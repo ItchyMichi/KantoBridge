@@ -1,0 +1,24 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kantobridge.invalid/protocol/messages/story.flags.schema.json",
+  "title": "story.flags",
+  "description": "Diff of save.flags.",
+  "x-type": "story.flags",
+  "x-legs": ["g2m"],
+  "x-re": "never",
+  "type": "object",
+  "required": ["set", "clear"],
+  "additionalProperties": false,
+  "properties": {
+    "set": {
+      "type": "array",
+      "items": {"$ref": "../defs.schema.json#/$defs/flagId"},
+      "uniqueItems": true
+    },
+    "clear": {
+      "type": "array",
+      "items": {"$ref": "../defs.schema.json#/$defs/flagId"},
+      "uniqueItems": true
+    }
+  }
+}

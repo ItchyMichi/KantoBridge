@@ -1,0 +1,11 @@
+{
+  "displayName": "Kanto Bridge: no Pokémon spawns inside buildings",
+  "enabled": true,
+  "components": [
+    {
+      "type": "filter",
+      "spawnablePositionSelector": "v.spawnable_position.biome.is_of('kantobridge:kanto_interior')",
+      "allow": "false"
+    }
+  ]
+}

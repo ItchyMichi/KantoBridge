@@ -1,0 +1,16 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kantobridge.invalid/protocol/messages/ui.qty.schema.json",
+  "title": "ui.qty",
+  "description": "Confirm a quantity.",
+  "x-type": "ui.qty",
+  "x-legs": ["m2g"],
+  "x-re": "never",
+  "type": "object",
+  "required": ["ui", "qty"],
+  "additionalProperties": false,
+  "properties": {
+    "ui": {"$ref": "../defs.schema.json#/$defs/uiId"},
+    "qty": {"type": "integer", "minimum": 0, "maximum": 999}
+  }
+}

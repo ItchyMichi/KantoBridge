@@ -1,0 +1,258 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kantobridge.invalid/protocol/defs.schema.json",
+  "title": "defs",
+  "description": "Shared definitions for Kanto Bridge message schemas.",
+  "$defs": {
+    "symbol": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9_]+$",
+      "maxLength": 64,
+      "minLength": 1,
+      "description": "An engine symbol id, e.g. EVENT_GOT_STARTER. Symbols are engine source names, safe to log."
+    },
+    "mapId": {
+      "type": "string",
+      "pattern": "^[A-Z0-9_]+$",
+      "maxLength": 64,
+      "minLength": 1,
+      "description": "A map symbol, e.g. PALLET_TOWN."
+    },
+    "flagId": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9_]+$",
+      "maxLength": 64,
+      "minLength": 1,
+      "description": "An event flag symbol (a key of save.flags)."
+    },
+    "itemId": {
+      "type": "string",
+      "pattern": "^[A-Z0-9_]+$",
+      "maxLength": 64,
+      "minLength": 1,
+      "description": "An item symbol, e.g. POKE_BALL."
+    },
+    "spriteId": {
+      "type": "string",
+      "pattern": "^[A-Z0-9_]+$",
+      "maxLength": 64,
+      "minLength": 1,
+      "description": "A sprite symbol, e.g. SPRITE_OAK."
+    },
+    "npcId": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9_]+$",
+      "maxLength": 96,
+      "minLength": 1,
+      "description": "A live NPC id, \"<MAP>_obj_<index>\"."
+    },
+    "objName": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9_]+$",
+      "maxLength": 96,
+      "minLength": 1,
+      "description": "A map object name (a key of save.objectToggles[map])."
+    },
+    "id": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9_.:-]+$",
+      "maxLength": 64,
+      "minLength": 1,
+      "description": "An opaque correlation id chosen by the sender."
+    },
+    "uid": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+      "maxLength": 36,
+      "description": "A Pokémon's Cobblemon UUID, lowercase; links the Cobblemon and shadow copies."
+    },
+    "uiId": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 2147483647,
+      "description": "A UI id chosen by gen1-bridge, unique per connection."
+    },
+    "hash": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{8,64}$",
+      "maxLength": 64,
+      "description": "Lowercase hex SHA-256 (or a prefix of one)."
+    },
+    "dir": {"enum": ["up", "down", "left", "right"]},
+    "button": {"enum": ["a", "b", "start", "select", "up", "down", "left", "right"]},
+    "coord": {
+      "type": "integer",
+      "minimum": -4096,
+      "maximum": 4096,
+      "description": "A cell coordinate (16 px) inside a map; -1 is allowed at map edges."
+    },
+    "frames": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 3600,
+      "description": "A duration in 60 Hz game frames."
+    },
+    "count": {"type": "integer", "minimum": 0, "maximum": 2147483647},
+    "dex": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 151,
+      "description": "Gen 1 national dex number."
+    },
+    "nationalDex": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 2000,
+      "description": "Any national dex number (Cobblemon side)."
+    },
+    "level": {"type": "integer", "minimum": 1, "maximum": 100},
+    "gen1Move": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 165,
+      "description": "Gen 1 move id, which equals the Showdown move number."
+    },
+    "moveNum": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 2000,
+      "description": "Showdown move number."
+    },
+    "gen1Status": {"enum": ["slp", "psn", "brn", "frz", "par"]},
+    "dvs": {
+      "type": "object",
+      "required": ["atk", "def", "spd", "spc"],
+      "additionalProperties": false,
+      "properties": {
+        "atk": {"type": "integer", "minimum": 0, "maximum": 15},
+        "def": {"type": "integer", "minimum": 0, "maximum": 15},
+        "spd": {"type": "integer", "minimum": 0, "maximum": 15},
+        "spc": {"type": "integer", "minimum": 0, "maximum": 15}
+      },
+      "description": "Gen 1 DVs. The HP DV is derived from these."
+    },
+    "cell": {
+      "type": "object",
+      "required": ["map", "x", "y"],
+      "additionalProperties": false,
+      "properties": {
+        "map": {"$ref": "#/$defs/mapId"},
+        "x": {"$ref": "#/$defs/coord"},
+        "y": {"$ref": "#/$defs/coord"}
+      }
+    },
+    "place": {
+      "type": "object",
+      "required": ["map", "x", "y", "facing"],
+      "additionalProperties": false,
+      "properties": {
+        "map": {"$ref": "#/$defs/mapId"},
+        "x": {"$ref": "#/$defs/coord"},
+        "y": {"$ref": "#/$defs/coord"},
+        "facing": {"$ref": "#/$defs/dir"}
+      }
+    },
+    "cellKey": {
+      "type": "string",
+      "pattern": "^[A-Z0-9_]+:-?[0-9]+:-?[0-9]+$",
+      "maxLength": 80,
+      "description": "\"MAP:x:y\", one story cell."
+    },
+    "npc": {
+      "type": "object",
+      "required": ["id", "sprite", "kind", "x", "y", "facing", "moving"],
+      "additionalProperties": false,
+      "properties": {
+        "id": {"$ref": "#/$defs/npcId"},
+        "sprite": {"$ref": "#/$defs/spriteId"},
+        "kind": {"enum": ["person", "item", "boulder", "static", "trainer"]},
+        "x": {"$ref": "#/$defs/coord"},
+        "y": {"$ref": "#/$defs/coord"},
+        "facing": {"$ref": "#/$defs/dir"},
+        "moving": {"type": "boolean"}
+      }
+    },
+    "playerState": {
+      "type": "object",
+      "required": ["mode", "bike", "surf", "slope", "hidden", "dark", "lit"],
+      "additionalProperties": false,
+      "properties": {
+        "mode": {"enum": ["idle", "screen", "forced", "cutscene", "busy"]},
+        "bike": {"type": "boolean"},
+        "surf": {"type": "boolean"},
+        "slope": {"type": "boolean"},
+        "hidden": {"type": "boolean", "description": "The player sprite is hidden by the game."},
+        "dark": {"type": "boolean", "description": "The current map is dark."},
+        "lit": {"type": "boolean", "description": "Flash has lit the current dark map."}
+      }
+    },
+    "shadowMon": {
+      "type": "object",
+      "required": ["dex", "level", "moves"],
+      "additionalProperties": false,
+      "properties": {
+        "uid": {"$ref": "#/$defs/uid"},
+        "dex": {"$ref": "#/$defs/nationalDex"},
+        "level": {"$ref": "#/$defs/level"},
+        "nick": {"type": "string", "maxLength": 32, "x-rom-derived": true},
+        "moves": {"type": "array", "items": {"$ref": "#/$defs/moveNum"}, "maxItems": 4},
+        "hp": {"type": "integer", "minimum": 0, "maximum": 9999},
+        "maxhp": {"type": "integer", "minimum": 1, "maximum": 9999},
+        "status": {"$ref": "#/$defs/gen1Status"}
+      },
+      "description": "A party member as one side sees it."
+    },
+    "teamMon": {
+      "type": "object",
+      "required": ["dex", "level", "moves", "dvs"],
+      "additionalProperties": false,
+      "properties": {
+        "dex": {"$ref": "#/$defs/dex"},
+        "level": {"$ref": "#/$defs/level"},
+        "moves": {
+          "type": "array",
+          "items": {"$ref": "#/$defs/gen1Move"},
+          "maxItems": 4,
+          "minItems": 1
+        },
+        "dvs": {"$ref": "#/$defs/dvs"}
+      }
+    },
+    "empty": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {},
+      "description": "Empty data: {}."
+    },
+    "warpKind": {
+      "enum": [
+        "door",
+        "stairs",
+        "edge",
+        "hole",
+        "pad",
+        "fly",
+        "teleport",
+        "dig",
+        "rope",
+        "blackout",
+        "script",
+        "elevator"
+      ]
+    },
+    "exportKind": {
+      "enum": [
+        "map",
+        "tileset",
+        "image",
+        "sprite",
+        "palettes",
+        "encounters",
+        "field",
+        "names",
+        "layout",
+        "swaps"
+      ]
+    }
+  }
+}

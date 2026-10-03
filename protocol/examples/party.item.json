@@ -1,0 +1,12 @@
+[
+  {
+    "type": "party.item",
+    "seq": 11,
+    "data": {"item": "TEST_STONE", "uid": "0f8b6a2e-1c2d-4e5f-8a9b-0c1d2e3f4a5b"}
+  },
+  {
+    "type": "party.item",
+    "seq": 12,
+    "data": {"item": "HM01", "uid": "0f8b6a2e-1c2d-4e5f-8a9b-0c1d2e3f4a5b", "slot": 3, "move": 15}
+  }
+]

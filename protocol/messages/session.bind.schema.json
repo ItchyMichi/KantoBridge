@@ -1,0 +1,16 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kantobridge.invalid/protocol/messages/session.bind.schema.json",
+  "title": "session.bind",
+  "description": "Pair the hidden game's save slot with this Minecraft world (multiplayer).",
+  "x-type": "session.bind",
+  "x-legs": ["m2g"],
+  "x-re": "never",
+  "type": "object",
+  "required": ["world", "multiplayer"],
+  "additionalProperties": false,
+  "properties": {
+    "world": {"$ref": "../defs.schema.json#/$defs/id"},
+    "multiplayer": {"type": "boolean"}
+  }
+}

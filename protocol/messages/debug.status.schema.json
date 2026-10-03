@@ -1,0 +1,23 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kantobridge.invalid/protocol/messages/debug.status.schema.json",
+  "title": "debug.status",
+  "description": "Test role only. Request {} or reply with counts and states (never content).",
+  "x-type": "debug.status",
+  "x-legs": ["m2g", "g2m"],
+  "x-re": "optional",
+  "oneOf": [
+    {"$ref": "../defs.schema.json#/$defs/empty"},
+    {
+      "type": "object",
+      "required": ["npcs", "topState", "mode", "flags"],
+      "additionalProperties": {"type": ["integer", "boolean"]},
+      "properties": {
+        "npcs": {"$ref": "../defs.schema.json#/$defs/count"},
+        "topState": {"$ref": "../defs.schema.json#/$defs/symbol"},
+        "mode": {"enum": ["idle", "screen", "forced", "cutscene", "busy"]},
+        "flags": {"$ref": "../defs.schema.json#/$defs/count"}
+      }
+    }
+  ]
+}

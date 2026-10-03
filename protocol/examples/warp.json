@@ -1,0 +1,12 @@
+[
+  {"type": "warp", "seq": 11, "data": {"phase": "start", "kind": "door"}},
+  {
+    "type": "warp",
+    "seq": 12,
+    "data": {
+      "phase": "arrive",
+      "kind": "door",
+      "to": {"map": "TEST_HOUSE", "x": 2, "y": 7, "facing": "up"}
+    }
+  }
+]

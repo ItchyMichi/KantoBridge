@@ -1,0 +1,7 @@
+[
+  {
+    "type": "warp.request",
+    "seq": 11,
+    "data": {"to": {"map": "TEST_HOUSE", "x": 2, "y": 7, "facing": "up"}, "kind": "door"}
+  }
+]

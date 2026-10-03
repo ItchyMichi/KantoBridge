@@ -1,0 +1,7 @@
+[
+  {
+    "type": "story.blocks",
+    "seq": 11,
+    "data": {"map": "TEST_TOWN", "changes": [{"bx": 4, "by": 2, "block": 9}]}
+  }
+]

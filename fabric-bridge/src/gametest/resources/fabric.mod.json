@@ -1,0 +1,20 @@
+{
+	"schemaVersion": 1,
+	"id": "kantobridge-gametest",
+	"version": "1.0.0",
+	"name": "Kanto Bridge GameTests",
+	"description": "Server GameTests for Kanto Bridge; only on the classpath of runGameTest.",
+	"environment": "*",
+	"entrypoints": {
+		"fabric-gametest": [
+			"dev.kantobridge.gametest.CobblemonStartupTests",
+			"dev.kantobridge.gametest.TileBlockTests",
+			"dev.kantobridge.gametest.StaticDataTests",
+			"dev.kantobridge.gametest.RelayGameTests"
+		]
+	},
+	"depends": {
+		"kantobridge": "*",
+		"cobblemon": "*"
+	}
+}

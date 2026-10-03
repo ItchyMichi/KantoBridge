@@ -1,0 +1,25 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kantobridge.invalid/protocol/messages/move.step.schema.json",
+  "title": "move.step",
+  "description": "The Minecraft player crossed into the next cell, or pushed against an edge for 8+ ticks.",
+  "x-type": "move.step",
+  "x-legs": ["m2g"],
+  "x-re": "never",
+  "type": "object",
+  "required": ["dir", "n"],
+  "additionalProperties": false,
+  "properties": {
+    "dir": {"$ref": "../defs.schema.json#/$defs/dir"},
+    "n": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 9007199254740991,
+      "description": "Step counter; player.pos and player.blocked echo it."
+    },
+    "push": {
+      "type": "boolean",
+      "description": "True when sent for edge-push intent rather than a crossing."
+    }
+  }
+}

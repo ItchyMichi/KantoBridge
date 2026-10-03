@@ -1,0 +1,16 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kantobridge.invalid/protocol/messages/bag.use.schema.json",
+  "title": "bag.use",
+  "description": "Items consumed in Minecraft.",
+  "x-type": "bag.use",
+  "x-legs": ["m2g", "s2c"],
+  "x-re": "never",
+  "type": "object",
+  "required": ["item", "qty"],
+  "additionalProperties": false,
+  "properties": {
+    "item": {"$ref": "../defs.schema.json#/$defs/itemId"},
+    "qty": {"type": "integer", "minimum": 1, "maximum": 999}
+  }
+}

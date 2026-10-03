@@ -1,0 +1,13 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kantobridge.invalid/protocol/messages/ui.back.schema.json",
+  "title": "ui.back",
+  "description": "B on a choice, menu, list or quantity.",
+  "x-type": "ui.back",
+  "x-legs": ["m2g"],
+  "x-re": "never",
+  "type": "object",
+  "required": ["ui"],
+  "additionalProperties": false,
+  "properties": {"ui": {"$ref": "../defs.schema.json#/$defs/uiId"}}
+}

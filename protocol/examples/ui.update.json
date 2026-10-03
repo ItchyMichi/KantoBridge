@@ -1,0 +1,4 @@
+[
+  {"type": "ui.update", "seq": 11, "data": {"ui": 1, "page": 1, "line": 0, "waiting": true}},
+  {"type": "ui.update", "seq": 12, "data": {"ui": 3, "index": 1}}
+]

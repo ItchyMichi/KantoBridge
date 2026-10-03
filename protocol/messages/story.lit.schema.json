@@ -1,0 +1,13 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kantobridge.invalid/protocol/messages/story.lit.schema.json",
+  "title": "story.lit",
+  "description": "A dark map was lit (Flash) or reset.",
+  "x-type": "story.lit",
+  "x-legs": ["g2m"],
+  "x-re": "never",
+  "type": "object",
+  "required": ["map", "lit"],
+  "additionalProperties": false,
+  "properties": {"map": {"$ref": "../defs.schema.json#/$defs/mapId"}, "lit": {"type": "boolean"}}
+}

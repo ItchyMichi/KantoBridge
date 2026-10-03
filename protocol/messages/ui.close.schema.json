@@ -1,0 +1,13 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kantobridge.invalid/protocol/messages/ui.close.schema.json",
+  "title": "ui.close",
+  "description": "The UI closed.",
+  "x-type": "ui.close",
+  "x-legs": ["g2m"],
+  "x-re": "never",
+  "type": "object",
+  "required": ["ui"],
+  "additionalProperties": false,
+  "properties": {"ui": {"$ref": "../defs.schema.json#/$defs/uiId"}}
+}

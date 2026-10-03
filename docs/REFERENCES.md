@@ -761,18 +761,17 @@ temporary NPC (read, not run); **medium-low** for the entity-less prediction.
 Updated 2026-10-03 with the user's decisions: ROM-derived data may pass through the host's server,
 and other players may see a story battle's Pokémon.
 
-- **Dialogue: Cobblemon's screen is now the default.** It meets the user's rule (it can be driven
-  with live text from code, on the server), and routing text through the server is now allowed.
-  The user confirms this when planning. What's left against it is UX:
+- **Dialogue: our own client-side screens** (decided by the user while planning, 2026-10-03).
+  Cobblemon's screen could be driven with live text from code on the server, but it fell short on
+  UX:
   - **Mouse-only.** Pages and options are clicked. The screen only reacts to the inventory key and
     Escape (both close it) and to Enter in the text input
     (`K/client/gui/dialogue/DialogueScreen.kt:290-297`).
-  - **Names.** The text input is capped at 30 characters, so Gen 1 name lengths must be checked on
-    our side.
+  - **Names.** The text input is capped at 30 characters.
   - **Round trip.** Every page goes client → server → client.
 
-  Our own client-side screen remains the fallback. Keeping the protocol's dialogue messages
-  independent of the screen keeps that swap cheap.
+  Since Minecraft screens are needed for the menus anyway, one client-side UI kit covers dialogue
+  too. See [PLAN.md](PLAN.md) §4.3.
 - **Trainer battles (recommended): run them on the server.**
   1. Our server-side code spawns a **temporary `NPCEntity`** at the trainer's tile, built from the
      team the hidden game hands over.

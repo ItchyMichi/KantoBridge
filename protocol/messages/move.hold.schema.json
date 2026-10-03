@@ -1,0 +1,13 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kantobridge.invalid/protocol/messages/move.hold.schema.json",
+  "title": "move.hold",
+  "description": "Hold or release a button outside screens (the Cycling Road brake).",
+  "x-type": "move.hold",
+  "x-legs": ["m2g"],
+  "x-re": "never",
+  "type": "object",
+  "required": ["button", "on"],
+  "additionalProperties": false,
+  "properties": {"button": {"enum": ["b"]}, "on": {"type": "boolean"}}
+}

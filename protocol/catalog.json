@@ -1,0 +1,521 @@
+{
+  "protocol": 1,
+  "limits": {"maxLineBytes": 4194304, "exportPageBytes": 1048576, "relayMaxBytes": 262144},
+  "heartbeat": {"pingMs": 2000, "timeoutMs": 10000},
+  "reconnect": {"initialMs": 500, "maxMs": 5000},
+  "messages": {
+    "act.button": {
+      "legs": ["m2g"],
+      "re": "never",
+      "rom": false,
+      "redact": [],
+      "schema": "messages/act.button.schema.json"
+    },
+    "act.field": {
+      "legs": ["m2g"],
+      "re": "never",
+      "rom": false,
+      "redact": [],
+      "schema": "messages/act.field.schema.json"
+    },
+    "act.interact": {
+      "legs": ["m2g"],
+      "re": "never",
+      "rom": false,
+      "redact": [],
+      "schema": "messages/act.interact.schema.json"
+    },
+    "act.result": {
+      "legs": ["g2m"],
+      "re": "required",
+      "rom": false,
+      "redact": [],
+      "schema": "messages/act.result.schema.json"
+    },
+    "activity": {
+      "legs": ["c2s"],
+      "re": "never",
+      "rom": false,
+      "redact": [],
+      "schema": "messages/activity.schema.json"
+    },
+    "bag.sync": {
+      "legs": ["g2m", "c2s"],
+      "re": "never",
+      "rom": false,
+      "redact": [],
+      "schema": "messages/bag.sync.schema.json"
+    },
+    "bag.use": {
+      "legs": ["m2g", "s2c"],
+      "re": "never",
+      "rom": false,
+      "redact": [],
+      "schema": "messages/bag.use.schema.json"
+    },
+    "battle.native": {
+      "legs": ["g2m"],
+      "re": "never",
+      "rom": false,
+      "redact": [],
+      "schema": "messages/battle.native.schema.json"
+    },
+    "battle.result": {
+      "legs": ["m2g", "s2c"],
+      "re": "never",
+      "rom": false,
+      "redact": [],
+      "schema": "messages/battle.result.schema.json"
+    },
+    "battle.start": {
+      "legs": ["g2m", "c2s"],
+      "re": "never",
+      "rom": true,
+      "redact": ["/team", "/trainer/name", "/wild"],
+      "schema": "messages/battle.start.schema.json"
+    },
+    "daycare.deposit": {
+      "legs": ["g2m", "c2s"],
+      "re": "never",
+      "rom": false,
+      "redact": [],
+      "schema": "messages/daycare.deposit.schema.json"
+    },
+    "daycare.withdraw": {
+      "legs": ["g2m", "c2s"],
+      "re": "never",
+      "rom": false,
+      "redact": [],
+      "schema": "messages/daycare.withdraw.schema.json"
+    },
+    "debug.quit": {
+      "legs": ["m2g"],
+      "re": "never",
+      "rom": false,
+      "redact": [],
+      "schema": "messages/debug.quit.schema.json"
+    },
+    "debug.status": {
+      "legs": ["m2g", "g2m"],
+      "re": "optional",
+      "rom": false,
+      "redact": [],
+      "schema": "messages/debug.status.schema.json"
+    },
+    "dex.sync": {
+      "legs": ["m2g", "s2c"],
+      "re": "never",
+      "rom": false,
+      "redact": [],
+      "schema": "messages/dex.sync.schema.json"
+    },
+    "emote": {
+      "legs": ["g2m"],
+      "re": "never",
+      "rom": false,
+      "redact": [],
+      "schema": "messages/emote.schema.json"
+    },
+    "error": {
+      "legs": ["g2m", "m2g", "c2s", "s2c"],
+      "re": "optional",
+      "rom": false,
+      "redact": [],
+      "schema": "messages/error.schema.json"
+    },
+    "export.data": {
+      "legs": ["g2m"],
+      "re": "required",
+      "rom": true,
+      "redact": ["/data"],
+      "schema": "messages/export.data.schema.json"
+    },
+    "export.get": {
+      "legs": ["m2g"],
+      "re": "never",
+      "rom": false,
+      "redact": [],
+      "schema": "messages/export.get.schema.json"
+    },
+    "export.index": {
+      "legs": ["m2g", "g2m"],
+      "re": "optional",
+      "rom": false,
+      "redact": [],
+      "schema": "messages/export.index.schema.json"
+    },
+    "hello": {
+      "legs": ["m2g"],
+      "re": "never",
+      "rom": false,
+      "redact": [],
+      "schema": "messages/hello.schema.json"
+    },
+    "hello.ok": {
+      "legs": ["g2m"],
+      "re": "required",
+      "rom": false,
+      "redact": [],
+      "schema": "messages/hello.ok.schema.json"
+    },
+    "hello.reject": {
+      "legs": ["g2m"],
+      "re": "required",
+      "rom": false,
+      "redact": [],
+      "schema": "messages/hello.reject.schema.json"
+    },
+    "log": {
+      "legs": ["g2m"],
+      "re": "never",
+      "rom": false,
+      "redact": [],
+      "schema": "messages/log.schema.json"
+    },
+    "mirror.frame": {
+      "legs": ["g2m"],
+      "re": "never",
+      "rom": true,
+      "redact": ["/png"],
+      "schema": "messages/mirror.frame.schema.json"
+    },
+    "mirror.sub": {
+      "legs": ["m2g"],
+      "re": "never",
+      "rom": false,
+      "redact": [],
+      "schema": "messages/mirror.sub.schema.json"
+    },
+    "mirror.unsub": {
+      "legs": ["m2g"],
+      "re": "never",
+      "rom": false,
+      "redact": [],
+      "schema": "messages/mirror.unsub.schema.json"
+    },
+    "move.face": {
+      "legs": ["m2g"],
+      "re": "never",
+      "rom": false,
+      "redact": [],
+      "schema": "messages/move.face.schema.json"
+    },
+    "move.hold": {
+      "legs": ["m2g"],
+      "re": "never",
+      "rom": false,
+      "redact": [],
+      "schema": "messages/move.hold.schema.json"
+    },
+    "move.step": {
+      "legs": ["m2g"],
+      "re": "never",
+      "rom": false,
+      "redact": [],
+      "schema": "messages/move.step.schema.json"
+    },
+    "npc.add": {
+      "legs": ["g2m"],
+      "re": "never",
+      "rom": false,
+      "redact": [],
+      "schema": "messages/npc.add.schema.json"
+    },
+    "npc.face": {
+      "legs": ["g2m"],
+      "re": "never",
+      "rom": false,
+      "redact": [],
+      "schema": "messages/npc.face.schema.json"
+    },
+    "npc.move": {
+      "legs": ["g2m"],
+      "re": "never",
+      "rom": false,
+      "redact": [],
+      "schema": "messages/npc.move.schema.json"
+    },
+    "npc.remove": {
+      "legs": ["g2m"],
+      "re": "never",
+      "rom": false,
+      "redact": [],
+      "schema": "messages/npc.remove.schema.json"
+    },
+    "npc.set": {
+      "legs": ["g2m"],
+      "re": "never",
+      "rom": false,
+      "redact": [],
+      "schema": "messages/npc.set.schema.json"
+    },
+    "party.give": {
+      "legs": ["g2m", "c2s"],
+      "re": "never",
+      "rom": true,
+      "redact": ["/nick", "/ot"],
+      "schema": "messages/party.give.schema.json"
+    },
+    "party.heal": {
+      "legs": ["g2m", "c2s"],
+      "re": "never",
+      "rom": false,
+      "redact": [],
+      "schema": "messages/party.heal.schema.json"
+    },
+    "party.item": {
+      "legs": ["g2m", "c2s"],
+      "re": "never",
+      "rom": false,
+      "redact": [],
+      "schema": "messages/party.item.schema.json"
+    },
+    "party.rename": {
+      "legs": ["g2m", "c2s"],
+      "re": "never",
+      "rom": true,
+      "redact": ["/nick"],
+      "schema": "messages/party.rename.schema.json"
+    },
+    "party.sync": {
+      "legs": ["m2g", "s2c"],
+      "re": "never",
+      "rom": true,
+      "redact": ["/party/*/nick"],
+      "schema": "messages/party.sync.schema.json"
+    },
+    "party.take": {
+      "legs": ["g2m", "c2s"],
+      "re": "never",
+      "rom": false,
+      "redact": [],
+      "schema": "messages/party.take.schema.json"
+    },
+    "pc.closed": {
+      "legs": ["m2g", "s2c"],
+      "re": "never",
+      "rom": false,
+      "redact": [],
+      "schema": "messages/pc.closed.schema.json"
+    },
+    "pc.open": {
+      "legs": ["g2m", "c2s"],
+      "re": "never",
+      "rom": false,
+      "redact": [],
+      "schema": "messages/pc.open.schema.json"
+    },
+    "ping": {
+      "legs": ["g2m", "m2g"],
+      "re": "never",
+      "rom": false,
+      "redact": [],
+      "schema": "messages/ping.schema.json"
+    },
+    "player.blocked": {
+      "legs": ["g2m"],
+      "re": "never",
+      "rom": false,
+      "redact": [],
+      "schema": "messages/player.blocked.schema.json"
+    },
+    "player.pos": {
+      "legs": ["g2m"],
+      "re": "never",
+      "rom": false,
+      "redact": [],
+      "schema": "messages/player.pos.schema.json"
+    },
+    "player.state": {
+      "legs": ["g2m"],
+      "re": "never",
+      "rom": false,
+      "redact": [],
+      "schema": "messages/player.state.schema.json"
+    },
+    "pong": {
+      "legs": ["g2m", "m2g"],
+      "re": "required",
+      "rom": false,
+      "redact": [],
+      "schema": "messages/pong.schema.json"
+    },
+    "resync": {
+      "legs": ["m2g"],
+      "re": "never",
+      "rom": false,
+      "redact": [],
+      "schema": "messages/resync.schema.json"
+    },
+    "save.begin": {
+      "legs": ["g2m", "c2s"],
+      "re": "never",
+      "rom": false,
+      "redact": [],
+      "schema": "messages/save.begin.schema.json"
+    },
+    "save.done": {
+      "legs": ["m2g", "s2c"],
+      "re": "optional",
+      "rom": false,
+      "redact": [],
+      "schema": "messages/save.done.schema.json"
+    },
+    "session.bind": {
+      "legs": ["m2g"],
+      "re": "never",
+      "rom": false,
+      "redact": [],
+      "schema": "messages/session.bind.schema.json"
+    },
+    "session.bound": {
+      "legs": ["g2m"],
+      "re": "optional",
+      "rom": false,
+      "redact": [],
+      "schema": "messages/session.bound.schema.json"
+    },
+    "snapshot": {
+      "legs": ["g2m"],
+      "re": "optional",
+      "rom": true,
+      "redact": ["/blocks", "/party/*/nick", "/ui"],
+      "schema": "messages/snapshot.schema.json"
+    },
+    "story.blocks": {
+      "legs": ["g2m"],
+      "re": "never",
+      "rom": true,
+      "redact": ["/changes"],
+      "schema": "messages/story.blocks.schema.json"
+    },
+    "story.flags": {
+      "legs": ["g2m"],
+      "re": "never",
+      "rom": false,
+      "redact": [],
+      "schema": "messages/story.flags.schema.json"
+    },
+    "story.lit": {
+      "legs": ["g2m"],
+      "re": "never",
+      "rom": false,
+      "redact": [],
+      "schema": "messages/story.lit.schema.json"
+    },
+    "story.state": {
+      "legs": ["c2s"],
+      "re": "never",
+      "rom": false,
+      "redact": [],
+      "schema": "messages/story.state.schema.json"
+    },
+    "story.toggles": {
+      "legs": ["g2m"],
+      "re": "never",
+      "rom": false,
+      "redact": [],
+      "schema": "messages/story.toggles.schema.json"
+    },
+    "texture.status": {
+      "legs": ["c2s"],
+      "re": "never",
+      "rom": false,
+      "redact": [],
+      "schema": "messages/texture.status.schema.json"
+    },
+    "ui.advance": {
+      "legs": ["m2g"],
+      "re": "never",
+      "rom": false,
+      "redact": [],
+      "schema": "messages/ui.advance.schema.json"
+    },
+    "ui.back": {
+      "legs": ["m2g"],
+      "re": "never",
+      "rom": false,
+      "redact": [],
+      "schema": "messages/ui.back.schema.json"
+    },
+    "ui.close": {
+      "legs": ["g2m"],
+      "re": "never",
+      "rom": false,
+      "redact": [],
+      "schema": "messages/ui.close.schema.json"
+    },
+    "ui.name": {
+      "legs": ["m2g"],
+      "re": "never",
+      "rom": true,
+      "redact": ["/glyphs"],
+      "schema": "messages/ui.name.schema.json"
+    },
+    "ui.open": {
+      "legs": ["g2m"],
+      "re": "never",
+      "rom": true,
+      "redact": [
+        "/footer",
+        "/items",
+        "/labels",
+        "/pages",
+        "/presets",
+        "/question",
+        "/title",
+        "/value"
+      ],
+      "schema": "messages/ui.open.schema.json"
+    },
+    "ui.pick": {
+      "legs": ["m2g"],
+      "re": "never",
+      "rom": false,
+      "redact": [],
+      "schema": "messages/ui.pick.schema.json"
+    },
+    "ui.qty": {
+      "legs": ["m2g"],
+      "re": "never",
+      "rom": false,
+      "redact": [],
+      "schema": "messages/ui.qty.schema.json"
+    },
+    "ui.update": {
+      "legs": ["g2m"],
+      "re": "never",
+      "rom": true,
+      "redact": ["/items"],
+      "schema": "messages/ui.update.schema.json"
+    },
+    "warp": {
+      "legs": ["g2m"],
+      "re": "never",
+      "rom": false,
+      "redact": [],
+      "schema": "messages/warp.schema.json"
+    },
+    "warp.done": {
+      "legs": ["s2c"],
+      "re": "optional",
+      "rom": false,
+      "redact": [],
+      "schema": "messages/warp.done.schema.json"
+    },
+    "warp.request": {
+      "legs": ["c2s"],
+      "re": "never",
+      "rom": false,
+      "redact": [],
+      "schema": "messages/warp.request.schema.json"
+    },
+    "world.index": {
+      "legs": ["s2c"],
+      "re": "never",
+      "rom": true,
+      "redact": ["/part"],
+      "schema": "messages/world.index.schema.json"
+    }
+  }
+}

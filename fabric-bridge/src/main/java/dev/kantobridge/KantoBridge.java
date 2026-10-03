@@ -1,5 +1,8 @@
 package dev.kantobridge;
 
+import dev.kantobridge.block.KbBlocks;
+import dev.kantobridge.net.RelayService;
+import dev.kantobridge.proto.Catalog;
 import net.fabricmc.api.ModInitializer;
 
 import org.slf4j.Logger;
@@ -15,6 +18,8 @@ public class KantoBridge implements ModInitializer {
 
 	@Override
 	public void onInitialize() {
-		LOGGER.info("kantobridge loaded");
+		KbBlocks.register();
+		RelayService.init();
+		LOGGER.info("kantobridge loaded (protocol {}, {} message types)", Catalog.bundled().protocol(), Catalog.bundled().messages().size());
 	}
 }

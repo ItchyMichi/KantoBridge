@@ -1,0 +1,13 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kantobridge.invalid/protocol/messages/npc.remove.schema.json",
+  "title": "npc.remove",
+  "description": "One NPC disappeared.",
+  "x-type": "npc.remove",
+  "x-legs": ["g2m"],
+  "x-re": "never",
+  "type": "object",
+  "required": ["id"],
+  "additionalProperties": false,
+  "properties": {"id": {"$ref": "../defs.schema.json#/$defs/npcId"}}
+}

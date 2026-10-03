@@ -1,0 +1,12 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kantobridge.invalid/protocol/messages/debug.quit.schema.json",
+  "title": "debug.quit",
+  "description": "Test role only: ask the test driver to exit.",
+  "x-type": "debug.quit",
+  "x-legs": ["m2g"],
+  "x-re": "never",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {"code": {"type": "integer", "minimum": 0, "maximum": 255}}
+}

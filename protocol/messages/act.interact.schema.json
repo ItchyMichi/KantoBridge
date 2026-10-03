@@ -1,0 +1,17 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kantobridge.invalid/protocol/messages/act.interact.schema.json",
+  "title": "act.interact",
+  "description": "Face the cell and press A.",
+  "x-type": "act.interact",
+  "x-legs": ["m2g"],
+  "x-re": "never",
+  "type": "object",
+  "required": ["map", "x", "y"],
+  "additionalProperties": false,
+  "properties": {
+    "map": {"$ref": "../defs.schema.json#/$defs/mapId"},
+    "x": {"$ref": "../defs.schema.json#/$defs/coord"},
+    "y": {"$ref": "../defs.schema.json#/$defs/coord"}
+  }
+}

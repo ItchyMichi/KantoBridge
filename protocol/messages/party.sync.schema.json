@@ -1,0 +1,43 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kantobridge.invalid/protocol/messages/party.sync.schema.json",
+  "title": "party.sync",
+  "description": "The Cobblemon party (authoritative); gen1-bridge rebuilds the shadow party.",
+  "x-type": "party.sync",
+  "x-legs": ["m2g", "s2c"],
+  "x-re": "never",
+  "type": "object",
+  "required": ["party", "box"],
+  "additionalProperties": false,
+  "properties": {
+    "party": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["uid", "dex", "level", "moves", "hp", "maxhp"],
+        "additionalProperties": false,
+        "properties": {
+          "uid": {"$ref": "../defs.schema.json#/$defs/uid"},
+          "dex": {"$ref": "../defs.schema.json#/$defs/nationalDex"},
+          "level": {"$ref": "../defs.schema.json#/$defs/level"},
+          "nick": {"type": "string", "maxLength": 32, "x-rom-derived": true},
+          "moves": {
+            "type": "array",
+            "items": {"$ref": "../defs.schema.json#/$defs/moveNum"},
+            "maxItems": 4
+          },
+          "hp": {"type": "integer", "minimum": 0, "maximum": 9999},
+          "maxhp": {"type": "integer", "minimum": 1, "maximum": 9999},
+          "status": {"$ref": "../defs.schema.json#/$defs/gen1Status"}
+        }
+      },
+      "maxItems": 6
+    },
+    "box": {
+      "type": "object",
+      "required": ["count"],
+      "additionalProperties": false,
+      "properties": {"count": {"$ref": "../defs.schema.json#/$defs/count"}}
+    }
+  }
+}

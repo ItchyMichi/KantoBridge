@@ -1,0 +1,20 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kantobridge.invalid/protocol/messages/emote.schema.json",
+  "title": "emote",
+  "description": "An emote bubble over the player or an NPC.",
+  "x-type": "emote",
+  "x-legs": ["g2m"],
+  "x-re": "never",
+  "type": "object",
+  "required": ["target", "bubble", "frames"],
+  "additionalProperties": false,
+  "properties": {
+    "target": {
+      "$ref": "../defs.schema.json#/$defs/npcId",
+      "description": "\"player\" or an NPC id."
+    },
+    "bubble": {"enum": ["!", "?", "happy", null]},
+    "frames": {"$ref": "../defs.schema.json#/$defs/frames"}
+  }
+}

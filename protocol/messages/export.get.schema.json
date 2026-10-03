@@ -1,0 +1,16 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kantobridge.invalid/protocol/messages/export.get.schema.json",
+  "title": "export.get",
+  "description": "Request one export resource.",
+  "x-type": "export.get",
+  "x-legs": ["m2g"],
+  "x-re": "never",
+  "type": "object",
+  "required": ["kind", "id"],
+  "additionalProperties": false,
+  "properties": {
+    "kind": {"$ref": "../defs.schema.json#/$defs/exportKind"},
+    "id": {"$ref": "../defs.schema.json#/$defs/id"}
+  }
+}

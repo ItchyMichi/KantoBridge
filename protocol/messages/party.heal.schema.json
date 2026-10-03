@@ -1,0 +1,12 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kantobridge.invalid/protocol/messages/party.heal.schema.json",
+  "title": "party.heal",
+  "description": "Heal the whole party (Pokémon Center, Mom, ...).",
+  "x-type": "party.heal",
+  "x-legs": ["g2m", "c2s"],
+  "x-re": "never",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {}
+}

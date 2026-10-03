@@ -7,10 +7,11 @@ return {
   differences = {
     changed = {},
     added = {
-      "logs \"gen1-bridge loaded\" when a game boots",
+      "logs \"gen1-bridge loaded\" when a game boots, and \"game.ready\" once the game is up",
+      "a status table in mod.exports (versions, counts, ready flag) for test drivers",
     },
     known = {
-      "skeleton only: no socket or bridge logic yet",
+      "foundations only: the socket listener and bridge messages arrive in later milestones",
     },
   },
   credits = {

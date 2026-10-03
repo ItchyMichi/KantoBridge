@@ -1,0 +1,28 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kantobridge.invalid/protocol/messages/battle.result.schema.json",
+  "title": "battle.result",
+  "description": "How a Cobblemon battle ended.",
+  "x-type": "battle.result",
+  "x-legs": ["m2g", "s2c"],
+  "x-re": "never",
+  "type": "object",
+  "required": ["battle", "outcome"],
+  "additionalProperties": false,
+  "properties": {
+    "battle": {"$ref": "../defs.schema.json#/$defs/id"},
+    "outcome": {"enum": ["win", "lose", "fled", "caught", "aborted"]},
+    "caught": {
+      "type": "object",
+      "required": ["uid", "dex", "level"],
+      "additionalProperties": false,
+      "properties": {
+        "uid": {"$ref": "../defs.schema.json#/$defs/uid"},
+        "dex": {"$ref": "../defs.schema.json#/$defs/nationalDex"},
+        "level": {"$ref": "../defs.schema.json#/$defs/level"}
+      }
+    }
+  },
+  "if": {"properties": {"outcome": {"const": "caught"}}},
+  "then": {"required": ["caught"]}
+}

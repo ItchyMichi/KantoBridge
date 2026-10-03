@@ -1,0 +1,18 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kantobridge.invalid/protocol/messages/texture.status.schema.json",
+  "title": "texture.status",
+  "description": "The client's generated pack state.",
+  "x-type": "texture.status",
+  "x-legs": ["c2s"],
+  "x-re": "never",
+  "type": "object",
+  "required": ["ok"],
+  "additionalProperties": false,
+  "properties": {
+    "ok": {"type": "boolean"},
+    "slotMapHash": {"$ref": "../defs.schema.json#/$defs/hash"},
+    "textures": {"$ref": "../defs.schema.json#/$defs/count"},
+    "reason": {"type": "string", "pattern": "^[a-z][a-z0-9_.]*$", "maxLength": 64}
+  }
+}

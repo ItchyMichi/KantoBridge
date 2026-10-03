@@ -1,0 +1,12 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kantobridge.invalid/protocol/messages/mirror.unsub.schema.json",
+  "title": "mirror.unsub",
+  "description": "Stop receiving mirror frames.",
+  "x-type": "mirror.unsub",
+  "x-legs": ["m2g"],
+  "x-re": "never",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {}
+}

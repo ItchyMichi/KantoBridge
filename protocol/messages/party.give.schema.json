@@ -1,0 +1,27 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kantobridge.invalid/protocol/messages/party.give.schema.json",
+  "title": "party.give",
+  "description": "The hidden game gives a Pokémon (starter, gift, trade, prize, native catch).",
+  "x-type": "party.give",
+  "x-legs": ["g2m", "c2s"],
+  "x-re": "never",
+  "type": "object",
+  "required": ["give", "dex", "level", "source"],
+  "additionalProperties": false,
+  "properties": {
+    "give": {"$ref": "../defs.schema.json#/$defs/id"},
+    "dex": {"$ref": "../defs.schema.json#/$defs/dex"},
+    "level": {"$ref": "../defs.schema.json#/$defs/level"},
+    "moves": {
+      "type": "array",
+      "items": {"$ref": "../defs.schema.json#/$defs/gen1Move"},
+      "maxItems": 4,
+      "minItems": 1
+    },
+    "dvs": {"$ref": "../defs.schema.json#/$defs/dvs"},
+    "nick": {"type": "string", "maxLength": 32, "x-rom-derived": true},
+    "ot": {"type": "string", "maxLength": 32, "x-rom-derived": true},
+    "source": {"enum": ["starter", "gift", "trade", "prize", "native_catch"]}
+  }
+}

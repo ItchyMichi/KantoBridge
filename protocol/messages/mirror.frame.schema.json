@@ -1,0 +1,25 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kantobridge.invalid/protocol/messages/mirror.frame.schema.json",
+  "title": "mirror.frame",
+  "description": "One 160x144 frame of the hidden game.",
+  "x-type": "mirror.frame",
+  "x-legs": ["g2m"],
+  "x-re": "never",
+  "type": "object",
+  "required": ["w", "h", "png", "n"],
+  "additionalProperties": false,
+  "properties": {
+    "w": {"const": 160},
+    "h": {"const": 144},
+    "png": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9+/]*={0,2}$",
+      "maxLength": 1048576,
+      "contentEncoding": "base64",
+      "description": "PNG bytes, base64.",
+      "x-rom-derived": true
+    },
+    "n": {"type": "integer", "minimum": 1, "maximum": 9007199254740991}
+  }
+}

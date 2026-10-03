@@ -1,0 +1,12 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kantobridge.invalid/protocol/messages/resync.schema.json",
+  "title": "resync",
+  "description": "Asks gen1-bridge for a fresh snapshot.",
+  "x-type": "resync",
+  "x-legs": ["m2g"],
+  "x-re": "never",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {}
+}

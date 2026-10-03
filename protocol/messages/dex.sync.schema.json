@@ -1,0 +1,24 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kantobridge.invalid/protocol/messages/dex.sync.schema.json",
+  "title": "dex.sync",
+  "description": "Pokédex seen/owned (dex <= 151) from Cobblemon.",
+  "x-type": "dex.sync",
+  "x-legs": ["m2g", "s2c"],
+  "x-re": "never",
+  "type": "object",
+  "required": ["seen", "owned"],
+  "additionalProperties": false,
+  "properties": {
+    "seen": {
+      "type": "array",
+      "items": {"$ref": "../defs.schema.json#/$defs/dex"},
+      "uniqueItems": true
+    },
+    "owned": {
+      "type": "array",
+      "items": {"$ref": "../defs.schema.json#/$defs/dex"},
+      "uniqueItems": true
+    }
+  }
+}

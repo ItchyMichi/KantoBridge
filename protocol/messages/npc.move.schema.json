@@ -1,0 +1,20 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kantobridge.invalid/protocol/messages/npc.move.schema.json",
+  "title": "npc.move",
+  "description": "An NPC started a move to a cell.",
+  "x-type": "npc.move",
+  "x-legs": ["g2m"],
+  "x-re": "never",
+  "type": "object",
+  "required": ["id", "x", "y", "facing", "frames", "kind"],
+  "additionalProperties": false,
+  "properties": {
+    "id": {"$ref": "../defs.schema.json#/$defs/npcId"},
+    "x": {"$ref": "../defs.schema.json#/$defs/coord"},
+    "y": {"$ref": "../defs.schema.json#/$defs/coord"},
+    "facing": {"$ref": "../defs.schema.json#/$defs/dir"},
+    "frames": {"$ref": "../defs.schema.json#/$defs/frames"},
+    "kind": {"enum": ["walk", "script", "push", "march"]}
+  }
+}

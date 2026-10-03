@@ -1,0 +1,18 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kantobridge.invalid/protocol/messages/export.data.schema.json",
+  "title": "export.data",
+  "description": "One export resource (at most 1 MiB per line).",
+  "x-type": "export.data",
+  "x-legs": ["g2m"],
+  "x-re": "required",
+  "type": "object",
+  "required": ["kind", "id", "hash", "data"],
+  "additionalProperties": false,
+  "properties": {
+    "kind": {"$ref": "../defs.schema.json#/$defs/exportKind"},
+    "id": {"$ref": "../defs.schema.json#/$defs/id"},
+    "hash": {"$ref": "../defs.schema.json#/$defs/hash"},
+    "data": {"description": "The resource; its shape depends on kind.", "x-rom-derived": true}
+  }
+}

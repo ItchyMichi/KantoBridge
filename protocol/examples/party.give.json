@@ -1,0 +1,20 @@
+[
+  {
+    "type": "party.give",
+    "seq": 11,
+    "data": {"give": "g-1", "dex": 7, "level": 5, "moves": [33, 39], "source": "starter"}
+  },
+  {
+    "type": "party.give",
+    "seq": 12,
+    "data": {
+      "give": "g-2",
+      "dex": 1,
+      "level": 10,
+      "nick": "TESTY",
+      "ot": "TESTOT",
+      "dvs": {"atk": 1, "def": 2, "spd": 3, "spc": 4},
+      "source": "trade"
+    }
+  }
+]

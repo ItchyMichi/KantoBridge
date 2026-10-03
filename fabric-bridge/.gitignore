@@ -38,3 +38,6 @@ hs_err_*.log
 replay_*.log
 *.hprof
 *.jfr
+
+# Minecraft log output from tests or tools run in this folder
+logs/

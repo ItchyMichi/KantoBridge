@@ -1,0 +1,1 @@
+[{"type": "hello.reject", "seq": 11, "re": 1, "data": {"reason": "protocol", "protocol": 1}}]

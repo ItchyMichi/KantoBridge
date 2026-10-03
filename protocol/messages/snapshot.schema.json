@@ -1,0 +1,124 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kantobridge.invalid/protocol/messages/snapshot.schema.json",
+  "title": "snapshot",
+  "description": "The full story view: sent after hello.ok and in answer to resync.",
+  "x-type": "snapshot",
+  "x-legs": ["g2m"],
+  "x-re": "optional",
+  "type": "object",
+  "required": [
+    "player",
+    "state",
+    "flags",
+    "toggles",
+    "blocks",
+    "lit",
+    "bag",
+    "money",
+    "coins",
+    "badges",
+    "party",
+    "dex",
+    "npcs"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "player": {"$ref": "../defs.schema.json#/$defs/place"},
+    "state": {"$ref": "../defs.schema.json#/$defs/playerState"},
+    "flags": {
+      "type": "array",
+      "items": {"$ref": "../defs.schema.json#/$defs/flagId"},
+      "uniqueItems": true,
+      "description": "Every set flag."
+    },
+    "toggles": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "additionalProperties": {"type": "boolean"},
+        "properties": {}
+      },
+      "properties": {},
+      "propertyNames": {"$ref": "../defs.schema.json#/$defs/mapId"},
+      "description": "save.objectToggles: map -> object name -> visible."
+    },
+    "blocks": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["map", "bx", "by", "block"],
+        "additionalProperties": false,
+        "properties": {
+          "map": {"$ref": "../defs.schema.json#/$defs/mapId"},
+          "bx": {"type": "integer", "minimum": 0, "maximum": 255},
+          "by": {"type": "integer", "minimum": 0, "maximum": 255},
+          "block": {"type": "integer", "minimum": 0, "maximum": 255}
+        }
+      },
+      "description": "Live map blocks that differ from the map data.",
+      "x-rom-derived": true
+    },
+    "lit": {
+      "type": "array",
+      "items": {"$ref": "../defs.schema.json#/$defs/mapId"},
+      "uniqueItems": true
+    },
+    "bag": {
+      "type": "object",
+      "additionalProperties": {"type": "integer", "minimum": 0, "maximum": 9999},
+      "properties": {},
+      "propertyNames": {"$ref": "../defs.schema.json#/$defs/itemId"}
+    },
+    "money": {"type": "integer", "minimum": 0, "maximum": 999999},
+    "coins": {"type": "integer", "minimum": 0, "maximum": 9999},
+    "badges": {
+      "type": "array",
+      "items": {"$ref": "../defs.schema.json#/$defs/itemId"},
+      "maxItems": 8,
+      "uniqueItems": true
+    },
+    "party": {
+      "type": "array",
+      "items": {"$ref": "../defs.schema.json#/$defs/shadowMon"},
+      "maxItems": 6,
+      "description": "The shadow party."
+    },
+    "dex": {
+      "type": "object",
+      "required": ["seen", "owned"],
+      "additionalProperties": false,
+      "properties": {
+        "seen": {
+          "type": "array",
+          "items": {"$ref": "../defs.schema.json#/$defs/dex"},
+          "uniqueItems": true
+        },
+        "owned": {
+          "type": "array",
+          "items": {"$ref": "../defs.schema.json#/$defs/dex"},
+          "uniqueItems": true
+        }
+      }
+    },
+    "npcs": {
+      "type": "object",
+      "required": ["map", "list"],
+      "additionalProperties": false,
+      "properties": {
+        "map": {"$ref": "../defs.schema.json#/$defs/mapId"},
+        "list": {
+          "type": "array",
+          "items": {"$ref": "../defs.schema.json#/$defs/npc"},
+          "maxItems": 64
+        }
+      }
+    },
+    "ui": {
+      "type": "object",
+      "properties": {},
+      "description": "The open UI, as its ui.open data, if any.",
+      "x-rom-derived": true
+    }
+  }
+}

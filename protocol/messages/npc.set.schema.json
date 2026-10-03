@@ -1,0 +1,16 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kantobridge.invalid/protocol/messages/npc.set.schema.json",
+  "title": "npc.set",
+  "description": "The full NPC list of the current map (puppets are rebuilt from it).",
+  "x-type": "npc.set",
+  "x-legs": ["g2m"],
+  "x-re": "never",
+  "type": "object",
+  "required": ["map", "list"],
+  "additionalProperties": false,
+  "properties": {
+    "map": {"$ref": "../defs.schema.json#/$defs/mapId"},
+    "list": {"type": "array", "items": {"$ref": "../defs.schema.json#/$defs/npc"}, "maxItems": 64}
+  }
+}

@@ -1,6 +1,10 @@
 plugins {
 	id 'net.fabricmc.fabric-loom-remap' version "${loom_version}"
 	id 'maven-publish'
+	// There are no Kotlin sources. Loom remaps the Kotlin metadata of Kotlin mods only when this plugin is applied;
+	// without it, Cobblemon's metadata keeps intermediary names and its kotlin-reflect setup crashes in every dev
+	// runtime (GameTest, runServer, runClient) with ClassNotFoundException: net.minecraft.class_2960.
+	id 'org.jetbrains.kotlin.jvm' version "${kotlin_version}"
 }
 
 repositories {
@@ -31,6 +35,141 @@ loom {
 			sourceSet sourceSets.client
 		}
 	}
+
+	runs {
+		// The dev client and the headless server share local/minecraft (git-ignored): saves, generated
+		// packs and exports stay there, next to the user's own eula.txt (docs/PLAN.md §0.6, §4.5).
+		client {
+			runDir "../local/minecraft"
+		}
+		server {
+			runDir "../local/minecraft"
+		}
+	}
+}
+
+// Server GameTests run headless in build/run/gameTest and are part of `check` (so of `build`).
+// There is no client GameTest module on 1.21.1.
+fabricApi {
+	configureTests {
+		createSourceSet = true
+		modId = "kantobridge-gametest"
+		enableClientGameTests = false
+	}
+}
+
+loom {
+	runs {
+		gameTest {
+			vmArg "-Dfabric-api.gametest.report-file=${file('build/reports/gametest/TEST-gametest.xml').absolutePath}"
+		}
+	}
+}
+
+// Dev runtimes only. Minecraft lists ICU4J as a client library, so Loom strips it from server-side runs, but
+// Cobblemon's Showdown engine (GraalJS) needs it on the server: without it the server waits for Showdown forever.
+// Real servers get the copy bundled in Cobblemon's jar; this adds that same version (Cobblemon 1.8.1's POM).
+def serverRuntimeIcu = configurations.detachedConfiguration(dependencies.create("com.ibm.icu:icu4j:${project.cobblemon_icu4j_version}"))
+serverRuntimeIcu.transitive = false
+sourceSets.main.runtimeClasspath += serverRuntimeIcu      // runServer
+sourceSets.gametest.runtimeClasspath += serverRuntimeIcu  // runGameTest
+
+/**
+ * Fails when a mixin injector in the remapped jar still names its target method in Mojang names. Loom 1.17 remaps
+ * mixins with tiny-remapper (no refmap); a target it can't resolve keeps its dev name, works in dev and GameTests,
+ * and only breaks in a real game. Injectors with remap = false (targets in non-Minecraft code) are skipped.
+ */
+abstract class VerifyMixinRemap extends DefaultTask {
+	private static final Set<String> INJECTORS = [
+		"Lorg/spongepowered/asm/mixin/injection/Inject;",
+		"Lorg/spongepowered/asm/mixin/injection/Redirect;",
+		"Lorg/spongepowered/asm/mixin/injection/ModifyArg;",
+		"Lorg/spongepowered/asm/mixin/injection/ModifyArgs;",
+		"Lorg/spongepowered/asm/mixin/injection/ModifyConstant;",
+		"Lorg/spongepowered/asm/mixin/injection/ModifyVariable;",
+		"Lcom/llamalad7/mixinextras/injector/ModifyExpressionValue;",
+		"Lcom/llamalad7/mixinextras/injector/ModifyReturnValue;",
+		"Lcom/llamalad7/mixinextras/injector/WrapWithCondition;",
+		"Lcom/llamalad7/mixinextras/injector/wrapoperation/WrapOperation;",
+		"Lcom/llamalad7/mixinextras/injector/wrapmethod/WrapMethod;",
+	] as Set
+
+	@InputFile
+	abstract RegularFileProperty getJarFile()
+
+	@Input
+	abstract Property<String> getMixinPackage()
+
+	@OutputFile
+	abstract RegularFileProperty getReport()
+
+	@TaskAction
+	void verify() {
+		def checked = []
+		def failures = []
+		new java.util.zip.ZipFile(getJarFile().get().asFile).withCloseable { zip ->
+			zip.entries().each { entry ->
+				if (!entry.name.startsWith(getMixinPackage().get()) || !entry.name.endsWith(".class")) {
+					return
+				}
+				def node = new org.objectweb.asm.tree.ClassNode()
+				new org.objectweb.asm.ClassReader(zip.getInputStream(entry).bytes).accept(node, org.objectweb.asm.ClassReader.SKIP_CODE)
+				node.methods.each { method ->
+					((method.visibleAnnotations ?: []) + (method.invisibleAnnotations ?: [])).each { annotation ->
+						if (!INJECTORS.contains(annotation.desc)) {
+							return
+						}
+						def values = [:]
+						def raw = annotation.values ?: []
+						for (int i = 0; i + 1 < raw.size(); i += 2) {
+							values[raw[i]] = raw[i + 1]
+						}
+						if (values.remap == false) {
+							return
+						}
+						(values.method ?: []).each { String target ->
+							def where = "${node.name}.${method.name} -> ${target}"
+							checked << where
+							if (!(target ==~ /.*\bmethod_\d+.*/ || target.startsWith("<init>") || target.startsWith("<clinit>"))) {
+								failures << where
+							}
+						}
+					}
+				}
+			}
+		}
+		getReport().get().asFile.text = (checked.collect { "ok " + it } + failures.collect { "UNMAPPED " + it }).join("\n") + "\n"
+		if (!failures.isEmpty()) {
+			throw new GradleException("mixin targets were not remapped and would fail in a real game:\n  " + failures.join("\n  "))
+		}
+		if (checked.isEmpty()) {
+			throw new GradleException("no mixin injectors found under " + getMixinPackage().get())
+		}
+		logger.lifecycle("Mixin remap check: ${checked.size()} injector target(s) remapped")
+	}
+}
+
+def verifyMixinRemap = tasks.register("verifyMixinRemap", VerifyMixinRemap) {
+	group = "verification"
+	description = "Checks that every mixin injector target in the remapped jar was remapped."
+	jarFile = tasks.named("remapJar").flatMap { it.archiveFile }
+	mixinPackage = "dev/kantobridge/mixin/"
+	report = layout.buildDirectory.file("reports/mixin-remap.txt")
+}
+tasks.named("check") {
+	dependsOn verifyMixinRemap
+}
+
+// Loom only clears the client GameTest directory, so drop the previous server test world ourselves.
+def cleanGameTestWorld = tasks.register("cleanGameTestWorld", Delete) {
+	group = "verification"
+	description = "Deletes the world left by the previous server GameTest run."
+	delete layout.buildDirectory.dir("run/gameTest/world")
+}
+tasks.matching { it.name == "runGameTest" }.configureEach {
+	dependsOn cleanGameTestWorld
+	// A server that never finishes starting (e.g. a broken Cobblemon dependency) must fail the build, not hang it.
+	timeout = java.time.Duration.ofMinutes(15)
 }
 
 dependencies {
@@ -50,7 +189,79 @@ dependencies {
 	modImplementation "com.cobblemon:fabric:${project.cobblemon_version}"
 	// Kotlin runtime Cobblemon needs on Fabric. Cobblemon bundles this exact version; pinned here explicitly.
 	modImplementation "net.fabricmc:fabric-language-kotlin:${project.fabric_kotlin_version}"
+
+	// JUnit 5 inside Fabric Loader (Knot), so mixins apply in unit tests. Same version as the loader.
+	testImplementation "net.fabricmc:fabric-loader-junit:${project.loader_version}"
 }
+
+// ---- Protocol: the catalog in ../protocol is the single source of message types ----
+
+// The derived protocol catalog (docs/PROTOCOL.md). -Pkb.catalog=<path> points at another copy.
+def protocolDir = layout.projectDirectory.dir("../protocol")
+def catalogFile = layout.projectDirectory.file(providers.gradleProperty("kb.catalog").orElse("../protocol/catalog.json"))
+
+/** Writes MsgTypes.java: one String constant per message type in the catalog. */
+abstract class GenerateProtocolTypes extends DefaultTask {
+	@InputFile
+	@PathSensitive(PathSensitivity.NONE)
+	abstract RegularFileProperty getCatalog()
+
+	@OutputDirectory
+	abstract DirectoryProperty getOutputDir()
+
+	@TaskAction
+	void generate() {
+		def catalog = new groovy.json.JsonSlurper().parse(getCatalog().get().asFile)
+		def types = (catalog.messages as Map).keySet().toList().sort()
+		def names = [:]
+		def lines = []
+		types.each { String type ->
+			def name = type.toUpperCase(Locale.ROOT).replace('.', '_')
+			if (!(name ==~ /[A-Z][A-Z0-9_]*/)) throw new GradleException("protocol type '$type' gives an invalid constant name")
+			if (names.containsKey(name)) throw new GradleException("protocol types '$type' and '${names[name]}' map to the same constant")
+			names[name] = type
+			def legs = (catalog.messages[type].legs as List).join(", ")
+			lines << "\t/** {@code ${type}} (${legs}). */"
+			lines << "\tpublic static final String ${name} = \"${type}\";"
+		}
+		def out = getOutputDir().get().asFile
+		def pkg = new File(out, "dev/kantobridge/proto")
+		out.deleteDir()
+		pkg.mkdirs()
+		def all = types.collect { "\t\t" + it.toUpperCase(Locale.ROOT).replace('.', '_') }.join(",\n")
+		new File(pkg, "MsgTypes.java").setText("""\
+// Generated from protocol/catalog.json by the generateProtocolTypes Gradle task. Do not edit.
+package dev.kantobridge.proto;
+
+import java.util.List;
+
+/** Message type names of protocol ${catalog.protocol}, from protocol/catalog.json. */
+public final class MsgTypes {
+	/** The protocol number; hello and hello.ok must carry exactly this. */
+	public static final int PROTOCOL = ${catalog.protocol as int};
+
+${lines.join("\n")}
+
+	/** Every type, sorted. */
+	public static final List<String> ALL = List.of(
+${all}
+	);
+
+	private MsgTypes() {
+	}
+}
+""", "UTF-8")
+	}
+}
+
+def generateProtocolTypes = tasks.register("generateProtocolTypes", GenerateProtocolTypes) {
+	group = "build"
+	description = "Generates MsgTypes.java from protocol/catalog.json."
+	catalog = catalogFile
+	outputDir = layout.buildDirectory.dir("generated/sources/protocol/java")
+}
+
+sourceSets.main.java.srcDir(generateProtocolTypes)
 
 processResources {
 	def version = project.version
@@ -58,6 +269,25 @@ processResources {
 
 	filesMatching("fabric.mod.json") {
 		expand "version": version
+	}
+
+	// Bundle the catalog so both sides can check legs, reply rules and redaction at runtime.
+	from(catalogFile) {
+		into "kantobridge/protocol"
+		rename { "catalog.json" }
+	}
+}
+
+test {
+	useJUnitPlatform()
+	// Minecraft's logging writes logs/ into the working directory; keep it in build/, out of the source tree.
+	workingDir = layout.buildDirectory
+	// Tests read the real protocol examples and redaction vectors.
+	inputs.dir(protocolDir).withPathSensitivity(PathSensitivity.RELATIVE).withPropertyName("protocolDir")
+	systemProperty "kb.protocolDir", protocolDir.asFile.absolutePath
+	testLogging {
+		events "failed", "skipped"
+		exceptionFormat = "full"
 	}
 }
 

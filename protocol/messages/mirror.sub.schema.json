@@ -1,0 +1,13 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kantobridge.invalid/protocol/messages/mirror.sub.schema.json",
+  "title": "mirror.sub",
+  "description": "Start receiving mirror frames.",
+  "x-type": "mirror.sub",
+  "x-legs": ["m2g"],
+  "x-re": "never",
+  "type": "object",
+  "required": ["fps"],
+  "additionalProperties": false,
+  "properties": {"fps": {"type": "integer", "minimum": 1, "maximum": 30}}
+}

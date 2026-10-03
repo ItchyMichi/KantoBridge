@@ -1,0 +1,19 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kantobridge.invalid/protocol/messages/warp.schema.json",
+  "title": "warp",
+  "description": "A warp: start fades out; arrive gives the destination.",
+  "x-type": "warp",
+  "x-legs": ["g2m"],
+  "x-re": "never",
+  "type": "object",
+  "required": ["phase", "kind"],
+  "additionalProperties": false,
+  "properties": {
+    "phase": {"enum": ["start", "arrive"]},
+    "kind": {"$ref": "../defs.schema.json#/$defs/warpKind"},
+    "to": {"$ref": "../defs.schema.json#/$defs/place"}
+  },
+  "if": {"properties": {"phase": {"const": "arrive"}}},
+  "then": {"required": ["to"]}
+}

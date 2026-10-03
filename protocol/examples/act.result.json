@@ -1,0 +1,4 @@
+[
+  {"type": "act.result", "seq": 11, "re": 7, "data": {"ok": true}},
+  {"type": "act.result", "seq": 12, "re": 8, "data": {"ok": false, "reason": "not_idle"}}
+]

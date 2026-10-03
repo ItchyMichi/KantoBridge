@@ -1,0 +1,19 @@
+[
+  {
+    "type": "hello",
+    "seq": 11,
+    "data": {
+      "protocol": 1,
+      "role": "client",
+      "mod": "0.1.0",
+      "minecraft": "1.21.1",
+      "player": {"uuid": "3f2c4b1a-0e9d-4c8b-a7f6-e5d4c3b2a190", "name": "Tester"},
+      "world": {"id": "kanto-test", "multiplayer": false}
+    }
+  },
+  {
+    "type": "hello",
+    "seq": 12,
+    "data": {"protocol": 1, "role": "test", "mod": "fake_minecraft-0.1.0"}
+  }
+]

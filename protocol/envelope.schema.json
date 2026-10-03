@@ -1,0 +1,30 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kantobridge.invalid/protocol/envelope.schema.json",
+  "title": "envelope",
+  "description": "Every Kanto Bridge message, on the socket (one per line) and in the kantobridge:json relay payload.",
+  "type": "object",
+  "required": ["type", "seq", "data"],
+  "additionalProperties": false,
+  "properties": {
+    "type": {
+      "description": "Message type: lowercase dotted words.",
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_]*(\\.[a-z][a-z0-9_]*)*$",
+      "maxLength": 64
+    },
+    "seq": {
+      "description": "Counted from 1 per sender and per connection.",
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 9007199254740991
+    },
+    "re": {
+      "description": "On replies only: the seq of the message being answered.",
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 9007199254740991
+    },
+    "data": {"description": "Validated by messages/<type>.schema.json.", "type": "object"}
+  }
+}

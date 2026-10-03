@@ -1,0 +1,17 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kantobridge.invalid/protocol/messages/act.result.schema.json",
+  "title": "act.result",
+  "description": "Outcome of an act.* request.",
+  "x-type": "act.result",
+  "x-legs": ["g2m"],
+  "x-re": "required",
+  "type": "object",
+  "required": ["ok"],
+  "additionalProperties": false,
+  "properties": {
+    "ok": {"type": "boolean"},
+    "kind": {"$ref": "../defs.schema.json#/$defs/symbol"},
+    "reason": {"type": "string", "pattern": "^[a-z][a-z0-9_.]*$", "maxLength": 64}
+  }
+}

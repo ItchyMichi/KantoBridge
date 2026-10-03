@@ -1,0 +1,7 @@
+[
+  {
+    "type": "daycare.withdraw",
+    "seq": 11,
+    "data": {"uid": "0f8b6a2e-1c2d-4e5f-8a9b-0c1d2e3f4a5b", "steps": 420}
+  }
+]

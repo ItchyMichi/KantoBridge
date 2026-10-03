@@ -1,0 +1,4 @@
+[
+  {"type": "emote", "seq": 11, "data": {"target": "TEST_TOWN_obj_2", "bubble": "!", "frames": 60}},
+  {"type": "emote", "seq": 12, "data": {"target": "player", "bubble": null, "frames": 0}}
+]

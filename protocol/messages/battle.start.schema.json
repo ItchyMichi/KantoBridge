@@ -1,0 +1,74 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kantobridge.invalid/protocol/messages/battle.start.schema.json",
+  "title": "battle.start",
+  "description": "The hidden game starts a battle that Cobblemon fights.",
+  "x-type": "battle.start",
+  "x-legs": ["g2m", "c2s"],
+  "x-re": "never",
+  "type": "object",
+  "required": ["battle", "kind", "rules"],
+  "additionalProperties": false,
+  "properties": {
+    "battle": {"$ref": "../defs.schema.json#/$defs/id"},
+    "kind": {"enum": ["trainer", "rival", "scripted", "static", "surf", "fish"]},
+    "trainer": {
+      "type": "object",
+      "required": ["cls", "party"],
+      "additionalProperties": false,
+      "properties": {
+        "cls": {"$ref": "../defs.schema.json#/$defs/symbol", "description": "Trainer class symbol."},
+        "party": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 255,
+          "description": "Party index within the class."
+        },
+        "name": {"type": "string", "maxLength": 32, "x-rom-derived": true},
+        "npc": {"$ref": "../defs.schema.json#/$defs/npcId"},
+        "map": {"$ref": "../defs.schema.json#/$defs/mapId"},
+        "x": {"$ref": "../defs.schema.json#/$defs/coord"},
+        "y": {"$ref": "../defs.schema.json#/$defs/coord"}
+      }
+    },
+    "team": {
+      "type": "array",
+      "items": {"$ref": "../defs.schema.json#/$defs/teamMon"},
+      "maxItems": 6,
+      "minItems": 1,
+      "x-rom-derived": true
+    },
+    "wild": {
+      "type": "object",
+      "required": ["dex", "level"],
+      "additionalProperties": false,
+      "properties": {
+        "dex": {"$ref": "../defs.schema.json#/$defs/dex"},
+        "level": {"$ref": "../defs.schema.json#/$defs/level"},
+        "x": {"$ref": "../defs.schema.json#/$defs/coord"},
+        "y": {"$ref": "../defs.schema.json#/$defs/coord"}
+      },
+      "x-rom-derived": true
+    },
+    "rules": {
+      "type": "object",
+      "required": ["catch", "flee"],
+      "additionalProperties": false,
+      "properties": {"catch": {"type": "boolean"}, "flee": {"type": "boolean"}}
+    }
+  },
+  "allOf": [
+    {
+      "if": {"properties": {"kind": {"enum": ["trainer", "rival"]}}},
+      "then": {"required": ["trainer", "team"]}
+    },
+    {
+      "if": {"properties": {"kind": {"enum": ["static", "surf", "fish"]}}},
+      "then": {"required": ["wild"]}
+    },
+    {
+      "if": {"properties": {"kind": {"const": "scripted"}}},
+      "then": {"anyOf": [{"required": ["team"]}, {"required": ["wild"]}]}
+    }
+  ]
+}

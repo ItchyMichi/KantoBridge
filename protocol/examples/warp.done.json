@@ -1,0 +1,8 @@
+[
+  {
+    "type": "warp.done",
+    "seq": 11,
+    "re": 6,
+    "data": {"ok": true, "to": {"map": "TEST_HOUSE", "x": 2, "y": 7, "facing": "up"}}
+  }
+]

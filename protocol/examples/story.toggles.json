@@ -1,0 +1,7 @@
+[
+  {
+    "type": "story.toggles",
+    "seq": 11,
+    "data": {"map": "TEST_TOWN", "obj": "TESTTOWN_BALL", "visible": false}
+  }
+]

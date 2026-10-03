@@ -1,0 +1,16 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kantobridge.invalid/protocol/messages/party.take.schema.json",
+  "title": "party.take",
+  "description": "The hidden game takes a party Pokémon away (in-game trade).",
+  "x-type": "party.take",
+  "x-legs": ["g2m", "c2s"],
+  "x-re": "never",
+  "type": "object",
+  "required": ["uid", "reason"],
+  "additionalProperties": false,
+  "properties": {
+    "uid": {"$ref": "../defs.schema.json#/$defs/uid"},
+    "reason": {"enum": ["trade", "daycare"]}
+  }
+}

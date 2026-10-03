@@ -1,0 +1,7 @@
+[
+  {
+    "type": "player.blocked",
+    "seq": 11,
+    "data": {"dir": "up", "reason": "tile", "map": "TEST_TOWN", "x": 5, "y": 5, "n": 3}
+  }
+]

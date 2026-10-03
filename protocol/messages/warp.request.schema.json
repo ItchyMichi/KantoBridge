@@ -1,0 +1,16 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kantobridge.invalid/protocol/messages/warp.request.schema.json",
+  "title": "warp.request",
+  "description": "Teleport me to the hidden game's warp destination.",
+  "x-type": "warp.request",
+  "x-legs": ["c2s"],
+  "x-re": "never",
+  "type": "object",
+  "required": ["to"],
+  "additionalProperties": false,
+  "properties": {
+    "to": {"$ref": "../defs.schema.json#/$defs/place"},
+    "kind": {"$ref": "../defs.schema.json#/$defs/warpKind"}
+  }
+}

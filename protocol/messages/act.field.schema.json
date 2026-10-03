@@ -1,0 +1,24 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kantobridge.invalid/protocol/messages/act.field.schema.json",
+  "title": "act.field",
+  "description": "Use a field move or field item.",
+  "x-type": "act.field",
+  "x-legs": ["m2g"],
+  "x-re": "never",
+  "type": "object",
+  "required": ["action"],
+  "additionalProperties": false,
+  "properties": {
+    "action": {
+      "enum": ["cut", "surf", "strength", "flash", "dig", "teleport", "bicycle", "fish", "fly"]
+    },
+    "x": {"$ref": "../defs.schema.json#/$defs/coord"},
+    "y": {"$ref": "../defs.schema.json#/$defs/coord"},
+    "dest": {"$ref": "../defs.schema.json#/$defs/mapId", "description": "Fly destination."},
+    "item": {
+      "$ref": "../defs.schema.json#/$defs/itemId",
+      "description": "The rod or other item used, when relevant."
+    }
+  }
+}

@@ -1,0 +1,4 @@
+[
+  {"type": "move.step", "seq": 11, "data": {"dir": "up", "n": 1}},
+  {"type": "move.step", "seq": 12, "data": {"dir": "left", "n": 2, "push": true}}
+]

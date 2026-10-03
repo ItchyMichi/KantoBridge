@@ -1,0 +1,4 @@
+[
+  {"type": "debug.quit", "seq": 11, "data": {}},
+  {"type": "debug.quit", "seq": 12, "data": {"code": 1}}
+]

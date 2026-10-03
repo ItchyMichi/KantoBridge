@@ -14,6 +14,12 @@
 *.state
 *.ss[0-9]
 
+# --- Python (tools/.venv and caches) ---
+.venv/
+__pycache__/
+.pytest_cache/
+*.pyc
+
 # --- Build outputs ---
 build/
 out/

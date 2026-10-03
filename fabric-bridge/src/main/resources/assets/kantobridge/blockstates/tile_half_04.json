@@ -1,0 +1,7 @@
+{
+  "variants": {
+    "": {
+      "model": "kantobridge:block/tile_half_placeholder"
+    }
+  }
+}

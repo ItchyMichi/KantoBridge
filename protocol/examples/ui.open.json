@@ -1,0 +1,62 @@
+[
+  {
+    "type": "ui.open",
+    "seq": 11,
+    "data": {
+      "ui": 1,
+      "kind": "text",
+      "pages": [["Hello, tester!", "This is a test."], ["Bye!"]],
+      "cont": [[false, false], [false]]
+    }
+  },
+  {
+    "type": "ui.open",
+    "seq": 12,
+    "data": {"ui": 2, "kind": "choice", "labels": ["YES", "NO"], "index": 0}
+  },
+  {
+    "type": "ui.open",
+    "seq": 13,
+    "data": {
+      "ui": 3,
+      "kind": "menu",
+      "items": [{"label": "ITEMS"}, {"label": "SAVE"}],
+      "index": 0,
+      "top": 0,
+      "rows": 2,
+      "screen": "StartMenu"
+    }
+  },
+  {
+    "type": "ui.open",
+    "seq": 14,
+    "data": {
+      "ui": 4,
+      "kind": "list",
+      "title": "TEST SHOP",
+      "items": [{"label": "TEST ITEM", "right": "¥200"}],
+      "index": 0,
+      "top": 0,
+      "rows": 4,
+      "money": 3000
+    }
+  },
+  {
+    "type": "ui.open",
+    "seq": 15,
+    "data": {"ui": 5, "kind": "quantity", "qty": 1, "max": 15, "unit": 200}
+  },
+  {
+    "type": "ui.open",
+    "seq": 16,
+    "data": {
+      "ui": 6,
+      "kind": "naming",
+      "title": "YOUR NAME?",
+      "max": 7,
+      "presets": ["TESTER", "ALEX"],
+      "value": ""
+    }
+  },
+  {"type": "ui.open", "seq": 17, "data": {"ui": 7, "kind": "mirror", "screen": "PartyMenu"}}
+]

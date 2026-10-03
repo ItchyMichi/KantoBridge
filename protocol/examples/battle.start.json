@@ -1,0 +1,33 @@
+[
+  {
+    "type": "battle.start",
+    "seq": 11,
+    "data": {
+      "battle": "b-1",
+      "kind": "trainer",
+      "trainer": {
+        "cls": "TEST_CLASS",
+        "party": 0,
+        "name": "TEST TRAINER",
+        "npc": "TEST_TOWN_obj_3",
+        "map": "TEST_TOWN",
+        "x": 6,
+        "y": 1
+      },
+      "team": [
+        {"dex": 16, "level": 9, "moves": [33, 28], "dvs": {"atk": 9, "def": 8, "spd": 8, "spc": 8}}
+      ],
+      "rules": {"catch": false, "flee": false}
+    }
+  },
+  {
+    "type": "battle.start",
+    "seq": 12,
+    "data": {
+      "battle": "b-2",
+      "kind": "surf",
+      "wild": {"dex": 129, "level": 15, "x": 4, "y": 10},
+      "rules": {"catch": true, "flee": true}
+    }
+  }
+]

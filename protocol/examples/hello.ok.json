@@ -1,0 +1,14 @@
+[
+  {
+    "type": "hello.ok",
+    "seq": 11,
+    "re": 1,
+    "data": {
+      "protocol": 1,
+      "bridge": "0.1.0",
+      "engine": "0.3.49",
+      "game": "red",
+      "session": "s-7f3a91"
+    }
+  }
+]

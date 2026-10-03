@@ -1,0 +1,14 @@
+[
+  {
+    "type": "story.state",
+    "seq": 11,
+    "data": {
+      "full": true,
+      "active": ["TEST_TOWN:9:4", "TEST_TOWN:6:1"],
+      "surf": false,
+      "bike": false,
+      "lit": []
+    }
+  },
+  {"type": "story.state", "seq": 12, "data": {"full": false, "remove": ["TEST_TOWN:9:4"]}}
+]

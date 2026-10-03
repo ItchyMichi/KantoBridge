@@ -1,0 +1,21 @@
+[
+  {
+    "type": "party.sync",
+    "seq": 11,
+    "data": {
+      "party": [
+        {
+          "uid": "0f8b6a2e-1c2d-4e5f-8a9b-0c1d2e3f4a5b",
+          "dex": 7,
+          "level": 6,
+          "nick": "SHELLY",
+          "moves": [33, 39, 145],
+          "hp": 18,
+          "maxhp": 22,
+          "status": "psn"
+        }
+      ],
+      "box": {"count": 3}
+    }
+  }
+]

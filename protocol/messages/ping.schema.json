@@ -1,0 +1,20 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kantobridge.invalid/protocol/messages/ping.schema.json",
+  "title": "ping",
+  "description": "Heartbeat. The client pings every 2 s; either side drops the link after 10 s of silence.",
+  "x-type": "ping",
+  "x-legs": ["g2m", "m2g"],
+  "x-re": "never",
+  "type": "object",
+  "required": ["t"],
+  "additionalProperties": false,
+  "properties": {
+    "t": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 9007199254740991,
+      "description": "Sender's clock in ms."
+    }
+  }
+}

@@ -1,0 +1,22 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kantobridge.invalid/protocol/messages/npc.add.schema.json",
+  "title": "npc.add",
+  "description": "One NPC appeared.",
+  "x-type": "npc.add",
+  "x-legs": ["g2m"],
+  "x-re": "never",
+  "type": "object",
+  "required": ["map", "id", "sprite", "kind", "x", "y", "facing", "moving"],
+  "additionalProperties": false,
+  "properties": {
+    "map": {"$ref": "../defs.schema.json#/$defs/mapId"},
+    "id": {"$ref": "../defs.schema.json#/$defs/npcId"},
+    "sprite": {"$ref": "../defs.schema.json#/$defs/spriteId"},
+    "kind": {"enum": ["person", "item", "boulder", "static", "trainer"]},
+    "x": {"$ref": "../defs.schema.json#/$defs/coord"},
+    "y": {"$ref": "../defs.schema.json#/$defs/coord"},
+    "facing": {"$ref": "../defs.schema.json#/$defs/dir"},
+    "moving": {"type": "boolean"}
+  }
+}

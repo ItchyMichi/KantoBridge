@@ -9,10 +9,13 @@ local TCP socket: a Gen1Recomp mod (`gen1-bridge`) and a Fabric mod (`fabric-bri
 Kanto is built in Minecraft from each player's **own** ROM, on their own machine. Nothing from the
 ROM is ever distributed. This is a personal test project, with no licence.
 
-**Status:** setup only. Both mods are skeletons that log a line when loaded.
+**Status:** being built milestone by milestone from [`docs/PLAN.md`](docs/PLAN.md);
+[`docs/PROGRESS.md`](docs/PROGRESS.md) says where it stands. Nothing is playable yet.
 
 - [`docs/DESIGN.md`](docs/DESIGN.md): the full design
-- [`docs/PROTOCOL.md`](docs/PROTOCOL.md): the bridge protocol (skeleton)
+- [`docs/PLAN.md`](docs/PLAN.md): the implementation plan, and [`docs/PLAYTEST.md`](docs/PLAYTEST.md)
+  the manual checks for each milestone
+- [`docs/PROTOCOL.md`](docs/PROTOCOL.md): the bridge protocol (v1; schemas in `protocol/`)
 - [`docs/VERSIONS.md`](docs/VERSIONS.md): pinned versions
 - [`docs/REFERENCES.md`](docs/REFERENCES.md): reference projects, their licences, and how Gen1Recomp and Cobblemon work inside
 - [`CLAUDE.md`](CLAUDE.md): working rules for this repo
@@ -29,7 +32,8 @@ ROM is ever distributed. This is a personal test project, with no licence.
    JAVA_HOME="<path to JDK 21>" ./gradlew build   # PowerShell: $env:JAVA_HOME='<path>'; .\gradlew.bat build
    ```
 
-   `./gradlew runClient` starts a development Minecraft with Fabric API and Cobblemon.
+   `./gradlew runClient` starts a development Minecraft with Fabric API and Cobblemon (run folder
+   `local/minecraft/`). Automated checks never launch it; see [`docs/PLAYTEST.md`](docs/PLAYTEST.md).
 4. **Set up Gen1Recomp** in `local/` (git-ignored), from the official GitHub only. Never use
    gen1recomp[.]com, which is an impersonation site.
    1. Download the pinned Windows release zip listed in [`docs/VERSIONS.md`](docs/VERSIONS.md).
@@ -43,6 +47,8 @@ ROM is ever distributed. This is a personal test project, with no licence.
       Keep its window open behind Minecraft; don't minimise it.
 5. **Optional, for development:** clone the reference projects into `refs/` (git-ignored), as
    listed in [`docs/REFERENCES.md`](docs/REFERENCES.md).
+6. **Tests:** `.\tools\setup.ps1` creates the project-local Python venv (Python 3.12, wheels only),
+   then `.\tools\check.ps1` runs every automated test. See [`tools/README.md`](tools/README.md).
 
 ## Built on
 

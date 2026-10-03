@@ -1,0 +1,17 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kantobridge.invalid/protocol/messages/log.schema.json",
+  "title": "log",
+  "description": "Bridge diagnostics. Never game text: codes, symbols, counts and hashes only.",
+  "x-type": "log",
+  "x-legs": ["g2m"],
+  "x-re": "never",
+  "type": "object",
+  "required": ["level", "code", "msg"],
+  "additionalProperties": false,
+  "properties": {
+    "level": {"enum": ["debug", "info", "warn", "error"]},
+    "code": {"type": "string", "pattern": "^[a-z][a-z0-9_.]*$", "maxLength": 64},
+    "msg": {"type": "string", "maxLength": 500}
+  }
+}

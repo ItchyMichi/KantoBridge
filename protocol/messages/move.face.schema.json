@@ -1,0 +1,13 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kantobridge.invalid/protocol/messages/move.face.schema.json",
+  "title": "move.face",
+  "description": "Turn in place while idle.",
+  "x-type": "move.face",
+  "x-legs": ["m2g"],
+  "x-re": "never",
+  "type": "object",
+  "required": ["dir"],
+  "additionalProperties": false,
+  "properties": {"dir": {"$ref": "../defs.schema.json#/$defs/dir"}}
+}

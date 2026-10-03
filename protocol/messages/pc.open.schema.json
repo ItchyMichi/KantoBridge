@@ -1,0 +1,12 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kantobridge.invalid/protocol/messages/pc.open.schema.json",
+  "title": "pc.open",
+  "description": "Bill's PC was chosen; open Cobblemon's PC.",
+  "x-type": "pc.open",
+  "x-legs": ["g2m", "c2s"],
+  "x-re": "never",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {}
+}

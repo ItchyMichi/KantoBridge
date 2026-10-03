@@ -1,0 +1,13 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kantobridge.invalid/protocol/messages/daycare.deposit.schema.json",
+  "title": "daycare.deposit",
+  "description": "Daycare deposit: the server holds the Pokémon.",
+  "x-type": "daycare.deposit",
+  "x-legs": ["g2m", "c2s"],
+  "x-re": "never",
+  "type": "object",
+  "required": ["uid"],
+  "additionalProperties": false,
+  "properties": {"uid": {"$ref": "../defs.schema.json#/$defs/uid"}}
+}

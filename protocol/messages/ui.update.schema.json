@@ -1,0 +1,36 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kantobridge.invalid/protocol/messages/ui.update.schema.json",
+  "title": "ui.update",
+  "description": "Changed fields of an open UI.",
+  "x-type": "ui.update",
+  "x-legs": ["g2m"],
+  "x-re": "never",
+  "type": "object",
+  "required": ["ui"],
+  "additionalProperties": false,
+  "properties": {
+    "ui": {"$ref": "../defs.schema.json#/$defs/uiId"},
+    "index": {"type": "integer", "minimum": 0, "maximum": 255},
+    "top": {"type": "integer", "minimum": 0, "maximum": 255},
+    "page": {"type": "integer", "minimum": 0, "maximum": 255},
+    "line": {"type": "integer", "minimum": 0, "maximum": 255},
+    "waiting": {"type": "boolean", "description": "text: waiting for A (the arrow shows)."},
+    "done": {"type": "boolean", "description": "text: all pages shown."},
+    "items": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["label"],
+        "additionalProperties": false,
+        "properties": {
+          "label": {"type": "string", "maxLength": 1000},
+          "right": {"type": "string", "maxLength": 1000}
+        }
+      },
+      "maxItems": 256,
+      "x-rom-derived": true
+    },
+    "qty": {"type": "integer", "minimum": 0, "maximum": 999}
+  }
+}

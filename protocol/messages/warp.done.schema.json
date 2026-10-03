@@ -1,0 +1,13 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kantobridge.invalid/protocol/messages/warp.done.schema.json",
+  "title": "warp.done",
+  "description": "The server teleported the player.",
+  "x-type": "warp.done",
+  "x-legs": ["s2c"],
+  "x-re": "optional",
+  "type": "object",
+  "required": ["ok"],
+  "additionalProperties": false,
+  "properties": {"ok": {"type": "boolean"}, "to": {"$ref": "../defs.schema.json#/$defs/place"}}
+}

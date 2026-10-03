@@ -1,0 +1,4 @@
+[
+  {"type": "act.field", "seq": 11, "data": {"action": "cut", "x": 9, "y": 4}},
+  {"type": "act.field", "seq": 12, "data": {"action": "fish", "x": 4, "y": 10, "item": "OLD_ROD"}}
+]

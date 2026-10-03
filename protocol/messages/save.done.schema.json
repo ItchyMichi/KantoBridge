@@ -1,0 +1,13 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kantobridge.invalid/protocol/messages/save.done.schema.json",
+  "title": "save.done",
+  "description": "Minecraft finished saving.",
+  "x-type": "save.done",
+  "x-legs": ["m2g", "s2c"],
+  "x-re": "optional",
+  "type": "object",
+  "required": ["save", "ok"],
+  "additionalProperties": false,
+  "properties": {"save": {"$ref": "../defs.schema.json#/$defs/id"}, "ok": {"type": "boolean"}}
+}

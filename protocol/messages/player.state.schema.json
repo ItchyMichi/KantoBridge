@@ -1,0 +1,10 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kantobridge.invalid/protocol/messages/player.state.schema.json",
+  "title": "player.state",
+  "description": "The classifier's mode plus movement and light state. Sent on change.",
+  "x-type": "player.state",
+  "x-legs": ["g2m"],
+  "x-re": "never",
+  "$ref": "../defs.schema.json#/$defs/playerState"
+}

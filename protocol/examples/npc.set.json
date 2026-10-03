@@ -1,0 +1,29 @@
+[
+  {
+    "type": "npc.set",
+    "seq": 11,
+    "data": {
+      "map": "TEST_TOWN",
+      "list": [
+        {
+          "id": "TEST_TOWN_obj_1",
+          "sprite": "SPRITE_TEST_GIRL",
+          "kind": "person",
+          "x": 3,
+          "y": 8,
+          "facing": "down",
+          "moving": false
+        },
+        {
+          "id": "TEST_TOWN_obj_2",
+          "sprite": "SPRITE_TEST_BALL",
+          "kind": "item",
+          "x": 9,
+          "y": 2,
+          "facing": "down",
+          "moving": false
+        }
+      ]
+    }
+  }
+]

@@ -1,0 +1,23 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kantobridge.invalid/protocol/messages/ui.name.schema.json",
+  "title": "ui.name",
+  "description": "Confirm a name typed on our naming screen.",
+  "x-type": "ui.name",
+  "x-legs": ["m2g"],
+  "x-re": "never",
+  "type": "object",
+  "required": ["ui", "glyphs"],
+  "additionalProperties": false,
+  "properties": {
+    "ui": {"$ref": "../defs.schema.json#/$defs/uiId"},
+    "glyphs": {
+      "type": "array",
+      "items": {"type": "string", "maxLength": 8, "minLength": 1},
+      "maxItems": 10,
+      "minItems": 1,
+      "description": "Gen 1 charset glyph tokens, e.g. \"A\", \"é\", \"<PK>\".",
+      "x-rom-derived": true
+    }
+  }
+}

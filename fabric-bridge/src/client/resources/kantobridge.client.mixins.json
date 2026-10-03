@@ -1,0 +1,12 @@
+{
+	"required": true,
+	"minVersion": "0.8",
+	"package": "dev.kantobridge.mixin.client",
+	"compatibilityLevel": "JAVA_21",
+	"client": [
+		"BuiltInPackSourceMixin"
+	],
+	"injectors": {
+		"defaultRequire": 1
+	}
+}

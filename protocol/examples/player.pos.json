@@ -1,0 +1,20 @@
+[
+  {
+    "type": "player.pos",
+    "seq": 11,
+    "data": {
+      "map": "TEST_TOWN",
+      "x": 5,
+      "y": 5,
+      "facing": "up",
+      "kind": "walk",
+      "frames": 16,
+      "n": 1
+    }
+  },
+  {
+    "type": "player.pos",
+    "seq": 12,
+    "data": {"map": "TEST_TOWN", "x": 5, "y": 7, "facing": "down", "kind": "ledge", "frames": 32}
+  }
+]

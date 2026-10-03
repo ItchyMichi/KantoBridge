@@ -1,0 +1,13 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kantobridge.invalid/protocol/messages/pong.schema.json",
+  "title": "pong",
+  "description": "Answer to ping, echoing t.",
+  "x-type": "pong",
+  "x-legs": ["g2m", "m2g"],
+  "x-re": "required",
+  "type": "object",
+  "required": ["t"],
+  "additionalProperties": false,
+  "properties": {"t": {"type": "integer", "minimum": 0, "maximum": 9007199254740991}}
+}

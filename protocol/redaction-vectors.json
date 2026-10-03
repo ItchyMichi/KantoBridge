@@ -1,0 +1,549 @@
+{
+  "about": "Expected redaction of every protocol example, plus placeholder edge cases. Derived by tools/kb_protocol/catalog.py; never edit by hand.",
+  "placeholders": [
+    {"value": "", "placeholder": "<rom:str:0:12ae32cb>"},
+    {"value": "Hello, tester!", "placeholder": "<rom:str:14:fa0c98ef>"},
+    {"value": "é♂♀×¥ <PK><MN>", "placeholder": "<rom:str:14:41235969>"},
+    {"value": "line\nbreak\ttab \"quoted\" \\ back", "placeholder": "<rom:str:30:1f58544e>"},
+    {"value": 0, "placeholder": "<rom:num:0:5feceb66>"},
+    {"value": -42, "placeholder": "<rom:num:0:fec80006>"},
+    {"value": 9007199254740991, "placeholder": "<rom:num:0:f40b423c>"},
+    {"value": true, "placeholder": "<rom:bool:0:b5bea41b>"},
+    {"value": false, "placeholder": "<rom:bool:0:fcbcf165>"},
+    {"value": null, "placeholder": "<rom:null:0:74234e98>"},
+    {"value": [], "placeholder": "<rom:arr:0:4f53cda1>"},
+    {"value": {}, "placeholder": "<rom:obj:0:44136fa3>"},
+    {"value": [1, "two", [3], {"four": 4}], "placeholder": "<rom:arr:4:bc5c850d>"},
+    {"value": {"b": 1, "a": [true, null], "é": "x"}, "placeholder": "<rom:obj:3:d98845a5>"}
+  ],
+  "messages": [
+    {"type": "act.button", "seq": 11, "redacted": {"button": "start", "how": "tap"}},
+    {"type": "act.field", "seq": 11, "redacted": {"action": "cut", "x": 9, "y": 4}},
+    {
+      "type": "act.field",
+      "seq": 12,
+      "redacted": {"action": "fish", "x": 4, "y": 10, "item": "OLD_ROD"}
+    },
+    {"type": "act.interact", "seq": 11, "redacted": {"map": "TEST_TOWN", "x": 3, "y": 8}},
+    {"type": "act.result", "seq": 11, "redacted": {"ok": true}},
+    {"type": "act.result", "seq": 12, "redacted": {"ok": false, "reason": "not_idle"}},
+    {"type": "activity", "seq": 11, "redacted": {"activity": "dialogue"}},
+    {"type": "bag.sync", "seq": 11, "redacted": {"items": {"POKE_BALL": 5, "POTION": 2}}},
+    {"type": "bag.use", "seq": 11, "redacted": {"item": "POKE_BALL", "qty": 1}},
+    {"type": "battle.native", "seq": 11, "redacted": {"kind": "safari", "phase": "start"}},
+    {"type": "battle.result", "seq": 11, "redacted": {"battle": "b-1", "outcome": "win"}},
+    {
+      "type": "battle.result",
+      "seq": 12,
+      "redacted": {
+        "battle": "b-2",
+        "outcome": "caught",
+        "caught": {"uid": "6c1e2d3f-4a5b-4c6d-8e7f-a0b1c2d3e4f5", "dex": 129, "level": 15}
+      }
+    },
+    {
+      "type": "battle.start",
+      "seq": 11,
+      "redacted": {
+        "battle": "b-1",
+        "kind": "trainer",
+        "trainer": {
+          "cls": "TEST_CLASS",
+          "party": 0,
+          "name": "<rom:str:12:64039672>",
+          "npc": "TEST_TOWN_obj_3",
+          "map": "TEST_TOWN",
+          "x": 6,
+          "y": 1
+        },
+        "team": "<rom:arr:1:b77860b3>",
+        "rules": {"catch": false, "flee": false}
+      }
+    },
+    {
+      "type": "battle.start",
+      "seq": 12,
+      "redacted": {
+        "battle": "b-2",
+        "kind": "surf",
+        "wild": "<rom:obj:4:39661ca2>",
+        "rules": {"catch": true, "flee": true}
+      }
+    },
+    {
+      "type": "daycare.deposit",
+      "seq": 11,
+      "redacted": {"uid": "0f8b6a2e-1c2d-4e5f-8a9b-0c1d2e3f4a5b"}
+    },
+    {
+      "type": "daycare.withdraw",
+      "seq": 11,
+      "redacted": {"uid": "0f8b6a2e-1c2d-4e5f-8a9b-0c1d2e3f4a5b", "steps": 420}
+    },
+    {"type": "debug.quit", "seq": 11, "redacted": {}},
+    {"type": "debug.quit", "seq": 12, "redacted": {"code": 1}},
+    {"type": "debug.status", "seq": 11, "redacted": {}},
+    {
+      "type": "debug.status",
+      "seq": 12,
+      "redacted": {"npcs": 2, "topState": "OverworldState", "mode": "idle", "flags": 1, "party": 1}
+    },
+    {"type": "dex.sync", "seq": 11, "redacted": {"seen": [7, 16, 19], "owned": [7, 16]}},
+    {
+      "type": "emote",
+      "seq": 11,
+      "redacted": {"target": "TEST_TOWN_obj_2", "bubble": "!", "frames": 60}
+    },
+    {"type": "emote", "seq": 12, "redacted": {"target": "player", "bubble": null, "frames": 0}},
+    {"type": "error", "seq": 11, "redacted": {"code": "unknown_type", "msg": "type not in catalog"}},
+    {"type": "error", "seq": 12, "redacted": {"code": "bad_envelope", "msg": "missing seq"}},
+    {
+      "type": "export.data",
+      "seq": 11,
+      "redacted": {
+        "kind": "map",
+        "id": "TEST_TOWN",
+        "hash": "9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08",
+        "data": "<rom:obj:3:d5e37420>"
+      }
+    },
+    {"type": "export.get", "seq": 11, "redacted": {"kind": "map", "id": "TEST_TOWN"}},
+    {"type": "export.index", "seq": 11, "redacted": {}},
+    {
+      "type": "export.index",
+      "seq": 12,
+      "redacted": {
+        "game": "red",
+        "engine": "0.3.49",
+        "bridge": "0.1.0",
+        "resources": [
+          {
+            "kind": "map",
+            "id": "TEST_TOWN",
+            "hash": "9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08",
+            "size": 2048
+          }
+        ]
+      }
+    },
+    {
+      "type": "hello",
+      "seq": 11,
+      "redacted": {
+        "protocol": 1,
+        "role": "client",
+        "mod": "0.1.0",
+        "minecraft": "1.21.1",
+        "player": {"uuid": "3f2c4b1a-0e9d-4c8b-a7f6-e5d4c3b2a190", "name": "Tester"},
+        "world": {"id": "kanto-test", "multiplayer": false}
+      }
+    },
+    {
+      "type": "hello",
+      "seq": 12,
+      "redacted": {"protocol": 1, "role": "test", "mod": "fake_minecraft-0.1.0"}
+    },
+    {
+      "type": "hello.ok",
+      "seq": 11,
+      "redacted": {
+        "protocol": 1,
+        "bridge": "0.1.0",
+        "engine": "0.3.49",
+        "game": "red",
+        "session": "s-7f3a91"
+      }
+    },
+    {"type": "hello.reject", "seq": 11, "redacted": {"reason": "protocol", "protocol": 1}},
+    {
+      "type": "log",
+      "seq": 11,
+      "redacted": {"level": "warn", "code": "net.bind_busy", "msg": "port 27151 busy, retrying"}
+    },
+    {
+      "type": "mirror.frame",
+      "seq": 11,
+      "redacted": {"w": 160, "h": 144, "png": "<rom:str:92:b2db9613>", "n": 1}
+    },
+    {"type": "mirror.sub", "seq": 11, "redacted": {"fps": 20}},
+    {"type": "mirror.unsub", "seq": 11, "redacted": {}},
+    {"type": "move.face", "seq": 11, "redacted": {"dir": "right"}},
+    {"type": "move.hold", "seq": 11, "redacted": {"button": "b", "on": true}},
+    {"type": "move.step", "seq": 11, "redacted": {"dir": "up", "n": 1}},
+    {"type": "move.step", "seq": 12, "redacted": {"dir": "left", "n": 2, "push": true}},
+    {
+      "type": "npc.add",
+      "seq": 11,
+      "redacted": {
+        "map": "TEST_TOWN",
+        "id": "TEST_TOWN_obj_3",
+        "sprite": "SPRITE_TEST_GUARD",
+        "kind": "trainer",
+        "x": 6,
+        "y": 1,
+        "facing": "left",
+        "moving": false
+      }
+    },
+    {"type": "npc.face", "seq": 11, "redacted": {"id": "TEST_TOWN_obj_1", "facing": "up"}},
+    {
+      "type": "npc.move",
+      "seq": 11,
+      "redacted": {
+        "id": "TEST_TOWN_obj_1",
+        "x": 4,
+        "y": 8,
+        "facing": "right",
+        "frames": 16,
+        "kind": "walk"
+      }
+    },
+    {"type": "npc.remove", "seq": 11, "redacted": {"id": "TEST_TOWN_obj_2"}},
+    {
+      "type": "npc.set",
+      "seq": 11,
+      "redacted": {
+        "map": "TEST_TOWN",
+        "list": [
+          {
+            "id": "TEST_TOWN_obj_1",
+            "sprite": "SPRITE_TEST_GIRL",
+            "kind": "person",
+            "x": 3,
+            "y": 8,
+            "facing": "down",
+            "moving": false
+          },
+          {
+            "id": "TEST_TOWN_obj_2",
+            "sprite": "SPRITE_TEST_BALL",
+            "kind": "item",
+            "x": 9,
+            "y": 2,
+            "facing": "down",
+            "moving": false
+          }
+        ]
+      }
+    },
+    {
+      "type": "party.give",
+      "seq": 11,
+      "redacted": {"give": "g-1", "dex": 7, "level": 5, "moves": [33, 39], "source": "starter"}
+    },
+    {
+      "type": "party.give",
+      "seq": 12,
+      "redacted": {
+        "give": "g-2",
+        "dex": 1,
+        "level": 10,
+        "nick": "<rom:str:5:4edca1de>",
+        "ot": "<rom:str:6:e3313cea>",
+        "dvs": {"atk": 1, "def": 2, "spd": 3, "spc": 4},
+        "source": "trade"
+      }
+    },
+    {"type": "party.heal", "seq": 11, "redacted": {}},
+    {
+      "type": "party.item",
+      "seq": 11,
+      "redacted": {"item": "TEST_STONE", "uid": "0f8b6a2e-1c2d-4e5f-8a9b-0c1d2e3f4a5b"}
+    },
+    {
+      "type": "party.item",
+      "seq": 12,
+      "redacted": {
+        "item": "HM01",
+        "uid": "0f8b6a2e-1c2d-4e5f-8a9b-0c1d2e3f4a5b",
+        "slot": 3,
+        "move": 15
+      }
+    },
+    {
+      "type": "party.rename",
+      "seq": 11,
+      "redacted": {"uid": "0f8b6a2e-1c2d-4e5f-8a9b-0c1d2e3f4a5b", "nick": "<rom:str:7:04f88a79>"}
+    },
+    {
+      "type": "party.sync",
+      "seq": 11,
+      "redacted": {
+        "party": [
+          {
+            "uid": "0f8b6a2e-1c2d-4e5f-8a9b-0c1d2e3f4a5b",
+            "dex": 7,
+            "level": 6,
+            "nick": "<rom:str:6:75856af0>",
+            "moves": [33, 39, 145],
+            "hp": 18,
+            "maxhp": 22,
+            "status": "psn"
+          }
+        ],
+        "box": {"count": 3}
+      }
+    },
+    {
+      "type": "party.take",
+      "seq": 11,
+      "redacted": {"uid": "0f8b6a2e-1c2d-4e5f-8a9b-0c1d2e3f4a5b", "reason": "trade"}
+    },
+    {"type": "pc.closed", "seq": 11, "redacted": {}},
+    {"type": "pc.open", "seq": 11, "redacted": {}},
+    {"type": "ping", "seq": 11, "redacted": {"t": 123456}},
+    {
+      "type": "player.blocked",
+      "seq": 11,
+      "redacted": {"dir": "up", "reason": "tile", "map": "TEST_TOWN", "x": 5, "y": 5, "n": 3}
+    },
+    {
+      "type": "player.pos",
+      "seq": 11,
+      "redacted": {
+        "map": "TEST_TOWN",
+        "x": 5,
+        "y": 5,
+        "facing": "up",
+        "kind": "walk",
+        "frames": 16,
+        "n": 1
+      }
+    },
+    {
+      "type": "player.pos",
+      "seq": 12,
+      "redacted": {
+        "map": "TEST_TOWN",
+        "x": 5,
+        "y": 7,
+        "facing": "down",
+        "kind": "ledge",
+        "frames": 32
+      }
+    },
+    {
+      "type": "player.state",
+      "seq": 11,
+      "redacted": {
+        "mode": "cutscene",
+        "bike": false,
+        "surf": false,
+        "slope": false,
+        "hidden": false,
+        "dark": false,
+        "lit": false
+      }
+    },
+    {"type": "pong", "seq": 11, "redacted": {"t": 123456}},
+    {"type": "resync", "seq": 11, "redacted": {}},
+    {"type": "save.begin", "seq": 11, "redacted": {"save": "sv-1", "reason": "menu"}},
+    {"type": "save.done", "seq": 11, "redacted": {"save": "sv-1", "ok": true}},
+    {"type": "session.bind", "seq": 11, "redacted": {"world": "kanto-test", "multiplayer": true}},
+    {"type": "session.bound", "seq": 11, "redacted": {"slot": 2}},
+    {
+      "type": "snapshot",
+      "seq": 11,
+      "redacted": {
+        "player": {"map": "TEST_TOWN", "x": 5, "y": 6, "facing": "down"},
+        "state": {
+          "mode": "idle",
+          "bike": false,
+          "surf": false,
+          "slope": false,
+          "hidden": false,
+          "dark": false,
+          "lit": false
+        },
+        "flags": ["EVENT_TEST_STARTED"],
+        "toggles": {"TEST_TOWN": {"TESTTOWN_HELPER": true}},
+        "blocks": "<rom:arr:1:5601b5d0>",
+        "lit": [],
+        "bag": {"POKE_BALL": 5, "POTION": 1},
+        "money": 3000,
+        "coins": 0,
+        "badges": [],
+        "party": [
+          {
+            "uid": "0f8b6a2e-1c2d-4e5f-8a9b-0c1d2e3f4a5b",
+            "dex": 7,
+            "level": 5,
+            "moves": [33, 39],
+            "hp": 20,
+            "maxhp": 20
+          }
+        ],
+        "dex": {"seen": [7, 16], "owned": [7]},
+        "npcs": {
+          "map": "TEST_TOWN",
+          "list": [
+            {
+              "id": "TEST_TOWN_obj_1",
+              "sprite": "SPRITE_TEST_GIRL",
+              "kind": "person",
+              "x": 3,
+              "y": 8,
+              "facing": "down",
+              "moving": false
+            }
+          ]
+        }
+      }
+    },
+    {
+      "type": "snapshot",
+      "seq": 12,
+      "redacted": {
+        "player": {"map": "TEST_HOUSE", "x": 2, "y": 4, "facing": "up"},
+        "state": {
+          "mode": "screen",
+          "bike": false,
+          "surf": false,
+          "slope": false,
+          "hidden": false,
+          "dark": false,
+          "lit": false
+        },
+        "flags": [],
+        "toggles": {},
+        "blocks": "<rom:arr:0:4f53cda1>",
+        "lit": [],
+        "bag": {},
+        "money": 0,
+        "coins": 0,
+        "badges": [],
+        "party": [],
+        "dex": {"seen": [], "owned": []},
+        "npcs": {"map": "TEST_HOUSE", "list": []},
+        "ui": "<rom:obj:4:fe42173f>"
+      }
+    },
+    {
+      "type": "story.blocks",
+      "seq": 11,
+      "redacted": {"map": "TEST_TOWN", "changes": "<rom:arr:1:407b9bbf>"}
+    },
+    {"type": "story.flags", "seq": 11, "redacted": {"set": ["EVENT_TEST_STARTED"], "clear": []}},
+    {"type": "story.lit", "seq": 11, "redacted": {"map": "TEST_CAVE", "lit": true}},
+    {
+      "type": "story.state",
+      "seq": 11,
+      "redacted": {
+        "full": true,
+        "active": ["TEST_TOWN:9:4", "TEST_TOWN:6:1"],
+        "surf": false,
+        "bike": false,
+        "lit": []
+      }
+    },
+    {"type": "story.state", "seq": 12, "redacted": {"full": false, "remove": ["TEST_TOWN:9:4"]}},
+    {
+      "type": "story.toggles",
+      "seq": 11,
+      "redacted": {"map": "TEST_TOWN", "obj": "TESTTOWN_BALL", "visible": false}
+    },
+    {
+      "type": "texture.status",
+      "seq": 11,
+      "redacted": {"ok": true, "slotMapHash": "a1b2c3d4e5f60718", "textures": 512}
+    },
+    {"type": "ui.advance", "seq": 11, "redacted": {"ui": 1}},
+    {"type": "ui.back", "seq": 11, "redacted": {"ui": 3}},
+    {"type": "ui.close", "seq": 11, "redacted": {"ui": 1}},
+    {"type": "ui.name", "seq": 11, "redacted": {"ui": 6, "glyphs": "<rom:arr:4:dcda0d91>"}},
+    {
+      "type": "ui.open",
+      "seq": 11,
+      "redacted": {
+        "ui": 1,
+        "kind": "text",
+        "pages": "<rom:arr:2:48aa7b77>",
+        "cont": [[false, false], [false]]
+      }
+    },
+    {
+      "type": "ui.open",
+      "seq": 12,
+      "redacted": {"ui": 2, "kind": "choice", "labels": "<rom:arr:2:8c593ca2>", "index": 0}
+    },
+    {
+      "type": "ui.open",
+      "seq": 13,
+      "redacted": {
+        "ui": 3,
+        "kind": "menu",
+        "items": "<rom:arr:2:5347112e>",
+        "index": 0,
+        "top": 0,
+        "rows": 2,
+        "screen": "StartMenu"
+      }
+    },
+    {
+      "type": "ui.open",
+      "seq": 14,
+      "redacted": {
+        "ui": 4,
+        "kind": "list",
+        "title": "<rom:str:9:54f479d3>",
+        "items": "<rom:arr:1:4d9745f3>",
+        "index": 0,
+        "top": 0,
+        "rows": 4,
+        "money": 3000
+      }
+    },
+    {
+      "type": "ui.open",
+      "seq": 15,
+      "redacted": {"ui": 5, "kind": "quantity", "qty": 1, "max": 15, "unit": 200}
+    },
+    {
+      "type": "ui.open",
+      "seq": 16,
+      "redacted": {
+        "ui": 6,
+        "kind": "naming",
+        "title": "<rom:str:10:a7fe4c86>",
+        "max": 7,
+        "presets": "<rom:arr:2:e6153efc>",
+        "value": "<rom:str:0:12ae32cb>"
+      }
+    },
+    {"type": "ui.open", "seq": 17, "redacted": {"ui": 7, "kind": "mirror", "screen": "PartyMenu"}},
+    {"type": "ui.pick", "seq": 11, "redacted": {"ui": 2, "index": 0}},
+    {"type": "ui.qty", "seq": 11, "redacted": {"ui": 5, "qty": 3}},
+    {"type": "ui.update", "seq": 11, "redacted": {"ui": 1, "page": 1, "line": 0, "waiting": true}},
+    {"type": "ui.update", "seq": 12, "redacted": {"ui": 3, "index": 1}},
+    {"type": "warp", "seq": 11, "redacted": {"phase": "start", "kind": "door"}},
+    {
+      "type": "warp",
+      "seq": 12,
+      "redacted": {
+        "phase": "arrive",
+        "kind": "door",
+        "to": {"map": "TEST_HOUSE", "x": 2, "y": 7, "facing": "up"}
+      }
+    },
+    {
+      "type": "warp.done",
+      "seq": 11,
+      "redacted": {"ok": true, "to": {"map": "TEST_HOUSE", "x": 2, "y": 7, "facing": "up"}}
+    },
+    {
+      "type": "warp.request",
+      "seq": 11,
+      "redacted": {"to": {"map": "TEST_HOUSE", "x": 2, "y": 7, "facing": "up"}, "kind": "door"}
+    },
+    {
+      "type": "world.index",
+      "seq": 11,
+      "redacted": {
+        "index": 0,
+        "count": 1,
+        "hash": "a1b2c3d4e5f60718",
+        "part": "<rom:str:36:aaa8570b>"
+      }
+    }
+  ]
+}

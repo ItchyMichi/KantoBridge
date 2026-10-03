@@ -1,0 +1,15 @@
+{
+  "names": [
+    "Trainer"
+  ],
+  "hitbox": "player",
+  "canDespawn": false,
+  "isMovable": false,
+  "isInvulnerable": true,
+  "isLeashable": false,
+  "allowProjectileHits": false,
+  "hideNameTag": true,
+  "autoHealParty": true,
+  "randomizePartyOrder": false,
+  "skill": 1
+}

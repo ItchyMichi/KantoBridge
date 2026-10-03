@@ -1,0 +1,15 @@
+[
+  {
+    "type": "player.state",
+    "seq": 11,
+    "data": {
+      "mode": "cutscene",
+      "bike": false,
+      "surf": false,
+      "slope": false,
+      "hidden": false,
+      "dark": false,
+      "lit": false
+    }
+  }
+]

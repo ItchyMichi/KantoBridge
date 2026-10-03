@@ -1,0 +1,101 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kantobridge.invalid/protocol/messages/ui.open.schema.json",
+  "title": "ui.open",
+  "description": "A hidden-game UI opened; the client shows the matching screen.",
+  "x-type": "ui.open",
+  "x-legs": ["g2m"],
+  "x-re": "never",
+  "type": "object",
+  "required": ["ui", "kind"],
+  "additionalProperties": false,
+  "properties": {
+    "ui": {"$ref": "../defs.schema.json#/$defs/uiId"},
+    "kind": {"enum": ["text", "choice", "menu", "list", "quantity", "naming", "mirror"]},
+    "pages": {
+      "type": "array",
+      "items": {"type": "array", "items": {"type": "string", "maxLength": 1000}, "maxItems": 8},
+      "maxItems": 64,
+      "description": "text: pages of lines, with the charmap markup of PROTOCOL.md.",
+      "x-rom-derived": true
+    },
+    "cont": {
+      "type": "array",
+      "items": {"type": "array", "items": {"type": "boolean"}, "maxItems": 8},
+      "maxItems": 64,
+      "description": "text: per line, whether it continues (scrolls) from the previous one."
+    },
+    "auto": {"type": "boolean", "description": "text: closes by itself."},
+    "stay": {"type": "boolean", "description": "text: stays open under the next screen."},
+    "instant": {"type": "boolean", "description": "text: printed at once."},
+    "labels": {
+      "type": "array",
+      "items": {"type": "string", "maxLength": 1000},
+      "maxItems": 8,
+      "description": "choice: option labels.",
+      "x-rom-derived": true
+    },
+    "question": {"type": "string", "maxLength": 1000, "x-rom-derived": true},
+    "title": {"type": "string", "maxLength": 1000, "x-rom-derived": true},
+    "items": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["label"],
+        "additionalProperties": false,
+        "properties": {
+          "label": {"type": "string", "maxLength": 1000},
+          "right": {"type": "string", "maxLength": 1000}
+        }
+      },
+      "maxItems": 256,
+      "x-rom-derived": true
+    },
+    "index": {"type": "integer", "minimum": 0, "maximum": 255},
+    "top": {"type": "integer", "minimum": 0, "maximum": 255},
+    "rows": {"type": "integer", "minimum": 1, "maximum": 32},
+    "screen": {
+      "$ref": "../defs.schema.json#/$defs/symbol",
+      "description": "The engine screen id or class, e.g. BagMenu."
+    },
+    "footer": {"type": "string", "maxLength": 1000, "x-rom-derived": true},
+    "money": {"type": "integer", "minimum": 0, "maximum": 999999},
+    "qty": {"type": "integer", "minimum": 0, "maximum": 999},
+    "max": {"type": "integer", "minimum": 1, "maximum": 999},
+    "unit": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 999999,
+      "description": "quantity: price per unit."
+    },
+    "presets": {
+      "type": "array",
+      "items": {"type": "string", "maxLength": 1000},
+      "maxItems": 8,
+      "x-rom-derived": true
+    },
+    "value": {
+      "type": "string",
+      "maxLength": 1000,
+      "description": "naming: the default name.",
+      "x-rom-derived": true
+    },
+    "mon": {
+      "$ref": "../defs.schema.json#/$defs/dex",
+      "description": "naming: the Pokémon being named."
+    }
+  },
+  "allOf": [
+    {"if": {"properties": {"kind": {"const": "text"}}}, "then": {"required": ["pages", "cont"]}},
+    {"if": {"properties": {"kind": {"const": "choice"}}}, "then": {"required": ["labels", "index"]}},
+    {
+      "if": {"properties": {"kind": {"enum": ["menu", "list"]}}},
+      "then": {"required": ["items", "index", "top", "rows"]}
+    },
+    {"if": {"properties": {"kind": {"const": "quantity"}}}, "then": {"required": ["qty", "max"]}},
+    {
+      "if": {"properties": {"kind": {"const": "naming"}}},
+      "then": {"required": ["title", "max", "presets", "value"]}
+    }
+  ]
+}

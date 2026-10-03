@@ -1,0 +1,12 @@
+[
+  {"type": "battle.result", "seq": 11, "data": {"battle": "b-1", "outcome": "win"}},
+  {
+    "type": "battle.result",
+    "seq": 12,
+    "data": {
+      "battle": "b-2",
+      "outcome": "caught",
+      "caught": {"uid": "6c1e2d3f-4a5b-4c6d-8e7f-a0b1c2d3e4f5", "dex": 129, "level": 15}
+    }
+  }
+]

@@ -3,7 +3,9 @@
 The Minecraft half of Kanto Bridge: a Fabric mod (Java) for Minecraft 1.21.1 with Cobblemon 1.8.1.
 Mod id `kantobridge`, package `dev.kantobridge`.
 
-**Status: skeleton.** The mod initializer only logs `kantobridge loaded`.
+**Status: M0 foundations.** Protocol codec and catalog, the client↔server relay skeleton, tile blocks, static
+world data and the test harnesses are in place; gameplay arrives milestone by milestone
+([`docs/PLAN.md`](../docs/PLAN.md), [`docs/PROGRESS.md`](../docs/PROGRESS.md)).
 
 Generated with Fabric's official template generator (`@fabricmc/cli init`, CC0), using Mojang mappings
 and split client/common sources. It was then changed as follows:
@@ -30,16 +32,36 @@ In IntelliJ, set *Settings → Build Tools → Gradle → Gradle JVM* to the JDK
 
 ## Layout
 
-- `src/main/java/` holds common code that runs on both server and client: `dev.kantobridge.KantoBridge`.
-- `src/client/java/` holds client-only code: `dev.kantobridge.client.KantoBridgeClient`. Rendering, screens and the
-  client-side NPC puppets will go here.
-- `src/main/resources/fabric.mod.json` declares the dependencies: Fabric Loader, Minecraft ~1.21.1, Java 21,
-  Fabric API and Cobblemon ~1.8.1.
+| Path | Contents |
+|---|---|
+| `src/main/java/dev/kantobridge/` | Common code. `proto/` (strict JSON, `Envelope`, `Catalog`, `Redact`; `MsgTypes` is generated), `net/` (the `kantobridge:json` payload and the server `RelayService`), `block/` (tile blocks), `battle/`, `mixin/` |
+| `src/main/resources/` | `fabric.mod.json`, `kantobridge.mixins.json`, and static data: the void world preset, biomes, the deeper overworld, battle-proxy NPC classes, the interior spawn rule, recipe overrides, placeholder tile models |
+| `src/client/java/dev/kantobridge/client/` | Client-only code: `net/ClientRelay`, `packs/GeneratedPack` and the pack-source mixin (`mixin/client/`) |
+| `src/test/java/` | JUnit 5 under Fabric Loader (`fabric-loader-junit`): codec, catalog, redaction vectors, protocol examples, tile blocks, generated pack |
+| `src/gametest/` | Server GameTests (mod `kantobridge-gametest`): Cobblemon start-up and mock players, tile blocks, static data, relay, battle-proxy hiding |
+
+The protocol catalog comes from [`../protocol/catalog.json`](../protocol/README.md): the build generates
+`MsgTypes.java` from it and bundles it in the jar as `kantobridge/protocol/catalog.json`.
 
 ## Tasks
 
 | Command | Result |
 |---|---|
-| `./gradlew build` | Builds `build/libs/kantobridge-<version>.jar` (plus a sources jar). |
-| `./gradlew runClient` | Starts a development Minecraft client with this mod, Fabric API and Cobblemon. |
-| `./gradlew genSources` | Decompiles Minecraft with Parchment names, for reading in the IDE. |
+| `./gradlew build` | Builds `build/libs/kantobridge-<version>.jar` and runs `check`: JUnit (`test`), the server GameTests (`runGameTest`) and `verifyMixinRemap` |
+| `./gradlew test` | JUnit only (reads `../protocol/` for examples and redaction vectors) |
+| `./gradlew runGameTest` | Server GameTests, headless, in `build/run/gameTest` (its old world is deleted first; 15-minute timeout). Report: `build/reports/gametest/TEST-gametest.xml` |
+| `./gradlew runServer` | A dev server in `../local/minecraft` (git-ignored); needs the user's `eula.txt` there |
+| `./gradlew runClient` | A dev client in `../local/minecraft`. Agents never use it for verification: nobody can see it |
+| `./gradlew genSources` | Decompiles Minecraft with Parchment names, for reading in the IDE |
+
+## Build notes
+
+- **Kotlin Gradle plugin, no Kotlin sources.** Loom remaps the Kotlin metadata of Kotlin mods only when the
+  `org.jetbrains.kotlin.jvm` plugin is applied. Without it, Cobblemon's metadata keeps intermediary names and its
+  start-up crashes in every dev runtime (`ClassNotFoundException: net.minecraft.class_2960`). The plugin version
+  equals Cobblemon's Kotlin (2.2.20). After changing it, delete `.gradle/loom-cache/remapped_mods` once.
+- **ICU4J on server runs.** Minecraft lists ICU4J as a client library, so Loom drops it from server-side runs, but
+  Cobblemon's Showdown engine needs it. The build adds Cobblemon's own version to `runServer` and `runGameTest`
+  only; real servers use the copy bundled in Cobblemon's jar.
+- **Mixin remapping.** Loom 1.17 remaps mixins with tiny-remapper (no refmap). `verifyMixinRemap` fails the build if
+  an injector target in the remapped jar still has its Mojang name, which would only break in a real game.

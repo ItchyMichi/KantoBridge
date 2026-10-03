@@ -1,0 +1,13 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kantobridge.invalid/protocol/messages/ui.advance.schema.json",
+  "title": "ui.advance",
+  "description": "A on a text box; gen1-bridge queues it until the box is ready.",
+  "x-type": "ui.advance",
+  "x-legs": ["m2g"],
+  "x-re": "never",
+  "type": "object",
+  "required": ["ui"],
+  "additionalProperties": false,
+  "properties": {"ui": {"$ref": "../defs.schema.json#/$defs/uiId"}}
+}

@@ -1,0 +1,16 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kantobridge.invalid/protocol/messages/act.button.schema.json",
+  "title": "act.button",
+  "description": "A raw button for the mirror screen or the start menu.",
+  "x-type": "act.button",
+  "x-legs": ["m2g"],
+  "x-re": "never",
+  "type": "object",
+  "required": ["button", "how"],
+  "additionalProperties": false,
+  "properties": {
+    "button": {"$ref": "../defs.schema.json#/$defs/button"},
+    "how": {"enum": ["tap", "down", "up"]}
+  }
+}

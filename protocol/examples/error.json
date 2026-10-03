@@ -1,0 +1,9 @@
+[
+  {
+    "type": "error",
+    "seq": 11,
+    "re": 12,
+    "data": {"code": "unknown_type", "msg": "type not in catalog"}
+  },
+  {"type": "error", "seq": 12, "data": {"code": "bad_envelope", "msg": "missing seq"}}
+]

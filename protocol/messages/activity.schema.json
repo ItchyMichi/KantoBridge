@@ -1,0 +1,13 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kantobridge.invalid/protocol/messages/activity.schema.json",
+  "title": "activity",
+  "description": "What the player is doing, for speech bubbles.",
+  "x-type": "activity",
+  "x-legs": ["c2s"],
+  "x-re": "never",
+  "type": "object",
+  "required": ["activity"],
+  "additionalProperties": false,
+  "properties": {"activity": {"enum": ["dialogue", "cutscene", "battle", "none"]}}
+}

@@ -1,0 +1,41 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kantobridge.invalid/protocol/messages/hello.schema.json",
+  "title": "hello",
+  "description": "First message from the Minecraft side. gen1-bridge answers hello.ok or hello.reject.",
+  "x-type": "hello",
+  "x-legs": ["m2g"],
+  "x-re": "never",
+  "type": "object",
+  "required": ["protocol", "role", "mod"],
+  "additionalProperties": false,
+  "properties": {
+    "protocol": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 1000,
+      "description": "Must equal gen1-bridge's protocol number exactly."
+    },
+    "role": {"enum": ["client", "builder", "test"]},
+    "mod": {"type": "string", "pattern": "^[0-9A-Za-z.+_-]+$", "maxLength": 32},
+    "minecraft": {"type": "string", "pattern": "^[0-9A-Za-z.+_-]+$", "maxLength": 32},
+    "player": {
+      "type": "object",
+      "required": ["uuid", "name"],
+      "additionalProperties": false,
+      "properties": {
+        "uuid": {"type": "string", "pattern": "^[0-9a-f-]{36}$", "maxLength": 36},
+        "name": {"type": "string", "pattern": "^[A-Za-z0-9_]{1,16}$", "maxLength": 16}
+      }
+    },
+    "world": {
+      "type": "object",
+      "required": ["id", "multiplayer"],
+      "additionalProperties": false,
+      "properties": {
+        "id": {"$ref": "../defs.schema.json#/$defs/id"},
+        "multiplayer": {"type": "boolean"}
+      }
+    }
+  }
+}

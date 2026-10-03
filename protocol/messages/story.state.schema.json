@@ -1,0 +1,40 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kantobridge.invalid/protocol/messages/story.state.schema.json",
+  "title": "story.state",
+  "description": "The player's blockade-relevant state: full on join, then deltas.",
+  "x-type": "story.state",
+  "x-legs": ["c2s"],
+  "x-re": "never",
+  "type": "object",
+  "required": ["full"],
+  "additionalProperties": false,
+  "properties": {
+    "full": {"type": "boolean"},
+    "active": {
+      "type": "array",
+      "items": {"$ref": "../defs.schema.json#/$defs/cellKey"},
+      "uniqueItems": true,
+      "description": "full: every active story cell."
+    },
+    "add": {
+      "type": "array",
+      "items": {"$ref": "../defs.schema.json#/$defs/cellKey"},
+      "uniqueItems": true
+    },
+    "remove": {
+      "type": "array",
+      "items": {"$ref": "../defs.schema.json#/$defs/cellKey"},
+      "uniqueItems": true
+    },
+    "surf": {"type": "boolean"},
+    "bike": {"type": "boolean"},
+    "lit": {
+      "type": "array",
+      "items": {"$ref": "../defs.schema.json#/$defs/mapId"},
+      "uniqueItems": true
+    }
+  },
+  "if": {"properties": {"full": {"const": true}}},
+  "then": {"required": ["active", "surf", "bike", "lit"]}
+}

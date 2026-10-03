@@ -1,0 +1,17 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kantobridge.invalid/protocol/messages/story.toggles.schema.json",
+  "title": "story.toggles",
+  "description": "One object's visibility changed (save.objectToggles).",
+  "x-type": "story.toggles",
+  "x-legs": ["g2m"],
+  "x-re": "never",
+  "type": "object",
+  "required": ["map", "obj", "visible"],
+  "additionalProperties": false,
+  "properties": {
+    "map": {"$ref": "../defs.schema.json#/$defs/mapId"},
+    "obj": {"$ref": "../defs.schema.json#/$defs/objName"},
+    "visible": {"type": "boolean"}
+  }
+}

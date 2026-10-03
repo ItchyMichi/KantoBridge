@@ -23,6 +23,8 @@ them only deliberately:
 | Cobblemon | **1.8.1** (Fabric), maven `com.cobblemon:fabric:1.8.1+1.21.1` | Modrinth (official mod page): version `gBW3vLC7` "Cobblemon v1.8.1 ~ Fabric", 2026-09-12, file `Cobblemon-fabric-1.8.1+1.21.1.jar`, only required dependency Fabric API (<https://modrinth.com/mod/cobblemon/version/gBW3vLC7>). Maven: Cobblemon's own <https://artefacts.cobblemon.com/releases> (mirrored at <https://maven.impactdev.net/repository/development/>). Source: tag `1.8.1` at <https://gitlab.com/cable-mc/cobblemon>, commit `0bc5bb5c`, which matches the POM's `gitCommit`. | |
 | Fabric Language Kotlin | **1.13.6+kotlin.2.2.20** | Cobblemon 1.8.1 `gradle/libs.versions.toml:30`; bundled jar-in-jar in Cobblemon and listed in its POM | The library Cobblemon needs on Fabric. Players get it inside Cobblemon's jar. Kotlin 2.2.20. |
 | Cobblemon's bundled libraries | GraalJS 22.3.0, ICU4J 71.1, MongoDB driver 4.10.2 | Cobblemon 1.8.1 POM | Arrive transitively through the POM; bundled for players |
+| Kotlin Gradle plugin | **2.2.20** (`kotlin_version`) | The Kotlin of Cobblemon 1.8.1 (`refs/cobblemon/gradle/libs.versions.toml`) and of the pinned Fabric Language Kotlin `1.13.6+kotlin.2.2.20` | **Build only; there are no Kotlin sources.** Added in M0: Loom remaps the Kotlin metadata of mods only when this plugin is applied, and without that Cobblemon crashes in every dev runtime (GameTest, `runServer`, `runClient`) with `ClassNotFoundException: net.minecraft.class_2960`. After changing it, delete `fabric-bridge/.gradle/loom-cache/remapped_mods` once. `kotlin.stdlib.default.dependency=false` keeps it from adding a stdlib |
+| ICU4J (dev server runs) | **71.1** (`cobblemon_icu4j_version`) | Cobblemon 1.8.1's POM | Added in M0 to the `runServer` and `runGameTest` classpaths only. Loom strips Minecraft's client-only ICU4J from server runs, and Cobblemon's Showdown (GraalJS) needs it, so the server waited for Showdown forever. Real servers get the copy bundled in Cobblemon's jar |
 
 For reference, Cobblemon 1.8.1 itself builds against:
 - Fabric Loader 0.17.2
@@ -46,10 +48,23 @@ from npm (source `FabricMC/fabricmc.net`).
 | LÖVE | **11.5**, bundled | Gen1Recomp `conf.lua:64`; the release's `gen1recomp.exe` is fused with LÖVE (`love.dll`) | No separate install needed for the release build |
 | Dramaless Shape (voxel mod) | **2.0.4** | Your zip in `refs/`; GitHub release `v2.0.4` (2026-09-01) at <https://github.com/artyrambles/DRAMALESS_SHAPE> | Reference only; not pinned for players yet |
 
+## Test tooling (`tools/`)
+
+Installed only into the project-local venv `tools/.venv`, wheels only, from `tools/requirements.txt`
+(exact pins, including dependencies, from `pip freeze` on 2026-10-03). Python itself is the
+machine's **3.12.7**.
+
+| Component | Version | Where it was found | Notes |
+|---|---|---|---|
+| pytest | **9.1.1** | pypi.org (latest at pinning) | Plus pytest-timeout **2.4.0** |
+| jsonschema | **4.26.0** | pypi.org | With referencing 0.37.0, jsonschema-specifications 2025.9.1, rpds-py 2026.6.3 (cp312 win_amd64 wheel) |
+| lupa | **2.8** | pypi.org, `lupa-2.8-cp312-cp312-win_amd64.whl` | Runs gen1-bridge's Lua on its bundled **LuaJIT 2.1** (`import lupa.luajit21`, never bare `import lupa`) |
+| fabric-loader-junit | **0.19.5** | Same version as Fabric Loader, from <https://maven.fabricmc.net/> | JUnit 5 with Minecraft classes on the classpath |
+
 ## This project
 
 | Component | Version |
 |---|---|
 | `fabric-bridge` (mod id `kantobridge`) | 0.1.0 |
 | `gen1-bridge` (mod id `gen1-bridge`) | 0.1.0 |
-| Protocol | Transport decided (`127.0.0.1:27151`, newline-delimited JSON); no messages yet ([PROTOCOL.md](PROTOCOL.md)) |
+| Protocol | **1** ([PROTOCOL.md](PROTOCOL.md), schemas in `protocol/`): `127.0.0.1:27151`, newline-delimited strict JSON, 72 message types |
