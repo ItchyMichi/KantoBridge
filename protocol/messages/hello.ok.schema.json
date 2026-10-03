@@ -17,6 +17,12 @@
     "session": {
       "$ref": "../defs.schema.json#/$defs/id",
       "description": "Random per gen1-bridge start, so a client can tell a restart from a reconnect."
+    },
+    "tested": {
+      "type": "string",
+      "pattern": "^[0-9A-Za-z.+_-]+$",
+      "maxLength": 32,
+      "description": "The engine version this gen1-bridge was tested with; the client warns when engine differs."
     }
   }
 }

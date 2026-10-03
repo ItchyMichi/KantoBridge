@@ -1,0 +1,16 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kantobridge.invalid/protocol/messages/relay.hello.schema.json",
+  "title": "relay.hello",
+  "description": "The relay's version handshake: the server sends it when a player joins and the client answers with its own. A different protocol disconnects the player with a reason.",
+  "x-type": "relay.hello",
+  "x-legs": ["s2c", "c2s"],
+  "x-re": "never",
+  "type": "object",
+  "required": ["protocol", "mod"],
+  "additionalProperties": false,
+  "properties": {
+    "protocol": {"type": "integer", "minimum": 1, "maximum": 1000},
+    "mod": {"type": "string", "pattern": "^[0-9A-Za-z.+_-]+$", "maxLength": 32}
+  }
+}

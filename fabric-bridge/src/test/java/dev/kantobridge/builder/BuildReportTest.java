@@ -39,11 +39,31 @@ class BuildReportTest {
 		assertEquals(1, json.getAsJsonObject("warning_codes").get("layout_overlap").getAsInt());
 		assertTrue(json.get("error").isJsonNull());
 		// Values are numbers, booleans, codes, ids and hashes only: no nested content beyond count maps.
-		Set<String> objects = Set.of("warning_codes", "notes", "story_cells_by_type");
+		Set<String> objects = Set.of("warning_codes", "notes", "story_cells_by_type", "throughput");
 		for (String key : json.keySet()) {
 			assertTrue(!json.get(key).isJsonObject() || objects.contains(key), key + " is an unexpected object");
 			assertTrue(!json.get(key).isJsonArray(), key + " is an array");
 		}
+	}
+
+	@Test
+	void throughputIsRecorded() throws Exception {
+		BuildReport report = new BuildReport();
+		report.status = "ok";
+		report.mapsBuilt = 220;
+		report.blocksPlaced = 2_485_154;
+		report.chunks = 2_126;
+		report.placeMs = 53_000;
+		report.elapsedMs = 56_500;
+		JsonObject throughput = report.toJson().getAsJsonObject("throughput");
+		assertEquals(46_889.7, throughput.get("blocks_per_s").getAsDouble(), 1e-9, "blocks placed per second of placement");
+		assertEquals(40.1, throughput.get("chunks_per_s").getAsDouble(), 1e-9);
+		assertEquals(3.9, throughput.get("maps_per_s").getAsDouble(), 1e-9, "maps per second of the whole build");
+		assertEquals(3, throughput.size());
+		JsonObject empty = new BuildReport().toJson().getAsJsonObject("throughput");
+		assertEquals(0.0, empty.get("blocks_per_s").getAsDouble(), "nothing measured: 0, never a division by zero");
+		assertEquals(0.0, BuildReport.rate(5, 0));
+		assertEquals(0.0, BuildReport.rate(0, 100));
 	}
 
 	@Test

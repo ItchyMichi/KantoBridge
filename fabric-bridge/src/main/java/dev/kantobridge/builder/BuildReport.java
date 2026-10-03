@@ -18,7 +18,8 @@ import org.jetbrains.annotations.Nullable;
  * {@code habitat_blocks} (habitat blocks configured for the built maps) and {@code pools} (habitat pools in the world's
  * datapack: every wild map of the export, whatever the filter); from M8 {@code maps_unplaced} (maps asked for that got
  * no place) and {@code diagnostics} (whether {@code build_diagnostics.json}, the symbol lists behind the warning counts,
- * was written beside the report).
+ * was written beside the report). M10 records the builder's speed as {@code throughput}: blocks and chunks placed per
+ * second of placement ({@code place_ms}), maps built per second of the whole build ({@code elapsed_ms}).
  */
 public final class BuildReport {
 	public static final String FILE = "build_report.json";
@@ -116,6 +117,11 @@ public final class BuildReport {
 		out.addProperty("elapsed_ms", this.elapsedMs);
 		out.addProperty("plan_ms", this.planMs);
 		out.addProperty("place_ms", this.placeMs);
+		JsonObject throughput = new JsonObject();
+		throughput.addProperty("blocks_per_s", rate(this.blocksPlaced, this.placeMs));
+		throughput.addProperty("chunks_per_s", rate(this.chunks, this.placeMs));
+		throughput.addProperty("maps_per_s", rate(this.mapsBuilt, this.elapsedMs));
+		out.add("throughput", throughput);
 		out.addProperty("export_hash", this.exportHash);
 		out.addProperty("slot_map_hash", this.slotMapHash);
 		out.addProperty("world_index_hash", this.worldIndexHash);
@@ -133,6 +139,14 @@ public final class BuildReport {
 			Files.createDirectories(parent);
 		}
 		Files.writeString(file, this.toText(), StandardCharsets.UTF_8);
+	}
+
+	/** {@code count} per second of {@code ms}, to one decimal; 0 when no time was measured. */
+	static double rate(long count, long ms) {
+		if (ms <= 0 || count <= 0) {
+			return 0.0;
+		}
+		return Math.round(count * 10_000.0 / ms) / 10.0;
 	}
 
 	private static JsonObject counts(Map<String, Integer> map) {

@@ -32,7 +32,9 @@
 			"dev.kantobridge.gametest.DaycareGameTests",
 			"dev.kantobridge.gametest.BattleMusicGameTests",
 			"dev.kantobridge.gametest.MultiplayerGameTests",
-			"dev.kantobridge.gametest.PlayerTradeGameTests"
+			"dev.kantobridge.gametest.PlayerTradeGameTests",
+			"dev.kantobridge.gametest.SavePairGameTests",
+			"dev.kantobridge.gametest.RelayHelloGameTests"
 		]
 	},
 	"depends": {

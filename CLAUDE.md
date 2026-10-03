@@ -87,11 +87,11 @@ Pokémon Red/Blue's story runs in a **hidden Gen1Recomp**. It is displayed and p
 
 | Path | Contents |
 |---|---|
-| `gen1-bridge/` | Gen1Recomp mod (Lua, mod API 2, `network` + `engine_internals`). `lib/` holds the `kb_*` modules; only `lib/kb_engine.lua` touches engine internals |
+| `gen1-bridge/` | Gen1Recomp mod (Lua, mod API 2, `network` + `engine_internals`). `lib/`, `observe/`, `act/` and `export/` hold the `kb_*` modules; only `lib/kb_engine.lua` touches engine internals |
 | `fabric-bridge/` | Fabric mod `kantobridge` (Java, package `dev.kantobridge`): `src/main` (common, builder), `src/client`, `src/test` (JUnit), `src/gametest` (server GameTests) |
 | `protocol/` | Message schemas (JSON Schema 2020-12), synthetic examples, and the derived `catalog.json` and `redaction-vectors.json` ([`protocol/README.md`](protocol/README.md)) |
 | `datapack-templates/` | Habitat pool, biome and settings templates (never ROM data) |
-| `tools/` | `kb_protocol` (Python protocol helpers), `lua/` (lupa test harness), `tests/`, `e2e/` (test-instance runner and drivers), `setup.*`, `check.*`; later the stand-ins `fake_gen1`, `fake_minecraft` ([`tools/README.md`](tools/README.md)) |
+| `tools/` | `kb_protocol` (Python protocol helpers), the stand-ins `fake_gen1` and `fake_minecraft`, `lua/` (lupa test harness), `tests/`, `e2e/` (test-instance runner, drivers, `build_world.py`), `setup.*`, `check.*`, `launch.ps1` (starts Gen1Recomp, then Minecraft), `installer/` (skeleton only, see [`docs/INSTALLER.md`](docs/INSTALLER.md)) ([`tools/README.md`](tools/README.md)) |
 | `refs/` | Reference clones (ignored) |
 | `local/` | Ignored. Holds the user's Gen1Recomp install and its ROM-derived data, plus generated packs |
 
@@ -124,15 +124,21 @@ $env:JAVA_HOME = 'C:\Program Files\Eclipse Adoptium\jdk-21.0.12.101-hotspot'; .\
   in that folder: saves, `options.lua`, ROM cache, `roms/`, `mods/`.
 - **The mod link:** `local/gen1recomp/mods/gen1-bridge` is a junction to `gen1-bridge/`, so edits
   apply on the next boot. Remove it only with `rmdir` in `cmd`, never `rm -rf` through it.
-- **Running it:** `local\gen1recomp\gen1recomp.exe`.
+- **Running it:** `local\gen1recomp\gen1recomp.exe`, or `.\tools\launch.ps1`, which starts it,
+  waits for the bridge and then starts the dev client. Agents only dry-run `launch.ps1`
+  (`-DryRun`): it would start the user's own instance.
   - **The user's imported game is Blue**, so use `--game=blue`; `--game=` skips the launcher.
   - `--console` shows a log console with `mod.log` output. In PowerShell, from inside the install
     folder, the command needs the `.\` prefix: `.\gen1recomp.exe --console --game=blue`.
   - `POKEPORT_DEV=1` enables the developer console (backtick).
   - The user does the first-run ROM import.
-- **Keep its window visible behind Minecraft. Never minimise it:** a minimised window runs at
-  about a third of normal speed (from reading the code, not measured). The user glances at the
-  window to check it's working.
+- **Keep its window visible behind Minecraft** (PLAN U6): the user glances at it to check it's
+  working. **Minimising is safe, though:** M10 measured that a minimised window keeps full speed,
+  because LÖVE still reports it as visible on Windows. That corrects the older "a third of the
+  speed" note, which came from reading the code.
+  - A window *hidden* with `SW_HIDE` does slow down. While Minecraft is connected, gen1-bridge keeps
+    it at full speed (`gen1-bridge/README.md`).
+  - While connected, gen1-bridge also paces a minimised window's drawing.
 - **Updating Gen1Recomp:** replace the release files (exe, DLLs, `license.txt`) and leave the data
   folders alone. Update VERSIONS.md.
 - **The test install** `local/gen1recomp-e2e/` has the same layout, its own `portable.txt`, and its

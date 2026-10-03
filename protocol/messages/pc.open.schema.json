@@ -2,11 +2,12 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://kantobridge.invalid/protocol/messages/pc.open.schema.json",
   "title": "pc.open",
-  "description": "Bill's PC was chosen; open Cobblemon's PC.",
+  "description": "Bill's PC was chosen; open Cobblemon's PC. pc: an id, echoed by the one pc.closed that ends this hold.",
   "x-type": "pc.open",
   "x-legs": ["g2m", "c2s"],
   "x-re": "never",
   "type": "object",
   "additionalProperties": false,
-  "properties": {}
+  "properties": {"pc": {"$ref": "../defs.schema.json#/$defs/id"}},
+  "required": ["pc"]
 }

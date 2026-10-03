@@ -6,6 +6,7 @@ import dev.kantobridge.proto.Envelope;
 import dev.kantobridge.proto.MsgTypes;
 import dev.kantobridge.story.StoryStateMessages;
 import dev.kantobridge.story.StoryStates;
+import dev.kantobridge.story.Surfing;
 import java.util.concurrent.atomic.AtomicLong;
 import net.minecraft.server.level.ServerPlayer;
 
@@ -14,7 +15,8 @@ import net.minecraft.server.level.ServerPlayer;
  * (docs/PLAN.md §4.4 {@code StoryStateService}): a full state on join, then deltas. The client applied the same message
  * to its own copy before sending it, so client prediction and the server's collision agree. A change of the bike flag
  * re-applies the Gen 1 speed ({@link Rules#applyMovement}); the lit maps decide Flash's Night Vision at once
- * ({@link FlashService}). The active cells are the client's verdict under docs/PROTOCOL.md "Story rules (M8)".
+ * ({@link FlashService}). The active cells are the client's verdict under docs/PROTOCOL.md "Story rules (M8)". The surf
+ * flag also goes to the {@link Surfing} attachment, so other players' clients draw the surf sprite under this player (M10).
  *
  * <p>A player's client speaks only for that player (relay authority). Malformed messages change nothing and are
  * answered with {@code error{code:"bad_message"}} and a counted warning. Server thread only.
@@ -43,6 +45,7 @@ public final class StoryStateService {
 		if (applied.full() || applied.bikeChanged()) {
 			Rules.applyMovement(player);
 		}
+		Surfing.set(player, StoryStates.of(player).surf());
 		FlashService.update(player, WorldIndexSync.current(player.server));
 		KantoBridge.LOGGER.debug("story.state: {} applied ({} cells changed)", applied.full() ? "full" : "delta", applied.cellsChanged());
 	}

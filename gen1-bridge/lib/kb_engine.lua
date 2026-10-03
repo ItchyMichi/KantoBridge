@@ -14,8 +14,11 @@
 
 local Engine = {}
 
--- The engine release whose internals this file was checked against.
+-- The engine release whose internals this file was checked against, and
+-- the one gen1-bridge is tested with (M10: hello.ok.tested; a connection to
+-- a different engine gets one engine.untested warning).
 Engine.CHECKED = "0.3.49"
+Engine.TESTED = Engine.CHECKED
 
 -- PLAN P21: the hidden game's display options pinned to classic, so mirror
 -- frames have the fixed 160x144 geometry, and text at FAST. Keys and
@@ -164,6 +167,8 @@ end
 -- opts.log:      kb_log logger (optional)
 -- opts.ui:       mod.ui, the UI module tables (src/ui/ModUI.lua:8-27)
 -- opts.datasets: mod.datasets, the dataset views (src/mods/Loader.lua:1361-1369)
+-- opts.love:     the sandbox's love facade (M10: love.window and love.timer
+--                for running hidden; optional)
 function Engine.new(opts)
   opts = opts or {}
   local requireFn = opts.require or function() return nil end
@@ -2178,7 +2183,7 @@ function Engine.new(opts)
       if type(mon) == "table" then
         st.serial = st.serial + 1
         st.gifts[#st.gifts + 1] = {
-          give = ("g-%s-%d"):format(st.token or "x", st.serial), state = "new", syncs = 0,
+          give = ("g-%s-%d"):format(st.token or "x", st.serial), serial = st.serial, state = "new", syncs = 0,
           box = box ~= nil, source = source, save = save, facts = giftFacts(mon),
           mon = (box == nil) and mon or nil,
         }
@@ -2230,8 +2235,8 @@ function Engine.new(opts)
     local st = type(game) == "table" and rawget(game, STATE_SLOT) or nil
     local out = {}
     for _, op in ipairs(opsOf(st, engine.save())) do
-      out[#out + 1] = { id = op.id, kind = op.kind, uid = op.uid, reason = op.reason, steps = op.steps,
-                        state = op.state, sentGen = op.sentGen, syncs = op.syncs }
+      out[#out + 1] = { id = op.id, serial = op.id, kind = op.kind, uid = op.uid, reason = op.reason,
+                        steps = op.steps, state = op.state, sentGen = op.sentGen, syncs = op.syncs }
     end
     return out
   end
@@ -2313,7 +2318,7 @@ function Engine.new(opts)
     end
     st.serial = st.serial + 1
     st.gifts[#st.gifts + 1] = {
-      give = ("g-%s-%d"):format(st.token or "x", st.serial), state = "new", syncs = 0,
+      give = ("g-%s-%d"):format(st.token or "x", st.serial), serial = st.serial, state = "new", syncs = 0,
       box = false, source = "trade", save = save, facts = giftFacts(received), mon = received,
     }
     return jump
@@ -2355,8 +2360,8 @@ function Engine.new(opts)
     for _, g in ipairs(st.gifts) do
       local f = g.facts
       out[#out + 1] = {
-        give = g.give, state = g.state, sentGen = g.sentGen, syncs = g.syncs, box = g.box, source = g.source,
-        dex = f.dex, level = f.level, moves = f.moves, dvs = f.dvs, nick = f.nick, ot = f.ot,
+        give = g.give, serial = g.serial, state = g.state, sentGen = g.sentGen, syncs = g.syncs, box = g.box,
+        source = g.source, dex = f.dex, level = f.level, moves = f.moves, dvs = f.dvs, nick = f.nick, ot = f.ot,
       }
     end
     return out
@@ -3290,24 +3295,41 @@ function Engine.new(opts)
   -- A hidden-game save to announce (save.begin): the newest one waits, one
   -- Minecraft save covers any before it. Returns its id (unique per
   -- process: the first instance's token and the shared serial) and whether
-  -- it replaced one still waiting.
-  function engine.queueSave(reason)
+  -- it replaced one still waiting. M10: `pair` = { pair, at } (the save
+  -- pair written into this save's mod data, act/kb_save.lua) goes with it,
+  -- and so does the save table it was written from and its serial, the
+  -- shared counter's value: a gift or an operation with a higher serial
+  -- came after this save and waits until its save.begin is out
+  -- (engine.queuedSaveSerial).
+  function engine.queueSave(reason, pair)
     local st = bridgeState()
     if not st then return nil, false end
     st.serial = st.serial + 1
     local id = ("v-%s-%d"):format(st.token or "x", st.serial)
     local replaced = st.saveQueued ~= nil
-    st.saveQueued = { save = id, reason = reason }
+    pair = type(pair) == "table" and pair or {}
+    st.saveQueued = { save = id, reason = reason, serial = st.serial, pair = pair.pair, at = pair.at,
+                      from = engine.save() }
     return id, replaced
   end
 
-  -- The save waiting to be announced ({ save, reason }), taken; or nil.
+  -- The save waiting to be announced ({ save, reason, pair, at, current }),
+  -- taken; or nil. current: it was written from the live save table (not a
+  -- playthrough left since, through the title).
   function engine.takeSave()
     local st = type(game) == "table" and rawget(game, STATE_SLOT) or nil
     local q = type(st) == "table" and st.saveQueued or nil
     if type(q) ~= "table" then return nil end
     st.saveQueued = nil
-    return { save = q.save, reason = q.reason }
+    return { save = q.save, reason = q.reason, pair = q.pair, at = q.at,
+             current = q.from ~= nil and q.from == engine.save() }
+  end
+
+  -- M10: the serial of the save waiting to be announced, or nil.
+  function engine.queuedSaveSerial()
+    local st = type(game) == "table" and rawget(game, STATE_SLOT) or nil
+    local q = type(st) == "table" and st.saveQueued or nil
+    return type(q) == "table" and q.serial or nil
   end
 
   -- The hidden game's active save slot as a number: SaveData.activeSlot
@@ -3390,8 +3412,9 @@ function Engine.new(opts)
     return out
   end
 
-  -- The PC hold as plain values ({ state, sentGen }) or nil; a hold whose
-  -- world went away (the title, New Game, CONTINUE) is dropped: nil, "dropped".
+  -- The PC hold as plain values ({ state, sentGen, id }) or nil; a hold
+  -- whose world went away (the title, New Game, CONTINUE) is dropped: nil,
+  -- "dropped".
   function engine.pcPending()
     local rec, st = pcRecord()
     if not rec then return nil end
@@ -3400,19 +3423,25 @@ function Engine.new(opts)
       st.pc = nil
       return nil, "dropped"
     end
-    return { state = rec.state, sentGen = rec.sentGen }
+    return { state = rec.state, sentGen = rec.sentGen, id = rec.id }
   end
 
-  function engine.pcSent(generation)
+  -- pc.open went out for the hold, with its id (M10: in the process-lifetime
+  -- record, so the pc.closed a newer instance gets after a hot reload is
+  -- matched against it too).
+  function engine.pcSent(generation, id)
     local rec = pcRecord()
-    if rec then rec.sentGen = generation end
+    if rec then rec.sentGen, rec.id = generation, id end
   end
 
   -- Ends the hold (pc.closed, or a release when the link drops): the hold
   -- state pops itself on its next update. Returns true when one was held.
-  function engine.pcClose(why)
+  -- M10: with an id, only the hold that pc.open announced with that id
+  -- ends; false plus "stale" for another one (the hold stays).
+  function engine.pcClose(why, id)
     local rec, st = pcRecord()
     if not rec or rec.state ~= "waiting" then return false end
+    if id ~= nil and rec.id ~= id then return false, "stale" end
     rec.state = why or "closed"
     st.pc = nil
     return true
@@ -3688,7 +3717,7 @@ function Engine.new(opts)
           if box then table.remove(save.boxes[where], slot) end
           st.serial = st.serial + 1
           st.gifts[#st.gifts + 1] = {
-            give = ("g-%s-%d"):format(st.token or "x", st.serial), state = "new", syncs = 0,
+            give = ("g-%s-%d"):format(st.token or "x", st.serial), serial = st.serial, state = "new", syncs = 0,
             box = box, source = "native_catch", save = save, facts = giftFacts(c.mon),
             mon = (not box) and c.mon or nil,
           }
@@ -4617,6 +4646,221 @@ function Engine.new(opts)
     st.gifts, st.ops, st.itemUses, st.renames, st.catches = {}, {}, {}, {}, {}
     st.heals, st.healHold, st.saveQueued, st.daycare = 0, nil, nil, nil
     return n
+  end
+
+  -- ------------------------------------------------------------ reliability (M10)
+  --
+  -- Save pairs (crash recovery; act/kb_save.lua, docs/PROTOCOL.md "Saving").
+  -- Game:writeSave stamps the save's meta first (SaveData.buildMeta: savedAt
+  -- = os.time(), sessionStart, the playthrough id carried over;
+  -- src/core/Game.lua:1337-1341, src/core/SaveData.lua:2331-2362) and then
+  -- emits save.writing, the moment "mods snapshot runtime state into their
+  -- namespace" (Game.lua:1337-1344). mod.save IS the save table's own modData
+  -- (Game:adoptSave, Game.lua:1314-1324; src/mods/Loader.lua:1543-1556), and
+  -- SaveData.save serializes the whole save table -- modData and meta
+  -- included -- into the active slot's file in one write (a .tmp witness and
+  -- a .bak of the previous file, SaveData.lua:2585-2638). So what kb_save
+  -- writes into mod.save during save.writing is part of that very save, and
+  -- comes back with it on every CONTINUE: Game:restoreSave adopts the loaded
+  -- save's modData before save.loaded (Game.lua:1475-1537), and F2 takes
+  -- the same path (:864-873). Not used, because they live apart from the
+  -- save: mod.storage writes its own files at once (src/mods/Storage.lua:
+  -- 183-229, "independent of the vanilla progress checkpoint"), and the
+  -- playthrough id names a playthrough, not one of its saves, and is filled
+  -- in from options.lua on load when the file lacks it (SaveData.lua:
+  -- 2675-2681). The Hall of Fame writes its save twice, the second time with
+  -- SaveData.save and no event (src/script/Commands.lua:943-950): the same
+  -- save table, modData and meta, so the same pair.
+
+  -- A save table's meta as plain values: savedAt and sessionStart (Unix
+  -- seconds, integers) and the engine version that wrote it.
+  function engine.metaOf(save)
+    if save == nil then save = engine.save() end
+    local meta = type(save) == "table" and type(save.meta) == "table" and save.meta or nil
+    if not meta then return {} end
+    local function int(v)
+      v = tonumber(v)
+      if v and v == v and v >= 0 and v < 9007199254740992 then return math.floor(v) end
+      return nil
+    end
+    return { savedAt = int(meta.savedAt), sessionStart = int(meta.sessionStart),
+             engine = type(meta.engine) == "string" and #meta.engine <= 32 and meta.engine or nil }
+  end
+
+  -- Our own state that must outlive a hot reload (the process-lifetime
+  -- slot): a table by name, created on first use; nil before game.ready.
+  function engine.persistent(name)
+    local st = bridgeState()
+    if not st then return nil end
+    st.keep = type(st.keep) == "table" and st.keep or {}
+    local t = st.keep[name]
+    if type(t) ~= "table" then
+      t = {}
+      st.keep[name] = t
+    end
+    return t
+  end
+
+  -- Running hidden (DESIGN section 9). love.run picks each frame's cap from
+  -- love.window.isVisible() (main.lua:1739-1756): a window that isn't
+  -- visible is capped at 10 frames a second, while Game:update catches up at
+  -- most about 2 logic steps a frame (FixedStep.catchupLimit,
+  -- src/core/FixedStep.lua:75-86, Game.lua:427-434): logic at a third of
+  -- its speed. It also isn't drawn (main.lua:1762-1769), so the mirror gets
+  -- no frames. Measured on Windows (tools/e2e/test_hidden.py): LÖVE 11.5's
+  -- isVisible reads only SDL_WINDOW_SHOWN, which a MINIMISED window keeps,
+  -- so minimising never slowed anything (60 logic steps a second); a HIDDEN
+  -- window (ShowWindow SW_HIDE) drops to 20. While a client or test
+  -- session is connected, isVisible answers true for a window that isn't
+  -- shown, so the loop keeps its normal cap and draws, as LÖVE's own default
+  -- love.run always does. Reached through the sandbox's love facade, which
+  -- hands the real love.window through (src/mods/Sandbox.lua:112-152).
+  -- Nothing else in the engine reads isVisible (PadHints.windowMinimized
+  -- asks isMinimized first, src/core/PadHints.lua:19-31; the game3
+  -- isVisible functions are other modules). A frame faked visible is paced
+  -- to at most 60 a second here, since present() needn't wait on a window
+  -- that isn't shown and the loop trusts it when vsync paces the cap
+  -- (main.lua:1773-1792, PresentSync.hardwarePacesCap). The same holds for a
+  -- MINIMISED window, which the loop runs at its normal cap: its present()
+  -- returns at once, so the loop spun at 170-350 drawn frames a second
+  -- (measured), taking CPU and GPU time from Minecraft; while a client or
+  -- test session is connected its frames are paced to 60 a second as well
+  -- (love.window.isMinimized, SDL_WINDOW_MINIMIZED). Logic stays at 60
+  -- steps a second either way: FixedStep runs on real time. Without a
+  -- client nothing changes: that is the engine's own behaviour. The wrapper
+  -- is installed once into a process-lifetime slot on the Game object with
+  -- the original function, answers only while its keep-alive (refreshed by
+  -- every live step) is fresh, and is taken out again when the link drops
+  -- and on a hot reload or a return to the launcher (the next instance's
+  -- takeover, main.lua).
+  local WINDOW_SLOT = "kantoBridgeWindow"
+  Engine.HIDDEN_KEEP_SECONDS = 1
+  Engine.HIDDEN_FRAME = 1 / 60
+  local windowCounts = { installs = 0, removals = 0 }
+
+  -- love.window and love.timer through the facade, looked up once (a
+  -- module never changes; a failed lookup is tried again)
+  local function index(t, k) return t[k] end
+  local loveModules = {}
+  local function loveModule(name)
+    local m = loveModules[name]
+    if m then return m end
+    local lv = opts.love
+    if lv == nil then return nil end
+    local ok, value = pcall(index, lv, name)
+    if ok and type(value) == "table" then
+      loveModules[name] = value
+      return value
+    end
+    return nil
+  end
+  local function loveWindow() return loveModule("window") end
+  local function loveTimer() return loveModule("timer") end
+
+  -- One frame, at most HIDDEN_FRAME after the one before: a carried
+  -- deadline, anchored again after a stall (or the first frame).
+  local function paceFrame(slot, timer, now)
+    local deadline = slot.nextFrame
+    if deadline == nil or now - deadline > Engine.HIDDEN_FRAME then deadline = now end
+    if deadline > now and type(timer.sleep) == "function" then
+      timer.sleep(math.min(deadline - now, Engine.HIDDEN_FRAME))
+      slot.paced = (slot.paced or 0) + 1
+    end
+    slot.nextFrame = deadline + Engine.HIDDEN_FRAME
+  end
+
+  -- love.window.isVisible, as the loop asks it once a frame (main.lua:1739):
+  -- the window's own answer, except while the keep-alive is fresh: a window
+  -- that isn't shown answers true (the normal cap, drawn), and its frames
+  -- and a minimised window's are paced. Never throws.
+  local function hiddenWrapper(slot)
+    return function(...)
+      local original = slot.original
+      if type(original) ~= "function" then return true end
+      local real = original(...)
+      local ok, answer = pcall(function()
+        local timer = slot.timer
+        local now = timer and timer.getTime and timer.getTime() or nil
+        if not (slot.active and now and now <= (slot.keepUntil or -math.huge)) then return real end
+        if real then
+          -- shown: the engine's own pacing, unless the window is minimised
+          local isMinimized = slot.isMinimized
+          if type(isMinimized) ~= "function" or isMinimized() ~= true then return real end
+          paceFrame(slot, timer, now)
+          slot.minimizedFrames = (slot.minimizedFrames or 0) + 1
+          return real
+        end
+        paceFrame(slot, timer, now)
+        slot.faked = (slot.faked or 0) + 1
+        return true
+      end)
+      if ok then return answer end
+      return real
+    end
+  end
+
+  -- Each logic step: want = a client or test session is connected; now =
+  -- love.timer.getTime(). Returns true while the wrapper is in place.
+  function engine.runHidden(want, now)
+    if type(game) ~= "table" then return false end
+    local win = loveWindow()
+    local slot = rawget(game, WINDOW_SLOT)
+    if not want then
+      if type(slot) == "table" and slot.wrapper ~= nil then
+        slot.active = false
+        if win and win.isVisible == slot.wrapper then
+          win.isVisible = slot.original
+          slot.wrapper = nil
+          windowCounts.removals = windowCounts.removals + 1
+        end
+      end
+      return false
+    end
+    if not (win and type(win.isVisible) == "function") then return false end
+    if type(slot) ~= "table" then
+      slot = { faked = 0, paced = 0 }
+      rawset(game, WINDOW_SLOT, slot)
+    end
+    slot.timer = loveTimer()
+    slot.isMinimized = type(win.isMinimized) == "function" and win.isMinimized or nil
+    if slot.wrapper == nil then
+      slot.original = win.isVisible
+      slot.wrapper = hiddenWrapper(slot)
+      win.isVisible = slot.wrapper
+      windowCounts.installs = windowCounts.installs + 1
+    end
+    -- a wrapper someone else put over ours keeps calling ours: left alone
+    slot.active = true
+    slot.keepUntil = (tonumber(now) or 0) + Engine.HIDDEN_KEEP_SECONDS
+    return win.isVisible == slot.wrapper
+  end
+
+  -- Plain counts for debug.status: the wrapper in place, frames it answered
+  -- visible for a window that wasn't, a minimised window's frames it saw,
+  -- the frames it paced (both kinds), installs and removals, and the
+  -- window's own answers (isVisible through the original, isMinimized).
+  function engine.hiddenStats()
+    local slot = type(game) == "table" and rawget(game, WINDOW_SLOT) or nil
+    local win = loveWindow()
+    local out = { installs = windowCounts.installs, removals = windowCounts.removals, faked = 0, paced = 0,
+                  minimizedFrames = 0, active = false, visible = true, minimized = false }
+    if type(slot) == "table" then
+      out.faked, out.paced, out.minimizedFrames = slot.faked or 0, slot.paced or 0, slot.minimizedFrames or 0
+      out.active = slot.active == true and slot.wrapper ~= nil and win ~= nil and win.isVisible == slot.wrapper
+    end
+    if win then
+      local isVisible = (type(slot) == "table" and slot.wrapper ~= nil and win.isVisible == slot.wrapper)
+        and slot.original or win.isVisible
+      if type(isVisible) == "function" then
+        local ok, v = pcall(isVisible)
+        if ok then out.visible = v == true end
+      end
+      if type(win.isMinimized) == "function" then
+        local ok, v = pcall(win.isMinimized)
+        if ok then out.minimized = v == true end
+      end
+    end
+    return out
   end
 
   -- ------------------------------------------------------------ export (M2)

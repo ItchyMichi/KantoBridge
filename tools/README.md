@@ -15,14 +15,43 @@ installed system-wide.
 Extra arguments go to pytest, e.g. `tools/check.sh --no-gradle -k redact`. Gradle uses
 `KB_JAVA_HOME` if set, otherwise the Temurin 21 path from CLAUDE.md.
 
+## Launching (`launch.ps1`)
+
+`.\tools\launch.ps1` starts Gen1Recomp (its window visible), waits until gen1-bridge listens, then
+starts Minecraft. It never touches Gen1Recomp's data and never stops it, so unsaved progress is never
+lost. It sets `JAVA_HOME` (a JDK 21) for its own Gradle runs only.
+
+| Command | What it starts |
+|---|---|
+| `.\tools\launch.ps1` | `local\gen1recomp` (`--game=blue --console`), then `gradlew runClient` in this console |
+| `.\tools\launch.ps1 -Players 2` | Two Gen1Recomp installs (`local\gen1recomp` on 27151, `local\gen1recomp-p2` on 27152), the dev server (`runServer`, sets `online-mode=false`), then `runClient` and `runClient2`, each in its own window |
+| `.\tools\launch.ps1 -Mode player` | An installed setup (docs/INSTALLER.md): `%LOCALAPPDATA%\KantoBridge\gen1recomp`, then the Prism instance `KantoBridge` |
+| `-DryRun` | Prints the plan only |
+
+Other options: `-Game red|blue`, `-Slot <slot id>` (Gen1Recomp's `--slot=`), `-NoConsole`,
+`-Watch` (restart Gen1Recomp if it closes while Minecraft runs, at most 3 times in 10 minutes; on by
+default in player mode, `-NoWatch` turns it off), `-Gen1Recomp`/`-P2Gen1Recomp <folder>`, `-JavaHome
+<jdk-21>`, `-TimeoutSec`. Settings can also live in `local\launch.json` (player mode:
+`<Root>\launch.json`): `game`, `gen1recomp`, `gen1recompP2`, `port`, `javaHome`, `slot`, `instance`.
+A Gen1Recomp that's already running from the same install is reused. If gen1-bridge had to take
+another port (the configured one was busy), the script says which and how to point Minecraft at it.
+
+## Installer (skeleton)
+
+`.\tools\installer\install.ps1` prints the install plan from [docs/INSTALLER.md](../docs/INSTALLER.md)
+and installs nothing; `-Verify <file> -Id <pin>` checks a downloaded file against
+`installer\pins.json` (size and SHA-256).
+
 ## Layout
 
 | Path | Contents |
 |---|---|
 | `kb_protocol/` | Shared protocol helpers: strict NDJSON framing, the schema registry and message checker, envelope builders, redaction, and the generator of `protocol/catalog.json` and `protocol/redaction-vectors.json` |
-| `fake_gen1/` | Listens like gen1-bridge with a synthetic world (`synth.py`: a procedurally drawn tileset, TEST_TOWN and TEST_HOUSE built from its blocks, NPCs, a sign, a trainer). Serves the full export. `python -m fake_gen1 --help` for the interactive commands; `--write-bundle DIR` writes the synthetic export bundle |
+| `fake_gen1/` | Listens like gen1-bridge with a synthetic world (`synth.py`: a procedurally drawn tileset, TEST_TOWN and TEST_HOUSE built from its blocks, NPCs, a sign, a trainer). Serves the full export, answers `session.bind` (`session.bound` with `switched`, then `save.loaded`), and can send made-up gifts, battles, saves (`save.begin` with a new pair), a reload of the last save, Bill's PC (`pc.open` with an id) and a waiting bind (`session.waiting`). `python -m fake_gen1 --help` for the interactive commands; `--write-bundle DIR` writes the synthetic export bundle |
 | `fake_minecraft/` | Connects like the fabric-bridge client, checks every message against the schemas, keeps the heartbeat, and logs only types and sizes (redacted messages with `--verbose`). `python -m fake_minecraft --help` |
-| `tests/` | pytest suites for the protocol, `kb_protocol` and the stand-ins |
+| `tests/` | pytest suites for the protocol, `kb_protocol`, the stand-ins, `launch.ps1` (dry runs and its port probe) and the installer skeleton |
+| `launch.ps1` | The launcher (above) |
+| `installer/` | The installer skeleton and its pins (above) |
 | `lua/` | The Lua test harness: gen1-bridge modules run under lupa's LuaJIT 2.1 in a sandbox-parity environment, with a fake LuaSocket. Its pytest files live beside it |
 | `e2e/` | End-to-end runner for the test Gen1Recomp instance, our own driver scripts, and e2e tests (marker `e2e`, run only with `--e2e`). `build_world.py` is the headless real-data build: export from the test instance through `ExportCli`, then a headless server build; `--maps pallet\|route1\|all\|<ids>`, `--world <name>` (default `Kanto`), `--fresh`, `--skip-export`. Automated tests build into `saves/KantoE2E` |
 | `pytest.ini`, `conftest.py` | pytest configuration (`--e2e` option, markers) |

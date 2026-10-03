@@ -52,6 +52,23 @@ def test_protocol_mismatch_is_rejected():
     run(scenario())
 
 
+def test_unknown_role_is_rejected_as_role():
+    async def scenario():
+        gen1, mc = await _pair()
+        try:
+            # A well-formed but unknown role: "role", as gen1-bridge answers (M10). Sent as bytes,
+            # because fake_minecraft won't send a schema-invalid hello.
+            await mc.conn.send_bytes(encode_line({"type": "hello", "seq": 1,
+                                                  "data": {"protocol": 1, "role": "spectator", "mod": "test"}}))
+            reject = await mc.expect("hello.reject")
+            assert (reject["data"]["reason"], reject["re"]) == ("role", 1)
+            assert await mc.next() is None
+        finally:
+            await mc.close()
+            await gen1.stop()
+    run(scenario())
+
+
 def test_hello_must_come_first():
     async def scenario():
         gen1, mc = await _pair()
@@ -204,6 +221,52 @@ def test_made_up_gift_and_battle_are_schema_valid():
             await mc.send("battle.result", {"battle": start["data"]["battle"], "outcome": "fled"})
             await asyncio.sleep(0.1)
             assert gen1.counts().get("battle.result") == 1
+            assert not mc.conn.problems
+        finally:
+            await mc.close()
+            await gen1.stop()
+    run(scenario())
+
+
+def test_bind_answers_with_switched_and_save_loaded():
+    """M10: session.bound says how the slot was reached, then save.loaded says which save runs."""
+    async def scenario():
+        gen1, mc = await _pair()
+        try:
+            ok = await mc.hello()
+            assert ok["data"]["tested"] == ok["data"]["engine"]
+            bind = (await mc.send("session.bind", {"world": "w-test", "multiplayer": False}))["seq"]
+            bound = await mc.expect("session.bound", re=bind)
+            assert bound["data"]["switched"] == "none"
+            loaded = (await mc.expect("save.loaded"))["data"]
+            assert (loaded["fresh"], loaded["ops"], loaded["pair"]) == (False, 0, gen1.pair)
+
+            await gen1.give(1, 5, "gift")
+            await mc.expect("party.give")
+            await gen1.save("center")
+            save = (await mc.expect("save.begin"))["data"]
+            assert save["pair"] == gen1.pair and save["reason"] == "center"
+            await gen1.give(4, 5, "gift")
+            await mc.expect("party.give")
+            await gen1.reload_save()
+            loaded = (await mc.expect("save.loaded"))["data"]
+            assert (loaded["pair"], loaded["ops"]) == (save["pair"], 0), "back to the save: no ops since"
+
+            gen1.bind_wait = ("busy", 0.2)
+            bind = (await mc.send("session.bind", {"world": "w-other", "multiplayer": True}))["seq"]
+            waiting = await mc.expect("session.waiting", re=bind)
+            assert waiting["data"]["reason"] == "busy"
+            bound = await mc.expect("session.bound", re=bind)
+            assert bound["data"]["switched"] == "title"
+
+            await gen1.open_pc()
+            pc = (await mc.expect("pc.open"))["data"]["pc"]
+            await mc.send("pc.closed", {"pc": "pc-stale"})
+            await asyncio.sleep(0.1)
+            assert gen1.pc_open == pc, "a stale pc.closed doesn't end the hold"
+            await mc.send("pc.closed", {"pc": pc})
+            await asyncio.sleep(0.1)
+            assert gen1.pc_open is None
             assert not mc.conn.problems
         finally:
             await mc.close()

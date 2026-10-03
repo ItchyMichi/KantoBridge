@@ -215,7 +215,13 @@ class Walker:
         for _ in range(ENTITY_RETRIES):
             here = self.pos[1], self.pos[2]
             dirs = route(grid, here, goals, blocked=self.npcs, min_row=min_row)
-            assert dirs is not None, "no route to the goal cells"
+            if dirs is None:
+                # Unreachable even without NPCs: a real dead end. Otherwise an NPC stands on the
+                # goal or in a narrow pass (M10 gate flake): wait for it to wander off, plan again.
+                assert route(grid, here, goals, min_row=min_row) is not None, "no route to the goal cells"
+                await asyncio.sleep(0.6)
+                await self.resync()
+                continue
             ok = await self.follow(dirs)
             steps += len(dirs)
             await self.idle()

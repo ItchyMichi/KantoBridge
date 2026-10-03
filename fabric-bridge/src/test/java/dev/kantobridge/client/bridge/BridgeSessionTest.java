@@ -30,6 +30,7 @@ class BridgeSessionTest {
 		final List<Envelope> delivered = new ArrayList<>();
 		@Nullable HelloOk connected;
 		@Nullable String rejected;
+		int rejectedProtocol = -2;
 		@Nullable String closed;
 		int closeCalls;
 		private long seq;
@@ -51,8 +52,9 @@ class BridgeSessionTest {
 		}
 
 		@Override
-		public void rejected(String reason) {
+		public void rejected(String reason, int protocol) {
 			this.rejected = reason;
+			this.rejectedProtocol = protocol;
 		}
 
 		@Override
@@ -152,6 +154,7 @@ class BridgeSessionTest {
 		this.session.open(0);
 		this.receive(line("hello.ok", 1, 1L, data("protocol", 2, "bridge", "9", "engine", "9", "game", "red", "session", "s")), 10);
 		assertEquals("protocol", this.out.rejected);
+		assertEquals(2, this.out.rejectedProtocol, "gen1-bridge's own number, for the overlay");
 		assertEquals("rejected", this.out.closed);
 	}
 
@@ -160,8 +163,38 @@ class BridgeSessionTest {
 		this.session.open(0);
 		this.receive(line("hello.reject", 1, 1L, data("reason", "busy", "protocol", 1)), 10);
 		assertEquals("busy", this.out.rejected);
+		assertEquals(1, this.out.rejectedProtocol);
 		assertEquals("rejected", this.out.closed);
 		assertTrue(this.session.isClosed());
+	}
+
+	@Test
+	void helloRejectForTheProtocolNamesGenOneBridgesNumber() {
+		this.session.open(0);
+		this.receive(line("hello.reject", 1, 1L, data("reason", "protocol", "protocol", 3)), 10);
+		assertEquals("protocol", this.out.rejected);
+		assertEquals(3, this.out.rejectedProtocol);
+		this.setUp();
+		this.session.open(0);
+		this.receive(line("hello.reject", 1, 1L, data("reason", "protocol", "protocol", 99_999)), 10);
+		assertEquals(-1, this.out.rejectedProtocol, "a number out of range isn't shown");
+	}
+
+	@Test
+	void helloOkCarriesTheTestedEngine() {
+		this.session.open(0);
+		this.receive(line("hello.ok", 1, 1L, data("protocol", 1, "bridge", "0.1.0", "engine", "0.3.50", "tested", "0.3.49", "game", "blue",
+				"session", "s-1")), 10);
+		HelloOk ok = this.out.connected;
+		assertEquals(new HelloOk("s-1", "blue", "0.3.50", "0.1.0", "0.3.49"), ok);
+		assertTrue(ok.untestedEngine());
+		assertFalse(new HelloOk("s-1", "blue", "0.3.49", "0.1.0", "0.3.49").untestedEngine());
+		assertFalse(new HelloOk("s-1", "blue", "0.3.49", "0.1.0").untestedEngine(), "no tested version: nothing to warn about");
+		this.setUp();
+		this.session.open(0);
+		this.receive(line("hello.ok", 1, 1L, data("protocol", 1, "bridge", "0.1.0", "engine", "0.3.50", "tested", "not a version!", "game",
+				"blue", "session", "s-1")), 10);
+		assertNull(this.out.connected.tested(), "a malformed tested version is left out");
 	}
 
 	@Test

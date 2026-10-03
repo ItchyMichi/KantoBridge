@@ -25,7 +25,8 @@ side), chosen by KB_SCENE:
               the town the nurse's lastHeal names (the driver's KB_HEALED), then party.heal, money
               halved
   pc     facing the PC: the box row's access text, then pc.open, the hidden game held (busy, no
-         BoxMenu ever pushed); pc.closed hands the PC menu back; the player's own PC opens natively
+         BoxMenu ever pushed); a pc.closed with a stale id changes nothing (M10), the one with the
+         pc.open's id hands the PC menu back; the player's own PC opens natively
          (PlayerPC) and B returns to the PC menu; LOG OFF
   mart   across the counter from the clerk: the greeting, the BUY/SELL/QUIT menu with money; BUY:
          B at the quantity box, NO at the confirm (nothing changes), then a purchase of 2 (money down
@@ -63,6 +64,7 @@ class ViridianWalker(StoryWalker):
         self.saves = []
         self.bounds = []
         self.pc_opens = 0
+        self.pc_ids = []  # M10: each pc.open's id, echoed by the pc.closed that ends it
         self.logs = []
         self.bag_syncs = []
         self.timeline = []
@@ -81,6 +83,7 @@ class ViridianWalker(StoryWalker):
             self.bounds.append((d, m.get("re")))
         elif t == "pc.open":
             self.pc_opens += 1
+            self.pc_ids.append(d["pc"])
         elif t == "log":
             self.logs.append((d["level"], d["code"]))
         elif t == "bag.sync":
@@ -348,7 +351,13 @@ async def _pc(port, running):
     held = await w.status()
     report["held"] = {"mode": w.mode, "pcHeld": held["pcHeld"], "opens": w.pc_opens,
                       "menu_open": menu_id in w.open_uis()}
-    await mc.send("pc.closed", {})
+    # M10: a pc.closed naming another id leaves the hold alone; the open's own id ends it
+    await mc.send("pc.closed", {"pc": "pc-00000000-1"})
+    await asyncio.sleep(0.5)
+    await w.pump(0.2)
+    stale = await w.status()
+    report["stale"] = {"pcHeld": stale["pcHeld"], "stale": stale["pcStale"]}
+    await mc.send("pc.closed", {"pc": w.pc_ids[-1]})
     await w.until(lambda: w.mode == "screen", 20, "the PC menu back")
     released = await w.status()
     report["released"] = {"pcHeld": released["pcHeld"], "closed": released["pcClosed"],
@@ -395,6 +404,7 @@ def test_bills_pc_opens_cobblemons_pc():
     assert not w.errors, w.errors
     assert report["interact_kind"] == "hidden" and report["rows"] >= 3
     assert report["held"] == {"mode": "busy", "pcHeld": True, "opens": 1, "menu_open": True}
+    assert report["stale"] == {"pcHeld": True, "stale": 1}, "only the open's own id ends the hold"
     assert report["released"] == {"pcHeld": False, "closed": 1, "top_is_menu": True}
     assert report["player_pc"]["back_to_pc_menu"]
     assert report["after"] == {"opens": 1, "unexpected": 0, "native": 0, "taken": 1, "mode": "idle"}

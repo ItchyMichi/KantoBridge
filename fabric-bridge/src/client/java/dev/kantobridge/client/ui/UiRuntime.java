@@ -237,6 +237,6 @@ public final class UiRuntime {
 		return I18n.get("kantobridge.debug.ui", this.router.sessions().size(), top == null ? "-" : top.toString(), stats.opened, stats.closed,
 				stats.advances, stats.picks + stats.backs + stats.quantities + stats.names, stats.stale + stats.refused,
 				this.mirror.subscribed() ? I18n.get("kantobridge.debug.yes") : I18n.get("kantobridge.debug.no"), this.mirror.frames(),
-				this.mirror.badFrames(), this.buttons, battle == null ? "-" : battle);
+				this.mirror.dropped(), this.mirror.badFrames(), this.buttons, battle == null ? "-" : battle);
 	}
 }

@@ -99,6 +99,8 @@ public final class TextureSyncRuntime {
 		ClientLifecycleEvents.CLIENT_STOPPING.register(minecraft -> runtime.cancelWorker());
 		ClientTickEvents.END_CLIENT_TICK.register(runtime::tick);
 		bridge.addHudLine(() -> runtime.sync.hudLine(runtime.clock.millis()));
+		// The export and the pack build pause the link on purpose: no pause overlay meanwhile (M10).
+		bridge.pauseExcludedWhile(() -> runtime.sync.phase() == TextureSync.Phase.WORKING || runtime.sync.phase() == TextureSync.Phase.RELOADING);
 		bridge.addDebugLine(runtime::debugLine);
 	}
 

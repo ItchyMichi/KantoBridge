@@ -22,6 +22,8 @@ import org.junit.jupiter.api.Test;
  * for it; then what waited goes to the server in order when the hidden game runs the same save as before (a reconnect),
  * and is dropped (with the relays' queues, and a fresh snapshot asked for) when it may be another world's. A world
  * change drops the previous world's queues; refusals are shown and tried again; the switch's waiting reason is shown.
+ * M10: {@code session.bound.switched} decides instead of the guess when gen1-bridge says it, {@code session.waiting} gives
+ * the waiting reason, and {@code save.loaded} waits like the other story data.
  */
 class SessionGateTest {
 	private static final String WORLD = "0f8e9a1c-2b3d-4e5f-8a9b-0c1d2e3f4a5b";
@@ -274,21 +276,89 @@ class SessionGateTest {
 		long bind = this.bind(0);
 		assertNull(this.gate.hudLine(SessionGate.QUIET_WAIT_MS - 1), "a quick pairing shows nothing");
 		assertEquals("kantobridge.hud.session.pairing", this.gate.hudLine(SessionGate.QUIET_WAIT_MS + 1).key());
-		this.gate.log("session.switch_waiting", "session.switch_waiting reason=busy slot=2", 2_000);
+		this.gate.waiting("busy", bind, 2_000);
 		assertEquals("busy", this.gate.waiting());
 		assertEquals("kantobridge.hud.session.waiting.busy", this.gate.hudLine(2_000).key());
-		this.gate.log("session.switch_waiting", "session.switch_waiting reason=new_game slot=2", 3_000);
+		this.gate.waiting("new_game", bind, 3_000);
 		assertEquals("kantobridge.hud.session.waiting.new_game", this.gate.hudLine(3_000).key());
-		this.gate.log("session.switch_waiting", "session.switch_waiting reason=later_thing slot=2", 4_000);
+		this.gate.waiting("save_failed", null, 3_500);
+		assertEquals("kantobridge.hud.session.waiting.save_failed", this.gate.hudLine(3_500).key(), "re is optional");
+		this.gate.waiting("later_thing", bind, 4_000);
 		ConnectionStatus.Line other = this.gate.hudLine(4_000);
 		assertEquals("kantobridge.hud.session.waiting", other.key());
-		assertEquals(List.of("later_thing"), other.args());
-		this.gate.log("pc.dropped", "pc.dropped count=1", 5_000);
-		assertEquals("later_thing", this.gate.waiting(), "other log lines don't matter");
-		assertEquals(3, this.gate.stats().waits);
+		assertEquals(List.of("other"), other.args(), "a reason this client doesn't know");
+		assertEquals(4, this.gate.stats().waits);
 		this.gate.bound(bind, 6_000);
 		assertNull(this.gate.waiting());
 		assertNull(this.gate.hudLine(6_000));
+		this.gate.waiting("busy", bind, 7_000);
+		assertNull(this.gate.waiting(), "a late waiting after the answer changes nothing");
+	}
+
+	@Test
+	void aWaitingAboutAnOlderBindIsIgnored() {
+		this.gate.linkUp(SESSION, 0);
+		this.gate.world(true, WORLD, 0);
+		long first = this.bind(0);
+		long second = this.bind(100);
+		this.gate.waiting("busy", first, 200);
+		assertNull(this.gate.waiting(), "another world's bind");
+		assertTrue(this.glue.warnings.contains("session.stale_waiting"));
+		this.gate.waiting("new_game", second, 300);
+		assertEquals("new_game", this.gate.waiting());
+	}
+
+	@Test
+	void switchedNoneLetsWhatWaitedGoOnEvenAtTheFirstPairing() {
+		this.gate.linkUp(SESSION, 0);
+		this.gate.world(true, WORLD, 0);
+		long bind = this.bind(0);
+		this.gate.admit(message(MsgTypes.PARTY_GIVE));
+		this.gate.admit(message(MsgTypes.SAVE_LOADED));
+		this.gate.bound(bind, SessionGate.SWITCHED_NONE, 10);
+		assertEquals(State.OPEN, this.gate.state());
+		assertEquals(List.of(false), this.glue.openings, "gen1-bridge says its game stayed on the save: no guessing");
+		assertEquals(List.of(MsgTypes.PARTY_GIVE, MsgTypes.SAVE_LOADED), this.glue.replayed, "in order, to the server");
+		assertFalse(this.gate.holdsPlayer(), "no fresh snapshot to wait for");
+	}
+
+	@Test
+	void aSwitchDropsWhatWaitedEvenOnAReconnect() {
+		this.pairedOnce();
+		// The same gen1-bridge session and world (the guess would call it the same save), but gen1-bridge says it switched.
+		this.gate.linkDown(100);
+		this.gate.linkUp(SESSION, 200);
+		long bind = this.bind(200);
+		this.gate.admit(message(MsgTypes.PARTY_GIVE));
+		for (String switched : List.of("title")) {
+			this.gate.bound(bind, switched, 300);
+		}
+		assertEquals(List.of(true), this.glue.openings, "a switch: what waited may be another world's");
+		assertTrue(this.glue.replayed.isEmpty());
+		assertTrue(this.gate.holdsPlayer(), "until the fresh snapshot");
+		this.gate.snapshot();
+		assertFalse(this.gate.holdsPlayer());
+	}
+
+	@Test
+	void everySwitchKindIsAFreshStart() {
+		for (String switched : List.of("title", "saved", "moved")) {
+			this.setUp();
+			this.gate.linkUp(SESSION, 0);
+			this.gate.world(true, WORLD, 0);
+			this.gate.bound(this.bind(0), switched, 10);
+			assertEquals(List.of(true), this.glue.openings, switched);
+		}
+	}
+
+	@Test
+	void saveLoadedWaitsLikeTheOtherStoryData() {
+		assertTrue(SessionGate.UP.contains(MsgTypes.SAVE_LOADED));
+		this.gate.linkUp(SESSION, 0);
+		this.gate.world(true, WORLD, 0);
+		this.bind(0);
+		assertEquals(Admit.HELD, this.gate.admit(message(MsgTypes.SAVE_LOADED)));
+		assertEquals(1, this.gate.heldCount());
 	}
 
 	@Test

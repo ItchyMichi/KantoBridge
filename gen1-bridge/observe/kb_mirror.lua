@@ -25,12 +25,24 @@
 -- the client lags (more than MAX_BACKLOG bytes queued: the frame is dropped).
 --
 -- The cost of every capture is measured (microseconds, for debug.status).
+--
+-- M10 (PLAN section 6 M10, "mirror at most 30 fps"): captures are paced at
+-- `fps` (at most 30) on a carried deadline, so they average no more than
+-- that, and on top of it no frame goes out while 30 have gone out in the
+-- last second (a sliding window: the frame waits for a later step, or a
+-- newer capture replaces it). debug.status: mirrorPeakFps (the most frames
+-- in any second so far), mirrorCapped (steps a frame waited for the cap).
 
 local Mirror = {}
 
 Mirror.W, Mirror.H = 160, 144
 Mirror.MAX_BACKLOG = 256 * 1024
 Mirror.MAX_PNG_B64 = 1048576 -- mirror.frame png maxLength
+Mirror.MAX_FPS = 30
+-- the sliding window: one second, less a little slack for clock noise, so a
+-- steady 30 fps stream (each frame a thirtieth of a second after the one
+-- before) is never held back
+Mirror.WINDOW_SECONDS = 1 - 0.002
 
 local floor = math.floor
 
@@ -49,10 +61,24 @@ function Mirror.new(opts)
   local target              -- our 160x144 canvas
   local quad, quadKey
   local frameNo = 0
+  local sentTimes = {}      -- when the frames of the last second went out, oldest first
   local counts = {
     subs = 0, captures = 0, frames = 0, skipped = 0, dropped = 0, failures = 0,
     bytes = 0, pngBytes = 0, totalUs = 0, maxUs = 0, encodeUs = 0,
+    peakFps = 0, capped = 0, -- M10
   }
+
+  -- The frames sent in the second up to now (older ones forgotten).
+  local function sentLastSecond(now)
+    local cutoff, first = now - Mirror.WINDOW_SECONDS, 1
+    while sentTimes[first] ~= nil and sentTimes[first] <= cutoff do first = first + 1 end
+    if first > 1 then
+      local kept = {}
+      for i = first, #sentTimes do kept[#kept + 1] = sentTimes[i] end
+      sentTimes = kept
+    end
+    return #sentTimes
+  end
 
   function m.subscribe(fps, gen)
     sub = { fps = fps, gen = gen }
@@ -163,6 +189,12 @@ function Mirror.new(opts)
       return
     end
     if not pending then return end
+    -- M10: never more than MAX_FPS frames in any second
+    local now = clock()
+    if sentLastSecond(now) >= Mirror.MAX_FPS then
+      counts.capped = counts.capped + 1
+      return
+    end
     local frame = pending
     pending = nil
     if (link.queued or 0) > Mirror.MAX_BACKLOG then
@@ -173,6 +205,8 @@ function Mirror.new(opts)
     counts.frames = counts.frames + 1
     counts.bytes = counts.bytes + #frame.png
     counts.pngBytes = counts.pngBytes + frame.bytes
+    sentTimes[#sentTimes + 1] = now
+    if #sentTimes > counts.peakFps then counts.peakFps = #sentTimes end
     out[#out + 1] = { "mirror.frame", { w = Mirror.W, h = Mirror.H, png = frame.png, n = frameNo }, "mirror" }
   end
 

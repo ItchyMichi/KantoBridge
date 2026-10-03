@@ -65,7 +65,7 @@ def test_first_message_must_be_hello():
 
 @pytest.mark.parametrize("hello, reason", [
     ({"protocol": 2, "role": "client", "mod": "x"}, "protocol"),
-    ({"protocol": 1, "role": "spectator", "mod": "x"}, "malformed"),
+    ({"protocol": 1, "role": "spectator", "mod": "x"}, "role"),
     ({"protocol": "1", "role": "client", "mod": "x"}, "malformed"),
     ({"protocol": 1, "role": "client"}, "malformed"),
 ])
@@ -383,3 +383,157 @@ def test_the_port_option_applies_at_once_from_the_mod_manager():
     rig.step()
     assert rig.listening(27165) and rig.status.portConfigured == 27165
     assert "[warn] [gen1-bridge] net.port_option_invalid" in rig.logs()
+
+
+# ------------------------------------------------------------ M10: handshake hardening
+
+UUID = "0123abcd-4567-89ab-cdef-0123456789ab"
+
+
+def test_hello_ok_says_which_engine_this_bridge_is_tested_with():
+    rig, peer, msgs = established()
+    ok = msgs[0]["data"]
+    assert ok["tested"] == "0.3.49" == ok["engine"]
+    rig.step(2)
+    assert not [m for m in peer.messages() if m["type"] == "log"]
+    assert not any("engine.untested" in line for line in rig.logs())
+
+
+def test_an_untested_engine_gets_one_warning_per_connection():
+    rig = Rig()
+    rig.E.Version.engine = b"0.3.50"
+    rig.world()
+    for n in (1, 2):
+        peer = rig.connect()
+        peer.hello()
+        msgs = peer.messages()
+        ok = msgs[0]["data"]
+        assert (ok["engine"], ok["tested"]) == ("0.3.50", "0.3.49")
+        warns = [m["data"] for m in msgs if m["type"] == "log" and m["data"]["code"] == "engine.untested"]
+        assert len(warns) == 1 and warns[0]["level"] == "warn"
+        assert "engine=0.3.50" in warns[0]["msg"] and "tested=0.3.49" in warns[0]["msg"]
+        kinds = [m["type"] for m in msgs]
+        assert kinds.index("snapshot") < kinds.index("log"), "nothing between hello.ok and the snapshot"
+        rig.step(3)
+        assert not [m for m in peer.messages() if m["type"] == "log" and m["data"]["code"] == "engine.untested"]
+    assert sum("engine.untested" in line for line in rig.logs()) == 2
+
+
+def test_a_connection_without_hello_is_closed_after_ten_seconds():
+    rig = Rig()
+    rig.step()
+    peer = rig.connect()
+    rig.advance(4)
+    rig.step()
+    peer.send_raw(b'{"type":"hel')  # a line that never ends keeps nothing alive
+    rig.advance(5)
+    rig.step()
+    assert not peer.closed()
+    rig.advance(1.5)
+    rig.step()
+    assert [(m["type"], m["data"]["code"], m["data"]["msg"]) for m in peer.messages()] == \
+        [("error", "no_hello", "hello_timeout")]
+    assert peer.closed() and rig.status.connected is False
+    assert "[info] [gen1-bridge] session.hello_timeout seconds=10" in rig.logs()
+    # the next connection is served as usual, and the count is in debug.status
+    fresh = rig.connect()
+    fresh.hello()
+    fresh.messages()
+    seq = fresh.send("debug.status")
+    rig.step()
+    st = [m for m in fresh.messages() if m["type"] == "debug.status" and m.get("re") == seq][0]["data"]
+    assert st["sessionHelloTimeouts"] == 1
+
+
+def test_a_first_line_that_isnt_an_envelope_gets_bad_envelope_then_the_close():
+    rig = Rig()
+    rig.step()
+    peer = rig.connect()
+    peer.send_raw(b'{"not": "an envelope"}\n')
+    rig.step()
+    assert [(m["type"], m["data"]["code"]) for m in peer.messages()] == [("error", "bad_envelope")]
+    assert peer.closed()
+
+
+def test_a_bad_line_after_hello_keeps_the_connection():
+    rig, peer, _ = established()
+    peer.send_raw(b'{"not": "an envelope"}\n')
+    rig.step()
+    assert [m["data"]["code"] for m in peer.messages() if m["type"] == "error"] == ["bad_envelope"]
+    assert not peer.closed()
+
+
+@pytest.mark.parametrize("hello, reason", [
+    # another protocol is "protocol" whatever else it carries
+    ({"protocol": 2}, "protocol"),
+    ({"protocol": 7, "role": 5, "colour": True}, "protocol"),
+    ({"protocol": 1000, "role": "client", "mod": "x"}, "protocol"),
+    # a role string that isn't one of ours
+    ({"protocol": 1, "role": "CLIENT", "mod": "x"}, "role"),
+    ({"protocol": 1, "role": "", "mod": "x"}, "role"),
+    # malformed fields
+    ({"protocol": 0, "role": "client", "mod": "x"}, "malformed"),
+    ({"protocol": 1.5, "role": "client", "mod": "x"}, "malformed"),
+    ({"protocol": 1001, "role": "client", "mod": "x"}, "malformed"),
+    ({"role": "client", "mod": "x"}, "malformed"),
+    ({"protocol": 1, "mod": "x"}, "malformed"),
+    ({"protocol": 1, "role": 3, "mod": "x"}, "malformed"),
+    ({"protocol": 1, "role": "client", "mod": ""}, "malformed"),
+    ({"protocol": 1, "role": "client", "mod": "has space"}, "malformed"),
+    ({"protocol": 1, "role": "client", "mod": "x" * 33}, "malformed"),
+    ({"protocol": 1, "role": "client", "mod": "x", "minecraft": "1.21 1"}, "malformed"),
+    ({"protocol": 1, "role": "client", "mod": "x", "minecraft": 121}, "malformed"),
+    ({"protocol": 1, "role": "client", "mod": "x", "player": {"uuid": "nope", "name": "Steve"}}, "malformed"),
+    ({"protocol": 1, "role": "client", "mod": "x", "player": {"uuid": UUID, "name": "bad name"}}, "malformed"),
+    ({"protocol": 1, "role": "client", "mod": "x", "player": {"uuid": UUID, "name": "x" * 17}}, "malformed"),
+    ({"protocol": 1, "role": "client", "mod": "x", "player": {"uuid": UUID}}, "malformed"),
+    ({"protocol": 1, "role": "client", "mod": "x", "player": {"uuid": UUID, "name": "Steve", "op": True}},
+     "malformed"),
+    ({"protocol": 1, "role": "client", "mod": "x", "world": {"id": "w-1", "multiplayer": "yes"}}, "malformed"),
+    ({"protocol": 1, "role": "client", "mod": "x", "world": {"id": "has space", "multiplayer": True}}, "malformed"),
+    ({"protocol": 1, "role": "client", "mod": "x", "world": {"multiplayer": True}}, "malformed"),
+    ({"protocol": 1, "role": "client", "mod": "x", "world": []}, "malformed"),
+    ({"protocol": 1, "role": "client", "mod": "x", "colour": "blue"}, "malformed"),
+    # a malformed field wins over the role
+    ({"protocol": 1, "role": "spectator", "mod": "has space"}, "malformed"),
+])
+def test_every_bad_hello_is_rejected_with_its_reason_then_closed(hello, reason):
+    rig = Rig()
+    rig.step()
+    peer = rig.connect()
+    seq = peer.send("hello", hello)
+    rig.step()
+    msgs = peer.messages()
+    assert [(m["type"], m["re"], m["data"]) for m in msgs] == [("hello.reject", seq, {"reason": reason, "protocol": 1})]
+    assert peer.closed()
+    assert f"[info] [gen1-bridge] session.rejected reason={reason}" in rig.logs()
+
+
+def test_a_hello_with_every_optional_field_is_accepted():
+    rig = Rig()
+    rig.world()
+    peer = rig.connect()
+    seq = peer.send("hello", {"protocol": 1, "role": "client", "mod": "kantobridge-0.1.0+local", "minecraft": "1.21.1",
+                              "player": {"uuid": UUID, "name": "Steve_1"},
+                              "world": {"id": "w-1:kanto", "multiplayer": True}})
+    rig.step()
+    msgs = peer.messages()
+    assert msgs[0]["type"] == "hello.ok" and msgs[0]["re"] == seq and msgs[1]["type"] == "snapshot"
+
+
+def test_rejections_are_counted_by_reason():
+    rig = Rig()
+    rig.world()
+    for hello in ({"protocol": 2}, {"protocol": 1, "role": "who", "mod": "x"}, {"protocol": 1, "role": "test"}):
+        peer = rig.connect()
+        peer.send("hello", hello)
+        rig.step()
+        assert peer.closed()
+    peer = rig.connect()
+    peer.hello()
+    peer.messages()
+    seq = peer.send("debug.status")
+    rig.step()
+    st = [m for m in peer.messages() if m["type"] == "debug.status" and m.get("re") == seq][0]["data"]
+    assert (st["sessionRejected"], st["sessionRejectedProtocol"], st["sessionRejectedRole"],
+            st["sessionRejectedMalformed"]) == (3, 1, 1, 1)

@@ -9,6 +9,7 @@ import dev.kantobridge.builder.BuildTasks;
 import dev.kantobridge.builder.HeadlessBuild;
 import dev.kantobridge.entity.DeferredRemovals;
 import dev.kantobridge.entity.KbEntities;
+import dev.kantobridge.net.RelayHandshake;
 import dev.kantobridge.net.RelayService;
 import dev.kantobridge.pokemon.DaycareService;
 import dev.kantobridge.pokemon.DexService;
@@ -20,6 +21,7 @@ import dev.kantobridge.server.BuildHold;
 import dev.kantobridge.server.FlashService;
 import dev.kantobridge.server.HabitatService;
 import dev.kantobridge.server.Rules;
+import dev.kantobridge.server.SavePairService;
 import dev.kantobridge.server.SaveService;
 import dev.kantobridge.server.SessionService;
 import dev.kantobridge.server.StoryStateService;
@@ -27,6 +29,7 @@ import dev.kantobridge.server.TextureStatusService;
 import dev.kantobridge.server.WarpService;
 import dev.kantobridge.server.WorldIndexSync;
 import dev.kantobridge.story.StoryStates;
+import dev.kantobridge.story.Surfing;
 import net.fabricmc.api.ModInitializer;
 
 import org.slf4j.Logger;
@@ -48,7 +51,11 @@ public class KantoBridge implements ModInitializer {
 		// Entity removals that can't run inside the server's entity tracking (a Pokémon whose owner leaves).
 		DeferredRemovals.init();
 		StoryStates.init();
+		// Each player's surf flag for the other players' clients (M10: they draw the surf sprite under a surfer).
+		Surfing.init();
 		RelayService.init();
+		// The relay's version handshake on join (M10): clients without kantobridge, or with another protocol, are told why.
+		RelayHandshake.init();
 		WorldIndexSync.init();
 		BuildTasks.init();
 		HeadlessBuild.init();
@@ -81,6 +88,8 @@ public class KantoBridge implements ModInitializer {
 		PcService.init();
 		SaveService.init();
 		SessionService.init();
+		// Which hidden-game save the world last saved with, and the warning when the hidden game runs another (M10).
+		SavePairService.init();
 		// Each player's own generated pack against this world's slot map (texture.status, M9): hashes and counts only.
 		TextureStatusService.init();
 		LOGGER.info("kantobridge loaded (protocol {}, {} message types)", Catalog.bundled().protocol(), Catalog.bundled().messages().size());

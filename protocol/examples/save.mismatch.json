@@ -1,0 +1,8 @@
+[
+  {"type": "save.mismatch", "seq": 21, "data": {"kind": "hidden_behind", "ops": 2}},
+  {
+    "type": "save.mismatch",
+    "seq": 22,
+    "data": {"kind": "hidden_older", "hiddenAt": 1789990000, "worldAt": 1790000000}
+  }
+]

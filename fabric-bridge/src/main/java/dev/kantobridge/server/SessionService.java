@@ -50,6 +50,8 @@ public final class SessionService {
 	private static final Map<String, AtomicLong> WARNINGS = new ConcurrentHashMap<>();
 	private static final AtomicLong OFFERED = new AtomicLong();
 	private static final AtomicLong BOUND = new AtomicLong();
+	/** {@code session.bound.switched}'s values (M10). */
+	private static final Set<String> SWITCHES = Set.of("none", "title", "saved", "moved");
 
 	private SessionService() {
 	}
@@ -148,11 +150,19 @@ public final class SessionService {
 		}
 	}
 
-	/** The client relays its gen1-bridge's {@code session.bound{slot}} (needs the {@code c2s} leg). */
+	/**
+	 * The client relays its gen1-bridge's {@code session.bound{slot}} (needs the {@code c2s} leg). M10's {@code switched}
+	 * (how the hidden game reached the slot) is the client's business; it is accepted and not kept.
+	 */
 	static void onBound(ServerPlayer player, Envelope message) {
 		int slot;
 		try {
-			slot = DataReader.of(message.data(), "").allowOnly(Set.of("slot")).integer("slot", 0, SessionRecord.MAX_SLOT);
+			DataReader reader = DataReader.of(message.data(), "").allowOnly(Set.of("slot", "switched"));
+			slot = reader.integer("slot", 0, SessionRecord.MAX_SLOT);
+			String switched = reader.has("switched") ? reader.string("switched") : null;
+			if (switched != null && !SWITCHES.contains(switched)) {
+				throw new DataException(reader.path("switched"), "unknown value");
+			}
 		} catch (DataException e) {
 			warn("bad_message");
 			RelayService.get().sendError(player, "bad_message", message.seq());

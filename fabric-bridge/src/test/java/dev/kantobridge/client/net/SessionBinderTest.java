@@ -161,6 +161,25 @@ class SessionBinderTest {
 	}
 
 	@Test
+	void switchedIsKeptForTheGateAndOnlyTheSlotGoesUp() throws Exception {
+		SessionBinder binder = new SessionBinder(this.links, true);
+		binder.linkUp();
+		binder.world(WORLD, true);
+		binder.tick();
+		assertTrue(binder.onBound(ProtoJson.parseObject("{\"slot\":3,\"switched\":\"title\"}"), binder.sentSeq()));
+		assertEquals(3, binder.slot());
+		assertEquals("title", binder.switched());
+		assertEquals("{\"slot\":3}", ProtoJson.write(this.links.server.get(0).data()), "the server keeps the slot only");
+		assertTrue(binder.onBound(ProtoJson.parseObject("{\"slot\":3,\"switched\":\"none\"}"), binder.sentSeq()));
+		assertEquals("none", binder.switched());
+		assertTrue(binder.onBound(ProtoJson.parseObject("{\"slot\":3}"), binder.sentSeq()));
+		assertNull(binder.switched(), "not said: the gate guesses as before");
+		assertFalse(binder.onBound(ProtoJson.parseObject("{\"slot\":3,\"switched\":\"sideways\"}"), binder.sentSeq()));
+		assertFalse(binder.onBound(ProtoJson.parseObject("{\"slot\":3,\"switched\":1}"), binder.sentSeq()));
+		assertEquals(List.of("session.bad_bound", "session.bad_bound"), this.links.warnings);
+	}
+
+	@Test
 	void anInvalidWorldIdIsNeverBound() {
 		SessionBinder binder = new SessionBinder(this.links, false);
 		binder.linkUp();

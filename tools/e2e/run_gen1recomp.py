@@ -232,14 +232,8 @@ class Launch:
         return False
 
 
-def launch(driver: str | Path, game: str | None = None, extra_env: dict[str, str] | None = None,
-           echo: bool = True, install: Path = INSTALL) -> Launch:
-    """Starts the test instance with a driver and returns at once."""
-    driver = Path(driver)
-    if not driver.is_absolute():
-        driver = (DRIVERS / driver) if (DRIVERS / driver).is_file() else driver.resolve()
-    if not driver.is_file():
-        raise FileNotFoundError(driver)
+def _start(driver: Path | None, game: str | None, extra_env: dict[str, str] | None, echo: bool,
+           install: Path) -> Launch:
     pf = preflight(install)
     if not pf.ok and not (game and pf.reasons == ["both red and blue are imported: pass --game"]):
         raise RuntimeError("pre-flight not done: " + "; ".join(pf.reasons))
@@ -248,13 +242,15 @@ def launch(driver: str | Path, game: str | None = None, extra_env: dict[str, str
         raise ValueError(f"game must be one of {VERSIONS}")
 
     env = dict(os.environ)
+    env.pop("POKEPORT_DRIVER", None)
     env.update({
-        "POKEPORT_DRIVER": str(driver),
         "POKEPORT_VERSION": game,
         "POKEPORT_CONSOLE": "1",      # no hidden console: stdout stays our pipe
         "POKEPORT_BACKGROUND": "1",   # mutes audio
         "PYTHONUTF8": "1",
     })
+    if driver is not None:
+        env["POKEPORT_DRIVER"] = str(driver)
     env.update(extra_env or {})
     proc = subprocess.Popen(
         [str(install / "gen1recomp.exe"), f"--game={game}"],  # never --console: it takes stdout away
@@ -262,6 +258,28 @@ def launch(driver: str | Path, game: str | None = None, extra_env: dict[str, str
         stdin=subprocess.DEVNULL, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
     )
     return Launch(proc, crash_log(), echo)
+
+
+def launch(driver: str | Path, game: str | None = None, extra_env: dict[str, str] | None = None,
+           echo: bool = True, install: Path = INSTALL) -> Launch:
+    """Starts the test instance with a driver and returns at once."""
+    driver = Path(driver)
+    if not driver.is_absolute():
+        driver = (DRIVERS / driver) if (DRIVERS / driver).is_file() else driver.resolve()
+    if not driver.is_file():
+        raise FileNotFoundError(driver)
+    return _start(driver, game, extra_env, echo, install)
+
+
+def launch_plain(game: str | None = None, extra_env: dict[str, str] | None = None, echo: bool = True,
+                 install: Path = INSTALL) -> Launch:
+    """M10: starts the test instance WITHOUT a driver, so the engine's own paced main loop runs as it
+    does for a player (a driver turns its frame pacing off, refs/gen1recomp/main.lua:1637-1642, and
+    steps the game once per frame). It boots straight into the game's title (--game=); gen1-bridge
+    listens on its configured port. Without a driver stdout stays block-buffered, so its lines come
+    late: talk to gen1-bridge over TCP instead of waiting for markers. Nothing ends it but the
+    caller: leave the ``with`` block (or call kill()); it is never given a save to write."""
+    return _start(None, game, extra_env, echo, install)
 
 
 def run(driver: str | Path, game: str | None = None, timeout: float = 180.0,

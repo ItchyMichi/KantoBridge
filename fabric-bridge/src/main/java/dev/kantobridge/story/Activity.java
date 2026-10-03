@@ -16,12 +16,14 @@ import org.jetbrains.annotations.Nullable;
 /**
  * What a player is doing for the hidden game (protocol/messages/activity.schema.json), shown to other players as a
  * speech bubble (DESIGN §8 "Smoothing it over", M9): in a battle, in a dialogue (one of the bridge's screens), in a
- * cutscene, or nothing. Each client reports its own player's; the server keeps it as an attachment on the player (not
+ * cutscene, paused (M10: their Gen1Recomp isn't connected, so their game waits), or nothing. Each client reports its own
+ * player's; the server keeps it as an attachment on the player (not
  * saved: the client reports again on every join) and Fabric syncs it to every client that tracks the player, except the
  * player's own ({@link #SYNC}): the bubble is for the others.
  */
 public enum Activity {
-	NONE, DIALOGUE, CUTSCENE, BATTLE;
+	// The wire form is the ordinal: new values only ever go at the end.
+	NONE, DIALOGUE, CUTSCENE, BATTLE, PAUSED;
 
 	/** Everyone but the player it is about (docs/PLAN.md §4.3 {@code fx/}: {@code allButTarget}). */
 	public static final AttachmentSyncPredicate SYNC = AttachmentSyncPredicate.allButTarget();

@@ -340,6 +340,13 @@
       "redact": [],
       "schema": "messages/pong.schema.json"
     },
+    "relay.hello": {
+      "legs": ["s2c", "c2s"],
+      "re": "never",
+      "rom": false,
+      "redact": [],
+      "schema": "messages/relay.hello.schema.json"
+    },
     "resync": {
       "legs": ["m2g"],
       "re": "never",
@@ -361,6 +368,20 @@
       "redact": [],
       "schema": "messages/save.done.schema.json"
     },
+    "save.loaded": {
+      "legs": ["g2m", "c2s"],
+      "re": "never",
+      "rom": false,
+      "redact": [],
+      "schema": "messages/save.loaded.schema.json"
+    },
+    "save.mismatch": {
+      "legs": ["s2c"],
+      "re": "never",
+      "rom": false,
+      "redact": [],
+      "schema": "messages/save.mismatch.schema.json"
+    },
     "session.bind": {
       "legs": ["m2g", "s2c"],
       "re": "never",
@@ -374,6 +395,13 @@
       "rom": false,
       "redact": [],
       "schema": "messages/session.bound.schema.json"
+    },
+    "session.waiting": {
+      "legs": ["g2m"],
+      "re": "optional",
+      "rom": false,
+      "redact": [],
+      "schema": "messages/session.waiting.schema.json"
     },
     "snapshot": {
       "legs": ["g2m"],

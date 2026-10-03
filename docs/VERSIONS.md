@@ -67,4 +67,8 @@ machine's **3.12.7**.
 |---|---|
 | `fabric-bridge` (mod id `kantobridge`) | 0.1.0 |
 | `gen1-bridge` (mod id `gen1-bridge`) | 0.1.0 |
-| Protocol | **1** ([PROTOCOL.md](PROTOCOL.md), schemas in `protocol/`): `127.0.0.1:27151`, newline-delimited strict JSON, 72 message types |
+| Protocol | **1** ([PROTOCOL.md](PROTOCOL.md), schemas in `protocol/`): `127.0.0.1:27151`, newline-delimited strict JSON, 77 message types |
+
+The installer skeleton's `tools/installer/pins.json` repeats the player-facing pins: Gen1Recomp,
+Fabric API, and Cobblemon (its Maven artifact, SHA-256 taken from the Gradle cache). Prism Launcher
+is not pinned yet (docs/INSTALLER.md).

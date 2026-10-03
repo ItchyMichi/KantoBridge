@@ -34,6 +34,7 @@ return function(mod)
     Engine = import("lib/kb_engine.lua"),
     catalog = import("lib/kb_catalog.lua"),
     Session = import("lib/kb_session.lua"),
+    Perf = import("lib/kb_perf.lua"),
     Player = import("observe/kb_player.lua"),
     Warp = import("observe/kb_warp.lua"),
     Snapshot = import("observe/kb_snapshot.lua"),
@@ -62,7 +63,8 @@ return function(mod)
     hash = kb.sha256.short,
     debug = mod.developer == true,
   })
-  local engine = kb.Engine.new({ require = require, log = log, ui = mod.ui, datasets = mod.datasets })
+  -- M10: the love facade too (love.window and love.timer for running hidden)
+  local engine = kb.Engine.new({ require = require, log = log, ui = mod.ui, datasets = mod.datasets, love = love })
 
   -- The port is a mod option (F10 manager, or the launcher's mod settings);
   -- drivers can move it through exports.configure before the first bind. A
@@ -84,6 +86,10 @@ return function(mod)
   -- love.timer passes the sandbox's love facade (src/mods/Sandbox.lua:100-108).
   local timer = love.timer
   local function clock() return timer.getTime() end
+
+  -- M10: gen1-bridge's own cost per logic step and per drawn frame
+  -- (lib/kb_perf.lua): every hook and event handler below is timed into it.
+  local perf = kb.Perf.new({ clock = clock })
 
   -- A fresh id per start, so a client can tell a restart from a reconnect.
   local sessionId = "s-" .. kb.sha256.short(table.concat({
@@ -161,20 +167,24 @@ return function(mod)
   -- M5: battles fought in Cobblemon, gifts, heals and the shadow party.
   -- party uids persist through mod.save (save.modData, src/core/Game.lua:1314-1324).
   local battles = kb.Battle.new({ engine = engine, log = log, markup = kb.Ui.markup })
+  local saves -- act/kb_save.lua, below (M10: it counts the Pokemon operations party sends)
   local party = kb.Party.new({
     engine = engine, log = log, markup = kb.Ui.markup, clock = clock,
     store = {
       get = function(key) return mod.save:get(key) end,
       set = function(key, value) mod.save:set(key, value) end,
     },
+    onOp = function() saves.opSent() end,
   })
   -- M6: the bag's battle items mirrored into Minecraft (P17)
   local bagObs = kb.Bag.new({ engine = engine, json = kb.json, log = log })
   -- M7: saving (save.begin/done, the Pokemon Center's heal and save),
   -- session pairing, and Bill's PC as Cobblemon's PC. The bound world is
-  -- kept in mod.save too (save.modData, src/core/Game.lua:1314-1324).
-  local saves = kb.Save.new({
-    engine = engine, log = log,
+  -- kept in mod.save too (save.modData, src/core/Game.lua:1314-1324). M10:
+  -- every save's pair is written into its own mod data (save.begin.pair,
+  -- save.loaded).
+  saves = kb.Save.new({
+    engine = engine, log = log, hex = kb.sha256.hex, seed = sessionId, clock = clock,
     store = {
       get = function(key) return mod.save:get(key) end,
       set = function(key, value) mod.save:set(key, value) end,
@@ -320,6 +330,18 @@ return function(mod)
     merge("pc", pcs.stats())
     merge("story", story.stats())
     merge("field", field.stats())
+    -- M10: our own cost per logic step and per drawn frame (perfSteps,
+    -- perfAvgUs, perfMaxUs, perfOver1ms, perfTotalUs, perfFrames,
+    -- perfDrawAvgUs, ...), running hidden (hiddenActive, hiddenFaked,
+    -- hiddenVisible, hiddenMinimized, ...), the session's hello counts
+    merge("perf", perf.stats())
+    merge("hidden", engine.hiddenStats())
+    local hello = {}
+    for _, k in ipairs({ "rejected", "rejectedProtocol", "rejectedRole", "rejectedMalformed", "helloTimeouts",
+                         "timeouts", "untested", "badFirstLines" }) do
+      hello[k] = stats[k]
+    end
+    merge("session", hello)
     for k, v in pairs(engine.bridgeCounts()) do out[k] = v end
     -- M8 (wave 2): direct battles, native catches, trades, the daycare,
     -- battle music
@@ -373,6 +395,8 @@ return function(mod)
     log = log,
     bridge = mod.version,
     engine = function() return (engine.version()) end,
+    -- M10: hello.ok.tested, and engine.untested when the running one differs
+    tested = kb.Engine.TESTED,
     game = engine.gameVersion,
     sessionId = sessionId,
     snapshot = snapshot,
@@ -490,35 +514,37 @@ return function(mod)
     live = function() return session.established() and kb.Session.STREAM_ROLES[session.role()] == true end,
     battle = function(facts) return battles.begin(facts) end,
   }
-  mod.hooks:wrap("script.command", function(nextFn, ctx, name, args)
+  -- (M10: every hook and event handler is timed into kb_perf; perf.hook
+  -- leaves the engine's own work in nextFn out)
+  mod.hooks:wrap("script.command", perf.hook(function(nextFn, ctx, name, args)
     return engine.scriptCommand(nextFn, ctx, name, args, bridge)
-  end)
-  mod.hooks:wrap("trainer.before_battle", function(nextFn, g, context, continueBattle)
+  end))
+  mod.hooks:wrap("trainer.before_battle", perf.hook(function(nextFn, g, context, continueBattle)
     return engine.trainerBeforeBattle(nextFn, g, context, continueBattle, bridge)
-  end)
+  end))
   -- M6 (lib/kb_engine.lua "wild encounters, Pokedex, bag, items"): wild
   -- encounters (grass and indoor rolls suppressed for the habitat pools,
   -- Safari and ghost battles native, surfing and fishing held for
   -- Cobblemon) and items used on a party member (stones and RARE_CANDY
   -- applied by Cobblemon, TM/HM moves watched). Hooks only, so a hot reload
   -- drops them with this instance.
-  mod.hooks:wrap("encounter.roll", function(nextFn, encDef, ctx)
+  mod.hooks:wrap("encounter.roll", perf.hook(function(nextFn, encDef, ctx)
     return engine.encounterRoll(nextFn, encDef, ctx, bridge)
-  end)
-  mod.hooks:wrap("encounter.fishing", function(nextFn, rod, mapId, pool)
+  end))
+  mod.hooks:wrap("encounter.fishing", perf.hook(function(nextFn, rod, mapId, pool)
     return engine.encounterFishing(nextFn, rod, mapId, pool, bridge)
-  end)
-  mod.hooks:wrap("item.use", function(nextFn, g, battle, id, target, list, moveIndex, picker)
+  end))
+  mod.hooks:wrap("item.use", perf.hook(function(nextFn, g, battle, id, target, list, moveIndex, picker)
     return engine.itemUse(nextFn, g, battle, id, target, list, moveIndex, picker, bridge)
-  end)
+  end))
   -- M7 (lib/kb_engine.lua "the Pokemon Center, saving, the PC, sessions"):
   -- the Pokemon Center PC's rows (OC:3664): the box row opens Cobblemon's
   -- PC while a client or test session is connected. A hook, so a hot
   -- reload drops it; a menu already built keeps asking the current
   -- instance through kb_engine's slot.
-  mod.hooks:wrap("ui.pc.items", function(nextFn, g, items)
+  mod.hooks:wrap("ui.pc.items", perf.hook(function(nextFn, g, items)
     return engine.pcItems(nextFn, g, items)
-  end)
+  end))
   -- M8 (lib/kb_engine.lua "direct battles, native catches, the daycare,
   -- renames"): the A press on an object (world.talk, OC:2561-2566) and a
   -- completed step (world.stepped, OC:4675-4678) arm the text boxes they
@@ -526,15 +552,15 @@ return function(mod)
   -- Pokemon object, the ghost Marowak with the SILPH_SCOPE, Giovanni in
   -- the Rocket Hideout) is fought in Cobblemon; pokemon.caught (a native
   -- catch: the Safari Zone) crosses over as a gift. Hooks and events only.
-  mod.hooks:wrap("world.talk", function(nextFn, ow, target)
+  mod.hooks:wrap("world.talk", perf.hook(function(nextFn, ow, target)
     return engine.worldTalk(nextFn, ow, target)
-  end)
-  mod.events:on("world.stepped", function() pcall(engine.directStepped) end)
-  mod.events:on("pokemon.caught", function(payload) pcall(engine.nativeCaught, payload) end)
+  end))
+  mod.events:on("world.stepped", perf.timed(function() pcall(engine.directStepped) end))
+  mod.events:on("pokemon.caught", perf.timed(function(payload) pcall(engine.nativeCaught, payload) end))
   -- Every hidden-game save (Game:writeSave emits save.writing before the
   -- file is written, src/core/Game.lua:1342-1345): Minecraft saves too
   -- (except the one before an M9 slot switch).
-  mod.events:on("save.writing", function() saves.writing() end)
+  mod.events:on("save.writing", perf.timed(function() saves.writing() end))
 
   status.session = sessionId
   status.configure = function(opts)
@@ -548,6 +574,9 @@ return function(mod)
   status.pairedSlot = function(world) return pairing.slotOf(world) end
   status.homeSlot = function() return pairing.home() end
   status.forgetWorld = function(world) return pairing.forget(world) end
+  -- M10, for test drivers: start the per-step cost counts over (a scenario's
+  -- own numbers, without the boot, the export or the handshake)
+  status.perfReset = function() perf.reset() end
 
   local PIN_EVERY = 60 -- steps between checks that the display pin still holds
   local steps = 0
@@ -631,6 +660,9 @@ return function(mod)
     party.step(out, link)
     bagObs.step(out, link)
     saves.step(out, link)
+    -- M10: which save the hidden game runs from, after a bind and on
+    -- entering the game, behind this step's party.* and save.begin
+    saves.loadedStep(out, link)
     pcs.step(out, link)
     battles.step(out, link)
     mirror.step(out, { live = live, generation = generation, queued = session.queued() })
@@ -649,6 +681,10 @@ return function(mod)
     end
     if #out > 0 or exported then session.flush() end
     if steps % PIN_EVERY == 0 then pinOptions(true) end
+    -- M10 (DESIGN section 9, running hidden): while a client or test session
+    -- is connected, a window that isn't shown keeps the normal frame cap
+    -- (lib/kb_engine.lua "reliability (M10)"); released when the link drops
+    engine.runHidden(live, clock())
     status.connected = session.connected()
     status.bound = session.listening()
     -- M9: the port listened on (after a fallback, not the configured one)
@@ -677,6 +713,12 @@ return function(mod)
       status.mirrorCaptures, status.mirrorFrames, status.mirrorAvgUs, status.mirrorMaxUs =
         s.captures, s.frames, s.avgUs, s.maxUs
       status.mirrorEncodeAvgUs, status.mirrorSkipped = s.encodeAvgUs, s.skipped
+      status.mirrorPeakFps, status.mirrorCapped = s.peakFps, s.capped
+      -- M10: our own cost per logic step
+      local p = perf.stats()
+      status.perfSteps, status.perfAvgUs, status.perfMaxUs, status.perfOver1ms =
+        p.steps, p.avgUs, p.maxUs, p.over1ms
+      status.perfTotalUs, status.perfFrames = p.totalUs, p.frames
     end
   end
 
@@ -685,7 +727,11 @@ return function(mod)
   -- the step is guarded and its errors are logged at most every 5 seconds.
   local errorAt = -math.huge
   mod.hooks:wrap("input.step", function(nextFn, game, dt)
+    -- M10: a new cost cycle starts here (the one before is complete)
+    perf.beginStep()
+    local t0 = clock()
     local ok, err = pcall(step, game)
+    perf.add(clock() - t0)
     if not ok and clock() - errorAt >= 5 then
       errorAt = clock()
       log.error("bridge.step_failed", { at = type(err) == "string" and err:match("[%w_/%.%-]+%.lua:%d+") or "unknown" })
@@ -693,12 +739,17 @@ return function(mod)
     return nextFn(game, dt)
   end)
 
-  mod.events:on("game.ready", function(payload)
+  mod.events:on("game.ready", perf.timed(function(payload)
     engine.setGame(payload and payload.game)
     -- A hot reload or a return to the launcher leaves the previous instance's
     -- sockets open. Close them through the slot it left on the Game object,
     -- before this instance binds, and collect once for anything else it held.
-    if engine.takeOver(session.close) then log.info("bridge.replaced_instance", {}) end
+    -- (M10: its window wrapper for running hidden goes too.)
+    local function closeMine()
+      session.close()
+      pcall(engine.runHidden, false)
+    end
+    if engine.takeOver(closeMine) then log.info("bridge.replaced_instance", {}) end
     collectgarbage("collect")
     local version, api = engine.version()
     engine.checkPin()
@@ -714,46 +765,46 @@ return function(mod)
     status.game = engine.gameVersion()
     status.ready = true
     log.info("game.ready", { engine = version, api = api, modules = loaded })
-  end)
+  end))
 
   -- The mod merge is done and nothing is on the stack yet
   -- (src/mods/Loader.lua:2163, src/core/Game.lua:52-119): the export checks
   -- that its dataset view opens, and copies the live Data now if it doesn't.
-  mod.events:on("mods.loaded", function(payload)
+  mod.events:on("mods.loaded", perf.timed(function(payload)
     -- M8: the map data the story diffs compare with, copied before any map
     -- loads (lib/kb_engine.lua "the story, departures, field moves")
     local ok, maps = pcall(engine.capturePristine, type(payload) == "table" and payload.data or nil)
     if ok then log.info("story.pristine", { maps = maps }) else log.warn("story.pristine_failed", {}) end
     exporter.onModsLoaded(payload)
-  end)
+  end))
   -- From the first map load on, the live Data may differ from the import
   -- (map.entered, src/world/OverworldController.lua:686).
-  mod.events:on("map.entered", function() exporter.onMapEntered() end)
+  mod.events:on("map.entered", perf.timed(function() exporter.onMapEntered() end))
 
   -- Warps and steps (M3). Events and hooks only: they die with this
   -- instance's loader on a hot reload. player.warped comes from takeWarp
   -- before anything moves (OverworldController.lua:5306-5309), so the
   -- departure is read right there; map.entered carries `via` (:686-691);
   -- world.blacked_out precedes the heal-point warp (:5212-5214).
-  mod.events:on("player.warped", function()
+  mod.events:on("player.warped", perf.timed(function()
     events.warped = engine.warpDeparture() or {}
-  end)
-  mod.events:on("map.entered", function(payload)
+  end))
+  mod.events:on("map.entered", perf.timed(function(payload)
     mapsEntered = mapsEntered + 1
     payload = type(payload) == "table" and payload or {}
     capped(events.entered, { map = payload.mapId, via = payload.via })
-  end)
+  end))
   -- a blackout heals the hidden party (OC:5204-5207); Cobblemon's heals too,
   -- once the blackout's warp has arrived (M7)
-  mod.events:on("world.blacked_out", function()
+  mod.events:on("world.blacked_out", perf.timed(function()
     events.blackout = true
     engine.queueHeal("blackout")
-  end)
+  end))
 
   -- M4. Pushes and pops only wake the UI observer, which polls the stack
   -- itself (src/core/StateStack.lua:28-45 fire them after enter/exit);
   -- world.interacted reports what an A press hit (OC:2532-2535).
-  mod.events:on("screen.pushed", function(payload)
+  mod.events:on("screen.pushed", perf.timed(function(payload)
     wake = true
     screenEvents = screenEvents + 1
     local state = type(payload) == "table" and payload.state or nil
@@ -761,29 +812,35 @@ return function(mod)
     pcall(engine.fishPushed, state)
     -- M8: a text box a talk or a step pushed gets the direct-battle seam
     pcall(engine.directPushed, state)
-  end)
-  mod.events:on("screen.popped", function()
+  end))
+  mod.events:on("screen.popped", perf.timed(function()
     wake = true
     screenEvents = screenEvents + 1
-  end)
-  mod.events:on("world.interacted", function(payload)
+  end))
+  mod.events:on("world.interacted", perf.timed(function(payload)
     local ok, facts = pcall(engine.interactedFacts, payload)
     if ok and facts then capped(events.interacted, facts) end
-  end)
+  end))
 
   -- The mirror (observe/kb_mirror.lua): the output seam is asked for only
   -- while a client watches, and render.output stays a pure observer -- it
   -- always returns next(ctx), so the engine presents the frame itself
   -- (Renderer.lua:939-962, :1374-1419; docs/modding.md "render.output").
   -- Hooks die with this instance's loader on a hot reload.
+  -- (M10: render.output_enabled is asked once per drawn frame while
+  -- render.output has a wrapper, Renderer.lua:942-943; it counts the frames,
+  -- and the capture's time is the frame's draw-phase cost in kb_perf)
   mod.hooks:wrap("render.output_enabled", function(nextFn, ...)
+    perf.frame()
     if mirror.enabled() then return true end
     return nextFn(...)
   end)
   local captureErrorAt = -math.huge
   mod.hooks:wrap("render.output", function(nextFn, ctx)
     if mirror.enabled() then
+      local t0 = clock()
       local ok, err = pcall(mirror.capture, ctx)
+      perf.addDraw(clock() - t0)
       if not ok then
         mirror.failed()
         if clock() - captureErrorAt >= 5 then
@@ -799,14 +856,16 @@ return function(mod)
   -- never changed.
   mod.hooks:wrap("movement.collision", function(nextFn, allowed, ctx)
     local result = nextFn(allowed, ctx)
+    local t0 = clock()
     local ok, verdict = pcall(engine.playerVerdict, ctx, result)
     if ok and verdict then capped(events.verdicts, verdict) end
+    perf.add(clock() - t0)
     return result
   end)
 
   -- New Game builds a fresh save and applies its options right after this
   -- event (src/core/Game.lua:179-183), so pinning the table is enough.
-  mod.events:on("save.created", function(payload)
+  mod.events:on("save.created", perf.timed(function(payload)
     local save = payload and payload.save
     local changed = engine.pinDisplay(type(save) == "table" and save.options or nil, false)
     if changed > 0 then log.info("options.pinned", { changed = changed }) end
@@ -814,23 +873,27 @@ return function(mod)
     party.reapply()
     -- the bound world goes into the new save's mod data (M7)
     saves.restore()
-  end)
+    -- M10: a fresh playthrough (save.loaded{fresh:true} once in the world)
+    saves.created(save)
+  end))
 
   -- CONTINUE re-applies the stored options before this event
   -- (src/core/Game.lua:1502 vs :1533), so pin and re-apply. The loaded
   -- party gets its uids back, then Cobblemon's party (the last sync) again.
-  mod.events:on("save.loaded", function(payload)
+  mod.events:on("save.loaded", perf.timed(function(payload)
     -- M9: a loaded game belongs to its slot (never "a New Game never saved")
     pairing.loaded(type(payload) == "table" and payload.save or nil)
     pinOptions(true)
     party.adopt()
     party.reapply()
     saves.restore()
-  end)
+    -- M10: the loaded save's own pair (save.loaded{fresh:false, pair})
+    saves.loadedSave(type(payload) == "table" and payload.save or nil)
+  end))
 
   -- M9: BRIDGE PORT changed in the F10 mod manager (ManagerState:setOption,
   -- src/mods/ManagerState.lua:1090-1112): the listener moves at once.
-  mod.events:on("mod.options_changed", function(payload)
+  mod.events:on("mod.options_changed", perf.timed(function(payload)
     if type(payload) ~= "table" or payload.mod ~= mod.id or payload.key ~= "port" then return end
     local p = validPort(payload.value)
     if p then
@@ -839,7 +902,7 @@ return function(mod)
     else
       log.warn("net.port_option_invalid", {})
     end
-  end)
+  end))
 
   mod.log:info("gen1-bridge loaded")
 end

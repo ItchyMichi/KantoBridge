@@ -5,8 +5,18 @@
 -- save, kept separate from the offline save.
 --
 --   session.bind{world, multiplayer}   M->G
---   session.bound{slot}                G->M (re set): sent once the hidden
---                                      game IS on that slot
+--   session.bound{slot, switched}      G->M (re set): sent once the hidden
+--                                      game IS on that slot; M10: switched =
+--                                      how it got there: "none" (it already
+--                                      was), "title" (moved at the title),
+--                                      "saved" (the running game saved into
+--                                      its own slot first, then the title),
+--                                      "moved" (a New Game never saved went
+--                                      on into the empty slot as it is)
+--   session.waiting{slot, reason}      G->M (re = the bind's seq), M10: when
+--                                      a bind starts waiting and whenever its
+--                                      reason changes (busy, new_game,
+--                                      save_failed)
 --
 -- The pairing, per game version: world id -> the engine's save slot id, and
 -- "home", the offline slot to come back to. It lives in mod.cache
@@ -42,10 +52,11 @@
 --                                    while the gate is closed: wait (reason
 --                                    busy); a refused save: wait and retry
 --                                    (reason save_failed)
---     While a switch waits, one warning says why (session.switch_waiting,
---     forwarded to the client as a log message); Cobblemon's syncs for the
---     new world are held (kb_party), bag.use is refused (error
---     session.pending) and the old game's saves aren't announced (kb_save). A
+--     While a switch waits, session.waiting says why (M10; and one warning,
+--     session.switch_waiting, forwarded as a log message, for diagnostics);
+--     Cobblemon's syncs for the new world are held (kb_party), bag.use is
+--     refused (error session.pending) and the old game's saves aren't
+--     announced (kb_save). A
 --     newer bind replaces a waiting one; a dropped connection cancels it (the
 --     client binds again on every link).
 --   * A bind that needs a switch drops what came from Minecraft before it
@@ -130,7 +141,8 @@ end
 --   hash     short hash for the slot label (kb_sha256.short)
 --   clock    seconds
 --   log      kb_log logger (optional)
---   onBound(world, multiplayer, slot)   a bind answered (kb_save keeps it)
+--   onBound(world, multiplayer, slot, switched)   a bind answered (kb_save
+--                    keeps it; M10: save.loaded follows it in game)
 --   onPending()      a bind needs a switch: what came before it goes
 --   onSwitch(kind)   a switch happened: "title", "fresh" or "saved"
 function Pairing.new(opts)
@@ -151,8 +163,11 @@ function Pairing.new(opts)
     switches = 0, switchTitle = 0, switchFresh = 0, switchSaved = 0, rebuilt = 0, homeReturns = 0,
     waits = 0, waitBusy = 0, waitNewGame = 0, waitSaveFailed = 0, saveFailed = 0, dropped = 0,
     storeWrites = 0, storeFailed = 0, storeRecovered = 0, storeUnreadable = 0,
+    waitingSent = 0, -- M10: session.waiting messages
   }
   local WAIT_FIELD = { busy = "waitBusy", new_game = "waitNewGame", save_failed = "waitSaveFailed" }
+  -- M10: a switch's kind as session.bound.switched (no switch: "none")
+  local SWITCHED = { title = "title", saved = "saved", fresh = "moved" }
 
   -- ------------------------------------------------------------ the file
 
@@ -359,10 +374,12 @@ function Pairing.new(opts)
   local function finish(out, r, res, why)
     if res == "done" then
       local slot = protocolSlot(r.target)
-      out[#out + 1] = { "session.bound", { slot = slot }, re = r.seq, gen = r.gen }
+      -- M10: how the hidden game reached the slot (session.bound.switched)
+      local switched = SWITCHED[r.how] or "none"
+      out[#out + 1] = { "session.bound", { slot = slot, switched = switched }, re = r.seq, gen = r.gen }
       counts.answered = counts.answered + 1
       req = nil
-      onBound(r.world, r.multiplayer, slot)
+      onBound(r.world, r.multiplayer, slot, switched)
       if log then
         log.info("session.bound", { slot = slot, multiplayer = r.multiplayer, worldLen = #r.world,
                                     switched = r.how or "no", created = r.created == true, count = counts.answered })
@@ -373,6 +390,10 @@ function Pairing.new(opts)
         counts.waits = counts.waits + 1
         local field = WAIT_FIELD[why]
         if field then counts[field] = counts[field] + 1 end
+        -- M10: the structured message, once when the wait starts and again
+        -- whenever its reason changes (the log line stays for diagnostics)
+        out[#out + 1] = { "session.waiting", { slot = protocolSlot(r.target), reason = why }, re = r.seq, gen = r.gen }
+        counts.waitingSent = counts.waitingSent + 1
         if log then log.warn("session.switch_waiting", { reason = why, slot = protocolSlot(r.target) }) end
       end
     else

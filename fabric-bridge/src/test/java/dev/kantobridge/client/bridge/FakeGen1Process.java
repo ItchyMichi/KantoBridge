@@ -27,11 +27,14 @@ public final class FakeGen1Process implements AutoCloseable {
 	private final Process process;
 	private final Writer commands;
 	private final int port;
+	/** fake_gen1's output lines not read yet (its console answers: counts, status). */
+	private final BlockingQueue<String> output;
 
-	private FakeGen1Process(Process process, Writer commands, int port) {
+	private FakeGen1Process(Process process, Writer commands, int port, BlockingQueue<String> output) {
 		this.process = process;
 		this.commands = commands;
 		this.port = port;
+		this.output = output;
 	}
 
 	/** Starts fake_gen1 and waits for its port; null without the venv ({@code tools/setup.ps1} creates it). */
@@ -72,7 +75,7 @@ public final class FakeGen1Process implements AutoCloseable {
 			Matcher matcher = line == null ? null : LISTENING.matcher(line);
 			if (matcher != null && matcher.find()) {
 				return new FakeGen1Process(process, new OutputStreamWriter(process.getOutputStream(), StandardCharsets.UTF_8),
-						Integer.parseInt(matcher.group(1)));
+						Integer.parseInt(matcher.group(1)), output);
 			}
 		}
 		process.destroyForcibly();
@@ -87,6 +90,18 @@ public final class FakeGen1Process implements AutoCloseable {
 	public void command(String line) throws IOException {
 		this.commands.write(line + "\n");
 		this.commands.flush();
+	}
+
+	/** The next output line that starts with {@code prefix} (earlier lines are skipped), or null after {@code ms}. */
+	public @Nullable String awaitLine(String prefix, long ms) throws InterruptedException {
+		long deadline = System.nanoTime() + TimeUnit.MILLISECONDS.toNanos(ms);
+		while (System.nanoTime() < deadline) {
+			String line = this.output.poll(50, TimeUnit.MILLISECONDS);
+			if (line != null && line.startsWith(prefix)) {
+				return line;
+			}
+		}
+		return null;
 	}
 
 	@Override

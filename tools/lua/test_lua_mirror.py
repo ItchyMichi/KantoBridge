@@ -183,3 +183,44 @@ def test_a_failing_capture_is_logged_and_switched_off():
     assert any("mirror.capture_disabled" in line for line in m.rig.logs())
     assert m.enabled() is False
     assert all("fake draw failure" not in line for line in m.rig.logs())
+
+
+# ------------------------------------------------------------ M10: at most 30 frames in any second
+
+
+def test_never_more_than_30_frames_in_any_second():
+    """Captures are paced on a carried deadline, so one that comes late (by 0.4 of a period here) and
+    the on-time ones after it would put 31 frames in less than a second; the sliding window holds the
+    31st back. The step clock is the fake one (1/60 s a step)."""
+    m = Mirror()
+    m.send("mirror.sub", {"fps": 30})
+    m.run()
+    p = 1 / 30
+    t0 = m.b.now
+    times = [t0, t0 + 1.4 * p] + [t0 + k * p + 1e-9 for k in range(2, 40)]
+    sent = []
+    for i, t in enumerate(times):
+        m.b.now = max(m.b.now, t)
+        m.render(f"frame {i}")
+        out = m.run()
+        sent += [m.b.now for _ in m.frames(out)]
+    for _ in range(10):
+        sent += [m.b.now for _ in m.frames(m.run())]
+    # frames in any second (the cap's window: a second less 2 ms of slack for clock noise)
+    peak = max(sum(1 for s in sent if t - 0.998 < s <= t) for t in sent)
+    assert peak == 30, peak
+    st = m.status()
+    assert st["mirrorPeakFps"] == 30 and st["mirrorCapped"] >= 1
+    assert st["mirrorCaptures"] >= len(times) - 1, "the captures ran; only the sending waited"
+
+
+def test_a_steady_30_fps_stream_is_hardly_touched():
+    m = Mirror()
+    m.send("mirror.sub", {"fps": 30})
+    m.run()
+    for i in range(180):  # three seconds of 60 Hz frames
+        m.render(f"frame {i}")
+        m.run()
+    st = m.status()
+    assert st["mirrorCapped"] <= 3 and 28 <= st["mirrorPeakFps"] <= 30
+    assert 86 <= st["mirrorFrames"] <= 91

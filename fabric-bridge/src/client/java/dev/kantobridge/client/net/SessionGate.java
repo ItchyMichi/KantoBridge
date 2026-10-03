@@ -11,7 +11,6 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.TreeMap;
-import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import org.jetbrains.annotations.Nullable;
 
@@ -30,15 +29,16 @@ import org.jetbrains.annotations.Nullable;
  * {@code party.sync}/{@code dex.sync}, queue {@code bag.use}s, keep battle results and saves' answers for when they are
  * asked again, and the player is held (the hidden game isn't this world's yet).</li>
  * <li><b>Open</b> ({@code session.bound} for this link's latest bind, matched by its {@code re}): when the hidden game
- * runs the same save as at the last opening (the same gen1-bridge session and world: a reconnect), what waited is this
- * world's and goes to the server in order. Otherwise it may be another world's game: it is dropped, the relays drop
+ * stayed on the save it ran (M10: {@code switched:"none"}; without {@code switched}, the same gen1-bridge session and
+ * world as at the last opening: a reconnect), what waited is this world's and goes to the server in order. Otherwise
+ * ({@code title}, {@code saved}, {@code moved}: a switch) it may be another world's game: it is dropped, the relays drop
  * their offline queues, and gen1-bridge is asked for a fresh snapshot ({@code resync}): it says whether its game is now
  * at the title ({@code ingame:false}: no teleports) and sends again what that game still has pending. Either way the
  * world's newest syncs go to gen1-bridge then.</li>
  * <li>A world other than the last one drops what the relays queued for the previous world at once.</li>
- * <li>{@code session.switch_waiting} (a forwarded {@code log}) names why the switch waits; {@code session.*} refusals
- * are tried again with a back-off ({@code session.no_slots}: an installation without save slots plays unpaired, as
- * before M9). A Kanto world whose id never arrives opens unpaired after {@value #NO_ID_TIMEOUT_MS} ms. The HUD says
+ * <li>{@code session.waiting{slot, reason}} (M10, answering the bind) names why the switch waits; {@code session.*}
+ * refusals are tried again with a back-off ({@code session.no_slots}: an installation without save slots plays unpaired,
+ * as before M9). A Kanto world whose id never arrives opens unpaired after {@value #NO_ID_TIMEOUT_MS} ms. The HUD says
  * what is going on.</li>
  * </ul>
  * Plain Java, client thread only; {@link SessionRuntime} is the glue. Logs carry codes and counts.
@@ -67,9 +67,9 @@ public final class SessionGate {
 	/** gen1-bridge's story data the client relays to the server (G→M → C→S), gated here. */
 	public static final Set<String> UP = Set.of(MsgTypes.BATTLE_START, MsgTypes.PARTY_GIVE, MsgTypes.PARTY_TAKE, MsgTypes.PARTY_HEAL,
 			MsgTypes.PARTY_RENAME, MsgTypes.PARTY_ITEM, MsgTypes.DAYCARE_DEPOSIT, MsgTypes.DAYCARE_WITHDRAW, MsgTypes.BAG_SYNC,
-			MsgTypes.SAVE_BEGIN, MsgTypes.PC_OPEN);
-	/** gen1-bridge's reason the switch waits ({@code log} code), from its line's {@code reason=…}. */
-	public static final String WAITING_LOG = "session.switch_waiting";
+			MsgTypes.SAVE_BEGIN, MsgTypes.PC_OPEN, MsgTypes.SAVE_LOADED);
+	/** {@code session.bound.switched}: the hidden game stayed on the save it ran, so what waited may go on (M10). */
+	public static final String SWITCHED_NONE = "none";
 	/** A refusal that won't go away: no save slots to pair (a cartridge install); play on unpaired. */
 	public static final String NO_SLOTS = "session.no_slots";
 
@@ -86,7 +86,6 @@ public final class SessionGate {
 	public static final long RETRY_MAX_MS = 60_000;
 	static final int HELD_MAX = 64;
 
-	private static final Pattern REASON = Pattern.compile("reason=([a-z][a-z0-9_]{0,31})");
 	private static final Pattern CODE = Pattern.compile("^[a-z][a-z0-9_.]{0,63}$");
 	private static final Set<String> REASONS = Set.of("busy", "new_game", "save_failed");
 
@@ -227,11 +226,20 @@ public final class SessionGate {
 
 	/** gen1-bridge answered {@code session.bound} (the binder checked it answers this link's latest bind). */
 	public void bound(@Nullable Long re, long now) {
+		this.bound(re, null, now);
+	}
+
+	/**
+	 * gen1-bridge answered {@code session.bound}; {@code switched} says how the hidden game reached the slot ({@code none}:
+	 * it was on it already; {@code title}, {@code saved}, {@code moved}: a switch), null when it doesn't say (then a
+	 * reconnect to the same gen1-bridge session and world counts as staying).
+	 */
+	public void bound(@Nullable Long re, @Nullable String switched, long now) {
 		if (!this.answers(re)) {
 			this.warn("session.stray_bound");
 			return;
 		}
-		this.open(now, false);
+		this.open(now, false, switched);
 	}
 
 	/**
@@ -267,18 +275,22 @@ public final class SessionGate {
 		this.retryDelay = Math.min(RETRY_MAX_MS, this.retryDelay * 2);
 	}
 
-	/** A {@code log} line gen1-bridge forwarded: {@value #WAITING_LOG} names why the switch waits. */
-	public void log(@Nullable String code, @Nullable String msg, long now) {
-		if (!WAITING_LOG.equals(code) || this.state() != State.HELD) {
+	/**
+	 * {@code session.waiting{slot, reason}} (M10): why gen1-bridge can't put the hidden game on the world's slot yet
+	 * ({@code busy}, {@code new_game}, {@code save_failed}); {@code re}, when set, must be this link's latest bind.
+	 */
+	public void waiting(@Nullable String reason, @Nullable Long re, long now) {
+		if (this.state() != State.HELD || this.bindLink != this.link) {
 			return;
 		}
-		String reason = "other";
-		Matcher matcher = msg == null ? null : REASON.matcher(msg);
-		if (matcher != null && matcher.find()) {
-			reason = matcher.group(1);
+		if (re != null && this.bindSeq > 0 && re != this.bindSeq) {
+			// About an older bind of this link (another world's): the latest one is answered by itself.
+			this.warn("session.stale_waiting");
+			return;
 		}
-		if (!reason.equals(this.waiting)) {
-			this.waiting = reason;
+		String why = reason != null && REASONS.contains(reason) ? reason : "other";
+		if (!why.equals(this.waiting)) {
+			this.waiting = why;
 			this.stats.waits++;
 		}
 	}
@@ -433,12 +445,14 @@ public final class SessionGate {
 
 	private void unpaired(long now) {
 		this.stats.unpaired++;
-		this.open(now, true);
+		this.open(now, true, null);
 	}
 
-	private void open(long now, boolean unpaired) {
-		boolean stale = !this.everOpened || !Objects.equals(this.bridgeSession, this.lastOpenSession)
-				|| !Objects.equals(this.world, this.lastOpenWorld);
+	private void open(long now, boolean unpaired, @Nullable String switched) {
+		// gen1-bridge says whether its game switched saves (M10); without that, only a reconnect to the same session and
+		// world provably kept the save.
+		boolean stale = switched != null ? !SWITCHED_NONE.equals(switched)
+				: !this.everOpened || !Objects.equals(this.bridgeSession, this.lastOpenSession) || !Objects.equals(this.world, this.lastOpenWorld);
 		this.open = true;
 		this.openLink = this.link;
 		this.openWorld = this.world;

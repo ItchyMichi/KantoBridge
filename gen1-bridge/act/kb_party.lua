@@ -86,6 +86,14 @@
 -- paired game, nor apply again after its New Game or CONTINUE); syncs that
 -- arrive while the switch waits wait with it (link.blocked).
 --
+-- M10 (save pairs, act/kb_save.lua): every gift, take, deposit and
+-- withdrawal is reported to onOp() once, when it first goes out (a repeat
+-- after a snapshot is the same operation). One the hidden game made after
+-- a save that is still waiting to be announced (its serial is higher than
+-- that save's, engine.queuedSaveSerial) waits until that save.begin has
+-- gone out, so Minecraft saves before it and counts it after, as the
+-- hidden save did.
+--
 -- Logs show codes, kinds, ids and counts only; nicknames, species and moves
 -- are never logged.
 
@@ -224,9 +232,12 @@ end
 --   store    { get(key), set(key, value) }: mod.save
 --   clock    seconds (optional; without it gifts are given up on by count alone)
 --   log      kb_log logger (optional)
+--   onOp     M10: called once per Pokemon operation (give, take, deposit,
+--            withdraw) as it first goes out (optional)
 function Party.new(opts)
   local engine, log, store, clock = opts.engine, opts.log, opts.store, opts.clock
   local markup = opts.markup or function(s) return s, 0 end
+  local onOp = opts.onOp or function() end
   local party = {}
   local pending   -- the newest party.sync waiting for a safe moment
   local lastSync  -- the last one applied (applied again after New Game / CONTINUE)
@@ -243,6 +254,7 @@ function Party.new(opts)
     takes = 0, deposits = 0, withdraws = 0, opsResent = 0, opsConfirmed = 0, opsGivenUp = 0,
     excluded = 0, renames = 0, catches = 0,
     forgotten = 0, -- M9: syncs dropped by a save-slot switch
+    givesHeld = 0, opsHeld = 0, -- M10: steps first sends waited for a save.begin
   }
   local deferredNow = false
   local seen = {}   -- give ids counted
@@ -498,10 +510,20 @@ function Party.new(opts)
     end
   end
 
+  -- M10: a first send made after a save still waiting to be announced waits
+  -- for its save.begin (hold: that save's serial, or nil).
+  local function later(item, hold)
+    return hold ~= nil and item.state == "new" and type(item.serial) == "number" and item.serial > hold
+  end
+
   -- M8: takes, deposits and withdrawals due on this connection.
-  local function sendOps(out, link)
+  local function sendOps(out, link, hold)
     for _, op in ipairs(engine.ops()) do
       local due = op.state == "new" or (op.state == "sent" and (resend or op.sentGen ~= link.generation))
+      if due and later(op, hold) then
+        due = false
+        counts.opsHeld = counts.opsHeld + 1
+      end
       if due then
         local msg
         if op.kind == "take" then
@@ -518,6 +540,7 @@ function Party.new(opts)
             counts[field] = counts[field] + 1
             if clock and opSentAt[op.id] == nil then opSentAt[op.id] = clock() end
             if log then log.info("party." .. op.kind, { count = counts[field] }) end
+            onOp()
           else
             counts.opsResent = counts.opsResent + 1
           end
@@ -563,18 +586,30 @@ function Party.new(opts)
         persist()
       end
     end
-    if live then sendOps(out, link) end
+    -- M10: a save the hidden game made that hasn't been announced yet
+    local okHold, hold = pcall(engine.queuedSaveSerial)
+    hold = okHold and type(hold) == "number" and hold or nil
+    if live then sendOps(out, link, hold) end
     for _, g in ipairs(engine.gifts()) do
       if not seen[g.give] then
         seen[g.give] = true
         counts.gives = counts.gives + 1
       end
       local due = g.state == "new" or (g.state == "sent" and (resend or g.sentGen ~= link.generation))
+      if due and live and later(g, hold) then
+        due = false
+        counts.givesHeld = counts.givesHeld + 1
+      end
       if due and live then
         local data = giveData(g)
         if data then
           out[#out + 1] = { "party.give", data, "party" }
-          if g.state == "new" then counts.givesSent = counts.givesSent + 1 else counts.givesResent = counts.givesResent + 1 end
+          if g.state == "new" then
+            counts.givesSent = counts.givesSent + 1
+            onOp()
+          else
+            counts.givesResent = counts.givesResent + 1
+          end
           if clock and sentAt[g.give] == nil then sentAt[g.give] = clock() end
           engine.giftSent(g.give, link.generation)
           if log then log.info("party.give", { give = g.give, source = g.source, count = counts.givesSent }) end

@@ -8,6 +8,19 @@
 --   10 s without a received message -> drop
 --   debug.status / debug.quit: role "test" only (else error test_only)
 --
+-- M10 (handshake hardening): hello is checked against its schema field by
+-- field -- another protocol number is hello.reject "protocol" (whatever
+-- else it carries: another protocol may shape its hello differently), then
+-- any malformed field (unknown keys, mod, minecraft, player, world, a role
+-- that isn't a string) is "malformed", and a role string that isn't
+-- client/builder/test is "role"; every reject is answered, then the
+-- connection is closed once it has gone out. A connection with no hello
+-- within 10 seconds of connecting gets error no_hello and is closed, and so
+-- does one whose first line isn't even an envelope (after its
+-- bad_envelope). hello.ok carries `tested`, the engine version gen1-bridge
+-- is tested with; when the running engine differs, each connection gets one
+-- `log` warning engine.untested (after its snapshot).
+--
 -- Everything outside the protocol is injected: the snapshot, the debug
 -- status and what quitting means. Streams (player.* and later the UI, NPCs
 -- and story) go only to established client and test sessions. Other
@@ -19,6 +32,7 @@ Session.ROLES = { client = true, builder = true, test = true }
 Session.STREAM_ROLES = { client = true, test = true }
 Session.LOG_PER_SECOND = 5
 Session.MAX_LOG_MSG = 500
+Session.HELLO_SECONDS = 10
 
 local floor = math.floor
 local GAMES = { red = true, blue = true }
@@ -27,11 +41,62 @@ local function wholeNumber(v, lo)
   return type(v) == "number" and v == floor(v) and v >= (lo or 0) and v <= 9007199254740991
 end
 
+local VERSION = "^[0-9A-Za-z.+_-]+$"
+
 local function versionText(v)
-  if type(v) ~= "string" or #v == 0 or #v > 32 or not v:find("^[0-9A-Za-z.+_-]+$") then
+  if type(v) ~= "string" or #v == 0 or #v > 32 or not v:find(VERSION) then
     return "unknown"
   end
   return v
+end
+
+-- hello.schema.json, field by field
+local HELLO_KEYS = { protocol = true, role = true, mod = true, minecraft = true, player = true, world = true }
+local PLAYER_KEYS = { uuid = true, name = true }
+local WORLD_KEYS = { id = true, multiplayer = true }
+
+local function versionField(v)
+  return type(v) == "string" and #v >= 1 and #v <= 32 and v:find(VERSION) ~= nil
+end
+
+local function onlyKeys(json, t, allowed)
+  if not json.isObject(t) then return false end
+  for k in pairs(t) do
+    if not allowed[k] then return false end
+  end
+  return true
+end
+
+-- The reject reason for a hello's data, or nil when it is acceptable.
+function Session.helloProblem(json, data, protocol)
+  if not json.isObject(data) then return "malformed" end
+  local p = data.protocol
+  if not wholeNumber(p, 1) or p > 1000 then return "malformed" end
+  if p ~= protocol then return "protocol" end
+  if not onlyKeys(json, data, HELLO_KEYS) then return "malformed" end
+  if not versionField(data.mod) then return "malformed" end
+  if data.minecraft ~= nil and not versionField(data.minecraft) then return "malformed" end
+  local player = data.player
+  if player ~= nil then
+    if not onlyKeys(json, player, PLAYER_KEYS) then return "malformed" end
+    local uuid, name = player.uuid, player.name
+    if not (type(uuid) == "string" and #uuid == 36 and uuid:find("^[0-9a-f-]+$")) then return "malformed" end
+    if not (type(name) == "string" and #name >= 1 and #name <= 16 and name:find("^[A-Za-z0-9_]+$")) then
+      return "malformed"
+    end
+  end
+  local world = data.world
+  if world ~= nil then
+    if not onlyKeys(json, world, WORLD_KEYS) then return "malformed" end
+    local id = world.id
+    if not (type(id) == "string" and #id >= 1 and #id <= 64 and id:find("^[A-Za-z0-9_.:-]+$")) then
+      return "malformed"
+    end
+    if type(world.multiplayer) ~= "boolean" then return "malformed" end
+  end
+  if type(data.role) ~= "string" then return "malformed" end
+  if not Session.ROLES[data.role] then return "role" end
+  return nil
 end
 
 -- opts:
@@ -49,13 +114,24 @@ end
 --   status()     the debug.status reply data
 --   onQuit(code) debug.quit
 --   timeout      seconds of silence before a drop (default: the catalog's)
+--   tested       M10: the engine version gen1-bridge is tested with
+--                (hello.ok.tested; engine.untested when the running one differs)
+--   helloSeconds M10: how long a connection may go without hello (default 10)
 function Session.new(opts)
   local json, catalog, log, clock = opts.json, opts.catalog, opts.log, opts.clock
   local timeout = opts.timeout or (catalog.timeoutMs / 1000)
+  local helloSeconds = opts.helloSeconds or Session.HELLO_SECONDS
   local session = {}
   local role, established = nil, false
   local lastRx = 0
-  local counts = { sessions = 0, rejected = 0, timeouts = 0, logsForwarded = 0, logsDropped = 0 }
+  local helloBy = math.huge
+  local counts = {
+    sessions = 0, rejected = 0, timeouts = 0, logsForwarded = 0, logsDropped = 0,
+    -- M10
+    rejectedProtocol = 0, rejectedRole = 0, rejectedMalformed = 0, helloTimeouts = 0, untested = 0,
+    badFirstLines = 0,
+  }
+  local REJECT_FIELD = { protocol = "rejectedProtocol", role = "rejectedRole", malformed = "rejectedMalformed" }
   local tokens, refilledAt = Session.LOG_PER_SECOND, 0
   local forwarding = false
   local generation = 0 -- counts connections, so a reply never reaches a newer one
@@ -82,6 +158,7 @@ function Session.new(opts)
       proto.reset()
       generation = generation + 1
       lastRx = clock()
+      helloBy = lastRx + helloSeconds
     end,
     onDisconnect = function() reset() end,
     onOversize = function() proto.sendError("line_too_long", nil, "line_too_long") end,
@@ -100,10 +177,19 @@ function Session.new(opts)
       net.finish("no_hello")
       return false
     end,
+    -- M10: a first line that isn't even an envelope gets its bad_envelope,
+    -- then the connection is closed like any other line before hello
+    onRejected = function()
+      if established then return end
+      counts.badFirstLines = counts.badFirstLines + 1
+      net.finish("no_hello")
+    end,
   })
 
   local function reject(msg, reason)
     counts.rejected = counts.rejected + 1
+    local field = REJECT_FIELD[reason]
+    if field then counts[field] = counts[field] + 1 end
     proto.reply(msg, "hello.reject", { reason = reason, protocol = catalog.protocol })
     net.finish("rejected")
     if log then log.info("session.rejected", { reason = reason }) end
@@ -114,24 +200,30 @@ function Session.new(opts)
       proto.sendError("already_hello", msg.seq, "already_hello")
       return
     end
-    if not wholeNumber(data.protocol, 1) or type(data.mod) ~= "string" then
-      return reject(msg, "malformed")
-    end
-    if data.protocol ~= catalog.protocol then return reject(msg, "protocol") end
-    -- an unknown role fails the hello schema, so it is malformed (as in fake_gen1)
-    if not Session.ROLES[data.role] then return reject(msg, "malformed") end
+    local problem = Session.helloProblem(json, data, catalog.protocol)
+    if problem then return reject(msg, problem) end
     role, established = data.role, true
     counts.sessions = counts.sessions + 1
     local game = opts.game()
-    proto.reply(msg, "hello.ok", {
+    local running = versionText(opts.engine())
+    local ok = {
       protocol = catalog.protocol,
       bridge = versionText(opts.bridge),
-      engine = versionText(opts.engine()),
+      engine = running,
       game = GAMES[game] and game or "red",
       session = opts.sessionId,
-    })
+    }
+    local tested = opts.tested and versionText(opts.tested) or nil
+    if tested ~= nil and tested ~= "unknown" then ok.tested = tested end
+    proto.reply(msg, "hello.ok", ok)
     proto.send("snapshot", opts.snapshot())
     if log then log.info("session.established", { role = role, count = counts.sessions }) end
+    -- M10: one warning per connection when the engine isn't the tested one
+    -- (after the snapshot: nothing lands between hello.ok and it)
+    if ok.tested ~= nil and running ~= ok.tested then
+      counts.untested = counts.untested + 1
+      if log then log.warn("engine.untested", { engine = running, tested = ok.tested }) end
+    end
   end)
 
   proto.on("ping", function(data, msg)
@@ -166,10 +258,16 @@ function Session.new(opts)
   end)
 
   -- One logic step: keep the listener up, move bytes, and drop a silent
-  -- client.
+  -- client (M10: and one that hasn't said hello in time).
   function session.step()
     net.pump()
-    if net.connected() and clock() - lastRx > timeout then
+    if net.connected() and not established and clock() > helloBy then
+      counts.helloTimeouts = counts.helloTimeouts + 1
+      if log then log.info("session.hello_timeout", { seconds = helloSeconds }) end
+      helloBy = math.huge
+      proto.sendError("no_hello", nil, "hello_timeout")
+      net.finish("hello_timeout")
+    elseif net.connected() and clock() - lastRx > timeout then
       counts.timeouts = counts.timeouts + 1
       if log then log.info("session.timeout", { seconds = timeout }) end
       net.disconnect("timeout")

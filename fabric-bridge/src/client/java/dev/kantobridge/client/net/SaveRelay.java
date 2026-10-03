@@ -24,6 +24,8 @@ import org.jetbrains.annotations.Nullable;
  * <li>gen1-bridge asking again for an answered save (a reconnect lost the answer) is answered from the record, without a
  * second save; a repeat while the server is still on it is ignored. Answers are never re-sent unasked. Answered records
  * are kept {@value #KEEP_MS} ms after delivery, at most {@value #RECORDS_MAX}.</li>
+ * <li>M10: {@code save.loaded} (which save the hidden game runs from) goes to the server unchanged, which compares it with
+ * the world's save pair. It isn't kept: gen1-bridge sends it after every pairing and whenever its game loads a save.</li>
  * </ul>
  * Plain Java, client thread only; {@link SessionRuntime} is the glue.
  */
@@ -50,6 +52,8 @@ public final class SaveRelay {
 		public long failed;
 		public long answeredHere;
 		public long repeats;
+		public long loaded;
+		public long loadedDropped;
 	}
 
 	private static final class Record {
@@ -109,6 +113,18 @@ public final class SaveRelay {
 		} else {
 			this.warn("save.no_server");
 			this.answerHere(record, now);
+		}
+	}
+
+	/**
+	 * {@code save.loaded} from gen1-bridge: to the server (M10). Without one (the title screen, another world) there is no
+	 * pair to compare with: it is dropped quietly, and gen1-bridge sends it again after the next pairing.
+	 */
+	public void loaded(Envelope message) {
+		if (this.port.toServer(MsgTypes.SAVE_LOADED, message.data().deepCopy())) {
+			this.stats.loaded++;
+		} else {
+			this.stats.loadedDropped++;
 		}
 	}
 

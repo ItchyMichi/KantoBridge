@@ -2,11 +2,12 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://kantobridge.invalid/protocol/messages/pc.closed.schema.json",
   "title": "pc.closed",
-  "description": "Cobblemon's PC screen closed.",
+  "description": "Cobblemon's PC screen closed (or couldn't open). pc: the pc.open's id.",
   "x-type": "pc.closed",
   "x-legs": ["m2g", "s2c"],
   "x-re": "never",
   "type": "object",
   "additionalProperties": false,
-  "properties": {}
+  "properties": {"pc": {"$ref": "../defs.schema.json#/$defs/id"}},
+  "required": ["pc"]
 }

@@ -281,6 +281,9 @@ public final class BuildTask {
 		KantoBridge.LOGGER.info("builder: done: {} maps, {} story cells, {} habitat blocks, {} pools, {} blocks placed, {} cleared, {} chunks, {} textures, {} warnings, {} ms",
 				this.report.mapsBuilt, this.report.storyCells, this.report.habitatBlocks, this.report.pools, this.report.blocksPlaced,
 				this.report.blocksCleared, this.report.chunks, this.report.packTextures, this.report.warnings, this.report.elapsedMs);
+		KantoBridge.LOGGER.info("builder: throughput {} blocks/s, {} chunks/s while placing; {} maps/s overall",
+				BuildReport.rate(this.report.blocksPlaced, this.report.placeMs), BuildReport.rate(this.report.chunks, this.report.placeMs),
+				BuildReport.rate(this.report.mapsBuilt, this.report.elapsedMs));
 		this.report.warningCodes.forEach((code, count) -> KantoBridge.LOGGER.warn("builder: warning {} x{}", code, count));
 		this.listener.onPhase(BuildPhase.DONE);
 		this.listener.onFinished(this.report);

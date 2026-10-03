@@ -11,6 +11,9 @@ import org.jetbrains.annotations.Nullable;
  * {@code mirror.unsub}, {@code mirror.frame}; PLAN P10): subscribed while a mirror screen is shown, unsubscribed when it
  * goes, and the newest frame kept for the screen to upload once per render. A subscription dies with its connection.
  * Frames are PNG bytes (ROM-derived art): they stay in memory and are never logged or written anywhere.
+ *
+ * <p>M10: the screen uploads at most {@link #FPS} frames a second ({@link FrameLimiter}), however fast frames arrive or
+ * the screen renders; a frame that a newer one replaces before its upload is dropped (counted for F7), never decoded.
  */
 public final class MirrorLink {
 	/** Frames a second asked for: the protocol's maximum, smooth enough for the slot machine's reels. */
@@ -25,7 +28,11 @@ public final class MirrorLink {
 	}
 
 	private final Port port;
+	private final FrameLimiter limiter = new FrameLimiter(FPS);
 	private boolean subscribed;
+	/** A frame from the stream waits for its upload (a newer one replacing it is a drop). */
+	private boolean waiting;
+	private long dropped;
 	private long lastN;
 	private byte @Nullable [] latest;
 	private boolean fresh;
@@ -77,7 +84,9 @@ public final class MirrorLink {
 		this.subscribed = false;
 		this.latest = null;
 		this.fresh = false;
+		this.waiting = false;
 		this.pictureUi = 0;
+		this.limiter.reset();
 	}
 
 	/** A {@code mirror.frame}: kept when it is newer than the last and well formed. */
@@ -96,6 +105,10 @@ public final class MirrorLink {
 			this.ignoredFrames++;
 			return;
 		}
+		if (this.waiting) {
+			// The one before was never uploaded: frames came faster than the screen takes them.
+			this.dropped++;
+		}
 		byte[] bytes;
 		try {
 			bytes = Base64.getDecoder().decode(png);
@@ -106,15 +119,20 @@ public final class MirrorLink {
 		this.lastN = n;
 		this.latest = bytes;
 		this.fresh = true;
+		this.waiting = true;
 		this.frames++;
 	}
 
-	/** The newest frame's PNG bytes if one arrived since the last call, else null. */
-	public byte @Nullable [] takeFresh() {
-		if (!this.fresh) {
+	/**
+	 * The newest frame's PNG bytes if one arrived since the last upload and an upload is allowed now ({@code nowNanos}:
+	 * {@link System#nanoTime}), else null; a frame held back by the rate limit stays for a later call.
+	 */
+	public byte @Nullable [] takeFresh(long nowNanos) {
+		if (!this.fresh || !this.limiter.tryAcquire(nowNanos)) {
 			return null;
 		}
 		this.fresh = false;
+		this.waiting = false;
 		return this.latest;
 	}
 
@@ -137,6 +155,11 @@ public final class MirrorLink {
 
 	public long badFrames() {
 		return this.badFrames;
+	}
+
+	/** Frames a newer one replaced before they were uploaded (the 30-a-second limit, or a slow screen). */
+	public long dropped() {
+		return this.dropped;
 	}
 
 	public long ignoredFrames() {

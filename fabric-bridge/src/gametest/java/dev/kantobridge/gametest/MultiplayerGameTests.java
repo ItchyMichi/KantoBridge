@@ -9,6 +9,7 @@ import dev.kantobridge.builder.plan.ArtCatalog;
 import dev.kantobridge.builder.plan.PlanException;
 import dev.kantobridge.builder.plan.Warnings;
 import dev.kantobridge.battle.BattleService;
+import dev.kantobridge.net.RelayHandshake;
 import dev.kantobridge.net.RelayService;
 import dev.kantobridge.pokemon.DaycareService;
 import dev.kantobridge.pokemon.Gen1Mon;
@@ -18,12 +19,15 @@ import dev.kantobridge.pokemon.PcService;
 import dev.kantobridge.proto.Envelope;
 import dev.kantobridge.proto.MsgTypes;
 import dev.kantobridge.proto.ProtoJson;
+import dev.kantobridge.server.SavePair;
+import dev.kantobridge.server.SavePairService;
 import dev.kantobridge.server.SessionService;
 import dev.kantobridge.server.TextureStatusService;
 import dev.kantobridge.server.WorldIndexSync;
 import dev.kantobridge.story.Activity;
 import dev.kantobridge.story.StoryState;
 import dev.kantobridge.story.StoryStates;
+import dev.kantobridge.story.Surfing;
 import dev.kantobridge.world.DataException;
 import dev.kantobridge.world.SlotMap;
 import dev.kantobridge.world.WorldIndex;
@@ -56,6 +60,9 @@ public class MultiplayerGameTests implements FabricGameTest {
 	private static final String SYNTHETIC = "kantobridge/synthetic_bundle/red/";
 	/** A story cell of the synthetic town (an object that stands in the hidden game). */
 	private static final String CELL = "TEST_TOWN:15:4";
+	/** Made-up save pairs (M10). */
+	private static final String VICTIM_PAIR = "0a1b2c3d4e5f6071";
+	private static final String OTHER_PAIR = "f0e1d2c3b4a59687";
 
 	static String envelope(long seq, String type, String data) {
 		return BattleGameTests.envelope(seq, type, data);
@@ -72,14 +79,14 @@ public class MultiplayerGameTests implements FabricGameTest {
 	/** Everything a relay message could change about a player, as plain values (equal when unchanged). */
 	private record Fingerprint(Set<String> active, Set<String> boulders, Set<String> lit, boolean surf, boolean bike, Activity activity,
 			TextureStatusService.Status texture, Integer slot, int balls, Set<UUID> daycare, String party, Vec3 position, boolean inBattle,
-			boolean pcOpen) {
+			boolean pcOpen, SavePair savePair, boolean surfing, boolean relayAgreed) {
 		static Fingerprint of(ServerPlayer player) {
 			StoryState state = StoryStates.of(player);
 			return new Fingerprint(new TreeSet<>(state.active()), new TreeSet<>(state.boulders()), new TreeSet<>(state.lit()), state.surf(),
 					state.bike(), Activity.of(player), TextureStatusService.of(player), SessionService.slotOf(player.server, player.getUUID()),
 					BagGameTests.count(player, "poke_ball"), Set.copyOf(DaycareService.held(player)), ProtoJson.write(PartyService.snapshot(player)),
 					player.position(), BattleRegistry.getBattleByParticipatingPlayer(player) != null || BattleService.battleOf(player) != null,
-					PcService.isOpen(player));
+					PcService.isOpen(player), SavePairService.of(player), Surfing.of(player), RelayHandshake.agreed(player));
 		}
 
 		/** Counts, flags and short hashes, for a failure message. */
@@ -88,7 +95,7 @@ public class MultiplayerGameTests implements FabricGameTest {
 					+ " bike=" + this.bike + " activity=" + this.activity + " texture=" + (this.texture == null ? "-" : this.texture.ok()) + " slot="
 					+ this.slot + " balls=" + this.balls + " daycare=" + this.daycare.size() + " party="
 					+ dev.kantobridge.world.Hashes.shortHash(dev.kantobridge.world.Hashes.sha256(this.party)) + " battle=" + this.inBattle + " pc="
-					+ this.pcOpen;
+					+ this.pcOpen + " pairOps=" + this.savePair.ops() + " surfing=" + this.surfing + " relay=" + this.relayAgreed;
 		}
 	}
 
@@ -131,9 +138,14 @@ public class MultiplayerGameTests implements FabricGameTest {
 			relay.receive(victim, envelope(4, MsgTypes.SESSION_BOUND, "{\"slot\":3}"));
 			relay.receive(victim, envelope(5, MsgTypes.BAG_SYNC, "{\"items\":{\"POKE_BALL\":2}}"));
 			relay.receive(victim, envelope(6, MsgTypes.DAYCARE_DEPOSIT, "{\"uid\":\"" + boarded.getUuid() + "\"}"));
-			relay.receive(victim, envelope(7, MsgTypes.SAVE_BEGIN, "{\"save\":\"sv-shared\",\"reason\":\"menu\"}"));
+			relay.receive(victim, envelope(7, MsgTypes.SAVE_BEGIN, "{\"save\":\"sv-shared\",\"reason\":\"menu\",\"pair\":\"" + VICTIM_PAIR + "\"}"));
+			relay.receive(victim, envelope(8, MsgTypes.SAVE_LOADED, "{\"fresh\":false,\"pair\":\"" + VICTIM_PAIR + "\",\"ops\":0,\"daycare\":\""
+					+ boarded.getUuid() + "\"}"));
+			relay.receive(victim, envelope(9, MsgTypes.RELAY_HELLO, "{\"protocol\":" + RelayHandshake.protocol() + ",\"mod\":\"0.1.0\"}"));
 			helper.assertTrue(DaycareService.held(victim).equals(Set.of(boarded.getUuid())), "the victim's own deposit failed");
 			helper.assertTrue(Objects.equals(SessionService.slotOf(server, victim.getUUID()), 3), "the victim's own pairing failed");
+			helper.assertTrue(VICTIM_PAIR.equals(SavePairService.of(victim).pair()), "the victim's own save pair");
+			helper.assertTrue(Surfing.of(victim) && RelayHandshake.agreed(victim), "the victim's own surf flag and relay hello");
 		} catch (RuntimeException e) {
 			cleanUp.run();
 			throw e;
@@ -166,8 +178,13 @@ public class MultiplayerGameTests implements FabricGameTest {
 					relay.receive(other, envelope(seq++, MsgTypes.PARTY_GIVE, "{\"give\":\"pg-mp\",\"dex\":1,\"level\":5,\"source\":\"gift\"}"));
 					// The bag, the PC, a save with the victim's save id, the activity, the pack, the save pairing.
 					relay.receive(other, envelope(seq++, MsgTypes.BAG_SYNC, "{\"items\":{\"POKE_BALL\":9,\"POTION\":1}}"));
-					relay.receive(other, envelope(seq++, MsgTypes.PC_OPEN, "{}"));
-					relay.receive(other, envelope(seq++, MsgTypes.SAVE_BEGIN, "{\"save\":\"sv-shared\",\"reason\":\"menu\"}"));
+					relay.receive(other, envelope(seq++, MsgTypes.PC_OPEN, "{\"pc\":\"pc-mp\"}"));
+					relay.receive(other, envelope(seq++, MsgTypes.SAVE_BEGIN, "{\"save\":\"sv-shared\",\"reason\":\"menu\",\"pair\":\"" + OTHER_PAIR
+							+ "\"}"));
+					// M10: which save the sender's hidden game runs (its daycare holds nothing: the victim's boarded Pokémon is
+					// none of its business), and the relay's hello.
+					relay.receive(other, envelope(seq++, MsgTypes.SAVE_LOADED, "{\"fresh\":false,\"pair\":\"" + VICTIM_PAIR + "\",\"ops\":7}"));
+					relay.receive(other, envelope(seq++, MsgTypes.RELAY_HELLO, "{\"protocol\":" + RelayHandshake.protocol() + ",\"mod\":\"0.1.0\"}"));
 					relay.receive(other, envelope(seq++, MsgTypes.ACTIVITY, "{\"activity\":\"dialogue\"}"));
 					relay.receive(other, envelope(seq++, MsgTypes.TEXTURE_STATUS, "{\"ok\":false,\"reason\":\"no_bridge\"}"));
 					relay.receive(other, envelope(seq++, MsgTypes.SESSION_BOUND, "{\"slot\":9}"));
@@ -188,6 +205,9 @@ public class MultiplayerGameTests implements FabricGameTest {
 					TextureStatusService.Status texture = TextureStatusService.of(other);
 					helper.assertTrue(texture != null && !texture.ok() && "no_bridge".equals(texture.reason()), "the sender's texture status");
 					helper.assertTrue(Objects.equals(SessionService.slotOf(server, other.getUUID()), 9), "the sender's pairing");
+					helper.assertTrue(OTHER_PAIR.equals(SavePairService.of(other).pair()), "the sender's save pair");
+					helper.assertTrue(otherSees.of(MsgTypes.SAVE_MISMATCH).size() == 1, "the sender's save.mismatch");
+					helper.assertTrue(Surfing.of(other) && RelayHandshake.agreed(other), "the sender's surf flag and relay hello");
 
 					// And the victim: exactly as before, and told nothing.
 					Fingerprint after = Fingerprint.of(victim);
@@ -311,6 +331,31 @@ public class MultiplayerGameTests implements FabricGameTest {
 			helper.assertTrue(sent.size() == 1 && sent.get(0).type().equals(MsgTypes.ERROR) && Objects.equals(sent.get(0).re(), 3L),
 					"the malformed activity wasn't answered with an error");
 		})));
+		helper.succeed();
+	}
+
+	/**
+	 * M10: each player's surf flag (from their own {@code story.state}) is kept for the other players' clients, which draw
+	 * the surf sprite under them; Fabric syncs it to every client but the surfer's own (checked as a rule: mock players'
+	 * connections never take attachment syncs), and a paused player's activity is theirs alone like any other.
+	 */
+	@GameTest(template = EMPTY_STRUCTURE, batch = BATCH_PLAYERS)
+	public void aSurfersFlagIsKeptForTheOtherPlayers(GameTestHelper helper) {
+		RelayService relay = RelayService.get();
+		MockPlayers.with(helper, surfer -> MockPlayers.with(helper, watcher -> {
+			helper.assertFalse(Surfing.of(surfer), "nobody surfs before their client says so");
+			relay.receive(surfer, envelope(1, MsgTypes.STORY_STATE, "{\"full\":true,\"active\":[],\"surf\":true,\"bike\":false,\"lit\":[]}"));
+			relay.receive(watcher, envelope(1, MsgTypes.STORY_STATE, "{\"full\":true,\"active\":[],\"surf\":false,\"bike\":false,\"lit\":[]}"));
+			helper.assertTrue(Surfing.of(surfer) && !Surfing.of(watcher), "surf flags mixed up");
+			helper.assertTrue(Surfing.TYPE.isSynced(), "the surf flag isn't synced to clients");
+			helper.assertTrue(Activity.SYNC.test(surfer, watcher), "the watcher's client must get it");
+			relay.receive(surfer, envelope(2, MsgTypes.STORY_STATE, "{\"full\":false,\"surf\":false}"));
+			helper.assertFalse(Surfing.of(surfer), "stepping ashore wasn't kept");
+			relay.receive(surfer, envelope(3, MsgTypes.STORY_STATE, "{\"full\":false,\"add\":[]}"));
+			helper.assertFalse(Surfing.of(surfer), "a delta without surf changed it");
+			relay.receive(watcher, envelope(2, MsgTypes.ACTIVITY, "{\"activity\":\"paused\"}"));
+			helper.assertTrue(Activity.of(watcher) == Activity.PAUSED && Activity.of(surfer) == Activity.NONE, "the paused activity is the watcher's");
+		}));
 		helper.succeed();
 	}
 

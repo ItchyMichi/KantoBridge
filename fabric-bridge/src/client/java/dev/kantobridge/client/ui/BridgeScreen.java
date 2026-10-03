@@ -2,6 +2,7 @@ package dev.kantobridge.client.ui;
 
 import com.mojang.blaze3d.platform.InputConstants;
 import com.mojang.blaze3d.platform.Window;
+import dev.kantobridge.client.bridge.LinkScreen;
 import dev.kantobridge.client.move.InputLock;
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -26,9 +27,10 @@ import org.lwjgl.glfw.GLFW;
  * <li>Keys become Game Boy buttons ({@link Keybinds}); a key already held when the screen opened (the A that started
  * the talk) acts only after it is pressed again, and held keys repeat only for the directions.</li>
  * <li>Esc opens the pause menu; the screen comes back when the pause menu closes, since the hidden UI is still open.</li>
+ * <li>Without the link it means nothing ({@link LinkScreen}): the pause overlay replaces it (M10).</li>
  * </ul>
  */
-public abstract class BridgeScreen extends Screen implements InputLock.Holds {
+public abstract class BridgeScreen extends Screen implements InputLock.Holds, LinkScreen {
 	protected final UiRuntime runtime;
 	protected UiRouter.View view;
 	/** Keys down now; a press of a key in here is the OS's repeat. */

@@ -550,3 +550,78 @@ def test_a_guest_of_the_other_version_needs_nothing_more():
         g.run(22)
     assert not g.received("battle.start") and (g.E.rollCalls[b"grass"] or 0) == 0
     assert g.status()["encounterGrass"] == 5
+
+
+# ------------------------------------------------------------ M10: session.bound.switched, session.waiting
+
+
+def switched(g):
+    return [m["data"].get("switched") for m in g.received("session.bound")]
+
+
+def waitings(g):
+    return [(m["data"], m.get("re")) for m in g.received("session.waiting")]
+
+
+def test_session_bound_says_how_the_slot_was_reached():
+    g = game()
+    bind(g, A)  # at the title: moved there
+    bind(g, A)  # already on it
+    assert switched(g) == ["title", "none"]
+    g.E.startNewGame()
+    g.run(2)
+    bind(g, B)  # a New Game never saved goes on into B's empty slot as it is
+    assert switched(g)[-1] == "moved" and in_game(g)
+    g.E.game.writeSave(g.E.game)
+    g.run(2)
+    bind(g, SOLO, multiplayer=False)  # a saved game: saved into its own slot first, then the title
+    assert switched(g)[-1] == "saved" and on_title(g)
+    bind(g, SOLO, multiplayer=False)
+    assert switched(g)[-1] == "none"
+    assert not waitings(g), "nothing waited"
+
+
+def test_session_waiting_says_why_once_per_reason_with_the_binds_seq():
+    g = game(at_title=False)
+    g.E.ow.runner.running = True  # a script runs: the F1 gate is closed
+    seq = bind(g, A, steps=5)
+    assert waitings(g) == [({"slot": 2, "reason": "busy"}, seq)]
+    g.run(10)
+    assert len(waitings(g)) == 1, "not again while the reason stays"
+    # the gate opens, but the save is refused: the reason changes
+    g.E.saveVeto = True
+    g.E.ow.runner.running = False
+    g.run(3)
+    assert waitings(g) == [({"slot": 2, "reason": "busy"}, seq), ({"slot": 2, "reason": "save_failed"}, seq)]
+    g.E.saveVeto = False
+    g.b.now = g.b.now + 5
+    g.run(3)
+    assert bounds(g) == [(2, seq)] and switched(g) == ["saved"]
+    # the log line stays for diagnostics
+    assert [w["level"] for w in warnings(g, "session.switch_waiting")] == ["warn", "warn"]
+    assert g.status()["pairingWaitingSent"] == 2
+
+
+def test_a_new_game_waiting_for_the_title_says_new_game():
+    g = game()
+    bind(g, A)
+    g.E.slotFiles[b"slot2"] = True  # world A's story was saved before
+    bind(g, SOLO, multiplayer=False)
+    g.E.startNewGame()
+    g.run(2)
+    seq = bind(g, A, steps=4)
+    assert waitings(g) == [({"slot": 2, "reason": "new_game"}, seq)]
+    g.E.game.returnToTitle(g.E.game)
+    g.run(2)
+    assert g.received("session.bound")[-1]["data"] == {"slot": 2, "switched": "title"}
+    assert g.received("session.bound")[-1]["re"] == seq
+
+
+def test_a_newer_bind_answers_with_its_own_seq():
+    g = game(at_title=False)
+    g.E.ow.runner.running = True
+    first = bind(g, A)
+    second = bind(g, SOLO, multiplayer=False)
+    assert waitings(g) == [({"slot": 2, "reason": "busy"}, first)]
+    assert [(m["data"], m.get("re")) for m in g.received("session.bound")] == \
+        [({"slot": 1, "switched": "none"}, second)]

@@ -13,14 +13,17 @@ import dev.kantobridge.net.RelayService;
 import dev.kantobridge.proto.Envelope;
 import dev.kantobridge.proto.Ids;
 import dev.kantobridge.proto.MsgTypes;
+import dev.kantobridge.server.SavePairService;
 import dev.kantobridge.server.SaveService;
 import dev.kantobridge.world.DataException;
 import dev.kantobridge.world.DataReader;
 import java.io.IOException;
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
@@ -51,6 +54,11 @@ import org.jetbrains.annotations.Nullable;
  * withdrawal changes nothing; a uid the server can't match (not in the party, not in the daycare) is refused with a
  * counted warning. A {@code party.take{reason:"daycare"}} is handled as a deposit. Logs carry codes and counts, never
  * names. Server thread only.
+ *
+ * <p>M10: the hidden game says which Pokémon its daycare holds ({@code save.loaded.daycare}); {@link #reconcile} sends
+ * every other Pokémon this daycare holds for the player back to the party (the PC when full): Gen1Recomp closed without
+ * saving after a deposit no longer strands it here. A withdrawal of a Pokémon already in the party or PC changes nothing,
+ * whatever the reason. Deposits and withdrawals count as the save pair's operations ({@link SavePairService}).
  */
 public final class DaycareService {
 	public static final String FOLDER = "daycare";
@@ -64,6 +72,7 @@ public final class DaycareService {
 	private static final AtomicLong DEPOSITS = new AtomicLong();
 	private static final AtomicLong WITHDRAWALS = new AtomicLong();
 	private static final AtomicLong REPEATS = new AtomicLong();
+	private static final AtomicLong RETURNED = new AtomicLong();
 
 	private DaycareService() {
 	}
@@ -122,6 +131,8 @@ public final class DaycareService {
 			pokemon = pc.get(uid);
 			fromPc = pokemon != null;
 		}
+		// Not in the party or PC: nothing to board, so gen1-bridge sent it again (or it's a mismatch, warned below).
+		SavePairService.operation(player, "deposit", uid.toString(), pokemon == null);
 		if (pokemon == null) {
 			if (store.contains(uid)) {
 				// gen1-bridge repeats what it hasn't seen applied; the daycare has it already.
@@ -184,13 +195,20 @@ public final class DaycareService {
 		if (existing == null) {
 			existing = PlayerExtensionsKt.pc(player).get(uid);
 		}
+		// Not boarded here: nothing to bring back, so gen1-bridge sent it again (or it's a mismatch, warned below).
+		SavePairService.operation(player, "withdraw", uid.toString(), data == null);
 		if (data == null) {
-			if (existing != null && WITHDRAWN.getOrDefault(player.getUUID(), Set.of()).contains(uid)) {
+			if (existing != null) {
+				// Already back in the party or PC (a repeat, the reconcile, a hidden game gone back to an older save): it stays
+				// as it is, never a second Pokémon with the same uid. Unexplained ones are counted.
 				REPEATS.incrementAndGet();
+				if (!WITHDRAWN.getOrDefault(player.getUUID(), Set.of()).contains(uid)) {
+					warn("withdraw_not_deposited");
+				}
 				return true;
 			}
 			// Never boarded here (or long since back): the hidden game and Minecraft disagree.
-			warn(existing != null ? "withdraw_not_deposited" : "withdraw_unknown_uid");
+			warn("withdraw_unknown_uid");
 			return false;
 		}
 		Pokemon pokemon;
@@ -235,6 +253,75 @@ public final class DaycareService {
 		long count = WITHDRAWALS.incrementAndGet();
 		KantoBridge.LOGGER.info("daycare: a Pokémon was withdrawn ({} experience for {} steps); {} withdrawals so far", experience, steps, count);
 		return true;
+	}
+
+	/**
+	 * The hidden game's daycare holds {@code hidden} (or nothing): every other Pokémon this daycare holds for the player comes
+	 * back to the party (the PC when it is full), without experience (it never stayed in the hidden game's daycare). One
+	 * already in the party or PC (a stale entry after a crash) only loses its entry. The Pokémon is put back and saved
+	 * before its entry goes, so a crash in between leaves it in both, never in neither. Returns how many came back.
+	 */
+	public static int reconcile(ServerPlayer player, @Nullable UUID hidden) {
+		DaycareStore store = store(player);
+		if (store == null || store.size() == 0) {
+			return 0;
+		}
+		List<UUID> stray = store.uids();
+		stray.remove(hidden);
+		if (stray.isEmpty()) {
+			return 0;
+		}
+		PlayerPartyStore party = PlayerExtensionsKt.party(player);
+		PCStore pc = PlayerExtensionsKt.pc(player);
+		List<UUID> back = new ArrayList<>();
+		List<UUID> stale = new ArrayList<>();
+		for (UUID uid : stray) {
+			if (party.get(uid) != null || pc.get(uid) != null) {
+				// A crash left it in both: the party's copy is the one; only the entry goes.
+				stale.add(uid);
+				continue;
+			}
+			Pokemon pokemon;
+			try {
+				pokemon = Pokemon.Companion.loadFromJSON(player.registryAccess(), store.get(uid));
+			} catch (RuntimeException e) {
+				KantoBridge.LOGGER.warn("daycare: Cobblemon couldn't read the Pokémon ({})", e.getClass().getName());
+				warn("reconcile_unreadable");
+				continue;
+			}
+			// The party, or the PC when it is full.
+			if (!party.add(pokemon)) {
+				warn("reconcile_no_room");
+				continue;
+			}
+			back.add(uid);
+		}
+		if (back.isEmpty() && stale.isEmpty()) {
+			return 0;
+		}
+		if (!back.isEmpty()) {
+			// In the party or PC on disk before the daycare lets go of them.
+			SaveService.savePokemon(player);
+		}
+		for (UUID uid : back) {
+			store.remove(uid);
+			// A later withdrawal of it (the hidden game's older save still boards it) is a repeat.
+			WITHDRAWN.computeIfAbsent(player.getUUID(), key -> new HashSet<>()).add(uid);
+		}
+		for (UUID uid : stale) {
+			store.remove(uid);
+			warn("reconcile_stale_entry");
+		}
+		if (!write(player, store)) {
+			// What came back is back; a later reconcile or withdrawal finds it in the party and only drops the entry.
+			warn("reconcile_io");
+		}
+		PartyService.markDirty(player);
+		if (!back.isEmpty()) {
+			long count = RETURNED.addAndGet(back.size());
+			KantoBridge.LOGGER.info("daycare: {} Pokémon the hidden game doesn't board came back to the party; {} so far", back.size(), count);
+		}
+		return back.size();
 	}
 
 	/** The uids the player's daycare holds (tests, diagnostics); empty when its file can't be read. */
@@ -319,5 +406,10 @@ public final class DaycareService {
 	/** Repeated deposits and withdrawals that changed nothing. */
 	public static long repeats() {
 		return REPEATS.get();
+	}
+
+	/** Pokémon the reconcile brought back from the daycare. */
+	public static long returned() {
+		return RETURNED.get();
 	}
 }

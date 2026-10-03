@@ -7,9 +7,14 @@ ones).
 
 **Before any session:**
 
-- Start Gen1Recomp from PowerShell inside `local\gen1recomp\`:
-  `.\gen1recomp.exe --console --game=blue`.
-- Keep its window visible behind Minecraft; never minimise it.
+- **The easy way (since M10):** `.\tools\launch.ps1` from the repository folder. It starts
+  Gen1Recomp (Blue, with its log console), waits until the bridge listens, then starts the dev
+  client. `-Players 2` starts the two-player setup (M9), `-Watch` restarts Gen1Recomp if it closes,
+  and `-DryRun` only shows what it would do. Details are in `tools/README.md`.
+- **By hand:** start Gen1Recomp from PowerShell inside `local\gen1recomp\` with
+  `.\gen1recomp.exe --console --game=blue`, then the client as in M1.
+- You can minimise Gen1Recomp's window; it keeps full speed (measured in M10). Older notes below
+  say "never minimise" — that was a guess from reading the code, and it was wrong.
 - Close Gen1Recomp and Minecraft before starting an automated run.
 
 ## M0: Foundations
@@ -309,3 +314,52 @@ tests' install) also works as Player 2's game.
 - [ ] A Cobblemon battle between the players: both parties' HP and levels sync back afterwards.
 - [ ] Leaving the server and opening the single-player `Kanto` world: Gen1Recomp returns to your
       offline save slot.
+
+## M10: Reliability, launch and performance
+
+**Launching:**
+
+- [ ] `.\tools\launch.ps1 -DryRun` prints what it would start (Gen1Recomp with `--game=blue
+      --console`, then `gradlew runClient`) and starts nothing.
+- [ ] `.\tools\launch.ps1` starts Gen1Recomp, waits until the bridge listens ("Gen1Recomp is
+      listening on 127.0.0.1:27151"), then starts the dev client. Open the `Kanto` world and play a
+      little.
+- [ ] Running it again while Gen1Recomp is still open reuses that Gen1Recomp instead of starting a
+      second one.
+- [ ] Optional: `.\tools\launch.ps1 -Players 2` starts both Gen1Recomps, the dev server and both
+      clients (M9's setup in one go).
+
+**Crash recovery (single player, in the `Kanto` world):**
+
+- [ ] Close Gen1Recomp's window while walking. Within about 2 seconds Minecraft shows the pause
+      overlay ("waiting for Gen1Recomp", the port and a countdown), and the world stops.
+- [ ] While the overlay is up, Esc opens the normal pause menu, and closing that menu brings the
+      overlay back.
+- [ ] Start Gen1Recomp again (or start with `.\tools\launch.ps1 -Watch`, which restarts it by
+      itself). The overlay closes and Gen1Recomp's title menu appears in Minecraft. Pick CONTINUE:
+      you're back where you last saved.
+- [ ] **A save that went back:**
+      1. Save in Gen1Recomp, then receive a Pokémon from the story (a gift, a trade or a Game
+         Corner prize).
+      2. Close Gen1Recomp without saving, restart it and CONTINUE.
+      3. A warning says Gen1Recomp went back to its last save, and that Pokémon received since
+         are still in your party.
+- [ ] **The daycare:**
+      1. Deposit a Pokémon at the Route 5 daycare.
+      2. Close Gen1Recomp without saving, restart it and CONTINUE.
+      3. The Pokémon is back in your party, not stranded in the daycare.
+- [ ] Reconnect in the middle of a text box: the same text box comes back.
+- [ ] If Gen1Recomp ever freezes on its blue error screen, the overlay says it isn't answering and
+      names its crash log. Don't share that log: it may contain game text.
+
+**Minimised and hidden:**
+
+- [ ] Minimise Gen1Recomp's window while walking in Minecraft: walking stays in step, with no
+      slow-down.
+- [ ] Optional: with the F7 overlay open, the mirror (e.g. the party screen) shows at most 30 frames
+      a second.
+
+**Multiplayer extras (two clients, as in M9):**
+
+- [ ] Close one player's Gen1Recomp: the other player sees a ⏸ bubble over them until it's back.
+- [ ] Surf with one player: the other sees them on the surf sprite, not standing on the water.

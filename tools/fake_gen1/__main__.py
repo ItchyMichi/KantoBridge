@@ -11,6 +11,10 @@ Type commands to drive the connected Minecraft client:
     flag NAME on|off       set or clear a story flag
     give [DEX] [LEVEL] [SOURCE]   send a made-up party.give (default 7 5 gift)
     battle [KIND]          send a made-up battle.start (trainer, rival, static, surf, fish)
+    save [REASON]          a made-up hidden-game save (save.begin, menu or center)
+    reload                 as if the hidden game went back to its last save (save.loaded, ops 0)
+    pc                     choose Bill's PC (pc.open)
+    waitbind REASON SECS   make the next session.bind wait (session.waiting busy|new_game|save_failed)
     counts                 print how many of each message type the client has sent
     status                 print the connection and world state
     drop                   drop the connection (the client should reconnect)
@@ -62,6 +66,14 @@ async def _commands(fake):
                                 args[2] if len(args) > 2 else "gift")
             elif cmd == "battle":
                 await fake.start_battle(args[0] if args else "trainer")
+            elif cmd == "save":
+                await fake.save(args[0] if args else "menu")
+            elif cmd == "reload":
+                await fake.reload_save()
+            elif cmd == "pc":
+                await fake.open_pc()
+            elif cmd == "waitbind":
+                fake.bind_wait = (args[0], float(args[1]))
             elif cmd == "counts":
                 print("counts " + " ".join(f"{t}={n}" for t, n in sorted(fake.counts().items())))
             elif cmd == "status":

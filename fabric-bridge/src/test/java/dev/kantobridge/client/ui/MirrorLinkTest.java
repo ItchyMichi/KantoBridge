@@ -15,8 +15,13 @@ import java.util.Base64;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 
-/** The mirror subscription: sub on show, unsub on hide, frames kept only while subscribed and newest first. */
+/**
+ * The mirror subscription: sub on show, unsub on hide, frames kept only while subscribed and newest first; uploads at
+ * most 30 a second (M10), frames replaced before their upload counted as dropped.
+ */
 class MirrorLinkTest {
+	/** A render clock: each take is 100 ms after the one before, well within the upload limit. */
+	long now;
 	final List<String> sent = new ArrayList<>();
 	boolean connected = true;
 	final MirrorLink link = new MirrorLink((type, data) -> {
@@ -25,6 +30,11 @@ class MirrorLinkTest {
 		}
 		return this.connected;
 	});
+
+	byte[] take() {
+		this.now += 100_000_000L;
+		return this.link.takeFresh(this.now);
+	}
 
 	static JsonObject frame(long n, String bytes) {
 		JsonObject data = new JsonObject();
@@ -56,8 +66,8 @@ class MirrorLinkTest {
 		this.link.onFrame(frame(3, "three"));
 		this.link.onFrame(frame(2, "late"));
 		assertEquals(2, this.link.frames());
-		assertArrayEquals("three".getBytes(StandardCharsets.US_ASCII), this.link.takeFresh());
-		assertNull(this.link.takeFresh(), "taken");
+		assertArrayEquals("three".getBytes(StandardCharsets.US_ASCII), this.take());
+		assertNull(this.take(), "taken");
 		JsonObject wrongSize = frame(4, "x");
 		wrongSize.addProperty("w", 320);
 		this.link.onFrame(wrongSize);
@@ -71,14 +81,31 @@ class MirrorLinkTest {
 	void showingTheSameUiAgainOffersItsPictureAnotherDoesNot() {
 		this.link.show(7);
 		this.link.onFrame(frame(1, "seven"));
-		assertNotNull(this.link.takeFresh());
+		assertNotNull(this.take());
 		this.link.hide();
 		this.link.show(7);
-		assertArrayEquals("seven".getBytes(StandardCharsets.US_ASCII), this.link.takeFresh(), "the pause menu came and went");
+		assertArrayEquals("seven".getBytes(StandardCharsets.US_ASCII), this.take(), "the pause menu came and went");
 		this.link.hide();
 		this.link.show(8);
-		assertNull(this.link.takeFresh(), "another UI's picture is dropped");
+		assertNull(this.take(), "another UI's picture is dropped");
 		assertFalse(this.link.hasPicture());
+	}
+
+	@Test
+	void uploadsAreLimitedAndReplacedFramesCounted() {
+		this.link.show(7);
+		this.link.onFrame(frame(1, "one"));
+		assertArrayEquals("one".getBytes(StandardCharsets.US_ASCII), this.link.takeFresh(1_000_000_000L));
+		this.link.onFrame(frame(2, "two"));
+		assertNull(this.link.takeFresh(1_010_000_000L), "10 ms after an upload: not yet");
+		this.link.onFrame(frame(3, "three"));
+		assertEquals(1, this.link.dropped(), "two never went up: three replaced it");
+		assertArrayEquals("three".getBytes(StandardCharsets.US_ASCII), this.link.takeFresh(1_040_000_000L), "the newest goes at the next slot");
+		assertNull(this.link.takeFresh(1_200_000_000L), "nothing new");
+		this.link.onFrame(frame(4, "four"));
+		assertArrayEquals("four".getBytes(StandardCharsets.US_ASCII), this.link.takeFresh(1_300_000_000L));
+		assertEquals(1, this.link.dropped(), "a frame taken in time is no drop");
+		assertEquals(4, this.link.frames());
 	}
 
 	@Test

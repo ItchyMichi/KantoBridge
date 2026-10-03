@@ -6,6 +6,7 @@ import dev.kantobridge.proto.Ids;
 import dev.kantobridge.proto.MsgTypes;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import java.util.TreeMap;
 import org.jetbrains.annotations.Nullable;
 
@@ -23,6 +24,9 @@ import org.jetbrains.annotations.Nullable;
  * <p>M9: gen1-bridge may switch the hidden game to the world's own save slot first and answer much later; its
  * {@code session.bound} carries {@code re}, the bind's {@code seq}, so an answer to an older bind (the player moved on
  * to another world meanwhile) is told apart and ignored. {@link SessionGate} holds the world's data until the answer.
+ *
+ * <p>M10: {@code session.bound} may say how the hidden game reached the slot ({@code switched}: {@code none},
+ * {@code title}, {@code saved}, {@code moved}); the binder keeps it ({@link #switched}) for the gate.
  */
 public final class SessionBinder {
 	/** Where messages go. */
@@ -62,10 +66,15 @@ public final class SessionBinder {
 	private @Nullable String sentWorld;
 	private boolean sentMultiplayer;
 	private @Nullable Integer slot;
+	/** The last accepted answer's {@code switched}, or null when it didn't say. */
+	private @Nullable String switched;
 
 	/**
 	 * @param boundUp relay {@code session.bound} to the server (the protocol's catalog decides)
 	 */
+	/** {@code session.bound.switched}'s values. */
+	static final Set<String> SWITCHES = Set.of("none", "title", "saved", "moved");
+
 	public SessionBinder(Port port, boolean boundUp) {
 		this.port = port;
 		this.boundUp = boundUp;
@@ -137,7 +146,9 @@ public final class SessionBinder {
 	 */
 	public boolean onBound(JsonObject data, @Nullable Long re) {
 		long value = JsonFields.integer(data, "slot", -1);
-		if (value < 0 || value > 255 || data.size() != 1) {
+		String how = JsonFields.str(data, "switched");
+		boolean switchedOk = data.has("switched") ? how != null && SWITCHES.contains(how) : how == null;
+		if (value < 0 || value > 255 || !switchedOk || data.size() != (data.has("switched") ? 2 : 1)) {
 			this.warn("session.bad_bound");
 			return false;
 		}
@@ -152,6 +163,7 @@ public final class SessionBinder {
 			return false;
 		}
 		this.slot = (int) value;
+		this.switched = how;
 		this.stats.bounds++;
 		if (this.boundUp) {
 			JsonObject up = new JsonObject();
@@ -177,6 +189,14 @@ public final class SessionBinder {
 	/** The save slot gen1-bridge paired with this world on this link, or null. */
 	public @Nullable Integer slot() {
 		return this.slot;
+	}
+
+	/**
+	 * How the hidden game reached the slot in the last accepted {@code session.bound} ({@code none}, {@code title},
+	 * {@code saved}, {@code moved}), or null when it didn't say.
+	 */
+	public @Nullable String switched() {
+		return this.switched;
 	}
 
 	/** The {@code seq} of this link's latest bind, or -1. */

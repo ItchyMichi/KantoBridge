@@ -4,24 +4,28 @@ import com.google.gson.JsonObject;
 import dev.kantobridge.proto.MsgTypes;
 import java.util.Map;
 import java.util.TreeMap;
+import org.jetbrains.annotations.Nullable;
 
 /**
  * Bill's PC on the client (docs/PLAN.md §4.4 {@code PcService}, PROTOCOL.md {@code pc.open}/{@code pc.closed}):
- * gen1-bridge holds the hidden game and sends {@code pc.open}; the client relays it, the server opens Cobblemon's PC
- * screen and answers {@code pc.closed} when the screen's link is gone; the client hands that to gen1-bridge. While a PC
- * session is {@link #pending} the player stays held and our screens wait (the glue asks).
+ * gen1-bridge holds the hidden game and sends {@code pc.open{pc}}; the client relays it, the server opens Cobblemon's PC
+ * screen and answers {@code pc.closed{pc}} when the screen's link is gone; the client hands that to gen1-bridge. While a
+ * PC session is {@link #pending} the player stays held and our screens wait (the glue asks).
  *
  * <ul>
+ * <li>Every {@code pc.closed} carries the id of the {@code pc.open} it ends (M10), whoever makes it: the server, this
+ * relay's own answers, the save pairing's.</li>
  * <li>Without a server, and when leaving it, {@code pc.closed} is answered here: no answer can come any more.</li>
- * <li>{@code pc.open} carries no id, so a repeat can't be told from a new request by itself: while a session runs, a
- * {@code pc.open} is gen1-bridge asking again (after a reconnect) and is ignored; when the PC closed but gen1-bridge
- * didn't get the answer (the link was down), its {@code pc.open} right after its next snapshot is answered from that
- * record, never opening the PC again (not asked within {@value #ASK_AGAIN_MS} ms of the snapshot, the record is
- * forgotten). Answers are never re-sent unasked.</li>
+ * <li>A {@code pc.open} with the running session's id is gen1-bridge asking again (after a reconnect) and is ignored;
+ * another id while a session runs is a new request the open screen serves (it is relayed, so the server's close answers
+ * the newest id). When the PC closed but gen1-bridge didn't get the answer (the link was down), its {@code pc.open} with
+ * that id is answered from the record, never opening the PC again; the record is forgotten when another id comes, or
+ * when it isn't asked for within {@value #ASK_AGAIN_MS} ms of gen1-bridge's next snapshot. Answers are never re-sent
+ * unasked.</li>
  * <li>Safety nets, should Cobblemon's screen not behave: if it never shows within {@value #OPEN_TIMEOUT_MS} ms, or it
  * disappears and the server hasn't answered within {@value #UNLINK_AFTER_MS} ms (another screen replaced it without
  * unlinking), the client sends Cobblemon's own unlink so the server answers; with no answer {@value #GIVE_UP_MS} ms
- * later the client answers gen1-bridge itself and drops the server's late answer if it still comes (within
+ * later the client answers gen1-bridge itself and drops the server's late answer for that id (within
  * {@value #STRAY_MS} ms). Each is a counted warning.</li>
  * </ul>
  * Plain Java, client thread only; {@link SessionRuntime} is the glue.
@@ -76,62 +80,83 @@ public final class PcRelay {
 	private final Stats stats = new Stats();
 	private final Map<String, Long> warnings = new TreeMap<>();
 	private State state = State.IDLE;
+	/** The id of the running session, or of the close that couldn't be delivered ({@link State#UNDELIVERED}). */
+	private @Nullable String id;
 	private long since;
 	private boolean unlinked;
 	/** When gen1-bridge's snapshot came while a close waited to be delivered (-1: none since). */
 	private long snapshotAt = -1;
-	/** Until when a {@code pc.closed} from the server answers a session closed here already (-1: none expected). */
+	/** The id answered here after giving up: the server's late close for it is dropped until {@link #strayUntil}. */
+	private @Nullable String strayId;
 	private long strayUntil = -1;
 
 	public PcRelay(Port port) {
 		this.port = port;
 	}
 
-	/** {@code pc.open} from gen1-bridge. */
-	public void fromBridge(long now) {
+	/** {@code pc.open{pc}} from gen1-bridge. */
+	public void fromBridge(String pc, long now) {
 		switch (this.state) {
-			case IDLE -> {
-				this.strayUntil = -1;
-				if (this.port.toServer(MsgTypes.PC_OPEN, new JsonObject())) {
-					this.enter(State.OPENING, now);
-					this.stats.opened++;
-				} else {
-					this.warn("pc.no_server");
-					this.answerHere();
+			case IDLE -> this.open(pc, now);
+			case OPENING, OPEN, CLOSING -> {
+				this.stats.repeats++;
+				if (!pc.equals(this.id)) {
+					// gen1-bridge let the older request go (a dropped link) and asks anew: the open screen serves it, and the
+					// server's close answers the newest id.
+					this.id = pc;
+					this.port.toServer(MsgTypes.PC_OPEN, openBody(pc));
 				}
 			}
-			case OPENING, OPEN, CLOSING -> this.stats.repeats++;
 			case UNDELIVERED -> {
-				// gen1-bridge never heard that the PC closed: this is it asking again, not a new PC.
-				this.stats.repeats++;
-				this.toBridge();
+				if (pc.equals(this.id)) {
+					// gen1-bridge never heard that this PC closed: it is asking again, not opening a new PC.
+					this.stats.repeats++;
+					this.toBridge(pc);
+				} else {
+					// A new PC: the undelivered close belonged to a request gen1-bridge no longer waits on.
+					this.open(pc, now);
+				}
 			}
 		}
 	}
 
-	/** {@code pc.closed} from the server. */
-	public void fromServer(long now) {
-		if (this.strayUntil >= 0 && now <= this.strayUntil) {
+	private void open(String pc, long now) {
+		this.strayId = null;
+		this.strayUntil = -1;
+		this.id = pc;
+		if (this.port.toServer(MsgTypes.PC_OPEN, openBody(pc))) {
+			this.enter(State.OPENING, now);
+			this.stats.opened++;
+		} else {
+			this.warn("pc.no_server");
+			this.answerHere();
+		}
+	}
+
+	/** {@code pc.closed{pc}} from the server. */
+	public void fromServer(String pc, long now) {
+		if (pc.equals(this.strayId) && now <= this.strayUntil) {
+			this.strayId = null;
 			this.strayUntil = -1;
 			this.stats.strays++;
 			return;
 		}
-		if (!this.pending()) {
-			// No session of ours runs: passed on when possible (gen1-bridge decides whether it waits for it), never kept.
-			this.warn("pc.unexpected_close");
-			if (this.port.toBridge(MsgTypes.PC_CLOSED, new JsonObject()) && this.state == State.UNDELIVERED) {
-				this.state = State.IDLE;
-			}
+		if (this.pending() && pc.equals(this.id)) {
+			this.stats.closed++;
+			this.toBridge(pc);
 			return;
 		}
-		this.stats.closed++;
-		this.toBridge();
+		// Not the running session's: passed on (gen1-bridge ignores an id it doesn't wait on), never kept.
+		this.warn("pc.unexpected_close");
+		if (this.port.toBridge(MsgTypes.PC_CLOSED, closedBody(pc)) && this.state == State.UNDELIVERED && pc.equals(this.id)) {
+			this.state = State.IDLE;
+			this.id = null;
+		}
 	}
 
 	/**
 	 * gen1-bridge sent a snapshot (a new link): it asks again for a PC it still waits on right after, so an undelivered
-	 * close not asked for within {@value #ASK_AGAIN_MS} ms belonged to nothing it waits on any more and is forgotten (a
-	 * later {@code pc.open} is then a new PC).
+	 * close not asked for within {@value #ASK_AGAIN_MS} ms belonged to nothing it waits on any more and is forgotten.
 	 */
 	public void bridgeSnapshot(long now) {
 		if (this.state == State.UNDELIVERED) {
@@ -141,6 +166,7 @@ public final class PcRelay {
 
 	/** Left the server: it can't answer any more, so a running session is closed here. */
 	public void serverLeft(long now) {
+		this.strayId = null;
 		this.strayUntil = -1;
 		if (this.pending()) {
 			this.warn("pc.server_left");
@@ -148,9 +174,7 @@ public final class PcRelay {
 		}
 	}
 
-	/**
-	 * Each client tick, with whether Cobblemon's PC screen is showing.
-	 */
+	/** Each client tick, with whether Cobblemon's PC screen is showing. */
 	public void tick(long now, boolean screenShown) {
 		switch (this.state) {
 			case OPENING -> {
@@ -182,6 +206,7 @@ public final class PcRelay {
 				if (this.snapshotAt >= 0 && now - this.snapshotAt > ASK_AGAIN_MS) {
 					this.warn("pc.close_not_asked");
 					this.state = State.IDLE;
+					this.id = null;
 				}
 			}
 			default -> {
@@ -200,12 +225,31 @@ public final class PcRelay {
 		return this.state;
 	}
 
+	/** The running session's id (or the undelivered close's), or null. */
+	public @Nullable String id() {
+		return this.id;
+	}
+
 	public Stats stats() {
 		return this.stats;
 	}
 
 	public Map<String, Long> warnings() {
 		return Map.copyOf(this.warnings);
+	}
+
+	/** The {@code pc.open} body. */
+	public static JsonObject openBody(String pc) {
+		JsonObject data = new JsonObject();
+		data.addProperty("pc", pc);
+		return data;
+	}
+
+	/** The {@code pc.closed} body: the id of the {@code pc.open} it ends. */
+	public static JsonObject closedBody(String pc) {
+		JsonObject data = new JsonObject();
+		data.addProperty("pc", pc);
+		return data;
 	}
 
 	// ---- helpers ----
@@ -228,18 +272,30 @@ public final class PcRelay {
 	/** No answer from the server after the unlink: gen1-bridge hears it from here, and a late answer is dropped. */
 	private void giveUp(long now) {
 		this.warn("pc.no_answer");
+		this.strayId = this.id;
 		this.strayUntil = now + STRAY_MS;
 		this.answerHere();
 	}
 
 	private void answerHere() {
 		this.stats.answeredHere++;
-		this.toBridge();
+		String pc = this.id;
+		if (pc != null) {
+			this.toBridge(pc);
+		} else {
+			this.state = State.IDLE;
+		}
 	}
 
-	/** {@code pc.closed} to gen1-bridge; kept as undelivered (answered on the next ask) when the link is down. */
-	private void toBridge() {
-		this.state = this.port.toBridge(MsgTypes.PC_CLOSED, new JsonObject()) ? State.IDLE : State.UNDELIVERED;
+	/** {@code pc.closed{pc}} to gen1-bridge; kept as undelivered (answered on the next ask) when the link is down. */
+	private void toBridge(String pc) {
+		if (this.port.toBridge(MsgTypes.PC_CLOSED, closedBody(pc))) {
+			this.state = State.IDLE;
+			this.id = null;
+		} else {
+			this.state = State.UNDELIVERED;
+			this.id = pc;
+		}
 		this.snapshotAt = -1;
 	}
 

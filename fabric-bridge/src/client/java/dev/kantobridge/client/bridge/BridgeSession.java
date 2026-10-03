@@ -20,6 +20,8 @@ import org.slf4j.LoggerFactory;
 final class BridgeSession {
 	private static final Logger LOGGER = LoggerFactory.getLogger("kantobridge");
 	private static final Pattern CODE = Pattern.compile("^[a-z][a-z0-9_.]{0,63}$");
+	/** {@code hello.ok.tested}'s format (a version only). */
+	private static final Pattern VERSION = Pattern.compile("^[0-9A-Za-z.+_-]{1,32}$");
 	/** Protocol errors logged at warn per connection; later ones only count. */
 	private static final int WARN_LIMIT = 20;
 
@@ -33,7 +35,11 @@ final class BridgeSession {
 
 		void connected(HelloOk ok);
 
-		void rejected(String reason);
+		/**
+		 * gen1-bridge refused this client: {@code reason} is a short code ({@code protocol} when the protocol numbers differ);
+		 * {@code protocol} is gen1-bridge's protocol number, or -1 when it didn't say.
+		 */
+		void rejected(String reason, int protocol);
 
 		/** The session ended; the connection must be closed. Called once. */
 		void closed(String reason);
@@ -142,8 +148,9 @@ final class BridgeSession {
 					this.close("handshake.re");
 					return;
 				}
-				if (JsonFields.integer(data, "protocol", -1) != this.catalog.protocol()) {
-					this.out.rejected("protocol");
+				long protocol = JsonFields.integer(data, "protocol", -1);
+				if (protocol != this.catalog.protocol()) {
+					this.out.rejected("protocol", protocolNumber(protocol));
 					this.close("rejected");
 					return;
 				}
@@ -156,14 +163,16 @@ final class BridgeSession {
 					this.close("handshake.malformed");
 					return;
 				}
+				String tested = JsonFields.str(data, "tested");
 				this.phase = Phase.CONNECTED;
 				this.lastPingMs = nowMs;
-				this.out.connected(new HelloOk(session, game, engine, bridge));
+				this.out.connected(new HelloOk(session, game, engine, bridge, tested != null && VERSION.matcher(tested).matches() ? tested : null));
 				this.out.deliver(message);
 			}
 			case MsgTypes.HELLO_REJECT -> {
 				String reason = JsonFields.str(data, "reason");
-				this.out.rejected(reason != null && CODE.matcher(reason).matches() ? reason : "unknown");
+				this.out.rejected(reason != null && CODE.matcher(reason).matches() ? reason : "unknown",
+						protocolNumber(JsonFields.integer(data, "protocol", -1)));
 				this.close("rejected");
 			}
 			case MsgTypes.ERROR -> this.warn(this.errorCode(data), message);
@@ -223,6 +232,11 @@ final class BridgeSession {
 		String text = cause == null ? "message failed the client's checks" : cause.getMessage();
 		error.addProperty("msg", text.length() > 500 ? text.substring(0, 500) : text);
 		this.out.send(MsgTypes.ERROR, message == null ? null : message.seq(), error);
+	}
+
+	/** A peer's protocol number as the HUD may show it, or -1. */
+	private static int protocolNumber(long protocol) {
+		return protocol >= 1 && protocol <= 1000 ? (int) protocol : -1;
 	}
 
 	private String errorCode(JsonObject data) {

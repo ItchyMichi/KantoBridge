@@ -9,5 +9,11 @@
   "type": "object",
   "required": ["slot"],
   "additionalProperties": false,
-  "properties": {"slot": {"type": "integer", "minimum": 0, "maximum": 255}}
+  "properties": {
+    "slot": {"type": "integer", "minimum": 0, "maximum": 255},
+    "switched": {
+      "enum": ["none", "title", "saved", "moved"],
+      "description": "How the hidden game reached the slot: none (it was already on it: held messages may go on), title (moved at the title screen), saved (the running game was saved into its own slot first, then returned to the title), moved (a never-saved New Game moved into the empty slot as it is). Absent: unknown (treat as a switch)."
+    }
+  }
 }

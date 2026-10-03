@@ -19,6 +19,7 @@ LIB_FILES = [
     "lib/kb_engine.lua",
     "lib/kb_catalog.lua",
     "lib/kb_session.lua",
+    "lib/kb_perf.lua",
     "observe/kb_player.lua",
     "observe/kb_warp.lua",
     "observe/kb_snapshot.lua",

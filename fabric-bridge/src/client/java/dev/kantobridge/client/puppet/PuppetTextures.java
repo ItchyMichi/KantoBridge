@@ -21,7 +21,8 @@ public final class PuppetTextures {
 	public static final ResourceLocation PLACEHOLDER = ResourceLocation.fromNamespaceAndPath(KantoBridge.MOD_ID,
 			"textures/entity/puppet_placeholder.png");
 
-	private final Map<String, ResourceLocation> cache = new HashMap<>();
+	/** By palette, then sprite: no key string is made per look-up (M10: looked up every frame per drawn puppet). */
+	private final Map<String, Map<String, ResourceLocation>> cache = new HashMap<>();
 	private long missing;
 
 	/** The texture for a puppet on a world with {@code index} (null outside Kanto worlds). */
@@ -30,11 +31,11 @@ public final class PuppetTextures {
 		if (map == null) {
 			return PLACEHOLDER;
 		}
-		String key = map.palette() + "|" + puppet.sprite();
-		ResourceLocation found = this.cache.get(key);
+		Map<String, ResourceLocation> sprites = this.cache.computeIfAbsent(map.palette(), palette -> new HashMap<>());
+		ResourceLocation found = sprites.get(puppet.sprite());
 		if (found == null) {
 			found = this.lookup(map.palette(), puppet.sprite());
-			this.cache.put(key, found);
+			sprites.put(puppet.sprite(), found);
 		}
 		return found;
 	}

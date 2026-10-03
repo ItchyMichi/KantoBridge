@@ -153,11 +153,12 @@ class BridgeClientTest {
 		BridgeClient started = this.start(quiet());
 		PipeTransport.Pipe pipe = this.transport.nextPipe();
 		Envelope hello = Envelope.parse(pipe.serverReadLine());
-		pipe.serverSend("{\"data\":{\"protocol\":1,\"reason\":\"protocol\"},\"re\":" + hello.seq() + ",\"seq\":1,\"type\":\"hello.reject\"}");
+		pipe.serverSend("{\"data\":{\"protocol\":2,\"reason\":\"protocol\"},\"re\":" + hello.seq() + ",\"seq\":1,\"type\":\"hello.reject\"}");
 		await("retry after rejection", () -> this.transport.attempts.get() >= 2);
 		assertTrue(this.recorder.states.contains("REJECTED:protocol"));
 		assertEquals(5000L, this.clock.sleeps.get(0));
 		assertEquals(0, started.stats().snapshot().handshakes());
+		assertEquals(2, started.rejectProtocol(), "gen1-bridge's protocol number, for the pause overlay");
 	}
 
 	@Test
@@ -239,7 +240,8 @@ class BridgeClientTest {
 		assertTrue(pause.settled(), "no connection is open or being opened once the pause returns");
 		assertTrue(first.closed, "the pause hangs up the current connection");
 		assertTrue(started.paused());
-		await("paused", () -> started.state() == ConnectionState.PAUSED);
+		// The state is set before the listener hears of it (on the socket thread): wait for both.
+		await("paused", () -> started.state() == ConnectionState.PAUSED && this.recorder.states.contains("PAUSED:export"));
 		assertEquals("PAUSED:export", this.recorder.states.get(this.recorder.states.size() - 1));
 		int attempts = this.transport.attempts.get();
 		Thread.sleep(150);

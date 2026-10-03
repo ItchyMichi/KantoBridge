@@ -49,6 +49,10 @@ import org.jetbrains.annotations.Nullable;
  * guarantee as Minecraft's autosave). {@code ok:false} for any exception, a world the builder holds players out of, and
  * levels with saving turned off ({@code /save-off}); each a counted warning. A repeated {@code save} id is answered again
  * from what the first one did, without saving twice. Logs carry reasons, counts and times. Server thread only.
+ *
+ * <p>M10: {@code save.begin} also names the hidden save it belongs to ({@code pair}, {@code at}); it becomes the player's
+ * {@link SavePair} before anything is written, so the player data this save writes carries it ({@link SavePairService}).
+ * The hidden game's save happened whatever Minecraft's does, so the pair is kept even when this save fails.
  */
 public final class SaveService {
 	private static final Set<String> REASONS = Set.of("menu", "center");
@@ -74,13 +78,17 @@ public final class SaveService {
 		JsonObject data = message.data();
 		String save;
 		String reason;
+		String pair;
+		long at;
 		try {
-			DataReader reader = DataReader.of(data, "").allowOnly(Set.of("save", "reason"));
+			DataReader reader = DataReader.of(data, "").allowOnly(Set.of("save", "reason", "pair", "at"));
 			save = reader.string("save", Ids.ID);
 			reason = reader.string("reason");
 			if (!REASONS.contains(reason)) {
 				throw new DataException(reader.path("reason"), "unknown reason");
 			}
+			pair = reader.string("pair", DataReader.HASH);
+			at = reader.has("at") ? reader.longValue("at", 0, Long.MAX_VALUE) : -1;
 		} catch (DataException e) {
 			KantoBridge.LOGGER.debug("save: malformed save.begin at {} ({})", e.path(), e.problem());
 			warn("bad_message");
@@ -92,6 +100,8 @@ public final class SaveService {
 			}
 			return;
 		}
+		// The hidden game saved: its pair goes into the player's data before this save writes it (a repeat changes nothing).
+		SavePairService.saveBegun(player, pair, at);
 		LinkedHashMap<String, Boolean> answers = ANSWERS.computeIfAbsent(player.getUUID(), key -> new LinkedHashMap<>());
 		Boolean before = answers.get(save);
 		if (before != null) {

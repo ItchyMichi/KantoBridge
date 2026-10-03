@@ -62,7 +62,7 @@ class Bridge:
 
     def __init__(self, permissions=PERMISSIONS, modules=None, developer=False, strict=True,
                  engine=False, mod_options=None, content=None, game="blue", graphics=False,
-                 script=False, mod_cache=None):
+                 script=False, mod_cache=None, save_files=False, window=False):
         self.rt = luajit.LuaRuntime(unpack_returned_tuples=True, encoding=None)
         self.lua = self.rt.globals()
         self.Sandbox = self._load_harness("sandbox.lua")
@@ -94,10 +94,23 @@ class Bridge:
                 self._load_harness("fake_content.lua").attach(self.engine)
 
         # love facade source: only timer is needed so far. perCall advances the clock on every
-        # read, so work inside one step "takes time" (budget tests); 0 by default.
-        self._clock = self.eval("{ now = 0, perCall = 0 }")
+        # read, so work inside one step "takes time" (budget tests); 0 by default. M10: sleep
+        # advances the clock too (and is recorded in c.sleeps).
+        self._clock = self.eval("{ now = 0, perCall = 0, sleeps = {} }")
         love = self.eval("function(c) return { timer = { getTime = function()"
-                         " c.now = c.now + c.perCall return c.now end } } end")(self._clock)
+                         " c.now = c.now + c.perCall return c.now end,"
+                         " sleep = function(s) c.sleeps[#c.sleeps + 1] = s c.now = c.now + s end } } end")(
+            self._clock)
+        # M10: window=True adds a fake love.window (isVisible, isMinimized) whose answers the
+        # tests set through self.window.visible / .minimized
+        self.window = None
+        if window:
+            self.window = self.eval("{ visible = true, minimized = false }")
+            win = self.eval("function(w) return { isVisible = function() return w.visible end,"
+                            " isMinimized = function() return w.minimized end } end")(self.window)
+            love[b"window"] = win
+            self.window_table = win
+        self._love = love
         # graphics=True adds fake_love.lua's love.graphics and love.data (the mirror)
         self.love = None
         if graphics:
@@ -139,6 +152,10 @@ class Bridge:
         self.mod = self.FakeMod.new(mod_opts)
         if self.engine is not None:
             self.engine.bindMod(self.FakeMod, self.mod)  # the fake world's events and hooks
+            # M10: mod.save backed by the live save's modData, and save files per slot
+            # (fake_center.lua; needs script=True)
+            if save_files:
+                self.engine.useSaveFiles(self.mod)
 
     # ------------------------------------------------------------ clock, steps
 
@@ -197,6 +214,30 @@ class Bridge:
         self.run_main()
         self.mods_loaded()
         self.ready()
+
+    def restart(self):
+        """M10: a new process on the same machine (a crash, or a quit without saving, then a
+        relaunch). The fake engine keeps its save files, slot registry and mod.cache
+        (E.restartProcess, which also closes the old instance's sockets as the OS would and
+        leaves the title up with a boot skeleton); main.lua runs again in a fresh sandbox env with
+        a fresh mod object: mods.loaded, save.created for the skeleton, then game.ready, in
+        Game:load's order (src/core/Game.lua:41-119)."""
+        save = self.engine.restartProcess()
+        self.env = self.Sandbox.env(self._env_opts)
+        self.mod = self.FakeMod.new(self._mod_opts)
+        self.engine.bindMod(self.FakeMod, self.mod)
+        self.run_main()
+        self.mods_loaded()
+        payload = self.table()
+        payload[b"save"] = save
+        self.emit("save.created", payload)
+        self.ready()
+
+    @property
+    def sleeps(self) -> list[float]:
+        """M10: every love.timer.sleep the bridge made, in seconds."""
+        s = self._clock[b"sleeps"]
+        return [s[i] for i in range(1, len(s) + 1)]
 
     def to_lua(self, value):
         """A Python value as Lua (dicts and lists become tables, str becomes bytes)."""

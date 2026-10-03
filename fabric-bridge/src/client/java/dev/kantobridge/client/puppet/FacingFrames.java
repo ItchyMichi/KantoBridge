@@ -41,13 +41,24 @@ public final class FacingFrames {
 		return relative > 0 ? COLUMN_RIGHT : COLUMN_LEFT;
 	}
 
+	/** Every frame's coordinates, made once: [column][walking][mirrored] (M10: no allocation per drawn puppet). */
+	private static final Uv[][][] FRAMES = new Uv[4][2][2];
+
+	static {
+		for (int column = 0; column < 4; column++) {
+			for (int row = 0; row < 2; row++) {
+				float u0 = column * FRAME / (float) Textures.SHEET_WIDTH;
+				float u1 = (column + 1) * FRAME / (float) Textures.SHEET_WIDTH;
+				float v0 = row * FRAME / (float) Textures.SHEET_HEIGHT;
+				float v1 = (row + 1) * FRAME / (float) Textures.SHEET_HEIGHT;
+				FRAMES[column][row][0] = new Uv(u0, v0, u1, v1);
+				FRAMES[column][row][1] = new Uv(u1, v0, u0, v1);
+			}
+		}
+	}
+
 	/** The texture coordinates of one frame; a mirrored walk swaps its left and right edges. */
 	public static Uv uv(int column, boolean walking, boolean mirrored) {
-		float u0 = column * FRAME / (float) Textures.SHEET_WIDTH;
-		float u1 = (column + 1) * FRAME / (float) Textures.SHEET_WIDTH;
-		int row = walking ? 1 : 0;
-		float v0 = row * FRAME / (float) Textures.SHEET_HEIGHT;
-		float v1 = (row + 1) * FRAME / (float) Textures.SHEET_HEIGHT;
-		return mirrored ? new Uv(u1, v0, u0, v1) : new Uv(u0, v0, u1, v1);
+		return FRAMES[Math.floorMod(column, 4)][walking ? 1 : 0][mirrored ? 1 : 0];
 	}
 }

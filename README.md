@@ -9,8 +9,11 @@ local TCP socket: a Gen1Recomp mod (`gen1-bridge`) and a Fabric mod (`fabric-bri
 Kanto is built in Minecraft from each player's **own** ROM, on their own machine. Nothing from the
 ROM is ever distributed. This is a personal test project, with no licence.
 
-**Status:** being built milestone by milestone from [`docs/PLAN.md`](docs/PLAN.md);
-[`docs/PROGRESS.md`](docs/PROGRESS.md) says where it stands. Nothing is playable yet.
+**Status:** all ten milestones of [`docs/PLAN.md`](docs/PLAN.md) are built and pass the automated
+checks. That covers the bridge, the world builder, the single-player story from the opening to the
+Hall of Fame, multiplayer, crash recovery and the launcher. The in-game play-test in
+[`docs/PLAYTEST.md`](docs/PLAYTEST.md) is still to do. [`docs/PROGRESS.md`](docs/PROGRESS.md)
+records every deviation, open issue and question.
 
 - [`docs/DESIGN.md`](docs/DESIGN.md): the full design
 - [`docs/PLAN.md`](docs/PLAN.md): the implementation plan, and [`docs/PLAYTEST.md`](docs/PLAYTEST.md)
@@ -44,11 +47,26 @@ ROM is ever distributed. This is a personal test project, with no licence.
    4. Link the mod, in `cmd`: `mkdir local\gen1recomp\mods`, then
       `mklink /J local\gen1recomp\mods\gen1-bridge gen1-bridge`.
    5. Start `local\gen1recomp\gen1recomp.exe` and import **your own** ROM through its launcher.
-      Keep its window open behind Minecraft; don't minimise it.
+      Keep its window open behind Minecraft. Minimising it is fine too: it keeps full speed.
 5. **Optional, for development:** clone the reference projects into `refs/` (git-ignored), as
    listed in [`docs/REFERENCES.md`](docs/REFERENCES.md).
 6. **Tests:** `.\tools\setup.ps1` creates the project-local Python venv (Python 3.12, wheels only),
    then `.\tools\check.ps1` runs every automated test. See [`tools/README.md`](tools/README.md).
+
+## Playing (development setup)
+
+1. **Build the world once.** Either use **Create Kanto world** on Minecraft's title screen, which
+   builds it from your running Gen1Recomp, or run the headless build from `tools/`:
+   `.venv\Scripts\python.exe e2e\build_world.py --maps all --world Kanto`. The headless build uses the
+   test install's export.
+2. **Play:** `.\tools\launch.ps1` starts Gen1Recomp, waits until the bridge listens, and starts the
+   dev client. Open the `Kanto` world. `.\tools\launch.ps1 -DryRun` shows what it would do.
+3. **Two players on one PC:** set up a second Gen1Recomp install (`local\gen1recomp-p2`, the same
+   steps as above), then `.\tools\launch.ps1 -Players 2`. Both clients join `localhost`.
+4. **If Gen1Recomp closes,** Minecraft pauses until it's back. `-Watch` restarts it for you; then pick
+   CONTINUE.
+
+A one-click installer for players is designed but not built: [`docs/INSTALLER.md`](docs/INSTALLER.md).
 
 ## Built on
 

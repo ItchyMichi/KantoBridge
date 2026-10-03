@@ -10,10 +10,12 @@ import dev.kantobridge.client.move.MoveRuntime;
 import dev.kantobridge.client.net.ClientRelay;
 import dev.kantobridge.client.net.GameRelayRuntime;
 import dev.kantobridge.client.net.SessionRuntime;
+import dev.kantobridge.client.net.Versions;
 import dev.kantobridge.client.packs.TextureSyncRuntime;
 import dev.kantobridge.client.puppet.PuppetRuntime;
 import dev.kantobridge.client.story.ClientStoryView;
 import dev.kantobridge.client.story.StoryCellRenderer;
+import dev.kantobridge.client.ui.Notices;
 import dev.kantobridge.client.ui.UiRuntime;
 import dev.kantobridge.client.world.ClientWorldIndex;
 import dev.kantobridge.client.world.CreateKantoWorldFlow;
@@ -46,13 +48,18 @@ public class KantoBridgeClient implements ClientModInitializer {
 		GameRelayRuntime.init(bridge);
 		// Saving in both games, Bill's PC as Cobblemon's PC, and the world's id for the save pairing (session.bind).
 		SessionRuntime.init(bridge);
-		// The title screen's "Create Kanto world" button: export, pack, new level, build.
+		// The title screen's "Create Kanto world" button: export, pack, new level, build. No pause overlay while it runs (M10).
 		CreateKantoWorldFlow.init();
+		bridge.pauseExcludedWhile(() -> CreateKantoWorldFlow.active() != null);
 		// Multiplayer (M9): this player's own art built into the world's slots when their pack doesn't fit it; speech
 		// bubbles over other players busy with their own hidden game; other players faded inside this player's blockades.
 		TextureSyncRuntime.init(bridge);
 		SpeechBubbles.init();
 		BlockadeFade.init();
 		bridge.addDebugLine(SpeechBubbles::debugLine);
+		// M10: warning screens wait their turn; the version checks (the relay's handshake, gen1-bridge's engine, the world's
+		// game) and the save-pair mismatch warning.
+		Notices.init();
+		Versions.init(bridge);
 	}
 }

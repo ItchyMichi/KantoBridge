@@ -11,6 +11,9 @@ import org.jetbrains.annotations.Nullable;
  * Client thread only (fed by {@link Dispatcher}); the movement sync ({@code client.move}) reads it.
  */
 public final class ClientBridgeState {
+	/** {@code hello.ok.tested}'s format (a version only). */
+	private static final java.util.regex.Pattern VERSION = java.util.regex.Pattern.compile("^[0-9A-Za-z.+_-]{1,32}$");
+
 	private @Nullable HelloOk handshake;
 	private @Nullable String map;
 	private int x;
@@ -53,7 +56,8 @@ public final class ClientBridgeState {
 		String engine = JsonFields.str(data, "engine");
 		String bridge = JsonFields.str(data, "bridge");
 		if (session != null && game != null && engine != null && bridge != null) {
-			this.handshake = new HelloOk(session, game, engine, bridge);
+			String tested = JsonFields.str(data, "tested");
+			this.handshake = new HelloOk(session, game, engine, bridge, tested != null && VERSION.matcher(tested).matches() ? tested : null);
 		}
 	}
 

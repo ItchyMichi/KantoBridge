@@ -14,6 +14,7 @@ import dev.kantobridge.client.ui.UiRuntime;
 import dev.kantobridge.client.world.ClientWorldIndex;
 import dev.kantobridge.proto.Catalog;
 import dev.kantobridge.proto.Envelope;
+import dev.kantobridge.proto.Ids;
 import dev.kantobridge.proto.MsgTypes;
 import dev.kantobridge.server.SessionService;
 import java.util.Locale;
@@ -38,6 +39,10 @@ import org.slf4j.LoggerFactory;
  * <p>M9: the {@link SessionGate} holds a world's data on both hops until gen1-bridge's {@code session.bound} for this
  * link's bind (the hidden game is on the world's save); the save and PC relays' ports, and {@link GameRelayRuntime}'s,
  * ask it first. It also shows the switch's waiting reason and refusals on the HUD.
+ *
+ * <p>M10: {@code session.bound.switched} tells the gate whether the hidden game stayed on its save, {@code session.waiting}
+ * why a switch waits; {@code save.loaded} (which save the hidden game runs from) goes up through the gate like the other
+ * story data; Bill's PC carries an id both ways, and the gate's own answer echoes it.
  */
 public final class SessionRuntime {
 	private static final Logger LOGGER = LoggerFactory.getLogger("kantobridge");
@@ -157,11 +162,22 @@ public final class SessionRuntime {
 				runtime.saves.fromBridge(message, runtime.now());
 			}
 		});
+		dispatcher.on(MsgTypes.SAVE_LOADED, message -> {
+			if (runtime.gate.admit(message) == SessionGate.Admit.PASS) {
+				runtime.saves.loaded(message);
+			}
+		});
 		dispatcher.on(MsgTypes.PC_OPEN, message -> {
+			String pc = pcId(message);
+			if (pc == null) {
+				// Nothing to echo: no answer could end gen1-bridge's hold, and the server would refuse it too.
+				LOGGER.warn("relay: a pc.open without a usable id");
+				return;
+			}
 			switch (runtime.gate.admit(message)) {
-				case PASS -> runtime.pc.fromBridge(runtime.now());
+				case PASS -> runtime.pc.fromBridge(pc, runtime.now());
 				// Not before the pairing: gen1-bridge lets its PC menu go.
-				case ANSWER_CLOSED -> bridge.client().send(MsgTypes.PC_CLOSED, new JsonObject());
+				case ANSWER_CLOSED -> bridge.client().send(MsgTypes.PC_CLOSED, PcRelay.closedBody(pc));
 				default -> {
 				}
 			}
@@ -172,12 +188,12 @@ public final class SessionRuntime {
 		});
 		dispatcher.on(MsgTypes.SESSION_BOUND, message -> {
 			if (runtime.binder.onBound(message.data(), message.re())) {
-				runtime.gate.bound(message.re(), runtime.now());
+				runtime.gate.bound(message.re(), runtime.binder.switched(), runtime.now());
 			}
 		});
-		dispatcher.on(MsgTypes.ERROR, message -> runtime.gate.error(JsonFields.str(message.data(), "code"), message.re(), runtime.now()));
-		dispatcher.on(MsgTypes.LOG, message -> runtime.gate.log(JsonFields.str(message.data(), "code"), JsonFields.str(message.data(), "msg"),
+		dispatcher.on(MsgTypes.SESSION_WAITING, message -> runtime.gate.waiting(JsonFields.str(message.data(), "reason"), message.re(),
 				runtime.now()));
+		dispatcher.on(MsgTypes.ERROR, message -> runtime.gate.error(JsonFields.str(message.data(), "code"), message.re(), runtime.now()));
 		dispatcher.onState((state, detail) -> {
 			if (state == ConnectionState.CONNECTED) {
 				runtime.saves.linkChanged();
@@ -191,7 +207,14 @@ public final class SessionRuntime {
 		});
 		ClientRelay server = ClientRelay.get();
 		server.register(MsgTypes.SAVE_DONE, message -> runtime.saves.fromServer(message, runtime.now()));
-		server.register(MsgTypes.PC_CLOSED, message -> runtime.pc.fromServer(runtime.now()));
+		server.register(MsgTypes.PC_CLOSED, message -> {
+			String pc = pcId(message);
+			if (pc != null) {
+				runtime.pc.fromServer(pc, runtime.now());
+			} else {
+				LOGGER.warn("relay: a pc.closed without a usable id");
+			}
+		});
 		if (hasLeg(MsgTypes.SESSION_BIND, Catalog.Leg.S2C)) {
 			server.register(MsgTypes.SESSION_BIND, message -> runtime.serverWorld = JsonFields.str(message.data(), "world"));
 		}
@@ -239,8 +262,13 @@ public final class SessionRuntime {
 		long now = this.now();
 		if (message.type().equals(MsgTypes.SAVE_BEGIN)) {
 			this.saves.fromBridge(message, now);
+		} else if (message.type().equals(MsgTypes.SAVE_LOADED)) {
+			this.saves.loaded(message);
 		} else if (message.type().equals(MsgTypes.PC_OPEN)) {
-			this.pc.fromBridge(now);
+			String pc = pcId(message);
+			if (pc != null) {
+				this.pc.fromBridge(pc, now);
+			}
 		} else {
 			GameRelayRuntime relay = GameRelayRuntime.get();
 			if (relay != null) {
@@ -307,6 +335,12 @@ public final class SessionRuntime {
 		} catch (RuntimeException e) {
 			LOGGER.warn("relay: the PC unlink couldn't be sent ({})", e.getClass().getName());
 		}
+	}
+
+	/** A {@code pc.open}'s or {@code pc.closed}'s id, or null when it has no usable one. */
+	private static @Nullable String pcId(Envelope message) {
+		String pc = JsonFields.str(message.data(), "pc");
+		return pc != null && Ids.ID.matcher(pc).matches() ? pc : null;
 	}
 
 	private static boolean hasLeg(String type, Catalog.Leg leg) {

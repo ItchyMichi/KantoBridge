@@ -90,6 +90,8 @@ public final class MoveRuntime {
 		HudRenderCallback.EVENT.register(FADE_PHASE, (graphics, delta) -> runtime.renderFade(graphics));
 		// While the save pairing holds the player, its own line says why.
 		bridge.addHudLine(() -> pairing() ? null : runtime.controller.hint());
+		// The pause overlay (M10) shows only while the player follows the hidden game in a Kanto world.
+		bridge.setFollowing(MoveRuntime::following);
 		bridge.addDebugLine(runtime::debugSteps);
 		bridge.addDebugLine(runtime::debugFixes);
 	}

@@ -8,6 +8,7 @@ import dev.kantobridge.entity.PuppetEntity;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.renderer.LightTexture;
 import net.minecraft.client.renderer.MultiBufferSource;
+import net.minecraft.client.renderer.culling.Frustum;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.renderer.entity.EntityRenderer;
 import net.minecraft.client.renderer.entity.EntityRendererProvider;
@@ -21,7 +22,8 @@ import org.jetbrains.annotations.Nullable;
  * two blocks wide and tall (one cell, 8 Gen 1 pixels a block) that turns about the vertical axis to face the camera,
  * with {@code entityCutoutNoCull} so shade 0 stays see-through. The frame comes from the NPC's facing as the camera sees
  * it ({@link FacingFrames}), standing or walking ({@link Puppet#walkingFrame}). An emote bubble floats above it. No
- * shadow and no name tag.
+ * shadow and no name tag. M10: puppets far from the camera, or off the hidden player's map, aren't drawn at all
+ * ({@link PuppetCulling}).
  */
 public final class PuppetRenderer extends EntityRenderer<PuppetEntity> {
 	/** Half the billboard's width, and its height, in blocks. */
@@ -32,6 +34,16 @@ public final class PuppetRenderer extends EntityRenderer<PuppetEntity> {
 	public PuppetRenderer(EntityRendererProvider.Context context) {
 		super(context);
 		this.shadowRadius = 0.0F;
+	}
+
+	/** Culled puppets skip the frame and bubble work entirely; the rest go through vanilla's frustum check. */
+	@Override
+	public boolean shouldRender(PuppetEntity entity, Frustum frustum, double cameraX, double cameraY, double cameraZ) {
+		PuppetRuntime runtime = PuppetRuntime.get();
+		if (runtime == null || !PuppetCulling.visible(entity.getX(), entity.getY(), entity.getZ(), cameraX, cameraY, cameraZ, runtime.area())) {
+			return false;
+		}
+		return super.shouldRender(entity, frustum, cameraX, cameraY, cameraZ);
 	}
 
 	@Override

@@ -7,6 +7,7 @@ import dev.kantobridge.McBootstrap;
 import dev.kantobridge.client.fx.SpeechBubbles.Bubble;
 import dev.kantobridge.story.Activity;
 import java.util.EnumSet;
+import java.util.List;
 import java.util.Set;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -28,6 +29,7 @@ class SpeechBubblesTest {
 		assertEquals(Bubble.DIALOGUE, SpeechBubbles.bubble(Activity.DIALOGUE, false, false, false, NEAR));
 		assertEquals(Bubble.CUTSCENE, SpeechBubbles.bubble(Activity.CUTSCENE, false, false, false, NEAR));
 		assertEquals(Bubble.BATTLE, SpeechBubbles.bubble(Activity.BATTLE, false, false, false, NEAR));
+		assertEquals(Bubble.PAUSED, SpeechBubbles.bubble(Activity.PAUSED, false, false, false, NEAR), "their Gen1Recomp is away (M10)");
 		assertNull(SpeechBubbles.bubble(Activity.NONE, false, false, false, NEAR), "nothing to show while they do nothing");
 	}
 
@@ -67,6 +69,9 @@ class SpeechBubblesTest {
 		io.netty.buffer.ByteBuf unknown = io.netty.buffer.Unpooled.buffer();
 		net.minecraft.network.VarInt.write(unknown, 42);
 		assertEquals(Activity.NONE, Activity.STREAM_CODEC.decode(unknown), "an unknown value reads as nothing");
+		// The wire form is the ordinal: the M9 values keep theirs, paused came after them.
+		assertEquals(List.of(Activity.NONE, Activity.DIALOGUE, Activity.CUTSCENE, Activity.BATTLE, Activity.PAUSED), List.of(Activity.values()));
+		assertEquals(Activity.PAUSED, Activity.byId("paused"));
 		assertEquals(true, Activity.TYPE.isSynced(), "the attachment syncs to clients");
 	}
 }

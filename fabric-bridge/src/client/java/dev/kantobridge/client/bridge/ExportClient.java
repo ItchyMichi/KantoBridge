@@ -380,7 +380,7 @@ public final class ExportClient {
 		}
 
 		@Override
-		public void rejected(String reason) {
+		public void rejected(String reason, int protocol) {
 			this.fail("rejected", reason);
 		}
 

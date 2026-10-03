@@ -43,6 +43,15 @@ class FakeGen1:
         self.received = []
         self.ui_counter = 0
         self.open_ui = None
+        # Save pairs (M10): the save the fake game "runs from" and the Pokémon operations sent since.
+        self.pair = secrets.token_hex(8)
+        self.saved_at = 1790000000
+        self.ops = 0
+        self.save_counter = 0
+        self.pc_counter = 0
+        self.pc_open = None
+        # A session.bind that waits before session.bound: (reason, seconds), used once.
+        self.bind_wait = None
 
     # --- lifecycle -------------------------------------------------------------------------------
 
@@ -116,12 +125,18 @@ class FakeGen1:
         if data.get("protocol") != PROTOCOL_NUMBER:
             await conn.send("hello.reject", {"reason": "protocol", "protocol": PROTOCOL_NUMBER}, re=hello["seq"])
             return
-        if conn.problems or data.get("role") not in ROLES:
+        role = data.get("role")
+        if isinstance(role, str) and role not in ROLES:
+            # Like gen1-bridge: a well-formed but unknown role is "role"; anything else wrong is "malformed".
+            await conn.send("hello.reject", {"reason": "role", "protocol": PROTOCOL_NUMBER}, re=hello["seq"])
+            return
+        if conn.problems or role not in ROLES:
             await conn.send("hello.reject", {"reason": "malformed", "protocol": PROTOCOL_NUMBER}, re=hello["seq"])
             return
         self.role = data["role"]
         await conn.send("hello.ok", {"protocol": PROTOCOL_NUMBER, "bridge": BRIDGE_VERSION, "engine": ENGINE_VERSION,
-                                     "game": self.game, "session": self.session}, re=hello["seq"])
+                                     "tested": ENGINE_VERSION, "game": self.game, "session": self.session},
+                        re=hello["seq"])
         await conn.send("snapshot", self.snapshot())
         while True:
             before = len(conn.problems)  # recv() records a failed schema check
@@ -161,7 +176,11 @@ class FakeGen1:
         elif msg_type in ("ui.pick", "ui.back", "ui.qty", "ui.name"):
             await self._close_ui(conn, data["ui"])
         elif msg_type == "session.bind":
-            await conn.send("session.bound", {"slot": 1}, re=seq)
+            # A waiting bind answers later without blocking pings.
+            self._bind_task = asyncio.create_task(self._bind(conn, seq))
+        elif msg_type == "pc.closed":
+            if self.pc_open == data["pc"]:
+                self.pc_open = None
         elif msg_type in ("export.index", "export.get"):
             await self._export(conn, message)
         elif msg_type == "debug.status":
@@ -175,6 +194,22 @@ class FakeGen1:
             await conn.send("error", {"code": "already_hello", "msg": "hello was already accepted"}, re=seq)
         # Everything else (party.sync, dex.sync, battle.result, ...) is only recorded.
         return None
+
+    async def _bind(self, conn, seq):
+        """session.bind: fake_gen1 has one slot. With bind_wait set it first says why it waits, like
+        gen1-bridge switching saves (session.waiting), then answers. save.loaded follows the answer."""
+        switched = "none"
+        if self.bind_wait is not None:
+            reason, seconds = self.bind_wait
+            self.bind_wait = None
+            await conn.send("session.waiting", {"slot": 1, "reason": reason}, re=seq)
+            await asyncio.sleep(seconds)
+            switched = "title"
+        await conn.send("session.bound", {"slot": 1, "switched": switched}, re=seq)
+        await conn.send("save.loaded", self.loaded())
+
+    def loaded(self):
+        return {"fresh": False, "pair": self.pair, "at": self.saved_at, "ops": self.ops}
 
     # --- world behaviour -------------------------------------------------------------------------
 
@@ -326,6 +361,28 @@ class FakeGen1:
         self.gift_counter = getattr(self, "gift_counter", 0) + 1
         await self._send("party.give", {"give": f"g-fake-{self.gift_counter}", "dex": dex, "level": level,
                                         "moves": [33], "source": source})
+        if self.connected:
+            self.ops += 1
+
+    async def save(self, reason="menu"):
+        """A made-up hidden-game save (save.begin): a new save pair, operations counted from zero."""
+        self.save_counter += 1
+        self.pair = secrets.token_hex(8)
+        self.saved_at += 60
+        self.ops = 0
+        await self._send("save.begin", {"save": f"sv-fake-{self.save_counter}", "reason": reason,
+                                        "pair": self.pair, "at": self.saved_at})
+
+    async def reload_save(self):
+        """As if the hidden game went back to its last save (crash and CONTINUE): save.loaded with ops 0."""
+        self.ops = 0
+        await self._send("save.loaded", self.loaded())
+
+    async def open_pc(self):
+        """Bill's PC chosen (pc.open); the matching pc.closed ends it."""
+        self.pc_counter += 1
+        self.pc_open = f"pc-fake-{self.pc_counter}"
+        await self._send("pc.open", {"pc": self.pc_open})
 
     async def start_battle(self, kind="trainer"):
         """A made-up trainer battle (battle.start); the answer arrives as battle.result."""
@@ -377,4 +434,5 @@ class FakeGen1:
 
     def status(self):
         return {"npcs": len(self._map().npcs), "topState": "FakeOverworld" if not self.open_ui else "FakeTextBox",
-                "mode": self.state.mode, "flags": len(self.story.flags), "connections": self.connections}
+                "mode": self.state.mode, "flags": len(self.story.flags), "connections": self.connections,
+                "ops": self.ops, "pcHeld": self.pc_open is not None}

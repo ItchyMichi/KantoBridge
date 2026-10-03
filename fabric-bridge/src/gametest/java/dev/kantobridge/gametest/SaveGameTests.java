@@ -3,6 +3,7 @@ package dev.kantobridge.gametest;
 import dev.kantobridge.net.RelayService;
 import dev.kantobridge.proto.Envelope;
 import dev.kantobridge.proto.MsgTypes;
+import dev.kantobridge.server.SavePairService;
 import dev.kantobridge.server.SaveService;
 import java.io.IOException;
 import java.io.UncheckedIOException;
@@ -84,7 +85,7 @@ public class SaveGameTests implements FabricGameTest {
 			delete(pc);
 			delete(List.of(data));
 			long saves = SaveService.saves();
-			RelayService.get().receive(player, saveBegin(1, "{\"save\":\"sv-1\",\"reason\":\"center\"}"));
+			RelayService.get().receive(player, saveBegin(1, "{\"save\":\"sv-1\",\"reason\":\"center\",\"pair\":\"aa11bb22\",\"at\":1790000000}"));
 			List<Envelope> done = relay.of(MsgTypes.SAVE_DONE);
 			helper.assertTrue(done.size() == 1, "expected one save.done, got " + done.size() + " (warnings: " + SaveService.warnings() + ")");
 			assertDone(helper, done.get(0), "sv-1", true, 1);
@@ -92,14 +93,14 @@ public class SaveGameTests implements FabricGameTest {
 			helper.assertTrue(Files.isRegularFile(data), "the player's data wasn't saved");
 
 			// The same id again (gen1-bridge after a reconnect): the same answer, no second save.
-			RelayService.get().receive(player, saveBegin(2, "{\"save\":\"sv-1\",\"reason\":\"center\"}"));
+			RelayService.get().receive(player, saveBegin(2, "{\"save\":\"sv-1\",\"reason\":\"center\",\"pair\":\"aa11bb22\",\"at\":1790000000}"));
 			done = relay.of(MsgTypes.SAVE_DONE);
 			helper.assertTrue(done.size() == 2, "a repeated save wasn't answered");
 			assertDone(helper, done.get(1), "sv-1", true, 2);
 			helper.assertTrue(SaveService.saves() == saves + 1, "a repeated id saved again");
 
 			// Another save is saved.
-			RelayService.get().receive(player, saveBegin(3, "{\"save\":\"sv-2\",\"reason\":\"menu\"}"));
+			RelayService.get().receive(player, saveBegin(3, "{\"save\":\"sv-2\",\"reason\":\"menu\",\"pair\":\"cc33dd44\"}"));
 			done = relay.of(MsgTypes.SAVE_DONE);
 			helper.assertTrue(done.size() == 3, "the second save wasn't answered");
 			assertDone(helper, done.get(2), "sv-2", true, 3);
@@ -123,17 +124,25 @@ public class SaveGameTests implements FabricGameTest {
 	public void malformedSavesAreRefused(GameTestHelper helper) {
 		MockPlayers.with(helper, player -> RelayTap.capture(player, sent -> {
 			long saves = SaveService.saves();
-			// No reason: an error, and ok:false for its id. A bad reason: the same. No usable id: an error only.
-			RelayService.get().receive(player, saveBegin(1, "{\"save\":\"sv-x\"}"));
-			RelayService.get().receive(player, saveBegin(2, "{\"save\":\"sv-y\",\"reason\":\"quit\"}"));
-			RelayService.get().receive(player, saveBegin(3, "{\"save\":5,\"reason\":\"menu\"}"));
-			helper.assertTrue(sent.size() == 5, "expected 3 errors and 2 answers, got " + sent.size());
+			// No reason: an error, and ok:false for its id. A bad reason: the same. No usable id: an error only. No pair (M10): an
+			// error and ok:false, and the player's save pair stays as it was.
+			RelayService.get().receive(player, saveBegin(1, "{\"save\":\"sv-x\",\"pair\":\"aa11bb22\"}"));
+			RelayService.get().receive(player, saveBegin(2, "{\"save\":\"sv-y\",\"reason\":\"quit\",\"pair\":\"aa11bb22\"}"));
+			RelayService.get().receive(player, saveBegin(3, "{\"save\":5,\"reason\":\"menu\",\"pair\":\"aa11bb22\"}"));
+			RelayService.get().receive(player, saveBegin(4, "{\"save\":\"sv-z\",\"reason\":\"menu\"}"));
+			RelayService.get().receive(player, saveBegin(5, "{\"save\":\"sv-w\",\"reason\":\"menu\",\"pair\":\"NOT-HEX\"}"));
+			helper.assertTrue(sent.size() == 9, "expected 5 errors and 4 answers, got " + sent.size());
 			helper.assertTrue(sent.get(0).type().equals(MsgTypes.ERROR) && Objects.equals(sent.get(0).re(), 1L), "no error for seq 1");
 			assertDone(helper, sent.get(1), "sv-x", false, 1);
 			helper.assertTrue(sent.get(2).type().equals(MsgTypes.ERROR) && Objects.equals(sent.get(2).re(), 2L), "no error for seq 2");
 			assertDone(helper, sent.get(3), "sv-y", false, 2);
 			helper.assertTrue(sent.get(4).type().equals(MsgTypes.ERROR) && Objects.equals(sent.get(4).re(), 3L), "no error for seq 3");
+			helper.assertTrue(sent.get(5).type().equals(MsgTypes.ERROR) && Objects.equals(sent.get(5).re(), 4L), "no error for seq 4");
+			assertDone(helper, sent.get(6), "sv-z", false, 4);
+			helper.assertTrue(sent.get(7).type().equals(MsgTypes.ERROR) && Objects.equals(sent.get(7).re(), 5L), "no error for seq 5");
+			assertDone(helper, sent.get(8), "sv-w", false, 5);
 			helper.assertTrue(SaveService.saves() == saves, "a malformed request saved");
+			helper.assertTrue(SavePairService.of(player).pair() == null, "a malformed save.begin changed the save pair");
 		}));
 		helper.succeed();
 	}

@@ -1,0 +1,19 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kantobridge.invalid/protocol/messages/session.waiting.schema.json",
+  "title": "session.waiting",
+  "description": "A session.bind can't be answered yet: why gen1-bridge is still waiting to put the hidden game on the world's slot. re: the bind's seq.",
+  "x-type": "session.waiting",
+  "x-legs": ["g2m"],
+  "x-re": "optional",
+  "type": "object",
+  "required": ["slot", "reason"],
+  "additionalProperties": false,
+  "properties": {
+    "slot": {"type": "integer", "minimum": 0, "maximum": 255},
+    "reason": {
+      "enum": ["busy", "new_game", "save_failed"],
+      "description": "busy: the engine's save gate is closed (a menu, script or battle); new_game: an unsaved New Game waits for the title; save_failed: saving the running game into its own slot failed and is retried."
+    }
+  }
+}

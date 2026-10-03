@@ -73,6 +73,25 @@ The first exchange on every connection:
 Anything else before the handshake is answered with `error{code:"no_hello"}` and the connection is
 closed.
 
+**Hardening (M10):**
+
+- **Timeouts:**
+  - gen1-bridge answers a connection that sends no `hello` within 10 s with
+    `error{code:"no_hello", msg:"hello_timeout"}` and closes it.
+  - A first line that isn't a valid envelope gets `error{code:"bad_envelope"}` and is closed.
+  - The client drops a connection that brings no `hello.ok` within 10 s. That is the "not
+    answering" case, for example Gen1Recomp stuck on its error screen.
+- **`hello.reject` precedence:** `protocol`, then `malformed` (wrong types or missing fields), then
+  `role`. A well-formed but unknown role string gets `role`.
+- `hello.ok.tested` is the engine version gen1-bridge was tested with. When `engine` differs,
+  gen1-bridge logs `engine.untested` once per connection, and the client shows a one-time notice
+  (a toast per pair of versions, plus an F7 line). It is a warning only.
+- `hello.reject{reason:"protocol"}` makes the client's pause overlay show both protocol numbers and
+  ask for matching gen1-bridge and kantobridge versions.
+- **Singleplayer only:** a world built from the other game (`WorldIndex.game` ≠ `hello.ok.game`)
+  gets a one-time warning screen per world join. The story works, and wild Pokémon follow the
+  world's version. Multiplayer guests may legitimately differ (M9).
+
 ## Redaction and logging
 
 Every ROM-derived field (text, names, trainer teams, map and tile data, images, encounter data)
@@ -121,7 +140,7 @@ optional ones. The schemas give the exact types and limits.
 | Type | Dir | Data | ROM |
 |---|---|---|---|
 | `hello` | M→G | `protocol:1, role:"client"\|"builder"\|"test", mod, minecraft?, player?{uuid,name}, world?{id,multiplayer}` | |
-| `hello.ok` | G→M | `protocol, bridge, engine, game:"red"\|"blue", session`; `re` required | |
+| `hello.ok` | G→M | `protocol, bridge, engine, tested?, game:"red"\|"blue", session`; `re` required. `tested`: the engine version gen1-bridge was tested with (M10) | |
 | `hello.reject` | G→M | `reason:"protocol"\|"role"\|"malformed"\|"busy", protocol`; `re` required | |
 | `ping` | G→M, M→G | `t` (sender's ms clock) | |
 | `pong` | G→M, M→G | `t` (echoed); `re` required | |
@@ -237,6 +256,10 @@ request is in flight at a time; refusals show as one translated line over the ho
 - **UI error codes:** `ui.stale`, `ui.wrong_kind`, `ui.timeout`, `bad_message`.
 - **The mirror:** after `mirror.sub` gen1-bridge sends the current frame at once, then changed frames
   only, at most `fps` a second.
+  - The cap is a sliding window (M10): never more than `fps` frames within a second less 2 ms.
+    `debug.status` counts held frames as `mirrorCapped`.
+  - The client also uploads at most 30 frames a second.
+  - Capture time is counted apart from the per-step cost, as `perfDraw*`.
 - **A same-id `ui.open` replaces an open UI in place:** gen1-bridge re-sends a menu or list whose
   footer or money changed (the Mart's money box and clerk line) this way. The Mart's menus carry
   `money`.
@@ -396,17 +419,24 @@ it for that player's collision.
   back); an unknown or repeated id is counted, never answered with an error. Minecraft answers once
   per id, `ok:false` on failure; `re` is set only when the `save.begin` came on the current
   connection.
-- **`session.bound.slot`** is the engine's save slot number, 0 for the flat legacy save file;
-  gen1-bridge keeps world, multiplayer flag and slot in its mod save data and answers every (repeated)
-  `session.bind`.
-- **Bill's PC:** choosing the Pokémon storage entry sends one `pc.open` and holds the hidden game over
-  its still-open PC menu until `pc.closed`; a dropped link releases the hold; an unexpected `pc.closed`
-  is ignored; the item PC stays native. The server sends exactly one `pc.closed` per `pc.open` (at
-  once if the PC can't open), and the client answers by itself after 5 s if Cobblemon's PC never shows.
+- **`session.bound.slot`** is the engine's save slot number, 0 for the flat legacy save file.
+  gen1-bridge answers every (repeated) `session.bind`. Since M9 the world → slot pairing is kept
+  installation-wide (Multiplayer rules below).
+- **Bill's PC:** choosing the Pokémon storage entry sends one `pc.open{pc}` and holds the hidden game
+  over its still-open PC menu until the `pc.closed` with the same `pc` id (M10).
+  - Another id is counted and ignored, and so is an unexpected `pc.closed`.
+  - A dropped link releases the hold.
+  - The item PC stays native.
+  - The server sends exactly one `pc.closed` per `pc.open`, echoing its id, at once if the PC
+    can't open. A second `pc.open` while a PC is open is served by the open screen, and its close
+    answers the newest id.
+  - The client answers by itself, with the id, after 5 s if Cobblemon's PC never shows, and at
+    once while it is pairing a save.
 - **Heals:** `party.heal` is also sent at the nurse's heal. After a blackout it follows the
   `warp{arrive, kind:"blackout"}`. A blackout lands where the engine puts it: the fly spot of the last
   heal point's town, in front of its Pokémon Center (that map must be built in the world).
-- **Order within one logic step:** `party.*`, `bag.sync`, `save.begin`, `pc.open`, then `battle.*`.
+- **Order within one logic step:** `party.*`, `bag.sync`, `save.begin`, `save.loaded` (M10),
+  `pc.open`, then `battle.*`.
 - `debug.status` adds `save*`, `pc*`, `money`, `bagTotal`, `bagKinds`, `defeated`, `healHeld`,
   `centerArmed`, `saveQueued`, `pcHeld`.
 
@@ -468,8 +498,8 @@ it for that player's collision.
 | `dex.sync` | S→C, M→G | `seen[dex], owned[dex]` (dex ≤ 151) | |
 | `bag.sync` | G→M, C→S | `items{item:qty}` (battle-usable subset) | |
 | `bag.use` | S→C, M→G | `item, qty` (consumed in Minecraft) | |
-| `pc.open` | G→M, C→S | `{}` | |
-| `pc.closed` | S→C, M→G | `{}` | |
+| `pc.open` | G→M, C→S | `pc` (id, M10) | |
+| `pc.closed` | S→C, M→G | `pc` (the `pc.open`'s id) | |
 | `daycare.deposit` | G→M, C→S | `uid` | |
 | `daycare.withdraw` | G→M, C→S | `uid, steps` | |
 
@@ -480,10 +510,95 @@ engine symbols, and Pokémon identities as Cobblemon UUIDs (`uid`).
 
 | Type | Dir | Data | ROM |
 |---|---|---|---|
-| `save.begin` | G→M, C→S | `save` (id), `reason:"menu"\|"center"` | |
+| `save.begin` | G→M, C→S | `save` (id), `reason:"menu"\|"center"`, `pair` (the hidden save's lasting id), `at?` (its time, Unix s) | |
 | `save.done` | S→C, M→G | `save, ok`; `re` optional | |
 | `session.bind` | S→C, M→G | `world, multiplayer` (save pairing: the server tells its client the world id; the client passes it on after joining and after every reconnect) | |
-| `session.bound` | G→M, C→S | `slot`; `re` optional (the client records the pairing on the server) | |
+| `session.bound` | G→M, C→S | `slot, switched?:"none"\|"title"\|"saved"\|"moved"`; `re` optional (the client records the pairing on the server) | |
+| `session.waiting` | G→M | `slot, reason:"busy"\|"new_game"\|"save_failed"`; `re` optional (the bind) | |
+| `save.loaded` | G→M, C→S | `fresh, ops, pair?, at?, daycare?` (which save the hidden game runs from; M10 crash recovery) | |
+| `save.mismatch` | S→C | `kind:"hidden_behind"\|"world_behind"\|"hidden_older"\|"hidden_newer"\|"new_game"\|"other", ops?, hiddenAt?, worldAt?` | |
+
+#### Crash recovery and save pairs (M10)
+
+**When the link drops:** if one side crashes or closes, the other pauses, then they resync.
+
+- **The client:** when the link has been down for more than 1.5 s in a Kanto world, it shows a
+  pausing screen. That pauses singleplayer's integrated server and locks the player's input.
+  - The screen says why (connecting, rejected, not answering, version mismatch), gives the port
+    and the retry countdown, and says what to do. For "not answering" it names Gen1Recomp's crash
+    log by its path; nothing ever opens it.
+  - Esc opens the vanilla pause menu. The overlay closes itself when the link is ready.
+  - It never shows during the export or world-build flows.
+  - While it is up, the player's `activity` is `paused`, and other players see a ⏸ bubble.
+  - `tools/launch.ps1 -Watch` restarts a Gen1Recomp that closed while Minecraft runs.
+- **gen1-bridge:** when its client drops, it releases every hold (PC, UI, steps and buttons).
+  Battle waits stay pending for the next client.
+- **Running hidden:** a minimised Gen1Recomp window already runs at full speed on Windows (measured
+  in M10: LÖVE still reports it visible). A window hidden with `SW_HIDE` drops to the engine's
+  10-frame cap, which is about 20 logic steps a second.
+  - While a client or test session is connected, gen1-bridge wraps `love.window.isVisible`. A
+    hidden window then keeps its normal cap and keeps drawing (the mirror needs it), and the frames
+    it fakes are paced to 60 a second.
+  - A minimised window is paced the same way, so it draws about 60 frames a second instead of
+    hundreds. gen1-bridge never fakes the answer for a minimised window.
+  - With no client connected, the engine's own behaviour is untouched.
+  - The wrapper comes off when the link drops and on a hot reload.
+- **Resync:**
+  1. `hello` → `snapshot` → open UIs again → `session.bind`/`bound`.
+  2. With `switched:"none"`, held messages go on. Otherwise they are dropped and the client sends
+     `resync`.
+  3. Then come gen1-bridge's queued messages, then `save.loaded`.
+  4. Position and story come from the hidden game (position only when `ingame`). Pokémon come
+     from Cobblemon (`party.sync`/`dex.sync` after the bind).
+
+**Save pairs** let the server notice when a crash left the two saves out of step.
+
+- **The pair id:** every hidden save gets a lasting `pair` id, carried by `save.begin`.
+  - It is 16 hex digits.
+  - gen1-bridge writes `{pair, at, ops}` into the save's own mod data when the engine announces
+    the save, after the engine stamps `savedAt`. The same file write stores it, and CONTINUE
+    restores it with the save, so a pair can never get out of step with its save.
+  - A save from before M10 gets a pair derived from its own metadata, the same on every load.
+  - The save gen1-bridge writes just before a slot switch (M9) keeps the leaving world's last
+    pair. Its `ops` counts the operations sent plus those the switch drops unsent, so returning to
+    that world flags exactly the Pokémon that never reached Minecraft.
+  - The server keeps the player's last pair (`pair`, `at`, `ops`) in a persistent attachment,
+    `kantobridge:save_pair`. It writes it before the save writes the player's data.
+  - A repeated pair keeps its count. A failed Minecraft save keeps the pair.
+- **`ops`** counts distinct Pokémon operations since that save: `party.give`, `party.take`,
+  `daycare.deposit` and `daycare.withdraw`.
+  - Each operation counts once, when gen1-bridge first sends it. The re-sends gen1-bridge makes
+    after a snapshot don't count.
+  - The server skips the same repeats: a gift whose `give` id is already on a Pokémon, a take or
+    deposit of a Pokémon that's no longer there, a withdrawal of one not boarded, or the same
+    operation on the same subject twice in a row.
+  - Both sides reset the count where the stream puts the `save.begin`. gen1-bridge also resets it
+    on CONTINUE (and F2) and on New Game.
+  - An operation the hidden game makes after a save it hasn't announced yet (no client connected)
+    waits until that save's `save.begin` has gone out, so both sides count it after the save.
+- **When `save.loaded` comes:** gen1-bridge sends it after `session.bound` while in game, after its
+  queued messages. It also sends it whenever the hidden game enters the game from the title:
+  CONTINUE gives `fresh:false` with the loaded save's `pair`, NEW GAME gives `fresh:true`.
+  - The client holds it in the pairing gate like other story data.
+- **`daycare`** is the uid in the hidden game's **live** daycare. Right after a load, that is what
+  the loaded save holds.
+- **The server compares** `save.loaded` with the stored pair, and sends `save.mismatch` or nothing:
+
+  | Stored pair | `save.loaded` | Result |
+  |---|---|---|
+  | none | anything | nothing (first pairing) |
+  | any | `fresh:true` | `new_game` |
+  | same `pair` | same `ops` | nothing |
+  | same `pair` | fewer `ops` | `hidden_behind` (`ops` = the difference): the hidden game went back to its save. Pokémon received since then are still in Minecraft, and the story may give them again |
+  | same `pair` | more `ops` | `world_behind`: Minecraft went back to an older save. Pokémon the story gave since then are missing |
+  | another `pair` | — | `hidden_older` or `hidden_newer`, by `at` when both are known, else `other` |
+
+  The client shows each distinct mismatch once per world join, as a warning screen with an OK
+  button. It pauses singleplayer only.
+- **Daycare reconcile (every `save.loaded`):** if the server's daycare holds a Pokémon for this
+  player whose uid isn't `save.loaded.daycare`, it goes back to the party, or to the PC if the party
+  is full. A `daycare.withdraw` of a Pokémon already in the party or PC is a no-op, so it never
+  makes a duplicate.
 
 ### Export (builder role)
 
@@ -580,7 +695,8 @@ bytes. A downloaded export is stored as an **export bundle**, which stays under 
 | `story.state` | C→S | `full`; when full: `active[cell], surf, bike, lit[]`; otherwise deltas `add?[], remove?[], surf?, bike?, lit?`. A cell is `"MAP:x:y"`. `active` counts only in a full state; a delta's `lit` replaces the lit set. The client applies a change to its own player's state first, then relays it: a full state on join, snapshot and respawn, deltas after (sent from M3 on) | |
 | `warp.request` | C→S | `to{map,x,y,facing}, kind?`. With `kind`: the hidden game's warp. Without: the client's own sync teleport (join, reconnect, drift, stuck) | |
 | `warp.done` | S→C | `ok, to?`; `re` optional | |
-| `activity` | C→S | `activity:"dialogue"\|"cutscene"\|"battle"\|"none"` (speech bubbles) | |
+| `activity` | C→S | `activity:"dialogue"\|"cutscene"\|"battle"\|"paused"\|"none"` (speech bubbles; `paused` while the player's Gen1Recomp is disconnected) | |
+| `relay.hello` | S→C, C→S | `protocol, mod` (the relay's version handshake on join; M10) | |
 | `texture.status` | C→S | `ok, slotMapHash?, textures?, reason?` | |
 | `world.index` | S→C | `index, count, hash, part` (the WorldIndex JSON in parts, on join) | yes |
 | `world.slots` | S→C | `index, count, hash, part` (the slot-map JSON in parts, on join, so a joining player can build their own pack against the host's slots; M9) | yes |
@@ -656,11 +772,20 @@ shared) is laid out for later milestones as:
   reconnect, and accepts only a `session.bound` whose `re` matches its latest bind. Until then it relays
   nothing between gen1-bridge and the server (story messages wait in order, keeping only the newest
   `bag.sync`; `pc.open` is answered `pc.closed` at once; server data is kept, newest `party.sync`/
-  `dex.sync` only) and holds the player. If the pairing provably kept the same save (same gen1-bridge
-  session and world), the held messages go on in order; otherwise they are dropped and the client
-  sends `resync`. Refused binds are retried with back-off (5 s doubling to 60 s); `session.no_slots`
-  plays unpaired. (M10 candidates: a `switched` field on `session.bound` so the client needn't guess,
-  and a structured waiting message instead of the `log` code.)
+  `dex.sync` only) and holds the player.
+  - **Since M10, `session.bound.switched` decides:** with `none` the held messages go on in order;
+    with `title`, `saved` or `moved` they are dropped and the client sends `resync`.
+  - Without the field it falls back to the M9 guess: the held messages go on only when the pairing
+    provably kept the same save (same gen1-bridge session and world).
+  - The HUD shows the waiting reason from `session.waiting`. gen1-bridge still logs
+    `session.switch_waiting` for diagnostics, but the client no longer reads it.
+  - Refused binds are retried with back-off (5 s doubling to 60 s). `session.no_slots` plays
+    unpaired.
+- **Speech bubbles:** `activity` picks one bubble in this order: battle, then paused, then dialogue,
+  then cutscene.
+- **Other players' surfing:** each player's surf flag (set from their own `story.state`) reaches other
+  players through the synced `kantobridge:surfing` attachment. Clients draw the surf sprite under
+  other surfers within 64 blocks.
 - **Ports on one PC:** each Gen1Recomp instance (a separate install per player) has its own port (the
   BRIDGE PORT mod option; Minecraft's `config/kantobridge-client.json` or `-Dkantobridge.port`). If the
   configured port stays busy or refused for 3 s, gen1-bridge takes the first free one of the next 8
@@ -679,6 +804,15 @@ carrying the same envelope in both directions. Larger data is split at the appli
 - The server trusts each client for its own player's story state, and a player can only affect
   themselves.
 - ROM-derived data such as text and trainer teams may pass through the server; art never does.
+- **The relay's version handshake (M10):** when a player joins, the server sends `relay.hello{protocol,
+  mod}` and the client answers with its own.
+  - The server disconnects a client that can't receive `kantobridge:json` (no kantobridge mod), or
+    that answers with another protocol. The reason names both versions and has an English fallback
+    for clients without the mod's translations. The missing-mod check runs on the next server task,
+    after the join.
+  - A client that never answers isn't kicked.
+  - The client leaves by itself when the server's protocol differs.
+  - GameTest mock players are left alone.
 
 ## Changes from the draft in PLAN.md §3
 
@@ -695,3 +829,14 @@ carrying the same envelope in both directions. Larger data is split at the appli
 - `snapshot.ingame` (M1): at the title screen there is no live position, only the save's.
 - The export resources, their per-cell flags and the bundle layout (M2 preparation), and the
   WorldIndex schema.
+- Added in M9: `world.slots` (S→C), so a joining player builds their own pack against the host's
+  slot map.
+- Added in M10:
+  - crash recovery: `save.begin.pair`/`at`, `save.loaded`, `save.mismatch`;
+  - the relay handshake `relay.hello`;
+  - `session.bound.switched` and `session.waiting`;
+  - `pc.open`/`pc.closed` ids;
+  - `hello.ok.tested`;
+  - `activity:"paused"`.
+  The client drops a `pc.open` without an id and answers a `save.begin` without a `pair` with
+  `save.done{ok:false}`.

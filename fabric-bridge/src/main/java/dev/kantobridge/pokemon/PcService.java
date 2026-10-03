@@ -7,15 +7,20 @@ import com.cobblemon.mod.common.battles.BattleRegistry;
 import com.cobblemon.mod.common.net.messages.client.storage.pc.ClosePCPacket;
 import com.cobblemon.mod.common.net.messages.client.storage.pc.OpenPCPacket;
 import com.cobblemon.mod.common.util.PlayerExtensionsKt;
+import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import dev.kantobridge.KantoBridge;
 import dev.kantobridge.net.RelayService;
 import dev.kantobridge.proto.Envelope;
+import dev.kantobridge.proto.Ids;
 import dev.kantobridge.proto.MsgTypes;
 import dev.kantobridge.server.BuildHold;
+import dev.kantobridge.world.DataException;
+import dev.kantobridge.world.DataReader;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
+import java.util.Set;
 import java.util.TreeMap;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
@@ -45,6 +50,10 @@ import org.jetbrains.annotations.Nullable;
  * A second {@code pc.open} while one is open is ignored: the open one's {@code pc.closed} answers both. Leaving the
  * server ends the session without an answer (the client tells gen1-bridge itself). Logs carry codes and counts only.
  * Server thread only.
+ *
+ * <p>M10: {@code pc.open{pc}} carries an id and every {@code pc.closed{pc}} echoes it, so a late answer can never end a
+ * later PC. The same id again is gen1-bridge asking again; another id while a PC is open is a new request the open screen
+ * serves (its close answers the newest id). A {@code pc.open} without a usable id can't be answered.
  */
 public final class PcService {
 	/**
@@ -62,8 +71,19 @@ public final class PcService {
 		}
 	}
 
+	/** One open Bill's PC: Cobblemon's link and the id its {@code pc.closed} answers. */
+	private static final class Session {
+		final BridgePcLink link;
+		String pc;
+
+		Session(BridgePcLink link, String pc) {
+			this.link = link;
+			this.pc = pc;
+		}
+	}
+
 	/** Open sessions by player. */
-	private static final Map<UUID, BridgePcLink> OPEN = new HashMap<>();
+	private static final Map<UUID, Session> OPEN = new HashMap<>();
 	private static final Map<String, AtomicLong> WARNINGS = new ConcurrentHashMap<>();
 	private static final AtomicLong OPENED = new AtomicLong();
 	private static final AtomicLong CLOSED = new AtomicLong();
@@ -82,24 +102,39 @@ public final class PcService {
 	}
 
 	static void onOpen(ServerPlayer player, Envelope message) {
-		if (!message.data().keySet().isEmpty()) {
+		String pcId;
+		try {
+			pcId = DataReader.of(message.data(), "").allowOnly(Set.of("pc")).string("pc", Ids.ID);
+		} catch (DataException e) {
 			RelayService.get().sendError(player, "bad_message", message.seq());
-			refuse(player, "bad_message");
+			String usable = idOf(message.data());
+			if (usable != null) {
+				refuse(player, usable, "bad_message");
+			} else {
+				// Nothing to echo, so the hidden game can't be told (gen1-bridge always sends an id).
+				warn("bad_id");
+			}
 			return;
 		}
 		UUID id = player.getUUID();
-		if (OPEN.containsKey(id)) {
-			// gen1-bridge asking again (after a reconnect): the open session's pc.closed answers it.
+		Session open = OPEN.get(id);
+		if (open != null) {
+			// The same id: gen1-bridge asking again (after a reconnect). Another: a new request the open screen serves.
 			REPEATS.incrementAndGet();
-			KantoBridge.LOGGER.debug("pc: ignored a repeated pc.open");
+			if (!open.pc.equals(pcId)) {
+				open.pc = pcId;
+				KantoBridge.LOGGER.debug("pc: the open PC now answers a newer pc.open");
+			} else {
+				KantoBridge.LOGGER.debug("pc: ignored a repeated pc.open");
+			}
 			return;
 		}
 		if (BuildHold.isHeld(player)) {
-			refuse(player, "held");
+			refuse(player, pcId, "held");
 			return;
 		}
 		if (BattleRegistry.getBattleByParticipatingPlayer(player) != null) {
-			refuse(player, "battle");
+			refuse(player, pcId, "battle");
 			return;
 		}
 		PCStore pc;
@@ -108,21 +143,21 @@ public final class PcService {
 		} catch (RuntimeException e) {
 			// Only the class: an exception's text could quote data.
 			KantoBridge.LOGGER.warn("pc: Cobblemon has no PC for the player ({})", e.getClass().getName());
-			refuse(player, "no_pc");
+			refuse(player, pcId, "no_pc");
 			return;
 		}
 		BridgePcLink link = new BridgePcLink(pc, id);
 		PCLinkManager.INSTANCE.addLink(link);
-		OPEN.put(id, link);
+		OPEN.put(id, new Session(link, pcId));
 		new OpenPCPacket(pc).sendToPlayer(player);
 		long count = OPENED.incrementAndGet();
 		KantoBridge.LOGGER.info("pc: opened Bill's PC; {} so far", count);
 	}
 
 	/** The PC can't open: the hidden game hears {@code pc.closed} at once. */
-	private static void refuse(ServerPlayer player, String code) {
+	private static void refuse(ServerPlayer player, String pcId, String code) {
 		warn(code);
-		answer(player);
+		answer(player, pcId);
 	}
 
 	/** Ends sessions whose link is gone (the screen closed and unlinked) or was replaced by another PC. */
@@ -130,24 +165,24 @@ public final class PcService {
 		if (OPEN.isEmpty()) {
 			return;
 		}
-		Iterator<Map.Entry<UUID, BridgePcLink>> it = OPEN.entrySet().iterator();
+		Iterator<Map.Entry<UUID, Session>> it = OPEN.entrySet().iterator();
 		while (it.hasNext()) {
-			Map.Entry<UUID, BridgePcLink> entry = it.next();
+			Map.Entry<UUID, Session> entry = it.next();
 			ServerPlayer player = server.getPlayerList().getPlayer(entry.getKey());
 			if (player == null) {
 				it.remove();
-			} else if (PCLinkManager.INSTANCE.getLink(entry.getKey()) != entry.getValue()) {
+			} else if (PCLinkManager.INSTANCE.getLink(entry.getKey()) != entry.getValue().link) {
 				it.remove();
 				CLOSED.incrementAndGet();
-				answer(player);
+				answer(player, entry.getValue().pc);
 				KantoBridge.LOGGER.debug("pc: Bill's PC closed");
 			}
 		}
 	}
 
 	private static void onLeave(ServerPlayer player) {
-		BridgePcLink link = OPEN.remove(player.getUUID());
-		if (link != null && PCLinkManager.INSTANCE.getLink(player.getUUID()) == link) {
+		Session session = OPEN.remove(player.getUUID());
+		if (session != null && PCLinkManager.INSTANCE.getLink(player.getUUID()) == session.link) {
 			PCLinkManager.INSTANCE.removeLink(player.getUUID());
 		}
 	}
@@ -157,10 +192,11 @@ public final class PcService {
 	 * next tick answers {@code pc.closed}. False when no session is open.
 	 */
 	public static boolean close(ServerPlayer player) {
-		BridgePcLink link = OPEN.get(player.getUUID());
-		if (link == null) {
+		Session session = OPEN.get(player.getUUID());
+		if (session == null) {
 			return false;
 		}
+		BridgePcLink link = session.link;
 		new ClosePCPacket(link.getPc().getUuid()).sendToPlayer(player);
 		if (PCLinkManager.INSTANCE.getLink(player.getUUID()) == link) {
 			PCLinkManager.INSTANCE.removeLink(player.getUUID());
@@ -168,8 +204,20 @@ public final class PcService {
 		return true;
 	}
 
-	private static void answer(ServerPlayer player) {
-		RelayService.get().send(player, MsgTypes.PC_CLOSED, new JsonObject(), null);
+	private static void answer(ServerPlayer player, String pcId) {
+		JsonObject data = new JsonObject();
+		data.addProperty("pc", pcId);
+		RelayService.get().send(player, MsgTypes.PC_CLOSED, data, null);
+	}
+
+	/** The {@code pc} id of a malformed message, if it has a usable one. */
+	private static @Nullable String idOf(JsonObject data) {
+		JsonElement value = data.get("pc");
+		if (value == null || !value.isJsonPrimitive() || !value.getAsJsonPrimitive().isString()) {
+			return null;
+		}
+		String id = value.getAsString();
+		return Ids.ID.matcher(id).matches() ? id : null;
 	}
 
 	// ---- views (tests, diagnostics) ----
@@ -181,7 +229,14 @@ public final class PcService {
 
 	/** The link of the player's open Bill's PC, or null. */
 	public static @Nullable PCLink linkOf(ServerPlayer player) {
-		return OPEN.get(player.getUUID());
+		Session session = OPEN.get(player.getUUID());
+		return session == null ? null : session.link;
+	}
+
+	/** The id the player's open Bill's PC answers, or null. */
+	public static @Nullable String openId(ServerPlayer player) {
+		Session session = OPEN.get(player.getUUID());
+		return session == null ? null : session.pc;
 	}
 
 	private static void warn(String code) {

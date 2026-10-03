@@ -130,7 +130,8 @@ public final class GameRelayRuntime {
 		UiRuntime ui = UiRuntime.get();
 		// A special battle running natively (P9) is a battle too, not a dialogue.
 		boolean battle = ClientBattles.active() || (ui != null && ui.nativeBattleActive());
-		String current = ActivityTracker.of(battle, ui != null && ui.open(), this.bridge.state().mode());
+		// M10: while the pause overlay is up, other players see this player's game is paused.
+		String current = ActivityTracker.of(battle, this.bridge.pauseShown(), ui != null && ui.open(), this.bridge.state().mode());
 		String next = this.activity.next(current);
 		if (next != null) {
 			JsonObject data = new JsonObject();

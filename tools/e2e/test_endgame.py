@@ -285,16 +285,23 @@ async def _snorlax(port, scene, running):
                   "the shown Snorlax's story.toggles")
     report["back"] = count("npc.add")
     report["toggle_back"] = sum(1 for t in w.toggles[toggles_before:] if t["visible"] is True)
+    # from the second flute on: its wake-up hides Snorlax again, and the catch keeps it hidden for good.
+    # The story reports the hide on its next 10-step beat, which may come before or after battle.start
+    # reaches the test (M8: toggles go out on the story's beat), so the check counts from here
+    toggles_before = len(w.toggles)
     second = await flute()
     report["second_new_id"] = second["battle"] != first["battle"]
     report["second_kind"] = second["kind"]
-    toggles_before = len(w.toggles)
     w2 = second.get("wild", {})
     await w.mc.send("battle.result", {"battle": second["battle"], "outcome": "caught",
                                       "caught": {"uid": U1, "dex": w2["dex"], "level": w2["level"]}})
     await w.quiet_ui(timeout=60)
+    await w.until(lambda: any(t["visible"] is False for t in w.toggles[toggles_before:]), 15,
+                  "the caught Snorlax's story.toggles")
     report["removed"] = count("npc.remove")
-    report["toggle_gone"] = sum(1 for t in w.toggles[toggles_before:] if t["visible"] is False)
+    since = w.toggles[toggles_before:]
+    report["toggle_gone"] = sum(1 for t in since if t["visible"] is False)
+    report["toggle_last_hidden"] = since[-1]["visible"] is False
     report["beat_flag"] = any(f.startswith("EVENT_BEAT_ROUTE") and f.endswith("_SNORLAX") for f in w.flags_set)
     # the driver reloads the map once the engine marked it beaten
     await w.until(lambda: len(w.arrivals()) >= 1, 60, "the map reload")
@@ -401,6 +408,7 @@ def test_endgame_scene(scene_name):
         assert report["back"] >= 1 and report["toggle_back"] >= 1, "aborted: Snorlax shown again"
         assert report["second_new_id"] and report["second_kind"] == "static"
         assert report["removed"] >= 2 and report["toggle_gone"] >= 1, "caught: gone"
+        assert report["toggle_last_hidden"], "the story's last word on it: hidden"
         assert report["beat_flag"]
         assert result.marker("KB_BACK").endswith("present=false"), "still gone after a reload"
         assert held is not None and not held.endswith("music=false")

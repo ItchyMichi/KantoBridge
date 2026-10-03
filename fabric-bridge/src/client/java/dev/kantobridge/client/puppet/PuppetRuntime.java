@@ -45,12 +45,23 @@ public final class PuppetRuntime implements PuppetManager.Listener {
 
 	private final PuppetManager manager = new PuppetManager(this);
 	private final PuppetTextures textures = new PuppetTextures();
+	private final BridgeRuntime bridge;
+	/** The hidden player's map area for culling, made again when the map or the WorldIndex changes (M10). */
+	private PuppetCulling.@Nullable Area area;
+	private @Nullable String areaMap;
+	private @Nullable WorldIndex areaIndex;
+	/** Puppets within drawing range at the last tick (F7). */
+	private int inRange;
+	/** The player's own emote sign and its width, kept while it shows. */
+	private @Nullable String bubbleSign;
+	private int bubbleWidth;
 	/** Spawned entities by NPC id, all in {@link #level}. */
 	private final Map<String, PuppetEntity> entities = new HashMap<>();
 	private @Nullable ClientLevel level;
 	private long spawned;
 
-	private PuppetRuntime() {
+	private PuppetRuntime(BridgeRuntime bridge) {
+		this.bridge = bridge;
 	}
 
 	/** Call once from the client entrypoint, after {@link BridgeRuntime#init}. */
@@ -58,7 +69,7 @@ public final class PuppetRuntime implements PuppetManager.Listener {
 		if (instance != null) {
 			return;
 		}
-		PuppetRuntime runtime = new PuppetRuntime();
+		PuppetRuntime runtime = new PuppetRuntime(bridge);
 		instance = runtime;
 		EntityRendererRegistry.register(KbEntities.PUPPET, PuppetRenderer::new);
 		Dispatcher dispatcher = bridge.dispatcher();
@@ -106,6 +117,11 @@ public final class PuppetRuntime implements PuppetManager.Listener {
 		return this.textures;
 	}
 
+	/** The hidden player's current map area (for {@link PuppetCulling}), or null when it isn't known. */
+	public PuppetCulling.@Nullable Area area() {
+		return this.area;
+	}
+
 	// ---- manager events ----
 
 	@Override
@@ -142,6 +158,34 @@ public final class PuppetRuntime implements PuppetManager.Listener {
 		if (!minecraft.isPaused()) {
 			this.manager.advancePlayer(Puppet.FRAMES_PER_TICK);
 		}
+		this.updateArea();
+		this.countInRange(minecraft);
+	}
+
+	/** The culling area follows the hidden player's map (only made again when the map or the WorldIndex changes). */
+	private void updateArea() {
+		WorldIndex index = ClientWorldIndex.current();
+		String map = this.bridge.state().map();
+		if (index == this.areaIndex && java.util.Objects.equals(map, this.areaMap)) {
+			return;
+		}
+		this.areaIndex = index;
+		this.areaMap = map;
+		MapPlacement placement = index == null || map == null ? null : index.map(map);
+		this.area = placement == null ? null : PuppetCulling.Area.of(placement);
+	}
+
+	private void countInRange(Minecraft minecraft) {
+		Entity camera = minecraft.getCameraEntity();
+		int count = 0;
+		if (camera != null) {
+			for (PuppetEntity entity : this.entities.values()) {
+				if (PuppetCulling.visible(entity.getX(), entity.getY(), entity.getZ(), camera.getX(), camera.getEyeY(), camera.getZ(), this.area)) {
+					count++;
+				}
+			}
+		}
+		this.inRange = count;
 	}
 
 	private void forgetLevel() {
@@ -211,7 +255,12 @@ public final class PuppetRuntime implements PuppetManager.Listener {
 			return;
 		}
 		String sign = bubble.equals("happy") ? "♥" : bubble;
-		int w = minecraft.font.width(sign) + 8;
+		if (!sign.equals(this.bubbleSign)) {
+			// Measured once per sign: the HUD draws it every frame (M10: no allocation per frame).
+			this.bubbleSign = sign;
+			this.bubbleWidth = minecraft.font.width(sign) + 8;
+		}
+		int w = this.bubbleWidth;
 		int x = graphics.guiWidth() / 2 - w / 2;
 		int y = graphics.guiHeight() / 2 - 34;
 		graphics.fill(x, y, x + w, y + 16, Gen1Draw.BLACK);
@@ -222,7 +271,7 @@ public final class PuppetRuntime implements PuppetManager.Listener {
 	private String debugLine() {
 		PuppetManager.Stats stats = this.manager.stats();
 		String map = this.manager.map();
-		return I18n.get("kantobridge.debug.npcs", this.manager.size(), this.entities.size(), map == null ? "-" : map, stats.moves, stats.faces,
-				stats.emotes, stats.stale + stats.refused, this.textures.missing());
+		return I18n.get("kantobridge.debug.npcs", this.manager.size(), this.entities.size(), this.inRange, map == null ? "-" : map, stats.moves,
+				stats.faces, stats.emotes, stats.stale + stats.refused, this.textures.missing());
 	}
 }

@@ -68,6 +68,9 @@ end
 --            ours to receive but not handled yet (logged once, at debug)
 --   gate     function(env) -> false to stop a valid envelope before dispatch
 --            (the session's hello-first rule); runs before reply matching
+--   onRejected  function(): a line that isn't a valid envelope was answered
+--            with bad_envelope (M10: the session closes a connection whose
+--            first line is one)
 function Proto.new(opts)
   local json = assert(opts and opts.json, "kb_proto needs kb_json")
   local write = assert(opts.write, "kb_proto needs a write function")
@@ -76,6 +79,7 @@ function Proto.new(opts)
   local catalog = opts.catalog
   local leg = opts.leg
   local gate = opts.gate
+  local onRejected = opts.onRejected
 
   local proto = {}
   local handlers = {}
@@ -162,6 +166,10 @@ function Proto.new(opts)
       if not (type(env) == "table" and env.type == "error") then
         local re = type(env) == "table" and Proto.validSeq(env.seq) and env.seq or nil
         proto.sendError("bad_envelope", re, why)
+      end
+      if onRejected then
+        local rok, rerr = pcall(onRejected)
+        if not rok then warn("proto.rejected_failed", { at = where(rerr) }) end
       end
       return false
     end

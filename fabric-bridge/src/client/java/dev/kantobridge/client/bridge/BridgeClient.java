@@ -67,6 +67,10 @@ public final class BridgeClient implements AutoCloseable {
 	private volatile ConnectionState state = ConnectionState.IDLE;
 	private volatile @Nullable String detail;
 	private volatile @Nullable HelloOk handshake;
+	/** gen1-bridge's protocol number from its last refusal (-1: none since the last handshake, or not said). */
+	private volatile int rejectProtocol = -1;
+	/** When the next connection attempt starts, on {@link #clock} (-1: one is under way, or none is planned). */
+	private volatile long retryAt = -1;
 	private volatile boolean stopping;
 	private @Nullable Thread thread; // guarded by lock
 	private Transport.@Nullable Link link; // guarded by lock
@@ -242,6 +246,19 @@ public final class BridgeClient implements AutoCloseable {
 		return this.handshake;
 	}
 
+	/** gen1-bridge's protocol number from its last refusal, or -1 (M10: the overlay names both versions). */
+	public int rejectProtocol() {
+		return this.rejectProtocol;
+	}
+
+	/**
+	 * When the next connection attempt starts, in this client's clock's milliseconds; -1 while one is under way (or the
+	 * client is connected, paused or stopped). The pause overlay counts down to it.
+	 */
+	public long retryAt() {
+		return this.retryAt;
+	}
+
 	public BridgeStats stats() {
 		return this.stats;
 	}
@@ -269,7 +286,12 @@ public final class BridgeClient implements AutoCloseable {
 					this.endTurn();
 				}
 				if (delay > 0 && !this.stopping) {
-					this.clock.sleep(delay);
+					this.retryAt = this.clock.millis() + delay;
+					try {
+						this.clock.sleep(delay);
+					} finally {
+						this.retryAt = -1;
+					}
 				}
 			}
 		} catch (InterruptedException e) {
@@ -368,7 +390,8 @@ public final class BridgeClient implements AutoCloseable {
 			}
 
 			@Override
-			public void rejected(String reason) {
+			public void rejected(String reason, int protocol) {
+				BridgeClient.this.rejectProtocol = protocol;
 				BridgeClient.this.setState(ConnectionState.REJECTED, reason);
 			}
 
@@ -470,6 +493,7 @@ public final class BridgeClient implements AutoCloseable {
 		}
 		this.lastSession = ok.session();
 		this.handshake = ok;
+		this.rejectProtocol = -1;
 		this.setState(ConnectionState.CONNECTED, ok.game());
 	}
 

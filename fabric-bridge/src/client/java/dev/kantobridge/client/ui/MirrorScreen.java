@@ -50,7 +50,7 @@ public final class MirrorScreen extends BridgeScreen {
 
 	@Override
 	protected void drawView(GuiGraphics graphics, Gen1Canvas canvas, long now) {
-		byte[] fresh = this.runtime.mirror().takeFresh();
+		byte[] fresh = this.runtime.mirror().takeFresh(System.nanoTime());
 		if (fresh != null && !Picture.upload(this.minecraft, fresh)) {
 			this.runtime.mirror().badFrame();
 		}

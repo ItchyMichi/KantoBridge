@@ -1,0 +1,8 @@
+[
+  {
+    "type": "save.loaded",
+    "seq": 13,
+    "data": {"fresh": false, "pair": "3f2a9c0d1e4b5a67", "at": 1790000000, "ops": 0}
+  },
+  {"type": "save.loaded", "seq": 14, "data": {"fresh": true, "ops": 0}}
+]

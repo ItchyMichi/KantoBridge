@@ -270,7 +270,7 @@ def test_session_bind_answers_the_active_slot_and_keeps_the_world(slot, expected
     seq = g.send("session.bind", {"world": "kanto-test-world", "multiplayer": False})
     g.run(1)
     bound = g.received("session.bound")
-    assert [(m["data"], m.get("re")) for m in bound] == [({"slot": expected}, seq)]
+    assert [(m["data"], m.get("re")) for m in bound] == [({"slot": expected, "switched": "none"}, seq)]
     rec = g.b.mod._save.session
     assert rec.world == b"kanto-test-world" and rec.multiplayer is False and rec.slot == expected
     st = g.status()

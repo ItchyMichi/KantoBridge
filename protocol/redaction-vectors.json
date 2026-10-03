@@ -151,7 +151,8 @@
         "bridge": "0.1.0",
         "engine": "0.3.49",
         "game": "red",
-        "session": "s-7f3a91"
+        "session": "s-7f3a91",
+        "tested": "0.3.49"
       }
     },
     {"type": "hello.reject", "seq": 11, "redacted": {"reason": "protocol", "protocol": 1}},
@@ -290,8 +291,8 @@
       "seq": 11,
       "redacted": {"uid": "0f8b6a2e-1c2d-4e5f-8a9b-0c1d2e3f4a5b", "reason": "trade"}
     },
-    {"type": "pc.closed", "seq": 11, "redacted": {}},
-    {"type": "pc.open", "seq": 11, "redacted": {}},
+    {"type": "pc.closed", "seq": 11, "redacted": {"pc": "pc-1"}},
+    {"type": "pc.open", "seq": 11, "redacted": {"pc": "pc-1"}},
     {"type": "ping", "seq": 11, "redacted": {"t": 123456}},
     {
       "type": "player.blocked",
@@ -337,11 +338,29 @@
       }
     },
     {"type": "pong", "seq": 11, "redacted": {"t": 123456}},
+    {"type": "relay.hello", "seq": 1, "redacted": {"protocol": 1, "mod": "0.10.0"}},
     {"type": "resync", "seq": 11, "redacted": {}},
-    {"type": "save.begin", "seq": 11, "redacted": {"save": "sv-1", "reason": "menu"}},
+    {
+      "type": "save.begin",
+      "seq": 11,
+      "redacted": {"save": "sv-1", "reason": "menu", "pair": "3f2a9c0d1e4b5a67", "at": 1790000000}
+    },
     {"type": "save.done", "seq": 11, "redacted": {"save": "sv-1", "ok": true}},
+    {
+      "type": "save.loaded",
+      "seq": 13,
+      "redacted": {"fresh": false, "pair": "3f2a9c0d1e4b5a67", "at": 1790000000, "ops": 0}
+    },
+    {"type": "save.loaded", "seq": 14, "redacted": {"fresh": true, "ops": 0}},
+    {"type": "save.mismatch", "seq": 21, "redacted": {"kind": "hidden_behind", "ops": 2}},
+    {
+      "type": "save.mismatch",
+      "seq": 22,
+      "redacted": {"kind": "hidden_older", "hiddenAt": 1789990000, "worldAt": 1790000000}
+    },
     {"type": "session.bind", "seq": 11, "redacted": {"world": "kanto-test", "multiplayer": true}},
-    {"type": "session.bound", "seq": 11, "redacted": {"slot": 2}},
+    {"type": "session.bound", "seq": 11, "redacted": {"slot": 2, "switched": "title"}},
+    {"type": "session.waiting", "seq": 12, "redacted": {"slot": 2, "reason": "busy"}},
     {
       "type": "snapshot",
       "seq": 11,

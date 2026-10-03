@@ -17,8 +17,11 @@ new items in [PLAYTEST.md](PLAYTEST.md) and a commit titled `M<n>: <title>`.
 | M6 | Route 1, habitat pools, catching, party/Pokédex/bag sync | **done** | 2026-10-03 | `b603f16` |
 | M7 | Viridian City (Pokémon Center, Mart, PC, money, trainers, saving) | **done** | 2026-10-03 | `46e5573` |
 | M8 | The rest of Kanto (single player) | **done** | 2026-10-03 | wave 1 `20e43b9`, wave 2 `559daa9`, final `aaf208c` |
-| M9 | Multiplayer | **done** | 2026-10-03 | `M9: multiplayer` |
-| M10 | Reliability, performance and launch | not started | | |
+| M9 | Multiplayer | **done** | 2026-10-03 | `24159b2` |
+| M10 | Reliability, performance and launch | **done** | 2026-10-03 | `M10: reliability and launch` |
+
+**All milestones are done.** What remains is your play-test ([PLAYTEST.md](PLAYTEST.md)) and the
+questions under "Open issues" below.
 
 ## Pre-flight (PLAN §0.6)
 
@@ -116,6 +119,24 @@ new items in [PLAYTEST.md](PLAYTEST.md) and a commit titled `M<n>: <title>`.
   0 warnings), then `gradlew build`: **525 JUnit**, **80/80 GameTests** (authority for every
   client→server type, two players' collision, `world.slots`, the activity sync, a player trade and a
   player battle with real Showdown), mixin remap and target checks.
+- **M10:** `tools/check.sh --e2e`: pytest **1400 passed**:
+  - **925 Lua tests.**
+  - **38 e2e tests on the real test instance:**
+    - crash and CONTINUE: the same pair after a kill and relaunch, `ops` back to 0, and a re-sent
+      gift not counted twice;
+    - handshake hardening;
+    - the per-step budget: about 150 µs per logic step on average against 1 ms, with the mirror
+      peaking at 30 fps;
+    - the hidden and minimised window measurements;
+    - the full real build: 220 maps, 0 warnings, 0 overlaps, 0 unplaced, 56.7 s, with
+      **throughput 49,237 blocks/s, 42.1 chunks/s, 3.9 maps/s**.
+  - **437 in `tools/tests`:** `launch.ps1` dry runs and its port probe under PowerShell 5.1 and 7,
+    the installer skeleton, and the stand-ins' M10 messages.
+
+  Then `gradlew build`: **569 JUnit**, **88/88 GameTests**, the mixin remap and target checks.
+  The JUnit tests were rerun with `--rerun` against the final fake_gen1, because Gradle doesn't
+  track `tools/fake_gen1` as a test input. The first gate run had found the two e2e flakes in
+  deviation 110.
 - **Early full-Kanto smoke build** (not an M2 gate; M8 owns it), `build_world.py --maps all` into
   `saves/KantoFullE2E`: 219 of 220 reachable maps (36 surface, 183 interiors on 14 layers, 5 moved
   sideways), **2,480,041 blocks in 2,126 chunks in 59 s** (plan 5.9 s, place 53 s), 12,539 story
@@ -636,99 +657,239 @@ new items in [PLAYTEST.md](PLAYTEST.md) and a commit titled `M<n>: <title>`.
     fallback to the next free of 8 ports after 3 s (also covering Windows' excluded port ranges);
     a second player on one PC uses a **second install** (two processes of one install would share
     the slot registry and pairing file: documented, not prevented).
+95. **Red/Blue guests** need nothing more (grass/cave suppressed; surf, fish, palettes, tiles and
+    swap sites are identical between Red and Blue); pairings are kept per game version.
 96. **Client pairing gate** (`SessionGate`): nothing is relayed between a bind and its matching
     `session.bound`; held story messages replay only when the pairing provably kept the same save,
     otherwise they're dropped and the client resyncs (on a first pairing that can lose a one-shot
     message sent in that window: M10 adds `session.bound.switched`); refused binds retry with
     back-off; `session.no_slots` plays unpaired; a world whose id never arrives opens unpaired after
     10 s; the HUD shows the waiting reason.
-95. **Red/Blue guests** need nothing more (grass/cave suppressed; surf, fish, palettes, tiles and
-    swap sites are identical between Red and Blue); pairings are kept per game version.
+
+**M10**
+
+97. **Protocol additions** (PROTOCOL.md "Crash recovery and save pairs", Handshake "Hardening",
+    relay): `save.begin.pair`/`at`, `save.loaded`, `save.mismatch`, `relay.hello`,
+    `session.bound.switched`, `session.waiting`, `pc.open`/`pc.closed` ids, `hello.ok.tested`,
+    `activity:"paused"`. This is 77 message types. The plan's "save-pair mismatch warning" became
+    a pair id plus a count of distinct Pokémon operations on both sides. That catches a hidden game
+    that went back to its save (`hidden_behind`) and a Minecraft that went back
+    (`world_behind`), not just different saves.
+98. **The pause overlay** (`LinkPauseScreen`):
+    - It shows only in a Kanto world while following the hidden game (not creative or spectator),
+      after 1.5 s.
+    - It replaces the bridge's own dialogue and mirror screens, but waits behind any other screen
+      (the inventory, Cobblemon's battle screen).
+    - "Not answering" covers 10 s without `hello.ok`, or a last drop that was a silence timeout.
+99. **Save pairs (server):**
+    - The server sends a mismatch on every mismatching `save.loaded`; the client shows each
+      distinct kind once per world join.
+    - The stored pair changes only on `save.begin` or a counted operation.
+    - The daycare reconcile runs on every `save.loaded`, including a fresh New Game. When an entry
+      and a party copy both exist after a crash, the entry is dropped; a later withdrawal keeps
+      M8's behaviour (the party copy gets the steps).
+    - This closes M8's daycare-stranding issue.
+100. **Relay handshake:**
+    - The missing-mod kick runs on the next server task.
+    - A client that never answers `relay.hello` isn't kicked, and a server hello without a usable
+      protocol number doesn't make the client leave.
+    - GameTests swap the kicker to watch the decision.
+101. **Performance (client):**
+    - Puppets more than 48 blocks from the camera or outside the hidden player's map area aren't
+      drawn, though they still move every tick.
+    - Mirror uploads are capped at 30 per second; replaced frames are counted on F7.
+    - The HUD, F7, bubbles and puppet frames no longer allocate each frame.
+    - `build_report.json` gains `throughput{blocks_per_s, chunks_per_s, maps_per_s}`.
+102. **Other players' surfing** is drawn: a synced `kantobridge:surfing` attachment, set from each
+     player's `story.state`, with the sprite drawn under surfers within 64 blocks.
+103. **Two test fixes:** `BridgeClientTest`'s pause test had a race, now fixed. The fake_gen1
+     integration test broke when fake_gen1 began sending `switched`, before the client knew the
+     field; that is fixed too.
+104. **The save pair id (gen1-bridge)** is the first 16 hex digits of a SHA-256 over:
+     - the bridge token;
+     - a counter that survives hot reloads;
+     - the start's seed;
+     - `savedAt`;
+     - the clocks;
+     - a fresh table address.
+
+     It is written into the save's own mod data (`mod.save`) at `save.writing`, so the same file
+     write stores it and CONTINUE restores it. The alternatives didn't work:
+     - `mod.storage` writes its own files at once, so a crash could put it out of step with the
+       save;
+     - the playthrough id names a playthrough, not a save;
+     - `savedAt` alone has 1-second resolution.
+
+     A save from before M10 gets a pair derived from its own metadata.
+105. **Operations on the gen1-bridge side:**
+     - Each is counted once, when first sent.
+     - The count resets when `save.begin` is sent, on CONTINUE/F2, and on New Game.
+     - An operation after a save that hasn't been announced waits until that save's `save.begin`
+       has gone out.
+     - The save before a slot switch keeps the leaving world's pair, with `ops` = sent plus
+       dropped unsent.
+     - The order within a step gains `save.loaded` after `save.begin`.
+     - The real-engine crash test confirms it: a reconnect re-sends the unconfirmed gift with the
+       same `give` id and `ops` stays 1. After a kill, a relaunch and CONTINUE, the save comes
+       back with the same pair and `at`, with `ops` 0 and without the gift.
+106. **Handshake (gen1-bridge):**
+     - Rejections go in the order `protocol`, then `malformed`, then `role`; an unknown role
+       string gets `role`, and fake_gen1 now matches.
+     - With no `hello` after 10 s, it sends `error{no_hello, msg:"hello_timeout"}` and closes.
+     - A bad first line gets `bad_envelope` and is closed.
+     - `tested` is `0.3.49`.
+     - PC ids are `pc-<token>-<n>`.
+107. **Performance (measured on the real test instance):**
+     - **The scenario:** a busy Pallet Town with NPCs, a sign, the start menu, the trainer card and
+       the mirror at 30 fps.
+     - **gen1-bridge's cost:** 146 µs per logic step on average against the 1 ms budget, 2,485 µs
+       at most, and 1 of 2,063 steps over 1 ms.
+     - **Mirror capture:** about 725 µs per drawn frame, counted separately as `perfDraw*`.
+     - **Mirror rate:** never more than 30 frames within a second. The cap is a sliding window,
+       which holds a frame about 4 times a second under real jitter. The client averaged 23.5 fps,
+       because identical frames are skipped.
+     - The new module is `lib/kb_perf.lua`, making 30 modules.
+108. **Running hidden:** minimising was never slow on Windows.
+     - **Measured:** 60 logic steps/s minimised, with or without a client. CLAUDE.md's "a third of
+       the speed" came from reading the code and was wrong.
+     - **The real slowdown** is a window hidden with `SW_HIDE`, which ran at 20.3 steps/s. While a
+       client is connected, gen1-bridge now keeps it at 59.8 steps/s by wrapping
+       `love.window.isVisible`, and paces the faked frames to 60/s.
+     - **How it was measured:** without a test driver (`launch_plain`), because a driver turns
+       frame pacing off.
+     - **Minimised drawing:** a minimised window drew 118–350 frames/s, which wastes CPU and GPU.
+       While a client is connected it is now paced to 60 frames/s at 60 steps/s. Without a client
+       the engine's own behaviour is unchanged.
+109. **`test_endgame[snorlax]` had a timing race:** whether Snorlax's hide arrives before or after
+     `battle.start` depends on the story's 10-step beat. Its check now counts from the second
+     flute and requires the last toggle to be hidden.
+110. **Two e2e flakes, found by the first M10 gate run and fixed by the orchestrator.** The budget
+     itself always passed (142–157 µs per step):
+     - **No route to a goal:** the shared e2e walker (`test_walk.py`) failed at once when an NPC
+       stood on its goal or in a narrow pass. It now waits and plans again, and fails at once only
+       when the goal is unreachable even without NPCs. `test_perf` also reads the next-nearest
+       Pallet sign when an idling NPC keeps one busy.
+     - **The mirror window:** `test_perf`'s client-side 5-second window counts frames by when the
+       harness read them, and it reads in bursts. It now allows 160 instead of 151. The
+       authoritative checks are unchanged: gen1-bridge's own `mirrorPeakFps` ≤ 30 and the client's
+       average ≤ 30.5.
+
+     After the fixes, `test_perf` passed 6 of 6 runs.
 
 ## Open issues
 
-- Harmless noise: the Kotlin plugin makes Fabric Loader warn "Class path entries reference missing
-  files: build/classes/kotlin/…"; Cobblemon logs "No data fixer registered for cobblemon:*" and
-  ".old File … corrupt or missing" for brand-new GameTest mock players.
-- The GameTest server writes `eula=false` into `fabric-bridge/build/run/gameTest/eula.txt`; Fabric's
-  GameTest mode skips the EULA check. No EULA was accepted by the agent.
-- `runClient` has never been launched (by design); PLAYTEST M0 asks the user to check it once.
-- `modkit lint` (PLAN P7 §2) isn't run: it executes tooling from `refs/gen1recomp`, which needs the
-  user's OK. The real loader accepting the mod (S5, `mod_errors=0`) is the stronger check.
-- A Python-backed real-TCP shim for lupa was judged unnecessary in M1: the strict lupa rig plus the
-  real-engine e2e tests cover that path.
-- M1's HUD line and debug overlay are only compile-checked (no client GameTests on 1.21.1); PLAYTEST
-  M1 covers them.
-- **Slot capacity** is 4,096 per shape (16 families). The builder estimated 3,000–4,000 full-shape
-  keys for the whole real export; if it overflows, the build fails with `slot_map.full` and the fix
-  is rebalancing the 32 families (e.g. 28 full + 4 half). The real report's `slots_full`/`slots_half`
-  show the usage.
-- Forest and Safari maps get ceilings like any interior (M8).
-- **For M10 (from M8 wave 2):** if Gen1Recomp is closed without saving after a daycare deposit, the
-  hidden save still has the Pokémon in its party while the server keeps it in the daycare; the next
-  `party.sync` drops it from the hidden party, so it's stranded in the daycare file. A protocol field
-  (the hidden daycare's uid in the snapshot) would let the server return it.
-- **Slot usage on the real export: 3,903 of 4,096 full-shape slots, 95 half** (the whole export, so
-  the same for every build). It fits, but M8's closed-art overlays or new art kinds may need more
-  families; rebalance before adding art.
-- Closing the game during a "Create Kanto world" build leaves the half-built world (only the flow's
-  own Cancel and failure paths delete it). A failed resource reload is detected heuristically (the
-  reload future never completes on failure).
-- M3's `Rules` service ("Adventure on join") must skip players held by `BuildHold.isHeld(player)`.
-- The "Create Kanto world" flow is compile- and unit-tested only; it builds all of Kanto (PLAYTEST M2
-  optional item).
-- The step driver's re-press after a focus change (`Input:reset`) is tested only in simulation: no
-  focus change happened during the real runs.
-- M3 movement is unit-, GameTest- and stand-in-tested, but **only the play-test can judge the feel**:
-  speed match with Gen1Recomp's window, Minecraft's acceleration, corner cuts, ledge hops, the warp
-  fade and destination-ready check, the camera turning on warps, the walk-out during the fade-in.
-  Until M4's puppets exist, walking into an NPC's cell is refused and snapped back (repeatedly while
-  the key is held). A pause menu held during a warp can trip a timeout (it fades back in with a
-  warning).
-- **For M6:** M4's `UseBlockCallback` returns FAIL for every block click while the player follows
-  the hidden game, whatever they hold, which would stop Cobblemon Poké Ball throws aimed at blocks.
-  M6 must let item use through (only plain right-clicks become `act.interact`).
-- M4's screens, puppets (facing, walking, collision, crosshair), emotes and the mirror picture are
-  only unit-tested; the play-test judges their look and feel.
-- **M5 battles, play-test only:** the trainer's throw animation is invisible (the proxy is hidden);
-  its Pokémon appear at Cobblemon's send-out spot and may clip into walls in small rooms like Oak's
-  lab; Cobblemon's NPC battle theme plays (P22 in M8); a sent-out Pokémon pushing the player off
-  their cell is fixed by a fade and teleport afterwards. If Cobblemon's battle engine crashes it
-  writes `battle_logs/<id>.txt` (with names) into the run folder (`local/minecraft`, or
-  `fabric-bridge/build/run/gameTest` for GameTests: both git-ignored).
-- **Questions for the user (from M9's save pairing):** (1) switching a multiplayer world while a
-  saved game is running saves that game into its own slot first, then returns to the title (never
-  losing progress): keep that, or refuse and wait for you to quit to the title? (2) Gen1Recomp
-  remembers the last active slot, so playing it on its own after a multiplayer session continues that
-  world's slot until a singleplayer world binds again: should the bridge restore your offline slot
-  when Minecraft disconnects at the title, or should the launcher pass `--slot`?
-- **Question for the user (from M9):** should a dev-only switch let a LAN host accept offline
-  guests, so two dev clients can share a LAN world? For now the two-client setup uses the local
-  dedicated dev server (`runServer`, `online-mode=false`), which DESIGN's "a server, or LAN" allows.
-- Other players' surfing isn't drawn yet (the surf sprite is local only), so a surfer appears to stand
-  on the water to others; syncing the surf flag like the activity would fix it.
-- **Question for the user (from M7):** because Gen1Recomp writes its live options on every save,
-  gen1-bridge's pinned display options (classic: no voxel, tilt, zoom or wide battle) and FAST text
-  speed end up in `local/gen1recomp/options.lua`. If you also play Gen1Recomp without the bridge,
-  you'll see those settings there too. The bridge could restore your own options on exit, if you
-  want that.
-- `pc.open`/`pc.closed` have no id, so a stale `pc.closed` could end a later hold (an id would make it
-  exact; M9 candidate). The center save relies on the `healAnim` heuristic (fine for Red/Blue).
-- **For M8 (from M6):** Pokémon Tower habitat pools must stay off until the player has the
-  SILPH_SCOPE (the hidden game runs its own ghost battles there; otherwise they'd double up); Safari
-  catches stay in the Gen 1 party/box until M8 crosses them over as `native_catch` gifts; a native
-  item effect (no client connected, or a member without a uid) consumes a stone without a Cobblemon
-  evolution, matching the battle rule; `SAFARI_BALL` is mirrored but never appears (Safari balls live
-  in `save.safari`).
-- **Battles not intercepted until M8:** talk-path static objects (OC:3488-3510), direct
-  `pushBattle` calls (Giovanni `story3.lua:481-510`, the ghost Marowak `story3.lua:143-194`).
-  Not handled yet: trades, native catches (`catch.nickname` → `native_catch`), the Name Rater, the
-  Pokémon Center heal (M7). Loss lines that `engageTrainer` callers pass in themselves (e.g. the Game
-  Corner rocket) aren't shown. The map-trainer path is covered only in lupa until M7's e2e.
-- NPCs on neighbouring maps (the engine's "ghosts" across a seam) aren't mirrored, so the previous
-  map's puppets vanish when you cross. The Pokédex list adapter has no field for owned markers. At the
-  title, TitleState and the intro arrive as mirror UIs and the title menu as a menu; battles are mirror
-  UIs until M5/M6.
+Final state after M10. Issues resolved along the way are gone from this list; the deviations above
+say how each was resolved:
+
+- block clicks (61);
+- the build hold (`Rules` skips held players);
+- the activity sync (90);
+- the battles M8 intercepts (85–87);
+- Safari and native catches (86);
+- PC ids (97);
+- daycare stranding (99);
+- other players' surfing (102).
+
+### Questions for you
+
+1. **Display options (from M7).** Gen1Recomp writes its live options on every save, so gen1-bridge's
+   pinned display options and FAST text speed end up in `local/gen1recomp/options.lua`:
+   - the pinned display options are classic: no voxel, tilt, zoom or wide battle;
+   - you'll see them there if you also play Gen1Recomp without the bridge.
+
+   Should the bridge restore your own options when it exits?
+2. **Switching a multiplayer world while a saved game runs (from M9).** Today gen1-bridge saves that
+   game into its own slot first, then returns to the title. Progress is never lost. Keep that, or
+   refuse and wait for you to quit to the title?
+3. **Standalone Gen1Recomp after a multiplayer session (from M9).** Gen1Recomp remembers the last
+   active slot, so it continues that world's slot until a singleplayer world binds again. There are
+   two ways out:
+   - the bridge restores your offline slot when Minecraft disconnects at the title;
+   - you start it with `tools/launch.ps1 -Slot <your slot>`.
+
+   Which do you want?
+4. **Two dev clients on LAN (from M9).** Should a dev-only switch let a LAN host accept offline
+   guests? Two dev clients share the local dedicated dev server instead (`launch.ps1 -Players 2`),
+   which DESIGN's "a server, or LAN" allows.
+5. **The installer (M10)** has four questions in [INSTALLER.md](INSTALLER.md):
+   - bundle or download Prism Launcher, and use Prism's Microsoft client ID;
+   - download the pinned files at install time;
+   - PowerShell or a native installer;
+   - also support the official launcher.
+
+   Nothing is downloaded or bundled until you answer.
+
+### Known gaps
+
+- **Pokémon Tower:**
+  - It has no wild Pokémon once you hold the SILPH_SCOPE. With the scope, the hidden game
+    suppresses Tower rolls like any indoor roll, and the builder gives the Tower no habitat pools.
+  - The fix is to gate a Tower pool per player on the SILPH_SCOPE, or to let the hidden game roll
+    there and send `battle.start` as for surfing. Either needs a decision.
+- **What isn't mirrored:**
+  - NPCs on neighbouring maps (the engine's "ghosts" across a seam), so the previous map's puppets
+    vanish when you cross.
+  - The Pokédex list adapter has no field for owned markers.
+  - At the title, TitleState and the intro arrive as mirror UIs and the title menu as a menu.
+- **Crash recovery:** it warns rather than undoing anything.
+  - When the hidden game goes back to an older save (`hidden_behind`), Pokémon received since stay in
+    Minecraft, and the story may give them again.
+  - When Minecraft goes back (`world_behind`), the missing Pokémon aren't recreated.
+  - A hidden save whose file write fails after `save.writing` has already announced its new pair.
+  - Savestate checkpoint restores (a developer feature) send no `save.loaded`.
+  - A New Game moved into an empty slot (M9) re-sends its gifts to the new world.
+- **Two processes of one Gen1Recomp install** would share its save slots, pairing file and
+  `options.lua`. This is documented, not prevented: each player needs their own install.
+- **`test_hidden` starts the test install on its configured port.** A Minecraft running at the same
+  time could connect to it, so close Minecraft before an automated run (PLAYTEST says so).
+- **Slot capacity:** 3,926 of 4,096 full-shape slots are used by the whole export. Rebalance the 32
+  families before adding new art kinds (`slot_map.full`).
+- **The "Create Kanto world" flow:**
+  - Closing the game during a build leaves the half-built world. Only the flow's own Cancel and
+    failure paths delete it.
+  - A failed resource reload is detected heuristically.
+- **Design notes, kept as they are:**
+  - The center save relies on the engine's `healAnim` (fine for Red/Blue).
+  - Native item effects with no client connected, or on a member without a uid, consume a stone
+    without a Cobblemon evolution, which matches the battle rule.
+  - `SAFARI_BALL` is mirrored but never appears, because Safari balls live in `save.safari`.
+  - Forest and Safari maps get ceilings like any interior.
+  - The `activity` attachment isn't persisted.
+
+### Play-test only
+
+No client GameTests exist on 1.21.1, and agents never run `runClient`, so everything you see or
+feel is checked only by [PLAYTEST.md](PLAYTEST.md):
+
+- the HUD and F7 overlay;
+- movement feel, warps and the camera;
+- screens, puppets and the mirror;
+- how battles look;
+- the world's look and sound;
+- multiplayer with two clients;
+- M10's pause overlay, warning screens, the ⏸ bubble and others' surf sprite.
+
+The step driver's re-press after a focus change is tested only in simulation.
+
+### Notes
+
+- **Harmless noise:**
+  - the Kotlin plugin makes Fabric Loader warn "Class path entries reference missing files:
+    build/classes/kotlin/…";
+  - Cobblemon logs "No data fixer registered for cobblemon:*" and ".old File … corrupt or missing"
+    for brand-new GameTest mock players.
+- **The GameTest EULA:** the GameTest server writes `eula=false` into
+  `fabric-bridge/build/run/gameTest/eula.txt`; Fabric's GameTest mode skips the EULA check. The
+  agent accepted no EULA.
+- **`modkit lint`** (PLAN P7 §2) isn't run, because it executes tooling from `refs/gen1recomp`. The
+  real loader accepting the mod (S5, `mod_errors=0`) is the stronger check.
+- **Gradle doesn't track `tools/fake_gen1`** as an input of the JUnit task, so after changing the
+  stand-in, run `gradlew test --rerun` (the M10 gate did).
+- **The lupa TCP shim** (a Python-backed real socket) was judged unnecessary: the strict lupa rig plus
+  the real-engine e2e tests cover that path.
+- **Battle logs:** if Cobblemon's battle engine crashes, it writes `battle_logs/<id>.txt` (with
+  names) into its run folder (`local/minecraft`, or `fabric-bridge/build/run/gameTest`). Both are
+  git-ignored.
 
 ## Blocked
 
@@ -749,3 +910,5 @@ Nothing.
 - PLAYTEST.md M7: the nurse and saving, the Mart, Bill's PC, a trainer, one blackout, save/reload.
 - PLAYTEST.md M8: the whole story, badge by badge, with field moves and the endgame.
 - PLAYTEST.md M9: two players on one PC (a second Gen1Recomp install, the dev server, two clients).
+- PLAYTEST.md M10: `tools/launch.ps1`, crash recovery (the pause overlay, CONTINUE, the save-went-back
+  warning, the daycare), minimising, and the multiplayer extras (the ⏸ bubble, others' surf sprite).

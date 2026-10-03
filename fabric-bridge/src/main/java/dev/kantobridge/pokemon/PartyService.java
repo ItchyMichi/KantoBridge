@@ -28,6 +28,7 @@ import dev.kantobridge.proto.Envelope;
 import dev.kantobridge.proto.Ids;
 import dev.kantobridge.proto.MsgTypes;
 import dev.kantobridge.proto.ProtoJson;
+import dev.kantobridge.server.SavePairService;
 import dev.kantobridge.world.DataException;
 import dev.kantobridge.world.DataReader;
 import java.util.List;
@@ -79,7 +80,9 @@ import org.jetbrains.annotations.Nullable;
  * one of its own gifts.</li>
  * </ul>
  *
- * Logs carry codes and counts only, never names. Server thread only.
+ * M10: gifts and takes count as the save pair's operations ({@link SavePairService}): a repeated gift (its id already on a
+ * Pokémon) or a take of a Pokémon no longer there is a repeat. Logs carry codes and counts only, never names. Server
+ * thread only.
  */
 public final class PartyService {
 	static final int SYNC_EVERY_TICKS = 10;
@@ -239,7 +242,9 @@ public final class PartyService {
 			reject(player, message, "give", e);
 			return;
 		}
-		if (given(player, give.give())) {
+		boolean repeat = given(player, give.give());
+		SavePairService.operation(player, "give", give.give(), repeat);
+		if (repeat) {
 			// Expected: gen1-bridge repeats a gift until a party.sync shows it.
 			REPEATED_GIVES.incrementAndGet();
 			KantoBridge.LOGGER.debug("party: ignored a repeated give");
@@ -328,6 +333,8 @@ public final class PartyService {
 		PCStore pc = PlayerExtensionsKt.pc(player);
 		Pokemon inParty = party.get(uid);
 		Pokemon inPc = inParty == null ? pc.get(uid) : null;
+		// Gone already: gen1-bridge sent it again (or it's a mismatch, warned below).
+		SavePairService.operation(player, "take", uid.toString(), inParty == null && inPc == null);
 		Pokemon traded = inParty != null ? inParty : inPc;
 		if (traded != null && traded.getEntity() != null) {
 			// Sent out: back in its ball before it leaves for good.

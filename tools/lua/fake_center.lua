@@ -28,6 +28,17 @@
 --   E.startNewGame() (a fresh save table without meta.savedAt, save.created,
 --   the overworld), E.continueGame() (a loaded save table, the overworld,
 --   save.loaded)
+--   M10, save files (E.useSaveFiles(mod), once; kblua's save_files=True):
+--   mod.save is the live save table's own modData bucket (Game:adoptSave,
+--   src/core/Game.lua:1314-1324), writeSave stores a deep copy of the save
+--   table -- modData and meta included -- as the active slot's file
+--   (E.slotSaves[slot or "flat"], SaveData.save :2585-2638), and
+--   continueGame loads a deep copy of that file (new tables, as
+--   SaveData.load does), so what a mod wrote during save.writing comes back
+--   exactly when that save is loaded; meta.savedAt is a made-up Unix time.
+--   E.restartProcess() leaves what a new process would find: the save files,
+--   the slot registry, mod.cache -- and nothing on the Game object (kblua's
+--   Bridge.restart runs main.lua again).
 --   E.musicRestores           Music.restoreMap calls
 --   E.nurseHeal(npc, onDone)  welcome + HEAL/CANCEL, the machine (heal,
 --                             lastHeal, healAnim of E.healFrames), the bow,
@@ -56,6 +67,23 @@ function FakeCenter.attach(E)
 
   -- ------------------------------------------------------------ the Game's save
 
+  -- M10: plain data copied, as a save file holds it (functions and
+  -- metatables don't survive serializing)
+  local function deepCopy(v, seen)
+    if type(v) ~= "table" then return v end
+    seen = seen or {}
+    if seen[v] then return seen[v] end
+    local out = {}
+    seen[v] = out
+    for k, x in pairs(v) do
+      if type(x) ~= "function" then out[deepCopy(k, seen)] = deepCopy(x, seen) end
+    end
+    return out
+  end
+  E.deepCopy = deepCopy
+  E.slotSaves = {}
+  E.unixBase = 1790000000
+
   -- Game:writeSave (Game.lua:1328-1351): the save.write veto, captureSave,
   -- save.writing, SaveData.save's result
   function E.game.writeSave(_)
@@ -65,7 +93,13 @@ function FakeCenter.attach(E)
       E.save.player.map, E.save.player.x, E.save.player.y = m.id, p.cellX, p.cellY
       E.save.player.facing = p.facing
     end
-    E.save.meta = { savedAt = E.saveWrites + 1 }
+    if E.saveFiles then
+      -- buildMeta (SaveData.lua:2331-2362): savedAt is os.time()
+      E.save.meta = { format = 5, engine = "0.3.49", savedAt = E.unixBase + 60 * (E.saveWrites + 1),
+                      sessionStart = E.unixBase }
+    else
+      E.save.meta = { savedAt = E.saveWrites + 1 }
+    end
     E.runtime.emit("save.writing", { save = E.save, meta = E.save.meta })
     E.saveWrites = E.saveWrites + 1
     if E.saveFails then return false end
@@ -73,7 +107,40 @@ function FakeCenter.attach(E)
     local key = E.activeSlot or "flat"
     E.slotWrites[key] = (E.slotWrites[key] or 0) + 1
     if E.activeSlot then E.slotFiles[E.activeSlot] = true else E.legacySave = true end
+    if E.saveFiles then E.slotSaves[key] = deepCopy(E.save) end
     return true
+  end
+
+  -- M10: mod.save backed by the live save's modData (Game:adoptSave)
+  function E.useSaveFiles(mod, modId)
+    E.saveFiles = true
+    modId = modId or "gen1-bridge"
+    local function bucket(create)
+      local save = E.save
+      if type(save) ~= "table" then return nil end
+      if save.modData == nil then save.modData = {} end
+      local b = save.modData[modId]
+      if b == nil and create then
+        b = {}
+        save.modData[modId] = b
+      end
+      return b
+    end
+    mod.save = {
+      get = function(_, key, default)
+        local b = bucket(false)
+        local v = b and b[key]
+        if v == nil then return default end
+        return v
+      end,
+      set = function(_, key, value) bucket(true)[key] = value end,
+    }
+    E.modBucket = function() return bucket(false) end
+  end
+  local bindMod = E.bindMod
+  function E.bindMod(FakeMod, mod)
+    bindMod(FakeMod, mod)
+    if E.saveFiles then E.useSaveFiles(mod) end
   end
 
   -- Game:quickSaveAllowed (Game.lua:1353-1369)
@@ -122,6 +189,7 @@ function FakeCenter.attach(E)
         -- tryMigrateLegacy (:1338-1373): the flat save becomes slot1
         E.legacySave = false
         E.slotFiles.slot1 = true
+        if E.slotSaves and E.slotSaves.flat then E.slotSaves.slot1, E.slotSaves.flat = E.slotSaves.flat, nil end
         reg.list, reg.active = { "slot1" }, "slot1"
         E.activeSlot = "slot1"
         E.migrations = E.migrations + 1
@@ -221,12 +289,42 @@ function FakeCenter.attach(E)
     return save
   end
   -- CONTINUE (Game:restoreSave, Game.lua:1475-1537): the active slot's save
+  -- (M10, with save files: a deep copy of the slot's file, its modData
+  -- adopted before save.loaded)
   function E.continueGame()
-    local save = freshSave()
-    save.meta = { format = 1, savedAt = 100 }
+    local file = E.saveFiles and E.slotSaves[E.activeSlot or "flat"] or nil
+    local save
+    if file then
+      save = deepCopy(file)
+      save.options = E.save.options
+    else
+      save = freshSave()
+      save.meta = { format = 1, savedAt = 100 }
+    end
     E.save, E.game.save = save, save
     E.stack.states = { ow }
     E.runtime.emit("save.loaded", { save = save, meta = save.meta })
+    return save
+  end
+
+  -- M10: what a new process finds (a crash, or quitting without saving):
+  -- the Game object without our process-lifetime slots, the process's slot
+  -- cache to resolve again, a boot skeleton save at the title; the save
+  -- files, the slot registry and mod.cache stay. The old instance's
+  -- sockets are closed first (the OS would). kblua's Bridge.restart() then
+  -- runs main.lua again with save.created before game.ready, as Game:load.
+  function E.restartProcess()
+    local close = rawget(E.game, "kantoBridgeCloseInstance")
+    if type(close) == "function" then pcall(close) end
+    for _, slot in ipairs({ "kantoBridgeState", "kantoBridgeCloseInstance", "kantoBridgeWindow" }) do
+      rawset(E.game, slot, nil)
+    end
+    E.slotsUnchecked = true
+    local save = freshSave()
+    save.meta = { format = 5, mods = {} }
+    E.save, E.game.save = save, save
+    while #E.stack.states > 0 do E.uiPop() end
+    E.uiPush(E.titleState())
     return save
   end
 
