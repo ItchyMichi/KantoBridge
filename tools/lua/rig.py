@@ -109,6 +109,11 @@ class Rig:
     def world(self, map_id="TEST_TOWN", x=5, y=6, facing="down"):
         self.E.enterWorld(map_id.encode(), x, y, facing.encode())
 
+    def simulate(self, spec):
+        """Installs a simulated overworld (tools/lua/fake_world.lua): from now on every step also
+        runs Input:step and the top state's update, with the engine's step timing."""
+        self.E.simulate(self.b.to_lua(spec))
+
     def step(self, n=1):
         self.b.step(n)
 

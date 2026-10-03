@@ -10,8 +10,8 @@ new items in [PLAYTEST.md](PLAYTEST.md) and a commit titled `M<n>: <title>`.
 |---|---|---|---|---|
 | M0 | Foundations, tooling and spikes | **done** | 2026-10-03 | `ccade90` |
 | M1 | Bridge connection | **done** | 2026-10-03 | `fa15739` |
-| M2 | World export and builder (Pallet Town and its interiors) | **done** | 2026-10-03 | `M2: world export and builder` |
-| M3 | Walking and warps | not started | | |
+| M2 | World export and builder (Pallet Town and its interiors) | **done** | 2026-10-03 | `bbad914` |
+| M3 | Walking and warps | **done** | 2026-10-03 | `M3: walking and warps` |
 | M4 | Dialogue, menus and NPC mirroring | not started | | |
 | M5 | Opening, Oak's cutscene, starter and rival battle | not started | | |
 | M6 | Route 1, habitat pools, catching, party/Pokédex/bag sync | not started | | |
@@ -62,6 +62,13 @@ new items in [PLAYTEST.md](PLAYTEST.md) and a commit titled `M<n>: <title>`.
   chunks, 4 interiors on 4 layers, 78 light blocks, `pack_textures 4273` (3,989 tile, 284 NPC, 23
   animated), slots 3,903 full + 95 half, world index written; planned in 5.2 s, placed in 0.7 s.
   The user's play-test world `saves/Kanto` was built the same way.
+- **M3:** `tools/check.sh --e2e`: pytest **768 passed** (367 Lua; e2e on the real engine: S5,
+  handshake, hot reload, export, the Pallet build, and the new walk: upstairs room → stairs → 1F →
+  exit mat → Pallet Town → back in through the door → out again → into a wall: 24 steps, 24 answers,
+  0 dropped, 4 warps (`stairs`, `edge`, `door`, `edge`), every message schema-valid), then
+  `gradlew build`: **235 JUnit** (including a movement integration test against `fake_gen1`:
+  join teleport, door warp, exit mat with `sync`+`n`, walk-out), **27/27 GameTests** (rules, warp
+  service, build hold), mixin remap check (4 injector targets).
 - **Early full-Kanto smoke build** (not an M2 gate; M8 owns it), `build_world.py --maps all` into
   `saves/KantoFullE2E`: 219 of 220 reachable maps (36 surface, 183 interiors on 14 layers, 5 moved
   sideways), **2,480,041 blocks in 2,126 chunks in 59 s** (plan 5.9 s, place 53 s), 12,539 story
@@ -113,8 +120,8 @@ new items in [PLAYTEST.md](PLAYTEST.md) and a commit titled `M<n>: <title>`.
    `player` is only the save's last position (the boot skeleton's spawn on a fresh start). Clients
    must not move the player to it.
 10. **gen1-bridge extras:** a spinner step is reported as kind `spin` already (trivial to detect);
-    Seafoam currents and boulder pushes go out as `script`, and the Cycling Road roll as `bike`, until
-    M3/M8. The snapshot carries the hidden party (no uids yet) and the current map's NPCs, because
+    Seafoam currents go out as `script` until M8. (Superseded in M3: boulder pushes are `push`, the
+    Cycling Road roll is `slope`.) The snapshot carries the hidden party (no uids yet) and the current map's NPCs, because
     both were cheap. `debug.status` adds `ingame`, `port`, `accepted`, `sessions`, `steps`,
     `optionsPinned`. A snapshot warning is deferred to the end of the step so no `log` lands
     between `hello.ok` and the snapshot. Lines are flushed at the end of each step.
@@ -212,6 +219,52 @@ new items in [PLAYTEST.md](PLAYTEST.md) and a commit titled `M<n>: <title>`.
     off), structures and bonus chest off, a random seed. `server/KantoGameRules` holds Appendix D's
     rules for M3's `Rules` service.
 
+**M3**
+
+28. **Warp kinds follow the mechanism** (now in PROTOCOL.md "Movement rules"): leaving Red's house
+    is `edge` (an exit mat), not `door` as the plan's e2e line said; `door` is a door tile or a gate
+    doorway (covered by walking back in through the house door); `stairs` any other warp tile;
+    `elevator` any warp out of an `*_ELEVATOR` map; Dig and Escape Rope report as `teleport` until
+    M8's field moves can name them.
+29. **One answer per `move.step`**, always carrying its `n` (PROTOCOL.md): a warp without a visible
+    step answers with `player.pos` kind `sync`; a boulder push with kind `push` (implemented now
+    rather than in M8); steps that can't run get `player.blocked` reason `script` (not idle, dropped
+    from the 2-deep queue, no result within 12 logic steps, or at the title screen).
+30. **Ledge hops** send one `player.pos` kind `ledge` at the landing cell with all 32 frames; the
+    arrival's `to` is the entry cell, and a door walk-out follows as its own `player.pos` kind
+    `script`. The order within a logic step is `player.state`, `warp`, then `player.pos`.
+31. `debug.status` gains `move*`, `warp*` and `mapsEntered` counters; gen1-bridge now loads 16
+    modules. `fake_gen1` mirrors these answer rules (exit mats answer with `sync` + `n`, kind `edge`,
+    arrival on the door cell, then a scripted walk-out).
+32. **Rules apply on every server running the mod** (GameTest server and non-Kanto worlds too), as
+    PLAN §4.4 states them unconditionally. Fixed time is noon (6000).
+33. **Gen 1 speeds are 0.1737 (walk) and 0.3474 (bike)** movement attribute: exactly 16 and 8 Gen 1
+    frames per 2-block cell under Minecraft's ground physics (PLAN P2 said ≈0.174/≈0.347), checked by
+    a physics simulation in JUnit. Sprinting is stopped on the client (a `LocalPlayer` mixin) as well
+    as on the server, because a server can't stop a client from sprinting.
+34. **Creative and spectator players are never followed or held**, so `/gamemode spectator`
+    inspection keeps working; returning to Adventure teleports the player onto the hidden cell.
+35. **Teleports and corrections:** joining, re-linking and a resync's snapshot (`ingame` only)
+    teleport the player onto the hidden cell at any distance, with a kind-less `warp.request` (the
+    client's own sync). Snap-backs, drift steering and door walk-outs are short ForcedMover walks (6
+    frames per cell for snaps, 16 for steering); a player still not there 10 ticks after a move
+    should have ended is teleported. Drift's "different map" means a different layer: neighbouring
+    outdoor maps share one grid, so a seam is steered across, not teleported.
+36. **Warps:** the `warp.request` goes out once the fade-out is complete, so the jump is never
+    visible; fades are 250 ms (white for fly/teleport/dig/rope/pad/hole); timeouts 10 s for the
+    arrival, 5 s for `warp.done`, 3 s for the destination's sections, each fading back in with a
+    counted warning.
+37. **InputLock** also holds the player during forced moves, at the hidden game's title screen
+    (`ingame:false`, with a HUD hint), and when the hidden map isn't built in this world (HUD hint).
+    It only applies in Kanto worlds (a WorldIndex is present).
+38. **Intent timing:** `move.face` goes out when the player stands still with the camera quadrant
+    off the hidden facing for 4 ticks (at most once a second); pushes repeat every 16 ticks while
+    pushing, only when no step is waiting; the step timeout is 3 s (counted, warned at most every 10 s).
+39. **A minimal `ClientStoryView` landed in M3** so bike speed works: surf/bike go to the local
+    `StoryState` first, then `story.state` is relayed (full on join, snapshot and respawn, with `active`
+    and `lit` empty until later milestones; deltas after). A malformed `story.state` changes nothing
+    and gets `error{bad_message}`. `move.hold` (Cycling Road brake) is M8.
+
 ## Open issues
 
 - Harmless noise: the Kotlin plugin makes Fabric Loader warn "Class path entries reference missing
@@ -240,6 +293,14 @@ new items in [PLAYTEST.md](PLAYTEST.md) and a commit titled `M<n>: <title>`.
 - M3's `Rules` service ("Adventure on join") must skip players held by `BuildHold.isHeld(player)`.
 - The "Create Kanto world" flow is compile- and unit-tested only; it builds all of Kanto (PLAYTEST M2
   optional item).
+- The step driver's re-press after a focus change (`Input:reset`) is tested only in simulation: no
+  focus change happened during the real runs.
+- M3 movement is unit-, GameTest- and stand-in-tested, but **only the play-test can judge the feel**:
+  speed match with Gen1Recomp's window, Minecraft's acceleration, corner cuts, ledge hops, the warp
+  fade and destination-ready check, the camera turning on warps, the walk-out during the fade-in.
+  Until M4's puppets exist, walking into an NPC's cell is refused and snapped back (repeatedly while
+  the key is held). A pause menu held during a warp can trip a timeout (it fades back in with a
+  warning).
 
 ## Blocked
 
@@ -253,3 +314,4 @@ Nothing.
 - PLAYTEST.md M2: look around the headless-built `Kanto` world (Pallet Town, the underground
   interiors, textures); optionally the experimental `KantoFullE2E` and the "Create Kanto world"
   button.
+- PLAYTEST.md M3: walk Pallet Town and its houses with Gen1Recomp following; stairs and doors.

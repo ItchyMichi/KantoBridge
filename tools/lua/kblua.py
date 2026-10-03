@@ -75,6 +75,7 @@ class Bridge:
             eopts = self.table()
             eopts[b"game"] = _b(game)
             self.engine = FakeEngine.new(eopts)
+            self._load_harness("fake_world.lua").attach(self.engine)
 
         # love facade source: only timer is needed so far. perCall advances the clock on every
         # read, so work inside one step "takes time" (budget tests); 0 by default.
@@ -112,6 +113,8 @@ class Bridge:
             mod_opts[b"content"] = self.to_lua(content)
         self._mod_opts = mod_opts
         self.mod = self.FakeMod.new(mod_opts)
+        if self.engine is not None:
+            self.engine.bindMod(self.FakeMod, self.mod)  # the fake world's events and hooks
 
     # ------------------------------------------------------------ clock, steps
 
@@ -145,12 +148,15 @@ class Bridge:
         self.emit("mods.loaded", payload)
 
     def step(self, n: int = 1):
-        """Runs n logic steps: the clock advances and the input.step hooks run."""
+        """Runs n logic steps: the clock advances and the input.step hooks run, then (with the
+        fake world simulating, fake_world.lua) Input:step and the top state's update."""
         vanilla = self.eval("function() end")
         game = self.engine.game if self.engine is not None else self.table()
         for _ in range(n):
             self.now = self.now + self.STEP
             self.FakeMod.call(self.mod, b"input.step", vanilla, game, self.STEP)
+            if self.engine is not None:
+                self.engine.tick()
 
     def reload(self):
         """Simulates F5 (HotReload.run, src/dev/HotReload.lua:27-64): a fresh sandbox env and
@@ -158,6 +164,8 @@ class Bridge:
         instance's hooks are never called again; the fake socket and fake game carry over."""
         self.env = self.Sandbox.env(self._env_opts)
         self.mod = self.FakeMod.new(self._mod_opts)
+        if self.engine is not None:
+            self.engine.bindMod(self.FakeMod, self.mod)
         self.run_main()
         self.mods_loaded()
         self.ready()

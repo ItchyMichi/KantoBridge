@@ -111,6 +111,28 @@ class ClientSideStateTest {
 	}
 
 	@Test
+	void theHiddenPlayerIsLiveOnlyInItsOverworld() throws Exception {
+		Dispatcher dispatcher = new Dispatcher(CATALOG);
+		ClientBridgeState state = new ClientBridgeState();
+		state.attach(dispatcher);
+		dispatcher.stateChanged(ConnectionState.CONNECTED, "red");
+		dispatcher.message(message("snapshot", 1, "{\"ingame\":false,\"player\":{\"map\":\"TEST_TOWN\",\"x\":5,\"y\":8,\"facing\":\"down\"}}"));
+		dispatcher.drain(100);
+		assertFalse(state.ingame(), "the title screen: the save's last position only");
+		assertTrue(state.hasPosition());
+		dispatcher.message(message("player.pos", 2, "{\"map\":\"TEST_TOWN\",\"x\":5,\"y\":8,\"facing\":\"down\",\"kind\":\"sync\",\"frames\":0}"));
+		dispatcher.drain(100);
+		assertTrue(state.ingame(), "positions come only from the overworld");
+		dispatcher.stateChanged(ConnectionState.DISCONNECTED, "eof");
+		dispatcher.drain(100);
+		assertFalse(state.ingame(), "nothing is live without the link");
+		dispatcher.stateChanged(ConnectionState.CONNECTED, "red");
+		dispatcher.message(message("snapshot", 1, "{\"ingame\":true,\"player\":{\"map\":\"TEST_TOWN\",\"x\":5,\"y\":8,\"facing\":\"down\"}}"));
+		dispatcher.drain(100);
+		assertTrue(state.ingame());
+	}
+
+	@Test
 	void statusLineRemembersFailuresUntilTheNextHandshake() {
 		ConnectionStatus status = new ConnectionStatus();
 		assertEquals("kantobridge.hud.connecting", status.line(0).key());

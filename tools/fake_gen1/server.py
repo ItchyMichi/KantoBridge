@@ -202,9 +202,10 @@ class FakeGen1:
         if not here.walkable(x, y):
             exit_warp = here.warps.get((self.player.x, self.player.y))
             if exit_warp is not None:
-                # Like Gen 1's exit mats: a step off the edge from a warp cell takes the warp.
+                # Like Gen 1's exit mats: a step off the edge from a warp cell takes the warp. There is
+                # no visible step, so the step's answer is the arrival's sync (with its n).
                 await self.warp_to(exit_warp.to_map, exit_warp.to_x, exit_warp.to_y, exit_warp.facing,
-                                   exit_warp.kind)
+                                   exit_warp.kind, n=n, walk_out=exit_warp.walk_out)
                 return
             reason = "bounds" if not (0 <= x < here.width and 0 <= y < here.height) else "tile"
             await conn.send("player.blocked", dict(self._cell(), dir=direction, reason=reason, n=n))
@@ -217,7 +218,8 @@ class FakeGen1:
         warp = here.warps.get((x, y))
         # A warp fires on arrival only on a door or warp tile (engine Warp rules).
         if warp is not None and self._flags(x, y) & (synth.F_DOOR | synth.F_WARPTILE):
-            await self.warp_to(warp.to_map, warp.to_x, warp.to_y, warp.facing, warp.kind)
+            await self.warp_to(warp.to_map, warp.to_x, warp.to_y, warp.facing, warp.kind,
+                               walk_out=warp.walk_out)
 
     async def _export(self, conn, message):
         seq = message["seq"]
@@ -296,12 +298,18 @@ class FakeGen1:
         self.state.mode = mode
         await self._send("player.state", self.state.as_data())
 
-    async def warp_to(self, map_id, x, y, facing, kind="door"):
+    async def warp_to(self, map_id, x, y, facing, kind="door", n=None, walk_out=None):
+        """A warp as gen1-bridge reports it: start, arrive at the entry cell, a sync (the step's
+        answer when the warp had no visible step), the new map's NPCs, then any door walk-out."""
         await self._send("warp", {"phase": "start", "kind": kind})
         self.player.map, self.player.x, self.player.y, self.player.facing = map_id, x, y, facing
         await self._send("warp", {"phase": "arrive", "kind": kind, "to": self.player.as_data()})
-        await self._send("player.pos", self._pos("sync", 0))
+        await self._send("player.pos", self._pos("sync", 0, n))
         await self._send("npc.set", self._npc_set())
+        if walk_out:
+            dx, dy = DIRS[walk_out]
+            self.player.x, self.player.y, self.player.facing = x + dx, y + dy, walk_out
+            await self._send("player.pos", self._pos("script", WALK_FRAMES))
 
     async def open_text(self, pages):
         self.ui_counter += 1

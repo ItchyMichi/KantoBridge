@@ -97,3 +97,34 @@ experiment.
 4. - [ ] Pressing **Cancel** during the export, or during the build, removes the half-made world
      folder.
 5. - [ ] With Gen1Recomp closed, the button gives a clear error.
+
+## M3: Walking and warps
+
+You walk in Minecraft and the hidden game's player walks with you. The `Kanto` world only has
+Pallet Town and its four interiors so far, so play inside them. **Don't walk north out of Pallet
+Town**: that starts Oak's cutscene, which comes in M5.
+
+**Start:**
+
+1. Start Gen1Recomp as in M1 and start a **New Game** (do the intro in Gen1Recomp's own window for
+   now; M5 moves it to Minecraft). Stop once you're standing in Red's room.
+2. Start Minecraft as in M1 and open **Singleplayer → Kanto**.
+
+**Check:**
+
+- [ ] You're placed in Red's room (the underground copy), on the same tile and facing the same way
+      as in Gen1Recomp.
+- [ ] Walking with WASD moves Gen1Recomp's player tile by tile, in step with you; the speed feels the
+      same in both windows.
+- [ ] Walking into walls, tables and the TV stops you; Gen1Recomp's player just turns.
+- [ ] The stairs: the screen fades out and in, and you're downstairs where Gen1Recomp's player is.
+- [ ] The front door: stepping down off the mat fades you out; you appear outside the house and
+      walk one step out, like Gen1Recomp's player.
+- [ ] Blue's house and Oak's lab: in and out through their doors works the same way.
+- [ ] You can't jump or sprint, and you take no damage; it's always noon and Peaceful.
+- [ ] While a text box is open in Gen1Recomp, you can't move in Minecraft.
+- [ ] Walking into a person's tile snaps you back (the NPCs themselves appear in M4).
+- [ ] F7 shows the movement counters: steps sent and answered stay equal.
+- [ ] `/gamemode spectator` still lets you fly around (if commands are on); `/gamemode adventure`
+      puts you back on Gen1Recomp's tile.
+- [ ] Note anything that feels off: lag, rubber-banding, corner cuts, the fade, the camera turning.

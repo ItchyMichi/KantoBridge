@@ -8,9 +8,12 @@ import dev.kantobridge.proto.MsgTypes;
 import dev.kantobridge.proto.ProtocolException;
 import dev.kantobridge.proto.Redact;
 import java.nio.charset.StandardCharsets;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.function.BiConsumer;
 import net.fabricmc.fabric.api.networking.v1.PayloadTypeRegistry;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
@@ -37,6 +40,8 @@ public final class RelayService {
 	private final Map<String, Handler> handlers = new ConcurrentHashMap<>();
 	// Outgoing seq per player connection; the protocol counts per sender and per connection.
 	private final Map<UUID, Long> nextSeq = new ConcurrentHashMap<>();
+	/** Observers of accepted outgoing messages; GameTests use them in place of a client. */
+	private final List<BiConsumer<ServerPlayer, Envelope>> taps = new CopyOnWriteArrayList<>();
 
 	RelayService(Catalog catalog) {
 		this.catalog = catalog;
@@ -66,6 +71,15 @@ public final class RelayService {
 
 	public void unregister(String type) {
 		this.handlers.remove(type);
+	}
+
+	/**
+	 * Observes every message {@link #send} accepts, before it goes out (mock players have no client to receive it).
+	 * Close the returned handle to stop.
+	 */
+	public AutoCloseable tap(BiConsumer<ServerPlayer, Envelope> observer) {
+		this.taps.add(observer);
+		return () -> this.taps.remove(observer);
 	}
 
 	/** Entry point for one relay payload from {@code player}'s client; public so GameTests can feed it directly. */
@@ -110,11 +124,15 @@ public final class RelayService {
 			KantoBridge.LOGGER.error("relay: {} is over the relay limit", Redact.summary(message, bytes));
 			return false;
 		}
+		for (BiConsumer<ServerPlayer, Envelope> tap : this.taps) {
+			tap.accept(player, message);
+		}
 		ServerPlayNetworking.send(player, new KbJsonPayload(json));
 		return true;
 	}
 
-	private void sendError(ServerPlayer player, String code, @Nullable Long re) {
+	/** Answers a client message the server could not use with {@code error{code}} (a short code, never data). */
+	public void sendError(ServerPlayer player, String code, @Nullable Long re) {
 		JsonObject data = new JsonObject();
 		data.addProperty("code", code);
 		data.addProperty("msg", "rejected by the server relay");

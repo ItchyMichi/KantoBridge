@@ -3,6 +3,8 @@ package dev.kantobridge.client.bridge;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
+import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.function.Supplier;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.resources.language.I18n;
@@ -17,6 +19,7 @@ final class DebugOverlay {
 	private static final int BACKGROUND = 0xA0000000;
 	private static final long RATE_WINDOW_MS = 1000;
 
+	private final List<Supplier<String>> extraLines = new CopyOnWriteArrayList<>();
 	private boolean visible;
 	private long sampleAtMs = -1;
 	private long sampleIn;
@@ -26,6 +29,11 @@ final class DebugOverlay {
 
 	void toggle() {
 		this.visible = !this.visible;
+	}
+
+	/** Adds a line other parts of the client fill in (the movement sync's counters, …). */
+	void addLine(Supplier<String> line) {
+		this.extraLines.add(line);
 	}
 
 	void render(GuiGraphics graphics, Minecraft minecraft, BridgeClient client, ClientBridgeState state, long nowMs, int top) {
@@ -53,6 +61,9 @@ final class DebugOverlay {
 				stats.messagesOut(), String.format(Locale.ROOT, "%.1f", this.outPerSecond),
 				stats.lastRttMs() < 0 ? "-" : Long.toString(stats.lastRttMs())));
 		lines.add(I18n.get("kantobridge.debug.errors", stats.protocolErrors(), stats.drops(), state.snapshots(), state.positions()));
+		for (Supplier<String> extra : this.extraLines) {
+			lines.add(extra.get());
+		}
 
 		int width = 0;
 		for (String line : lines) {

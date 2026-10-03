@@ -20,6 +20,16 @@
 -- one logic step, so a new step is recognised by its target changing, not
 -- only by `moving` turning on. Anything else that changes the cell, map or
 -- facing (turns, warps, script teleports) is sent as kind "sync", frames 0.
+--
+-- A ledge hop is one message: kind "ledge" at the LANDING cell, two cells
+-- away, with the whole hop's frames (both cells); its second cell and the
+-- stop between them send nothing. A hop that lands on a connected map
+-- crosses the seam on its second cell (OC:2011-2023): that step is sent as
+-- kind "ledge" too, with the new map and its own frames.
+--
+-- Each message carries a third, local element (never sent): a tag the step
+-- driver (act/kb_move.lua) reads to answer its requests: "state", "step"
+-- (a step start), "hop" (a hop's announcement), "seam", "sync".
 
 local Player = {}
 
@@ -34,6 +44,7 @@ end
 local STATE_KEYS = { "mode", "bike", "surf", "slope", "hidden", "dark", "lit" }
 local POS_KEYS = { "map", "x", "y", "facing" }
 local DIRS = { up = true, down = true, left = true, right = true }
+local DELTA = { up = { 0, -1 }, down = { 0, 1 }, left = { -1, 0 }, right = { 1, 0 } }
 
 local floor = math.floor
 
@@ -41,11 +52,13 @@ local floor = math.floor
 -- dir); anything else, e.g. a half-built player during a map switch, is
 -- held back rather than sent malformed.
 local function sendable(p)
-  return type(p.map) == "string" and p.map:find("^[A-Z0-9_]+$") ~= nil and #p.map <= 64
+  return type(p) == "table"
+    and type(p.map) == "string" and p.map:find("^[A-Z0-9_]+$") ~= nil and #p.map <= 64
     and type(p.x) == "number" and p.x == floor(p.x) and p.x >= -4096 and p.x <= 4096
     and type(p.y) == "number" and p.y == floor(p.y) and p.y >= -4096 and p.y <= 4096
     and DIRS[p.facing] == true
 end
+Player.sendable = sendable
 
 local function frameCount(v)
   if type(v) ~= "number" or v ~= v then return 0 end
@@ -54,6 +67,7 @@ local function frameCount(v)
   if v > 3600 then return 3600 end
   return v
 end
+Player.frameCount = frameCount
 
 function Player.classify(f)
   if f.top ~= "overworld" then
@@ -69,9 +83,9 @@ function Player.classify(f)
   return "idle"
 end
 
--- The kind of a step that is starting. M1 tells walk, bike, surf, ledge,
--- spin and script apart; Seafoam currents and boulder-pushing are still sent
--- as "script" and the Cycling Road roll as "bike" (M3/M8 refine them).
+-- The kind of a step that is starting. Seafoam currents are still sent as
+-- "script" (M8); the step driver turns a Cycling Road roll into "slope" and
+-- sends Strength pushes as "push".
 function Player.moveKind(f)
   if f.ledge then return "ledge" end
   if f.spinning then return "spin" end
@@ -113,50 +127,84 @@ function Player.new()
   local observer = {}
   local sentState, sentPos -- what the client has been told
   local last = {}          -- the previous facts, for step detection
+  local hop                -- the ledge hop already announced: { map }
+  local syncWanted = false -- the next standing update sends a sync even if unchanged
 
   local function remember(f)
     last = { moving = f.moving == true, tx = f.tx, ty = f.ty, map = f.map }
   end
 
-  -- Messages to send for this step's facts: a list of { type, data }.
+  local function posMessage(map, x, y, facing, kind, frames, tag)
+    local pos = { map = map, x = x, y = y, facing = facing }
+    if not sendable(pos) then return nil end
+    sentPos = pos
+    local data = copy(pos)
+    data.kind = kind
+    data.frames = frameCount(frames)
+    return { "player.pos", data, tag }
+  end
+
+  -- The message for a step that starts now, or nil (held back, or a hop's
+  -- second cell).
+  local function stepStart(f)
+    if f.ledge then
+      if hop ~= nil then return nil end -- the second cell: the landing is out already
+      local d = DELTA[f.facing]
+      if not d then return nil end
+      hop = { map = f.map }
+      local frames = f.hopFrames or (tonumber(f.frames) or 16) * 2
+      return posMessage(f.map, f.tx + d[1], f.ty + d[2], f.facing, "ledge", frames, "hop")
+    end
+    if hop ~= nil and f.map ~= hop.map then
+      hop = nil
+      return posMessage(f.map, f.tx, f.ty, f.facing, "ledge", f.frames, "seam")
+    end
+    hop = nil
+    return posMessage(f.map, f.tx, f.ty, f.facing, Player.moveKind(f), f.frames, "step")
+  end
+
+  -- Messages to send for this step's facts: a list of { type, data, tag }.
   function observer.update(f)
     local out = {}
     local state = Player.state(f)
     if not same(state, sentState, STATE_KEYS) then
       sentState = state
-      out[#out + 1] = { "player.state", copy(state) }
+      out[#out + 1] = { "player.state", copy(state), "state" }
     end
     if f.inGame and f.map ~= nil then
       local newStep = f.moving and f.tx ~= nil
         and (not last.moving or f.tx ~= last.tx or f.ty ~= last.ty or f.map ~= last.map)
-      local target = newStep and { map = f.map, x = f.tx, y = f.ty, facing = f.facing } or nil
-      if target and sendable(target) then
-        sentPos = target
-        local data = copy(sentPos)
-        data.kind = Player.moveKind(f)
-        data.frames = frameCount(f.frames)
-        out[#out + 1] = { "player.pos", data }
+      if newStep then
+        local msg = stepStart(f)
+        if msg then out[#out + 1] = msg end
       elseif not f.moving then
-        local here = { map = f.map, x = f.x, y = f.y, facing = f.facing }
-        if sendable(here) and not same(here, sentPos, POS_KEYS) then
-          sentPos = here
-          local data = copy(here)
-          data.kind = "sync"
-          data.frames = 0
-          out[#out + 1] = { "player.pos", data }
+        if hop ~= nil and not f.ledge then hop = nil end -- landed: the hop is over
+        if hop == nil then -- between a hop's two cells nothing is sent
+          local here = { map = f.map, x = f.x, y = f.y, facing = f.facing }
+          if sendable(here) and (syncWanted or not same(here, sentPos, POS_KEYS)) then
+            syncWanted = false
+            local msg = posMessage(f.map, f.x, f.y, f.facing, "sync", 0, "sync")
+            out[#out + 1] = msg
+          end
         end
       end
       remember(f)
     else
       last = {}
+      hop = nil
     end
     return out
   end
+
+  -- The next update where the player stands sends a sync even when nothing
+  -- changed (the answer to move.face).
+  function observer.forceSync() syncWanted = true end
 
   -- After a snapshot told the client everything, deltas start from it.
   function observer.rebase(f)
     sentState = Player.state(f)
     sentPos = Player.position(f)
+    hop = (f.inGame and f.ledge) and { map = f.map } or nil
     if f.inGame then remember(f) else last = {} end
   end
 

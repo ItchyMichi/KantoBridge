@@ -13,7 +13,9 @@
 			"dev.kantobridge.gametest.RelayGameTests",
 			"dev.kantobridge.gametest.CollisionGameTests",
 			"dev.kantobridge.gametest.SyntheticBuildGameTests",
-			"dev.kantobridge.gametest.BuildHoldGameTests"
+			"dev.kantobridge.gametest.BuildHoldGameTests",
+			"dev.kantobridge.gametest.RulesGameTests",
+			"dev.kantobridge.gametest.WarpGameTests"
 		]
 	},
 	"depends": {

@@ -77,24 +77,32 @@ public final class ClientRelay {
 
 	/** Sends one message to the server. Returns false when not connected, not a c2s type, or too big. */
 	public boolean send(String type, JsonObject data, @Nullable Long re) {
+		return this.post(type, data, re) > 0;
+	}
+
+	/**
+	 * {@link #send}, returning the message's {@code seq} (which the server's reply carries as {@code re}), or -1 when it
+	 * wasn't sent.
+	 */
+	public long post(String type, JsonObject data, @Nullable Long re) {
 		if (!ClientPlayNetworking.canSend(KbJsonPayload.TYPE)) {
-			return false;
+			return -1;
 		}
 		Envelope message = new Envelope(type, this.nextSeq, re, data);
 		try {
 			this.catalog.check(message, Catalog.Leg.C2S);
 		} catch (ProtocolException e) {
 			KantoBridge.LOGGER.error("relay: refusing to send {}: {}", type, e.code());
-			return false;
+			return -1;
 		}
 		String json = message.toJson();
 		int bytes = json.getBytes(StandardCharsets.UTF_8).length;
 		if (bytes > this.catalog.relayMaxBytes()) {
 			KantoBridge.LOGGER.error("relay: {} is over the relay limit", Redact.summary(message, bytes));
-			return false;
+			return -1;
 		}
 		this.nextSeq++;
 		ClientPlayNetworking.send(new KbJsonPayload(json));
-		return true;
+		return message.seq();
 	}
 }

@@ -94,7 +94,6 @@ def test_turns_and_teleports_are_syncs():
 @pytest.mark.parametrize("facts, kind", [
     ({"bike": True}, "bike"),
     ({"surf": True}, "surf"),
-    ({"ledge": True, "playerScripted": True}, "ledge"),
     ({"spinning": True}, "spin"),
     ({"playerScripted": True}, "script"),
     ({"forcedPhase": True}, "script"),
@@ -105,6 +104,56 @@ def test_step_kinds(facts, kind):
     (msg,) = [m for m in o.update(moving=True, tx=6, ty=6, facing="right", frames=8, **facts)
               if m[0] == "player.pos"]
     assert msg[1]["kind"] == kind and msg[1]["frames"] == 8
+
+
+def positions(out):
+    return [(d["map"], d["x"], d["y"], d["facing"], d["kind"], d["frames"]) for t, d in out if t == "player.pos"]
+
+
+def test_a_ledge_hop_is_one_message_at_its_landing_cell():
+    o = Obs()
+    o.update()
+    hop = {"ledge": True, "playerScripted": True, "hopFrames": 32}
+    assert positions(o.update(**hop)) == []                             # queued: starts next step
+    assert positions(o.update(moving=True, tx=5, ty=7, frames=16, **hop)) == [
+        ("TEST_TOWN", 5, 8, "down", "ledge", 32)]                       # the landing, the whole hop
+    assert positions(o.update(moving=True, tx=5, ty=7, frames=16, **hop)) == []
+    assert positions(o.update(x=5, y=7, **hop)) == []                   # between the two cells
+    assert positions(o.update(x=5, y=7, moving=True, tx=5, ty=8, frames=16, **hop)) == []
+    assert positions(o.update(x=5, y=8, hopLand=3)) == []               # landed where announced
+    assert positions(o.update(x=5, y=8)) == []
+    assert positions(o.update(x=5, y=8, facing="left")) == [("TEST_TOWN", 5, 8, "left", "sync", 0)]
+
+
+def test_a_hop_onto_a_connected_map_finishes_with_the_seam_step():
+    o = Obs()
+    o.update(x=5, y=6)
+    hop = {"ledge": True, "playerScripted": True, "hopFrames": 32}
+    assert positions(o.update(x=5, y=6, moving=True, tx=5, ty=7, frames=16, **hop)) == [
+        ("TEST_TOWN", 5, 8, "down", "ledge", 32)]                       # off this map: 2 cells on
+    assert positions(o.update(x=5, y=7, **hop)) == []
+    # the seam: the hop's onDone crosses into the connected map, then clears the hop flag
+    assert positions(o.update(map="TEST_ROUTE", x=5, y=-1, moving=True, tx=5, ty=0, frames=16, hopLand=2)) == [
+        ("TEST_ROUTE", 5, 0, "down", "ledge", 16)]
+    assert positions(o.update(map="TEST_ROUTE", x=5, y=0)) == []
+
+
+def test_messages_carry_tags_for_the_step_driver():
+    o = Obs()
+    out = o.o.update(o.facts())
+    assert [m[3].decode() for m in out.values()] == ["state", "sync"]
+    out = o.o.update(o.facts(moving=True, tx=5, ty=5, facing="up", frames=16))
+    assert [m[3].decode() for m in out.values()] == ["step"]
+
+
+def test_force_sync_resends_an_unchanged_position():
+    o = Obs()
+    o.update()
+    o.o.forceSync()
+    assert positions(o.update(moving=True, tx=5, ty=5, facing="up", frames=16)) == [
+        ("TEST_TOWN", 5, 5, "up", "walk", 16)]                          # a step goes first
+    assert positions(o.update(x=5, y=5, facing="up")) == [("TEST_TOWN", 5, 5, "up", "sync", 0)]
+    assert positions(o.update(x=5, y=5, facing="up")) == []
 
 
 def test_state_changes_are_sent_once():

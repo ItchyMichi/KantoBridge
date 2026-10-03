@@ -13,13 +13,22 @@ final class MockPlayers {
 	 * Joins a mock player (going through the normal join path, so Cobblemon sets up its data), runs {@code test},
 	 * and always removes the player again so it doesn't linger in the shared test world.
 	 */
-	@SuppressWarnings("removal") // the only GameTest helper that yields a real, joined ServerPlayer on 1.21.1
 	static void with(GameTestHelper helper, Consumer<ServerPlayer> test) {
-		ServerPlayer player = helper.makeMockServerPlayerInLevel();
+		ServerPlayer player = join(helper);
 		try {
 			test.accept(player);
 		} finally {
-			helper.getLevel().getServer().getPlayerList().remove(player);
+			leave(helper, player);
 		}
+	}
+
+	/** Joins a mock player for a test that spans ticks; the test must {@link #leave} it on every path. */
+	@SuppressWarnings("removal") // the only GameTest helper that yields a real, joined ServerPlayer on 1.21.1
+	static ServerPlayer join(GameTestHelper helper) {
+		return helper.makeMockServerPlayerInLevel();
+	}
+
+	static void leave(GameTestHelper helper, ServerPlayer player) {
+		helper.getLevel().getServer().getPlayerList().remove(player);
 	}
 }

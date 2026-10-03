@@ -131,6 +131,33 @@ optional ones. The schemas give the exact types and limits.
 | `warp` | G→M | `phase:"start"\|"arrive", kind:"door"\|"stairs"\|"edge"\|"hole"\|"pad"\|"fly"\|"teleport"\|"dig"\|"rope"\|"blackout"\|"script"\|"elevator", to?{map,x,y,facing}` (required on arrive) | |
 | `emote` | G→M | `target:"player"\|<npc id>, bubble:"!"\|"?"\|"happy"\|null, frames` | |
 
+#### Movement rules (M3)
+
+- **Every `move.step{n}` gets exactly one answer carrying its `n`:**
+  - a normal step: the `player.pos` sent at its start (kind `walk`, `bike` or `slope`; the target cell);
+  - a step that set off a warp without a visible step (exit mats) or moved the player some other way:
+    `player.pos` kind `sync`, sent after the warp's `arrive`;
+  - a Strength boulder push: `player.pos` kind `push`, `frames` 0, at the player's unchanged cell;
+  - an engine refusal: `player.blocked` with `tile`, `entity` or `bounds` at the player's cell (the
+    hidden player only turns);
+  - `player.blocked` reason `script` when the game isn't idle, the step was dropped from the queue,
+    it produced no result within 12 logic steps, or the game is at the title screen.
+- **Queue:** at most 2 steps wait behind the one in flight; a third drops the oldest waiting one.
+  Requests die with their connection.
+- **`move.face`** is answered by a `player.pos` kind `sync` (`frames` 0). **`move.hold`** applies only
+  while idle.
+- **Kinds:** `ledge` is one message at the landing cell with the whole hop's 32 frames (a hop onto a
+  connected map sends the seam step as kind `ledge` on the new map, without `n`); `slope` is the
+  Cycling Road roll; `script` covers moves the game makes on its own (cutscenes, door walk-outs,
+  Seafoam currents until M8).
+- **Warp kinds** by mechanism: `door` (a door tile or a gate doorway), `stairs` (any other warp tile),
+  `edge` (an exit mat or map edge), `pad`, `hole`, `elevator` (a warp out of an `*_ELEVATOR` map),
+  `fly`, `teleport` (also Dig and Escape Rope until M8), `blackout`, `script`. `arrive.to` is the
+  entry cell; a door walk-out follows as its own `player.pos` kind `script`.
+- **Connection crossings** (walking off a map edge into the connected map) are not warps: the step's
+  `player.pos` simply names the new map and cell.
+- **Order within one logic step:** `player.state`, then `warp`, then `player.pos`/`player.blocked`.
+
 ### Interaction
 
 | Type | Dir | Data | ROM |
@@ -319,8 +346,8 @@ bytes. A downloaded export is stored as an **export bundle**, which stays under 
 
 | Type | Dir | Data | ROM |
 |---|---|---|---|
-| `story.state` | C→S | `full`; when full: `active[cell], surf, bike, lit[]`; otherwise deltas `add?[], remove?[], surf?, bike?, lit?`. A cell is `"MAP:x:y"` | |
-| `warp.request` | C→S | `to{map,x,y,facing}, kind?` | |
+| `story.state` | C→S | `full`; when full: `active[cell], surf, bike, lit[]`; otherwise deltas `add?[], remove?[], surf?, bike?, lit?`. A cell is `"MAP:x:y"`. `active` counts only in a full state; a delta's `lit` replaces the lit set. The client applies a change to its own player's state first, then relays it: a full state on join, snapshot and respawn, deltas after (sent from M3 on) | |
+| `warp.request` | C→S | `to{map,x,y,facing}, kind?`. With `kind`: the hidden game's warp. Without: the client's own sync teleport (join, reconnect, drift, stuck) | |
 | `warp.done` | S→C | `ok, to?`; `re` optional | |
 | `activity` | C→S | `activity:"dialogue"\|"cutscene"\|"battle"\|"none"` (speech bubbles) | |
 | `texture.status` | C→S | `ok, slotMapHash?, textures?, reason?` | |

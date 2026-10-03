@@ -156,8 +156,12 @@ def test_steps_blocks_and_door_warp():
             await mc.send("move.step", {"dir": "down", "n": 11})  # off the edge from the mat
             leave = await mc.expect("warp")
             back = await mc.expect("warp")
-            assert leave["data"]["phase"] == "start"
-            assert back["data"]["to"] == {"map": "TEST_TOWN", "x": 5, "y": 6, "facing": "down"}
+            assert (leave["data"]["phase"], leave["data"]["kind"]) == ("start", "edge")
+            assert back["data"]["to"] == {"map": "TEST_TOWN", "x": 5, "y": 5, "facing": "down"}
+            answer = await mc.expect("player.pos")
+            assert (answer["data"]["kind"], answer["data"]["n"]) == ("sync", 11), "the step's one answer"
+            walk_out = await mc.expect("player.pos")
+            assert (walk_out["data"]["kind"], walk_out["data"]["y"], "n" in walk_out["data"]) == ("script", 6, False)
         finally:
             await mc.close()
             await gen1.stop()

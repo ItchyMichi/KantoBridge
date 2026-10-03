@@ -123,23 +123,48 @@ function FakeMod.new(opts)
     mod.content[name] = { get = function(_, id) return records[id] end }
   end
 
-  -- Records button calls; the real ones go through game.input sources.
+  -- Records button calls. When the game has an input with sources (the fake
+  -- world's), presses go through it as the Loader's do
+  -- (src/mods/Loader.lua:1393-1431): every call is its own
+  -- "mod:<id>:<n>" source, and release only knows this mod's tokens.
   local input = mod._input
+  local ledger, seq = {}, 0
+  local function source()
+    seq = seq + 1
+    return "mod:" .. id .. ":" .. seq
+  end
   mod.input = {
     tap = function(_, game, btn)
       assert(game, "mod.input needs the live game (see game.ready)")
       assert(GB_BUTTONS[btn], "unknown GB button: " .. tostring(btn))
       input[#input + 1] = { op = "tap", btn = btn }
+      local gi = game.input
+      if gi and gi.sourcePress then
+        local s = source()
+        gi:sourcePress(btn, s)
+        gi:sourceRelease(btn, s)
+      end
     end,
     press = function(_, game, btn)
       assert(game, "mod.input needs the live game (see game.ready)")
       assert(GB_BUTTONS[btn], "unknown GB button: " .. tostring(btn))
       local token = { btn = btn }
       input[#input + 1] = { op = "press", btn = btn, token = token }
+      local gi = game.input
+      if gi and gi.sourcePress then
+        local s = source()
+        gi:sourcePress(btn, s)
+        ledger[token] = { input = gi, btn = btn, source = s }
+      end
       return token
     end,
     release = function(_, token)
       input[#input + 1] = { op = "release", token = token }
+      local rec = ledger[token]
+      if rec then
+        ledger[token] = nil
+        rec.input:sourceRelease(rec.btn, rec.source)
+      end
       return true
     end,
   }

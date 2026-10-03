@@ -6,9 +6,9 @@ import dev.kantobridge.proto.MsgTypes;
 import org.jetbrains.annotations.Nullable;
 
 /**
- * What the client knows about the hidden game in M1: the handshake, and the player's map, cell, facing and mode from
- * {@code snapshot}, {@code player.pos}, {@code player.state} and {@code warp}. Client thread only (fed by
- * {@link Dispatcher}); later milestones read it to move the Minecraft player.
+ * What the client knows about the hidden game: the handshake, whether its player is live ({@link #ingame}), and the
+ * player's map, cell, facing and mode from {@code snapshot}, {@code player.pos}, {@code player.state} and {@code warp}.
+ * Client thread only (fed by {@link Dispatcher}); the movement sync ({@code client.move}) reads it.
  */
 public final class ClientBridgeState {
 	private @Nullable HelloOk handshake;
@@ -28,6 +28,8 @@ public final class ClientBridgeState {
 	private @Nullable String warpKind;
 	private long snapshots;
 	private long positions;
+	/** The hidden game is in its overworld, so its player position is live (snapshot {@code ingame}). */
+	private boolean ingame;
 
 	/** Subscribes to the messages this state follows. */
 	public void attach(Dispatcher dispatcher) {
@@ -39,6 +41,7 @@ public final class ClientBridgeState {
 		dispatcher.onState((state, detail) -> {
 			if (state != ConnectionState.CONNECTED) {
 				this.handshake = null;
+				this.ingame = false;
 			}
 		});
 	}
@@ -57,6 +60,7 @@ public final class ClientBridgeState {
 	void onSnapshot(Envelope message) {
 		this.snapshots++;
 		JsonObject data = message.data();
+		this.ingame = JsonFields.bool(data, "ingame", false);
 		JsonObject player = JsonFields.obj(data, "player");
 		if (player != null) {
 			this.applyPlace(player);
@@ -73,6 +77,8 @@ public final class ClientBridgeState {
 		JsonObject data = message.data();
 		this.applyPlace(data);
 		this.moveKind = JsonFields.str(data, "kind");
+		// gen1-bridge reports positions only from its overworld: the title screen is behind.
+		this.ingame = true;
 	}
 
 	void onWarp(Envelope message) {
@@ -82,6 +88,7 @@ public final class ClientBridgeState {
 		JsonObject to = JsonFields.obj(data, "to");
 		if (to != null) {
 			this.applyPlace(to);
+			this.ingame = true;
 		}
 	}
 
@@ -176,6 +183,14 @@ public final class ClientBridgeState {
 
 	public @Nullable String warpKind() {
 		return this.warpKind;
+	}
+
+	/**
+	 * True when the hidden player's position is live: the last snapshot said {@code ingame}, or a position or warp
+	 * arrival came since. False at the hidden game's title screen and while disconnected.
+	 */
+	public boolean ingame() {
+		return this.ingame;
 	}
 
 	public long snapshots() {

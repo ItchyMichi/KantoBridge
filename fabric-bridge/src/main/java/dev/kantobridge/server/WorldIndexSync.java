@@ -32,8 +32,8 @@ import org.jetbrains.annotations.Nullable;
  * when the server starts and replaced when a build finishes. Logs carry part counts and short hashes only.
  */
 public final class WorldIndexSync {
-	/** One server's current index, already split. */
-	private record Published(String hash, List<WorldIndexParts.Part> parts) {
+	/** One server's current index, already split, and parsed for the server's own lookups (warps). */
+	private record Published(String hash, List<WorldIndexParts.Part> parts, @Nullable WorldIndex index) {
 	}
 
 	private static final Map<MinecraftServer, Published> CURRENT = Collections.synchronizedMap(new WeakHashMap<>());
@@ -56,17 +56,32 @@ public final class WorldIndexSync {
 		}
 		try {
 			String json = Files.readString(file, StandardCharsets.UTF_8);
-			WorldIndex.fromJson(json);
-			publish(server, json, false);
+			publish(server, WorldIndex.fromJson(json), json, false);
 		} catch (IOException | DataException e) {
 			KantoBridge.LOGGER.warn("world.index: the world's index is unreadable ({}); clients won't get one", e.getClass().getSimpleName());
 		}
 	}
 
-	/** Makes {@code json} the index joining players get; with {@code broadcast}, sends it to everyone online now. */
+	/** Makes {@code index} the one joining players get; with {@code broadcast}, sends it to everyone online now. */
+	public static void publish(MinecraftServer server, WorldIndex index, boolean broadcast) {
+		publish(server, index, index.toJson(), broadcast);
+	}
+
+	/** {@link #publish(MinecraftServer, WorldIndex, boolean)} for index JSON text (checked; an invalid one refuses warps). */
 	public static void publish(MinecraftServer server, String json, boolean broadcast) {
+		WorldIndex index = null;
+		try {
+			index = WorldIndex.fromJson(json);
+		} catch (DataException e) {
+			// Still handed to clients (they check it too), but the server can't resolve warps with it.
+			KantoBridge.LOGGER.warn("world.index: the published index is invalid ({}); warps will be refused", e.problem());
+		}
+		publish(server, index, json, broadcast);
+	}
+
+	private static void publish(MinecraftServer server, @Nullable WorldIndex index, String json, boolean broadcast) {
 		List<WorldIndexParts.Part> parts = WorldIndexParts.split(json, WorldIndexParts.PART_CHARS);
-		Published published = new Published(parts.get(0).hash(), parts);
+		Published published = new Published(parts.get(0).hash(), parts, index);
 		CURRENT.put(server, published);
 		KantoBridge.LOGGER.info("world.index: {} parts, hash {}", parts.size(), Hashes.shortHash(published.hash()));
 		if (broadcast) {
@@ -74,6 +89,12 @@ public final class WorldIndexSync {
 				send(server, player);
 			}
 		}
+	}
+
+	/** The server's current WorldIndex (where every map lies), or null when the world has none. */
+	public static @Nullable WorldIndex current(MinecraftServer server) {
+		Published published = CURRENT.get(server);
+		return published == null ? null : published.index();
 	}
 
 	/** The hash of the index the server currently hands out, or null. */

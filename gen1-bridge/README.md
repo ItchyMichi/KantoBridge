@@ -4,10 +4,10 @@ The Gen1Recomp half of Kanto Bridge: a Gen1Recomp mod (Lua, mod API 2) that runs
 player's hidden Gen1Recomp. It listens on `127.0.0.1:27151` for `fabric-bridge`
 ([`docs/PROTOCOL.md`](../docs/PROTOCOL.md#transport)).
 
-**Status: M2, world export.** The listener, the handshake, the heartbeat, `snapshot`, the live
-`player.pos`/`player.state` stream and the world export for the builder work against the real engine
-(end-to-end tests in [`tools/e2e/`](../tools/e2e)). Steps, UI, NPCs and the story arrive in later
-milestones.
+**Status: M3, walking and warps.** The listener, the handshake, the heartbeat, `snapshot`, the live
+`player.pos`/`player.state` stream, the world export for the builder, the step driver (`move.step`,
+`move.face`, `move.hold`) and the `warp` messages work against the real engine (end-to-end tests in
+[`tools/e2e/`](../tools/e2e)). UI, NPCs and the story arrive in later milestones.
 
 ## What it does each logic step
 
@@ -24,13 +24,34 @@ test drivers), guarded so the hook always calls `next`:
    `error wrong_leg`; protocol types handled in later milestones are accepted quietly.
 3. **Player:** the classifier turns the engine's state into a mode (`screen`, `busy`, `forced`,
    `cutscene`, `idle`), and changes go out as `player.state`. Each step start goes out as
-   `player.pos` with the **target** cell and its length in frames; turns, warps and teleports go out
-   as `player.pos` kind `sync`.
-4. **Options pin (PLAN P21):** the hidden game's display options stay classic (no tilt, zoom, render
+   `player.pos` with the **target** cell and its length in frames (kind `walk`, `bike`, `surf`,
+   `script` for the engine's own moves such as a door walk-out, `spin`, `slope` for the Cycling Road
+   roll); a ledge hop is one `player.pos` kind `ledge` at its landing cell with the whole hop's
+   frames; turns, warps and teleports go out as `player.pos` kind `sync`.
+4. **Steps** (`act/kb_move.lua`, PLAN §4.1 "Step driver"): `move.step{dir, n, push?}` requests
+   queue (at most 2 waiting behind the one in flight; the oldest beyond that is dropped and logged).
+   While the classifier says `idle` and the player stands, the driver sets the facing directly (no
+   4-frame turn) and holds the direction through `mod.input`; the engine starts the step in that
+   same logic step. The hold is released on the landing poll, unless the next queued step is ready:
+   it then starts in that same logic step, with no idle frame. Every `move.step` is answered exactly
+   once with its `n`: the step's `player.pos` (its start; a hop's landing; kind `push` for a Strength
+   boulder push; kind `sync` when it set off a warp), or `player.blocked` (`tile`, `entity`,
+   `bounds` from the engine's `movement.collision` verdict; `script` when the hidden game isn't
+   taking steps or the step was dropped). Holds are a "desired" set, pressed again after a focus
+   change's `Input:reset`, and all released the moment the mode leaves `idle`. `move.face` turns in
+   place while idle (answered by a `sync`); `move.hold{b}` holds B, the Cycling Road brake.
+5. **Warps** (`observe/kb_warp.lua`): `warp{phase:"start", kind}` when a warp begins (the engine's
+   `player.warped` event, a blackout, or a fade with no warp entry), then `warp{phase:"arrive", kind,
+   to}` once `map.entered` reports the destination, followed by the `player.pos` sync of the new
+   cell. Kinds: `door` (a door tile, or a gate doorway), `stairs` (another warp tile), `edge` (an exit
+   mat on the map edge), `pad`, `hole`, `elevator` (out of a `*_ELEVATOR` car), `fly`, `teleport`
+   (Dig, Teleport and Escape Rope look alike here), `blackout`, `script`. A connection crossing is not
+   a warp: its step's `player.pos` carries the new map.
+6. **Options pin (PLAN P21):** the hidden game's display options stay classic (no tilt, zoom, render
    pipelines, wide or fill battles, or dynamic UI) and text speed stays FAST. They are pinned in
    memory at boot, on New Game and on CONTINUE, and re-checked every second. Nothing is written to
    disk; Gen1Recomp's own OPTIONS screen persists them if the player saves options there.
-5. **World export** ([`docs/PROTOCOL.md`](../docs/PROTOCOL.md) "Export resources"): for `builder`
+7. **World export** ([`docs/PROTOCOL.md`](../docs/PROTOCOL.md) "Export resources"): for `builder`
    and `test` connections, `export.index` and `export.get` serve the ten resource kinds (maps with
    per-cell flags, tilesets, images, sprites, palettes, encounters, field tables, names, the surface
    layout, swap sites). The first request starts one build of everything in a coroutine that
@@ -73,7 +94,7 @@ client are released at once.
 | File | Purpose |
 |---|---|
 | `manifest.json` | Read by Gen1Recomp's loader. `network` unlocks `require("socket")` (LÖVE's bundled LuaSocket) inside the mod sandbox; `engine_internals` discloses that the mod requires engine modules (`src.*`). Gen1Recomp only displays permissions; it never prompts. |
-| `main.lua` | Entry point. Loads the modules, defines the `port` option, wires the `input.step` hook and the `game.ready`, `save.created` and `save.loaded` events, and publishes a status table in `mod.exports` (versions, counts, flags) for test drivers. |
+| `main.lua` | Entry point. Loads the modules, defines the `port` option, wires the `input.step` and `movement.collision` hooks and the `game.ready`, `save.created`, `save.loaded`, `player.warped`, `map.entered` and `world.blacked_out` events, routes `move.*` to the step driver, orders each step's messages (`player.state`, `warp`, then `player.pos`/`player.blocked`), and publishes a status table in `mod.exports` (versions, counts, flags) for test drivers. |
 | `lib/kb_json.lua` | Our own strict, deterministic JSON codec: sorted keys, `{}`/`[]`/null kept apart, strict parsing, errors that never quote the input. |
 | `lib/kb_sha256.lua` | SHA-256, for the short hashes logs may show and for export hashes. |
 | `lib/kb_log.lua` | Redacted logging: a code plus fields; any string that isn't id-shaped prints as `<str:LEN:SHA8>`. |
@@ -81,8 +102,10 @@ client are released at once.
 | `lib/kb_proto.lua` | The message envelope (`type`, `seq`, `re`, `data`), dispatch, replies and `error` answers, with a gate and catalog-aware handling of unhandled types. |
 | `lib/kb_session.lua` | One connection's session: hello first, handshake, heartbeat timeout, resync, debug messages, live streams, log forwarding. |
 | `lib/kb_catalog.lua` | **Generated** from `protocol/catalog.json` by `tools/lua/gen_catalog.py`: the message types and their legs. A test fails when it is stale. |
-| `lib/kb_engine.lua` | **The only file that touches engine internals.** Each function cites the engine `file:line` it relies on (v0.3.49): the overworld and its player, the top state's class, NPCs, dark maps, badges, the options pin, the instance takeover slot, and the export's data sources and queries (dataset views, the live-Data copy, `Map.new` and its cell queries, `Map.isOutside`, `computeNeighbors`, tile animations, spinner tiles, `Assets.imageData` + PNG encoding, the SGB palette cascade, and the few engine constants with nothing to call: cut-tree and shore tiles). Re-check them all when the Gen1Recomp pin changes. |
-| `observe/kb_player.lua` | The mode classifier and the `player.state`/`player.pos` observer, working on plain facts from `kb_engine`. |
+| `lib/kb_engine.lua` | **The only file that touches engine internals.** Each function cites the engine `file:line` it relies on (v0.3.49): the overworld and its player, the top state's class, NPCs, dark maps, badges, the options pin, the instance takeover slot, the movement internals (setting the facing, held buttons, the player's collision verdicts, warp departures, hop/boulder/departure facts), and the export's data sources and queries (dataset views, the live-Data copy, `Map.new` and its cell queries, `Map.isOutside`, `computeNeighbors`, tile animations, spinner tiles, `Assets.imageData` + PNG encoding, the SGB palette cascade, and the few engine constants with nothing to call: cut-tree and shore tiles). Re-check them all when the Gen1Recomp pin changes. |
+| `observe/kb_player.lua` | The mode classifier and the `player.state`/`player.pos` observer, working on plain facts from `kb_engine`: step starts, ledge hops (one message at the landing), syncs, and tags the step driver reads. |
+| `observe/kb_warp.lua` | The `warp` start/arrive messages and their kinds, from the warp events and the transition facts. |
+| `act/kb_move.lua` | The step driver: `move.step` queue, facing first, holds through `mod.input` (released on the landing poll, re-pressed after an input reset, all released outside `idle`), outcomes (step, hop, push, warp, blocked) answered once per `n`, `move.face`, `move.hold`. |
 | `observe/kb_snapshot.lua` | Builds `snapshot` from the facts and the save: position, state, flags, toggles, bag, money, coins, badges, the hidden game's party, the Pokédex, the current map's NPCs. |
 | `export/kb_export.lua` | The export service: roles, the request queue, the budgeted build coroutine, the cache, budgeted replies, and every resource's shaping (map records, surface, parents by BFS, the `LAST_MAP` memory, palettes, tile classes, images, sprites, encounters, field tables, names, layout). |
 | `export/kb_cells.lua` | The per-cell flag integers of one map, from `kb_engine`'s map queries plus `field.ledges`, `field.spinners`, the warps and signs. |

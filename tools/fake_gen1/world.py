@@ -17,13 +17,15 @@ TEXTS = {
     "TESTHOUSE_MOM": ("Welcome home,", "tester!"),
 }
 SIGN_TEXTS = {("TEST_TOWN", 11, 5): ("TEST TOWN", "A place for tests.")}
-# Where a warp lands: the destination warp's cell, then a step away from it for exits to the town.
+# Where a warp lands (the destination warp's cell) and its kind, as gen1-bridge reports them: a
+# door tile is "door", other warp tiles "stairs", an exit mat "edge". Leaving a house lands on the
+# town's door cell, and the engine then walks the player out one cell (a scripted step).
 ARRIVALS = {
-    ("TEST_TOWN", 5, 5): ("TEST_HOUSE", 4, 8, "up", "door"),
-    ("TEST_HOUSE", 4, 8): ("TEST_TOWN", 5, 6, "down", "door"),
-    ("TEST_HOUSE", 5, 8): ("TEST_TOWN", 5, 6, "down", "door"),
-    ("TEST_HOUSE", 7, 2): ("TEST_HOUSE_2F", 5, 2, "down", "stairs"),
-    ("TEST_HOUSE_2F", 5, 2): ("TEST_HOUSE", 7, 2, "down", "stairs"),
+    ("TEST_TOWN", 5, 5): ("TEST_HOUSE", 4, 8, "up", "door", None),
+    ("TEST_HOUSE", 4, 8): ("TEST_TOWN", 5, 5, "down", "edge", "down"),
+    ("TEST_HOUSE", 5, 8): ("TEST_TOWN", 5, 5, "down", "edge", "down"),
+    ("TEST_HOUSE", 7, 2): ("TEST_HOUSE_2F", 5, 2, "down", "stairs", None),
+    ("TEST_HOUSE_2F", 5, 2): ("TEST_HOUSE", 7, 2, "down", "stairs", None),
 }
 OBJECT_KINDS = {"item": "item", "trainer": "trainer", "pokemon": "static"}
 
@@ -51,6 +53,7 @@ class Warp:
     to_y: int
     facing: str
     kind: str = "door"
+    walk_out: str | None = None
 
 
 @dataclass

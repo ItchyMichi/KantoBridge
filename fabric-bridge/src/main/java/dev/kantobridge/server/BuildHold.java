@@ -3,9 +3,12 @@ package dev.kantobridge.server;
 import dev.kantobridge.KantoBridge;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.WeakHashMap;
+import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.function.Consumer;
 import net.fabricmc.fabric.api.entity.event.v1.ServerPlayerEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
 import net.minecraft.server.MinecraftServer;
@@ -26,6 +29,8 @@ import net.minecraft.world.phys.Vec3;
 public final class BuildHold {
 	/** Per server: held players and the game mode each had before. */
 	private static final Map<MinecraftServer, Map<UUID, GameType>> HELD = Collections.synchronizedMap(new WeakHashMap<>());
+	/** Told about each player let in by {@link #release}, after they have their own game mode back. */
+	private static final List<Consumer<ServerPlayer>> RELEASE_LISTENERS = new CopyOnWriteArrayList<>();
 
 	private BuildHold() {
 	}
@@ -36,6 +41,11 @@ public final class BuildHold {
 		ServerPlayerEvents.LEAVE.register(player -> restore(player, false));
 		ServerLifecycleEvents.SERVER_STOPPING.register(BuildHold::releaseModes);
 		ServerLifecycleEvents.SERVER_STOPPED.register(HELD::remove);
+	}
+
+	/** Runs {@code listener} for every player {@link #release} lets in (the rules service re-applies its game mode). */
+	public static void onRelease(Consumer<ServerPlayer> listener) {
+		RELEASE_LISTENERS.add(listener);
 	}
 
 	/** Starts holding everyone on {@code server}, and everyone who joins it, until {@link #release}. */
@@ -77,6 +87,9 @@ public final class BuildHold {
 			player.teleportTo(level, spawn.x, spawn.y, spawn.z, angle, 0.0F);
 			player.resetFallDistance();
 			player.setGameMode(entry.getValue());
+			for (Consumer<ServerPlayer> listener : RELEASE_LISTENERS) {
+				listener.accept(player);
+			}
 			moved++;
 		}
 		KantoBridge.LOGGER.info("builder: let {} player(s) in at the spawn", moved);

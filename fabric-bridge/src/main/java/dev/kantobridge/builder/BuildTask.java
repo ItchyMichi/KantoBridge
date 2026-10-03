@@ -254,7 +254,7 @@ public final class BuildTask {
 		this.report.status = "ok";
 		this.writeReport();
 		if (this.options.publishIndex()) {
-			WorldIndexSync.publish(this.level.getServer(), plan.index().toJson(), true);
+			WorldIndexSync.publish(this.level.getServer(), plan.index(), true);
 		}
 		this.phase = BuildPhase.DONE;
 		KantoBridge.LOGGER.info("builder: done: {} maps, {} story cells, {} blocks placed, {} cleared, {} chunks, {} textures, {} warnings, {} ms",

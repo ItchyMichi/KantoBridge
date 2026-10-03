@@ -278,6 +278,29 @@ function Engine.new(opts)
     return false
   end
 
+  -- A Strength boulder on the move: a scriptMoves entry (OC:5655-5660) whose
+  -- entity is a pushable object, as checkBoulderPush queues it (OC:1864).
+  -- Pushable is Map.isPushable's rule (src/world/Map.lua:188-191): the
+  -- object's own `pushable`, else sprite SPRITE_BOULDER. Returns its
+  -- direction, or nil.
+  local function boulderMoving(ow, p)
+    for _, mv in ipairs(type(ow.scriptMoves) == "table" and ow.scriptMoves or {}) do
+      local e = mv.entity
+      local def = type(e) == "table" and e ~= p and e.def or nil
+      if type(def) == "table" and not mv.inPlace then
+        local pushable = def.pushable
+        if pushable == nil then pushable = def.sprite == "SPRITE_BOULDER" end
+        if pushable then return mv.dir end
+      end
+    end
+    return nil
+  end
+
+  -- The live player while an overworld is on the stack, refreshed by
+  -- observe() every step, so the movement.collision hook can tell the
+  -- player's verdicts from the NPCs' without walking the stack each call.
+  local livePlayer
+
   -- Everything the player observer needs, as plain values. The input.step
   -- hook runs before the stack updates (src/core/Game.lua:320 vs :356), so
   -- this is the world as the previous step left it.
@@ -286,6 +309,7 @@ function Engine.new(opts)
     facts.top, facts.topName = engine.classifyState(engine.top())
     local save = engine.save()
     local ow = engine.overworld()
+    livePlayer = ow and ow.player or nil
     if not ow then return facts end
     local p = ow.player
     facts.inGame = true
@@ -296,15 +320,31 @@ function Engine.new(opts)
     if facts.moving then
       facts.tx, facts.ty = p.targetX, p.targetY -- set at step start (Player.lua:179, OC:5711)
       facts.frames = p.stepFramesCur            -- Player.lua:183, OC:5714
+      facts.progress = tonumber(p.progress)     -- frames done, Player.lua:182, :237
     end
     facts.playerScripted = playerScripted(ow, p)
     facts.ledge = p.ledgeHop and true or false  -- OC:1985-2037, Player.lua:124
+    -- a hop's whole length, both cells: stepLength() * 2 (OC:2017-2018, :2029-2030)
+    facts.hopFrames = facts.ledge and tonumber(p.hopTotal) or nil
+    facts.boulderPush = boulderMoving(ow, p)
     facts.spinning = (p.spinning or ow.spinnerSliding) and true or false -- OC:4825-4871
     -- departures and arrivals that move or hide the player (OC:1366-1498,
     -- :1546-1552) and the locks set with them (Player.lua:97, :150; OC:2456,
     -- :2486, :5329, :5354, :5522, :5528)
     facts.forcedPhase = (ow.teleportOut or ow.flyFade or ow.flyAnim or ow.flyArrive
       or ow.holeFall or ow.holeArrive or ow.spinArrive or p.inputLocked) and true or false
+    -- which departure is under way before a warp's fade starts (P1 6.5):
+    -- Fly's fade and bird (flyTo, OC:2441-2458; OC:1366-1408), the spin of
+    -- Dig/Teleport/Escape Rope and of a warp pad (teleportOut, OC:2470-2499,
+    -- :5339-5342, :1436-1463), a hole's sink (fallThroughHole, OC:5353-5359,
+    -- :1466-1477)
+    if ow.flyFade or ow.flyAnim then
+      facts.departure = "fly"
+    elseif ow.teleportOut then
+      facts.departure = "teleport"
+    elseif ow.holeFall then
+      facts.departure = "hole"
+    end
     facts.hopLand = tonumber(ow.hopLand) or 0     -- OC:1548, :1572
     facts.transitioning = ow.transitioning and true or false -- OC:5423, :5550-5552
     facts.emote = ow.emote ~= nil and ow.emote ~= false      -- OC:1510-1527
@@ -354,6 +394,108 @@ function Engine.new(opts)
       }
     end
     return out, ow.map.id
+  end
+
+  -- ------------------------------------------------------------ movement (M3)
+
+  local DELTA = { up = { 0, -1 }, down = { 0, 1 }, left = { -1, 0 }, right = { 1, 0 } }
+
+  -- Turns the standing player in place by writing ow.player.facing, as the
+  -- engine's own cutscenes do (Commands.face_player_dir,
+  -- src/script/Commands.lua:546-548) and as handleInput does before an edge,
+  -- ledge or boulder check (OC:1729-1732, which also ends a wall-bonk cycle
+  -- by clearing bumpFrames). turnArmed and turnTimer are left alone, so a
+  -- held direction then steps at once with no 4-frame turn
+  -- (Player:tryMove, src/world/Player.lua:151-165), and nothing fires: map
+  -- onStep scripts run only from onStepComplete (OC:4691-4697). Refused
+  -- mid-step, where the pixel interpolation follows the facing
+  -- (Player.lua:242-245). Returns true when the player now faces dir.
+  function engine.setFacing(dir)
+    local ow = engine.overworld()
+    local p = ow and ow.player
+    if not p or p.moving or DELTA[dir] == nil then return false end
+    if p.facing ~= dir then
+      p.facing = dir
+      p.bumpFrames = nil
+    end
+    return true
+  end
+
+  -- True while any source holds a Game Boy button: Input:isDown
+  -- (src/core/Input.lua:705-709) on game.input, the one mod.input presses
+  -- into (src/mods/Loader.lua:1393-1431). Input:reset on a focus or
+  -- visibility change wipes every source, mods' holds included
+  -- (Input.lua:182-203; src/core/Game.lua:1120-1139).
+  function engine.buttonDown(btn)
+    local input = game and game.input
+    if type(input) ~= "table" or type(input.isDown) ~= "function" then return false end
+    local ok, down = pcall(input.isDown, input, btn)
+    return ok and down == true
+  end
+
+  -- One movement.collision verdict as plain values when its mover is the
+  -- player, else nil (NPC moves pass through the same hook). The hook's ctx
+  -- is { map, mover, dir, fromX, fromY, toX, toY, reason }
+  -- (src/world/Collision.lua:84-96); the engine's reasons are bounds, tile
+  -- and entity (Collision.lua:56-73), and a wrapper may rewrite them.
+  -- Player:tryMove asks it for every attempted step (Player.lua:166-177);
+  -- the door walk-out probe (OC:5542) and collide-moves (OC:5699-5703) do
+  -- too, which callers tell apart by timing.
+  function engine.playerVerdict(ctx, allowed)
+    if type(ctx) ~= "table" or livePlayer == nil or ctx.mover ~= livePlayer then return nil end
+    local reason = ctx.reason
+    return {
+      allowed = allowed and true or false,
+      dir = DELTA[ctx.dir] and ctx.dir or nil,
+      reason = type(reason) == "string" and symbol(reason) and reason or nil,
+    }
+  end
+
+  -- Where a warp the player is taking leaves from, for the protocol's warp
+  -- kinds. Called from the player.warped event, which takeWarp emits before
+  -- anything moves (OC:5306-5309), so the player still stands on the
+  -- departure cell; Warp.lua's three triggers (src/world/Warp.lua:1-10)
+  -- then read:
+  --   pad, hole  Map:warpPadOrHoleAt (src/world/Map.lua:265-269), the test
+  --              takeWarp branches on (OC:5320-5347)
+  --   door       a door tile underfoot (Map:isDoorTileCell, Map.lua:253-255)
+  --   stairs     another warp-activating tile (Map:isWarpTileCell,
+  --              Map.lua:258-261): stairs, ladders, cave mouths
+  --   edge       neither, with the facing pointing off the map: an exit mat,
+  --              taken by walking off the edge (checkEdgeExit, OC:2047-2061;
+  --              Warp.onEdge, Warp.lua:77-86) or by arriving on it facing the
+  --              edge with the d-pad held (Warp.extraCheck's facing-edge
+  --              test, Warp.lua:38-45; onStepComplete, OC:4750-4757)
+  --   door       neither, facing into the map: the carpet maps' collision
+  --              warps (route-gate doorways, the dock: Warp.extraCheck's
+  --              warp-tile-in-front test, Warp.lua:46-61; OC:1743-1749)
+  -- Returns { kind, map, x, y, facing } or nil outside the overworld.
+  function engine.warpDeparture()
+    local ow = engine.overworld()
+    local p, m = ow and ow.player, ow and ow.map
+    if not (p and m) then return nil end
+    local x, y, facing = p.cellX, p.cellY, p.facing
+    local out = { map = symbol(m.id) and m.id or nil, x = x, y = y, facing = facing }
+    local function ask(method, ...)
+      local fn = m[method]
+      if type(fn) ~= "function" then return nil end
+      local ok, v = pcall(fn, m, ...)
+      if not ok then return nil end
+      return v
+    end
+    local pad = ask("warpPadOrHoleAt", x, y)
+    if pad == "pad" or pad == "hole" then
+      out.kind = pad
+    elseif ask("isDoorTileCell", x, y) then
+      out.kind = "door"
+    elseif ask("isWarpTileCell", x, y) then
+      out.kind = "stairs"
+    else
+      local d = DELTA[facing]
+      local inside = d and ask("inBounds", x + d[1], y + d[2])
+      out.kind = (d and inside == false) and "edge" or "door"
+    end
+    return out
   end
 
   -- True when options already hold the classic pin (debug.status reports it).

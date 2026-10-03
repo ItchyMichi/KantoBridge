@@ -24,14 +24,16 @@ final class ConnectionHud {
 			return Y;
 		}
 		ConnectionStatus.Line line = status.line(nowMs);
-		if (line == null) {
-			return Y;
-		}
+		return line == null ? Y : renderLine(graphics, minecraft, line, Y);
+	}
+
+	/** Draws one status-style line at {@code y}; returns the y below it. */
+	static int renderLine(GuiGraphics graphics, Minecraft minecraft, ConnectionStatus.Line line, int y) {
 		String text = I18n.get(line.key(), line.args().toArray());
 		int width = minecraft.font.width(text);
 		int height = minecraft.font.lineHeight;
-		graphics.fill(X, Y, X + width + 4, Y + height + 2, BACKGROUND);
-		graphics.drawString(minecraft.font, text, X + 2, Y + 2, line.warning() ? WARNING : NORMAL, false);
-		return Y + height + 4;
+		graphics.fill(X, y, X + width + 4, y + height + 2, BACKGROUND);
+		graphics.drawString(minecraft.font, text, X + 2, y + 2, line.warning() ? WARNING : NORMAL, false);
+		return y + height + 4;
 	}
 }

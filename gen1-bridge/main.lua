@@ -35,7 +35,9 @@ return function(mod)
     catalog = import("lib/kb_catalog.lua"),
     Session = import("lib/kb_session.lua"),
     Player = import("observe/kb_player.lua"),
+    Warp = import("observe/kb_warp.lua"),
     Snapshot = import("observe/kb_snapshot.lua"),
+    Move = import("act/kb_move.lua"),
     Cells = import("export/kb_cells.lua"),
     Images = import("export/kb_images.lua"),
     SwapSites = import("export/kb_swapsites.lua"),
@@ -78,8 +80,36 @@ return function(mod)
   status.sessions, status.quitRequested = 0, false
 
   local player = kb.Player.new()
+  local warps = kb.Warp.new({ log = log })
   local lastFacts = { inGame = false, top = "none" }
   local pendingDropped
+
+  -- The step driver (act/kb_move.lua) presses through the supported
+  -- mod.input (src/mods/Loader.lua:1393-1431) with the live game.
+  local mover = kb.Move.new({
+    engine = engine,
+    Player = kb.Player,
+    log = log,
+    forceSync = player.forceSync,
+    press = function(btn) return mod.input:press(engine.game(), btn) end,
+    release = function(token) return mod.input:release(token) end,
+  })
+
+  -- Engine events and the player's collision verdicts between two of our
+  -- steps; each step takes them (they all happen during the stack update
+  -- that follows input.step, src/core/Game.lua:320 vs :356).
+  local EVENT_CAP = 16
+  local events = { verdicts = {}, entered = {} }
+  local mapsEntered = 0
+  local function takeEvents()
+    local taken = events
+    events = { verdicts = {}, entered = {} }
+    return taken
+  end
+  local function capped(list, item)
+    if #list >= EVENT_CAP then table.remove(list, 1) end
+    list[#list + 1] = item
+  end
 
   local function contentRecord(registry, id)
     local reg = mod.content and mod.content[registry]
@@ -138,8 +168,12 @@ return function(mod)
       sessions = stats.sessions,
       steps = engine.logicStep(),
       optionsPinned = engine.displayPinned(save and save.options),
+      mapsEntered = mapsEntered,
     }
     for k, v in pairs(exporter.status()) do out[k] = v end
+    -- step driver and warp counts (moveRequests, moveAnswered, moveDropped, ...)
+    for k, v in pairs(mover.stats()) do out["move" .. k:sub(1, 1):upper() .. k:sub(2)] = v end
+    for k, v in pairs(warps.stats()) do out["warp" .. k:sub(1, 1):upper() .. k:sub(2)] = v end
     return out
   end
 
@@ -174,6 +208,24 @@ return function(mod)
   })
   exporter.attach(session)
 
+  -- Movement requests (docs/PROTOCOL.md "Movement"), client and test roles
+  -- only. They queue in the step driver, which answers move.step in its own
+  -- step with fresh facts.
+  local function movement(handler, what)
+    return function(data, msg, role)
+      if not kb.Session.STREAM_ROLES[role] then
+        session.sendError("role", msg.seq, "movement needs role client or test")
+        return
+      end
+      if not handler(data, session.generation()) then
+        session.sendError("bad_message", msg.seq, "bad " .. what)
+      end
+    end
+  end
+  session.on("move.step", movement(mover.request, "move.step"))
+  session.on("move.face", movement(mover.face, "move.face"))
+  session.on("move.hold", movement(mover.hold, "move.hold"))
+
   status.session = sessionId
   status.configure = function(opts)
     if type(opts) == "table" and opts.port ~= nil then
@@ -193,11 +245,25 @@ return function(mod)
   local function step(game)
     engine.setGame(game)
     steps = steps + 1
-    session.step()
+    session.step() -- received move.* requests queue in the driver
     local exported = exporter.step()
     local facts = engine.observe()
     lastFacts = facts
-    local out = player.update(facts)
+    local ev = takeEvents()
+    local out = player.update(facts) -- player.state, then player.pos
+    -- warp start/arrive go after player.state and before player.pos (the
+    -- arrival's sync follows its warp message)
+    local warpOut = warps.step(facts, ev)
+    if #warpOut > 0 then
+      local at = (out[1] and out[1][1] == "player.state") and 2 or 1
+      for i = #warpOut, 1, -1 do table.insert(out, at, warpOut[i]) end
+    end
+    -- the step driver answers its requests in `out`, then presses or
+    -- releases for this logic step
+    mover.step(facts, kb.Player.classify(facts), ev, out, {
+      live = session.established() and kb.Session.STREAM_ROLES[session.role()] == true,
+      generation = session.generation(),
+    })
     for i = 1, #out do session.stream(out[i][1], out[i][2]) end
     if pendingDropped then
       log.once("snapshot.dropped", "warn", "snapshot.dropped", { values = pendingDropped })
@@ -210,6 +276,11 @@ return function(mod)
     status.role = session.role()
     status.sessions = session.sessions()
     status.exportState = exporter.state()
+    local moves, warped = mover.stats(), warps.stats()
+    status.moveRequests, status.moveAnswered = moves.requests, moves.answered
+    status.moveDropped, status.moveRepressed = moves.dropped, moves.repressed
+    status.warpsStarted, status.warpsArrived = warped.started, warped.arrived
+    status.mapsEntered = mapsEntered
   end
 
   -- input.step must always call next, and a throwing wrapper would be
@@ -248,6 +319,30 @@ return function(mod)
   -- From the first map load on, the live Data may differ from the import
   -- (map.entered, src/world/OverworldController.lua:686).
   mod.events:on("map.entered", function() exporter.onMapEntered() end)
+
+  -- Warps and steps (M3). Events and hooks only: they die with this
+  -- instance's loader on a hot reload. player.warped comes from takeWarp
+  -- before anything moves (OverworldController.lua:5306-5309), so the
+  -- departure is read right there; map.entered carries `via` (:686-691);
+  -- world.blacked_out precedes the heal-point warp (:5212-5214).
+  mod.events:on("player.warped", function()
+    events.warped = engine.warpDeparture() or {}
+  end)
+  mod.events:on("map.entered", function(payload)
+    mapsEntered = mapsEntered + 1
+    payload = type(payload) == "table" and payload or {}
+    capped(events.entered, { map = payload.mapId, via = payload.via })
+  end)
+  mod.events:on("world.blacked_out", function() events.blackout = true end)
+  -- Every collision verdict passes this hook (src/world/Collision.lua:84-96);
+  -- the player's are recorded for the step driver, and the verdict itself is
+  -- never changed.
+  mod.hooks:wrap("movement.collision", function(nextFn, allowed, ctx)
+    local result = nextFn(allowed, ctx)
+    local ok, verdict = pcall(engine.playerVerdict, ctx, result)
+    if ok and verdict then capped(events.verdicts, verdict) end
+    return result
+  end)
 
   -- New Game builds a fresh save and applies its options right after this
   -- event (src/core/Game.lua:179-183), so pinning the table is enough.

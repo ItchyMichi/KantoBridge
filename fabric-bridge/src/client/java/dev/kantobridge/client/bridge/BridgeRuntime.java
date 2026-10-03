@@ -3,6 +3,9 @@ package dev.kantobridge.client.bridge;
 import com.mojang.blaze3d.platform.InputConstants;
 import dev.kantobridge.KantoBridge;
 import dev.kantobridge.proto.Catalog;
+import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.function.Supplier;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientLifecycleEvents;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.keybinding.v1.KeyBindingHelper;
@@ -41,6 +44,8 @@ public final class BridgeRuntime {
 	private final BridgeClient client;
 	private final KeyMapping debugKey;
 	private final DebugOverlay overlay = new DebugOverlay();
+	/** Extra lines under the status line (why the player is held, …); each returns null when it has nothing to say. */
+	private final List<Supplier<ConnectionStatus.@Nullable Line>> hudLines = new CopyOnWriteArrayList<>();
 
 	private BridgeRuntime(Catalog catalog, ClientConfig config) {
 		this.dispatcher = new Dispatcher(catalog);
@@ -92,6 +97,16 @@ public final class BridgeRuntime {
 		return this.state;
 	}
 
+	/** Adds a HUD line drawn under the connection status (in game only, hidden with F1 and F3 like it). */
+	public void addHudLine(Supplier<ConnectionStatus.@Nullable Line> line) {
+		this.hudLines.add(line);
+	}
+
+	/** Adds a line to the F7 debug overlay (symbols and counters only). */
+	public void addDebugLine(Supplier<String> line) {
+		this.overlay.addLine(line);
+	}
+
 	private void tick(Minecraft minecraft) {
 		this.dispatcher.drain(EVENTS_PER_TICK);
 		while (this.debugKey.consumeClick()) {
@@ -102,6 +117,14 @@ public final class BridgeRuntime {
 	private void renderHud(GuiGraphics graphics, Minecraft minecraft) {
 		long now = this.clock.millis();
 		int below = ConnectionHud.render(graphics, minecraft, this.status, now);
+		if (!minecraft.options.hideGui && !minecraft.getDebugOverlay().showDebugScreen()) {
+			for (Supplier<ConnectionStatus.@Nullable Line> supplier : this.hudLines) {
+				ConnectionStatus.Line line = supplier.get();
+				if (line != null) {
+					below = ConnectionHud.renderLine(graphics, minecraft, line, below);
+				}
+			}
+		}
 		this.overlay.render(graphics, minecraft, this.client, this.state, now, below);
 	}
 
