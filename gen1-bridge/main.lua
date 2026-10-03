@@ -49,6 +49,7 @@ return function(mod)
     Battle = import("act/kb_battle.lua"),
     Party = import("act/kb_party.lua"),
     Save = import("act/kb_save.lua"),
+    Pairing = import("act/kb_pairing.lua"),
     Pc = import("act/kb_pc.lua"),
     Cells = import("export/kb_cells.lua"),
     Images = import("export/kb_images.lua"),
@@ -63,13 +64,22 @@ return function(mod)
   })
   local engine = kb.Engine.new({ require = require, log = log, ui = mod.ui, datasets = mod.datasets })
 
-  -- The port is a mod option (F10 manager); drivers can move it through
-  -- exports.configure before the first bind.
+  -- The port is a mod option (F10 manager, or the launcher's mod settings);
+  -- drivers can move it through exports.configure before the first bind. A
+  -- change in the F10 manager applies at once (mod.options_changed, below).
+  -- M9: when another process keeps the port, the listener takes the next free
+  -- one of the PORT_SPAN after it (kb_net), so a second instance on the same
+  -- PC still listens; exports.port and debug.status say which.
+  local PORT_SPAN = 8
+  local function validPort(v)
+    v = tonumber(v)
+    if v and v == math.floor(v) and v >= 1024 and v <= 65535 then return v end
+    return nil
+  end
   mod.options:define({
-    { key = "port", label = "BRIDGE PORT", type = "number", default = 27151, min = 1024, max = 65535 },
+    { key = "port", label = "BRIDGE PORT", type = "number", default = 27151, min = 1024, max = 65535, step = 1 },
   })
-  local port = tonumber(mod.options:get("port")) or 27151
-  if port ~= math.floor(port) or port < 1 or port > 65535 then port = 27151 end
+  local port = validPort(mod.options:get("port")) or 27151
 
   -- love.timer passes the sandbox's love facade (src/mods/Sandbox.lua:100-108).
   local timer = love.timer
@@ -87,7 +97,7 @@ return function(mod)
   status.protocol = kb.Proto.PROTOCOL
   status.modules = loaded
   status.ready = false
-  status.port = port
+  status.port, status.portConfigured, status.portFallback = port, port, false
   status.connected, status.bound, status.role = false, false, nil
   status.sessions, status.quitRequested = 0, false
 
@@ -171,6 +181,30 @@ return function(mod)
     },
   })
   local pcs = kb.Pc.new({ engine = engine, log = log })
+  -- M9: online save pairing (act/kb_pairing.lua): session.bind's world gets
+  -- its own save slot, switched to at runtime; the world -> slot map lives in
+  -- mod.cache (installation-wide, src/mods/Loader.lua:1567-1569), never in
+  -- a slot's own save, as session/pairings.json.
+  local cache = mod.cache
+  local pairing = kb.Pairing.new({
+    engine = engine, json = kb.json, log = log, clock = clock, hash = kb.sha256.short,
+    store = type(cache) == "table" and {
+      read = function(rel) return cache:read(rel) end,
+      write = function(rel, bytes) return cache:write(rel, bytes) end,
+      remove = function(rel) return cache:delete(rel) end,
+    } or nil,
+    onBound = function(world, multiplayer, slot) saves.bound(world, multiplayer, slot) end,
+    -- what Cobblemon sent before a switching bind is the old world's
+    onPending = function() party.forget() end,
+    -- a New Game moved to the paired slot as it is: its gifts, operations
+    -- and bag go to the new world again
+    onSwitch = function(kind)
+      if kind == "fresh" then
+        party.rebase()
+        bagObs.rebase()
+      end
+    end,
+  })
   -- M8: the story diffs (story.flags, story.toggles, story.blocks,
   -- story.lit) and field moves from Minecraft (act.field)
   local story = kb.Story.new({ engine = engine, SwapSites = kb.SwapSites, json = kb.json, log = log })
@@ -251,6 +285,9 @@ return function(mod)
       flags = flags,
       ingame = lastFacts.inGame == true,
       port = session.port(),
+      -- M9: the port asked for, and whether the listener fell back from it
+      portConfigured = session.configuredPort(),
+      portFallback = session.portFallback(),
       accepted = stats.accepted,
       sessions = stats.sessions,
       steps = engine.logicStep(),
@@ -278,6 +315,8 @@ return function(mod)
     merge("encounter", engine.encounterCounts())
     merge("item", engine.itemCounts())
     merge("save", saves.stats())
+    -- M9: pairingBinds, pairingCreated, pairingSwitches, pairingPending, ...
+    merge("pairing", pairing.stats())
     merge("pc", pcs.stats())
     merge("story", story.stats())
     merge("field", field.stats())
@@ -329,6 +368,7 @@ return function(mod)
     catalog = kb.catalog,
     socket = function() return require("socket") end,
     port = port,
+    portSpan = PORT_SPAN,
     clock = clock,
     log = log,
     bridge = mod.version,
@@ -422,19 +462,22 @@ return function(mod)
   session.on("party.sync", answered(party.sync))
   -- M6: Cobblemon's Pokedex, and items it used up
   session.on("dex.sync", answered(party.dex))
-  session.on("bag.use", answered(bagObs.use))
-  -- M7: Minecraft saved (log only), Cobblemon's PC closed, session pairing
-  -- (answered at once, re set)
+  -- (M9: not while a save-slot switch waits: the bag isn't the new world's yet)
+  session.on("bag.use", answered(function(data)
+    if pairing.blocked() then return false, "session.pending" end
+    return bagObs.use(data)
+  end))
+  -- M7: Minecraft saved (log only), Cobblemon's PC closed
   session.on("save.done", answered(saves.done))
   session.on("pc.closed", answered(pcs.closed))
+  -- M9: session pairing (act/kb_pairing.lua). The target slot is decided at
+  -- once (so what arrives after the bind is the new world's); the switch and
+  -- session.bound{slot} (re set) come in the step, once the hidden game is on
+  -- that slot.
   session.on("session.bind", function(data, msg, role)
     if not streamRole(msg, role) then return end
-    local slot, code = saves.bind(data)
-    if slot then
-      session.reply(msg, "session.bound", { slot = slot })
-    else
-      session.sendError(code or "bad_message", msg.seq, code or "bad_message")
-    end
+    local ok, code = pairing.bind(data, msg.seq, session.generation())
+    if not ok then session.sendError(code or "bad_message", msg.seq, code or "bad_message") end
   end)
 
   -- The battle and gift seams (lib/kb_engine.lua "battles, gifts, the
@@ -489,16 +532,22 @@ return function(mod)
   mod.events:on("world.stepped", function() pcall(engine.directStepped) end)
   mod.events:on("pokemon.caught", function(payload) pcall(engine.nativeCaught, payload) end)
   -- Every hidden-game save (Game:writeSave emits save.writing before the
-  -- file is written, src/core/Game.lua:1342-1345): Minecraft saves too.
+  -- file is written, src/core/Game.lua:1342-1345): Minecraft saves too
+  -- (except the one before an M9 slot switch).
   mod.events:on("save.writing", function() saves.writing() end)
 
   status.session = sessionId
   status.configure = function(opts)
     if type(opts) == "table" and opts.port ~= nil then
       session.setPort(opts.port)
-      status.port = opts.port
+      status.port, status.portConfigured = session.port(), session.configuredPort()
     end
   end
+  -- M9, for test drivers: the slot id paired with a world, the home slot id,
+  -- and forgetting a world's pairing (its slot stays; the driver deletes it)
+  status.pairedSlot = function(world) return pairing.slotOf(world) end
+  status.homeSlot = function() return pairing.home() end
+  status.forgetWorld = function(world) return pairing.forget(world) end
 
   local PIN_EVERY = 60 -- steps between checks that the display pin still holds
   local steps = 0
@@ -515,6 +564,14 @@ return function(mod)
     tapped = false
     session.step() -- received requests queue in their modules
     local exported = exporter.step()
+    local live = session.established() and kb.Session.STREAM_ROLES[session.role()] == true
+    local generation = session.generation()
+    -- M9: a bind's save-slot switch runs before anything looks at the game
+    -- (it may save the old game and return to the title); its
+    -- session.bound (or error) goes out first in this step
+    local pairOut = {}
+    pairing.step(pairOut, { live = live, generation = generation })
+    local blocked = pairing.blocked()
     local facts = engine.observe()
     lastFacts = facts
     local ev = takeEvents()
@@ -533,8 +590,7 @@ return function(mod)
         if w.phase == "arrive" and w.kind == "blackout" then engine.releaseHeals() end
       end
     end
-    local live = session.established() and kb.Session.STREAM_ROLES[session.role()] == true
-    local generation = session.generation()
+    for i = #pairOut, 1, -1 do table.insert(out, 1, pairOut[i]) end
     -- the step driver answers its requests in `out`, then presses or
     -- releases for this logic step
     mover.step(facts, mode, ev, out, { live = live, generation = generation })
@@ -568,8 +624,9 @@ return function(mod)
     -- balls before a battle that may use them), (M7) a save's save.begin
     -- and Bill's PC's pc.open, then a native special battle's
     -- battle.native and a held battle's battle.start. A nurse heal is
-    -- noticed first, so its party.heal goes out this very step.
-    local link = { live = live, generation = generation }
+    -- noticed first, so its party.heal goes out this very step. (M9: while
+    -- a save-slot switch waits, syncs and save announcements wait too.)
+    local link = { live = live, generation = generation, blocked = blocked }
     saves.watch(link)
     party.step(out, link)
     bagObs.step(out, link)
@@ -594,6 +651,9 @@ return function(mod)
     if steps % PIN_EVERY == 0 then pinOptions(true) end
     status.connected = session.connected()
     status.bound = session.listening()
+    -- M9: the port listened on (after a fallback, not the configured one)
+    status.port, status.portConfigured = session.port(), session.configuredPort()
+    status.portFallback = session.portFallback()
     status.role = session.role()
     status.sessions = session.sessions()
     status.exportState = exporter.state()
@@ -608,6 +668,8 @@ return function(mod)
     local sv = saves.stats()
     status.saves, status.centerSaves, status.sessionBinds = sv.begun, sv.centerWritten, sv.binds
     status.pcHeld = engine.pcHeld()
+    -- M9: the active save slot (0: the flat legacy save) and a waiting switch
+    status.slot, status.pairingPending = engine.saveSlot(), pairing.blocked()
     if steps % 30 == 0 then
       local u, n, s = uiObs.stats(), npcObs.stats(), mirror.stats()
       status.uiOpened, status.uiClosed, status.uiOpen = u.opened, u.closed, u.open
@@ -757,11 +819,26 @@ return function(mod)
   -- CONTINUE re-applies the stored options before this event
   -- (src/core/Game.lua:1502 vs :1533), so pin and re-apply. The loaded
   -- party gets its uids back, then Cobblemon's party (the last sync) again.
-  mod.events:on("save.loaded", function()
+  mod.events:on("save.loaded", function(payload)
+    -- M9: a loaded game belongs to its slot (never "a New Game never saved")
+    pairing.loaded(type(payload) == "table" and payload.save or nil)
     pinOptions(true)
     party.adopt()
     party.reapply()
     saves.restore()
+  end)
+
+  -- M9: BRIDGE PORT changed in the F10 mod manager (ManagerState:setOption,
+  -- src/mods/ManagerState.lua:1090-1112): the listener moves at once.
+  mod.events:on("mod.options_changed", function(payload)
+    if type(payload) ~= "table" or payload.mod ~= mod.id or payload.key ~= "port" then return end
+    local p = validPort(payload.value)
+    if p then
+      session.setPort(p)
+      log.info("net.port_option", { port = p })
+    else
+      log.warn("net.port_option_invalid", {})
+    end
   end)
 
   mod.log:info("gen1-bridge loaded")

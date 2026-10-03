@@ -583,6 +583,7 @@ bytes. A downloaded export is stored as an **export bundle**, which stays under 
 | `activity` | C→S | `activity:"dialogue"\|"cutscene"\|"battle"\|"none"` (speech bubbles) | |
 | `texture.status` | C→S | `ok, slotMapHash?, textures?, reason?` | |
 | `world.index` | S→C | `index, count, hash, part` (the WorldIndex JSON in parts, on join) | yes |
+| `world.slots` | S→C | `index, count, hash, part` (the slot-map JSON in parts, on join, so a joining player can build their own pack against the host's slots; M9) | yes |
 
 **The WorldIndex** ([`protocol/world/world_index.schema.json`](../protocol/world/world_index.schema.json))
 is what the builder writes to `<world>/kantobridge/world_index.json`:
@@ -620,6 +621,50 @@ shared) is laid out for later milestones as:
   facing down, up, left, right);
 - `assets/kantobridge/textures/player/<palette>/surf.png` (the surf sprite, from the export's
   `field.playerSprites.surf`).
+
+#### Multiplayer rules (M9)
+
+- **`world.slots`** follows the `world.index` parts on join and whenever a build publishes; the
+  server sends it only when the slot map's hash equals the WorldIndex's `slotMapHash`, and the client
+  accepts it only when the text's and the parsed map's hashes both match. A client whose pack was made
+  for other slots re-exports its **own** art and rebuilds its pack against the host's slot map (a
+  pack it can't rebuild is held back, so the world shows placeholders rather than wrong art). Art is
+  never sent over the network.
+- **`texture.status`:** `ok:true` carries `slotMapHash` and `textures`; `ok:false` carries `reason`:
+  `no_bridge`, `no_slots` (nothing arrived 15 s after the index), `slot_map_mismatch`, `reload`,
+  `export.<code>`, `pack.<code>`, `pack.io`, `interrupted`, `internal`. Failures retry only when the
+  world changes or the player rejoins; `no_bridge` starts the export once gen1-bridge connects. The
+  pack's root `kantobridge.json` carries `game`, `exportHash`, `slotMapHash` and `textures`.
+- **Activity** reaches other players through Fabric's attachment sync (`kantobridge:activity`, to all
+  but the player); clients draw speech bubbles from it.
+- **Authority:** every client → server message affects only the sender (GameTest-proven for every
+  type).
+- **Per-world save slots:** on `session.bind{world, multiplayer:true}` gen1-bridge pairs the world
+  with its own save slot (created on first use; the world → slot map is kept installation-wide, per
+  game version) and switches the hidden game to it at runtime: at the title it just moves the active
+  slot; from a saved game it first saves that game into its own slot (behind the engine's quick-save
+  gate, not announced as `save.begin`), then returns to the title; a never-saved New Game moves as is
+  into an empty slot, otherwise waits for the title. `session.bound{slot}` comes only once the hidden
+  game is on the slot (possibly much later than the bind); meanwhile a `log` warning
+  `session.switch_waiting` (reason `busy`, `new_game` or `save_failed`) says why, `bag.use` is refused
+  with `error{code:"session.pending"}`, and the client neither relays story data to the server nor
+  world data to gen1-bridge. A singleplayer bind (`multiplayer:false`) keeps the current slot, unless it
+  is a multiplayer world's, in which case the remembered offline slot returns. Errors: `session.no_game`,
+  `session.no_slots`, `session.no_slot`, `session.store_failed`, `session.failed`. After a switch the
+  snapshot shows the title (`ingame:false`).
+- **The client's side of pairing:** it sends `session.bind` on entering a Kanto world and after every
+  reconnect, and accepts only a `session.bound` whose `re` matches its latest bind. Until then it relays
+  nothing between gen1-bridge and the server (story messages wait in order, keeping only the newest
+  `bag.sync`; `pc.open` is answered `pc.closed` at once; server data is kept, newest `party.sync`/
+  `dex.sync` only) and holds the player. If the pairing provably kept the same save (same gen1-bridge
+  session and world), the held messages go on in order; otherwise they are dropped and the client
+  sends `resync`. Refused binds are retried with back-off (5 s doubling to 60 s); `session.no_slots`
+  plays unpaired. (M10 candidates: a `switched` field on `session.bound` so the client needn't guess,
+  and a structured waiting message instead of the `log` code.)
+- **Ports on one PC:** each Gen1Recomp instance (a separate install per player) has its own port (the
+  BRIDGE PORT mod option; Minecraft's `config/kantobridge-client.json` or `-Dkantobridge.port`). If the
+  configured port stays busy or refused for 3 s, gen1-bridge takes the first free one of the next 8
+  (never by address reuse) and reports it (`debug.status`: `port`, `portConfigured`, `portFallback`).
 
 ## Relay to the Minecraft server
 

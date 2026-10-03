@@ -326,3 +326,60 @@ def test_a_reloaded_instance_closes_the_old_ones_sockets_first():
 def test_the_first_instance_finds_no_one_to_replace():
     rig = Rig()
     assert not any("bridge.replaced_instance" in line for line in rig.logs())
+
+
+# ------------------------------------------------------------ M9: two instances on one PC
+
+
+def test_a_busy_port_falls_back_and_says_so():
+    rig = Rig()
+    fake = rig.b.net
+    fake.occupy(fake, b"127.0.0.1", 27151)  # another Gen1Recomp instance keeps it
+    rig.step()
+    assert not rig.listening(27151) and not rig.listening(27152)
+    assert rig.status.port == 27151 and rig.status.portFallback is False
+    rig.advance(3)
+    rig.step()
+    assert rig.listening(27152)
+    assert (rig.status.port, rig.status.portConfigured, rig.status.portFallback) == (27152, 27151, True)
+    assert "[info] [gen1-bridge] net.listening configured=27151 fallback=true host=127.0.0.1 port=27152" \
+        in rig.logs()
+    rig.world()
+    peer = rig.connect(port=27152)
+    peer.hello()
+    peer.messages()
+    seq = peer.send("debug.status")
+    rig.step()
+    reply = [m for m in peer.messages() if m["type"] == "debug.status" and m.get("re") == seq][0]["data"]
+    assert (reply["port"], reply["portConfigured"], reply["portFallback"]) == (27152, 27151, True)
+    assert fake.reuseaddrSet == 0
+
+
+def test_a_driver_port_falls_back_the_same_way():
+    rig = Rig()
+    fake = rig.b.net
+    fake.occupy(fake, b"127.0.0.1", 27160)
+    fake.occupy(fake, b"127.0.0.1", 27161)
+    rig.status.configure(rig.b.to_lua({"port": 27160}))
+    rig.step()
+    rig.advance(3)
+    rig.step()
+    assert rig.listening(27162)
+    assert (rig.status.port, rig.status.portConfigured, rig.status.portFallback) == (27162, 27160, True)
+
+
+def test_the_port_option_applies_at_once_from_the_mod_manager():
+    rig, peer, _ = established()
+    payload = rig.b.to_lua({"mod": "gen1-bridge", "key": "port", "value": 27165})
+    rig.b.emit("mod.options_changed", payload)
+    rig.step()
+    assert peer.closed() and rig.listening(27165) and not rig.listening(27151)
+    assert rig.status.port == 27165 and rig.status.portConfigured == 27165
+    assert "[info] [gen1-bridge] net.port_option port=27165" in rig.logs()
+    # another mod's option, another key, a bad value: nothing moves
+    rig.b.emit("mod.options_changed", rig.b.to_lua({"mod": "other-mod", "key": "port", "value": 27166}))
+    rig.b.emit("mod.options_changed", rig.b.to_lua({"mod": "gen1-bridge", "key": "colour", "value": 27167}))
+    rig.b.emit("mod.options_changed", rig.b.to_lua({"mod": "gen1-bridge", "key": "port", "value": 80}))
+    rig.step()
+    assert rig.listening(27165) and rig.status.portConfigured == 27165
+    assert "[warn] [gen1-bridge] net.port_option_invalid" in rig.logs()

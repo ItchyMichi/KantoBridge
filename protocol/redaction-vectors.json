@@ -576,6 +576,16 @@
         "hash": "a1b2c3d4e5f60718",
         "part": "<rom:str:36:aaa8570b>"
       }
+    },
+    {
+      "type": "world.slots",
+      "seq": 11,
+      "redacted": {
+        "index": 0,
+        "count": 1,
+        "hash": "a1b2c3d4e5f60718",
+        "part": "<rom:str:24:7c5b9600>"
+      }
     }
   ]
 }

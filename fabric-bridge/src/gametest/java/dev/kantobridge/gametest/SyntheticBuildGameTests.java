@@ -149,6 +149,15 @@ public class SyntheticBuildGameTests implements FabricGameTest {
 		helper.assertTrue(index.toJson().equals(golden(helper)), "the built WorldIndex differs from the golden file");
 		helper.assertTrue(index.hash().equals(WorldIndexSync.currentHash(helper.getLevel().getServer())), "the new index was not published");
 		helper.assertTrue(Files.isRegularFile(task.worldDir().resolve("kantobridge/slot_map.json")), "slot map not written");
+		// M9: the build's slot map goes out with its index (world.slots), and the files read back on a restart do the same.
+		helper.assertTrue(index.slotMapHash().equals(WorldIndexSync.currentSlotsHash(helper.getLevel().getServer())),
+				"the build's slot map was not published with its index");
+		if (task.worldDir().equals(KantoWorldBuilder.worldDir(helper.getLevel()))) {
+			WorldIndexSync.load(helper.getLevel().getServer());
+			helper.assertTrue(index.hash().equals(WorldIndexSync.currentHash(helper.getLevel().getServer()))
+					&& index.slotMapHash().equals(WorldIndexSync.currentSlotsHash(helper.getLevel().getServer())),
+					"the world's index and slot map, read back from its folder, aren't the ones published");
+		}
 		helper.assertTrue(Files.isRegularFile(task.worldDir().resolve("kantobridge/build_report.json")), "report not written");
 		helper.assertTrue(Files.isRegularFile(task.worldDir().resolve("datapacks/kantobridge_generated/pack.mcmeta")), "datapack not written");
 		helper.assertTrue(Files.isRegularFile(task.worldDir().resolve("datapacks/kantobridge_generated/data/kantobridge/habitat_pools/test_town.json")),

@@ -80,6 +80,12 @@
 -- party; a withdrawn member stays in it until a sync names it. Renames go
 -- out once each, queued while no client is connected.
 --
+-- M9 (save pairing, act/kb_pairing.lua): a session.bind that switches save
+-- slots forgets every sync and Pokedex that came before it, waiting or
+-- applied (they are the world being left's: they must never reach the
+-- paired game, nor apply again after its New Game or CONTINUE); syncs that
+-- arrive while the switch waits wait with it (link.blocked).
+--
 -- Logs show codes, kinds, ids and counts only; nicknames, species and moves
 -- are never logged.
 
@@ -236,6 +242,7 @@ function Party.new(opts)
     -- M8 (wave 2)
     takes = 0, deposits = 0, withdraws = 0, opsResent = 0, opsConfirmed = 0, opsGivenUp = 0,
     excluded = 0, renames = 0, catches = 0,
+    forgotten = 0, -- M9: syncs dropped by a save-slot switch
   }
   local deferredNow = false
   local seen = {}   -- give ids counted
@@ -588,14 +595,16 @@ function Party.new(opts)
       sendRenames(out)
       resend = false
     end
-    if pendingDex and engine.inGame() then
+    -- M9: while a save-slot switch waits (link.blocked), the new world's
+    -- syncs wait for the game they belong to
+    if pendingDex and engine.inGame() and not link.blocked then
       local data = pendingDex
       pendingDex = nil
       local ok = pcall(applyDex, data)
       if not ok and log then log.warn("party.dex_failed", { count = counts.dexSyncs }) end
     end
     if pending then
-      if engine.partySafe() then
+      if engine.partySafe() and not link.blocked then
         local data = pending
         pending = nil
         deferredNow = false
@@ -624,6 +633,16 @@ function Party.new(opts)
   function party.reapply()
     if lastSync and not pending then pending = lastSync end
     if lastDex and not pendingDex then pendingDex = lastDex end
+  end
+
+  -- M9: a session.bind that switches save slots: everything Cobblemon sent
+  -- before it belongs to the world being left, so it never reaches the
+  -- paired game (the client sends the new world's again once it is bound).
+  function party.forget()
+    local dropped = (pending and 1 or 0) + (pendingDex and 1 or 0)
+    pending, lastSync, pendingDex, lastDex = nil, nil, nil, nil
+    deferredNow = false
+    counts.forgotten = counts.forgotten + dropped
   end
 
   function party.stats()

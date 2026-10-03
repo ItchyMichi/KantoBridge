@@ -139,9 +139,18 @@ public final class ArtCatalog {
 				surfSprite == null ? Set.of() : waterPalettes);
 	}
 
-	/** The slot map of the whole export. */
+	/** The slot map of the whole export (or the host's, see {@link #withSlotMap}). */
 	public SlotMap slotMap() {
 		return this.slotMap;
+	}
+
+	/**
+	 * This export's art, assigned to another slot map: a multiplayer host's (docs/PLAN.md §4.3 "Multiplayer clients"). The
+	 * world's tile blocks name the host's slots, so a joining player's pack draws their own art into exactly those slots;
+	 * a key their export lacks gets a blank tile, one the host's map lacks isn't drawn at all.
+	 */
+	public ArtCatalog withSlotMap(SlotMap host) {
+		return new ArtCatalog(host, this.tilesPerRow, this.waterTiles, this.flowerAtlases, this.npcs, this.surfSprite, this.surfPalettes);
 	}
 
 	/** Tiles per atlas row, by atlas image id. */

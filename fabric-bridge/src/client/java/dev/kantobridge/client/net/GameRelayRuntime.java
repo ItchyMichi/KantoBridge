@@ -7,6 +7,7 @@ import dev.kantobridge.client.bridge.BridgeRuntime;
 import dev.kantobridge.client.bridge.Dispatcher;
 import dev.kantobridge.client.ui.UiRuntime;
 import dev.kantobridge.proto.Catalog;
+import dev.kantobridge.proto.Envelope;
 import dev.kantobridge.proto.MsgTypes;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
@@ -20,6 +21,9 @@ import org.slf4j.LoggerFactory;
  * Minecraft glue for {@link GameRelay} (battles and Pokémon between gen1-bridge and the server) and the
  * {@link ActivityTracker}: gen1-bridge's messages come through the {@link Dispatcher}, the server's through
  * {@link ClientRelay}, both on the client thread. Logs carry codes and counts only.
+ *
+ * <p>M9: the save pairing's {@link SessionGate} (in {@link SessionRuntime}) is asked first: gen1-bridge's requests wait in
+ * it while a world's pairing isn't answered, and the ports send nothing to the server, or to gen1-bridge, meanwhile.
  */
 public final class GameRelayRuntime {
 	private static final Logger LOGGER = LoggerFactory.getLogger("kantobridge");
@@ -35,12 +39,14 @@ public final class GameRelayRuntime {
 		this.relay = new GameRelay(new GameRelay.Port() {
 			@Override
 			public boolean toBridge(String type, JsonObject data) {
-				return bridge.client().send(type, data);
+				SessionGate gate = gate();
+				return (gate == null || gate.bridgeOpen()) && bridge.client().send(type, data);
 			}
 
 			@Override
 			public boolean toServer(String type, JsonObject data) {
-				return ClientRelay.get().send(type, data, null);
+				SessionGate gate = gate();
+				return (gate == null || gate.serverOpen()) && ClientRelay.get().send(type, data, null);
 			}
 
 			@Override
@@ -58,11 +64,11 @@ public final class GameRelayRuntime {
 		GameRelayRuntime runtime = new GameRelayRuntime(bridge);
 		instance = runtime;
 		Dispatcher dispatcher = bridge.dispatcher();
-		dispatcher.on(MsgTypes.BATTLE_START, message -> runtime.relay.fromBridge(message, runtime.now()));
+		dispatcher.on(MsgTypes.BATTLE_START, runtime::fromBridge);
 		for (String type : GameRelay.PARTY_REQUESTS) {
-			dispatcher.on(type, message -> runtime.relay.fromBridge(message, runtime.now()));
+			dispatcher.on(type, runtime::fromBridge);
 		}
-		dispatcher.on(MsgTypes.BAG_SYNC, message -> runtime.relay.fromBridge(message, runtime.now()));
+		dispatcher.on(MsgTypes.BAG_SYNC, runtime::fromBridge);
 		dispatcher.on(MsgTypes.SNAPSHOT, message -> runtime.relay.bridgeSnapshot(message.data(), runtime.now()));
 		ClientRelay server = ClientRelay.get();
 		server.register(MsgTypes.BATTLE_RESULT, message -> runtime.relay.fromServer(message, runtime.now()));
@@ -81,6 +87,21 @@ public final class GameRelayRuntime {
 		// After BridgeRuntime's tick, which drains the bridge's messages.
 		ClientTickEvents.END_CLIENT_TICK.register(runtime::tick);
 		bridge.addDebugLine(runtime::debugLine);
+	}
+
+	/** The save pairing's gate, once the session glue exists (it is set up after this runtime). */
+	private static @Nullable SessionGate gate() {
+		SessionRuntime session = SessionRuntime.get();
+		return session == null ? null : session.gate();
+	}
+
+	/** One of gen1-bridge's requests for the server: to the relay, unless the gate holds it until the world is paired. */
+	private void fromBridge(Envelope message) {
+		SessionGate gate = gate();
+		if (gate != null && gate.admit(message) != SessionGate.Admit.PASS) {
+			return;
+		}
+		this.relay.fromBridge(message, this.now());
 	}
 
 	/** The hidden game's Pokédex goes up only when the protocol gives {@code dex.sync} a client-to-server leg. */

@@ -73,6 +73,11 @@ public final class RelayService {
 		this.handlers.remove(type);
 	}
 
+	/** The handler registered for {@code type}, or null; tests that stand in for one put it back afterwards. */
+	public @Nullable Handler handler(String type) {
+		return this.handlers.get(type);
+	}
+
 	/**
 	 * Observes every message {@link #send} accepts, before it goes out (mock players have no client to receive it).
 	 * Close the returned handle to stop.

@@ -2,6 +2,7 @@ package dev.kantobridge.pokemon;
 
 import com.cobblemon.mod.common.api.Priority;
 import com.cobblemon.mod.common.api.events.CobblemonEvents;
+import com.cobblemon.mod.common.api.events.pokemon.TradeEvent;
 import com.cobblemon.mod.common.api.events.pokemon.evolution.EvolutionTestedEvent;
 import com.cobblemon.mod.common.api.moves.BenchedMove;
 import com.cobblemon.mod.common.api.moves.Move;
@@ -17,6 +18,8 @@ import com.cobblemon.mod.common.battles.BattleRegistry;
 import com.cobblemon.mod.common.pokemon.Pokemon;
 import com.cobblemon.mod.common.pokemon.Species;
 import com.cobblemon.mod.common.pokemon.evolution.variants.ItemInteractionEvolution;
+import com.cobblemon.mod.common.trade.PlayerTradeParticipant;
+import com.cobblemon.mod.common.trade.TradeParticipant;
 import com.cobblemon.mod.common.util.PlayerExtensionsKt;
 import com.google.gson.JsonObject;
 import dev.kantobridge.KantoBridge;
@@ -27,6 +30,7 @@ import dev.kantobridge.proto.MsgTypes;
 import dev.kantobridge.proto.ProtoJson;
 import dev.kantobridge.world.DataException;
 import dev.kantobridge.world.DataReader;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
@@ -68,6 +72,11 @@ import org.jetbrains.annotations.Nullable;
  * (the move it replaces stays re-learnable, P13), Rare Candy gives the experience to the next level (Cobblemon's level-up
  * evolution prompt follows, P14).</li>
  * <li>Evolutions into species beyond 151 are blocked (P14).</li>
+ * <li><b>Player trades</b> (DESIGN §8, M9) run on Cobblemon's own trade; both players' {@code party.sync} (and
+ * {@code dex.sync}, from Cobblemon's Pokédex events) follow from the stores' change observers, debounced as ever, and a
+ * trade evolution is Cobblemon's own accept prompt for the receiver. A {@code give} id belongs to the hidden game that
+ * gave the Pokémon, so a Pokémon that changes hands loses it: the receiver's gen1-bridge must never match it against
+ * one of its own gifts.</li>
  * </ul>
  *
  * Logs carry codes and counts only, never names. Server thread only.
@@ -110,6 +119,7 @@ public final class PartyService {
 	private static final AtomicLong REPEATED_GIVES = new AtomicLong();
 	private static final AtomicLong EVOLUTIONS_BLOCKED = new AtomicLong();
 	private static final AtomicLong ITEMS_USED = new AtomicLong();
+	private static final AtomicLong TRADES = new AtomicLong();
 	/** Rare Candy's experience source: a side mod. */
 	static final String EXPERIENCE_SOURCE = "kantobridge";
 
@@ -132,6 +142,9 @@ public final class PartyService {
 			event.cancel();
 		});
 		CobblemonEvents.EVOLUTION_TESTED.subscribe(Priority.LOWEST, PartyService::filterEvolution);
+		CobblemonEvents.TRADE_EVENT_POST.subscribe(Priority.NORMAL, event -> {
+			onTraded(event);
+		});
 		ServerTickEvents.END_SERVER_TICK.register(PartyService::tick);
 		ServerPlayerEvents.LEAVE.register(PartyService::unwatch);
 		ServerLifecycleEvents.SERVER_STOPPED.register(server -> {
@@ -458,6 +471,28 @@ public final class PartyService {
 		RelayService.get().sendError(player, "bad_message", message.seq());
 	}
 
+	// ---- player trades (M9) ----
+
+	/** After a Cobblemon trade between two players: the traded Pokémon forget their gift ids; both parties sync. */
+	static void onTraded(TradeEvent.Post event) {
+		int cleared = 0;
+		for (Pokemon pokemon : List.of(event.getTradeParticipant1Pokemon(), event.getTradeParticipant2Pokemon())) {
+			if (pokemon.getPersistentData().contains(GIVE_KEY)) {
+				pokemon.getPersistentData().remove(GIVE_KEY);
+				// Stores save on change; the change also marks the new owner's party for its sync.
+				pokemon.onChange(null);
+				cleared++;
+			}
+		}
+		for (TradeParticipant participant : List.of(event.getTradeParticipant1(), event.getTradeParticipant2())) {
+			if (participant instanceof PlayerTradeParticipant player) {
+				markDirty(player.getPlayer());
+			}
+		}
+		long count = TRADES.incrementAndGet();
+		KantoBridge.LOGGER.info("party: two players traded ({} gift ids cleared); {} trades so far", cleared, count);
+	}
+
 	// ---- evolutions (P14) ----
 
 	static void filterEvolution(EvolutionTestedEvent event) {
@@ -502,6 +537,11 @@ public final class PartyService {
 	/** {@code party.item}s applied. */
 	public static long itemsUsed() {
 		return ITEMS_USED.get();
+	}
+
+	/** Cobblemon trades between players seen. */
+	public static long trades() {
+		return TRADES.get();
 	}
 
 	/** True while the player's party is followed (after Cobblemon synchronised their data). */

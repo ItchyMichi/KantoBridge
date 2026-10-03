@@ -46,6 +46,10 @@ import org.jetbrains.annotations.Nullable;
  *
  * Correlation is by the ids in {@code data}; the envelopes' {@code seq} is new on each hop. Plain Java, client thread
  * only; {@link GameRelayRuntime} is the glue.
+ *
+ * <p>M9: the save pairing ({@link SessionGate}) gates both hops through the glue's ports while a world's pairing isn't
+ * answered; when it opens, {@link #resendSyncs} and {@link #flushUses} catch gen1-bridge up, and a stale opening or a
+ * world change drops what was queued for another world ({@link #dropQueue}, {@link #dropUses}).
  */
 public final class GameRelay {
 	/** Where messages go. */
@@ -219,11 +223,7 @@ public final class GameRelay {
 	 * that waited for the link go out after the syncs.
 	 */
 	public void bridgeSnapshot(JsonObject snapshot, long now) {
-		this.syncs.forEach((type, data) -> {
-			if (this.port.toBridge(type, data.deepCopy())) {
-				this.stats.syncsForwarded++;
-			}
-		});
+		this.resendSyncs();
 		JsonElement ingame = snapshot.get("ingame");
 		if (ingame != null && ingame.isJsonPrimitive() && ingame.getAsJsonPrimitive().isBoolean() && ingame.getAsBoolean()) {
 			JsonElement dex = snapshot.get("dex");
@@ -231,10 +231,44 @@ public final class GameRelay {
 				this.port.toServer(MsgTypes.DEX_SYNC, dex.getAsJsonObject().deepCopy());
 			}
 		}
+		this.flushUses();
+	}
+
+	/** The server's newest {@code party.sync} and {@code dex.sync} go to gen1-bridge again (a snapshot, a pairing). */
+	public void resendSyncs() {
+		this.syncs.forEach((type, data) -> {
+			if (this.port.toBridge(type, data.deepCopy())) {
+				this.stats.syncsForwarded++;
+			}
+		});
+	}
+
+	/** {@code bag.use}s that waited for gen1-bridge go to it, in order, as far as it takes them. */
+	public void flushUses() {
 		while (!this.pendingUses.isEmpty() && this.port.toBridge(MsgTypes.BAG_USE, this.pendingUses.peekFirst().deepCopy())) {
 			this.pendingUses.removeFirst();
 			this.stats.bagUsesForwarded++;
 		}
+	}
+
+	/** Drops the requests and the bag waiting for the server (another world's); returns how many. */
+	public int dropQueue() {
+		int dropped = this.queue.size();
+		if (dropped > 0) {
+			this.queue.clear();
+			this.warn("party.queue_dropped");
+		}
+		return dropped;
+	}
+
+	/** Drops the {@code bag.use}s waiting for gen1-bridge (another world's); returns how many. */
+	public int dropUses() {
+		int dropped = this.pendingUses.size();
+		if (dropped > 0) {
+			this.pendingUses.clear();
+			this.warn("bag.uses_dropped");
+		}
+		return dropped;
 	}
 
 

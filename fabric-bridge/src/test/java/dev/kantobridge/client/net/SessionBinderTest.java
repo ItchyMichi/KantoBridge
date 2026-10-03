@@ -25,14 +25,15 @@ class SessionBinderTest {
 		final List<Sent> server = new ArrayList<>();
 		final List<String> warnings = new ArrayList<>();
 		boolean bridgeUp = true;
+		long seq;
 
 		@Override
-		public boolean toBridge(String type, JsonObject data) {
+		public long toBridge(String type, JsonObject data) {
 			if (!this.bridgeUp) {
-				return false;
+				return -1;
 			}
 			this.bridge.add(new Sent(type, data.deepCopy()));
-			return true;
+			return ++this.seq;
 		}
 
 		@Override
@@ -169,5 +170,44 @@ class SessionBinderTest {
 		assertTrue(this.links.bridge.isEmpty());
 		assertNull(binder.world());
 		assertEquals(List.of("session.bad_world"), this.links.warnings, "warned once, not every tick");
+	}
+
+	@Test
+	void anAnswerToAnOlderBindIsIgnored() throws Exception {
+		SessionBinder binder = new SessionBinder(this.links, false);
+		binder.linkUp();
+		binder.world(WORLD, true);
+		binder.tick();
+		long first = binder.sentSeq();
+		binder.world(OTHER, true);
+		binder.tick();
+		long second = binder.sentSeq();
+		assertTrue(second > first);
+		// gen1-bridge answered the first world's bind just before the second reached it.
+		assertFalse(binder.onBound(bound(5), first));
+		assertNull(binder.slot());
+		assertTrue(this.links.warnings.contains("session.stale_bound"));
+		assertTrue(binder.onBound(bound(6), second));
+		assertEquals(6, binder.slot());
+		// Without a re (an older gen1-bridge), the answer is taken as the latest bind's.
+		binder.world(WORLD, true);
+		binder.tick();
+		assertTrue(binder.onBound(bound(7), null));
+		assertEquals(7, binder.slot());
+	}
+
+	@Test
+	void aRefusedBindIsSentAgainOnRequest() {
+		SessionBinder binder = new SessionBinder(this.links, false);
+		binder.linkUp();
+		binder.world(WORLD, true);
+		binder.tick();
+		binder.tick();
+		assertEquals(1, this.links.bridge.size());
+		binder.rebind();
+		binder.tick();
+		assertEquals(2, this.links.bridge.size());
+		assertBind(this.links.bridge.get(1), WORLD, true);
+		assertEquals(2, binder.sentSeq());
 	}
 }

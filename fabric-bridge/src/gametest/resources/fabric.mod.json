@@ -30,7 +30,9 @@
 			"dev.kantobridge.gametest.FlashGameTests",
 			"dev.kantobridge.gametest.StoryRulesGameTests",
 			"dev.kantobridge.gametest.DaycareGameTests",
-			"dev.kantobridge.gametest.BattleMusicGameTests"
+			"dev.kantobridge.gametest.BattleMusicGameTests",
+			"dev.kantobridge.gametest.MultiplayerGameTests",
+			"dev.kantobridge.gametest.PlayerTradeGameTests"
 		]
 	},
 	"depends": {

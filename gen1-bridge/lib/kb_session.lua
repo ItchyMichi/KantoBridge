@@ -37,7 +37,8 @@ end
 -- opts:
 --   json, Net, Proto, catalog   modules (kb_json, kb_net, kb_proto, kb_catalog)
 --   socket       LuaSocket, or a function returning it (resolved lazily)
---   port         listening port
+--   port         listening port (the configured one)
+--   portSpan, fallbackAfter   M9: kb_net's fallback when the port is busy
 --   clock        seconds (love.timer.getTime in game)
 --   log          kb_log logger
 --   bridge       gen1-bridge's version string
@@ -67,6 +68,8 @@ function Session.new(opts)
   net = opts.Net.new({
     socket = opts.socket,
     port = opts.port,
+    portSpan = opts.portSpan,
+    fallbackAfter = opts.fallbackAfter,
     clock = clock,
     log = log,
     maxLine = catalog.maxLineBytes,
@@ -219,6 +222,8 @@ function Session.new(opts)
 
   function session.setPort(port) net.setPort(port) end
   function session.port() return net.port() end
+  function session.configuredPort() return net.configuredPort() end
+  function session.portFallback() return net.fallback() end
   function session.listening() return net.listening() end
   function session.connected() return net.connected() end
   function session.established() return established end

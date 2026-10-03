@@ -516,6 +516,13 @@
       "rom": true,
       "redact": ["/part"],
       "schema": "messages/world.index.schema.json"
+    },
+    "world.slots": {
+      "legs": ["s2c"],
+      "re": "never",
+      "rom": true,
+      "redact": ["/part"],
+      "schema": "messages/world.slots.schema.json"
     }
   },
   "exports": {

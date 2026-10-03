@@ -16,8 +16,8 @@ new items in [PLAYTEST.md](PLAYTEST.md) and a commit titled `M<n>: <title>`.
 | M5 | Opening, Oak's cutscene, starter and rival battle | **done** | 2026-10-03 | `eb9c570` |
 | M6 | Route 1, habitat pools, catching, party/Pokédex/bag sync | **done** | 2026-10-03 | `b603f16` |
 | M7 | Viridian City (Pokémon Center, Mart, PC, money, trainers, saving) | **done** | 2026-10-03 | `46e5573` |
-| M8 | The rest of Kanto (single player) | **done** | 2026-10-03 | wave 1 `20e43b9`, wave 2 `559daa9`, final `M8: the rest of Kanto` |
-| M9 | Multiplayer | not started | | |
+| M8 | The rest of Kanto (single player) | **done** | 2026-10-03 | wave 1 `20e43b9`, wave 2 `559daa9`, final `aaf208c` |
+| M9 | Multiplayer | **done** | 2026-10-03 | `M9: multiplayer` |
 | M10 | Reliability, performance and launch | not started | | |
 
 ## Pre-flight (PLAN §0.6)
@@ -109,6 +109,13 @@ new items in [PLAYTEST.md](PLAYTEST.md) and a commit titled `M<n>: <title>`.
   and the **full real build: 220 of 220 maps, 0 warnings, 0 overlaps, 0 unplaced, in 57 s**), then
   `gradlew build`: **479 JUnit**, **73/73 GameTests**, mixin remap check (6 targets). The user's
   `saves/Kanto` holds all of Kanto.
+- **M9:** `tools/check.sh --e2e`: pytest **1275 passed** (840 Lua; e2e adds per-world save pairing
+  on the real test instance: worlds A/B on slots 2/3 across a restart, a saved game switched after
+  its own save, an unsaved New Game waiting, singleplayer back to the offline slot whose listing is
+  unchanged, and the port fallback; two stand-in pairs side by side), the full real build (220 maps,
+  0 warnings), then `gradlew build`: **525 JUnit**, **80/80 GameTests** (authority for every
+  client→server type, two players' collision, `world.slots`, the activity sync, a player trade and a
+  player battle with real Showdown), mixin remap and target checks.
 - **Early full-Kanto smoke build** (not an M2 gate; M8 owns it), `build_world.py --maps all` into
   `saves/KantoFullE2E`: 219 of 220 reachable maps (36 surface, 183 interiors on 14 layers, 5 moved
   sideways), **2,480,041 blocks in 2,126 chunks in 59 s** (plan 5.9 s, place 53 s), 12,539 story
@@ -368,7 +375,7 @@ new items in [PLAYTEST.md](PLAYTEST.md) and a commit titled `M<n>: <title>`.
     movement sync unlinks (relinking puts the player back on the hidden cell), our screens wait, and A,
     START and clicks do nothing. **M6 consequence:** Cobblemon's Run (walking away) can't work, so M6
     must end wild battles as `fled` on `BATTLE_FLEE_ATTEMPT`.
-51. The `activity` attachment isn't persisted or synced to other clients yet (M9). Wild kinds are
+51. The `activity` attachment isn't persisted (synced to other clients since M9). Wild kinds are
     answered `aborted` (`unsupported_kind`) until M6.
 52. **The opening needed no `intro.oak_speech.build` wrap:** M4's UI observer already turns both
     naming steps into `ui.open{naming}` answered by `ui.name`, and survives hot reload. Oak's escort
@@ -598,6 +605,46 @@ new items in [PLAYTEST.md](PLAYTEST.md) and a commit titled `M<n>: <title>`.
 - **Wave 3 (done):** the remaining e2e scenarios (11), the full real build gate, rebuilding the user's world
   as all of Kanto, and the badge-by-badge play-test checklist.
 
+**M9**
+
+89. **Texture flow for joining players:** `world.slots` sent after `world.index` (only when its hash
+    matches the index); a mismatching local pack makes the client re-export its own art through
+    `ExportClient` and rebuild against the host's slot map, every time (even with a bundle already on
+    disk); a pack it can't rebuild is held back in memory so the world shows the jar's placeholders.
+    `texture.status` reasons as in PROTOCOL.md.
+90. **Speech bubbles** (signs in a white box: `…` dialogue, `▶` cutscene, `⚔` battle; up to 64
+    blocks, hidden by walls and F1) from the `kantobridge:activity` attachment, now synced to other
+    clients (`syncWith`, all but the player). **Blockade fading:** other players standing in a cell
+    closed for you render at about 55% alpha (vanilla's translucent-body path; held items, cape and
+    shoulder Pokémon hidden meanwhile); object, closed-tile and boulder cells count, water doesn't. A
+    new `verifyMixinTargets` check (in `check`) covers INVOKE targets the remap check doesn't inspect.
+91. **Trades:** after Cobblemon's `TRADE_EVENT_POST` both traded Pokémon lose their `give` id and both
+    parties sync; player battles were already covered by the after-battle syncs.
+92. **Two dev clients:** a `runClient2` run config (Player2, `local/minecraft-p2`, port 27152).
+    **Two dev clients can't share a LAN world** (Minecraft's integrated server authenticates guests
+    with Mojang, which dev accounts fail), so the documented multiplayer setup is the local dedicated
+    dev server (`runServer`, `online-mode=false`) with two clients.
+
+93. **Per-world save slots switch at runtime** (PLAN §8's `--slot` fallback wasn't needed, though
+    the pairing file exists for a launcher: `<install>/mod_cache/gen1-bridge/session/pairings.json`,
+    installation-wide in `mod.cache` because `mod.storage` is per playthrough; written via `.tmp`
+    with a `.bak`). New slots appear in Gen1Recomp's launcher as `MULTIPLAYER <8 hex>`. A
+    singleplayer bind returns from a multiplayer slot to the remembered offline slot. Verified on the
+    test instance: worlds A/B → slots 2/3 across a restart, a saved game switched after its own save,
+    an unsaved New Game waiting, and the offline save's listing (names, sizes, times) unchanged.
+94. **Ports:** the BRIDGE PORT mod option (F10 mod manager, applied at once) plus an automatic
+    fallback to the next free of 8 ports after 3 s (also covering Windows' excluded port ranges);
+    a second player on one PC uses a **second install** (two processes of one install would share
+    the slot registry and pairing file: documented, not prevented).
+96. **Client pairing gate** (`SessionGate`): nothing is relayed between a bind and its matching
+    `session.bound`; held story messages replay only when the pairing provably kept the same save,
+    otherwise they're dropped and the client resyncs (on a first pairing that can lose a one-shot
+    message sent in that window: M10 adds `session.bound.switched`); refused binds retry with
+    back-off; `session.no_slots` plays unpaired; a world whose id never arrives opens unpaired after
+    10 s; the HUD shows the waiting reason.
+95. **Red/Blue guests** need nothing more (grass/cave suppressed; surf, fish, palettes, tiles and
+    swap sites are identical between Red and Blue); pairings are kept per game version.
+
 ## Open issues
 
 - Harmless noise: the Kotlin plugin makes Fabric Loader warn "Class path entries reference missing
@@ -649,6 +696,17 @@ new items in [PLAYTEST.md](PLAYTEST.md) and a commit titled `M<n>: <title>`.
   their cell is fixed by a fade and teleport afterwards. If Cobblemon's battle engine crashes it
   writes `battle_logs/<id>.txt` (with names) into the run folder (`local/minecraft`, or
   `fabric-bridge/build/run/gameTest` for GameTests: both git-ignored).
+- **Questions for the user (from M9's save pairing):** (1) switching a multiplayer world while a
+  saved game is running saves that game into its own slot first, then returns to the title (never
+  losing progress): keep that, or refuse and wait for you to quit to the title? (2) Gen1Recomp
+  remembers the last active slot, so playing it on its own after a multiplayer session continues that
+  world's slot until a singleplayer world binds again: should the bridge restore your offline slot
+  when Minecraft disconnects at the title, or should the launcher pass `--slot`?
+- **Question for the user (from M9):** should a dev-only switch let a LAN host accept offline
+  guests, so two dev clients can share a LAN world? For now the two-client setup uses the local
+  dedicated dev server (`runServer`, `online-mode=false`), which DESIGN's "a server, or LAN" allows.
+- Other players' surfing isn't drawn yet (the surf sprite is local only), so a surfer appears to stand
+  on the water to others; syncing the surf flag like the activity would fix it.
 - **Question for the user (from M7):** because Gen1Recomp writes its live options on every save,
   gen1-bridge's pinned display options (classic: no voxel, tilt, zoom or wide battle) and FAST text
   speed end up in `local/gen1recomp/options.lua`. If you also play Gen1Recomp without the bridge,
@@ -690,3 +748,4 @@ Nothing.
 - PLAYTEST.md M6: wild Pokémon on Route 1, catching, the Pokédex, Poké Ball and Potion counts.
 - PLAYTEST.md M7: the nurse and saving, the Mart, Bill's PC, a trainer, one blackout, save/reload.
 - PLAYTEST.md M8: the whole story, badge by badge, with field moves and the endgame.
+- PLAYTEST.md M9: two players on one PC (a second Gen1Recomp install, the dev server, two clients).

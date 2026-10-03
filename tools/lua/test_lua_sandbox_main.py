@@ -34,6 +34,7 @@ LIB_FILES = [
     "act/kb_battle.lua",
     "act/kb_party.lua",
     "act/kb_save.lua",
+    "act/kb_pairing.lua",
     "act/kb_pc.lua",
     "export/kb_cells.lua",
     "export/kb_images.lua",

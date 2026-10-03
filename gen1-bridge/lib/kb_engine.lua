@@ -3280,7 +3280,8 @@ function Engine.new(opts)
   end
 
   -- The reason of the save being written right now (inside writeSave's
-  -- save.writing): "center" for the center save, else nil.
+  -- save.writing): "center" for the center save, "switch" for the save
+  -- before a slot switch (M9, engine.switchSave), else nil.
   function engine.savingReason()
     local st = type(game) == "table" and rawget(game, STATE_SLOT) or nil
     return type(st) == "table" and st.saving or nil
@@ -4371,6 +4372,251 @@ function Engine.new(opts)
       return done == true, what
     end
 
+  end
+
+  -- ------------------------------------------------------------ save slots, online pairing (M9)
+  --
+  -- DESIGN section 8 "Saving": each multiplayer world gets its own paired
+  -- online story save, kept apart from the offline one (act/kb_pairing.lua).
+  -- Gen1Recomp keeps a version's playthroughs in numbered slots,
+  -- saves/<version>/slot<N>.lua (src/core/SaveData.lua:1222-1264),
+  -- registered in options.lua as saveSlots[version] = { list, active, names }
+  -- (:1295-1313, read through SaveData.loadOptions :993-1032). The ACTIVE
+  -- slot is where SaveData.save (:2585-2638) and SaveData.load (:2645-2684)
+  -- land, through saveNames (:1440-1453), which resolves it once per process
+  -- (ensureSlots :1407-1438: an existing registry wins; else a flat legacy
+  -- save is migrated into slot1, :1338-1373; else orphaned slot files are
+  -- adopted, :1375-1405; else the flat legacy path, "slot 0" here).
+  --
+  -- Switching at runtime goes through the engine's own slot API:
+  --   * SaveData.setActiveSlot(version, id) (:1661-1686) registers id if it
+  --     is new and makes it active in options.lua AND in the process cache:
+  --     the very next CONTINUE or save lands there;
+  --   * SaveData.createSlot(version) (:1688-1715) registers a new empty slot
+  --     one past the highest number (never a lingering file's id) without
+  --     activating it; renameSlot (:1626-1659) labels it for the launcher;
+  --     deleteSlot (:1800-1856) takes one back;
+  --   * refreshSlotResolution (:1858-1872) drops the once-per-process
+  --     resolution, so a flat save written in this process is migrated into
+  --     slot1 before any slot is registered beside it (a registry hides a
+  --     flat save for good, :1419-1421);
+  --   * a progress save rewrites options.lua from the live options snapshot,
+  --     but rememberPlaythroughId copies the slot registry from disk first
+  --     (:2164-2178), so a switch is never undone by a later save;
+  --   * at the title, CONTINUE reads the active slot when it is chosen
+  --     (Game:makeTitleState, src/core/Game.lua:222-240), and the title menu
+  --     builds its CONTINUE row from the active slot's file when it opens
+  --     (src/ui/TitleState.lua:469-477, :533-551), so a menu already open is
+  --     rebuilt with Game:returnToTitle (Game.lua:242-249, the START menu
+  --     QUIT's own path);
+  --   * in game, the live playthrough belongs to the active slot: it is saved
+  --     there first (Game:writeSave, Game.lua:1326-1351, behind the F1
+  --     quick-save gate :1353-1371, as the center save), then the slot
+  --     switches and the game goes back to the title. A New Game never saved
+  --     has no meta.savedAt (SaveData.newGame :3026-3036; buildMeta stamps it
+  --     on every writeSave, :2331-2362, Game.lua:1339-1341).
+  -- A cart (SaveData.getCart :1895-1897) has its own slot scope
+  -- (activeScopeKey :1290-1293), which the version's registry doesn't reach.
+  -- The --slot launch option is the same setActiveSlot, by id ("slot2") or
+  -- by 1-based list index (src/core/LaunchOptions.lua:347-372).
+
+  local function slotId(v)
+    return type(v) == "string" and v:find("^slot%d+$") ~= nil and #v <= 16
+  end
+
+  local function slotApi()
+    local SaveData = try("src.core.SaveData")
+    if not SaveData then return nil end
+    for _, name in ipairs({ "activeSlot", "setActiveSlot", "createSlot" }) do
+      if type(SaveData[name]) ~= "function" then return nil end
+    end
+    return SaveData
+  end
+
+  -- What pairing needs to know: { version, api (the switching API is
+  -- there), cart (a cart is active), active (the active slot's id, or nil
+  -- for the flat legacy path) }.
+  function engine.slotState()
+    local version = engine.gameVersion()
+    local out = { version = version, api = slotApi() ~= nil and version ~= nil, cart = false }
+    local SaveData = try("src.core.SaveData")
+    if not (version and SaveData) then return out end
+    if type(SaveData.getCart) == "function" then
+      local ok, cart = pcall(SaveData.getCart)
+      out.cart = ok and cart ~= nil
+    end
+    if type(SaveData.activeSlot) == "function" then
+      local ok, id = pcall(SaveData.activeSlot, version)
+      out.active = ok and slotId(id) and id or nil
+    end
+    return out
+  end
+
+  -- The active slot after resolving again (a flat save written in this
+  -- process becomes slot1 first), or nil.
+  function engine.resolveActiveSlot()
+    local SaveData, version = slotApi(), engine.gameVersion()
+    if not (SaveData and version) then return nil end
+    if type(SaveData.refreshSlotResolution) == "function" then pcall(SaveData.refreshSlotResolution, version) end
+    local ok, id = pcall(SaveData.activeSlot, version)
+    return ok and slotId(id) and id or nil
+  end
+
+  -- True when the slot is in the version's registry.
+  function engine.slotRegistered(id)
+    local SaveData, version = try("src.core.SaveData"), engine.gameVersion()
+    if not (slotId(id) and SaveData and version and type(SaveData.loadOptions) == "function") then return false end
+    local ok, opts = pcall(SaveData.loadOptions)
+    local roots = ok and type(opts) == "table" and opts.saveSlots or nil
+    local reg = type(roots) == "table" and roots[version] or nil
+    for _, v in ipairs(type(reg) == "table" and type(reg.list) == "table" and reg.list or {}) do
+      if v == id then return true end
+    end
+    return false
+  end
+
+  -- True when the slot holds a save: its file or one of its recovery copies
+  -- (decodeSlot's order, :1324-1336) on the persistence root (:555-567).
+  function engine.slotHasSave(id)
+    local SaveData, version = try("src.core.SaveData"), engine.gameVersion()
+    if not (slotId(id) and symbol(version) and SaveData and type(SaveData.persistenceFs) == "function") then
+      return false
+    end
+    local ok, fs = pcall(SaveData.persistenceFs)
+    if not (ok and type(fs) == "table" and type(fs.getInfo) == "function") then return false end
+    local main = "saves/" .. version .. "/" .. id .. ".lua"
+    for _, path in ipairs({ main, main .. ".tmp", main .. ".bak" }) do
+      local okInfo, info = pcall(fs.getInfo, path)
+      if okInfo and info then return true end
+    end
+    return false
+  end
+
+  -- Labels a slot in Gen1Recomp's launcher. True when it took.
+  function engine.labelSlot(id, label)
+    local SaveData, version = try("src.core.SaveData"), engine.gameVersion()
+    if not (slotId(id) and SaveData and version and type(SaveData.renameSlot) == "function") then return false end
+    local ok, done = pcall(SaveData.renameSlot, version, id, label)
+    return ok and done == true
+  end
+
+  -- Registers a new empty slot (labelled when a label is given): its id,
+  -- or nil.
+  function engine.createSlot(label)
+    local SaveData, version = slotApi(), engine.gameVersion()
+    if not (SaveData and version) then return nil end
+    local ok, id = pcall(SaveData.createSlot, version)
+    if not ok then
+      warnAt("engine.create_slot_failed", id)
+      return nil
+    end
+    if not slotId(id) then return nil end
+    if label then engine.labelSlot(id, label) end
+    return id
+  end
+
+  -- Takes back a slot pairing created (its files and its registry row).
+  function engine.deleteSlot(id)
+    local SaveData, version = try("src.core.SaveData"), engine.gameVersion()
+    if not (slotId(id) and SaveData and version and type(SaveData.deleteSlot) == "function") then return false end
+    local ok, done = pcall(SaveData.deleteSlot, version, id)
+    return ok and done == true
+  end
+
+  -- Makes the slot the active one (registering it again if the launcher
+  -- deleted it): the next CONTINUE and every save land there.
+  function engine.activateSlot(id)
+    local SaveData, version = slotApi(), engine.gameVersion()
+    if not (SaveData and version and slotId(id)) then return false end
+    local ok, got = pcall(SaveData.setActiveSlot, version, id)
+    if not ok then
+      warnAt("engine.activate_slot_failed", got)
+      return false
+    end
+    return got == id
+  end
+
+  -- The live playthrough: "title" (no overworld: the boot screens, the
+  -- title, its menus), "fresh" (a New Game never saved) or "saved" (loaded
+  -- by CONTINUE -- `loaded`, a set of save tables save.loaded brought -- or
+  -- saved since).
+  function engine.playthrough(loaded)
+    if not engine.overworld() then return "title" end
+    local save = engine.save()
+    if type(save) ~= "table" then return "title" end
+    if type(loaded) == "table" and loaded[save] then return "saved" end
+    local meta = save.meta
+    if type(meta) == "table" and meta.savedAt ~= nil then return "saved" end
+    return "fresh"
+  end
+
+  -- True while something is open over the title (its menu, CONTINUE's info
+  -- box, OPTION): its rows were built for the slot that was active then.
+  -- Game:makeTitleState stamps screenId "TitleState" (Game.lua:238).
+  function engine.titleMenuOpen()
+    local states = game and game.stack and game.stack.states
+    if type(states) ~= "table" then return false end
+    for i = 1, #states do
+      local s = states[i]
+      if type(s) == "table" and s.screenId == "TitleState" then return i < #states end
+    end
+    return false
+  end
+
+  -- The save before a switch may run now: the overworld on top and
+  -- settled, no battle held, the engine's own F1 gate open (the center
+  -- save's gate, engine.centerSaveStep).
+  function engine.switchGateOpen()
+    local ow = engine.overworld()
+    if not ow or ow.healAnim or engine.top() ~= ow or liveBattle() then return false end
+    if type(game.writeSave) ~= "function" then return false end
+    if type(game.quickSaveAllowed) == "function" then
+      local ok, allowed = pcall(game.quickSaveAllowed, game)
+      if not (ok and allowed) then return false end
+    end
+    return true
+  end
+
+  -- Saves the live playthrough into its own (active) slot before a switch:
+  -- "written", "refused" (the save.write veto or a failed write) or
+  -- "error". Its save.writing carries the reason "switch" (kb_save doesn't
+  -- announce it: it belongs to the pairing being left).
+  function engine.switchSave()
+    local st = bridgeState()
+    if not (st and type(game.writeSave) == "function") then return "error" end
+    st.saving = "switch"
+    local ok, written = pcall(game.writeSave, game)
+    st.saving = nil
+    if not ok then
+      warnAt("engine.write_save_failed", written)
+      return "error"
+    end
+    if written == false or written == nil then return "refused" end
+    return "written"
+  end
+
+  -- Back to the title, as the START menu's QUIT (Game:returnToTitle):
+  -- unsaved progress is gone, so callers save first.
+  function engine.toTitle()
+    if type(game) ~= "table" or type(game.returnToTitle) ~= "function" then return false end
+    local ok, err = pcall(game.returnToTitle, game)
+    if not ok then warnAt("engine.return_to_title_failed", err) end
+    return ok
+  end
+
+  -- Forgets what the previous playthrough still had for Minecraft -- gifts,
+  -- party operations, heals, renames, item uses, native catches, the
+  -- daycare record, a save waiting to be announced -- which after a switch
+  -- would reach the new world. Returns how many there were.
+  function engine.dropPlaythrough()
+    local st = type(game) == "table" and rawget(game, STATE_SLOT) or nil
+    if type(st) ~= "table" then return 0 end
+    local function count(list) return type(list) == "table" and #list or 0 end
+    local n = count(st.gifts) + count(st.ops) + count(st.itemUses) + count(st.renames) + count(st.catches)
+      + (tonumber(st.heals) or 0) + (st.saveQueued ~= nil and 1 or 0) + (st.daycare ~= nil and 1 or 0)
+    st.gifts, st.ops, st.itemUses, st.renames, st.catches = {}, {}, {}, {}, {}
+    st.heals, st.healHold, st.saveQueued, st.daycare = 0, nil, nil, nil
+    return n
   end
 
   -- ------------------------------------------------------------ export (M2)

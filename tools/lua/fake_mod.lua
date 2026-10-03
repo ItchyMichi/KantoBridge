@@ -122,6 +122,48 @@ function FakeMod.new(opts)
     set = function(_, key, value) bucket[key] = value end,
   }
 
+  -- mod.cache (Loader.lua:1567-1569, src/mods/ImportAccess.lua:72-122):
+  -- installation-wide bytes under mod_cache/<id>/, not tied to a playthrough.
+  -- opts.cache is the backing table (rel -> bytes), so a test can hand the
+  -- same files to a "restarted" mod; mod._cacheControl.failWrites makes
+  -- every write fail. Paths follow SafePath (no "..", no leading "/", no "\").
+  local cacheFiles = opts.cache or {}
+  local cacheControl = { failWrites = false, writes = 0 }
+  mod._cache, mod._cacheControl = cacheFiles, cacheControl
+  local function safeRel(rel, what)
+    if type(rel) ~= "string" or rel == "" or rel:find("..", 1, true) or rel:sub(1, 1) == "/"
+        or rel:find("\\", 1, true) then
+      error(what .. " must stay inside its root", 0)
+    end
+  end
+  mod.cache = {
+    write = function(_, rel, bytes)
+      safeRel(rel, "mod.cache:write")
+      if type(bytes) ~= "string" then return nil, "mod.cache:write expects a byte string" end
+      if cacheControl.failWrites then return false, "could not write" end
+      cacheControl.writes = cacheControl.writes + 1
+      cacheFiles[rel] = bytes
+      return true
+    end,
+    read = function(_, rel)
+      safeRel(rel, "mod.cache:read")
+      local v = cacheFiles[rel]
+      if v == nil then return nil, "no file: " .. rel end
+      return v
+    end,
+    info = function(_, rel)
+      safeRel(rel, "mod.cache:info")
+      local v = cacheFiles[rel]
+      return v ~= nil and { type = "file", size = #v } or nil
+    end,
+    exists = function(self, rel) return self:info(rel) ~= nil end,
+    delete = function(_, rel)
+      safeRel(rel, "mod.cache:delete")
+      cacheFiles[rel] = nil
+      return true
+    end,
+  }
+
   -- mod.ui: the UI module tables (src/ui/ModUI.lua:8-27); tests pass fakes.
   mod.ui = opts.ui or {}
 

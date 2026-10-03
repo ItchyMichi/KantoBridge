@@ -40,8 +40,8 @@ class SessionFakeGen1IntegrationTest {
 				Transport.socket(), BridgeClock.system(), dispatcher);
 		SessionBinder binder = new SessionBinder(new SessionBinder.Port() {
 			@Override
-			public boolean toBridge(String type, JsonObject data) {
-				return client.send(type, data);
+			public long toBridge(String type, JsonObject data) {
+				return client.sendTracked(type, data);
 			}
 
 			@Override
@@ -62,7 +62,7 @@ class SessionFakeGen1IntegrationTest {
 				binder.linkDown();
 			}
 		});
-		dispatcher.on(MsgTypes.SESSION_BOUND, message -> binder.onBound(message.data()));
+		dispatcher.on(MsgTypes.SESSION_BOUND, message -> binder.onBound(message.data(), message.re()));
 		binder.world(WORLD, true);
 		try {
 			client.start();

@@ -23,6 +23,7 @@ import dev.kantobridge.server.Rules;
 import dev.kantobridge.server.SaveService;
 import dev.kantobridge.server.SessionService;
 import dev.kantobridge.server.StoryStateService;
+import dev.kantobridge.server.TextureStatusService;
 import dev.kantobridge.server.WarpService;
 import dev.kantobridge.server.WorldIndexSync;
 import dev.kantobridge.story.StoryStates;
@@ -80,6 +81,8 @@ public class KantoBridge implements ModInitializer {
 		PcService.init();
 		SaveService.init();
 		SessionService.init();
+		// Each player's own generated pack against this world's slot map (texture.status, M9): hashes and counts only.
+		TextureStatusService.init();
 		LOGGER.info("kantobridge loaded (protocol {}, {} message types)", Catalog.bundled().protocol(), Catalog.bundled().messages().size());
 	}
 }

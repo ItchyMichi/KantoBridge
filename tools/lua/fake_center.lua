@@ -15,7 +15,19 @@
 --                             event) and E.saveFails (the write fails after
 --                             the event); E.saveWrites counts the events
 --   E.game:quickSaveAllowed() the F1 gate
---   E.activeSlot              what SaveData.activeSlot returns ("slot2", nil)
+--   E.activeSlot              what SaveData.activeSlot returns ("slot2", nil):
+--                             the process cache of the active slot
+--   M9, SaveData's save slots (src/core/SaveData.lua:1222-1872) over a
+--   made-up registry -- E.slotReg = { list, active, names } (options.lua's
+--   saveSlots[version]); E.slotFiles[id] (the slot holds a save: a write
+--   into the active slot marks it; E.slotWrites[id or "flat"] counts them);
+--   E.legacySave (a flat save: refreshSlotResolution + activeSlot migrate it
+--   into slot1); E.cart (getCart); E.createFails; E.slotCalls (every
+--   call's name) -- and the title: E.game:returnToTitle() (everything
+--   popped, a TitleState screen pushed; E.titleRebuilds), E.titleState(),
+--   E.startNewGame() (a fresh save table without meta.savedAt, save.created,
+--   the overworld), E.continueGame() (a loaded save table, the overworld,
+--   save.loaded)
 --   E.musicRestores           Music.restoreMap calls
 --   E.nurseHeal(npc, onDone)  welcome + HEAL/CANCEL, the machine (heal,
 --                             lastHeal, healAnim of E.healFrames), the bow,
@@ -56,7 +68,12 @@ function FakeCenter.attach(E)
     E.save.meta = { savedAt = E.saveWrites + 1 }
     E.runtime.emit("save.writing", { save = E.save, meta = E.save.meta })
     E.saveWrites = E.saveWrites + 1
-    return not E.saveFails
+    if E.saveFails then return false end
+    -- SaveData.save lands in the active slot (the flat legacy file without one)
+    local key = E.activeSlot or "flat"
+    E.slotWrites[key] = (E.slotWrites[key] or 0) + 1
+    if E.activeSlot then E.slotFiles[E.activeSlot] = true else E.legacySave = true end
+    return true
   end
 
   -- Game:quickSaveAllowed (Game.lua:1353-1369)
@@ -78,7 +95,140 @@ function FakeCenter.attach(E)
   end
 
   E.modules["src.core.Music"] = { restoreMap = function() E.musicRestores = E.musicRestores + 1 end }
-  E.modules["src.core.SaveData"] = { activeSlot = function() return E.activeSlot end }
+
+  -- ------------------------------------------------------------ save slots (M9)
+
+  E.slotReg = { list = {}, names = {} }
+  E.slotFiles, E.slotWrites, E.slotCalls = {}, {}, {}
+  E.titleRebuilds, E.newGames, E.migrations = 0, 0, 0
+  local function call(name) E.slotCalls[#E.slotCalls + 1] = name end
+  local function registered(id)
+    for _, v in ipairs(E.slotReg.list) do
+      if v == id then return true end
+    end
+    return false
+  end
+  local SaveData = {}
+  -- activeSlot (:1717-1731): resolved once per process (ensureSlots
+  -- :1407-1438); refreshSlotResolution asks for it again
+  function SaveData.activeSlot()
+    call("activeSlot")
+    if E.slotsUnchecked then
+      E.slotsUnchecked = false
+      local reg = E.slotReg
+      if #reg.list > 0 then
+        E.activeSlot = reg.active or reg.list[1]
+      elseif E.legacySave then
+        -- tryMigrateLegacy (:1338-1373): the flat save becomes slot1
+        E.legacySave = false
+        E.slotFiles.slot1 = true
+        reg.list, reg.active = { "slot1" }, "slot1"
+        E.activeSlot = "slot1"
+        E.migrations = E.migrations + 1
+      else
+        E.activeSlot = nil
+      end
+    end
+    return E.activeSlot
+  end
+  function SaveData.refreshSlotResolution() call("refreshSlotResolution") E.slotsUnchecked = true end
+  -- setActiveSlot (:1661-1686): registered if new, active in the registry
+  -- and in the process cache
+  function SaveData.setActiveSlot(_, id)
+    call("setActiveSlot")
+    if not registered(id) then E.slotReg.list[#E.slotReg.list + 1] = id end
+    E.slotReg.active = id
+    E.activeSlot = id
+    return id
+  end
+  -- createSlot (:1688-1715): one past the highest number, not active
+  function SaveData.createSlot()
+    call("createSlot")
+    if E.createFails then return nil end
+    local max = 0
+    for _, id in ipairs(E.slotReg.list) do
+      local n = tonumber(id:match("^slot(%d+)$"))
+      if n and n > max then max = n end
+    end
+    local id = "slot" .. (max + (E.slotGap or 1))
+    E.slotReg.list[#E.slotReg.list + 1] = id
+    return id
+  end
+  function SaveData.renameSlot(_, id, label)
+    call("renameSlot")
+    if not registered(id) then return false, "slot not registered" end
+    E.slotReg.names[id] = label
+    return true
+  end
+  -- deleteSlot (:1800-1856): files and row gone; an active one moves to list[1]
+  function SaveData.deleteSlot(_, id)
+    call("deleteSlot")
+    if not registered(id) then return false, "slot not registered" end
+    for i, v in ipairs(E.slotReg.list) do
+      if v == id then table.remove(E.slotReg.list, i) break end
+    end
+    E.slotFiles[id], E.slotReg.names[id] = nil, nil
+    if E.slotReg.active == id then E.slotReg.active = E.slotReg.list[1] end
+    if E.activeSlot == id then E.activeSlot = E.slotReg.active end
+    return true
+  end
+  function SaveData.getCart() return E.cart end
+  function SaveData.loadOptions()
+    local list, names = {}, {}
+    for i, v in ipairs(E.slotReg.list) do list[i] = v end
+    for k, v in pairs(E.slotReg.names) do names[k] = v end
+    return { saveSlots = { [E.GameVersion.current] = { list = list, active = E.slotReg.active, names = names } } }
+  end
+  -- persistenceFs (:565-567) with the slot files (saves/<version>/<id>.lua)
+  function SaveData.persistenceFs()
+    return { getInfo = function(path)
+      local version, id = path:match("^saves/([%w_]+)/(slot%d+)%.lua$")
+      if version == E.GameVersion.current and E.slotFiles[id] then return { type = "file" } end
+      return nil
+    end }
+  end
+  E.SaveData = SaveData
+  E.modules["src.core.SaveData"] = SaveData
+
+  -- Game:makeTitleState's screen (Game.lua:222-240)
+  function E.titleState() return { screenId = "TitleState" } end
+  -- Game:returnToTitle (Game.lua:245-249)
+  function E.game.returnToTitle(_)
+    E.titleRebuilds = E.titleRebuilds + 1
+    while #E.stack.states > 0 do E.uiPop() end
+    E.uiPush(E.titleState())
+  end
+
+  local function freshSave()
+    local save = {}
+    for k, v in pairs(E.save) do save[k] = v end
+    save.player = { map = E.save.player.map, x = E.save.player.x, y = E.save.player.y,
+                    facing = E.save.player.facing, name = "NEWTEST", rival = "RIVALNEW", id = 1234 }
+    save.party, save.flags, save.objectToggles = {}, {}, {}
+    save.pokedex = { seen = {}, owned = {} }
+    save.modData = {}
+    return save
+  end
+  -- Game:startNewGame (Game.lua:179-198) without the intro: SaveData.newGame's
+  -- skeleton has no meta.savedAt (SaveData.lua:3026-3036)
+  function E.startNewGame()
+    local save = freshSave()
+    save.meta = { format = 1, mods = {} }
+    E.save, E.game.save = save, save
+    E.newGames = E.newGames + 1
+    E.runtime.emit("save.created", { save = save })
+    E.stack.states = { ow }
+    return save
+  end
+  -- CONTINUE (Game:restoreSave, Game.lua:1475-1537): the active slot's save
+  function E.continueGame()
+    local save = freshSave()
+    save.meta = { format = 1, savedAt = 100 }
+    E.save, E.game.save = save, save
+    E.stack.states = { ow }
+    E.runtime.emit("save.loaded", { save = save, meta = save.meta })
+    return save
+  end
 
   -- Bag.order (src/inventory/Bag.lua): the acquisition order
   function E.Bag.order(save)

@@ -277,3 +277,160 @@ def test_framer_alone():
     assert got == [b"ab"] and framer.pending() == 2
     assert framer.push(b"efghijklm", lambda line: got.append(line)) == (None, b"oversize")
     assert framer.pending() == 0
+
+
+# ------------------------------------------------------------ M9: a busy port falls back along the span
+
+
+def fallback_harness():
+    return Harness(portSpan=8, fallbackAfter=3)
+
+
+def listening_on(h, port):
+    return bool(call(h.lua.net, "listening", HOST, port))
+
+
+def test_a_busy_port_falls_back_to_the_next_free_one_after_the_grace():
+    h = fallback_harness()
+    fake = h.lua.net
+    call(fake, "occupy", HOST, PORT)
+    h.pump()
+    h.time = 1.0
+    h.pump()
+    h.time = 2.0
+    h.pump()
+    assert not h.net.listening(), "the configured port gets its grace first"
+    h.time = 3.0
+    h.pump()
+    assert h.net.listening() and listening_on(h, PORT + 1) and not listening_on(h, PORT)
+    assert (h.net.port(), h.net.configuredPort(), h.net.fallback()) == (PORT + 1, PORT, True)
+    assert fake.reuseaddrSet == 0 and fake.bindHelperUsed == 0, "never a port taken by reuse"
+    assert [line for line in h.logs if line.startswith("net.")] == [
+        "net.bind_failed err=addr_in_use port=27151 retry=1 stage=bind",
+        "net.listening configured=27151 fallback=true host=127.0.0.1 port=27152",
+    ]
+    stats = h.net.stats()
+    assert (stats.port, stats.portConfigured, stats.portFallback) == (PORT + 1, PORT, True)
+    # a client reaches it there
+    peer = call(fake, "connect", HOST, PORT + 1)
+    assert not isinstance(peer, tuple)
+    h.pump()
+    assert h.net.connected()
+
+
+def test_busy_ports_of_the_span_are_skipped():
+    h = fallback_harness()
+    fake = h.lua.net
+    for p in (PORT, PORT + 1, PORT + 2):
+        call(fake, "occupy", HOST, p)
+    h.pump()
+    h.time = 3.0
+    h.pump()
+    assert h.net.port() == PORT + 3 and listening_on(h, PORT + 3)
+
+
+def test_a_refused_port_falls_back_too():
+    h = fallback_harness()
+    fake = h.lua.net
+    # a port Windows keeps for itself (WSAEACCES): bind says "permission denied"
+    master = h.lua.eval("""function(fake, host, port)
+      local real = fake.socket.tcp
+      fake.socket.tcp = function()
+        local s = real()
+        local bind = s.bind
+        s.bind = function(self, h, p)
+          if tonumber(p) == port then return nil, "permission denied" end
+          return bind(self, h, p)
+        end
+        return s
+      end
+    end""")
+    master(h.lua.fake, HOST, PORT)
+    h.pump()
+    h.time = 3.5
+    h.pump()
+    assert h.net.port() == PORT + 1 and h.net.fallback()
+    assert "net.bind_failed err=access port=27151 retry=1 stage=bind" in h.logs
+
+
+def test_every_port_busy_retries_every_second_and_logs_once():
+    h = fallback_harness()
+    fake = h.lua.net
+    for p in range(PORT, PORT + 9):
+        call(fake, "occupy", HOST, p)
+    for t in (0.0, 1.0, 2.0, 3.0, 4.0, 5.0):
+        h.time = t
+        h.pump()
+    assert not h.net.listening() and h.net.port() == PORT
+    assert [line for line in h.logs if line.startswith("net.bind_failed")] == [
+        "net.bind_failed err=addr_in_use port=27151 retry=1 stage=bind",
+        "net.bind_failed err=all_busy port=27151 retry=1 span=8 stage=bind",
+    ]
+    created = fake.created
+    h.time = 5.5
+    h.pump()
+    assert fake.created == created, "nothing tried between retries"
+    call(fake, "free", HOST, PORT + 5)
+    h.time = 6.0
+    h.pump()
+    assert h.net.port() == PORT + 5 and listening_on(h, PORT + 5)
+    assert fake.reuseaddrSet == 0
+
+
+def test_the_configured_port_wins_when_it_frees_within_the_grace():
+    h = fallback_harness()
+    fake = h.lua.net
+    call(fake, "occupy", HOST, PORT)
+    h.pump()
+    call(fake, "free", HOST, PORT)
+    h.time = 1.0
+    h.pump()
+    assert h.net.port() == PORT and not h.net.fallback() and listening_on(h, PORT)
+    assert "net.listening host=127.0.0.1 port=27151" in h.logs
+
+
+def test_set_port_starts_over_from_the_new_configured_port():
+    h = fallback_harness()
+    fake = h.lua.net
+    call(fake, "occupy", HOST, PORT)
+    h.pump()
+    h.time = 3.0
+    h.pump()
+    assert h.net.port() == PORT + 1
+    h.net.setPort(27170)
+    h.pump()
+    assert (h.net.port(), h.net.configuredPort(), h.net.fallback()) == (27170, 27170, False)
+    assert listening_on(h, 27170) and not listening_on(h, PORT + 1)
+    # the same configured port again changes nothing
+    h.net.setPort(27170)
+    assert listening_on(h, 27170)
+
+
+def test_the_span_stops_at_the_last_port():
+    h = Harness(port=65534, portSpan=8, fallbackAfter=0)
+    fake = h.lua.net
+    call(fake, "occupy", HOST, 65534)
+    call(fake, "occupy", HOST, 65535)
+    h.pump()
+    assert not h.net.listening()
+    assert any("err=all_busy" in line for line in h.logs)
+
+
+def test_a_broken_listener_starts_over_from_the_configured_port():
+    h = fallback_harness()
+    fake = h.lua.net
+    call(fake, "occupy", HOST, PORT)
+    h.pump()
+    h.time = 3.0
+    h.pump()
+    assert h.net.port() == PORT + 1
+    call(fake, "free", HOST, PORT)
+    # the listener breaks (accept fails): it is rebuilt from the configured port
+    server = fake.listeners[b"127.0.0.1:27152"]
+    server.closed = True
+    h.time = 3.1
+    h.pump()
+    assert not h.net.listening()
+    h.time = 4.2
+    h.pump()
+    assert h.net.port() == PORT and listening_on(h, PORT)

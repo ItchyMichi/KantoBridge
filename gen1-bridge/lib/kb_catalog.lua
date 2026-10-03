@@ -83,5 +83,6 @@ return {
     ["warp.done"] = { s2c = true, re = "optional" },
     ["warp.request"] = { c2s = true, re = "never" },
     ["world.index"] = { s2c = true, re = "never" },
+    ["world.slots"] = { s2c = true, re = "never" },
   },
 }

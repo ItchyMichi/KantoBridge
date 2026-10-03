@@ -100,6 +100,64 @@ public class CollisionGameTests implements FabricGameTest {
 		helper.succeed();
 	}
 
+	/** A story block of a given cell key at {@code rel} (a tile cell gets the tile block, as the builder places it). */
+	private static BlockPos storyCell(GameTestHelper helper, BlockPos rel, String key, StoryCellType type) {
+		helper.setBlock(rel.below(), Blocks.STONE);
+		helper.setBlock(rel, type == StoryCellType.TILE ? KbBlocks.STORY_TILE : KbBlocks.STORY_CELL);
+		BlockPos abs = helper.absolutePos(rel);
+		StoryCellBlockEntity cell = (StoryCellBlockEntity) helper.getLevel().getBlockEntity(abs);
+		helper.assertTrue(cell != null, "story cell has no block entity");
+		cell.set(key, type);
+		return abs;
+	}
+
+	private static boolean stopped(ServerPlayer player, BlockPos abs) {
+		return Math.abs(walkSouthInto(player, abs) + 0.3) < 1.0E-6;
+	}
+
+	/**
+	 * M9: two players walk into the same story cells, each with their own hidden game's story (DESIGN §8 "the golden
+	 * rule"): every blockade type closes for the player whose story has it closed and stays open for the other, and a
+	 * player's relayed {@code story.state} changes their collision only.
+	 */
+	@GameTest(template = EMPTY_STRUCTURE)
+	public void twoPlayersWalkTheSameCellsWithTheirOwnStories(GameTestHelper helper) {
+		String guard = "TEST_MAP:1:1";
+		String tree = "TEST_MAP:2:1";
+		String boulder = "TEST_MAP:3:1";
+		String water = "TEST_MAP:4:1";
+		BlockPos guardAt = storyCell(helper, new BlockPos(1, 2, 4), guard, StoryCellType.OBJECT);
+		BlockPos treeAt = storyCell(helper, new BlockPos(3, 2, 4), tree, StoryCellType.TILE);
+		BlockPos boulderAt = storyCell(helper, new BlockPos(5, 2, 4), boulder, StoryCellType.BOULDER_AREA);
+		BlockPos waterAt = storyCell(helper, new BlockPos(7, 2, 4), water, StoryCellType.WATER);
+		dev.kantobridge.net.RelayService relay = dev.kantobridge.net.RelayService.get();
+		MockPlayers.with(helper, walker -> MockPlayers.with(helper, surfer -> {
+			// The walker's hidden game: the guard stands, the tree is uncut, a boulder sits there, no Surf. The surfer's: all
+			// of that is behind them, and they are surfing.
+			relay.receive(walker, PartyGameTests.envelope(1, "story.state", "{\"full\":true,\"active\":[\"" + guard + "\",\"" + tree + "\",\""
+					+ boulder + "\"],\"surf\":false,\"bike\":false,\"lit\":[]}"));
+			relay.receive(surfer, PartyGameTests.envelope(1, "story.state", "{\"full\":true,\"active\":[],\"surf\":true,\"bike\":false,\"lit\":[]}"));
+			for (BlockPos at : new BlockPos[] {guardAt, treeAt, boulderAt, waterAt}) {
+				helper.assertTrue(stopped(walker, at), "the walker went through a cell their story has closed");
+				helper.assertFalse(stopped(surfer, at), "the surfer was stopped by another player's blockade");
+			}
+
+			// The surfer's own client closes the guard for them (a delta): only their collision changes.
+			relay.receive(surfer, PartyGameTests.envelope(2, "story.state", "{\"full\":false,\"add\":[\"" + guard + "\"]}"));
+			helper.assertTrue(stopped(surfer, guardAt), "the surfer's own delta didn't close their cell");
+			helper.assertTrue(stopped(walker, guardAt) && stopped(walker, treeAt), "the walker's cells changed with the surfer's delta");
+			// The walker's client clears everything and surfs: open for them; the surfer's guard stays closed.
+			relay.receive(walker, PartyGameTests.envelope(2, "story.state", "{\"full\":true,\"active\":[],\"surf\":true,\"bike\":false,\"lit\":[]}"));
+			for (BlockPos at : new BlockPos[] {guardAt, treeAt, boulderAt, waterAt}) {
+				helper.assertFalse(stopped(walker, at), "the walker's cleared story still blocks");
+			}
+			helper.assertTrue(stopped(surfer, guardAt), "the walker's full state reached the surfer");
+			StoryStates.of(walker).clear();
+			StoryStates.of(surfer).clear();
+		}));
+		helper.succeed();
+	}
+
 	@GameTest(template = EMPTY_STRUCTURE)
 	public void ledgesBlockOnlyFromBelow(GameTestHelper helper) {
 		BlockPos rel = new BlockPos(3, 2, 3);

@@ -274,7 +274,8 @@ public final class BuildTask {
 		this.report.status = "ok";
 		this.writeReport();
 		if (this.options.publishIndex()) {
-			WorldIndexSync.publish(this.level.getServer(), plan.index(), true);
+			// With its slot map, so players who join later (or are online now) can build their own art into these slots.
+			WorldIndexSync.publish(this.level.getServer(), plan.index(), plan.slotMap(), true);
 		}
 		this.phase = BuildPhase.DONE;
 		KantoBridge.LOGGER.info("builder: done: {} maps, {} story cells, {} habitat blocks, {} pools, {} blocks placed, {} cleared, {} chunks, {} textures, {} warnings, {} ms",

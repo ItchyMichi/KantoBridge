@@ -178,6 +178,8 @@ public final class CreateKantoWorldFlow {
 		}
 		CreateKantoWorldFlow flow = new CreateKantoWorldFlow(minecraft);
 		active = flow;
+		// A pack held back for a world it didn't fit (M9) is this flow's to replace; its reload must see it again.
+		GeneratedPack.setSuppressed(false);
 		KantoBridge.LOGGER.info("create: Create Kanto world started");
 		minecraft.setScreen(flow.screen);
 	}
@@ -569,8 +571,8 @@ public final class CreateKantoWorldFlow {
 		}
 	}
 
-	/** The builder's hello: versions only; the export needs no player. */
-	private static HelloInfo builderHello() {
+	/** The builder's hello: versions only; the export needs no player (also the texture flow's export, M9). */
+	public static HelloInfo builderHello() {
 		String mod = FabricLoader.getInstance().getModContainer(KantoBridge.MOD_ID)
 				.map(container -> container.getMetadata().getVersion().getFriendlyString())
 				.orElse("unknown");

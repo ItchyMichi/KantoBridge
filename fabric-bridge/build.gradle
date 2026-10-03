@@ -48,6 +48,21 @@ loom {
 	}
 }
 
+// A second dev client for multiplayer play-tests (docs/PLAN.md §6 M9): `./gradlew runClient2` starts "Player2" in its own
+// game folder, ../local/minecraft-p2 (its own options, generated pack and export), linked to a second Gen1Recomp whose
+// gen1-bridge listens on port 27152. Agents never start it; the user does.
+loom {
+	runs {
+		client2 {
+			inherit(loom.runs.getByName("client"))
+			name "Minecraft Client 2 (Player2)"
+			runDir "../local/minecraft-p2"
+			programArgs "--username", "Player2"
+			vmArg "-Dkantobridge.port=27152"
+		}
+	}
+}
+
 // Server GameTests run headless in build/run/gameTest and are part of `check` (so of `build`).
 // There is no client GameTest module on 1.21.1.
 fabricApi {
@@ -229,6 +244,132 @@ def verifyMixinRemap = tasks.register("verifyMixinRemap", VerifyMixinRemap) {
 }
 tasks.named("check") {
 	dependsOn verifyMixinRemap
+}
+
+/**
+ * Complements verifyMixinRemap: the @At targets inside injector annotations (INVOKE, FIELD, NEW, ...) and the method
+ * targets of injectors that task doesn't list (MixinExtras' v2 annotations) must be remapped too. A target that still
+ * names a Mojang-named Minecraft type or member works in dev and GameTests and only breaks in a real game.
+ */
+abstract class VerifyMixinTargets extends DefaultTask {
+	private static final Set<String> INJECTORS = [
+		"Lorg/spongepowered/asm/mixin/injection/Inject;",
+		"Lorg/spongepowered/asm/mixin/injection/Redirect;",
+		"Lorg/spongepowered/asm/mixin/injection/ModifyArg;",
+		"Lorg/spongepowered/asm/mixin/injection/ModifyArgs;",
+		"Lorg/spongepowered/asm/mixin/injection/ModifyConstant;",
+		"Lorg/spongepowered/asm/mixin/injection/ModifyVariable;",
+		"Lcom/llamalad7/mixinextras/injector/ModifyExpressionValue;",
+		"Lcom/llamalad7/mixinextras/injector/ModifyReceiver;",
+		"Lcom/llamalad7/mixinextras/injector/ModifyReturnValue;",
+		"Lcom/llamalad7/mixinextras/injector/WrapWithCondition;",
+		"Lcom/llamalad7/mixinextras/injector/v2/WrapWithCondition;",
+		"Lcom/llamalad7/mixinextras/injector/wrapoperation/WrapOperation;",
+		"Lcom/llamalad7/mixinextras/injector/wrapmethod/WrapMethod;",
+	] as Set
+	/** Mojang names left in a remapped descriptor: Minecraft's own packages (intermediary is net/minecraft/class_N). */
+	private static final java.util.regex.Pattern MOJANG_TYPE = ~/L(net\/minecraft\/(?!class_)|com\/mojang\/(blaze3d|math|realmsclient)\/)/
+	private static final java.util.regex.Pattern MAPPED_MEMBER = ~/(method|field)_\d+|<init>|<clinit>/
+
+	@InputFile
+	abstract RegularFileProperty getJarFile()
+
+	@Input
+	abstract Property<String> getMixinPackage()
+
+	@OutputFile
+	abstract RegularFileProperty getReport()
+
+	/** Null when an @At {@code target} is remapped, else why not. */
+	static String atProblem(String target) {
+		if (MOJANG_TYPE.matcher(target).find()) {
+			return "a Mojang type name"
+		}
+		if (target.startsWith("Lnet/minecraft/class_")) {
+			int semi = target.indexOf(';')
+			String member = target.substring(semi + 1).split("[(:]", 2)[0]
+			if (!member.isEmpty() && !(member ==~ MAPPED_MEMBER)) {
+				return "a Mojang member name"
+			}
+		}
+		return null
+	}
+
+	/** Null when an injector's {@code method} target is remapped, else why not. */
+	static String methodProblem(String target) {
+		if (MOJANG_TYPE.matcher(target).find()) {
+			return "a Mojang type name"
+		}
+		if (!(target ==~ /.*\bmethod_\d+.*/ || target.startsWith("<init>") || target.startsWith("<clinit>"))) {
+			return "a Mojang method name"
+		}
+		return null
+	}
+
+	@TaskAction
+	void verify() {
+		def checked = []
+		def failures = []
+		new java.util.zip.ZipFile(getJarFile().get().asFile).withCloseable { zip ->
+			zip.entries().each { entry ->
+				if (!entry.name.startsWith(getMixinPackage().get()) || !entry.name.endsWith(".class")) {
+					return
+				}
+				def node = new org.objectweb.asm.tree.ClassNode()
+				new org.objectweb.asm.ClassReader(zip.getInputStream(entry).bytes).accept(node, org.objectweb.asm.ClassReader.SKIP_CODE)
+				node.methods.each { method ->
+					((method.visibleAnnotations ?: []) + (method.invisibleAnnotations ?: [])).each { annotation ->
+						if (!INJECTORS.contains(annotation.desc)) {
+							return
+						}
+						def values = [:]
+						def raw = annotation.values ?: []
+						for (int i = 0; i + 1 < raw.size(); i += 2) {
+							values[raw[i]] = raw[i + 1]
+						}
+						if (values.remap == false) {
+							return
+						}
+						def check = { String target, String why ->
+							def where = "${node.name}.${method.name} -> ${target}"
+							checked << where
+							if (why != null) {
+								failures << "${where} (${why})"
+							}
+						}
+						(values.method ?: []).each { String target -> check(target, methodProblem(target)) }
+						def ats = values.at instanceof List ? values.at : (values.at == null ? [] : [values.at])
+						ats.each { at ->
+							def atValues = [:]
+							def atRaw = at.values ?: []
+							for (int i = 0; i + 1 < atRaw.size(); i += 2) {
+								atValues[atRaw[i]] = atRaw[i + 1]
+							}
+							if (atValues.remap != false && atValues.target != null) {
+								check(atValues.target as String, atProblem(atValues.target as String))
+							}
+						}
+					}
+				}
+			}
+		}
+		getReport().get().asFile.text = (checked.collect { "ok " + it } + failures.collect { "UNMAPPED " + it }).join("\n") + "\n"
+		if (!failures.isEmpty()) {
+			throw new GradleException("mixin targets were not remapped and would fail in a real game:\n  " + failures.join("\n  "))
+		}
+		logger.lifecycle("Mixin target check: ${checked.size()} method and @At target(s) remapped")
+	}
+}
+
+def verifyMixinTargets = tasks.register("verifyMixinTargets", VerifyMixinTargets) {
+	group = "verification"
+	description = "Checks that every @At target (and MixinExtras v2 method target) in the remapped jar was remapped."
+	jarFile = tasks.named("remapJar").flatMap { it.archiveFile }
+	mixinPackage = "dev/kantobridge/mixin/"
+	report = layout.buildDirectory.file("reports/mixin-targets.txt")
+}
+tasks.named("check") {
+	dependsOn verifyMixinTargets
 }
 
 // Loom only clears the client GameTest directory, so drop the previous server test world ourselves.

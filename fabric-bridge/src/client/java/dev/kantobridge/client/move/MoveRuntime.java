@@ -8,6 +8,8 @@ import dev.kantobridge.client.bridge.BridgeRuntime;
 import dev.kantobridge.client.bridge.ConnectionState;
 import dev.kantobridge.client.bridge.Dispatcher;
 import dev.kantobridge.client.net.ClientRelay;
+import dev.kantobridge.client.net.SessionGate;
+import dev.kantobridge.client.net.SessionRuntime;
 import dev.kantobridge.client.world.ClientWorldIndex;
 import dev.kantobridge.proto.MsgTypes;
 import dev.kantobridge.world.Dir;
@@ -64,7 +66,14 @@ public final class MoveRuntime {
 		instance = runtime;
 		Dispatcher dispatcher = bridge.dispatcher();
 		for (String type : new String[] {MsgTypes.SNAPSHOT, MsgTypes.PLAYER_POS, MsgTypes.PLAYER_BLOCKED, MsgTypes.PLAYER_STATE, MsgTypes.WARP}) {
-			dispatcher.on(type, message -> runtime.controller.onBridgeMessage(message, runtime.clock.millis()));
+			dispatcher.on(type, message -> {
+				// M9: while the save pairing waits, the hidden game may still run another world's save: its warps move
+				// nobody in this world (no warp.request); its positions are only noted.
+				if (message.type().equals(MsgTypes.WARP) && pairing()) {
+					return;
+				}
+				runtime.controller.onBridgeMessage(message, runtime.clock.millis());
+			});
 		}
 		ClientRelay.get().register(MsgTypes.WARP_DONE, message -> runtime.controller.onServerMessage(message, runtime.clock.millis()));
 		ClientPlayConnectionEvents.JOIN.register((handler, sender, client) -> runtime.controller.onJoin());
@@ -79,9 +88,20 @@ public final class MoveRuntime {
 		ClientTickEvents.END_WORLD_TICK.register(runtime::afterMove);
 		HudRenderCallback.EVENT.addPhaseOrdering(FADE_PHASE, Event.DEFAULT_PHASE);
 		HudRenderCallback.EVENT.register(FADE_PHASE, (graphics, delta) -> runtime.renderFade(graphics));
-		bridge.addHudLine(runtime.controller::hint);
+		// While the save pairing holds the player, its own line says why.
+		bridge.addHudLine(() -> pairing() ? null : runtime.controller.hint());
 		bridge.addDebugLine(runtime::debugSteps);
 		bridge.addDebugLine(runtime::debugFixes);
+	}
+
+	/**
+	 * True while the save pairing holds the player (M9): the hidden game isn't on this world's save yet, or its fresh
+	 * snapshot after a switch hasn't come. Its player then isn't followed: no steps, no teleports to where it was.
+	 */
+	private static boolean pairing() {
+		SessionRuntime session = SessionRuntime.get();
+		SessionGate gate = session == null ? null : session.gate();
+		return gate != null && gate.holdsPlayer();
 	}
 
 	/** True while the movement sync follows the hidden game for this player (a Kanto world, not a free camera). */
@@ -99,7 +119,7 @@ public final class MoveRuntime {
 			return;
 		}
 		MoveController.Frame frame = new MoveController.Frame(ClientWorldIndex.current(), player.isSpectator() || player.isCreative(),
-				this.bridge.client().state() == ConnectionState.CONNECTED, this.bridge.state().ingame(), this.bridge.state().mode(),
+				this.bridge.client().state() == ConnectionState.CONNECTED, this.bridge.state().ingame() && !pairing(), this.bridge.state().mode(),
 				InputLock.screenHolds(minecraft.screen), ClientBattles.active(), player.getX(), player.getZ());
 		ForcedMover.Velocity velocity = this.controller.beforeMove(this.clock.millis(), frame);
 		if (velocity != null) {

@@ -11,9 +11,10 @@ import java.util.concurrent.atomic.AtomicLong;
 import net.minecraft.server.level.ServerPlayer;
 
 /**
- * Keeps each player's {@code activity} (docs/PLAN.md §3.3, §4.3 {@code fx/}) as the {@link Activity} attachment, for
- * M9's speech bubbles; nothing is drawn yet. A client speaks only for its own player. A malformed message changes nothing
- * and is answered with {@code error{bad_message}} and a counted warning. Server thread only.
+ * Keeps each player's {@code activity} (docs/PLAN.md §3.3, §4.3 {@code fx/}) as the {@link Activity} attachment, which
+ * Fabric syncs to every other client tracking the player; their {@code SpeechBubbles} draw it (M9). A client speaks only
+ * for its own player. A malformed message changes nothing and is answered with {@code error{bad_message}} and a counted
+ * warning. Server thread only.
  */
 public final class ActivityService {
 	private static final AtomicLong REJECTED = new AtomicLong();

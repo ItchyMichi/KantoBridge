@@ -62,7 +62,7 @@ class Bridge:
 
     def __init__(self, permissions=PERMISSIONS, modules=None, developer=False, strict=True,
                  engine=False, mod_options=None, content=None, game="blue", graphics=False,
-                 script=False):
+                 script=False, mod_cache=None):
         self.rt = luajit.LuaRuntime(unpack_returned_tuples=True, encoding=None)
         self.lua = self.rt.globals()
         self.Sandbox = self._load_harness("sandbox.lua")
@@ -133,6 +133,8 @@ class Bridge:
             mod_opts[b"options"] = self.to_lua(mod_options)
         if content:
             mod_opts[b"content"] = self.to_lua(content)
+        # M9: mod.cache's files (rel -> bytes), e.g. another run's, for a simulated restart
+        mod_opts[b"cache"] = self.to_lua(mod_cache or {})
         self._mod_opts = mod_opts
         self.mod = self.FakeMod.new(mod_opts)
         if self.engine is not None:
@@ -254,6 +256,11 @@ class Bridge:
 
     def emit(self, name: str, payload=None):
         self.FakeMod.emit(self.mod, _b(name), payload)
+
+    def cache_files(self) -> dict[str, bytes]:
+        """mod.cache's files (M9), as a plain dict another Bridge can start from."""
+        files = self.mod._cache
+        return {k.decode("utf-8"): v for k, v in files.items()}
 
     def log_lines(self) -> list[str]:
         out = []

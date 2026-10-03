@@ -5,6 +5,14 @@
 -- JSON, at most 4 MiB each. Everything here is non-blocking: pump() is called
 -- once per logic step and never waits.
 --
+-- Two instances on one PC (M9): with opts.portSpan > 0, a configured port
+-- that stays busy (or refused) for opts.fallbackAfter seconds makes the
+-- listener take the next free port of the span (configured + 1 .. + span),
+-- logging the port it took; when every port of the span is busy it starts
+-- over from the configured port every retry, logging once. A port is never
+-- taken over: no reuseaddr, ever. Once bound, the listener stays on its port
+-- until setPort() or a broken listener sends it back to the configured one.
+--
 -- The socket module is injected (LuaSocket in game, a fake in tests) and only
 -- resolved on first use, so this file loads without LuaSocket (modkit, tests).
 --
@@ -30,6 +38,8 @@ Net.MAX_QUEUED = 32 * 1024 * 1024 -- a client this far behind is dropped
 Net.COALESCE = 64 * 1024          -- queued lines are joined up to this size per send
 Net.RETRY_SECONDS = 1
 Net.FINISH_SECONDS = 2            -- finish() gives a slow reader this long to take the queue
+Net.FALLBACK_AFTER = 3            -- seconds a configured port stays busy before the span is tried
+Net.MAX_PORT = 65535
 
 -- ------------------------------------------------------------ framing
 
@@ -99,10 +109,17 @@ local BIND_ERRORS = {
 --   onOversize()  called before a client whose line broke the size limit is
 --                 finished, so the caller can queue an `error` first
 --   maxLine, readBudget, maxQueued, retrySeconds      limits
+--   portSpan      M9: how many ports after the configured one a busy
+--                 configured port may fall back to (default 0: none)
+--   fallbackAfter M9: seconds the configured port must stay busy first
+--                 (default Net.FALLBACK_AFTER)
 function Net.new(opts)
   assert(type(opts) == "table", "kb_net.new expects options")
   local host = opts.host or "127.0.0.1"
-  local port = opts.port or 27151
+  local configured = opts.port or 27151 -- the port asked for (the mod option, configure())
+  local port = configured               -- the port listened on, or being tried
+  local span = opts.portSpan or 0
+  local fallbackAfter = opts.fallbackAfter or Net.FALLBACK_AFTER
   local clock = assert(opts.clock, "kb_net needs a clock")
   local log = opts.log
   local maxLine = opts.maxLine or Net.MAX_LINE
@@ -119,6 +136,7 @@ function Net.new(opts)
   local server, client
   local closing, closeBy -- set by finish(): the reason, and the deadline
   local nextBindAt = 0
+  local busySince        -- when the configured port was first found busy (M9)
   local framer = Net.newFramer(maxLine)
   local queue, qhead, qtail, qbytes, offset = {}, 1, 0, 0, 1
   local stats = { accepted = 0, dropped = 0, linesIn = 0, linesOut = 0, bytesIn = 0, bytesOut = 0 }
@@ -162,6 +180,38 @@ function Net.new(opts)
       { stage = stage, err = code, port = port, retry = retrySeconds })
   end
 
+  local function rearm()
+    if log then
+      log.rearm("bind:bind:addr_in_use")
+      log.rearm("bind:bind:access")
+      log.rearm("bind:bind:other")
+      log.rearm("bind:all")
+    end
+  end
+
+  -- One listener on p: the socket, or nil plus the stage and the error.
+  local function listenOn(socket, p)
+    local master, err = socket.tcp()
+    if not master then return nil, "create", err end
+    master:settimeout(0)
+    local ok
+    ok, err = master:bind(host, p)
+    if not ok then pcall(master.close, master); return nil, "bind", err end
+    ok, err = master:listen(4)
+    if not ok then pcall(master.close, master); return nil, "listen", err end
+    return master
+  end
+
+  local function bound(master, p)
+    server, port, busySince = master, p, nil
+    rearm()
+    if p == configured then
+      info("net.listening", { host = host, port = p })
+    else
+      info("net.listening", { host = host, port = p, configured = configured, fallback = true })
+    end
+  end
+
   local function tryBind()
     local socket = resolveSocket()
     if not socket then
@@ -169,20 +219,26 @@ function Net.new(opts)
       once("bind:nosocket", "error", "net.no_socket", {})
       return
     end
-    local master, err = socket.tcp()
-    if not master then return bindFailed("create", err) end
-    master:settimeout(0)
-    local ok
-    ok, err = master:bind(host, port)
-    if not ok then pcall(master.close, master); return bindFailed("bind", err) end
-    ok, err = master:listen(4)
-    if not ok then pcall(master.close, master); return bindFailed("listen", err) end
-    server = master
-    if log then
-      log.rearm("bind:bind:addr_in_use")
-      log.rearm("bind:bind:other")
+    port = configured
+    local master, stage, err = listenOn(socket, configured)
+    if master then return bound(master, configured) end
+    local code = BIND_ERRORS[err] or "other"
+    -- M9: a configured port another process keeps (or refuses) for
+    -- fallbackAfter seconds sends the listener along the span
+    if span <= 0 or stage ~= "bind" or (code ~= "addr_in_use" and code ~= "access") then
+      return bindFailed(stage, err)
     end
-    info("net.listening", { host = host, port = port })
+    local now = clock()
+    busySince = busySince or now
+    if now - busySince < fallbackAfter then return bindFailed(stage, err) end
+    for p = configured + 1, math.min(configured + span, Net.MAX_PORT) do
+      local other, otherStage = listenOn(socket, p)
+      if other then return bound(other, p) end
+      if otherStage == "create" then break end
+    end
+    nextBindAt = now + retrySeconds
+    once("bind:all", "warn", "net.bind_failed",
+      { stage = "bind", err = "all_busy", port = configured, span = span, retry = retrySeconds })
   end
 
   local function accept()
@@ -323,22 +379,23 @@ function Net.new(opts)
 
   function net.connected() return client ~= nil and not closing end
   function net.listening() return server ~= nil end
+  -- the port listened on (or being tried), and the one asked for (M9)
   function net.port() return port end
+  function net.configuredPort() return configured end
+  function net.fallback() return server ~= nil and port ~= configured end
 
-  -- Moves the listener to another port: the current listener and client are
-  -- closed and the new port is bound on the next pump.
+  -- Moves the listener to another configured port: the current listener and
+  -- client are closed and the new port is bound on the next pump (falling
+  -- back along the span from there).
   function net.setPort(newPort)
     assert(type(newPort) == "number" and newPort >= 1 and newPort <= 65535 and newPort % 1 == 0,
       "kb_net.setPort expects a port number")
-    if newPort == port then return end
+    if newPort == configured then return end
     dropClient("reconfigured")
     if server then pcall(server.close, server); server = nil end
-    port = newPort
+    configured, port, busySince = newPort, newPort, nil
     nextBindAt = 0
-    if log then
-      log.rearm("bind:bind:addr_in_use")
-      log.rearm("bind:bind:other")
-    end
+    rearm()
     info("net.port_changed", { port = port })
   end
   function net.queued() return qbytes end
@@ -353,6 +410,7 @@ function Net.new(opts)
     local out = {}
     for k, v in pairs(stats) do out[k] = v end
     out.listening, out.connected, out.queued = server ~= nil, client ~= nil, qbytes
+    out.port, out.portConfigured, out.portFallback = port, configured, net.fallback()
     return out
   end
 

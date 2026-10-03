@@ -8,7 +8,7 @@ import org.jetbrains.annotations.Nullable;
 /**
  * Splits the WorldIndex JSON into {@code world.index} parts and puts them back together (docs/PROTOCOL.md "Relay
  * only": {@code index, count, hash, part}). Each part is a slice of the text; {@code hash} is the SHA-256 of the whole
- * text, checked once every part has arrived.
+ * text, checked once every part has arrived. The slot map travels the same way as {@code world.slots} (M9).
  */
 public final class WorldIndexParts {
 	/**
@@ -88,7 +88,7 @@ public final class WorldIndexParts {
 			String expected = this.hash;
 			this.reset();
 			if (!Hashes.sha256(json).equals(expected)) {
-				throw new DataException("/hash", "world index hash mismatch");
+				throw new DataException("/hash", "parts hash mismatch");
 			}
 			return json;
 		}

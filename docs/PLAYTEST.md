@@ -271,3 +271,41 @@ in order; tick each item, or note what went wrong and where (map and what you di
       the prize money, then the TM.
 - [ ] The Game Corner rocket: his line, then he leaves. Silph Co's Giovanni: his line shows once.
 - [ ] The Elite Four: each door opens after its battle; nobody heals you between rooms.
+
+## M9: Multiplayer (two players on one PC)
+
+**Setup (once):** Player 2 needs a second Gen1Recomp install. Make `local\gen1recomp-p2` the same way as
+`local\gen1recomp` (README "Setting up a new machine", step 4: unzip the release, `portable.txt`, the
+`mods\gen1-bridge` junction, import your ROM). For a quick try, `local\gen1recomp-e2e` (the automated
+tests' install) also works as Player 2's game.
+
+**Start (M10's `tools\launch.ps1` will do this in one go):**
+
+1. Start Player 1's Gen1Recomp (`local\gen1recomp`, port 27151), then Player 2's (`local\gen1recomp-p2`).
+   The second one picks port 27152 by itself; to fix it, set BRIDGE PORT = 27152 in its mod settings
+   (F10). Keep both windows visible.
+2. In `local\minecraft\server.properties` set `online-mode=false` (the headless builds already point
+   `level-name` at `saves/Kanto`), then in `fabric-bridge\` run `.\gradlew.bat runServer`.
+3. In two more terminals in `fabric-bridge\`: `.\gradlew.bat runClient` (Player 1) and
+   `.\gradlew.bat runClient2` (Player 2). Both: Multiplayer → Direct Connection → `localhost`.
+
+**Check:**
+
+- [ ] Each player's Gen1Recomp switches to its own save slot for this world (Gen1Recomp's launcher
+      later shows it as `MULTIPLAYER …`); your single-player save is untouched.
+- [ ] Player 2's first join exports their own art and reloads textures (the HUD says so); the world
+      then looks the same for both.
+- [ ] You see each other walking; puppets (NPCs, item balls) are each player's own: take an item ball
+      as Player 1, and it's still there for Player 2.
+- [ ] Cut a tree as Player 1: it's gone for Player 1 only; Player 2 still bumps into it.
+- [ ] Standing inside the other player's blockade (an uncut tree, a guard, a boulder), you look faded
+      to them.
+- [ ] Speech bubbles appear over the other player while they're in a dialogue, a cutscene or a battle.
+- [ ] Each player's trainers and gym leaders are their own; a story battle is only visible to the
+      player fighting it (their opponent's Pokémon may be visible to others).
+- [ ] Doors and warps work per player.
+- [ ] A Cobblemon trade between the players (try a trade evolution, e.g. Kadabra): both Gen1Recomp
+      parties update afterwards.
+- [ ] A Cobblemon battle between the players: both parties' HP and levels sync back afterwards.
+- [ ] Leaving the server and opening the single-player `Kanto` world: Gen1Recomp returns to your
+      offline save slot.

@@ -6,6 +6,7 @@ import dev.kantobridge.client.bridge.BridgeRuntime;
 import dev.kantobridge.client.bridge.Dispatcher;
 import dev.kantobridge.client.bridge.JsonFields;
 import dev.kantobridge.client.net.ClientRelay;
+import dev.kantobridge.client.net.SessionRuntime;
 import dev.kantobridge.client.puppet.Puppet;
 import dev.kantobridge.client.puppet.PuppetManager;
 import dev.kantobridge.client.puppet.PuppetRuntime;
@@ -37,6 +38,9 @@ import org.jetbrains.annotations.Nullable;
  * first (client-side collision) and then relayed as {@code story.state}, on the client thread, so it stays ordered with
  * movement packets (§2.3). A full state goes up on joining a world, after a snapshot, and when the local player object is
  * replaced (respawn); deltas follow. The tile cells drawn closed feed {@link StoryCellRenderer}.
+ *
+ * <p>M9: nothing is applied or relayed while the save pairing holds the world's data (the hidden game may still run
+ * another world's save); once it opens, a full state goes up.
  */
 public final class ClientStoryView {
 	private static @Nullable ClientStoryView instance;
@@ -114,6 +118,12 @@ public final class ClientStoryView {
 		this.drawn = cells.drawn();
 		LocalPlayer player = minecraft.player;
 		if (player == null || !ClientPlayNetworking.canSend(KbJsonPayload.TYPE)) {
+			return;
+		}
+		SessionRuntime session = SessionRuntime.get();
+		if (session != null && !session.gate().serverOpen()) {
+			// Not this world's story yet: a full state goes up once the pairing is answered.
+			this.fullSent = false;
 			return;
 		}
 		StoryState local = StoryStates.of(player);

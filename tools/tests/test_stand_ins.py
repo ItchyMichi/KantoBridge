@@ -211,6 +211,33 @@ def test_made_up_gift_and_battle_are_schema_valid():
     run(scenario())
 
 
+def test_two_pairs_run_side_by_side():
+    """Multiplayer on one PC (M9): two bridge pairs on different ports stay independent."""
+    async def scenario():
+        first = await FakeGen1(port=0).start()
+        second = await FakeGen1(port=0, game="blue").start()
+        clients = []
+        try:
+            assert first.port != second.port
+            for gen1 in (first, second):
+                client = await FakeMinecraft(port=gen1.port, ping_ms=0).connect()
+                clients.append(client)
+                await client.hello()
+            await clients[0].send("move.step", {"dir": "up", "n": 1})
+            moved = await clients[0].expect("player.pos")
+            assert moved["data"]["y"] == 7
+            assert (await clients[1].request("debug.status"))["data"]["connections"] == 1
+            assert (first.player.y, second.player.y) == (7, 8), "a step on one pair never moves the other"
+            assert (clients[0].hello_ok["data"]["game"], clients[1].hello_ok["data"]["game"]) == ("red", "blue")
+            assert first.session != second.session
+        finally:
+            for client in clients:
+                await client.close()
+            await first.stop()
+            await second.stop()
+    run(scenario())
+
+
 def test_export_index_and_resources():
     async def scenario():
         gen1, mc = await _pair(role="builder")

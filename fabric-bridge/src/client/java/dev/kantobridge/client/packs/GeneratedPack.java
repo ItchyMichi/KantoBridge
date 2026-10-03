@@ -21,6 +21,12 @@ import org.jetbrains.annotations.Nullable;
 public final class GeneratedPack {
 	public static final String ID = "kantobridge_generated";
 
+	/**
+	 * While set, the pack isn't offered: a pack made for another world's slots would draw the wrong art on every tile, so
+	 * a world it doesn't fit shows the jar's placeholders instead until the pack is rebuilt for it (M9). Memory only.
+	 */
+	private static volatile boolean suppressed;
+
 	/** Added to {@code BuiltInPackSource} by the pack-source mixin, so tests can see that the mixin applied. */
 	public interface SourceMarker {
 	}
@@ -55,8 +61,25 @@ public final class GeneratedPack {
 				PackType.CLIENT_RESOURCES, selection());
 	}
 
-	/** Hands the pack to a pack source's consumer if there is one. */
+	/** What the pack says about itself ({@code kantobridge.json}), or null without one. */
+	public static @Nullable PackInfo info(Path gameDir) {
+		return present(gameDir) ? PackInfo.read(directory(gameDir)) : null;
+	}
+
+	/** Holds the pack back from the next resource reloads (true) or offers it again (false); takes effect on a reload. */
+	public static void setSuppressed(boolean value) {
+		suppressed = value;
+	}
+
+	public static boolean suppressed() {
+		return suppressed;
+	}
+
+	/** Hands the pack to a pack source's consumer if there is one (and it isn't held back). */
 	public static void offer(Path gameDir, Consumer<Pack> consumer) {
+		if (suppressed) {
+			return;
+		}
 		Pack pack = create(gameDir);
 		if (pack != null) {
 			consumer.accept(pack);

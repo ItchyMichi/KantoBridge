@@ -19,12 +19,16 @@ import org.jetbrains.annotations.Nullable;
  * <p>{@code multiplayer} is the client's own view: false on the integrated server it runs itself (singleplayer, or a
  * LAN world it hosts), true on any other server. A change of world or of that view binds again. Plain Java, client
  * thread only; {@link SessionRuntime} is the glue.
+ *
+ * <p>M9: gen1-bridge may switch the hidden game to the world's own save slot first and answer much later; its
+ * {@code session.bound} carries {@code re}, the bind's {@code seq}, so an answer to an older bind (the player moved on
+ * to another world meanwhile) is told apart and ignored. {@link SessionGate} holds the world's data until the answer.
  */
 public final class SessionBinder {
 	/** Where messages go. */
 	public interface Port {
-		/** To gen1-bridge; false when not connected (then the message is dropped). */
-		boolean toBridge(String type, JsonObject data);
+		/** To gen1-bridge: the message's {@code seq}, or -1 when not connected (then the message is dropped). */
+		long toBridge(String type, JsonObject data);
 
 		/** To the server relay; false when there is no server link. */
 		boolean toServer(String type, JsonObject data);
@@ -53,6 +57,8 @@ public final class SessionBinder {
 	/** Counts connections to gen1-bridge; each gets its own bind. */
 	private long link;
 	private long sentLink = -1;
+	/** The last bind's {@code seq} on its link (-1: none). */
+	private long sentSeq = -1;
 	private @Nullable String sentWorld;
 	private boolean sentMultiplayer;
 	private @Nullable Integer slot;
@@ -104,25 +110,46 @@ public final class SessionBinder {
 		JsonObject data = new JsonObject();
 		data.addProperty("world", current);
 		data.addProperty("multiplayer", this.multiplayer);
-		if (this.port.toBridge(MsgTypes.SESSION_BIND, data)) {
+		long seq = this.port.toBridge(MsgTypes.SESSION_BIND, data);
+		if (seq >= 0) {
 			this.sentLink = this.link;
+			this.sentSeq = seq;
 			this.sentWorld = current;
 			this.sentMultiplayer = this.multiplayer;
+			this.slot = null;
 			this.stats.binds++;
 		}
 	}
 
-	/** {@code session.bound{slot}} from gen1-bridge. */
+	/** The same bind again on this link at the next tick (gen1-bridge refused it; it may succeed now). */
+	public void rebind() {
+		this.sentLink = -1;
+	}
+
+	/** {@code session.bound{slot}} from gen1-bridge, without its {@code re}. */
 	public void onBound(JsonObject data) {
+		this.onBound(data, null);
+	}
+
+	/**
+	 * {@code session.bound{slot}} from gen1-bridge; {@code re} is the bind it answers (null: not said). Returns true when it
+	 * answers this link's latest bind for the current world.
+	 */
+	public boolean onBound(JsonObject data, @Nullable Long re) {
 		long value = JsonFields.integer(data, "slot", -1);
 		if (value < 0 || value > 255 || data.size() != 1) {
 			this.warn("session.bad_bound");
-			return;
+			return false;
 		}
-		if (this.world == null || this.sentLink != this.link) {
+		if (this.world == null || this.sentLink != this.link || !this.world.equals(this.sentWorld)) {
 			// An answer to no bind of this link (the player left the world meanwhile): nothing to pair.
 			this.warn("session.stray_bound");
-			return;
+			return false;
+		}
+		if (re != null && this.sentSeq > 0 && re != this.sentSeq) {
+			// The answer to an older bind of this link (another world's): the latest one is still being worked on.
+			this.warn("session.stale_bound");
+			return false;
 		}
 		this.slot = (int) value;
 		this.stats.bounds++;
@@ -133,6 +160,7 @@ public final class SessionBinder {
 				this.stats.boundsRelayed++;
 			}
 		}
+		return true;
 	}
 
 	// ---- views ----
@@ -149,6 +177,11 @@ public final class SessionBinder {
 	/** The save slot gen1-bridge paired with this world on this link, or null. */
 	public @Nullable Integer slot() {
 		return this.slot;
+	}
+
+	/** The {@code seq} of this link's latest bind, or -1. */
+	public long sentSeq() {
+		return this.sentLink == this.link ? this.sentSeq : -1;
 	}
 
 	/** True when this link's gen1-bridge has been told about the current world. */

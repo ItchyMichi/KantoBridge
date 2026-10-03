@@ -29,12 +29,17 @@
 -- (save.minecraft_failed); a save id gen1-bridge never sent, or one already
 -- answered, is counted and logged, never answered with an error.
 --
--- session.bind (M7 basics; multiplayer pairing is M9): answered with the
--- hidden game's active save slot (kb_engine.saveSlot: N of "slotN", 0 for
--- the flat legacy save file). The world and the multiplayer flag are kept
--- in the hidden save's mod data (mod.save "session"), written again after
--- New Game or CONTINUE (whose save brings its own mod data). The world id
--- is the client's own and is never logged, only its length.
+-- M9: the save act/kb_pairing.lua makes before a slot switch (reason
+-- "switch") belongs to the pairing being left, so it is never announced;
+-- while a switch waits (link.blocked), saves wait unannounced too (the
+-- switch then drops them with the old game).
+--
+-- session.bind (M7 basics; M9's pairing is act/kb_pairing.lua): once the
+-- pairing answers session.bound{slot}, the world, the multiplayer flag and
+-- the slot are kept in the hidden save's mod data (mod.save "session"),
+-- written again after New Game or CONTINUE (whose save brings its own mod
+-- data). The world id is the client's own and is never logged, only its
+-- length.
 --
 -- Logs show codes, reasons, ids and counts only.
 
@@ -51,7 +56,7 @@ end
 -- opts:
 --   engine   kb_engine instance (savingReason, queueSave, takeSave,
 --            nurseHealed, queueHeal, armCenterSave, centerSaveStep,
---            centerSaveArmed, saveSlot, inGame)
+--            centerSaveArmed, inGame)
 --   store    { get(key), set(key, value) }: mod.save
 --   log      kb_log logger (optional)
 function Save.new(opts)
@@ -65,6 +70,7 @@ function Save.new(opts)
     heals = 0, centerArmed = 0, centerOffline = 0, centerWritten = 0, centerRefused = 0,
     centerFailed = 0, centerDropped = 0,
     binds = 0, storeWrites = 0,
+    switchWrites = 0, -- M9: saves before a slot switch (never announced)
   }
 
   local function remember(id, reason)
@@ -77,7 +83,14 @@ function Save.new(opts)
 
   -- save.writing (inside Game:writeSave, before the file is written).
   function saves.writing()
-    local reason = engine.savingReason() == "center" and "center" or "menu"
+    local saving = engine.savingReason()
+    if saving == "switch" then
+      -- M9: the old game saved into its own slot before a switch
+      counts.switchWrites = counts.switchWrites + 1
+      if log then log.info("save.switch_writing", { count = counts.switchWrites }) end
+      return
+    end
+    local reason = saving == "center" and "center" or "menu"
     local id, replaced = engine.queueSave(reason)
     if not id then return end
     counts.writes = counts.writes + 1
@@ -107,8 +120,8 @@ function Save.new(opts)
   end
 
   -- After the step's party.* and bag.sync: the center save when it may run,
-  -- then the save waiting to be announced (live only). out gets
-  -- { "save.begin", data, "save" }.
+  -- then the save waiting to be announced (live only, and not while a slot
+  -- switch waits: link.blocked). out gets { "save.begin", data, "save" }.
   function saves.step(out, link)
     local res = engine.centerSaveStep()
     if res == "written" then
@@ -124,7 +137,7 @@ function Save.new(opts)
       counts.centerDropped = counts.centerDropped + 1
       if log then log.info("save.center_dropped", { count = counts.centerDropped }) end
     end
-    if not (link and link.live) then return end
+    if not (link and link.live) or link.blocked then return end
     local q = engine.takeSave()
     if q then
       out[#out + 1] = { "save.begin", { save = q.save, reason = q.reason }, "save" }
@@ -175,21 +188,13 @@ function Save.new(opts)
     return ok
   end
 
-  -- session.bind from the session (role already checked). Returns the
-  -- slot, or nil plus bad_message.
-  function saves.bind(data)
-    if type(data) ~= "table" or not validId(data.world) or type(data.multiplayer) ~= "boolean" then
-      return nil, "bad_message"
-    end
-    local slot = engine.saveSlot()
-    bound = { world = data.world, multiplayer = data.multiplayer, slot = slot }
+  -- A bind the pairing answered with session.bound{slot} (act/kb_pairing.lua):
+  -- kept in the hidden save's mod data while in game.
+  function saves.bound(world, multiplayer, slot)
+    if not validId(world) then return end
+    bound = { world = world, multiplayer = multiplayer == true, slot = slot }
     counts.binds = counts.binds + 1
-    local stored = store_()
-    if log then
-      log.info("session.bound", { slot = slot, multiplayer = data.multiplayer, worldLen = #data.world,
-                                  stored = stored, count = counts.binds })
-    end
-    return slot
+    store_()
   end
 
   -- New Game or CONTINUE: the bound world goes into the new save's mod data.

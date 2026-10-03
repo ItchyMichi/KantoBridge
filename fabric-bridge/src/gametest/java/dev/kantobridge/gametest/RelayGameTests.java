@@ -17,6 +17,8 @@ public class RelayGameTests implements FabricGameTest {
 	public void relayDispatchesOnlyValidClientMessages(GameTestHelper helper) {
 		List<Envelope> seen = new ArrayList<>();
 		RelayService relay = RelayService.get();
+		// Stands in for the real texture.status handler (TextureStatusService), which is put back afterwards.
+		RelayService.Handler real = relay.handler(MsgTypes.TEXTURE_STATUS);
 		relay.register(MsgTypes.TEXTURE_STATUS, (player, message) -> seen.add(message));
 		try {
 			MockPlayers.with(helper, player -> {
@@ -29,7 +31,11 @@ public class RelayGameTests implements FabricGameTest {
 				relay.receive(player, "{\"type\":\"texture.status\",\"seq\":5,\"re\":1,\"data\":" + data + "}");
 			});
 		} finally {
-			relay.unregister(MsgTypes.TEXTURE_STATUS);
+			if (real != null) {
+				relay.register(MsgTypes.TEXTURE_STATUS, real);
+			} else {
+				relay.unregister(MsgTypes.TEXTURE_STATUS);
+			}
 		}
 		helper.assertTrue(seen.size() == 1, "expected exactly one accepted message, got " + seen.size());
 		helper.assertTrue(seen.get(0).seq() == 1 && seen.get(0).data().get("textures").getAsInt() == 3, "message changed in transit");

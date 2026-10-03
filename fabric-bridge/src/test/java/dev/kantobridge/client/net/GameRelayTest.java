@@ -319,4 +319,39 @@ class GameRelayTest {
 		assertEquals(List.of("POKE_BALL", "POTION", "POKE_BALL"), uses.stream().map(sent -> sent.str("item")).toList(), "in order");
 		assertEquals(3, this.relay.stats().bagUsesForwarded);
 	}
+
+	/** M9: what the save pairing's gate asks of the relay when it opens, and when the player changes worlds. */
+	@Test
+	void theGateCatchesGen1BridgeUpAndDropsAnotherWorldsQueues() throws Exception {
+		// Nothing flows while the gate holds the world (the glue's ports say no).
+		this.links.bridgeUp = false;
+		this.links.serverUp = false;
+		this.relay.fromServer(this.message(MsgTypes.PARTY_SYNC, "{\"party\":[],\"box\":{\"count\":0}}"), 0);
+		this.relay.fromServer(this.message(MsgTypes.DEX_SYNC, "{\"seen\":[1],\"owned\":[1]}"), 0);
+		this.relay.fromServer(this.message(MsgTypes.BAG_USE, "{\"item\":\"POTION\",\"qty\":1}"), 0);
+		this.relay.fromBridge(this.message(MsgTypes.PARTY_HEAL, "{}"), 0);
+		this.relay.fromBridge(this.message(MsgTypes.BAG_SYNC, "{\"items\":{\"POKE_BALL\":3}}"), 0);
+		assertTrue(this.links.bridge.isEmpty() && this.links.server.isEmpty());
+		assertEquals(1, this.relay.queuedUses());
+		assertEquals(2, this.relay.queued());
+
+		// The gate opens: the world's newest syncs and the waiting uses go to gen1-bridge.
+		this.links.bridgeUp = true;
+		this.links.serverUp = true;
+		this.relay.resendSyncs();
+		this.relay.flushUses();
+		assertEquals(List.of(MsgTypes.PARTY_SYNC, MsgTypes.DEX_SYNC, MsgTypes.BAG_USE), this.links.bridge.stream().map(Sent::type).toList());
+		assertEquals(0, this.relay.queuedUses());
+
+		// Another world's queue goes instead of reaching this world's server.
+		assertEquals(2, this.relay.dropQueue());
+		this.relay.tick(10);
+		assertTrue(this.links.server.isEmpty(), "the dropped requests never went out");
+		assertEquals(0, this.relay.dropQueue());
+		this.links.bridgeUp = false;
+		this.relay.fromServer(this.message(MsgTypes.BAG_USE, "{\"item\":\"POTION\",\"qty\":1}"), 20);
+		assertEquals(1, this.relay.dropUses());
+		assertEquals(0, this.relay.queuedUses());
+		assertTrue(this.links.warnings.contains("party.queue_dropped") && this.links.warnings.contains("bag.uses_dropped"));
+	}
 }

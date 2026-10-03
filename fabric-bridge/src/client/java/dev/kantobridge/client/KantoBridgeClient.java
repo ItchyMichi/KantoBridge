@@ -3,11 +3,14 @@ package dev.kantobridge.client;
 import dev.kantobridge.block.KbBlocks;
 import dev.kantobridge.client.act.ActRuntime;
 import dev.kantobridge.client.bridge.BridgeRuntime;
+import dev.kantobridge.client.fx.BlockadeFade;
+import dev.kantobridge.client.fx.SpeechBubbles;
 import dev.kantobridge.client.fx.SurfSprite;
 import dev.kantobridge.client.move.MoveRuntime;
 import dev.kantobridge.client.net.ClientRelay;
 import dev.kantobridge.client.net.GameRelayRuntime;
 import dev.kantobridge.client.net.SessionRuntime;
+import dev.kantobridge.client.packs.TextureSyncRuntime;
 import dev.kantobridge.client.puppet.PuppetRuntime;
 import dev.kantobridge.client.story.ClientStoryView;
 import dev.kantobridge.client.story.StoryCellRenderer;
@@ -45,5 +48,11 @@ public class KantoBridgeClient implements ClientModInitializer {
 		SessionRuntime.init(bridge);
 		// The title screen's "Create Kanto world" button: export, pack, new level, build.
 		CreateKantoWorldFlow.init();
+		// Multiplayer (M9): this player's own art built into the world's slots when their pack doesn't fit it; speech
+		// bubbles over other players busy with their own hidden game; other players faded inside this player's blockades.
+		TextureSyncRuntime.init(bridge);
+		SpeechBubbles.init();
+		BlockadeFade.init();
+		bridge.addDebugLine(SpeechBubbles::debugLine);
 	}
 }
