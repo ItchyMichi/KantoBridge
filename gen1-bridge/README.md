@@ -4,18 +4,23 @@ The Gen1Recomp half of Kanto Bridge: a Gen1Recomp mod (Lua, mod API 2) that runs
 player's hidden Gen1Recomp. It listens on `127.0.0.1:27151` for `fabric-bridge`
 ([`docs/PROTOCOL.md`](../docs/PROTOCOL.md#transport)).
 
-**Status: M6, Route 1, habitat pools, catching, party/Pokédex/bag sync.** The listener, the
-handshake, the heartbeat, `snapshot`, the live `player.pos`/`player.state` stream, the world export
-for the builder, the step driver (`move.step`, `move.face`, `move.hold`), the `warp` messages, the UI
-observer and its answers (`ui.*`), the NPC observer (`npc.*`, `emote`), `act.interact`, `act.button`,
-the mirror frames (`mirror.*`), battles fought in Cobblemon (`battle.start`/`battle.result`), gifts
-(`party.give`), heals (`party.heal`), the shadow party (`party.sync`), and now wild encounters (grass
-and cave rolls left to Cobblemon's habitat pools, surfing and fishing fought in Cobblemon, the Safari
-Zone and ghost battles native with `battle.native`), the Pokédex (`dex.sync`), the mirrored bag
-(`bag.sync`/`bag.use`) and items used on a party member (`party.item`) work against the real engine
-(end-to-end tests in [`tools/e2e/`](../tools/e2e): the title, Oak's speech with both names typed from
-the client, Oak's escort, the starter, the lab's rival battle won and lost, and 200 grass steps on
-Route 1 with no native battle). Story diffs, field moves and saving arrive in later milestones.
+**Status: M7, Viridian City: the Pokémon Center, the Mart, the PC, money, trainers, saving.** The
+listener, the handshake, the heartbeat, `snapshot`, the live `player.pos`/`player.state` stream, the
+world export for the builder, the step driver (`move.step`, `move.face`, `move.hold`), the `warp`
+messages, the UI observer and its answers (`ui.*`), the NPC observer (`npc.*`, `emote`),
+`act.interact`, `act.button`, the mirror frames (`mirror.*`), battles fought in Cobblemon
+(`battle.start`/`battle.result`), gifts (`party.give`), heals (`party.heal`), the shadow party
+(`party.sync`), wild encounters (grass and cave rolls left to Cobblemon's habitat pools, surfing and
+fishing fought in Cobblemon, the Safari Zone and ghost battles native with `battle.native`), the
+Pokédex (`dex.sync`), the mirrored bag (`bag.sync`/`bag.use`), items used on a party member
+(`party.item`), and now saving (`save.begin`/`save.done`, the nurse's heal saving both games),
+`session.bind`/`session.bound`, Bill's PC as Cobblemon's PC (`pc.open`/`pc.closed`), the Mart through
+the generic menus, and map trainers that sight the player work against the real engine (end-to-end
+tests in [`tools/e2e/`](../tools/e2e): the title, Oak's speech with both names typed from the client,
+Oak's escort, the starter, the lab's rival battle won and lost, 200 grass steps on Route 1 with no
+native battle, and Viridian City: the nurse, both saves, Bill's PC, a Mart purchase and sale, a Viridian
+Forest trainer beaten and another lost to, the blackout). Story diffs and field moves arrive in later
+milestones.
 
 ## What it does each logic step
 
@@ -73,7 +78,10 @@ test drivers), guarded so the hook always calls `next`:
    `stay` only for boxes whose end takes no press; pages of more than 8 lines are split into protocol
    pages), choice (labels, index 0 = the first, the question from the text box under it), menu and
    list (rows with their right column, cursor and scroll, `wrap` when the cursor goes round; the
-   Mart's footer and money), quantity, naming (title, length, presets, the
+   Mart's footer and money: its BUY/SELL/QUIT menu shows the money box too; a menu or list whose
+   footer or money changes while open, such as the clerk's next line or the money after a purchase,
+   is sent again as `ui.open` with its own id, which the client replaces in place), quantity
+   (with the Mart's unit price), naming (title, length, presets, the
    default, the species' dex number and the engine's letter `grid` without its ED and case cells; its
    preset menu is part of it), small list adapters for the Pokédex list, the prize counter and the
    Fly list, and `mirror` (with the screen id) for everything else that takes input: the party menu,
@@ -121,13 +129,16 @@ test drivers), guarded so the hook always calls `next`:
     1-based party index, name, NPC and cell; it goes out again with the same id after every snapshot
     until its `battle.result` arrives. A result first shows what the battle screen would have (the
     trainer's loss line and the prize, added to the money; on a loss `Rival1WinText` and the
-    blackout lines, except for the Oak's-lab rival), then applies the engine's own effects: a script
-    resumes through `start_battle`'s resume path (`lastBattleResult`, `lastCheck`, `afterBattle`: a
-    loss blacks out, except in Oak's lab); a map trainer gets engageTrainer's win effects (defeated,
-    event flag, rewards, `afterBattle`) and its encounter ends with `continue({cancel = true})`.
-    `aborted` (or a trainer battle "fled"/"caught") applies nothing: the script stops, the encounter
-    is cancelled, so the battle can be fought again. Without a client the hidden game fights its own
-    battles (shown on the mirror).
+    blackout lines, except for the Oak's-lab rival), brings the map's song back as a battle screen's
+    exit does (M7), then applies the engine's own effects: a script resumes through `start_battle`'s
+    resume path (`lastBattleResult`, `lastCheck`, `afterBattle`: a loss blacks out, except in Oak's
+    lab); a map trainer gets engageTrainer's win effects (defeated, event flag, rewards,
+    `afterBattle`) and its encounter ends with `continue({cancel = true})`. A map trainer that sights
+    the player plays natively up to its battle text: the "!" bubble over it (`emote`), its walk-up
+    (`npc.move` kind `script`), the challenge. `aborted` (or a trainer battle "fled"/"caught")
+    applies nothing: the script stops, the encounter is cancelled, so the battle can be fought again
+    (a cancelled sighting waits until the player moves). Without a client the hidden game fights its
+    own battles (shown on the mirror).
 12. **Gifts, heals, the shadow party** (`act/kb_party.lua`): `give_pokemon` runs natively, its
     nickname prompt included (it reaches the client as a text box, a YES/NO and the naming screen),
     and the gift goes out as `party.give` (`starter`, `prize` or `gift`; moves, DVs, nickname, OT)
@@ -137,8 +148,10 @@ test drivers), guarded so the hook always calls `next`:
     in `mod.save`, members kept by uid in place, the pending gift matched by species and level,
     moves by Gen 1 number, HP scaled, status, nickname; non-Gen-1 species and moves left out and
     counted), as soon as that is safe (not at the title, not during a give, not under a native
-    battle); the last one applies again after New Game or CONTINUE. `heal_party` and a blackout
-    send `party.heal`. The snapshot's party carries the uids it knows.
+    battle); the last one applies again after New Game or CONTINUE. `heal_party`, the nurse's heal
+    and a blackout send `party.heal`; a blackout's goes out right after its warp's `arrive` (the
+    player lands at the last heal point's town, then Cobblemon's party heals), or after 10 s at
+    most. The snapshot's party carries the uids it knows.
 13. **The opening** needs nothing of its own: the title screen and Oak's speech arrive as mirror and
     text UIs, the title menu as a menu, and both naming screens as `ui.open{kind:"naming"}` (presets,
     grid) answered by `ui.name` through the M4 observer path, which no hot reload can break.
@@ -177,8 +190,11 @@ test drivers), guarded so the hook always calls `next`:
     exact gift; without it the M5 dex-and-level match applies.
 18. **Options pin (PLAN P21):** the hidden game's display options stay classic (no tilt, zoom, render
    pipelines, wide or fill battles, or dynamic UI) and text speed stays FAST. They are pinned in
-   memory at boot, on New Game and on CONTINUE, and re-checked every second. Nothing is written to
-   disk; Gen1Recomp's own OPTIONS screen persists them if the player saves options there.
+   memory at boot, on New Game and on CONTINUE, and re-checked every second. gen1-bridge never
+   writes the options file itself, but every progress save writes the live options with it
+   (SaveData.save calls saveLiveOptions, `src/core/SaveData.lua:2585-2597`): the player's own saves
+   and, from M7, the save after the nurse's heal leave the pinned values in `options.lua`, as
+   Gen1Recomp's own OPTIONS screen would.
 19. **World export** ([`docs/PROTOCOL.md`](../docs/PROTOCOL.md) "Export resources"): for `builder`
    and `test` connections, `export.index` and `export.get` serve the ten resource kinds (maps with
    per-cell flags, tilesets, images, sprites, palettes, encounters, field tables, names, the surface
@@ -186,6 +202,33 @@ test drivers), guarded so the hook always calls `next`:
    yields after about 6 ms of work per step; requests wait until it's done. Resources are cached
    for the instance's lifetime as canonical JSON (the hash is its SHA-256), and replies go out at
    most 256 KiB per step, pausing while the client lags more than 1 MiB behind.
+20. **Saving** (`act/kb_save.lua`, M7, PLAN flow 12): every hidden-game save announces itself
+   through the engine's `save.writing` event and goes out as `save.begin{save, reason}` (ids
+   `v-<token>-<n>`, unique per gen1-bridge process): reason `center` for the save after the nurse's
+   heal, `menu` for every other one (the start menu's SAVE, F1, the Hall of Fame). A save made while
+   no client or test session is connected waits, the newest only, until one is. **The Pokémon
+   Center:** gen1-bridge notices the nurse's heal machine (a new `healAnim`); Cobblemon's party heals
+   at once (`party.heal`), and while a client or test session is connected the hidden game saves
+   itself (`Game:writeSave`, behind the engine's own F1 quick-save gate) as soon as her lines are
+   done and the player stands; its `save.begin{reason:"center"}` follows. The engine's `lastHeal` (the
+   blackout return point) is the nurse's own, never written by gen1-bridge. A vetoed or failed write
+   is a counted warning. `save.done{save, ok}` is log only: the hidden save already happened and is
+   never blocked or rolled back; `ok: false` is a counted warning (`save.minecraft_failed`, also a
+   `log` message); an unknown or repeated id is counted and logged, never answered with an error.
+   **Sessions:** `session.bind{world, multiplayer}` is answered with `session.bound{slot}` (`re` set):
+   the hidden game's active save slot (`slotN` → N, 0 for the flat legacy save file). The world and
+   the flag go into the hidden save's mod data (`mod.save` "session"), again after New Game or
+   CONTINUE; the world id is never logged, only its length. Multiplayer pairing is M9.
+21. **Bill's PC** (`act/kb_pc.lua`, M7): the Pokémon Center PC's rows pass the engine's
+   `ui.pc.items` hook; while a client or test session is connected, the box row ("BILL'S PC", or
+   "SOMEONE'S PC" before meeting Bill) runs its own access text and then, instead of the Gen 1 box
+   screens, holds the hidden game (a plain state over the still-open PC menu: mode `busy`, no UI)
+   and sends `pc.open` once. `pc.closed` ends the hold and the PC menu takes input again (another row,
+   or LOG OFF), all native. The player's item PC and the other rows are untouched; without a client
+   the box row is native. A dropped link releases the hold at once; a hold whose world went away
+   (the title, New Game, CONTINUE) is dropped; `pc.closed` with no hold is counted and ignored. A hot
+   reload keeps it working: the hold lives in kb_engine's process-lifetime slot and a menu built
+   before the reload asks the current instance.
 
 ### Where the export's data comes from
 
@@ -222,7 +265,7 @@ client are released at once.
 | File | Purpose |
 |---|---|
 | `manifest.json` | Read by Gen1Recomp's loader. `network` unlocks `require("socket")` (LÖVE's bundled LuaSocket) inside the mod sandbox; `engine_internals` discloses that the mod requires engine modules (`src.*`). Gen1Recomp only displays permissions; it never prompts. |
-| `main.lua` | Entry point. Loads the modules, defines the `port` option, wires the `input.step`, `movement.collision`, `render.output_enabled`, `render.output`, `script.command`, `trainer.before_battle`, `encounter.roll`, `encounter.fishing` and `item.use` hooks and the `game.ready`, `save.created`, `save.loaded`, `player.warped`, `map.entered`, `world.blacked_out`, `screen.pushed`/`popped` and `world.interacted` events, routes `move.*`, `act.*`, `ui.*`, `mirror.*`, `battle.result`, `party.sync`, `dex.sync` and `bag.use` to their modules, keeps one tap per logic step, orders each step's messages (`player.state`, `warp`, `player.pos`/`player.blocked`, `act.result`, `npc.*`/`emote`, `ui.close`/`open`/`update`, `party.give`/`party.heal`/`party.item`, `bag.sync`, `battle.native`/`battle.start`, `mirror.frame`), and publishes a status table in `mod.exports` (versions, counts, flags) for test drivers. `debug.status` adds the battle, party, bag, encounter and item counters, the Pokédex counts and the typed names' lengths and short hashes. |
+| `main.lua` | Entry point. Loads the modules, defines the `port` option, wires the `input.step`, `movement.collision`, `render.output_enabled`, `render.output`, `script.command`, `trainer.before_battle`, `encounter.roll`, `encounter.fishing`, `item.use` and `ui.pc.items` hooks and the `game.ready`, `save.created`, `save.loaded`, `save.writing`, `player.warped`, `map.entered`, `world.blacked_out`, `screen.pushed`/`popped` and `world.interacted` events, routes `move.*`, `act.*`, `ui.*`, `mirror.*`, `battle.result`, `party.sync`, `dex.sync`, `bag.use`, `save.done`, `pc.closed` and `session.bind` to their modules, keeps one tap per logic step, orders each step's messages (`player.state`, `warp`, `player.pos`/`player.blocked`, `act.result`, `npc.*`/`emote`, `ui.close`/`open`/`update`, `party.give`/`party.heal`/`party.item`, `bag.sync`, `save.begin`, `pc.open`, `battle.native`/`battle.start`, `mirror.frame`; a blackout's `party.heal` after its warp's `arrive`), and publishes a status table in `mod.exports` (versions, counts, flags; from M7 also `saves`, `centerSaves`, `sessionBinds`, `pcHeld`) for test drivers. `debug.status` adds the battle, party, bag, encounter, item, save (`save*`) and PC (`pc*`) counters, the Pokédex counts, `money`, `bagTotal`/`bagKinds`, `defeated` (trainers beaten) and the typed names' lengths and short hashes. |
 | `lib/kb_json.lua` | Our own strict, deterministic JSON codec: sorted keys, `{}`/`[]`/null kept apart, strict parsing, errors that never quote the input. |
 | `lib/kb_sha256.lua` | SHA-256, for the short hashes logs may show and for export hashes. |
 | `lib/kb_log.lua` | Redacted logging: a code plus fields; any string that isn't id-shaped prints as `<str:LEN:SHA8>`. |
@@ -230,13 +273,15 @@ client are released at once.
 | `lib/kb_proto.lua` | The message envelope (`type`, `seq`, `re`, `data`), dispatch, replies and `error` answers, with a gate and catalog-aware handling of unhandled types. |
 | `lib/kb_session.lua` | One connection's session: hello first, handshake, heartbeat timeout, resync, debug messages, live streams, log forwarding. |
 | `lib/kb_catalog.lua` | **Generated** from `protocol/catalog.json` by `tools/lua/gen_catalog.py`: the message types and their legs. A test fails when it is stale. |
-| `lib/kb_engine.lua` | **The only file that touches engine internals.** Each function cites the engine `file:line` it relies on (v0.3.49): the overworld and its player, the top state's class, NPCs, dark maps, badges, the options pin, the instance takeover slot, the movement internals (setting the facing, held buttons, the player's collision verdicts, warp departures, hop/boulder/departure facts), the M4 internals (the screen stack's classes and stable keys, each widget's fields and its ready test, the few writes before a confirming tap: a cursor, a quantity, a name's glyphs; NPC steps and scripted moves, the emotion bubble, `world.interacted`'s target, counter tiles), and the export's data sources and queries (dataset views, the live-Data copy, `Map.new` and its cell queries, `Map.isOutside`, `computeNeighbors`, tile animations, spinner tiles, `Assets.imageData` + PNG encoding, the SGB palette cascade, and the few engine constants with nothing to call: cut-tree and shore tiles), and the M5 seams: the `script.command` and `trainer.before_battle` bodies (the held battle on the runner's `waitingCheck`, `start_battle`'s resume path, engageTrainer's win effects, `continue({cancel})`, the result texts and prize), trainer teams (`Pokemon.movesAtLevel`, the copied boss-move table and trainer DVs, the rival's offset), `give_pokemon`'s gift capture, `heal_party`, the shadow party's rebuild (`Pokemon.new`, `Stats.calc`, `Growth.expForLevel`, `stampOT`) with its uid map, and the process-lifetime `kantoBridgeState` slot on the Game object; and the M6 seams: the `encounter.roll` and `encounter.fishing` bodies (the Safari region and ghost-map rules, REPEL's filter, `encounter.species`, the held surf/fish battle and its `afterBattle` ending, the cast box's continuation taken over on `screen.pushed`), the native special battle on the stack (`battleKind`), the Pokédex (`save.pokedex`), the bag (`save.inventory`, `Bag.remove`, key items), and the `item.use` body (the stone and candy tests, BagMenu's consume, row refresh and party-menu close, the TM/HM watch over MoveLearnMenu's slot), with the slot pointing at the current instance's bridge. Re-check them all when the Gen1Recomp pin changes. |
+| `lib/kb_engine.lua` | **The only file that touches engine internals.** Each function cites the engine `file:line` it relies on (v0.3.49): the overworld and its player, the top state's class, NPCs, dark maps, badges, the options pin, the instance takeover slot, the movement internals (setting the facing, held buttons, the player's collision verdicts, warp departures, hop/boulder/departure facts), the M4 internals (the screen stack's classes and stable keys, each widget's fields and its ready test, the few writes before a confirming tap: a cursor, a quantity, a name's glyphs; NPC steps and scripted moves, the emotion bubble, `world.interacted`'s target, counter tiles), and the export's data sources and queries (dataset views, the live-Data copy, `Map.new` and its cell queries, `Map.isOutside`, `computeNeighbors`, tile animations, spinner tiles, `Assets.imageData` + PNG encoding, the SGB palette cascade, and the few engine constants with nothing to call: cut-tree and shore tiles), and the M5 seams: the `script.command` and `trainer.before_battle` bodies (the held battle on the runner's `waitingCheck`, `start_battle`'s resume path, engageTrainer's win effects, `continue({cancel})`, the result texts and prize), trainer teams (`Pokemon.movesAtLevel`, the copied boss-move table and trainer DVs, the rival's offset), `give_pokemon`'s gift capture, `heal_party`, the shadow party's rebuild (`Pokemon.new`, `Stats.calc`, `Growth.expForLevel`, `stampOT`) with its uid map, and the process-lifetime `kantoBridgeState` slot on the Game object; and the M6 seams: the `encounter.roll` and `encounter.fishing` bodies (the Safari region and ghost-map rules, REPEL's filter, `encounter.species`, the held surf/fish battle and its `afterBattle` ending, the cast box's continuation taken over on `screen.pushed`), the native special battle on the stack (`battleKind`), the Pokédex (`save.pokedex`), the bag (`save.inventory`, `Bag.remove`, key items), and the `item.use` body (the stone and candy tests, BagMenu's consume, row refresh and party-menu close, the TM/HM watch over MoveLearnMenu's slot), with the slot pointing at the current instance's bridge; and the M7 seams: the nurse's heal machine (`healAnim`, `lastHeal`), the center save (`Game:writeSave` behind `Game:quickSaveAllowed`, its reason during `save.writing`), the save queue, the active save slot (`SaveData.activeSlot`), the blackout's held heal, the map's song after a battle Cobblemon fought (`Music.restoreMap`), the Mart's money box and changing footers, and the `ui.pc.items` body (the box row by its source label, the access text's continuation, the hold state and its record). Re-check them all when the Gen1Recomp pin changes. |
 | `observe/kb_player.lua` | The mode classifier (`busy` while a Cobblemon battle holds the world) and the `player.state`/`player.pos` observer, working on plain facts from `kb_engine`: step starts, ledge hops (one message at the landing), syncs, and tags the step driver reads. |
 | `observe/kb_warp.lua` | The `warp` start/arrive messages and their kinds, from the warp events and the transition facts. |
 | `act/kb_move.lua` | The step driver: `move.step` queue, facing first, holds through `mod.input` (released on the landing poll, re-pressed after an input reset, all released outside `idle`), outcomes (step, hop, push, warp, blocked) answered once per `n`, `move.face`, `move.hold`. |
 | `observe/kb_snapshot.lua` | Builds `snapshot` from the facts and the save: position, state, flags, toggles, bag, money, coins, badges, the hidden game's party (with the Cobblemon uids it knows), the Pokédex, the current map's NPCs (shaped by `kb_npcs`). |
 | `act/kb_battle.lua` | Battles fought in Cobblemon: the `battle.start` payload of a battle kb_engine holds (kind, trainer, team, wild, rules; wild kinds `static`, `surf`, `fish`), sending it and re-sending it after snapshots, `battle.result` (outcomes to the engine's results; errors `battle.unknown`, `bad_message`), and `battle.native` for the special battles that stay native. |
 | `act/kb_party.lua` | Gifts (`party.give`, re-sent until a sync shows them, given up on after five syncs and two minutes), heals (`party.heal`), `party.sync` (checked, mapped to Gen 1 species and moves, matched to pending gifts by `give` or by species and level, applied when safe), the uids in `mod.save`, `dex.sync` (added to the Pokédex in game, again after New Game or CONTINUE) and `party.item` (the item uses kb_engine queued, sent once). |
+| `act/kb_save.lua` | Saving and sessions (M7): `save.writing` → `save.begin` (reason `menu` or `center`, the newest waiting while no client is connected), the nurse's heal (Cobblemon's `party.heal`, then the center save), `save.done` (log only, counted), `session.bind` → `session.bound{slot}` with the world kept in `mod.save`. |
+| `act/kb_pc.lua` | Bill's PC (M7): `pc.open` once per hold kb_engine's `ui.pc.items` wrapper sets up, `pc.closed` ending it, a dropped link releasing it, counts. |
 | `observe/kb_bag.lua` | The mirrored bag: the battle items of PLAN Appendix B as `bag.sync` (after snapshots and on change, in game only), `bag.use` applied through kb_engine's `Bag.remove` (never below zero, mismatches counted, unmirrored items refused). |
 | `observe/kb_npcs.lua` | The NPC observer: `npc.set`/`add`/`remove`/`move`/`face` and `emote` from a per-step diff by id; `Npcs.shape`, the one place an NPC becomes a protocol entry. |
 | `observe/kb_ui.lua` | The UI observer: the stack's states as `ui.open`/`update`/`close` by kind, the protocol text markup (`Ui.markup`), re-announcing after a snapshot. |

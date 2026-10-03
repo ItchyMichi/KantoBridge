@@ -7,6 +7,10 @@
 --                            again, bottom first, with their ids)
 --   ui.update{ui, ...}       the moving parts: text page/line/waiting/done,
 --                            a cursor (index/top), a quantity, a list's rows
+--   ui.open{ui, ...} again   (M7) a menu or list whose footer or money
+--                            changed while open (the Mart's clerk lines, its
+--                            money box): the whole UI again with its id, which
+--                            the client replaces in place
 --   ui.close{ui}             once the state has left the stack
 --
 -- The stack is polled every logic step (kb_engine.uiStack: plain entries
@@ -166,7 +170,8 @@ function Ui.new(opts)
   local lastId = 0
   local steps = 0
   local top, presetKey     -- the effective top entry, and the preset Menu above a naming screen
-  local counts = { opened = 0, closed = 0, updates = 0, reannounced = 0, fixes = 0, cut = 0, mirrors = 0 }
+  local counts = { opened = 0, closed = 0, updates = 0, reannounced = 0, reopened = 0, fixes = 0, cut = 0,
+                   mirrors = 0 }
 
   local function text(s)
     local out, fixes = Ui.markup(s)
@@ -325,6 +330,8 @@ function Ui.new(opts)
       if f.wrap ~= nil then data.wrap = f.wrap == true end
       e.sent = { index = data.index, top = data.top }
       e.items = items
+      -- what the client was told, raw, for the re-open check (M7)
+      e.rawFooter, e.rawMoney = f.footer, f.money
     elseif kind == "quantity" then
       data = { qty = clampInt(f.qty, 0, 999), max = clampInt(f.max, 1, 999) }
       if f.unit ~= nil then data.unit = clampInt(f.unit, 0, 999999) end
@@ -358,11 +365,26 @@ function Ui.new(opts)
     end
   end
 
-  -- The cursor fields that changed since the client was told.
+  -- The cursor fields that changed since the client was told. A menu or
+  -- list whose footer or money changed (the Mart's clerk lines and money
+  -- box, M7) is sent again as ui.open with its id: ui.update carries
+  -- neither, and the client replaces an open UI sent again in place.
   local function update(e, readItems, out)
     local c = engine.uiCursor(e.key)
     e.cursor = c
     if not c or not e.announced then return end
+    if LISTLIKE[e.kind] and engine.uiMoneyFooter then
+      local mf = engine.uiMoneyFooter(e.key)
+      if mf and (mf.footer ~= e.rawFooter or mf.money ~= e.rawMoney) then
+        local data = openData(e)
+        if data then
+          out[#out + 1] = { "ui.open", data, "ui" }
+          counts.reopened = counts.reopened + 1
+          if log then log.debug("ui.reopened", { ui = e.id, kind = e.kind, screen = e.screen }) end
+          return
+        end
+      end
+    end
     local now = {}
     if e.kind == "text" then
       now.page, now.line = textPos(e, c.page or 1, c.line or 1)

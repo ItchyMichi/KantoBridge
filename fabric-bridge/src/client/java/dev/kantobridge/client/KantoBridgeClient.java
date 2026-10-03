@@ -5,6 +5,7 @@ import dev.kantobridge.client.bridge.BridgeRuntime;
 import dev.kantobridge.client.move.MoveRuntime;
 import dev.kantobridge.client.net.ClientRelay;
 import dev.kantobridge.client.net.GameRelayRuntime;
+import dev.kantobridge.client.net.SessionRuntime;
 import dev.kantobridge.client.puppet.PuppetRuntime;
 import dev.kantobridge.client.story.ClientStoryView;
 import dev.kantobridge.client.ui.UiRuntime;
@@ -33,6 +34,8 @@ public class KantoBridgeClient implements ClientModInitializer {
 		ActRuntime.init(bridge);
 		// Battles and Pokémon between gen1-bridge and the server (battle.start/result, party.*, syncs) and the activity.
 		GameRelayRuntime.init(bridge);
+		// Saving in both games, Bill's PC as Cobblemon's PC, and the world's id for the save pairing (session.bind).
+		SessionRuntime.init(bridge);
 		// The title screen's "Create Kanto world" button: export, pack, new level, build.
 		CreateKantoWorldFlow.init();
 	}

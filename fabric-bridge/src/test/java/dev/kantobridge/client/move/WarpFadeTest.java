@@ -188,6 +188,36 @@ class WarpFadeTest {
 	}
 
 	@Test
+	void aBlackoutFadesToBlackSlowlyAndComesBackSlower() {
+		FakePort port = new FakePort();
+		WarpFade fade = new WarpFade(port);
+		fade.start(WarpFade.BLACKOUT, 0);
+		assertEquals(WarpFade.BLACK, fade.colour());
+		assertEquals(0.25F, fade.alpha(250), 1.0E-6, "a quarter of the way after a usual fade's whole time");
+		run(fade, 50, 950);
+		assertEquals(WarpFade.Phase.OUT, fade.phase(), "still fading out");
+		fade.arrive(new Place("TEST_TOWN", 3, 4, Dir.DOWN), WarpFade.BLACKOUT, 960);
+		fade.tick(1000);
+		assertEquals(WarpFade.Phase.DARK, fade.phase());
+		assertEquals(List.of("request TEST_TOWN:3:4:down blackout"), port.take(), "requested once dark, with the hidden game's kind");
+		fade.tick(1050);
+		assertEquals(List.of(), port.take());
+		fade.done(true, 1100);
+		port.ready = true;
+		fade.tick(1150);
+		assertEquals(List.of("ended"), port.take());
+		assertEquals(WarpFade.Phase.IN, fade.phase());
+		assertEquals(0.5F, fade.alpha(1400), 1.0E-6, "half-way back after 250 ms");
+		fade.tick(1600);
+		assertEquals(WarpFade.Phase.IN, fade.phase());
+		fade.tick(1650);
+		assertEquals(WarpFade.Phase.IDLE, fade.phase());
+		// The next ordinary warp has the usual pace again.
+		fade.start("door", 2000);
+		assertEquals(0.5F, fade.alpha(2125), 1.0E-6);
+	}
+
+	@Test
 	void aNewWarpDuringTheFadeInFadesOutFromWhereItWas() {
 		FakePort port = new FakePort();
 		WarpFade fade = new WarpFade(port);

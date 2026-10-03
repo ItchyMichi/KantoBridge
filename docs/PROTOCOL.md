@@ -223,6 +223,9 @@ optional ones. The schemas give the exact types and limits.
 - **UI error codes:** `ui.stale`, `ui.wrong_kind`, `ui.timeout`, `bad_message`.
 - **The mirror:** after `mirror.sub` gen1-bridge sends the current frame at once, then changed frames
   only, at most `fps` a second.
+- **A same-id `ui.open` replaces an open UI in place:** gen1-bridge re-sends a menu or list whose
+  footer or money changed (the Mart's money box and clerk line) this way. The Mart's menus carry
+  `money`.
 - **`act.interact` targets** a cell 1–2 cells away in a straight line from the hidden player's cell
   (2 only across a counter), named in the hidden player's current map: near an outdoor seam `x`/`y`
   can be −1 or one past the map edge.
@@ -333,6 +336,31 @@ comes from each player's own generated pack.
   fallback applies only when `give` is absent.
 - **Order within one logic step:** `party.*`, then `bag.sync`, then `battle.native`/`battle.start`.
 
+#### Saving, PC and blackout rules (M7)
+
+- **`save.begin` reasons:** `center` for the save gen1-bridge makes right after a nurse heal (with
+  `Game:writeSave()`, once her lines are done and the engine's own quick-save gate is open); `menu`
+  for every other hidden-game save (start menu, F1, Hall of Fame). Ids are unique per gen1-bridge
+  process. Saves made while no client is connected collapse to the newest and go out after the next
+  `hello` (so a `save.begin` can arrive right after the handshake).
+- **`save.done`** is log-only on the Gen 1 side (its own save already happened and is never rolled
+  back); an unknown or repeated id is counted, never answered with an error. Minecraft answers once
+  per id, `ok:false` on failure; `re` is set only when the `save.begin` came on the current
+  connection.
+- **`session.bound.slot`** is the engine's save slot number, 0 for the flat legacy save file;
+  gen1-bridge keeps world, multiplayer flag and slot in its mod save data and answers every (repeated)
+  `session.bind`.
+- **Bill's PC:** choosing the Pokémon storage entry sends one `pc.open` and holds the hidden game over
+  its still-open PC menu until `pc.closed`; a dropped link releases the hold; an unexpected `pc.closed`
+  is ignored; the item PC stays native. The server sends exactly one `pc.closed` per `pc.open` (at
+  once if the PC can't open), and the client answers by itself after 5 s if Cobblemon's PC never shows.
+- **Heals:** `party.heal` is also sent at the nurse's heal. After a blackout it follows the
+  `warp{arrive, kind:"blackout"}`. A blackout lands where the engine puts it: the fly spot of the last
+  heal point's town, in front of its Pokémon Center (that map must be built in the world).
+- **Order within one logic step:** `party.*`, `bag.sync`, `save.begin`, `pc.open`, then `battle.*`.
+- `debug.status` adds `save*`, `pc*`, `money`, `bagTotal`, `bagKinds`, `defeated`, `healHeld`,
+  `centerArmed`, `saveQueued`, `pcHeld`.
+
 #### Party rules (M5)
 
 - `party.sync` (Cobblemon is authoritative) is debounced, **never sent during a battle**, and sent
@@ -386,8 +414,8 @@ engine symbols, and Pokémon identities as Cobblemon UUIDs (`uid`).
 |---|---|---|---|
 | `save.begin` | G→M, C→S | `save` (id), `reason:"menu"\|"center"` | |
 | `save.done` | S→C, M→G | `save, ok`; `re` optional | |
-| `session.bind` | M→G | `world, multiplayer` (multiplayer save pairing) | |
-| `session.bound` | G→M | `slot`; `re` optional | |
+| `session.bind` | S→C, M→G | `world, multiplayer` (save pairing: the server tells its client the world id; the client passes it on after joining and after every reconnect) | |
+| `session.bound` | G→M, C→S | `slot`; `re` optional (the client records the pairing on the server) | |
 
 ### Export (builder role)
 

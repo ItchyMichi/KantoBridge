@@ -414,7 +414,11 @@ def test_heal_party_and_a_blackout_heal_cobblemons_party_too():
     g.E.healPoint = g.b.to_lua({"map": "OAKS_LAB", "x": 1, "y": 1})
     g.E.blackOutTo(b"OAKS_LAB", 1, 1)
     g.run(2)
+    assert len(g.received("party.heal")) == 1, "a blackout's heal waits for its warp's arrival (M7)"
+    g.run(40)  # the warp's fade
     assert len(g.received("party.heal")) == 2
+    kinds = [(m["type"], m["data"].get("phase")) for m in g.log if m["type"] in ("warp", "party.heal")]
+    assert kinds[-3:] == [("warp", "start"), ("warp", "arrive"), ("party.heal", None)], "warp, then heal"
 
 
 def test_a_heal_waits_for_a_client():

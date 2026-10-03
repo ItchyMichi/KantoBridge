@@ -230,6 +230,7 @@ function FakeUi.attach(E)
     s.maxVisible, s.title, s.screenId, s.footer = opts.maxVisible, opts.title, opts.screenId, opts.footer
     s.cancelable = opts.cancelable ~= false
     s.startCloses, s.onCancel, s.isMenu, s.noWrap = opts.startCloses, opts.onCancel, opts.isMenu, opts.noWrap
+    s.keepOnCancel = opts.keepOnCancel -- B calls onCancel without popping (Menu.lua:115)
     local function clamp(self)
       if not (self.maxVisible and #self.items > self.maxVisible) then self.scroll = 0 return end
       if self.index - self.scroll > self.maxVisible then self.scroll = self.index - self.maxVisible
@@ -247,7 +248,7 @@ function FakeUi.attach(E)
         if not item.keepOpen then E.uiPop() end
         if item.onSelect then item.onSelect() end
       elseif self.cancelable and (pressed(input, "b") or (self.startCloses and pressed(input, "start"))) then
-        E.uiPop()
+        if not self.keepOnCancel then E.uiPop() end
         if self.onCancel then self.onCancel() end
       end
       clamp(self)
@@ -263,6 +264,14 @@ function FakeUi.attach(E)
     s.cursorRows, s.footer, s.dialogue, s.money = opts.cursorRows, opts.footer, opts.dialogue, opts.money
     s.screenId, s.kind, s.script, s.wrap = opts.screenId, opts.kind or title, opts.script, opts.wrap
     s.onChoose, s.onCancel = opts.onChoose, opts.onCancel
+    -- ListMenu:removeCurrent / :close (src/ui/ListMenu.lua:263-271)
+    function s.removeCurrent(self)
+      table.remove(self.items, self.index)
+      self.index = math.max(1, math.min(self.index, #self.items))
+    end
+    function s.close(self)
+      if E.stack:top() == self then E.uiPop() end
+    end
     local function sync(self)
       local maxRow = self.cursorRows or self.rows
       if self.index - self.scroll > maxRow then self.scroll = self.index - maxRow end
@@ -293,6 +302,7 @@ function FakeUi.attach(E)
     s.max = math.max(1, opts.max or 99)
     s.qty = math.min(opts.start or 1, s.max)
     s.unitPrice, s.onDone = opts.unitPrice, opts.onDone
+    s.keepOpen = opts.keepOpen -- the Mart's: its caller pops it (QuantityBox.lua:41-46)
     function s.update(self)
       local input = E.game.input
       if pressed(input, "up") then
@@ -300,10 +310,10 @@ function FakeUi.attach(E)
       elseif pressed(input, "down") then
         self.qty = self.qty > 1 and self.qty - 1 or self.max
       elseif pressed(input, "a") then
-        E.uiPop()
+        if not self.keepOpen then E.uiPop() end
         if self.onDone then self.onDone(self.qty) end
       elseif pressed(input, "b") then
-        E.uiPop()
+        if not self.keepOpen then E.uiPop() end
         if self.onDone then self.onDone(nil) end
       end
     end
@@ -474,6 +484,30 @@ function FakeUi.attach(E)
         end }))
       end },
     }
+    -- M7: a SAVE row before QUIT (opt-in), StartMenu.lua:63-139's shape: a
+    -- panel with no input, a YES/NO, "saving" (auto) whose end writes the
+    -- save, then "saved" (auto); the panel and the menu close after it
+    if E.startMenuSave then
+      table.insert(items, #items, { label = "SAVE", keepOpen = true, onSelect = function()
+        local panel = { delay = 0 }
+        local function closePanel()
+          if E.stack:top() == panel then E.uiPop() end
+          if E.stack:top() == menu then E.uiPop() end
+        end
+        function panel.update(self)
+          self.delay = self.delay + 1
+          if self.delay ~= 30 then return end
+          E.uiPush(E.textBox("SAVE THE\nTEST?", { choice = function(yes)
+            if not yes then closePanel() return end
+            E.uiPush(E.textBox("SAVING...", { auto = { delay = 12 }, onDone = function()
+              E.game:writeSave()
+              E.uiPush(E.textBox("SAVED!", { auto = { delay = 6 }, onDone = closePanel }))
+            end }))
+          end }))
+        end
+        E.uiPush(panel)
+      end })
+    end
     menu = E.menuState(items, { screenId = "StartMenu", startCloses = true, maxVisible = 8 })
     menu.index = math.min(E.startMenuIndex, #items)
     return menu

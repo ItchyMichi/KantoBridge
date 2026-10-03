@@ -182,7 +182,7 @@ function FakeWorld.attach(E)
         id = n.id or (mapId .. "_obj_" .. (#out + 1)),
         def = { index = #out + 1, name = n.name, sprite = n.sprite or "SPRITE_TEST", pushable = n.pushable,
                 item = n.item, pokemon = n.pokemon, level = n.level, trainerClass = n.trainerClass,
-                trainerParty = n.trainerParty },
+                trainerParty = n.trainerParty, nurse = n.nurse, mart = n.mart },
         cellX = n.x, cellY = n.y, facing = n.facing or "down", moving = false, progress = 0,
         stepFrames = n.stepFrames,
       }
@@ -612,14 +612,33 @@ function FakeWorld.attach(E)
     end
     if w.emote then
       w.emote.frames = w.emote.frames - 1
-      if w.emote.frames <= 0 then w.emote = nil end
+      if w.emote.frames <= 0 then
+        -- the hold's continuation runs when it ends (OC:1510-1527)
+        local done = w.emote.onDone
+        w.emote = nil
+        if done then done() end
+      end
       playerUpdate()
+      return
+    end
+    -- the Pokemon Center's machine holds the world (OC:1348-1360; M7,
+    -- fake_center.lua)
+    if w.healAnim then
+      w.healAnim.frames = w.healAnim.frames - 1
+      if w.healAnim.frames <= 0 then
+        local done = w.healAnim.onDone
+        w.healAnim = nil
+        if done then done() end
+      end
       return
     end
     for _, n in ipairs(w.npcs) do npcUpdate(n) end
     updateScriptMoves()
     local scripted = w.runner:isRunning() or #w.scriptMoves > 0 or (w.hopLand or 0) > 0
       or w.engaging or w.emote or w.teleportOut or (w.dustAnim and w.dustAnim.boulder)
+    -- trainers' sight before the player's input (OC:1553-1566; M7,
+    -- fake_center.lua's E.sightCheck)
+    if not scripted and not w.transitioning and E.sightCheck and E.sightCheck() then scripted = true end
     if not scripted and not w.transitioning and E.stack:top() == w then handleInput() end
     if (w.hopLand or 0) > 0 then w.hopLand = w.hopLand - 1 end
     local stepped = playerUpdate()

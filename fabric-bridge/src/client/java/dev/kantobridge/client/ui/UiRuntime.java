@@ -10,6 +10,9 @@ import dev.kantobridge.client.bridge.JsonFields;
 import dev.kantobridge.client.move.InputLock;
 import dev.kantobridge.client.move.MoveRuntime;
 import dev.kantobridge.proto.MsgTypes;
+import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.function.BooleanSupplier;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.Screen;
@@ -35,6 +38,8 @@ public final class UiRuntime {
 	static final long CLOSE_GRACE_MS = 150;
 
 	private static @Nullable UiRuntime instance;
+	/** Conditions under which our screens wait (another mod's screen has the hidden game's attention: Bill's PC). */
+	private static final List<BooleanSupplier> SUSPENDS = new CopyOnWriteArrayList<>();
 
 	private final BridgeRuntime bridge;
 	private final BridgeClock clock = BridgeClock.system();
@@ -96,6 +101,23 @@ public final class UiRuntime {
 		return instance;
 	}
 
+	/**
+	 * Adds a condition under which none of our screens shows (client thread): while it holds, ours closes and the hidden
+	 * UIs stay open in the router, to show again once it no longer holds.
+	 */
+	public static void suspendWhile(BooleanSupplier suspend) {
+		SUSPENDS.add(suspend);
+	}
+
+	private static boolean suspended() {
+		for (BooleanSupplier suspend : SUSPENDS) {
+			if (suspend.getAsBoolean()) {
+				return true;
+			}
+		}
+		return false;
+	}
+
 	public UiRouter router() {
 		return this.router;
 	}
@@ -139,10 +161,12 @@ public final class UiRuntime {
 
 	/**
 	 * Shows the router's view in one screen of ours, or none. Never during a Cobblemon battle: its own screens are up, and
-	 * the hidden game waits for the result (a UI still open meanwhile holds the player and shows after the battle).
+	 * the hidden game waits for the result (a UI still open meanwhile holds the player and shows after the battle). The
+	 * same while a {@link #suspendWhile} condition holds (Cobblemon's PC for Bill's PC).
 	 */
 	private void reconcile(Minecraft minecraft) {
-		boolean allowed = minecraft.level != null && minecraft.player != null && MoveRuntime.following() && !ClientBattles.active();
+		boolean allowed = minecraft.level != null && minecraft.player != null && MoveRuntime.following() && !ClientBattles.active()
+				&& !suspended();
 		UiRouter.View view = allowed ? this.router.view() : null;
 		Screen current = minecraft.screen;
 		if (view == null) {

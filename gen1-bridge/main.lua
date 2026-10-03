@@ -46,6 +46,8 @@ return function(mod)
     UiAct = import("act/kb_uiact.lua"),
     Battle = import("act/kb_battle.lua"),
     Party = import("act/kb_party.lua"),
+    Save = import("act/kb_save.lua"),
+    Pc = import("act/kb_pc.lua"),
     Cells = import("export/kb_cells.lua"),
     Images = import("export/kb_images.lua"),
     SwapSites = import("export/kb_swapsites.lua"),
@@ -156,6 +158,17 @@ return function(mod)
   })
   -- M6: the bag's battle items mirrored into Minecraft (P17)
   local bagObs = kb.Bag.new({ engine = engine, json = kb.json, log = log })
+  -- M7: saving (save.begin/done, the Pokemon Center's heal and save),
+  -- session pairing, and Bill's PC as Cobblemon's PC. The bound world is
+  -- kept in mod.save too (save.modData, src/core/Game.lua:1314-1324).
+  local saves = kb.Save.new({
+    engine = engine, log = log,
+    store = {
+      get = function(key) return mod.save:get(key) end,
+      set = function(key, value) mod.save:set(key, value) end,
+    },
+  })
+  local pcs = kb.Pc.new({ engine = engine, log = log })
 
   -- One injected tap per logic step (PLAN section 2.3), shared by the
   -- interaction and the UI answers: mod.input:tap with the live game
@@ -254,8 +267,27 @@ return function(mod)
     merge("bag", bagObs.stats())
     merge("encounter", engine.encounterCounts())
     merge("item", engine.itemCounts())
+    merge("save", saves.stats())
+    merge("pc", pcs.stats())
     for k, v in pairs(engine.bridgeCounts()) do out[k] = v end
     out.screenEvents = screenEvents
+    -- M7: money, the bag's size and the beaten trainers, as counts
+    local s = type(save) == "table" and save or {}
+    out.money = math.floor(tonumber(s.money) or 0)
+    local badges = {}
+    for _, item in ipairs(engine.badgeItems()) do badges[item] = true end
+    local bagTotal, bagKinds = 0, 0
+    for item, qty in pairs(type(s.inventory) == "table" and s.inventory or {}) do
+      if type(qty) == "number" and not badges[item] then
+        bagTotal, bagKinds = bagTotal + math.floor(qty), bagKinds + 1
+      end
+    end
+    out.bagTotal, out.bagKinds = bagTotal, bagKinds
+    local defeated = 0
+    for _, v in pairs(type(s.defeatedTrainers) == "table" and s.defeatedTrainers or {}) do
+      if v == true then defeated = defeated + 1 end
+    end
+    out.defeated = defeated
     -- the names typed into the hidden game: lengths and a short hash only
     local p = save and type(save.player) == "table" and save.player or {}
     for key, field in pairs({ playerName = "name", rivalName = "rival" }) do
@@ -367,6 +399,19 @@ return function(mod)
   -- M6: Cobblemon's Pokedex, and items it used up
   session.on("dex.sync", answered(party.dex))
   session.on("bag.use", answered(bagObs.use))
+  -- M7: Minecraft saved (log only), Cobblemon's PC closed, session pairing
+  -- (answered at once, re set)
+  session.on("save.done", answered(saves.done))
+  session.on("pc.closed", answered(pcs.closed))
+  session.on("session.bind", function(data, msg, role)
+    if not streamRole(msg, role) then return end
+    local slot, code = saves.bind(data)
+    if slot then
+      session.reply(msg, "session.bound", { slot = slot })
+    else
+      session.sendError(code or "bad_message", msg.seq, code or "bad_message")
+    end
+  end)
 
   -- The battle and gift seams (lib/kb_engine.lua "battles, gifts, the
   -- shadow party"): script.command for the scripted battle rows, give_pokemon
@@ -399,6 +444,17 @@ return function(mod)
   mod.hooks:wrap("item.use", function(nextFn, g, battle, id, target, list, moveIndex, picker)
     return engine.itemUse(nextFn, g, battle, id, target, list, moveIndex, picker, bridge)
   end)
+  -- M7 (lib/kb_engine.lua "the Pokemon Center, saving, the PC, sessions"):
+  -- the Pokemon Center PC's rows (OC:3664): the box row opens Cobblemon's
+  -- PC while a client or test session is connected. A hook, so a hot
+  -- reload drops it; a menu already built keeps asking the current
+  -- instance through kb_engine's slot.
+  mod.hooks:wrap("ui.pc.items", function(nextFn, g, items)
+    return engine.pcItems(nextFn, g, items)
+  end)
+  -- Every hidden-game save (Game:writeSave emits save.writing before the
+  -- file is written, src/core/Game.lua:1342-1345): Minecraft saves too.
+  mod.events:on("save.writing", function() saves.writing() end)
 
   status.session = sessionId
   status.configure = function(opts)
@@ -433,7 +489,13 @@ return function(mod)
     local warpOut = warps.step(facts, ev)
     if #warpOut > 0 then
       local at = (out[1] and out[1][1] == "player.state") and 2 or 1
-      for i = #warpOut, 1, -1 do table.insert(out, at, warpOut[i]) end
+      for i = #warpOut, 1, -1 do
+        table.insert(out, at, warpOut[i])
+        -- M7: a blackout's party.heal follows its warp's arrival (this
+        -- step's party.* go out after the warp messages)
+        local w = warpOut[i][2]
+        if w.phase == "arrive" and w.kind == "blackout" then engine.releaseHeals() end
+      end
     end
     local live = session.established() and kb.Session.STREAM_ROLES[session.role()] == true
     local generation = session.generation()
@@ -456,11 +518,16 @@ return function(mod)
     uiAct.step(facts, mode, out, ctx)
     -- M5: gifts, heals and (M6) items used on a member first (a gift goes
     -- out before a battle that may follow it), then the mirrored bag (its
-    -- balls before a battle that may use them), then a native special
-    -- battle's battle.native and a held battle's battle.start
+    -- balls before a battle that may use them), (M7) a save's save.begin
+    -- and Bill's PC's pc.open, then a native special battle's
+    -- battle.native and a held battle's battle.start. A nurse heal is
+    -- noticed first, so its party.heal goes out this very step.
     local link = { live = live, generation = generation }
+    saves.watch(link)
     party.step(out, link)
     bagObs.step(out, link)
+    saves.step(out, link)
+    pcs.step(out, link)
     battles.step(out, link)
     mirror.step(out, { live = live, generation = generation, queued = session.queued() })
     for i = 1, #out do
@@ -490,6 +557,10 @@ return function(mod)
     status.mapsEntered = mapsEntered
     status.mirrorOn = mirror.enabled()
     status.battleHeld = facts.battle == true
+    -- M7, for test drivers: saves announced, sessions bound, the PC hold
+    local sv = saves.stats()
+    status.saves, status.centerSaves, status.sessionBinds = sv.begun, sv.centerWritten, sv.binds
+    status.pcHeld = engine.pcHeld()
     if steps % 30 == 0 then
       local u, n, s = uiObs.stats(), npcObs.stats(), mirror.stats()
       status.uiOpened, status.uiClosed, status.uiOpen = u.opened, u.closed, u.open
@@ -557,10 +628,11 @@ return function(mod)
     payload = type(payload) == "table" and payload or {}
     capped(events.entered, { map = payload.mapId, via = payload.via })
   end)
-  -- a blackout heals the hidden party (OC:5204-5207); Cobblemon's heals too
+  -- a blackout heals the hidden party (OC:5204-5207); Cobblemon's heals too,
+  -- once the blackout's warp has arrived (M7)
   mod.events:on("world.blacked_out", function()
     events.blackout = true
-    engine.queueHeal()
+    engine.queueHeal("blackout")
   end)
 
   -- M4. Pushes and pops only wake the UI observer, which polls the stack
@@ -622,6 +694,8 @@ return function(mod)
     if changed > 0 then log.info("options.pinned", { changed = changed }) end
     -- Cobblemon's party (the last party.sync) is the new game's party too
     party.reapply()
+    -- the bound world goes into the new save's mod data (M7)
+    saves.restore()
   end)
 
   -- CONTINUE re-applies the stored options before this event
@@ -631,6 +705,7 @@ return function(mod)
     pinOptions(true)
     party.adopt()
     party.reapply()
+    saves.restore()
   end)
 
   mod.log:info("gen1-bridge loaded")

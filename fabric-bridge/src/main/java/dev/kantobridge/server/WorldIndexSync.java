@@ -91,6 +91,15 @@ public final class WorldIndexSync {
 		}
 	}
 
+	/**
+	 * Forgets the server's published index (no more {@code world.index} for joining players, no warps, no habitat checks).
+	 * For GameTests that publish one for themselves: a lingering index would make the runtime habitat check judge a later
+	 * build's blocks before they are placed.
+	 */
+	public static void withdraw(MinecraftServer server) {
+		CURRENT.remove(server);
+	}
+
 	/** The server's current WorldIndex (where every map lies), or null when the world has none. */
 	public static @Nullable WorldIndex current(MinecraftServer server) {
 		Published published = CURRENT.get(server);

@@ -160,10 +160,10 @@ def content():
 
 
 class BattleGame(Game):
-    def __init__(self, start=("OAKS_LAB", 4, 5, "up"), role="test", connect=True, **kw):
+    def __init__(self, start=("OAKS_LAB", 4, 5, "up"), role="test", connect=True, maps=None, data=None, **kw):
         kw.setdefault("content", content())
-        super().__init__(start=start, role=role, maps=MAPS, connect=False, script=True, **kw)
-        self.E.installData(self.b.to_lua(DATA))
+        super().__init__(start=start, role=role, maps=maps or MAPS, connect=False, script=True, **kw)
+        self.E.installData(self.b.to_lua(data or DATA))
         if connect:
             self.connect(role)
 

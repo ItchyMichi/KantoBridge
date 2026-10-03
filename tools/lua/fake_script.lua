@@ -169,7 +169,12 @@ function FakeScript.attach(E)
     if battle and battle.oppClass == "OPP_RIVAL1" and self.map and self.map.id == "OAKS_LAB" then return end
     for _, mon in ipairs(E.save.party) do Pokemon.heal(mon) end
     E.save.money = math.floor(E.save.money / 2)
-    local heal = E.healPoint or { map = self.map.id, x = 1, y = 1 }
+    -- the heal point: a test's own, else (M7) the nurse's lastHeal town
+    -- (escapeWarpTarget's outdoor side, OC:5368-5383), else here
+    local last = E.save.lastHeal
+    local heal = E.healPoint
+      or (last and last.outdoor and { map = last.outdoor.id, x = last.outdoor.x, y = last.outdoor.y })
+      or { map = self.map.id, x = 1, y = 1 }
     E.blackOutTo(heal.map, heal.x, heal.y)
   end
 
@@ -268,14 +273,23 @@ function FakeScript.attach(E)
     E.uiPush(E.textBox((header and header.battleText) or "LET'S BATTLE!", { onDone = prepareBattle }))
   end
 
-  -- OverworldState:startTrainerApproach (OC:4422-4467), without the walk-up
-  function E.startTrainerApproach(npc)
+  -- OverworldState:startTrainerApproach (OC:4422-4467). With dist (M7: a
+  -- sighting, fake_center.lua's E.sightCheck), the "!" hold of 60 frames
+  -- and the walk-up (dist - 1 scripted steps) come first; without it (the
+  -- M5 tests) the trainer engages at once.
+  function E.startTrainerApproach(npc, dist)
     ow.engaging = true
     npc.frozen = true
-    E.engageTrainer(npc, function()
-      npc.frozen = false
-      ow.engaging = false
-    end)
+    local function fight()
+      E.engageTrainer(npc, function()
+        npc.frozen = false
+        ow.engaging = false
+      end)
+    end
+    if dist == nil then return fight() end
+    ow.emote = { npc = npc, frames = 60, onDone = function()
+      if dist - 1 > 0 then E.scriptMove(npc, npc.facing, dist - 1, fight) else fight() end
+    end }
   end
 
   -- ------------------------------------------------------------ the script runner

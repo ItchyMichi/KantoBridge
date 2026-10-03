@@ -12,7 +12,8 @@ import org.jetbrains.annotations.Nullable;
  *
  * <p>Every wait has a timeout that fades back in and reports a counted warning, so a lost message never leaves the
  * screen dark. Fly, Teleport, Dig, Escape Rope, warp pads and holes fade to white as in Gen 1; everything else to
- * black. Plain Java, client thread only.
+ * black. A blackout (back to the last Pokémon Center after a lost battle) fades to black four times slower and comes
+ * back twice as slow. Plain Java, client thread only.
  */
 public final class WarpFade {
 	public enum Phase {
@@ -42,6 +43,10 @@ public final class WarpFade {
 
 	public static final long FADE_OUT_MS = 250;
 	public static final long FADE_IN_MS = 250;
+	/** A blackout (the lost battle's end) goes dark slowly and comes back at the last Pokémon Center a little slower. */
+	public static final long BLACKOUT_FADE_OUT_MS = 1_000;
+	public static final long BLACKOUT_FADE_IN_MS = 500;
+	public static final String BLACKOUT = "blackout";
 	/** Fly and Dig play long departure animations before they arrive. */
 	public static final long ARRIVE_TIMEOUT_MS = 10_000;
 	public static final long DONE_TIMEOUT_MS = 5_000;
@@ -64,6 +69,8 @@ public final class WarpFade {
 	private boolean ok;
 	private long answeredAt;
 	private int colour = BLACK;
+	private long fadeOutMs = FADE_OUT_MS;
+	private long fadeInMs = FADE_IN_MS;
 	private long warps;
 	private long warnings;
 
@@ -127,7 +134,7 @@ public final class WarpFade {
 		if (this.phase == Phase.DARK) {
 			this.dark(now);
 		}
-		if (this.phase == Phase.IN && now - this.phaseAt >= FADE_IN_MS) {
+		if (this.phase == Phase.IN && now - this.phaseAt >= this.fadeInMs) {
 			this.phase = Phase.IDLE;
 		}
 	}
@@ -175,6 +182,9 @@ public final class WarpFade {
 		this.requested = false;
 		this.answered = false;
 		this.colour = warpKind != null && WHITE_KINDS.contains(warpKind) ? WHITE : BLACK;
+		boolean blackout = BLACKOUT.equals(warpKind);
+		this.fadeOutMs = blackout ? BLACKOUT_FADE_OUT_MS : FADE_OUT_MS;
+		this.fadeInMs = blackout ? BLACKOUT_FADE_IN_MS : FADE_IN_MS;
 		this.warps++;
 	}
 
@@ -194,9 +204,9 @@ public final class WarpFade {
 	public float alpha(long now) {
 		return switch (this.phase) {
 			case IDLE -> 0.0F;
-			case OUT -> Math.min(1.0F, this.fromAlpha + (now - this.phaseAt) / (float) FADE_OUT_MS);
+			case OUT -> Math.min(1.0F, this.fromAlpha + (now - this.phaseAt) / (float) this.fadeOutMs);
 			case DARK -> 1.0F;
-			case IN -> Math.max(0.0F, 1.0F - (now - this.phaseAt) / (float) FADE_IN_MS);
+			case IN -> Math.max(0.0F, 1.0F - (now - this.phaseAt) / (float) this.fadeInMs);
 		};
 	}
 

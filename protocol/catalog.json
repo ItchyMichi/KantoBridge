@@ -362,14 +362,14 @@
       "schema": "messages/save.done.schema.json"
     },
     "session.bind": {
-      "legs": ["m2g"],
+      "legs": ["m2g", "s2c"],
       "re": "never",
       "rom": false,
       "redact": [],
       "schema": "messages/session.bind.schema.json"
     },
     "session.bound": {
-      "legs": ["g2m"],
+      "legs": ["g2m", "c2s"],
       "re": "optional",
       "rom": false,
       "redact": [],

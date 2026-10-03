@@ -14,8 +14,8 @@ new items in [PLAYTEST.md](PLAYTEST.md) and a commit titled `M<n>: <title>`.
 | M3 | Walking and warps | **done** | 2026-10-03 | `aa725fd` |
 | M4 | Dialogue, menus and NPC mirroring | **done** | 2026-10-03 | `c5b39d1` |
 | M5 | Opening, Oak's cutscene, starter and rival battle | **done** | 2026-10-03 | `eb9c570` |
-| M6 | Route 1, habitat pools, catching, party/Pokédex/bag sync | **done** | 2026-10-03 | `M6: Route 1, habitats, catching and sync` |
-| M7 | Viridian City (Pokémon Center, Mart, PC, money, trainers, saving) | not started | | |
+| M6 | Route 1, habitat pools, catching, party/Pokédex/bag sync | **done** | 2026-10-03 | `b603f16` |
+| M7 | Viridian City (Pokémon Center, Mart, PC, money, trainers, saving) | **done** | 2026-10-03 | `M7: Viridian City` |
 | M8 | The rest of Kanto (single player) | not started | | |
 | M9 | Multiplayer | not started | | |
 | M10 | Reliability, performance and launch | not started | | |
@@ -93,6 +93,16 @@ new items in [PLAYTEST.md](PLAYTEST.md) and a commit titled `M<n>: <title>`.
   `bag.use`, stone/TM/Rare Candy effects, habitats configured, Cobblemon's spawner offering the
   synthetic pool), mixin remap check. The user's `saves/Kanto` was rebuilt in place with the Route 1
   set (player data kept).
+- **M7:** `tools/check.sh --e2e`: pytest **1091 passed** (681 Lua; e2e on the real engine: all
+  earlier ones plus Viridian: the nurse heal (`party.heal`, the hidden game's own save, then
+  `save.begin{center}`), a start-menu save, `session.bound`, a Viridian Forest trainer's sighting →
+  walk-up → `battle.start{trainer}` → win (defeated, money and flags up) and a second one → lose
+  (blackout warp to VIRIDIAN_CITY, then `party.heal`, money halved), Bill's PC → `pc.open` →
+  `pc.closed`, the player's PC native, a Mart buy and sell with exact money and bag changes; and the
+  real **Viridian build**: 13 maps, 7 habitat blocks, 46 pools, 0 warnings), then `gradlew build`:
+  **419 JUnit**, **63/63 GameTests** (PC sessions, saves, the stable world id, lose → heal → warp,
+  the leave-during-battle regressions), mixin remap check (5 targets). The user's `saves/Kanto` was
+  rebuilt in place with the Viridian set.
 - **Early full-Kanto smoke build** (not an M2 gate; M8 owns it), `build_world.py --maps all` into
   `saves/KantoFullE2E`: 219 of 220 reachable maps (36 surface, 183 interiors on 14 layers, 5 moved
   sideways), **2,480,041 blocks in 2,126 chunks in 59 s** (plan 5.9 s, place 53 s), 12,539 story
@@ -414,6 +424,56 @@ new items in [PLAYTEST.md](PLAYTEST.md) and a commit titled `M<n>: <title>`.
     `bag.sync` shares the party queue (party → bag → battle order; only the newest bag waits);
     `bag.use` is queued for the next snapshot while gen1-bridge is away.
 
+**M7**
+
+62. **Bill's PC:** `pc.open` opens Cobblemon's PC through our own `BridgePcLink` (away from any PC
+    block; never during a battle) plus `OpenPCPacket`. Cobblemon has no "PC closed" event, but its
+    PC screen removes the link on every way out, so the server checks the link each tick and sends
+    exactly one `pc.closed`; refused opens are answered at once; a second open is ignored. The client
+    holds movement and our screens while the PC is open, and if Cobblemon's screen never shows (or
+    vanishes unanswered) it sends Cobblemon's own unlink packet and answers gen1-bridge itself after
+    5 s. `pc.open` has no id: a close missed during a link drop answers a `pc.open` arriving within
+    5 s of the next snapshot (an id would remove that guesswork).
+63. **Saving:** `save.begin` saves the player's party and PC and other Cobblemon data (Pokédex, TM
+    moves), then the world like `/save-all` without a flush, and answers `save.done{save, ok}`;
+    `ok:false` on any exception, while a world holds players for a build, or under `/save-off`; one
+    save per id. Cobblemon has no public per-player save, so an accessor mixin
+    (`PokemonStoreManagerAccessor`, `remap=false`, not an injector) reaches its store list. A test
+    world saves in 16–38 ms; a full world is untested (each save logs its time).
+64. **Sessions:** the world id is a UUID in `<world>/kantobridge/session.json` (created on every
+    world's first start, including non-Kanto, GameTest and headless worlds; an unreadable file is
+    moved to `.broken`), which also records each player's paired slot. `multiplayer` is false only for
+    the integrated server's own client. The protocol now relays `session.bind` S→C and
+    `session.bound` C→S, so LAN guests and dedicated-server players pair too.
+65. **Blackout:** `BattleService` needed no change; lose → (still fainted) → `warp.request{blackout}`
+    → `party.heal` leaves the player teleported, healed and out of battle (GameTest). The `blackout`
+    warp fades to black over 1 s and back over 0.5 s.
+66. **The `writeSave` spike passed** (no PLAN §8 fallback): the nurse heal is spotted through the
+    engine's `ow.healAnim` (only her heal sets it), `party.heal` goes out the same step, and the
+    center save runs after her farewell lines, behind the engine's quick-save gate (not
+    mid-dialogue). gen1-bridge never writes `lastHeal` itself.
+67. **Mart money and clerk lines** use a same-id `ui.open` re-send instead of new `ui.update` fields
+    (no schema change); the Java `UiRouter` already replaces in place. While a PC hold is active,
+    answers to the PC menu wait (and time out with `ui.timeout`).
+68. **A blackout lands in front of the Pokémon Center** (the fly spot of the last heal point's town,
+    the engine's own behaviour), not inside it. Battle results restore the map's music
+    (`Music.restoreMap`), as a battle screen's exit does; otherwise a trainer's sighting theme kept
+    playing.
+70. **A Cobblemon 1.8.1 crash hazard, fixed:** when a player stops seeing their own sent-out
+    Pokémon, Cobblemon's `PokemonEntity.stopSeenByPlayer` (`PokemonEntity.kt:2193`) removes it on the
+    spot, from inside Minecraft's `ChunkMap.removeEntity(player)` loop over the tracked entities, which
+    corrupts fastutil's iterator (an NPE, only for some map layouts). A real server could crash when a
+    player disconnects with a Pokémon out, or warps (or blacks out) right after a battle. The fix: a
+    HEAD inject (`PokemonEntityMixin`, remapped to `method_5742`) cancels that in-loop removal of the
+    owner's own untethered Pokémon and queues it (`DeferredRemovals`) for `END_SERVER_TICK`. Our own
+    removals (proxies, encounter Pokémon) already ran outside the loop. GameTest cleanups now end the
+    battle and let Cobblemon's recall finish before removing the mock player, and two regression
+    GameTests (leave mid-battle, leave in the tick the battle ends) fail without the mixin and pass
+    with it.
+69. **Correction to deviation 12:** the engine's `SaveData.save` writes the live options to
+    `options.lua` on every progress save, so the pinned display options and FAST text speed **are**
+    persisted, since M4 on the player's own saves and now also on the center save (see Open issues).
+
 ## Open issues
 
 - Harmless noise: the Kotlin plugin makes Fabric Loader warn "Class path entries reference missing
@@ -461,6 +521,13 @@ new items in [PLAYTEST.md](PLAYTEST.md) and a commit titled `M<n>: <title>`.
   their cell is fixed by a fade and teleport afterwards. If Cobblemon's battle engine crashes it
   writes `battle_logs/<id>.txt` (with names) into the run folder (`local/minecraft`, or
   `fabric-bridge/build/run/gameTest` for GameTests: both git-ignored).
+- **Question for the user (from M7):** because Gen1Recomp writes its live options on every save,
+  gen1-bridge's pinned display options (classic: no voxel, tilt, zoom or wide battle) and FAST text
+  speed end up in `local/gen1recomp/options.lua`. If you also play Gen1Recomp without the bridge,
+  you'll see those settings there too. The bridge could restore your own options on exit, if you
+  want that.
+- `pc.open`/`pc.closed` have no id, so a stale `pc.closed` could end a later hold (an id would make it
+  exact; M9 candidate). The center save relies on the `healAnim` heuristic (fine for Red/Blue).
 - **For M8 (from M6):** Pokémon Tower habitat pools must stay off until the player has the
   SILPH_SCOPE (the hidden game runs its own ghost battles there; otherwise they'd double up); Safari
   catches stay in the Gen 1 party/box until M8 crosses them over as `native_catch` gifts; a native
@@ -493,3 +560,4 @@ Nothing.
 - PLAYTEST.md M4: talk to people and signs, the start menu, the bag, YES/NO, the mirror, puppets.
 - PLAYTEST.md M5: a new game from Minecraft: names, Oak's escort, the starter, the rival battle.
 - PLAYTEST.md M6: wild Pokémon on Route 1, catching, the Pokédex, Poké Ball and Potion counts.
+- PLAYTEST.md M7: the nurse and saving, the Mart, Bill's PC, a trainer, one blackout, save/reload.

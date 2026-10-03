@@ -21,7 +21,12 @@
 			"dev.kantobridge.gametest.BattleGameTests",
 			"dev.kantobridge.gametest.EncounterGameTests",
 			"dev.kantobridge.gametest.BagGameTests",
-			"dev.kantobridge.gametest.DexGameTests"
+			"dev.kantobridge.gametest.DexGameTests",
+			"dev.kantobridge.gametest.PcGameTests",
+			"dev.kantobridge.gametest.SaveGameTests",
+			"dev.kantobridge.gametest.SessionGameTests",
+			"dev.kantobridge.gametest.BlackoutGameTests",
+			"dev.kantobridge.gametest.LeaveGameTests"
 		]
 	},
 	"depends": {

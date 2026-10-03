@@ -85,6 +85,8 @@ class Bridge:
                 # sandbox, since they add engine modules
                 self._load_harness("fake_script.lua").attach(self.engine)
                 self._load_harness("fake_wild.lua").attach(self.engine)
+                # M7: the Pokemon Center, the PC, the Mart, saving and trainer sight
+                self._load_harness("fake_center.lua").attach(self.engine)
 
         # love facade source: only timer is needed so far. perCall advances the clock on every
         # read, so work inside one step "takes time" (budget tests); 0 by default.

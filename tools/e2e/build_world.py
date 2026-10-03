@@ -53,6 +53,9 @@ MAP_SETS = {
     "pallet": ["PALLET_TOWN", "REDS_HOUSE_1F", "REDS_HOUSE_2F", "BLUES_HOUSE", "OAKS_LAB"],
     "route1": ["PALLET_TOWN", "REDS_HOUSE_1F", "REDS_HOUSE_2F", "BLUES_HOUSE", "OAKS_LAB",
                "ROUTE_1", "VIRIDIAN_CITY"],
+    "viridian": ["PALLET_TOWN", "REDS_HOUSE_1F", "REDS_HOUSE_2F", "BLUES_HOUSE", "OAKS_LAB",
+                 "ROUTE_1", "VIRIDIAN_CITY", "VIRIDIAN_POKECENTER", "VIRIDIAN_MART",
+                 "VIRIDIAN_SCHOOL_HOUSE", "VIRIDIAN_NICKNAME_HOUSE", "VIRIDIAN_GYM", "ROUTE_2"],
 }
 
 # Server settings for a headless build (Minecraft fills in every other key with its defaults).

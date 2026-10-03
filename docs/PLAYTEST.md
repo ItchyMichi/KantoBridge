@@ -196,3 +196,25 @@ M5 game (Oak's parcel errand sends you north).
 - [ ] Choosing **Run** in a wild battle ends it.
 - [ ] Optional: use a Potion from Gen1Recomp's bag (ITEM in the start menu) on a Pokémon: Cobblemon's
       HP follows.
+
+## M7: Viridian City (Pokémon Center, Mart, PC, money, trainers, saving)
+
+The agent rebuilds the `Kanto` world with Viridian City's buildings and Route 2 before you test (your
+player data stays).
+
+- [ ] **Heal at the nurse** in Viridian's Pokémon Center: Cobblemon's party is healed, and both games
+      save (Gen1Recomp writes its save after the nurse's farewell).
+- [ ] **The Mart:** buy and sell; the money box and the clerk's line update; the bag and the Poké
+      Ball/Potion counts in Minecraft follow; cancelling or answering NO changes nothing.
+- [ ] **Bill's PC** (in the Center): Cobblemon's PC opens; deposit or withdraw a Pokémon; closing it
+      returns to the Gen 1 PC menu; LOG OFF. The hidden party (Enter → POKéMON) matches. Your own PC
+      (items) stays the Gen 1 screen.
+- [ ] **A trainer** (e.g. on Route 2 or in Viridian Forest's entrance area): the "!" bubble, the
+      trainer walks up, Cobblemon's battle starts; after a win, talking to them again gives their
+      after-battle line; the route music comes back after the battle.
+- [ ] **Black out once** (lose a battle on purpose): you appear in front of the Viridian Pokémon
+      Center, healed, with half your money.
+- [ ] **Save** from Gen1Recomp's start menu (SAVE), quit both games, start them again, and continue:
+      your position, party, bag, money and story agree in both.
+- [ ] Watch how long saves take, and note any stall.
+- [ ] F7 shows the world id and the save slot.

@@ -27,6 +27,7 @@ import java.util.UUID;
 import net.fabricmc.fabric.api.gametest.v1.FabricGameTest;
 import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestHelper;
+import net.minecraft.gametest.framework.GameTestSequence;
 import net.minecraft.server.level.ServerPlayer;
 import org.jetbrains.annotations.Nullable;
 
@@ -65,13 +66,12 @@ public class EncounterGameTests implements FabricGameTest {
 		helper.assertTrue(data.get("outcome").getAsString().equals(outcome), "should end " + outcome + ", got " + data.get("outcome").getAsString());
 	}
 
+	/** A failing test's clean-up, at once: the battle stops, the player's Pokémon are taken back, the player leaves. */
 	static void cleanUp(GameTestHelper helper, ServerPlayer player, RelayTap.Recorder relay) {
-		PokemonBattle battle = BattleRegistry.getBattleByParticipatingPlayer(player);
-		if (battle != null) {
-			battle.stop();
-		}
 		relay.close();
-		MockPlayers.leave(helper, player);
+		if (!player.isRemoved()) {
+			MockPlayers.leaveNow(helper, player);
+		}
 	}
 
 	static @Nullable BattleActor wildActor(PokemonBattle battle) {
@@ -130,7 +130,7 @@ public class EncounterGameTests implements FabricGameTest {
 			throw e;
 		}
 		PokemonEntity discarded = entity;
-		helper.startSequence()
+		GameTestSequence end = helper.startSequence()
 				.thenExecuteAfter(2, () -> {
 					PokemonBattle battle = EncounterService.battleOf(player);
 					helper.assertTrue(battle != null && !battle.getEnded(), "a flee attempt ended a battle the rules don't let you run from");
@@ -140,11 +140,8 @@ public class EncounterGameTests implements FabricGameTest {
 					helper.assertTrue(EncounterService.battleOf(player) == null, "the encounter still counts as running");
 				})
 				.thenWaitUntil(() -> helper.assertTrue(discarded.isRemoved(), "the encounter Pokémon wasn't discarded"))
-				.thenExecute(() -> {
-					helper.assertTrue(relay.of(MsgTypes.BATTLE_RESULT).size() == 1, "answered more than once");
-					cleanUp(helper, player, relay);
-				})
-				.thenSucceed();
+				.thenExecute(() -> helper.assertTrue(relay.of(MsgTypes.BATTLE_RESULT).size() == 1, "answered more than once"));
+		MockPlayers.leaveAfterBattle(helper, end, relay::close, player);
 	}
 
 	@GameTest(template = EMPTY_STRUCTURE, batch = BATCH, timeoutTicks = 200)
@@ -164,14 +161,14 @@ public class EncounterGameTests implements FabricGameTest {
 			throw e;
 		}
 		PokemonEntity discarded = entity;
-		helper.succeedWhen(() -> {
+		GameTestSequence end = helper.startSequence().thenWaitUntil(() -> {
 			helper.assertTrue(!relay.of(MsgTypes.BATTLE_RESULT).isEmpty(), "no result yet");
 			assertOneResult(helper, relay, "en-2", "fled");
 			helper.assertTrue(BattleRegistry.getBattleByParticipatingPlayer(player) == null, "the battle didn't end");
 			helper.assertTrue(discarded.isRemoved(), "the encounter Pokémon wasn't discarded");
 			helper.assertTrue(EncounterService.flees() > flees, "the flight wasn't counted");
-			cleanUp(helper, player, relay);
 		});
+		MockPlayers.leaveAfterBattle(helper, end, relay::close, player);
 	}
 
 	@GameTest(template = EMPTY_STRUCTURE, batch = BATCH, timeoutTicks = 200)
@@ -209,11 +206,12 @@ public class EncounterGameTests implements FabricGameTest {
 			cleanUp(helper, player, relay);
 			throw e;
 		}
-		helper.succeedWhen(() -> {
-			helper.assertTrue(EncounterService.entityOf(player) == null && EncounterService.entityOf(second) == null, "still running");
-			cleanUp(helper, second, secondRelay);
-			cleanUp(helper, player, relay);
-		});
+		GameTestSequence end = helper.startSequence().thenWaitUntil(() -> helper.assertTrue(
+				EncounterService.entityOf(player) == null && EncounterService.entityOf(second) == null, "still running"));
+		MockPlayers.leaveAfterBattle(helper, end, () -> {
+			secondRelay.close();
+			relay.close();
+		}, second, player);
 	}
 
 	@GameTest(template = EMPTY_STRUCTURE, batch = BATCH, timeoutTicks = 200)
@@ -247,7 +245,7 @@ public class EncounterGameTests implements FabricGameTest {
 			throw e;
 		}
 		String uid = caught.getUuid().toString();
-		helper.succeedWhen(() -> {
+		GameTestSequence end = helper.startSequence().thenWaitUntil(() -> {
 			helper.assertTrue(EncounterService.entityOf(player) == null, "still running");
 			// A party.sync follows the battle, with the catch in it, and the Pokédex owns it (gen1-bridge feeds Gen 1's
 			// Pokédex from dex.sync only).
@@ -256,8 +254,8 @@ public class EncounterGameTests implements FabricGameTest {
 			List<Envelope> dex = relay.of(MsgTypes.DEX_SYNC);
 			helper.assertTrue(!dex.isEmpty() && DexGameTests.numbers(dex.get(dex.size() - 1).data().getAsJsonArray("owned")).contains(19),
 					"no dex.sync owning the catch yet");
-			cleanUp(helper, player, relay);
 		});
+		MockPlayers.leaveAfterBattle(helper, end, relay::close, player);
 	}
 
 	@GameTest(template = EMPTY_STRUCTURE, batch = BATCH, timeoutTicks = 100)
@@ -276,7 +274,6 @@ public class EncounterGameTests implements FabricGameTest {
 			cleanUp(helper, player, relay);
 			throw e;
 		}
-		cleanUp(helper, player, relay);
-		helper.succeed();
+		MockPlayers.leaveAfterBattle(helper, helper.startSequence(), relay::close, player);
 	}
 }

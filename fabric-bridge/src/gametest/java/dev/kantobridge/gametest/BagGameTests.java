@@ -14,6 +14,7 @@ import net.fabricmc.fabric.api.gametest.v1.FabricGameTest;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestHelper;
+import net.minecraft.gametest.framework.GameTestSequence;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.player.Inventory;
@@ -150,7 +151,7 @@ public class BagGameTests implements FabricGameTest {
 			EncounterGameTests.cleanUp(helper, player, relay);
 			throw e;
 		}
-		helper.startSequence()
+		GameTestSequence end = helper.startSequence()
 				.thenExecuteAfter(12, () -> {
 					helper.assertTrue(uses(relay).isEmpty(), "a use was reported during the battle");
 					PokemonBattle battle = BattleRegistry.getBattleByParticipatingPlayer(player);
@@ -161,8 +162,7 @@ public class BagGameTests implements FabricGameTest {
 				.thenExecute(() -> {
 					List<Envelope> uses = uses(relay);
 					helper.assertTrue(uses.size() == 1 && uses.get(0).data().get("item").getAsString().equals("POTION"), "wrong use");
-					EncounterGameTests.cleanUp(helper, player, relay);
-				})
-				.thenSucceed();
+				});
+		MockPlayers.leaveAfterBattle(helper, end, relay::close, player);
 	}
 }

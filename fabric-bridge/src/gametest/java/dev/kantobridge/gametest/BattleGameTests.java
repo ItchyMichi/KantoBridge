@@ -25,6 +25,7 @@ import net.fabricmc.fabric.api.gametest.v1.FabricGameTest;
 import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestAssertException;
 import net.minecraft.gametest.framework.GameTestHelper;
+import net.minecraft.gametest.framework.GameTestSequence;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
 
@@ -99,13 +100,12 @@ public class BattleGameTests implements FabricGameTest {
 		return proxy;
 	}
 
+	/** A failing test's clean-up, at once: the battle stops, the player's Pokémon are taken back, the player leaves. */
 	private static void cleanUp(GameTestHelper helper, ServerPlayer player, RelayTap.Recorder relay) {
-		PokemonBattle battle = BattleRegistry.getBattleByParticipatingPlayer(player);
-		if (battle != null) {
-			battle.stop();
-		}
 		relay.close();
-		MockPlayers.leave(helper, player);
+		if (!player.isRemoved()) {
+			MockPlayers.leaveNow(helper, player);
+		}
 	}
 
 	@GameTest(template = EMPTY_STRUCTURE, batch = BATCH, timeoutTicks = 400)
@@ -160,11 +160,10 @@ public class BattleGameTests implements FabricGameTest {
 			throw e;
 		}
 		NPCEntity discarded = proxy;
-		helper.succeedWhen(() -> {
-			helper.assertTrue(discarded.isRemoved(), "the proxy wasn't discarded after the battle");
-			helper.assertTrue(relay.of(MsgTypes.BATTLE_RESULT).size() == 2, "answered more than once");
-			cleanUp(helper, player, relay);
-		});
+		GameTestSequence end = helper.startSequence()
+				.thenWaitUntil(() -> helper.assertTrue(discarded.isRemoved(), "the proxy wasn't discarded after the battle"))
+				.thenExecute(() -> helper.assertTrue(relay.of(MsgTypes.BATTLE_RESULT).size() == 2, "answered more than once"));
+		MockPlayers.leaveAfterBattle(helper, end, relay::close, player);
 	}
 
 	/**
@@ -195,13 +194,15 @@ public class BattleGameTests implements FabricGameTest {
 				.thenWaitUntil(() -> helper.assertTrue(System.nanoTime() > deadline, "still within the time Showdown has"))
 				.thenExecute(() -> cleanUp(helper, player, relay))
 				.thenFail(() -> new GameTestAssertException("Showdown didn't end the forfeited battle within " + SHOWDOWN_SECONDS + " s"));
-		helper.succeedWhen(() -> {
-			List<Envelope> results = relay.of(MsgTypes.BATTLE_RESULT);
-			helper.assertTrue(!results.isEmpty(), "Showdown hasn't ended the battle yet");
-			helper.assertTrue(results.size() == 1, "answered more than once");
-			assertResult(helper, results.get(0), "bt-3", "lose");
-			cleanUp(helper, player, relay);
-		});
+		GameTestSequence end = helper.startSequence()
+				.thenWaitUntil(() -> helper.assertTrue(!relay.of(MsgTypes.BATTLE_RESULT).isEmpty(), "Showdown hasn't ended the battle yet"))
+				.thenExecute(() -> {
+					List<Envelope> results = relay.of(MsgTypes.BATTLE_RESULT);
+					helper.assertTrue(results.size() == 1, "answered more than once");
+					assertResult(helper, results.get(0), "bt-3", "lose");
+				});
+		// Not in the tick the battle ended: Cobblemon is still recalling the player's Pokémon then.
+		MockPlayers.leaveAfterBattle(helper, end, relay::close, player);
 	}
 
 	@GameTest(template = EMPTY_STRUCTURE, batch = BATCH, timeoutTicks = 400)
@@ -230,10 +231,9 @@ public class BattleGameTests implements FabricGameTest {
 			throw e;
 		}
 		NPCEntity discarded = proxy;
-		helper.succeedWhen(() -> {
-			helper.assertTrue(discarded.isRemoved(), "the proxy wasn't discarded after the battle");
-			cleanUp(helper, player, relay);
-		});
+		GameTestSequence end = helper.startSequence()
+				.thenWaitUntil(() -> helper.assertTrue(discarded.isRemoved(), "the proxy wasn't discarded after the battle"));
+		MockPlayers.leaveAfterBattle(helper, end, relay::close, player);
 	}
 
 	@GameTest(template = EMPTY_STRUCTURE, batch = BATCH)

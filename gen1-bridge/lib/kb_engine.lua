@@ -63,6 +63,19 @@ Engine.RIVAL_STARTER_MOVES = { VENUSAUR = "MEGA_DRAIN", CHARIZARD = "FIRE_BLAST"
 -- (src/battle/BattleState.lua:902-909)
 Engine.RIVAL_CLASSES = { OPP_RIVAL1 = true, OPP_RIVAL2 = true, OPP_RIVAL3 = true }
 
+-- ------------------------------------------------------------ M7 constants
+
+-- A blackout's party.heal waits for its warp's arrival, at most this many
+-- live steps (engine.queueHeal).
+Engine.HEAL_HOLD_STEPS = 600
+
+-- The PC menu's box row, by the English source label it carries while the
+-- ui.pc.items hook sees it: "BILL'S PC", or "SOMEONE'S PC" before meeting
+-- Bill (OC:3592-3593; Strings.source returns its argument,
+-- src/core/Strings.lua:211-213; rows are translated only after the hook,
+-- OC:3672-3689).
+Engine.BOX_PC_LABELS = { ["BILL'S PC"] = true, ["SOMEONE'S PC"] = true }
+
 -- One move list (ids) after setThirdMove (src/battle/BattleState.lua:864-869):
 -- the move lands in slot min(3, #moves + 1).
 local function setThirdMove(moves, moveId)
@@ -841,6 +854,23 @@ function Engine.new(opts)
     return nil
   end
 
+  -- The money a menu-like UI shows (M7): the Mart's BUY/SELL/QUIT menu
+  -- draws save.money in its MONEY box (ShopMenu's drawClerk,
+  -- src/ui/ShopMenu.lua:274-284); its BUY and SELL lists are dialogue lists
+  -- with a money() reader (ShopMenu.lua:78-84, :185-191; ListMenu.lua
+  -- :135, :140, :414-421). nil for anything else.
+  local function shopMoney(s, screen)
+    if screen == "ShopMenu" then
+      local save = engine.save()
+      return save and int(save.money, nil) or nil
+    end
+    if s.dialogue and type(s.money) == "function" then
+      local ok, money = pcall(s.money)
+      if ok then return int(money, nil) end
+    end
+    return nil
+  end
+
   -- Everything a UI needs when it opens, by class, as plain values (raw
   -- engine strings; the observer translates them to the protocol markup).
   function engine.uiOpenFacts(key)
@@ -891,6 +921,7 @@ function Engine.new(opts)
       f.rows = int(s.maxVisible, nil)
       f.footer = type(s.footer) == "string" and s.footer or nil
       f.wrap = not s.noWrap -- up/down wrap unless noWrap (Menu.lua:38, :90-95)
+      f.money = shopMoney(s, screen)
     elseif cls == "ListMenu" then
       -- title (:110-111, drawn through Strings :370), items (:113), rows
       -- (:158), footer (:120), the Mart's money box (dialogue + money(),
@@ -900,10 +931,7 @@ function Engine.new(opts)
       f.rows = int(s.rows, nil)
       f.footer = type(s.footer) == "string" and s.footer or nil
       f.wrap = s.wrap == true -- clamps unless opts.wrap (ListMenu.lua:122, :163-173)
-      if s.dialogue and type(s.money) == "function" then
-        local ok, money = pcall(s.money)
-        if ok then f.money = int(money, nil) end
-      end
+      f.money = shopMoney(s, screen)
       f.script = s.script ~= nil
     elseif cls == "QuantityBox" then
       f.qty, f.max, f.unit = int(s.qty, 1), int(s.max, 1), int(s.unitPrice, nil) -- QuantityBox.lua:14-16
@@ -984,6 +1012,19 @@ function Engine.new(opts)
     if cls == "PrizeCounter" then return prizeItems(s) end
     if cls == "TownMap" and s.fly then return flyItems(s) end
     return nil
+  end
+
+  -- A menu-like UI's footer (raw) and money, which change while it is open
+  -- (M7): the Mart's clerk lines (ShopMenu's say, src/ui/ShopMenu.lua:32-40,
+  -- and list.footer, :107, :119, :137), its money box after a purchase or a
+  -- sale (:130, :250), the PC lists' prompts (src/ui/PlayerPC.lua). The
+  -- same rules as uiOpenFacts; nil for other classes.
+  function engine.uiMoneyFooter(key)
+    local s = keyStates[key]
+    if type(s) ~= "table" then return nil end
+    local cls, screen = engine.uiClass(s)
+    if cls ~= "Menu" and cls ~= "ListMenu" and cls ~= "PokedexMenu" then return nil end
+    return { footer = type(s.footer) == "string" and s.footer or nil, money = shopMoney(s, screen) }
   end
 
   -- Moves a cursor to `index` (1-based), keeping the scroll window around
@@ -1713,6 +1754,19 @@ function Engine.new(opts)
     end
   end
 
+  -- Leaving a battle screen brings the map's song back: BattleState's exit
+  -- calls Music.restoreMap (src/battle/BattleState.lua:5859-5865, and
+  -- :1878 for a battle that ends before it starts; src/core/Music.lua
+  -- :491-497). A battle Cobblemon fought never had that exit, so the
+  -- trainer's sighting theme (OC:4429-4430, :4096) would play on (M7).
+  local function restoreMapMusic()
+    local Music, data = try("src.core.Music"), gameData()
+    if Music and type(Music.restoreMap) == "function" and data then
+      local ok, err = pcall(Music.restoreMap, data)
+      if not ok then warnAt("engine.music_restore_failed", err) end
+    end
+  end
+
   -- Applies a Cobblemon result to the pending battle. result is the
   -- engine's word: "win", "lose", "run", "caught", or "abort" (nothing
   -- happened: the script stops / the encounter is cancelled, so it can be
@@ -1725,6 +1779,8 @@ function Engine.new(opts)
     local save = engine.save()
     if prize > 0 and type(save) == "table" then save.money = (tonumber(save.money) or 0) + prize end
     pushTexts(texts, function()
+      -- as the battle screen's exit would, before its onFinish (M7)
+      if result ~= "abort" then restoreMapMusic() end
       if rec.path == "script" then
         rec.state = "done" -- the script's waitingCheck resumes it
       else
@@ -1860,13 +1916,29 @@ function Engine.new(opts)
     if g then table.remove(st.gifts, i) end
   end
 
-  function engine.queueHeal()
+  -- Heals for Cobblemon's party (party.heal). kind "blackout" (M7): the
+  -- blackout heals the hidden party before its warp to the heal point
+  -- (OC:5202-5214), but Minecraft gets the heal after the warp's arrival:
+  -- the heal waits until releaseHeals() (main.lua calls it when the
+  -- blackout's warp arrive goes out) or HEAL_HOLD_STEPS live steps.
+  function engine.queueHeal(kind)
     local st = bridgeState()
-    if st then st.heals = st.heals + 1 end
+    if not st then return end
+    st.heals = st.heals + 1
+    if kind == "blackout" then st.healHold = 0 end
+  end
+  function engine.releaseHeals()
+    local st = type(game) == "table" and rawget(game, STATE_SLOT) or nil
+    if type(st) == "table" then st.healHold = nil end
   end
   function engine.takeHeals()
     local st = type(game) == "table" and rawget(game, STATE_SLOT) or nil
     if type(st) ~= "table" then return 0 end
+    if st.healHold ~= nil then
+      st.healHold = st.healHold + 1
+      if st.healHold <= Engine.HEAL_HOLD_STEPS then return 0 end
+      st.healHold = nil
+    end
     local n = st.heals
     st.heals = 0
     return n
@@ -2058,6 +2130,11 @@ function Engine.new(opts)
       dexOwned = owned,
       itemUsesQueued = type(st) == "table" and type(st.itemUses) == "table" and #st.itemUses or 0,
       tmWatching = type(st) == "table" and type(st.tmWatch) == "table",
+      -- M7
+      healHeld = type(st) == "table" and st.healHold ~= nil,
+      centerArmed = type(st) == "table" and type(st.centerSave) == "table",
+      saveQueued = type(st) == "table" and type(st.saveQueued) == "table",
+      pcHeld = type(st) == "table" and type(st.pc) == "table",
     }
   end
 
@@ -2615,6 +2692,247 @@ function Engine.new(opts)
     local out = {}
     for k, v in pairs(itemCounts) do out[k] = v end
     return out
+  end
+
+  -- ------------------------------------------------------------ the Pokemon Center, saving, the PC, sessions (M7)
+  --
+  -- The nurse (OverworldState:nurseHeal, OC:3806-3912) has no event or
+  -- hook. Her machine() heals the hidden party, writes save.lastHeal -- the
+  -- blackout return point, SetLastBlackoutMap (OC:3850-3857) -- and starts
+  -- ow.healAnim (OC:3858-3864), the one place that field is set; the
+  -- machine runs for dozens of frames (OC:1348-1360, stepHealAnim), so a
+  -- new healAnim table, polled every step, is a nurse heal. Cobblemon's
+  -- party heals too (party.heal), and while a client or test session is
+  -- connected the hidden game saves itself once her lines are done and the
+  -- player stands: Game:writeSave (src/core/Game.lua:1328-1351: the save.write
+  -- veto, captureSave, the meta stamp, save.writing, SaveData.save), gated
+  -- exactly as the engine gates its own F1 quick save (Game:quickSaveAllowed,
+  -- Game.lua:1353-1369; :861-863). That save's save.writing has the reason
+  -- "center"; every other one -- the start menu's SAVE
+  -- (src/ui/StartMenu.lua:117-125), F1, the Hall of Fame
+  -- (src/script/Commands.lua:943) -- is "menu". gen1-bridge never writes
+  -- lastHeal itself.
+  --
+  -- Bill's PC: OverworldState:openPC (OC:3568-3700) passes the PC menu's
+  -- rows through the ui.pc.items hook (OC:3664) with their English source
+  -- labels (Engine.BOX_PC_LABELS). The box row keeps the menu open
+  -- (keepOpen, src/ui/Menu.lua:104-105) and its onSelect plays the sound, pushes
+  -- the "Accessed ... PC" text box whose onDone opens BoxMenu through
+  -- openSub (OC:3581-3608), then calls done(). While a client or test
+  -- session is connected the wrapper runs that onSelect as it is and then
+  -- gives the text box another continuation (TextBox's onDone, read when it
+  -- pops: src/render/TextBox.lua:132, :612-613): a hold state on top of the
+  -- still-open PC menu -- a plain state with no input and nothing drawn
+  -- (src/core/StateStack.lua:1-3), busy to the classifier -- until
+  -- pc.closed; it then pops itself and the PC menu takes input again. The
+  -- player's item PC (PlayerPC) and the other rows stay native. The hold
+  -- record lives in the process-lifetime slot, so the wrapper an older
+  -- instance put on an open menu, and the hold an older instance pushed,
+  -- answer to the current instance after a hot reload.
+
+  -- A nurse heal since the last call: { map, outdoor } (lastHeal's map and
+  -- its town, symbols or nil) once per new ow.healAnim, else nil.
+  function engine.nurseHealed()
+    local ow, st = engine.overworld(), bridgeState()
+    if not (ow and st) then return nil end
+    local anim = ow.healAnim
+    if type(anim) ~= "table" or anim == st.healAnimSeen then return nil end
+    st.healAnimSeen = anim
+    local save = engine.save()
+    local heal = type(save) == "table" and type(save.lastHeal) == "table" and save.lastHeal or {}
+    local outdoor = type(heal.outdoor) == "table" and heal.outdoor.id or nil
+    return { map = symbol(heal.map) and heal.map or nil, outdoor = symbol(outdoor) and outdoor or nil }
+  end
+
+  -- Arms the center save for this overworld and save.
+  function engine.armCenterSave()
+    local st, ow, save = bridgeState(), engine.overworld(), engine.save()
+    if not (st and ow and save) then return false end
+    st.centerSave = { ow = ow, save = save }
+    return true
+  end
+
+  function engine.centerSaveArmed()
+    local st = type(game) == "table" and rawget(game, STATE_SLOT) or nil
+    return type(st) == "table" and type(st.centerSave) == "table"
+  end
+
+  -- One step of the armed center save. nil while there is none or it waits
+  -- (the machine still running, something on top of the overworld, a
+  -- Cobblemon battle held, or the quick-save gate closed: a walk, a script,
+  -- an emote, a warp); otherwise what happened: "written", "refused" (the
+  -- save.write veto or a failed write), "error" (writeSave threw or is
+  -- missing) or "dropped" (the world went away: the title, New Game,
+  -- CONTINUE).
+  function engine.centerSaveStep()
+    local st = type(game) == "table" and rawget(game, STATE_SLOT) or nil
+    local arm = type(st) == "table" and st.centerSave or nil
+    if type(arm) ~= "table" then return nil end
+    local ow, save = engine.overworld(), engine.save()
+    if arm.ow ~= ow or arm.save ~= save then
+      st.centerSave = nil
+      return "dropped"
+    end
+    if ow.healAnim or engine.top() ~= ow or liveBattle() then return nil end
+    if type(game.quickSaveAllowed) == "function" then
+      local ok, allowed = pcall(game.quickSaveAllowed, game)
+      if not (ok and allowed) then return nil end
+    end
+    st.centerSave = nil
+    if type(game.writeSave) ~= "function" then return "error" end
+    st.saving = "center"
+    local ok, written = pcall(game.writeSave, game)
+    st.saving = nil
+    if not ok then
+      warnAt("engine.write_save_failed", written)
+      return "error"
+    end
+    if written == false or written == nil then return "refused" end
+    return "written"
+  end
+
+  -- The reason of the save being written right now (inside writeSave's
+  -- save.writing): "center" for the center save, else nil.
+  function engine.savingReason()
+    local st = type(game) == "table" and rawget(game, STATE_SLOT) or nil
+    return type(st) == "table" and st.saving or nil
+  end
+
+  -- A hidden-game save to announce (save.begin): the newest one waits, one
+  -- Minecraft save covers any before it. Returns its id (unique per
+  -- process: the first instance's token and the shared serial) and whether
+  -- it replaced one still waiting.
+  function engine.queueSave(reason)
+    local st = bridgeState()
+    if not st then return nil, false end
+    st.serial = st.serial + 1
+    local id = ("v-%s-%d"):format(st.token or "x", st.serial)
+    local replaced = st.saveQueued ~= nil
+    st.saveQueued = { save = id, reason = reason }
+    return id, replaced
+  end
+
+  -- The save waiting to be announced ({ save, reason }), taken; or nil.
+  function engine.takeSave()
+    local st = type(game) == "table" and rawget(game, STATE_SLOT) or nil
+    local q = type(st) == "table" and st.saveQueued or nil
+    if type(q) ~= "table" then return nil end
+    st.saveQueued = nil
+    return { save = q.save, reason = q.reason }
+  end
+
+  -- The hidden game's active save slot as a number: SaveData.activeSlot
+  -- (src/core/SaveData.lua:1721-1731) names it "slot<N>" (valid_slot_id,
+  -- :1256-1258), resolved once per process (the title's CONTINUE gate
+  -- already did, saveNames :1442-1453); nil there means the flat legacy
+  -- save file, 0 here.
+  function engine.saveSlot()
+    local SaveData = try("src.core.SaveData")
+    if not (SaveData and type(SaveData.activeSlot) == "function") then return 0 end
+    local save = engine.save()
+    local version = type(save) == "table" and type(save.version) == "string" and save.version
+      or engine.gameVersion()
+    local ok, id = pcall(SaveData.activeSlot, version)
+    local n = ok and type(id) == "string" and tonumber(id:match("^slot(%d+)$")) or nil
+    if not n or n < 0 or n > 255 then return 0 end
+    return n
+  end
+
+  -- ---- Bill's PC
+
+  local pcCounts = { taken = 0, native = 0 }
+
+  local function pcRecord()
+    local st = type(game) == "table" and rawget(game, STATE_SLOT) or nil
+    local rec = type(st) == "table" and st.pc or nil
+    return type(rec) == "table" and rec or nil, st
+  end
+
+  -- The hold: a plain state over the PC menu that pops itself once its
+  -- record is no longer waiting (only the top state updates,
+  -- src/core/StateStack.lua:60-63).
+  local function holdPc(ow, save)
+    local st = bridgeState()
+    if not (st and type(game) == "table" and game.stack) then return end
+    local rec = { state = "waiting", ow = ow, save = save }
+    local stack = game.stack
+    local hold = { kantoBridgePcHold = true }
+    function hold.update()
+      if rec.state ~= "waiting" and stack:top() == hold then stack:pop() end
+    end
+    rec.hold = hold
+    st.pc = rec
+    stack:push(hold)
+  end
+
+  local function boxPcSelected(nativeSelect, ...)
+    local ow = engine.overworld()
+    if not (ow and isLive(currentBridge())) or pcRecord() or not (game and game.stack) then
+      pcCounts.native = pcCounts.native + 1
+      return nativeSelect(...)
+    end
+    local stack = game.stack
+    local before = stack:top()
+    local results = { nativeSelect(...) }
+    local box = stack:top()
+    if box ~= before and type(box) == "table" and box.isTextBox and type(box.onDone) == "function" then
+      local save = engine.save()
+      box.onDone = function() holdPc(ow, save) end
+      pcCounts.taken = pcCounts.taken + 1
+    else
+      pcCounts.native = pcCounts.native + 1
+      if log then log.warn("engine.pc_native", { count = pcCounts.native }) end
+    end
+    return unpack(results, 1, table.maxn(results))
+  end
+
+  -- ui.pc.items's wrapper body (OC:3664; the (next, game, items)
+  -- decorate-after-next convention, docs/modding.md "ui.title_menu.items"):
+  -- the box row's onSelect is wrapped, the rest is left as it is.
+  function engine.pcItems(nextFn, g, items)
+    local out = nextFn(g, items)
+    if type(out) ~= "table" then return out end
+    for _, row in ipairs(out) do
+      if type(row) == "table" and Engine.BOX_PC_LABELS[row.label] and type(row.onSelect) == "function" then
+        local nativeSelect = row.onSelect
+        row.onSelect = function(...) return boxPcSelected(nativeSelect, ...) end
+      end
+    end
+    return out
+  end
+
+  -- The PC hold as plain values ({ state, sentGen }) or nil; a hold whose
+  -- world went away (the title, New Game, CONTINUE) is dropped: nil, "dropped".
+  function engine.pcPending()
+    local rec, st = pcRecord()
+    if not rec then return nil end
+    if rec.state ~= "waiting" or rec.ow ~= engine.overworld() or rec.save ~= engine.save() then
+      if rec.state == "waiting" then rec.state = "dropped" end
+      st.pc = nil
+      return nil, "dropped"
+    end
+    return { state = rec.state, sentGen = rec.sentGen }
+  end
+
+  function engine.pcSent(generation)
+    local rec = pcRecord()
+    if rec then rec.sentGen = generation end
+  end
+
+  -- Ends the hold (pc.closed, or a release when the link drops): the hold
+  -- state pops itself on its next update. Returns true when one was held.
+  function engine.pcClose(why)
+    local rec, st = pcRecord()
+    if not rec or rec.state ~= "waiting" then return false end
+    rec.state = why or "closed"
+    st.pc = nil
+    return true
+  end
+
+  function engine.pcHeld() return pcRecord() ~= nil end
+
+  function engine.pcCounts()
+    return { taken = pcCounts.taken, native = pcCounts.native }
   end
 
   -- ------------------------------------------------------------ export (M2)
