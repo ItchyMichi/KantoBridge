@@ -55,7 +55,8 @@
       "title": "YOUR NAME?",
       "max": 7,
       "presets": ["TESTER", "ALEX"],
-      "value": ""
+      "value": "",
+      "grid": [[["A", "B", "C"], ["<PK>", "<MN>", "é"]], [["a", "b", "c"], ["?", "!", " "]]]
     }
   },
   {"type": "ui.open", "seq": 17, "data": {"ui": 7, "kind": "mirror", "screen": "PartyMenu"}}

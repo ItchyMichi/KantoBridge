@@ -4,10 +4,12 @@ The Gen1Recomp half of Kanto Bridge: a Gen1Recomp mod (Lua, mod API 2) that runs
 player's hidden Gen1Recomp. It listens on `127.0.0.1:27151` for `fabric-bridge`
 ([`docs/PROTOCOL.md`](../docs/PROTOCOL.md#transport)).
 
-**Status: M3, walking and warps.** The listener, the handshake, the heartbeat, `snapshot`, the live
-`player.pos`/`player.state` stream, the world export for the builder, the step driver (`move.step`,
-`move.face`, `move.hold`) and the `warp` messages work against the real engine (end-to-end tests in
-[`tools/e2e/`](../tools/e2e)). UI, NPCs and the story arrive in later milestones.
+**Status: M4, dialogue, menus and NPC mirroring.** The listener, the handshake, the heartbeat,
+`snapshot`, the live `player.pos`/`player.state` stream, the world export for the builder, the step
+driver (`move.step`, `move.face`, `move.hold`), the `warp` messages, the UI observer and its answers
+(`ui.*`), the NPC observer (`npc.*`, `emote`), `act.interact`, `act.button` and the mirror frames
+(`mirror.*`) work against the real engine (end-to-end tests in [`tools/e2e/`](../tools/e2e)). The
+story, battles and the party arrive in later milestones.
 
 ## What it does each logic step
 
@@ -47,11 +49,66 @@ test drivers), guarded so the hook always calls `next`:
    mat on the map edge), `pad`, `hole`, `elevator` (out of a `*_ELEVATOR` car), `fly`, `teleport`
    (Dig, Teleport and Escape Rope look alike here), `blackout`, `script`. A connection crossing is not
    a warp: its step's `player.pos` carries the new map.
-6. **Options pin (PLAN P21):** the hidden game's display options stay classic (no tilt, zoom, render
+6. **NPCs** (`observe/kb_npcs.lua`): the current map's NPCs (`ow.npcs`) are diffed by id every
+   step. `npc.set` (the whole list) on map entry (every new NPC table: warps, seam crossings) and after
+   every snapshot; `npc.add`/`npc.remove` when one appears or goes (show/hide, an item taken);
+   `npc.move` at each step start with the target cell and its frames (kind `walk` for its own
+   wandering, `script` for a cutscene move, `push` for a Strength boulder, `march` for a
+   walk-in-place beat; a jump with no step is `script` with 0 frames); `npc.face` for a turn. Kinds:
+   `item`, `boulder`, `static`, `trainer`, else `person`; the sprite is the NPC's appearance or its
+   own. The global emotion bubble goes out as `emote` (`!`, `?`, `happy`, or null when silent) on the
+   player or an NPC. The snapshot's NPC list is shaped by the same code.
+7. **UIs** (`observe/kb_ui.lua`): the screen stack is polled every step (`screen.pushed`/`popped`
+   only wake a re-read of open lists' rows). A state opens once, when it first becomes the top
+   (`ui.open`, ids unique per connection; after every snapshot the open UIs are sent again, bottom
+   first, with their ids), sends its moving parts as `ui.update`, and closes once it has left the
+   stack (`ui.close`). Kinds: text (pages and `cont` once, then 0-based page/line, waiting (the
+   arrow is up) and done; `instant`; `choice` when a YES/NO opens over it at its end; `auto` and
+   `stay` only for boxes whose end takes no press; pages of more than 8 lines are split into protocol
+   pages), choice (labels, index 0 = the first, the question from the text box under it), menu and
+   list (rows with their right column, cursor and scroll, `wrap` when the cursor goes round; the
+   Mart's footer and money), quantity, naming (title, length, presets, the
+   default, the species' dex number and the engine's letter `grid` without its ED and case cells; its
+   preset menu is part of it), small list adapters for the Pokédex list, the prize counter and the
+   Fly list, and `mirror` (with the screen id) for everything else that takes input: the party menu,
+   the summary, the trainer card, battles, the title. Fades, flashes and panels open nothing; the mod
+   manager and anything above it are ignored. All text goes out in the protocol markup
+   (docs/PROTOCOL.md "Text": `#` becomes `POKé`, `<PK>`/`<MN>` stay, font-only sequences and leftover
+   engine tokens are written out or dropped).
+8. **UI answers and buttons** (`act/kb_uiact.lua`), one tap per step: `ui.advance` taps A only when
+   the text box is ready (waiting with its 3-frame preWait over, or finished and closed by A/B; never
+   during a scroll or page clear, never for auto, stay or choice boxes); `ui.pick` puts the cursor on
+   the row and taps A (a YES/NO's NO is B, which always answers NO); `ui.back` taps B; `ui.qty` sets
+   the number and taps A; `ui.name` checks the glyphs against the grid and the length, picks NEW
+   NAME (or the preset itself) when the presets are up, then sets the glyphs and taps START, the
+   screen's own confirm. Answers wait for their UI to be on top; a closed UI takes its answers with
+   it (`error ui.stale`), and one that never comes back on top times out (`error ui.timeout`).
+   `act.button` taps START while idle (the start menu then opens as a normal menu) or on the start
+   menu (closing it), and forwards any button, as a tap or a hold, to a mirror screen; holds end with
+   their screen and the A+B+START+SELECT soft-reset chord is refused. Every `act.button` gets an
+   `act.result`.
+9. **Interaction** (`act/kb_interact.lua`): `act.interact{map,x,y}` sets the facing toward the cell
+   and taps A in the same logic step, only while idle, on the player's map, with the cell adjacent or
+   across a counter (it waits for a step in flight to land). The engine's `world.interacted` gives
+   the `act.result` (`ok`, `kind`); an NPC caught mid-step is retried once where it stands. Refusals:
+   `not_idle`, `wrong_map`, `off_map` (a cell across a map seam, x or y -1 or one past the edge: the
+   A press never reaches another map), `not_adjacent`, `busy`, `nothing`, `no_effect`,
+   `npc_moving`, `npc_moved`.
+10. **Mirror** (`observe/kb_mirror.lua`): while a client is subscribed (`mirror.sub{fps}`, at most
+    30), the `render.output_enabled` hook asks the engine for its full-window composite and a
+    read-only `render.output` observer captures it: the game rectangle downscaled into a 160×144
+    canvas (inside `push("all")`/`pop()`), `newImageData`, a hash to skip identical frames,
+    `encode("png")` with no filename, base64. The observer always returns `next(ctx)`, so the engine
+    presents the frame as usual; it never hides a state, never takes the output over and never writes
+    a file. Right after a `mirror.sub` the current picture goes out even if unchanged; then at most
+    `fps` frames a second, changed ones only, the newest one per logic step, dropped while the client
+    lags; a capture that keeps failing switches itself off. Measured on the test install: about
+    1.5 ms per capture (0.9 ms of it PNG encoding), 0.1-1.7 KB PNGs, no change to the 16.7 ms frames.
+11. **Options pin (PLAN P21):** the hidden game's display options stay classic (no tilt, zoom, render
    pipelines, wide or fill battles, or dynamic UI) and text speed stays FAST. They are pinned in
    memory at boot, on New Game and on CONTINUE, and re-checked every second. Nothing is written to
    disk; Gen1Recomp's own OPTIONS screen persists them if the player saves options there.
-7. **World export** ([`docs/PROTOCOL.md`](../docs/PROTOCOL.md) "Export resources"): for `builder`
+12. **World export** ([`docs/PROTOCOL.md`](../docs/PROTOCOL.md) "Export resources"): for `builder`
    and `test` connections, `export.index` and `export.get` serve the ten resource kinds (maps with
    per-cell flags, tilesets, images, sprites, palettes, encounters, field tables, names, the surface
    layout, swap sites). The first request starts one build of everything in a coroutine that
@@ -94,7 +151,7 @@ client are released at once.
 | File | Purpose |
 |---|---|
 | `manifest.json` | Read by Gen1Recomp's loader. `network` unlocks `require("socket")` (LÖVE's bundled LuaSocket) inside the mod sandbox; `engine_internals` discloses that the mod requires engine modules (`src.*`). Gen1Recomp only displays permissions; it never prompts. |
-| `main.lua` | Entry point. Loads the modules, defines the `port` option, wires the `input.step` and `movement.collision` hooks and the `game.ready`, `save.created`, `save.loaded`, `player.warped`, `map.entered` and `world.blacked_out` events, routes `move.*` to the step driver, orders each step's messages (`player.state`, `warp`, then `player.pos`/`player.blocked`), and publishes a status table in `mod.exports` (versions, counts, flags) for test drivers. |
+| `main.lua` | Entry point. Loads the modules, defines the `port` option, wires the `input.step`, `movement.collision`, `render.output_enabled` and `render.output` hooks and the `game.ready`, `save.created`, `save.loaded`, `player.warped`, `map.entered`, `world.blacked_out`, `screen.pushed`/`popped` and `world.interacted` events, routes `move.*`, `act.*`, `ui.*` and `mirror.*` to their modules, keeps one tap per logic step, orders each step's messages (`player.state`, `warp`, `player.pos`/`player.blocked`, `act.result`, `npc.*`/`emote`, `ui.close`/`open`/`update`, `mirror.frame`), and publishes a status table in `mod.exports` (versions, counts, flags) for test drivers. |
 | `lib/kb_json.lua` | Our own strict, deterministic JSON codec: sorted keys, `{}`/`[]`/null kept apart, strict parsing, errors that never quote the input. |
 | `lib/kb_sha256.lua` | SHA-256, for the short hashes logs may show and for export hashes. |
 | `lib/kb_log.lua` | Redacted logging: a code plus fields; any string that isn't id-shaped prints as `<str:LEN:SHA8>`. |
@@ -102,11 +159,16 @@ client are released at once.
 | `lib/kb_proto.lua` | The message envelope (`type`, `seq`, `re`, `data`), dispatch, replies and `error` answers, with a gate and catalog-aware handling of unhandled types. |
 | `lib/kb_session.lua` | One connection's session: hello first, handshake, heartbeat timeout, resync, debug messages, live streams, log forwarding. |
 | `lib/kb_catalog.lua` | **Generated** from `protocol/catalog.json` by `tools/lua/gen_catalog.py`: the message types and their legs. A test fails when it is stale. |
-| `lib/kb_engine.lua` | **The only file that touches engine internals.** Each function cites the engine `file:line` it relies on (v0.3.49): the overworld and its player, the top state's class, NPCs, dark maps, badges, the options pin, the instance takeover slot, the movement internals (setting the facing, held buttons, the player's collision verdicts, warp departures, hop/boulder/departure facts), and the export's data sources and queries (dataset views, the live-Data copy, `Map.new` and its cell queries, `Map.isOutside`, `computeNeighbors`, tile animations, spinner tiles, `Assets.imageData` + PNG encoding, the SGB palette cascade, and the few engine constants with nothing to call: cut-tree and shore tiles). Re-check them all when the Gen1Recomp pin changes. |
+| `lib/kb_engine.lua` | **The only file that touches engine internals.** Each function cites the engine `file:line` it relies on (v0.3.49): the overworld and its player, the top state's class, NPCs, dark maps, badges, the options pin, the instance takeover slot, the movement internals (setting the facing, held buttons, the player's collision verdicts, warp departures, hop/boulder/departure facts), the M4 internals (the screen stack's classes and stable keys, each widget's fields and its ready test, the few writes before a confirming tap: a cursor, a quantity, a name's glyphs; NPC steps and scripted moves, the emotion bubble, `world.interacted`'s target, counter tiles), and the export's data sources and queries (dataset views, the live-Data copy, `Map.new` and its cell queries, `Map.isOutside`, `computeNeighbors`, tile animations, spinner tiles, `Assets.imageData` + PNG encoding, the SGB palette cascade, and the few engine constants with nothing to call: cut-tree and shore tiles). Re-check them all when the Gen1Recomp pin changes. |
 | `observe/kb_player.lua` | The mode classifier and the `player.state`/`player.pos` observer, working on plain facts from `kb_engine`: step starts, ledge hops (one message at the landing), syncs, and tags the step driver reads. |
 | `observe/kb_warp.lua` | The `warp` start/arrive messages and their kinds, from the warp events and the transition facts. |
 | `act/kb_move.lua` | The step driver: `move.step` queue, facing first, holds through `mod.input` (released on the landing poll, re-pressed after an input reset, all released outside `idle`), outcomes (step, hop, push, warp, blocked) answered once per `n`, `move.face`, `move.hold`. |
-| `observe/kb_snapshot.lua` | Builds `snapshot` from the facts and the save: position, state, flags, toggles, bag, money, coins, badges, the hidden game's party, the Pokédex, the current map's NPCs. |
+| `observe/kb_snapshot.lua` | Builds `snapshot` from the facts and the save: position, state, flags, toggles, bag, money, coins, badges, the hidden game's party, the Pokédex, the current map's NPCs (shaped by `kb_npcs`). |
+| `observe/kb_npcs.lua` | The NPC observer: `npc.set`/`add`/`remove`/`move`/`face` and `emote` from a per-step diff by id; `Npcs.shape`, the one place an NPC becomes a protocol entry. |
+| `observe/kb_ui.lua` | The UI observer: the stack's states as `ui.open`/`update`/`close` by kind, the protocol text markup (`Ui.markup`), re-announcing after a snapshot. |
+| `observe/kb_mirror.lua` | The mirror: subscriptions, the fps cap, the capture inside the `render.output` observer, dedupe, the cost counters. |
+| `act/kb_uiact.lua` | UI answers (`ui.advance`, `ui.pick`, `ui.back`, `ui.qty`, `ui.name`) and `act.button`, applied as taps to the top state. |
+| `act/kb_interact.lua` | `act.interact`: face and press A in one step, confirmed by `world.interacted`, one retry for a moving NPC. |
 | `export/kb_export.lua` | The export service: roles, the request queue, the budgeted build coroutine, the cache, budgeted replies, and every resource's shaping (map records, surface, parents by BFS, the `LAST_MAP` memory, palettes, tile classes, images, sprites, encounters, field tables, names, layout). |
 | `export/kb_cells.lua` | The per-cell flag integers of one map, from `kb_engine`'s map queries plus `field.ledges`, `field.spinners`, the warps and signs. |
 | `export/kb_images.lua` | Base64, image ids from asset paths (`<folder>.<name>`), and the image and sprite resources. |

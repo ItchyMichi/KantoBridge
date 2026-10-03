@@ -133,6 +133,8 @@ function SimMap:warpAtCell(x, y)
   return self.warpAt[y * self.widthCells + x]
 end
 function SimMap:ledgeAt(x, y) return LEDGES[self:char(x, y)] end
+-- C: a counter tile, which the A press reaches across (OC:2542-2547)
+function SimMap:isCounterCell(x, y) return self:char(x, y) == "C" end
 
 -- ------------------------------------------------------------ the simulation
 
@@ -167,8 +169,10 @@ function FakeWorld.attach(E)
     for _, n in ipairs(sim.maps[mapId].spec.npcs or {}) do
       out[#out + 1] = {
         id = n.id or (mapId .. "_obj_" .. (#out + 1)),
-        def = { sprite = n.sprite or "SPRITE_TEST", pushable = n.pushable },
+        def = { sprite = n.sprite or "SPRITE_TEST", pushable = n.pushable, item = n.item,
+                pokemon = n.pokemon, trainerClass = n.trainerClass },
         cellX = n.x, cellY = n.y, facing = n.facing or "down", moving = false, progress = 0,
+        stepFrames = n.stepFrames,
       }
     end
     return out
@@ -216,6 +220,11 @@ function FakeWorld.attach(E)
     list[#list + 1] = { entity = entity, dir = dir, remaining = tiles, onDone = onDone }
   end
   E.scriptMove = scriptMove
+  -- OverworldState:marchInPlace: one walk-in-place beat (OC:5667-5671)
+  function E.marchInPlace(entity, onDone)
+    local list = E.ow.scriptMoves
+    list[#list + 1] = { entity = entity, inPlace = true, remaining = 1, onDone = onDone }
+  end
 
   local function setMap(mapId, x, y, facing, opts)
     opts = opts or {}
@@ -426,6 +435,8 @@ function FakeWorld.attach(E)
   local function handleInput()
     local w, p, input = ow(), player(), E.game.input
     if p.moving then return end
+    -- A and START on the standing poll (fake_ui.lua: interact, the start menu)
+    if E.overworldButtons and E.overworldButtons(input) then return end
     for _, dir in ipairs(DIR_ORDER) do
       if input:isDown(dir) then
         if p.facing == dir or (not p.turnArmed and p.turnTimer <= 0) then
@@ -475,6 +486,11 @@ function FakeWorld.attach(E)
   local function npcUpdate(n)
     if not n.moving then return end
     n.progress = n.progress + 1
+    if n.marching then
+      -- a walk-in-place beat: no translation (NPC.lua:116-124)
+      if n.progress >= (n.stepFrames or 32) then n.progress, n.moving, n.marching = 0, false, false end
+      return
+    end
     if n.progress >= (n.stepFrames or 32) then
       n.cellX, n.cellY = n.targetX, n.targetY
       n.targetX, n.targetY = nil, nil
@@ -496,7 +512,10 @@ function FakeWorld.attach(E)
     end
     for _, mv in ipairs(w.scriptMoves) do
       local e = mv.entity
-      if not e.moving and mv.remaining > 0 then
+      if not e.moving and mv.remaining > 0 and mv.inPlace then
+        e.moving, e.marching, e.progress = true, true, 0
+        mv.remaining = mv.remaining - 1
+      elseif not e.moving and mv.remaining > 0 then
         e.facing = mv.dir
         local d = DELTA[mv.dir]
         e.targetX, e.targetY = e.cellX + d[1], e.cellY + d[2]

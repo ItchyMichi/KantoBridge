@@ -11,8 +11,8 @@ new items in [PLAYTEST.md](PLAYTEST.md) and a commit titled `M<n>: <title>`.
 | M0 | Foundations, tooling and spikes | **done** | 2026-10-03 | `ccade90` |
 | M1 | Bridge connection | **done** | 2026-10-03 | `fa15739` |
 | M2 | World export and builder (Pallet Town and its interiors) | **done** | 2026-10-03 | `bbad914` |
-| M3 | Walking and warps | **done** | 2026-10-03 | `M3: walking and warps` |
-| M4 | Dialogue, menus and NPC mirroring | not started | | |
+| M3 | Walking and warps | **done** | 2026-10-03 | `aa725fd` |
+| M4 | Dialogue, menus and NPC mirroring | **done** | 2026-10-03 | `M4: dialogue, menus and NPC mirroring` |
 | M5 | Opening, Oak's cutscene, starter and rival battle | not started | | |
 | M6 | Route 1, habitat pools, catching, party/Pokédex/bag sync | not started | | |
 | M7 | Viridian City (Pokémon Center, Mart, PC, money, trainers, saving) | not started | | |
@@ -69,6 +69,13 @@ new items in [PLAYTEST.md](PLAYTEST.md) and a commit titled `M<n>: <title>`.
   `gradlew build`: **235 JUnit** (including a movement integration test against `fake_gen1`:
   join teleport, door warp, exit mat with `sync`+`n`, walk-out), **27/27 GameTests** (rules, warp
   service, build hold), mixin remap check (4 injector targets).
+- **M4:** `tools/check.sh --e2e`: pytest **908 passed** (506 Lua; e2e on the real engine: S5,
+  handshake, hot reload, export, walk, the Pallet build, and the new UI test: talk to an NPC (a
+  2-page text box advanced to its close), the start menu (7 rows, wrapping), the trainer card on the
+  mirror (78 frames, 160×144, 98 B–1.7 KB), QUIT's YES/NO answered NO then YES), then
+  `gradlew build`: **322 JUnit** (including a UI integration test against `fake_gen1`: puppets from
+  the snapshot, talk → text box → advance → close, UIs closed when the link drops), **27/27
+  GameTests**, mixin remap check.
 - **Early full-Kanto smoke build** (not an M2 gate; M8 owns it), `build_world.py --maps all` into
   `saves/KantoFullE2E`: 219 of 220 reachable maps (36 surface, 183 interiors on 14 layers, 5 moved
   sideways), **2,480,041 blocks in 2,126 chunks in 59 s** (plan 5.9 s, place 53 s), 12,539 story
@@ -265,6 +272,47 @@ new items in [PLAYTEST.md](PLAYTEST.md) and a commit titled `M<n>: <title>`.
     and `lit` empty until later milestones; deltas after). A malformed `story.state` changes nothing
     and gets `error{bad_message}`. `move.hold` (Cycling Road brake) is M8.
 
+**M4**
+
+40. **Text boxes run ahead locally:** a press at a stop moves on at once and sends exactly one
+    `ui.advance`; a press while typing finishes the visible text; `ui.update` only moves a box forward;
+    a final press without `ui.close` within 1.5 s may be resent. New optional `ui.open` fields
+    `choice` (text: a choice follows, so no ▼ and no advance at the end) and `wrap` (menu/list
+    cursor wrapping) close the gap where the client couldn't know a choice was coming.
+41. **One Minecraft screen, several UIs:** the client keeps a stack of open UIs (a choice over its
+    text box shows as one view; UIs underneath are drawn inactive, including a mirror's last
+    picture); answers go only to the top UI, at most once until it changes. Safety nets: a dropped
+    link closes every UI; each snapshot rebuilds them; if the hidden player stays idle for 0.5 s,
+    anything still open is cleared (counted as stale); our screen lingers 150 ms after its UI closes
+    so chained boxes don't flicker. Esc opens the pause menu and our screen comes back after. UIs show
+    only while following the hidden game (a Kanto world, not creative or spectator).
+42. **Interpretations the protocol leaves open:** Gen 1 menus wrap and lists stop at their ends
+    (unless `wrap` says otherwise); left/right pages lists and steps quantities by ±10; Start closes the
+    start menu; a click advances text and picks on menus. The A key fires only when the Minecraft
+    player's cell matches the hidden player's; targets are 1–2 cells in a straight line (2 across a
+    counter). Emote bubbles are white boxes with `!`, `?` or `♥` (not Gen 1 art). The mirror asks for
+    30 fps. The dialog area is about half the window wide (1×–2× the GUI scale). The optional Gen 1
+    bitmap font was skipped (Minecraft's font, `<PK>`/`<MN>` as small capitals).
+43. **Puppets** are `kantobridge:puppet` entities (registered both sides, noSave, noSummon, tracking
+    range 0, 1.75×1.9), spawned only on the client with negative ids; 2×2-block camera-facing
+    billboards using the map palette's NPC sheet from the generated pack (the M2 pack writer needed no
+    change: every object sprite on every map has a sheet); a neutral placeholder covers sprites
+    changed at runtime through the mod API (Gen 1 content never does). `UseEntityCallback` and
+    `UseBlockCallback` send `act.interact` and return FAIL; left-clicks on puppets are cancelled.
+44. **gen1-bridge UI choices:** naming sets `glyphs` and then taps START so the screen's own
+    `confirm()` runs from its update (not from our hook); with presets up it picks NEW NAME first, and
+    a name equal to a preset picks that preset. PartyMenu stays a mirror screen (P10); the Pokédex
+    list, the prize counter and the Fly list are list adapters. The ready gate is a superset of P2
+    §3.3 (`stay.prompt` and `auto.promptFirst` boxes take one press at their end); `auto`/`stay` are
+    sent only when the box's end takes no press. Text pages longer than 8 lines are split into
+    protocol pages. The interaction retry follows a moving NPC to where it stops (`npc_moved` if out of
+    reach). Seam targets are refused with `off_map`. NPC diffing pauses while no client is connected.
+    gen1-bridge never fills `snapshot.ui`: open UIs follow the snapshot as `ui.open` messages (bottom
+    first), then an `npc.set`.
+45. **Mirror cost (real engine):** about 1.3–1.5 ms per capture on average (PNG encode about
+    0.8 ms), 2.2–4.2 ms worst; frames are 98 B–1.7 KB; about 35% are identical and skipped; frame
+    times stay at the 16.7 ms vsync budget with the mirror on or off. No PLAN §8 fallback was needed.
+
 ## Open issues
 
 - Harmless noise: the Kotlin plugin makes Fabric Loader warn "Class path entries reference missing
@@ -301,6 +349,15 @@ new items in [PLAYTEST.md](PLAYTEST.md) and a commit titled `M<n>: <title>`.
   Until M4's puppets exist, walking into an NPC's cell is refused and snapped back (repeatedly while
   the key is held). A pause menu held during a warp can trip a timeout (it fades back in with a
   warning).
+- **For M6:** M4's `UseBlockCallback` returns FAIL for every block click while the player follows
+  the hidden game, whatever they hold, which would stop Cobblemon Poké Ball throws aimed at blocks.
+  M6 must let item use through (only plain right-clicks become `act.interact`).
+- M4's screens, puppets (facing, walking, collision, crosshair), emotes and the mirror picture are
+  only unit-tested; the play-test judges their look and feel.
+- NPCs on neighbouring maps (the engine's "ghosts" across a seam) aren't mirrored, so the previous
+  map's puppets vanish when you cross. The Pokédex list adapter has no field for owned markers. At the
+  title, TitleState and the intro arrive as mirror UIs and the title menu as a menu; battles are mirror
+  UIs until M5/M6.
 
 ## Blocked
 
@@ -315,3 +372,4 @@ Nothing.
   interiors, textures); optionally the experimental `KantoFullE2E` and the "Create Kanto world"
   button.
 - PLAYTEST.md M3: walk Pallet Town and its houses with Gen1Recomp following; stairs and doors.
+- PLAYTEST.md M4: talk to people and signs, the start menu, the bag, YES/NO, the mirror, puppets.

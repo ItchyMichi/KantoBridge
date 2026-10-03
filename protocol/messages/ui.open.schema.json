@@ -28,6 +28,10 @@
     "auto": {"type": "boolean", "description": "text: closes by itself."},
     "stay": {"type": "boolean", "description": "text: stays open under the next screen."},
     "instant": {"type": "boolean", "description": "text: printed at once."},
+    "choice": {
+      "type": "boolean",
+      "description": "text: a choice (YES/NO) opens over this box when it finishes: no ▼ and no ui.advance at its end."
+    },
     "labels": {
       "type": "array",
       "items": {"type": "string", "maxLength": 1000},
@@ -54,6 +58,10 @@
     "index": {"type": "integer", "minimum": 0, "maximum": 255},
     "top": {"type": "integer", "minimum": 0, "maximum": 255},
     "rows": {"type": "integer", "minimum": 1, "maximum": 32},
+    "wrap": {
+      "type": "boolean",
+      "description": "menu, list: the cursor wraps from the last item to the first (Gen 1 menus do; lists don't)."
+    },
     "screen": {
       "$ref": "../defs.schema.json#/$defs/symbol",
       "description": "The engine screen id or class, e.g. BagMenu."
@@ -83,6 +91,20 @@
     "mon": {
       "$ref": "../defs.schema.json#/$defs/dex",
       "description": "naming: the Pokémon being named."
+    },
+    "grid": {
+      "type": "array",
+      "maxItems": 4,
+      "description": "naming: the letter grid's pages (e.g. upper and lower case), each a list of rows of glyph tokens, as the engine's NamingScreen lays them out.",
+      "items": {
+        "type": "array",
+        "maxItems": 12,
+        "items": {
+          "type": "array",
+          "maxItems": 16,
+          "items": {"type": "string", "minLength": 1, "maxLength": 8}
+        }
+      }
     }
   },
   "allOf": [

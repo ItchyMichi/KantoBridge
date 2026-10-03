@@ -17,9 +17,12 @@ def established(role="test"):
     peer = rig.connect()
     seq = peer.hello(role=role)
     msgs = peer.messages()
-    assert [m["type"] for m in msgs] == ["hello.ok", "snapshot"]
+    # the NPC observer follows every snapshot with the current map's npc.set (M4),
+    # a live stream for the client and test roles only
+    follow = ["npc.set"] if role in ("client", "test") else []
+    assert [m["type"] for m in msgs] == ["hello.ok", "snapshot"] + follow
     assert msgs[0]["re"] == seq
-    return rig, peer, msgs
+    return rig, peer, msgs[:2]
 
 
 def test_listener_binds_lazily_on_the_first_step():
@@ -104,7 +107,7 @@ def test_ping_pong_and_resync():
     seq = peer.send("resync")
     rig.step()
     snap = peer.messages()
-    assert [(m["type"], m["re"]) for m in snap] == [("snapshot", seq)]
+    assert [(m["type"], m.get("re")) for m in snap] == [("snapshot", seq), ("npc.set", None)]
 
 
 def test_bad_ping_gets_bad_message():
@@ -166,7 +169,7 @@ def test_a_new_connection_replaces_the_old():
     second = rig.connect()
     assert first.closed() and not second.closed()
     second.hello()
-    assert [m["type"] for m in second.messages()] == ["hello.ok", "snapshot"]
+    assert [m["type"] for m in second.messages()] == ["hello.ok", "snapshot", "npc.set"]
     assert rig.status.sessions == 2
 
 
@@ -201,10 +204,12 @@ def test_player_updates_stream_after_the_snapshot():
     rig.E.push(rig.E.text())
     rig.step(3)
     msgs = peer.messages()
-    assert [(m["type"], m["data"]["mode"]) for m in msgs] == [("player.state", "screen")]
+    assert [(m["type"], m["data"].get("mode", m["data"].get("kind"))) for m in msgs] == [
+        ("player.state", "screen"), ("ui.open", "text")]
     rig.E.pop()
     rig.step()
-    assert [(m["type"], m["data"]["mode"]) for m in peer.messages()] == [("player.state", "idle")]
+    assert [(m["type"], m["data"].get("mode")) for m in peer.messages()] == [
+        ("player.state", "idle"), ("ui.close", None)]
 
 
 def test_builder_role_gets_no_live_stream():
@@ -312,7 +317,7 @@ def test_a_reloaded_instance_closes_the_old_ones_sockets_first():
     assert "[info] [gen1-bridge] bridge.replaced_instance" in rig.logs()
     fresh = rig.connect()
     fresh.hello()
-    ok, snap = fresh.messages()
+    ok, snap = fresh.messages()[:2]
     assert ok["data"]["session"] != old_session and snap["type"] == "snapshot"
     assert rig.b.net.reuseaddrSet == 0
 

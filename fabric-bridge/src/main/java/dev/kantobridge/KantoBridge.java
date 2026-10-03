@@ -3,6 +3,7 @@ package dev.kantobridge;
 import dev.kantobridge.block.KbBlocks;
 import dev.kantobridge.builder.BuildTasks;
 import dev.kantobridge.builder.HeadlessBuild;
+import dev.kantobridge.entity.KbEntities;
 import dev.kantobridge.net.RelayService;
 import dev.kantobridge.proto.Catalog;
 import dev.kantobridge.server.BuildHold;
@@ -27,6 +28,8 @@ public class KantoBridge implements ModInitializer {
 	@Override
 	public void onInitialize() {
 		KbBlocks.register();
+		// The NPC puppet type: registered on both sides so registries agree, spawned only by clients (docs/PLAN.md §4.2).
+		KbEntities.register();
 		StoryStates.init();
 		RelayService.init();
 		WorldIndexSync.init();

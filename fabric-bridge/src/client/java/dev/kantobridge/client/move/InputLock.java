@@ -1,6 +1,10 @@
 package dev.kantobridge.client.move;
 
+import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.function.BooleanSupplier;
 import net.minecraft.client.player.Input;
+import org.jetbrains.annotations.Nullable;
 
 /**
  * Holds the Minecraft player still while the hidden game isn't taking steps (docs/PLAN.md §2.4 flows 6, 7 and 13,
@@ -22,7 +26,7 @@ public final class InputLock {
 		WARP,
 		/** The forced mover drives the player. */
 		FORCED,
-		/** One of our screens is open. */
+		/** One of our screens is open, or a hidden-game UI is open while something covers its screen (M4). */
 		SCREEN,
 		/** The hidden game's mode isn't {@code idle} (a menu, a cutscene, a transition). */
 		BUSY
@@ -37,6 +41,8 @@ public final class InputLock {
 	}
 
 	private static volatile boolean locked;
+	/** Other reasons to hold the player as if one of our screens were open (a hidden UI whose screen is covered). */
+	private static final List<BooleanSupplier> HOLDS = new CopyOnWriteArrayList<>();
 
 	private InputLock() {
 	}
@@ -47,6 +53,24 @@ public final class InputLock {
 
 	public static void set(boolean value) {
 		locked = value;
+	}
+
+	/** Adds a condition under which the player is held like with one of our screens open (client thread). */
+	public static void holdWhile(BooleanSupplier hold) {
+		HOLDS.add(hold);
+	}
+
+	/** True when one of our screens is open, or something else asked to hold the player like one ({@link #holdWhile}). */
+	public static boolean screenHolds(@Nullable Object screen) {
+		if (screen instanceof Holds) {
+			return true;
+		}
+		for (BooleanSupplier hold : HOLDS) {
+			if (hold.getAsBoolean()) {
+				return true;
+			}
+		}
+		return false;
 	}
 
 	/**

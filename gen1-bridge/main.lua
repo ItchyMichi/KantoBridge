@@ -37,7 +37,12 @@ return function(mod)
     Player = import("observe/kb_player.lua"),
     Warp = import("observe/kb_warp.lua"),
     Snapshot = import("observe/kb_snapshot.lua"),
+    Npcs = import("observe/kb_npcs.lua"),
+    Ui = import("observe/kb_ui.lua"),
+    Mirror = import("observe/kb_mirror.lua"),
     Move = import("act/kb_move.lua"),
+    Interact = import("act/kb_interact.lua"),
+    UiAct = import("act/kb_uiact.lua"),
     Cells = import("export/kb_cells.lua"),
     Images = import("export/kb_images.lua"),
     SwapSites = import("export/kb_swapsites.lua"),
@@ -99,11 +104,12 @@ return function(mod)
   -- steps; each step takes them (they all happen during the stack update
   -- that follows input.step, src/core/Game.lua:320 vs :356).
   local EVENT_CAP = 16
-  local events = { verdicts = {}, entered = {} }
+  local events = { verdicts = {}, entered = {}, interacted = {} }
   local mapsEntered = 0
+  local screenEvents = 0
   local function takeEvents()
     local taken = events
-    events = { verdicts = {}, entered = {} }
+    events = { verdicts = {}, entered = {}, interacted = {} }
     return taken
   end
   local function capped(list, item)
@@ -117,12 +123,51 @@ return function(mod)
     local ok, record = pcall(reg.get, reg, id)
     return ok and type(record) == "table" and record or nil
   end
+  -- species -> national dex through the supported content API (pokemon.dex,
+  -- docs/modding/reference/registries.md)
+  local function dexOf(species)
+    local r = contentRecord("pokemon", species)
+    return r and tonumber(r.dex)
+  end
+
+  -- M4: NPCs, UIs and their answers, interaction, the mirror.
+  local npcObs = kb.Npcs.new({ json = kb.json, log = log })
+  local uiObs = kb.Ui.new({ engine = engine, json = kb.json, log = log, dexOf = dexOf })
+  local uiAct = kb.UiAct.new({
+    engine = engine, ui = uiObs, log = log,
+    press = function(btn) return mod.input:press(engine.game(), btn) end,
+    release = function(token) return mod.input:release(token) end,
+  })
+  local interact = kb.Interact.new({ engine = engine, log = log })
+  local mirror = kb.Mirror.new({ love = love, clock = clock, log = log, base64 = kb.Images.base64 })
+
+  -- One injected tap per logic step (PLAN section 2.3), shared by the
+  -- interaction and the UI answers: mod.input:tap with the live game
+  -- (src/mods/Loader.lua:1393-1431), issued from input.step so the edge lands
+  -- in this very step (src/core/Game.lua:320-321).
+  local tapped = false
+  local tapBudget = {
+    can = function() return not tapped end,
+    tap = function(btn)
+      if tapped then return false end
+      tapped = true
+      local ok = pcall(mod.input.tap, mod.input, engine.game(), btn)
+      if not ok then log.once("tap.failed:" .. btn, "warn", "input.tap_failed", { button = btn }) end
+      return ok
+    end,
+  }
 
   local function snapshot()
     local facts = engine.observe()
     lastFacts = facts
     player.rebase(facts)
-    local npcs, npcMap = engine.npcs()
+    -- the snapshot's NPC list is shaped like npc.set's (kb_npcs); the
+    -- observers then send npc.set and the open UIs again, later in the same
+    -- logic step (the snapshot is answered from session.step, before them)
+    local raw, npcMap = engine.npcs()
+    local npcs = raw and kb.Npcs.list(raw) or nil
+    npcObs.rebase()
+    uiObs.rebase()
     local data, dropped = kb.Snapshot.build({
       json = kb.json,
       Player = kb.Player,
@@ -134,10 +179,7 @@ return function(mod)
       npcMap = npcMap,
       -- species and moves through the supported content API: pokemon.dex,
       -- moves.index (docs/modding/reference/registries.md)
-      dexOf = function(species)
-        local r = contentRecord("pokemon", species)
-        return r and tonumber(r.dex)
-      end,
+      dexOf = dexOf,
       moveNum = function(moveId)
         local r = contentRecord("moves", moveId)
         return r and tonumber(r.index)
@@ -171,9 +213,21 @@ return function(mod)
       mapsEntered = mapsEntered,
     }
     for k, v in pairs(exporter.status()) do out[k] = v end
-    -- step driver and warp counts (moveRequests, moveAnswered, moveDropped, ...)
-    for k, v in pairs(mover.stats()) do out["move" .. k:sub(1, 1):upper() .. k:sub(2)] = v end
-    for k, v in pairs(warps.stats()) do out["warp" .. k:sub(1, 1):upper() .. k:sub(2)] = v end
+    -- counts per service, prefixed: moveRequests, warpStarted, uiOpened,
+    -- uiactPicked, npcMoves, interactOk, mirrorFrames, ...
+    local function merge(prefix, stats)
+      for k, v in pairs(stats) do
+        if type(v) == "number" or type(v) == "boolean" then out[prefix .. k:sub(1, 1):upper() .. k:sub(2)] = v end
+      end
+    end
+    merge("move", mover.stats())
+    merge("warp", warps.stats())
+    merge("ui", uiObs.stats())
+    merge("uiact", uiAct.stats())
+    merge("npc", npcObs.stats())
+    merge("interact", interact.stats())
+    merge("mirror", mirror.stats())
+    out.screenEvents = screenEvents
     return out
   end
 
@@ -226,6 +280,41 @@ return function(mod)
   session.on("move.face", movement(mover.face, "move.face"))
   session.on("move.hold", movement(mover.hold, "move.hold"))
 
+  -- M4 requests (docs/PROTOCOL.md "Interaction", "UI"), client and test
+  -- roles only. They queue in their modules and are applied in the step,
+  -- with fresh facts; answers that need one (act.result, late errors) go
+  -- out in the step's message list with their `re`.
+  local function streamRole(msg, role)
+    if kb.Session.STREAM_ROLES[role] then return true end
+    session.sendError("role", msg.seq, "needs role client or test")
+    return false
+  end
+  local function queued(handler)
+    return function(data, msg, role)
+      if not streamRole(msg, role) then return end
+      local ok, code = handler(data, msg.seq, session.generation())
+      if not ok then session.sendError(code or "bad_message", msg.seq, code or "bad_message") end
+    end
+  end
+  session.on("act.interact", queued(interact.request))
+  session.on("act.button", queued(uiAct.button))
+  for _, t in ipairs({ "ui.advance", "ui.pick", "ui.back", "ui.qty", "ui.name" }) do
+    session.on(t, queued(function(data, seq, gen) return uiAct.request(t, data, seq, gen) end))
+  end
+  session.on("mirror.sub", function(data, msg, role)
+    if not streamRole(msg, role) then return end
+    local fps = data.fps
+    if type(fps) ~= "number" or fps ~= math.floor(fps) or fps < 1 or fps > 30 then
+      session.sendError("bad_message", msg.seq, "bad mirror.sub")
+      return
+    end
+    mirror.subscribe(fps, session.generation())
+  end)
+  session.on("mirror.unsub", function(_, msg, role)
+    if not streamRole(msg, role) then return end
+    mirror.unsubscribe(session.generation())
+  end)
+
   status.session = sessionId
   status.configure = function(opts)
     if type(opts) == "table" and opts.port ~= nil then
@@ -242,14 +331,17 @@ return function(mod)
     if changed > 0 then log.info("options.pinned", { changed = changed }) end
   end
 
+  local wake = true -- a screen was pushed or popped since the last step
   local function step(game)
     engine.setGame(game)
     steps = steps + 1
-    session.step() -- received move.* requests queue in the driver
+    tapped = false
+    session.step() -- received requests queue in their modules
     local exported = exporter.step()
     local facts = engine.observe()
     lastFacts = facts
     local ev = takeEvents()
+    local mode = kb.Player.classify(facts)
     local out = player.update(facts) -- player.state, then player.pos
     -- warp start/arrive go after player.state and before player.pos (the
     -- arrival's sync follows its warp message)
@@ -258,13 +350,35 @@ return function(mod)
       local at = (out[1] and out[1][1] == "player.state") and 2 or 1
       for i = #warpOut, 1, -1 do table.insert(out, at, warpOut[i]) end
     end
+    local live = session.established() and kb.Session.STREAM_ROLES[session.role()] == true
+    local generation = session.generation()
     -- the step driver answers its requests in `out`, then presses or
     -- releases for this logic step
-    mover.step(facts, kb.Player.classify(facts), ev, out, {
-      live = session.established() and kb.Session.STREAM_ROLES[session.role()] == true,
-      generation = session.generation(),
-    })
-    for i = 1, #out do session.stream(out[i][1], out[i][2]) end
+    mover.step(facts, mode, ev, out, { live = live, generation = generation })
+    -- then the interaction (act.result), the NPCs (npc.*, emote), the UIs
+    -- (ui.close, ui.open, ui.update), their answers (taps; act.result for
+    -- act.button), and the newest mirror frame
+    local npcRaw, npcMap, npcGen, emote
+    if live then
+      npcRaw, npcMap, npcGen = engine.npcs()
+      emote = engine.emote()
+    end
+    local ctx = { live = live, generation = generation, budget = tapBudget, moverBusy = mover.busy() }
+    interact.step(facts, mode, ev, npcRaw, out, ctx)
+    npcObs.step(npcRaw, npcMap, npcGen, emote, out, live)
+    uiObs.step(wake, out)
+    wake = false
+    uiAct.step(facts, mode, out, ctx)
+    mirror.step(out, { live = live, generation = generation, queued = session.queued() })
+    for i = 1, #out do
+      local m = out[i]
+      if m.re ~= nil then
+        -- a reply (act.result, a late error) belongs to the connection that asked
+        if m.gen == generation and session.established() then session.reply({ seq = m.re }, m[1], m[2]) end
+      else
+        session.stream(m[1], m[2])
+      end
+    end
     if pendingDropped then
       log.once("snapshot.dropped", "warn", "snapshot.dropped", { values = pendingDropped })
       pendingDropped = nil
@@ -281,6 +395,15 @@ return function(mod)
     status.moveDropped, status.moveRepressed = moves.dropped, moves.repressed
     status.warpsStarted, status.warpsArrived = warped.started, warped.arrived
     status.mapsEntered = mapsEntered
+    status.mirrorOn = mirror.enabled()
+    if steps % 30 == 0 then
+      local u, n, s = uiObs.stats(), npcObs.stats(), mirror.stats()
+      status.uiOpened, status.uiClosed, status.uiOpen = u.opened, u.closed, u.open
+      status.npcSets, status.npcMoves = n.sets, n.moves
+      status.mirrorCaptures, status.mirrorFrames, status.mirrorAvgUs, status.mirrorMaxUs =
+        s.captures, s.frames, s.avgUs, s.maxUs
+      status.mirrorEncodeAvgUs, status.mirrorSkipped = s.encodeAvgUs, s.skipped
+    end
   end
 
   -- input.step must always call next, and a throwing wrapper would be
@@ -334,6 +457,46 @@ return function(mod)
     capped(events.entered, { map = payload.mapId, via = payload.via })
   end)
   mod.events:on("world.blacked_out", function() events.blackout = true end)
+
+  -- M4. Pushes and pops only wake the UI observer, which polls the stack
+  -- itself (src/core/StateStack.lua:28-45 fire them after enter/exit);
+  -- world.interacted reports what an A press hit (OC:2532-2535).
+  mod.events:on("screen.pushed", function()
+    wake = true
+    screenEvents = screenEvents + 1
+  end)
+  mod.events:on("screen.popped", function()
+    wake = true
+    screenEvents = screenEvents + 1
+  end)
+  mod.events:on("world.interacted", function(payload)
+    local ok, facts = pcall(engine.interactedFacts, payload)
+    if ok and facts then capped(events.interacted, facts) end
+  end)
+
+  -- The mirror (observe/kb_mirror.lua): the output seam is asked for only
+  -- while a client watches, and render.output stays a pure observer -- it
+  -- always returns next(ctx), so the engine presents the frame itself
+  -- (Renderer.lua:939-962, :1374-1419; docs/modding.md "render.output").
+  -- Hooks die with this instance's loader on a hot reload.
+  mod.hooks:wrap("render.output_enabled", function(nextFn, ...)
+    if mirror.enabled() then return true end
+    return nextFn(...)
+  end)
+  local captureErrorAt = -math.huge
+  mod.hooks:wrap("render.output", function(nextFn, ctx)
+    if mirror.enabled() then
+      local ok, err = pcall(mirror.capture, ctx)
+      if not ok then
+        mirror.failed()
+        if clock() - captureErrorAt >= 5 then
+          captureErrorAt = clock()
+          log.error("mirror.capture_failed", { at = type(err) == "string" and err:match("[%w_/%.%-]+%.lua:%d+") or "unknown" })
+        end
+      end
+    end
+    return nextFn(ctx)
+  end)
   -- Every collision verdict passes this hook (src/world/Collision.lua:84-96);
   -- the player's are recorded for the step driver, and the verdict itself is
   -- never changed.

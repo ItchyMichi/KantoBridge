@@ -84,11 +84,23 @@ message types, engine symbols, counts, lengths and short hashes. The details are
 
 ## Text
 
-- Text lines are UTF-8 strings. The Gen 1 charmap is translated by gen1-bridge: `<PK>` and `<MN>`
-  stay as tokens, `#` becomes `POKé`, and `é ♂ ♀ × ¥` are sent as themselves. The full markup is
-  fixed in M4.
-- Naming glyphs (`ui.name`) are the engine's glyph tokens, one per entry, e.g. `"A"`, `"é"`,
-  `"<PK>"`. Multi-character cells count as one glyph.
+Every text field (text-box lines, choice labels, menu items, titles, naming presets and values) is a
+UTF-8 string in this small markup (fixed in M4):
+
+- gen1-bridge sends text **after** the engine's own token substitution (`{PLAYER}`, `{RIVAL}`, …)
+  and with PAUSE marks removed, so the client never sees `{…}` tokens.
+- **`#` is expanded to `POKé`** by gen1-bridge (in Gen 1 it is a macro, never a literal `#`).
+- **`<PK>` and `<MN>`** stay as tokens: each is one Gen 1 glyph (the small "PK" and "MN" that make
+  "PKMN"). The client draws them as glyphs, or as `PK`/`MN` in a smaller style. No other `<…>`
+  sequence is a token; anything else is literal text.
+- **Ligatures** (`'d`, `'l`, `'s`, `'t`, `'v`, `'r`, `'m`) stay as their two ASCII characters; they
+  look the same drawn separately.
+- **Everything else** is its Unicode character: `é ♂ ♀ × ¥ … ▶`, digits, letters, punctuation.
+- Lines carry no line breaks; `pages`/`cont` give the layout (`cont[p][i]` = the line scrolls in after
+  the previous one, `\v` in the engine). A box shows two lines at a time and up to 18 glyphs per line.
+- **Naming glyphs** (`ui.name.glyphs`, `ui.open{naming}.grid`) are one token per entry, using the
+  same markup: `"A"`, `"é"`, `"<PK>"`, `" "`. Multi-character cells count as one glyph toward the
+  length limit.
 
 ## Directions
 
@@ -114,7 +126,7 @@ optional ones. The schemas give the exact types and limits.
 | `ping` | G→M, M→G | `t` (sender's ms clock) | |
 | `pong` | G→M, M→G | `t` (echoed); `re` required | |
 | `resync` | M→G | `{}`; asks for a `snapshot` | |
-| `snapshot` | G→M | `ingame` (false at the title screen and intro: `player` is then only the save's last position and must not move the Minecraft player), `player{map,x,y,facing}, state{…player.state}, flags[], toggles{map:{obj:bool}}, blocks[{map,bx,by,block}], lit[], bag{item:qty}, money, coins, badges[], party[{uid?,dex,level,nick?,moves[],hp?,maxhp?,status?}], dex{seen[],owned[]}, npcs{map,list[]}, ui?`; `re` optional (set when answering `resync`) | yes |
+| `snapshot` | G→M | `ingame` (false at the title screen and intro: `player` is then only the save's last position and must not move the Minecraft player), `player{map,x,y,facing}, state{…player.state}, flags[], toggles{map:{obj:bool}}, blocks[{map,bx,by,block}], lit[], bag{item:qty}, money, coins, badges[], party[{uid?,dex,level,nick?,moves[],hp?,maxhp?,status?}], dex{seen[],owned[]}, npcs{map,list[]}`; `re` optional (set when answering `resync`). `ui` is reserved and never sent: open UIs follow as `ui.open` messages (UI rules) | yes |
 | `log` | G→M | `level, code, msg` (bridge diagnostics, never game text) | |
 | `error` | G→M, M→G, C→S, S→C | `code, msg`; `re` optional (the offending message) | |
 
@@ -183,15 +195,47 @@ optional ones. The schemas give the exact types and limits.
 | `mirror.unsub` | M→G | `{}` | |
 | `mirror.frame` | G→M | `w:160, h:144, png` (base64), `n`. About 3–10 KB per frame | yes |
 
+#### UI rules (M4)
+
+- **Indexes are 0-based:** `page`, `line`, `index` (index 0 is the first label or item).
+- **Text boxes:** the client may run ahead locally: a press at a stop moves on at once and sends
+  exactly one `ui.advance`; gen1-bridge queues it, taps A only when the box is ready, ties it to that
+  `ui` id and drops it if the UI closes first. A final press without `ui.close` within 1.5 s may be
+  sent again. `auto`/`stay` boxes and boxes with `choice: true` never get a `ui.advance` at their
+  end. `ui.update` only moves a box forward.
+- **Several UIs can be open** (a choice over its text box); answers go to the top one, at most once
+  until it changes. A dropped link closes every UI.
+- **After every `snapshot`** (same logic step) gen1-bridge sends `ui.open` for each open UI, bottom
+  first, with their ids, then their `ui.update`s, and an `npc.set` (client and test roles). It never
+  fills `snapshot.ui`; a client clears its UIs on a snapshot and rebuilds them from these messages.
+- **Field meanings:** `waiting` means the ▼ is up, including at the end of a box that A closes. A
+  menu's `rows` is min(visible rows, item count); a list's `rows` is its window size. The naming
+  `grid` leaves out ED and the case-switch row; a preset name is accepted even when it can't be
+  typed on the grid. `emote.bubble` null is a silent hold. `npc.move` kind `script` with 0 frames
+  places an NPC without a step.
+- **Mirror frames** are dropped, not queued, while the client lags more than 256 KiB behind; `n` counts
+  per gen1-bridge instance.
+- **`act.result`** answers every `act.interact` and `act.button`. Interact kinds: `npc`, `sign`,
+  `door`, `hidden`, `script`, `bookshelf`. Interact reasons: `not_ingame`, `wrong_map`, `off_map`
+  (a target across a seam: the engine's A press never reaches another map), `not_idle`,
+  `not_adjacent`, `busy`, `nothing`, `no_effect`, `npc_moving`, `npc_moved`. Button reasons:
+  `not_idle`, `not_mirror`, `chord`, `busy`, `press_failed`.
+- **UI error codes:** `ui.stale`, `ui.wrong_kind`, `ui.timeout`, `bad_message`.
+- **The mirror:** after `mirror.sub` gen1-bridge sends the current frame at once, then changed frames
+  only, at most `fps` a second.
+- **`act.interact` targets** a cell 1–2 cells away in a straight line from the hidden player's cell
+  (2 only across a counter), named in the hidden player's current map: near an outdoor seam `x`/`y`
+  can be −1 or one past the map edge.
+
 Per-kind fields of `ui.open`:
 
 | Kind | Fields |
 |---|---|
-| text | `pages[[lines]], cont[[bool]], auto?, stay?, instant?` |
+| text | `pages[[lines]], cont[[bool]], auto?, stay?, instant?, choice?` (a choice opens over it when it ends) |
 | choice | `labels[], index, question?` |
-| menu, list | `title?, items[{label,right?}], index, top, rows, screen?, footer?, money?` |
+| menu, list | `title?, items[{label,right?}], index, top, rows, wrap?, screen?, footer?, money?` |
 | quantity | `qty, max, unit?` |
-| naming | `title, max, presets[], value, mon?` |
+| naming | `title, max, presets[], value, mon?, grid?[pages][rows][glyphs]` |
 | mirror | `screen?` |
 
 ### NPCs

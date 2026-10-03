@@ -128,3 +128,25 @@ Town**: that starts Oak's cutscene, which comes in M5.
 - [ ] `/gamemode spectator` still lets you fly around (if commands are on); `/gamemode adventure`
       puts you back on Gen1Recomp's tile.
 - [ ] Note anything that feels off: lag, rubber-banding, corner cuts, the fade, the camera turning.
+
+## M4: Dialogue, menus and NPC mirroring
+
+Start as in M3 (Gen1Recomp in game, standing in Pallet Town or a house; Minecraft in the `Kanto`
+world). Text is still in Minecraft's own font.
+
+- [ ] People appear as flat, upright figures in their places (Mom downstairs, the girl in Blue's
+      house, Oak's aides in the lab). Walking ones walk tile by tile, and they face the right way
+      from every side you look at them.
+- [ ] Talk to Mom with **Z** (or right-click her): a Gen 1 style text box opens in Minecraft, types
+      the text, shows ▼ when it waits; **Z** or **X** moves on; it closes at the end. Gen1Recomp's
+      window shows the same box moving along.
+- [ ] Read a sign in Pallet Town, and check the TV and the bookshelves with Z or right-click.
+- [ ] **Enter** opens the start menu; arrows and Z pick, X backs out.
+- [ ] In the menu, ITEM opens the bag list; picking an item gives USE/TOSS; TOSS asks for a quantity
+      (up/down, left/right by 10); X backs out of each.
+- [ ] A YES/NO question works with arrows and Z; X answers NO.
+- [ ] Your name in the start menu (the trainer card), or any other picture-style screen, opens the
+      **mirror**: Gen1Recomp's live picture inside Minecraft, driven with arrows, Z and X.
+- [ ] Esc during a text box opens Minecraft's pause menu; closing it brings the box back.
+- [ ] F7 shows the UI, NPC and action lines.
+- [ ] Note how the boxes, the `PK`/`MN` letters, ▶ and ▼ look, and anything sized or placed oddly.

@@ -288,7 +288,7 @@ def test_npcs_are_read_and_classified():
     E.npc(b"TEST_TOWN_obj_6", b"SPRITE_TEST_GUARD", 9, 1, b.to_lua({"sprite": "SPRITE_TEST_GUARD", "trainerClass": "TEST"}))
     trainer = E.ow.npcs[6]
     trainer.appearance = b"SPRITE_TEST_OTHER"
-    npcs, map_id = eng.npcs()
+    npcs, map_id, generation = eng.npcs()
     got = [(n.id.decode(), n.sprite.decode(), n.kind.decode()) for n in npcs.values()]
     assert map_id == b"TEST_TOWN"
     assert got == [
@@ -299,6 +299,9 @@ def test_npcs_are_read_and_classified():
         ("TEST_TOWN_obj_5", "SPRITE_TEST_BIRD", "static"),
         ("TEST_TOWN_obj_6", "SPRITE_TEST_OTHER", "trainer"),  # appearance wins
     ]
+    assert generation == 1 and eng.npcs()[2] == 1, "the same ow.npcs table: the same generation"
+    E.ow.npcs = b.table()  # setMap builds a new table (OC:551-558)
+    assert eng.npcs()[2] == 2
 
 
 def test_positions_that_dont_fit_the_schema_are_held_back():

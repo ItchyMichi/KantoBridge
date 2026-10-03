@@ -99,6 +99,38 @@ class PackWriterTest {
 		assertEquals(plan.slotMap().hash(), info.get("slotMapHash").getAsString());
 	}
 
+	/**
+	 * M4's check of the NPC sheets against what the puppet renderer needs: for every object of every map the world places,
+	 * a sheet exists under the texture id the renderer asks for (the sprite in the palette the WorldIndex gives its map),
+	 * 64×32 (standing and walking rows of down, up, left, right), with right exactly left mirrored.
+	 */
+	@Test
+	void everyPuppetTheWorldCanShowHasItsSheet() throws Exception {
+		PackFiles files = new PackFiles();
+		ResourcePackWriter.generate(plan, bundle, files, new Warnings());
+		int checked = 0;
+		for (var placement : plan.index().maps().values()) {
+			for (var object : bundle.map(placement.id()).objects()) {
+				String id = ResourcePackWriter.npcTexture(placement.palette(), object.sprite());
+				String path = "assets/" + id.replace(":", "/");
+				byte[] png = files.files().get(path);
+				assertNotNull(png, "no sheet for an object of " + placement.id());
+				Png.Image sheet = Png.decode(png);
+				assertEquals(Textures.SHEET_WIDTH, sheet.width());
+				assertEquals(Textures.SHEET_HEIGHT, sheet.height());
+				for (int row = 0; row < 2; row++) {
+					for (int y = 0; y < 16; y++) {
+						for (int x = 0; x < 16; x++) {
+							assertEquals(sheet.get(2 * 16 + x, row * 16 + y), sheet.get(3 * 16 + 15 - x, row * 16 + y), "right mirrors left");
+						}
+					}
+				}
+				checked++;
+			}
+		}
+		assertEquals(4, checked, "the town's three objects and Mom");
+	}
+
 	@Test
 	void generationIsDeterministic() throws Exception {
 		PackFiles a = new PackFiles();

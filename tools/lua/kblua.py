@@ -54,13 +54,14 @@ class Bridge:
     ``engine=True`` adds ``fake_engine.lua``: its modules join ``modules``,
     its UI tables become ``mod.ui``, and ``self.engine`` controls the fake
     game. ``love.timer.getTime`` reads ``self.now`` (seconds), which
-    ``step()`` advances by one logic step at a time.
+    ``step()`` advances by one logic step at a time. ``graphics=True`` adds a fake
+    ``love.graphics`` and ``love.data`` (``fake_love.lua``, controlled through ``self.love``).
     """
 
     STEP = 1 / 60
 
     def __init__(self, permissions=PERMISSIONS, modules=None, developer=False, strict=True,
-                 engine=False, mod_options=None, content=None, game="blue"):
+                 engine=False, mod_options=None, content=None, game="blue", graphics=False):
         self.rt = luajit.LuaRuntime(unpack_returned_tuples=True, encoding=None)
         self.lua = self.rt.globals()
         self.Sandbox = self._load_harness("sandbox.lua")
@@ -76,12 +77,19 @@ class Bridge:
             eopts[b"game"] = _b(game)
             self.engine = FakeEngine.new(eopts)
             self._load_harness("fake_world.lua").attach(self.engine)
+            self._load_harness("fake_ui.lua").attach(self.engine)
 
         # love facade source: only timer is needed so far. perCall advances the clock on every
         # read, so work inside one step "takes time" (budget tests); 0 by default.
         self._clock = self.eval("{ now = 0, perCall = 0 }")
         love = self.eval("function(c) return { timer = { getTime = function()"
                          " c.now = c.now + c.perCall return c.now end } } end")(self._clock)
+        # graphics=True adds fake_love.lua's love.graphics and love.data (the mirror)
+        self.love = None
+        if graphics:
+            self.love = self._load_harness("fake_love.lua").new()
+            love[b"graphics"] = self.love.graphics
+            love[b"data"] = self.love.data
 
         mods = self.table()
         mods[b"socket"] = self.fake.socket

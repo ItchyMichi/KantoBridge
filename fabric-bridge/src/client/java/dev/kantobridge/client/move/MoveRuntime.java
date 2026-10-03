@@ -94,7 +94,7 @@ public final class MoveRuntime {
 		}
 		MoveController.Frame frame = new MoveController.Frame(ClientWorldIndex.current(), player.isSpectator() || player.isCreative(),
 				this.bridge.client().state() == ConnectionState.CONNECTED, this.bridge.state().ingame(), this.bridge.state().mode(),
-				minecraft.screen instanceof InputLock.Holds, player.getX(), player.getZ());
+				InputLock.screenHolds(minecraft.screen), player.getX(), player.getZ());
 		ForcedMover.Velocity velocity = this.controller.beforeMove(this.clock.millis(), frame);
 		if (velocity != null) {
 			// Keep the vertical speed, so gravity, landing and step-up work as when walking.

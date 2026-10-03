@@ -176,7 +176,9 @@ class Walker:
             if time.monotonic() > deadline:
                 raise AssertionError("timed out waiting for the idle mode")
             m = await self.pump(0.1)
-            if m is not None and m["type"] not in ("pong", "log"):
+            # NPCs wandering and mirror frames (M4) are no sign of the player's walk
+            if m is not None and m["type"] not in ("pong", "log", "npc.move", "npc.face", "npc.add",
+                                                   "npc.remove", "emote", "mirror.frame"):
                 last = time.monotonic()
 
     async def resync(self):

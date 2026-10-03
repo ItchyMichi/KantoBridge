@@ -11,10 +11,12 @@ return {
     added = {
       "listens on 127.0.0.1 (port option, default 27151) for one Kanto Bridge client at a time",
       "sends the player's position and state each step, and a full story snapshot on connect",
+      "mirrors the hidden game's text boxes, YES/NO, menus, lists, quantities and naming, and its NPCs, to Minecraft, and applies Minecraft's answers as button taps",
+      "while Minecraft watches a graphical screen, captures the finished frame (read-only) and sends it as a 160x144 PNG",
       "a status table in mod.exports (versions, counts, flags) for test drivers",
     },
     known = {
-      "steps, dialogue, NPCs and the story are not mirrored yet; they arrive in later milestones",
+      "the story, battles and the party are not mirrored yet; they arrive in later milestones",
     },
   },
   credits = {

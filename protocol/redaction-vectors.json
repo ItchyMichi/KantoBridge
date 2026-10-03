@@ -537,7 +537,8 @@
         "title": "<rom:str:10:a7fe4c86>",
         "max": 7,
         "presets": "<rom:arr:2:e6153efc>",
-        "value": "<rom:str:0:12ae32cb>"
+        "value": "<rom:str:0:12ae32cb>",
+        "grid": [[["A", "B", "C"], ["<PK>", "<MN>", "é"]], [["a", "b", "c"], ["?", "!", " "]]]
       }
     },
     {"type": "ui.open", "seq": 17, "redacted": {"ui": 7, "kind": "mirror", "screen": "PartyMenu"}},

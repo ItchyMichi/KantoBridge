@@ -365,35 +365,636 @@ function Engine.new(opts)
     return facts
   end
 
+  -- ow.npcs is rebuilt as a new table by every setMap (OC:551-558: warps,
+  -- seam crossings, same-map warps), so its identity tells a map (re)load
+  -- from NPCs coming and going on the same map. The generation counts the
+  -- tables seen.
+  local npcTable, npcGeneration = nil, 0
+
   -- The live NPCs of the current map, as PLAN section 4.1 "NPCs" describes
-  -- them: ow.npcs holds the visible ones (NPC.lua:31-67, OC:551-558); sprite
+  -- them: ow.npcs holds the visible ones (NPC.lua:32-64, OC:551-558); sprite
   -- is appearance or def.sprite (NPC.lua:68-79); item balls have def.item
-  -- (except "0", OC:3451-3456); boulders are SPRITE_BOULDER or pushable
-  -- (Map.lua:188-191); statics have def.pokemon; trainers trainerClass.
-  -- Returns the list and the map id, or nil outside the overworld.
+  -- (except the ITEM_NONE sentinels "0" and 0, OC:3451-3456); boulders are
+  -- SPRITE_BOULDER or pushable (Map.lua:188-191); statics have def.pokemon;
+  -- trainers trainerClass. Per NPC also its step: moving, targetX/Y, the
+  -- step length (stepFrames or 32, NPC.lua:9, :109), marching (the
+  -- walk-in-place cycle, NPC.lua:116-124), progress, and `via` when a
+  -- scripted move drives it: scriptMoves entries (OC:5655-5671) are "march"
+  -- for an inPlace beat, "push" for a pushable object (a Strength boulder,
+  -- OC:1864), else "script".
+  -- Returns the list, the map id and the npc-table generation, or nil
+  -- outside the overworld.
   function engine.npcs()
     local ow = engine.overworld()
     if not ow then return nil end
-    local out = {}
-    for _, npc in ipairs(type(ow.npcs) == "table" and ow.npcs or {}) do
-      local def = type(npc.def) == "table" and npc.def or {}
-      local sprite = npc.appearance or def.sprite
-      local kind = "person"
-      if def.item ~= nil and def.item ~= "0" then
-        kind = "item"
-      elseif sprite == "SPRITE_BOULDER" or def.pushable then
-        kind = "boulder"
-      elseif def.pokemon ~= nil then
-        kind = "static"
-      elseif def.trainerClass ~= nil then
-        kind = "trainer"
-      end
-      out[#out + 1] = {
-        id = npc.id, sprite = sprite, kind = kind,
-        x = npc.cellX, y = npc.cellY, facing = npc.facing, moving = npc.moving == true,
-      }
+    local list = type(ow.npcs) == "table" and ow.npcs or {}
+    if list ~= npcTable then
+      npcTable, npcGeneration = list, npcGeneration + 1
     end
-    return out, ow.map.id
+    local via = {}
+    for _, mv in ipairs(type(ow.scriptMoves) == "table" and ow.scriptMoves or {}) do
+      local e = mv.entity
+      if type(e) == "table" and e ~= ow.player then
+        local def = type(e.def) == "table" and e.def or {}
+        local pushable = def.pushable
+        if pushable == nil then pushable = def.sprite == "SPRITE_BOULDER" end
+        via[e] = mv.inPlace and "march" or (pushable and "push") or "script"
+      end
+    end
+    local out = {}
+    for _, npc in ipairs(list) do
+      if type(npc) == "table" then
+        local def = type(npc.def) == "table" and npc.def or {}
+        local sprite = npc.appearance or def.sprite
+        local kind = "person"
+        if def.item ~= nil and def.item ~= "0" and def.item ~= 0 then
+          kind = "item"
+        elseif sprite == "SPRITE_BOULDER" or def.pushable then
+          kind = "boulder"
+        elseif def.pokemon ~= nil then
+          kind = "static"
+        elseif def.trainerClass ~= nil then
+          kind = "trainer"
+        end
+        out[#out + 1] = {
+          id = npc.id, sprite = sprite, kind = kind,
+          x = npc.cellX, y = npc.cellY, facing = npc.facing, moving = npc.moving == true,
+          tx = npc.targetX, ty = npc.targetY,
+          marching = npc.marching == true,
+          progress = tonumber(npc.progress) or 0,
+          frames = tonumber(npc.stepFrames) or 32,
+          via = via[npc],
+        }
+      end
+    end
+    return out, ow.map.id, npcGeneration
+  end
+
+  -- The global emotion-bubble hold, ow.emote = { npc, frames, bubble,
+  -- onDone } (OC:1510-1527; Commands.emote, src/script/Commands.lua:1184-1200):
+  -- bubble nil or 1 is "!", 2 "?", 3 happy, false a silent hold (OC:6055-6075).
+  -- Each new hold gets a new serial. target is "player" (ow.player), an NPC
+  -- id, or nil (a silent cutscene beat with no entity).
+  local emoteSerials = setmetatable({}, { __mode = "k" })
+  local emoteSerial = 0
+  function engine.emote()
+    local ow = engine.overworld()
+    local em = ow and ow.emote
+    if type(em) ~= "table" then return nil end
+    local serial = emoteSerials[em]
+    if serial == nil then
+      emoteSerial = emoteSerial + 1
+      serial = emoteSerial
+      emoteSerials[em] = serial
+    end
+    local target
+    if em.npc ~= nil and em.npc == ow.player then
+      target = "player"
+    elseif type(em.npc) == "table" and symbol(em.npc.id) then
+      target = em.npc.id
+    end
+    local bubble = em.bubble
+    if bubble ~= false and type(bubble) ~= "number" then bubble = nil end
+    return { serial = serial, target = target, bubble = bubble, frames = tonumber(em.frames) or 0 }
+  end
+
+  -- ------------------------------------------------------------ interaction (M4)
+
+  -- world.interacted { mapId, x, y, kind, target } fires after the A press
+  -- was handled, in the same logic step (OC:2532-2535, :2537-2614). kind is
+  -- npc, sign, door, hidden, script, bookshelf or none; for npc the target
+  -- is the NPC, which was talked to only if it stood still (a moving NPC
+  -- gets no world.talk, OC:2550-2567). Plain values only.
+  function engine.interactedFacts(payload)
+    if type(payload) ~= "table" then return nil end
+    local target = payload.target
+    local out = {
+      map = symbol(payload.mapId) and payload.mapId or nil,
+      x = tonumber(payload.x), y = tonumber(payload.y),
+      kind = symbol(payload.kind) and payload.kind or "none",
+    }
+    if out.kind == "npc" and type(target) == "table" then
+      out.npcId = symbol(target.id) and target.id or nil
+      out.npcMoving = target.moving == true
+    end
+    return out
+  end
+
+  -- Whether (x, y) is a cell of the current map (Map:inBounds,
+  -- src/world/Map.lua:213-215), or nil outside the overworld. The A press
+  -- looks only at the current map (OC:2537-2614): a cell across a seam holds
+  -- nothing it can reach, the neighbour map's NPCs being drawn ghosts that
+  -- never talk (OC:785-803).
+  function engine.cellInMap(x, y)
+    local ow = engine.overworld()
+    local m = ow and ow.map
+    if not (m and type(m.inBounds) == "function") then return nil end
+    local ok, inside = pcall(m.inBounds, m, x, y)
+    if not ok then return nil end
+    return inside and true or false
+  end
+
+  -- True when (x, y) of the current map is a counter tile: the A press
+  -- then reaches one cell further (OC:2542-2547; Map:isCounterCell,
+  -- src/world/Map.lua:272).
+  function engine.counterCell(x, y)
+    local ow = engine.overworld()
+    local m = ow and ow.map
+    if not (m and type(m.isCounterCell) == "function") then return false end
+    local ok, counter = pcall(m.isCounterCell, m, x, y)
+    return ok and counter == true
+  end
+
+  -- ------------------------------------------------------------ UI (M4)
+  --
+  -- The UI observer (observe/kb_ui.lua) follows the screen stack
+  -- (game.stack.states, src/core/StateStack.lua:9-11) without holding its
+  -- states: each state gets a small integer key here (weak keys, so a
+  -- popped state can be collected; weak values for the way back). Readers
+  -- return plain copies; the few writes (a cursor, a quantity, a name) are
+  -- the ones P2 sections 4-6 describe, made right before the bridge taps
+  -- the button that confirms them.
+
+  local stateKeys = setmetatable({}, { __mode = "k" })
+  local keyStates = setmetatable({}, { __mode = "v" })
+  local lastKey = 0
+  local function keyOf(state)
+    local k = stateKeys[state]
+    if k == nil then
+      lastKey = lastKey + 1
+      k = lastKey
+      stateKeys[state] = k
+      keyStates[k] = state
+    end
+    return k
+  end
+
+  -- The engine's string catalog, an identity function without a
+  -- translation mod (src/core/Strings.lua:46-90); labels pass through it
+  -- when drawn (e.g. ChoiceBox.lua:90-91, ListMenu.lua:370).
+  local function S(text)
+    if type(text) ~= "string" then return nil end
+    local Strings = try("src.core.Strings")
+    if Strings then
+      local ok, out = pcall(Strings, text)
+      if ok and type(out) == "string" then return out end
+    end
+    return text
+  end
+
+  -- The widget classes are the instances' metatables (mod.ui, ModUI.lua:8-27).
+  local UI_CLASS_NAMES = { "ChoiceBox", "Menu", "ListMenu", "QuantityBox", "NamingScreen", "PicBox" }
+  -- Screens built with .new outside Screens.push carry no screenId: the
+  -- daycare's and Name Rater's PartyMenu (data/scripts/story2.lua:1171,
+  -- story4.lua:767) and the prize counter (data/scripts/story3.lua:900).
+  -- Their modules are loaded by then, so require hands back the class.
+  local MENU_CLASSES = {
+    { "PartyMenu", "src.ui.PartyMenu" }, { "PrizeCounter", "src.ui.PrizeCounter" },
+    { "PokedexMenu", "src.ui.PokedexMenu" },
+  }
+  local SCREEN_CLASSES = { PartyMenu = true, PokedexMenu = true, PrizeCounter = true, TownMap = true }
+
+  -- A state's class for the UI observer, plus its screen id (a symbol, or
+  -- nil). Classes: Overworld; Manager (the mod manager, ManagerState:
+  -- everything from it up is the player's own business, P2 2.3); TextBox
+  -- (isTextBox, TextBox.lua:22); the mod.ui widgets ChoiceBox, Menu,
+  -- ListMenu, QuantityBox, NamingScreen, PicBox; BattleState (isBattleState,
+  -- BattleState.lua:49); the adapted screens PartyMenu, PokedexMenu,
+  -- PrizeCounter, TownMap (by the screenId Screens.build stamps,
+  -- src/ui/Screens.lua:174-176, or by class); Screen (any other screen that
+  -- takes input: a screenId or isMenu); Busy (no input: fades, flashes,
+  -- slides, the SAVE panel; P2 2.2's last row).
+  function engine.uiClass(state)
+    if type(state) ~= "table" then return "Busy" end
+    if state.isOverworld then return "Overworld" end
+    local sid = symbol(state.screenId) and state.screenId or nil
+    if sid == "ManagerState" then return "Manager", sid end
+    if state.isTextBox then return "TextBox", sid end
+    local mt = getmetatable(state)
+    if ui and mt ~= nil then
+      if ui.TextBox ~= nil and mt == ui.TextBox then return "TextBox", sid end
+      for i = 1, #UI_CLASS_NAMES do
+        local m = ui[UI_CLASS_NAMES[i]]
+        if m ~= nil and mt == m then return UI_CLASS_NAMES[i], sid end
+      end
+    end
+    if state.isBattleState then return "BattleState", sid or "BattleState" end
+    if sid and SCREEN_CLASSES[sid] then return sid, sid end
+    if sid == nil and state.isMenu and mt ~= nil then
+      for i = 1, #MENU_CLASSES do
+        local m = try(MENU_CLASSES[i][2])
+        if m and mt == m then return MENU_CLASSES[i][1], MENU_CLASSES[i][1] end
+      end
+    end
+    if sid then return "Screen", sid end
+    if state.isMenu then return "Screen", nil end
+    return "Busy"
+  end
+
+  -- The stack as plain entries, bottom to top: { key, cls, screen }.
+  function engine.uiStack()
+    local stack = game and game.stack
+    local states = stack and stack.states
+    local out = {}
+    if type(states) ~= "table" then return out end
+    for i = 1, #states do
+      local s = states[i]
+      local cls, screen = engine.uiClass(s)
+      out[i] = { key = type(s) == "table" and keyOf(s) or 0, cls = cls, screen = screen }
+    end
+    return out
+  end
+
+  local function stateFor(key, cls)
+    local s = keyStates[key]
+    if type(s) ~= "table" then return nil end
+    if cls and engine.uiClass(s) ~= cls then return nil end
+    return s
+  end
+
+  local function count(t) return type(t) == "table" and #t or 0 end
+  local function int(v, default)
+    v = tonumber(v)
+    if v == nil or v ~= v then return default end
+    return math.floor(v)
+  end
+
+  -- TextBox (src/render/TextBox.lua): the lines currently in the box,
+  -- TextBox:visibleText's rule (:391-399): the page's lines up to lineIndex,
+  -- as many as `shown` holds (at most two).
+  local function visibleLines(s)
+    local pages = type(s.pages) == "table" and s.pages or {}
+    local page = pages[int(s.pageIndex, 1)]
+    if type(page) ~= "table" then return {} end
+    local shown = count(s.shown)
+    local line = int(s.lineIndex, 1)
+    local out = {}
+    for i = math.max(1, line - shown + 1), line do
+      if type(page[i]) == "string" then out[#out + 1] = page[i] end
+    end
+    return out
+  end
+
+  -- The box takes an A/B tap this logic step (P2 3.3; TextBox.lua:457-698,
+  -- in update order): nothing while a scroll or page clear holds
+  -- (holdFrames, :476-479), a PAUSE or sound waits (preSound :461-472,
+  -- pauseFrames :481-499, pauseSrc :500-506) or a sound effect holds
+  -- (sfxWait, :402-407). Finished: A/B closes a plain box (:607-614); a
+  -- stay.prompt box takes one press (:511-526) and an auto.promptFirst box
+  -- one press (:529-534); other stay, auto and choice boxes take none
+  -- (:527-605). Mid-text: waiting at a page break or scroll once the
+  -- 3-frame preWait has run out (:617-627).
+  local function textReady(s)
+    if int(s.holdFrames, 0) > 0 then return false end
+    if s.preSound or s.pauseFrames or s.pauseSrc or s.sfxWait then return false end
+    if s.done then
+      if s.stay then
+        return type(s.stay) == "table" and s.stay.prompt and not s.stayShown and true or false
+      end
+      if s.auto then
+        return type(s.auto) == "table" and s.auto.promptFirst and not s.autoPrompted and true or false
+      end
+      return not s.choice
+    end
+    return s.waiting == true and int(s.preWait, 0) == 0
+  end
+
+  -- The blinking arrow is up: TextBox:arrowVisible's rule (:415-426) for a
+  -- Gen 1 save.
+  local function textArrow(s)
+    if s.sfxWait then return false end
+    if s.waiting then return true end
+    if not s.done or s.choice then return false end
+    if s.auto and not (type(s.auto) == "table" and s.auto.promptFirst and not s.autoPrompted) then
+      return false
+    end
+    if s.stay and not (type(s.stay) == "table" and s.stay.prompt and not s.stayShown) then
+      return false
+    end
+    return true
+  end
+
+  -- Menu rows are drawn as their labels (Menu.lua:176-180); callers built
+  -- them through Strings already (e.g. StartMenu.lua:32-165).
+  local function menuItems(items)
+    local out = {}
+    for i = 1, count(items) do
+      local it = items[i]
+      out[i] = { label = type(it) == "table" and type(it.label) == "string" and it.label or "" }
+    end
+    return out
+  end
+
+  -- ListMenu rows (src/ui/ListMenu.lua:1-3, drawn :322-344, :374-398): the
+  -- right-hand column is a level (`sub`), a price, a count (×N) or `right`.
+  local function listItems(items)
+    local out = {}
+    for i = 1, count(items) do
+      local it = items[i]
+      local row = { label = "" }
+      if type(it) == "table" then
+        row.label = type(it.label) == "string" and it.label or ""
+        if type(it.sub) == "string" then
+          row.right = it.sub
+        elseif type(it.price) == "string" then
+          row.right = it.price
+        elseif it.count ~= nil then
+          row.right = "\195\151" .. tostring(it.count) -- "×N", :337-341
+        elseif type(it.right) == "string" then
+          row.right = it.right
+        end
+      end
+      out[i] = row
+    end
+    return out
+  end
+
+  -- PrizeCounter rows: prizes {name, cost} (src/ui/PrizeCounter.lua:15-23)
+  -- and the fixed fourth row, NO THANKS, which cancels (:33-37, drawn :62).
+  local function prizeItems(s)
+    local out = {}
+    for i, p in ipairs(type(s.prizes) == "table" and s.prizes or {}) do
+      out[i] = { label = type(p) == "table" and type(p.name) == "string" and p.name or "",
+                 right = type(p) == "table" and p.cost ~= nil and tostring(p.cost) or nil }
+    end
+    out[#out + 1] = { label = S("NO THANKS") }
+    return out
+  end
+
+  -- TownMap's fly list (src/ui/TownMap.lua:259-276): the visited fly towns
+  -- (locs, :265) by the names the banner shows (:174-177).
+  local function flyItems(s)
+    local out = {}
+    for i, loc in ipairs(type(s.locs) == "table" and s.locs or {}) do
+      out[i] = { label = type(loc) == "table" and S(loc.name) or "" }
+    end
+    return out
+  end
+
+  local function copyStrings(list)
+    local out = {}
+    for i = 1, count(list) do
+      if type(list[i]) == "string" then out[#out + 1] = list[i] end
+    end
+    return out
+  end
+
+  -- The NamingScreen's letter pages, as NamingScreen:grid gives them
+  -- (src/ui/NamingScreen.lua:176-187, the ui.naming.grid hook included),
+  -- for both cases: `lower` is flipped only around the call and restored.
+  -- The ED cell and the case-switch row are controls, not glyphs (findMeta's
+  -- rule, :72-84), so they are left out.
+  local CASE_ROWS = { ["lower case"] = true, ["UPPER CASE"] = true, lower = true, UPPER = true }
+  local function namingGrid(s)
+    if type(s.grid) ~= "function" then return {} end
+    local saved = s.lower
+    local pages = {}
+    for _, lower in ipairs({ false, true }) do
+      s.lower = lower
+      local ok, grid = pcall(s.grid, s)
+      local rows = {}
+      if ok and type(grid) == "table" then
+        for r = 1, #grid do
+          local row = grid[r]
+          if type(row) == "table" and not (#row == 1 and CASE_ROWS[row[1]]) then
+            local cells = {}
+            for c = 1, #row do
+              local cell = row[c]
+              if type(cell) == "string" and cell ~= "ED" and #cell > 0 then cells[#cells + 1] = cell end
+            end
+            if #cells > 0 then rows[#rows + 1] = cells end
+          end
+        end
+      end
+      pages[#pages + 1] = rows
+    end
+    s.lower = saved
+    return pages
+  end
+
+  local function stackIndex(state)
+    local states = game and game.stack and game.stack.states
+    if type(states) ~= "table" then return nil end
+    for i = #states, 1, -1 do
+      if states[i] == state then return i, states end
+    end
+    return nil
+  end
+
+  -- Everything a UI needs when it opens, by class, as plain values (raw
+  -- engine strings; the observer translates them to the protocol markup).
+  function engine.uiOpenFacts(key)
+    local s = keyStates[key]
+    if type(s) ~= "table" then return nil end
+    local cls, screen = engine.uiClass(s)
+    local f = { cls = cls, screen = screen }
+    if cls == "TextBox" then
+      -- pages + pages.contBefore (TextBox.paginate, :298-375; built at :181);
+      -- the opts flags (:133, :143-144, :161)
+      local pages = type(s.pages) == "table" and s.pages or {}
+      local before = type(pages.contBefore) == "table" and pages.contBefore or {}
+      f.pages, f.cont = {}, {}
+      for p = 1, #pages do
+        local lines = type(pages[p]) == "table" and pages[p] or {}
+        local conts = type(before[p]) == "table" and before[p] or {}
+        local pl, pc = {}, {}
+        for i = 1, #lines do
+          pl[i] = type(lines[i]) == "string" and lines[i] or ""
+          pc[i] = conts[i] == true
+        end
+        f.pages[p], f.cont[p] = pl, pc
+      end
+      -- auto/stay as the protocol means them: the box's end takes no press.
+      -- auto.promptFirst waits for one press first (:529-534) and auto.wait
+      -- turns into a plain A/B box once its sound is over (:569-572);
+      -- stay.prompt takes one press before it stays up (:511-526).
+      local auto, stay = s.auto, s.stay
+      f.auto = auto ~= nil and auto ~= false
+        and not (type(auto) == "table" and (auto.promptFirst or auto.wait))
+      f.stay = stay ~= nil and stay ~= false and not (type(stay) == "table" and stay.prompt)
+      f.instant = s.instant == true
+      f.choice = s.choice ~= nil
+    elseif cls == "ChoiceBox" then
+      -- labels default to YES/NO (ChoiceBox.lua:33), drawn through Strings
+      -- (:90-91); the question is the text box right under it (P2 4)
+      f.labels = {}
+      for i, label in ipairs(type(s.labels) == "table" and s.labels or {}) do f.labels[i] = S(label) or "" end
+      local i, states = stackIndex(s)
+      local below = i and states[i - 1]
+      if type(below) == "table" and engine.uiClass(below) == "TextBox" then f.question = visibleLines(below) end
+    elseif cls == "Menu" then
+      -- items {label} (Menu.lua:1-2, :17), title (:40, may carry {DONE}/
+      -- {PROMPT} and line breaks, :137-143), maxVisible (:46); the Mart
+      -- menu keeps the clerk's line in `footer` (src/ui/ShopMenu.lua:31-37)
+      f.items = menuItems(s.items)
+      f.title = type(s.title) == "string" and s.title or nil
+      f.rows = int(s.maxVisible, nil)
+      f.footer = type(s.footer) == "string" and s.footer or nil
+      f.wrap = not s.noWrap -- up/down wrap unless noWrap (Menu.lua:38, :90-95)
+    elseif cls == "ListMenu" then
+      -- title (:110-111, drawn through Strings :370), items (:113), rows
+      -- (:158), footer (:120), the Mart's money box (dialogue + money(),
+      -- :135, :140, :414-421), script mode (the old man's demo, :131)
+      f.items = listItems(s.items)
+      f.title = type(s.title) == "string" and S(s.title) or nil
+      f.rows = int(s.rows, nil)
+      f.footer = type(s.footer) == "string" and s.footer or nil
+      f.wrap = s.wrap == true -- clamps unless opts.wrap (ListMenu.lua:122, :163-173)
+      if s.dialogue and type(s.money) == "function" then
+        local ok, money = pcall(s.money)
+        if ok then f.money = int(money, nil) end
+      end
+      f.script = s.script ~= nil
+    elseif cls == "QuantityBox" then
+      f.qty, f.max, f.unit = int(s.qty, 1), int(s.max, 1), int(s.unitPrice, nil) -- QuantityBox.lua:14-16
+    elseif cls == "NamingScreen" then
+      -- title (:92), presets (:93), maxLen (:95), default (:96), mon (:102)
+      f.title = type(s.title) == "string" and s.title or ""
+      f.presets = copyStrings(s.presets)
+      f.max = int(s.maxLen, 7)
+      f.value = type(s.default) == "string" and s.default or ""
+      f.species = type(s.mon) == "table" and symbol(s.mon.species) and s.mon.species or nil
+      f.grid = namingGrid(s)
+    elseif cls == "PokedexMenu" then
+      -- items {num, name, label} (src/ui/PokedexMenu.lua:84-98), rows() :113,
+      -- the SEEN/OWN footer (:103)
+      f.items = menuItems(s.items)
+      local ok, rows = pcall(function() return s:rows() end)
+      f.rows = ok and int(rows, nil) or nil
+      f.footer = type(s.footer) == "string" and s.footer or nil
+      f.wrap = false -- the cursor stops at both ends (PokedexMenu:syncScroll, :118-127)
+    elseif cls == "PrizeCounter" then
+      f.items = prizeItems(s)
+      f.rows = #f.items
+      f.wrap = false -- stops at rows 1 and 4 (PrizeCounter.lua:28-33)
+    elseif cls == "TownMap" then
+      -- only fly mode is a list (src/ui/TownMap.lua:259-276); the viewer and
+      -- the dex AREA map are art
+      f.fly = s.fly == true
+      if f.fly then
+        f.items = flyItems(s)
+        f.rows = #f.items
+        f.wrap = true -- TownMap:moveList goes round (:322-327)
+      end
+    end
+    return f
+  end
+
+  -- The fields that move while a UI is open, by class.
+  function engine.uiCursor(key)
+    local s = keyStates[key]
+    if type(s) ~= "table" then return nil end
+    local cls = engine.uiClass(s)
+    if cls == "TextBox" then
+      -- pageIndex/lineIndex (:189-190), done (:195)
+      return { page = int(s.pageIndex, 1), line = int(s.lineIndex, 1), done = s.done == true,
+               waiting = textArrow(s), ready = textReady(s) }
+    elseif cls == "ChoiceBox" then
+      -- index 1 YES / 2 NO (:17); pending during the 15-frame answer hold (:43-52)
+      return { index = int(s.index, 1), busy = s.pending ~= nil }
+    elseif cls == "Menu" then
+      return { index = int(s.index, 1), scroll = int(s.scroll, 0), count = count(s.items),
+               busy = s.frozen == true } -- frozen ignores input (Menu.lua:89)
+    elseif cls == "ListMenu" then
+      -- script: the old man's demo list reads no input (ListMenu.lua:128-131, :219-222)
+      return { index = int(s.index, 1), scroll = int(s.scroll, 0), count = count(s.items),
+               script = s.script ~= nil }
+    elseif cls == "QuantityBox" then
+      return { qty = int(s.qty, 1), max = int(s.max, 1) }
+    elseif cls == "NamingScreen" then
+      return { choosing = s.choosing == true, typed = count(s.glyphs) } -- :98, :117
+    elseif cls == "PokedexMenu" then
+      return { index = int(s.index, 1), scroll = int(s.scroll, 0), count = count(s.items) }
+    elseif cls == "PrizeCounter" then
+      return { index = int(s.index, 1), scroll = 0, count = count(s.prizes) + 1 }
+    elseif cls == "TownMap" then
+      return { index = int(s.sel, 1), scroll = 0, count = count(s.locs), fly = s.fly == true } -- :303
+    end
+    return {}
+  end
+
+  -- A menu-like UI's rows again (they change while it is open: tosses,
+  -- sales, swaps; P2 5.2), or nil for other classes.
+  function engine.uiItems(key)
+    local s = keyStates[key]
+    if type(s) ~= "table" then return nil end
+    local cls = engine.uiClass(s)
+    if cls == "Menu" or cls == "PokedexMenu" then return menuItems(s.items) end
+    if cls == "ListMenu" then return listItems(s.items) end
+    if cls == "PrizeCounter" then return prizeItems(s) end
+    if cls == "TownMap" and s.fly then return flyItems(s) end
+    return nil
+  end
+
+  -- Moves a cursor to `index` (1-based), keeping the scroll window around
+  -- it as the widget itself would on its next update: Menu:clampScroll
+  -- (Menu.lua:74-84), ListMenu's syncScroll (ListMenu.lua:175-181),
+  -- PokedexMenu:syncScroll (PokedexMenu.lua:118-127). ChoiceBox index
+  -- 1/2 (:17), PrizeCounter rows 1-4 (PrizeCounter.lua:13, :20), TownMap's
+  -- fly cursor `sel` (TownMap.lua:303). Returns true when it moved.
+  function engine.uiSetIndex(key, index)
+    local s = keyStates[key]
+    if type(s) ~= "table" or type(index) ~= "number" or index ~= math.floor(index) then return false end
+    local cls = engine.uiClass(s)
+    if cls == "ChoiceBox" then
+      if index ~= 1 and index ~= 2 then return false end
+      s.index = index
+    elseif cls == "Menu" then
+      local n = count(s.items)
+      if index < 1 or index > n then return false end
+      s.index = index
+      local maxVisible = int(s.maxVisible, nil)
+      if not (maxVisible and n > maxVisible) then
+        s.scroll = 0
+      elseif index - int(s.scroll, 0) > maxVisible then
+        s.scroll = index - maxVisible
+      elseif index - int(s.scroll, 0) < 1 then
+        s.scroll = index - 1
+      end
+    elseif cls == "ListMenu" then
+      if index < 1 or index > count(s.items) then return false end
+      s.index = index
+      local maxRow = int(s.cursorRows, nil) or int(s.rows, 7)
+      if index - int(s.scroll, 0) > maxRow then s.scroll = index - maxRow end
+      if index - int(s.scroll, 0) < 1 then s.scroll = index - 1 end
+    elseif cls == "PokedexMenu" then
+      if index < 1 or index > count(s.items) then return false end
+      s.index = index
+      if type(s.syncScroll) == "function" then pcall(s.syncScroll, s) end
+    elseif cls == "PrizeCounter" then
+      if index < 1 or index > count(s.prizes) + 1 then return false end
+      s.index = index
+    elseif cls == "TownMap" then
+      if not s.fly or index < 1 or index > count(s.locs) then return false end
+      s.sel = index
+    else
+      return false
+    end
+    return true
+  end
+
+  -- QuantityBox: qty in 1..max (QuantityBox.lua:14-15, :29-33).
+  function engine.uiSetQty(key, qty)
+    local s = stateFor(key, "QuantityBox")
+    if not s or type(qty) ~= "number" or qty ~= math.floor(qty) then return false end
+    if qty < 1 or qty > int(s.max, 1) then return false end
+    s.qty = qty
+    return true
+  end
+
+  -- NamingScreen: the typed glyphs, one grid cell per entry, as A would
+  -- have inserted them (NamingScreen.lua:98, :242-245); confirm() joins them
+  -- (:153-174) when START is pressed on the next update (:201-203).
+  function engine.uiSetGlyphs(key, glyphs)
+    local s = stateFor(key, "NamingScreen")
+    if not s or type(glyphs) ~= "table" then return false end
+    local copy = {}
+    for i = 1, #glyphs do
+      if type(glyphs[i]) ~= "string" then return false end
+      copy[i] = glyphs[i]
+    end
+    s.glyphs = copy
+    return true
   end
 
   -- ------------------------------------------------------------ movement (M3)
