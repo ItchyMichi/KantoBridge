@@ -282,6 +282,80 @@ public class PartyGameTests implements FabricGameTest {
 		helper.succeed();
 	}
 
+	/**
+	 * M8 wave 2: a Safari Zone catch crosses over as a {@code native_catch} gift that belongs to the player, with the
+	 * nickname, moves and DVs it was caught with; an in-game trade sends one member away ({@code party.take}) and brings
+	 * one that keeps its NPC trainer and nickname. Neither doubles up when gen1-bridge repeats it, and the sync names them.
+	 */
+	@GameTest(template = EMPTY_STRUCTURE, batch = BATCH, timeoutTicks = 100)
+	public void safariCatchesAndTradesCrossOver(GameTestHelper helper) {
+		ServerPlayer player = MockPlayers.join(helper);
+		RelayTap.Recorder relay = RelayTap.open(player);
+		UUID[] kept = new UUID[2];
+		try {
+			RelayService service = RelayService.get();
+			PlayerPartyStore party = PlayerExtensionsKt.party(player);
+			party.add(Gen1Mons.gift(new Gen1Mon(19, 6, List.of(33), null)));
+			String caught = "{\"give\":\"nc-1\",\"dex\":111,\"level\":25,\"moves\":[30,39],\"dvs\":{\"atk\":12,\"def\":3,\"spd\":7,\"spc\":9},"
+					+ "\"nick\":\"SPIKE\",\"source\":\"native_catch\"}";
+			service.receive(player, envelope(1, MsgTypes.PARTY_GIVE, caught));
+			service.receive(player, envelope(2, MsgTypes.PARTY_GIVE, caught));
+			helper.assertTrue(party.occupied() == 2, "the catch should be in the party once, the party has " + party.occupied());
+			Pokemon rhyhorn = party.get(1);
+			helper.assertTrue(rhyhorn.getSpecies().getNationalPokedexNumber() == 111 && rhyhorn.getLevel() == 25, "species or level");
+			helper.assertTrue(Gen1Mons.moveNumbers(rhyhorn).equals(List.of(30, 39)), "the moves it was caught with");
+			Dvs dvs = new Dvs(12, 3, 7, 9);
+			for (Dvs.Stat stat : Dvs.Stat.values()) {
+				helper.assertTrue(rhyhorn.getIvs().getOrDefault(Gen1Mons.cobblemonStat(stat)) == dvs.ivFor(stat), "IV for " + stat);
+			}
+			helper.assertTrue(rhyhorn.getNickname() != null && rhyhorn.getNickname().getString().equals("SPIKE"), "the catch's nickname");
+			helper.assertTrue(rhyhorn.getOriginalTrainerType() == OriginalTrainerType.PLAYER
+					&& player.getUUID().toString().equals(rhyhorn.getOriginalTrainer()), "the player caught it");
+
+			// The trade: the first member goes, a Mr. Mime with its trainer's name and nickname comes.
+			Pokemon sentAway = party.get(0);
+			service.receive(player, envelope(3, MsgTypes.PARTY_TAKE, "{\"uid\":\"" + sentAway.getUuid() + "\",\"reason\":\"trade\"}"));
+			String received = "{\"give\":\"tr-1\",\"dex\":122,\"level\":20,\"nick\":\"MARCEL\",\"ot\":\"TRADER\",\"source\":\"trade\"}";
+			service.receive(player, envelope(4, MsgTypes.PARTY_GIVE, received));
+			service.receive(player, envelope(5, MsgTypes.PARTY_GIVE, received));
+			helper.assertTrue(party.occupied() == 2 && party.get(sentAway.getUuid()) == null, "the traded-away member stayed, or the trade doubled up");
+			Pokemon mime = null;
+			for (Pokemon pokemon : party) {
+				if (pokemon.getSpecies().getNationalPokedexNumber() == 122) {
+					mime = pokemon;
+				}
+			}
+			helper.assertTrue(mime != null, "the received Pokémon isn't in the party");
+			helper.assertTrue(mime.getOriginalTrainerType() == OriginalTrainerType.NPC && "TRADER".equals(mime.getOriginalTrainer())
+					&& "TRADER".equals(mime.getOriginalTrainerName()), "a traded Pokémon keeps its trainer's name");
+			helper.assertTrue(mime.getNickname() != null && mime.getNickname().getString().equals("MARCEL"), "the trade's nickname");
+			kept[0] = rhyhorn.getUuid();
+			kept[1] = mime.getUuid();
+			helper.assertTrue(relay.of(MsgTypes.ERROR).isEmpty(), "a valid request was refused");
+		} catch (Gen1Mons.Missing | RuntimeException e) {
+			relay.close();
+			MockPlayers.leave(helper, player);
+			throw e instanceof RuntimeException runtime ? runtime : new GameTestAssertException("Cobblemon lacks a species or move");
+		}
+		helper.succeedWhen(() -> {
+			List<Envelope> syncs = relay.of(MsgTypes.PARTY_SYNC);
+			helper.assertTrue(!syncs.isEmpty(), "no party.sync yet");
+			JsonArray list = syncs.get(syncs.size() - 1).data().getAsJsonArray("party");
+			helper.assertTrue(list.size() == 2, "the sync lists " + list.size() + " Pokémon");
+			for (int i = 0; i < 2; i++) {
+				// The traded member's slot went to the newcomer, so match by uid, not by slot.
+				JsonObject entry = list.get(i).getAsJsonObject();
+				int which = entry.get("uid").getAsString().equals(kept[0].toString()) ? 0
+						: entry.get("uid").getAsString().equals(kept[1].toString()) ? 1 : -1;
+				helper.assertTrue(which >= 0, "slot " + i + " is neither the catch nor the trade");
+				helper.assertTrue(entry.get("give").getAsString().equals(which == 0 ? "nc-1" : "tr-1"), "slot " + i + " lacks its give id");
+				helper.assertTrue(entry.get("nick").getAsString().equals(which == 0 ? "SPIKE" : "MARCEL"), "slot " + i + "'s nickname");
+			}
+			relay.close();
+			MockPlayers.leave(helper, player);
+		});
+	}
+
 	@GameTest(template = EMPTY_STRUCTURE, batch = BATCH, timeoutTicks = 100)
 	public void aGiftCarriesItsGiveIdInPartySync(GameTestHelper helper) {
 		ServerPlayer player = MockPlayers.join(helper);

@@ -58,6 +58,28 @@
 -- soon as a client is connected (party.item carries no id to apply it by
 -- once, so it is never sent twice). The next party.sync brings the result.
 --
+-- M8 (wave 2):
+--   party.take{uid, reason:"trade"}, daycare.deposit{uid},
+--   daycare.withdraw{uid, steps}, party.rename{uid, nick}       G->M
+-- * In-game trades: kb_engine reads the trade from the party (the member
+--   sent: party.take by its uid; the one received: a gift with source
+--   "trade", its nickname and OT).
+-- * Native catches (P9, the Safari Zone): once the battle has left the
+--   stack the catch is a gift with source "native_catch".
+-- * The daycare (P15): a member with a uid boarded is daycare.deposit; back
+--   in the party, daycare.withdraw with the steps walked meanwhile. The
+--   boarded uid is kept in mod.save ("daycare": { uid, exp0 }) so a
+--   CONTINUE finds it again.
+-- * The Name Rater (P16): a nickname of a member with a uid that changes
+--   outside a sync goes out as party.rename (an empty nick clears it).
+-- Takes, deposits and withdrawals go out once and again after every
+-- snapshot until a party.sync confirms them (the uid gone from Cobblemon's
+-- party for a take or a deposit, back in it for a withdrawal), with the
+-- gifts' limits for giving up. Until a take is confirmed, and while the
+-- daycare holds a member, a sync never puts that uid back into the hidden
+-- party; a withdrawn member stays in it until a sync names it. Renames go
+-- out once each, queued while no client is connected.
+--
 -- Logs show codes, kinds, ids and counts only; nicknames, species and moves
 -- are never logged.
 
@@ -189,7 +211,9 @@ end
 --   engine   kb_engine instance (gifts, giftSent, giftSynced, giftDone,
 --            takeHeals, partyUids, adoptUids, partySafe, applyParty,
 --            speciesOfDex, moveIdOfNum, inGame, applyDex, takeItemUses,
---            tmWatchStep)
+--            tmWatchStep; M8: releaseCatches, daycareStep, ops, opSent,
+--            opSynced, opDone, excludedUids, partyNicks, queueRename,
+--            takeRenames)
 --   markup   kb_ui's Ui.markup (nick and ot in the protocol's text)
 --   store    { get(key), set(key, value) }: mod.save
 --   clock    seconds (optional; without it gifts are given up on by count alone)
@@ -209,10 +233,16 @@ function Party.new(opts)
     nonGen1Species = 0, nonGen1Moves = 0, heals = 0,
     dexSyncs = 0, dexApplied = 0, dexAddedSeen = 0, dexAddedOwned = 0, dexUnknown = 0,
     items = 0, itemsBad = 0,
+    -- M8 (wave 2)
+    takes = 0, deposits = 0, withdraws = 0, opsResent = 0, opsConfirmed = 0, opsGivenUp = 0,
+    excluded = 0, renames = 0, catches = 0,
   }
   local deferredNow = false
   local seen = {}   -- give ids counted
   local sentAt = {} -- give id -> clock when first sent
+  local opSentAt = {} -- op id -> clock when first sent
+  local persistedOps = {} -- op ids whose party change the uid list was saved after
+  local nicks, nickSave = {}, nil -- uid -> the nickname last seen (false: none), and its save
 
   local function text(s)
     if type(s) ~= "string" then return nil end
@@ -252,15 +282,52 @@ function Party.new(opts)
     if log then log.warn(code, { count = counts[field] }) end
   end
 
+  -- The nicknames of the members with a uid, as they are now (after a
+  -- sync, a reload or a new save: nothing to report).
+  local function reseedNicks()
+    local list, save = engine.partyNicks()
+    nicks, nickSave = {}, save
+    for _, e in ipairs(list) do nicks[e.uid] = e.nick end
+  end
+
+  -- M8: a sync confirms the pending operations it reflects (a take or a
+  -- deposit: the uid gone; a withdrawal: the uid back); the others count
+  -- one more sync, and are given up on with the gifts' limits.
+  local function confirmOps(data)
+    local inSync = {}
+    for _, e in ipairs(data.party) do inSync[e.uid] = true end
+    for _, op in ipairs(engine.ops()) do
+      local done = (op.kind == "withdraw") == (inSync[op.uid] == true)
+      if done then
+        engine.opDone(op.id)
+        counts.opsConfirmed = counts.opsConfirmed + 1
+      elseif op.state == "sent" then
+        if op.syncs + 1 >= Party.GIVE_UP_AFTER
+            and (not clock or clock() - (opSentAt[op.id] or clock()) >= Party.GIVE_UP_SECONDS) then
+          engine.opDone(op.id)
+          counts.opsGivenUp = counts.opsGivenUp + 1
+          if log then log.warn("party.op_unconfirmed", { kind = op.kind, count = counts.opsGivenUp }) end
+        else
+          engine.opSynced(op.id)
+        end
+      end
+    end
+  end
+
   local function apply(data)
     local _, known = engine.partyUids()
     local gifts = engine.gifts()
+    local excluded = engine.excludedUids()
+    confirmOps(data)
     local taken = {}
     local entries = {}
     local species0, moves0 = counts.nonGen1Species, counts.nonGen1Moves
     for _, e in ipairs(data.party) do
       local species = e.dex <= 151 and engine.speciesOfDex(e.dex) or nil
-      if not species then
+      if excluded[e.uid] then
+        -- traded away, or boarded at the daycare: not the hidden party's
+        counts.excluded = counts.excluded + 1
+      elseif not species then
         counts.nonGen1Species = counts.nonGen1Species + 1
       else
         local moves = {}
@@ -325,6 +392,7 @@ function Party.new(opts)
     counts.kept = counts.kept + res.kept
     counts.failed = counts.failed + res.failed
     persist()
+    reseedNicks()
     lastSync = data
     if log then
       log.info("party.synced", { size = res.size, created = res.created, matched = res.matched,
@@ -383,13 +451,112 @@ function Party.new(opts)
     end
   end
 
-  -- One logic step. out gets party.give / party.heal / party.item; link =
-  -- { live, generation }.
+  -- M8: the boarded member's record in mod.save, { uid, exp0 } or nil.
+  local function storedDaycare()
+    if not store then return nil end
+    local ok, rec = pcall(store.get, "daycare")
+    return ok and type(rec) == "table" and rec or nil
+  end
+
+  -- M8: the daycare watch (a deposit or a withdrawal queues its operation
+  -- in kb_engine; the boarded uid is kept in mod.save).
+  local function watchDaycare()
+    local ok, ev = pcall(engine.daycareStep, storedDaycare())
+    if not ok or type(ev) ~= "table" then return end
+    if ev.kind == "deposit" then
+      if store then pcall(store.set, "daycare", { uid = ev.uid, exp0 = ev.exp0 }) end
+      persist()
+      if log then log.info("party.daycare_in", {}) end
+    elseif ev.kind == "withdraw" or ev.kind == "cleared" or ev.kind == "lost" then
+      if store then pcall(store.set, "daycare", nil) end
+      persist()
+      if log then log.info("party.daycare_out", { kind = ev.kind, steps = ev.steps }) end
+    elseif ev.kind == "unknown" and log then
+      log.warn("party.daycare_no_uid", {})
+    end
+  end
+
+  -- M8: nicknames of members with a uid that changed since the last look
+  -- (the Name Rater) are queued as renames.
+  local function watchNicks()
+    local list, save = engine.partyNicks()
+    if save ~= nickSave then
+      reseedNicks()
+      return
+    end
+    for _, e in ipairs(list) do
+      local before = nicks[e.uid]
+      if before ~= nil and before ~= e.nick then engine.queueRename(e.uid, e.nick) end
+      nicks[e.uid] = e.nick
+    end
+  end
+
+  -- M8: takes, deposits and withdrawals due on this connection.
+  local function sendOps(out, link)
+    for _, op in ipairs(engine.ops()) do
+      local due = op.state == "new" or (op.state == "sent" and (resend or op.sentGen ~= link.generation))
+      if due then
+        local msg
+        if op.kind == "take" then
+          msg = { "party.take", { uid = op.uid, reason = op.reason or "trade" }, "party" }
+        elseif op.kind == "deposit" then
+          msg = { "daycare.deposit", { uid = op.uid }, "party" }
+        elseif op.kind == "withdraw" then
+          msg = { "daycare.withdraw", { uid = op.uid, steps = math.max(0, math.floor(op.steps or 0)) }, "party" }
+        end
+        if msg then
+          out[#out + 1] = msg
+          if op.state == "new" then
+            local field = op.kind == "take" and "takes" or (op.kind == "deposit" and "deposits" or "withdraws")
+            counts[field] = counts[field] + 1
+            if clock and opSentAt[op.id] == nil then opSentAt[op.id] = clock() end
+            if log then log.info("party." .. op.kind, { count = counts[field] }) end
+          else
+            counts.opsResent = counts.opsResent + 1
+          end
+          engine.opSent(op.id, link.generation)
+        else
+          engine.opDone(op.id)
+        end
+      end
+    end
+  end
+
+  -- M8: the queued renames, once each.
+  local function sendRenames(out)
+    for _, r in ipairs(engine.takeRenames()) do
+      local nick = r.nick and text(r.nick) or ""
+      out[#out + 1] = { "party.rename", { uid = r.uid, nick = nick }, "party" }
+      counts.renames = counts.renames + 1
+      if log then log.info("party.rename", { len = #nick, count = counts.renames }) end
+    end
+  end
+
+  -- One logic step. out gets party.take / daycare.* / party.give /
+  -- party.heal / party.item / party.rename; link = { live, generation }.
   function party.step(out, link)
     link = link or {}
     local live = link.live
     -- a TM/HM being taught: its move and slot are queued once it lands
     engine.tmWatchStep()
+    -- M8: native catches whose battle is over become gifts, then the
+    -- daycare and the nicknames are looked at (before anything is sent or
+    -- a sync applied)
+    local released = engine.releaseCatches()
+    if released > 0 then
+      counts.catches = counts.catches + released
+      if log then log.info("party.native_catch", { count = counts.catches }) end
+    end
+    watchDaycare()
+    watchNicks()
+    -- a trade changed the party's order: the uids by position again
+    for _, op in ipairs(engine.ops()) do
+      if op.state == "new" and not persistedOps[op.id] then
+        persistedOps[op.id] = true
+        persist()
+      end
+    end
+    if live then sendOps(out, link) end
     for _, g in ipairs(engine.gifts()) do
       if not seen[g.give] then
         seen[g.give] = true
@@ -418,6 +585,7 @@ function Party.new(opts)
         counts.heals = counts.heals + 1
       end
       sendItems(out)
+      sendRenames(out)
       resend = false
     end
     if pendingDex and engine.inGame() then

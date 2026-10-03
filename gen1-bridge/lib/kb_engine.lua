@@ -1575,6 +1575,77 @@ function Engine.new(opts)
     }
   end
 
+  -- ---- battle music (M8, PLAN P22)
+  --
+  -- While a battle Cobblemon fights holds the hidden game, the hidden game
+  -- plays the Gen 1 battle theme that battle would have had: Music.playBattle
+  -- (src/core/Music.lua:418-425, kind "wild" | "trainer" | "gym" | "final")
+  -- with BattleState:computeMusicKind's choice (src/battle/BattleState.lua
+  -- :1791-1818): "final" for OPP_RIVAL3, "gym" for a badge fight (a
+  -- data/scripts/victories.lua reward with a badge for class#party, the
+  -- eight gym battles, :1801-1803) or OPP_LANCE, "trainer" for every other
+  -- trainer, "wild" for wild Pokemon. A direct battle (below) plays its own
+  -- BattleState:playBattleTheme (:1838-1841), as OverworldState:pushBattle
+  -- does at the wipe (OC:1154-1158). A win with texts to show plays the
+  -- victory theme under them (Music.playVictory, Music.lua:431-440; the
+  -- final battle shares the gym leaders' theme, BattleState.lua:5803-5810),
+  -- and every result brings the map's song back (restoreMapMusic, M7).
+  local musicCounts = { battle = 0, victory = 0, failed = 0 }
+
+  -- a badge fight: victories.lua's reward for class#party carries a badge
+  -- (BattleState.lua:1801-1803); without the module, the gym leaders'
+  -- boss-move table names the same eight fights
+  local function badgeFight(cls, partyIndex)
+    local victories = try("data.scripts.victories")
+    if victories then
+      local reward = victories[tostring(cls) .. "#" .. tostring(partyIndex or 1)]
+      return type(reward) == "table" and reward.badge ~= nil
+    end
+    local lone = Engine.LONE_MOVES[cls]
+    return lone ~= nil and (not lone.onlyParty or lone.onlyParty == partyIndex)
+  end
+
+  local function musicKindFor(rec)
+    if rec.wild then return "wild" end
+    if rec.cls == "OPP_RIVAL3" then return "final" end
+    if rec.cls == "OPP_LANCE" or badgeFight(rec.cls, rec.party) then return "gym" end
+    return "trainer"
+  end
+
+  -- The held battle's theme (battle: the engine's own BattleState of a
+  -- direct battle, or nil). Records the kind on the record for the
+  -- victory theme and the map song's return.
+  local function playBattleMusic(rec, battle)
+    local data = gameData()
+    rec.music = musicKindFor(rec)
+    local ok, err = false, nil
+    if type(battle) == "table" and type(battle.playBattleTheme) == "function" then
+      ok, err = pcall(battle.playBattleTheme, battle)
+    else
+      local Music = try("src.core.Music")
+      if not (Music and type(Music.playBattle) == "function" and data) then return end
+      ok, err = pcall(Music.playBattle, data, rec.music, rec.cls)
+    end
+    if ok then
+      musicCounts.battle = musicCounts.battle + 1
+    else
+      musicCounts.failed = musicCounts.failed + 1
+      warnAt("engine.battle_music_failed", err)
+    end
+  end
+
+  local function playVictoryMusic(rec)
+    local Music, data = try("src.core.Music"), gameData()
+    if not (Music and type(Music.playVictory) == "function" and data and rec.music) then return end
+    local ok, err = pcall(Music.playVictory, data, rec.music == "final" and "gym" or rec.music)
+    if ok then
+      musicCounts.victory = musicCounts.victory + 1
+    else
+      musicCounts.failed = musicCounts.failed + 1
+      warnAt("engine.battle_music_failed", err)
+    end
+  end
+
   -- Commands.rival_battle's party offset for Red/Blue (Commands.lua:1063-1075).
   local function rivalOffset(save, offsets)
     local flags = type(save) == "table" and type(save.flags) == "table" and save.flags or {}
@@ -1631,6 +1702,27 @@ function Engine.new(opts)
     return f
   end
 
+  -- An aborted static_battle (M8): the object its script hid before the
+  -- fight (hide_object writes objectToggles[map][name] = false,
+  -- Commands.lua:602-646) comes back through Commands.show_object, unless
+  -- its beat flag (static_battle's third argument, Commands.lua:991-1000)
+  -- is set. Nothing else of the script is undone.
+  local function reshowStatic(ctx, args)
+    local npc, ow, save = ctx.npc, ctx.overworld, ctx.save
+    if not (type(npc) == "table" and type(npc.def) == "table" and symbol(npc.def.name) and type(ow) == "table"
+            and type(ow.map) == "table" and symbol(ow.map.id) and type(save) == "table") then
+      return false
+    end
+    local beat = type(args) == "table" and args[3] or nil
+    if beat ~= nil and type(save.flags) == "table" and save.flags[beat] then return false end
+    local toggles = type(save.objectToggles) == "table" and save.objectToggles[ow.map.id] or nil
+    if not (type(toggles) == "table" and toggles[npc.def.name] == false) then return false end
+    local Commands = try("src.script.Commands")
+    if not (Commands and type(Commands.show_object) == "function") then return false end
+    Commands.show_object({ game = game, save = save, overworld = ow }, ow.map.id, npc.def.name)
+    return true
+  end
+
   local function scriptBattle(nextFn, ctx, name, args, bridge)
     local runner = ctx.runner
     if ctx.resumeBattle ~= nil or type(runner) ~= "table" or type(runner.yield) ~= "function"
@@ -1649,6 +1741,7 @@ function Engine.new(opts)
     -- substituted; shown after a win as the battle screen would
     record.endText = type(ctx.endBattleText) == "string" and ctx.endBattleText or nil
     st.battle = record
+    playBattleMusic(record) -- M8 (P22)
     runner.waitingCheck = function() return record.state == "done" end
     runner:yield()
     -- Resumed by ScriptRunner:update once the result's texts are done
@@ -1659,7 +1752,13 @@ function Engine.new(opts)
     if st.battle == record then st.battle = nil end
     ctx.endBattleText = nil -- one armed line arms one battle (Commands.lua:366-368)
     -- aborted: the script stops here, so whatever triggers it can run it again
-    if result == nil or result == "abort" then return "end" end
+    if result == nil or result == "abort" then
+      -- M8: a static_battle whose script hid its object before the fight
+      -- (Snorlax's wake-up, data/scripts/story.lua:652-660) shows it again,
+      -- so the Poke Flute can wake it once more
+      if name == "static_battle" then pcall(reshowStatic, ctx, args) end
+      return "end"
+    end
     ctx.resumeBattle = { result = result, battle = record.fake }
     return nextFn(ctx, name, args)
   end
@@ -1710,6 +1809,7 @@ function Engine.new(opts)
       record.heldEngaging = true
     end
     bridgeState().battle = record
+    playBattleMusic(record) -- M8 (P22)
     return true
   end
 
@@ -1837,6 +1937,27 @@ function Engine.new(opts)
     end
   end
 
+  -- M8: a direct battle (engine.worldTalk / directPushed below) ends the
+  -- way BattleState:finish ends it (src/battle/BattleState.lua:5812-5890):
+  -- the battle's own onFinish continuation with the result -- the
+  -- talk-path static's removal and afterBattle (OC:3497-3507), the ghost
+  -- Marowak's departure or its step off the trigger
+  -- (data/scripts/story3.lua:156-190), Giovanni's hideout aftermath
+  -- (story3.lua:484-507). "abort" ends it as a flight ("run"): nothing is
+  -- won, the object or trigger stays, so it can be fought again.
+  local function finishDirect(rec, result)
+    local ow = rec.ow
+    if type(ow) ~= "table" or ow ~= engine.overworld() or rec.save ~= engine.save() then return end
+    if rec.heldEngaging then ow.engaging = false end
+    local battle = rec.battle
+    local onFinish = type(battle) == "table" and battle.onFinish or nil
+    if type(onFinish) ~= "function" then return end
+    local word = result == "abort" and "run" or result
+    battle.result = word
+    local ok, err = pcall(onFinish, word)
+    if not ok then warnAt("engine.direct_finish_failed", err) end
+  end
+
   -- Applies a Cobblemon result to the pending battle. result is the
   -- engine's word: "win", "lose", "run", "caught", or "abort" (nothing
   -- happened: the script stops / the encounter is cancelled, so it can be
@@ -1848,15 +1969,24 @@ function Engine.new(opts)
     local texts, prize = resultTexts(rec, result)
     local save = engine.save()
     if prize > 0 and type(save) == "table" then save.money = (tonumber(save.money) or 0) + prize end
+    -- M8 (P22): the victory theme under a win's texts
+    if result == "win" and #texts > 0 and rec.music then playVictoryMusic(rec) end
     pushTexts(texts, function()
-      -- as the battle screen's exit would, before its onFinish (M7)
-      if result ~= "abort" then restoreMapMusic() end
+      -- as the battle screen's exit would, before its onFinish (M7); M8:
+      -- also after an abort, when the battle's theme was playing
+      if result ~= "abort" or rec.music then restoreMapMusic() end
       if rec.path == "script" then
         rec.state = "done" -- the script's waitingCheck resumes it
       else
         rec.state = "consumed"
         if st.battle == rec then st.battle = nil end
-        if rec.path == "wild" then finishWild(rec, result) else finishTrainer(rec, result) end
+        if rec.path == "wild" then
+          finishWild(rec, result)
+        elseif rec.path == "direct" then
+          finishDirect(rec, result)
+        else
+          finishTrainer(rec, result)
+        end
       end
     end)
     return true
@@ -1932,16 +2062,156 @@ function Engine.new(opts)
 
   -- The script.command wrapper's body (ScriptRunner.lua:168-172: next is
   -- the command itself; it may yield the script's coroutine).
+  -- ---- party operations for Minecraft (M8): trades, the daycare
+  --
+  -- Changes the hidden game makes to the party that Cobblemon must follow,
+  -- queued in the process-lifetime slot until a client takes them:
+  --   take      party.take{uid, reason}: an in-game trade sent this member
+  --             away (Commands.trade, src/script/Commands.lua:1086-1177)
+  --   deposit   daycare.deposit{uid}: the daycare took it (the gentleman's
+  --             talk, data/scripts/story2.lua:1155-1180)
+  --   withdraw  daycare.withdraw{uid, steps}: it came back (:1132-1150)
+  -- Each goes out once, and again after every snapshot until a party.sync
+  -- confirms it: a take or a deposit by the uid missing from Cobblemon's
+  -- party, a withdrawal by the uid in it. Until then a take's uid is left
+  -- out of every sync (a sync from before the take would bring the traded
+  -- member back), so is the uid the daycare holds, and a withdrawn member
+  -- is kept in the hidden party like a gift (engine.applyParty).
+
+  local opCounts = { trades = 0, tradeNoUid = 0, deposits = 0, withdraws = 0, depositNoUid = 0 }
+
+  local function queueOp(op)
+    local st = bridgeState()
+    if not st then return nil end
+    st.ops = type(st.ops) == "table" and st.ops or {}
+    st.serial = st.serial + 1
+    op.id, op.state, op.syncs = st.serial, "new", 0
+    st.ops[#st.ops + 1] = op
+    return op.id
+  end
+
+  local function opsOf(st, save)
+    local list = type(st) == "table" and type(st.ops) == "table" and st.ops or {}
+    for i = #list, 1, -1 do
+      if list[i].save ~= save then table.remove(list, i) end -- a new game or CONTINUE
+    end
+    return list
+  end
+
+  -- The pending operations of this save, as plain values, oldest first.
+  function engine.ops()
+    local st = type(game) == "table" and rawget(game, STATE_SLOT) or nil
+    local out = {}
+    for _, op in ipairs(opsOf(st, engine.save())) do
+      out[#out + 1] = { id = op.id, kind = op.kind, uid = op.uid, reason = op.reason, steps = op.steps,
+                        state = op.state, sentGen = op.sentGen, syncs = op.syncs }
+    end
+    return out
+  end
+
+  local function opNamed(id)
+    local st = type(game) == "table" and rawget(game, STATE_SLOT) or nil
+    for i, op in ipairs(type(st) == "table" and type(st.ops) == "table" and st.ops or {}) do
+      if op.id == id then return op, i, st end
+    end
+    return nil
+  end
+  function engine.opSent(id, generation)
+    local op = opNamed(id)
+    if op then op.state, op.sentGen = "sent", generation end
+  end
+  function engine.opSynced(id)
+    local op = opNamed(id)
+    if op then op.syncs = op.syncs + 1 end
+  end
+  function engine.opDone(id)
+    local op, i, st = opNamed(id)
+    if op then table.remove(st.ops, i) end
+  end
+
+  -- The uids no party.sync may put back into the hidden party right now:
+  -- the pending takes and the member the daycare holds.
+  function engine.excludedUids()
+    local st = type(game) == "table" and rawget(game, STATE_SLOT) or nil
+    local save = engine.save()
+    local out = {}
+    for _, op in ipairs(opsOf(st, save)) do
+      if op.kind == "take" and op.uid then out[op.uid] = true end
+    end
+    local dc = type(st) == "table" and st.daycare or nil
+    if type(dc) == "table" and dc.save == save and dc.uid then out[dc.uid] = true end
+    return out
+  end
+
+  -- Commands.trade (src/script/Commands.lua:1086-1177) runs natively -- the
+  -- YES/NO, the party menu, the TradeAnim, the texts -- and the trade is
+  -- read from the party afterwards: the member that left (table.remove,
+  -- :1154) and the one that arrived at the end (Pokemon.new with the
+  -- trade's nickname, traded, OT "TRAINER", :1149-1155). The member sent
+  -- goes as a take (by its Cobblemon uid), the one received as a gift with
+  -- source "trade" (its nickname and OT). A party.sync waits while the
+  -- trade is under way (engine.partySafe), as it does for give_pokemon.
+  local function scriptTrade(nextFn, ctx, name, args)
+    local save, st = ctx.save, bridgeState()
+    if type(save) ~= "table" or type(save.party) ~= "table" or not st then return nextFn(ctx, name, args) end
+    local before = {}
+    for _, mon in ipairs(save.party) do before[mon] = true end
+    local giving = { ow = ctx.overworld, save = save }
+    st.giving[giving] = true
+    local ok, jump = pcall(nextFn, ctx, name, args)
+    st.giving[giving] = nil
+    if not ok then error(jump, 0) end
+    local now = {}
+    for _, mon in ipairs(save.party) do now[mon] = true end
+    local sent, received
+    for mon in pairs(before) do
+      if not now[mon] then sent = mon end
+    end
+    for _, mon in ipairs(save.party) do
+      if not before[mon] then received = mon end
+    end
+    if type(sent) ~= "table" or type(received) ~= "table" then return jump end
+    opCounts.trades = opCounts.trades + 1
+    local uid = engine.uidOf(sent)
+    if uid then
+      queueOp({ kind = "take", uid = uid, reason = "trade", save = save })
+    else
+      -- a member Cobblemon never named: a gift not yet sent is simply
+      -- forgotten; anything else is counted
+      for i, g in ipairs(st.gifts) do
+        if g.mon == sent and g.state == "new" then table.remove(st.gifts, i) break end
+      end
+      opCounts.tradeNoUid = opCounts.tradeNoUid + 1
+      if log then log.warn("engine.trade_no_uid", { count = opCounts.tradeNoUid }) end
+    end
+    st.serial = st.serial + 1
+    st.gifts[#st.gifts + 1] = {
+      give = ("g-%s-%d"):format(st.token or "x", st.serial), state = "new", syncs = 0,
+      box = false, source = "trade", save = save, facts = giftFacts(received), mon = received,
+    }
+    return jump
+  end
+
   function engine.scriptCommand(nextFn, ctx, name, args, bridge)
     if type(ctx) ~= "table" then return nextFn(ctx, name, args) end
     if SCRIPT_BATTLES[name] then return scriptBattle(nextFn, ctx, name, args, bridge) end
     if name == "give_pokemon" then return scriptGive(nextFn, ctx, name, args) end
+    if name == "trade" then return scriptTrade(nextFn, ctx, name, args) end
     if name == "heal_party" then
       -- HealParty (Commands.lua:750-755): Cobblemon's party heals too
       local jump = nextFn(ctx, name, args)
       local st = bridgeState()
       if st then st.heals = st.heals + 1 end
       return jump
+    end
+    if name == "record_hall_of_fame" then
+      -- M8: the Hall of Fame heals the hidden party once THE END is up
+      -- (Commands.record_hall_of_fame, Commands.lua:910-933); Cobblemon's
+      -- party heals too, and the save it writes there is a menu save
+      -- (save.writing, M7)
+      local st = bridgeState()
+      if st then st.heals = st.heals + 1 end
+      return nextFn(ctx, name, args)
     end
     return nextFn(ctx, name, args)
   end
@@ -2174,6 +2444,16 @@ function Engine.new(opts)
         res.kept = res.kept + 1
       end
     end
+    -- M8: a member back from the daycare that Cobblemon has not returned
+    -- yet stays too (its withdrawal is still pending)
+    for _, op in ipairs(type(st.ops) == "table" and st.ops or {}) do
+      if op.kind == "withdraw" and op.save == save and type(op.mon) == "table" and not seen[op.mon] and #out < 6 then
+        out[#out + 1] = op.mon
+        seen[op.mon] = true
+        monUid[op.mon] = op.uid
+        res.kept = res.kept + 1
+      end
+    end
     local party = save.party
     for i = #party, 1, -1 do party[i] = nil end
     for i, mon in ipairs(out) do party[i] = mon end
@@ -2323,6 +2603,7 @@ function Engine.new(opts)
       record.heldEngaging = true
     end
     bridgeState().battle = record
+    playBattleMusic(record) -- M8 (P22)
     return record
   end
 
@@ -3013,6 +3294,396 @@ function Engine.new(opts)
 
   function engine.pcCounts()
     return { taken = pcCounts.taken, native = pcCounts.native }
+  end
+
+  -- ------------------------------------------------------------ direct battles, native catches, the daycare, renames (M8)
+  --
+  -- Direct battles. Three Red/Blue battles never pass the M5 seams: their
+  -- code builds the BattleState itself and hands it to
+  -- OverworldState:pushBattle (OC:1142-1176) from a text box's continuation:
+  --   * a static Pokemon object talked to (talkTo, OC:3488-3510: the
+  --     legendary birds, Mewtwo, the Power Plant's Voltorb and Electrode),
+  --     an A press through the world.talk hook (OC:2561-2566);
+  --   * the ghost Marowak (data/scripts/story3.lua:134-194), a step trigger
+  --     (the map's onStep, OC:4692-4697, right after world.stepped,
+  --     :4675-4678); with the SILPH_SCOPE it is an ordinary wild battle
+  --     (makeUnveiledGhost, src/battle/BattleState.lua:999-1002); without it
+  --     the unidentified ghost (makeGhost, :986-989: battleKind "ghost")
+  --     stays native (P9);
+  --   * Giovanni in the Rocket Hideout (story3.lua:458-513), a talk script.
+  -- The seam: a text box pushed while a talk (the world.talk wrapper) or a
+  -- completed step (world.stepped, same logic step) is under way gets a new
+  -- continuation (TextBox's onDone, read when it pops: TextBox.lua:604-614,
+  -- as M6's fishing and M7's PC do), which runs the native one with
+  -- OverworldState.pushBattle shadowed for that one synchronous call. (The
+  -- overworld on the stack is the OverworldState module table itself,
+  -- src/core/Game.lua:127, :190, so the method is its own field; it is put
+  -- back as soon as the call returns, error or not.) A battle pushed then
+  -- that is not native (battleKind, :1857-1862), not an engageTrainer or
+  -- script-runner battle (checkpointOrigin.kind "trainer_encounter",
+  -- OC:4108-4115, or "script_battle", src/script/ScriptRunner.lua:210-245:
+  -- those were offered through trainer.before_battle / script.command
+  -- already) and that kb_battle
+  -- can express is held for Cobblemon as kind "static" (wild: dex, level,
+  -- the object's cell or the cell in front of the player; catch unless
+  -- battle.noCatch, story3.lua:147-150) or "scripted" (a trainer); the
+  -- result ends it through the battle's own onFinish (finishDirect).
+  -- Anything else is pushed as usual.
+  --
+  -- Native catches (P9). pokemon.caught (BattleState:storeCaughtMon,
+  -- :5555-5620) reports a Pokemon caught in a battle the hidden game fought
+  -- itself (the Safari Zone; any wild battle without a client); it joined
+  -- the party (Party.add) or a box (Boxes.deposit) before the event, and its
+  -- nickname prompt follows inside the battle (offerNickname, :5487-5505).
+  -- Once that battle has left the stack, the catch becomes a gift with
+  -- source "native_catch" (facts read then, nickname included): a box catch
+  -- is taken out of the Gen 1 box (Cobblemon's PC keeps it), a party catch
+  -- stays until a party.sync names it (as for gifts). The old man's demo
+  -- never reaches storeCaughtMon (:2755-2776).
+  --
+  -- The daycare (P15): data/scripts/story2.lua:1020-1210 keeps the boarded
+  -- member in save.daycare = { mon, steps, depositLevel } (removed from
+  -- save.party, :1168-1173), adds a step's exp per step (OC:4712-4716),
+  -- folds the steps into mon.exp on every talk (:1046-1047) and puts the
+  -- member back at the end of the party on a paid withdrawal (:1132-1145).
+  -- A member with a Cobblemon uid going in is a deposit; coming back, a
+  -- withdrawal with the steps walked since: the exp it gained in the
+  -- daycare over FieldDefaults' daycareExpPerStep (src/world/FieldDefaults
+  -- .lua; 1 by default). The cost, the texts and the Gen 1 state stay
+  -- native. kb_party keeps the boarded uid in mod.save for CONTINUE.
+  --
+  -- Renames (P16): only the Name Rater changes a nickname in Gen 1
+  -- (data/scripts/story4.lua:744-818; its NamingScreen's onDone writes
+  -- mon.nickname, :800-806). kb_party watches the nicknames of the members
+  -- with a uid (engine.partyNicks) and sends what changed outside a sync.
+
+  local directCounts = { armed = 0, taken = 0, native = 0, declined = 0 }
+  local catchCounts = { caught = 0, released = 0, skipped = 0, lost = 0 }
+
+  -- What a battle the engine built would be for kb_battle, or nil.
+  local function directFacts(ow, battle, npc)
+    local f = { path = "direct" }
+    f.map = type(ow.map) == "table" and symbol(ow.map.id) and ow.map.id or nil
+    if type(npc) == "table" then
+      if symbol(npc.id) then f.npc = npc.id end
+      f.x, f.y = tonumber(npc.cellX), tonumber(npc.cellY)
+    end
+    if battle.kind == "wild" then
+      local mon = type(battle.enemy) == "table" and battle.enemy.mon or nil
+      local species = type(mon) == "table" and mon.species or nil
+      local level = type(mon) == "table" and tonumber(mon.level) or nil
+      local data = gameData()
+      if not (symbol(species) and level and data and type(data.pokemon) == "table"
+              and type(data.pokemon[species]) == "table") then
+        return nil
+      end
+      f.wild, f.species, f.level, f.dex = true, species, level, engine.dexOf(species)
+      f.catch = not battle.noCatch
+      if f.x == nil then
+        -- no object (a step trigger): the cell in front of the player
+        local p = ow.player
+        local d = type(p) == "table" and DIR_DELTA[p.facing] or nil
+        if d and tonumber(p.cellX) and tonumber(p.cellY) then f.x, f.y = p.cellX + d[1], p.cellY + d[2] end
+      end
+      return f
+    end
+    if battle.kind == "trainer" and symbol(battle.oppClass) then
+      f.cls, f.party = battle.oppClass, tonumber(battle.partyIndex) or 1
+      return f
+    end
+    return nil
+  end
+
+  -- The shadowed pushBattle's decision: true when the battle is now held
+  -- for Cobblemon (and never pushed), false to push it as usual.
+  local function divert(ow, battle, npc)
+    if type(battle) ~= "table" or type(battle.onFinish) ~= "function" or battle.dead then return false end
+    local bridge = currentBridge()
+    if liveBattle() or not isLive(bridge) then return false end
+    local kind = battle.kind
+    if type(battle.battleKind) == "function" then
+      local ok, k = pcall(battle.battleKind, battle)
+      if ok then kind = k end
+    end
+    -- ghost, safari, oldman (P9) and link battles stay native
+    if kind ~= "wild" and kind ~= "trainer" then return false end
+    -- engageTrainer's and the script runner's battles (their checkpoint
+    -- origins, OC:4108-4115, src/script/ScriptRunner.lua:210-245) were
+    -- offered through trainer.before_battle / script.command already
+    local origin = battle.checkpointOrigin
+    if type(origin) == "table" and (origin.kind == "trainer_encounter" or origin.kind == "script_battle") then
+      return false
+    end
+    local facts = directFacts(ow, battle, npc)
+    local plan = facts and planFor(bridge, facts)
+    if not plan then
+      directCounts.declined = directCounts.declined + 1
+      return false
+    end
+    local record = newRecord(plan, facts, "direct")
+    record.battle = battle
+    -- the loss line the script armed (already substituted, e.g.
+    -- story3.lua:482-484), shown with the trainer's tag after a win
+    if facts.cls and type(battle.endBattleText) == "string" then record.endText = battle.endBattleText end
+    if not ow.engaging then
+      ow.engaging = true
+      record.heldEngaging = true
+    end
+    bridgeState().battle = record
+    playBattleMusic(record, battle)
+    directCounts.taken = directCounts.taken + 1
+    return true
+  end
+
+  -- Runs a text box's native continuation with pushBattle shadowed.
+  local function runShadowed(arm, nativeDone, ...)
+    local ow = arm.ow
+    if type(ow) ~= "table" or ow ~= engine.overworld() then return nativeDone(...) end
+    local push = ow.pushBattle
+    if type(push) ~= "function" then return nativeDone(...) end
+    local own = rawget(ow, "pushBattle")
+    local shadow
+    shadow = function(self, battle, trainerNpc, ...)
+      local ok, took = pcall(divert, self, battle, trainerNpc or arm.npc)
+      if not ok then
+        warnAt("engine.direct_failed", took)
+        took = false
+      end
+      if took then return nil end
+      directCounts.native = directCounts.native + 1
+      return push(self, battle, trainerNpc, ...)
+    end
+    rawset(ow, "pushBattle", shadow)
+    local results = { pcall(nativeDone, ...) }
+    if rawget(ow, "pushBattle") == shadow then rawset(ow, "pushBattle", own) end
+    if not results[1] then error(results[2], 0) end
+    return unpack(results, 2, table.maxn(results))
+  end
+
+  -- world.talk's wrapper body (OC:2561-2566; docs/modding.md "world.talk"):
+  -- text boxes the talk pushes are armed (engine.directPushed).
+  function engine.worldTalk(nextFn, ow, target)
+    local st = bridgeState()
+    if not st then return nextFn(ow, target) end
+    local previous = st.directArm
+    st.directArm = { ow = ow, npc = target }
+    local results = { pcall(nextFn, ow, target) }
+    st.directArm = previous
+    if not results[1] then error(results[2], 0) end
+    return unpack(results, 2, table.maxn(results))
+  end
+
+  -- world.stepped (OC:4675-4678, before the map's onStep, :4692-4697): text
+  -- boxes pushed in this same logic step are armed.
+  function engine.directStepped()
+    local st, ow = bridgeState(), engine.overworld()
+    if st and ow then st.directArm = { ow = ow, step = engine.logicStep() } end
+  end
+
+  -- screen.pushed: an armed text box gets the shadowed continuation.
+  -- Returns true when it took one.
+  function engine.directPushed(state)
+    local st = type(game) == "table" and rawget(game, STATE_SLOT) or nil
+    local arm = type(st) == "table" and st.directArm or nil
+    if type(arm) ~= "table" then return false end
+    if arm.step ~= nil and arm.step ~= engine.logicStep() then
+      st.directArm = nil
+      return false
+    end
+    if arm.ow ~= engine.overworld() or type(state) ~= "table" or not state.isTextBox
+        or type(state.onDone) ~= "function" or state.kantoBridgeDirect then
+      return false
+    end
+    local nativeDone = state.onDone
+    state.kantoBridgeDirect = true
+    state.onDone = function(...) return runShadowed(arm, nativeDone, ...) end
+    directCounts.armed = directCounts.armed + 1
+    return true
+  end
+
+  -- pokemon.caught's payload { battle, mon, species, isNew, ball,
+  -- destination, game } (BattleState.lua:5615-5618). Returns true when the
+  -- catch was taken.
+  function engine.nativeCaught(payload)
+    if type(payload) ~= "table" then return false end
+    local st, save = bridgeState(), engine.save()
+    local mon, battle = payload.mon, payload.battle
+    if not (st and type(save) == "table" and type(mon) == "table") then return false end
+    if (payload.destination ~= "party" and payload.destination ~= "box")
+        or (type(battle) == "table" and battle.demo) then
+      catchCounts.skipped = catchCounts.skipped + 1
+      return false
+    end
+    st.catches = type(st.catches) == "table" and st.catches or {}
+    st.catches[#st.catches + 1] = { mon = mon, battle = battle, save = save }
+    catchCounts.caught = catchCounts.caught + 1
+    return true
+  end
+
+  -- Where a member is now: "party", a box number, or nil.
+  local function whereIs(save, mon)
+    for _, m in ipairs(type(save.party) == "table" and save.party or {}) do
+      if m == mon then return "party" end
+    end
+    for n, box in pairs(type(save.boxes) == "table" and save.boxes or {}) do
+      if type(box) == "table" then
+        for i, m in ipairs(box) do
+          if m == mon then return n, i end
+        end
+      end
+    end
+    return nil
+  end
+
+  -- Catches whose battle has left the stack become gifts (source
+  -- "native_catch"). Called before gifts are sent and syncs applied.
+  -- Returns how many were released.
+  function engine.releaseCatches()
+    local st = type(game) == "table" and rawget(game, STATE_SLOT) or nil
+    local list = type(st) == "table" and st.catches or nil
+    if type(list) ~= "table" or #list == 0 then return 0 end
+    local save = engine.save()
+    local n, i = 0, 1
+    while i <= #list do
+      local c = list[i]
+      if c.save ~= save then
+        table.remove(list, i)
+      elseif type(c.battle) == "table" and stackIndex(c.battle) then
+        i = i + 1 -- its battle (the nickname prompt) is still under way
+      else
+        table.remove(list, i)
+        local where, slot = whereIs(save, c.mon)
+        if where == nil then
+          catchCounts.lost = catchCounts.lost + 1
+        else
+          local box = where ~= "party"
+          if box then table.remove(save.boxes[where], slot) end
+          st.serial = st.serial + 1
+          st.gifts[#st.gifts + 1] = {
+            give = ("g-%s-%d"):format(st.token or "x", st.serial), state = "new", syncs = 0,
+            box = box, source = "native_catch", save = save, facts = giftFacts(c.mon),
+            mon = (not box) and c.mon or nil,
+          }
+          catchCounts.released = catchCounts.released + 1
+          n = n + 1
+        end
+      end
+    end
+    return n
+  end
+
+  -- One step of the daycare watch. stored: the boarded member kb_party
+  -- kept in mod.save ({ uid, exp0 }) or nil. Returns what happened, or nil:
+  --   { kind = "deposit", uid, exp0 }  a member with a uid went in (a
+  --                                    daycare.deposit is queued)
+  --   { kind = "withdraw", uid, steps } it came back (daycare.withdraw queued)
+  --   { kind = "adopted" }             the boarded member of a loaded save
+  --                                    got its uid back from `stored`
+  --   { kind = "unknown" }             a member without a uid went in
+  --   { kind = "cleared" | "lost" }    the daycare emptied with nothing to tell
+  function engine.daycareStep(stored)
+    local save, st = engine.save(), bridgeState()
+    if not (st and type(save) == "table") then return nil end
+    local dc = save.daycare
+    local mon = type(dc) == "table" and type(dc.mon) == "table" and dc.mon or nil
+    local rec = st.daycare
+    if type(rec) == "table" and rec.save ~= save then rec, st.daycare = nil, nil end
+    if mon then
+      if rec and rec.mon == mon then return nil end
+      local uid = monUid[mon]
+      if uid then
+        st.daycare = { uid = uid, mon = mon, exp0 = tonumber(mon.exp) or 0, save = save }
+        queueOp({ kind = "deposit", uid = uid, save = save })
+        opCounts.deposits = opCounts.deposits + 1
+        return { kind = "deposit", uid = uid, exp0 = st.daycare.exp0 }
+      end
+      if type(stored) == "table" and type(stored.uid) == "string" then
+        monUid[mon] = stored.uid
+        st.daycare = { uid = stored.uid, mon = mon, exp0 = tonumber(stored.exp0) or 0, save = save }
+        return { kind = "adopted" }
+      end
+      st.daycare = { mon = mon, save = save }
+      opCounts.depositNoUid = opCounts.depositNoUid + 1
+      return { kind = "unknown" }
+    end
+    if not rec then return nil end
+    st.daycare = nil
+    if not rec.uid then return { kind = "cleared" } end
+    for _, m in ipairs(type(save.party) == "table" and save.party or {}) do
+      if m == rec.mon then
+        monUid[m] = rec.uid
+        local FD, data = try("src.world.FieldDefaults"), gameData()
+        local perStep = 1
+        if FD and type(FD.world) == "function" then
+          local ok, v = pcall(FD.world, data, "daycareExpPerStep")
+          if ok and tonumber(v) and v > 0 then perStep = tonumber(v) end
+        end
+        local steps = math.floor(math.max(0, (tonumber(m.exp) or 0) - (rec.exp0 or 0)) / perStep)
+        queueOp({ kind = "withdraw", uid = rec.uid, steps = steps, mon = m, save = save })
+        opCounts.withdraws = opCounts.withdraws + 1
+        return { kind = "withdraw", uid = rec.uid, steps = steps }
+      end
+    end
+    return { kind = "lost", uid = rec.uid }
+  end
+
+  -- The boarded member's uid (for the snapshot's sake: never in the party).
+  function engine.daycareUid()
+    local st = type(game) == "table" and rawget(game, STATE_SLOT) or nil
+    local dc = type(st) == "table" and st.daycare or nil
+    return type(dc) == "table" and dc.save == engine.save() and dc.uid or nil
+  end
+
+  -- The nicknames of the party members with a uid: { { uid, nick } } (nick
+  -- false when there is none), and the save they belong to.
+  function engine.partyNicks()
+    local save = engine.save()
+    local out = {}
+    for _, mon in ipairs(save and type(save.party) == "table" and save.party or {}) do
+      local uid = monUid[mon]
+      if uid then
+        out[#out + 1] = { uid = uid, nick = type(mon.nickname) == "string" and mon.nickname or false }
+      end
+    end
+    return out, save
+  end
+
+  -- Renames waiting for Minecraft (party.rename), in the process-lifetime
+  -- slot so a hot reload keeps them; taken once each.
+  function engine.queueRename(uid, nick)
+    local st = bridgeState()
+    if not st then return end
+    st.renames = type(st.renames) == "table" and st.renames or {}
+    st.renames[#st.renames + 1] = { uid = uid, nick = nick, save = engine.save() }
+  end
+  function engine.takeRenames()
+    local st = type(game) == "table" and rawget(game, STATE_SLOT) or nil
+    local list = type(st) == "table" and st.renames or nil
+    local out = {}
+    if type(list) ~= "table" then return out end
+    local save = engine.save()
+    for _, r in ipairs(list) do
+      if r.save == save then out[#out + 1] = { uid = r.uid, nick = r.nick } end
+    end
+    st.renames = {}
+    return out
+  end
+
+  -- Plain counts for debug.status (M8 wave 2).
+  function engine.contentCounts()
+    local st = type(game) == "table" and rawget(game, STATE_SLOT) or nil
+    return {
+      directArmed = directCounts.armed, directTaken = directCounts.taken,
+      directNative = directCounts.native, directDeclined = directCounts.declined,
+      catchesCaught = catchCounts.caught, catchesReleased = catchCounts.released,
+      catchesSkipped = catchCounts.skipped, catchesLost = catchCounts.lost,
+      catchesPending = type(st) == "table" and type(st.catches) == "table" and #st.catches or 0,
+      trades = opCounts.trades, tradeNoUid = opCounts.tradeNoUid,
+      deposits = opCounts.deposits, withdraws = opCounts.withdraws, depositNoUid = opCounts.depositNoUid,
+      opsPending = type(st) == "table" and type(st.ops) == "table" and #st.ops or 0,
+      daycareHeld = engine.daycareUid() ~= nil,
+      musicBattle = musicCounts.battle, musicVictory = musicCounts.victory, musicFailed = musicCounts.failed,
+    }
   end
 
   -- ------------------------------------------------------------ the story, departures, field moves (M8)

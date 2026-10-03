@@ -181,9 +181,10 @@ public final class EncounterService {
 		Running run = new Running(player.server, player.getUUID(), start, entity);
 		BattleStartResult result;
 		try {
-			// Modern rules (U3), the player's real party, no healing first; no running when the rules forbid it (-1).
-			result = BattleBuilder.INSTANCE.pve(player, entity, null, BattleFormat.Companion.getGEN_9_SINGLES(), false, false,
-					start.canFlee() ? FLEE_DISTANCE : -1.0F);
+			// Modern rules (U3), the player's real party, no healing first; no running when the rules forbid it (-1). The
+			// hidden game plays the battle music (P22).
+			result = BattleMusic.starting(player, () -> BattleBuilder.INSTANCE.pve(player, entity, null, BattleFormat.Companion.getGEN_9_SINGLES(),
+					false, false, start.canFlee() ? FLEE_DISTANCE : -1.0F));
 		} catch (RuntimeException e) {
 			KantoBridge.LOGGER.warn("encounter: Cobblemon failed to start the battle ({})", e.getClass().getName());
 			result = null;

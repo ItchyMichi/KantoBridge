@@ -110,7 +110,10 @@ public final class ArtCatalog {
 				keys.add(new SlotMap.Key(atlas, palette, model.borderTile(t % 4, t / 4), SlotMap.Shape.FULL));
 			}
 			for (ExportSwaps.Site site : sites) {
-				for (int block : new int[] {site.before(), site.after()}) {
+				// The data's own block too: for an overwritten script site it is never built, but listing it keeps the slot
+				// map the same whichever sites the planner accepts (for every other site it is one of the two already).
+				int data = site.bx() < map.width() && site.by() < map.height() ? map.block(site.bx(), site.by()) : site.before();
+				for (int block : new int[] {site.before(), site.after(), data}) {
 					for (int t = 0; t < 16; t++) {
 						int tile = tileset.tile(block, t % 4, t / 4);
 						if (tile >= 0) {

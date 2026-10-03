@@ -140,6 +140,28 @@ class StoryRulesTest {
 	}
 
 	@Test
+	void liveBlocksBelongToOneVisitOfTheirMap() throws Exception {
+		// A warp's arrival comes before the new map's story.blocks in the same logic step (PROTOCOL.md "Story rules").
+		this.rules.onPlayerMap("TOWN");
+		this.rules.onBlocks(json("{\"map\":\"TOWN\",\"changes\":[{\"bx\":5,\"by\":7,\"block\":15}]}"));
+		assertFalse(active().contains(TREE), "cut");
+		// A reload of the same map re-sends a block that went back to the map data: the regrown tree.
+		this.rules.onBlocks(json("{\"map\":\"TOWN\",\"changes\":[{\"bx\":5,\"by\":7,\"block\":14}]}"));
+		assertTrue(active().contains(TREE), "regrown on reload");
+		this.rules.onBlocks(json("{\"map\":\"TOWN\",\"changes\":[{\"bx\":5,\"by\":7,\"block\":15}]}"));
+		// Into the house: the town's overrides go, the house's own arrive after the warp.
+		this.rules.onPlayerMap("HOUSE");
+		this.rules.onBlocks(json("{\"map\":\"HOUSE\",\"changes\":[{\"bx\":0,\"by\":1,\"block\":2}]}"));
+		assertTrue(active().containsAll(Set.of(TREE, DOOR)), "the tree regrew; the house's door is stamped shut");
+		// A position on the same map changes nothing; back out to town, the door's override goes too.
+		this.rules.onPlayerMap("HOUSE");
+		assertTrue(active().contains(DOOR));
+		this.rules.onPlayerMap("TOWN");
+		assertFalse(active().contains(DOOR), "other maps show their data again (the door's data is open)");
+		assertTrue(active().contains(TREE), "nothing was cut on this visit");
+	}
+
+	@Test
 	void theSnapshotsBlocksAreTheCurrentMapsLiveBlocks() throws Exception {
 		this.rules.onSnapshot(json("{\"player\":{\"map\":\"HOUSE\",\"x\":4,\"y\":8,\"facing\":\"up\"},\"toggles\":{},\"lit\":[],"
 				+ "\"blocks\":[{\"map\":\"HOUSE\",\"bx\":0,\"by\":1,\"block\":2},{\"map\":\"TOWN\",\"bx\":5,\"by\":7,\"block\":15}]}"));

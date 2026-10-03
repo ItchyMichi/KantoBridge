@@ -82,6 +82,21 @@ public final class InteractTarget {
 		return Dir.of(Integer.signum(target.x() - x), Integer.signum(target.y() - y));
 	}
 
+	/**
+	 * The cell a target names, in the map that really holds it: the target itself inside its map, or the neighbouring
+	 * outdoor map's cell for one named across a seam (story cells are keyed by their own map). Null off every map.
+	 */
+	public static @Nullable CellPos own(WorldIndex index, CellPos named) {
+		MapPlacement map = index.map(named.map());
+		if (map == null) {
+			return null;
+		}
+		if (map.containsCell(named.x(), named.y())) {
+			return named;
+		}
+		return index.toCell(map.x() + Scale.cellToBlock(named.x()), map.y(), map.z() + Scale.cellToBlock(named.y())).orElse(null);
+	}
+
 	private static @Nullable CellPos inPlayerMap(WorldIndex index, String playerMap, String otherMap, int blockX, int blockZ) {
 		MapPlacement player = index.map(playerMap);
 		MapPlacement other = index.map(otherMap);

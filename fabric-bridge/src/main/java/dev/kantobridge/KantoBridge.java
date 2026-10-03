@@ -1,6 +1,7 @@
 package dev.kantobridge;
 
 import dev.kantobridge.bag.BagService;
+import dev.kantobridge.battle.BattleMusic;
 import dev.kantobridge.battle.BattleService;
 import dev.kantobridge.battle.EncounterService;
 import dev.kantobridge.block.KbBlocks;
@@ -9,6 +10,7 @@ import dev.kantobridge.builder.HeadlessBuild;
 import dev.kantobridge.entity.DeferredRemovals;
 import dev.kantobridge.entity.KbEntities;
 import dev.kantobridge.net.RelayService;
+import dev.kantobridge.pokemon.DaycareService;
 import dev.kantobridge.pokemon.DexService;
 import dev.kantobridge.pokemon.PartyService;
 import dev.kantobridge.pokemon.PcService;
@@ -63,7 +65,11 @@ public class KantoBridge implements ModInitializer {
 		BattleService.init();
 		// Static, surfing and fishing encounters (wild battle.start kinds), and Run for every wild battle in Kanto.
 		EncounterService.init();
+		// Cobblemon's battle themes are silenced for Kanto battles: the hidden game plays Gen 1's (P22).
+		BattleMusic.init();
 		PartyService.init();
+		// Gen 1's daycare: a boarded Pokémon waits on the server and comes back with its steps' experience (P15).
+		DaycareService.init();
 		// The Pokédex and the bag's battle items between Cobblemon and the hidden game.
 		DexService.init();
 		BagService.init();

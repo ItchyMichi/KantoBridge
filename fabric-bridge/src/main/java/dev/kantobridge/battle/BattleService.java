@@ -217,8 +217,10 @@ public final class BattleService {
 		Running run = new Running(player.server, player.getUUID(), start.battle(), start.kind(), proxyClass, proxy);
 		BattleStartResult result;
 		try {
-			// Modern rules (U3); the player's real party (no clone: damage and XP stick); no healing first, as in Gen 1.
-			result = BattleBuilder.INSTANCE.pvn(player, proxy, null, BattleFormat.Companion.getGEN_9_SINGLES(), false, false);
+			// Modern rules (U3); the player's real party (no clone: damage and XP stick); no healing first, as in Gen 1. The
+			// hidden game plays the battle music (P22).
+			result = BattleMusic.starting(player,
+					() -> BattleBuilder.INSTANCE.pvn(player, proxy, null, BattleFormat.Companion.getGEN_9_SINGLES(), false, false));
 		} catch (RuntimeException e) {
 			KantoBridge.LOGGER.warn("battle: Cobblemon failed to start the battle ({})", e.getClass().getName());
 			result = null;

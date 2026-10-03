@@ -7,8 +7,10 @@ import dev.kantobridge.builder.export.ExportTileset;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.function.ToIntFunction;
 import org.jetbrains.annotations.Nullable;
 
@@ -21,8 +23,11 @@ import org.jetbrains.annotations.Nullable;
  * one is built {@code before}), and story cells close it per player. Its flags are re-derived from the tiles it is
  * built with, keeping the positional warp and sign bits. A site is accepted when the map data holds either of its
  * blocks: {@code before} (the data shows it closed, like a Cut tree) or {@code after} (the engine stamps it closed on
- * map load, like the card-key doors); anything else is a {@code swap_block_mismatch}. {@link #closedModel()} is the
- * same map with every changing cell in its other, closed state: the art and height the story-cell renderer draws.
+ * map load, like the card-key doors). A {@code script} site whose data holds neither is accepted too: its script writes
+ * the block on every map entry, so the data's own block there never shows in play (Agatha's exit seal; noted
+ * {@code swap_site_overwritten}, and every cell of its block takes its flags from what it is built with). Any other
+ * mismatch is a {@code swap_block_mismatch}. {@link #closedModel()} is the same map with every changing cell in its
+ * other, closed state: the art and height the story-cell renderer draws.
  */
 public final class MapModel {
 	/** What a cell is built as. */
@@ -56,10 +61,12 @@ public final class MapModel {
 	/** Per cell of a site: the block it is built with, and the block that closes it (equal when the cell never changes). */
 	private final int[] openBlock;
 	private final int[] closedBlock;
+	/** Cells of a site whose map data holds neither of its blocks: the data's flags don't describe what is built there. */
+	private final boolean[] overwritten;
 	private @Nullable MapModel closed;
 
 	private MapModel(ExportMap map, ExportTileset tileset, boolean interior, boolean closedState, Map<Integer, ExportSwaps.Site> sites,
-			int[] openBlock, int[] closedBlock) {
+			int[] openBlock, int[] closedBlock, boolean[] overwritten) {
 		this.map = map;
 		this.tileset = tileset;
 		this.interior = interior;
@@ -75,6 +82,7 @@ public final class MapModel {
 		this.sites = sites;
 		this.openBlock = openBlock;
 		this.closedBlock = closedBlock;
+		this.overwritten = overwritten;
 	}
 
 	/**
@@ -91,6 +99,7 @@ public final class MapModel {
 	public static MapModel build(ExportMap map, ExportTileset tileset, List<ExportSwaps.Site> swaps, boolean interior, Warnings warnings,
 			ToIntFunction<ExportSwaps.Site> numbers) {
 		Map<Integer, ExportSwaps.Site> valid = new HashMap<>();
+		Set<Integer> overwrittenSites = new HashSet<>();
 		for (ExportSwaps.Site site : swaps) {
 			int number = numbers.applyAsInt(site);
 			Map<String, String> detail = Warnings.symbols("map", map.id(), "kind", site.kind(), "source", site.source(), "site",
@@ -105,7 +114,8 @@ public final class MapModel {
 			}
 			int index = site.by() * map.width() + site.bx();
 			int data = map.blocks()[index];
-			if (data != site.before() && data != site.after()) {
+			boolean neither = data != site.before() && data != site.after();
+			if (neither && !overwritable(site)) {
 				warnings.warn("swap_block_mismatch", detail);
 				continue;
 			}
@@ -113,7 +123,11 @@ public final class MapModel {
 				warnings.warn("swap_site_duplicate", detail);
 				continue;
 			}
-			if (data == site.after()) {
+			if (neither) {
+				// Its script writes one of the two blocks on every map entry; the data's own block is never seen.
+				warnings.note("swap_site_overwritten", detail);
+				overwrittenSites.add(index);
+			} else if (data == site.after()) {
 				// The map data shows the site open; the engine closes it on map load until its event is set.
 				warnings.note("swap_site_stamped", detail);
 			}
@@ -122,21 +136,32 @@ public final class MapModel {
 		int cells = map.cellWidth() * map.cellHeight();
 		int[] openBlock = new int[cells];
 		int[] closedBlock = new int[cells];
+		boolean[] overwritten = new boolean[cells];
 		Arrays.fill(openBlock, -1);
 		Arrays.fill(closedBlock, -1);
-		for (ExportSwaps.Site site : valid.values()) {
+		for (Map.Entry<Integer, ExportSwaps.Site> entry : valid.entrySet()) {
+			ExportSwaps.Site site = entry.getValue();
 			for (int dy = 0; dy < 2; dy++) {
 				for (int dx = 0; dx < 2; dx++) {
 					int i = (site.by() * 2 + dy) * map.cellWidth() + site.bx() * 2 + dx;
 					int open = openBlock(tileset, site, dx, dy);
 					openBlock[i] = open;
 					closedBlock[i] = changes(tileset, site, dx, dy) ? (open == site.after() ? site.before() : site.after()) : open;
+					overwritten[i] = overwrittenSites.contains(entry.getKey());
 				}
 			}
 		}
-		MapModel model = new MapModel(map, tileset, interior, false, Collections.unmodifiableMap(valid), openBlock, closedBlock);
+		MapModel model = new MapModel(map, tileset, interior, false, Collections.unmodifiableMap(valid), openBlock, closedBlock, overwritten);
 		model.fill(warnings);
 		return model;
+	}
+
+	/**
+	 * True for a site the engine writes itself whatever the map data holds: a scripted swap (its script sets the block on
+	 * entry). Cut trees, card-key doors and boulder barriers must match the data, or the export and the engine disagree.
+	 */
+	static boolean overwritable(ExportSwaps.Site site) {
+		return "script".equals(site.kind());
 	}
 
 	/**
@@ -188,7 +213,8 @@ public final class MapModel {
 				int i = cy * this.cw + cx;
 				int f = this.map.flags(cx, cy);
 				int shown = this.closedState ? this.closedBlock[i] : this.openBlock[i];
-				if (this.openBlock[i] != this.closedBlock[i] && shown != this.map.block(cx / 2, cy / 2)) {
+				boolean rederive = this.openBlock[i] != this.closedBlock[i] || this.overwritten[i];
+				if (rederive && shown != this.map.block(cx / 2, cy / 2)) {
 					// Built (or drawn) in another state than the map data: its flags follow the tiles it shows.
 					f = this.derivedFlags(cx, cy) | (f & (CellFlags.WARP | CellFlags.SIGN));
 				}
@@ -353,7 +379,8 @@ public final class MapModel {
 			return this;
 		}
 		if (this.closed == null) {
-			MapModel model = new MapModel(this.map, this.tileset, this.interior, true, this.sites, this.openBlock, this.closedBlock);
+			MapModel model = new MapModel(this.map, this.tileset, this.interior, true, this.sites, this.openBlock, this.closedBlock,
+					this.overwritten);
 			model.fill(new Warnings());
 			this.closed = model;
 		}

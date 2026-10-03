@@ -16,7 +16,7 @@ new items in [PLAYTEST.md](PLAYTEST.md) and a commit titled `M<n>: <title>`.
 | M5 | Opening, Oak's cutscene, starter and rival battle | **done** | 2026-10-03 | `eb9c570` |
 | M6 | Route 1, habitat pools, catching, party/Pokédex/bag sync | **done** | 2026-10-03 | `b603f16` |
 | M7 | Viridian City (Pokémon Center, Mart, PC, money, trainers, saving) | **done** | 2026-10-03 | `46e5573` |
-| M8 | The rest of Kanto (single player) | in progress (wave 1 of 3 done) | | `M8 wave 1` |
+| M8 | The rest of Kanto (single player) | in progress (wave 2 of 3 done) | | wave 1 `20e43b9`, wave 2 `M8 wave 2` |
 | M9 | Multiplayer | not started | | |
 | M10 | Reliability, performance and launch | not started | | |
 
@@ -531,9 +531,51 @@ new items in [PLAYTEST.md](PLAYTEST.md) and a commit titled `M<n>: <title>`.
     1 deep spill, 5 sideways), 2,485,146 blocks in 2,126 chunks in 57 s, 12,664 story cells (160
     tile), 296 habitat blocks on 46 pools, slots 3,926 full + 92 half, 0 overlaps, **1 warning**
     (`swap_block_mismatch`: AGATHAS_ROOM, for wave 2).
-- **Wave 2:** static encounters (6); native special battles and the Safari crossover (7); gifts,
+- **Wave 2 (done):** static encounters (6); native special battles and the Safari crossover (7); gifts,
   in-game trades, the Name Rater, the Game Corner and prize counter (8); gyms, the Elite Four, the
   Champion, the Hall of Fame and credits (9); the daycare and battle-music polish (10).
+  Wave 2 Java results:
+  - 80. **Field-move clicks:** A or a plain right-click sends `act.field` (cut on a standing cut tree,
+    surf on water, surf → dismount on land while surfing; A also triggers cut and surf, per P20's
+    "right-click = A on targets", but never dismounts so shore signs stay readable); a
+    `GameRenderer.pick` TAIL mixin lets the crosshair land on closed art as drawn (story blocks have
+    no outline and a tree's upper half has no block).
+  - 81. **Swap sites:** a `script` site matching neither block (AGATHAS_ROOM (2,0), overwritten by the
+    engine on every entry) is built open with tile story cells (`swap_site_overwritten` note); other
+    kinds must still match. VERMILION_DOCK needed no change (the hull is water with `water:true`).
+  - 82. **Native battles** (Safari, old man, ghost) keep a mirror up between their own UIs (a UI of
+    our own, id −1), hold the player, refuse A/START/clicks and report `activity` `battle`; cleared on
+    `end`, a snapshot, a dropped link, or 1 s of the hidden player idle.
+  - 83. **Daycare** (P15): a per-player store in `<world>/kantobridge/daycare/<uuid>.json` (Cobblemon's
+    own JSON, written atomically before the Pokémon leaves the party; party and PC saved right after),
+    withdrawals with 1 XP per step (level 100 cap); `party.take{daycare}` = deposit; `party.take`
+    recalls a sent-out Pokémon first.
+  - 84. **Battle music (P22):** the server clears `PlayerBattleActor.battleTheme` on
+    `BATTLE_STARTED_PRE` for bridge battles and natural wild battles in Kanto worlds, so Cobblemon
+    sends no theme (other worlds keep Cobblemon's music).
+  Wave 2 Lua results:
+  - 85. **Statics:** Red/Blue's static objects (Power Plant, the birds, Mewtwo) use hand-ported talk
+    scripts ending in `static_battle`, so M5's script path already covers them; the talk-path branch
+    (OC:3488-3510, no Red/Blue users), the ghost Marowak and Giovanni's hideout battle push their
+    battles directly and are now held through a text box's wrapped `onDone` (shadowing `pushBattle`
+    for that one synchronous call; no global patch, hot-reload safe). Giovanni goes out as
+    `scripted`; an aborted direct battle ends as a flight.
+  - 86. **Every native wild catch crosses over** as `native_catch` (not only Safari ones: also
+    catches made with no client connected); trades as `party.take` + `party.give{trade}`; Name Rater
+    renames; daycare deposits/withdrawals; the Hall of Fame heal. Gyms, the Elite Four and the
+    Champion needed no change (checked against the engine). **P22 is implemented**: the engine's
+    music API (`Music.playBattle`, `playVictory`, `restoreMap`) gives the Gen 1 battle themes during
+    held battles.
+  - Open: loss lines that `engageTrainer` callers pass in themselves (Silph Co Giovanni's, the Game
+    Corner rocket's) still aren't shown after a Cobblemon win; the Elite Four, Lance, the Champion,
+    the Hall of Fame and the Snorlax flute wake are covered by code reading and Lua tests, not e2e; a
+    trade or daycare change followed by a CONTINUE from an older hidden save leaves the games out of
+    step (M10's save pairing); a traded member without a uid gets no `party.take` (counted).
+  - Wave 2 gate: `tools/check.sh --e2e` **1207 passed** (783 Lua; e2e adds 9 real-game content
+    scenes: a Power Plant static, the ghost Marowak, Giovanni's hideout battle, the Eevee gift, an
+    in-game trade, the Name Rater, Brock's gym with its badge, a daycare deposit/withdrawal, a Safari
+    catch crossover), `gradlew build` **479 JUnit**, **73/73 GameTests**; **full real build: 220 of
+    220 maps, 0 warnings, 0 overlaps, 0 unplaced, 2,485,154 blocks in 56.5 s.**
 - **Wave 3:** the remaining e2e scenarios (11), the full real build gate, rebuilding the user's world
   as all of Kanto, and the badge-by-badge play-test checklist.
 
@@ -556,6 +598,10 @@ new items in [PLAYTEST.md](PLAYTEST.md) and a commit titled `M<n>: <title>`.
   is rebalancing the 32 families (e.g. 28 full + 4 half). The real report's `slots_full`/`slots_half`
   show the usage.
 - Forest and Safari maps get ceilings like any interior (M8).
+- **For M10 (from M8 wave 2):** if Gen1Recomp is closed without saving after a daycare deposit, the
+  hidden save still has the Pokémon in its party while the server keeps it in the daycare; the next
+  `party.sync` drops it from the hidden party, so it's stranded in the daycare file. A protocol field
+  (the hidden daycare's uid in the snapshot) would let the server return it.
 - **Slot usage on the real export: 3,903 of 4,096 full-shape slots, 95 half** (the whole export, so
   the same for every build). It fits, but M8's closed-art overlays or new art kinds may need more
   families; rebalance before adding art.

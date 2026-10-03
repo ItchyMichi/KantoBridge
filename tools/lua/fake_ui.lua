@@ -522,6 +522,22 @@ function FakeUi.attach(E)
     return nil
   end
 
+  -- OverworldState:talkTo (OC:3440-3560), shortened: the NPC freezes and
+  -- turns to the player; an undefeated trainer battles, anything else talks
+  -- (fake_content.lua adds statics and talk scripts, M8)
+  function E.talkTo(npc)
+    local p = E.ow.player
+    npc.frozen = true
+    npc.facing = OPPOSITE[p.facing]
+    local unfreeze = function() npc.frozen = false end
+    if npc.def and npc.def.trainerClass and E.engageTrainer and not E.trainerDefeated(npc) then
+      -- an undefeated trainer battles (OC:3516-3519; fake_script.lua)
+      E.engageTrainer(npc, unfreeze)
+    else
+      E.uiPush(E.textBox(E.talk[npc.id] or "HELLO!\fGOOD LUCK!", { onDone = unfreeze }))
+    end
+  end
+
   -- OverworldState:interact's order: an NPC (across a counter too), a
   -- sign, otherwise nothing; world.interacted after the handler
   function E.interact()
@@ -538,15 +554,8 @@ function FakeUi.attach(E)
     end
     if npc then
       if not npc.moving then
-        npc.frozen = true
-        npc.facing = OPPOSITE[p.facing]
-        local unfreeze = function() npc.frozen = false end
-        if npc.def and npc.def.trainerClass and E.engageTrainer and not E.trainerDefeated(npc) then
-          -- an undefeated trainer battles (OC:3516-3519; fake_script.lua)
-          E.engageTrainer(npc, unfreeze)
-        else
-          E.uiPush(E.textBox(E.talk[npc.id] or "HELLO!\fGOOD LUCK!", { onDone = unfreeze }))
-        end
+        -- the world.talk hook around talkTo (OC:2561-2566; M8)
+        E.runtime.call("world.talk", function(_, target) return E.talkTo(target) end, w, npc)
       end
       return interacted("npc", npc)
     end

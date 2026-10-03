@@ -21,7 +21,7 @@ import org.junit.jupiter.api.Test;
 
 /**
  * Story cells on a made-up 2×2-block room: objects, a card-key door, a boulder area, and an item on a table; and the
- * swap sites M8 handles: one the engine stamps closed on map load (the data shows it open), one whose data matches
+ * swap sites M8 handles: one the engine stamps closed on map load (the data shows it open), a door whose data matches
  * neither block, one whose {@code after} is the solid state, and an art-only swap.
  */
 class StoryCellPlannerTest {
@@ -126,14 +126,15 @@ class StoryCellPlannerTest {
 
 	@Test
 	void aSiteMatchingNeitherBlockIsAWarningNamingItsSymbols() {
+		// A card-key door must match the data (only scripted swaps are written over whatever the data holds: SealAndShipTest).
 		ExportMap map = room(new int[] {0, 0, 1, 0}, List.of());
-		ExportSwaps.Site door = new ExportSwaps.Site("ROOM", 0, 1, "script", 2, 3, "EVENT_ROOM_DOOR");
+		ExportSwaps.Site door = new ExportSwaps.Site("ROOM", 0, 1, "card_key", 2, 3, "EVENT_ROOM_DOOR");
 		Warnings warnings = new Warnings();
 		MapModel model = MapModel.build(map, TILESET, List.of(door), true, warnings, site -> 3);
 		StoryCellTable table = StoryCellPlanner.plan(List.of(placed(model)), warnings, SLOTS);
 
 		assertEquals(1, warnings.count("swap_block_mismatch"));
-		assertEquals(List.of(Map.of("kind", "script", "map", "ROOM", "site", "3", "source", "EVENT_ROOM_DOOR")),
+		assertEquals(List.of(Map.of("kind", "card_key", "map", "ROOM", "site", "3", "source", "EVENT_ROOM_DOOR")),
 				warnings.details("swap_block_mismatch"), "symbols only: no coordinates, no block ids");
 		assertNull(table.get("ROOM:0:2"), "a mismatched site gets no story cells");
 		assertEquals(MapModel.Kind.SOLID, model.kind(0, 2), "the table stays as the data has it");

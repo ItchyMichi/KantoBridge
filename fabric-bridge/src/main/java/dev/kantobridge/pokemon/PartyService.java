@@ -60,7 +60,9 @@ import org.jetbrains.annotations.Nullable;
  * {@code party.sync} shows it, so a {@code give} id is applied once: the Pokémon keeps it in its persistent data, which
  * also holds across server restarts.</li>
  * <li><b>{@code party.heal}</b> heals the party; <b>{@code party.rename}</b> is the Name Rater (P16), and renames from
- * Cobblemon's own screens are cancelled; <b>{@code party.take}</b> removes a Pokémon traded away (daycare is M8's).</li>
+ * Cobblemon's own screens are cancelled; <b>{@code party.take}</b> removes a Pokémon traded away (reason
+ * {@code daycare} boards it at the daycare instead: {@link DaycareService}). A native catch (the Safari Zone) arrives as
+ * a gift like any other and belongs to the player; a trade keeps its NPC trainer's name and its nickname.</li>
  * <li><b>{@code party.item}</b>: an item the hidden game used on a Pokémon. A stone evolves it at once (P14:
  * {@code forceEvolve} of the evolution that takes that stone), a TM/HM teaches its move into the given slot or a free one
  * (the move it replaces stays re-learnable, P13), Rare Candy gives the experience to the next level (Cobblemon's level-up
@@ -305,14 +307,19 @@ public final class PartyService {
 			return;
 		}
 		if (reason.equals("daycare")) {
-			// P15: the daycare holds Pokémon on the server; that comes with M8.
-			warn("take_daycare_unsupported");
+			// P15: the daycare holds it on the server (gen1-bridge sends daycare.deposit; this is the same, once).
+			DaycareService.deposit(player, uid);
 			return;
 		}
 		PlayerPartyStore party = PlayerExtensionsKt.party(player);
 		PCStore pc = PlayerExtensionsKt.pc(player);
 		Pokemon inParty = party.get(uid);
 		Pokemon inPc = inParty == null ? pc.get(uid) : null;
+		Pokemon traded = inParty != null ? inParty : inPc;
+		if (traded != null && traded.getEntity() != null) {
+			// Sent out: back in its ball before it leaves for good.
+			traded.recall();
+		}
 		boolean removed = inParty != null ? party.remove(inParty) : inPc != null && pc.remove(inPc);
 		if (!removed) {
 			warn("take_unknown_uid");

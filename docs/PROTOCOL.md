@@ -187,7 +187,11 @@ rod in the bag; `fly` without `dest` opens the game's own Fly list (a list UI). 
 `cut`, `surf`, `dismount`, `strength`, `flash`, `dig`, `rope`, `teleport`, `bike_on`, `bike_off`,
 `fish`, `fly`, `fly_list`. Reasons: `not_ingame`, `not_idle`, `not_adjacent`, `no_move`, `no_badge`,
 `no_target`, `not_here`, `no_item`, `already`, `busy`, `failed`. Strength is activated once, then the
-player walks into the boulder twice (the first step bumps, the second pushes).
+player walks into the boulder twice (the first step bumps, the second pushes). **The client** sends
+`act.field` from A or a plain right-click: on a cut tree it still sees standing → `cut`; on water
+while not surfing → `surf`; while surfing, on the ground of a land cell → `surf` (answered as
+`dismount`). Targets must be adjacent (farther ones are refused locally as `not_adjacent`); one field
+request is in flight at a time; refusals show as one translated line over the hotbar.
 
 ### UI
 
@@ -428,6 +432,23 @@ it for that player's collision.
   moves are left out with counted warnings; a sync waits while a gift is pending, at the title
   screen, or under a native battle.
 - **`party.heal`** is sent on the engine's `heal_party` (Mom, …) and on a blackout.
+- **Content rules (M8):** direct battles the engine pushes itself are held too: the ghost Marowak as
+  kind `static` with `rules.catch:false` (`wild.x/y` the cell in front of the player), Giovanni in the
+  hideout as `scripted` (with trainer and team); `aborted` ends a direct battle as a flight; an aborted
+  `static_battle` whose script hid its object first (Snorlax waking) shows the object again.
+  `party.take`, `daycare.deposit` and `daycare.withdraw` carry no id, so gen1-bridge re-sends them
+  after snapshots until a `party.sync` confirms them (uid absent for take and deposit, present for
+  withdraw; taken and boarded uids never re-enter the hidden party meanwhile); Minecraft treats
+  repeats as idempotent by uid. `withdraw.steps` = the Gen 1 daycare's experience ÷ experience per
+  step (normally 1). `native_catch` gifts are sent after the native battle ends (nickname included;
+  box catches leave the Gen 1 box; never the old man's demo). Trades carry `ot` and the trade's
+  nickname. `party.rename` is sent once per Name Rater change (`""` clears) and queued while offline.
+  The Hall of Fame also sends `party.heal`. During held battles the hidden game plays the matching Gen 1
+  battle theme (P22), and the victory theme after a win with texts.
+- **The daycare (M8):** `daycare.deposit{uid}` (and `party.take{reason:"daycare"}`, treated the same,
+  idempotent) moves the Pokémon from the Cobblemon party into a per-player daycare store on the
+  server; `daycare.withdraw{uid, steps}` returns it to the party (the PC if full) with 1 XP per step,
+  never past level 100. Repeats change nothing; mismatches are counted warnings. `party.sync` follows.
 - `debug.status` (test role) adds `battle*`, `party*`, `giftsPending`, `healsPending`, `battleHeld`,
   `partySize`, `partyKnown`, and `playerNameLen`/`playerNameHash`, `rivalNameLen`/`rivalNameHash`
   (the first 7 hex digits of SHA-256, as an integer).

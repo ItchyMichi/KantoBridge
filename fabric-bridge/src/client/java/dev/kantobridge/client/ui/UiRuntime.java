@@ -45,6 +45,7 @@ public final class UiRuntime {
 	private final BridgeClock clock = BridgeClock.system();
 	private final UiRouter router;
 	private final MirrorLink mirror;
+	private final NativeBattle nativeBattle = new NativeBattle();
 	private long buttons;
 	/** When the shown screen's UI went away, or -1. */
 	private long closingSince = -1;
@@ -77,22 +78,31 @@ public final class UiRuntime {
 		dispatcher.on(MsgTypes.UI_OPEN, message -> runtime.router.onOpen(message.data(), runtime.now()));
 		dispatcher.on(MsgTypes.UI_UPDATE, message -> runtime.router.onUpdate(message.data(), runtime.now()));
 		dispatcher.on(MsgTypes.UI_CLOSE, message -> runtime.router.onClose(message.data()));
-		dispatcher.on(MsgTypes.SNAPSHOT, message -> runtime.router.onSnapshot(message.data(), runtime.now()));
+		dispatcher.on(MsgTypes.SNAPSHOT, message -> {
+			runtime.router.onSnapshot(message.data(), runtime.now());
+			runtime.nativeBattle.onSnapshot();
+			runtime.nativeBattle.onMode(JsonFields.str(JsonFields.obj(message.data(), "state"), "mode"), runtime.now());
+		});
+		// M8: the Safari Zone, the old man's demo and the ghost run natively, on the mirror (P9).
+		dispatcher.on(MsgTypes.BATTLE_NATIVE, message -> runtime.nativeBattle.onMessage(message.data()));
 		dispatcher.on(MsgTypes.PLAYER_STATE, message -> {
 			runtime.router.onMode(JsonFields.str(message.data(), "mode"), runtime.now());
+			runtime.nativeBattle.onMode(JsonFields.str(message.data(), "mode"), runtime.now());
 		});
 		dispatcher.on(MsgTypes.MIRROR_FRAME, message -> runtime.mirror.onFrame(message.data()));
 		dispatcher.onState((state, detail) -> {
 			if (state != ConnectionState.CONNECTED) {
 				runtime.router.onDisconnected();
+				runtime.nativeBattle.onDisconnected();
 				runtime.mirror.connectionLost();
 				MirrorScreen.Picture.reset();
 			}
 		});
 		// Registered after BridgeRuntime's tick, which drains the bridge's messages first.
 		ClientTickEvents.END_CLIENT_TICK.register(runtime::tick);
-		// A hidden UI holds the player even while another screen covers ours.
+		// A hidden UI holds the player even while another screen covers ours; so does a native battle between its UIs.
 		InputLock.holdWhile(runtime.router::open);
+		InputLock.holdWhile(runtime.nativeBattle::active);
 		bridge.addDebugLine(runtime::debugLine);
 	}
 
@@ -130,9 +140,19 @@ public final class UiRuntime {
 		return this.clock.millis();
 	}
 
-	/** True while a hidden-game UI is open on our side. */
+	/** True while a hidden-game UI is open on our side, or a native battle runs (its mirror is up). */
 	public boolean open() {
-		return this.router.open();
+		return this.router.open() || this.nativeBattle.active();
+	}
+
+	/** True while a special battle runs natively in the hidden game (P9). */
+	public boolean nativeBattleActive() {
+		return this.nativeBattle.active();
+	}
+
+	/** True when our screen showing {@code session} takes the Game Boy's keys now. */
+	boolean takesInput(UiSession session) {
+		return this.nativeBattle.takesInput(this.router, session);
 	}
 
 	/** A Game Boy button straight to the hidden game ({@code act.button} tap), for the mirror screen. */
@@ -156,6 +176,7 @@ public final class UiRuntime {
 
 	private void tick(Minecraft minecraft) {
 		this.router.tick(this.now());
+		this.nativeBattle.tick(this.now());
 		this.reconcile(minecraft);
 	}
 
@@ -167,7 +188,7 @@ public final class UiRuntime {
 	private void reconcile(Minecraft minecraft) {
 		boolean allowed = minecraft.level != null && minecraft.player != null && MoveRuntime.following() && !ClientBattles.active()
 				&& !suspended();
-		UiRouter.View view = allowed ? this.router.view() : null;
+		UiRouter.View view = allowed ? this.nativeBattle.view(this.router) : null;
 		Screen current = minecraft.screen;
 		if (view == null) {
 			if (current instanceof BridgeScreen) {
@@ -212,9 +233,10 @@ public final class UiRuntime {
 	private String debugLine() {
 		UiRouter.Stats stats = this.router.stats();
 		UiSession top = this.router.top();
+		String battle = this.nativeBattle.kind();
 		return I18n.get("kantobridge.debug.ui", this.router.sessions().size(), top == null ? "-" : top.toString(), stats.opened, stats.closed,
 				stats.advances, stats.picks + stats.backs + stats.quantities + stats.names, stats.stale + stats.refused,
 				this.mirror.subscribed() ? I18n.get("kantobridge.debug.yes") : I18n.get("kantobridge.debug.no"), this.mirror.frames(),
-				this.mirror.badFrames(), this.buttons);
+				this.mirror.badFrames(), this.buttons, battle == null ? "-" : battle);
 	}
 }

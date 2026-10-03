@@ -89,6 +89,9 @@ class Bridge:
                 self._load_harness("fake_wild.lua").attach(self.engine)
                 # M7: the Pokemon Center, the PC, the Mart, saving and trainer sight
                 self._load_harness("fake_center.lua").attach(self.engine)
+                # M8 (wave 2): direct battles, talk scripts, trades, the Name Rater, the
+                # daycare, native catches, the Hall of Fame, the music API
+                self._load_harness("fake_content.lua").attach(self.engine)
 
         # love facade source: only timer is needed so far. perCall advances the clock on every
         # read, so work inside one step "takes time" (budget tests); 0 by default.
@@ -173,6 +176,10 @@ class Bridge:
         game = self.engine.game if self.engine is not None else self.table()
         for _ in range(n):
             self.now = self.now + self.STEP
+            if self.engine is not None:
+                # Game.logicStep counts fixed steps before input.step runs (Game.lua:311-321)
+                gm = self.engine.GameModule
+                gm[b"logicStep"] = (gm[b"logicStep"] or 0) + 1
             self.FakeMod.call(self.mod, b"input.step", vanilla, game, self.STEP)
             if self.engine is not None:
                 self.engine.tick()

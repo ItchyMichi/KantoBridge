@@ -28,10 +28,11 @@ import org.junit.jupiter.api.io.TempDir;
  * about with symbols only.
  */
 class FullBuildFixesTest {
-	/** Synthetic block ids (tools/fake_gen1/synth.py): floor, interior wall, counter, stairs. */
+	/** Synthetic block ids (tools/fake_gen1/synth.py): floor, interior wall, counter, rug over a wall row, stairs. */
 	private static final int B_FLOOR = 9;
 	private static final int B_IWALL = 10;
 	private static final int B_COUNTER = 11;
+	private static final int B_RUG = 13;
 	private static final int B_STAIRS = 16;
 
 	@TempDir
@@ -58,17 +59,35 @@ class FullBuildFixesTest {
 		JsonArray sites = swaps.getAsJsonArray("sites");
 		// A card-key door the engine stamps shut on map load: the house's data has the open floor there.
 		sites.add(site("TEST_HOUSE", 2, 2, "card_key", B_IWALL, B_FLOOR, "EVENT_TEST_DOOR"));
-		// A site whose data shows neither of its blocks.
-		sites.add(site("TEST_HOUSE", 1, 2, "script", B_COUNTER, B_STAIRS, "EVENT_TEST_GATE"));
+		// A door whose data shows neither of its blocks: the export and the engine disagree.
+		sites.add(site("TEST_HOUSE", 1, 2, "card_key", B_COUNTER, B_STAIRS, "EVENT_TEST_GATE"));
+		// A scripted seal its script writes on every entry (Agatha's exit, wave 2): the data's own floor never shows.
+		sites.add(site("TEST_HOUSE", 3, 3, "script", B_IWALL, B_RUG, "EVENT_TEST_SEAL"));
 		ExportBundle bundle = ExportBundle.open(TestData.syntheticCopyWith(this.temp, Map.of("swaps/all", swaps)));
 		WorldPlan plan = WorldPlanner.plan(bundle, new WorldPlanner.Options(null, TestData.ORIGIN_X, TestData.ORIGIN_Z, TestData.MIN_BUILD_HEIGHT));
 
 		Warnings warnings = plan.warnings();
 		assertEquals(Map.of("swap_block_mismatch", 1), warnings.warnings(), "only the true mismatch is a warning");
-		assertEquals(List.of(Map.of("kind", "script", "map", "TEST_HOUSE", "site", "2", "source", "EVENT_TEST_GATE")),
+		assertEquals(List.of(Map.of("kind", "card_key", "map", "TEST_HOUSE", "site", "2", "source", "EVENT_TEST_GATE")),
 				warnings.details("swap_block_mismatch"));
 		assertEquals(1, warnings.noteCount("swap_site_stamped"));
 		assertEquals("TEST_HOUSE", warnings.details("swap_site_stamped").get(0).get("map"));
+		assertEquals(List.of(Map.of("kind", "script", "map", "TEST_HOUSE", "site", "3", "source", "EVENT_TEST_SEAL")),
+				warnings.details("swap_site_overwritten"), "noted with its symbols, never a warning");
+
+		// The seal: its rug row built open with tile cells the wall closes; the wall row it never changes is built as the
+		// site shows it (a wall), not as the data's floor says.
+		for (String key : new String[] {"TEST_HOUSE:6:6", "TEST_HOUSE:7:6"}) {
+			StoryCellTable.Entry entry = plan.storyCells().get(key);
+			assertNotNull(entry, key);
+			assertEquals(B_FLOOR, entry.start(), "other maps show the data's own block");
+			assertEquals(B_IWALL, entry.closed().block());
+			assertEquals(StoryCellTable.Pass.SOLID, entry.closed().pass());
+		}
+		MapModel house = plan.map("TEST_HOUSE").model();
+		assertEquals(MapModel.Kind.GROUND, house.kind(6, 6));
+		assertEquals(MapModel.Kind.SOLID, house.kind(6, 7), "the unchanged wall row isn't the data's walkable floor");
+		assertEquals(null, plan.storyCells().get("TEST_HOUSE:6:7"));
 
 		// The stamped door: built open, four tile cells closed by the wall block, which other maps' data would show open.
 		for (String key : new String[] {"TEST_HOUSE:4:4", "TEST_HOUSE:5:4", "TEST_HOUSE:4:5", "TEST_HOUSE:5:5"}) {

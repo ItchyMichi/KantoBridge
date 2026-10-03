@@ -30,8 +30,9 @@ import org.jetbrains.annotations.Nullable;
  * {@value #RESEND_WINDOW_MS} ms after they were delivered (an undelivered one until it is). A repeated start for a
  * pending battle is ignored. Results are never re-sent unasked: gen1-bridge answers a result for a battle it isn't
  * waiting on with an error.</li>
- * <li><b>{@code party.give/heal/rename/take/item}</b> (from gen1-bridge) go to the server unchanged; while there is no
- * server link they wait in a queue (at most {@value #QUEUE_MAX}, oldest dropped) and go out on the next join.</li>
+ * <li><b>{@code party.give/heal/rename/take/item}</b> and <b>{@code daycare.deposit/withdraw}</b> (from gen1-bridge) go to
+ * the server unchanged; while there is no server link they wait in a queue (at most {@value #QUEUE_MAX}, oldest dropped)
+ * and go out on the next join.</li>
  * <li><b>{@code party.sync}</b> and <b>{@code dex.sync}</b> (from the server, Cobblemon is authoritative) go to
  * gen1-bridge; the latest of each is sent again after every snapshot, and forgotten when leaving the server.</li>
  * <li><b>{@code bag.sync}</b> (from gen1-bridge, the bag is authoritative; it sends one after every snapshot and on
@@ -59,9 +60,9 @@ public final class GameRelay {
 		void warn(String code, long count);
 	}
 
-	/** gen1-bridge's requests about the party that the server carries out. */
+	/** gen1-bridge's requests about the party that the server carries out (the daycare's too: it holds Pokémon, P15). */
 	public static final List<String> PARTY_REQUESTS = List.of(MsgTypes.PARTY_GIVE, MsgTypes.PARTY_HEAL, MsgTypes.PARTY_RENAME,
-			MsgTypes.PARTY_TAKE, MsgTypes.PARTY_ITEM);
+			MsgTypes.PARTY_TAKE, MsgTypes.PARTY_ITEM, MsgTypes.DAYCARE_DEPOSIT, MsgTypes.DAYCARE_WITHDRAW);
 	/** The server's state for gen1-bridge. */
 	public static final List<String> SERVER_SYNCS = List.of(MsgTypes.PARTY_SYNC, MsgTypes.DEX_SYNC);
 

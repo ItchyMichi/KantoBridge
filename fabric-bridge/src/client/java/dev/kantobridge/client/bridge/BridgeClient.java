@@ -113,6 +113,18 @@ public final class BridgeClient implements AutoCloseable {
 
 	/** {@link #send(String, JsonObject)} for replies, with the envelope's {@code re}. */
 	public boolean send(String type, @Nullable Long re, JsonObject data) {
+		return this.enqueue(type, re, data) > 0;
+	}
+
+	/**
+	 * {@link #send(String, JsonObject)} for a request whose answer names it: returns the message's {@code seq} (the answer's
+	 * {@code re}), or -1 when it was dropped.
+	 */
+	public long sendTracked(String type, JsonObject data) {
+		return this.enqueue(type, null, data);
+	}
+
+	private long enqueue(String type, @Nullable Long re, JsonObject data) {
 		Catalog.Entry entry = this.catalog.get(type);
 		if (entry == null || !entry.legs().contains(Catalog.Leg.M2G)) {
 			throw new IllegalArgumentException("not a client-to-gen1-bridge message type: " + type);
@@ -123,9 +135,9 @@ public final class BridgeClient implements AutoCloseable {
 		synchronized (this.lock) {
 			Outbox box = this.outbox;
 			if (box == null || this.state != ConnectionState.CONNECTED) {
-				return false;
+				return -1;
 			}
-			return box.enqueue(type, re, data) > 0;
+			return box.enqueue(type, re, data);
 		}
 	}
 

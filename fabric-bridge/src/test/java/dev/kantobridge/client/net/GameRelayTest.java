@@ -285,6 +285,25 @@ class GameRelayTest {
 	}
 
 	@Test
+	void daycareRequestsGoUpOrWaitLikePartyRequests() throws Exception {
+		String uid = "0f8b6a2e-1c2d-4e5f-8a9b-0c1d2e3f4a5b";
+		Envelope deposit = this.message(MsgTypes.DAYCARE_DEPOSIT, "{\"uid\":\"" + uid + "\"}");
+		this.relay.fromBridge(deposit, 0);
+		assertEquals(List.of(MsgTypes.DAYCARE_DEPOSIT), this.links.server.stream().map(Sent::type).toList());
+		assertEquals(ProtoJson.write(deposit.data()), ProtoJson.write(this.links.server.get(0).data()), "unchanged");
+		// No server: the withdrawal waits behind nothing and goes first on the next join, before a battle.
+		this.links.serverUp = false;
+		this.relay.fromBridge(this.message(MsgTypes.DAYCARE_WITHDRAW, "{\"uid\":\"" + uid + "\",\"steps\":420}"), 10);
+		assertEquals(1, this.relay.queued());
+		this.links.serverUp = true;
+		this.relay.fromBridge(this.message(MsgTypes.BATTLE_START, start("b-9")), 20);
+		assertEquals(List.of(MsgTypes.DAYCARE_DEPOSIT, MsgTypes.DAYCARE_WITHDRAW, MsgTypes.BATTLE_START),
+				this.links.server.stream().map(Sent::type).toList());
+		assertEquals(420, this.links.server.get(1).data().get("steps").getAsInt());
+		assertEquals(2, this.relay.stats().partyRelayed);
+	}
+
+	@Test
 	void bagUsesGoDownOrWaitForTheNextSnapshot() throws Exception {
 		this.relay.fromServer(this.message(MsgTypes.BAG_USE, "{\"item\":\"POKE_BALL\",\"qty\":1}"), 0);
 		assertEquals(List.of(MsgTypes.BAG_USE), this.links.bridge.stream().map(Sent::type).toList());

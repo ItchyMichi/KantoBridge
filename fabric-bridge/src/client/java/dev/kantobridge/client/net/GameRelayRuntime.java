@@ -107,7 +107,9 @@ public final class GameRelayRuntime {
 			return;
 		}
 		UiRuntime ui = UiRuntime.get();
-		String current = ActivityTracker.of(ClientBattles.active(), ui != null && ui.open(), this.bridge.state().mode());
+		// A special battle running natively (P9) is a battle too, not a dialogue.
+		boolean battle = ClientBattles.active() || (ui != null && ui.nativeBattleActive());
+		String current = ActivityTracker.of(battle, ui != null && ui.open(), this.bridge.state().mode());
 		String next = this.activity.next(current);
 		if (next != null) {
 			JsonObject data = new JsonObject();

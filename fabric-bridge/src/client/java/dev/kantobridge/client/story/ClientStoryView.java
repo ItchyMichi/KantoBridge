@@ -95,6 +95,18 @@ public final class ClientStoryView {
 		return view != null && view.drawn.contains(key);
 	}
 
+	/** Every tile cell the local player sees closed (for the crosshair on closed art). */
+	public static Set<String> drawnKeys() {
+		ClientStoryView view = instance;
+		return view == null ? Set.of() : view.drawn;
+	}
+
+	/** True while the hidden player surfs (the field moves a click means depend on it). */
+	public static boolean surfing() {
+		ClientStoryView view = instance;
+		return view != null && view.rules.surf();
+	}
+
 	private void tick(Minecraft minecraft) {
 		this.rules.setIndex(ClientWorldIndex.current());
 		this.feedNpcs();

@@ -2,6 +2,7 @@ package dev.kantobridge.client.act;
 
 import com.google.gson.JsonObject;
 import com.mojang.blaze3d.platform.InputConstants;
+import dev.kantobridge.block.TileBlock;
 import dev.kantobridge.client.bridge.BridgeClock;
 import dev.kantobridge.client.bridge.BridgeRuntime;
 import dev.kantobridge.client.bridge.ClientBridgeState;
@@ -11,15 +12,20 @@ import dev.kantobridge.client.move.InputLock;
 import dev.kantobridge.client.move.MoveRuntime;
 import dev.kantobridge.client.puppet.Puppet;
 import dev.kantobridge.client.puppet.PuppetRuntime;
+import dev.kantobridge.client.story.ClientStoryView;
 import dev.kantobridge.client.ui.Keybinds;
 import dev.kantobridge.client.ui.UiRuntime;
 import dev.kantobridge.client.world.ClientWorldIndex;
 import dev.kantobridge.entity.PuppetEntity;
+import dev.kantobridge.proto.Envelope;
 import dev.kantobridge.proto.MsgTypes;
 import dev.kantobridge.world.CellPos;
 import dev.kantobridge.world.Dir;
+import dev.kantobridge.world.MapPlacement;
 import dev.kantobridge.world.WorldIndex;
+import java.util.List;
 import java.util.Locale;
+import java.util.Set;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.keybinding.v1.KeyBindingHelper;
 import net.fabricmc.fabric.api.event.client.player.ClientPreAttackCallback;
@@ -30,6 +36,8 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.client.resources.language.I18n;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
+import net.minecraft.network.chat.Component;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.Entity;
@@ -37,12 +45,14 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.EntityHitResult;
+import net.minecraft.world.phys.HitResult;
+import net.minecraft.world.phys.Vec3;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * The player acting on the hidden game from the world (docs/PLAN.md §2.4 flow 2, §4.3 "Clicks", P20):
+ * The player acting on the hidden game from the world (docs/PLAN.md §2.4 flow 2, §4.3 "Clicks", P20, §6 M8 item 4):
  *
  * <ul>
  * <li><b>A</b> ({@code Z}) talks to, reads or checks the cell in front of the player in the camera's quadrant:
@@ -52,6 +62,12 @@ import org.slf4j.LoggerFactory;
  * FAIL, so nothing reaches the server: a puppet's id is unknown there, and Kanto's blocks do nothing. Item use on a block
  * (a Poké Ball thrown at the ground, Cobblemon's medicine) passes through to Minecraft. Left-clicks on puppets are
  * cancelled before they start.</li>
+ * <li><b>Field moves</b> (M8, {@link FieldClick}): A or a plain right-click on a Cut tree the player sees standing sends
+ * {@code act.field{cut}}, on water while not surfing {@code act.field{surf}}, and a right-click on the ground of land
+ * while surfing {@code act.field{surf}} (gen1-bridge's dismount). The crosshair meets closed art as it is drawn
+ * ({@link ClosedArtPick}, after Minecraft's own pick), so a click on a tree's trunk reaches the tree. A refusal (no Pokémon
+ * knows Cut, no badge, not next to it, …) shows a short line over the hotbar ({@link FieldFeedback}). Strength needs
+ * nothing here: once it is on, walking into a boulder twice pushes it (the movement sync's pushes).</li>
  * <li><b>START</b> ({@code Enter}) opens the hidden start menu: {@code act.button{start, tap}}.</li>
  * </ul>
  *
@@ -66,6 +82,7 @@ public final class ActRuntime {
 	private final BridgeRuntime bridge;
 	private final BridgeClock clock = BridgeClock.system();
 	private final ActionGate gate = new ActionGate();
+	private final FieldFeedback feedback = new FieldFeedback();
 	private boolean aWasDown;
 	private boolean startWasDown;
 	private long results;
@@ -87,7 +104,8 @@ public final class ActRuntime {
 		UseBlockCallback.EVENT.register(runtime::useBlock);
 		ClientPreAttackCallback.EVENT.register((minecraft, player, clicks) -> minecraft.crosshairPickEntity instanceof PuppetEntity);
 		ClientTickEvents.END_CLIENT_TICK.register(runtime::tick);
-		bridge.dispatcher().on(MsgTypes.ACT_RESULT, message -> runtime.onResult(message.data()));
+		bridge.dispatcher().on(MsgTypes.ACT_RESULT, runtime::onResult);
+		bridge.dispatcher().onState((state, detail) -> runtime.feedback.connectionChanged());
 		bridge.addDebugLine(runtime::debugLine);
 	}
 
@@ -129,7 +147,8 @@ public final class ActRuntime {
 		CellPos target = InteractTarget.inFront(index, map, state.x(), state.y(), player.getX(), player.getY(), player.getZ(),
 				Dir.fromYaw(player.getYRot()));
 		if (target != null) {
-			this.send(target);
+			// A has no ground to aim at: it never means a dismount (walking ashore does that).
+			this.act(index, target, false);
 		}
 	}
 
@@ -168,11 +187,48 @@ public final class ActRuntime {
 			BlockPos pos = hit.getBlockPos();
 			CellPos target = InteractTarget.clicked(index, map, pos.getX(), pos.getY(), pos.getZ());
 			if (target != null) {
-				this.sendIfReachable(target);
+				this.act(index, target, ground(index, level, target, pos));
 			}
 		}
 		// A plain click: Kanto's blocks do nothing in Minecraft, and nothing should reach the server.
 		return InteractionResult.FAIL;
+	}
+
+	/**
+	 * True when a click hit the ground surface of a land cell: its floor block (feet level - 1) with no column standing on
+	 * it, where a surfer can step ashore.
+	 */
+	private static boolean ground(WorldIndex index, Level level, CellPos target, BlockPos pos) {
+		CellPos own = InteractTarget.own(index, target);
+		MapPlacement map = own == null ? null : index.map(own.map());
+		return map != null && pos.getY() == map.y() - 1 && !(level.getBlockState(pos.above()).getBlock() instanceof TileBlock);
+	}
+
+	/** A press on {@code target}: a field move where one applies, else the ordinary A on it. */
+	private void act(WorldIndex index, CellPos target, boolean ground) {
+		ClientBridgeState state = this.bridge.state();
+		String map = state.map();
+		if (map == null) {
+			return;
+		}
+		FieldClick.Decision decision = FieldClick.decide(index, map, state.x(), state.y(), target, ClientStoryView.surfing(), ClientStoryView::drawn,
+				ground);
+		long now = this.clock.millis();
+		switch (decision.kind()) {
+			case FIELD -> {
+				if (this.feedback.busy(now)) {
+					// The last one is still under way (a held right-click): the hidden game would only answer busy.
+					return;
+				}
+				long seq = this.bridge.client().sendTracked(MsgTypes.ACT_FIELD, decision.fieldData());
+				if (seq > 0) {
+					this.feedback.sent(seq, decision.action(), now);
+					LOGGER.debug("act: field {}", decision.action());
+				}
+			}
+			case REFUSED -> this.show(this.feedback.refusal(decision.action(), decision.reason()));
+			case INTERACT -> this.sendIfReachable(target);
+		}
 	}
 
 	private void sendIfReachable(CellPos target) {
@@ -190,14 +246,70 @@ public final class ActRuntime {
 		this.bridge.client().send(MsgTypes.ACT_INTERACT, data);
 	}
 
-	private void onResult(JsonObject data) {
+	private void onResult(Envelope message) {
+		JsonObject data = message.data();
 		this.results++;
-		if (!JsonFields.bool(data, "ok", false)) {
+		boolean ok = JsonFields.bool(data, "ok", false);
+		String reason = JsonFields.str(data, "reason");
+		if (!ok) {
 			this.failures++;
-			String reason = JsonFields.str(data, "reason");
 			this.lastReason = reason != null && reason.matches("^[a-z][a-z0-9_.]{0,63}$") ? reason : "?";
 			LOGGER.debug("act: refused ({})", this.lastReason);
 		}
+		this.show(this.feedback.onResult(message.re(), ok, reason));
+	}
+
+	/** A field move's refusal, over the hotbar. */
+	private void show(FieldFeedback.@Nullable Message message) {
+		Minecraft minecraft = Minecraft.getInstance();
+		if (message != null && minecraft.player != null) {
+			minecraft.gui.setOverlayMessage(Component.translatable("kantobridge.field.refused", Component.translatable(message.actionKey()),
+					Component.translatable(message.reasonKey())), false);
+		}
+	}
+
+	// ---- the crosshair on closed art ----
+
+	/**
+	 * After Minecraft's pick (GameRendererMixin): if the look ray meets a closed column this player sees (a standing tree,
+	 * a shut door) before whatever Minecraft found, the crosshair is on that column's cell. Only while following the
+	 * hidden game with a plain hand: that click is then A on the cell; an item in hand keeps aiming at the real blocks.
+	 */
+	public static void pickClosedArt(float partialTick) {
+		Minecraft minecraft = Minecraft.getInstance();
+		LocalPlayer player = minecraft.player;
+		WorldIndex index = ClientWorldIndex.current();
+		if (instance == null || player == null || index == null || minecraft.getCameraEntity() != player || !MoveRuntime.following()
+				|| !ClickPolicy.plainClick(player.getMainHandItem())) {
+			return;
+		}
+		Set<String> drawn = ClientStoryView.drawnKeys();
+		if (drawn.isEmpty()) {
+			return;
+		}
+		Vec3 eye = player.getEyePosition(partialTick);
+		Vec3 look = player.getViewVector(partialTick);
+		double reach = player.blockInteractionRange();
+		HitResult current = minecraft.hitResult;
+		double limit = current == null || current.getType() == HitResult.Type.MISS ? reach : Math.min(reach, current.getLocation().distanceTo(eye));
+		List<ClosedArtPick.Box> boxes = ClosedArtPick.boxes(index, drawn, eye.x, eye.y, eye.z, reach);
+		ClosedArtPick.Hit hit = ClosedArtPick.nearest(boxes, eye.x, eye.y, eye.z, look.x, look.y, look.z, limit);
+		if (hit != null) {
+			minecraft.hitResult = new BlockHitResult(new Vec3(hit.x(), hit.y(), hit.z()), direction(hit.face()),
+					new BlockPos(hit.blockX(), hit.blockY(), hit.blockZ()), false);
+			minecraft.crosshairPickEntity = null;
+		}
+	}
+
+	private static Direction direction(ClosedArtPick.Face face) {
+		return switch (face) {
+			case DOWN -> Direction.DOWN;
+			case UP -> Direction.UP;
+			case NORTH -> Direction.NORTH;
+			case SOUTH -> Direction.SOUTH;
+			case WEST -> Direction.WEST;
+			case EAST -> Direction.EAST;
+		};
 	}
 
 	// ---- helpers ----
@@ -226,7 +338,7 @@ public final class ActRuntime {
 	}
 
 	private String debugLine() {
-		return I18n.get("kantobridge.debug.act", this.gate.interacts(), this.gate.buttons(), this.results, this.failures,
+		return I18n.get("kantobridge.debug.act", this.gate.interacts(), this.feedback.sentCount(), this.gate.buttons(), this.results, this.failures,
 				this.lastReason == null ? "-" : this.lastReason.toLowerCase(Locale.ROOT));
 	}
 }

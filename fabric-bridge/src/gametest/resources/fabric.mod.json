@@ -27,7 +27,10 @@
 			"dev.kantobridge.gametest.SessionGameTests",
 			"dev.kantobridge.gametest.BlackoutGameTests",
 			"dev.kantobridge.gametest.LeaveGameTests",
-			"dev.kantobridge.gametest.FlashGameTests"
+			"dev.kantobridge.gametest.FlashGameTests",
+			"dev.kantobridge.gametest.StoryRulesGameTests",
+			"dev.kantobridge.gametest.DaycareGameTests",
+			"dev.kantobridge.gametest.BattleMusicGameTests"
 		]
 	},
 	"depends": {

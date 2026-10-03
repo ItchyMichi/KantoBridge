@@ -282,6 +282,9 @@ return function(mod)
     merge("story", story.stats())
     merge("field", field.stats())
     for k, v in pairs(engine.bridgeCounts()) do out[k] = v end
+    -- M8 (wave 2): direct battles, native catches, trades, the daycare,
+    -- battle music
+    for k, v in pairs(engine.contentCounts()) do out[k] = v end
     out.screenEvents = screenEvents
     -- M7: money, the bag's size and the beaten trainers, as counts
     local s = type(save) == "table" and save or {}
@@ -300,6 +303,13 @@ return function(mod)
       if v == true then defeated = defeated + 1 end
     end
     out.defeated = defeated
+    -- M8: the badges held and the coins, as counts
+    local badgeCount = 0
+    for _, item in ipairs(engine.badgeItems()) do
+      if type(s.inventory) == "table" and s.inventory[item] then badgeCount = badgeCount + 1 end
+    end
+    out.badges = badgeCount
+    out.coins = math.floor(tonumber(s.coins) or 0)
     -- the names typed into the hidden game: lengths and a short hash only
     local p = save and type(save.player) == "table" and save.player or {}
     for key, slot in pairs({ playerName = "name", rivalName = "rival" }) do
@@ -466,6 +476,18 @@ return function(mod)
   mod.hooks:wrap("ui.pc.items", function(nextFn, g, items)
     return engine.pcItems(nextFn, g, items)
   end)
+  -- M8 (lib/kb_engine.lua "direct battles, native catches, the daycare,
+  -- renames"): the A press on an object (world.talk, OC:2561-2566) and a
+  -- completed step (world.stepped, OC:4675-4678) arm the text boxes they
+  -- push, so a battle their continuation pushes directly (a static
+  -- Pokemon object, the ghost Marowak with the SILPH_SCOPE, Giovanni in
+  -- the Rocket Hideout) is fought in Cobblemon; pokemon.caught (a native
+  -- catch: the Safari Zone) crosses over as a gift. Hooks and events only.
+  mod.hooks:wrap("world.talk", function(nextFn, ow, target)
+    return engine.worldTalk(nextFn, ow, target)
+  end)
+  mod.events:on("world.stepped", function() pcall(engine.directStepped) end)
+  mod.events:on("pokemon.caught", function(payload) pcall(engine.nativeCaught, payload) end)
   -- Every hidden-game save (Game:writeSave emits save.writing before the
   -- file is written, src/core/Game.lua:1342-1345): Minecraft saves too.
   mod.events:on("save.writing", function() saves.writing() end)
@@ -672,8 +694,11 @@ return function(mod)
   mod.events:on("screen.pushed", function(payload)
     wake = true
     screenEvents = screenEvents + 1
+    local state = type(payload) == "table" and payload.state or nil
     -- M6: the cast box of a bite gets the bite's continuation (kb_engine)
-    pcall(engine.fishPushed, type(payload) == "table" and payload.state or nil)
+    pcall(engine.fishPushed, state)
+    -- M8: a text box a talk or a step pushed gets the direct-battle seam
+    pcall(engine.directPushed, state)
   end)
   mod.events:on("screen.popped", function()
     wake = true

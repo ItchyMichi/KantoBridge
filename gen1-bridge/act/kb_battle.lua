@@ -16,15 +16,19 @@
 --
 -- Kinds: "rival" (the rival classes OPP_RIVAL1-3, scripted or not),
 -- "trainer" (a map trainer: sight or talk), "scripted" (another trainer a
--- script starts), "static" (a scripted wild battle: static_battle,
--- start_battle "wild"), and from M6 "surf" and "fish" (a wild Pokemon the
--- hidden game rolled while surfing or fishing, PLAN P8). Trainer teams come
+-- script starts; M8: also Giovanni's Rocket Hideout battle, which its talk
+-- script pushes directly), "static" (a scripted wild battle: static_battle,
+-- start_battle "wild"; M8: a static Pokemon object talked to and the ghost
+-- Marowak with the SILPH_SCOPE, pushed directly: kb_engine's direct
+-- battles), and from M6 "surf" and "fish" (a wild Pokemon the hidden game
+-- rolled while surfing or fishing, PLAN P8). Trainer teams come
 -- resolved from kb_engine as the engine would build them: species as dex,
 -- level, 1-4 Gen 1 move numbers, DVs; trainer.party is the engine's 1-based
 -- party index. Wild ones carry wild{dex, level, x, y}: for static the
 -- object's cell, for surf and fish the water in front of the player.
 -- Rules: trainers { catch = false, flee = false }, wild Pokemon
--- { catch = true, flee = true }. A team the protocol can't express exactly
+-- { catch = true, flee = true } (catch false for a Pokemon the engine
+-- marks uncatchable: the ghost Marowak). A team the protocol can't express exactly
 -- is declined: the hidden game fights that battle itself (shown on the
 -- mirror).
 --
@@ -32,7 +36,9 @@
 -- caught -> caught, aborted -> nothing happens (a scripted battle's script
 -- stops there, so whatever triggered it can run it again; a map trainer's
 -- encounter is cancelled, so it challenges again once the player moves or
--- talks to it; a surf or fish encounter just ends). A trainer battle can't
+-- talks to it; a surf or fish encounter just ends; M8: a direct battle ends
+-- through its own continuation as a flight, so its object or trigger stays
+-- for another try). A trainer battle can't
 -- be fled or caught: those count as aborted. A caught Pokemon is
 -- Cobblemon's: it reaches the hidden game through party.sync and dex.sync.
 -- A result for any other id is answered with error battle.unknown.
@@ -120,7 +126,7 @@ function Battle.new(opts)
   local counts = {
     started = 0, declined = 0, sent = 0, resent = 0, results = 0, win = 0, lose = 0, run = 0,
     caught = 0, abort = 0, refused = 0, unknown = 0, dropped = 0,
-    static = 0, surf = 0, fish = 0, native = 0, nativeEnded = 0,
+    static = 0, surf = 0, fish = 0, native = 0, nativeEnded = 0, direct = 0,
   }
 
   local function decline(why, fields)
@@ -135,19 +141,21 @@ function Battle.new(opts)
 
   -- kb_engine's facts about a battle it is holding (plain values) -> the
   -- plan { id, kind, data = battle.start payload }, or nil to let the
-  -- hidden game fight it. facts: path ("script"|"trainer"|"wild"), kind
-  -- (wild: "surf"|"fish", else static), command, cls, party, wild,
-  -- species, dex, level, map, npc, x, y.
+  -- hidden game fight it. facts: path ("script"|"trainer"|"wild"|"direct"),
+  -- kind (wild: "surf"|"fish", else static), command, cls, party, wild,
+  -- species, dex, level, map, npc, x, y, catch (false: the Pokemon can't be
+  -- caught, the ghost Marowak).
   function battles.begin(facts)
     if type(facts) ~= "table" then return decline("facts") end
     local data, kind = {}, nil
+    if facts.path == "direct" then counts.direct = counts.direct + 1 end
     if facts.wild then
       if not (whole(facts.dex, 1, 151) and whole(facts.level, 1, 100)) then return decline("wild") end
       kind = WILD_KINDS[facts.kind] or "static"
       counts[kind] = counts[kind] + 1
       data.wild = { dex = facts.dex, level = facts.level }
       if coord(facts.x) and coord(facts.y) then data.wild.x, data.wild.y = facts.x, facts.y end
-      data.rules = { catch = true, flee = true }
+      data.rules = { catch = facts.catch ~= false, flee = true }
     else
       if not (sym(facts.cls, "^[A-Za-z0-9_]+$") and whole(facts.party, 0, 255)) then return decline("trainer") end
       local team, name = engine.trainerTeam(facts.cls, facts.party)

@@ -18,7 +18,8 @@ import org.jetbrains.annotations.Nullable;
  * slots, …) as the hidden game draws them. It subscribes to {@code mirror.frame}s while shown ({@link MirrorLink}),
  * uploads the newest into one reused 160×144 texture with nearest filtering, and draws it at the largest whole number
  * of window pixels per Game Boy pixel that fits. Every button goes to the hidden game as {@code act.button} taps; the
- * key hints sit under the picture. The picture is ROM-derived art: it lives only in that texture.
+ * key hints sit under the picture. The picture is ROM-derived art: it lives only in that texture. Native special
+ * battles (the Safari Zone, the old man, the ghost) play here too, kept up between their own UIs ({@link NativeBattle}).
  */
 public final class MirrorScreen extends BridgeScreen {
 	/** GUI units kept free under the picture for the key hints. */
@@ -74,7 +75,8 @@ public final class MirrorScreen extends BridgeScreen {
 
 	@Override
 	protected void onButton(Keybinds.Button button, boolean repeat, long now) {
-		if (this.runtime.router().isTop(this.view.main())) {
+		// The top UI takes the keys; so does a native battle's mirror kept up between the battle's own UIs.
+		if (this.runtime.takesInput(this.view.main())) {
 			this.runtime.button(button);
 		}
 	}

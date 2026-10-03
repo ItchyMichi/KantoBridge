@@ -437,6 +437,26 @@ class MovementSyncTest {
 	}
 
 	@Test
+	void walkingIntoABoulderTwiceBumpsThenPushesIt() {
+		// M8 wave 2: with Strength on, Gen 1 needs two steps into the boulder; holding the key against it sends both.
+		Rig rig = Rig.at(world, "TEST_TOWN", 5, 8, Dir.UP);
+		rig.intent = Dir.UP;
+		rig.ticks(MovementSync.PUSH_TICKS - 1);
+		assertEquals(List.of("step up 1 push"), rig.tick());
+		// The first step only bumps it: refused, the player stays where both stand.
+		rig.sync.onBlocked(new Place("TEST_TOWN", 5, 8, Dir.UP), 1L, rig.now);
+		assertEquals(List.of(), rig.port.take(), "nothing to snap back");
+		assertEquals(List.of(), rig.ticks(MovementSync.PUSH_REPEAT_TICKS - 1));
+		assertEquals(List.of("step up 2 push"), rig.tick(), "still pushing: the second step");
+		rig.pos("TEST_TOWN", 5, 8, Dir.UP, "push", 0, 2L);
+		assertEquals(List.of(), rig.port.take(), "the boulder moved, not the player");
+		assertEquals(0, rig.sync.pendingSteps());
+		// The way is open now: the player's own walk into the cell is an ordinary step.
+		rig.moveTo("TEST_TOWN", 5, 7);
+		assertEquals(List.of("step up 3"), rig.tick());
+	}
+
+	@Test
 	void slopeStepsAreClaimedLikeWalksAndTheRollIsWalked() {
 		Rig rig = Rig.at(world, "TEST_TOWN", 5, 8, Dir.DOWN);
 		rig.moveTo("TEST_TOWN", 5, 9);
