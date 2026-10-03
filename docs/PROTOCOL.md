@@ -160,11 +160,12 @@ optional ones. The schemas give the exact types and limits.
   while idle.
 - **Kinds:** `ledge` is one message at the landing cell with the whole hop's 32 frames (a hop onto a
   connected map sends the seam step as kind `ledge` on the new map, without `n`); `slope` is the
-  Cycling Road roll; `script` covers moves the game makes on its own (cutscenes, door walk-outs,
-  Seafoam currents until M8).
+  Cycling Road roll (8 frames, no `n`); `spin` a spinner tile (48 frames a cell); `current` a Seafoam
+  current or push-back (16 frames); `script` covers moves the game makes on its own (cutscenes, door
+  walk-outs).
 - **Warp kinds** by mechanism: `door` (a door tile or a gate doorway), `stairs` (any other warp tile),
   `edge` (an exit mat or map edge), `pad`, `hole`, `elevator` (a warp out of an `*_ELEVATOR` map),
-  `fly`, `teleport` (also Dig and Escape Rope until M8), `blackout`, `script`. `arrive.to` is the
+  `fly`, `teleport`, `dig`, `rope` (Escape Rope), `blackout`, `script`. `arrive.to` is the
   entry cell; a door walk-out follows as its own `player.pos` kind `script`.
 - **Connection crossings** (walking off a map edge into the connected map) are not warps: the step's
   `player.pos` simply names the new map and cell.
@@ -178,6 +179,15 @@ optional ones. The schemas give the exact types and limits.
 | `act.button` | M→G | `button, how:"tap"\|"down"\|"up"` (mirror screen, start menu) | |
 | `act.field` | M→G | `action:"cut"\|"surf"\|"strength"\|"flash"\|"dig"\|"teleport"\|"bicycle"\|"fish"\|"fly", x?, y?, dest?, item?` | |
 | `act.result` | G→M | `ok, kind?, reason?`; `re` required | |
+
+**`act.field` (M8):** each action runs through the hidden game's own entry points after its own
+checks (the move in the party, the badge, the place). `x`/`y` name an adjacent target cell (a cut
+tree, water). Escape Rope is `action:"dig", item:"ESCAPE_ROPE"`; `fish` without `item` uses the best
+rod in the bag; `fly` without `dest` opens the game's own Fly list (a list UI). `act.result.kind`:
+`cut`, `surf`, `dismount`, `strength`, `flash`, `dig`, `rope`, `teleport`, `bike_on`, `bike_off`,
+`fish`, `fly`, `fly_list`. Reasons: `not_ingame`, `not_idle`, `not_adjacent`, `no_move`, `no_badge`,
+`no_target`, `not_here`, `no_item`, `already`, `busy`, `failed`. Strength is activated once, then the
+player walks into the boulder twice (the first step bumps, the second pushes).
 
 ### UI
 
@@ -262,6 +272,41 @@ comes from each player's own generated pack.
 | `story.toggles` | G→M | `map, obj, visible` | |
 | `story.blocks` | G→M | `map, changes[{bx,by,block}]` (live map block diff: Cut, doors, scripted swaps) | yes |
 | `story.lit` | G→M | `map, lit` | |
+
+#### Story rules (M8)
+
+The client keeps each story cell of the WorldIndex open or closed for its own player (the
+`active` set of `story.state`) from what gen1-bridge reports:
+
+- **`object` cells** (STAY objects: people, item balls, statics, guards, Snorlax): closed while the
+  object is visible in the hidden game (on the map of the live NPC list: where a live NPC stands). gen1-bridge reports **effective** visibility: the snapshot's
+  `toggles` holds, for every map, each object whose effective visibility differs from its map
+  record's `hidden` default (items taken, statics beaten, toggles, …), and `story.toggles{map, obj,
+  visible}` reports every change. On the current map the live NPC list (`npc.*`) decides.
+- **`tile` cells** (swap sites: cut trees, card-key doors, scripted swaps): closed while the map's live
+  block at `(bx, by)` is the cell's **closing block** (`closed.block` in the WorldIndex: the site's
+  `before`, or its `after` where only `before` is walkable at that cell). `story.blocks{map,
+  changes}` reports the current map's live blocks that differ from the exported map data (after
+  scripts, Cut, boulders, map entry); the snapshot's `blocks` holds the same for the current map.
+  Other maps are taken to show their `start` block (cut trees grow back when the player leaves a map,
+  as in Gen 1; card-key doors are stamped shut on map load). A closed cell's collision follows
+  `closed.pass`: `solid` (nobody), `water` (surfers only) or `ground` (everybody; only its art
+  differs); an open cell whose built state is water lets only surfers through.
+- **`water` cells:** closed unless the player is surfing (`player.state.surf`).
+- **`boulder_area` cells:** closed where a boulder stands (the live `npc.*` boulders).
+- **`story.flags`** reports the diff of `save.flags` every 10 logic steps, when a script ends and on
+  a map load; **`story.lit`** reports every dark map while Flash's light holds (or its reset).
+- **Details:** `story.toggles.obj` is the map object's name; `visible` back at the default is reported
+  too; objects absent from `toggles` are at their default. `story.blocks` is sent on map entry only
+  when something differs, and a reload of the same map re-sends blocks that went back to the map data
+  (regrown trees); a client drops a map's live-block overrides when the player's map changes. A
+  block change no swap site or recorded Cut explains is still reported, and logged by gen1-bridge as
+  the error `story.unknown_block` (map symbol and count only). Cut tall grass has no swap site (it's
+  cosmetic) but is reported in `story.blocks`.
+
+The client draws closed `tile` cells with the site's `before` art (per player, never in the world's
+blocks) and relays its active set with `story.state` (full on join, deltas after); the server uses
+it for that player's collision.
 
 ### Battles
 
@@ -523,7 +568,10 @@ is what the builder writes to `<world>/kantobridge/world_index.json`:
 - each map's block origin (the north-west corner of its cell (0, 0) at feet level), size in cells,
   layer, kind, palette, biome, darkness and parent;
 - the slot-map hash;
-- the story-cell table (`"MAP:x:y"` keys, each with its type and the object or swap site behind it);
+- the story-cell table (`"MAP:x:y"` keys, each with its type and the object or swap site behind it;
+  objects carry their `hidden` default; tile cells their `start` block, `water`, and `closed{block,
+  pass, height, art}` with the closed art's four slot indices, so each client draws and collides
+  its own player's closed cells);
 - the habitat block positions and pools.
 
 Clients turn block positions into cells and back with it. The `parts` of `world.index` are slices of
@@ -546,7 +594,9 @@ shared) is laid out for later milestones as:
 - `assets/kantobridge/textures/block/tile/<atlas>/<palette>/<tile, 4 digits>.png` (16×16, coloured,
   with `.mcmeta` animations for water and flowers);
 - `assets/kantobridge/textures/npc/<palette>/<sprite>.png` (64×32 sheets: standing and walking rows,
-  facing down, up, left, right).
+  facing down, up, left, right);
+- `assets/kantobridge/textures/player/<palette>/surf.png` (the surf sprite, from the export's
+  `field.playerSprites.surf`).
 
 ## Relay to the Minecraft server
 

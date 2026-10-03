@@ -4,17 +4,25 @@ import dev.kantobridge.builder.export.CellFlags;
 import dev.kantobridge.builder.export.ExportMap;
 import dev.kantobridge.builder.export.ExportSwaps;
 import dev.kantobridge.builder.export.ExportTileset;
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.function.ToIntFunction;
 import org.jetbrains.annotations.Nullable;
 
 /**
  * One map as the builder sees it (docs/PLAN.md §4.5 "Cell model and heights"): the tile under every block, and per
  * cell what is built there.
  *
- * <p>Swap sites are built in their {@code after} (open) state: story cells close them per player. Their cells' flags
- * are re-derived from the {@code after} block's tile classes, keeping the positional warp and sign bits.
+ * <p><b>Swap sites</b> (Cut trees, card-key doors, scripted swaps) are built open: each cell a site changes is built in
+ * whichever of its two states is walkable (normally the site's {@code after}; a cell whose {@code after} is the solid
+ * one is built {@code before}), and story cells close it per player. Its flags are re-derived from the tiles it is
+ * built with, keeping the positional warp and sign bits. A site is accepted when the map data holds either of its
+ * blocks: {@code before} (the data shows it closed, like a Cut tree) or {@code after} (the engine stamps it closed on
+ * map load, like the card-key doors); anything else is a {@code swap_block_mismatch}. {@link #closedModel()} is the
+ * same map with every changing cell in its other, closed state: the art and height the story-cell renderer draws.
  */
 public final class MapModel {
 	/** What a cell is built as. */
@@ -34,6 +42,7 @@ public final class MapModel {
 	private final ExportMap map;
 	private final ExportTileset tileset;
 	private final boolean interior;
+	private final boolean closedState;
 	private final int cw;
 	private final int ch;
 	private final int tw;
@@ -42,12 +51,19 @@ public final class MapModel {
 	private final int[] flags;
 	private final Kind[] kinds;
 	private final int[] heights;
-	private final Map<Integer, ExportSwaps.Site> sites = new HashMap<>();
+	/** Valid sites by Gen 1 block index ({@code by * width + bx}). */
+	private final Map<Integer, ExportSwaps.Site> sites;
+	/** Per cell of a site: the block it is built with, and the block that closes it (equal when the cell never changes). */
+	private final int[] openBlock;
+	private final int[] closedBlock;
+	private @Nullable MapModel closed;
 
-	private MapModel(ExportMap map, ExportTileset tileset, boolean interior) {
+	private MapModel(ExportMap map, ExportTileset tileset, boolean interior, boolean closedState, Map<Integer, ExportSwaps.Site> sites,
+			int[] openBlock, int[] closedBlock) {
 		this.map = map;
 		this.tileset = tileset;
 		this.interior = interior;
+		this.closedState = closedState;
 		this.cw = map.cellWidth();
 		this.ch = map.cellHeight();
 		this.tw = this.cw * 2;
@@ -56,61 +72,138 @@ public final class MapModel {
 		this.flags = new int[this.cw * this.ch];
 		this.kinds = new Kind[this.cw * this.ch];
 		this.heights = new int[this.cw * this.ch];
+		this.sites = sites;
+		this.openBlock = openBlock;
+		this.closedBlock = closedBlock;
 	}
 
 	/**
 	 * @param swaps the export's swap sites on this map
 	 */
 	public static MapModel build(ExportMap map, ExportTileset tileset, List<ExportSwaps.Site> swaps, boolean interior, Warnings warnings) {
-		MapModel model = new MapModel(map, tileset, interior);
-		int[] blockIds = map.blocks().clone();
+		return build(map, tileset, swaps, interior, warnings, site -> -1);
+	}
+
+	/**
+	 * @param swaps   the export's swap sites on this map
+	 * @param numbers each site's position in the export's site list (for diagnostics), or -1
+	 */
+	public static MapModel build(ExportMap map, ExportTileset tileset, List<ExportSwaps.Site> swaps, boolean interior, Warnings warnings,
+			ToIntFunction<ExportSwaps.Site> numbers) {
+		Map<Integer, ExportSwaps.Site> valid = new HashMap<>();
 		for (ExportSwaps.Site site : swaps) {
+			int number = numbers.applyAsInt(site);
+			Map<String, String> detail = Warnings.symbols("map", map.id(), "kind", site.kind(), "source", site.source(), "site",
+					number >= 0 ? Integer.toString(number) : null);
 			if (site.bx() >= map.width() || site.by() >= map.height()) {
-				warnings.warn("swap_out_of_bounds");
+				warnings.warn("swap_out_of_bounds", detail);
+				continue;
+			}
+			if (site.before() == site.after()) {
+				warnings.note("swap_site_unchanged", detail);
 				continue;
 			}
 			int index = site.by() * map.width() + site.bx();
-			if (blockIds[index] != site.before()) {
-				warnings.warn("swap_block_mismatch");
+			int data = map.blocks()[index];
+			if (data != site.before() && data != site.after()) {
+				warnings.warn("swap_block_mismatch", detail);
 				continue;
 			}
-			blockIds[index] = site.after();
-			model.sites.put(index, site);
+			if (valid.containsKey(index)) {
+				warnings.warn("swap_site_duplicate", detail);
+				continue;
+			}
+			if (data == site.after()) {
+				// The map data shows the site open; the engine closes it on map load until its event is set.
+				warnings.note("swap_site_stamped", detail);
+			}
+			valid.put(index, site);
 		}
+		int cells = map.cellWidth() * map.cellHeight();
+		int[] openBlock = new int[cells];
+		int[] closedBlock = new int[cells];
+		Arrays.fill(openBlock, -1);
+		Arrays.fill(closedBlock, -1);
+		for (ExportSwaps.Site site : valid.values()) {
+			for (int dy = 0; dy < 2; dy++) {
+				for (int dx = 0; dx < 2; dx++) {
+					int i = (site.by() * 2 + dy) * map.cellWidth() + site.bx() * 2 + dx;
+					int open = openBlock(tileset, site, dx, dy);
+					openBlock[i] = open;
+					closedBlock[i] = changes(tileset, site, dx, dy) ? (open == site.after() ? site.before() : site.after()) : open;
+				}
+			}
+		}
+		MapModel model = new MapModel(map, tileset, interior, false, Collections.unmodifiableMap(valid), openBlock, closedBlock);
+		model.fill(warnings);
+		return model;
+	}
+
+	/**
+	 * The state cell ({@code dx}, {@code dy}) of a site's block is built in: {@code after} unless only {@code before} is
+	 * walkable there.
+	 */
+	static int openBlock(ExportTileset tileset, ExportSwaps.Site site, int dx, int dy) {
+		boolean before = tileset.walkable().contains(tileset.tile(site.before(), dx * 2, dy * 2 + 1));
+		boolean after = tileset.walkable().contains(tileset.tile(site.after(), dx * 2, dy * 2 + 1));
+		return after || !before ? site.after() : site.before();
+	}
+
+	/** True when a site changes cell ({@code dx}, {@code dy}) of its block: its art or its passability differs. */
+	static boolean changes(ExportTileset tileset, ExportSwaps.Site site, int dx, int dy) {
+		for (int ty = dy * 2; ty < dy * 2 + 2; ty++) {
+			for (int tx = dx * 2; tx < dx * 2 + 2; tx++) {
+				if (tileset.tile(site.before(), tx, ty) != tileset.tile(site.after(), tx, ty)) {
+					return true;
+				}
+			}
+		}
+		int before = tileset.tile(site.before(), dx * 2, dy * 2 + 1);
+		int after = tileset.tile(site.after(), dx * 2, dy * 2 + 1);
+		return tileset.walkable().contains(before) != tileset.walkable().contains(after);
+	}
+
+	private void fill(Warnings warnings) {
+		int[] blockIds = this.map.blocks();
 		int unknownBlocks = 0;
-		for (int ty = 0; ty < model.th; ty++) {
-			for (int tx = 0; tx < model.tw; tx++) {
-				int block = blockIds[(ty / 4) * map.width() + tx / 4];
-				int tile = tileset.tile(block, tx, ty);
+		for (int ty = 0; ty < this.th; ty++) {
+			for (int tx = 0; tx < this.tw; tx++) {
+				int block = blockIds[(ty / 4) * this.map.width() + tx / 4];
+				int cell = (ty / 2) * this.cw + tx / 2;
+				if (this.openBlock[cell] >= 0) {
+					block = this.closedState ? this.closedBlock[cell] : this.openBlock[cell];
+				}
+				int tile = this.tileset.tile(block, tx, ty);
 				if (tile < 0) {
 					unknownBlocks++;
 					tile = 0;
 				}
-				model.tiles[ty * model.tw + tx] = tile;
+				this.tiles[ty * this.tw + tx] = tile;
 			}
 		}
 		warnings.warn("block_out_of_tileset", unknownBlocks);
 
-		for (int cy = 0; cy < model.ch; cy++) {
-			for (int cx = 0; cx < model.cw; cx++) {
-				int f = map.flags(cx, cy);
-				if (model.sites.containsKey((cy / 2) * map.width() + cx / 2)) {
-					f = model.derivedFlags(cx, cy) | (f & (CellFlags.WARP | CellFlags.SIGN));
+		for (int cy = 0; cy < this.ch; cy++) {
+			for (int cx = 0; cx < this.cw; cx++) {
+				int i = cy * this.cw + cx;
+				int f = this.map.flags(cx, cy);
+				int shown = this.closedState ? this.closedBlock[i] : this.openBlock[i];
+				if (this.openBlock[i] != this.closedBlock[i] && shown != this.map.block(cx / 2, cy / 2)) {
+					// Built (or drawn) in another state than the map data: its flags follow the tiles it shows.
+					f = this.derivedFlags(cx, cy) | (f & (CellFlags.WARP | CellFlags.SIGN));
 				}
-				int i = cy * model.cw + cx;
-				model.flags[i] = f;
-				model.kinds[i] = kindOf(f);
-				model.heights[i] = switch (model.kinds[i]) {
+				this.flags[i] = f;
+				this.kinds[i] = kindOf(f);
+				this.heights[i] = switch (this.kinds[i]) {
 					case COUNTER -> HeightRules.COUNTER;
-					case SOLID -> interior ? HeightRules.INTERIOR_WALL : 0;
+					case SOLID -> this.interior ? HeightRules.INTERIOR_WALL : 0;
 					default -> 0;
 				};
 			}
 		}
-		if (!interior) {
-			model.measureSurfaceHeights();
+		if (!this.interior) {
+			this.measureSurfaceHeights();
 		}
-		return model;
 	}
 
 	static Kind kindOf(int flags) {
@@ -225,8 +318,45 @@ public final class MapModel {
 		return this.sites.get((cy / 2) * this.map.width() + cx / 2);
 	}
 
-	/** The swap sites applied to this map. */
+	/** The swap sites applied to this map, by Gen 1 block index. */
 	public Map<Integer, ExportSwaps.Site> sites() {
 		return this.sites;
+	}
+
+	/** True when cell (cx, cy) belongs to a swap site that changes it (its art or its passability). */
+	public boolean changes(int cx, int cy) {
+		int i = cy * this.cw + cx;
+		return this.openBlock[i] >= 0 && this.openBlock[i] != this.closedBlock[i];
+	}
+
+	/** The block whose presence at the cell's site closes the cell; -1 for cells no site changes. */
+	public int closedBlock(int cx, int cy) {
+		return this.changes(cx, cy) ? this.closedBlock[cy * this.cw + cx] : -1;
+	}
+
+	/** The block the map data has at the cell's Gen 1 block. */
+	public int dataBlock(int cx, int cy) {
+		return this.map.block(cx / 2, cy / 2);
+	}
+
+	/** True for the closed variant ({@link #closedModel()}). */
+	public boolean closedState() {
+		return this.closedState;
+	}
+
+	/**
+	 * The same map with every changing site cell in its closed state: what a story cell draws while closed. Built on
+	 * first use; anomalies were already counted for this model, so none are counted again.
+	 */
+	public MapModel closedModel() {
+		if (this.closedState) {
+			return this;
+		}
+		if (this.closed == null) {
+			MapModel model = new MapModel(this.map, this.tileset, this.interior, true, this.sites, this.openBlock, this.closedBlock);
+			model.fill(new Warnings());
+			this.closed = model;
+		}
+		return this.closed;
 	}
 }

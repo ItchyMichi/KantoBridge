@@ -372,6 +372,63 @@ function Engine.new(opts)
   -- player's verdicts from the NPCs' without walking the stack each call.
   local livePlayer
 
+  -- M8: a Seafoam current is a chain of the player's scripted steps that
+  -- checkSeafoamCurrent starts on one of the map's current cells while
+  -- surfing (OC:5028-5078: runSpinnerMoves with noSpin, :4839-4864, which
+  -- sets neither p.spinning nor spinnerSliding; the B4F stair push-back,
+  -- :5043-5054, is one too). Nothing marks those steps, so a chain is
+  -- recognised by where it began: when the player's scripted moves start
+  -- (OC:5655-5660) on such a cell while surfing. The surf mount's own
+  -- scripted step (stepForwardOrCrossEdge, OC:2162-2170) starts on land.
+  local chain = { active = false, current = false }
+
+  local function currentStart(ow, p)
+    local data = game and game.data
+    local field = data and data.field
+    local sf = type(field) == "table" and type(field.seafoam) == "table" and field.seafoam[ow.map.id] or nil
+    if type(sf) ~= "table" or not p.surfing then return false end
+    local x, y = p.cellX, p.cellY
+    local function at(c) return type(c) == "table" and c.x == x and c.y == y end
+    for _, c in ipairs(type(sf.currents) == "table" and sf.currents or {}) do
+      if at(c) then return true end
+    end
+    if at(sf.entryCurrent) then return true end
+    local exit = type(sf.forcedExit) == "table" and sf.forcedExit or nil
+    for _, c in ipairs(exit and type(exit.coords) == "table" and exit.coords or {}) do
+      if at(c) then return true end
+    end
+    return false
+  end
+
+  -- M8: which escape a teleportOut spin is (OC:2470-2499, shared by DIG,
+  -- TELEPORT and the ESCAPE ROPE): the one gen1-bridge started (act.field)
+  -- or saw the bag start (the item.use wrapper below) is marked with its
+  -- teleportOut table; otherwise the party menu's rules say it: TELEPORT
+  -- works only outside, DIG only in the dungeon tilesets
+  -- (src/ui/PartyMenu.lua:708-735), so the map tells them apart. A warp
+  -- pad's spin is a warp-table warp (player.warped, OC:5307-5343), which
+  -- kb_warp names first.
+  local DIG_TILESETS = { FOREST = true, CEMETERY = true, CAVERN = true, FACILITY = true, INTERIOR = true }
+
+  local function outsideMap(ow)
+    local Map, data = try("src.world.Map"), game and game.data
+    if not (Map and type(Map.isOutside) == "function" and type(ow.map) == "table" and type(ow.map.def) == "table") then
+      return false
+    end
+    local FieldDefaults = try("src.world.FieldDefaults")
+    local tilesets = FieldDefaults and type(FieldDefaults.field) == "function"
+      and FieldDefaults.field(data, "outsideTilesets") or (data and data.field and data.field.outsideTilesets)
+    local ok, out = pcall(Map.isOutside, ow.map.def, tilesets)
+    return ok and out == true
+  end
+
+  local function teleportKind(ow)
+    local st = type(game) == "table" and rawget(game, "kantoBridgeState") or nil
+    local mark = type(st) == "table" and st.departure or nil
+    if type(mark) == "table" and mark.out == ow.teleportOut then return mark.kind end
+    return outsideMap(ow) and "teleport" or "dig"
+  end
+
   -- Everything the player observer needs, as plain values. The input.step
   -- hook runs before the stack updates (src/core/Game.lua:320 vs :356), so
   -- this is the world as the previous step left it.
@@ -394,6 +451,15 @@ function Engine.new(opts)
       facts.progress = tonumber(p.progress)     -- frames done, Player.lua:182, :237
     end
     facts.playerScripted = playerScripted(ow, p)
+    -- M8: a Seafoam current's chain (see currentStart above)
+    if facts.playerScripted then
+      if not chain.active or chain.ow ~= ow then
+        chain.active, chain.ow, chain.current = true, ow, currentStart(ow, p)
+      end
+    else
+      chain.active, chain.ow, chain.current = false, nil, false
+    end
+    facts.current = (chain.current and p.surfing) and true or false
     facts.ledge = p.ledgeHop and true or false  -- OC:1985-2037, Player.lua:124
     -- a hop's whole length, both cells: stepLength() * 2 (OC:2017-2018, :2029-2030)
     facts.hopFrames = facts.ledge and tonumber(p.hopTotal) or nil
@@ -412,7 +478,7 @@ function Engine.new(opts)
     if ow.flyFade or ow.flyAnim then
       facts.departure = "fly"
     elseif ow.teleportOut then
-      facts.departure = "teleport"
+      facts.departure = teleportKind(ow) -- M8: dig, rope or teleport
     elseif ow.holeFall then
       facts.departure = "hole"
     end
@@ -426,6 +492,10 @@ function Engine.new(opts)
     -- healAnim and pikaHop (OC:1344-1363)
     facts.scripted = (running or #(ow.scriptMoves or {}) > 0 or ow.engaging
       or ow.healAnim or ow.pikaHop) and true or false
+    -- M8: the main script runner alone (a script's end is a story-diff
+    -- moment; ScriptRunner:isRunning, src/script/ScriptRunner.lua:120-139)
+    facts.runner = running and true or false
+    facts.dark = ow.dark and true or false                          -- OC:507-515, :1063
     facts.surf = p.surfing and true or false                         -- Player.lua:139, :331
     facts.bike = (save and save.onBike) and true or false            -- OC:1301-1302
     facts.slope = (facts.bike and p.slopeMap) and true or false      -- Player.lua:128
@@ -2623,6 +2693,16 @@ function Engine.new(opts)
     local function native()
       return nextFn(g, battle, id, target, list, moveIndex, picker)
     end
+    -- M8: the bag's ESCAPE ROPE (BagMenu's escape_rope branch runs
+    -- beginTeleportOut inside this dispatch, src/ui/BagMenu.lua:323-347):
+    -- its spin is marked so the warp goes out as kind "rope"
+    if id == "ESCAPE_ROPE" and battle == nil and target == nil then
+      local ow = engine.overworld()
+      local before = ow and ow.teleportOut
+      local results = { native() }
+      if ow and ow.teleportOut ~= nil and ow.teleportOut ~= before then engine.markDeparture("rope") end
+      return unpack(results, 1, table.maxn(results))
+    end
     if battle ~= nil or type(g) ~= "table" or type(target) ~= "table" or type(id) ~= "string" then
       return native()
     end
@@ -2933,6 +3013,563 @@ function Engine.new(opts)
 
   function engine.pcCounts()
     return { taken = pcCounts.taken, native = pcCounts.native }
+  end
+
+  -- ------------------------------------------------------------ the story, departures, field moves (M8)
+  --
+  -- Story diffs (docs/PROTOCOL.md "Story rules (M8)", PLAN section 4.1
+  -- "Story diffs") compare the live game with the map data the world was
+  -- built from:
+  --   * blocks: Map:setBlock writes into the map record's own blocks
+  --     (src/world/Map.lua:244-249), which is the shared Data.maps record
+  --     (MapLoader's build hands Map.new data.maps[mapId] itself,
+  --     src/world/MapLoader.lua:33-46; Map.new keeps it as `def`,
+  --     Map.lua:112-114), so the live block array is ow.map.def.blocks and
+  --     the pristine one must be copied before any map loads: at mods.loaded
+  --     (src/mods/Loader.lua:2163), which a boot runs before anything is on
+  --     the stack (src/core/Game.lua:47-119) and a hot reload runs right
+  --     after Data:reloadGenerated put the generated records back
+  --     (src/dev/HotReload.lua:31-41; src/core/Data.lua:372-378). A map the
+  --     copy lacks is read from the dataset view (the export's own source).
+  --   * objects: an object's effective visibility is the engine's spawn
+  --     filter, OverworldState.objectVisible (OC:227-243, exposed :244):
+  --     the record's `hidden` default, then save.objectToggles by name,
+  --     items taken and beaten statics by "<MAP>_obj_<index>".
+  --   * a map (re)load is a new ow.npcs table: setMap is its only writer
+  --     (OC:551), for warps, seam crossings, same-map warps and reloads; Cut
+  --     regrowth and the door stamps happen there too (OC:479-488).
+
+  do
+    local pristine = { maps = {}, captured = false, source = nil }
+    local objects -- byName[map][name], byKey["<MAP>_obj_<i>"] = { map, obj }, of the pristine records
+    local dsView, dsTried
+
+    local function copyMap(def)
+      if type(def) ~= "table" or type(def.blocks) ~= "table" or type(def.width) ~= "number" then return nil end
+      local blocks = {}
+      for i = 1, #def.blocks do blocks[i] = def.blocks[i] end
+      local objs = {}
+      for _, o in ipairs(type(def.objects) == "table" and def.objects or {}) do
+        -- runtime objects a mod adds (OC:5591-5605) are never map data
+        if type(o) == "table" and not o.runtime then
+          objs[#objs + 1] = { index = o.index, name = o.name, hidden = o.hidden, item = o.item, pokemon = o.pokemon }
+        end
+      end
+      return { width = def.width, height = tonumber(def.height) or 0, blocks = blocks, objects = objs }
+    end
+
+    -- mods.loaded's payload { loader, data } (Loader.lua:2163). Returns how
+    -- many maps were copied.
+    function engine.capturePristine(data)
+      local maps = type(data) == "table" and data.maps or nil
+      if type(maps) ~= "table" then return 0 end
+      local out, n = {}, 0
+      for id, def in pairs(maps) do
+        local copy = type(id) == "string" and copyMap(def) or nil
+        if copy then
+          out[id] = copy
+          n = n + 1
+        end
+      end
+      pristine = { maps = out, captured = true, source = "boot" }
+      objects = nil
+      return n
+    end
+
+    -- One map's pristine record (a copy kb_engine owns: callers only read
+    -- it), from the boot copy or else the dataset view (DatasetViews' get
+    -- hands out detached copies, src/mods/DatasetViews.lua:368-378).
+    local function pristineMap(mapId)
+      local m = pristine.maps[mapId]
+      if m then return m end
+      if type(mapId) ~= "string" then return nil end
+      if not dsTried then
+        dsTried = true
+        dsView = engine.openDataset(engine.gameVersion())
+      end
+      local reg = dsView and dsView.content and dsView.content.maps or nil
+      if not (reg and type(reg.get) == "function") then return nil end
+      local ok, def = pcall(reg.get, reg, mapId)
+      m = ok and copyMap(def) or nil
+      if m then pristine.maps[mapId] = m end
+      return m
+    end
+
+    function engine.pristineBlocks(mapId)
+      local m = pristineMap(mapId)
+      return m and m.blocks or nil, m and m.width or nil
+    end
+
+    function engine.pristineCaptured() return pristine.captured end
+
+    -- The pristine block at (bx, by) of a map, or nil.
+    function engine.pristineBlockAt(mapId, bx, by)
+      local m = pristineMap(mapId)
+      if not (m and type(bx) == "number" and type(by) == "number") then return nil end
+      if bx < 0 or by < 0 or bx >= m.width or by >= m.height then return nil end
+      return m.blocks[by * m.width + bx + 1]
+    end
+
+    -- The current map for the story: its id, size in blocks and a load
+    -- serial that changes on every setMap (a new ow.npcs table, OC:551).
+    local loadTable, loadSerial = nil, 0
+    function engine.storyMap()
+      local ow = engine.overworld()
+      local m = ow and ow.map
+      local def = type(m) == "table" and m.def or nil
+      if type(def) ~= "table" or type(def.blocks) ~= "table" or not symbol(m.id) then return nil end
+      if ow.npcs ~= loadTable then loadTable, loadSerial = ow.npcs, loadSerial + 1 end
+      return { map = m.id, width = tonumber(def.width) or 0, height = tonumber(def.height) or 0, load = loadSerial }
+    end
+
+    -- A copy of the current map's live blocks (Map:blockAt reads the same
+    -- array, Map.lua:193-198).
+    function engine.liveBlocks()
+      local ow = engine.overworld()
+      local blocks = ow and ow.map and type(ow.map.def) == "table" and ow.map.def.blocks or nil
+      if type(blocks) ~= "table" then return nil end
+      local out = {}
+      for i = 1, #blocks do out[i] = blocks[i] end
+      return out
+    end
+
+    -- The live blocks that differ from `known` (the caller's plain array),
+    -- as { { index, block }, ... }, or nil when none do. Allocates nothing
+    -- when nothing changed (it runs every step).
+    function engine.liveBlockChanges(known)
+      local ow = engine.overworld()
+      local blocks = ow and ow.map and type(ow.map.def) == "table" and ow.map.def.blocks or nil
+      if type(blocks) ~= "table" or type(known) ~= "table" then return nil end
+      local out
+      for i = 1, #blocks do
+        local b = blocks[i]
+        if b ~= known[i] then
+          out = out or {}
+          out[#out + 1] = { i, b }
+        end
+      end
+      return out
+    end
+
+    -- The engine's own record of this visit's cuts on a map, { bx, by,
+    -- block = the block before the cut } (tryCut, OC:3318-3322; cleared by
+    -- the regrowth on the map's next load, OC:481-487), copied.
+    function engine.cutRecords(mapId)
+      local ow = engine.overworld()
+      local list = ow and type(ow.cutBlocks) == "table" and ow.cutBlocks[mapId] or nil
+      local out = {}
+      for _, c in ipairs(type(list) == "table" and list or {}) do
+        if type(c) == "table" then out[#out + 1] = { bx = c.bx, by = c.by, block = c.block } end
+      end
+      return out
+    end
+
+    -- field.cutTreeSwaps as before -> after (tryCut takes the first row
+    -- whose before matches, OC:3310-3313).
+    function engine.cutSwaps()
+      local data = gameData()
+      local rows = data and type(data.field) == "table" and data.field.cutTreeSwaps or nil
+      local out = {}
+      for _, r in ipairs(type(rows) == "table" and rows or {}) do
+        if type(r) == "table" and r.before ~= nil and out[r.before] == nil then out[r.before] = r.after end
+      end
+      return out
+    end
+
+    -- The field tables the swap sites come from, as the engine reads them:
+    -- FieldDefaults.fieldValue falls back to the engine's own seeds
+    -- (src/world/FieldDefaults.lua:247-252: the Rocket Hideout lift gates,
+    -- the trash-can door), copied.
+    function engine.swapField()
+      local data = gameData()
+      local field = data and type(data.field) == "table" and data.field or {}
+      local FD = try("src.world.FieldDefaults")
+      local function value(...)
+        if FD and type(FD.fieldValue) == "function" then
+          local ok, v = pcall(FD.fieldValue, data, ...)
+          if ok then return v end
+        end
+        local node = field
+        for _, k in ipairs({ ... }) do node = type(node) == "table" and node[k] or nil end
+        return node
+      end
+      local ck = type(field.cardKeyDoors) == "table" and field.cardKeyDoors or {}
+      local out = {
+        cardKeyDoors = {
+          maps = ck.maps, openBlock = ck.openBlock, silphCo11F = ck.silphCo11F,
+          closedDoors = value("cardKeyDoors", "closedDoors"), skipMaps = value("cardKeyDoors", "skipMaps"),
+        },
+        gameCornerPoster = field.gameCornerPoster,
+        hiddenExtras = { trashCans = value("hiddenExtras", "trashCans") },
+      }
+      return (copyPlain(out, {}, 0))
+    end
+
+    -- objects of every map, from the pristine copy (or the live records
+    -- when there is none: map objects never change in play, OC:5591-5605
+    -- adds only runtime ones, which are skipped)
+    local function objectIndex()
+      if objects then return objects end
+      local byName, byKey = {}, {}
+      local source = pristine.maps
+      if not pristine.captured then
+        source = {}
+        local data = gameData()
+        for id, def in pairs(data and type(data.maps) == "table" and data.maps or {}) do
+          if type(id) == "string" then source[id] = copyMap(def) end
+        end
+      end
+      for id, m in pairs(source) do
+        local names = {}
+        byName[id] = names
+        for _, o in ipairs(m.objects) do
+          if type(o.name) == "string" then names[o.name] = o end
+          if type(o.index) == "number" then byKey[id .. "_obj_" .. o.index] = { map = id, obj = o } end
+        end
+      end
+      objects = { byName = byName, byKey = byKey }
+      return objects
+    end
+
+    -- objectVisible's rule (OC:227-243), for an engine that doesn't expose it
+    local function ruleVisible(save, mapId, obj)
+      local toggles = type(save.objectToggles) == "table" and save.objectToggles[mapId] or nil
+      local visible = not obj.hidden
+      if obj.name and type(toggles) == "table" and toggles[obj.name] ~= nil then visible = toggles[obj.name] end
+      local key = mapId .. "_obj_" .. tostring(obj.index)
+      if obj.item and type(save.itemsTaken) == "table" and save.itemsTaken[key] then visible = false end
+      if obj.pokemon and type(save.defeatedTrainers) == "table" and save.defeatedTrainers[key] then visible = false end
+      return visible and true or false
+    end
+
+    -- Effective visibility for the story: every object whose effective
+    -- visibility differs from its record's `hidden` default, as
+    -- { [map] = { [name] = visible } } (names that aren't symbols are left
+    -- out and counted). Only objects a toggle, an item taken or a beaten
+    -- static can touch are looked at.
+    function engine.storyToggles()
+      local save = engine.save()
+      local out, skipped = {}, 0
+      if type(save) ~= "table" then return out, skipped end
+      local idx = objectIndex()
+      local OC = try("src.world.OverworldController")
+      local visibleFn = OC and type(OC.objectVisible) == "function" and OC.objectVisible or nil
+      local candidates = {}
+      for map, names in pairs(type(save.objectToggles) == "table" and save.objectToggles or {}) do
+        local byName = idx.byName[map]
+        if byName and type(names) == "table" then
+          for name in pairs(names) do
+            local o = byName[name]
+            if o then candidates[o] = map end
+          end
+        end
+      end
+      for key in pairs(type(save.itemsTaken) == "table" and save.itemsTaken or {}) do
+        local e = idx.byKey[key]
+        if e and e.obj.item then candidates[e.obj] = e.map end
+      end
+      for key in pairs(type(save.defeatedTrainers) == "table" and save.defeatedTrainers or {}) do
+        local e = idx.byKey[key]
+        if e and e.obj.pokemon then candidates[e.obj] = e.map end
+      end
+      for obj, map in pairs(candidates) do
+        local visible
+        if visibleFn then
+          local ok, v = pcall(visibleFn, save, map, obj)
+          if ok then visible = v and true or false end
+        end
+        if visible == nil then visible = ruleVisible(save, map, obj) end
+        if visible ~= (not obj.hidden) then
+          if type(obj.name) == "string" and #obj.name <= 96 and obj.name:find(SYMBOL) then
+            out[map] = out[map] or {}
+            out[map][obj.name] = visible
+          else
+            skipped = skipped + 1
+          end
+        end
+      end
+      return out, skipped
+    end
+
+    -- Marks the teleportOut spin just started as `kind` (dig, rope,
+    -- teleport); observe() reports it as the departure (teleportKind).
+    function engine.markDeparture(kind)
+      local ow, st = engine.overworld(), bridgeState()
+      if ow and st and ow.teleportOut ~= nil then st.departure = { kind = kind, out = ow.teleportOut } end
+    end
+  end
+
+  -- ---- field moves from Minecraft (act.field)
+  --
+  -- The party menu's and the bag's own entry points, the ones the supported
+  -- mod.world:useFieldAction / flyTo facade calls (src/world/WorldAPI.lua
+  -- :190-324), after the checks the engine makes, so a refusal names its
+  -- reason:
+  --   the world takes input   WorldAPI's acceptsMenuInput (:26-35, a local)
+  --   the move                a shadow-party member knows it, and the badge
+  --                           of constants.hmBadges (src/world/FieldDefaults
+  --                           .lua:220-224) is in the bag: partyKnowsVanilla
+  --                           (OC:2214-2228); then OverworldState:partyKnows
+  --                           itself (OC:2230-2237), which a mod's
+  --                           fieldmove.eligibility hook may answer
+  --   cut                     useCutFieldMove (OC:3415-3438), tryCut on the
+  --                           cell in front (OC:3292-3347)
+  --   surf                    useSurfFieldMove (OC:3352-3404), trySurf
+  --                           (OC:3237-3271) or stopSurfing (OC:3273-3280)
+  --   strength                useStrengthFieldMove (OC:1074-1095), not when
+  --                           already active (the facade's own rule)
+  --   flash                   useFlashFieldMove (OC:1057-1072), only while
+  --                           the map is dark (ow.dark, the facade's rule)
+  --   dig / teleport          beginTeleportOut (OC:2470-2499) where the party
+  --                           menu allows it (PartyMenu.lua:708-735) and a
+  --                           heal point exists
+  --   rope                    action dig with item ESCAPE_ROPE: the bag's
+  --                           branch (BagMenu.lua:323-347): the item used up
+  --                           with Bag.remove (src/inventory/Bag.lua:166-181)
+  --   bicycle                 useBicycle (OC:1035-1052) after the bag's checks
+  --                           (BagMenu.lua:167-212; ItemEffects.lua:636-647)
+  --   fish                    useFishingRod (OC:2431-2437) with the rod
+  --   fly                     flyTo (OC:2441-2458) to a destination the Town
+  --                           Map would list (WorldAPI.lua:69-80), or, with no
+  --                           destination, the native fly list: Screens.push
+  --                           TownMap { fly, onFly } as the party menu does
+  --                           (PartyMenu.lua:582-585; src/ui/Screens.lua)
+  do
+    local RODS = { "SUPER_ROD", "GOOD_ROD", "OLD_ROD" } -- best first (WorldAPI.lua:24)
+    local ROD = { SUPER_ROD = true, GOOD_ROD = true, OLD_ROD = true }
+    local DIG_PLACES = { FOREST = true, CEMETERY = true, CAVERN = true, FACILITY = true, INTERIOR = true }
+
+    local function takesInput(ow)
+      local stack = game and game.stack
+      local runner = ow.runner
+      return stack and stack.top and stack:top() == ow
+        and not ow.transitioning and not ow.flyAnim and not ow.teleportOut
+        and not ow.engaging and not ow.emote and not ow.pikaHop and not ow.healAnim
+        and not (ow.player and (ow.player.moving or ow.player.inputLocked))
+        and not (runner and runner.isRunning and runner:isRunning())
+        and #(ow.scriptMoves or {}) == 0
+    end
+
+    local function knows(save, move)
+      for _, mon in ipairs(type(save.party) == "table" and save.party or {}) do
+        for _, mv in ipairs(type(mon) == "table" and type(mon.moves) == "table" and mon.moves or {}) do
+          if type(mv) == "table" and mv.id == move then return true end
+        end
+      end
+      return false
+    end
+
+    local function badgeOf(move)
+      local FD = try("src.world.FieldDefaults")
+      local gates = FD and type(FD.constant) == "function" and FD.constant(gameData(), "hmBadges") or nil
+      local gate = type(gates) == "table" and gates[move] or nil
+      return type(gate) == "table" and gate.badge or nil
+    end
+
+    -- nil when the party may use the move (the engine's own partyKnows
+    -- decides, a mod's eligibility hook included), else why not: the move
+    -- missing from the shadow party, else its badge
+    local function eligible(ow, save, move)
+      local ok, mon = pcall(ow.partyKnows, ow, move)
+      if ok and mon then return nil end
+      if not knows(save, move) then return "no_move" end
+      local badge = badgeOf(move)
+      local inv = type(save.inventory) == "table" and save.inventory or {}
+      if badge and not inv[badge] then return "no_badge" end
+      return "no_move"
+    end
+
+    local function call(ow, method, ...)
+      local fn = ow[method]
+      if type(fn) ~= "function" then return false, nil end
+      return pcall(fn, ow, ...)
+    end
+
+    local function hasHeal(save) return type(save.lastHeal) == "table" end
+
+    local function tilesetOf(ow) return type(ow.map.def) == "table" and ow.map.def.tileset or nil end
+
+    local function flyable(save, mapId)
+      local data = gameData()
+      local field = data and type(data.field) == "table" and data.field or {}
+      local Map = try("src.world.Map")
+      for _, id in ipairs(type(field.flyOrder) == "table" and field.flyOrder or {}) do
+        if id == mapId then
+          local def = data.maps and data.maps[id]
+          local town = Map and type(Map.isFlyTown) == "function" and def and Map.isFlyTown(def)
+          return type(save.visited) == "table" and save.visited[id] and type(field.flyWarps) == "table"
+            and field.flyWarps[id] and town and true or false
+        end
+      end
+      return false
+    end
+
+    local function anyFlyable(save)
+      local data = gameData()
+      local field = data and type(data.field) == "table" and data.field or {}
+      for _, id in ipairs(type(field.flyOrder) == "table" and field.flyOrder or {}) do
+        if flyable(save, id) then return true end
+      end
+      return false
+    end
+
+    local function teleportOut(ow, kind)
+      local ok = call(ow, "beginTeleportOut")
+      if not ok or ow.teleportOut == nil then return false, "failed" end
+      engine.markDeparture(kind)
+      return true, kind
+    end
+
+    local actions = {}
+
+    function actions.cut(ow, save, p)
+      local why = eligible(ow, save, "CUT")
+      if why then return false, why end
+      local ok, verdict = call(ow, "useCutFieldMove")
+      if not ok then return false, "failed" end
+      if verdict == "no_badge" then return false, "no_badge" end
+      if verdict ~= "ok" then return false, "no_target" end
+      local fx, fy = p:facingCell()
+      local okCut, did = call(ow, "tryCut", fx, fy)
+      if okCut and did then return true, "cut" end
+      return false, "failed"
+    end
+
+    function actions.surf(ow, save, p)
+      local why = eligible(ow, save, "SURF")
+      if why then return false, why end
+      local ok, verdict = call(ow, "useSurfFieldMove")
+      if not ok then return false, "failed" end
+      if verdict == "no_badge" then return false, "no_badge" end
+      if verdict == "forced_bike" or verdict == "current" then return false, "not_here" end
+      if verdict == "dismount" then
+        if call(ow, "stopSurfing") then return true, "dismount" end
+        return false, "failed"
+      end
+      if verdict ~= "ok" then return false, "no_target" end
+      local fx, fy = p:facingCell()
+      if call(ow, "trySurf", fx, fy) then return true, "surf" end
+      return false, "failed"
+    end
+
+    function actions.strength(ow, save)
+      local why = eligible(ow, save, "STRENGTH")
+      if why then return false, why end
+      if ow.strengthActive then return false, "already" end
+      local ok, did = call(ow, "useStrengthFieldMove")
+      if ok and did then return true, "strength" end
+      return false, "failed"
+    end
+
+    function actions.flash(ow, save)
+      local why = eligible(ow, save, "FLASH")
+      if why then return false, why end
+      if not ow.dark then return false, "not_here" end
+      if call(ow, "useFlashFieldMove") then return true, "flash" end
+      return false, "failed"
+    end
+
+    function actions.dig(ow, save, _, opts)
+      local rope = opts.item == "ESCAPE_ROPE"
+      if opts.item ~= nil and not rope then return false, "no_item" end
+      if rope then
+        local inv = type(save.inventory) == "table" and save.inventory or {}
+        if (tonumber(inv.ESCAPE_ROPE) or 0) < 1 then return false, "no_item" end
+      else
+        local why = eligible(ow, save, "DIG")
+        if why then return false, why end
+      end
+      if not (DIG_PLACES[tilesetOf(ow)] and ow.map.id ~= "AGATHAS_ROOM") or not hasHeal(save) then
+        return false, "not_here"
+      end
+      if rope then
+        local Bag = try("src.inventory.Bag")
+        if not (Bag and type(Bag.remove) == "function" and pcall(Bag.remove, save, "ESCAPE_ROPE", 1)) then
+          return false, "failed"
+        end
+        return teleportOut(ow, "rope")
+      end
+      return teleportOut(ow, "dig")
+    end
+
+    function actions.teleport(ow, save)
+      local why = eligible(ow, save, "TELEPORT")
+      if why then return false, why end
+      if not outsideMap(ow) or not hasHeal(save) then return false, "not_here" end
+      return teleportOut(ow, "teleport")
+    end
+
+    function actions.bicycle(ow, save, p)
+      local inv = type(save.inventory) == "table" and save.inventory or {}
+      if (tonumber(inv.BICYCLE) or 0) < 1 then return false, "no_item" end
+      if p.surfing then return false, "not_here" end
+      if save.onBike and save.forcedBike then return false, "not_here" end
+      if not save.onBike then
+        local ok, allowed = call(ow, "bikeAllowed", ow.map.id)
+        if not (ok and allowed) then return false, "not_here" end
+      end
+      local ok, did = call(ow, "useBicycle")
+      if not (ok and did) then return false, "failed" end
+      return true, save.onBike and "bike_on" or "bike_off"
+    end
+
+    function actions.fish(ow, save, p, opts)
+      local inv = type(save.inventory) == "table" and save.inventory or {}
+      local rod = opts.item
+      if rod ~= nil then
+        if not ROD[rod] or (tonumber(inv[rod]) or 0) < 1 then return false, "no_item" end
+      else
+        for _, id in ipairs(RODS) do
+          if (tonumber(inv[id]) or 0) >= 1 then rod = id break end
+        end
+        if not rod then return false, "no_item" end
+      end
+      if p.surfing then return false, "not_here" end
+      local okW, water = call(ow, "facingIsShoreOrWater")
+      if not (okW and water) then return false, "no_target" end
+      local ok, did = call(ow, "useFishingRod", rod)
+      if ok and did then return true, "fish" end
+      return false, "failed"
+    end
+
+    function actions.fly(ow, save, _, opts)
+      local why = eligible(ow, save, "FLY")
+      if why then return false, why end
+      if not outsideMap(ow) then return false, "not_here" end
+      if opts.dest ~= nil then
+        if not flyable(save, opts.dest) then return false, "no_target" end
+        if call(ow, "flyTo", opts.dest) and (ow.flyFade or ow.flyAnim) then return true, "fly" end
+        return false, "failed"
+      end
+      if not anyFlyable(save) then return false, "no_target" end
+      local Screens = try("src.ui.Screens")
+      if not (Screens and type(Screens.push) == "function") then return false, "failed" end
+      local okPush = pcall(Screens.push, game, "TownMap", { fly = true, onFly = function(mapId)
+        if engine.overworld() == ow then ow:flyTo(mapId) end
+      end })
+      if okPush then return true, "fly_list" end
+      return false, "failed"
+    end
+
+    -- Performs act.field's action now: true plus the kind, or false plus
+    -- the reason (not_ingame, not_idle, no_move, no_badge, no_target,
+    -- not_here, no_item, already, failed). The caller has already set the
+    -- facing for a target cell.
+    function engine.fieldAction(action, opts)
+      opts = type(opts) == "table" and opts or {}
+      local ow, save = engine.overworld(), engine.save()
+      if not (ow and type(save) == "table" and type(ow.player) == "table") then return false, "not_ingame" end
+      local fn = actions[action]
+      if not fn then return false, "bad_action" end
+      if not takesInput(ow) then return false, "not_idle" end
+      local ok, done, what = pcall(fn, ow, save, ow.player, opts)
+      if not ok then
+        warnAt("engine.field_failed", done)
+        return false, "failed"
+      end
+      return done == true, what
+    end
+
   end
 
   -- ------------------------------------------------------------ export (M2)

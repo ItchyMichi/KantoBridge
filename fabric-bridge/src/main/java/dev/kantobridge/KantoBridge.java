@@ -15,6 +15,7 @@ import dev.kantobridge.pokemon.PcService;
 import dev.kantobridge.proto.Catalog;
 import dev.kantobridge.server.ActivityService;
 import dev.kantobridge.server.BuildHold;
+import dev.kantobridge.server.FlashService;
 import dev.kantobridge.server.HabitatService;
 import dev.kantobridge.server.Rules;
 import dev.kantobridge.server.SaveService;
@@ -56,6 +57,8 @@ public class KantoBridge implements ModInitializer {
 		// The relay's story.state and warp.request (docs/PLAN.md §4.4).
 		StoryStateService.init();
 		WarpService.init();
+		// Night Vision on dark maps the player's hidden game lit with Flash (M8).
+		FlashService.init();
 		// Battles for the hidden game (hidden proxy NPCs + Cobblemon's pvn), the party both ways, the players' activity.
 		BattleService.init();
 		// Static, surfing and fishing encounters (wild battle.start kinds), and Run for every wild battle in Kanto.

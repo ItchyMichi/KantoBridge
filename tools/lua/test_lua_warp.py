@@ -200,12 +200,23 @@ def test_observe_reports_hops_boulders_and_departures():
     boulder[b"def"][b"pushable"] = False  # an explicit "not pushable" wins over the sprite
     assert eng.observe().boulderPush is None
     E.ow.scriptMoves = b.table()
+    E.ow.map[b"def"] = b.to_lua({"id": "TEST_TOWN", "tileset": "OVERWORLD"})
     for field, departure in (("flyFade", b"fly"), ("flyAnim", b"fly"), ("teleportOut", b"teleport"),
                              ("holeFall", b"hole")):
         E.ow[field.encode()] = b.table()
         assert eng.observe().departure == departure, field
         E.ow[field.encode()] = None
     assert eng.observe().departure is None
+    # M8: the spin out of a dungeon is a Dig (TELEPORT works only outside, PartyMenu.lua:708-735),
+    # and a spin gen1-bridge marked keeps its mark (the bag's ESCAPE ROPE)
+    E.ow.map[b"def"].tileset = b"CAVERN"
+    E.ow.teleportOut = b.table()
+    assert eng.observe().departure == b"dig"
+    eng.markDeparture(b"rope")
+    assert eng.observe().departure == b"rope"
+    E.ow.teleportOut = b.table()  # a new spin: the mark was for the old one
+    assert eng.observe().departure == b"dig"
+    E.ow.teleportOut = None
     E.startStep(b"down")
     p.progress = 5
     assert eng.observe().progress == 5

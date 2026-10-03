@@ -38,11 +38,13 @@ return function(mod)
     Warp = import("observe/kb_warp.lua"),
     Snapshot = import("observe/kb_snapshot.lua"),
     Npcs = import("observe/kb_npcs.lua"),
+    Story = import("observe/kb_story.lua"),
     Ui = import("observe/kb_ui.lua"),
     Mirror = import("observe/kb_mirror.lua"),
     Bag = import("observe/kb_bag.lua"),
     Move = import("act/kb_move.lua"),
     Interact = import("act/kb_interact.lua"),
+    Field = import("act/kb_field.lua"),
     UiAct = import("act/kb_uiact.lua"),
     Battle = import("act/kb_battle.lua"),
     Party = import("act/kb_party.lua"),
@@ -169,6 +171,10 @@ return function(mod)
     },
   })
   local pcs = kb.Pc.new({ engine = engine, log = log })
+  -- M8: the story diffs (story.flags, story.toggles, story.blocks,
+  -- story.lit) and field moves from Minecraft (act.field)
+  local story = kb.Story.new({ engine = engine, SwapSites = kb.SwapSites, json = kb.json, log = log })
+  local field = kb.Field.new({ engine = engine, log = log })
 
   -- One injected tap per logic step (PLAN section 2.3), shared by the
   -- interaction and the UI answers: mod.input:tap with the live game
@@ -202,6 +208,9 @@ return function(mod)
     battles.rebase()
     party.rebase()
     bagObs.rebase()
+    -- M8: the story's full state (effective toggles, the current map's
+    -- differing blocks, lit maps); its diffs start from here
+    local storyParts = story.rebase()
     local data, dropped = kb.Snapshot.build({
       json = kb.json,
       Player = kb.Player,
@@ -219,6 +228,7 @@ return function(mod)
         return r and tonumber(r.index)
       end,
       uidOf = engine.uidOf,
+      story = storyParts,
     })
     -- logged at the end of the step: a forwarded `log` must not land between
     -- hello.ok and the snapshot
@@ -269,6 +279,8 @@ return function(mod)
     merge("item", engine.itemCounts())
     merge("save", saves.stats())
     merge("pc", pcs.stats())
+    merge("story", story.stats())
+    merge("field", field.stats())
     for k, v in pairs(engine.bridgeCounts()) do out[k] = v end
     out.screenEvents = screenEvents
     -- M7: money, the bag's size and the beaten trainers, as counts
@@ -290,8 +302,8 @@ return function(mod)
     out.defeated = defeated
     -- the names typed into the hidden game: lengths and a short hash only
     local p = save and type(save.player) == "table" and save.player or {}
-    for key, field in pairs({ playerName = "name", rivalName = "rival" }) do
-      local name = p[field]
+    for key, slot in pairs({ playerName = "name", rivalName = "rival" }) do
+      local name = p[slot]
       if type(name) == "string" then
         out[key .. "Len"] = #name
         out[key .. "Hash"] = tonumber(kb.sha256.short(name):sub(1, 7), 16) or 0
@@ -366,6 +378,8 @@ return function(mod)
     end
   end
   session.on("act.interact", queued(interact.request))
+  -- M8: field moves (act/kb_field.lua), answered by act.result
+  session.on("act.field", queued(field.request))
   session.on("act.button", queued(uiAct.button))
   for _, t in ipairs({ "ui.advance", "ui.pick", "ui.back", "ui.qty", "ui.name" }) do
     session.on(t, queued(function(data, seq, gen) return uiAct.request(t, data, seq, gen) end))
@@ -512,7 +526,18 @@ return function(mod)
     end
     local ctx = { live = live, generation = generation, budget = tapBudget, moverBusy = mover.busy() }
     interact.step(facts, mode, ev, npcRaw, out, ctx)
+    field.step(facts, mode, out, { live = live, generation = generation, moverBusy = ctx.moverBusy,
+                                   interactBusy = interact.busy() })
     npcObs.step(npcRaw, npcMap, npcGen, emote, out, live)
+    -- M8: story.blocks / story.lit every step, story.flags / story.toggles
+    -- every few steps, when a script ends and on a map load. Guarded: the
+    -- story reads a lot of save data, and a fault there must not stop the
+    -- UIs, battles and saves that follow in this step.
+    local okStory, storyErr = pcall(story.step, facts, out, { live = live, generation = generation })
+    if not okStory then
+      log.once("story.step_failed", "error", "story.step_failed",
+        { at = type(storyErr) == "string" and storyErr:match("[%w_/%.%-]+%.lua:%d+") or "unknown" })
+    end
     uiObs.step(wake, out)
     wake = false
     uiAct.step(facts, mode, out, ctx)
@@ -610,7 +635,13 @@ return function(mod)
   -- The mod merge is done and nothing is on the stack yet
   -- (src/mods/Loader.lua:2163, src/core/Game.lua:52-119): the export checks
   -- that its dataset view opens, and copies the live Data now if it doesn't.
-  mod.events:on("mods.loaded", function(payload) exporter.onModsLoaded(payload) end)
+  mod.events:on("mods.loaded", function(payload)
+    -- M8: the map data the story diffs compare with, copied before any map
+    -- loads (lib/kb_engine.lua "the story, departures, field moves")
+    local ok, maps = pcall(engine.capturePristine, type(payload) == "table" and payload.data or nil)
+    if ok then log.info("story.pristine", { maps = maps }) else log.warn("story.pristine_failed", {}) end
+    exporter.onModsLoaded(payload)
+  end)
   -- From the first map load on, the live Data may differ from the import
   -- (map.entered, src/world/OverworldController.lua:686).
   mod.events:on("map.entered", function() exporter.onMapEntered() end)

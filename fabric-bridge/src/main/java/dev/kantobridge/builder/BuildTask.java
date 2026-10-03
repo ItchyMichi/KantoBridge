@@ -330,6 +330,7 @@ public final class BuildTask {
 		r.placeMs = this.placeStartNanos == 0 ? 0 : (now - this.placeStartNanos) / 1_000_000L;
 		r.mapsRequested = plan.mapsRequested();
 		r.mapsBuilt = plan.maps().size();
+		r.mapsUnplaced = plan.mapsUnplaced();
 		r.surfaceMaps = (int) plan.maps().stream().filter(m -> !m.interior()).count();
 		r.interiors = (int) plan.maps().stream().filter(PlacedMap::interior).count();
 		r.layers = plan.maxLayer();
@@ -371,8 +372,22 @@ public final class BuildTask {
 	}
 
 	private void writeReport() {
+		Path report = this.worldDir.resolve(DATA_FOLDER).resolve(BuildReport.FILE);
+		WorldPlan plan = this.prepared != null ? this.prepared.plan() : null;
+		if (plan != null) {
+			// The symbol lists behind the warning counts: beside each copy of the report, never in the log.
+			try {
+				BuildDiagnostics.writeBeside(report, plan.warnings(), plan.mapsUnplaced());
+				if (this.options.reportCopy() != null) {
+					BuildDiagnostics.writeBeside(this.options.reportCopy(), plan.warnings(), plan.mapsUnplaced());
+				}
+				this.report.diagnostics = true;
+			} catch (IOException e) {
+				KantoBridge.LOGGER.error("builder: could not write the build diagnostics ({})", e.getClass().getSimpleName());
+			}
+		}
 		try {
-			this.report.writeTo(this.worldDir.resolve(DATA_FOLDER).resolve(BuildReport.FILE));
+			this.report.writeTo(report);
 			if (this.options.reportCopy() != null) {
 				this.report.writeTo(this.options.reportCopy());
 			}

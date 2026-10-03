@@ -15,6 +15,8 @@ public final class BlockCode {
 	public static final int KIND_LEDGE = 3;
 	public static final int KIND_LIGHT = 4;
 	public static final int KIND_STORY = 5;
+	/** A story-cell block of a {@code tile} cell: the same collision, plus its closed art drawn per player. */
+	public static final int KIND_STORY_TILE = 6;
 
 	private static final int SHIFT = 24;
 	private static final int VALUE_MASK = (1 << SHIFT) - 1;
@@ -44,6 +46,17 @@ public final class BlockCode {
 	/** A story-cell block for entry {@code index} of the story-cell table. */
 	public static int story(int index) {
 		return (KIND_STORY << SHIFT) | index;
+	}
+
+	/** A tile story-cell block (a swap site's cell) for entry {@code index} of the story-cell table. */
+	public static int storyTile(int index) {
+		return (KIND_STORY_TILE << SHIFT) | index;
+	}
+
+	/** True for both story-cell kinds. */
+	public static boolean isStory(int code) {
+		int kind = kind(code);
+		return kind == KIND_STORY || kind == KIND_STORY_TILE;
 	}
 
 	public static int kind(int code) {

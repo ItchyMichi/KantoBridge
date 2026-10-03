@@ -16,7 +16,9 @@ import org.jetbrains.annotations.Nullable;
  * content, so it may be read from {@code local/reports/} (§0.3). The e2e gate reads {@code maps_built},
  * {@code overlaps}, {@code story_cells}, {@code warnings}, {@code pack_textures} and {@code world_index}; from M6 also
  * {@code habitat_blocks} (habitat blocks configured for the built maps) and {@code pools} (habitat pools in the world's
- * datapack: every wild map of the export, whatever the filter).
+ * datapack: every wild map of the export, whatever the filter); from M8 {@code maps_unplaced} (maps asked for that got
+ * no place) and {@code diagnostics} (whether {@code build_diagnostics.json}, the symbol lists behind the warning counts,
+ * was written beside the report).
  */
 public final class BuildReport {
 	public static final String FILE = "build_report.json";
@@ -30,6 +32,7 @@ public final class BuildReport {
 	public String packHash = "";
 	public int mapsRequested;
 	public int mapsBuilt;
+	public int mapsUnplaced;
 	public int surfaceMaps;
 	public int interiors;
 	public int layers;
@@ -52,6 +55,7 @@ public final class BuildReport {
 	public int slotsFull;
 	public int slotsHalf;
 	public boolean worldIndex;
+	public boolean diagnostics;
 	public @Nullable String spawnMap;
 	public int blocksPlaced;
 	public int blocksCleared;
@@ -76,6 +80,7 @@ public final class BuildReport {
 		out.addProperty("game", this.game);
 		out.addProperty("maps_requested", this.mapsRequested);
 		out.addProperty("maps_built", this.mapsBuilt);
+		out.addProperty("maps_unplaced", this.mapsUnplaced);
 		out.addProperty("surface_maps", this.surfaceMaps);
 		out.addProperty("interiors", this.interiors);
 		out.addProperty("layers", this.layers);
@@ -98,6 +103,7 @@ public final class BuildReport {
 		out.addProperty("slots_full", this.slotsFull);
 		out.addProperty("slots_half", this.slotsHalf);
 		out.addProperty("world_index", this.worldIndex);
+		out.addProperty("diagnostics", this.diagnostics);
 		if (this.spawnMap == null) {
 			out.add("spawn_map", JsonNull.INSTANCE);
 		} else {

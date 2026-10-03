@@ -106,16 +106,26 @@ def test_snapshot_party_dex_toggles_lit_and_npcs():
     for species in ("TESTMON", "OTHERMON", "BIGMON", "UNKNOWNMON"):
         E.save.pokedex.seen[species.encode()] = True
     E.save.pokedex.owned[b"TESTMON"] = True
+    # effective visibility (M8): only objects whose visibility differs from their record's default
+    E.data.maps = b.to_lua({
+        "TEST_TOWN": {"id": "TEST_TOWN", "width": 1, "height": 1, "blocks": [0], "objects": [
+            {"index": 1, "name": "TESTTOWN_BALL", "item": "POTION"},
+            {"index": 2, "name": "TESTTOWN_GIRL", "hidden": True},
+            {"index": 3, "name": "TESTTOWN_BOY"},
+        ]},
+        "TEST_CAVE": {"id": "TEST_CAVE", "width": 1, "height": 1, "blocks": [0], "objects": []},
+    })
     E.save.objectToggles = b.to_lua({"TEST_TOWN": {}, "TEST_CAVE": {}})
     E.save.objectToggles.TEST_TOWN.TESTTOWN_BALL = False
     E.save.objectToggles.TEST_TOWN.TESTTOWN_GIRL = True
+    E.save.objectToggles.TEST_TOWN.TESTTOWN_BOY = True  # its default: not listed
     E.save.flashLit = True
     E.save.coins = 120
     E.npc(b"TEST_CAVE_obj_1", b"SPRITE_BOULDER", 4, 4)
     data = snapshot(rig)
     assert data["party"] == [{"dex": 7, "level": 5, "moves": [33, 39], "hp": 18, "maxhp": 20, "status": "psn"}]
     assert data["dex"] == {"seen": [7, 16], "owned": [7]}  # 251 is beyond Gen 1
-    assert data["toggles"] == {"TEST_TOWN": {"TESTTOWN_BALL": False, "TESTTOWN_GIRL": True}, "TEST_CAVE": {}}
+    assert data["toggles"] == {"TEST_TOWN": {"TESTTOWN_BALL": False, "TESTTOWN_GIRL": True}}
     assert data["lit"] == ["TEST_CAVE"] and data["state"]["dark"] and data["state"]["lit"]
     assert data["coins"] == 120
     assert data["npcs"]["map"] == "TEST_CAVE"

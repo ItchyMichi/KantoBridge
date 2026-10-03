@@ -5,6 +5,7 @@ import dev.kantobridge.world.MapPlacement;
 import dev.kantobridge.world.Scale;
 import dev.kantobridge.world.SlotMap;
 import dev.kantobridge.world.StoryCellTable;
+import dev.kantobridge.world.StoryCellType;
 import dev.kantobridge.world.WorldIndex;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -79,12 +80,13 @@ public final class WorldPlan {
 	private final Map<String, String> pools;
 	private final Warnings warnings;
 	private final int mapsRequested;
+	private final int mapsUnplaced;
 	private final int edgeMismatches;
 	private final int overlaps;
 
 	WorldPlan(String game, String exportHash, int originX, int originZ, List<PlacedMap> maps, @Nullable Box3 surfaceBox, int[] surfaceOwner,
 			boolean[] surfaceVoid, StoryCellTable storyCells, Map<String, int[]> storyIndex, ArtCatalog art, @Nullable Spawn spawn,
-			WorldIndex index, Map<String, String> pools, Warnings warnings, int mapsRequested, int edgeMismatches, int overlaps) {
+			WorldIndex index, Map<String, String> pools, Warnings warnings, int mapsRequested, int mapsUnplaced, int edgeMismatches, int overlaps) {
 		this.game = game;
 		this.exportHash = exportHash;
 		this.originX = originX;
@@ -102,6 +104,7 @@ public final class WorldPlan {
 		this.pools = java.util.Collections.unmodifiableMap(new java.util.TreeMap<>(pools));
 		this.warnings = warnings;
 		this.mapsRequested = mapsRequested;
+		this.mapsUnplaced = mapsUnplaced;
 		this.edgeMismatches = edgeMismatches;
 		this.overlaps = overlaps;
 		for (Map.Entry<SlotMap.Key, SlotMap.Slot> entry : this.slotMap.slots().entrySet()) {
@@ -201,6 +204,11 @@ public final class WorldPlan {
 
 	public int mapsRequested() {
 		return this.mapsRequested;
+	}
+
+	/** Maps asked for (known to the export) that got no place: their ids are in the warnings' {@code maps_unplaced} details. */
+	public int mapsUnplaced() {
+		return this.mapsUnplaced;
 	}
 
 	public int edgeMismatches() {
@@ -443,7 +451,9 @@ public final class WorldPlan {
 		}
 		int story = this.storyIndex.get(map.id())[cy * model.cellWidth() + cx];
 		if (story >= 0) {
-			sink.set(x, feet, z, BlockCode.story(story));
+			// Tile cells get the block whose renderer draws their closed art; the others render nothing.
+			boolean swapCell = this.storyCells.entries().get(story).type() == StoryCellType.TILE;
+			sink.set(x, feet, z, swapCell ? BlockCode.storyTile(story) : BlockCode.story(story));
 		}
 		if (map.interior()) {
 			sink.set(x, feet + CEILING_ABOVE_FEET, z, BlockCode.full(this.slot(map, model.borderTile(tx, ty), false)));

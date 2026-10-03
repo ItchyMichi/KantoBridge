@@ -13,7 +13,8 @@ import net.minecraft.server.level.ServerPlayer;
  * Applies each client's {@code story.state} to that player's {@link dev.kantobridge.story.StoryState} attachment
  * (docs/PLAN.md §4.4 {@code StoryStateService}): a full state on join, then deltas. The client applied the same message
  * to its own copy before sending it, so client prediction and the server's collision agree. A change of the bike flag
- * re-applies the Gen 1 speed ({@link Rules#applyMovement}). M3 relays only surf and bike; story cells follow later.
+ * re-applies the Gen 1 speed ({@link Rules#applyMovement}); the lit maps decide Flash's Night Vision at once
+ * ({@link FlashService}). The active cells are the client's verdict under docs/PROTOCOL.md "Story rules (M8)".
  *
  * <p>A player's client speaks only for that player (relay authority). Malformed messages change nothing and are
  * answered with {@code error{code:"bad_message"}} and a counted warning. Server thread only.
@@ -42,6 +43,7 @@ public final class StoryStateService {
 		if (applied.full() || applied.bikeChanged()) {
 			Rules.applyMovement(player);
 		}
+		FlashService.update(player, WorldIndexSync.current(player.server));
 		KantoBridge.LOGGER.debug("story.state: {} applied ({} cells changed)", applied.full() ? "full" : "delta", applied.cellsChanged());
 	}
 

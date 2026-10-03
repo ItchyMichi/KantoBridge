@@ -86,12 +86,15 @@ function Player.classify(f)
   return "idle"
 end
 
--- The kind of a step that is starting. Seafoam currents are still sent as
--- "script" (M8); the step driver turns a Cycling Road roll into "slope" and
--- sends Strength pushes as "push".
+-- The kind of a step that is starting: a spinner's slide is "spin" (48
+-- frames a cell), a Seafoam current's drag "current" (M8: kb_engine's
+-- facts.current), any other move the game makes on its own "script"; the
+-- step driver turns a Cycling Road roll into "slope" and sends Strength
+-- pushes as "push".
 function Player.moveKind(f)
   if f.ledge then return "ledge" end
   if f.spinning then return "spin" end
+  if f.current then return "current" end
   if f.playerScripted or f.forcedPhase then return "script" end
   if f.surf then return "surf" end
   if f.bike then return "bike" end

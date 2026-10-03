@@ -10,20 +10,33 @@ import java.util.EnumMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.regex.Pattern;
 import org.jetbrains.annotations.Nullable;
 
 /**
  * Every cell that carries a story-cell block, with what decides whether it is closed for a player (WorldIndex
- * {@code storyCells}). Entries are kept sorted by map, then row, then column, so the JSON is deterministic.
+ * {@code storyCells}; docs/PROTOCOL.md "Story rules (M8)"). Entries are kept sorted by map, then row, then column, so
+ * the JSON is deterministic.
+ *
+ * <p>Besides its type, an entry carries what a client needs to decide its state from the hidden game's reports:
+ * {@code object} entries name their map object and whether it starts hidden; {@code tile} entries name their swap site,
+ * the block the map data has there ({@code start}, what maps other than the hidden player's current one show), whether
+ * their open (built) state is water ({@code water}: it then closes unless the player surfs, like a water cell) and their
+ * closed state ({@link Closed}: the block that closes the cell, how it lets players through, and its art).
  */
 public final class StoryCellTable {
 	/** Swap kinds, as in protocol/export/swaps.schema.json. */
 	public static final Set<String> SWAP_KINDS = Set.of("cut", "card_key", "script", "boulder");
+	/** Closed art covers the cell's 2×2 blocks: north-west, north-east, south-west, south-east. */
+	public static final int ART_BLOCKS = 4;
+	/** The tallest closed art: a roof column (4) plus room for measured heights. */
+	public static final int MAX_CLOSED_HEIGHT = 8;
 
-	private static final Set<String> ENTRY_FIELDS = Set.of("key", "type", "obj", "swap");
+	private static final Set<String> ENTRY_FIELDS = Set.of("key", "type", "obj", "swap", "hidden", "start", "closed", "water");
 	private static final Set<String> SWAP_FIELDS = Set.of("bx", "by", "kind", "before", "after");
+	private static final Set<String> CLOSED_FIELDS = Set.of("block", "pass", "height", "art");
 	private static final Pattern CELL_KEY = Pattern.compile("^[A-Z0-9_]+:-?[0-9]+:-?[0-9]+$");
 	private static final Comparator<Entry> ORDER = Comparator.<Entry, String>comparing(e -> e.cell().map())
 			.thenComparingInt(e -> e.cell().y())
@@ -48,11 +61,104 @@ public final class StoryCellTable {
 		}
 	}
 
+	/** How a tile cell's closed state lets a player through. */
+	public enum Pass {
+		/** Never: a tree, a shut door, a barrier, a ship's hull. */
+		SOLID,
+		/** Water: only a surfing player. */
+		WATER,
+		/** Always: only the art differs. */
+		GROUND;
+
+		public String id() {
+			return this.name().toLowerCase(java.util.Locale.ROOT);
+		}
+
+		public static @Nullable Pass byId(String id) {
+			for (Pass pass : values()) {
+				if (pass.id().equals(id)) {
+					return pass;
+				}
+			}
+			return null;
+		}
+	}
+
 	/**
-	 * @param obj  {@code object} cells: the map object (toggle name) standing here
-	 * @param swap {@code tile} cells: the swap site behind them
+	 * A {@code tile} cell's closed state.
+	 *
+	 * @param block  the cell is closed while the live block at the site is this one (the site's {@code before}, or its
+	 *               {@code after} for a cell whose {@code after} state is the barred one)
+	 * @param pass   how the closed cell lets players through
+	 * @param height closed art drawn above the floor block, in blocks; 0 draws it flat on the floor
+	 * @param art    full-shape slot indices of the closed art, {@link #ART_BLOCKS} of them (north-west, north-east,
+	 *               south-west, south-east)
 	 */
-	public record Entry(CellPos cell, StoryCellType type, @Nullable String obj, @Nullable Swap swap) {
+	public record Closed(int block, Pass pass, int height, List<Integer> art) {
+		public Closed {
+			Objects.requireNonNull(pass, "pass");
+			art = List.copyOf(art);
+			if (block < 0 || block > 255 || height < 0 || height > MAX_CLOSED_HEIGHT || art.size() != ART_BLOCKS) {
+				throw new IllegalArgumentException("invalid closed state");
+			}
+			for (int slot : art) {
+				if (slot < 0 || slot >= SlotMap.CAPACITY) {
+					throw new IllegalArgumentException("invalid art slot");
+				}
+			}
+		}
+
+		/** A closed state that either bars everyone ({@code solid}) or only shows other art. */
+		public Closed(int block, boolean solid, int height, List<Integer> art) {
+			this(block, solid ? Pass.SOLID : Pass.GROUND, height, art);
+		}
+
+		/** The art slot of the block at ({@code dx}, {@code dz}) within the cell (each 0 or 1). */
+		public int art(int dx, int dz) {
+			return this.art.get((dz & 1) * 2 + (dx & 1));
+		}
+
+		JsonObject toJson() {
+			JsonObject out = new JsonObject();
+			out.addProperty("block", this.block);
+			out.addProperty("pass", this.pass.id());
+			out.addProperty("height", this.height);
+			JsonArray slots = new JsonArray();
+			this.art.forEach(slots::add);
+			out.add("art", slots);
+			return out;
+		}
+	}
+
+	/**
+	 * @param obj    {@code object} cells: the map object (toggle name) standing here
+	 * @param swap   {@code tile} cells: the swap site behind them
+	 * @param hidden {@code object} cells: the object starts hidden (its map record's default)
+	 * @param start  {@code tile} cells: the map data's block at the site
+	 * @param closed {@code tile} cells: the closed state
+	 * @param water  {@code tile} cells: the open (built) state is water, closed unless the player surfs
+	 */
+	public record Entry(CellPos cell, StoryCellType type, @Nullable String obj, @Nullable Swap swap, boolean hidden, @Nullable Integer start,
+			@Nullable Closed closed, boolean water) {
+		public Entry {
+			Objects.requireNonNull(cell, "cell");
+			Objects.requireNonNull(type, "type");
+			if (start != null && (start < 0 || start > 255)) {
+				throw new IllegalArgumentException("invalid start block");
+			}
+		}
+
+		/** An entry without M8's state fields (an object that starts visible; a tile cell with no closed state known). */
+		public Entry(CellPos cell, StoryCellType type, @Nullable String obj, @Nullable Swap swap) {
+			this(cell, type, obj, swap, false, null, null, false);
+		}
+
+		/** An entry whose open state (if it is a tile cell) isn't water. */
+		public Entry(CellPos cell, StoryCellType type, @Nullable String obj, @Nullable Swap swap, boolean hidden, @Nullable Integer start,
+				@Nullable Closed closed) {
+			this(cell, type, obj, swap, hidden, start, closed, false);
+		}
+
 		public String key() {
 			return this.cell.key();
 		}
@@ -66,6 +172,18 @@ public final class StoryCellTable {
 			}
 			if (this.swap != null) {
 				out.add("swap", this.swap.toJson());
+			}
+			if (this.hidden) {
+				out.addProperty("hidden", true);
+			}
+			if (this.start != null) {
+				out.addProperty("start", this.start);
+			}
+			if (this.closed != null) {
+				out.add("closed", this.closed.toJson());
+			}
+			if (this.water) {
+				out.addProperty("water", true);
 			}
 			return out;
 		}
@@ -148,13 +266,33 @@ public final class StoryCellTable {
 				swap = new Swap(s.integer("bx", 0, 255), s.integer("by", 0, 255), kind, s.integer("before", 0, 255),
 						s.integer("after", 0, 255));
 			}
+			boolean hidden = item.has("hidden") && item.bool("hidden");
+			Integer start = item.has("start") ? item.integer("start", 0, 255) : null;
+			Closed closed = null;
+			if (item.has("closed")) {
+				DataReader c = item.object("closed").allowOnly(CLOSED_FIELDS);
+				int[] art = DataReader.intArray(c.array("art"), c.path("art"), 0, SlotMap.CAPACITY - 1);
+				if (art.length != ART_BLOCKS) {
+					throw new DataException(c.path("art"), "closed art needs " + ART_BLOCKS + " slots");
+				}
+				List<Integer> slots = new ArrayList<>(ART_BLOCKS);
+				for (int slot : art) {
+					slots.add(slot);
+				}
+				Pass pass = Pass.byId(c.string("pass"));
+				if (pass == null) {
+					throw new DataException(c.path("pass"), "unknown pass");
+				}
+				closed = new Closed(c.integer("block", 0, 255), pass, c.integer("height", 0, MAX_CLOSED_HEIGHT), slots);
+			}
+			boolean water = item.has("water") && item.bool("water");
 			CellPos cell;
 			try {
 				cell = CellPos.parse(key);
 			} catch (IllegalArgumentException e) {
 				throw new DataException(item.path("key"), "bad cell key");
 			}
-			entries.add(new Entry(cell, type, obj, swap));
+			entries.add(new Entry(cell, type, obj, swap, hidden, start, closed, water));
 		}
 		try {
 			return of(entries);

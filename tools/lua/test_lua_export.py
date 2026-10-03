@@ -361,7 +361,10 @@ def test_swap_sites(exported):
     sites = exported["data"][("swaps", "all")]["sites"]
     assert sites == [
         {"map": "PALLET_TOWN", "bx": 2, "by": 2, "kind": "cut", "before": 3, "after": 4},
-        {"map": "REDS_HOUSE_2F", "bx": 1, "by": 1, "kind": "script", "before": 0, "after": 2},
+        # the trash-can door: closed is the engine's own $24 (data/scripts/seafoam.lua:21), whatever
+        # the map ships; open is the field table's doorBlock
+        {"map": "REDS_HOUSE_2F", "bx": 1, "by": 1, "kind": "script", "before": 0x24, "after": 2,
+         "source": "EVENT_2ND_LOCK_OPENED"},
         {"map": "TEST_GYM", "bx": 0, "by": 0, "kind": "script", "before": 1, "after": 0,
          "source": "EVENT_TEST_POSTER"},
         {"map": "TEST_GYM", "bx": 2, "by": 1, "kind": "cut", "before": 5, "after": 0},

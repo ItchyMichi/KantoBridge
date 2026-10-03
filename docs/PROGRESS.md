@@ -15,8 +15,8 @@ new items in [PLAYTEST.md](PLAYTEST.md) and a commit titled `M<n>: <title>`.
 | M4 | Dialogue, menus and NPC mirroring | **done** | 2026-10-03 | `c5b39d1` |
 | M5 | Opening, Oak's cutscene, starter and rival battle | **done** | 2026-10-03 | `eb9c570` |
 | M6 | Route 1, habitat pools, catching, party/Pokédex/bag sync | **done** | 2026-10-03 | `b603f16` |
-| M7 | Viridian City (Pokémon Center, Mart, PC, money, trainers, saving) | **done** | 2026-10-03 | `M7: Viridian City` |
-| M8 | The rest of Kanto (single player) | not started | | |
+| M7 | Viridian City (Pokémon Center, Mart, PC, money, trainers, saving) | **done** | 2026-10-03 | `46e5573` |
+| M8 | The rest of Kanto (single player) | in progress (wave 1 of 3 done) | | `M8 wave 1` |
 | M9 | Multiplayer | not started | | |
 | M10 | Reliability, performance and launch | not started | | |
 
@@ -473,6 +473,69 @@ new items in [PLAYTEST.md](PLAYTEST.md) and a commit titled `M<n>: <title>`.
 69. **Correction to deviation 12:** the engine's `SaveData.save` writes the live options to
     `options.lua` on every progress save, so the pinned display options and FAST text speed **are**
     persisted, since M4 on the player's own saves and now also on the center save (see Open issues).
+
+**M8** (in progress), run in three waves, each ending green with an intermediate commit
+(`M8 wave <n>: …`); the milestone commit `M8: the rest of Kanto` comes after wave 3:
+
+- **Wave 1 (done):** the full build with clean report gates (items 1); the swap-site audit
+  (2); per-player story cells (`ClientStoryView` active cells per PROTOCOL.md "Story rules (M8)",
+  `StoryCellRenderer` closed art) and gen1-bridge's story diffs; forced movement (3); field moves
+  from Minecraft (4); bike, surf and Flash feel (5); their e2e scenarios.
+  Wave 1 Java results (builder, story cells, feel):
+  - 71. **`swap_block_mismatch` ×22 was the builder being too strict:** the engine stamps the 20
+    card-key doors and the 2 Rocket Hideout lift gates shut on map load, so the map data holds the
+    site's `after` (open) block. The builder now accepts either block (noted `swap_site_stamped`).
+    Swap cells are built per cell in their walkable state (normally `after`; a cell where only
+    `before` is walkable keeps `before`, e.g. the S.S. Anne deck).
+  - 72. **`interior_unplaced` ×1** came from `InteriorPacker.place` returning null when the parent
+    already sat on the deepest layer; it now uses PLAN §8's fallback (the deepest layer, the nearest
+    free spot outside every surface map's footprint, under the void fill; noted
+    `interior_deep_spill`).
+  - 73. **`build_diagnostics.json`** (beside every copy of the report): per warning code, rows of
+    symbols only (map, parent, layer, kind, source, the site's index in the export); report fields
+    `maps_unplaced` and `diagnostics`; `build_world.py` gates on `maps_unplaced == 0` and prints the
+    diagnostics on failure.
+  - 74. **Story cells:** the rules live in common `story/StoryRules` (shared with GameTests); tile
+    cells close on their `closed.block` (WorldIndex) and use a new block `kantobridge:story_tile`
+    with a block-entity renderer drawing the closed art per player (other story cells cost nothing
+    per frame). The WorldIndex story-cell table gained `hidden`, `start`, `water` and `closed`
+    (schema updated; golden updated for this change only).
+  - 75. **Feel:** the surf sprite comes from the pack (`textures/player/<palette>/surf.png`), a
+    billboard in third person and flat in first person, the surfer at Y 63.5; on the Cycling Road
+    sneak sends `move.hold{b}` and doesn't crouch; Flash's Night Vision is applied by the server
+    (`FlashService`) only on a WorldIndex-dark map the player's state has lit, never touching a
+    potion's Night Vision.
+  - **Not done in wave 1 (moves to wave 2):** the client side of field moves (right-click a cut tree
+    or water → `act.field`; a Fly list); play-test-only: the closed art's lighting, a half-block gap
+    under the S.S. Anne hull art, the surf sprite, the Cycling Road feel.
+  Wave 1 Lua results (story diffs, swap audit, forced movement, field moves):
+  - 76. **Story diffs** per PROTOCOL.md "Story rules (M8)": effective visibility through the engine's
+    own `objectVisible`; live blocks against the map data copied at `mods.loaded` (before any map
+    loads; the dataset view as fallback); flags every 10 logic steps, at script end and map load;
+    an unexplained block change is counted and logged as `story.unknown_block`.
+  - 77. **Swap-site audit: 95 sites** (cut 35, card-key 20, Victory Road boulders 4, scripted 36:
+    Elite Four exits, Lance's doorway, the Mansion's 13 switches, the Cinnabar Gym gates, the S.S.
+    Anne, …). One row was wrong and fixed (the Vermilion Gym door had `before` == `after`); `site()`
+    now refuses no-op rows. One site matches neither block in the map data: AGATHAS_ROOM (2,0), which
+    the engine overwrites on every entry (`story4.lua:870-873`), so the builder must accept it
+    (wave 2).
+  - 78. **Forced movement:** spinners `spin` (48 frames a cell), currents `current` (16), the
+    Cycling Road `slope` (8, with the B brake), holes (including script-opened ones), pads, boulder
+    pushes (`push` + `npc.move push`); warp kinds `dig`, `rope`, `teleport` told apart.
+  - 79. **`act.field`** runs every action through the engine's own entry points after its own
+    checks (`partyKnows`, the badge, the place); Escape Rope is `dig` + `item:"ESCAPE_ROPE"`; `fish`
+    without an item uses the best rod; `fly` without `dest` opens the game's Fly list. Real-engine
+    e2e: cut (regrows after leaving), surf, a spinner maze, an elevator, a Strength push.
+  - Wave 1 gate: `tools/check.sh --e2e` **1154 passed**, `gradlew build` **451 JUnit**, **65/65
+    GameTests**; **full real build**: all **220 of 220** reachable maps (184 interiors on 14 layers,
+    1 deep spill, 5 sideways), 2,485,146 blocks in 2,126 chunks in 57 s, 12,664 story cells (160
+    tile), 296 habitat blocks on 46 pools, slots 3,926 full + 92 half, 0 overlaps, **1 warning**
+    (`swap_block_mismatch`: AGATHAS_ROOM, for wave 2).
+- **Wave 2:** static encounters (6); native special battles and the Safari crossover (7); gifts,
+  in-game trades, the Name Rater, the Game Corner and prize counter (8); gyms, the Elite Four, the
+  Champion, the Hall of Fame and credits (9); the daycare and battle-music polish (10).
+- **Wave 3:** the remaining e2e scenarios (11), the full real build gate, rebuilding the user's world
+  as all of Kanto, and the badge-by-badge play-test checklist.
 
 ## Open issues
 

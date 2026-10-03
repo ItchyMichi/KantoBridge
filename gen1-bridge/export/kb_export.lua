@@ -864,6 +864,11 @@ function Export.new(opts)
       return type(def.blocks) == "table" and def.blocks[by * def.width + bx + 1] or nil
     end
     for _, r in ipairs(SwapSites.doorSites(field, engine.gameVersion(), blockAt)) do swapRows[#swapRows + 1] = r end
+    -- M8's audit: the script and boulder swaps the hand-ported map scripts
+    -- make (kb_swapsites), for the maps this export has
+    for _, r in ipairs(SwapSites.scriptSites(blockAt)) do
+      if blockAt(r[1], r[2], r[3]) ~= nil then swapRows[#swapRows + 1] = r end
+    end
     put("swaps", "all", { sites = json.array(SwapSites.collect(swapRows, function(code) warn(code) end)) })
   end
 

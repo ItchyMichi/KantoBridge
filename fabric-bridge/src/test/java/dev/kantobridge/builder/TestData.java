@@ -47,7 +47,7 @@ public final class TestData {
 
 	/**
 	 * A copy of the synthetic bundle in {@code dir} with extra resources (kind/id → data) added to it and its index, with
-	 * correct hashes and sizes.
+	 * correct hashes and sizes. A resource the bundle already has (e.g. {@code swaps/all}) is replaced.
 	 */
 	public static Path syntheticCopyWith(Path dir, Map<String, com.google.gson.JsonObject> extra) throws java.io.IOException {
 		Path source = syntheticBundle();
@@ -78,7 +78,15 @@ public final class TestData {
 			entry.addProperty("id", resource.getKey().substring(resource.getKey().indexOf('/') + 1));
 			entry.addProperty("hash", dev.kantobridge.world.Hashes.sha256(bytes));
 			entry.addProperty("size", bytes.length);
-			index.getAsJsonArray("resources").add(entry);
+			com.google.gson.JsonArray resources = index.getAsJsonArray("resources");
+			for (int i = resources.size() - 1; i >= 0; i--) {
+				com.google.gson.JsonObject old = resources.get(i).getAsJsonObject();
+				if (old.get("kind").getAsString().equals(entry.get("kind").getAsString())
+						&& old.get("id").getAsString().equals(entry.get("id").getAsString())) {
+					resources.remove(i);
+				}
+			}
+			resources.add(entry);
 		}
 		Files.writeString(copy.resolve("index.json"), dev.kantobridge.proto.ProtoJson.write(index));
 		return copy;

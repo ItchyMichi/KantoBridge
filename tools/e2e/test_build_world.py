@@ -26,5 +26,6 @@ def test_viridian_build_from_the_real_export():
     code = build_world.build(bundle, maps, "KantoE2E")
     assert build_world.REPORT.exists(), f"no build report (server exit {code})"
     data, failed = build_world.check_report(maps)
+    details = build_world.DIAGNOSTICS.read_text(encoding="utf-8") if build_world.DIAGNOSTICS.exists() else None
     assert code == 0 and not failed, {"exit": code, "failed": failed,
-                                      "warning_codes": data.get("warning_codes")}
+                                      "warning_codes": data.get("warning_codes"), "diagnostics": details}

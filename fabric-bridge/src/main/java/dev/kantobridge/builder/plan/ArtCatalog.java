@@ -15,6 +15,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.TreeSet;
+import org.jetbrains.annotations.Nullable;
 
 /**
  * Every piece of art the whole export can put on screen, and the slot map that names it (docs/PLAN.md §4.5 "Slot map,
@@ -23,7 +24,9 @@ import java.util.TreeSet;
  * <p>It depends on the export alone, never on which maps a build places: the generated resource pack is shared by
  * every world in a game folder, so a filtered or test build must write exactly the pack (and slot-map hash) a full
  * build writes. The keys cover, for every map: each tile its blocks show (half-height where the cell is water), its
- * border block (interior rings and ceilings, the surface void fill), and the closed art of its swap sites.
+ * border block (interior rings and ceilings, the surface void fill), and both blocks of its swap sites (the closed art
+ * the story-cell renderer draws, whichever state a cell is built in). Besides the slot map it lists the NPC sheets and
+ * the palettes that need the player's surfing sheet (maps with water).
  */
 public final class ArtCatalog {
 	private final SlotMap slotMap;
@@ -31,14 +34,18 @@ public final class ArtCatalog {
 	private final Map<String, Set<Integer>> waterTiles;
 	private final Set<String> flowerAtlases;
 	private final Set<String> npcs;
+	private final @Nullable String surfSprite;
+	private final Set<String> surfPalettes;
 
 	private ArtCatalog(SlotMap slotMap, Map<String, Integer> tilesPerRow, Map<String, Set<Integer>> waterTiles, Set<String> flowerAtlases,
-			Set<String> npcs) {
+			Set<String> npcs, @Nullable String surfSprite, Set<String> surfPalettes) {
 		this.slotMap = slotMap;
 		this.tilesPerRow = Collections.unmodifiableMap(tilesPerRow);
 		this.waterTiles = Collections.unmodifiableMap(waterTiles);
 		this.flowerAtlases = Collections.unmodifiableSet(flowerAtlases);
 		this.npcs = Collections.unmodifiableSet(npcs);
+		this.surfSprite = surfSprite;
+		this.surfPalettes = Collections.unmodifiableSet(surfPalettes);
 	}
 
 	/**
@@ -55,6 +62,7 @@ public final class ArtCatalog {
 		Map<String, Set<Integer>> waterTiles = new TreeMap<>();
 		Set<String> flowerAtlases = new TreeSet<>();
 		Set<String> npcs = new TreeSet<>();
+		Set<String> waterPalettes = new TreeSet<>();
 		Map<String, ExportTileset> tilesets = new HashMap<>();
 		// Anomalies in maps are the planner's to report for the maps it places; here they would only repeat.
 		Warnings scratch = new Warnings();
@@ -93,19 +101,30 @@ public final class ArtCatalog {
 				for (int tx = 0; tx < model.cellWidth() * 2; tx++) {
 					boolean half = model.kind(tx / 2, ty / 2) == MapModel.Kind.WATER;
 					keys.add(new SlotMap.Key(atlas, palette, model.tile(tx, ty), half ? SlotMap.Shape.HALF : SlotMap.Shape.FULL));
+					if (half) {
+						waterPalettes.add(palette);
+					}
 				}
 			}
 			for (int t = 0; t < 16; t++) {
 				keys.add(new SlotMap.Key(atlas, palette, model.borderTile(t % 4, t / 4), SlotMap.Shape.FULL));
 			}
 			for (ExportSwaps.Site site : sites) {
-				for (int t = 0; t < 16; t++) {
-					int before = tileset.tile(site.before(), t % 4, t / 4);
-					if (before >= 0) {
-						keys.add(new SlotMap.Key(atlas, palette, before, SlotMap.Shape.FULL));
+				for (int block : new int[] {site.before(), site.after()}) {
+					for (int t = 0; t < 16; t++) {
+						int tile = tileset.tile(block, t % 4, t / 4);
+						if (tile >= 0) {
+							keys.add(new SlotMap.Key(atlas, palette, tile, SlotMap.Shape.FULL));
+						}
 					}
 				}
 			}
+		}
+		// The surfing player's sheet in the palette of every map with water (docs/PLAN.md §6 M8 item 5).
+		String surfSprite = bundle.field().surfSprite();
+		if (surfSprite != null && !bundle.has("sprite", surfSprite)) {
+			warnings.note("surf_sprite_missing");
+			surfSprite = null;
 		}
 		SlotMap slotMap;
 		try {
@@ -113,7 +132,8 @@ public final class ArtCatalog {
 		} catch (SlotMap.FullException e) {
 			throw new PlanException("slot_map.full", e.getMessage());
 		}
-		return new ArtCatalog(slotMap, tilesPerRow, waterTiles, flowerAtlases, npcs);
+		return new ArtCatalog(slotMap, tilesPerRow, waterTiles, flowerAtlases, npcs, surfSprite,
+				surfSprite == null ? Set.of() : waterPalettes);
 	}
 
 	/** The slot map of the whole export. */
@@ -139,5 +159,15 @@ public final class ArtCatalog {
 	/** Every (palette, sprite) pair an object of some map needs, as {@code "PALETTE|SPRITE"}, sorted. */
 	public Set<String> npcs() {
 		return this.npcs;
+	}
+
+	/** The sprite the hidden game draws for a surfing player ({@code field.playerSprites.surf}), or null. */
+	public @Nullable String surfSprite() {
+		return this.surfSprite;
+	}
+
+	/** The palettes of the maps with water, each of which gets the surfing sheet; empty without a surf sprite. */
+	public Set<String> surfPalettes() {
+		return this.surfPalettes;
 	}
 }

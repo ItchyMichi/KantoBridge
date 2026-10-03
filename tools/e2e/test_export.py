@@ -16,6 +16,7 @@ import asyncio
 import hashlib
 import json
 import time
+from collections import Counter
 
 import pytest
 
@@ -141,6 +142,31 @@ async def _export(port, game):
     }
 
 
+def _swap_audit(swaps, pages):
+    """M8's swap-site audit against the exported map data: per site kind, how many sites find their
+    closed state (`before`: the map ships it, like a Cut tree) or their open one (`after`: the
+    engine stamps the site shut on load, like a card-key door) in the map's block there, and how
+    many find neither (a wrong row), no map or a block out of bounds. Only counts and the map
+    symbols of wrong rows."""
+    audit, wrong, by_map = {}, [], {}
+    for s in swaps:
+        m = pages.get(("map", s["map"]))
+        if m is None:
+            state = "no_map"
+        elif s["bx"] >= m["width"] or s["by"] >= m["height"]:
+            state = "out_of_bounds"
+        else:
+            block = m["blocks"][s["by"] * m["width"] + s["bx"]]
+            state = "before" if block == s["before"] else ("after" if block == s["after"] else "neither")
+        audit.setdefault(s["kind"], Counter())[state] += 1
+        if s["kind"] != "cut":
+            by_map.setdefault(f"{s['map']}:{s['kind']}", Counter())[state] += 1
+        if state not in ("before", "after"):
+            wrong.append(f"{s['map']}:{s['kind']}:{state}")
+    return ({kind: dict(sorted(c.items())) for kind, c in sorted(audit.items())}, sorted(wrong),
+            {key: dict(sorted(c.items())) for key, c in sorted(by_map.items())})
+
+
 def _summary(got):
     index, pages = got["index"], got["pages"]
     per_kind = {kind: 0 for kind in KINDS}
@@ -202,6 +228,9 @@ def _summary(got):
         "field_tables": len(pages[("field", "all")]["tables"]),
         "species": len(names["species"]), "moves": len(names["moves"]), "items": len(names["items"]),
         "swap_sites": len(swaps),
+        "swap_audit": _swap_audit(swaps, pages)[0],
+        "swap_audit_wrong": _swap_audit(swaps, pages)[1],
+        "swap_audit_maps": _swap_audit(swaps, pages)[2],
         "swap_sites_by_kind": {kind: sum(1 for s in swaps if s["kind"] == kind)
                                for kind in sorted({s["kind"] for s in swaps})},
         "timing": {
@@ -266,5 +295,10 @@ def test_world_export_end_to_end():
     assert report["species"] == 151 and report["moves"] == 165
     assert report["encounter_maps"] >= 50 and report["super_rod_maps"] >= 30
     assert report["swap_sites_by_kind"].get("cut", 0) > 0 and report["swap_sites_by_kind"].get("card_key", 0) > 0
+    # M8's audit: every site's map block is its closed or its open state, except Agatha's exit seal:
+    # the engine writes block (2, 0) of AGATHAS_ROOM on every entry ($3b shut, $0e open:
+    # data/scripts/story4.lua:870-873, :929), so the map's own block there never shows in play
+    assert report["swap_audit_wrong"] == ["AGATHAS_ROOM:script:neither"], report["swap_audit_wrong"]
+    assert set(report["swap_sites_by_kind"]) == {"cut", "card_key", "script", "boulder"}
     assert report["largest_line"]["bytes"] <= PAGE_LIMIT
     assert report["data_path"] in ("datasets", "live")

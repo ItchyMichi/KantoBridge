@@ -65,11 +65,54 @@ class InteriorPackerTest {
 	}
 
 	@Test
-	void tooDeepIsRefused() {
+	void layerZeroIsTheSurface() {
 		InteriorPacker packer = new InteriorPacker(Scale.maxLayer(-256));
 		assertEquals(14, packer.maxLayer());
-		assertNull(packer.place(0, 0, 4, 4, 15));
 		assertNull(packer.place(0, 0, 4, 4, 0), "layer 0 is the surface");
+		assertNull(new InteriorPacker(0).place(0, 0, 4, 4, 1), "a world with no room below the surface has no layers");
+	}
+
+	@Test
+	void tooDeepSpillsSidewaysUnderTheVoidFill() {
+		// One surface map 200 blocks square around the door; PLAN §8: the deepest layer, outside every surface footprint.
+		InteriorPacker.Box town = new InteriorPacker.Box(-100, -100, 100, 100);
+		InteriorPacker packer = new InteriorPacker(14, List.of(town));
+		InteriorPacker.Spot spot = packer.place(0, 0, 20, 16, 15);
+		assertNotNull(spot, "a chain that ran out of depth still gets a place");
+		assertEquals(14, spot.layer());
+		assertTrue(spot.moved() && spot.deep());
+		InteriorPacker.Box box = InteriorPacker.footprint(spot.x(), spot.z(), 20, 16);
+		assertTrue(box.separated(town, 0), "not under the surface map");
+		// Nearest first: the interior reaches east and south of its origin, so seven 16-block steps east clear the town
+		// (ring included) before any other direction does.
+		assertEquals(112, spot.x());
+		assertEquals(0, spot.z());
+		// The next one keeps the gap from the first.
+		InteriorPacker.Spot next = packer.place(0, 0, 20, 16, 16);
+		assertTrue(next.deep() && next.layer() == 14);
+		assertTrue(InteriorPacker.footprint(next.x(), next.z(), 20, 16).separated(box, InteriorPacker.GAP));
+	}
+
+	@Test
+	void aLongFloorChainUnderOneDoorIsAllPlaced() {
+		// The shape that left one interior unplaced in the early full build: a chain whose floors were pushed down by a
+		// crowded column until the last one's parent sat on the deepest layer.
+		InteriorPacker.Box city = new InteriorPacker.Box(-60, -60, 60, 60);
+		InteriorPacker packer = new InteriorPacker(Scale.maxLayer(-256), List.of(city));
+		// Neighbours under the same door fill the first layers.
+		for (int i = 0; i < 4; i++) {
+			assertNotNull(packer.place(0, 0, 30, 30, 1));
+		}
+		int parentLayer = 0;
+		int deep = 0;
+		for (int floor = 0; floor < 16; floor++) {
+			InteriorPacker.Spot spot = packer.place(0, 0, 30, 30, parentLayer + 1);
+			assertNotNull(spot, "floor " + floor + " found no room");
+			assertTrue(spot.layer() > parentLayer || spot.deep(), "floors stack downwards until the depth runs out");
+			deep += spot.deep() ? 1 : 0;
+			parentLayer = spot.layer();
+		}
+		assertTrue(deep > 0, "the chain ran out of depth and spilled sideways");
 	}
 
 	@Test

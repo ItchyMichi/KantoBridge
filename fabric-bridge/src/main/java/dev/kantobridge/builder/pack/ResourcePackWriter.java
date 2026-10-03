@@ -32,7 +32,9 @@ import org.jetbrains.annotations.Nullable;
  * placeholder model;</li>
  * <li>one model per used slot ({@code cube_all}, or the half-height placeholder's shape);</li>
  * <li>tile textures per (atlas, palette, tile), 16×16, with {@code .mcmeta} animations for water and flowers;</li>
- * <li>NPC textures per (palette, sprite) in the fixed sheet layout of {@link Textures#spriteSheet}.</li>
+ * <li>NPC textures per (palette, sprite) in the fixed sheet layout of {@link Textures#spriteSheet};</li>
+ * <li>the surfing player's sheet ({@code textures/player/<palette>/surf.png}, same layout) per palette of a map with
+ * water.</li>
  * </ul>
  *
  * <p>The art comes from this player's own export and never leaves the machine.
@@ -204,6 +206,25 @@ public final class ResourcePackWriter {
 			npcTextures++;
 		}
 
+		// ---- the surfing player's sheet, per palette of a map with water (drawn under a surfer by the client) ----
+		String surf = art.surfSprite();
+		if (surf != null && !art.surfPalettes().isEmpty()) {
+			Png.Image sheet = null;
+			ExportImage export = bundle.sprite(surf);
+			try {
+				sheet = Png.decode(export.png());
+			} catch (IOException e) {
+				warnings.warn("sprite_unreadable");
+			}
+			if (sheet != null) {
+				for (String palette : art.surfPalettes()) {
+					Png.Image texture = Textures.spriteSheet(sheet, export.frames(), colours(palettes, palette));
+					files.put("assets/" + NAMESPACE + "/textures/player/" + pathPart(palette) + "/surf.png", Png.encode(texture));
+					npcTextures++;
+				}
+			}
+		}
+
 		JsonObject info = new JsonObject();
 		info.addProperty("game", bundle.game());
 		info.addProperty("exportHash", bundle.exportHash());
@@ -222,6 +243,11 @@ public final class ResourcePackWriter {
 	/** The NPC texture id of a sprite in a palette. */
 	public static String npcTexture(String palette, String sprite) {
 		return NAMESPACE + ":textures/npc/" + pathPart(palette) + "/" + pathPart(sprite) + ".png";
+	}
+
+	/** The surfing player's sheet in a palette (same layout as an NPC sheet), for maps with water. */
+	public static String surfTexture(String palette) {
+		return NAMESPACE + ":textures/player/" + pathPart(palette) + "/surf.png";
 	}
 
 	/** An id as a resource-path segment: lowercase, anything outside {@code [a-z0-9_.-]} replaced by '_'. */

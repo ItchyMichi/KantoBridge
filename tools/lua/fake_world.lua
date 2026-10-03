@@ -26,6 +26,17 @@
 -- A map spec may also carry region, ghostBattles and indoor (copied into its
 -- def, for the M6 encounter rules) and npcs' facing, item, pokemon, ...
 --
+-- M8 (fake_field.lua): a map spec with `blocks` (block ids, row-major),
+-- `width` (in blocks) and `blockset` (block id -> { "ab", "cd" }, the chars
+-- of its 2x2 cells) draws its cells from the LIVE blocks in def.blocks, so a
+-- Map:setBlock (Cut, a door, a script swap) changes what is walkable. More
+-- cells: T a cuttable tree (solid), = a closed gate (solid). `objects`
+-- become the def's object records (index, name, hidden, item, pokemon) for
+-- the effective-visibility tests; `tileset`, `slope` (the Cycling Road) and
+-- `dark` (field.darkMaps) are the map's own. Every def is registered in
+-- E.data.maps (the engine's records are the live map's def, Map.lua:112-114)
+-- and a pristine copy serves the fake dataset view (E.simPristine).
+--
 -- What one tick does, in the engine's order (OverworldState:update): the
 -- top state updates (a warp fade counts down and then switches the map);
 -- on the overworld: departure phases, the dust animation, an emote's hold,
@@ -101,14 +112,40 @@ end
 local SimMap = {}
 SimMap.__index = SimMap
 
+local function copyList(list)
+  local out = {}
+  for i, v in ipairs(list or {}) do
+    if type(v) == "table" then
+      local c = {}
+      for k, x in pairs(v) do c[k] = x end
+      out[i] = c
+    else
+      out[i] = v
+    end
+  end
+  return out
+end
+
 local function newMap(id, spec)
   local rows = spec.rows
   local m = setmetatable({
-    id = id, rows = rows, widthCells = #rows[1], heightCells = #rows, warpAt = {},
+    id = id, rows = rows, warpAt = {},
     def = { id = id, label = id, tileset = spec.tileset or "TEST", connections = spec.connections or {},
-            region = spec.region, ghostBattles = spec.ghostBattles, indoor = spec.indoor },
+            region = spec.region, ghostBattles = spec.ghostBattles, indoor = spec.indoor,
+            objects = copyList(spec.objects), warps = {}, signs = {} },
     spec = spec,
+    renderer = { rebuild = function() end },
   }, SimMap)
+  if spec.blocks then
+    local w = spec.width
+    m.def.width, m.def.height = w, #spec.blocks / w
+    m.def.blocks = copyList(spec.blocks)
+    m.def.borderBlock = spec.border or spec.blocks[1]
+    m.blockset = spec.blockset
+    m.widthCells, m.heightCells = w * 2, m.def.height * 2
+  else
+    m.widthCells, m.heightCells = #rows[1], #rows
+  end
   for i, w in ipairs(spec.warps or {}) do
     m.warpAt[w.y * m.widthCells + w.x] = { index = i, def = w }
   end
@@ -118,7 +155,26 @@ end
 function SimMap:inBounds(x, y) return x >= 0 and y >= 0 and x < self.widthCells and y < self.heightCells end
 function SimMap:char(x, y)
   if not self:inBounds(x, y) then return "#" end
+  if self.blockset then
+    local d = self.def
+    local block = d.blocks[math.floor(y / 2) * d.width + math.floor(x / 2) + 1]
+    local pattern = self.blockset[block] or { "##", "##" }
+    return pattern[y % 2 + 1]:sub(x % 2 + 1, x % 2 + 1)
+  end
   return self.rows[y + 1]:sub(x + 1, x + 1)
+end
+-- Map:blockAt / Map:setBlock (src/world/Map.lua:193-198, :244-249): the
+-- record's own array; off the map, the border block / nothing
+function SimMap:blockAt(bx, by)
+  local d = self.def
+  if not d.blocks then return nil end
+  if bx < 0 or by < 0 or bx >= d.width or by >= d.height then return d.borderBlock end
+  return d.blocks[by * d.width + bx + 1]
+end
+function SimMap:setBlock(bx, by, block)
+  local d = self.def
+  if not d.blocks or bx < 0 or by < 0 or bx >= d.width or by >= d.height then return end
+  d.blocks[by * d.width + bx + 1] = block
 end
 function SimMap:isWalkableCell(x, y) return WALK[self:char(x, y)] == true end
 function SimMap:isWaterCell(x, y) return self:char(x, y) == "w" end
@@ -195,6 +251,8 @@ function FakeWorld.attach(E)
     local onBike = E.save.onBike and not p.ledgeHop
     local frames = onBike and 8 or 16
     if onBike and p.slopeMap and (dir or p.facing) ~= "down" then frames = 16 end
+    -- a spinner's slide (Player.lua:131-133): 16 / 2 * 6 = 48
+    if p.spinning and not p.spinFrames then frames = frames / 2 * 6 end
     return frames
   end
   E.stepLength = stepLength
@@ -243,8 +301,11 @@ function FakeWorld.attach(E)
     local w, p = ow(), player()
     local from = w.map and w.map.id
     w.map = sim.maps[mapId]
-    w.npcs = npcsFor(mapId)
     w.strengthActive = false
+    -- M8 (fake_field.lua): Cut regrowth, the card-key stamps, darkness, the
+    -- slope flag, in setMap's order (OC:479-515)
+    if E.onMapLoad then E.onMapLoad(mapId, opts) end
+    w.npcs = npcsFor(mapId)
     p.cellX, p.cellY = x, y
     p.facing = facing or p.facing
     p.moving, p.targetX, p.targetY = false, nil, nil
@@ -254,6 +315,8 @@ function FakeWorld.attach(E)
       mapId = mapId, map = w.map, fromMapId = from,
       via = opts.via or (opts.seamless and "connection") or (from and "warp" or "boot"),
     })
+    -- the map's onEnter hook (OC:695-707; fake_field.lua's E.mapScripts)
+    if E.onMapEnter then E.onMapEnter(mapId, from) end
   end
 
   -- a warp fade on top of the overworld; its last frame switches the map
@@ -292,6 +355,7 @@ function FakeWorld.attach(E)
     end))
   end
   E.startWarpTo = startWarpTo
+  E.setMapSim = setMap
 
   local function takeWarp(w)
     local o, p = ow(), player()
@@ -462,6 +526,11 @@ function FakeWorld.attach(E)
         end
         local result = tryMove(dir)
         E.lastTry = result
+        -- a step from the water onto land ends the surf (stopSurfingOntoLand,
+        -- OC:1739, :3283-3290)
+        if result == "moved" and p.surfing and w.map:isWalkableCell(p.targetX, p.targetY) then
+          p.surfing = false
+        end
         if result == "blocked" and w.standingOnWarp then
           local wp = w.map:warpAtCell(p.cellX, p.cellY)
           if wp and facingEdge(p.cellX, p.cellY, dir) then takeWarp(wp) end
@@ -551,6 +620,10 @@ function FakeWorld.attach(E)
     local w, p = ow(), player()
     E.stepsCompleted = (E.stepsCompleted or 0) + 1
     emit("world.stepped", { mapId = w.map.id, x = p.cellX, y = p.cellY })
+    if p.surfing and w.map:isWalkableCell(p.cellX, p.cellY) then p.surfing = false end
+    -- M8 (fake_field.lua): a map's onStep, spinners and Seafoam currents
+    -- (OC:4689-4710)
+    if E.stepHooks and E.stepHooks() then return end
     w.boulderTried = nil
     local entry = w.warpEntryCell
     if entry and (p.cellX ~= entry.x or p.cellY ~= entry.y) then
@@ -570,6 +643,7 @@ function FakeWorld.attach(E)
     -- the rest of onStepComplete (M6: the wild-encounter roll, fake_wild.lua)
     if E.afterStep then E.afterStep() end
   end
+  E.onStepComplete = onStepComplete
 
   local function owUpdate()
     local w, p = ow(), player()
@@ -580,6 +654,11 @@ function FakeWorld.attach(E)
     if w.dustAnim then
       w.dustAnim.frames = w.dustAnim.frames - 1
       if w.dustAnim.frames <= 0 then w.dustAnim = nil end
+    end
+    -- the Cut tree's split (startCutTreeAnim, OC:3355-3362; M8)
+    if w.cutAnim then
+      w.cutAnim.frames = w.cutAnim.frames - 1
+      if w.cutAnim.frames <= 0 then w.cutAnim = nil end
     end
     if w.flyFade then
       w.flyFade = w.flyFade - 1
@@ -635,7 +714,7 @@ function FakeWorld.attach(E)
     for _, n in ipairs(w.npcs) do npcUpdate(n) end
     updateScriptMoves()
     local scripted = w.runner:isRunning() or #w.scriptMoves > 0 or (w.hopLand or 0) > 0
-      or w.engaging or w.emote or w.teleportOut or (w.dustAnim and w.dustAnim.boulder)
+      or w.engaging or w.emote or w.teleportOut or (w.dustAnim and w.dustAnim.boulder) or w.cutAnim
     -- trainers' sight before the player's input (OC:1553-1566; M7,
     -- fake_center.lua's E.sightCheck)
     if not scripted and not w.transitioning and E.sightCheck and E.sightCheck() then scripted = true end
@@ -665,13 +744,31 @@ function FakeWorld.attach(E)
     E.trace[#E.trace + 1] = { E.ticks, p.moving == true, p.cellX, p.cellY, E.game.input:held() }
   end
 
+  local function deepCopy(v)
+    if type(v) ~= "table" then return v end
+    local out = {}
+    for k, x in pairs(v) do out[k] = deepCopy(x) end
+    return out
+  end
+
   function E.simulate(spec)
     sim.maps, sim.fade = {}, spec.fade or 32
-    for id, m in pairs(spec.maps) do sim.maps[id] = newMap(id, m) end
+    E.data.maps = E.data.maps or {}
+    E.simPristine = {}
+    for id, m in pairs(spec.maps) do
+      sim.maps[id] = newMap(id, m)
+      E.data.maps[id] = sim.maps[id].def
+      E.simPristine[id] = deepCopy(sim.maps[id].def)
+    end
     local s = spec.start
     E.ow.scriptMoves, E.ow.hopLand = {}, 0
     E.ow.player = { cellX = s.x, cellY = s.y, facing = s.facing or "down", moving = false, progress = 0,
                     turnTimer = 0, turnArmed = true, inputLocked = false }
+    -- Player:facingCell (src/world/Player.lua:262-264)
+    function E.ow.player.facingCell(self)
+      local d = DELTA[self.facing]
+      return self.cellX + d[1], self.cellY + d[2]
+    end
     E.ow.map = nil
     E.stack.states = { E.ow }
     setMap(s.map, s.x, s.y, s.facing or "down", { via = "boot" })
@@ -684,7 +781,7 @@ function FakeWorld.attach(E)
   function E.settled()
     local w, p, s = E.ow, E.ow.player, E.game.input.state
     return E.stack:top() == w and not p.moving and #w.scriptMoves == 0 and not w.transitioning
-      and (w.hopLand or 0) == 0 and not w.dustAnim and not w.emote and not w.teleportOut
+      and (w.hopLand or 0) == 0 and not w.dustAnim and not w.cutAnim and not w.emote and not w.teleportOut
       and not w.flyFade and not w.holeFall and not p.inputLocked
       and not (s.up or s.down or s.left or s.right)
   end

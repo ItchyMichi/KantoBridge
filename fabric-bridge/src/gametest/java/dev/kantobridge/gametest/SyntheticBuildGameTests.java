@@ -18,6 +18,7 @@ import com.cobblemon.mod.common.api.spawning.spawner.SpawningZoneInput;
 import com.cobblemon.mod.common.block.habitat.HabitatBlock;
 import com.cobblemon.mod.common.block.habitat.HabitatBlockEntity;
 import com.cobblemon.mod.common.util.PlayerExtensionsKt;
+import com.google.gson.JsonObject;
 import dev.kantobridge.KantoBridge;
 import dev.kantobridge.block.KbBlocks;
 import dev.kantobridge.block.LedgeColliderBlock;
@@ -29,8 +30,14 @@ import dev.kantobridge.builder.BuildTask;
 import dev.kantobridge.builder.KantoWorldBuilder;
 import dev.kantobridge.builder.export.BundleException;
 import dev.kantobridge.builder.export.ExportBundle;
+import dev.kantobridge.net.RelayService;
+import dev.kantobridge.proto.ProtoJson;
+import dev.kantobridge.proto.ProtocolException;
 import dev.kantobridge.server.HabitatService;
 import dev.kantobridge.server.WorldIndexSync;
+import dev.kantobridge.story.StoryRules;
+import dev.kantobridge.story.StoryStateMessages;
+import dev.kantobridge.story.StoryStates;
 import dev.kantobridge.world.DataException;
 import dev.kantobridge.world.MapPlacement;
 import dev.kantobridge.world.SlotMap;
@@ -43,6 +50,7 @@ import java.nio.file.Files;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.TreeSet;
 import net.fabricmc.fabric.api.gametest.v1.FabricGameTest;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -55,10 +63,13 @@ import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.entity.MoverType;
 import net.minecraft.world.level.biome.Biome;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.LightBlock;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.phys.Vec3;
+import net.minecraft.world.phys.shapes.CollisionContext;
 import org.jetbrains.annotations.Nullable;
 
 /**
@@ -68,6 +79,10 @@ import org.jetbrains.annotations.Nullable;
  * a habitat pool and a configured habitat block under its grass, whose influence offers the pool's Pokémon on the
  * grass floor and nothing on the trees beside it (M6). Then rebuilds twice: the same plan again must change nothing, and
  * a town-only rebuild must clear the interiors the first build left (and keep the town's habitat block).
+ *
+ * <p>M8: two mock players whose made-up hidden games differ get their story cells from {@link StoryRules} and relay them
+ * as {@code story.state}; in the built town the cut tree, the item ball and the water then close for one and open for
+ * the other, a surfer rides on the water's surface, and a later delta (the tree cut) reaches only its own player.
  */
 public class SyntheticBuildGameTests implements FabricGameTest {
 	/** Must equal {@code TestData.ORIGIN_X/Z} in the JUnit tests, which hold the golden WorldIndex to the same origin. */
@@ -101,6 +116,7 @@ public class SyntheticBuildGameTests implements FabricGameTest {
 		helper.startSequence()
 				.thenWaitUntil(() -> waitFor(helper, first))
 				.thenExecute(() -> verifyFirstBuild(helper, first[0]))
+				.thenExecute(() -> verifyStoryCells(helper, first[0]))
 				.thenExecute(() -> second[0] = start(helper, null))
 				.thenWaitUntil(() -> waitFor(helper, second))
 				.thenExecute(() -> verifyRebuild(helper, first[0], second[0]))
@@ -167,10 +183,11 @@ public class SyntheticBuildGameTests implements FabricGameTest {
 		helper.assertTrue(collider.is(KbBlocks.LEDGE_COLLIDER) && collider.getValue(LedgeColliderBlock.FACING) == Direction.SOUTH,
 				"ledge collider missing or facing the wrong way");
 		helper.assertTrue(isTile(level, ledge.below(), true), "ledge art missing");
-		// The cut tree: built open (ground), closed per player by a tile story cell.
+		// The cut tree: built open (ground), closed per player by a tile story cell (the block whose renderer draws the tree).
 		BlockPos cut = index.cellOrigin("TEST_TOWN", 10, 14);
 		helper.assertTrue(isTile(level, cut.below(), true), "the cut tree's ground is missing");
 		assertStoryCell(helper, level, cut, "TEST_TOWN:10:14", StoryCellType.TILE);
+		assertStoryCell(helper, level, cut.offset(1, 0, 1), "TEST_TOWN:10:14", StoryCellType.TILE);
 		// STAY objects carry story cells; the walker doesn't.
 		assertStoryCell(helper, level, index.cellOrigin("TEST_TOWN", 15, 4), "TEST_TOWN:15:4", StoryCellType.OBJECT);
 		helper.assertTrue(level.getBlockState(index.cellOrigin("TEST_TOWN", 10, 8)).isAir(), "a walking NPC got a story cell");
@@ -359,9 +376,98 @@ public class SyntheticBuildGameTests implements FabricGameTest {
 	}
 
 	private static void assertStoryCell(GameTestHelper helper, ServerLevel level, BlockPos pos, String key, StoryCellType type) {
-		helper.assertTrue(level.getBlockState(pos).is(KbBlocks.STORY_CELL), "no story cell for " + key);
-		helper.assertTrue(level.getBlockEntity(pos) instanceof StoryCellBlockEntity cell && key.equals(cell.cellKey()) && cell.type() == type,
-				"story cell data wrong for " + key);
+		// Tile cells are story_tile blocks with their own block-entity type (the one the client's renderer draws).
+		boolean tile = type == StoryCellType.TILE;
+		helper.assertTrue(level.getBlockState(pos).is(tile ? KbBlocks.STORY_TILE : KbBlocks.STORY_CELL), "no story cell for " + key);
+		helper.assertTrue(level.getBlockEntity(pos) instanceof StoryCellBlockEntity cell && key.equals(cell.cellKey()) && cell.type() == type
+				&& cell.getType() == (tile ? KbBlocks.STORY_TILE_ENTITY : KbBlocks.STORY_CELL_ENTITY), "story cell data wrong for " + key);
+	}
+
+	/**
+	 * Two players, two hidden games: A's tree stands, its ball lies there and it walks; B cut the tree, took the ball and
+	 * surfs. Their clients' rules ({@link StoryRules}, as {@code ClientStoryView} runs them) relay full states through the
+	 * real relay, and the built cells close per player.
+	 */
+	private static void verifyStoryCells(GameTestHelper helper, BuildTask task) {
+		ServerLevel level = helper.getLevel();
+		WorldIndex index = task.plan().index();
+		StoryRules rulesA = new StoryRules();
+		rulesA.setIndex(index);
+		rulesA.onSnapshot(json("{\"ingame\":true,\"player\":{\"map\":\"TEST_TOWN\",\"x\":12,\"y\":11,\"facing\":\"down\"},"
+				+ "\"state\":" + state(false) + ",\"toggles\":{},\"blocks\":[],\"lit\":[]}"));
+		StoryRules rulesB = new StoryRules();
+		rulesB.setIndex(index);
+		rulesB.onSnapshot(json("{\"ingame\":true,\"player\":{\"map\":\"TEST_TOWN\",\"x\":12,\"y\":11,\"facing\":\"down\"},"
+				+ "\"state\":" + state(true) + ",\"toggles\":{\"TEST_TOWN\":{\"TESTTOWN_BALL\":false}},"
+				+ "\"blocks\":[{\"map\":\"TEST_TOWN\",\"bx\":5,\"by\":7,\"block\":15}],\"lit\":[]}"));
+		helper.assertTrue(rulesA.cells().active().containsAll(Set.of("TEST_TOWN:10:14", "TEST_TOWN:15:4")), "A's rules");
+		helper.assertTrue(!rulesB.cells().active().contains("TEST_TOWN:10:14") && !rulesB.cells().active().contains("TEST_TOWN:15:4"),
+				"B's rules");
+
+		BlockPos tree = index.cellOrigin("TEST_TOWN", 10, 14);
+		BlockPos ball = index.cellOrigin("TEST_TOWN", 15, 4);
+		BlockPos water = index.cellOrigin("TEST_TOWN", 12, 12);
+		for (BlockPos pos : new BlockPos[] {tree, ball, water}) {
+			// Collision reads chunks without loading them: load them for this step.
+			level.getChunk(pos.getX() >> 4, pos.getZ() >> 4);
+		}
+		ServerPlayer a = MockPlayers.join(helper);
+		ServerPlayer b = MockPlayers.join(helper);
+		try {
+			relayState(a, 1, StoryStateMessages.full(rulesA.cells().active(), rulesA.surf(), rulesA.bike(), rulesA.lit()));
+			relayState(b, 1, StoryStateMessages.full(rulesB.cells().active(), rulesB.surf(), rulesB.bike(), rulesB.lit()));
+			helper.assertTrue(closedFor(level, tree, a) && !closedFor(level, tree, b), "the cut tree closes only for A");
+			helper.assertTrue(closedFor(level, ball, a) && !closedFor(level, ball, b), "the item ball closes only for A");
+			helper.assertTrue(closedFor(level, water, a) && !closedFor(level, water, b), "water opens only for the surfer");
+
+			// From the shore cell north of the water, each walks half a block south.
+			BlockPos shore = index.cellOrigin("TEST_TOWN", 12, 11);
+			for (ServerPlayer player : List.of(a, b)) {
+				player.setPos(shore.getX() + 1.0, 64.0, shore.getZ() + 2.0 - 0.31);
+				player.move(MoverType.SELF, new Vec3(0.0, 0.0, 0.5));
+			}
+			helper.assertTrue(Math.abs(a.getZ() - (water.getZ() - 0.3)) < 1.0E-6, "A walked into the water");
+			helper.assertTrue(b.getZ() > water.getZ() + 0.1, "the surfer was stopped at the shore");
+			// Clear of the shore's ground, the surfer settles on the water: a half block, its top half a block down.
+			b.move(MoverType.SELF, new Vec3(0.0, 0.0, 0.5));
+			b.move(MoverType.SELF, new Vec3(0.0, -1.0, 0.0));
+			helper.assertTrue(Math.abs(b.getY() - 63.5) < 1.0E-6, "the surfer rides on the water's surface, got y " + b.getY());
+
+			// A's hidden game cuts the tree: the delta reaches A's state only.
+			rulesA.onPlayerMap("TEST_TOWN");
+			rulesA.onBlocks(json("{\"map\":\"TEST_TOWN\",\"changes\":[{\"bx\":5,\"by\":7,\"block\":15}]}"));
+			Set<String> removed = new TreeSet<>(StoryStates.of(a).active());
+			removed.removeAll(rulesA.cells().active());
+			helper.assertTrue(removed.equals(Set.of("TEST_TOWN:10:14")), "the cut opens exactly the tree's cell");
+			relayState(a, 2, StoryStateMessages.delta(null, removed, null, null, null));
+			helper.assertTrue(!closedFor(level, tree, a), "A's tree was cut");
+			helper.assertTrue(closedFor(level, ball, a), "A's ball is still there");
+			helper.assertTrue(!closedFor(level, tree, b) && !closedFor(level, ball, b), "B didn't change");
+		} finally {
+			MockPlayers.leave(helper, a);
+			MockPlayers.leave(helper, b);
+		}
+	}
+
+	private static String state(boolean surf) {
+		return "{\"mode\":\"idle\",\"bike\":false,\"surf\":" + surf + ",\"slope\":false,\"hidden\":false,\"dark\":false,\"lit\":false}";
+	}
+
+	private static JsonObject json(String text) {
+		try {
+			return ProtoJson.parseObject(text);
+		} catch (ProtocolException e) {
+			throw new GameTestAssertException("bad test JSON: " + e.code());
+		}
+	}
+
+	/** Relays a {@code story.state} from the player's client, as the real relay receives it. */
+	private static void relayState(ServerPlayer player, long seq, JsonObject data) {
+		RelayService.get().receive(player, "{\"type\":\"story.state\",\"seq\":" + seq + ",\"data\":" + ProtoJson.write(data) + "}");
+	}
+
+	private static boolean closedFor(ServerLevel level, BlockPos pos, ServerPlayer player) {
+		return !level.getBlockState(pos).getCollisionShape(level, pos, CollisionContext.of(player)).isEmpty();
 	}
 
 	private static void assertBiome(GameTestHelper helper, ServerLevel level, BlockPos pos, String name) {

@@ -10,13 +10,15 @@ import net.minecraft.network.protocol.Packet;
 import net.minecraft.network.protocol.game.ClientGamePacketListener;
 import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
 import net.minecraft.world.level.block.entity.BlockEntity;
+import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
 import org.jetbrains.annotations.Nullable;
 
 /**
  * The data of one story-cell block: which cell it belongs to ({@code "MAP:x:y"}) and what kind of blockade it is.
- * Clients need it too (their own collision prediction, and later the per-player overlay), so it travels in chunk
- * data and block-entity updates.
+ * Clients need it too (their own collision prediction, and the closed art of tile cells), so it travels in chunk data
+ * and block-entity updates. Tile cells ({@link StoryTileBlock}) use their own block-entity type, the only one a
+ * renderer is registered for, so the thousands of water and boulder cells cost nothing per frame.
  */
 public class StoryCellBlockEntity extends BlockEntity {
 	private static final String KEY = "cell";
@@ -26,7 +28,16 @@ public class StoryCellBlockEntity extends BlockEntity {
 	private StoryCellType type = StoryCellType.OBJECT;
 
 	public StoryCellBlockEntity(BlockPos pos, BlockState state) {
-		super(KbBlocks.STORY_CELL_ENTITY, pos, state);
+		this(KbBlocks.STORY_CELL_ENTITY, pos, state);
+	}
+
+	protected StoryCellBlockEntity(BlockEntityType<?> type, BlockPos pos, BlockState state) {
+		super(type, pos, state);
+	}
+
+	/** The block entity of a tile cell ({@link KbBlocks#STORY_TILE_ENTITY}). */
+	public static StoryCellBlockEntity tile(BlockPos pos, BlockState state) {
+		return new StoryCellBlockEntity(KbBlocks.STORY_TILE_ENTITY, pos, state);
 	}
 
 	/** The cell key, or null while the block has no data yet (treated as closed). */

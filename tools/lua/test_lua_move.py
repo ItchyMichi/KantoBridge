@@ -27,6 +27,7 @@ TOWN = {
               {"x": 8, "y": 3, "to": "TEST_CAVE", "tx": 1, "ty": 1}],
     "connections": {"south": {"map": "TEST_ROUTE", "offset": 0}},
     "npcs": [{"id": "TEST_TOWN_obj_1", "x": 5, "y": 7}],
+    "tileset": "OVERWORLD",  # outside: a spin out of here is a Teleport (M8)
 }
 ROUTE = {
     "rows": [

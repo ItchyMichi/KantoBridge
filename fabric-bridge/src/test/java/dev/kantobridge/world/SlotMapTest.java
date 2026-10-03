@@ -109,6 +109,25 @@ class SlotMapTest {
 	}
 
 	@Test
+	void aFullShapeFillsToTheLastStateAndClosedArtCanNameIt() throws Exception {
+		// Closed art (M8) names full-shape slots, so it competes for the same 4,096 states as every other full tile.
+		List<SlotMap.Key> keys = new ArrayList<>();
+		for (int p = 0; p < 4; p++) {
+			for (int tile = 0; tile < 1024; tile++) {
+				keys.add(new SlotMap.Key("tilesets.a", "P" + p, tile, SlotMap.Shape.FULL));
+			}
+		}
+		SlotMap full = SlotMap.enumerate(keys);
+		SlotMap.Slot last = full.slot(new SlotMap.Key("tilesets.a", "P3", 1023, SlotMap.Shape.FULL));
+		assertEquals(SlotMap.CAPACITY - 1, last.index());
+		assertEquals("tile_full_15", last.blockPath());
+		assertEquals(List.of(0, 1, 2, last.index()), new StoryCellTable.Closed(1, true, 2, List.of(0, 1, 2, last.index())).art());
+		assertThrows(IllegalArgumentException.class, () -> new StoryCellTable.Closed(1, true, 2, List.of(0, 1, 2, SlotMap.CAPACITY)));
+		keys.add(new SlotMap.Key("tilesets.b", "P0", 0, SlotMap.Shape.FULL));
+		assertEquals(SlotMap.CAPACITY + 1, assertThrows(SlotMap.FullException.class, () -> SlotMap.enumerate(keys)).needed());
+	}
+
+	@Test
 	void capacityMatchesTheRegisteredFamilies() {
 		assertEquals(KbBlocks.FAMILIES_PER_SHAPE, SlotMap.FAMILIES_PER_SHAPE);
 		assertTrue(SlotMap.CAPACITY >= 4096);

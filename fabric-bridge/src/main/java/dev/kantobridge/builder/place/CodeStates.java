@@ -22,6 +22,7 @@ public final class CodeStates {
 			case BlockCode.KIND_LEDGE -> KbBlocks.LEDGE_COLLIDER.defaultBlockState().setValue(LedgeColliderBlock.FACING, downhill(value));
 			case BlockCode.KIND_LIGHT -> Blocks.LIGHT.defaultBlockState().setValue(LightBlock.LEVEL, Math.min(15, value));
 			case BlockCode.KIND_STORY -> KbBlocks.STORY_CELL.defaultBlockState();
+			case BlockCode.KIND_STORY_TILE -> KbBlocks.STORY_TILE.defaultBlockState();
 			default -> Blocks.AIR.defaultBlockState();
 		};
 	}

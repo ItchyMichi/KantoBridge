@@ -48,6 +48,7 @@ public final class MoveRuntime {
 	private final BridgeRuntime bridge;
 	private final BridgeClock clock = BridgeClock.system();
 	private final MoveController controller;
+	private final SlopeBrake brake = new SlopeBrake();
 
 	private MoveRuntime(BridgeRuntime bridge) {
 		this.bridge = bridge;
@@ -70,7 +71,10 @@ public final class MoveRuntime {
 		ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> {
 			runtime.controller.onLeave();
 			InputLock.set(false);
+			InputLock.setNoSneak(false);
 		});
+		// A new link has no hold yet: a brake still held is sent again.
+		dispatcher.onState((state, detail) -> runtime.brake.reset());
 		ClientTickEvents.START_WORLD_TICK.register(runtime::beforeMove);
 		ClientTickEvents.END_WORLD_TICK.register(runtime::afterMove);
 		HudRenderCallback.EVENT.addPhaseOrdering(FADE_PHASE, Event.DEFAULT_PHASE);
@@ -91,6 +95,7 @@ public final class MoveRuntime {
 		LocalPlayer player = minecraft.player;
 		if (player == null || player.level() != level) {
 			InputLock.set(false);
+			InputLock.setNoSneak(false);
 			return;
 		}
 		MoveController.Frame frame = new MoveController.Frame(ClientWorldIndex.current(), player.isSpectator() || player.isCreative(),
@@ -102,6 +107,24 @@ public final class MoveRuntime {
 			player.setDeltaMovement(velocity.x(), player.getDeltaMovement().y, velocity.z());
 		}
 		InputLock.set(this.controller.reason() != InputLock.Reason.NONE);
+		this.brake(minecraft);
+	}
+
+	/** Cycling Road: sneak holds B while the hidden player is on a slope map (and never crouches there). */
+	private void brake(Minecraft minecraft) {
+		boolean slope = this.controller.following() && this.bridge.state().slope();
+		InputLock.setNoSneak(slope);
+		boolean connected = this.bridge.client().state() == ConnectionState.CONNECTED;
+		// The key itself: the input lock zeroes the player's sneak during the roll's forced steps.
+		Boolean hold = this.brake.tick(this.controller.following(), connected, slope, minecraft.options.keyShift.isDown());
+		if (hold != null) {
+			JsonObject data = new JsonObject();
+			data.addProperty("button", "b");
+			data.addProperty("on", hold);
+			if (!this.bridge.client().send(MsgTypes.MOVE_HOLD, data)) {
+				this.brake.reset();
+			}
+		}
 	}
 
 	private void afterMove(ClientLevel level) {

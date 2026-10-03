@@ -105,6 +105,10 @@ class SyntheticPlanTest {
 		StoryCellTable.Entry tree = cells.get("TEST_TOWN:10:14");
 		assertEquals(StoryCellType.TILE, tree.type());
 		assertEquals(new StoryCellTable.Swap(5, 7, "cut", 14, 15), tree.swap());
+		// The map data shows the tree; while it stands the cell is solid and draws the cut-tree tile, two blocks high.
+		assertEquals(14, tree.start());
+		int cutTree = plan.slotMap().slot(new SlotMap.Key("tilesets.test", "TEST_PALETTE", 13, SlotMap.Shape.FULL)).index();
+		assertEquals(new StoryCellTable.Closed(14, true, HeightRules.WALL, List.of(cutTree, cutTree, cutTree, cutTree)), tree.closed());
 		assertNull(cells.get("TEST_TOWN:11:14"), "the rest of the cut block doesn't change");
 		assertEquals(StoryCellType.WATER, cells.get("TEST_TOWN:12:12").type());
 	}
@@ -160,8 +164,10 @@ class SyntheticPlanTest {
 		for (int y = feet - 1; y <= feet + 3; y++) {
 			assertEquals(full, view.kind(house.x() - 1, y, house.z() + 3));
 		}
-		// Mom's cell carries a story cell.
+		// Mom's cell carries a story cell; the cut tree's cell the tile kind, whose block draws its closed art.
 		assertEquals(BlockCode.KIND_STORY, view.kind(house.x() + 12, feet, house.z() + 8));
+		assertEquals(BlockCode.KIND_STORY_TILE, view.kind(ox(20), 64, oz(28)));
+		assertEquals(BlockCode.KIND_STORY_TILE, view.kind(ox(21), 64, oz(29)));
 	}
 
 	@Test

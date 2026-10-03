@@ -24,9 +24,11 @@
 --   door, stairs, edge, pad, hole   from the departure cell (kb_engine)
 --   elevator                        any warp-table warp out of an elevator car
 --   fly                             Fly (its bird departure, or via "fly")
---   teleport                        the Dig/Teleport/Escape Rope spin; the three
---                                   look alike from here, so dig and rope wait
---                                   for M8's field moves to say which
+--   dig, rope, teleport             the escape spin (M8): kb_engine names it
+--                                   (facts.departure): the one act.field or the
+--                                   bag's ESCAPE ROPE started, else DIG in a
+--                                   dungeon and TELEPORT outside, the only
+--                                   places the party menu allows each
 --   blackout                        a blackout's warp to the heal point
 --   script                          any other warp (cutscenes, mods)
 -- Logs show codes, kinds and counts only.

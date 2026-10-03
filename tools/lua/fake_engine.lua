@@ -339,7 +339,9 @@ function FakeEngine.addExport(E)
       local content = {}
       for _, name in ipairs({ "maps", "tilesets", "sprites", "palettes", "encounters", "pokemon",
                               "moves", "items", "field", "constants" }) do
-        content[name] = registry(w[name])
+        -- the simulated overworld's maps as imported (M8, fake_world.lua's
+        -- E.simPristine) when no export world is installed
+        content[name] = registry(w[name] or (name == "maps" and E.simPristine or nil))
       end
       return { version = version, generation = 1, content = content }
     end,

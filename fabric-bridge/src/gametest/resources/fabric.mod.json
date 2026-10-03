@@ -26,7 +26,8 @@
 			"dev.kantobridge.gametest.SaveGameTests",
 			"dev.kantobridge.gametest.SessionGameTests",
 			"dev.kantobridge.gametest.BlackoutGameTests",
-			"dev.kantobridge.gametest.LeaveGameTests"
+			"dev.kantobridge.gametest.LeaveGameTests",
+			"dev.kantobridge.gametest.FlashGameTests"
 		]
 	},
 	"depends": {

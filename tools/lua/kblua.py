@@ -79,6 +79,8 @@ class Bridge:
             self.engine = FakeEngine.new(eopts)
             self._load_harness("fake_world.lua").attach(self.engine)
             self._load_harness("fake_ui.lua").attach(self.engine)
+            # M8: field moves, live map blocks, spinners and currents
+            self._load_harness("fake_field.lua").attach(self.engine)
             if script:
                 # the script runner, battles, trainers and gifts (M5), then wild encounters,
                 # fishing, the bag and item use (M6); before the modules are handed to the

@@ -44,6 +44,8 @@ SAVES = MC_DIR / "saves"
 EXPORT_DIR = MC_DIR / "kantobridge" / "export"
 REPORTS = REPO / "local" / "reports"
 REPORT = REPORTS / "build_report.json"
+# Symbols-only details per warning code (map ids, kinds), written beside the report (M8).
+DIAGNOSTICS = REPORTS / "build_diagnostics.json"
 FABRIC = REPO / "fabric-bridge"
 DEFAULT_JAVA_HOME = r"C:\Program Files\Eclipse Adoptium\jdk-21.0.12.101-hotspot"
 EXPORT_PORT = 27196
@@ -152,8 +154,9 @@ def build(bundle, maps, world, timeout=3600):
     """Steps 4-5."""
     _write_server_properties(world)
     REPORTS.mkdir(parents=True, exist_ok=True)
-    if REPORT.exists():
-        REPORT.unlink()
+    for stale in (REPORT, DIAGNOSTICS):
+        if stale.exists():
+            stale.unlink()
     args = ["runServer", f"-Pkb.build={bundle}", f"-Pkb.buildReport={REPORT}", "-Pkb.buildExit=true",
             "--args=nogui", "--console=plain"]
     if maps:
@@ -176,6 +179,7 @@ def check_report(maps, report=REPORT):
         "warnings": data.get("warnings") == 0,
         "pack_textures": (data.get("pack_textures") or 0) > 0,
         "world_index": data.get("world_index") is True,
+        "maps_unplaced": (data.get("maps_unplaced") or 0) == 0,
     }
     if not maps or ENCOUNTER_MAPS & set(maps):
         checks["habitat_blocks"] = (data.get("habitat_blocks") or 0) > 0
@@ -215,6 +219,9 @@ def main(argv=None):
     print("report: " + json.dumps(data, sort_keys=True))
     if code != 0 or failed:
         print(f"FAILED: server exit {code}, checks {failed}")
+        if DIAGNOSTICS.exists():
+            # Symbols only (map ids, kinds, sources): safe to print.
+            print("diagnostics: " + DIAGNOSTICS.read_text(encoding="utf-8").strip())
         return 1
     print("build OK")
     return 0

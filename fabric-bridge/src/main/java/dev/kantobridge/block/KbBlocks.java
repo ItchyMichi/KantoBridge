@@ -19,7 +19,8 @@ import net.minecraft.world.phys.shapes.VoxelShape;
 
 /**
  * Block registration. Tile families: {@code tile_full_00..15} (full cubes) and {@code tile_half_00..15} (half
- * height). Plus the invisible world blocks: {@code story_cell} (with its block entity) and {@code ledge_collider}.
+ * height). Plus the invisible world blocks: {@code story_cell} and {@code story_tile} (a swap site's cell, whose closed
+ * art the client draws per player), each with its block entity, and {@code ledge_collider}.
  */
 public final class KbBlocks {
 	/** Families per shape; 2 shapes × 16 families × 256 slots = 8192 tile states. */
@@ -34,8 +35,10 @@ public final class KbBlocks {
 
 	/** Set by {@link #register()}. */
 	public static StoryCellBlock STORY_CELL;
+	public static StoryTileBlock STORY_TILE;
 	public static LedgeColliderBlock LEDGE_COLLIDER;
 	public static BlockEntityType<StoryCellBlockEntity> STORY_CELL_ENTITY;
+	public static BlockEntityType<StoryCellBlockEntity> STORY_TILE_ENTITY;
 
 	private KbBlocks() {
 	}
@@ -51,10 +54,13 @@ public final class KbBlocks {
 			TILE_HALF.add(register(tileId("half", family), new TileBlock(tileProperties(), HALF)));
 		}
 		STORY_CELL = register("story_cell", new StoryCellBlock(invisibleProperties()));
+		STORY_TILE = register("story_tile", new StoryTileBlock(invisibleProperties()));
 		LEDGE_COLLIDER = register("ledge_collider", new LedgeColliderBlock(invisibleProperties()));
-		// No data fixer: the block entity holds only our own two strings.
+		// No data fixer: the block entities hold only our own two strings.
 		STORY_CELL_ENTITY = Registry.register(BuiltInRegistries.BLOCK_ENTITY_TYPE, id("story_cell"),
 				BlockEntityType.Builder.of(StoryCellBlockEntity::new, STORY_CELL).build(null));
+		STORY_TILE_ENTITY = Registry.register(BuiltInRegistries.BLOCK_ENTITY_TYPE, id("story_tile"),
+				BlockEntityType.Builder.of(StoryCellBlockEntity::tile, STORY_TILE).build(null));
 	}
 
 	public static String tileId(String shape, int family) {

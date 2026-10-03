@@ -1,17 +1,21 @@
 package dev.kantobridge.client;
 
+import dev.kantobridge.block.KbBlocks;
 import dev.kantobridge.client.act.ActRuntime;
 import dev.kantobridge.client.bridge.BridgeRuntime;
+import dev.kantobridge.client.fx.SurfSprite;
 import dev.kantobridge.client.move.MoveRuntime;
 import dev.kantobridge.client.net.ClientRelay;
 import dev.kantobridge.client.net.GameRelayRuntime;
 import dev.kantobridge.client.net.SessionRuntime;
 import dev.kantobridge.client.puppet.PuppetRuntime;
 import dev.kantobridge.client.story.ClientStoryView;
+import dev.kantobridge.client.story.StoryCellRenderer;
 import dev.kantobridge.client.ui.UiRuntime;
 import dev.kantobridge.client.world.ClientWorldIndex;
 import dev.kantobridge.client.world.CreateKantoWorldFlow;
 import net.fabricmc.api.ClientModInitializer;
+import net.minecraft.client.renderer.blockentity.BlockEntityRenderers;
 
 public class KantoBridgeClient implements ClientModInitializer {
 	@Override
@@ -24,8 +28,11 @@ public class KantoBridgeClient implements ClientModInitializer {
 		BridgeRuntime bridge = BridgeRuntime.get();
 		// Walking and warps: the Minecraft player and the hidden player move together (docs/PLAN.md §4.3 move/).
 		MoveRuntime.init(bridge);
-		// The surf and bike flags, applied locally and relayed as story.state.
+		// The player's story cells, surf, bike and lit maps from the hidden game, applied locally and relayed as story.state;
+		// tile cells draw their closed art for this player, and a surfer rides the hidden game's surfing sprite (M8).
 		ClientStoryView.init(bridge);
+		BlockEntityRenderers.register(KbBlocks.STORY_TILE_ENTITY, StoryCellRenderer::new);
+		SurfSprite.init();
 		// The hidden game's text boxes, menus, naming and mirror as our screens, and the Game Boy keys (§4.3 ui/).
 		UiRuntime.init(bridge);
 		// The hidden game's NPCs as client-only puppets (§4.3 puppet/).

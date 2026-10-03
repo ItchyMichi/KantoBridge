@@ -6,10 +6,13 @@
 -- the schema's shape on the way in; anything that doesn't fit is left out
 -- and counted, never sent malformed.
 --
--- blocks stays empty until the story diffs (M6+); ui is never filled (open
--- UIs follow as ui.open). The party is the hidden game's own party; members
--- a party.sync named carry their Cobblemon uid (M5), gifts Cobblemon hasn't
--- confirmed yet don't.
+-- toggles, blocks and lit come from the story observer (M8,
+-- observe/kb_story.lua, docs/PROTOCOL.md "Story rules (M8)"): every object
+-- whose effective visibility differs from its default, the current map's
+-- live blocks that differ from the map data, the dark maps Flash lit. ui is
+-- never filled (open UIs follow as ui.open). The party is the hidden game's
+-- own party; members a party.sync named carry their Cobblemon uid (M5),
+-- gifts Cobblemon hasn't confirmed yet don't.
 
 local Snapshot = {}
 
@@ -63,6 +66,9 @@ end
 --   dexOf(species)          national dex number of a species id, or nil
 --   moveNum(moveId)         Gen 1 move number of a move id, or nil
 --   uidOf(mon)              a party member's Cobblemon uid, or nil
+--   story                   kb_story's rebase() parts { toggles, blocks, lit },
+--                           or nil (then the raw save.objectToggles, no
+--                           blocks, and every dark map while flashLit)
 -- Returns the snapshot data and the number of values left out.
 local UID = "^%x%x%x%x%x%x%x%x%-%x%x%x%x%-%x%x%x%x%-%x%x%x%x%-%x%x%x%x%x%x%x%x%x%x%x%x$"
 
@@ -92,17 +98,20 @@ function Snapshot.build(ctx)
 
   local flags = sortedKeys(save.flags, function(k, v) return v == true and sym(k) end)
 
-  local toggles = json.object()
-  for map, objects in pairs(type(save.objectToggles) == "table" and save.objectToggles or {}) do
-    if sym(map, UPPER) and type(objects) == "table" then
-      local inner = json.object()
-      for name, visible in pairs(objects) do
-        if sym(name) and type(visible) == "boolean" then inner[name] = visible
-        else dropped = dropped + 1 end
+  local story = type(ctx.story) == "table" and ctx.story or nil
+  local toggles = story and story.toggles or json.object()
+  if not story then
+    for map, objects in pairs(type(save.objectToggles) == "table" and save.objectToggles or {}) do
+      if sym(map, UPPER) and type(objects) == "table" then
+        local inner = json.object()
+        for name, visible in pairs(objects) do
+          if sym(name) and type(visible) == "boolean" then inner[name] = visible
+          else dropped = dropped + 1 end
+        end
+        toggles[map] = inner
+      else
+        dropped = dropped + 1
       end
-      toggles[map] = inner
-    else
-      dropped = dropped + 1
     end
   end
 
@@ -121,7 +130,9 @@ function Snapshot.build(ctx)
   end
 
   local lit = {}
-  if save.flashLit then
+  if story then
+    lit = story.lit
+  elseif save.flashLit then
     for _, id in ipairs(ctx.darkMaps or {}) do lit[#lit + 1] = id end
   end
 
@@ -183,7 +194,7 @@ function Snapshot.build(ctx)
     state = ctx.Player.state(facts),
     flags = json.array(flags),
     toggles = toggles,
-    blocks = json.array({}),
+    blocks = story and story.blocks or json.array({}),
     lit = json.array(lit),
     bag = bag,
     money = int(save.money, 0, 999999) or 0,

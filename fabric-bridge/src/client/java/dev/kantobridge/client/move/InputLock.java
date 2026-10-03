@@ -44,6 +44,8 @@ public final class InputLock {
 	}
 
 	private static volatile boolean locked;
+	/** Sneak never crouches (Cycling Road: the key is the brake, {@link SlopeBrake}). */
+	private static volatile boolean noSneak;
 	/** Other reasons to hold the player as if one of our screens were open (a hidden UI whose screen is covered). */
 	private static final List<BooleanSupplier> HOLDS = new CopyOnWriteArrayList<>();
 
@@ -56,6 +58,15 @@ public final class InputLock {
 
 	public static void set(boolean value) {
 		locked = value;
+	}
+
+	/** While set, sneaking doesn't crouch (the key is read for Cycling Road's brake instead). */
+	public static void setNoSneak(boolean value) {
+		noSneak = value;
+	}
+
+	public static boolean noSneak() {
+		return noSneak;
 	}
 
 	/** Adds a condition under which the player is held like with one of our screens open (client thread). */
@@ -124,6 +135,9 @@ public final class InputLock {
 
 	/** Zeroes the movement keys' effect when locked (called at the end of {@code KeyboardInput.tick}). */
 	public static void apply(Input input) {
+		if (noSneak) {
+			input.shiftKeyDown = false;
+		}
 		if (!locked) {
 			return;
 		}

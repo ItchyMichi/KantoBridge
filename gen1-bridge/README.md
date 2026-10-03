@@ -19,8 +19,12 @@ the generic menus, and map trainers that sight the player work against the real 
 tests in [`tools/e2e/`](../tools/e2e): the title, Oak's speech with both names typed from the client,
 Oak's escort, the starter, the lab's rival battle won and lost, 200 grass steps on Route 1 with no
 native battle, and Viridian City: the nurse, both saves, Bill's PC, a Mart purchase and sale, a Viridian
-Forest trainer beaten and another lost to, the blackout). Story diffs and field moves arrive in later
-milestones.
+Forest trainer beaten and another lost to, the blackout). **M8 (wave 1)** adds the story diffs
+(`story.flags`, `story.toggles`, `story.blocks`, `story.lit` and the snapshot's effective toggles,
+live blocks and lit maps), field moves from Minecraft (`act.field`), the forced-movement kinds
+(spinners, Seafoam currents, the Cycling Road, holes, pads, boulders) and the audited table of every
+runtime block change the engine makes (end to end: a cut tree reported and grown back, Surf, a
+Viridian Gym spinner, an elevator, a Strength boulder).
 
 ## What it does each logic step
 
@@ -38,9 +42,13 @@ test drivers), guarded so the hook always calls `next`:
 3. **Player:** the classifier turns the engine's state into a mode (`screen`, `busy`, `forced`,
    `cutscene`, `idle`), and changes go out as `player.state`. Each step start goes out as
    `player.pos` with the **target** cell and its length in frames (kind `walk`, `bike`, `surf`,
-   `script` for the engine's own moves such as a door walk-out, `spin`, `slope` for the Cycling Road
-   roll); a ledge hop is one `player.pos` kind `ledge` at its landing cell with the whole hop's
-   frames; turns, warps and teleports go out as `player.pos` kind `sync`.
+   `script` for the engine's own moves such as a door walk-out, `spin` for a spinner's slide (48
+   frames a cell), `current` for a Seafoam current's drag or push-back (M8: a chain of the player's
+   scripted steps that began on one of the map's current cells while surfing), `slope` for the
+   Cycling Road roll); a ledge hop is one `player.pos` kind `ledge` at its landing cell with the
+   whole hop's frames; turns, warps and teleports go out as `player.pos` kind `sync`.
+   `player.state` carries `bike`, `surf`, `slope` (on the bike on a slope map), `dark` (a
+   `field.darkMaps` map) and `lit` (dark and lit by Flash).
 4. **Steps** (`act/kb_move.lua`, PLAN §4.1 "Step driver"): `move.step{dir, n, push?}` requests
    queue (at most 2 waiting behind the one in flight; the oldest beyond that is dropped and logged).
    While the classifier says `idle` and the player stands, the driver sets the facing directly (no
@@ -57,9 +65,12 @@ test drivers), guarded so the hook always calls `next`:
    `player.warped` event, a blackout, or a fade with no warp entry), then `warp{phase:"arrive", kind,
    to}` once `map.entered` reports the destination, followed by the `player.pos` sync of the new
    cell. Kinds: `door` (a door tile, or a gate doorway), `stairs` (another warp tile), `edge` (an exit
-   mat on the map edge), `pad`, `hole`, `elevator` (out of a `*_ELEVATOR` car), `fly`, `teleport`
-   (Dig, Teleport and Escape Rope look alike here), `blackout`, `script`. A connection crossing is not
-   a warp: its step's `player.pos` carries the new map.
+   mat on the map edge), `pad`, `hole` (also a hole a map script opens: no `player.warped` then, the
+   hole's sink names it), `elevator` (out of a `*_ELEVATOR` car), `fly`, `dig`, `rope`, `teleport`
+   (M8: the escape spin is named by whoever started it -- `act.field`, or the bag's ESCAPE ROPE seen
+   through the `item.use` hook -- else by the place: TELEPORT works only outside, DIG only in a
+   dungeon), `blackout`, `script`. A connection crossing is not a warp: its step's `player.pos`
+   carries the new map.
 6. **NPCs** (`observe/kb_npcs.lua`): the current map's NPCs (`ow.npcs`) are diffed by id every
    step. `npc.set` (the whole list) on map entry (every new NPC table: warps, seam crossings) and after
    every snapshot; `npc.add`/`npc.remove` when one appears or goes (show/hide, an item taken);
@@ -229,6 +240,50 @@ test drivers), guarded so the hook always calls `next`:
    (the title, New Game, CONTINUE) is dropped; `pc.closed` with no hold is counted and ignored. A hot
    reload keeps it working: the hold lives in kb_engine's process-lifetime slot and a menu built
    before the reload asks the current instance.
+22. **The story** (`observe/kb_story.lua`, M8, docs/PROTOCOL.md "Story rules (M8)"), while a client
+   or test session is connected, after the NPC messages of each step:
+   - `story.flags{set, clear}`: the diff of `save.flags` (flags now true / no longer true) every 10
+     logic steps, on the step a script ends (the main runner stops) and on a map load (many paths
+     write `save.flags` directly, so there is no event to follow);
+   - `story.toggles{map, obj, visible}`: every change in an object's **effective** visibility --
+     the engine's own `objectVisible` over its record's `hidden` default, `save.objectToggles`,
+     items taken and beaten statics -- on the same beat; `visible` back at the default means the
+     object is at its default again. `obj` is the map object's name (the export's, and the story
+     cell's `obj`);
+   - `story.blocks{map, changes[{bx, by, block}]}`: the current map's live blocks. On every map load
+     (warps, seam crossings, same-map warps and reloads: a new `ow.npcs` table) every block that
+     differs from the map data the world was built from -- or, for a same-map reload, every block
+     that changed since, so regrown trees go out too; then every change while the player stays,
+     checked every step. A client drops a map's live blocks when the player leaves it (the map data
+     holds again there, as Cut trees grow back on the next load). The map data is copied at
+     `mods.loaded`, before any map loads (a hot reload's Data is reloaded from disk first); a map
+     the copy lacks is read from the dataset view;
+   - `story.lit{map, lit}`: the dark maps Flash lit -- all of them while `save.flashLit` holds,
+     since the engine keeps the light across dark floors and drops it on any other map.
+   The snapshot holds the same state in full: `toggles` (every non-default effective visibility,
+   all maps), `blocks` (the current map's differing blocks) and `lit`; the diffs start from it.
+   Every block change must be a known one: a site of `export/kb_swapsites.lua`'s audited table (its
+   closed or open block; a card-key door also the CARD KEY's open block), a Cut the engine recorded
+   (`ow.cutBlocks`, cut tall grass included), or the map data again. Anything else is still
+   reported, and counted (`storyUnknownBlocks`) and logged as the error code `story.unknown_block`
+   with the map's symbol.
+23. **Field moves** (`act/kb_field.lua`, M8): `act.field{action, x?, y?, dest?, item?}` waits for the
+   player to stand (a step in flight lands first), turns to `x`/`y` when given (cut, surf, fish: an
+   adjacent cell), and has the hidden game perform the move as if it was chosen from the party menu
+   or the bag (kb_engine's `fieldAction`: the engine's own entry points behind the checks the engine
+   makes): `cut` (the tree or grass in front), `surf` (onto the water in front, or off it: kind
+   `dismount`), `strength` (on; a boulder is then pushed by walking into it twice with
+   `move.step`, the engine's own push), `flash` (only on a dark map), `dig` (in a dungeon;
+   **with `item: "ESCAPE_ROPE"` the bag's Escape Rope instead**, kind `rope`, the rope used up),
+   `teleport` (outside), `bicycle` (on or off: kinds `bike_on`, `bike_off`), `fish` (the rod
+   `item`, else the best rod in the bag), `fly` (to `dest`, a town the Town Map's fly list offers;
+   without one the native fly list opens and arrives as a list UI, kind `fly_list`). Eligibility is
+   the engine's: a shadow-party member knows the move, its badge is in the bag (`constants.hmBadges`),
+   then `partyKnows` itself (which a mod's `fieldmove.eligibility` hook may answer). Every request
+   gets one `act.result`: `ok` with the kind, or a reason: `not_ingame`, `not_idle`, `not_adjacent`,
+   `no_move`, `no_badge`, `no_target` (nothing to cut, no water, no such fly town), `not_here` (the
+   wrong place: indoors, outdoors, not dark, no riding here, the Cycling Road, a current), `no_item`,
+   `already` (Strength is on), `busy` (one request at a time), `failed`.
 
 ### Where the export's data comes from
 
@@ -265,7 +320,7 @@ client are released at once.
 | File | Purpose |
 |---|---|
 | `manifest.json` | Read by Gen1Recomp's loader. `network` unlocks `require("socket")` (LÖVE's bundled LuaSocket) inside the mod sandbox; `engine_internals` discloses that the mod requires engine modules (`src.*`). Gen1Recomp only displays permissions; it never prompts. |
-| `main.lua` | Entry point. Loads the modules, defines the `port` option, wires the `input.step`, `movement.collision`, `render.output_enabled`, `render.output`, `script.command`, `trainer.before_battle`, `encounter.roll`, `encounter.fishing`, `item.use` and `ui.pc.items` hooks and the `game.ready`, `save.created`, `save.loaded`, `save.writing`, `player.warped`, `map.entered`, `world.blacked_out`, `screen.pushed`/`popped` and `world.interacted` events, routes `move.*`, `act.*`, `ui.*`, `mirror.*`, `battle.result`, `party.sync`, `dex.sync`, `bag.use`, `save.done`, `pc.closed` and `session.bind` to their modules, keeps one tap per logic step, orders each step's messages (`player.state`, `warp`, `player.pos`/`player.blocked`, `act.result`, `npc.*`/`emote`, `ui.close`/`open`/`update`, `party.give`/`party.heal`/`party.item`, `bag.sync`, `save.begin`, `pc.open`, `battle.native`/`battle.start`, `mirror.frame`; a blackout's `party.heal` after its warp's `arrive`), and publishes a status table in `mod.exports` (versions, counts, flags; from M7 also `saves`, `centerSaves`, `sessionBinds`, `pcHeld`) for test drivers. `debug.status` adds the battle, party, bag, encounter, item, save (`save*`) and PC (`pc*`) counters, the Pokédex counts, `money`, `bagTotal`/`bagKinds`, `defeated` (trainers beaten) and the typed names' lengths and short hashes. |
+| `main.lua` | Entry point. Loads the modules, defines the `port` option, wires the `input.step`, `movement.collision`, `render.output_enabled`, `render.output`, `script.command`, `trainer.before_battle`, `encounter.roll`, `encounter.fishing`, `item.use` and `ui.pc.items` hooks and the `mods.loaded` (M8: the copy of the map data the story compares with), `game.ready`, `save.created`, `save.loaded`, `save.writing`, `player.warped`, `map.entered`, `world.blacked_out`, `screen.pushed`/`popped` and `world.interacted` events, routes `move.*`, `act.*`, `ui.*`, `mirror.*`, `battle.result`, `party.sync`, `dex.sync`, `bag.use`, `save.done`, `pc.closed`, `session.bind` and (M8) `act.field` to their modules, keeps one tap per logic step, orders each step's messages (`player.state`, `warp`, `player.pos`/`player.blocked`, `act.result`, `npc.*`/`emote`, (M8) `story.blocks`/`story.lit`/`story.flags`/`story.toggles`, `ui.close`/`open`/`update`, `party.give`/`party.heal`/`party.item`, `bag.sync`, `save.begin`, `pc.open`, `battle.native`/`battle.start`, `mirror.frame`; a blackout's `party.heal` after its warp's `arrive`), and publishes a status table in `mod.exports` (versions, counts, flags; from M7 also `saves`, `centerSaves`, `sessionBinds`, `pcHeld`) for test drivers. `debug.status` adds the battle, party, bag, encounter, item, save (`save*`) and PC (`pc*`) counters, the Pokédex counts, `money`, `bagTotal`/`bagKinds`, `defeated` (trainers beaten) and the typed names' lengths and short hashes; M8 adds `story*` (messages, map loads, block changes, `storyUnknownBlocks`, `storySites`, `storyPristine`) and `field*` (requests, ok, failed, busy, `fieldKind_<kind>`). |
 | `lib/kb_json.lua` | Our own strict, deterministic JSON codec: sorted keys, `{}`/`[]`/null kept apart, strict parsing, errors that never quote the input. |
 | `lib/kb_sha256.lua` | SHA-256, for the short hashes logs may show and for export hashes. |
 | `lib/kb_log.lua` | Redacted logging: a code plus fields; any string that isn't id-shaped prints as `<str:LEN:SHA8>`. |
@@ -273,25 +328,27 @@ client are released at once.
 | `lib/kb_proto.lua` | The message envelope (`type`, `seq`, `re`, `data`), dispatch, replies and `error` answers, with a gate and catalog-aware handling of unhandled types. |
 | `lib/kb_session.lua` | One connection's session: hello first, handshake, heartbeat timeout, resync, debug messages, live streams, log forwarding. |
 | `lib/kb_catalog.lua` | **Generated** from `protocol/catalog.json` by `tools/lua/gen_catalog.py`: the message types and their legs. A test fails when it is stale. |
-| `lib/kb_engine.lua` | **The only file that touches engine internals.** Each function cites the engine `file:line` it relies on (v0.3.49): the overworld and its player, the top state's class, NPCs, dark maps, badges, the options pin, the instance takeover slot, the movement internals (setting the facing, held buttons, the player's collision verdicts, warp departures, hop/boulder/departure facts), the M4 internals (the screen stack's classes and stable keys, each widget's fields and its ready test, the few writes before a confirming tap: a cursor, a quantity, a name's glyphs; NPC steps and scripted moves, the emotion bubble, `world.interacted`'s target, counter tiles), and the export's data sources and queries (dataset views, the live-Data copy, `Map.new` and its cell queries, `Map.isOutside`, `computeNeighbors`, tile animations, spinner tiles, `Assets.imageData` + PNG encoding, the SGB palette cascade, and the few engine constants with nothing to call: cut-tree and shore tiles), and the M5 seams: the `script.command` and `trainer.before_battle` bodies (the held battle on the runner's `waitingCheck`, `start_battle`'s resume path, engageTrainer's win effects, `continue({cancel})`, the result texts and prize), trainer teams (`Pokemon.movesAtLevel`, the copied boss-move table and trainer DVs, the rival's offset), `give_pokemon`'s gift capture, `heal_party`, the shadow party's rebuild (`Pokemon.new`, `Stats.calc`, `Growth.expForLevel`, `stampOT`) with its uid map, and the process-lifetime `kantoBridgeState` slot on the Game object; and the M6 seams: the `encounter.roll` and `encounter.fishing` bodies (the Safari region and ghost-map rules, REPEL's filter, `encounter.species`, the held surf/fish battle and its `afterBattle` ending, the cast box's continuation taken over on `screen.pushed`), the native special battle on the stack (`battleKind`), the Pokédex (`save.pokedex`), the bag (`save.inventory`, `Bag.remove`, key items), and the `item.use` body (the stone and candy tests, BagMenu's consume, row refresh and party-menu close, the TM/HM watch over MoveLearnMenu's slot), with the slot pointing at the current instance's bridge; and the M7 seams: the nurse's heal machine (`healAnim`, `lastHeal`), the center save (`Game:writeSave` behind `Game:quickSaveAllowed`, its reason during `save.writing`), the save queue, the active save slot (`SaveData.activeSlot`), the blackout's held heal, the map's song after a battle Cobblemon fought (`Music.restoreMap`), the Mart's money box and changing footers, and the `ui.pc.items` body (the box row by its source label, the access text's continuation, the hold state and its record). Re-check them all when the Gen1Recomp pin changes. |
-| `observe/kb_player.lua` | The mode classifier (`busy` while a Cobblemon battle holds the world) and the `player.state`/`player.pos` observer, working on plain facts from `kb_engine`: step starts, ledge hops (one message at the landing), syncs, and tags the step driver reads. |
+| `lib/kb_engine.lua` | **The only file that touches engine internals.** Each function cites the engine `file:line` it relies on (v0.3.49): the overworld and its player, the top state's class, NPCs, dark maps, badges, the options pin, the instance takeover slot, the movement internals (setting the facing, held buttons, the player's collision verdicts, warp departures, hop/boulder/departure facts), the M4 internals (the screen stack's classes and stable keys, each widget's fields and its ready test, the few writes before a confirming tap: a cursor, a quantity, a name's glyphs; NPC steps and scripted moves, the emotion bubble, `world.interacted`'s target, counter tiles), and the export's data sources and queries (dataset views, the live-Data copy, `Map.new` and its cell queries, `Map.isOutside`, `computeNeighbors`, tile animations, spinner tiles, `Assets.imageData` + PNG encoding, the SGB palette cascade, and the few engine constants with nothing to call: cut-tree and shore tiles), and the M5 seams: the `script.command` and `trainer.before_battle` bodies (the held battle on the runner's `waitingCheck`, `start_battle`'s resume path, engageTrainer's win effects, `continue({cancel})`, the result texts and prize), trainer teams (`Pokemon.movesAtLevel`, the copied boss-move table and trainer DVs, the rival's offset), `give_pokemon`'s gift capture, `heal_party`, the shadow party's rebuild (`Pokemon.new`, `Stats.calc`, `Growth.expForLevel`, `stampOT`) with its uid map, and the process-lifetime `kantoBridgeState` slot on the Game object; and the M6 seams: the `encounter.roll` and `encounter.fishing` bodies (the Safari region and ghost-map rules, REPEL's filter, `encounter.species`, the held surf/fish battle and its `afterBattle` ending, the cast box's continuation taken over on `screen.pushed`), the native special battle on the stack (`battleKind`), the Pokédex (`save.pokedex`), the bag (`save.inventory`, `Bag.remove`, key items), and the `item.use` body (the stone and candy tests, BagMenu's consume, row refresh and party-menu close, the TM/HM watch over MoveLearnMenu's slot), with the slot pointing at the current instance's bridge; and the M7 seams: the nurse's heal machine (`healAnim`, `lastHeal`), the center save (`Game:writeSave` behind `Game:quickSaveAllowed`, its reason during `save.writing`), the save queue, the active save slot (`SaveData.activeSlot`), the blackout's held heal, the map's song after a battle Cobblemon fought (`Music.restoreMap`), the Mart's money box and changing footers, and the `ui.pc.items` body (the box row by its source label, the access text's continuation, the hold state and its record); and the M8 seams: the copy of the map data at `mods.loaded` (blocks and objects; the dataset view for a map it lacks), the current map's live blocks (`ow.map.def.blocks`) and load serial (a new `ow.npcs` table), the engine's cut record (`ow.cutBlocks`) and `field.cutTreeSwaps`, the swap-site field tables through `FieldDefaults.fieldValue`, effective visibility through `OverworldState.objectVisible`, a Seafoam current's chain (where the player's scripted steps began), the escape spin's kind (the `teleportOut` table marked by `act.field` or the bag's ESCAPE ROPE), and `fieldAction`: WorldAPI's `acceptsMenuInput` test, the shadow party's moves and `constants.hmBadges`, `partyKnows`, and the party menu's and bag's own entry points (`useCutFieldMove`/`tryCut`, `useSurfFieldMove`/`trySurf`/`stopSurfing`, `useStrengthFieldMove`, `useFlashFieldMove`, `beginTeleportOut`, `Bag.remove`, `useBicycle`/`bikeAllowed`, `useFishingRod`, `flyTo` and `Screens.push` of the Town Map's fly list). Re-check them all when the Gen1Recomp pin changes. |
+| `observe/kb_player.lua` | The mode classifier (`busy` while a Cobblemon battle holds the world) and the `player.state`/`player.pos` observer, working on plain facts from `kb_engine`: step starts, ledge hops (one message at the landing), syncs, and tags the step driver reads. M8: Seafoam currents as kind `current`. |
 | `observe/kb_warp.lua` | The `warp` start/arrive messages and their kinds, from the warp events and the transition facts. |
 | `act/kb_move.lua` | The step driver: `move.step` queue, facing first, holds through `mod.input` (released on the landing poll, re-pressed after an input reset, all released outside `idle`), outcomes (step, hop, push, warp, blocked) answered once per `n`, `move.face`, `move.hold`. |
-| `observe/kb_snapshot.lua` | Builds `snapshot` from the facts and the save: position, state, flags, toggles, bag, money, coins, badges, the hidden game's party (with the Cobblemon uids it knows), the Pokédex, the current map's NPCs (shaped by `kb_npcs`). |
+| `observe/kb_snapshot.lua` | Builds `snapshot` from the facts and the save: position, state, flags, the story's effective toggles, live blocks and lit maps (M8), bag, money, coins, badges, the hidden game's party (with the Cobblemon uids it knows), the Pokédex, the current map's NPCs (shaped by `kb_npcs`). |
 | `act/kb_battle.lua` | Battles fought in Cobblemon: the `battle.start` payload of a battle kb_engine holds (kind, trainer, team, wild, rules; wild kinds `static`, `surf`, `fish`), sending it and re-sending it after snapshots, `battle.result` (outcomes to the engine's results; errors `battle.unknown`, `bad_message`), and `battle.native` for the special battles that stay native. |
 | `act/kb_party.lua` | Gifts (`party.give`, re-sent until a sync shows them, given up on after five syncs and two minutes), heals (`party.heal`), `party.sync` (checked, mapped to Gen 1 species and moves, matched to pending gifts by `give` or by species and level, applied when safe), the uids in `mod.save`, `dex.sync` (added to the Pokédex in game, again after New Game or CONTINUE) and `party.item` (the item uses kb_engine queued, sent once). |
 | `act/kb_save.lua` | Saving and sessions (M7): `save.writing` → `save.begin` (reason `menu` or `center`, the newest waiting while no client is connected), the nurse's heal (Cobblemon's `party.heal`, then the center save), `save.done` (log only, counted), `session.bind` → `session.bound{slot}` with the world kept in `mod.save`. |
 | `act/kb_pc.lua` | Bill's PC (M7): `pc.open` once per hold kb_engine's `ui.pc.items` wrapper sets up, `pc.closed` ending it, a dropped link releasing it, counts. |
 | `observe/kb_bag.lua` | The mirrored bag: the battle items of PLAN Appendix B as `bag.sync` (after snapshots and on change, in game only), `bag.use` applied through kb_engine's `Bag.remove` (never below zero, mismatches counted, unmirrored items refused). |
 | `observe/kb_npcs.lua` | The NPC observer: `npc.set`/`add`/`remove`/`move`/`face` and `emote` from a per-step diff by id; `Npcs.shape`, the one place an NPC becomes a protocol entry. |
+| `observe/kb_story.lua` | M8: the story diffs (`story.flags`, `story.toggles`, `story.blocks`, `story.lit`), the snapshot's story parts (`rebase`), and the check that every block change is a known one (`story.unknown_block`). |
 | `observe/kb_ui.lua` | The UI observer: the stack's states as `ui.open`/`update`/`close` by kind, the protocol text markup (`Ui.markup`), re-announcing after a snapshot. |
 | `observe/kb_mirror.lua` | The mirror: subscriptions, the fps cap, the capture inside the `render.output` observer, dedupe, the cost counters. |
 | `act/kb_uiact.lua` | UI answers (`ui.advance`, `ui.pick`, `ui.back`, `ui.qty`, `ui.name`) and `act.button`, applied as taps to the top state. |
 | `act/kb_interact.lua` | `act.interact`: face and press A in one step, confirmed by `world.interacted`, one retry for a moving NPC. |
+| `act/kb_field.lua` | M8: `act.field`: one request at a time, waiting for the player to stand, turning to a target cell, kb_engine's `fieldAction`, one `act.result` each (kinds and refusal reasons above). |
 | `export/kb_export.lua` | The export service: roles, the request queue, the budgeted build coroutine, the cache, budgeted replies, and every resource's shaping (map records, surface, parents by BFS, the `LAST_MAP` memory, palettes, tile classes, images, sprites, encounters, field tables, names, layout). |
 | `export/kb_cells.lua` | The per-cell flag integers of one map, from `kb_engine`'s map queries plus `field.ledges`, `field.spinners`, the warps and signs. |
 | `export/kb_images.lua` | Base64, image ids from asset paths (`<folder>.<name>`), and the image and sprite resources. |
-| `export/kb_swapsites.lua` | Runtime block-change sites: cut trees (from the cells), card-key doors and lift gates (`field.cardKeyDoors`), the Game Corner poster and the Vermilion Gym door; curated script swaps come with M8's audit. |
+| `export/kb_swapsites.lua` | The audited table of every runtime block change the engine makes (M8; the file's header lists each engine site with its `file:line`): cut trees (from the cells), card-key doors and lift gates (`field.cardKeyDoors`), the Game Corner poster, the Vermilion Gym door, the Victory Road barriers (kind `boulder`), the Elite Four exits, Lance's doorway, the Pokemon Mansion switches, the Cinnabar Gym gates and the S.S. Anne's departure (curated rows). `before` is the closed state, `after` the open one; the map data holds one of the two (except AGATHAS_ROOM's exit, which the engine overwrites on every entry). `runtimeIndex`/`allows`: the runtime check the story uses. |
 | `mod.card` | Sharing metadata for the mod manager and gallery. The loader never reads it. |
 
 Rules for this folder:

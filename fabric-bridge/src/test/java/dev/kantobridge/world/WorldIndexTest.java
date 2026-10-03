@@ -68,6 +68,33 @@ class WorldIndexTest {
 	}
 
 	@Test
+	void storyCellsCarryTheirM8State() throws Exception {
+		StoryCellTable cells = StoryCellTable.of(List.of(
+				new StoryCellTable.Entry(new CellPos("TEST_TOWN", 15, 4), StoryCellType.OBJECT, "TESTTOWN_BALL", null, true, null, null),
+				new StoryCellTable.Entry(new CellPos("TEST_TOWN", 10, 14), StoryCellType.TILE, null, new StoryCellTable.Swap(5, 7, "cut", 14, 15),
+						false, 14, new StoryCellTable.Closed(14, true, 2, List.of(13, 13, 13, 4095)))));
+		WorldIndex index = new WorldIndex("red", HASH_A, sample().maps().values(), HASH_B, cells, List.of());
+		WorldIndex read = WorldIndex.fromJson(index.toJson());
+		assertEquals(index.storyCells().entries(), read.storyCells().entries());
+		JsonObject ball = ProtoJson.parseObject(index.toJson()).getAsJsonArray("storyCells").get(0).getAsJsonObject();
+		assertEquals(List.of("hidden", "key", "obj", "type"), ball.keySet().stream().sorted().toList());
+		JsonObject tile = ProtoJson.parseObject(index.toJson()).getAsJsonArray("storyCells").get(1).getAsJsonObject();
+		assertEquals(List.of("closed", "key", "start", "swap", "type"), tile.keySet().stream().sorted().toList());
+		assertEquals(List.of("art", "block", "height", "pass"), tile.getAsJsonObject("closed").keySet().stream().sorted().toList());
+		// Entries from before M8 (no state fields) still read, and an object that starts visible says nothing.
+		JsonObject plain = ProtoJson.parseObject(sample().toJson()).getAsJsonArray("storyCells").get(0).getAsJsonObject();
+		assertEquals(List.of("key", "obj", "type"), plain.keySet().stream().sorted().toList());
+
+		String good = index.toJson();
+		assertThrows(DataException.class, () -> WorldIndex.fromJson(good.replace("\"art\":[13,13,13,4095]", "\"art\":[13,13,13]")));
+		assertThrows(DataException.class, () -> WorldIndex.fromJson(good.replace("4095", "4096")));
+		assertThrows(DataException.class, () -> WorldIndex.fromJson(good.replace("\"height\":2", "\"height\":9")));
+		assertThrows(DataException.class, () -> WorldIndex.fromJson(good.replace("\"start\":14", "\"start\":256")));
+		assertThrows(DataException.class, () -> WorldIndex.fromJson(good.replace("\"pass\":\"solid\"", "\"pass\":\"solid\",\"x\":1")));
+		assertThrows(DataException.class, () -> WorldIndex.fromJson(good.replace("\"pass\":\"solid\"", "\"pass\":\"lava\"")));
+	}
+
+	@Test
 	void strictReadingRejectsMalformedIndexes() {
 		String good = sample().toJson();
 		assertThrows(DataException.class, () -> WorldIndex.fromJson(good.replace("\"version\":1", "\"version\":2")));

@@ -254,7 +254,7 @@ public final class BlockPlacer {
 			}
 		}
 		switch (BlockCode.kind(code)) {
-			case BlockCode.KIND_STORY -> {
+			case BlockCode.KIND_STORY, BlockCode.KIND_STORY_TILE -> {
 				this.counts.storyCells++;
 				StoryCellTable.Entry entry = this.plan.storyCells().entries().get(BlockCode.value(code));
 				BlockEntity blockEntity = this.level.getBlockEntity(pos);

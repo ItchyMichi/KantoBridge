@@ -19,6 +19,7 @@ import com.cobblemon.mod.common.pokemon.properties.UncatchableProperty;
 import com.cobblemon.mod.common.util.PlayerExtensionsKt;
 import dev.kantobridge.KantoBridge;
 import dev.kantobridge.block.KbBlocks;
+import dev.kantobridge.block.StoryCellBlock;
 import dev.kantobridge.net.RelayService;
 import dev.kantobridge.pokemon.Gen1Mons;
 import dev.kantobridge.proto.MsgTypes;
@@ -251,7 +252,7 @@ public final class EncounterService {
 		BlockPos.MutableBlockPos pos = new BlockPos.MutableBlockPos(Mth.floor(x), Mth.floor(fromY + 0.5), Mth.floor(z));
 		for (int i = 0; i < 6; i++) {
 			BlockState state = level.getBlockState(pos);
-			if (!state.is(KbBlocks.STORY_CELL) && !state.is(KbBlocks.LEDGE_COLLIDER)) {
+			if (!(state.getBlock() instanceof StoryCellBlock) && !state.is(KbBlocks.LEDGE_COLLIDER)) {
 				VoxelShape shape = state.getCollisionShape(level, pos, CollisionContext.empty());
 				if (!shape.isEmpty()) {
 					return pos.getY() + shape.max(Direction.Axis.Y);

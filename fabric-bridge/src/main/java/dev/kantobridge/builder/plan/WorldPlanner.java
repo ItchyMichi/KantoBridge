@@ -11,6 +11,7 @@ import dev.kantobridge.builder.export.ExportPalettes;
 import dev.kantobridge.builder.export.ExportSwaps;
 import dev.kantobridge.builder.export.ExportTileset;
 import dev.kantobridge.builder.pack.HabitatPoolWriter;
+import dev.kantobridge.world.DataReader;
 import dev.kantobridge.world.MapPlacement;
 import dev.kantobridge.world.Scale;
 import dev.kantobridge.world.SlotMap;
@@ -22,6 +23,7 @@ import java.util.Arrays;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.IdentityHashMap;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -73,7 +75,8 @@ public final class WorldPlanner {
 				if (all.containsKey(id)) {
 					requested.add(id);
 				} else {
-					warnings.warn("filter_unknown_map");
+					// The id was typed by whoever ran the build; only a well-formed one is repeated.
+					warnings.warn("filter_unknown_map", Warnings.symbols("map", DataReader.MAP_ID.matcher(id).matches() ? id : null));
 				}
 			}
 		}
@@ -114,7 +117,11 @@ public final class WorldPlanner {
 		}
 
 		// ---- interiors: in rounds, each placed under its parent's door ----
-		InteriorPacker packer = new InteriorPacker(Scale.maxLayer(options.minBuildHeight()));
+		List<InteriorPacker.Box> surfaceFootprints = new ArrayList<>();
+		for (MapPlacement p : placements.values()) {
+			surfaceFootprints.add(new InteriorPacker.Box(p.x(), p.z(), p.x() + p.blockWidth(), p.z() + p.blockDepth()));
+		}
+		InteriorPacker packer = new InteriorPacker(Scale.maxLayer(options.minBuildHeight()), surfaceFootprints);
 		List<ExportMap> pending = new ArrayList<>();
 		for (String id : requested) {
 			ExportMap map = all.get(id);
@@ -123,9 +130,9 @@ public final class WorldPlanner {
 			}
 			if (map.parent() == null) {
 				// Only an explicit filter gets here (a full build leaves unreachable maps out): asked for, can't be placed.
-				warnings.warn("map_unreachable");
+				warnings.warn("map_unreachable", Warnings.symbols("map", id));
 			} else if (!requestedSet.contains(map.parent().map())) {
-				warnings.warn("interior_parent_not_built");
+				warnings.warn("interior_parent_not_built", Warnings.symbols("map", id, "parent", map.parent().map()));
 			} else {
 				pending.add(map);
 			}
@@ -149,12 +156,33 @@ public final class WorldPlanner {
 			}
 			pending = next;
 		}
-		warnings.warn("interior_parent_unplaced", pending.size());
+		for (ExportMap map : pending) {
+			warnings.warn("interior_parent_unplaced", Warnings.symbols("map", map.id(), "parent", map.parent().map()));
+		}
+		// Every map asked for that has no place now, for the report and its diagnostics (the codes above say why).
+		int unplaced = 0;
+		for (String id : requested) {
+			if (!placements.containsKey(id)) {
+				unplaced++;
+				warnings.detail("maps_unplaced", Warnings.symbols("map", id));
+			}
+		}
 
 		// ---- cell models ----
 		Map<String, List<ExportSwaps.Site>> swapsByMap = new HashMap<>();
-		for (ExportSwaps.Site site : bundle.swaps().sites()) {
+		// Each site's position in the export's list names it in the diagnostics (no coordinates, no block ids).
+		Map<ExportSwaps.Site, Integer> siteNumbers = new IdentityHashMap<>();
+		List<ExportSwaps.Site> allSites = bundle.swaps().sites();
+		for (int i = 0; i < allSites.size(); i++) {
+			ExportSwaps.Site site = allSites.get(i);
 			swapsByMap.computeIfAbsent(site.map(), k -> new ArrayList<>()).add(site);
+			siteNumbers.put(site, i);
+		}
+		for (ExportSwaps.Site site : allSites) {
+			if (!all.containsKey(site.map())) {
+				warnings.warn("swap_unknown_map", Warnings.symbols("map", site.map(), "kind", site.kind(), "source", site.source(), "site",
+						Integer.toString(siteNumbers.get(site))));
+			}
 		}
 		Map<String, ExportTileset> tilesets = new HashMap<>();
 		ExportPalettes palettes = bundle.has("palettes", "sgb") ? bundle.palettes() : null;
@@ -173,7 +201,8 @@ public final class WorldPlanner {
 				warnings.warn("palette_missing");
 			}
 			boolean interior = placement.kind() == MapPlacement.Kind.INTERIOR;
-			placed.add(new PlacedMap(placement, MapModel.build(map, tileset, swapsByMap.getOrDefault(map.id(), List.of()), interior, warnings)));
+			placed.add(new PlacedMap(placement, MapModel.build(map, tileset, swapsByMap.getOrDefault(map.id(), List.of()), interior, warnings,
+					site -> siteNumbers.getOrDefault(site, -1))));
 		}
 
 		// ---- surface void fill: each gap cell takes the border art of its nearest surface map ----
@@ -228,8 +257,15 @@ public final class WorldPlanner {
 			warnings.note("void_fill_cells", gaps);
 		}
 
-		// ---- story cells ----
-		StoryCellTable storyCells = StoryCellPlanner.plan(placed, warnings);
+		// ---- slot map: from the whole export, so it (and the shared resource pack) never depends on the filter ----
+		ArtCatalog art = ArtCatalog.of(bundle, warnings);
+		SlotMap slotMap = art.slotMap();
+
+		// ---- story cells (their closed art names slots of the slot map) ----
+		StoryCellTable storyCells = StoryCellPlanner.plan(placed, warnings, (atlas, palette, tile) -> {
+			SlotMap.Slot slot = tile < 0 || tile > 1023 ? null : slotMap.slot(new SlotMap.Key(atlas, palette, tile, SlotMap.Shape.FULL));
+			return slot == null ? -1 : slot.index();
+		});
 		Map<String, int[]> storyIndex = new HashMap<>();
 		Map<String, Integer> widths = new HashMap<>();
 		for (PlacedMap map : placed) {
@@ -244,10 +280,6 @@ public final class WorldPlanner {
 			storyIndex.get(entry.cell().map())[entry.cell().y() * widths.get(entry.cell().map()) + entry.cell().x()] = i;
 		}
 
-		// ---- slot map: from the whole export, so it (and the shared resource pack) never depends on the filter ----
-		ArtCatalog art = ArtCatalog.of(bundle, warnings);
-		SlotMap slotMap = art.slotMap();
-
 		// ---- habitats: blocks for the built maps; pools for every wild map of the export (like the slot map) ----
 		List<WorldIndex.Habitat> habitats = encounters == null ? List.of() : HabitatPlanner.plan(placed, encounters, field, warnings);
 		Map<String, String> pools = encounters == null ? Map.of() : HabitatPoolWriter.pools(encounters, field);
@@ -259,7 +291,7 @@ public final class WorldPlanner {
 		}
 		WorldIndex index = new WorldIndex(bundle.game(), bundle.exportHash(), placements.values(), slotMap.hash(), storyCells, habitats);
 		return new WorldPlan(bundle.game(), bundle.exportHash(), options.originX(), options.originZ(), placed, surfaceBox, owner, voidCells,
-				storyCells, storyIndex, art, spawn, index, pools, warnings, mapsRequested, layout.edgeMismatches(), layout.overlaps());
+				storyCells, storyIndex, art, spawn, index, pools, warnings, mapsRequested, unplaced, layout.edgeMismatches(), layout.overlaps());
 	}
 
 	/**
@@ -280,20 +312,24 @@ public final class WorldPlanner {
 			arrivalX = arrival.x();
 			arrivalY = arrival.y();
 		} else if (!map.warps().isEmpty()) {
-			warnings.warn("interior_arrival_missing");
+			warnings.warn("interior_arrival_missing", Warnings.symbols("map", map.id()));
 			arrivalX = map.warps().get(0).x();
 			arrivalY = map.warps().get(0).y();
 		} else {
-			warnings.warn("interior_arrival_missing");
+			warnings.warn("interior_arrival_missing", Warnings.symbols("map", map.id()));
 		}
 		InteriorPacker.Spot spot = packer.place(doorX - Scale.cellToBlock(arrivalX), doorZ - Scale.cellToBlock(arrivalY),
 				Scale.cellToBlock(map.cellWidth()), Scale.cellToBlock(map.cellHeight()), parent.layer() + 1);
+		Map<String, String> detail = Warnings.symbols("map", map.id(), "parent", parent.id(), "parent_layer", Integer.toString(parent.layer()));
 		if (spot == null) {
-			warnings.warn("interior_unplaced");
+			warnings.warn("interior_unplaced", detail);
 			return null;
 		}
-		if (spot.moved()) {
-			warnings.note("interior_moved_sideways");
+		if (spot.deep()) {
+			// PLAN §8: the chain ran out of depth; it went sideways on the deepest layer, under the void fill.
+			warnings.note("interior_deep_spill", detail);
+		} else if (spot.moved()) {
+			warnings.note("interior_moved_sideways", detail);
 		}
 		String biome = CAVE_TILESET.equals(map.tileset()) || wild ? WorldPlan.BIOME_CAVE : WorldPlan.BIOME_INTERIOR;
 		return new MapPlacement(map.id(), spot.x(), Scale.feetY(spot.layer()), spot.z(), map.cellWidth(), map.cellHeight(), spot.layer(),

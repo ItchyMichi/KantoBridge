@@ -46,7 +46,7 @@
       },
       "properties": {},
       "propertyNames": {"$ref": "../defs.schema.json#/$defs/mapId"},
-      "description": "save.objectToggles: map -> object name -> visible."
+      "description": "map -> object name -> visible: every object whose effective visibility (toggles, items taken, statics beaten) differs from its map record's hidden default."
     },
     "blocks": {
       "type": "array",
