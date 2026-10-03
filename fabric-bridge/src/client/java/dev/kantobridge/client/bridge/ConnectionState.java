@@ -14,6 +14,11 @@ public enum ConnectionState {
 	REJECTED,
 	/** No connection (refused, dropped or timed out); retrying with backoff. */
 	DISCONNECTED,
+	/**
+	 * Held off gen1-bridge on purpose: another connection (the world export) has the link, because gen1-bridge serves
+	 * one connection at a time. Reconnects once resumed.
+	 */
+	PAUSED,
 	/** Closed for good. */
 	STOPPED
 }

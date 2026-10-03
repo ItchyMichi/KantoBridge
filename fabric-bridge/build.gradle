@@ -66,6 +66,77 @@ loom {
 	}
 }
 
+// Headless world builds (docs/PLAN.md §4.5): `./gradlew runServer -Pkb.build=<bundle dir> [-Pkb.buildMaps=A,B]
+// [-Pkb.buildReport=<path>] [-Pkb.buildExit=true]` hands these to the server as -Dkantobridge.build* (HeadlessBuild).
+// Relative paths resolve against this project directory. Added after the GameTest run is configured, so the GameTest
+// server (which inherits the server run) never gets them.
+def kbBuildProperties = [
+	"kb.build"      : ["kantobridge.build", true],
+	"kb.buildMaps"  : ["kantobridge.build.maps", false],
+	"kb.buildReport": ["kantobridge.build.report", true],
+	"kb.buildExit"  : ["kantobridge.build.exit", false],
+]
+def kbBuildVmArgs = []
+kbBuildProperties.each { gradleName, spec ->
+	def value = providers.gradleProperty(gradleName).getOrNull()
+	if (value != null && !value.isBlank()) {
+		def resolved = spec[1] ? file(value).absolutePath : value
+		kbBuildVmArgs << "-D${spec[0]}=${resolved}"
+	}
+}
+loom {
+	runs {
+		server {
+			kbBuildVmArgs.each { vmArg it }
+		}
+	}
+}
+
+// Headless export (docs/PLAN.md §4.5 "ExportBundle"): `./gradlew exportCli -Pkb.exportPort=<port> -Pkb.exportOut=<dir>
+// [-Pkb.exportTimeout=<seconds>]` downloads gen1-bridge's export as role builder into <dir>/<game>/ with ExportCli (plain
+// Java, no Minecraft). <dir> defaults to the dev game folder's export folder; relative paths resolve against this project
+// directory. It prints one `export:` line and fails the task when the export fails.
+def kbExportArgs = []
+def kbExportPort = providers.gradleProperty("kb.exportPort").getOrNull()
+if (kbExportPort != null && !kbExportPort.isBlank()) {
+	kbExportArgs += ["--port", kbExportPort.trim()]
+}
+def kbExportOut = providers.gradleProperty("kb.exportOut").getOrNull()
+kbExportArgs += ["--out", file(kbExportOut != null && !kbExportOut.isBlank() ? kbExportOut.trim() : "../local/minecraft/kantobridge/export").absolutePath]
+def kbExportTimeout = providers.gradleProperty("kb.exportTimeout").getOrNull()
+if (kbExportTimeout != null && !kbExportTimeout.isBlank()) {
+	kbExportArgs += ["--timeout", kbExportTimeout.trim()]
+}
+def kbExportWorkDir = layout.buildDirectory.dir("exportCli").get().asFile
+// Mojang's logging jar on this classpath ships a log4j2.xml that prints INFO to stdout; the CLI's stdout is its one
+// summary line, so its own config keeps warnings only, on stderr, never starting with "export:".
+def kbExportLogConfig = new File(kbExportWorkDir, "log4j2-exportcli.xml")
+tasks.register("exportCli", JavaExec) {
+	group = "kantobridge"
+	description = "Downloads gen1-bridge's world export into an export bundle (headless)."
+	classpath = sourceSets.client.runtimeClasspath
+	mainClass = "dev.kantobridge.client.bridge.ExportCli"
+	args kbExportArgs
+	systemProperty "kantobridge.modVersion", project.version.toString()
+	systemProperty "kantobridge.minecraftVersion", project.minecraft_version.toString()
+	systemProperty "log4j2.configurationFile", kbExportLogConfig.absolutePath
+	// Nothing should land in the source tree, even if a library decides to write logs.
+	workingDir = kbExportWorkDir
+	doFirst {
+		kbExportWorkDir.mkdirs()
+		kbExportLogConfig.setText("""<?xml version="1.0" encoding="UTF-8"?>
+<Configuration status="error">
+  <Appenders>
+    <Console name="stderr" target="SYSTEM_ERR"><PatternLayout pattern="[%level] %logger: %msg%n"/></Console>
+  </Appenders>
+  <Loggers>
+    <Root level="warn"><AppenderRef ref="stderr"/></Root>
+  </Loggers>
+</Configuration>
+""", "UTF-8")
+	}
+}
+
 // Dev runtimes only. Minecraft lists ICU4J as a client library, so Loom strips it from server-side runs, but
 // Cobblemon's Showdown engine (GraalJS) needs it on the server: without it the server waits for Showdown forever.
 // Real servers get the copy bundled in Cobblemon's jar; this adds that same version (Cobblemon 1.8.1's POM).
@@ -285,6 +356,12 @@ test {
 	// Tests read the real protocol examples and redaction vectors.
 	inputs.dir(protocolDir).withPathSensitivity(PathSensitivity.RELATIVE).withPropertyName("protocolDir")
 	systemProperty "kb.protocolDir", protocolDir.asFile.absolutePath
+	// Builder tests read the GameTests' synthetic export bundle and the golden WorldIndex beside it.
+	def gametestResources = layout.projectDirectory.dir("src/gametest/resources")
+	inputs.dir(gametestResources.dir("kantobridge")).withPathSensitivity(PathSensitivity.RELATIVE).withPropertyName("gametestData")
+	systemProperty "kb.gametestResources", gametestResources.asFile.absolutePath
+	// -Pkb.updateGolden=true rewrites the golden WorldIndex instead of comparing against it.
+	systemProperty "kb.updateGolden", providers.gradleProperty("kb.updateGolden").getOrElse("false")
 	testLogging {
 		events "failed", "skipped"
 		exceptionFormat = "full"

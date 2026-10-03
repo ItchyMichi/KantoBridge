@@ -59,6 +59,7 @@ public final class ConnectionStatus {
 					? new Line("kantobridge.hud.connected", List.of(this.detail == null ? "?" : this.detail), false)
 					: null;
 			case STOPPED -> new Line("kantobridge.hud.stopped", List.of(), false);
+			case PAUSED -> new Line("kantobridge.hud.paused", List.of(), false);
 			default -> {
 				if (this.rejectReason != null) {
 					yield new Line("kantobridge.hud.rejected", List.of(this.rejectReason), true);

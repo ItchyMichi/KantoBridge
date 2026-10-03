@@ -22,6 +22,8 @@ ARRIVALS = {
     ("TEST_TOWN", 5, 5): ("TEST_HOUSE", 4, 8, "up", "door"),
     ("TEST_HOUSE", 4, 8): ("TEST_TOWN", 5, 6, "down", "door"),
     ("TEST_HOUSE", 5, 8): ("TEST_TOWN", 5, 6, "down", "door"),
+    ("TEST_HOUSE", 7, 2): ("TEST_HOUSE_2F", 5, 2, "down", "stairs"),
+    ("TEST_HOUSE_2F", 5, 2): ("TEST_HOUSE", 7, 2, "down", "stairs"),
 }
 OBJECT_KINDS = {"item": "item", "trainer": "trainer", "pokemon": "static"}
 

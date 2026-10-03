@@ -25,6 +25,10 @@ import org.slf4j.LoggerFactory;
  *
  * <p>No Minecraft classes are used here: listeners are called on the socket thread, and the game hands messages to
  * its own thread through {@link Dispatcher} (PLAN §2.3).
+ *
+ * <p>gen1-bridge serves one connection at a time and a newer one replaces the older, so another connection to it
+ * (the world export, {@link ExportClient}) first takes the link with {@link #pauseReconnects}: this client hangs up
+ * and stays off until the pause is closed, then reconnects and gets a fresh snapshot as after any drop.
  */
 public final class BridgeClient implements AutoCloseable {
 	public static final String ROLE = "client";
@@ -39,6 +43,16 @@ public final class BridgeClient implements AutoCloseable {
 		/** A message from gen1-bridge that passed the envelope and catalog checks. */
 		default void message(Envelope message) {
 		}
+	}
+
+	/** Holds the client off gen1-bridge until closed (idempotent). See {@link #pauseReconnects}. */
+	public interface Pause extends AutoCloseable {
+		/** False if the client was still busy with a connection when the wait ran out. */
+		boolean settled();
+
+		/** Resumes reconnecting (once every pause is closed). */
+		@Override
+		void close();
 	}
 
 	private final BridgeConfig config;
@@ -57,6 +71,11 @@ public final class BridgeClient implements AutoCloseable {
 	private @Nullable Thread thread; // guarded by lock
 	private Transport.@Nullable Link link; // guarded by lock
 	private @Nullable Outbox outbox; // guarded by lock
+	/** Open pauses; while above 0 the socket thread opens no connection. */
+	private int pauses; // guarded by lock
+	private @Nullable String pauseReason; // guarded by lock
+	/** True from the decision to connect until that connection is torn down; a pause waits for it to clear. */
+	private boolean busy; // guarded by lock
 	private @Nullable String lastSession; // socket thread only
 
 	public BridgeClient(BridgeConfig config, Catalog catalog, Supplier<HelloInfo> helloInfo, Transport transport, BridgeClock clock,
@@ -110,6 +129,70 @@ public final class BridgeClient implements AutoCloseable {
 		}
 	}
 
+	/**
+	 * Takes this client off gen1-bridge so another connection can have the link: closes the current connection (if
+	 * any), opens no new one until the returned pause is closed, and waits up to {@code waitMs} until no connection is
+	 * open or being opened. Pauses nest; reconnecting resumes when the last one closes, with the backoff reset.
+	 *
+	 * @param reason a short code for logs and the status line
+	 */
+	public Pause pauseReconnects(String reason, long waitMs) throws InterruptedException {
+		Transport.Link open;
+		synchronized (this.lock) {
+			this.pauses++;
+			this.pauseReason = reason;
+			open = this.link;
+		}
+		if (open != null) {
+			// The reader fails at once and the session ends; serve() sees the pause and doesn't back off.
+			open.close();
+		}
+		long deadline = System.nanoTime() + Math.max(0, waitMs) * 1_000_000L;
+		boolean settled;
+		synchronized (this.lock) {
+			while (this.busy && !this.stopping) {
+				long left = deadline - System.nanoTime();
+				if (left <= 0) {
+					break;
+				}
+				this.lock.wait(Math.max(1, left / 1_000_000L));
+			}
+			settled = !this.busy || this.stopping;
+		}
+		if (!settled) {
+			LOGGER.warn("bridge: still busy with a connection after {} ms; pausing anyway", waitMs);
+		} else {
+			LOGGER.info("bridge: paused ({})", reason);
+		}
+		boolean[] closed = {false};
+		return new Pause() {
+			@Override
+			public boolean settled() {
+				return settled;
+			}
+
+			@Override
+			public void close() {
+				synchronized (BridgeClient.this.lock) {
+					if (closed[0]) {
+						return;
+					}
+					closed[0] = true;
+					BridgeClient.this.pauses--;
+					BridgeClient.this.lock.notifyAll();
+				}
+				LOGGER.info("bridge: resumed after {}", reason);
+			}
+		};
+	}
+
+	/** True while a pause holds the client off gen1-bridge. */
+	public boolean paused() {
+		synchronized (this.lock) {
+			return this.pauses > 0;
+		}
+	}
+
 	/** Stops for good: closes the connection and ends the socket thread. Idempotent. */
 	@Override
 	public void close() {
@@ -120,6 +203,7 @@ public final class BridgeClient implements AutoCloseable {
 				this.link.close();
 			}
 			socketThread = this.thread;
+			this.lock.notifyAll();
 		}
 		if (socketThread != null && socketThread != Thread.currentThread()) {
 			socketThread.interrupt();
@@ -159,45 +243,96 @@ public final class BridgeClient implements AutoCloseable {
 	private void run() {
 		Backoff backoff = new Backoff(this.config.reconnectInitialMs(), this.config.reconnectMaxMs());
 		try {
-			while (!this.stopping) {
+			while (this.awaitTurn(backoff)) {
+				long delay;
 				try {
-					this.attempt(backoff);
+					delay = this.attempt(backoff);
 				} catch (RuntimeException e) {
 					// A bug must not kill the thread for the rest of the session; content never reaches this log.
 					StackTraceElement[] where = e.getStackTrace();
 					LOGGER.error("bridge: unexpected {} at {}", e.getClass().getName(), where.length > 0 ? where[0] : "?");
 					this.setState(ConnectionState.DISCONNECTED, "internal");
-					this.clock.sleep(backoff.max());
+					delay = backoff.max();
+				} finally {
+					this.endTurn();
+				}
+				if (delay > 0 && !this.stopping) {
+					this.clock.sleep(delay);
 				}
 			}
 		} catch (InterruptedException e) {
-			// close() interrupts the backoff sleep.
+			// close() interrupts the backoff sleep and a paused wait.
 		} finally {
 			this.setState(ConnectionState.STOPPED, null);
 		}
 	}
 
-	private void attempt(Backoff backoff) throws InterruptedException {
+	/**
+	 * Waits while paused, then claims the next connection attempt (marks the client busy, so a pause can wait for it).
+	 * Returns false once stopping.
+	 */
+	private boolean awaitTurn(Backoff backoff) throws InterruptedException {
+		while (true) {
+			String reason;
+			synchronized (this.lock) {
+				if (this.stopping) {
+					return false;
+				}
+				if (this.pauses == 0) {
+					this.busy = true;
+					return true;
+				}
+				reason = this.pauseReason;
+			}
+			this.setState(ConnectionState.PAUSED, reason);
+			synchronized (this.lock) {
+				while (this.pauses > 0 && !this.stopping) {
+					this.lock.wait();
+				}
+			}
+			// Whatever failed before the pause says nothing about gen1-bridge now: start the backoff over.
+			backoff.reset();
+		}
+	}
+
+	private void endTurn() {
+		synchronized (this.lock) {
+			this.busy = false;
+			this.lock.notifyAll();
+		}
+	}
+
+	/** One connection attempt; returns how long to wait before the next one. */
+	private long attempt(Backoff backoff) {
 		this.setState(ConnectionState.CONNECTING, null);
 		Transport.Link opened;
 		try {
 			opened = this.transport.connect(this.config.host(), this.config.port(), this.config.connectTimeoutMs(), this.config.tickMs());
 		} catch (IOException e) {
+			if (this.paused()) {
+				return 0;
+			}
 			this.setState(ConnectionState.DISCONNECTED, "unreachable");
-			this.clock.sleep(backoff.next());
-			return;
+			return backoff.next();
 		}
 		this.stats.connects.incrementAndGet();
-		String reason = this.serve(opened, backoff);
-		if (this.stopping) {
-			return;
+		String reason;
+		try {
+			reason = this.serve(opened, backoff);
+		} catch (InterruptedException e) {
+			// Only close() interrupts this thread; it is stopping.
+			Thread.currentThread().interrupt();
+			return 0;
+		}
+		if (this.stopping || this.paused()) {
+			// A pause hung up on purpose: no backoff, and the next turn reports PAUSED.
+			return 0;
 		}
 		if (this.state == ConnectionState.REJECTED) {
-			this.clock.sleep(backoff.max());
-		} else {
-			this.setState(ConnectionState.DISCONNECTED, reason);
-			this.clock.sleep(backoff.next());
+			return backoff.max();
 		}
+		this.setState(ConnectionState.DISCONNECTED, reason);
+		return backoff.next();
 	}
 
 	/** Runs one connection until it ends; returns why it ended. */
@@ -231,9 +366,10 @@ public final class BridgeClient implements AutoCloseable {
 			}
 		});
 		synchronized (this.lock) {
-			if (this.stopping) {
+			if (this.stopping || this.pauses > 0) {
+				// A pause arrived while connecting: hang up before saying hello.
 				opened.close();
-				return "stopped";
+				return this.stopping ? "stopped" : "paused";
 			}
 			this.link = opened;
 			this.outbox = box;

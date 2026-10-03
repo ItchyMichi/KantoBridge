@@ -4,9 +4,10 @@ The Gen1Recomp half of Kanto Bridge: a Gen1Recomp mod (Lua, mod API 2) that runs
 player's hidden Gen1Recomp. It listens on `127.0.0.1:27151` for `fabric-bridge`
 ([`docs/PROTOCOL.md`](../docs/PROTOCOL.md#transport)).
 
-**Status: M1, bridge connection.** The listener, the handshake, the heartbeat, `snapshot` and the
-live `player.pos`/`player.state` stream work against the real engine (end-to-end tests in
-[`tools/e2e/`](../tools/e2e)). Steps, UI, NPCs and the story arrive in later milestones.
+**Status: M2, world export.** The listener, the handshake, the heartbeat, `snapshot`, the live
+`player.pos`/`player.state` stream and the world export for the builder work against the real engine
+(end-to-end tests in [`tools/e2e/`](../tools/e2e)). Steps, UI, NPCs and the story arrive in later
+milestones.
 
 ## What it does each logic step
 
@@ -29,6 +30,33 @@ test drivers), guarded so the hook always calls `next`:
    pipelines, wide or fill battles, or dynamic UI) and text speed stays FAST. They are pinned in
    memory at boot, on New Game and on CONTINUE, and re-checked every second. Nothing is written to
    disk; Gen1Recomp's own OPTIONS screen persists them if the player saves options there.
+5. **World export** ([`docs/PROTOCOL.md`](../docs/PROTOCOL.md) "Export resources"): for `builder`
+   and `test` connections, `export.index` and `export.get` serve the ten resource kinds (maps with
+   per-cell flags, tilesets, images, sprites, palettes, encounters, field tables, names, the surface
+   layout, swap sites). The first request starts one build of everything in a coroutine that
+   yields after about 6 ms of work per step; requests wait until it's done. Resources are cached
+   for the instance's lifetime as canonical JSON (the hash is its SHA-256), and replies go out at
+   most 256 KiB per step, pausing while the client lags more than 1 MiB behind.
+
+### Where the export's data comes from
+
+- **First choice:** `mod.datasets:open(<game>)`, the engine's read-only view of the imported cache.
+  It hands out detached copies, so the live tables the game changes during play (Cut, card-key
+  doors, elevators) never leak into the world. It is the pristine import, without other mods'
+  changes.
+- **Fallback (PLAN §8):** when the view doesn't open at `mods.loaded`, the live `Data` is
+  deep-copied right then, before any map has loaded. If the view opens but reads nothing at export
+  time, the live `Data` is copied then, but only while no map has been loaded in this instance;
+  otherwise the export fails with `error export_failed`.
+- On v0.3.49's portable build the view works (the e2e test reports which path ran). Each record
+  read through it costs about 5 ms, because the view re-checks every decoded cache module on each
+  read (`src/mods/DatasetViews.lua:209-243`), so a full build takes about 5 s of CPU, spread over
+  roughly 500 steps, with a couple of one-off hitches of up to about 0.2 s while the engine decodes
+  a cache module.
+- Every engine question (per-cell flags through `Map.new`, the neighbour layout through
+  `computeNeighbors`, image bytes through `Assets.imageData`, tile animations, spinner tiles) goes
+  through `lib/kb_engine.lua`. Anything that can't be exported correctly is left out and counted
+  under a warning code, logged with its count when the build ends.
 
 Warnings and errors from `kb_log` are also sent to the client as `log` messages (at most 5 a
 second). Logs only ever show codes, engine symbols, counts, lengths and short hashes.
@@ -53,9 +81,13 @@ client are released at once.
 | `lib/kb_proto.lua` | The message envelope (`type`, `seq`, `re`, `data`), dispatch, replies and `error` answers, with a gate and catalog-aware handling of unhandled types. |
 | `lib/kb_session.lua` | One connection's session: hello first, handshake, heartbeat timeout, resync, debug messages, live streams, log forwarding. |
 | `lib/kb_catalog.lua` | **Generated** from `protocol/catalog.json` by `tools/lua/gen_catalog.py`: the message types and their legs. A test fails when it is stale. |
-| `lib/kb_engine.lua` | **The only file that touches engine internals.** Each function cites the engine `file:line` it relies on (v0.3.49): the overworld and its player, the top state's class, NPCs, dark maps, badges, the options pin and the instance takeover slot. Re-check them all when the Gen1Recomp pin changes. |
+| `lib/kb_engine.lua` | **The only file that touches engine internals.** Each function cites the engine `file:line` it relies on (v0.3.49): the overworld and its player, the top state's class, NPCs, dark maps, badges, the options pin, the instance takeover slot, and the export's data sources and queries (dataset views, the live-Data copy, `Map.new` and its cell queries, `Map.isOutside`, `computeNeighbors`, tile animations, spinner tiles, `Assets.imageData` + PNG encoding, the SGB palette cascade, and the few engine constants with nothing to call: cut-tree and shore tiles). Re-check them all when the Gen1Recomp pin changes. |
 | `observe/kb_player.lua` | The mode classifier and the `player.state`/`player.pos` observer, working on plain facts from `kb_engine`. |
 | `observe/kb_snapshot.lua` | Builds `snapshot` from the facts and the save: position, state, flags, toggles, bag, money, coins, badges, the hidden game's party, the Pokédex, the current map's NPCs. |
+| `export/kb_export.lua` | The export service: roles, the request queue, the budgeted build coroutine, the cache, budgeted replies, and every resource's shaping (map records, surface, parents by BFS, the `LAST_MAP` memory, palettes, tile classes, images, sprites, encounters, field tables, names, layout). |
+| `export/kb_cells.lua` | The per-cell flag integers of one map, from `kb_engine`'s map queries plus `field.ledges`, `field.spinners`, the warps and signs. |
+| `export/kb_images.lua` | Base64, image ids from asset paths (`<folder>.<name>`), and the image and sprite resources. |
+| `export/kb_swapsites.lua` | Runtime block-change sites: cut trees (from the cells), card-key doors and lift gates (`field.cardKeyDoors`), the Game Corner poster and the Vermilion Gym door; curated script swaps come with M8's audit. |
 | `mod.card` | Sharing metadata for the mod manager and gallery. The loader never reads it. |
 
 Rules for this folder:
@@ -85,6 +117,7 @@ boot without copying.
    `POKEPORT_DEV=1` enables the in-game developer console (backtick).
 4. Connect a stand-in client: from `tools/`, `.venv\Scripts\python.exe -m fake_minecraft --seconds 10`
    prints what gen1-bridge sends (types and sizes; `--verbose` shows them with game text redacted).
+   The export is exercised end to end by `tools/e2e/test_export.py`.
 
 Automated runs use the separate test install `local/gen1recomp-e2e/` through
 `tools/e2e/run_gen1recomp.py`, never the user's install.

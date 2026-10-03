@@ -164,6 +164,27 @@ def test_steps_blocks_and_door_warp():
     run(scenario())
 
 
+def test_stairs_warp_between_floors():
+    async def scenario():
+        gen1, mc = await _pair()
+        try:
+            await mc.hello()
+            await gen1.teleport("TEST_HOUSE", 4, 5, "right")
+            for n, direction in enumerate(("right", "right", "right", "up", "up", "up"), start=1):
+                await mc.send("move.step", {"dir": direction, "n": n})
+            arrive = None
+            while arrive is None:
+                message = await mc.next()
+                if message["type"] == "warp" and message["data"]["phase"] == "arrive":
+                    arrive = message
+            assert arrive["data"]["kind"] == "stairs"
+            assert arrive["data"]["to"] == {"map": "TEST_HOUSE_2F", "x": 5, "y": 2, "facing": "down"}
+        finally:
+            await mc.close()
+            await gen1.stop()
+    run(scenario())
+
+
 def test_export_index_and_resources():
     async def scenario():
         gen1, mc = await _pair(role="builder")

@@ -34,7 +34,7 @@ def _quad(tl, tr, bl, br):
 
 
 B_GROUND, B_GRASS, B_TREES, B_WALL, B_ROOF, B_DOOR, B_WATER, B_FLOWERS, B_LEDGE, B_FLOOR, B_IWALL, B_COUNTER, \
-    B_SIGN, B_MAT, B_CUT, B_CUT_DONE = range(16)
+    B_SIGN, B_MAT, B_CUT, B_CUT_DONE, B_STAIRS = range(17)
 BLOCKS = [
     _uniform(GROUND),
     _uniform(GRASS),
@@ -52,6 +52,7 @@ BLOCKS = [
     _quad(MAT, MAT, WALL, WALL),          # exit mat cells on top, wall below
     _quad(CUT, GROUND, GROUND, GROUND),   # a cuttable tree in the top-left cell
     _uniform(GROUND),                     # the same block after Cut
+    _quad(FLOOR, STAIRS, FLOOR, FLOOR),   # stairs in the top-right cell
 ]
 
 T = B_TREES
@@ -69,10 +70,16 @@ TOWN_BLOCKS = [
 W = B_IWALL
 HOUSE_BLOCKS = [
     [W, W, W, W, W],
-    [W, B_FLOOR, B_COUNTER, B_FLOOR, W],
+    [W, B_FLOOR, B_COUNTER, B_STAIRS, W],
     [W, B_FLOOR, B_FLOOR, B_FLOOR, W],
     [W, B_FLOOR, B_FLOOR, B_FLOOR, W],
     [W, W, B_MAT, W, W],
+]
+HOUSE_2F_BLOCKS = [
+    [W, W, W, W],
+    [W, B_FLOOR, B_STAIRS, W],
+    [W, B_FLOOR, B_FLOOR, W],
+    [W, W, W, W],
 ]
 
 # --- maps --------------------------------------------------------------------------------------------
@@ -93,13 +100,21 @@ MAPS = {
     },
     "TEST_HOUSE": {
         "index": 37, "blocks": HOUSE_BLOCKS, "border": B_IWALL, "surface": False, "outside": False,
-        "warps": [{"x": 4, "y": 8, "to": "LAST_MAP", "warp": 1}, {"x": 5, "y": 8, "to": "LAST_MAP", "warp": 1}],
+        "warps": [{"x": 4, "y": 8, "to": "LAST_MAP", "warp": 1}, {"x": 5, "y": 8, "to": "LAST_MAP", "warp": 1},
+                  {"x": 7, "y": 2, "to": "TEST_HOUSE_2F", "warp": 1}],
         "signs": [],
         "objects": [
             {"index": 1, "name": "TESTHOUSE_MOM", "sprite": "SPRITE_TEST_MOM", "x": 6, "y": 4,
              "movement": "STAY", "range": "LEFT", "hidden": False},
         ],
         "parent": {"map": "TEST_TOWN", "warp": 1, "x": 5, "y": 5}, "lastMap": "TEST_TOWN",
+    },
+    "TEST_HOUSE_2F": {
+        "index": 38, "blocks": HOUSE_2F_BLOCKS, "border": B_IWALL, "surface": False, "outside": False,
+        "warps": [{"x": 5, "y": 2, "to": "TEST_HOUSE", "warp": 3}],
+        "signs": [],
+        "objects": [],
+        "parent": {"map": "TEST_HOUSE", "warp": 3, "x": 7, "y": 2}, "lastMap": "TEST_TOWN",
     },
 }
 

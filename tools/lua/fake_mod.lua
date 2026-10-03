@@ -111,6 +111,11 @@ function FakeMod.new(opts)
   -- mod.ui: the UI module tables (src/ui/ModUI.lua:8-27); tests pass fakes.
   mod.ui = opts.ui or {}
 
+  -- mod.datasets (Loader.lua:1361-1369): open(version) -> a read-only view,
+  -- or nil plus a reason. The fake engine provides one; without it the API
+  -- is absent, as on an engine that predates dataset views.
+  mod.datasets = opts.datasets
+
   -- mod.content.<registry>:get(id) (Loader.lua:1262-1265), over plain tables
   -- of records the test provides: opts.content = { pokemon = { ID = rec } }.
   mod.content = {}

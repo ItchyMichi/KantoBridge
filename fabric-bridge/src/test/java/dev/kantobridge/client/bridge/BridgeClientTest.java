@@ -232,6 +232,61 @@ class BridgeClientTest {
 	}
 
 	@Test
+	void aPauseHangsUpStaysOffAndResumeReconnects() throws Exception {
+		BridgeClient started = this.start(quiet());
+		PipeTransport.Pipe first = this.handshake("s-1");
+		BridgeClient.Pause pause = started.pauseReconnects("export", 2_000);
+		assertTrue(pause.settled(), "no connection is open or being opened once the pause returns");
+		assertTrue(first.closed, "the pause hangs up the current connection");
+		assertTrue(started.paused());
+		await("paused", () -> started.state() == ConnectionState.PAUSED);
+		assertEquals("PAUSED:export", this.recorder.states.get(this.recorder.states.size() - 1));
+		int attempts = this.transport.attempts.get();
+		Thread.sleep(150);
+		assertEquals(attempts, this.transport.attempts.get(), "no reconnect while paused");
+		assertFalse(started.send("resync", new JsonObject()), "nothing is sent while paused");
+		assertFalse(this.recorder.states.contains("DISCONNECTED:io"), "a pause is not a failure");
+
+		pause.close();
+		pause.close(); // idempotent
+		assertFalse(started.paused());
+		this.handshake("s-1");
+		assertEquals(1, started.stats().snapshot().reconnects(), "the same gen1-bridge session: a resync, not a restart");
+		assertTrue(this.clock.sleeps.isEmpty(), "a pause costs no backoff wait");
+	}
+
+	@Test
+	void pausesNestAndHoldOffAnUnreachableRetry() throws Exception {
+		this.transport.refuse.set(1_000);
+		BridgeClient started = this.start(quiet());
+		await("first attempt", () -> this.transport.attempts.get() >= 1);
+		BridgeClient.Pause outer = started.pauseReconnects("export", 2_000);
+		BridgeClient.Pause inner = started.pauseReconnects("export", 2_000);
+		assertTrue(outer.settled() && inner.settled());
+		await("paused", () -> started.state() == ConnectionState.PAUSED);
+		int attempts = this.transport.attempts.get();
+		outer.close();
+		Thread.sleep(100);
+		assertEquals(attempts, this.transport.attempts.get(), "still paused while one pause is open");
+		this.transport.refuse.set(0);
+		inner.close();
+		this.handshake("s-2");
+	}
+
+	@Test
+	void closeEndsAPausedClient() throws Exception {
+		BridgeClient started = this.start(quiet());
+		this.handshake("s-1");
+		BridgeClient.Pause pause = started.pauseReconnects("export", 2_000);
+		await("paused", () -> started.state() == ConnectionState.PAUSED);
+		long start = System.nanoTime();
+		started.close();
+		assertTrue(System.nanoTime() - start < 2_000_000_000L);
+		assertEquals(ConnectionState.STOPPED, started.state());
+		pause.close();
+	}
+
+	@Test
 	void closeBeforeStartIsFine() {
 		BridgeClient never = new BridgeClient(quiet(), CATALOG, () -> null, this.transport, this.clock, this.recorder);
 		never.close();

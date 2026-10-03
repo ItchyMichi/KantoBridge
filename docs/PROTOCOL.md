@@ -241,6 +241,20 @@ A builder connection (role `builder`) asks for `export.index`, then fetches each
 `export.get`. Each resource's `data` has its own schema in
 [`protocol/export/<kind>.schema.json`](../protocol/export/); everything in it is ROM-derived.
 
+- **Timing.** gen1-bridge builds every resource once, spread over many logic steps, when the first
+  `export.index` arrives: about 8 s of game time on the real game (10–15 s of wall time at 60 fps),
+  then cached for that gen1-bridge instance. Fetching all resources afterwards takes well under a
+  second. Clients keep their heartbeat going while they wait.
+- **Size.** The real Red/Blue export is about 360 resources and 0.8 MB; the largest line is about
+  33 KB (`encounters`).
+- **Errors:** `error{code}` with `role` (not a builder or test connection), `not_found` (no such
+  resource), `bad_message`, or `export_failed` (the game data couldn't be read).
+- **Image ids** are `<folder>.<name>` from the asset path: `tilesets.*` for atlases and animation
+  strips, `fx.*` for overworld effects and emotion bubbles.
+- **Field tables** are a fixed list chosen by gen1-bridge (ledges, tile pairs, cut-tree swaps,
+  card-key doors, dark maps, spinners, forced movement, warp carpets, fly warps, last-map rewrites,
+  water tilesets, rods, …); integer keys become strings.
+
 | Kind | Id | Contents |
 |---|---|---|
 | map | map symbol | The map record (size in blocks, `blocks`, `border`, `connections`, `warps`, `signs`, `objects`) plus derived fields: `surface`, `outside`, per-cell `cells` flags, `parent` (the warp that first leads into an interior, by BFS from the surface), `lastMap`, `dark`, `palette` |
@@ -264,12 +278,12 @@ a cell's behaviour comes from its bottom-left 8×8 tile.
 | 2 | 4 | Shore |
 | 3 | 8 | Tall grass |
 | 4 | 16 | Door tile |
-| 5 | 32 | Warp tile (stairs, mats, …) |
+| 5 | 32 | Warp tile: the collision tile is in the tileset's `warp` list (stairs, ladders, …) |
 | 6 | 64 | Counter |
-| 7 | 128 | Cut tree |
-| 8 | 256 | Warp pad |
-| 9 | 512 | Hole |
-| 10 | 1024 | Spinner tile |
+| 7 | 128 | Cut tree: a tree tile (not walkable) in a block that `field.cutTreeSwaps` swaps |
+| 8 | 256 | Warp pad, **only on a cell with a warp entry** (bit 11); elsewhere pad tiles are floor art |
+| 9 | 512 | Hole, only on a cell with a warp entry, likewise |
+| 10 | 1024 | Spinner: the cell is in `field.spinners` (the arrow tile ids are the tileset's `spinner` list) |
 | 11 | 2048 | A warp entry is on this cell |
 | 12 | 4096 | A sign is on this cell |
 | 13 | 8192 | Ledge |
@@ -281,9 +295,18 @@ bytes. A downloaded export is stored as an **export bundle**, which stays under 
 
 ```
 <gameDir>/kantobridge/export/<game>/
-  index.json          the export.index reply's data
+  index.json          the export.index reply's data (pretty-printed, protocol field order)
   <kind>/<id>.json    one resource's data, exactly its canonical JSON (so the file's SHA-256 is its hash)
 ```
+
+- Export ids double as file names, so they must be file-safe: `^[A-Za-z0-9_][A-Za-z0-9_.-]{0,63}$`,
+  with no `..`, and unique ignoring case. (The protocol's general `id` pattern also allows `:`; export
+  ids never use it.)
+- The bundle's identity, `exportHash` in the WorldIndex, is the SHA-256 of the index **data's**
+  canonical JSON, not of the pretty `index.json` file.
+- `ExportCli` (`./gradlew exportCli -Pkb.exportPort=<port> -Pkb.exportOut=<dir>`) and the client's
+  "Create Kanto world" flow both write bundles; `python -m fake_gen1 --write-bundle` writes the
+  synthetic one, byte for byte the same as what `ExportCli` downloads from `fake_gen1`.
 
 ### Test only (role `test`)
 
@@ -314,7 +337,26 @@ is what the builder writes to `<world>/kantobridge/world_index.json`:
 - the habitat block positions and pools.
 
 Clients turn block positions into cells and back with it. The `parts` of `world.index` are slices of
-its JSON text; `hash` is the SHA-256 of the whole text.
+its JSON text (64 Ki characters each); `hash` is the SHA-256 of the whole text.
+
+**The slot map** ([`protocol/world/slot_map.schema.json`](../protocol/world/slot_map.schema.json)),
+`<world>/kantobridge/slot_map.json`, gives every `(atlas, palette, tile, shape)` the export uses a tile
+block: family `f` of that shape (`kantobridge:tile_full_ff` or `tile_half_ff`) and slot `s` (block
+state `hi = s >> 4`, `lo = s & 15`). It is computed from the **whole export, never from a build's map
+filter**, so every build from the same export, and every player's pack, agrees. `slotMapHash` is the
+SHA-256 of its canonical JSON. Capacity: 16 families × 256 slots per shape.
+
+**The generated resource pack** (`<gameDir>/kantobridge/resourcepack/`, ROM-derived art, never
+shared) is laid out for later milestones as:
+
+- `pack.mcmeta` (pack format 34) and `kantobridge.json` at the root: `game`, `exportHash`,
+  `slotMapHash`, so a client can tell whether its pack matches a world;
+- `assets/kantobridge/blockstates/tile_<shape>_<ff>.json` with all 256 variants (unused ones point at
+  a placeholder);
+- `assets/kantobridge/textures/block/tile/<atlas>/<palette>/<tile, 4 digits>.png` (16×16, coloured,
+  with `.mcmeta` animations for water and flowers);
+- `assets/kantobridge/textures/npc/<palette>/<sprite>.png` (64×32 sheets: standing and walking rows,
+  facing down, up, left, right).
 
 ## Relay to the Minecraft server
 

@@ -58,10 +58,11 @@ class Protocol:
         for path in sorted((self.root / "export").glob("*.schema.json")):
             schema = _read_json(path)
             self.exports[schema["x-export-kind"]] = schema
-        # The builder's WorldIndex (world.index parts, <world>/kantobridge/world_index.json).
+        # The builder's WorldIndex (world.index parts, <world>/kantobridge/world_index.json) and slot map.
         self.world_index = _read_json(self.root / "world" / "world_index.schema.json")
+        self.slot_map = _read_json(self.root / "world" / "slot_map.schema.json")
         self.documents = {self.envelope["$id"]: self.envelope, self.defs["$id"]: self.defs,
-                          self.world_index["$id"]: self.world_index}
+                          self.world_index["$id"]: self.world_index, self.slot_map["$id"]: self.slot_map}
         for schema in (*self.messages.values(), *self.exports.values()):
             self.documents[schema["$id"]] = schema
         self.registry = Registry().with_resources(
@@ -76,6 +77,7 @@ class Protocol:
             k: Draft202012Validator(s, registry=self.registry) for k, s in self.exports.items()
         }
         self._world_index_validator = Draft202012Validator(self.world_index, registry=self.registry)
+        self._slot_map_validator = Draft202012Validator(self.slot_map, registry=self.registry)
 
     @property
     def types(self):
@@ -122,6 +124,11 @@ class Protocol:
         """Problems of a WorldIndex against protocol/world/world_index.schema.json."""
         return [Problem(_pointer(e.absolute_path), e.validator)
                 for e in sorted(self._world_index_validator.iter_errors(data), key=lambda e: list(e.path))]
+
+    def check_slot_map(self, data):
+        """Problems of a slot map against protocol/world/slot_map.schema.json."""
+        return [Problem(_pointer(e.absolute_path), e.validator)
+                for e in sorted(self._slot_map_validator.iter_errors(data), key=lambda e: list(e.path))]
 
     def resolve(self, base_uri, ref):
         """Resolve a $ref against base_uri; returns (uri, subschema)."""

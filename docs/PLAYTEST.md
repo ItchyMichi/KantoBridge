@@ -56,3 +56,44 @@ because M0 changed the build in a way that affects the dev client:
 
 Minecraft's settings for the bridge live in `local\minecraft\config\kantobridge-client.json` (the
 port, 27151). F7 can be rebound in Controls.
+
+## M2: World export and builder (Pallet Town and its interiors)
+
+The agent has already built a world called **Kanto** from your game (Pallet Town, Red's house on both
+floors, Blue's house and Oak's lab), headless. It is in `local\minecraft\saves\Kanto`, and its
+textures are in `local\minecraft\kantobridge\resourcepack\`.
+
+**Look at the built world** (Gen1Recomp doesn't need to run for this):
+
+1. Start Minecraft as in M1 (`.\gradlew.bat runClient`) and open **Singleplayer → Kanto**.
+2. You spawn in Pallet Town in Adventure mode. To look inside the underground rooms, switch to
+   spectator mode with `/gamemode spectator` (fly through walls), and back with
+   `/gamemode adventure`. If commands are off in this world, press Esc → **Open to LAN** → Allow
+   Cheats: **ON** → Start LAN World first.
+
+- [ ] Pallet Town looks right: the houses, the lab, fences, flowers, the water to the south, in your
+      game's Super Game Boy colours. The flowers and the water are animated.
+- [ ] The textures load: no purple-and-black "missing texture" blocks anywhere.
+- [ ] The interiors are underground, below their buildings: Red's house 1F, with its 2F below that,
+      Blue's house and Oak's lab. Each is fully enclosed (no holes to the void), lit, and each room's
+      floor matches the original layout.
+- [ ] Walls are about 2 blocks high, and roofs and cliffs about 4. You can't jump (that comes in
+      M3), but in spectator mode nothing looks broken.
+- [ ] The trees around the town form a solid wall.
+- [ ] Note anything that looks wrong; say which map and roughly where.
+
+**Optional: a full Kanto.** The agent also made an experimental headless build of all of Kanto,
+`KantoFullE2E` (Singleplayer list). It has two known issues that M8 fixes: one interior is missing,
+and a few Cut-tree/door spots may show the wrong block.
+
+**Optional: the "Create Kanto world" button.** This builds **all of Kanto**, not just Pallet Town,
+from your running Gen1Recomp. Full-size builds aren't checked until M8, so treat this as an
+experiment.
+
+1. Start Gen1Recomp (as in M1) and stay at its title screen, or in game.
+2. In Minecraft's title screen, click **Create Kanto world**. Watch the export progress (the status
+   line says "exporting…"), the texture reload, the world creation and the build progress.
+3. - [ ] You arrive at the Pallet Town spawn in Adventure mode; the status line reconnects.
+4. - [ ] Pressing **Cancel** during the export, or during the build, removes the half-made world
+     folder.
+5. - [ ] With Gen1Recomp closed, the button gives a clear error.

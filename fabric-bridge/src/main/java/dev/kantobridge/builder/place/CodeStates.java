@@ -1,0 +1,49 @@
+package dev.kantobridge.builder.place;
+
+import dev.kantobridge.block.KbBlocks;
+import dev.kantobridge.block.LedgeColliderBlock;
+import dev.kantobridge.builder.plan.BlockCode;
+import dev.kantobridge.world.SlotMap;
+import net.minecraft.core.Direction;
+import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.LightBlock;
+import net.minecraft.world.level.block.state.BlockState;
+
+/** Turns planned {@link BlockCode}s into block states, caching the tile states. */
+public final class CodeStates {
+	private final BlockState[] full = new BlockState[SlotMap.CAPACITY];
+	private final BlockState[] half = new BlockState[SlotMap.CAPACITY];
+
+	public BlockState state(int code) {
+		int value = BlockCode.value(code);
+		return switch (BlockCode.kind(code)) {
+			case BlockCode.KIND_FULL -> this.tile(this.full, true, value);
+			case BlockCode.KIND_HALF -> this.tile(this.half, false, value);
+			case BlockCode.KIND_LEDGE -> KbBlocks.LEDGE_COLLIDER.defaultBlockState().setValue(LedgeColliderBlock.FACING, downhill(value));
+			case BlockCode.KIND_LIGHT -> Blocks.LIGHT.defaultBlockState().setValue(LightBlock.LEVEL, Math.min(15, value));
+			case BlockCode.KIND_STORY -> KbBlocks.STORY_CELL.defaultBlockState();
+			default -> Blocks.AIR.defaultBlockState();
+		};
+	}
+
+	private BlockState tile(BlockState[] cache, boolean fullShape, int index) {
+		BlockState state = cache[index];
+		if (state == null) {
+			int family = index / SlotMap.SLOTS_PER_FAMILY;
+			int slot = index % SlotMap.SLOTS_PER_FAMILY;
+			state = (fullShape ? KbBlocks.tileFull() : KbBlocks.tileHalf()).get(family).withSlot(slot);
+			cache[index] = state;
+		}
+		return state;
+	}
+
+	/** Gen 1 hop direction (0 down, 1 up, 2 left, 3 right) as a Minecraft direction: map down is +Z (south). */
+	public static Direction downhill(int gen1Dir) {
+		return switch (gen1Dir & 3) {
+			case 0 -> Direction.SOUTH;
+			case 1 -> Direction.NORTH;
+			case 2 -> Direction.WEST;
+			default -> Direction.EAST;
+		};
+	}
+}

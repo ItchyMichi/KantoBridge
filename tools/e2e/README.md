@@ -22,6 +22,7 @@ only with `--e2e`; without the pre-flight they skip.
 | `kb_ready.lua` | `test_s5_ready.py` | Spike S5: the mod loads in the real loader and reports ready after `game.ready` |
 | `kb_handshake.lua` | `test_handshake.py` | M1: on a test port (27199), after New Game without the intro, `fake_minecraft` gets `hello.ok` (protocol 1, engine 0.3.49, the imported game), a valid `snapshot`, pongs, reconnects to the same session, reads `debug.status` (display options pinned) and quits the game with `debug.quit` |
 | `kb_reload.lua` | `test_hot_reload.py` | M1: an F5-style hot reload closes the old instance's connection at once, the new instance binds the same port (27198) cleanly, and a reconnect gets a new session |
+| `kb_export.lua` | `test_export.py` | M2: at the title screen, on port 27197, a `builder` connection gets `export.index` and every resource; all messages pass their schemas (strict), every resource passes its export schema, every hash and size matches Python's canonical JSON + SHA-256, the counts match Kanto (222 maps, 36 surface maps whose 78 directed connection edges all agree with the layout, 24 tilesets, 151 species, ...). The driver measures the longest frame while the export builds. Writes the counts-only `local/reports/export_report.json` (counts, ids, sizes, times and the index hash; no data) |
 
 Drivers move gen1-bridge off 27151 through `game.mods.exports["gen1-bridge"].configure({ port = N })`,
 so a user instance running on 27151 can't interfere.

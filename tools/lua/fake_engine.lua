@@ -120,7 +120,233 @@ function FakeEngine.new(opts)
     return npc
   end
 
+  FakeEngine.addExport(E)
   return E
+end
+
+-- ------------------------------------------------------------ export (M2)
+--
+-- Stand-ins for the engine pieces the world export asks (lib/kb_engine.lua
+-- names the real file:line of each): the runtime Map, the neighbour BFS, the
+-- tile-animation table, image loading, and the dataset views. Behaviour
+-- follows the engine's documented rules; the code is our own, and the world
+-- they serve is made up (tools/lua/export_world.py).
+
+local function setOf(list)
+  local out = {}
+  for _, v in ipairs(type(list) == "table" and list or {}) do out[v] = true end
+  return out
+end
+
+local function deepCopy(v)
+  if type(v) ~= "table" then return v end
+  local out = {}
+  for k, x in pairs(v) do out[k] = deepCopy(x) end
+  return out
+end
+
+-- The runtime map: a cell's behaviour is its bottom-left 8x8 tile; water
+-- falls back to $14 and shore to $32/$48 (none on SHIP_PORT); pads and holes
+-- per tileset unless the record carries its own.
+local function newMapModule()
+  local Map = {}
+  Map.__index = Map
+  local WATER, SHORE = { 0x14 }, { 0x32, 0x48 }
+  local PADS = { FACILITY = { [0x20] = "pad", [0x11] = "hole" }, CAVERN = { [0x22] = "hole" },
+                 INTERIOR = { [0x55] = "pad" } }
+  Map.calls = 0
+
+  function Map.new(def, ts)
+    Map.calls = Map.calls + 1
+    local m = setmetatable({ def = def, tileset = ts, id = def.id,
+                             widthCells = def.width * 2, heightCells = def.height * 2 }, Map)
+    m.walk, m.doors, m.warpSet = setOf(ts.walkable), setOf(ts.doorTiles), setOf(ts.warpTiles)
+    m.wet = setOf(ts.waterTiles or WATER)
+    local shore = ts.shoreTiles
+    if shore == nil and def.tileset ~= "SHIP_PORT" then shore = SHORE end
+    for t in pairs(setOf(shore)) do m.wet[t] = true end
+    return m
+  end
+
+  function Map.isOutdoor(def)
+    if def.outdoor ~= nil then return def.outdoor end
+    return def.tileset == "OVERWORLD"
+  end
+
+  function Map.isOutside(def, tilesets)
+    if Map.isOutdoor(def) then return true end
+    return setOf(tilesets or { "OVERWORLD", "PLATEAU" })[def.tileset] == true
+  end
+
+  function Map:inBounds(cx, cy) return cx >= 0 and cy >= 0 and cx < self.widthCells and cy < self.heightCells end
+  function Map:blockAt(bx, by)
+    local d = self.def
+    if bx < 0 or by < 0 or bx >= d.width or by >= d.height then return d.borderBlock end
+    return d.blocks[by * d.width + bx + 1]
+  end
+  function Map:cellTile(cx, cy)
+    local tx, ty = cx * 2, cy * 2 + 1
+    local block = self.tileset.blocks[self:blockAt(math.floor(tx / 4), math.floor(ty / 4)) + 1]
+    return block[(ty % 4) * 4 + (tx % 4) + 1]
+  end
+  function Map:isWalkableCell(cx, cy) return self.walk[self:cellTile(cx, cy)] or false end
+  function Map:isGrassCell(cx, cy)
+    if not self:inBounds(cx, cy) then return false end
+    local g = self.tileset.grassTile
+    return g ~= nil and self:cellTile(cx, cy) == g
+  end
+  function Map:isWaterCell(cx, cy) return self.wet[self:cellTile(cx, cy)] or false end
+  function Map:isDoorTileCell(cx, cy) return self.doors[self:cellTile(cx, cy)] or false end
+  function Map:isWarpTileCell(cx, cy)
+    local t = self:cellTile(cx, cy)
+    return self.doors[t] or self.warpSet[t] or false
+  end
+  function Map:warpPadOrHoleAt(cx, cy)
+    local pads = self.tileset.warpPadTiles or PADS[self.def.tileset]
+    return pads and pads[self:cellTile(cx, cy)] or nil
+  end
+  function Map:isCounterCell(cx, cy) return setOf(self.tileset.counterTiles)[self:cellTile(cx, cy)] or false end
+  return Map
+end
+
+-- The neighbour BFS: each new neighbour is placed off its parent by the
+-- connection direction and offset (32 px per block).
+local function newOverworldModule()
+  local OC = {}
+  local ORDER = { "north", "south", "west", "east" }
+  function OC.computeNeighbors(maps, rootId)
+    local out, placed = {}, { [rootId] = true }
+    local queue, i = { { id = rootId, x = 0, y = 0 } }, 1
+    while queue[i] do
+      local cur = queue[i]
+      i = i + 1
+      local def = maps[cur.id]
+      for _, dir in ipairs(ORDER) do
+        local c = def.connections and def.connections[dir]
+        local nd = c and maps[c.map]
+        if nd and not placed[c.map] then
+          placed[c.map] = true
+          local x, y
+          if dir == "north" then x, y = cur.x + c.offset * 32, cur.y - nd.height * 32
+          elseif dir == "south" then x, y = cur.x + c.offset * 32, cur.y + def.height * 32
+          elseif dir == "west" then x, y = cur.x - nd.width * 32, cur.y + c.offset * 32
+          else x, y = cur.x + def.width * 32, cur.y + c.offset * 32 end
+          out[#out + 1] = { id = c.map, ox = x, oy = y }
+          queue[#queue + 1] = { id = c.map, x = x, y = y }
+        end
+      end
+    end
+    return out
+  end
+  return OC
+end
+
+function FakeEngine.addExport(E)
+  E.Map = newMapModule()
+  E.modules["src.world.Map"] = E.Map
+  E.modules["src.world.OverworldController"] = newOverworldModule()
+
+  -- tile animations: water shifts in place; flowers and the spinner strip
+  -- come from images the world names (E.animationPaths)
+  E.animationPaths = { flowers = {}, spinners = nil }
+  local TileRenderer = { SPINNER_ARROW_TILES = { GYM = { 0x3c, 0x3d, 0x4c, 0x4d }, FACILITY = { 0x20, 0x21, 0x30, 0x31 } } }
+  function TileRenderer.defaultAnimatedTiles(ts)
+    local out = {}
+    if ts.animation == "TILEANIM_WATER" or ts.animation == "TILEANIM_WATER_FLOWER" then
+      out[#out + 1] = { tile = 0x14, kind = "hshift", offsets = { 1, 2, 3, 2, 1, 0, 7, 0 } }
+    end
+    if ts.animation == "TILEANIM_WATER_FLOWER" then
+      out[#out + 1] = { tile = 0x03, kind = "frames", images = E.animationPaths.flowers, sequence = { 1, 2, 3 } }
+    end
+    if TileRenderer.SPINNER_ARROW_TILES[ts.id] and E.animationPaths.spinners then
+      out[#out + 1] = { tiles = TileRenderer.SPINNER_ARROW_TILES[ts.id], kind = "toggle",
+                        image = E.animationPaths.spinners, gate = "spinning" }
+    end
+    return out
+  end
+  E.modules["src.render.TileRenderer"] = TileRenderer
+
+  -- image loading: E.images[path] = { w, h, png }; anything else fails
+  E.images = {}
+  E.imageLoads = 0
+  local Assets = {}
+  function Assets.imageData(path)
+    local img = E.images[path]
+    if not img then error("Could not open file " .. tostring(path), 2) end
+    E.imageLoads = E.imageLoads + 1
+    local data = {}
+    function data.getWidth() return img[1] end
+    function data.getHeight() return img[2] end
+    function data.encode(_, fmt)
+      assert(fmt == "png", "only png")
+      return { getString = function() return img[3] end, release = function() end }
+    end
+    function data.release() end
+    return data
+  end
+  E.modules["src.render.Assets"] = Assets
+
+  -- The dataset views (mod.datasets): open(version) gives a view whose
+  -- registries hand out deep copies, ids sorted; E.datasetMode "ok",
+  -- "missing" (open fails) or "broken" (the view reads nothing, like a cache
+  -- the engine rejected).
+  E.datasetMode = "ok"
+  E.datasetOpens = 0
+  E.datasetReads = 0
+  local function registry(source)
+    local reg = {}
+    function reg.get(_, id)
+      if E.datasetMode == "broken" then return nil end
+      E.datasetReads = E.datasetReads + 1
+      return deepCopy(source and source[id])
+    end
+    function reg.has(_, id) return reg.get(nil, id) ~= nil end
+    function reg.each()
+      local ids = {}
+      if E.datasetMode ~= "broken" then
+        for id in pairs(source or {}) do ids[#ids + 1] = id end
+      end
+      table.sort(ids)
+      local i = 0
+      return function()
+        i = i + 1
+        local id = ids[i]
+        if id == nil then return nil end
+        E.datasetReads = E.datasetReads + 1
+        return id, deepCopy(source[id])
+      end
+    end
+    return reg
+  end
+  E.datasets = {
+    open = function(_, version)
+      E.datasetOpens = E.datasetOpens + 1
+      if E.datasetMode == "missing" then return nil, "not_imported" end
+      if version ~= E.GameVersion.current then return nil, "not_imported" end
+      local w = E.world or {}
+      local content = {}
+      for _, name in ipairs({ "maps", "tilesets", "sprites", "palettes", "encounters", "pokemon",
+                              "moves", "items", "field", "constants" }) do
+        content[name] = registry(w[name])
+      end
+      return { version = version, generation = 1, content = content }
+    end,
+  }
+
+  -- Installs a made-up world: registries (maps, tilesets, sprites, palettes,
+  -- encounters, pokemon, moves, items, field, constants), images and the
+  -- animation image paths. The live Data mirrors it (palettes nest under
+  -- palettes.palettes, as in the engine).
+  function E.setWorld(world)
+    E.world = world.registries
+    E.images = world.images or {}
+    E.animationPaths = world.animations or E.animationPaths
+    local r = E.world
+    E.data.maps, E.data.tilesets, E.data.sprites = r.maps, r.tilesets, r.sprites
+    E.data.palettes = { palettes = r.palettes }
+    E.data.encounters, E.data.pokemon, E.data.moves, E.data.items = r.encounters, r.pokemon, r.moves, r.items
+    E.data.field, E.data.constants = r.field, r.constants
+  end
 end
 
 return FakeEngine

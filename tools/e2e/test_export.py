@@ -1,0 +1,270 @@
+"""M2 end to end, on the real engine: gen1-bridge's world export in the Gen1Recomp test instance,
+read by fake_minecraft as role builder (docs/PLAN.md M2 [L], docs/PROTOCOL.md "Export resources").
+
+The game stays at the title screen: the export reads the imported data, not a save. The test asks
+for export.index, fetches every resource, and checks that every message passes its schema (strict),
+every resource passes protocol/export/<kind>.schema.json, and every hash and size equals Python's
+canonical JSON + SHA-256 of the data received. It then checks counts against what Kanto has and
+that the surface layout agrees with every connection, and writes a counts-only report to
+local/reports/export_report.json.
+
+Data safety (docs/PLAN.md section 0.3): only kinds, ids (engine symbols), counts, sizes, times and
+hashes are printed or reported. Assertion messages name keys, never values from the game.
+"""
+
+import asyncio
+import hashlib
+import json
+import time
+
+import pytest
+
+from fake_minecraft import FakeMinecraft
+from kb_protocol import load_protocol
+from kb_protocol.jsonfmt import canonical
+from run_gen1recomp import REPORTS, launch, preflight
+
+TEST_PORT = 27197
+PAGE_LIMIT = 1048576
+KINDS = ("encounters", "field", "image", "layout", "map", "names", "palettes", "sprite", "swaps", "tileset")
+ROOT = "PALLET_TOWN"
+
+
+OPPOSITE = {"north": "south", "south": "north", "west": "east", "east": "west"}
+
+
+def _layout_checks(layout, maps):
+    """Directed connection edges between surface maps that agree with the layout, those that don't,
+    those without the mirrored edge back, and overlapping pairs. Origins in blocks, as the engine's
+    neighbour arithmetic places them."""
+    placed = layout["maps"]
+    agree, disagree, one_way = 0, 0, 0
+    for mid, origin in placed.items():
+        for direction, conn in maps[("map", mid)]["connections"].items():
+            other = placed.get(conn["map"])
+            if other is None:
+                disagree += 1
+                continue
+            back = maps[("map", conn["map"])]["connections"].get(OPPOSITE[direction])
+            if not back or back["map"] != mid or back["offset"] != -conn["offset"]:
+                one_way += 1
+            off = conn["offset"]
+            expected = {
+                "north": (origin["x"] + off, origin["y"] - other["h"]),
+                "south": (origin["x"] + off, origin["y"] + origin["h"]),
+                "west": (origin["x"] - other["w"], origin["y"] + off),
+                "east": (origin["x"] + origin["w"], origin["y"] + off),
+            }[direction]
+            if expected == (other["x"], other["y"]):
+                agree += 1
+            else:
+                disagree += 1
+    ids = sorted(placed)
+    overlaps = 0
+    for i, a_id in enumerate(ids):
+        a = placed[a_id]
+        for b_id in ids[i + 1:]:
+            b = placed[b_id]
+            if a["x"] < b["x"] + b["w"] and b["x"] < a["x"] + a["w"] and \
+                    a["y"] < b["y"] + b["h"] and b["y"] < a["y"] + a["h"]:
+                overlaps += 1
+    xs = [p["x"] for p in placed.values()] + [p["x"] + p["w"] for p in placed.values()]
+    ys = [p["y"] for p in placed.values()] + [p["y"] + p["h"] for p in placed.values()]
+    return agree, disagree, one_way, overlaps, (max(xs) - min(xs), max(ys) - min(ys))
+
+
+async def _export(port, game):
+    protocol = load_protocol()
+    builder = FakeMinecraft(port=port, role="builder", ping_ms=1000)
+    await builder.connect(attempts=20)
+    ok = (await builder.hello())["data"]
+    assert (ok["protocol"], ok["engine"], ok["game"]) == (1, "0.3.49", game)
+    await builder.expect("snapshot", timeout=10)
+
+    started = time.monotonic()
+    reply = await builder.request("export.index", {}, reply_type="export.index", timeout=240)
+    index_seconds = time.monotonic() - started
+    index = reply["data"]
+    assert (index["game"], index["engine"], index["bridge"]) == (game, "0.3.49", "0.1.0")
+    entries = index["resources"]
+    assert {e["kind"] for e in entries} == set(KINDS)
+    assert len({(e["kind"], e["id"]) for e in entries}) == len(entries), "unique ids per kind"
+
+    fetch_started = time.monotonic()
+    want = {}
+    for e in entries:
+        message = await builder.send("export.get", {"kind": e["kind"], "id": e["id"]})
+        want[message["seq"]] = e
+    pages, lines = {}, {}
+    while len(pages) < len(want):
+        message = await builder.next(timeout=120)
+        assert message is not None, "the connection ended during the fetch"
+        if message.get("re") not in want:
+            assert message["type"] in ("pong", "log"), message["type"]
+            continue
+        assert message["type"] == "export.data", message["type"]
+        e = want[message["re"]]
+        page = message["data"]
+        key = (e["kind"], e["id"])
+        assert (page["kind"], page["id"], page["hash"]) == (e["kind"], e["id"], e["hash"]), key
+        pages[key] = page["data"]
+        lines[key] = len(canonical(message).encode("utf-8")) + 1
+    fetch_seconds = time.monotonic() - fetch_started
+    assert not builder.conn.problems, "every message passed its schema (strict)"
+
+    problems, mismatches = {}, 0
+    for e in entries:
+        key = (e["kind"], e["id"])
+        found = protocol.check_export(e["kind"], pages[key])
+        if found:
+            problems[f"{key[0]}:{key[1]}"] = sorted({str(p) for p in found})[:5]
+        raw = canonical(pages[key]).encode("utf-8")
+        if len(raw) != e["size"] or hashlib.sha256(raw).hexdigest() != e["hash"]:
+            mismatches += 1
+    assert not problems, problems
+    assert mismatches == 0, f"{mismatches} resources whose hash or size differs from the index"
+    await builder.close()
+
+    tester = FakeMinecraft(port=port, role="test", ping_ms=1000)
+    await tester.connect(attempts=20)
+    await tester.hello()
+    await tester.expect("snapshot", timeout=10)
+    missing = await tester.request("export.get", {"kind": "map", "id": "NO_SUCH_MAP_KB"}, reply_type="error")
+    assert missing["data"]["code"] == "not_found"
+    status = (await tester.request("debug.status", reply_type="debug.status"))["data"]
+    await tester.send("debug.quit", {"code": 0})
+    await tester.close()
+    return {
+        "index": index, "pages": pages, "lines": lines, "status": status,
+        "index_seconds": index_seconds, "fetch_seconds": fetch_seconds,
+        "builder_counts": dict(builder.counts),
+    }
+
+
+def _summary(got):
+    index, pages = got["index"], got["pages"]
+    per_kind = {kind: 0 for kind in KINDS}
+    bytes_per_kind = {kind: 0 for kind in KINDS}
+    for e in index["resources"]:
+        per_kind[e["kind"]] += 1
+        bytes_per_kind[e["kind"]] += e["size"]
+    maps = {k: v for k, v in pages.items() if k[0] == "map"}
+    layout = pages[("layout", "kanto")]
+    agree, disagree, one_way, overlaps, box = _layout_checks(layout, pages)
+    surface = sorted(k[1] for k, m in maps.items() if m["surface"])
+    cells = sum(len(row) for m in maps.values() for row in m["cells"])
+    flags = {name: 0 for name in ("walkable", "water", "shore", "grass", "door", "warp_tile", "counter",
+                                  "cut_tree", "pad", "hole", "spinner", "warp_entry", "sign", "ledge")}
+    bits = list(flags)
+    for m in maps.values():
+        for row in m["cells"]:
+            for f in row:
+                for i, name in enumerate(bits):
+                    if f >> i & 1:
+                        flags[name] += 1
+    encounters = pages[("encounters", "all")]
+    names = pages[("names", "all")]
+    swaps = pages[("swaps", "all")]["sites"]
+    largest = max(index["resources"], key=lambda e: e["size"])
+    largest_line = max(got["lines"].items(), key=lambda kv: kv[1])
+    status = got["status"]
+    return {
+        "game": index["game"], "engine": index["engine"], "bridge": index["bridge"],
+        "index_sha256": hashlib.sha256(canonical(index).encode("utf-8")).hexdigest(),
+        "resources": len(index["resources"]), "per_kind": per_kind, "bytes_per_kind": bytes_per_kind,
+        "total_bytes": sum(e["size"] for e in index["resources"]),
+        "largest_resource": {"kind": largest["kind"], "id": largest["id"], "size": largest["size"]},
+        "largest_line": {"kind": largest_line[0][0], "id": largest_line[0][1], "bytes": largest_line[1]},
+        "maps": len(maps), "surface_maps": len(surface), "layout_maps": len(layout["maps"]),
+        "layout_root": layout["root"], "root_origin": [layout["maps"][ROOT]["x"], layout["maps"][ROOT]["y"]],
+        "layout_edges_agree": agree, "layout_edges_disagree": disagree, "layout_edges_one_way": one_way,
+        "layout_overlaps": overlaps,
+        "layout_box_blocks": list(box),
+        "outside_maps": sum(1 for m in maps.values() if m["outside"]),
+        "interiors": sum(1 for m in maps.values() if not m["surface"]),
+        "interiors_with_parent": sum(1 for m in maps.values() if m["parent"] is not None),
+        "interiors_without_parent": sorted(k[1] for k, m in maps.items() if not m["surface"] and m["parent"] is None),
+        "interiors_with_last_map": sum(1 for m in maps.values() if m["lastMap"] is not None),
+        "interiors_without_last_map": sorted(k[1] for k, m in maps.items()
+                                             if not m["surface"] and m["lastMap"] is None),
+        "dark_maps": sorted(k[1] for k, m in maps.items() if m["dark"]),
+        "palettes_used": len({m["palette"] for m in maps.values()}),
+        "warps": sum(len(m["warps"]) for m in maps.values()),
+        "last_map_warps": sum(1 for m in maps.values() for w in m["warps"] if w["to"] == "LAST_MAP"),
+        "signs": sum(len(m["signs"]) for m in maps.values()),
+        "objects": sum(len(m["objects"]) for m in maps.values()),
+        "cells": cells, "cell_flags": flags,
+        "tilesets": per_kind["tileset"], "images": per_kind["image"], "sprites": per_kind["sprite"],
+        "sgb_palettes": len(pages[("palettes", "sgb")]["palettes"]),
+        "encounter_maps": len(encounters["maps"]),
+        "encounter_tables": sum(len(v) for v in encounters["maps"].values()),
+        "super_rod_maps": len(encounters["rods"]["super"]),
+        "field_tables": len(pages[("field", "all")]["tables"]),
+        "species": len(names["species"]), "moves": len(names["moves"]), "items": len(names["items"]),
+        "swap_sites": len(swaps),
+        "swap_sites_by_kind": {kind: sum(1 for s in swaps if s["kind"] == kind)
+                               for kind in sorted({s["kind"] for s in swaps})},
+        "timing": {
+            "index_seconds": round(got["index_seconds"], 2), "fetch_seconds": round(got["fetch_seconds"], 2),
+            "build_ms": status.get("exportBuildMs"), "build_cpu_ms": status.get("exportCpuMs"),
+            "build_steps": status.get("exportSteps"), "max_step_ms": status.get("exportMaxStepMs"),
+        },
+        "data_path": "datasets" if status.get("exportDatasets") else ("live" if status.get("exportLive") else "none"),
+        "live_copy_at_boot": status.get("exportBootLive"),
+        "warnings": status.get("exportWarnings"),
+        "served": status.get("exportServed"),
+        "builder_messages": got["builder_counts"],
+    }
+
+
+@pytest.mark.e2e
+@pytest.mark.timeout(600)
+def test_world_export_end_to_end():
+    pf = preflight()
+    if not pf.ok:
+        pytest.skip("pre-flight not done: " + "; ".join(pf.reasons))
+    with launch("kb_export.lua", extra_env={"KB_TEST_PORT": str(TEST_PORT)}) as running:
+        marker = running.wait_marker("KB_TITLE", timeout=150)
+        assert marker is not None, running.result.summary()
+        assert f"port={TEST_PORT}" in marker and "overworld=false" in marker
+        got = asyncio.run(asyncio.wait_for(_export(TEST_PORT, pf.game), 420))
+        result = running.wait(timeout=60)
+    report = _summary(got)
+    frames = result.facts("KB_EXPORT_FRAMES")
+    report["frames"] = {"while_building": int(frames.get("frames", -1)),
+                        "max_gap_ms": int(frames.get("max_gap_ms", -1))}
+    report["exit"] = {"returncode": result.returncode, "timed_out": result.timed_out,
+                      "crash_log_touched": result.crash_log_touched, "error_spots": len(result.error_spots)}
+    report["bridge_warning_lines"] = sorted(line.split("] ", 2)[-1] for line in result.lines
+                                            if "export.warning" in line)
+    REPORTS.mkdir(parents=True, exist_ok=True)
+    (REPORTS / "export_report.json").write_text(json.dumps(report, indent=2, sort_keys=True) + "\n",
+                                                encoding="utf-8")
+    print("export report:", json.dumps(report, sort_keys=True))
+
+    assert not result.timed_out and result.returncode == 0, result.summary()
+    assert result.marker("KB_QUIT") is not None and result.marker("KB_FAIL") is None
+    assert not result.crash_log_touched and not result.error_spots
+    # Kanto, as Gen1Recomp imports it (refs/_research/P3_gen1_data_export.md sections 2-5)
+    assert report["maps"] == 222 and report["surface_maps"] == 36 and report["layout_maps"] == 36
+    assert report["layout_root"] == ROOT and report["root_origin"] == [0, 0]
+    # 39 connections, each a mirrored pair of directed edges; all agree with the engine's placement
+    assert report["layout_edges_disagree"] == 0 and report["layout_edges_one_way"] == 0
+    assert report["layout_edges_agree"] == 78
+    assert report["layout_overlaps"] == 0 and report["layout_box_blocks"] == [170, 180]
+    assert report["outside_maps"] == 36 and report["interiors"] == 186
+    assert report["interiors_with_parent"] == 184
+    assert report["interiors_without_parent"] == ["COLOSSEUM", "TRADE_CENTER"], "the link-cable rooms"
+    # no single LAST_MAP memory: unreachable, position-dependent, or two ends with different routes
+    assert report["interiors_without_last_map"] == [
+        "COLOSSEUM", "DIGLETTS_CAVE", "ROUTE_22_GATE", "TRADE_CENTER",
+        "UNDERGROUND_PATH_NORTH_SOUTH", "UNDERGROUND_PATH_WEST_EAST"]
+    assert report["last_map_warps"] == 242 and report["warps"] == 802
+    assert report["tilesets"] == 24 and report["sprites"] >= 72
+    assert report["images"] >= 19 + 4, "the atlases plus the flower and spinner frames"
+    assert report["dark_maps"] == ["ROCK_TUNNEL_1F", "ROCK_TUNNEL_B1F"]
+    assert report["species"] == 151 and report["moves"] == 165
+    assert report["encounter_maps"] >= 50 and report["super_rod_maps"] >= 30
+    assert report["swap_sites_by_kind"].get("cut", 0) > 0 and report["swap_sites_by_kind"].get("card_key", 0) > 0
+    assert report["largest_line"]["bytes"] <= PAGE_LIMIT
+    assert report["data_path"] in ("datasets", "live")

@@ -10,13 +10,17 @@ import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.SoundType;
+import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockBehaviour;
 import net.minecraft.world.level.material.MapColor;
 import net.minecraft.world.level.material.PushReaction;
 import net.minecraft.world.phys.shapes.Shapes;
 import net.minecraft.world.phys.shapes.VoxelShape;
 
-/** Block registration. Tile families: {@code tile_full_00..15} (full cubes) and {@code tile_half_00..15} (half height). */
+/**
+ * Block registration. Tile families: {@code tile_full_00..15} (full cubes) and {@code tile_half_00..15} (half
+ * height). Plus the invisible world blocks: {@code story_cell} (with its block entity) and {@code ledge_collider}.
+ */
 public final class KbBlocks {
 	/** Families per shape; 2 shapes × 16 families × 256 slots = 8192 tile states. */
 	public static final int FAMILIES_PER_SHAPE = 16;
@@ -27,6 +31,11 @@ public final class KbBlocks {
 	private static final List<TileBlock> TILE_FULL = new ArrayList<>();
 	private static final List<TileBlock> TILE_HALF = new ArrayList<>();
 	private static boolean registered;
+
+	/** Set by {@link #register()}. */
+	public static StoryCellBlock STORY_CELL;
+	public static LedgeColliderBlock LEDGE_COLLIDER;
+	public static BlockEntityType<StoryCellBlockEntity> STORY_CELL_ENTITY;
 
 	private KbBlocks() {
 	}
@@ -41,6 +50,11 @@ public final class KbBlocks {
 			TILE_FULL.add(register(tileId("full", family), new TileBlock(tileProperties(), FULL)));
 			TILE_HALF.add(register(tileId("half", family), new TileBlock(tileProperties(), HALF)));
 		}
+		STORY_CELL = register("story_cell", new StoryCellBlock(invisibleProperties()));
+		LEDGE_COLLIDER = register("ledge_collider", new LedgeColliderBlock(invisibleProperties()));
+		// No data fixer: the block entity holds only our own two strings.
+		STORY_CELL_ENTITY = Registry.register(BuiltInRegistries.BLOCK_ENTITY_TYPE, id("story_cell"),
+				BlockEntityType.Builder.of(StoryCellBlockEntity::new, STORY_CELL).build(null));
 	}
 
 	public static String tileId(String shape, int family) {
@@ -72,7 +86,25 @@ public final class KbBlocks {
 				.pushReaction(PushReaction.BLOCK);
 	}
 
+	// Invisible blocks: no occlusion, never suffocating or view-blocking (their cached collision is a full cube).
+	private static BlockBehaviour.Properties invisibleProperties() {
+		return BlockBehaviour.Properties.of()
+				.mapColor(MapColor.NONE)
+				.strength(-1.0F, 3_600_000.0F)
+				.noLootTable()
+				.noOcclusion()
+				.noTerrainParticles()
+				.isSuffocating((state, level, pos) -> false)
+				.isViewBlocking((state, level, pos) -> false)
+				.isRedstoneConductor((state, level, pos) -> false)
+				.pushReaction(PushReaction.BLOCK);
+	}
+
+	private static ResourceLocation id(String path) {
+		return ResourceLocation.fromNamespaceAndPath(KantoBridge.MOD_ID, path);
+	}
+
 	private static <T extends Block> T register(String path, T block) {
-		return Registry.register(BuiltInRegistries.BLOCK, ResourceLocation.fromNamespaceAndPath(KantoBridge.MOD_ID, path), block);
+		return Registry.register(BuiltInRegistries.BLOCK, id(path), block);
 	}
 }

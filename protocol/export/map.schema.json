@@ -164,7 +164,7 @@
         "maxItems": 510
       },
       "maxItems": 510,
-      "description": "Per-cell flags (16-px cells), one integer per cell, rows top to bottom (height*2 rows of width*2 cells). Bits: 1 walkable, 2 water (incl. shore), 4 shore, 8 tall grass, 16 door tile, 32 warp tile, 64 counter, 128 cut tree, 256 warp pad, 512 hole, 1024 spinner tile, 2048 a warp entry is here, 4096 a sign is here, 8192 ledge; bits 14-15 the ledge hop direction (0 down, 1 up, 2 left, 3 right)."
+      "description": "Per-cell flags (16-px cells), one integer per cell, rows top to bottom (height*2 rows of width*2 cells). Bits: 1 walkable, 2 water (incl. shore), 4 shore, 8 tall grass, 16 door tile, 32 warp tile, 64 counter, 128 cut tree, 256 warp pad, 512 hole, 1024 spinner tile, 2048 a warp entry is here, 4096 a sign is here, 8192 ledge; bits 14-15 the ledge hop direction (0 down, 1 up, 2 left, 3 right). Pad and hole bits appear only on cells that also have a warp entry."
     },
     "parent": {
       "anyOf": [
@@ -185,7 +185,7 @@
     },
     "lastMap": {
       "anyOf": [{"type": "null"}, {"$ref": "../defs.schema.json#/$defs/mapId"}],
-      "description": "Interiors: the outdoor map their LAST_MAP exits return to (static rule, after lastMapRewrites). Null when not applicable or position-dependent."
+      "description": "Interiors: the outdoor map their LAST_MAP exits return to (static rule, after lastMapRewrites). Null when unreachable, position-dependent, or reachable from more than one outdoor map."
     },
     "dark": {"type": "boolean"},
     "palette": {

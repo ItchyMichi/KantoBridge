@@ -36,6 +36,10 @@ return function(mod)
     Session = import("lib/kb_session.lua"),
     Player = import("observe/kb_player.lua"),
     Snapshot = import("observe/kb_snapshot.lua"),
+    Cells = import("export/kb_cells.lua"),
+    Images = import("export/kb_images.lua"),
+    SwapSites = import("export/kb_swapsites.lua"),
+    Export = import("export/kb_export.lua"),
   }
 
   local log = kb.Log.new({
@@ -43,7 +47,7 @@ return function(mod)
     hash = kb.sha256.short,
     debug = mod.developer == true,
   })
-  local engine = kb.Engine.new({ require = require, log = log, ui = mod.ui })
+  local engine = kb.Engine.new({ require = require, log = log, ui = mod.ui, datasets = mod.datasets })
 
   -- The port is a mod option (F10 manager); drivers can move it through
   -- exports.configure before the first bind.
@@ -115,7 +119,7 @@ return function(mod)
     return data
   end
 
-  local session
+  local session, exporter
   local function debugStatus()
     local save = engine.save()
     local flags = 0
@@ -123,7 +127,7 @@ return function(mod)
       if v == true then flags = flags + 1 end
     end
     local stats = session.stats()
-    return {
+    local out = {
       npcs = lastFacts.npcs or 0,
       topState = lastFacts.topName or "None",
       mode = kb.Player.classify(lastFacts),
@@ -135,6 +139,8 @@ return function(mod)
       steps = engine.logicStep(),
       optionsPinned = engine.displayPinned(save and save.options),
     }
+    for k, v in pairs(exporter.status()) do out[k] = v end
+    return out
   end
 
   session = kb.Session.new({
@@ -159,6 +165,15 @@ return function(mod)
   })
   log.setForward(session.forwardLog)
 
+  -- The world export (builder and test roles): lazy, budgeted, cached for
+  -- this instance's lifetime.
+  exporter = kb.Export.new({
+    json = kb.json, sha256 = kb.sha256, log = log, clock = clock, engine = engine,
+    Cells = kb.Cells, Images = kb.Images, SwapSites = kb.SwapSites, catalog = kb.catalog,
+    bridge = mod.version,
+  })
+  exporter.attach(session)
+
   status.session = sessionId
   status.configure = function(opts)
     if type(opts) == "table" and opts.port ~= nil then
@@ -179,6 +194,7 @@ return function(mod)
     engine.setGame(game)
     steps = steps + 1
     session.step()
+    local exported = exporter.step()
     local facts = engine.observe()
     lastFacts = facts
     local out = player.update(facts)
@@ -187,12 +203,13 @@ return function(mod)
       log.once("snapshot.dropped", "warn", "snapshot.dropped", { values = pendingDropped })
       pendingDropped = nil
     end
-    if #out > 0 then session.flush() end
+    if #out > 0 or exported then session.flush() end
     if steps % PIN_EVERY == 0 then pinOptions(true) end
     status.connected = session.connected()
     status.bound = session.listening()
     status.role = session.role()
     status.sessions = session.sessions()
+    status.exportState = exporter.state()
   end
 
   -- input.step must always call next, and a throwing wrapper would be
@@ -223,6 +240,14 @@ return function(mod)
     status.ready = true
     log.info("game.ready", { engine = version, api = api, modules = loaded })
   end)
+
+  -- The mod merge is done and nothing is on the stack yet
+  -- (src/mods/Loader.lua:2163, src/core/Game.lua:52-119): the export checks
+  -- that its dataset view opens, and copies the live Data now if it doesn't.
+  mod.events:on("mods.loaded", function(payload) exporter.onModsLoaded(payload) end)
+  -- From the first map load on, the live Data may differ from the import
+  -- (map.entered, src/world/OverworldController.lua:686).
+  mod.events:on("map.entered", function() exporter.onMapEntered() end)
 
   -- New Game builds a fresh save and applies its options right after this
   -- event (src/core/Game.lua:179-183), so pinning the table is enough.

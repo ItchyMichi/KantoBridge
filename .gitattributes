@@ -1,0 +1,6 @@
+# Byte-exact data: hashes and golden/staleness tests compare these files byte for byte, so Git must
+# never convert their line endings.
+fabric-bridge/src/gametest/resources/kantobridge/synthetic_bundle/** -text
+fabric-bridge/src/gametest/resources/kantobridge/golden/** -text
+# Shell scripts run in Git Bash keep LF.
+*.sh text eol=lf

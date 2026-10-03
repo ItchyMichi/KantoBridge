@@ -7,6 +7,7 @@
 return {
   protocol = 1,
   maxLineBytes = 4194304,
+  exportPageBytes = 1048576,
   pingMs = 2000,
   timeoutMs = 10000,
   types = {

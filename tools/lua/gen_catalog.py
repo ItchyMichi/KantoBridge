@@ -33,6 +33,7 @@ def render(catalog: dict) -> str:
         "return {",
         f"  protocol = {int(catalog['protocol'])},",
         f"  maxLineBytes = {int(limits['maxLineBytes'])},",
+        f"  exportPageBytes = {int(limits['exportPageBytes'])},",
         f"  pingMs = {int(beat['pingMs'])},",
         f"  timeoutMs = {int(beat['timeoutMs'])},",
         "  types = {",

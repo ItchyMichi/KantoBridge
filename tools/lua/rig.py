@@ -86,12 +86,20 @@ class Peer:
 
 
 class Rig:
-    def __init__(self, ready=True, **kw):
+    """``world`` (a dict from export_world.world()) installs a made-up world for the export:
+    dataset views, live data and images. ``dataset_mode`` is the fake view's behaviour:
+    "ok", "missing" (open fails) or "broken" (it reads nothing)."""
+
+    def __init__(self, ready=True, world=None, dataset_mode="ok", **kw):
         kw.setdefault("content", CONTENT)
         self.b = Bridge(engine=True, **kw)
         self.E = self.b.engine
+        if world is not None:
+            self.E.setWorld(self.b.to_lua(world))
+        self.E.datasetMode = dataset_mode.encode()
         self.b.run_main()
         if ready:
+            self.b.mods_loaded()
             self.b.ready()
 
     @property

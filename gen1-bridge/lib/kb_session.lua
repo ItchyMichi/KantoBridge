@@ -10,7 +10,8 @@
 --
 -- Everything outside the protocol is injected: the snapshot, the debug
 -- status and what quitting means. Streams (player.* and later the UI, NPCs
--- and story) go only to established client and test sessions.
+-- and story) go only to established client and test sessions. Other
+-- services (the export) add their handlers with session.on.
 
 local Session = {}
 
@@ -56,6 +57,7 @@ function Session.new(opts)
   local counts = { sessions = 0, rejected = 0, timeouts = 0, logsForwarded = 0, logsDropped = 0 }
   local tokens, refilledAt = Session.LOG_PER_SECOND, 0
   local forwarding = false
+  local generation = 0 -- counts connections, so a reply never reaches a newer one
   local net, proto
 
   local function reset()
@@ -75,6 +77,7 @@ function Session.new(opts)
     onConnect = function()
       reset()
       proto.reset()
+      generation = generation + 1
       lastRx = clock()
     end,
     onDisconnect = function() reset() end,
@@ -200,6 +203,19 @@ function Session.new(opts)
     forwarding = false
     if ok then counts.logsForwarded = counts.logsForwarded + 1 end
   end
+
+  -- Services beyond the session's own messages (the export) register here:
+  -- handler(data, msg, role) runs for an established session.
+  function session.on(msgType, handler)
+    proto.on(msgType, function(data, msg) return handler(data, msg, role) end)
+  end
+  function session.reply(msg, msgType, data) return proto.reply(msg, msgType, data) end
+  function session.replyEncoded(msg, msgType, text) return proto.replyEncoded(msg, msgType, text) end
+  function session.sendError(code, re, msg) return proto.sendError(code, re, msg) end
+  -- bytes queued but not yet sent (backpressure for large replies)
+  function session.queued() return net.queued() end
+  -- the current connection's number; it changes on every new connection
+  function session.generation() return generation end
 
   function session.setPort(port) net.setPort(port) end
   function session.port() return net.port() end

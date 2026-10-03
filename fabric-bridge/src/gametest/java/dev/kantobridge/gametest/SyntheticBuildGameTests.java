@@ -1,0 +1,246 @@
+package dev.kantobridge.gametest;
+
+import dev.kantobridge.KantoBridge;
+import dev.kantobridge.block.KbBlocks;
+import dev.kantobridge.block.LedgeColliderBlock;
+import dev.kantobridge.block.StoryCellBlockEntity;
+import dev.kantobridge.block.TileBlock;
+import dev.kantobridge.builder.BuildOptions;
+import dev.kantobridge.builder.BuildReport;
+import dev.kantobridge.builder.BuildTask;
+import dev.kantobridge.builder.KantoWorldBuilder;
+import dev.kantobridge.builder.export.BundleException;
+import dev.kantobridge.builder.export.ExportBundle;
+import dev.kantobridge.server.WorldIndexSync;
+import dev.kantobridge.world.DataException;
+import dev.kantobridge.world.MapPlacement;
+import dev.kantobridge.world.SlotMap;
+import dev.kantobridge.world.StoryCellType;
+import dev.kantobridge.world.WorldIndex;
+import java.io.IOException;
+import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.util.List;
+import net.fabricmc.fabric.api.gametest.v1.FabricGameTest;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
+import net.minecraft.core.QuartPos;
+import net.minecraft.core.registries.Registries;
+import net.minecraft.gametest.framework.GameTest;
+import net.minecraft.gametest.framework.GameTestAssertException;
+import net.minecraft.gametest.framework.GameTestHelper;
+import net.minecraft.resources.ResourceKey;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.level.biome.Biome;
+import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.LightBlock;
+import net.minecraft.world.level.block.state.BlockState;
+import org.jetbrains.annotations.Nullable;
+
+/**
+ * Builds the synthetic export bundle (a made-up 10×9-block town, a house and its upper floor) into the test level, far
+ * from every other test, and checks the result (docs/PLAN.md §6 M2 [T]): blocks and heights, story cells, the ledge
+ * collider, biomes, the written WorldIndex (against the golden file) and the report. Then rebuilds twice: the same
+ * plan again must change nothing, and a town-only rebuild must clear the interiors the first build left.
+ */
+public class SyntheticBuildGameTests implements FabricGameTest {
+	/** Must equal {@code TestData.ORIGIN_X/Z} in the JUnit tests, which hold the golden WorldIndex to the same origin. */
+	public static final int ORIGIN_X = 3_200_000;
+	public static final int ORIGIN_Z = 3_200_000;
+	private static final String BUNDLE = "kantobridge/synthetic_bundle/red/";
+	private static final String GOLDEN = "kantobridge/golden/synthetic_world_index.json";
+
+	private static ExportBundle bundle() {
+		try {
+			return ExportBundle.fromClasspath(SyntheticBuildGameTests.class.getClassLoader(), BUNDLE);
+		} catch (BundleException e) {
+			throw new GameTestAssertException("synthetic bundle unreadable: " + e.code());
+		}
+	}
+
+	private static BuildTask start(GameTestHelper helper, @Nullable List<String> maps) {
+		BuildOptions options = BuildOptions.defaults().withOrigin(ORIGIN_X, ORIGIN_Z).withWorldSpawn(false);
+		return KantoWorldBuilder.start(helper.getLevel(), bundle(), maps, options, dev.kantobridge.builder.BuildListener.NONE);
+	}
+
+	private static void waitFor(GameTestHelper helper, BuildTask[] task) {
+		helper.assertTrue(task[0] != null && task[0].isDone(), "build still running");
+	}
+
+	@GameTest(template = EMPTY_STRUCTURE, timeoutTicks = 6000)
+	public void syntheticBundleBuilds(GameTestHelper helper) {
+		BuildTask[] first = {start(helper, null)};
+		BuildTask[] second = new BuildTask[1];
+		BuildTask[] third = new BuildTask[1];
+		helper.startSequence()
+				.thenWaitUntil(() -> waitFor(helper, first))
+				.thenExecute(() -> verifyFirstBuild(helper, first[0]))
+				.thenExecute(() -> second[0] = start(helper, null))
+				.thenWaitUntil(() -> waitFor(helper, second))
+				.thenExecute(() -> verifyRebuild(helper, first[0], second[0]))
+				.thenExecute(() -> third[0] = start(helper, List.of("TEST_TOWN")))
+				.thenWaitUntil(() -> waitFor(helper, third))
+				.thenExecute(() -> verifyTownOnly(helper, first[0], third[0]))
+				.thenSucceed();
+	}
+
+	private static void verifyFirstBuild(GameTestHelper helper, BuildTask task) {
+		BuildReport report = task.report();
+		helper.assertTrue(task.succeeded(), "build failed: " + report.error);
+		helper.assertTrue(report.mapsBuilt == 3, "maps_built " + report.mapsBuilt);
+		helper.assertTrue(report.overlaps == 0, "overlaps " + report.overlaps);
+		helper.assertTrue(report.warnings == 0, "warnings " + report.warningCodes);
+		helper.assertTrue(report.storyCells == 20, "story_cells " + report.storyCells);
+		helper.assertTrue(report.storyCellBlocks == 80, "story-cell blocks " + report.storyCellBlocks);
+		helper.assertTrue(report.ledgeColliders == 24, "ledge colliders " + report.ledgeColliders);
+		helper.assertTrue(report.packTextures == 19, "pack_textures " + report.packTextures);
+		helper.assertTrue(report.worldIndex, "world_index not written");
+		helper.assertTrue(report.layers == 2, "layers " + report.layers);
+		helper.assertTrue(report.chunks == 20, "chunks " + report.chunks);
+		helper.assertTrue(report.biomeChunks == 20, "biome chunks " + report.biomeChunks);
+		helper.assertTrue(report.blocksPlaced > 5000, "blocks_placed " + report.blocksPlaced);
+		helper.assertTrue(report.lightBlocks > 0, "no interior lights");
+		helper.assertTrue("TEST_TOWN".equals(report.spawnMap), "spawn map " + report.spawnMap);
+		helper.assertTrue("ok".equals(report.status), "status " + report.status);
+
+		WorldIndex index = readIndex(helper, task);
+		helper.assertTrue(index.toJson().equals(golden(helper)), "the built WorldIndex differs from the golden file");
+		helper.assertTrue(index.hash().equals(WorldIndexSync.currentHash(helper.getLevel().getServer())), "the new index was not published");
+		helper.assertTrue(Files.isRegularFile(task.worldDir().resolve("kantobridge/slot_map.json")), "slot map not written");
+		helper.assertTrue(Files.isRegularFile(task.worldDir().resolve("kantobridge/build_report.json")), "report not written");
+		helper.assertTrue(Files.isRegularFile(task.worldDir().resolve("datapacks/kantobridge_generated/pack.mcmeta")), "datapack not written");
+		helper.assertTrue(Files.isRegularFile(task.packDir().resolve("pack.mcmeta")), "resource pack not written");
+
+		ServerLevel level = helper.getLevel();
+		SlotMap slots = task.plan().slotMap();
+		// A border tree: a 2-block column on its ground block, nothing above.
+		BlockPos tree = index.cellOrigin("TEST_TOWN", 0, 0);
+		helper.assertTrue(isTile(level, tree.below(), true) && isTile(level, tree, true) && isTile(level, tree.above()),
+				"tree column incomplete");
+		helper.assertTrue(level.getBlockState(tree.above(2)).isAir(), "tree column too tall");
+		// Ground: one tile block under the feet, showing the slot of (atlas, palette, tile 0, full).
+		BlockPos ground = index.cellOrigin("TEST_TOWN", 2, 2);
+		BlockState groundState = level.getBlockState(ground.below());
+		SlotMap.Slot groundSlot = slots.slot(new SlotMap.Key("tilesets.test", "TEST_PALETTE", 0, SlotMap.Shape.FULL));
+		helper.assertTrue(groundState.is(KbBlocks.tileFull().get(groundSlot.family())) && TileBlock.slot(groundState) == groundSlot.slot(),
+				"ground shows the wrong slot");
+		helper.assertTrue(level.getBlockState(ground).isAir(), "something stands on open ground");
+		// Water: a half block, and a story cell above it that knows its cell.
+		BlockPos water = index.cellOrigin("TEST_TOWN", 12, 12);
+		helper.assertTrue(level.getBlockState(water.below()).getBlock() instanceof TileBlock tile && KbBlocks.tileHalf().contains(tile),
+				"water is not a half tile");
+		assertStoryCell(helper, level, water, "TEST_TOWN:12:12", StoryCellType.WATER);
+		assertStoryCell(helper, level, water.offset(1, 0, 1), "TEST_TOWN:12:12", StoryCellType.WATER);
+		// The ledge row: a collider facing the hop direction (down = south).
+		BlockPos ledge = index.cellOrigin("TEST_TOWN", 2, 13);
+		BlockState collider = level.getBlockState(ledge);
+		helper.assertTrue(collider.is(KbBlocks.LEDGE_COLLIDER) && collider.getValue(LedgeColliderBlock.FACING) == Direction.SOUTH,
+				"ledge collider missing or facing the wrong way");
+		helper.assertTrue(isTile(level, ledge.below(), true), "ledge art missing");
+		// The cut tree: built open (ground), closed per player by a tile story cell.
+		BlockPos cut = index.cellOrigin("TEST_TOWN", 10, 14);
+		helper.assertTrue(isTile(level, cut.below(), true), "the cut tree's ground is missing");
+		assertStoryCell(helper, level, cut, "TEST_TOWN:10:14", StoryCellType.TILE);
+		// STAY objects carry story cells; the walker doesn't.
+		assertStoryCell(helper, level, index.cellOrigin("TEST_TOWN", 15, 4), "TEST_TOWN:15:4", StoryCellType.OBJECT);
+		helper.assertTrue(level.getBlockState(index.cellOrigin("TEST_TOWN", 10, 8)).isAir(), "a walking NPC got a story cell");
+		// Void fill around the town: 3 blocks above the ground.
+		MapPlacement town = index.map("TEST_TOWN");
+		BlockPos gap = new BlockPos(town.x() - 1, 63, town.z() - 1);
+		helper.assertTrue(isTile(level, gap.above(3)) && level.getBlockState(gap.above(4)).isAir(), "void fill is not 3 high");
+
+		// The house, one layer down: floor, walls, counter, ceiling and lights; enclosed by its ring.
+		MapPlacement house = index.map("TEST_HOUSE");
+		helper.assertTrue(house.layer() == 1 && house.y() == 42, "house layer");
+		int feet = house.y();
+		BlockPos floor = new BlockPos(house.x() + 4, feet, house.z() + 6);
+		helper.assertTrue(isTile(level, floor.below()) && level.getBlockState(floor).isAir(), "house floor");
+		helper.assertTrue(isTile(level, new BlockPos(floor.getX(), feet + 3, floor.getZ())), "house ceiling");
+		BlockState light = level.getBlockState(new BlockPos(house.x() + 5, feet + 2, house.z() + 5));
+		helper.assertTrue(light.is(Blocks.LIGHT) && light.getValue(LightBlock.LEVEL) == 15, "house light");
+		BlockPos counter = new BlockPos(house.x() + 8, feet, house.z() + 6);
+		helper.assertTrue(isTile(level, counter) && level.getBlockState(counter.above()).isAir(), "counter is not 1 block high");
+		BlockPos wall = new BlockPos(house.x(), feet + 1, house.z());
+		helper.assertTrue(isTile(level, wall) && level.getBlockState(wall.above()).isAir(), "interior wall is not 2 blocks high");
+		for (int y = feet - 1; y <= feet + 3; y++) {
+			helper.assertTrue(isTile(level, new BlockPos(house.x() - 1, y, house.z() + 3)), "enclosure ring open at y offset " + (y - feet));
+		}
+		assertStoryCell(helper, level, new BlockPos(house.x() + 12, feet, house.z() + 8), "TEST_HOUSE:6:4", StoryCellType.OBJECT);
+		MapPlacement upstairs = index.map("TEST_HOUSE_2F");
+		helper.assertTrue(upstairs.layer() == 2 && isTile(level, new BlockPos(upstairs.x() + 2, upstairs.y() - 1, upstairs.z() + 4)),
+				"upper floor missing on layer 2");
+
+		// Biomes per 4×4×4 cell.
+		assertBiome(helper, level, new BlockPos(town.x() + 18, 64, town.z() + 16), "kanto_outdoor");
+		assertBiome(helper, level, new BlockPos(house.x() + 10, feet, house.z() + 10), "kanto_interior");
+		KantoBridge.LOGGER.info("synthetic build: {} blocks placed, {} chunks, {} story cells, {} ms", report.blocksPlaced, report.chunks,
+				report.storyCells, report.elapsedMs);
+	}
+
+	private static void verifyRebuild(GameTestHelper helper, BuildTask first, BuildTask second) {
+		BuildReport report = second.report();
+		helper.assertTrue(second.succeeded(), "rebuild failed: " + report.error);
+		helper.assertTrue(report.blocksPlaced == 0 && report.blocksCleared == 0,
+				"an identical rebuild changed blocks: placed " + report.blocksPlaced + ", cleared " + report.blocksCleared);
+		helper.assertTrue(report.worldIndexHash.equals(first.report().worldIndexHash), "an identical rebuild changed the index");
+	}
+
+	private static void verifyTownOnly(GameTestHelper helper, BuildTask first, BuildTask third) {
+		BuildReport report = third.report();
+		helper.assertTrue(third.succeeded(), "town-only rebuild failed: " + report.error);
+		helper.assertTrue(report.mapsBuilt == 1 && report.interiors == 0, "town-only build placed " + report.mapsBuilt + " maps");
+		helper.assertTrue(report.blocksCleared > 0 && report.blocksPlaced == 0, "town-only rebuild: placed " + report.blocksPlaced
+				+ ", cleared " + report.blocksCleared);
+		// The shared resource pack and the slot map depend on the whole export, never on the filter.
+		helper.assertTrue(report.slotMapHash.equals(first.report().slotMapHash), "a filtered build changed the slot map");
+		helper.assertTrue(report.packHash.equals(first.report().packHash), "a filtered build changed the resource pack");
+		WorldIndex before = first.plan().index();
+		MapPlacement house = before.map("TEST_HOUSE");
+		ServerLevel level = helper.getLevel();
+		helper.assertTrue(level.getBlockState(new BlockPos(house.x() + 4, house.y() - 1, house.z() + 6)).isAir(),
+				"the old interior was not cleared");
+		MapPlacement town = before.map("TEST_TOWN");
+		helper.assertTrue(isTile(level, new BlockPos(town.x() + 4, 63, town.z() + 4)), "the town was cleared too");
+		WorldIndex after = readIndex(helper, third);
+		helper.assertTrue(after.maps().size() == 1 && after.map("TEST_HOUSE") == null, "the new index still lists the house");
+	}
+
+	private static WorldIndex readIndex(GameTestHelper helper, BuildTask task) {
+		try {
+			return WorldIndex.fromJson(Files.readString(task.worldDir().resolve("kantobridge/world_index.json"), StandardCharsets.UTF_8));
+		} catch (IOException | DataException e) {
+			throw new GameTestAssertException("world index unreadable: " + e.getClass().getSimpleName());
+		}
+	}
+
+	private static String golden(GameTestHelper helper) {
+		try (InputStream in = SyntheticBuildGameTests.class.getClassLoader().getResourceAsStream(GOLDEN)) {
+			helper.assertTrue(in != null, "golden WorldIndex missing");
+			return new String(in.readAllBytes(), StandardCharsets.UTF_8);
+		} catch (IOException e) {
+			throw new GameTestAssertException("golden WorldIndex unreadable");
+		}
+	}
+
+	private static boolean isTile(ServerLevel level, BlockPos pos) {
+		return level.getBlockState(pos).getBlock() instanceof TileBlock;
+	}
+
+	private static boolean isTile(ServerLevel level, BlockPos pos, boolean full) {
+		return level.getBlockState(pos).getBlock() instanceof TileBlock tile && KbBlocks.tileFull().contains(tile) == full;
+	}
+
+	private static void assertStoryCell(GameTestHelper helper, ServerLevel level, BlockPos pos, String key, StoryCellType type) {
+		helper.assertTrue(level.getBlockState(pos).is(KbBlocks.STORY_CELL), "no story cell for " + key);
+		helper.assertTrue(level.getBlockEntity(pos) instanceof StoryCellBlockEntity cell && key.equals(cell.cellKey()) && cell.type() == type,
+				"story cell data wrong for " + key);
+	}
+
+	private static void assertBiome(GameTestHelper helper, ServerLevel level, BlockPos pos, String name) {
+		ResourceKey<Biome> expected = ResourceKey.create(Registries.BIOME, ResourceLocation.fromNamespaceAndPath(KantoBridge.MOD_ID, name));
+		helper.assertTrue(level.getNoiseBiome(QuartPos.fromBlock(pos.getX()), QuartPos.fromBlock(pos.getY()), QuartPos.fromBlock(pos.getZ()))
+				.is(expected), "biome at a " + name + " position is wrong");
+	}
+}

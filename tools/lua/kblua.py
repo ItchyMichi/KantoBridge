@@ -76,10 +76,11 @@ class Bridge:
             eopts[b"game"] = _b(game)
             self.engine = FakeEngine.new(eopts)
 
-        # love facade source: only timer is needed so far
-        self._clock = self.eval("{ now = 0 }")
-        love = self.eval("function(c) return { timer = { getTime = function() return c.now end } } end")(
-            self._clock)
+        # love facade source: only timer is needed so far. perCall advances the clock on every
+        # read, so work inside one step "takes time" (budget tests); 0 by default.
+        self._clock = self.eval("{ now = 0, perCall = 0 }")
+        love = self.eval("function(c) return { timer = { getTime = function()"
+                         " c.now = c.now + c.perCall return c.now end } } end")(self._clock)
 
         mods = self.table()
         mods[b"socket"] = self.fake.socket
@@ -104,6 +105,7 @@ class Bridge:
         mod_opts[b"developer"] = developer
         if self.engine is not None:
             mod_opts[b"ui"] = self.engine.ui
+            mod_opts[b"datasets"] = self.engine.datasets
         if mod_options:
             mod_opts[b"options"] = self.to_lua(mod_options)
         if content:
@@ -121,11 +123,26 @@ class Bridge:
     def now(self, value: float):
         self._clock[b"now"] = value
 
+    @property
+    def clock_per_call(self) -> float:
+        return self._clock[b"perCall"]
+
+    @clock_per_call.setter
+    def clock_per_call(self, value: float):
+        self._clock[b"perCall"] = value
+
     def ready(self):
         """Emits game.ready with the fake game, as Game:load does (Game.lua:119)."""
         payload = self.table()
         payload[b"game"] = self.engine.game if self.engine is not None else self.table()
         self.emit("game.ready", payload)
+
+    def mods_loaded(self):
+        """Emits mods.loaded with the live data, as the loader does after the merge
+        (Loader.lua:2163), before game.ready."""
+        payload = self.table()
+        payload[b"data"] = self.engine.data if self.engine is not None else self.table()
+        self.emit("mods.loaded", payload)
 
     def step(self, n: int = 1):
         """Runs n logic steps: the clock advances and the input.step hooks run."""
@@ -142,6 +159,7 @@ class Bridge:
         self.env = self.Sandbox.env(self._env_opts)
         self.mod = self.FakeMod.new(self._mod_opts)
         self.run_main()
+        self.mods_loaded()
         self.ready()
 
     def to_lua(self, value):

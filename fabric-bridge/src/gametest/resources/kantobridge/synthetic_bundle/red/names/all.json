@@ -1,0 +1,1 @@
+{"items":{"POKE_BALL":{"key":false,"name":"TEST BALL","num":4},"POTION":{"key":false,"name":"TEST POTION","num":20},"TEST_KEY":{"key":true,"name":"TEST KEY","num":63}},"moves":{"TEST_GROWL":{"name":"TEST GROWL","num":45},"TEST_TACKLE":{"name":"TEST TACKLE","num":33}},"species":{"TESTMON_A":{"dex":16,"name":"TESTMON A"},"TESTMON_B":{"dex":19,"name":"TESTMON B"}}}

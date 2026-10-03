@@ -18,7 +18,8 @@ Proto.PROTOCOL = 1
 Proto.MAX_TYPE = 64
 Proto.MAX_SEQ = 9007199254740991 -- 2^53 - 1: the largest exact integer in a double
 
-local find, gmatch, match = string.find, string.gmatch, string.match
+local byte, find, format, gmatch, match = string.byte, string.find, string.format, string.gmatch, string.match
+local concat = table.concat
 local floor = math.floor
 
 -- Only the file:line of a Lua error is logged; the message itself could
@@ -114,6 +115,22 @@ function Proto.new(opts)
   -- Answers msg (a received envelope) with re = msg.seq.
   function proto.reply(msg, msgType, data)
     return proto.send(msgType, data, msg.seq)
+  end
+
+  -- Answers msg with data that is already encoded JSON object text, e.g. a
+  -- cached export page, so a large payload is never decoded and encoded
+  -- again. The envelope keeps kb_json's sorted key order (data, re, seq,
+  -- type), so the line is the same canonical JSON a full encode would give.
+  function proto.replyEncoded(msg, msgType, dataText)
+    if not Proto.validType(msgType) then return nil, "bad_type" end
+    if type(dataText) ~= "string" or byte(dataText, 1) ~= 123 or not Proto.validSeq(msg.seq) then
+      return nil, "bad_data"
+    end
+    seq = seq + 1
+    write(concat({ '{"data":', dataText, ',"re":', format("%d", msg.seq), ',"seq":', format("%d", seq),
+                   ',"type":"', msgType, '"}' }))
+    stats.sent = stats.sent + 1
+    return seq
   end
 
   -- Sends a request; onReply(data, msg) runs when a message with re = its seq

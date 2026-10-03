@@ -1,0 +1,97 @@
+{
+  "game": "red",
+  "engine": "0.0.0-fake",
+  "bridge": "fake_gen1-0.1.0",
+  "resources": [
+    {
+      "kind": "encounters",
+      "id": "all",
+      "hash": "f7c25a9109952b79302a81689d834426e799945402789d386d0688e3548318a6",
+      "size": 616
+    },
+    {
+      "kind": "field",
+      "id": "all",
+      "hash": "b248682e72b14c491f8c855a8aa844b81b78c8985937811e88baee03bd7c4ad5",
+      "size": 152
+    },
+    {
+      "kind": "image",
+      "id": "tilesets.test",
+      "hash": "35e9483941b6816bda31a2eae00ace504e10f7d8f35b539828657a1b7004d682",
+      "size": 402
+    },
+    {
+      "kind": "layout",
+      "id": "kanto",
+      "hash": "8ab3898ccdd39ccdcf63c0ef887f16ddd073fc2175325e45fd4040f9238fab1d",
+      "size": 68
+    },
+    {
+      "kind": "map",
+      "id": "TEST_HOUSE",
+      "hash": "182b9af2f033911c52563514442880bc15343acbfa6e273421b1246e8fded433",
+      "size": 836
+    },
+    {
+      "kind": "map",
+      "id": "TEST_HOUSE_2F",
+      "hash": "a35f6838ccbc671ad11b024373e476476c64731c8afd9bf783af9c00d6e9aa75",
+      "size": 531
+    },
+    {
+      "kind": "map",
+      "id": "TEST_TOWN",
+      "hash": "e8f7bd1dbaaa5db87884c898c6028c3c9b7731cf96185bc62f48eaf9bf9b4a3e",
+      "size": 1698
+    },
+    {
+      "kind": "names",
+      "id": "all",
+      "hash": "505fb141b837769dd0016658d802bd2f1bcbdc7f9f1319ae71acb316f55dec1f",
+      "size": 364
+    },
+    {
+      "kind": "palettes",
+      "id": "sgb",
+      "hash": "021a623e2f3b55644319efd16acca114f758da0e61467e4c0629f3cc7c45e057",
+      "size": 95
+    },
+    {
+      "kind": "sprite",
+      "id": "SPRITE_TEST_BALL",
+      "hash": "8edf99e2d3126e305bc40f9f9b0587a24080978a0767f0e21f2e99b2fda5538f",
+      "size": 190
+    },
+    {
+      "kind": "sprite",
+      "id": "SPRITE_TEST_GIRL",
+      "hash": "5370bbfb1163ff0b6972fc5bef49b0d41fd6584726bb4c3c10c7b4328a8231d1",
+      "size": 229
+    },
+    {
+      "kind": "sprite",
+      "id": "SPRITE_TEST_GUARD",
+      "hash": "5ff15ceaf35c9b89289f395aaa3178e9dcc60057795a46fa24d269865cdfea85",
+      "size": 230
+    },
+    {
+      "kind": "sprite",
+      "id": "SPRITE_TEST_MOM",
+      "hash": "e114eb30ef7b09733010c325b07773fe0d2163a4f4b9f77bd5ab694eb2b2327e",
+      "size": 205
+    },
+    {
+      "kind": "swaps",
+      "id": "all",
+      "hash": "139338b829ee7811d5c9d9137d437d3898000cf8855a6545ede19bf4de1ed4a6",
+      "size": 81
+    },
+    {
+      "kind": "tileset",
+      "id": "TEST",
+      "hash": "c60671040e00e093c583a1c1a64b9faf22a2188bf89d7f17e8b496b840437dc7",
+      "size": 861
+    }
+  ]
+}

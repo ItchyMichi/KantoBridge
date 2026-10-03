@@ -24,7 +24,7 @@ Extra arguments go to pytest, e.g. `tools/check.sh --no-gradle -k redact`. Gradl
 | `fake_minecraft/` | Connects like the fabric-bridge client, checks every message against the schemas, keeps the heartbeat, and logs only types and sizes (redacted messages with `--verbose`). `python -m fake_minecraft --help` |
 | `tests/` | pytest suites for the protocol, `kb_protocol` and the stand-ins |
 | `lua/` | The Lua test harness: gen1-bridge modules run under lupa's LuaJIT 2.1 in a sandbox-parity environment, with a fake LuaSocket. Its pytest files live beside it |
-| `e2e/` | End-to-end runner for the test Gen1Recomp instance, our own driver scripts, and e2e tests (marker `e2e`, run only with `--e2e`) |
+| `e2e/` | End-to-end runner for the test Gen1Recomp instance, our own driver scripts, and e2e tests (marker `e2e`, run only with `--e2e`). `build_world.py` is the headless real-data build: export from the test instance through `ExportCli`, then a headless server build; `--maps pallet\|route1\|all\|<ids>`, `--world <name>` (default `Kanto`), `--fresh`, `--skip-export`. Automated tests build into `saves/KantoE2E` |
 | `pytest.ini`, `conftest.py` | pytest configuration (`--e2e` option, markers) |
 | `requirements.txt` | Exact pins (see `docs/VERSIONS.md`) |
 

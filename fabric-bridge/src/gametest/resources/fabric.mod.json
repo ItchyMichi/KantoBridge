@@ -10,7 +10,10 @@
 			"dev.kantobridge.gametest.CobblemonStartupTests",
 			"dev.kantobridge.gametest.TileBlockTests",
 			"dev.kantobridge.gametest.StaticDataTests",
-			"dev.kantobridge.gametest.RelayGameTests"
+			"dev.kantobridge.gametest.RelayGameTests",
+			"dev.kantobridge.gametest.CollisionGameTests",
+			"dev.kantobridge.gametest.SyntheticBuildGameTests",
+			"dev.kantobridge.gametest.BuildHoldGameTests"
 		]
 	},
 	"depends": {

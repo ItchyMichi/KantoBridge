@@ -21,6 +21,10 @@ LIB_FILES = [
     "lib/kb_session.lua",
     "observe/kb_player.lua",
     "observe/kb_snapshot.lua",
+    "export/kb_cells.lua",
+    "export/kb_images.lua",
+    "export/kb_swapsites.lua",
+    "export/kb_export.lua",
 ]
 
 VERSION_OK = "{ engine = '0.3.49', modApi = 2 }"
