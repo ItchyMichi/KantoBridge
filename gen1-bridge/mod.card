@@ -1,0 +1,20 @@
+-- Sharing metadata for Gen1Recomp's mod manager and gallery tooling.
+-- The loader never reads this file; manifest.json is what loads the mod.
+return {
+  summary = "Links this hidden Gen1Recomp game to Minecraft (Kanto Bridge) over a local TCP socket.",
+  author = "Kanto Bridge contributors",
+  tags = { "tool", "network", "bridge" },
+  differences = {
+    changed = {},
+    added = {
+      "logs \"gen1-bridge loaded\" when a game boots",
+    },
+    known = {
+      "skeleton only: no socket or bridge logic yet",
+    },
+  },
+  credits = {
+    { who = "Pokemon Gen 1 Recompilation Project", for_ = "the engine and its mod platform" },
+  },
+  compat = { engine = "0.0.0-dev || >=0.3.49 <0.4.0", modApi = 2 },
+}

@@ -1,0 +1,57 @@
+# --- Never commit these (see CLAUDE.md, hard rules) ---
+# Reference clones (third-party code; study only)
+/refs/
+# ROM, Gen1Recomp portable data, generated resource packs/datapacks, saves
+/local/
+
+# Safety net: ROMs, saves and save states must never be committed anywhere
+*.gb
+*.gbc
+*.sgb
+*.sav
+*.srm
+*.rtc
+*.state
+*.ss[0-9]
+
+# --- Build outputs ---
+build/
+out/
+classes/
+bin/
+remappedSrc/
+
+# Gradle
+.gradle/
+.kotlin/
+
+# Fabric Loom dev runtime
+run/
+
+# Java crash/profiling output
+hs_err_*.log
+replay_*.log
+*.hprof
+*.jfr
+
+# --- IDE files ---
+# IntelliJ
+.idea/
+*.iml
+*.ipr
+*.iws
+# Eclipse
+.classpath
+.project
+.settings/
+.factorypath
+*.launch
+# VS Code
+.vscode/
+
+# --- OS files ---
+.DS_Store
+Thumbs.db
+ehthumbs.db
+desktop.ini
+$RECYCLE.BIN/

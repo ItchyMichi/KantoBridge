@@ -1,0 +1,13 @@
+{
+  "id": "gen1-bridge",
+  "name": "Kanto Bridge (Gen1Recomp side)",
+  "version": "0.1.0",
+  "api": 2,
+  "entry": "main.lua",
+  "profile": "content",
+  "category": "TOOL",
+  "games": ["red", "blue"],
+  "game_version": "0.0.0-dev || >=0.3.49 <0.4.0",
+  "permissions": ["network"],
+  "description": "Gen1Recomp half of Kanto Bridge: talks to the Minecraft half (fabric-bridge) over a local TCP socket."
+}

@@ -1,0 +1,27 @@
+{
+	"schemaVersion": 1,
+	"id": "kantobridge",
+	"version": "${version}",
+	"name": "Kanto Bridge",
+	"description": "Minecraft half of Kanto Bridge: mirrors a hidden Gen1Recomp game in Minecraft, with Cobblemon owning all Pokémon.",
+	"authors": [
+		"Kanto Bridge contributors"
+	],
+	"icon": "assets/kantobridge/icon.png",
+	"environment": "*",
+	"entrypoints": {
+		"main": [
+			"dev.kantobridge.KantoBridge"
+		],
+		"client": [
+			"dev.kantobridge.client.KantoBridgeClient"
+		]
+	},
+	"depends": {
+		"fabricloader": ">=0.19.5",
+		"minecraft": "~1.21.1",
+		"java": ">=21",
+		"fabric-api": "*",
+		"cobblemon": "~1.8.1"
+	}
+}

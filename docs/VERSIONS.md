@@ -1,0 +1,55 @@
+# Versions
+
+Pinned versions for Kanto Bridge, all looked up from official sources on **2026-10-03**. Change
+them only deliberately:
+
+1. Update `fabric-bridge/gradle.properties`, and `fabric.mod.json` `depends` if needed.
+2. Update this file, including where the new value came from.
+3. Rebuild.
+
+## Minecraft side (`fabric-bridge`)
+
+| Component | Version | Where it was found | Notes |
+|---|---|---|---|
+| Minecraft | **1.21.1** | Pinned by you. Listed as stable by Fabric meta: <https://meta.fabricmc.net/v2/versions/game> | |
+| Java | **21** | Pinned by you. Minecraft 1.20.5+ needs Java 21 (official template generator, `scripts/src/lib/template/java.ts` in <https://github.com/FabricMC/fabricmc.net>). | Installed here: Eclipse Temurin **21.0.12.1+1** (winget `EclipseAdoptium.Temurin.21.JDK`) at `C:\Program Files\Eclipse Adoptium\jdk-21.0.12.101-hotspot`. This machine's default `JAVA_HOME`/PATH Java stays **17**, so point builds at 21 explicitly. |
+| Fabric Loader | **0.19.5** | First `"stable": true` entry at <https://meta.fabricmc.net/v2/versions/loader>; also `fabric versions 1.21.1` from the official Fabric CLI | Latest stable |
+| Fabric API | **0.116.17+1.21.1** | Highest `+1.21.1` version in <https://maven.fabricmc.net/net/fabricmc/fabric-api/fabric-api/maven-metadata.xml>; also `fabric versions 1.21.1` | Latest for 1.21.1 |
+| Fabric Loom | **1.17.21** | <https://maven.fabricmc.net/net/fabricmc/fabric-loom/maven-metadata.xml>. Its Gradle module metadata (`fabric-loom-1.17.21.module`) requires JVM ≥ 21 and Gradle ≥ 9.5. | Fabric's template now uses `1.18-SNAPSHOT`, but **Loom 1.18.x needs Gradle to run on Java 25** (`"Dependency requires at least JVM runtime version 25"`). You chose 1.17.21 to keep Java 21. Moving to 1.18+ later means building on JDK 25. |
+| Loom plugin ID | `net.fabricmc.fabric-loom-remap` | Template generator, `templates/gradle/groovy/build.gradle.eta` (`-remap` for obfuscated versions such as 1.21.1); published for 1.17.21 at <https://maven.fabricmc.net/net/fabricmc/fabric-loom-remap/> | |
+| Gradle (wrapper) | **9.7.1** | Template generator, `templates/gradle/wrapper/gradle/wrapper/gradle-wrapper.properties` | The wrapper jar's SHA-256 (`7a9ce74c…262c5d`) matches Gradle's published checksum for 9.7.1 (<https://services.gradle.org/versions/all>) |
+| Mappings | Mojang official + Parchment | `loom.layered() { officialMojangMappings(); parchment(…) }`, per <https://parchmentmc.org/docs/getting-started> | Never Yarn |
+| Parchment | **parchment-1.21.1 : 2024.11.17** | `<release>` in <https://maven.parchmentmc.org/org/parchmentmc/data/parchment-1.21.1/maven-metadata.xml> (the maven linked from parchmentmc.org) | Latest for 1.21.1 |
+| Cobblemon | **1.8.1** (Fabric), maven `com.cobblemon:fabric:1.8.1+1.21.1` | Modrinth (official mod page): version `gBW3vLC7` "Cobblemon v1.8.1 ~ Fabric", 2026-09-12, file `Cobblemon-fabric-1.8.1+1.21.1.jar`, only required dependency Fabric API (<https://modrinth.com/mod/cobblemon/version/gBW3vLC7>). Maven: Cobblemon's own <https://artefacts.cobblemon.com/releases> (mirrored at <https://maven.impactdev.net/repository/development/>). Source: tag `1.8.1` at <https://gitlab.com/cable-mc/cobblemon>, commit `0bc5bb5c`, which matches the POM's `gitCommit`. | |
+| Fabric Language Kotlin | **1.13.6+kotlin.2.2.20** | Cobblemon 1.8.1 `gradle/libs.versions.toml:30`; bundled jar-in-jar in Cobblemon and listed in its POM | The library Cobblemon needs on Fabric. Players get it inside Cobblemon's jar. Kotlin 2.2.20. |
+| Cobblemon's bundled libraries | GraalJS 22.3.0, ICU4J 71.1, MongoDB driver 4.10.2 | Cobblemon 1.8.1 POM | Arrive transitively through the POM; bundled for players |
+
+For reference, Cobblemon 1.8.1 itself builds against:
+- Fabric Loader 0.17.2
+- Fabric API 0.116.6+1.21.1
+- Fabric Language Kotlin 1.13.6+kotlin.2.2.20
+- Parchment `parchment-1.21:2024.07.28`
+- Architectury Loom 1.11-SNAPSHOT
+
+These come from `refs/cobblemon/gradle/libs.versions.toml` and `gradle.properties`. Our Loader and
+Fabric API meet Cobblemon's minimums (`>=0.17.2`, `>=0.116.6+1.21.1`).
+
+Tooling used once to create `fabric-bridge`: the official Fabric CLI, `@fabricmc/cli` **0.1.466**
+from npm (source `FabricMC/fabricmc.net`).
+
+## Gen1Recomp side (`gen1-bridge`): studied, not yet pinned
+
+| Component | Version | Where it was found | Notes |
+|---|---|---|---|
+| Gen1Recomp | Studied `dev` @ `cb02aeb` (2026-10-02), included in release **v0.3.49** (2026-10-02) | <https://github.com/bryanthaboi/gen1recomp> (official; never gen1recomp[.]com) | Several releases a day, so **choosing the pin is an open question**. `gen1-bridge/manifest.json` declares `"game_version": "0.0.0-dev \|\| >=0.3.49 <0.4.0"`. |
+| Gen1Recomp mod API | **2** | `src/core/Version.lua` (`modApi = 2`) | `"api": 2` in the manifest |
+| LÖVE | **11.5** | Gen1Recomp `conf.lua:64` | Needed to run Gen1Recomp from source. Not installed on this machine; release zips bundle it. |
+| Dramaless Shape (voxel mod) | **2.0.4** | Your zip in `refs/`; GitHub release `v2.0.4` (2026-09-01) at <https://github.com/artyrambles/DRAMALESS_SHAPE> | Reference only; not pinned for players yet |
+
+## This project
+
+| Component | Version |
+|---|---|
+| `fabric-bridge` (mod id `kantobridge`) | 0.1.0 |
+| `gen1-bridge` (mod id `gen1-bridge`) | 0.1.0 |
+| Protocol | none defined yet ([PROTOCOL.md](PROTOCOL.md)) |
