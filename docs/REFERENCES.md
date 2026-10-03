@@ -77,8 +77,9 @@ Conventions:
 ## Gen1Recomp
 
 - **Source:** `https://github.com/bryanthaboi/gen1recomp`, default branch `dev`. Commit
-  `cb02aebd01a9d3eff1ca0c6e5e5f633a4c1a89b9` (2026-10-02) is included in the latest release
-  **v0.3.49** (2026-10-02). Several releases go out per day, so pin a tag.
+  `cb02aebd01a9d3eff1ca0c6e5e5f633a4c1a89b9` (2026-10-02) is included in release **v0.3.49**
+  (2026-10-02), **the pinned version** (see [VERSIONS.md](VERSIONS.md)). Several releases go out per
+  day, so always pin a tag.
 - **Official sources** per `README.md:12`: *"This GitHub repository, the Discord, and
   https://gen1re.com are the only official sources for this project."* The same line warns that
   `gen1recomp[.]com` impersonates the project. Never download from it.
@@ -323,7 +324,9 @@ The authoritative validator is `src/mods/Manifest.lua:293-488`. The human-readab
   - `--game=red` skips the launcher.
   - `--developer` / `POKEPORT_DEV=1` gives the console and F5 hot reload
     (`docs/guides/launch-options.md`).
-  - LÖVE is **not installed** on this machine.
+  - LÖVE is **not installed** on this machine. It isn't needed: we run the release build, whose
+    exe has LÖVE fused in. The `--game`, `--slot` and `POKEPORT_DEV` options work there too, because
+    the game's own code reads them (`conf.lua:8-13`, `main.lua:798`).
 - **Never use `Play-Windows.bat` or `scripts/setup.ps1`.** They scan the project root for a `*.gb`
   and build `data/generated` into the source tree (`scripts/setup.ps1:1-45`). `scripts/run.ps1`
   refuses to start without that dev data, so call `lovec` directly.
@@ -338,9 +341,10 @@ The authoritative validator is `src/mods/Manifest.lua:293-488`. The human-readab
   - **What moves into that folder:** `save.lua`, `options.lua` (including mod enable state), the
     whole ROM cache, `mods/`, `roms/`, `imports/`, `baseroms/`, `shaders/` and `prints/`. There's no
     env var or flag, only the marker, and Flatpak ignores it.
-  - **Our layout** (in [`CLAUDE.md`](../CLAUDE.md)): the engine goes in `local/gen1recomp/engine/`,
-    run as `lovec local/gen1recomp/engine`, and `portable.txt` goes in `local/gen1recomp/`. All
-    Gen1Recomp data then lands in `local/gen1recomp/`.
+  - **Our layout** (decided 2026-10-03; see [`CLAUDE.md`](../CLAUDE.md)): the official v0.3.49
+    Windows release is unzipped into `local/gen1recomp/`, with `portable.txt` beside its fused
+    `gen1recomp.exe`. For a fused exe the source-base directory is the exe's own folder, so all
+    Gen1Recomp data lands in `local/gen1recomp/`.
   - Never run Gen1Recomp from `refs/`.
 - **Running hidden:**
   - When the window is minimised the frame cap drops to 10 fps (`main.lua:1739-1745`), and catch-up
@@ -350,7 +354,8 @@ The authoritative validator is `src/mods/Manifest.lua:293-488`. The human-readab
     buttons (`Game.lua:1120-1139`).
   - `POKEPORT_BACKGROUND=1` only mutes audio on Windows; on macOS it also moves the window
     off-screen.
-  - This conflicts with DESIGN.md §9 ("keeps full speed while minimized"). See the open questions.
+  - This conflicts with DESIGN.md §9 ("keeps full speed while minimized"). **Decided:** keep
+    Gen1Recomp's window visible behind Minecraft and never minimise it.
 
 ---
 
@@ -751,16 +756,24 @@ temporary NPC (read, not run); **medium-low** for the entity-less prediction.
 - **Client-only entities** are inherently per player, which fits our puppet design. The server
   knows nothing about them, so interaction has to be caught client-side.
 
-### Implications (recommendation, pending your decision)
+### Implications for Kanto Bridge
 
-- **Dialogue: build our own client-side screen.**
-  - Cobblemon's screen is server-driven. In multiplayer, every text box would make a round trip
-    through the host's server, carrying ROM-derived text.
-  - It is mouse-only, caps names at 30 characters and has a fixed box.
-  - Making it client-only would mean brittle mixins into final classes.
-  - For an early single-player prototype, it can be driven from code on the integrated server with
-    the public API above.
-- **Trainer battles: run them on the server.**
+Updated 2026-10-03 with the user's decisions: ROM-derived data may pass through the host's server,
+and other players may see a story battle's Pokémon.
+
+- **Dialogue: Cobblemon's screen is now the default.** It meets the user's rule (it can be driven
+  with live text from code, on the server), and routing text through the server is now allowed.
+  The user confirms this when planning. What's left against it is UX:
+  - **Mouse-only.** Pages and options are clicked. The screen only reacts to the inventory key and
+    Escape (both close it) and to Enter in the text input
+    (`K/client/gui/dialogue/DialogueScreen.kt:290-297`).
+  - **Names.** The text input is capped at 30 characters, so Gen 1 name lengths must be checked on
+    our side.
+  - **Round trip.** Every page goes client → server → client.
+
+  Our own client-side screen remains the fallback. Keeping the protocol's dialogue messages
+  independent of the screen keeps that swap cheap.
+- **Trainer battles (recommended): run them on the server.**
   1. Our server-side code spawns a **temporary `NPCEntity`** at the trainer's tile, built from the
      team the hidden game hands over.
   2. It hides the NPC from every other player: a small mixin making it owner-only, or Cobblemon's
@@ -769,8 +782,8 @@ temporary NPC (read, not run); **medium-low** for the entity-less prediction.
   4. It reports the result from `BATTLE_VICTORY`/`BATTLE_FLED`.
   5. It discards the NPC.
 
-  The player's own client-side puppet stays the visible trainer. **Open:** hiding the opponent's
-  sent-out Pokémon from other players needs a further mixin on `PokemonEntity`.
+  The player's own client-side puppet stays the visible trainer. Other players may see the
+  opponent's sent-out Pokémon (decided), so no `PokemonEntity` mixin is needed.
 
   Alternatives:
   - an entity-less `TrainerBattleActor` (spike-test only);
@@ -886,7 +899,8 @@ Paths below are relative to
 
 Collected from every section above.
 
-1. **Gen1Recomp licensing:**
+1. **Gen1Recomp licensing.** This is a personal test project with no licence, so these matter only
+   if it is ever published:
    - whether a mod that only uses the mod API is a "work based on" Gen1Recomp, which would bring in
      the credit-line requirement;
    - whether our installer counts as a "launcher used to start the game", which would need the
@@ -894,6 +908,7 @@ Collected from every section above.
 2. **Gen1Recomp runtime behaviour:** nothing was run.
    - `gen1-bridge` hasn't been loaded in Gen1Recomp, and `modkit validate` needs LuaJIT, which isn't
      installed.
+   - Whether LÖVE's `--console` option opens a log console on the fused release exe.
    - The ~⅓ speed when minimised is a reading of the code.
    - It's unknown whether hot reload leaves old sockets or hooks behind.
    - `mod.game:writeSave()` from a mod, and yielding inside a `script.command` hook, are both

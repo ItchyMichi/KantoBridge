@@ -37,13 +37,13 @@ Fabric API meet Cobblemon's minimums (`>=0.17.2`, `>=0.116.6+1.21.1`).
 Tooling used once to create `fabric-bridge`: the official Fabric CLI, `@fabricmc/cli` **0.1.466**
 from npm (source `FabricMC/fabricmc.net`).
 
-## Gen1Recomp side (`gen1-bridge`): studied, not yet pinned
+## Gen1Recomp side (`gen1-bridge`)
 
 | Component | Version | Where it was found | Notes |
 |---|---|---|---|
-| Gen1Recomp | Studied `dev` @ `cb02aeb` (2026-10-02), included in release **v0.3.49** (2026-10-02) | <https://github.com/bryanthaboi/gen1recomp> (official; never gen1recomp[.]com) | Several releases a day, so **choosing the pin is an open question**. `gen1-bridge/manifest.json` declares `"game_version": "0.0.0-dev \|\| >=0.3.49 <0.4.0"`. |
+| Gen1Recomp | **v0.3.49**: the official Windows release zip `gen1recomp-0.3.49-windows.zip`, SHA-256 `7816b1fd93a06197aa395658f73d7e8087ee6421b3da6452f7be8ff69f3ae878` | <https://github.com/bryanthaboi/gen1recomp/releases/tag/v0.3.49> (2026-10-02, the latest release when pinned on 2026-10-03). The checksum matches the release's own `sha256sums.txt`. Official source only; never gen1recomp[.]com. | You chose the latest release; I chose the release zip over a source checkout, because it needs no LÖVE install and is the exact build players would get. Installed portable in `local/gen1recomp/`. The references were studied at `dev` @ `cb02aeb`, which v0.3.49 contains. `gen1-bridge/manifest.json` declares `"game_version": "0.0.0-dev \|\| >=0.3.49 <0.4.0"`. |
 | Gen1Recomp mod API | **2** | `src/core/Version.lua` (`modApi = 2`) | `"api": 2` in the manifest |
-| LÖVE | **11.5** | Gen1Recomp `conf.lua:64` | Needed to run Gen1Recomp from source. Not installed on this machine; release zips bundle it. |
+| LÖVE | **11.5**, bundled | Gen1Recomp `conf.lua:64`; the release's `gen1recomp.exe` is fused with LÖVE (`love.dll`) | No separate install needed for the release build |
 | Dramaless Shape (voxel mod) | **2.0.4** | Your zip in `refs/`; GitHub release `v2.0.4` (2026-09-01) at <https://github.com/artyrambles/DRAMALESS_SHAPE> | Reference only; not pinned for players yet |
 
 ## This project
@@ -52,4 +52,4 @@ from npm (source `FabricMC/fabricmc.net`).
 |---|---|
 | `fabric-bridge` (mod id `kantobridge`) | 0.1.0 |
 | `gen1-bridge` (mod id `gen1-bridge`) | 0.1.0 |
-| Protocol | none defined yet ([PROTOCOL.md](PROTOCOL.md)) |
+| Protocol | Transport decided (`127.0.0.1:27151`, newline-delimited JSON); no messages yet ([PROTOCOL.md](PROTOCOL.md)) |

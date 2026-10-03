@@ -7,7 +7,7 @@ draws everything and owns all Pokémon, wild spawns and battles. A small bridge 
 local TCP socket: a Gen1Recomp mod (`gen1-bridge`) and a Fabric mod (`fabric-bridge`).
 
 Kanto is built in Minecraft from each player's **own** ROM, on their own machine. Nothing from the
-ROM is ever distributed. This is a personal project.
+ROM is ever distributed. This is a personal test project, with no licence.
 
 **Status:** setup only. Both mods are skeletons that log a line when loaded.
 
@@ -19,10 +19,8 @@ ROM is ever distributed. This is a personal project.
 
 ## Setting up a new machine
 
-1. **Install the tools:**
-   - Git;
-   - a **JDK 21**, e.g. `winget install EclipseAdoptium.Temurin.21.JDK`;
-   - [LÖVE 11.5](https://love2d.org), if you'll run Gen1Recomp from source.
+1. **Install the tools:** Git, and a **JDK 21**, e.g. `winget install EclipseAdoptium.Temurin.21.JDK`.
+   That MSI changes the machine's default Java, so check `JAVA_HOME` afterwards.
 2. **Clone this repository.**
 3. **Build the Fabric mod.** Gradle must run on Java 21:
 
@@ -34,15 +32,15 @@ ROM is ever distributed. This is a personal project.
    `./gradlew runClient` starts a development Minecraft with Fabric API and Cobblemon.
 4. **Set up Gen1Recomp** in `local/` (git-ignored), from the official GitHub only. Never use
    gen1recomp[.]com, which is an impersonation site.
-   1. Put the pinned Gen1Recomp in `local/gen1recomp/engine/`.
-   2. Create an empty `local/gen1recomp/portable.txt`, so Gen1Recomp keeps its saves, settings and
-      ROM import in `local/gen1recomp/`.
-   3. Link the mod, in `cmd`: `mklink /J local\gen1recomp\mods\gen1-bridge gen1-bridge`.
-   4. Start it with `lovec local/gen1recomp/engine` and import **your own** ROM through
-      Gen1Recomp's launcher.
-
-   Don't use Gen1Recomp's `Play-Windows.bat` or `scripts/setup.ps1`; they write ROM data into the
-   source tree.
+   1. Download the pinned Windows release zip listed in [`docs/VERSIONS.md`](docs/VERSIONS.md).
+      Check its SHA-256 against the release's `sha256sums.txt`.
+   2. Unzip the files inside its `gen1recomp-win64/` folder into `local/gen1recomp/`.
+   3. Create an empty `local/gen1recomp/portable.txt` beside `gen1recomp.exe`, so Gen1Recomp keeps
+      its saves, settings and ROM import in that folder.
+   4. Link the mod, in `cmd`: `mkdir local\gen1recomp\mods`, then
+      `mklink /J local\gen1recomp\mods\gen1-bridge gen1-bridge`.
+   5. Start `local\gen1recomp\gen1recomp.exe` and import **your own** ROM through its launcher.
+      Keep its window open behind Minecraft; don't minimise it.
 5. **Optional, for development:** clone the reference projects into `refs/` (git-ignored), as
    listed in [`docs/REFERENCES.md`](docs/REFERENCES.md).
 

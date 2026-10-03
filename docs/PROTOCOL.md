@@ -13,12 +13,40 @@ The protocol connects the two halves of the bridge:
 A local TCP socket between the two halves on the player's own machine. The Gen1Recomp side needs
 the sandbox's `network` permission (see [REFERENCES.md](REFERENCES.md)).
 
-To decide:
+Decided 2026-10-03:
 
-- which side listens and which connects, and the port
-- framing and encoding (JSON messages; delimiting)
-- message envelope (type, sequence/ids, protocol version)
-- error handling, timeouts, reconnects and backpressure
+- **Endpoints.** The socket joins `gen1-bridge` and the **client** side of `fabric-bridge`, both on
+  the player's machine. The Minecraft server never talks to Gen1Recomp (see
+  [Relay to the Minecraft server](#relay-to-the-minecraft-server)).
+- **Listening.** `gen1-bridge` listens on **`127.0.0.1:27151`**: loopback only, so no firewall
+  prompt. The port is configurable on both sides, e.g. for two players testing on one PC.
+  - `fabric-bridge`'s client connects when Minecraft starts and reconnects automatically with
+    backoff.
+  - `gen1-bridge` serves one connection at a time; a new connection replaces the old one.
+  - Gen1Recomp mods only start once a game boots, so the listener exists from then on.
+  - **Why this way round:** the Lua side is single-threaded and sandboxed, and polling `accept()`
+    each logic step is its simplest non-blocking pattern, while Java can connect and retry on a
+    background thread. Gen1Recomp is also the long-lived side, while Minecraft clients restart
+    and rejoin.
+- **Framing.** Newline-delimited JSON: one UTF-8 JSON object per line. The Lua side keeps a
+  reassembly buffer for partial reads.
+- **First message.** The version handshake (DESIGN.md §9).
+
+Still to decide, together with the messages:
+
+- the message envelope (type, ids) and handshake fields
+- heartbeat and timeout values
+- error handling and backpressure
+
+## Relay to the Minecraft server
+
+Decided 2026-10-03: the Minecraft server gets each player's story data only from **that player's
+own client**, over Fabric custom payload packets. It replies the same way; for example, a battle
+result goes back to the client, which forwards it to Gen1Recomp.
+
+- The same path serves singleplayer (integrated server) and multiplayer.
+- The server trusts each client for its own player's story state.
+- ROM-derived data such as text and trainer teams may pass through the server.
 
 ## Handshake
 
