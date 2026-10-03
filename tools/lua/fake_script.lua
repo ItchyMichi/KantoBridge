@@ -10,7 +10,9 @@
 --                              constants, field (plain tables)
 --   E.runScript(rows, extra)   runs command rows on the overworld's runner
 --                              (the script.command hook wraps every row)
---   E.engageTrainer(npc, onDone)          a map trainer: battle text, then
+--   E.engageTrainer(npc, onDone, endBattleText, skipBattleText, endBattleSound,
+--                   endBattleIsReward, endBattleSoundPage)
+--                              a map trainer: battle text, then
 --                              trainer.before_battle (OC:4038-4174's shape)
 --   E.startTrainerApproach(npc)           the sight path: engaging, then engage
 --   E.nativeResult             what a native (not intercepted) battle ends
@@ -20,8 +22,9 @@
 --
 -- Engine modules it provides (E.modules): src.pokemon.Pokemon (movesAtLevel,
 -- new with deterministic DVs, heal), src.pokemon.Stats (calc),
--- src.pokemon.Growth (expForLevel), src.battle.BattleState (stampOT),
--- src.render.TextBox (new), src.core.RomText, src.script.Flags,
+-- src.pokemon.Growth (expForLevel), src.battle.BattleState (stampOT;
+-- fake_content.lua adds newTrainer), src.render.TextBox (new, substitute,
+-- M8 wave 3: soundOpts, with E.sounds), src.core.RomText, src.script.Flags,
 -- src.mods.Runtime (wantsHook, call), src.core.GameVersion.isYellow.
 
 local FakeScript = {}
@@ -129,6 +132,19 @@ function FakeScript.attach(E)
     o.onDone = onDone
     return E.textBox(TextBox.substitute(game, text), o)
   end
+  -- M8 wave 3: TextBox.soundOpts (TextBox.lua:220-238): a sound played once
+  -- the box's last page has typed, then the plain A/B wait (auto.wait);
+  -- every sound played is recorded in E.sounds
+  E.sounds = {}
+  function TextBox.soundOpts(_, sound, opts)
+    opts = opts or {}
+    local auto = type(opts.auto) == "table" and opts.auto or {}
+    if auto.wait == nil then auto.wait = true end
+    auto.delay = auto.delay or 0
+    auto.sound = function() E.sounds[#E.sounds + 1] = sound end
+    opts.auto = auto
+    return opts
+  end
 
   local function romText(_, _, fallback, ...)
     return string.format(fallback, ...)
@@ -178,14 +194,27 @@ function FakeScript.attach(E)
     E.blackOutTo(heal.map, heal.x, heal.y)
   end
 
-  -- checkVictoryRewards (OC:4251-4312): recorded; a made-up reward pushes a box
-  function ow.checkVictoryRewards(_, cls, party, shown)
+  -- checkVictoryRewards (OC:4251-4312): recorded; a made-up reward (its flag
+  -- once, its badge) shows its boxes one after the other (M8 wave 3: its
+  -- `dialogue` only when it didn't ride the battle screen as the armed loss
+  -- line, `shown`, OC:4285-4288; then `text`, standing for its TM lines),
+  -- then the map's onVictory runs (runVictoryHook, OC:4334-4337)
+  function ow.checkVictoryRewards(self, cls, party, shown)
     E.rewards[#E.rewards + 1] = { cls = cls, party = party, shown = shown }
     local reward = E.victories and E.victories[cls .. "#" .. tostring(party)]
-    if reward then
+    if reward and not (reward.flag and E.save.flags[reward.flag]) then
+      if reward.flag then E.save.flags[reward.flag] = true end
       if reward.badge then E.save.inventory[reward.badge] = 1 end
-      E.uiPush(E.textBox(reward.text or "A REWARD!"))
+      local boxes = {}
+      if reward.dialogue and not shown then boxes[#boxes + 1] = reward.dialogue end
+      if reward.text or not reward.dialogue then boxes[#boxes + 1] = reward.text or "A REWARD!" end
+      local function nextBox(i)
+        if boxes[i] then E.uiPush(E.textBox(boxes[i], { onDone = function() nextBox(i + 1) end })) end
+      end
+      nextBox(1)
     end
+    local scripts = E.mapScripts and E.mapScripts[self.map.id]
+    if scripts and scripts.onVictory then scripts.onVictory(E, self) end
   end
 
   -- A native battle: a graphical screen (isBattleState) that A ends with
@@ -244,24 +273,42 @@ function FakeScript.attach(E)
     return deferred == true
   end
 
-  -- OverworldState:engageTrainer (OC:4067-4174), shortened: the battle text,
-  -- then the battle (deferrable), whose win marks the trainer, sets the
-  -- header's event, runs the rewards and afterBattle, then onDone.
-  function E.engageTrainer(npc, onDone)
+  -- OverworldState:engageTrainer (OC:4067-4174), shortened: the battle text
+  -- (skipped with skipBattleText), then the battle (deferrable). Its start
+  -- (OC:4098-4146) builds the battle through BattleState.newTrainer (looked
+  -- up on the module at the call, fake_content.lua's stand-in), hands it the
+  -- loss line (the caller's endBattleText, else the header's won text,
+  -- substituted), the caller's sound and its page and rewardDialogueShown,
+  -- and pushes it with ow:pushBattle; its onFinish's win marks the trainer,
+  -- sets the header's event and runs the rewards (with rewardDialogueShown),
+  -- then afterBattle and onDone. E.starts counts the starts that ran.
+  function E.engageTrainer(npc, onDone, endBattleText, skipBattleText, endBattleSound, endBattleIsReward,
+                           endBattleSoundPage)
     local d = npc.def
     local header = E.data:trainerHeader(ow.map.def.label, d.index)
-    local function startBattle()
-      local info = { kind = "trainer", cls = d.trainerClass, party = d.trainerParty or 1 }
-      E.nativeBattle(info, function(result)
-        local fake = { kind = "trainer", oppClass = d.trainerClass, partyIndex = d.trainerParty or 1 }
+    local wonText = endBattleText or (header and header.won and E.data.text[header.won])
+    local function startBattle(options)
+      ow.cancelledTrainerSight = nil
+      E.starts = (E.starts or 0) + 1
+      local battle = E.modules["src.battle.BattleState"].newTrainer(E.game, d.trainerClass, d.trainerParty or 1,
+        options)
+      battle.checkpointOrigin = { kind = "trainer_encounter", map = ow.map.id, npcId = npc.id,
+                                  trainerClass = d.trainerClass, partyIndex = d.trainerParty or 1,
+                                  event = header and header.event or nil }
+      battle.endBattleText = wonText and TextBox.substitute(E.game, wonText) or nil
+      battle.endBattleSound = endBattleText ~= nil and endBattleSound or nil
+      battle.endBattleSoundPage = endBattleText ~= nil and endBattleSoundPage or nil
+      battle.rewardDialogueShown = endBattleText ~= nil and endBattleIsReward ~= false
+      battle.onFinish = function(result)
         if result == "win" then
           E.save.defeatedTrainers[npc.id] = true
           if header and header.event then E.save.flags[header.event] = true end
-          ow:checkVictoryRewards(d.trainerClass, d.trainerParty or 1, false)
+          ow:checkVictoryRewards(d.trainerClass, d.trainerParty or 1, battle.rewardDialogueShown)
         end
-        ow:afterBattle(result, fake)
+        ow:afterBattle(result, battle)
         if onDone then onDone() end
-      end)
+      end
+      ow:pushBattle(battle, npc)
     end
     local function prepareBattle()
       prepareTrainerBattle({ trainerClass = d.trainerClass, partyIndex = d.trainerParty or 1,
@@ -270,6 +317,7 @@ function FakeScript.attach(E)
         if onDone then onDone() end
       end)
     end
+    if skipBattleText then return prepareBattle() end
     E.uiPush(E.textBox((header and header.battleText) or "LET'S BATTLE!", { onDone = prepareBattle }))
   end
 

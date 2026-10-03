@@ -16,7 +16,7 @@ new items in [PLAYTEST.md](PLAYTEST.md) and a commit titled `M<n>: <title>`.
 | M5 | Opening, Oak's cutscene, starter and rival battle | **done** | 2026-10-03 | `eb9c570` |
 | M6 | Route 1, habitat pools, catching, party/Pokédex/bag sync | **done** | 2026-10-03 | `b603f16` |
 | M7 | Viridian City (Pokémon Center, Mart, PC, money, trainers, saving) | **done** | 2026-10-03 | `46e5573` |
-| M8 | The rest of Kanto (single player) | in progress (wave 2 of 3 done) | | wave 1 `20e43b9`, wave 2 `M8 wave 2` |
+| M8 | The rest of Kanto (single player) | **done** | 2026-10-03 | wave 1 `20e43b9`, wave 2 `559daa9`, final `M8: the rest of Kanto` |
 | M9 | Multiplayer | not started | | |
 | M10 | Reliability, performance and launch | not started | | |
 
@@ -103,6 +103,12 @@ new items in [PLAYTEST.md](PLAYTEST.md) and a commit titled `M<n>: <title>`.
   **419 JUnit**, **63/63 GameTests** (PC sessions, saves, the stable world id, lose → heal → warp,
   the leave-during-battle regressions), mixin remap check (5 targets). The user's `saves/Kanto` was
   rebuilt in place with the Viridian set.
+- **M8:** `tools/check.sh --e2e`: pytest **1224 passed** (796 Lua; e2e on the real engine: all
+  earlier ones plus field moves (cut, surf, spinners, an elevator, Strength), 9 content scenes, the
+  endgame (an Elite Four room, the Champion → Hall of Fame → credits, Snorlax, the Game Corner rocket),
+  and the **full real build: 220 of 220 maps, 0 warnings, 0 overlaps, 0 unplaced, in 57 s**), then
+  `gradlew build`: **479 JUnit**, **73/73 GameTests**, mixin remap check (6 targets). The user's
+  `saves/Kanto` holds all of Kanto.
 - **Early full-Kanto smoke build** (not an M2 gate; M8 owns it), `build_world.py --maps all` into
   `saves/KantoFullE2E`: 219 of 220 reachable maps (36 surface, 183 interiors on 14 layers, 5 moved
   sideways), **2,480,041 blocks in 2,126 chunks in 59 s** (plan 5.9 s, place 53 s), 12,539 story
@@ -474,7 +480,7 @@ new items in [PLAYTEST.md](PLAYTEST.md) and a commit titled `M<n>: <title>`.
     `options.lua` on every progress save, so the pinned display options and FAST text speed **are**
     persisted, since M4 on the player's own saves and now also on the center save (see Open issues).
 
-**M8** (in progress), run in three waves, each ending green with an intermediate commit
+**M8**, run in three waves, each ending green with an intermediate commit
 (`M8 wave <n>: …`); the milestone commit `M8: the rest of Kanto` comes after wave 3:
 
 - **Wave 1 (done):** the full build with clean report gates (items 1); the swap-site audit
@@ -566,9 +572,7 @@ new items in [PLAYTEST.md](PLAYTEST.md) and a commit titled `M<n>: <title>`.
     Champion needed no change (checked against the engine). **P22 is implemented**: the engine's
     music API (`Music.playBattle`, `playVictory`, `restoreMap`) gives the Gen 1 battle themes during
     held battles.
-  - Open: loss lines that `engageTrainer` callers pass in themselves (Silph Co Giovanni's, the Game
-    Corner rocket's) still aren't shown after a Cobblemon win; the Elite Four, Lance, the Champion,
-    the Hall of Fame and the Snorlax flute wake are covered by code reading and Lua tests, not e2e; a
+  - Open: (the defeat lines and the endgame e2e were closed in wave 3); a
     trade or daycare change followed by a CONTINUE from an older hidden save leaves the games out of
     step (M10's save pairing); a traded member without a uid gets no `party.take` (counted).
   - Wave 2 gate: `tools/check.sh --e2e` **1207 passed** (783 Lua; e2e adds 9 real-game content
@@ -576,7 +580,22 @@ new items in [PLAYTEST.md](PLAYTEST.md) and a commit titled `M<n>: <title>`.
     in-game trade, the Name Rater, Brock's gym with its badge, a daycare deposit/withdrawal, a Safari
     catch crossover), `gradlew build` **479 JUnit**, **73/73 GameTests**; **full real build: 220 of
     220 maps, 0 warnings, 0 overlaps, 0 unplaced, 2,485,154 blocks in 56.5 s.**
-- **Wave 3:** the remaining e2e scenarios (11), the full real build gate, rebuilding the user's world
+  Wave 3 results:
+  - 87. **Trainers' own defeat lines** (Silph Co Giovanni, the Game Corner rocket, the Karate
+    Master, the Nugget Bridge recruiter, every gym leader's badge lines with their jingle) now show
+    after a Cobblemon win: the continuation captured at deferral runs the engine's own start on a
+    win, with `BattleState.newTrainer` and `pushBattle` shadowed for that one synchronous call (a
+    stand-in keeps the substituted line, sound, page and the encounter's own `onFinish`); losses and
+    aborts keep M5's path. Gym leaders' badge lines now come as the tagged defeat line before the
+    prize (not repeated after it).
+  - 88. **Endgame end to end on the real game:** an Elite Four room (Elite Four members don't sight
+    the player: entering runs the walk-in, the battle starts on talking; the door opens; no heal
+    between rooms), the Champion → the Hall of Fame (heal, save) → credits → the title, Snorlax with
+    the flute (abort brings it back, a catch removes it), and the Game Corner rocket's line and exit.
+    The Hall of Fame scene writes a save into the test install's own slot.
+  - Wave 3 also made the e2e build gate the **full Kanto build** and rebuilt the user's `saves/Kanto`
+    as all of Kanto (220 maps, 0 warnings, player data kept).
+- **Wave 3 (done):** the remaining e2e scenarios (11), the full real build gate, rebuilding the user's world
   as all of Kanto, and the badge-by-badge play-test checklist.
 
 ## Open issues
@@ -670,3 +689,4 @@ Nothing.
 - PLAYTEST.md M5: a new game from Minecraft: names, Oak's escort, the starter, the rival battle.
 - PLAYTEST.md M6: wild Pokémon on Route 1, catching, the Pokédex, Poké Ball and Potion counts.
 - PLAYTEST.md M7: the nurse and saving, the Mart, Bill's PC, a trainer, one blackout, save/reload.
+- PLAYTEST.md M8: the whole story, badge by badge, with field moves and the endgame.

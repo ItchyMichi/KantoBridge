@@ -1342,7 +1342,10 @@ function Engine.new(opts)
   --     engageTrainer's own win side effects (OC:4127-4144) and ends the
   --     encounter with continue({ cancel = true }) (OC:4048-4049), which runs
   --     the encounter's completion callback and suppresses the sight at the
-  --     player's cell (OC:4157-4166).
+  --     player's cell (OC:4157-4166). M8 wave 3: a win instead runs the
+  --     encounter's own start with the battle stood in for, and its onFinish
+  --     (startTrainerBattle below), so a loss line the caller handed over
+  --     is shown too.
   -- What a result shows first, as text boxes the battle screen would have
   -- shown (BattleState.lua): the trainer's own loss line with its tag
   -- (:5006-5037) and the prize (:4979-4980, :5039); on a loss Rival1WinText
@@ -1792,9 +1795,12 @@ function Engine.new(opts)
       return nextFn(g, context, continueBattle)
     end
     local record = newRecord(plan, facts, "trainer")
+    -- the encounter's continuation: cancels an abort or a loss, and (M8
+    -- wave 3) runs the encounter's own start on a win (startTrainerBattle)
     record.continueBattle = continueBattle
     -- the trainer header's event flag and loss line (Data:trainerHeader,
-    -- src/core/Data.lua:425-428; OC:4073-4087, :4130-4132)
+    -- src/core/Data.lua:425-428; OC:4073-4087, :4130-4132): what a win
+    -- shows and applies when that start can't run (M5's own path)
     if npc and type(npc.def) == "table" and type(ow.map) == "table" and type(ow.map.def) == "table"
         and type(data.trainerHeader) == "function" then
       local ok, header = pcall(data.trainerHeader, data, ow.map.def.label, npc.def.index)
@@ -1828,18 +1834,49 @@ function Engine.new(opts)
     return okFmt and formatted or nil
   end
 
+  -- M8 wave 3: wins applied through engageTrainer's own start
+  -- (startTrainerBattle below), starts that came back empty, and the loss
+  -- lines shown after a win (with a sound: a gym leader's badge jingle).
+  local trainerCounts = { started = 0, failed = 0, lines = 0, sounds = 0 }
+
+  -- A win's loss line as the battle screen shows it (BattleState.lua
+  -- :5006-5037): its \f pages, empty ones skipped, the trainer's tag on the
+  -- first; and (M8 wave 3) the sound the line carries (engageTrainer's
+  -- endBattleSound, OC:4121-4123: a gym leader's badge jingle) played once
+  -- the page endBattleSoundPage (default 1) has typed: the pages up to that
+  -- one make a box that plays it (TextBox.soundOpts, TextBox.lua:220-238,
+  -- the reward chain's way, OC:4201-4248), the rest a second box. A sound
+  -- page past the line's last page plays nothing, as on the battle screen.
+  local function lossLineBoxes(rec, texts)
+    local pages = {}
+    for page in (rec.endText .. "\f"):gmatch("(.-)\f") do
+      if page ~= "" then pages[#pages + 1] = page end
+    end
+    if #pages == 0 then return end
+    local tag = trainerName(rec.cls, rec.party)
+    if tag then pages[1] = tag .. ": " .. pages[1] end
+    trainerCounts.lines = trainerCounts.lines + 1
+    local sound = type(rec.endSound) == "string" and rec.endSound ~= "" and rec.endSound or nil
+    local at = sound and math.max(1, math.floor(tonumber(rec.endSoundPage) or 1)) or nil
+    if at and at <= #pages then
+      trainerCounts.sounds = trainerCounts.sounds + 1
+      texts[#texts + 1] = { text = table.concat(pages, "\f", 1, at), sound = sound }
+      if at < #pages then texts[#texts + 1] = table.concat(pages, "\f", at + 1) end
+    else
+      texts[#texts + 1] = table.concat(pages, "\f")
+    end
+  end
+
   -- The text boxes a result shows (raw engine text, substituted by
-  -- TextBox.new itself, TextBox.lua:170), and the prize.
+  -- TextBox.new itself, TextBox.lua:170), and the prize. A box is its
+  -- text, or { text, sound } for one that plays a sound (lossLineBoxes).
   local function resultTexts(rec, result)
     local save = engine.save()
     local player = save and type(save.player) == "table" and save.player.name or nil
     player = type(player) == "string" and player or "RED"
     local texts, prize = {}, 0
     if result == "win" and rec.cls then
-      if rec.endText then
-        local tag = trainerName(rec.cls, rec.party)
-        texts[#texts + 1] = (tag and (tag .. ": ") or "") .. rec.endText
-      end
+      if type(rec.endText) == "string" then lossLineBoxes(rec, texts) end
       prize = tonumber(rec.prize) or 0
       if prize > 0 then
         texts[#texts + 1] = romText("_MoneyForWinningText", "%s got \194\165%d\nfor winning!", player, prize)
@@ -1859,26 +1896,104 @@ function Engine.new(opts)
   end
 
   -- Pushes text boxes one after the other (TextBox.new, TextBox.lua:129;
-  -- A/B pops each and calls its onDone), then runs onDone.
+  -- A/B pops each and calls its onDone), then runs onDone. An entry
+  -- { text, sound } plays its sound once its last page has typed and holds
+  -- until it is over (TextBox.soundOpts, TextBox.lua:220-238).
   local function pushTexts(list, onDone)
     local TextBox = try("src.render.TextBox")
     local i = 0
     local function nextBox()
       i = i + 1
-      local text = list[i]
-      if text == nil or not (TextBox and type(TextBox.new) == "function" and game and game.stack) then
+      local entry = list[i]
+      if entry == nil or not (TextBox and type(TextBox.new) == "function" and game and game.stack) then
         return onDone()
       end
-      local ok, box = pcall(TextBox.new, game, text, nextBox)
+      local text, opts = entry, nil
+      if type(entry) == "table" then
+        text = entry.text
+        if entry.sound ~= nil and type(TextBox.soundOpts) == "function" then
+          local okOpts, o = pcall(TextBox.soundOpts, game, entry.sound)
+          if okOpts and type(o) == "table" then opts = o end
+        end
+      end
+      local ok, box = pcall(TextBox.new, game, text, nextBox, opts)
       if not ok or type(box) ~= "table" then return nextBox() end
       game.stack:push(box)
     end
     nextBox()
   end
 
+  -- M8 wave 3: engageTrainer's own start of a deferred map trainer's
+  -- battle, run when Cobblemon reports a win. An engageTrainer caller may
+  -- hand the battle its own loss line and what goes with it
+  -- (endBattleText, endBattleSound, endBattleIsReward, endBattleSoundPage;
+  -- OC:4067-4087, :4119-4126): Silph Co Giovanni
+  -- (data/scripts/story.lua:885-901), the Game Corner rocket
+  -- (story3.lua:597-643), the Karate Master (story4.lua:233-258), the Nugget
+  -- Bridge recruiter (story4.lua:668-679) and every gym leader's badge lines
+  -- (data/scripts/gyms.lua:94-131). Those live only in the start's closure:
+  -- the trainer.before_battle context carries none of them (OC:4152-4157)
+  -- and the mod sandbox has no debug library. So the continuation captured
+  -- when the battle was deferred runs the start (continueBattle(),
+  -- OC:4045-4054 -> startBattle, OC:4098-4146), with two engine functions
+  -- shadowed for that one synchronous call and put back at once, error or
+  -- not: BattleState.newTrainer (looked up on the module table at the call,
+  -- OC:4089, :4101) hands back a stand-in instead of building a battle
+  -- (src/battle/BattleState.lua:891-969: nothing is marked in the Pokedex,
+  -- no pic or cry loads), and OverworldState.pushBattle (OC:4145) keeps what
+  -- the start filled in instead of pushing it (OC:1142-1176; the overworld
+  -- on the stack is the module table itself, src/core/Game.lua:127, :190).
+  -- The stand-in then carries what the battle screen would use -- the
+  -- substituted endBattleText (the caller's line, else the header's won
+  -- line), endBattleSound, endBattleSoundPage, rewardDialogueShown -- and
+  -- the encounter's own onFinish (OC:4127-4144: defeatedTrainers, the
+  -- header's event, checkVictoryRewards with rewardDialogueShown,
+  -- afterBattle, the caller's onDone), which applies the win
+  -- (finishTrainer). The start's other writes are harmless here: the
+  -- sighting suppression is cleared (OC:4099) and the meet sting stays
+  -- silent while the world is held engaging (OC:4093-4097). A loss and an
+  -- abort never run it: they keep M5's path, continue({cancel = true}).
+  -- Returns the stand-in (or whatever the start pushed), or nil.
+  local function startTrainerBattle(rec)
+    local continueBattle = rec.continueBattle
+    local ow = rec.ow
+    if type(continueBattle) ~= "function" or type(ow) ~= "table" or ow ~= engine.overworld() then return nil end
+    local BattleState = try("src.battle.BattleState")
+    if not (BattleState and type(ow.pushBattle) == "function") then return nil end
+    local standIn = { kind = "trainer", oppClass = rec.cls, partyIndex = rec.party or 1 }
+    local kept
+    local function newShadow(_, oppClass, partyIndex)
+      standIn.oppClass, standIn.partyIndex = oppClass, partyIndex or 1
+      return standIn
+    end
+    local function pushShadow(_, battle) kept = battle end
+    local ownNew, ownPush = rawget(BattleState, "newTrainer"), rawget(ow, "pushBattle")
+    rawset(BattleState, "newTrainer", newShadow)
+    rawset(ow, "pushBattle", pushShadow)
+    rec.continueBattle = nil -- spent either way (OC:4046-4047)
+    local ok, err = pcall(continueBattle)
+    if rawget(ow, "pushBattle") == pushShadow then rawset(ow, "pushBattle", ownPush) end
+    if rawget(BattleState, "newTrainer") == newShadow then rawset(BattleState, "newTrainer", ownNew) end
+    if ok and type(kept) == "table" and type(kept.onFinish) == "function" then
+      trainerCounts.started = trainerCounts.started + 1
+      return kept
+    end
+    trainerCounts.failed = trainerCounts.failed + 1
+    warnAt("engine.trainer_start_failed", not ok and err or nil)
+    return nil
+  end
+
   local function finishTrainer(rec, result)
     local ow, save = rec.ow, engine.save()
     if type(ow) == "table" and ow == engine.overworld() and type(save) == "table" then
+      if result == "win" and type(rec.built) == "table" then
+        -- M8 wave 3: the encounter's own win (OC:4127-4144), the world let
+        -- go first as the battle screen's exit would
+        if rec.heldEngaging then ow.engaging = false end
+        local ok, err = pcall(rec.built.onFinish, "win")
+        if not ok then warnAt("engine.trainer_finish_failed", err) end
+        return
+      end
       if result == "win" then
         if rec.npcId and type(save.defeatedTrainers) == "table" then save.defeatedTrainers[rec.npcId] = true end
         if rec.event then
@@ -1966,6 +2081,18 @@ function Engine.new(opts)
     local rec, st = liveBattle()
     if not rec or rec.id ~= id or rec.state ~= "waiting" then return false end
     rec.state, rec.result = "texts", result
+    -- M8 wave 3: a map trainer's win runs engageTrainer's own start first,
+    -- for the loss line (and its sound, its reward flag) the caller handed
+    -- the battle; without it the header's line captured at deferral stays
+    if result == "win" and rec.path == "trainer" then
+      local built = startTrainerBattle(rec)
+      if built then
+        rec.built = built
+        rec.endText = type(built.endBattleText) == "string" and built.endBattleText or nil
+        rec.endSound = type(built.endBattleSound) == "string" and built.endBattleSound or nil
+        rec.endSoundPage = tonumber(built.endBattleSoundPage)
+      end
+    end
     local texts, prize = resultTexts(rec, result)
     local save = engine.save()
     if prize > 0 and type(save) == "table" then save.money = (tonumber(save.money) or 0) + prize end
@@ -3683,6 +3810,9 @@ function Engine.new(opts)
       opsPending = type(st) == "table" and type(st.ops) == "table" and #st.ops or 0,
       daycareHeld = engine.daycareUid() ~= nil,
       musicBattle = musicCounts.battle, musicVictory = musicCounts.victory, musicFailed = musicCounts.failed,
+      -- M8 wave 3: wins through engageTrainer's own start, loss lines shown
+      trainerStarts = trainerCounts.started, trainerStartsFailed = trainerCounts.failed,
+      lossLines = trainerCounts.lines, lossLineSounds = trainerCounts.sounds,
     }
   end
 

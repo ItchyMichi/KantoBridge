@@ -125,6 +125,16 @@ function FakeUi.attach(E)
           return
         end
         if self.auto then
+          -- M8 wave 3: auto.sound plays once at the end (TextBox.lua:535-540);
+          -- auto.wait then hands the box to the plain A/B wait (:569-572)
+          if type(self.auto) == "table" and self.auto.sound and not self.autoStarted then
+            self.autoStarted = true
+            self.auto.sound()
+          end
+          if type(self.auto) == "table" and self.auto.wait then
+            self.auto = nil
+            return
+          end
           self.autoTimer = (self.autoTimer or 0) + 1
           if self.autoTimer >= ((type(self.auto) == "table" and self.auto.delay) or 3) then
             E.uiPop()

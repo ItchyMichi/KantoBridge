@@ -29,7 +29,9 @@ scene's object, facing it (found with the engine's own data and map scripts), ch
              screen -> party.rename{uid, nick} with its length
   gym        Brock: act.interact -> his text -> battle.start kind trainer, class OPP_BROCK, two
              members, BIDE (Gen 1 move 117) in the second one's moves, the gym theme playing; a
-             `win` -> one more badge, one more beaten trainer, the prize and the TM in the bag
+             `win` -> his badge lines as his loss line, with the badge jingle (M8 wave 3: through
+             his encounter's own start, debug.status trainerStarts, lossLines, lossLineSounds),
+             one more badge, one more beaten trainer, the prize and the TM in the bag
   daycare    the gentleman: YES, the party menu (A) -> daycare.deposit{uid}; three steps away and
              back -> talking again, the fee YES -> daycare.withdraw{uid, steps: 6}, money -100
   safari     a Safari game in the Safari Zone's grass (the driver makes the engine's catch.rate
@@ -400,7 +402,8 @@ def test_content_scene(scene_name):
     print("status:", {k: status.get(k) for k in ("directTaken", "directArmed", "battleStatic", "battleTrainer",
                                                   "trades", "partyTakes", "partyRenames", "partyDeposits",
                                                   "partyWithdraws", "opsPending", "musicBattle", "musicVictory",
-                                                  "badges", "defeated")})
+                                                  "badges", "defeated", "trainerStarts", "lossLines",
+                                                  "lossLineSounds")})
     print("driver:", [line for line in result.lines if line.startswith(("KB_HELD", "KB_BEATEN", "KB_BACK", "KB_END",
                                                                          "KB_BATTLE_PUSHED", "KB_QUIT"))])
 
@@ -452,6 +455,8 @@ def test_content_scene(scene_name):
         assert report["money_up"] and report["bag_kinds_up"], "the prize and the TM"
         assert held is not None and not held.endswith("music=false"), "the Gen 1 gym theme while held"
         assert status["musicBattle"] >= 1
+        # M8 wave 3: the badge lines his talk hands engageTrainer are his loss line, with the jingle
+        assert (status["trainerStarts"], status["lossLines"], status["lossLineSounds"]) == (1, 1, 1)
     elif scene_name == "daycare":
         assert report["deposits"] == [{"uid": U1}]
         assert report["held"] == (True, 1)

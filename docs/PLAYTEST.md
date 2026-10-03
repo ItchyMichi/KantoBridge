@@ -218,3 +218,56 @@ player data stays).
       your position, party, bag, money and story agree in both.
 - [ ] Watch how long saves take, and note any stall.
 - [ ] F7 shows the world id and the save slot.
+
+## M8: The rest of Kanto
+
+The `Kanto` world now holds **all of Kanto** (220 maps, built headless from your game). Play the story
+in order; tick each item, or note what went wrong and where (map and what you did).
+
+**Field moves and movement (try each once it's available):**
+
+- [ ] **Cut** (HM01 + Cascade Badge): with an empty hand, right-click (or Z) a small tree: it's cut for
+      you; leave the area and come back: it has grown back.
+- [ ] **Surf**: right-click water: you ride on the surface (surf sprite); right-click land to get off.
+- [ ] **Strength**: use it from the party menu, then walk into a boulder twice: it moves.
+- [ ] **Flash** in Rock Tunnel: dark until you use Flash, then you can see (Night Vision).
+- [ ] **Bicycle** from the bag: faster; Cycling Road's slope pulls you downhill; sneak brakes.
+- [ ] **Fly** (party menu → FLY → a town), **Dig**, **Teleport**, **Escape Rope**.
+- [ ] Spinner tiles slide you (Viridian Gym, Rocket Hideout); holes and warp pads move you (Silph Co,
+      Saffron Gym, the Mansion); Seafoam's currents push you.
+- [ ] Blockades stay until the story clears them, for you: the thirsty gate guards, Snorlax,
+      card-key doors, Rocket grunts, the Viridian old man.
+
+**Badge by badge:**
+
+1. - [ ] Viridian Forest's bug catchers; **Brock** (badge, TM, his Bide).
+2. - [ ] Mt. Moon (choose a fossil); Cerulean: the rival, **Misty**, Nugget Bridge, Bill (the S.S.
+     Ticket); the bike voucher and the bike shop.
+3. - [ ] Vermilion: the S.S. Anne (HM01 from the captain), **Lt. Surge** (the trash-can switches);
+     Diglett's Cave.
+4. - [ ] Rock Tunnel with Flash; Lavender's Pokémon Tower (the unidentified ghosts are native battles on
+     the mirror until you have the Silph Scope); Celadon: **Erika**, the Game Corner (slots on the
+     mirror; the prize counter), the Rocket Hideout (spinners, the elevator, Giovanni); the Silph
+     Scope, the ghost Marowak, Mr. Fuji and the Poké Flute.
+5. - [ ] Snorlax on Route 12 or 16 with the flute (a Cobblemon battle; catch it or knock it out; it
+     stays gone); Fuchsia: **Koga**, the Safari Zone (a native battle on the mirror; what you catch
+     appears in Cobblemon), Surf and Strength.
+6. - [ ] Saffron: Silph Co (card keys, warp pads, the Lapras gift, Giovanni), **Sabrina**.
+7. - [ ] Cinnabar: the Mansion's switches, **Blaine**, the lab (fossil revival); Seafoam Islands.
+8. - [ ] Viridian Gym: **Giovanni**; Victory Road's boulders; **the Elite Four** (no healing between
+     rooms), **the Champion**, the Hall of Fame and the credits (on the mirror).
+
+**Optional extras:**
+
+- [ ] The daycare (Route 5): deposit, walk, withdraw: the Pokémon comes back with experience.
+- [ ] An in-game trade, and the Name Rater (Lavender).
+- [ ] The Power Plant (Voltorb/Electrode, Zapdos), the other birds, Mewtwo in Cerulean Cave.
+- [ ] Battle music: Gen1Recomp's window plays Gen 1 battle music during Cobblemon battles; Cobblemon's
+      own battle music stays silent.
+
+**After-battle text (check as you meet them):**
+
+- [ ] A gym leader: after the Cobblemon win, their badge lines appear (with the badge jingle), then
+      the prize money, then the TM.
+- [ ] The Game Corner rocket: his line, then he leaves. Silph Co's Giovanni: his line shows once.
+- [ ] The Elite Four: each door opens after its battle; nobody heals you between rooms.

@@ -444,7 +444,9 @@ it for that player's collision.
   box catches leave the Gen 1 box; never the old man's demo). Trades carry `ot` and the trade's
   nickname. `party.rename` is sent once per Name Rater change (`""` clears) and queued while offline.
   The Hall of Fame also sends `party.heal`. During held battles the hidden game plays the matching Gen 1
-  battle theme (P22), and the victory theme after a win with texts.
+  battle theme (P22), and the victory theme after a win with texts. After a `win` the trainer's own
+  defeat line (gym leaders' badge lines with their jingle) shows before the prize, as in Gen 1
+  (`debug.status`: `trainerStarts`, `trainerStartsFailed`, `lossLines`, `lossLineSounds`).
 - **The daycare (M8):** `daycare.deposit{uid}` (and `party.take{reason:"daycare"}`, treated the same,
   idempotent) moves the Pokémon from the Cobblemon party into a per-player daycare store on the
   server; `daycare.withdraw{uid, steps}` returns it to the party (the PC if full) with 1 XP per step,

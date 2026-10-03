@@ -14,6 +14,8 @@
 --
 --   FakeContent.attach(E)     after FakeCenter.attach
 --   E.newWild(species, level), E.newTrainer(cls, party)   BattleState stand-ins
+--                             (M8 wave 3: also the module's newTrainer, which
+--                             engageTrainer's start calls; E.trainerBuilds)
 --   ow:pushBattle(battle, npc)   the theme, then a native battle screen (A
 --                             ends it with E.nativeResult, then onFinish)
 --   E.pushes                  every battle pushBattle received
@@ -84,6 +86,12 @@ function FakeContent.attach(E)
   function E.newTrainer(cls, party)
     return setmetatable({ kind = "trainer", oppClass = cls, partyIndex = party or 1, trainer = { id = cls } }, Battle)
   end
+  -- BattleState.newTrainer (BattleState.lua:891-969), the one engageTrainer's
+  -- start calls (fake_script.lua); E.trainerBuilds counts real builds
+  E.modules["src.battle.BattleState"].newTrainer = function(_, cls, party)
+    E.trainerBuilds = (E.trainerBuilds or 0) + 1
+    return E.newTrainer(cls, party)
+  end
 
   -- OverworldState:pushBattle (OC:1142-1176): the battle's theme with the
   -- wipe, then the battle screen; BattleState:finish hands the result to
@@ -92,7 +100,7 @@ function FakeContent.attach(E)
     local mon = battle.enemy and battle.enemy.mon
     E.pushes[#E.pushes + 1] = { kind = battle.kind, species = mon and mon.species, level = mon and mon.level,
                                 cls = battle.oppClass, npc = trainerNpc and trainerNpc.id, ghost = battle.ghost,
-                                scope = battle.scopeReveal }
+                                scope = battle.scopeReveal, endText = battle.endBattleText }
     battle:playBattleTheme()
     E.nativeBattle({ kind = battle.kind, species = mon and mon.species, level = mon and mon.level,
                      cls = battle.oppClass, party = battle.partyIndex, ghost = battle.ghost,
