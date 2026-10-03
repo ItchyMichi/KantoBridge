@@ -102,7 +102,7 @@ local function newMap(id, spec)
   local rows = spec.rows
   local m = setmetatable({
     id = id, rows = rows, widthCells = #rows[1], heightCells = #rows, warpAt = {},
-    def = { id = id, tileset = spec.tileset or "TEST", connections = spec.connections or {} },
+    def = { id = id, label = id, tileset = spec.tileset or "TEST", connections = spec.connections or {} },
     spec = spec,
   }, SimMap)
   for i, w in ipairs(spec.warps or {}) do
@@ -142,6 +142,7 @@ function FakeWorld.attach(E)
   E.runtime = {
     emit = function() end,
     call = function(_, vanilla, ...) return vanilla(...) end,
+    wants = function() return false end,
   }
   E.simOn = false
   E.game.input = newInput()
@@ -153,6 +154,11 @@ function FakeWorld.attach(E)
     E.runtime = {
       emit = function(name, payload) FakeMod.emit(mod, name, payload) end,
       call = function(name, vanilla, ...) return FakeMod.call(mod, name, vanilla, ...) end,
+      -- Runtime.wantsHook (src/mods/Runtime.lua:75-78)
+      wants = function(name)
+        local chain = mod._chains[name]
+        return chain ~= nil and #chain > 0
+      end,
     }
   end
 
@@ -169,8 +175,9 @@ function FakeWorld.attach(E)
     for _, n in ipairs(sim.maps[mapId].spec.npcs or {}) do
       out[#out + 1] = {
         id = n.id or (mapId .. "_obj_" .. (#out + 1)),
-        def = { sprite = n.sprite or "SPRITE_TEST", pushable = n.pushable, item = n.item,
-                pokemon = n.pokemon, trainerClass = n.trainerClass },
+        def = { index = #out + 1, name = n.name, sprite = n.sprite or "SPRITE_TEST", pushable = n.pushable,
+                item = n.item, pokemon = n.pokemon, level = n.level, trainerClass = n.trainerClass,
+                trainerParty = n.trainerParty },
         cellX = n.x, cellY = n.y, facing = n.facing or "down", moving = false, progress = 0,
         stepFrames = n.stepFrames,
       }
@@ -557,6 +564,9 @@ function FakeWorld.attach(E)
 
   local function owUpdate()
     local w, p = ow(), player()
+    -- the script runner's frame waits and condition polls (OC:1297;
+    -- ScriptRunner:update, src/script/ScriptRunner.lua:290-308)
+    if w.runner and type(w.runner.update) == "function" then w.runner:update() end
     p.onBike = E.save.onBike
     if w.dustAnim then
       w.dustAnim.frames = w.dustAnim.frames - 1

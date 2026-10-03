@@ -268,6 +268,66 @@ comes from each player's own generated pack.
 | `battle.result` | S→C, M→G | `battle, outcome:"win"\|"lose"\|"fled"\|"caught"\|"aborted"`, `caught?{uid,dex,level}` (required when caught) | |
 | `battle.native` | G→M | `kind:"safari"\|"old_man"\|"ghost", phase:"start"\|"end"` | |
 
+#### Battle rules (M5)
+
+- **Who fights:** the server runs every non-native battle in Cobblemon (`GEN_9_SINGLES`) against a
+  hidden battle-proxy NPC placed at `trainer.map/x/y` (the trainer's cell, if within 32 blocks;
+  otherwise 4 blocks in front of the player). No client ever sees the proxy; the fighter's client
+  draws the trainer as a puppet. `trainer.name` is the name in Cobblemon's battle UI.
+- **AI skill** from `trainer.cls` (`OPP_*`, prefix optional): gym leaders (including
+  `OPP_GIOVANNI`) 3; the Elite Four and `OPP_RIVAL3` 5; `OPP_RIVAL1`/`OPP_RIVAL2` or kind `rival` 3;
+  everyone else 1. Team members get IVs 2×DV+1 (HP from the derived HP DV), nature Hardy, the species'
+  first ability, no item, exact moves (a repeated move is kept once).
+- **Outcomes:** `win`; `lose` (a forfeit is a loss); `aborted` when the battle stopped with no winner,
+  or couldn't start (no usable Pokémon, already in a battle, malformed start, and until M6 the wild
+  kinds `static`/`surf`/`fish`); `fled` and `caught` from M6. A scripted battle with a team runs like a
+  trainer battle. Exactly one `battle.result` per `battle` id, about 2 s after the deciding hit.
+- **Ordering:** a gift's `party.give` must reach Minecraft before a `battle.start` that needs that
+  Pokémon (the client flushes queued `party.*` before relaying a `battle.start`).
+- **Repeats are safe:** a repeated `battle.start` with the same id is ignored by the server and
+  answered by the client from its record (results kept 60 s after delivery), so gen1-bridge re-sends
+  pending battles after a snapshot. With no server link the client answers `aborted` at once.
+- **The Oak's-lab rival battle:** gen1-bridge continues the story on a loss, as Gen 1 does; every
+  other trainer loss is a blackout.
+- **Kinds (gen1-bridge):** a script's `start_battle` against a rival class (`OPP_RIVAL*`) is `rival`;
+  other script-started trainers are `scripted`; map trainers (sight or talk) are `trainer`; scripted
+  wild battles are `static`. `trainer.party` is the engine's 1-based party index.
+- **gen1-bridge holds the hidden game** (mode `busy`) from `battle.start` to `battle.result`, re-sends
+  the same `battle.start` after every snapshot, and only takes battles over while a client or test
+  session is connected (otherwise the hidden game fights natively, on the mirror).
+- **Results on the Gen 1 side:** `win` applies the engine's own effects (defeated trainer, event
+  flag, prize money, `afterBattle`) and shows the trainer's loss line and prize text; `lose` shows the
+  win line and runs the blackout (except the lab rival); `aborted` applies nothing and re-arms the
+  battle (an aborted scripted battle ends its script so its trigger can run again); `fled`/`caught`
+  for a trainer battle are treated like `aborted`. Expect text UIs right after a `battle.result`. A
+  result gen1-bridge isn't waiting for is answered `error{code:"battle.unknown"}`.
+
+#### Party rules (M5)
+
+- `party.sync` (Cobblemon is authoritative) is debounced, **never sent during a battle**, and sent
+  after each battle (after its `battle.result`). The client re-sends the latest `party.sync` and
+  `dex.sync` after every gen1-bridge snapshot.
+- `party.give` is applied once per `give` id (stored on the Pokémon, so it holds across restarts);
+  it fills the party, then the PC. Gifts keep Cobblemon's random nature and ability; `ot` is used only
+  for `source:"trade"`. Cobblemon's starter prompt is locked: the starter comes from the hidden game.
+- `party.rename` is the only way a nickname changes (Cobblemon's own rename is cancelled).
+  `party.take` handles trades (daycare in M8); `party.item` arrives in M6.
+- **Gifts on the Gen 1 side:** `give_pokemon` runs natively (its nickname prompt reaches Minecraft as
+  text, YES/NO and naming); once the prompt is done gen1-bridge sends `party.give` (`source`
+  `starter`, `prize` or `gift`; `trade` and `native_catch` from M6/M8) and re-sends it after each
+  snapshot until a `party.sync` shows it. The engine's own copy stays in the hidden party meanwhile,
+  and the sync replaces that same member (matched by dex and level), so there is never a duplicate. A
+  gift put in a Gen 1 box is taken out of it, because Cobblemon's PC keeps it. gen1-bridge gives up on
+  a gift after 5 syncs and 2 minutes without it.
+- **`party.sync` on the Gen 1 side** rebuilds the hidden party in place (species from dex, level,
+  moves by Gen 1 number, HP, status), keeping uids in the mod's save data; non-Gen-1 species and
+  moves are left out with counted warnings; a sync waits while a gift is pending, at the title
+  screen, or under a native battle.
+- **`party.heal`** is sent on the engine's `heal_party` (Mom, …) and on a blackout.
+- `debug.status` (test role) adds `battle*`, `party*`, `giftsPending`, `healsPending`, `battleHeld`,
+  `partySize`, `partyKnown`, and `playerNameLen`/`playerNameHash`, `rivalNameLen`/`rivalNameHash`
+  (the first 7 hex digits of SHA-256, as an integer).
+
 ### Party, Pokédex, bag, PC
 
 | Type | Dir | Data | ROM |

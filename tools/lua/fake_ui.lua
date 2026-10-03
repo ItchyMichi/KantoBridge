@@ -506,9 +506,13 @@ function FakeUi.attach(E)
       if not npc.moving then
         npc.frozen = true
         npc.facing = OPPOSITE[p.facing]
-        E.uiPush(E.textBox(E.talk[npc.id] or "HELLO!\fGOOD LUCK!", {
-          onDone = function() npc.frozen = false end,
-        }))
+        local unfreeze = function() npc.frozen = false end
+        if npc.def and npc.def.trainerClass and E.engageTrainer and not E.trainerDefeated(npc) then
+          -- an undefeated trainer battles (OC:3516-3519; fake_script.lua)
+          E.engageTrainer(npc, unfreeze)
+        else
+          E.uiPush(E.textBox(E.talk[npc.id] or "HELLO!\fGOOD LUCK!", { onDone = unfreeze }))
+        end
       end
       return interacted("npc", npc)
     end

@@ -43,6 +43,19 @@ class InputLockTest {
 	}
 
 	@Test
+	void aCobblemonBattleHoldsThePlayerFirst() {
+		// The hidden game waits for the battle's result, whatever else is going on.
+		assertEquals(InputLock.Reason.BATTLE, InputLock.reason(true, false, true, false, false, false, "idle", false, false, false));
+		assertEquals(InputLock.Reason.BATTLE, InputLock.reason(true, false, true, true, true, false, "idle", false, false, false));
+		assertEquals(InputLock.Reason.NONE, InputLock.reason(false, false, true, true, true, false, "idle", false, false, false),
+				"not a Kanto world");
+		assertEquals(InputLock.Reason.NONE, InputLock.reason(true, true, true, true, true, false, "idle", false, false, false),
+				"creative or spectator");
+		assertEquals(InputLock.Reason.NONE, InputLock.reason(true, false, false, true, true, false, "idle", false, false, false),
+				"no battle: free to walk");
+	}
+
+	@Test
 	void holdingZeroesMovementJumpAndSneak() {
 		Input input = new Input();
 		fill(input);

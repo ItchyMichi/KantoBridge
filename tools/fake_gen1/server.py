@@ -321,6 +321,31 @@ class FakeGen1:
                                      "cont": [[False] * len(page) for page in pages]})
         return ui
 
+    async def give(self, dex=7, level=5, source="gift"):
+        """A made-up gift, as gen1-bridge sends one (party.give)."""
+        self.gift_counter = getattr(self, "gift_counter", 0) + 1
+        await self._send("party.give", {"give": f"g-fake-{self.gift_counter}", "dex": dex, "level": level,
+                                        "moves": [33], "source": source})
+
+    async def start_battle(self, kind="trainer"):
+        """A made-up trainer battle (battle.start); the answer arrives as battle.result."""
+        self.battle_counter = getattr(self, "battle_counter", 0) + 1
+        data = {"battle": f"b-fake-{self.battle_counter}", "kind": kind, "rules": {"catch": False, "flee": False}}
+        if kind in ("trainer", "rival", "scripted"):
+            data["trainer"] = {"cls": "OPP_TEST", "party": 1, "name": "TESTER", "map": self.player.map,
+                               "x": self.player.x, "y": max(self.player.y - 2, 0)}
+            data["team"] = [{"dex": 16, "level": 4, "moves": [33], "dvs": {"atk": 9, "def": 8, "spd": 8, "spc": 8}}]
+        else:
+            data["wild"] = {"dex": 19, "level": 3}
+        await self._send("battle.start", data)
+
+    def counts(self):
+        """Message counts received from the client, by type."""
+        out = {}
+        for message in self.received:
+            out[message.get("type")] = out.get(message.get("type"), 0) + 1
+        return out
+
     async def set_flag(self, flag, on=True):
         (self.story.flags.add if on else self.story.flags.discard)(flag)
         await self._send("story.flags", {"set": [flag] if on else [], "clear": [] if on else [flag]})

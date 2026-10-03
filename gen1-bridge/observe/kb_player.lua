@@ -7,8 +7,10 @@
 -- Modes, checked in this order (refs/_research/P1_gen1_movement.md section 3):
 --   screen    something other than the overworld is on top and takes input
 --             (text, menus, battles, the title)
---   busy      a transition with no input: a fade on top, a warp in flight,
---             an emote beat, the Cut or boulder-dust animation
+--   busy      a battle Cobblemon is fighting holds the world (M5: the
+--             hidden game waits for battle.result), or a transition with no
+--             input: a fade on top, a warp in flight, an emote beat, the Cut
+--             or boulder-dust animation
 --   forced    the game moves the player: a scripted walk, a ledge hop and
 --             its landing hold, a spinner, Fly, Dig/Teleport, holes, pads
 --   cutscene  the world is held while the player stands: a script running,
@@ -74,6 +76,7 @@ function Player.classify(f)
     if f.top == "screen" then return "screen" end
     return "busy" -- a fade or flash on top, or an empty stack mid-switch
   end
+  if f.battle then return "busy" end -- held for a Cobblemon battle's result
   if f.transitioning then return "busy" end
   if f.playerScripted or f.ledge or f.spinning or f.forcedPhase or (f.hopLand or 0) > 0 then
     return "forced"

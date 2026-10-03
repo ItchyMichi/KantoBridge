@@ -150,3 +150,30 @@ world). Text is still in Minecraft's own font.
 - [ ] Esc during a text box opens Minecraft's pause menu; closing it brings the box back.
 - [ ] F7 shows the UI, NPC and action lines.
 - [ ] Note how the boxes, the `PK`/`MN` letters, ▶ and ▼ look, and anything sized or placed oddly.
+
+## M5: Opening, Oak's cutscene, starter and rival battle
+
+This plays the story's opening from Minecraft. Use a **new game**: in Gen1Recomp's window, stay at
+its title screen.
+
+1. Start Gen1Recomp as in M1 and leave it at the title screen.
+2. Start Minecraft as in M1 and open **Singleplayer → Kanto**.
+
+- [ ] Minecraft shows Gen1Recomp's title screen in the mirror; choose NEW GAME with arrows and Z.
+- [ ] Oak's speech shows in the mirror. When he asks your name, and later your rival's, Minecraft's
+      own naming screen opens (presets first, then NEW NAME for the letter grid); the names you type
+      appear in Gen1Recomp.
+- [ ] You start in Red's room in Minecraft, on the same tile as in Gen1Recomp.
+- [ ] No Cobblemon starter prompt appears at any point.
+- [ ] Walk out of the house and north towards the edge of Pallet Town: Oak stops you, walks you to
+      his lab, and you can't move while he leads you (the camera follows the walk).
+- [ ] In the lab, choose a starter from the table (Z or right-click a ball). If it asks for a
+      nickname, Minecraft's naming screen opens.
+- [ ] The starter appears in Cobblemon's party (with its nickname, if you gave one).
+- [ ] The rival's battle opens Cobblemon's battle screen with the rival's name; no extra trainer
+      model appears; you can't walk or press Z/Enter during the battle.
+- [ ] Win or lose, the story continues afterwards (in Gen 1 the lab battle never ends in a blackout).
+      Forfeiting counts as a loss.
+- [ ] After the battle, the starter's HP and level in Gen1Recomp's party screen (Enter → POKéMON, in
+      the mirror) match Cobblemon's.
+- [ ] F7 shows a "Relay:" line counting the battle and party messages.

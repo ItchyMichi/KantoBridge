@@ -4,6 +4,7 @@ import dev.kantobridge.client.act.ActRuntime;
 import dev.kantobridge.client.bridge.BridgeRuntime;
 import dev.kantobridge.client.move.MoveRuntime;
 import dev.kantobridge.client.net.ClientRelay;
+import dev.kantobridge.client.net.GameRelayRuntime;
 import dev.kantobridge.client.puppet.PuppetRuntime;
 import dev.kantobridge.client.story.ClientStoryView;
 import dev.kantobridge.client.ui.UiRuntime;
@@ -30,6 +31,8 @@ public class KantoBridgeClient implements ClientModInitializer {
 		PuppetRuntime.init(bridge);
 		// A, START and right-clicks from the world: act.interact and act.button.
 		ActRuntime.init(bridge);
+		// Battles and Pokémon between gen1-bridge and the server (battle.start/result, party.*, syncs) and the activity.
+		GameRelayRuntime.init(bridge);
 		// The title screen's "Create Kanto world" button: export, pack, new level, build.
 		CreateKantoWorldFlow.init();
 	}

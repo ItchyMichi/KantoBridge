@@ -108,6 +108,20 @@ function FakeMod.new(opts)
     end,
   }
 
+  -- mod.save (Loader.lua:1541-1556): this mod's bucket of the save's
+  -- modData (Game:adoptSave, src/core/Game.lua:1314-1324). Tests reach the
+  -- bucket as mod._save (opts.save to start with values).
+  local bucket = opts.save or {}
+  mod._save = bucket
+  mod.save = {
+    get = function(_, key, default)
+      local value = bucket[key]
+      if value == nil then return default end
+      return value
+    end,
+    set = function(_, key, value) bucket[key] = value end,
+  }
+
   -- mod.ui: the UI module tables (src/ui/ModUI.lua:8-27); tests pass fakes.
   mod.ui = opts.ui or {}
 

@@ -2,6 +2,7 @@ package dev.kantobridge.client.move;
 
 import com.google.gson.JsonObject;
 import dev.kantobridge.KantoBridge;
+import dev.kantobridge.client.battle.ClientBattles;
 import dev.kantobridge.client.bridge.BridgeClock;
 import dev.kantobridge.client.bridge.BridgeRuntime;
 import dev.kantobridge.client.bridge.ConnectionState;
@@ -94,7 +95,7 @@ public final class MoveRuntime {
 		}
 		MoveController.Frame frame = new MoveController.Frame(ClientWorldIndex.current(), player.isSpectator() || player.isCreative(),
 				this.bridge.client().state() == ConnectionState.CONNECTED, this.bridge.state().ingame(), this.bridge.state().mode(),
-				InputLock.screenHolds(minecraft.screen), player.getX(), player.getZ());
+				InputLock.screenHolds(minecraft.screen), ClientBattles.active(), player.getX(), player.getZ());
 		ForcedMover.Velocity velocity = this.controller.beforeMove(this.clock.millis(), frame);
 		if (velocity != null) {
 			// Keep the vertical speed, so gravity, landing and step-up work as when walking.

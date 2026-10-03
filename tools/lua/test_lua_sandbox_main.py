@@ -28,6 +28,8 @@ LIB_FILES = [
     "act/kb_move.lua",
     "act/kb_interact.lua",
     "act/kb_uiact.lua",
+    "act/kb_battle.lua",
+    "act/kb_party.lua",
     "export/kb_cells.lua",
     "export/kb_images.lua",
     "export/kb_swapsites.lua",

@@ -47,9 +47,15 @@ public final class MoveController {
 	 * @param freeCamera creative or spectator
 	 * @param mode       the hidden game's mode ({@code player.state})
 	 * @param holds      one of our screens that holds the player is open
+	 * @param battle     the player fights a Cobblemon battle (the hidden game waits for its result)
 	 */
 	public record Frame(@Nullable WorldIndex index, boolean freeCamera, boolean connected, boolean ingame, String mode, boolean holds,
-			double x, double z) {
+			boolean battle, double x, double z) {
+		/** A frame outside any battle. */
+		public Frame(@Nullable WorldIndex index, boolean freeCamera, boolean connected, boolean ingame, String mode, boolean holds, double x,
+				double z) {
+			this(index, freeCamera, connected, ingame, mode, holds, false, x, z);
+		}
 	}
 
 	static final long LOST_WARNING_EVERY_MS = 10_000;
@@ -82,7 +88,9 @@ public final class MoveController {
 		this.sync.setIndex(frame.index());
 		boolean kanto = frame.index() != null;
 		this.following = kanto && !frame.freeCamera();
-		this.sync.setLinked(this.following && frame.connected() && frame.ingame());
+		// A battle unlinks the movement sync: nothing may reach the waiting hidden game, and relinking afterwards puts the
+		// player back on the hidden cell if a sent-out Pokémon pushed them off it.
+		this.sync.setLinked(this.following && frame.connected() && frame.ingame() && !frame.battle());
 		if (!this.following) {
 			// A free camera (or no Kanto world): nothing to drive or fade; linking again settles the player.
 			this.mover.clear();
@@ -92,7 +100,7 @@ public final class MoveController {
 		}
 		this.fade.tick(now);
 		ForcedMover.Velocity velocity = this.following ? this.mover.tick(frame.x(), frame.z()) : null;
-		this.reason = InputLock.reason(kanto, frame.freeCamera(), frame.connected(), frame.ingame(), this.sync.hiddenUnbuilt(),
+		this.reason = InputLock.reason(kanto, frame.freeCamera(), frame.battle(), frame.connected(), frame.ingame(), this.sync.hiddenUnbuilt(),
 				frame.mode(), this.fade.holding(), this.mover.active(), frame.holds());
 		return velocity;
 	}

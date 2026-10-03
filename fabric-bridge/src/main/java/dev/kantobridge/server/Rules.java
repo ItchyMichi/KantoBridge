@@ -1,5 +1,8 @@
 package dev.kantobridge.server;
 
+import com.cobblemon.mod.common.Cobblemon;
+import com.cobblemon.mod.common.api.Priority;
+import com.cobblemon.mod.common.api.events.CobblemonEvents;
 import dev.kantobridge.KantoBridge;
 import dev.kantobridge.story.StoryState;
 import dev.kantobridge.story.StoryStates;
@@ -28,6 +31,8 @@ import net.minecraft.world.level.GameType;
  * let in), Gen 1 walking or biking speed, and no jumping. Sprinting is stopped on the client
  * ({@code LocalPlayerMixin}): the server can't stop a client from sprinting.</li>
  * <li>Players take no damage, except from sources that bypass invulnerability (the void, {@code /kill}).</li>
+ * <li>Cobblemon's settings (Appendix C, {@link CobblemonSettings}): its configuration at server start, its game rules
+ * with Minecraft's, and the starter prompt locked for each player once Cobblemon has synchronised their data.</li>
  * </ul>
  *
  * <p>The rules hold on every server running this mod (the GameTest server included): the mod exists to play Kanto.
@@ -49,6 +54,12 @@ public final class Rules {
 
 	/** Call once from common init, after {@link BuildHold#init}. */
 	public static void init() {
+		// Appendix C: Cobblemon's configuration before anyone joins, its game rules with the world's, the starter locked
+		// for every player once Cobblemon has synchronised their data.
+		ServerLifecycleEvents.SERVER_STARTING.register(server -> CobblemonSettings.apply(Cobblemon.INSTANCE.getConfig()));
+		CobblemonEvents.DATA_SYNCHRONIZED.subscribe(Priority.NORMAL, player -> {
+			CobblemonSettings.lockStarter(player);
+		});
 		ServerLifecycleEvents.SERVER_STARTED.register(Rules::applyServer);
 		ServerPlayerEvents.JOIN.register(Rules::applyPlayer);
 		ServerPlayerEvents.AFTER_RESPAWN.register((oldPlayer, newPlayer, alive) -> applyPlayer(newPlayer));
@@ -59,6 +70,7 @@ public final class Rules {
 	/** The server-wide part: game rules, difficulty, default game type, weather and time. Safe to repeat. */
 	public static void applyServer(MinecraftServer server) {
 		KantoGameRules.apply(server.getGameRules(), server);
+		CobblemonSettings.applyGameRules(server);
 		server.setDifficulty(Difficulty.PEACEFUL, true);
 		server.setDifficultyLocked(true);
 		server.setDefaultGameType(GameType.ADVENTURE);

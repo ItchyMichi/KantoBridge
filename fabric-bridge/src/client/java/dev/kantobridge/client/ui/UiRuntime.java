@@ -1,6 +1,7 @@
 package dev.kantobridge.client.ui;
 
 import com.google.gson.JsonObject;
+import dev.kantobridge.client.battle.ClientBattles;
 import dev.kantobridge.client.bridge.BridgeClock;
 import dev.kantobridge.client.bridge.BridgeRuntime;
 import dev.kantobridge.client.bridge.ConnectionState;
@@ -136,9 +137,12 @@ public final class UiRuntime {
 		this.reconcile(minecraft);
 	}
 
-	/** Shows the router's view in one screen of ours, or none. */
+	/**
+	 * Shows the router's view in one screen of ours, or none. Never during a Cobblemon battle: its own screens are up, and
+	 * the hidden game waits for the result (a UI still open meanwhile holds the player and shows after the battle).
+	 */
 	private void reconcile(Minecraft minecraft) {
-		boolean allowed = minecraft.level != null && minecraft.player != null && MoveRuntime.following();
+		boolean allowed = minecraft.level != null && minecraft.player != null && MoveRuntime.following() && !ClientBattles.active();
 		UiRouter.View view = allowed ? this.router.view() : null;
 		Screen current = minecraft.screen;
 		if (view == null) {

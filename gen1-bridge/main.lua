@@ -43,6 +43,8 @@ return function(mod)
     Move = import("act/kb_move.lua"),
     Interact = import("act/kb_interact.lua"),
     UiAct = import("act/kb_uiact.lua"),
+    Battle = import("act/kb_battle.lua"),
+    Party = import("act/kb_party.lua"),
     Cells = import("export/kb_cells.lua"),
     Images = import("export/kb_images.lua"),
     SwapSites = import("export/kb_swapsites.lua"),
@@ -141,6 +143,17 @@ return function(mod)
   local interact = kb.Interact.new({ engine = engine, log = log })
   local mirror = kb.Mirror.new({ love = love, clock = clock, log = log, base64 = kb.Images.base64 })
 
+  -- M5: battles fought in Cobblemon, gifts, heals and the shadow party.
+  -- party uids persist through mod.save (save.modData, src/core/Game.lua:1314-1324).
+  local battles = kb.Battle.new({ engine = engine, log = log, markup = kb.Ui.markup })
+  local party = kb.Party.new({
+    engine = engine, log = log, markup = kb.Ui.markup, clock = clock,
+    store = {
+      get = function(key) return mod.save:get(key) end,
+      set = function(key, value) mod.save:set(key, value) end,
+    },
+  })
+
   -- One injected tap per logic step (PLAN section 2.3), shared by the
   -- interaction and the UI answers: mod.input:tap with the live game
   -- (src/mods/Loader.lua:1393-1431), issued from input.step so the edge lands
@@ -168,6 +181,9 @@ return function(mod)
     local npcs = raw and kb.Npcs.list(raw) or nil
     npcObs.rebase()
     uiObs.rebase()
+    -- a pending battle and unconfirmed gifts go out again after it
+    battles.rebase()
+    party.rebase()
     local data, dropped = kb.Snapshot.build({
       json = kb.json,
       Player = kb.Player,
@@ -184,6 +200,7 @@ return function(mod)
         local r = contentRecord("moves", moveId)
         return r and tonumber(r.index)
       end,
+      uidOf = engine.uidOf,
     })
     -- logged at the end of the step: a forwarded `log` must not land between
     -- hello.ok and the snapshot
@@ -227,7 +244,19 @@ return function(mod)
     merge("npc", npcObs.stats())
     merge("interact", interact.stats())
     merge("mirror", mirror.stats())
+    merge("battle", battles.stats())
+    merge("party", party.stats())
+    for k, v in pairs(engine.bridgeCounts()) do out[k] = v end
     out.screenEvents = screenEvents
+    -- the names typed into the hidden game: lengths and a short hash only
+    local p = save and type(save.player) == "table" and save.player or {}
+    for key, field in pairs({ playerName = "name", rivalName = "rival" }) do
+      local name = p[field]
+      if type(name) == "string" then
+        out[key .. "Len"] = #name
+        out[key .. "Hash"] = tonumber(kb.sha256.short(name):sub(1, 7), 16) or 0
+      end
+    end
     return out
   end
 
@@ -315,6 +344,36 @@ return function(mod)
     mirror.unsubscribe(session.generation())
   end)
 
+  -- M5 (docs/PROTOCOL.md "Battles", "Party, Pokédex, bag, PC"), client and
+  -- test roles: a battle's result applies at once (its texts are pushed in
+  -- this step); a party.sync waits in kb_party for a safe moment.
+  local function answered(handler)
+    return function(data, msg, role)
+      if not streamRole(msg, role) then return end
+      local ok, code = handler(data)
+      if not ok then session.sendError(code or "bad_message", msg.seq, code or "bad_message") end
+    end
+  end
+  session.on("battle.result", answered(battles.result))
+  session.on("party.sync", answered(party.sync))
+
+  -- The battle and gift seams (lib/kb_engine.lua "battles, gifts, the
+  -- shadow party"): script.command for the scripted battle rows, give_pokemon
+  -- and heal_party; trainer.before_battle for map trainers. Hooks die with
+  -- this instance's loader on a hot reload; what a held battle or a gift
+  -- needs lives in kb_engine's process-lifetime slot. Battles are taken over
+  -- only while a client or test session is connected.
+  local bridge = {
+    live = function() return session.established() and kb.Session.STREAM_ROLES[session.role()] == true end,
+    battle = function(facts) return battles.begin(facts) end,
+  }
+  mod.hooks:wrap("script.command", function(nextFn, ctx, name, args)
+    return engine.scriptCommand(nextFn, ctx, name, args, bridge)
+  end)
+  mod.hooks:wrap("trainer.before_battle", function(nextFn, g, context, continueBattle)
+    return engine.trainerBeforeBattle(nextFn, g, context, continueBattle, bridge)
+  end)
+
   status.session = sessionId
   status.configure = function(opts)
     if type(opts) == "table" and opts.port ~= nil then
@@ -369,6 +428,11 @@ return function(mod)
     uiObs.step(wake, out)
     wake = false
     uiAct.step(facts, mode, out, ctx)
+    -- M5: gifts and heals first (a gift goes out before a battle that may
+    -- follow it), then a held battle's battle.start
+    local link = { live = live, generation = generation }
+    party.step(out, link)
+    battles.step(out, link)
     mirror.step(out, { live = live, generation = generation, queued = session.queued() })
     for i = 1, #out do
       local m = out[i]
@@ -396,6 +460,7 @@ return function(mod)
     status.warpsStarted, status.warpsArrived = warped.started, warped.arrived
     status.mapsEntered = mapsEntered
     status.mirrorOn = mirror.enabled()
+    status.battleHeld = facts.battle == true
     if steps % 30 == 0 then
       local u, n, s = uiObs.stats(), npcObs.stats(), mirror.stats()
       status.uiOpened, status.uiClosed, status.uiOpen = u.opened, u.closed, u.open
@@ -429,6 +494,10 @@ return function(mod)
     local version, api = engine.version()
     engine.checkPin()
     pinOptions(true)
+    -- battle and gift ids carry the first instance's token (kept by the slot
+    -- through hot reloads); the party's uids come back from mod.save
+    engine.bridgeToken(sessionId:sub(3, 10))
+    party.adopt()
     status.engine = version
     status.game = engine.gameVersion()
     status.ready = true
@@ -456,7 +525,11 @@ return function(mod)
     payload = type(payload) == "table" and payload or {}
     capped(events.entered, { map = payload.mapId, via = payload.via })
   end)
-  mod.events:on("world.blacked_out", function() events.blackout = true end)
+  -- a blackout heals the hidden party (OC:5204-5207); Cobblemon's heals too
+  mod.events:on("world.blacked_out", function()
+    events.blackout = true
+    engine.queueHeal()
+  end)
 
   -- M4. Pushes and pops only wake the UI observer, which polls the stack
   -- itself (src/core/StateStack.lua:28-45 fire them after enter/exit);
@@ -513,11 +586,18 @@ return function(mod)
     local save = payload and payload.save
     local changed = engine.pinDisplay(type(save) == "table" and save.options or nil, false)
     if changed > 0 then log.info("options.pinned", { changed = changed }) end
+    -- Cobblemon's party (the last party.sync) is the new game's party too
+    party.reapply()
   end)
 
   -- CONTINUE re-applies the stored options before this event
-  -- (src/core/Game.lua:1502 vs :1533), so pin and re-apply.
-  mod.events:on("save.loaded", function() pinOptions(true) end)
+  -- (src/core/Game.lua:1502 vs :1533), so pin and re-apply. The loaded
+  -- party gets its uids back, then Cobblemon's party (the last sync) again.
+  mod.events:on("save.loaded", function()
+    pinOptions(true)
+    party.adopt()
+    party.reapply()
+  end)
 
   mod.log:info("gen1-bridge loaded")
 end

@@ -61,7 +61,8 @@ class Bridge:
     STEP = 1 / 60
 
     def __init__(self, permissions=PERMISSIONS, modules=None, developer=False, strict=True,
-                 engine=False, mod_options=None, content=None, game="blue", graphics=False):
+                 engine=False, mod_options=None, content=None, game="blue", graphics=False,
+                 script=False):
         self.rt = luajit.LuaRuntime(unpack_returned_tuples=True, encoding=None)
         self.lua = self.rt.globals()
         self.Sandbox = self._load_harness("sandbox.lua")
@@ -78,6 +79,10 @@ class Bridge:
             self.engine = FakeEngine.new(eopts)
             self._load_harness("fake_world.lua").attach(self.engine)
             self._load_harness("fake_ui.lua").attach(self.engine)
+            if script:
+                # the script runner, battles, trainers and gifts (M5); before the modules are
+                # handed to the sandbox, since it adds engine modules
+                self._load_harness("fake_script.lua").attach(self.engine)
 
         # love facade source: only timer is needed so far. perCall advances the clock on every
         # read, so work inside one step "takes time" (budget tests); 0 by default.

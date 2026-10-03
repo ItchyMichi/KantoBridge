@@ -189,6 +189,28 @@ def test_stairs_warp_between_floors():
     run(scenario())
 
 
+def test_made_up_gift_and_battle_are_schema_valid():
+    async def scenario():
+        gen1, mc = await _pair()
+        try:
+            await mc.hello()
+            await gen1.give(1, 5, "starter")
+            gift = await mc.expect("party.give")
+            assert (gift["data"]["dex"], gift["data"]["source"]) == (1, "starter")
+            for kind in ("trainer", "surf"):
+                await gen1.start_battle(kind)
+                start = await mc.expect("battle.start")
+                assert start["data"]["kind"] == kind
+            await mc.send("battle.result", {"battle": start["data"]["battle"], "outcome": "fled"})
+            await asyncio.sleep(0.1)
+            assert gen1.counts().get("battle.result") == 1
+            assert not mc.conn.problems
+        finally:
+            await mc.close()
+            await gen1.stop()
+    run(scenario())
+
+
 def test_export_index_and_resources():
     async def scenario():
         gen1, mc = await _pair(role="builder")

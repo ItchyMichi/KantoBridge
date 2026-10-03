@@ -35,6 +35,64 @@ local function symbol(v)
   return type(v) == "string" and #v > 0 and #v <= 64 and v:find(SYMBOL) ~= nil
 end
 
+-- ------------------------------------------------------------ battle constants (M5)
+--
+-- Engine facts a trainer team needs that BattleState keeps as file locals,
+-- so there is nothing to call without building a battle (newTrainer marks
+-- the Pokedex and loads pics, so it is never called just to read a team;
+-- refs/_research/P3_gen1_data_export.md 7.5). Copied, cited and re-checked
+-- with everything else on a pin change.
+
+-- Fixed trainer DVs, unless constants.trainerDvs overrides them
+-- (src/battle/BattleState.lua:543-545, :925-934).
+Engine.TRAINER_DVS = { attack = 9, defense = 8, speed = 8, special = 8 }
+
+-- The boss moves written into a team's third move slot
+-- (src/battle/BattleState.lua:837-889, from pokered's
+-- data/trainers/special_moves.asm): a gym leader's n-th Pokemon (Giovanni
+-- only in party 3), the fifth Pokemon of each Elite Four member, and the
+-- Champion's first Pokemon plus his starter's final form.
+Engine.LONE_MOVES = {
+  OPP_BROCK = { 2, "BIDE" }, OPP_MISTY = { 2, "BUBBLEBEAM" }, OPP_LT_SURGE = { 3, "THUNDERBOLT" },
+  OPP_ERIKA = { 3, "MEGA_DRAIN" }, OPP_KOGA = { 4, "TOXIC" }, OPP_SABRINA = { 4, "PSYWAVE" },
+  OPP_BLAINE = { 4, "FIRE_BLAST" }, OPP_GIOVANNI = { 5, "FISSURE", onlyParty = 3 },
+}
+Engine.TEAM_MOVES = { OPP_LORELEI = "BLIZZARD", OPP_BRUNO = "FISSURE", OPP_AGATHA = "TOXIC", OPP_LANCE = "BARRIER" }
+Engine.RIVAL_STARTER_MOVES = { VENUSAUR = "MEGA_DRAIN", CHARIZARD = "FIRE_BLAST", BLASTOISE = "BLIZZARD" }
+-- GetTrainerName_: the rival classes are named after the rival
+-- (src/battle/BattleState.lua:902-909)
+Engine.RIVAL_CLASSES = { OPP_RIVAL1 = true, OPP_RIVAL2 = true, OPP_RIVAL3 = true }
+
+-- One move list (ids) after setThirdMove (src/battle/BattleState.lua:864-869):
+-- the move lands in slot min(3, #moves + 1).
+local function setThirdMove(moves, moveId)
+  if type(moves) ~= "table" then return end
+  moves[math.min(3, #moves + 1)] = moveId
+end
+
+-- applySpecialMoves (src/battle/BattleState.lua:871-889) over plain
+-- { species, moves = {ids} } entries.
+function Engine.applySpecialMoves(oppClass, partyIndex, party)
+  local lone = Engine.LONE_MOVES[oppClass]
+  if lone and (not lone.onlyParty or lone.onlyParty == partyIndex) then
+    local mon = party[lone[1]]
+    if mon then setThirdMove(mon.moves, lone[2]) end
+    return
+  end
+  local team = Engine.TEAM_MOVES[oppClass]
+  if team then
+    if party[5] then setThirdMove(party[5].moves, team) end
+    return
+  end
+  if oppClass == "OPP_RIVAL3" then
+    if party[1] then setThirdMove(party[1].moves, "SKY_ATTACK") end
+    local starter = party[6]
+    if starter and Engine.RIVAL_STARTER_MOVES[starter.species] then
+      setThirdMove(starter.moves, Engine.RIVAL_STARTER_MOVES[starter.species])
+    end
+  end
+end
+
 -- ------------------------------------------------------------ export constants
 --
 -- Engine facts the world export needs that the engine keeps as inline
@@ -362,6 +420,8 @@ function Engine.new(opts)
     facts.darkMap = darkMapSet()[facts.map] == true                  -- OC:510-515
     facts.flashLit = (save and save.flashLit) and true or false      -- OC:510-513, :1063
     facts.npcs = type(ow.npcs) == "table" and #ow.npcs or 0
+    -- a battle Cobblemon is fighting holds this world (M5, engine.battle*)
+    facts.battle = engine.battleHolds(ow)
     return facts
   end
 
@@ -1149,6 +1209,828 @@ function Engine.new(opts)
       end
     end
     return changed
+  end
+
+  -- ------------------------------------------------------------ battles, gifts, the shadow party (M5)
+  --
+  -- Battles the hidden game would fight are fought in Cobblemon instead
+  -- (PLAN section 4.1 "Battles"), through two seams:
+  --   * script.command (src/script/ScriptRunner.lua:168-172, inside the
+  --     script's coroutine): the rows start_battle, rival_battle and
+  --     static_battle (src/script/Commands.lua:339-393, :1047-1076,
+  --     :991-1000) wait on runner.waitingCheck, exactly as push_screen
+  --     waits for its screen (Commands.lua:1344-1364; ScriptRunner:update,
+  --     ScriptRunner.lua:290-308). The result then goes through
+  --     start_battle's own resume path (ctx.resumeBattle, Commands.lua:
+  --     342-358): lastBattleResult, lastCheck and afterBattle (OC:5184-5225),
+  --     whose lose branch keeps the Oak's-lab rival loss in the lab
+  --     (OC:5195-5201). static_battle's beat flag and object toggle follow
+  --     on their own (Commands.lua:993-999).
+  --   * trainer.before_battle (OC:4038-4059, :4147-4167; docs/modding.md
+  --     "trainer.before_battle"): map trainers are deferred; a result applies
+  --     engageTrainer's own win side effects (OC:4127-4144) and ends the
+  --     encounter with continue({ cancel = true }) (OC:4048-4049), which runs
+  --     the encounter's completion callback and suppresses the sight at the
+  --     player's cell (OC:4157-4166).
+  -- What a result shows first, as text boxes the battle screen would have
+  -- shown (BattleState.lua): the trainer's own loss line with its tag
+  -- (:5006-5037) and the prize (:4979-4980, :5039); on a loss Rival1WinText
+  -- (:5117-5130) and the blackout lines (:1894-1897), except for the
+  -- Oak's-lab rival (:5096-5101, :5133).
+  --
+  -- The pending battle, the captured gifts and the queued heals live in a
+  -- process-lifetime slot on the Game object (like kantoBridgeCloseInstance),
+  -- so a hot reload keeps them: a script coroutine waiting on a battle holds
+  -- the previous instance's wrapper, which only ever reads the shared record.
+  -- Battles are taken over only while a Minecraft client (or a test) is
+  -- connected; otherwise the hidden game fights them itself.
+
+  local STATE_SLOT = "kantoBridgeState"
+  local SCRIPT_BATTLES = { start_battle = true, rival_battle = true, static_battle = true }
+
+  local function gameData() return type(game) == "table" and type(game.data) == "table" and game.data or nil end
+
+  local function bridgeState()
+    if type(game) ~= "table" then return nil end
+    local st = rawget(game, STATE_SLOT)
+    if type(st) ~= "table" then
+      -- giving: the give_pokemon calls under way, { ow, save } each
+      st = { serial = 0, gifts = {}, heals = 0, giving = {} }
+      rawset(game, STATE_SLOT, st)
+    end
+    return st
+  end
+
+  local function warnAt(code, err)
+    if log then
+      log.warn(code, { at = type(err) == "string" and err:match("[%w_/%.%-]+%.lua:%d+") or "unknown" })
+    end
+  end
+
+  -- A per-process token for battle and gift ids (the first instance's
+  -- survives hot reloads), and the counter behind them.
+  function engine.bridgeToken(token)
+    local st = bridgeState()
+    if not st then return token or "x" end
+    if st.token == nil and type(token) == "string" then st.token = token end
+    return st.token or token or "x"
+  end
+  function engine.nextSerial()
+    local st = bridgeState()
+    if not st then return 0 end
+    st.serial = st.serial + 1
+    return st.serial
+  end
+
+  -- ---- data lookups (the live Data registries: pokemon[id].dex,
+  -- RomExtractor.lua:1214; moves[id].index = the Gen 1 move number, the
+  -- moveOrder position, RomExtractor.lua:607-623)
+
+  function engine.dexOf(species)
+    local data = gameData()
+    local def = data and type(data.pokemon) == "table" and data.pokemon[species] or nil
+    return type(def) == "table" and tonumber(def.dex) or nil
+  end
+
+  local dexFor, dexIndex = nil, {}
+  function engine.speciesOfDex(dex)
+    local data = gameData()
+    local reg = data and data.pokemon
+    if type(reg) ~= "table" then return nil end
+    if reg ~= dexFor then
+      dexFor, dexIndex = reg, {}
+      for id, def in pairs(reg) do
+        local n = type(def) == "table" and tonumber(def.dex) or nil
+        if n and type(id) == "string" and (dexIndex[n] == nil or id < dexIndex[n]) then dexIndex[n] = id end
+      end
+    end
+    return dexIndex[dex]
+  end
+
+  function engine.moveNumOf(id)
+    local data = gameData()
+    local def = data and type(data.moves) == "table" and data.moves[id] or nil
+    return type(def) == "table" and tonumber(def.index) or nil
+  end
+
+  local moveFor, moveIndex = nil, {}
+  function engine.moveIdOfNum(num)
+    local data = gameData()
+    local reg = data and data.moves
+    if type(reg) ~= "table" then return nil end
+    if reg ~= moveFor then
+      moveFor, moveIndex = reg, {}
+      for id, def in pairs(reg) do
+        local n = type(def) == "table" and tonumber(def.index) or nil
+        if n and type(id) == "string" and (moveIndex[n] == nil or id < moveIndex[n]) then moveIndex[n] = id end
+      end
+    end
+    return moveIndex[num]
+  end
+
+  -- ---- trainer teams
+
+  -- The trainer's name as the battle shows it (BattleState.lua:902-916): the
+  -- class name, the rival's name for the rival classes, plus a personal
+  -- name. Raw engine text (ROM-derived), never logged.
+  local function trainerName(cls, partyIndex)
+    local data = gameData()
+    local tr = data and type(data.trainers) == "table" and data.trainers[cls] or nil
+    if type(tr) ~= "table" then return nil end
+    local name = tr.name
+    if Engine.RIVAL_CLASSES[cls] then
+      local save = engine.save()
+      name = (save and type(save.player) == "table" and save.player.rival) or "BLUE"
+    end
+    local personal = type(tr.partyNames) == "table" and tr.partyNames[partyIndex] or nil
+    if type(name) == "string" and type(personal) == "string" and personal ~= "" then name = name .. " " .. personal end
+    return type(name) == "string" and name or nil
+  end
+
+  -- A trainer's party as BattleState.newTrainer builds it, without building
+  -- a battle: the party (through the trainer.party hook, :918-924), each
+  -- slot's moves from Pokemon.movesAtLevel (src/pokemon/Pokemon.lua:10-30,
+  -- as Pokemon.new, :60-88, gives them), the boss moves (:937), a slot's own
+  -- moves list winning (:938-948), the fixed DVs (:925-934). Returns a plain
+  -- list of { species, dex, level, moves = {Gen 1 numbers}, dvs }, the
+  -- trainer's name (raw text) and its base money (:4979), or nil + reason.
+  function engine.trainerTeam(cls, partyIndex)
+    local data = gameData()
+    local tr = data and type(data.trainers) == "table" and data.trainers[cls] or nil
+    if type(tr) ~= "table" or type(tr.parties) ~= "table" then return nil, "no_trainer" end
+    partyIndex = tonumber(partyIndex) or 1
+    local partyDef = tr.parties[partyIndex]
+    if type(partyDef) ~= "table" then return nil, "no_party" end
+    local Runtime = try("src.mods.Runtime")
+    if Runtime and type(Runtime.wantsHook) == "function" and Runtime.wantsHook("trainer.party") then
+      local ok, hooked = pcall(Runtime.call, "trainer.party", function(_, _, party) return party end,
+        cls, partyIndex, partyDef)
+      if ok and type(hooked) == "table" then partyDef = hooked end
+    end
+    local Pokemon = try("src.pokemon.Pokemon")
+    if not (Pokemon and type(Pokemon.movesAtLevel) == "function") then return nil, "no_pokemon_module" end
+    local mons = {}
+    for i, slot in ipairs(partyDef) do
+      local def = type(slot) == "table" and type(data.pokemon) == "table" and data.pokemon[slot.species] or nil
+      if type(def) ~= "table" or type(slot.level) ~= "number" then return nil, "bad_slot" end
+      local ok, ids = pcall(Pokemon.movesAtLevel, def, slot.level)
+      if not ok or type(ids) ~= "table" then return nil, "moves_failed" end
+      local moves = {}
+      for k = 1, #ids do moves[k] = ids[k] end
+      mons[i] = { species = slot.species, level = slot.level, moves = moves }
+    end
+    Engine.applySpecialMoves(cls, partyIndex, mons)
+    for i, slot in ipairs(partyDef) do
+      if mons[i] and type(slot.moves) == "table" then
+        local own = {}
+        for k = 1, #slot.moves do own[k] = slot.moves[k] end
+        mons[i].moves = own
+      end
+    end
+    local dvs = (type(data.constants) == "table" and type(data.constants.trainerDvs) == "table")
+      and data.constants.trainerDvs or Engine.TRAINER_DVS
+    local out = {}
+    for i, m in ipairs(mons) do
+      local nums = {}
+      for _, id in ipairs(m.moves) do nums[#nums + 1] = engine.moveNumOf(id) or 0 end
+      out[i] = {
+        species = m.species, dex = engine.dexOf(m.species), level = m.level, moves = nums,
+        dvs = { atk = tonumber(dvs.attack), def = tonumber(dvs.defense), spd = tonumber(dvs.speed),
+                spc = tonumber(dvs.special) },
+      }
+    end
+    return out, trainerName(cls, partyIndex), tonumber(tr.baseMoney) or 0
+  end
+
+  -- ---- the pending battle
+
+  local function liveBattle()
+    local st = type(game) == "table" and rawget(game, STATE_SLOT) or nil
+    local rec = type(st) == "table" and st.battle or nil
+    if type(rec) ~= "table" then return nil end
+    return rec, st
+  end
+
+  -- True while a battle Cobblemon fights holds this overworld (the
+  -- classifier reports busy).
+  function engine.battleHolds(ow)
+    local rec = liveBattle()
+    return rec ~= nil and rec.ow == ow and rec.state ~= "consumed"
+  end
+
+  -- The pending battle as plain values (data is kb_battle's own battle.start
+  -- payload), or nil.
+  function engine.battlePending()
+    local rec = liveBattle()
+    if not rec then return nil end
+    return { id = rec.id, kind = rec.kind, state = rec.state, path = rec.path, data = rec.data,
+             sentGen = rec.sentGen, cls = rec.cls, wild = rec.wild == true }
+  end
+
+  function engine.battleSent(id, generation)
+    local rec = liveBattle()
+    if rec and rec.id == id then rec.sentGen = generation end
+  end
+
+  -- Drops a pending battle whose world is gone (the title, a new game,
+  -- CONTINUE): its script coroutine or deferred encounter went with it.
+  -- Returns true when one was dropped.
+  function engine.battleStale()
+    local rec, st = liveBattle()
+    if not rec then return false end
+    if rec.state == "consumed" or rec.ow ~= engine.overworld() or rec.save ~= engine.save() then
+      st.battle = nil
+      return true
+    end
+    return false
+  end
+
+  local function lastLevel(data)
+    local team = type(data) == "table" and data.team or nil
+    local last = type(team) == "table" and team[#team] or nil
+    return type(last) == "table" and tonumber(last.level) or 0
+  end
+
+  local function newRecord(plan, facts, path)
+    local data = gameData()
+    local tr = facts.cls and data and type(data.trainers) == "table" and data.trainers[facts.cls] or nil
+    return {
+      id = plan.id, kind = plan.kind, data = plan.data, path = path, state = "waiting",
+      cls = facts.cls, party = facts.party, wild = facts.wild == true, map = facts.map, npcId = facts.npc,
+      -- engine side only
+      ow = engine.overworld(), save = engine.save(),
+      prize = (type(tr) == "table" and tonumber(tr.baseMoney) or 0) * lastLevel(plan.data),
+      fake = { kind = facts.wild and "wild" or "trainer", oppClass = facts.cls, partyIndex = facts.party },
+    }
+  end
+
+  -- Commands.rival_battle's party offset for Red/Blue (Commands.lua:1063-1075).
+  local function rivalOffset(save, offsets)
+    local flags = type(save) == "table" and type(save.flags) == "table" and save.flags or {}
+    local data = gameData()
+    offsets = offsets or (data and type(data.field) == "table" and data.field.starterCounterpicks or nil)
+    if type(offsets) == "table" then
+      for flag, mapped in pairs(offsets) do
+        if flags[flag] == true then return tonumber(mapped) or 0 end
+      end
+      return 0
+    end
+    if flags.EVENT_CHOSE_SQUIRTLE == true then return 1 end
+    if flags.EVENT_CHOSE_BULBASAUR == true then return 2 end
+    return 0
+  end
+
+  local function isYellow()
+    local GameVersion = try("src.core.GameVersion")
+    if not (GameVersion and type(GameVersion.isYellow) == "function") then return false end
+    local ok, yes = pcall(GameVersion.isYellow)
+    return ok and yes == true
+  end
+
+  -- Plain facts about a held battle row, or nil to let the engine run it.
+  local function scriptBattleFacts(ctx, name, args)
+    local data = gameData()
+    if not data or type(args) ~= "table" then return nil end
+    local f = { path = "script", command = name }
+    if name == "static_battle" or (name == "start_battle" and args[1] == "wild") then
+      local species, level = args[1], args[2]
+      if name == "start_battle" then species, level = args[2], args[3] end
+      if not (symbol(species) and type(data.pokemon) == "table" and type(data.pokemon[species]) == "table"
+          and type(level) == "number") then
+        return nil
+      end
+      f.wild, f.species, f.level, f.dex = true, species, level, engine.dexOf(species)
+    elseif name == "start_battle" then
+      f.cls, f.party = args[2], tonumber(args[3]) or 1
+    else
+      -- Yellow keys its rival parties off save.rivalStarter (Commands.lua:1035-1062)
+      if isYellow() or type(args[2]) ~= "number" then return nil end
+      f.cls, f.party, f.rival = args[1], args[2] + rivalOffset(ctx.save, args[3]), true
+    end
+    if f.cls ~= nil and not (symbol(f.cls) and type(data.trainers) == "table" and type(data.trainers[f.cls]) == "table") then
+      return nil
+    end
+    local ow = ctx.overworld
+    f.map = type(ow) == "table" and type(ow.map) == "table" and symbol(ow.map.id) and ow.map.id or nil
+    local npc = ctx.npc
+    if type(npc) == "table" then
+      if symbol(npc.id) then f.npc = npc.id end
+      f.x, f.y = tonumber(npc.cellX), tonumber(npc.cellY)
+    end
+    return f
+  end
+
+  local function scriptBattle(nextFn, ctx, name, args, bridge)
+    local runner = ctx.runner
+    if ctx.resumeBattle ~= nil or type(runner) ~= "table" or type(runner.yield) ~= "function"
+        or runner.parallel then
+      return nextFn(ctx, name, args)
+    end
+    local okLive, live = pcall(bridge.live)
+    if not (okLive and live) or liveBattle() then return nextFn(ctx, name, args) end
+    local okFacts, facts = pcall(scriptBattleFacts, ctx, name, args)
+    if not (okFacts and facts) then return nextFn(ctx, name, args) end
+    local okPlan, plan = pcall(bridge.battle, facts)
+    if not (okPlan and type(plan) == "table" and type(plan.id) == "string") then return nextFn(ctx, name, args) end
+    local st = bridgeState()
+    local record = newRecord(plan, facts, "script")
+    -- save_end_battle_text's armed line (Commands.lua:310-318), already
+    -- substituted; shown after a win as the battle screen would
+    record.endText = type(ctx.endBattleText) == "string" and ctx.endBattleText or nil
+    st.battle = record
+    runner.waitingCheck = function() return record.state == "done" end
+    runner:yield()
+    -- Resumed by ScriptRunner:update once the result's texts are done
+    -- (possibly applied by a newer instance after a hot reload: only the
+    -- record is read here).
+    local result = record.result
+    record.state = "consumed"
+    if st.battle == record then st.battle = nil end
+    ctx.endBattleText = nil -- one armed line arms one battle (Commands.lua:366-368)
+    -- aborted: the script stops here, so whatever triggers it can run it again
+    if result == nil or result == "abort" then return "end" end
+    ctx.resumeBattle = { result = result, battle = record.fake }
+    return nextFn(ctx, name, args)
+  end
+
+  -- trainer.before_battle's wrapper body: defers a map trainer's battle.
+  -- context = { trainerClass, partyIndex, mapId, npcId } (OC:4152-4157).
+  -- While it waits, the world is held as a trainer sight holds it
+  -- (ow.engaging, part of OC:1546-1552's `scripted`), also for the talk path.
+  function engine.trainerBeforeBattle(nextFn, g, context, continueBattle, bridge)
+    if type(context) ~= "table" or type(continueBattle) ~= "function" then return nextFn(g, context, continueBattle) end
+    local okLive, live = pcall(bridge.live)
+    local ow = engine.overworld()
+    local data = gameData()
+    if not (okLive and live) or not ow or not data or liveBattle()
+        or not (symbol(context.trainerClass) and type(data.trainers) == "table"
+                and type(data.trainers[context.trainerClass]) == "table") then
+      return nextFn(g, context, continueBattle)
+    end
+    local npc
+    for _, n in ipairs(type(ow.npcs) == "table" and ow.npcs or {}) do
+      if type(n) == "table" and n.id == context.npcId then npc = n break end
+    end
+    local facts = {
+      path = "trainer", cls = context.trainerClass, party = tonumber(context.partyIndex) or 1,
+      map = symbol(context.mapId) and context.mapId or (symbol(ow.map.id) and ow.map.id or nil),
+      npc = symbol(context.npcId) and context.npcId or nil,
+    }
+    if npc then facts.x, facts.y = tonumber(npc.cellX), tonumber(npc.cellY) end
+    local okPlan, plan = pcall(bridge.battle, facts)
+    if not (okPlan and type(plan) == "table" and type(plan.id) == "string") then
+      return nextFn(g, context, continueBattle)
+    end
+    local record = newRecord(plan, facts, "trainer")
+    record.continueBattle = continueBattle
+    -- the trainer header's event flag and loss line (Data:trainerHeader,
+    -- src/core/Data.lua:425-428; OC:4073-4087, :4130-4132)
+    if npc and type(npc.def) == "table" and type(ow.map) == "table" and type(ow.map.def) == "table"
+        and type(data.trainerHeader) == "function" then
+      local ok, header = pcall(data.trainerHeader, data, ow.map.def.label, npc.def.index)
+      if ok and type(header) == "table" then
+        record.event = symbol(header.event) and header.event or nil
+        local won = header.won and type(data.text) == "table" and data.text[header.won] or nil
+        record.endText = type(won) == "string" and won or nil
+      end
+    end
+    if not ow.engaging then
+      ow.engaging = true
+      record.heldEngaging = true
+    end
+    bridgeState().battle = record
+    return true
+  end
+
+  -- The line the game prints for a label, with the engine's wording as the
+  -- fallback: src/core/RomText.lua (the module is a function).
+  local function romText(label, fallback, ...)
+    local okReq, RomText = pcall(requireFn, "src.core.RomText")
+    local data = gameData()
+    if okReq and type(RomText) == "function" then
+      local ok, text = pcall(RomText, data, label, fallback, ...)
+      if ok and type(text) == "string" then return text end
+    end
+    local text = data and type(data.text) == "table" and data.text[label] or nil
+    if type(text) == "string" then return text end
+    local okFmt, formatted = pcall(string.format, fallback, ...)
+    return okFmt and formatted or nil
+  end
+
+  -- The text boxes a result shows (raw engine text, substituted by
+  -- TextBox.new itself, TextBox.lua:170), and the prize.
+  local function resultTexts(rec, result)
+    local save = engine.save()
+    local player = save and type(save.player) == "table" and save.player.name or nil
+    player = type(player) == "string" and player or "RED"
+    local texts, prize = {}, 0
+    if result == "win" and rec.cls then
+      if rec.endText then
+        local tag = trainerName(rec.cls, rec.party)
+        texts[#texts + 1] = (tag and (tag .. ": ") or "") .. rec.endText
+      end
+      prize = tonumber(rec.prize) or 0
+      if prize > 0 then
+        texts[#texts + 1] = romText("_MoneyForWinningText", "%s got \194\165%d\nfor winning!", player, prize)
+      end
+    elseif result == "lose" then
+      local data = gameData()
+      if rec.cls == "OPP_RIVAL1" then
+        local raw = data and type(data.text) == "table" and data.text._Rival1WinText or nil
+        texts[#texts + 1] = type(raw) == "string" and raw or "{RIVAL}: Yeah! Am\nI great or what?"
+      end
+      if not (rec.cls == "OPP_RIVAL1" and rec.map == "OAKS_LAB") then
+        texts[#texts + 1] = romText("_PlayerBlackedOutText2", "%s is out of\nuseable POK\195\169MON!\f%s blacked\nout!",
+          player, player)
+      end
+    end
+    return texts, prize
+  end
+
+  -- Pushes text boxes one after the other (TextBox.new, TextBox.lua:129;
+  -- A/B pops each and calls its onDone), then runs onDone.
+  local function pushTexts(list, onDone)
+    local TextBox = try("src.render.TextBox")
+    local i = 0
+    local function nextBox()
+      i = i + 1
+      local text = list[i]
+      if text == nil or not (TextBox and type(TextBox.new) == "function" and game and game.stack) then
+        return onDone()
+      end
+      local ok, box = pcall(TextBox.new, game, text, nextBox)
+      if not ok or type(box) ~= "table" then return nextBox() end
+      game.stack:push(box)
+    end
+    nextBox()
+  end
+
+  local function finishTrainer(rec, result)
+    local ow, save = rec.ow, engine.save()
+    if type(ow) == "table" and ow == engine.overworld() and type(save) == "table" then
+      if result == "win" then
+        if rec.npcId and type(save.defeatedTrainers) == "table" then save.defeatedTrainers[rec.npcId] = true end
+        if rec.event then
+          local Flags = try("src.script.Flags")
+          if Flags and type(Flags.set) == "function" then pcall(Flags.set, save, rec.event)
+          elseif type(save.flags) == "table" then save.flags[rec.event] = true end
+        end
+        if type(ow.checkVictoryRewards) == "function" then
+          local ok, err = pcall(ow.checkVictoryRewards, ow, rec.cls, rec.party, false)
+          if not ok then warnAt("engine.victory_rewards_failed", err) end
+        end
+        if type(ow.afterBattle) == "function" then
+          local ok, err = pcall(ow.afterBattle, ow, "win", rec.fake)
+          if not ok then warnAt("engine.after_battle_failed", err) end
+        end
+      elseif result == "lose" and type(ow.afterBattle) == "function" then
+        local ok, err = pcall(ow.afterBattle, ow, "lose", rec.fake)
+        if not ok then warnAt("engine.after_battle_failed", err) end
+      end
+      if rec.heldEngaging then ow.engaging = false end
+    end
+    if type(rec.continueBattle) == "function" then
+      local ok, err = pcall(rec.continueBattle, { cancel = true })
+      if not ok then warnAt("engine.continue_failed", err) end
+    end
+  end
+
+  -- Applies a Cobblemon result to the pending battle. result is the
+  -- engine's word: "win", "lose", "run", "caught", or "abort" (nothing
+  -- happened: the script stops / the encounter is cancelled, so it can be
+  -- fought again). Returns true, or false when id isn't the battle waiting.
+  function engine.battleFinish(id, result)
+    local rec, st = liveBattle()
+    if not rec or rec.id ~= id or rec.state ~= "waiting" then return false end
+    rec.state, rec.result = "texts", result
+    local texts, prize = resultTexts(rec, result)
+    local save = engine.save()
+    if prize > 0 and type(save) == "table" then save.money = (tonumber(save.money) or 0) + prize end
+    pushTexts(texts, function()
+      if rec.path == "script" then
+        rec.state = "done" -- the script's waitingCheck resumes it
+      else
+        rec.state = "consumed"
+        if st.battle == rec then st.battle = nil end
+        finishTrainer(rec, result)
+      end
+    end)
+    return true
+  end
+
+  -- ---- gifts and heals
+
+  local function giftFacts(mon)
+    local moves = {}
+    for _, mv in ipairs(type(mon.moves) == "table" and mon.moves or {}) do
+      moves[#moves + 1] = type(mv) == "table" and engine.moveNumOf(mv.id) or 0
+    end
+    local dvs = type(mon.dvs) == "table" and mon.dvs or {}
+    return {
+      species = mon.species, dex = engine.dexOf(mon.species), level = tonumber(mon.level), moves = moves,
+      dvs = { atk = tonumber(dvs.attack), def = tonumber(dvs.defense), spd = tonumber(dvs.speed),
+              spc = tonumber(dvs.special) },
+      nick = type(mon.nickname) == "string" and mon.nickname or nil,
+      ot = type(mon.ot) == "string" and mon.ot or nil,
+    }
+  end
+
+  -- give_pokemon (Commands.lua:807-869) runs as usual -- Party.add or the
+  -- box, the Pokedex, the native nickname prompt (askNickname, :761-794) --
+  -- and the gift is captured once it returns: the party member that wasn't
+  -- there before (Party.add appends, src/pokemon/Party.lua:7-13), or the box
+  -- deposit's last entry (Boxes.deposit, src/pokemon/Boxes.lua:33-43; taken
+  -- out of the Gen 1 box: Cobblemon's PC keeps it). ctx.lastCheck is
+  -- give_pokemon's carry (:829-838, kept by askNickname :764, :789). A
+  -- party.sync waits while a give is under way (engine.partySafe).
+  local function scriptGive(nextFn, ctx, name, args)
+    local save, st = ctx.save, bridgeState()
+    if type(save) ~= "table" or type(save.party) ~= "table" or not st then return nextFn(ctx, name, args) end
+    local before = {}
+    for _, mon in ipairs(save.party) do before[mon] = true end
+    local flags = type(save.flags) == "table" and save.flags or {}
+    local ow = ctx.overworld
+    local mapId = type(ow) == "table" and type(ow.map) == "table" and ow.map.id or nil
+    local source = "gift"
+    if flags.EVENT_GOT_STARTER ~= true and #save.party == 0 then
+      source = "starter"
+    elseif mapId == "GAME_CORNER_PRIZE_ROOM" then
+      source = "prize"
+    end
+    local giving = { ow = ow, save = save }
+    st.giving[giving] = true
+    local ok, jump = pcall(nextFn, ctx, name, args)
+    st.giving[giving] = nil
+    if not ok then error(jump, 0) end
+    if ctx.lastCheck == true then
+      local mon, box
+      if type(ctx.boxNum) == "number" then
+        local list = type(save.boxes) == "table" and save.boxes[ctx.boxNum] or nil
+        if type(list) == "table" and type(list[#list]) == "table" then
+          mon, box = table.remove(list), ctx.boxNum
+        end
+      else
+        for _, m in ipairs(save.party) do
+          if not before[m] then mon = m end
+        end
+      end
+      if type(mon) == "table" then
+        st.serial = st.serial + 1
+        st.gifts[#st.gifts + 1] = {
+          give = ("g-%s-%d"):format(st.token or "x", st.serial), state = "new", syncs = 0,
+          box = box ~= nil, source = source, save = save, facts = giftFacts(mon),
+          mon = (box == nil) and mon or nil,
+        }
+      end
+    end
+    return jump
+  end
+
+  -- The script.command wrapper's body (ScriptRunner.lua:168-172: next is
+  -- the command itself; it may yield the script's coroutine).
+  function engine.scriptCommand(nextFn, ctx, name, args, bridge)
+    if type(ctx) ~= "table" then return nextFn(ctx, name, args) end
+    if SCRIPT_BATTLES[name] then return scriptBattle(nextFn, ctx, name, args, bridge) end
+    if name == "give_pokemon" then return scriptGive(nextFn, ctx, name, args) end
+    if name == "heal_party" then
+      -- HealParty (Commands.lua:750-755): Cobblemon's party heals too
+      local jump = nextFn(ctx, name, args)
+      local st = bridgeState()
+      if st then st.heals = st.heals + 1 end
+      return jump
+    end
+    return nextFn(ctx, name, args)
+  end
+
+  -- Captured gifts of this save, as plain values.
+  function engine.gifts()
+    local st = type(game) == "table" and rawget(game, STATE_SLOT) or nil
+    local out = {}
+    if type(st) ~= "table" then return out end
+    local save = engine.save()
+    for i = #st.gifts, 1, -1 do
+      if st.gifts[i].save ~= save then table.remove(st.gifts, i) end -- a new game or CONTINUE
+    end
+    for _, g in ipairs(st.gifts) do
+      local f = g.facts
+      out[#out + 1] = {
+        give = g.give, state = g.state, sentGen = g.sentGen, syncs = g.syncs, box = g.box, source = g.source,
+        dex = f.dex, level = f.level, moves = f.moves, dvs = f.dvs, nick = f.nick, ot = f.ot,
+      }
+    end
+    return out
+  end
+
+  local function giftNamed(give)
+    local st = type(game) == "table" and rawget(game, STATE_SLOT) or nil
+    for i, g in ipairs(type(st) == "table" and st.gifts or {}) do
+      if g.give == give then return g, i, st end
+    end
+    return nil
+  end
+  function engine.giftSent(give, generation)
+    local g = giftNamed(give)
+    if g then g.state, g.sentGen = "sent", generation end
+  end
+  function engine.giftSynced(give)
+    local g = giftNamed(give)
+    if g then g.syncs = g.syncs + 1 end
+  end
+  -- Forgets a gift (confirmed by a party.sync, or given up on).
+  function engine.giftDone(give)
+    local g, i, st = giftNamed(give)
+    if g then table.remove(st.gifts, i) end
+  end
+
+  function engine.queueHeal()
+    local st = bridgeState()
+    if st then st.heals = st.heals + 1 end
+  end
+  function engine.takeHeals()
+    local st = type(game) == "table" and rawget(game, STATE_SLOT) or nil
+    if type(st) ~= "table" then return 0 end
+    local n = st.heals
+    st.heals = 0
+    return n
+  end
+
+  -- ---- the shadow party (party.sync, Cobblemon authoritative)
+
+  -- Cobblemon uids of party members, by member (weak keys); rebuilt from
+  -- mod.save after a reload (engine.adoptUids).
+  local monUid = setmetatable({}, { __mode = "k" })
+
+  function engine.uidOf(mon) return type(mon) == "table" and monUid[mon] or nil end
+
+  -- The uids of save.party in order (false where unknown) and their set.
+  function engine.partyUids()
+    local save = engine.save()
+    local list, set = {}, {}
+    for i, mon in ipairs(save and type(save.party) == "table" and save.party or {}) do
+      local uid = monUid[mon]
+      list[i] = uid or false
+      if uid then set[uid] = true end
+    end
+    return list, set
+  end
+
+  -- After a reload or CONTINUE: uids by party position (the list saved with
+  -- the last sync). Returns how many were adopted.
+  function engine.adoptUids(list)
+    local save = engine.save()
+    local n = 0
+    if type(list) ~= "table" or not (save and type(save.party) == "table") then return 0 end
+    for i, mon in ipairs(save.party) do
+      local uid = list[i]
+      if type(uid) == "string" and monUid[mon] == nil then
+        monUid[mon] = uid
+        n = n + 1
+      end
+    end
+    return n
+  end
+
+  -- A sync may be applied now: an overworld is up, no give_pokemon is under
+  -- way (it holds its new party member while the nickname prompt runs) and
+  -- no native battle (BattleState, isBattleState :49) holds party members.
+  function engine.partySafe()
+    local st = type(game) == "table" and rawget(game, STATE_SLOT) or nil
+    local ow, save = engine.overworld(), engine.save()
+    if not ow then return false end
+    for giving in pairs(type(st) == "table" and st.giving or {}) do
+      -- one whose world is gone (the title, New Game, CONTINUE) never ends
+      if giving.ow ~= ow or giving.save ~= save then st.giving[giving] = nil else return false end
+    end
+    for _, s in ipairs(game.stack.states) do
+      if type(s) == "table" and s.isBattleState then return false end
+    end
+    return true
+  end
+
+  -- Brings one party member in line with a sync entry: species and level
+  -- (stats from Stats.calc with its own DVs, src/pokemon/Stats.lua:35-48;
+  -- exp from Growth.expForLevel, src/pokemon/Growth.lua:27), moves (PP kept
+  -- for known moves, full for new ones, as Pokemon.new fills them, :71-74),
+  -- HP scaled to the Gen 1 maximum, status, nickname.
+  local function updateMon(mon, e, data)
+    local def = data.pokemon[e.species]
+    local Stats, Growth = try("src.pokemon.Stats"), try("src.pokemon.Growth")
+    local levelChanged = mon.level ~= e.level
+    if mon.species ~= e.species or levelChanged or type(mon.stats) ~= "table" then
+      mon.species, mon.level = e.species, e.level
+      if Stats and type(Stats.calc) == "function" then
+        local ok, stats = pcall(Stats.calc, def, e.level, type(mon.dvs) == "table" and mon.dvs or {}, mon.statExp)
+        if ok and type(stats) == "table" then mon.stats = stats end
+      end
+      if Growth and type(Growth.expForLevel) == "function" then
+        local ok, base = pcall(Growth.expForLevel, def.growthRate, e.level)
+        local okNext, nextBase = pcall(Growth.expForLevel, def.growthRate, e.level + 1)
+        local exp = tonumber(mon.exp)
+        if ok and type(base) == "number" and (levelChanged or exp == nil or exp < base
+            or (okNext and type(nextBase) == "number" and e.level < 100 and exp >= nextBase)) then
+          mon.exp = base
+        end
+      end
+    end
+    if #e.moves > 0 then
+      local old = {}
+      for _, mv in ipairs(type(mon.moves) == "table" and mon.moves or {}) do
+        if type(mv) == "table" and mv.id ~= nil then old[mv.id] = mv end
+      end
+      local moves = {}
+      for i, id in ipairs(e.moves) do
+        local md = type(data.moves) == "table" and data.moves[id] or nil
+        moves[i] = old[id] or { id = id, pp = type(md) == "table" and tonumber(md.pp) or 0 }
+      end
+      mon.moves = moves
+    end
+    local maxhp = type(mon.stats) == "table" and tonumber(mon.stats.hp) or 1
+    if e.hp <= 0 then
+      mon.hp = 0
+    else
+      mon.hp = math.max(1, math.min(maxhp, math.floor(e.hp * maxhp / e.maxhp + 0.5)))
+    end
+    mon.status = e.status
+    if mon.status ~= "SLP" then mon.sleepTurns = nil end
+    mon.nickname = e.nick
+  end
+
+  -- Rebuilds save.party from a party.sync (Cobblemon is authoritative):
+  -- entries = { { uid, species, level, moves = {ids}, hp, maxhp, status?,
+  -- nick?, give? } } in Cobblemon's order. A known uid keeps its member (in
+  -- place); `give` names a captured gift whose member this entry is; others
+  -- are created with Pokemon.new (Pokemon.lua:60-88) and stamped with the
+  -- player as OT (BattleState.stampOT, :698-705). Gifts Cobblemon hasn't
+  -- confirmed yet stay after them, so scripts still find them. The party
+  -- table is refilled in place (callers hold save.party itself). Returns
+  -- counts.
+  function engine.applyParty(entries)
+    local save, data, st = engine.save(), gameData(), bridgeState()
+    if not (save and type(save.party) == "table" and data and st) then return nil end
+    local Pokemon = try("src.pokemon.Pokemon")
+    local BattleState = try("src.battle.BattleState")
+    local byUid = {}
+    for _, mon in ipairs(save.party) do
+      local uid = monUid[mon]
+      if uid then byUid[uid] = mon end
+    end
+    local res = { created = 0, updated = 0, matched = 0, kept = 0, failed = 0 }
+    local out, seen = {}, {}
+    for _, e in ipairs(entries) do
+      local mon, how = byUid[e.uid], "updated"
+      if mon == nil and e.give ~= nil then
+        local g = giftNamed(e.give)
+        if g and type(g.mon) == "table" and g.save == save then mon, how = g.mon, "matched" end
+        engine.giftDone(e.give)
+      end
+      if mon == nil or seen[mon] then
+        local ok, fresh = false, nil
+        if Pokemon and type(Pokemon.new) == "function" then ok, fresh = pcall(Pokemon.new, data, e.species, e.level) end
+        if ok and type(fresh) == "table" then
+          mon, how = fresh, "created"
+          if BattleState and type(BattleState.stampOT) == "function" then pcall(BattleState.stampOT, save, mon) end
+        else
+          mon, how = nil, "failed"
+        end
+      end
+      res[how] = res[how] + 1
+      if mon then
+        local ok = pcall(updateMon, mon, e, data)
+        if not ok then res.failed = res.failed + 1 end
+        monUid[mon] = e.uid
+        seen[mon] = true
+        out[#out + 1] = mon
+      end
+    end
+    for _, g in ipairs(st.gifts) do
+      if type(g.mon) == "table" and g.save == save and not seen[g.mon] and #out < 6 then
+        out[#out + 1] = g.mon
+        seen[g.mon] = true
+        res.kept = res.kept + 1
+      end
+    end
+    local party = save.party
+    for i = #party, 1, -1 do party[i] = nil end
+    for i, mon in ipairs(out) do party[i] = mon end
+    res.size = #party
+    return res
+  end
+
+  -- Plain counts for debug.status.
+  function engine.bridgeCounts()
+    local st = type(game) == "table" and rawget(game, STATE_SLOT) or nil
+    local save = engine.save()
+    local known = 0
+    for _, mon in ipairs(save and type(save.party) == "table" and save.party or {}) do
+      if monUid[mon] then known = known + 1 end
+    end
+    return {
+      partySize = save and type(save.party) == "table" and #save.party or 0,
+      partyKnown = known,
+      giftsPending = type(st) == "table" and #st.gifts or 0,
+      healsPending = type(st) == "table" and st.heals or 0,
+      battleHeld = liveBattle() ~= nil,
+    }
   end
 
   -- ------------------------------------------------------------ export (M2)

@@ -6,8 +6,10 @@
 -- the schema's shape on the way in; anything that doesn't fit is left out
 -- and counted, never sent malformed.
 --
--- Still empty in M1: blocks (M2+), ui (M4). The party is the hidden game's
--- own party without uids, until party.sync owns it (M5/M6).
+-- blocks stays empty until the story diffs (M6+); ui is never filled (open
+-- UIs follow as ui.open). The party is the hidden game's own party; members
+-- a party.sync named carry their Cobblemon uid (M5), gifts Cobblemon hasn't
+-- confirmed yet don't.
 
 local Snapshot = {}
 
@@ -60,13 +62,17 @@ end
 --   npcs, npcMap            kb_engine.npcs(), or nil
 --   dexOf(species)          national dex number of a species id, or nil
 --   moveNum(moveId)         Gen 1 move number of a move id, or nil
+--   uidOf(mon)              a party member's Cobblemon uid, or nil
 -- Returns the snapshot data and the number of values left out.
+local UID = "^%x%x%x%x%x%x%x%x%-%x%x%x%x%-%x%x%x%x%-%x%x%x%x%-%x%x%x%x%x%x%x%x%x%x%x%x$"
+
 function Snapshot.build(ctx)
   local json, facts = ctx.json, ctx.facts
   local save = type(ctx.save) == "table" and ctx.save or {}
   local dropped = 0
   local dexOf = ctx.dexOf or function() return nil end
   local moveNum = ctx.moveNum or function() return nil end
+  local uidOf = ctx.uidOf or function() return nil end
 
   -- Outside the overworld (title screen), fall back to the save's position:
   -- the boot skeleton's spawn, or the loaded save's. ingame tells the client
@@ -131,6 +137,8 @@ function Snapshot.build(ctx)
         if num and #moves < 4 then moves[#moves + 1] = num end
       end
       local entry = { dex = dex, level = level, moves = json.array(moves) }
+      local uid = uidOf(mon)
+      if type(uid) == "string" and uid:find(UID) and uid == uid:lower() then entry.uid = uid end
       local hp = int(mon.hp, 0, 9999)
       local maxhp = int(type(mon.stats) == "table" and mon.stats.hp or nil, 1, 9999)
       if hp and maxhp then entry.hp, entry.maxhp = hp, maxhp end

@@ -12,8 +12,8 @@ new items in [PLAYTEST.md](PLAYTEST.md) and a commit titled `M<n>: <title>`.
 | M1 | Bridge connection | **done** | 2026-10-03 | `fa15739` |
 | M2 | World export and builder (Pallet Town and its interiors) | **done** | 2026-10-03 | `bbad914` |
 | M3 | Walking and warps | **done** | 2026-10-03 | `aa725fd` |
-| M4 | Dialogue, menus and NPC mirroring | **done** | 2026-10-03 | `M4: dialogue, menus and NPC mirroring` |
-| M5 | Opening, Oak's cutscene, starter and rival battle | not started | | |
+| M4 | Dialogue, menus and NPC mirroring | **done** | 2026-10-03 | `c5b39d1` |
+| M5 | Opening, Oak's cutscene, starter and rival battle | **done** | 2026-10-03 | `M5: opening, starter and rival battle` |
 | M6 | Route 1, habitat pools, catching, party/Pokédex/bag sync | not started | | |
 | M7 | Viridian City (Pokémon Center, Mart, PC, money, trainers, saving) | not started | | |
 | M8 | The rest of Kanto (single player) | not started | | |
@@ -76,6 +76,14 @@ new items in [PLAYTEST.md](PLAYTEST.md) and a commit titled `M<n>: <title>`.
   `gradlew build`: **322 JUnit** (including a UI integration test against `fake_gen1`: puppets from
   the snapshot, talk → text box → advance → close, UIs closed when the link drops), **27/27
   GameTests**, mixin remap check.
+- **M5:** `tools/check.sh --e2e`: pytest **972 passed** (566 Lua; e2e on the real engine: all
+  earlier ones plus the opening (NEW GAME via the mirror, both names typed on our naming screen, Oak's
+  escort: 24 scripted steps, the escort flags), the lab rival battle won and lost (starter
+  `party.give` → a made-up-uid `party.sync` → `battle.start` kind `rival` held in `busy`, re-sent
+  with the same id after a reconnect → result applied; no blackout on the lab loss; progress flags
+  3 → 6)), then `gradlew build`: **361 JUnit**, **40/40 GameTests** (battle proxy, exact moves and
+  IVs, a real Showdown forfeit → `lose`, party give/PC overflow/sync, starter lock, Cobblemon
+  settings, all 151 species and 165 moves resolving), mixin remap check.
 - **Early full-Kanto smoke build** (not an M2 gate; M8 owns it), `build_world.py --maps all` into
   `saves/KantoFullE2E`: 219 of 220 reachable maps (36 surface, 183 interiors on 14 layers, 5 moved
   sideways), **2,480,041 blocks in 2,126 chunks in 59 s** (plan 5.9 s, place 53 s), 12,539 story
@@ -313,6 +321,48 @@ new items in [PLAYTEST.md](PLAYTEST.md) and a commit titled `M<n>: <title>`.
     0.8 ms), 2.2–4.2 ms worst; frames are 98 B–1.7 KB; about 35% are identical and skipped; frame
     times stay at the 16.7 ms vsync budget with the mirror on or off. No PLAN §8 fallback was needed.
 
+**M5**
+
+46. **Proxy placement and removal:** the hidden proxy stands on the trainer's cell if the WorldIndex
+    knows it within 32 blocks, otherwise 4 blocks in front of the player; it faces the player and
+    carries the trainer's name; it is discarded once Cobblemon's recall finishes (10 s at most), at
+    server stop, and when a crash left one in a loaded chunk.
+47. **Cobblemon settings in memory** at `SERVER_STARTING` (Appendix C); `main.json` is never
+    rewritten. `shinyRate` is 1e9 (infinity would overflow Cobblemon's fishing reroll, which converts
+    the rate to an int and adds 1); passive statuses last 1e9 s. The starter lock lives in
+    `CobblemonSettings`, called from `Rules`.
+48. **Gifts** keep Cobblemon's random nature and ability (P11 covers trainer Pokémon only); `ot` only
+    for trades; one application per `give` id. `party.take` handles trades only (daycare in M8);
+    `party.item` is a counted "unsupported" until M6. A repeated move in a team or gift is kept once.
+49. **No `party.sync` during a battle**; one follows each battle. **The client relay** answers a
+    repeated `battle.start` from its record, never re-sends results unasked (gen1-bridge answers an
+    unexpected result with `error battle.unknown`), answers `aborted` at once without a server link,
+    aborts pending battles on leaving, queues up to 32 `party.*` requests while offline (flushed
+    before any `battle.start`), and re-sends the latest `party.sync`/`dex.sync` after each snapshot.
+50. **During any Cobblemon battle the client holds the player** (`InputLock` reason `BATTLE`):
+    movement sync unlinks (relinking puts the player back on the hidden cell), our screens wait, and A,
+    START and clicks do nothing. **M6 consequence:** Cobblemon's Run (walking away) can't work, so M6
+    must end wild battles as `fled` on `BATTLE_FLEE_ATTEMPT`.
+51. The `activity` attachment isn't persisted or synced to other clients yet (M9). Wild kinds are
+    answered `aborted` (`unsupported_kind`) until M6.
+52. **The opening needed no `intro.oak_speech.build` wrap:** M4's UI observer already turns both
+    naming steps into `ui.open{naming}` answered by `ui.name`, and survives hot reload. Oak's escort
+    was already reported correctly by M1–M4 (24 scripted player steps, Oak's NPC moves, the escort
+    flags), verified on the real game.
+53. **Scripted battles wait inside their script** on the runner's own `waitingCheck`, and the result
+    goes back through `start_battle`'s checkpoint-resume path, so the engine itself sets
+    `lastBattleResult`/`lastCheck` and runs `afterBattle`. Map trainers are deferred through
+    `trainer.before_battle` with the world held through `ow.engaging`. Battles are taken over only
+    while a client or test session is connected. The held battle and queued gifts/heals live in a
+    process-lifetime slot on the Game object (`kantoBridgeState`, a **new engine internal**), so a
+    hot reload keeps them.
+54. **Gifts run natively** and are matched by dex and level when the sync arrives (no duplicate); an
+    optional `give` field on `party.sync` entries would make the match exact (M6 candidate).
+    gen1-bridge gives up on a gift after 5 syncs and 2 minutes, conservatively, because the client
+    re-sends stale syncs after every snapshot.
+
+## Open issues
+
 ## Open issues
 
 - Harmless noise: the Kotlin plugin makes Fabric Loader warn "Class path entries reference missing
@@ -354,6 +404,17 @@ new items in [PLAYTEST.md](PLAYTEST.md) and a commit titled `M<n>: <title>`.
   M6 must let item use through (only plain right-clicks become `act.interact`).
 - M4's screens, puppets (facing, walking, collision, crosshair), emotes and the mirror picture are
   only unit-tested; the play-test judges their look and feel.
+- **M5 battles, play-test only:** the trainer's throw animation is invisible (the proxy is hidden);
+  its Pokémon appear at Cobblemon's send-out spot and may clip into walls in small rooms like Oak's
+  lab; Cobblemon's NPC battle theme plays (P22 in M8); a sent-out Pokémon pushing the player off
+  their cell is fixed by a fade and teleport afterwards. If Cobblemon's battle engine crashes it
+  writes `battle_logs/<id>.txt` (with names) into the run folder (`local/minecraft`, or
+  `fabric-bridge/build/run/gameTest` for GameTests: both git-ignored).
+- **Battles not intercepted until M8:** talk-path static objects (OC:3488-3510), direct
+  `pushBattle` calls (Giovanni `story3.lua:481-510`, the ghost Marowak `story3.lua:143-194`).
+  Not handled yet: trades, native catches (`catch.nickname` → `native_catch`), the Name Rater, the
+  Pokémon Center heal (M7). Loss lines that `engageTrainer` callers pass in themselves (e.g. the Game
+  Corner rocket) aren't shown. The map-trainer path is covered only in lupa until M7's e2e.
 - NPCs on neighbouring maps (the engine's "ghosts" across a seam) aren't mirrored, so the previous
   map's puppets vanish when you cross. The Pokédex list adapter has no field for owned markers. At the
   title, TitleState and the intro arrive as mirror UIs and the title menu as a menu; battles are mirror
@@ -373,3 +434,4 @@ Nothing.
   button.
 - PLAYTEST.md M3: walk Pallet Town and its houses with Gen1Recomp following; stairs and doors.
 - PLAYTEST.md M4: talk to people and signs, the start menu, the bag, YES/NO, the mirror, puppets.
+- PLAYTEST.md M5: a new game from Minecraft: names, Oak's escort, the starter, the rival battle.

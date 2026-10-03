@@ -9,6 +9,9 @@ Type commands to drive the connected Minecraft client:
     warp MAP X Y DIR       warp (TEST_TOWN, TEST_HOUSE)
     text LINE | LINE ...   open a one-page text box
     flag NAME on|off       set or clear a story flag
+    give [DEX] [LEVEL] [SOURCE]   send a made-up party.give (default 7 5 gift)
+    battle [KIND]          send a made-up battle.start (trainer, rival, static, surf, fish)
+    counts                 print how many of each message type the client has sent
     status                 print the connection and world state
     drop                   drop the connection (the client should reconnect)
     quit
@@ -54,6 +57,13 @@ async def _commands(fake):
                 await fake.open_text([lines])
             elif cmd == "flag":
                 await fake.set_flag(args[0], args[1] == "on")
+            elif cmd == "give":
+                await fake.give(int(args[0]) if args else 7, int(args[1]) if len(args) > 1 else 5,
+                                args[2] if len(args) > 2 else "gift")
+            elif cmd == "battle":
+                await fake.start_battle(args[0] if args else "trainer")
+            elif cmd == "counts":
+                print("counts " + " ".join(f"{t}={n}" for t, n in sorted(fake.counts().items())))
             elif cmd == "status":
                 print(f"connected={fake.connected} role={fake.role} connections={fake.connections} "
                       f"player={fake.player.as_data()} mode={fake.state.mode}")

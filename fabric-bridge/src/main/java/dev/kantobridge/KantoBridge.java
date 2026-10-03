@@ -1,11 +1,14 @@
 package dev.kantobridge;
 
+import dev.kantobridge.battle.BattleService;
 import dev.kantobridge.block.KbBlocks;
 import dev.kantobridge.builder.BuildTasks;
 import dev.kantobridge.builder.HeadlessBuild;
 import dev.kantobridge.entity.KbEntities;
 import dev.kantobridge.net.RelayService;
+import dev.kantobridge.pokemon.PartyService;
 import dev.kantobridge.proto.Catalog;
+import dev.kantobridge.server.ActivityService;
 import dev.kantobridge.server.BuildHold;
 import dev.kantobridge.server.Rules;
 import dev.kantobridge.server.StoryStateService;
@@ -43,6 +46,10 @@ public class KantoBridge implements ModInitializer {
 		// The relay's story.state and warp.request (docs/PLAN.md §4.4).
 		StoryStateService.init();
 		WarpService.init();
+		// Battles for the hidden game (hidden proxy NPCs + Cobblemon's pvn), the party both ways, the players' activity.
+		BattleService.init();
+		PartyService.init();
+		ActivityService.init();
 		LOGGER.info("kantobridge loaded (protocol {}, {} message types)", Catalog.bundled().protocol(), Catalog.bundled().messages().size());
 	}
 }

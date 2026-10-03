@@ -10,12 +10,15 @@ import org.jetbrains.annotations.Nullable;
  * Holds the Minecraft player still while the hidden game isn't taking steps (docs/PLAN.md §2.4 flows 6, 7 and 13,
  * §4.3 {@code InputLock}): {@code KeyboardInputMixin} calls {@link #apply} at the end of every {@code KeyboardInput.tick},
  * which zeroes movement, jump and sneak while locked. The lock is decided once per world tick by {@link #reason}; only
- * Kanto worlds (the server sent a WorldIndex) are ever locked, and never in creative or spectator mode.
+ * Kanto worlds (the server sent a WorldIndex) are ever locked, and never in creative or spectator mode. A Cobblemon
+ * battle holds the player before anything else: the hidden game waits for its result (M5).
  */
 public final class InputLock {
 	/** Why the player is held (or {@link #NONE}). */
 	public enum Reason {
 		NONE,
+		/** A Cobblemon battle runs for the hidden game, which waits for its result (M5). */
+		BATTLE,
 		/** No link to gen1-bridge (connecting, dropped, paused for an export). */
 		NOT_CONNECTED,
 		/** The hidden game is at its title screen or intro: there is no live player to follow. */
@@ -81,8 +84,22 @@ public final class InputLock {
 	 */
 	public static Reason reason(boolean kantoWorld, boolean freeCamera, boolean connected, boolean ingame, boolean unbuilt, String mode,
 			boolean warping, boolean forced, boolean screen) {
+		return reason(kantoWorld, freeCamera, false, connected, ingame, unbuilt, mode, warping, forced, screen);
+	}
+
+	/**
+	 * The lock decision, with Cobblemon's battles: while one runs for this player the hidden game waits for its result,
+	 * so nothing may walk or act on it.
+	 *
+	 * @param battle the player fights a Cobblemon battle (not spectating one)
+	 */
+	public static Reason reason(boolean kantoWorld, boolean freeCamera, boolean battle, boolean connected, boolean ingame, boolean unbuilt,
+			String mode, boolean warping, boolean forced, boolean screen) {
 		if (!kantoWorld || freeCamera) {
 			return Reason.NONE;
+		}
+		if (battle) {
+			return Reason.BATTLE;
 		}
 		if (!connected) {
 			return Reason.NOT_CONNECTED;

@@ -73,6 +73,7 @@ class MoveControllerTest {
 		boolean connected = true;
 		boolean ingame = true;
 		boolean free;
+		boolean battle;
 		String mode = "idle";
 		@Nullable WorldIndex index = world;
 
@@ -86,7 +87,7 @@ class MoveControllerTest {
 		ForcedMover.@Nullable Velocity tick(@Nullable Dir intent, float yaw) {
 			this.now += 50;
 			ForcedMover.Velocity velocity = this.controller.beforeMove(this.now,
-					new MoveController.Frame(this.index, this.free, this.connected, this.ingame, this.mode, false, this.x, this.z));
+					new MoveController.Frame(this.index, this.free, this.connected, this.ingame, this.mode, false, this.battle, this.x, this.z));
 			if (velocity != null) {
 				this.x += velocity.x();
 				this.z += velocity.z();
@@ -208,6 +209,28 @@ class MoveControllerTest {
 		rig.tick(null, 0.0F);
 		assertEquals(InputLock.Reason.NONE, rig.controller.reason(), "not a Kanto world");
 		assertFalse(rig.controller.following());
+	}
+
+	@Test
+	void aBattleHoldsThePlayerAndTellsTheWaitingGameNothing() throws Exception {
+		Rig rig = linkedAt("TEST_TOWN", 5, 8, "up");
+		rig.battle = true;
+		rig.tick(null, 180.0F);
+		assertEquals(InputLock.Reason.BATTLE, rig.controller.reason());
+		// A sent-out Pokémon shoves the player a cell up: no step, push or face reaches the hidden game.
+		rig.at("TEST_TOWN", 5, 7);
+		for (int i = 0; i < 2 * MovementSync.PUSH_TICKS; i++) {
+			rig.tick(Dir.UP, 90.0F);
+		}
+		assertEquals(List.of(), rig.port.bridge);
+		assertEquals(List.of(), rig.port.server);
+		// After the battle the player is put back on the hidden cell (a sync teleport, without a kind).
+		rig.battle = false;
+		for (int i = 0; i < 20 && rig.port.server.isEmpty(); i++) {
+			rig.tick(null, 180.0F);
+		}
+		assertEquals(List.of(), rig.port.bridge);
+		assertEquals(List.of("warp.request {\"to\":{\"map\":\"TEST_TOWN\",\"x\":5,\"y\":8,\"facing\":\"up\"}}"), rig.port.server);
 	}
 
 	@Test

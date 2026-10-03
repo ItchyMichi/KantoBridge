@@ -23,7 +23,7 @@ def test_s5_driver_reports_ready():
     assert facts, result.lines
     assert facts["state"] == "loaded"
     assert facts["engine"] == "0.3.49" and facts["status_engine"] == "0.3.49"
-    assert facts["bridge"] == "0.1.0" and facts["protocol"] == "1" and facts["modules"] == "21"
+    assert facts["bridge"] == "0.1.0" and facts["protocol"] == "1" and facts["modules"] == "23"
     assert facts["mod_errors"] == "0"
     assert "[info] [gen1-bridge] gen1-bridge loaded" in result.lines
     assert any(line.startswith("[info] [gen1-bridge] game.ready ") for line in result.lines)

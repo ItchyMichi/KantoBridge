@@ -62,6 +62,7 @@
   "kantobridge.debug.ui": "UI: open %s (top %s)  opened %s  closed %s  advances %s  answers %s  dropped %s  mirror %s (%s frames, %s bad)  buttons %s",
   "kantobridge.debug.npcs": "NPCs: %s (%s shown) on %s  moves %s  faces %s  emotes %s  dropped %s  missing sheets %s",
   "kantobridge.debug.act": "Act: interacts %s  start %s  results %s  refused %s (%s)",
+  "kantobridge.debug.relay": "Relay: battles %s (pending %s)  results %s (resent %s, aborted here %s)  party %s (queued %s)  syncs %s  activity %s",
   "kantobridge.debug.yes": "yes",
   "kantobridge.debug.no": "no",
   "kantobridge.create.button": "Create Kanto world",
