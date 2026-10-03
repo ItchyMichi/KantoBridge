@@ -345,6 +345,7 @@
       "type": "snapshot",
       "seq": 11,
       "redacted": {
+        "ingame": true,
         "player": {"map": "TEST_TOWN", "x": 5, "y": 6, "facing": "down"},
         "state": {
           "mode": "idle",
@@ -394,6 +395,7 @@
       "type": "snapshot",
       "seq": 12,
       "redacted": {
+        "ingame": true,
         "player": {"map": "TEST_HOUSE", "x": 2, "y": 4, "facing": "up"},
         "state": {
           "mode": "screen",
@@ -416,6 +418,34 @@
         "dex": {"seen": [], "owned": []},
         "npcs": {"map": "TEST_HOUSE", "list": []},
         "ui": "<rom:obj:4:fe42173f>"
+      }
+    },
+    {
+      "type": "snapshot",
+      "seq": 13,
+      "redacted": {
+        "ingame": false,
+        "player": {"map": "TEST_TOWN", "x": 5, "y": 8, "facing": "down"},
+        "state": {
+          "mode": "screen",
+          "bike": false,
+          "surf": false,
+          "slope": false,
+          "hidden": false,
+          "dark": false,
+          "lit": false
+        },
+        "flags": [],
+        "toggles": {},
+        "blocks": "<rom:arr:0:4f53cda1>",
+        "lit": [],
+        "bag": {},
+        "money": 0,
+        "coins": 0,
+        "badges": [],
+        "party": [],
+        "dex": {"seen": [], "owned": []},
+        "npcs": {"map": "TEST_TOWN", "list": []}
       }
     },
     {

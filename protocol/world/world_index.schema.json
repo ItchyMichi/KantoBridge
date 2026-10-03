@@ -1,0 +1,92 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kantobridge.invalid/protocol/world/world_index.schema.json",
+  "title": "world index",
+  "description": "Written by the world builder to <world>/kantobridge/world_index.json and sent to clients in world.index parts. Maps cells to blocks and lists the story cells and habitat blocks. ROM-derived as a whole (map sizes, story cells).",
+  "type": "object",
+  "required": ["version", "game", "exportHash", "scale", "maps", "slotMapHash", "storyCells", "habitats"],
+  "additionalProperties": false,
+  "properties": {
+    "version": {"const": 1},
+    "game": {"enum": ["red", "blue"]},
+    "exportHash": {
+      "$ref": "../defs.schema.json#/$defs/hash",
+      "description": "SHA-256 of the export bundle's index.json canonical JSON: which export built this world."
+    },
+    "scale": {
+      "type": "object",
+      "required": ["cellBlocks", "surfaceY", "layerStep"],
+      "additionalProperties": false,
+      "properties": {
+        "cellBlocks": {"const": 2, "description": "Blocks per cell edge: a cell is 2x2 blocks, one 8x8 tile per block."},
+        "surfaceY": {"type": "integer", "description": "Feet level of the outdoor walking surface (64); ground blocks sit at surfaceY - 1."},
+        "layerStep": {"type": "integer", "minimum": 16, "description": "Interior layer k has its floor surface at surfaceY - layerStep * k."}
+      }
+    },
+    "maps": {
+      "type": "object",
+      "propertyNames": {"$ref": "../defs.schema.json#/$defs/mapId"},
+      "additionalProperties": {
+        "type": "object",
+        "required": ["x", "y", "z", "w", "h", "layer", "kind", "palette", "biome", "dark", "parent"],
+        "additionalProperties": false,
+        "properties": {
+          "x": {"type": "integer", "description": "Block X of the map's cell (0, 0) north-west corner."},
+          "y": {"type": "integer", "description": "Feet level (block Y) of the map's walking surface."},
+          "z": {"type": "integer", "description": "Block Z of the map's cell (0, 0) north-west corner."},
+          "w": {"type": "integer", "minimum": 1, "description": "Width in cells."},
+          "h": {"type": "integer", "minimum": 1, "description": "Height in cells."},
+          "layer": {"type": "integer", "minimum": 0, "description": "0 for the surface; k >= 1 for interior layers."},
+          "kind": {"enum": ["surface", "interior"]},
+          "palette": {"$ref": "../defs.schema.json#/$defs/symbol"},
+          "biome": {"type": "string", "pattern": "^[a-z0-9_.-]+:[a-z0-9_./-]+$"},
+          "dark": {"type": "boolean"},
+          "parent": {"anyOf": [{"type": "null"}, {"$ref": "../defs.schema.json#/$defs/mapId"}]}
+        }
+      }
+    },
+    "slotMapHash": {"$ref": "../defs.schema.json#/$defs/hash"},
+    "storyCells": {
+      "type": "array",
+      "description": "Every cell that carries a story-cell block, with what decides whether it is closed for a player.",
+      "items": {
+        "type": "object",
+        "required": ["key", "type"],
+        "additionalProperties": false,
+        "properties": {
+          "key": {"$ref": "../defs.schema.json#/$defs/cellKey"},
+          "type": {"enum": ["object", "tile", "water", "boulder_area"]},
+          "obj": {"$ref": "../defs.schema.json#/$defs/objName", "description": "object: the map object (toggle name) standing here."},
+          "swap": {
+            "type": "object",
+            "required": ["bx", "by", "kind", "before", "after"],
+            "additionalProperties": false,
+            "description": "tile: the swap site (from the swaps export) this cell belongs to.",
+            "properties": {
+              "bx": {"type": "integer", "minimum": 0, "maximum": 255},
+              "by": {"type": "integer", "minimum": 0, "maximum": 255},
+              "kind": {"enum": ["cut", "card_key", "script", "boulder"]},
+              "before": {"type": "integer", "minimum": 0, "maximum": 255},
+              "after": {"type": "integer", "minimum": 0, "maximum": 255}
+            }
+          }
+        }
+      }
+    },
+    "habitats": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["map", "x", "y", "z", "pool"],
+        "additionalProperties": false,
+        "properties": {
+          "map": {"$ref": "../defs.schema.json#/$defs/mapId"},
+          "x": {"type": "integer"},
+          "y": {"type": "integer"},
+          "z": {"type": "integer"},
+          "pool": {"type": "string", "pattern": "^[a-z0-9_.-]+:[a-z0-9_./-]+$"}
+        }
+      }
+    }
+  }
+}

@@ -5,13 +5,16 @@ return {
   author = "Kanto Bridge contributors",
   tags = { "tool", "network", "bridge" },
   differences = {
-    changed = {},
+    changed = {
+      "display options are pinned to classic (no tilt, zoom, render pipelines, wide battles or dynamic UI) and text speed to FAST, in memory, while the mod is on",
+    },
     added = {
-      "logs \"gen1-bridge loaded\" when a game boots, and \"game.ready\" once the game is up",
-      "a status table in mod.exports (versions, counts, ready flag) for test drivers",
+      "listens on 127.0.0.1 (port option, default 27151) for one Kanto Bridge client at a time",
+      "sends the player's position and state each step, and a full story snapshot on connect",
+      "a status table in mod.exports (versions, counts, flags) for test drivers",
     },
     known = {
-      "foundations only: the socket listener and bridge messages arrive in later milestones",
+      "steps, dialogue, NPCs and the story are not mirrored yet; they arrive in later milestones",
     },
   },
   credits = {

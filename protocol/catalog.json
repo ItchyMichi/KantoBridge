@@ -517,5 +517,17 @@
       "redact": ["/part"],
       "schema": "messages/world.index.schema.json"
     }
+  },
+  "exports": {
+    "encounters": {"schema": "export/encounters.schema.json"},
+    "field": {"schema": "export/field.schema.json"},
+    "image": {"schema": "export/image.schema.json"},
+    "layout": {"schema": "export/layout.schema.json"},
+    "map": {"schema": "export/map.schema.json"},
+    "names": {"schema": "export/names.schema.json"},
+    "palettes": {"schema": "export/palettes.schema.json"},
+    "sprite": {"schema": "export/sprite.schema.json"},
+    "swaps": {"schema": "export/swaps.schema.json"},
+    "tileset": {"schema": "export/tileset.schema.json"}
   }
 }

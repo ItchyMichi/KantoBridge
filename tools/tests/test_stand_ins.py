@@ -1,11 +1,14 @@
 """fake_minecraft against fake_gen1: the connection rules of docs/PROTOCOL.md."""
 import asyncio
+import hashlib
+import json
 
 import pytest
 
 from fake_gen1 import FakeGen1
 from fake_minecraft import FakeMinecraft, HelloRejected
 from kb_protocol import encode_line
+from kb_protocol.jsonfmt import canonical
 
 
 def run(coro):
@@ -138,20 +141,73 @@ def test_steps_blocks_and_door_warp():
             start = await mc.expect("warp")
             arrive = await mc.expect("warp")
             assert (start["data"]["phase"], arrive["data"]["phase"]) == ("start", "arrive")
-            assert arrive["data"]["to"]["map"] == "TEST_HOUSE"
+            assert arrive["data"]["to"] == {"map": "TEST_HOUSE", "x": 4, "y": 8, "facing": "up"}
             npcs = await mc.expect("npc.set")
             assert npcs["data"]["map"] == "TEST_HOUSE"
-            await mc.send("move.step", {"dir": "left", "n": 4})
-            await mc.send("move.step", {"dir": "left", "n": 5})
-            await mc.send("move.step", {"dir": "left", "n": 6})  # into the wall at x 0
-            await mc.expect("player.pos")
-            await mc.expect("player.pos")
+            for n, direction in enumerate(("up", "left", "left"), start=4):
+                await mc.send("move.step", {"dir": direction, "n": n})
+                await mc.expect("player.pos")
+            await mc.send("move.step", {"dir": "left", "n": 7})  # into the house wall
             blocked = await mc.expect("player.blocked")
-            assert (blocked["data"]["reason"], blocked["data"]["n"]) == ("tile", 6)
+            assert (blocked["data"]["reason"], blocked["data"]["n"], blocked["data"]["x"]) == ("tile", 7, 2)
+            for n, direction in enumerate(("right", "right", "down"), start=8):
+                await mc.send("move.step", {"dir": direction, "n": n})
+                await mc.expect("player.pos")  # back onto the exit mat at (4, 8): no warp on arrival
+            await mc.send("move.step", {"dir": "down", "n": 11})  # off the edge from the mat
+            leave = await mc.expect("warp")
+            back = await mc.expect("warp")
+            assert leave["data"]["phase"] == "start"
+            assert back["data"]["to"] == {"map": "TEST_TOWN", "x": 5, "y": 6, "facing": "down"}
         finally:
             await mc.close()
             await gen1.stop()
     run(scenario())
+
+
+def test_export_index_and_resources():
+    async def scenario():
+        gen1, mc = await _pair(role="builder")
+        try:
+            await mc.hello()
+            index = (await mc.request("export.index", {}))["data"]
+            assert index["game"] == "red" and len(index["resources"]) >= 10
+            for entry in index["resources"]:
+                reply = await mc.request("export.get", {"kind": entry["kind"], "id": entry["id"]},
+                                         reply_type="export.data")
+                data = reply["data"]
+                assert (data["kind"], data["id"], data["hash"]) == (entry["kind"], entry["id"], entry["hash"])
+                assert not mc.protocol.check_export(entry["kind"], data["data"])
+                raw = canonical(data["data"]).encode("utf-8")
+                assert len(raw) == entry["size"] and hashlib.sha256(raw).hexdigest() == entry["hash"]
+            missing = await mc.send("export.get", {"kind": "map", "id": "NO_SUCH_MAP"})
+            assert (await mc.expect("error", re=missing["seq"]))["data"]["code"] == "not_found"
+        finally:
+            await mc.close()
+            await gen1.stop()
+    run(scenario())
+
+
+def test_export_needs_builder_role():
+    async def scenario():
+        gen1, mc = await _pair(role="client")
+        try:
+            await mc.hello()
+            sent = await mc.send("export.index", {})
+            assert (await mc.expect("error", re=sent["seq"]))["data"]["code"] == "role"
+        finally:
+            await mc.close()
+            await gen1.stop()
+    run(scenario())
+
+
+def test_write_bundle(tmp_path):
+    from fake_gen1.bundle import write_bundle
+    root = write_bundle(tmp_path, game="blue")
+    index = json.loads((root / "index.json").read_text(encoding="utf-8"))
+    assert root.name == "blue" and index["game"] == "blue"
+    for entry in index["resources"]:
+        raw = (root / entry["kind"] / f"{entry['id']}.json").read_bytes()
+        assert hashlib.sha256(raw).hexdigest() == entry["hash"] and len(raw) == entry["size"]
 
 
 def test_talk_to_npc_opens_and_closes_text():

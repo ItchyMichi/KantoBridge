@@ -86,12 +86,14 @@ def build_catalog(protocol=None):
             "redact": paths,
             "schema": f"messages/{msg_type}.schema.json",
         }
+    exports = {kind: {"schema": f"export/{kind}.schema.json"} for kind in sorted(protocol.exports)}
     return {
         "protocol": PROTOCOL_NUMBER,
         "limits": LIMITS,
         "heartbeat": HEARTBEAT,
         "reconnect": RECONNECT,
         "messages": messages,
+        "exports": exports,
     }
 
 

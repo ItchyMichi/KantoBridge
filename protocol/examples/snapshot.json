@@ -3,6 +3,7 @@
     "type": "snapshot",
     "seq": 11,
     "data": {
+      "ingame": true,
       "player": {"map": "TEST_TOWN", "x": 5, "y": 6, "facing": "down"},
       "state": {
         "mode": "idle",
@@ -53,6 +54,7 @@
     "seq": 12,
     "re": 9,
     "data": {
+      "ingame": true,
       "player": {"map": "TEST_HOUSE", "x": 2, "y": 4, "facing": "up"},
       "state": {
         "mode": "screen",
@@ -80,6 +82,34 @@
         "pages": [["Welcome to the", "test house!"]],
         "cont": [[false, false]]
       }
+    }
+  },
+  {
+    "type": "snapshot",
+    "seq": 13,
+    "data": {
+      "ingame": false,
+      "player": {"map": "TEST_TOWN", "x": 5, "y": 8, "facing": "down"},
+      "state": {
+        "mode": "screen",
+        "bike": false,
+        "surf": false,
+        "slope": false,
+        "hidden": false,
+        "dark": false,
+        "lit": false
+      },
+      "flags": [],
+      "toggles": {},
+      "blocks": [],
+      "lit": [],
+      "bag": {},
+      "money": 0,
+      "coins": 0,
+      "badges": [],
+      "party": [],
+      "dex": {"seen": [], "owned": []},
+      "npcs": {"map": "TEST_TOWN", "list": []}
     }
   }
 ]

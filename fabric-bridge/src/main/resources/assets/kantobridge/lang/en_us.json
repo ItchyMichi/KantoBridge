@@ -31,5 +31,22 @@
   "block.kantobridge.tile_half_12": "Kanto Tile",
   "block.kantobridge.tile_half_13": "Kanto Tile",
   "block.kantobridge.tile_half_14": "Kanto Tile",
-  "block.kantobridge.tile_half_15": "Kanto Tile"
+  "block.kantobridge.tile_half_15": "Kanto Tile",
+  "key.categories.kantobridge": "Kanto Bridge",
+  "key.kantobridge.debug_overlay": "Bridge debug overlay",
+  "kantobridge.hud.connecting": "Gen1Recomp: connecting…",
+  "kantobridge.hud.connected": "Gen1Recomp: connected (%s)",
+  "kantobridge.hud.rejected": "Gen1Recomp: rejected (%s), retrying…",
+  "kantobridge.hud.disconnected": "Gen1Recomp: not connected, retrying…",
+  "kantobridge.hud.stopped": "Gen1Recomp: link stopped",
+  "kantobridge.debug.title": "Kanto Bridge",
+  "kantobridge.debug.link": "Link %s (%s)  game %s  engine %s  bridge %s",
+  "kantobridge.debug.session": "Session %s  connects %s  restarts %s  reconnects %s",
+  "kantobridge.debug.place": "Map %s  cell %s,%s  facing %s  (%s)",
+  "kantobridge.debug.no_place": "Map -  (no position yet)",
+  "kantobridge.debug.mode": "Mode %s  bike %s  surf %s  slope %s  dark %s  lit %s",
+  "kantobridge.debug.traffic": "In %s (%s/s)  out %s (%s/s)  rtt %s ms",
+  "kantobridge.debug.errors": "Protocol errors %s  drops %s  snapshots %s  positions %s",
+  "kantobridge.debug.yes": "yes",
+  "kantobridge.debug.no": "no"
 }

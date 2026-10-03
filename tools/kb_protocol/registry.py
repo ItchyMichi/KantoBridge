@@ -53,8 +53,16 @@ class Protocol:
         for path in sorted((self.root / "messages").glob("*.schema.json")):
             schema = _read_json(path)
             self.messages[schema["x-type"]] = schema
-        self.documents = {self.envelope["$id"]: self.envelope, self.defs["$id"]: self.defs}
-        for schema in self.messages.values():
+        # Export resources (the `data` of export.data, per kind); see docs/PROTOCOL.md "Export".
+        self.exports = {}
+        for path in sorted((self.root / "export").glob("*.schema.json")):
+            schema = _read_json(path)
+            self.exports[schema["x-export-kind"]] = schema
+        # The builder's WorldIndex (world.index parts, <world>/kantobridge/world_index.json).
+        self.world_index = _read_json(self.root / "world" / "world_index.schema.json")
+        self.documents = {self.envelope["$id"]: self.envelope, self.defs["$id"]: self.defs,
+                          self.world_index["$id"]: self.world_index}
+        for schema in (*self.messages.values(), *self.exports.values()):
             self.documents[schema["$id"]] = schema
         self.registry = Registry().with_resources(
             (uri, Resource.from_contents(doc, default_specification=DRAFT202012))
@@ -64,6 +72,10 @@ class Protocol:
         self._validators = {
             t: Draft202012Validator(s, registry=self.registry) for t, s in self.messages.items()
         }
+        self._export_validators = {
+            k: Draft202012Validator(s, registry=self.registry) for k, s in self.exports.items()
+        }
+        self._world_index_validator = Draft202012Validator(self.world_index, registry=self.registry)
 
     @property
     def types(self):
@@ -97,6 +109,19 @@ class Protocol:
         for e in sorted(self._validators[msg_type].iter_errors(message["data"]), key=lambda e: list(e.path)):
             problems.append(Problem("/data" + _pointer(e.absolute_path), e.validator))
         return problems
+
+    def check_export(self, kind, data):
+        """Problems of one export resource against protocol/export/<kind>.schema.json."""
+        validator = self._export_validators.get(kind)
+        if validator is None:
+            return [Problem("", "unknown_export_kind")]
+        return [Problem(_pointer(e.absolute_path), e.validator)
+                for e in sorted(validator.iter_errors(data), key=lambda e: list(e.path))]
+
+    def check_world_index(self, data):
+        """Problems of a WorldIndex against protocol/world/world_index.schema.json."""
+        return [Problem(_pointer(e.absolute_path), e.validator)
+                for e in sorted(self._world_index_validator.iter_errors(data), key=lambda e: list(e.path))]
 
     def resolve(self, base_uri, ref):
         """Resolve a $ref against base_uri; returns (uri, subschema)."""

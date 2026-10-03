@@ -1,0 +1,130 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kantobridge.invalid/protocol/export/encounters.schema.json",
+  "title": "export encounters",
+  "description": "Wild encounter tables of the imported version.",
+  "x-export-kind": "encounters",
+  "type": "object",
+  "required": ["buckets", "maps", "rods"],
+  "additionalProperties": false,
+  "properties": {
+    "buckets": {
+      "type": "array",
+      "items": {"type": "integer", "minimum": 1, "maximum": 256},
+      "maxItems": 10,
+      "minItems": 10,
+      "description": "Cumulative slot thresholds out of 256."
+    },
+    "maps": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "grass": {
+            "type": "object",
+            "required": ["rate", "slots"],
+            "additionalProperties": false,
+            "properties": {
+              "rate": {"type": "integer", "minimum": 0, "maximum": 255},
+              "slots": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "required": ["species", "dex", "level"],
+                  "additionalProperties": false,
+                  "properties": {
+                    "species": {"$ref": "../defs.schema.json#/$defs/symbol"},
+                    "dex": {"$ref": "../defs.schema.json#/$defs/dex"},
+                    "level": {"$ref": "../defs.schema.json#/$defs/level"}
+                  }
+                },
+                "maxItems": 10,
+                "minItems": 1
+              }
+            }
+          },
+          "water": {
+            "type": "object",
+            "required": ["rate", "slots"],
+            "additionalProperties": false,
+            "properties": {
+              "rate": {"type": "integer", "minimum": 0, "maximum": 255},
+              "slots": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "required": ["species", "dex", "level"],
+                  "additionalProperties": false,
+                  "properties": {
+                    "species": {"$ref": "../defs.schema.json#/$defs/symbol"},
+                    "dex": {"$ref": "../defs.schema.json#/$defs/dex"},
+                    "level": {"$ref": "../defs.schema.json#/$defs/level"}
+                  }
+                },
+                "maxItems": 10,
+                "minItems": 1
+              }
+            }
+          }
+        }
+      },
+      "properties": {},
+      "propertyNames": {"$ref": "../defs.schema.json#/$defs/mapId"}
+    },
+    "rods": {
+      "type": "object",
+      "required": ["old", "good", "super"],
+      "additionalProperties": false,
+      "properties": {
+        "old": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["species", "dex", "level"],
+            "additionalProperties": false,
+            "properties": {
+              "species": {"$ref": "../defs.schema.json#/$defs/symbol"},
+              "dex": {"$ref": "../defs.schema.json#/$defs/dex"},
+              "level": {"$ref": "../defs.schema.json#/$defs/level"}
+            }
+          },
+          "maxItems": 16
+        },
+        "good": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["species", "dex", "level"],
+            "additionalProperties": false,
+            "properties": {
+              "species": {"$ref": "../defs.schema.json#/$defs/symbol"},
+              "dex": {"$ref": "../defs.schema.json#/$defs/dex"},
+              "level": {"$ref": "../defs.schema.json#/$defs/level"}
+            }
+          },
+          "maxItems": 16
+        },
+        "super": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["species", "dex", "level"],
+              "additionalProperties": false,
+              "properties": {
+                "species": {"$ref": "../defs.schema.json#/$defs/symbol"},
+                "dex": {"$ref": "../defs.schema.json#/$defs/dex"},
+                "level": {"$ref": "../defs.schema.json#/$defs/level"}
+              }
+            },
+            "maxItems": 16
+          },
+          "properties": {},
+          "propertyNames": {"$ref": "../defs.schema.json#/$defs/mapId"}
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,33 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kantobridge.invalid/protocol/export/swaps.schema.json",
+  "title": "export swaps",
+  "description": "Runtime block-change sites the builder must prepare story cells for.",
+  "x-export-kind": "swaps",
+  "type": "object",
+  "required": ["sites"],
+  "additionalProperties": false,
+  "properties": {
+    "sites": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["map", "bx", "by", "kind", "before", "after"],
+        "additionalProperties": false,
+        "properties": {
+          "map": {"$ref": "../defs.schema.json#/$defs/mapId"},
+          "bx": {"type": "integer", "minimum": 0, "maximum": 255},
+          "by": {"type": "integer", "minimum": 0, "maximum": 255},
+          "kind": {"enum": ["cut", "card_key", "script", "boulder"]},
+          "before": {"type": "integer", "minimum": 0, "maximum": 255},
+          "after": {"type": "integer", "minimum": 0, "maximum": 255},
+          "source": {
+            "$ref": "../defs.schema.json#/$defs/symbol",
+            "description": "The flag, object or script that triggers it, when known."
+          }
+        }
+      },
+      "maxItems": 4096
+    }
+  }
+}

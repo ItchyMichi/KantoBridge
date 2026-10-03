@@ -1,0 +1,118 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kantobridge.invalid/protocol/export/tileset.schema.json",
+  "title": "export tileset",
+  "description": "One tileset: its atlas image, block table and tile classes.",
+  "x-export-kind": "tileset",
+  "type": "object",
+  "required": [
+    "id",
+    "image",
+    "tilesPerRow",
+    "tiles",
+    "blocks",
+    "animation",
+    "walkable",
+    "counter",
+    "grass",
+    "door",
+    "warp",
+    "water",
+    "shore",
+    "cutTree",
+    "spinner",
+    "pads"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "id": {"$ref": "../defs.schema.json#/$defs/symbol"},
+    "image": {
+      "$ref": "../defs.schema.json#/$defs/id",
+      "description": "The image resource holding the atlas."
+    },
+    "tilesPerRow": {"type": "integer", "minimum": 1, "maximum": 64},
+    "tiles": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 1024,
+      "description": "Tiles in the atlas."
+    },
+    "blocks": {
+      "type": "array",
+      "items": {
+        "type": "array",
+        "items": {"type": "integer", "minimum": 0, "maximum": 255},
+        "minItems": 16,
+        "maxItems": 16
+      },
+      "maxItems": 256,
+      "description": "Block id -> 16 tile ids, row-major 4x4."
+    },
+    "animation": {
+      "$ref": "../defs.schema.json#/$defs/symbol",
+      "description": "TILEANIM_NONE, TILEANIM_WATER or TILEANIM_WATER_FLOWER."
+    },
+    "walkable": {
+      "type": "array",
+      "items": {"type": "integer", "minimum": 0, "maximum": 255},
+      "maxItems": 256,
+      "uniqueItems": true
+    },
+    "counter": {
+      "type": "array",
+      "items": {"type": "integer", "minimum": 0, "maximum": 255},
+      "maxItems": 256,
+      "uniqueItems": true
+    },
+    "grass": {"anyOf": [{"type": "null"}, {"type": "integer", "minimum": 0, "maximum": 255}]},
+    "door": {
+      "type": "array",
+      "items": {"type": "integer", "minimum": 0, "maximum": 255},
+      "maxItems": 256,
+      "uniqueItems": true
+    },
+    "warp": {
+      "type": "array",
+      "items": {"type": "integer", "minimum": 0, "maximum": 255},
+      "maxItems": 256,
+      "uniqueItems": true
+    },
+    "water": {
+      "type": "array",
+      "items": {"type": "integer", "minimum": 0, "maximum": 255},
+      "maxItems": 256,
+      "uniqueItems": true
+    },
+    "shore": {
+      "type": "array",
+      "items": {"type": "integer", "minimum": 0, "maximum": 255},
+      "maxItems": 256,
+      "uniqueItems": true
+    },
+    "cutTree": {
+      "type": "array",
+      "items": {"type": "integer", "minimum": 0, "maximum": 255},
+      "maxItems": 256,
+      "uniqueItems": true
+    },
+    "spinner": {
+      "type": "array",
+      "items": {"type": "integer", "minimum": 0, "maximum": 255},
+      "maxItems": 256,
+      "uniqueItems": true
+    },
+    "pads": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["tile", "kind"],
+        "additionalProperties": false,
+        "properties": {
+          "tile": {"type": "integer", "minimum": 0, "maximum": 255},
+          "kind": {"enum": ["pad", "hole"]}
+        }
+      },
+      "maxItems": 16
+    }
+  }
+}

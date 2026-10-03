@@ -1,11 +1,29 @@
-"""The synthetic world fake_gen1 serves. Made up from scratch; no ROM data.
+"""The synthetic world fake_gen1 plays. Made up from scratch; no ROM data.
 
-TEST_TOWN is 10x9 blocks (20x18 cells) with a tree border, one house, two NPCs, an item ball, a
-sign and a trainer. TEST_HOUSE is its 4x4-block interior. Coordinates are 16-px cells.
+The maps, walls, warps, signs and objects all come from `synth`, the same data fake_gen1 exports,
+so walking here agrees with the world the builder makes from that export. Coordinates are 16-px
+cells.
 """
 from dataclasses import dataclass, field
 
+from . import synth
+
 DIRS = {"up": (0, -1), "down": (0, 1), "left": (-1, 0), "right": (1, 0)}
+
+# Made-up lines for the people and the sign (by object name, and by sign cell).
+TEXTS = {
+    "TESTTOWN_GIRL": ("Hi! I'm a made-up", "test person."),
+    "TESTTOWN_GUARD": ("Let's battle!",),
+    "TESTHOUSE_MOM": ("Welcome home,", "tester!"),
+}
+SIGN_TEXTS = {("TEST_TOWN", 11, 5): ("TEST TOWN", "A place for tests.")}
+# Where a warp lands: the destination warp's cell, then a step away from it for exits to the town.
+ARRIVALS = {
+    ("TEST_TOWN", 5, 5): ("TEST_HOUSE", 4, 8, "up", "door"),
+    ("TEST_HOUSE", 4, 8): ("TEST_TOWN", 5, 6, "down", "door"),
+    ("TEST_HOUSE", 5, 8): ("TEST_TOWN", 5, 6, "down", "door"),
+}
+OBJECT_KINDS = {"item": "item", "trainer": "trainer", "pokemon": "static"}
 
 
 @dataclass
@@ -53,40 +71,29 @@ class MapDef:
         return None
 
 
-def _border(width, height):
-    cells = set()
-    for x in range(width):
-        cells.add((x, 0))
-        cells.add((x, height - 1))
-    for y in range(height):
-        cells.add((0, y))
-        cells.add((width - 1, y))
-    return cells
+def _facing(obj):
+    return obj["range"].lower() if obj["range"] in ("UP", "DOWN", "LEFT", "RIGHT") else "down"
 
 
 def build_world():
-    town = MapDef("TEST_TOWN", 20, 18)
-    town.walls |= _border(20, 18)
-    # The house: rows 3-5, columns 4-7, with its door at (5, 5).
-    town.walls |= {(x, y) for x in range(4, 8) for y in range(3, 6)} - {(5, 5)}
-    town.walls.add((8, 6))  # the sign post
-    town.signs[(8, 6)] = ("TEST TOWN", "A place for tests.")
-    town.warps[(5, 5)] = Warp("TEST_HOUSE", 3, 6, "up", "door")
-    town.npcs = [
-        Npc("TEST_TOWN_obj_1", "SPRITE_TEST_GIRL", "person", 10, 8, "down",
-            text=("Hi! I'm a made-up", "test person.")),
-        Npc("TEST_TOWN_obj_2", "SPRITE_TEST_BALL", "item", 15, 4),
-        Npc("TEST_TOWN_obj_3", "SPRITE_TEST_GUARD", "trainer", 12, 12, "left",
-            text=("Let's battle!",)),
-    ]
-
-    house = MapDef("TEST_HOUSE", 8, 8)
-    house.walls |= _border(8, 8) - {(3, 7)}
-    house.walls |= {(1, 1), (2, 1)}  # a made-up table
-    house.warps[(3, 7)] = Warp("TEST_TOWN", 5, 6, "down", "door")
-    house.npcs = [Npc("TEST_HOUSE_obj_1", "SPRITE_TEST_MOM", "person", 5, 3, "left",
-                      text=("Welcome home,", "tester!"))]
-    return {m.id: m for m in (town, house)}
+    world = {}
+    for name in synth.MAPS:
+        data = synth.resources()[("map", name)]
+        cells = data["cells"]
+        m = MapDef(name, data["width"] * 2, data["height"] * 2)
+        m.walls = {(x, y) for y, row in enumerate(cells) for x, flags in enumerate(row)
+                   if not flags & synth.F_WALK}
+        for warp in data["warps"]:
+            to = ARRIVALS[(name, warp["x"], warp["y"])]
+            m.warps[(warp["x"], warp["y"])] = Warp(*to)
+        for sign in data["signs"]:
+            m.signs[(sign["x"], sign["y"])] = SIGN_TEXTS[(name, sign["x"], sign["y"])]
+        for obj in data["objects"]:
+            kind = next((k for key, k in OBJECT_KINDS.items() if key in obj), "person")
+            m.npcs.append(Npc(f"{name}_obj_{obj['index']}", obj["sprite"], kind, obj["x"], obj["y"],
+                              _facing(obj), text=TEXTS.get(obj["name"], ())))
+        world[name] = m
+    return world
 
 
 @dataclass

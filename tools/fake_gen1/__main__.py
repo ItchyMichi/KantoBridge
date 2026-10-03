@@ -77,7 +77,14 @@ def main(argv=None):
     parser.add_argument("--port", type=int, default=27151)
     parser.add_argument("--game", choices=("red", "blue"), default="red")
     parser.add_argument("--timeout", type=float, default=10.0, help="heartbeat timeout in seconds")
-    asyncio.run(_main(parser.parse_args(argv)))
+    parser.add_argument("--write-bundle", metavar="DIR",
+                        help="write the synthetic export as a bundle under DIR/<game>/ and exit")
+    args = parser.parse_args(argv)
+    if args.write_bundle:
+        from .bundle import write_bundle
+        print(f"wrote {write_bundle(args.write_bundle, args.game)}")
+        return
+    asyncio.run(_main(args))
 
 
 if __name__ == "__main__":

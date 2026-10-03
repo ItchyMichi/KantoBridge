@@ -8,6 +8,7 @@
   "x-re": "optional",
   "type": "object",
   "required": [
+    "ingame",
     "player",
     "state",
     "flags",
@@ -24,6 +25,10 @@
   ],
   "additionalProperties": false,
   "properties": {
+    "ingame": {
+      "type": "boolean",
+      "description": "True when the hidden game is in the overworld and player is live. False at the title screen and intro: player is then only the save's last position, and a client must not move the Minecraft player to it."
+    },
     "player": {"$ref": "../defs.schema.json#/$defs/place"},
     "state": {"$ref": "../defs.schema.json#/$defs/playerState"},
     "flags": {

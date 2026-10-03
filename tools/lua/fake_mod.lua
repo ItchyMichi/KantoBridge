@@ -84,6 +84,40 @@ function FakeMod.new(opts)
     end,
   }
 
+  -- mod.options (Loader.lua:1597-1615): define stores the schema; get returns
+  -- a stored value (opts.options, as the F10 manager would save it), else
+  -- the row's default.
+  local stored = opts.options or {}
+  mod._optionSchema = nil
+  mod.options = {
+    define = function(_, schema)
+      assert(type(schema) == "table", "options schema must be a table of rows")
+      for _, row in ipairs(schema) do
+        assert(type(row) == "table" and type(row.key) == "string" and row.key ~= "",
+          "each options row needs a string key")
+      end
+      mod._optionSchema = schema
+      return schema
+    end,
+    get = function(_, key)
+      if stored[key] ~= nil then return stored[key] end
+      for _, row in ipairs(mod._optionSchema or {}) do
+        if row.key == key then return row.default end
+      end
+      return nil
+    end,
+  }
+
+  -- mod.ui: the UI module tables (src/ui/ModUI.lua:8-27); tests pass fakes.
+  mod.ui = opts.ui or {}
+
+  -- mod.content.<registry>:get(id) (Loader.lua:1262-1265), over plain tables
+  -- of records the test provides: opts.content = { pokemon = { ID = rec } }.
+  mod.content = {}
+  for name, records in pairs(opts.content or {}) do
+    mod.content[name] = { get = function(_, id) return records[id] end }
+  end
+
   -- Records button calls; the real ones go through game.input sources.
   local input = mod._input
   mod.input = {

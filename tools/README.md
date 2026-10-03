@@ -20,14 +20,13 @@ Extra arguments go to pytest, e.g. `tools/check.sh --no-gradle -k redact`. Gradl
 | Path | Contents |
 |---|---|
 | `kb_protocol/` | Shared protocol helpers: strict NDJSON framing, the schema registry and message checker, envelope builders, redaction, and the generator of `protocol/catalog.json` and `protocol/redaction-vectors.json` |
-| `tests/` | pytest suites for the protocol and `kb_protocol` |
+| `fake_gen1/` | Listens like gen1-bridge with a synthetic world (`synth.py`: a procedurally drawn tileset, TEST_TOWN and TEST_HOUSE built from its blocks, NPCs, a sign, a trainer). Serves the full export. `python -m fake_gen1 --help` for the interactive commands; `--write-bundle DIR` writes the synthetic export bundle |
+| `fake_minecraft/` | Connects like the fabric-bridge client, checks every message against the schemas, keeps the heartbeat, and logs only types and sizes (redacted messages with `--verbose`). `python -m fake_minecraft --help` |
+| `tests/` | pytest suites for the protocol, `kb_protocol` and the stand-ins |
 | `lua/` | The Lua test harness: gen1-bridge modules run under lupa's LuaJIT 2.1 in a sandbox-parity environment, with a fake LuaSocket. Its pytest files live beside it |
 | `e2e/` | End-to-end runner for the test Gen1Recomp instance, our own driver scripts, and e2e tests (marker `e2e`, run only with `--e2e`) |
 | `pytest.ini`, `conftest.py` | pytest configuration (`--e2e` option, markers) |
 | `requirements.txt` | Exact pins (see `docs/VERSIONS.md`) |
-
-Coming in M1: **`fake_gen1`** (listens like gen1-bridge, with a synthetic town) and
-**`fake_minecraft`** (connects like the fabric-bridge client and checks every message).
 
 ## Protocol helpers
 

@@ -29,6 +29,7 @@ Net.READ_BUDGET = 256 * 1024      -- bytes read per pump, so a flood can't stall
 Net.MAX_QUEUED = 32 * 1024 * 1024 -- a client this far behind is dropped
 Net.COALESCE = 64 * 1024          -- queued lines are joined up to this size per send
 Net.RETRY_SECONDS = 1
+Net.FINISH_SECONDS = 2            -- finish() gives a slow reader this long to take the queue
 
 -- ------------------------------------------------------------ framing
 
@@ -95,6 +96,8 @@ local BIND_ERRORS = {
 --   clock        function returning seconds (love.timer.getTime in game)
 --   log          a kb_log logger
 --   onLine(line), onConnect(), onDisconnect(reason)   callbacks
+--   onOversize()  called before a client whose line broke the size limit is
+--                 finished, so the caller can queue an `error` first
 --   maxLine, readBudget, maxQueued, retrySeconds      limits
 function Net.new(opts)
   assert(type(opts) == "table", "kb_net.new expects options")
@@ -109,10 +112,12 @@ function Net.new(opts)
   local onLine = opts.onLine or function() end
   local onConnect = opts.onConnect or function() end
   local onDisconnect = opts.onDisconnect or function() end
+  local onOversize = opts.onOversize
 
   local net = {}
   local socketModule
   local server, client
+  local closing, closeBy -- set by finish(): the reason, and the deadline
   local nextBindAt = 0
   local framer = Net.newFramer(maxLine)
   local queue, qhead, qtail, qbytes, offset = {}, 1, 0, 0, 1
@@ -141,6 +146,7 @@ function Net.new(opts)
     if not client then return end
     local old = client
     client = nil
+    closing, closeBy = nil, nil
     pcall(old.close, old)
     framer.reset()
     clearQueue()
@@ -254,7 +260,11 @@ function Net.new(opts)
         stats.bytesIn = stats.bytesIn + #chunk
         local ok, ferr = framer.push(chunk, deliver)
         if client ~= current then return end
-        if not ok then dropClient(ferr); return end
+        if not ok then
+          if onOversize then pcall(onOversize) end
+          net.finish(ferr)
+          return
+        end
       end
       if err == "closed" then dropClient("closed"); return end
       if err == "timeout" then return end
@@ -263,20 +273,42 @@ function Net.new(opts)
   end
 
   -- One non-blocking turn: keep the listener up, take a new client, send
-  -- what is queued, read and deliver complete lines.
+  -- what is queued, read and deliver complete lines. A finishing client is
+  -- no longer read; it is closed once its queue has gone out.
   function net.pump()
     if not server and clock() >= nextBindAt then tryBind() end
     if server then accept() end
     if client then flush() end
-    if client then receive() end
+    if client and not closing then receive() end
     if client then flush() end
+    if client and closing and (qhead > qtail or clock() >= closeBy) then
+      dropClient(closing)
+    end
   end
 
-  -- Queues one line (a newline is added). False when no client is connected.
+  -- Sends what is queued without reading: for lines queued after this
+  -- step's pump, so they don't wait a step.
+  function net.flush()
+    if client then flush() end
+    if client and closing and qhead > qtail then dropClient(closing) end
+  end
+
+  -- Stops reading from the client and closes it once everything queued so
+  -- far has been sent (or after FINISH_SECONDS), e.g. after a hello.reject.
+  function net.finish(reason)
+    if not client or closing then return end
+    closing = reason or "finished"
+    closeBy = clock() + Net.FINISH_SECONDS
+    flush()
+    if client and qhead > qtail then dropClient(closing) end
+  end
+
+  -- Queues one line (a newline is added). False when no client is connected
+  -- or it is finishing.
   function net.send(line)
     assert(type(line) == "string", "kb_net.send expects a string")
     if find(line, "\n", 1, true) then error("kb_net.send: line contains a newline", 2) end
-    if not client then return false end
+    if not client or closing then return false end
     if #line + 1 > maxLine then
       once("send:oversize", "error", "net.send_oversize", { bytes = #line })
       return false
@@ -289,8 +321,26 @@ function Net.new(opts)
     return true
   end
 
-  function net.connected() return client ~= nil end
+  function net.connected() return client ~= nil and not closing end
   function net.listening() return server ~= nil end
+  function net.port() return port end
+
+  -- Moves the listener to another port: the current listener and client are
+  -- closed and the new port is bound on the next pump.
+  function net.setPort(newPort)
+    assert(type(newPort) == "number" and newPort >= 1 and newPort <= 65535 and newPort % 1 == 0,
+      "kb_net.setPort expects a port number")
+    if newPort == port then return end
+    dropClient("reconfigured")
+    if server then pcall(server.close, server); server = nil end
+    port = newPort
+    nextBindAt = 0
+    if log then
+      log.rearm("bind:bind:addr_in_use")
+      log.rearm("bind:bind:other")
+    end
+    info("net.port_changed", { port = port })
+  end
   function net.queued() return qbytes end
   function net.disconnect(reason) dropClient(reason or "local") end
 

@@ -1,0 +1,196 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kantobridge.invalid/protocol/export/map.schema.json",
+  "title": "export map",
+  "description": "One map record plus the derived fields the builder needs.",
+  "x-export-kind": "map",
+  "type": "object",
+  "required": [
+    "id",
+    "index",
+    "tileset",
+    "width",
+    "height",
+    "blocks",
+    "border",
+    "surface",
+    "outside",
+    "connections",
+    "warps",
+    "signs",
+    "objects",
+    "cells",
+    "parent",
+    "lastMap",
+    "dark",
+    "palette"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "id": {"$ref": "../defs.schema.json#/$defs/mapId"},
+    "index": {"type": "integer", "minimum": 0, "maximum": 255},
+    "tileset": {"$ref": "../defs.schema.json#/$defs/symbol"},
+    "width": {"type": "integer", "minimum": 1, "maximum": 255, "description": "In 32-px blocks."},
+    "height": {"type": "integer", "minimum": 1, "maximum": 255},
+    "blocks": {
+      "type": "array",
+      "items": {"type": "integer", "minimum": 0, "maximum": 255},
+      "maxItems": 65025,
+      "description": "width*height block ids, row-major."
+    },
+    "border": {"type": "integer", "minimum": 0, "maximum": 255},
+    "surface": {
+      "type": "boolean",
+      "description": "One of the connected outdoor maps laid out on the surface."
+    },
+    "outside": {
+      "type": "boolean",
+      "description": "Map.isOutside: the map sets the LAST_MAP memory."
+    },
+    "connections": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "north": {
+          "type": "object",
+          "required": ["map", "offset"],
+          "additionalProperties": false,
+          "properties": {
+            "map": {"$ref": "../defs.schema.json#/$defs/mapId"},
+            "offset": {"type": "integer", "minimum": -255, "maximum": 255}
+          }
+        },
+        "south": {
+          "type": "object",
+          "required": ["map", "offset"],
+          "additionalProperties": false,
+          "properties": {
+            "map": {"$ref": "../defs.schema.json#/$defs/mapId"},
+            "offset": {"type": "integer", "minimum": -255, "maximum": 255}
+          }
+        },
+        "west": {
+          "type": "object",
+          "required": ["map", "offset"],
+          "additionalProperties": false,
+          "properties": {
+            "map": {"$ref": "../defs.schema.json#/$defs/mapId"},
+            "offset": {"type": "integer", "minimum": -255, "maximum": 255}
+          }
+        },
+        "east": {
+          "type": "object",
+          "required": ["map", "offset"],
+          "additionalProperties": false,
+          "properties": {
+            "map": {"$ref": "../defs.schema.json#/$defs/mapId"},
+            "offset": {"type": "integer", "minimum": -255, "maximum": 255}
+          }
+        }
+      }
+    },
+    "warps": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["x", "y", "to", "warp"],
+        "additionalProperties": false,
+        "properties": {
+          "x": {"$ref": "../defs.schema.json#/$defs/coord"},
+          "y": {"$ref": "../defs.schema.json#/$defs/coord"},
+          "to": {"anyOf": [{"$ref": "../defs.schema.json#/$defs/mapId"}, {"const": "LAST_MAP"}]},
+          "warp": {"type": "integer", "minimum": 1, "maximum": 255}
+        }
+      },
+      "maxItems": 64
+    },
+    "signs": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["x", "y"],
+        "additionalProperties": false,
+        "properties": {
+          "x": {"$ref": "../defs.schema.json#/$defs/coord"},
+          "y": {"$ref": "../defs.schema.json#/$defs/coord"}
+        }
+      },
+      "maxItems": 64
+    },
+    "objects": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["index", "name", "sprite", "x", "y", "movement", "range", "hidden"],
+        "additionalProperties": false,
+        "properties": {
+          "index": {"type": "integer", "minimum": 1, "maximum": 255},
+          "name": {"$ref": "../defs.schema.json#/$defs/objName"},
+          "sprite": {"$ref": "../defs.schema.json#/$defs/spriteId"},
+          "x": {"$ref": "../defs.schema.json#/$defs/coord"},
+          "y": {"$ref": "../defs.schema.json#/$defs/coord"},
+          "movement": {"enum": ["WALK", "STAY"]},
+          "range": {"$ref": "../defs.schema.json#/$defs/symbol"},
+          "hidden": {"type": "boolean"},
+          "item": {"$ref": "../defs.schema.json#/$defs/itemId"},
+          "trainer": {
+            "type": "object",
+            "required": ["cls", "party"],
+            "additionalProperties": false,
+            "properties": {
+              "cls": {"$ref": "../defs.schema.json#/$defs/symbol"},
+              "party": {"type": "integer", "minimum": 1, "maximum": 255}
+            }
+          },
+          "pokemon": {
+            "type": "object",
+            "required": ["species", "dex", "level"],
+            "additionalProperties": false,
+            "properties": {
+              "species": {"$ref": "../defs.schema.json#/$defs/symbol"},
+              "dex": {"$ref": "../defs.schema.json#/$defs/dex"},
+              "level": {"$ref": "../defs.schema.json#/$defs/level"}
+            }
+          }
+        }
+      },
+      "maxItems": 64
+    },
+    "cells": {
+      "type": "array",
+      "items": {
+        "type": "array",
+        "items": {"type": "integer", "minimum": 0, "maximum": 65535},
+        "maxItems": 510
+      },
+      "maxItems": 510,
+      "description": "Per-cell flags (16-px cells), one integer per cell, rows top to bottom (height*2 rows of width*2 cells). Bits: 1 walkable, 2 water (incl. shore), 4 shore, 8 tall grass, 16 door tile, 32 warp tile, 64 counter, 128 cut tree, 256 warp pad, 512 hole, 1024 spinner tile, 2048 a warp entry is here, 4096 a sign is here, 8192 ledge; bits 14-15 the ledge hop direction (0 down, 1 up, 2 left, 3 right)."
+    },
+    "parent": {
+      "anyOf": [
+        {"type": "null"},
+        {
+          "type": "object",
+          "required": ["map", "warp", "x", "y"],
+          "additionalProperties": false,
+          "properties": {
+            "map": {"$ref": "../defs.schema.json#/$defs/mapId"},
+            "warp": {"type": "integer", "minimum": 1, "maximum": 255},
+            "x": {"$ref": "../defs.schema.json#/$defs/coord"},
+            "y": {"$ref": "../defs.schema.json#/$defs/coord"}
+          }
+        }
+      ],
+      "description": "Interiors: the warp in another map that first leads here (BFS from the surface by map index, then warp index); the builder hangs the interior under it. Null for surface maps and unreachable maps."
+    },
+    "lastMap": {
+      "anyOf": [{"type": "null"}, {"$ref": "../defs.schema.json#/$defs/mapId"}],
+      "description": "Interiors: the outdoor map their LAST_MAP exits return to (static rule, after lastMapRewrites). Null when not applicable or position-dependent."
+    },
+    "dark": {"type": "boolean"},
+    "palette": {
+      "$ref": "../defs.schema.json#/$defs/symbol",
+      "description": "SGB palette name; interiors take their outdoor parent's."
+    }
+  }
+}

@@ -60,17 +60,27 @@ end
 --   write    function(line): sends one line (kb_net's net.send)
 --   log      kb_log logger (optional)
 --   maxLine  decode limit in bytes (default 4 MiB)
+--   catalog  kb_catalog (optional) and leg, the hop we receive on ("m2g"):
+--            a type with no handler is then answered by what the catalog
+--            says: unknown_type when it isn't in the protocol, wrong_leg
+--            when it never travels this way, and nothing at all when it is
+--            ours to receive but not handled yet (logged once, at debug)
+--   gate     function(env) -> false to stop a valid envelope before dispatch
+--            (the session's hello-first rule); runs before reply matching
 function Proto.new(opts)
   local json = assert(opts and opts.json, "kb_proto needs kb_json")
   local write = assert(opts.write, "kb_proto needs a write function")
   local log = opts.log
   local maxLine = opts.maxLine or 4 * 1024 * 1024
+  local catalog = opts.catalog
+  local leg = opts.leg
+  local gate = opts.gate
 
   local proto = {}
   local handlers = {}
   local pending = {}
   local seq = 0
-  local stats = { received = 0, sent = 0, rejected = 0, unknown = 0 }
+  local stats = { received = 0, sent = 0, rejected = 0, unknown = 0, unhandled = 0 }
 
   local function warn(code, fields) if log then log.warn(code, fields) end end
 
@@ -139,6 +149,14 @@ function Proto.new(opts)
       return false
     end
     stats.received = stats.received + 1
+    if gate then
+      local gok, pass = pcall(gate, env)
+      if not gok then
+        warn("proto.gate_failed", { type = env.type, at = where(pass) })
+        return false
+      end
+      if pass == false then return false end
+    end
     if env.re ~= nil and pending[env.re] then
       local callback = pending[env.re]
       pending[env.re] = nil
@@ -148,6 +166,19 @@ function Proto.new(opts)
     end
     local handler = handlers[env.type]
     if not handler then
+      local known = catalog and catalog.types[env.type]
+      if known and leg and known[leg] then
+        -- ours to receive, just not handled (yet): no error, and one log line
+        stats.unhandled = stats.unhandled + 1
+        if log then log.once("unhandled:" .. env.type, "debug", "proto.unhandled", { type = env.type }) end
+        return false
+      end
+      if known and leg then
+        stats.rejected = stats.rejected + 1
+        warn("proto.wrong_leg", { type = env.type })
+        if env.type ~= "error" then proto.sendError("wrong_leg", env.seq, "wrong_leg") end
+        return false
+      end
       stats.unknown = stats.unknown + 1
       warn("proto.unknown_type", { type = env.type })
       if env.type ~= "error" then proto.sendError("unknown_type", env.seq, "unknown_type") end

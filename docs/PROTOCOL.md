@@ -114,7 +114,7 @@ optional ones. The schemas give the exact types and limits.
 | `ping` | G→M, M→G | `t` (sender's ms clock) | |
 | `pong` | G→M, M→G | `t` (echoed); `re` required | |
 | `resync` | M→G | `{}`; asks for a `snapshot` | |
-| `snapshot` | G→M | `player{map,x,y,facing}, state{…player.state}, flags[], toggles{map:{obj:bool}}, blocks[{map,bx,by,block}], lit[], bag{item:qty}, money, coins, badges[], party[{uid?,dex,level,nick?,moves[],hp?,maxhp?,status?}], dex{seen[],owned[]}, npcs{map,list[]}, ui?`; `re` optional (set when answering `resync`) | yes |
+| `snapshot` | G→M | `ingame` (false at the title screen and intro: `player` is then only the save's last position and must not move the Minecraft player), `player{map,x,y,facing}, state{…player.state}, flags[], toggles{map:{obj:bool}}, blocks[{map,bx,by,block}], lit[], bag{item:qty}, money, coins, badges[], party[{uid?,dex,level,nick?,moves[],hp?,maxhp?,status?}], dex{seen[],owned[]}, npcs{map,list[]}, ui?`; `re` optional (set when answering `resync`) | yes |
 | `log` | G→M | `level, code, msg` (bridge diagnostics, never game text) | |
 | `error` | G→M, M→G, C→S, S→C | `code, msg`; `re` optional (the offending message) | |
 
@@ -235,6 +235,56 @@ engine symbols, and Pokémon identities as Cobblemon UUIDs (`uid`).
 | `export.get` | M→G | `kind:"map"\|"tileset"\|"image"\|"sprite"\|"palettes"\|"encounters"\|"field"\|"names"\|"layout"\|"swaps", id` | |
 | `export.data` | G→M | `kind, id, hash, data`; `re` required | yes |
 
+#### Export resources
+
+A builder connection (role `builder`) asks for `export.index`, then fetches each resource it needs with
+`export.get`. Each resource's `data` has its own schema in
+[`protocol/export/<kind>.schema.json`](../protocol/export/); everything in it is ROM-derived.
+
+| Kind | Id | Contents |
+|---|---|---|
+| map | map symbol | The map record (size in blocks, `blocks`, `border`, `connections`, `warps`, `signs`, `objects`) plus derived fields: `surface`, `outside`, per-cell `cells` flags, `parent` (the warp that first leads into an interior, by BFS from the surface), `lastMap`, `dark`, `palette` |
+| tileset | tileset symbol | Atlas image id, `tilesPerRow`, `blocks` (block → 16 tile ids), `animation`, and tile classes: walkable, counter, grass, door, warp, water, shore, cut tree, spinner, pads |
+| image | `<folder>.<name>`, e.g. `tilesets.overworld` | A greyscale PNG (4 shades), base64: atlases, animation strips, effects |
+| sprite | sprite symbol | A sheet of 16×16 frames: 0–2 standing down/up/left, 3–5 walking; right is left mirrored |
+| palettes | `sgb` | SGB palettes: name → 4 RGB colours, lightest first |
+| encounters | `all` | Slot buckets, grass/water tables per map (species symbol, dex, level), rod tables |
+| field | `all` | Selected engine field tables as JSON (ledges, cut-tree swaps, dark maps, …) |
+| names | `all` | Species → dex, move → number, item → number, with display names |
+| layout | `kanto` | Block origins of the surface maps relative to `PALLET_TOWN`, from the engine's neighbour arithmetic |
+| swaps | `all` | Runtime block-change sites (cut trees, card-key doors, scripted swaps) the builder prepares story cells for |
+
+**Per-cell flags** (`map.cells`): one integer per 16-px cell, rows top to bottom. Like the engine,
+a cell's behaviour comes from its bottom-left 8×8 tile.
+
+| Bit | Value | Meaning |
+|---|---|---|
+| 0 | 1 | Walkable |
+| 1 | 2 | Water (surfable, including shore) |
+| 2 | 4 | Shore |
+| 3 | 8 | Tall grass |
+| 4 | 16 | Door tile |
+| 5 | 32 | Warp tile (stairs, mats, …) |
+| 6 | 64 | Counter |
+| 7 | 128 | Cut tree |
+| 8 | 256 | Warp pad |
+| 9 | 512 | Hole |
+| 10 | 1024 | Spinner tile |
+| 11 | 2048 | A warp entry is on this cell |
+| 12 | 4096 | A sign is on this cell |
+| 13 | 8192 | Ledge |
+| 14–15 | | Ledge hop direction: 0 down, 1 up, 2 left, 3 right |
+
+**Hashes and the bundle.** A resource's `hash` is the SHA-256 (lowercase hex) of its canonical JSON
+(sorted keys, `,`/`:` separators, UTF-8, non-ASCII unescaped), and `size` is that text's length in
+bytes. A downloaded export is stored as an **export bundle**, which stays under `local/`:
+
+```
+<gameDir>/kantobridge/export/<game>/
+  index.json          the export.index reply's data
+  <kind>/<id>.json    one resource's data, exactly its canonical JSON (so the file's SHA-256 is its hash)
+```
+
 ### Test only (role `test`)
 
 | Type | Dir | Data | ROM |
@@ -252,6 +302,19 @@ engine symbols, and Pokémon identities as Cobblemon UUIDs (`uid`).
 | `activity` | C→S | `activity:"dialogue"\|"cutscene"\|"battle"\|"none"` (speech bubbles) | |
 | `texture.status` | C→S | `ok, slotMapHash?, textures?, reason?` | |
 | `world.index` | S→C | `index, count, hash, part` (the WorldIndex JSON in parts, on join) | yes |
+
+**The WorldIndex** ([`protocol/world/world_index.schema.json`](../protocol/world/world_index.schema.json))
+is what the builder writes to `<world>/kantobridge/world_index.json`:
+
+- the scale (a cell is 2×2 blocks, the surface's feet level, the interior layer step);
+- each map's block origin (the north-west corner of its cell (0, 0) at feet level), size in cells,
+  layer, kind, palette, biome, darkness and parent;
+- the slot-map hash;
+- the story-cell table (`"MAP:x:y"` keys, each with its type and the object or swap site behind it);
+- the habitat block positions and pools.
+
+Clients turn block positions into cells and back with it. The `parts` of `world.index` are slices of
+its JSON text; `hash` is the SHA-256 of the whole text.
 
 ## Relay to the Minecraft server
 
@@ -279,3 +342,6 @@ carrying the same envelope in both directions. Larger data is split at the appli
   species name from the game.
 - The relay-only types (`story.state`, `warp.request`, `warp.done`, `activity`, `texture.status`,
   `world.index`) are now fully defined.
+- `snapshot.ingame` (M1): at the title screen there is no live position, only the save's.
+- The export resources, their per-cell flags and the bundle layout (M2 preparation), and the
+  WorldIndex schema.

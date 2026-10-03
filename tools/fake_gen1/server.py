@@ -11,6 +11,7 @@ from kb_protocol import load_protocol
 from kb_protocol.aio import STREAM_LIMIT, Connection
 from kb_protocol.framing import FramingError
 
+from . import synth
 from .world import DIRS, Player, State, Story, build_world
 
 PROTOCOL_NUMBER = 1
@@ -29,6 +30,8 @@ class FakeGen1:
         self.log = log or (lambda line: None)
         self.protocol = load_protocol()
         self.world = build_world()
+        self.exports = synth.resources(game)
+        self.export_index = synth.index(game, ENGINE_VERSION, BRIDGE_VERSION, self.exports)
         self.player = Player()
         self.state = State()
         self.story = Story()
@@ -159,9 +162,8 @@ class FakeGen1:
             await self._close_ui(conn, data["ui"])
         elif msg_type == "session.bind":
             await conn.send("session.bound", {"slot": 1}, re=seq)
-        elif msg_type == "export.index":
-            await conn.send("export.index", {"game": self.game, "engine": ENGINE_VERSION, "bridge": BRIDGE_VERSION,
-                                             "resources": []}, re=seq)
+        elif msg_type in ("export.index", "export.get"):
+            await self._export(conn, message)
         elif msg_type == "debug.status":
             if self.role != "test":
                 await conn.send("error", {"code": "test_only", "msg": "debug.* needs role test"}, re=seq)
@@ -185,6 +187,10 @@ class FakeGen1:
             data["n"] = n
         return data
 
+    def _flags(self, x, y):
+        cells = self.exports[("map", self.player.map)]["cells"]
+        return cells[y][x] if 0 <= y < len(cells) and 0 <= x < len(cells[0]) else 0
+
     async def _step(self, conn, direction, n):
         self.player.facing = direction
         if self.state.mode != "idle":
@@ -193,8 +199,13 @@ class FakeGen1:
         dx, dy = DIRS[direction]
         x, y = self.player.x + dx, self.player.y + dy
         here = self._map()
-        warp = here.warps.get((x, y))
         if not here.walkable(x, y):
+            exit_warp = here.warps.get((self.player.x, self.player.y))
+            if exit_warp is not None:
+                # Like Gen 1's exit mats: a step off the edge from a warp cell takes the warp.
+                await self.warp_to(exit_warp.to_map, exit_warp.to_x, exit_warp.to_y, exit_warp.facing,
+                                   exit_warp.kind)
+                return
             reason = "bounds" if not (0 <= x < here.width and 0 <= y < here.height) else "tile"
             await conn.send("player.blocked", dict(self._cell(), dir=direction, reason=reason, n=n))
             return
@@ -203,8 +214,25 @@ class FakeGen1:
             return
         self.player.x, self.player.y = x, y
         await conn.send("player.pos", self._pos("walk", WALK_FRAMES, n))
-        if warp is not None:
+        warp = here.warps.get((x, y))
+        # A warp fires on arrival only on a door or warp tile (engine Warp rules).
+        if warp is not None and self._flags(x, y) & (synth.F_DOOR | synth.F_WARPTILE):
             await self.warp_to(warp.to_map, warp.to_x, warp.to_y, warp.facing, warp.kind)
+
+    async def _export(self, conn, message):
+        seq = message["seq"]
+        if self.role not in ("builder", "test"):
+            await conn.send("error", {"code": "role", "msg": "export needs role builder"}, re=seq)
+        elif message["type"] == "export.index":
+            await conn.send("export.index", self.export_index, re=seq)
+        else:
+            kind, rid = message["data"]["kind"], message["data"]["id"]
+            data = self.exports.get((kind, rid))
+            if data is None:
+                await conn.send("error", {"code": "not_found", "msg": "no such export resource"}, re=seq)
+                return
+            entry = next(e for e in self.export_index["resources"] if (e["kind"], e["id"]) == (kind, rid))
+            await conn.send("export.data", {"kind": kind, "id": rid, "hash": entry["hash"], "data": data}, re=seq)
 
     def _cell(self):
         return {"map": self.player.map, "x": self.player.x, "y": self.player.y}
@@ -297,6 +325,7 @@ class FakeGen1:
     def snapshot(self):
         story = self.story
         data = {
+            "ingame": True,  # fake_gen1 is always in its overworld
             "player": self.player.as_data(),
             "state": self.state.as_data(),
             "flags": sorted(story.flags),

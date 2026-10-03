@@ -1,0 +1,29 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kantobridge.invalid/protocol/export/palettes.schema.json",
+  "title": "export palettes",
+  "description": "SGB palettes: 4 colours each, lightest first.",
+  "x-export-kind": "palettes",
+  "type": "object",
+  "required": ["mode", "palettes"],
+  "additionalProperties": false,
+  "properties": {
+    "mode": {"const": "sgb"},
+    "palettes": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "array",
+        "items": {
+          "type": "array",
+          "items": {"type": "integer", "minimum": 0, "maximum": 255},
+          "minItems": 3,
+          "maxItems": 3
+        },
+        "minItems": 4,
+        "maxItems": 4
+      },
+      "properties": {},
+      "propertyNames": {"$ref": "../defs.schema.json#/$defs/symbol"}
+    }
+  }
+}

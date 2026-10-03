@@ -17,6 +17,10 @@ LIB_FILES = [
     "lib/kb_net.lua",
     "lib/kb_proto.lua",
     "lib/kb_engine.lua",
+    "lib/kb_catalog.lua",
+    "lib/kb_session.lua",
+    "observe/kb_player.lua",
+    "observe/kb_snapshot.lua",
 ]
 
 VERSION_OK = "{ engine = '0.3.49', modApi = 2 }"
@@ -92,7 +96,7 @@ def test_main_loads_modules_and_logs():
     assert b.log_lines() == ["[info] [gen1-bridge] gen1-bridge loaded"]
     assert b.read_calls == LIB_FILES
     status = b.mod.exports
-    assert (status.ready, status.modules, status.bridge, status.protocol) == (False, 6, b"0.1.0", 1)
+    assert (status.ready, status.modules, status.bridge, status.protocol) == (False, len(LIB_FILES), b"0.1.0", 1)
     assert b.env_keys() == before, "main.lua or a module leaked a global"
 
 
@@ -104,7 +108,7 @@ def test_game_ready_sets_status():
     b.emit("game.ready", b.eval("function(g) return { game = g } end")(game))
     status = b.mod.exports
     assert status.ready is True and status.engine == b"0.3.49"
-    assert b.log_lines()[-1] == "[info] [gen1-bridge] game.ready api=2 engine=0.3.49 modules=6"
+    assert b.log_lines()[-1] == f"[info] [gen1-bridge] game.ready api=2 engine=0.3.49 modules={len(LIB_FILES)}"
     assert b.env_keys() == before
 
 

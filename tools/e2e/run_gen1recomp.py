@@ -142,9 +142,99 @@ class RunResult:
         }
 
 
-def run(driver: str | Path, game: str | None = None, timeout: float = 180.0,
-        extra_env: dict[str, str] | None = None, echo: bool = True,
-        install: Path = INSTALL) -> RunResult:
+class Launch:
+    """A running test instance. Filtered output streams into ``result.lines``.
+
+        with launch("kb_handshake.lua", extra_env={...}) as run:
+            run.wait_marker("KB_OVERWORLD", timeout=120)
+            ...                             # talk to it over TCP
+            result = run.wait(timeout=60)   # exit code, markers, counts
+
+    Leaving the ``with`` block kills the game if it is still running.
+    """
+
+    def __init__(self, proc: subprocess.Popen, crash: Path | None, echo: bool):
+        self.proc = proc
+        self.result = RunResult(returncode=None, timed_out=False, elapsed=0.0)
+        self._crash = crash
+        self._crash_before = _stat(crash)
+        self._echo = echo
+        self._digest = hashlib.sha256()
+        self._spots: list[str] = []
+        self._error_seen = False
+        self._cond = threading.Condition()
+        self._done = False
+        self._start = time.monotonic()
+        self._reader = threading.Thread(target=self._consume, daemon=True)
+        self._reader.start()
+
+    def _consume(self):
+        for raw in iter(self.proc.stdout.readline, b""):
+            line = raw.decode("utf-8", errors="replace")
+            shown = safe_line(line)
+            with self._cond:
+                if shown is not None:
+                    self.result.lines.append(shown)
+                    if shown.startswith(("LUA ERROR", "driver error")):
+                        self._error_seen = True
+                    self._cond.notify_all()
+                else:
+                    self.result.other_count += 1
+                    self._digest.update(raw)
+                    if self._error_seen:  # traceback lines: keep their locations only
+                        for spot in LOCATION.findall(line):
+                            if spot not in self._spots:
+                                self._spots.append(spot)
+            if shown is not None and self._echo:
+                print(shown, flush=True)
+        with self._cond:
+            self._done = True
+            self._cond.notify_all()
+
+    def wait_marker(self, name: str, timeout: float) -> str | None:
+        """The first safe line starting with name, or None if the game ended or time ran out."""
+        deadline = time.monotonic() + timeout
+        with self._cond:
+            while True:
+                found = self.result.marker(name)
+                if found is not None:
+                    return found
+                left = deadline - time.monotonic()
+                if self._done or left <= 0:
+                    return None
+                self._cond.wait(left)
+
+    def wait(self, timeout: float) -> RunResult:
+        """Waits for the game to exit (killing it after timeout) and finishes the result."""
+        try:
+            self.result.returncode = self.proc.wait(timeout=timeout)
+        except subprocess.TimeoutExpired:
+            self.result.timed_out = True
+            self.proc.kill()
+            self.result.returncode = self.proc.wait(timeout=30)
+        self._reader.join(timeout=10)
+        self.result.elapsed = time.monotonic() - self._start
+        self.result.other_sha8 = self._digest.hexdigest()[:8]
+        self.result.error_spots = list(self._spots)
+        self.result.crash_log_touched = _stat(self._crash) != self._crash_before
+        return self.result
+
+    def kill(self):
+        if self.proc.poll() is None:
+            self.proc.kill()
+            self.proc.wait(timeout=30)
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *exc):
+        self.kill()
+        return False
+
+
+def launch(driver: str | Path, game: str | None = None, extra_env: dict[str, str] | None = None,
+           echo: bool = True, install: Path = INSTALL) -> Launch:
+    """Starts the test instance with a driver and returns at once."""
     driver = Path(driver)
     if not driver.is_absolute():
         driver = (DRIVERS / driver) if (DRIVERS / driver).is_file() else driver.resolve()
@@ -166,54 +256,20 @@ def run(driver: str | Path, game: str | None = None, timeout: float = 180.0,
         "PYTHONUTF8": "1",
     })
     env.update(extra_env or {})
-    exe = install / "gen1recomp.exe"
-    crash = crash_log()
-    crash_before = _stat(crash)
-
-    result = RunResult(returncode=None, timed_out=False, elapsed=0.0)
-    digest = hashlib.sha256()
-    spots: list[str] = []
-    error_seen = False
-
-    def consume(stream):
-        nonlocal error_seen
-        for raw in iter(stream.readline, b""):
-            line = raw.decode("utf-8", errors="replace")
-            shown = safe_line(line)
-            if shown is not None:
-                result.lines.append(shown)
-                if shown.startswith(("LUA ERROR", "driver error")):
-                    error_seen = True
-                if echo:
-                    print(shown, flush=True)
-                continue
-            result.other_count += 1
-            digest.update(raw)
-            if error_seen:  # traceback lines: keep their locations only
-                for spot in LOCATION.findall(line):
-                    if spot not in spots:
-                        spots.append(spot)
-
-    start = time.monotonic()
     proc = subprocess.Popen(
-        [str(exe), f"--game={game}"],  # never --console: it would take stdout away
+        [str(install / "gen1recomp.exe"), f"--game={game}"],  # never --console: it takes stdout away
         cwd=str(install), env=env,
         stdin=subprocess.DEVNULL, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
     )
-    reader = threading.Thread(target=consume, args=(proc.stdout,), daemon=True)
-    reader.start()
-    try:
-        result.returncode = proc.wait(timeout=timeout)
-    except subprocess.TimeoutExpired:
-        result.timed_out = True
-        proc.kill()
-        result.returncode = proc.wait(timeout=30)
-    reader.join(timeout=10)
-    result.elapsed = time.monotonic() - start
-    result.other_sha8 = digest.hexdigest()[:8]
-    result.error_spots = spots
-    result.crash_log_touched = _stat(crash) != crash_before
-    return result
+    return Launch(proc, crash_log(), echo)
+
+
+def run(driver: str | Path, game: str | None = None, timeout: float = 180.0,
+        extra_env: dict[str, str] | None = None, echo: bool = True,
+        install: Path = INSTALL) -> RunResult:
+    """Starts the test instance with a driver and waits for it to exit."""
+    with launch(driver, game=game, extra_env=extra_env, echo=echo, install=install) as running:
+        return running.wait(timeout)
 
 
 def write_report(name: str, result: RunResult) -> Path:

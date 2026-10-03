@@ -18,6 +18,7 @@ Gen1Recomp) and `fabric-bridge` (Java, inside Minecraft), plus the test stand-in
 | `defs.schema.json` | Shared definitions (`$defs`): ids, directions, cells, Pokémon fields |
 | `messages/<type>.schema.json` | One schema per message type, describing its `data` object |
 | `examples/<type>.json` | A JSON array of complete, synthetic example envelopes for that type |
+| `export/<kind>.schema.json` | The `data` of one export resource kind (`export.data`); docs/PROTOCOL.md "Export resources". The synthetic world in `tools/fake_gen1/synth.py` exercises every kind |
 | `catalog.json` | **Derived** from the message schemas by `tools/kb_protocol/catalog.py`. Checked in so Java can bundle it. A test fails when it is stale |
 
 All schemas are JSON Schema **2020-12**. Their `$id`s live under

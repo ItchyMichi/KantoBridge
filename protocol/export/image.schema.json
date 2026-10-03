@@ -1,0 +1,22 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kantobridge.invalid/protocol/export/image.schema.json",
+  "title": "export image",
+  "description": "A greyscale image: a tileset atlas, an animation strip or an effect.",
+  "x-export-kind": "image",
+  "type": "object",
+  "required": ["id", "w", "h", "png"],
+  "additionalProperties": false,
+  "properties": {
+    "id": {"$ref": "../defs.schema.json#/$defs/id"},
+    "w": {"type": "integer", "minimum": 1, "maximum": 1024},
+    "h": {"type": "integer", "minimum": 1, "maximum": 1024},
+    "png": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9+/]*={0,2}$",
+      "maxLength": 1048576,
+      "contentEncoding": "base64",
+      "description": "PNG bytes, base64. Greyscale with 4 shades (white, 2/3, 1/3, black)."
+    }
+  }
+}

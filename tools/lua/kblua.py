@@ -50,9 +50,17 @@ class Bridge:
     for the sandbox's require; ``socket`` is the fake LuaSocket by default.
     ``strict`` (the default) makes reading an unknown global, or creating a
     new one, an error, so typos and leaks fail the tests.
+
+    ``engine=True`` adds ``fake_engine.lua``: its modules join ``modules``,
+    its UI tables become ``mod.ui``, and ``self.engine`` controls the fake
+    game. ``love.timer.getTime`` reads ``self.now`` (seconds), which
+    ``step()`` advances by one logic step at a time.
     """
 
-    def __init__(self, permissions=PERMISSIONS, modules=None, developer=False, strict=True):
+    STEP = 1 / 60
+
+    def __init__(self, permissions=PERMISSIONS, modules=None, developer=False, strict=True,
+                 engine=False, mod_options=None, content=None, game="blue"):
         self.rt = luajit.LuaRuntime(unpack_returned_tuples=True, encoding=None)
         self.lua = self.rt.globals()
         self.Sandbox = self._load_harness("sandbox.lua")
@@ -61,9 +69,23 @@ class Bridge:
         self.fake = self.FakeSocket.new()
         self.net = self.fake.net
         self.read_calls: list[str] = []
+        self.engine = None
+        if engine:
+            FakeEngine = self._load_harness("fake_engine.lua")
+            eopts = self.table()
+            eopts[b"game"] = _b(game)
+            self.engine = FakeEngine.new(eopts)
+
+        # love facade source: only timer is needed so far
+        self._clock = self.eval("{ now = 0 }")
+        love = self.eval("function(c) return { timer = { getTime = function() return c.now end } } end")(
+            self._clock)
 
         mods = self.table()
         mods[b"socket"] = self.fake.socket
+        if self.engine is not None:
+            for name, value in self.engine.modules.items():
+                mods[name] = value
         for name, value in (modules or {}).items():
             mods[_b(name)] = self.eval(value) if isinstance(value, str) else value
         perms = self.table()
@@ -73,12 +95,68 @@ class Bridge:
         opts[b"permissions"] = perms
         opts[b"modules"] = mods
         opts[b"strict"] = strict
+        opts[b"love"] = love
+        self._env_opts = opts
         self.env = self.Sandbox.env(opts)
 
         mod_opts = self.table()
         mod_opts[b"read"] = self._read
         mod_opts[b"developer"] = developer
+        if self.engine is not None:
+            mod_opts[b"ui"] = self.engine.ui
+        if mod_options:
+            mod_opts[b"options"] = self.to_lua(mod_options)
+        if content:
+            mod_opts[b"content"] = self.to_lua(content)
+        self._mod_opts = mod_opts
         self.mod = self.FakeMod.new(mod_opts)
+
+    # ------------------------------------------------------------ clock, steps
+
+    @property
+    def now(self) -> float:
+        return self._clock[b"now"]
+
+    @now.setter
+    def now(self, value: float):
+        self._clock[b"now"] = value
+
+    def ready(self):
+        """Emits game.ready with the fake game, as Game:load does (Game.lua:119)."""
+        payload = self.table()
+        payload[b"game"] = self.engine.game if self.engine is not None else self.table()
+        self.emit("game.ready", payload)
+
+    def step(self, n: int = 1):
+        """Runs n logic steps: the clock advances and the input.step hooks run."""
+        vanilla = self.eval("function() end")
+        game = self.engine.game if self.engine is not None else self.table()
+        for _ in range(n):
+            self.now = self.now + self.STEP
+            self.FakeMod.call(self.mod, b"input.step", vanilla, game, self.STEP)
+
+    def reload(self):
+        """Simulates F5 (HotReload.run, src/dev/HotReload.lua:27-64): a fresh sandbox env and
+        mod object run main.lua again, then game.ready reaches only the new instance. The old
+        instance's hooks are never called again; the fake socket and fake game carry over."""
+        self.env = self.Sandbox.env(self._env_opts)
+        self.mod = self.FakeMod.new(self._mod_opts)
+        self.run_main()
+        self.ready()
+
+    def to_lua(self, value):
+        """A Python value as Lua (dicts and lists become tables, str becomes bytes)."""
+        if isinstance(value, dict):
+            t = self.table()
+            for k, v in value.items():
+                t[_b(k)] = self.to_lua(v)
+            return t
+        if isinstance(value, (list, tuple)):
+            t = self.table()
+            for i, v in enumerate(value, start=1):
+                t[i] = self.to_lua(v)
+            return t
+        return _b(value)
 
     # ------------------------------------------------------------ helpers
 

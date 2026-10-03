@@ -1,0 +1,17 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kantobridge.invalid/protocol/export/field.schema.json",
+  "title": "export field",
+  "description": "Selected engine field tables, copied as JSON (Lua 1-based arrays become JSON arrays).",
+  "x-export-kind": "field",
+  "type": "object",
+  "required": ["tables"],
+  "additionalProperties": false,
+  "properties": {
+    "tables": {
+      "type": "object",
+      "properties": {},
+      "propertyNames": {"$ref": "../defs.schema.json#/$defs/symbol"}
+    }
+  }
+}
