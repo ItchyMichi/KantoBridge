@@ -3,6 +3,7 @@ package dev.kantobridge.gametest;
 import com.cobblemon.mod.common.api.events.CobblemonEvents;
 import com.cobblemon.mod.common.api.events.pokemon.PokemonNicknamedEvent;
 import com.cobblemon.mod.common.api.events.pokemon.evolution.EvolutionTestedEvent;
+import com.cobblemon.mod.common.api.moves.BenchedMove;
 import com.cobblemon.mod.common.api.pokemon.evolution.Evolution;
 import com.cobblemon.mod.common.api.storage.party.PlayerPartyStore;
 import com.cobblemon.mod.common.api.storage.pc.PCStore;
@@ -228,5 +229,86 @@ public class PartyGameTests implements FabricGameTest {
 		helper.assertTrue(vaporeon.getResult(), "Vaporeon (134) must stay possible");
 		helper.assertTrue(PartyService.evolutionsBlocked() == blocked + 1, "the block wasn't counted");
 		helper.succeed();
+	}
+	@GameTest(template = EMPTY_STRUCTURE, batch = BATCH)
+	public void itemsFromTheBagWorkInCobblemon(GameTestHelper helper) {
+		RelayService relay = RelayService.get();
+		MockPlayers.with(helper, player -> RelayTap.capture(player, sent -> {
+			PlayerPartyStore party = PlayerExtensionsKt.party(player);
+			Pokemon pikachu;
+			Pokemon rattata;
+			try {
+				pikachu = Gen1Mons.gift(new Gen1Mon(25, 20, List.of(84, 45), null));
+				rattata = Gen1Mons.gift(new Gen1Mon(19, 9, List.of(33, 39), null));
+			} catch (Gen1Mons.Missing e) {
+				throw new GameTestAssertException("Cobblemon lacks " + e.code());
+			}
+			party.add(pikachu);
+			party.add(rattata);
+			long used = PartyService.itemsUsed();
+			// A stone evolves at once (P14), keeping the Pokémon's uid.
+			relay.receive(player, envelope(1, MsgTypes.PARTY_ITEM, "{\"item\":\"THUNDER_STONE\",\"uid\":\"" + pikachu.getUuid() + "\"}"));
+			helper.assertTrue(pikachu.getSpecies().getNationalPokedexNumber() == 26, "the Thunder Stone didn't evolve Pikachu");
+			helper.assertTrue(party.get(pikachu.getUuid()) == pikachu, "the evolved Pokémon changed identity");
+			// A stone that does nothing for this species changes nothing.
+			long noEvolution = PartyService.warnings("item_no_evolution");
+			relay.receive(player, envelope(2, MsgTypes.PARTY_ITEM, "{\"item\":\"MOON_STONE\",\"uid\":\"" + rattata.getUuid() + "\"}"));
+			helper.assertTrue(rattata.getSpecies().getNationalPokedexNumber() == 19, "a Moon Stone evolved Rattata");
+			helper.assertTrue(PartyService.warnings("item_no_evolution") == noEvolution + 1, "the useless stone wasn't counted");
+			// A TM replaces the move in its slot; the old move stays re-learnable (P13).
+			relay.receive(player, envelope(3, MsgTypes.PARTY_ITEM,
+					"{\"item\":\"TM_BODY_SLAM\",\"uid\":\"" + rattata.getUuid() + "\",\"slot\":1,\"move\":34}"));
+			helper.assertTrue(Gen1Mons.moveNumbers(rattata).equals(List.of(33, 34)), "the TM didn't teach into slot 1: " + Gen1Mons.moveNumbers(rattata));
+			boolean benched = false;
+			for (BenchedMove move : rattata.getBenchedMoves()) {
+				benched |= move.getMoveTemplate().getNum() == 39;
+			}
+			helper.assertTrue(benched, "the replaced move isn't re-learnable");
+			helper.assertTrue(rattata.getMoveSet().get(1).getCurrentPp() == rattata.getMoveSet().get(1).getMaxPp(), "a TM move comes with full PP");
+			// An HM into a free slot.
+			relay.receive(player, envelope(4, MsgTypes.PARTY_ITEM, "{\"item\":\"HM_CUT\",\"uid\":\"" + rattata.getUuid() + "\",\"move\":15}"));
+			helper.assertTrue(Gen1Mons.moveNumbers(rattata).equals(List.of(33, 34, 15)), "the HM didn't go into the free slot");
+			// Rare Candy: one level.
+			int level = rattata.getLevel();
+			relay.receive(player, envelope(5, MsgTypes.PARTY_ITEM, "{\"item\":\"RARE_CANDY\",\"uid\":\"" + rattata.getUuid() + "\"}"));
+			helper.assertTrue(rattata.getLevel() == level + 1, "Rare Candy gave " + (rattata.getLevel() - level) + " levels");
+			helper.assertTrue(PartyService.itemsUsed() == used + 4, "applied items weren't counted");
+			// An unknown Pokémon: counted, nothing else.
+			long unknown = PartyService.warnings("item_unknown_uid");
+			relay.receive(player, envelope(6, MsgTypes.PARTY_ITEM, "{\"item\":\"RARE_CANDY\",\"uid\":\"" + UUID.randomUUID() + "\"}"));
+			helper.assertTrue(PartyService.warnings("item_unknown_uid") == unknown + 1, "an unknown uid wasn't counted");
+			helper.assertTrue(sent.stream().noneMatch(message -> message.type().equals(MsgTypes.ERROR)), "a valid party.item was refused");
+		}));
+		helper.succeed();
+	}
+
+	@GameTest(template = EMPTY_STRUCTURE, batch = BATCH, timeoutTicks = 100)
+	public void aGiftCarriesItsGiveIdInPartySync(GameTestHelper helper) {
+		ServerPlayer player = MockPlayers.join(helper);
+		RelayTap.Recorder relay = RelayTap.open(player);
+		try {
+			RelayService.get().receive(player, envelope(1, MsgTypes.PARTY_GIVE, "{\"give\":\"pg-gv\",\"dex\":7,\"level\":5,\"source\":\"gift\"}"));
+			PlayerExtensionsKt.party(player).add(Gen1Mons.gift(new Gen1Mon(1, 5, List.of(33), null)));
+		} catch (Gen1Mons.Missing | RuntimeException e) {
+			relay.close();
+			MockPlayers.leave(helper, player);
+			throw e instanceof RuntimeException runtime ? runtime : new GameTestAssertException("Cobblemon lacks a species or move");
+		}
+		helper.succeedWhen(() -> {
+			List<Envelope> syncs = relay.of(MsgTypes.PARTY_SYNC);
+			helper.assertTrue(!syncs.isEmpty(), "no party.sync yet");
+			JsonArray list = syncs.get(syncs.size() - 1).data().getAsJsonArray("party");
+			helper.assertTrue(list.size() == 2, "the sync lists " + list.size() + " Pokémon");
+			for (int i = 0; i < list.size(); i++) {
+				JsonObject entry = list.get(i).getAsJsonObject();
+				if (entry.get("dex").getAsInt() == 7) {
+					helper.assertTrue(entry.has("give") && entry.get("give").getAsString().equals("pg-gv"), "the gift lacks its give id");
+				} else {
+					helper.assertFalse(entry.has("give"), "a Pokémon that wasn't given carries a give id");
+				}
+			}
+			relay.close();
+			MockPlayers.leave(helper, player);
+		});
 	}
 }

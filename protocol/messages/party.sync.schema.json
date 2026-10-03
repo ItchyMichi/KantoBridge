@@ -18,6 +18,10 @@
         "additionalProperties": false,
         "properties": {
           "uid": {"$ref": "../defs.schema.json#/$defs/uid"},
+          "give": {
+            "$ref": "../defs.schema.json#/$defs/id",
+            "description": "The party.give id this Pokémon came from, when it was a gift (exact gift matching)."
+          },
           "dex": {"$ref": "../defs.schema.json#/$defs/nationalDex"},
           "level": {"$ref": "../defs.schema.json#/$defs/level"},
           "nick": {"type": "string", "maxLength": 32, "x-rom-derived": true},

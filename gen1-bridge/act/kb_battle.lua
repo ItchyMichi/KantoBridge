@@ -17,22 +17,33 @@
 -- Kinds: "rival" (the rival classes OPP_RIVAL1-3, scripted or not),
 -- "trainer" (a map trainer: sight or talk), "scripted" (another trainer a
 -- script starts), "static" (a scripted wild battle: static_battle,
--- start_battle "wild"). Trainer teams come resolved from kb_engine as the
--- engine would build them: species as dex, level, 1-4 Gen 1 move numbers,
--- DVs; trainer.party is the engine's 1-based party index. Rules: trainers
--- { catch = false, flee = false }, static Pokemon { catch = true, flee = true }.
--- A team the protocol can't express exactly is declined: the hidden game
--- fights that battle itself (shown on the mirror).
+-- start_battle "wild"), and from M6 "surf" and "fish" (a wild Pokemon the
+-- hidden game rolled while surfing or fishing, PLAN P8). Trainer teams come
+-- resolved from kb_engine as the engine would build them: species as dex,
+-- level, 1-4 Gen 1 move numbers, DVs; trainer.party is the engine's 1-based
+-- party index. Wild ones carry wild{dex, level, x, y}: for static the
+-- object's cell, for surf and fish the water in front of the player.
+-- Rules: trainers { catch = false, flee = false }, wild Pokemon
+-- { catch = true, flee = true }. A team the protocol can't express exactly
+-- is declined: the hidden game fights that battle itself (shown on the
+-- mirror).
 --
 -- Outcomes -> the engine's results: win -> win, lose -> lose, fled -> run,
 -- caught -> caught, aborted -> nothing happens (a scripted battle's script
 -- stops there, so whatever triggered it can run it again; a map trainer's
 -- encounter is cancelled, so it challenges again once the player moves or
--- talks to it). A trainer battle can't be fled or caught: those count as
--- aborted. A result for any other id is answered with error battle.unknown.
+-- talks to it; a surf or fish encounter just ends). A trainer battle can't
+-- be fled or caught: those count as aborted. A caught Pokemon is
+-- Cobblemon's: it reaches the hidden game through party.sync and dex.sync.
+-- A result for any other id is answered with error battle.unknown.
 --
--- Logs show codes, kinds, ids and counts only; trainer names and teams are
--- ROM-derived and never logged.
+-- battle.native{kind, phase} (G->M): the special battles that stay in the
+-- hidden game (PLAN P9: the Safari Zone, the old man's demo, the
+-- unidentified ghost) are announced when one appears on the stack ("start")
+-- and when it leaves ("end"), and a running one again after a snapshot.
+--
+-- Logs show codes, kinds, ids and counts only; trainer names, teams and wild
+-- species are ROM-derived and never logged.
 
 local Battle = {}
 
@@ -43,6 +54,8 @@ local byte, gsub, sub = string.byte, string.gsub, string.sub
 
 local OUTCOMES = { win = "win", lose = "lose", fled = "run", caught = "caught", aborted = "abort" }
 local RIVALS = { OPP_RIVAL1 = true, OPP_RIVAL2 = true, OPP_RIVAL3 = true }
+local WILD_KINDS = { surf = "surf", fish = "fish" }
+local NATIVE_KINDS = { safari = true, old_man = true, ghost = true }
 local DV_KEYS = { "atk", "def", "spd", "spc" }
 local UID = "^%x%x%x%x%x%x%x%x%-%x%x%x%x%-%x%x%x%x%-%x%x%x%x%-%x%x%x%x%x%x%x%x%x%x%x%x$"
 
@@ -94,7 +107,8 @@ end
 
 -- opts:
 --   engine   kb_engine instance (trainerTeam, battlePending, battleSent,
---            battleStale, battleFinish, bridgeToken, nextSerial)
+--            battleStale, battleFinish, bridgeToken, nextSerial,
+--            nativeBattle)
 --   markup   kb_ui's Ui.markup (the trainer's name in the protocol's text)
 --   log      kb_log logger (optional)
 function Battle.new(opts)
@@ -102,9 +116,11 @@ function Battle.new(opts)
   local markup = opts.markup or function(s) return s, 0 end
   local battles = {}
   local resend = false -- a snapshot went out: send the pending battle again
+  local nativeSent, nativeGen -- the special battle announced on this connection
   local counts = {
     started = 0, declined = 0, sent = 0, resent = 0, results = 0, win = 0, lose = 0, run = 0,
     caught = 0, abort = 0, refused = 0, unknown = 0, dropped = 0,
+    static = 0, surf = 0, fish = 0, native = 0, nativeEnded = 0,
   }
 
   local function decline(why, fields)
@@ -119,14 +135,16 @@ function Battle.new(opts)
 
   -- kb_engine's facts about a battle it is holding (plain values) -> the
   -- plan { id, kind, data = battle.start payload }, or nil to let the
-  -- hidden game fight it. facts: path ("script"|"trainer"), command, cls,
-  -- party, wild, species, dex, level, map, npc, x, y.
+  -- hidden game fight it. facts: path ("script"|"trainer"|"wild"), kind
+  -- (wild: "surf"|"fish", else static), command, cls, party, wild,
+  -- species, dex, level, map, npc, x, y.
   function battles.begin(facts)
     if type(facts) ~= "table" then return decline("facts") end
     local data, kind = {}, nil
     if facts.wild then
       if not (whole(facts.dex, 1, 151) and whole(facts.level, 1, 100)) then return decline("wild") end
-      kind = "static"
+      kind = WILD_KINDS[facts.kind] or "static"
+      counts[kind] = counts[kind] + 1
       data.wild = { dex = facts.dex, level = facts.level }
       if coord(facts.x) and coord(facts.y) then data.wild.x, data.wild.y = facts.x, facts.y end
       data.rules = { catch = true, flee = true }
@@ -164,15 +182,38 @@ function Battle.new(opts)
     return { id = id, kind = kind, data = data }
   end
 
-  -- One logic step: drops a battle whose world is gone, and sends the
-  -- pending battle.start when this connection hasn't had it (or a snapshot
-  -- asked for everything again). out gets { "battle.start", data, tag }.
-  -- link = { live, generation }.
+  -- A native special battle appearing or leaving (battle.native), told to
+  -- this connection once; after a snapshot a running one is told again.
+  local function native(out, link)
+    local kind = engine.nativeBattle and engine.nativeBattle() or nil
+    if not NATIVE_KINDS[kind] then kind = nil end
+    if not (link and link.live) then return end
+    if nativeGen ~= link.generation or resend then nativeSent, nativeGen = nil, link.generation end
+    if kind == nativeSent then return end
+    if nativeSent then
+      out[#out + 1] = { "battle.native", { kind = nativeSent, phase = "end" }, "battle" }
+      counts.nativeEnded = counts.nativeEnded + 1
+      if log then log.info("battle.native", { kind = nativeSent, phase = "end" }) end
+    end
+    if kind then
+      out[#out + 1] = { "battle.native", { kind = kind, phase = "start" }, "battle" }
+      counts.native = counts.native + 1
+      if log then log.info("battle.native", { kind = kind, phase = "start", count = counts.native }) end
+    end
+    nativeSent = kind
+  end
+
+  -- One logic step: drops a battle whose world is gone, announces a native
+  -- special battle, and sends the pending battle.start when this connection
+  -- hasn't had it (or a snapshot asked for everything again). out gets
+  -- { "battle.native" | "battle.start", data, tag }. link = { live,
+  -- generation }.
   function battles.step(out, link)
     if engine.battleStale() then
       counts.dropped = counts.dropped + 1
       if log then log.warn("battle.dropped", { count = counts.dropped }) end
     end
+    native(out, link)
     local rec = engine.battlePending()
     if rec and rec.state == "waiting" and link and link.live and type(rec.data) == "table"
         and (rec.sentGen ~= link.generation or resend) then
@@ -221,6 +262,7 @@ function Battle.new(opts)
     for k, v in pairs(counts) do out[k] = v end
     local rec = engine.battlePending()
     out.pending = rec ~= nil and rec.state == "waiting"
+    out.nativeActive = nativeSent ~= nil
     return out
   end
 

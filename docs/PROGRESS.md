@@ -13,8 +13,8 @@ new items in [PLAYTEST.md](PLAYTEST.md) and a commit titled `M<n>: <title>`.
 | M2 | World export and builder (Pallet Town and its interiors) | **done** | 2026-10-03 | `bbad914` |
 | M3 | Walking and warps | **done** | 2026-10-03 | `aa725fd` |
 | M4 | Dialogue, menus and NPC mirroring | **done** | 2026-10-03 | `c5b39d1` |
-| M5 | Opening, Oak's cutscene, starter and rival battle | **done** | 2026-10-03 | `M5: opening, starter and rival battle` |
-| M6 | Route 1, habitat pools, catching, party/Pokédex/bag sync | not started | | |
+| M5 | Opening, Oak's cutscene, starter and rival battle | **done** | 2026-10-03 | `eb9c570` |
+| M6 | Route 1, habitat pools, catching, party/Pokédex/bag sync | **done** | 2026-10-03 | `M6: Route 1, habitats, catching and sync` |
 | M7 | Viridian City (Pokémon Center, Mart, PC, money, trainers, saving) | not started | | |
 | M8 | The rest of Kanto (single player) | not started | | |
 | M9 | Multiplayer | not started | | |
@@ -84,6 +84,15 @@ new items in [PLAYTEST.md](PLAYTEST.md) and a commit titled `M<n>: <title>`.
   3 → 6)), then `gradlew build`: **361 JUnit**, **40/40 GameTests** (battle proxy, exact moves and
   IVs, a real Showdown forfeit → `lose`, party give/PC overflow/sync, starter lock, Cobblemon
   settings, all 151 species and 165 moves resolving), mixin remap check.
+- **M6:** `tools/check.sh --e2e`: pytest **1044 passed** (637 Lua; e2e on the real engine: all
+  earlier ones plus Route 1: 201 grass steps with no native battle (`encounterGrass` 201, every
+  battle counter 0), a made-up `dex.sync` (4 seen / 2 owned) and `party.sync` (2 members, uids)
+  applied, `bag.sync` with only battle items, a refused key-item `bag.use`; and the real **Route 1
+  build**: 7 maps, 4 habitat blocks, 46 pools, 0 warnings), then `gradlew build`: **387 JUnit**,
+  **53/53 GameTests** (wild spawn with no AI and `pve`, outcome mapping, bag sync without echo,
+  `bag.use`, stone/TM/Rare Candy effects, habitats configured, Cobblemon's spawner offering the
+  synthetic pool), mixin remap check. The user's `saves/Kanto` was rebuilt in place with the Route 1
+  set (player data kept).
 - **Early full-Kanto smoke build** (not an M2 gate; M8 owns it), `build_world.py --maps all` into
   `saves/KantoFullE2E`: 219 of 220 reachable maps (36 surface, 183 interiors on 14 layers, 5 moved
   sideways), **2,480,041 blocks in 2,126 chunks in 59 s** (plan 5.9 s, place 53 s), 12,539 story
@@ -359,9 +368,51 @@ new items in [PLAYTEST.md](PLAYTEST.md) and a commit titled `M<n>: <title>`.
 54. **Gifts run natively** and are matched by dex and level when the sync arrives (no duplicate); an
     optional `give` field on `party.sync` entries would make the match exact (M6 candidate).
     gen1-bridge gives up on a gift after 5 syncs and 2 minutes, conservatively, because the client
-    re-sends stale syncs after every snapshot.
+    re-sends stale syncs after every snapshot. (M6 added the exact `give` match.)
 
-## Open issues
+**M6**
+
+55. **gen1-bridge encounter rules** (now in PROTOCOL.md "Wild encounters, bag and Pokédex"):
+    Pokémon Tower ghost battles without the SILPH_SCOPE run natively (P9's "unidentified ghost") with
+    `battle.native{ghost}`; `battle.native` comes from watching the stack (so the old man's demo is
+    announced too); the surf hook takes the engine's own roll and runs `encounter.species` and REPEL
+    itself (returning nil would skip them) and holds the world with `ow.engaging`; fishing keeps the
+    bite text and animation native and replaces only the native battle (with no client connected at
+    the end of the cast, the engine's own verdict runs).
+56. **Item use:** stones and Rare Candy skip their Gen 1 effect (the item is consumed, the party menu
+    closes with the bag's white flash) and Cobblemon applies them; TMs/HMs are taught natively (the
+    Gen 1 forget prompt is the slot picker), then `party.item` reports the move; a `party.sync` waits
+    while a TM/HM is being taught. `party.item` has no id, so it's sent once and queued until a
+    client connects (an id like `give` would make re-sending safe).
+57. **`bag.sync`** follows every in-game snapshot and every change; `bag.use` of a non-mirrored item
+    is refused with `bag.not_mirrored`. `dex.sync` is the only source of the Gen 1 Pokédex (the Gen 1
+    side never marks it locally). gen1-bridge now loads 24 modules.
+
+58. **Wild battles in Cobblemon** (`EncounterService`): the Pokémon appears on the given cell (or two
+    cells ahead), stands still, can't be battled by anyone else, doesn't count toward the spawn cap,
+    and gets **Cobblemon's own moves for its level** (the protocol's `wild` carries no moves); `pve`
+    with flee distance 12 (none when `rules.flee` is false); `rules.catch` false makes it
+    uncatchable. **Run ends the battle as `fled`, for every wild battle in a Kanto world** (the
+    client holds the player still, so Cobblemon's walk-away flee can't work).
+59. **Bag mirror:** 29 mirrored items; a matching sync changes nothing; items the mirror itself takes
+    are never reported; uses during a battle wait until it ends (Cobblemon refunds unused items);
+    in-flight uses are subtracted from crossing syncs and dropped after 60 s if no sync shows them.
+    **Appendix B corrections** (checked against Cobblemon 1.8.1): `X_DEFEND` → `x_defence`,
+    `X_SPECIAL` → `x_special_attack`.
+60. **Habitats:** one pool per wild map of the whole export (like the slot map), handed to Cobblemon
+    immediately (a new world datapack loads only on the next world load); blocks buried 2 below the
+    ground with a greedy cover that always covers the first uncovered cell (about a third fewer
+    blocks on route-shaped grass); checked at runtime as chunks load. **Interiors with a pool get the
+    `kanto_cave` biome** (the `no_interior_spawns` rule would block them; the biomes look and sound
+    the same), and a new spawn rule **`walking_level_only`** keeps spawns on floor blocks at a map's
+    walking level (a block's 14-block range also covers tree tops, roofs and story cells). No PLAN §8
+    fallback was needed: the synthetic GameTest runs Cobblemon's own spawner against the test grass.
+    **Pokémon Tower gets no habitats or pools for now**, so it has no wild Pokémon once the player has
+    the SILPH_SCOPE (the hidden game suppresses Tower encounters then) until M8.
+61. **Client clicks:** only plain right-clicks on blocks (empty hand, block items, plain items)
+    become `act.interact`; balls, medicine and other usable items pass through to Minecraft.
+    `bag.sync` shares the party queue (party → bag → battle order; only the newest bag waits);
+    `bag.use` is queued for the next snapshot while gen1-bridge is away.
 
 ## Open issues
 
@@ -410,6 +461,12 @@ new items in [PLAYTEST.md](PLAYTEST.md) and a commit titled `M<n>: <title>`.
   their cell is fixed by a fade and teleport afterwards. If Cobblemon's battle engine crashes it
   writes `battle_logs/<id>.txt` (with names) into the run folder (`local/minecraft`, or
   `fabric-bridge/build/run/gameTest` for GameTests: both git-ignored).
+- **For M8 (from M6):** Pokémon Tower habitat pools must stay off until the player has the
+  SILPH_SCOPE (the hidden game runs its own ghost battles there; otherwise they'd double up); Safari
+  catches stay in the Gen 1 party/box until M8 crosses them over as `native_catch` gifts; a native
+  item effect (no client connected, or a member without a uid) consumes a stone without a Cobblemon
+  evolution, matching the battle rule; `SAFARI_BALL` is mirrored but never appears (Safari balls live
+  in `save.safari`).
 - **Battles not intercepted until M8:** talk-path static objects (OC:3488-3510), direct
   `pushBattle` calls (Giovanni `story3.lua:481-510`, the ghost Marowak `story3.lua:143-194`).
   Not handled yet: trades, native catches (`catch.nickname` → `native_catch`), the Name Rater, the
@@ -435,3 +492,4 @@ Nothing.
 - PLAYTEST.md M3: walk Pallet Town and its houses with Gen1Recomp following; stairs and doors.
 - PLAYTEST.md M4: talk to people and signs, the start menu, the bag, YES/NO, the mirror, puppets.
 - PLAYTEST.md M5: a new game from Minecraft: names, Oak's escort, the starter, the rival battle.
+- PLAYTEST.md M6: wild Pokémon on Route 1, catching, the Pokédex, Poké Ball and Potion counts.

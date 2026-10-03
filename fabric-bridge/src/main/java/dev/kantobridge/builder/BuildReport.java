@@ -14,7 +14,9 @@ import org.jetbrains.annotations.Nullable;
 /**
  * {@code build_report.json} (docs/PLAN.md §4.5 "Finishing up"): counts, hashes, map ids and error codes only, never
  * content, so it may be read from {@code local/reports/} (§0.3). The e2e gate reads {@code maps_built},
- * {@code overlaps}, {@code story_cells}, {@code warnings}, {@code pack_textures} and {@code world_index}.
+ * {@code overlaps}, {@code story_cells}, {@code warnings}, {@code pack_textures} and {@code world_index}; from M6 also
+ * {@code habitat_blocks} (habitat blocks configured for the built maps) and {@code pools} (habitat pools in the world's
+ * datapack: every wild map of the export, whatever the filter).
  */
 public final class BuildReport {
 	public static final String FILE = "build_report.json";
@@ -38,6 +40,8 @@ public final class BuildReport {
 	public int storyCellBlocks;
 	public int ledgeColliders;
 	public int lightBlocks;
+	public int habitatBlocks;
+	public int pools;
 	public int warnings;
 	public Map<String, Integer> warningCodes = new TreeMap<>();
 	public Map<String, Integer> notes = new TreeMap<>();
@@ -82,6 +86,8 @@ public final class BuildReport {
 		out.addProperty("story_cell_blocks", this.storyCellBlocks);
 		out.addProperty("ledge_colliders", this.ledgeColliders);
 		out.addProperty("light_blocks", this.lightBlocks);
+		out.addProperty("habitat_blocks", this.habitatBlocks);
+		out.addProperty("pools", this.pools);
 		out.addProperty("warnings", this.warnings);
 		out.add("warning_codes", counts(this.warningCodes));
 		out.add("notes", counts(this.notes));

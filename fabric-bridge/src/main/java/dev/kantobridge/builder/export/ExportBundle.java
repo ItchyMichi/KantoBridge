@@ -238,6 +238,16 @@ public final class ExportBundle {
 		return this.has("swaps", "all") ? this.typed("swaps", "all", ExportSwaps::parse, ExportSwaps.class) : ExportSwaps.empty();
 	}
 
+	/** The wild encounter tables, or null when the export has no encounters resource. */
+	public @Nullable ExportEncounters encounters() throws BundleException {
+		return this.has("encounters", "all") ? this.typed("encounters", "all", ExportEncounters::parse, ExportEncounters.class) : null;
+	}
+
+	/** The field tables the habitat planner reads; empty when the export has no field resource. */
+	public ExportField field() throws BundleException {
+		return this.has("field", "all") ? this.typed("field", "all", ExportField::parse, ExportField.class) : ExportField.empty();
+	}
+
 	@FunctionalInterface
 	private interface Parser<T> {
 		T parse(DataReader reader) throws DataException;

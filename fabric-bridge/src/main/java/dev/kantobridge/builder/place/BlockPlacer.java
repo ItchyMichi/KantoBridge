@@ -1,17 +1,22 @@
 package dev.kantobridge.builder.place;
 
+import com.cobblemon.mod.common.api.habitats.HabitatPool;
 import dev.kantobridge.block.StoryCellBlockEntity;
 import dev.kantobridge.builder.plan.BlockCode;
 import dev.kantobridge.builder.plan.Box3;
 import dev.kantobridge.builder.plan.ChunkCodes;
 import dev.kantobridge.builder.plan.WorldPlan;
+import dev.kantobridge.server.HabitatService;
 import dev.kantobridge.world.StoryCellTable;
+import dev.kantobridge.world.WorldIndex;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.Deque;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
@@ -34,6 +39,8 @@ import net.minecraft.world.level.chunk.LevelChunk;
  * <li>Re-runnable: every position inside the build's volumes (and an older build's) is set to its planned state or
  * cleared; unchanged blocks are left alone, so a second identical build places nothing.</li>
  * <li>Biomes are written per chunk in the same pass.</li>
+ * <li>Habitat blocks (under the ground, outside the volumes) are placed and configured once their chunk is built
+ * ({@link HabitatService#place}); an older build's that this plan doesn't keep are removed.</li>
  * </ul>
  * Runs on the server thread only.
  */
@@ -55,6 +62,12 @@ public final class BlockPlacer {
 		public int lights;
 		public int chunks;
 		public int biomeChunks;
+		/** Habitat blocks configured as planned (new, reconfigured or unchanged). */
+		public int habitatBlocks;
+		/** Planned habitat blocks that couldn't be configured (no pool, no block entity). */
+		public int habitatFailures;
+		/** An older build's habitat blocks removed. */
+		public int habitatsRemoved;
 	}
 
 	private record LightWait(ChunkPos pos, CompletableFuture<?> future) {
@@ -63,6 +76,8 @@ public final class BlockPlacer {
 	private final ServerLevel level;
 	private final WorldPlan plan;
 	private final List<Box3> extraClear;
+	private final List<WorldIndex.Habitat> previousHabitats;
+	private final Map<String, HabitatPool> pools;
 	private final List<long[]> chunks;
 	private final CodeStates states = new CodeStates();
 	private final BiomeWriter biomes;
@@ -102,9 +117,21 @@ public final class BlockPlacer {
 	 * @param extraClear volumes an older build occupied, cleared too
 	 */
 	public BlockPlacer(ServerLevel level, WorldPlan plan, List<Box3> extraClear) {
+		this(level, plan, extraClear, List.of(), Map.of());
+	}
+
+	/**
+	 * @param extraClear       volumes an older build occupied, cleared too
+	 * @param previousHabitats an older build's habitat blocks, removed unless this plan keeps them
+	 * @param pools            the plan's habitat pools as Cobblemon knows them ({@link HabitatService#ensurePools})
+	 */
+	public BlockPlacer(ServerLevel level, WorldPlan plan, List<Box3> extraClear, List<WorldIndex.Habitat> previousHabitats,
+			Map<String, HabitatPool> pools) {
 		this.level = level;
 		this.plan = plan;
 		this.extraClear = List.copyOf(extraClear);
+		this.previousHabitats = List.copyOf(previousHabitats);
+		this.pools = Map.copyOf(pools);
 		List<Box3> all = new ArrayList<>(plan.volumes());
 		all.addAll(extraClear);
 		this.chunks = WorldPlan.chunks(all);
@@ -247,8 +274,40 @@ public final class BlockPlacer {
 	private void finishChunk() {
 		Work work = this.current;
 		this.current = null;
+		this.habitats(work);
 		this.counts.chunks++;
 		this.lightWaits.add(new LightWait(work.pos, this.level.getChunkSource().getLightEngine().waitForPendingTasks(work.pos.x, work.pos.z)));
+	}
+
+	/** The chunk's habitat blocks: an older build's that this plan drops go, the planned ones are placed or kept. */
+	private void habitats(Work work) {
+		List<WorldIndex.Habitat> planned = this.plan.habitatsIn(work.pos.x, work.pos.z);
+		Set<BlockPos> keep = new HashSet<>();
+		for (WorldIndex.Habitat habitat : planned) {
+			keep.add(new BlockPos(habitat.x(), habitat.y(), habitat.z()));
+		}
+		for (WorldIndex.Habitat old : WorldPlan.habitatsIn(this.previousHabitats, work.pos.x, work.pos.z)) {
+			BlockPos pos = new BlockPos(old.x(), old.y(), old.z());
+			if (!keep.contains(pos) && HabitatService.remove(this.level, pos, work.flags)) {
+				this.counts.habitatsRemoved++;
+				this.counts.blocksCleared++;
+			}
+		}
+		for (WorldIndex.Habitat habitat : planned) {
+			HabitatPool pool = this.pools.get(habitat.pool());
+			if (pool == null) {
+				this.counts.habitatFailures++;
+				continue;
+			}
+			switch (HabitatService.place(this.level, new BlockPos(habitat.x(), habitat.y(), habitat.z()), pool, work.flags)) {
+				case NEW -> {
+					this.counts.habitatBlocks++;
+					this.counts.blocksPlaced++;
+				}
+				case RECONFIGURED, UNCHANGED -> this.counts.habitatBlocks++;
+				case FAILED -> this.counts.habitatFailures++;
+			}
+		}
 	}
 
 	private void releaseLitChunks() {

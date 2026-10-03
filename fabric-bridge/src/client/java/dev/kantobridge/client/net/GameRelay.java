@@ -34,6 +34,13 @@ import org.jetbrains.annotations.Nullable;
  * server link they wait in a queue (at most {@value #QUEUE_MAX}, oldest dropped) and go out on the next join.</li>
  * <li><b>{@code party.sync}</b> and <b>{@code dex.sync}</b> (from the server, Cobblemon is authoritative) go to
  * gen1-bridge; the latest of each is sent again after every snapshot, and forgotten when leaving the server.</li>
+ * <li><b>{@code bag.sync}</b> (from gen1-bridge, the bag is authoritative; it sends one after every snapshot and on
+ * every change) goes to the server. Without a server link it waits in the same queue as the party requests, so
+ * gen1-bridge's order holds ({@code party.*}, {@code bag.sync}, then a {@code battle.start}); only the newest bag waits,
+ * behind whatever came before it. A live snapshot's {@code dex} goes up as {@code dex.sync} when the protocol gives that
+ * type a {@code c2s} leg ({@code dexUp}).</li>
+ * <li><b>{@code bag.use}</b> (from the server: items Minecraft consumed) goes to gen1-bridge; without a link it waits
+ * (at most {@value #QUEUE_MAX}) and goes out after the next snapshot.</li>
  * </ul>
  *
  * Correlation is by the ids in {@code data}; the envelopes' {@code seq} is new on each hop. Plain Java, client thread
@@ -73,6 +80,9 @@ public final class GameRelay {
 		public long partyRelayed;
 		public long partyQueued;
 		public long syncsForwarded;
+		public long bagSyncsRelayed;
+		public long bagUsesForwarded;
+		public long bagUsesQueued;
 	}
 
 	private enum State {
@@ -104,20 +114,46 @@ public final class GameRelay {
 	private final Deque<Queued> queue = new ArrayDeque<>();
 	private final Map<String, JsonObject> syncs = new LinkedHashMap<>();
 	private final Map<String, Long> warnings = new TreeMap<>();
+	/** bag.use messages gen1-bridge couldn't get yet. */
+	private final Deque<JsonObject> pendingUses = new ArrayDeque<>();
+	private final boolean dexUp;
 
 	public GameRelay(Port port) {
+		this(port, false);
+	}
+
+	/**
+	 * @param dexUp relay a live snapshot's {@code dex} to the server as {@code dex.sync} (the protocol's catalog decides)
+	 */
+	public GameRelay(Port port, boolean dexUp) {
 		this.port = port;
+		this.dexUp = dexUp;
 	}
 
 	// ---- from gen1-bridge ----
 
-	/** A message from gen1-bridge; types other than {@code battle.start} and the party requests are ignored. */
+	/** A message from gen1-bridge; types other than {@code battle.start}, the party requests and {@code bag.sync} are ignored. */
 	public void fromBridge(Envelope message, long now) {
 		if (message.type().equals(MsgTypes.BATTLE_START)) {
 			this.battleStart(message.data(), now);
 		} else if (PARTY_REQUESTS.contains(message.type())) {
 			this.partyRequest(message.type(), message.data());
+		} else if (message.type().equals(MsgTypes.BAG_SYNC)) {
+			this.bagSync(message.data().deepCopy());
 		}
+	}
+
+	/**
+	 * The bag goes to the server after anything still waiting; without a link it waits in the queue, and a newer bag
+	 * replaces an older one there (it is a whole state, not a request), at the end, behind what came before it.
+	 */
+	private void bagSync(JsonObject data) {
+		if (this.queue.isEmpty() && this.port.toServer(MsgTypes.BAG_SYNC, data)) {
+			this.stats.bagSyncsRelayed++;
+			return;
+		}
+		this.queue.removeIf(queued -> queued.type().equals(MsgTypes.BAG_SYNC));
+		this.enqueue(MsgTypes.BAG_SYNC, data);
 	}
 
 	private void battleStart(JsonObject data, long now) {
@@ -139,7 +175,8 @@ public final class GameRelay {
 		}
 		record = new Record(id);
 		this.remember(record);
-		// Party requests that waited go first: the starter's party.give must be in before the rival battle needs it.
+		// Party requests and the bag that waited go first, in gen1-bridge's order: the starter's party.give must be in
+		// before the rival battle needs it, and the balls and medicine the battle uses.
 		this.flush();
 		if (this.queue.isEmpty() && this.port.toServer(MsgTypes.BATTLE_START, data)) {
 			this.stats.battlesRelayed++;
@@ -154,12 +191,16 @@ public final class GameRelay {
 			this.stats.partyRelayed++;
 			return;
 		}
+		this.enqueue(type, data);
+		this.stats.partyQueued++;
+	}
+
+	private void enqueue(String type, JsonObject data) {
 		if (this.queue.size() >= QUEUE_MAX) {
 			this.queue.removeFirst();
 			this.warn("party.queue_full");
 		}
 		this.queue.addLast(new Queued(type, data.deepCopy()));
-		this.stats.partyQueued++;
 	}
 
 	/**
@@ -167,12 +208,35 @@ public final class GameRelay {
 	 * go again. Battle results don't: a battle still waiting is started again by gen1-bridge itself.
 	 */
 	public void bridgeSnapshot(long now) {
+		this.bridgeSnapshot(new JsonObject(), now);
+	}
+
+	/**
+	 * {@link #bridgeSnapshot(long)} with the snapshot's data: when it is live ({@code ingame}) and {@code dexUp}, its
+	 * Pokédex goes to the server as {@code dex.sync}; at the title screen it is only the save's leftovers and goes
+	 * nowhere. (The bag needs nothing here: gen1-bridge sends a {@code bag.sync} after every snapshot.) {@code bag.use}s
+	 * that waited for the link go out after the syncs.
+	 */
+	public void bridgeSnapshot(JsonObject snapshot, long now) {
 		this.syncs.forEach((type, data) -> {
 			if (this.port.toBridge(type, data.deepCopy())) {
 				this.stats.syncsForwarded++;
 			}
 		});
+		JsonElement ingame = snapshot.get("ingame");
+		if (ingame != null && ingame.isJsonPrimitive() && ingame.getAsJsonPrimitive().isBoolean() && ingame.getAsBoolean()) {
+			JsonElement dex = snapshot.get("dex");
+			if (this.dexUp && dex != null && dex.isJsonObject()) {
+				this.port.toServer(MsgTypes.DEX_SYNC, dex.getAsJsonObject().deepCopy());
+			}
+		}
+		while (!this.pendingUses.isEmpty() && this.port.toBridge(MsgTypes.BAG_USE, this.pendingUses.peekFirst().deepCopy())) {
+			this.pendingUses.removeFirst();
+			this.stats.bagUsesForwarded++;
+		}
 	}
+
+
 
 	// ---- from the server ----
 
@@ -198,7 +262,23 @@ public final class GameRelay {
 			if (this.port.toBridge(message.type(), data)) {
 				this.stats.syncsForwarded++;
 			}
+		} else if (message.type().equals(MsgTypes.BAG_USE)) {
+			this.bagUse(data.deepCopy());
 		}
+	}
+
+	/** Items consumed in Minecraft go to gen1-bridge, in order; without a link they wait for the next snapshot. */
+	private void bagUse(JsonObject data) {
+		if (this.pendingUses.isEmpty() && this.port.toBridge(MsgTypes.BAG_USE, data)) {
+			this.stats.bagUsesForwarded++;
+			return;
+		}
+		if (this.pendingUses.size() >= QUEUE_MAX) {
+			this.pendingUses.removeFirst();
+			this.warn("bag.use_queue_full");
+		}
+		this.pendingUses.addLast(data);
+		this.stats.bagUsesQueued++;
 	}
 
 	/** Joined a server: party requests that waited go out. */
@@ -259,6 +339,16 @@ public final class GameRelay {
 		return this.queue.size();
 	}
 
+	/** {@code bag.use}s waiting for gen1-bridge. */
+	public int queuedUses() {
+		return this.pendingUses.size();
+	}
+
+	/** True while a {@code bag.sync} waits for the server. */
+	public boolean bagPending() {
+		return this.queue.stream().anyMatch(queued -> queued.type().equals(MsgTypes.BAG_SYNC));
+	}
+
 	public Map<String, Long> warnings() {
 		return Map.copyOf(this.warnings);
 	}
@@ -272,7 +362,11 @@ public final class GameRelay {
 				return;
 			}
 			this.queue.removeFirst();
-			this.stats.partyRelayed++;
+			if (next.type().equals(MsgTypes.BAG_SYNC)) {
+				this.stats.bagSyncsRelayed++;
+			} else {
+				this.stats.partyRelayed++;
+			}
 		}
 	}
 

@@ -1,5 +1,6 @@
 package dev.kantobridge.builder;
 
+import com.cobblemon.mod.common.api.habitats.HabitatPool;
 import dev.kantobridge.KantoBridge;
 import dev.kantobridge.builder.export.BundleException;
 import dev.kantobridge.builder.export.ExportBundle;
@@ -11,6 +12,7 @@ import dev.kantobridge.builder.plan.PlacedMap;
 import dev.kantobridge.builder.plan.PlanException;
 import dev.kantobridge.builder.plan.WorldPlan;
 import dev.kantobridge.builder.plan.WorldPlanner;
+import dev.kantobridge.server.HabitatService;
 import dev.kantobridge.server.WorldIndexSync;
 import dev.kantobridge.world.DataException;
 import dev.kantobridge.world.Hashes;
@@ -62,7 +64,8 @@ public final class BuildTask {
 		}
 	}
 
-	private record Prepared(WorldPlan plan, @Nullable ResourcePackWriter.Result pack, List<Box3> previousVolumes, long planMs) {
+	private record Prepared(WorldPlan plan, @Nullable ResourcePackWriter.Result pack, List<Box3> previousVolumes,
+			List<WorldIndex.Habitat> previousHabitats, long planMs) {
 	}
 
 	private final ServerLevel level;
@@ -154,7 +157,9 @@ public final class BuildTask {
 					this.minBuildHeight));
 			ResourcePackWriter.Result pack = this.options.writePack() ? ResourcePackWriter.write(plan, this.bundle, this.packDir, plan.warnings())
 					: null;
-			return new Prepared(plan, pack, previousVolumes(this.worldDir), (System.nanoTime() - t0) / 1_000_000L);
+			WorldIndex previous = previousIndex(this.worldDir);
+			return new Prepared(plan, pack, previous == null ? List.of() : WorldPlan.volumesOf(previous),
+					previous == null ? List.of() : previous.habitats(), (System.nanoTime() - t0) / 1_000_000L);
 		} catch (BundleException e) {
 			throw new Failure(e.code(), e);
 		} catch (PlanException e) {
@@ -166,15 +171,21 @@ public final class BuildTask {
 
 	/** The volumes of the build this world had before, so this one clears them. */
 	static List<Box3> previousVolumes(Path worldDir) {
+		WorldIndex previous = previousIndex(worldDir);
+		return previous == null ? List.of() : WorldPlan.volumesOf(previous);
+	}
+
+	/** The index of the build this world had before (its volumes and habitat blocks are cleared), or null. */
+	static @Nullable WorldIndex previousIndex(Path worldDir) {
 		Path file = worldDir.resolve(DATA_FOLDER).resolve(INDEX_FILE);
 		if (!Files.isRegularFile(file)) {
-			return List.of();
+			return null;
 		}
 		try {
-			return WorldPlan.volumesOf(WorldIndex.fromJson(Files.readString(file, StandardCharsets.UTF_8)));
+			return WorldIndex.fromJson(Files.readString(file, StandardCharsets.UTF_8));
 		} catch (IOException | DataException e) {
 			KantoBridge.LOGGER.warn("builder: the previous world index is unreadable ({}); not clearing its volumes", e.getClass().getSimpleName());
-			return List.of();
+			return null;
 		}
 	}
 
@@ -204,15 +215,23 @@ public final class BuildTask {
 			return;
 		}
 		WorldPlan plan = this.prepared.plan();
-		this.placer = new BlockPlacer(this.level, plan, this.prepared.previousVolumes());
+		Map<String, HabitatPool> pools;
+		try {
+			// Cobblemon gets the pools now; the datapack written at the end holds them for later loads.
+			pools = HabitatService.ensurePools(plan.pools());
+		} catch (RuntimeException e) {
+			this.fail(new Failure("habitat.pool", e));
+			return;
+		}
+		this.placer = new BlockPlacer(this.level, plan, this.prepared.previousVolumes(), this.prepared.previousHabitats(), pools);
 		this.placer.placeSpawnPlatform();
 		WorldPlan.Spawn spawn = plan.spawn();
 		if (spawn != null && this.options.setWorldSpawn()) {
 			this.level.setDefaultSpawnPos(new BlockPos(spawn.blockX(), spawn.feetY(), spawn.blockZ()), 0.0F);
 		}
-		KantoBridge.LOGGER.info("builder: planned {} maps ({} warnings), {} story cells, {} slots, {} chunks to place in {} ms",
-				plan.maps().size(), plan.warnings().total(), plan.storyCells().size(), plan.slotMap().size(), this.placer.totalChunks(),
-				this.prepared.planMs());
+		KantoBridge.LOGGER.info("builder: planned {} maps ({} warnings), {} story cells, {} habitat blocks on {} pools, {} slots, {} chunks to place in {} ms",
+				plan.maps().size(), plan.warnings().total(), plan.storyCells().size(), plan.habitats().size(), plan.pools().size(),
+				plan.slotMap().size(), this.placer.totalChunks(), this.prepared.planMs());
 		this.placeStartNanos = System.nanoTime();
 		this.phase = BuildPhase.PLACING;
 		this.listener.onPhase(BuildPhase.PLACING);
@@ -243,13 +262,14 @@ public final class BuildTask {
 			Files.writeString(data.resolve(SLOT_MAP_FILE), plan.slotMap().toJson(), StandardCharsets.UTF_8);
 			Files.writeString(data.resolve(INDEX_FILE), plan.index().toJson(), StandardCharsets.UTF_8);
 			if (this.options.writeDatapack()) {
-				DatapackWriter.write(this.worldDir);
+				DatapackWriter.write(this.worldDir, plan.pools());
 			}
 		} catch (IOException e) {
 			this.fail(new Failure("io.world", e));
 			return;
 		}
 		this.report.worldIndex = true;
+		plan.warnings().warn("habitat_unconfigured", this.placer.counts().habitatFailures);
 		this.fillReport();
 		this.report.status = "ok";
 		this.writeReport();
@@ -257,9 +277,9 @@ public final class BuildTask {
 			WorldIndexSync.publish(this.level.getServer(), plan.index(), true);
 		}
 		this.phase = BuildPhase.DONE;
-		KantoBridge.LOGGER.info("builder: done: {} maps, {} story cells, {} blocks placed, {} cleared, {} chunks, {} textures, {} warnings, {} ms",
-				this.report.mapsBuilt, this.report.storyCells, this.report.blocksPlaced, this.report.blocksCleared, this.report.chunks,
-				this.report.packTextures, this.report.warnings, this.report.elapsedMs);
+		KantoBridge.LOGGER.info("builder: done: {} maps, {} story cells, {} habitat blocks, {} pools, {} blocks placed, {} cleared, {} chunks, {} textures, {} warnings, {} ms",
+				this.report.mapsBuilt, this.report.storyCells, this.report.habitatBlocks, this.report.pools, this.report.blocksPlaced,
+				this.report.blocksCleared, this.report.chunks, this.report.packTextures, this.report.warnings, this.report.elapsedMs);
 		this.report.warningCodes.forEach((code, count) -> KantoBridge.LOGGER.warn("builder: warning {} x{}", code, count));
 		this.listener.onPhase(BuildPhase.DONE);
 		this.listener.onFinished(this.report);
@@ -328,6 +348,7 @@ public final class BuildTask {
 		r.slotsHalf = plan.slotMap().count(SlotMap.Shape.HALF);
 		r.worldIndexHash = plan.index().hash();
 		r.spawnMap = plan.spawn() != null ? plan.spawn().map() : null;
+		r.pools = plan.pools().size();
 		ResourcePackWriter.Result pack = this.prepared.pack();
 		if (pack != null) {
 			r.packTextures = pack.textures();
@@ -345,6 +366,7 @@ public final class BuildTask {
 			r.storyCellBlocks = counts.storyCells;
 			r.ledgeColliders = counts.ledgeColliders;
 			r.lightBlocks = counts.lights;
+			r.habitatBlocks = counts.habitatBlocks;
 		}
 	}
 

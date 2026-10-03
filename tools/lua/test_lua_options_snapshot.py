@@ -70,8 +70,9 @@ def snapshot(rig, role="test"):
     peer.hello(role=role)
     msgs = peer.messages()
     assert [m["type"] for m in msgs][:2] == ["hello.ok", "snapshot"]
-    # then the observers' follow-ups (M4): the map's npc.set, the open UIs again
-    assert {m["type"] for m in msgs[2:]} <= {"npc.set", "ui.open", "log"}
+    # then the observers' follow-ups: the map's npc.set, the open UIs again (M4), the mirrored
+    # bag (M6)
+    assert {m["type"] for m in msgs[2:]} <= {"npc.set", "ui.open", "log", "bag.sync"}
     return msgs[1]["data"]
 
 
@@ -148,8 +149,9 @@ def test_resync_snapshot_matches_the_live_view():
     peer.messages()
     seq = peer.send("resync")
     rig.step()
-    snap, npcs = peer.messages()
+    snap, npcs, bag = peer.messages()
     assert npcs["type"] == "npc.set" and npcs["data"] == {"map": "TEST_TOWN", "list": []}
+    assert bag["type"] == "bag.sync" and bag["data"] == {"items": {"POTION": 2}}
     assert snap["re"] == seq and snap["data"]["player"] == {"map": "TEST_TOWN", "x": 5, "y": 5, "facing": "up"}
 
 

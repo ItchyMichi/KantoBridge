@@ -1695,6 +1695,24 @@ function Engine.new(opts)
     end
   end
 
+  -- M6: a surfing or fishing encounter held for Cobblemon (engine.encounter*
+  -- below). The world lets go, then the engine's own wild-battle ending
+  -- runs as the native battle's onFinish would (OC:4820, :2429):
+  -- OverworldState:afterBattle (OC:5184-5225) gives a wild battle its
+  -- encounter grace steps (:5188-5190), and "lose" blacks out (:5196-5214).
+  -- "caught" needs nothing more here: the Pokemon is Cobblemon's and comes
+  -- back through party.sync, its Pokedex entry through dex.sync. "abort"
+  -- applies nothing at all.
+  local function finishWild(rec, result)
+    local ow = rec.ow
+    if type(ow) ~= "table" or ow ~= engine.overworld() then return end
+    if rec.heldEngaging then ow.engaging = false end
+    if result ~= "abort" and type(ow.afterBattle) == "function" then
+      local ok, err = pcall(ow.afterBattle, ow, result, rec.fake)
+      if not ok then warnAt("engine.after_battle_failed", err) end
+    end
+  end
+
   -- Applies a Cobblemon result to the pending battle. result is the
   -- engine's word: "win", "lose", "run", "caught", or "abort" (nothing
   -- happened: the script stops / the encounter is cancelled, so it can be
@@ -1712,7 +1730,7 @@ function Engine.new(opts)
       else
         rec.state = "consumed"
         if st.battle == rec then st.battle = nil end
-        finishTrainer(rec, result)
+        if rec.path == "wild" then finishWild(rec, result) else finishTrainer(rec, result) end
       end
     end)
     return true
@@ -1891,8 +1909,10 @@ function Engine.new(opts)
   end
 
   -- A sync may be applied now: an overworld is up, no give_pokemon is under
-  -- way (it holds its new party member while the nickname prompt runs) and
-  -- no native battle (BattleState, isBattleState :49) holds party members.
+  -- way (it holds its new party member while the nickname prompt runs), no
+  -- TM/HM is being taught (M6: the watch below compares the member's moves)
+  -- and no native battle (BattleState, isBattleState :49) holds party
+  -- members.
   function engine.partySafe()
     local st = type(game) == "table" and rawget(game, STATE_SLOT) or nil
     local ow, save = engine.overworld(), engine.save()
@@ -1901,6 +1921,8 @@ function Engine.new(opts)
       -- one whose world is gone (the title, New Game, CONTINUE) never ends
       if giving.ow ~= ow or giving.save ~= save then st.giving[giving] = nil else return false end
     end
+    local watch = type(st) == "table" and st.tmWatch or nil
+    if type(watch) == "table" and watch.save == save and watch.ow == ow then return false end
     for _, s in ipairs(game.stack.states) do
       if type(s) == "table" and s.isBattleState then return false end
     end
@@ -1978,9 +2000,10 @@ function Engine.new(opts)
     local out, seen = {}, {}
     for _, e in ipairs(entries) do
       local mon, how = byUid[e.uid], "updated"
-      if mon == nil and e.give ~= nil then
+      if e.give ~= nil then
+        -- the gift this entry is: its member, unless the uid is known already
         local g = giftNamed(e.give)
-        if g and type(g.mon) == "table" and g.save == save then mon, how = g.mon, "matched" end
+        if mon == nil and g and type(g.mon) == "table" and g.save == save then mon, how = g.mon, "matched" end
         engine.giftDone(e.give)
       end
       if mon == nil or seen[mon] then
@@ -2024,13 +2047,574 @@ function Engine.new(opts)
     for _, mon in ipairs(save and type(save.party) == "table" and save.party or {}) do
       if monUid[mon] then known = known + 1 end
     end
+    local seen, owned = engine.dexCounts()
     return {
       partySize = save and type(save.party) == "table" and #save.party or 0,
       partyKnown = known,
       giftsPending = type(st) == "table" and #st.gifts or 0,
       healsPending = type(st) == "table" and st.heals or 0,
       battleHeld = liveBattle() ~= nil,
+      dexSeen = seen,
+      dexOwned = owned,
+      itemUsesQueued = type(st) == "table" and type(st.itemUses) == "table" and #st.itemUses or 0,
+      tmWatching = type(st) == "table" and type(st.tmWatch) == "table",
     }
+  end
+
+  -- ------------------------------------------------------------ wild encounters, Pokedex, bag, items (M6)
+  --
+  -- Wild encounters (PLAN section 4.1 "Battles", P8, P9). Every random
+  -- encounter the overworld rolls goes through OverworldState:rollEncounter
+  -- (OC:4635-4646), whose encounter.roll chain may return nil to suppress it
+  -- (OC:4641-4645; docs/modding.md "Effective wild-encounter distribution").
+  -- ctx.terrain is "grass" (a grass cell), "water" (surfing on water: the
+  -- map's water table) or "indoor" (every step of an indoor map), in
+  -- onStepComplete's order (OC:4781-4790). While a client or test session is
+  -- connected:
+  --   * a roll the engine would turn into a Safari Zone battle (a Safari game
+  --     on a SAFARI-region map, OC:4812-4814) or an unidentifiable ghost
+  --     battle (Map.ghostBattles without its item, OC:4805-4810) runs
+  --     natively, shown on the mirror (P9);
+  --   * grass and indoor rolls return nil without rolling: Cobblemon's
+  --     habitat pools spawn those Pokemon in Minecraft (P8);
+  --   * a water roll is the engine's own (the vanilla link, then
+  --     encounter.species as OC:4642-4644 runs it), filtered by REPEL as
+  --     OC:4793-4799 does, and then held for Cobblemon instead of the native
+  --     battle (OC:4800-4822): the world waits (ow.engaging, as a trainer's
+  --     encounter holds it) until battle.result.
+  -- Fishing: OverworldState:goFishing (OC:2375-2407) rolls through
+  -- encounter.fishing (OC:2382-2388). No bite ("Not even a nibble!", "nothing
+  -- here") stays native, and so does a Safari Zone bite (OC:2426-2428). A
+  -- bite plays its cast animation natively in the TextBox goFishing pushes
+  -- right after the roll (OC:2394-2406); that one box's continuation
+  -- (self.onDone, called when it pops: src/render/TextBox.lua:586-588,
+  -- fishVerdict OC:2397-2399) is replaced with fishVerdict's bite text and
+  -- its field resets (OC:2421-2423) and then the hold, so the native battle
+  -- (:2424-2430) never starts.
+  -- Without a client the hidden game fights everything itself (M5's rule).
+
+  local DIR_DELTA = { up = { 0, -1 }, down = { 0, 1 }, left = { -1, 0 }, right = { 1, 0 } }
+  -- BattleState:battleKind (src/battle/BattleState.lua:1857-1862): the
+  -- special battles that stay native (P9), in the protocol's words
+  local NATIVE_KINDS = { safari = "safari", ghost = "ghost", oldman = "old_man" }
+  local encounterCounts = {
+    grass = 0, indoor = 0, water = 0, fish = 0, safari = 0, ghost = 0, repel = 0, native = 0,
+    declined = 0, noBite = 0, other = 0,
+  }
+
+  -- The process-lifetime slot also points at the current instance's bridge
+  -- (live, battle): a fishing line cast before a hot reload is answered by
+  -- the instance that is current when it bites.
+  function engine.attachBridge(bridge)
+    local st = bridgeState()
+    if st then st.bridge = bridge end
+  end
+
+  local function currentBridge()
+    local st = type(game) == "table" and rawget(game, STATE_SLOT) or nil
+    return type(st) == "table" and st.bridge or nil
+  end
+
+  local function isLive(bridge)
+    if type(bridge) ~= "table" or type(bridge.live) ~= "function" then return false end
+    local ok, live = pcall(bridge.live)
+    return ok and live == true
+  end
+
+  -- The engine would make this a Safari Zone battle: a Safari game under way
+  -- (save.safari) on a SAFARI-region map (Map.inRegion,
+  -- src/world/Map.lua:173-176; tested so at OC:4812 and :2426).
+  local function safariHere(ow, save)
+    local def = type(ow) == "table" and type(ow.map) == "table" and ow.map.def or nil
+    if not (type(save) == "table" and save.safari and type(def) == "table") then return false end
+    local Map = try("src.world.Map")
+    if not (Map and type(Map.inRegion) == "function") then return false end
+    local ok, yes = pcall(Map.inRegion, def, "SAFARI", "SAFARI_ZONE")
+    return ok and yes == true
+  end
+
+  -- ... or an unidentifiable ghost battle: the map's ghostBattles
+  -- (src/world/Map.lua:179-185: the Pokemon Tower floors) without its
+  -- unlessItem in the bag (OC:4807-4810).
+  local function ghostHere(ow, save)
+    local def = type(ow) == "table" and type(ow.map) == "table" and ow.map.def or nil
+    if type(def) ~= "table" then return false end
+    local Map = try("src.world.Map")
+    if not (Map and type(Map.ghostBattles) == "function") then return false end
+    local ok, ghost = pcall(Map.ghostBattles, def)
+    if not (ok and ghost) then return false end
+    local inv = type(save) == "table" and type(save.inventory) == "table" and save.inventory or {}
+    return not (type(ghost) == "table" and ghost.unlessItem and inv[ghost.unlessItem])
+  end
+
+  -- Plain facts about a wild Pokemon the engine rolled, for kb_battle: kind
+  -- "surf" or "fish", the species as dex, its level, and the cell in front
+  -- of the player (the water it surfaces from or bites in), on the
+  -- player's map.
+  local function wildFacts(ow, enc, kind)
+    local data = gameData()
+    local species, level = enc.species, tonumber(enc.level)
+    if not (symbol(species) and level and data and type(data.pokemon) == "table"
+            and type(data.pokemon[species]) == "table") then
+      return nil
+    end
+    local f = { path = "wild", kind = kind, wild = true, species = species, level = level,
+                dex = engine.dexOf(species) }
+    local p, m = ow.player, ow.map
+    f.map = type(m) == "table" and symbol(m.id) and m.id or nil
+    local d = type(p) == "table" and DIR_DELTA[p.facing] or nil
+    if d and tonumber(p.cellX) and tonumber(p.cellY) then f.x, f.y = p.cellX + d[1], p.cellY + d[2] end
+    return f
+  end
+
+  -- Holds a wild battle for Cobblemon on this overworld (the record kb_battle
+  -- sends and battleFinish/finishWild end).
+  local function holdWild(ow, plan, facts)
+    local record = newRecord(plan, facts, "wild")
+    if not ow.engaging then
+      ow.engaging = true
+      record.heldEngaging = true
+    end
+    bridgeState().battle = record
+    return record
+  end
+
+  local function planFor(bridge, facts)
+    if type(bridge) ~= "table" or type(bridge.battle) ~= "function" then return nil end
+    local ok, plan = pcall(bridge.battle, facts)
+    if ok and type(plan) == "table" and type(plan.id) == "string" then return plan end
+    return nil
+  end
+
+  -- encounter.roll's wrapper body (OC:4641; next is the vanilla roll,
+  -- OC:4628).
+  function engine.encounterRoll(nextFn, encDef, ctx, bridge)
+    local terrain = type(ctx) == "table" and ctx.terrain or nil
+    local ow, save = engine.overworld(), engine.save()
+    if not ow or not isLive(bridge) then
+      encounterCounts.native = encounterCounts.native + 1
+      return nextFn(encDef, ctx)
+    end
+    if safariHere(ow, save) then
+      encounterCounts.safari = encounterCounts.safari + 1
+      return nextFn(encDef, ctx)
+    end
+    if ghostHere(ow, save) then
+      encounterCounts.ghost = encounterCounts.ghost + 1
+      return nextFn(encDef, ctx)
+    end
+    if terrain == "grass" or terrain == "indoor" then
+      encounterCounts[terrain] = encounterCounts[terrain] + 1
+      return nil
+    end
+    if terrain ~= "water" then
+      encounterCounts.other = encounterCounts.other + 1
+      return nextFn(encDef, ctx)
+    end
+    if liveBattle() then
+      encounterCounts.declined = encounterCounts.declined + 1
+      return nil
+    end
+    local raw = nextFn(encDef, ctx)
+    if type(raw) ~= "table" then return raw end
+    local enc = raw
+    local Runtime = try("src.mods.Runtime")
+    if Runtime and type(Runtime.wantsHook) == "function" and Runtime.wantsHook("encounter.species") then
+      local ok, out = pcall(Runtime.call, "encounter.species", function(e) return e end, raw, ctx)
+      if ok then enc = out end
+      if type(enc) ~= "table" then return nil end
+    end
+    -- REPEL blocks wild Pokemon weaker than the lead (OC:4793-4799)
+    local lead = type(save) == "table" and type(save.party) == "table" and save.party[1] or nil
+    local repel = type(save) == "table" and tonumber(save.repelSteps) or 0
+    if repel > 0 and type(lead) == "table" and tonumber(lead.level) and tonumber(enc.level)
+        and enc.level < lead.level then
+      encounterCounts.repel = encounterCounts.repel + 1
+      return nil
+    end
+    local facts = wildFacts(ow, enc, "surf")
+    local plan = facts and planFor(bridge, facts)
+    if not plan then
+      -- kb_battle can't express it: the hidden game fights it (the engine
+      -- runs encounter.species on this raw roll itself)
+      encounterCounts.declined = encounterCounts.declined + 1
+      return raw
+    end
+    holdWild(ow, plan, facts)
+    encounterCounts.water = encounterCounts.water + 1
+    return nil
+  end
+
+  -- encounter.fishing's wrapper body (OC:2384-2387: next rolls the
+  -- candidates, or the Old Rod's `always`).
+  function engine.encounterFishing(nextFn, rod, mapId, pool, bridge)
+    local ow, save = engine.overworld(), engine.save()
+    if not ow or not isLive(bridge) then
+      encounterCounts.native = encounterCounts.native + 1
+      return nextFn(rod, mapId, pool)
+    end
+    if safariHere(ow, save) then
+      encounterCounts.safari = encounterCounts.safari + 1
+      return nextFn(rod, mapId, pool)
+    end
+    local enc = nextFn(rod, mapId, pool)
+    if type(enc) ~= "table" then
+      encounterCounts.noBite = encounterCounts.noBite + 1
+      return enc
+    end
+    local facts = wildFacts(ow, enc, "fish")
+    local st = bridgeState()
+    if facts and st then
+      st.fishArm = { facts = facts, ow = ow, save = save, step = engine.logicStep() }
+    else
+      encounterCounts.declined = encounterCounts.declined + 1
+    end
+    return enc
+  end
+
+  -- screen.pushed (src/core/StateStack.lua:28-35, fired right after the
+  -- push): the cast box goFishing pushes right after a bite's roll, in the
+  -- same logic step, gets the bite's continuation. Returns true when it
+  -- took one.
+  function engine.fishPushed(state)
+    local st = type(game) == "table" and rawget(game, STATE_SLOT) or nil
+    local arm = type(st) == "table" and st.fishArm or nil
+    if type(arm) ~= "table" then return false end
+    st.fishArm = nil
+    if not (type(state) == "table" and state.isTextBox and type(state.onDone) == "function")
+        or arm.step ~= engine.logicStep() or arm.ow ~= engine.overworld() then
+      return false
+    end
+    local nativeDone = state.onDone
+    state.onDone = function()
+      local ow = engine.overworld()
+      local bridge = currentBridge()
+      local plan
+      if ow == arm.ow and engine.save() == arm.save and not liveBattle() and isLive(bridge) then
+        plan = planFor(bridge, arm.facts)
+      end
+      if not plan then
+        if ow == arm.ow then encounterCounts.declined = encounterCounts.declined + 1 end
+        return nativeDone() -- the engine's own verdict: the bite and a native battle
+      end
+      encounterCounts.fish = encounterCounts.fish + 1
+      pushTexts({ romText("_ItsABiteText", "Oh!\nIt's a bite!") }, function()
+        ow.fishing = nil
+        if type(ow.player) == "table" then ow.player.fishing = nil end
+        if engine.overworld() == ow and engine.save() == arm.save and not liveBattle() then
+          holdWild(ow, plan, arm.facts)
+        end
+      end)
+    end
+    return true
+  end
+
+  -- The special battle running natively on the stack, if any: "safari",
+  -- "ghost" or "old_man" (BattleState:battleKind, src/battle/BattleState.lua
+  -- :1857-1862, from makeSafari :1077, makeGhost :986, makeOldManDemo :1052).
+  function engine.nativeBattle()
+    local states = type(game) == "table" and game.stack and game.stack.states or nil
+    if type(states) ~= "table" then return nil end
+    for i = #states, 1, -1 do
+      local s = states[i]
+      if type(s) == "table" and s.isBattleState then
+        local kind
+        if type(s.battleKind) == "function" then
+          local ok, k = pcall(s.battleKind, s)
+          if ok then kind = k end
+        end
+        if kind == nil then kind = (s.ghost and "ghost") or (s.safari and "safari") or (s.demo and "oldman") or nil end
+        return NATIVE_KINDS[kind]
+      end
+    end
+    return nil
+  end
+
+  function engine.encounterCounts()
+    local out = {}
+    for k, v in pairs(encounterCounts) do out[k] = v end
+    return out
+  end
+
+  -- ---- the Pokedex
+  --
+  -- save.pokedex.seen / owned: species -> true (SaveData.newGame's skeleton,
+  -- src/core/SaveData.lua:3061); the engine marks both on a gift, a trade or
+  -- an evolution (src/pokemon/Evolution.lua:105-108,
+  -- src/link/Protocol.lua:1199-1200) and counts entries with pairs (Oak's
+  -- rating, OC:3740-3743; the start menu, src/ui/StartMenu.lua:68).
+
+  function engine.inGame() return engine.overworld() ~= nil end
+
+  -- Adds Cobblemon's Pokedex (dex numbers) to the hidden game's: an owned
+  -- entry is seen as well, and nothing already set is ever cleared. Returns
+  -- { seen, owned } newly set and `unknown` dex numbers with no Gen 1
+  -- species, or nil without a save.
+  function engine.applyDex(seen, owned)
+    local save = engine.save()
+    if type(save) ~= "table" then return nil end
+    if type(save.pokedex) ~= "table" then save.pokedex = {} end
+    local dex = save.pokedex
+    if type(dex.seen) ~= "table" then dex.seen = {} end
+    if type(dex.owned) ~= "table" then dex.owned = {} end
+    local res = { seen = 0, owned = 0, unknown = 0 }
+    local function mark(set, species, field)
+      if not set[species] then
+        set[species] = true
+        res[field] = res[field] + 1
+      end
+    end
+    for _, n in ipairs(type(owned) == "table" and owned or {}) do
+      local species = engine.speciesOfDex(n)
+      if species then
+        mark(dex.owned, species, "owned")
+        mark(dex.seen, species, "seen")
+      else
+        res.unknown = res.unknown + 1
+      end
+    end
+    for _, n in ipairs(type(seen) == "table" and seen or {}) do
+      local species = engine.speciesOfDex(n)
+      if species then mark(dex.seen, species, "seen") else res.unknown = res.unknown + 1 end
+    end
+    return res
+  end
+
+  -- How many species the hidden game has seen and owned.
+  function engine.dexCounts()
+    local save = engine.save()
+    local dex = type(save) == "table" and type(save.pokedex) == "table" and save.pokedex or {}
+    local seen, owned = 0, 0
+    for _, v in pairs(type(dex.seen) == "table" and dex.seen or {}) do if v then seen = seen + 1 end end
+    for _, v in pairs(type(dex.owned) == "table" and dex.owned or {}) do if v then owned = owned + 1 end end
+    return seen, owned
+  end
+
+  -- ---- the bag
+  --
+  -- save.inventory: item -> quantity, badges included (as true; Bag.isBadge,
+  -- src/inventory/Bag.lua:23-26); key items carry keyItem in their record
+  -- (RomExtractor.lua:883-886). The engine changes it through Bag.add /
+  -- Bag.remove (Bag.lua:139-181).
+
+  -- The quantities of the listed items the bag holds (1 or more), never a
+  -- key item.
+  function engine.bagCounts(items)
+    local save, data = engine.save(), gameData()
+    local inv = type(save) == "table" and type(save.inventory) == "table" and save.inventory or nil
+    local out = {}
+    if not inv then return out end
+    for _, id in ipairs(type(items) == "table" and items or {}) do
+      local qty = inv[id]
+      local def = data and type(data.items) == "table" and data.items[id] or nil
+      if type(qty) == "number" and qty >= 1 and not (type(def) == "table" and def.keyItem) then
+        out[id] = math.floor(qty)
+      end
+    end
+    return out
+  end
+
+  -- Takes up to qty of an item out of the bag with Bag.remove (the slot and
+  -- its bagOrder entry go at zero, Bag.lua:166-181); never below zero.
+  -- Returns how many were taken and how many there were.
+  function engine.bagRemove(id, qty)
+    local save = engine.save()
+    local inv = type(save) == "table" and type(save.inventory) == "table" and save.inventory or nil
+    if not inv then return 0, 0 end
+    local held = type(inv[id]) == "number" and math.max(0, math.floor(inv[id])) or 0
+    local n = math.min(qty, held)
+    if n <= 0 then return 0, held end
+    local Bag = try("src.inventory.Bag")
+    if not (Bag and type(Bag.remove) == "function") then return 0, held end
+    local ok = pcall(Bag.remove, save, id, n)
+    if not ok then return 0, held end
+    return n, held
+  end
+
+  -- ---- items used on a party member
+  --
+  -- BagMenu runs every use-flow through the item.use hook
+  -- (src/ui/BagMenu.lua:513-516; the wrapped dispatch is vanillaUseOn, :89),
+  -- so the wrapper sees (game, battle, id, target, list, moveIndex, picker)
+  -- before anything happens. Outside battles, while a client or test
+  -- session is connected, on a member with a Cobblemon uid (PLAN P14, DESIGN
+  -- section 5 "Items and moves crossing over"):
+  --   * an evolution stone the member's species evolves with (ItemEffects.use's
+  --     own test, src/inventory/ItemEffects.lua:510-531; Yellow's starter
+  --     Pikachu refusal left native) and RARE_CANDY below level 100 (:490-492):
+  --     the engine's effect is skipped -- Cobblemon applies it (party.item),
+  --     and the next party.sync brings it back. The bag side stays BagMenu's:
+  --     the item is consumed and its row refreshed (consume and removeUsed,
+  --     BagMenu.lua:39-46, :362-374), and the party menu closes behind the
+  --     bag's white flash (closePicker, :94-101; BAG_RETURN_WHITE, :17);
+  --   * a TM or HM runs natively -- its forget prompt (MoveLearnMenu) is the
+  --     slot picker, HMs stay in the bag and TMs are used up (BagMenu.lua
+  --     :240-277) -- and the move it teaches is watched for: appended
+  --     (:247-248) or written over slot i (src/ui/MoveLearnMenu.lua:111-112).
+  --     That goes to Cobblemon as party.item{move, slot}; the next party.sync
+  --     replaces the shadow party's copy either way.
+  -- Anything else, and anything the engine refuses, runs natively.
+
+  local STONES = { FIRE_STONE = true, WATER_STONE = true, THUNDER_STONE = true, LEAF_STONE = true,
+                   MOON_STONE = true } -- ItemEffects.lua:57-60, when isStone isn't there
+  local itemCounts = { stone = 0, candy = 0, machine = 0, taught = 0, declined = 0, native = 0 }
+
+  local function itemState()
+    local st = bridgeState()
+    if st and type(st.itemUses) ~= "table" then st.itemUses = {} end
+    return st
+  end
+
+  local function queueItemUse(use)
+    local st = itemState()
+    if st then st.itemUses[#st.itemUses + 1] = use end
+  end
+
+  local function isStone(id)
+    local ItemEffects = try("src.inventory.ItemEffects")
+    if ItemEffects and type(ItemEffects.isStone) == "function" then
+      local ok, yes = pcall(ItemEffects.isStone, id)
+      if ok then return yes and true or false end
+    end
+    return STONES[id] == true
+  end
+
+  -- BagMenu's bag side of a used-up item, without the item's effect.
+  local function consumeAndClose(g, id, list, picker)
+    local save = g.save
+    local Bag = try("src.inventory.Bag")
+    if not (type(save) == "table" and Bag and type(Bag.remove) == "function") then return false end
+    if not pcall(Bag.remove, save, id, 1) then return false end
+    local inv = type(save.inventory) == "table" and save.inventory or {}
+    if not inv[id] then
+      g.bagSavedMenuItem, g.bagListScrollOffset = 0, 0
+      if type(list) == "table" then list.index, list.scroll = 1, 0 end
+    end
+    if type(list) == "table" and type(list.items) == "table" then
+      for i, it in ipairs(list.items) do
+        if type(it) == "table" and it.value == id then
+          local left = inv[id]
+          if left then it.count = left else table.remove(list.items, i) end
+          break
+        end
+      end
+      list.index = math.min(tonumber(list.index) or 1, math.max(1, #list.items))
+    end
+    if type(picker) == "table" and type(picker.close) == "function" then
+      pcall(picker.close, picker)
+      local Transition = try("src.render.Transition")
+      if Transition and type(Transition.whiteFlash) == "function" and g.stack then
+        local ok, flash = pcall(Transition.whiteFlash, g, 19)
+        if ok and type(flash) == "table" then g.stack:push(flash) end
+      end
+    end
+    return true
+  end
+
+  -- The watched TM/HM: taught (the move is in the member's list now: slot
+  -- i when it took an old move's place), declined (the party menu the flow
+  -- runs from is gone without it) or dropped (the world went away).
+  -- Returns that word, or nil while it is still under way.
+  function engine.tmWatchStep()
+    local st = type(game) == "table" and rawget(game, STATE_SLOT) or nil
+    local w = type(st) == "table" and st.tmWatch or nil
+    if type(w) ~= "table" then return nil end
+    if w.save ~= engine.save() or w.ow ~= engine.overworld() then
+      st.tmWatch = nil
+      return "dropped"
+    end
+    for i, mv in ipairs(type(w.mon.moves) == "table" and w.mon.moves or {}) do
+      if type(mv) == "table" and mv.id == w.move then
+        st.tmWatch = nil
+        local use = { item = w.item, uid = w.uid, move = engine.moveNumOf(w.move), save = w.save }
+        if i <= w.known then use.slot = i - 1 end
+        queueItemUse(use)
+        itemCounts.taught = itemCounts.taught + 1
+        return "taught"
+      end
+    end
+    if not (w.picker ~= nil and stackIndex(w.picker)) then
+      st.tmWatch = nil
+      itemCounts.declined = itemCounts.declined + 1
+      return "declined"
+    end
+    return nil
+  end
+
+  -- item.use's wrapper body (BagMenu.lua:513-516).
+  function engine.itemUse(nextFn, g, battle, id, target, list, moveIndex, picker, bridge)
+    local function native()
+      return nextFn(g, battle, id, target, list, moveIndex, picker)
+    end
+    if battle ~= nil or type(g) ~= "table" or type(target) ~= "table" or type(id) ~= "string" then
+      return native()
+    end
+    local data, save, ow = gameData(), engine.save(), engine.overworld()
+    local uid = monUid[target]
+    local def = data and type(data.items) == "table" and data.items[id] or nil
+    local sdef = data and type(data.pokemon) == "table" and data.pokemon[target.species] or nil
+    if not (uid and save and ow and type(def) == "table" and type(sdef) == "table" and isLive(bridge)) then
+      itemCounts.native = itemCounts.native + 1
+      return native()
+    end
+    if type(def.machine) == "table" then
+      -- ItemUseTMHM's tests (ItemEffects.lua:586-612): the species learns
+      -- it and the member doesn't know it yet; otherwise the engine refuses
+      local move = def.machine.move
+      local learns = false
+      for _, m in ipairs(type(sdef.tmhm) == "table" and sdef.tmhm or {}) do
+        if m == move then learns = true break end
+      end
+      local known = 0
+      for _, mv in ipairs(type(target.moves) == "table" and target.moves or {}) do
+        known = known + 1
+        if type(mv) == "table" and mv.id == move then learns = false end
+      end
+      if not learns then return native() end
+      local st = itemState()
+      if st then
+        st.tmWatch = { mon = target, uid = uid, item = id, move = move, known = known, picker = picker,
+                       save = save, ow = ow }
+      end
+      itemCounts.machine = itemCounts.machine + 1
+      local results = { native() }
+      engine.tmWatchStep() -- fewer than four moves: taught already
+      return unpack(results, 1, table.maxn(results))
+    end
+    local kind
+    if isStone(id) then
+      if isYellow() then return native() end
+      for _, evo in ipairs(type(sdef.evolutions) == "table" and sdef.evolutions or {}) do
+        if type(evo) == "table" and evo.method == "ITEM" and evo.item == id then kind = "stone" break end
+      end
+    elseif id == "RARE_CANDY" and tonumber(target.level) and target.level < 100 then
+      kind = "candy"
+    end
+    if not kind or not consumeAndClose(g, id, list, picker) then return native() end
+    queueItemUse({ item = id, uid = uid, save = save })
+    itemCounts[kind] = itemCounts[kind] + 1
+    return nil
+  end
+
+  -- The item uses waiting for Minecraft (party.item), as plain values; the
+  -- queue is emptied. Uses from another save (New Game, CONTINUE) are gone.
+  function engine.takeItemUses()
+    local st = type(game) == "table" and rawget(game, STATE_SLOT) or nil
+    local list = type(st) == "table" and st.itemUses or nil
+    local out = {}
+    if type(list) ~= "table" then return out end
+    local save = engine.save()
+    for _, u in ipairs(list) do
+      if u.save == save then out[#out + 1] = { item = u.item, uid = u.uid, slot = u.slot, move = u.move } end
+    end
+    st.itemUses = {}
+    return out
+  end
+
+  function engine.itemCounts()
+    local out = {}
+    for k, v in pairs(itemCounts) do out[k] = v end
+    return out
   end
 
   -- ------------------------------------------------------------ export (M2)

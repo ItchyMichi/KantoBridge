@@ -218,6 +218,79 @@ def test_a_box_gift_leaves_the_gen1_box():
     assert g.status()["giftsPending"] == 0 and len(g.party()) == 6
 
 
+# ------------------------------------------------------------ exact gift matching (party.sync's give, M6)
+
+
+def two_gifts(g):
+    """Two gifts of the same species and level: only their give ids tell them apart."""
+    g.script([["give_pokemon", "BIRDMON", 9, True]])
+    g.run(2)
+    g.script([["give_pokemon", "BIRDMON", 9, True]])
+    g.run(2)
+    first, second = gives(g)
+    return first, second
+
+
+def test_a_sync_naming_the_give_confirms_that_very_gift():
+    g = BattleGame()
+    first, second = two_gifts(g)
+    a, b = g.party()
+    sync(g, [entry(U1, 16, 9, [N["GUST_T"]], give=second["give"])])
+    g.run(2)
+    party = g.party()
+    assert len(party) == 2 and same(g, party[0], b), "the second gift is the synced one, by its id"
+    assert same(g, party[1], a), "the first is still pending, kept behind it"
+    st = g.status()
+    assert st["partyGivesExact"] == 1 and st["giftsPending"] == 1 and st["partyKnown"] == 1
+
+
+def test_without_give_the_sync_falls_back_to_species_and_level():
+    g = BattleGame()
+    first, second = two_gifts(g)
+    a, b = g.party()
+    sync(g, [entry(U1, 16, 9, [N["GUST_T"]])])
+    g.run(2)
+    assert same(g, g.party()[0], a), "the first pending gift of that species and level"
+    assert g.status()["partyGivesExact"] == 0
+
+
+def test_a_give_naming_no_pending_gift_is_never_matched_by_species():
+    g = BattleGame()
+    starter(g)
+    (give,) = gives(g)
+    given = g.party()[0]
+    sync(g, [entry(U1, 7, 5, give["moves"], give="g-older-1")])
+    g.run(2)
+    party = g.party()
+    assert len(party) == 2 and not same(g, party[0], given), "a Pokemon of an older gift: created"
+    assert same(g, party[1], given) and g.status()["giftsPending"] == 1
+
+
+def test_a_box_gift_named_by_give_is_confirmed():
+    g = BattleGame()
+    for i in range(6):
+        g.script([["give_pokemon", "BIRDMON", 5 + i, True]])
+        g.run(1)
+    g.script([["give_pokemon", "STARTMON_A", 30, True]])
+    g.run(2)
+    box_gift = gives(g)[-1]
+    members = [entry("aaaaaaaa-bbbb-4ccc-8ddd-%012d" % i, 16, 5 + i, [N["GUST_T"]], give=gives(g)[i]["give"])
+               for i in range(5)]
+    members.append(entry(U3, 1, 30, [N["TACKLE_T"]], give=box_gift["give"]))
+    sync(g, members, box=1)
+    g.run(2)
+    st = g.status()
+    assert st["giftsPending"] == 1, "the sixth party gift is not in this sync"
+    assert st["partyGivesExact"] == 6 and species(g)[5] == "STARTMON_A"
+
+
+def test_a_bad_give_field_is_refused():
+    g = BattleGame()
+    seq = sync(g, [entry(U1, 16, 9, [N["GUST_T"]], give="not ok!")])
+    g.run(2)
+    assert ("bad_message", seq) in errors(g)
+
+
 # ------------------------------------------------------------ party.sync
 
 

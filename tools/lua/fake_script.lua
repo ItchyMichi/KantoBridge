@@ -159,11 +159,12 @@ function FakeScript.attach(E)
 
   local ow = E.ow
 
-  -- OverworldState:afterBattle (OC:5184-5225): a lose blacks out, except the
-  -- Oak's-lab rival
+  -- OverworldState:afterBattle (OC:5184-5225): a wild battle's encounter
+  -- grace steps; a lose blacks out, except the Oak's-lab rival
   function ow.afterBattle(self, result, battle)
     E.afterBattles[#E.afterBattles + 1] = { result = result, kind = battle and battle.kind,
                                             cls = battle and battle.oppClass }
+    if battle and battle.kind == "wild" then self.wildEncounterGraceSteps = 3 end
     if result ~= "lose" then return end
     if battle and battle.oppClass == "OPP_RIVAL1" and self.map and self.map.id == "OAKS_LAB" then return end
     for _, mon in ipairs(E.save.party) do Pokemon.heal(mon) end
@@ -183,10 +184,19 @@ function FakeScript.attach(E)
   end
 
   -- A native battle: a graphical screen (isBattleState) that A ends with
-  -- E.nativeResult, calling onFinish(result) after it pops.
+  -- E.nativeResult, calling onFinish(result) after it pops. info.safari,
+  -- info.ghost and info.demo make the special battles BattleState:battleKind
+  -- names (src/battle/BattleState.lua:1857-1862).
   function E.nativeBattle(info, onFinish)
     E.battles[#E.battles + 1] = info
-    local s = { isBattleState = true, screenId = "BattleState", info = info }
+    local s = { isBattleState = true, screenId = "BattleState", info = info,
+                safari = info.safari, ghost = info.ghost, demo = info.demo }
+    function s.battleKind(self)
+      if self.ghost then return "ghost" end
+      if self.safari then return "safari" end
+      if self.demo then return "oldman" end
+      return info.kind == "wild" and "wild" or "trainer"
+    end
     function s.update(self)
       if E.game.input:wasPressed("a") then
         E.uiPop()

@@ -4,15 +4,18 @@ The Gen1Recomp half of Kanto Bridge: a Gen1Recomp mod (Lua, mod API 2) that runs
 player's hidden Gen1Recomp. It listens on `127.0.0.1:27151` for `fabric-bridge`
 ([`docs/PROTOCOL.md`](../docs/PROTOCOL.md#transport)).
 
-**Status: M5, opening, Oak's cutscene, starter and rival battle.** The listener, the handshake, the
-heartbeat, `snapshot`, the live `player.pos`/`player.state` stream, the world export for the builder,
-the step driver (`move.step`, `move.face`, `move.hold`), the `warp` messages, the UI observer and its
-answers (`ui.*`), the NPC observer (`npc.*`, `emote`), `act.interact`, `act.button`, the mirror frames
-(`mirror.*`), and now battles fought in Cobblemon (`battle.start`/`battle.result`), gifts
-(`party.give`), heals (`party.heal`) and the shadow party (`party.sync`) work against the real engine
+**Status: M6, Route 1, habitat pools, catching, party/Pokédex/bag sync.** The listener, the
+handshake, the heartbeat, `snapshot`, the live `player.pos`/`player.state` stream, the world export
+for the builder, the step driver (`move.step`, `move.face`, `move.hold`), the `warp` messages, the UI
+observer and its answers (`ui.*`), the NPC observer (`npc.*`, `emote`), `act.interact`, `act.button`,
+the mirror frames (`mirror.*`), battles fought in Cobblemon (`battle.start`/`battle.result`), gifts
+(`party.give`), heals (`party.heal`), the shadow party (`party.sync`), and now wild encounters (grass
+and cave rolls left to Cobblemon's habitat pools, surfing and fishing fought in Cobblemon, the Safari
+Zone and ghost battles native with `battle.native`), the Pokédex (`dex.sync`), the mirrored bag
+(`bag.sync`/`bag.use`) and items used on a party member (`party.item`) work against the real engine
 (end-to-end tests in [`tools/e2e/`](../tools/e2e): the title, Oak's speech with both names typed from
-the client, Oak's escort, the starter and the lab's rival battle won and lost). Story diffs, wild
-encounters, the bag and the Pokédex arrive in later milestones.
+the client, Oak's escort, the starter, the lab's rival battle won and lost, and 200 grass steps on
+Route 1 with no native battle). Story diffs, field moves and saving arrive in later milestones.
 
 ## What it does each logic step
 
@@ -139,11 +142,44 @@ test drivers), guarded so the hook always calls `next`:
 13. **The opening** needs nothing of its own: the title screen and Oak's speech arrive as mirror and
     text UIs, the title menu as a menu, and both naming screens as `ui.open{kind:"naming"}` (presets,
     grid) answered by `ui.name` through the M4 observer path, which no hot reload can break.
-14. **Options pin (PLAN P21):** the hidden game's display options stay classic (no tilt, zoom, render
+14. **Wild encounters** (M6, PLAN P8/P9; kb_engine's `encounter.roll` and `encounter.fishing`
+    wrappers): while a client or test session is connected, grass and indoor (cave) rolls return nil
+    without rolling (Cobblemon's habitat pools spawn those Pokémon in Minecraft). A roll the engine
+    would make a Safari Zone battle (a Safari game on a SAFARI-region map) or an unidentifiable ghost
+    battle (a Pokémon Tower floor without the SILPH_SCOPE) runs natively on the mirror. A surfing roll
+    is the engine's own (and REPEL's filter), then held for Cobblemon instead of the native battle:
+    `battle.start{kind:"surf", wild{dex, level, x, y}, rules{catch, flee}}` with the water in front
+    of the player, the world held like a trainer's encounter. Fishing rolls through the engine (Old,
+    Good and Super Rod; "Not even a nibble!" stays native); a bite plays its cast and "Oh! It's a
+    bite!" natively, then goes out as `kind:"fish"` instead of the native battle. Results: `win` and
+    `fled` continue (the engine's wild-battle ending: grace steps), `caught` too (the Pokémon is
+    Cobblemon's: it arrives by `party.sync`, its Pokédex entry by `dex.sync`), `lose` blacks out,
+    `aborted` applies nothing. `battle.native{kind:"safari"|"ghost"|"old_man", phase}` announces a
+    native special battle when it appears on the stack and when it leaves (again after a snapshot).
+    Without a client the hidden game rolls and fights everything itself.
+15. **The Pokédex** (`act/kb_party.lua`): `dex.sync{seen, owned}` from Cobblemon is added to
+    `save.pokedex` (species from dex numbers; owned implies seen; nothing is ever cleared), once an
+    overworld is up, and again after New Game or CONTINUE, so Oak, his aides and the Pokédex count
+    see it.
+16. **The bag** (`observe/kb_bag.lua`, PLAN P17): `bag.sync{items}` carries the battle items of PLAN
+    Appendix B the bag holds (balls, medicine, X items; never key items), after every snapshot and
+    whenever one of them changes, only in game. `bag.use{item, qty}` takes them out of the hidden
+    game's bag through the engine's `Bag.remove`, never below zero (a counted mismatch warning);
+    anything that isn't mirrored is refused (`error bag.not_mirrored`).
+17. **Items on a party member** (kb_engine's `item.use` wrapper around BagMenu's use-flow): while a
+    client is connected, an evolution stone the member's species evolves with and RARE_CANDY (below
+    level 100) are Cobblemon's to apply: the Gen 1 effect is skipped, the item is used up from the
+    Gen 1 bag, the party menu closes, and `party.item{item, uid}` goes out once. A TM or HM is taught
+    natively (its forget prompt is the slot picker); the move it taught is watched for and goes out
+    as `party.item{item, uid, move, slot?}` (`slot` when it took an old move's place). The next
+    `party.sync` brings Cobblemon's result. Anything the engine refuses, uses in battle, and members
+    with no Cobblemon uid stay native. `party.sync` entries naming their gift (`give`) confirm that
+    exact gift; without it the M5 dex-and-level match applies.
+18. **Options pin (PLAN P21):** the hidden game's display options stay classic (no tilt, zoom, render
    pipelines, wide or fill battles, or dynamic UI) and text speed stays FAST. They are pinned in
    memory at boot, on New Game and on CONTINUE, and re-checked every second. Nothing is written to
    disk; Gen1Recomp's own OPTIONS screen persists them if the player saves options there.
-15. **World export** ([`docs/PROTOCOL.md`](../docs/PROTOCOL.md) "Export resources"): for `builder`
+19. **World export** ([`docs/PROTOCOL.md`](../docs/PROTOCOL.md) "Export resources"): for `builder`
    and `test` connections, `export.index` and `export.get` serve the ten resource kinds (maps with
    per-cell flags, tilesets, images, sprites, palettes, encounters, field tables, names, the surface
    layout, swap sites). The first request starts one build of everything in a coroutine that
@@ -186,7 +222,7 @@ client are released at once.
 | File | Purpose |
 |---|---|
 | `manifest.json` | Read by Gen1Recomp's loader. `network` unlocks `require("socket")` (LÖVE's bundled LuaSocket) inside the mod sandbox; `engine_internals` discloses that the mod requires engine modules (`src.*`). Gen1Recomp only displays permissions; it never prompts. |
-| `main.lua` | Entry point. Loads the modules, defines the `port` option, wires the `input.step`, `movement.collision`, `render.output_enabled`, `render.output`, `script.command` and `trainer.before_battle` hooks and the `game.ready`, `save.created`, `save.loaded`, `player.warped`, `map.entered`, `world.blacked_out`, `screen.pushed`/`popped` and `world.interacted` events, routes `move.*`, `act.*`, `ui.*`, `mirror.*`, `battle.result` and `party.sync` to their modules, keeps one tap per logic step, orders each step's messages (`player.state`, `warp`, `player.pos`/`player.blocked`, `act.result`, `npc.*`/`emote`, `ui.close`/`open`/`update`, `party.give`/`party.heal`, `battle.start`, `mirror.frame`), and publishes a status table in `mod.exports` (versions, counts, flags) for test drivers. `debug.status` adds the battle and party counters and the typed names' lengths and short hashes. |
+| `main.lua` | Entry point. Loads the modules, defines the `port` option, wires the `input.step`, `movement.collision`, `render.output_enabled`, `render.output`, `script.command`, `trainer.before_battle`, `encounter.roll`, `encounter.fishing` and `item.use` hooks and the `game.ready`, `save.created`, `save.loaded`, `player.warped`, `map.entered`, `world.blacked_out`, `screen.pushed`/`popped` and `world.interacted` events, routes `move.*`, `act.*`, `ui.*`, `mirror.*`, `battle.result`, `party.sync`, `dex.sync` and `bag.use` to their modules, keeps one tap per logic step, orders each step's messages (`player.state`, `warp`, `player.pos`/`player.blocked`, `act.result`, `npc.*`/`emote`, `ui.close`/`open`/`update`, `party.give`/`party.heal`/`party.item`, `bag.sync`, `battle.native`/`battle.start`, `mirror.frame`), and publishes a status table in `mod.exports` (versions, counts, flags) for test drivers. `debug.status` adds the battle, party, bag, encounter and item counters, the Pokédex counts and the typed names' lengths and short hashes. |
 | `lib/kb_json.lua` | Our own strict, deterministic JSON codec: sorted keys, `{}`/`[]`/null kept apart, strict parsing, errors that never quote the input. |
 | `lib/kb_sha256.lua` | SHA-256, for the short hashes logs may show and for export hashes. |
 | `lib/kb_log.lua` | Redacted logging: a code plus fields; any string that isn't id-shaped prints as `<str:LEN:SHA8>`. |
@@ -194,13 +230,14 @@ client are released at once.
 | `lib/kb_proto.lua` | The message envelope (`type`, `seq`, `re`, `data`), dispatch, replies and `error` answers, with a gate and catalog-aware handling of unhandled types. |
 | `lib/kb_session.lua` | One connection's session: hello first, handshake, heartbeat timeout, resync, debug messages, live streams, log forwarding. |
 | `lib/kb_catalog.lua` | **Generated** from `protocol/catalog.json` by `tools/lua/gen_catalog.py`: the message types and their legs. A test fails when it is stale. |
-| `lib/kb_engine.lua` | **The only file that touches engine internals.** Each function cites the engine `file:line` it relies on (v0.3.49): the overworld and its player, the top state's class, NPCs, dark maps, badges, the options pin, the instance takeover slot, the movement internals (setting the facing, held buttons, the player's collision verdicts, warp departures, hop/boulder/departure facts), the M4 internals (the screen stack's classes and stable keys, each widget's fields and its ready test, the few writes before a confirming tap: a cursor, a quantity, a name's glyphs; NPC steps and scripted moves, the emotion bubble, `world.interacted`'s target, counter tiles), and the export's data sources and queries (dataset views, the live-Data copy, `Map.new` and its cell queries, `Map.isOutside`, `computeNeighbors`, tile animations, spinner tiles, `Assets.imageData` + PNG encoding, the SGB palette cascade, and the few engine constants with nothing to call: cut-tree and shore tiles), and the M5 seams: the `script.command` and `trainer.before_battle` bodies (the held battle on the runner's `waitingCheck`, `start_battle`'s resume path, engageTrainer's win effects, `continue({cancel})`, the result texts and prize), trainer teams (`Pokemon.movesAtLevel`, the copied boss-move table and trainer DVs, the rival's offset), `give_pokemon`'s gift capture, `heal_party`, the shadow party's rebuild (`Pokemon.new`, `Stats.calc`, `Growth.expForLevel`, `stampOT`) with its uid map, and the process-lifetime `kantoBridgeState` slot on the Game object. Re-check them all when the Gen1Recomp pin changes. |
+| `lib/kb_engine.lua` | **The only file that touches engine internals.** Each function cites the engine `file:line` it relies on (v0.3.49): the overworld and its player, the top state's class, NPCs, dark maps, badges, the options pin, the instance takeover slot, the movement internals (setting the facing, held buttons, the player's collision verdicts, warp departures, hop/boulder/departure facts), the M4 internals (the screen stack's classes and stable keys, each widget's fields and its ready test, the few writes before a confirming tap: a cursor, a quantity, a name's glyphs; NPC steps and scripted moves, the emotion bubble, `world.interacted`'s target, counter tiles), and the export's data sources and queries (dataset views, the live-Data copy, `Map.new` and its cell queries, `Map.isOutside`, `computeNeighbors`, tile animations, spinner tiles, `Assets.imageData` + PNG encoding, the SGB palette cascade, and the few engine constants with nothing to call: cut-tree and shore tiles), and the M5 seams: the `script.command` and `trainer.before_battle` bodies (the held battle on the runner's `waitingCheck`, `start_battle`'s resume path, engageTrainer's win effects, `continue({cancel})`, the result texts and prize), trainer teams (`Pokemon.movesAtLevel`, the copied boss-move table and trainer DVs, the rival's offset), `give_pokemon`'s gift capture, `heal_party`, the shadow party's rebuild (`Pokemon.new`, `Stats.calc`, `Growth.expForLevel`, `stampOT`) with its uid map, and the process-lifetime `kantoBridgeState` slot on the Game object; and the M6 seams: the `encounter.roll` and `encounter.fishing` bodies (the Safari region and ghost-map rules, REPEL's filter, `encounter.species`, the held surf/fish battle and its `afterBattle` ending, the cast box's continuation taken over on `screen.pushed`), the native special battle on the stack (`battleKind`), the Pokédex (`save.pokedex`), the bag (`save.inventory`, `Bag.remove`, key items), and the `item.use` body (the stone and candy tests, BagMenu's consume, row refresh and party-menu close, the TM/HM watch over MoveLearnMenu's slot), with the slot pointing at the current instance's bridge. Re-check them all when the Gen1Recomp pin changes. |
 | `observe/kb_player.lua` | The mode classifier (`busy` while a Cobblemon battle holds the world) and the `player.state`/`player.pos` observer, working on plain facts from `kb_engine`: step starts, ledge hops (one message at the landing), syncs, and tags the step driver reads. |
 | `observe/kb_warp.lua` | The `warp` start/arrive messages and their kinds, from the warp events and the transition facts. |
 | `act/kb_move.lua` | The step driver: `move.step` queue, facing first, holds through `mod.input` (released on the landing poll, re-pressed after an input reset, all released outside `idle`), outcomes (step, hop, push, warp, blocked) answered once per `n`, `move.face`, `move.hold`. |
 | `observe/kb_snapshot.lua` | Builds `snapshot` from the facts and the save: position, state, flags, toggles, bag, money, coins, badges, the hidden game's party (with the Cobblemon uids it knows), the Pokédex, the current map's NPCs (shaped by `kb_npcs`). |
-| `act/kb_battle.lua` | Battles fought in Cobblemon: the `battle.start` payload of a battle kb_engine holds (kind, trainer, team, wild, rules), sending it and re-sending it after snapshots, `battle.result` (outcomes to the engine's results; errors `battle.unknown`, `bad_message`). |
-| `act/kb_party.lua` | Gifts (`party.give`, re-sent until a sync shows them, given up on after five syncs and two minutes), heals (`party.heal`), `party.sync` (checked, mapped to Gen 1 species and moves, matched to pending gifts, applied when safe), the uids in `mod.save`. |
+| `act/kb_battle.lua` | Battles fought in Cobblemon: the `battle.start` payload of a battle kb_engine holds (kind, trainer, team, wild, rules; wild kinds `static`, `surf`, `fish`), sending it and re-sending it after snapshots, `battle.result` (outcomes to the engine's results; errors `battle.unknown`, `bad_message`), and `battle.native` for the special battles that stay native. |
+| `act/kb_party.lua` | Gifts (`party.give`, re-sent until a sync shows them, given up on after five syncs and two minutes), heals (`party.heal`), `party.sync` (checked, mapped to Gen 1 species and moves, matched to pending gifts by `give` or by species and level, applied when safe), the uids in `mod.save`, `dex.sync` (added to the Pokédex in game, again after New Game or CONTINUE) and `party.item` (the item uses kb_engine queued, sent once). |
+| `observe/kb_bag.lua` | The mirrored bag: the battle items of PLAN Appendix B as `bag.sync` (after snapshots and on change, in game only), `bag.use` applied through kb_engine's `Bag.remove` (never below zero, mismatches counted, unmirrored items refused). |
 | `observe/kb_npcs.lua` | The NPC observer: `npc.set`/`add`/`remove`/`move`/`face` and `emote` from a per-step diff by id; `Npcs.shape`, the one place an NPC becomes a protocol entry. |
 | `observe/kb_ui.lua` | The UI observer: the stack's states as `ui.open`/`update`/`close` by kind, the protocol text markup (`Ui.markup`), re-announcing after a snapshot. |
 | `observe/kb_mirror.lua` | The mirror: subscriptions, the fps cap, the capture inside the `render.output` observer, dedupe, the cost counters. |

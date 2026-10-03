@@ -177,3 +177,22 @@ its title screen.
 - [ ] After the battle, the starter's HP and level in Gen1Recomp's party screen (Enter → POKéMON, in
       the mirror) match Cobblemon's.
 - [ ] F7 shows a "Relay:" line counting the battle and party messages.
+
+## M6: Route 1, habitat pools, catching, party/Pokédex/bag sync
+
+The `Kanto` world now also has Route 1 and Viridian City (its buildings come in M7). Play on from your
+M5 game (Oak's parcel errand sends you north).
+
+- [ ] Walking through Route 1's tall grass starts **no** battle in Gen1Recomp's window.
+- [ ] Wild Pokémon spawn in Minecraft around Route 1's grass (Cobblemon's normal wild spawning), only
+      Route 1's species and levels, standing on the ground, not on trees or roofs.
+- [ ] Battle one (Cobblemon's usual way) and catch it: it joins your party in Cobblemon, and the
+      Gen1Recomp party screen (Enter → POKéMON, on the mirror) shows it too.
+- [ ] The Pokédex count rises in Gen1Recomp (Enter → POKéDEX) as you see and catch Pokémon.
+- [ ] Poké Balls and Potions you have in Gen1Recomp's bag appear in your Minecraft inventory, and the
+      counts match; using or throwing one in Minecraft lowers the Gen1Recomp count too. Key items never
+      appear in Minecraft.
+- [ ] Right-clicking a person with an empty hand talks to them; holding a Poké Ball throws it instead.
+- [ ] Choosing **Run** in a wild battle ends it.
+- [ ] Optional: use a Potion from Gen1Recomp's bag (ITEM in the start menu) on a Pokémon: Cobblemon's
+      HP follows.

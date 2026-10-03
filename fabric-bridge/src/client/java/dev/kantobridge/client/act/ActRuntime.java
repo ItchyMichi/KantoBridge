@@ -47,9 +47,11 @@ import org.slf4j.LoggerFactory;
  * <ul>
  * <li><b>A</b> ({@code Z}) talks to, reads or checks the cell in front of the player in the camera's quadrant:
  * {@code act.interact} (only while the Minecraft player stands on the hidden player's cell).</li>
- * <li><b>Right-click</b> on a puppet or a block sends {@code act.interact} for that cell (named in the hidden player's
- * map) and returns FAIL, so nothing reaches the server: a puppet's id is unknown there, and Kanto's blocks do nothing.
- * Left-clicks on puppets are cancelled before they start.</li>
+ * <li><b>Right-click</b> on a puppet, or a plain right-click on a block ({@link ClickPolicy}: an empty hand or an item
+ * that does nothing to blocks), sends {@code act.interact} for that cell (named in the hidden player's map) and returns
+ * FAIL, so nothing reaches the server: a puppet's id is unknown there, and Kanto's blocks do nothing. Item use on a block
+ * (a Poké Ball thrown at the ground, Cobblemon's medicine) passes through to Minecraft. Left-clicks on puppets are
+ * cancelled before they start.</li>
  * <li><b>START</b> ({@code Enter}) opens the hidden start menu: {@code act.button{start, tap}}.</li>
  * </ul>
  *
@@ -156,6 +158,10 @@ public final class ActRuntime {
 		if (!level.isClientSide() || !MoveRuntime.following()) {
 			return InteractionResult.PASS;
 		}
+		if (!ClickPolicy.plainClick(player.getItemInHand(hand))) {
+			// Item use (a ball, a potion): Minecraft and Cobblemon handle it; the hidden game hears nothing.
+			return InteractionResult.PASS;
+		}
 		WorldIndex index = ClientWorldIndex.current();
 		String map = this.bridge.state().map();
 		if (hand == InteractionHand.MAIN_HAND && index != null && map != null && this.idle() && this.gate.tryInteract(this.clock.millis())) {
@@ -165,7 +171,7 @@ public final class ActRuntime {
 				this.sendIfReachable(target);
 			}
 		}
-		// Kanto's blocks do nothing in Minecraft, and nothing should reach the server.
+		// A plain click: Kanto's blocks do nothing in Minecraft, and nothing should reach the server.
 		return InteractionResult.FAIL;
 	}
 

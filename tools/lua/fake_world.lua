@@ -21,7 +21,10 @@
 -- Cells:  .  floor          #  wall            D  door tile (warp tile too)
 --         S  stairs (warp tile)               M  exit mat (no door/warp tile)
 --         P  warp pad       H  hole            w  water
+--         g  tall grass (walkable)
 --         v ^ < >  a ledge hopped in that direction
+-- A map spec may also carry region, ghostBattles and indoor (copied into its
+-- def, for the M6 encounter rules) and npcs' facing, item, pokemon, ...
 --
 -- What one tick does, in the engine's order (OverworldState:update): the
 -- top state updates (a warp fade counts down and then switches the map);
@@ -38,7 +41,7 @@ local FakeWorld = {}
 local DELTA = { up = { 0, -1 }, down = { 0, 1 }, left = { -1, 0 }, right = { 1, 0 } }
 local DIR_ORDER = { "up", "down", "left", "right" }
 local COMPASS = { up = "north", down = "south", left = "west", right = "east" }
-local WALK = { ["."] = true, D = true, S = true, M = true, P = true, H = true }
+local WALK = { ["."] = true, D = true, S = true, M = true, P = true, H = true, g = true }
 local LEDGES = { v = "down", ["^"] = "up", ["<"] = "left", [">"] = "right" }
 
 -- ------------------------------------------------------------ input
@@ -102,7 +105,8 @@ local function newMap(id, spec)
   local rows = spec.rows
   local m = setmetatable({
     id = id, rows = rows, widthCells = #rows[1], heightCells = #rows, warpAt = {},
-    def = { id = id, label = id, tileset = spec.tileset or "TEST", connections = spec.connections or {} },
+    def = { id = id, label = id, tileset = spec.tileset or "TEST", connections = spec.connections or {},
+            region = spec.region, ghostBattles = spec.ghostBattles, indoor = spec.indoor },
     spec = spec,
   }, SimMap)
   for i, w in ipairs(spec.warps or {}) do
@@ -118,6 +122,7 @@ function SimMap:char(x, y)
 end
 function SimMap:isWalkableCell(x, y) return WALK[self:char(x, y)] == true end
 function SimMap:isWaterCell(x, y) return self:char(x, y) == "w" end
+function SimMap:isGrassCell(x, y) return self:char(x, y) == "g" end
 function SimMap:isDoorTileCell(x, y) return self:char(x, y) == "D" end
 function SimMap:isWarpTileCell(x, y)
   local c = self:char(x, y)
@@ -557,9 +562,13 @@ function FakeWorld.attach(E)
     local wp = w.map:warpAtCell(p.cellX, p.cellY)
     if wp and w.map:isWarpTileCell(p.cellX, p.cellY) then
       takeWarp(wp)
+      return
     elseif wp and dirHeld() and facingEdge(p.cellX, p.cellY, p.facing) then
       takeWarp(wp)
+      return
     end
+    -- the rest of onStepComplete (M6: the wild-encounter roll, fake_wild.lua)
+    if E.afterStep then E.afterStep() end
   end
 
   local function owUpdate()

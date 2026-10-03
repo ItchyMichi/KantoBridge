@@ -158,8 +158,12 @@ def build(bundle, maps, world, timeout=3600):
     return _gradle(args, timeout, "build")
 
 
+# Maps with wild encounters: a build that includes one must place habitat blocks (M6 gate).
+ENCOUNTER_MAPS = {"ROUTE_1", "ROUTE_2", "ROUTE_22", "VIRIDIAN_FOREST"}
+
+
 def check_report(maps, report=REPORT):
-    """Step 6: the M2 gate on the counts-only report. Returns a list of failed checks."""
+    """Step 6: the milestone gates on the counts-only report. Returns (report, failed checks)."""
     data = json.loads(report.read_text(encoding="utf-8"))
     expected = len(maps) if maps else data.get("maps_requested")
     checks = {
@@ -170,6 +174,9 @@ def check_report(maps, report=REPORT):
         "pack_textures": (data.get("pack_textures") or 0) > 0,
         "world_index": data.get("world_index") is True,
     }
+    if not maps or ENCOUNTER_MAPS & set(maps):
+        checks["habitat_blocks"] = (data.get("habitat_blocks") or 0) > 0
+        checks["pools"] = (data.get("pools") or 0) > 0
     return data, [name for name, ok in checks.items() if not ok]
 
 

@@ -76,6 +76,7 @@ public final class WorldPlan {
 	private final Map<String, TileSlots> tileSlots = new java.util.HashMap<>();
 	private final @Nullable Spawn spawn;
 	private final WorldIndex index;
+	private final Map<String, String> pools;
 	private final Warnings warnings;
 	private final int mapsRequested;
 	private final int edgeMismatches;
@@ -83,7 +84,7 @@ public final class WorldPlan {
 
 	WorldPlan(String game, String exportHash, int originX, int originZ, List<PlacedMap> maps, @Nullable Box3 surfaceBox, int[] surfaceOwner,
 			boolean[] surfaceVoid, StoryCellTable storyCells, Map<String, int[]> storyIndex, ArtCatalog art, @Nullable Spawn spawn,
-			WorldIndex index, Warnings warnings, int mapsRequested, int edgeMismatches, int overlaps) {
+			WorldIndex index, Map<String, String> pools, Warnings warnings, int mapsRequested, int edgeMismatches, int overlaps) {
 		this.game = game;
 		this.exportHash = exportHash;
 		this.originX = originX;
@@ -98,6 +99,7 @@ public final class WorldPlan {
 		this.slotMap = art.slotMap();
 		this.spawn = spawn;
 		this.index = index;
+		this.pools = java.util.Collections.unmodifiableMap(new java.util.TreeMap<>(pools));
 		this.warnings = warnings;
 		this.mapsRequested = mapsRequested;
 		this.edgeMismatches = edgeMismatches;
@@ -162,6 +164,35 @@ public final class WorldPlan {
 
 	public WorldIndex index() {
 		return this.index;
+	}
+
+	/** The habitat blocks of the built maps (the WorldIndex's {@code habitats}). */
+	public List<WorldIndex.Habitat> habitats() {
+		return this.index.habitats();
+	}
+
+	/**
+	 * The habitat pools of the whole export (canonical JSON by pool id, e.g. {@code kantobridge:route_1}): what the
+	 * datapack holds, whatever the filter.
+	 */
+	public Map<String, String> pools() {
+		return this.pools;
+	}
+
+	/** The habitat blocks in chunk (chunkX, chunkZ). */
+	public List<WorldIndex.Habitat> habitatsIn(int chunkX, int chunkZ) {
+		return habitatsIn(this.index.habitats(), chunkX, chunkZ);
+	}
+
+	/** The habitat blocks of {@code habitats} in chunk (chunkX, chunkZ). */
+	public static List<WorldIndex.Habitat> habitatsIn(List<WorldIndex.Habitat> habitats, int chunkX, int chunkZ) {
+		List<WorldIndex.Habitat> out = new ArrayList<>();
+		for (WorldIndex.Habitat habitat : habitats) {
+			if (habitat.x() >> 4 == chunkX && habitat.z() >> 4 == chunkZ) {
+				out.add(habitat);
+			}
+		}
+		return out;
 	}
 
 	public Warnings warnings() {

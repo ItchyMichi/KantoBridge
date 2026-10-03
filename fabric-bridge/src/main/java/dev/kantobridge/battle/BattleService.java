@@ -61,10 +61,10 @@ import org.jetbrains.annotations.Nullable;
  * once: win, lose (a forfeit is a loss), fled, or aborted when nobody won ({@code stop()}: a disconnect, a crash).
  * The proxy is discarded once Cobblemon's own cleanup is done, 10 s after the end at the latest.
  *
- * <p>One battle per player: a repeated {@code battle.start} with the running battle's id is ignored; anything else
- * that can't run (another battle, no usable Pokémon, a malformed message, a wild kind, which M6 brings) is answered
- * {@code aborted} with a counted warning. Logs carry kinds, counts, class ids and codes, never teams or names.
- * Server thread only.
+ * <p>One battle per player, trainer or wild: a repeated {@code battle.start} with the running battle's id is ignored;
+ * anything else that can't run (another battle, no usable Pokémon, a malformed message) is answered {@code aborted} with
+ * a counted warning. Wild kinds (static, surf, fish, and scripted battles with a {@code wild} Pokémon) go to
+ * {@link EncounterService}. Logs carry kinds, counts, class ids and codes, never teams or names. Server thread only.
  */
 public final class BattleService {
 	/** The proxy goes at the latest this long after the end (PLAN §4.4: Cobblemon's recall takes about 7 s). */
@@ -153,19 +153,15 @@ public final class BattleService {
 			return;
 		}
 		Running running = RUNNING.get(player.getUUID());
-		if (running != null) {
-			if (running.id.equals(start.battle())) {
+		String runningId = running != null ? running.id : EncounterService.runningId(player);
+		if (runningId != null) {
+			if (runningId.equals(start.battle())) {
 				// The same battle again (a client relaying twice): it is already being fought.
 				DUPLICATES.incrementAndGet();
 				KantoBridge.LOGGER.debug("battle: ignored a repeated battle.start");
 			} else {
 				refuse(player, start.battle(), "busy");
 			}
-			return;
-		}
-		if (!start.hasTeam()) {
-			// Static, surfing and fishing encounters are M6's EncounterService.
-			refuse(player, start.battle(), "unsupported_kind");
 			return;
 		}
 		if (BuildHold.isHeld(player)) {
@@ -178,6 +174,14 @@ public final class BattleService {
 		}
 		if (!hasUsablePokemon(player)) {
 			refuse(player, start.battle(), "no_party");
+			return;
+		}
+		if (!start.hasTeam()) {
+			// Static, surfing and fishing encounters (and scripted wild battles): a wild Pokémon, not a trainer.
+			String refused = EncounterService.begin(player, start);
+			if (refused != null) {
+				refuse(player, start.battle(), refused);
+			}
 			return;
 		}
 		begin(player, start);

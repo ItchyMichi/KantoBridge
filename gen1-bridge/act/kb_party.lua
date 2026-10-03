@@ -1,9 +1,12 @@
--- kb_party: the shadow party, gifts and heals (docs/PLAN.md section 4.1
--- "Party and Pokedex", flow 11; docs/PROTOCOL.md "Party, Pokedex, bag, PC").
+-- kb_party: the shadow party, gifts, heals, the Pokedex and items used on a
+-- party member (docs/PLAN.md section 4.1 "Party and Pokedex", flows 10
+-- and 11; docs/PROTOCOL.md "Party, Pokedex, bag, PC").
 --
 --   party.give{give, dex, level, moves?, dvs?, nick?, ot?, source}   G->M
 --   party.heal{}                                                      G->M
---   party.sync{party[{uid, dex, level, nick?, moves, hp, maxhp, status?}], box}  M->G
+--   party.item{item, uid, slot?, move?}                               G->M
+--   party.sync{party[{uid, give?, dex, level, nick?, moves, hp, maxhp, status?}], box}  M->G
+--   dex.sync{seen[dex], owned[dex]}                                   M->G
 --
 -- Gifts. give_pokemon runs as usual in the hidden game -- its nickname prompt
 -- included, which reaches Minecraft as a text box, a YES/NO and the naming
@@ -20,8 +23,10 @@
 --
 -- party.sync. Cobblemon is authoritative: the hidden party is rebuilt from it
 -- (kb_engine.applyParty). A known uid keeps its party member, updated in
--- place; a new uid with a pending gift's species (dex) and at least its level
--- is that gift; other new uids are created. Moves go by Gen 1 number, HP is
+-- place; an entry whose `give` names a pending gift is that gift (exact,
+-- M6); a new uid without `give` that has a pending gift's species (dex) and
+-- at least its level is that gift (M5's fallback); other new uids are
+-- created. Moves go by Gen 1 number, HP is
 -- scaled to the Gen 1 maximum, status and nickname follow. Species beyond
 -- Gen 1 and moves beyond 165 are left out and counted, with a warning each
 -- time the count grows. A sync waits while applying it isn't safe
@@ -39,7 +44,22 @@
 -- heal the hidden party; Cobblemon's party heals as well: one party.heal, as
 -- soon as a client is connected (several collapse into one).
 --
--- Logs show codes, kinds, ids and counts only; nicknames are never logged.
+-- dex.sync (M6). Cobblemon's Pokedex is added to the hidden game's
+-- (kb_engine.applyDex): species from dex numbers, an owned entry is seen as
+-- well, nothing is ever cleared, so Oak, his aides and the Pokedex count
+-- see what the player saw and caught in Minecraft. It applies once an
+-- overworld is up (the newest one wins) and again after New Game or
+-- CONTINUE.
+--
+-- party.item (M6). A stone or RARE_CANDY used from the Gen 1 bag on a party
+-- member, or a TM/HM the member learned there, is applied by Cobblemon:
+-- kb_engine intercepts it (the Gen 1 effect skipped, or for a TM/HM the
+-- taught move and its slot watched) and queues it; it goes out once, as
+-- soon as a client is connected (party.item carries no id to apply it by
+-- once, so it is never sent twice). The next party.sync brings the result.
+--
+-- Logs show codes, kinds, ids and counts only; nicknames, species and moves
+-- are never logged.
 
 local Party = {}
 
@@ -122,14 +142,54 @@ function Party.validSync(data)
     end
     if e.status ~= nil and not STATUS[e.status] then return false end
     if e.nick ~= nil and type(e.nick) ~= "string" then return false end
+    if e.give ~= nil and not (type(e.give) == "string" and #e.give >= 1 and #e.give <= 64
+                              and find(e.give, "^[A-Za-z0-9_.:-]+$")) then
+      return false
+    end
   end
   return true
+end
+
+-- dex.sync data checked against its schema's shape: two lists of distinct
+-- Gen 1 dex numbers; returns true or false.
+function Party.validDex(data)
+  if type(data) ~= "table" then return false end
+  for _, key in ipairs({ "seen", "owned" }) do
+    local list = data[key]
+    if type(list) ~= "table" or #list > 151 then return false end
+    local seen = {}
+    for i, n in pairs(list) do
+      if type(i) ~= "number" or not whole(n, 1, 151) or seen[n] then return false end
+      seen[n] = true
+    end
+  end
+  return true
+end
+
+-- A queued item use as party.item's payload, or nil when it can't be one.
+function Party.itemData(use)
+  if type(use) ~= "table" or type(use.item) ~= "string" or not find(use.item, "^[A-Z0-9_]+$")
+      or #use.item > 64 or type(use.uid) ~= "string" or not find(use.uid, UID) then
+    return nil
+  end
+  local data = { item = use.item, uid = use.uid }
+  if use.move ~= nil or use.slot ~= nil then
+    -- a TM/HM: the move it taught, and the slot it took when it replaced one
+    if not whole(use.move, 1, 165) then return nil end
+    data.move = use.move
+    if use.slot ~= nil then
+      if not whole(use.slot, 0, 3) then return nil end
+      data.slot = use.slot
+    end
+  end
+  return data
 end
 
 -- opts:
 --   engine   kb_engine instance (gifts, giftSent, giftSynced, giftDone,
 --            takeHeals, partyUids, adoptUids, partySafe, applyParty,
---            speciesOfDex, moveIdOfNum)
+--            speciesOfDex, moveIdOfNum, inGame, applyDex, takeItemUses,
+--            tmWatchStep)
 --   markup   kb_ui's Ui.markup (nick and ot in the protocol's text)
 --   store    { get(key), set(key, value) }: mod.save
 --   clock    seconds (optional; without it gifts are given up on by count alone)
@@ -140,11 +200,15 @@ function Party.new(opts)
   local party = {}
   local pending   -- the newest party.sync waiting for a safe moment
   local lastSync  -- the last one applied (applied again after New Game / CONTINUE)
+  local pendingDex, lastDex -- the same for dex.sync
   local resend = false
   local counts = {
     gives = 0, givesSent = 0, givesResent = 0, givesConfirmed = 0, givesGivenUp = 0, givesBad = 0,
+    givesExact = 0,
     syncs = 0, applied = 0, deferred = 0, created = 0, matched = 0, kept = 0, failed = 0,
     nonGen1Species = 0, nonGen1Moves = 0, heals = 0,
+    dexSyncs = 0, dexApplied = 0, dexAddedSeen = 0, dexAddedOwned = 0, dexUnknown = 0,
+    items = 0, itemsBad = 0,
   }
   local deferredNow = false
   local seen = {}   -- give ids counted
@@ -208,8 +272,20 @@ function Party.new(opts)
           uid = e.uid, species = species, level = e.level, moves = moves, hp = e.hp, maxhp = e.maxhp,
           status = STATUS[e.status], nick = Party.engineNick(e.nick),
         }
-        if not known[e.uid] then
-          -- a member the hidden party doesn't know: the pending gift it is?
+        if e.give ~= nil then
+          -- exact: the gift Cobblemon says this Pokemon came from (M6)
+          for _, g in ipairs(gifts) do
+            if g.give == e.give and not taken[g.give] then
+              entry.give = g.give
+              taken[g.give] = true
+              counts.givesExact = counts.givesExact + 1
+              if g.box then counts.givesConfirmed = counts.givesConfirmed + 1 end
+              break
+            end
+          end
+        elseif not known[e.uid] then
+          -- a member the hidden party doesn't know: the pending gift it is,
+          -- by species and level (Cobblemon didn't name one)
           for _, g in ipairs(gifts) do
             if not g.box and not taken[g.give] and g.dex == e.dex and e.level >= (g.level or 1) then
               entry.give = g.give
@@ -266,10 +342,54 @@ function Party.new(opts)
     return true
   end
 
-  -- One logic step. out gets party.give / party.heal; link = { live, generation }.
+  -- dex.sync from the session (role already checked). Returns true, or
+  -- false plus bad_message.
+  function party.dex(data)
+    if not Party.validDex(data) then return false, "bad_message" end
+    counts.dexSyncs = counts.dexSyncs + 1
+    pendingDex = data
+    return true
+  end
+
+  local function applyDex(data)
+    local res = engine.applyDex(data.seen, data.owned)
+    if not res then return false end
+    counts.dexApplied = counts.dexApplied + 1
+    counts.dexAddedSeen = counts.dexAddedSeen + res.seen
+    counts.dexAddedOwned = counts.dexAddedOwned + res.owned
+    counts.dexUnknown = counts.dexUnknown + res.unknown
+    lastDex = data
+    if log then
+      log.info("party.dex", { seen = #data.seen, owned = #data.owned, addedSeen = res.seen,
+                              addedOwned = res.owned, count = counts.dexApplied })
+    end
+    return true
+  end
+
+  -- Items used on a party member (kb_engine's queue), once each, while live.
+  local function sendItems(out)
+    for _, use in ipairs(engine.takeItemUses()) do
+      local data = Party.itemData(use)
+      if data then
+        out[#out + 1] = { "party.item", data, "party" }
+        counts.items = counts.items + 1
+        if log then
+          log.info("party.item", { kind = data.move and "machine" or "item", slot = data.slot, count = counts.items })
+        end
+      else
+        counts.itemsBad = counts.itemsBad + 1
+        if log then log.warn("party.item_unsendable", { count = counts.itemsBad }) end
+      end
+    end
+  end
+
+  -- One logic step. out gets party.give / party.heal / party.item; link =
+  -- { live, generation }.
   function party.step(out, link)
     link = link or {}
     local live = link.live
+    -- a TM/HM being taught: its move and slot are queued once it lands
+    engine.tmWatchStep()
     for _, g in ipairs(engine.gifts()) do
       if not seen[g.give] then
         seen[g.give] = true
@@ -297,7 +417,14 @@ function Party.new(opts)
         out[#out + 1] = { "party.heal", {}, "party" }
         counts.heals = counts.heals + 1
       end
+      sendItems(out)
       resend = false
+    end
+    if pendingDex and engine.inGame() then
+      local data = pendingDex
+      pendingDex = nil
+      local ok = pcall(applyDex, data)
+      if not ok and log then log.warn("party.dex_failed", { count = counts.dexSyncs }) end
     end
     if pending then
       if engine.partySafe() then
@@ -324,15 +451,18 @@ function Party.new(opts)
     return ok and engine.adoptUids(list) or 0
   end
 
-  -- New Game or CONTINUE: the last sync applies again to the new party.
+  -- New Game or CONTINUE: the last sync applies again to the new party, and
+  -- the last Pokedex to the new save.
   function party.reapply()
     if lastSync and not pending then pending = lastSync end
+    if lastDex and not pendingDex then pendingDex = lastDex end
   end
 
   function party.stats()
     local out = {}
     for k, v in pairs(counts) do out[k] = v end
     out.waiting = pending ~= nil
+    out.dexWaiting = pendingDex ~= nil
     return out
   end
 

@@ -302,6 +302,37 @@ comes from each player's own generated pack.
   for a trainer battle are treated like `aborted`. Expect text UIs right after a `battle.result`. A
   result gen1-bridge isn't waiting for is answered `error{code:"battle.unknown"}`.
 
+#### Wild encounters, bag and Pokédex (M6)
+
+- **Grass and cave rolls** are suppressed in the hidden game while a client or test session is
+  connected: Cobblemon's habitat pools spawn those Pokémon in Minecraft.
+- **Native special battles** stay in the hidden game and are announced with `battle.native{kind,
+  phase}` (start, end, and start again after a snapshot): the Safari Zone, the old man's demo, and
+  Pokémon Tower ghosts while the player lacks the SILPH_SCOPE (with it, Tower rolls are suppressed
+  like any indoor roll).
+- **Surfing and fishing:** the hidden game rolls (its own species, level and REPEL rules) and sends
+  `battle.start{kind:"surf"|"fish", wild{dex, level, x, y}, rules{catch:true, flee:true}}`, holding
+  the world; `wild.x/y` is the water cell in front of the player. The fishing bite text and animation
+  stay native. Results: `win`, `fled` and `caught` run the engine's wild-battle ending; `lose` shows
+  the blackout text and blacks out; `aborted` changes nothing. A `caught` result carries
+  `caught{uid, dex, level}`; the Pokémon then appears in `dex.sync` and `party.sync`.
+- **`bag.sync`** is the full map of the battle-usable items (Appendix B) held with quantity ≥ 1
+  (absent means 0), never key items, sent while in game after every snapshot and on any change. A
+  `bag.sync` can cross `bag.use` messages still in flight; Minecraft reconciles them.
+- **`bag.use`** is applied in the hidden game (queued at the title), never below zero, and answered by
+  the resulting `bag.sync`; an item that isn't mirrored gets `error{code:"bag.not_mirrored"}`.
+- **`dex.sync`** is the only source of the hidden game's Pokédex: applied in game as a union (owned
+  implies seen; nothing is ever cleared), newest wins, re-applied after New Game or CONTINUE.
+- **`party.item`** (an item used from the Gen 1 bag on a party member with a uid, outside battles,
+  while a client is connected): stones that evolve the species and Rare Candy below level 100 skip
+  their Gen 1 effect and are applied by Cobblemon at once; TMs/HMs are taught natively (the Gen 1
+  forget prompt picks the slot) and Cobblemon force-teaches the same move (`slot` 0-based, present
+  only when a move was replaced). Each `party.item` is sent exactly once (it has no id), so the client
+  queues it while offline.
+- **`party.sync.give`** is matched exactly when present (box gifts included); the dex-and-level
+  fallback applies only when `give` is absent.
+- **Order within one logic step:** `party.*`, then `bag.sync`, then `battle.native`/`battle.start`.
+
 #### Party rules (M5)
 
 - `party.sync` (Cobblemon is authoritative) is debounced, **never sent during a battle**, and sent
@@ -332,7 +363,7 @@ comes from each player's own generated pack.
 
 | Type | Dir | Data | ROM |
 |---|---|---|---|
-| `party.sync` | S→C, M→G | `party[{uid, dex, level, nick?, moves[], hp, maxhp, status?}], box{count}` (Cobblemon is authoritative) | yes |
+| `party.sync` | S→C, M→G | `party[{uid, give?, dex, level, nick?, moves[], hp, maxhp, status?}], box{count}` (Cobblemon is authoritative) | yes |
 | `party.give` | G→M, C→S | `give` (id), `dex, level, moves[]?, dvs?, nick?, ot?, source:"starter"\|"gift"\|"trade"\|"prize"\|"native_catch"` | yes |
 | `party.take` | G→M, C→S | `uid, reason:"trade"\|"daycare"` | |
 | `party.heal` | G→M, C→S | `{}` | |

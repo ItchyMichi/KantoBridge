@@ -6,6 +6,7 @@ import dev.kantobridge.client.bridge.BridgeClock;
 import dev.kantobridge.client.bridge.BridgeRuntime;
 import dev.kantobridge.client.bridge.Dispatcher;
 import dev.kantobridge.client.ui.UiRuntime;
+import dev.kantobridge.proto.Catalog;
 import dev.kantobridge.proto.MsgTypes;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
@@ -46,7 +47,7 @@ public final class GameRelayRuntime {
 			public void warn(String code, long count) {
 				LOGGER.warn("relay: {} ({} so far)", code, count);
 			}
-		});
+		}, dexUp());
 	}
 
 	/** Call once from the client entrypoint, after {@link BridgeRuntime#init} and the UI runtime. */
@@ -61,12 +62,14 @@ public final class GameRelayRuntime {
 		for (String type : GameRelay.PARTY_REQUESTS) {
 			dispatcher.on(type, message -> runtime.relay.fromBridge(message, runtime.now()));
 		}
-		dispatcher.on(MsgTypes.SNAPSHOT, message -> runtime.relay.bridgeSnapshot(runtime.now()));
+		dispatcher.on(MsgTypes.BAG_SYNC, message -> runtime.relay.fromBridge(message, runtime.now()));
+		dispatcher.on(MsgTypes.SNAPSHOT, message -> runtime.relay.bridgeSnapshot(message.data(), runtime.now()));
 		ClientRelay server = ClientRelay.get();
 		server.register(MsgTypes.BATTLE_RESULT, message -> runtime.relay.fromServer(message, runtime.now()));
 		for (String type : GameRelay.SERVER_SYNCS) {
 			server.register(type, message -> runtime.relay.fromServer(message, runtime.now()));
 		}
+		server.register(MsgTypes.BAG_USE, message -> runtime.relay.fromServer(message, runtime.now()));
 		ClientPlayConnectionEvents.JOIN.register((handler, sender, client) -> {
 			runtime.activity.reset();
 			runtime.relay.serverJoined(runtime.now());
@@ -78,6 +81,12 @@ public final class GameRelayRuntime {
 		// After BridgeRuntime's tick, which drains the bridge's messages.
 		ClientTickEvents.END_CLIENT_TICK.register(runtime::tick);
 		bridge.addDebugLine(runtime::debugLine);
+	}
+
+	/** The hidden game's Pokédex goes up only when the protocol gives {@code dex.sync} a client-to-server leg. */
+	private static boolean dexUp() {
+		Catalog.Entry entry = Catalog.bundled().get(MsgTypes.DEX_SYNC);
+		return entry != null && entry.legs().contains(Catalog.Leg.C2S);
 	}
 
 	public static @Nullable GameRelayRuntime get() {
@@ -113,6 +122,7 @@ public final class GameRelayRuntime {
 		GameRelay.Stats stats = this.relay.stats();
 		String last = this.activity.last();
 		return I18n.get("kantobridge.debug.relay", stats.battlesRelayed, this.relay.pendingBattles(), stats.resultsForwarded, stats.resultsResent,
-				stats.abortedHere, stats.partyRelayed, this.relay.queued(), stats.syncsForwarded, last == null ? "-" : last);
+				stats.abortedHere, stats.partyRelayed, this.relay.queued(), stats.syncsForwarded, stats.bagSyncsRelayed, stats.bagUsesForwarded,
+				this.relay.queuedUses(), last == null ? "-" : last);
 	}
 }

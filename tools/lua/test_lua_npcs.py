@@ -253,5 +253,5 @@ def test_resync_sends_the_set_again():
     seq = g.send("resync")
     snap = g.until(lambda m: m["type"] == "snapshot" and m.get("re") == seq)
     after = g.log[g.log.index(snap):]
-    assert [m["type"] for m in after] == ["snapshot", "npc.set"]
+    assert [m["type"] for m in after] == ["snapshot", "npc.set", "bag.sync"]  # M6: the mirrored bag too
     assert after[1]["data"] == snap["data"]["npcs"]

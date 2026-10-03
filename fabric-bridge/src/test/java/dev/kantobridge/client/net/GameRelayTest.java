@@ -232,4 +232,72 @@ class GameRelayTest {
 		this.relay.fromBridge(this.message(MsgTypes.BATTLE_START, start("b-1")), GameRelay.RESEND_WINDOW_MS + 2);
 		assertEquals(2, this.links.server.size());
 	}
+	@Test
+	void theBagGoesUpAndTheNewestWaitsForTheServer() throws Exception {
+		Envelope bag = this.message(MsgTypes.BAG_SYNC, "{\"items\":{\"POKE_BALL\":5,\"POTION\":2}}");
+		this.relay.fromBridge(bag, 0);
+		assertEquals(List.of(MsgTypes.BAG_SYNC), this.links.server.stream().map(Sent::type).toList());
+		assertEquals(ProtoJson.write(bag.data()), ProtoJson.write(this.links.server.get(0).data()), "relayed unchanged");
+		this.links.serverUp = false;
+		this.relay.fromBridge(this.message(MsgTypes.BAG_SYNC, "{\"items\":{\"POKE_BALL\":4}}"), 10);
+		this.relay.fromBridge(this.message(MsgTypes.BAG_SYNC, "{\"items\":{\"POKE_BALL\":3}}"), 20);
+		assertTrue(this.relay.bagPending());
+		this.links.serverUp = true;
+		this.relay.tick(30);
+		assertFalse(this.relay.bagPending());
+		assertEquals(2, this.links.server.size(), "only the newest bag waited");
+		assertEquals(3, this.links.server.get(1).data().getAsJsonObject("items").get("POKE_BALL").getAsInt());
+		// A newer bag waits behind a party request that came before it, never in front of it.
+		this.links.serverUp = false;
+		this.relay.fromBridge(this.message(MsgTypes.BAG_SYNC, "{\"items\":{\"POKE_BALL\":2}}"), 40);
+		this.relay.fromBridge(this.message(MsgTypes.PARTY_HEAL, "{}"), 41);
+		this.relay.fromBridge(this.message(MsgTypes.BAG_SYNC, "{\"items\":{\"POKE_BALL\":1}}"), 42);
+		this.links.serverUp = true;
+		this.relay.serverJoined(50);
+		assertEquals(List.of(MsgTypes.BAG_SYNC, MsgTypes.BAG_SYNC, MsgTypes.PARTY_HEAL, MsgTypes.BAG_SYNC),
+				this.links.server.stream().map(Sent::type).toList());
+		assertEquals(1, this.links.server.get(3).data().getAsJsonObject("items").get("POKE_BALL").getAsInt(), "the newest bag");
+	}
+
+	@Test
+	void aWaitingBagKeepsItsPlaceBetweenPartyRequestsAndABattle() throws Exception {
+		this.links.serverUp = false;
+		this.relay.fromBridge(this.message(MsgTypes.PARTY_GIVE, "{\"give\":\"g-1\",\"dex\":4,\"level\":5,\"source\":\"gift\"}"), 0);
+		this.relay.fromBridge(this.message(MsgTypes.BAG_SYNC, "{\"items\":{\"POKE_BALL\":5}}"), 1);
+		this.links.serverUp = true;
+		// The link is back but no tick flushed yet: gen1-bridge's order is party, bag, battle.
+		this.relay.fromBridge(this.message(MsgTypes.BATTLE_START, start("b-1")), 10);
+		assertEquals(List.of(MsgTypes.PARTY_GIVE, MsgTypes.BAG_SYNC, MsgTypes.BATTLE_START), this.links.server.stream().map(Sent::type).toList());
+		assertFalse(this.relay.bagPending());
+	}
+
+	@Test
+	void aLiveSnapshotsPokedexGoesUpOnlyWithTheC2sLeg() throws Exception {
+		String snapshot = "{\"ingame\":true,\"bag\":{\"POKE_BALL\":5},\"dex\":{\"seen\":[16],\"owned\":[]}}";
+		this.relay.bridgeSnapshot(ProtoJson.parseObject(snapshot), 0);
+		assertTrue(this.links.server.isEmpty(), "gen1-bridge sends its own bag.sync after a snapshot; no dex.sync without the leg");
+		GameRelay withDex = new GameRelay(this.links, true);
+		withDex.bridgeSnapshot(ProtoJson.parseObject("{\"ingame\":false,\"dex\":{\"seen\":[],\"owned\":[]}}"), 10);
+		assertTrue(this.links.server.isEmpty(), "at the title screen the Pokédex is only the save's leftovers");
+		withDex.bridgeSnapshot(ProtoJson.parseObject(snapshot), 20);
+		assertEquals(List.of(MsgTypes.DEX_SYNC), this.links.server.stream().map(Sent::type).toList());
+		assertEquals("{\"owned\":[],\"seen\":[16]}", ProtoJson.write(this.links.server.get(0).data()));
+	}
+
+	@Test
+	void bagUsesGoDownOrWaitForTheNextSnapshot() throws Exception {
+		this.relay.fromServer(this.message(MsgTypes.BAG_USE, "{\"item\":\"POKE_BALL\",\"qty\":1}"), 0);
+		assertEquals(List.of(MsgTypes.BAG_USE), this.links.bridge.stream().map(Sent::type).toList());
+		this.links.bridgeUp = false;
+		this.relay.fromServer(this.message(MsgTypes.BAG_USE, "{\"item\":\"POTION\",\"qty\":1}"), 10);
+		this.relay.fromServer(this.message(MsgTypes.BAG_USE, "{\"item\":\"POKE_BALL\",\"qty\":2}"), 20);
+		assertEquals(2, this.relay.queuedUses());
+		this.links.bridgeUp = true;
+		this.relay.bridgeSnapshot(ProtoJson.parseObject("{\"ingame\":true}"), 30);
+		assertEquals(0, this.relay.queuedUses());
+		List<Sent> uses = this.links.bridge.stream().filter(sent -> sent.type().equals(MsgTypes.BAG_USE)).toList();
+		assertEquals(3, uses.size());
+		assertEquals(List.of("POKE_BALL", "POTION", "POKE_BALL"), uses.stream().map(sent -> sent.str("item")).toList(), "in order");
+		assertEquals(3, this.relay.stats().bagUsesForwarded);
+	}
 }

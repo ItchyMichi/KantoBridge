@@ -25,6 +25,7 @@ LIB_FILES = [
     "observe/kb_npcs.lua",
     "observe/kb_ui.lua",
     "observe/kb_mirror.lua",
+    "observe/kb_bag.lua",
     "act/kb_move.lua",
     "act/kb_interact.lua",
     "act/kb_uiact.lua",

@@ -83,6 +83,17 @@ public final class Gen1Mons {
 		return pokemon;
 	}
 
+	/**
+	 * A wild Pokémon of a static, surfing or fishing encounter: the species at the level given, Cobblemon's own moves for
+	 * that level (Gen 1 gives wild Pokémon their latest level-up moves too), random IVs, nature and ability, never shiny,
+	 * no held item, full HP and PP.
+	 */
+	public static Pokemon wild(int dex, int level) throws Missing {
+		Pokemon pokemon = base(new Gen1Mon(dex, level, List.of(), null));
+		pokemon.heal();
+		return pokemon;
+	}
+
 	private static Pokemon base(Gen1Mon mon) throws Missing {
 		Species species = species(mon.dex());
 		if (species == null) {

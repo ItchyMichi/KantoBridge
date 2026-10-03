@@ -1,0 +1,11 @@
+{
+  "displayName": "Kanto Bridge: wild Pokémon spawn only on a map's walking level",
+  "enabled": true,
+  "components": [
+    {
+      "type": "filter",
+      "spawnablePositionSelector": "v.spawnable_position.biome.is_of('kantobridge:kanto_outdoor') || v.spawnable_position.biome.is_of('kantobridge:kanto_cave')",
+      "allow": "math.mod(v.spawnable_position.y - 63, 22) == 0"
+    }
+  ]
+}

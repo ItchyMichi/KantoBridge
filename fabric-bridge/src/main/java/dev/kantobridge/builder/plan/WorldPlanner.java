@@ -3,11 +3,14 @@ package dev.kantobridge.builder.plan;
 import dev.kantobridge.builder.export.BundleException;
 import dev.kantobridge.builder.export.CellFlags;
 import dev.kantobridge.builder.export.ExportBundle;
+import dev.kantobridge.builder.export.ExportEncounters;
+import dev.kantobridge.builder.export.ExportField;
 import dev.kantobridge.builder.export.ExportLayout;
 import dev.kantobridge.builder.export.ExportMap;
 import dev.kantobridge.builder.export.ExportPalettes;
 import dev.kantobridge.builder.export.ExportSwaps;
 import dev.kantobridge.builder.export.ExportTileset;
+import dev.kantobridge.builder.pack.HabitatPoolWriter;
 import dev.kantobridge.world.MapPlacement;
 import dev.kantobridge.world.Scale;
 import dev.kantobridge.world.SlotMap;
@@ -76,6 +79,10 @@ public final class WorldPlanner {
 		}
 		int mapsRequested = options.maps() == null ? requested.size() : new LinkedHashSet<>(options.maps()).size();
 		Set<String> requestedSet = new HashSet<>(requested);
+		// Maps whose wild Pokémon come from habitat pools (grass tables outside the Safari Zone).
+		ExportEncounters encounters = bundle.encounters();
+		ExportField field = bundle.field();
+		Set<String> wildMaps = encounters == null ? Set.of() : HabitatPlanner.wildMaps(encounters, field);
 
 		// ---- surface layout ----
 		Map<String, ExportMap> surface = new LinkedHashMap<>();
@@ -135,7 +142,7 @@ public final class WorldPlanner {
 					continue;
 				}
 				progress = true;
-				MapPlacement placed = placeInterior(map, parent, all.get(parent.id()), packer, bundle, warnings);
+				MapPlacement placed = placeInterior(map, parent, all.get(parent.id()), packer, wildMaps.contains(map.id()), warnings);
 				if (placed != null) {
 					placements.put(map.id(), placed);
 				}
@@ -241,18 +248,26 @@ public final class WorldPlanner {
 		ArtCatalog art = ArtCatalog.of(bundle, warnings);
 		SlotMap slotMap = art.slotMap();
 
+		// ---- habitats: blocks for the built maps; pools for every wild map of the export (like the slot map) ----
+		List<WorldIndex.Habitat> habitats = encounters == null ? List.of() : HabitatPlanner.plan(placed, encounters, field, warnings);
+		Map<String, String> pools = encounters == null ? Map.of() : HabitatPoolWriter.pools(encounters, field);
+
 		// ---- spawn and index ----
 		WorldPlan.Spawn spawn = chooseSpawn(placed, root, requested, storyIndex);
 		if (spawn == null) {
 			warnings.warn("spawn_missing");
 		}
-		WorldIndex index = new WorldIndex(bundle.game(), bundle.exportHash(), placements.values(), slotMap.hash(), storyCells, List.of());
+		WorldIndex index = new WorldIndex(bundle.game(), bundle.exportHash(), placements.values(), slotMap.hash(), storyCells, habitats);
 		return new WorldPlan(bundle.game(), bundle.exportHash(), options.originX(), options.originZ(), placed, surfaceBox, owner, voidCells,
-				storyCells, storyIndex, art, spawn, index, warnings, mapsRequested, layout.edgeMismatches(), layout.overlaps());
+				storyCells, storyIndex, art, spawn, index, pools, warnings, mapsRequested, layout.edgeMismatches(), layout.overlaps());
 	}
 
+	/**
+	 * @param wild the map's wild Pokémon come from a habitat pool: it gets the cave biome, which the interior spawn guard
+	 *             (spawn rule {@code no_interior_spawns}) leaves alone; the two biomes look and sound the same
+	 */
 	private static @Nullable MapPlacement placeInterior(ExportMap map, MapPlacement parent, ExportMap parentMap, InteriorPacker packer,
-			ExportBundle bundle, Warnings warnings) throws BundleException {
+			boolean wild, Warnings warnings) {
 		ExportMap.Parent door = map.parent();
 		int doorX = parent.x() + Scale.cellToBlock(door.x());
 		int doorZ = parent.z() + Scale.cellToBlock(door.y());
@@ -280,7 +295,7 @@ public final class WorldPlanner {
 		if (spot.moved()) {
 			warnings.note("interior_moved_sideways");
 		}
-		String biome = CAVE_TILESET.equals(map.tileset()) ? WorldPlan.BIOME_CAVE : WorldPlan.BIOME_INTERIOR;
+		String biome = CAVE_TILESET.equals(map.tileset()) || wild ? WorldPlan.BIOME_CAVE : WorldPlan.BIOME_INTERIOR;
 		return new MapPlacement(map.id(), spot.x(), Scale.feetY(spot.layer()), spot.z(), map.cellWidth(), map.cellHeight(), spot.layer(),
 				MapPlacement.Kind.INTERIOR, map.palette(), biome, map.dark(), parent.id());
 	}

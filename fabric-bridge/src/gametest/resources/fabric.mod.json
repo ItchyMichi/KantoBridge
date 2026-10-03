@@ -18,7 +18,10 @@
 			"dev.kantobridge.gametest.WarpGameTests",
 			"dev.kantobridge.gametest.CobblemonSetupGameTests",
 			"dev.kantobridge.gametest.PartyGameTests",
-			"dev.kantobridge.gametest.BattleGameTests"
+			"dev.kantobridge.gametest.BattleGameTests",
+			"dev.kantobridge.gametest.EncounterGameTests",
+			"dev.kantobridge.gametest.BagGameTests",
+			"dev.kantobridge.gametest.DexGameTests"
 		]
 	},
 	"depends": {

@@ -40,6 +40,7 @@ return function(mod)
     Npcs = import("observe/kb_npcs.lua"),
     Ui = import("observe/kb_ui.lua"),
     Mirror = import("observe/kb_mirror.lua"),
+    Bag = import("observe/kb_bag.lua"),
     Move = import("act/kb_move.lua"),
     Interact = import("act/kb_interact.lua"),
     UiAct = import("act/kb_uiact.lua"),
@@ -153,6 +154,8 @@ return function(mod)
       set = function(key, value) mod.save:set(key, value) end,
     },
   })
+  -- M6: the bag's battle items mirrored into Minecraft (P17)
+  local bagObs = kb.Bag.new({ engine = engine, json = kb.json, log = log })
 
   -- One injected tap per logic step (PLAN section 2.3), shared by the
   -- interaction and the UI answers: mod.input:tap with the live game
@@ -181,9 +184,11 @@ return function(mod)
     local npcs = raw and kb.Npcs.list(raw) or nil
     npcObs.rebase()
     uiObs.rebase()
-    -- a pending battle and unconfirmed gifts go out again after it
+    -- a pending battle, a native special battle, unconfirmed gifts and the
+    -- mirrored bag go out again after it
     battles.rebase()
     party.rebase()
+    bagObs.rebase()
     local data, dropped = kb.Snapshot.build({
       json = kb.json,
       Player = kb.Player,
@@ -246,6 +251,9 @@ return function(mod)
     merge("mirror", mirror.stats())
     merge("battle", battles.stats())
     merge("party", party.stats())
+    merge("bag", bagObs.stats())
+    merge("encounter", engine.encounterCounts())
+    merge("item", engine.itemCounts())
     for k, v in pairs(engine.bridgeCounts()) do out[k] = v end
     out.screenEvents = screenEvents
     -- the names typed into the hidden game: lengths and a short hash only
@@ -356,6 +364,9 @@ return function(mod)
   end
   session.on("battle.result", answered(battles.result))
   session.on("party.sync", answered(party.sync))
+  -- M6: Cobblemon's Pokedex, and items it used up
+  session.on("dex.sync", answered(party.dex))
+  session.on("bag.use", answered(bagObs.use))
 
   -- The battle and gift seams (lib/kb_engine.lua "battles, gifts, the
   -- shadow party"): script.command for the scripted battle rows, give_pokemon
@@ -372,6 +383,21 @@ return function(mod)
   end)
   mod.hooks:wrap("trainer.before_battle", function(nextFn, g, context, continueBattle)
     return engine.trainerBeforeBattle(nextFn, g, context, continueBattle, bridge)
+  end)
+  -- M6 (lib/kb_engine.lua "wild encounters, Pokedex, bag, items"): wild
+  -- encounters (grass and indoor rolls suppressed for the habitat pools,
+  -- Safari and ghost battles native, surfing and fishing held for
+  -- Cobblemon) and items used on a party member (stones and RARE_CANDY
+  -- applied by Cobblemon, TM/HM moves watched). Hooks only, so a hot reload
+  -- drops them with this instance.
+  mod.hooks:wrap("encounter.roll", function(nextFn, encDef, ctx)
+    return engine.encounterRoll(nextFn, encDef, ctx, bridge)
+  end)
+  mod.hooks:wrap("encounter.fishing", function(nextFn, rod, mapId, pool)
+    return engine.encounterFishing(nextFn, rod, mapId, pool, bridge)
+  end)
+  mod.hooks:wrap("item.use", function(nextFn, g, battle, id, target, list, moveIndex, picker)
+    return engine.itemUse(nextFn, g, battle, id, target, list, moveIndex, picker, bridge)
   end)
 
   status.session = sessionId
@@ -428,10 +454,13 @@ return function(mod)
     uiObs.step(wake, out)
     wake = false
     uiAct.step(facts, mode, out, ctx)
-    -- M5: gifts and heals first (a gift goes out before a battle that may
-    -- follow it), then a held battle's battle.start
+    -- M5: gifts, heals and (M6) items used on a member first (a gift goes
+    -- out before a battle that may follow it), then the mirrored bag (its
+    -- balls before a battle that may use them), then a native special
+    -- battle's battle.native and a held battle's battle.start
     local link = { live = live, generation = generation }
     party.step(out, link)
+    bagObs.step(out, link)
     battles.step(out, link)
     mirror.step(out, { live = live, generation = generation, queued = session.queued() })
     for i = 1, #out do
@@ -495,8 +524,11 @@ return function(mod)
     engine.checkPin()
     pinOptions(true)
     -- battle and gift ids carry the first instance's token (kept by the slot
-    -- through hot reloads); the party's uids come back from mod.save
+    -- through hot reloads); the party's uids come back from mod.save; the
+    -- slot points at this instance's bridge from now on (a fishing bite
+    -- that was cast before a reload is answered here)
     engine.bridgeToken(sessionId:sub(3, 10))
+    engine.attachBridge(bridge)
     party.adopt()
     status.engine = version
     status.game = engine.gameVersion()
@@ -534,9 +566,11 @@ return function(mod)
   -- M4. Pushes and pops only wake the UI observer, which polls the stack
   -- itself (src/core/StateStack.lua:28-45 fire them after enter/exit);
   -- world.interacted reports what an A press hit (OC:2532-2535).
-  mod.events:on("screen.pushed", function()
+  mod.events:on("screen.pushed", function(payload)
     wake = true
     screenEvents = screenEvents + 1
+    -- M6: the cast box of a bite gets the bite's continuation (kb_engine)
+    pcall(engine.fishPushed, type(payload) == "table" and payload.state or nil)
   end)
   mod.events:on("screen.popped", function()
     wake = true

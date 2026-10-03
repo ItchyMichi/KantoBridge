@@ -3,13 +3,20 @@ package dev.kantobridge.pokemon;
 import com.cobblemon.mod.common.api.Priority;
 import com.cobblemon.mod.common.api.events.CobblemonEvents;
 import com.cobblemon.mod.common.api.events.pokemon.evolution.EvolutionTestedEvent;
+import com.cobblemon.mod.common.api.moves.BenchedMove;
+import com.cobblemon.mod.common.api.moves.Move;
+import com.cobblemon.mod.common.api.moves.MoveSet;
+import com.cobblemon.mod.common.api.moves.MoveTemplate;
 import com.cobblemon.mod.common.api.pokemon.PokemonSpecies;
+import com.cobblemon.mod.common.api.pokemon.evolution.Evolution;
+import com.cobblemon.mod.common.api.pokemon.experience.SidemodExperienceSource;
 import com.cobblemon.mod.common.api.reactive.ObservableSubscription;
 import com.cobblemon.mod.common.api.storage.party.PlayerPartyStore;
 import com.cobblemon.mod.common.api.storage.pc.PCStore;
 import com.cobblemon.mod.common.battles.BattleRegistry;
 import com.cobblemon.mod.common.pokemon.Pokemon;
 import com.cobblemon.mod.common.pokemon.Species;
+import com.cobblemon.mod.common.pokemon.evolution.variants.ItemInteractionEvolution;
 import com.cobblemon.mod.common.util.PlayerExtensionsKt;
 import com.google.gson.JsonObject;
 import dev.kantobridge.KantoBridge;
@@ -29,10 +36,14 @@ import kotlin.Unit;
 import net.fabricmc.fabric.api.entity.event.v1.ServerPlayerEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
 import org.jetbrains.annotations.Nullable;
 
 /**
@@ -41,15 +52,19 @@ import org.jetbrains.annotations.Nullable;
  * <ul>
  * <li><b>{@code party.sync}</b> (S→C, relayed to gen1-bridge): the party and the PC's count, sent once Cobblemon has
  * synchronised the player's data, then whenever the party or the PC changes, at most every
- * {@value #SYNC_EVERY_TICKS} ticks, only when the content changed, and not during a battle (one goes out after it).</li>
+ * {@value #SYNC_EVERY_TICKS} ticks, only when the content changed, and not during a battle; one always goes out after
+ * each battle (catches included). A gift carries its {@code give} id, so gen1-bridge matches it exactly.</li>
  * <li><b>{@code party.give}</b>: the hidden game gives a Pokémon; it goes into the party, or the PC when the party is
  * full ({@code PlayerPartyStore.add}), with exact moves, IVs from DVs when given, its nickname, and an NPC original
  * trainer for trades (others belong to the player). gen1-bridge sends a gift again after every snapshot until a
  * {@code party.sync} shows it, so a {@code give} id is applied once: the Pokémon keeps it in its persistent data, which
  * also holds across server restarts.</li>
  * <li><b>{@code party.heal}</b> heals the party; <b>{@code party.rename}</b> is the Name Rater (P16), and renames from
- * Cobblemon's own screens are cancelled; <b>{@code party.take}</b> removes a Pokémon traded away (daycare is M8's).
- * {@code party.item} arrives in M6.</li>
+ * Cobblemon's own screens are cancelled; <b>{@code party.take}</b> removes a Pokémon traded away (daycare is M8's).</li>
+ * <li><b>{@code party.item}</b>: an item the hidden game used on a Pokémon. A stone evolves it at once (P14:
+ * {@code forceEvolve} of the evolution that takes that stone), a TM/HM teaches its move into the given slot or a free one
+ * (the move it replaces stays re-learnable, P13), Rare Candy gives the experience to the next level (Cobblemon's level-up
+ * evolution prompt follows, P14).</li>
  * <li>Evolutions into species beyond 151 are blocked (P14).</li>
  * </ul>
  *
@@ -68,6 +83,8 @@ public final class PartyService {
 		boolean dirty = true;
 		long lastSent = Long.MIN_VALUE / 2;
 		@Nullable String lastJson;
+		/** The player was in a battle: one sync goes out once it is over. */
+		boolean inBattle;
 
 		Watch(UUID player) {
 			this.player = player;
@@ -90,6 +107,9 @@ public final class PartyService {
 	private static final AtomicLong GIVES = new AtomicLong();
 	private static final AtomicLong REPEATED_GIVES = new AtomicLong();
 	private static final AtomicLong EVOLUTIONS_BLOCKED = new AtomicLong();
+	private static final AtomicLong ITEMS_USED = new AtomicLong();
+	/** Rare Candy's experience source: a side mod. */
+	static final String EXPERIENCE_SOURCE = "kantobridge";
 
 	private PartyService() {
 	}
@@ -104,7 +124,7 @@ public final class PartyService {
 		relay.register(MsgTypes.PARTY_HEAL, PartyService::onHeal);
 		relay.register(MsgTypes.PARTY_RENAME, PartyService::onRename);
 		relay.register(MsgTypes.PARTY_TAKE, PartyService::onTake);
-		relay.register(MsgTypes.PARTY_ITEM, (player, message) -> warn("item_unsupported"));
+		relay.register(MsgTypes.PARTY_ITEM, PartyService::onItem);
 		// P16: nicknames change only through the Name Rater (and the catch or gift prompt), never Cobblemon's screens.
 		CobblemonEvents.POKEMON_NICKNAMED.subscribe(Priority.HIGHEST, event -> {
 			event.cancel();
@@ -153,15 +173,22 @@ public final class PartyService {
 	private static void tick(MinecraftServer server) {
 		long now = server.getTickCount();
 		for (Watch watch : WATCHES.values()) {
-			if (!watch.dirty || now - watch.lastSent < SYNC_EVERY_TICKS) {
-				continue;
-			}
 			ServerPlayer player = server.getPlayerList().getPlayer(watch.player);
 			if (player == null) {
 				continue;
 			}
 			// HP and PP change every turn of a battle; the hidden game needs the state after it.
 			if (BattleRegistry.getBattleByParticipatingPlayer(player) != null) {
+				watch.inBattle = true;
+				continue;
+			}
+			if (watch.inBattle) {
+				// The battle is over: one sync goes out even if nothing changed (PROTOCOL.md "Party rules").
+				watch.inBattle = false;
+				watch.dirty = true;
+				watch.lastJson = null;
+			}
+			if (!watch.dirty || now - watch.lastSent < SYNC_EVERY_TICKS) {
 				continue;
 			}
 			sync(player, watch, now);
@@ -295,6 +322,107 @@ public final class PartyService {
 		KantoBridge.LOGGER.info("party: a Pokémon was traded away");
 	}
 
+	// ---- party.item ----
+
+	static void onItem(ServerPlayer player, Envelope message) {
+		PartyItem item;
+		try {
+			item = PartyItem.read(message.data());
+		} catch (DataException e) {
+			reject(player, message, "item", e);
+			return;
+		}
+		Pokemon pokemon = find(player, item.uid());
+		if (pokemon == null) {
+			warn("item_unknown_uid");
+			return;
+		}
+		boolean applied = switch (item.kind()) {
+			case STONE -> evolveWithStone(player, pokemon, PartyItem.STONES.get(item.item()));
+			case MACHINE -> teach(pokemon, item.move(), item.slot());
+			case RARE_CANDY -> rareCandy(player, pokemon);
+			case OTHER -> {
+				warn("item_unsupported");
+				yield false;
+			}
+		};
+		if (applied) {
+			ITEMS_USED.incrementAndGet();
+			markDirty(player);
+			KantoBridge.LOGGER.info("party: applied a {} from the bag", item.kind().name().toLowerCase(java.util.Locale.ROOT));
+		}
+	}
+
+	/** P14: the evolution that takes this stone happens at once ({@code forceEvolve}; Cobblemon's own path only queues). */
+	static boolean evolveWithStone(ServerPlayer player, Pokemon pokemon, String stonePath) {
+		Item stone = BuiltInRegistries.ITEM.get(ResourceLocation.fromNamespaceAndPath(GenOneIds.NAMESPACE, stonePath));
+		if (stone == Items.AIR) {
+			warn("item_stone_missing");
+			return false;
+		}
+		ItemInteractionEvolution.ItemInteractionContext context = new ItemInteractionEvolution.ItemInteractionContext(new ItemStack(stone),
+				player.level());
+		for (Evolution evolution : pokemon.getEvolutions()) {
+			// test() posts EVOLUTION_TESTED, so evolutions beyond 151 stay blocked (P14).
+			if (evolution instanceof ItemInteractionEvolution byItem && byItem.testContext(pokemon, context) && byItem.test(pokemon)) {
+				byItem.forceEvolve(pokemon);
+				return true;
+			}
+		}
+		warn("item_no_evolution");
+		return false;
+	}
+
+	/**
+	 * A TM or HM: the move goes into {@code slot} (or the first free slot) with full PP; the move it replaces is benched,
+	 * so it stays re-learnable from Cobblemon's summary (P13: nobody softlocks over an HM).
+	 */
+	static boolean teach(Pokemon pokemon, int number, @Nullable Integer slot) {
+		MoveTemplate template = Gen1Mons.move(number);
+		if (template == null) {
+			warn("item_move_missing");
+			return false;
+		}
+		MoveSet moves = pokemon.getMoveSet();
+		for (Move known : moves.getMoves()) {
+			if (known.getTemplate() == template) {
+				// Gen 1 refuses a move the Pokémon knows; the hidden game shouldn't send one.
+				warn("item_move_known");
+				return false;
+			}
+		}
+		int target = slot == null ? -1 : slot;
+		if (target < 0 || moves.get(target) == null) {
+			target = -1;
+			for (int i = 0; i < MoveSet.MOVE_COUNT && target < 0; i++) {
+				if (moves.get(i) == null) {
+					target = i;
+				}
+			}
+		}
+		if (target < 0) {
+			warn("item_no_slot");
+			return false;
+		}
+		Move replaced = moves.get(target);
+		if (replaced != null) {
+			pokemon.getBenchedMoves().add(new BenchedMove(replaced.getTemplate(), replaced.getRaisedPpStages()));
+		}
+		pokemon.getBenchedMoves().remove(template);
+		moves.setMove(target, template.create());
+		return true;
+	}
+
+	/** Rare Candy: the experience to the next level, as Cobblemon's own candy gives it (with the player's level-up UI). */
+	static boolean rareCandy(ServerPlayer player, Pokemon pokemon) {
+		if (pokemon.getLevel() >= com.cobblemon.mod.common.Cobblemon.INSTANCE.getConfig().getMaxPokemonLevel()) {
+			warn("item_max_level");
+			return false;
+		}
+		pokemon.addExperienceWithPlayer(player, new SidemodExperienceSource(EXPERIENCE_SOURCE), pokemon.getExperienceToNextLevel());
+		return true;
+	}
+
 	/** True when a Pokémon in the party or the PC came with this {@code give} id. */
 	static boolean given(ServerPlayer player, String give) {
 		for (Pokemon pokemon : PlayerExtensionsKt.party(player)) {
@@ -362,6 +490,11 @@ public final class PartyService {
 
 	public static long evolutionsBlocked() {
 		return EVOLUTIONS_BLOCKED.get();
+	}
+
+	/** {@code party.item}s applied. */
+	public static long itemsUsed() {
+		return ITEMS_USED.get();
 	}
 
 	/** True while the player's party is followed (after Cobblemon synchronised their data). */

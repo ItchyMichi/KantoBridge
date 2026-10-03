@@ -6,6 +6,7 @@ import com.cobblemon.mod.common.pokemon.Pokemon;
 import com.cobblemon.mod.common.pokemon.status.PersistentStatusContainer;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
+import dev.kantobridge.proto.Ids;
 import net.minecraft.network.chat.MutableComponent;
 import org.jetbrains.annotations.Nullable;
 
@@ -52,6 +53,11 @@ public final class PartySync {
 		}
 		JsonObject entry = new JsonObject();
 		entry.addProperty("uid", pokemon.getUuid().toString());
+		// The party.give id a gift came with, so gen1-bridge matches its pending gift exactly (not by dex and level).
+		String give = pokemon.getPersistentData().getString(PartyService.GIVE_KEY);
+		if (Ids.ID.matcher(give).matches()) {
+			entry.addProperty("give", give);
+		}
 		entry.addProperty("dex", dex);
 		entry.addProperty("level", Math.max(1, Math.min(100, pokemon.getLevel())));
 		String nick = nickname(pokemon.getNickname());

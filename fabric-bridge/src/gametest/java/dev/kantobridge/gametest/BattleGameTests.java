@@ -245,21 +245,20 @@ public class BattleGameTests implements FabricGameTest {
 			relay.receive(player, envelope(1, MsgTypes.BATTLE_START, start("bx-1", "trainer", TRAINER, TEAM)));
 			helper.assertTrue(BattleService.warnings("no_party") == noParty + 1, "no_party wasn't counted");
 			partner(player);
-			// A wild kind (static, surf, fish) is M6's.
-			long unsupported = BattleService.warnings("unsupported_kind");
+			// A wild kind without its Pokémon is malformed (wild encounters themselves are EncounterGameTests').
 			relay.receive(player, envelope(2, MsgTypes.BATTLE_START,
-					"{\"battle\":\"bx-2\",\"kind\":\"static\",\"wild\":{\"dex\":143,\"level\":30},\"rules\":{\"catch\":true,\"flee\":false}}"));
-			helper.assertTrue(BattleService.warnings("unsupported_kind") == unsupported + 1, "unsupported_kind wasn't counted");
+					"{\"battle\":\"bx-2\",\"kind\":\"static\",\"rules\":{\"catch\":true,\"flee\":false}}"));
 			// Malformed but with an id: an error and an answer. Without a usable id: an error only.
 			relay.receive(player, envelope(3, MsgTypes.BATTLE_START, "{\"battle\":\"bx-3\",\"kind\":\"trainer\",\"rules\":{\"catch\":false,\"flee\":false}}"));
 			relay.receive(player, envelope(4, MsgTypes.BATTLE_START, "{\"battle\":7,\"kind\":\"trainer\"}"));
 			helper.assertTrue(BattleService.proxyOf(player) == null, "a battle that can't run spawned a proxy");
-			helper.assertTrue(sent.size() == 5, "expected 3 results and 2 errors, got " + sent.size());
+			helper.assertTrue(sent.size() == 6, "expected 3 results and 3 errors, got " + sent.size());
 			assertResult(helper, sent.get(0), "bx-1", "aborted");
-			assertResult(helper, sent.get(1), "bx-2", "aborted");
-			helper.assertTrue(sent.get(2).type().equals(MsgTypes.ERROR) && Objects.equals(sent.get(2).re(), 3L), "malformed: no error");
-			assertResult(helper, sent.get(3), "bx-3", "aborted");
-			helper.assertTrue(sent.get(4).type().equals(MsgTypes.ERROR) && Objects.equals(sent.get(4).re(), 4L), "no id: no error");
+			helper.assertTrue(sent.get(1).type().equals(MsgTypes.ERROR) && Objects.equals(sent.get(1).re(), 2L), "malformed wild: no error");
+			assertResult(helper, sent.get(2), "bx-2", "aborted");
+			helper.assertTrue(sent.get(3).type().equals(MsgTypes.ERROR) && Objects.equals(sent.get(3).re(), 3L), "malformed: no error");
+			assertResult(helper, sent.get(4), "bx-3", "aborted");
+			helper.assertTrue(sent.get(5).type().equals(MsgTypes.ERROR) && Objects.equals(sent.get(5).re(), 4L), "no id: no error");
 		}));
 		helper.succeed();
 	}

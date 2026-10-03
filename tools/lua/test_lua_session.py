@@ -17,9 +17,10 @@ def established(role="test"):
     peer = rig.connect()
     seq = peer.hello(role=role)
     msgs = peer.messages()
-    # the NPC observer follows every snapshot with the current map's npc.set (M4),
-    # a live stream for the client and test roles only
-    follow = ["npc.set"] if role in ("client", "test") else []
+    # the NPC observer follows every snapshot with the current map's npc.set (M4) and the
+    # bag observer with the mirrored battle items (M6), live streams for the client and test
+    # roles only
+    follow = ["npc.set", "bag.sync"] if role in ("client", "test") else []
     assert [m["type"] for m in msgs] == ["hello.ok", "snapshot"] + follow
     assert msgs[0]["re"] == seq
     return rig, peer, msgs[:2]
@@ -107,7 +108,7 @@ def test_ping_pong_and_resync():
     seq = peer.send("resync")
     rig.step()
     snap = peer.messages()
-    assert [(m["type"], m.get("re")) for m in snap] == [("snapshot", seq), ("npc.set", None)]
+    assert [(m["type"], m.get("re")) for m in snap] == [("snapshot", seq), ("npc.set", None), ("bag.sync", None)]
 
 
 def test_bad_ping_gets_bad_message():
@@ -169,7 +170,7 @@ def test_a_new_connection_replaces_the_old():
     second = rig.connect()
     assert first.closed() and not second.closed()
     second.hello()
-    assert [m["type"] for m in second.messages()] == ["hello.ok", "snapshot", "npc.set"]
+    assert [m["type"] for m in second.messages()] == ["hello.ok", "snapshot", "npc.set", "bag.sync"]
     assert rig.status.sessions == 2
 
 

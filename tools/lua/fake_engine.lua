@@ -178,6 +178,18 @@ local function newMapModule()
     return setOf(tilesets or { "OVERWORLD", "PLATEAU" })[def.tileset] == true
   end
 
+  -- the region rule and the ghost-battle rule (M6): a def's own field wins,
+  -- else the id prefix
+  function Map.inRegion(def, region, prefix)
+    if def.region ~= nil then return def.region == region end
+    return prefix ~= nil and def.id:find(prefix, 1, true) == 1
+  end
+  function Map.ghostBattles(def)
+    if def.ghostBattles ~= nil then return def.ghostBattles end
+    if def.id:find("POKEMON_TOWER", 1, true) == 1 then return { unlessItem = "SILPH_SCOPE" } end
+    return nil
+  end
+
   function Map:inBounds(cx, cy) return cx >= 0 and cy >= 0 and cx < self.widthCells and cy < self.heightCells end
   function Map:blockAt(bx, by)
     local d = self.def

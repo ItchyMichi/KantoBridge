@@ -1,5 +1,23 @@
 package dev.kantobridge.gametest;
 
+import com.cobblemon.mod.common.Cobblemon;
+import com.cobblemon.mod.common.CobblemonBlocks;
+import com.cobblemon.mod.common.CobblemonPoiTypes;
+import com.cobblemon.mod.common.api.habitats.HabitatPhaseOrder;
+import com.cobblemon.mod.common.api.habitats.spawningstyle.NaturalHabitatSpawning;
+import com.cobblemon.mod.common.api.spawning.SpawnCause;
+import com.cobblemon.mod.common.api.spawning.SpawningZone;
+import com.cobblemon.mod.common.api.spawning.detail.PokemonSpawnDetail;
+import com.cobblemon.mod.common.api.spawning.detail.SpawnDetail;
+import com.cobblemon.mod.common.api.spawning.influence.SpawningZoneInfluence;
+import com.cobblemon.mod.common.api.spawning.influence.detector.HabitatBlockDetector;
+import com.cobblemon.mod.common.api.spawning.position.AreaSpawnablePosition;
+import com.cobblemon.mod.common.api.spawning.position.calculators.SpawnablePositionCalculator;
+import com.cobblemon.mod.common.api.spawning.spawner.PlayerSpawner;
+import com.cobblemon.mod.common.api.spawning.spawner.SpawningZoneInput;
+import com.cobblemon.mod.common.block.habitat.HabitatBlock;
+import com.cobblemon.mod.common.block.habitat.HabitatBlockEntity;
+import com.cobblemon.mod.common.util.PlayerExtensionsKt;
 import dev.kantobridge.KantoBridge;
 import dev.kantobridge.block.KbBlocks;
 import dev.kantobridge.block.LedgeColliderBlock;
@@ -11,6 +29,7 @@ import dev.kantobridge.builder.BuildTask;
 import dev.kantobridge.builder.KantoWorldBuilder;
 import dev.kantobridge.builder.export.BundleException;
 import dev.kantobridge.builder.export.ExportBundle;
+import dev.kantobridge.server.HabitatService;
 import dev.kantobridge.server.WorldIndexSync;
 import dev.kantobridge.world.DataException;
 import dev.kantobridge.world.MapPlacement;
@@ -21,7 +40,9 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import net.fabricmc.fabric.api.gametest.v1.FabricGameTest;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -33,6 +54,7 @@ import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.level.biome.Biome;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.LightBlock;
@@ -42,8 +64,10 @@ import org.jetbrains.annotations.Nullable;
 /**
  * Builds the synthetic export bundle (a made-up 10×9-block town, a house and its upper floor) into the test level, far
  * from every other test, and checks the result (docs/PLAN.md §6 M2 [T]): blocks and heights, story cells, the ledge
- * collider, biomes, the written WorldIndex (against the golden file) and the report. Then rebuilds twice: the same
- * plan again must change nothing, and a town-only rebuild must clear the interiors the first build left.
+ * collider, biomes, the written WorldIndex (against the golden file) and the report. The town's made-up grass table gets
+ * a habitat pool and a configured habitat block under its grass, whose influence offers the pool's Pokémon on the
+ * grass floor and nothing on the trees beside it (M6). Then rebuilds twice: the same plan again must change nothing, and
+ * a town-only rebuild must clear the interiors the first build left (and keep the town's habitat block).
  */
 public class SyntheticBuildGameTests implements FabricGameTest {
 	/** Must equal {@code TestData.ORIGIN_X/Z} in the JUnit tests, which hold the golden WorldIndex to the same origin. */
@@ -111,6 +135,10 @@ public class SyntheticBuildGameTests implements FabricGameTest {
 		helper.assertTrue(Files.isRegularFile(task.worldDir().resolve("kantobridge/slot_map.json")), "slot map not written");
 		helper.assertTrue(Files.isRegularFile(task.worldDir().resolve("kantobridge/build_report.json")), "report not written");
 		helper.assertTrue(Files.isRegularFile(task.worldDir().resolve("datapacks/kantobridge_generated/pack.mcmeta")), "datapack not written");
+		helper.assertTrue(Files.isRegularFile(task.worldDir().resolve("datapacks/kantobridge_generated/data/kantobridge/habitat_pools/test_town.json")),
+				"the town's habitat pool isn't in the datapack");
+		helper.assertTrue(report.habitatBlocks == 1, "habitat_blocks " + report.habitatBlocks);
+		helper.assertTrue(report.pools == 1, "pools " + report.pools);
 		helper.assertTrue(Files.isRegularFile(task.packDir().resolve("pack.mcmeta")), "resource pack not written");
 
 		ServerLevel level = helper.getLevel();
@@ -175,6 +203,15 @@ public class SyntheticBuildGameTests implements FabricGameTest {
 		// Biomes per 4×4×4 cell.
 		assertBiome(helper, level, new BlockPos(town.x() + 18, 64, town.z() + 16), "kanto_outdoor");
 		assertBiome(helper, level, new BlockPos(house.x() + 10, feet, house.z() + 10), "kanto_interior");
+
+		// The habitat block under the grass: configured, a point of interest, and its influence where the grass is. Its
+		// chunk may have been saved and unloaded since the build (no player is near): the runtime check, which runs as
+		// chunks load, prepares a reloaded block before its chunk ticks.
+		helper.assertTrue(index.habitats().size() == 1, "habitats listed: " + index.habitats().size());
+		HabitatBlockEntity habitat = assertHabitat(helper, level, index.habitats().get(0));
+		assertInfluence(helper, level, index, habitat);
+		helper.assertTrue(HabitatService.counts().missingBlock.get() == 0 && HabitatService.counts().missingPool.get() == 0,
+				"the runtime check found a problem");
 		KantoBridge.LOGGER.info("synthetic build: {} blocks placed, {} chunks, {} story cells, {} ms", report.blocksPlaced, report.chunks,
 				report.storyCells, report.elapsedMs);
 	}
@@ -185,6 +222,8 @@ public class SyntheticBuildGameTests implements FabricGameTest {
 		helper.assertTrue(report.blocksPlaced == 0 && report.blocksCleared == 0,
 				"an identical rebuild changed blocks: placed " + report.blocksPlaced + ", cleared " + report.blocksCleared);
 		helper.assertTrue(report.worldIndexHash.equals(first.report().worldIndexHash), "an identical rebuild changed the index");
+		helper.assertTrue(report.habitatBlocks == 1, "the rebuild's habitat_blocks " + report.habitatBlocks);
+		assertHabitat(helper, helper.getLevel(), first.plan().habitats().get(0));
 	}
 
 	private static void verifyTownOnly(GameTestHelper helper, BuildTask first, BuildTask third) {
@@ -205,6 +244,93 @@ public class SyntheticBuildGameTests implements FabricGameTest {
 		helper.assertTrue(isTile(level, new BlockPos(town.x() + 4, 63, town.z() + 4)), "the town was cleared too");
 		WorldIndex after = readIndex(helper, third);
 		helper.assertTrue(after.maps().size() == 1 && after.map("TEST_HOUSE") == null, "the new index still lists the house");
+		helper.assertTrue(after.habitats().equals(before.habitats()), "the town keeps its habitat block");
+		assertHabitat(helper, level, after.habitats().get(0));
+	}
+
+	/** A habitat block configured as PLAN §4.5 wants it, and a point of interest Cobblemon's spawner finds. */
+	private static HabitatBlockEntity assertHabitat(GameTestHelper helper, ServerLevel level, WorldIndex.Habitat habitat) {
+		BlockPos pos = new BlockPos(habitat.x(), habitat.y(), habitat.z());
+		level.getChunk(pos);
+		helper.assertTrue(HabitatService.verifyLoaded(level.getServer()) >= 1, "the runtime check didn't see the loaded habitat block");
+		helper.assertTrue("kantobridge:test_town".equals(habitat.pool()) && habitat.y() == 61, "habitat listed wrong");
+		BlockState state = level.getBlockState(pos);
+		helper.assertTrue(state.is(CobblemonBlocks.HABITAT_BLOCK), "no habitat block 2 blocks under the grass");
+		helper.assertFalse(state.getValue(HabitatBlock.Companion.getACTIVATED_STYLE()) || state.getValue(HabitatBlock.Companion.getCANCELS_REGULAR_SPAWNS()),
+				"the block's state flags weren't refreshed");
+		helper.assertTrue(level.getBlockEntity(pos) instanceof HabitatBlockEntity, "the habitat block has no block entity");
+		HabitatBlockEntity entity = (HabitatBlockEntity) level.getBlockEntity(pos);
+		helper.assertTrue(entity.getSpawningStyle() instanceof NaturalHabitatSpawning, "not natural spawning");
+		NaturalHabitatSpawning style = (NaturalHabitatSpawning) entity.getSpawningStyle();
+		helper.assertFalse(style.getReplaceSpawns(), "ReplaceSpawns must be off");
+		helper.assertTrue(style.getRangeOfInfluence() == 14, "RangeOfInfluence " + style.getRangeOfInfluence());
+		helper.assertTrue(style.getAffectsOverworld() && !style.getAffectsFishing(), "the pool's spawns weren't attached (initialized "
+				+ entity.getInitialized() + ", details " + entity.getSpawnDetails().size() + ", pool spawns " + entity.getPool().getSpawns().size() + ")");
+		helper.assertTrue(entity.getPool().getId().toString().equals("kantobridge:test_town"), "the pool isn't attached");
+		helper.assertTrue(entity.getPhaseOrder() == HabitatPhaseOrder.SIMPLE && entity.getNumberOfPhases() == 1, "phases");
+		helper.assertTrue(entity.getSpawnDetails().size() == 10, "one spawn detail per Gen 1 slot, got " + entity.getSpawnDetails().size());
+		helper.assertTrue(HabitatService.configuredFor(entity, habitat.pool()), "the service doesn't see it configured");
+		helper.assertTrue(level.getPoiManager().getType(pos).map(holder -> holder.is(CobblemonPoiTypes.HABITAT_BLOCK_KEY)).orElse(false),
+				"the habitat block isn't a point of interest, so the spawner can't find it");
+		return entity;
+	}
+
+	/**
+	 * Cobblemon's own spawner, as {@code /checkspawn} runs it, around the town's grass for a mock player: the habitat
+	 * detector finds the block, grass floor blocks get the pool's Pokémon, and the tree tops beside the grass (inside
+	 * the sphere, above the walking level) get nothing, because of the spawn rule {@code walking_level_only}.
+	 */
+	private static void assertInfluence(GameTestHelper helper, ServerLevel level, WorldIndex index, HabitatBlockEntity habitat) {
+		ServerPlayer player = MockPlayers.join(helper);
+		try {
+			PlayerSpawner spawner = PlayerExtensionsKt.getSpawner(player);
+			helper.assertTrue(spawner != null, "the mock player has no Cobblemon spawner");
+			BlockPos patch = index.cellOrigin("TEST_TOWN", 14, 4);
+			for (int cx = (patch.getX() - 2) >> 4; cx <= (patch.getX() + 16) >> 4; cx++) {
+				for (int cz = (patch.getZ() - 2) >> 4; cz <= (patch.getZ() + 16) >> 4; cz++) {
+					level.getChunk(cx, cz);
+				}
+			}
+			SpawningZoneInput input = new SpawningZoneInput(new SpawnCause(spawner, player), level, patch.getX() - 2, 60, patch.getZ() - 2, 16, 10,
+					16);
+			boolean detected = false;
+			for (SpawningZoneInfluence influence : HabitatBlockDetector.INSTANCE.detectFromInput(spawner, input)) {
+				detected |= influence.getInfluence() == habitat;
+			}
+			helper.assertTrue(detected, "Cobblemon's habitat detector doesn't find the block");
+			SpawningZone zone = Cobblemon.INSTANCE.getSpawningZoneGenerator().generate(spawner, input);
+			List<AreaSpawnablePosition> positions = Cobblemon.INSTANCE.getAreaSpawnablePositionResolver().resolve(spawner,
+					SpawnablePositionCalculator.Companion.getPrioritizedAreaCalculators(), zone);
+			int onGrass = 0;
+			int above = 0;
+			Set<String> species = new HashSet<>();
+			for (AreaSpawnablePosition position : positions) {
+				List<SpawnDetail> details = spawner.getMatchingSpawns("common", position);
+				if (position.getPosition().getY() == 63) {
+					if (!details.isEmpty() && position.getPosition().distSqr(habitat.getBlockPos()) <= 14 * 14) {
+						onGrass++;
+						helper.assertTrue(details.size() == 10, "a grass floor block got " + details.size() + " spawns, want the 10 slots");
+						for (SpawnDetail detail : details) {
+							species.add(((PokemonSpawnDetail) detail).getPokemon().getSpecies());
+						}
+					}
+				} else {
+					helper.assertTrue(details.isEmpty(), "something may spawn above the walking level, at y offset "
+							+ (position.getPosition().getY() - 63));
+					if (position.getPosition().distSqr(habitat.getBlockPos()) <= 14 * 14) {
+						// Inside the sphere: only the walking-level rule keeps the pool off these tree tops.
+						above++;
+					}
+				}
+			}
+			helper.assertTrue(onGrass > 0, "no floor block near the habitat offers its spawns (" + positions.size() + " positions)");
+			helper.assertTrue(above > 0, "the zone had no tree tops inside the sphere to check the walking-level rule on");
+			helper.assertTrue(species.equals(Set.of("pidgey", "rattata")), "the pool's species don't come through: " + species);
+			KantoBridge.LOGGER.info("synthetic build: habitat influence on {} floor positions, {} positions in the sphere above the walking level refused",
+					onGrass, above);
+		} finally {
+			MockPlayers.leave(helper, player);
+		}
 	}
 
 	private static WorldIndex readIndex(GameTestHelper helper, BuildTask task) {
