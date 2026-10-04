@@ -29,8 +29,8 @@
     },
     "geoms": {
       "type": "array",
-      "description": "Sorted canonical shape keys (cube, slab, roof, tuft, cell, tmpl); geom id = index.",
-      "items": {"type": "string", "pattern": "^(cube|slab|roof|tuft|cell|tmpl):[0-9]{1,5}\\|[-0-9a-z,|=_]+$", "maxLength": 256},
+      "description": "Sorted canonical shape keys (cube, slab, roof, tuft, cell, tmpl; box from P3); geom id = index.",
+      "items": {"type": "string", "pattern": "^(cube|slab|roof|tuft|cell|tmpl|box):[0-9]{1,5}\\|[-0-9a-z,|=_]+$", "maxLength": 256},
       "uniqueItems": true,
       "x-rom-derived": true
     },
@@ -57,11 +57,15 @@
           "outdoor": {"type": "boolean"},
           "columns": {
             "type": "array",
-            "items": {"type": "array", "maxItems": 8, "items": {"type": "string", "pattern": "^(cube|slab|roof|tuft|cell|tmpl):[0-9]{1,5}\\|[-0-9a-z,|=_]+$", "maxLength": 256}}
+            "items": {"type": "array", "maxItems": 8, "items": {"type": "string", "pattern": "^(cube|slab|roof|tuft|cell|tmpl|box):[0-9]{1,5}\\|[-0-9a-z,|=_]+$", "maxLength": 256}}
           },
           "band": {
             "type": "object",
-            "description": "From P2: the profile's band-table building this template draws, pixel-free numbers only: the band table (roofRows, roofBack, roofFront, roofCycle, slab, frontEave, ledge, seal, depthPx, panes, scrub), the composite grid (top: rows drawn above the matched rows; rows: the matched grid), the overhang rows (north, south), and per grid position the solid blocks of a claimed solid tile (solid) and the decor blocks of its doorway or overhang (air); claimOnly for a claim that draws nothing."
+            "description": "From P2: the profile's band-table building this template draws, pixel-free numbers only: the band table (roofRows, roofBack, roofFront, roofCycle, slab, frontEave, ledge, seal, depthPx, panes, scrub), the composite grid (top: rows drawn above the matched rows; rows: the matched grid), the overhang rows (north, south), and per grid position the solid blocks of a claimed solid tile (solid) and the decor blocks of its doorway or overhang (air); claimOnly for a claim that draws nothing. From P3 a furniture entry carries parts instead of the roof fields: its plane, its base piece (tray, or desk and wall), and its parts in order (flat, box, iso, upright), rows and columns of the drawing, sizes in voxels."
+          },
+          "hull": {
+            "type": "object",
+            "description": "From P3: the profile's two-cell hull this template draws (kind canopy over 2 x 2 cells, or planter two cells tall), pixel-free: its height in pixels and per grid position its solid blocks (solid)."
           }
         }
       },

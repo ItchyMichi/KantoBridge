@@ -142,7 +142,12 @@ PROFILE_TEXT = "\n".join([
     f"      signpost = {_lua_list([SIGN_TOP, SIGN_POST])},",
     f"      post = {_lua_list([POST])},",
     f"      prop = {_lua_list([CUT])},",
-    f"      wall = {_lua_list([CLIFF])},",
+    f"      wall = {_lua_list([WALL])},",
+    # P3 (docs/specs/PROFILE_PLAN.md §5.6): the mound a cliff, the fence line, the counter, the house's stairs.
+    f"      cliff = {_lua_list([RIM, CLIFF])},",
+    f"      fence = {_lua_list([FENCE])},",
+    f"      counter = {_lua_list([COUNTER])},",
+    f"      stair_e = {_lua_list([STAIRS])},",
     f"      prop_ground = {{ [{CUT}] = {GROUND} }},",
     f"      prop_bg = {{ {{ tiles = {_lua_list([SIGN_TOP])}, shades = {{ \"white\" }} }} }},",
     f"      when_above = {{ [{ROOF2}] = {{ {{ above = {_lua_list([ROOF_EDGE])}, class = \"roof\" }} }} }},",
@@ -156,6 +161,14 @@ PROFILE_TEXT = "\n".join([
 ] + [f"          {_lua_list(row)}," for row in HILL_HOUSE_TILES] + [
     "        },",
     "        roofRows = 16, roofBack = 2, roofFront = 4, roofCycle = { 2, 9 }, slab = 2, frontEave = 1,",
+    "      },",
+    # P3: a desk (the parts path) over the house's counter row, an upright part riding it.
+    "      {",
+    "        id = \"desk\",",
+    f"        tiles = {{ {_lua_list([COUNTER] * 4)}, {_lua_list([COUNTER] * 4)} }},",
+    "        roofRows = 0, slab = 0,",
+    "        desk = { fascia = { 0, 1 }, base = { 2, 15 } },",
+    "        parts = { { x = { 9, 14 }, top = { 0, 1 }, facade = { 2, 7 }, depth = 4, z = 2 } },",
     "      },",
     "    },",
     "  },",

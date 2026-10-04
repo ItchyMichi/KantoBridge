@@ -637,3 +637,20 @@ A new world (the mod installed and switched off, as for P1).
       Name Rater's, Mr. Fuji's, the Day Care…), Oak's lab, the Celadon Mansion. What it models looks right, stays under
       the ceiling, and you can't walk through anything the game doesn't let you.
 - [ ] **A building the profile doesn't model** keeps its shape from before (four kinds, six places in all).
+
+### P3: boxes, interiors, stairs and canopies
+
+A new world (the mod installed and switched off, as for P1).
+
+- [ ] **A Pokémon Center and a Mart:** counters one block; shelves standing as deep boxes with their books set in;
+      tables and desks at their own heights; nothing through the ceiling; you can't walk through anything the game
+      doesn't let you.
+- [ ] **The houses, Oak's lab, the Celadon Mansion:** the furniture from the profile's parts (desks with things on them,
+      trays, machines) whole, lids and fronts in the right colours.
+- [ ] **A gym:** the same; statues and plants as before (P1).
+- [ ] **Outdoors:** cliffs four blocks high (the profile's height), their faces folded like the drawing; fences low;
+      ledge walls low.
+- [ ] **Viridian Forest:** the big trees as one round crown over four cells, whole under the open sky.
+- [ ] **Stairs** (Red's house, the route gates, Mt. Moon): a rising stair shows four steps you walk through to the
+      warp, as before; a stair down stays flat.
+- [ ] **Round stumps and cans** where the profile pins them: a cut top or an open mouth.

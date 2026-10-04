@@ -2,7 +2,6 @@ package dev.kantobridge.builder.shape;
 
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
-import dev.kantobridge.builder.plan.WorldPlan;
 import dev.kantobridge.scene.CellKind;
 import dev.kantobridge.scene.SceneMap;
 import dev.kantobridge.scene.SwapSite;
@@ -21,8 +20,8 @@ import java.util.TreeMap;
  *
  * <pre>
  * volume    per claimed column from feet level: solid and counter cells max(2, bound) blocks on shape_full, walkable
- *           cells (doorways) bound blocks on decor; bound = ceil((8 × drawn rows − roofRows + slab) / 8); interiors stop
- *           under the ceiling
+ *           cells (doorways) bound blocks on decor; bound = ceil((8 × drawn rows − roofRows + slab) / 8), a furniture
+ *           entry's (P3) its pieces' highest layer; capped by the map's headroom (ShapeHeights)
  * overhang  one row north (an awning) and south (an awning or a front eave) of the footprint, on decor, bound blocks,
  *           where that row is walkable ground inside the map; elsewhere cut (counted)
  * claimOnly the claim keeps two blocks of collision on shape_full and draws nothing; its floor wears the ground
@@ -136,11 +135,20 @@ final class Buildings {
 		return true;
 	}
 
-	/** Blocks of a band building's model, from feet level: the drawing's rows under the roof band, plus the slab. */
+	/**
+	 * Blocks of a band building's model, from feet level: the drawing's rows under the roof band, plus the slab; a
+	 * furniture entry's (P3) up to its pieces' highest layer.
+	 */
 	static int bound(Profile.Building building) {
 		Profile.Band band = building.band();
-		int drawn = 8 * (building.topRows().size() + building.tiles().size());
-		return band == null ? 2 : Math.max(1, (drawn - band.roofRows() + band.slab() + 7) / 8);
+		int drawn = building.drawnPx();
+		if (band == null) {
+			return 2;
+		}
+		if (building.parts() != null) {
+			return Math.max(1, (building.parts().ytop(drawn) + 1 + 7) / 8);
+		}
+		return Math.max(1, (drawn - band.roofRows() + band.slab() + 7) / 8);
 	}
 
 	/**
@@ -160,10 +168,7 @@ final class Buildings {
 		int cols = map.artCols();
 		int rows = map.artRows();
 		boolean indoor = !(map.surface() && map.env().outdoor());
-		int bound = bound(building);
-		if (indoor) {
-			bound = Math.min(bound, WorldPlan.CEILING_ABOVE_FEET);
-		}
+		int bound = Math.min(bound(building), ShapeHeights.headroom(map));
 		int bw = claim.width();
 		int bh = claim.rows();
 		boolean north = band != null && band.ledge() != null && claim.ty() > 0;
@@ -278,14 +283,19 @@ final class Buildings {
 			return out;
 		}
 		out.addProperty("roofRows", band.roofRows());
-		out.addProperty("roofBack", band.roofBack());
-		out.addProperty("roofFront", band.roofFront());
-		JsonArray cycle = new JsonArray();
-		cycle.add(band.cycle0());
-		cycle.add(band.cycle1());
-		out.add("roofCycle", cycle);
 		out.addProperty("slab", band.slab());
-		out.addProperty("frontEave", band.frontEave());
+		if (building.parts() != null) {
+			// A furniture entry (P3): its pieces; the roof fields are only measuring fields there.
+			out.add("parts", partsJson(building.parts()));
+		} else {
+			out.addProperty("roofBack", band.roofBack());
+			out.addProperty("roofFront", band.roofFront());
+			JsonArray cycle = new JsonArray();
+			cycle.add(band.cycle0());
+			cycle.add(band.cycle1());
+			out.add("roofCycle", cycle);
+			out.addProperty("frontEave", band.frontEave());
+		}
 		if (band.ledge() != null) {
 			JsonArray ledge = new JsonArray();
 			ledge.add(band.ledge()[0]);
@@ -304,6 +314,102 @@ final class Buildings {
 			scrub.add(r);
 		}
 		out.add("scrub", scrub);
+		return out;
+	}
+
+	/** A furniture entry's pieces as the shape index carries them: its plane, its base piece, its parts in order. */
+	static JsonObject partsJson(Profile.Parts parts) {
+		JsonObject out = new JsonObject();
+		out.addProperty("plane", parts.plane());
+		if (parts.tray() != null) {
+			Profile.Tray t = parts.tray();
+			JsonObject tray = new JsonObject();
+			tray.add("top", pair(t.top0(), t.top1()));
+			tray.add("front", pair(t.front0(), t.front1()));
+			tray.add("x", pair(t.x0(), t.x1()));
+			tray.add("inner", pair(t.inner0(), t.inner1()));
+			tray.addProperty("floor", t.floor());
+			out.add("tray", tray);
+		}
+		if (parts.desk() != null) {
+			Profile.Desk d = parts.desk();
+			JsonObject desk = new JsonObject();
+			desk.add("fascia", pair(d.fascia0(), d.fascia1()));
+			desk.add("base", pair(d.base0(), d.base1()));
+			desk.addProperty("depthPx", d.depthPx());
+			desk.addProperty("z", d.z());
+			desk.add("x", pair(d.x0(), d.x1()));
+			if (d.top() != null) {
+				desk.add("top", pair(d.top()[0], d.top()[1]));
+			}
+			desk.addProperty("white", d.whiteLid());
+			out.add("desk", desk);
+		}
+		if (parts.wall() != null) {
+			Profile.WallBand w = parts.wall();
+			JsonObject wall = new JsonObject();
+			wall.add("cycle", pair(w.cycle0(), w.cycle1()));
+			wall.addProperty("x", w.x());
+			wall.addProperty("h", w.h());
+			wall.addProperty("depthPx", w.depthPx());
+			out.add("wall", wall);
+		}
+		JsonArray list = new JsonArray();
+		for (Profile.Part part : parts.list()) {
+			JsonObject o = new JsonObject();
+			switch (part) {
+				case Profile.FlatPart f -> {
+					o.addProperty("kind", "flat");
+					o.add("x", pair(f.x0(), f.x1()));
+					o.add("rows", pair(f.r0(), f.r1()));
+					o.addProperty("z", f.z());
+					o.addProperty("at", f.at());
+					o.addProperty("thick", f.thick());
+				}
+				case Profile.BoxPart b -> {
+					o.addProperty("kind", "box");
+					o.add("x", pair(b.x0(), b.x1()));
+					o.add("rows", pair(b.r0(), b.r1()));
+					o.addProperty("depth", b.depth());
+					o.addProperty("z", b.z());
+					o.addProperty("base", b.base());
+					o.add("cycle", pair(b.c0(), b.c1()));
+				}
+				case Profile.IsoPart i -> {
+					o.addProperty("kind", "iso");
+					o.add("x", pair(i.x0(), i.x1()));
+					o.add("rows", pair(i.r0(), i.r1()));
+					o.addProperty("z", i.z());
+					o.addProperty("plan", i.plan());
+				}
+				case Profile.UprightPart u -> {
+					o.addProperty("kind", "upright");
+					o.add("x", pair(u.x0(), u.x1()));
+					o.add("top", pair(u.t0(), u.t1()));
+					o.add("facade", pair(u.f0(), u.f1()));
+					o.addProperty("depth", u.depth());
+					o.addProperty("rise", u.rise());
+					o.addProperty("z", u.z());
+					if (u.inset() != null) {
+						JsonArray inset = new JsonArray();
+						for (int v : u.inset()) {
+							inset.add(v);
+						}
+						o.add("inset", inset);
+					}
+					o.addProperty("stretch", u.stretch());
+				}
+			}
+			list.add(o);
+		}
+		out.add("list", list);
+		return out;
+	}
+
+	private static JsonArray pair(int a, int b) {
+		JsonArray out = new JsonArray();
+		out.add(a);
+		out.add(b);
 		return out;
 	}
 

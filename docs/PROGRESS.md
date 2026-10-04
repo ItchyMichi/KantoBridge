@@ -427,8 +427,8 @@ own rules as the fallback; the tree fallback is option 1; buildings follow the t
 | # | Milestone | Status | Date | Commit |
 |---|---|---|---|---|
 | P1 | Profile and outdoor units | **done** (play-test waits for you: install the mod, switched off, then a new world) | 2026-10-04 | `7dab639` |
-| P2 | Buildings | **done** (play-test waits for you; a new world) | 2026-10-04 | `P2: buildings` |
-| P3 | Boxes and interiors | to do | | |
+| P2 | Buildings | **done** (play-test waits for you; a new world) | 2026-10-04 | `5178d71` |
+| P3 | Boxes and interiors | **done** (play-test waits for you; a new world) | 2026-10-04 | `P3: boxes and interiors` |
 | P4 | Finish | to do | | |
 
 **Why the trees were cubes** (counts from your world, which is identical to the e2e build): V4 made a repeating cell a
@@ -462,6 +462,18 @@ Route 22: none. Over the 36 outdoor maps, 2,586 of 14,797 solid cells were units
   **92/92 GameTests**, the mixin checks. After that, the records were corrected against the build's counts and map ids
   and three tests' assertions tightened (the schema's band columns back to 8, descriptions); `tools/check.sh` again:
   pytest **1418 passed** (37 end-to-end skipped), **92/92 GameTests**.
+- **P3** (the same export; planner `kb-shapes/8`): all 55 of the profile's building entries read (the 13
+  furniture entries' parts with them): 365 claims, 130 more than P2. Class boxes by tile: counters 4,440, ledges 4,968,
+  cliffs 3,952, bookcases 2,308 (1,214 ranks; 1,972 empty rows behind them), tables 800, desks 152, beds 136,
+  backrests 48, roofs 192; left flat: 16,318 walkable pins and 1,516 one-way ledges. 182 canopies over 2 × 2 cells in
+  Viridian Forest (2 templates); 82 stair and 6 relief units; 77 sunken stairs left flat. Structures: 14,829 hulls,
+  1,871 objects, 548 buildings (366 band, 182 hull placements), 127 fallbacks; no template failed; a hull template's
+  block holds at most 82 quads. 2,511,236 blocks in 61.2 s; 59,546 keys (1,214 box), index 2.94 MB, map 409,476
+  characters. Quads per block mean 11.9, max 87; per section p95 7,304, max 24,064. Self-check (boxes and hulls left
+  out of the structure score): no hole, ground 1.0, structure p05 0.730, min 0.530 (Fuchsia City; 0.632 and 0.364 with
+  the boxes scored). Every gate holds.
+  `tools/check.sh --e2e`: pytest **1455 passed** (the end-to-end tests included), then `gradlew build`: **847 JUnit**,
+  **92/92 GameTests**, the mixin checks.
 
 
 ### Profile plan: deviations
@@ -522,10 +534,39 @@ Route 22: none. Over the 36 outdoor maps, 2,586 of 14,797 solid cells were units
     move (61.5 s against 60.5 s). A rebuild now also clears anything placed between ground + 9 and ground + 32.
 18. **Interiors' roof-path entries are built in P2** (97 claims; §5.6 gives them to P3): §5.5's match runs on every map
     whose tileset has buildings, and the heights clamp under the ceiling. P3 keeps the parts path.
+19. **P3: `wall` pins stay Tier A's** (measured columns, V7 templates, interior walls up to the ceiling). The profile's
+    `wall` is its fallback class for any solid tile (16 pixels everywhere); our own rules know more: roofs on
+    buildings the profile doesn't model, and rooms whose walls meet their ceiling.
+20. **A pin on a walkable or ledge tile changes nothing** (16,318 walkable tiles, mostly the ledge floors of caves and
+    the Safari Zone; 1,516 one-way ledges): Dramaless raises them to their class height, but here collision decides
+    the floor, so they stay flat. Likewise a sunken stair (its well would need the floor opened): counted
+    (`stair_down`), left flat.
+21. **A counter cell's box stands one block** (its collision, V-plan): a table or bookcase pinned on one is cut to 8 px.
+22. **Heights clamp to the map's headroom** (`ShapeHeights`; Dramaless has no ceiling): three blocks under an
+    interior's ceiling, four in an open-air interior (Viridian Forest, the Safari Zone: a canopy stands whole there),
+    the surface volume outdoors. If an open-air interior ever kept its ceiling, `plan()` stops its columns under it.
+23. **Every box is culled by height** (Dramaless culls a bookcase's flanks only against other bookcases): a side is left
+    out where the neighbour (a box, or a column's full cubes) stands at least as high.
+24. **Bookcase panes per tile face**, not per bank face (a pane must not touch its own tile's edges), merged into
+    rectangles with their reveals; over 48 quads the face stays flat. Flanks show their band tile 1:1 (Dramaless
+    stretches one tile over the box's 16-pixel depth).
+25. **A relief's flood runs per cell** (Dramaless: the relief region's bounding box); the same for a one-cell region.
+26. **Stairs are voxels**: each the drawing's pixel at its column and height (Dramaless maps treads and risers as
+    stretched slivers of the same rows). They stand on decor carriers; a stair whose bottom block a story block takes
+    (the boulder maps) stays out (`shape_decor_skipped`).
+27. **A can's well walls show the body's art inside** (one texel per voxel; Dramaless lays the mouth's rows there).
+28. **The `support` rule is left out** (a pinned standee north of a box, lifted onto it): our units stand in their own
+    cell, two blocks high; about 260 cells, 75 of them on counters and tables. An open issue.
+29. **The self-check leaves class boxes and two-cell hulls out of the structure score**, as P2's band buildings: their
+    heights are the profile's, so their tops show away from their drawn rows in the game's view, by design. Holes
+    still count.
+30. **A part's `rise` may be negative** (one entry lowers a part under its plane; Dramaless doesn't range-check it): the
+    model clips at the floor. `desk.plane`, which the research found mentioned but never read, isn't read either.
 
 ### Profile plan: open issues
 
-- P3 (boxes and interiors) and P4 (finish) are to do.
+- P4 (finish) is to do.
+- The `support` rule (deviation 28): standees on counters, tables and bookcases stand on the floor behind them.
 - Your own install needs the mod, switched off (PLAYTEST.md, "Profile plan, P1"). I can copy it for you if you say
   so; switching it off is done in Gen1Recomp's launcher.
 

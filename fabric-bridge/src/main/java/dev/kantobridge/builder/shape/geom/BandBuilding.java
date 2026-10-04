@@ -31,6 +31,8 @@ import org.jetbrains.annotations.Nullable;
  *           drawing, the layers between de-outlined; a pane's front voxel left out, so it sinks one)
  * ours      each doorway carved DOOR_VOXELS high (the roof stays), its facade pixels moved to the doorway's back; the
  *           grid sliced into the template's blocks, overhang rows included
+ * furniture an entry with parts (P3) builds its pieces instead ({@link Furniture}): the same drawing, flood and measures,
+ *           no roof, no doorway carved (a chair's walkable cell keeps its model, on decor carriers)
  * gate      CellUnits.MAX_QUADS per block and MAX_VOXELS in all; else the template's columns (plain cubes)
  * </pre>
  *
@@ -115,6 +117,8 @@ public final class BandBuilding {
 		final int north;
 		final int gridH;
 		final int gridD;
+		/** A furniture entry's pieces (P3), else null. */
+		final @Nullable JsonObject parts;
 
 		private Model(int w, int h, int px, int[] shade, int[] texel, List<Integer> tiles, JsonObject band, Templates.Entry entry) {
 			this.w = w;
@@ -124,13 +128,15 @@ public final class BandBuilding {
 			this.texel = texel;
 			this.tiles = tiles;
 			this.roofRows = Math.min(h, band.get("roofRows").getAsInt());
-			this.roofBack = band.get("roofBack").getAsInt();
-			this.roofFront = band.get("roofFront").getAsInt();
-			JsonArray cycle = band.getAsJsonArray("roofCycle");
-			this.cycle0 = cycle.get(0).getAsInt();
-			this.cycle1 = Math.max(this.cycle0, cycle.get(1).getAsInt());
+			this.parts = band.has("parts") ? band.getAsJsonObject("parts") : null;
+			// A furniture entry's roof fields are measuring fields only: no roof rows by depth, no eave.
+			this.roofBack = band.has("roofBack") ? band.get("roofBack").getAsInt() : 0;
+			this.roofFront = band.has("roofFront") ? band.get("roofFront").getAsInt() : 0;
+			JsonArray cycle = band.has("roofCycle") ? band.getAsJsonArray("roofCycle") : null;
+			this.cycle0 = cycle == null ? 0 : cycle.get(0).getAsInt();
+			this.cycle1 = cycle == null ? 0 : Math.max(this.cycle0, cycle.get(1).getAsInt());
 			this.slab = band.get("slab").getAsInt();
-			this.frontEave = band.get("frontEave").getAsInt();
+			this.frontEave = band.has("frontEave") ? band.get("frontEave").getAsInt() : 0;
 			JsonArray ledgeRows = band.has("ledge") ? band.getAsJsonArray("ledge") : null;
 			this.ledge = ledgeRows == null ? null : new int[] {ledgeRows.get(0).getAsInt(), ledgeRows.get(1).getAsInt()};
 			this.depth = band.get("depthPx").getAsInt();
@@ -184,7 +190,8 @@ public final class BandBuilding {
 				}
 			}
 			this.gridD = entry.d() * px;
-			this.gridH = Math.max(px, ((Math.max(0, this.ytop) + 1 + px - 1) / px) * px);
+			int top = this.parts != null ? Furniture.top(this, this.parts) : this.ytop;
+			this.gridH = Math.max(px, ((Math.max(0, top) + 1 + px - 1) / px) * px);
 		}
 
 		/** The composed drawing of an entry, or null when this art lacks one of its tiles. */
@@ -435,8 +442,11 @@ public final class BandBuilding {
 			return z == 0 ? this.texel[i] : this.deOutlined(x, sy);
 		}
 
-		/** The voxels in the template's grid (the north overhang row first), doorways carved. */
+		/** The voxels in the template's grid (the north overhang row first), doorways carved; a furniture entry's pieces. */
 		VoxelGrid voxels(Templates.Entry entry, JsonObject band) {
+			if (this.parts != null) {
+				return Furniture.voxels(this, this.parts, this.gridH, this.gridD);
+			}
 			VoxelGrid grid = new VoxelGrid(this.w, this.gridH, this.gridD, this.px);
 			int shift = this.north * this.px;
 			int zMin = this.ledge != null ? -2 : 0;

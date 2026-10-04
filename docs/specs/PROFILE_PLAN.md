@@ -110,8 +110,16 @@ fields are counted (`profile_unknown`), never fatal. `figures`, `mounted` and `c
 - **Unit variants** (kb-shapes/6): `g<sides>[i][r][s][t]` as before, then `_<class>` for a pinned or probed unit,
   then `_bg<hex>` (the background shades of `prop_bg`, bit k = shade k) when the profile names them. At most 32
   characters (ShapeKey's rule). `CellUnits.Context` reads the flags before the first `_` only.
-- **P2** adds `bldg` keys (like `tmpl`) and a `buildings` section in the shape index; **P3** adds class keys for
-  boxes, stairs, bookcases and reliefs. Their formats are fixed when those milestones start, in this file.
+- **P2** places band-table buildings as V7's `tmpl` keys whose template entry carries `band` (§5.5).
+- **P3** (kb-shapes/8):
+  - `box:<a>|<u>,<n>,<s>,<w>,<e>|<h>`: a box `h`/16 high without a bottom, its top wearing `u`, its sides `n`, `s`,
+    `w`, `e` (each the tile's lowest h/2 rows); -1 is no face, all -1 draws nothing (an empty carrier). The class
+    boxes and bookcases. `|v=p` sinks the south face's panes (needs the south tile's art).
+  - Unit variants gain `_k<params>`, two decimal digits per value, after the class: a stump's cap rows; a can's cap,
+    base, height, well and taper; a stair's or relief's height. A class with an underscore (`stair_e`) is read back
+    from its parts.
+  - A template entry may carry `hull` (a canopy or a planter: `kind`, `height`, per position `solid`), or `band`
+    with `parts` (a furniture entry: `plane`, `tray`, `desk`, `wall`, `list`).
 
 ## 5. Component designs
 
@@ -234,19 +242,64 @@ Without a profile entry, V7's templates stay.
 
 ### 5.6 Boxes and interiors (P3)
 
-Upright boxes: class height; all exposed faces fold the same stack (band k: the tile k rows north of the run's
-front when it has the same class, else the column's own); the top the drawn row the game shows. Tops: the tile on
-top, the sides its bottom rows. `relief`: each kept pixel a column of the class height. `bookcase`: ranks of at
-most four rows collapsed onto a box two tiles deep, panes sunk. Stairs: four steps rising (or descending into a
-well) over the cell. Hull variants: `stump` and `can` caps, `can` foot, height, well and taper, `canopy` over 2×2
-cells, `planter` two cells tall. Furniture entries of `buildings` (roof path as §5.5; parts path: flat, box, iso,
-upright parts, desks, walls, trays). Heights clamp under an interior's ceiling.
+From two more research passes (refs/_research Q_dramaless_classes.md, R_dramaless_parts.md: `lib/TileShape.lua`,
+`lib/ChunkMesher.lua`, `lib/Structures.lua`, `lib/Buildings.lua`), restated in our units; nothing copied. P3 is
+`kb-shapes/8`.
+
+**Headroom** (`ShapeHeights`): the surface volume outdoors (31 blocks from feet level); an interior's ceiling (three
+blocks); an open-air interior (a forest, V7) four, up to the ceiling's own level, which nothing fills there. Dramaless
+has no ceiling; the clamp is ours. A column never passes its map's headroom.
+
+**Class boxes** (`ClassBoxes`, pixel-free): a SOLID or COUNTER tile pinned to `cliff`, `tree`, `fence`, `sign`,
+`counter`, `table`, `desk` (upright), `ledge`, `bed`, `backrest`, `roof` (top) or `bookcase`, not claimed, not in a
+unit's cell, leaves Tier A and stands as `box` keys, planned after every other column so that culling sees them:
+
+- Height: the class height (the profile's, then its tileset's), under the headroom; a COUNTER cell's one block.
+  Collision: a solid cell's blocks over the box, up to two, are empty carriers (PD7).
+- Upright fold (ChunkMesher): `front` = the run's south tile, at most six same-class steps; band k's source is the
+  tile k rows north of the front when it is the same class, else the column's own. The top wears its own row
+  unless it lies in the face block (the southmost floor(h/8) rows): then the row north of the block; a whole run
+  folded takes the upright pin north of the run, else the run's north row.
+- Top classes: every face its own tile (a partial band its lowest rows).
+- Bookcase (Structures): each run cut from the south into ranks of at most four rows; a rank's box stands on its
+  two southmost rows, band b its row b north of the front; the northmost rank's cap (the tile directly north, a
+  table pin or an unpinned solid tile, not claimed) one band more and its top; the rows behind the box are empty
+  carriers on the ground's floor, or (`bookcase_backfill = "above"`) the column of the tile north of the rank. Its
+  front face sinks its panes one pixel (`v=p`) unless `bookcase_relief = false`: a pane is a 4-connected region of
+  non-black pixels the face's edges don't touch, its reveals wearing the pixels beside them.
+- Culling: a side whose neighbour (a box, or a column's full cubes) stands at least as high is left out.
+- `wall` stays Tier A's (the profile's fallback class for any solid tile). A pin on a walkable or ledge tile changes
+  nothing: its collision stays, so its floor stays flat (counted).
+
+**Units** (from P1's pinned path, behind the P3 flag): `stump` (its tileset's cap rows stripped from the hull and
+laid on its top by depth), `can` (cap, base rebuilt as the foot, the body repeated up to its height, tapered, the
+well hollowed two voxels thick, the mouth laid on the rim and the well's floor), `relief` (the drawing lying flat:
+what a flood from the cell's border through the border's non-black shades can't reach stands as columns of the class
+height), and on walkable cells (decor carriers, the ground's floor) the rising stairs `stair_e` and `stair_w` (four
+steps a quarter of the class height higher each, every voxel the pixel the drawing shows at its column and height).
+A sunken stair would need its floor opened, which collision forbids: counted, left flat. A stair whose bottom block a
+story block takes stays out.
+
+**Two-cell hulls** (`BigHulls`, templates with `hull`): a canopy (a solid cell whose top-left tile is a canopy, its
+cells east, south and south-east solid with hull or canopy classes) is our hull over the 32 × 32 drawing, four blocks;
+a planter (a planter cell over a planter cell) is carved over its 16 × 32 drawing, each half masked on its own, the
+crown rows no deeper than five voxels and the pot round, standing on the south cell; the north cell keeps two blocks
+of collision.
+
+**Furniture** (§5.5's claims, the parts path): the drawing, flood and measures of §5.5; a base piece (a tray: an open
+box, its rim the row its depth shows; a desk: its wall band, base rows, fascia and lid; or none) and the parts riding
+its plane in list order (flat, box, iso, upright), the last write winning; nothing leaves the plot or goes under the
+floor; no doorway carved. The volume is the pieces' highest layer, under the headroom.
+
+**The self-check** leaves class boxes and two-cell hulls out of a map's structure score (their heights are the
+profile's, not the drawn rows), as band buildings are. Holes still count.
 
 ### 5.7 Reports and checks
 
 The build report's `profile`: present, mod version, enabled, a short hash of the text, tilesets and pins counted;
-`units_by_source` (pin, hint, cut, lone, probe); `profile_pin_skipped` by reason; later `buildings_by_kind`. The
-self-check and budgets of the voxel plan stand.
+`units_by_source` (pin, hint, cut, lone, probe; from P3 `stair_down`); `buildings` (claims, P2); `classes` (P3: boxes by
+class, bookcase ranks and empty rows, canopies and planters, pins left flat). The self-check and budgets of the voxel
+plan stand.
 
 ### 5.8 The test install
 

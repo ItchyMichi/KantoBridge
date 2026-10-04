@@ -64,6 +64,11 @@ Conventions:
     installed copy of the mod (gen1-bridge exports it as `profile/dramaless`; Java reads it as data, never runs it). It
     is never copied into this project. Its `figures` and `mounted` masks are not read: they are traced from the game's
     art. The test install holds a copy of the mod's runtime files (`tools/e2e/install_profile_mod.py`), switched off.
+  - **P3 (2026-10-04):** two more research passes read `lib/TileShape.lua`, `lib/ChunkMesher.lua`,
+    `lib/Structures.lua` and `lib/Buildings.lua` for the class boxes, bookcases, stairs, reliefs, hull variants and the
+    furniture parts path (notes in `refs/_research/Q_dramaless_classes.md` and `R_dramaless_parts.md`, with
+    `file:line` references). Every rule is re-implemented in our own Java (`builder/shape/ClassBoxes`, `BigHulls`,
+    `geom/Furniture`, `HullVariants`, `BigHull`); no code is copied.
 - **Kanto in First Person:** no licence anywhere in the repo (its README's "Credits and licence"
   section grants none). Ideas only: never copy its code, panoramas, pictures, sounds or sprites.
 - **gen1coop, SkyCraft:** MIT. Code can be reused with the notice. SkyCraft bundles an unmodified

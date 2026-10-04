@@ -104,6 +104,11 @@ public final class ShapeTable {
 				case SLAB -> KeyGeometry.slab(key.number(0), key.number(1), texture);
 				case ROOF -> KeyGeometry.roof(key.number(0), key.number(1), key.number(2), key.number(3), key.number(4), key.number(5) == 1,
 						key.number(6) == 1, texture);
+				case BOX -> {
+					// A bookcase's sunk panes (P3) come from this art's south tile; without it, the flat face.
+					int[] shades = "p".equals(key.variant()) && key.number(2) >= 0 ? art.tileShades(atlas, key.number(2)) : null;
+					yield shades == null ? KeyGeometry.box(key.numbers(), texture) : KeyGeometry.paneBox(key.numbers(), shades, artPx, texture);
+				}
 				case TUFT -> {
 					int tile = key.number(0);
 					List<ShapeQuad> tuft = tufts.computeIfAbsent(atlas + "|" + tile, k -> {

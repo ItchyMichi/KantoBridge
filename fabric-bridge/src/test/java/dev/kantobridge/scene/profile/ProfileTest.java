@@ -1,5 +1,6 @@
 package dev.kantobridge.scene.profile;
 
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -97,8 +98,8 @@ class ProfileTest {
 		assertEquals(1, counts.duplicatePins());
 		assertEquals(2, counts.conds());
 		assertEquals(4, counts.buildingEntries());
-		assertEquals(Map.of("class", 1, "heights.?", 1, "when_above", 1, "buildings.band", 1, "buildings.parts", 1), counts.unknown(),
-				"gazebo, nonsense height, nonsense class; a roofed entry without its roof rows; a parts entry (P3)");
+		assertEquals(Map.of("class", 1, "heights.?", 1, "when_above", 1, "buildings.band", 1, "buildings.parts.upright.top", 1), counts.unknown(),
+				"gazebo, nonsense height, nonsense class; a roofed entry without its roof rows; an upright part without its rows");
 	}
 
 	@Test
@@ -125,6 +126,63 @@ class ProfileTest {
 		assertNull(twin.band());
 		assertEquals(1, twin.index());
 		assertTrue(p.tileset("ROOM").buildings().isEmpty());
+	}
+
+	@Test
+	void furnitureEntriesReadTheirPiecesWithTheirDefaults() throws Exception {
+		Profile p = Profile.parse("""
+				return { buildings = { ROOM = {
+				  { tiles = { { 1, 2 }, { 3, 4 } }, roofRows = 0, slab = 0,
+				    desk = { fascia = { 6, 7 }, base = { 13, 15 }, depth = 1 },
+				    wall = { cycle = { 0, 1 }, h = 20, depthPx = 3 },
+				    parts = { { kind = "flat", x = { 2, 5 }, rows = { 0, 2 } },
+				              { kind = "box", x = { 8, 11 }, rows = { 4, 9 }, depth = 3 },
+				              { kind = "iso", x = { 0, 7 }, rows = { 0, 7 }, z = 4 },
+				              { x = { 9, 14 }, top = { 0, 3 }, facade = { 4, 10 }, depth = 5, rise = 1, inset = { x = { 10, 12 }, rows = { 5, 6 } } } } },
+				  { tiles = { { 5 } }, roofRows = 0, slab = 0, tray = { top = { 0, 2 }, front = { 5, 7 }, x = { 0, 7 }, inner = { 2, 5 } },
+				    parts = { } },
+				  { tiles = { { 6 } }, roofRows = 0, slab = 0, parts = { { kind = "box", x = { 0, 9 }, rows = { 0, 1 }, depth = 2 } } },
+				} } }""");
+		List<Profile.Building> read = p.tileset("ROOM").buildings();
+		assertEquals(2, read.size(), "the box part's columns run past the one-tile drawing");
+		Profile.Parts desk = read.get(0).parts();
+		assertEquals(3 + 2, desk.plane(), "base rows and fascia rows");
+		assertEquals(8, desk.desk().depthPx(), "one tile row");
+		assertEquals(0, desk.desk().x0());
+		assertEquals(15, desk.desk().x1(), "the drawing's width by default");
+		assertNull(desk.desk().top());
+		assertEquals(20, desk.wall().h());
+		Profile.FlatPart flat = (Profile.FlatPart) desk.list().get(0);
+		assertEquals(0, flat.z(), "a flat part's depth starts at its first row");
+		assertEquals(5, flat.at(), "and it lies on the plane");
+		Profile.BoxPart box = (Profile.BoxPart) desk.list().get(1);
+		assertEquals(-1, box.base(), "the ground line's");
+		assertEquals(9, box.c0(), "the last row cycles by default");
+		Profile.IsoPart iso = (Profile.IsoPart) desk.list().get(2);
+		assertEquals(2, iso.plan(), "rx 4, rz 2");
+		assertEquals(7 - 4, iso.height());
+		Profile.UprightPart upright = (Profile.UprightPart) desk.list().get(3);
+		assertEquals(1, upright.rise());
+		assertArrayEquals(new int[] {10, 12, 5, 6}, upright.inset());
+		assertEquals(5 + 1 + 6, upright.top(desk.plane(), 16));
+		assertEquals(5 + 1 + 6, desk.ytop(16), "the upright part's lid is the highest");
+		Profile.Parts tray = read.get(1).parts();
+		assertEquals(3, tray.plane(), "the front wall's rows");
+		assertEquals(0, tray.tray().floor());
+		assertNull(read.get(0).band().ledge(), "a furniture entry has no awning");
+		assertEquals(1, p.counts().unknown().get("buildings.parts.box"), "the box part's columns run past the drawing");
+	}
+
+	@Test
+	void aPartMaySinkUnderItsPlane() throws Exception {
+		Profile p = Profile.parse("""
+				return { buildings = { ROOM = {
+				  { tiles = { { 1, 2 } }, roofRows = 0, slab = 0, desk = { fascia = { 0, 1 }, base = { 2, 7 } },
+				    parts = { { x = { 0, 7 }, top = { 0, 1 }, facade = { 2, 5 }, depth = 3, rise = -2 } } },
+				} } }""");
+		Profile.UprightPart part = (Profile.UprightPart) p.tileset("ROOM").buildings().get(0).parts().list().get(0);
+		assertEquals(-2, part.rise(), "lowered two voxels under the desk's lid plane");
+		assertTrue(p.counts().unknown().isEmpty());
 	}
 
 	@Test

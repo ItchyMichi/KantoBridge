@@ -147,12 +147,123 @@ public final class Profile {
 	 * @param topRows   rows drawn above the grid for the model only (never matched)
 	 * @param claimOnly claims its cells and draws nothing (the other half of a drawing that straddles two maps)
 	 * @param keep      ids the claim leaves to the other passes
-	 * @param band      the band table, null for a claim-only entry
+	 * @param band      the band table (for a furniture entry its measuring fields only), null for a claim-only entry
+	 * @param parts     a furniture entry's pieces (the parts path, P3), null for a roof-path or claim-only entry
 	 */
-	public record Building(int index, List<int[]> tiles, List<int[]> topRows, boolean claimOnly, Set<Integer> keep, @Nullable Band band) {
+	public record Building(int index, List<int[]> tiles, List<int[]> topRows, boolean claimOnly, Set<Integer> keep, @Nullable Band band,
+			@Nullable Parts parts) {
+		/** A roof-path or claim-only entry. */
+		public Building(int index, List<int[]> tiles, List<int[]> topRows, boolean claimOnly, Set<Integer> keep, @Nullable Band band) {
+			this(index, tiles, topRows, claimOnly, keep, band, null);
+		}
+
 		/** The grid's width in tiles. */
 		public int width() {
 			return this.tiles.get(0).length;
+		}
+
+		/** The drawing's height in pixel rows: topRows and the grid. */
+		public int drawnPx() {
+			return 8 * (this.topRows.size() + this.tiles.size());
+		}
+	}
+
+	/**
+	 * A furniture entry's pieces (the research's parts path, P3): a base piece (a tray, or a desk with an optional wall
+	 * band behind it, or none) and the parts riding its plane, in list order (a later piece overwrites what an earlier one
+	 * left in the same voxel). Rows are the drawing's pixel rows (topRows first), x its pixel columns; sizes, depths and
+	 * layers in voxels (one per Game Boy pixel).
+	 *
+	 * @param plane the layer the parts stand on: a tray's wall height, a desk's base and fascia rows, else 0 (the floor)
+	 */
+	public record Parts(@Nullable Tray tray, @Nullable Desk desk, @Nullable WallBand wall, List<Part> list, int plane) {
+		/**
+		 * The model's highest layer at most: the base piece's lid and each part's top, a box part's from the drawing's bottom
+		 * row (the lowest its measured ground line can lie).
+		 */
+		public int ytop(int drawnPx) {
+			int top = this.tray != null || this.desk != null ? this.plane - 1 : 0;
+			for (Part part : this.list) {
+				top = Math.max(top, part.top(this.plane, drawnPx));
+			}
+			return Math.max(0, top);
+		}
+	}
+
+	/** An open box the drawing looks down into: its far rim's rows, its front wall's rows, its outer and opening columns, its floor's top layer. */
+	public record Tray(int top0, int top1, int front0, int front1, int x0, int x1, int inner0, int inner1, int floor) {
+	}
+
+	/**
+	 * A desk: its fascia rows (the lid's edge and the band under it), its base rows (standing on the floor), its box's
+	 * depth (0: the footprint's) and back row, its columns, and the rows its lid shows (null: a lid of the drawing's own
+	 * shades, its field white or grey).
+	 */
+	public record Desk(int fascia0, int fascia1, int base0, int base1, int depthPx, int z, int x0, int x1, int @Nullable [] top,
+			boolean whiteLid) {
+	}
+
+	/** The wall band behind a desk: its stripe's rows (cycled down from its top), the column it reads, its height and depth. */
+	public record WallBand(int cycle0, int cycle1, int x, int h, int depthPx) {
+	}
+
+	/** One part of a furniture entry, over the drawing's columns {@code x0..x1}. */
+	public sealed interface Part permits FlatPart, BoxPart, IsoPart, UprightPart {
+		int x0();
+
+		int x1();
+
+		/** Its top layer, riding a plane at {@code plane}, in a drawing {@code drawnPx} rows high. */
+		int top(int plane, int drawnPx);
+	}
+
+	/** A top-view decal: rows {@code r0..r1} laid from depth {@code z}, on layers {@code at - thick + 1..at}. */
+	public record FlatPart(int x0, int x1, int r0, int r1, int z, int at, int thick) implements Part {
+		@Override
+		public int top(int plane, int drawnPx) {
+			return this.at;
+		}
+	}
+
+	/**
+	 * A face-on box at its own drawn elevation over the ground line: rows {@code r0..r1}, {@code depth} voxels from
+	 * {@code z}, its bottom layer ({@code -1}: where its last row meets the ground line), the rows it cycles.
+	 */
+	public record BoxPart(int x0, int x1, int r0, int r1, int depth, int z, int base, int c0, int c1) implements Part {
+		@Override
+		public int top(int plane, int drawnPx) {
+			return drawnPx - 1 - this.r0;
+		}
+	}
+
+	/** A box drawn in 2:1 isometric: rows {@code r0..r1}, its depth centre {@code z}, its radius in plan. */
+	public record IsoPart(int x0, int x1, int r0, int r1, int z, int plan) implements Part {
+		/** The drawn z radius: half the x radius. */
+		public int rz() {
+			return (this.x1 - this.x0 + 1) / 2 / 2;
+		}
+
+		/** Its height above the plane: the drawn rows less both rhombi. */
+		public int height() {
+			return this.r1 - 2 * this.rz() - this.r0;
+		}
+
+		@Override
+		public int top(int plane, int drawnPx) {
+			return plane + this.height();
+		}
+	}
+
+	/**
+	 * A lid over a facade: the lid's rows (back to front) and the facade's (its first the lid's front edge), its depth
+	 * and back row, its rise off the plane, a sunk rect {x0, x1, r0, r1} (null: none), the lid's rows spread over its
+	 * depth.
+	 */
+	public record UprightPart(int x0, int x1, int t0, int t1, int f0, int f1, int depth, int rise, int z, int @Nullable [] inset, boolean stretch)
+			implements Part {
+		@Override
+		public int top(int plane, int drawnPx) {
+			return plane + this.rise + (this.f1 - this.f0);
 		}
 	}
 
@@ -314,10 +425,8 @@ public final class Profile {
 		if (entry.bool("claimOnly", false)) {
 			return new Building(index, tiles, topRows, true, keep, null);
 		}
-		if (entry.get("parts") != null) {
-			unknown.merge("buildings.parts", 1, Integer::sum);
-			return null;
-		}
+		// Furniture (P3): with parts, the roof fields are measuring fields only.
+		boolean partsPath = entry.get("parts") != null;
 		long roofRows = entry.integer("roofRows", -1);
 		long slab = entry.integer("slab", -1);
 		LuaData.Table cycle = entry.table("roofCycle");
@@ -326,14 +435,14 @@ public final class Profile {
 		long roofFront = entry.integer("roofFront", -1);
 		int width = tiles.get(0).length;
 		int drawnRows = 8 * (topRows.size() + tiles.size());
-		if (roofRows < 0 || roofRows > drawnRows || slab < 0 || slab > 32 || (roofRows > 0
+		if (roofRows < 0 || roofRows > drawnRows || slab < 0 || slab > 32 || (!partsPath && roofRows > 0
 				&& (cycleRows.size() != 2 || roofBack < 0 || roofFront < 0 || cycleRows.get(0) < 0 || cycleRows.get(1) < cycleRows.get(0)
 						|| cycleRows.get(1) >= roofRows))) {
 			unknown.merge("buildings.band", 1, Integer::sum);
 			return null;
 		}
 		int[] ledge = null;
-		LuaData.Table ledgeTable = entry.table("ledge");
+		LuaData.Table ledgeTable = partsPath ? null : entry.table("ledge");
 		if (ledgeTable != null) {
 			List<Long> rows = ledgeTable.integers();
 			if (rows.size() != 2 || rows.get(0) < 0 || rows.get(1) < rows.get(0) || rows.get(1) >= drawnRows) {
@@ -369,11 +478,175 @@ public final class Profile {
 				scrub.add(new int[] {r.get(0).intValue(), r.get(1).intValue(), r.get(2).intValue(), r.get(3).intValue()});
 			}
 		}
-		int c0 = cycleRows.size() == 2 ? cycleRows.get(0).intValue() : 0;
-		int c1 = cycleRows.size() == 2 ? cycleRows.get(1).intValue() : 0;
-		Band band = new Band((int) roofRows, (int) Math.max(0, roofBack), (int) Math.max(0, roofFront), c0, c1, (int) slab,
-				(int) Math.max(0, Math.min(16, entry.integer("frontEave", 0))), ledge, seal, (int) depthPx, entry.bool("panes", true), List.copyOf(scrub));
-		return new Building(index, tiles, topRows, false, keep, band);
+		Parts parts = null;
+		if (partsPath) {
+			String[] why = {"list"};
+			parts = parts(entry, 8 * width, drawnRows, why);
+			if (parts == null) {
+				// Which piece was malformed, by name only (counts, never values).
+				unknown.merge("buildings.parts." + why[0], 1, Integer::sum);
+				return null;
+			}
+		}
+		int c0 = !partsPath && cycleRows.size() == 2 ? cycleRows.get(0).intValue() : 0;
+		int c1 = !partsPath && cycleRows.size() == 2 ? cycleRows.get(1).intValue() : 0;
+		int frontEave = partsPath ? 0 : (int) Math.max(0, Math.min(16, entry.integer("frontEave", 0)));
+		Band band = new Band((int) roofRows, partsPath ? 0 : (int) Math.max(0, roofBack), partsPath ? 0 : (int) Math.max(0, roofFront), c0, c1,
+				(int) slab, frontEave, ledge, seal, (int) depthPx, entry.bool("panes", true), List.copyOf(scrub));
+		return new Building(index, tiles, topRows, false, keep, band, parts);
+	}
+
+	/** The largest layer, depth or height a piece may name, in voxels. */
+	private static final int MAX_VOXELS = 512;
+
+	/**
+	 * A furniture entry's pieces in a drawing {@code w} pixels wide and {@code h} rows high, or null when one is malformed:
+	 * a tray, else a desk (and its wall band), else no base; then each part, by its {@code kind} ({@code flat},
+	 * {@code box}, {@code iso}; anything else an upright lid over a facade).
+	 */
+	private static @Nullable Parts parts(LuaData.Table entry, int w, int h, String[] why) {
+		LuaData.Table list = entry.table("parts");
+		if (list == null) {
+			return null;
+		}
+		Tray tray = null;
+		Desk desk = null;
+		WallBand wall = null;
+		LuaData.Table t = entry.table("tray");
+		LuaData.Table d = entry.table("desk");
+		if (t != null) {
+			why[0] = "tray";
+			int[] top = span(t, "top", h);
+			int[] front = span(t, "front", h);
+			int[] x = span(t, "x", w);
+			int[] inner = span(t, "inner", w);
+			long floor = t.integer("floor", 0);
+			if (top == null || front == null || x == null || inner == null || floor < 0 || floor > MAX_VOXELS) {
+				return null;
+			}
+			tray = new Tray(top[0], top[1], front[0], front[1], x[0], x[1], inner[0], inner[1], (int) floor);
+		} else if (d != null) {
+			why[0] = "desk";
+			int[] fascia = span(d, "fascia", h);
+			int[] base = span(d, "base", h);
+			int[] x = d.get("x") == null ? new int[] {0, w - 1} : span(d, "x", w);
+			int[] top = d.get("top") == null ? null : span(d, "top", h);
+			long depth = d.integer("depthPx", d.get("depth") == null ? 0 : 8 * d.integer("depth", -1));
+			long z = d.integer("z", 0);
+			if (fascia == null || base == null || x == null || (d.get("top") != null && top == null) || depth < 0 || depth > MAX_VOXELS || z < 0
+					|| z >= MAX_VOXELS) {
+				return null;
+			}
+			desk = new Desk(fascia[0], fascia[1], base[0], base[1], (int) depth, (int) z, x[0], x[1], top, "white".equals(d.string("lid")));
+			LuaData.Table band = entry.table("wall");
+			if (band != null) {
+				why[0] = "wall";
+				int[] cycle = span(band, "cycle", h);
+				long wx = band.integer("x", 0);
+				long wh = band.integer("h", -1);
+				long wd = band.integer("depthPx", -1);
+				if (cycle == null || wx < 0 || wx >= w || wh < 1 || wh > MAX_VOXELS || wd < 1 || wd > MAX_VOXELS) {
+					return null;
+				}
+				wall = new WallBand(cycle[0], cycle[1], (int) wx, (int) wh, (int) wd);
+			}
+		}
+		int plane = tray != null ? tray.front1() - tray.front0() + 1
+				: desk != null ? (desk.base1() - desk.base0() + 1) + (desk.fascia1() - desk.fascia0() + 1) : 0;
+		List<Part> parts = new ArrayList<>();
+		for (Object o : list.array()) {
+			if (!(o instanceof LuaData.Table p)) {
+				why[0] = "list";
+				return null;
+			}
+			String kind = p.string("kind");
+			why[0] = kind == null || !Set.of("flat", "box", "iso").contains(kind) ? "upright" : kind;
+			Part part = part(p, w, h, plane);
+			if (part == null && why[0].equals("upright")) {
+				// The first field that fails, by name.
+				why[0] += span(p, "x", w) == null ? ".x" : span(p, "top", h) == null ? ".top" : span(p, "facade", h) == null ? ".facade"
+						: p.integer("depth", -1) < 1 || p.integer("depth", -1) > MAX_VOXELS ? ".depth" : ".other";
+			}
+			if (part == null) {
+				return null;
+			}
+			parts.add(part);
+		}
+		return new Parts(tray, desk, wall, List.copyOf(parts), plane);
+	}
+
+	/** One part, its pixel-free defaults filled in, or null when malformed. */
+	private static @Nullable Part part(LuaData.Table p, int w, int h, int plane) {
+		int[] x = span(p, "x", w);
+		if (x == null) {
+			return null;
+		}
+		String kind = p.string("kind");
+		switch (kind == null ? "" : kind) {
+			case "flat" -> {
+				int[] rows = span(p, "rows", h);
+				if (rows == null) {
+					return null;
+				}
+				long z = p.integer("z", rows[0]);
+				long at = p.integer("at", plane);
+				long thick = p.integer("thick", 1);
+				return z < 0 || z >= MAX_VOXELS || at < 0 || at >= MAX_VOXELS || thick < 1 || thick > MAX_VOXELS ? null
+						: new FlatPart(x[0], x[1], rows[0], rows[1], (int) z, (int) at, (int) thick);
+			}
+			case "box" -> {
+				int[] rows = span(p, "rows", h);
+				if (rows == null) {
+					return null;
+				}
+				int[] cycle = p.get("cycle") == null ? new int[] {rows[1], rows[1]} : span(p, "cycle", h);
+				long depth = p.integer("depth", -1);
+				long z = p.integer("z", 0);
+				long base = p.integer("base", -1);
+				return cycle == null || depth < 1 || depth > MAX_VOXELS || z < 0 || z >= MAX_VOXELS || base < -1 || base >= MAX_VOXELS
+						|| (p.get("base") != null && base < 0) ? null : new BoxPart(x[0], x[1], rows[0], rows[1], (int) depth, (int) z, (int) base, cycle[0], cycle[1]);
+			}
+			case "iso" -> {
+				int[] rows = span(p, "rows", h);
+				long z = p.integer("z", -1);
+				if (rows == null || z < 0 || z >= MAX_VOXELS) {
+					return null;
+				}
+				IsoPart probe = new IsoPart(x[0], x[1], rows[0], rows[1], (int) z, 1);
+				long plan = p.integer("plan", probe.rz());
+				return plan < 1 || plan > MAX_VOXELS ? null : new IsoPart(x[0], x[1], rows[0], rows[1], (int) z, (int) plan);
+			}
+			default -> {
+				int[] top = span(p, "top", h);
+				int[] facade = span(p, "facade", h);
+				long depth = p.integer("depth", -1);
+				long rise = p.integer("rise", 0);
+				long z = p.integer("z", 0);
+				int[] inset = null;
+				LuaData.Table in = p.table("inset");
+				if (in != null) {
+					int[] ix = span(in, "x", w);
+					int[] ir = span(in, "rows", h);
+					if (ix == null || ir == null) {
+						return null;
+					}
+					inset = new int[] {ix[0], ix[1], ir[0], ir[1]};
+				}
+				// A negative rise lowers the part under the plane (the model clips it at the floor).
+				return top == null || facade == null || depth < 1 || depth > MAX_VOXELS || rise <= -MAX_VOXELS || rise >= MAX_VOXELS || z < 0 || z >= MAX_VOXELS
+						? null : new UprightPart(x[0], x[1], top[0], top[1], facade[0], facade[1], (int) depth, (int) rise, (int) z, inset, p.bool("stretch", false));
+			}
+		}
+	}
+
+	/** A pair {a, b} of integers with 0 &lt;= a &lt;= b &lt; {@code limit}, or null. */
+	private static int @Nullable [] span(LuaData.Table table, String key, int limit) {
+		LuaData.Table pair = table.table(key);
+		List<Long> v = pair == null ? List.of() : pair.integers();
+		if (v.size() != 2 || pair.array().size() != 2 || v.get(0) < 0 || v.get(1) < v.get(0) || v.get(1) >= limit) {
+			return null;
+		}
+		return new int[] {v.get(0).intValue(), v.get(1).intValue()};
 	}
 
 	/** Rows of tile ids (each a list of integers within the atlas), or null when any isn't. */

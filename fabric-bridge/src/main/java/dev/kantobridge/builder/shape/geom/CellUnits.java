@@ -56,7 +56,11 @@ public final class CellUnits {
 		FLAT("flat"),
 		COLUMNS("columns"),
 		/** A pack's {@code .vox} model (V6). */
-		MODEL("model");
+		MODEL("model"),
+		/** A pinned stair's steps (P3). */
+		STAIR("stair"),
+		/** A pinned relief's raised pixels (P3). */
+		RELIEF("relief");
 
 		private final String id;
 
@@ -70,27 +74,45 @@ public final class CellUnits {
 	}
 
 	/**
-	 * The planner's context of a unit, carried in its keys' variant ({@code g<sides>[i][r][s][t][_<class>][_bg<hex>]}):
-	 * the sides bordering flat ground (a hex digit, {@link Background} bits; outdoors only the south bit), indoors,
-	 * repeating vertically, a sign, a tree (the front end's foliage hint); then the class the profile pins on the unit
-	 * (docs/specs/PROFILE_PLAN.md §5.4) and the background shades it names ({@code prop_bg}, bit k = shade k).
+	 * The planner's context of a unit, carried in its keys' variant
+	 * ({@code g<sides>[i][r][s][t][_<class>][_k<params>][_bg<hex>]}): the sides bordering flat ground (a hex digit,
+	 * {@link Background} bits; outdoors only the south bit), indoors, repeating vertically, a sign, a tree (the front end's
+	 * foliage hint); then the class the profile pins on the unit (docs/specs/PROFILE_PLAN.md §5.4), its parameters (P3,
+	 * §5.6: two decimal digits each) and the background shades it names ({@code prop_bg}, bit k = shade k).
 	 *
-	 * @param pinned     the profile's class for the unit ({@code cylinder}, a standee pool, {@code post}), or null
+	 * @param pinned     the profile's class for the unit ({@code cylinder}, a standee pool, {@code post}; from P3 a hull
+	 *                   variant, a stair, a relief), or null
 	 * @param background the shades {@code prop_bg} names as background, 0 for none
+	 * @param params     the pinned class's parameters (0..99): a stump's cap rows; a can's cap, base, height, well and
+	 *                   taper; a stair's or relief's height in pixels
 	 */
 	public record Context(int flatSides, boolean indoor, boolean repeatsVertically, boolean sign, boolean tree, @Nullable String pinned,
-			int background) {
+			int background, List<Integer> params) {
 		public static final Context NONE = new Context(0, false, false, false, false);
+
+		public Context {
+			params = List.copyOf(params);
+		}
 
 		/** A context without a profile class. */
 		public Context(int flatSides, boolean indoor, boolean repeatsVertically, boolean sign, boolean tree) {
-			this(flatSides, indoor, repeatsVertically, sign, tree, null, 0);
+			this(flatSides, indoor, repeatsVertically, sign, tree, null, 0, List.of());
+		}
+
+		/** A context with a profile class and its background, no parameters (P1). */
+		public Context(int flatSides, boolean indoor, boolean repeatsVertically, boolean sign, boolean tree, @Nullable String pinned,
+				int background) {
+			this(flatSides, indoor, repeatsVertically, sign, tree, pinned, background, List.of());
 		}
 
 		/** The variant text; the inverse of {@link #parse}. */
 		public String variant() {
+			StringBuilder params = new StringBuilder();
+			for (int value : this.params) {
+				params.append(String.format(java.util.Locale.ROOT, "%02d", Math.max(0, Math.min(99, value))));
+			}
 			return "g" + Integer.toHexString(this.flatSides & 15) + (this.indoor ? "i" : "") + (this.repeatsVertically ? "r" : "") + (this.sign ? "s" : "")
-					+ (this.tree ? "t" : "") + (this.pinned != null ? "_" + this.pinned : "")
+					+ (this.tree ? "t" : "") + (this.pinned != null ? "_" + this.pinned : "") + (params.length() > 0 ? "_k" + params : "")
 					+ ((this.background & 15) != 0 ? "_bg" + Integer.toHexString(this.background & 15) : "");
 		}
 
@@ -103,16 +125,30 @@ public final class CellUnits {
 			String flags = parts[0].substring(2);
 			String pinned = null;
 			int background = 0;
+			List<Integer> params = new ArrayList<>();
 			for (int k = 1; k < parts.length; k++) {
 				String part = parts[k];
 				if (part.length() == 3 && part.startsWith("bg") && Character.digit(part.charAt(2), 16) >= 0) {
 					background = Character.digit(part.charAt(2), 16);
 				} else if (Profile.CLASSES.containsKey(part)) {
 					pinned = part;
+				} else if (part.length() >= 3 && part.length() % 2 == 1 && part.charAt(0) == 'k' && part.substring(1).chars().allMatch(Character::isDigit)) {
+					for (int d = 1; d < part.length(); d += 2) {
+						params.add(Integer.parseInt(part.substring(d, d + 2)));
+					}
+				}
+			}
+			// A class whose name has an underscore (a stair) arrives in two parts.
+			for (int k = 1; k + 1 < parts.length && pinned == null; k++) {
+				if (Profile.CLASSES.containsKey(parts[k] + "_" + parts[k + 1])) {
+					pinned = parts[k] + "_" + parts[k + 1];
+				}
+				if (k + 2 < parts.length && Profile.CLASSES.containsKey(parts[k] + "_" + parts[k + 1] + "_" + parts[k + 2])) {
+					pinned = parts[k] + "_" + parts[k + 1] + "_" + parts[k + 2];
 				}
 			}
 			return new Context(Character.digit(variant.charAt(1), 16), flags.contains("i"), flags.contains("r"), flags.contains("s"),
-					flags.contains("t"), pinned, background);
+					flags.contains("t"), pinned, background, params);
 		}
 	}
 
@@ -217,6 +253,12 @@ public final class CellUnits {
 			Arrays.fill(all, true);
 			return new Unit(Kind.FLAT, null, 1.0, 1.0, 1, blocks, all);
 		}
+		if (style == null && context.pinned() != null) {
+			Unit pinned = pinnedP3(context.pinned(), context.params(), shades, texels, skip, voidTile, w, perCell, artPx, maxQuads);
+			if (pinned != null) {
+				return pinned;
+			}
+		}
 		Kind failed = null;
 		double[] last = null;
 		// The profile's class (docs/specs/PROFILE_PLAN.md §5.4): a pinned standee is cut out by its pool, without the
@@ -284,6 +326,54 @@ public final class CellUnits {
 		Unit columns = columns(perCell, w);
 		return failed == null ? columns
 				: new Unit(Kind.COLUMNS, failed, last[0], last[1], columns.maxQuads(), columns.blocks(), columns.foreground());
+	}
+
+	/**
+	 * P3's pinned units (docs/specs/PROFILE_PLAN.md §5.6, {@link HullVariants}), or null for a class they don't cover: a
+	 * stump or a can gated as a hull is; a stair or a relief stands on walkable ground, so over the quad cap it draws
+	 * nothing rather than columns across the way.
+	 */
+	private static @Nullable Unit pinnedP3(String pinned, List<Integer> params, int[] shades, int[] texels, boolean[] skip, boolean[] voidTile, int w,
+			int perCell, int artPx, int maxQuads) {
+		int p0 = params.isEmpty() ? 0 : params.get(0);
+		switch (pinned) {
+			case "stump", "can" -> {
+				boolean[] mask = Hulls.mask(shades, skip, w, w);
+				VoxelGrid grid = "stump".equals(pinned) ? HullVariants.stump(mask, texels, w, artPx, p0)
+						: HullVariants.can(mask, texels, w, artPx, param(params, 0), param(params, 1), param(params, 2), param(params, 3), param(params, 4));
+				List<List<ShapeQuad>> blocks = slice(grid, perCell);
+				plates(blocks, voidTile, perCell);
+				boolean[] foreground = or(mask, skip);
+				double[] score = check(blocks, foreground, texels, perCell, artPx);
+				int quads = maxQuads(blocks);
+				if (Background.count(mask) > 0 && score[1] >= HULL_COVER && quads <= maxQuads) {
+					return new Unit(Kind.HULL, null, score[0], score[1], quads, blocks, foreground, null, grid);
+				}
+				Unit columns = columns(perCell, w);
+				return new Unit(Kind.COLUMNS, Kind.HULL, score[0], score[1], columns.maxQuads(), columns.blocks(), columns.foreground());
+			}
+			case "stair_e", "stair_w", "relief" -> {
+				boolean relief = "relief".equals(pinned);
+				VoxelGrid grid = relief ? HullVariants.relief(shades, texels, skip, w, artPx, p0)
+						: HullVariants.stairs(texels, w, artPx, "stair_e".equals(pinned), Math.max(1, p0 / 4));
+				List<List<ShapeQuad>> blocks = slice(grid, perCell);
+				int quads = maxQuads(blocks);
+				boolean[] all = new boolean[w * w];
+				Arrays.fill(all, true);
+				Kind kind = relief ? Kind.RELIEF : Kind.STAIR;
+				if (quads <= maxQuads) {
+					return new Unit(kind, null, 1.0, 1.0, quads, blocks, all, null, grid);
+				}
+				return new Unit(Kind.FLAT, kind, 0.0, 0.0, 0, empty(perCell), all);
+			}
+			default -> {
+				return null;
+			}
+		}
+	}
+
+	private static int param(List<Integer> params, int k) {
+		return k < params.size() ? params.get(k) : 0;
 	}
 
 	/** The column version: every block a full cube folded from the unit's tiles. */

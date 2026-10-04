@@ -75,11 +75,11 @@ public final class Reference {
 				}
 			}
 		}
-		// The profile's band-table buildings (P2) no longer reproduce their drawing, by design: their claimed tiles and
-		// doorways are left out of the map's scores (holes still count).
+		// The profile's band-table buildings (P2) and two-cell hulls (P3) no longer reproduce their drawing, by design: their
+		// claimed tiles and doorways are left out of the map's scores (holes still count).
 		for (Templates.Placed placed : shapes.templates()) {
 			com.google.gson.JsonObject entry = placed.entry();
-			if (!entry.has("band")) {
+			if (!entry.has("band") && !entry.has("hull")) {
 				continue;
 			}
 			if (drawn == null) {
@@ -90,14 +90,14 @@ public final class Reference {
 			int gw = entry.get("w").getAsInt();
 			int gd = entry.get("d").getAsInt();
 			com.google.gson.JsonArray tiles = entry.getAsJsonArray("tiles");
-			com.google.gson.JsonObject band = entry.getAsJsonObject("band");
-			com.google.gson.JsonArray air = band.getAsJsonArray("air");
-			int north = band.get("north").getAsInt();
-			int rows = band.getAsJsonArray("rows").size();
+			com.google.gson.JsonObject band = entry.has("band") ? entry.getAsJsonObject("band") : null;
+			com.google.gson.JsonArray air = band == null ? null : band.getAsJsonArray("air");
+			int north = band == null ? 0 : band.get("north").getAsInt();
+			int rows = band == null ? 0 : band.getAsJsonArray("rows").size();
 			for (int gy = 0; gy < gd; gy++) {
 				for (int gx = 0; gx < gw; gx++) {
 					int g = gy * gw + gx;
-					boolean doorway = gy >= north && gy < north + rows && air.get(g).getAsInt() > 0;
+					boolean doorway = band != null && gy >= north && gy < north + rows && air.get(g).getAsInt() > 0;
 					if (tiles.get(g).getAsInt() < 0 && !doorway) {
 						continue;
 					}
@@ -111,6 +111,26 @@ public final class Reference {
 								drawn[sy * w + sx] = true;
 							}
 						}
+					}
+				}
+			}
+		}
+		// The profile's class boxes (P3) stand at its class heights, not at their drawn rows, so their tops show away from
+		// their drawing in the game's view, by design: left out of the map's scores too (holes still count).
+		for (int ty = 0; ty < this.map.artRows(); ty++) {
+			for (int tx = 0; tx < this.map.artCols(); tx++) {
+				ShapeKey[] column = shapes.open()[ty * this.map.artCols() + tx];
+				if (column == null || column.length == 0 || column[0] == null || column[0].kind() != ShapeKey.Kind.BOX) {
+					continue;
+				}
+				if (drawn == null) {
+					ground = new int[w * this.height()];
+					java.util.Arrays.fill(ground, -1);
+					drawn = new boolean[w * this.height()];
+				}
+				for (int py = 0; py < artPx; py++) {
+					for (int px = 0; px < artPx; px++) {
+						drawn[(ty * artPx + py) * w + tx * artPx + px] = true;
 					}
 				}
 			}

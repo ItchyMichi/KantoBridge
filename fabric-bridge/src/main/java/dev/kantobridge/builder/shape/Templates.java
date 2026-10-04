@@ -224,11 +224,22 @@ public final class Templates {
 
 	/** A template entry, read: what the geometry needs. */
 	public record Entry(String sig, int atlas, int w, int d, int perCell, int[] tiles, int[][] doors, int ground, boolean outdoor,
-			ShapeKey[][] columns, @Nullable JsonObject band) {
+			ShapeKey[][] columns, @Nullable JsonObject band, @Nullable JsonObject hull) {
 		/** A V7 template (no band table). */
 		public Entry(String sig, int atlas, int w, int d, int perCell, int[] tiles, int[][] doors, int ground, boolean outdoor,
 				ShapeKey[][] columns) {
-			this(sig, atlas, w, d, perCell, tiles, doors, ground, outdoor, columns, null);
+			this(sig, atlas, w, d, perCell, tiles, doors, ground, outdoor, columns, null, null);
+		}
+
+		/** A V7 template or a band-table building (P2). */
+		public Entry(String sig, int atlas, int w, int d, int perCell, int[] tiles, int[][] doors, int ground, boolean outdoor,
+				ShapeKey[][] columns, @Nullable JsonObject band) {
+			this(sig, atlas, w, d, perCell, tiles, doors, ground, outdoor, columns, band, null);
+		}
+
+		/** The profile's section that sizes this template per position (a band building's, P2; a two-cell hull's, P3), or null. */
+		public @Nullable JsonObject volume() {
+			return this.band != null ? this.band : this.hull;
 		}
 
 		/** The tile at grid position (x, y), -1 outside the structure and its doors. */
@@ -236,10 +247,11 @@ public final class Templates {
 			return x < 0 || y < 0 || x >= this.w || y >= this.d ? -1 : this.tiles[y * this.w + x];
 		}
 
-		/** Blocks of the column at (x, y): its volume (a band building's solid blocks, P2). */
+		/** Blocks of the column at (x, y): its volume (a band building's or a two-cell hull's solid blocks, P2, P3). */
 		public int blocks(int x, int y) {
-			if (this.band != null && this.band.has("solid")) {
-				return this.band.getAsJsonArray("solid").get(y * this.w + x).getAsInt();
+			JsonObject volume = this.volume();
+			if (volume != null && volume.has("solid")) {
+				return volume.getAsJsonArray("solid").get(y * this.w + x).getAsInt();
 			}
 			ShapeKey[] column = this.columns[y * this.w + x];
 			return column == null ? 0 : column.length;
@@ -296,7 +308,7 @@ public final class Templates {
 			}
 			return new Entry(sig, json.get("atlas").getAsInt(), w, d, json.get("perCell").getAsInt(), tiles, doors.toArray(new int[0][]),
 					json.get("ground").getAsInt(), json.get("outdoor").getAsBoolean(), columns,
-					json.has("band") ? json.getAsJsonObject("band").deepCopy() : null);
+					json.has("band") ? json.getAsJsonObject("band").deepCopy() : null, json.has("hull") ? json.getAsJsonObject("hull").deepCopy() : null);
 		}
 	}
 }

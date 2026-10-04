@@ -166,9 +166,10 @@ class SyntheticPlanTest {
 		assertEquals(BlockCode.light(15), view.code(house.x() + 5, feet + 2, house.z() + 5));
 		assertEquals(full, view.kind(house.x(), feet + 1, house.z()));
 		assertEquals(full, view.kind(house.x(), feet + 2, house.z()), "a wall along the north edge rises to the ceiling");
-		// The counter is one block high.
-		assertEquals(full, view.kind(house.x() + 8, feet, house.z() + 6));
-		assertEquals(BlockCode.AIR, view.code(house.x() + 8, feet + 1, house.z() + 6));
+		// The counter row is the synthetic profile's desk (P3's furniture): three blocks of it up to the ceiling.
+		for (int y = feet; y < feet + 3; y++) {
+			assertEquals(BlockCode.KIND_SHAPE, view.kind(house.x() + 8, y, house.z() + 6));
+		}
 		// The enclosure ring runs from the floor block to the ceiling.
 		for (int y = feet - 1; y <= feet + 3; y++) {
 			assertEquals(full, view.kind(house.x() - 1, y, house.z() + 3));

@@ -19,6 +19,11 @@ import org.jetbrains.annotations.Nullable;
  * roof  a|u,s,n|h0,h1|hW,hE    a wedge: the top from h0 at the south edge to h1 at the north edge, wearing u; vertical
  *                              south and north faces up to h0 and h1 wearing s and n; gable flanks wearing s, or, on a
  *                              hipped side, the top's edge lowered to the eave (both sides hipped: a ridge along x = 8)
+ * box   a|u,n,s,w,e|h          a box 0..16 × 0..h × 0..16 without a bottom: the top wearing u, the sides n, s, w, e, each
+ *                              the lowest h/2 pixel rows of its tile; -1: no face (all -1: nothing at all)
+ * box   ...|v=p                its south face's panes sunk one pixel (a bookcase's, P3; needs the south tile's art): a
+ *                              pane is a 4-connected region of non-black pixels the face's edges don't touch; its reveals
+ *                              wear the pixels beside them; more than PANE_QUADS quads: the flat face
  * </pre>
  */
 final class KeyGeometry {
@@ -32,6 +37,7 @@ final class KeyGeometry {
 			case SLAB -> slab(key.number(0), key.number(1), texture);
 			case ROOF -> roof(key.number(0), key.number(1), key.number(2), key.number(3), key.number(4), key.number(5) == 1, key.number(6) == 1,
 					texture);
+			case BOX -> key.variant() == null ? box(key.numbers(), texture) : null;
 			default -> null;
 		};
 	}
@@ -47,6 +53,204 @@ final class KeyGeometry {
 		}
 		quads.sort(Comparator.comparingInt(ShapeQuad::face));
 		return quads;
+	}
+
+	/** Key order up, north, south, west, east, then h; quads sorted by face. */
+	static List<ShapeQuad> box(int[] n, IntUnaryOperator texture) {
+		int h = n[5];
+		List<ShapeQuad> quads = new ArrayList<>(5);
+		if (n[0] >= 0) {
+			quads.add(ShapeQuad.face(ShapeQuad.UP, 0, h, 0, 16, h, 16, texture.applyAsInt(n[0]), 0, 0, 16, 16, h == 16 ? ShapeQuad.UP : -1, 0));
+		}
+		int[] faces = {ShapeQuad.NORTH, ShapeQuad.SOUTH, ShapeQuad.WEST, ShapeQuad.EAST};
+		for (int i = 0; i < faces.length; i++) {
+			if (n[1 + i] >= 0) {
+				quads.add(ShapeQuad.face(faces[i], 0, 0, 0, 16, h, 16, texture.applyAsInt(n[1 + i]), 0, 16 - h, 16, 16, faces[i], 0));
+			}
+		}
+		quads.sort(Comparator.comparingInt(ShapeQuad::face));
+		return quads;
+	}
+
+	/** The most quads a sunk-pane face may take; more draws the flat face. */
+	static final int PANE_QUADS = 48;
+	private static final int BLACK = 3;
+
+	/**
+	 * A box whose south face's panes sink one pixel (P3's bookcases): {@code shades} the south tile's ({@code artPx²},
+	 * row-major). The face shows the tile's lowest h/2 rows, as {@link #box} does.
+	 */
+	static List<ShapeQuad> paneBox(int[] n, int[] shades, int artPx, IntUnaryOperator texture) {
+		List<ShapeQuad> plain = box(n, texture);
+		int h = n[5];
+		int south = n[2];
+		int rows = Math.min(artPx, h * artPx / 16);
+		if (south < 0 || rows < 3 || artPx != 8) {
+			return plain;
+		}
+		int top = artPx - rows;
+		boolean[] sunk = panes(shades, artPx, top);
+		boolean any = false;
+		for (boolean b : sunk) {
+			any |= b;
+		}
+		if (!any) {
+			return plain;
+		}
+		int t = texture.applyAsInt(south);
+		int unit = 16 / artPx;
+		List<ShapeQuad> face = new ArrayList<>();
+		// The face as rectangles of one state, proud on the box's plane, sunk one pixel in.
+		for (int state = 0; state < 2; state++) {
+			boolean want = state == 1;
+			boolean[] done = new boolean[artPx * artPx];
+			for (int v = top; v < artPx; v++) {
+				for (int u = 0; u < artPx; u++) {
+					if (done[v * artPx + u] || sunk[v * artPx + u] != want) {
+						continue;
+					}
+					int u1 = u;
+					while (u1 + 1 < artPx && !done[v * artPx + u1 + 1] && sunk[v * artPx + u1 + 1] == want) {
+						u1++;
+					}
+					int v1 = v;
+					while (v1 + 1 < artPx && rowIs(sunk, done, artPx, v1 + 1, u, u1, want)) {
+						v1++;
+					}
+					for (int vv = v; vv <= v1; vv++) {
+						for (int uu = u; uu <= u1; uu++) {
+							done[vv * artPx + uu] = true;
+						}
+					}
+					int z = want ? 16 - unit : 16;
+					face.add(ShapeQuad.face(ShapeQuad.SOUTH, u * unit, (artPx - 1 - v1) * unit, 0, (u1 + 1) * unit, (artPx - v) * unit, z, t, u * unit,
+							v * unit, (u1 + 1) * unit, (v1 + 1) * unit, want ? -1 : ShapeQuad.SOUTH, 0));
+				}
+			}
+		}
+		// The reveals: where a sunk pixel meets a proud one, one pixel deep, wearing the proud pixel; runs merged.
+		for (int u = 0; u <= artPx; u++) {
+			for (int v = top; v < artPx; v++) {
+				int side = reveal(sunk, artPx, top, u, v);
+				if (side == 0) {
+					continue;
+				}
+				int v1 = v;
+				while (v1 + 1 < artPx && reveal(sunk, artPx, top, u, v1 + 1) == side) {
+					v1++;
+				}
+				// side > 0: sunk to the east of the edge (a proud pixel west); side < 0: sunk to the west.
+				int pu = side > 0 ? u - 1 : u;
+				int x = u * unit;
+				face.add(ShapeQuad.face(side > 0 ? ShapeQuad.EAST : ShapeQuad.WEST, x, (artPx - 1 - v1) * unit, 16 - unit, x, (artPx - v) * unit, 16, t,
+						pu * unit, v * unit, (pu + 1) * unit, (v1 + 1) * unit, -1, 0));
+				v = v1;
+			}
+		}
+		for (int v = top; v <= artPx; v++) {
+			for (int u = 0; u < artPx; u++) {
+				int side = ledge(sunk, artPx, top, u, v);
+				if (side == 0) {
+					continue;
+				}
+				int u1 = u;
+				while (u1 + 1 < artPx && ledge(sunk, artPx, top, u1 + 1, v) == side) {
+					u1++;
+				}
+				// side > 0: a sill (sunk above the edge, proud below); side < 0: a lintel (sunk below, proud above).
+				int pv = side > 0 ? v : v - 1;
+				int y = (artPx - v) * unit;
+				face.add(ShapeQuad.face(side > 0 ? ShapeQuad.UP : ShapeQuad.DOWN, u * unit, y, 16 - unit, (u1 + 1) * unit, y, 16, t, u * unit,
+						pv * unit, (u1 + 1) * unit, (pv + 1) * unit, -1, 0));
+				u = u1;
+			}
+		}
+		if (face.size() > PANE_QUADS) {
+			return plain;
+		}
+		List<ShapeQuad> out = new ArrayList<>();
+		for (ShapeQuad quad : plain) {
+			if (quad.face() != ShapeQuad.SOUTH) {
+				out.add(quad);
+			}
+		}
+		out.addAll(face);
+		out.sort(Comparator.comparingInt(ShapeQuad::face));
+		return out;
+	}
+
+	/**
+	 * Panes of a tile's face showing rows {@code top..artPx-1}: its 4-connected regions of non-black pixels that touch none
+	 * of the face's edges.
+	 */
+	static boolean[] panes(int[] shades, int artPx, int top) {
+		boolean[] out = new boolean[artPx * artPx];
+		boolean[] seen = new boolean[artPx * artPx];
+		int[] queue = new int[artPx * artPx];
+		for (int start = top * artPx; start < artPx * artPx; start++) {
+			if (seen[start] || shades[start] == BLACK) {
+				continue;
+			}
+			int head = 0;
+			int tail = 0;
+			queue[tail++] = start;
+			seen[start] = true;
+			boolean edge = false;
+			while (head < tail) {
+				int i = queue[head++];
+				int x = i % artPx;
+				int y = i / artPx;
+				edge |= x == 0 || y == top || x == artPx - 1 || y == artPx - 1;
+				int[] next = {y > top ? i - artPx : -1, x > 0 ? i - 1 : -1, x < artPx - 1 ? i + 1 : -1, y < artPx - 1 ? i + artPx : -1};
+				for (int nb : next) {
+					if (nb >= 0 && !seen[nb] && shades[nb] != BLACK) {
+						seen[nb] = true;
+						queue[tail++] = nb;
+					}
+				}
+			}
+			if (!edge) {
+				for (int k = 0; k < tail; k++) {
+					out[queue[k]] = true;
+				}
+			}
+		}
+		return out;
+	}
+
+	private static boolean rowIs(boolean[] sunk, boolean[] done, int artPx, int v, int u0, int u1, boolean want) {
+		for (int u = u0; u <= u1; u++) {
+			if (done[v * artPx + u] || sunk[v * artPx + u] != want) {
+				return false;
+			}
+		}
+		return true;
+	}
+
+	/** The vertical edge at column boundary {@code u} on row {@code v}: 1 sunk east of it, -1 sunk west, 0 none. */
+	private static int reveal(boolean[] sunk, int artPx, int top, int u, int v) {
+		boolean west = u > 0 && sunk[v * artPx + u - 1];
+		boolean east = u < artPx && sunk[v * artPx + u];
+		if (east && !west && u > 0) {
+			return 1;
+		}
+		if (west && !east && u < artPx) {
+			return -1;
+		}
+		return 0;
+	}
+
+	/** The horizontal edge at row boundary {@code v} (above row v) in column {@code u}: 1 a sill, -1 a lintel, 0 none. */
+	private static int ledge(boolean[] sunk, int artPx, int top, int u, int v) {
+		boolean above = v > top && sunk[(v - 1) * artPx + u];
+		boolean below = v < artPx && sunk[v * artPx + u];
+		if (above && !below && v < artPx) {
+			return 1;
+		}
+		if (below && !above && v > top) {
+			return -1;
+		}
+		return 0;
 	}
 
 	static List<ShapeQuad> slab(int tile, int h, IntUnaryOperator texture) {

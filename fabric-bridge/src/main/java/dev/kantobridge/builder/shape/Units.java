@@ -6,6 +6,7 @@ import dev.kantobridge.scene.CellKind;
 import dev.kantobridge.scene.CellTag;
 import dev.kantobridge.scene.SceneAtlas;
 import dev.kantobridge.scene.SceneMap;
+import dev.kantobridge.scene.profile.Profile;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
@@ -32,7 +33,12 @@ import org.jetbrains.annotations.Nullable;
  * volume     its perCell × perCell columns, perCell blocks high, every block a cell key on shape_full; its floor wears g
  * context    the keys' variant ({@link CellUnits.Context}): the sides bordering walkable cells (outdoors the south side
  *            only), indoors, repeating vertically (the same tiles in the cell north or south), a sign, foliage, and a
- *            pinned unit's class and prop_bg shades
+ *            pinned unit's class, its parameters and prop_bg shades
+ * P3         (docs/specs/PROFILE_PLAN.md §5.6) stump and can are hulls with their tileset's cap (and the can's base, height,
+ *            well and taper) as parameters; a relief's class height is its parameter; a walkable cell whose top-left tile
+ *            is a rising stair or a relief is a unit on decor carriers (no collision), as high as its class height under the
+ *            map's headroom, its floor the ground; a sunken stair would need its floor opened, which collision forbids:
+ *            counted ({@code stair_down}), left flat
  * </pre>
  */
 final class Units {
@@ -93,7 +99,12 @@ final class Units {
 				String pinned = classes == null ? null : classes.unitClass(cx, cy);
 				boolean unitPin = pinned != null && !ProfileClasses.OTHER.equals(pinned);
 				if (map.kind(cx, cy) != CellKind.SOLID) {
-					if (unitPin) {
+					String corner = classes == null ? null : classes.at(cx * per, cy * per);
+					if (unitPin && map.kind(cx, cy) == CellKind.WALK && WALKABLE_UNITS.contains(corner) && pinned.equals(corner)) {
+						decorUnit(map, atlas, atlasIndex, classes, cx, cy, corner, keys, decor, floor, units, mapGround, indoor, tally);
+					} else if (unitPin && pinned.startsWith("stair_down")) {
+						tally.merge("stair_down", 1, Integer::sum);
+					} else if (unitPin) {
 						tally.merge("pin_not_solid", 1, Integer::sum);
 					}
 					continue;
@@ -125,7 +136,7 @@ final class Units {
 				}
 				int background = unitPin ? classes.propBackground(tiles) : 0;
 				CellUnits.Context context = new CellUnits.Context(flatSides(map, cx, cy, indoor), indoor, repeatsVertically,
-						map.hasTag(cx, cy, CellTag.SIGN), foliage, unitPin ? pinned : null, background);
+						map.hasTag(cx, cy, CellTag.SIGN), foliage, unitPin ? pinned : null, background, unitPin ? params(map, classes, pinned) : List.of());
 				String source = unitPin ? "pin" : cut ? "cut" : foliage ? "hint" : lone ? "lone" : null;
 				if (source == null && probe != null && repeats.getOrDefault(region[cy * map.w() + cx] + "|" + Arrays.toString(tiles), 0) >= 2
 						&& probe.shaped(map.atlas(), tiles, context)) {
@@ -155,6 +166,62 @@ final class Units {
 				units.add(new Cell(cx, cy, first, foliage, source));
 			}
 		}
+	}
+
+	/** The walkable cells P3 stands a unit on (a rising stair, a relief), by their top-left tile's class. */
+	static final Set<String> WALKABLE_UNITS = Set.of("stair_e", "stair_w", "relief");
+
+	/** A pinned unit's parameters (P3): a stump's cap rows; a can's cap, base, height, well and taper; a stair's or relief's height. */
+	static List<Integer> params(SceneMap map, ProfileClasses classes, String pinned) {
+		Profile.HullParams hull = classes.tileset().hull();
+		int headroom = ShapeHeights.headroomPx(map);
+		return switch (pinned) {
+			case "stump" -> List.of(clamp(hull.stumpCap()));
+			case "can" -> List.of(clamp(hull.canCap()), clamp(hull.canBase()), clamp(hull.canHeight()), clamp(hull.canWell()), clamp(hull.canTaper()));
+			case "relief", "stair_e", "stair_w" -> List.of(clamp(Math.min(classes.tileset().height(pinned), headroom)));
+			default -> List.of();
+		};
+	}
+
+	/** A parameter as a key carries it: 0..99. */
+	private static int clamp(int value) {
+		return Math.max(0, Math.min(99, value));
+	}
+
+	/**
+	 * A walkable cell's unit (P3: a rising stair or a relief): its tiles' columns as high as its class height on decor
+	 * carriers, its floor the ground.
+	 */
+	private static void decorUnit(SceneMap map, SceneAtlas atlas, int atlasIndex, ProfileClasses classes, int cx, int cy, String cls,
+			ShapeKey[][] keys, int[] decor, int[] floor, List<Cell> units, int mapGround, boolean indoor, Map<String, Integer> tally) {
+		int per = map.perCell();
+		int cols = map.artCols();
+		List<Integer> params = params(map, classes, cls);
+		int h = params.isEmpty() ? 0 : params.get(0);
+		int high = Math.min(per, (h + 7) / 8);
+		if (high <= 0) {
+			tally.merge("pin_flat", 1, Integer::sum);
+			return;
+		}
+		int[] tiles = tiles(map, cx, cy);
+		CellUnits.Context context = new CellUnits.Context(0, indoor, false, false, false, cls, 0, params);
+		int g = ground(map, cx, cy, atlas.grassTiles(), atlas.frameTiles(), mapGround);
+		ShapeKey first = null;
+		for (int bz = 0; bz < per; bz++) {
+			for (int bx = 0; bx < per; bx++) {
+				int i = (cy * per + bz) * cols + cx * per + bx;
+				ShapeKey[] column = new ShapeKey[high];
+				for (int by = 0; by < high; by++) {
+					column[by] = ShapeKey.cell(atlasIndex, tiles, g, bx, by, bz).withVariant(context.variant());
+				}
+				first = first == null ? column[0] : first;
+				keys[i] = column;
+				decor[i] = (1 << high) - 1;
+				floor[i] = g;
+			}
+		}
+		tally.merge("pin", 1, Integer::sum);
+		units.add(new Cell(cx, cy, first, false, "pin"));
 	}
 
 	/** True when a building's claim holds any tile of cell (cx, cy). */

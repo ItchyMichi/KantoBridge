@@ -486,7 +486,10 @@ public final class BuildTask {
 		}
 		r.unitsBySource.clear();
 		r.profileBuildings.clear();
-		shapes.unitTally().forEach((k, v) -> (k.startsWith("building") ? r.profileBuildings : r.unitsBySource).put(k, (long) v));
+		r.profileClasses.clear();
+		shapes.unitTally().forEach((k, v) -> (k.startsWith("building") ? r.profileBuildings
+				: k.startsWith("box_") || k.startsWith("bookcase_") || k.startsWith("canopy") || k.startsWith("planter") ? r.profileClasses
+						: r.unitsBySource).put(k, (long) v));
 		r.shapeIndexHash = shapes.index().hash();
 		r.shapePlanner = shapes.index().planner();
 		r.shapeMapHash = shapes.map().hash();

@@ -911,3 +911,6 @@ carrying the same envelope in both directions. Larger data is split at the appli
   - P2: a shape-index template may carry `band` (a band-table building: its band table, composite grid, overhang rows,
     and per position its solid and decor heights; its columns are empty); the planner `kb-shapes/7`. Still
     `world.shapes`.
+  - P3: the shape key kind `box` (`box:<a>|<u>,<n>,<s>,<w>,<e>|<h>`, `|v=p` for sunk panes); unit variants'
+    parameters (`_k<two digits each>`); a template's `hull` (a canopy or a planter) and `band.parts` (a furniture
+    entry's pieces); the planner `kb-shapes/8`. Still `world.shapes`.

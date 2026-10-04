@@ -54,6 +54,8 @@ public final class TemplateRule {
 		BUILDING("building"),
 		/** The profile's band-table building (P2). */
 		BAND("band"),
+		/** The profile's two-cell hull, a canopy or a planter (P3). */
+		HULL("hull"),
 		MODEL("model"),
 		COLUMNS("columns");
 
@@ -107,6 +109,10 @@ public final class TemplateRule {
 		if (entry.band() != null) {
 			// The profile's band-table building (docs/specs/PROFILE_PLAN.md §5.5, P2).
 			return BandBuilding.build(entry, atlas, art);
+		}
+		if (entry.hull() != null) {
+			// The profile's two-cell hull, a canopy or a planter (docs/specs/PROFILE_PLAN.md §5.6, P3).
+			return BigHull.build(entry, atlas, art);
 		}
 		Template columns = columns(entry, null, 1.0);
 		int artPx = art.artPx();
@@ -181,7 +187,7 @@ public final class TemplateRule {
 	 */
 	static Template columns(Templates.Entry entry, @Nullable Kind failed, double match) {
 		Map<Integer, List<ShapeQuad>> blocks = new TreeMap<>();
-		if (entry.band() != null && entry.band().has("solid")) {
+		if (entry.volume() != null && entry.volume().has("solid")) {
 			for (int y = 0; y < entry.d(); y++) {
 				for (int x = 0; x < entry.w(); x++) {
 					int tile = entry.tile(x, y);

@@ -15,13 +15,18 @@ import org.jetbrains.annotations.Nullable;
 final class ProfileClasses {
 	/** The classes P1 turns into cell units: hulls, standee pools and posts, with a standee's depth in pixels. */
 	static final Set<String> UNIT_CLASSES = Set.of("cylinder", "billboard", "signpost", "stool", "prop", "cutout", "bike", "console", "post");
+	/** P3's too (docs/specs/PROFILE_PLAN.md §5.6): the hull variants, rising and sunken stairs, reliefs. */
+	static final Set<String> P3_UNIT_CLASSES = Set.of("cylinder", "billboard", "signpost", "stool", "prop", "cutout", "bike", "console", "post",
+			"stump", "can", "relief", "stair_e", "stair_w", "stair_down_e", "stair_down_w");
 
 	private final SceneMap map;
 	private final Profile.Tileset tileset;
+	private final Set<String> unitClasses;
 
-	private ProfileClasses(SceneMap map, Profile.Tileset tileset) {
+	private ProfileClasses(SceneMap map, Profile.Tileset tileset, Set<String> unitClasses) {
 		this.map = map;
 		this.tileset = tileset;
+		this.unitClasses = unitClasses;
 	}
 
 	/** The classes of {@code map}, or null when the scene's profile says nothing about its tileset. */
@@ -31,7 +36,12 @@ final class ProfileClasses {
 
 	/** The classes of {@code map} under a tileset's entry, or null without one. */
 	static @Nullable ProfileClasses of(SceneMap map, Profile.@Nullable Tileset tileset) {
-		return tileset == null ? null : new ProfileClasses(map, tileset);
+		return of(map, tileset, false);
+	}
+
+	/** The same, with P3's unit classes when {@code p3}. */
+	static @Nullable ProfileClasses of(SceneMap map, Profile.@Nullable Tileset tileset, boolean p3) {
+		return tileset == null ? null : new ProfileClasses(map, tileset, p3 ? P3_UNIT_CLASSES : UNIT_CLASSES);
 	}
 
 	Profile.Tileset tileset() {
@@ -75,7 +85,7 @@ final class ProfileClasses {
 					continue;
 				}
 				any = true;
-				if (UNIT_CLASSES.contains(cls)) {
+				if (this.unitClasses.contains(cls)) {
 					if (dx == 0 && dy == 0) {
 						return cls;
 					}

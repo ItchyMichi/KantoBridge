@@ -25,10 +25,12 @@ import java.util.Objects;
  * @param profileUnits  units from the profile's pins, and the probe's repeating cells (docs/specs/PROFILE_PLAN.md §5.4;
  *                      from P1)
  * @param profileBuildings the profile's band-table buildings (docs/specs/PROFILE_PLAN.md §5.5; from P2)
+ * @param profileBoxes  the profile's class boxes, furniture parts, hull variants, stairs and reliefs
+ *                      (docs/specs/PROFILE_PLAN.md §5.6; from P3)
  */
 public record ShapeParams(String planner, String heights, int maxUnit, int minRepeatRows, int hullRing, int interiorWall, boolean tierB,
 		boolean tierC, int roofRise, int ledgeLip, boolean storyArt, boolean dressing, int templateMax, boolean profileUnits,
-		boolean profileBuildings) {
+		boolean profileBuildings, boolean profileBoxes) {
 	public static final String CLASSIFIED = "classified";
 	public static final String MEASURED = "measured";
 
@@ -43,6 +45,14 @@ public record ShapeParams(String planner, String heights, int maxUnit, int minRe
 		if (tierC ? templateMax < 4 || templateMax > 64 : templateMax != 0) {
 			throw new IllegalArgumentException("a template size needs Tier C, and lies in 4..64");
 		}
+	}
+
+	/** Parameters before P3 (no class boxes). */
+	public ShapeParams(String planner, String heights, int maxUnit, int minRepeatRows, int hullRing, int interiorWall, boolean tierB,
+			boolean tierC, int roofRise, int ledgeLip, boolean storyArt, boolean dressing, int templateMax, boolean profileUnits,
+			boolean profileBuildings) {
+		this(planner, heights, maxUnit, minRepeatRows, hullRing, interiorWall, tierB, tierC, roofRise, ledgeLip, storyArt, dressing, templateMax,
+				profileUnits, profileBuildings, false);
 	}
 
 	/** Parameters before P2 (no profile buildings). */
@@ -127,9 +137,18 @@ public record ShapeParams(String planner, String heights, int maxUnit, int minRe
 				true, true, 16, 4, true, true, TEMPLATE_MAX, true, true);
 	}
 
+	/**
+	 * P3: P2's planner plus the profile's class boxes, furniture parts, hull variants, stairs and reliefs
+	 * (docs/specs/PROFILE_PLAN.md §5.6).
+	 */
+	public static ShapeParams p3() {
+		return new ShapeParams("kb-shapes/8", MEASURED, HeightRules.MAX_UNIT, HeightRules.MIN_REPEAT_ROWS, 2, HeightRules.INTERIOR_WALL,
+				true, true, 16, 4, true, true, TEMPLATE_MAX, true, true, true);
+	}
+
 	/** The parameters a build plans with. */
 	public static ShapeParams current() {
-		return p2();
+		return p3();
 	}
 
 	/** The parameters as they appear in the shape index. */
@@ -162,6 +181,9 @@ public record ShapeParams(String planner, String heights, int maxUnit, int minRe
 		}
 		if (this.profileBuildings) {
 			out.addProperty("profileBuildings", true);
+		}
+		if (this.profileBoxes) {
+			out.addProperty("profileBoxes", true);
 		}
 		return out;
 	}

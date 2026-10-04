@@ -20,6 +20,7 @@ import org.jetbrains.annotations.Nullable;
  * tuft:&lt;a&gt;|&lt;tile&gt;                                     standing cut-outs of the tile's strokes
  * cell:&lt;a&gt;|&lt;t0&gt;,&lt;t1&gt;,&lt;t2&gt;,&lt;t3&gt;|&lt;g&gt;|&lt;bx&gt;,&lt;by&gt;,&lt;bz&gt;     one block of a cell-sized unit
  * tmpl:&lt;a&gt;|&lt;sig&gt;|&lt;bx&gt;,&lt;by&gt;,&lt;bz&gt;                     one block of a bounded structure
+ * box:&lt;a&gt;|&lt;u&gt;,&lt;n&gt;,&lt;s&gt;,&lt;w&gt;,&lt;e&gt;|&lt;h&gt;              a box h/16 high without a bottom (P3's class boxes)
  * modifiers, in this order when present:  |tint=&lt;0..3&gt;  |v=&lt;variant&gt;
  * </pre>
  *
@@ -34,7 +35,8 @@ public final class ShapeKey implements Comparable<ShapeKey> {
 		ROOF("roof", 3, 2, 2),
 		TUFT("tuft", 1),
 		CELL("cell", 4, 1, 3),
-		TMPL("tmpl", 3);
+		TMPL("tmpl", 3),
+		BOX("box", 5, 1);
 
 		private final String id;
 		private final int[] groups;
@@ -104,6 +106,7 @@ public final class ShapeKey implements Comparable<ShapeKey> {
 					&& (numbers[6] == 0 || numbers[6] == 1), "roof heights or hips out of range");
 			case CELL -> check(numbers[5] >= 0 && numbers[6] >= 0 && numbers[7] >= 0, "negative block offset");
 			case TMPL -> check(numbers[0] >= 0 && numbers[1] >= 0 && numbers[2] >= 0, "negative block offset");
+			case BOX -> check(numbers[5] >= 1 && numbers[5] <= 16, "box height out of range");
 			default -> {
 			}
 		}
@@ -160,6 +163,19 @@ public final class ShapeKey implements Comparable<ShapeKey> {
 	/** One block of a bounded structure, by its template's signature. */
 	public static ShapeKey tmpl(int atlas, String sig, int bx, int by, int bz) {
 		return new ShapeKey(Kind.TMPL, atlas, new int[] {bx, by, bz}, sig, 0, null);
+	}
+
+	/**
+	 * A box {@code h}/16 high without a bottom (the profile's class boxes, P3): its top wearing {@code up}, its sides
+	 * {@code north}, {@code south}, {@code west} and {@code east}, each showing its tile's lowest rows; -1: no face.
+	 */
+	public static ShapeKey box(int atlas, int up, int north, int south, int west, int east, int h) {
+		return new ShapeKey(Kind.BOX, atlas, new int[] {up, north, south, west, east, h}, null, 0, null);
+	}
+
+	/** A carrier that draws nothing: a solid cell's blocks over a shape lower than its column (PD7). */
+	public static ShapeKey empty(int atlas) {
+		return box(atlas, -1, -1, -1, -1, -1, 16);
 	}
 
 	/** This key with a darkening step. */

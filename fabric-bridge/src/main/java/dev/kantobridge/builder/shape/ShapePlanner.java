@@ -214,7 +214,16 @@ public final class ShapePlanner {
 						continue;
 					}
 					boolean story = taken.storyAt(map.id(), map.cellIndexOfTile(tx, ty));
-					for (int k = 0; k < column.length; k++) {
+					if (story && column.length > 0 && column[0] != null && column[0].kind() == ShapeKey.Kind.CELL && column[0].variant() != null
+							&& column[0].variant().contains("_stair")) {
+						// A stair (P3) whose bottom block a story block takes would float: it stays out (counted).
+						decorSkipped++;
+						continue;
+					}
+					// Under a ceiling a column stops below it (an open-air interior has the ceiling's level too, P3).
+					int top = placement.kind() == MapPlacement.Kind.INTERIOR && !WorldPlan.openSky(placement) ? WorldPlan.CEILING_ABOVE_FEET
+							: column.length;
+					for (int k = 0; k < column.length && k < top; k++) {
 						if (column[k] == null) {
 							continue;
 						}
@@ -456,14 +465,24 @@ public final class ShapePlanner {
 		if (!params.measured()) {
 			return classified(map, atlas, params);
 		}
-		ProfileClasses classes = params.profileUnits() ? ProfileClasses.of(map, tileset) : null;
+		ProfileClasses classes = params.profileUnits() ? ProfileClasses.of(map, tileset, params.profileBoxes()) : null;
 		// P2: the profile's band-table buildings claim their grids before Tier A (docs/specs/PROFILE_PLAN.md §5.5).
 		boolean[] held = new boolean[map.artCols() * map.artRows()];
 		List<Buildings.Claim> claims = params.profileBuildings() && tileset != null && sceneAtlas != null && map.perCell() == ShapeTable.UNIT_CELL
 				? Buildings.claims(map, tileset.buildings(), held, tally) : List.of();
+		// P3: the two-cell hulls (a canopy, a planter) take their cells as a claim does.
+		List<BigHulls.Group> hulls = params.profileBoxes() && classes != null && sceneAtlas != null && map.perCell() == ShapeTable.UNIT_CELL
+				? BigHulls.find(map, classes, held, tally) : List.of();
 		boolean[] solid = classes == null ? Structures.solidTiles(map) : classes.structural();
 		for (int i = 0; i < held.length; i++) {
 			solid[i] &= !held[i];
+		}
+		// P3: the profile's class boxes leave Tier A; they are planned last, over the final columns (docs/specs/PROFILE_PLAN.md §5.6).
+		String[] box = params.profileBoxes() && classes != null ? ClassBoxes.mark(map, classes, held, tally) : null;
+		if (box != null) {
+			for (int i = 0; i < solid.length; i++) {
+				solid[i] &= box[i] == null;
+			}
 		}
 		Columns columns = measured(map, atlas, params, solid);
 		boolean cells = sceneAtlas != null && map.perCell() == ShapeTable.UNIT_CELL;
@@ -473,7 +492,7 @@ public final class ShapePlanner {
 		if (params.tierB() && cells) {
 			// Tier B (kb-shapes/3): tufts and cell units over the measured columns.
 			Units.plan(map, sceneAtlas, atlas, columns.keys(), columns.blocks(), columns.shapeMask(), floor, decor, units, classes,
-					params.profileUnits() ? probe : null, tally, claims.isEmpty() ? null : held);
+					params.profileUnits() ? probe : null, tally, claims.isEmpty() && hulls.isEmpty() ? null : held);
 		}
 		List<Templates.Placed> templates = List.of();
 		if (params.tierC() && cells) {
@@ -490,6 +509,15 @@ public final class ShapePlanner {
 			}
 			templates = all;
 		}
+		if (!hulls.isEmpty()) {
+			List<Templates.Placed> all = new ArrayList<>(templates);
+			int ground = Units.mapGround(map, sceneAtlas.grassTiles(), sceneAtlas.frameTiles());
+			for (BigHulls.Group group : hulls) {
+				int g = BigHulls.ground(map, group, ground, sceneAtlas.grassTiles(), sceneAtlas.frameTiles());
+				all.add(BigHulls.place(map, atlas, group, g, columns.keys(), columns.blocks(), columns.shapeMask(), floor));
+			}
+			templates = all;
+		}
 		int wallTile = -1;
 		ShapeKey ceiling = null;
 		if (params.dressing()) {
@@ -497,6 +525,10 @@ public final class ShapePlanner {
 			Dress dress = Dressing.dress(map, new Dress(atlas, columns.keys(), columns.blocks(), columns.shapeMask(), columns.runs()));
 			wallTile = dress.wallTile();
 			ceiling = dress.ceiling();
+		}
+		if (box != null) {
+			int ground = sceneAtlas == null ? -1 : Units.mapGround(map, sceneAtlas.grassTiles(), sceneAtlas.frameTiles());
+			ClassBoxes.plan(map, atlas, classes, box, held, ground, columns.keys(), columns.blocks(), columns.shapeMask(), floor, tally);
 		}
 		return new Columns(columns.keys(), columns.blocks(), columns.shapeMask(), floor, decor, List.copyOf(units), columns.runs(), templates,
 				wallTile, ceiling);

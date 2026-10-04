@@ -136,9 +136,9 @@ class CarrierChoiceTest {
 		assertEquals(BlockCode.AIR, view.code(gx, 65, gz));
 		assertEquals(ShapeKey.Kind.TUFT, plan.shapes().index().key(plan.shapes().map().shapeAt(gx, 64, gz)).kind());
 		MapPlacement house = plan.index().map("TEST_HOUSE");
-		// The counter: one block high.
-		assertEquals(BlockCode.KIND_FULL, view.kind(house.x() + 8, house.y(), house.z() + 6));
-		assertEquals(BlockCode.AIR, view.code(house.x() + 8, house.y() + 1, house.z() + 6));
+		// The counter row: the synthetic profile's desk (P3's furniture), its three blocks up to the ceiling.
+		assertEquals(BlockCode.KIND_SHAPE, view.kind(house.x() + 8, house.y(), house.z() + 6));
+		assertEquals(BlockCode.KIND_SHAPE, view.kind(house.x() + 8, house.y() + 2, house.z() + 6));
 		// Every shape_full block of the world lies in a solid cell's column, on a block of that column.
 		long shapeBlocks = 0;
 		for (var placed : plan.maps()) {
