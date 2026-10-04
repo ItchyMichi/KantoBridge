@@ -21,6 +21,9 @@ import java.util.TreeSet;
  */
 public record SceneAtlas(String id, int tilesPerRow, int tiles, int artPx, List<Animated> animated, Set<Integer> grassTiles,
 		Map<Integer, String> hints) {
+	/** The hint of a tile that draws foliage (a cuttable tree, the tree wall around outdoor maps). */
+	public static final String HINT_FOLIAGE = "tree";
+
 	public SceneAtlas {
 		animated = List.copyOf(animated);
 		grassTiles = Collections.unmodifiableSet(new TreeSet<>(grassTiles));

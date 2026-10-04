@@ -21,9 +21,26 @@ public final class ShapePlan {
 	private final Map<ShapeKey.Kind, Integer> keysByKind;
 	private final long shapedBlocks;
 	private final long planMs;
+	private final long decorSkipped;
+	private final Occupancy.@Nullable VoidFill voidFill;
+	private final Map<Integer, VoidUnit> voidUnits;
+
+	/**
+	 * A void-fill cell planned as a unit of its owner's border (V4).
+	 *
+	 * @param owner    the map whose border it wears
+	 * @param ground   the tile its floor block wears, -1 for its own
+	 * @param distance its distance in cells to the nearest map body
+	 * @param key      the key of its first block
+	 */
+	public record VoidUnit(String owner, int ground, int distance, ShapeKey key) {
+	}
 
 	ShapePlan(ShapeParams params, ShapeIndex index, ShapeMap map, Map<String, ShapePlanner.MapShapes> maps, Map<ShapeKey.Kind, Integer> keysByKind,
-			long shapedBlocks, long planMs) {
+			long shapedBlocks, long planMs, long decorSkipped, Occupancy.@Nullable VoidFill voidFill, Map<Integer, VoidUnit> voidUnits) {
+		this.decorSkipped = decorSkipped;
+		this.voidFill = voidFill;
+		this.voidUnits = Collections.unmodifiableMap(new TreeMap<>(voidUnits));
 		this.params = params;
 		this.index = index;
 		this.map = map;
@@ -38,7 +55,7 @@ public final class ShapePlan {
 	/** The same plan with its shape map bound to the WorldIndex whose text hashes to {@code indexHash}. */
 	public ShapePlan withIndexHash(String indexHash) {
 		return new ShapePlan(this.params, this.index, this.map.withHeader(indexHash, this.index.hash()), this.maps, this.keysByKind,
-				this.shapedBlocks, this.planMs);
+				this.shapedBlocks, this.planMs, this.decorSkipped, this.voidFill, this.voidUnits);
 	}
 
 	public ShapeParams params() {
@@ -74,5 +91,25 @@ public final class ShapePlan {
 
 	public long planMs() {
 		return this.planMs;
+	}
+
+	/** Decor pieces (tufts) skipped because a story block takes their position. */
+	public long decorSkipped() {
+		return this.decorSkipped;
+	}
+
+	/** The void fill the plan was made for, or null. */
+	public Occupancy.@Nullable VoidFill voidFill() {
+		return this.voidFill;
+	}
+
+	/** The void-fill cells planned as units, by surface cell index ({@code cz * w + cx} of the void fill). */
+	public Map<Integer, VoidUnit> voidUnits() {
+		return this.voidUnits;
+	}
+
+	/** The unit planned for a void-fill cell, or null (a plain void column). */
+	public @Nullable VoidUnit voidUnit(int cell) {
+		return this.voidUnits.get(cell);
 	}
 }

@@ -38,7 +38,8 @@ pack below player packs; VD10 the JSON file.
 | V1a | Measuring tools (V1's first work package) | **done** | 2026-10-04 | `eeda9ee` |
 | V1 | Runtime model with the same cubes | **done** (X1 and X4 wait for you) | 2026-10-04 | `9b3a647` |
 | V2 | Shape data, sync and per-face art | **done** (play-test waits for you) | 2026-10-04 | `7a364d7` |
-| V3 | Carriers and Tier A shapes | **done** (play-test waits for you; rebuild your world first) | 2026-10-04 | `V3: Tier A shapes` |
+| V3 | Carriers and Tier A shapes | **done** (play-test waits for you; rebuild your world first) | 2026-10-04 | `5a1a283` |
+| V4 | Tier B shapes | **done** (play-test, X2 and X3 wait for you; rebuild your world first) | 2026-10-04 | `V4: Tier B shapes` |
 
 **Measurements waiting on you** (agents never start the client; the plan's §10):
 
@@ -47,6 +48,8 @@ pack below player packs; VD10 the JSON file.
 - **X1 with the runtime model and X4** (a pack of your own above the generated one): PLAYTEST.md "V1". V1's gate is X1
   within its thresholds; the run went on without it, because only you can measure it. If X1 fails, the plan's R1 ladder
   applies (§9).
+- **X2 and X3** (V4: shapes against cubes, and our share of the mesh time): PLAYTEST.md "V4". The budgets the build
+  report can check hold (see the check results); these two are yours. If they fail, R1's ladder applies.
 
 ### Voxel plan: check results
 
@@ -95,6 +98,24 @@ pack below player packs; VD10 the JSON file.
   `build_world.py`): no hole, ground match 1.0, structure match 5th percentile at least 0.55 and lowest at least 0.35
   per map. The plan's per-type targets (walls 0.99, roofed columns 0.90) aren't separable in a per-map score: walls
   score exactly on fixtures (`SelfCheckTest`), roofs lay their two drawn rows on a one-block slope and score below them.
+
+- **V4:** `tools/check.sh --e2e`: pytest 1,421 passed and 1 failed (the golden shape index test still named planner
+  version 2; fixed), then `tools/check.sh`: pytest **1385 passed** (37 e2e skipped), `gradlew build`: **701 JUnit** (new:
+  `BackgroundTest`, `ObjectTest`, `HullTest`, `TuftTest`, `QuadMergerTest` (120 random voxel grids: every exposed face
+  covered once, showing exactly its voxel's texel), `BudgetTest`, `UnitsTest`, and Tier B cases in `ShapeTableTest`,
+  `QuadCounterTest` and `WalkabilityTest`), **91/91 GameTests** (new: `EncounterGameTests.aTuftKeepsItsGrassSpawnable`;
+  the synthetic build's grass under tufts still offers its pool's Pokémon, its void ring holds units; the shaped build
+  places tufts, ring units and an object, none beyond the ring), the mixin checks. The real build: 220 maps, 0
+  warnings, 2,456,469 blocks, 58.5 s at 47,713 blocks/s; `kb-shapes/3` planned 6,435 keys (4,400 cubes, 1,525 roofs,
+  496 cell keys (62 units), 9 lips, 5 tufts), 293,510 shaped positions; the shape map is 151,892 characters (3 of 8
+  parts). 10,975 tufts on `decor` (73 skipped under story cells), 8,264 void-ring units (none beyond the ring).
+  Structures: 1,005 Tier A regions, 10,763 hull cells (19 units), 29 object cells (4 units), 227 column fallbacks (16
+  units), no flat unit; no unit failed its gate. Quads after culling: 15.2 per shaped block on average, 69 at most
+  (99th percentile 54; budgets 24 and 96), per section 304 median, 6,240 at the 95th percentile, 24,064 at most
+  (budgets 12,000 and 30,000); counting them took 0.8 s. Self-check: **0 holes**, ground match 1.0 on every map,
+  structure match 5th percentile 0.5645 and lowest 0.375, so V3's thresholds hold (unit drawings are scored per unit).
+  Hulls cover 0.52 to 0.63 of their drawing (gate 0.4, fixed from this run), objects match 1.0 (gate 0.95). The first
+  run of the real build had failed the section maximum (34,688 quads); deviation 32 has the fix.
 
 ### Voxel plan: deviations
 
@@ -171,6 +192,47 @@ pack below player packs; VD10 the JSON file.
     unit: the planner measures from the scene. The void fill and interior rings wear the drawn border in shaped builds
     only; an unshaped build is today's world.
 25. **The shape table's geometry version is 2,** so a client's V2 cache files are rebuilt.
+26. **A repeating cell is a unit only with the foliage hint (V4).** Read literally ("repeats as the same 2×2 unit across
+    its region"), a house's plain wall and a fence would be units too, and the object rule would cut them into thin
+    cards. Repeating cells need every tile to wear the front end's foliage hint (the tree wall the game draws around
+    outdoor maps, cut trees); lone cells and cut trees always qualify.
+27. **Units stand only where Tier A is at most two blocks without a roof.** A unit fills its cell's 2×2 columns two
+    blocks high on `shape_full`, so a solid cell's collision height never drops (I1), and its floor wears the unit's
+    ground tile.
+28. **A unit's context is in its keys' variant** (`g<sides>[i][r][s][t]`: the sides bordering walkable cells, outdoors
+    the south side only; indoors; repeating vertically; a sign; foliage): the background seeds and the object rule
+    depend on it, and a key must name everything its geometry depends on.
+29. **The void fill's ring keeps its collision.** Its border trees stand on `shape_full`, not on `decor` as the carrier
+    table's "outside every column" would say, so nobody leaves a map through its border trees or walks from one map to
+    another across the void; the ring is two blocks high (the void column beyond it stays three), and I2 holds beyond
+    it. The ring's keys come from the whole export (every cell of each outdoor map's drawn border block, on the map's
+    most frequent ground tile, context `g0rt`), so a filtered and a full build still share one shape index.
+30. **No `decor_leaves` yet.** The foliage hint puts a unit's blocks over walkable cells on `decor_leaves`; V4 has none
+    (units stand in solid cells, the ring keeps its collision). V5's closed cut trees are the first.
+31. **Hulls are gated by coverage.** A hull stands round in the middle of its cell, so in the game's view each row shows
+    higher than it is drawn and the lowest rows show the floor in front of it: no pixel matches by texel (match 0 on
+    real art), and a hull covers 0.52 to 0.63 of its drawing on the real build. The gate is coverage ≥ 0.4 (a broken
+    hull covers little) and the 96-quad cap; objects keep the plan's 0.95 and score 1.0. The per-map self-check leaves a
+    unit's drawn pixels to the unit's own check and counts its background as ground, expecting the unit's ground tile.
+32. **Hull runs are half-block steps deep, and caps show the crown.** The first real build failed one budget: its
+    densest section held 34,688 quads (30,000), with hulls at 33–94 quads per block. Rounding each run's depth to
+    four pixels and capping every run with the row below its top cut hulls by about a third (21–69 per block): the
+    section maximum fell to 24,064 and the mean per shaped block to 15.2. No step of R1's ladder was needed.
+33. **Void tiles lie as plates 1/16 above the floor,** in units only; Tier A's columns stay opaque cubes (a `tile_full`
+    carrier can't hold less than a cube, rule 3).
+34. **The shape table cache is keyed by the art too** (the export hash in the cache name's third value), since tufts and
+    units are built from pixels; a new export rebuilds the table (`ClientShapes.artChanged`). Geometry version 3.
+35. **The dev-only mesh check (§6.3) rides on the measurement:** each F8 run compares up to 256 of its sections' emitted
+    quads with `QuadCounter.emittedAt` (the pure-Java count) and records `prediction{sections, equal, max_diff}`.
+36. **Report:** `structures_by_kind` adds `flat` (all-void units) to the plan's kinds; `void_ring_units` counts the
+    ring's units (`void_hull_cells` those beyond the ring: 0); `units_failed` counts unit cells drawn as columns
+    because their candidate failed its gate; per-unit numbers (kind, scores, quads, cells) go to
+    `shape_selfcheck.json` under 16-digit signature hashes.
+37. **Tufts are `decor`, drawn without ambient occlusion** (a third material); a tile without strokes has no tuft. A
+    puppet stands on the colliding blocks of its cell (`ClientShapes.topHeight`), cached per cell once its chunk is
+    loaded.
+38. **The synthetic round tree stays a column:** it stands beside the cliff, so it is neither alone nor foliage. JUnit
+    fixtures cover hulls; the synthetic world covers an object (the hill's sign), column fallbacks, tufts and the ring.
 
 ### Voxel plan: open issues
 

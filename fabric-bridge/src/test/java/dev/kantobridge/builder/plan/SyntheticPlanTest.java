@@ -137,9 +137,10 @@ class SyntheticPlanTest {
 	void renderedColumns() {
 		ChunkCodesView view = new ChunkCodesView(plan);
 		int full = BlockCode.KIND_FULL;
-		// A border tree cell: a 2-high column on the ground block.
+		// A border tree cell: a unit (V4), two shape_full blocks on the ground block.
 		assertEquals(full, view.kind(ox(0), 63, oz(0)));
-		assertEquals(full, view.kind(ox(0), 65, oz(0)));
+		assertEquals(BlockCode.KIND_SHAPE, view.kind(ox(0), 64, oz(0)));
+		assertEquals(BlockCode.KIND_SHAPE, view.kind(ox(0), 65, oz(0)));
 		assertEquals(BlockCode.AIR, view.code(ox(0), 66, oz(0)));
 		// Water: a half block, with a story cell above it.
 		assertEquals(BlockCode.KIND_HALF, view.kind(ox(24), 63, oz(24)));
@@ -147,9 +148,13 @@ class SyntheticPlanTest {
 		// The ledge row: art below, a collider facing the hop direction (down = 0) above.
 		assertEquals(BlockCode.ledge(0), view.code(ox(4), 64, oz(26)));
 		assertEquals(full, view.kind(ox(4), 63, oz(26)));
-		// Void fill around the town: 3 high.
-		assertEquals(full, view.kind(ox(-1), 66, oz(-1)));
-		assertEquals(BlockCode.AIR, view.code(ox(-1), 67, oz(-1)));
+		// Void fill around the town: within two cells of it, border trees as units (two shape_full blocks); beyond, 3 high.
+		assertEquals(full, view.kind(ox(-1), 63, oz(-1)));
+		assertEquals(BlockCode.KIND_SHAPE, view.kind(ox(-1), 64, oz(-1)));
+		assertEquals(BlockCode.KIND_SHAPE, view.kind(ox(-4), 65, oz(-4)));
+		assertEquals(BlockCode.AIR, view.code(ox(-1), 66, oz(-1)));
+		assertEquals(full, view.kind(ox(-5), 66, oz(-5)));
+		assertEquals(BlockCode.AIR, view.code(ox(-5), 67, oz(-5)));
 		assertEquals(BlockCode.UNOWNED, view.code(ox(-13), 63, oz(0)), "outside the surface volume");
 
 		MapPlacement house = plan.index().map("TEST_HOUSE");

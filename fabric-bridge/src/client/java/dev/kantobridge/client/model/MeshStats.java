@@ -19,8 +19,8 @@ public final class MeshStats {
 	public static final String REPORT_PROPERTY = "kantobridge.meshstats.report";
 	public static final boolean ENABLED = Boolean.getBoolean(PROPERTY);
 
-	/** Values per section sample: total, our own time (ns), our quads. */
-	private static final int STRIDE = 3;
+	/** Values per section sample: total, our own time (ns), our quads, the section ({@code SectionPos#asLong}). */
+	private static final int STRIDE = 4;
 	private static final Object LOCK = new Object();
 	private static final ThreadLocal<long[]> OPEN = ThreadLocal.withInitial(() -> new long[STRIDE]);
 
@@ -51,12 +51,17 @@ public final class MeshStats {
 
 	// ---- mesh threads ----
 
-	/** A section starts meshing on this thread (the dev mixin, at the head of {@code SectionCompiler#compile}). */
-	public static void sectionStart() {
+	/**
+	 * A section starts meshing on this thread (the dev mixin, at the head of {@code SectionCompiler#compile}).
+	 *
+	 * @param section the section's position, {@code SectionPos#asLong}
+	 */
+	public static void sectionStart(long section) {
 		long[] open = OPEN.get();
 		open[0] = System.nanoTime();
 		open[1] = 0;
 		open[2] = 0;
+		open[3] = section;
 	}
 
 	/** The section this thread meshed is done (the dev mixin, at every return of {@code compile}). */
@@ -76,6 +81,7 @@ public final class MeshStats {
 			samples[i] = end - open[0];
 			samples[i + 1] = open[1];
 			samples[i + 2] = open[2];
+			samples[i + 3] = open[3];
 			sampleCount++;
 		}
 	}
@@ -124,18 +130,20 @@ public final class MeshStats {
 		model = name;
 	}
 
-	/** The recorded sections: total time, our time and our quads per section (copies). */
+	/** The recorded sections: total time, our time, our quads and the section's position per sample (copies). */
 	public static long[][] sections() {
 		synchronized (LOCK) {
 			long[] total = new long[sampleCount];
 			long[] ours = new long[sampleCount];
 			long[] quads = new long[sampleCount];
+			long[] where = new long[sampleCount];
 			for (int s = 0; s < sampleCount; s++) {
 				total[s] = samples[s * STRIDE];
 				ours[s] = samples[s * STRIDE + 1];
 				quads[s] = samples[s * STRIDE + 2];
+				where[s] = samples[s * STRIDE + 3];
 			}
-			return new long[][] {total, ours, quads};
+			return new long[][] {total, ours, quads, where};
 		}
 	}
 

@@ -31,7 +31,9 @@ class BuildReportTest {
 		report.writeTo(file);
 		JsonObject json = ProtoJson.parseObject(Files.readString(file).trim());
 		for (String key : List.of("maps_requested", "maps_built", "overlaps", "story_cells", "warnings", "warning_codes", "pack_textures",
-				"world_index", "blocks_placed", "chunks", "layers", "elapsed_ms", "export_hash", "slot_map_hash", "status", "error")) {
+				"world_index", "blocks_placed", "chunks", "layers", "elapsed_ms", "export_hash", "slot_map_hash", "status", "error",
+				// The voxel plan's Tier B groups (V4): carriers and structures.
+				"shape_decor_skipped", "void_hull_cells", "void_ring_units", "structures", "structures_by_kind", "shape_templates")) {
 			assertTrue(json.has(key), "missing " + key);
 		}
 		assertEquals(5, json.get("maps_built").getAsInt());
@@ -40,7 +42,7 @@ class BuildReportTest {
 		assertTrue(json.get("error").isJsonNull());
 		// Values are numbers, booleans, codes, ids and hashes only: no nested content beyond count maps.
 		Set<String> objects = Set.of("warning_codes", "notes", "story_cells_by_type", "throughput", "viewpoints", "blocks_by_kind", "cells_by_kind",
-				"solid_cells_by_height", "shape_keys_by_kind", "selfcheck", "densest_section");
+				"solid_cells_by_height", "shape_keys_by_kind", "selfcheck", "densest_section", "structures_by_kind");
 		for (String key : json.keySet()) {
 			assertTrue(!json.get(key).isJsonObject() || objects.contains(key), key + " is an unexpected object");
 			assertTrue(!json.get(key).isJsonArray(), key + " is an array");

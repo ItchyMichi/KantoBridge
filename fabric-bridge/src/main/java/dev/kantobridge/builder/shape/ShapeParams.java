@@ -53,9 +53,15 @@ public record ShapeParams(String planner, String heights, int maxUnit, int minRe
 				false, false, 16, 4);
 	}
 
+	/** V4: Tier B. Tufts, cell units (hulls, objects) and the void fill's ring of border trees. */
+	public static ShapeParams v4() {
+		return new ShapeParams("kb-shapes/3", MEASURED, HeightRules.MAX_UNIT, HeightRules.MIN_REPEAT_ROWS, 2, HeightRules.INTERIOR_WALL,
+				true, false, 16, 4);
+	}
+
 	/** The parameters a build plans with. */
 	public static ShapeParams current() {
-		return v3();
+		return v4();
 	}
 
 	/** The parameters as they appear in the shape index. */

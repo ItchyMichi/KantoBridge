@@ -20,6 +20,8 @@ import java.util.Set;
  * <li>{@code occluded_ground}: the share of ground pixels a structure hides (inherent to 3D, only reported);</li>
  * <li>{@code back_faces}: north faces nothing hides from the north (the "second front" problem, only reported).</li>
  * </ul>
+ * The drawn pixels of cell units built as hulls or objects are scored per unit ({@code CellUnits}); their background
+ * counts as ground ({@link Reference#excluded}, {@link Reference#ground}).
  * Pure; the reference and the projection exist in memory only. Only the five numbers per map leave it.
  */
 public final class SelfCheck {
@@ -46,7 +48,7 @@ public final class SelfCheck {
 	}
 
 	/** A texel's identity: the tile, and its column and row in the tile. */
-	static long texel(int tile, int tx, int ty) {
+	public static long texel(int tile, int tx, int ty) {
 		return ((long) tile << 16) | ((long) tx << 8) | ty;
 	}
 
@@ -92,6 +94,13 @@ public final class SelfCheck {
 		for (int sy = 0; sy < h; sy++) {
 			for (int sx = 0; sx < w; sx++) {
 				int i = sy * w + sx;
+				if (near[i] == Float.NEGATIVE_INFINITY) {
+					holes++;
+				}
+				if (reference.excluded(sx, sy)) {
+					// A unit's drawn pixel: its unit's own self-check scores it.
+					continue;
+				}
 				boolean ground = reference.ground(sx, sy);
 				if (ground) {
 					groundPixels++;
@@ -99,7 +108,6 @@ public final class SelfCheck {
 					structurePixels++;
 				}
 				if (near[i] == Float.NEGATIVE_INFINITY) {
-					holes++;
 					continue;
 				}
 				boolean match = source[i] == reference.texel(sx, sy);
@@ -119,7 +127,7 @@ public final class SelfCheck {
 				groundPixels == 0 ? 0 : occluded / (double) groundPixels, backFaces[0]);
 	}
 
-	private static int texelOf(float uv, int artPx) {
+	public static int texelOf(float uv, int artPx) {
 		return Math.max(0, Math.min(artPx - 1, (int) Math.floor(uv * artPx / 16)));
 	}
 
@@ -129,7 +137,7 @@ public final class SelfCheck {
 
 	/** A projected texel: screen pixel, nearness, and the texel's (u, v) in 1/16 of the texture. */
 	@FunctionalInterface
-	interface PixelSink {
+	public interface PixelSink {
 		void pixel(int sx, int sy, float nearness, float u, float v);
 	}
 
@@ -137,10 +145,12 @@ public final class SelfCheck {
 	private static final int SAMPLES = 32;
 
 	/**
-	 * Projects every texel-sized cell of an up- or south-facing axis-aligned quad. Coordinates are 1/16 block; one screen pixel is
-	 * {@code unitsPerPixel} of them. The texel's centre picks the screen pixel.
+	 * Projects every texel-sized cell of a quad that looks up or south. Coordinates are 1/16 block; one screen pixel is
+	 * {@code unitsPerPixel} of them; the cell's centre picks the screen pixel. An axis-aligned rectangle is projected cell
+	 * by cell, its (u, v) interpolated between its corners' (a rectangle of UVs, or one per corner); anything else is
+	 * sampled.
 	 */
-	static void project(ShapeQuad quad, int bx, int by, int bz, int unitsPerPixel, PixelSink sink) {
+	public static void project(ShapeQuad quad, int bx, int by, int bz, int unitsPerPixel, PixelSink sink) {
 		if ((quad.face() != ShapeQuad.UP && quad.face() != ShapeQuad.SOUTH) || !rectangle(quad)) {
 			sample(quad, bx, by, bz, unitsPerPixel, sink);
 			return;
@@ -159,47 +169,51 @@ public final class SelfCheck {
 			maxY = Math.max(maxY, quad.y(c));
 			maxZ = Math.max(maxZ, quad.z(c));
 		}
-		// Up and south faces both run u along +x; v runs north to south (up) or top to bottom (south).
-		byte[] rect = quad.uv();
-		float u0 = rect[0];
-		float v0 = rect[1];
-		float u1 = rect[2];
-		float v1 = rect[3];
+		// The corners' UVs, and which end of each axis each corner sits at: the bilinear weights of a cell's centre.
+		float[] cu = new float[4];
+		float[] cv = new float[4];
+		boolean[] farA = new boolean[4];
+		boolean[] farB = new boolean[4];
+		boolean up = quad.face() == ShapeQuad.UP;
+		for (int c = 0; c < 4; c++) {
+			cu[c] = quad.cornerU(c);
+			cv[c] = quad.cornerV(c);
+			farA[c] = quad.x(c) == maxX;
+			farB[c] = up ? quad.z(c) == maxZ : quad.y(c) == maxY;
+		}
 		int ox = bx * 16;
 		int oy = by * 16;
 		int oz = bz * 16;
 		int half = unitsPerPixel / 2;
-		if (quad.face() == ShapeQuad.UP) {
-			int y = oy + maxY;
-			for (int x = minX; x < maxX; x += unitsPerPixel) {
-				for (int z = minZ; z < maxZ; z += unitsPerPixel) {
-					int wx = ox + x + half;
-					int wz = oz + z + half;
-					float fu = (x + half - minX) / (float) (maxX - minX);
-					float fv = (z + half - minZ) / (float) (maxZ - minZ);
-					sink.pixel(Math.floorDiv(wx, unitsPerPixel), Math.floorDiv(wz - y, unitsPerPixel), wz + y, lerp(u0, u1, fu), lerp(v0, v1, fv));
+		int minB = up ? minZ : minY;
+		int maxB = up ? maxZ : maxY;
+		for (int x = minX; x < maxX; x += unitsPerPixel) {
+			float fa = (x + half - minX) / (float) (maxX - minX);
+			for (int b = minB; b < maxB; b += unitsPerPixel) {
+				float fb = (b + half - minB) / (float) (maxB - minB);
+				float u = 0;
+				float v = 0;
+				for (int c = 0; c < 4; c++) {
+					float w = (farA[c] ? fa : 1 - fa) * (farB[c] ? fb : 1 - fb);
+					u += w * cu[c];
+					v += w * cv[c];
 				}
-			}
-		} else {
-			int z = oz + maxZ;
-			for (int x = minX; x < maxX; x += unitsPerPixel) {
-				for (int y = minY; y < maxY; y += unitsPerPixel) {
-					int wx = ox + x + half;
-					int wy = oy + y + half;
-					float fu = (x + half - minX) / (float) (maxX - minX);
-					float fv = (maxY - (y + half)) / (float) (maxY - minY);
-					sink.pixel(Math.floorDiv(wx, unitsPerPixel), Math.floorDiv(z - wy, unitsPerPixel), z + wy, lerp(u0, u1, fu), lerp(v0, v1, fv));
+				int wx = ox + x + half;
+				if (up) {
+					int y = oy + maxY;
+					int wz = oz + b + half;
+					sink.pixel(Math.floorDiv(wx, unitsPerPixel), Math.floorDiv(wz - y, unitsPerPixel), wz + y, u, v);
+				} else {
+					int z = oz + maxZ;
+					int wy = oy + b + half;
+					sink.pixel(Math.floorDiv(wx, unitsPerPixel), Math.floorDiv(z - wy, unitsPerPixel), z + wy, u, v);
 				}
 			}
 		}
 	}
 
-	private static float lerp(float a, float b, float t) {
-		return a + (b - a) * t;
-	}
-
 	/** True when the quad's four corners are the four corners of its bounding rectangle. */
-	static boolean rectangle(ShapeQuad quad) {
+	public static boolean rectangle(ShapeQuad quad) {
 		int minX = Math.min(Math.min(quad.x(0), quad.x(1)), Math.min(quad.x(2), quad.x(3)));
 		int maxX = Math.max(Math.max(quad.x(0), quad.x(1)), Math.max(quad.x(2), quad.x(3)));
 		int minY = Math.min(Math.min(quad.y(0), quad.y(1)), Math.min(quad.y(2), quad.y(3)));

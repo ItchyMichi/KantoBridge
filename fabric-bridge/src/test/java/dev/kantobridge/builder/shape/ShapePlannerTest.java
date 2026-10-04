@@ -43,7 +43,7 @@ class ShapePlannerTest {
 	}
 
 	private static ShapePlanner.MapShapes planned(SceneMap map) {
-		return ShapePlanner.planMap(map, 0, ShapeParams.v2());
+		return ShapePlanner.planMap(map, null, 0, ShapeParams.v2());
 	}
 
 	private static ShapeKey[] column(ShapePlanner.MapShapes shapes, SceneMap map, int tx, int ty) {

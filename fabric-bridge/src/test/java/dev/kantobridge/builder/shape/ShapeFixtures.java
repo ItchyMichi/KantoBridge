@@ -1,5 +1,6 @@
 package dev.kantobridge.builder.shape;
 
+import dev.kantobridge.scene.Animated;
 import dev.kantobridge.scene.CellKind;
 import dev.kantobridge.scene.CellTag;
 import dev.kantobridge.scene.Env;
@@ -22,12 +23,14 @@ import java.util.Set;
  *
  * <p>One character is one art tile (one block column); its tile id is its position in {@link #LEGEND}. A cell is 2×2
  * tiles and takes its kind from its bottom-left tile, as Gen 1 does: {@code ~} water, {@code >} a ledge hopping down,
- * {@code =} a counter, an upper-case letter or {@code #} solid, anything else walkable; {@code +} is a walkable door.
+ * {@code =} a counter, an upper-case letter, {@code #} or {@code !} solid ({@code !} a sign), anything else walkable;
+ * {@code +} is a walkable door. For Tier B: {@code ,} is the atlas's grass tile, {@code 0} a tile that cycles through
+ * frames (a flower), {@code T} wears the foliage hint ({@link #TIER_B}).
  */
 public final class ShapeFixtures {
 	public static final String ATLAS = "tilesets.fix";
 	public static final String PALETTE = "FIX_PALETTE";
-	public static final String LEGEND = ".,+abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ#~>=0123456789";
+	public static final String LEGEND = ".,+abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ#~>=0123456789!";
 	public static final int PER_CELL = 2;
 	public static final int ART_PX = 8;
 	/** Feet level of fixture surface maps, and of the first interior layer. */
@@ -56,14 +59,14 @@ public final class ShapeFixtures {
 		if (c == '=') {
 			return CellKind.COUNTER;
 		}
-		if (c == '#' || Character.isUpperCase(c)) {
+		if (c == '#' || c == '!' || Character.isUpperCase(c)) {
 			return CellKind.SOLID;
 		}
 		return CellKind.WALK;
 	}
 
 	static int tagsOf(char c) {
-		return c == '+' ? CellTag.DOOR.bit() | CellTag.WARP.bit() : 0;
+		return c == '+' ? CellTag.DOOR.bit() | CellTag.WARP.bit() : c == '!' ? CellTag.SIGN.bit() : 0;
 	}
 
 	/** An outdoor surface map. */
@@ -138,13 +141,32 @@ public final class ShapeFixtures {
 				open.objects(), sites);
 	}
 
+	/** {@code map} with every tile of its drawn border (and its own) {@code tile}. */
+	public static SceneMap withBorder(SceneMap map, char tile) {
+		int[] border = new int[map.ownBorder().length];
+		Arrays.fill(border, tile(tile));
+		return new SceneMap(map.id(), map.index(), map.tileset(), map.atlas(), map.palette(), map.w(), map.h(), map.perCell(), map.surface(),
+				map.env(), map.tiles(), map.closedTiles(), map.kinds(), map.tags(), map.dirs(), map.surface() ? border : null, border, map.objects(),
+				map.swapSites());
+	}
+
+	/** The fixtures' atlas for Tier B: {@code ,} grass, {@code 0} a flower (frames), {@code T} foliage. */
+	public static final SceneAtlas TIER_B = new SceneAtlas(ATLAS, 16, LEGEND.length(), ART_PX,
+			List.of(new Animated(new int[] {tile('0')}, Animated.FRAMES, 20, new int[0], List.of("fix.flower1", "fix.flower2"), new int[] {1, 2},
+					null, new int[0], null)),
+			Set.of(tile(',')), Map.of(tile('T'), SceneAtlas.HINT_FOLIAGE));
+
 	/** A scene of the maps, the first one the layout's root. */
 	public static Scene scene(SceneMap... maps) {
+		return scene(new SceneAtlas(ATLAS, 16, LEGEND.length(), ART_PX, List.of(), Set.of(), Map.of()), maps);
+	}
+
+	/** A scene of the maps over {@code atlas}, the first one the layout's root. */
+	public static Scene scene(SceneAtlas atlas, SceneMap... maps) {
 		Map<String, SceneMap> byId = new LinkedHashMap<>();
 		for (SceneMap map : maps) {
 			byId.put(map.id(), map);
 		}
-		SceneAtlas atlas = new SceneAtlas(ATLAS, 16, LEGEND.length(), ART_PX, List.of(), Set.of(), Map.of());
 		return new Scene("fix", "fix", "fixtures/1", "0".repeat(64), PaletteModel.MAP4, PER_CELL * ART_PX, ART_PX, Map.of(ATLAS, atlas), byId,
 				Map.of(), maps[0].id());
 	}

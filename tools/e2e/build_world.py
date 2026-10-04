@@ -231,9 +231,9 @@ def shape_gates(full, again, filtered):
 
 
 def budget_gates(report, full_build=True):
-    """The budgets of section 3.8 that a build report can check, and the self-check's gates (no holes, the ground exact,
-    the structure floors). The build's time and rate are judged for a full build only. Returns the names of the failed
-    gates.
+    """The budgets of section 3.8 that a build report can check, the self-check's gates (no holes, the ground exact,
+    the structure floors) and Tier B's (no unit in the void fill beyond its ring; skipped decoration and structures
+    reported). The build's time and rate are judged for a full build only. Returns the names of the failed gates.
     """
     selfcheck = report.get("selfcheck") if isinstance(report.get("selfcheck"), dict) else {}
     throughput = report.get("throughput") if isinstance(report.get("throughput"), dict) else {}
@@ -247,6 +247,9 @@ def budget_gates(report, full_build=True):
         "selfcheck_structure": (selfcheck.get("structure_match_p05") or 0) >= SELFCHECK_STRUCTURE_P05_MIN
         and (selfcheck.get("structure_match_min") or 0) >= SELFCHECK_STRUCTURE_MIN,
         "shape_map_fits": 0 < (report.get("shape_map_wire_chars") or 0) <= MAX_SHAPE_MAP_PARTS * PART_CHARS,
+        # Tier B (V4): the void fill never holds a unit beyond its ring; skipped decoration and structures are reported.
+        "void_hull_cells": report.get("void_hull_cells") == 0,
+        "tier_b_reported": isinstance(report.get("shape_decor_skipped"), int) and isinstance(report.get("structures_by_kind"), dict),
     }
     if full_build:
         checks["placement_rate"] = (throughput.get("blocks_per_s") or 0) >= MIN_BLOCKS_PER_S

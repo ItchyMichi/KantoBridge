@@ -8,7 +8,7 @@ package dev.kantobridge.builder.shape.geom;
  * the face's convention maps onto its corners ({@link #cornerUvs()}): top faces show the texture as on the map
  * (texture top = north); south faces upright; north faces seen from the north; west and east faces upright as seen from
  * outside (vanilla's default face mapping). A reversed pair ({@code u0 > u1}) mirrors. A sloped quad ({@code face} 6)
- * gives eight values, one (u, v) per corner.
+ * gives eight values, one (u, v) per corner; a face quad may too (merged voxel faces whose texels repeat or step).
  *
  * @param face    0..5 down, up, north, south, west, east; 6 sloped
  * @param xyz     4 corners × (x, y, z), in the vanilla vertex order of the face
@@ -34,8 +34,8 @@ public record ShapeQuad(byte face, short[] xyz, int texture, byte[] uv, byte cul
 		if (face < 0 || face > SLOPED || xyz.length != 12 || (uv.length != 4 && uv.length != 8) || cull < -1 || cull > EAST) {
 			throw new IllegalArgumentException("malformed quad");
 		}
-		if ((face == SLOPED) != (uv.length == 8)) {
-			throw new IllegalArgumentException("a sloped quad gives one uv per corner, a face quad a rectangle");
+		if (face == SLOPED && uv.length != 8) {
+			throw new IllegalArgumentException("a sloped quad gives one uv per corner");
 		}
 		for (short v : xyz) {
 			if (v < -8 || v > 24) {
@@ -60,6 +60,16 @@ public record ShapeQuad(byte face, short[] xyz, int texture, byte[] uv, byte cul
 			default -> throw new IllegalArgumentException("not a face");
 		};
 		return new ShapeQuad((byte) face, p, texture, new byte[] {(byte) u0, (byte) v0, (byte) u1, (byte) v1}, (byte) cull, (byte) flags);
+	}
+
+	/** The same quad with one (u, v) per corner. */
+	public ShapeQuad withCornerUvs(byte[] uv8) {
+		return new ShapeQuad(this.face, this.xyz, this.texture, uv8, this.cull, this.flags);
+	}
+
+	/** The same quad wearing another texture. */
+	public ShapeQuad withTexture(int texture) {
+		return texture == this.texture ? this : new ShapeQuad(this.face, this.xyz, texture, this.uv, this.cull, this.flags);
 	}
 
 	/** One full face of the block, the whole texture on it, culled by that side. */

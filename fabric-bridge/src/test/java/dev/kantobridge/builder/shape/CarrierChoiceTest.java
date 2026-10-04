@@ -70,14 +70,24 @@ class CarrierChoiceTest {
 	}
 
 	@Test
-	void treeLinesCountersAndGroundAreAsBefore() {
+	void treeWallsAreUnitsCountersAndGroundAsBefore() {
 		MapPlacement town = plan.index().map("TEST_TOWN");
-		// A border tree: two tile_full blocks on the floor block.
-		assertEquals(BlockCode.KIND_FULL, view.kind(town.x(), 64, town.z()));
-		assertEquals(BlockCode.KIND_FULL, view.kind(town.x(), 65, town.z()));
+		// A border tree (V4): a unit, two shape_full blocks on a floor block wearing the town's ground.
+		assertEquals(BlockCode.KIND_SHAPE, view.kind(town.x(), 64, town.z()));
+		assertEquals(BlockCode.KIND_SHAPE, view.kind(town.x(), 65, town.z()));
 		assertEquals(BlockCode.AIR, view.code(town.x(), 66, town.z()));
+		ShapeKey unit = plan.shapes().index().key(plan.shapes().map().shapeAt(town.x(), 65, town.z()));
+		assertEquals(ShapeKey.Kind.CELL, unit.kind());
+		assertEquals(0, unit.number(4), "its ground is the ground tile");
+		assertEquals(view.code(town.x() + 4, 63, town.z() + 4), view.code(town.x(), 63, town.z()), "the floor wears the ground's slot");
 		// Open ground: nothing at feet level.
 		assertEquals(BlockCode.AIR, view.code(town.x() + 4, 64, town.z() + 4));
+		// Tall grass: a tuft on a decor carrier at feet level, nothing above.
+		int gx = town.x() + 14 * 2;
+		int gz = town.z() + 4 * 2;
+		assertEquals(BlockCode.decor(false), view.code(gx, 64, gz));
+		assertEquals(BlockCode.AIR, view.code(gx, 65, gz));
+		assertEquals(ShapeKey.Kind.TUFT, plan.shapes().index().key(plan.shapes().map().shapeAt(gx, 64, gz)).kind());
 		MapPlacement house = plan.index().map("TEST_HOUSE");
 		// The counter: one block high.
 		assertEquals(BlockCode.KIND_FULL, view.kind(house.x() + 8, house.y(), house.z() + 6));

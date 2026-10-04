@@ -100,6 +100,37 @@ public final class QuadCounter {
 		return n;
 	}
 
+	/**
+	 * The quads the runtime model emits at one position, before Minecraft culls faces against opaque neighbours (the
+	 * renderer does that after the model): a shape's quads but those its shaped neighbours' face masks hide, a carrier's
+	 * plain cube without a shape, nothing for decoration, ledges and story blocks. The dev-only mesh check compares this,
+	 * summed over a section, with what the model emitted there (docs/specs/VOXEL_BLOCKS_PLAN.md §6.3).
+	 */
+	public static int emittedAt(World world, @Nullable ShapeTable table, int x, int y, int z) {
+		int kind = BlockCode.kind(world.code(x, y, z));
+		if (kind != BlockCode.KIND_FULL && kind != BlockCode.KIND_HALF && kind != BlockCode.KIND_SHAPE && kind != BlockCode.KIND_DECOR
+				&& kind != BlockCode.KIND_LEDGE) {
+			return 0;
+		}
+		int id = world.shapeId(x, y, z);
+		ShapeMesh mesh = id == 0 || table == null ? null : table.mesh(id);
+		if (mesh == null) {
+			return kind == BlockCode.KIND_DECOR || kind == BlockCode.KIND_LEDGE ? 0 : 6;
+		}
+		int n = 0;
+		for (int q = 0; q < mesh.size(); q++) {
+			int cull = mesh.quads().get(q).cull();
+			if (cull >= 0) {
+				int neighbour = world.shapeId(x + FaceMasks.DX[cull], y + FaceMasks.DY[cull], z + FaceMasks.DZ[cull]);
+				if (neighbour != 0 && FaceMasks.culled(mesh, q, table.mesh(neighbour))) {
+					continue;
+				}
+			}
+			n++;
+		}
+		return n;
+	}
+
 	/** Counts a planned world: every position of its volumes, the shape ids from its shape map. */
 	public static Stats count(WorldPlan plan, ShapeMap map, ShapeTable table) {
 		ShapeMap.Lookup lookup = map.lookup();

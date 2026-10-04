@@ -97,7 +97,13 @@ public final class BuildReport {
 	public long shapeHostsAdded;
 	public long shapeDecorSkipped;
 	public long voidHullCells;
+	/** Void-fill cells within the ring planned as units of their owner's border (V4). */
+	public long voidRingUnits;
 	public long closedShapeCells;
+	// Structures (V4, V7): Tier A regions and unit cells by what they became; templates (V7).
+	public long structures;
+	public Map<String, Long> structuresByKind = new java.util.LinkedHashMap<>();
+	public int shapeTemplates;
 	// Quads, after culling (V3): per shaped block, per 16×16×16 section, and the densest section's corner.
 	public double shapeQuadsMeanBlock;
 	public int shapeQuadsMaxBlock;
@@ -113,7 +119,7 @@ public final class BuildReport {
 
 	/** The self-check's numbers over all checked maps. */
 	public record SelfCheckSummary(int maps, long holes, double groundMatchMin, double structureMatchMin, double structureMatchP05,
-			double occludedGroundMax, long backFaces, int unitsFailed, long ms) {
+			double occludedGroundMax, long backFaces, long unitsFailed, long templatesFailed, long ms) {
 	}
 
 	public boolean ok() {
@@ -193,7 +199,13 @@ public final class BuildReport {
 		out.addProperty("shape_hosts_added", this.shapeHostsAdded);
 		out.addProperty("shape_decor_skipped", this.shapeDecorSkipped);
 		out.addProperty("void_hull_cells", this.voidHullCells);
+		out.addProperty("void_ring_units", this.voidRingUnits);
 		out.addProperty("closed_shape_cells", this.closedShapeCells);
+		out.addProperty("structures", this.structures);
+		JsonObject byKind = new JsonObject();
+		this.structuresByKind.forEach(byKind::addProperty);
+		out.add("structures_by_kind", byKind);
+		out.addProperty("shape_templates", this.shapeTemplates);
 		out.addProperty("shape_quads_mean_block", round4(this.shapeQuadsMeanBlock));
 		out.addProperty("shape_quads_max_block", this.shapeQuadsMaxBlock);
 		out.addProperty("shape_quads_p99_block", this.shapeQuadsP99Block);
@@ -223,6 +235,7 @@ public final class BuildReport {
 			check.addProperty("occluded_ground_max", round4(c.occludedGroundMax()));
 			check.addProperty("back_faces", c.backFaces());
 			check.addProperty("units_failed", c.unitsFailed());
+			check.addProperty("templates_failed", c.templatesFailed());
 			check.addProperty("ms", c.ms());
 			out.add("selfcheck", check);
 		}

@@ -5,6 +5,7 @@ import dev.kantobridge.client.bridge.BridgeRuntime;
 import dev.kantobridge.client.bridge.ConnectionState;
 import dev.kantobridge.client.bridge.Dispatcher;
 import dev.kantobridge.client.bridge.JsonFields;
+import dev.kantobridge.client.shape.ClientShapes;
 import dev.kantobridge.client.ui.Gen1Draw;
 import dev.kantobridge.client.world.ClientWorldIndex;
 import dev.kantobridge.entity.KbEntities;
@@ -234,15 +235,20 @@ public final class PuppetRuntime implements PuppetManager.Listener {
 		entity.setPos(position);
 	}
 
-	/** Where a puppet stands: its (sliding) cell's centre on its map's walking surface; null for a map not in the world. */
+	/**
+	 * Where a puppet stands: its (sliding) cell's centre on its map's walking surface, or on top of a solid cell's column
+	 * (an item on a table, the voxel plan's §5.7); null for a map not in the world.
+	 */
 	static @Nullable Vec3 position(WorldIndex index, Puppet puppet, float partialFrames) {
 		MapPlacement map = index.map(puppet.map());
 		if (map == null) {
 			return null;
 		}
 		double half = Scale.CELL_BLOCKS / 2.0;
-		return new Vec3(map.x() + puppet.cellX(partialFrames) * Scale.CELL_BLOCKS + half, map.y(),
-				map.z() + puppet.cellY(partialFrames) * Scale.CELL_BLOCKS + half);
+		double cx = puppet.cellX(partialFrames);
+		double cy = puppet.cellY(partialFrames);
+		int top = ClientShapes.topHeight(index, puppet.map(), (int) Math.round(cx), (int) Math.round(cy));
+		return new Vec3(map.x() + cx * Scale.CELL_BLOCKS + half, map.y() + top, map.z() + cy * Scale.CELL_BLOCKS + half);
 	}
 
 	// ---- HUD and debug ----

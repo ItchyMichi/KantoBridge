@@ -21,7 +21,7 @@ abstract class SectionCompilerTimingMixin {
 	@Inject(method = "compile", at = @At("HEAD"))
 	private void kantobridge$sectionStart(SectionPos sectionPos, RenderChunkRegion region, VertexSorting vertexSorting,
 			SectionBufferBuilderPack buffers, CallbackInfoReturnable<SectionCompiler.Results> cir) {
-		MeshStats.sectionStart();
+		MeshStats.sectionStart(sectionPos.asLong());
 	}
 
 	@Inject(method = "compile", at = @At("RETURN"))

@@ -13,8 +13,9 @@ import org.jetbrains.annotations.Nullable;
 
 /**
  * One planned map's geometry as the world would draw it (docs/specs/VOXEL_BLOCKS_PLAN.md §5.6), for the self-check: the
- * floor's top where no column stands on it, and every block of every column and every ledge lip: its shape's quads
- * where it has a shape, the plain cube of its own tile otherwise. A face is left out where the game leaves it out: on
+ * floor's top where no opaque block stands on it (wearing a unit's ground tile under a unit), and every block of every
+ * column, every ledge lip and every tuft: its shape's quads where it has a shape, the plain cube of its own tile
+ * otherwise. A face is left out where the game leaves it out: on
  * an opaque {@code tile_full} neighbour (the floor, and the columns' blocks other than {@code shape_full} roofs), and on a
  * shaped neighbour whose face mask covers it ({@link FaceMasks}).
  */
@@ -67,10 +68,13 @@ public final class PlannedGeometry implements SelfCheck.Geometry {
 	public void forEach(SelfCheck.QuadVisitor visitor) {
 		for (int ty = 0; ty < this.map.artRows(); ty++) {
 			for (int tx = 0; tx < this.cols; tx++) {
+				int i = ty * this.cols + tx;
 				TextureKey ownKey = new TextureKey(this.map.atlas(), this.map.palette(), this.map.tile(tx, ty));
 				int blocks = this.blocks(tx, ty);
-				if (blocks == 0) {
-					visitor.quad(tx, -1, ty, ShapeQuad.fullFace(ShapeQuad.UP, 0), ownKey);
+				if (blocks == 0 || (this.shapes.shapeMask()[i] & 1) != 0) {
+					// The floor's top shows where nothing opaque stands on it: walkable tiles, and under a unit (its ground).
+					TextureKey floorKey = new TextureKey(this.map.atlas(), this.map.palette(), this.shapes.floorTile(i, this.map.tile(tx, ty)));
+					visitor.quad(tx, -1, ty, ShapeQuad.fullFace(ShapeQuad.UP, 0), floorKey);
 				}
 				ShapeKey[] column = this.shapes.open()[ty * this.cols + tx];
 				int levels = Math.max(blocks, column == null ? 0 : column.length);

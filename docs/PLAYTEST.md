@@ -447,3 +447,32 @@ lip. Blocks change, so rebuild your world first (Minecraft closed):
       you where they did.
 - [ ] Interiors look as before (walls two blocks high).
 - [ ] An old world (one built before this rebuild) still loads and shows its old look.
+
+### V4: Tier B shapes
+
+Trees are round, signs and posts stand as thin cut-outs on their own drawing, tall grass and flowers stand up from the
+ground, and the void fill's two-cell ring around each outdoor map holds the border trees as round trees. Blocks change,
+so rebuild your world first (Minecraft closed):
+`tools\.venv\Scripts\python.exe tools\e2e\build_world.py --maps all --world Kanto`. The first time you join, your
+client builds the tree and grass shapes from its own export (F7's Shapes line says `building`, then shows the table).
+
+- [ ] **Tall grass:** walk into it from the south: its southern row of strokes hides your feet, and you walk through it
+      freely. Flowers stand up too and still animate.
+- [ ] **Wild Pokémon still appear in tall grass** (Route 1, and any route with grass).
+- [ ] **Signs and posts** stand as thin cut-outs on their own drawing, the ground showing around them; reading a sign
+      works as before.
+- [ ] **Trees:** lone trees, tree walls along routes and the border trees around towns (two cells beyond the map) are
+      round; no holes, no black faces, no flicker where trees touch. You still can't walk into or through them, nor
+      leave a map through its border trees.
+- [ ] **An item on a table** (in a house or a lab) sits on top of the table, not inside it.
+- [ ] From above, looking north at 45°, the scene still reads like the 2D game (round trees show a little higher than
+      they're drawn).
+- [ ] Interiors: lone furniture (plants, statues) may stand as cut-outs or round shapes; nothing new to bump into.
+- [ ] **Two players:** the guest sees the same trees and grass, drawn from their own export.
+- [ ] `"shapes": "off"` still shows the V1 cubes.
+- [ ] **X2, shapes against cubes** on the same world: measure (as above, three runs per scene) with `"shapes": "on"`,
+      then with `"off"` (restart the game in between), at render distance 16 and 32. Pass: with shapes, at least 90 %
+      of the cubes' frame rate at 16 and 85 % at 32; the heap with shapes at most 32 MB more.
+- [ ] **X3, mesh time** (the same runs): the report's `ours_ms` has median ≤ 1.0 ms and P95 ≤ 4 ms; with shapes,
+      `section_ms` P95 ≤ 2 × the cubes' and ≤ 15 ms. Each run also records `prediction` (sections whose emitted quads
+      equal the pure-Java count): `equal` should be all of `sections`.

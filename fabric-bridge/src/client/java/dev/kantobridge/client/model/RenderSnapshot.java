@@ -31,7 +31,7 @@ import org.jetbrains.annotations.Nullable;
 public final class RenderSnapshot {
 	/** Before the first publish: the model draws its own placeholder cube. */
 	public static final RenderSnapshot BOOT = new RenderSnapshot(-1, null, null, new TextureAtlasSprite[2][], new Mesh[2][], new Mesh[2],
-			null, false, null, 0, -1, null, null, new TextureAtlasSprite[0], null);
+			null, false, null, 0, -1, null, null, new TextureAtlasSprite[0], null, null);
 
 	private static volatile RenderSnapshot current = BOOT;
 
@@ -56,12 +56,14 @@ public final class RenderSnapshot {
 	/** By the shape table's texture index: the key's sprite, or null (the placeholder). */
 	private final TextureAtlasSprite[] shapeSprites;
 	private final @Nullable RenderMaterial cutout;
+	/** Solid without ambient occlusion: thin standing cards (tufts), which would darken their own neighbours. */
+	private final @Nullable RenderMaterial flat;
 
 	@SuppressWarnings("unchecked")
 	RenderSnapshot(long generation, @Nullable TextureAtlasSprite placeholder, @Nullable String slotMapHash, TextureAtlasSprite[][] sprites,
 			Mesh[][] cubes, Mesh[] placeholderCubes, @Nullable RenderMaterial solid, boolean kanto, @Nullable String artSet, int keys,
 			int missing, ShapeMap.@Nullable Lookup shapes, @Nullable ShapeTable table, TextureAtlasSprite[] shapeSprites,
-			@Nullable RenderMaterial cutout) {
+			@Nullable RenderMaterial cutout, @Nullable RenderMaterial flat) {
 		this.generation = generation;
 		this.placeholder = placeholder;
 		this.slotMapHash = slotMapHash;
@@ -79,6 +81,7 @@ public final class RenderSnapshot {
 		this.table = table;
 		this.shapeSprites = shapeSprites;
 		this.cutout = cutout;
+		this.flat = flat;
 	}
 
 	/** The shape id at a position: 0 without one, without a shape map, or while the table builds. */
@@ -114,7 +117,7 @@ public final class RenderSnapshot {
 			int texture = quad.texture();
 			TextureAtlasSprite sprite = texture < this.shapeSprites.length && this.shapeSprites[texture] != null ? this.shapeSprites[texture]
 					: placeholder;
-			ShapeEmitter.emit(quad, sprite, quad.has(ShapeQuad.CUTOUT) ? this.cutout : this.solid, out);
+			ShapeEmitter.emit(quad, sprite, quad.has(ShapeQuad.CUTOUT) ? this.cutout : quad.has(ShapeQuad.NO_AO) ? this.flat : this.solid, out);
 			emitted++;
 		}
 		return emitted;

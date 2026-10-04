@@ -5,9 +5,15 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import com.mojang.blaze3d.platform.InputConstants;
 import dev.kantobridge.KantoBridge;
+import dev.kantobridge.block.KbBlocks;
+import dev.kantobridge.builder.plan.BlockCode;
+import dev.kantobridge.builder.shape.QuadCounter;
+import dev.kantobridge.builder.shape.geom.ShapeTable;
 import dev.kantobridge.client.bridge.BridgeRuntime;
+import dev.kantobridge.client.shape.ClientShapes;
 import dev.kantobridge.proto.ProtoJson;
 import dev.kantobridge.proto.ProtocolException;
+import dev.kantobridge.world.ShapeMap;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -15,7 +21,10 @@ import java.nio.file.Path;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.Arrays;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.Locale;
+import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
@@ -24,17 +33,21 @@ import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
 import net.fabricmc.fabric.api.client.rendering.v1.InvalidateRenderStateCallback;
 import net.fabricmc.fabric.api.client.rendering.v1.WorldRenderEvents;
 import net.fabricmc.fabric.api.renderer.v1.RendererAccess;
-import net.fabricmc.fabric.api.resource.ResourceManagerHelper;
 import net.fabricmc.fabric.api.resource.IdentifiableResourceReloadListener;
+import net.fabricmc.fabric.api.resource.ResourceManagerHelper;
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.resources.language.I18n;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.SectionPos;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.packs.PackType;
 import net.minecraft.server.packs.resources.ResourceManager;
 import net.minecraft.util.profiling.ProfilerFiller;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.level.block.Block;
 import org.jetbrains.annotations.Nullable;
 import org.lwjgl.glfw.GLFW;
 
@@ -225,6 +238,7 @@ public final class MeshStatsRuntime {
 		rate.addProperty("low1", fps[1]);
 		run.add("fps", rate);
 		run.addProperty("heap_mb", MeshStats.round(heapMb));
+		run.add("prediction", prediction(minecraft, sections));
 		run.addProperty("reload_ms", MeshStats.round(this.reloadMs));
 		run.addProperty("join_to_view_ms", MeshStats.round(this.joinToViewMs));
 		this.last = run;
@@ -247,6 +261,74 @@ public final class MeshStatsRuntime {
 		} catch (IOException e) {
 			KantoBridge.LOGGER.error("meshstats: could not write {} ({})", path, e.getClass().getSimpleName());
 		}
+	}
+
+	/** Sections the dev-only mesh check compares per run, at most. */
+	static final int PREDICTED = 256;
+
+	/**
+	 * The dev-only mesh check (docs/specs/VOXEL_BLOCKS_PLAN.md §6.3): for up to {@link #PREDICTED} sections this run
+	 * meshed, the quads our model emitted there against the pure-Java prediction ({@link QuadCounter#emittedAt}) from
+	 * this client's level and shapes. Counts only: sections compared, how many agree, the largest difference.
+	 */
+	static JsonObject prediction(Minecraft minecraft, long[][] sections) {
+		Map<Long, Long> latest = new LinkedHashMap<>();
+		for (int s = 0; s < sections[3].length; s++) {
+			latest.put(sections[3][s], sections[2][s]);
+		}
+		ClientLevel level = minecraft.level;
+		ShapeTable table = ClientShapes.table();
+		ShapeMap.Lookup lookup = ClientShapes.lookup();
+		Map<Block, Integer> codes = new HashMap<>();
+		for (KbBlocks.Carrier carrier : KbBlocks.carriers()) {
+			codes.put(carrier.block(), switch (carrier.kind()) {
+				case TILE_FULL -> BlockCode.full(0);
+				case TILE_HALF -> BlockCode.half(0);
+				case SHAPE_FULL -> BlockCode.shape(0);
+				case DECOR -> BlockCode.decor(false);
+				case DECOR_LEAVES -> BlockCode.decor(true);
+				case LEDGE -> BlockCode.ledge(0);
+			});
+		}
+		BlockPos.MutableBlockPos cursor = new BlockPos.MutableBlockPos();
+		QuadCounter.World world = new QuadCounter.World() {
+			@Override
+			public int code(int x, int y, int z) {
+				return level == null ? BlockCode.AIR : codes.getOrDefault(level.getBlockState(cursor.set(x, y, z)).getBlock(), BlockCode.AIR);
+			}
+
+			@Override
+			public int shapeId(int x, int y, int z) {
+				return lookup == null || table == null ? 0 : lookup.shapeAt(x, y, z);
+			}
+		};
+		int compared = 0;
+		int equal = 0;
+		long maxDiff = 0;
+		if (level != null) {
+			for (Map.Entry<Long, Long> e : latest.entrySet()) {
+				if (compared >= PREDICTED) {
+					break;
+				}
+				SectionPos section = SectionPos.of(e.getKey());
+				long predicted = 0;
+				for (int y = section.minBlockY(); y <= section.maxBlockY(); y++) {
+					for (int z = section.minBlockZ(); z <= section.maxBlockZ(); z++) {
+						for (int x = section.minBlockX(); x <= section.maxBlockX(); x++) {
+							predicted += QuadCounter.emittedAt(world, table, x, y, z);
+						}
+					}
+				}
+				compared++;
+				equal += predicted == e.getValue() ? 1 : 0;
+				maxDiff = Math.max(maxDiff, Math.abs(predicted - e.getValue()));
+			}
+		}
+		JsonObject out = new JsonObject();
+		out.addProperty("sections", compared);
+		out.addProperty("equal", equal);
+		out.addProperty("max_diff", maxDiff);
+		return out;
 	}
 
 	private String debugLine() {

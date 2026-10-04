@@ -1,5 +1,6 @@
 package dev.kantobridge.gametest;
 
+import com.cobblemon.mod.common.Cobblemon;
 import com.cobblemon.mod.common.CobblemonEntities;
 import com.cobblemon.mod.common.api.battles.model.PokemonBattle;
 import com.cobblemon.mod.common.api.battles.model.actor.ActorType;
@@ -9,6 +10,12 @@ import com.cobblemon.mod.common.api.events.battles.BattleFleeAttemptEvent;
 import com.cobblemon.mod.common.api.events.pokeball.ThrownPokeballHitEvent;
 import com.cobblemon.mod.common.api.events.pokemon.PokemonCapturedEvent;
 import com.cobblemon.mod.common.api.pokeball.PokeBalls;
+import com.cobblemon.mod.common.api.spawning.SpawnCause;
+import com.cobblemon.mod.common.api.spawning.SpawningZone;
+import com.cobblemon.mod.common.api.spawning.position.AreaSpawnablePosition;
+import com.cobblemon.mod.common.api.spawning.position.calculators.SpawnablePositionCalculator;
+import com.cobblemon.mod.common.api.spawning.spawner.PlayerSpawner;
+import com.cobblemon.mod.common.api.spawning.spawner.SpawningZoneInput;
 import com.cobblemon.mod.common.battles.BattleFormat;
 import com.cobblemon.mod.common.battles.BattleRegistry;
 import com.cobblemon.mod.common.battles.actor.PlayerBattleActor;
@@ -19,6 +26,7 @@ import com.cobblemon.mod.common.pokemon.properties.UncatchableProperty;
 import com.cobblemon.mod.common.util.PlayerExtensionsKt;
 import com.google.gson.JsonObject;
 import dev.kantobridge.battle.EncounterService;
+import dev.kantobridge.block.KbBlocks;
 import dev.kantobridge.net.RelayService;
 import dev.kantobridge.proto.Envelope;
 import dev.kantobridge.proto.MsgTypes;
@@ -27,8 +35,11 @@ import java.util.UUID;
 import net.fabricmc.fabric.api.gametest.v1.FabricGameTest;
 import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestHelper;
+import net.minecraft.core.BlockPos;
 import net.minecraft.gametest.framework.GameTestSequence;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.level.block.state.BlockState;
 import org.jetbrains.annotations.Nullable;
 
 /**
@@ -41,6 +52,56 @@ import org.jetbrains.annotations.Nullable;
  */
 public class EncounterGameTests implements FabricGameTest {
 	private static final String BATCH = "kantobridge_encounters";
+
+	/**
+	 * A tuft keeps its grass spawnable (the voxel plan's R3, V4): a decor carrier at feet level has no collision, so
+	 * Cobblemon's own resolver of spawn positions (as {@code /checkspawn} runs it) offers the floor block under a tuft
+	 * exactly as it offers bare ground.
+	 */
+	@GameTest(template = EMPTY_STRUCTURE, batch = BATCH, timeoutTicks = 100)
+	public void aTuftKeepsItsGrassSpawnable(GameTestHelper helper) {
+		ServerLevel level = helper.getLevel();
+		BlockPos corner = helper.absolutePos(new BlockPos(1, 1, 1));
+		BlockState floor = KbBlocks.tileFull().get(0).defaultBlockState();
+		for (int dz = 0; dz < 6; dz++) {
+			for (int dx = 0; dx < 6; dx++) {
+				level.setBlock(corner.offset(dx, 0, dz), floor, 3);
+				// Tufts on the western half, bare ground on the eastern half.
+				if (dx < 3) {
+					level.setBlock(corner.offset(dx, 1, dz), KbBlocks.DECOR.defaultBlockState(), 3);
+				}
+			}
+		}
+		ServerPlayer player = MockPlayers.join(helper);
+		try {
+			PlayerSpawner spawner = PlayerExtensionsKt.getSpawner(player);
+			helper.assertTrue(spawner != null, "the mock player has no Cobblemon spawner");
+			SpawningZoneInput input = new SpawningZoneInput(new SpawnCause(spawner, player), level, corner.getX() - 1, corner.getY() - 1,
+					corner.getZ() - 1, 8, 6, 8);
+			SpawningZone zone = Cobblemon.INSTANCE.getSpawningZoneGenerator().generate(spawner, input);
+			List<AreaSpawnablePosition> positions = Cobblemon.INSTANCE.getAreaSpawnablePositionResolver().resolve(spawner,
+					SpawnablePositionCalculator.Companion.getPrioritizedAreaCalculators(), zone);
+			int underTufts = 0;
+			int bare = 0;
+			for (AreaSpawnablePosition position : positions) {
+				BlockPos at = position.getPosition();
+				if (at.getY() != corner.getY() || at.getX() < corner.getX() || at.getX() >= corner.getX() + 6 || at.getZ() < corner.getZ()
+						|| at.getZ() >= corner.getZ() + 6) {
+					continue;
+				}
+				if (at.getX() < corner.getX() + 3) {
+					underTufts++;
+				} else {
+					bare++;
+				}
+			}
+			helper.assertTrue(bare > 0, "bare ground offers no spawn position (" + positions.size() + " positions)");
+			helper.assertTrue(underTufts == bare, "the floor under tufts offers " + underTufts + " positions, bare ground " + bare);
+		} finally {
+			MockPlayers.leave(helper, player);
+		}
+		helper.succeed();
+	}
 
 	static String wildStart(String battle, String kind, int dex, int level, boolean canCatch, boolean canFlee) {
 		return "{\"battle\":\"" + battle + "\",\"kind\":\"" + kind + "\",\"wild\":{\"dex\":" + dex + ",\"level\":" + level + "},\"rules\":{\"catch\":"

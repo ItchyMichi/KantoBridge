@@ -22,6 +22,7 @@ import com.google.gson.JsonObject;
 import dev.kantobridge.KantoBridge;
 import dev.kantobridge.block.KbBlocks;
 import dev.kantobridge.block.LedgeColliderBlock;
+import dev.kantobridge.block.ShapeBlock;
 import dev.kantobridge.block.StoryCellBlockEntity;
 import dev.kantobridge.block.TileBlock;
 import dev.kantobridge.builder.BuildOptions;
@@ -182,10 +183,10 @@ public class SyntheticBuildGameTests implements FabricGameTest {
 
 		ServerLevel level = helper.getLevel();
 		SlotMap slots = task.plan().slotMap();
-		// A border tree: a 2-block column on its ground block, nothing above.
+		// A border tree: a unit (V4), two shape_full blocks on its ground block, nothing above.
 		BlockPos tree = index.cellOrigin("TEST_TOWN", 0, 0);
-		helper.assertTrue(isTile(level, tree.below(), true) && isTile(level, tree, true) && isTile(level, tree.above()),
-				"tree column incomplete");
+		helper.assertTrue(isTile(level, tree.below(), true) && level.getBlockState(tree).getBlock() instanceof ShapeBlock
+				&& level.getBlockState(tree.above()).getBlock() instanceof ShapeBlock, "tree column incomplete");
 		helper.assertTrue(level.getBlockState(tree.above(2)).isAir(), "tree column too tall");
 		// Ground: one tile block under the feet, showing the slot of (atlas, palette, tile 0, full).
 		BlockPos ground = index.cellOrigin("TEST_TOWN", 2, 2);
@@ -214,10 +215,14 @@ public class SyntheticBuildGameTests implements FabricGameTest {
 		// STAY objects carry story cells; the walker doesn't.
 		assertStoryCell(helper, level, index.cellOrigin("TEST_TOWN", 15, 4), "TEST_TOWN:15:4", StoryCellType.OBJECT);
 		helper.assertTrue(level.getBlockState(index.cellOrigin("TEST_TOWN", 10, 8)).isAir(), "a walking NPC got a story cell");
-		// Void fill around the town: 3 blocks above the ground.
+		// Void fill around the town: within two cells of it, border trees as units (V4: two shape_full blocks on the
+		// ground); beyond, 3 blocks above the ground.
 		MapPlacement town = index.map("TEST_TOWN");
-		BlockPos gap = new BlockPos(town.x() - 1, 63, town.z() - 1);
-		helper.assertTrue(isTile(level, gap.above(3)) && level.getBlockState(gap.above(4)).isAir(), "void fill is not 3 high");
+		BlockPos ring = new BlockPos(town.x() - 1, 63, town.z() - 1);
+		helper.assertTrue(isTile(level, ring, true) && level.getBlockState(ring.above(2)).getBlock() instanceof ShapeBlock
+				&& level.getBlockState(ring.above(3)).isAir(), "the void fill's ring is not a unit");
+		BlockPos gap = new BlockPos(town.x() - 9, 63, town.z() - 9);
+		helper.assertTrue(isTile(level, gap.above(3), true) && level.getBlockState(gap.above(4)).isAir(), "void fill is not 3 high");
 
 		// The house, one layer down: floor, walls, counter, ceiling and lights; enclosed by its ring.
 		MapPlacement house = index.map("TEST_HOUSE");
@@ -349,6 +354,7 @@ public class SyntheticBuildGameTests implements FabricGameTest {
 			List<AreaSpawnablePosition> positions = Cobblemon.INSTANCE.getAreaSpawnablePositionResolver().resolve(spawner,
 					SpawnablePositionCalculator.Companion.getPrioritizedAreaCalculators(), zone);
 			int onGrass = 0;
+			int underTufts = 0;
 			int above = 0;
 			Set<String> species = new HashSet<>();
 			for (AreaSpawnablePosition position : positions) {
@@ -356,6 +362,8 @@ public class SyntheticBuildGameTests implements FabricGameTest {
 				if (position.getPosition().getY() == 63) {
 					if (!details.isEmpty() && position.getPosition().distSqr(habitat.getBlockPos()) <= 14 * 14) {
 						onGrass++;
+						// The voxel plan's R3 (V4): a tuft's decor carrier above the grass leaves it spawnable.
+						underTufts += level.getBlockState(position.getPosition().above()).is(KbBlocks.DECOR) ? 1 : 0;
 						helper.assertTrue(details.size() == 10, "a grass floor block got " + details.size() + " spawns, want the 10 slots");
 						for (SpawnDetail detail : details) {
 							species.add(((PokemonSpawnDetail) detail).getPokemon().getSpecies());
@@ -371,6 +379,7 @@ public class SyntheticBuildGameTests implements FabricGameTest {
 				}
 			}
 			helper.assertTrue(onGrass > 0, "no floor block near the habitat offers its spawns (" + positions.size() + " positions)");
+			helper.assertTrue(underTufts > 0, "no grass under a tuft offers the pool's spawns");
 			helper.assertTrue(above > 0, "the zone had no tree tops inside the sphere to check the walking-level rule on");
 			helper.assertTrue(species.equals(Set.of("pidgey", "rattata")), "the pool's species don't come through: " + species);
 			KantoBridge.LOGGER.info("synthetic build: habitat influence on {} floor positions, {} positions in the sphere above the walking level refused",

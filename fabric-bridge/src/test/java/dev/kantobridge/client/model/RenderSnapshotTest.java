@@ -20,7 +20,7 @@ import org.junit.jupiter.api.Test;
 class RenderSnapshotTest {
 	private static RenderSnapshot numbered(long n) {
 		return new RenderSnapshot(n, null, Long.toString(n), new TextureAtlasSprite[2][], new Mesh[2][], new Mesh[2], null, true,
-				Long.toString(n), (int) n, (int) n, null, null, new TextureAtlasSprite[0], null);
+				Long.toString(n), (int) n, (int) n, null, null, new TextureAtlasSprite[0], null, null);
 	}
 
 	@Test

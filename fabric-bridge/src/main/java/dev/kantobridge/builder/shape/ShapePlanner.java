@@ -4,8 +4,11 @@ import com.google.gson.JsonArray;
 import dev.kantobridge.builder.plan.Box3;
 import dev.kantobridge.builder.plan.HeightRules;
 import dev.kantobridge.builder.plan.WorldPlan;
+import dev.kantobridge.builder.shape.geom.CellUnits;
+import dev.kantobridge.builder.shape.geom.ShapeTable;
 import dev.kantobridge.scene.CellKind;
 import dev.kantobridge.scene.Scene;
+import dev.kantobridge.scene.SceneAtlas;
 import dev.kantobridge.scene.SceneMap;
 import dev.kantobridge.world.MapPlacement;
 import dev.kantobridge.world.ShapeIndex;
@@ -18,6 +21,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 import java.util.TreeSet;
+import org.jetbrains.annotations.Nullable;
 
 /**
  * Turns the scene into shape keys per block (docs/specs/VOXEL_BLOCKS_PLAN.md §5.4): pure, integer-only, shared by the
@@ -56,20 +60,48 @@ public final class ShapePlanner {
 	 *
 	 * @param blocks    per art tile, the blocks standing on its floor block (0: none)
 	 * @param shapeMask per art tile, bit k set when block k (from feet level) is a {@code shape_full} carrier
+	 * @param floor     per art tile, the tile the floor block wears (a unit's ground tile), -1 for its own
+	 * @param decor     per art tile, bit k set when block k (from feet level) is a {@code decor} carrier (a tuft)
+	 * @param units     the map's cell units (open state), in scan order
 	 */
-	public record MapShapes(String map, ShapeKey[][] open, ShapeKey[][] closed, int[] blocks, int[] shapeMask) {
+	public record MapShapes(String map, ShapeKey[][] open, ShapeKey[][] closed, int[] blocks, int[] shapeMask, int[] floor, int[] decor,
+			List<Units.Cell> units) {
+		/** The plan of a map without Tier B (no floor change, no decor, no unit). */
+		public MapShapes(String map, ShapeKey[][] open, ShapeKey[][] closed, int[] blocks, int[] shapeMask) {
+			this(map, open, closed, blocks, shapeMask, filled(blocks.length, -1), new int[blocks.length], List.of());
+		}
+
+		/** The tile the floor block of art tile {@code i} wears, given its own. */
+		public int floorTile(int i, int own) {
+			return this.floor[i] >= 0 ? this.floor[i] : own;
+		}
 	}
 
 	/** One state's plan of a map. */
-	record Columns(ShapeKey[][] keys, int[] blocks, int[] shapeMask) {
+	record Columns(ShapeKey[][] keys, int[] blocks, int[] shapeMask, int[] floor, int[] decor, List<Units.Cell> units) {
+		Columns(ShapeKey[][] keys, int[] blocks, int[] shapeMask) {
+			this(keys, blocks, shapeMask, filled(blocks.length, -1), new int[blocks.length], List.of());
+		}
+	}
+
+	static int[] filled(int n, int value) {
+		int[] out = new int[n];
+		Arrays.fill(out, value);
+		return out;
+	}
+
+	/** Plans a world's shapes with no position taken and no void fill (tests). */
+	public static ShapePlan plan(Scene scene, Collection<MapPlacement> placements, ShapeParams params) {
+		return plan(scene, placements, params, Occupancy.NONE);
 	}
 
 	/**
 	 * Plans a world's shapes.
 	 *
 	 * @param placements the maps the build places (their shape map positions)
+	 * @param taken      the positions the builder's story blocks take, and the surface's void fill
 	 */
-	public static ShapePlan plan(Scene scene, Collection<MapPlacement> placements, ShapeParams params) {
+	public static ShapePlan plan(Scene scene, Collection<MapPlacement> placements, ShapeParams params, Occupancy taken) {
 		long started = System.nanoTime();
 		List<String> atlases = new ArrayList<>(new TreeSet<>(scene.atlases().keySet()));
 		TreeSet<String> paletteSet = new TreeSet<>();
@@ -84,8 +116,11 @@ public final class ShapePlanner {
 			if (atlas < 0) {
 				continue;
 			}
-			MapShapes planned = planMap(map, atlas, params);
+			MapShapes planned = planMap(map, scene.atlas(map.atlas()), atlas, params);
 			shapes.put(map.id(), planned);
+			for (ShapeKey key : borderUnitKeys(map, scene.atlas(map.atlas()), atlas, params)) {
+				uses.add(new ShapeIndex.Use(key, map.palette()));
+			}
 			for (ShapeKey[][] state : new ShapeKey[][][] {planned.open(), planned.closed()}) {
 				for (ShapeKey[] column : state) {
 					if (column == null) {
@@ -111,6 +146,7 @@ public final class ShapePlanner {
 			grids.add(surfaceGrid);
 		}
 		long shaped = 0;
+		long decorSkipped = 0;
 		for (MapPlacement placement : placements) {
 			MapShapes planned = shapes.get(placement.id());
 			SceneMap map = scene.map(placement.id());
@@ -136,8 +172,14 @@ public final class ShapePlanner {
 					if (column == null) {
 						continue;
 					}
+					boolean story = taken.storyAt(map.id(), map.cellIndexOfTile(tx, ty));
 					for (int k = 0; k < column.length; k++) {
 						if (column[k] == null) {
+							continue;
+						}
+						if (k == 0 && story) {
+							// The story block keeps the feet level; a tuft there is skipped (and counted).
+							decorSkipped += (planned.decor()[ty * cols + tx] & 1) != 0 ? 1 : 0;
 							continue;
 						}
 						int id = index.shapeId(column[k], map.palette());
@@ -146,6 +188,12 @@ public final class ShapePlanner {
 					}
 				}
 			}
+		}
+		// ---- the void fill's ring: border trees as units within hullRing of a map body (V4) ----
+		Map<Integer, ShapePlan.VoidUnit> voidUnits = new TreeMap<>();
+		Occupancy.VoidFill fill = taken.voidFill();
+		if (params.tierB() && fill != null && surfaceGrid != null) {
+			shaped += voidUnits(scene, placements, params, index, atlases, fill, surfaceGrid, voidUnits);
 		}
 		List<ShapeMap.Grid> built = new ArrayList<>();
 		for (ShapeMap.GridBuilder grid : grids) {
@@ -156,17 +204,111 @@ public final class ShapePlanner {
 		for (ShapeKey key : index.geoms()) {
 			byKind.merge(key.kind(), 1, Integer::sum);
 		}
-		return new ShapePlan(params, index, map, shapes, byKind, shaped, (System.nanoTime() - started) / 1_000_000L);
+		return new ShapePlan(params, index, map, shapes, byKind, shaped, (System.nanoTime() - started) / 1_000_000L, decorSkipped, fill,
+				voidUnits);
+	}
+
+	/** The context of the border's units: outdoors, no walkable side, repeating, foliage (the void tells no more). */
+	static final CellUnits.Context BORDER_UNIT = new CellUnits.Context(0, false, true, false, true);
+
+	/**
+	 * The keys of a map's border units, from the whole export: one unit per cell of the drawn border block of an outdoor
+	 * surface map (the void fill's ring wears them, V4), on the map's most frequent ground tile.
+	 */
+	static List<ShapeKey> borderUnitKeys(SceneMap map, @Nullable SceneAtlas sceneAtlas, int atlas, ShapeParams params) {
+		List<ShapeKey> out = new ArrayList<>();
+		int per = map.perCell();
+		int side = map.borderSize();
+		if (!params.tierB() || sceneAtlas == null || !map.surface() || !map.env().outdoor() || map.border() == null || per != ShapeTable.UNIT_CELL
+				|| side % per != 0) {
+			return out;
+		}
+		int ground = Units.mapGround(map, sceneAtlas.grassTiles(), sceneAtlas.frameTiles());
+		for (int qy = 0; qy < side; qy += per) {
+			for (int qx = 0; qx < side; qx += per) {
+				int[] tiles = new int[per * per];
+				for (int dy = 0; dy < per; dy++) {
+					for (int dx = 0; dx < per; dx++) {
+						tiles[dy * per + dx] = map.borderTile(qx + dx, qy + dy);
+					}
+				}
+				out.addAll(List.of(Units.keys(atlas, tiles, ground, BORDER_UNIT.variant(), per)));
+			}
+		}
+		return out;
+	}
+
+	/**
+	 * Plans the void fill's ring: every void cell within {@code hullRing} cells of a map body whose owner draws a border
+	 * becomes a unit of that border's cell (keys from {@link #borderUnitKeys}). Returns the positions it shaped.
+	 */
+	private static long voidUnits(Scene scene, Collection<MapPlacement> placements, ShapeParams params, ShapeIndex index, List<String> atlases,
+			Occupancy.VoidFill fill, ShapeMap.GridBuilder grid, Map<Integer, ShapePlan.VoidUnit> out) {
+		Map<String, MapPlacement> byId = new TreeMap<>();
+		for (MapPlacement placement : placements) {
+			byId.put(placement.id(), placement);
+		}
+		int[] distance = fill.distances();
+		// Per owner: its ground tile, or null when its border has no units.
+		Map<String, Integer> grounds = new TreeMap<>();
+		long shaped = 0;
+		for (int cell = 0; cell < distance.length; cell++) {
+			String owner = fill.owner(cell);
+			if (owner == null || distance[cell] > params.hullRing()) {
+				continue;
+			}
+			SceneMap map = scene.map(owner);
+			MapPlacement placement = byId.get(owner);
+			if (map == null || placement == null) {
+				continue;
+			}
+			SceneAtlas sceneAtlas = scene.atlas(map.atlas());
+			Integer ground = grounds.computeIfAbsent(owner, k -> borderUnitKeys(map, sceneAtlas, 0, params).isEmpty() ? null
+					: Units.mapGround(map, sceneAtlas.grassTiles(), sceneAtlas.frameTiles()));
+			if (ground == null) {
+				continue;
+			}
+			int per = map.perCell();
+			int x0 = fill.minX() + (cell % fill.w()) * fill.cellBlocks();
+			int z0 = fill.minZ() + (cell / fill.w()) * fill.cellBlocks();
+			int[] tiles = new int[per * per];
+			for (int dy = 0; dy < per; dy++) {
+				for (int dx = 0; dx < per; dx++) {
+					tiles[dy * per + dx] = map.borderTile(x0 - placement.x() + dx, z0 - placement.z() + dy);
+				}
+			}
+			ShapeKey[] keys = Units.keys(atlases.indexOf(map.atlas()), tiles, ground, BORDER_UNIT.variant(), per);
+			int[] ids = new int[keys.length];
+			boolean known = true;
+			for (int b = 0; b < keys.length; b++) {
+				ids[b] = index.shapeId(keys[b], map.palette());
+				known &= ids[b] != 0;
+			}
+			if (!known) {
+				// A cell off the border block's grid (never with cell-aligned placements) keeps its void column.
+				continue;
+			}
+			for (int by = 0; by < per; by++) {
+				for (int bz = 0; bz < per; bz++) {
+					for (int bx = 0; bx < per; bx++) {
+						grid.set(x0 + bx, placement.y() + by, z0 + bz, ids[CellUnits.block(per, bx, by, bz)]);
+						shaped++;
+					}
+				}
+			}
+			out.put(cell, new ShapePlan.VoidUnit(owner, ground, distance[cell], keys[0]));
+		}
+		return shaped;
 	}
 
 	/** One map's keys and columns, open and closed. */
-	static MapShapes planMap(SceneMap map, int atlas, ShapeParams params) {
-		Columns open = columns(map, atlas, params);
+	static MapShapes planMap(SceneMap map, @Nullable SceneAtlas sceneAtlas, int atlas, ShapeParams params) {
+		Columns open = columns(map, sceneAtlas, atlas, params);
 		ShapeKey[][] closed = new ShapeKey[open.keys().length][];
 		if (map.closedTiles() != null) {
 			// The closed state of the cells a swap site changes (a standing cut tree), planned on the map with every site
 			// closed, exactly as the open state is; kept for the cells that change only.
-			Columns all = columns(map.closedVariant(), atlas, params);
+			Columns all = columns(map.closedVariant(), sceneAtlas, atlas, params);
 			int cols = map.artCols();
 			int per = map.perCell();
 			for (var site : map.swapSites()) {
@@ -180,11 +322,23 @@ public final class ShapePlanner {
 				}
 			}
 		}
-		return new MapShapes(map.id(), open.keys(), closed, open.blocks(), open.shapeMask());
+		return new MapShapes(map.id(), open.keys(), closed, open.blocks(), open.shapeMask(), open.floor(), open.decor(), open.units());
 	}
 
-	static Columns columns(SceneMap map, int atlas, ShapeParams params) {
-		return params.measured() ? measured(map, atlas, params) : classified(map, atlas, params);
+	static Columns columns(SceneMap map, @Nullable SceneAtlas sceneAtlas, int atlas, ShapeParams params) {
+		if (!params.measured()) {
+			return classified(map, atlas, params);
+		}
+		Columns columns = measured(map, atlas, params);
+		if (!params.tierB() || sceneAtlas == null || map.perCell() != ShapeTable.UNIT_CELL) {
+			return columns;
+		}
+		// Tier B (kb-shapes/3): tufts and cell units over the measured columns.
+		int[] floor = filled(columns.blocks().length, -1);
+		int[] decor = new int[columns.blocks().length];
+		List<Units.Cell> units = new ArrayList<>();
+		Units.plan(map, sceneAtlas, atlas, columns.keys(), columns.blocks(), columns.shapeMask(), floor, decor, units);
+		return new Columns(columns.keys(), columns.blocks(), columns.shapeMask(), floor, decor, List.copyOf(units));
 	}
 
 	// ---- kb-shapes/1: today's classified heights, folded ----

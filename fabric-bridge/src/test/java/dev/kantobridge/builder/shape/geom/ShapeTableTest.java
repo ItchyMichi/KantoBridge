@@ -62,12 +62,46 @@ class ShapeTableTest {
 		assertEquals(table.textureKeys().indexOf("tile:tilesets.fix/3@PAL_A"), open.quads().get(2).texture(), "shared with the first cube");
 		assertEquals(table.textureKeys().size(), table.textureKeys().stream().distinct().count(), "each key once");
 		assertEquals(6, table.mesh(index.shapeId(ShapeKey.slab(0, 4, 8), "PAL_A")).size(), "slabs from V3");
-		assertNull(table.mesh(index.shapeId(ShapeKey.tuft(0, 9), "PAL_A")), "tufts from V4: until then the plain cube is drawn");
+		assertNull(table.mesh(index.shapeId(ShapeKey.tuft(0, 9), "PAL_A")), "a tuft without art draws nothing");
 		assertNull(table.mesh(0));
 		assertNull(table.mesh(99));
 		assertEquals(5, table.size());
 		assertEquals(4, table.built());
 		assertEquals(6 + 6 + 5 + 6, table.quads());
+	}
+
+	@Test
+	void tuftsAndUnitsAreBuiltFromTheArt() {
+		ShapeParams p = ShapeParams.v4();
+		int[][] sign = ArtFixtures.tiles(ArtFixtures.sign());
+		CellUnits.Context context = new CellUnits.Context(Background.SOUTH, false, false, true, false);
+		ShapeKey front = ShapeKey.cell(0, new int[] {20, 21, 22, 23}, 1, 0, 0, 1).withVariant(context.variant());
+		ShapeKey back = ShapeKey.cell(0, new int[] {20, 21, 22, 23}, 1, 0, 0, 0).withVariant(context.variant());
+		ShapeIndex index = ShapeIndex.of(p.planner(), p.toJson(), List.of("tilesets.fix"), List.of("PAL_A"),
+				List.of(new ShapeIndex.Use(ShapeKey.tuft(0, 9), "PAL_A"), new ShapeIndex.Use(front, "PAL_A"), new ShapeIndex.Use(back, "PAL_A")),
+				new JsonArray());
+		int[] grass = new int[64];
+		grass[7 * 8 + 3] = 2;
+		ArtSource art = ArtFixtures.art("tilesets.fix", java.util.Map.of(9, grass, 20, sign[0], 21, sign[1], 22, sign[2], 23, sign[3]),
+				java.util.Map.of());
+		ShapeTable table = ShapeTable.build(index, art, "a".repeat(64));
+		assertEquals("a".repeat(64), table.overridesHash(), "the art the geometry was built from names the cache");
+		ShapeMesh tuft = table.mesh(index.shapeId(ShapeKey.tuft(0, 9), "PAL_A"));
+		assertEquals(2, tuft.size(), "one stroke pixel: its front and its back");
+		assertEquals("tile:tilesets.fix/9@PAL_A", table.textureKeys().get(tuft.quads().get(0).texture()));
+		CellUnits.Unit unit = table.unit("tilesets.fix", front);
+		assertEquals(CellUnits.Kind.OBJECT, unit.kind());
+		assertTrue(table.mesh(index.shapeId(front, "PAL_A")).size() > 0, "the sign's south blocks hold its slab");
+		assertEquals(0, table.mesh(index.shapeId(back, "PAL_A")).size(), "its north blocks are empty: nothing is drawn there");
+		for (ShapeQuad quad : table.mesh(index.shapeId(front, "PAL_A")).quads()) {
+			assertTrue(List.of("tile:tilesets.fix/20@PAL_A", "tile:tilesets.fix/21@PAL_A", "tile:tilesets.fix/22@PAL_A", "tile:tilesets.fix/23@PAL_A")
+					.contains(table.textureKeys().get(quad.texture())), "the unit's own tiles");
+		}
+		// Without the art, the unit draws its column version and the tuft nothing.
+		ShapeTable bare = ShapeTable.build(index, ArtSource.NONE);
+		assertEquals(6, bare.mesh(index.shapeId(front, "PAL_A")).size());
+		assertEquals(CellUnits.Kind.COLUMNS, bare.unit("tilesets.fix", front).kind());
+		assertNull(bare.mesh(index.shapeId(ShapeKey.tuft(0, 9), "PAL_A")));
 	}
 
 	@Test

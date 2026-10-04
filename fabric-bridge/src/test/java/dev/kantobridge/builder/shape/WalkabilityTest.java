@@ -20,7 +20,8 @@ import org.junit.jupiter.api.Test;
  * Walkability is unchanged (docs/specs/VOXEL_BLOCKS_PLAN.md I1): for every cell of every map, the shaped build and the
  * unshaped one have the same colliders at feet level. A solid or counter cell has a full-cube collider ({@code tile_full}
  * or {@code shape_full}) in all four of its columns; a walkable, water or ledge cell has exactly the unshaped build's
- * blocks (story cells, ledge colliders, air) at feet level and at feet + 1: the shaped build never adds a collider there.
+ * blocks (story cells, ledge colliders, air) at feet level and at feet + 1, except that air may hold a {@code decor}
+ * carrier (a tuft, V4), which has no collision: the shaped build never adds a collider there.
  */
 class WalkabilityTest {
 	private static WorldPlan shaped;
@@ -47,6 +48,7 @@ class WalkabilityTest {
 		ChunkCodesView b = new ChunkCodesView(unshaped);
 		int cells = 0;
 		int roofs = 0;
+		int tufts = 0;
 		for (PlacedMap map : shaped.maps()) {
 			MapPlacement p = map.placement();
 			MapModel model = map.model();
@@ -67,7 +69,12 @@ class WalkabilityTest {
 								}
 							} else {
 								for (int y = p.y(); y <= p.y() + 1; y++) {
-									assertEquals(b.code(x, y, z), a.code(x, y, z), where + ": feet + " + (y - p.y()));
+									int code = a.code(x, y, z);
+									if (BlockCode.kind(code) == BlockCode.KIND_DECOR && b.code(x, y, z) == BlockCode.AIR) {
+										tufts++;
+										continue;
+									}
+									assertEquals(b.code(x, y, z), code, where + ": feet + " + (y - p.y()));
 								}
 							}
 						}
@@ -77,5 +84,6 @@ class WalkabilityTest {
 		}
 		assertEquals(20 * 18 + 16 * 12 + 10 * 10 + 8 * 8, cells, "every cell of the four maps");
 		assertTrue(roofs > 0, "the hill's house carries its roof in shape_full blocks");
+		assertTrue(tufts > 0, "the town's grass stands up on decor carriers");
 	}
 }

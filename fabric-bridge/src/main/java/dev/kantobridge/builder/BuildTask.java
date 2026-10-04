@@ -18,6 +18,7 @@ import dev.kantobridge.builder.shape.QuadCounter;
 import dev.kantobridge.builder.shape.ShapePlan;
 import dev.kantobridge.builder.shape.ShapePlanner;
 import dev.kantobridge.builder.shape.ShapeReport;
+import dev.kantobridge.scene.gen1.BundleArtSource;
 import dev.kantobridge.server.HabitatService;
 import dev.kantobridge.server.WorldIndexSync;
 import dev.kantobridge.world.DataException;
@@ -173,7 +174,7 @@ public final class BuildTask {
 			WorldIndex previous = previousIndex(this.worldDir);
 			// The geometry a client would build from the shape index, the self-check of every placed map (recorded) and the
 			// quads the planned world draws.
-			ShapeReport shapes = plan.shapes() == null || plan.scene() == null ? null : ShapeReport.of(plan);
+			ShapeReport shapes = plan.shapes() == null || plan.scene() == null ? null : ShapeReport.of(plan, BundleArtSource.of(this.bundle));
 			return new Prepared(plan, pack, previous == null ? List.of() : WorldPlan.volumesOf(previous),
 					previous == null ? List.of() : previous.habitats(), (System.nanoTime() - t0) / 1_000_000L, shapes, packMs);
 		} catch (BundleException e) {
@@ -473,6 +474,17 @@ public final class BuildTask {
 		r.shapeInstances = shapes.index().size();
 		r.shapedBlocks = shapes.shapedBlocks();
 		r.shapePlanMs = shapes.planMs();
+		r.shapeDecorSkipped = shapes.decorSkipped();
+		r.voidHullCells = 0;
+		r.voidRingUnits = 0;
+		for (ShapePlan.VoidUnit unit : shapes.voidUnits().values()) {
+			// Beyond the ring the void fill never holds a unit (the e2e gate keeps this at 0).
+			if (unit.distance() > shapes.params().hullRing()) {
+				r.voidHullCells++;
+			} else {
+				r.voidRingUnits++;
+			}
+		}
 		r.packMs = this.prepared.packMs();
 		ShapeReport report = this.prepared.shapes();
 		if (report != null) {
@@ -487,8 +499,11 @@ public final class BuildTask {
 			r.shapeQuadsSectionMax = quads.sectionMax();
 			r.densestSection = quads.densest();
 			r.quadCountMs = report.quadMs();
+			r.structuresByKind = new java.util.LinkedHashMap<>(report.structures());
+			r.structures = report.structures().values().stream().mapToLong(Long::longValue).sum();
+			r.shapeTemplates = 0;
 			r.selfCheck = new BuildReport.SelfCheckSummary(report.scores().size(), report.holes(), report.groundMatchMin(), report.structureMatchMin(),
-					report.structureMatchP05(), report.occludedGroundMax(), report.backFaces(), 0, report.checkMs());
+					report.structureMatchP05(), report.occludedGroundMax(), report.backFaces(), report.unitsFailed(), 0, report.checkMs());
 		}
 	}
 

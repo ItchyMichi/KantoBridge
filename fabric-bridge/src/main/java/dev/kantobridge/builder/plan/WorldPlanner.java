@@ -11,6 +11,7 @@ import dev.kantobridge.builder.export.ExportPalettes;
 import dev.kantobridge.builder.export.ExportSwaps;
 import dev.kantobridge.builder.export.ExportTileset;
 import dev.kantobridge.builder.pack.HabitatPoolWriter;
+import dev.kantobridge.builder.shape.Occupancy;
 import dev.kantobridge.builder.shape.ShapeParams;
 import dev.kantobridge.builder.shape.ShapePlan;
 import dev.kantobridge.builder.shape.ShapePlanner;
@@ -26,6 +27,7 @@ import dev.kantobridge.world.WorldIndex;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.BitSet;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -310,7 +312,8 @@ public final class WorldPlanner {
 				warnings.note("shapes_no_front_end");
 			} else {
 				scene = frontEnd.describe(bundle);
-				shapes = ShapePlanner.plan(scene, placements.values(), ShapeParams.current()).withIndexHash(index.hash());
+				shapes = ShapePlanner.plan(scene, placements.values(), ShapeParams.current(), occupancy(placed, storyIndex, surfaceBox, owner, voidCells))
+						.withIndexHash(index.hash());
 			}
 		}
 		ExportField.Display display = field.display();
@@ -321,6 +324,33 @@ public final class WorldPlanner {
 		return new WorldPlan(bundle.game(), bundle.exportHash(), options.originX(), options.originZ(), placed, surfaceBox, owner, voidCells,
 				storyCells, storyIndex, art, spawn, index, pools, warnings, mapsRequested, unplaced, layout.edgeMismatches(), layout.overlaps(), scene,
 				shapes);
+	}
+
+	/**
+	 * What the shape planner must leave to the builder (the voxel plan's §5.4): the feet level of every story cell, and
+	 * the void fill (whose ring may hold units of its owner's border).
+	 */
+	static Occupancy occupancy(List<PlacedMap> placed, Map<String, int[]> storyIndex, @Nullable Box3 surfaceBox, int[] owner, boolean[] voidCells) {
+		Map<String, BitSet> story = new HashMap<>();
+		for (PlacedMap map : placed) {
+			int[] cells = storyIndex.get(map.id());
+			BitSet bits = new BitSet(cells.length);
+			for (int i = 0; i < cells.length; i++) {
+				bits.set(i, cells[i] >= 0);
+			}
+			story.put(map.id(), bits);
+		}
+		Occupancy.VoidFill fill = null;
+		if (surfaceBox != null) {
+			int w = (surfaceBox.maxX() - surfaceBox.minX()) / Scale.CELL_BLOCKS;
+			int d = (surfaceBox.maxZ() - surfaceBox.minZ()) / Scale.CELL_BLOCKS;
+			String[] owners = new String[w * d];
+			for (int i = 0; i < owners.length; i++) {
+				owners[i] = voidCells[i] && owner[i] >= 0 ? placed.get(owner[i]).id() : null;
+			}
+			fill = new Occupancy.VoidFill(surfaceBox.minX(), surfaceBox.minZ(), w, d, Scale.CELL_BLOCKS, owners);
+		}
+		return new Occupancy(story, fill);
 	}
 
 	/**

@@ -27,4 +27,12 @@ public interface ArtSource {
 
 	/** Pixels per art tile edge. */
 	int artPx();
+
+	/**
+	 * The shades of each frame an animated tile cycles through (its {@code frames} entries' images), in order; empty for a
+	 * tile that doesn't cycle or when they are unknown. A flower's tuft is the union of its frames' strokes.
+	 */
+	default java.util.List<int[]> frameShades(String atlas, int tile) {
+		return java.util.List.of();
+	}
 }

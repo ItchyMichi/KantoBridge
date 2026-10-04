@@ -423,7 +423,17 @@ public final class WorldPlan {
 			return;
 		}
 		MapPlacement p = owner.placement();
-		int code = BlockCode.full(this.slot(owner, this.ringTile(owner, x - p.x(), z - p.z()), false));
+		int slot = this.slot(owner, this.ringTile(owner, x - p.x(), z - p.z()), false);
+		ShapePlan.VoidUnit unit = this.shapes == null ? null : this.shapes.voidUnit(i);
+		if (unit != null) {
+			// The ring's border tree (V4): its floor wears the owner's ground, the unit's blocks collide as the void did.
+			sink.set(x, Scale.GROUND_Y, z, BlockCode.full(unit.ground() >= 0 ? this.slot(owner, unit.ground(), false) : slot));
+			for (int k = 0; k < Scale.CELL_BLOCKS; k++) {
+				sink.set(x, p.y() + k, z, BlockCode.shape(slot));
+			}
+			return;
+		}
+		int code = BlockCode.full(slot);
 		for (int y = Scale.GROUND_Y; y <= Scale.GROUND_Y + HeightRules.VOID; y++) {
 			sink.set(x, y, z, code);
 		}
@@ -457,8 +467,17 @@ public final class WorldPlan {
 		int feet = p.y();
 		int tile = model.tile(tx, ty);
 		int column = 0;
+		ShapePlanner.MapShapes planned = this.shapes == null ? null : this.shapes.shapes(map.id());
+		int planIndex = ty * model.cellWidth() * Scale.CELL_BLOCKS + tx;
+		int story = this.storyIndex.get(map.id())[cy * model.cellWidth() + cx];
 		switch (model.kind(cx, cy)) {
-			case GROUND -> sink.set(x, feet - 1, z, BlockCode.full(this.slot(map, tile, false)));
+			case GROUND -> {
+				sink.set(x, feet - 1, z, BlockCode.full(this.slot(map, tile, false)));
+				// A tuft (V4) stands on a decor carrier at feet level, unless a story block takes the position.
+				if (planned != null && (planned.decor()[planIndex] & 1) != 0 && story < 0) {
+					sink.set(x, feet, z, BlockCode.decor(false));
+				}
+			}
 			case WATER -> sink.set(x, feet - 1, z, BlockCode.half(this.slot(map, tile, true)));
 			case LEDGE -> {
 				sink.set(x, feet - 1, z, BlockCode.full(this.slot(map, tile, false)));
@@ -467,18 +486,18 @@ public final class WorldPlan {
 			case COUNTER, SOLID -> {
 				int slot = this.slot(map, tile, false);
 				int code = BlockCode.full(slot);
-				sink.set(x, feet - 1, z, code);
-				// The column on the floor block: its planned blocks (tile_full, a shape_full where a roof stands), else today's.
-				ShapePlanner.MapShapes planned = this.shapes == null ? null : this.shapes.shapes(map.id());
-				int blocks = planned == null ? model.height(cx, cy) : planned.blocks()[ty * model.cellWidth() * 2 + tx];
-				int shaped = planned == null ? 0 : planned.shapeMask()[ty * model.cellWidth() * 2 + tx];
+				// The floor block wears a unit's ground tile (V4), else its own.
+				sink.set(x, feet - 1, z, planned == null ? code : BlockCode.full(this.slot(map, planned.floorTile(planIndex, tile), false)));
+				// The column on the floor block: its planned blocks (tile_full; shape_full where a roof or a unit stands), else
+				// today's.
+				int blocks = planned == null ? model.height(cx, cy) : planned.blocks()[planIndex];
+				int shaped = planned == null ? 0 : planned.shapeMask()[planIndex];
 				for (int k = 0; k < blocks; k++) {
 					sink.set(x, feet + k, z, (shaped >> k & 1) != 0 ? BlockCode.shape(slot) : code);
 				}
 				column = blocks;
 			}
 		}
-		int story = this.storyIndex.get(map.id())[cy * model.cellWidth() + cx];
 		if (story >= 0) {
 			// Tile cells get the block whose renderer draws their closed art; the others render nothing.
 			boolean swapCell = this.storyCells.entries().get(story).type() == StoryCellType.TILE;

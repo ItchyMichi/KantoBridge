@@ -66,12 +66,12 @@ class MeshStatsTest {
 	@Test
 	void sectionsAreRecordedOnlyWhileMeasuring() {
 		MeshStats.stopRecording();
-		MeshStats.sectionStart();
+		MeshStats.sectionStart(1L);
 		MeshStats.ours(1_000, 6);
 		MeshStats.sectionEnd();
 		MeshStats.startRecording();
 		assertEquals(0, MeshStats.sections()[0].length, "a new recording starts empty");
-		MeshStats.sectionStart();
+		MeshStats.sectionStart(42L);
 		MeshStats.ours(2_000, 12);
 		MeshStats.ours(1_000, 6);
 		MeshStats.sectionEnd();
@@ -80,6 +80,7 @@ class MeshStatsTest {
 		assertEquals(1, sections[0].length);
 		assertEquals(3_000, sections[1][0], "our time adds up per section");
 		assertEquals(18, sections[2][0], "our quads too");
+		assertEquals(42L, sections[3][0], "and where the section is");
 		assertTrue(sections[0][0] >= 0);
 	}
 }

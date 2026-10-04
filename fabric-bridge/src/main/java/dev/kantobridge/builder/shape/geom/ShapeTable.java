@@ -27,13 +27,14 @@ import org.jetbrains.annotations.Nullable;
  * builds one too, for counts and the self-check (V2's cubes need no pixel).
  *
  * <p>A key this table can't build (an unknown kind, or a tile the client can't draw) has no mesh: the model draws the
- * plain cube of its block there, never a hole. {@link #encode()}/{@link #decode} are the client's cache file:
- * {@code KBST}, a format number, the shape index's hash, the geometry version, the pack overrides' hash, the texture
- * keys, then per shape id its quads.
+ * plain cube of its block there, never a hole; a cell unit whose art is missing draws its column version. From V4 tufts
+ * and cell units are built from pixels, so the geometry depends on the art it was built from. {@link #encode()}/
+ * {@link #decode} are the client's cache file: {@code KBST}, a format number, the shape index's hash, the geometry
+ * version, the art hash (the art and the pack overrides), the texture keys, then per shape id its quads.
  */
 public final class ShapeTable {
 	/** The geometry version: what this code builds from a key. Not part of any world hash; it keys the client's cache. */
-	public static final int GEOMETRY = 2;
+	public static final int GEOMETRY = 3;
 	public static final String NO_OVERRIDES = "0".repeat(64);
 	private static final byte[] MAGIC = "KBST".getBytes(StandardCharsets.US_ASCII);
 	private static final int FORMAT = 1;
@@ -44,8 +45,11 @@ public final class ShapeTable {
 	private final List<String> textureKeys;
 	private final ShapeMesh[] meshes;
 	private final int quads;
+	private final Map<String, CellUnits.Unit> units;
 
-	private ShapeTable(String shapeIndexHash, int geometry, String overridesHash, List<String> textureKeys, ShapeMesh[] meshes) {
+	private ShapeTable(String shapeIndexHash, int geometry, String overridesHash, List<String> textureKeys, ShapeMesh[] meshes,
+			Map<String, CellUnits.Unit> units) {
+		this.units = Map.copyOf(units);
 		this.shapeIndexHash = shapeIndexHash;
 		this.geometry = geometry;
 		this.overridesHash = overridesHash;
@@ -58,11 +62,24 @@ public final class ShapeTable {
 		this.quads = n;
 	}
 
-	/** Builds every shape of {@code index} with {@code art} (V3: cubes, slabs and roofs, no pixels needed). */
+	/** Builds every shape of {@code index} with {@code art}, for no particular art ({@link #NO_OVERRIDES} in the cache). */
 	public static ShapeTable build(ShapeIndex index, ArtSource art) {
+		return build(index, art, NO_OVERRIDES);
+	}
+
+	/**
+	 * Builds every shape of {@code index} with {@code art}. Cubes, slabs and roofs need no pixel; tufts and cell units
+	 * are built from the art (a tuft this art lacks draws nothing, a unit draws its column version).
+	 *
+	 * @param artHash what the geometry was built from (the art and the pack overrides), the cache file's third value
+	 */
+	public static ShapeTable build(ShapeIndex index, ArtSource art, String artHash) {
 		Map<String, Integer> textures = new HashMap<>();
 		List<String> keys = new ArrayList<>();
 		ShapeMesh[] meshes = new ShapeMesh[index.size() + 1];
+		Map<String, CellUnits.Unit> units = new HashMap<>();
+		Map<String, List<ShapeQuad>> tufts = new HashMap<>();
+		int artPx = art.artPx();
 		for (int id = 1; id <= index.size(); id++) {
 			ShapeKey key = index.key(id);
 			String palette = index.palette(id);
@@ -76,11 +93,64 @@ public final class ShapeTable {
 				case SLAB -> KeyGeometry.slab(key.number(0), key.number(1), texture);
 				case ROOF -> KeyGeometry.roof(key.number(0), key.number(1), key.number(2), key.number(3), key.number(4), key.number(5) == 1,
 						key.number(6) == 1, texture);
+				case TUFT -> {
+					int tile = key.number(0);
+					List<ShapeQuad> tuft = tufts.computeIfAbsent(atlas + "|" + tile, k -> {
+						int[] shades = art.tileShades(atlas, tile);
+						return shades == null ? null : Tufts.quads(Tufts.mask(shades, art.frameShades(atlas, tile)), artPx);
+					});
+					yield tuft == null ? null : retexture(tuft, slot -> texture.applyAsInt(tile));
+				}
+				case CELL -> {
+					int bx = key.number(5);
+					int by = key.number(6);
+					int bz = key.number(7);
+					if (bx >= UNIT_CELL || by >= UNIT_CELL || bz >= UNIT_CELL) {
+						yield null;
+					}
+					CellUnits.Unit unit = units.computeIfAbsent(unitSignature(atlas, key), k -> buildUnit(atlas, key, art));
+					int[] tiles = {key.number(0), key.number(1), key.number(2), key.number(3)};
+					yield retexture(unit.blocks().get(CellUnits.block(UNIT_CELL, bx, by, bz)), slot -> texture.applyAsInt(tiles[slot]));
+				}
 				default -> null;
 			};
 			meshes[id] = quads == null ? null : new ShapeMesh(quads);
 		}
-		return new ShapeTable(index.hash(), GEOMETRY, NO_OVERRIDES, keys, meshes);
+		return new ShapeTable(index.hash(), GEOMETRY, artHash, keys, meshes, units);
+	}
+
+	/** Tiles along a cell unit's edge: a {@code cell} key names four tiles. */
+	public static final int UNIT_CELL = 2;
+
+	/** A unit's geometry depends on its atlas, its tiles and its context only: its blocks and ground tile share it. */
+	static String unitSignature(String atlas, ShapeKey key) {
+		return atlas + "|" + key.number(0) + "," + key.number(1) + "," + key.number(2) + "," + key.number(3) + "|" + key.variant();
+	}
+
+	private static CellUnits.Unit buildUnit(String atlas, ShapeKey key, ArtSource art) {
+		int[][] tiles = new int[UNIT_CELL * UNIT_CELL][];
+		for (int t = 0; t < tiles.length; t++) {
+			tiles[t] = key.number(t) < 0 ? null : art.tileShades(atlas, key.number(t));
+		}
+		return CellUnits.build(tiles, CellUnits.Context.parse(key.variant()), UNIT_CELL, art.artPx());
+	}
+
+	private static List<ShapeQuad> retexture(List<ShapeQuad> quads, java.util.function.IntUnaryOperator texture) {
+		List<ShapeQuad> out = new ArrayList<>(quads.size());
+		for (ShapeQuad quad : quads) {
+			out.add(quad.withTexture(texture.applyAsInt(quad.texture())));
+		}
+		return out;
+	}
+
+	/** The geometry a {@code cell} key's unit got (built tables only; a table read from a cache file has none), or null. */
+	public CellUnits.@Nullable Unit unit(String atlas, ShapeKey key) {
+		return key.kind() == ShapeKey.Kind.CELL ? this.units.get(unitSignature(atlas, key)) : null;
+	}
+
+	/** Every unit this table built, by signature. */
+	public Map<String, CellUnits.Unit> units() {
+		return this.units;
 	}
 
 	static int texture(String key, Map<String, Integer> textures, List<String> keys) {
@@ -238,7 +308,7 @@ public final class ShapeTable {
 			if (in.read() != -1) {
 				throw new DataException("/", "trailing bytes");
 			}
-			return new ShapeTable(indexHash, version, overrides, keys, meshes);
+			return new ShapeTable(indexHash, version, overrides, keys, meshes, Map.of());
 		} catch (EOFException e) {
 			throw new DataException("/", "truncated");
 		} catch (IOException e) {

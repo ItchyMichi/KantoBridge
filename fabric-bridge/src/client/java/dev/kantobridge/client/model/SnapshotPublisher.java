@@ -160,6 +160,8 @@ public final class SnapshotPublisher {
 		TextureAtlasSprite placeholder = atlas.getSprite(TileUnbakedModel.PLACEHOLDER);
 		RenderMaterial solid = renderer == null ? null : renderer.materialFinder().blendMode(BlendMode.SOLID).find();
 		RenderMaterial cutout = renderer == null ? null : renderer.materialFinder().blendMode(BlendMode.CUTOUT).find();
+		RenderMaterial flat = renderer == null ? null
+				: renderer.materialFinder().blendMode(BlendMode.SOLID).ambientOcclusion(net.fabricmc.fabric.api.util.TriState.FALSE).find();
 		// The shape table's texture keys, each to this client's own sprite (a key it can't draw: the placeholder).
 		TextureAtlasSprite[] shapeSprites = new TextureAtlasSprite[table == null ? 0 : table.textureKeys().size()];
 		for (int i = 0; i < shapeSprites.length; i++) {
@@ -208,6 +210,6 @@ public final class SnapshotPublisher {
 			}
 		}
 		return new RenderSnapshot(generation, placeholder, slots == null ? null : slots.hash(), sprites, cubes, placeholderCubes, solid, kanto,
-				artSet, keys, missing, table == null ? null : shapes, table, shapeSprites, cutout);
+				artSet, keys, missing, table == null ? null : shapes, table, shapeSprites, cutout, flat);
 	}
 }

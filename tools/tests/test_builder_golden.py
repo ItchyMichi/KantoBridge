@@ -54,5 +54,8 @@ def test_golden_shape_index_matches_the_schema():
     problems = PROTOCOL.check_shape_index(golden["index"])
     assert not problems, [str(p) for p in problems]
     assert hashlib.sha256(canonical(golden["index"]).encode("utf-8")).hexdigest() == golden["indexHash"]
-    assert golden["index"]["planner"] == "kb-shapes/2"
+    assert golden["index"]["planner"] == "kb-shapes/3"
+    assert golden["index"]["params"]["tierB"] is True
+    kinds = {geom.split(":")[0] for geom in golden["index"]["geoms"]}
+    assert {"cube", "slab", "roof", "tuft", "cell"} <= kinds
     assert golden["shapedBlocks"] > 0

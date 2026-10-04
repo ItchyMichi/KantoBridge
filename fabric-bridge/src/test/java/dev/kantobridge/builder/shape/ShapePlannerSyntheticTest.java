@@ -44,7 +44,10 @@ class ShapePlannerSyntheticTest {
 		golden.addProperty("mapHash", shapes.map().hash());
 		golden.addProperty("shapedBlocks", shapes.shapedBlocks());
 		TestData.assertGolden(TestData.goldenShapes(), ProtoJson.write(golden), "shapes");
-		assertEquals("kb-shapes/2", shapes.index().planner());
+		assertEquals("kb-shapes/3", shapes.index().planner());
+		assertEquals(2, shapes.keysByKind().get(ShapeKey.Kind.TUFT), "the grass and the flower");
+		assertEquals(5 * 8, shapes.keysByKind().get(ShapeKey.Kind.CELL),
+				"five units of eight blocks: the tree wall (with and without walkable ground south), the town's post, the cut tree, the hill's sign");
 		assertTrue(shapes.index().size() > 0);
 		assertTrue(shapes.keysByKind().get(ShapeKey.Kind.ROOF) > 0, "the hill's house has its roof");
 		assertEquals(1, shapes.keysByKind().get(ShapeKey.Kind.SLAB), "the town's ledge lip, one tile");
@@ -65,9 +68,13 @@ class ShapePlannerSyntheticTest {
 		ShapePlanner.MapShapes town = plan.shapes().shapes("TEST_TOWN");
 		assertNotNull(town);
 		assertEquals(town.open().length, town.closed().length);
-		// Open, the cut tree's cell is ground: no shape. Closed, its tree is one cell of one tile: the plain cube already is it.
+		// Open, the cut tree's cell is ground: no shape. Closed, its tree is a unit (V4): a cut tree is foliage.
 		assertEquals(null, town.open()[28 * 40 + 20]);
-		assertEquals(null, town.closed()[28 * 40 + 20]);
+		ShapeKey[] closed = town.closed()[28 * 40 + 20];
+		assertNotNull(closed);
+		assertEquals(2, closed.length, "two blocks high");
+		assertEquals(ShapeKey.Kind.CELL, closed[0].kind());
+		assertTrue(closed[0].variant().endsWith("t"), "foliage: " + closed[0].variant());
 		for (String id : plan.shapes().maps().keySet()) {
 			assertNotNull(plan.shapes().shapes(id), id);
 		}
@@ -92,5 +99,10 @@ class ShapePlannerSyntheticTest {
 		assertEquals(forward.index().hash(), backward.index().hash());
 		assertEquals(forward.map().hash(), backward.map().hash());
 		assertEquals(plan.shapes().map().grids().size(), backward.map().grids().size());
+		ShapePlan tierB = ShapePlanner.plan(plan.scene(), placements, ShapeParams.v4());
+		Collections.reverse(placements);
+		ShapePlan tierBForward = ShapePlanner.plan(plan.scene(), placements, ShapeParams.v4());
+		assertEquals(tierB.index().hash(), tierBForward.index().hash(), "Tier B keys don't depend on the map order");
+		assertEquals(tierB.map().hash(), tierBForward.map().hash());
 	}
 }

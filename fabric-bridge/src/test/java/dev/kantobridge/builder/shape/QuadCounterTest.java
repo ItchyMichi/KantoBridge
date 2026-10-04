@@ -85,6 +85,13 @@ class QuadCounterTest {
 		// The middle lip: top, north and south; its west and east sides touch the other lips; the bottom rests on the floor.
 		assertEquals(3, QuadCounter.quadsAt(world, table, 1, 0, 0));
 		assertEquals(4, QuadCounter.quadsAt(world, table, 0, 0, 0), "the end lip also shows its outer side");
+		// What the model emits (§6.3's dev check): the face masks apply, Minecraft's culling against the floor doesn't yet.
+		assertEquals(4, QuadCounter.emittedAt(world, table, 1, 0, 0), "top, north, south and the bottom on the floor");
+		assertEquals(5, QuadCounter.emittedAt(world, table, 0, 0, 0));
+		assertEquals(6, QuadCounter.emittedAt(world, table, 0, -1, 0), "a cube carrier without a shape emits its whole cube");
+		assertEquals(6, QuadCounter.emittedAt(world, null, 0, -1, 0), "without a table too");
+		assertEquals(0, QuadCounter.emittedAt(world, null, 1, 0, 0), "a ledge without its lip emits nothing");
+		assertEquals(0, QuadCounter.emittedAt(new Blocks().put(0, 0, 0, BlockCode.decor(false), 0), null, 0, 0, 0), "nor a tuft's carrier");
 	}
 
 	@Test

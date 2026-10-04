@@ -114,7 +114,7 @@ public class ShapeBuildGameTests implements FabricGameTest {
 			helper.assertTrue(map.indexHash().equals(Hashes.sha256(indexText)), "the shape map doesn't name the build's WorldIndex");
 			helper.assertTrue(map.shapeHash().equals(index.hash()), "the shape map doesn't name the shape index");
 			helper.assertTrue(map.shapedBlocks() == report.shapedBlocks && report.shapedBlocks > 0, "shaped_blocks " + report.shapedBlocks);
-			helper.assertTrue("kb-shapes/2".equals(report.shapePlanner), "planner " + report.shapePlanner);
+			helper.assertTrue("kb-shapes/3".equals(report.shapePlanner), "planner " + report.shapePlanner);
 		} catch (IOException | DataException e) {
 			throw new GameTestAssertException("shape files unreadable: " + e.getClass().getSimpleName());
 		}
@@ -122,6 +122,10 @@ public class ShapeBuildGameTests implements FabricGameTest {
 				"self-check " + report.selfCheck);
 		helper.assertTrue(report.shapeQuadsMaxBlock <= 96 && report.shapeQuadsSectionMax <= 30_000, "quads " + report.shapeQuadsMaxBlock + " per block, "
 				+ report.shapeQuadsSectionMax + " per section");
+		// Tier B (V4): tufts on decor carriers, units in the solid cells and in the void fill's ring, never beyond it.
+		helper.assertTrue(report.blocksByKind.get("decor") > 0, "no tuft placed");
+		helper.assertTrue(report.voidRingUnits > 0 && report.voidHullCells == 0, "void ring " + report.voidRingUnits + ", beyond " + report.voidHullCells);
+		helper.assertTrue(report.structures > 0 && report.structuresByKind.get("object") > 0, "structures " + report.structuresByKind);
 		helper.assertTrue(Files.isRegularFile(data.resolve(BuildTask.SELFCHECK_FILE)), "no shape_selfcheck.json beside the report");
 	}
 

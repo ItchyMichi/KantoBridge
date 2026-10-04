@@ -52,7 +52,7 @@ public final class Gen1FrontEnd implements GameFrontEnd {
 	static final int BLOCK_TILES = 4;
 	static final int CELLS_PER_BLOCK = BLOCK_TILES / PER_CELL;
 	/** Classes the front end knows about single tiles: the tiles of a cuttable tree are foliage. */
-	public static final String HINT_TREE = "tree";
+	public static final String HINT_TREE = dev.kantobridge.scene.SceneAtlas.HINT_FOLIAGE;
 
 	private Gen1FrontEnd() {
 	}

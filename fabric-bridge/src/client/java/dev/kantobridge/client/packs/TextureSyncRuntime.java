@@ -171,6 +171,10 @@ public final class TextureSyncRuntime {
 			minecraft.execute(() -> {
 				this.localRead = false;
 				this.sync.finished(token, failure);
+				if (failure == null) {
+					// A new export: shapes built from this player's art (tufts, units) follow it.
+					ClientShapes.artChanged();
+				}
 			});
 		}, "kantobridge-textures");
 		thread.setDaemon(true);
