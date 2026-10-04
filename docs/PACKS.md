@@ -41,8 +41,8 @@ The game is not part of a key: `targets.games` names the games a manifest applie
 | `tile:<atlas>/<tile>@<PALETTE>` | The same tile in one palette only | `textures` |
 | `sprite:<SPRITE_ID>` | A character's sheet | `textures`, `models` (V8) |
 | `cell:<atlas>/<t0>-<t1>-<t2>-<t3>` | A cell-sized unit (a tree, a sign, a statue) by its four tiles, north-west, north-east, south-west, south-east | `models` |
-| `struct:<atlas>/<16 hex digits>` | A bounded structure by its signature (V7) | `models`, `rules` |
-| `place:<MAP_ID>/<n>` | One placement of a structure (V7) | `models` |
+| `struct:<atlas>/<16 hex digits>` | A building template by its signature (V7; `keys.json` lists them under `structs`) | `models`, `rules` |
+| `place:<MAP_ID>/<n>` | One placement of a structure: read and checked, but never drawn (every placement of a structure shares its shapes) | `models` |
 | `class:<name>` | A class of tiles: `ground`, `water`, `ledge`, `wall`, `roof`, `tree`, `grass`, `flower`, `counter`, `prop`, `door`, `void` | `rules` |
 | `map:<MAP_ID>` | A map | `dressing` (V7) |
 
@@ -91,10 +91,10 @@ manifest that passes it applies without a warning.
 | `targets.games` | The games it applies to (`red`, `blue`); a world of another game skips it silently |
 | `targets.geometry` | The geometry it was made for, `1` (optional) |
 | `textures` | A `tile:` key → a **block sprite id** (`namespace:block/…`, the file `assets/<namespace>/textures/block/….png`): a square power of two, at least 16 px, or a strip of such frames with its `.png.mcmeta` animation. A `sprite:` key → a **texture file** (`namespace:textures/….png`) in the generated sheet's layout (64 × 32: columns facing down, up, left and right; rows standing and walking; 16 × 16 each), at that size or any whole multiple of it |
-| `models` | A `cell:` key (or, from V7 and V8, `struct:`, `place:`, `sprite:`) → `{"vox": "namespace:path.vox", "voxelsPerBlock": 8, "origin": [0, 0, 0], "turn": 0, "flip": false}` (below) |
-| `rules` | `class:tree` and `class:prop`: `style` `hull` (round), `object` (a slab on its own drawing) or `columns` (plain blocks), and an object's `depth` 1–8 (Game Boy pixels; 0 keeps the default 2). `class:grass` and `class:flower`: `style` `tuft` (standing strokes) or `flat` (none). `tile:` → `{"class": "<name>"}` pins the tile to a class: a unit with a pinned tile takes that class's rule. `struct:` → `{"bands": {"roofRows": 0–6}}` (V7) |
+| `models` | A `cell:` or `struct:` key (and, from V8, `sprite:`) → `{"vox": "namespace:path.vox", "voxelsPerBlock": 8, "origin": [0, 0, 0], "turn": 0, "flip": false}` (below) |
+| `rules` | `class:tree` and `class:prop`: `style` `hull` (round), `object` (a slab on its own drawing) or `columns` (plain blocks), and an object's `depth` 1–8 (Game Boy pixels; 0 keeps the default 2). `class:grass` and `class:flower`: `style` `tuft` (standing strokes) or `flat` (none). `tile:` → `{"class": "<name>"}` pins the tile to a class: a unit with a pinned tile takes that class's rule. `struct:` → `{"bands": {"roofRows": 0–6}}`: how many of the building's top tile rows are roof (instead of the rows above its highest window) |
 | `characters` | V8: `style` `thick`, `carved` or `rigged`; `sprites` per sprite id, also `model` |
-| `dressing` | V7: per `map:` key, `ceiling` and `headroom` 2–8 |
+| `dressing` | Per `map:` key, `ceiling` and `headroom` 2–8: read and checked, but not applied. A world's dressing is part of its build, which a client-local pack can't change; retexture the room's wall tile instead |
 
 A unit's class is `tree` when the planner marked it foliage (tree walls, lone trees, cut trees), else `prop`.
 
@@ -112,6 +112,11 @@ each axis; palette index 0 is empty.
   east-west before turning.
 - **A `cell:` model** must fit its unit: 2 × 2 blocks and 2 blocks high (16 × 16 × 16 voxels at 8 per block). It
   replaces the unit wherever those four tiles stand, in every context. Collision doesn't change.
+- **A `struct:` model** replaces a building template wherever it stands (V7). Its minimum corner is the template's
+  north-west bottom corner (its grid includes one cell row south of the building when the door lies there), and every
+  block it fills must lie in the template's volume (`keys.json`: `structs.<key>.blocks` is the grid's width, the
+  tallest column and the depth); one that doesn't is not used, and the generated building is drawn.
+  `reference/models/struct_*.vox` are the generated buildings to start from.
 - **Colours:** each voxel keeps its palette colour, lit and shaded like the terrain.
 - **Budget:** at most 96 quads in any one block after merging faces of one colour; a busier model is refused.
 

@@ -20,9 +20,11 @@ import java.util.Objects;
  * @param roofRise      the highest a roof rises above its eave, in 1/16 block (measured heights only)
  * @param ledgeLip      the ledge lip's height, in 1/16 block (measured heights only)
  * @param storyArt      the closed art of tile story cells as overlays of the shape map (from V5)
+ * @param dressing      interior walls up to the ceiling, ceilings in the room's wall art, open-air interiors (from V7)
+ * @param templateMax   the largest structure template, in art tiles along either side (with {@code tierC}; from V7)
  */
 public record ShapeParams(String planner, String heights, int maxUnit, int minRepeatRows, int hullRing, int interiorWall, boolean tierB,
-		boolean tierC, int roofRise, int ledgeLip, boolean storyArt) {
+		boolean tierC, int roofRise, int ledgeLip, boolean storyArt, boolean dressing, int templateMax) {
 	public static final String CLASSIFIED = "classified";
 	public static final String MEASURED = "measured";
 
@@ -34,6 +36,15 @@ public record ShapeParams(String planner, String heights, int maxUnit, int minRe
 		if (roofRise < 0 || roofRise > 16 || ledgeLip < 1 || ledgeLip > 12) {
 			throw new IllegalArgumentException("roof rise or ledge lip out of range");
 		}
+		if (tierC ? templateMax < 4 || templateMax > 64 : templateMax != 0) {
+			throw new IllegalArgumentException("a template size needs Tier C, and lies in 4..64");
+		}
+	}
+
+	/** Parameters before V7 (no dressing, no templates). */
+	public ShapeParams(String planner, String heights, int maxUnit, int minRepeatRows, int hullRing, int interiorWall, boolean tierB,
+			boolean tierC, int roofRise, int ledgeLip, boolean storyArt) {
+		this(planner, heights, maxUnit, minRepeatRows, hullRing, interiorWall, tierB, tierC, roofRise, ledgeLip, storyArt, false, tierC ? TEMPLATE_MAX : 0);
 	}
 
 	/** The V2 parameters with another planner version or setting (tests). */
@@ -72,9 +83,21 @@ public record ShapeParams(String planner, String heights, int maxUnit, int minRe
 				true, false, 16, 4, true);
 	}
 
+	/**
+	 * V7: Tier C (bounded structures with a door as templates, at most {@link #TEMPLATE_MAX} tiles along either side) and
+	 * dressing (interior walls up to the ceiling, ceilings in the room's wall art, open-air interiors).
+	 */
+	public static ShapeParams v7() {
+		return new ShapeParams("kb-shapes/5", MEASURED, HeightRules.MAX_UNIT, HeightRules.MIN_REPEAT_ROWS, 2, HeightRules.INTERIOR_WALL,
+				true, true, 16, 4, true, true, TEMPLATE_MAX);
+	}
+
+	/** The largest template V7 plans, in art tiles along either side (16 cells of 2 × 2 tiles: the biggest Kanto building). */
+	public static final int TEMPLATE_MAX = 32;
+
 	/** The parameters a build plans with. */
 	public static ShapeParams current() {
-		return v5();
+		return v7();
 	}
 
 	/** The parameters as they appear in the shape index. */
@@ -95,6 +118,12 @@ public record ShapeParams(String planner, String heights, int maxUnit, int minRe
 		if (this.storyArt) {
 			// Not in older indexes, whose planners have none.
 			out.addProperty("storyArt", true);
+		}
+		if (this.tierC) {
+			out.addProperty("templateMax", this.templateMax);
+		}
+		if (this.dressing) {
+			out.addProperty("dressing", true);
 		}
 		return out;
 	}

@@ -502,9 +502,10 @@ public final class BuildTask {
 			r.quadCountMs = report.quadMs();
 			r.structuresByKind = new java.util.LinkedHashMap<>(report.structures());
 			r.structures = report.structures().values().stream().mapToLong(Long::longValue).sum();
-			r.shapeTemplates = 0;
+			r.shapeTemplates = report.shapeTemplates();
 			r.selfCheck = new BuildReport.SelfCheckSummary(report.scores().size(), report.holes(), report.groundMatchMin(), report.structureMatchMin(),
-					report.structureMatchP05(), report.occludedGroundMax(), report.backFaces(), report.unitsFailed(), 0, report.checkMs());
+					report.structureMatchP05(), report.occludedGroundMax(), report.backFaces(), report.unitsFailed(), report.templatesFailed(),
+					report.checkMs());
 		}
 	}
 

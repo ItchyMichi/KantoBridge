@@ -208,7 +208,7 @@ public final class KbPackReload implements SimpleResourceReloadListener<PackOver
 		}
 		for (KbPackManifest.Model model : manifest.models()) {
 			PackKey key = model.key();
-			if (keys != null && (key.kind() == PackKey.Kind.CELL || key.kind() == PackKey.Kind.SPRITE) && !keys.contains(key)) {
+			if (keys != null && key.kind() != PackKey.Kind.PLACE && !keys.contains(key)) {
 				out.warn("pack.unknown_key");
 				continue;
 			}
@@ -228,8 +228,8 @@ public final class KbPackReload implements SimpleResourceReloadListener<PackOver
 				out.warn("pack.vox_size");
 				continue;
 			}
-			if (key.kind() != PackKey.Kind.CELL) {
-				// Structures and placements (V7) and sprites (V8): checked here, drawn by their own milestones.
+			if (key.kind() != PackKey.Kind.CELL && key.kind() != PackKey.Kind.STRUCT) {
+				// Placements (never drawn: they share their structure's shapes) and sprites (V8): checked here.
 				out.model(model);
 				continue;
 			}
@@ -238,6 +238,16 @@ public final class KbPackReload implements SimpleResourceReloadListener<PackOver
 				mesh = VoxMesher.mesh(vox, model.voxelsPerBlock(), model.turn(), model.flip(), model.origin());
 			} catch (IllegalArgumentException e) {
 				out.warn("pack.vox_size");
+				continue;
+			}
+			if (key.kind() == PackKey.Kind.STRUCT) {
+				// A structure's model (V7): whether it fits the template's volume is the shape table's to say.
+				if (mesh.maxQuads() > CellUnits.MAX_QUADS) {
+					out.warn("pack.model_budget");
+					continue;
+				}
+				out.structModel(key, new ShapeOverrides.StructModel(Map.copyOf(mesh.blocks()), mesh.palette()), Hashes.sha256(bytes) + "|"
+						+ model.voxelsPerBlock() + "|" + model.turn() + "|" + model.flip() + "|" + Arrays.toString(model.origin()));
 				continue;
 			}
 			ShapeOverrides.Model unit = unitModel(mesh);
@@ -254,7 +264,7 @@ public final class KbPackReload implements SimpleResourceReloadListener<PackOver
 			out.cellModel(key, unit, print);
 		}
 		for (KbPackManifest.Rule rule : manifest.rules()) {
-			if (keys != null && rule.key().kind() == PackKey.Kind.TILE && !keys.contains(rule.key())) {
+			if (keys != null && (rule.key().kind() == PackKey.Kind.TILE || rule.key().kind() == PackKey.Kind.STRUCT) && !keys.contains(rule.key())) {
 				out.warn("pack.unknown_key");
 				continue;
 			}

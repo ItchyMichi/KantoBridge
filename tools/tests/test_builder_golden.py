@@ -54,9 +54,18 @@ def test_golden_shape_index_matches_the_schema():
     problems = PROTOCOL.check_shape_index(golden["index"])
     assert not problems, [str(p) for p in problems]
     assert hashlib.sha256(canonical(golden["index"]).encode("utf-8")).hexdigest() == golden["indexHash"]
-    assert golden["index"]["planner"] == "kb-shapes/4"
+    assert golden["index"]["planner"] == "kb-shapes/5"
     assert golden["index"]["params"]["tierB"] is True
     assert golden["index"]["params"]["storyArt"] is True
+    assert golden["index"]["params"]["tierC"] is True and golden["index"]["params"]["dressing"] is True
     kinds = {geom.split(":")[0] for geom in golden["index"]["geoms"]}
-    assert {"cube", "slab", "roof", "tuft", "cell"} <= kinds
+    assert {"cube", "slab", "tmpl", "tuft", "cell"} <= kinds
     assert golden["shapedBlocks"] > 0
+    # V7: every template's signature is the hash of its canonical entry; its blocks are the index's tmpl keys.
+    assert golden["index"]["templates"]
+    for template in golden["index"]["templates"]:
+        entry = {k: v for k, v in template.items() if k != "sig"}
+        assert hashlib.sha256(canonical(entry).encode("utf-8")).hexdigest()[:16] == template["sig"]
+        assert len(template["tiles"]) == len(template["columns"]) == template["w"] * template["d"]
+        blocks = sum(len(column) for column in template["columns"])
+        assert sum(1 for g in golden["index"]["geoms"] if g.startswith("tmpl:") and "|" + template["sig"] + "|" in g) == blocks

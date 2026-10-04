@@ -124,4 +124,26 @@ class InteriorPackerTest {
 		assertEquals(5, Scale.maxLayer(-64), "a vanilla-depth overworld fits five layers below Y 64");
 		assertEquals(2, Scale.maxLayer(0));
 	}
+
+	@Test
+	void anOpenAirInteriorGetsTheSkyAndKeepsItsColumnFree() {
+		// The voxel plan's V7: a forest under the open sky, outside the surface's volume, nothing above it ever.
+		InteriorPacker packer = new InteriorPacker(4);
+		InteriorPacker.Box surface = new InteriorPacker.Box(-200, -200, 200, 200);
+		InteriorPacker.Spot under = packer.place(0, 0, 40, 40, 1);
+		assertNotNull(under);
+		InteriorPacker.Spot forest = packer.placeOpenSky(0, 0, 40, 40, 2, surface);
+		assertNotNull(forest);
+		assertEquals(2, forest.layer());
+		assertTrue(forest.moved());
+		InteriorPacker.Box box = InteriorPacker.footprint(forest.x(), forest.z(), 40, 40);
+		assertTrue(box.separated(surface, InteriorPacker.GAP), "outside the surface's volume");
+		// An interior that wants the spot above it, on layer 1, can't have it: the column stays free up to the sky. It
+		// spills down under the forest instead, as any interior spills under a taken spot.
+		InteriorPacker.Spot wants = packer.place(forest.x(), forest.z(), 40, 40, 1);
+		assertNotNull(wants);
+		assertEquals(forest.x(), wants.x());
+		assertEquals(3, wants.layer(), "below the forest, never above it");
+		assertNull(new InteriorPacker(1).placeOpenSky(0, 0, 40, 40, 2, surface), "no layer for it: it keeps its ceiling");
+	}
 }

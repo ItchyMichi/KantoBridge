@@ -265,6 +265,14 @@ public final class WorldPlan {
 		return out;
 	}
 
+	/**
+	 * An open-air interior under the open sky (the voxel plan's V7): an interior placement with the outdoor biome. The
+	 * packer gave it a spot nothing lies above, so it has no ceiling.
+	 */
+	public static boolean openSky(MapPlacement p) {
+		return p.kind() == MapPlacement.Kind.INTERIOR && BIOME_OUTDOOR.equals(p.biome());
+	}
+
 	/** The volume of an interior: its footprint and enclosure ring, from the floor block up to the ceiling. */
 	public static Box3 interiorVolume(MapPlacement p) {
 		InteriorPacker.Box box = InteriorPacker.footprint(p.x(), p.z(), p.blockWidth(), p.blockDepth());
@@ -450,8 +458,10 @@ public final class WorldPlan {
 			this.renderMapColumn(sink, map, x, z);
 			return;
 		}
-		// The enclosure ring: border-block art from the floor block up to the ceiling.
-		int code = BlockCode.full(this.slot(map, this.ringTile(map, x - p.x(), z - p.z()), false));
+		// The enclosure ring: border-block art from the floor block up to the ceiling; a dressed room's wall tile (V7).
+		ShapePlanner.MapShapes planned = this.shapes == null ? null : this.shapes.shapes(map.id());
+		int tile = planned != null && planned.wallTile() >= 0 ? planned.wallTile() : this.ringTile(map, x - p.x(), z - p.z());
+		int code = BlockCode.full(this.slot(map, tile, false));
 		for (int y = p.y() - 1; y <= p.y() + CEILING_ABOVE_FEET; y++) {
 			sink.set(x, y, z, code);
 		}
@@ -515,7 +525,11 @@ public final class WorldPlan {
 			}
 		}
 		if (map.interior()) {
-			sink.set(x, feet + CEILING_ABOVE_FEET, z, BlockCode.full(this.slot(map, model.borderTile(tx, ty), false)));
+			if (!openSky(p)) {
+				// The ceiling: the border block's art; a dressed room's wall tile, its shape darkening it (V7).
+				int ceiling = planned != null && planned.wallTile() >= 0 ? planned.wallTile() : model.borderTile(tx, ty);
+				sink.set(x, feet + CEILING_ABOVE_FEET, z, BlockCode.full(this.slot(map, ceiling, false)));
+			}
 			// A carrier wins: the light goes only where the position is still air.
 			if (!p.dark() && Math.floorMod(tx, LIGHT_SPACING) == 1 && Math.floorMod(ty, LIGHT_SPACING) == 1 && column <= LIGHT_ABOVE_FEET) {
 				sink.set(x, feet + LIGHT_ABOVE_FEET, z, BlockCode.light(LIGHT_LEVEL));

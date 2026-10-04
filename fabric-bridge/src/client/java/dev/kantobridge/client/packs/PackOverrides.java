@@ -26,6 +26,8 @@ public final class PackOverrides implements ShapeOverrides {
 	private final Map<String, ShapeOverrides.Model> cellModels;
 	private final Map<String, String> cellModelPrints;
 	private final Map<String, KbPackManifest.Model> otherModels;
+	private final Map<String, ShapeOverrides.StructModel> structModels;
+	private final Map<String, String> structModelPrints;
 	private final Map<String, KbPackManifest.Rule> classRules;
 	private final Map<String, String> pins;
 	private final Map<String, Integer> roofRows;
@@ -42,6 +44,8 @@ public final class PackOverrides implements ShapeOverrides {
 		this.cellModels = Collections.unmodifiableMap(new TreeMap<>(b.cellModels));
 		this.cellModelPrints = Collections.unmodifiableMap(new TreeMap<>(b.cellModelPrints));
 		this.otherModels = Collections.unmodifiableMap(new TreeMap<>(b.otherModels));
+		this.structModels = Collections.unmodifiableMap(new TreeMap<>(b.structModels));
+		this.structModelPrints = Collections.unmodifiableMap(new TreeMap<>(b.structModelPrints));
 		this.classRules = Collections.unmodifiableMap(new TreeMap<>(b.classRules));
 		this.pins = Collections.unmodifiableMap(new TreeMap<>(b.pins));
 		this.roofRows = Collections.unmodifiableMap(new TreeMap<>(b.roofRows));
@@ -57,11 +61,14 @@ public final class PackOverrides implements ShapeOverrides {
 
 	/** Everything that changes geometry, canonically, hashed: the cache name's part for packs. */
 	private String computeGeometryHash() {
-		if (this.cellModelPrints.isEmpty() && this.classRules.isEmpty() && this.pins.isEmpty()) {
+		if (this.cellModelPrints.isEmpty() && this.structModelPrints.isEmpty() && this.classRules.isEmpty() && this.pins.isEmpty()
+				&& this.roofRows.isEmpty()) {
 			return ShapeTable.NO_OVERRIDES;
 		}
 		StringBuilder out = new StringBuilder("kb-pack-geometry/1\n");
 		this.cellModelPrints.forEach((key, print) -> out.append("model ").append(key).append(' ').append(print).append('\n'));
+		this.structModelPrints.forEach((key, print) -> out.append("struct ").append(key).append(' ').append(print).append('\n'));
+		this.roofRows.forEach((key, rows) -> out.append("bands ").append(key).append(' ').append(rows).append('\n'));
 		this.classRules.forEach((clazz, rule) -> out.append("class ").append(clazz).append(' ').append(rule.style()).append(' ').append(rule.depth())
 				.append('\n'));
 		this.pins.forEach((tile, clazz) -> out.append("pin ").append(tile).append(' ').append(clazz).append('\n'));
@@ -129,12 +136,18 @@ public final class PackOverrides implements ShapeOverrides {
 
 	// ---- the rest (structures V7, characters V8, dressing V7) ----
 
+	@Override
+	public ShapeOverrides.@Nullable StructModel templateModel(String atlas, String sig) {
+		return this.structModels.get(atlas + "/" + sig);
+	}
+
 	/** A structure's, a placement's or a sprite's model, or null. */
 	public KbPackManifest.@Nullable Model model(PackKey key) {
 		return this.otherModels.get(key.text());
 	}
 
 	/** A structure's roof rows by a pack's band rule, or -1. */
+	@Override
 	public int roofRows(String atlas, String sig) {
 		Integer rows = this.roofRows.get(atlas + "/" + sig);
 		return rows == null ? -1 : rows;
@@ -177,6 +190,8 @@ public final class PackOverrides implements ShapeOverrides {
 		private final Map<String, ShapeOverrides.Model> cellModels = new TreeMap<>();
 		private final Map<String, String> cellModelPrints = new TreeMap<>();
 		private final Map<String, KbPackManifest.Model> otherModels = new TreeMap<>();
+		private final Map<String, ShapeOverrides.StructModel> structModels = new TreeMap<>();
+		private final Map<String, String> structModelPrints = new TreeMap<>();
 		private final Map<String, KbPackManifest.Rule> classRules = new TreeMap<>();
 		private final Map<String, String> pins = new TreeMap<>();
 		private final Map<String, Integer> roofRows = new TreeMap<>();
@@ -203,7 +218,19 @@ public final class PackOverrides implements ShapeOverrides {
 			return this;
 		}
 
-		/** A structure's, a placement's or a sprite's model (used from V7 and V8). */
+		/**
+		 * A structure's model, meshed (V7).
+		 *
+		 * @param print what the geometry came from, for the geometry hash
+		 */
+		public Builder structModel(PackKey key, ShapeOverrides.StructModel model, String print) {
+			String id = key.scope() + "/" + key.sig();
+			this.structModels.put(id, model);
+			this.structModelPrints.put(id, print);
+			return this;
+		}
+
+		/** A placement's or a sprite's model (placements are never drawn; sprites from V8). */
 		public Builder model(KbPackManifest.Model model) {
 			this.otherModels.put(model.key().text(), model);
 			return this;

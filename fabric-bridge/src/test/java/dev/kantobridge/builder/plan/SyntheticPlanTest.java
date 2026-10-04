@@ -159,13 +159,13 @@ class SyntheticPlanTest {
 
 		MapPlacement house = plan.index().map("TEST_HOUSE");
 		int feet = house.y();
-		// Floor, a 2-high wall, the ceiling 4 blocks above the floor, a light on the 4-block grid.
+		// Floor, the walls up to the ceiling (V7's dressing), the ceiling 4 blocks above the floor, a light on the 4-block grid.
 		assertEquals(full, view.kind(house.x() + 4, feet - 1, house.z() + 6));
 		assertEquals(BlockCode.AIR, view.code(house.x() + 4, feet, house.z() + 6));
 		assertEquals(full, view.kind(house.x() + 4, feet + 3, house.z() + 6));
 		assertEquals(BlockCode.light(15), view.code(house.x() + 5, feet + 2, house.z() + 5));
 		assertEquals(full, view.kind(house.x(), feet + 1, house.z()));
-		assertEquals(BlockCode.AIR, view.code(house.x(), feet + 2, house.z()));
+		assertEquals(full, view.kind(house.x(), feet + 2, house.z()), "a wall along the north edge rises to the ceiling");
 		// The counter is one block high.
 		assertEquals(full, view.kind(house.x() + 8, feet, house.z() + 6));
 		assertEquals(BlockCode.AIR, view.code(house.x() + 8, feet + 1, house.z() + 6));

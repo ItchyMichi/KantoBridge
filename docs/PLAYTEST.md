@@ -529,3 +529,28 @@ and swap a unit for a `.vox` model ([PACKS.md](PACKS.md)). No rebuild needed. Th
 - [ ] **X5, the calibration model:** name any tree's `cell:` key with `reference\calibration.vox`
       (`"voxelsPerBlock": 8`). Stand south of it and look north: the **red post stands at the back right** (north-east)
       and the **blue strip lies along the front** (south). If it shows mirrored or turned, say which.
+
+### V7: structures and dressing
+
+Buildings a door leads into (houses, Pokémon Centers, Marts, gyms) are drawn from their own drawing: the facade
+stands up as before, windows sit one pixel back, and the roof lies flat on the walls showing the drawn roof; their
+volume (and collision) stays what it was. A building without windows keeps V6's look. Interiors' walls reach
+the ceiling, and the ceiling wears the room's wall art, darker. Viridian Forest lies under the open sky. Rebuild your
+world first (Minecraft closed): `tools\.venv\Scripts\python.exe tools\e2e\build_world.py --maps all --world Kanto`.
+
+- [ ] **Houses in a town from all four sides:** the front reads like the 2D game from the usual view; windows are
+      recessed; the sides and the back show the wall's art (no stretched stripes); the roof sits on the walls, with no
+      gap and nothing floating. Say whether the flat roof reads better or worse than V6's sloped one.
+- [ ] Walk around and into the buildings: doors work as before, you can't walk into a wall, and nothing invisible
+      stops you at street level.
+- [ ] A building without windows (or one whose check failed) still looks as it did in V6: plain columns.
+- [ ] **Interiors in first person:** walls reach the ceiling; the ceiling wears the room's wall art, darker; no light
+      leaks through anywhere.
+- [ ] **Viridian Forest:** open sky above it (day and night), its trees, wild Pokémon in its grass; you go in and out
+      through its gates as before.
+- [ ] The build report counts the buildings: `structures_by_kind.building` and `fallback`, `shape_templates`,
+      `selfcheck.templates_failed`; `notes.open_air_sky` (forests under the sky) and `notes.open_air_kept_ceiling`
+      (should be absent).
+- [ ] With a texture pack: a `struct:` key from `keys.json` with `{"bands": {"roofRows": 1}}` changes where that
+      building's roof starts; a `struct:` model (start from `reference\models\struct_*.vox` of a new pack template)
+      replaces the building wherever it stands.

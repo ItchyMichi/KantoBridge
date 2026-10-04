@@ -707,7 +707,8 @@ is what the builder writes to `<world>/kantobridge/world_index.json`:
 
 - the scale (a cell is 2×2 blocks, the surface's feet level, the interior layer step);
 - each map's block origin (the north-west corner of its cell (0, 0) at feet level), size in cells,
-  layer, kind, palette, biome, darkness and parent;
+  layer, kind, palette, biome, darkness and parent (from the voxel plan's V7, an interior with the outdoor biome lies
+  under the open sky and has no ceiling: a forest);
 - the slot-map hash;
 - the story-cell table (`"MAP:x:y"` keys, each with its type and the object or swap site behind it;
   objects carry their `hidden` default; tile cells their `start` block, `water`, and `closed{block,
@@ -731,7 +732,11 @@ SHA-256 of its canonical JSON. Capacity: 16 families × 256 slots per shape.
 atlases and palettes, the sorted shape keys (`geoms`; a key such as `cube:<a>|<u>,<d>,<n>,<s>,<w>,<e>` names one tile per
 face of a cube, `<a>` an index into `atlases`) and the sorted `[geom, palette]` pairs (`instances`). A shape id is an index
 into `instances` plus 1; 0 means no shape. Its keys come from the whole export, never from a build's filter;
-`shapeIndexHash` is the SHA-256 of its text.
+`shapeIndexHash` is the SHA-256 of its text. From V7 its `templates` hold the world's structure templates (bounded
+buildings a door folds into): per entry its tile grid, door cells, ground tile, outdoor flag and, per grid position, the
+Tier A keys it would otherwise be, under `sig` (the first 16 hex digits of the SHA-256 of the entry's canonical JSON);
+a key `tmpl:<a>|<sig>|<bx>,<by>,<bz>` is one block of one, so a guest rebuilds every structure from the host's list
+with its own art. A key may end in `|tint=<1..3>`: its faces are darkened by a vertex colour (an interior's ceiling).
 
 **The shape map**, `<world>/kantobridge/shape_map.bin`, gives positions their shape ids: a binary file (magic `KBSM`,
 version 1, the SHA-256 of the WorldIndex's text and of the shape index's text, then per box of columns (the surface box,
@@ -891,3 +896,5 @@ carrying the same envelope in both directions. Larger data is split at the appli
     the export's `map.borderDrawn`, `tileset.animated` and `field.display` (all optional, so older bundles stay valid).
   - V6: `texture.status.packs` (optional). Texture packs themselves never travel: their manifest format is
     `protocol/packs/kb_pack.schema.json`, read only by the client that has them ([PACKS.md](PACKS.md)).
+  - V7: the shape index's `templates` and `tmpl` keys, the `tint` modifier on keys (ceilings), and an interior placed
+    with the outdoor biome (under the open sky, no ceiling). The planner is `kb-shapes/5`.

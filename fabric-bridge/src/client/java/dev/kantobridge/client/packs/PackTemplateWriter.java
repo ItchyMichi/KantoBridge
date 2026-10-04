@@ -13,6 +13,7 @@ import dev.kantobridge.builder.shape.ShapeParams;
 import dev.kantobridge.builder.shape.ShapePlanner;
 import dev.kantobridge.builder.shape.geom.CellUnits;
 import dev.kantobridge.builder.shape.geom.ShapeTable;
+import dev.kantobridge.builder.shape.geom.TemplateRule;
 import dev.kantobridge.builder.shape.geom.VoxelGrid;
 import dev.kantobridge.client.shape.vox.VoxFile;
 import dev.kantobridge.scene.FrontEnds;
@@ -114,6 +115,17 @@ public final class PackTemplateWriter {
 				String name = "reference/models/cell_" + ArtKeys.pathPart(parts[0]) + "_" + parts[1].replace(',', '-') + "_"
 						+ ArtKeys.pathPart(parts[2]) + ".vox";
 				write(out, name, VoxFile.write(model), generated);
+				models++;
+			}
+			// Each building a template drew (V7), as voxels in shades: the grid's north-west bottom corner is the model's origin.
+			for (Map.Entry<String, TemplateRule.Template> e : table.templates().entrySet()) {
+				TemplateRule.Template template = e.getValue();
+				if (template.voxels() == null || template.tiles() == null) {
+					continue;
+				}
+				String[] parts = e.getKey().split("\\|", -1);
+				VoxFile.Model model = vox(template.voxels(), parts[0], template.tiles(), art);
+				write(out, "reference/models/struct_" + ArtKeys.pathPart(parts[0]) + "_" + parts[1] + ".vox", VoxFile.write(model), generated);
 				models++;
 			}
 		}

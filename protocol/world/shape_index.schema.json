@@ -36,8 +36,31 @@
     },
     "templates": {
       "type": "array",
-      "description": "Per structure signature, its tile grid, door cells, ground tile and outdoor flag (from V7).",
-      "items": {"type": "object"},
+      "description": "From V7: one entry per structure template (a bounded building a door folds into), sorted by sig. What a client needs to rebuild it from its own art: the tile grid (w x d art tiles, -1 outside the structure; one cell row more for its doors), the door cells, the ground tile, the outdoor flag, and per grid position its Tier A keys bottom-up (its fallback, which fixes its volume). sig is the first 16 hex digits of the SHA-256 of the canonical entry without sig; a tmpl key names one block of it.",
+      "items": {
+        "type": "object",
+        "required": ["sig", "template", "atlas", "w", "d", "perCell", "tiles", "doors", "ground", "outdoor", "columns"],
+        "additionalProperties": false,
+        "properties": {
+          "sig": {"type": "string", "pattern": "^[0-9a-f]{16}$"},
+          "template": {"const": 1},
+          "atlas": {"type": "integer", "minimum": 0},
+          "w": {"type": "integer", "minimum": 1, "maximum": 64},
+          "d": {"type": "integer", "minimum": 1, "maximum": 64},
+          "perCell": {"type": "integer", "minimum": 1, "maximum": 8},
+          "tiles": {"type": "array", "items": {"type": "integer", "minimum": -1}},
+          "doors": {
+            "type": "array",
+            "items": {"type": "array", "prefixItems": [{"type": "integer", "minimum": 0}, {"type": "integer", "minimum": 0}], "minItems": 2, "maxItems": 2}
+          },
+          "ground": {"type": "integer", "minimum": -1},
+          "outdoor": {"type": "boolean"},
+          "columns": {
+            "type": "array",
+            "items": {"type": "array", "maxItems": 8, "items": {"type": "string", "pattern": "^(cube|slab|roof|tuft|cell|tmpl):[0-9]{1,5}\\|[-0-9a-z,|=_]+$", "maxLength": 256}}
+          }
+        }
+      },
       "x-rom-derived": true
     },
     "instances": {

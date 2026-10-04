@@ -4,6 +4,7 @@ import com.google.gson.GsonBuilder;
 import com.google.gson.JsonObject;
 import dev.kantobridge.builder.plan.WorldPlan;
 import dev.kantobridge.builder.shape.geom.CellUnits;
+import dev.kantobridge.builder.shape.geom.TemplateRule;
 import dev.kantobridge.builder.shape.geom.ShapeTable;
 import dev.kantobridge.scene.ArtSource;
 import dev.kantobridge.scene.Scene;
@@ -37,6 +38,10 @@ public final class ShapeReport {
 	public record UnitRow(String signature, String kind, @Nullable String failed, double match, double cover, int quads, long cells) {
 	}
 
+	/** What one template became (V7): by its signature (a hash), its kind, what failed, its match, quads, roof rows, places. */
+	public record TemplateRow(String signature, String kind, @Nullable String failed, double match, int quads, int roofRows, long places) {
+	}
+
 	private final ShapeTable table;
 	private final long tableMs;
 	private final List<SelfCheck.Scores> scores;
@@ -44,10 +49,12 @@ public final class ShapeReport {
 	private final QuadCounter.Stats quads;
 	private final long quadMs;
 	private final Map<String, Long> structures;
+	private final List<TemplateRow> templates;
+	private final int shapeTemplates;
 	private final List<UnitRow> units;
 
 	private ShapeReport(ShapeTable table, long tableMs, List<SelfCheck.Scores> scores, long checkMs, QuadCounter.Stats quads, long quadMs,
-			Map<String, Long> structures, List<UnitRow> units) {
+			Map<String, Long> structures, List<UnitRow> units, List<TemplateRow> templates, int shapeTemplates) {
 		this.table = table;
 		this.tableMs = tableMs;
 		this.scores = List.copyOf(scores);
@@ -55,6 +62,8 @@ public final class ShapeReport {
 		this.quads = quads;
 		this.quadMs = quadMs;
 		this.structures = Collections.unmodifiableMap(new LinkedHashMap<>(structures));
+		this.templates = List.copyOf(templates);
+		this.shapeTemplates = shapeTemplates;
 		this.units = List.copyOf(units);
 	}
 
@@ -69,7 +78,7 @@ public final class ShapeReport {
 		long t0 = System.nanoTime();
 		QuadCounter.Stats quads = QuadCounter.count(world, plan.map(), checked.table);
 		return new ShapeReport(checked.table, checked.tableMs, checked.scores, checked.checkMs, quads, (System.nanoTime() - t0) / 1_000_000L,
-				checked.structures, checked.units);
+				checked.structures, checked.units, checked.templates, checked.shapeTemplates);
 	}
 
 	/** Builds the table with {@code art} and checks every placed map and unit (no quad count). */
@@ -85,6 +94,8 @@ public final class ShapeReport {
 		}
 		Map<String, long[]> cells = new TreeMap<>();
 		Map<String, CellUnits.Unit> used = new TreeMap<>();
+		Map<String, long[]> placesBySig = new TreeMap<>();
+		Map<String, TemplateRule.Template> templatesBySig = new TreeMap<>();
 		for (MapPlacement placement : placements) {
 			SceneMap map = scene.map(placement.id());
 			ShapePlanner.MapShapes shapes = plan.shapes(placement.id());
@@ -95,6 +106,16 @@ public final class ShapeReport {
 					new PlannedGeometry(map, shapes, plan.index(), table), scene.artPx()));
 			for (Units.Cell cell : shapes.units()) {
 				countUnit(table, map.atlas(), cell.key(), structures, cells, used);
+			}
+			for (Templates.Placed placed : shapes.templates()) {
+				// A template (V7): a building when its geometry passed, else a fallback to its Tier A columns.
+				TemplateRule.Template template = table.template(map.atlas(), placed.sig());
+				if (template == null) {
+					continue;
+				}
+				structures.merge(template.kind() == TemplateRule.Kind.COLUMNS ? "fallback" : "building", 1L, Long::sum);
+				placesBySig.computeIfAbsent(placed.sig(), k -> new long[1])[0]++;
+				templatesBySig.put(placed.sig(), template);
 			}
 			structures.merge("volume", (long) volumes(map, shapes), Long::sum);
 		}
@@ -112,7 +133,12 @@ public final class ShapeReport {
 		}
 		rows.sort(Comparator.comparing(UnitRow::signature));
 		scores.sort(Comparator.comparing(SelfCheck.Scores::id));
-		return new ShapeReport(table, tableMs, scores, (System.nanoTime() - t1) / 1_000_000L, QuadCounter.Stats.EMPTY, 0, structures, rows);
+		List<TemplateRow> templateRows = new ArrayList<>();
+		templatesBySig.forEach((sig, template) -> templateRows.add(new TemplateRow(sig, template.kind().id(),
+				template.failed() == null ? null : template.failed().id(), template.match(), template.maxQuads(), template.roofRows(),
+				placesBySig.get(sig)[0])));
+		return new ShapeReport(table, tableMs, scores, (System.nanoTime() - t1) / 1_000_000L, QuadCounter.Stats.EMPTY, 0, structures, rows,
+				templateRows, plan.index().templates().size());
 	}
 
 	/** Counts one cell of a unit under the kind its geometry became (a unit drawn as columns is a fallback). */
@@ -129,10 +155,16 @@ public final class ShapeReport {
 		used.put(signature, unit);
 	}
 
-	/** Tier A structures of a map: the 4-connected regions of its solid tiles that no unit took. */
+	/** Tier A structures of a map: the 4-connected regions of its solid tiles that no unit or template took. */
 	private static int volumes(SceneMap map, ShapePlanner.MapShapes shapes) {
 		boolean[] solid = Structures.solidTiles(map);
 		int cols = map.artCols();
+		for (int i = 0; i < solid.length; i++) {
+			ShapeKey[] column = shapes.open()[i];
+			if (column != null && column.length > 0 && column[0] != null && column[0].kind() == ShapeKey.Kind.TMPL) {
+				solid[i] = false;
+			}
+		}
 		int per = map.perCell();
 		for (Units.Cell cell : shapes.units()) {
 			for (int dy = 0; dy < per; dy++) {
@@ -156,6 +188,21 @@ public final class ShapeReport {
 	/** Every unit the placed world shows, by signature hash. */
 	public List<UnitRow> units() {
 		return this.units;
+	}
+
+	/** Every template the placed world shows, by signature. */
+	public List<TemplateRow> templates() {
+		return this.templates;
+	}
+
+	/** The templates of the shape index (the whole export). */
+	public int shapeTemplates() {
+		return this.shapeTemplates;
+	}
+
+	/** Placed templates drawn as columns because their geometry failed its gate. */
+	public long templatesFailed() {
+		return this.templates.stream().filter(t -> t.failed() != null).mapToLong(TemplateRow::places).sum();
 	}
 
 	/** Unit cells drawn as columns because their hull or object failed its gate. */
@@ -221,7 +268,7 @@ public final class ShapeReport {
 	/** {@code shape_selfcheck.json}: per map id, its five scores; per unit signature hash, what it became. */
 	public JsonObject toJson() {
 		JsonObject root = new JsonObject();
-		root.addProperty("version", 2);
+		root.addProperty("version", 3);
 		JsonObject maps = new JsonObject();
 		for (SelfCheck.Scores s : this.scores) {
 			JsonObject one = new JsonObject();
@@ -247,6 +294,20 @@ public final class ShapeReport {
 			units.add(u.signature(), one);
 		}
 		root.add("units", units);
+		JsonObject templates = new JsonObject();
+		for (TemplateRow t : this.templates) {
+			JsonObject one = new JsonObject();
+			one.addProperty("kind", t.kind());
+			if (t.failed() != null) {
+				one.addProperty("failed", t.failed());
+			}
+			one.addProperty("match", round4(t.match()));
+			one.addProperty("quads", t.quads());
+			one.addProperty("roof_rows", t.roofRows());
+			one.addProperty("places", t.places());
+			templates.add(t.signature(), one);
+		}
+		root.add("templates", templates);
 		return root;
 	}
 

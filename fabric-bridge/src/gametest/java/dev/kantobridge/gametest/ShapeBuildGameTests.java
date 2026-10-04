@@ -114,7 +114,8 @@ public class ShapeBuildGameTests implements FabricGameTest {
 			helper.assertTrue(map.indexHash().equals(Hashes.sha256(indexText)), "the shape map doesn't name the build's WorldIndex");
 			helper.assertTrue(map.shapeHash().equals(index.hash()), "the shape map doesn't name the shape index");
 			helper.assertTrue(map.shapedBlocks() == report.shapedBlocks && report.shapedBlocks > 0, "shaped_blocks " + report.shapedBlocks);
-			helper.assertTrue("kb-shapes/4".equals(report.shapePlanner), "planner " + report.shapePlanner);
+			helper.assertTrue("kb-shapes/5".equals(report.shapePlanner), "planner " + report.shapePlanner);
+			helper.assertTrue(report.shapeTemplates == index.templates().size() && report.shapeTemplates > 0, "templates " + report.shapeTemplates);
 		} catch (IOException | DataException e) {
 			throw new GameTestAssertException("shape files unreadable: " + e.getClass().getSimpleName());
 		}
@@ -126,6 +127,11 @@ public class ShapeBuildGameTests implements FabricGameTest {
 		helper.assertTrue(report.blocksByKind.get("decor") > 0, "no tuft placed");
 		helper.assertTrue(report.voidRingUnits > 0 && report.voidHullCells == 0, "void ring " + report.voidRingUnits + ", beyond " + report.voidHullCells);
 		helper.assertTrue(report.structures > 0 && report.structuresByKind.get("object") > 0, "structures " + report.structuresByKind);
+		// Tier C (V7): the synthetic buildings are templates, drawn as buildings or as their columns; a failure is counted.
+		helper.assertTrue(report.structuresByKind.get("building") + report.structuresByKind.get("fallback") >= 2, "templates drawn: "
+				+ report.structuresByKind);
+		helper.assertTrue(report.selfCheck.templatesFailed() <= report.structuresByKind.get("fallback"), "templates failed "
+				+ report.selfCheck.templatesFailed());
 		helper.assertTrue(Files.isRegularFile(data.resolve(BuildTask.SELFCHECK_FILE)), "no shape_selfcheck.json beside the report");
 	}
 

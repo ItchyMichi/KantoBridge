@@ -47,6 +47,16 @@ public interface ShapeOverrides {
 		return true;
 	}
 
+	/** A structure's roof rows by a band rule ({@code struct:} key, V7), or -1 for the pane heuristic. */
+	default int roofRows(String atlas, String sig) {
+		return -1;
+	}
+
+	/** A structure replaced by a model ({@code struct:} key, V7), or null. */
+	default @Nullable StructModel templateModel(String atlas, String sig) {
+		return null;
+	}
+
 	/**
 	 * A model's geometry.
 	 *
@@ -55,5 +65,14 @@ public interface ShapeOverrides {
 	 * @param colours ARGB by colour index
 	 */
 	record Model(List<List<ShapeQuad>> blocks, int[] colours) {
+	}
+
+	/**
+	 * A structure's model: its blocks from the template's north-west bottom corner.
+	 *
+	 * @param blocks  per block ({@link QuadMerger#blockKey}), the quads; a quad's texture is a colour index
+	 * @param colours ARGB by colour index
+	 */
+	record StructModel(java.util.Map<Integer, List<ShapeQuad>> blocks, int[] colours) {
 	}
 }

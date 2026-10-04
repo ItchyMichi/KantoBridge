@@ -118,7 +118,7 @@ final class FakeResources implements ResourceManager {
 				 "sprites": {"S": {"frames": 6}},
 				 "cells": {"t/1-2-3-4": {"kind": "hull"}, "t/1-2-3-5": {"kind": "hull"}, "t/1-2-3-6": {"kind": "object"},
 				           "t/1-2-3-7": {"kind": "columns"}, "t/1-2-3-8": {"kind": "columns"}},
-				 "structs": {}, "maps": ["M"], "classes": []}
+				 "structs": {"t/0123456789abcdef": {"tiles": [8, 6], "blocks": [8, 5, 6], "places": 2}}, "maps": ["M"], "classes": []}
 				""".formatted("0".repeat(64));
 		Path file = dir.resolve("keys.json");
 		Files.writeString(file, json, StandardCharsets.UTF_8);

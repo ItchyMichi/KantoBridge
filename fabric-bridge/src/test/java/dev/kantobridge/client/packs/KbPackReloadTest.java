@@ -99,7 +99,7 @@ class KbPackReloadTest {
 		}
 		assertEquals(0xFF336699, tree.colours()[1]);
 		assertNull(packs.unitModel("t", new int[] {1, 2, 3, 8}));
-		assertNotNull(packs.model(PackKey.parse("struct:t/0123456789abcdef")), "kept for the structure templates (V7)");
+		assertNotNull(packs.templateModel("t", "0123456789abcdef"), "a structure's model, meshed for its template (V7)");
 		assertNotNull(packs.model(PackKey.parse("sprite:S")), "kept for the characters (V8)");
 		assertNotEquals(ShapeTable.NO_OVERRIDES, packs.geometryHash(), "a cell model changes geometry");
 	}

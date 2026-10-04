@@ -71,6 +71,9 @@ MAX_FULL_BUILD_MS = 90_000
 SELFCHECK_GROUND_MATCH_MIN = 1.0
 SELFCHECK_STRUCTURE_P05_MIN = 0.55
 SELFCHECK_STRUCTURE_MIN = 0.35
+# V7's templates, from its first recorded full build: a jump in failed templates or a drop in buildings is a regression.
+MAX_TEMPLATES_FAILED = 2
+MIN_TEMPLATE_BUILDINGS = 20
 # The overview viewpoint looks straight down from this far above the surface box's top.
 OVERVIEW_HEIGHT = 128
 FABRIC = REPO / "fabric-bridge"
@@ -233,8 +236,9 @@ def shape_gates(full, again, filtered):
 def budget_gates(report, full_build=True):
     """The budgets of section 3.8 that a build report can check, the self-check's gates (no holes, the ground exact,
     the structure floors), Tier B's (no unit in the void fill beyond its ring; skipped decoration and structures
-    reported) and V5's (every tile story cell has its closed art's overlay). The build's time and rate are judged for a
-    full build only. Returns the names of the failed gates.
+    reported), V5's (every tile story cell has its closed art's overlay) and V7's (templates and their fallbacks
+    reported; for a full build, no jump in failed templates and no drop in buildings). The build's time and rate are
+    judged for a full build only. Returns the names of the failed gates.
     """
     selfcheck = report.get("selfcheck") if isinstance(report.get("selfcheck"), dict) else {}
     throughput = report.get("throughput") if isinstance(report.get("throughput"), dict) else {}
@@ -253,8 +257,14 @@ def budget_gates(report, full_build=True):
         "tier_b_reported": isinstance(report.get("shape_decor_skipped"), int) and isinstance(report.get("structures_by_kind"), dict),
         # V5: every tile story cell's closed art is in the shape map (its overlay), so the chunk mesh draws it.
         "closed_story_art": report.get("closed_shape_cells") == (report.get("story_cells_by_type") or {}).get("tile", 0),
+        # V7: templates and their fallbacks are reported; a failure is one of the fallbacks.
+        "templates_reported": isinstance(report.get("shape_templates"), int) and isinstance(selfcheck.get("templates_failed"), int)
+        and selfcheck.get("templates_failed") <= ((report.get("structures_by_kind") or {}).get("fallback") or 0),
     }
     if full_build:
+        by_kind = report.get("structures_by_kind") or {}
+        checks["template_fallbacks"] = (selfcheck.get("templates_failed") or 0) <= MAX_TEMPLATES_FAILED \
+            and (by_kind.get("building") or 0) >= MIN_TEMPLATE_BUILDINGS
         checks["placement_rate"] = (throughput.get("blocks_per_s") or 0) >= MIN_BLOCKS_PER_S
         checks["build_time"] = 0 < (report.get("elapsed_ms") or 0) <= MAX_FULL_BUILD_MS
     return [name for name, ok in checks.items() if not ok]

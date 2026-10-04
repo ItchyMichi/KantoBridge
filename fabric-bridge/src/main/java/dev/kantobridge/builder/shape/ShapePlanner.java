@@ -1,9 +1,11 @@
 package dev.kantobridge.builder.shape;
 
-import com.google.gson.JsonArray;
+import com.google.gson.JsonObject;
 import dev.kantobridge.builder.plan.Box3;
 import dev.kantobridge.builder.plan.HeightRules;
 import dev.kantobridge.builder.plan.WorldPlan;
+import dev.kantobridge.builder.shape.dressing.Dress;
+import dev.kantobridge.builder.shape.dressing.Dressing;
 import dev.kantobridge.builder.shape.geom.CellUnits;
 import dev.kantobridge.builder.shape.geom.ShapeTable;
 import dev.kantobridge.scene.CellKind;
@@ -65,12 +67,16 @@ public final class ShapePlanner {
 	 * @param units     the map's cell units (open state), in scan order
 	 * @param overlay   per art tile of a swap site's cell, its closed column bottom-up from feet level as an overlay
 	 *                  draws it (V5); null elsewhere
+	 * @param templates the map's structure templates (V7), in region order
+	 * @param wallTile  a dressed interior's dominant wall tile, which its ring and ceiling wear (V7); -1 when not dressed
+	 * @param ceiling   a dressed interior's ceiling key (V7), null when not dressed
 	 */
 	public record MapShapes(String map, ShapeKey[][] open, ShapeKey[][] closed, int[] blocks, int[] shapeMask, int[] floor, int[] decor,
-			List<Units.Cell> units, ShapeKey[][] overlay) {
+			List<Units.Cell> units, ShapeKey[][] overlay, List<Templates.Placed> templates, int wallTile, @Nullable ShapeKey ceiling) {
 		/** The plan of a map without Tier B (no floor change, no decor, no unit, no overlay). */
 		public MapShapes(String map, ShapeKey[][] open, ShapeKey[][] closed, int[] blocks, int[] shapeMask) {
-			this(map, open, closed, blocks, shapeMask, filled(blocks.length, -1), new int[blocks.length], List.of(), new ShapeKey[blocks.length][]);
+			this(map, open, closed, blocks, shapeMask, filled(blocks.length, -1), new int[blocks.length], List.of(), new ShapeKey[blocks.length][],
+					List.of(), -1, null);
 		}
 
 		/** The tile the floor block of art tile {@code i} wears, given its own. */
@@ -80,9 +86,14 @@ public final class ShapePlanner {
 	}
 
 	/** One state's plan of a map. */
-	record Columns(ShapeKey[][] keys, int[] blocks, int[] shapeMask, int[] floor, int[] decor, List<Units.Cell> units) {
+	record Columns(ShapeKey[][] keys, int[] blocks, int[] shapeMask, int[] floor, int[] decor, List<Units.Cell> units,
+			List<Structures.MeasuredRun> runs, List<Templates.Placed> templates, int wallTile, @Nullable ShapeKey ceiling) {
 		Columns(ShapeKey[][] keys, int[] blocks, int[] shapeMask) {
-			this(keys, blocks, shapeMask, filled(blocks.length, -1), new int[blocks.length], List.of());
+			this(keys, blocks, shapeMask, List.of());
+		}
+
+		Columns(ShapeKey[][] keys, int[] blocks, int[] shapeMask, List<Structures.MeasuredRun> runs) {
+			this(keys, blocks, shapeMask, filled(blocks.length, -1), new int[blocks.length], List.of(), runs, List.of(), -1, null);
 		}
 	}
 
@@ -113,6 +124,7 @@ public final class ShapePlanner {
 		List<String> palettes = new ArrayList<>(paletteSet);
 		Map<String, MapShapes> shapes = new TreeMap<>();
 		List<ShapeIndex.Use> uses = new ArrayList<>();
+		Map<String, JsonObject> templates = new TreeMap<>();
 		for (SceneMap map : scene.maps().values()) {
 			int atlas = atlases.indexOf(map.atlas());
 			if (atlas < 0) {
@@ -120,6 +132,12 @@ public final class ShapePlanner {
 			}
 			MapShapes planned = planMap(map, scene.atlas(map.atlas()), atlas, params);
 			shapes.put(map.id(), planned);
+			for (Templates.Placed template : planned.templates()) {
+				templates.putIfAbsent(template.sig(), template.entry());
+			}
+			if (planned.ceiling() != null) {
+				uses.add(new ShapeIndex.Use(planned.ceiling(), map.palette()));
+			}
 			for (ShapeKey key : borderUnitKeys(map, scene.atlas(map.atlas()), atlas, params)) {
 				uses.add(new ShapeIndex.Use(key, map.palette()));
 			}
@@ -136,7 +154,7 @@ public final class ShapePlanner {
 				}
 			}
 		}
-		ShapeIndex index = ShapeIndex.of(params.planner(), params.toJson(), atlases, palettes, uses, new JsonArray());
+		ShapeIndex index = ShapeIndex.of(params.planner(), params.toJson(), atlases, palettes, uses, Templates.indexEntries(templates));
 
 		// ---- the shape map: the surface box and each interior volume, from the feet level up ----
 		Box3 surface = WorldPlan.surfaceVolume(placements);
@@ -168,6 +186,16 @@ public final class ShapePlanner {
 				continue;
 			}
 			int cols = map.artCols();
+			if (planned.ceiling() != null && placement.kind() == MapPlacement.Kind.INTERIOR && !WorldPlan.openSky(placement)) {
+				// A dressed interior's ceiling (V7), over the map's footprint.
+				int ceiling = index.shapeId(planned.ceiling(), map.palette());
+				for (int ty = 0; ty < map.artRows(); ty++) {
+					for (int tx = 0; tx < cols; tx++) {
+						grid.set(placement.x() + tx, placement.y() + WorldPlan.CEILING_ABOVE_FEET, placement.z() + ty, ceiling);
+						shaped++;
+					}
+				}
+			}
 			for (int ty = 0; ty < map.artRows(); ty++) {
 				for (int tx = 0; tx < cols; tx++) {
 					ShapeKey[] column = planned.open()[ty * cols + tx];
@@ -374,7 +402,8 @@ public final class ShapePlanner {
 				}
 			}
 		}
-		return new MapShapes(map.id(), open.keys(), closed, open.blocks(), open.shapeMask(), open.floor(), open.decor(), open.units(), overlay);
+		return new MapShapes(map.id(), open.keys(), closed, open.blocks(), open.shapeMask(), open.floor(), open.decor(), open.units(), overlay,
+				open.templates(), open.wallTile(), open.ceiling());
 	}
 
 	/**
@@ -403,15 +432,30 @@ public final class ShapePlanner {
 			return classified(map, atlas, params);
 		}
 		Columns columns = measured(map, atlas, params);
-		if (!params.tierB() || sceneAtlas == null || map.perCell() != ShapeTable.UNIT_CELL) {
-			return columns;
-		}
-		// Tier B (kb-shapes/3): tufts and cell units over the measured columns.
+		boolean cells = sceneAtlas != null && map.perCell() == ShapeTable.UNIT_CELL;
 		int[] floor = filled(columns.blocks().length, -1);
 		int[] decor = new int[columns.blocks().length];
 		List<Units.Cell> units = new ArrayList<>();
-		Units.plan(map, sceneAtlas, atlas, columns.keys(), columns.blocks(), columns.shapeMask(), floor, decor, units);
-		return new Columns(columns.keys(), columns.blocks(), columns.shapeMask(), floor, decor, List.copyOf(units));
+		if (params.tierB() && cells) {
+			// Tier B (kb-shapes/3): tufts and cell units over the measured columns.
+			Units.plan(map, sceneAtlas, atlas, columns.keys(), columns.blocks(), columns.shapeMask(), floor, decor, units);
+		}
+		List<Templates.Placed> templates = List.of();
+		if (params.tierC() && cells) {
+			// Tier C (kb-shapes/5): bounded buildings as templates over their Tier A columns.
+			templates = Templates.plan(map, atlas, params, columns.runs(), columns.keys(), columns.blocks(), columns.shapeMask(), units,
+					Units.mapGround(map, sceneAtlas.grassTiles(), sceneAtlas.frameTiles()));
+		}
+		int wallTile = -1;
+		ShapeKey ceiling = null;
+		if (params.dressing()) {
+			// Dressing (kb-shapes/5): interior walls up to the ceiling, the ceiling in the room's wall art.
+			Dress dress = Dressing.dress(map, new Dress(atlas, columns.keys(), columns.blocks(), columns.shapeMask(), columns.runs()));
+			wallTile = dress.wallTile();
+			ceiling = dress.ceiling();
+		}
+		return new Columns(columns.keys(), columns.blocks(), columns.shapeMask(), floor, decor, List.copyOf(units), columns.runs(), templates,
+				wallTile, ceiling);
 	}
 
 	// ---- kb-shapes/1: today's classified heights, folded ----
@@ -541,7 +585,7 @@ public final class ShapePlanner {
 				}
 			}
 		}
-		return new Columns(keys, blocks, mask);
+		return new Columns(keys, blocks, mask, runs);
 	}
 
 	/** The roof's height {@code s} rows behind the eave of a run {@code length} rows deep: a gable over the run's depth. */

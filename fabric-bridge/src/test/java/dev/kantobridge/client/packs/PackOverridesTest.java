@@ -123,6 +123,6 @@ class PackOverridesTest {
 		assertEquals(4, packs.dressing("TEST_HOUSE").headroom());
 		assertEquals(List.of("m"), packs.packs());
 		assertEquals(Map.of("pack.rule", 3, "pack.vox_size", 1), packs.warnings());
-		assertEquals(ShapeTable.NO_OVERRIDES, packs.geometryHash(), "structures change geometry from V7, through their own key");
+		assertNotEquals(ShapeTable.NO_OVERRIDES, packs.geometryHash(), "a band rule changes a structure's geometry (V7)");
 	}
 }

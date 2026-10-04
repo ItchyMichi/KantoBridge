@@ -1,9 +1,11 @@
 package dev.kantobridge.builder.shape.geom;
 
+import dev.kantobridge.builder.shape.ShapeKey;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.function.IntUnaryOperator;
+import org.jetbrains.annotations.Nullable;
 
 /**
  * The direct kinds' geometry (docs/specs/VOXEL_BLOCKS_PLAN.md §5.5), block-local in 1/16 block; one Game Boy pixel is
@@ -21,6 +23,17 @@ import java.util.function.IntUnaryOperator;
  */
 final class KeyGeometry {
 	private KeyGeometry() {
+	}
+
+	/** A key drawn without pixels ({@code cube}, {@code slab}, {@code roof}), or null for any other kind. */
+	static @Nullable List<ShapeQuad> direct(ShapeKey key, IntUnaryOperator texture) {
+		return switch (key.kind()) {
+			case CUBE -> cube(key.numbers(), texture);
+			case SLAB -> slab(key.number(0), key.number(1), texture);
+			case ROOF -> roof(key.number(0), key.number(1), key.number(2), key.number(3), key.number(4), key.number(5) == 1, key.number(6) == 1,
+					texture);
+			default -> null;
+		};
 	}
 
 	/** Key order up, down, north, south, west, east; quads sorted by face. */

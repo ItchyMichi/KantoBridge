@@ -34,25 +34,42 @@ class CarrierChoiceTest {
 	}
 
 	@Test
-	void theHillsHouseStandsOnTilesAndCarriesItsRoof() {
+	void theHillsHouseIsATemplateOverItsTierAColumns() {
+		// V7: the house (a door folds into it) is a template; its volume, and so its collision, stays its Tier A columns'.
 		MapPlacement hill = plan.index().map("TEST_HILL");
 		int x = hill.x() + 5;
 		int z = hill.z() + 8;
 		int feet = hill.y();
 		assertEquals(BlockCode.KIND_FULL, view.kind(x, feet - 1, z), "the floor block");
-		for (int k = 0; k < 4; k++) {
-			assertEquals(BlockCode.KIND_FULL, view.kind(x, feet + k, z), "band " + k);
+		int band = view.code(x, feet, z);
+		for (int k = 0; k <= 4; k++) {
+			int code = view.code(x, feet + k, z);
+			assertEquals(BlockCode.KIND_SHAPE, BlockCode.kind(code), "block " + k + ": a template's carrier");
+			// The slot is the position's own tile, as a tile_full there would show.
+			assertEquals(BlockCode.value(band), BlockCode.value(code), "the same slot index");
 		}
-		int roof = view.code(x, feet + 4, z);
-		assertEquals(BlockCode.KIND_SHAPE, BlockCode.kind(roof), "the roof block");
 		assertEquals(BlockCode.AIR, view.code(x, feet + 5, z));
-		// The roof's slot is the position's own tile, as a tile_full there would show.
-		assertEquals(BlockCode.value(view.code(x, feet + 3, z)), BlockCode.value(roof), "the same slot index");
 		ShapeMap map = plan.shapes().map();
 		ShapeIndex index = plan.shapes().index();
-		assertEquals(ShapeKey.Kind.ROOF, index.key(map.shapeAt(x, feet + 4, z)).kind());
-		assertEquals(ShapeKey.Kind.CUBE, index.key(map.shapeAt(x, feet, z)).kind(), "the bands are folded cubes");
+		ShapeKey first = index.key(map.shapeAt(x, feet, z));
+		assertEquals(ShapeKey.Kind.TMPL, first.kind());
 		assertEquals(0, map.shapeAt(x, feet + 5, z));
+		Templates.Entry entry = null;
+		for (com.google.gson.JsonElement element : index.templates()) {
+			if (element.getAsJsonObject().get("sig").getAsString().equals(first.sig())) {
+				entry = Templates.Entry.of(element.getAsJsonObject());
+			}
+		}
+		org.junit.jupiter.api.Assertions.assertNotNull(entry, "the index holds the template");
+		ShapeKey[] column = entry.columns()[first.number(2) * entry.w() + first.number(0)];
+		assertEquals(5, column.length, "four bands and the roof block: its fallback is Tier A's column");
+		assertEquals(ShapeKey.Kind.CUBE, column[0].kind(), "the bands are folded cubes");
+		assertEquals(ShapeKey.Kind.ROOF, column[4].kind());
+		for (int k = 0; k <= 4; k++) {
+			ShapeKey key = index.key(map.shapeAt(x, feet + k, z));
+			assertEquals(first.sig(), key.sig());
+			assertEquals(k, key.number(1), "the block's height in the template");
+		}
 	}
 
 	@Test

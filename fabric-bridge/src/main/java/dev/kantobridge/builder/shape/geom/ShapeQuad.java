@@ -29,6 +29,8 @@ public record ShapeQuad(byte face, short[] xyz, int texture, byte[] uv, byte cul
 	public static final int DARKEN = 2;
 	public static final int EMISSIVE = 4;
 	public static final int NO_AO = 8;
+	/** Two bits from here: a key's {@code tint} (0..3), a darkening drawn as a vertex colour (V7: ceilings). */
+	public static final int TINT_SHIFT = 4;
 
 	public ShapeQuad {
 		if (face < 0 || face > SLOPED || xyz.length != 12 || (uv.length != 4 && uv.length != 8) || cull < -1 || cull > EAST) {
@@ -70,6 +72,19 @@ public record ShapeQuad(byte face, short[] xyz, int texture, byte[] uv, byte cul
 	/** The same quad wearing another texture. */
 	public ShapeQuad withTexture(int texture) {
 		return texture == this.texture ? this : new ShapeQuad(this.face, this.xyz, texture, this.uv, this.cull, this.flags);
+	}
+
+	/** This quad darkened by a key's tint, 0..3 (it replaces any tint it had). */
+	public ShapeQuad withTint(int tint) {
+		if (tint < 0 || tint > 3) {
+			throw new IllegalArgumentException("tint out of range");
+		}
+		return new ShapeQuad(this.face, this.xyz, this.texture, this.uv, this.cull, (byte) (this.flags & ~(3 << TINT_SHIFT) | tint << TINT_SHIFT));
+	}
+
+	/** The quad's tint, 0..3. */
+	public int tint() {
+		return this.flags >> TINT_SHIFT & 3;
 	}
 
 	/** One full face of the block, the whole texture on it, culled by that side. */

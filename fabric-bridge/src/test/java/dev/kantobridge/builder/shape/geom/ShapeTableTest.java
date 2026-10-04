@@ -10,6 +10,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import com.google.gson.JsonArray;
 import dev.kantobridge.builder.shape.ShapeKey;
 import dev.kantobridge.builder.shape.ShapeParams;
+import dev.kantobridge.builder.shape.Templates;
 import dev.kantobridge.scene.ArtSource;
 import dev.kantobridge.world.DataException;
 import dev.kantobridge.world.ShapeIndex;
@@ -158,6 +159,69 @@ class ShapeTableTest {
 		assertEquals(1, mesh.size(), "the model's quad in this block");
 		assertEquals("color:123456", table.textureKeys().get(mesh.quads().get(0).texture()), "a colour over the white sprite");
 		assertEquals("d".repeat(64), table.overridesHash());
+	}
+
+	@Test
+	void templatesAreBuiltFromTheIndexAndTintsDarken() {
+		// V7: a tmpl key's block from its template entry; a tinted key's quads carry the tint.
+		ShapeParams p = ShapeParams.v7();
+		com.google.gson.JsonObject entry = new com.google.gson.JsonObject();
+		Templates.Entry house = BandsTest.house();
+		entry.addProperty("template", Templates.FORMAT);
+		entry.addProperty("atlas", 0);
+		entry.addProperty("w", house.w());
+		entry.addProperty("d", house.d());
+		entry.addProperty("perCell", 2);
+		JsonArray tiles = new JsonArray();
+		JsonArray columns = new JsonArray();
+		for (int i = 0; i < house.tiles().length; i++) {
+			tiles.add(house.tiles()[i]);
+			JsonArray column = new JsonArray();
+			if (house.columns()[i] != null) {
+				for (ShapeKey key : house.columns()[i]) {
+					column.add(key.text());
+				}
+			}
+			columns.add(column);
+		}
+		entry.add("tiles", tiles);
+		JsonArray door = new JsonArray();
+		door.add(1);
+		door.add(2);
+		JsonArray doors = new JsonArray();
+		doors.add(door);
+		entry.add("doors", doors);
+		entry.addProperty("ground", 0);
+		entry.addProperty("outdoor", true);
+		entry.add("columns", columns);
+		String sig = Templates.signature(entry);
+		entry.addProperty("sig", sig);
+		JsonArray templates = new JsonArray();
+		templates.add(entry);
+		ShapeKey block = ShapeKey.tmpl(0, sig, 0, 0, 3);
+		ShapeKey ceiling = ShapeKey.cube(0, 1, 1, 1, 1, 1, 1).withTint(2);
+		ShapeIndex index = ShapeIndex.of(p.planner(), p.toJson(), List.of(BandsTest.ATLAS), List.of("PAL_A"),
+				List.of(new ShapeIndex.Use(block, "PAL_A"), new ShapeIndex.Use(ceiling, "PAL_A")), templates);
+		ShapeTable table = ShapeTable.build(index, BandsTest.art(true));
+		TemplateRule.Template built = table.template(BandsTest.ATLAS, sig);
+		assertNotNull(built);
+		assertEquals(TemplateRule.Kind.BUILDING, built.kind());
+		ShapeMesh mesh = table.mesh(index.shapeId(block, "PAL_A"));
+		assertTrue(mesh.size() > 0, "the house's south-west front block");
+		for (ShapeQuad quad : mesh.quads()) {
+			assertTrue(table.textureKeys().get(quad.texture()).startsWith("tile:tilesets.fix/"), "its own tiles");
+		}
+		for (ShapeQuad quad : table.mesh(index.shapeId(ceiling, "PAL_A")).quads()) {
+			assertEquals(2, quad.tint(), "darkened as a vertex colour, not a texture");
+		}
+		// An index whose template doesn't read: its keys get no mesh (the plain cube is drawn).
+		JsonArray broken = new JsonArray();
+		com.google.gson.JsonObject bad = entry.deepCopy();
+		bad.addProperty("ground", 9);
+		broken.add(bad);
+		ShapeIndex wrong = ShapeIndex.of(p.planner(), p.toJson(), List.of(BandsTest.ATLAS), List.of("PAL_A"),
+				List.of(new ShapeIndex.Use(block, "PAL_A")), broken);
+		assertNull(ShapeTable.build(wrong, BandsTest.art(true)).mesh(wrong.shapeId(block, "PAL_A")));
 	}
 
 	@Test

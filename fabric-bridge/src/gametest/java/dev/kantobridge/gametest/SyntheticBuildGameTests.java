@@ -248,8 +248,9 @@ public class SyntheticBuildGameTests implements FabricGameTest {
 		helper.assertTrue(light.is(Blocks.LIGHT) && light.getValue(LightBlock.LEVEL) == 15, "house light");
 		BlockPos counter = new BlockPos(house.x() + 8, feet, house.z() + 6);
 		helper.assertTrue(isTile(level, counter) && level.getBlockState(counter.above()).isAir(), "counter is not 1 block high");
+		// A wall along the north edge rises to the ceiling (the voxel plan's V7 dressing).
 		BlockPos wall = new BlockPos(house.x(), feet + 1, house.z());
-		helper.assertTrue(isTile(level, wall) && level.getBlockState(wall.above()).isAir(), "interior wall is not 2 blocks high");
+		helper.assertTrue(isTile(level, wall) && isTile(level, wall.above()) && isTile(level, wall.above(2)), "interior wall doesn't reach the ceiling");
 		for (int y = feet - 1; y <= feet + 3; y++) {
 			helper.assertTrue(isTile(level, new BlockPos(house.x() - 1, y, house.z() + 3)), "enclosure ring open at y offset " + (y - feet));
 		}

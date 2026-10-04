@@ -18,6 +18,10 @@ import org.jetbrains.annotations.Nullable;
  * <p>A chain can run out of depth: its parent already sits on the deepest layer (long floor chains pushed down by
  * spills, e.g. under a crowded city). PLAN §8's fallback then puts the interior on that deepest layer, moved sideways
  * to the nearest free spot under the void fill, outside every surface map's footprint ({@link Spot#deep()}).
+ *
+ * <p>An open-air interior (a forest; the voxel plan's V7, §5.12) needs the sky: {@link #placeOpenSky} puts it outside the
+ * surface's box, at a spot free on its layer and on every layer above, and keeps that column free up to the sky for the
+ * interiors placed after it.
  */
 public final class InteriorPacker {
 	/** Minimum horizontal distance between two interiors' outer walls on one layer. */
@@ -120,6 +124,42 @@ public final class InteriorPacker {
 				}
 				this.occupied.computeIfAbsent(this.maxLayer, k -> new ArrayList<>()).add(box);
 				return new Spot(sx, sz, this.maxLayer, true, true);
+			}
+		}
+		return null;
+	}
+
+	/**
+	 * Finds and reserves a spot under the open sky for an open-air interior: on layer {@code minLayer}, its footprint
+	 * outside {@code surfaceBox} (the surface's volume: maps, void fill and ring) by at least {@link #GAP} and free on its
+	 * layer and on every layer above it; nearest its door first (rings of {@link #SIDEWAYS_STEP} blocks). The footprint is
+	 * reserved on every layer from the top down to its own, so nothing is placed above it later.
+	 * Null when nothing fits (the interior then takes an ordinary spot and keeps its ceiling).
+	 */
+	public @Nullable Spot placeOpenSky(int x, int z, int blockWidth, int blockDepth, int minLayer, Box surfaceBox) {
+		if (minLayer < 1 || minLayer > this.maxLayer) {
+			return null;
+		}
+		for (int ring = 0; ring <= MAX_DEEP_RINGS; ring++) {
+			for (Offset offset : ring == 0 ? List.of(new Offset(0, 0)) : ringOffsets(ring)) {
+				int sx = x + offset.dx() * SIDEWAYS_STEP;
+				int sz = z + offset.dz() * SIDEWAYS_STEP;
+				Box box = footprint(sx, sz, blockWidth, blockDepth);
+				if (!box.separated(surfaceBox, GAP)) {
+					continue;
+				}
+				// The shallowest layer it may take is the only one worth trying: a deeper one needs this one free as well.
+				boolean clear = true;
+				for (int layer = 1; layer <= minLayer && clear; layer++) {
+					clear = this.fits(layer, box);
+				}
+				if (!clear) {
+					continue;
+				}
+				for (int layer = 1; layer <= minLayer; layer++) {
+					this.occupied.computeIfAbsent(layer, k -> new ArrayList<>()).add(box);
+				}
+				return new Spot(sx, sz, minLayer, sx != x || sz != z);
 			}
 		}
 		return null;

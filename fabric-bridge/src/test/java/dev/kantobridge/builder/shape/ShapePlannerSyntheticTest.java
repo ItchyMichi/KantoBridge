@@ -44,12 +44,16 @@ class ShapePlannerSyntheticTest {
 		golden.addProperty("mapHash", shapes.map().hash());
 		golden.addProperty("shapedBlocks", shapes.shapedBlocks());
 		TestData.assertGolden(TestData.goldenShapes(), ProtoJson.write(golden), "shapes");
-		assertEquals("kb-shapes/4", shapes.index().planner());
+		assertEquals("kb-shapes/5", shapes.index().planner());
 		assertEquals(2, shapes.keysByKind().get(ShapeKey.Kind.TUFT), "the grass and the flower");
 		assertEquals(5 * 8, shapes.keysByKind().get(ShapeKey.Kind.CELL),
 				"five units of eight blocks: the tree wall (with and without walkable ground south), the town's post, the cut tree, the hill's sign");
 		assertTrue(shapes.index().size() > 0);
-		assertTrue(shapes.keysByKind().get(ShapeKey.Kind.ROOF) > 0, "the hill's house has its roof");
+		// V7: the hill's house and the town's door block are templates; their Tier A keys (the house's roof) live in them.
+		assertEquals(2, shapes.index().templates().size());
+		assertEquals(60 * 5 + 4 * 2, shapes.keysByKind().get(ShapeKey.Kind.TMPL), "a key per block: the house's 60 columns of 5, the door block's 4 of 2");
+		assertEquals(null, shapes.keysByKind().get(ShapeKey.Kind.ROOF));
+		assertTrue(shapes.index().geoms().stream().anyMatch(k -> k.tint() == 2), "the house's ceiling, darkened (V7)");
 		assertEquals(1, shapes.keysByKind().get(ShapeKey.Kind.SLAB), "the town's ledge lip, one tile");
 		assertEquals(shapes.index().size(), shapes.index().geoms().size(), "one palette: one shape per key");
 	}

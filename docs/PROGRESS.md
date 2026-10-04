@@ -41,7 +41,8 @@ pack below player packs; VD10 the JSON file.
 | V3 | Carriers and Tier A shapes | **done** (play-test waits for you; rebuild your world first) | 2026-10-04 | `5a1a283` |
 | V4 | Tier B shapes | **done** (play-test, X2 and X3 wait for you; rebuild your world first) | 2026-10-04 | `aa706c9` |
 | V5 | Story art in the mesh | **done** (play-test waits for you; rebuild your world first) | 2026-10-04 | `144c669` |
-| V6 | Texture packs and `.vox` models | **done** (play-test and X5 wait for you; no rebuild needed) | 2026-10-04 | `V6: texture packs` |
+| V6 | Texture packs and `.vox` models | **done** (play-test and X5 wait for you; no rebuild needed) | 2026-10-04 | `0df5171` |
+| V7 | Structure templates and dressing | **done** (play-test waits for you; rebuild your world first) | 2026-10-04 | `V7: structures and dressing` |
 
 **Measurements waiting on you** (agents never start the client; the plan's §10):
 
@@ -135,6 +136,21 @@ pack below player packs; VD10 the JSON file.
   a made-up resource manager, `PackOverridesTest`, `PackTemplateWriterTest` on the synthetic bundle, `VoxFileTest`,
   `VoxMesherTest`, the pack keys in `ArtKeysTest`, a pack's rules and model in `ShapeTableTest`), **92/92 GameTests**,
   the mixin checks. V6 changes no block, so it has no real build (its gate is "green").
+- **V7:** `tools/check.sh --e2e`: pytest **1447 passed** (the end-to-end tests included; new: the template gates in
+  `test_shape_gates.py`, the template entries in `test_builder_golden.py`), then `gradlew build`: **753 JUnit** (new:
+  `TemplatesTest`, `DressingTest`, `BandsTest`, the open-sky packer in `InteriorPackerTest`, templates and tints in
+  `ShapeTableTest`), **92/92 GameTests** (the synthetic buildings are templates; the house's walls reach its ceiling),
+  the mixin checks. The real build: 220 maps, 0 warnings, 2,467,050 blocks (9,937 more than V5: interior walls up to
+  the ceiling), 60.0 s at 47,229 blocks/s; `kb-shapes/5` planned 18,834 keys (12,753 `tmpl` in 35 templates, 4,250
+  cubes, 1,315 roofs, 496 cell keys, 15 slabs, 5 tufts) and 23,557 instances; the shape index is 1.21 MB, the shape map
+  211,204 characters (4 parts). Templates: 18 with panes became buildings (22 placements; match 0.978 to 1.0, none
+  failed), 17 without a pane kept their columns (22 placements); at most 66 quads in a template block. Self-check:
+  0 holes, ground 1.0, structure match 5th percentile 0.5982 and lowest 0.375 (the route gates, as at V4); quads
+  9.8 per shaped block on average, 69 at most, sections 6,240 at the 95th percentile and 24,064 at most. Five open-air
+  interiors went under the open sky (`notes.open_air_sky`), none kept its ceiling. The new gates `templates_reported`
+  and `template_fallbacks` (at most 2 failed templates and at least 20 building placements, set from this run) hold.
+  Two earlier runs failed: `selfcheck_structure` (5th percentile 0.4231, lowest 0.2973; deviation 64), and four
+  templates under their gate while sunk panes counted as misses and the facade was carved (deviations 60 and 63).
 
 ### Voxel plan: deviations
 
@@ -303,13 +319,51 @@ pack below player packs; VD10 the JSON file.
 56. **`PackOverrides` implements the geometry stage's `ShapeOverrides`** (in `builder/shape/geom`, so the shared
     builder code never sees client classes); the template writes each unit's voxels, kept on `CellUnits.Unit`, in the
     four Game Boy shades.
+57. **A template's volume is its Tier A columns** (the plan: its footprint × its drawn rows plus the roof rise). Its
+    blocks, and so its collision, stay exactly what V3–V6 built (they turn from `tile_full` into `shape_full`), and its
+    fallback is exact. Tier C's geometry stays inside it: a block it leaves empty (above a low flat roof) still
+    collides, as an empty template block would in the plan.
+58. **Templates are buildings**: a structure region of the measured runs that a door folds into, on an outdoor map,
+    within 32 tiles along either side (`templateMax`), touching no swap site and no cell unit. Other regions stay Tier A
+    volumes; interiors get dressing, not templates.
+59. **A template entry also holds its Tier A keys** (per grid position, bottom-up), so a client rebuilds the fallback
+    without planning a fragment of a map, and the signature covers them.
+60. **No carving** (the plan: objects split off, a silhouette from the background flood). Carving the roof where the
+    drawing is light shows the wall's top from the game's view; carving the facade turned light-painted walls into holes
+    the roof floats over (the synthetic house: a light facade without side outlines), and no score sees that because
+    the floor under a building shows the same art. So a template's volume is full, as Tier A's is; the background flood
+    only tells the panes, and no object is split off.
+61. **The bands**: the roof rows are those above the highest pane (or a pack's `struct:` rule); the facade folds
+    upright at each run's front exactly as Tier A's bands do (a folded door's columns show the door); panes sink one
+    pixel; the roof is one voxel layer on the facade showing, at each depth, the drawing row the game's view sees there
+    (the roof rows cycled north of the drawing), so from the game's view it is the drawing. Sides and backs show their
+    band's tile and the run's plain back tile, as Tier A's columns do.
+62. **Without a pane (and without a rule) a template stays its Tier A columns**, reported as `fallback` without
+    `failed` ("keep the generic volume").
+63. **The template's self-check** scores every pixel of the structure's tiles from the game's view over its floor
+    (texel identity), allowing the door fold's shift in a folded run and a sunk pane's one-row shift; the gate is the
+    plan's 0.90 and the 96-quad cap.
+64. **Interior walls rise to the ceiling refolded**, not repeated: a wall column (a run along the north, west or east
+    edge) is folded as Tier A folds a run of the ceiling's height, so a two-row back wall repeats its top band (the
+    plan's words) while a long side wall shows its next row and keeps the game's view. The first real run, which
+    repeated the top band's key, lowered the route gates' structure match to 0.3750 and the 5th percentile to 0.4231.
+65. **Dressing's rule interface** is `applies(SceneMap)` and `dress(SceneMap, Dress)`; the plan's `StitchedGrid`,
+    `ShapeSink` and `PositionHash` don't exist here, and no rule needs randomness.
+66. **Open-air interiors** (the forest, and outdoor maps placed as interiors) go under the open sky when the build
+    plans shapes: outside the surface's volume, on their usual layer, their footprint reserved on every layer above;
+    their placement takes the outdoor biome (sky colour, the outdoor spawn rule), which is how the builder and every
+    client know there is no ceiling. A kept ceiling is not raised (the plan said "raised for headroom"): an interior's
+    volume follows from its placement alone; `open_air_kept_ceiling` shows whether it ever happens.
+67. **A pack's `dressing` is read and checked but not applied**, and `place:` models are read but never drawn: a world's
+    dressing is part of its build, and every placement of a structure shares its shapes; a client-local pack can change
+    neither.
+68. **The tint is two flag bits on the quad** (`ShapeQuad.TINT_SHIFT`): levels 1–3 multiply the vertex colour by
+    0.85, 0.69 and 0.53 (with the darkening and a pack model's colour); ceilings use 2. The shape table's geometry
+    version is 4.
 
 ### Voxel plan: open issues
 
-- **V7 must put structure rules and models in the packs' geometry hash.** V6 reads and checks `struct:` band rules and
-  `struct:`/`place:` models but nothing draws them yet, so `PackOverrides.geometryHash` leaves them out; once V7 builds
-  structure templates from them, the hash must include them (and the key index must list structures, so their keys can
-  be checked).
+None (V7 put the structure rules and models in the packs' geometry hash, and the key index lists structures).
 
 ## Pre-flight (PLAN §0.6)
 

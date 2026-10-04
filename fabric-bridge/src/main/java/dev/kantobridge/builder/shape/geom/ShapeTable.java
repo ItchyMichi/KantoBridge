@@ -1,6 +1,7 @@
 package dev.kantobridge.builder.shape.geom;
 
 import dev.kantobridge.builder.shape.ShapeKey;
+import dev.kantobridge.builder.shape.Templates;
 import dev.kantobridge.scene.ArtSource;
 import dev.kantobridge.world.DataException;
 import dev.kantobridge.world.Hashes;
@@ -34,7 +35,7 @@ import org.jetbrains.annotations.Nullable;
  */
 public final class ShapeTable {
 	/** The geometry version: what this code builds from a key. Not part of any world hash; it keys the client's cache. */
-	public static final int GEOMETRY = 3;
+	public static final int GEOMETRY = 4;
 	public static final String NO_OVERRIDES = "0".repeat(64);
 	private static final byte[] MAGIC = "KBST".getBytes(StandardCharsets.US_ASCII);
 	private static final int FORMAT = 1;
@@ -46,10 +47,12 @@ public final class ShapeTable {
 	private final ShapeMesh[] meshes;
 	private final int quads;
 	private final Map<String, CellUnits.Unit> units;
+	private final Map<String, TemplateRule.Template> templates;
 
 	private ShapeTable(String shapeIndexHash, int geometry, String overridesHash, List<String> textureKeys, ShapeMesh[] meshes,
-			Map<String, CellUnits.Unit> units) {
+			Map<String, CellUnits.Unit> units, Map<String, TemplateRule.Template> templates) {
 		this.units = Map.copyOf(units);
+		this.templates = Map.copyOf(templates);
 		this.shapeIndexHash = shapeIndexHash;
 		this.geometry = geometry;
 		this.overridesHash = overridesHash;
@@ -85,6 +88,8 @@ public final class ShapeTable {
 		ShapeMesh[] meshes = new ShapeMesh[index.size() + 1];
 		Map<String, CellUnits.Unit> units = new HashMap<>();
 		Map<String, List<ShapeQuad>> tufts = new HashMap<>();
+		Map<String, TemplateRule.Template> templates = new HashMap<>();
+		Map<String, Templates.Entry> entries = entries(index);
 		int artPx = art.artPx();
 		for (int id = 1; id <= index.size(); id++) {
 			ShapeKey key = index.key(id);
@@ -111,6 +116,18 @@ public final class ShapeTable {
 					});
 					yield tuft == null ? null : retexture(tuft, slot -> texture.applyAsInt(tile));
 				}
+				case TMPL -> {
+					// One block of a bounded structure (V7): its template, built once from this art and the packs.
+					Templates.Entry entry = entries.get(key.sig());
+					if (entry == null) {
+						yield null;
+					}
+					TemplateRule.Template template = templates.computeIfAbsent(atlas + "|" + key.sig(), k -> TemplateRule.build(entry, atlas, art,
+							overrides));
+					List<ShapeQuad> block = template.block(key.number(0), key.number(1), key.number(2));
+					int[] colours = template.colours();
+					yield colours != null ? retexture(block, colour -> texture(colourKey(colours[colour]), textures, keys)) : retexture(block, texture);
+				}
 				case CELL -> {
 					int bx = key.number(5);
 					int by = key.number(6);
@@ -127,9 +144,17 @@ public final class ShapeTable {
 				}
 				default -> null;
 			};
+			if (quads != null && key.tint() > 0) {
+				// A key's tint (V7: ceilings) darkens every quad, as a vertex colour.
+				List<ShapeQuad> tinted = new ArrayList<>(quads.size());
+				for (ShapeQuad quad : quads) {
+					tinted.add(quad.withTint(key.tint()));
+				}
+				quads = tinted;
+			}
 			meshes[id] = quads == null ? null : new ShapeMesh(quads);
 		}
-		return new ShapeTable(index.hash(), GEOMETRY, artHash, keys, meshes, units);
+		return new ShapeTable(index.hash(), GEOMETRY, artHash, keys, meshes, units, templates);
 	}
 
 	/** Tiles along a cell unit's edge: a {@code cell} key names four tiles. */
@@ -174,6 +199,30 @@ public final class ShapeTable {
 	/** The geometry a {@code cell} key's unit got (built tables only; a table read from a cache file has none), or null. */
 	public CellUnits.@Nullable Unit unit(String atlas, ShapeKey key) {
 		return key.kind() == ShapeKey.Kind.CELL ? this.units.get(unitSignature(atlas, key)) : null;
+	}
+
+	/** The geometry a template got, by atlas and signature (built tables only), or null. */
+	public TemplateRule.@Nullable Template template(String atlas, String sig) {
+		return this.templates.get(atlas + "|" + sig);
+	}
+
+	/** Every template this table built, by {@code atlas|sig}. */
+	public Map<String, TemplateRule.Template> templates() {
+		return this.templates;
+	}
+
+	/** The shape index's templates by signature; one that doesn't read draws plain cubes (its keys get no mesh). */
+	static Map<String, Templates.Entry> entries(ShapeIndex index) {
+		Map<String, Templates.Entry> out = new HashMap<>();
+		for (com.google.gson.JsonElement element : index.templates()) {
+			try {
+				Templates.Entry entry = Templates.Entry.of(element.getAsJsonObject());
+				out.put(entry.sig(), entry);
+			} catch (RuntimeException e) {
+				// A malformed entry: its keys stay unbuilt.
+			}
+		}
+		return out;
 	}
 
 	/** Every unit this table built, by signature. */
@@ -336,7 +385,7 @@ public final class ShapeTable {
 			if (in.read() != -1) {
 				throw new DataException("/", "trailing bytes");
 			}
-			return new ShapeTable(indexHash, version, overrides, keys, meshes, Map.of());
+			return new ShapeTable(indexHash, version, overrides, keys, meshes, Map.of(), Map.of());
 		} catch (EOFException e) {
 			throw new DataException("/", "truncated");
 		} catch (IOException e) {

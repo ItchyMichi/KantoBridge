@@ -135,6 +135,12 @@ public final class WorldPlanner {
 			surfaceFootprints.add(new InteriorPacker.Box(p.x(), p.z(), p.x() + p.blockWidth(), p.z() + p.blockDepth()));
 		}
 		InteriorPacker packer = new InteriorPacker(Scale.maxLayer(options.minBuildHeight()), surfaceFootprints);
+		// Open-air interiors (a forest) get the sky when the build plans shapes (the voxel plan's V7): outside the surface's
+		// volume, nothing above them.
+		Box3 surfaceVolume = WorldPlan.surfaceVolume(placements.values());
+		InteriorPacker.Box sky = !options.shapes() || surfaceVolume == null ? null
+				: new InteriorPacker.Box(surfaceVolume.minX(), surfaceVolume.minZ(), surfaceVolume.maxX(), surfaceVolume.maxZ());
+		String forest = field.indoor() == null ? null : field.indoor().excludedTileset();
 		List<ExportMap> pending = new ArrayList<>();
 		for (String id : requested) {
 			ExportMap map = all.get(id);
@@ -162,7 +168,9 @@ public final class WorldPlanner {
 					continue;
 				}
 				progress = true;
-				MapPlacement placed = placeInterior(map, parent, all.get(parent.id()), packer, wildMaps.contains(map.id()), warnings);
+				boolean openAir = map.outside() || map.tileset().equals(forest);
+				MapPlacement placed = placeInterior(map, parent, all.get(parent.id()), packer, wildMaps.contains(map.id()), openAir ? sky : null,
+						warnings);
 				if (placed != null) {
 					placements.put(map.id(), placed);
 				}
@@ -365,9 +373,11 @@ public final class WorldPlanner {
 	/**
 	 * @param wild the map's wild Pokémon come from a habitat pool: it gets the cave biome, which the interior spawn guard
 	 *             (spawn rule {@code no_interior_spawns}) leaves alone; the two biomes look and sound the same
+	 * @param sky  for an open-air interior (V7), the surface's volume it must keep out from under to see the sky; null for
+	 *             any other interior
 	 */
 	private static @Nullable MapPlacement placeInterior(ExportMap map, MapPlacement parent, ExportMap parentMap, InteriorPacker packer,
-			boolean wild, Warnings warnings) {
+			boolean wild, InteriorPacker.@Nullable Box sky, Warnings warnings) {
 		ExportMap.Parent door = map.parent();
 		int doorX = parent.x() + Scale.cellToBlock(door.x());
 		int doorZ = parent.z() + Scale.cellToBlock(door.y());
@@ -386,9 +396,22 @@ public final class WorldPlanner {
 		} else {
 			warnings.warn("interior_arrival_missing", Warnings.symbols("map", map.id()));
 		}
-		InteriorPacker.Spot spot = packer.place(doorX - Scale.cellToBlock(arrivalX), doorZ - Scale.cellToBlock(arrivalY),
-				Scale.cellToBlock(map.cellWidth()), Scale.cellToBlock(map.cellHeight()), parent.layer() + 1);
+		int wantX = doorX - Scale.cellToBlock(arrivalX);
+		int wantZ = doorZ - Scale.cellToBlock(arrivalY);
 		Map<String, String> detail = Warnings.symbols("map", map.id(), "parent", parent.id(), "parent_layer", Integer.toString(parent.layer()));
+		InteriorPacker.Spot spot = null;
+		if (sky != null) {
+			// An open-air interior: under the open sky, outside the surface's volume; else it keeps its ceiling (counted).
+			spot = packer.placeOpenSky(wantX, wantZ, Scale.cellToBlock(map.cellWidth()), Scale.cellToBlock(map.cellHeight()), parent.layer() + 1,
+					sky);
+			if (spot != null) {
+				warnings.note("open_air_sky", detail);
+				return new MapPlacement(map.id(), spot.x(), Scale.feetY(spot.layer()), spot.z(), map.cellWidth(), map.cellHeight(), spot.layer(),
+						MapPlacement.Kind.INTERIOR, map.palette(), WorldPlan.BIOME_OUTDOOR, map.dark(), parent.id());
+			}
+			warnings.note("open_air_kept_ceiling", detail);
+		}
+		spot = packer.place(wantX, wantZ, Scale.cellToBlock(map.cellWidth()), Scale.cellToBlock(map.cellHeight()), parent.layer() + 1);
 		if (spot == null) {
 			warnings.warn("interior_unplaced", detail);
 			return null;

@@ -19,6 +19,8 @@ public final class ShapeEmitter {
 	private static final Direction[] DIRECTIONS = Direction.values();
 	/** A darkened quad's vertex colour (ceilings, the {@code tint} modifier from V7). */
 	static final int DARKEN = 0xFFB4B4B4;
+	/** A key's tint by level (V7: ceilings), multiplied in like {@link #DARKEN}. */
+	static final int[] TINTS = {0xFFFFFFFF, 0xFFD8D8D8, 0xFFB0B0B0, 0xFF888888};
 
 	private ShapeEmitter() {
 	}
@@ -58,6 +60,9 @@ public final class ShapeEmitter {
 		float centreV = (minV + maxV) / 2;
 		float ratio = sprite.uvShrinkRatio();
 		int colour = quad.has(ShapeQuad.DARKEN) ? multiply(tint, DARKEN) : tint;
+		if (quad.tint() > 0) {
+			colour = multiply(colour, TINTS[quad.tint()]);
+		}
 		for (int i = 0; i < 4; i++) {
 			float u = quad.cornerU(i);
 			float v = quad.cornerV(i);

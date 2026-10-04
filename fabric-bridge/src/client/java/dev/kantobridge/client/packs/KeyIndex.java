@@ -14,6 +14,7 @@ import dev.kantobridge.builder.shape.ShapeKey;
 import dev.kantobridge.builder.shape.ShapeParams;
 import dev.kantobridge.builder.shape.ShapePlan;
 import dev.kantobridge.builder.shape.ShapePlanner;
+import dev.kantobridge.builder.shape.Templates;
 import dev.kantobridge.builder.shape.geom.CellUnits;
 import dev.kantobridge.builder.shape.geom.ShapeTable;
 import dev.kantobridge.scene.FrontEnds;
@@ -50,6 +51,10 @@ public final class KeyIndex {
 	record Cell(String kind, String clazz, int uses) {
 	}
 
+	/** A structure template (V7): its grid in tiles, its volume in blocks, its placements. */
+	record Struct(int w, int d, int height, int places) {
+	}
+
 	private final String game;
 	private final String exportHash;
 	private final String shapeIndexHash;
@@ -59,16 +64,19 @@ public final class KeyIndex {
 	private final Map<String, Integer> sprites;
 	/** By "atlas/t0-t1-t2-t3". */
 	private final Map<String, Cell> cells;
+	/** By "atlas/sig". */
+	private final Map<String, Struct> structs;
 	private final Set<String> maps;
 
 	private KeyIndex(String game, String exportHash, String shapeIndexHash, Map<String, Tile> tiles, Map<String, Integer> sprites,
-			Map<String, Cell> cells, Set<String> maps) {
+			Map<String, Cell> cells, Map<String, Struct> structs, Set<String> maps) {
 		this.game = game;
 		this.exportHash = exportHash;
 		this.shapeIndexHash = shapeIndexHash;
 		this.tiles = tiles;
 		this.sprites = sprites;
 		this.cells = cells;
+		this.structs = structs;
 		this.maps = maps;
 	}
 
@@ -129,7 +137,24 @@ public final class KeyIndex {
 			boolean foliage = use != null ? use.foliage() : CellUnits.Context.parse(key.variant()).tree();
 			cells.put(id, new Cell(unit == null ? "columns" : unit.kind().id(), foliage ? "tree" : "prop", use == null ? 0 : use.uses()));
 		}
-		return new KeyIndex(bundle.game(), bundle.exportHash(), plan.index().hash(), tiles, sprites, cells, new TreeSet<>(scene.maps().keySet()));
+		Map<String, Integer> places = new TreeMap<>();
+		for (ShapePlanner.MapShapes shapes : plan.maps().values()) {
+			for (Templates.Placed placed : shapes.templates()) {
+				places.merge(placed.sig(), 1, Integer::sum);
+			}
+		}
+		Map<String, Struct> structs = new TreeMap<>();
+		for (com.google.gson.JsonElement element : plan.index().templates()) {
+			try {
+				Templates.Entry entry = Templates.Entry.of(element.getAsJsonObject());
+				structs.put(plan.index().atlas(entry.atlas()) + "/" + entry.sig(), new Struct(entry.w(), entry.d(), entry.height(),
+						places.getOrDefault(entry.sig(), 0)));
+			} catch (RuntimeException e) {
+				// Not a template this client reads: its key can't be named.
+			}
+		}
+		return new KeyIndex(bundle.game(), bundle.exportHash(), plan.index().hash(), tiles, sprites, cells, structs,
+				new TreeSet<>(scene.maps().keySet()));
 	}
 
 	public String game() {
@@ -150,7 +175,7 @@ public final class KeyIndex {
 			}
 			case MAP -> this.maps.contains(key.scope());
 			case PLACE -> false;
-			case STRUCT -> false;
+			case STRUCT -> this.structs.containsKey(key.scope() + "/" + key.sig());
 			case CLASS -> true;
 		};
 	}
@@ -161,6 +186,10 @@ public final class KeyIndex {
 
 	public int cells() {
 		return this.cells.size();
+	}
+
+	public int structs() {
+		return this.structs.size();
 	}
 
 	public JsonObject toJson() {
@@ -200,7 +229,22 @@ public final class KeyIndex {
 			cells.add(id, one);
 		});
 		root.add("cells", cells);
-		root.add("structs", new JsonObject());
+		JsonObject structs = new JsonObject();
+		this.structs.forEach((id, struct) -> {
+			JsonObject one = new JsonObject();
+			JsonArray size = new JsonArray();
+			size.add(struct.w());
+			size.add(struct.d());
+			one.add("tiles", size);
+			JsonArray blocks = new JsonArray();
+			blocks.add(struct.w());
+			blocks.add(struct.height());
+			blocks.add(struct.d());
+			one.add("blocks", blocks);
+			one.addProperty("places", struct.places());
+			structs.add(id, one);
+		});
+		root.add("structs", structs);
 		JsonArray maps = new JsonArray();
 		this.maps.forEach(maps::add);
 		root.add("maps", maps);
@@ -240,12 +284,21 @@ public final class KeyIndex {
 				cells.put(e.getKey(), new Cell(entry.get("kind").getAsString(), entry.has("class") ? entry.get("class").getAsString() : "prop",
 						count(entry, "uses")));
 			}
+			Map<String, Struct> structs = new TreeMap<>();
+			if (root.has("structs")) {
+				for (Map.Entry<String, JsonElement> e : root.getAsJsonObject("structs").entrySet()) {
+					JsonObject entry = e.getValue().getAsJsonObject();
+					JsonArray blocks = entry.getAsJsonArray("blocks");
+					structs.put(e.getKey(), new Struct(blocks.get(0).getAsInt(), blocks.get(2).getAsInt(), blocks.get(1).getAsInt(),
+							count(entry, "places")));
+				}
+			}
 			Set<String> maps = new TreeSet<>();
 			for (JsonElement map : root.getAsJsonArray("maps")) {
 				maps.add(map.getAsString());
 			}
 			return new KeyIndex(root.get("game").getAsString(), root.get("exportHash").getAsString(), root.get("shapeIndexHash").getAsString(),
-					tiles, sprites, cells, maps);
+					tiles, sprites, cells, structs, maps);
 		} catch (IOException | RuntimeException e) {
 			return null;
 		}
