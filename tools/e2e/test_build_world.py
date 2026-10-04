@@ -29,3 +29,6 @@ def test_full_build_from_the_real_export():
     details = build_world.DIAGNOSTICS.read_text(encoding="utf-8") if build_world.DIAGNOSTICS.exists() else None
     assert code == 0 and not failed, {"exit": code, "failed": failed,
                                       "warning_codes": data.get("warning_codes"), "diagnostics": details}
+    points = build_world.viewpoints(data, "KantoE2E")["viewpoints"]
+    assert [p["id"] for p in points] == ["spawn", "above"], points
+    build_world.write_viewpoints(data, "KantoE2E")

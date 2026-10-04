@@ -363,3 +363,28 @@ tests' install) also works as Player 2's game.
 
 - [ ] Close one player's Gen1Recomp: the other player sees a ⏸ bubble over them until it's back.
 - [ ] Surf with one player: the other sees them on the surf sprite, not standing on the water.
+
+## Voxel plan (specs/VOXEL_BLOCKS_PLAN.md)
+
+The voxel plan's milestones V1–V9 have their own items below. **Measurements** (the plan's §10) write numbers only to
+`local/reports/mesh_report.json`. For each one:
+
+- Start the dev client with the measuring tool: in `fabric-bridge\`, run
+  `$env:JAVA_HOME = 'C:\Program Files\Eclipse Adoptium\jdk-21.0.12.101-hotspot'; .\gradlew.bat runClient -Pkb.meshstats=true`.
+- In the world, switch to spectator mode, turn vsync off, and stand at one of the viewpoints in
+  `local/reports/viewpoints.json` (each has a ready `/tp` command; `tools/e2e/build_world.py` writes the file after a
+  headless build).
+- Press **F8** and keep still: the tool re-meshes the view, then samples 30 s of frames and the heap. F7 shows its
+  line; the run is appended to the report. Do three runs per scene; the medians count.
+
+### V1a: measuring tools
+
+- [ ] **X1 baseline** (today's rendering, before V1b): check out the V1a commit, measure, then come back:
+      ```powershell
+      git checkout (git log --format=%h --grep='^V1a:' -1)
+      # measure as above: the spawn town, the densest map you know, all of Kanto from above (render distance 16 and 32)
+      git checkout main
+      ```
+      Use your current `saves/Kanto` (built before V3; a world rebuilt by V3 or later doesn't load at the V1a commit).
+      F7's mesh line says `model json` here and `model runtime` from V1b on.
+- [ ] Also note the time of one F3+T (the line's `reload` value) and of joining the world (`join→view`).

@@ -6,6 +6,7 @@ import dev.kantobridge.client.bridge.BridgeRuntime;
 import dev.kantobridge.client.fx.BlockadeFade;
 import dev.kantobridge.client.fx.SpeechBubbles;
 import dev.kantobridge.client.fx.SurfSprite;
+import dev.kantobridge.client.model.MeshStatsRuntime;
 import dev.kantobridge.client.move.MoveRuntime;
 import dev.kantobridge.client.net.ClientRelay;
 import dev.kantobridge.client.net.GameRelayRuntime;
@@ -61,5 +62,7 @@ public class KantoBridgeClient implements ClientModInitializer {
 		// game) and the save-pair mismatch warning.
 		Notices.init();
 		Versions.init(bridge);
+		// Dev only (-Dkantobridge.meshstats=true): the rendering measurements of the voxel plan (§10).
+		MeshStatsRuntime.init(bridge);
 	}
 }

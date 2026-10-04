@@ -353,6 +353,11 @@ public final class BuildTask {
 		r.slotsHalf = plan.slotMap().count(SlotMap.Shape.HALF);
 		r.worldIndexHash = plan.index().hash();
 		r.spawnMap = plan.spawn() != null ? plan.spawn().map() : null;
+		WorldPlan.Spawn spawn = plan.spawn();
+		r.spawnBlock = spawn == null ? null : new int[] {spawn.blockX(), spawn.feetY(), spawn.blockZ()};
+		Box3 surface = plan.surfaceBox();
+		r.surfaceBox = surface == null ? null
+				: new int[] {surface.minX(), surface.minY(), surface.minZ(), surface.maxX(), surface.maxY(), surface.maxZ()};
 		r.pools = plan.pools().size();
 		ResourcePackWriter.Result pack = this.prepared.pack();
 		if (pack != null) {

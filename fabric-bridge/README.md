@@ -401,3 +401,13 @@ GameTests: `SavePairGameTests` (the pair in the player data the save writes, eve
 once, the daycare reconcile and the no-op withdrawal), `RelayHelloGameTests` (as far as mock players allow), the PC ids
 (`PcGameTests`), `save.begin`'s pair (`SaveGameTests`), relay authority for `save.loaded` and `relay.hello` and the surf
 flag (`MultiplayerGameTests`).
+
+## Voxel blocks and models (docs/specs/VOXEL_BLOCKS_PLAN.md)
+
+The voxel plan (V1–V9) moves the tiles' look from generated JSON to one runtime model and then shapes the art. Its
+classes, milestone by milestone:
+
+| Class | Role |
+|---|---|
+| `client/model/MeshStats`, `MeshStatsRuntime`, `MeshStatsMixinPlugin`; `mixin/dev/SectionCompilerTimingMixin` | **Dev-only measuring** (V1a; the plan's §10), off unless `-Dkantobridge.meshstats=true` (`./gradlew runClient -Pkb.meshstats=true`). The timing mixin (its own config, `kantobridge.dev.mixins.json`, applied only with the property) times every section's mesh; F8 re-meshes the view, samples 30 s of frames and the heap after two collections, and appends a run (numbers only: re-mesh ms, section and own-model timings, quads per section, mean and 1%-low fps, heap, the last reload's and the join's times) to `mesh_report.json` (`local/reports/` in the dev run). F7 shows the last run |
+| `builder/BuildReport` | Also `viewpoints`: the spawn cell's block and the surface box (block coordinates only); `tools/e2e/build_world.py` writes them as `local/reports/viewpoints.json` with ready `/tp` commands |

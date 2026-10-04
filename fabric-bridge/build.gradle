@@ -48,6 +48,20 @@ loom {
 	}
 }
 
+// Rendering measurements (docs/specs/VOXEL_BLOCKS_PLAN.md §10): `./gradlew runClient -Pkb.meshstats=true` turns on the dev-only
+// MeshStats counters and its timing mixin; F8 in game appends a run to local/reports/mesh_report.json (numbers only).
+def kbMeshStats = providers.gradleProperty("kb.meshstats").getOrElse("false") == "true"
+if (kbMeshStats) {
+	loom {
+		runs {
+			client {
+				vmArg "-Dkantobridge.meshstats=true"
+				vmArg "-Dkantobridge.meshstats.report=${file('../local/reports/mesh_report.json').absolutePath}"
+			}
+		}
+	}
+}
+
 // A second dev client for multiplayer play-tests (docs/PLAN.md §6 M9): `./gradlew runClient2` starts "Player2" in its own
 // game folder, ../local/minecraft-p2 (its own options, generated pack and export), linked to a second Gen1Recomp whose
 // gen1-bridge listens on port 27152. Agents never start it; the user does.

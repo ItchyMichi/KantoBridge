@@ -9,6 +9,8 @@
 4. Points local/minecraft/server.properties at saves/<world> with the kantobridge:kanto preset.
 5. Runs the dev server headless with the build properties; it builds, writes the report and stops.
 6. Checks local/reports/build_report.json, which holds counts and hashes only.
+7. Writes local/reports/viewpoints.json: fixed spectator viewpoints for the voxel plan's measurements
+   (docs/specs/VOXEL_BLOCKS_PLAN.md V1a, section 10), from the report's block coordinates.
 
 Data safety (PLAN section 0.3): only markers, counts, symbols and hashes are printed. The bundle,
 world, datapack and resource pack are ROM-derived and stay under local/. The user accepts the
@@ -46,6 +48,10 @@ REPORTS = REPO / "local" / "reports"
 REPORT = REPORTS / "build_report.json"
 # Symbols-only details per warning code (map ids, kinds), written beside the report (M8).
 DIAGNOSTICS = REPORTS / "build_diagnostics.json"
+# Fixed spectator viewpoints for the user's rendering measurements (voxel plan V1a): map ids and coordinates only.
+VIEWPOINTS = REPORTS / "viewpoints.json"
+# The overview viewpoint looks straight down from this far above the surface box's top.
+OVERVIEW_HEIGHT = 128
 FABRIC = REPO / "fabric-bridge"
 DEFAULT_JAVA_HOME = r"C:\Program Files\Eclipse Adoptium\jdk-21.0.12.101-hotspot"
 EXPORT_PORT = 27196
@@ -187,6 +193,31 @@ def check_report(maps, report=REPORT):
     return data, [name for name, ok in checks.items() if not ok]
 
 
+def viewpoints(report, world):
+    """The fixed spectator viewpoints of a build (voxel plan V1a): the spawn cell at walking height, looking north
+    over the town, and the centre of the surface box from above, looking down. Map ids and block coordinates only.
+    """
+    points = []
+    vp = report.get("viewpoints") or {}
+    if {"spawn_x", "spawn_feet_y", "spawn_z"} <= vp.keys():
+        x, y, z = vp["spawn_x"] + 1.0, float(vp["spawn_feet_y"]), vp["spawn_z"] + 1.0
+        points.append({"id": "spawn", "map": report.get("spawn_map"), "x": x, "y": y, "z": z, "yaw": 180.0, "pitch": 10.0})
+    if {"surface_min_x", "surface_max_x", "surface_min_z", "surface_max_z", "surface_max_y"} <= vp.keys():
+        x = (vp["surface_min_x"] + vp["surface_max_x"]) / 2.0
+        z = (vp["surface_min_z"] + vp["surface_max_z"]) / 2.0
+        y = float(vp["surface_max_y"] + OVERVIEW_HEIGHT)
+        points.append({"id": "above", "map": None, "x": x, "y": y, "z": z, "yaw": 180.0, "pitch": 90.0})
+    for point in points:
+        point["command"] = "/tp @s {x:g} {y:g} {z:g} {yaw:g} {pitch:g}".format(**point)
+    return {"version": 1, "world": world, "viewpoints": points}
+
+
+def write_viewpoints(report, world, path=VIEWPOINTS):
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(viewpoints(report, world), indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    return path
+
+
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--maps", default="pallet", help="a map set (" + ", ".join(MAP_SETS) +
@@ -223,6 +254,8 @@ def main(argv=None):
             # Symbols only (map ids, kinds, sources): safe to print.
             print("diagnostics: " + DIAGNOSTICS.read_text(encoding="utf-8").strip())
         return 1
+    write_viewpoints(data, args.world)
+    print(f"viewpoints: {VIEWPOINTS.relative_to(REPO).as_posix()}")
     print("build OK")
     return 0
 

@@ -19,7 +19,9 @@ import org.jetbrains.annotations.Nullable;
  * datapack: every wild map of the export, whatever the filter); from M8 {@code maps_unplaced} (maps asked for that got
  * no place) and {@code diagnostics} (whether {@code build_diagnostics.json}, the symbol lists behind the warning counts,
  * was written beside the report). M10 records the builder's speed as {@code throughput}: blocks and chunks placed per
- * second of placement ({@code place_ms}), maps built per second of the whole build ({@code elapsed_ms}).
+ * second of placement ({@code place_ms}), maps built per second of the whole build ({@code elapsed_ms}). The voxel plan's
+ * measurements (docs/specs/VOXEL_BLOCKS_PLAN.md V1a) add {@code viewpoints}: block coordinates of the spawn cell and of
+ * the surface box, from which {@code tools/e2e/build_world.py} writes the fixed spectator viewpoints.
  */
 public final class BuildReport {
 	public static final String FILE = "build_report.json";
@@ -58,6 +60,10 @@ public final class BuildReport {
 	public boolean worldIndex;
 	public boolean diagnostics;
 	public @Nullable String spawnMap;
+	/** The spawn cell's north-west block and feet level ({@code x, feetY, z}), or null without a spawn. */
+	public int @Nullable [] spawnBlock;
+	/** The surface volume ({@code minX, minY, minZ, maxX, maxY, maxZ}, max exclusive), or null without surface maps. */
+	public int @Nullable [] surfaceBox;
 	public int blocksPlaced;
 	public int blocksCleared;
 	public int chunks;
@@ -110,6 +116,7 @@ public final class BuildReport {
 		} else {
 			out.addProperty("spawn_map", this.spawnMap);
 		}
+		out.add("viewpoints", this.viewpoints());
 		out.addProperty("blocks_placed", this.blocksPlaced);
 		out.addProperty("blocks_cleared", this.blocksCleared);
 		out.addProperty("chunks", this.chunks);
@@ -126,6 +133,23 @@ public final class BuildReport {
 		out.addProperty("slot_map_hash", this.slotMapHash);
 		out.addProperty("world_index_hash", this.worldIndexHash);
 		out.addProperty("pack_hash", this.packHash);
+		return out;
+	}
+
+	/** Block coordinates only: where the spawn cell and the surface box are, for fixed measuring viewpoints. */
+	private JsonObject viewpoints() {
+		JsonObject out = new JsonObject();
+		if (this.spawnBlock != null) {
+			out.addProperty("spawn_x", this.spawnBlock[0]);
+			out.addProperty("spawn_feet_y", this.spawnBlock[1]);
+			out.addProperty("spawn_z", this.spawnBlock[2]);
+		}
+		if (this.surfaceBox != null) {
+			String[] names = {"surface_min_x", "surface_min_y", "surface_min_z", "surface_max_x", "surface_max_y", "surface_max_z"};
+			for (int i = 0; i < names.length; i++) {
+				out.addProperty(names[i], this.surfaceBox[i]);
+			}
+		}
 		return out;
 	}
 

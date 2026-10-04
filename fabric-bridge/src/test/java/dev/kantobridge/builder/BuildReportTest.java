@@ -39,10 +39,27 @@ class BuildReportTest {
 		assertEquals(1, json.getAsJsonObject("warning_codes").get("layout_overlap").getAsInt());
 		assertTrue(json.get("error").isJsonNull());
 		// Values are numbers, booleans, codes, ids and hashes only: no nested content beyond count maps.
-		Set<String> objects = Set.of("warning_codes", "notes", "story_cells_by_type", "throughput");
+		Set<String> objects = Set.of("warning_codes", "notes", "story_cells_by_type", "throughput", "viewpoints");
 		for (String key : json.keySet()) {
 			assertTrue(!json.get(key).isJsonObject() || objects.contains(key), key + " is an unexpected object");
 			assertTrue(!json.get(key).isJsonArray(), key + " is an array");
+		}
+	}
+
+	@Test
+	void viewpointsAreBlockCoordinatesOnly() {
+		BuildReport report = new BuildReport();
+		assertEquals(0, report.toJson().getAsJsonObject("viewpoints").size(), "nothing without a spawn or a surface");
+		report.spawnBlock = new int[] {10, 64, -20};
+		report.surfaceBox = new int[] {-12, 63, -40, 52, 71, 36};
+		JsonObject viewpoints = report.toJson().getAsJsonObject("viewpoints");
+		assertEquals(9, viewpoints.size());
+		assertEquals(10, viewpoints.get("spawn_x").getAsInt());
+		assertEquals(64, viewpoints.get("spawn_feet_y").getAsInt());
+		assertEquals(-20, viewpoints.get("spawn_z").getAsInt());
+		assertEquals(52, viewpoints.get("surface_max_x").getAsInt());
+		for (String key : viewpoints.keySet()) {
+			assertTrue(viewpoints.get(key).getAsJsonPrimitive().isNumber(), key + " is a number");
 		}
 	}
 

@@ -25,6 +25,47 @@ questions under "Open issues" below. Proposals for later stages (the hidden-play
 the generative voxel system, first-person dressing, several regions in one world) are in
 [NEXT_STAGES.md](NEXT_STAGES.md).
 
+## Voxel plan
+
+Execution of [specs/VOXEL_BLOCKS_PLAN.md](specs/VOXEL_BLOCKS_PLAN.md) (V1–V9), in its own numbering. The decisions of
+its §2.1 use their defaults (nobody answered them before the run): VD1 (a) the hybrid, built directly; VD2 nothing
+pinned; VD3 never Dramaless Shape's tables; VD4 export and warn; VD5 thick cards, carved and rigged as options, players
+as skins; VD6 all four pack steps; VD7 interior walls and ceilings only; VD8 keep the block outline; VD9 the generated
+pack below player packs; VD10 the JSON file.
+
+| # | Milestone | Status | Date | Commit |
+|---|---|---|---|---|
+| V1a | Measuring tools (V1's first work package) | **done** | 2026-10-04 | `V1a: measuring tools` |
+
+**Measurements waiting on you** (agents never start the client; the plan's §10):
+
+- **X1 baseline:** take it on the commit `V1a: measuring tools`, before V1b's runtime model, on a world built before V3
+  (your `saves/Kanto` as it is now). PLAYTEST.md "Voxel plan, V1a" has the steps.
+
+### Voxel plan: check results
+
+- **V1a:** `tools/check.sh`: pytest **1366 passed** (37 e2e skipped; the new `tests/test_viewpoints.py`), then
+  `gradlew build`: JUnit (the new `MeshStatsTest`, `BuildReportTest#viewpointsAreBlockCoordinatesOnly`), **88/88
+  GameTests**, the mixin remap check (**10** injector targets: the two new ones are the dev timing mixin's) and the
+  target check.
+
+### Voxel plan: deviations
+
+1. **V1 is two commits** (`V1a: measuring tools`, then `V1: runtime model`) instead of one, so the X1 baseline can be
+   measured on today's rendering at the V1a commit while the run continues.
+2. **MeshStats is two classes:** `client/model/MeshStats` (the counters and the arithmetic, pure and unit-tested) and
+   `client/model/MeshStatsRuntime` (the key, the frame clock, the report file). The dev mixin's gate is
+   `client/model/MeshStatsMixinPlugin`; its config is `kantobridge.dev.mixins.json`, its package
+   `dev.kantobridge.mixin.dev`. The dev client turns it on with `./gradlew runClient -Pkb.meshstats=true`, which also
+   points the report at `local/reports/mesh_report.json`; the key is F8.
+3. **The viewpoints come from the build report:** the builder adds `viewpoints` (the spawn cell's block and the surface
+   box, block coordinates only) to `build_report.json`, and `build_world.py` turns them into
+   `local/reports/viewpoints.json`, so no tool parses the world's own files.
+
+### Voxel plan: open issues
+
+None yet.
+
 ## Pre-flight (PLAN §0.6)
 
 | Step | State |
