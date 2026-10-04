@@ -41,7 +41,13 @@ class ProfileTest {
 			    ROOM = { stool = { 5 } },
 			  },
 			  buildings = {
-			    TOWN = { { tiles = { { 1, 2 }, { 3, 4 } }, roofRows = 8, slab = 2 }, { claimOnly = true, tiles = { { 5 } } } },
+			    TOWN = {
+			      { tiles = { { 1, 2 }, { 3, 4 } }, roofRows = 8, roofBack = 2, roofFront = 2, roofCycle = { 2, 5 }, slab = 2, frontEave = 1,
+			        ledge = { 9, 10 }, seal = "s", scrub = { { 0, 0, 1, 1 } }, keep = { 4 } },
+			      { claimOnly = true, tiles = { { 5 } } },
+			      { tiles = { { 6 } }, roofRows = 8, slab = 2 },
+			      { tiles = { { 7 } }, parts = { { x = { 0, 1 } } }, roofRows = 0, slab = 0 },
+			    },
 			  },
 			}
 			""";
@@ -82,7 +88,7 @@ class ProfileTest {
 	@Test
 	void buildingsStayInListOrderAndCountsAreCounts() throws Exception {
 		Profile p = Profile.parse(TEXT);
-		assertEquals(2, p.buildings("TOWN").size());
+		assertEquals(4, p.buildings("TOWN").size());
 		assertEquals(8, p.buildings("TOWN").get(0).integer("roofRows", 0));
 		assertTrue(p.buildings("ROOM").isEmpty());
 		Profile.Counts counts = p.counts();
@@ -90,8 +96,35 @@ class ProfileTest {
 		assertEquals(4 + 2 + 1 + 1 + 1, counts.pins(), "every tile pinned once; the repeated 13 is not counted again");
 		assertEquals(1, counts.duplicatePins());
 		assertEquals(2, counts.conds());
-		assertEquals(2, counts.buildingEntries());
-		assertEquals(Map.of("class", 1, "heights.?", 1, "when_above", 1), counts.unknown(), "gazebo, nonsense height, nonsense class");
+		assertEquals(4, counts.buildingEntries());
+		assertEquals(Map.of("class", 1, "heights.?", 1, "when_above", 1, "buildings.band", 1, "buildings.parts", 1), counts.unknown(),
+				"gazebo, nonsense height, nonsense class; a roofed entry without its roof rows; a parts entry (P3)");
+	}
+
+	@Test
+	void buildingEntriesReadIntoTheirBandTables() throws Exception {
+		Profile p = Profile.parse(TEXT);
+		List<Profile.Building> read = p.tileset("TOWN").buildings();
+		assertEquals(2, read.size(), "the band table and the claim-only twin");
+		Profile.Building house = read.get(0);
+		assertEquals(0, house.index());
+		assertEquals(2, house.width());
+		assertEquals(Set.of(4), house.keep());
+		Profile.Band band = house.band();
+		assertEquals(8, band.roofRows());
+		assertEquals(2, band.roofBack());
+		assertEquals(2, band.cycle0());
+		assertEquals(5, band.cycle1());
+		assertEquals(1, band.frontEave());
+		assertEquals(9, band.ledge()[0]);
+		assertEquals("s", band.seal());
+		assertEquals(16, band.depthPx(), "eight voxels per grid row");
+		assertEquals(1, band.scrub().size());
+		Profile.Building twin = read.get(1);
+		assertTrue(twin.claimOnly());
+		assertNull(twin.band());
+		assertEquals(1, twin.index());
+		assertTrue(p.tileset("ROOM").buildings().isEmpty());
 	}
 
 	@Test

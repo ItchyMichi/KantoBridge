@@ -24,9 +24,11 @@ import java.util.Objects;
  * @param templateMax   the largest structure template, in art tiles along either side (with {@code tierC}; from V7)
  * @param profileUnits  units from the profile's pins, and the probe's repeating cells (docs/specs/PROFILE_PLAN.md §5.4;
  *                      from P1)
+ * @param profileBuildings the profile's band-table buildings (docs/specs/PROFILE_PLAN.md §5.5; from P2)
  */
 public record ShapeParams(String planner, String heights, int maxUnit, int minRepeatRows, int hullRing, int interiorWall, boolean tierB,
-		boolean tierC, int roofRise, int ledgeLip, boolean storyArt, boolean dressing, int templateMax, boolean profileUnits) {
+		boolean tierC, int roofRise, int ledgeLip, boolean storyArt, boolean dressing, int templateMax, boolean profileUnits,
+		boolean profileBuildings) {
 	public static final String CLASSIFIED = "classified";
 	public static final String MEASURED = "measured";
 
@@ -41,6 +43,13 @@ public record ShapeParams(String planner, String heights, int maxUnit, int minRe
 		if (tierC ? templateMax < 4 || templateMax > 64 : templateMax != 0) {
 			throw new IllegalArgumentException("a template size needs Tier C, and lies in 4..64");
 		}
+	}
+
+	/** Parameters before P2 (no profile buildings). */
+	public ShapeParams(String planner, String heights, int maxUnit, int minRepeatRows, int hullRing, int interiorWall, boolean tierB,
+			boolean tierC, int roofRise, int ledgeLip, boolean storyArt, boolean dressing, int templateMax, boolean profileUnits) {
+		this(planner, heights, maxUnit, minRepeatRows, hullRing, interiorWall, tierB, tierC, roofRise, ledgeLip, storyArt, dressing, templateMax,
+				profileUnits, false);
 	}
 
 	/** Parameters before P1 (no profile units). */
@@ -112,9 +121,15 @@ public record ShapeParams(String planner, String heights, int maxUnit, int minRe
 				true, true, 16, 4, true, true, TEMPLATE_MAX, true);
 	}
 
+	/** P2: P1's planner plus the profile's band-table buildings (docs/specs/PROFILE_PLAN.md §5.5). */
+	public static ShapeParams p2() {
+		return new ShapeParams("kb-shapes/7", MEASURED, HeightRules.MAX_UNIT, HeightRules.MIN_REPEAT_ROWS, 2, HeightRules.INTERIOR_WALL,
+				true, true, 16, 4, true, true, TEMPLATE_MAX, true, true);
+	}
+
 	/** The parameters a build plans with. */
 	public static ShapeParams current() {
-		return p1();
+		return p2();
 	}
 
 	/** The parameters as they appear in the shape index. */
@@ -144,6 +159,9 @@ public record ShapeParams(String planner, String heights, int maxUnit, int minRe
 		}
 		if (this.profileUnits) {
 			out.addProperty("profileUnits", true);
+		}
+		if (this.profileBuildings) {
+			out.addProperty("profileBuildings", true);
 		}
 		return out;
 	}

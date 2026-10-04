@@ -114,7 +114,7 @@ public class ShapeBuildGameTests implements FabricGameTest {
 			helper.assertTrue(map.indexHash().equals(Hashes.sha256(indexText)), "the shape map doesn't name the build's WorldIndex");
 			helper.assertTrue(map.shapeHash().equals(index.hash()), "the shape map doesn't name the shape index");
 			helper.assertTrue(map.shapedBlocks() == report.shapedBlocks && report.shapedBlocks > 0, "shaped_blocks " + report.shapedBlocks);
-			helper.assertTrue("kb-shapes/6".equals(report.shapePlanner), "planner " + report.shapePlanner);
+			helper.assertTrue("kb-shapes/7".equals(report.shapePlanner), "planner " + report.shapePlanner);
 			helper.assertTrue(report.shapeTemplates == index.templates().size() && report.shapeTemplates > 0, "templates " + report.shapeTemplates);
 		} catch (IOException | DataException e) {
 			throw new GameTestAssertException("shape files unreadable: " + e.getClass().getSimpleName());

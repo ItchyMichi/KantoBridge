@@ -87,6 +87,17 @@ public final class VoxelGrid {
 		}
 	}
 
+	/** Empties a voxel, its cap too (outside the grid: ignored). */
+	public void clear(int x, int y, int z) {
+		if (this.inside(x, y, z)) {
+			int i = this.index(x, y, z);
+			this.texels[i] = EMPTY;
+			if (this.caps != null) {
+				this.caps[i] = EMPTY;
+			}
+		}
+	}
+
 	/** Sets the texel a voxel's top face wears (it must be solid to show). */
 	public void setCap(int x, int y, int z, int texel) {
 		if (!this.inside(x, y, z)) {

@@ -120,6 +120,8 @@ public final class BuildReport {
 	public Map<String, Long> profileUnknown = new java.util.LinkedHashMap<>();
 	/** The map bodies' cell units by why they are units, and pinned cells left as they were (the profile plan). */
 	public Map<String, Long> unitsBySource = new java.util.LinkedHashMap<>();
+	/** The profile's band-table buildings (P2): claims, claim-only twins, refusals and cut overhangs, counted. */
+	public Map<String, Long> profileBuildings = new java.util.LinkedHashMap<>();
 	/** Characters (the voxel plan's V8): sheets by frame count, and the styles' fallbacks; empty without shapes. */
 	public Map<String, Long> spritesByFrames = new java.util.LinkedHashMap<>();
 	public Map<String, Long> characterFallbacks = new java.util.LinkedHashMap<>();
@@ -241,6 +243,9 @@ public final class BuildReport {
 		JsonObject bySource = new JsonObject();
 		this.unitsBySource.forEach(bySource::addProperty);
 		out.add("units_by_source", bySource);
+		JsonObject buildings = new JsonObject();
+		this.profileBuildings.forEach(buildings::addProperty);
+		out.add("buildings", buildings);
 		JsonObject byFrames = new JsonObject();
 		this.spritesByFrames.forEach(byFrames::addProperty);
 		out.add("sprites_by_frames", byFrames);

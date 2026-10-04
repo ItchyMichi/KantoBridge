@@ -426,8 +426,8 @@ own rules as the fallback; the tree fallback is option 1; buildings follow the t
 
 | # | Milestone | Status | Date | Commit |
 |---|---|---|---|---|
-| P1 | Profile and outdoor units | **done** (play-test waits for you: install the mod, switched off, then a new world) | 2026-10-04 | `P1: profile and outdoor units` |
-| P2 | Buildings | to do | | |
+| P1 | Profile and outdoor units | **done** (play-test waits for you: install the mod, switched off, then a new world) | 2026-10-04 | `7dab639` |
+| P2 | Buildings | **done** (play-test waits for you; a new world) | 2026-10-04 | `P2: buildings` |
 | P3 | Boxes and interiors | to do | | |
 | P4 | Finish | to do | | |
 
@@ -449,6 +449,19 @@ Route 22: none. Over the 36 outdoor maps, 2,586 of 14,797 solid cells were units
   (0.598 before), min 0.530 (0.375; Pallet Town, whose 45 non-unit solid cells are its houses). Every gate holds.
   `tools/check.sh --e2e`: pytest **1455 passed** (the end-to-end tests included), then `gradlew build`: **796 JUnit**,
   **92/92 GameTests**, the mixin checks.
+- **P2** (the same export): 42 of the profile's 55 building entries read (13 furniture entries built from parts wait for
+  P3); 235 claims (138 outdoors, the tallest 21 blocks in Saffron City; 97 indoors, in houses, Oak's lab, the Celadon
+  Mansion and the Safari Zone, three blocks at most) and one claim-only twin (on Route 10: the Pokémon Tower's other
+  half); 82 overhang positions cut (over walls, not ground). 84 band
+  templates (236 placements) beside 4 V7 templates (6); structures: 242 buildings (35), 120 fallbacks (144); no template
+  failed; a band block holds at most 61 quads. 2,505,147 blocks in 61.5 s (48,415 blocks/s); 58,646 keys, index 2.87 MB
+  (4.16 MB before the fallback columns became a height per position), map 392,512 characters of the 8 parts' 524,288.
+  Quads per block mean 12.0, max 80; per section p95 7,288, max 26,752. Self-check: no hole, ground 1.0, structure p05
+  0.810, min 0.656. Every gate holds.
+  `tools/check.sh --e2e`: pytest **1455 passed** (the end-to-end tests included), then `gradlew build`: **810 JUnit**,
+  **92/92 GameTests**, the mixin checks. After that, the records were corrected against the build's counts and map ids
+  and three tests' assertions tightened (the schema's band columns back to 8, descriptions); `tools/check.sh` again:
+  pytest **1418 passed** (37 end-to-end skipped), **92/92 GameTests**.
 
 
 ### Profile plan: deviations
@@ -495,9 +508,24 @@ Route 22: none. Over the 36 outdoor maps, 2,586 of 14,797 solid cells were units
     ledge pixel may also match the texel two rows lower, as a template's pane may shift one. Routes 1, 14 and 17 have no
     structure left but ledges once their trees are units, and scored 0.125 texel for texel.
 
+13. **P2: a band building's volume is its model's bound** from feet level, at least two blocks on a solid tile (under
+    the ceiling indoors), not the higher of it and the Tier A height (§5.5): claimed tiles never reach Tier A, so they
+    have none, and blocks above the model would be empty carriers. The entry carries the heights per position
+    (`band.solid`, `band.air`) instead of spelt-out fallback keys (the index: 2.87 MB, not 4.16 MB).
+14. **The plain-cube fallback also covers** a tile this client's art lacks and a model over 16 M voxels, beside the
+    96-quad cap.
+15. **A claim-only twin keeps two blocks of collision** (§5.5: its Tier A height, which claimed tiles don't have): the
+    least a player can't step or jump onto (I1).
+16. **An overhang past the map's edge is cut** too (counted), as one over a wall is.
+17. **The surface volume reaches ground + 32** (it was ground + 8): the tallest building stands 21 blocks. The placer
+    writes only where the world differs (`BlockPlacer.apply`), so the air above costs reads; the build's time didn't
+    move (61.5 s against 60.5 s). A rebuild now also clears anything placed between ground + 9 and ground + 32.
+18. **Interiors' roof-path entries are built in P2** (97 claims; §5.6 gives them to P3): §5.5's match runs on every map
+    whose tileset has buildings, and the heights clamp under the ceiling. P3 keeps the parts path.
+
 ### Profile plan: open issues
 
-- P2 (buildings), P3 (boxes and interiors) and P4 (finish) are to do.
+- P3 (boxes and interiors) and P4 (finish) are to do.
 - Your own install needs the mod, switched off (PLAYTEST.md, "Profile plan, P1"). I can copy it for you if you say
   so; switching it off is done in Gen1Recomp's launcher.
 

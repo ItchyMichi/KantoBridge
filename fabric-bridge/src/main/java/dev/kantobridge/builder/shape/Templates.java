@@ -224,14 +224,23 @@ public final class Templates {
 
 	/** A template entry, read: what the geometry needs. */
 	public record Entry(String sig, int atlas, int w, int d, int perCell, int[] tiles, int[][] doors, int ground, boolean outdoor,
-			ShapeKey[][] columns) {
+			ShapeKey[][] columns, @Nullable JsonObject band) {
+		/** A V7 template (no band table). */
+		public Entry(String sig, int atlas, int w, int d, int perCell, int[] tiles, int[][] doors, int ground, boolean outdoor,
+				ShapeKey[][] columns) {
+			this(sig, atlas, w, d, perCell, tiles, doors, ground, outdoor, columns, null);
+		}
+
 		/** The tile at grid position (x, y), -1 outside the structure and its doors. */
 		public int tile(int x, int y) {
 			return x < 0 || y < 0 || x >= this.w || y >= this.d ? -1 : this.tiles[y * this.w + x];
 		}
 
-		/** Blocks of the column at (x, y): its volume. */
+		/** Blocks of the column at (x, y): its volume (a band building's solid blocks, P2). */
 		public int blocks(int x, int y) {
+			if (this.band != null && this.band.has("solid")) {
+				return this.band.getAsJsonArray("solid").get(y * this.w + x).getAsInt();
+			}
 			ShapeKey[] column = this.columns[y * this.w + x];
 			return column == null ? 0 : column.length;
 		}
@@ -286,7 +295,8 @@ public final class Templates {
 				doors.add(new int[] {cell.get(0).getAsInt(), cell.get(1).getAsInt()});
 			}
 			return new Entry(sig, json.get("atlas").getAsInt(), w, d, json.get("perCell").getAsInt(), tiles, doors.toArray(new int[0][]),
-					json.get("ground").getAsInt(), json.get("outdoor").getAsBoolean(), columns);
+					json.get("ground").getAsInt(), json.get("outdoor").getAsBoolean(), columns,
+					json.has("band") ? json.getAsJsonObject("band").deepCopy() : null);
 		}
 	}
 }

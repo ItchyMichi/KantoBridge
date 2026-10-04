@@ -457,7 +457,15 @@ public final class ShapePlanner {
 			return classified(map, atlas, params);
 		}
 		ProfileClasses classes = params.profileUnits() ? ProfileClasses.of(map, tileset) : null;
-		Columns columns = measured(map, atlas, params, classes == null ? Structures.solidTiles(map) : classes.structural());
+		// P2: the profile's band-table buildings claim their grids before Tier A (docs/specs/PROFILE_PLAN.md §5.5).
+		boolean[] held = new boolean[map.artCols() * map.artRows()];
+		List<Buildings.Claim> claims = params.profileBuildings() && tileset != null && sceneAtlas != null && map.perCell() == ShapeTable.UNIT_CELL
+				? Buildings.claims(map, tileset.buildings(), held, tally) : List.of();
+		boolean[] solid = classes == null ? Structures.solidTiles(map) : classes.structural();
+		for (int i = 0; i < held.length; i++) {
+			solid[i] &= !held[i];
+		}
+		Columns columns = measured(map, atlas, params, solid);
 		boolean cells = sceneAtlas != null && map.perCell() == ShapeTable.UNIT_CELL;
 		int[] floor = filled(columns.blocks().length, -1);
 		int[] decor = new int[columns.blocks().length];
@@ -465,13 +473,22 @@ public final class ShapePlanner {
 		if (params.tierB() && cells) {
 			// Tier B (kb-shapes/3): tufts and cell units over the measured columns.
 			Units.plan(map, sceneAtlas, atlas, columns.keys(), columns.blocks(), columns.shapeMask(), floor, decor, units, classes,
-					params.profileUnits() ? probe : null, tally);
+					params.profileUnits() ? probe : null, tally, claims.isEmpty() ? null : held);
 		}
 		List<Templates.Placed> templates = List.of();
 		if (params.tierC() && cells) {
 			// Tier C (kb-shapes/5): bounded buildings as templates over their Tier A columns.
 			templates = Templates.plan(map, atlas, params, columns.runs(), columns.keys(), columns.blocks(), columns.shapeMask(), units,
 					Units.mapGround(map, sceneAtlas.grassTiles(), sceneAtlas.frameTiles()));
+		}
+		if (!claims.isEmpty()) {
+			// The buildings' templates, placed last: their keys and carriers hold their grids, doorways and overhangs.
+			List<Templates.Placed> all = new ArrayList<>(templates);
+			int ground = Units.mapGround(map, sceneAtlas.grassTiles(), sceneAtlas.frameTiles());
+			for (Buildings.Claim claim : claims) {
+				all.add(Buildings.place(map, atlas, claim, ground, columns.keys(), columns.blocks(), columns.shapeMask(), decor, floor, tally));
+			}
+			templates = all;
 		}
 		int wallTile = -1;
 		ShapeKey ceiling = null;

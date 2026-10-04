@@ -54,7 +54,7 @@ def test_golden_shape_index_matches_the_schema():
     problems = PROTOCOL.check_shape_index(golden["index"])
     assert not problems, [str(p) for p in problems]
     assert hashlib.sha256(canonical(golden["index"]).encode("utf-8")).hexdigest() == golden["indexHash"]
-    assert golden["index"]["planner"] == "kb-shapes/6"
+    assert golden["index"]["planner"] == "kb-shapes/7"
     assert golden["index"]["params"]["tierB"] is True
     assert golden["index"]["params"]["storyArt"] is True
     assert golden["index"]["params"]["tierC"] is True and golden["index"]["params"]["dressing"] is True
@@ -67,5 +67,7 @@ def test_golden_shape_index_matches_the_schema():
         entry = {k: v for k, v in template.items() if k != "sig"}
         assert hashlib.sha256(canonical(entry).encode("utf-8")).hexdigest()[:16] == template["sig"]
         assert len(template["tiles"]) == len(template["columns"]) == template["w"] * template["d"]
-        blocks = sum(len(column) for column in template["columns"])
+        # P2: a band building's doorways and overhang rows hold keys on decor carriers besides its fallback columns.
+        band = template.get("band", {})
+        blocks = sum(len(column) for column in template["columns"]) + sum(band.get("solid", [])) + sum(band.get("air", []))
         assert sum(1 for g in golden["index"]["geoms"] if g.startswith("tmpl:") and "|" + template["sig"] + "|" in g) == blocks

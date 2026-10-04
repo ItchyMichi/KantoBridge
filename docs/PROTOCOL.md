@@ -905,3 +905,9 @@ carrying the same envelope in both directions. Larger data is split at the appli
   - V7: the shape index's `templates` and `tmpl` keys, the `tint` modifier on keys (ceilings), and an interior placed
     with the outdoor biome (under the open sky, no ceiling). The planner is `kb-shapes/5`.
   - V8 and V9 change no message (characters are drawn from each client's own sheets; V9 removes only jar files).
+- Added by the profile plan ([specs/PROFILE_PLAN.md](specs/PROFILE_PLAN.md)):
+  - P1: the export resource `profile/dramaless` (another mod's shape profile, as text; it never leaves this machine);
+    the planner `kb-shapes/6`, whose unit variants carry the pinned class and the `prop_bg` shades (`g2_prop_bg3`).
+  - P2: a shape-index template may carry `band` (a band-table building: its band table, composite grid, overhang rows,
+    and per position its solid and decor heights; its columns are empty); the planner `kb-shapes/7`. Still
+    `world.shapes`.

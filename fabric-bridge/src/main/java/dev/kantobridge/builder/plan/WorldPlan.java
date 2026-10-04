@@ -26,11 +26,13 @@ public final class WorldPlan {
 	/** Void fill around the surface maps: 3 Gen 1 blocks, the border ring Gen1Recomp draws. */
 	public static final int SURFACE_RING = 12;
 	/**
-	 * The surface volume: ground blocks at Y 63 up to ground + 8 (the voxel plan's V3: six measured rows, a roof's rise
-	 * and a tree's trunk; it was ground + 5 for today's 4-high roof columns).
+	 * The surface volume: ground blocks at Y 63 up to ground + 32 (the profile plan's P2: a band-table building stands as
+	 * tall as its facade is drawn, 21 blocks for the tallest; it was ground + 8 for the voxel plan's six measured
+	 * rows, a roof's rise and a tree's trunk). The placer only writes where the world differs, so the air above costs
+	 * reads, and a rebuild clears whatever an older build left up there.
 	 */
 	public static final int SURFACE_MIN_Y = Scale.GROUND_Y;
-	public static final int SURFACE_MAX_Y = Scale.GROUND_Y + 8;
+	public static final int SURFACE_MAX_Y = Scale.GROUND_Y + 32;
 	/** Interiors: the ceiling is 4 blocks above the floor block, i.e. at feet + 3. */
 	public static final int CEILING_ABOVE_FEET = 3;
 	/** Interior lights: {@code minecraft:light} level 15 at feet + 2 on a 4-block grid. */
@@ -482,10 +484,16 @@ public final class WorldPlan {
 		int story = this.storyIndex.get(map.id())[cy * model.cellWidth() + cx];
 		switch (model.kind(cx, cy)) {
 			case GROUND -> {
-				sink.set(x, feet - 1, z, BlockCode.full(this.slot(map, tile, false)));
-				// A tuft (V4) stands on a decor carrier at feet level, unless a story block takes the position.
-				if (planned != null && (planned.decor()[planIndex] & 1) != 0 && story < 0) {
-					sink.set(x, feet, z, BlockCode.decor(false));
+				int floorTile = planned == null ? tile : planned.floorTile(planIndex, tile);
+				sink.set(x, feet - 1, z, BlockCode.full(this.slot(map, floorTile, false)));
+				// A tuft (V4) stands on a decor carrier at feet level, unless a story block takes the position; a building's
+				// doorway or overhang (P2) on decor carriers up its column.
+				int decor = planned == null ? 0 : planned.decor()[planIndex];
+				for (int k = 0; k < 31 && decor >> k != 0; k++) {
+					if ((decor >> k & 1) != 0 && (k > 0 || story < 0)) {
+						sink.set(x, feet + k, z, BlockCode.decor(false));
+						column = Math.max(column, k + 1);
+					}
 				}
 			}
 			case WATER -> sink.set(x, feet - 1, z, BlockCode.half(this.slot(map, tile, true)));

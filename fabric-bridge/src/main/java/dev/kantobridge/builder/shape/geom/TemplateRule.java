@@ -52,6 +52,8 @@ public final class TemplateRule {
 	/** What a template became. */
 	public enum Kind {
 		BUILDING("building"),
+		/** The profile's band-table building (P2). */
+		BAND("band"),
 		MODEL("model"),
 		COLUMNS("columns");
 
@@ -101,6 +103,10 @@ public final class TemplateRule {
 		ShapeOverrides.StructModel model = overrides.templateModel(atlas, entry.sig());
 		if (model != null && fits(model, entry)) {
 			return new Template(Kind.MODEL, null, 1.0, maxQuads(model.blocks()), model.blocks(), model.colours().clone(), null, null, -1);
+		}
+		if (entry.band() != null) {
+			// The profile's band-table building (docs/specs/PROFILE_PLAN.md §5.5, P2).
+			return BandBuilding.build(entry, atlas, art);
 		}
 		Template columns = columns(entry, null, 1.0);
 		int artPx = art.artPx();
@@ -169,9 +175,23 @@ public final class TemplateRule {
 				roofRows);
 	}
 
-	/** The template's Tier A columns: per position its keys' geometry, as a tile-id texture. */
+	/**
+	 * The template's Tier A columns: per position its keys' geometry, as a tile-id texture; for a band building (P2) the
+	 * plain cube of each claimed solid tile, its volume high.
+	 */
 	static Template columns(Templates.Entry entry, @Nullable Kind failed, double match) {
 		Map<Integer, List<ShapeQuad>> blocks = new TreeMap<>();
+		if (entry.band() != null && entry.band().has("solid")) {
+			for (int y = 0; y < entry.d(); y++) {
+				for (int x = 0; x < entry.w(); x++) {
+					int tile = entry.tile(x, y);
+					for (int k = 0; k < entry.blocks(x, y) && tile >= 0; k++) {
+						blocks.put(QuadMerger.blockKey(x, k, y), KeyGeometry.cube(new int[] {tile, tile, tile, tile, tile, tile}, t -> t));
+					}
+				}
+			}
+			return new Template(Kind.COLUMNS, failed, match, maxQuads(blocks), blocks, null, null, null, -1);
+		}
 		for (int y = 0; y < entry.d(); y++) {
 			for (int x = 0; x < entry.w(); x++) {
 				ShapeKey[] column = entry.columns()[y * entry.w() + x];

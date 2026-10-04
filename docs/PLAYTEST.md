@@ -618,3 +618,22 @@ Once, before a new world:
       front, instead of the same tile on every face.
 - [ ] **Without the mod** (rename its folder, new world): the trees still stand round where their drawing is round
       (our own fallback), and some fences come out as cutouts.
+
+### P2: buildings from the profile's band tables
+
+A new world (the mod installed and switched off, as for P1).
+
+- [ ] **Houses** (Pallet Town, Viridian City) from all four sides: a flat roof on top showing the roof's drawing, its
+      ends stepping down where the drawing tapers; the side walls in the house's own colours (no roof stripes on the
+      sides); windows set one pixel into the wall.
+- [ ] **Oak's lab, a Center, a Mart, a gym**: the same; an awning where one is drawn; the roof's front edge over the
+      street where it has an eave.
+- [ ] **Doors:** walk in and out of every kind of building: the doorway is open two blocks high, the door's art stands
+      at its back, and the warp works as before.
+- [ ] **The Pokémon Tower** (Lavender Town) stands as one tall building; the part of its drawing on Route 10 is flat
+      ground you can't walk on.
+- [ ] **Tall buildings** (Silph Co, 21 blocks; the Celadon department store): whole, nothing cut off at the top.
+- [ ] **Interiors** where the profile models things: Red's and Blue's houses, the other houses (the trade houses, the
+      Name Rater's, Mr. Fuji's, the Day Care…), Oak's lab, the Celadon Mansion. What it models looks right, stays under
+      the ceiling, and you can't walk through anything the game doesn't let you.
+- [ ] **A building the profile doesn't model** keeps its shape from before (four kinds, six places in all).

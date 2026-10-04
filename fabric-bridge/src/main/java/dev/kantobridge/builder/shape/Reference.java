@@ -75,6 +75,46 @@ public final class Reference {
 				}
 			}
 		}
+		// The profile's band-table buildings (P2) no longer reproduce their drawing, by design: their claimed tiles and
+		// doorways are left out of the map's scores (holes still count).
+		for (Templates.Placed placed : shapes.templates()) {
+			com.google.gson.JsonObject entry = placed.entry();
+			if (!entry.has("band")) {
+				continue;
+			}
+			if (drawn == null) {
+				ground = new int[w * this.height()];
+				java.util.Arrays.fill(ground, -1);
+				drawn = new boolean[w * this.height()];
+			}
+			int gw = entry.get("w").getAsInt();
+			int gd = entry.get("d").getAsInt();
+			com.google.gson.JsonArray tiles = entry.getAsJsonArray("tiles");
+			com.google.gson.JsonObject band = entry.getAsJsonObject("band");
+			com.google.gson.JsonArray air = band.getAsJsonArray("air");
+			int north = band.get("north").getAsInt();
+			int rows = band.getAsJsonArray("rows").size();
+			for (int gy = 0; gy < gd; gy++) {
+				for (int gx = 0; gx < gw; gx++) {
+					int g = gy * gw + gx;
+					boolean doorway = gy >= north && gy < north + rows && air.get(g).getAsInt() > 0;
+					if (tiles.get(g).getAsInt() < 0 && !doorway) {
+						continue;
+					}
+					int tx = placed.x0() + gx;
+					int ty = placed.y0() + gy;
+					for (int py = 0; py < artPx; py++) {
+						for (int px = 0; px < artPx; px++) {
+							int sx = tx * artPx + px;
+							int sy = ty * artPx + py;
+							if (sx >= 0 && sy >= 0 && sx < w && sy < this.height()) {
+								drawn[sy * w + sx] = true;
+							}
+						}
+					}
+				}
+			}
+		}
 		this.unitGround = ground;
 		this.unitDrawn = drawn;
 	}

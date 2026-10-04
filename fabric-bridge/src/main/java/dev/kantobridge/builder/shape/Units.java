@@ -57,7 +57,7 @@ final class Units {
 	 */
 	static void plan(SceneMap map, SceneAtlas atlas, int atlasIndex, ShapeKey[][] keys, int[] blocks, int[] mask, int[] floor, int[] decor,
 			List<Cell> units) {
-		plan(map, atlas, atlasIndex, keys, blocks, mask, floor, decor, units, null, null, new TreeMap<>());
+		plan(map, atlas, atlasIndex, keys, blocks, mask, floor, decor, units, null, null, new TreeMap<>(), null);
 	}
 
 	/**
@@ -65,7 +65,7 @@ final class Units {
 	 * the units by source and of the pinned cells left as they were, by reason ({@code pin_not_low}, {@code pin_not_solid}).
 	 */
 	static void plan(SceneMap map, SceneAtlas atlas, int atlasIndex, ShapeKey[][] keys, int[] blocks, int[] mask, int[] floor, int[] decor,
-			List<Cell> units, @Nullable ProfileClasses classes, @Nullable UnitProbe probe, Map<String, Integer> tally) {
+			List<Cell> units, @Nullable ProfileClasses classes, @Nullable UnitProbe probe, Map<String, Integer> tally, boolean @Nullable [] held) {
 		int per = map.perCell();
 		int cols = map.artCols();
 		Set<Integer> grass = atlas.grassTiles();
@@ -86,6 +86,10 @@ final class Units {
 		Map<String, Integer> repeats = probe == null ? null : repeats(map, region);
 		for (int cy = 0; cy < map.h(); cy++) {
 			for (int cx = 0; cx < map.w(); cx++) {
+				if (held != null && heldCell(map, held, cx, cy)) {
+					// A building's claim holds a tile of this cell (P2).
+					continue;
+				}
 				String pinned = classes == null ? null : classes.unitClass(cx, cy);
 				boolean unitPin = pinned != null && !ProfileClasses.OTHER.equals(pinned);
 				if (map.kind(cx, cy) != CellKind.SOLID) {
@@ -151,6 +155,19 @@ final class Units {
 				units.add(new Cell(cx, cy, first, foliage, source));
 			}
 		}
+	}
+
+	/** True when a building's claim holds any tile of cell (cx, cy). */
+	private static boolean heldCell(SceneMap map, boolean[] held, int cx, int cy) {
+		int per = map.perCell();
+		for (int dy = 0; dy < per; dy++) {
+			for (int dx = 0; dx < per; dx++) {
+				if (held[(cy * per + dy) * map.artCols() + cx * per + dx]) {
+					return true;
+				}
+			}
+		}
+		return false;
 	}
 
 	/** Per cell, its 4-connected region of solid cells (the index of the region's first cell in scan order), -1 elsewhere. */

@@ -2,6 +2,7 @@ package dev.kantobridge.builder.shape;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import dev.kantobridge.builder.TestData;
@@ -34,42 +35,48 @@ class CarrierChoiceTest {
 	}
 
 	@Test
-	void theHillsHouseIsATemplateOverItsTierAColumns() {
-		// V7: the house (a door folds into it) is a template; its volume, and so its collision, stays its Tier A columns'.
+	void theHillsHouseIsABandBuildingOverItsClaim() {
+		// P2: the synthetic profile's building entry claims the house (8 x 8 tiles); its volume is the model's bound, seven
+		// blocks (64 drawn rows, less 16 roof rows, plus a two-voxel slab), on shape_full over its solid tiles.
 		MapPlacement hill = plan.index().map("TEST_HILL");
 		int x = hill.x() + 5;
 		int z = hill.z() + 8;
 		int feet = hill.y();
 		assertEquals(BlockCode.KIND_FULL, view.kind(x, feet - 1, z), "the floor block");
-		int band = view.code(x, feet, z);
-		for (int k = 0; k <= 4; k++) {
+		int first = view.code(x, feet, z);
+		for (int k = 0; k < 7; k++) {
 			int code = view.code(x, feet + k, z);
-			assertEquals(BlockCode.KIND_SHAPE, BlockCode.kind(code), "block " + k + ": a template's carrier");
+			assertEquals(BlockCode.KIND_SHAPE, BlockCode.kind(code), "block " + k + ": the building's carrier");
 			// The slot is the position's own tile, as a tile_full there would show.
-			assertEquals(BlockCode.value(band), BlockCode.value(code), "the same slot index");
+			assertEquals(BlockCode.value(first), BlockCode.value(code), "the same slot index");
 		}
-		assertEquals(BlockCode.AIR, view.code(x, feet + 5, z));
+		assertEquals(BlockCode.AIR, view.code(x, feet + 7, z));
 		ShapeMap map = plan.shapes().map();
 		ShapeIndex index = plan.shapes().index();
-		ShapeKey first = index.key(map.shapeAt(x, feet, z));
-		assertEquals(ShapeKey.Kind.TMPL, first.kind());
-		assertEquals(0, map.shapeAt(x, feet + 5, z));
+		ShapeKey key = index.key(map.shapeAt(x, feet, z));
+		assertEquals(ShapeKey.Kind.TMPL, key.kind());
 		Templates.Entry entry = null;
 		for (com.google.gson.JsonElement element : index.templates()) {
-			if (element.getAsJsonObject().get("sig").getAsString().equals(first.sig())) {
+			if (element.getAsJsonObject().get("sig").getAsString().equals(key.sig())) {
 				entry = Templates.Entry.of(element.getAsJsonObject());
 			}
 		}
-		org.junit.jupiter.api.Assertions.assertNotNull(entry, "the index holds the template");
-		ShapeKey[] column = entry.columns()[first.number(2) * entry.w() + first.number(0)];
-		assertEquals(5, column.length, "four bands and the roof block: its fallback is Tier A's column");
-		assertEquals(ShapeKey.Kind.CUBE, column[0].kind(), "the bands are folded cubes");
-		assertEquals(ShapeKey.Kind.ROOF, column[4].kind());
-		for (int k = 0; k <= 4; k++) {
-			ShapeKey key = index.key(map.shapeAt(x, feet + k, z));
-			assertEquals(first.sig(), key.sig());
-			assertEquals(k, key.number(1), "the block's height in the template");
+		org.junit.jupiter.api.Assertions.assertNotNull(entry, "the index holds the building");
+		org.junit.jupiter.api.Assertions.assertNotNull(entry.band(), "a band-table building");
+		assertEquals(7, entry.blocks(key.number(0), key.number(2)), "its volume, seven blocks; its fallback the plain cube of its own tile");
+		assertNull(entry.columns()[key.number(2) * entry.w() + key.number(0)], "no keys spelt out");
+		for (int k = 0; k < 7; k++) {
+			assertEquals(k, index.key(map.shapeAt(x, feet + k, z)).number(1), "the block's height in the template");
 		}
+		// The doorway (the door cell, walkable) on decor carriers up the building's height: nothing collides there.
+		int dx = hill.x() + 10;
+		int dz = hill.z() + 10;
+		for (int k = 0; k < 7; k++) {
+			assertEquals(BlockCode.KIND_DECOR, view.kind(dx, feet + k, dz), "doorway block " + k);
+		}
+		// The front eave's row, the walkable ground south of the house: decor carriers too.
+		assertEquals(BlockCode.KIND_DECOR, view.kind(hill.x() + 5, feet + 6, hill.z() + 12));
+		assertEquals(ShapeKey.Kind.TMPL, index.key(map.shapeAt(hill.x() + 5, feet + 6, hill.z() + 12)).kind());
 	}
 
 	@Test

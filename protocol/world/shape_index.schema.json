@@ -36,7 +36,7 @@
     },
     "templates": {
       "type": "array",
-      "description": "From V7: one entry per structure template (a bounded building a door folds into), sorted by sig. What a client needs to rebuild it from its own art: the tile grid (w x d art tiles, -1 outside the structure; one cell row more for its doors), the door cells, the ground tile, the outdoor flag, and per grid position its Tier A keys bottom-up (its fallback, which fixes its volume). sig is the first 16 hex digits of the SHA-256 of the canonical entry without sig; a tmpl key names one block of it.",
+      "description": "From V7: one entry per structure template (a bounded building a door folds into), sorted by sig. What a client needs to rebuild it from its own art: the tile grid (w x d art tiles, -1 outside the structure; one cell row more for its doors), the door cells, the ground tile, the outdoor flag, and per grid position its Tier A keys bottom-up (its fallback, which fixes its volume). sig is the first 16 hex digits of the SHA-256 of the canonical entry without sig; a tmpl key names one block of it. From P2 (docs/specs/PROFILE_PLAN.md §5.5) an entry may carry band, a band-table building: its columns are then empty, and band.solid gives each position's volume (its fallback: the plain cube of its own tile).",
       "items": {
         "type": "object",
         "required": ["sig", "template", "atlas", "w", "d", "perCell", "tiles", "doors", "ground", "outdoor", "columns"],
@@ -58,6 +58,10 @@
           "columns": {
             "type": "array",
             "items": {"type": "array", "maxItems": 8, "items": {"type": "string", "pattern": "^(cube|slab|roof|tuft|cell|tmpl):[0-9]{1,5}\\|[-0-9a-z,|=_]+$", "maxLength": 256}}
+          },
+          "band": {
+            "type": "object",
+            "description": "From P2: the profile's band-table building this template draws, pixel-free numbers only: the band table (roofRows, roofBack, roofFront, roofCycle, slab, frontEave, ledge, seal, depthPx, panes, scrub), the composite grid (top: rows drawn above the matched rows; rows: the matched grid), the overhang rows (north, south), and per grid position the solid blocks of a claimed solid tile (solid) and the decor blocks of its doorway or overhang (air); claimOnly for a claim that draws nothing."
           }
         }
       },

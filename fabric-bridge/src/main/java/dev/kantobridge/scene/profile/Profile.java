@@ -95,15 +95,24 @@ public final class Profile {
 	 * @param heights    class → height for this tileset (the profile's, then the tileset's own overrides)
 	 * @param propGround prop tile → the ground tile painted under it
 	 * @param propBg     tile → the shades that count as background when it is cut out (bit k = shade k)
+	 * @param buildings  the tileset's building entries that read, in list order (P2)
 	 */
 	public record Tileset(String id, Map<Integer, String> pins, Map<Integer, List<Cond>> conds, Map<String, Integer> heights,
-			Map<Integer, Integer> propGround, Map<Integer, Integer> propBg, HullParams hull, boolean bookcaseRelief, @Nullable String bookcaseBackfill) {
+			Map<Integer, Integer> propGround, Map<Integer, Integer> propBg, HullParams hull, boolean bookcaseRelief, @Nullable String bookcaseBackfill,
+			List<Building> buildings) {
 		public Tileset {
 			pins = Collections.unmodifiableMap(pins);
 			conds = Collections.unmodifiableMap(conds);
 			heights = Collections.unmodifiableMap(heights);
 			propGround = Collections.unmodifiableMap(propGround);
 			propBg = Collections.unmodifiableMap(propBg);
+			buildings = List.copyOf(buildings);
+		}
+
+		/** This entry with its buildings. */
+		Tileset withBuildings(List<Building> list) {
+			return new Tileset(this.id, this.pins, this.conds, this.heights, this.propGround, this.propBg, this.hull, this.bookcaseRelief,
+					this.bookcaseBackfill, list);
 		}
 
 		/** The class pinned on {@code tile}, or null. */
@@ -114,6 +123,36 @@ public final class Profile {
 		/** A class's height in Game Boy pixels for this tileset (0 for an unknown class). */
 		public int height(String cls) {
 			return this.heights.getOrDefault(cls, 0);
+		}
+	}
+
+	/**
+	 * A building's band table (docs/specs/PROFILE_PLAN.md §5.5): rows in the drawing's pixel rows, sizes in voxels (one
+	 * per Game Boy pixel).
+	 *
+	 * @param ledge   the awning's rows {r0, r1} (absolute drawing rows), or null
+	 * @param seal    the sides ({@code n}, {@code s}, {@code e}, {@code w}) the drawing runs off, which the flood doesn't seed
+	 * @param depthPx the footprint's depth in voxels ({@code depthPx}, else 8 × ({@code depth} or the grid's rows))
+	 * @param scrub   painted-over rects {x0, y0, x1, y1}, inclusive pixels
+	 */
+	public record Band(int roofRows, int roofBack, int roofFront, int cycle0, int cycle1, int slab, int frontEave, int @Nullable [] ledge,
+			String seal, int depthPx, boolean panes, List<int[]> scrub) {
+	}
+
+	/**
+	 * One building entry, in list order (its placement priority).
+	 *
+	 * @param tiles     the grid that matches, north row first; a row compares as many ids as it has, the grid is as wide as
+	 *                  its first row
+	 * @param topRows   rows drawn above the grid for the model only (never matched)
+	 * @param claimOnly claims its cells and draws nothing (the other half of a drawing that straddles two maps)
+	 * @param keep      ids the claim leaves to the other passes
+	 * @param band      the band table, null for a claim-only entry
+	 */
+	public record Building(int index, List<int[]> tiles, List<int[]> topRows, boolean claimOnly, Set<Integer> keep, @Nullable Band band) {
+		/** The grid's width in tiles. */
+		public int width() {
+			return this.tiles.get(0).length;
 		}
 	}
 
@@ -129,13 +168,16 @@ public final class Profile {
 	private final String hash;
 	private final Map<String, Tileset> tilesets;
 	private final Map<String, List<LuaData.Table>> buildings;
+	private final Map<String, List<Building>> readBuildings;
 	private final Counts counts;
 
-	private Profile(int version, String hash, Map<String, Tileset> tilesets, Map<String, List<LuaData.Table>> buildings, Counts counts) {
+	private Profile(int version, String hash, Map<String, Tileset> tilesets, Map<String, List<LuaData.Table>> buildings,
+			Map<String, List<Building>> readBuildings, Counts counts) {
 		this.version = version;
 		this.hash = hash;
 		this.tilesets = Collections.unmodifiableMap(tilesets);
 		this.buildings = Collections.unmodifiableMap(buildings);
+		this.readBuildings = Collections.unmodifiableMap(readBuildings);
 		this.counts = counts;
 	}
 
@@ -162,6 +204,14 @@ public final class Profile {
 	/** A tileset's building entries in list order (placement priority), raw; empty when none. */
 	public List<LuaData.Table> buildings(String tilesetId) {
 		return this.buildings.getOrDefault(tilesetId, List.of());
+	}
+
+	/**
+	 * A tileset's building entries that read (roof-path band tables and claim-only twins), in list order; an entry with
+	 * {@code parts} (furniture assembled from parts, P3) or missing a field is left out and counted.
+	 */
+	public List<Building> buildingSpecs(String tilesetId) {
+		return this.readBuildings.getOrDefault(tilesetId, List.of());
 	}
 
 	public Counts counts() {
@@ -196,6 +246,7 @@ public final class Profile {
 			}
 		}
 		Map<String, List<LuaData.Table>> buildings = new TreeMap<>();
+		Map<String, List<Building>> readBuildings = new TreeMap<>();
 		int entries = 0;
 		LuaData.Table groups = root.table("buildings");
 		if (groups != null) {
@@ -214,7 +265,23 @@ public final class Profile {
 				}
 				entries += out.size();
 				buildings.put(id, List.copyOf(out));
+				List<Building> read = new ArrayList<>();
+				for (int k = 0; k < out.size(); k++) {
+					Building building = building(k, out.get(k), unknown);
+					if (building != null) {
+						read.add(building);
+					}
+				}
+				readBuildings.put(id, List.copyOf(read));
 			}
+		}
+		// Each tileset's entry carries its buildings; a tileset with buildings and no pins gets an entry of its own.
+		for (Map.Entry<String, List<Building>> e : readBuildings.entrySet()) {
+			Tileset t = tilesets.get(e.getKey());
+			if (t == null) {
+				t = new Tileset(e.getKey(), Map.of(), Map.of(), heights, Map.of(), Map.of(), HullParams.DEFAULTS, true, null, List.of());
+			}
+			tilesets.put(e.getKey(), t.withBuildings(e.getValue()));
 		}
 		for (Object key : root.hash().keySet()) {
 			if (!Set.of("version", "heights", "tilesets", "buildings").contains(key)) {
@@ -222,7 +289,113 @@ public final class Profile {
 			}
 		}
 		Counts counts = new Counts(tilesets.size(), pins, conds, entries, duplicates, Collections.unmodifiableMap(unknown));
-		return new Profile((int) root.integer("version", 0), Hashes.sha256(text), tilesets, buildings, counts);
+		return new Profile((int) root.integer("version", 0), Hashes.sha256(text), tilesets, buildings, readBuildings, counts);
+	}
+
+	/** One building entry read and checked, or null (counted under {@code buildings.*}). */
+	private static @Nullable Building building(int index, LuaData.Table entry, Map<String, Integer> unknown) {
+		List<int[]> tiles = rows(entry.table("tiles"));
+		if (tiles == null || tiles.isEmpty() || tiles.get(0).length == 0) {
+			unknown.merge("buildings.tiles", 1, Integer::sum);
+			return null;
+		}
+		List<int[]> topRows = entry.table("topRows") == null ? List.of() : rows(entry.table("topRows"));
+		if (topRows == null) {
+			unknown.merge("buildings.topRows", 1, Integer::sum);
+			return null;
+		}
+		Set<Integer> keep = new java.util.TreeSet<>();
+		LuaData.Table keepTable = entry.table("keep");
+		if (keepTable != null) {
+			for (long tile : keepTable.integers()) {
+				keep.add((int) tile);
+			}
+		}
+		if (entry.bool("claimOnly", false)) {
+			return new Building(index, tiles, topRows, true, keep, null);
+		}
+		if (entry.get("parts") != null) {
+			unknown.merge("buildings.parts", 1, Integer::sum);
+			return null;
+		}
+		long roofRows = entry.integer("roofRows", -1);
+		long slab = entry.integer("slab", -1);
+		LuaData.Table cycle = entry.table("roofCycle");
+		List<Long> cycleRows = cycle == null ? List.of() : cycle.integers();
+		long roofBack = entry.integer("roofBack", -1);
+		long roofFront = entry.integer("roofFront", -1);
+		int width = tiles.get(0).length;
+		int drawnRows = 8 * (topRows.size() + tiles.size());
+		if (roofRows < 0 || roofRows > drawnRows || slab < 0 || slab > 32 || (roofRows > 0
+				&& (cycleRows.size() != 2 || roofBack < 0 || roofFront < 0 || cycleRows.get(0) < 0 || cycleRows.get(1) < cycleRows.get(0)
+						|| cycleRows.get(1) >= roofRows))) {
+			unknown.merge("buildings.band", 1, Integer::sum);
+			return null;
+		}
+		int[] ledge = null;
+		LuaData.Table ledgeTable = entry.table("ledge");
+		if (ledgeTable != null) {
+			List<Long> rows = ledgeTable.integers();
+			if (rows.size() != 2 || rows.get(0) < 0 || rows.get(1) < rows.get(0) || rows.get(1) >= drawnRows) {
+				unknown.merge("buildings.ledge", 1, Integer::sum);
+				return null;
+			}
+			ledge = new int[] {rows.get(0).intValue(), rows.get(1).intValue()};
+		}
+		String seal = entry.string("seal");
+		seal = seal == null ? "" : seal;
+		if (!seal.matches("[nsew]*")) {
+			unknown.merge("buildings.seal", 1, Integer::sum);
+			return null;
+		}
+		long depthPx = entry.integer("depthPx", -1);
+		if (depthPx < 0) {
+			depthPx = 8 * entry.integer("depth", tiles.size());
+		}
+		if (depthPx < 1 || depthPx > 8 * 64) {
+			unknown.merge("buildings.depth", 1, Integer::sum);
+			return null;
+		}
+		List<int[]> scrub = new ArrayList<>();
+		LuaData.Table scrubTable = entry.table("scrub");
+		if (scrubTable != null) {
+			for (Object rect : scrubTable.array()) {
+				List<Long> r = rect instanceof LuaData.Table t ? t.integers() : List.of();
+				if (r.size() != 4 || r.get(0) < 0 || r.get(1) < 0 || r.get(2) < r.get(0) || r.get(3) < r.get(1) || r.get(2) >= 8L * width
+						|| r.get(3) >= drawnRows) {
+					unknown.merge("buildings.scrub", 1, Integer::sum);
+					return null;
+				}
+				scrub.add(new int[] {r.get(0).intValue(), r.get(1).intValue(), r.get(2).intValue(), r.get(3).intValue()});
+			}
+		}
+		int c0 = cycleRows.size() == 2 ? cycleRows.get(0).intValue() : 0;
+		int c1 = cycleRows.size() == 2 ? cycleRows.get(1).intValue() : 0;
+		Band band = new Band((int) roofRows, (int) Math.max(0, roofBack), (int) Math.max(0, roofFront), c0, c1, (int) slab,
+				(int) Math.max(0, Math.min(16, entry.integer("frontEave", 0))), ledge, seal, (int) depthPx, entry.bool("panes", true), List.copyOf(scrub));
+		return new Building(index, tiles, topRows, false, keep, band);
+	}
+
+	/** Rows of tile ids (each a list of integers within the atlas), or null when any isn't. */
+	private static @Nullable List<int[]> rows(LuaData.@Nullable Table table) {
+		if (table == null) {
+			return null;
+		}
+		List<int[]> out = new ArrayList<>();
+		for (Object row : table.array()) {
+			if (!(row instanceof LuaData.Table r) || r.array().isEmpty()) {
+				return null;
+			}
+			int[] ids = new int[r.array().size()];
+			for (int k = 0; k < ids.length; k++) {
+				if (!(r.array().get(k) instanceof Long id) || id < 0 || id > MAX_TILE) {
+					return null;
+				}
+				ids[k] = id.intValue();
+			}
+			out.add(ids);
+		}
+		return out;
 	}
 
 	private static void readHeights(LuaData.Table table, Map<String, Integer> into, Map<String, Integer> unknown) {
@@ -324,7 +497,7 @@ public final class Profile {
 				param(table, "can_height", d.canHeight()), param(table, "can_well", d.canWell()), param(table, "can_taper", d.canTaper()));
 		String backfill = table.string("bookcase_backfill");
 		return new Tileset(id, pins, conds, heights, propGround, propBg, hull, table.bool("bookcase_relief", true),
-				"above".equals(backfill) ? backfill : null);
+				"above".equals(backfill) ? backfill : null, List.of());
 	}
 
 	private static @Nullable Cond cond(LuaData.Table rule, boolean above) {
