@@ -4,6 +4,7 @@ import static dev.kantobridge.builder.shape.ShapeFixtures.scene;
 import static dev.kantobridge.builder.shape.ShapeFixtures.surface;
 import static dev.kantobridge.builder.shape.ShapeFixtures.surfaceAt;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.google.gson.JsonArray;
 import dev.kantobridge.builder.shape.geom.ShapeTable;
@@ -20,7 +21,11 @@ import org.junit.jupiter.api.Test;
  */
 class SelfCheckTest {
 	private static SelfCheck.Scores score(SceneMap map, boolean shaped) {
-		ShapePlan plan = ShapePlanner.plan(scene(map), List.of(surfaceAt(map, 0, 0)), ShapeParams.v2());
+		return score(map, shaped, ShapeParams.v2());
+	}
+
+	private static SelfCheck.Scores score(SceneMap map, boolean shaped, ShapeParams params) {
+		ShapePlan plan = ShapePlanner.plan(scene(map), List.of(surfaceAt(map, 0, 0)), params);
 		ShapeIndex index = plan.index();
 		if (!shaped) {
 			// No shapes at all: every block draws the plain cube of its own tile, as before V2.
@@ -79,5 +84,90 @@ class SelfCheckTest {
 		// Four blocks high: the tops cover the four rows north of the structure, here the two ground rows and the map's
 		// edge above them; the ground rows 0 and 1 are hidden (8 of 48 ground tiles).
 		assertEquals(8 / 48.0, s.occludedGround(), 1e-9);
+	}
+
+	@Test
+	void measuredWallsStayExact() {
+		// kb-shapes/2: the same two-row wall is a two-high run without a roof; still exactly the 2D map.
+		SelfCheck.Scores s = score(ShapePlannerTest.WALL, true, ShapeParams.v3());
+		assertEquals(0, s.holes());
+		assertEquals(1.0, s.structureMatch());
+		assertEquals(1.0, s.groundMatch());
+	}
+
+	@Test
+	void aRoofedHouseHasNoHoles() {
+		SceneMap house = surface("HOUSE",
+				"........",
+				"........",
+				"RRRR....",
+				"SSSS....",
+				"FFFF....",
+				"GGGG....",
+				"........",
+				"........");
+		SelfCheck.Scores s = score(house, true, ShapeParams.v3());
+		assertEquals(0, s.holes(), "the slopes close the roof");
+		assertEquals(1.0, s.groundMatch());
+		// The facade's bands show its rows exactly; the roof rows are laid on a one-block slope, so they match only roughly.
+		assertTrue(s.structureMatch() >= 0.5 && s.structureMatch() < 1.0, "structure match " + s.structureMatch());
+	}
+
+	@Test
+	void aHippedEndOverAFoldedDoorHasNoHoles() {
+		// Found by the real build: the hipped end's south face is a triangle whose first two corners coincide.
+		SceneMap house = surface("DOOR",
+				"........",
+				"........",
+				"..DD....",
+				"..FF....",
+				"..GG....",
+				"..KM....",
+				"..++....",
+				"..++....",
+				"........",
+				"........");
+		SelfCheck.Scores s = score(house, true, ShapeParams.v3());
+		assertEquals(0, s.holes());
+	}
+
+	@Test
+	void tierANeverLeavesAHole() {
+		// Random layouts of structures, uniform and drawn rows, doors below them: every pixel of the map is covered.
+		java.util.Random random = new java.util.Random(7);
+		String letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+		for (int trial = 0; trial < 2000; trial++) {
+			int w = 3 + random.nextInt(5);
+			int h = 3 + random.nextInt(6);
+			char[][] art = new char[h * 2][w * 2];
+			for (char[] row : art) {
+				java.util.Arrays.fill(row, '.');
+			}
+			for (int structures = 1 + random.nextInt(4); structures > 0; structures--) {
+				int cx = random.nextInt(w);
+				int cy = random.nextInt(h);
+				int cw = 1 + random.nextInt(w - cx);
+				int ch = 1 + random.nextInt(h - cy);
+				for (int y = cy * 2; y < (cy + ch) * 2; y++) {
+					char c = letters.charAt(random.nextInt(26));
+					boolean uniform = random.nextInt(3) == 0;
+					for (int x = cx * 2; x < (cx + cw) * 2; x++) {
+						art[y][x] = uniform || random.nextInt(4) != 0 ? c : letters.charAt(random.nextInt(26));
+					}
+				}
+				if (random.nextBoolean() && cy + ch < h) {
+					int dx = cx + random.nextInt(cw);
+					for (int k = 0; k < 4; k++) {
+						art[(cy + ch) * 2 + k / 2][dx * 2 + k % 2] = '+';
+					}
+				}
+			}
+			String[] rows = new String[art.length];
+			for (int i = 0; i < art.length; i++) {
+				rows[i] = new String(art[i]);
+			}
+			SelfCheck.Scores s = score(surface("FUZZ", rows), true, ShapeParams.v3());
+			assertEquals(0, s.holes(), "trial " + trial + ": " + String.join("/", rows));
+		}
 	}
 }

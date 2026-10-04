@@ -67,6 +67,47 @@ public record ShapeQuad(byte face, short[] xyz, int texture, byte[] uv, byte cul
 		return face(face, 0, 0, 0, 16, 16, 16, texture, 0, 0, 16, 16, face, 0);
 	}
 
+	/**
+	 * A polygon of three or four corners ({@code {x, y, z}} each, in the face's vanilla winding; a triangle repeats its
+	 * last corner) lying flat on axis-aligned face {@code face}, wearing the texture rectangle {@code u0, v0 → u1, v1}
+	 * mapped over its bounding box by the face's convention.
+	 */
+	public static ShapeQuad polygon(int face, int[][] corners, int texture, int u0, int v0, int u1, int v1, int cull, int flags) {
+		if (face == SLOPED || (corners.length != 3 && corners.length != 4)) {
+			throw new IllegalArgumentException("a face polygon has three or four corners on an axis-aligned face");
+		}
+		return new ShapeQuad((byte) face, flatten(corners), texture, new byte[] {(byte) u0, (byte) v0, (byte) u1, (byte) v1}, (byte) cull,
+				(byte) flags);
+	}
+
+	/**
+	 * A sloped quad or triangle (three or four corners, counter-clockwise seen from its front; a triangle repeats its last
+	 * corner) with one (u, v) per corner.
+	 */
+	public static ShapeQuad sloped(int[][] corners, int[][] uvs, int texture, int cull, int flags) {
+		if ((corners.length != 3 && corners.length != 4) || uvs.length != corners.length) {
+			throw new IllegalArgumentException("a sloped quad has three or four corners, each with a uv");
+		}
+		byte[] uv = new byte[8];
+		for (int i = 0; i < 4; i++) {
+			int[] one = uvs[Math.min(i, uvs.length - 1)];
+			uv[i * 2] = (byte) one[0];
+			uv[i * 2 + 1] = (byte) one[1];
+		}
+		return new ShapeQuad((byte) SLOPED, flatten(corners), texture, uv, (byte) cull, (byte) flags);
+	}
+
+	private static short[] flatten(int[][] corners) {
+		short[] out = new short[12];
+		for (int i = 0; i < 4; i++) {
+			int[] c = corners[Math.min(i, corners.length - 1)];
+			out[i * 3] = (short) c[0];
+			out[i * 3 + 1] = (short) c[1];
+			out[i * 3 + 2] = (short) c[2];
+		}
+		return out;
+	}
+
 	private static short[] corners(int... values) {
 		short[] out = new short[values.length];
 		for (int i = 0; i < values.length; i++) {

@@ -5,14 +5,13 @@ The full build (every reachable map) covers M2's checks, M6's habitat blocks and
 and M8's full-build gate (every map placed, 0 warnings, 0 overlaps) in one build of about a minute.
 The shape gates add a filtered build (Pallet Town, into its own world) and the full build run again
 over itself: equal shape hashes, the filtered build's shape index equal to the full one's, no block
-changed by the rebuild, and (V2 only) blocks_placed equal to the last build before V2.
+changed by the rebuild; the full build meets the budgets the report can check (quads per block and
+per section, placement rate, build time, the shape map's size) and its self-check finds no hole.
 
 Builds into its own worlds, saves/KantoE2E and saves/KantoE2EPallet, recreated on every run, so it
 never touches the world the user plays in (saves/Kanto). Prints and checks only the counts-only
 build reports; the fresh full build's report and self-check are the ones left in local/reports/.
 """
-import json
-
 import pytest
 
 import build_world
@@ -56,13 +55,13 @@ def test_full_build_from_the_real_export():
         build_world.SELFCHECK.write_text(selfcheck_text, encoding="utf-8")
     assert selfcheck_text is not None, "no shape_selfcheck.json beside the report"
 
-    before = None
-    if build_world.REPORT_BEFORE_V2.is_file():
-        before = json.loads(build_world.REPORT_BEFORE_V2.read_text(encoding="utf-8"))
-    failed = build_world.shape_gates(full, again, filtered, before)
+    failed = build_world.shape_gates(full, again, filtered) + build_world.budget_gates(full)
     assert not failed, {"failed": failed, "shape_map_wire_chars": full.get("shape_map_wire_chars"),
-                        "blocks_placed": (full.get("blocks_placed"), before and before.get("blocks_placed")),
-                        "rebuild": (again.get("blocks_placed"), again.get("blocks_cleared"))}
+                        "rebuild": (again.get("blocks_placed"), again.get("blocks_cleared")),
+                        "quads": (full.get("shape_quads_mean_block"), full.get("shape_quads_max_block"),
+                                  full.get("shape_quads_section_p95"), full.get("shape_quads_section_max")),
+                        "throughput": full.get("throughput"), "elapsed_ms": full.get("elapsed_ms"),
+                        "selfcheck": full.get("selfcheck")}
 
     points = build_world.viewpoints(full, "KantoE2E")["viewpoints"]
     assert [p["id"] for p in points] == ["spawn", "above"], points

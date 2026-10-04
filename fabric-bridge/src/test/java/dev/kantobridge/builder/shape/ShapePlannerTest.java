@@ -60,7 +60,8 @@ class ShapePlannerTest {
 			assertArrayEquals(new ShapeKey[] {cube('A', 'B', 'B'), cube('A', 'B', 'A')}, column(shapes, WALL, tx, 2));
 		}
 		assertNull(column(shapes, WALL, 4, 3), "ground");
-		assertEquals(2, shapes.heights()[1 * 4], "today's wall height");
+		assertEquals(2, shapes.blocks()[3 * 8], "today's wall height");
+		assertEquals(0, shapes.shapeMask()[3 * 8], "every block a tile_full");
 	}
 
 	@Test
@@ -73,7 +74,7 @@ class ShapePlannerTest {
 				"....",
 				"....");
 		ShapePlanner.MapShapes shapes = planned(tall);
-		assertEquals(4, shapes.heights()[0], "a unit of 4: today's roof class");
+		assertEquals(4, shapes.blocks()[0], "a unit of 4: today's roof class");
 		// Front column (row 3): bands show D, C, B, A from the ground up; its top shows the run's first row; the back B.
 		assertArrayEquals(new ShapeKey[] {cube('A', 'B', 'D'), cube('A', 'B', 'C'), cube('A', 'B', 'B'), cube('A', 'B', 'A')},
 				column(shapes, tall, 0, 3));
@@ -90,7 +91,9 @@ class ShapePlannerTest {
 				"CCDD",
 				"CCDD");
 		ShapePlanner.MapShapes shapes = planned(inside);
-		assertArrayEquals(new int[] {2, 2, 2, 2}, shapes.heights());
+		int[] two = new int[16];
+		java.util.Arrays.fill(two, 2);
+		assertArrayEquals(two, shapes.blocks());
 		// Column 0, row 3 (h 2 inside a 4-row run): its top shows row 1, its bands C and C.
 		assertArrayEquals(new ShapeKey[] {cube('B', 'B', 'C'), cube('B', 'B', 'C')}, column(shapes, inside, 0, 3));
 		// Column 2, row 3: D and D; row 1's top shows A... two rows up leaves the run, so the first row.
@@ -120,7 +123,7 @@ class ShapePlannerTest {
 		for (ShapeKey[] column : shapes.open()) {
 			assertNull(column);
 		}
-		assertArrayEquals(new int[] {1, 0, 0}, shapes.heights(), "the counter keeps its one block, as today");
+		assertArrayEquals(new int[] {1, 1, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0}, shapes.blocks(), "the counter keeps its one block, as today");
 	}
 
 	@Test

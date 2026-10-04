@@ -310,7 +310,7 @@ public final class WorldPlanner {
 				warnings.note("shapes_no_front_end");
 			} else {
 				scene = frontEnd.describe(bundle);
-				shapes = ShapePlanner.plan(scene, placements.values(), ShapeParams.v2()).withIndexHash(index.hash());
+				shapes = ShapePlanner.plan(scene, placements.values(), ShapeParams.current()).withIndexHash(index.hash());
 			}
 		}
 		ExportField.Display display = field.display();

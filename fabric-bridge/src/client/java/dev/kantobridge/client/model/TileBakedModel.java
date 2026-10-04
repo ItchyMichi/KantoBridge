@@ -48,10 +48,20 @@ final class TileBakedModel implements BakedModel {
 		long started = MeshStats.ENABLED ? System.nanoTime() : 0L;
 		RenderSnapshot snapshot = RenderSnapshot.current();
 		// pos is the mesher's cursor: read its coordinates, never keep it.
-		int id = snapshot.shapeAt(pos.getX(), pos.getY(), pos.getZ());
+		int x = pos.getX();
+		int y = pos.getY();
+		int z = pos.getZ();
+		int id = snapshot.shapeAt(x, y, z);
 		ShapeMesh mesh = id == 0 ? null : snapshot.mesh(id);
-		int quads = mesh == null ? snapshot.emitCube(this.kind, this.slot, this.placeholder, context.getEmitter())
-				: snapshot.emitShape(mesh, this.placeholder, context.getEmitter());
+		int quads;
+		if (mesh != null) {
+			quads = snapshot.emitShape(mesh, x, y, z, this.placeholder, context.getEmitter());
+		} else if (this.kind.drawsCube()) {
+			quads = snapshot.emitCube(this.kind, this.slot, this.placeholder, context.getEmitter());
+		} else {
+			// Decoration and ledge colliders draw only their shapes.
+			quads = 0;
+		}
 		if (MeshStats.ENABLED) {
 			MeshStats.ours(System.nanoTime() - started, quads);
 		}
@@ -59,7 +69,7 @@ final class TileBakedModel implements BakedModel {
 
 	@Override
 	public List<BakedQuad> getQuads(@Nullable BlockState state, @Nullable Direction side, RandomSource random) {
-		return RenderSnapshot.current().quads(this.kind, this.slot, side, this.placeholder);
+		return this.kind.drawsCube() ? RenderSnapshot.current().quads(this.kind, this.slot, side, this.placeholder) : List.of();
 	}
 
 	@Override
@@ -84,7 +94,7 @@ final class TileBakedModel implements BakedModel {
 
 	@Override
 	public TextureAtlasSprite getParticleIcon() {
-		return RenderSnapshot.current().sprite(this.kind, this.slot, this.placeholder);
+		return this.kind.hasSlot() ? RenderSnapshot.current().sprite(this.kind, this.slot, this.placeholder) : this.placeholder;
 	}
 
 	@Override

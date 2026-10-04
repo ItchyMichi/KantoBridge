@@ -90,6 +90,8 @@ public class SyntheticBuildGameTests implements FabricGameTest {
 	public static final int ORIGIN_Z = 3_200_000;
 	private static final String BUNDLE = "kantobridge/synthetic_bundle/red/";
 	private static final String GOLDEN = "kantobridge/golden/synthetic_world_index.json";
+	/** The JUnit tests' golden shapes of the same build: its shape index and the shape map's hash. */
+	private static final String GOLDEN_SHAPES = "kantobridge/golden/synthetic_shapes.json";
 
 	private static ExportBundle bundle() {
 		try {
@@ -149,6 +151,18 @@ public class SyntheticBuildGameTests implements FabricGameTest {
 		helper.assertTrue(index.toJson().equals(golden(helper)), "the built WorldIndex differs from the golden file");
 		helper.assertTrue(index.hash().equals(WorldIndexSync.currentHash(helper.getLevel().getServer())), "the new index was not published");
 		helper.assertTrue(Files.isRegularFile(task.worldDir().resolve("kantobridge/slot_map.json")), "slot map not written");
+		// The voxel plan's V3: the shape map the build wrote is the golden one, byte for byte.
+		try {
+			JsonObject shapes = ProtoJson.parseObject(resource(helper, GOLDEN_SHAPES));
+			byte[] written = Files.readAllBytes(task.worldDir().resolve("kantobridge/" + BuildTask.SHAPE_MAP_FILE));
+			helper.assertTrue(dev.kantobridge.world.Hashes.sha256(written).equals(shapes.get("mapHash").getAsString()),
+					"the built shape map differs from the golden one");
+			String shapeIndex = Files.readString(task.worldDir().resolve("kantobridge/" + BuildTask.SHAPE_INDEX_FILE), StandardCharsets.UTF_8);
+			helper.assertTrue(dev.kantobridge.world.Hashes.sha256(shapeIndex).equals(shapes.get("indexHash").getAsString()),
+					"the built shape index differs from the golden one");
+		} catch (IOException | ProtocolException e) {
+			throw new GameTestAssertException("shape files unreadable: " + e.getClass().getSimpleName());
+		}
 		// M9: the build's slot map goes out with its index (world.slots), and the files read back on a restart do the same.
 		helper.assertTrue(index.slotMapHash().equals(WorldIndexSync.currentSlotsHash(helper.getLevel().getServer())),
 				"the build's slot map was not published with its index");
@@ -375,11 +389,15 @@ public class SyntheticBuildGameTests implements FabricGameTest {
 	}
 
 	private static String golden(GameTestHelper helper) {
-		try (InputStream in = SyntheticBuildGameTests.class.getClassLoader().getResourceAsStream(GOLDEN)) {
-			helper.assertTrue(in != null, "golden WorldIndex missing");
+		return resource(helper, GOLDEN);
+	}
+
+	private static String resource(GameTestHelper helper, String path) {
+		try (InputStream in = SyntheticBuildGameTests.class.getClassLoader().getResourceAsStream(path)) {
+			helper.assertTrue(in != null, path + " missing");
 			return new String(in.readAllBytes(), StandardCharsets.UTF_8);
 		} catch (IOException e) {
-			throw new GameTestAssertException("golden WorldIndex unreadable");
+			throw new GameTestAssertException(path + " unreadable");
 		}
 	}
 

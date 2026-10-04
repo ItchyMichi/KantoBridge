@@ -90,7 +90,7 @@ public final class HeightRules {
 	}
 
 	/** The length of the longest stretch starting at {@code i} that repeats with a period of 1 or 2 rows. */
-	static int repeatLength(int[] seq, int n, int i) {
+	public static int repeatLength(int[] seq, int n, int i) {
 		int one = 1;
 		while (i + one < n && seq[i + one] == seq[i + one - 1]) {
 			one++;

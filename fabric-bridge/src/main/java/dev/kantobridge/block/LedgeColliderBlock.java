@@ -24,7 +24,8 @@ import net.minecraft.world.phys.shapes.VoxelShape;
  * performs the hop. With no entity (pathfinding, shape caches) it is the wall, which also marks the shape as larger
  * than a block so collision checks look at it from a block away (refs/_research/P5_mc_content_testing.md §1.4, §1.6).
  *
- * <p>Invisible, no outline, no occlusion: the ledge art is on the tile block below.
+ * <p>No outline, no occlusion: the ledge art is on the tile block below. Since the voxel plan's V3 it is a model block:
+ * the client's runtime model draws the ledge lip the world's shape map gives its position, and nothing without one.
  */
 public class LedgeColliderBlock extends HorizontalDirectionalBlock {
 	public static final MapCodec<LedgeColliderBlock> CODEC = simpleCodec(LedgeColliderBlock::new);
@@ -49,7 +50,7 @@ public class LedgeColliderBlock extends HorizontalDirectionalBlock {
 
 	@Override
 	protected RenderShape getRenderShape(BlockState state) {
-		return RenderShape.INVISIBLE;
+		return RenderShape.MODEL;
 	}
 
 	@Override

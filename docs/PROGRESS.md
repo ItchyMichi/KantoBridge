@@ -37,7 +37,8 @@ pack below player packs; VD10 the JSON file.
 |---|---|---|---|---|
 | V1a | Measuring tools (V1's first work package) | **done** | 2026-10-04 | `eeda9ee` |
 | V1 | Runtime model with the same cubes | **done** (X1 and X4 wait for you) | 2026-10-04 | `9b3a647` |
-| V2 | Shape data, sync and per-face art | **done** (play-test waits for you) | 2026-10-04 | `V2: shape data` |
+| V2 | Shape data, sync and per-face art | **done** (play-test waits for you) | 2026-10-04 | `7a364d7` |
+| V3 | Carriers and Tier A shapes | **done** (play-test waits for you; rebuild your world first) | 2026-10-04 | `V3: Tier A shapes` |
 
 **Measurements waiting on you** (agents never start the client; the plan's §10):
 
@@ -74,6 +75,26 @@ pack below player packs; VD10 the JSON file.
   filtered build. Self-check (recorded, not gated): 0 holes, ground match 1.0 everywhere, structure match median 1.0,
   5th percentile 0.71, lowest 0.375 (small gate interiors: counters and classified wall heights); occluded ground at
   most 0.66.
+
+- **V3:** `tools/check.sh --e2e`: pytest **1422 passed**, then `gradlew build`: **666 JUnit** (new: `GeometryTest`,
+  `FaceMaskTest`, `CarrierChoiceTest`, `WalkabilityTest` (I1, shaped against unshaped, every cell of every map),
+  `QuadCounterTest`, `ShapeBlockTest`, `CullingContractTest`, the measured runs in `StructuresTest`, and in
+  `SelfCheckTest` a fuzz of 2,000 random layouts with doors that must leave no hole), **90/90 GameTests**
+  (`ShapeBuildGameTests.carriers`: every planned position holds exactly its planned state, and a player fits every
+  walkable cell and collides in every solid one; `SyntheticBuildGameTests`: the built shape map is the golden one, byte
+  for byte). The first run of the real build found 228 self-check holes in 11 maps: the self-check skipped the
+  triangular south face of a hipped roof end whose repeated corner came first (a zero first edge for its normal). The
+  geometry was right; the projection now takes the normal over all four corners, and a fuzz of 20,000 layouts found no
+  hole. The real build: 220 maps, 0 warnings, 2,478,550 blocks (6,604 fewer than V2: measured heights and one-block
+  roofs in place of the two height classes), 57.8 s at 48,272 blocks/s;
+  `kb-shapes/2` planned 6,065 keys (4,531 cubes, 1,525 roofs, 9 lips), 9,139 `shape_full` blocks, 213,496 shaped
+  positions; the shape map is 136,920 characters (3 of 8 parts). Quads after culling: 1.01 per shaped block on
+  average, 5 at most (budget 96 and 24), per section 256 median, 1,104 at the 95th percentile, 1,968 at most (budgets
+  12,000 and 30,000); counting them took 0.8 s. Self-check: **0 holes**, ground match 1.0 on every map, structure
+  match median 0.93, 5th percentile 0.577, lowest 0.375; occluded ground at most 0.66. **Thresholds** (§5.6, in
+  `build_world.py`): no hole, ground match 1.0, structure match 5th percentile at least 0.55 and lowest at least 0.35
+  per map. The plan's per-type targets (walls 0.99, roofed columns 0.90) aren't separable in a per-map score: walls
+  score exactly on fixtures (`SelfCheckTest`), roofs lay their two drawn rows on a one-block slope and score below them.
 
 ### Voxel plan: deviations
 
@@ -123,6 +144,33 @@ pack below player packs; VD10 the JSON file.
     `ok:true` and says the reason; `building` (the table still building) isn't reported.
 15. **Export additions are optional in the schemas,** so older bundles still read: without `animated`, the pack
     animates water and flowers as before.
+16. **Runs (V3) are the repeat rule's pieces,** a non-repeating piece keeping the repeating piece directly south of it (a
+    building's roof rows with its plain facade, a cliff's rim with its body); a repeating piece elsewhere (a tree line)
+    is its own run. Read literally ("a maximal vertical stretch"), a tree line touching a building would take the
+    building's height and the roof's gable would span the trees.
+17. **Read as a repeat:** a pure repeat, a head over a repeating body, or the trim rule with a distinct front row
+    (`tile(f-1) == tile(f-2) != tile(f)`). The region vote counts only runs measured from their drawing, regions leave
+    pure repeats out, and only runs read as repeats that aren't pure repeats adopt the vote: otherwise a region merged
+    through a tree wall raised the whole wall to a house's height.
+18. **Roofs need four drawn rows** (`Structures.ROOF_MIN_ROWS`, two roof rows over at least two wall rows). With the
+    plan's `L >= 2`, every sign, post and lone tree (two rows) would carry a tent until V4 turns them into objects. A
+    run raised by the vote isn't a plain repeat, so a building's plain columns get the same roof as its drawn ones.
+19. **A folded door's columns are roofed over the depth to their fold origin,** so they rise with the facade beside them.
+20. **Flanks and hips:** an exposed side is hipped; a side with a roof next to it keeps its flank, which the face masks
+    drop. Besides cell coverage, a quad is also dropped when the neighbour's opposite face holds exactly its outline
+    (touching flanks, and the faces between consecutive roof rows): coverage of whole cells alone never hides a triangle.
+21. **Ledge lips** are `slab(tile, 4)` on every tile of a ledge cell. The self-check counts ledges with the structures,
+    not the ground ("ground_match: walkable and water pixels"), since the lip lifts their art by two pixels.
+22. **The self-check samples every face that looks up or south,** sloped roofs and non-rectangular faces included;
+    axis-aligned rectangles are projected exactly as before.
+23. **Quads are counted over the whole planned world** by `builder/shape/QuadCounter` (pure): Minecraft's own culling
+    (opaque tiles; water hides the top of the block under it) and the face masks, per shaped block and per 16³
+    section, with the densest section's corner and `quad_count_ms`. The dev-only per-section comparison on the client
+    (§6.3) comes with V4's measurements.
+24. **`shape_hosts_added`** counts the new carrier blocks placed (`shape_full`, `decor`). `MapModel` keeps no per-tile
+    unit: the planner measures from the scene. The void fill and interior rings wear the drawn border in shaped builds
+    only; an unshaped build is today's world.
+25. **The shape table's geometry version is 2,** so a client's V2 cache files are rebuilt.
 
 ### Voxel plan: open issues
 

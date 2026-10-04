@@ -20,15 +20,17 @@ import net.minecraft.world.phys.shapes.Shapes;
 import net.minecraft.world.phys.shapes.VoxelShape;
 
 /**
- * Block registration. Tile families: {@code tile_full_00..15} (full cubes) and {@code tile_half_00..15} (half
- * height). Plus the invisible world blocks: {@code story_cell} and {@code story_tile} (a swap site's cell, whose closed
- * art the client draws per player), each with its block entity, and {@code ledge_collider}.
+ * Block registration. Tile families: {@code tile_full_00..15} (full cubes), {@code tile_half_00..15} (half height) and
+ * {@code shape_full_00..15} (full collision around shaped art, never occluding; the voxel plan's V3). Plus
+ * {@code decor} and {@code decor_leaves} (visual only), and the invisible world blocks: {@code story_cell} and
+ * {@code story_tile} (a swap site's cell, whose closed art the client draws per player), each with its block entity,
+ * and {@code ledge_collider} (which carries the ledge lip since V3).
  *
  * <p>The blocks the client's runtime model draws are its <b>carriers</b> ({@link #carriers()}, docs/specs/VOXEL_BLOCKS_PLAN.md
  * §3.3): each with its {@link CarrierKind} and family.
  */
 public final class KbBlocks {
-	/** Families per shape; 2 shapes × 16 families × 256 slots = 8192 tile states. */
+	/** Families per shape; 3 shapes × 16 families × 256 slots = 12,288 tile states. */
 	public static final int FAMILIES_PER_SHAPE = 16;
 
 	private static final VoxelShape FULL = Shapes.block();
@@ -36,6 +38,7 @@ public final class KbBlocks {
 
 	private static final List<TileBlock> TILE_FULL = new ArrayList<>();
 	private static final List<TileBlock> TILE_HALF = new ArrayList<>();
+	private static final List<ShapeBlock> SHAPE_FULL = new ArrayList<>();
 	private static final List<Carrier> CARRIERS = new ArrayList<>();
 	private static boolean registered;
 
@@ -43,6 +46,8 @@ public final class KbBlocks {
 	public static StoryCellBlock STORY_CELL;
 	public static StoryTileBlock STORY_TILE;
 	public static LedgeColliderBlock LEDGE_COLLIDER;
+	public static DecorBlock DECOR;
+	public static DecorBlock DECOR_LEAVES;
 	public static BlockEntityType<StoryCellBlockEntity> STORY_CELL_ENTITY;
 	public static BlockEntityType<StoryCellBlockEntity> STORY_TILE_ENTITY;
 
@@ -72,14 +77,25 @@ public final class KbBlocks {
 			TILE_HALF.add(register(tileId("half", family), new TileBlock(tileProperties(), HALF)));
 		}
 		for (int family = 0; family < FAMILIES_PER_SHAPE; family++) {
+			SHAPE_FULL.add(register(shapeId(family), new ShapeBlock(shapeProperties())));
+		}
+		for (int family = 0; family < FAMILIES_PER_SHAPE; family++) {
 			CARRIERS.add(new Carrier(TILE_FULL.get(family), CarrierKind.TILE_FULL, family));
 		}
 		for (int family = 0; family < FAMILIES_PER_SHAPE; family++) {
 			CARRIERS.add(new Carrier(TILE_HALF.get(family), CarrierKind.TILE_HALF, family));
 		}
+		for (int family = 0; family < FAMILIES_PER_SHAPE; family++) {
+			CARRIERS.add(new Carrier(SHAPE_FULL.get(family), CarrierKind.SHAPE_FULL, family));
+		}
 		STORY_CELL = register("story_cell", new StoryCellBlock(invisibleProperties()));
 		STORY_TILE = register("story_tile", new StoryTileBlock(invisibleProperties()));
 		LEDGE_COLLIDER = register("ledge_collider", new LedgeColliderBlock(invisibleProperties()));
+		DECOR = register("decor", new DecorBlock(decorProperties()));
+		DECOR_LEAVES = register("decor_leaves", new DecorBlock(decorProperties()));
+		CARRIERS.add(new Carrier(DECOR, CarrierKind.DECOR, 0));
+		CARRIERS.add(new Carrier(DECOR_LEAVES, CarrierKind.DECOR_LEAVES, 0));
+		CARRIERS.add(new Carrier(LEDGE_COLLIDER, CarrierKind.LEDGE, 0));
 		// No data fixer: the block entities hold only our own two strings.
 		STORY_CELL_ENTITY = Registry.register(BuiltInRegistries.BLOCK_ENTITY_TYPE, id("story_cell"),
 				BlockEntityType.Builder.of(StoryCellBlockEntity::new, STORY_CELL).build(null));
@@ -91,6 +107,10 @@ public final class KbBlocks {
 		return String.format(Locale.ROOT, "tile_%s_%02d", shape, family);
 	}
 
+	public static String shapeId(int family) {
+		return String.format(Locale.ROOT, "shape_full_%02d", family);
+	}
+
 	public static List<TileBlock> tileFull() {
 		return Collections.unmodifiableList(TILE_FULL);
 	}
@@ -99,15 +119,20 @@ public final class KbBlocks {
 		return Collections.unmodifiableList(TILE_HALF);
 	}
 
+	public static List<ShapeBlock> shapeFull() {
+		return Collections.unmodifiableList(SHAPE_FULL);
+	}
+
 	/** Every carrier block, with its kind and family (registration order). */
 	public static List<Carrier> carriers() {
 		return Collections.unmodifiableList(CARRIERS);
 	}
 
-	/** Every tile block, full families first. */
+	/** Every tile block: full, half, then shape families. */
 	public static List<TileBlock> allTiles() {
 		List<TileBlock> all = new ArrayList<>(TILE_FULL);
 		all.addAll(TILE_HALF);
+		all.addAll(SHAPE_FULL);
 		return Collections.unmodifiableList(all);
 	}
 
@@ -119,6 +144,20 @@ public final class KbBlocks {
 				.noLootTable()
 				.sound(SoundType.STONE)
 				.pushReaction(PushReaction.BLOCK);
+	}
+
+	// Shaped tiles: a full cube to walk into and to pick, but no occlusion, never suffocating or view-blocking.
+	private static BlockBehaviour.Properties shapeProperties() {
+		return tileProperties()
+				.noOcclusion()
+				.isSuffocating((state, level, pos) -> false)
+				.isViewBlocking((state, level, pos) -> false)
+				.isRedstoneConductor((state, level, pos) -> false);
+	}
+
+	// Decoration: nothing to collide with or to pick; drawn by the runtime model only.
+	private static BlockBehaviour.Properties decorProperties() {
+		return invisibleProperties().noCollission();
 	}
 
 	// Invisible blocks: no occlusion, never suffocating or view-blocking (their cached collision is a full cube).

@@ -1,7 +1,9 @@
 package dev.kantobridge.client.model;
 
 import dev.kantobridge.block.CarrierKind;
+import dev.kantobridge.builder.shape.geom.FaceMasks;
 import dev.kantobridge.builder.shape.geom.ShapeMesh;
+import dev.kantobridge.builder.shape.geom.ShapeQuad;
 import dev.kantobridge.builder.shape.geom.ShapeTable;
 import dev.kantobridge.world.ShapeMap;
 import dev.kantobridge.world.SlotMap;
@@ -91,9 +93,31 @@ public final class RenderSnapshot {
 		return built == null ? null : built.mesh(id);
 	}
 
-	/** Emits a shape's quads with this snapshot's sprites and materials; returns the quads emitted. */
-	public int emitShape(ShapeMesh mesh, TextureAtlasSprite fallback, QuadEmitter out) {
-		return ShapeEmitter.emit(mesh, this.shapeSprites, this.placeholder != null ? this.placeholder : fallback, this.solid, this.cutout, out);
+	/**
+	 * Emits the shape at (x, y, z) with this snapshot's sprites and materials, leaving out every quad on a block face
+	 * that the neighbour's shape covers there (its face mask; Minecraft itself culls against opaque neighbours). Returns
+	 * the quads emitted.
+	 */
+	public int emitShape(ShapeMesh mesh, int x, int y, int z, TextureAtlasSprite fallback, QuadEmitter out) {
+		TextureAtlasSprite placeholder = this.placeholder != null ? this.placeholder : fallback;
+		List<ShapeQuad> quads = mesh.quads();
+		int emitted = 0;
+		for (int q = 0; q < quads.size(); q++) {
+			ShapeQuad quad = quads.get(q);
+			int cull = quad.cull();
+			if (cull >= 0 && mesh.footprint(q) != 0) {
+				int id = this.shapeAt(x + FaceMasks.DX[cull], y + FaceMasks.DY[cull], z + FaceMasks.DZ[cull]);
+				if (id != 0 && FaceMasks.culled(mesh, q, this.mesh(id))) {
+					continue;
+				}
+			}
+			int texture = quad.texture();
+			TextureAtlasSprite sprite = texture < this.shapeSprites.length && this.shapeSprites[texture] != null ? this.shapeSprites[texture]
+					: placeholder;
+			ShapeEmitter.emit(quad, sprite, quad.has(ShapeQuad.CUTOUT) ? this.cutout : this.solid, out);
+			emitted++;
+		}
+		return emitted;
 	}
 
 	/** True when the world's shapes are drawn (a verified shape map and a built table). */

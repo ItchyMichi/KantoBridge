@@ -430,3 +430,20 @@ no_shapes`).
 - [ ] **`"shapes": "off"`** in `kantobridge-client.json`, then restart the game: the world looks exactly as at V1
       (F7: `cubes because shapes_off`). Set it back to `"on"`.
 - [ ] Animated tiles (water, flowers) still move as before.
+
+### V3: carriers and Tier A shapes
+
+Buildings get their measured heights (up to six blocks), gable roofs and doors folded into their facades; ledges get a
+lip. Blocks change, so rebuild your world first (Minecraft closed):
+`tools\.venv\Scripts\python.exe tools\e2e\build_world.py --maps all --world Kanto`.
+
+- [ ] Walk around a house, a fence, a ledge and the shore: no holes, no black faces, no flicker.
+- [ ] Roofs look right: they rise from the facade's top to a ridge and fall again, hipped at the ends; the door's art
+      stands at the back of its doorway, which you can still walk into.
+- [ ] Ledge lips: a low step on top of each ledge; hopping down works as before, and you can't climb back up.
+- [ ] The crosshair still lands on signs and counters, and talking or reading works as before (VD8: the block outline
+      stays the cell's box; say if it bothers you).
+- [ ] Walking is unchanged: nothing new to bump into on paths, grass, doors or shores; walls, trees and buildings stop
+      you where they did.
+- [ ] Interiors look as before (walls two blocks high).
+- [ ] An old world (one built before this rebuild) still loads and shows its old look.

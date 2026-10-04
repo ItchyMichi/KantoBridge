@@ -8,7 +8,6 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import com.google.gson.JsonObject;
 import dev.kantobridge.builder.TestData;
 import dev.kantobridge.builder.export.ExportBundle;
-import dev.kantobridge.builder.plan.ChunkCodesView;
 import dev.kantobridge.builder.plan.WorldPlan;
 import dev.kantobridge.builder.plan.WorldPlanner;
 import dev.kantobridge.proto.ProtoJson;
@@ -23,7 +22,7 @@ import org.junit.jupiter.api.Test;
 /**
  * The planner on the synthetic bundle (docs/specs/VOXEL_BLOCKS_PLAN.md §6.1): a golden shape index and shape map hash;
  * the map bound to the build's WorldIndex; both swap states planned; equal results across two runs, a reversed map order
- * and a filtered build's index (I7); V2 places no other block.
+ * and a filtered build's index (I7).
  */
 class ShapePlannerSyntheticTest {
 	private static ExportBundle bundle;
@@ -45,9 +44,11 @@ class ShapePlannerSyntheticTest {
 		golden.addProperty("mapHash", shapes.map().hash());
 		golden.addProperty("shapedBlocks", shapes.shapedBlocks());
 		TestData.assertGolden(TestData.goldenShapes(), ProtoJson.write(golden), "shapes");
-		assertEquals("kb-shapes/1", shapes.index().planner());
+		assertEquals("kb-shapes/2", shapes.index().planner());
 		assertTrue(shapes.index().size() > 0);
-		assertEquals(shapes.index().size(), shapes.keysByKind().get(ShapeKey.Kind.CUBE), "V2 plans cubes only, one palette");
+		assertTrue(shapes.keysByKind().get(ShapeKey.Kind.ROOF) > 0, "the hill's house has its roof");
+		assertEquals(1, shapes.keysByKind().get(ShapeKey.Kind.SLAB), "the town's ledge lip, one tile");
+		assertEquals(shapes.index().size(), shapes.index().geoms().size(), "one palette: one shape per key");
 	}
 
 	@Test
@@ -91,23 +92,5 @@ class ShapePlannerSyntheticTest {
 		assertEquals(forward.index().hash(), backward.index().hash());
 		assertEquals(forward.map().hash(), backward.map().hash());
 		assertEquals(plan.shapes().map().grids().size(), backward.map().grids().size());
-	}
-
-	@Test
-	void unshapedBuildsPlaceTheSameBlocks() throws Exception {
-		WorldPlan unshaped = WorldPlanner.plan(bundle, new WorldPlanner.Options(null, TestData.ORIGIN_X, TestData.ORIGIN_Z,
-				TestData.MIN_BUILD_HEIGHT, false));
-		assertEquals(null, unshaped.shapes(), "shapes off: no shape data");
-		assertEquals(plan.index().toJson(), unshaped.index().toJson(), "and the same WorldIndex");
-		ChunkCodesView shaped = new ChunkCodesView(plan);
-		ChunkCodesView plain = new ChunkCodesView(unshaped);
-		var surface = plan.surfaceBox();
-		for (int y = surface.minY(); y < surface.maxY(); y++) {
-			for (int z = surface.minZ(); z < surface.maxZ(); z += 3) {
-				for (int x = surface.minX(); x < surface.maxX(); x += 3) {
-					assertEquals(plain.code(x, y, z), shaped.code(x, y, z), x + "," + y + "," + z);
-				}
-			}
-		}
 	}
 }

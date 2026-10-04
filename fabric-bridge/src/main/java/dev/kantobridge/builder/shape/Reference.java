@@ -30,9 +30,12 @@ public final class Reference {
 		return SelfCheck.texel(this.map.tile(sx / this.artPx, sy / this.artPx), sx % this.artPx, sy % this.artPx);
 	}
 
-	/** True when the pixel shows ground (a walkable, water or ledge cell); false for a structure (solid, counter). */
+	/**
+	 * True when the pixel shows ground (a walkable or water cell); false for everything that stands up from it (solid
+	 * cells, counters, ledges with their lips).
+	 */
 	public boolean ground(int sx, int sy) {
 		CellKind kind = this.map.kindAtTile(sx / this.artPx, sy / this.artPx);
-		return kind == CellKind.WALK || kind == CellKind.WATER || kind == CellKind.LEDGE;
+		return kind == CellKind.WALK || kind == CellKind.WATER;
 	}
 }

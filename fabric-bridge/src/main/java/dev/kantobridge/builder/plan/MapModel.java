@@ -325,6 +325,16 @@ public final class MapModel {
 		return Math.max(tile, 0);
 	}
 
+	/**
+	 * The tile the border the game really draws around the map ({@code borderDrawn}) shows at tile position (tx, ty); the
+	 * map's own border block where it draws none, or where an older export doesn't say.
+	 */
+	public int drawnBorderTile(int tx, int ty) {
+		Integer drawn = this.map.borderDrawn();
+		int tile = this.tileset.tile(drawn == null ? this.map.border() : drawn, Math.floorMod(tx, 4), Math.floorMod(ty, 4));
+		return Math.max(tile, 0);
+	}
+
 	public Kind kind(int cx, int cy) {
 		return this.kinds[cy * this.cw + cx];
 	}

@@ -13,12 +13,15 @@ import net.minecraft.world.level.block.state.BlockState;
 public final class CodeStates {
 	private final BlockState[] full = new BlockState[SlotMap.CAPACITY];
 	private final BlockState[] half = new BlockState[SlotMap.CAPACITY];
+	private final BlockState[] shape = new BlockState[SlotMap.CAPACITY];
 
 	public BlockState state(int code) {
 		int value = BlockCode.value(code);
 		return switch (BlockCode.kind(code)) {
 			case BlockCode.KIND_FULL -> this.tile(this.full, true, value);
 			case BlockCode.KIND_HALF -> this.tile(this.half, false, value);
+			case BlockCode.KIND_SHAPE -> this.shape(value);
+			case BlockCode.KIND_DECOR -> (value == 1 ? KbBlocks.DECOR_LEAVES : KbBlocks.DECOR).defaultBlockState();
 			case BlockCode.KIND_LEDGE -> KbBlocks.LEDGE_COLLIDER.defaultBlockState().setValue(LedgeColliderBlock.FACING, downhill(value));
 			case BlockCode.KIND_LIGHT -> Blocks.LIGHT.defaultBlockState().setValue(LightBlock.LEVEL, Math.min(15, value));
 			case BlockCode.KIND_STORY -> KbBlocks.STORY_CELL.defaultBlockState();
@@ -34,6 +37,15 @@ public final class CodeStates {
 			int slot = index % SlotMap.SLOTS_PER_FAMILY;
 			state = (fullShape ? KbBlocks.tileFull() : KbBlocks.tileHalf()).get(family).withSlot(slot);
 			cache[index] = state;
+		}
+		return state;
+	}
+
+	private BlockState shape(int index) {
+		BlockState state = this.shape[index];
+		if (state == null) {
+			state = KbBlocks.shapeFull().get(index / SlotMap.SLOTS_PER_FAMILY).withSlot(index % SlotMap.SLOTS_PER_FAMILY);
+			this.shape[index] = state;
 		}
 		return state;
 	}

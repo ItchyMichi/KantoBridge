@@ -1,8 +1,6 @@
 package dev.kantobridge.client.model;
 
-import dev.kantobridge.builder.shape.geom.ShapeMesh;
 import dev.kantobridge.builder.shape.geom.ShapeQuad;
-import java.util.List;
 import net.fabricmc.fabric.api.renderer.v1.material.RenderMaterial;
 import net.fabricmc.fabric.api.renderer.v1.mesh.QuadEmitter;
 import net.minecraft.client.renderer.texture.TextureAtlasSprite;
@@ -14,7 +12,8 @@ import org.jetbrains.annotations.Nullable;
  * corner's UV by the quad's face convention ({@link ShapeQuad#cornerU}), inset toward the centre of the quad's UV
  * rectangle by the sprite's shrink ratio (Fabric's emitter doesn't shrink UVs as vanilla's face bakery does, so sub-tile
  * UVs would bleed), the cull face where the quad lies on the block's surface, the material by its flags. Runs on the
- * mesh threads; allocates nothing.
+ * mesh threads; allocates nothing. Which quads of a shape are drawn (face masks against shaped neighbours) is
+ * {@link RenderSnapshot#emitShape}'s.
  */
 public final class ShapeEmitter {
 	private static final Direction[] DIRECTIONS = Direction.values();
@@ -22,22 +21,6 @@ public final class ShapeEmitter {
 	static final int DARKEN = 0xFFB4B4B4;
 
 	private ShapeEmitter() {
-	}
-
-	/**
-	 * Emits every quad of {@code mesh}; {@code sprites} by the quad's texture index (a missing one draws the placeholder).
-	 * Returns the quads emitted.
-	 */
-	public static int emit(ShapeMesh mesh, TextureAtlasSprite[] sprites, TextureAtlasSprite placeholder, @Nullable RenderMaterial solid,
-			@Nullable RenderMaterial cutout, QuadEmitter out) {
-		List<ShapeQuad> quads = mesh.quads();
-		for (int q = 0; q < quads.size(); q++) {
-			ShapeQuad quad = quads.get(q);
-			int texture = quad.texture();
-			TextureAtlasSprite sprite = texture < sprites.length && sprites[texture] != null ? sprites[texture] : placeholder;
-			emit(quad, sprite, quad.has(ShapeQuad.CUTOUT) ? cutout : solid, out);
-		}
-		return quads.size();
 	}
 
 	static void emit(ShapeQuad quad, TextureAtlasSprite sprite, @Nullable RenderMaterial material, QuadEmitter out) {

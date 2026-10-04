@@ -17,6 +17,10 @@ public final class BlockCode {
 	public static final int KIND_STORY = 5;
 	/** A story-cell block of a {@code tile} cell: the same collision, plus its closed art drawn per player. */
 	public static final int KIND_STORY_TILE = 6;
+	/** A shaped tile ({@code shape_full}): full collision around shaped art; the value is its slot index (V3). */
+	public static final int KIND_SHAPE = 7;
+	/** Decoration: value 0 {@code decor}, 1 {@code decor_leaves} (V3). */
+	public static final int KIND_DECOR = 8;
 
 	private static final int SHIFT = 24;
 	private static final int VALUE_MASK = (1 << SHIFT) - 1;
@@ -32,6 +36,16 @@ public final class BlockCode {
 	/** A half-height tile block showing the slot with this index. */
 	public static int half(int slotIndex) {
 		return (KIND_HALF << SHIFT) | slotIndex;
+	}
+
+	/** A shaped tile block ({@code shape_full}) showing the slot with this index where it has no shape. */
+	public static int shape(int slotIndex) {
+		return (KIND_SHAPE << SHIFT) | slotIndex;
+	}
+
+	/** A decoration block: foliage or not. */
+	public static int decor(boolean leaves) {
+		return (KIND_DECOR << SHIFT) | (leaves ? 1 : 0);
 	}
 
 	/** A ledge collider; {@code dir} is the Gen 1 hop direction: 0 down, 1 up, 2 left, 3 right. */

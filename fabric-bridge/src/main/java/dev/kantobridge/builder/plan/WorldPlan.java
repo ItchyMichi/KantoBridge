@@ -2,6 +2,7 @@ package dev.kantobridge.builder.plan;
 
 import dev.kantobridge.builder.export.CellFlags;
 import dev.kantobridge.builder.shape.ShapePlan;
+import dev.kantobridge.builder.shape.ShapePlanner;
 import dev.kantobridge.scene.Scene;
 import dev.kantobridge.world.MapPlacement;
 import dev.kantobridge.world.Scale;
@@ -24,9 +25,12 @@ import org.jetbrains.annotations.Nullable;
 public final class WorldPlan {
 	/** Void fill around the surface maps: 3 Gen 1 blocks, the border ring Gen1Recomp draws. */
 	public static final int SURFACE_RING = 12;
-	/** The surface volume: ground blocks at Y 63 up to the top of a 4-high roof column. */
+	/**
+	 * The surface volume: ground blocks at Y 63 up to ground + 8 (the voxel plan's V3: six measured rows, a roof's rise
+	 * and a tree's trunk; it was ground + 5 for today's 4-high roof columns).
+	 */
 	public static final int SURFACE_MIN_Y = Scale.GROUND_Y;
-	public static final int SURFACE_MAX_Y = Scale.GROUND_Y + HeightRules.ROOF + 1;
+	public static final int SURFACE_MAX_Y = Scale.GROUND_Y + 8;
 	/** Interiors: the ceiling is 4 blocks above the floor block, i.e. at feet + 3. */
 	public static final int CEILING_ABOVE_FEET = 3;
 	/** Interior lights: {@code minecraft:light} level 15 at feet + 2 on a 4-block grid. */
@@ -419,7 +423,7 @@ public final class WorldPlan {
 			return;
 		}
 		MapPlacement p = owner.placement();
-		int code = BlockCode.full(this.slot(owner, owner.model().borderTile(x - p.x(), z - p.z()), false));
+		int code = BlockCode.full(this.slot(owner, this.ringTile(owner, x - p.x(), z - p.z()), false));
 		for (int y = Scale.GROUND_Y; y <= Scale.GROUND_Y + HeightRules.VOID; y++) {
 			sink.set(x, y, z, code);
 		}
@@ -437,7 +441,7 @@ public final class WorldPlan {
 			return;
 		}
 		// The enclosure ring: border-block art from the floor block up to the ceiling.
-		int code = BlockCode.full(this.slot(map, map.model().borderTile(x - p.x(), z - p.z()), false));
+		int code = BlockCode.full(this.slot(map, this.ringTile(map, x - p.x(), z - p.z()), false));
 		for (int y = p.y() - 1; y <= p.y() + CEILING_ABOVE_FEET; y++) {
 			sink.set(x, y, z, code);
 		}
@@ -452,6 +456,7 @@ public final class WorldPlan {
 		int cy = ty / Scale.CELL_BLOCKS;
 		int feet = p.y();
 		int tile = model.tile(tx, ty);
+		int column = 0;
 		switch (model.kind(cx, cy)) {
 			case GROUND -> sink.set(x, feet - 1, z, BlockCode.full(this.slot(map, tile, false)));
 			case WATER -> sink.set(x, feet - 1, z, BlockCode.half(this.slot(map, tile, true)));
@@ -460,10 +465,17 @@ public final class WorldPlan {
 				sink.set(x, feet, z, BlockCode.ledge(CellFlags.ledgeDir(model.flags(cx, cy))));
 			}
 			case COUNTER, SOLID -> {
-				int code = BlockCode.full(this.slot(map, tile, false));
-				for (int y = feet - 1; y <= feet - 1 + model.height(cx, cy); y++) {
-					sink.set(x, y, z, code);
+				int slot = this.slot(map, tile, false);
+				int code = BlockCode.full(slot);
+				sink.set(x, feet - 1, z, code);
+				// The column on the floor block: its planned blocks (tile_full, a shape_full where a roof stands), else today's.
+				ShapePlanner.MapShapes planned = this.shapes == null ? null : this.shapes.shapes(map.id());
+				int blocks = planned == null ? model.height(cx, cy) : planned.blocks()[ty * model.cellWidth() * 2 + tx];
+				int shaped = planned == null ? 0 : planned.shapeMask()[ty * model.cellWidth() * 2 + tx];
+				for (int k = 0; k < blocks; k++) {
+					sink.set(x, feet + k, z, (shaped >> k & 1) != 0 ? BlockCode.shape(slot) : code);
 				}
+				column = blocks;
 			}
 		}
 		int story = this.storyIndex.get(map.id())[cy * model.cellWidth() + cx];
@@ -474,10 +486,19 @@ public final class WorldPlan {
 		}
 		if (map.interior()) {
 			sink.set(x, feet + CEILING_ABOVE_FEET, z, BlockCode.full(this.slot(map, model.borderTile(tx, ty), false)));
-			if (!p.dark() && Math.floorMod(tx, LIGHT_SPACING) == 1 && Math.floorMod(ty, LIGHT_SPACING) == 1) {
+			// A carrier wins: the light goes only where the position is still air.
+			if (!p.dark() && Math.floorMod(tx, LIGHT_SPACING) == 1 && Math.floorMod(ty, LIGHT_SPACING) == 1 && column <= LIGHT_ABOVE_FEET) {
 				sink.set(x, feet + LIGHT_ABOVE_FEET, z, BlockCode.light(LIGHT_LEVEL));
 			}
 		}
+	}
+
+	/**
+	 * The art of the void fill and the interior rings at tile (tx, ty) of a map: the border the game really draws there
+	 * when this build plans shapes (the voxel plan's V3), else the map's own border block, as before.
+	 */
+	private int ringTile(PlacedMap map, int tx, int ty) {
+		return this.shapes != null ? map.model().drawnBorderTile(tx, ty) : map.model().borderTile(tx, ty);
 	}
 
 	private int slot(PlacedMap map, int tile, boolean half) {

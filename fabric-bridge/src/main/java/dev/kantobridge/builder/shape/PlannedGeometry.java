@@ -1,5 +1,6 @@
 package dev.kantobridge.builder.shape;
 
+import dev.kantobridge.builder.shape.geom.FaceMasks;
 import dev.kantobridge.builder.shape.geom.ShapeMesh;
 import dev.kantobridge.builder.shape.geom.ShapeQuad;
 import dev.kantobridge.builder.shape.geom.ShapeTable;
@@ -8,11 +9,14 @@ import dev.kantobridge.scene.SceneMap;
 import dev.kantobridge.world.ShapeIndex;
 import java.util.ArrayList;
 import java.util.List;
+import org.jetbrains.annotations.Nullable;
 
 /**
  * One planned map's geometry as the world would draw it (docs/specs/VOXEL_BLOCKS_PLAN.md §5.6), for the self-check: the
- * floor's top where nothing stands on it, and every block of every column: its shape's quads where it has a shape, the
- * plain cube of its own tile otherwise. Faces a solid neighbour hides are left out, as the mesher culls them.
+ * floor's top where no column stands on it, and every block of every column and every ledge lip: its shape's quads
+ * where it has a shape, the plain cube of its own tile otherwise. A face is left out where the game leaves it out: on
+ * an opaque {@code tile_full} neighbour (the floor, and the columns' blocks other than {@code shape_full} roofs), and on a
+ * shaped neighbour whose face mask covers it ({@link FaceMasks}).
  */
 public final class PlannedGeometry implements SelfCheck.Geometry {
 	private final SceneMap map;
@@ -20,69 +24,89 @@ public final class PlannedGeometry implements SelfCheck.Geometry {
 	private final ShapeIndex index;
 	private final ShapeTable table;
 	private final List<TextureKey> textures = new ArrayList<>();
+	private final int cols;
 
 	public PlannedGeometry(SceneMap map, ShapePlanner.MapShapes shapes, ShapeIndex index, ShapeTable table) {
 		this.map = map;
 		this.shapes = shapes;
 		this.index = index;
 		this.table = table;
+		this.cols = map.artCols();
 		for (String key : table.textureKeys()) {
 			this.textures.add(TextureKey.parse(key));
 		}
 	}
 
-	private int height(int tx, int ty) {
-		return this.shapes.heights()[this.map.cellIndexOfTile(tx, ty)];
+	private boolean inside(int bx, int bz) {
+		return bx >= 0 && bz >= 0 && bx < this.cols && bz < this.map.artRows();
+	}
+
+	private int blocks(int bx, int bz) {
+		return this.shapes.blocks()[bz * this.cols + bx];
 	}
 
 	@Override
 	public boolean solid(int bx, int by, int bz) {
-		if (bx < 0 || bz < 0 || bx >= this.map.artCols() || bz >= this.map.artRows()) {
+		if (!this.inside(bx, bz)) {
 			return false;
 		}
-		return by == -1 || (by >= 0 && by < this.height(bx, bz));
+		return by == -1 || (by >= 0 && by < this.blocks(bx, bz) && (this.shapes.shapeMask()[bz * this.cols + bx] >> by & 1) == 0);
+	}
+
+	/** The shape drawn at a block of the map, or null (a plain cube, a floor, air). */
+	private @Nullable ShapeMesh mesh(int bx, int by, int bz) {
+		if (!this.inside(bx, bz) || by < 0) {
+			return null;
+		}
+		ShapeKey[] column = this.shapes.open()[bz * this.cols + bx];
+		ShapeKey key = column == null || by >= column.length ? null : column[by];
+		return key == null ? null : this.table.mesh(this.index.shapeId(key, this.map.palette()));
 	}
 
 	@Override
 	public void forEach(SelfCheck.QuadVisitor visitor) {
-		int cols = this.map.artCols();
 		for (int ty = 0; ty < this.map.artRows(); ty++) {
-			for (int tx = 0; tx < cols; tx++) {
-				int own = this.map.tile(tx, ty);
-				TextureKey ownKey = new TextureKey(this.map.atlas(), this.map.palette(), own);
-				int h = this.height(tx, ty);
-				if (h == 0) {
+			for (int tx = 0; tx < this.cols; tx++) {
+				TextureKey ownKey = new TextureKey(this.map.atlas(), this.map.palette(), this.map.tile(tx, ty));
+				int blocks = this.blocks(tx, ty);
+				if (blocks == 0) {
 					visitor.quad(tx, -1, ty, ShapeQuad.fullFace(ShapeQuad.UP, 0), ownKey);
-					continue;
 				}
-				ShapeKey[] column = this.shapes.open()[ty * cols + tx];
-				for (int k = 0; k < h; k++) {
-					ShapeKey key = column == null ? null : column[k];
-					ShapeMesh mesh = key == null ? null : this.table.mesh(this.index.shapeId(key, this.map.palette()));
+				ShapeKey[] column = this.shapes.open()[ty * this.cols + tx];
+				int levels = Math.max(blocks, column == null ? 0 : column.length);
+				for (int k = 0; k < levels; k++) {
+					ShapeMesh mesh = this.mesh(tx, k, ty);
 					if (mesh == null) {
-						for (int face = 0; face < 6; face++) {
-							this.emit(visitor, tx, k, ty, ShapeQuad.fullFace(face, 0), ownKey);
+						if (k < blocks) {
+							for (int face = 0; face < 6; face++) {
+								this.emit(visitor, tx, k, ty, ShapeQuad.fullFace(face, 0), ownKey, null, -1);
+							}
 						}
 						continue;
 					}
-					for (ShapeQuad quad : mesh.quads()) {
-						this.emit(visitor, tx, k, ty, quad, this.textures.get(quad.texture()));
+					for (int q = 0; q < mesh.size(); q++) {
+						ShapeQuad quad = mesh.quads().get(q);
+						this.emit(visitor, tx, k, ty, quad, this.textures.get(quad.texture()), mesh, q);
 					}
 				}
 			}
 		}
 	}
 
-	private void emit(SelfCheck.QuadVisitor visitor, int bx, int by, int bz, ShapeQuad quad, TextureKey texture) {
-		if (quad.cull() >= 0) {
-			int[] step = STEPS[quad.cull()];
-			if (this.solid(bx + step[0], by + step[1], bz + step[2])) {
+	private void emit(SelfCheck.QuadVisitor visitor, int bx, int by, int bz, ShapeQuad quad, TextureKey texture, @Nullable ShapeMesh mesh,
+			int q) {
+		int cull = quad.cull();
+		if (cull >= 0) {
+			int nx = bx + FaceMasks.DX[cull];
+			int ny = by + FaceMasks.DY[cull];
+			int nz = bz + FaceMasks.DZ[cull];
+			if (this.solid(nx, ny, nz)) {
+				return;
+			}
+			if (mesh != null && FaceMasks.culled(mesh, q, this.mesh(nx, ny, nz))) {
 				return;
 			}
 		}
 		visitor.quad(bx, by, bz, quad, texture);
 	}
-
-	/** Neighbour offsets by face: down, up, north, south, west, east. */
-	private static final int[][] STEPS = {{0, -1, 0}, {0, 1, 0}, {0, 0, -1}, {0, 0, 1}, {-1, 0, 0}, {1, 0, 0}};
 }

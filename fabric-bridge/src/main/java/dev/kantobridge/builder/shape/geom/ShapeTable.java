@@ -33,7 +33,7 @@ import org.jetbrains.annotations.Nullable;
  */
 public final class ShapeTable {
 	/** The geometry version: what this code builds from a key. Not part of any world hash; it keys the client's cache. */
-	public static final int GEOMETRY = 1;
+	public static final int GEOMETRY = 2;
 	public static final String NO_OVERRIDES = "0".repeat(64);
 	private static final byte[] MAGIC = "KBST".getBytes(StandardCharsets.US_ASCII);
 	private static final int FORMAT = 1;
@@ -58,7 +58,7 @@ public final class ShapeTable {
 		this.quads = n;
 	}
 
-	/** Builds every shape of {@code index} with {@code art} (V2: cubes, no pixels needed). */
+	/** Builds every shape of {@code index} with {@code art} (V3: cubes, slabs and roofs, no pixels needed). */
 	public static ShapeTable build(ShapeIndex index, ArtSource art) {
 		Map<String, Integer> textures = new HashMap<>();
 		List<String> keys = new ArrayList<>();
@@ -70,28 +70,17 @@ public final class ShapeTable {
 				continue;
 			}
 			String atlas = index.atlas(key.atlas());
-			meshes[id] = switch (key.kind()) {
-				case CUBE -> cube(key, atlas, palette, textures, keys);
+			java.util.function.IntUnaryOperator texture = tile -> texture(new TextureKey(atlas, palette, tile).text(), textures, keys);
+			List<ShapeQuad> quads = switch (key.kind()) {
+				case CUBE -> KeyGeometry.cube(key.numbers(), texture);
+				case SLAB -> KeyGeometry.slab(key.number(0), key.number(1), texture);
+				case ROOF -> KeyGeometry.roof(key.number(0), key.number(1), key.number(2), key.number(3), key.number(4), key.number(5) == 1,
+						key.number(6) == 1, texture);
 				default -> null;
 			};
+			meshes[id] = quads == null ? null : new ShapeMesh(quads);
 		}
 		return new ShapeTable(index.hash(), GEOMETRY, NO_OVERRIDES, keys, meshes);
-	}
-
-	/** A cube: each face its own tile, on the block's surface, culled by that side; a face with tile -1 isn't drawn. */
-	static ShapeMesh cube(ShapeKey key, String atlas, String palette, Map<String, Integer> textures, List<String> keys) {
-		// Key order: up, down, north, south, west, east; quad faces: down 0, up 1, north 2, south 3, west 4, east 5.
-		int[] faceOfKey = {ShapeQuad.UP, ShapeQuad.DOWN, ShapeQuad.NORTH, ShapeQuad.SOUTH, ShapeQuad.WEST, ShapeQuad.EAST};
-		List<ShapeQuad> quads = new ArrayList<>(6);
-		for (int i = 0; i < 6; i++) {
-			int tile = key.number(i);
-			if (tile < 0) {
-				continue;
-			}
-			quads.add(ShapeQuad.fullFace(faceOfKey[i], texture(new TextureKey(atlas, palette, tile).text(), textures, keys)));
-		}
-		quads.sort(java.util.Comparator.comparingInt(ShapeQuad::face));
-		return new ShapeMesh(quads);
 	}
 
 	static int texture(String key, Map<String, Integer> textures, List<String> keys) {

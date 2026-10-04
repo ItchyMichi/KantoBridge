@@ -8,9 +8,10 @@ import java.util.Set;
 
 /**
  * Re-projects the 3D result into the game's own view and scores it against the 2D map (docs/specs/VOXEL_BLOCKS_PLAN.md
- * §5.6). Every up- and south-facing texel is projected with {@code (x, y, z) → (x, z − y)} (a point {@code y} pixels high
- * shows {@code y} pixels further up the screen), the nearest sample (largest {@code z + y}) wins each screen pixel, and
- * it is compared by texel identity (tile and texel coordinates, never colour) with {@link Reference}.
+ * §5.6). Every texel of a face that looks up or south (a top, a south face, a roof's slopes) is projected with
+ * {@code (x, y, z) → (x, z − y)} (a point {@code y} pixels high shows {@code y} pixels further up the screen), the nearest
+ * sample (largest {@code z + y}) wins each screen pixel, and it is compared by texel identity (tile and texel coordinates,
+ * never colour) with {@link Reference}.
  *
  * <ul>
  * <li>{@code holes}: map-body pixels nothing lands on;</li>
@@ -53,8 +54,8 @@ public final class SelfCheck {
 	public static Scores score(String id, Reference reference, String atlas, Geometry geometry, int artPx) {
 		int w = reference.width();
 		int h = reference.height();
-		int[] near = new int[w * h];
-		Arrays.fill(near, Integer.MIN_VALUE);
+		float[] near = new float[w * h];
+		Arrays.fill(near, Float.NEGATIVE_INFINITY);
 		long[] source = new long[w * h];
 		boolean[] floor = new boolean[w * h];
 		int unitsPerPixel = 16 / artPx;
@@ -65,7 +66,7 @@ public final class SelfCheck {
 					&& seenBack.add(((long) bx << 40) ^ ((long) by << 20) ^ bz)) {
 				backFaces[0]++;
 			}
-			if (quad.face() != ShapeQuad.UP && quad.face() != ShapeQuad.SOUTH) {
+			if (quad.face() != ShapeQuad.UP && quad.face() != ShapeQuad.SOUTH && quad.face() != ShapeQuad.SLOPED) {
 				return;
 			}
 			boolean sameAtlas = atlas.equals(texture.atlas());
@@ -97,7 +98,7 @@ public final class SelfCheck {
 				} else {
 					structurePixels++;
 				}
-				if (near[i] == Integer.MIN_VALUE) {
+				if (near[i] == Float.NEGATIVE_INFINITY) {
 					holes++;
 					continue;
 				}
@@ -129,14 +130,21 @@ public final class SelfCheck {
 	/** A projected texel: screen pixel, nearness, and the texel's (u, v) in 1/16 of the texture. */
 	@FunctionalInterface
 	interface PixelSink {
-		void pixel(int sx, int sy, int nearness, float u, float v);
+		void pixel(int sx, int sy, float nearness, float u, float v);
 	}
+
+	/** Samples per edge of a quad that isn't an axis-aligned rectangle: two per 1/16 block. */
+	private static final int SAMPLES = 32;
 
 	/**
 	 * Projects every texel-sized cell of an up- or south-facing axis-aligned quad. Coordinates are 1/16 block; one screen pixel is
 	 * {@code unitsPerPixel} of them. The texel's centre picks the screen pixel.
 	 */
 	static void project(ShapeQuad quad, int bx, int by, int bz, int unitsPerPixel, PixelSink sink) {
+		if ((quad.face() != ShapeQuad.UP && quad.face() != ShapeQuad.SOUTH) || !rectangle(quad)) {
+			sample(quad, bx, by, bz, unitsPerPixel, sink);
+			return;
+		}
 		int minX = Integer.MAX_VALUE;
 		int minY = Integer.MAX_VALUE;
 		int minZ = Integer.MAX_VALUE;
@@ -188,5 +196,65 @@ public final class SelfCheck {
 
 	private static float lerp(float a, float b, float t) {
 		return a + (b - a) * t;
+	}
+
+	/** True when the quad's four corners are the four corners of its bounding rectangle. */
+	static boolean rectangle(ShapeQuad quad) {
+		int minX = Math.min(Math.min(quad.x(0), quad.x(1)), Math.min(quad.x(2), quad.x(3)));
+		int maxX = Math.max(Math.max(quad.x(0), quad.x(1)), Math.max(quad.x(2), quad.x(3)));
+		int minY = Math.min(Math.min(quad.y(0), quad.y(1)), Math.min(quad.y(2), quad.y(3)));
+		int maxY = Math.max(Math.max(quad.y(0), quad.y(1)), Math.max(quad.y(2), quad.y(3)));
+		int minZ = Math.min(Math.min(quad.z(0), quad.z(1)), Math.min(quad.z(2), quad.z(3)));
+		int maxZ = Math.max(Math.max(quad.z(0), quad.z(1)), Math.max(quad.z(2), quad.z(3)));
+		Set<Long> corners = new HashSet<>();
+		for (int c = 0; c < 4; c++) {
+			boolean x = quad.x(c) == minX || quad.x(c) == maxX;
+			boolean y = quad.y(c) == minY || quad.y(c) == maxY;
+			boolean z = quad.z(c) == minZ || quad.z(c) == maxZ;
+			if (!x || !y || !z) {
+				return false;
+			}
+			corners.add(((long) quad.x(c) << 32) ^ ((long) quad.y(c) << 16) ^ quad.z(c));
+		}
+		return corners.size() == 4;
+	}
+
+	/**
+	 * Projects any quad that looks up or south (its normal against the view direction (0, 1, 1)) by sampling it: a
+	 * bilinear grid over its corners (a triangle repeats its last corner), each sample's (u, v) from the corners' UVs.
+	 */
+	static void sample(ShapeQuad quad, int bx, int by, int bz, int unitsPerPixel, PixelSink sink) {
+		// The normal's y and z by Newell's method over all four corners (counter-clockwise seen from the front), so a
+		// triangle works whichever of its corners repeats.
+		float ny = 0;
+		float nz = 0;
+		for (int i = 0; i < 4; i++) {
+			int j = (i + 1) & 3;
+			ny += (quad.z(i) - quad.z(j)) * (float) (quad.x(i) + quad.x(j));
+			nz += (quad.x(i) - quad.x(j)) * (float) (quad.y(i) + quad.y(j));
+		}
+		if (ny + nz <= 0) {
+			return;
+		}
+		int ox = bx * 16;
+		int oy = by * 16;
+		int oz = bz * 16;
+		for (int i = 0; i < SAMPLES; i++) {
+			float s = (i + 0.5F) / SAMPLES;
+			for (int j = 0; j < SAMPLES; j++) {
+				float t = (j + 0.5F) / SAMPLES;
+				// Bilinear over corners 0, 1, 2, 3: (1-s)(1-t) p0 + (1-s) t p1 + s t p2 + s (1-t) p3.
+				float w0 = (1 - s) * (1 - t);
+				float w1 = (1 - s) * t;
+				float w2 = s * t;
+				float w3 = s * (1 - t);
+				float x = ox + w0 * quad.x(0) + w1 * quad.x(1) + w2 * quad.x(2) + w3 * quad.x(3);
+				float y = oy + w0 * quad.y(0) + w1 * quad.y(1) + w2 * quad.y(2) + w3 * quad.y(3);
+				float z = oz + w0 * quad.z(0) + w1 * quad.z(1) + w2 * quad.z(2) + w3 * quad.z(3);
+				float u = w0 * quad.cornerU(0) + w1 * quad.cornerU(1) + w2 * quad.cornerU(2) + w3 * quad.cornerU(3);
+				float v = w0 * quad.cornerV(0) + w1 * quad.cornerV(1) + w2 * quad.cornerV(2) + w3 * quad.cornerV(3);
+				sink.pixel((int) Math.floor(x / unitsPerPixel), (int) Math.floor((z - y) / unitsPerPixel), z + y, u, v);
+			}
+		}
 	}
 }

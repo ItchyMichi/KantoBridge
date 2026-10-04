@@ -14,7 +14,9 @@ import dev.kantobridge.builder.plan.PlacedMap;
 import dev.kantobridge.builder.plan.PlanException;
 import dev.kantobridge.builder.plan.WorldPlan;
 import dev.kantobridge.builder.plan.WorldPlanner;
+import dev.kantobridge.builder.shape.QuadCounter;
 import dev.kantobridge.builder.shape.ShapePlan;
+import dev.kantobridge.builder.shape.ShapePlanner;
 import dev.kantobridge.builder.shape.ShapeReport;
 import dev.kantobridge.server.HabitatService;
 import dev.kantobridge.server.WorldIndexSync;
@@ -74,7 +76,7 @@ public final class BuildTask {
 	}
 
 	private record Prepared(WorldPlan plan, @Nullable ResourcePackWriter.Result pack, List<Box3> previousVolumes,
-			List<WorldIndex.Habitat> previousHabitats, long planMs, @Nullable ShapeReport shapes) {
+			List<WorldIndex.Habitat> previousHabitats, long planMs, @Nullable ShapeReport shapes, long packMs) {
 	}
 
 	private final ServerLevel level;
@@ -164,14 +166,16 @@ public final class BuildTask {
 		try {
 			WorldPlan plan = WorldPlanner.plan(this.bundle, new WorldPlanner.Options(this.maps, this.options.originX(), this.options.originZ(),
 					this.minBuildHeight, this.options.shapes()));
+			long packStarted = System.nanoTime();
 			ResourcePackWriter.Result pack = this.options.writePack() ? ResourcePackWriter.write(plan, this.bundle, this.packDir, plan.warnings())
 					: null;
+			long packMs = (System.nanoTime() - packStarted) / 1_000_000L;
 			WorldIndex previous = previousIndex(this.worldDir);
-			// The geometry a client would build from the shape index, and the self-check of every placed map (recorded).
-			ShapeReport shapes = plan.shapes() == null || plan.scene() == null ? null
-					: ShapeReport.of(plan.scene(), plan.shapes(), plan.index().maps().values());
+			// The geometry a client would build from the shape index, the self-check of every placed map (recorded) and the
+			// quads the planned world draws.
+			ShapeReport shapes = plan.shapes() == null || plan.scene() == null ? null : ShapeReport.of(plan);
 			return new Prepared(plan, pack, previous == null ? List.of() : WorldPlan.volumesOf(previous),
-					previous == null ? List.of() : previous.habitats(), (System.nanoTime() - t0) / 1_000_000L, shapes);
+					previous == null ? List.of() : previous.habitats(), (System.nanoTime() - t0) / 1_000_000L, shapes, packMs);
 		} catch (BundleException e) {
 			throw new Failure(e.code(), e);
 		} catch (PlanException e) {
@@ -408,6 +412,10 @@ public final class BuildTask {
 			r.blocksByKind.put("ledge", counts.byKind[BlockCode.KIND_LEDGE]);
 			r.blocksByKind.put("light", counts.byKind[BlockCode.KIND_LIGHT]);
 			r.blocksByKind.put("habitat", counts.habitatBlocks);
+			r.blocksByKind.put("shape_full", counts.byKind[BlockCode.KIND_SHAPE]);
+			r.blocksByKind.put("decor", counts.byKind[BlockCode.KIND_DECOR] - counts.decorLeaves);
+			r.blocksByKind.put("decor_leaves", counts.decorLeaves);
+			r.shapeHostsAdded = counts.byKind[BlockCode.KIND_SHAPE] + counts.byKind[BlockCode.KIND_DECOR];
 		}
 		this.fillShapes(r, plan);
 	}
@@ -416,8 +424,11 @@ public final class BuildTask {
 	private void fillShapes(BuildReport r, WorldPlan plan) {
 		r.cellsByKind.clear();
 		r.solidCellsByHeight.clear();
+		ShapePlan planned = plan.shapes();
 		for (PlacedMap map : plan.maps()) {
 			MapModel model = map.model();
+			// A shaped build's heights are the planner's (the tallest column of the cell); an unshaped one's the classes.
+			ShapePlanner.MapShapes columns = planned == null ? null : planned.shapes(map.id());
 			for (int cy = 0; cy < model.cellHeight(); cy++) {
 				for (int cx = 0; cx < model.cellWidth(); cx++) {
 					MapModel.Kind kind = model.kind(cx, cy);
@@ -430,7 +441,17 @@ public final class BuildTask {
 					};
 					r.cellsByKind.merge(name, 1, Integer::sum);
 					if (kind == MapModel.Kind.SOLID) {
-						r.solidCellsByHeight.merge(Integer.toString(model.height(cx, cy)), 1, Integer::sum);
+						int height = model.height(cx, cy);
+						if (columns != null) {
+							height = 0;
+							int cols = model.cellWidth() * 2;
+							for (int dy = 0; dy < 2; dy++) {
+								for (int dx = 0; dx < 2; dx++) {
+									height = Math.max(height, columns.blocks()[(cy * 2 + dy) * cols + cx * 2 + dx]);
+								}
+							}
+						}
+						r.solidCellsByHeight.merge(Integer.toString(height), 1, Integer::sum);
 					}
 				}
 			}
@@ -452,10 +473,20 @@ public final class BuildTask {
 		r.shapeInstances = shapes.index().size();
 		r.shapedBlocks = shapes.shapedBlocks();
 		r.shapePlanMs = shapes.planMs();
+		r.packMs = this.prepared.packMs();
 		ShapeReport report = this.prepared.shapes();
 		if (report != null) {
 			r.shapeTableMs = report.tableMs();
-			r.shapeQuadsTotal = report.table().quads();
+			QuadCounter.Stats quads = report.quads();
+			r.shapeQuadsTotal = quads.shapeQuads();
+			r.shapeQuadsMeanBlock = quads.meanBlock();
+			r.shapeQuadsMaxBlock = quads.maxBlock();
+			r.shapeQuadsP99Block = quads.p99Block();
+			r.shapeQuadsSectionP50 = quads.sectionP50();
+			r.shapeQuadsSectionP95 = quads.sectionP95();
+			r.shapeQuadsSectionMax = quads.sectionMax();
+			r.densestSection = quads.densest();
+			r.quadCountMs = report.quadMs();
 			r.selfCheck = new BuildReport.SelfCheckSummary(report.scores().size(), report.holes(), report.groundMatchMin(), report.structureMatchMin(),
 					report.structureMatchP05(), report.occludedGroundMax(), report.backFaces(), 0, report.checkMs());
 		}

@@ -64,7 +64,7 @@ class SyntheticPlanTest {
 		assertEquals(2, plan.maxLayer());
 		assertEquals(0, plan.overlaps());
 		assertEquals(0, plan.edgeMismatches());
-		assertEquals(new Box3(ox(-12), 63, oz(-36), ox(52), 68, oz(48)), plan.surfaceBox());
+		assertEquals(new Box3(ox(-12), 63, oz(-36), ox(52), 71, oz(48)), plan.surfaceBox(), "ground + 8 since the voxel plan's V3");
 	}
 
 	@Test

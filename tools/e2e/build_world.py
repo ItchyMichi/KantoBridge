@@ -12,7 +12,8 @@
 7. Writes local/reports/viewpoints.json: fixed spectator viewpoints for the voxel plan's measurements
    (docs/specs/VOXEL_BLOCKS_PLAN.md V1a, section 10), from the report's block coordinates.
 
-The voxel plan's shape gates (section 6.4) compare reports of several builds: shape_gates().
+The voxel plan's shape gates (section 6.4) compare reports of several builds: shape_gates(); its budgets
+(section 3.8) and the self-check's gates (section 5.6) read one report: budget_gates().
 
 Data safety (PLAN section 0.3): only markers, counts, symbols and hashes are printed. The bundle,
 world, datapack and resource pack are ROM-derived and stay under local/. The user accepts the
@@ -54,11 +55,22 @@ DIAGNOSTICS = REPORTS / "build_diagnostics.json"
 VIEWPOINTS = REPORTS / "viewpoints.json"
 # The self-check's scores per map id (voxel plan V2), written by the build beside the report.
 SELFCHECK = REPORTS / "shape_selfcheck.json"
-# The last full build before the voxel plan's V2, kept for its "no block changed" gate.
-REPORT_BEFORE_V2 = REPORTS / "build_report_v1.json"
 # world.shapes travels in parts of this many characters (WorldIndexParts.PART_CHARS); the map must fit in 8.
 PART_CHARS = 64 * 1024
 MAX_SHAPE_MAP_PARTS = 8
+# The voxel plan's budgets the build report can check (section 3.8).
+MAX_QUADS_PER_BLOCK = 96
+MAX_MEAN_QUADS_PER_BLOCK = 24
+MAX_SECTION_QUADS_P95 = 12_000
+MAX_SECTION_QUADS = 30_000
+MIN_BLOCKS_PER_S = 40_000
+MAX_FULL_BUILD_MS = 90_000
+# The self-check's gates (section 5.6), fixed after the first recorded run (V3, 2026-10-04: no hole, ground match 1.0
+# on every map, structure match 5th percentile 0.577 and lowest 0.375 per map): Tier A must show the ground exactly;
+# the structure floors catch a regression without failing on the run that set them.
+SELFCHECK_GROUND_MATCH_MIN = 1.0
+SELFCHECK_STRUCTURE_P05_MIN = 0.55
+SELFCHECK_STRUCTURE_MIN = 0.35
 # The overview viewpoint looks straight down from this far above the surface box's top.
 OVERVIEW_HEIGHT = 128
 FABRIC = REPO / "fabric-bridge"
@@ -202,10 +214,9 @@ def check_report(maps, report=REPORT):
     return data, [name for name, ok in checks.items() if not ok]
 
 
-def shape_gates(full, again, filtered, before=None):
+def shape_gates(full, again, filtered):
     """The voxel plan's shape gates (section 6.4) on counts-only reports: a fresh full build, the same build run again
-    over it, and a filtered build. ``before`` is the last full build before V2, for V2's "no block changed" gate.
-    Returns the names of the failed gates.
+    over it, and a filtered build. Returns the names of the failed gates.
     """
     checks = {
         "shapes_reported": bool(full.get("shape_index_hash")) and bool(full.get("shape_map_hash")),
@@ -216,8 +227,30 @@ def shape_gates(full, again, filtered, before=None):
         "shape_map_fits": 0 < (full.get("shape_map_wire_chars") or 0) <= MAX_SHAPE_MAP_PARTS * PART_CHARS,
         "selfcheck_recorded": isinstance(full.get("selfcheck"), dict) and (full["selfcheck"].get("maps") or 0) > 0,
     }
-    if before is not None:
-        checks["blocks_unchanged"] = full.get("blocks_placed") == before.get("blocks_placed")
+    return [name for name, ok in checks.items() if not ok]
+
+
+def budget_gates(report, full_build=True):
+    """The budgets of section 3.8 that a build report can check, and the self-check's gates (no holes, the ground exact,
+    the structure floors). The build's time and rate are judged for a full build only. Returns the names of the failed
+    gates.
+    """
+    selfcheck = report.get("selfcheck") if isinstance(report.get("selfcheck"), dict) else {}
+    throughput = report.get("throughput") if isinstance(report.get("throughput"), dict) else {}
+    checks = {
+        "quads_per_block": (report.get("shape_quads_max_block") or 0) <= MAX_QUADS_PER_BLOCK
+        and (report.get("shape_quads_mean_block") or 0) <= MAX_MEAN_QUADS_PER_BLOCK,
+        "quads_per_section": (report.get("shape_quads_section_p95") or 0) <= MAX_SECTION_QUADS_P95
+        and (report.get("shape_quads_section_max") or 0) <= MAX_SECTION_QUADS,
+        "selfcheck_holes": selfcheck.get("holes") == 0,
+        "selfcheck_ground": (selfcheck.get("ground_match_min") or 0) >= SELFCHECK_GROUND_MATCH_MIN,
+        "selfcheck_structure": (selfcheck.get("structure_match_p05") or 0) >= SELFCHECK_STRUCTURE_P05_MIN
+        and (selfcheck.get("structure_match_min") or 0) >= SELFCHECK_STRUCTURE_MIN,
+        "shape_map_fits": 0 < (report.get("shape_map_wire_chars") or 0) <= MAX_SHAPE_MAP_PARTS * PART_CHARS,
+    }
+    if full_build:
+        checks["placement_rate"] = (throughput.get("blocks_per_s") or 0) >= MIN_BLOCKS_PER_S
+        checks["build_time"] = 0 < (report.get("elapsed_ms") or 0) <= MAX_FULL_BUILD_MS
     return [name for name, ok in checks.items() if not ok]
 
 

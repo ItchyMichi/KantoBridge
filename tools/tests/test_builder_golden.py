@@ -48,11 +48,11 @@ def test_slot_map_schema_accepts_a_minimal_map():
 
 
 def test_golden_shape_index_matches_the_schema():
-    """The voxel plan's V2: the synthetic build's shape index (checked byte for byte by a JUnit test) fits its schema,
+    """The voxel plan (from V2): the synthetic build's shape index (checked byte for byte by a JUnit test) fits its schema,
     and its hash is the SHA-256 of its canonical text."""
     golden = json.loads(SHAPES.read_text(encoding="utf-8"))
     problems = PROTOCOL.check_shape_index(golden["index"])
     assert not problems, [str(p) for p in problems]
     assert hashlib.sha256(canonical(golden["index"]).encode("utf-8")).hexdigest() == golden["indexHash"]
-    assert golden["index"]["planner"] == "kb-shapes/1"
+    assert golden["index"]["planner"] == "kb-shapes/2"
     assert golden["shapedBlocks"] > 0

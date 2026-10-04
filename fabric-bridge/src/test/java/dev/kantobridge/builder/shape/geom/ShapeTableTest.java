@@ -17,8 +17,8 @@ import java.util.List;
 import org.junit.jupiter.api.Test;
 
 /**
- * The shape table (docs/specs/VOXEL_BLOCKS_PLAN.md §5.5) for V2's {@code cube}: six faces on the block's surface, each
- * its own tile and its cull face; texture keys shared between shapes; a key it can't build has no mesh (the plain cube is
+ * The shape table (docs/specs/VOXEL_BLOCKS_PLAN.md §5.5): a {@code cube} is six faces on the block's surface, each its
+ * own tile and its cull face; texture keys are shared between shapes; a key it can't build has no mesh (the plain cube is
  * drawn); the client's cache file reads back exactly and only for the same index, geometry and overrides.
  */
 class ShapeTableTest {
@@ -26,7 +26,8 @@ class ShapeTableTest {
 		ShapeParams p = ShapeParams.v2();
 		return ShapeIndex.of(p.planner(), p.toJson(), List.of("tilesets.fix"), List.of("PAL_A", "PAL_B"),
 				List.of(new ShapeIndex.Use(ShapeKey.cube(0, 1, 2, 3, 4, 5, 6), "PAL_A"), new ShapeIndex.Use(ShapeKey.cube(0, 1, 2, 3, 4, 5, 6), "PAL_B"),
-						new ShapeIndex.Use(ShapeKey.cube(0, 7, 7, 3, -1, 7, 7), "PAL_A"), new ShapeIndex.Use(ShapeKey.slab(0, 4, 8), "PAL_A")),
+						new ShapeIndex.Use(ShapeKey.cube(0, 7, 7, 3, -1, 7, 7), "PAL_A"), new ShapeIndex.Use(ShapeKey.slab(0, 4, 8), "PAL_A"),
+						new ShapeIndex.Use(ShapeKey.tuft(0, 9), "PAL_A")),
 				new JsonArray());
 	}
 
@@ -60,12 +61,13 @@ class ShapeTableTest {
 		assertEquals(List.of(0, 1, 2, 4, 5), open.quads().stream().map(q -> (int) q.face()).toList());
 		assertEquals(table.textureKeys().indexOf("tile:tilesets.fix/3@PAL_A"), open.quads().get(2).texture(), "shared with the first cube");
 		assertEquals(table.textureKeys().size(), table.textureKeys().stream().distinct().count(), "each key once");
-		assertNull(table.mesh(index.shapeId(ShapeKey.slab(0, 4, 8), "PAL_A")), "V2 builds cubes only: the plain cube is drawn");
+		assertEquals(6, table.mesh(index.shapeId(ShapeKey.slab(0, 4, 8), "PAL_A")).size(), "slabs from V3");
+		assertNull(table.mesh(index.shapeId(ShapeKey.tuft(0, 9), "PAL_A")), "tufts from V4: until then the plain cube is drawn");
 		assertNull(table.mesh(0));
 		assertNull(table.mesh(99));
-		assertEquals(4, table.size());
-		assertEquals(3, table.built());
-		assertEquals(6 + 6 + 5, table.quads());
+		assertEquals(5, table.size());
+		assertEquals(4, table.built());
+		assertEquals(6 + 6 + 5 + 6, table.quads());
 	}
 
 	@Test
@@ -95,6 +97,6 @@ class ShapeTableTest {
 		byte[] cut = java.util.Arrays.copyOf(bytes, bytes.length - 5);
 		assertThrows(DataException.class, () -> ShapeTable.decode(cut, index.hash(), ShapeTable.GEOMETRY, ShapeTable.NO_OVERRIDES));
 		String name = ShapeTable.cacheName(index.hash(), ShapeTable.GEOMETRY, ShapeTable.NO_OVERRIDES);
-		assertTrue(name.matches("[0-9a-f]{16}-g1-0{16}\\.bin"), name);
+		assertTrue(name.matches("[0-9a-f]{16}-g" + ShapeTable.GEOMETRY + "-0{16}\\.bin"), name);
 	}
 }

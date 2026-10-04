@@ -24,7 +24,8 @@ import org.jetbrains.annotations.Nullable;
  * <p>It depends on the export alone, never on which maps a build places: the generated resource pack is shared by
  * every world in a game folder, so a filtered or test build must write exactly the pack (and slot-map hash) a full
  * build writes. The keys cover, for every map: each tile its blocks show (half-height where the cell is water), its
- * border block (interior rings and ceilings, the surface void fill), and both blocks of its swap sites (the closed art
+ * border block (interior ceilings) and the border the game draws around it (the void fill and the rings since the voxel
+ * plan's V3), and both blocks of its swap sites (the closed art
  * the story-cell renderer draws, whichever state a cell is built in). Besides the slot map it lists the NPC sheets and
  * the palettes that need the player's surfing sheet (maps with water).
  */
@@ -101,6 +102,7 @@ public final class ArtCatalog {
 			}
 			for (int t = 0; t < 16; t++) {
 				keys.add(new SlotMap.Key(atlas, palette, model.borderTile(t % 4, t / 4), SlotMap.Shape.FULL));
+				keys.add(new SlotMap.Key(atlas, palette, model.drawnBorderTile(t % 4, t / 4), SlotMap.Shape.FULL));
 			}
 			for (ExportSwaps.Site site : sites) {
 				// The data's own block too: for an overwritten script site it is never built, but listing it keeps the slot

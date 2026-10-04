@@ -108,4 +108,138 @@ class StructuresTest {
 		assertEquals(2, units[0]);
 		assertArrayEquals(new int[] {2, 2, 2, 2}, Structures.classifiedHeights(trees, units, 2));
 	}
+
+	// ---- measured runs (kb-shapes/2) ----
+
+	private static List<Structures.MeasuredRun> measured(SceneMap map) {
+		return Structures.measured(map, Structures.solidTiles(map), HeightRules.MAX_UNIT, HeightRules.MIN_REPEAT_ROWS, HeightRules.INTERIOR_WALL);
+	}
+
+	private static Structures.MeasuredRun run(List<Structures.MeasuredRun> runs, int tx, int n) {
+		return runs.stream().filter(r -> r.tx() == tx && r.n() == n).findFirst().orElseThrow(() -> new AssertionError("no run " + tx + "," + n));
+	}
+
+	@Test
+	void aTreeLineTouchingABuildingStaysItsOwnLowRun() {
+		SceneMap map = surface("TOUCH",
+				"TTTTTTTT",
+				"UUUUUUUU",
+				"TTTTTTTT",
+				"UUUUUUUU",
+				"RRRR....",
+				"SSSS....",
+				"FFFF....",
+				"GGGG....",
+				"........",
+				"........");
+		List<Structures.MeasuredRun> runs = measured(map);
+		Structures.MeasuredRun trees = run(runs, 0, 0);
+		assertEquals(3, trees.f());
+		assertEquals(true, trees.pureRepeat());
+		assertEquals(2, trees.h());
+		assertEquals(-1, trees.region(), "pure repeats take no part in a region");
+		Structures.MeasuredRun house = run(runs, 0, 4);
+		assertEquals(7, house.f());
+		assertEquals(false, house.repeatRead());
+		assertEquals(4, house.unit(), "four drawn rows");
+		assertEquals(4, house.h());
+		assertEquals(2, house.r(), "two roof rows: the top rows differ");
+		assertEquals(2, house.wallH());
+		assertEquals(3, house.blocks(), "two bands and the roof block");
+		assertEquals(2, run(runs, 5, 0).h(), "beside the house the tree line is just as low");
+	}
+
+	@Test
+	void aRimOverAUniformBodyIsAFlatMound() {
+		SceneMap map = surface("MOUND",
+				"RRRR",
+				"CCCC",
+				"CCCC",
+				"CCCC",
+				"CCCC",
+				"CCCC",
+				"....",
+				"....");
+		Structures.MeasuredRun mound = run(measured(map), 1, 0);
+		assertEquals(5, mound.f(), "the rim and its body are one run");
+		assertEquals(false, mound.pureRepeat());
+		assertEquals(true, mound.repeatRead(), "its front repeats");
+		assertEquals(2, mound.h());
+		assertEquals(0, mound.r(), "a plain repeat never gets a roof");
+	}
+
+	@Test
+	void aRepeatWearingATrimAdoptsItsRegionsHeight() {
+		SceneMap map = surface("TRIM",
+				"AAXX....",
+				"BBYY....",
+				"BBZZ....",
+				"CCWW....",
+				"........",
+				"........");
+		List<Structures.MeasuredRun> runs = measured(map);
+		Structures.MeasuredRun trim = run(runs, 0, 0);
+		Structures.MeasuredRun drawn = run(runs, 2, 0);
+		assertEquals(true, trim.repeatRead(), "two equal rows over a different front row");
+		assertEquals(2, trim.unit());
+		assertEquals(false, drawn.repeatRead());
+		assertEquals(4, drawn.unit());
+		assertEquals(drawn.region(), trim.region());
+		assertEquals(4, trim.h(), "the region's height");
+		assertEquals(2, trim.r(), "raised by the vote: roofed like the rest");
+		assertEquals(4, drawn.h());
+	}
+
+	@Test
+	void aDoorFoldsIntoTheFacadeAtTheRegionsHeight() {
+		SceneMap map = surface("DOOR",
+				"RRRRRR..",
+				"SSSSSS..",
+				"FFFFFF..",
+				"GGGGGG..",
+				"GG++GG..",
+				"GG++GG..",
+				"........",
+				"........");
+		List<Structures.MeasuredRun> runs = measured(map);
+		Structures.MeasuredRun door = run(runs, 2, 0);
+		Structures.MeasuredRun wall = run(runs, 0, 0);
+		assertEquals(3, door.f(), "the run stops at the door cell, which stays walkable");
+		assertEquals(true, door.doorFold());
+		assertEquals(5, door.origin(), "the fold starts at the door cell's southern row");
+		assertEquals(5, wall.f());
+		assertEquals(6, wall.unit());
+		assertEquals(6, door.h(), "the region's height: the facade beside it");
+		assertEquals(wall.h(), door.h());
+		assertEquals(wall.r(), door.r());
+	}
+
+	@Test
+	void interiorsKeepTheirWallHeight() {
+		SceneMap inside = interior("ROOM",
+				"RRRR",
+				"SSSS",
+				"FFFF",
+				"GGGG",
+				"....",
+				"....");
+		for (Structures.MeasuredRun run : measured(inside)) {
+			assertEquals(HeightRules.INTERIOR_WALL, run.h());
+			assertEquals(0, run.r());
+		}
+	}
+
+	@Test
+	void theSameMapGivesTheSameRuns() {
+		SceneMap map = surface("DOOR",
+				"RRRRRR..",
+				"SSSSSS..",
+				"FFFFFF..",
+				"GGGGGG..",
+				"GG++GG..",
+				"GG++GG..",
+				"........",
+				"........");
+		assertEquals(measured(map), measured(map));
+	}
 }

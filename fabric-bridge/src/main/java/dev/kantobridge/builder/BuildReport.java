@@ -92,6 +92,22 @@ public final class BuildReport {
 	public long shapePlanMs;
 	public long shapeTableMs;
 	public long shapeQuadsTotal;
+	// Carriers (V3): new carrier blocks placed, decoration skipped on occupied positions, void-fill hull cells (V4),
+	// closed story cells drawn by shapes (V5).
+	public long shapeHostsAdded;
+	public long shapeDecorSkipped;
+	public long voidHullCells;
+	public long closedShapeCells;
+	// Quads, after culling (V3): per shaped block, per 16×16×16 section, and the densest section's corner.
+	public double shapeQuadsMeanBlock;
+	public int shapeQuadsMaxBlock;
+	public int shapeQuadsP99Block;
+	public int shapeQuadsSectionP50;
+	public int shapeQuadsSectionP95;
+	public int shapeQuadsSectionMax;
+	public int @Nullable [] densestSection;
+	public long quadCountMs;
+	public long packMs;
 	/** The recorded self-check: per-map scores aggregated (null when shapes weren't planned). */
 	public @Nullable SelfCheckSummary selfCheck;
 
@@ -174,6 +190,26 @@ public final class BuildReport {
 		out.addProperty("shape_plan_ms", this.shapePlanMs);
 		out.addProperty("shape_table_ms", this.shapeTableMs);
 		out.addProperty("shape_quads_total", this.shapeQuadsTotal);
+		out.addProperty("shape_hosts_added", this.shapeHostsAdded);
+		out.addProperty("shape_decor_skipped", this.shapeDecorSkipped);
+		out.addProperty("void_hull_cells", this.voidHullCells);
+		out.addProperty("closed_shape_cells", this.closedShapeCells);
+		out.addProperty("shape_quads_mean_block", round4(this.shapeQuadsMeanBlock));
+		out.addProperty("shape_quads_max_block", this.shapeQuadsMaxBlock);
+		out.addProperty("shape_quads_p99_block", this.shapeQuadsP99Block);
+		out.addProperty("shape_quads_section_p50", this.shapeQuadsSectionP50);
+		out.addProperty("shape_quads_section_p95", this.shapeQuadsSectionP95);
+		out.addProperty("shape_quads_section_max", this.shapeQuadsSectionMax);
+		JsonObject densest = new JsonObject();
+		if (this.densestSection != null) {
+			densest.addProperty("quads", this.shapeQuadsSectionMax);
+			densest.addProperty("x", this.densestSection[0]);
+			densest.addProperty("y", this.densestSection[1]);
+			densest.addProperty("z", this.densestSection[2]);
+		}
+		out.add("densest_section", densest);
+		out.addProperty("quad_count_ms", this.quadCountMs);
+		out.addProperty("pack_ms", this.packMs);
 		if (this.selfCheck == null) {
 			out.add("selfcheck", JsonNull.INSTANCE);
 		} else {

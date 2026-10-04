@@ -2,6 +2,7 @@ package dev.kantobridge.builder.shape;
 
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonObject;
+import dev.kantobridge.builder.plan.WorldPlan;
 import dev.kantobridge.builder.shape.geom.ShapeTable;
 import dev.kantobridge.scene.ArtSource;
 import dev.kantobridge.scene.Scene;
@@ -22,15 +23,32 @@ public final class ShapeReport {
 	private final long tableMs;
 	private final List<SelfCheck.Scores> scores;
 	private final long checkMs;
+	private final QuadCounter.Stats quads;
+	private final long quadMs;
 
-	private ShapeReport(ShapeTable table, long tableMs, List<SelfCheck.Scores> scores, long checkMs) {
+	private ShapeReport(ShapeTable table, long tableMs, List<SelfCheck.Scores> scores, long checkMs, QuadCounter.Stats quads, long quadMs) {
 		this.table = table;
 		this.tableMs = tableMs;
 		this.scores = List.copyOf(scores);
 		this.checkMs = checkMs;
+		this.quads = quads;
+		this.quadMs = quadMs;
 	}
 
-	/** Builds the table and checks every placed map. */
+	/** Builds the table, checks every placed map and counts the quads the planned world draws. */
+	public static ShapeReport of(WorldPlan world) {
+		Scene scene = world.scene();
+		ShapePlan plan = world.shapes();
+		if (scene == null || plan == null) {
+			throw new IllegalArgumentException("a plan without shapes");
+		}
+		ShapeReport checked = of(scene, plan, world.index().maps().values());
+		long t0 = System.nanoTime();
+		QuadCounter.Stats quads = QuadCounter.count(world, plan.map(), checked.table);
+		return new ShapeReport(checked.table, checked.tableMs, checked.scores, checked.checkMs, quads, (System.nanoTime() - t0) / 1_000_000L);
+	}
+
+	/** Builds the table and checks every placed map (no quad count). */
 	public static ShapeReport of(Scene scene, ShapePlan plan, Collection<MapPlacement> placements) {
 		long t0 = System.nanoTime();
 		ShapeTable table = ShapeTable.build(plan.index(), ArtSource.NONE);
@@ -47,7 +65,16 @@ public final class ShapeReport {
 					new PlannedGeometry(map, shapes, plan.index(), table), scene.artPx()));
 		}
 		scores.sort(Comparator.comparing(SelfCheck.Scores::id));
-		return new ShapeReport(table, tableMs, scores, (System.nanoTime() - t1) / 1_000_000L);
+		return new ShapeReport(table, tableMs, scores, (System.nanoTime() - t1) / 1_000_000L, QuadCounter.Stats.EMPTY, 0);
+	}
+
+	/** The quads the planned world draws, per shaped block and per section. */
+	public QuadCounter.Stats quads() {
+		return this.quads;
+	}
+
+	public long quadMs() {
+		return this.quadMs;
 	}
 
 	public ShapeTable table() {

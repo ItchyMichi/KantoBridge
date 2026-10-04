@@ -17,9 +17,11 @@ import java.util.Objects;
  * @param interiorWall  interior wall height in blocks
  * @param tierB         cell-sized units (from V4)
  * @param tierC         whole-structure templates (from V7)
+ * @param roofRise      the highest a roof rises above its eave, in 1/16 block (measured heights only)
+ * @param ledgeLip      the ledge lip's height, in 1/16 block (measured heights only)
  */
 public record ShapeParams(String planner, String heights, int maxUnit, int minRepeatRows, int hullRing, int interiorWall, boolean tierB,
-		boolean tierC) {
+		boolean tierC, int roofRise, int ledgeLip) {
 	public static final String CLASSIFIED = "classified";
 	public static final String MEASURED = "measured";
 
@@ -28,12 +30,32 @@ public record ShapeParams(String planner, String heights, int maxUnit, int minRe
 		if (!CLASSIFIED.equals(heights) && !MEASURED.equals(heights)) {
 			throw new IllegalArgumentException("unknown heights mode");
 		}
+		if (roofRise < 0 || roofRise > 16 || ledgeLip < 1 || ledgeLip > 12) {
+			throw new IllegalArgumentException("roof rise or ledge lip out of range");
+		}
+	}
+
+	/** The V2 parameters with another planner version or setting (tests). */
+	public ShapeParams(String planner, String heights, int maxUnit, int minRepeatRows, int hullRing, int interiorWall, boolean tierB,
+			boolean tierC) {
+		this(planner, heights, maxUnit, minRepeatRows, hullRing, interiorWall, tierB, tierC, 16, 4);
 	}
 
 	/** V2: shape data only. Today's classified heights and cube keys, so no block changes. */
 	public static ShapeParams v2() {
 		return new ShapeParams("kb-shapes/1", CLASSIFIED, HeightRules.MAX_UNIT, HeightRules.MIN_REPEAT_ROWS, 2, HeightRules.INTERIOR_WALL,
 				false, false);
+	}
+
+	/** V3: Tier A. Measured heights, the door fold, the region vote, roofs and ledge lips. */
+	public static ShapeParams v3() {
+		return new ShapeParams("kb-shapes/2", MEASURED, HeightRules.MAX_UNIT, HeightRules.MIN_REPEAT_ROWS, 2, HeightRules.INTERIOR_WALL,
+				false, false, 16, 4);
+	}
+
+	/** The parameters a build plans with. */
+	public static ShapeParams current() {
+		return v3();
 	}
 
 	/** The parameters as they appear in the shape index. */
@@ -46,6 +68,11 @@ public record ShapeParams(String planner, String heights, int maxUnit, int minRe
 		out.addProperty("interiorWall", this.interiorWall);
 		out.addProperty("tierB", this.tierB);
 		out.addProperty("tierC", this.tierC);
+		if (this.measured()) {
+			// Not in kb-shapes/1's index, whose planner has neither.
+			out.addProperty("roofRise", this.roofRise);
+			out.addProperty("ledgeLip", this.ledgeLip);
+		}
 		return out;
 	}
 

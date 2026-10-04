@@ -70,6 +70,8 @@ public final class BlockPlacer {
 		public int habitatsRemoved;
 		/** Planned blocks by {@link BlockCode} kind (air excluded), whether they changed or not. */
 		public final int[] byKind = new int[16];
+		/** Of {@code byKind[KIND_DECOR]}, the foliage ones ({@code decor_leaves}). */
+		public int decorLeaves;
 	}
 
 	private record LightWait(ChunkPos pos, CompletableFuture<?> future) {
@@ -272,6 +274,7 @@ public final class BlockPlacer {
 			}
 			case BlockCode.KIND_LEDGE -> this.counts.ledgeColliders++;
 			case BlockCode.KIND_LIGHT -> this.counts.lights++;
+			case BlockCode.KIND_DECOR -> this.counts.decorLeaves += BlockCode.value(code) == 1 ? 1 : 0;
 			default -> {
 			}
 		}

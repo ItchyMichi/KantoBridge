@@ -22,7 +22,10 @@ import net.minecraft.world.level.block.state.StateDefinition;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
-/** Spike S2: 32 tile families × 256 states register, map slots 1:1, and stay cheap in memory. */
+/**
+ * Spike S2: tile families × 256 states register, map slots 1:1, and stay cheap in memory. Since the voxel plan's V3: 48
+ * families (full, half, shape) and the carriers of the runtime model.
+ */
 class TileBlockTest {
 	@BeforeAll
 	static void setUp() {
@@ -33,16 +36,24 @@ class TileBlockTest {
 	@Test
 	void everyTileFamilyIsACarrierWithItsSlots() {
 		List<KbBlocks.Carrier> carriers = KbBlocks.carriers();
-		assertEquals(32, carriers.size(), "the voxel plan's V1: the tile families");
+		assertEquals(3 * 16 + 3, carriers.size(), "the tile, half and shape families, decor, decor_leaves and the ledge collider");
 		for (int family = 0; family < KbBlocks.FAMILIES_PER_SHAPE; family++) {
 			KbBlocks.Carrier full = carriers.get(family);
 			KbBlocks.Carrier half = carriers.get(KbBlocks.FAMILIES_PER_SHAPE + family);
+			KbBlocks.Carrier shape = carriers.get(2 * KbBlocks.FAMILIES_PER_SHAPE + family);
 			assertSame(KbBlocks.tileFull().get(family), full.block());
 			assertSame(KbBlocks.tileHalf().get(family), half.block());
+			assertSame(KbBlocks.shapeFull().get(family), shape.block());
 			assertEquals(CarrierKind.TILE_FULL, full.kind());
 			assertEquals(CarrierKind.TILE_HALF, half.kind());
+			assertEquals(CarrierKind.SHAPE_FULL, shape.kind());
 			assertEquals(family, full.family());
+			assertEquals(family, shape.family());
 		}
+		assertEquals(List.of(CarrierKind.DECOR, CarrierKind.DECOR_LEAVES, CarrierKind.LEDGE),
+				carriers.subList(48, 51).stream().map(KbBlocks.Carrier::kind).toList());
+		assertSame(KbBlocks.LEDGE_COLLIDER, carriers.get(50).block());
+		assertEquals(0, carriers.get(50).slotIndex(KbBlocks.LEDGE_COLLIDER.defaultBlockState()), "no slot");
 		KbBlocks.Carrier carrier = carriers.get(3);
 		TileBlock block = (TileBlock) carrier.block();
 		for (int slot : new int[] {0, 1, 17, 255}) {
@@ -50,24 +61,31 @@ class TileBlockTest {
 		}
 		assertTrue(CarrierKind.TILE_HALF.half() && !CarrierKind.TILE_FULL.half());
 		assertTrue(CarrierKind.TILE_FULL.drawsCube() && CarrierKind.TILE_FULL.hasSlot());
+		assertTrue(CarrierKind.SHAPE_FULL.drawsCube() && CarrierKind.SHAPE_FULL.hasSlot() && !CarrierKind.SHAPE_FULL.half(),
+				"a shape tile's fallback is its slot's full cube");
+		for (CarrierKind kind : List.of(CarrierKind.DECOR, CarrierKind.DECOR_LEAVES, CarrierKind.LEDGE)) {
+			assertTrue(!kind.drawsCube() && !kind.hasSlot(), kind + " draws only its shape");
+		}
 	}
 
 	@Test
-	void thirtyTwoFamiliesOf256States() {
+	void fortyEightFamiliesOf256States() {
 		List<TileBlock> tiles = KbBlocks.allTiles();
-		assertEquals(32, tiles.size());
+		assertEquals(48, tiles.size());
 		int states = 0;
 		for (TileBlock block : tiles) {
 			assertEquals(256, block.getStateDefinition().getPossibleStates().size());
 			states += block.getStateDefinition().getPossibleStates().size();
 		}
-		assertEquals(8192, states);
+		assertEquals(12288, states);
 		for (int family = 0; family < KbBlocks.FAMILIES_PER_SHAPE; family++) {
 			assertSame(KbBlocks.tileFull().get(family), byId(KbBlocks.tileId("full", family)));
 			assertSame(KbBlocks.tileHalf().get(family), byId(KbBlocks.tileId("half", family)));
+			assertSame(KbBlocks.shapeFull().get(family), byId(KbBlocks.shapeId(family)));
 		}
 		assertEquals("tile_full_00", KbBlocks.tileId("full", 0));
 		assertEquals("tile_half_15", KbBlocks.tileId("half", 15));
+		assertEquals("shape_full_07", KbBlocks.shapeId(7));
 	}
 
 	@Test
