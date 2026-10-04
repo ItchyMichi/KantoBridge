@@ -130,7 +130,7 @@ Prism is listed without a pin until you choose a version.
 | Prism Launcher | GPL-3.0 | unmodified portable build; ship its licence text and a source link, as SkyCraft does |
 | Fabric API | Apache-2.0 | downloaded (or bundled with its licence) |
 | Cobblemon | code MPL-2.0; assets under their own terms | downloaded from official sources at install time; redistribution not checked |
-| kantobridge, gen1-bridge | no licence (personal project) | in the release zip |
+| kantobridge, gen1-bridge | GPL-3.0-only, with Gen1Recomp's credit line ([`LICENSE`](../LICENSE), [`CREDITS.md`](../CREDITS.md)) | in the release zip |
 | Minecraft, Java, Fabric Loader | Mojang's and the vendors' terms | downloaded by Prism after sign-in |
 
 ## Questions for you before it's built

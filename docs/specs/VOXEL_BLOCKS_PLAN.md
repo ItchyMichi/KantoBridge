@@ -1,7 +1,7 @@
 # Plan: voxel blocks and models in the Kanto world
 
-- **Status:** ready to execute once the decisions in [§2.1](#21-decisions-for-the-user) are answered
-  (every one has a default the run may use).
+- **Status:** executed (V1–V9, 2026-10-04), its decisions taken by their defaults; recorded in
+  [PROGRESS.md](../PROGRESS.md), "Voxel plan". Its user measurements (X1–X7) and play-tests wait.
 - **What it delivers:** Kanto's tile cubes become shaped art: folded facades, measured heights, roofs,
   ledge lips, grass tufts, signs, tree hulls, whole-structure models, story art meshed per player,
   player texture packs with hand-made `.vox` models, and three character styles.

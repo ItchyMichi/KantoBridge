@@ -59,6 +59,9 @@ $ServerPort = 25565
 $RestartLimit = 3              # -Watch: at most this many restarts per player ...
 $RestartWindowSec = 600        # ... within this many seconds
 
+# Gen1Recomp's licence (its LICENSE.MD, additional term 1) asks any front end that starts the game to show this credit.
+Write-Host "Based on the Pokemon Gen 1 Recompilation Project by BOIS CLUB GAMES, LLC (https://github.com/bryanthaboi/gen1recomp)"
+
 function Say([string] $text) { Write-Host "launch: $text" }
 function Plan([string] $text) { Write-Host "[plan] $text" }
 function Fail([string] $text) {

@@ -3,8 +3,9 @@
 Ideas for work after M10, written down from play-testing questions: the hidden-player speed-up (1),
 voxel shapes (2), first-person dressing (3), the deep dive that designs them as one generative
 system (4), and a later vision of several regions and the open world in one Minecraft world (5).
-Nothing here is decided or built yet. Each section says what it would change, why, and how we'd
-know it worked.
+When written, nothing here was decided or built. Since then §2 became the voxel plan and the profile
+plan, and §4's research was done; [ROADMAP.md](ROADMAP.md) says where each section stands now. Each
+section says what it would change, why, and how we'd know it worked.
 
 ## 1. Hidden-player speed-up (less rubber-banding)
 

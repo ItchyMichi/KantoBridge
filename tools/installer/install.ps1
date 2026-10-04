@@ -29,6 +29,9 @@ param(
 Set-StrictMode -Version 2.0
 $ErrorActionPreference = "Stop"
 
+# Gen1Recomp's licence (its LICENSE.MD, additional term 1) asks any front end that starts the game to show this credit.
+Write-Host "Based on the Pokemon Gen 1 Recompilation Project by BOIS CLUB GAMES, LLC (https://github.com/bryanthaboi/gen1recomp)"
+
 if (-not $Root) { $Root = Join-Path $env:LOCALAPPDATA "KantoBridge" }
 if (-not $Pins) { $Pins = Join-Path $PSScriptRoot "pins.json" }
 $Repo = Split-Path -Parent (Split-Path -Parent $PSScriptRoot)

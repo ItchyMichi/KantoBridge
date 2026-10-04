@@ -126,7 +126,7 @@ one condition: **the agent never reads or prints game content.**
 | U7 | **`gen1-bridge` may use engine internals** wherever that gives the most complete result. All internals go through one adapter module. |
 | U8 | **ROM-derived data may pass through the host's Minecraft server**: text and trainer teams. Art never does. |
 | U9 | **Other players may see a story battle's Pokémon.** |
-| U10 | **No project licence**: a personal test project. |
+| U10 | **No project licence**: a personal test project. *Superseded 2026-10-04: the user licensed the repository GPL-3.0-only and made it public ([`LICENSE`](../LICENSE), [`CREDITS.md`](../CREDITS.md)).* |
 | U11 | **Transport:** `gen1-bridge` listens on `127.0.0.1:27151`; the Minecraft client connects and reconnects; the server gets story data only through each player's client. |
 
 ### 1.2 Plan defaults

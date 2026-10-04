@@ -77,6 +77,7 @@ def test_dev_plan_one_player(shell, setup):
     assert "gradlew.bat runClient with JAVA_HOME=" + setup["jdk"] in out
     assert "runServer" not in out and "runClient2" not in out
     assert "[plan] done" in out
+    assert "Based on the Pokemon Gen 1 Recompilation Project by BOIS CLUB GAMES, LLC" in out, "Gen1Recomp's required credit"
 
 
 @pytest.mark.parametrize("shell", SHELLS)

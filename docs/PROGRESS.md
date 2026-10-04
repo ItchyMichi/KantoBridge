@@ -1,7 +1,8 @@
 # Kanto Bridge: progress
 
 Where the execution of [PLAN.md](PLAN.md) stands. A new run reads this file and continues at the
-first milestone that isn't **done**. Each milestone ends with `tools/check` green, this file updated,
+first milestone that isn't **done**; every planned milestone is done now, so new work starts from
+[ROADMAP.md](ROADMAP.md). Each milestone ends with `tools/check` green, this file updated,
 new items in [PLAYTEST.md](PLAYTEST.md) and a commit titled `M<n>: <title>`.
 
 ## Milestones
@@ -1412,7 +1413,8 @@ say how each was resolved:
   - Native item effects with no client connected, or on a member without a uid, consume a stone
     without a Cobblemon evolution, which matches the battle rule.
   - `SAFARI_BALL` is mirrored but never appears, because Safari balls live in `save.safari`.
-  - Forest and Safari maps get ceilings like any interior.
+  - Forest and Safari maps got ceilings like any interior; since V7 an open-air interior (the forest, the Safari Zone)
+    is placed under the sky instead (voxel deviation 66).
   - The `activity` attachment isn't persisted.
 
 ### Play-test only

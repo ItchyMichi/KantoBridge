@@ -3,10 +3,19 @@
 	"id": "kantobridge",
 	"version": "${version}",
 	"name": "Kanto Bridge",
-	"description": "Minecraft half of Kanto Bridge: mirrors a hidden Gen1Recomp game in Minecraft, with Cobblemon owning all Pokémon.",
+	"description": "Minecraft half of Kanto Bridge: mirrors a hidden Gen1Recomp game in Minecraft, with Cobblemon owning all Pokémon. Based on the Pokemon Gen 1 Recompilation Project by BOIS CLUB GAMES, LLC (https://github.com/bryanthaboi/gen1recomp).",
 	"authors": [
-		"Kanto Bridge contributors"
+		"ItchyMichi"
 	],
+	"contributors": [
+		"Claude (Anthropic), in Claude Code"
+	],
+	"contact": {
+		"homepage": "https://github.com/ItchyMichi/KantoBridge",
+		"sources": "https://github.com/ItchyMichi/KantoBridge",
+		"issues": "https://github.com/ItchyMichi/KantoBridge/issues"
+	},
+	"license": "GPL-3.0-only",
 	"icon": "assets/kantobridge/icon.png",
 	"environment": "*",
 	"entrypoints": {

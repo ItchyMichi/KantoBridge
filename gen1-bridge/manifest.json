@@ -9,5 +9,5 @@
   "games": ["red", "blue"],
   "game_version": "0.0.0-dev || >=0.3.49 <0.4.0",
   "permissions": ["network", "engine_internals"],
-  "description": "Gen1Recomp half of Kanto Bridge: talks to the Minecraft half (fabric-bridge) over a local TCP socket."
+  "description": "Gen1Recomp half of Kanto Bridge: talks to the Minecraft half (fabric-bridge) over a local TCP socket. Based on the Pokemon Gen 1 Recompilation Project by BOIS CLUB GAMES, LLC (https://github.com/bryanthaboi/gen1recomp)."
 }

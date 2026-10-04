@@ -55,6 +55,12 @@ replay_*.log
 # VS Code
 .vscode/
 
+# --- Local only ---
+# Screenshots of the game (they show its art: never commit them)
+/testing images/
+# Claude Code's local state
+/.claude/
+
 # --- OS files ---
 .DS_Store
 Thumbs.db

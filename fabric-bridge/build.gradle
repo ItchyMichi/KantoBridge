@@ -541,8 +541,9 @@ jar {
 	def projectName = project.name
 	inputs.property "projectName", projectName
 
-	from("LICENSE") {
-		rename { "${it}_$projectName"}
+	// The repository's licence and credits (Gen1Recomp's required credit line among them) travel inside the jar.
+	from(files("../LICENSE", "../CREDITS.md")) {
+		rename { it == "LICENSE" ? "LICENSE_$projectName" : "CREDITS_${projectName}.md" }
 	}
 }
 

@@ -46,6 +46,7 @@ def test_plan_installs_nothing(shell, tmp_path):
     for step in range(1, 10):
         assert f"[plan] {step}. " in out
     assert "--launcher" in out and "never touches the ROM" in out
+    assert "Based on the Pokemon Gen 1 Recompilation Project by BOIS CLUB GAMES, LLC" in out, "Gen1Recomp's required credit"
     assert not root.exists(), "the skeleton creates nothing"
     code, out = _run(shell, "-Root", str(root), "-Execute")
     assert code == 2 and "isn't available yet" in out

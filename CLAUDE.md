@@ -94,7 +94,9 @@ Pokémon Red/Blue's story runs in a **hidden Gen1Recomp**. It is displayed and p
 - **Characters** draw through a style chosen per sprite from its own sheet: thick cards by default, carved and
   rigged figures as settings (`characters.style`), a pack's sprite model; each falls back down rigged → carved →
   thick → flat. Players keep their Minecraft skins.
-- **No project licence.** This is a personal test project.
+- **Licence: GPL-3.0-only** (the user's decision of 2026-10-04; [`LICENSE`](LICENSE), [`CREDITS.md`](CREDITS.md)).
+  Gen1Recomp's attribution term travels with it: the README, both mods' descriptions and any launcher that starts the
+  game show its credit line. The repository is public: nothing ROM-derived, no secrets, no personal data in it.
 - **Testing on the user's real game is allowed** through the separate test install
   `local/gen1recomp-e2e/` only, never the user's `local/gen1recomp/`. The conditions are in
   [`docs/PLAN.md` §0.3](docs/PLAN.md):

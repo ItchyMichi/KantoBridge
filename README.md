@@ -7,7 +7,12 @@ draws everything and owns all Pokémon, wild spawns and battles. A small bridge 
 local TCP socket: a Gen1Recomp mod (`gen1-bridge`) and a Fabric mod (`fabric-bridge`).
 
 Kanto is built in Minecraft from each player's **own** ROM, on their own machine. Nothing from the
-ROM is ever distributed. This is a personal test project, with no licence.
+ROM is ever distributed. Kanto Bridge is free software under the GPL-3.0 ([`LICENSE`](LICENSE),
+[`CREDITS.md`](CREDITS.md)). It's **vibe coded**: designed and directed by its author and written almost
+entirely by Claude in Claude Code.
+
+**To set it up and play, see [`INSTALL.md`](INSTALL.md).** What to build next is in
+[`docs/ROADMAP.md`](docs/ROADMAP.md).
 
 **Status:** all ten milestones of [`docs/PLAN.md`](docs/PLAN.md) are built and pass the automated
 checks. That covers the bridge, the world builder, the single-player story from the opening to the
@@ -72,11 +77,24 @@ A one-click installer for players is designed but not built: [`docs/INSTALLER.md
 
 ## Built on
 
-- Gen1Recomp's licence asks works based on it to show this credit: *Based on the Pokemon Gen 1
-  Recompilation Project by BOIS CLUB GAMES, LLC (https://github.com/bryanthaboi/gen1recomp)*.
+- **Based on the Pokemon Gen 1 Recompilation Project by BOIS CLUB GAMES, LLC
+  (https://github.com/bryanthaboi/gen1recomp).** Gen1Recomp's licence (GPL-3.0 with additional terms)
+  asks every work based on it to show this credit; forks of Kanto Bridge must keep it.
 - [Cobblemon](https://gitlab.com/cable-mc/cobblemon) (MPL-2.0).
 - [Fabric](https://fabricmc.net). The `fabric-bridge` project was generated from Fabric's template
   (CC0).
+- The shape rules re-implemented from [Dramaless Shape](https://github.com/artyrambles/DRAMALESS_SHAPE)
+  (MIT), whose table is read from the player's own installed copy. Everything else:
+  [`CREDITS.md`](CREDITS.md).
 
-Pokémon and all related names are the property of Nintendo, Creatures Inc. and GAME FREAK inc. This
-project is not affiliated with them.
+## Licence
+
+Kanto Bridge is free software: you can redistribute it and/or modify it under the terms of the GNU
+General Public License as published by the Free Software Foundation, version 3 of the License
+(GPL-3.0-only), together with Gen1Recomp's attribution term above. It is distributed in the hope that
+it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+FITNESS FOR A PARTICULAR PURPOSE. See [`LICENSE`](LICENSE).
+
+Pokémon and all related names are the property of Nintendo, Creatures Inc. and GAME FREAK inc.
+Minecraft is a trademark of Mojang Synergies AB. Not an official Minecraft product; not approved by or
+associated with Mojang or Microsoft. This project is not affiliated with any of them.

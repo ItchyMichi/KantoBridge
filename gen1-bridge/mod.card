@@ -2,7 +2,9 @@
 -- The loader never reads this file; manifest.json is what loads the mod.
 return {
   summary = "Links this hidden Gen1Recomp game to Minecraft (Kanto Bridge) over a local TCP socket.",
-  author = "Kanto Bridge contributors",
+  author = "ItchyMichi",
+  license = "GPL-3.0-only",
+  homepage = "https://github.com/ItchyMichi/KantoBridge",
   tags = { "tool", "network", "bridge" },
   differences = {
     changed = {
@@ -17,13 +19,18 @@ return {
       "while Minecraft is connected, the battles the story starts (scripted, rival, map trainers) wait for its Cobblemon battle, whose result is applied with the game's own effects",
       "gifts (the starter included) and heals are sent to Minecraft",
       "a status table in mod.exports (versions, counts, flags) for test drivers",
+      "wild Pokémon: grass and caves come from Minecraft's pools; surfing, fishing and static encounters are rolled here and fought in Minecraft",
+      "the bag, the Pokédex, the story's flags and blocks, saving (the nurse and the start menu save both games), per-world multiplayer save slots, and a pause and reconnect when either side closes",
     },
     known = {
-      "wild encounters, the bag, the Pokedex and the story's flags are not mirrored yet; they arrive in later milestones",
+      "NPCs on a neighbouring map (across a map seam) aren't mirrored",
+      "Pokémon Tower has no wild Pokémon once the SILPH SCOPE is held",
+      "the pinned display options and text speed are written into Gen1Recomp's options.lua when the game saves",
     },
   },
   credits = {
-    { who = "Pokemon Gen 1 Recompilation Project", for_ = "the engine and its mod platform" },
+    { who = "Based on the Pokemon Gen 1 Recompilation Project by BOIS CLUB GAMES, LLC (https://github.com/bryanthaboi/gen1recomp)", for_ = "the engine and its mod platform" },
+    { who = "Claude (Anthropic), in Claude Code", for_ = "writing the code (vibe coded)" },
   },
   compat = { engine = "0.0.0-dev || >=0.3.49 <0.4.0", modApi = 2 },
 }
