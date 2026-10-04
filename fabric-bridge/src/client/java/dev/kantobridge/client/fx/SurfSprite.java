@@ -8,6 +8,9 @@ import dev.kantobridge.builder.pack.ArtKeys;
 import dev.kantobridge.client.packs.LoadedPack;
 import dev.kantobridge.client.puppet.FacingFrames;
 import dev.kantobridge.client.puppet.Puppet;
+import dev.kantobridge.client.puppet.PuppetRuntime;
+import dev.kantobridge.client.puppet.style.CharacterStyle;
+import dev.kantobridge.client.puppet.style.FlatStyle;
 import dev.kantobridge.client.world.ClientWorldIndex;
 import dev.kantobridge.story.StoryState;
 import dev.kantobridge.story.StoryStates;
@@ -157,20 +160,24 @@ public final class SurfSprite {
 		float cycle = frames % Puppet.CYCLE;
 		boolean walking = moving && cycle >= 4 && cycle < 12;
 		Dir facing = Dir.fromYaw(player.getYRot());
-		VertexConsumer consumer = buffers.getBuffer(RenderType.entityCutoutNoCull(texture));
 		poseStack.pushPose();
 		poseStack.translate(x - eyeX, y - eyeY, z - eyeZ);
 		if (upright) {
-			FacingFrames.Uv uv = FacingFrames.uv(FacingFrames.column(facing, camera.getYRot()), walking, false);
-			// Upright, turned about Y to face the camera (as PuppetRenderer does); +Z then points at the camera.
-			poseStack.mulPose(Axis.YP.rotation(Mth.PI - camera.getYRot() * Mth.DEG_TO_RAD));
-			poseStack.translate(0.0F, -SINK, FORWARD);
-			PoseStack.Pose pose = poseStack.last();
-			vertex(consumer, pose, light, -HALF_WIDTH, 0.0F, 0.0F, uv.u0(), uv.v1(), 0.0F, 0.0F, 1.0F);
-			vertex(consumer, pose, light, HALF_WIDTH, 0.0F, 0.0F, uv.u1(), uv.v1(), 0.0F, 0.0F, 1.0F);
-			vertex(consumer, pose, light, HALF_WIDTH, HEIGHT, 0.0F, uv.u1(), uv.v0(), 0.0F, 0.0F, 1.0F);
-			vertex(consumer, pose, light, -HALF_WIDTH, HEIGHT, 0.0F, uv.u0(), uv.v0(), 0.0F, 0.0F, 1.0F);
+			// Upright in the characters' style (the voxel plan's V8): a billboard turned to the camera (+Z toward it, a little
+			// in front of the player), or a real figure turned by the player's facing.
+			PuppetRuntime runtime = PuppetRuntime.get();
+			CharacterStyle style = runtime == null ? FlatStyle.INSTANCE : runtime.styles().styleFor("SURF", "person", texture);
+			if (style.worldOriented()) {
+				poseStack.mulPose(Axis.YP.rotation(-facing.yaw() * Mth.DEG_TO_RAD));
+				poseStack.translate(0.0F, -SINK, 0.0F);
+			} else {
+				poseStack.mulPose(Axis.YP.rotation(Mth.PI - camera.getYRot() * Mth.DEG_TO_RAD));
+				poseStack.translate(0.0F, -SINK, FORWARD);
+			}
+			VertexConsumer consumer = buffers.getBuffer(RenderType.entityCutoutNoCull(style.texture(texture)));
+			style.emit(poseStack, consumer, light, FacingFrames.column(facing, camera.getYRot()), walking, false, walking ? cycle / Puppet.CYCLE : -1.0F);
 		} else {
+			VertexConsumer consumer = buffers.getBuffer(RenderType.entityCutoutNoCull(texture));
 			// Flat on the water, its top towards where the player faces: the sprite's back ("up" frame) seen from above.
 			FacingFrames.Uv uv = FacingFrames.uv(FacingFrames.COLUMN_UP, walking, false);
 			poseStack.mulPose(Axis.YP.rotation(Mth.PI - facing.yaw() * Mth.DEG_TO_RAD));

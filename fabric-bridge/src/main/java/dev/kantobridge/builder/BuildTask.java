@@ -18,6 +18,7 @@ import dev.kantobridge.builder.shape.QuadCounter;
 import dev.kantobridge.builder.shape.ShapePlan;
 import dev.kantobridge.builder.shape.ShapePlanner;
 import dev.kantobridge.builder.shape.ShapeReport;
+import dev.kantobridge.character.CharacterReport;
 import dev.kantobridge.scene.gen1.BundleArtSource;
 import dev.kantobridge.server.HabitatService;
 import dev.kantobridge.server.WorldIndexSync;
@@ -76,7 +77,7 @@ public final class BuildTask {
 		}
 	}
 
-	private record Prepared(WorldPlan plan, @Nullable ResourcePackWriter.Result pack, List<Box3> previousVolumes,
+	private record Prepared(WorldPlan plan, @Nullable ResourcePackWriter.Result pack, @Nullable CharacterReport characters, List<Box3> previousVolumes,
 			List<WorldIndex.Habitat> previousHabitats, long planMs, @Nullable ShapeReport shapes, long packMs) {
 	}
 
@@ -175,7 +176,9 @@ public final class BuildTask {
 			// The geometry a client would build from the shape index, the self-check of every placed map (recorded) and the
 			// quads the planned world draws.
 			ShapeReport shapes = plan.shapes() == null || plan.scene() == null ? null : ShapeReport.of(plan, BundleArtSource.of(this.bundle));
-			return new Prepared(plan, pack, previous == null ? List.of() : WorldPlan.volumesOf(previous),
+			// The character styles' pure parts on the export's sprites (the voxel plan's V8): what each client would fall back to.
+			CharacterReport characters = plan.shapes() == null ? null : CharacterReport.of(this.bundle);
+			return new Prepared(plan, pack, characters, previous == null ? List.of() : WorldPlan.volumesOf(previous),
 					previous == null ? List.of() : previous.habitats(), (System.nanoTime() - t0) / 1_000_000L, shapes, packMs);
 		} catch (BundleException e) {
 			throw new Failure(e.code(), e);
@@ -503,6 +506,11 @@ public final class BuildTask {
 			r.structuresByKind = new java.util.LinkedHashMap<>(report.structures());
 			r.structures = report.structures().values().stream().mapToLong(Long::longValue).sum();
 			r.shapeTemplates = report.shapeTemplates();
+			CharacterReport characters = this.prepared.characters();
+			if (characters != null) {
+				r.spritesByFrames = new java.util.LinkedHashMap<>(characters.spritesByFrames());
+				r.characterFallbacks = new java.util.LinkedHashMap<>(characters.fallbacks());
+			}
 			r.selfCheck = new BuildReport.SelfCheckSummary(report.scores().size(), report.holes(), report.groundMatchMin(), report.structureMatchMin(),
 					report.structureMatchP05(), report.occludedGroundMax(), report.backFaces(), report.unitsFailed(), report.templatesFailed(),
 					report.checkMs());

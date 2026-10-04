@@ -203,6 +203,28 @@ class ClientSideStateTest {
 	}
 
 	@Test
+	void charactersHaveAStyleAndPacks(@TempDir Path dir) throws IOException {
+		// The voxel plan's V8: unset by default (a pack's suggestion, else thick cards), packs on.
+		Path file = dir.resolve(ClientConfig.FILE_NAME);
+		List<String> warnings = new ArrayList<>();
+		ClientConfig defaults = ClientConfig.load(dir, new Properties(), warnings::add);
+		assertEquals(null, defaults.characterStyle());
+		assertTrue(defaults.characterPacks());
+		Files.writeString(file, "{\"characters\": {\"style\": \"carved\", \"packs\": false}}", StandardCharsets.UTF_8);
+		ClientConfig carved = ClientConfig.load(dir, new Properties(), warnings::add);
+		assertEquals(dev.kantobridge.character.StyleFallback.Style.CARVED, carved.characterStyle());
+		assertFalse(carved.characterPacks());
+		assertTrue(warnings.isEmpty());
+		Files.writeString(file, "{\"characters\": {\"style\": \"model\"}}", StandardCharsets.UTF_8);
+		assertEquals(null, ClientConfig.load(dir, new Properties(), warnings::add).characterStyle(), "a model is a pack's, not a setting");
+		Files.writeString(file, "{\"characters\": {\"style\": \"voxel\"}}", StandardCharsets.UTF_8);
+		assertEquals(null, ClientConfig.load(dir, new Properties(), warnings::add).characterStyle());
+		Files.writeString(file, "{\"characters\": \"thick\"}", StandardCharsets.UTF_8);
+		assertEquals(null, ClientConfig.load(dir, new Properties(), warnings::add).characterStyle());
+		assertEquals(3, warnings.size(), "each mistake warned about, none fatal");
+	}
+
+	@Test
 	void systemPropertyOverridesTheFile(@TempDir Path dir) throws IOException {
 		Files.writeString(dir.resolve(ClientConfig.FILE_NAME), "{\"port\": 27152}", StandardCharsets.UTF_8);
 		Properties properties = new Properties();

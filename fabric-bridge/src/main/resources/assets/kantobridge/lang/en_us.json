@@ -112,6 +112,7 @@
   "kantobridge.debug.mesh": "Mesh (dev, %s): model %s  re-mesh %s ms  sections %s (p95 %s ms, ours p95 %s ms)  fps %s (1%% low %s)  heap %s MB  reload %s ms  join→view %s ms  runs %s",
   "kantobridge.debug.mesh.idle": "Mesh (dev, %s): model %s  sections meshed %s  F8 measures",
   "kantobridge.debug.packs": "Packs: %s applied (%s entries)  skipped %s",
+  "kantobridge.debug.characters": "Characters: style %s  packs %s  drawn %s  fell back %s",
   "kantobridge.debug.yes": "yes",
   "kantobridge.debug.no": "no",
   "kantobridge.create.button": "Create Kanto world",

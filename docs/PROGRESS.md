@@ -42,7 +42,8 @@ pack below player packs; VD10 the JSON file.
 | V4 | Tier B shapes | **done** (play-test, X2 and X3 wait for you; rebuild your world first) | 2026-10-04 | `aa706c9` |
 | V5 | Story art in the mesh | **done** (play-test waits for you; rebuild your world first) | 2026-10-04 | `144c669` |
 | V6 | Texture packs and `.vox` models | **done** (play-test and X5 wait for you; no rebuild needed) | 2026-10-04 | `0df5171` |
-| V7 | Structure templates and dressing | **done** (play-test waits for you; rebuild your world first) | 2026-10-04 | `V7: structures and dressing` |
+| V7 | Structure templates and dressing | **done** (play-test waits for you; rebuild your world first) | 2026-10-04 | `cadd6b3` |
+| V8 | Characters | **done** (play-test and X7 wait for you; no rebuild needed) | 2026-10-04 | `V8: characters` |
 
 **Measurements waiting on you** (agents never start the client; the plan's §10):
 
@@ -55,6 +56,8 @@ pack below player packs; VD10 the JSON file.
   report can check hold (see the check results); these two are yours. If they fail, R1's ladder applies.
 - **X5** (V6: the calibration model's axes): PLAYTEST.md "V6". If the model shows mirrored or turned, the documented
   axes and `VoxMesher` change together.
+- **X7** (V8: 64 puppets, flat against thick and carved): PLAYTEST.md "V8". If thick or carved cost more than the
+  plan's limits, the quad budgets (256 and 600) come down.
 
 ### Voxel plan: check results
 
@@ -151,6 +154,12 @@ pack below player packs; VD10 the JSON file.
   and `template_fallbacks` (at most 2 failed templates and at least 20 building placements, set from this run) hold.
   Two earlier runs failed: `selfcheck_structure` (5th percentile 0.4231, lowest 0.2973; deviation 64), and four
   templates under their gate while sunk panes counted as misses and the facade was carved (deviations 60 and 63).
+- **V8:** `tools/check.sh`: pytest **1410 passed**, then `gradlew build`: **768 JUnit** (new: `ThickCardMeshTest`,
+  `HullCarverTest`, `RigSplitterTest`, `StyleFallbackTest` with the synthetic bundle's report, the `characters`
+  settings in `ClientSideStateTest`), **92/92 GameTests**, the mixin checks. The synthetic build's report:
+  `sprites_by_frames` 1 × 1, 1 × 3, 2 × 6; `character_fallbacks`: rigged to carved 4 (its made-up sprites aren't
+  people by the rig's test), carved to thick 0, rigged to thick 0, thick to flat 0. V8 changes no block, so it has no
+  real build (its gate is "green"); the real export's numbers come with V9's `--e2e` run.
 
 ### Voxel plan: deviations
 
@@ -360,6 +369,26 @@ pack below player packs; VD10 the JSON file.
 68. **The tint is two flag bits on the quad** (`ShapeQuad.TINT_SHIFT`): levels 1–3 multiply the vertex colour by
     0.85, 0.69 and 0.53 (with the darkening and a pack model's colour); ceilings use 2. The shape table's geometry
     version is 4.
+69. **The styles' pure parts live in `src/main`** (`dev.kantobridge.character`: `SpriteFrames`, `ThickCardMesh`,
+    `HullCarver`, `RigSplitter`, `StyleFallback`, `CharacterReport`), not in `client/puppet/style/`: the headless build
+    runs them for the report's Characters group, and `src/main` can't see client classes. `client/puppet/style/` holds
+    the styles that emit vertices and the per-sheet decisions (`CharacterStyles`).
+70. **Rigged figures are quads straight into the sheet**: each box's faces show the frames' own crops (front: the
+    standing "down" frame; back: "up", mirrored; sides: "left"; top and bottom: the front's edge rows), and limbs swing
+    by turning their quads about the joint. No `ModelPart` is baked and no unwrap texture is made (so there is no
+    `RigTextures`): the sheet already holds every face's art. 144 vertices, as planned.
+71. **A rig's neck is where the figure narrows and widens again below**: a plain local minimum took a ball's flat
+    sides for a neck. A rig still needs walk frames, a neck, a head a quarter to two thirds of the figure, and boxes
+    covering 85% of the front.
+72. **A client reads a sheet's frame count from its masks** (every frame equal: 1; the walking row equal to the
+    standing one: 3; else 6), since it has its resolved sheet, not the export's count; only a 1-frame item or boulder
+    revolves. The headless report counts from the export's own frame counts.
+73. **Settings**: `characters.style` is unset by default (a pack's suggestion, else thick cards) and
+    `characters.packs` on. A pack's own style for a sprite comes first, its `model` before that; the new settings file
+    doesn't list `characters`.
+74. **`character_fallbacks` also counts `thick_to_flat`** (an empty frame, or more than 256 quads).
+75. **The surfing sprite's upright card takes the NPCs' style** (keyed `SURF`); its flat form on the water stays a
+    card.
 
 ### Voxel plan: open issues
 

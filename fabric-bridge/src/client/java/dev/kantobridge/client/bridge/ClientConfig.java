@@ -2,6 +2,7 @@ package dev.kantobridge.client.bridge;
 
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
+import dev.kantobridge.character.StyleFallback;
 import dev.kantobridge.proto.ProtoJson;
 import dev.kantobridge.proto.ProtocolException;
 import java.io.IOException;
@@ -20,15 +21,20 @@ import org.jetbrains.annotations.Nullable;
  * elsewhere (docs/PROTOCOL.md "Transport"). A different port lets two client/Gen1Recomp pairs share one PC.</li>
  * <li>{@code shapes}: {@code "on"} (default) or {@code "off"}: whether the world's shaped art is drawn
  * (docs/specs/VOXEL_BLOCKS_PLAN.md §5.1); {@code off} draws today's cubes. The debugging switch and the fallback.</li>
+ * <li>{@code characters}: {@code {"style": "flat" | "thick" | "carved" | "rigged", "packs": true | false}} (V8, §5.11):
+ * how NPCs are drawn (unset: a pack's suggestion, else thick cards), and whether texture packs may give sprites models and
+ * styles.</li>
  * </ul>
  *
  * <p>A missing file is created with the defaults. A broken file or value falls back to the default with a warning,
  * so a typo never stops the game. The system property {@code kantobridge.port} overrides the file for dev runs.
  *
- * @param port   the port gen1-bridge listens on
- * @param shapes draw the world's shapes
+ * @param port            the port gen1-bridge listens on
+ * @param shapes          draw the world's shapes
+ * @param characterStyle  {@code characters.style}, or null when unset
+ * @param characterPacks  {@code characters.packs}
  */
-public record ClientConfig(int port, boolean shapes) {
+public record ClientConfig(int port, boolean shapes, StyleFallback.@Nullable Style characterStyle, boolean characterPacks) {
 	public static final String FILE_NAME = "kantobridge-client.json";
 	public static final String PORT_PROPERTY = "kantobridge.port";
 	public static final int DEFAULT_PORT = 27151;
@@ -38,16 +44,29 @@ public record ClientConfig(int port, boolean shapes) {
 		this(port, true);
 	}
 
+	public ClientConfig(int port, boolean shapes) {
+		this(port, shapes, null, true);
+	}
+
 	/** Reads (or creates) the file in {@code configDir}, then applies the system property override. */
 	public static ClientConfig load(Path configDir, Properties systemProperties, Consumer<String> warn) {
 		Path file = configDir.resolve(FILE_NAME);
 		int port = DEFAULT_PORT;
 		boolean shapes = true;
+		StyleFallback.Style style = null;
+		boolean packs = true;
 		if (Files.isRegularFile(file)) {
 			JsonObject root = readRoot(file, warn);
 			if (root != null) {
 				port = readPort(root, warn);
 				shapes = readSwitch(root, "shapes", true, warn);
+				JsonElement characters = root.get("characters");
+				if (characters != null && characters.isJsonObject()) {
+					style = readStyle(characters.getAsJsonObject(), warn);
+					packs = readSwitch(characters.getAsJsonObject(), "packs", true, warn);
+				} else if (characters != null) {
+					warn.accept(FILE_NAME + ": characters must be an object; using the defaults");
+				}
 			}
 		} else {
 			try {
@@ -66,7 +85,22 @@ public record ClientConfig(int port, boolean shapes) {
 				warn.accept("ignoring -D" + PORT_PROPERTY + ": not a port number from 1 to 65535");
 			}
 		}
-		return new ClientConfig(port, shapes);
+		return new ClientConfig(port, shapes, style, packs);
+	}
+
+	/** {@code characters.style}: a style's name; anything else is unset (with a warning). */
+	static StyleFallback.@Nullable Style readStyle(JsonObject characters, Consumer<String> warn) {
+		JsonElement value = characters.get("style");
+		if (value == null) {
+			return null;
+		}
+		StyleFallback.Style style = value.isJsonPrimitive() && value.getAsJsonPrimitive().isString() ? StyleFallback.Style.byId(value.getAsString())
+				: null;
+		if (style == null || style == StyleFallback.Style.MODEL) {
+			warn.accept(FILE_NAME + ": characters.style must be \"flat\", \"thick\", \"carved\" or \"rigged\"; leaving it unset");
+			return null;
+		}
+		return style;
 	}
 
 	private static @Nullable JsonObject readRoot(Path file, Consumer<String> warn) {

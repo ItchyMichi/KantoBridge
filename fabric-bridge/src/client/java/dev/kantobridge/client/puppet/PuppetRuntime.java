@@ -5,6 +5,7 @@ import dev.kantobridge.client.bridge.BridgeRuntime;
 import dev.kantobridge.client.bridge.ConnectionState;
 import dev.kantobridge.client.bridge.Dispatcher;
 import dev.kantobridge.client.bridge.JsonFields;
+import dev.kantobridge.client.puppet.style.CharacterStyles;
 import dev.kantobridge.client.shape.ClientShapes;
 import dev.kantobridge.client.ui.Gen1Draw;
 import dev.kantobridge.client.world.ClientWorldIndex;
@@ -46,6 +47,7 @@ public final class PuppetRuntime implements PuppetManager.Listener {
 
 	private final PuppetManager manager = new PuppetManager(this);
 	private final PuppetTextures textures = new PuppetTextures();
+	private final CharacterStyles styles = stylesFromConfig();
 	private final BridgeRuntime bridge;
 	/** The hidden player's map area for culling, made again when the map or the WorldIndex changes (M10). */
 	private PuppetCulling.@Nullable Area area;
@@ -100,9 +102,11 @@ public final class PuppetRuntime implements PuppetManager.Listener {
 			@Override
 			public void onResourceManagerReload(ResourceManager resourceManager) {
 				runtime.textures.clear();
+				runtime.styles.clear();
 			}
 		});
 		bridge.addDebugLine(runtime::debugLine);
+		bridge.addDebugLine(runtime.styles::debugLine);
 	}
 
 	/** The running glue, or null before client init. */
@@ -110,9 +114,20 @@ public final class PuppetRuntime implements PuppetManager.Listener {
 		return instance;
 	}
 
-	/** A texture pack changed (V6): sheets are looked up again. */
+	/** A texture pack changed (V6): sheets are looked up again, and styles decided again (V8). */
 	public void packsChanged() {
 		this.textures.clear();
+		this.styles.clear();
+	}
+
+	/** How characters are drawn (V8). */
+	public CharacterStyles styles() {
+		return this.styles;
+	}
+
+	private static CharacterStyles stylesFromConfig() {
+		BridgeRuntime bridge = BridgeRuntime.get();
+		return bridge == null ? new CharacterStyles(null, true) : new CharacterStyles(bridge.config().characterStyle(), bridge.config().characterPacks());
 	}
 
 	public PuppetManager manager() {

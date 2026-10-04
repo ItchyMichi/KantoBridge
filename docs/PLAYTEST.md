@@ -554,3 +554,27 @@ world first (Minecraft closed): `tools\.venv\Scripts\python.exe tools\e2e\build_
 - [ ] With a texture pack: a `struct:` key from `keys.json` with `{"bands": {"roofRows": 1}}` changes where that
       building's roof starts; a `struct:` model (start from `reference\models\struct_*.vox` of a new pack template)
       replaces the building wherever it stands.
+
+### V8: characters
+
+NPCs now stand as thick cards by default: today's card from the front, a slab two sprite pixels deep from the side and
+above. Other styles are options in `local\minecraft\config\kantobridge-client.json` (dev client):
+`"characters": {"style": "thick"}` (or `"flat"`, `"carved"`, `"rigged"`), and `"packs": false` to leave texture packs
+out of characters. Restart the game after changing it. F7's Characters line shows how many sprites each style drew and
+what fell back (and why). No rebuild needed.
+
+- [ ] **Thick (the default):** a walking NPC, a standing NPC, an item ball, a boulder and Snorlax look as before from
+      the front; from the side and above they have depth; no gaps, no flicker.
+- [ ] **Carved:** NPCs are solid figures turned by their own facing (they don't turn to follow you); walking alternates
+      feet; an item ball and a boulder are round. Sprites that can't be carved stay thick (F7 says why).
+- [ ] **Rigged:** people are blocky dolls whose legs and arms swing while they walk; anything that isn't a person
+      (items, boulders, Snorlax) falls back to carved or thick. Say whether the swing reads well.
+- [ ] **Flat:** today's cards.
+- [ ] **Push a boulder** (Strength) in each style: it moves cell by cell as before.
+- [ ] **Surf:** the mount you ride stands in the same style (thick by default).
+- [ ] **A pack's sprite model** (a `sprite:` key under `models`, PACKS.md): that character is the model, facing where
+      it faces; with `"packs": false` it is back to its style.
+- [ ] **X7, 64 puppets:** with the measuring tool (`.\gradlew.bat runClient -Pkb.meshstats=true`), stand where many
+      NPCs are in view (a busy town; two players' worth if you can), and measure frame time (F3's graph: average and 1%
+      low) with `"style": "flat"`, then `"thick"`, then `"carved"` (restart in between). Pass: thick costs under 0.3 ms
+      a frame more than flat, carved under 0.5 ms with about 20 figures in view and under 1.5 ms with 64.

@@ -104,6 +104,9 @@ public final class BuildReport {
 	public long structures;
 	public Map<String, Long> structuresByKind = new java.util.LinkedHashMap<>();
 	public int shapeTemplates;
+	/** Characters (the voxel plan's V8): sheets by frame count, and the styles' fallbacks; empty without shapes. */
+	public Map<String, Long> spritesByFrames = new java.util.LinkedHashMap<>();
+	public Map<String, Long> characterFallbacks = new java.util.LinkedHashMap<>();
 	// Quads, after culling (V3): per shaped block, per 16×16×16 section, and the densest section's corner.
 	public double shapeQuadsMeanBlock;
 	public int shapeQuadsMaxBlock;
@@ -206,6 +209,12 @@ public final class BuildReport {
 		this.structuresByKind.forEach(byKind::addProperty);
 		out.add("structures_by_kind", byKind);
 		out.addProperty("shape_templates", this.shapeTemplates);
+		JsonObject byFrames = new JsonObject();
+		this.spritesByFrames.forEach(byFrames::addProperty);
+		out.add("sprites_by_frames", byFrames);
+		JsonObject fallbacks = new JsonObject();
+		this.characterFallbacks.forEach(fallbacks::addProperty);
+		out.add("character_fallbacks", fallbacks);
 		out.addProperty("shape_quads_mean_block", round4(this.shapeQuadsMeanBlock));
 		out.addProperty("shape_quads_max_block", this.shapeQuadsMaxBlock);
 		out.addProperty("shape_quads_p99_block", this.shapeQuadsP99Block);

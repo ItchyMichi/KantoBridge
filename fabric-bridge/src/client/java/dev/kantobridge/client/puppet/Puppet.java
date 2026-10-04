@@ -152,6 +152,19 @@ public final class Puppet {
 		return inCycle >= 4 && inCycle < 12;
 	}
 
+	/** Where in its walk cycle the puppet is, 0..1, or -1 when it stands (rigged figures swing their limbs by it). */
+	public float walkPhase(float partialFrames) {
+		double phase;
+		if (this.stepping()) {
+			phase = (this.stepElapsed + partialFrames) * CYCLE / (double) this.stepFrames;
+		} else if (this.moving) {
+			phase = this.marchClock + partialFrames;
+		} else {
+			return -1.0F;
+		}
+		return (float) (phase % CYCLE / CYCLE);
+	}
+
 	/** For up and down, every other step shows the walking frame mirrored (the other foot forward). */
 	public boolean mirroredWalk() {
 		// The first step (or walk cycle) is drawn as the sheet has it, the second mirrored, and so on.
