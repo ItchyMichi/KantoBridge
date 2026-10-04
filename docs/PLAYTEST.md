@@ -602,10 +602,9 @@ switched off once, as P1 says.
 
 Once, before a new world:
 
-1. **Install the mod.** Copy the Dramaless Shape mod into `local\gen1recomp\mods\DRAMALESS_SHAPE\`: from your
-   `refs\DRAMALESS_SHAPE-main\`, the files `manifest.json`, `main.lua`, `mod.card`, `LICENSE`, `README.md`,
-   `CREDITS.md`, `CHANGELOG.md` and the folders `lib`, `data`, `docs` (or install it the way you usually install
-   mods). Tell me if you'd rather I copy it.
+1. **Install the mod.** Done for you on 2026-10-04: `local\gen1recomp\mods\DRAMALESS_SHAPE\` holds the files
+   `manifest.json`, `main.lua`, `mod.card`, `LICENSE`, `README.md`, `CREDITS.md`, `CHANGELOG.md` and the folders `lib`,
+   `data`, `docs` from your `refs\DRAMALESS_SHAPE-main\`.
 2. **Switch it off.** Start `local\gen1recomp\gen1recomp.exe` without `--game` (the launcher), open its mod settings
    and switch "Dramaless Shape Voxel Mod" off; or in game, F10. It must stay off: the bridge only reads its table, and
    switched on it would run its own 3D view and hotkeys inside the hidden game.

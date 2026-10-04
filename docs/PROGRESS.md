@@ -429,7 +429,7 @@ own rules as the fallback; the tree fallback is option 1; buildings follow the t
 | P1 | Profile and outdoor units | **done** (play-test waits for you: install the mod, switched off, then a new world) | 2026-10-04 | `7dab639` |
 | P2 | Buildings | **done** (play-test waits for you; a new world) | 2026-10-04 | `5178d71` |
 | P3 | Boxes and interiors | **done** (play-test waits for you; a new world) | 2026-10-04 | `6eaa772` |
-| P4 | Finish | **done** (your install waits for your go-ahead) | 2026-10-04 | `P4: finish` |
+| P4 | Finish | **done** (the mod installed in your install; switching it off is yours) | 2026-10-04 | `9ff3d74` |
 
 **Why the trees were cubes** (counts from your world, which is identical to the e2e build): V4 made a repeating cell a
 unit only when all its tiles were in the map's drawn border block (voxel plan deviation 26). Pallet Town: 123 solid
@@ -573,8 +573,9 @@ Route 22: none. Over the 36 outdoor maps, 2,586 of 14,797 solid cells were units
 
 ### Profile plan: open issues
 
-- **Your own install** needs the mod, switched off (PLAYTEST.md, "Profile plan, P1"): waiting for your go-ahead, or do
-  it yourself. Then a new world shows P1–P3.
+- **Your own install:** the mod was copied into `local/gen1recomp/mods/DRAMALESS_SHAPE/` on 2026-10-04 at your request
+  (59 files from `refs/DRAMALESS_SHAPE-main/`, each checked by hash; no `assets/`, `tests/` or `tools/`). Switching it
+  off is yours, in the launcher or with F10 (PLAYTEST.md, "Profile plan, P1"); then a new world shows P1–P3.
 - The `support` rule (deviation 28): standees on counters, tables and bookcases stand on the floor behind them.
 
 ## Pre-flight (PLAN §0.6)
