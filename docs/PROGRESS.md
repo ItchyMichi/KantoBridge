@@ -39,7 +39,8 @@ pack below player packs; VD10 the JSON file.
 | V1 | Runtime model with the same cubes | **done** (X1 and X4 wait for you) | 2026-10-04 | `9b3a647` |
 | V2 | Shape data, sync and per-face art | **done** (play-test waits for you) | 2026-10-04 | `7a364d7` |
 | V3 | Carriers and Tier A shapes | **done** (play-test waits for you; rebuild your world first) | 2026-10-04 | `5a1a283` |
-| V4 | Tier B shapes | **done** (play-test, X2 and X3 wait for you; rebuild your world first) | 2026-10-04 | `V4: Tier B shapes` |
+| V4 | Tier B shapes | **done** (play-test, X2 and X3 wait for you; rebuild your world first) | 2026-10-04 | `aa706c9` |
+| V5 | Story art in the mesh | **done** (play-test waits for you; rebuild your world first) | 2026-10-04 | `V5: story art in the mesh` |
 
 **Measurements waiting on you** (agents never start the client; the plan's §10):
 
@@ -116,6 +117,16 @@ pack below player packs; VD10 the JSON file.
   structure match 5th percentile 0.5645 and lowest 0.375, so V3's thresholds hold (unit drawings are scored per unit).
   Hulls cover 0.52 to 0.63 of their drawing (gate 0.4, fixed from this run), objects match 1.0 (gate 0.95). The first
   run of the real build had failed the section maximum (34,688 quads); deviation 32 has the fix.
+
+- **V5:** `tools/check.sh --e2e`: pytest **1422 passed**, then `gradlew build`: **713 JUnit** (new: `ClosedOverlayTest`,
+  `ClosedArtTest`, `StoryDirtyTest`, the story carriers in `CarrierChoiceTest`), **92/92 GameTests** (new:
+  `CollisionGameTests.aMeshedStoryTileCollidesAsBefore`; the synthetic build's cut tree is a model story tile with
+  `decor_leaves` above it, and `closed_shape_cells` equals its tile story cells), the mixin checks. The real build:
+  220 maps, 0 warnings, 2,457,113 blocks (644 more than V4: the carriers above story tiles), 59.3 s at 46,998
+  blocks/s; `kb-shapes/4` planned 6,445 keys (4 cubes and 6 slabs more than V4: the explicit plain and flat closed
+  columns of gates and scripted swaps; the cut trees' units were planned already); **162 overlays for the 162 tile
+  story cells**; 128 `decor_leaves` (the cut trees) and 516 `decor` above story tiles; the shape map is 155,752
+  characters (3 parts). Quads, self-check and structures as at V4 (the open world didn't change).
 
 ### Voxel plan: deviations
 
@@ -233,6 +244,23 @@ pack below player packs; VD10 the JSON file.
     loaded.
 38. **The synthetic round tree stays a column:** it stands beside the cliff, so it is neither alone nor foliage. JUnit
     fixtures cover hulls; the synthetic world covers an object (the hill's sign), column fallbacks, tufts and the ring.
+39. **The block-entity renderer stays, as a fallback only (V5).** It draws just the cells the snapshot doesn't: a world
+    built before V5 (its shape map has no overlays) or a client without a verified shape map. The plan removed it, but
+    then such a world would show only the bottom block of each closed column (the only carrier it has): I3 forbids
+    missing art. With overlays but without a shape table (`shapes: off`), the mesh draws each closed level as the plain
+    tile cube the story table names (flat art as a layer 1/16 above the floor).
+40. **A plain closed column is made explicit** in its overlay (`cube` keys of the closed tile): an overlay's carriers
+    (`story_tile`, `decor`) have no cube of their own to fall back to, as `tile_full` has.
+41. **The carriers above a story tile** are `decor_leaves` when the closed column is foliage (a cut tree: the first
+    `decor_leaves` of a build), else `decor`; a light block never takes their place.
+42. **The planner is `kb-shapes/4`** with the hashed parameter `storyArt`, so `kb-shapes/3` keeps planning exactly what
+    it did; the overlays add keys for gates and scripted swaps (explicit cubes, slabs for flat art), not for cut trees,
+    whose units were planned already.
+43. **The mesh threads find a position's overlay by a binary search** over the sorted block columns of all overlays
+    (`ClosedArt`), never a boxed map key. The closed set is a bit set over overlays, swapped with a shallow copy of the
+    snapshot (`withClosed`) on every story change, then only the changed cells' columns are re-meshed (`StoryDirty`).
+44. **`story_tile` is a carrier** (`CarrierKind.STORY_TILE`), drawn by the runtime model; the dev mesh check counts
+    closed art too (`QuadCounter.World#closedId`).
 
 ### Voxel plan: open issues
 

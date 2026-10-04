@@ -16,6 +16,7 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.MoverType;
 import net.minecraft.world.entity.decoration.ArmorStand;
 import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.RenderShape;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.Vec3;
 import net.minecraft.world.phys.shapes.CollisionContext;
@@ -70,6 +71,29 @@ public class CollisionGameTests implements FabricGameTest {
 		});
 		ArmorStand stand = new ArmorStand(helper.getLevel(), abs.getX() + 0.5, abs.getY(), abs.getZ() - 1.0);
 		helper.assertTrue(!solidFor(helper, abs, CollisionContext.of(stand)), "entities no player governs pass story cells");
+		helper.succeed();
+	}
+
+	/**
+	 * A swap site's cell as the voxel plan's V5 builds it: its story tile is a model block (it carries the bottom of the
+	 * cell's closed art, drawn per player) with a decor carrier above; collision is still the story tile's, per player, and
+	 * the carrier above never collides.
+	 */
+	@GameTest(template = EMPTY_STRUCTURE)
+	public void aMeshedStoryTileCollidesAsBefore(GameTestHelper helper) {
+		BlockPos abs = storyCell(helper, new BlockPos(3, 2, 3), KEY, StoryCellType.TILE);
+		helper.setBlock(new BlockPos(3, 3, 3), KbBlocks.DECOR_LEAVES);
+		helper.assertTrue(helper.getLevel().getBlockState(abs).getRenderShape() == RenderShape.MODEL, "the story tile is a model block");
+		MockPlayers.with(helper, player -> {
+			StoryState state = StoryStates.of(player);
+			state.clear();
+			helper.assertTrue(walkSouthInto(player, abs) > 0.1, "an open cell was in the way");
+			BlockState above = helper.getLevel().getBlockState(abs.above());
+			helper.assertTrue(above.getCollisionShape(helper.getLevel(), abs.above(), CollisionContext.of(player)).isEmpty(), "the carrier collides");
+			state.activate(KEY);
+			helper.assertTrue(Math.abs(walkSouthInto(player, abs) + 0.3) < 1.0E-6, "a closed cell didn't stop the player at its face");
+			state.clear();
+		});
 		helper.succeed();
 	}
 

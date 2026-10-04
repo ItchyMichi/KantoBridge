@@ -36,7 +36,7 @@ class TileBlockTest {
 	@Test
 	void everyTileFamilyIsACarrierWithItsSlots() {
 		List<KbBlocks.Carrier> carriers = KbBlocks.carriers();
-		assertEquals(3 * 16 + 3, carriers.size(), "the tile, half and shape families, decor, decor_leaves and the ledge collider");
+		assertEquals(3 * 16 + 4, carriers.size(), "the tile, half and shape families, decor, decor_leaves, the ledge collider and the story tile");
 		for (int family = 0; family < KbBlocks.FAMILIES_PER_SHAPE; family++) {
 			KbBlocks.Carrier full = carriers.get(family);
 			KbBlocks.Carrier half = carriers.get(KbBlocks.FAMILIES_PER_SHAPE + family);

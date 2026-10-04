@@ -114,12 +114,13 @@ public final class ShapeFixtures {
 	}
 
 	/**
-	 * {@code open} with one swap site over cell (cx, cy): built open, as {@code open} shows it, closed as {@code closed}
-	 * (2 rows of 2 characters).
+	 * {@code open} with one more swap site over cell (cx, cy): built open, as {@code open} shows it, closed as
+	 * {@code closed} (2 rows of 2 characters); a {@code cut} site's closed cell is a cut tree.
 	 */
 	public static SceneMap withSite(SceneMap open, String kind, int cx, int cy, String... closed) {
 		int cols = open.artCols();
-		int[] closedTiles = open.tiles().clone();
+		// Earlier sites keep their closed art.
+		int[] closedTiles = open.closedTiles() != null ? open.closedTiles().clone() : open.tiles().clone();
 		int[] closedArt = new int[PER_CELL * PER_CELL];
 		int[] openArt = new int[PER_CELL * PER_CELL];
 		for (int dy = 0; dy < PER_CELL; dy++) {
@@ -131,7 +132,7 @@ public final class ShapeFixtures {
 			}
 		}
 		char key = closed[PER_CELL - 1].charAt(0);
-		SwapSite.CellState shut = new SwapSite.CellState(kindOf(key), tagsOf(key) | CellTag.CUT.bit(), closedArt);
+		SwapSite.CellState shut = new SwapSite.CellState(kindOf(key), tagsOf(key) | ("cut".equals(kind) ? CellTag.CUT.bit() : 0), closedArt);
 		SwapSite.CellState opened = new SwapSite.CellState(open.kind(cx, cy), open.tags(cx, cy), openArt);
 		SwapSite site = new SwapSite(open.id() + ":" + kind + ":" + cx + ":" + cy, kind, List.of(new SwapSite.SwapCell(cx, cy, shut, opened)));
 		List<SwapSite> sites = new ArrayList<>(open.swapSites());

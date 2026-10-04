@@ -53,15 +53,14 @@ final class TileBakedModel implements BakedModel {
 		int z = pos.getZ();
 		int id = snapshot.shapeAt(x, y, z);
 		ShapeMesh mesh = id == 0 ? null : snapshot.mesh(id);
-		int quads;
+		// A swap site's cell carries its closed art for the local player only (V5).
+		int quads = this.kind.carriesStoryArt() ? snapshot.emitClosed(x, y, z, this.placeholder, context.getEmitter()) : 0;
 		if (mesh != null) {
-			quads = snapshot.emitShape(mesh, x, y, z, this.placeholder, context.getEmitter());
+			quads += snapshot.emitShape(mesh, x, y, z, this.placeholder, context.getEmitter());
 		} else if (this.kind.drawsCube()) {
-			quads = snapshot.emitCube(this.kind, this.slot, this.placeholder, context.getEmitter());
-		} else {
-			// Decoration and ledge colliders draw only their shapes.
-			quads = 0;
+			quads += snapshot.emitCube(this.kind, this.slot, this.placeholder, context.getEmitter());
 		}
+		// Decoration, ledge colliders and story tiles draw nothing else.
 		if (MeshStats.ENABLED) {
 			MeshStats.ours(System.nanoTime() - started, quads);
 		}

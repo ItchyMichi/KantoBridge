@@ -735,8 +735,10 @@ into `instances` plus 1; 0 means no shape. Its keys come from the whole export, 
 
 **The shape map**, `<world>/kantobridge/shape_map.bin`, gives positions their shape ids: a binary file (magic `KBSM`,
 version 1, the SHA-256 of the WorldIndex's text and of the shape index's text, then per box of columns (the surface box,
-each interior volume) a stack of ids per column from the feet level up, then closed story-cell overlays from V5).
-`shapeMapHash` is the SHA-256 of its bytes. Each client builds the geometry of every shape from its **own** export and
+each interior volume) a stack of ids per column from the feet level up, then closed story-cell overlays from V5: per
+tile story cell, sorted by its story key, the block of its north-west column at feet level and four stacks of ids
+(north-west, north-east, south-west, south-east) of its closed art, bottom-up; a client draws a cell's overlay only
+while its own player sees the cell closed). `shapeMapHash` is the SHA-256 of its bytes. Each client builds the geometry of every shape from its **own** export and
 pack; a position without an entry, or a client without geometry, draws the plain cube of its block.
 
 **The generated resource pack** (`<gameDir>/kantobridge/resourcepack/`, ROM-derived art, never

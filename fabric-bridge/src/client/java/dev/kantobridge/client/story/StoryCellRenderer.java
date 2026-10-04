@@ -3,6 +3,7 @@ package dev.kantobridge.client.story;
 import com.mojang.blaze3d.vertex.PoseStack;
 import dev.kantobridge.block.KbBlocks;
 import dev.kantobridge.block.StoryCellBlockEntity;
+import dev.kantobridge.client.model.RenderSnapshot;
 import dev.kantobridge.client.world.ClientWorldIndex;
 import dev.kantobridge.world.StoryCellTable;
 import dev.kantobridge.world.StoryCellType;
@@ -17,11 +18,13 @@ import net.minecraft.world.phys.Vec3;
 
 /**
  * Draws a tile story cell's closed state for the local player only (docs/PLAN.md §4.3 {@code StoryCellRenderer};
- * PROTOCOL.md "Story rules (M8)"): the world is built with every swap site open, and while this player's hidden game
- * still has the site closed (a Cut tree standing, a card-key door locked), each block of the cell draws its closed art:
- * the tile block of its slot (the player's own generated pack has the texture; the slot map listed both states of every
- * site), stacked up the closed column, or flat on the floor where the closed state is walkable art. Object cells stay
- * invisible: puppets draw people and items. Runs only for {@code story_tile} blocks, the one type it is registered for.
+ * PROTOCOL.md "Story rules (M8)") in a world built before the voxel plan's V5, whose shape map has no overlay for the
+ * cell: from V5 the chunk mesh draws closed art ({@code RenderSnapshot#emitClosed}), so this renderer draws only where the
+ * snapshot doesn't (never a cell without its art, I3). The world is built with every swap site open, and while this
+ * player's hidden game still has the site closed (a Cut tree standing, a card-key door locked), each block of the cell
+ * draws its closed art: the tile block of its slot (the player's own generated pack has the texture; the slot map listed
+ * both states of every site), stacked up the closed column, or flat on the floor where the closed state is walkable art.
+ * Object cells stay invisible: puppets draw people and items. Runs only for {@code story_tile} blocks.
  */
 public final class StoryCellRenderer implements BlockEntityRenderer<StoryCellBlockEntity> {
 	/** Closed art is scenery: draw it as far as a player might see a tree line. */
@@ -41,7 +44,8 @@ public final class StoryCellRenderer implements BlockEntityRenderer<StoryCellBlo
 			int packedOverlay) {
 		String key = cell.cellKey();
 		WorldIndex index = ClientWorldIndex.current();
-		if (key == null || index == null || cell.type() != StoryCellType.TILE || !ClientStoryView.drawn(key)) {
+		if (key == null || index == null || cell.type() != StoryCellType.TILE || !ClientStoryView.drawn(key)
+				|| RenderSnapshot.current().drawsClosed(key)) {
 			return;
 		}
 		StoryCellTable.Entry entry = index.storyCells().get(key);
@@ -77,6 +81,7 @@ public final class StoryCellRenderer implements BlockEntityRenderer<StoryCellBlo
 
 	@Override
 	public boolean shouldRender(StoryCellBlockEntity cell, Vec3 cameraPos) {
-		return cell.cellKey() != null && ClientStoryView.drawn(cell.cellKey()) && BlockEntityRenderer.super.shouldRender(cell, cameraPos);
+		return cell.cellKey() != null && ClientStoryView.drawn(cell.cellKey()) && !RenderSnapshot.current().drawsClosed(cell.cellKey())
+				&& BlockEntityRenderer.super.shouldRender(cell, cameraPos);
 	}
 }

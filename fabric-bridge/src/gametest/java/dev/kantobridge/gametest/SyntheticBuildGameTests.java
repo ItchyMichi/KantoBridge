@@ -68,6 +68,7 @@ import net.minecraft.world.entity.MoverType;
 import net.minecraft.world.level.biome.Biome;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.LightBlock;
+import net.minecraft.world.level.block.RenderShape;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.Vec3;
 import net.minecraft.world.phys.shapes.CollisionContext;
@@ -207,11 +208,23 @@ public class SyntheticBuildGameTests implements FabricGameTest {
 		helper.assertTrue(collider.is(KbBlocks.LEDGE_COLLIDER) && collider.getValue(LedgeColliderBlock.FACING) == Direction.SOUTH,
 				"ledge collider missing or facing the wrong way");
 		helper.assertTrue(isTile(level, ledge.below(), true), "ledge art missing");
-		// The cut tree: built open (ground), closed per player by a tile story cell (the block whose renderer draws the tree).
+		// The cut tree: built open (ground), closed per player by a tile story cell. From V5 its closed art is meshed: the
+		// story tile (a model block) carries the bottom, decor_leaves (no collision) the block above, in each column.
 		BlockPos cut = index.cellOrigin("TEST_TOWN", 10, 14);
 		helper.assertTrue(isTile(level, cut.below(), true), "the cut tree's ground is missing");
 		assertStoryCell(helper, level, cut, "TEST_TOWN:10:14", StoryCellType.TILE);
 		assertStoryCell(helper, level, cut.offset(1, 0, 1), "TEST_TOWN:10:14", StoryCellType.TILE);
+		helper.assertTrue(level.getBlockState(cut).getRenderShape() == RenderShape.MODEL, "the story tile is drawn by the model");
+		for (int dz = 0; dz < 2; dz++) {
+			for (int dx = 0; dx < 2; dx++) {
+				BlockState above = level.getBlockState(cut.offset(dx, 1, dz));
+				helper.assertTrue(above.is(KbBlocks.DECOR_LEAVES), "no story carrier above the cut tree's story tile");
+				helper.assertTrue(above.getCollisionShape(level, cut.offset(dx, 1, dz)).isEmpty(), "a story carrier collides");
+				helper.assertTrue(level.getBlockState(cut.offset(dx, 2, dz)).isAir(), "the closed tree is two blocks high");
+			}
+		}
+		helper.assertTrue(report.closedShapeCells == report.storyCellsByType.getOrDefault("tile", 0) && report.closedShapeCells == 1,
+				"closed_shape_cells " + report.closedShapeCells);
 		// STAY objects carry story cells; the walker doesn't.
 		assertStoryCell(helper, level, index.cellOrigin("TEST_TOWN", 15, 4), "TEST_TOWN:15:4", StoryCellType.OBJECT);
 		helper.assertTrue(level.getBlockState(index.cellOrigin("TEST_TOWN", 10, 8)).isAir(), "a walking NPC got a story cell");

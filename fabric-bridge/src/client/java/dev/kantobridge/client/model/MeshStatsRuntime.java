@@ -279,6 +279,7 @@ public final class MeshStatsRuntime {
 		ClientLevel level = minecraft.level;
 		ShapeTable table = ClientShapes.table();
 		ShapeMap.Lookup lookup = ClientShapes.lookup();
+		RenderSnapshot snapshot = RenderSnapshot.current();
 		Map<Block, Integer> codes = new HashMap<>();
 		for (KbBlocks.Carrier carrier : KbBlocks.carriers()) {
 			codes.put(carrier.block(), switch (carrier.kind()) {
@@ -288,6 +289,7 @@ public final class MeshStatsRuntime {
 				case DECOR -> BlockCode.decor(false);
 				case DECOR_LEAVES -> BlockCode.decor(true);
 				case LEDGE -> BlockCode.ledge(0);
+				case STORY_TILE -> BlockCode.storyTile(0);
 			});
 		}
 		BlockPos.MutableBlockPos cursor = new BlockPos.MutableBlockPos();
@@ -300,6 +302,11 @@ public final class MeshStatsRuntime {
 			@Override
 			public int shapeId(int x, int y, int z) {
 				return lookup == null || table == null ? 0 : lookup.shapeAt(x, y, z);
+			}
+
+			@Override
+			public int closedId(int x, int y, int z) {
+				return snapshot.closedIdAt(x, y, z);
 			}
 		};
 		int compared = 0;

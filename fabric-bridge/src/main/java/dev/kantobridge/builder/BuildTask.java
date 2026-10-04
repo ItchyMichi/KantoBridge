@@ -475,6 +475,7 @@ public final class BuildTask {
 		r.shapedBlocks = shapes.shapedBlocks();
 		r.shapePlanMs = shapes.planMs();
 		r.shapeDecorSkipped = shapes.decorSkipped();
+		r.closedShapeCells = shapes.closedColumns().size();
 		r.voidHullCells = 0;
 		r.voidRingUnits = 0;
 		for (ShapePlan.VoidUnit unit : shapes.voidUnits().values()) {

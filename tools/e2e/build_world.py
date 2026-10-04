@@ -232,8 +232,9 @@ def shape_gates(full, again, filtered):
 
 def budget_gates(report, full_build=True):
     """The budgets of section 3.8 that a build report can check, the self-check's gates (no holes, the ground exact,
-    the structure floors) and Tier B's (no unit in the void fill beyond its ring; skipped decoration and structures
-    reported). The build's time and rate are judged for a full build only. Returns the names of the failed gates.
+    the structure floors), Tier B's (no unit in the void fill beyond its ring; skipped decoration and structures
+    reported) and V5's (every tile story cell has its closed art's overlay). The build's time and rate are judged for a
+    full build only. Returns the names of the failed gates.
     """
     selfcheck = report.get("selfcheck") if isinstance(report.get("selfcheck"), dict) else {}
     throughput = report.get("throughput") if isinstance(report.get("throughput"), dict) else {}
@@ -250,6 +251,8 @@ def budget_gates(report, full_build=True):
         # Tier B (V4): the void fill never holds a unit beyond its ring; skipped decoration and structures are reported.
         "void_hull_cells": report.get("void_hull_cells") == 0,
         "tier_b_reported": isinstance(report.get("shape_decor_skipped"), int) and isinstance(report.get("structures_by_kind"), dict),
+        # V5: every tile story cell's closed art is in the shape map (its overlay), so the chunk mesh draws it.
+        "closed_story_art": report.get("closed_shape_cells") == (report.get("story_cells_by_type") or {}).get("tile", 0),
     }
     if full_build:
         checks["placement_rate"] = (throughput.get("blocks_per_s") or 0) >= MIN_BLOCKS_PER_S

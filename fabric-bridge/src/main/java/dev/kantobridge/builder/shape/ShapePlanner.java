@@ -63,12 +63,14 @@ public final class ShapePlanner {
 	 * @param floor     per art tile, the tile the floor block wears (a unit's ground tile), -1 for its own
 	 * @param decor     per art tile, bit k set when block k (from feet level) is a {@code decor} carrier (a tuft)
 	 * @param units     the map's cell units (open state), in scan order
+	 * @param overlay   per art tile of a swap site's cell, its closed column bottom-up from feet level as an overlay
+	 *                  draws it (V5); null elsewhere
 	 */
 	public record MapShapes(String map, ShapeKey[][] open, ShapeKey[][] closed, int[] blocks, int[] shapeMask, int[] floor, int[] decor,
-			List<Units.Cell> units) {
-		/** The plan of a map without Tier B (no floor change, no decor, no unit). */
+			List<Units.Cell> units, ShapeKey[][] overlay) {
+		/** The plan of a map without Tier B (no floor change, no decor, no unit, no overlay). */
 		public MapShapes(String map, ShapeKey[][] open, ShapeKey[][] closed, int[] blocks, int[] shapeMask) {
-			this(map, open, closed, blocks, shapeMask, filled(blocks.length, -1), new int[blocks.length], List.of());
+			this(map, open, closed, blocks, shapeMask, filled(blocks.length, -1), new int[blocks.length], List.of(), new ShapeKey[blocks.length][]);
 		}
 
 		/** The tile the floor block of art tile {@code i} wears, given its own. */
@@ -121,7 +123,7 @@ public final class ShapePlanner {
 			for (ShapeKey key : borderUnitKeys(map, scene.atlas(map.atlas()), atlas, params)) {
 				uses.add(new ShapeIndex.Use(key, map.palette()));
 			}
-			for (ShapeKey[][] state : new ShapeKey[][][] {planned.open(), planned.closed()}) {
+			for (ShapeKey[][] state : new ShapeKey[][][] {planned.open(), planned.closed(), planned.overlay()}) {
 				for (ShapeKey[] column : state) {
 					if (column == null) {
 						continue;
@@ -189,6 +191,49 @@ public final class ShapePlanner {
 				}
 			}
 		}
+		// ---- overlays: each tile story cell's closed columns (V5) ----
+		List<ShapeMap.Overlay> overlays = new ArrayList<>();
+		Map<String, ShapePlan.Closed> closedColumns = new TreeMap<>();
+		Map<String, MapPlacement> placed = new TreeMap<>();
+		for (MapPlacement placement : placements) {
+			placed.put(placement.id(), placement);
+		}
+		for (Occupancy.TileCell cell : params.storyArt() ? taken.tileCells() : List.<Occupancy.TileCell>of()) {
+			MapShapes planned = shapes.get(cell.map());
+			SceneMap map = scene.map(cell.map());
+			MapPlacement placement = placed.get(cell.map());
+			if (planned == null || map == null || placement == null) {
+				continue;
+			}
+			int per = map.perCell();
+			int cols = map.artCols();
+			int[][] columns = new int[per * per][];
+			int[] heights = new int[per * per];
+			boolean leaves = false;
+			boolean complete = per * per == 4;
+			for (int dz = 0; dz < per && complete; dz++) {
+				for (int dx = 0; dx < per; dx++) {
+					ShapeKey[] keys = planned.overlay()[(cell.cy() * per + dz) * cols + cell.cx() * per + dx];
+					if (keys == null) {
+						complete = false;
+						break;
+					}
+					int[] ids = new int[keys.length];
+					for (int k = 0; k < keys.length; k++) {
+						ids[k] = index.shapeId(keys[k], map.palette());
+						leaves |= keys[k].kind() == ShapeKey.Kind.CELL && CellUnits.Context.parse(keys[k].variant()).tree();
+					}
+					columns[dz * per + dx] = ids;
+					heights[dz * per + dx] = keys.length;
+				}
+			}
+			if (!complete) {
+				// A tile cell outside every swap site (not planned by a front end): its block entity's renderer draws it.
+				continue;
+			}
+			overlays.add(new ShapeMap.Overlay(cell.key(), placement.x() + cell.cx() * per, placement.y(), placement.z() + cell.cy() * per, columns));
+			closedColumns.put(cell.key(), new ShapePlan.Closed(heights, leaves));
+		}
 		// ---- the void fill's ring: border trees as units within hullRing of a map body (V4) ----
 		Map<Integer, ShapePlan.VoidUnit> voidUnits = new TreeMap<>();
 		Occupancy.VoidFill fill = taken.voidFill();
@@ -199,13 +244,13 @@ public final class ShapePlanner {
 		for (ShapeMap.GridBuilder grid : grids) {
 			built.add(grid.build());
 		}
-		ShapeMap map = new ShapeMap(ShapeMap.NO_HASH, index.hash(), built, List.of());
+		ShapeMap map = new ShapeMap(ShapeMap.NO_HASH, index.hash(), built, overlays);
 		Map<ShapeKey.Kind, Integer> byKind = new EnumMap<>(ShapeKey.Kind.class);
 		for (ShapeKey key : index.geoms()) {
 			byKind.merge(key.kind(), 1, Integer::sum);
 		}
 		return new ShapePlan(params, index, map, shapes, byKind, shaped, (System.nanoTime() - started) / 1_000_000L, decorSkipped, fill,
-				voidUnits);
+				voidUnits, closedColumns);
 	}
 
 	/** The context of the border's units: outdoors, no walkable side, repeating, foliage (the void tells no more). */
@@ -305,24 +350,52 @@ public final class ShapePlanner {
 	static MapShapes planMap(SceneMap map, @Nullable SceneAtlas sceneAtlas, int atlas, ShapeParams params) {
 		Columns open = columns(map, sceneAtlas, atlas, params);
 		ShapeKey[][] closed = new ShapeKey[open.keys().length][];
+		ShapeKey[][] overlay = new ShapeKey[open.keys().length][];
 		if (map.closedTiles() != null) {
 			// The closed state of the cells a swap site changes (a standing cut tree), planned on the map with every site
 			// closed, exactly as the open state is; kept for the cells that change only.
-			Columns all = columns(map.closedVariant(), sceneAtlas, atlas, params);
+			SceneMap shut = map.closedVariant();
+			Columns all = columns(shut, sceneAtlas, atlas, params);
 			int cols = map.artCols();
 			int per = map.perCell();
 			for (var site : map.swapSites()) {
 				for (var cell : site.cells()) {
 					for (int dy = 0; dy < per; dy++) {
 						for (int dx = 0; dx < per; dx++) {
-							int i = (cell.y() * per + dy) * cols + cell.x() * per + dx;
+							int tx = cell.x() * per + dx;
+							int ty = cell.y() * per + dy;
+							int i = ty * cols + tx;
 							closed[i] = all.keys()[i];
+							if (params.storyArt()) {
+								overlay[i] = closedColumn(shut, all, atlas, tx, ty);
+							}
 						}
 					}
 				}
 			}
 		}
-		return new MapShapes(map.id(), open.keys(), closed, open.blocks(), open.shapeMask(), open.floor(), open.decor(), open.units());
+		return new MapShapes(map.id(), open.keys(), closed, open.blocks(), open.shapeMask(), open.floor(), open.decor(), open.units(), overlay);
+	}
+
+	/**
+	 * The closed column of a swap-site cell's tile, bottom-up from feet level, as its overlay draws it (V5): every block of
+	 * the closed state's column, a plain one made explicit (an overlay's carriers have no cube of their own to fall back
+	 * to); a closed state that is walkable art (hull art over water) is a slab 1/16 high.
+	 */
+	static ShapeKey[] closedColumn(SceneMap shut, Columns all, int atlas, int tx, int ty) {
+		int i = ty * shut.artCols() + tx;
+		int tile = shut.tile(tx, ty);
+		CellKind kind = shut.kindAtTile(tx, ty);
+		if (kind != CellKind.SOLID && kind != CellKind.COUNTER) {
+			return new ShapeKey[] {ShapeKey.slab(atlas, tile, 1)};
+		}
+		ShapeKey[] planned = all.keys()[i];
+		ShapeKey[] out = new ShapeKey[Math.max(1, all.blocks()[i])];
+		for (int k = 0; k < out.length; k++) {
+			ShapeKey key = planned != null && k < planned.length ? planned[k] : null;
+			out[k] = key != null ? key : ShapeKey.cube(atlas, tile, tile, tile, tile, tile, tile);
+		}
+		return out;
 	}
 
 	static Columns columns(SceneMap map, @Nullable SceneAtlas sceneAtlas, int atlas, ShapeParams params) {

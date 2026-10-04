@@ -7,6 +7,7 @@ import dev.kantobridge.world.StoryCellType;
 import dev.kantobridge.world.WorldIndex;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.ToIntFunction;
 import org.jetbrains.annotations.Nullable;
 
 /**
@@ -41,10 +42,24 @@ public final class ClosedArtPick {
 
 	/** The columns of the drawn (closed) tile cells near the eye: those with a height, within {@code reach}. */
 	public static List<Box> boxes(WorldIndex index, Iterable<String> drawn, double eyeX, double eyeY, double eyeZ, double reach) {
+		return boxes(index, drawn, key -> -1, eyeX, eyeY, eyeZ, reach);
+	}
+
+	/**
+	 * The same, each column as high as the closed art the chunk mesh draws for it ({@code heights}: from the cell's overlay,
+	 * V5; -1 where it has none, which takes the story table's height). The click box keeps the cell's 2×2 footprint.
+	 */
+	public static List<Box> boxes(WorldIndex index, Iterable<String> drawn, ToIntFunction<String> heights, double eyeX, double eyeY,
+			double eyeZ, double reach) {
 		List<Box> out = new ArrayList<>();
 		for (String key : drawn) {
 			StoryCellTable.Entry entry = index.storyCells().get(key);
-			if (entry == null || entry.type() != StoryCellType.TILE || entry.closed() == null || entry.closed().height() <= 0) {
+			if (entry == null || entry.type() != StoryCellType.TILE || entry.closed() == null) {
+				continue;
+			}
+			int overlayHeight = heights.applyAsInt(key);
+			int height = overlayHeight >= 0 ? overlayHeight : entry.closed().height();
+			if (height <= 0) {
 				continue;
 			}
 			MapPlacement map = index.map(entry.cell().map());
@@ -54,7 +69,7 @@ public final class ClosedArtPick {
 			double minX = map.x() + Scale.cellToBlock(entry.cell().x());
 			double minZ = map.z() + Scale.cellToBlock(entry.cell().y());
 			double minY = map.y();
-			Box box = new Box(key, minX, minY, minZ, minX + Scale.CELL_BLOCKS, minY + entry.closed().height(), minZ + Scale.CELL_BLOCKS);
+			Box box = new Box(key, minX, minY, minZ, minX + Scale.CELL_BLOCKS, minY + height, minZ + Scale.CELL_BLOCKS);
 			if (distanceSquared(box, eyeX, eyeY, eyeZ) <= reach * reach) {
 				out.add(box);
 			}

@@ -101,6 +101,11 @@ public final class ClientShapes {
 		return enabled() ? table : null;
 	}
 
+	/** The verified shape map (with the closed art's overlays, V5), or null; held even with shapes off. */
+	public static @Nullable ShapeMap map() {
+		return map;
+	}
+
 	/** The verified shape index, or null. */
 	public static @Nullable ShapeIndex index() {
 		return index;

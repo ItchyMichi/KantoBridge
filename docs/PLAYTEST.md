@@ -476,3 +476,22 @@ client builds the tree and grass shapes from its own export (F7's Shapes line sa
 - [ ] **X3, mesh time** (the same runs): the report's `ours_ms` has median ≤ 1.0 ms and P95 ≤ 4 ms; with shapes,
       `section_ms` P95 ≤ 2 × the cubes' and ≤ 15 ms. Each run also records `prediction` (sections whose emitted quads
       equal the pure-Java count): `equal` should be all of `sections`.
+
+### V5: story art in the mesh
+
+Closed story art (a Cut tree still standing, a locked card-key door, a sealed gate) is now part of the world's mesh,
+lit and shaded like the terrain beside it, and still each player's own. Rebuild your world first (Minecraft closed):
+`tools\.venv\Scripts\python.exe tools\e2e\build_world.py --maps all --world Kanto`.
+
+- [ ] **A Cut tree before Cut:** a tree stands on its cell (round, like the trees around it); you can't walk through
+      it, and the crosshair lands on it (a right-click reaches the tree).
+- [ ] **Cut it:** the tree goes and you walk through. Note any lag between "collision gone" and "tree gone" (a few
+      frames may show; say if you see it).
+- [ ] **A card-key door** (Silph Co.): locked, a wall you can't pass; opened with the card key, gone.
+- [ ] **Two players:** one cuts a tree, the other still sees it standing and can't pass, each from their own hidden
+      game; when the second cuts it too, it goes for them.
+- [ ] Flat closed art (art on walkable or water cells, such as the S.S. Anne's hull before the ship leaves) still lies
+      on the ground.
+- [ ] Closed art is lit like the terrain beside it: no block brighter or darker than its neighbours.
+- [ ] `"shapes": "off"` in `kantobridge-client.json`: closed art shows as plain tile columns, as before V5.
+- [ ] A world built before this rebuild still shows its closed art as it did (drawn by the old renderer).

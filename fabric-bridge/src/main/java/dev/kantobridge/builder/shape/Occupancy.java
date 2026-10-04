@@ -1,26 +1,39 @@
 package dev.kantobridge.builder.shape;
 
 import java.util.BitSet;
+import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 import org.jetbrains.annotations.Nullable;
 
 /**
  * What the builder knows about positions that the shape planner doesn't (docs/specs/VOXEL_BLOCKS_PLAN.md §5.4): the
- * feet-level positions its story blocks take, and the void fill of the surface. Positions only: keys never depend on
- * it (they come from the whole export), only which positions of the placed maps get them.
+ * feet-level positions its story blocks take, the void fill of the surface, and the tile story cells that get the
+ * overlay of their closed art (V5). Positions only: keys never depend on it (they come from the whole export), only
+ * which positions of the placed maps get them.
  *
  * @param storyCells per placed map, the cells whose feet level holds a story block
  * @param voidFill   the surface's void fill, or null when the build places no surface map
+ * @param tileCells  the tile story cells (swap sites' cells), in the story table's order
  */
-public record Occupancy(Map<String, BitSet> storyCells, @Nullable VoidFill voidFill) {
+public record Occupancy(Map<String, BitSet> storyCells, @Nullable VoidFill voidFill, List<TileCell> tileCells) {
 	/** Nothing taken, no void fill. */
 	public static final Occupancy NONE = new Occupancy(Map.of(), null);
+
+	/** A tile story cell: its key in the story table, its map and cell. */
+	public record TileCell(String key, String map, int cx, int cy) {
+	}
 
 	public Occupancy {
 		Map<String, BitSet> copy = new TreeMap<>();
 		storyCells.forEach((map, cells) -> copy.put(map, (BitSet) cells.clone()));
 		storyCells = java.util.Collections.unmodifiableMap(copy);
+		tileCells = List.copyOf(tileCells);
+	}
+
+	/** Without tile story cells (tests). */
+	public Occupancy(Map<String, BitSet> storyCells, @Nullable VoidFill voidFill) {
+		this(storyCells, voidFill, List.of());
 	}
 
 	/** True when the feet level of cell {@code cellIndex} ({@code cy * w + cx}) of {@code map} holds a story block. */

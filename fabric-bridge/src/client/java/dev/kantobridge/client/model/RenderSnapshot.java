@@ -7,10 +7,12 @@ import dev.kantobridge.builder.shape.geom.ShapeQuad;
 import dev.kantobridge.builder.shape.geom.ShapeTable;
 import dev.kantobridge.world.ShapeMap;
 import dev.kantobridge.world.SlotMap;
+import java.util.BitSet;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicReferenceArray;
 import net.fabricmc.fabric.api.renderer.v1.material.RenderMaterial;
 import net.fabricmc.fabric.api.renderer.v1.mesh.Mesh;
+import net.fabricmc.fabric.api.renderer.v1.mesh.MutableQuadView;
 import net.fabricmc.fabric.api.renderer.v1.mesh.QuadEmitter;
 import net.fabricmc.fabric.api.renderer.v1.model.ModelHelper;
 import net.minecraft.client.renderer.block.model.BakedQuad;
@@ -21,7 +23,8 @@ import org.jetbrains.annotations.Nullable;
 /**
  * Everything the runtime model reads while meshing (docs/specs/VOXEL_BLOCKS_PLAN.md §3.6, §5.1): per slot of the world's
  * slot map its sprite and its cube, already built; the world's shape map lookup and shape table with every texture key
- * resolved to a sprite (V2); and the materials. Deeply immutable once built, and published
+ * resolved to a sprite (V2); the closed story art of its tile cells and the local player's closed set (V5); and the
+ * materials. Deeply immutable once built, and published
  * through one {@code volatile} reference: a mesh thread does one read ({@link #current()}) and sees a whole snapshot or
  * the previous whole one, never half of each (I5). Built and swapped on the client thread by {@link SnapshotPublisher}.
  *
@@ -31,7 +34,7 @@ import org.jetbrains.annotations.Nullable;
 public final class RenderSnapshot {
 	/** Before the first publish: the model draws its own placeholder cube. */
 	public static final RenderSnapshot BOOT = new RenderSnapshot(-1, null, null, new TextureAtlasSprite[2][], new Mesh[2][], new Mesh[2],
-			null, false, null, 0, -1, null, null, new TextureAtlasSprite[0], null, null);
+			null, false, null, 0, -1, null, null, new TextureAtlasSprite[0], null, null, null, new BitSet());
 
 	private static volatile RenderSnapshot current = BOOT;
 
@@ -58,12 +61,16 @@ public final class RenderSnapshot {
 	private final @Nullable RenderMaterial cutout;
 	/** Solid without ambient occlusion: thin standing cards (tufts), which would darken their own neighbours. */
 	private final @Nullable RenderMaterial flat;
+	/** The tile cells' closed art (the shape map's overlays), or null: the block-entity renderer draws it. */
+	private final @Nullable ClosedArt closedArt;
+	/** The overlays the local player sees closed. Never changed once published. */
+	private final BitSet closed;
 
 	@SuppressWarnings("unchecked")
 	RenderSnapshot(long generation, @Nullable TextureAtlasSprite placeholder, @Nullable String slotMapHash, TextureAtlasSprite[][] sprites,
 			Mesh[][] cubes, Mesh[] placeholderCubes, @Nullable RenderMaterial solid, boolean kanto, @Nullable String artSet, int keys,
 			int missing, ShapeMap.@Nullable Lookup shapes, @Nullable ShapeTable table, TextureAtlasSprite[] shapeSprites,
-			@Nullable RenderMaterial cutout, @Nullable RenderMaterial flat) {
+			@Nullable RenderMaterial cutout, @Nullable RenderMaterial flat, @Nullable ClosedArt closedArt, BitSet closed) {
 		this.generation = generation;
 		this.placeholder = placeholder;
 		this.slotMapHash = slotMapHash;
@@ -82,7 +89,106 @@ public final class RenderSnapshot {
 		this.shapeSprites = shapeSprites;
 		this.cutout = cutout;
 		this.flat = flat;
+		this.closedArt = closedArt;
+		this.closed = (BitSet) closed.clone();
 	}
+
+	/** A copy sharing everything with {@code base} but the closed set. */
+	private RenderSnapshot(RenderSnapshot base, BitSet closed) {
+		this.generation = base.generation;
+		this.placeholder = base.placeholder;
+		this.slotMapHash = base.slotMapHash;
+		this.sprites = base.sprites;
+		this.cubes = base.cubes;
+		this.placeholderCubes = base.placeholderCubes;
+		this.quadLists = base.quadLists;
+		this.solid = base.solid;
+		this.kanto = base.kanto;
+		this.artSet = base.artSet;
+		this.keys = base.keys;
+		this.missing = base.missing;
+		this.shapes = base.shapes;
+		this.table = base.table;
+		this.shapeSprites = base.shapeSprites;
+		this.cutout = base.cutout;
+		this.flat = base.flat;
+		this.closedArt = base.closedArt;
+		this.closed = (BitSet) closed.clone();
+	}
+
+	/** This snapshot with another closed set (the local player's story changed; V5). */
+	public RenderSnapshot withClosed(BitSet closed) {
+		return new RenderSnapshot(this, closed);
+	}
+
+	/** The tile cells' closed art, or null when the block-entity renderer draws it (a world built before V5). */
+	public @Nullable ClosedArt closedArt() {
+		return this.closedArt;
+	}
+
+	/** True when the chunk mesh draws this tile cell's closed art (its overlay is known). */
+	public boolean drawsClosed(String key) {
+		ClosedArt art = this.closedArt;
+		return art != null && art.overlay(key) >= 0;
+	}
+
+	/** The shape id of the closed art drawn at a position for the local player, 0 for none (the dev mesh check). */
+	public int closedIdAt(int x, int y, int z) {
+		ClosedArt art = this.closedArt;
+		int[] at = art == null ? null : art.at(x, z);
+		if (at == null || !this.closed.get(at[0])) {
+			return 0;
+		}
+		int[] ids = art.ids(at[0], at[1]);
+		int level = y - at[2];
+		return level >= 0 && level < ids.length ? ids[level] : 0;
+	}
+
+	/**
+	 * Emits the closed story art at (x, y, z) when the local player sees its cell closed (V5): the overlay's shape at
+	 * this level, every quad of it (closed shapes neither cull nor are culled); without a shape table, the closed art's
+	 * tile as a cube, or as a thin layer on the floor for flat art. Returns the quads emitted.
+	 */
+	public int emitClosed(int x, int y, int z, TextureAtlasSprite fallback, QuadEmitter out) {
+		ClosedArt art = this.closedArt;
+		int[] at = art == null ? null : art.at(x, z);
+		if (at == null || !this.closed.get(at[0])) {
+			return 0;
+		}
+		int[] ids = art.ids(at[0], at[1]);
+		int level = y - at[2];
+		if (level < 0 || level >= ids.length) {
+			return 0;
+		}
+		ShapeMesh mesh = this.mesh(ids[level]);
+		if (mesh != null) {
+			TextureAtlasSprite placeholder = this.placeholder != null ? this.placeholder : fallback;
+			List<ShapeQuad> quads = mesh.quads();
+			for (int q = 0; q < quads.size(); q++) {
+				ShapeQuad quad = quads.get(q);
+				int texture = quad.texture();
+				TextureAtlasSprite sprite = texture < this.shapeSprites.length && this.shapeSprites[texture] != null ? this.shapeSprites[texture]
+						: placeholder;
+				ShapeEmitter.emit(quad, sprite, quad.has(ShapeQuad.CUTOUT) ? this.cutout : quad.has(ShapeQuad.NO_AO) ? this.flat : this.solid, out);
+			}
+			return quads.size();
+		}
+		int slot = art.slot(at[0], at[1]);
+		if (art.flat(at[0])) {
+			out.square(Direction.UP, 0.0F, 0.0F, 1.0F, 1.0F, 1.0F - FLAT_LIFT);
+			out.spriteBake(this.sprite(CarrierKind.TILE_FULL, slot, fallback), MutableQuadView.BAKE_LOCK_UV);
+			out.color(-1, -1, -1, -1);
+			if (this.solid != null) {
+				out.material(this.solid);
+			}
+			out.emit();
+			return 1;
+		}
+		return this.emitCube(CarrierKind.TILE_FULL, slot, fallback, out);
+	}
+
+	/** Flat closed art without a shape table lies this far above the floor (the overlay's slab is as high). */
+	static final float FLAT_LIFT = 1.0F / 16.0F;
 
 	/** The shape id at a position: 0 without one, without a shape map, or while the table builds. */
 	public int shapeAt(int x, int y, int z) {

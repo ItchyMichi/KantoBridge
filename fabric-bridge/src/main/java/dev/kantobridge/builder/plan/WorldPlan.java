@@ -499,9 +499,20 @@ public final class WorldPlan {
 			}
 		}
 		if (story >= 0) {
-			// Tile cells get the block whose renderer draws their closed art; the others render nothing.
-			boolean swapCell = this.storyCells.entries().get(story).type() == StoryCellType.TILE;
+			// Tile cells get the block that carries the bottom of their closed art; the others render nothing.
+			StoryCellTable.Entry entry = this.storyCells.entries().get(story);
+			boolean swapCell = entry.type() == StoryCellType.TILE;
 			sink.set(x, feet, z, swapCell ? BlockCode.storyTile(story) : BlockCode.story(story));
+			ShapePlan.Closed closed = swapCell && this.shapes != null ? this.shapes.closed(entry.key()) : null;
+			if (closed != null) {
+				// The rest of this column of the closed art (V5): decor carriers in the air above, drawn only for players who
+				// see the cell closed; no collision (it comes from the story block and each player's story state).
+				int h = closed.heights()[(ty - cy * Scale.CELL_BLOCKS) * Scale.CELL_BLOCKS + tx - cx * Scale.CELL_BLOCKS];
+				for (int k = 1; k < h; k++) {
+					sink.set(x, feet + k, z, BlockCode.decor(closed.leaves()));
+				}
+				column = Math.max(column, h);
+			}
 		}
 		if (map.interior()) {
 			sink.set(x, feet + CEILING_ABOVE_FEET, z, BlockCode.full(this.slot(map, model.borderTile(tx, ty), false)));

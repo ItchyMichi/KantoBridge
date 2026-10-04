@@ -19,9 +19,10 @@ import java.util.Objects;
  * @param tierC         whole-structure templates (from V7)
  * @param roofRise      the highest a roof rises above its eave, in 1/16 block (measured heights only)
  * @param ledgeLip      the ledge lip's height, in 1/16 block (measured heights only)
+ * @param storyArt      the closed art of tile story cells as overlays of the shape map (from V5)
  */
 public record ShapeParams(String planner, String heights, int maxUnit, int minRepeatRows, int hullRing, int interiorWall, boolean tierB,
-		boolean tierC, int roofRise, int ledgeLip) {
+		boolean tierC, int roofRise, int ledgeLip, boolean storyArt) {
 	public static final String CLASSIFIED = "classified";
 	public static final String MEASURED = "measured";
 
@@ -38,7 +39,13 @@ public record ShapeParams(String planner, String heights, int maxUnit, int minRe
 	/** The V2 parameters with another planner version or setting (tests). */
 	public ShapeParams(String planner, String heights, int maxUnit, int minRepeatRows, int hullRing, int interiorWall, boolean tierB,
 			boolean tierC) {
-		this(planner, heights, maxUnit, minRepeatRows, hullRing, interiorWall, tierB, tierC, 16, 4);
+		this(planner, heights, maxUnit, minRepeatRows, hullRing, interiorWall, tierB, tierC, 16, 4, false);
+	}
+
+	/** Parameters before V5 (no story art overlays). */
+	public ShapeParams(String planner, String heights, int maxUnit, int minRepeatRows, int hullRing, int interiorWall, boolean tierB,
+			boolean tierC, int roofRise, int ledgeLip) {
+		this(planner, heights, maxUnit, minRepeatRows, hullRing, interiorWall, tierB, tierC, roofRise, ledgeLip, false);
 	}
 
 	/** V2: shape data only. Today's classified heights and cube keys, so no block changes. */
@@ -59,9 +66,15 @@ public record ShapeParams(String planner, String heights, int maxUnit, int minRe
 				true, false, 16, 4);
 	}
 
+	/** V5: Tier B and the closed art of tile story cells as overlays of the shape map. */
+	public static ShapeParams v5() {
+		return new ShapeParams("kb-shapes/4", MEASURED, HeightRules.MAX_UNIT, HeightRules.MIN_REPEAT_ROWS, 2, HeightRules.INTERIOR_WALL,
+				true, false, 16, 4, true);
+	}
+
 	/** The parameters a build plans with. */
 	public static ShapeParams current() {
-		return v4();
+		return v5();
 	}
 
 	/** The parameters as they appear in the shape index. */
@@ -78,6 +91,10 @@ public record ShapeParams(String planner, String heights, int maxUnit, int minRe
 			// Not in kb-shapes/1's index, whose planner has neither.
 			out.addProperty("roofRise", this.roofRise);
 			out.addProperty("ledgeLip", this.ledgeLip);
+		}
+		if (this.storyArt) {
+			// Not in older indexes, whose planners have none.
+			out.addProperty("storyArt", true);
 		}
 		return out;
 	}

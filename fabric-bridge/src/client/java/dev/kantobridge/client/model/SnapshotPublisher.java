@@ -4,15 +4,19 @@ import dev.kantobridge.KantoBridge;
 import dev.kantobridge.builder.pack.ArtKeys;
 import dev.kantobridge.builder.shape.geom.ShapeTable;
 import dev.kantobridge.builder.shape.geom.TextureKey;
-import dev.kantobridge.client.shape.ClientShapes;
 import dev.kantobridge.client.packs.LoadedPack;
+import dev.kantobridge.client.shape.ClientShapes;
+import dev.kantobridge.client.story.ClientStoryView;
+import dev.kantobridge.client.story.StoryDirty;
 import dev.kantobridge.client.world.ClientWorldIndex;
 import dev.kantobridge.world.Hashes;
 import dev.kantobridge.world.ShapeMap;
 import dev.kantobridge.world.SlotMap;
 import dev.kantobridge.world.WorldIndex;
+import java.util.BitSet;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
 import net.fabricmc.fabric.api.client.rendering.v1.InvalidateRenderStateCallback;
@@ -53,6 +57,8 @@ public final class SnapshotPublisher {
 	private static boolean builtKanto;
 	private static ShapeMap.@Nullable Lookup builtShapes;
 	private static @Nullable ShapeTable builtTable;
+	private static @Nullable ShapeMap builtOverlays;
+	private static @Nullable WorldIndex builtIndex;
 	private static long publishes;
 
 	private SnapshotPublisher() {
@@ -71,6 +77,26 @@ public final class SnapshotPublisher {
 		ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> request());
 		ClientWorldIndex.addListener(SnapshotPublisher::request);
 		ClientShapes.init(SnapshotPublisher::request);
+	}
+
+	/**
+	 * The local player's closed tile cells changed (client thread; V5): publish the new closed set, then re-mesh the closed
+	 * columns of every cell that opened or closed. Cells without an overlay are the block-entity renderer's.
+	 */
+	public static void storyChanged(Set<String> before, Set<String> after) {
+		RenderSnapshot current = RenderSnapshot.current();
+		ClosedArt art = current.closedArt();
+		if (art == null) {
+			return;
+		}
+		RenderSnapshot.publish(current.withClosed(art.bits(after)));
+		Minecraft minecraft = Minecraft.getInstance();
+		if (minecraft.level == null) {
+			return;
+		}
+		for (int[] box : StoryDirty.boxes(before, after, art)) {
+			minecraft.levelRenderer.setBlocksDirty(box[0], box[1], box[2], box[3], box[4], box[5]);
+		}
 	}
 
 	/** Something the snapshot is built from changed: build again on the next client tick. */
@@ -121,8 +147,10 @@ public final class SnapshotPublisher {
 		boolean kanto = index != null;
 		ShapeMap.Lookup shapes = kanto ? ClientShapes.lookup() : null;
 		ShapeTable table = shapes == null ? null : ClientShapes.table();
+		// The closed story art comes with the verified shape map even when shapes are off: its fallback is the tile cube.
+		ShapeMap overlays = kanto ? ClientShapes.map() : null;
 		boolean drawingChanges = generation != builtGeneration || slots != builtSlots || !Objects.equals(artSet, builtArtSet) || shapes != builtShapes
-				|| table != builtTable;
+				|| table != builtTable || overlays != builtOverlays || index != builtIndex;
 		if (!drawingChanges && kanto == builtKanto) {
 			return false;
 		}
@@ -135,8 +163,9 @@ public final class SnapshotPublisher {
 			return false;
 		}
 		long started = System.nanoTime();
+		ClosedArt closedArt = ClosedArt.of(overlays, index);
 		RenderSnapshot snapshot = build(atlas, RendererAccess.INSTANCE.hasRenderer() ? RendererAccess.INSTANCE.getRenderer() : null, publishes,
-				kanto, slots, artSet, shapes, table);
+				kanto, slots, artSet, shapes, table, closedArt, closedArt == null ? new BitSet() : closedArt.bits(ClientStoryView.drawnKeys()));
 		RenderSnapshot.publish(snapshot);
 		publishes++;
 		builtGeneration = generation;
@@ -144,6 +173,8 @@ public final class SnapshotPublisher {
 		builtArtSet = artSet;
 		builtKanto = kanto;
 		builtShapes = shapes;
+		builtOverlays = overlays;
+		builtIndex = index;
 		builtTable = table;
 		if (kanto && drawingChanges) {
 			KantoBridge.LOGGER.info("render: snapshot {} for slot map {}: {} keys, {} without art (art set {}), shapes {}, {} ms", publishes,
@@ -156,7 +187,7 @@ public final class SnapshotPublisher {
 
 	/** A snapshot of the slot map's art from the atlas; every slot's cube baked for the renderer (none without one). */
 	static RenderSnapshot build(TextureAtlas atlas, @Nullable Renderer renderer, long generation, boolean kanto, @Nullable SlotMap slots,
-			@Nullable String artSet, ShapeMap.@Nullable Lookup shapes, @Nullable ShapeTable table) {
+			@Nullable String artSet, ShapeMap.@Nullable Lookup shapes, @Nullable ShapeTable table, @Nullable ClosedArt closedArt, BitSet closed) {
 		TextureAtlasSprite placeholder = atlas.getSprite(TileUnbakedModel.PLACEHOLDER);
 		RenderMaterial solid = renderer == null ? null : renderer.materialFinder().blendMode(BlendMode.SOLID).find();
 		RenderMaterial cutout = renderer == null ? null : renderer.materialFinder().blendMode(BlendMode.CUTOUT).find();
@@ -210,6 +241,6 @@ public final class SnapshotPublisher {
 			}
 		}
 		return new RenderSnapshot(generation, placeholder, slots == null ? null : slots.hash(), sprites, cubes, placeholderCubes, solid, kanto,
-				artSet, keys, missing, table == null ? null : shapes, table, shapeSprites, cutout, flat);
+				artSet, keys, missing, table == null ? null : shapes, table, shapeSprites, cutout, flat, closedArt, closed);
 	}
 }

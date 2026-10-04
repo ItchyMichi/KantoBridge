@@ -18,7 +18,12 @@ public enum CarrierKind {
 	/** {@code decor_leaves}: the same for foliage, so shader packs and distant-terrain mods can tell it apart. */
 	DECOR_LEAVES(false, false),
 	/** {@code ledge_collider}: the ledge's one-way wall; carries the ledge lip. */
-	LEDGE(false, false);
+	LEDGE(false, false),
+	/**
+	 * {@code story_tile}: a swap site's cell at feet level, colliding per player; carries the bottom of the cell's closed
+	 * art, drawn for players who see the cell closed (V5).
+	 */
+	STORY_TILE(false, false);
 
 	private final boolean slot;
 	private final boolean half;
@@ -36,6 +41,11 @@ public enum CarrierKind {
 	/** True when the fallback cube is the lower half of a block. */
 	public boolean half() {
 		return this.half;
+	}
+
+	/** True when the position can carry closed story art (the overlay of a swap site's cell, V5). */
+	public boolean carriesStoryArt() {
+		return this == STORY_TILE || this == DECOR || this == DECOR_LEAVES;
 	}
 
 	/** True when the model draws the plain cube of the slot where it has nothing else to draw. */

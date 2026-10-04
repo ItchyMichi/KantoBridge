@@ -96,6 +96,7 @@ public final class KbBlocks {
 		CARRIERS.add(new Carrier(DECOR, CarrierKind.DECOR, 0));
 		CARRIERS.add(new Carrier(DECOR_LEAVES, CarrierKind.DECOR_LEAVES, 0));
 		CARRIERS.add(new Carrier(LEDGE_COLLIDER, CarrierKind.LEDGE, 0));
+		CARRIERS.add(new Carrier(STORY_TILE, CarrierKind.STORY_TILE, 0));
 		// No data fixer: the block entities hold only our own two strings.
 		STORY_CELL_ENTITY = Registry.register(BuiltInRegistries.BLOCK_ENTITY_TYPE, id("story_cell"),
 				BlockEntityType.Builder.of(StoryCellBlockEntity::new, STORY_CELL).build(null));

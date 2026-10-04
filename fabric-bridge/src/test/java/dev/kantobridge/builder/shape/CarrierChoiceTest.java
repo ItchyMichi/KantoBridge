@@ -56,6 +56,29 @@ class CarrierChoiceTest {
 	}
 
 	@Test
+	void aCutTreesClosedArtRidesOnItsStoryCarriers() {
+		MapPlacement town = plan.index().map("TEST_TOWN");
+		int x = town.x() + 20;
+		int z = town.z() + 28;
+		int feet = town.y();
+		// Built open: the story tile at feet level carries the bottom of the closed tree, decor_leaves the rest (V5).
+		assertEquals(BlockCode.KIND_STORY_TILE, view.kind(x + 1, feet, z + 1));
+		assertEquals(BlockCode.decor(true), view.code(x + 1, feet + 1, z + 1), "foliage");
+		assertEquals(BlockCode.AIR, view.code(x + 1, feet + 2, z + 1));
+		assertEquals(0, plan.shapes().map().shapeAt(x, feet + 1, z), "the open world has no shape there");
+		ShapeMap.Overlay tree = plan.shapes().map().overlays().get(0);
+		assertEquals("TEST_TOWN:10:14", tree.key());
+		assertEquals(x, tree.x());
+		assertEquals(feet, tree.y());
+		assertEquals(z, tree.z());
+		for (int[] column : tree.columns()) {
+			assertEquals(2, column.length);
+			assertEquals(ShapeKey.Kind.CELL, plan.shapes().index().key(column[1]).kind());
+		}
+		assertEquals(1, plan.shapes().closedColumns().size(), "the town's one tile story cell");
+	}
+
+	@Test
 	void ledgeLipsRideOnTheirColliders() {
 		MapPlacement town = plan.index().map("TEST_TOWN");
 		int x = town.x() + 4;

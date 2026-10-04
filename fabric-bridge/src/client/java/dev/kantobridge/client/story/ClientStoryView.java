@@ -5,6 +5,7 @@ import dev.kantobridge.KantoBridge;
 import dev.kantobridge.client.bridge.BridgeRuntime;
 import dev.kantobridge.client.bridge.Dispatcher;
 import dev.kantobridge.client.bridge.JsonFields;
+import dev.kantobridge.client.model.SnapshotPublisher;
 import dev.kantobridge.client.net.ClientRelay;
 import dev.kantobridge.client.net.SessionRuntime;
 import dev.kantobridge.client.puppet.Puppet;
@@ -37,7 +38,8 @@ import org.jetbrains.annotations.Nullable;
  * WorldIndex's story-cell table into the active cells; each change is applied to the local player's {@link StoryState}
  * first (client-side collision) and then relayed as {@code story.state}, on the client thread, so it stays ordered with
  * movement packets (§2.3). A full state goes up on joining a world, after a snapshot, and when the local player object is
- * replaced (respawn); deltas follow. The tile cells drawn closed feed {@link StoryCellRenderer}.
+ * replaced (respawn); deltas follow. The tile cells drawn closed go to the chunk mesh ({@link SnapshotPublisher#storyChanged},
+ * the voxel plan's V5), or to {@link StoryCellRenderer} in a world built before V5.
  *
  * <p>M9: nothing is applied or relayed while the save pairing holds the world's data (the hidden game may still run
  * another world's save); once it opens, a full state goes up.
@@ -115,7 +117,12 @@ public final class ClientStoryView {
 		this.rules.setIndex(ClientWorldIndex.current());
 		this.feedNpcs();
 		StoryRules.Cells cells = this.rules.cells();
+		Set<String> before = this.drawn;
 		this.drawn = cells.drawn();
+		if (!this.drawn.equals(before)) {
+			// The chunk mesh draws closed art from the published set (V5): swap it, re-mesh the changed cells.
+			SnapshotPublisher.storyChanged(before, this.drawn);
+		}
 		LocalPlayer player = minecraft.player;
 		if (player == null || !ClientPlayNetworking.canSend(KbJsonPayload.TYPE)) {
 			return;

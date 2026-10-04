@@ -23,6 +23,7 @@ import dev.kantobridge.world.MapPlacement;
 import dev.kantobridge.world.Scale;
 import dev.kantobridge.world.SlotMap;
 import dev.kantobridge.world.StoryCellTable;
+import dev.kantobridge.world.StoryCellType;
 import dev.kantobridge.world.WorldIndex;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
@@ -312,8 +313,8 @@ public final class WorldPlanner {
 				warnings.note("shapes_no_front_end");
 			} else {
 				scene = frontEnd.describe(bundle);
-				shapes = ShapePlanner.plan(scene, placements.values(), ShapeParams.current(), occupancy(placed, storyIndex, surfaceBox, owner, voidCells))
-						.withIndexHash(index.hash());
+				shapes = ShapePlanner.plan(scene, placements.values(), ShapeParams.current(),
+						occupancy(placed, storyIndex, storyCells, surfaceBox, owner, voidCells)).withIndexHash(index.hash());
 			}
 		}
 		ExportField.Display display = field.display();
@@ -327,10 +328,12 @@ public final class WorldPlanner {
 	}
 
 	/**
-	 * What the shape planner must leave to the builder (the voxel plan's §5.4): the feet level of every story cell, and
-	 * the void fill (whose ring may hold units of its owner's border).
+	 * What the shape planner must leave to the builder (the voxel plan's §5.4): the feet level of every story cell, the
+	 * void fill (whose ring may hold units of its owner's border), and the tile story cells (their closed art's overlays,
+	 * V5).
 	 */
-	static Occupancy occupancy(List<PlacedMap> placed, Map<String, int[]> storyIndex, @Nullable Box3 surfaceBox, int[] owner, boolean[] voidCells) {
+	static Occupancy occupancy(List<PlacedMap> placed, Map<String, int[]> storyIndex, StoryCellTable storyCells, @Nullable Box3 surfaceBox,
+			int[] owner, boolean[] voidCells) {
 		Map<String, BitSet> story = new HashMap<>();
 		for (PlacedMap map : placed) {
 			int[] cells = storyIndex.get(map.id());
@@ -350,7 +353,13 @@ public final class WorldPlanner {
 			}
 			fill = new Occupancy.VoidFill(surfaceBox.minX(), surfaceBox.minZ(), w, d, Scale.CELL_BLOCKS, owners);
 		}
-		return new Occupancy(story, fill);
+		List<Occupancy.TileCell> tiles = new ArrayList<>();
+		for (StoryCellTable.Entry entry : storyCells.entries()) {
+			if (entry.type() == StoryCellType.TILE) {
+				tiles.add(new Occupancy.TileCell(entry.key(), entry.cell().map(), entry.cell().x(), entry.cell().y()));
+			}
+		}
+		return new Occupancy(story, fill, tiles);
 	}
 
 	/**

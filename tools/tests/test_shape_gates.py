@@ -13,7 +13,8 @@ FULL = {"shape_index_hash": "a" * 64, "shape_map_hash": "b" * 64, "shape_map_wir
                                            "structure_match_min": 0.4}, "shape_quads_max_block": 40, "shape_quads_mean_block": 5.5,
         "shape_quads_section_p95": 3_000, "shape_quads_section_max": 9_000, "throughput": {"blocks_per_s": 48_000.0},
         "elapsed_ms": 60_000, "void_hull_cells": 0, "shape_decor_skipped": 12,
-        "structures_by_kind": {"volume": 900, "object": 40, "hull": 3000, "flat": 0, "building": 0, "fallback": 200}}
+        "structures_by_kind": {"volume": 900, "object": 40, "hull": 3000, "flat": 0, "building": 0, "fallback": 200},
+        "story_cells_by_type": {"object": 700, "tile": 162, "water": 9000}, "closed_shape_cells": 162}
 AGAIN = dict(FULL, blocks_placed=0)
 FILTERED = dict(FULL, shape_map_hash="c" * 64, blocks_placed=40_000)
 
@@ -44,6 +45,7 @@ def test_each_budget_fails_on_its_own():
     assert build_world.budget_gates(dict(FULL, void_hull_cells=1)) == ["void_hull_cells"]
     assert build_world.budget_gates(dict(FULL, shape_decor_skipped=None)) == ["tier_b_reported"]
     assert build_world.budget_gates(dict(FULL, structures_by_kind=None)) == ["tier_b_reported"]
+    assert build_world.budget_gates(dict(FULL, closed_shape_cells=161)) == ["closed_story_art"]
     check = FULL["selfcheck"]
     assert build_world.budget_gates(dict(FULL, selfcheck=dict(check, holes=3))) == ["selfcheck_holes"]
     assert build_world.budget_gates(dict(FULL, selfcheck=dict(check, ground_match_min=0.999))) == ["selfcheck_ground"]

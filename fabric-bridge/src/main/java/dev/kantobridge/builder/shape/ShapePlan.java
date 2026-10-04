@@ -24,6 +24,23 @@ public final class ShapePlan {
 	private final long decorSkipped;
 	private final Occupancy.@Nullable VoidFill voidFill;
 	private final Map<Integer, VoidUnit> voidUnits;
+	private final Map<String, Closed> closedColumns;
+
+	/**
+	 * A tile story cell's closed columns (V5): per column of the cell (north-west, north-east, south-west, south-east)
+	 * its height in blocks from feet level, and whether it is foliage (its carriers above feet level are
+	 * {@code decor_leaves}).
+	 */
+	public record Closed(int[] heights, boolean leaves) {
+		/** The tallest column. */
+		public int height() {
+			int max = 0;
+			for (int h : this.heights) {
+				max = Math.max(max, h);
+			}
+			return max;
+		}
+	}
 
 	/**
 	 * A void-fill cell planned as a unit of its owner's border (V4).
@@ -37,7 +54,9 @@ public final class ShapePlan {
 	}
 
 	ShapePlan(ShapeParams params, ShapeIndex index, ShapeMap map, Map<String, ShapePlanner.MapShapes> maps, Map<ShapeKey.Kind, Integer> keysByKind,
-			long shapedBlocks, long planMs, long decorSkipped, Occupancy.@Nullable VoidFill voidFill, Map<Integer, VoidUnit> voidUnits) {
+			long shapedBlocks, long planMs, long decorSkipped, Occupancy.@Nullable VoidFill voidFill, Map<Integer, VoidUnit> voidUnits,
+			Map<String, Closed> closedColumns) {
+		this.closedColumns = Collections.unmodifiableMap(new TreeMap<>(closedColumns));
 		this.decorSkipped = decorSkipped;
 		this.voidFill = voidFill;
 		this.voidUnits = Collections.unmodifiableMap(new TreeMap<>(voidUnits));
@@ -55,7 +74,7 @@ public final class ShapePlan {
 	/** The same plan with its shape map bound to the WorldIndex whose text hashes to {@code indexHash}. */
 	public ShapePlan withIndexHash(String indexHash) {
 		return new ShapePlan(this.params, this.index, this.map.withHeader(indexHash, this.index.hash()), this.maps, this.keysByKind,
-				this.shapedBlocks, this.planMs, this.decorSkipped, this.voidFill, this.voidUnits);
+				this.shapedBlocks, this.planMs, this.decorSkipped, this.voidFill, this.voidUnits, this.closedColumns);
 	}
 
 	public ShapeParams params() {
@@ -106,6 +125,16 @@ public final class ShapePlan {
 	/** The void-fill cells planned as units, by surface cell index ({@code cz * w + cx} of the void fill). */
 	public Map<Integer, VoidUnit> voidUnits() {
 		return this.voidUnits;
+	}
+
+	/** The closed columns of a tile story cell with an overlay, or null. */
+	public @Nullable Closed closed(String storyKey) {
+		return this.closedColumns.get(storyKey);
+	}
+
+	/** Every tile story cell with an overlay, by key. */
+	public Map<String, Closed> closedColumns() {
+		return this.closedColumns;
 	}
 
 	/** The unit planned for a void-fill cell, or null (a plain void column). */

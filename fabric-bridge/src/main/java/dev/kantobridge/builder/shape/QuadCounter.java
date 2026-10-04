@@ -31,6 +31,11 @@ public final class QuadCounter {
 
 		/** The shape id, 0 for none. */
 		int shapeId(int x, int y, int z);
+
+		/** The id of the closed story art drawn at a position for this player (V5), 0 for none. */
+		default int closedId(int x, int y, int z) {
+			return 0;
+		}
 	}
 
 	/**
@@ -103,11 +108,22 @@ public final class QuadCounter {
 	/**
 	 * The quads the runtime model emits at one position, before Minecraft culls faces against opaque neighbours (the
 	 * renderer does that after the model): a shape's quads but those its shaped neighbours' face masks hide, a carrier's
-	 * plain cube without a shape, nothing for decoration, ledges and story blocks. The dev-only mesh check compares this,
+	 * plain cube without a shape, nothing for decoration, ledges and story blocks but the closed story art they carry for
+	 * this player ({@link World#closedId}). The dev-only mesh check compares this,
 	 * summed over a section, with what the model emitted there (docs/specs/VOXEL_BLOCKS_PLAN.md §6.3).
 	 */
 	public static int emittedAt(World world, @Nullable ShapeTable table, int x, int y, int z) {
 		int kind = BlockCode.kind(world.code(x, y, z));
+		int closed = 0;
+		if (kind == BlockCode.KIND_STORY_TILE || kind == BlockCode.KIND_DECOR) {
+			// Closed story art: every quad of its shape, neither culling nor culled (V5).
+			int id = world.closedId(x, y, z);
+			ShapeMesh mesh = id == 0 || table == null ? null : table.mesh(id);
+			closed = mesh == null ? 0 : mesh.size();
+		}
+		if (kind == BlockCode.KIND_STORY_TILE) {
+			return closed;
+		}
 		if (kind != BlockCode.KIND_FULL && kind != BlockCode.KIND_HALF && kind != BlockCode.KIND_SHAPE && kind != BlockCode.KIND_DECOR
 				&& kind != BlockCode.KIND_LEDGE) {
 			return 0;
@@ -115,9 +131,9 @@ public final class QuadCounter {
 		int id = world.shapeId(x, y, z);
 		ShapeMesh mesh = id == 0 || table == null ? null : table.mesh(id);
 		if (mesh == null) {
-			return kind == BlockCode.KIND_DECOR || kind == BlockCode.KIND_LEDGE ? 0 : 6;
+			return closed + (kind == BlockCode.KIND_DECOR || kind == BlockCode.KIND_LEDGE ? 0 : 6);
 		}
-		int n = 0;
+		int n = closed;
 		for (int q = 0; q < mesh.size(); q++) {
 			int cull = mesh.quads().get(q).cull();
 			if (cull >= 0) {

@@ -8,6 +8,8 @@ import dev.kantobridge.client.bridge.BridgeRuntime;
 import dev.kantobridge.client.bridge.ClientBridgeState;
 import dev.kantobridge.client.bridge.ConnectionState;
 import dev.kantobridge.client.bridge.JsonFields;
+import dev.kantobridge.client.model.ClosedArt;
+import dev.kantobridge.client.model.RenderSnapshot;
 import dev.kantobridge.client.move.InputLock;
 import dev.kantobridge.client.move.MoveRuntime;
 import dev.kantobridge.client.puppet.Puppet;
@@ -292,7 +294,12 @@ public final class ActRuntime {
 		double reach = player.blockInteractionRange();
 		HitResult current = minecraft.hitResult;
 		double limit = current == null || current.getType() == HitResult.Type.MISS ? reach : Math.min(reach, current.getLocation().distanceTo(eye));
-		List<ClosedArtPick.Box> boxes = ClosedArtPick.boxes(index, drawn, eye.x, eye.y, eye.z, reach);
+		// The click box is as high as the closed art the chunk mesh draws (its overlay, V5), else the story table says.
+		ClosedArt art = RenderSnapshot.current().closedArt();
+		List<ClosedArtPick.Box> boxes = ClosedArtPick.boxes(index, drawn, key -> {
+			int overlay = art == null ? -1 : art.overlay(key);
+			return overlay < 0 ? -1 : art.height(overlay);
+		}, eye.x, eye.y, eye.z, reach);
 		ClosedArtPick.Hit hit = ClosedArtPick.nearest(boxes, eye.x, eye.y, eye.z, look.x, look.y, look.z, limit);
 		if (hit != null) {
 			minecraft.hitResult = new BlockHitResult(new Vec3(hit.x(), hit.y(), hit.z()), direction(hit.face()),
