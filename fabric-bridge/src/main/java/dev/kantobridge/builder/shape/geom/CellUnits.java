@@ -49,7 +49,9 @@ public final class CellUnits {
 		HULL("hull"),
 		OBJECT("object"),
 		FLAT("flat"),
-		COLUMNS("columns");
+		COLUMNS("columns"),
+		/** A pack's {@code .vox} model (V6). */
+		MODEL("model");
 
 		private final String id;
 
@@ -94,11 +96,31 @@ public final class CellUnits {
 	 * @param match      the kept candidate's share of foreground pixels showing the same texel (1 for columns and flat)
 	 * @param cover      the kept candidate's share of foreground pixels covered by it (1 for columns and flat)
 	 * @param maxQuads   the most quads one of its blocks holds
-	 * @param blocks     per block (index {@link #block}), its quads; a quad's texture is its tile's slot (0 .. perCell²-1)
+	 * @param blocks     per block (index {@link #block}), its quads; a quad's texture is its tile's slot (0 .. perCell²-1),
+	 *                   or for a model a colour index into {@code colours}
 	 * @param foreground per pixel of the drawing: part of the thing drawn (columns: every pixel)
+	 * @param colours    a model's colours (ARGB by index), null otherwise
+	 * @param voxels     the voxels a hull or an object was built from (a pack template writes them as {@code .vox}), else
+	 *                   null
 	 */
 	public record Unit(Kind kind, @Nullable Kind failed, double match, double cover, int maxQuads, List<List<ShapeQuad>> blocks,
-			boolean[] foreground) {
+			boolean[] foreground, int @Nullable [] colours, @Nullable VoxelGrid voxels) {
+		public Unit(Kind kind, @Nullable Kind failed, double match, double cover, int maxQuads, List<List<ShapeQuad>> blocks,
+				boolean[] foreground) {
+			this(kind, failed, match, cover, maxQuads, blocks, foreground, null, null);
+		}
+	}
+
+	/** A pack's model in place of a unit (V6): its blocks as they are, no self-check (the pack maker's own art). */
+	public static Unit model(ShapeOverrides.Model model, int perCell, int artPx) {
+		int w = perCell * artPx;
+		boolean[] all = new boolean[w * w];
+		Arrays.fill(all, true);
+		List<List<ShapeQuad>> blocks = empty(perCell);
+		for (int b = 0; b < Math.min(blocks.size(), model.blocks().size()); b++) {
+			blocks.get(b).addAll(model.blocks().get(b));
+		}
+		return new Unit(Kind.MODEL, null, 1.0, 1.0, maxQuads(blocks), blocks, all, model.colours().clone(), null);
 	}
 
 	private CellUnits() {
@@ -120,7 +142,20 @@ public final class CellUnits {
 
 	/** {@link #build} with another cap on a block's quads (the budget tests). */
 	static Unit build(int @Nullable [][] tiles, Context context, int perCell, int artPx, int maxQuads) {
+		return build(tiles, context, perCell, artPx, maxQuads, null, 0);
+	}
+
+	/**
+	 * {@link #build} as a pack's rule asks (V6): {@code style} {@code hull} or {@code object} tries only that candidate
+	 * (a hull even where the round test says no), {@code columns} draws the column version, null tries both in the
+	 * generated order; {@code depth} is an object's slab depth in pixels, 0 for {@link ObjectRule#DEPTH}. The gates
+	 * stay, so a rule can never leave a hole.
+	 */
+	public static Unit build(int @Nullable [][] tiles, Context context, int perCell, int artPx, int maxQuads, @Nullable String style, int depth) {
 		int w = perCell * artPx;
+		if ("columns".equals(style)) {
+			return columns(perCell, w);
+		}
 		for (int[] tile : tiles) {
 			if (tile == null) {
 				return columns(perCell, w);
@@ -157,16 +192,18 @@ public final class CellUnits {
 		}
 		Kind failed = null;
 		double[] last = null;
-		if (!context.sign()) {
+		boolean tryHull = style == null ? !context.sign() : style.equals("hull");
+		if (tryHull) {
 			boolean[] mask = Hulls.mask(shades, skip, w, w);
-			if (Hulls.round(mask, w, w)) {
-				List<List<ShapeQuad>> blocks = slice(Hulls.hull(mask, texels, w, w, w, artPx), perCell);
+			if ((style != null && Background.count(mask) > 0) || Hulls.round(mask, w, w)) {
+				VoxelGrid grid = Hulls.hull(mask, texels, w, w, w, artPx);
+				List<List<ShapeQuad>> blocks = slice(grid, perCell);
 				plates(blocks, voidTile, perCell);
 				boolean[] foreground = or(mask, skip);
 				double[] score = check(blocks, foreground, texels, perCell, artPx);
 				int quads = maxQuads(blocks);
 				if (score[1] >= HULL_COVER && score[0] >= HULL_MATCH && quads <= maxQuads) {
-					return new Unit(Kind.HULL, null, score[0], score[1], quads, blocks, foreground);
+					return new Unit(Kind.HULL, null, score[0], score[1], quads, blocks, foreground, null, grid);
 				}
 				failed = Kind.HULL;
 				last = score;
@@ -174,15 +211,19 @@ public final class CellUnits {
 		}
 		int seeds = context.indoor() ? context.flatSides() : context.flatSides() & Background.SOUTH;
 		boolean[] background = Background.of(shades, w, w, seeds);
-		if (ObjectRule.applies(background, skip, perCell, artPx, context.flatSides(), context.indoor(), context.repeatsVertically())) {
+		boolean tryObject = style == null
+				? ObjectRule.applies(background, skip, perCell, artPx, context.flatSides(), context.indoor(), context.repeatsVertically())
+				: style.equals("object");
+		if (tryObject) {
 			boolean[] drawn = ObjectRule.foreground(background, skip);
-			List<List<ShapeQuad>> blocks = slice(ObjectRule.slabs(drawn, texels, w, w, w, artPx), perCell);
+			VoxelGrid grid = ObjectRule.slabs(drawn, texels, w, w, w, artPx, depth > 0 ? depth : ObjectRule.DEPTH);
+			List<List<ShapeQuad>> blocks = slice(grid, perCell);
 			plates(blocks, voidTile, perCell);
 			boolean[] foreground = or(drawn, skip);
 			double[] score = check(blocks, foreground, texels, perCell, artPx);
 			int quads = maxQuads(blocks);
 			if (score[0] >= OBJECT_MATCH && quads <= maxQuads) {
-				return new Unit(Kind.OBJECT, failed, score[0], score[1], quads, blocks, foreground);
+				return new Unit(Kind.OBJECT, failed, score[0], score[1], quads, blocks, foreground, null, grid);
 			}
 			failed = Kind.OBJECT;
 			last = score;

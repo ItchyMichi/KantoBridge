@@ -23,7 +23,25 @@ public final class ShapeEmitter {
 	private ShapeEmitter() {
 	}
 
+	/** Two colours multiplied channel by channel (ARGB). */
+	static int multiply(int a, int b) {
+		int out = 0;
+		for (int shift = 0; shift < 32; shift += 8) {
+			int channel = ((a >>> shift) & 0xFF) * ((b >>> shift) & 0xFF) / 255;
+			out |= channel << shift;
+		}
+		return out;
+	}
+
 	static void emit(ShapeQuad quad, TextureAtlasSprite sprite, @Nullable RenderMaterial material, QuadEmitter out) {
+		emit(quad, sprite, material, -1, out);
+	}
+
+	/**
+	 * The same with a tint: a pack model's colour over the white sprite (V6), -1 for none. A darkened quad is darkened
+	 * after.
+	 */
+	static void emit(ShapeQuad quad, TextureAtlasSprite sprite, @Nullable RenderMaterial material, int tint, QuadEmitter out) {
 		float minU = Float.MAX_VALUE;
 		float maxU = -Float.MAX_VALUE;
 		float minV = Float.MAX_VALUE;
@@ -39,7 +57,7 @@ public final class ShapeEmitter {
 		float centreU = (minU + maxU) / 2;
 		float centreV = (minV + maxV) / 2;
 		float ratio = sprite.uvShrinkRatio();
-		int colour = quad.has(ShapeQuad.DARKEN) ? DARKEN : -1;
+		int colour = quad.has(ShapeQuad.DARKEN) ? multiply(tint, DARKEN) : tint;
 		for (int i = 0; i < 4; i++) {
 			float u = quad.cornerU(i);
 			float v = quad.cornerV(i);

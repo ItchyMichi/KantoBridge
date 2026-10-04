@@ -1,0 +1,71 @@
+{
+  "kantobridge_pack": 1,
+  "id": "hd_test",
+  "name": "HD Test",
+  "version": "1.0.0",
+  "targets": {
+    "games": [
+      "red",
+      "blue"
+    ],
+    "geometry": 1
+  },
+  "textures": {
+    "tile:tilesets.test/4": "hd_test:block/roof",
+    "tile:tilesets.test/7@TEST_PALETTE": "hd_test:block/flower",
+    "sprite:SPRITE_TEST_GIRL": "hd_test:textures/npc/girl.png"
+  },
+  "models": {
+    "cell:tilesets.test/2-2-2-2": {
+      "vox": "hd_test:kb_models/tree.vox",
+      "voxelsPerBlock": 8
+    },
+    "struct:tilesets.test/0123456789abcdef": {
+      "vox": "hd_test:kb_models/house.vox",
+      "voxelsPerBlock": 16,
+      "origin": [
+        0,
+        0,
+        0
+      ],
+      "turn": 0
+    },
+    "sprite:SPRITE_TEST_BALL": {
+      "vox": "hd_test:kb_models/ball.vox",
+      "voxelsPerBlock": 8,
+      "turn": 90,
+      "flip": true
+    }
+  },
+  "rules": {
+    "class:tree": {
+      "style": "hull"
+    },
+    "class:prop": {
+      "depth": 3
+    },
+    "class:flower": {
+      "style": "flat"
+    },
+    "tile:tilesets.test/5": {
+      "class": "prop"
+    },
+    "struct:tilesets.test/0123456789abcdef": {
+      "bands": {
+        "roofRows": 2
+      }
+    }
+  },
+  "characters": {
+    "style": "carved",
+    "sprites": {
+      "SPRITE_TEST_BALL": "model"
+    }
+  },
+  "dressing": {
+    "map:TEST_HOUSE": {
+      "ceiling": "wall",
+      "headroom": 4
+    }
+  }
+}

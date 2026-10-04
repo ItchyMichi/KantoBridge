@@ -67,13 +67,19 @@ public final class ShapeTable {
 		return build(index, art, NO_OVERRIDES);
 	}
 
+	/** {@link #build(ShapeIndex, ArtSource, String, ShapeOverrides)} without packs. */
+	public static ShapeTable build(ShapeIndex index, ArtSource art, String artHash) {
+		return build(index, art, artHash, ShapeOverrides.NONE);
+	}
+
 	/**
 	 * Builds every shape of {@code index} with {@code art}. Cubes, slabs and roofs need no pixel; tufts and cell units
-	 * are built from the art (a tuft this art lacks draws nothing, a unit draws its column version).
+	 * are built from the art (a tuft this art lacks draws nothing, a unit draws its column version). A pack's rules and
+	 * models change the geometry of the keys they name (V6); a model's quads wear {@code color:} textures.
 	 *
 	 * @param artHash what the geometry was built from (the art and the pack overrides), the cache file's third value
 	 */
-	public static ShapeTable build(ShapeIndex index, ArtSource art, String artHash) {
+	public static ShapeTable build(ShapeIndex index, ArtSource art, String artHash, ShapeOverrides overrides) {
 		Map<String, Integer> textures = new HashMap<>();
 		List<String> keys = new ArrayList<>();
 		ShapeMesh[] meshes = new ShapeMesh[index.size() + 1];
@@ -97,7 +103,11 @@ public final class ShapeTable {
 					int tile = key.number(0);
 					List<ShapeQuad> tuft = tufts.computeIfAbsent(atlas + "|" + tile, k -> {
 						int[] shades = art.tileShades(atlas, tile);
-						return shades == null ? null : Tufts.quads(Tufts.mask(shades, art.frameShades(atlas, tile)), artPx);
+						List<int[]> frames = art.frameShades(atlas, tile);
+						if (shades == null || !overrides.tuft(atlas, tile, !frames.isEmpty())) {
+							return null;
+						}
+						return Tufts.quads(Tufts.mask(shades, frames), artPx);
 					});
 					yield tuft == null ? null : retexture(tuft, slot -> texture.applyAsInt(tile));
 				}
@@ -108,9 +118,12 @@ public final class ShapeTable {
 					if (bx >= UNIT_CELL || by >= UNIT_CELL || bz >= UNIT_CELL) {
 						yield null;
 					}
-					CellUnits.Unit unit = units.computeIfAbsent(unitSignature(atlas, key), k -> buildUnit(atlas, key, art));
+					CellUnits.Unit unit = units.computeIfAbsent(unitSignature(atlas, key), k -> buildUnit(atlas, key, art, overrides));
 					int[] tiles = {key.number(0), key.number(1), key.number(2), key.number(3)};
-					yield retexture(unit.blocks().get(CellUnits.block(UNIT_CELL, bx, by, bz)), slot -> texture.applyAsInt(tiles[slot]));
+					List<ShapeQuad> block = unit.blocks().get(CellUnits.block(UNIT_CELL, bx, by, bz));
+					int[] colours = unit.colours();
+					yield colours != null ? retexture(block, colour -> texture(colourKey(colours[colour]), textures, keys))
+							: retexture(block, slot -> texture.applyAsInt(tiles[slot]));
 				}
 				default -> null;
 			};
@@ -127,13 +140,28 @@ public final class ShapeTable {
 		return atlas + "|" + key.number(0) + "," + key.number(1) + "," + key.number(2) + "," + key.number(3) + "|" + key.variant();
 	}
 
-	private static CellUnits.Unit buildUnit(String atlas, ShapeKey key, ArtSource art) {
+	private static CellUnits.Unit buildUnit(String atlas, ShapeKey key, ArtSource art, ShapeOverrides overrides) {
+		int[] ids = {key.number(0), key.number(1), key.number(2), key.number(3)};
+		ShapeOverrides.Model model = overrides.unitModel(atlas, ids);
+		if (model != null) {
+			return CellUnits.model(model, UNIT_CELL, art.artPx());
+		}
 		int[][] tiles = new int[UNIT_CELL * UNIT_CELL][];
 		for (int t = 0; t < tiles.length; t++) {
-			tiles[t] = key.number(t) < 0 ? null : art.tileShades(atlas, key.number(t));
+			tiles[t] = ids[t] < 0 ? null : art.tileShades(atlas, ids[t]);
 		}
-		return CellUnits.build(tiles, CellUnits.Context.parse(key.variant()), UNIT_CELL, art.artPx());
+		CellUnits.Context context = CellUnits.Context.parse(key.variant());
+		return CellUnits.build(tiles, context, UNIT_CELL, art.artPx(), CellUnits.MAX_QUADS, overrides.unitStyle(atlas, ids, context.tree()),
+				overrides.objectDepth(atlas, ids, context.tree()));
 	}
+
+	/** The texture key of a plain colour (a pack model's quads): {@code color:rrggbb}, drawn on a white sprite. */
+	public static String colourKey(int argb) {
+		return String.format(java.util.Locale.ROOT, "%s%06x", COLOUR, argb & 0xFFFFFF);
+	}
+
+	/** The prefix of a colour's texture key. */
+	public static final String COLOUR = "color:";
 
 	private static List<ShapeQuad> retexture(List<ShapeQuad> quads, java.util.function.IntUnaryOperator texture) {
 		List<ShapeQuad> out = new ArrayList<>(quads.size());

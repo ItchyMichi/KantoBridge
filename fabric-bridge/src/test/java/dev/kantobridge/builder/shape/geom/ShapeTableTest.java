@@ -105,6 +105,62 @@ class ShapeTableTest {
 	}
 
 	@Test
+	void packRulesAndModelsChangeUnitsAndTufts() {
+		// The voxel plan's V6: a pack's rules and .vox models, through ShapeOverrides.
+		ShapeParams p = ShapeParams.v4();
+		int[][] sign = ArtFixtures.tiles(ArtFixtures.sign());
+		CellUnits.Context context = new CellUnits.Context(Background.SOUTH, false, false, true, false);
+		ShapeKey front = ShapeKey.cell(0, new int[] {20, 21, 22, 23}, 1, 0, 0, 1).withVariant(context.variant());
+		ShapeIndex index = ShapeIndex.of(p.planner(), p.toJson(), List.of("tilesets.fix"), List.of("PAL_A"),
+				List.of(new ShapeIndex.Use(ShapeKey.tuft(0, 9), "PAL_A"), new ShapeIndex.Use(front, "PAL_A")), new JsonArray());
+		int[] grass = new int[64];
+		grass[7 * 8 + 3] = 2;
+		ArtSource art = ArtFixtures.art("tilesets.fix", java.util.Map.of(9, grass, 20, sign[0], 21, sign[1], 22, sign[2], 23, sign[3]),
+				java.util.Map.of());
+		ShapeOverrides flat = new ShapeOverrides() {
+			@Override
+			public String geometryHash() {
+				return "c".repeat(64);
+			}
+
+			@Override
+			public String unitStyle(String atlas, int[] tiles, boolean foliage) {
+				return "columns";
+			}
+
+			@Override
+			public boolean tuft(String atlas, int tile, boolean flower) {
+				return false;
+			}
+		};
+		ShapeTable styled = ShapeTable.build(index, art, "c".repeat(64), flat);
+		assertEquals(CellUnits.Kind.COLUMNS, styled.unit("tilesets.fix", front).kind(), "a class rule's style");
+		assertNull(styled.mesh(index.shapeId(ShapeKey.tuft(0, 9), "PAL_A")), "flat grass: no tuft, the ground's own face shows");
+
+		java.util.List<java.util.List<ShapeQuad>> blocks = new java.util.ArrayList<>(java.util.Collections.nCopies(8, java.util.List.of()));
+		blocks.set(CellUnits.block(ShapeTable.UNIT_CELL, 0, 0, 1), java.util.List.of(ShapeQuad.fullFace(ShapeQuad.UP, 3)));
+		int[] colours = new int[256];
+		colours[3] = 0xFF123456;
+		ShapeOverrides modelled = new ShapeOverrides() {
+			@Override
+			public String geometryHash() {
+				return "d".repeat(64);
+			}
+
+			@Override
+			public ShapeOverrides.Model unitModel(String atlas, int[] tiles) {
+				return java.util.Arrays.equals(tiles, new int[] {20, 21, 22, 23}) ? new ShapeOverrides.Model(blocks, colours) : null;
+			}
+		};
+		ShapeTable table = ShapeTable.build(index, art, "d".repeat(64), modelled);
+		assertEquals(CellUnits.Kind.MODEL, table.unit("tilesets.fix", front).kind());
+		ShapeMesh mesh = table.mesh(index.shapeId(front, "PAL_A"));
+		assertEquals(1, mesh.size(), "the model's quad in this block");
+		assertEquals("color:123456", table.textureKeys().get(mesh.quads().get(0).texture()), "a colour over the white sprite");
+		assertEquals("d".repeat(64), table.overridesHash());
+	}
+
+	@Test
 	void theCacheFileReadsBackForTheSameInputsOnly() throws Exception {
 		ShapeIndex index = index();
 		ShapeTable table = ShapeTable.build(index, ArtSource.NONE);

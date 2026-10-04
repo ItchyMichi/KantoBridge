@@ -697,7 +697,7 @@ bytes. A downloaded export is stored as an **export bundle**, which stays under 
 | `warp.done` | S→C | `ok, to?`; `re` optional | |
 | `activity` | C→S | `activity:"dialogue"\|"cutscene"\|"battle"\|"paused"\|"none"` (speech bubbles; `paused` while the player's Gen1Recomp is disconnected) | |
 | `relay.hello` | S→C, C→S | `protocol, mod` (the relay's version handshake on join; M10) | |
-| `texture.status` | C→S | `ok, slotMapHash?, textures?, missing?, shapes?, shapeIndexHash?, reason?` | |
+| `texture.status` | C→S | `ok, slotMapHash?, textures?, missing?, shapes?, shapeIndexHash?, packs?, reason?` | |
 | `world.index` | S→C | `index, count, hash, part` (the WorldIndex JSON in parts, on join) | yes |
 | `world.slots` | S→C | `index, count, hash, part` (the slot-map JSON in parts, on join, so a joining player can build their own pack against the host's slots; M9) | yes |
 | `world.shapes` | S→C | `doc, index, count, hash, part` (the shape index, `doc:"index"`, and the shape map, `doc:"map"`, in parts after `world.slots`; the voxel plan's V2) | yes |
@@ -793,7 +793,8 @@ before V1) counts as no pack.
   shape index (`shapeIndexHash`). A client that draws its own art but cubes keeps `ok:true` and says why in
   `reason`: `no_shapes` (the world sent none), `shape_map_mismatch` (the shape map doesn't decode or names another
   index), `geometry_unsupported` (a shape index it can't read), `shapes_off` (its `kantobridge-client.json` says
-  `"shapes": "off"`); an art reason wins over these.
+  `"shapes": "off"`); an art reason wins over these. From V6 a client that applies texture packs also says how many
+  manifests (`packs`; omitted when none), so "my tree looks different" can be told from a world problem.
 - **Activity** reaches other players through Fabric's attachment sync (`kantobridge:activity`, to all
   but the player); clients draw speech bubbles from it.
 - **Authority:** every client → server message affects only the sender (GameTest-proven for every
@@ -888,3 +889,5 @@ carrying the same envelope in both directions. Larger data is split at the appli
     (`no_bridge` and `slot_map_mismatch` are gone), and the generated pack's layout 2.
   - V2: `world.shapes` (S→C), the shape index and shape map files, `texture.status.shapes` and `shapeIndexHash`, and
     the export's `map.borderDrawn`, `tileset.animated` and `field.display` (all optional, so older bundles stay valid).
+  - V6: `texture.status.packs` (optional). Texture packs themselves never travel: their manifest format is
+    `protocol/packs/kb_pack.schema.json`, read only by the client that has them ([PACKS.md](PACKS.md)).

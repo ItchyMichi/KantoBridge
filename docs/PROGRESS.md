@@ -40,7 +40,8 @@ pack below player packs; VD10 the JSON file.
 | V2 | Shape data, sync and per-face art | **done** (play-test waits for you) | 2026-10-04 | `7a364d7` |
 | V3 | Carriers and Tier A shapes | **done** (play-test waits for you; rebuild your world first) | 2026-10-04 | `5a1a283` |
 | V4 | Tier B shapes | **done** (play-test, X2 and X3 wait for you; rebuild your world first) | 2026-10-04 | `aa706c9` |
-| V5 | Story art in the mesh | **done** (play-test waits for you; rebuild your world first) | 2026-10-04 | `V5: story art in the mesh` |
+| V5 | Story art in the mesh | **done** (play-test waits for you; rebuild your world first) | 2026-10-04 | `144c669` |
+| V6 | Texture packs and `.vox` models | **done** (play-test and X5 wait for you; no rebuild needed) | 2026-10-04 | `V6: texture packs` |
 
 **Measurements waiting on you** (agents never start the client; the plan's §10):
 
@@ -51,6 +52,8 @@ pack below player packs; VD10 the JSON file.
   applies (§9).
 - **X2 and X3** (V4: shapes against cubes, and our share of the mesh time): PLAYTEST.md "V4". The budgets the build
   report can check hold (see the check results); these two are yours. If they fail, R1's ladder applies.
+- **X5** (V6: the calibration model's axes): PLAYTEST.md "V6". If the model shows mirrored or turned, the documented
+  axes and `VoxMesher` change together.
 
 ### Voxel plan: check results
 
@@ -127,6 +130,11 @@ pack below player packs; VD10 the JSON file.
   columns of gates and scripted swaps; the cut trees' units were planned already); **162 overlays for the 162 tile
   story cells**; 128 `decor_leaves` (the cut trees) and 516 `decor` above story tiles; the shape map is 155,752
   characters (3 parts). Quads, self-check and structures as at V4 (the open world didn't change).
+- **V6:** `tools/check.sh`: pytest **1410 passed** (new: `test_pack_schema.py`, the manifest schema, its synthetic
+  example and what it refuses), then `gradlew build`: **738 JUnit** (new: `KbPackManifestTest`, `KbPackReloadTest` on
+  a made-up resource manager, `PackOverridesTest`, `PackTemplateWriterTest` on the synthetic bundle, `VoxFileTest`,
+  `VoxMesherTest`, the pack keys in `ArtKeysTest`, a pack's rules and model in `ShapeTableTest`), **92/92 GameTests**,
+  the mixin checks. V6 changes no block, so it has no real build (its gate is "green").
 
 ### Voxel plan: deviations
 
@@ -261,10 +269,47 @@ pack below player packs; VD10 the JSON file.
     snapshot (`withClosed`) on every story change, then only the changed cells' columns are re-meshed (`StoryDirty`).
 44. **`story_tile` is a carrier** (`CarrierKind.STORY_TILE`), drawn by the runtime model; the dev mesh check counts
     closed art too (`QuadCounter.World#closedId`).
+45. **Manifests apply by pack priority, then file name.** Minecraft lists resources per file; the reload orders every
+    manifest by its pack's place in the load order first, so a higher pack wins whatever its file is called.
+46. **A model's colours are tints over one white sprite** (`kantobridge:block/white`, 16 × 16): the shape table gives
+    each colour a `color:rrggbb` texture key, the snapshot maps it to that sprite and a tint, and `ShapeEmitter`
+    multiplies the tint with the darkening; ambient occlusion and light apply as on any face.
+47. **The atlas check assumes an 8192² atlas** (a pack's block textures may take half of it, 32 M pixels) instead of
+    asking the GPU: the check runs off the client thread, before a GL call is safe. It can't count vanilla's and other
+    mods' sprites; a pack that stays far below the limit can't cause a stitch failure on its own.
+48. **Animated block textures are accepted**: a strip of square power-of-two frames with its `.png.mcmeta`, besides
+    the plan's "square power of two ≥ 16". A strip without its animation file is `pack.texture_size`.
+49. **Structure, placement and sprite models, `struct:` band rules, characters and dressing are read and checked in
+    V6, and drawn from V7 (structures, dressing) and V8 (characters).** A play-test `.vox` sprite therefore counts as
+    applied but shows from V8. `struct:` and `place:` keys can't be checked against the key index before V7 lists
+    structures.
+50. **A 32-voxels-per-block model is halved** to 16 (each 2 × 2 × 2 group becomes one voxel of its most frequent
+    colour where at least half is filled), because quads live on the 1/16 grid.
+51. **What the key index lists:** a tile's palettes with their generated sprite ids, the block columns that show it
+    (`uses`) and the maps (`maps`); a sprite's frames; a unit's result (`hull`, `object`, `columns`), its class
+    (`tree` for foliage, else `prop`) and the cells that use it. A unit with a missing tile can't be named by a
+    `cell:` key and isn't listed. It is written after each pack generation and with every template, so worlds made
+    before V6 get one when the template is written; without it keys aren't checked.
+52. **The template button stands beside "Create Kanto world"** (on its right when the screen is wide enough, else
+    below it), writes and opens the folder, and reports by toast; `/kbpack template` does the same in a world.
+    "Prepare for sharing" is `/kbpack share <folder>` (a copy to `kantobridge/shared/`), and `/kbpack` is the check.
+53. **`texture.status.packs` is omitted when no manifest applies**, like the other optional counts.
+54. **A `cell:` model keys on the unit's four tiles**, so it replaces every context variant of that unit; collision
+    is the world's and doesn't change.
+55. **Codes for cases the plan's table doesn't name:** a texture or model for a key kind that section can't take, and
+    a key that doesn't parse, are `pack.unknown_key`; a block texture outside `block/` or a sheet outside `textures/`
+    is `pack.texture_missing`; a model's bad fields are `pack.vox_format`; an origin that moves a cell model out of
+    its unit is `pack.vox_size`; an unreadable manifest file is `pack.format`.
+56. **`PackOverrides` implements the geometry stage's `ShapeOverrides`** (in `builder/shape/geom`, so the shared
+    builder code never sees client classes); the template writes each unit's voxels, kept on `CellUnits.Unit`, in the
+    four Game Boy shades.
 
 ### Voxel plan: open issues
 
-None yet.
+- **V7 must put structure rules and models in the packs' geometry hash.** V6 reads and checks `struct:` band rules and
+  `struct:`/`place:` models but nothing draws them yet, so `PackOverrides.geometryHash` leaves them out; once V7 builds
+  structure templates from them, the hash must include them (and the key index must list structures, so their keys can
+  be checked).
 
 ## Pre-flight (PLAN §0.6)
 

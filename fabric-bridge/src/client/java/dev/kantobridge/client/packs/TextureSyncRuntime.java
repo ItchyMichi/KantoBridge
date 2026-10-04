@@ -152,7 +152,8 @@ public final class TextureSyncRuntime {
 				&& Games.compatible(hello.game(), index.game());
 		ShapeIndex shapes = ClientShapes.table() == null ? null : ClientShapes.index();
 		TextureSync.Inputs inputs = new TextureSync.Inputs(index == null ? null : index.game(), index == null ? null : index.slotMapHash(),
-				this.local, packLoaded, missing, compatible, ClientShapes.shapes(), shapes == null ? null : shapes.hash(), ClientShapes.reason());
+				this.local, packLoaded, missing, compatible, ClientShapes.shapes(), shapes == null ? null : shapes.hash(), ClientShapes.reason(),
+				KbPackReload.current().packs().size());
 		this.sync.tick(this.clock.millis(), inputs, busy);
 	}
 

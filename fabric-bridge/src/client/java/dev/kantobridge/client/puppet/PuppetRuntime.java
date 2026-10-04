@@ -110,6 +110,11 @@ public final class PuppetRuntime implements PuppetManager.Listener {
 		return instance;
 	}
 
+	/** A texture pack changed (V6): sheets are looked up again. */
+	public void packsChanged() {
+		this.textures.clear();
+	}
+
 	public PuppetManager manager() {
 		return this.manager;
 	}

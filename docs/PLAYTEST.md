@@ -495,3 +495,37 @@ lit and shaded like the terrain beside it, and still each player's own. Rebuild 
 - [ ] Closed art is lit like the terrain beside it: no block brighter or darker than its neighbours.
 - [ ] `"shapes": "off"` in `kantobridge-client.json`: closed art shows as plain tile columns, as before V5.
 - [ ] A world built before this rebuild still shows its closed art as it did (drawn by the old renderer).
+
+### V6: texture packs and `.vox` models
+
+Your own texture packs can now change a tile's texture, a character's sheet, how trees, props and grass are shaped,
+and swap a unit for a `.vox` model ([PACKS.md](PACKS.md)). No rebuild needed. The dev client's folder is
+`local\minecraft\`; its template lands in `local\minecraft\kantobridge\pack-template\blue\`.
+
+- [ ] **Pack template** on the title screen (beside "Create Kanto world"): a toast counts the textures and models it
+      wrote and the folder opens. In a world, `/kbpack template` does the same.
+- [ ] **Make a test pack:** copy the template folder to `local\minecraft\resourcepacks\`, rename it, and edit
+      `assets\kantobridge\kb_pack\template.json` (PACKS.md has an example). Put in:
+  - a texture: one tile's `tile:` key (from `keys.json`) → a 16 × 16 PNG of your own under
+    `assets\<your namespace>\textures\block\`;
+  - a rule: `"class:tree": {"style": "columns"}` (trees as plain columns) or `"class:grass": {"style": "flat"}`;
+  - a `.vox` tree: one of `reference\models\*.vox` edited in MagicaVoxel, named by its `cell:` key under `models`;
+  - a `.vox` sprite (`sprite:` key under `models`): it only counts as applied; characters draw it from V8;
+  - a character sheet: a `sprite:` key under `textures` → a PNG in the generated layout (64 × 32), or twice that.
+
+  Enable it above "Kanto Bridge (generated)" and press F3+T. F7's **Packs** line shows `1 applied`, its entries and
+  nothing skipped; `/kbpack` says the same.
+- [ ] The texture shows on that tile wherever the tile is used (only in one palette if your key has `@PALETTE`).
+- [ ] The rule changes every tree (or all the grass) without a rebuild: F7's Shapes line says `building`, then the
+      new table.
+- [ ] The `.vox` tree stands wherever that unit does, in its own colours, lit and shaded like the terrain; you still
+      can't walk through it.
+- [ ] The character's sheet is yours.
+- [ ] **Break it on purpose** (a key with a typo, a 24 × 24 texture, a rule `"style": "round"`): F7 counts each under
+      "skipped" by its code, everything else still applies, nothing crashes.
+- [ ] **Remove the pack** (F3+T): everything falls back to your generated art and shapes.
+- [ ] **Prepare for sharing:** `/kbpack share <your pack folder>` writes a copy to `local\minecraft\kantobridge\shared\`;
+      it holds your own files and nothing from `reference\` (not even a texture you moved or renamed), no `keys.json`.
+- [ ] **X5, the calibration model:** name any tree's `cell:` key with `reference\calibration.vox`
+      (`"voxelsPerBlock": 8`). Stand south of it and look north: the **red post stands at the back right** (north-east)
+      and the **blue strip lies along the front** (south). If it shows mirrored or turned, say which.

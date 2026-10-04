@@ -14,6 +14,8 @@ import dev.kantobridge.client.net.ClientRelay;
 import dev.kantobridge.client.net.GameRelayRuntime;
 import dev.kantobridge.client.net.SessionRuntime;
 import dev.kantobridge.client.net.Versions;
+import dev.kantobridge.client.packs.KbPackReload;
+import dev.kantobridge.client.packs.PackCommands;
 import dev.kantobridge.client.packs.TextureSyncRuntime;
 import dev.kantobridge.client.puppet.PuppetRuntime;
 import dev.kantobridge.client.shape.ClientShapes;
@@ -36,6 +38,17 @@ public class KantoBridgeClient implements ClientModInitializer {
 		// slots with this player's own art through an immutable render snapshot, rebuilt when the world or the atlas changes.
 		KbModelPlugin.init();
 		SnapshotPublisher.init();
+		// Texture packs (the voxel plan's V6): read on every resource reload; their geometry rebuilds the shape table.
+		KbPackReload.init();
+		KbPackReload.onChange(() -> {
+			ClientShapes.artChanged();
+			SnapshotPublisher.request();
+			PuppetRuntime puppets = PuppetRuntime.get();
+			if (puppets != null) {
+				puppets.packsChanged();
+			}
+		});
+		PackCommands.init();
 		// The link to this player's hidden Gen1Recomp (docs/PROTOCOL.md); it reconnects on its own.
 		BridgeRuntime.init();
 		BridgeRuntime bridge = BridgeRuntime.get();
@@ -71,6 +84,7 @@ public class KantoBridgeClient implements ClientModInitializer {
 		Versions.init(bridge);
 		// The world's shapes (the voxel plan's V2): what the shape table holds, or why the world draws cubes.
 		bridge.addDebugLine(ClientShapes::debugLine);
+		bridge.addDebugLine(KbPackReload::debugLine);
 		// Dev only (-Dkantobridge.meshstats=true): the rendering measurements of the voxel plan (§10).
 		MeshStatsRuntime.init(bridge);
 	}

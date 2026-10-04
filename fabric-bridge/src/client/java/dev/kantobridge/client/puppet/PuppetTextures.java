@@ -2,6 +2,7 @@ package dev.kantobridge.client.puppet;
 
 import dev.kantobridge.KantoBridge;
 import dev.kantobridge.builder.pack.ArtKeys;
+import dev.kantobridge.client.packs.KbPackReload;
 import dev.kantobridge.client.packs.LoadedPack;
 import dev.kantobridge.world.MapPlacement;
 import dev.kantobridge.world.WorldIndex;
@@ -52,6 +53,12 @@ public final class PuppetTextures {
 	}
 
 	private ResourceLocation lookup(String palette, String sprite) {
+		// A texture pack's sheet first (V6), when it exists.
+		String override = KbPackReload.current().spriteTexture(sprite);
+		ResourceLocation packed = override == null ? null : ResourceLocation.tryParse(override);
+		if (packed != null && Minecraft.getInstance().getResourceManager().getResource(packed).isPresent()) {
+			return packed;
+		}
 		String artSet = LoadedPack.artSet();
 		ResourceLocation location = artSet == null ? null : ResourceLocation.tryParse(ArtKeys.npcTexture(artSet, palette, sprite));
 		if (location != null && Minecraft.getInstance().getResourceManager().getResource(location).isPresent()) {

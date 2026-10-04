@@ -6,6 +6,7 @@ import dev.kantobridge.builder.BuildPhase;
 import dev.kantobridge.builder.BuildRequest;
 import dev.kantobridge.builder.BuildStatus;
 import dev.kantobridge.builder.export.BundleException;
+import dev.kantobridge.builder.export.ExportBundle;
 import dev.kantobridge.builder.plan.PlanException;
 import dev.kantobridge.client.bridge.BridgeClient;
 import dev.kantobridge.client.bridge.BridgeClock;
@@ -17,6 +18,8 @@ import dev.kantobridge.client.bridge.HelloInfo;
 import dev.kantobridge.client.bridge.HelloOk;
 import dev.kantobridge.client.bridge.Transport;
 import dev.kantobridge.client.packs.GeneratedPack;
+import dev.kantobridge.client.packs.KeyIndex;
+import dev.kantobridge.client.packs.KeyIndexWriter;
 import dev.kantobridge.client.packs.PackGenerator;
 import dev.kantobridge.client.packs.PackReload;
 import dev.kantobridge.proto.Catalog;
@@ -348,6 +351,7 @@ public final class CreateKantoWorldFlow {
 			}
 			this.moveTo(Step.PACK);
 			PackGenerator.generate(result.bundleDir(), this.packDir);
+			writeKeys(result.bundleDir());
 		} catch (ExportClient.ExportException e) {
 			this.workerError = e.code().equals("rejected")
 					? Component.translatable("kantobridge.create.error.rejected", String.valueOf(e.detail()))
@@ -366,6 +370,20 @@ public final class CreateKantoWorldFlow {
 		} finally {
 			this.exporter = null;
 			this.workerDone = true;
+		}
+	}
+
+	/** The key index for pack makers (the voxel plan's V6); a failure only costs the pack check its unknown keys. */
+	private static void writeKeys(Path bundleDir) {
+		try {
+			KeyIndex keys = KeyIndexWriter.write(FabricLoader.getInstance().getGameDir(), ExportBundle.open(bundleDir));
+			KantoBridge.LOGGER.info("create: key index written ({} tiles, {} cells)", keys.tiles(), keys.cells());
+		} catch (BundleException e) {
+			KantoBridge.LOGGER.warn("create: no key index ({})", e.code());
+		} catch (PlanException e) {
+			KantoBridge.LOGGER.warn("create: no key index ({})", e.code());
+		} catch (IOException | RuntimeException e) {
+			KantoBridge.LOGGER.warn("create: no key index ({})", e.getClass().getSimpleName());
 		}
 	}
 

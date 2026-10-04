@@ -9,7 +9,9 @@ import dev.kantobridge.builder.export.ExportBundle;
 import dev.kantobridge.builder.shape.geom.ShapeTable;
 import dev.kantobridge.client.bridge.BridgeRuntime;
 import dev.kantobridge.client.packs.GeneratedPack;
+import dev.kantobridge.client.packs.KbPackReload;
 import dev.kantobridge.client.packs.PackInfo;
+import dev.kantobridge.client.packs.PackOverrides;
 import dev.kantobridge.client.world.ClientWorldIndex;
 import dev.kantobridge.scene.ArtSource;
 import dev.kantobridge.scene.gen1.BundleArtSource;
@@ -194,7 +196,7 @@ public final class ClientShapes {
 				built = null;
 			}
 			if (built == null) {
-				built = ShapeTable.build(parsed, art.source(), art.hash());
+				built = ShapeTable.build(parsed, art.source(), art.hash(), art.packs());
 				try {
 					Files.createDirectories(cache.getParent());
 					Files.write(cache, built.encode());
@@ -226,23 +228,28 @@ public final class ClientShapes {
 
 	/**
 	 * This client's art for geometry: the export bundle its generated pack was made from ({@code export/<game>/}), or none
-	 * (units then draw their column version and tufts nothing). Its hash names the export (and, from V6, the pack
-	 * overrides) in the cache file's name.
+	 * (units then draw their column version and tufts nothing), with the texture packs' rules and models (V6). Its hash
+	 * names the export and the packs' geometry in the cache file's name.
 	 */
-	record Art(ArtSource source, String hash) {
-		private static final Art NONE = new Art(ArtSource.NONE, ShapeTable.NO_OVERRIDES);
+	record Art(ArtSource source, String hash, PackOverrides packs) {
+		/** Without an export: units draw their column version, tufts nothing; a pack's models and rules still apply. */
+		private static Art none(PackOverrides packs) {
+			String geometry = packs.geometryHash();
+			return new Art(ArtSource.NONE, geometry.equals(ShapeTable.NO_OVERRIDES) ? ShapeTable.NO_OVERRIDES : Hashes.sha256("art|-|" + geometry), packs);
+		}
 
 		static Art local() {
 			Path gameDir = FabricLoader.getInstance().getGameDir();
 			PackInfo pack = PackInfo.read(GeneratedPack.directory(gameDir));
+			PackOverrides packs = KbPackReload.current();
 			if (pack == null || !pack.usable()) {
-				return NONE;
+				return none(packs);
 			}
 			Path bundleDir = gameDir.resolve("kantobridge").resolve("export").resolve(pack.game());
 			if (!Files.isRegularFile(bundleDir.resolve("index.json"))) {
-				return NONE;
+				return none(packs);
 			}
-			return new Art(new LazyArt(bundleDir), Hashes.sha256("art|" + pack.exportHash() + "|" + ShapeTable.NO_OVERRIDES));
+			return new Art(new LazyArt(bundleDir), Hashes.sha256("art|" + pack.exportHash() + "|" + packs.geometryHash()), packs);
 		}
 	}
 

@@ -34,6 +34,7 @@ public final class PlannedGeometry implements SelfCheck.Geometry {
 		this.table = table;
 		this.cols = map.artCols();
 		for (String key : table.textureKeys()) {
+			// A colour of a pack's model has no tile: such quads aren't the 2D map's (the headless build has no pack).
 			this.textures.add(TextureKey.parse(key));
 		}
 	}
@@ -90,7 +91,10 @@ public final class PlannedGeometry implements SelfCheck.Geometry {
 					}
 					for (int q = 0; q < mesh.size(); q++) {
 						ShapeQuad quad = mesh.quads().get(q);
-						this.emit(visitor, tx, k, ty, quad, this.textures.get(quad.texture()), mesh, q);
+						TextureKey texture = this.textures.get(quad.texture());
+						if (texture != null) {
+							this.emit(visitor, tx, k, ty, quad, texture, mesh, q);
+						}
 					}
 				}
 			}

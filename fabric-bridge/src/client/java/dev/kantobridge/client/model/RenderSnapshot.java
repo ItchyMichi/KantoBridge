@@ -34,7 +34,7 @@ import org.jetbrains.annotations.Nullable;
 public final class RenderSnapshot {
 	/** Before the first publish: the model draws its own placeholder cube. */
 	public static final RenderSnapshot BOOT = new RenderSnapshot(-1, null, null, new TextureAtlasSprite[2][], new Mesh[2][], new Mesh[2],
-			null, false, null, 0, -1, null, null, new TextureAtlasSprite[0], null, null, null, new BitSet());
+			null, false, null, 0, -1, null, null, new TextureAtlasSprite[0], new int[0], null, null, null, new BitSet());
 
 	private static volatile RenderSnapshot current = BOOT;
 
@@ -58,6 +58,8 @@ public final class RenderSnapshot {
 	private final @Nullable ShapeTable table;
 	/** By the shape table's texture index: the key's sprite, or null (the placeholder). */
 	private final TextureAtlasSprite[] shapeSprites;
+	/** By the shape table's texture index: a pack model colour's tint over the white sprite, -1 for none (V6). */
+	private final int[] shapeTints;
 	private final @Nullable RenderMaterial cutout;
 	/** Solid without ambient occlusion: thin standing cards (tufts), which would darken their own neighbours. */
 	private final @Nullable RenderMaterial flat;
@@ -69,7 +71,7 @@ public final class RenderSnapshot {
 	@SuppressWarnings("unchecked")
 	RenderSnapshot(long generation, @Nullable TextureAtlasSprite placeholder, @Nullable String slotMapHash, TextureAtlasSprite[][] sprites,
 			Mesh[][] cubes, Mesh[] placeholderCubes, @Nullable RenderMaterial solid, boolean kanto, @Nullable String artSet, int keys,
-			int missing, ShapeMap.@Nullable Lookup shapes, @Nullable ShapeTable table, TextureAtlasSprite[] shapeSprites,
+			int missing, ShapeMap.@Nullable Lookup shapes, @Nullable ShapeTable table, TextureAtlasSprite[] shapeSprites, int[] shapeTints,
 			@Nullable RenderMaterial cutout, @Nullable RenderMaterial flat, @Nullable ClosedArt closedArt, BitSet closed) {
 		this.generation = generation;
 		this.placeholder = placeholder;
@@ -87,6 +89,7 @@ public final class RenderSnapshot {
 		this.shapes = shapes;
 		this.table = table;
 		this.shapeSprites = shapeSprites;
+		this.shapeTints = shapeTints;
 		this.cutout = cutout;
 		this.flat = flat;
 		this.closedArt = closedArt;
@@ -110,10 +113,16 @@ public final class RenderSnapshot {
 		this.shapes = base.shapes;
 		this.table = base.table;
 		this.shapeSprites = base.shapeSprites;
+		this.shapeTints = base.shapeTints;
 		this.cutout = base.cutout;
 		this.flat = base.flat;
 		this.closedArt = base.closedArt;
 		this.closed = (BitSet) closed.clone();
+	}
+
+	/** A texture's tint (a pack model's colour), -1 for none. */
+	private int tint(int texture) {
+		return texture < this.shapeTints.length ? this.shapeTints[texture] : -1;
 	}
 
 	/** This snapshot with another closed set (the local player's story changed; V5). */
@@ -169,7 +178,8 @@ public final class RenderSnapshot {
 				int texture = quad.texture();
 				TextureAtlasSprite sprite = texture < this.shapeSprites.length && this.shapeSprites[texture] != null ? this.shapeSprites[texture]
 						: placeholder;
-				ShapeEmitter.emit(quad, sprite, quad.has(ShapeQuad.CUTOUT) ? this.cutout : quad.has(ShapeQuad.NO_AO) ? this.flat : this.solid, out);
+				ShapeEmitter.emit(quad, sprite, quad.has(ShapeQuad.CUTOUT) ? this.cutout : quad.has(ShapeQuad.NO_AO) ? this.flat : this.solid,
+						this.tint(texture), out);
 			}
 			return quads.size();
 		}
@@ -223,7 +233,8 @@ public final class RenderSnapshot {
 			int texture = quad.texture();
 			TextureAtlasSprite sprite = texture < this.shapeSprites.length && this.shapeSprites[texture] != null ? this.shapeSprites[texture]
 					: placeholder;
-			ShapeEmitter.emit(quad, sprite, quad.has(ShapeQuad.CUTOUT) ? this.cutout : quad.has(ShapeQuad.NO_AO) ? this.flat : this.solid, out);
+			ShapeEmitter.emit(quad, sprite, quad.has(ShapeQuad.CUTOUT) ? this.cutout : quad.has(ShapeQuad.NO_AO) ? this.flat : this.solid,
+					this.tint(texture), out);
 			emitted++;
 		}
 		return emitted;

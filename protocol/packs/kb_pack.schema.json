@@ -1,0 +1,333 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kantobridge.invalid/protocol/packs/kb_pack.schema.json",
+  "title": "kb_pack",
+  "description": "A texture pack's manifest: assets/kantobridge/kb_pack/<name>.json inside an ordinary resource pack (docs/PACKS.md). Only the client that has the pack reads it; it never travels. A manifest that passes this schema parses without a warning; a client drops an entry that breaks it with a counted warning code (pack.*) and keeps the rest. Tiles are 0-1023; keys are canonical (no leading zeros).",
+  "type": "object",
+  "required": [
+    "kantobridge_pack",
+    "id",
+    "targets"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "kantobridge_pack": {
+      "const": 1,
+      "description": "The manifest format."
+    },
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z0-9_.-]{1,64}$"
+    },
+    "name": {
+      "type": "string",
+      "maxLength": 128
+    },
+    "version": {
+      "type": "string",
+      "maxLength": 64
+    },
+    "targets": {
+      "type": "object",
+      "required": [
+        "games"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "games": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "pattern": "^[a-z0-9_]{1,32}$"
+          },
+          "description": "The games whose worlds it applies to; a client of another game skips the manifest silently."
+        },
+        "geometry": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 1,
+          "description": "The geometry it was made for."
+        }
+      }
+    },
+    "textures": {
+      "type": "object",
+      "description": "A tile's block face (a sprite id under block/) or a character sheet (a texture file under textures/).",
+      "propertyNames": {
+        "anyOf": [
+          {
+            "$ref": "#/$defs/tileKey"
+          },
+          {
+            "$ref": "#/$defs/spriteKey"
+          }
+        ]
+      },
+      "patternProperties": {
+        "^tile:": {
+          "type": "string",
+          "pattern": "^[a-z0-9_.-]{1,64}:block/[a-z0-9_./-]{1,250}$"
+        },
+        "^sprite:": {
+          "type": "string",
+          "pattern": "^[a-z0-9_.-]{1,64}:textures/[a-z0-9_./-]{1,243}\\.png$"
+        }
+      }
+    },
+    "models": {
+      "type": "object",
+      "description": "A .vox model for a cell unit, a structure (V7), one placement (V7) or a sprite (V8).",
+      "propertyNames": {
+        "anyOf": [
+          {
+            "$ref": "#/$defs/cellKey"
+          },
+          {
+            "$ref": "#/$defs/structKey"
+          },
+          {
+            "$ref": "#/$defs/placeKey"
+          },
+          {
+            "$ref": "#/$defs/spriteKey"
+          }
+        ]
+      },
+      "additionalProperties": {
+        "$ref": "#/$defs/model"
+      }
+    },
+    "rules": {
+      "type": "object",
+      "description": "Shape rules: a class's style, the class a tile is pinned to, a structure's roof rows (V7).",
+      "patternProperties": {
+        "^class:(tree|prop)$": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "style": {
+              "enum": [
+                "hull",
+                "object",
+                "columns"
+              ]
+            },
+            "depth": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 8,
+              "description": "An object's slab depth in Game Boy pixels; 0 keeps the default."
+            }
+          },
+          "anyOf": [
+            {
+              "required": [
+                "style"
+              ]
+            },
+            {
+              "required": [
+                "depth"
+              ],
+              "properties": {
+                "depth": {
+                  "minimum": 1
+                }
+              }
+            }
+          ]
+        },
+        "^class:(grass|flower)$": {
+          "type": "object",
+          "required": [
+            "style"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "style": {
+              "enum": [
+                "tuft",
+                "flat"
+              ]
+            }
+          }
+        },
+        "^tile:[A-Za-z0-9_.:-]{1,64}/(0|[1-9][0-9]{0,2}|10[01][0-9]|102[0-3])(@[A-Za-z0-9_.:-]{1,64})?$": {
+          "type": "object",
+          "required": [
+            "class"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "class": {
+              "$ref": "#/$defs/class"
+            }
+          }
+        },
+        "^struct:[A-Za-z0-9_.:-]{1,64}/[0-9a-f]{16}$": {
+          "type": "object",
+          "required": [
+            "bands"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "bands": {
+              "type": "object",
+              "required": [
+                "roofRows"
+              ],
+              "additionalProperties": false,
+              "properties": {
+                "roofRows": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 6
+                }
+              }
+            }
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "characters": {
+      "type": "object",
+      "description": "Character styles (V8): one for every sprite, and per sprite.",
+      "additionalProperties": false,
+      "properties": {
+        "style": {
+          "enum": [
+            "thick",
+            "carved",
+            "rigged"
+          ]
+        },
+        "sprites": {
+          "type": "object",
+          "propertyNames": {
+            "pattern": "^[A-Za-z0-9_.:-]{1,64}$"
+          },
+          "additionalProperties": {
+            "enum": [
+              "thick",
+              "carved",
+              "rigged",
+              "model"
+            ]
+          }
+        }
+      }
+    },
+    "dressing": {
+      "type": "object",
+      "description": "Per-map dressing (V7).",
+      "propertyNames": {
+        "$ref": "#/$defs/mapKey"
+      },
+      "additionalProperties": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "ceiling": {
+            "type": "string",
+            "maxLength": 64
+          },
+          "headroom": {
+            "type": "integer",
+            "minimum": 2,
+            "maximum": 8
+          }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "tileKey": {
+      "type": "string",
+      "pattern": "^tile:[A-Za-z0-9_.:-]{1,64}/(0|[1-9][0-9]{0,2}|10[01][0-9]|102[0-3])(@[A-Za-z0-9_.:-]{1,64})?$"
+    },
+    "spriteKey": {
+      "type": "string",
+      "pattern": "^sprite:[A-Za-z0-9_.:-]{1,64}$"
+    },
+    "cellKey": {
+      "type": "string",
+      "pattern": "^cell:[A-Za-z0-9_.:-]{1,64}/(0|[1-9][0-9]{0,2}|10[01][0-9]|102[0-3])-(0|[1-9][0-9]{0,2}|10[01][0-9]|102[0-3])-(0|[1-9][0-9]{0,2}|10[01][0-9]|102[0-3])-(0|[1-9][0-9]{0,2}|10[01][0-9]|102[0-3])$"
+    },
+    "structKey": {
+      "type": "string",
+      "pattern": "^struct:[A-Za-z0-9_.:-]{1,64}/[0-9a-f]{16}$"
+    },
+    "placeKey": {
+      "type": "string",
+      "pattern": "^place:[A-Za-z0-9_.:-]{1,64}/(0|[1-9][0-9]{0,4})$"
+    },
+    "mapKey": {
+      "type": "string",
+      "pattern": "^map:[A-Za-z0-9_.:-]{1,64}$"
+    },
+    "class": {
+      "enum": [
+        "ground",
+        "water",
+        "ledge",
+        "wall",
+        "roof",
+        "tree",
+        "grass",
+        "flower",
+        "counter",
+        "prop",
+        "door",
+        "void"
+      ]
+    },
+    "model": {
+      "type": "object",
+      "required": [
+        "vox"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "vox": {
+          "type": "string",
+          "pattern": "^[a-z0-9_.-]{1,64}:[a-z0-9_./-]{1,252}\\.vox$"
+        },
+        "voxelsPerBlock": {
+          "enum": [
+            8,
+            16,
+            32
+          ],
+          "description": "8 is one voxel per Game Boy pixel. Default 8."
+        },
+        "origin": {
+          "type": "array",
+          "minItems": 3,
+          "maxItems": 3,
+          "items": {
+            "type": "integer",
+            "minimum": -256,
+            "maximum": 256
+          },
+          "description": "The model's minimum corner moved by these voxels: x east, y up, z south (after turning)."
+        },
+        "turn": {
+          "enum": [
+            0,
+            90,
+            180,
+            270
+          ],
+          "description": "Degrees, clockwise seen from above."
+        },
+        "flip": {
+          "type": "boolean",
+          "description": "Mirror east-west before turning."
+        }
+      }
+    }
+  }
+}

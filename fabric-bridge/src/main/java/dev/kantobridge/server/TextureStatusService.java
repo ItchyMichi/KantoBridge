@@ -29,7 +29,7 @@ import org.jetbrains.annotations.Nullable;
  * codes. Server thread only.
  */
 public final class TextureStatusService {
-	private static final Set<String> FIELDS = Set.of("ok", "slotMapHash", "textures", "missing", "shapes", "shapeIndexHash", "reason");
+	private static final Set<String> FIELDS = Set.of("ok", "slotMapHash", "textures", "missing", "shapes", "shapeIndexHash", "packs", "reason");
 	private static final Pattern REASON = Pattern.compile("^[a-z][a-z0-9_.]{0,63}$");
 	/** protocol/defs.schema.json {@code count}. */
 	private static final int MAX_COUNT = Integer.MAX_VALUE;
@@ -40,10 +40,11 @@ public final class TextureStatusService {
 	 * @param missing        the world's slot-map keys the client has no art for (drawn as placeholders); 0 when not said
 	 * @param shapes         shape ids the client has geometry for (V2); 0 while it draws cubes
 	 * @param shapeIndexHash the shape index it built them from, or null
+	 * @param packs          texture-pack manifests the client applied (V6); 0 when not said
 	 * @param matchesWorld   the client draws with its own art, resolved against the slot map the world's index names
 	 */
 	public record Status(boolean ok, @Nullable String slotMapHash, int textures, int missing, int shapes, @Nullable String shapeIndexHash,
-			@Nullable String reason, boolean matchesWorld) {
+			int packs, @Nullable String reason, boolean matchesWorld) {
 	}
 
 	private static final Map<UUID, Status> STATUS = new ConcurrentHashMap<>();
@@ -69,10 +70,11 @@ public final class TextureStatusService {
 			int missing = reader.has("missing") ? reader.integer("missing", 0, MAX_COUNT) : 0;
 			int shapes = reader.has("shapes") ? reader.integer("shapes", 0, MAX_COUNT) : 0;
 			String shapeIndexHash = reader.optionalString("shapeIndexHash", DataReader.HASH);
+			int packs = reader.has("packs") ? reader.integer("packs", 0, MAX_COUNT) : 0;
 			String reason = reader.optionalString("reason", REASON);
 			WorldIndex index = WorldIndexSync.current(player.server);
 			boolean matches = ok && hash != null && index != null && hash.equals(index.slotMapHash());
-			status = new Status(ok, hash, textures, missing, shapes, shapeIndexHash, reason, matches);
+			status = new Status(ok, hash, textures, missing, shapes, shapeIndexHash, packs, reason, matches);
 		} catch (DataException e) {
 			warn("bad_message");
 			RelayService.get().sendError(player, "bad_message", message.seq());
@@ -84,9 +86,9 @@ public final class TextureStatusService {
 				// Not fatal (the client judged against what it received), but its tiles would show other art.
 				warn("slot_map_mismatch");
 			}
-			KantoBridge.LOGGER.info("texture.status: a player draws with their own art ({} textures, slot map {}, {} shapes of index {})",
+			KantoBridge.LOGGER.info("texture.status: a player draws with their own art ({} textures, slot map {}, {} shapes of index {}, {} packs)",
 					status.textures(), status.slotMapHash() == null ? "-" : Hashes.shortHash(status.slotMapHash()), status.shapes(),
-					status.shapeIndexHash() == null ? "-" : Hashes.shortHash(status.shapeIndexHash()));
+					status.shapeIndexHash() == null ? "-" : Hashes.shortHash(status.shapeIndexHash()), status.packs());
 		} else {
 			KantoBridge.LOGGER.warn("texture.status: a player sees placeholders ({}, {} missing)", status.reason() == null ? "-" : status.reason(),
 					status.missing());

@@ -96,12 +96,18 @@ public final class TextureSync {
 	 * @param shapeIndexHash   the shape index they come from, or null without shapes
 	 * @param shapesReason     why it draws cubes ({@code no_shapes}, {@code shape_map_mismatch}, {@code geometry_unsupported},
 	 *                         {@code shapes_off}; {@code building} while the table builds), or null when it draws its shapes
+	 * @param packs            texture-pack manifests applied (the voxel plan's V6)
 	 */
 	public record Inputs(@Nullable String worldGame, @Nullable String worldSlotMapHash, @Nullable PackInfo local, boolean packLoaded,
-			int missing, boolean bridgeCompatible, int shapes, @Nullable String shapeIndexHash, @Nullable String shapesReason) {
+			int missing, boolean bridgeCompatible, int shapes, @Nullable String shapeIndexHash, @Nullable String shapesReason, int packs) {
 		public Inputs(@Nullable String worldGame, @Nullable String worldSlotMapHash, @Nullable PackInfo local, boolean packLoaded, int missing,
 				boolean bridgeCompatible) {
-			this(worldGame, worldSlotMapHash, local, packLoaded, missing, bridgeCompatible, 0, null, null);
+			this(worldGame, worldSlotMapHash, local, packLoaded, missing, bridgeCompatible, 0, null, null, 0);
+		}
+
+		public Inputs(@Nullable String worldGame, @Nullable String worldSlotMapHash, @Nullable PackInfo local, boolean packLoaded, int missing,
+				boolean bridgeCompatible, int shapes, @Nullable String shapeIndexHash, @Nullable String shapesReason) {
+			this(worldGame, worldSlotMapHash, local, packLoaded, missing, bridgeCompatible, shapes, shapeIndexHash, shapesReason, 0);
 		}
 	}
 
@@ -212,7 +218,7 @@ public final class TextureSync {
 		}
 		if (this.phase == Phase.READY) {
 			// Ready stays ready; only a change of shapes (their table finished, or went) is reported again.
-			this.queueReport(withShapes(ok(in.worldSlotMapHash(), textures(in.local()), 0), in));
+			this.queueReport(withPacks(withShapes(ok(in.worldSlotMapHash(), textures(in.local()), 0), in), in));
 			return;
 		}
 		if (this.phase == Phase.FAILED) {
@@ -226,14 +232,14 @@ public final class TextureSync {
 				this.reason = null;
 				this.missing = 0;
 				this.readyAt = nowMs;
-				this.queueReport(withShapes(ok(in.worldSlotMapHash(), textures(in.local()), 0), in));
+				this.queueReport(withPacks(withShapes(ok(in.worldSlotMapHash(), textures(in.local()), 0), in), in));
 			}
 			case INCOMPLETE -> {
 				// Judged again every tick: gen1-bridge may still connect and refresh the art once.
 				this.phase = Phase.INCOMPLETE;
 				this.reason = "art_incomplete";
 				this.missing = in.missing();
-				this.queueReport(withShapes(incomplete(in.worldSlotMapHash(), textures(in.local()), in.missing()), in));
+				this.queueReport(withPacks(withShapes(incomplete(in.worldSlotMapHash(), textures(in.local()), in.missing()), in), in));
 			}
 			case RELOAD -> this.startReload();
 			case WAIT_SLOTS -> {
@@ -352,6 +358,14 @@ public final class TextureSync {
 		} else if (in.shapesReason() != null && !"building".equals(in.shapesReason()) && !status.has("reason")) {
 			status.addProperty("shapes", 0);
 			status.addProperty("reason", reasonCode(in.shapesReason()));
+		}
+		return status;
+	}
+
+	/** A status with the texture-pack manifests applied (V6), when there are any. */
+	static JsonObject withPacks(JsonObject status, Inputs in) {
+		if (in.packs() > 0) {
+			status.addProperty("packs", in.packs());
 		}
 		return status;
 	}

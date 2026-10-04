@@ -4,7 +4,9 @@ import dev.kantobridge.KantoBridge;
 import dev.kantobridge.builder.pack.ArtKeys;
 import dev.kantobridge.builder.shape.geom.ShapeTable;
 import dev.kantobridge.builder.shape.geom.TextureKey;
+import dev.kantobridge.client.packs.KbPackReload;
 import dev.kantobridge.client.packs.LoadedPack;
+import dev.kantobridge.client.packs.PackOverrides;
 import dev.kantobridge.client.shape.ClientShapes;
 import dev.kantobridge.client.story.ClientStoryView;
 import dev.kantobridge.client.story.StoryDirty;
@@ -59,6 +61,9 @@ public final class SnapshotPublisher {
 	private static @Nullable ShapeTable builtTable;
 	private static @Nullable ShapeMap builtOverlays;
 	private static @Nullable WorldIndex builtIndex;
+	private static @Nullable PackOverrides builtPacks;
+	/** A pack model's colours are tints over this sprite (V6). */
+	static final ResourceLocation WHITE = ResourceLocation.fromNamespaceAndPath(KantoBridge.MOD_ID, "block/white");
 	private static long publishes;
 
 	private SnapshotPublisher() {
@@ -149,8 +154,9 @@ public final class SnapshotPublisher {
 		ShapeTable table = shapes == null ? null : ClientShapes.table();
 		// The closed story art comes with the verified shape map even when shapes are off: its fallback is the tile cube.
 		ShapeMap overlays = kanto ? ClientShapes.map() : null;
+		PackOverrides packs = KbPackReload.current();
 		boolean drawingChanges = generation != builtGeneration || slots != builtSlots || !Objects.equals(artSet, builtArtSet) || shapes != builtShapes
-				|| table != builtTable || overlays != builtOverlays || index != builtIndex;
+				|| table != builtTable || overlays != builtOverlays || index != builtIndex || packs != builtPacks;
 		if (!drawingChanges && kanto == builtKanto) {
 			return false;
 		}
@@ -175,6 +181,7 @@ public final class SnapshotPublisher {
 		builtShapes = shapes;
 		builtOverlays = overlays;
 		builtIndex = index;
+		builtPacks = packs;
 		builtTable = table;
 		if (kanto && drawingChanges) {
 			KantoBridge.LOGGER.info("render: snapshot {} for slot map {}: {} keys, {} without art (art set {}), shapes {}, {} ms", publishes,
@@ -193,18 +200,24 @@ public final class SnapshotPublisher {
 		RenderMaterial cutout = renderer == null ? null : renderer.materialFinder().blendMode(BlendMode.CUTOUT).find();
 		RenderMaterial flat = renderer == null ? null
 				: renderer.materialFinder().blendMode(BlendMode.SOLID).ambientOcclusion(net.fabricmc.fabric.api.util.TriState.FALSE).find();
-		// The shape table's texture keys, each to this client's own sprite (a key it can't draw: the placeholder).
+		// The shape table's texture keys, each to this client's own sprite (a key it can't draw: the placeholder); a pack's
+		// texture first (V6); a pack model's colour: the white sprite, tinted.
+		PackOverrides packs = KbPackReload.current();
 		TextureAtlasSprite[] shapeSprites = new TextureAtlasSprite[table == null ? 0 : table.textureKeys().size()];
+		int[] shapeTints = new int[shapeSprites.length];
+		java.util.Arrays.fill(shapeTints, -1);
 		for (int i = 0; i < shapeSprites.length; i++) {
-			TextureKey key = TextureKey.parse(table.textureKeys().get(i));
+			String text = table.textureKeys().get(i);
+			if (text.startsWith(ShapeTable.COLOUR)) {
+				shapeSprites[i] = found(atlas, WHITE);
+				shapeTints[i] = 0xFF000000 | Integer.parseInt(text.substring(ShapeTable.COLOUR.length()), 16);
+				continue;
+			}
+			TextureKey key = TextureKey.parse(text);
 			if (key == null || artSet == null) {
 				continue;
 			}
-			TextureAtlasSprite sprite = atlas.getSprite(ResourceLocation.fromNamespaceAndPath(ArtKeys.NAMESPACE, ArtKeys.texturePath(artSet, key.atlas(),
-					key.palette(), key.tile())));
-			if (!MissingTextureAtlasSprite.getLocation().equals(sprite.contents().name())) {
-				shapeSprites[i] = sprite;
-			}
+			shapeSprites[i] = tileSprite(atlas, packs, artSet, key.atlas(), key.palette(), key.tile());
 		}
 		MeshBuilder builder = renderer == null ? null : renderer.meshBuilder();
 		Mesh[] placeholderCubes = new Mesh[2];
@@ -227,10 +240,8 @@ public final class SnapshotPublisher {
 				int shape = CubeEmitter.shape(key.shape() == SlotMap.Shape.HALF);
 				int index = entry.getValue().index();
 				keys++;
-				TextureAtlasSprite sprite = artSet == null ? null
-						: atlas.getSprite(ResourceLocation.fromNamespaceAndPath(ArtKeys.NAMESPACE, ArtKeys.texturePath(artSet, key.atlas(), key.palette(),
-								key.tile())));
-				if (sprite == null || MissingTextureAtlasSprite.getLocation().equals(sprite.contents().name())) {
+				TextureAtlasSprite sprite = artSet == null ? null : tileSprite(atlas, packs, artSet, key.atlas(), key.palette(), key.tile());
+				if (sprite == null) {
 					missing++;
 					continue;
 				}
@@ -241,6 +252,24 @@ public final class SnapshotPublisher {
 			}
 		}
 		return new RenderSnapshot(generation, placeholder, slots == null ? null : slots.hash(), sprites, cubes, placeholderCubes, solid, kanto,
-				artSet, keys, missing, table == null ? null : shapes, table, shapeSprites, cutout, flat, closedArt, closed);
+				artSet, keys, missing, table == null ? null : shapes, table, shapeSprites, shapeTints, cutout, flat, closedArt, closed);
+	}
+
+	/**
+	 * A tile's sprite: a pack's texture when it is in the atlas (V6), else the generated one; null when neither is (the
+	 * placeholder is drawn).
+	 */
+	static @Nullable TextureAtlasSprite tileSprite(TextureAtlas atlas, PackOverrides packs, String artSet, String atlasId, String palette, int tile) {
+		String override = packs.tileTexture(atlasId, palette, tile);
+		ResourceLocation id = override == null ? null : ResourceLocation.tryParse(override);
+		TextureAtlasSprite sprite = id == null ? null : found(atlas, id);
+		return sprite != null ? sprite
+				: found(atlas, ResourceLocation.fromNamespaceAndPath(ArtKeys.NAMESPACE, ArtKeys.texturePath(artSet, atlasId, palette, tile)));
+	}
+
+	/** A sprite of the atlas, or null when the atlas lacks it. */
+	static @Nullable TextureAtlasSprite found(TextureAtlas atlas, ResourceLocation id) {
+		TextureAtlasSprite sprite = atlas.getSprite(id);
+		return MissingTextureAtlasSprite.getLocation().equals(sprite.contents().name()) ? null : sprite;
 	}
 }

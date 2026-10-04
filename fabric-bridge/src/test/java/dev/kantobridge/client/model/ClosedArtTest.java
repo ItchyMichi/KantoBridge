@@ -77,7 +77,7 @@ class ClosedArtTest {
 	void aSnapshotDrawsACellsArtOnlyWhileItIsClosed() {
 		ClosedArt art = ClosedArt.of(MAP, WORLD);
 		RenderSnapshot open = new RenderSnapshot(1, null, null, new TextureAtlasSprite[2][], new Mesh[2][], new Mesh[2], null, true, null, 0, 0, null,
-				null, new TextureAtlasSprite[0], null, null, art, new BitSet());
+				null, new TextureAtlasSprite[0], new int[0], null, null, art, new BitSet());
 		assertEquals(0, open.closedIdAt(20, 65, 28), "open for this player: nothing");
 		assertTrue(open.drawsClosed(TREE), "the mesh draws this cell, not the block-entity renderer");
 		assertFalse(open.drawsClosed("TOWN:1:1"));

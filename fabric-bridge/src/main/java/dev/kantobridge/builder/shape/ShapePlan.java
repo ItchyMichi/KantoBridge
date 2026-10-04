@@ -71,6 +71,26 @@ public final class ShapePlan {
 		this.planMs = planMs;
 	}
 
+	/**
+	 * How a cell unit is used (V6, the pack key index): the cells it stands on, and whether it is foliage (a pack's
+	 * {@code class:tree}, else {@code class:prop}).
+	 */
+	public record CellUse(int uses, boolean foliage) {
+	}
+
+	/** Every cell unit the plan places, by {@code atlas/t0-t1-t2-t3} (a pack's {@code cell:} key without its kind). */
+	public Map<String, CellUse> cellUses() {
+		Map<String, CellUse> out = new TreeMap<>();
+		for (ShapePlanner.MapShapes shapes : this.maps.values()) {
+			for (Units.Cell cell : shapes.units()) {
+				ShapeKey key = cell.key();
+				String id = this.index.atlas(key.atlas()) + "/" + key.number(0) + "-" + key.number(1) + "-" + key.number(2) + "-" + key.number(3);
+				out.merge(id, new CellUse(1, cell.foliage()), (a, b) -> new CellUse(a.uses() + b.uses(), a.foliage() || b.foliage()));
+			}
+		}
+		return out;
+	}
+
 	/** The same plan with its shape map bound to the WorldIndex whose text hashes to {@code indexHash}. */
 	public ShapePlan withIndexHash(String indexHash) {
 		return new ShapePlan(this.params, this.index, this.map.withHeader(indexHash, this.index.hash()), this.maps, this.keysByKind,

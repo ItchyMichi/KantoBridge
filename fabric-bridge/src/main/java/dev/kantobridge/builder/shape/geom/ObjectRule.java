@@ -113,6 +113,11 @@ public final class ObjectRule {
 	 * @param texels per pixel, the texel it shows ({@link VoxelGrid#texel})
 	 */
 	public static VoxelGrid slabs(boolean[] foreground, int[] texels, int w, int h, int d, int artPx) {
+		return slabs(foreground, texels, w, h, d, artPx, DEPTH);
+	}
+
+	/** {@link #slabs} with another depth in pixels (a pack's rule, V6). */
+	public static VoxelGrid slabs(boolean[] foreground, int[] texels, int w, int h, int d, int artPx, int depth) {
 		VoxelGrid grid = new VoxelGrid(w, h, d, artPx);
 		int[] component = new int[w * h];
 		java.util.Arrays.fill(component, -1);
@@ -147,7 +152,7 @@ public final class ObjectRule {
 				int i = queue[k];
 				int x = i % w;
 				int y = i / w;
-				for (int z = Math.max(0, lowest + 1 - DEPTH); z <= Math.min(d - 1, lowest); z++) {
+				for (int z = Math.max(0, lowest + 1 - depth); z <= Math.min(d - 1, lowest); z++) {
 					grid.set(x, lowest - y, z, texels[i]);
 				}
 			}
