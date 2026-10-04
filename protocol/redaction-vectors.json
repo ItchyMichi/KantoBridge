@@ -495,8 +495,20 @@
     {
       "type": "texture.status",
       "seq": 11,
-      "redacted": {"ok": true, "slotMapHash": "a1b2c3d4e5f60718", "textures": 512}
+      "redacted": {"ok": true, "slotMapHash": "a1b2c3d4e5f60718", "textures": 512, "missing": 0}
     },
+    {
+      "type": "texture.status",
+      "seq": 12,
+      "redacted": {
+        "ok": false,
+        "reason": "art_incomplete",
+        "slotMapHash": "a1b2c3d4e5f60718",
+        "textures": 510,
+        "missing": 2
+      }
+    },
+    {"type": "texture.status", "seq": 13, "redacted": {"ok": false, "reason": "no_art"}},
     {"type": "ui.advance", "seq": 11, "redacted": {"ui": 1}},
     {"type": "ui.back", "seq": 11, "redacted": {"ui": 3}},
     {"type": "ui.close", "seq": 11, "redacted": {"ui": 1}},

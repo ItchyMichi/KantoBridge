@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://kantobridge.invalid/protocol/messages/texture.status.schema.json",
   "title": "texture.status",
-  "description": "The client's generated pack state.",
+  "description": "Whether the client draws the world with its own art (its generated pack), against which slot map, and what it lacks.",
   "x-type": "texture.status",
   "x-legs": ["c2s"],
   "x-re": "never",
@@ -13,6 +13,7 @@
     "ok": {"type": "boolean"},
     "slotMapHash": {"$ref": "../defs.schema.json#/$defs/hash"},
     "textures": {"$ref": "../defs.schema.json#/$defs/count"},
+    "missing": {"$ref": "../defs.schema.json#/$defs/count", "description": "Slot-map keys whose sprite this client lacks (drawn as placeholders)."},
     "reason": {"type": "string", "pattern": "^[a-z][a-z0-9_.]*$", "maxLength": 64}
   }
 }

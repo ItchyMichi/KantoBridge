@@ -2,6 +2,16 @@
   {
     "type": "texture.status",
     "seq": 11,
-    "data": {"ok": true, "slotMapHash": "a1b2c3d4e5f60718", "textures": 512}
+    "data": {"ok": true, "slotMapHash": "a1b2c3d4e5f60718", "textures": 512, "missing": 0}
+  },
+  {
+    "type": "texture.status",
+    "seq": 12,
+    "data": {"ok": false, "reason": "art_incomplete", "slotMapHash": "a1b2c3d4e5f60718", "textures": 510, "missing": 2}
+  },
+  {
+    "type": "texture.status",
+    "seq": 13,
+    "data": {"ok": false, "reason": "no_art"}
   }
 ]

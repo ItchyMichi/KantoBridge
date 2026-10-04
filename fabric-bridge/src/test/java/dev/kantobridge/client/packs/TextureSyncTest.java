@@ -16,8 +16,8 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 /**
- * The joining player's texture flow (docs/PLAN.md §4.3 "Multiplayer clients"): the hash comparison and the regenerate
- * decision, the flow through export, build and reload, placeholders without gen1-bridge (a wrong pack held back), and the
+ * The texture flow (docs/specs/VOXEL_BLOCKS_PLAN.md §5.2): every row of the decision table, the flow through export,
+ * build and reload, placeholders without a compatible gen1-bridge, the export at most once per world, and the
  * {@code texture.status} it reports (hashes and counts only).
  */
 class TextureSyncTest {
@@ -29,8 +29,7 @@ class TextureSyncTest {
 	private static final class FakePort implements TextureSync.Port {
 		final List<JsonObject> reports = new ArrayList<>();
 		final List<Long> regenerations = new ArrayList<>();
-		final List<Boolean> reloads = new ArrayList<>();
-		final List<Long> reloadTokens = new ArrayList<>();
+		final List<Long> reloads = new ArrayList<>();
 		final List<String> warnings = new ArrayList<>();
 		boolean serverUp = true;
 
@@ -49,9 +48,8 @@ class TextureSyncTest {
 		}
 
 		@Override
-		public void reload(long token, boolean offer) {
-			this.reloadTokens.add(token);
-			this.reloads.add(offer);
+		public void reload(long token) {
+			this.reloads.add(token);
 		}
 
 		@Override
@@ -74,239 +72,230 @@ class TextureSyncTest {
 		this.sync.reset();
 	}
 
-	private static PackInfo pack(String hash, int textures) {
-		return new PackInfo("red", "c".repeat(64), hash, textures);
+	private static PackInfo pack(String game, int textures) {
+		return new PackInfo(2, game, game, "c".repeat(64), textures - 4, 4, textures);
 	}
 
-	private static TextureSync.Inputs in(String server, String slots, PackInfo local, boolean loaded, boolean bridge) {
-		return new TextureSync.Inputs(server, slots, local, loaded, bridge);
+	private static PackInfo layoutOne() {
+		return new PackInfo(1, null, "red", "c".repeat(64), 0, 0, 19);
+	}
+
+	private static TextureSync.Inputs in(String game, PackInfo local, boolean loaded, int missing, boolean bridge) {
+		return new TextureSync.Inputs(game, game == null ? null : WORLD, local, loaded, missing, bridge);
 	}
 
 	@Test
 	void theDecisionTable() {
-		assertEquals(Decision.NONE, TextureSync.decide(null, WORLD, true, WORLD, true), "no index: not a Kanto world");
-		assertEquals(Decision.MATCH, TextureSync.decide(WORLD, WORLD, true, null, false), "the pack fits; nothing else matters");
-		assertEquals(Decision.RELOAD, TextureSync.decide(WORLD, WORLD, false, null, false), "it fits but isn't loaded");
-		assertEquals(Decision.WAIT_SLOTS, TextureSync.decide(WORLD, OTHER, true, null, true), "can't build before the slots came");
-		assertEquals(Decision.WAIT_SLOTS, TextureSync.decide(WORLD, null, false, null, true), "no pack at all: same");
-		assertEquals(Decision.SLOTS_MISMATCH, TextureSync.decide(WORLD, OTHER, true, OTHER, true), "slots that aren't the index's");
-		assertEquals(Decision.NO_BRIDGE, TextureSync.decide(WORLD, OTHER, true, WORLD, false), "no gen1-bridge: placeholders");
-		assertEquals(Decision.NO_BRIDGE, TextureSync.decide(WORLD, null, false, WORLD, false));
-		assertEquals(Decision.REGENERATE, TextureSync.decide(WORLD, OTHER, true, WORLD, true), "a different pack: rebuild it");
-		assertEquals(Decision.REGENERATE, TextureSync.decide(WORLD, null, false, WORLD, true), "no pack yet: build one");
+		PackInfo red = pack("red", 19);
+		// Outside a Kanto world nothing is judged.
+		assertEquals(Decision.NONE, TextureSync.decide(in(null, red, true, 0, true), false));
+		// No usable pack (none, layout 1, another family's): export when a compatible gen1-bridge is there, else placeholders.
+		assertEquals(Decision.REGENERATE, TextureSync.decide(in("red", null, false, -1, true), false));
+		assertEquals(Decision.NO_ART, TextureSync.decide(in("red", null, false, -1, false), false));
+		assertEquals(Decision.REGENERATE, TextureSync.decide(in("red", layoutOne(), true, -1, true), false), "a layout 1 pack counts as none");
+		assertEquals(Decision.NO_ART, TextureSync.decide(in("red", layoutOne(), true, -1, false), false));
+		assertEquals(Decision.NO_ART, TextureSync.decide(in("red", pack("gold", 19), true, 0, false), false), "a game of another family");
+		// A usable pack that isn't the loaded one: reload.
+		assertEquals(Decision.RELOAD, TextureSync.decide(in("red", red, false, 0, true), false));
+		// Loaded: wait for the slot map's count, then ready, or refresh the art once, or placeholders for what is missing.
+		assertEquals(Decision.WAIT_SLOTS, TextureSync.decide(in("red", red, true, -1, true), false));
+		assertEquals(Decision.READY, TextureSync.decide(in("red", red, true, 0, false), false));
+		assertEquals(Decision.READY, TextureSync.decide(in("blue", red, true, 0, false), false), "red art draws a blue world");
+		assertEquals(Decision.REGENERATE, TextureSync.decide(in("red", red, true, 3, true), false), "the set is stale");
+		assertEquals(Decision.INCOMPLETE, TextureSync.decide(in("red", red, true, 3, false), false));
+		// The export runs once per world.
+		assertEquals(Decision.INCOMPLETE, TextureSync.decide(in("red", red, true, 3, true), true));
+		assertEquals(Decision.NO_ART, TextureSync.decide(in("red", null, false, -1, true), true));
 	}
 
 	@Test
-	void aFittingPackIsReportedOnce() {
-		this.sync.tick(0, in(WORLD, null, pack(WORLD, 4273), true, false), false);
+	void aLoadedPackWithEveryTextureIsReportedOnce() {
+		PackInfo red = pack("red", 19);
+		this.sync.tick(0, in("red", red, true, 0, false), false);
 		assertEquals(Phase.READY, this.sync.phase());
 		assertEquals(1, this.port.reports.size());
 		JsonObject status = this.port.last();
 		assertTrue(status.get("ok").getAsBoolean());
 		assertEquals(WORLD, status.get("slotMapHash").getAsString());
-		assertEquals(4273, status.get("textures").getAsInt());
-		assertEquals(3, status.size(), "ok, slotMapHash and textures only");
-		for (int t = 1; t < 50; t++) {
-			this.sync.tick(t * 50L, in(WORLD, WORLD, pack(WORLD, 4273), true, true), false);
-		}
-		assertEquals(1, this.port.reports.size(), "reported once per world");
-		assertTrue(this.port.regenerations.isEmpty() && this.port.reloads.isEmpty(), "nothing to do for a fitting pack");
-		assertNull(this.sync.hudLine(5000), "no HUD line when nothing was rebuilt");
+		assertEquals(19, status.get("textures").getAsInt());
+		assertEquals(0, status.get("missing").getAsInt());
+		this.sync.tick(50, in("red", red, true, 0, false), false);
+		assertEquals(1, this.port.reports.size(), "reported once");
+		assertTrue(this.port.regenerations.isEmpty() && this.port.reloads.isEmpty());
+		assertNull(this.sync.hudLine(50), "nothing to say when the pack was already right");
 	}
 
 	@Test
-	void aFittingPackThatIsntLoadedIsReloadedFirst() {
-		this.sync.tick(0, in(WORLD, null, pack(WORLD, 10), false, false), false);
+	void aPackOnDiskThatIsntLoadedIsReloadedFirst() {
+		PackInfo red = pack("red", 19);
+		this.sync.tick(0, in("red", red, false, -1, false), false);
 		assertEquals(Phase.RELOADING, this.sync.phase());
-		assertEquals(List.of(true), this.port.reloads, "reloaded with the pack offered");
-		this.sync.tick(50, in(WORLD, null, pack(WORLD, 10), false, false), false);
-		assertEquals(List.of(true), this.port.reloads, "one reload at a time");
-		this.sync.reloaded(this.port.reloadTokens.get(0), true);
-		this.sync.tick(100, in(WORLD, null, pack(WORLD, 10), true, false), false);
+		assertEquals(1, this.port.reloads.size());
+		this.sync.reloaded(this.port.reloads.get(0), true);
+		this.sync.tick(10, in("red", red, true, 0, false), false);
 		assertEquals(Phase.READY, this.sync.phase());
 		assertTrue(this.port.last().get("ok").getAsBoolean());
 	}
 
 	@Test
-	void aDifferentPackIsRebuiltAgainstTheServersSlots() {
-		// The index arrives first; the slot map a moment later.
-		this.sync.tick(0, in(WORLD, null, pack(OTHER, 99), true, true), false);
-		assertEquals(Phase.WAITING, this.sync.phase());
-		assertTrue(this.port.regenerations.isEmpty() && this.port.reports.isEmpty());
-		this.sync.tick(50, in(WORLD, WORLD, pack(OTHER, 99), true, true), false);
+	void withoutAPackTheArtIsExportedOnceAndLoaded() {
+		this.sync.tick(0, in("red", null, false, -1, true), false);
 		assertEquals(Phase.WORKING, this.sync.phase());
-		assertEquals(1, this.port.regenerations.size(), "the export starts");
-		assertNotNull(this.sync.hudLine(50));
-		assertEquals("kantobridge.hud.textures.export", this.sync.hudLine(50).key());
-		this.sync.work(TextureSync.Work.PACK);
-		assertEquals("kantobridge.hud.textures.pack", this.sync.hudLine(60).key());
-		// While the worker runs, nothing else happens (the main link is paused: the bridge looks disconnected).
-		for (int t = 2; t < 20; t++) {
-			this.sync.tick(t * 50L, in(WORLD, WORLD, pack(OTHER, 99), true, false), false);
-		}
 		assertEquals(1, this.port.regenerations.size());
-		assertTrue(this.port.reports.isEmpty(), "no status while working");
-
-		this.sync.finished(this.port.regenerations.get(0), null);
+		assertNotNull(this.sync.hudLine(0));
+		long token = this.port.regenerations.get(0);
+		this.sync.tick(10, in("red", null, false, -1, true), false);
+		assertEquals(1, this.port.regenerations.size(), "one export at a time");
+		this.sync.finished(token, null);
 		assertEquals(Phase.RELOADING, this.sync.phase());
-		assertEquals(List.of(true), this.port.reloads);
-		this.sync.reloaded(this.port.reloadTokens.get(0), true);
-		// The rebuilt pack now says it was made for the world's slots.
-		this.sync.tick(1000, in(WORLD, WORLD, pack(WORLD, 4100), true, true), false);
+		assertEquals(1, this.port.reloads.size());
+		this.sync.reloaded(token, true);
+		PackInfo fresh = pack("red", 19);
+		this.sync.tick(20, in("red", fresh, true, 0, true), false);
 		assertEquals(Phase.READY, this.sync.phase());
-		JsonObject status = this.port.last();
-		assertTrue(status.get("ok").getAsBoolean());
-		assertEquals(WORLD, status.get("slotMapHash").getAsString(), "the server's slot map, never the export's own");
-		assertEquals(4100, status.get("textures").getAsInt());
-		assertEquals("kantobridge.hud.textures.ready", this.sync.hudLine(1000 + TextureSync.DONE_LINE_MS - 1).key());
-		assertNull(this.sync.hudLine(1000 + TextureSync.DONE_LINE_MS + 1), "the line goes after a while");
+		assertTrue(this.port.last().get("ok").getAsBoolean());
+		assertEquals("kantobridge.hud.textures.ready", this.sync.hudLine(20).key(), "says the art is in place for a while");
+		assertNull(this.sync.hudLine(20 + TextureSync.DONE_LINE_MS + 1));
+		assertEquals(1, this.sync.regenerations());
 	}
 
 	@Test
 	void withoutGen1BridgeTheWorldShowsPlaceholdersUntilItConnects() {
-		this.sync.tick(0, in(WORLD, WORLD, pack(OTHER, 99), true, false), false);
-		assertEquals(Phase.NO_BRIDGE, this.sync.phase());
-		JsonObject status = this.port.last();
-		assertFalse(status.get("ok").getAsBoolean());
-		assertEquals("no_bridge", status.get("reason").getAsString());
-		assertEquals(List.of(false), this.port.reloads, "the wrong pack is held back");
-		assertTrue(this.sync.hudLine(0).warning(), "a HUD hint");
-		this.sync.reloaded(this.port.reloadTokens.get(0), true);
-		assertTrue(this.sync.hidden());
-
-		for (int t = 1; t < 20; t++) {
-			this.sync.tick(t * 50L, in(WORLD, WORLD, pack(OTHER, 99), false, false), false);
-		}
-		assertEquals(1, this.port.reports.size(), "placeholders reported once");
-		assertEquals(1, this.port.reloads.size(), "held back once");
-		assertTrue(this.port.regenerations.isEmpty());
-
-		// gen1-bridge starts: the export runs after all.
-		this.sync.tick(2000, in(WORLD, WORLD, pack(OTHER, 99), false, true), false);
+		this.sync.tick(0, in("red", null, false, -1, false), false);
+		assertEquals(Phase.NO_ART, this.sync.phase());
+		assertEquals("no_art", this.port.last().get("reason").getAsString());
+		assertFalse(this.port.last().get("ok").getAsBoolean());
+		assertTrue(this.sync.hudLine(0).warning());
+		this.sync.tick(10, in("red", null, false, -1, false), false);
+		assertEquals(1, this.port.reports.size(), "the same placeholders aren't reported twice");
+		// gen1-bridge connects to a compatible game: the export runs.
+		this.sync.tick(20, in("red", null, false, -1, true), false);
 		assertEquals(Phase.WORKING, this.sync.phase());
 		assertEquals(1, this.port.regenerations.size());
 	}
 
 	@Test
-	void withoutAnyPackNothingIsHeldBack() {
-		this.sync.tick(0, in(WORLD, WORLD, null, false, false), false);
-		assertEquals(Phase.NO_BRIDGE, this.sync.phase());
-		assertTrue(this.port.reloads.isEmpty(), "placeholders already");
-		assertEquals("no_bridge", this.port.last().get("reason").getAsString());
+	void missingArtIsRefreshedOnceThenDrawnAsPlaceholders() {
+		PackInfo red = pack("red", 19);
+		this.sync.tick(0, in("red", red, true, 2, false), false);
+		assertEquals(Phase.INCOMPLETE, this.sync.phase(), "no gen1-bridge: the missing keys show placeholders");
+		JsonObject status = this.port.last();
+		assertFalse(status.get("ok").getAsBoolean());
+		assertEquals("art_incomplete", status.get("reason").getAsString());
+		assertEquals(2, status.get("missing").getAsInt());
+		assertEquals(WORLD, status.get("slotMapHash").getAsString());
+		assertEquals("2", this.sync.hudLine(0).args().get(0));
+		// gen1-bridge comes: the art is refreshed once.
+		this.sync.tick(10, in("red", red, true, 2, true), false);
+		assertEquals(Phase.WORKING, this.sync.phase());
+		long token = this.port.regenerations.get(0);
+		this.sync.finished(token, null);
+		this.sync.reloaded(token, true);
+		// Still missing (the host's export has tiles this one hasn't): placeholders for those, no second export.
+		this.sync.tick(20, in("red", red, true, 1, true), false);
+		assertEquals(Phase.INCOMPLETE, this.sync.phase());
+		assertEquals(1, this.port.regenerations.size());
+		assertEquals(1, this.port.last().get("missing").getAsInt());
 	}
 
 	@Test
 	void failuresEndInPlaceholdersWithAReason() {
-		this.sync.tick(0, in(WORLD, WORLD, pack(OTHER, 99), true, true), false);
-		this.sync.finished(this.port.regenerations.get(0), "export.index_timeout");
+		this.sync.tick(0, in("red", null, false, -1, true), false);
+		long token = this.port.regenerations.get(0);
+		this.sync.finished(token, "export.timeout");
 		assertEquals(Phase.FAILED, this.sync.phase());
-		assertEquals("export.index_timeout", this.sync.reason());
-		assertEquals("export.index_timeout", this.port.last().get("reason").getAsString());
-		// The next tick holds the wrong pack back.
-		this.sync.tick(50, in(WORLD, WORLD, pack(OTHER, 99), true, true), false);
-		assertEquals(List.of(false), this.port.reloads);
-		assertEquals("kantobridge.hud.textures.failed", this.sync.hudLine(50).key());
-		// No retry loop in the same world.
-		for (int t = 2; t < 40; t++) {
-			this.sync.tick(t * 50L, in(WORLD, WORLD, pack(OTHER, 99), false, true), false);
-		}
+		assertEquals("export.timeout", this.sync.reason());
+		assertEquals("export.timeout", this.port.last().get("reason").getAsString());
+		assertEquals(List.of("textures.export.timeout"), this.port.warnings);
+		this.sync.tick(10, in("red", null, false, -1, true), false);
+		assertEquals(Phase.FAILED, this.sync.phase(), "no retry until the world changes");
 		assertEquals(1, this.port.regenerations.size());
-		assertEquals(1, this.port.reports.size());
-		assertTrue(this.port.warnings.contains("textures.export.index_timeout"));
 	}
 
 	@Test
-	void aSlotMapThatNeverComesOrIsntTheIndexsFails() {
-		this.sync.tick(0, in(WORLD, null, pack(OTHER, 1), false, true), false);
-		this.sync.tick(TextureSync.SLOTS_WAIT_MS - 1, in(WORLD, null, pack(OTHER, 1), false, true), false);
+	void aSlotMapThatNeverComesFails() {
+		PackInfo red = pack("red", 19);
+		this.sync.tick(0, in("red", red, true, -1, false), false);
 		assertEquals(Phase.WAITING, this.sync.phase());
-		this.sync.tick(TextureSync.SLOTS_WAIT_MS + 1, in(WORLD, null, pack(OTHER, 1), false, true), false);
+		this.sync.tick(TextureSync.SLOTS_WAIT_MS + 1, in("red", red, true, -1, false), false);
 		assertEquals(Phase.FAILED, this.sync.phase());
 		assertEquals("no_slots", this.port.last().get("reason").getAsString());
-
-		TextureSync other = new TextureSync(this.port);
-		other.reset();
-		other.tick(0, in(WORLD, OTHER, null, false, true), false);
-		assertEquals(Phase.FAILED, other.phase());
-		assertEquals("slot_map_mismatch", this.port.last().get("reason").getAsString());
-		assertTrue(this.port.regenerations.isEmpty(), "nothing is built against slots the index doesn't name");
 	}
 
 	@Test
 	void aFailedReloadIsReported() {
-		this.sync.tick(0, in(WORLD, WORLD, null, false, true), false);
-		this.sync.finished(this.port.regenerations.get(0), null);
-		this.sync.reloaded(this.port.reloadTokens.get(0), false);
+		PackInfo red = pack("red", 19);
+		this.sync.tick(0, in("red", red, false, -1, false), false);
+		this.sync.reloaded(this.port.reloads.get(0), false);
 		assertEquals(Phase.FAILED, this.sync.phase());
 		assertEquals("reload", this.port.last().get("reason").getAsString());
 	}
 
 	@Test
 	void lateAnswersForAnOlderWorldAreDropped() {
-		this.sync.tick(0, in(WORLD, WORLD, pack(OTHER, 1), true, true), false);
+		this.sync.tick(0, in("red", null, false, -1, true), false);
 		long token = this.port.regenerations.get(0);
-		// The player leaves while the worker runs and joins elsewhere.
 		this.sync.reset();
 		this.sync.finished(token, null);
-		assertEquals(Phase.IDLE, this.sync.phase());
-		assertTrue(this.port.reloads.isEmpty(), "a finished worker of the old world starts nothing");
-		this.sync.tick(10, in(OTHER, OTHER, pack(OTHER, 7), true, true), false);
-		assertEquals(Phase.READY, this.sync.phase());
-		assertEquals(OTHER, this.port.last().get("slotMapHash").getAsString());
+		assertEquals(Phase.IDLE, this.sync.phase(), "the old export's end changes nothing");
+		assertTrue(this.port.reloads.isEmpty());
 	}
 
 	@Test
 	void aRebuildThatPublishesANewIndexIsJudgedAgain() {
-		this.sync.tick(0, in(WORLD, WORLD, pack(WORLD, 5), true, true), false);
+		PackInfo red = pack("red", 19);
+		this.sync.tick(0, in("red", red, true, 0, false), false);
 		assertEquals(Phase.READY, this.sync.phase());
-		this.sync.tick(50, in(OTHER, OTHER, pack(WORLD, 5), true, true), false);
-		assertEquals(Phase.WORKING, this.sync.phase(), "the world's slots changed under the pack");
+		this.sync.tick(10, new TextureSync.Inputs("red", OTHER, red, true, 4, false), false);
+		assertEquals(Phase.INCOMPLETE, this.sync.phase(), "the new slot map names keys this pack lacks");
 	}
 
 	@Test
 	void theCreateKantoWorldFlowOwnsThePackWhileItRuns() {
-		for (int t = 0; t < 10; t++) {
-			this.sync.tick(t * 50L, in(WORLD, WORLD, pack(OTHER, 1), true, true), true);
-		}
-		assertTrue(this.port.regenerations.isEmpty() && this.port.reports.isEmpty() && this.port.reloads.isEmpty());
+		this.sync.tick(0, in("red", null, false, -1, true), true);
+		assertEquals(Phase.IDLE, this.sync.phase());
+		assertTrue(this.port.regenerations.isEmpty());
 	}
 
 	@Test
 	void aReportWaitsForTheServerLink() {
 		this.port.serverUp = false;
-		this.sync.tick(0, in(WORLD, WORLD, pack(WORLD, 3), true, false), false);
+		PackInfo red = pack("red", 19);
+		this.sync.tick(0, in("red", red, true, 0, false), false);
 		assertTrue(this.port.reports.isEmpty());
 		this.port.serverUp = true;
-		this.sync.tick(50, in(WORLD, WORLD, pack(WORLD, 3), true, false), false);
+		this.sync.tick(10, in("red", red, true, 0, false), false);
 		assertEquals(1, this.port.reports.size(), "sent once the link is up");
-		this.sync.tick(100, in(WORLD, WORLD, pack(WORLD, 3), true, false), false);
-		assertEquals(1, this.port.reports.size());
+		assertEquals(1, this.sync.reports());
 	}
 
 	@Test
 	void reasonsFollowTheProtocolPattern() {
-		for (String raw : List.of("export.index_timeout", "pack.slot_map.full", "IO Error!", "1st", "", "x".repeat(100), "pack.bundle-hash")) {
-			String code = TextureSync.reasonCode(raw);
-			assertTrue(REASON.matcher(code).matches(), "reason " + code);
+		for (String raw : List.of("export.timeout", "Pack.IO", "9lives", "", "a".repeat(80), "no_art", "art_incomplete")) {
+			assertTrue(REASON.matcher(TextureSync.reasonCode(raw)).matches(), raw);
 		}
-		assertEquals("export.index_timeout", TextureSync.reasonCode("export.index_timeout"));
-		JsonObject placeholders = TextureSync.placeholders("no_bridge");
-		assertEquals(2, placeholders.size(), "ok and reason only");
+		assertEquals("pack.io", TextureSync.reasonCode("Pack.IO"));
 	}
 
 	@Test
 	void packInfoIsReadFromTheGeneratedPack() {
-		PackInfo info = PackInfo.parse("{\"exportHash\":\"" + "c".repeat(64) + "\",\"game\":\"blue\",\"slotMapHash\":\"" + WORLD
-				+ "\",\"textures\":4273}");
+		PackInfo info = PackInfo.parse("{\"artSet\":\"blue\",\"exportHash\":\"" + "c".repeat(64)
+				+ "\",\"game\":\"blue\",\"layout\":2,\"sprites\":4,\"textures\":19,\"tiles\":15}");
 		assertNotNull(info);
-		assertEquals(WORLD, info.slotMapHash());
-		assertEquals(4273, info.textures());
-		assertEquals("blue", info.game());
-		PackInfo old = PackInfo.parse("{\"exportHash\":\"" + "c".repeat(64) + "\",\"game\":\"red\",\"slotMapHash\":\"" + WORLD + "\"}");
+		assertTrue(info.usable());
+		assertEquals("blue", info.artSet());
+		assertEquals(15, info.tiles());
+		assertEquals(4, info.sprites());
+		assertEquals(19, info.textures());
+		// A layout 1 pack (before the runtime model) parses, but can't be drawn from.
+		PackInfo old = PackInfo.parse("{\"exportHash\":\"" + "c".repeat(64) + "\",\"game\":\"red\",\"slotMapHash\":\"" + WORLD
+				+ "\",\"textures\":19}");
 		assertNotNull(old);
-		assertEquals(0, old.textures(), "an older pack without a count");
+		assertEquals(1, old.layout());
+		assertFalse(old.usable());
 		assertNull(PackInfo.parse("not json"));
 		assertNull(PackInfo.parse("{\"game\":\"red\"}"));
-		assertNull(PackInfo.parse("{\"exportHash\":\"" + "c".repeat(64) + "\",\"game\":\"red\",\"slotMapHash\":\"NOT A HASH\"}"));
+		assertNull(PackInfo.parse("{\"exportHash\":\"" + "c".repeat(64) + "\",\"game\":\"red\",\"layout\":2}"), "layout 2 needs an art set");
+		assertNull(PackInfo.parse("{\"artSet\":\"../x\",\"exportHash\":\"" + "c".repeat(64) + "\",\"game\":\"red\",\"layout\":2}"));
 	}
 }

@@ -49,7 +49,7 @@ class GeneratedPackTest {
 	}
 
 	@Test
-	void offersARequiredTopPackOnceWritten() throws IOException {
+	void offersARequiredBottomPackOnceWritten() throws IOException {
 		Path dir = GeneratedPack.directory(this.gameDir);
 		assertEquals(this.gameDir.resolve("kantobridge").resolve("resourcepack"), dir);
 		Files.createDirectories(dir);
@@ -64,7 +64,8 @@ class GeneratedPackTest {
 		assertNotNull(pack);
 		assertEquals(GeneratedPack.ID, pack.getId());
 		assertTrue(pack.isRequired(), "the generated pack must not be switchable off");
-		assertEquals(Pack.Position.TOP, pack.getDefaultPosition());
+		assertEquals(Pack.Position.BOTTOM, pack.getDefaultPosition(), "below player packs (VD9): they override its textures");
+		assertFalse(pack.isFixedPosition(), "a player may move it");
 		assertTrue(pack.getCompatibility().isCompatible(), "pack_format 34 is 1.21.1's resource format");
 	}
 

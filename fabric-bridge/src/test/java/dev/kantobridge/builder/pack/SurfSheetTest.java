@@ -44,9 +44,9 @@ class SurfSheetTest {
 		PackFiles files = new PackFiles();
 		ResourcePackWriter.Result result = ResourcePackWriter.generate(art, bundle, files, warnings);
 		assertEquals(0, warnings.total(), warnings.warnings().toString());
-		assertNotNull(files.files().get("assets/kantobridge/textures/player/test_palette/surf.png"));
+		assertNotNull(files.files().get("assets/kantobridge/textures/player/red/test_palette/surf.png"));
 		assertEquals(5, result.npcTextures(), "the four NPC sheets and the surf sheet");
-		assertEquals("kantobridge:textures/player/test_palette/surf.png", ResourcePackWriter.surfTexture("TEST_PALETTE"));
+		assertEquals("kantobridge:textures/player/red/test_palette/surf.png", ArtKeys.surfTexture("red", "TEST_PALETTE"));
 	}
 
 	@Test

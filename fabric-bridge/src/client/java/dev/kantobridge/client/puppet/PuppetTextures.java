@@ -1,7 +1,8 @@
 package dev.kantobridge.client.puppet;
 
 import dev.kantobridge.KantoBridge;
-import dev.kantobridge.builder.pack.ResourcePackWriter;
+import dev.kantobridge.builder.pack.ArtKeys;
+import dev.kantobridge.client.packs.LoadedPack;
 import dev.kantobridge.world.MapPlacement;
 import dev.kantobridge.world.WorldIndex;
 import java.util.HashMap;
@@ -12,7 +13,8 @@ import org.jetbrains.annotations.Nullable;
 
 /**
  * Which texture draws a puppet: its sprite's sheet in its map's palette from the player's own generated pack
- * ({@code assets/kantobridge/textures/npc/<palette>/<sprite>.png}, docs/PROTOCOL.md "The generated resource pack"),
+ * ({@code assets/kantobridge/textures/npc/<art set>/<palette>/<sprite>.png}, docs/PROTOCOL.md "The generated resource
+ * pack"; the art set is the loaded pack's),
  * looked up once per pair and kept until resources reload. A sheet the pack lacks (no pack yet, a map or sprite it
  * doesn't know) falls back to a neutral placeholder from the mod jar, never to Minecraft's missing-texture checkerboard.
  */
@@ -50,7 +52,8 @@ public final class PuppetTextures {
 	}
 
 	private ResourceLocation lookup(String palette, String sprite) {
-		ResourceLocation location = ResourceLocation.tryParse(ResourcePackWriter.npcTexture(palette, sprite));
+		String artSet = LoadedPack.artSet();
+		ResourceLocation location = artSet == null ? null : ResourceLocation.tryParse(ArtKeys.npcTexture(artSet, palette, sprite));
 		if (location != null && Minecraft.getInstance().getResourceManager().getResource(location).isPresent()) {
 			return location;
 		}

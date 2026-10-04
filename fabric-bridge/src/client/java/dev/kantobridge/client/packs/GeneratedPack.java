@@ -14,18 +14,15 @@ import net.minecraft.server.packs.repository.PackSource;
 import org.jetbrains.annotations.Nullable;
 
 /**
- * The resource pack the world builder generates from the player's own ROM: tile textures, sprites and blockstate
- * variants (docs/PLAN.md §4.3 {@code packs/}). It lives in {@code <gameDir>/kantobridge/resourcepack/}, outside
- * any shared folder, and is never sent to other players.
+ * The resource pack the world builder generates from the player's own ROM: tile textures and sprites, addressed by key
+ * (docs/PLAN.md §4.3 {@code packs/}; layout 2, docs/specs/VOXEL_BLOCKS_PLAN.md §4.7). It lives in
+ * {@code <gameDir>/kantobridge/resourcepack/}, outside any shared folder, and is never sent to other players.
+ *
+ * <p>It sits at the <b>bottom</b> of the pack stack (VD9): it holds no blockstate or model to win any more, so player
+ * packs above it override single textures by repeating their paths, and the order a player sets is kept across starts.
  */
 public final class GeneratedPack {
 	public static final String ID = "kantobridge_generated";
-
-	/**
-	 * While set, the pack isn't offered: a pack made for another world's slots would draw the wrong art on every tile, so
-	 * a world it doesn't fit shows the jar's placeholders instead until the pack is rebuilt for it (M9). Memory only.
-	 */
-	private static volatile boolean suppressed;
 
 	/** Added to {@code BuiltInPackSource} by the pack-source mixin, so tests can see that the mixin applied. */
 	public interface SourceMarker {
@@ -47,9 +44,9 @@ public final class GeneratedPack {
 		return new PackLocationInfo(ID, Component.literal("Kanto Bridge (generated)"), PackSource.BUILT_IN, Optional.empty());
 	}
 
-	/** Required, so it is always selected and can't be switched off; on top, so it overrides the jar's placeholders. */
+	/** Required, so it is always selected and can't be switched off; at the bottom, below every player pack. */
 	public static PackSelectionConfig selection() {
-		return new PackSelectionConfig(true, Pack.Position.TOP, false);
+		return new PackSelectionConfig(true, Pack.Position.BOTTOM, false);
 	}
 
 	/** The pack, or null when there is none yet or its {@code pack.mcmeta} is invalid (Minecraft logs why). */
@@ -66,20 +63,8 @@ public final class GeneratedPack {
 		return present(gameDir) ? PackInfo.read(directory(gameDir)) : null;
 	}
 
-	/** Holds the pack back from the next resource reloads (true) or offers it again (false); takes effect on a reload. */
-	public static void setSuppressed(boolean value) {
-		suppressed = value;
-	}
-
-	public static boolean suppressed() {
-		return suppressed;
-	}
-
-	/** Hands the pack to a pack source's consumer if there is one (and it isn't held back). */
+	/** Hands the pack to a pack source's consumer if there is one. */
 	public static void offer(Path gameDir, Consumer<Pack> consumer) {
-		if (suppressed) {
-			return;
-		}
 		Pack pack = create(gameDir);
 		if (pack != null) {
 			consumer.accept(pack);

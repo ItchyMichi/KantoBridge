@@ -178,8 +178,6 @@ public final class CreateKantoWorldFlow {
 		}
 		CreateKantoWorldFlow flow = new CreateKantoWorldFlow(minecraft);
 		active = flow;
-		// A pack held back for a world it didn't fit (M9) is this flow's to replace; its reload must see it again.
-		GeneratedPack.setSuppressed(false);
 		KantoBridge.LOGGER.info("create: Create Kanto world started");
 		minecraft.setScreen(flow.screen);
 	}

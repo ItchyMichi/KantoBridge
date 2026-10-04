@@ -31,6 +31,28 @@ class TileBlockTest {
 	}
 
 	@Test
+	void everyTileFamilyIsACarrierWithItsSlots() {
+		List<KbBlocks.Carrier> carriers = KbBlocks.carriers();
+		assertEquals(32, carriers.size(), "the voxel plan's V1: the tile families");
+		for (int family = 0; family < KbBlocks.FAMILIES_PER_SHAPE; family++) {
+			KbBlocks.Carrier full = carriers.get(family);
+			KbBlocks.Carrier half = carriers.get(KbBlocks.FAMILIES_PER_SHAPE + family);
+			assertSame(KbBlocks.tileFull().get(family), full.block());
+			assertSame(KbBlocks.tileHalf().get(family), half.block());
+			assertEquals(CarrierKind.TILE_FULL, full.kind());
+			assertEquals(CarrierKind.TILE_HALF, half.kind());
+			assertEquals(family, full.family());
+		}
+		KbBlocks.Carrier carrier = carriers.get(3);
+		TileBlock block = (TileBlock) carrier.block();
+		for (int slot : new int[] {0, 1, 17, 255}) {
+			assertEquals(3 * 256 + slot, carrier.slotIndex(block.withSlot(slot)), "family × 256 + hi × 16 + lo");
+		}
+		assertTrue(CarrierKind.TILE_HALF.half() && !CarrierKind.TILE_FULL.half());
+		assertTrue(CarrierKind.TILE_FULL.drawsCube() && CarrierKind.TILE_FULL.hasSlot());
+	}
+
+	@Test
 	void thirtyTwoFamiliesOf256States() {
 		List<TileBlock> tiles = KbBlocks.allTiles();
 		assertEquals(32, tiles.size());

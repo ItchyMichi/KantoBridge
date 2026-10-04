@@ -23,7 +23,10 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
-/** The generated resource pack and datapack: metadata, blockstates, models, textures, animations, NPC sheets. */
+/**
+ * The generated resource pack (layout 2, docs/specs/VOXEL_BLOCKS_PLAN.md §4.7) and datapack: metadata, textures by key
+ * and art set, animations, NPC sheets; no blockstate and no model.
+ */
 class PackWriterTest {
 	private static ExportBundle bundle;
 	private static WorldPlan plan;
@@ -57,46 +60,43 @@ class PackWriterTest {
 		assertEquals(4, result.npcTextures(), "girl, ball, guard (town) and Mom (house), in the town palette");
 		assertEquals(19, result.textures());
 		assertEquals(1, result.animated(), "the water tile");
-		assertEquals(15, result.models(), "one per slot");
-		assertEquals(2, result.blockstates(), "tile_full_00 and tile_half_00");
-		assertEquals(15, files.count("assets/kantobridge/textures/block/tile/", ".png"));
-		assertEquals(4, files.count("assets/kantobridge/textures/npc/", ".png"));
+		assertEquals(15, files.count("assets/kantobridge/textures/block/red/tile/", ".png"), "under the art set: the export's game");
+		assertEquals(4, files.count("assets/kantobridge/textures/npc/red/", ".png"));
 
-		// Every used family lists all 256 variants; unused ones point at the jar's placeholder.
-		JsonObject variants = ProtoJson.parseObject(text(files, "assets/kantobridge/blockstates/tile_full_00.json")).getAsJsonObject("variants");
-		assertEquals(256, variants.size());
-		assertEquals("kantobridge:block/tile/tile_full_00/000", variants.getAsJsonObject("hi=0,lo=0").get("model").getAsString());
-		assertEquals("kantobridge:block/tile_full_placeholder", variants.getAsJsonObject("hi=15,lo=15").get("model").getAsString());
-		JsonObject halfVariants = ProtoJson.parseObject(text(files, "assets/kantobridge/blockstates/tile_half_00.json")).getAsJsonObject("variants");
-		assertEquals("kantobridge:block/tile_half_placeholder", halfVariants.getAsJsonObject("hi=0,lo=1").get("model").getAsString());
-		assertFalse(files.files().containsKey("assets/kantobridge/blockstates/tile_full_01.json"), "unused families keep the jar's");
+		// Layout 2: no blockstate, no model, no slot number anywhere; the runtime model draws the tile blocks.
+		for (String path : files.files().keySet()) {
+			assertFalse(path.startsWith("assets/kantobridge/blockstates/"), path);
+			assertFalse(path.startsWith("assets/kantobridge/models/"), path);
+		}
 
-		// Models point at the slot's texture.
+		// The texture of a slot key is addressed by its key and the art set.
 		SlotMap.Key water = new SlotMap.Key("tilesets.test", "TEST_PALETTE", 6, SlotMap.Shape.HALF);
-		SlotMap.Slot waterSlot = plan.slotMap().slot(water);
-		JsonObject model = ProtoJson.parseObject(text(files,
-				String.format("assets/kantobridge/models/block/tile/%s/%03d.json", waterSlot.blockPath(), waterSlot.slot())));
-		assertEquals("kantobridge:block/tile_half_placeholder", model.get("parent").getAsString());
-		assertEquals(ResourcePackWriter.texture(water), model.getAsJsonObject("textures").get("tile").getAsString());
-		assertEquals("kantobridge:block/tile/tilesets.test/test_palette/0006", ResourcePackWriter.texture(water));
+		assertEquals("kantobridge:block/red/tile/tilesets.test/test_palette/0006", ResourcePackWriter.texture("red", water));
 
 		// The water texture is an 8-frame strip with its animation.
-		String waterPath = "assets/kantobridge/textures/block/tile/tilesets.test/test_palette/0006.png";
+		String waterPath = "assets/kantobridge/textures/block/red/tile/tilesets.test/test_palette/0006.png";
 		Png.Image strip = Png.decode(files.files().get(waterPath));
 		assertEquals(16, strip.width());
 		assertEquals(128, strip.height());
 		assertEquals(Textures.waterMeta(), text(files, waterPath + ".mcmeta"));
-		Png.Image ground = Png.decode(files.files().get("assets/kantobridge/textures/block/tile/tilesets.test/test_palette/0000.png"));
+		Png.Image ground = Png.decode(files.files().get("assets/kantobridge/textures/block/red/tile/tilesets.test/test_palette/0000.png"));
 		assertEquals(16, ground.width());
 		assertEquals(16, ground.height());
 
 		// NPC sheets use the fixed layout.
-		Png.Image girl = Png.decode(files.files().get("assets/kantobridge/textures/npc/test_palette/sprite_test_girl.png"));
+		Png.Image girl = Png.decode(files.files().get("assets/kantobridge/textures/npc/red/test_palette/sprite_test_girl.png"));
 		assertEquals(Textures.SHEET_WIDTH, girl.width());
 		assertEquals(Textures.SHEET_HEIGHT, girl.height());
 
 		JsonObject info = ProtoJson.parseObject(text(files, ResourcePackWriter.INFO_FILE));
-		assertEquals(plan.slotMap().hash(), info.get("slotMapHash").getAsString());
+		assertEquals(2, info.get("layout").getAsInt());
+		assertEquals("red", info.get("artSet").getAsString());
+		assertEquals("red", info.get("game").getAsString());
+		assertEquals(bundle.exportHash(), info.get("exportHash").getAsString());
+		assertEquals(15, info.get("tiles").getAsInt());
+		assertEquals(4, info.get("sprites").getAsInt());
+		assertEquals(19, info.get("textures").getAsInt());
+		assertFalse(info.has("slotMapHash"), "the pack no longer follows a slot map");
 	}
 
 	/**
@@ -111,7 +111,7 @@ class PackWriterTest {
 		int checked = 0;
 		for (var placement : plan.index().maps().values()) {
 			for (var object : bundle.map(placement.id()).objects()) {
-				String id = ResourcePackWriter.npcTexture(placement.palette(), object.sprite());
+				String id = ArtKeys.npcTexture("red", placement.palette(), object.sprite());
 				String path = "assets/" + id.replace(":", "/");
 				byte[] png = files.files().get(path);
 				assertNotNull(png, "no sheet for an object of " + placement.id());
@@ -146,7 +146,7 @@ class PackWriterTest {
 		Path pack = this.temp.resolve("kantobridge").resolve("resourcepack");
 		ResourcePackWriter.write(plan, bundle, pack, new Warnings());
 		assertTrue(Files.isRegularFile(pack.resolve("pack.mcmeta")));
-		Path stale = pack.resolve("assets/kantobridge/textures/block/tile/stale.png");
+		Path stale = pack.resolve("assets/kantobridge/textures/block/red/tile/stale.png");
 		Files.writeString(stale, "old");
 		ResourcePackWriter.write(plan, bundle, pack, new Warnings());
 		assertFalse(Files.exists(stale), "a rebuild leaves no stale files");
@@ -194,7 +194,7 @@ class PackWriterTest {
 		PackFiles files = new PackFiles();
 		ResourcePackWriter.Result result = ResourcePackWriter.generate(flowerPlan, flowered, files, new Warnings());
 		assertEquals(2, result.animated(), "water, and the flower tile (3) of the water-and-flower tileset");
-		String flowerPath = "assets/kantobridge/textures/block/tile/tilesets.test/test_palette/0003.png";
+		String flowerPath = "assets/kantobridge/textures/block/red/tile/tilesets.test/test_palette/0003.png";
 		assertEquals(Textures.flowerMeta(), text(files, flowerPath + ".mcmeta"));
 		Png.Image strip = Png.decode(files.files().get(flowerPath));
 		assertEquals(48, strip.height());
@@ -204,9 +204,9 @@ class PackWriterTest {
 
 	@Test
 	void pathPartsAreResourceSafe() {
-		assertEquals("tilesets.overworld", ResourcePackWriter.pathPart("tilesets.overworld"));
-		assertEquals("pallet", ResourcePackWriter.pathPart("PALLET"));
-		assertEquals("a_b", ResourcePackWriter.pathPart("A:B"));
+		assertEquals("tilesets.overworld", ArtKeys.pathPart("tilesets.overworld"));
+		assertEquals("pallet", ArtKeys.pathPart("PALLET"));
+		assertEquals("a_b", ArtKeys.pathPart("A:B"));
 		Map<String, byte[]> none = new PackFiles().files();
 		assertTrue(none.isEmpty());
 		assertThrows(IllegalArgumentException.class, () -> new PackFiles().put("../escape", "x"));

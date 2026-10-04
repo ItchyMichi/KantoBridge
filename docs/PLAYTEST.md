@@ -388,3 +388,26 @@ The voxel plan's milestones V1–V9 have their own items below. **Measurements**
       Use your current `saves/Kanto` (built before V3; a world rebuilt by V3 or later doesn't load at the V1a commit).
       F7's mesh line says `model json` here and `model runtime` from V1b on.
 - [ ] Also note the time of one F3+T (the line's `reload` value) and of joining the world (`join→view`).
+
+### V1: runtime model with the same cubes
+
+Nothing should look different: the tile blocks are now drawn by one model of ours instead of generated JSON. The
+generated pack holds textures only and sits at the **bottom** of the resource-pack list.
+
+- [ ] The world looks exactly as before from the viewpoints (the spawn town, a cave, the sea from above): the same
+      tiles, water and flowers animating, the closed art of a Cut tree, puppets and the surf sprite.
+- [ ] F7: the Textures line reads `ready (-)` with `keys N (0 without art)`. (`-Pkb.meshstats=true` also shows the
+      Mesh line with `model runtime`.)
+- [ ] F3+T: the world reloads and still looks the same.
+- [ ] Options → Resource Packs: "Kanto Bridge (generated)" is at the bottom of the selected list.
+- [ ] **X4, a pack of your own:** make a folder pack in `local\minecraft\resourcepacks\` with a `pack.mcmeta`
+      (`{"pack":{"pack_format":34,"description":"test"}}`) and one PNG copied from your generated pack
+      (`local\minecraft\kantobridge\resourcepack\assets\kantobridge\textures\block\blue\tile\...`, same path inside
+      your pack), painted over. Select it above "Kanto Bridge (generated)", press Done: that tile changes everywhere.
+      Restart the game: the order is kept and the tile is still changed. Remove the pack: the tile is back.
+- [ ] **Two players (as in M9):** the guest joins the host's world and draws it with their own art right away, with no
+      export and no resource reload (the Textures line goes straight to `ready`), even if the host's world was built
+      from the other game version.
+- [ ] **X1 with the runtime model:** measure the same scenes as the V1a baseline (three runs each). Pass: re-mesh at
+      most 1.25 × the baseline, frame rate at least 97 % of it, reload at most 2 s longer.
+- Note: a world built before M9 has no slot map and now shows placeholders; all your worlds have one.

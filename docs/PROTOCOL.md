@@ -697,7 +697,7 @@ bytes. A downloaded export is stored as an **export bundle**, which stays under 
 | `warp.done` | S→C | `ok, to?`; `re` optional | |
 | `activity` | C→S | `activity:"dialogue"\|"cutscene"\|"battle"\|"paused"\|"none"` (speech bubbles; `paused` while the player's Gen1Recomp is disconnected) | |
 | `relay.hello` | S→C, C→S | `protocol, mod` (the relay's version handshake on join; M10) | |
-| `texture.status` | C→S | `ok, slotMapHash?, textures?, reason?` | |
+| `texture.status` | C→S | `ok, slotMapHash?, textures?, missing?, reason?` | |
 | `world.index` | S→C | `index, count, hash, part` (the WorldIndex JSON in parts, on join) | yes |
 | `world.slots` | S→C | `index, count, hash, part` (the slot-map JSON in parts, on join, so a joining player can build their own pack against the host's slots; M9) | yes |
 
@@ -725,32 +725,46 @@ filter**, so every build from the same export, and every player's pack, agrees. 
 SHA-256 of its canonical JSON. Capacity: 16 families × 256 slots per shape.
 
 **The generated resource pack** (`<gameDir>/kantobridge/resourcepack/`, ROM-derived art, never
-shared) is laid out for later milestones as:
+shared) holds textures only, addressed by key, never by slot (layout 2, from the voxel plan's V1):
 
-- `pack.mcmeta` (pack format 34) and `kantobridge.json` at the root: `game`, `exportHash`,
-  `slotMapHash`, so a client can tell whether its pack matches a world;
-- `assets/kantobridge/blockstates/tile_<shape>_<ff>.json` with all 256 variants (unused ones point at
-  a placeholder);
-- `assets/kantobridge/textures/block/tile/<atlas>/<palette>/<tile, 4 digits>.png` (16×16, coloured,
-  with `.mcmeta` animations for water and flowers);
-- `assets/kantobridge/textures/npc/<palette>/<sprite>.png` (64×32 sheets: standing and walking rows,
-  facing down, up, left, right);
-- `assets/kantobridge/textures/player/<palette>/surf.png` (the surf sprite, from the export's
+- `pack.mcmeta` (pack format 34) and `kantobridge.json` at the root: `layout` (2), `artSet` (the art
+  set: the game the export came from, the path segment `<set>` below), `game`, `exportHash`, and the
+  counts `tiles`, `sprites`, `textures`;
+- `assets/kantobridge/textures/block/<set>/tile/<atlas>/<palette>/<tile, 4 digits>.png` (16×16,
+  coloured, with `.mcmeta` animations for water and flowers): sprite id
+  `kantobridge:block/<set>/tile/<atlas>/<palette>/<tile>`;
+- `assets/kantobridge/textures/npc/<set>/<palette>/<sprite>.png` (64×32 sheets: standing and walking
+  rows, facing down, up, left, right);
+- `assets/kantobridge/textures/player/<set>/<palette>/surf.png` (the surf sprite, from the export's
   `field.playerSprites.surf`).
+
+Ids become path segments lower-cased, with anything outside `[a-z0-9_.-]` replaced by `_`. The pack
+holds every texture of the whole export, so one pack fits every world of a compatible game (the same
+game, or Red with Blue): the client's runtime model turns each tile block's slot into a key through
+the world's slot map, and the key into this sprite. It sits **below** player resource packs, so a
+player pack overrides any texture by repeating its path. A pack without `layout` (layout 1, from
+before V1) counts as no pack.
 
 #### Multiplayer rules (M9)
 
 - **`world.slots`** follows the `world.index` parts on join and whenever a build publishes; the
   server sends it only when the slot map's hash equals the WorldIndex's `slotMapHash`, and the client
-  accepts it only when the text's and the parsed map's hashes both match. A client whose pack was made
-  for other slots re-exports its **own** art and rebuilds its pack against the host's slot map (a
-  pack it can't rebuild is held back, so the world shows placeholders rather than wrong art). Art is
-  never sent over the network.
-- **`texture.status`:** `ok:true` carries `slotMapHash` and `textures`; `ok:false` carries `reason`:
-  `no_bridge`, `no_slots` (nothing arrived 15 s after the index), `slot_map_mismatch`, `reload`,
-  `export.<code>`, `pack.<code>`, `pack.io`, `interrupted`, `internal`. Failures retry only when the
-  world changes or the player rejoins; `no_bridge` starts the export once gen1-bridge connects. The
-  pack's root `kantobridge.json` carries `game`, `exportHash`, `slotMapHash` and `textures`.
+  accepts it only when the text's and the parsed map's hashes both match. Each client draws the
+  world's tile blocks through it with its **own** art: a block's slot names a key, the key a texture
+  of the client's own pack. The pack doesn't depend on the host's slot map (since V1), so joining a
+  host with other slots is a re-mesh, never a re-export. A client re-exports its own art only when it
+  has no usable pack (none, layout 1, or one of an incompatible game) or its pack lacks textures the
+  world's slot map names, and only while gen1-bridge is connected to a compatible game (the same game,
+  or Red with Blue), once per world. Art is never sent over the network. A world without a slot map
+  (built before M9) shows placeholders.
+- **`texture.status`:** `ok:true` means this client draws the world with its own art; it carries
+  `slotMapHash` (the world's slot map it resolved its sprites against), `textures` and `missing` (0).
+  `ok:false` carries `reason`: `no_art` (no usable pack, and gen1-bridge isn't connected to a
+  compatible game; the export starts once it is), `art_incomplete` (the pack lacks `missing` of the
+  world's keys, drawn as placeholders; with `slotMapHash`, `textures`, `missing`), `no_slots` (no slot
+  map arrived 15 s after the index), `reload`, `export.<code>`, `pack.<code>`, `pack.io`,
+  `interrupted`, `internal`. Failures retry only when the world changes or the player rejoins. The
+  pack's root `kantobridge.json` carries `layout`, `artSet`, `game`, `exportHash` and its counts.
 - **Activity** reaches other players through Fabric's attachment sync (`kantobridge:activity`, to all
   but the player); clients draw speech bubbles from it.
 - **Authority:** every client → server message affects only the sender (GameTest-proven for every
@@ -840,3 +854,6 @@ carrying the same envelope in both directions. Larger data is split at the appli
   - `activity:"paused"`.
   The client drops a `pc.open` without an id and answers a `save.begin` without a `pair` with
   `save.done{ok:false}`.
+- Added by the voxel plan ([specs/VOXEL_BLOCKS_PLAN.md](specs/VOXEL_BLOCKS_PLAN.md)):
+  - V1: `texture.status.missing` and its new meaning, the reasons `no_art` and `art_incomplete`
+    (`no_bridge` and `slot_map_mismatch` are gone), and the generated pack's layout 2.

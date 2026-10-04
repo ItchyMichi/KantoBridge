@@ -9,17 +9,21 @@ import dev.kantobridge.client.bridge.BridgeConfig;
 import dev.kantobridge.client.bridge.BridgeRuntime;
 import dev.kantobridge.client.bridge.ConnectionState;
 import dev.kantobridge.client.bridge.ExportClient;
+import dev.kantobridge.client.bridge.HelloOk;
 import dev.kantobridge.client.bridge.Transport;
+import dev.kantobridge.client.model.RenderSnapshot;
 import dev.kantobridge.client.net.ClientRelay;
 import dev.kantobridge.client.world.ClientWorldIndex;
 import dev.kantobridge.client.world.CreateKantoWorldFlow;
 import dev.kantobridge.proto.Catalog;
 import dev.kantobridge.proto.MsgTypes;
+import dev.kantobridge.world.Games;
 import dev.kantobridge.world.Hashes;
 import dev.kantobridge.world.SlotMap;
 import dev.kantobridge.world.WorldIndex;
 import java.io.IOException;
 import java.nio.file.Path;
+import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientLifecycleEvents;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
@@ -32,12 +36,12 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Minecraft glue for {@link TextureSync} (docs/PLAN.md §4.3 "Multiplayer clients", M9): feeds it the world's slot-map
- * hash (the WorldIndex), the slot map from {@code world.slots}, the generated pack's {@code kantobridge.json} and
- * whether the main link is up; runs its export (through {@link ExportClient}, the main link paused as for "Create Kanto
- * world") and pack build ({@link PackGenerator} against the server's slot map) on a worker thread; reloads resources;
- * sends {@code texture.status}; and adds a HUD line. The art is written only into this player's own game folder. Logs
- * carry steps, codes, counts and short hashes.
+ * Minecraft glue for {@link TextureSync} (docs/PLAN.md §4.3 "Multiplayer clients", M9; the voxel plan's V1): feeds it
+ * the world's game and slot-map hash (the WorldIndex), the generated pack on disk and whether it is the loaded one, how
+ * many of the world's keys the render snapshot found no sprite for, and whether the main link is up to a compatible
+ * game; runs its export (through {@link ExportClient}, the main link paused as for "Create Kanto world") and pack build
+ * ({@link PackGenerator}) on a worker thread; reloads resources; sends {@code texture.status}; and adds a HUD line. The
+ * art is written only into this player's own game folder. Logs carry steps, codes, counts and short hashes.
  */
 public final class TextureSyncRuntime {
 	private static final Logger LOGGER = LoggerFactory.getLogger("kantobridge");
@@ -59,7 +63,6 @@ public final class TextureSyncRuntime {
 	private volatile @Nullable ExportClient exporter;
 	private @Nullable CompletableFuture<Void> reload;
 	private long reloadToken;
-	private boolean reloadOffers;
 	private long reloadStartedMs;
 
 	private TextureSyncRuntime(BridgeRuntime bridge) {
@@ -76,8 +79,8 @@ public final class TextureSyncRuntime {
 			}
 
 			@Override
-			public void reload(long token, boolean offer) {
-				TextureSyncRuntime.this.startReload(token, offer);
+			public void reload(long token) {
+				TextureSyncRuntime.this.startReload(token);
 			}
 
 			@Override
@@ -135,29 +138,33 @@ public final class TextureSyncRuntime {
 			this.local = GeneratedPack.info(this.gameDir);
 			this.localRead = true;
 		}
-		boolean connected = this.bridge.client().state() == ConnectionState.CONNECTED;
-		TextureSync.Inputs inputs = new TextureSync.Inputs(index == null ? null : index.slotMapHash(), slots == null ? null : slots.hash(),
-				this.local, PackReload.selected(minecraft), connected);
+		PackInfo loaded = LoadedPack.info();
+		boolean packLoaded = this.local != null && loaded != null && PackReload.selected(minecraft) && this.local.equals(loaded);
+		// The snapshot's count is only about this world once it was resolved against this slot map and the loaded art set.
+		RenderSnapshot snapshot = RenderSnapshot.current();
+		int missing = slots != null && slots.hash().equals(snapshot.slotMapHash()) && Objects.equals(snapshot.artSet(), LoadedPack.artSet())
+				? snapshot.missing()
+				: -1;
+		HelloOk hello = this.bridge.state().handshake();
+		boolean compatible = this.bridge.client().state() == ConnectionState.CONNECTED && hello != null && index != null
+				&& Games.compatible(hello.game(), index.game());
+		TextureSync.Inputs inputs = new TextureSync.Inputs(index == null ? null : index.game(), index == null ? null : index.slotMapHash(),
+				this.local, packLoaded, missing, compatible);
 		this.sync.tick(this.clock.millis(), inputs, busy);
 	}
 
 	// ---- the worker: export and pack ----
 
 	private void startWorker(long token) {
-		SlotMap slots = ClientWorldIndex.slotMap();
-		if (slots == null) {
-			this.sync.finished(token, "no_slots");
-			return;
-		}
 		BridgeClient link = this.bridge.client();
 		Catalog catalog = Catalog.bundled();
 		ExportClient client = new ExportClient(BridgeConfig.fromCatalog(catalog, link.config().port()), catalog, CreateKantoWorldFlow.builderHello(),
 				Transport.socket(), BridgeClock.system(), ExportClient.Options.DEFAULTS);
 		this.exporter = client;
 		Minecraft minecraft = Minecraft.getInstance();
-		LOGGER.info("textures: this pack doesn't fit the world's slot map {}; exporting this player's art to rebuild it", Hashes.shortHash(slots.hash()));
+		LOGGER.info("textures: no usable pack, or it lacks some of this world's art; exporting this player's art to rebuild it");
 		Thread thread = new Thread(() -> {
-			String failure = this.work(link, client, slots);
+			String failure = this.work(link, client);
 			minecraft.execute(() -> {
 				this.localRead = false;
 				this.sync.finished(token, failure);
@@ -168,7 +175,7 @@ public final class TextureSyncRuntime {
 	}
 
 	/** Runs on the worker thread; returns null on success, else a failure code. */
-	private @Nullable String work(BridgeClient link, ExportClient client, SlotMap slots) {
+	private @Nullable String work(BridgeClient link, ExportClient client) {
 		Path exportDir = this.gameDir.resolve("kantobridge").resolve("export");
 		try {
 			ExportClient.Result result;
@@ -176,8 +183,8 @@ public final class TextureSyncRuntime {
 				result = client.run(exportDir, ExportClient.Listener.NONE);
 			}
 			this.sync.work(TextureSync.Work.PACK);
-			PackGenerator.Result pack = PackGenerator.generate(result.bundleDir(), GeneratedPack.directory(this.gameDir), slots);
-			LOGGER.info("textures: rebuilt this player's pack for slot map {} ({} textures)", Hashes.shortHash(pack.slotMapHash()),
+			PackGenerator.Result pack = PackGenerator.generate(result.bundleDir(), GeneratedPack.directory(this.gameDir));
+			LOGGER.info("textures: rebuilt this player's pack (art set {}, export {}, {} textures)", pack.game(), Hashes.shortHash(pack.exportHash()),
 					pack.pack().textures());
 			return null;
 		} catch (ExportClient.ExportException e) {
@@ -211,15 +218,12 @@ public final class TextureSyncRuntime {
 
 	// ---- reloads ----
 
-	private void startReload(long token, boolean offer) {
+	private void startReload(long token) {
 		Minecraft minecraft = Minecraft.getInstance();
-		// Held back: the pack source skips the folder, so the jar's placeholders draw the tiles.
-		GeneratedPack.setSuppressed(!offer);
 		this.reloadToken = token;
-		this.reloadOffers = offer;
 		this.reloadStartedMs = this.clock.millis();
 		this.reload = PackReload.reload(minecraft);
-		LOGGER.info("textures: reloading resources with the generated pack {}", offer ? "offered" : "held back");
+		LOGGER.info("textures: reloading resources with the generated pack");
 	}
 
 	private void tickReload(Minecraft minecraft) {
@@ -237,15 +241,15 @@ public final class TextureSyncRuntime {
 		}
 		this.reload = null;
 		this.localRead = false;
-		boolean selected = PackReload.selected(minecraft);
-		this.sync.reloaded(this.reloadToken, done && selected == this.reloadOffers);
+		this.sync.reloaded(this.reloadToken, done && PackReload.selected(minecraft));
 	}
 
 	private String debugLine() {
 		TextureSync.Phase phase = this.sync.phase();
 		PackInfo info = this.local;
+		RenderSnapshot snapshot = RenderSnapshot.current();
 		return I18n.get("kantobridge.debug.textures", phase.name().toLowerCase(java.util.Locale.ROOT),
-				this.sync.reason() == null ? "-" : this.sync.reason(), info == null ? "-" : Hashes.shortHash(info.slotMapHash()),
-				info == null ? 0 : info.textures(), this.sync.hidden(), this.sync.regenerations(), this.sync.reports());
+				this.sync.reason() == null ? "-" : this.sync.reason(), info == null ? "-" : info.usable() ? info.artSet() : "layout " + info.layout(),
+				info == null ? 0 : info.textures(), snapshot.keys(), snapshot.missing(), this.sync.regenerations(), this.sync.reports());
 	}
 }

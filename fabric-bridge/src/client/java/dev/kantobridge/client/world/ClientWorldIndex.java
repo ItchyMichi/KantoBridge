@@ -11,6 +11,8 @@ import dev.kantobridge.world.Hashes;
 import dev.kantobridge.world.SlotMap;
 import dev.kantobridge.world.WorldIndex;
 import dev.kantobridge.world.WorldIndexParts;
+import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
 import org.jetbrains.annotations.Nullable;
 
@@ -25,6 +27,8 @@ public final class ClientWorldIndex {
 	private static final WorldIndexParts.Assembler SLOT_ASSEMBLER = new WorldIndexParts.Assembler();
 	private static @Nullable WorldIndex current;
 	private static @Nullable SlotMap slots;
+	/** Told whenever the index or the slot map arrives or goes (the render snapshot, ...). */
+	private static final List<Runnable> LISTENERS = new CopyOnWriteArrayList<>();
 
 	private ClientWorldIndex() {
 	}
@@ -34,6 +38,17 @@ public final class ClientWorldIndex {
 		ClientRelay.get().register(MsgTypes.WORLD_INDEX, ClientWorldIndex::onPart);
 		ClientRelay.get().register(MsgTypes.WORLD_SLOTS, ClientWorldIndex::onSlotsPart);
 		ClientPlayConnectionEvents.DISCONNECT.register((listener, client) -> clear());
+	}
+
+	/** Runs {@code listener} on the client thread whenever the index or the slot map arrives or goes. */
+	public static void addListener(Runnable listener) {
+		LISTENERS.add(listener);
+	}
+
+	private static void changed() {
+		for (Runnable listener : LISTENERS) {
+			listener.run();
+		}
 	}
 
 	/** The index of the world this client is in, or null before it has arrived. */
@@ -51,6 +66,7 @@ public final class ClientWorldIndex {
 		slots = null;
 		ASSEMBLER.reset();
 		SLOT_ASSEMBLER.reset();
+		changed();
 	}
 
 	static void onPart(Envelope message) {
@@ -71,6 +87,7 @@ public final class ClientWorldIndex {
 			current = WorldIndex.fromJson(json);
 			KantoBridge.LOGGER.info("world.index: received ({} parts, hash {}, {} maps, {} story cells)", count, Hashes.shortHash(hash),
 					current.maps().size(), current.storyCells().size());
+			changed();
 		} catch (DataException e) {
 			KantoBridge.LOGGER.warn("world.index: rejected ({})", e.problem());
 		}
@@ -93,6 +110,7 @@ public final class ClientWorldIndex {
 			}
 			slots = received;
 			KantoBridge.LOGGER.info("world.slots: received ({} parts, hash {}, {} slots)", count, Hashes.shortHash(hash), received.size());
+			changed();
 		} catch (DataException e) {
 			KantoBridge.LOGGER.warn("world.slots: rejected ({})", e.problem());
 		}

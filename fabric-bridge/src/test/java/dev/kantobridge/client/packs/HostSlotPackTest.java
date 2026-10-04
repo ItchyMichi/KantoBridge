@@ -1,6 +1,7 @@
 package dev.kantobridge.client.packs;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -9,29 +10,28 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import dev.kantobridge.builder.TestData;
 import dev.kantobridge.builder.export.ExportBundle;
-import dev.kantobridge.builder.pack.ResourcePackWriter;
+import dev.kantobridge.builder.pack.ArtKeys;
 import dev.kantobridge.builder.plan.ArtCatalog;
 import dev.kantobridge.builder.plan.Warnings;
 import dev.kantobridge.proto.ProtoJson;
 import dev.kantobridge.world.SlotMap;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
 /**
- * A joining player's pack (docs/PLAN.md §4.3 "Multiplayer clients", M9): their own art, built into the <b>host's</b> slot
- * map. Every slot the host's blocks name shows this player's texture of the same (atlas, palette, tile); the pack says
- * it was made for the host's slot map; a key this export lacks gets a blank tile and nothing fails.
+ * A joining player's pack against a host's slot map (docs/specs/VOXEL_BLOCKS_PLAN.md §4.7, §5.2): since layout 2 the pack
+ * holds textures by key and art set only, so the same pack fits a host whose slots differ. Every key the host's slot map
+ * names that this export has is a texture of the pack under this player's art set; a key the export lacks is simply
+ * missing (drawn as a placeholder, counted), and nothing is rebuilt for the host.
  */
 class HostSlotPackTest {
 	/** The host's map: the same keys, other slots (reversed), plus a key this export doesn't have. */
-	private static SlotMap hostMap(SlotMap own) throws Exception {
+	static SlotMap hostMap(SlotMap own) throws Exception {
 		List<Map.Entry<SlotMap.Key, SlotMap.Slot>> entries = new ArrayList<>(own.slots().entrySet());
 		JsonArray slots = new JsonArray();
 		int full = (int) entries.stream().filter(e -> e.getKey().shape() == SlotMap.Shape.FULL).count() + 1;
@@ -60,54 +60,50 @@ class HostSlotPackTest {
 		return item;
 	}
 
-	private static String variantModel(Path packDir, SlotMap.Slot slot) throws Exception {
-		JsonObject blockstate = ProtoJson.parseObject(Files.readString(
-				packDir.resolve("assets/kantobridge/blockstates/" + slot.blockPath() + ".json"), StandardCharsets.UTF_8));
-		return blockstate.getAsJsonObject("variants").getAsJsonObject("hi=" + slot.hi() + ",lo=" + slot.lo()).get("model").getAsString();
-	}
-
-	private static String modelTexture(Path packDir, String model) throws Exception {
-		String path = model.substring(model.indexOf(':') + 1);
-		JsonObject json = ProtoJson.parseObject(Files.readString(packDir.resolve("assets/kantobridge/models/" + path + ".json"),
-				StandardCharsets.UTF_8));
-		JsonObject textures = json.getAsJsonObject("textures");
-		return (textures.has("all") ? textures.get("all") : textures.get("tile")).getAsString();
-	}
-
 	@Test
-	void ownArtIsDrawnIntoTheHostsSlots(@TempDir Path gameDir) throws Exception {
+	void onePackFitsAHostWithOtherSlots(@TempDir Path gameDir) throws Exception {
 		ExportBundle bundle = ExportBundle.open(TestData.syntheticBundle());
 		SlotMap own = ArtCatalog.of(bundle, new Warnings()).slotMap();
 		SlotMap host = hostMap(own);
 		assertNotEquals(own.hash(), host.hash(), "the host's slot map differs");
 
 		Path packDir = GeneratedPack.directory(gameDir);
-		PackGenerator.Result result = PackGenerator.generate(TestData.syntheticBundle(), packDir, host);
-		assertEquals(host.hash(), result.slotMapHash(), "built against the host's slot map, never the export's own");
+		PackGenerator.Result result = PackGenerator.generate(TestData.syntheticBundle(), packDir);
 		PackInfo info = GeneratedPack.info(gameDir);
 		assertNotNull(info);
-		assertEquals(host.hash(), info.slotMapHash(), "kantobridge.json names the host's slot map");
-		assertEquals(bundle.exportHash(), info.exportHash(), "the art is still this player's own export");
+		assertTrue(info.usable(), "layout 2 with an art set");
+		assertEquals("red", info.artSet(), "the art set is the export's game");
+		assertEquals(bundle.exportHash(), info.exportHash());
 		assertEquals(result.pack().textures(), info.textures());
 
-		// Every slot the host's blocks name shows this export's texture of its key.
-		int checked = 0;
-		for (Map.Entry<SlotMap.Key, SlotMap.Slot> entry : host.slots().entrySet()) {
-			String model = variantModel(packDir, entry.getValue());
-			assertEquals(String.format(Locale.ROOT, "kantobridge:block/tile/%s/%03d", entry.getValue().blockPath(), entry.getValue().slot()), model);
-			assertEquals(ResourcePackWriter.texture(entry.getKey()), modelTexture(packDir, model));
-			assertTrue(Files.isRegularFile(packDir.resolve("assets/kantobridge/textures/"
-					+ ResourcePackWriter.texture(entry.getKey()).substring("kantobridge:".length()) + ".png")), "texture file");
-			checked++;
+		// Every key of the host's map: this player's texture of it under their art set, whatever slot the host gave it.
+		int present = 0;
+		int missing = 0;
+		for (SlotMap.Key key : host.slots().keySet()) {
+			Path file = packDir.resolve(ArtKeys.textureFile(info.artSet(), key.atlas(), key.palette(), key.tile()));
+			if (Files.isRegularFile(file)) {
+				present++;
+			} else {
+				missing++;
+				assertEquals("tilesets.host_only", key.atlas(), "only the key this export lacks is missing");
+			}
 		}
-		assertEquals(host.size(), checked);
+		assertEquals(own.size(), present);
+		assertEquals(1, missing);
 
-		// The same art as the player's own pack: a tile's texture file is byte for byte the same.
-		Path ownDir = gameDir.resolve("own");
-		PackGenerator.generate(TestData.syntheticBundle(), ownDir);
-		SlotMap.Key sample = own.slots().keySet().iterator().next();
-		String file = "assets/kantobridge/textures/" + ResourcePackWriter.texture(sample).substring("kantobridge:".length()) + ".png";
-		assertTrue(java.util.Arrays.equals(Files.readAllBytes(ownDir.resolve(file)), Files.readAllBytes(packDir.resolve(file))),
-				"the host's slot numbers change where the art goes, not the art");
+		// No file of the pack depends on a slot map: no blockstates, no models, nothing that names a slot.
+		try (var files = Files.walk(packDir)) {
+			for (Path path : (Iterable<Path>) files::iterator) {
+				String rel = packDir.relativize(path).toString().replace('\\', '/');
+				assertFalse(rel.startsWith("assets/kantobridge/blockstates"), rel);
+				assertFalse(rel.startsWith("assets/kantobridge/models"), rel);
+			}
+		}
+
+		// The texture flow keeps that pack for the host's world: no export while it lacks nothing but the host-only key...
+		TextureSync.Inputs host1 = new TextureSync.Inputs("red", host.hash(), info, true, missing, false);
+		assertEquals(TextureSync.Decision.INCOMPLETE, TextureSync.decide(host1, false), "placeholders for the one key, no export");
+		TextureSync.Inputs host2 = new TextureSync.Inputs("blue", host.hash(), info, true, 0, false);
+		assertEquals(TextureSync.Decision.READY, TextureSync.decide(host2, false), "a Red pack draws a Blue world");
 	}
 }

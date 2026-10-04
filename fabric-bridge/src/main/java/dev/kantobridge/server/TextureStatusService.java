@@ -21,15 +21,15 @@ import net.minecraft.server.level.ServerPlayer;
 import org.jetbrains.annotations.Nullable;
 
 /**
- * Each player's generated-pack state ({@code texture.status}, docs/PLAN.md §3.3, §4.3 "Multiplayer clients"): whether
- * their client draws this world with its own art built into the world's slots ({@code ok}), for which slot map, how many
- * textures, or why it shows placeholders. The art itself never reaches the server; this is a hash and a count. Kept per
+ * Each player's generated-pack state ({@code texture.status}, docs/PLAN.md §3.3, §4.3 "Multiplayer clients"; the voxel
+ * plan's V1): whether their client draws this world with its own art ({@code ok}), against which slot map, how many
+ * textures and how many of the world's keys it lacks, or why it shows placeholders. The art itself never reaches the server; this is a hash and a count. Kept per
  * player for diagnostics and tests, forgotten when they leave. A client speaks only for its own player; a malformed
  * message changes nothing and is answered with {@code error{bad_message}}. Logs carry counts, short hashes and reason
  * codes. Server thread only.
  */
 public final class TextureStatusService {
-	private static final Set<String> FIELDS = Set.of("ok", "slotMapHash", "textures", "reason");
+	private static final Set<String> FIELDS = Set.of("ok", "slotMapHash", "textures", "missing", "reason");
 	private static final Pattern REASON = Pattern.compile("^[a-z][a-z0-9_.]{0,63}$");
 	/** protocol/defs.schema.json {@code count}. */
 	private static final int MAX_COUNT = Integer.MAX_VALUE;
@@ -37,9 +37,10 @@ public final class TextureStatusService {
 	/**
 	 * One player's report.
 	 *
-	 * @param matchesWorld the pack is ready and made for the slot map the world's index names
+	 * @param missing      the world's slot-map keys the client has no art for (drawn as placeholders); 0 when not said
+	 * @param matchesWorld the client draws with its own art, resolved against the slot map the world's index names
 	 */
-	public record Status(boolean ok, @Nullable String slotMapHash, int textures, @Nullable String reason, boolean matchesWorld) {
+	public record Status(boolean ok, @Nullable String slotMapHash, int textures, int missing, @Nullable String reason, boolean matchesWorld) {
 	}
 
 	private static final Map<UUID, Status> STATUS = new ConcurrentHashMap<>();
@@ -62,10 +63,11 @@ public final class TextureStatusService {
 			boolean ok = reader.bool("ok");
 			String hash = reader.optionalString("slotMapHash", DataReader.HASH);
 			int textures = reader.has("textures") ? reader.integer("textures", 0, MAX_COUNT) : 0;
+			int missing = reader.has("missing") ? reader.integer("missing", 0, MAX_COUNT) : 0;
 			String reason = reader.optionalString("reason", REASON);
 			WorldIndex index = WorldIndexSync.current(player.server);
 			boolean matches = ok && hash != null && index != null && hash.equals(index.slotMapHash());
-			status = new Status(ok, hash, textures, reason, matches);
+			status = new Status(ok, hash, textures, missing, reason, matches);
 		} catch (DataException e) {
 			warn("bad_message");
 			RelayService.get().sendError(player, "bad_message", message.seq());
@@ -77,10 +79,11 @@ public final class TextureStatusService {
 				// Not fatal (the client judged against what it received), but its tiles would show other art.
 				warn("slot_map_mismatch");
 			}
-			KantoBridge.LOGGER.info("texture.status: a player's own pack is in use ({} textures, slot map {})", status.textures(),
+			KantoBridge.LOGGER.info("texture.status: a player draws with their own art ({} textures, slot map {})", status.textures(),
 					status.slotMapHash() == null ? "-" : Hashes.shortHash(status.slotMapHash()));
 		} else {
-			KantoBridge.LOGGER.warn("texture.status: a player sees placeholders ({})", status.reason() == null ? "-" : status.reason());
+			KantoBridge.LOGGER.warn("texture.status: a player sees placeholders ({}, {} missing)", status.reason() == null ? "-" : status.reason(),
+					status.missing());
 		}
 	}
 

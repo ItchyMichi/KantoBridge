@@ -35,12 +35,16 @@ pack below player packs; VD10 the JSON file.
 
 | # | Milestone | Status | Date | Commit |
 |---|---|---|---|---|
-| V1a | Measuring tools (V1's first work package) | **done** | 2026-10-04 | `V1a: measuring tools` |
+| V1a | Measuring tools (V1's first work package) | **done** | 2026-10-04 | `eeda9ee` |
+| V1 | Runtime model with the same cubes | **done** (X1 and X4 wait for you) | 2026-10-04 | `V1: runtime model` |
 
 **Measurements waiting on you** (agents never start the client; the plan's §10):
 
 - **X1 baseline:** take it on the commit `V1a: measuring tools`, before V1b's runtime model, on a world built before V3
   (your `saves/Kanto` as it is now). PLAYTEST.md "Voxel plan, V1a" has the steps.
+- **X1 with the runtime model and X4** (a pack of your own above the generated one): PLAYTEST.md "V1". V1's gate is X1
+  within its thresholds; the run went on without it, because only you can measure it. If X1 fails, the plan's R1 ladder
+  applies (§9).
 
 ### Voxel plan: check results
 
@@ -48,6 +52,13 @@ pack below player packs; VD10 the JSON file.
   `gradlew build`: JUnit (the new `MeshStatsTest`, `BuildReportTest#viewpointsAreBlockCoordinatesOnly`), **88/88
   GameTests**, the mixin remap check (**10** injector targets: the two new ones are the dev timing mixin's) and the
   target check.
+
+- **V1:** `tools/check.sh --e2e`: pytest **1405 passed** (every e2e scenario of M9 and M10 unchanged, and the full real
+  build: 220 maps, 0 warnings, **2,485,154 blocks** as before, 56.4 s), then `gradlew build`: **584 JUnit** (new:
+  `CubeEmitterTest` against vanilla's own `FaceInfo` and `BlockFaceUV` and the jar's half-cube model, `RenderSnapshotTest`
+  with four reader threads, `ArtKeysTest`, the carriers in `TileBlockTest`; rewritten: `TextureSyncTest`,
+  `HostSlotPackTest`, the pack tests), **88/88 GameTests**, the mixin checks. The real build's generated pack holds only
+  `textures/` under the art set `blue`: no blockstate, no model.
 
 ### Voxel plan: deviations
 
@@ -61,6 +72,19 @@ pack below player packs; VD10 the JSON file.
 3. **The viewpoints come from the build report:** the builder adds `viewpoints` (the spawn cell's block and the surface
    box, block coordinates only) to `build_report.json`, and `build_world.py` turns them into
    `local/reports/viewpoints.json`, so no tool parses the world's own files.
+
+4. **The cubes keep vanilla's UV shrink.** The plan's sketch emits the full cube with `square(...).spriteBake(sprite,
+   BAKE_LOCK_UV)`, which doesn't shrink UVs. `CubeEmitter` writes the same corners and default UVs from a table and also
+   applies vanilla's shrink toward each face's centre, so the runtime cubes are vertex for vertex what the JSON models
+   gave (`CubeEmitterTest` checks the table against vanilla's `FaceInfo` and `BlockFaceUV`). The cubes are prebuilt as one
+   mesh per slot when a snapshot is built, and `emitBlockQuads` copies the mesh.
+5. **Two small helpers the plan doesn't name:** `client/packs/LoadedPack` (the generated pack's info as the last
+   resource reload loaded it, so the art set drawn with is the one in the atlas) and `world/Games` (which games share
+   their art: the one place that names `red` and `blue`).
+6. **`art_incomplete` is re-judged every tick,** so a client without gen1-bridge that lacks a few keys exports its art
+   once gen1-bridge connects (once per world), as `no_art` does. The plan's table left that row without a retry.
+7. **A world without a slot map** (built before M9) shows placeholders since V1: the model needs the slot map to turn a
+   block's slot into a key. Every world of yours has one.
 
 ### Voxel plan: open issues
 

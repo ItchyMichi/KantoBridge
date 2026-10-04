@@ -4,7 +4,8 @@ import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import com.mojang.math.Axis;
 import dev.kantobridge.KantoBridge;
-import dev.kantobridge.builder.pack.ResourcePackWriter;
+import dev.kantobridge.builder.pack.ArtKeys;
+import dev.kantobridge.client.packs.LoadedPack;
 import dev.kantobridge.client.puppet.FacingFrames;
 import dev.kantobridge.client.puppet.Puppet;
 import dev.kantobridge.client.world.ClientWorldIndex;
@@ -42,7 +43,7 @@ import org.jetbrains.annotations.Nullable;
 /**
  * The surfing player's mount (docs/PLAN.md §6 M8 item 5): while a player surfs, the hidden game's surfing sprite (Gen 1's
  * Seel, {@code field.playerSprites.surf}) from this client's own generated pack, in the palette of the map they're on
- * ({@code textures/player/<palette>/surf.png}, an NPC-style sheet). Kept simple:
+ * ({@code textures/player/<art set>/<palette>/surf.png}, an NPC-style sheet). Kept simple:
  *
  * <ul>
  * <li>seen from outside (third person, and every other player): an upright, camera-facing 2×2-block billboard like a
@@ -193,7 +194,8 @@ public final class SurfSprite {
 		}
 		Optional<ResourceLocation> known = TEXTURES.get(map.palette());
 		if (known == null) {
-			ResourceLocation location = ResourceLocation.tryParse(ResourcePackWriter.surfTexture(map.palette()));
+			String artSet = LoadedPack.artSet();
+			ResourceLocation location = artSet == null ? null : ResourceLocation.tryParse(ArtKeys.surfTexture(artSet, map.palette()));
 			boolean present = location != null && Minecraft.getInstance().getResourceManager().getResource(location).isPresent();
 			known = present ? Optional.of(location) : Optional.empty();
 			TEXTURES.put(map.palette(), known);

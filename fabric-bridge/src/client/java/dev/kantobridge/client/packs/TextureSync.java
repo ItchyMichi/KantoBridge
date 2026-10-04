@@ -2,6 +2,7 @@ package dev.kantobridge.client.packs;
 
 import com.google.gson.JsonObject;
 import dev.kantobridge.client.bridge.ConnectionStatus;
+import dev.kantobridge.world.Games;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -11,22 +12,25 @@ import org.jetbrains.annotations.Nullable;
 /**
  * Whether this player's own generated pack draws the world they are in, and what to do when it doesn't (docs/PLAN.md
  * §4.3 "Multiplayer clients", DESIGN §8 "Setup": every player's textures come from their own locally generated pack).
- * The world's tile blocks name slots of the host's slot map; the pack's {@code kantobridge.json} says which slot map it
- * was made for. In a world with a WorldIndex:
+ * Since the voxel plan's V1 (docs/specs/VOXEL_BLOCKS_PLAN.md §5.2) the pack holds textures by key only, so one pack fits
+ * every world of a compatible game; the runtime model turns the world's slots into keys through the world's slot map.
+ * The decision table:
  *
- * <ul>
- * <li>the hashes agree: the pack is right ({@code texture.status{ok:true}}; reloaded first if it isn't loaded);</li>
- * <li>they differ (or there is no pack) and gen1-bridge is connected: export this player's own art (the main link pauses
- * meanwhile), build the pack against the <b>server's</b> slot map ({@code world.slots}), never this export's own, reload,
- * then report;</li>
- * <li>they differ and gen1-bridge isn't connected: placeholders ({@code ok:false}, reason {@code no_bridge}, a HUD
- * hint); a pack made for other slots is held back so its art never lands on the wrong tiles; once gen1-bridge connects,
- * the export runs;</li>
- * <li>anything that fails (the export, the build, the reload, a slot map that never comes or isn't the index's) ends in
- * placeholders with the reason, until the world changes or the player joins again.</li>
- * </ul>
- * Art never travels: the status carries a hash and a count. Plain Java, client thread only (except {@link #work}, which a
- * worker thread sets); {@code TextureSyncRuntime} is the glue.
+ * <pre>
+ * usable = the pack is layout 2 and its game can draw the world's (the same game, or red with blue)
+ * no usable pack:      gen1-bridge connected to a compatible game ? EXPORT + GENERATE + one RELOAD
+ *                                                                : placeholders, "no_art" (the export runs once it connects)
+ * a usable pack, not loaded:                                       RELOAD
+ * loaded:  missing = the world's slot-map keys whose sprite is absent from the block atlas
+ *          missing == 0                                         -> ready
+ *          missing &gt; 0 and gen1-bridge connected, compatible   -> EXPORT + GENERATE + RELOAD (the art is stale)
+ *          missing &gt; 0 otherwise                               -> ready with placeholders, "art_incomplete"
+ * </pre>
+ *
+ * The export runs at most once per world. Anything that fails (the export, the build, the reload, a slot map that never
+ * comes) ends in placeholders with the reason, until the world changes or the player joins again. Art never travels:
+ * {@code texture.status} carries a hash and counts. Plain Java, client thread only (except {@link #work}, which a worker
+ * thread sets); {@code TextureSyncRuntime} is the glue.
  */
 public final class TextureSync {
 	/** How long the slot map may lag behind the index before the client gives up waiting for it. */
@@ -34,22 +38,22 @@ public final class TextureSync {
 	/** How long the HUD says a rebuilt pack is in use. */
 	public static final long DONE_LINE_MS = 5_000;
 
-	/** What the hashes and the link call for. */
+	/** What the inputs call for. */
 	public enum Decision {
 		/** Not a Kanto world (no index yet). */
 		NONE,
-		/** The pack was made for this world's slots and is loaded. */
-		MATCH,
-		/** The pack was made for this world's slots but isn't loaded (held back earlier, or written without a reload). */
+		/** The loaded pack has every texture the world's slot map names. */
+		READY,
+		/** The loaded pack lacks some, and nothing can be exported now: those draw as placeholders. */
+		INCOMPLETE,
+		/** A usable pack is on disk but not the one loaded (written without a reload, or newer). */
 		RELOAD,
-		/** The pack doesn't fit and the world's slot map hasn't arrived yet. */
+		/** The world's slot map hasn't arrived (or hasn't been resolved against the atlas yet). */
 		WAIT_SLOTS,
-		/** The slot map the server sent isn't the one its index names: nothing can be built against it. */
-		SLOTS_MISMATCH,
-		/** The pack doesn't fit and gen1-bridge isn't connected: placeholders. */
-		NO_BRIDGE,
-		/** Export this player's art and build it into the world's slots. */
-		REGENERATE
+		/** Export this player's art and generate the pack from it. */
+		REGENERATE,
+		/** No usable pack and no compatible gen1-bridge: placeholders. */
+		NO_ART
 	}
 
 	/** Where the flow is for the current world. */
@@ -58,14 +62,16 @@ public final class TextureSync {
 		IDLE,
 		/** Waiting for the slot map. */
 		WAITING,
-		/** Placeholders until gen1-bridge connects. */
-		NO_BRIDGE,
+		/** Placeholders until gen1-bridge connects to a compatible game. */
+		NO_ART,
 		/** The export and the pack build run on a worker. */
 		WORKING,
-		/** Reloading resources with the pack offered. */
+		/** Reloading resources. */
 		RELOADING,
 		/** The pack draws this world. */
 		READY,
+		/** The pack draws this world, but {@code missing} keys show placeholders. */
+		INCOMPLETE,
 		/** Placeholders, for {@link #reason()}. */
 		FAILED
 	}
@@ -79,14 +85,16 @@ public final class TextureSync {
 	/**
 	 * What the world and this client look like now.
 	 *
-	 * @param serverHash      the world's slot-map hash (its WorldIndex's), or null outside a Kanto world
-	 * @param slotsHash       the hash of the slot map received in {@code world.slots}, or null before it came
-	 * @param local           the generated pack's {@code kantobridge.json}, or null without a pack
-	 * @param packLoaded      the generated pack is among the loaded resource packs
-	 * @param bridgeConnected the main link to gen1-bridge is up (an export can run)
+	 * @param worldGame        the world's game (its WorldIndex's), or null outside a Kanto world
+	 * @param worldSlotMapHash the world's slot-map hash (its WorldIndex's), or null
+	 * @param local            the generated pack on disk ({@code kantobridge.json}), or null without a pack
+	 * @param packLoaded       that pack is the one the last resource reload loaded
+	 * @param missing          the world's slot-map keys without a sprite in the atlas; -1 while that isn't known (no slot
+	 *                         map yet, or not resolved against the loaded pack yet)
+	 * @param bridgeCompatible the main link to gen1-bridge is up, and its game can draw this world
 	 */
-	public record Inputs(@Nullable String serverHash, @Nullable String slotsHash, @Nullable PackInfo local, boolean packLoaded,
-			boolean bridgeConnected) {
+	public record Inputs(@Nullable String worldGame, @Nullable String worldSlotMapHash, @Nullable PackInfo local, boolean packLoaded,
+			int missing, boolean bridgeCompatible) {
 	}
 
 	/** What the glue does for the flow. Calls come on the client thread. */
@@ -94,14 +102,11 @@ public final class TextureSync {
 		/** Sends {@code texture.status}; false when there is no server link (it is tried again next tick). */
 		boolean report(JsonObject status);
 
-		/** Starts the export and the pack build for the world's slot map; the end comes back as {@link #finished}. */
+		/** Starts the export and the pack build; the end comes back as {@link #finished}. */
 		void regenerate(long token);
 
-		/**
-		 * Re-scans the packs and reloads resources, offering the generated pack ({@code offer}) or holding it back; the end
-		 * comes back as {@link #reloaded}.
-		 */
-		void reload(long token, boolean offer);
+		/** Re-scans the packs and reloads resources; the end comes back as {@link #reloaded}. */
+		void reload(long token);
 
 		/** A counted warning: a short code and how many so far. */
 		void warn(String code, long count);
@@ -110,8 +115,8 @@ public final class TextureSync {
 	private final Port port;
 	private final Map<String, Long> warnings = new TreeMap<>();
 	private Phase phase = Phase.IDLE;
-	/** The world slot-map hash the current phase is about. */
-	private @Nullable String forHash;
+	/** The world (game and slot-map hash) the current phase is about. */
+	private @Nullable String forWorld;
 	/** Bumped whenever the world (or its index) changes, so late answers about an older one are dropped. */
 	private long token;
 	private long waitingSince;
@@ -119,12 +124,9 @@ public final class TextureSync {
 	private @Nullable JsonObject pendingReport;
 	private @Nullable String lastReport;
 	private boolean reloadInFlight;
-	private boolean reloadOffers;
-	/** A failure the tick hasn't acted on: hold a wrong pack back once the inputs are known. */
-	private boolean holdBackWanted;
-	private boolean hidden;
 	private boolean regenerated;
 	private long readyAt;
+	private int missing = -1;
 	private volatile @Nullable Work work;
 	private long reports;
 	private long regenerations;
@@ -133,39 +135,40 @@ public final class TextureSync {
 		this.port = port;
 	}
 
-	/**
-	 * The decision table (docs/PLAN.md §4.3 "Multiplayer clients"): {@code serverHash} is the world's slot-map hash (its
-	 * WorldIndex's), {@code localHash} the generated pack's ({@code kantobridge.json}), {@code slotsHash} the slot map
-	 * received in {@code world.slots}.
-	 */
-	public static Decision decide(@Nullable String serverHash, @Nullable String localHash, boolean packLoaded, @Nullable String slotsHash,
-			boolean bridgeConnected) {
-		if (serverHash == null) {
+	/** The decision table (docs/specs/VOXEL_BLOCKS_PLAN.md §5.2); {@code regenerated}: the export already ran for this world. */
+	public static Decision decide(Inputs in, boolean regenerated) {
+		if (in.worldGame() == null) {
 			return Decision.NONE;
 		}
-		if (serverHash.equals(localHash)) {
-			return packLoaded ? Decision.MATCH : Decision.RELOAD;
+		PackInfo local = in.local();
+		boolean usable = local != null && local.usable() && Games.compatible(local.game(), in.worldGame());
+		boolean canExport = in.bridgeCompatible() && !regenerated;
+		if (!usable) {
+			return canExport ? Decision.REGENERATE : Decision.NO_ART;
 		}
-		if (slotsHash == null) {
+		if (!in.packLoaded()) {
+			return Decision.RELOAD;
+		}
+		if (in.missing() < 0) {
 			return Decision.WAIT_SLOTS;
 		}
-		if (!slotsHash.equals(serverHash)) {
-			return Decision.SLOTS_MISMATCH;
+		if (in.missing() == 0) {
+			return Decision.READY;
 		}
-		return bridgeConnected ? Decision.REGENERATE : Decision.NO_BRIDGE;
+		return canExport ? Decision.REGENERATE : Decision.INCOMPLETE;
 	}
 
 	/** A server connection began, or ended: everything is judged again. */
 	public void reset() {
 		this.token++;
 		this.phase = Phase.IDLE;
-		this.forHash = null;
+		this.forWorld = null;
 		this.reason = null;
 		this.pendingReport = null;
 		this.lastReport = null;
 		this.reloadInFlight = false;
-		this.holdBackWanted = false;
 		this.regenerated = false;
+		this.missing = -1;
 		this.work = null;
 	}
 
@@ -180,58 +183,56 @@ public final class TextureSync {
 		if (busy || this.reloadInFlight || this.phase == Phase.WORKING) {
 			return;
 		}
-		String serverHash = in.serverHash();
-		if (serverHash == null) {
-			if (this.forHash != null) {
+		if (in.worldGame() == null) {
+			if (this.forWorld != null) {
 				this.token++;
-				this.forHash = null;
+				this.forWorld = null;
 			}
 			this.phase = Phase.IDLE;
 			return;
 		}
-		if (!serverHash.equals(this.forHash)) {
+		String world = in.worldGame() + "|" + in.worldSlotMapHash();
+		if (!world.equals(this.forWorld)) {
 			// A new world, or a rebuild published a new index: judge it afresh.
 			this.token++;
-			this.forHash = serverHash;
+			this.forWorld = world;
 			this.phase = Phase.IDLE;
 			this.reason = null;
-			this.holdBackWanted = false;
 			this.regenerated = false;
+			this.missing = -1;
 			this.waitingSince = nowMs;
 		}
-		if (this.phase == Phase.FAILED) {
-			if (this.holdBackWanted) {
-				this.holdBackWanted = false;
-				this.holdBackWrongPack(in);
-			}
+		if (this.phase == Phase.FAILED || this.phase == Phase.READY) {
 			return;
 		}
-		if (this.phase == Phase.READY) {
-			return;
-		}
-		Decision decision = decide(serverHash, in.local() == null ? null : in.local().slotMapHash(), in.packLoaded(), in.slotsHash(),
-				in.bridgeConnected());
+		Decision decision = decide(in, this.regenerated);
 		switch (decision) {
 			case NONE -> this.phase = Phase.IDLE;
-			case MATCH -> {
+			case READY -> {
 				this.phase = Phase.READY;
-				this.hidden = false;
+				this.reason = null;
+				this.missing = 0;
 				this.readyAt = nowMs;
-				this.queueReport(ok(serverHash, in.local() == null ? 0 : in.local().textures()));
+				this.queueReport(ok(in.worldSlotMapHash(), textures(in.local()), 0));
 			}
-			case RELOAD -> this.startReload(true);
+			case INCOMPLETE -> {
+				// Judged again every tick: gen1-bridge may still connect and refresh the art once.
+				this.phase = Phase.INCOMPLETE;
+				this.reason = "art_incomplete";
+				this.missing = in.missing();
+				this.queueReport(incomplete(in.worldSlotMapHash(), textures(in.local()), in.missing()));
+			}
+			case RELOAD -> this.startReload();
 			case WAIT_SLOTS -> {
 				this.phase = Phase.WAITING;
 				if (nowMs - this.waitingSince > SLOTS_WAIT_MS) {
-					this.fail("no_slots", in);
+					this.fail("no_slots");
 				}
 			}
-			case SLOTS_MISMATCH -> this.fail("slot_map_mismatch", in);
-			case NO_BRIDGE -> {
-				this.phase = Phase.NO_BRIDGE;
-				this.reason = "no_bridge";
-				this.queueReport(placeholders("no_bridge"));
-				this.holdBackWrongPack(in);
+			case NO_ART -> {
+				this.phase = Phase.NO_ART;
+				this.reason = "no_art";
+				this.queueReport(placeholders("no_art"));
 			}
 			case REGENERATE -> {
 				this.phase = Phase.WORKING;
@@ -249,65 +250,39 @@ public final class TextureSync {
 			return;
 		}
 		this.work = null;
+		this.regenerated = true;
 		if (failure != null) {
-			String code = reasonCode(failure);
-			this.phase = Phase.FAILED;
-			this.reason = code;
-			this.warn("textures." + code);
-			this.queueReport(placeholders(code));
-			// The inputs come with the next tick.
-			this.holdBackWanted = true;
+			this.fail(reasonCode(failure));
 			return;
 		}
-		this.regenerated = true;
-		this.startReload(true);
+		this.startReload();
 	}
 
-	/** The reload asked for is done; {@code ok}: the generated pack is now loaded (offered) or gone (held back), as asked. */
+	/** The reload asked for is done; {@code ok}: the generated pack is now loaded. */
 	public void reloaded(long token, boolean ok) {
 		if (token != this.token || !this.reloadInFlight) {
 			return;
 		}
 		this.reloadInFlight = false;
-		if (!this.reloadOffers) {
-			// Holding a wrong pack back: the phase stands either way.
-			this.hidden = ok;
-			return;
-		}
 		if (ok) {
-			// Judged again next tick: the pack now says it fits (MATCH reports it).
+			// Judged again next tick, against the newly loaded pack.
 			this.phase = Phase.IDLE;
 		} else {
-			this.phase = Phase.FAILED;
-			this.reason = "reload";
-			this.warn("textures.reload");
-			this.queueReport(placeholders("reload"));
+			this.fail("reload");
 		}
 	}
 
-	private void fail(String code, Inputs in) {
+	private void fail(String code) {
 		this.phase = Phase.FAILED;
 		this.reason = code;
 		this.warn("textures." + code);
 		this.queueReport(placeholders(code));
-		this.holdBackWrongPack(in);
 	}
 
-	/** A loaded pack made for other slots draws wrong art on every tile; placeholders are better. */
-	private void holdBackWrongPack(Inputs in) {
-		PackInfo local = in.local();
-		if (in.packLoaded() && local != null && !local.slotMapHash().equals(in.serverHash()) && !this.reloadInFlight) {
-			this.startReload(false);
-		}
-	}
-
-	private void startReload(boolean offer) {
+	private void startReload() {
 		this.reloadInFlight = true;
-		this.reloadOffers = offer;
-		if (offer) {
-			this.phase = Phase.RELOADING;
-		}
-		this.port.reload(this.token, offer);
+		this.phase = Phase.RELOADING;
+		this.port.reload(this.token);
 	}
 
 	private void queueReport(JsonObject status) {
@@ -326,12 +301,30 @@ public final class TextureSync {
 		this.reports++;
 	}
 
-	/** The {@code texture.status} of a pack that draws this world. */
-	public static JsonObject ok(String slotMapHash, int textures) {
+	private static int textures(@Nullable PackInfo local) {
+		return local == null ? 0 : local.textures();
+	}
+
+	/** The {@code texture.status} of a client that draws the world with its own art. */
+	public static JsonObject ok(@Nullable String slotMapHash, int textures, int missing) {
 		JsonObject data = new JsonObject();
 		data.addProperty("ok", true);
-		data.addProperty("slotMapHash", slotMapHash);
+		if (slotMapHash != null) {
+			data.addProperty("slotMapHash", slotMapHash);
+		}
 		data.addProperty("textures", Math.max(0, textures));
+		data.addProperty("missing", Math.max(0, missing));
+		return data;
+	}
+
+	/** The {@code texture.status} of a client whose own art lacks {@code missing} of the world's keys. */
+	public static JsonObject incomplete(@Nullable String slotMapHash, int textures, int missing) {
+		JsonObject data = placeholders("art_incomplete");
+		if (slotMapHash != null) {
+			data.addProperty("slotMapHash", slotMapHash);
+		}
+		data.addProperty("textures", Math.max(0, textures));
+		data.addProperty("missing", Math.max(0, missing));
 		return data;
 	}
 
@@ -366,9 +359,9 @@ public final class TextureSync {
 		return this.reason;
 	}
 
-	/** True while a pack made for other slots is held back (the world shows placeholders). */
-	public boolean hidden() {
-		return this.hidden;
+	/** The world's keys this client draws as placeholders, as last judged; -1 while unknown. */
+	public int missing() {
+		return this.missing;
 	}
 
 	/** The worker's step (set from the worker thread). */
@@ -381,7 +374,7 @@ public final class TextureSync {
 		return this.reports;
 	}
 
-	/** Exports started for a world's slots. */
+	/** Exports started for a world. */
 	public long regenerations() {
 		return this.regenerations;
 	}
@@ -396,7 +389,8 @@ public final class TextureSync {
 			case WORKING -> new ConnectionStatus.Line(this.work == Work.PACK ? "kantobridge.hud.textures.pack" : "kantobridge.hud.textures.export",
 					List.of(), false);
 			case RELOADING -> new ConnectionStatus.Line("kantobridge.hud.textures.reload", List.of(), false);
-			case NO_BRIDGE -> new ConnectionStatus.Line("kantobridge.hud.textures.no_bridge", List.of(), true);
+			case NO_ART -> new ConnectionStatus.Line("kantobridge.hud.textures.no_art", List.of(), true);
+			case INCOMPLETE -> new ConnectionStatus.Line("kantobridge.hud.textures.incomplete", List.of(Integer.toString(this.missing)), true);
 			case FAILED -> new ConnectionStatus.Line("kantobridge.hud.textures.failed", List.of(this.reason == null ? "?" : this.reason), true);
 			case READY -> this.regenerated && nowMs - this.readyAt < DONE_LINE_MS
 					? new ConnectionStatus.Line("kantobridge.hud.textures.ready", List.of(), false)

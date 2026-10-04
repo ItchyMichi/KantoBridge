@@ -6,7 +6,9 @@ import dev.kantobridge.client.bridge.BridgeRuntime;
 import dev.kantobridge.client.fx.BlockadeFade;
 import dev.kantobridge.client.fx.SpeechBubbles;
 import dev.kantobridge.client.fx.SurfSprite;
+import dev.kantobridge.client.model.KbModelPlugin;
 import dev.kantobridge.client.model.MeshStatsRuntime;
+import dev.kantobridge.client.model.SnapshotPublisher;
 import dev.kantobridge.client.move.MoveRuntime;
 import dev.kantobridge.client.net.ClientRelay;
 import dev.kantobridge.client.net.GameRelayRuntime;
@@ -29,6 +31,10 @@ public class KantoBridgeClient implements ClientModInitializer {
 		ClientRelay.init();
 		// The server sends its WorldIndex on join; keep the client's copy.
 		ClientWorldIndex.init();
+		// The voxel plan's runtime model (V1): every tile block's look comes from one model of ours, which draws the world's
+		// slots with this player's own art through an immutable render snapshot, rebuilt when the world or the atlas changes.
+		KbModelPlugin.init();
+		SnapshotPublisher.init();
 		// The link to this player's hidden Gen1Recomp (docs/PROTOCOL.md); it reconnects on its own.
 		BridgeRuntime.init();
 		BridgeRuntime bridge = BridgeRuntime.get();

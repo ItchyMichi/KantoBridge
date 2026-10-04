@@ -16,33 +16,32 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
-import java.util.TreeMap;
 import org.jetbrains.annotations.Nullable;
 
 /**
- * Writes the per-player resource pack (docs/PLAN.md §4.5 "Resource pack writer") into
- * {@code <gameDir>/kantobridge/resourcepack/}, the folder the client's pack-source mixin offers as a required pack:
+ * Writes the per-player resource pack (docs/PLAN.md §4.5 "Resource pack writer"; layout 2 from the voxel plan's V1,
+ * docs/specs/VOXEL_BLOCKS_PLAN.md §4.7) into {@code <gameDir>/kantobridge/resourcepack/}, the folder the client's
+ * pack-source mixin offers as a required pack. Textures only, addressed by key and art set ({@link ArtKeys}), never by
+ * slot, so one pack fits every world of a compatible game:
  *
  * <ul>
  * <li>{@code pack.mcmeta}, {@code pack_format} 34 (1.21.1 resources);</li>
- * <li>a blockstate for every used tile family with all 256 {@code hi}/{@code lo} variants, unused ones on the jar's
- * placeholder model;</li>
- * <li>one model per used slot ({@code cube_all}, or the half-height placeholder's shape);</li>
- * <li>tile textures per (atlas, palette, tile), 16×16, with {@code .mcmeta} animations for water and flowers;</li>
+ * <li>{@code kantobridge.json}: the layout, the art set (the export's game), the export hash and the counts;</li>
+ * <li>tile textures per (atlas, palette, tile) of the whole export, 16×16, with {@code .mcmeta} animations for water
+ * and flowers;</li>
  * <li>NPC textures per (palette, sprite) in the fixed sheet layout of {@link Textures#spriteSheet};</li>
- * <li>the surfing player's sheet ({@code textures/player/<palette>/surf.png}, same layout) per palette of a map with
- * water.</li>
+ * <li>the surfing player's sheet per palette of a map with water.</li>
  * </ul>
  *
- * <p>The art comes from this player's own export and never leaves the machine.
+ * <p>The client's runtime model draws the tile blocks: no blockstate or model file is written. The art comes from this
+ * player's own export and never leaves the machine.
  */
 public final class ResourcePackWriter {
 	public static final int PACK_FORMAT = 34;
 	public static final String NAMESPACE = "kantobridge";
-	/** Written at the pack's root (outside {@code assets/}): which slot map and export the pack was made for. */
+	/** Written at the pack's root (outside {@code assets/}): the layout, the art set, the export and the counts. */
 	public static final String INFO_FILE = "kantobridge.json";
 	/** Gen 1's flower tile; its frames are separate images (refs/_research/P3_gen1_data_export.md §3.3). */
 	public static final int FLOWER_TILE = 3;
@@ -52,11 +51,8 @@ public final class ResourcePackWriter {
 	 */
 	public static final List<String> FLOWER_NAMES = List.of("flower1", "flower2", "flower3");
 
-	private static final String FULL_PLACEHOLDER = NAMESPACE + ":block/tile_full_placeholder";
-	private static final String HALF_PLACEHOLDER = NAMESPACE + ":block/tile_half_placeholder";
-
 	/** What was written. */
-	public record Result(int tileTextures, int npcTextures, int animated, int models, int blockstates, String hash) {
+	public record Result(int tileTextures, int npcTextures, int animated, String hash) {
 		public int textures() {
 			return this.tileTextures + this.npcTextures;
 		}
@@ -89,6 +85,7 @@ public final class ResourcePackWriter {
 	public static Result generate(ArtCatalog art, ExportBundle bundle, PackFiles files, Warnings warnings) throws BundleException {
 		SlotMap slotMap = art.slotMap();
 		ExportPalettes palettes = bundle.has("palettes", "sgb") ? bundle.palettes() : null;
+		String artSet = bundle.game();
 
 		JsonObject pack = new JsonObject();
 		JsonObject meta = new JsonObject();
@@ -105,9 +102,9 @@ public final class ResourcePackWriter {
 		int animated = 0;
 		int blank = 0;
 		for (SlotMap.Key key : slotMap.slots().keySet()) {
-			String texture = texture(key);
+			String path = ArtKeys.textureFile(artSet, key.atlas(), key.palette(), key.tile());
 			String owner = key.atlas() + "|" + key.palette() + "|" + key.tile();
-			String previous = textureOwners.putIfAbsent(texture, owner);
+			String previous = textureOwners.putIfAbsent(path, owner);
 			if (previous != null) {
 				if (!previous.equals(owner)) {
 					// Ids that differ only in case would share a file; the art could be wrong, so stop.
@@ -115,7 +112,6 @@ public final class ResourcePackWriter {
 				}
 				continue;
 			}
-			String path = "assets/" + NAMESPACE + "/textures/" + texture.substring(NAMESPACE.length() + 1) + ".png";
 			Png.Image atlas = atlases.computeIfAbsent(key.atlas(), id -> decodeImage(bundle, id, warnings));
 			int perRow = art.tilesPerRow(key.atlas());
 			int[] colours = colours(palettes, key.palette());
@@ -143,44 +139,6 @@ public final class ResourcePackWriter {
 		}
 		warnings.note("tile_outside_atlas", blank);
 
-		// ---- models and blockstates ----
-		Map<String, String[]> variants = new TreeMap<>();
-		int models = 0;
-		for (Map.Entry<SlotMap.Key, SlotMap.Slot> entry : slotMap.slots().entrySet()) {
-			SlotMap.Key key = entry.getKey();
-			SlotMap.Slot slot = entry.getValue();
-			String texture = texture(key);
-			String model = String.format(Locale.ROOT, "%s:block/tile/%s/%03d", NAMESPACE, slot.blockPath(), slot.slot());
-			JsonObject json = new JsonObject();
-			JsonObject textures = new JsonObject();
-			if (key.shape() == SlotMap.Shape.FULL) {
-				json.addProperty("parent", "minecraft:block/cube_all");
-				textures.addProperty("all", texture);
-			} else {
-				json.addProperty("parent", HALF_PLACEHOLDER);
-				textures.addProperty("particle", texture);
-				textures.addProperty("tile", texture);
-			}
-			json.add("textures", textures);
-			files.put(String.format(Locale.ROOT, "assets/%s/models/block/tile/%s/%03d.json", NAMESPACE, slot.blockPath(), slot.slot()),
-					ProtoJson.write(json));
-			models++;
-			variants.computeIfAbsent(slot.blockPath(), k -> new String[SlotMap.SLOTS_PER_FAMILY])[slot.slot()] = model;
-		}
-		for (Map.Entry<String, String[]> family : variants.entrySet()) {
-			String placeholder = family.getKey().startsWith("tile_full_") ? FULL_PLACEHOLDER : HALF_PLACEHOLDER;
-			JsonObject all = new JsonObject();
-			for (int s = 0; s < SlotMap.SLOTS_PER_FAMILY; s++) {
-				JsonObject variant = new JsonObject();
-				String model = family.getValue()[s];
-				variant.addProperty("model", model != null ? model : placeholder);
-				all.add("hi=" + (s >> 4) + ",lo=" + (s & 15), variant);
-			}
-			JsonObject blockstate = new JsonObject();
-			blockstate.add("variants", all);
-			files.put("assets/" + NAMESPACE + "/blockstates/" + family.getKey() + ".json", ProtoJson.write(blockstate));
-		}
-
 		// ---- NPC textures: each sprite in the palette of every map it appears on ----
 		int npcTextures = 0;
 		Set<String> missingSprites = new HashSet<>();
@@ -202,7 +160,7 @@ public final class ResourcePackWriter {
 				continue;
 			}
 			Png.Image texture = Textures.spriteSheet(sheet, export.frames(), colours(palettes, palette));
-			files.put("assets/" + NAMESPACE + "/textures/npc/" + pathPart(palette) + "/" + pathPart(sprite) + ".png", Png.encode(texture));
+			files.put(ArtKeys.file(ArtKeys.npcTexture(artSet, palette, sprite)), Png.encode(texture));
 			npcTextures++;
 		}
 
@@ -219,46 +177,28 @@ public final class ResourcePackWriter {
 			if (sheet != null) {
 				for (String palette : art.surfPalettes()) {
 					Png.Image texture = Textures.spriteSheet(sheet, export.frames(), colours(palettes, palette));
-					files.put("assets/" + NAMESPACE + "/textures/player/" + pathPart(palette) + "/surf.png", Png.encode(texture));
+					files.put(ArtKeys.file(ArtKeys.surfTexture(artSet, palette)), Png.encode(texture));
 					npcTextures++;
 				}
 			}
 		}
 
 		JsonObject info = new JsonObject();
+		info.addProperty("layout", ArtKeys.LAYOUT);
+		info.addProperty("artSet", artSet);
 		info.addProperty("game", bundle.game());
 		info.addProperty("exportHash", bundle.exportHash());
-		info.addProperty("slotMapHash", slotMap.hash());
+		info.addProperty("tiles", tileTextures);
+		info.addProperty("sprites", npcTextures);
 		info.addProperty("textures", tileTextures + npcTextures);
 		files.put(INFO_FILE, ProtoJson.write(info));
 
-		return new Result(tileTextures, npcTextures, animated, models, variants.size(), files.hash());
+		return new Result(tileTextures, npcTextures, animated, files.hash());
 	}
 
-	/** The texture id of a slot key: one texture per (atlas, palette, tile), shared by both shapes. */
-	public static String texture(SlotMap.Key key) {
-		return String.format(Locale.ROOT, "%s:block/tile/%s/%s/%04d", NAMESPACE, pathPart(key.atlas()), pathPart(key.palette()), key.tile());
-	}
-
-	/** The NPC texture id of a sprite in a palette. */
-	public static String npcTexture(String palette, String sprite) {
-		return NAMESPACE + ":textures/npc/" + pathPart(palette) + "/" + pathPart(sprite) + ".png";
-	}
-
-	/** The surfing player's sheet in a palette (same layout as an NPC sheet), for maps with water. */
-	public static String surfTexture(String palette) {
-		return NAMESPACE + ":textures/player/" + pathPart(palette) + "/surf.png";
-	}
-
-	/** An id as a resource-path segment: lowercase, anything outside {@code [a-z0-9_.-]} replaced by '_'. */
-	static String pathPart(String id) {
-		String lower = id.toLowerCase(Locale.ROOT);
-		StringBuilder out = new StringBuilder(lower.length());
-		for (int i = 0; i < lower.length(); i++) {
-			char c = lower.charAt(i);
-			out.append((c >= 'a' && c <= 'z') || (c >= '0' && c <= '9') || c == '_' || c == '.' || c == '-' ? c : '_');
-		}
-		return out.toString();
+	/** The block-atlas sprite id of a slot key's tile in an art set: one texture per (atlas, palette, tile), both shapes. */
+	public static String texture(String artSet, SlotMap.Key key) {
+		return ArtKeys.spriteId(artSet, key.atlas(), key.palette(), key.tile());
 	}
 
 	private static int[] colours(@Nullable ExportPalettes palettes, String name) {
