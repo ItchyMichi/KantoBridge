@@ -22,18 +22,30 @@ public final class Reference {
 	private final int @Nullable [] unitGround;
 	/** Per screen pixel: a unit's drawn pixel, scored per unit. */
 	private final boolean @Nullable [] unitDrawn;
+	/** How many pixels a ledge's lip lifts its art in the game's view (its slab's height), 0 to allow none. */
+	private final int ledgeLift;
 
 	public Reference(SceneMap map, int artPx) {
 		this.map = map;
 		this.artPx = artPx;
 		this.unitGround = null;
 		this.unitDrawn = null;
+		this.ledgeLift = 0;
 	}
 
 	/** The reference of a planned map: its units as the table built them. */
 	public Reference(SceneMap map, int artPx, ShapePlanner.MapShapes shapes, ShapeTable table) {
+		this(map, artPx, shapes, table, 0);
+	}
+
+	/**
+	 * The reference of a planned map whose ledge lips stand {@code ledgeLift} pixels high (the profile plan, P1): a lip
+	 * shows its tile lifted by its own height, by design, so a ledge pixel may also match the texel that many rows lower.
+	 */
+	public Reference(SceneMap map, int artPx, ShapePlanner.MapShapes shapes, ShapeTable table, int ledgeLift) {
 		this.map = map;
 		this.artPx = artPx;
+		this.ledgeLift = ledgeLift;
 		int w = this.width();
 		int[] ground = null;
 		boolean[] drawn = null;
@@ -94,6 +106,11 @@ public final class Reference {
 		}
 		CellKind kind = this.map.kindAtTile(sx / this.artPx, sy / this.artPx);
 		return kind == CellKind.WALK || kind == CellKind.WATER;
+	}
+
+	/** The rows a pixel's art is lifted by design: a ledge lip's height, 0 elsewhere. */
+	public int lift(int sx, int sy) {
+		return this.ledgeLift > 0 && this.map.kindAtTile(sx / this.artPx, sy / this.artPx) == CellKind.LEDGE ? this.ledgeLift : 0;
 	}
 
 	/** True for a unit's drawn pixel: scored per unit, so the map's scores leave it out. */

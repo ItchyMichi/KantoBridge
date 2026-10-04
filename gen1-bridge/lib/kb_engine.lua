@@ -5119,6 +5119,38 @@ function Engine.new(opts)
     return TileRenderer.voidFill, default ~= nil and TileRenderer.voidFill == default
   end
 
+  -- Another installed mod's data file, as text (the profile plan,
+  -- docs/specs/PROFILE_PLAN.md): mods.loaded's payload carries the loader
+  -- (src/mods/Loader.lua:2163), whose `mods` lists every mod found under mods/,
+  -- enabled or not, as { manifest, path } (:545-566; a disabled one is marked
+  -- in `disabled`, :395-404), and whose `fs` is love.filesystem unless a test
+  -- injects one (:319-345). The sandbox keeps mod:read inside a mod's own
+  -- folder (:1712-1716), so this reads through the loader. The text is only
+  -- returned, never run. Returns text, version, enabled; or nil and a reason
+  -- code (no_loader, absent, no_file, too_big, unreadable). Engine internals:
+  -- re-check on every pin change.
+  function engine.modDataFile(loader, modId, rel, maxBytes)
+    if type(loader) ~= "table" or type(loader.mods) ~= "table" then return nil, "no_loader" end
+    local m = loader.mods[modId]
+    if type(m) ~= "table" or type(m.path) ~= "string" then return nil, "absent" end
+    local fs = loader.fs
+    if type(fs) ~= "table" or type(fs.read) ~= "function" then return nil, "no_loader" end
+    local path = m.path .. "/" .. rel
+    if type(fs.getInfo) == "function" then
+      local ok, info = pcall(fs.getInfo, path)
+      if not ok or type(info) ~= "table" or info.type ~= "file" then return nil, "no_file" end
+      if type(info.size) == "number" and info.size > maxBytes then return nil, "too_big" end
+    end
+    local ok, text = pcall(fs.read, path)
+    if not ok or type(text) ~= "string" then return nil, "unreadable" end
+    if #text == 0 then return nil, "no_file" end
+    if #text > maxBytes then return nil, "too_big" end
+    local manifest = type(m.manifest) == "table" and m.manifest or {}
+    local version = type(manifest.version) == "string" and manifest.version or nil
+    local enabled = not (type(loader.disabled) == "table" and loader.disabled[modId]) and m.enabled ~= false
+    return text, version, enabled
+  end
+
   -- The asset paths a tileset's tile animations draw from (engine.animatedTiles):
   -- each entry carries `images` (frames) or `image` (a strip).
   function engine.animationImages(tileset)

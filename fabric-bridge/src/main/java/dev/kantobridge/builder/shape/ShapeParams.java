@@ -22,9 +22,11 @@ import java.util.Objects;
  * @param storyArt      the closed art of tile story cells as overlays of the shape map (from V5)
  * @param dressing      interior walls up to the ceiling, ceilings in the room's wall art, open-air interiors (from V7)
  * @param templateMax   the largest structure template, in art tiles along either side (with {@code tierC}; from V7)
+ * @param profileUnits  units from the profile's pins, and the probe's repeating cells (docs/specs/PROFILE_PLAN.md §5.4;
+ *                      from P1)
  */
 public record ShapeParams(String planner, String heights, int maxUnit, int minRepeatRows, int hullRing, int interiorWall, boolean tierB,
-		boolean tierC, int roofRise, int ledgeLip, boolean storyArt, boolean dressing, int templateMax) {
+		boolean tierC, int roofRise, int ledgeLip, boolean storyArt, boolean dressing, int templateMax, boolean profileUnits) {
 	public static final String CLASSIFIED = "classified";
 	public static final String MEASURED = "measured";
 
@@ -39,6 +41,12 @@ public record ShapeParams(String planner, String heights, int maxUnit, int minRe
 		if (tierC ? templateMax < 4 || templateMax > 64 : templateMax != 0) {
 			throw new IllegalArgumentException("a template size needs Tier C, and lies in 4..64");
 		}
+	}
+
+	/** Parameters before P1 (no profile units). */
+	public ShapeParams(String planner, String heights, int maxUnit, int minRepeatRows, int hullRing, int interiorWall, boolean tierB,
+			boolean tierC, int roofRise, int ledgeLip, boolean storyArt, boolean dressing, int templateMax) {
+		this(planner, heights, maxUnit, minRepeatRows, hullRing, interiorWall, tierB, tierC, roofRise, ledgeLip, storyArt, dressing, templateMax, false);
 	}
 
 	/** Parameters before V7 (no dressing, no templates). */
@@ -95,9 +103,18 @@ public record ShapeParams(String planner, String heights, int maxUnit, int minRe
 	/** The largest template V7 plans, in art tiles along either side (16 cells of 2 × 2 tiles: the biggest Kanto building). */
 	public static final int TEMPLATE_MAX = 32;
 
+	/**
+	 * P1: V7's planner plus units from the profile's pins and the probe's repeating cells (docs/specs/PROFILE_PLAN.md
+	 * §5.4). Without a profile and a probe it plans what V7 plans.
+	 */
+	public static ShapeParams p1() {
+		return new ShapeParams("kb-shapes/6", MEASURED, HeightRules.MAX_UNIT, HeightRules.MIN_REPEAT_ROWS, 2, HeightRules.INTERIOR_WALL,
+				true, true, 16, 4, true, true, TEMPLATE_MAX, true);
+	}
+
 	/** The parameters a build plans with. */
 	public static ShapeParams current() {
-		return v7();
+		return p1();
 	}
 
 	/** The parameters as they appear in the shape index. */
@@ -124,6 +141,9 @@ public record ShapeParams(String planner, String heights, int maxUnit, int minRe
 		}
 		if (this.dressing) {
 			out.addProperty("dressing", true);
+		}
+		if (this.profileUnits) {
+			out.addProperty("profileUnits", true);
 		}
 		return out;
 	}

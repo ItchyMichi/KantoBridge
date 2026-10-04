@@ -3,6 +3,7 @@ package dev.kantobridge.client.bridge;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
+import dev.kantobridge.builder.export.ExportBundle;
 import dev.kantobridge.proto.Catalog;
 import dev.kantobridge.proto.Envelope;
 import dev.kantobridge.proto.MsgTypes;
@@ -56,8 +57,8 @@ public final class ExportClient {
 	private static final Pattern FILE_ID = Pattern.compile("^[A-Za-z0-9_][A-Za-z0-9_.-]{0,63}$");
 	private static final Pattern HASH = Pattern.compile("^[0-9a-f]{64}$");
 	private static final Pattern VERSION = Pattern.compile("^[0-9A-Za-z.+_-]{1,32}$");
-	private static final Set<String> KINDS = Set.of("map", "tileset", "image", "sprite", "palettes", "encounters", "field", "names",
-			"layout", "swaps");
+	/** The export kinds a bundle may hold: the bundle reader's list (the profile plan added {@code profile}). */
+	private static final Set<String> KINDS = ExportBundle.KINDS;
 	private static final Set<String> GAMES = Set.of("red", "blue");
 	/** The protocol's limits: at most 4096 resources, each at most 1 MiB (export.index.schema.json). */
 	private static final int MAX_RESOURCES = 4096;

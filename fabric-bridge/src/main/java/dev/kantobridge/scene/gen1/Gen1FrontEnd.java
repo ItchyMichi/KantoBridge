@@ -6,6 +6,7 @@ import dev.kantobridge.builder.export.ExportBundle;
 import dev.kantobridge.builder.export.ExportField;
 import dev.kantobridge.builder.export.ExportImage;
 import dev.kantobridge.builder.export.ExportMap;
+import dev.kantobridge.builder.export.ExportProfile;
 import dev.kantobridge.builder.export.ExportSwaps;
 import dev.kantobridge.builder.export.ExportTileset;
 import dev.kantobridge.builder.plan.MapModel;
@@ -22,6 +23,7 @@ import dev.kantobridge.scene.SceneAtlas;
 import dev.kantobridge.scene.SceneMap;
 import dev.kantobridge.scene.SceneSprite;
 import dev.kantobridge.scene.SwapSite;
+import dev.kantobridge.scene.profile.ProfileSource;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -112,7 +114,11 @@ public final class Gen1FrontEnd implements GameFrontEnd {
 			sprites.put(id, new SceneSprite(id, id, CELL_PX, CELL_PX, sprite.frames(), true));
 		}
 		String root = bundle.has("layout", "kanto") ? bundle.layout().root() : WorldPlanner.DEFAULT_ROOT;
-		return new Scene(bundle.game(), FAMILY, ID, bundle.exportHash(), PaletteModel.MAP4, CELL_PX, ART_PX, atlases, maps, sprites, root);
+		// The profile plan: another mod's shape profile, when the export carried one (read as data, never run).
+		ExportProfile carried = bundle.profile();
+		ProfileSource profile = carried == null ? null : ProfileSource.read(carried.text(), carried.version(), carried.enabled());
+		return new Scene(bundle.game(), FAMILY, ID, bundle.exportHash(), PaletteModel.MAP4, CELL_PX, ART_PX, atlases, maps, sprites, root,
+				profile);
 	}
 
 	/** One map's scene description from its cell model. */

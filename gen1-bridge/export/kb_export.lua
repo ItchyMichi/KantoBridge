@@ -26,7 +26,7 @@
 local Export = {}
 
 Export.KINDS = { map = true, tileset = true, image = true, sprite = true, palettes = true,
-                 encounters = true, field = true, names = true, layout = true, swaps = true }
+                 encounters = true, field = true, names = true, layout = true, swaps = true, profile = true }
 Export.ROLES = { builder = true, test = true }
 Export.ROOT = "PALLET_TOWN"              -- layout root (PLAN section 2.2)
 Export.BUDGET = 0.006                    -- seconds of build work per logic step
@@ -35,6 +35,12 @@ Export.BACKLOG = 1024 * 1024             -- no new replies while this much is un
 Export.LINE_SLACK = 512                  -- envelope bytes around a page
 Export.SLOW_STEP_MS = 33                 -- a build slice longer than two frames counts as slow
 Export.STATES = { idle = 0, building = 1, ready = 2, failed = 3 }
+-- The profile plan (docs/specs/PROFILE_PLAN.md): another mod's shape profile,
+-- exported as text when that mod is installed (profile/dramaless).
+Export.PROFILE_MOD = "DRAMALESS_SHAPE"
+Export.PROFILE_FILE = "data/voxel_heights.lua"
+Export.PROFILE_ID = "dramaless"
+Export.PROFILE_MAX = 1024 * 1024 - 64 * 1024 -- the text, leaving room for the page's escapes
 
 -- The field tables the builder and later milestones read, copied as JSON
 -- (Lua tables with keys other than 1..n become objects with string keys).
@@ -136,6 +142,7 @@ function Export.new(opts)
   local warnings, warnOrder = {}, {}
   local bootLive          -- the live-Data copy taken at mods.loaded, when datasets failed
   local bootReason        -- why the datasets path failed at boot
+  local profile           -- { text, version, enabled } read at mods.loaded, or nil
   local worldSeen = false -- a map has loaded in this instance (the live Data may have changed)
   local stats = { path = "none", buildMs = 0, cpuMs = 0, maxStepMs = 0, steps = 0, bytes = 0,
                   largest = 0, served = 0, counts = {}, phaseMs = {}, slowSteps = 0 }
@@ -939,6 +946,18 @@ function Export.new(opts)
       if blockAt(r[1], r[2], r[3]) ~= nil then swapRows[#swapRows + 1] = r end
     end
     put("swaps", "all", { sites = json.array(SwapSites.collect(swapRows, function(code) warn(code) end)) })
+
+    -- ---------------------------------------------- the shape profile
+    -- Read at mods.loaded (ex.onModsLoaded), exported as the file's text;
+    -- the builder reads it as data, never as code.
+    if profile then
+      local version = profile.version
+      if not (type(version) == "string" and #version <= 32 and version:match("^[0-9A-Za-z.+_-]+$")) then
+        version = "unknown"
+      end
+      put("profile", Export.PROFILE_ID, { mod = Export.PROFILE_MOD, version = version, file = Export.PROFILE_FILE,
+                                          enabled = profile.enabled == true, text = profile.text })
+    end
   end
 
   local function finish()
@@ -1083,6 +1102,19 @@ function Export.new(opts)
   -- view opens; when it doesn't, PLAN section 8's fallback copies the live
   -- Data right now, before any map has loaded.
   function ex.onModsLoaded(payload)
+    -- The profile plan: another mod's shape profile, read now through the
+    -- loader this payload carries (only kb_engine touches it) and kept as text.
+    local text, version_or_reason, enabled = engine.modDataFile(type(payload) == "table" and payload.loader or nil,
+      Export.PROFILE_MOD, Export.PROFILE_FILE, Export.PROFILE_MAX)
+    if text then
+      profile = { text = text, version = version_or_reason, enabled = enabled }
+      if log then
+        log.info("export.profile_found", { mod = Export.PROFILE_MOD, bytes = #text, enabled = enabled == true })
+      end
+    else
+      profile = nil
+      if log then log.info("export.profile_absent", { mod = Export.PROFILE_MOD, reason = version_or_reason }) end
+    end
     local version = engine.gameVersion()
     local view, reason = engine.openDataset(version)
     if view then

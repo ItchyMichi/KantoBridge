@@ -592,3 +592,29 @@ and the invisible blocks break into transparent particles. Nothing to rebuild.
       with Sodium 0.8) and a shader pack, then with **Distant Horizons** (`3.3.3-1.21.1`). For each: shapes, story
       art, puppets and their styles draw; no crash; no black or missing faces; distant terrain shows the map's
       colours (story and ledge blocks invisible). Any pin that follows is your decision and a VERSIONS.md change.
+
+## Profile plan
+
+### P1: Dramaless Shape's table, trees, props, signs and posts
+
+Once, before a new world:
+
+1. **Install the mod.** Copy the Dramaless Shape mod into `local\gen1recomp\mods\DRAMALESS_SHAPE\`: from your
+   `refs\DRAMALESS_SHAPE-main\`, the files `manifest.json`, `main.lua`, `mod.card`, `LICENSE`, `README.md`,
+   `CREDITS.md`, `CHANGELOG.md` and the folders `lib`, `data`, `docs` (or install it the way you usually install
+   mods). Tell me if you'd rather I copy it.
+2. **Switch it off.** Start `local\gen1recomp\gen1recomp.exe` without `--game` (the launcher), open its mod settings
+   and switch "Dramaless Shape Voxel Mod" off; or in game, F10. It must stay off: the bridge only reads its table, and
+   switched on it would run its own 3D view and hotkeys inside the hidden game.
+3. Start as usual (`.\tools\launch.ps1`) and create a **new** world.
+
+- [ ] The world's `local\minecraft\saves\<world>\kantobridge\build_report.json` shows `"profile": {"status": "ok",
+      ... "enabled": false}` and `units_by_source` with `pin` > 0.
+- [ ] **Trees:** Pallet Town's and Route 1's trees stand round, like Route 2's; the border trees too.
+- [ ] **The town sign** is a thin standee, the **fence posts** that run north–south are thin posts, the **cuttable
+      bush** is a cutout standing on grass (and after Cut, plain grass).
+- [ ] **Interiors:** stools, potted plants and TVs (the profile's standees) stand as cutouts, not cubes.
+- [ ] **Counters** (a Center, a Mart, a route gate) show their counter top on top and their front panel on the
+      front, instead of the same tile on every face.
+- [ ] **Without the mod** (rename its folder, new world): the trees still stand round where their drawing is round
+      (our own fallback), and some fences come out as cutouts.

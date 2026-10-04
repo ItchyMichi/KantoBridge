@@ -29,9 +29,9 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
 /**
- * No pixel reaches a shape key (docs/specs/VOXEL_BLOCKS_PLAN.md I8): the planner takes no {@link ArtSource} and the scene
- * it reads holds no image, and two bundles that differ only in their pixels plan the same shape index and the same shape
- * map.
+ * No pixel reaches a shape key (docs/specs/VOXEL_BLOCKS_PLAN.md I8) but the probe's answers (docs/specs/PROFILE_PLAN.md
+ * PD3): the planner takes no {@link ArtSource} and the scene it reads holds no image, and two bundles that differ only in
+ * their pixels plan the same shape index and the same shape map when the probe answers the same.
  */
 class NoPixelTest {
 	@Test
@@ -82,10 +82,22 @@ class NoPixelTest {
 
 		WorldPlan a = WorldPlanner.plan(bundle, new WorldPlanner.Options(null, 0, 0, TestData.MIN_BUILD_HEIGHT));
 		WorldPlan b = WorldPlanner.plan(repainted, new WorldPlanner.Options(null, 0, 0, TestData.MIN_BUILD_HEIGHT));
-		assertEquals(a.shapes().index().toJson(), b.shapes().index().toJson());
-		assertEquals(a.shapes().index().hash(), b.shapes().index().hash());
-		// The map's header names each build's own WorldIndex (whose export hash differs); its body is the same.
-		assertEquals(unbound(a.shapes().map()).hash(), unbound(b.shapes().map()).hash());
+		// The probe of PD3 is the planner's one pixel question: answered alike, the plans are the same.
+		for (boolean answer : new boolean[] {false, true}) {
+			UnitProbe probe = (atlas, tiles, context) -> answer;
+			ShapePlan pa = ShapePlanner.plan(a.scene(), a.index().maps().values(), ShapeParams.current(), Occupancy.NONE, probe);
+			ShapePlan pb = ShapePlanner.plan(b.scene(), b.index().maps().values(), ShapeParams.current(), Occupancy.NONE, probe);
+			assertEquals(pa.index().toJson(), pb.index().toJson());
+			assertEquals(pa.index().hash(), pb.index().hash());
+			assertEquals(unbound(pa.map()).hash(), unbound(pb.map()).hash());
+		}
+		// The builder's own plans differ only where the probe's answers do.
+		assertEquals(a.shapes().index().hash().equals(b.shapes().index().hash()), sameAnswers(a, b));
+	}
+
+	/** True when the two builds' probes answer every repeating cell alike (their units by source match). */
+	private static boolean sameAnswers(WorldPlan a, WorldPlan b) {
+		return a.shapes().unitTally().equals(b.shapes().unitTally());
 	}
 
 	private static ShapeMap unbound(ShapeMap map) {

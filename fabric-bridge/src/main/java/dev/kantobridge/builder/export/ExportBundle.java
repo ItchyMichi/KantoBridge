@@ -33,7 +33,7 @@ import org.jetbrains.annotations.Nullable;
  */
 public final class ExportBundle {
 	public static final Set<String> KINDS = Set.of("map", "tileset", "image", "sprite", "palettes", "encounters", "field", "names",
-			"layout", "swaps");
+			"layout", "swaps", "profile");
 	/** Ids that are safe as file names everywhere (no separators, colons or leading dots). */
 	private static final Pattern FILE_ID = Pattern.compile("^[A-Za-z0-9_][A-Za-z0-9_.-]{0,63}$");
 	private static final Pattern FULL_HASH = Pattern.compile("^[0-9a-f]{64}$");
@@ -241,6 +241,14 @@ public final class ExportBundle {
 	/** The wild encounter tables, or null when the export has no encounters resource. */
 	public @Nullable ExportEncounters encounters() throws BundleException {
 		return this.has("encounters", "all") ? this.typed("encounters", "all", ExportEncounters::parse, ExportEncounters.class) : null;
+	}
+
+	/**
+	 * Dramaless Shape's shape profile (docs/specs/PROFILE_PLAN.md), or null when the export has none (the mod isn't
+	 * installed, or the bundle predates the profile plan).
+	 */
+	public @Nullable ExportProfile profile() throws BundleException {
+		return this.has("profile", ExportProfile.ID) ? this.typed("profile", ExportProfile.ID, ExportProfile::parse, ExportProfile.class) : null;
 	}
 
 	/** The field tables the habitat planner reads; empty when the export has no field resource. */

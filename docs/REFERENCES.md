@@ -59,7 +59,11 @@ Conventions:
   Terrarium. The original Dramatic Shape base is only *claimed* MIT, and only up to v1.6.1, and that
   claim can't be verified now. Some BattleArt-fork code is still present.
   - Fine: study it, and re-implement its documented rules ourselves with credit.
-  - Needs your decision first: copying its code or the `data/voxel_heights.lua` tables.
+  - Needs your decision first: copying its code.
+  - **Decided 2026-10-04 (the profile plan, PD1):** its `data/voxel_heights.lua` table is read at runtime from your
+    installed copy of the mod (gen1-bridge exports it as `profile/dramaless`; Java reads it as data, never runs it). It
+    is never copied into this project. Its `figures` and `mounted` masks are not read: they are traced from the game's
+    art. The test install holds a copy of the mod's runtime files (`tools/e2e/install_profile_mod.py`), switched off.
 - **Kanto in First Person:** no licence anywhere in the repo (its README's "Credits and licence"
   section grants none). Ideas only: never copy its code, panoramas, pictures, sounds or sprites.
 - **gen1coop, SkyCraft:** MIT. Code can be reused with the notice. SkyCraft bundles an unmodified

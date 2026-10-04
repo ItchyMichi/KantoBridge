@@ -20,6 +20,9 @@ Pokémon Red/Blue's story runs in a **hidden Gen1Recomp**. It is displayed and p
   recorded in PROGRESS.md's "Voxel plan" sections. [`docs/PACKS.md`](docs/PACKS.md) is the texture-pack format
   (keys, the `kb_pack` manifest, `.vox` conventions, what may be shared); its schema is
   `protocol/packs/kb_pack.schema.json`.
+- [`docs/specs/PROFILE_PLAN.md`](docs/specs/PROFILE_PLAN.md) is the profile plan (P1–P4): Dramaless Shape's
+  hand-made table drives the shapes where it says something, our rules elsewhere; executed and recorded in
+  PROGRESS.md's "Profile plan" sections.
 - `refs/_research/` (git-ignored) holds the research notes, with verified `file:line` references,
   that the plan cites.
 
@@ -82,6 +85,11 @@ Pokémon Red/Blue's story runs in a **hidden Gen1Recomp**. It is displayed and p
 - **Texture packs** are ordinary resource packs with a `kb_pack` manifest: textures, shape rules and `.vox` models
   that change only their own client's look (never collision or anything the server decides) and never travel. The
   pack template is written only on the player's action; its generated files are ROM-derived and never shared.
+- **Dramaless Shape's profile** (the profile plan, the user's decision of 2026-10-04): its hand-made table
+  (`data/voxel_heights.lua`) is read at runtime from the mod installed in Gen1Recomp, kept **switched off** there.
+  gen1-bridge exports it as text (`profile/dramaless`); Java reads it as data, never runs it, and the planner turns its
+  pins into units. Its code is never copied, the table never committed, its `figures`/`mounted` masks never read.
+  Without it, our own rules apply.
 - **Characters** draw through a style chosen per sprite from its own sheet: thick cards by default, carved and
   rigged figures as settings (`characters.style`), a pack's sprite model; each falls back down rigged → carved →
   thick → flat. Players keep their Minecraft skins.

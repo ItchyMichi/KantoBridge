@@ -102,7 +102,9 @@ public final class ShapeReport {
 			if (map == null || shapes == null) {
 				continue;
 			}
-			scores.add(SelfCheck.score(map.id(), new Reference(map, scene.artPx(), shapes, table), map.atlas(),
+			// From P1 a ledge lip's designed lift is allowed (the profile plan's deviations).
+			int lift = plan.params().profileUnits() ? plan.params().ledgeLip() * scene.artPx() / 16 : 0;
+			scores.add(SelfCheck.score(map.id(), new Reference(map, scene.artPx(), shapes, table, lift), map.atlas(),
 					new PlannedGeometry(map, shapes, plan.index(), table), scene.artPx()));
 			for (Units.Cell cell : shapes.units()) {
 				countUnit(table, map.atlas(), cell.key(), structures, cells, used);

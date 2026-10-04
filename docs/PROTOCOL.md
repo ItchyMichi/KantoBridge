@@ -605,14 +605,15 @@ engine symbols, and Pokémon identities as Cobblemon UUIDs (`uid`).
 | Type | Dir | Data | ROM |
 |---|---|---|---|
 | `export.index` | M→G, G→M | Request (M→G): `{}`. Reply (G→M, `re` set): `game, engine, bridge, resources[{kind,id,hash,size}]` | |
-| `export.get` | M→G | `kind:"map"\|"tileset"\|"image"\|"sprite"\|"palettes"\|"encounters"\|"field"\|"names"\|"layout"\|"swaps", id` | |
+| `export.get` | M→G | `kind:"map"\|"tileset"\|"image"\|"sprite"\|"palettes"\|"encounters"\|"field"\|"names"\|"layout"\|"swaps"\|"profile", id` | |
 | `export.data` | G→M | `kind, id, hash, data`; `re` required | yes |
 
 #### Export resources
 
 A builder connection (role `builder`) asks for `export.index`, then fetches each resource it needs with
 `export.get`. Each resource's `data` has its own schema in
-[`protocol/export/<kind>.schema.json`](../protocol/export/); everything in it is ROM-derived.
+[`protocol/export/<kind>.schema.json`](../protocol/export/); everything in it is ROM-derived, except
+`profile`, which is another mod's hand-authored file (it stays on this machine all the same).
 
 - **Timing.** gen1-bridge builds every resource once, spread over many logic steps, when the first
   `export.index` arrives: about 8 s of game time on the real game (10–15 s of wall time at 60 fps),
@@ -640,6 +641,7 @@ A builder connection (role `builder`) asks for `export.index`, then fetches each
 | names | `all` | Species → dex, move → number, item → number, with display names |
 | layout | `kanto` | Block origins of the surface maps relative to `PALLET_TOWN`, from the engine's neighbour arithmetic |
 | swaps | `all` | Runtime block-change sites (cut trees, card-key doors, scripted swaps) the builder prepares story cells for |
+| profile | `dramaless` | Only when the Dramaless Shape mod (`DRAMALESS_SHAPE`) is installed in Gen1Recomp, enabled or not: its hand-authored shape profile `data/voxel_heights.lua` as text (never run), with the mod's version and whether it is enabled. The builder plans with it, and this player's client builds geometry with it ([specs/PROFILE_PLAN.md](specs/PROFILE_PLAN.md)); the file itself is never relayed |
 
 **Per-cell flags** (`map.cells`): one integer per 16-px cell, rows top to bottom. Like the engine,
 a cell's behaviour comes from its bottom-left 8×8 tile.

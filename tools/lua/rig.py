@@ -88,9 +88,10 @@ class Peer:
 class Rig:
     """``world`` (a dict from export_world.world()) installs a made-up world for the export:
     dataset views, live data and images. ``dataset_mode`` is the fake view's behaviour:
-    "ok", "missing" (open fails) or "broken" (it reads nothing)."""
+    "ok", "missing" (open fails) or "broken" (it reads nothing). ``loader`` (fake_loader's
+    keywords) puts a stand-in mod loader in mods.loaded's payload (the profile plan)."""
 
-    def __init__(self, ready=True, world=None, dataset_mode="ok", **kw):
+    def __init__(self, ready=True, world=None, dataset_mode="ok", loader=None, **kw):
         kw.setdefault("content", CONTENT)
         self.b = Bridge(engine=True, **kw)
         self.E = self.b.engine
@@ -99,7 +100,7 @@ class Rig:
         self.E.datasetMode = dataset_mode.encode()
         self.b.run_main()
         if ready:
-            self.b.mods_loaded()
+            self.b.mods_loaded(None if loader is None else self.b.fake_loader(**loader))
             self.b.ready()
 
     @property

@@ -181,12 +181,36 @@ class Bridge:
         payload[b"game"] = self.engine.game if self.engine is not None else self.table()
         self.emit("game.ready", payload)
 
-    def mods_loaded(self):
+    def mods_loaded(self, loader=None):
         """Emits mods.loaded with the live data, as the loader does after the merge
-        (Loader.lua:2163), before game.ready."""
+        (Loader.lua:2163), before game.ready. ``loader`` (a Lua table, see fake_loader) stands
+        for the loader itself, which the payload also carries."""
         payload = self.table()
         payload[b"data"] = self.engine.data if self.engine is not None else self.table()
+        if loader is not None:
+            payload[b"loader"] = loader
         self.emit("mods.loaded", payload)
+
+    def fake_loader(self, mods=None, files=None, disabled=()):
+        """A stand-in for the engine's mod loader as gen1-bridge reads it (src/mods/Loader.lua):
+        ``mods`` maps a mod id to {"version", "path"} (its manifest version and folder), ``files``
+        maps a path to its text, read through ``fs.read`` and ``fs.getInfo`` like love.filesystem,
+        and ``disabled`` lists ids the player switched off."""
+        make = self.eval("""function(mods, files, disabled)
+          local out = { mods = {}, disabled = {} }
+          for id, m in pairs(mods) do out.mods[id] = { manifest = { version = m.version }, path = m.path } end
+          for _, id in ipairs(disabled) do out.disabled[id] = true end
+          out.fs = {
+            read = function(path) return files[path] end,
+            getInfo = function(path)
+              local text = files[path]
+              if text == nil then return nil end
+              return { type = "file", size = #text }
+            end,
+          }
+          return out
+        end""")
+        return make(self.to_lua(mods or {}), self.to_lua(files or {}), self.to_lua(list(disabled)))
 
     def step(self, n: int = 1):
         """Runs n logic steps: the clock advances and the input.step hooks run, then (with the

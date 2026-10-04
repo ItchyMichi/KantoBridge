@@ -257,6 +257,9 @@ def budget_gates(report, full_build=True):
         "tier_b_reported": isinstance(report.get("shape_decor_skipped"), int) and isinstance(report.get("structures_by_kind"), dict),
         # V5: every tile story cell's closed art is in the shape map (its overlay), so the chunk mesh draws it.
         "closed_story_art": report.get("closed_shape_cells") == (report.get("story_cells_by_type") or {}).get("tile", 0),
+        # The profile plan (P1): a profile the export carried is read as data, and units are reported by source.
+        "profile_read": (report.get("profile") or {}).get("status") in ("absent", "ok")
+        and isinstance(report.get("units_by_source"), dict),
         # V7: templates and their fallbacks are reported; a failure is one of the fallbacks.
         "templates_reported": isinstance(report.get("shape_templates"), int) and isinstance(selfcheck.get("templates_failed"), int)
         and selfcheck.get("templates_failed") <= ((report.get("structures_by_kind") or {}).get("fallback") or 0),

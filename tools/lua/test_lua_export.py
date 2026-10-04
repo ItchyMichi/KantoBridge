@@ -625,6 +625,63 @@ def test_the_view_is_read_not_the_live_tables():
     assert data["type"] == "export.data"
 
 
+# ------------------------------------------------------------ the shape profile (the profile plan)
+
+PROFILE_PATH = "mods/DRAMALESS_SHAPE/data/voxel_heights.lua"
+# made-up profile text; the marker must never reach a log line
+PROFILE_TEXT = "-- MADE_UP_MARKER\nreturn { version = 1, heights = { wall = 16 } }\n"
+
+
+def profile_loader(text=PROFILE_TEXT, disabled=("DRAMALESS_SHAPE",), version="2.0.4"):
+    return {"mods": {"DRAMALESS_SHAPE": {"version": version, "path": "mods/DRAMALESS_SHAPE"},
+                     "gen1-bridge": {"version": "0.1.0", "path": "mods/gen1-bridge"}},
+            "files": {PROFILE_PATH: text}, "disabled": list(disabled)}
+
+
+def test_an_installed_profile_is_exported_as_text():
+    rig, peer = export_rig(loader=profile_loader())
+    index = request(rig, peer, "export.index", {})["data"]
+    entries = {(e["kind"], e["id"]) for e in index["resources"]}
+    assert ("profile", "dramaless") in entries
+    page = request(rig, peer, "export.get", {"kind": "profile", "id": "dramaless"})
+    assert page["type"] == "export.data"
+    data = page["data"]["data"]
+    assert not PROTOCOL.check_export("profile", data)
+    assert data == {"mod": "DRAMALESS_SHAPE", "version": "2.0.4", "file": "data/voxel_heights.lua", "enabled": False,
+                    "text": PROFILE_TEXT}
+    assert page["data"]["hash"] == hashlib.sha256(canonical(data).encode("utf-8")).hexdigest()
+    found = [line for line in rig.logs() if "export.profile_found" in line]
+    assert found and "enabled=false" in found[0] and f"bytes={len(PROFILE_TEXT)}" in found[0]
+    assert not any("MADE_UP_MARKER" in line for line in rig.logs())
+
+
+def test_an_enabled_profile_mod_is_reported_as_enabled():
+    rig, peer = export_rig(loader=profile_loader(disabled=()))
+    data = request(rig, peer, "export.get", {"kind": "profile", "id": "dramaless"})["data"]["data"]
+    assert data["enabled"] is True
+
+
+def test_an_odd_version_is_exported_as_unknown():
+    rig, peer = export_rig(loader=profile_loader(version="2.0.4 beta!"))
+    data = request(rig, peer, "export.get", {"kind": "profile", "id": "dramaless"})["data"]["data"]
+    assert data["version"] == "unknown"
+
+
+@pytest.mark.parametrize("loader, reason", [
+    (None, "no_loader"),
+    ({"mods": {}, "files": {}}, "absent"),
+    ({"mods": {"DRAMALESS_SHAPE": {"version": "2.0.4", "path": "mods/DRAMALESS_SHAPE"}}, "files": {}}, "no_file"),
+    (profile_loader(text="x" * (1024 * 1024)), "too_big"),
+])
+def test_without_a_readable_profile_there_is_no_profile_resource(loader, reason):
+    rig, peer = export_rig(loader=loader)
+    index = request(rig, peer, "export.index", {})["data"]
+    assert not [e for e in index["resources"] if e["kind"] == "profile"]
+    assert any("export.profile_absent" in line and f"reason={reason}" in line for line in rig.logs())
+    reply = request(rig, peer, "export.get", {"kind": "profile", "id": "dramaless"})
+    assert reply["type"] == "error" and reply["data"]["code"] == "not_found"
+
+
 # ------------------------------------------------------------ what can't be exported
 
 

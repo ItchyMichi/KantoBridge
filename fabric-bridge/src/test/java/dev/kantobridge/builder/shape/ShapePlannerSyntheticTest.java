@@ -10,6 +10,7 @@ import dev.kantobridge.builder.TestData;
 import dev.kantobridge.builder.export.ExportBundle;
 import dev.kantobridge.builder.plan.WorldPlan;
 import dev.kantobridge.builder.plan.WorldPlanner;
+import dev.kantobridge.builder.shape.geom.CellUnits;
 import dev.kantobridge.proto.ProtoJson;
 import dev.kantobridge.world.MapPlacement;
 import dev.kantobridge.world.ShapeMap;
@@ -44,10 +45,10 @@ class ShapePlannerSyntheticTest {
 		golden.addProperty("mapHash", shapes.map().hash());
 		golden.addProperty("shapedBlocks", shapes.shapedBlocks());
 		TestData.assertGolden(TestData.goldenShapes(), ProtoJson.write(golden), "shapes");
-		assertEquals("kb-shapes/5", shapes.index().planner());
+		assertEquals("kb-shapes/6", shapes.index().planner());
 		assertEquals(2, shapes.keysByKind().get(ShapeKey.Kind.TUFT), "the grass and the flower");
-		assertEquals(5 * 8, shapes.keysByKind().get(ShapeKey.Kind.CELL),
-				"five units of eight blocks: the tree wall (with and without walkable ground south), the town's post, the cut tree, the hill's sign");
+		assertEquals(6 * 8, shapes.keysByKind().get(ShapeKey.Kind.CELL), "six units of eight blocks: the tree wall (with and without walkable "
+				+ "ground south), the town's post, the cut tree, the hill's sign, and the hill's round tree (the synthetic profile pins it)");
 		assertTrue(shapes.index().size() > 0);
 		// V7: the hill's house and the town's door block are templates; their Tier A keys (the house's roof) live in them.
 		assertEquals(2, shapes.index().templates().size());
@@ -78,7 +79,9 @@ class ShapePlannerSyntheticTest {
 		assertNotNull(closed);
 		assertEquals(2, closed.length, "two blocks high");
 		assertEquals(ShapeKey.Kind.CELL, closed[0].kind());
-		assertTrue(closed[0].variant().endsWith("t"), "foliage: " + closed[0].variant());
+		CellUnits.Context context = CellUnits.Context.parse(closed[0].variant());
+		assertTrue(context.tree(), "foliage: " + closed[0].variant());
+		assertEquals("prop", context.pinned(), "the synthetic profile pins the cut tree a prop");
 		for (String id : plan.shapes().maps().keySet()) {
 			assertNotNull(plan.shapes().shapes(id), id);
 		}

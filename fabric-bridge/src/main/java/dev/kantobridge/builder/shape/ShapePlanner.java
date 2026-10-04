@@ -12,6 +12,7 @@ import dev.kantobridge.scene.CellKind;
 import dev.kantobridge.scene.Scene;
 import dev.kantobridge.scene.SceneAtlas;
 import dev.kantobridge.scene.SceneMap;
+import dev.kantobridge.scene.profile.Profile;
 import dev.kantobridge.world.MapPlacement;
 import dev.kantobridge.world.ShapeIndex;
 import dev.kantobridge.world.ShapeMap;
@@ -108,13 +109,20 @@ public final class ShapePlanner {
 		return plan(scene, placements, params, Occupancy.NONE);
 	}
 
+	/** Plans a world's shapes without the probe of PD3. */
+	public static ShapePlan plan(Scene scene, Collection<MapPlacement> placements, ShapeParams params, Occupancy taken) {
+		return plan(scene, placements, params, taken, null);
+	}
+
 	/**
 	 * Plans a world's shapes.
 	 *
 	 * @param placements the maps the build places (their shape map positions)
 	 * @param taken      the positions the builder's story blocks take, and the surface's void fill
+	 * @param probe      asks the builder's own art whether a repeating cell stands as a unit (PD3), or null
 	 */
-	public static ShapePlan plan(Scene scene, Collection<MapPlacement> placements, ShapeParams params, Occupancy taken) {
+	public static ShapePlan plan(Scene scene, Collection<MapPlacement> placements, ShapeParams params, Occupancy taken,
+			@Nullable UnitProbe probe) {
 		long started = System.nanoTime();
 		List<String> atlases = new ArrayList<>(new TreeSet<>(scene.atlases().keySet()));
 		TreeSet<String> paletteSet = new TreeSet<>();
@@ -125,12 +133,15 @@ public final class ShapePlanner {
 		Map<String, MapShapes> shapes = new TreeMap<>();
 		List<ShapeIndex.Use> uses = new ArrayList<>();
 		Map<String, JsonObject> templates = new TreeMap<>();
+		Map<String, Integer> unitSources = new TreeMap<>();
 		for (SceneMap map : scene.maps().values()) {
 			int atlas = atlases.indexOf(map.atlas());
 			if (atlas < 0) {
 				continue;
 			}
-			MapShapes planned = planMap(map, scene.atlas(map.atlas()), atlas, params);
+			MapShapes planned = params.profileUnits()
+					? planMap(map, scene.atlas(map.atlas()), atlas, params, scene.profileTileset(map.tileset()), probe, unitSources)
+					: planMap(map, scene.atlas(map.atlas()), atlas, params);
 			shapes.put(map.id(), planned);
 			for (Templates.Placed template : planned.templates()) {
 				templates.putIfAbsent(template.sig(), template.entry());
@@ -278,7 +289,7 @@ public final class ShapePlanner {
 			byKind.merge(key.kind(), 1, Integer::sum);
 		}
 		return new ShapePlan(params, index, map, shapes, byKind, shaped, (System.nanoTime() - started) / 1_000_000L, decorSkipped, fill,
-				voidUnits, closedColumns);
+				voidUnits, closedColumns, unitSources);
 	}
 
 	/** The context of the border's units: outdoors, no walkable side, repeating, foliage (the void tells no more). */
@@ -376,14 +387,23 @@ public final class ShapePlanner {
 
 	/** One map's keys and columns, open and closed. */
 	static MapShapes planMap(SceneMap map, @Nullable SceneAtlas sceneAtlas, int atlas, ShapeParams params) {
-		Columns open = columns(map, sceneAtlas, atlas, params);
+		return planMap(map, sceneAtlas, atlas, params, null, null, new TreeMap<>());
+	}
+
+	/**
+	 * One map's keys and columns, open and closed, with the profile's entry for its tileset (null: none), the probe of
+	 * PD3 (null: none), and the unit tally of {@link Units#plan} (the open state's only).
+	 */
+	static MapShapes planMap(SceneMap map, @Nullable SceneAtlas sceneAtlas, int atlas, ShapeParams params, Profile.@Nullable Tileset tileset,
+			@Nullable UnitProbe probe, Map<String, Integer> tally) {
+		Columns open = columns(map, sceneAtlas, atlas, params, tileset, probe, tally);
 		ShapeKey[][] closed = new ShapeKey[open.keys().length][];
 		ShapeKey[][] overlay = new ShapeKey[open.keys().length][];
 		if (map.closedTiles() != null) {
 			// The closed state of the cells a swap site changes (a standing cut tree), planned on the map with every site
 			// closed, exactly as the open state is; kept for the cells that change only.
 			SceneMap shut = map.closedVariant();
-			Columns all = columns(shut, sceneAtlas, atlas, params);
+			Columns all = columns(shut, sceneAtlas, atlas, params, tileset, probe, new TreeMap<>());
 			int cols = map.artCols();
 			int per = map.perCell();
 			for (var site : map.swapSites()) {
@@ -428,17 +448,24 @@ public final class ShapePlanner {
 	}
 
 	static Columns columns(SceneMap map, @Nullable SceneAtlas sceneAtlas, int atlas, ShapeParams params) {
+		return columns(map, sceneAtlas, atlas, params, null, null, new TreeMap<>());
+	}
+
+	static Columns columns(SceneMap map, @Nullable SceneAtlas sceneAtlas, int atlas, ShapeParams params, Profile.@Nullable Tileset tileset,
+			@Nullable UnitProbe probe, Map<String, Integer> tally) {
 		if (!params.measured()) {
 			return classified(map, atlas, params);
 		}
-		Columns columns = measured(map, atlas, params);
+		ProfileClasses classes = params.profileUnits() ? ProfileClasses.of(map, tileset) : null;
+		Columns columns = measured(map, atlas, params, classes == null ? Structures.solidTiles(map) : classes.structural());
 		boolean cells = sceneAtlas != null && map.perCell() == ShapeTable.UNIT_CELL;
 		int[] floor = filled(columns.blocks().length, -1);
 		int[] decor = new int[columns.blocks().length];
 		List<Units.Cell> units = new ArrayList<>();
 		if (params.tierB() && cells) {
 			// Tier B (kb-shapes/3): tufts and cell units over the measured columns.
-			Units.plan(map, sceneAtlas, atlas, columns.keys(), columns.blocks(), columns.shapeMask(), floor, decor, units);
+			Units.plan(map, sceneAtlas, atlas, columns.keys(), columns.blocks(), columns.shapeMask(), floor, decor, units, classes,
+					params.profileUnits() ? probe : null, tally);
 		}
 		List<Templates.Placed> templates = List.of();
 		if (params.tierC() && cells) {
@@ -516,11 +543,15 @@ public final class ShapePlanner {
 	// ---- kb-shapes/2: measured runs, door folds, roofs, ledge lips ----
 
 	static Columns measured(SceneMap map, int atlas, ShapeParams params) {
+		return measured(map, atlas, params, Structures.solidTiles(map));
+	}
+
+	/** {@link #measured} over the solid tiles {@code solid} (the profile's pinned units left out, P1). */
+	static Columns measured(SceneMap map, int atlas, ShapeParams params, boolean[] solid) {
 		int cols = map.artCols();
 		int rows = map.artRows();
 		int n = cols * rows;
-		List<Structures.MeasuredRun> runs = Structures.measured(map, Structures.solidTiles(map), params.maxUnit(), params.minRepeatRows(),
-				params.interiorWall());
+		List<Structures.MeasuredRun> runs = Structures.measured(map, solid, params.maxUnit(), params.minRepeatRows(), params.interiorWall());
 		int[] blocks = new int[n];
 		int[] mask = new int[n];
 		// The block index of each column's roof, -1 for none: what the hips compare.
@@ -542,6 +573,11 @@ public final class ShapePlanner {
 				CellKind kind = map.kindAtTile(tx, ty);
 				if (kind == CellKind.COUNTER) {
 					blocks[ty * cols + tx] = HeightRules.COUNTER;
+					if (params.profileUnits()) {
+						// From P1 (the research's counter: one band): the counter's front panel stands, the rows above ride
+						// its top, as Tier A folds a run one block high.
+						keys[ty * cols + tx] = counterColumn(map, atlas, tx, ty);
+					}
 				} else if (kind == CellKind.LEDGE) {
 					keys[ty * cols + tx] = new ShapeKey[] {ShapeKey.slab(atlas, map.tile(tx, ty), params.ledgeLip())};
 				}
@@ -586,6 +622,30 @@ public final class ShapePlanner {
 			}
 		}
 		return new Columns(keys, blocks, mask, runs);
+	}
+
+	/**
+	 * A counter tile's block, folded as Tier A folds a run one block high: the south and side faces show the front tile
+	 * of its column's counter run, the top the tile one row up (the run's north tile at the run's north end), the back
+	 * the run's second tile. Null when that is the position's own plain cube.
+	 */
+	static ShapeKey @Nullable [] counterColumn(SceneMap map, int atlas, int tx, int ty) {
+		int n = ty;
+		while (n > 0 && map.kindAtTile(tx, n - 1) == CellKind.COUNTER) {
+			n--;
+		}
+		int f = ty;
+		while (f < map.artRows() - 1 && map.kindAtTile(tx, f + 1) == CellKind.COUNTER) {
+			f++;
+		}
+		int own = map.tile(tx, ty);
+		int up = ty - 1 >= n ? map.tile(tx, ty - 1) : map.tile(tx, n);
+		int north = map.tile(tx, Math.min(f, n + 1));
+		int front = map.tile(tx, f);
+		if (up == own && north == own && front == own) {
+			return null;
+		}
+		return new ShapeKey[] {ShapeKey.cube(atlas, up, up, north, front, front, front)};
 	}
 
 	/** The roof's height {@code s} rows behind the eave of a run {@code length} rows deep: a gable over the run's depth. */

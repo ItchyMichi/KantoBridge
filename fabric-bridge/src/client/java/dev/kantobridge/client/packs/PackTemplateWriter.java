@@ -9,6 +9,8 @@ import dev.kantobridge.builder.export.ExportBundle;
 import dev.kantobridge.builder.pack.ArtKeys;
 import dev.kantobridge.builder.pack.Textures;
 import dev.kantobridge.builder.plan.PlanException;
+import dev.kantobridge.builder.shape.ArtUnitProbe;
+import dev.kantobridge.builder.shape.Occupancy;
 import dev.kantobridge.builder.shape.ShapeParams;
 import dev.kantobridge.builder.shape.ShapePlanner;
 import dev.kantobridge.builder.shape.geom.CellUnits;
@@ -103,7 +105,8 @@ public final class PackTemplateWriter {
 		if (front != null) {
 			Scene scene = front.describe(bundle);
 			BundleArtSource art = BundleArtSource.of(bundle);
-			ShapeTable table = ShapeTable.build(ShapePlanner.plan(scene, List.of(), ShapeParams.current()).index(), art);
+			ShapeTable table = ShapeTable.build(ShapePlanner.plan(scene, List.of(), ShapeParams.current(), Occupancy.NONE, new ArtUnitProbe(art))
+					.index(), art);
 			for (Map.Entry<String, CellUnits.Unit> e : table.units().entrySet()) {
 				VoxelGrid voxels = e.getValue().voxels();
 				if (voxels == null) {

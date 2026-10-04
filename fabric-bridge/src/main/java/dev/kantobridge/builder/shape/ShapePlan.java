@@ -25,6 +25,7 @@ public final class ShapePlan {
 	private final Occupancy.@Nullable VoidFill voidFill;
 	private final Map<Integer, VoidUnit> voidUnits;
 	private final Map<String, Closed> closedColumns;
+	private final Map<String, Integer> unitTally;
 
 	/**
 	 * A tile story cell's closed columns (V5): per column of the cell (north-west, north-east, south-west, south-east)
@@ -55,8 +56,9 @@ public final class ShapePlan {
 
 	ShapePlan(ShapeParams params, ShapeIndex index, ShapeMap map, Map<String, ShapePlanner.MapShapes> maps, Map<ShapeKey.Kind, Integer> keysByKind,
 			long shapedBlocks, long planMs, long decorSkipped, Occupancy.@Nullable VoidFill voidFill, Map<Integer, VoidUnit> voidUnits,
-			Map<String, Closed> closedColumns) {
+			Map<String, Closed> closedColumns, Map<String, Integer> unitTally) {
 		this.closedColumns = Collections.unmodifiableMap(new TreeMap<>(closedColumns));
+		this.unitTally = Collections.unmodifiableMap(new TreeMap<>(unitTally));
 		this.decorSkipped = decorSkipped;
 		this.voidFill = voidFill;
 		this.voidUnits = Collections.unmodifiableMap(new TreeMap<>(voidUnits));
@@ -94,7 +96,16 @@ public final class ShapePlan {
 	/** The same plan with its shape map bound to the WorldIndex whose text hashes to {@code indexHash}. */
 	public ShapePlan withIndexHash(String indexHash) {
 		return new ShapePlan(this.params, this.index, this.map.withHeader(indexHash, this.index.hash()), this.maps, this.keysByKind,
-				this.shapedBlocks, this.planMs, this.decorSkipped, this.voidFill, this.voidUnits, this.closedColumns);
+				this.shapedBlocks, this.planMs, this.decorSkipped, this.voidFill, this.voidUnits, this.closedColumns, this.unitTally);
+	}
+
+	/**
+	 * The map bodies' cell units by why they are units ({@code pin}, {@code cut}, {@code hint}, {@code lone},
+	 * {@code probe}), and the profile's pinned cells left as they were ({@code pin_not_low}, {@code pin_not_solid});
+	 * docs/specs/PROFILE_PLAN.md §5.7. Counts only.
+	 */
+	public Map<String, Integer> unitTally() {
+		return this.unitTally;
 	}
 
 	public ShapeParams params() {

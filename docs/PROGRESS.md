@@ -44,7 +44,7 @@ pack below player packs; VD10 the JSON file.
 | V6 | Texture packs and `.vox` models | **done** (play-test and X5 wait for you; no rebuild needed) | 2026-10-04 | `0df5171` |
 | V7 | Structure templates and dressing | **done** (play-test waits for you; rebuild your world first) | 2026-10-04 | `cadd6b3` |
 | V8 | Characters | **done** (play-test and X7 wait for you; no rebuild needed) | 2026-10-04 | `7b606a9` |
-| V9 | Clean-up, other renderers, docs | **done** (X6 and one question wait for you) | 2026-10-04 | `V9: clean-up` |
+| V9 | Clean-up, other renderers, docs | **done** (X6 and one question wait for you) | 2026-10-04 | `819b6ae` |
 
 **Measurements waiting on you** (agents never start the client; the plan's §10):
 
@@ -416,6 +416,90 @@ question 5 below (the fallback for worlds built before V5).
 ### Voxel plan: open issues
 
 None (V7 put the structure rules and models in the packs' geometry hash, and the key index lists structures).
+
+## Profile plan
+
+Execution of [specs/PROFILE_PLAN.md](specs/PROFILE_PLAN.md) (P1–P4), after your play-test of the voxel plan on
+2026-10-04: the trees at Pallet Town and on Route 1 stood as folded cubes, and buildings were painted boxes. Your
+decisions (PD1–PD4): use Dramaless Shape's hand-made table, read at runtime from an installed copy of the mod, with our
+own rules as the fallback; the tree fallback is option 1; buildings follow the table's band tables.
+
+| # | Milestone | Status | Date | Commit |
+|---|---|---|---|---|
+| P1 | Profile and outdoor units | **done** (play-test waits for you: install the mod, switched off, then a new world) | 2026-10-04 | `P1: profile and outdoor units` |
+| P2 | Buildings | to do | | |
+| P3 | Boxes and interiors | to do | | |
+| P4 | Finish | to do | | |
+
+**Why the trees were cubes** (counts from your world, which is identical to the e2e build): V4 made a repeating cell a
+unit only when all its tiles were in the map's drawn border block (voxel plan deviation 26). Pallet Town: 123 solid
+cells, none with the hint, so no unit; Route 1: 53 units, and 72 more cells whose drawing is round stayed columns;
+Route 22: none. Over the 36 outdoor maps, 2,586 of 14,797 solid cells were units; option 1's probe adds 2,378 hulls and
+430 objects, and leaves 6,000 low repeating cells (walls, cliffs) as they were.
+
+### Profile plan: check results
+
+- **P1** (the real export with Dramaless Shape 2.0.4 in the test install, switched off; counts only): the export
+  carries `profile/dramaless`, byte for byte and reported switched off; the build reads it (`status: ok`, 24 tilesets,
+  1,207 pins, 14 conditional pins, 55 building entries, nothing unknown). Units by source: 8,571 pinned, 396 probed, 17
+  lone; 235 pins on walkable cells left as they were. Structures: 15,150 hull cells (10,763 before), 1,978 objects
+  (29), 35 template buildings (22), 144 fallbacks (249), 0 units or templates failed. 220 maps, 0 warnings, 2,471,966
+  blocks in 60.5 s (48,059 blocks/s); 23,016 keys, 30,218 instances, index 1.58 MB, map 243,596 characters; quads per
+  block mean 12.5, max 80; per section p95 7,200, max 26,752. Self-check: no hole, ground 1.0, structure p05 0.766
+  (0.598 before), min 0.530 (0.375; Pallet Town, whose 45 non-unit solid cells are its houses). Every gate holds.
+  `tools/check.sh --e2e`: pytest **1455 passed** (the end-to-end tests included), then `gradlew build`: **796 JUnit**,
+  **92/92 GameTests**, the mixin checks.
+
+
+### Profile plan: deviations
+
+1. **The voxel plan's I8 (no pixel reaches a key) is narrowed to the probe of PD3.** The planner itself still takes no
+   `ArtSource` and its scene holds no image; the builder's own art answers one question per repeating cell (would it
+   stand as a hull or an object?), and the answer becomes a unit key. `NoPixelTest` now proves that with the probe
+   answering alike, repainted art plans the same shapes. A pixel-free rule would have turned 6,000 plain wall cells
+   into units.
+2. **The probe runs where the plan is made:** the builder, on the host's export. The client's key index and pack
+   template plan with the same probe on the client's own export, so their keys match a world built from that export.
+3. **Pinned units are per 16-px cell**: the class of the cell's top-left tile, else its first tile with a unit class.
+   Dramaless groups 4-connected tiles of one class; a standee drawn over two cells stands as two units here.
+4. **Pinned standees keep our placement** (PD8: the slab's front at the south edge of its lowest pixel row, which the
+   self-check needs) with Dramaless's pool depths and segmentation: the background is the shades `prop_bg` names, else
+   the non-black shades on the drawing's border, else white; a cutout is strict and keeps its largest piece; a post
+   floods through white only. **Their gate is cover, not match:** a thick slab's top hides part of a farther piece in
+   the game's top-down view, which is no hole (the first real run: 158 cells, 18 kinds, covered their drawing fully but
+   matched 0.82–0.90 by texel, and fell back to cubes). Dramaless has no gate at all; ours keeps "never leave the
+   drawing to the floor" and the quad cap.
+5. **A pinned cylinder tries the hull even where the round test says no.** The hull's gates stay (cover 0.4, 96
+   quads), so one that fails draws its column version; our hulls keep their half-block depth steps (PD9).
+6. **Pinned cells are never structural** (the research: authored tiles never join Dramaless's volume regions). A solid
+   cell the profile pins to a unit class leaves Tier A's solid tiles before runs and regions are measured, and stands
+   as its own unit, two blocks high: a sign or a post beside a house no longer joins the house's region (on the first
+   real run, unit-touching regions cost 8 of 22 templates), and a pinned tree in a run Tier A measured taller is a
+   two-block hull. Feet-level colliders are the same (I1). A pin on a walkable cell is counted (`pin_not_solid`), never
+   forced. Pins of other classes (walls, counters, tables, …) wait for P3.
+7. **`figures` and `mounted` are not read** (PD5): their masks are traced from the game's art, and the shape index
+   travels.
+8. **The export's kind list has one owner:** the client's `ExportClient` now uses `ExportBundle.KINDS`.
+9. **gen1-bridge reads the table at mods.loaded** (boot and hot reload) through the loader in the event's payload, an
+   engine internal (`engine.modDataFile`): the sandbox keeps `mod:read` inside a mod's own folder. The text is never
+   run; Java reads it as data (`scene/profile/LuaData`), which refuses anything but literals.
+10. **The test install holds a copy of your mod** (`tools/e2e/install_profile_mod.py`: its runtime files and data only,
+    never `assets/`, `tests/` or `tools/`), switched off once by a driver (`drivers/kb_mods_off.lua`); Gen1Recomp keeps
+    the switch.
+11. **Counters fold from P1** (brought forward from P3, the research's `counter`: one band): a counter's block shows its
+    column's front panel on the south and side faces and the row above on top, as Tier A folds a run one block high,
+    where before every face showed its own tile. Units took the trees and props out of the maps' structure scores, which
+    left the route gates scoring their counters alone (0.375–0.46, under the 0.55 floor); folded, a counter shows its
+    drawing in the game's view.
+12. **The self-check lets a ledge lip lift its art by its own height** (the lip's 4/16 block: two Game Boy pixels): a
+    ledge pixel may also match the texel two rows lower, as a template's pane may shift one. Routes 1, 14 and 17 have no
+    structure left but ledges once their trees are units, and scored 0.125 texel for texel.
+
+### Profile plan: open issues
+
+- P2 (buildings), P3 (boxes and interiors) and P4 (finish) are to do.
+- Your own install needs the mod, switched off (PLAYTEST.md, "Profile plan, P1"). I can copy it for you if you say
+  so; switching it off is done in Gen1Recomp's launcher.
 
 ## Pre-flight (PLAN §0.6)
 

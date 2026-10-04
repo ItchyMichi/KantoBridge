@@ -23,11 +23,18 @@ import pytest
 from fake_minecraft import FakeMinecraft
 from kb_protocol import load_protocol
 from kb_protocol.jsonfmt import canonical
-from run_gen1recomp import REPORTS, launch, preflight
+from run_gen1recomp import INSTALL, REPORTS, launch, preflight
 
 TEST_PORT = 27197
 PAGE_LIMIT = 1048576
 KINDS = ("encounters", "field", "image", "layout", "map", "names", "palettes", "sprite", "swaps", "tileset")
+# The profile plan (docs/specs/PROFILE_PLAN.md §5.8): with Dramaless Shape installed in the test install
+# (tools/e2e/install_profile_mod.py), the export carries its table as profile/dramaless.
+PROFILE_MOD = INSTALL / "mods" / "DRAMALESS_SHAPE"
+
+
+def _kinds():
+    return set(KINDS) | ({"profile"} if (PROFILE_MOD / "data" / "voxel_heights.lua").is_file() else set())
 ROOT = "PALLET_TOWN"
 
 
@@ -88,7 +95,7 @@ async def _export(port, game):
     index = reply["data"]
     assert (index["game"], index["engine"], index["bridge"]) == (game, "0.3.49", "0.1.0")
     entries = index["resources"]
-    assert {e["kind"] for e in entries} == set(KINDS)
+    assert {e["kind"] for e in entries} == _kinds()
     assert len({(e["kind"], e["id"]) for e in entries}) == len(entries), "unique ids per kind"
 
     fetch_started = time.monotonic()
@@ -124,6 +131,13 @@ async def _export(port, game):
             mismatches += 1
     assert not problems, problems
     assert mismatches == 0, f"{mismatches} resources whose hash or size differs from the index"
+    if "profile" in _kinds():
+        # The installed mod's table, byte for byte (compared by hash only), and the mod switched off.
+        profile = pages[("profile", "dramaless")]
+        manifest = json.loads((PROFILE_MOD / "manifest.json").read_text(encoding="utf-8"))
+        assert (profile["mod"], profile["version"], profile["enabled"]) == ("DRAMALESS_SHAPE", manifest["version"], False)
+        on_disk = (PROFILE_MOD / "data" / "voxel_heights.lua").read_bytes()
+        assert hashlib.sha256(profile["text"].encode("utf-8")).hexdigest() == hashlib.sha256(on_disk).hexdigest()
     await builder.close()
 
     tester = FakeMinecraft(port=port, role="test", ping_ms=1000)
@@ -169,8 +183,8 @@ def _swap_audit(swaps, pages):
 
 def _summary(got):
     index, pages = got["index"], got["pages"]
-    per_kind = {kind: 0 for kind in KINDS}
-    bytes_per_kind = {kind: 0 for kind in KINDS}
+    per_kind = {kind: 0 for kind in sorted(_kinds())}
+    bytes_per_kind = {kind: 0 for kind in sorted(_kinds())}
     for e in index["resources"]:
         per_kind[e["kind"]] += 1
         bytes_per_kind[e["kind"]] += e["size"]

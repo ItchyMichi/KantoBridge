@@ -568,6 +568,7 @@
     "map": {"schema": "export/map.schema.json"},
     "names": {"schema": "export/names.schema.json"},
     "palettes": {"schema": "export/palettes.schema.json"},
+    "profile": {"schema": "export/profile.schema.json"},
     "sprite": {"schema": "export/sprite.schema.json"},
     "swaps": {"schema": "export/swaps.schema.json"},
     "tileset": {"schema": "export/tileset.schema.json"}

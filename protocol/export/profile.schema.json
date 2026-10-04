@@ -1,0 +1,17 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kantobridge.invalid/protocol/export/profile.schema.json",
+  "title": "export profile",
+  "description": "A shape profile another installed Gen1Recomp mod ships (docs/specs/PROFILE_PLAN.md): Dramaless Shape's hand-authored data/voxel_heights.lua, as text, unparsed. Read by the builder and this player's own client only; the file never leaves this machine. Absent when that mod isn't installed.",
+  "x-export-kind": "profile",
+  "type": "object",
+  "required": ["mod", "version", "file", "enabled", "text"],
+  "additionalProperties": false,
+  "properties": {
+    "mod": {"const": "DRAMALESS_SHAPE", "description": "The mod id the file was read from."},
+    "version": {"type": "string", "pattern": "^[0-9A-Za-z.+_-]{1,32}$", "description": "The mod's manifest version."},
+    "file": {"const": "data/voxel_heights.lua", "description": "The file, relative to the mod's folder."},
+    "enabled": {"type": "boolean", "description": "Whether Gen1Recomp runs the mod. The bridge only reads its table, so it should be disabled."},
+    "text": {"type": "string", "minLength": 1, "maxLength": 1048576, "description": "The file's text (UTF-8). Lua that is only data: never run, only read."}
+  }
+}

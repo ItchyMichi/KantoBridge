@@ -11,6 +11,7 @@ import dev.kantobridge.builder.export.ExportPalettes;
 import dev.kantobridge.builder.export.ExportSwaps;
 import dev.kantobridge.builder.export.ExportTileset;
 import dev.kantobridge.builder.pack.HabitatPoolWriter;
+import dev.kantobridge.builder.shape.ArtUnitProbe;
 import dev.kantobridge.builder.shape.Occupancy;
 import dev.kantobridge.builder.shape.ShapeParams;
 import dev.kantobridge.builder.shape.ShapePlan;
@@ -18,6 +19,7 @@ import dev.kantobridge.builder.shape.ShapePlanner;
 import dev.kantobridge.scene.FrontEnds;
 import dev.kantobridge.scene.GameFrontEnd;
 import dev.kantobridge.scene.Scene;
+import dev.kantobridge.scene.gen1.BundleArtSource;
 import dev.kantobridge.world.DataReader;
 import dev.kantobridge.world.MapPlacement;
 import dev.kantobridge.world.Scale;
@@ -321,8 +323,10 @@ public final class WorldPlanner {
 				warnings.note("shapes_no_front_end");
 			} else {
 				scene = frontEnd.describe(bundle);
+				// The probe of the profile plan's PD3 asks this export's own art whether a repeating cell stands as a unit.
 				shapes = ShapePlanner.plan(scene, placements.values(), ShapeParams.current(),
-						occupancy(placed, storyIndex, storyCells, surfaceBox, owner, voidCells)).withIndexHash(index.hash());
+						occupancy(placed, storyIndex, storyCells, surfaceBox, owner, voidCells), new ArtUnitProbe(BundleArtSource.of(bundle)))
+						.withIndexHash(index.hash());
 			}
 		}
 		ExportField.Display display = field.display();

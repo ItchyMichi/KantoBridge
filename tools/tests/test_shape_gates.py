@@ -14,7 +14,8 @@ FULL = {"shape_index_hash": "a" * 64, "shape_map_hash": "b" * 64, "shape_map_wir
         "shape_quads_section_p95": 3_000, "shape_quads_section_max": 9_000, "throughput": {"blocks_per_s": 48_000.0},
         "elapsed_ms": 60_000, "void_hull_cells": 0, "shape_decor_skipped": 12,
         "structures_by_kind": {"volume": 900, "object": 40, "hull": 3000, "flat": 0, "building": 20, "fallback": 200},
-        "story_cells_by_type": {"object": 700, "tile": 162, "water": 9000}, "closed_shape_cells": 162, "shape_templates": 35}
+        "story_cells_by_type": {"object": 700, "tile": 162, "water": 9000}, "closed_shape_cells": 162, "shape_templates": 35,
+        "profile": {"status": "ok", "pins": 1207}, "units_by_source": {"pin": 400, "hint": 2500}}
 FULL["selfcheck"]["templates_failed"] = 1
 AGAIN = dict(FULL, blocks_placed=0)
 FILTERED = dict(FULL, shape_map_hash="c" * 64, blocks_placed=40_000)
@@ -40,6 +41,9 @@ def test_each_gate_fails_on_its_own():
 
 def test_each_budget_fails_on_its_own():
     assert build_world.budget_gates(dict(FULL, shape_quads_max_block=97)) == ["quads_per_block"]
+    assert build_world.budget_gates(dict(FULL, profile={"status": "unreadable"})) == ["profile_read"]
+    assert build_world.budget_gates(dict(FULL, profile={"status": "absent"})) == [], "no profile is fine"
+    assert build_world.budget_gates({k: v for k, v in FULL.items() if k != "units_by_source"}) == ["profile_read"]
     assert build_world.budget_gates(dict(FULL, shape_quads_mean_block=24.5)) == ["quads_per_block"]
     assert build_world.budget_gates(dict(FULL, shape_quads_section_p95=12_001)) == ["quads_per_section"]
     assert build_world.budget_gates(dict(FULL, shape_quads_section_max=30_001)) == ["quads_per_section"]

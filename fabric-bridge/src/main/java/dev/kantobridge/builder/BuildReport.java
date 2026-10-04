@@ -104,6 +104,22 @@ public final class BuildReport {
 	public long structures;
 	public Map<String, Long> structuresByKind = new java.util.LinkedHashMap<>();
 	public int shapeTemplates;
+	/**
+	 * The shape profile the export carried (docs/specs/PROFILE_PLAN.md §5.7): {@code absent}, {@code ok} or
+	 * {@code unreadable}; the mod's version, whether Gen1Recomp runs it, a short hash of its text, and counts. Never a
+	 * tile id.
+	 */
+	public String profileStatus = "absent";
+	public String profileVersion = "";
+	public boolean profileEnabled;
+	public String profileHash = "";
+	public int profileTilesets;
+	public int profilePins;
+	public int profileConds;
+	public int profileBuildingEntries;
+	public Map<String, Long> profileUnknown = new java.util.LinkedHashMap<>();
+	/** The map bodies' cell units by why they are units, and pinned cells left as they were (the profile plan). */
+	public Map<String, Long> unitsBySource = new java.util.LinkedHashMap<>();
 	/** Characters (the voxel plan's V8): sheets by frame count, and the styles' fallbacks; empty without shapes. */
 	public Map<String, Long> spritesByFrames = new java.util.LinkedHashMap<>();
 	public Map<String, Long> characterFallbacks = new java.util.LinkedHashMap<>();
@@ -209,6 +225,22 @@ public final class BuildReport {
 		this.structuresByKind.forEach(byKind::addProperty);
 		out.add("structures_by_kind", byKind);
 		out.addProperty("shape_templates", this.shapeTemplates);
+		JsonObject profile = new JsonObject();
+		profile.addProperty("status", this.profileStatus);
+		profile.addProperty("mod_version", this.profileVersion);
+		profile.addProperty("enabled", this.profileEnabled);
+		profile.addProperty("hash", this.profileHash);
+		profile.addProperty("tilesets", this.profileTilesets);
+		profile.addProperty("pins", this.profilePins);
+		profile.addProperty("conds", this.profileConds);
+		profile.addProperty("building_entries", this.profileBuildingEntries);
+		JsonObject unknown = new JsonObject();
+		this.profileUnknown.forEach(unknown::addProperty);
+		profile.add("unknown", unknown);
+		out.add("profile", profile);
+		JsonObject bySource = new JsonObject();
+		this.unitsBySource.forEach(bySource::addProperty);
+		out.add("units_by_source", bySource);
 		JsonObject byFrames = new JsonObject();
 		this.spritesByFrames.forEach(byFrames::addProperty);
 		out.add("sprites_by_frames", byFrames);

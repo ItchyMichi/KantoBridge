@@ -110,7 +110,8 @@ public final class SelfCheck {
 				if (near[i] == Float.NEGATIVE_INFINITY) {
 					continue;
 				}
-				boolean match = source[i] == reference.texel(sx, sy);
+				int lift = reference.lift(sx, sy);
+				boolean match = source[i] == reference.texel(sx, sy) || (lift > 0 && sy + lift < h && source[i] == reference.texel(sx, sy + lift));
 				if (ground) {
 					if (floor[i]) {
 						groundSeen++;

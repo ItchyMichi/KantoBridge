@@ -251,7 +251,8 @@
         "field",
         "names",
         "layout",
-        "swaps"
+        "swaps",
+        "profile"
       ]
     }
   }

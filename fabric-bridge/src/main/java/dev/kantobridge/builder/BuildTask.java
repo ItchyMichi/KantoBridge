@@ -20,6 +20,8 @@ import dev.kantobridge.builder.shape.ShapePlanner;
 import dev.kantobridge.builder.shape.ShapeReport;
 import dev.kantobridge.character.CharacterReport;
 import dev.kantobridge.scene.gen1.BundleArtSource;
+import dev.kantobridge.scene.profile.Profile;
+import dev.kantobridge.scene.profile.ProfileSource;
 import dev.kantobridge.server.HabitatService;
 import dev.kantobridge.server.WorldIndexSync;
 import dev.kantobridge.world.DataException;
@@ -461,10 +463,29 @@ public final class BuildTask {
 			}
 		}
 		r.worldIndexBytes = plan.index().toJson().getBytes(StandardCharsets.UTF_8).length;
+		ProfileSource source = plan.scene() == null ? null : plan.scene().profile();
+		if (source != null) {
+			// The profile plan's report (§5.7): what the export carried, as counts and a short hash.
+			r.profileStatus = source.status();
+			r.profileVersion = source.modVersion();
+			r.profileEnabled = source.enabled();
+			Profile profile = source.profile();
+			if (profile != null) {
+				r.profileHash = profile.hash().substring(0, 16);
+				r.profileTilesets = profile.counts().tilesets();
+				r.profilePins = profile.counts().pins();
+				r.profileConds = profile.counts().conds();
+				r.profileBuildingEntries = profile.counts().buildingEntries();
+				r.profileUnknown.clear();
+				profile.counts().unknown().forEach((k, v) -> r.profileUnknown.put(k, (long) v));
+			}
+		}
 		ShapePlan shapes = plan.shapes();
 		if (shapes == null) {
 			return;
 		}
+		r.unitsBySource.clear();
+		shapes.unitTally().forEach((k, v) -> r.unitsBySource.put(k, (long) v));
 		r.shapeIndexHash = shapes.index().hash();
 		r.shapePlanner = shapes.index().planner();
 		r.shapeMapHash = shapes.map().hash();

@@ -15,7 +15,7 @@ build reports; the fresh full build's report and self-check are the ones left in
 import pytest
 
 import build_world
-from run_gen1recomp import preflight
+from run_gen1recomp import INSTALL, preflight
 
 
 def _build(bundle, maps, world):
@@ -62,6 +62,12 @@ def test_full_build_from_the_real_export():
                                   full.get("shape_quads_section_p95"), full.get("shape_quads_section_max")),
                         "throughput": full.get("throughput"), "elapsed_ms": full.get("elapsed_ms"),
                         "selfcheck": full.get("selfcheck")}
+
+    # The profile plan (P1): with Dramaless Shape in the test install, its table is read and its pins make units.
+    if (INSTALL / "mods" / "DRAMALESS_SHAPE" / "data" / "voxel_heights.lua").is_file():
+        profile = full.get("profile") or {}
+        assert profile.get("status") == "ok" and profile.get("pins", 0) > 0 and profile.get("enabled") is False, profile
+        assert (full.get("units_by_source") or {}).get("pin", 0) > 0, full.get("units_by_source")
 
     points = build_world.viewpoints(full, "KantoE2E")["viewpoints"]
     assert [p["id"] for p in points] == ["spawn", "above"], points

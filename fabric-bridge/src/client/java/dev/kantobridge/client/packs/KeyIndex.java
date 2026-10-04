@@ -10,6 +10,8 @@ import dev.kantobridge.builder.export.ExportBundle;
 import dev.kantobridge.builder.pack.ArtKeys;
 import dev.kantobridge.builder.pack.PackKey;
 import dev.kantobridge.builder.plan.PlanException;
+import dev.kantobridge.builder.shape.ArtUnitProbe;
+import dev.kantobridge.builder.shape.Occupancy;
 import dev.kantobridge.builder.shape.ShapeKey;
 import dev.kantobridge.builder.shape.ShapeParams;
 import dev.kantobridge.builder.shape.ShapePlan;
@@ -118,8 +120,9 @@ public final class KeyIndex {
 		for (String id : bundle.ids("sprite")) {
 			sprites.put(id, bundle.sprite(id).frames());
 		}
-		ShapePlan plan = ShapePlanner.plan(scene, List.of(), ShapeParams.current());
-		ShapeTable table = ShapeTable.build(plan.index(), BundleArtSource.of(bundle));
+		BundleArtSource art = BundleArtSource.of(bundle);
+		ShapePlan plan = ShapePlanner.plan(scene, List.of(), ShapeParams.current(), Occupancy.NONE, new ArtUnitProbe(art));
+		ShapeTable table = ShapeTable.build(plan.index(), art);
 		Map<String, ShapePlan.CellUse> cellUses = plan.cellUses();
 		Map<String, Cell> cells = new TreeMap<>();
 		for (ShapeKey key : plan.index().geoms()) {

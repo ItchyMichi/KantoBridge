@@ -1,6 +1,7 @@
 package dev.kantobridge.builder.shape.geom;
 
 import dev.kantobridge.builder.shape.SelfCheck;
+import dev.kantobridge.scene.profile.Profile;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -16,6 +17,10 @@ import org.jetbrains.annotations.Nullable;
  * art unknown        the column version (below)
  * void tile          every pixel the darkest shade: it never stands up; a plate 1/16 high wears it
  * every tile void    flat: plates only
+ * a pinned standee   the profile's class (docs/specs/PROFILE_PLAN.md §5.4): cut out by its pool's background rule
+ *                    ({@link ObjectRule#forcedBackground}), at its pool's depth, kept when it covers its drawing (cover,
+ *                    not match: thick slabs may hide one another in the top-down view)
+ * a pinned cylinder  a hull, tried even where the round test says no
  * a round mask       a {@link Hulls hull}, kept when its self-check passes: it covers enough of its mask (HULL_COVER)
  * an object          its {@link ObjectRule slabs}, kept when its self-check passes: its drawing shows exactly (OBJECT_MATCH)
  * otherwise          the column version: each block a cube folded from the unit's tiles as Tier A folds a run of perCell
@@ -65,27 +70,49 @@ public final class CellUnits {
 	}
 
 	/**
-	 * The planner's context of a unit, carried in its keys' variant ({@code g<sides>[i][r][s][t]}): the sides bordering
-	 * flat ground (a hex digit, {@link Background} bits; outdoors only the south bit), indoors, repeating vertically, a
-	 * sign, a tree (the front end's foliage hint).
+	 * The planner's context of a unit, carried in its keys' variant ({@code g<sides>[i][r][s][t][_<class>][_bg<hex>]}):
+	 * the sides bordering flat ground (a hex digit, {@link Background} bits; outdoors only the south bit), indoors,
+	 * repeating vertically, a sign, a tree (the front end's foliage hint); then the class the profile pins on the unit
+	 * (docs/specs/PROFILE_PLAN.md §5.4) and the background shades it names ({@code prop_bg}, bit k = shade k).
+	 *
+	 * @param pinned     the profile's class for the unit ({@code cylinder}, a standee pool, {@code post}), or null
+	 * @param background the shades {@code prop_bg} names as background, 0 for none
 	 */
-	public record Context(int flatSides, boolean indoor, boolean repeatsVertically, boolean sign, boolean tree) {
+	public record Context(int flatSides, boolean indoor, boolean repeatsVertically, boolean sign, boolean tree, @Nullable String pinned,
+			int background) {
 		public static final Context NONE = new Context(0, false, false, false, false);
+
+		/** A context without a profile class. */
+		public Context(int flatSides, boolean indoor, boolean repeatsVertically, boolean sign, boolean tree) {
+			this(flatSides, indoor, repeatsVertically, sign, tree, null, 0);
+		}
 
 		/** The variant text; the inverse of {@link #parse}. */
 		public String variant() {
 			return "g" + Integer.toHexString(this.flatSides & 15) + (this.indoor ? "i" : "") + (this.repeatsVertically ? "r" : "") + (this.sign ? "s" : "")
-					+ (this.tree ? "t" : "");
+					+ (this.tree ? "t" : "") + (this.pinned != null ? "_" + this.pinned : "")
+					+ ((this.background & 15) != 0 ? "_bg" + Integer.toHexString(this.background & 15) : "");
 		}
 
-		/** Reads a variant; anything unreadable is {@link #NONE}. */
+		/** Reads a variant; anything unreadable is {@link #NONE}, an unknown suffix is left out. */
 		public static Context parse(@Nullable String variant) {
 			if (variant == null || variant.length() < 2 || variant.charAt(0) != 'g' || Character.digit(variant.charAt(1), 16) < 0) {
 				return NONE;
 			}
-			String flags = variant.substring(2);
+			String[] parts = variant.split("_");
+			String flags = parts[0].substring(2);
+			String pinned = null;
+			int background = 0;
+			for (int k = 1; k < parts.length; k++) {
+				String part = parts[k];
+				if (part.length() == 3 && part.startsWith("bg") && Character.digit(part.charAt(2), 16) >= 0) {
+					background = Character.digit(part.charAt(2), 16);
+				} else if (Profile.CLASSES.containsKey(part)) {
+					pinned = part;
+				}
+			}
 			return new Context(Character.digit(variant.charAt(1), 16), flags.contains("i"), flags.contains("r"), flags.contains("s"),
-					flags.contains("t"));
+					flags.contains("t"), pinned, background);
 		}
 	}
 
@@ -192,6 +219,32 @@ public final class CellUnits {
 		}
 		Kind failed = null;
 		double[] last = null;
+		// The profile's class (docs/specs/PROFILE_PLAN.md §5.4): a pinned standee is cut out by its pool, without the
+		// object test; a pinned round thing is a hull. A pack's rule still wins (V6).
+		ObjectRule.Pool pool = ObjectRule.pool(context.pinned());
+		if (pool != null && (style == null || style.equals("object"))) {
+			boolean[] background = ObjectRule.forcedBackground(shades, skip, w, w, pool, context.background());
+			boolean[] drawn = ObjectRule.foreground(background, skip);
+			if (pool == ObjectRule.Pool.CUTOUT) {
+				drawn = ObjectRule.largest(drawn, w, w);
+			}
+			VoxelGrid grid = ObjectRule.slabs(drawn, texels, w, w, w, artPx, depth > 0 ? depth : ObjectRule.poolDepth(context.pinned()));
+			List<List<ShapeQuad>> blocks = slice(grid, perCell);
+			plates(blocks, voidTile, perCell);
+			boolean[] foreground = or(drawn, skip);
+			double[] score = check(blocks, foreground, texels, perCell, artPx);
+			int quads = maxQuads(blocks);
+			// A pinned standee's gate is cover, not match: its thick slabs may hide one another in the game's top-down view (a
+			// nearer piece's top over a farther one), which is no hole; it must not leave its drawing to the floor.
+			if (Background.count(drawn) > 0 && score[1] >= OBJECT_MATCH && quads <= maxQuads) {
+				return new Unit(Kind.OBJECT, null, score[0], score[1], quads, blocks, foreground, null, grid);
+			}
+			Unit columns = columns(perCell, w);
+			return new Unit(Kind.COLUMNS, Kind.OBJECT, score[0], score[1], columns.maxQuads(), columns.blocks(), columns.foreground());
+		}
+		if (style == null && "cylinder".equals(context.pinned())) {
+			style = "hull";
+		}
 		boolean tryHull = style == null ? !context.sign() : style.equals("hull");
 		if (tryHull) {
 			boolean[] mask = Hulls.mask(shades, skip, w, w);

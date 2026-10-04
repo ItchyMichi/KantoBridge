@@ -110,6 +110,59 @@ HOUSE_2F_BLOCKS = [
     [W, W, W, W],
 ]
 
+# --- the shape profile (docs/specs/PROFILE_PLAN.md) ----------------------------------------------------
+# Made up in the format of Dramaless Shape's data/voxel_heights.lua, over this world's own tiles: the hill's round
+# tree pinned round, its sign a signpost (prop_bg: white only), the town's post a post, the cut tree a prop on plain
+# ground, the cliff a wall (a class P1 leaves to Tier A), a conditional pin on the roof, and the hill's house as a
+# building entry (counted from P1, modelled from P2). No game data.
+
+
+def _grid(block_rows):
+    """The tile grid (north row first) of a rectangle of blocks."""
+    rows = []
+    for block_row in block_rows:
+        for ty in range(4):
+            rows.append([BLOCKS[b][ty * 4 + tx] for b in block_row for tx in range(4)])
+    return rows
+
+
+def _lua_list(values):
+    return "{ " + ", ".join(str(v) for v in values) + " }"
+
+
+HILL_HOUSE_TILES = _grid([[B_HROOF, B_HROOF], [B_HFRONT, B_HDOOR]])
+PROFILE_TEXT = "\n".join([
+    "-- A made-up shape profile for the synthetic world (fake_gen1/synth.py).",
+    "return {",
+    "  version = 1,",
+    "  heights = { wall = 16, prop = 16 },",
+    "  tilesets = {",
+    "    TEST = {",
+    f"      cylinder = {_lua_list([RTREE_NW, RTREE_NE, RTREE_SW, RTREE_SE])},",
+    f"      signpost = {_lua_list([SIGN_TOP, SIGN_POST])},",
+    f"      post = {_lua_list([POST])},",
+    f"      prop = {_lua_list([CUT])},",
+    f"      wall = {_lua_list([CLIFF])},",
+    f"      prop_ground = {{ [{CUT}] = {GROUND} }},",
+    f"      prop_bg = {{ {{ tiles = {_lua_list([SIGN_TOP])}, shades = {{ \"white\" }} }} }},",
+    f"      when_above = {{ [{ROOF2}] = {{ {{ above = {_lua_list([ROOF_EDGE])}, class = \"roof\" }} }} }},",
+    "    },",
+    "  },",
+    "  buildings = {",
+    "    TEST = {",
+    "      {",
+    "        id = \"hill_house\",",
+    "        tiles = {",
+] + [f"          {_lua_list(row)}," for row in HILL_HOUSE_TILES] + [
+    "        },",
+    "        roofRows = 16, roofBack = 2, roofFront = 4, roofCycle = { 2, 9 }, slab = 2, frontEave = 1,",
+    "      },",
+    "    },",
+    "  },",
+    "}",
+    "",
+])
+
 # --- maps --------------------------------------------------------------------------------------------
 MAPS = {
     "TEST_TOWN": {
@@ -383,6 +436,8 @@ def resources(game="red"):
         "TEST_HILL": {"x": 0, "y": -len(HILL_BLOCKS), "w": len(HILL_BLOCKS[0]), "h": len(HILL_BLOCKS)}}}
     out[("swaps", "all")] = {"sites": [
         {"map": "TEST_TOWN", "bx": 5, "by": 7, "kind": "cut", "before": B_CUT, "after": B_CUT_DONE}]}
+    out[("profile", "dramaless")] = {"mod": "DRAMALESS_SHAPE", "version": "0.0.0-synthetic", "file": "data/voxel_heights.lua",
+                                     "enabled": False, "text": PROFILE_TEXT}
     return out
 
 
