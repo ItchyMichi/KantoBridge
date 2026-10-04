@@ -1,0 +1,67 @@
+{
+  "_about": "Draft companion of docs/research/VOXEL_WORLD_REPORT.md, answers B4.1 to B4.3 and section 4.8. Synthetic ids only (the test bundle of tools/fake_gen1/synth.py); nothing here comes from a ROM and no pack ships with the mod. 'manifest' is what a pack maker writes at assets/kantobridge/kb_pack/<name>.json inside an ordinary resource pack. 'keys_index' is what the client writes to <gameDir>/kantobridge/keys/<game>.json so pack makers can see every valid key; a real one is ROM-derived and stays on the player's machine.",
+
+  "manifest": {
+    "kantobridge_pack": 1,
+    "id": "hd_test",
+    "name": "HD Test",
+    "version": "1.0.0",
+    "targets": {"games": ["red", "blue"], "geometry": 1},
+    "textures": {
+      "tile:tilesets.test/4": "kantobridge:block/pack/hd_test/roof",
+      "tile:tilesets.test/7@TEST_PALETTE": "kantobridge:block/pack/hd_test/flower",
+      "sprite:SPRITE_TEST_GIRL": "kantobridge:textures/npc_pack/hd_test/girl.png"
+    },
+    "models": {
+      "sprite:SPRITE_TEST_BALL": {"vox": "kantobridge:kb_models/hd_test/ball.vox", "voxelsPerBlock": 8},
+      "struct:tilesets.test/0123456789abcdef": {
+        "vox": "kantobridge:kb_models/hd_test/house.vox",
+        "voxelsPerBlock": 16,
+        "origin": [0, 0, 0],
+        "turn": 0
+      },
+      "cell:tilesets.test/2-2-2-2": {"vox": "kantobridge:kb_models/hd_test/tree.vox", "voxelsPerBlock": 8}
+    },
+    "rules": {
+      "class:tree": {"style": "hull", "trunk": 1},
+      "tile:tilesets.test/4": {"class": "roof"},
+      "struct:tilesets.test/0123456789abcdef": {"bands": {"roofRows": 2}}
+    },
+    "characters": {"style": "carved", "sprites": {"SPRITE_TEST_BALL": "model"}},
+    "dressing": {"map:TEST_HOUSE": {"ceiling": "dominant_wall", "headroom": 4}}
+  },
+
+  "keys_index": {
+    "keys": 1,
+    "game": "red",
+    "exportHash": "<hash>",
+    "slotMapHash": "<hash>",
+    "shapeIndexHash": "<hash>",
+    "tiles": {
+      "tilesets.test/3": {
+        "class": "wall",
+        "maps": 3,
+        "palettes": {
+          "TEST_PALETTE": {
+            "texture": "kantobridge:block/red/tile/tilesets.test/test_palette/0003",
+            "slots": {"full": 12}
+          }
+        }
+      }
+    },
+    "sprites": {"SPRITE_TEST_GIRL": {"frames": 6, "palettes": ["TEST_PALETTE"]}},
+    "cells": {"tilesets.test/2-2-2-2": {"kind": "round", "count": 150}},
+    "structs": {
+      "tilesets.test/0123456789abcdef": {"tiles": [8, 6], "blocks": [8, 6, 6], "places": ["TEST_TOWN/1"]}
+    },
+    "classes": ["ground", "water", "ledge", "wall", "roof", "tree", "grass", "flower", "counter", "prop", "door", "void"]
+  },
+
+  "_rules": {
+    "keys": "tile:<atlas>/<tile>[@<PALETTE>], sprite:<SPRITE_ID>, cell:<atlas>/<t0>-<t1>-<t2>-<t3>, struct:<atlas>/<16 hex signature>, place:<MAP_ID>/<n>, class:<name>, map:<MAP_ID>. The game is not part of a key; targets.games names the games a manifest applies to.",
+    "precedence": "generated base < manifests in resource-pack order (later packs win) ; for one face or shape: place > struct / cell > tile@palette > tile > class > base.",
+    "validation": "an entry that fails (unknown key, missing or badly sized texture, bad .vox, out-of-range rule, model over the quad budget) is skipped with a counted warning and the base is used; a pack can never leave a hole.",
+    "vox": "first model of the file; voxelsPerBlock 8, 16 or 32; at most 256 voxels per axis; palette index 0 is empty; our mapping: vox z -> up, vox x -> east, vox y -> north (check with the calibration model of the template export).",
+    "textures": "block faces must lie under textures/block/, be square, a power of two and at least 16 px; an art-set segment (here 'red') is part of every generated texture path from milestone M14 on."
+  }
+}

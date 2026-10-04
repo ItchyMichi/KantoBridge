@@ -1,0 +1,103 @@
+{
+  "_about": "Draft companion of docs/research/VOXEL_WORLD_REPORT.md, answer B3.3 and section 4.7: the neutral scene description a game front end produces from its export bundle. Synthetic values only (the test town of tools/fake_gen1/synth.py); nothing here comes from a ROM. In the recommended design this is the serialised form of an in-memory Java model (dev.kantobridge.scene.Scene), used for golden tests and debugging; the wire export stays per game family. A real scene is ROM-derived as a whole and stays beside the export bundle under <gameDir>/kantobridge/.",
+
+  "scene": 1,
+  "game": "red",
+  "family": "gen1",
+  "frontEnd": "kb-frontend-gen1/1",
+  "exportHash": "<sha256 of the export index>",
+  "units": {"cellPx": 16, "artPx": 8},
+  "paletteModel": "map4",
+  "paletteVariants": ["default"],
+
+  "atlases": {
+    "tilesets.test": {
+      "image": "tilesets.test",
+      "tilesPerRow": 16,
+      "tiles": 96,
+      "artPx": 8,
+      "planes": ["under"],
+      "animated": [
+        {"tiles": [6], "kind": "hshift", "period": 20, "offsets": [1, 2, 3, 2, 1, 0, 7, 0]}
+      ],
+      "tilePalettes": null,
+      "hints": {"7": {"class": "flower"}}
+    }
+  },
+
+  "maps": {
+    "TEST_TOWN": {
+      "w": 20,
+      "h": 18,
+      "env": {"outdoor": true, "openAir": true, "cave": false, "dark": "never"},
+      "atlas": "tilesets.test",
+      "palette": {"default": "TEST_PALETTE"},
+      "art": {
+        "cols": 40,
+        "rows": 36,
+        "planes": [
+          {"plane": "under", "tiles": "<base64: cols*rows uint16 tile ids, row-major>"}
+        ]
+      },
+      "cells": {
+        "kind": "<base64: w*h uint8; 0 walk, 1 solid, 2 water, 3 ledge, 4 counter>",
+        "tags": "<base64: w*h uint16 bit set; grass, door, warp, warpTile, shore, cut, pad, hole, spinner, sign, ice, current, headbutt, ...>",
+        "dir": "<base64: w*h uint8; ledge/current/spinner direction 0..3, 255 none>",
+        "edges": null,
+        "elev": null,
+        "raw": "<base64: w*h uint16; the game's own behaviour id, for family-specific rules>"
+      },
+      "border": {"cols": 4, "rows": 4, "tiles": [2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2]},
+      "connections": {"north": {"map": "TEST_ROUTE", "offsetCells": 0}},
+      "warps": [{"x": 5, "y": 5, "to": "TEST_HOUSE", "warp": 1}],
+      "objects": [
+        {"id": "TESTTOWN_BALL", "sprite": "SPRITE_TEST_BALL", "x": 15, "y": 4, "stays": true, "kind": "item", "elev": 0}
+      ],
+      "swapSites": [
+        {
+          "id": "TEST_TOWN:cut:10:14",
+          "kind": "cut",
+          "cells": [
+            {
+              "x": 10,
+              "y": 14,
+              "closed": {"kind": 1, "tags": ["cut"], "art": [14, 14, 14, 14]},
+              "open": {"kind": 0, "tags": [], "art": [0, 0, 0, 0]}
+            }
+          ]
+        }
+      ],
+      "structures": [],
+      "props": []
+    }
+  },
+
+  "sprites": {
+    "SPRITE_TEST_GIRL": {
+      "image": "SPRITE_TEST_GIRL",
+      "frameW": 16,
+      "frameH": 16,
+      "frames": {
+        "stand": {"down": [0], "up": [1], "left": [2]},
+        "walk": {"down": [3], "up": [4], "left": [5]}
+      },
+      "mirrorRight": true,
+      "alternateMirror": ["down", "up"],
+      "palette": "map",
+      "transparentShade": 0,
+      "anchor": "feet"
+    }
+  },
+
+  "layout": {"root": "TEST_TOWN", "unit": "cells", "maps": {"TEST_TOWN": {"x": 0, "y": 0}}},
+
+  "_notes": {
+    "units": "cellPx is 16 for Gen 1, 2 and 3. artPx is the art-grid pitch: 8 (Gen 1 and 2: four art tiles per cell) or 16 (Gen 3: one metatile per cell).",
+    "planes": "under always; Gen 3 adds middle and over; Crystal's priority tiles become over entries.",
+    "paletteModel": "map4 (Gen 1: one 4-colour palette per map), tile8x4 (Gen 2: a palette slot per tile and a palette set per map), tile16x16 (Gen 3: the atlas is paletted per pixel).",
+    "paletteVariants": "['default'] for Gen 1 and Gen 3; ['MORN','DAY','NITE','DARK'] for Gen 2.",
+    "cells.edges": "optional w*h uint8: bits 0-3 leaving N/S/W/E blocked, bits 4-7 entering blocked (visual use only).",
+    "cells.elev": "optional w*h uint8 (Gen 3 collision level: 0 any, 15 keeps the mover's level).",
+    "swapSites": "per cell open and closed states with their own art and behaviour; replaces the Gen-1-specific 32-px block before/after of today's swaps export."
+  }
+}

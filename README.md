@@ -19,6 +19,8 @@ records every deviation, open issue and question.
 - [`docs/PLAN.md`](docs/PLAN.md): the implementation plan, and [`docs/PLAYTEST.md`](docs/PLAYTEST.md)
   the manual checks for each milestone
 - [`docs/PROTOCOL.md`](docs/PROTOCOL.md): the bridge protocol (v1; schemas in `protocol/`)
+- [`docs/NEXT_STAGES.md`](docs/NEXT_STAGES.md): proposals for after M10 (the hidden-player speed-up,
+  the generative voxel system, first-person dressing, several regions in one world)
 - [`docs/VERSIONS.md`](docs/VERSIONS.md): pinned versions
 - [`docs/REFERENCES.md`](docs/REFERENCES.md): reference projects, their licences, and how Gen1Recomp and Cobblemon work inside
 - [`CLAUDE.md`](CLAUDE.md): working rules for this repo

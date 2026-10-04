@@ -19,6 +19,7 @@ Conventions:
 | [Gen1Recomp](#gen1recomp) | `gen1recomp/` | `dev` @ `cb02aeb` (2026-10-02), included in release v0.3.49 | GPL-3.0 with Section 7 terms: a credit line is required, and the launcher files are proprietary | The hidden game, and the mod platform `gen1-bridge` runs on |
 | [Gen1Recomp mod index](#gen1recomp-mod-index) | `gen1recomp-mod-index/` | `main` @ `67c40b2` | None stated; treat as all rights reserved | Finding comparable mods; the index schema |
 | [Dramaless Shape](#dramaless-shape-voxel-mod) (voxel mod) | `DRAMALESS_SHAPE-main/` | v2.0.4 zip (no git) | MIT for the 2.0 line; the Dramatic Shape base is unverifiable | How a Gen1Recomp map becomes 3D; height rules |
+| [Kanto in First Person](#kanto-in-first-person-ds_fp_ceiling) (`ds_fp_ceiling`) | `kanto-first-person/` | `main` @ `94d0151`, v1.57.2 (cloned 2026-10-03) | None stated; treat as all rights reserved, its art and sounds included | Ideas for first-person dressing: interiors, caves, sky, canopy, camera feel |
 | [gen1coop](#gen1coop) | `gen1coop/` | `main` @ `bdd0c11` | MIT | The cleanest example of sockets inside the Gen1Recomp sandbox |
 | [Gen1Online](#gen1online) | `Gen1Online/` | `master` @ `a5251ee` | MIT for code; its follower art is ROM-derived and must never be reused | A robust non-blocking socket client; version reporting |
 | [overworld-spawn-mod](#overworld-spawn-mod-wilds-of-kanto) | `overworld-spawn-mod/` | `main` @ `e66e03d` | MIT for code and original assets; third-party sprite packs excluded | How to switch off random encounters |
@@ -59,6 +60,8 @@ Conventions:
   claim can't be verified now. Some BattleArt-fork code is still present.
   - Fine: study it, and re-implement its documented rules ourselves with credit.
   - Needs your decision first: copying its code or the `data/voxel_heights.lua` tables.
+- **Kanto in First Person:** no licence anywhere in the repo (its README's "Credits and licence"
+  section grants none). Ideas only: never copy its code, panoramas, pictures, sounds or sprites.
 - **gen1coop, SkyCraft:** MIT. Code can be reused with the notice. SkyCraft bundles an unmodified
   Prism Launcher under GPL-3.0.
 - **Gen1Online:** MIT for code. Never reuse `assets/followers/` (converted from pokeemerald
@@ -461,6 +464,38 @@ The authoritative validator is `src/mods/Manifest.lua:293-488`. The human-readab
   the ROM-derived atlas.
 
 ---
+
+## Kanto in First Person (`ds_fp_ceiling`)
+
+- **Source:** `https://github.com/mrmushrooms11/kanto-first-person` @ `94d0151` (shallow clone,
+  2026-10-03); manifest id `ds_fp_ceiling`, "Kanto in First Person - Interiors and Tweaks" v1.57.2,
+  api 2, permissions `filesystem` and `engine_internals`.
+- **Licence:** none stated. Its README and CHANGELOG carry no grant, so it is all rights reserved.
+  Ideas only. Its own assets were inventoried by name and size and not opened: mp3 ambience and
+  footstep sounds, backdrop panoramas, poster strips, and a bird transform that derives frames from
+  the player's import.
+- **What it is:** a companion **patch** to the Dramatic Shape voxel mod that finishes its
+  first-person view. Everything it adds is presentational; collision, movement, scripts and saves
+  are untouched.
+  - **Interiors:** walls on the three sides Gen 1 never draws; ceilings with headroom; doors;
+    pictures; contact shadows; lamps.
+  - **Caves:** rock roofs, stalactites, pools, torches, bats.
+  - **Outdoors:** a painted horizon, clouds, a night sky, birds, rain, storms, rainbows, chimney
+    smoke, Lavender fog.
+  - **Woods:** a forest canopy and vines; tall grass in the wind; particles; terrain continuing past
+    the map edge.
+  - **Feel:** a crouch-and-arc ledge hop and a stepping-through-the-doorway camera.
+- **Why it's a patcher:** `README.md` ("How it works") explains that Dramatic Shape keeps its
+  modules private with no exports, so it writes its renderer modules into Dramatic Shape's folder.
+  Writes go through LÖVE's save directory where possible, it keeps a ledger, and it restores the
+  files on removal.
+- **Techniques worth re-implementing in our builder** (described in `payload_ceiling.lua:1-40`):
+  - **Risers:** every wall-height cell grows side faces up to the ceiling, textured with that
+    cell's own tile art repeated per course.
+  - **The ceiling:** at about two cells of headroom, textured with the room's dominant wall tile,
+    darkened.
+  - In both cases the map's own art supplies the materials, so nothing is authored.
+- Proposals that build on it: [NEXT_STAGES.md](NEXT_STAGES.md) section 3.
 
 ## gen1coop
 

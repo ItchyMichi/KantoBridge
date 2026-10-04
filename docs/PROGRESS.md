@@ -21,7 +21,9 @@ new items in [PLAYTEST.md](PLAYTEST.md) and a commit titled `M<n>: <title>`.
 | M10 | Reliability, performance and launch | **done** | 2026-10-03 | `M10: reliability and launch` |
 
 **All milestones are done.** What remains is your play-test ([PLAYTEST.md](PLAYTEST.md)) and the
-questions under "Open issues" below.
+questions under "Open issues" below. Proposals for later stages (the hidden-player speed-up against rubber-banding,
+the generative voxel system, first-person dressing, several regions in one world) are in
+[NEXT_STAGES.md](NEXT_STAGES.md).
 
 ## Pre-flight (PLAN §0.6)
 

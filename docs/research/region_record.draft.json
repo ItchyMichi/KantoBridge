@@ -1,0 +1,112 @@
+{
+  "_about": "Draft companion of docs/research/VOXEL_WORLD_REPORT.md, sections 4.2 to 4.5. Synthetic values only: the test town of tools/fake_gen1/synth.py (one 20x18-cell surface map at the origin, one interior). Nothing here comes from a ROM. These are examples, not schemas; the schemas (protocol/world/region.schema.json, footprint.schema.json) are written in milestone M11.",
+
+  "region.json": {
+    "_file": "<world>/kantobridge/regions/kanto/region.json (canonical JSON: sorted keys, compact)",
+    "version": 1,
+    "id": "kanto",
+    "game": "red",
+    "family": "gen1",
+    "exportHash": "<64 hex: sha256 of the export index>",
+    "origin": {"x": 0, "y": 64, "z": 0},
+    "bounds": {"minX": -20, "minY": -256, "minZ": -20, "maxX": 59, "maxY": 319, "maxZ": 55},
+    "files": {
+      "index": "world_index.json",
+      "footprint": "regions/kanto/footprint.json"
+    },
+    "hashes": {
+      "index": "<64 hex>",
+      "footprint": "<64 hex>",
+      "shapeIndex": null,
+      "shapeMap": null,
+      "artKeys": null
+    },
+    "generator": {"footprint": "ring-close-1", "shapes": null},
+    "gates": [
+      {"id": "west", "kind": "land", "map": "TEST_TOWN", "side": "west"}
+    ],
+    "rules": {
+      "profile": "kanto",
+      "movement": {"walk": 0.1737, "bike": 0.3474, "jump": 0.0, "sprint": false},
+      "build": false,
+      "damage": false,
+      "hunger": false,
+      "vanillaMobs": false,
+      "time": "world",
+      "weather": "world",
+      "compat": {
+        "maxDex": 151,
+        "maxMove": 165,
+        "forms": "base",
+        "heldItems": "ignore",
+        "onIncompatible": "leave_out",
+        "minCompatibleToEnter": 1
+      }
+    },
+    "namespaces": {"artSet": "red", "pools": "kantobridge"}
+  },
+
+  "footprint.json": {
+    "_file": "<world>/kantobridge/regions/kanto/footprint.json (canonical JSON; its sha256 is hashes.footprint)",
+    "version": 1,
+    "region": "kanto",
+    "game": "red",
+    "exportHash": "<64 hex: sha256 of the export index>",
+    "algorithm": {"id": "ring-close-1", "ring": 6, "close": 16, "pockets": "fill", "shell": 2, "apron": 8, "ramp": 96},
+    "cellBlocks": 2,
+    "origin": [0, 0],
+    "surfaceY": 64,
+    "layerStep": 22,
+    "minY": -256,
+    "grid": {"x": -6, "z": -6, "w": 32, "h": 30},
+    "rows": ["0:32", "0:32", "0:32", "0:32", "0:32", "0:32", "0:32", "0:32", "0:32", "0:32",
+             "0:32", "0:32", "0:32", "0:32", "0:32", "0:32", "0:32", "0:32", "0:32", "0:32",
+             "0:32", "0:32", "0:32", "0:32", "0:32", "0:32", "0:32", "0:32", "0:32", "0:32"],
+    "edges": [
+      {"x": -6, "z": -6, "dir": "n", "len": 32, "kind": "wall"},
+      {"x": -6, "z": 23, "dir": "s", "len": 32, "kind": "wall"},
+      {"x": -6, "z": -6, "dir": "w", "len": 15, "kind": "wall"},
+      {"x": -6, "z": 9, "dir": "w", "len": 1, "kind": "open"},
+      {"x": -6, "z": 10, "dir": "w", "len": 14, "kind": "wall"},
+      {"x": 25, "z": -6, "dir": "e", "len": 30, "kind": "wall"}
+    ],
+    "interiors": [
+      {"x": 2, "z": -6, "w": 10, "h": 10, "layer": 1, "biome": "kantobridge:kanto_interior"},
+      {"x": 6, "z": -6, "w": 8, "h": 8, "layer": 2, "biome": "kantobridge:kanto_interior"}
+    ],
+    "gates": [
+      {
+        "id": "west",
+        "kind": "land",
+        "map": "TEST_TOWN",
+        "inside": {"x0": 1, "y0": 9, "x1": 1, "y1": 9},
+        "dir": "left",
+        "corridor": {"cx": -6, "cz": 9, "w": 7, "h": 1},
+        "cut": 1
+      }
+    ]
+  },
+
+  "world.regions": {
+    "_relay": "S->C, sent in parts {index, count, hash, part} like world.index; the text is this document",
+    "version": 1,
+    "world": "<the world id from session.json>",
+    "regions": ["<one region.json object per region>"]
+  },
+
+  "region_presence": {
+    "_attachment": "kantobridge:region_presence on the player (server: persistent, copied on death; synced to its owner only)",
+    "region": "kanto",
+    "state": "OUTSIDE",
+    "home": "west",
+    "admitted": "west"
+  },
+
+  "messages": {
+    "region.leave": {"type": "region.leave", "seq": 41, "data": {"region": "kanto", "gate": "west"}},
+    "region.enter": {"type": "region.enter", "seq": 57, "data": {"region": "kanto", "gate": "west", "to": {"map": "TEST_TOWN", "x": 1, "y": 9, "facing": "right"}}},
+    "act.result": {"type": "act.result", "seq": 90, "re": 57, "data": {"ok": true, "kind": "enter"}},
+    "region.state": {"type": "region.state", "seq": 12, "data": {"region": "kanto", "inside": false, "home": "west", "admitted": "west"}},
+    "world.footprint": {"type": "world.footprint", "seq": 3, "data": {"region": "kanto", "index": 0, "count": 1, "hash": "<64 hex>", "part": "<the footprint.json text, or a slice of it>"}}
+  }
+}
