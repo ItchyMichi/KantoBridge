@@ -1,6 +1,8 @@
 package dev.kantobridge.builder.plan;
 
 import dev.kantobridge.builder.export.CellFlags;
+import dev.kantobridge.builder.shape.ShapePlan;
+import dev.kantobridge.scene.Scene;
 import dev.kantobridge.world.MapPlacement;
 import dev.kantobridge.world.Scale;
 import dev.kantobridge.world.SlotMap;
@@ -83,10 +85,13 @@ public final class WorldPlan {
 	private final int mapsUnplaced;
 	private final int edgeMismatches;
 	private final int overlaps;
+	private final @Nullable Scene scene;
+	private final @Nullable ShapePlan shapes;
 
 	WorldPlan(String game, String exportHash, int originX, int originZ, List<PlacedMap> maps, @Nullable Box3 surfaceBox, int[] surfaceOwner,
 			boolean[] surfaceVoid, StoryCellTable storyCells, Map<String, int[]> storyIndex, ArtCatalog art, @Nullable Spawn spawn,
-			WorldIndex index, Map<String, String> pools, Warnings warnings, int mapsRequested, int mapsUnplaced, int edgeMismatches, int overlaps) {
+			WorldIndex index, Map<String, String> pools, Warnings warnings, int mapsRequested, int mapsUnplaced, int edgeMismatches, int overlaps,
+			@Nullable Scene scene, @Nullable ShapePlan shapes) {
 		this.game = game;
 		this.exportHash = exportHash;
 		this.originX = originX;
@@ -107,6 +112,8 @@ public final class WorldPlan {
 		this.mapsUnplaced = mapsUnplaced;
 		this.edgeMismatches = edgeMismatches;
 		this.overlaps = overlaps;
+		this.scene = scene;
+		this.shapes = shapes;
 		for (Map.Entry<SlotMap.Key, SlotMap.Slot> entry : this.slotMap.slots().entrySet()) {
 			SlotMap.Key key = entry.getKey();
 			TileSlots slots = this.tileSlots.computeIfAbsent(key.atlas() + "|" + key.palette(), k -> new TileSlots());
@@ -213,6 +220,16 @@ public final class WorldPlan {
 
 	public int edgeMismatches() {
 		return this.edgeMismatches;
+	}
+
+	/** The whole export as the neutral scene, or null when shapes weren't planned. */
+	public @Nullable Scene scene() {
+		return this.scene;
+	}
+
+	/** The world's shapes (index, map, keys per map column), or null when they weren't planned. */
+	public @Nullable ShapePlan shapes() {
+		return this.shapes;
 	}
 
 	public int overlaps() {

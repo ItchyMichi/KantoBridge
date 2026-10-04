@@ -286,6 +286,45 @@ def test_tileset_classes(exported):
     assert d[("tileset", "UNDERGROUND")]["tiles"] == 32
 
 
+def test_animated_tiles_are_data(exported):
+    """The voxel plan's V2: each tileset's animated tiles as the engine describes them, image paths as export ids."""
+    d = exported["data"]
+    ow = d[("tileset", "OVERWORLD")]["animated"]
+    assert ow[0] == {"tiles": [0x14], "kind": "hshift", "period": 20, "offsets": [1, 2, 3, 2, 1, 0, 7, 0]}
+    assert ow[1] == {"tiles": [0x03], "kind": "frames", "period": 20, "sequence": [1, 2, 3],
+                     "images": ["tilesets.flower1", "tilesets.flower2", "tilesets.flower3"]}
+    gym = d[("tileset", "GYM")]["animated"]
+    assert gym == [{"tiles": [0x3C, 0x3D, 0x4C, 0x4D], "kind": "toggle", "image": "tilesets.spinners", "gate": "spinning",
+                    "stripOffsets": [1, 3, 0, 2]}], "a toggle's strip offsets follow its tiles"
+    assert d[("tileset", "HOUSE")]["animated"] == [], "no animation: an empty list"
+    for (kind, _), data in d.items():
+        if kind == "tileset":
+            for entry in data["animated"]:
+                for image in entry.get("images", []) + ([entry["image"]] if "image" in entry else []):
+                    assert ("image", image) in d, "every animation image is exported"
+
+
+def test_the_border_the_engine_draws(exported):
+    """borderDrawn: OVERWORLD maps get the renderer's void fill (the tree wall by default), others their own block."""
+    d = exported["data"]
+    assert d[("map", "PALLET_TOWN")]["border"] == 2
+    assert d[("map", "PALLET_TOWN")]["borderDrawn"] == 0x0F, "the tree wall around outdoor maps"
+    assert d[("map", "REDS_HOUSE_1F")]["borderDrawn"] == d[("map", "REDS_HOUSE_1F")]["border"]
+    display = d[("field", "all")]["display"]
+    assert display == {"voidFill": "trees", "voidFillDefault": True}
+
+
+@pytest.mark.parametrize("option,drawn", [("water", 0x43), ("black", None)])
+def test_the_void_fill_option_is_exported_not_pinned(option, drawn):
+    world = W.world()
+    world["voidFill"] = option
+    rig, peer = export_rig(world=world)
+    town = request(rig, peer, "export.get", {"kind": "map", "id": "PALLET_TOWN"})["data"]["data"]
+    assert town["borderDrawn"] == drawn
+    field = request(rig, peer, "export.get", {"kind": "field", "id": "all"})["data"]["data"]
+    assert field["display"] == {"voidFill": option, "voidFillDefault": False}
+
+
 def test_images_are_the_engine_pngs(exported):
     world = W.world()
     d = exported["data"]

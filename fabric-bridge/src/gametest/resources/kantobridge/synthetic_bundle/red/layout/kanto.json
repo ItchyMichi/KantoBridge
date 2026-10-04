@@ -1,1 +1,1 @@
-{"maps":{"TEST_TOWN":{"h":9,"w":10,"x":0,"y":0}},"root":"TEST_TOWN"}
+{"maps":{"TEST_HILL":{"h":6,"w":8,"x":0,"y":-6},"TEST_TOWN":{"h":9,"w":10,"x":0,"y":0}},"root":"TEST_TOWN"}

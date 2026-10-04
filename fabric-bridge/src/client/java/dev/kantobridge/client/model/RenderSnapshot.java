@@ -1,6 +1,9 @@
 package dev.kantobridge.client.model;
 
 import dev.kantobridge.block.CarrierKind;
+import dev.kantobridge.builder.shape.geom.ShapeMesh;
+import dev.kantobridge.builder.shape.geom.ShapeTable;
+import dev.kantobridge.world.ShapeMap;
 import dev.kantobridge.world.SlotMap;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicReferenceArray;
@@ -15,7 +18,8 @@ import org.jetbrains.annotations.Nullable;
 
 /**
  * Everything the runtime model reads while meshing (docs/specs/VOXEL_BLOCKS_PLAN.md §3.6, §5.1): per slot of the world's
- * slot map its sprite and its cube, already built, and the materials. Deeply immutable once built, and published
+ * slot map its sprite and its cube, already built; the world's shape map lookup and shape table with every texture key
+ * resolved to a sprite (V2); and the materials. Deeply immutable once built, and published
  * through one {@code volatile} reference: a mesh thread does one read ({@link #current()}) and sees a whole snapshot or
  * the previous whole one, never half of each (I5). Built and swapped on the client thread by {@link SnapshotPublisher}.
  *
@@ -25,7 +29,7 @@ import org.jetbrains.annotations.Nullable;
 public final class RenderSnapshot {
 	/** Before the first publish: the model draws its own placeholder cube. */
 	public static final RenderSnapshot BOOT = new RenderSnapshot(-1, null, null, new TextureAtlasSprite[2][], new Mesh[2][], new Mesh[2],
-			null, false, null, 0, -1);
+			null, false, null, 0, -1, null, null, new TextureAtlasSprite[0], null);
 
 	private static volatile RenderSnapshot current = BOOT;
 
@@ -45,11 +49,17 @@ public final class RenderSnapshot {
 	private final @Nullable String artSet;
 	private final int keys;
 	private final int missing;
+	private final ShapeMap.@Nullable Lookup shapes;
+	private final @Nullable ShapeTable table;
+	/** By the shape table's texture index: the key's sprite, or null (the placeholder). */
+	private final TextureAtlasSprite[] shapeSprites;
+	private final @Nullable RenderMaterial cutout;
 
 	@SuppressWarnings("unchecked")
 	RenderSnapshot(long generation, @Nullable TextureAtlasSprite placeholder, @Nullable String slotMapHash, TextureAtlasSprite[][] sprites,
 			Mesh[][] cubes, Mesh[] placeholderCubes, @Nullable RenderMaterial solid, boolean kanto, @Nullable String artSet, int keys,
-			int missing) {
+			int missing, ShapeMap.@Nullable Lookup shapes, @Nullable ShapeTable table, TextureAtlasSprite[] shapeSprites,
+			@Nullable RenderMaterial cutout) {
 		this.generation = generation;
 		this.placeholder = placeholder;
 		this.slotMapHash = slotMapHash;
@@ -63,6 +73,32 @@ public final class RenderSnapshot {
 		this.artSet = artSet;
 		this.keys = keys;
 		this.missing = missing;
+		this.shapes = shapes;
+		this.table = table;
+		this.shapeSprites = shapeSprites;
+		this.cutout = cutout;
+	}
+
+	/** The shape id at a position: 0 without one, without a shape map, or while the table builds. */
+	public int shapeAt(int x, int y, int z) {
+		ShapeMap.Lookup lookup = this.shapes;
+		return lookup == null ? 0 : lookup.shapeAt(x, y, z);
+	}
+
+	/** The mesh of a shape id, or null (the plain cube is drawn). */
+	public @Nullable ShapeMesh mesh(int id) {
+		ShapeTable built = this.table;
+		return built == null ? null : built.mesh(id);
+	}
+
+	/** Emits a shape's quads with this snapshot's sprites and materials; returns the quads emitted. */
+	public int emitShape(ShapeMesh mesh, TextureAtlasSprite fallback, QuadEmitter out) {
+		return ShapeEmitter.emit(mesh, this.shapeSprites, this.placeholder != null ? this.placeholder : fallback, this.solid, this.cutout, out);
+	}
+
+	/** True when the world's shapes are drawn (a verified shape map and a built table). */
+	public boolean shaped() {
+		return this.shapes != null && this.table != null;
 	}
 
 	/** The snapshot to draw with: one volatile read. */

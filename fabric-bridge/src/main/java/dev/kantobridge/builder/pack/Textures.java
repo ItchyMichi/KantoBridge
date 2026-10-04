@@ -80,11 +80,35 @@ public final class Textures {
 
 	/** The 8-step water sway as a 16×128 strip (frametime {@link #FRAME_TICKS}). */
 	public static Png.Image waterStrip(int[] shades, int[] palette) {
-		Png.Image out = new Png.Image(TILE * SCALE, TILE * SCALE * WATER_OFFSETS.length);
-		for (int frame = 0; frame < WATER_OFFSETS.length; frame++) {
-			paintTile(out, frame * TILE * SCALE, shades, palette, WATER_OFFSETS[frame]);
+		return shiftStrip(shades, palette, WATER_OFFSETS);
+	}
+
+	/** A sideways-shifting tile (the export's {@code hshift}): one 16×16 frame per offset, the tile rotated right by it. */
+	public static Png.Image shiftStrip(int[] shades, int[] palette, int[] offsets) {
+		Png.Image out = new Png.Image(TILE * SCALE, TILE * SCALE * offsets.length);
+		for (int frame = 0; frame < offsets.length; frame++) {
+			paintTile(out, frame * TILE * SCALE, shades, palette, offsets[frame]);
 		}
 		return out;
+	}
+
+	/** Minecraft ticks per animation step for the engine's {@code period} (frames at 60 Hz); today's 7 when not given. */
+	public static int frameTicks(int period) {
+		return period > 0 ? Math.max(1, Math.round(period / 3.0F)) : FRAME_TICKS;
+	}
+
+	/** An animation that plays its frames in order. */
+	public static String stripMeta(int frameTicks) {
+		return "{\"animation\":{\"frametime\":" + frameTicks + "}}";
+	}
+
+	/** An animation that plays its frames in the order of a 1-based {@code sequence}. */
+	public static String sequenceMeta(int[] sequence, int frames, int frameTicks) {
+		StringBuilder order = new StringBuilder();
+		for (int i = 0; i < sequence.length; i++) {
+			order.append(i == 0 ? "" : ",").append(Math.max(0, Math.min(frames - 1, sequence[i] - 1)));
+		}
+		return "{\"animation\":{\"frametime\":" + frameTicks + ",\"frames\":[" + order + "]}}";
 	}
 
 	/** The flower frames (each 8×8 shades) as a 16×(16·n) strip; the order of steps is {@link #flowerMeta()}'s. */

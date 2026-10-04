@@ -12,6 +12,8 @@
 7. Writes local/reports/viewpoints.json: fixed spectator viewpoints for the voxel plan's measurements
    (docs/specs/VOXEL_BLOCKS_PLAN.md V1a, section 10), from the report's block coordinates.
 
+The voxel plan's shape gates (section 6.4) compare reports of several builds: shape_gates().
+
 Data safety (PLAN section 0.3): only markers, counts, symbols and hashes are printed. The bundle,
 world, datapack and resource pack are ROM-derived and stay under local/. The user accepts the
 Minecraft EULA (local/minecraft/eula.txt); this script never writes or reads it.
@@ -50,6 +52,13 @@ REPORT = REPORTS / "build_report.json"
 DIAGNOSTICS = REPORTS / "build_diagnostics.json"
 # Fixed spectator viewpoints for the user's rendering measurements (voxel plan V1a): map ids and coordinates only.
 VIEWPOINTS = REPORTS / "viewpoints.json"
+# The self-check's scores per map id (voxel plan V2), written by the build beside the report.
+SELFCHECK = REPORTS / "shape_selfcheck.json"
+# The last full build before the voxel plan's V2, kept for its "no block changed" gate.
+REPORT_BEFORE_V2 = REPORTS / "build_report_v1.json"
+# world.shapes travels in parts of this many characters (WorldIndexParts.PART_CHARS); the map must fit in 8.
+PART_CHARS = 64 * 1024
+MAX_SHAPE_MAP_PARTS = 8
 # The overview viewpoint looks straight down from this far above the surface box's top.
 OVERVIEW_HEIGHT = 128
 FABRIC = REPO / "fabric-bridge"
@@ -191,6 +200,25 @@ def check_report(maps, report=REPORT):
         checks["habitat_blocks"] = (data.get("habitat_blocks") or 0) > 0
         checks["pools"] = (data.get("pools") or 0) > 0
     return data, [name for name, ok in checks.items() if not ok]
+
+
+def shape_gates(full, again, filtered, before=None):
+    """The voxel plan's shape gates (section 6.4) on counts-only reports: a fresh full build, the same build run again
+    over it, and a filtered build. ``before`` is the last full build before V2, for V2's "no block changed" gate.
+    Returns the names of the failed gates.
+    """
+    checks = {
+        "shapes_reported": bool(full.get("shape_index_hash")) and bool(full.get("shape_map_hash")),
+        "shape_hashes_repeat": (again.get("shape_index_hash"), again.get("shape_map_hash"))
+        == (full.get("shape_index_hash"), full.get("shape_map_hash")),
+        "rebuild_changes_nothing": again.get("blocks_placed") == 0 and again.get("blocks_cleared") == 0,
+        "filtered_shares_the_index": filtered.get("shape_index_hash") == full.get("shape_index_hash"),
+        "shape_map_fits": 0 < (full.get("shape_map_wire_chars") or 0) <= MAX_SHAPE_MAP_PARTS * PART_CHARS,
+        "selfcheck_recorded": isinstance(full.get("selfcheck"), dict) and (full["selfcheck"].get("maps") or 0) > 0,
+    }
+    if before is not None:
+        checks["blocks_unchanged"] = full.get("blocks_placed") == before.get("blocks_placed")
+    return [name for name, ok in checks.items() if not ok]
 
 
 def viewpoints(report, world):

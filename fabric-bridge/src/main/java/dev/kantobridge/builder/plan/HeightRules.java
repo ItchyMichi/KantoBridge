@@ -25,9 +25,9 @@ public final class HeightRules {
 	public static final int INTERIOR_WALL = 2;
 
 	/** The tallest drawn unit, in tile rows (48 px). */
-	static final int MAX_UNIT = 6;
+	public static final int MAX_UNIT = 6;
 	/** A repeating stretch must cover at least two cells (4 tile rows) to split a run. */
-	static final int MIN_REPEAT_ROWS = 4;
+	public static final int MIN_REPEAT_ROWS = 4;
 
 	private HeightRules() {
 	}

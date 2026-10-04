@@ -5,6 +5,7 @@ import dev.kantobridge.builder.export.BundleException;
 import dev.kantobridge.builder.export.ExportBundle;
 import dev.kantobridge.builder.export.ExportImage;
 import dev.kantobridge.builder.export.ExportPalettes;
+import dev.kantobridge.builder.export.ExportTileset;
 import dev.kantobridge.builder.plan.ArtCatalog;
 import dev.kantobridge.builder.plan.Warnings;
 import dev.kantobridge.builder.plan.WorldPlan;
@@ -43,13 +44,6 @@ public final class ResourcePackWriter {
 	public static final String NAMESPACE = "kantobridge";
 	/** Written at the pack's root (outside {@code assets/}): the layout, the art set, the export and the counts. */
 	public static final String INFO_FILE = "kantobridge.json";
-	/** Gen 1's flower tile; its frames are separate images (refs/_research/P3_gen1_data_export.md §3.3). */
-	public static final int FLOWER_TILE = 3;
-	/**
-	 * The flower frame images: export image ids named {@code <folder>.flower1..3} (Gen1Recomp keeps them as
-	 * {@code tilesets/flower1-3.png}); {@code tilesets.} is preferred when several folders have them.
-	 */
-	public static final List<String> FLOWER_NAMES = List.of("flower1", "flower2", "flower3");
 
 	/** What was written. */
 	public record Result(int tileTextures, int npcTextures, int animated, String hash) {
@@ -93,7 +87,7 @@ public final class ResourcePackWriter {
 		meta.addProperty("description", "Kanto Bridge (generated)");
 		pack.add("pack", meta);
 		files.put("pack.mcmeta", ProtoJson.write(pack));
-		List<int[]> flowerFrames = flowerFrames(bundle);
+		Map<String, int[]> frameShades = new HashMap<>();
 
 		// ---- tile textures ----
 		Map<String, Png.Image> atlases = new HashMap<>();
@@ -119,15 +113,23 @@ public final class ResourcePackWriter {
 			if (atlas == null || !Textures.inAtlas(atlas, perRow, key.tile())) {
 				blank++;
 			}
-			Png.Image image;
+			Png.Image image = null;
 			String mcmeta = null;
-			if (art.waterTiles(key.atlas()).contains(key.tile())) {
-				image = Textures.waterStrip(shades, colours);
-				mcmeta = Textures.waterMeta();
-			} else if (key.tile() == FLOWER_TILE && art.animatesFlowers(key.atlas()) && flowerFrames != null) {
-				image = Textures.flowerStrip(flowerFrames, colours);
-				mcmeta = Textures.flowerMeta();
-			} else {
+			// The export's animated tiles (V2): a sideways shift, or frames from images, in the engine's steps.
+			ExportTileset.Animated animation = art.animation(key.atlas(), key.tile());
+			if (animation != null && animation.kind().equals("hshift") && animation.offsets().length > 0) {
+				image = Textures.shiftStrip(shades, colours, animation.offsets());
+				mcmeta = Textures.stripMeta(Textures.frameTicks(animation.period()));
+			} else if (animation != null && animation.kind().equals("frames") && !animation.images().isEmpty()) {
+				List<int[]> frames = frames(bundle, animation.images(), frameShades, warnings);
+				if (frames != null) {
+					image = Textures.flowerStrip(frames, colours);
+					mcmeta = animation.sequence().length > 0
+							? Textures.sequenceMeta(animation.sequence(), frames.size(), Textures.frameTicks(animation.period()))
+							: Textures.stripMeta(Textures.frameTicks(animation.period()));
+				}
+			}
+			if (image == null) {
 				image = Textures.tile(shades, colours);
 			}
 			files.put(path, Png.encode(image));
@@ -218,32 +220,46 @@ public final class ResourcePackWriter {
 		}
 	}
 
-	/** The export image id of a flower frame, or null. */
-	static @Nullable String flowerImage(List<String> imageIds, String name) {
+	/**
+	 * The export image a frame names: that id when the bundle has it, else (an older export's implied frames) an image of
+	 * the same name in another folder, {@code tilesets.} preferred; null when there is none.
+	 */
+	static @Nullable String frameImage(List<String> imageIds, String id) {
+		if (imageIds.contains(id)) {
+			return id;
+		}
+		String name = id.substring(id.indexOf('.') + 1);
 		String found = null;
-		for (String id : imageIds) {
-			if (id.endsWith("." + name) && (found == null || id.startsWith("tilesets."))) {
-				found = id;
+		for (String candidate : imageIds) {
+			if (candidate.endsWith("." + name) && (found == null || candidate.startsWith("tilesets."))) {
+				found = candidate;
 			}
 		}
 		return found;
 	}
 
-	/** The three flower frames (8×8 shades each), or null when the export has no flower images. */
-	private static @Nullable List<int[]> flowerFrames(ExportBundle bundle) {
+	/** An animation's frames (8×8 shades each), or null (noted) when the export lacks one of its images. */
+	private static @Nullable List<int[]> frames(ExportBundle bundle, List<String> images, Map<String, int[]> cache, Warnings warnings) {
 		List<int[]> frames = new ArrayList<>();
 		List<String> imageIds = bundle.ids("image");
-		for (String name : FLOWER_NAMES) {
-			String id = flowerImage(imageIds, name);
+		for (String wanted : images) {
+			String id = frameImage(imageIds, wanted);
 			if (id == null) {
+				warnings.note("animation_image_missing");
 				return null;
 			}
-			try {
-				Png.Image image = Png.decode(bundle.image(id).png());
-				frames.add(Textures.tileShades(image, Math.max(1, image.width() / 8), 0));
-			} catch (IOException | BundleException e) {
-				return null;
+			int[] shades = cache.get(id);
+			if (shades == null) {
+				try {
+					Png.Image image = Png.decode(bundle.image(id).png());
+					shades = Textures.tileShades(image, Math.max(1, image.width() / 8), 0);
+				} catch (IOException | BundleException e) {
+					warnings.warn("image_unreadable");
+					return null;
+				}
+				cache.put(id, shades);
 			}
+			frames.add(shades);
 		}
 		return frames;
 	}

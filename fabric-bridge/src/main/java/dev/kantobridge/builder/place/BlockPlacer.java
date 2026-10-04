@@ -68,6 +68,8 @@ public final class BlockPlacer {
 		public int habitatFailures;
 		/** An older build's habitat blocks removed. */
 		public int habitatsRemoved;
+		/** Planned blocks by {@link BlockCode} kind (air excluded), whether they changed or not. */
+		public final int[] byKind = new int[16];
 	}
 
 	private record LightWait(ChunkPos pos, CompletableFuture<?> future) {
@@ -253,7 +255,11 @@ public final class BlockPlacer {
 				this.counts.blocksPlaced++;
 			}
 		}
-		switch (BlockCode.kind(code)) {
+		int kind = BlockCode.kind(code);
+		if (kind > 0 && kind < this.counts.byKind.length) {
+			this.counts.byKind[kind]++;
+		}
+		switch (kind) {
 			case BlockCode.KIND_STORY, BlockCode.KIND_STORY_TILE -> {
 				this.counts.storyCells++;
 				StoryCellTable.Entry entry = this.plan.storyCells().entries().get(BlockCode.value(code));

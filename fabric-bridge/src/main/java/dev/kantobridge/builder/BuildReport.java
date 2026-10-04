@@ -21,7 +21,10 @@ import org.jetbrains.annotations.Nullable;
  * was written beside the report). M10 records the builder's speed as {@code throughput}: blocks and chunks placed per
  * second of placement ({@code place_ms}), maps built per second of the whole build ({@code elapsed_ms}). The voxel plan's
  * measurements (docs/specs/VOXEL_BLOCKS_PLAN.md V1a) add {@code viewpoints}: block coordinates of the spawn cell and of
- * the surface box, from which {@code tools/e2e/build_world.py} writes the fixed spectator viewpoints.
+ * the surface box, from which {@code tools/e2e/build_world.py} writes the fixed spectator viewpoints. From V2 the groups
+ * Blocks ({@code blocks_by_kind}, {@code cells_by_kind}, {@code solid_cells_by_height}), Shapes (the shape index and map:
+ * hashes, sizes, key counts, {@code shaped_blocks}, {@code shape_plan_ms}) and the recorded self-check
+ * ({@code selfcheck}: per-map scores aggregated; the per-map numbers go to {@code shape_selfcheck.json}).
  */
 public final class BuildReport {
 	public static final String FILE = "build_report.json";
@@ -71,6 +74,31 @@ public final class BuildReport {
 	public long elapsedMs;
 	public long planMs;
 	public long placeMs;
+	// ---- the voxel plan (docs/specs/VOXEL_BLOCKS_PLAN.md §4.10) ----
+	public Map<String, Integer> blocksByKind = new TreeMap<>();
+	public Map<String, Integer> cellsByKind = new TreeMap<>();
+	public Map<String, Integer> solidCellsByHeight = new TreeMap<>();
+	public String shapeIndexHash = "";
+	public String shapePlanner = "";
+	public String shapeMapHash = "";
+	public long shapeMapBytes;
+	public long shapeMapWireChars;
+	public long shapeIndexBytes;
+	public long worldIndexBytes;
+	public int shapeKeys;
+	public Map<String, Integer> shapeKeysByKind = new TreeMap<>();
+	public int shapeInstances;
+	public long shapedBlocks;
+	public long shapePlanMs;
+	public long shapeTableMs;
+	public long shapeQuadsTotal;
+	/** The recorded self-check: per-map scores aggregated (null when shapes weren't planned). */
+	public @Nullable SelfCheckSummary selfCheck;
+
+	/** The self-check's numbers over all checked maps. */
+	public record SelfCheckSummary(int maps, long holes, double groundMatchMin, double structureMatchMin, double structureMatchP05,
+			double occludedGroundMax, long backFaces, int unitsFailed, long ms) {
+	}
 
 	public boolean ok() {
 		return "ok".equals(this.status);
@@ -129,6 +157,39 @@ public final class BuildReport {
 		throughput.addProperty("chunks_per_s", rate(this.chunks, this.placeMs));
 		throughput.addProperty("maps_per_s", rate(this.mapsBuilt, this.elapsedMs));
 		out.add("throughput", throughput);
+		out.add("blocks_by_kind", counts(this.blocksByKind));
+		out.add("cells_by_kind", counts(this.cellsByKind));
+		out.add("solid_cells_by_height", counts(this.solidCellsByHeight));
+		out.addProperty("shape_index_hash", this.shapeIndexHash);
+		out.addProperty("shape_planner", this.shapePlanner);
+		out.addProperty("shape_map_hash", this.shapeMapHash);
+		out.addProperty("shape_map_bytes", this.shapeMapBytes);
+		out.addProperty("shape_map_wire_chars", this.shapeMapWireChars);
+		out.addProperty("shape_index_bytes", this.shapeIndexBytes);
+		out.addProperty("world_index_bytes", this.worldIndexBytes);
+		out.addProperty("shape_keys", this.shapeKeys);
+		out.add("shape_keys_by_kind", counts(this.shapeKeysByKind));
+		out.addProperty("shape_instances", this.shapeInstances);
+		out.addProperty("shaped_blocks", this.shapedBlocks);
+		out.addProperty("shape_plan_ms", this.shapePlanMs);
+		out.addProperty("shape_table_ms", this.shapeTableMs);
+		out.addProperty("shape_quads_total", this.shapeQuadsTotal);
+		if (this.selfCheck == null) {
+			out.add("selfcheck", JsonNull.INSTANCE);
+		} else {
+			SelfCheckSummary c = this.selfCheck;
+			JsonObject check = new JsonObject();
+			check.addProperty("maps", c.maps());
+			check.addProperty("holes", c.holes());
+			check.addProperty("ground_match_min", round4(c.groundMatchMin()));
+			check.addProperty("structure_match_min", round4(c.structureMatchMin()));
+			check.addProperty("structure_match_p05", round4(c.structureMatchP05()));
+			check.addProperty("occluded_ground_max", round4(c.occludedGroundMax()));
+			check.addProperty("back_faces", c.backFaces());
+			check.addProperty("units_failed", c.unitsFailed());
+			check.addProperty("ms", c.ms());
+			out.add("selfcheck", check);
+		}
 		out.addProperty("export_hash", this.exportHash);
 		out.addProperty("slot_map_hash", this.slotMapHash);
 		out.addProperty("world_index_hash", this.worldIndexHash);
@@ -171,6 +232,11 @@ public final class BuildReport {
 			return 0.0;
 		}
 		return Math.round(count * 10_000.0 / ms) / 10.0;
+	}
+
+	/** A ratio to four decimals, so the report stays readable. */
+	public static double round4(double value) {
+		return Math.round(value * 10_000.0) / 10_000.0;
 	}
 
 	private static JsonObject counts(Map<String, Integer> map) {

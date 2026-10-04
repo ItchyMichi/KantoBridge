@@ -14,6 +14,8 @@
     "slotMapHash": {"$ref": "../defs.schema.json#/$defs/hash"},
     "textures": {"$ref": "../defs.schema.json#/$defs/count"},
     "missing": {"$ref": "../defs.schema.json#/$defs/count", "description": "Slot-map keys whose sprite this client lacks (drawn as placeholders)."},
+    "shapes": {"$ref": "../defs.schema.json#/$defs/count", "description": "Shape ids this client has geometry for; 0 while it draws cubes."},
+    "shapeIndexHash": {"$ref": "../defs.schema.json#/$defs/hash", "description": "The shape index it built them from."},
     "reason": {"type": "string", "pattern": "^[a-z][a-z0-9_.]*$", "maxLength": 64}
   }
 }

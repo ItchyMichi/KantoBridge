@@ -1,9 +1,15 @@
 """The synthetic world as export data (docs/PROTOCOL.md "Export"). Entirely made up; no ROM data.
 
-One tileset (TEST) with a procedurally drawn 128x48 atlas, two maps built from its blocks
-(TEST_TOWN, 10x9 blocks, and TEST_HOUSE, 5x5 blocks), four sprite sheets, one palette, a grass
-encounter table, field tables and names. Per-cell flags are derived from the blocks the same way the
-engine does it: a cell's behaviour comes from its bottom-left 8x8 tile.
+One tileset (TEST) with a procedurally drawn 128x48 atlas, maps built from its blocks (TEST_TOWN,
+10x9 blocks; TEST_HILL, 8x6 blocks north of it; TEST_HOUSE and TEST_HOUSE_2F), four sprite sheets,
+three flower frames, one palette, a grass encounter table, field tables and names. Per-cell flags are
+derived from the blocks the same way the engine does it: a cell's behaviour comes from its bottom-left
+8x8 tile.
+
+TEST_HILL (the voxel plan's V2) holds what the shape generator needs to see once: a house with a
+tapered two-row roof and a windowed facade, a cliff mound with a rim, a fence line, a sign on a
+lightest-shade background and a 2x2-tile round tree with a dark outline. Its south row of trees meets
+the town's north row of trees, so nobody walks between the two.
 """
 import base64
 import hashlib
@@ -14,6 +20,9 @@ from kb_protocol.jsonfmt import canonical
 
 # --- tiles -------------------------------------------------------------------------------------------
 GROUND, GRASS, TREE, WALL, ROOF, DOOR, WATER, FLOWER, LEDGE, FLOOR, COUNTER, POST, MAT, CUT, SHORE, STAIRS = range(16)
+# TEST_HILL's art (the voxel plan's V2)
+ROOF_EDGE, ROOF2, FACADE, WINDOW, FENCE, RIM, CLIFF, SIGN_TOP, SIGN_POST, RTREE_NW, RTREE_NE, RTREE_SW, RTREE_SE = \
+    range(16, 29)
 TILES_PER_ROW, ATLAS_TILES = 16, 96
 WALKABLE = [GROUND, GRASS, DOOR, FLOWER, FLOOR, MAT, STAIRS]
 
@@ -53,7 +62,17 @@ BLOCKS = [
     _quad(CUT, GROUND, GROUND, GROUND),   # a cuttable tree in the top-left cell
     _uniform(GROUND),                     # the same block after Cut
     _quad(FLOOR, STAIRS, FLOOR, FLOOR),   # stairs in the top-right cell
+    # TEST_HILL (append only: earlier block ids never move)
+    [ROOF_EDGE] * 4 + [ROOF2] * 4 + [FACADE] * 4 + [FACADE, WINDOW, WINDOW, FACADE],  # 17: roof over the facade
+    [FACADE, WINDOW, WINDOW, FACADE] + [FACADE] * 12,                                 # 18: facade, left
+    [FACADE, WINDOW, WINDOW, FACADE] + [FACADE] * 4 + [FACADE, FACADE, DOOR, DOOR] * 2,  # 19: facade with the door
+    [RIM] * 4 + [CLIFF] * 12,                                                         # 20: the mound's rim
+    [CLIFF] * 16,                                                                     # 21: the mound's face
+    [RTREE_NW, RTREE_NE, GROUND, GROUND, RTREE_SW, RTREE_SE, GROUND, GROUND] + [GROUND] * 8,  # 22: a round tree
+    [FENCE] * 8 + [GROUND] * 8,                                                       # 23: a fence line
+    [SIGN_TOP, SIGN_TOP, GROUND, GROUND, SIGN_POST, SIGN_POST, GROUND, GROUND] + [GROUND] * 8,  # 24: a sign
 ]
+B_HROOF, B_HFRONT, B_HDOOR, B_RIM, B_CLIFF, B_RTREE, B_FENCE, B_SIGN2 = range(17, 25)
 
 T = B_TREES
 TOWN_BLOCKS = [
@@ -66,6 +85,15 @@ TOWN_BLOCKS = [
     [T, B_LEDGE, B_LEDGE, B_LEDGE, B_GROUND, B_GROUND, B_WATER, B_WATER, B_GROUND, T],
     [T, B_GROUND, B_GROUND, B_GROUND, B_GROUND, B_CUT, B_WATER, B_WATER, B_GROUND, T],
     [T, T, T, T, T, T, T, T, T, T],
+]
+G = B_GROUND
+HILL_BLOCKS = [
+    [T, T, T, T, T, T, T, T],
+    [T, B_HROOF, B_HROOF, G, B_RIM, B_RIM, G, T],
+    [T, B_HFRONT, B_HDOOR, G, B_CLIFF, B_CLIFF, B_RTREE, T],
+    [T, G, G, G, G, G, G, T],
+    [T, B_FENCE, B_FENCE, B_FENCE, G, B_SIGN2, G, T],
+    [T, T, T, T, T, T, T, T],
 ]
 W = B_IWALL
 HOUSE_BLOCKS = [
@@ -97,6 +125,13 @@ MAPS = {
              "movement": "STAY", "range": "LEFT", "hidden": False, "trainer": {"cls": "OPP_TEST", "party": 1}},
         ],
         "parent": None, "lastMap": None,
+        "connections": {"north": {"map": "TEST_HILL", "offset": 0}},
+    },
+    "TEST_HILL": {
+        "index": 12, "blocks": HILL_BLOCKS, "border": B_TREES, "surface": True, "outside": True,
+        "warps": [], "signs": [{"x": 10, "y": 8}], "objects": [],
+        "parent": None, "lastMap": None,
+        "connections": {"south": {"map": "TEST_TOWN", "offset": 0}},
     },
     "TEST_HOUSE": {
         "index": 37, "blocks": HOUSE_BLOCKS, "border": B_IWALL, "surface": False, "outside": False,
@@ -217,6 +252,36 @@ def _tile_pattern(tile, x, y):
         return 3 if y % 2 else 1
     if tile == CUT:
         return 3 if abs(x - 3.5) + abs(y - 3.5) < 3 else 1
+    if tile == ROOF_EDGE:
+        # the roof's tapered top: the lightest shade above its dark eave line
+        return 0 if y == 0 or (y == 1 and x in (0, 7)) else (3 if y == 1 or (x + y) % 3 == 0 else 2)
+    if tile == ROOF2:
+        return 3 if (x + 2 * y) % 4 == 0 else 2
+    if tile == FACADE:
+        return 3 if y == 7 else 1
+    if tile == WINDOW:
+        if x in (0, 7) or y in (0, 7):
+            return 1
+        return 3 if x in (1, 6) or y in (1, 6) else 0  # a pane sealed by its dark frame
+    if tile == FENCE:
+        return 3 if x in (3, 4) or y in (2, 5) else 0
+    if tile == RIM:
+        return 3 if y < 2 else 2
+    if tile == CLIFF:
+        return 3 if x % 4 == 0 else 2
+    if tile == SIGN_TOP:
+        if not (1 <= x <= 6 and y >= 1):
+            return 0
+        return 3 if x in (1, 6) or y == 1 else 1
+    if tile == SIGN_POST:
+        if y < 4:
+            return 3 if x in (1, 6) or y == 3 else (1 if 1 <= x <= 6 else 0)
+        return 3 if x in (3, 4) else 0
+    if tile in (RTREE_NW, RTREE_NE, RTREE_SW, RTREE_SE):
+        px = x + (8 if tile in (RTREE_NE, RTREE_SE) else 0)
+        py = y + (8 if tile in (RTREE_SW, RTREE_SE) else 0)
+        r2 = (px - 7.5) ** 2 + (py - 7.5) ** 2
+        return 2 if r2 < 36 else (3 if r2 < 56 else 0)
     return 0
 
 
@@ -229,6 +294,13 @@ def atlas_png():
             for x in range(8):
                 pixels[oy + y][ox + x] = _tile_pattern(tile, x, y)
     return width, height, _png(width, height, pixels)
+
+
+def flower_png(frame):
+    """One 8x8 flower frame: a dot that grows over the lightest ground."""
+    size = (1, 2, 3)[frame - 1]
+    pixels = [[3 if abs(x - 3.5) < size and abs(y - 3.5) < size else 0 for x in range(8)] for y in range(8)]
+    return 8, 8, _png(8, 8, pixels)
 
 
 def sprite_png(frames):
@@ -258,9 +330,11 @@ def resources(game="red"):
             "width": len(blocks[0]), "height": len(blocks),
             "blocks": [b for row in blocks for b in row],
             "border": m["border"], "surface": m["surface"], "outside": m["outside"],
-            "connections": {}, "warps": m["warps"], "signs": m["signs"], "objects": m["objects"],
-            "cells": cell_flags(name), "parent": m["parent"], "lastMap": m["lastMap"],
+            "connections": m.get("connections", {}), "warps": m["warps"], "signs": m["signs"],
+            "objects": m["objects"], "cells": cell_flags(name), "parent": m["parent"], "lastMap": m["lastMap"],
             "dark": False, "palette": "TEST_PALETTE",
+            # the TEST tileset isn't the engine's OVERWORLD one: the border drawn is the map's own
+            "borderDrawn": m["border"],
         }
     out[("tileset", "TEST")] = {
         "id": "TEST", "image": "tilesets.test", "tilesPerRow": TILES_PER_ROW, "tiles": ATLAS_TILES,
@@ -268,9 +342,17 @@ def resources(game="red"):
         "walkable": sorted(WALKABLE), "counter": [COUNTER], "grass": GRASS, "door": [DOOR],
         "warp": [STAIRS], "water": [WATER, SHORE], "shore": [SHORE], "cutTree": [CUT], "spinner": [],
         "pads": [],
+        "animated": [
+            {"tiles": [WATER], "kind": "hshift", "period": 20, "offsets": [1, 2, 3, 2, 1, 0, 7, 0]},
+            {"tiles": [FLOWER], "kind": "frames", "period": 20, "sequence": [1, 2, 3, 1, 1, 2, 3, 1],
+             "images": ["tilesets.flower1", "tilesets.flower2", "tilesets.flower3"]},
+        ],
     }
     w, h, png = atlas_png()
     out[("image", "tilesets.test")] = {"id": "tilesets.test", "w": w, "h": h, "png": _b64(png)}
+    for frame in (1, 2, 3):
+        w, h, png = flower_png(frame)
+        out[("image", f"tilesets.flower{frame}")] = {"id": f"tilesets.flower{frame}", "w": w, "h": h, "png": _b64(png)}
     for sprite, frames in SPRITES.items():
         w, h, png = sprite_png(frames)
         out[("sprite", sprite)] = {"id": sprite, "w": w, "h": h, "frames": frames, "walker": frames >= 6,
@@ -290,14 +372,15 @@ def resources(game="red"):
         "ledges": LEDGES,
         "cutTreeSwaps": [{"before": B_CUT, "after": B_CUT_DONE}],
         "darkMaps": {"maps": []},
-    }}
+    }, "display": {"voidFill": "trees", "voidFillDefault": True}}
     out[("names", "all")] = {
         "species": {k: {"dex": v[0], "name": v[1]} for k, v in SPECIES.items()},
         "moves": {k: {"num": v[0], "name": v[1]} for k, v in MOVES.items()},
         "items": {k: {"num": v[0], "name": v[1], "key": v[2]} for k, v in ITEMS.items()},
     }
     out[("layout", "kanto")] = {"root": "TEST_TOWN", "maps": {
-        "TEST_TOWN": {"x": 0, "y": 0, "w": len(TOWN_BLOCKS[0]), "h": len(TOWN_BLOCKS)}}}
+        "TEST_TOWN": {"x": 0, "y": 0, "w": len(TOWN_BLOCKS[0]), "h": len(TOWN_BLOCKS)},
+        "TEST_HILL": {"x": 0, "y": -len(HILL_BLOCKS), "w": len(HILL_BLOCKS[0]), "h": len(HILL_BLOCKS)}}}
     out[("swaps", "all")] = {"sites": [
         {"map": "TEST_TOWN", "bx": 5, "by": 7, "kind": "cut", "before": B_CUT, "after": B_CUT_DONE}]}
     return out

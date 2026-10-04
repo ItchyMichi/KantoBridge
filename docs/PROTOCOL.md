@@ -630,13 +630,13 @@ A builder connection (role `builder`) asks for `export.index`, then fetches each
 
 | Kind | Id | Contents |
 |---|---|---|
-| map | map symbol | The map record (size in blocks, `blocks`, `border`, `connections`, `warps`, `signs`, `objects`) plus derived fields: `surface`, `outside`, per-cell `cells` flags, `parent` (the warp that first leads into an interior, by BFS from the surface), `lastMap`, `dark`, `palette` |
-| tileset | tileset symbol | Atlas image id, `tilesPerRow`, `blocks` (block → 16 tile ids), `animation`, and tile classes: walkable, counter, grass, door, warp, water, shore, cut tree, spinner, pads |
+| map | map symbol | The map record (size in blocks, `blocks`, `border`, `connections`, `warps`, `signs`, `objects`) plus derived fields: `surface`, `outside`, per-cell `cells` flags, `parent` (the warp that first leads into an interior, by BFS from the surface), `lastMap`, `dark`, `palette`, and `borderDrawn` (the block the engine really draws around the map, or null for none; the voxel plan's V2) |
+| tileset | tileset symbol | Atlas image id, `tilesPerRow`, `blocks` (block → 16 tile ids), `animation`, tile classes: walkable, counter, grass, door, warp, water, shore, cut tree, spinner, pads; and `animated` (the animated tiles as data: `tiles`, `kind` `hshift`/`frames`/`toggle`, `period`, `offsets` or `images` + `sequence`, or `image` + `stripOffsets` + `gate`; V2) |
 | image | `<folder>.<name>`, e.g. `tilesets.overworld` | A greyscale PNG (4 shades), base64: atlases, animation strips, effects |
 | sprite | sprite symbol | A sheet of 16×16 frames: 0–2 standing down/up/left, 3–5 walking; right is left mirrored |
 | palettes | `sgb` | SGB palettes: name → 4 RGB colours, lightest first |
 | encounters | `all` | Slot buckets, grass/water tables per map (species symbol, dex, level), rod tables |
-| field | `all` | Selected engine field tables as JSON (ledges, cut-tree swaps, dark maps, …) |
+| field | `all` | Selected engine field tables as JSON (ledges, cut-tree swaps, dark maps, …), and `display`: the player's void-fill option and whether it is the engine's default (V2) |
 | names | `all` | Species → dex, move → number, item → number, with display names |
 | layout | `kanto` | Block origins of the surface maps relative to `PALLET_TOWN`, from the engine's neighbour arithmetic |
 | swaps | `all` | Runtime block-change sites (cut trees, card-key doors, scripted swaps) the builder prepares story cells for |
@@ -697,9 +697,10 @@ bytes. A downloaded export is stored as an **export bundle**, which stays under 
 | `warp.done` | S→C | `ok, to?`; `re` optional | |
 | `activity` | C→S | `activity:"dialogue"\|"cutscene"\|"battle"\|"paused"\|"none"` (speech bubbles; `paused` while the player's Gen1Recomp is disconnected) | |
 | `relay.hello` | S→C, C→S | `protocol, mod` (the relay's version handshake on join; M10) | |
-| `texture.status` | C→S | `ok, slotMapHash?, textures?, missing?, reason?` | |
+| `texture.status` | C→S | `ok, slotMapHash?, textures?, missing?, shapes?, shapeIndexHash?, reason?` | |
 | `world.index` | S→C | `index, count, hash, part` (the WorldIndex JSON in parts, on join) | yes |
 | `world.slots` | S→C | `index, count, hash, part` (the slot-map JSON in parts, on join, so a joining player can build their own pack against the host's slots; M9) | yes |
+| `world.shapes` | S→C | `doc, index, count, hash, part` (the shape index, `doc:"index"`, and the shape map, `doc:"map"`, in parts after `world.slots`; the voxel plan's V2) | yes |
 
 **The WorldIndex** ([`protocol/world/world_index.schema.json`](../protocol/world/world_index.schema.json))
 is what the builder writes to `<world>/kantobridge/world_index.json`:
@@ -723,6 +724,20 @@ block: family `f` of that shape (`kantobridge:tile_full_ff` or `tile_half_ff`) a
 state `hi = s >> 4`, `lo = s & 15`). It is computed from the **whole export, never from a build's map
 filter**, so every build from the same export, and every player's pack, agrees. `slotMapHash` is the
 SHA-256 of its canonical JSON. Capacity: 16 families × 256 slots per shape.
+
+**The shape index** ([`protocol/world/shape_index.schema.json`](../protocol/world/shape_index.schema.json)),
+`<world>/kantobridge/shape_index.json` (the voxel plan's V2, [specs/VOXEL_BLOCKS_PLAN.md](specs/VOXEL_BLOCKS_PLAN.md)
+§4.2), names the world's shapes without a pixel: canonical JSON of the planner's version and parameters, the sorted
+atlases and palettes, the sorted shape keys (`geoms`; a key such as `cube:<a>|<u>,<d>,<n>,<s>,<w>,<e>` names one tile per
+face of a cube, `<a>` an index into `atlases`) and the sorted `[geom, palette]` pairs (`instances`). A shape id is an index
+into `instances` plus 1; 0 means no shape. Its keys come from the whole export, never from a build's filter;
+`shapeIndexHash` is the SHA-256 of its text.
+
+**The shape map**, `<world>/kantobridge/shape_map.bin`, gives positions their shape ids: a binary file (magic `KBSM`,
+version 1, the SHA-256 of the WorldIndex's text and of the shape index's text, then per box of columns (the surface box,
+each interior volume) a stack of ids per column from the feet level up, then closed story-cell overlays from V5).
+`shapeMapHash` is the SHA-256 of its bytes. Each client builds the geometry of every shape from its **own** export and
+pack; a position without an entry, or a client without geometry, draws the plain cube of its block.
 
 **The generated resource pack** (`<gameDir>/kantobridge/resourcepack/`, ROM-derived art, never
 shared) holds textures only, addressed by key, never by slot (layout 2, from the voxel plan's V1):
@@ -757,6 +772,13 @@ before V1) counts as no pack.
   world's slot map names, and only while gen1-bridge is connected to a compatible game (the same game,
   or Red with Blue), once per world. Art is never sent over the network. A world without a slot map
   (built before M9) shows placeholders.
+- **`world.shapes`** follows the `world.slots` parts: first the shape index's text (`doc:"index"`), then Base64 of
+  the shape map's deflated bytes (`doc:"map"`); `hash` is the SHA-256 of the document's whole transmitted text. The
+  server sends them only when both files exist and the shape map's header names the published WorldIndex. The client
+  accepts the pair when both documents assemble and match their hashes, the index parses with a known version, the
+  map's index hash is the hash of the `world.index` text it holds and its shape hash is the SHA-256 of the received
+  index text; otherwise it keeps drawing cubes and reports why. A guest builds geometry for the **host's** keys from
+  its own art; a key it can't build draws the plain cube.
 - **`texture.status`:** `ok:true` means this client draws the world with its own art; it carries
   `slotMapHash` (the world's slot map it resolved its sprites against), `textures` and `missing` (0).
   `ok:false` carries `reason`: `no_art` (no usable pack, and gen1-bridge isn't connected to a
@@ -764,7 +786,12 @@ before V1) counts as no pack.
   world's keys, drawn as placeholders; with `slotMapHash`, `textures`, `missing`), `no_slots` (no slot
   map arrived 15 s after the index), `reload`, `export.<code>`, `pack.<code>`, `pack.io`,
   `interrupted`, `internal`. Failures retry only when the world changes or the player rejoins. The
-  pack's root `kantobridge.json` carries `layout`, `artSet`, `game`, `exportHash` and its counts.
+  pack's root `kantobridge.json` carries `layout`, `artSet`, `game`, `exportHash` and its counts. From V2 every
+  status also says how many shape ids the client has geometry for (`shapes`, 0 while it draws cubes) and from which
+  shape index (`shapeIndexHash`). A client that draws its own art but cubes keeps `ok:true` and says why in
+  `reason`: `no_shapes` (the world sent none), `shape_map_mismatch` (the shape map doesn't decode or names another
+  index), `geometry_unsupported` (a shape index it can't read), `shapes_off` (its `kantobridge-client.json` says
+  `"shapes": "off"`); an art reason wins over these.
 - **Activity** reaches other players through Fabric's attachment sync (`kantobridge:activity`, to all
   but the player); clients draw speech bubbles from it.
 - **Authority:** every client → server message affects only the sender (GameTest-proven for every
@@ -857,3 +884,5 @@ carrying the same envelope in both directions. Larger data is split at the appli
 - Added by the voxel plan ([specs/VOXEL_BLOCKS_PLAN.md](specs/VOXEL_BLOCKS_PLAN.md)):
   - V1: `texture.status.missing` and its new meaning, the reasons `no_art` and `art_incomplete`
     (`no_bridge` and `slot_map_mismatch` are gone), and the generated pack's layout 2.
+  - V2: `world.shapes` (S→C), the shape index and shape map files, `texture.status.shapes` and `shapeIndexHash`, and
+    the export's `map.borderDrawn`, `tileset.animated` and `field.display` (all optional, so older bundles stay valid).

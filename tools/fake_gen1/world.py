@@ -16,7 +16,8 @@ TEXTS = {
     "TESTTOWN_GUARD": ("Let's battle!",),
     "TESTHOUSE_MOM": ("Welcome home,", "tester!"),
 }
-SIGN_TEXTS = {("TEST_TOWN", 11, 5): ("TEST TOWN", "A place for tests.")}
+SIGN_TEXTS = {("TEST_TOWN", 11, 5): ("TEST TOWN", "A place for tests."),
+              ("TEST_HILL", 10, 8): ("TEST HILL", "Mind the cliff.")}
 # Where a warp lands (the destination warp's cell) and its kind, as gen1-bridge reports them: a
 # door tile is "door", other warp tiles "stairs", an exit mat "edge". Leaving a house lands on the
 # town's door cell, and the engine then walks the player out one cell (a scripted step).

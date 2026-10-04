@@ -113,6 +113,27 @@
         }
       },
       "maxItems": 16
+    },
+    "animated": {
+      "type": "array",
+      "description": "The tileset's animated tiles as data: the record's own animatedTiles, else the engine's default set. hshift shifts the tile's pixels by offsets (one per step); frames cycles through images (export image ids) in the order of sequence (1-based); toggle switches the tiles to their slice (stripOffsets, one per tile) of the strip image while gate holds. period is in engine frames. Older exports leave it out.",
+      "items": {
+        "type": "object",
+        "required": ["tiles", "kind"],
+        "additionalProperties": false,
+        "properties": {
+          "tiles": {"type": "array", "items": {"type": "integer", "minimum": 0, "maximum": 1023}, "minItems": 1, "maxItems": 64},
+          "kind": {"enum": ["hshift", "frames", "toggle"]},
+          "period": {"type": "integer", "minimum": 0, "maximum": 65535},
+          "offsets": {"type": "array", "items": {"type": "integer", "minimum": 0, "maximum": 255}, "maxItems": 64},
+          "images": {"type": "array", "items": {"$ref": "../defs.schema.json#/$defs/id"}, "maxItems": 64},
+          "sequence": {"type": "array", "items": {"type": "integer", "minimum": 0, "maximum": 255}, "maxItems": 64},
+          "image": {"$ref": "../defs.schema.json#/$defs/id"},
+          "stripOffsets": {"type": "array", "items": {"type": "integer", "minimum": 0, "maximum": 255}, "maxItems": 64},
+          "gate": {"$ref": "../defs.schema.json#/$defs/symbol"}
+        }
+      },
+      "maxItems": 32
     }
   }
 }

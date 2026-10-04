@@ -1,0 +1,24 @@
+[
+  {
+    "type": "world.shapes",
+    "seq": 12,
+    "data": {
+      "doc": "index",
+      "index": 0,
+      "count": 1,
+      "hash": "b2c3d4e5f6071829",
+      "part": "{\"atlases\":[\"tilesets.test\"],\"geoms\":[\"cube:0|4,4,3,3,3,3\"],\"instances\":[[0,0]],\"palettes\":[\"TEST_PALETTE\"],\"params\":{\"heights\":\"classified\",\"hullRing\":2,\"interiorWall\":2,\"maxUnit\":6,\"minRepeatRows\":4,\"tierB\":false,\"tierC\":false},\"planner\":\"kb-shapes/1\",\"templates\":[],\"version\":1}"
+    }
+  },
+  {
+    "type": "world.shapes",
+    "seq": 13,
+    "data": {
+      "doc": "map",
+      "index": 0,
+      "count": 1,
+      "hash": "c3d4e5f607182930",
+      "part": "S0JTTQEAAA=="
+    }
+  }
+]

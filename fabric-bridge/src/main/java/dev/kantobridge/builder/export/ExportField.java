@@ -17,22 +17,31 @@ import org.jetbrains.annotations.Nullable;
  * @param indoor     null when the export has no {@code indoorEncounters} table
  * @param safariMaps the Safari Zone's maps (empty without a {@code safari} table)
  * @param surfSprite the sprite the hidden game draws for a surfing player, or null when the export doesn't say
+ * @param display    the player's display options that change what the engine draws (the voxel plan's V2), or null
  */
-public record ExportField(@Nullable Indoor indoor, Set<String> safariMaps, @Nullable String surfSprite) {
+public record ExportField(@Nullable Indoor indoor, Set<String> safariMaps, @Nullable String surfSprite, @Nullable Display display) {
 	/** Gen 1's indoor encounter rule. */
 	public record Indoor(int firstIndoorMap, String excludedTileset) {
+	}
+
+	/** The void-fill option the export was made under (outdoor borders), and whether it is the engine's default. */
+	public record Display(String voidFill, boolean voidFillDefault) {
 	}
 
 	public ExportField {
 		safariMaps = Set.copyOf(safariMaps);
 	}
 
+	public ExportField(@Nullable Indoor indoor, Set<String> safariMaps, @Nullable String surfSprite) {
+		this(indoor, safariMaps, surfSprite, null);
+	}
+
 	public ExportField(@Nullable Indoor indoor, Set<String> safariMaps) {
-		this(indoor, safariMaps, null);
+		this(indoor, safariMaps, null, null);
 	}
 
 	public static ExportField empty() {
-		return new ExportField(null, Set.of(), null);
+		return new ExportField(null, Set.of(), null, null);
 	}
 
 	/** True when map {@code index} with tileset {@code tileset} rolls encounters on every floor cell. */
@@ -65,6 +74,11 @@ public record ExportField(@Nullable Indoor indoor, Set<String> safariMaps, @Null
 				surf = value.getAsString();
 			}
 		}
-		return new ExportField(indoor, safari, surf);
+		Display display = null;
+		DataReader options = r.optionalObject("display");
+		if (options != null) {
+			display = new Display(options.string("voidFill"), options.bool("voidFillDefault"));
+		}
+		return new ExportField(indoor, safari, surf, display);
 	}
 }

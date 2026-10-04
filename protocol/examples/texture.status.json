@@ -2,7 +2,7 @@
   {
     "type": "texture.status",
     "seq": 11,
-    "data": {"ok": true, "slotMapHash": "a1b2c3d4e5f60718", "textures": 512, "missing": 0}
+    "data": {"ok": true, "slotMapHash": "a1b2c3d4e5f60718", "textures": 512, "missing": 0, "shapes": 1830, "shapeIndexHash": "b2c3d4e5f6071829"}
   },
   {
     "type": "texture.status",

@@ -1,0 +1,54 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kantobridge.invalid/protocol/world/shape_index.schema.json",
+  "title": "shape index",
+  "description": "Written by the builder to <world>/kantobridge/shape_index.json (docs/specs/VOXEL_BLOCKS_PLAN.md §4.2): the world's shape keys. Pixel-free names of shapes (which rule, which tile ids and offsets); each client builds their geometry from its own art. Canonical JSON (sorted keys, compact); shapeIndexHash is its SHA-256, so the planner version and parameters are inside the hash. Keys come from the whole export, never from a build's map filter. A geom id is an index into geoms; a shape id is an index into instances plus 1 (0: no shape).",
+  "type": "object",
+  "required": ["version", "planner", "params", "atlases", "palettes", "geoms", "templates", "instances"],
+  "additionalProperties": false,
+  "properties": {
+    "version": {"const": 1},
+    "planner": {"type": "string", "pattern": "^[a-z0-9-]{1,32}/[0-9]{1,4}$", "description": "The planner and its version, e.g. kb-shapes/1."},
+    "params": {
+      "type": "object",
+      "description": "The planner's parameters (docs/specs/VOXEL_BLOCKS_PLAN.md §2.2).",
+      "additionalProperties": {"type": ["string", "integer", "boolean"]}
+    },
+    "atlases": {
+      "type": "array",
+      "description": "Sorted atlas image ids; keys refer to them by index.",
+      "items": {"$ref": "../defs.schema.json#/$defs/id"},
+      "uniqueItems": true,
+      "x-rom-derived": true
+    },
+    "palettes": {
+      "type": "array",
+      "description": "Sorted palette ids; instances refer to them by index.",
+      "items": {"$ref": "../defs.schema.json#/$defs/symbol"},
+      "uniqueItems": true
+    },
+    "geoms": {
+      "type": "array",
+      "description": "Sorted canonical shape keys (cube, slab, roof, tuft, cell, tmpl); geom id = index.",
+      "items": {"type": "string", "pattern": "^(cube|slab|roof|tuft|cell|tmpl):[0-9]{1,5}\\|[-0-9a-z,|=_]+$", "maxLength": 256},
+      "uniqueItems": true,
+      "x-rom-derived": true
+    },
+    "templates": {
+      "type": "array",
+      "description": "Per structure signature, its tile grid, door cells, ground tile and outdoor flag (from V7).",
+      "items": {"type": "object"},
+      "x-rom-derived": true
+    },
+    "instances": {
+      "type": "array",
+      "description": "Sorted [geomId, paletteIndex] pairs; shape id = index + 1.",
+      "items": {
+        "type": "array",
+        "prefixItems": [{"type": "integer", "minimum": 0}, {"type": "integer", "minimum": 0}],
+        "minItems": 2,
+        "maxItems": 2
+      }
+    }
+  }
+}

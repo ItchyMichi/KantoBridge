@@ -1,6 +1,7 @@
 package dev.kantobridge.client.model;
 
 import dev.kantobridge.block.CarrierKind;
+import dev.kantobridge.builder.shape.geom.ShapeMesh;
 import java.util.List;
 import java.util.function.Supplier;
 import net.fabricmc.fabric.api.renderer.v1.render.RenderContext;
@@ -46,7 +47,11 @@ final class TileBakedModel implements BakedModel {
 			RenderContext context) {
 		long started = MeshStats.ENABLED ? System.nanoTime() : 0L;
 		RenderSnapshot snapshot = RenderSnapshot.current();
-		int quads = snapshot.emitCube(this.kind, this.slot, this.placeholder, context.getEmitter());
+		// pos is the mesher's cursor: read its coordinates, never keep it.
+		int id = snapshot.shapeAt(pos.getX(), pos.getY(), pos.getZ());
+		ShapeMesh mesh = id == 0 ? null : snapshot.mesh(id);
+		int quads = mesh == null ? snapshot.emitCube(this.kind, this.slot, this.placeholder, context.getEmitter())
+				: snapshot.emitShape(mesh, this.placeholder, context.getEmitter());
 		if (MeshStats.ENABLED) {
 			MeshStats.ours(System.nanoTime() - started, quads);
 		}

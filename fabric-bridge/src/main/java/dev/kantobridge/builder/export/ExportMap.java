@@ -17,12 +17,14 @@ import org.jetbrains.annotations.Nullable;
  *
  * @param blocks  {@code width*height} block ids, row-major
  * @param cells   per-cell flags ({@link CellFlags}), {@code cells[cy][cx]}, {@code height*2} rows of {@code width*2}
- * @param parent  interiors: the warp in another map that first leads here; null for surface or unreachable maps
- * @param lastMap interiors: the outdoor map their {@code LAST_MAP} exits return to
+ * @param parent      interiors: the warp in another map that first leads here; null for surface or unreachable maps
+ * @param lastMap     interiors: the outdoor map their {@code LAST_MAP} exits return to
+ * @param borderDrawn the block the engine really draws around the map (outdoors: the player's void fill), or null when
+ *                    it draws none; {@code border} when an older export doesn't say (the voxel plan's V2)
  */
 public record ExportMap(String id, int index, String tileset, int width, int height, int[] blocks, int border, boolean surface,
 		boolean outside, Map<Direction, Connection> connections, List<Warp> warps, List<Sign> signs, List<MapObject> objects,
-		int[][] cells, @Nullable Parent parent, @Nullable String lastMap, boolean dark, String palette) {
+		int[][] cells, @Nullable Parent parent, @Nullable String lastMap, boolean dark, String palette, @Nullable Integer borderDrawn) {
 
 	/** Connection directions, as the export names them. */
 	public enum Direction {
@@ -74,6 +76,14 @@ public record ExportMap(String id, int index, String tileset, int width, int hei
 		warps = List.copyOf(warps);
 		signs = List.copyOf(signs);
 		objects = List.copyOf(objects);
+	}
+
+	/** A map whose drawn border is its own border block. */
+	public ExportMap(String id, int index, String tileset, int width, int height, int[] blocks, int border, boolean surface, boolean outside,
+			Map<Direction, Connection> connections, List<Warp> warps, List<Sign> signs, List<MapObject> objects, int[][] cells,
+			@Nullable Parent parent, @Nullable String lastMap, boolean dark, String palette) {
+		this(id, index, tileset, width, height, blocks, border, surface, outside, connections, warps, signs, objects, cells, parent, lastMap,
+				dark, palette, border);
 	}
 
 	/** Width in cells. */
@@ -163,8 +173,10 @@ public record ExportMap(String id, int index, String tileset, int width, int hei
 			parent = new Parent(p.string("map", DataReader.MAP_ID), p.integer("warp", 1, 255), p.integer("x", -4096, 4096),
 					p.integer("y", -4096, 4096));
 		}
-		return new ExportMap(id, r.integer("index", 0, 255), r.string("tileset", DataReader.SYMBOL), width, height, blocks,
-				r.integer("border", 0, 255), r.bool("surface"), r.bool("outside"), connections, warps, signs, objects, cells, parent,
-				r.optionalString("lastMap", DataReader.MAP_ID), r.bool("dark"), r.string("palette", DataReader.SYMBOL));
+		int border = r.integer("border", 0, 255);
+		Integer borderDrawn = !r.has("borderDrawn") ? Integer.valueOf(border) : r.isNull("borderDrawn") ? null : r.integer("borderDrawn", 0, 255);
+		return new ExportMap(id, r.integer("index", 0, 255), r.string("tileset", DataReader.SYMBOL), width, height, blocks, border,
+				r.bool("surface"), r.bool("outside"), connections, warps, signs, objects, cells, parent, r.optionalString("lastMap", DataReader.MAP_ID),
+				r.bool("dark"), r.string("palette", DataReader.SYMBOL), borderDrawn);
 	}
 }

@@ -31,18 +31,16 @@ import org.jetbrains.annotations.Nullable;
 public final class ArtCatalog {
 	private final SlotMap slotMap;
 	private final Map<String, Integer> tilesPerRow;
-	private final Map<String, Set<Integer>> waterTiles;
-	private final Set<String> flowerAtlases;
+	private final Map<String, List<ExportTileset.Animated>> animations;
 	private final Set<String> npcs;
 	private final @Nullable String surfSprite;
 	private final Set<String> surfPalettes;
 
-	private ArtCatalog(SlotMap slotMap, Map<String, Integer> tilesPerRow, Map<String, Set<Integer>> waterTiles, Set<String> flowerAtlases,
+	private ArtCatalog(SlotMap slotMap, Map<String, Integer> tilesPerRow, Map<String, List<ExportTileset.Animated>> animations,
 			Set<String> npcs, @Nullable String surfSprite, Set<String> surfPalettes) {
 		this.slotMap = slotMap;
 		this.tilesPerRow = Collections.unmodifiableMap(tilesPerRow);
-		this.waterTiles = Collections.unmodifiableMap(waterTiles);
-		this.flowerAtlases = Collections.unmodifiableSet(flowerAtlases);
+		this.animations = Collections.unmodifiableMap(animations);
 		this.npcs = Collections.unmodifiableSet(npcs);
 		this.surfSprite = surfSprite;
 		this.surfPalettes = Collections.unmodifiableSet(surfPalettes);
@@ -59,8 +57,8 @@ public final class ArtCatalog {
 		}
 		Set<SlotMap.Key> keys = new HashSet<>();
 		Map<String, Integer> tilesPerRow = new TreeMap<>();
-		Map<String, Set<Integer>> waterTiles = new TreeMap<>();
-		Set<String> flowerAtlases = new TreeSet<>();
+		Map<String, List<ExportTileset.Animated>> animations = new TreeMap<>();
+		Map<String, Set<String>> animationSeen = new HashMap<>();
 		Set<String> npcs = new TreeSet<>();
 		Set<String> waterPalettes = new TreeSet<>();
 		Map<String, ExportTileset> tilesets = new HashMap<>();
@@ -80,16 +78,11 @@ public final class ArtCatalog {
 			String atlas = tileset.image();
 			String palette = map.palette();
 			tilesPerRow.putIfAbsent(atlas, tileset.tilesPerRow());
-			if (tileset.animatesWater()) {
-				Set<Integer> water = waterTiles.computeIfAbsent(atlas, k -> new TreeSet<>());
-				for (int tile : tileset.water()) {
-					if (!tileset.shore().contains(tile)) {
-						water.add(tile);
-					}
+			// The export's animated tiles (from V2; older exports imply today's water and flowers), each entry once per atlas.
+			for (ExportTileset.Animated entry : tileset.animated()) {
+				if (animationSeen.computeIfAbsent(atlas, k -> new java.util.HashSet<>()).add(entry.kind() + java.util.Arrays.toString(entry.tiles()))) {
+					animations.computeIfAbsent(atlas, k -> new ArrayList<>()).add(entry);
 				}
-			}
-			if (tileset.animatesFlowers()) {
-				flowerAtlases.add(atlas);
 			}
 			for (ExportMap.MapObject object : map.objects()) {
 				npcs.add(palette + "|" + object.sprite());
@@ -135,7 +128,7 @@ public final class ArtCatalog {
 		} catch (SlotMap.FullException e) {
 			throw new PlanException("slot_map.full", e.getMessage());
 		}
-		return new ArtCatalog(slotMap, tilesPerRow, waterTiles, flowerAtlases, npcs, surfSprite,
+		return new ArtCatalog(slotMap, tilesPerRow, animations, npcs, surfSprite,
 				surfSprite == null ? Set.of() : waterPalettes);
 	}
 
@@ -149,14 +142,22 @@ public final class ArtCatalog {
 		return this.tilesPerRow.getOrDefault(atlas, 16);
 	}
 
-	/** Atlas tiles that sway like Gen 1 water (the tileset's water tiles that aren't shore, where it animates water). */
-	public Set<Integer> waterTiles(String atlas) {
-		return this.waterTiles.getOrDefault(atlas, Set.of());
-	}
-
-	/** Atlases whose tileset cycles the flower tile. */
-	public boolean animatesFlowers(String atlas) {
-		return this.flowerAtlases.contains(atlas);
+	/**
+	 * The animation that moves a tile of an atlas in the generated pack: its first {@code hshift} or {@code frames} entry,
+	 * or null ({@code toggle} entries are gated effects the pack doesn't play).
+	 */
+	public ExportTileset.@Nullable Animated animation(String atlas, int tile) {
+		for (ExportTileset.Animated entry : this.animations.getOrDefault(atlas, List.of())) {
+			if (entry.kind().equals("toggle")) {
+				continue;
+			}
+			for (int t : entry.tiles()) {
+				if (t == tile) {
+					return entry;
+				}
+			}
+		}
+		return null;
 	}
 
 	/** Every (palette, sprite) pair an object of some map needs, as {@code "PALETTE|SPRITE"}, sorted. */

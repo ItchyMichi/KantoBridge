@@ -12,6 +12,7 @@ import dev.kantobridge.client.bridge.ExportClient;
 import dev.kantobridge.client.bridge.HelloOk;
 import dev.kantobridge.client.bridge.Transport;
 import dev.kantobridge.client.model.RenderSnapshot;
+import dev.kantobridge.client.shape.ClientShapes;
 import dev.kantobridge.client.net.ClientRelay;
 import dev.kantobridge.client.world.ClientWorldIndex;
 import dev.kantobridge.client.world.CreateKantoWorldFlow;
@@ -19,6 +20,7 @@ import dev.kantobridge.proto.Catalog;
 import dev.kantobridge.proto.MsgTypes;
 import dev.kantobridge.world.Games;
 import dev.kantobridge.world.Hashes;
+import dev.kantobridge.world.ShapeIndex;
 import dev.kantobridge.world.SlotMap;
 import dev.kantobridge.world.WorldIndex;
 import java.io.IOException;
@@ -148,8 +150,9 @@ public final class TextureSyncRuntime {
 		HelloOk hello = this.bridge.state().handshake();
 		boolean compatible = this.bridge.client().state() == ConnectionState.CONNECTED && hello != null && index != null
 				&& Games.compatible(hello.game(), index.game());
+		ShapeIndex shapes = ClientShapes.table() == null ? null : ClientShapes.index();
 		TextureSync.Inputs inputs = new TextureSync.Inputs(index == null ? null : index.game(), index == null ? null : index.slotMapHash(),
-				this.local, packLoaded, missing, compatible);
+				this.local, packLoaded, missing, compatible, ClientShapes.shapes(), shapes == null ? null : shapes.hash(), ClientShapes.reason());
 		this.sync.tick(this.clock.millis(), inputs, busy);
 	}
 

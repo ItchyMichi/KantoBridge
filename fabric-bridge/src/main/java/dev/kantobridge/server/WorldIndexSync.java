@@ -8,6 +8,7 @@ import dev.kantobridge.net.RelayService;
 import dev.kantobridge.proto.MsgTypes;
 import dev.kantobridge.world.DataException;
 import dev.kantobridge.world.Hashes;
+import dev.kantobridge.world.ShapeMap;
 import dev.kantobridge.world.SlotMap;
 import dev.kantobridge.world.WorldIndex;
 import dev.kantobridge.world.WorldIndexParts;
@@ -43,7 +44,8 @@ public final class WorldIndexSync {
 	 * (empty when the world has none that matches the index).
 	 */
 	private record Published(String hash, List<WorldIndexParts.Part> parts, @Nullable WorldIndex index, @Nullable String slotsHash,
-			List<WorldIndexParts.Part> slotParts) {
+			List<WorldIndexParts.Part> slotParts, @Nullable String shapesHash, List<WorldIndexParts.Part> shapeIndexParts,
+			List<WorldIndexParts.Part> shapeMapParts) {
 	}
 
 	private static final Map<MinecraftServer, Published> CURRENT = Collections.synchronizedMap(new WeakHashMap<>());
@@ -74,7 +76,21 @@ public final class WorldIndexSync {
 			KantoBridge.LOGGER.warn("world.index: the world's index is unreadable ({}); clients won't get one", e.getClass().getSimpleName());
 			return;
 		}
-		publish(server, index, json, readSlots(data.resolve(BuildTask.SLOT_MAP_FILE)), false);
+		Path shapeIndex = data.resolve(BuildTask.SHAPE_INDEX_FILE);
+		Path shapeMap = data.resolve(BuildTask.SHAPE_MAP_FILE);
+		String shapes = null;
+		byte[] map = null;
+		if (Files.isRegularFile(shapeIndex) && Files.isRegularFile(shapeMap)) {
+			try {
+				shapes = Files.readString(shapeIndex, StandardCharsets.UTF_8);
+				map = Files.readAllBytes(shapeMap);
+			} catch (IOException e) {
+				KantoBridge.LOGGER.warn("world.shapes: the world's shape files are unreadable ({}); clients draw cubes", e.getClass().getSimpleName());
+				shapes = null;
+				map = null;
+			}
+		}
+		publish(server, index, json, readSlots(data.resolve(BuildTask.SLOT_MAP_FILE)), shapes, map, false);
 	}
 
 	/** The world's stored slot map, or null when it has none or it is unreadable (a warning). */
@@ -94,7 +110,7 @@ public final class WorldIndexSync {
 
 	/** Makes {@code index} the one joining players get (without a slot map); with {@code broadcast}, sends it to everyone. */
 	public static void publish(MinecraftServer server, WorldIndex index, boolean broadcast) {
-		publish(server, index, index.toJson(), null, broadcast);
+		publish(server, index, index.toJson(), null, null, null, broadcast);
 	}
 
 	/**
@@ -102,7 +118,17 @@ public final class WorldIndexSync {
 	 * with {@code broadcast}, sends both to everyone online now. A slot map whose hash isn't the index's is left out.
 	 */
 	public static void publish(MinecraftServer server, WorldIndex index, @Nullable SlotMap slots, boolean broadcast) {
-		publish(server, index, index.toJson(), slots, broadcast);
+		publish(server, index, index.toJson(), slots, null, null, broadcast);
+	}
+
+	/**
+	 * {@link #publish(MinecraftServer, WorldIndex, SlotMap, boolean)} with the world's shapes: the shape index's text and
+	 * the shape map's bytes (both null for none). They go out only when the map's header names this index and that
+	 * shape index; otherwise clients draw cubes.
+	 */
+	public static void publish(MinecraftServer server, WorldIndex index, @Nullable SlotMap slots, @Nullable String shapeIndex,
+			byte @Nullable [] shapeMap, boolean broadcast) {
+		publish(server, index, index.toJson(), slots, shapeIndex, shapeMap, broadcast);
 	}
 
 	/** {@link #publish(MinecraftServer, WorldIndex, boolean)} for index JSON text (checked; an invalid one refuses warps). */
@@ -114,10 +140,11 @@ public final class WorldIndexSync {
 			// Still handed to clients (they check it too), but the server can't resolve warps with it.
 			KantoBridge.LOGGER.warn("world.index: the published index is invalid ({}); warps will be refused", e.problem());
 		}
-		publish(server, index, json, null, broadcast);
+		publish(server, index, json, null, null, null, broadcast);
 	}
 
-	private static void publish(MinecraftServer server, @Nullable WorldIndex index, String json, @Nullable SlotMap slots, boolean broadcast) {
+	private static void publish(MinecraftServer server, @Nullable WorldIndex index, String json, @Nullable SlotMap slots,
+			@Nullable String shapeIndex, byte @Nullable [] shapeMap, boolean broadcast) {
 		List<WorldIndexParts.Part> parts = WorldIndexParts.split(json, WorldIndexParts.PART_CHARS);
 		String slotsHash = null;
 		List<WorldIndexParts.Part> slotParts = List.of();
@@ -130,10 +157,31 @@ public final class WorldIndexSync {
 				KantoBridge.LOGGER.warn("world.slots: the slot map ({}) isn't the one the index names; not sent", Hashes.shortHash(slots.hash()));
 			}
 		}
-		Published published = new Published(parts.get(0).hash(), parts, index, slotsHash, slotParts);
+		String shapesHash = null;
+		List<WorldIndexParts.Part> shapeIndexParts = List.of();
+		List<WorldIndexParts.Part> shapeMapParts = List.of();
+		if (shapeIndex != null && shapeMap != null) {
+			try {
+				ShapeMap map = ShapeMap.decode(shapeMap);
+				String indexHash = Hashes.sha256(json);
+				String shapeHash = Hashes.sha256(shapeIndex);
+				if (map.indexHash().equals(indexHash) && map.shapeHash().equals(shapeHash)) {
+					shapeIndexParts = WorldIndexParts.split(shapeIndex, WorldIndexParts.PART_CHARS);
+					shapeMapParts = WorldIndexParts.split(map.wire(), WorldIndexParts.PART_CHARS);
+					shapesHash = shapeHash;
+				} else {
+					KantoBridge.LOGGER.warn("world.shapes: the shape map ({}) doesn't name this index and its shape index; not sent",
+							Hashes.shortHash(map.hash()));
+				}
+			} catch (DataException e) {
+				KantoBridge.LOGGER.warn("world.shapes: the shape map is unreadable ({}); not sent", e.problem());
+			}
+		}
+		Published published = new Published(parts.get(0).hash(), parts, index, slotsHash, slotParts, shapesHash, shapeIndexParts, shapeMapParts);
 		CURRENT.put(server, published);
-		KantoBridge.LOGGER.info("world.index: {} parts, hash {}; world.slots: {} parts, hash {}", parts.size(), Hashes.shortHash(published.hash()),
-				slotParts.size(), slotsHash == null ? "-" : Hashes.shortHash(slotsHash));
+		KantoBridge.LOGGER.info("world.index: {} parts, hash {}; world.slots: {} parts, hash {}; world.shapes: {}+{} parts, index {}", parts.size(),
+				Hashes.shortHash(published.hash()), slotParts.size(), slotsHash == null ? "-" : Hashes.shortHash(slotsHash), shapeIndexParts.size(),
+				shapeMapParts.size(), shapesHash == null ? "-" : Hashes.shortHash(shapesHash));
 		if (broadcast) {
 			for (ServerPlayer player : server.getPlayerList().getPlayers()) {
 				send(server, player);
@@ -180,6 +228,23 @@ public final class WorldIndexSync {
 		return published == null ? List.of() : published.slotParts();
 	}
 
+	/** The hash of the shape index the server sends ({@code world.shapes}), or null when it sends none. */
+	public static @Nullable String currentShapesHash(MinecraftServer server) {
+		Published published = CURRENT.get(server);
+		return published == null ? null : published.shapesHash();
+	}
+
+	/** The {@code world.shapes} parts the server would send, index first, or an empty list. */
+	public static List<WorldIndexParts.Part> currentShapeParts(MinecraftServer server) {
+		Published published = CURRENT.get(server);
+		if (published == null) {
+			return List.of();
+		}
+		List<WorldIndexParts.Part> out = new java.util.ArrayList<>(published.shapeIndexParts());
+		out.addAll(published.shapeMapParts());
+		return out;
+	}
+
 	/** Sends the current index and slot map to one player whose client has our mod. Returns the number of parts sent. */
 	public static int send(MinecraftServer server, ServerPlayer player) {
 		if (!ServerPlayNetworking.canSend(player, KbJsonPayload.TYPE)) {
@@ -202,8 +267,34 @@ public final class WorldIndexSync {
 			return sent;
 		}
 		int slots = sendParts(player, MsgTypes.WORLD_SLOTS, published.slotParts());
-		KantoBridge.LOGGER.debug("world.index: sent {} parts (hash {}), world.slots {} parts", sent, Hashes.shortHash(published.hash()), slots);
-		return sent + slots;
+		int shapes = 0;
+		if (slots == published.slotParts().size()) {
+			shapes = sendShapes(player, "index", published.shapeIndexParts());
+			if (shapes == published.shapeIndexParts().size()) {
+				shapes += sendShapes(player, "map", published.shapeMapParts());
+			}
+		}
+		KantoBridge.LOGGER.debug("world.index: sent {} parts (hash {}), world.slots {} parts, world.shapes {} parts", sent,
+				Hashes.shortHash(published.hash()), slots, shapes);
+		return sent + slots + shapes;
+	}
+
+	private static int sendShapes(ServerPlayer player, String doc, List<WorldIndexParts.Part> parts) {
+		int sent = 0;
+		for (WorldIndexParts.Part part : parts) {
+			JsonObject data = new JsonObject();
+			data.addProperty("doc", doc);
+			data.addProperty("index", part.index());
+			data.addProperty("count", part.count());
+			data.addProperty("hash", part.hash());
+			data.addProperty("part", part.text());
+			if (!RelayService.get().send(player, MsgTypes.WORLD_SHAPES, data, null)) {
+				KantoBridge.LOGGER.error("world.shapes: {} part {}/{} could not be sent", doc, part.index() + 1, part.count());
+				return sent;
+			}
+			sent++;
+		}
+		return sent;
 	}
 
 	private static int sendParts(ServerPlayer player, String type, List<WorldIndexParts.Part> parts) {

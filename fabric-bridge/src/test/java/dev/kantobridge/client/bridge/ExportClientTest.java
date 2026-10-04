@@ -139,7 +139,7 @@ class ExportClientTest {
 		assertEquals(resources, last[0]);
 		assertEquals(last[3], last[2], "every byte arrived");
 		assertEquals(done.bytes(), last[2]);
-		assertEquals(3, done.kinds().get("map"));
+		assertEquals(4, done.kinds().get("map"));
 
 		// The written bundle is the source bundle (written by fake_gen1 --write-bundle), byte for byte, and opens.
 		this.assertSameBundle(TestData.syntheticBundle(), done.bundleDir());

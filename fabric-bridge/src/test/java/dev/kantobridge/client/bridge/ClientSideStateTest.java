@@ -185,6 +185,24 @@ class ClientSideStateTest {
 	}
 
 	@Test
+	void shapesCanBeSwitchedOff(@TempDir Path dir) throws IOException {
+		Path file = dir.resolve(ClientConfig.FILE_NAME);
+		List<String> warnings = new ArrayList<>();
+		assertTrue(ClientConfig.load(dir, new Properties(), warnings::add).shapes(), "on by default");
+		assertTrue(Files.readString(file).contains("\"shapes\": \"on\""), "the new file names the setting");
+		Files.writeString(file, "{\"port\": 27152, \"shapes\": \"off\"}", StandardCharsets.UTF_8);
+		ClientConfig off = ClientConfig.load(dir, new Properties(), warnings::add);
+		assertFalse(off.shapes());
+		assertEquals(27152, off.port());
+		Files.writeString(file, "{\"shapes\": false}", StandardCharsets.UTF_8);
+		assertFalse(ClientConfig.load(dir, new Properties(), warnings::add).shapes());
+		assertTrue(warnings.isEmpty());
+		Files.writeString(file, "{\"shapes\": \"maybe\"}", StandardCharsets.UTF_8);
+		assertTrue(ClientConfig.load(dir, new Properties(), warnings::add).shapes(), "a mistake keeps the default");
+		assertEquals(1, warnings.size());
+	}
+
+	@Test
 	void systemPropertyOverridesTheFile(@TempDir Path dir) throws IOException {
 		Files.writeString(dir.resolve(ClientConfig.FILE_NAME), "{\"port\": 27152}", StandardCharsets.UTF_8);
 		Properties properties = new Properties();

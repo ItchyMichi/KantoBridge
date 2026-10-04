@@ -48,6 +48,7 @@ public final class BridgeRuntime {
 
 	private final BridgeClock clock = BridgeClock.system();
 	private final Catalog catalog;
+	private final ClientConfig config;
 	private final Dispatcher dispatcher;
 	private final ClientBridgeState state = new ClientBridgeState();
 	private final ConnectionStatus status = new ConnectionStatus();
@@ -65,6 +66,7 @@ public final class BridgeRuntime {
 
 	private BridgeRuntime(Catalog catalog, ClientConfig config) {
 		this.catalog = catalog;
+		this.config = config;
 		this.dispatcher = new Dispatcher(catalog);
 		this.state.attach(this.dispatcher);
 		this.client = new BridgeClient(BridgeConfig.fromCatalog(catalog, config.port()), catalog, BridgeRuntime::helloInfo,
@@ -108,6 +110,11 @@ public final class BridgeRuntime {
 
 	public BridgeClient client() {
 		return this.client;
+	}
+
+	/** The client's settings ({@code kantobridge-client.json}), as read at start-up. */
+	public ClientConfig config() {
+		return this.config;
 	}
 
 	public Dispatcher dispatcher() {

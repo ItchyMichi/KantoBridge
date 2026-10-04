@@ -45,11 +45,14 @@ class SyntheticPlanTest {
 	@Test
 	void placements() {
 		assertEquals(0, plan.warnings().total(), plan.warnings().warnings().toString());
-		assertEquals(3, plan.maps().size());
-		assertEquals(3, plan.mapsRequested());
+		assertEquals(4, plan.maps().size());
+		assertEquals(4, plan.mapsRequested());
 		MapPlacement town = plan.index().map("TEST_TOWN");
 		assertEquals(new MapPlacement("TEST_TOWN", ox(0), 64, oz(0), 20, 18, 0, MapPlacement.Kind.SURFACE, "TEST_PALETTE",
 				"kantobridge:kanto_outdoor", false, null), town);
+		// The hill joins the town's north edge: 12 cells (24 blocks) north of it.
+		assertEquals(new MapPlacement("TEST_HILL", ox(0), 64, oz(-24), 16, 12, 0, MapPlacement.Kind.SURFACE, "TEST_PALETTE",
+				"kantobridge:kanto_outdoor", false, null), plan.index().map("TEST_HILL"));
 		// The house's arrival cell (4, 8) sits right under the town door (5, 5), one layer down.
 		MapPlacement house = plan.index().map("TEST_HOUSE");
 		assertEquals(new MapPlacement("TEST_HOUSE", ox(10 - 8), 42, oz(10 - 16), 10, 10, 1, MapPlacement.Kind.INTERIOR, "TEST_PALETTE",
@@ -61,7 +64,7 @@ class SyntheticPlanTest {
 		assertEquals(2, plan.maxLayer());
 		assertEquals(0, plan.overlaps());
 		assertEquals(0, plan.edgeMismatches());
-		assertEquals(new Box3(ox(-12), 63, oz(-12), ox(52), 68, oz(48)), plan.surfaceBox());
+		assertEquals(new Box3(ox(-12), 63, oz(-36), ox(52), 68, oz(48)), plan.surfaceBox());
 	}
 
 	@Test
@@ -117,8 +120,9 @@ class SyntheticPlanTest {
 	void slotMapAndSpawn() {
 		SlotMap slots = plan.slotMap();
 		// Town: ground, grass, tree, wall, roof, door, flower, ledge, post, and the cut tree's closed art; house: floor,
-		// counter, mat, stairs (walls and trees are shared); water is the only half-height tile.
-		assertEquals(14, slots.count(SlotMap.Shape.FULL));
+		// counter, mat, stairs (walls and trees are shared); the hill's 13 tiles (roof edge and row, facade, window,
+		// fence, rim, cliff, the sign's two and the round tree's four); water is the only half-height tile.
+		assertEquals(27, slots.count(SlotMap.Shape.FULL));
 		assertEquals(1, slots.count(SlotMap.Shape.HALF));
 		assertNotNull(slots.slot(new SlotMap.Key("tilesets.test", "TEST_PALETTE", 6, SlotMap.Shape.HALF)));
 		assertNotNull(slots.slot(new SlotMap.Key("tilesets.test", "TEST_PALETTE", 13, SlotMap.Shape.FULL)), "cut tree overlay art");
@@ -173,9 +177,9 @@ class SyntheticPlanTest {
 	@Test
 	void volumesAndChunks() {
 		List<Box3> volumes = plan.volumes();
-		assertEquals(3, volumes.size(), "the surface and two interiors");
+		assertEquals(3, volumes.size(), "the surface (town and hill) and two interiors");
 		List<long[]> chunks = WorldPlan.chunks(volumes);
-		assertEquals(20, chunks.size(), "5 × 4 chunks of surface; the interiors lie under it");
+		assertEquals(30, chunks.size(), "5 × 6 chunks of surface; the interiors lie under it");
 		assertEquals(3, plan.biomeRegions().size());
 	}
 
@@ -190,27 +194,6 @@ class SyntheticPlanTest {
 		assertTrue(Files.isRegularFile(golden), "golden WorldIndex missing: run the tests with -Pkb.updateGolden=true once");
 		assertEquals(Files.readString(golden, StandardCharsets.UTF_8), json, "the synthetic WorldIndex changed; review and update the golden");
 		assertEquals(bundle.exportHash(), plan.index().exportHash());
-	}
-
-	/** Renders chunks on demand and reads codes at world positions. */
-	static final class ChunkCodesView {
-		private final WorldPlan plan;
-		private final Map<Long, ChunkCodes> chunks = new java.util.HashMap<>();
-
-		ChunkCodesView(WorldPlan plan) {
-			this.plan = plan;
-		}
-
-		int code(int x, int y, int z) {
-			int cx = x >> 4;
-			int cz = z >> 4;
-			ChunkCodes codes = this.chunks.computeIfAbsent(((long) cx << 32) ^ (cz & 0xFFFFFFFFL), k -> this.plan.renderChunk(cx, cz, List.of()));
-			return codes.get(x, y, z);
-		}
-
-		int kind(int x, int y, int z) {
-			return BlockCode.kind(this.code(x, y, z));
-		}
 	}
 
 	@Test
@@ -244,8 +227,8 @@ class SyntheticPlanTest {
 		ExportBundle withArena = ExportBundle.open(TestData.syntheticCopyWith(temp, Map.of("map/TEST_ARENA", arena)));
 
 		WorldPlan full = WorldPlanner.plan(withArena, new WorldPlanner.Options(null, 0, 0, TestData.MIN_BUILD_HEIGHT));
-		assertEquals(3, full.mapsRequested(), "unreachable maps aren't requested by a full build");
-		assertEquals(3, full.maps().size());
+		assertEquals(4, full.mapsRequested(), "unreachable maps aren't requested by a full build");
+		assertEquals(4, full.maps().size());
 		assertEquals(0, full.warnings().total(), full.warnings().warnings().toString());
 		assertEquals(1, full.warnings().noteCount("map_unreachable"));
 

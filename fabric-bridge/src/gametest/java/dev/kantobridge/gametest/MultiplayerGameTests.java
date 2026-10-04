@@ -8,6 +8,9 @@ import dev.kantobridge.builder.export.ExportBundle;
 import dev.kantobridge.builder.plan.ArtCatalog;
 import dev.kantobridge.builder.plan.PlanException;
 import dev.kantobridge.builder.plan.Warnings;
+import dev.kantobridge.builder.plan.WorldPlan;
+import dev.kantobridge.builder.plan.WorldPlanner;
+import dev.kantobridge.builder.shape.ShapePlan;
 import dev.kantobridge.battle.BattleService;
 import dev.kantobridge.net.RelayHandshake;
 import dev.kantobridge.net.RelayService;
@@ -29,6 +32,7 @@ import dev.kantobridge.story.StoryState;
 import dev.kantobridge.story.StoryStates;
 import dev.kantobridge.story.Surfing;
 import dev.kantobridge.world.DataException;
+import dev.kantobridge.world.ShapeMap;
 import dev.kantobridge.world.SlotMap;
 import dev.kantobridge.world.WorldIndex;
 import dev.kantobridge.world.WorldIndexParts;
@@ -301,6 +305,93 @@ public class MultiplayerGameTests implements FabricGameTest {
 				WorldIndexSync.sendTo(server, player);
 				helper.assertTrue(!sent.isEmpty() && sent.stream().noneMatch(message -> message.type().equals(MsgTypes.WORLD_SLOTS)),
 						"world.slots went out for a slot map the index doesn't name");
+			}));
+		} finally {
+			WorldIndexSync.withdraw(server);
+		}
+		helper.succeed();
+	}
+
+	// ---- world.shapes ----
+
+	/** The synthetic world's plan at the golden index's origin, so its shape map names the golden WorldIndex. */
+	private static ShapePlan syntheticShapes(GameTestHelper helper, WorldIndex golden) {
+		try {
+			// The JUnit tests' TestData.MIN_BUILD_HEIGHT, which the golden index was planned with.
+			WorldPlan plan = WorldPlanner.plan(syntheticBundle(), new WorldPlanner.Options(null, SyntheticBuildGameTests.ORIGIN_X,
+					SyntheticBuildGameTests.ORIGIN_Z, -256));
+			helper.assertTrue(plan.index().toJson().equals(golden.toJson()), "the plan's index isn't the golden one");
+			helper.assertTrue(plan.shapes() != null, "no shapes planned");
+			return plan.shapes();
+		} catch (BundleException | PlanException e) {
+			throw new GameTestAssertException("synthetic plan: " + e.getClass().getSimpleName());
+		}
+	}
+
+	private static String reassembleDoc(GameTestHelper helper, List<Envelope> parts, String doc) {
+		WorldIndexParts.Assembler assembler = new WorldIndexParts.Assembler();
+		String text = null;
+		try {
+			for (Envelope part : parts) {
+				if (doc.equals(part.data().get("doc").getAsString())) {
+					text = assembler.accept(part.data().get("index").getAsInt(), part.data().get("count").getAsInt(),
+							part.data().get("hash").getAsString(), part.data().get("part").getAsString());
+				}
+			}
+		} catch (DataException e) {
+			throw new GameTestAssertException("world.shapes " + doc + " parts rejected: " + e.problem());
+		}
+		helper.assertTrue(text != null, "the world.shapes " + doc + " parts don't make a whole document");
+		return text;
+	}
+
+	/**
+	 * The voxel plan's V2 (docs/specs/VOXEL_BLOCKS_PLAN.md §4.4): a joining player gets the world's shapes after its slot
+	 * map, the shape index first and then the shape map, and only when the map names the published index and that shape
+	 * index; otherwise no {@code world.shapes} goes out and clients draw cubes.
+	 */
+	@GameTest(template = EMPTY_STRUCTURE, batch = BATCH_SLOTS)
+	public void joiningPlayersGetTheWorldsShapesAfterItsSlots(GameTestHelper helper) {
+		MinecraftServer server = helper.getLevel().getServer();
+		WorldIndex golden = WarpGameTests.publishSyntheticIndex(helper);
+		SlotMap slots = syntheticSlots();
+		ShapePlan shapes = syntheticShapes(helper, golden);
+		String shapeIndex = shapes.index().toJson();
+		try {
+			WorldIndexSync.publish(server, golden, slots, shapeIndex, shapes.map().encode(), false);
+			helper.assertTrue(shapes.index().hash().equals(WorldIndexSync.currentShapesHash(server)), "the shapes weren't published");
+			MockPlayers.with(helper, player -> RelayTap.capture(player, sent -> {
+				int count = WorldIndexSync.sendTo(server, player);
+				int indexParts = WorldIndexSync.currentParts(server).size();
+				int slotParts = WorldIndexSync.currentSlotParts(server).size();
+				int shapeParts = WorldIndexSync.currentShapeParts(server).size();
+				helper.assertTrue(shapeParts >= 2 && count == indexParts + slotParts + shapeParts && sent.size() == count, "parts sent: " + count);
+				List<String> types = sent.stream().map(Envelope::type).toList();
+				helper.assertTrue(types.subList(indexParts + slotParts, count).stream().allMatch(MsgTypes.WORLD_SHAPES::equals)
+						&& types.subList(0, indexParts + slotParts).stream().noneMatch(MsgTypes.WORLD_SHAPES::equals), "the shapes come after the slots");
+				List<Envelope> shapeMessages = sent.subList(indexParts + slotParts, count);
+				List<String> docs = shapeMessages.stream().map(message -> message.data().get("doc").getAsString()).toList();
+				helper.assertTrue(docs.indexOf("map") == docs.lastIndexOf("index") + 1, "the shape index comes first, then the map");
+				helper.assertTrue(reassembleDoc(helper, shapeMessages, "index").equals(shapeIndex), "another shape index arrived");
+				try {
+					ShapeMap map = ShapeMap.fromWire(reassembleDoc(helper, shapeMessages, "map"), 1 << 24);
+					helper.assertTrue(map.hash().equals(shapes.map().hash()), "another shape map arrived");
+				} catch (DataException e) {
+					throw new GameTestAssertException("the shape map doesn't decode: " + e.problem());
+				}
+			}));
+
+			// A map bound to another index (or another shape index) stays home.
+			WorldIndexSync.publish(server, golden, slots, shapeIndex, shapes.map().withHeader("0".repeat(64), shapes.index().hash()).encode(), false);
+			helper.assertTrue(WorldIndexSync.currentShapesHash(server) == null && WorldIndexSync.currentShapeParts(server).isEmpty(),
+					"a shape map naming another index was published");
+			WorldIndexSync.publish(server, golden, slots, shapeIndex, shapes.map().withHeader(shapes.map().indexHash(), "0".repeat(64)).encode(),
+					false);
+			helper.assertTrue(WorldIndexSync.currentShapesHash(server) == null, "a shape map naming another shape index was published");
+			MockPlayers.with(helper, player -> RelayTap.capture(player, sent -> {
+				WorldIndexSync.sendTo(server, player);
+				helper.assertTrue(!sent.isEmpty() && sent.stream().noneMatch(message -> message.type().equals(MsgTypes.WORLD_SHAPES)),
+						"world.shapes went out for a map that doesn't match");
 			}));
 		} finally {
 			WorldIndexSync.withdraw(server);

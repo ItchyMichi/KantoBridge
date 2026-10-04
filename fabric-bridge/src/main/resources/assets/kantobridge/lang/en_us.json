@@ -90,6 +90,7 @@
   "kantobridge.debug.versions.untested": "  untested engine",
   "kantobridge.debug.world.online": "online",
   "kantobridge.debug.world.offline": "offline",
+  "kantobridge.debug.shapes": "Shapes: on %s  index %s (%s shapes)  table %s shapes, %s quads, %s ms (cache %s)  cubes because %s",
   "kantobridge.debug.mesh": "Mesh (dev, %s): model %s  re-mesh %s ms  sections %s (p95 %s ms, ours p95 %s ms)  fps %s (1%% low %s)  heap %s MB  reload %s ms  join→view %s ms  runs %s",
   "kantobridge.debug.mesh.idle": "Mesh (dev, %s): model %s  sections meshed %s  F8 measures",
   "kantobridge.debug.yes": "yes",

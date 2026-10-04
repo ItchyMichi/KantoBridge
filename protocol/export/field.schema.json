@@ -12,6 +12,16 @@
       "type": "object",
       "properties": {},
       "propertyNames": {"$ref": "../defs.schema.json#/$defs/symbol"}
+    },
+    "display": {
+      "type": "object",
+      "description": "Display options that change what the engine draws: the player's void-fill option (the border of outdoor maps) and whether it is the engine's default (decided by gen1-bridge, so no engine constant is copied). Older exports leave it out.",
+      "required": ["voidFill", "voidFillDefault"],
+      "additionalProperties": false,
+      "properties": {
+        "voidFill": {"type": "string", "pattern": "^[a-z0-9_]{1,32}$"},
+        "voidFillDefault": {"type": "boolean"}
+      }
     }
   }
 }

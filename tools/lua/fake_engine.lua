@@ -262,17 +262,29 @@ function FakeEngine.addExport(E)
   -- come from images the world names (E.animationPaths)
   E.animationPaths = { flowers = {}, spinners = nil }
   local TileRenderer = { SPINNER_ARROW_TILES = { GYM = { 0x3c, 0x3d, 0x4c, 0x4d }, FACILITY = { 0x20, 0x21, 0x30, 0x31 } } }
+  -- the border the renderer draws: OVERWORLD maps by the player's void fill, others their own block
+  TileRenderer.VOID_FILLS = { "trees", "water", "black" }
+  TileRenderer.voidFill = "trees"
+  function TileRenderer.borderBlockFor(map)
+    if map.def.tileset == "OVERWORLD" then
+      if TileRenderer.voidFill == "water" then return 0x43 end
+      if TileRenderer.voidFill == "black" then return false end
+      return 0x0F
+    end
+    return map.def.borderBlock
+  end
   function TileRenderer.defaultAnimatedTiles(ts)
     local out = {}
     if ts.animation == "TILEANIM_WATER" or ts.animation == "TILEANIM_WATER_FLOWER" then
-      out[#out + 1] = { tile = 0x14, kind = "hshift", offsets = { 1, 2, 3, 2, 1, 0, 7, 0 } }
+      out[#out + 1] = { tile = 0x14, kind = "hshift", period = 20, offsets = { 1, 2, 3, 2, 1, 0, 7, 0 } }
     end
     if ts.animation == "TILEANIM_WATER_FLOWER" then
-      out[#out + 1] = { tile = 0x03, kind = "frames", images = E.animationPaths.flowers, sequence = { 1, 2, 3 } }
+      out[#out + 1] = { tile = 0x03, kind = "frames", period = 20, images = E.animationPaths.flowers, sequence = { 1, 2, 3 } }
     end
     if TileRenderer.SPINNER_ARROW_TILES[ts.id] and E.animationPaths.spinners then
       out[#out + 1] = { tiles = TileRenderer.SPINNER_ARROW_TILES[ts.id], kind = "toggle",
-                        image = E.animationPaths.spinners, gate = "spinning" }
+                        image = E.animationPaths.spinners, gate = "spinning",
+                        stripOffsets = { [0x3c] = 1, [0x3d] = 3, [0x4c] = 0, [0x4d] = 2 } }
     end
     return out
   end
@@ -355,6 +367,10 @@ function FakeEngine.addExport(E)
     E.world = world.registries
     E.images = world.images or {}
     E.animationPaths = world.animations or E.animationPaths
+    -- the player's void-fill option (the renderer's border for OVERWORLD maps)
+    if E.modules["src.render.TileRenderer"] then
+      E.modules["src.render.TileRenderer"].voidFill = world.voidFill or "trees"
+    end
     local r = E.world
     E.data.maps, E.data.tilesets, E.data.sprites = r.maps, r.tilesets, r.sprites
     E.data.palettes = { palettes = r.palettes }

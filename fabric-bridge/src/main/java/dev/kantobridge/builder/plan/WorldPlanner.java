@@ -11,6 +11,12 @@ import dev.kantobridge.builder.export.ExportPalettes;
 import dev.kantobridge.builder.export.ExportSwaps;
 import dev.kantobridge.builder.export.ExportTileset;
 import dev.kantobridge.builder.pack.HabitatPoolWriter;
+import dev.kantobridge.builder.shape.ShapeParams;
+import dev.kantobridge.builder.shape.ShapePlan;
+import dev.kantobridge.builder.shape.ShapePlanner;
+import dev.kantobridge.scene.FrontEnds;
+import dev.kantobridge.scene.GameFrontEnd;
+import dev.kantobridge.scene.Scene;
 import dev.kantobridge.world.DataReader;
 import dev.kantobridge.world.MapPlacement;
 import dev.kantobridge.world.Scale;
@@ -46,8 +52,12 @@ public final class WorldPlanner {
 	 * @param originX        block X of the root map's cell (0, 0)
 	 * @param originZ        block Z of the root map's cell (0, 0)
 	 * @param minBuildHeight the world's lowest block (decides the deepest interior layer)
+	 * @param shapes         plan the world's shapes (the voxel plan's V2)
 	 */
-	public record Options(@Nullable List<String> maps, int originX, int originZ, int minBuildHeight) {
+	public record Options(@Nullable List<String> maps, int originX, int originZ, int minBuildHeight, boolean shapes) {
+		public Options(@Nullable List<String> maps, int originX, int originZ, int minBuildHeight) {
+			this(maps, originX, originZ, minBuildHeight, true);
+		}
 	}
 
 	private WorldPlanner() {
@@ -290,8 +300,27 @@ public final class WorldPlanner {
 			warnings.warn("spawn_missing");
 		}
 		WorldIndex index = new WorldIndex(bundle.game(), bundle.exportHash(), placements.values(), slotMap.hash(), storyCells, habitats);
+
+		// ---- shapes (docs/specs/VOXEL_BLOCKS_PLAN.md §5.4): keys of the whole export, positions of the placed maps ----
+		Scene scene = null;
+		ShapePlan shapes = null;
+		if (options.shapes()) {
+			GameFrontEnd frontEnd = FrontEnds.forGame(bundle.game());
+			if (frontEnd == null) {
+				warnings.note("shapes_no_front_end");
+			} else {
+				scene = frontEnd.describe(bundle);
+				shapes = ShapePlanner.plan(scene, placements.values(), ShapeParams.v2()).withIndexHash(index.hash());
+			}
+		}
+		ExportField.Display display = field.display();
+		if (display != null && !display.voidFillDefault()) {
+			// VD4: the drawn border follows the player's void-fill option; exported, never pinned.
+			warnings.warn("void_fill_not_default", Warnings.symbols("option", display.voidFill()));
+		}
 		return new WorldPlan(bundle.game(), bundle.exportHash(), options.originX(), options.originZ(), placed, surfaceBox, owner, voidCells,
-				storyCells, storyIndex, art, spawn, index, pools, warnings, mapsRequested, unplaced, layout.edgeMismatches(), layout.overlaps());
+				storyCells, storyIndex, art, spawn, index, pools, warnings, mapsRequested, unplaced, layout.edgeMismatches(), layout.overlaps(), scene,
+				shapes);
 	}
 
 	/**

@@ -60,7 +60,7 @@ because M0 changed the build in a way that affects the dev client:
       game text.
 
 Minecraft's settings for the bridge live in `local\minecraft\config\kantobridge-client.json` (the
-port, 27151). F7 can be rebound in Controls.
+port, 27151; since the voxel plan's V2 also `"shapes": "on"` or `"off"`). F7 can be rebound in Controls.
 
 ## M2: World export and builder (Pallet Town and its interiors)
 
@@ -411,3 +411,22 @@ generated pack holds textures only and sits at the **bottom** of the resource-pa
 - [ ] **X1 with the runtime model:** measure the same scenes as the V1a baseline (three runs each). Pass: re-mesh at
       most 1.25 × the baseline, frame rate at least 97 % of it, reload at most 2 s longer.
 - Note: a world built before M9 has no slot map and now shows placeholders; all your worlds have one.
+
+### V2: shape data, sync and per-face art
+
+No block changes, but walls and buildings now show their drawn rows on their sides. Rebuild your world so it gets
+the two shape files (a rebuild changes no block, and your player data stays): with Minecraft closed, run
+`tools\.venv\Scripts\python.exe tools\e2e\build_world.py --maps all --world Kanto` from the repository folder (it
+exports from the test install, then builds headless). Until then the world draws cubes (F7: `cubes because
+no_shapes`).
+
+- [ ] **Pallet Town from the south** reads like the 2D game: a house's front shows its door and windows at the
+      height they're drawn, its roof rows above them; tree walls and fences show their own rows.
+- [ ] **From the north** a house has no second front door: its back is plain wall.
+- [ ] F7: the Shapes line reads `on yes`, an index hash and a table with shapes and quads, `cubes because -`.
+      (`cache yes` from the second join on.)
+- [ ] **Two players:** the guest sees the same faces as the host (F7 shows the same index hash on both), drawn with
+      their own art.
+- [ ] **`"shapes": "off"`** in `kantobridge-client.json`, then restart the game: the world looks exactly as at V1
+      (F7: `cubes because shapes_off`). Set it back to `"on"`.
+- [ ] Animated tiles (water, flowers) still move as before.

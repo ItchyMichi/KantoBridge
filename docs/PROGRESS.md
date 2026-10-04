@@ -36,7 +36,8 @@ pack below player packs; VD10 the JSON file.
 | # | Milestone | Status | Date | Commit |
 |---|---|---|---|---|
 | V1a | Measuring tools (V1's first work package) | **done** | 2026-10-04 | `eeda9ee` |
-| V1 | Runtime model with the same cubes | **done** (X1 and X4 wait for you) | 2026-10-04 | `V1: runtime model` |
+| V1 | Runtime model with the same cubes | **done** (X1 and X4 wait for you) | 2026-10-04 | `9b3a647` |
+| V2 | Shape data, sync and per-face art | **done** (play-test waits for you) | 2026-10-04 | `V2: shape data` |
 
 **Measurements waiting on you** (agents never start the client; the plan's §10):
 
@@ -59,6 +60,20 @@ pack below player packs; VD10 the JSON file.
   with four reader threads, `ArtKeysTest`, the carriers in `TileBlockTest`; rewritten: `TextureSyncTest`,
   `HostSlotPackTest`, the pack tests), **88/88 GameTests**, the mixin checks. The real build's generated pack holds only
   `textures/` under the art set `blue`: no blockstate, no model.
+
+- **V2:** `tools/check.sh --e2e`: pytest **1421 passed** (new: `tests/test_shape_gates.py`, the golden shape index
+  against its schema, the export additions under lupa; the full real build three times: a filtered Pallet Town build,
+  the full build and the full build again over itself), then `gradlew build`: **638 JUnit** (new: `Gen1FrontEndTest`
+  with the golden `synthetic_scene.json`, `StructuresTest`, `ShapeKeyTest`, `ShapeIndexTest`, `ShapeMapTest`,
+  `ShapePlannerTest`, `ShapePlannerSyntheticTest` with the golden `synthetic_shapes.json`, `NoPixelTest`,
+  `ShapeTableTest`, `SelfCheckTest`, `ShapeQuadConventionTest`, `ShapeCheckTest`), **90/90 GameTests** (new:
+  `ShapeBuildGameTests.dataFilesOnly`, `MultiplayerGameTests.joiningPlayersGetTheWorldsShapesAfterItsSlots`). The real
+  build: 220 maps, 0 warnings, **2,485,154 blocks, as before V2**, 56.2 s; `kb-shapes/1` planned 5,787 cube keys and
+  9,717 shapes over 265,229 positions; the shape map is 3.07 MB, 127,580 characters on the wire (2 of the 8 parts
+  allowed); equal shape hashes on the second build, which placed and cleared nothing, and the same shape index for the
+  filtered build. Self-check (recorded, not gated): 0 holes, ground match 1.0 everywhere, structure match median 1.0,
+  5th percentile 0.71, lowest 0.375 (small gate interiors: counters and classified wall heights); occluded ground at
+  most 0.66.
 
 ### Voxel plan: deviations
 
@@ -85,6 +100,29 @@ pack below player packs; VD10 the JSON file.
    once gen1-bridge connects (once per world), as `no_art` does. The plan's table left that row without a retry.
 7. **A world without a slot map** (built before M9) shows placeholders since V1: the model needs the slot map to turn a
    block's slot into a key. Every world of yours has one.
+8. **The synthetic bundle grew a fourth map** (V2): `TEST_HILL`, north of the town, holds the plan's new synthetic
+   content (a house with a tapered two-row roof and a windowed facade, a cliff mound with a rim, a fence line, a sign on
+   a lightest-shade background, a 2×2-tile round tree with a dark outline), so the town and every coordinate-based test
+   stay as they were. Counts that cover the whole bundle moved (4 maps, 32 pack textures, 5×6 surface chunks), and the
+   GameTest's town-only rebuild now also closes the town's ring with void fill where the hill stood.
+9. **I7 for a filtered build is the shape index's hash.** Keys come from the whole export, so a filtered and a full
+   build share one shape index; the shape map holds only the placed maps (and names its own WorldIndex), so its hash is
+   equal across identical builds only. The e2e gates check exactly that.
+10. **East faces follow vanilla's UV lock** (seen from outside, the tile is upright and not mirrored: texture left =
+    south on an east face). §5.5 says "texture left = north" for west and east faces, which on an east face would
+    mirror vanilla's own cube and break "the same cubes, exactly"; `ShapeQuadConventionTest` pins every face to V1's
+    cube.
+11. **The self-check sees water at the walking plane** (a flat floor, as the 2D map draws it), not the half block's
+    top; water is ground, never a structure, so only its occlusion numbers could move.
+12. **V2's client builds geometry without pixels** (`ArtSource.NONE`): cubes need none. Reading this client's own
+    export for pixels comes with the first pixel-based shapes (V4).
+13. **The shape map lookup keeps per-chunk grid lists** and leaves out §4.3's per-thread "last grid": a chunk column
+    touches one to three grids, so a lookup is already a few comparisons, without a thread-local read per block.
+14. **Shape reasons:** a shape index that doesn't parse (or has an unknown version) is `geometry_unsupported`; a map
+    that doesn't decode or names another index is `shape_map_mismatch`. A client that draws its art but cubes keeps
+    `ok:true` and says the reason; `building` (the table still building) isn't reported.
+15. **Export additions are optional in the schemas,** so older bundles still read: without `animated`, the pack
+    animates water and flowers as before.
 
 ### Voxel plan: open issues
 

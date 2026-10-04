@@ -73,8 +73,8 @@ import net.minecraft.world.phys.shapes.CollisionContext;
 import org.jetbrains.annotations.Nullable;
 
 /**
- * Builds the synthetic export bundle (a made-up 10×9-block town, a house and its upper floor) into the test level, far
- * from every other test, and checks the result (docs/PLAN.md §6 M2 [T]): blocks and heights, story cells, the ledge
+ * Builds the synthetic export bundle (a made-up 10×9-block town, a hill north of it, a house and its upper floor) into the
+ * test level, far from every other test, and checks the result (docs/PLAN.md §6 M2 [T]): blocks and heights, story cells, the ledge
  * collider, biomes, the written WorldIndex (against the golden file) and the report. The town's made-up grass table gets
  * a habitat pool and a configured habitat block under its grass, whose influence offers the pool's Pokémon on the
  * grass floor and nothing on the trees beside it (M6). Then rebuilds twice: the same plan again must change nothing, and
@@ -129,17 +129,17 @@ public class SyntheticBuildGameTests implements FabricGameTest {
 	private static void verifyFirstBuild(GameTestHelper helper, BuildTask task) {
 		BuildReport report = task.report();
 		helper.assertTrue(task.succeeded(), "build failed: " + report.error);
-		helper.assertTrue(report.mapsBuilt == 3, "maps_built " + report.mapsBuilt);
+		helper.assertTrue(report.mapsBuilt == 4, "maps_built " + report.mapsBuilt);
 		helper.assertTrue(report.overlaps == 0, "overlaps " + report.overlaps);
 		helper.assertTrue(report.warnings == 0, "warnings " + report.warningCodes);
 		helper.assertTrue(report.storyCells == 20, "story_cells " + report.storyCells);
 		helper.assertTrue(report.storyCellBlocks == 80, "story-cell blocks " + report.storyCellBlocks);
 		helper.assertTrue(report.ledgeColliders == 24, "ledge colliders " + report.ledgeColliders);
-		helper.assertTrue(report.packTextures == 19, "pack_textures " + report.packTextures);
+		helper.assertTrue(report.packTextures == 32, "pack_textures " + report.packTextures);
 		helper.assertTrue(report.worldIndex, "world_index not written");
 		helper.assertTrue(report.layers == 2, "layers " + report.layers);
-		helper.assertTrue(report.chunks == 20, "chunks " + report.chunks);
-		helper.assertTrue(report.biomeChunks == 20, "biome chunks " + report.biomeChunks);
+		helper.assertTrue(report.chunks == 30, "chunks " + report.chunks);
+		helper.assertTrue(report.biomeChunks == 30, "biome chunks " + report.biomeChunks);
 		helper.assertTrue(report.blocksPlaced > 5000, "blocks_placed " + report.blocksPlaced);
 		helper.assertTrue(report.lightBlocks > 0, "no interior lights");
 		helper.assertTrue("TEST_TOWN".equals(report.spawnMap), "spawn map " + report.spawnMap);
@@ -256,8 +256,12 @@ public class SyntheticBuildGameTests implements FabricGameTest {
 		BuildReport report = third.report();
 		helper.assertTrue(third.succeeded(), "town-only rebuild failed: " + report.error);
 		helper.assertTrue(report.mapsBuilt == 1 && report.interiors == 0, "town-only build placed " + report.mapsBuilt + " maps");
-		helper.assertTrue(report.blocksCleared > 0 && report.blocksPlaced == 0, "town-only rebuild: placed " + report.blocksPlaced
-				+ ", cleared " + report.blocksCleared);
+		// The interiors and the hill go; void fill closes the town's ring where the hill stood (its 16 columns × the 12-block
+		// ring, at most the surface's 6 layers each), and nothing else changes.
+		MapPlacement hill = first.plan().index().map("TEST_HILL");
+		int ringLimit = hill.blockWidth() * dev.kantobridge.builder.plan.WorldPlan.SURFACE_RING * 6;
+		helper.assertTrue(report.blocksCleared > 0 && report.blocksPlaced > 0 && report.blocksPlaced <= ringLimit,
+				"town-only rebuild: placed " + report.blocksPlaced + ", cleared " + report.blocksCleared);
 		// The shared resource pack and the slot map depend on the whole export, never on the filter.
 		helper.assertTrue(report.slotMapHash.equals(first.report().slotMapHash), "a filtered build changed the slot map");
 		helper.assertTrue(report.packHash.equals(first.report().packHash), "a filtered build changed the resource pack");
@@ -268,6 +272,9 @@ public class SyntheticBuildGameTests implements FabricGameTest {
 				"the old interior was not cleared");
 		MapPlacement town = before.map("TEST_TOWN");
 		helper.assertTrue(isTile(level, new BlockPos(town.x() + 4, 63, town.z() + 4)), "the town was cleared too");
+		BlockPos wasHill = new BlockPos(hill.x() + 4, 63, town.z() - 6);
+		helper.assertTrue(isTile(level, wasHill.above(3)) && level.getBlockState(wasHill.above(4)).isAir(), "the ring isn't void fill where the hill was");
+		helper.assertTrue(level.getBlockState(new BlockPos(hill.x() + 4, 63, hill.z() + 2)).isAir(), "the hill outside the ring wasn't cleared");
 		WorldIndex after = readIndex(helper, third);
 		helper.assertTrue(after.maps().size() == 1 && after.map("TEST_HOUSE") == null, "the new index still lists the house");
 		helper.assertTrue(after.habitats().equals(before.habitats()), "the town keeps its habitat block");

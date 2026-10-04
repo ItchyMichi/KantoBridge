@@ -56,11 +56,11 @@ class PackWriterTest {
 		JsonObject meta = ProtoJson.parseObject(text(files, "pack.mcmeta")).getAsJsonObject("pack");
 		assertEquals(34, meta.get("pack_format").getAsInt());
 
-		assertEquals(15, result.tileTextures(), "one per (atlas, palette, tile)");
+		assertEquals(28, result.tileTextures(), "one per (atlas, palette, tile)");
 		assertEquals(4, result.npcTextures(), "girl, ball, guard (town) and Mom (house), in the town palette");
-		assertEquals(19, result.textures());
-		assertEquals(1, result.animated(), "the water tile");
-		assertEquals(15, files.count("assets/kantobridge/textures/block/red/tile/", ".png"), "under the art set: the export's game");
+		assertEquals(32, result.textures());
+		assertEquals(2, result.animated(), "the water tile and the flower tile");
+		assertEquals(28, files.count("assets/kantobridge/textures/block/red/tile/", ".png"), "under the art set: the export's game");
 		assertEquals(4, files.count("assets/kantobridge/textures/npc/red/", ".png"));
 
 		// Layout 2: no blockstate, no model, no slot number anywhere; the runtime model draws the tile blocks.
@@ -93,9 +93,9 @@ class PackWriterTest {
 		assertEquals("red", info.get("artSet").getAsString());
 		assertEquals("red", info.get("game").getAsString());
 		assertEquals(bundle.exportHash(), info.get("exportHash").getAsString());
-		assertEquals(15, info.get("tiles").getAsInt());
+		assertEquals(28, info.get("tiles").getAsInt());
 		assertEquals(4, info.get("sprites").getAsInt());
-		assertEquals(19, info.get("textures").getAsInt());
+		assertEquals(32, info.get("textures").getAsInt());
 		assertFalse(info.has("slotMapHash"), "the pack no longer follows a slot map");
 	}
 
@@ -172,34 +172,38 @@ class PackWriterTest {
 	}
 
 	@Test
-	void flowerFramesAnimateTileThreeWhenTheExportHasThem() throws Exception {
-		assertEquals("tilesets.flower1", ResourcePackWriter.flowerImage(List.of("fx.flower1", "tilesets.flower1"), "flower1"));
-		assertEquals("fx.flower2", ResourcePackWriter.flowerImage(List.of("fx.flower2", "tilesets.test"), "flower2"));
-		assertEquals(null, ResourcePackWriter.flowerImage(List.of("tilesets.test"), "flower3"));
-
-		// A copy of the synthetic bundle plus three made-up flower frames.
-		Map<String, JsonObject> frames = new java.util.TreeMap<>();
-		for (int frame = 1; frame <= 3; frame++) {
-			Png.Image image = new Png.Image(8, 8);
-			java.util.Arrays.fill(image.argb(), frame == 2 ? 0xFF555555 : 0xFFFFFFFF);
-			JsonObject resource = new JsonObject();
-			resource.addProperty("id", "tilesets.flower" + frame);
-			resource.addProperty("w", 8);
-			resource.addProperty("h", 8);
-			resource.addProperty("png", java.util.Base64.getEncoder().encodeToString(Png.encode(image)));
-			frames.put("image/tilesets.flower" + frame, resource);
-		}
-		ExportBundle flowered = ExportBundle.open(TestData.syntheticCopyWith(this.temp, frames));
-		WorldPlan flowerPlan = WorldPlanner.plan(flowered, new WorldPlanner.Options(null, 0, 0, TestData.MIN_BUILD_HEIGHT));
+	void animationsComeFromTheExportsAnimatedList() throws Exception {
+		// The voxel plan's V2: the tileset's `animated` entries decide which tiles move and how (no Java constants).
 		PackFiles files = new PackFiles();
-		ResourcePackWriter.Result result = ResourcePackWriter.generate(flowerPlan, flowered, files, new Warnings());
-		assertEquals(2, result.animated(), "water, and the flower tile (3) of the water-and-flower tileset");
-		String flowerPath = "assets/kantobridge/textures/block/red/tile/tilesets.test/test_palette/0003.png";
-		assertEquals(Textures.flowerMeta(), text(files, flowerPath + ".mcmeta"));
+		ResourcePackWriter.Result result = ResourcePackWriter.generate(plan, bundle, files, new Warnings());
+		assertEquals(2, result.animated(), "the water tile (hshift) and the flower tile (frames)");
+		String waterPath = "assets/kantobridge/textures/block/red/tile/tilesets.test/test_palette/0006.png";
+		assertEquals("{\"animation\":{\"frametime\":7}}", text(files, waterPath + ".mcmeta"), "period 20 at 60 Hz is about 7 ticks");
+		String flowerPath = "assets/kantobridge/textures/block/red/tile/tilesets.test/test_palette/0007.png";
+		assertEquals("{\"animation\":{\"frametime\":7,\"frames\":[0,1,2,0,0,1,2,0]}}", text(files, flowerPath + ".mcmeta"));
 		Png.Image strip = Png.decode(files.files().get(flowerPath));
-		assertEquals(48, strip.height());
-		assertEquals(0xFF000000 | flowered.palettes().colours("TEST_PALETTE")[2], strip.get(0, 16), "frame 2 is the darker one");
-		assertTrue(!flowered.exportHash().equals(bundle.exportHash()));
+		assertEquals(48, strip.height(), "three frames from the export's three images");
+
+		// A frame image the export names elsewhere (an older export's implied frames) is found by its name.
+		assertEquals("tilesets.flower1", ResourcePackWriter.frameImage(List.of("fx.flower1", "tilesets.flower1"), "tilesets.flower1"));
+		assertEquals("fx.flower2", ResourcePackWriter.frameImage(List.of("fx.flower2", "tilesets.test"), "tilesets.flower2"));
+		assertEquals(null, ResourcePackWriter.frameImage(List.of("tilesets.test"), "tilesets.flower3"));
+
+		// Without the images the tile stays still (noted), never a broken strip.
+		Map<String, JsonObject> noFlowers = new java.util.TreeMap<>();
+		JsonObject tileset = bundle.json("tileset", "TEST").deepCopy();
+		JsonObject frames = tileset.getAsJsonArray("animated").get(1).getAsJsonObject();
+		frames.add("images", new com.google.gson.JsonArray());
+		frames.getAsJsonArray("images").add("tilesets.nowhere");
+		noFlowers.put("tileset/TEST", tileset);
+		ExportBundle missing = ExportBundle.open(TestData.syntheticCopyWith(this.temp, noFlowers));
+		WorldPlan missingPlan = WorldPlanner.plan(missing, new WorldPlanner.Options(null, 0, 0, TestData.MIN_BUILD_HEIGHT));
+		Warnings warnings = new Warnings();
+		PackFiles still = new PackFiles();
+		assertEquals(1, ResourcePackWriter.generate(missingPlan, missing, still, warnings).animated());
+		assertEquals(1, warnings.noteCount("animation_image_missing"));
+		assertEquals(16, Png.decode(still.files().get(flowerPath)).height());
+		assertTrue(!missing.exportHash().equals(bundle.exportHash()));
 	}
 
 	@Test

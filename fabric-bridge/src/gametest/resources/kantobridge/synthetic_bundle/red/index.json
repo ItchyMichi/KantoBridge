@@ -12,38 +12,62 @@
     {
       "kind": "field",
       "id": "all",
-      "hash": "b248682e72b14c491f8c855a8aa844b81b78c8985937811e88baee03bd7c4ad5",
-      "size": 152
+      "hash": "bd522f22602cd8fcab232bc5578ef148bcb9d4e756bd996845e5e9892319a690",
+      "size": 206
+    },
+    {
+      "kind": "image",
+      "id": "tilesets.flower1",
+      "hash": "888dbabbd90f0493887e175ae463b914d19bd1ccd930ac6119f5e1d7820ee276",
+      "size": 150
+    },
+    {
+      "kind": "image",
+      "id": "tilesets.flower2",
+      "hash": "45afda4a128359ef1ef12344838835a45ea5c9cdd06a4e8c41e4f8aa82d74b90",
+      "size": 150
+    },
+    {
+      "kind": "image",
+      "id": "tilesets.flower3",
+      "hash": "a2e26367f994420fd097ceb249afe0548495a4b5758e82ff97e0af19a89e521e",
+      "size": 150
     },
     {
       "kind": "image",
       "id": "tilesets.test",
-      "hash": "35e9483941b6816bda31a2eae00ace504e10f7d8f35b539828657a1b7004d682",
-      "size": 402
+      "hash": "7029c5b13d743d308ed63843852d41cec43383537064d366b027be8ba46335b1",
+      "size": 558
     },
     {
       "kind": "layout",
       "id": "kanto",
-      "hash": "8ab3898ccdd39ccdcf63c0ef887f16ddd073fc2175325e45fd4040f9238fab1d",
-      "size": 68
+      "hash": "bfe34e934cdc6cc30d844eb517f474c4c99f2a7cdc2a61048f2728241c867baa",
+      "size": 107
+    },
+    {
+      "kind": "map",
+      "id": "TEST_HILL",
+      "hash": "7532437437d74ac41bf4c908adf600ce23b3ef7418b8659f46237bb4fcbcb808",
+      "size": 837
     },
     {
       "kind": "map",
       "id": "TEST_HOUSE",
-      "hash": "182b9af2f033911c52563514442880bc15343acbfa6e273421b1246e8fded433",
-      "size": 836
+      "hash": "8f25fbc594a482c664bdb9b9f5cc22e6084b9d0a0afc45c447ce241cf58cea17",
+      "size": 853
     },
     {
       "kind": "map",
       "id": "TEST_HOUSE_2F",
-      "hash": "a35f6838ccbc671ad11b024373e476476c64731c8afd9bf783af9c00d6e9aa75",
-      "size": 531
+      "hash": "77d141e9c2d3bccfb95837c9cda4e49eb21699ef7109ad1a740f57a71fa48ec2",
+      "size": 548
     },
     {
       "kind": "map",
       "id": "TEST_TOWN",
-      "hash": "e8f7bd1dbaaa5db87884c898c6028c3c9b7731cf96185bc62f48eaf9bf9b4a3e",
-      "size": 1698
+      "hash": "b3fc9808c53d7ff7e9fba0a9c8d47cbc647615eb839770dd9451dd275bdb8f2e",
+      "size": 1752
     },
     {
       "kind": "names",
@@ -90,8 +114,8 @@
     {
       "kind": "tileset",
       "id": "TEST",
-      "hash": "c60671040e00e093c583a1c1a64b9faf22a2188bf89d7f17e8b496b840437dc7",
-      "size": 861
+      "hash": "15549d20b37c7f7f131f53c595dbe76a1a4962cb9c91a474549b5f151d0f1499",
+      "size": 1447
     }
   ]
 }

@@ -43,8 +43,8 @@ class ExportBundleTest {
 	void readsTheSyntheticBundle() throws Exception {
 		ExportBundle bundle = ExportBundle.open(TestData.syntheticBundle());
 		assertEquals("red", bundle.game());
-		assertEquals(15, bundle.resources().size());
-		assertEquals(List.of("TEST_HOUSE", "TEST_HOUSE_2F", "TEST_TOWN"), bundle.ids("map"));
+		assertEquals(19, bundle.resources().size());
+		assertEquals(List.of("TEST_HILL", "TEST_HOUSE", "TEST_HOUSE_2F", "TEST_TOWN"), bundle.ids("map"));
 		String index = Files.readString(TestData.syntheticBundle().resolve("index.json"), StandardCharsets.UTF_8);
 		assertEquals(Hashes.sha256(ProtoJson.write(ProtoJson.parse(index))), bundle.exportHash());
 
@@ -64,7 +64,7 @@ class ExportBundleTest {
 		ExportTileset tileset = bundle.tileset("TEST");
 		assertEquals("tilesets.test", tileset.image());
 		assertTrue(tileset.animatesWater());
-		assertEquals(17, tileset.blocks().length);
+		assertEquals(25, tileset.blocks().length, "the town's and house's 17 blocks and the hill's 8");
 		assertEquals("TEST_TOWN", bundle.layout().root());
 		assertEquals(1, bundle.swaps().sites().size());
 		assertEquals(4, bundle.palettes().colours("TEST_PALETTE").length);
@@ -129,7 +129,7 @@ class ExportBundleTest {
 	@Test
 	void missingOptionalResources() throws Exception {
 		ExportBundle bundle = ExportBundle.open(TestData.syntheticBundle());
-		assertFalse(bundle.has("image", "tilesets.flower1"));
+		assertFalse(bundle.has("image", "tilesets.flower4"));
 		assertNull(bundle.json("map", "NOWHERE"));
 		assertEquals("bundle.missing", assertThrows(BundleException.class, () -> bundle.map("NOWHERE")).code());
 	}

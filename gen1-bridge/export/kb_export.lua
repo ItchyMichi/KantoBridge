@@ -91,6 +91,15 @@ local function copyList(list)
   return out
 end
 
+-- The bytes of a list in order, repeats kept (animation steps); at most 64.
+local function byteSteps(list)
+  local out = {}
+  for _, v in ipairs(type(list) == "table" and list or {}) do
+    if int(v, 0, 255) and #out < 64 then out[#out + 1] = v end
+  end
+  return out
+end
+
 -- an object name (defs.schema.json objName)
 local function objName(v)
   return type(v) == "string" and #v > 0 and #v <= 96 and v:find(SYMBOL) ~= nil
@@ -552,6 +561,51 @@ function Export.new(opts)
       if put("image", id, res) then imageDims[path] = { w = w, h = h } end
     end
 
+    -- The tileset's animated tiles as data (the voxel plan's V2): the engine's own
+    -- entries, image paths as export image ids, a toggle's per-tile strip offsets
+    -- as a list beside `tiles`. An entry that can't be told correctly is left out.
+    local function animatedOf(ts, tid)
+      local out = {}
+      for _, spec in ipairs(engine.animatedTiles(ts)) do
+        local tiles = {}
+        if type(spec) == "table" then
+          if int(spec.tile, 0, 1023) then tiles[1] = spec.tile end
+          for _, t in ipairs(type(spec.tiles) == "table" and spec.tiles or {}) do
+            if int(t, 0, 1023) and #tiles < 64 then tiles[#tiles + 1] = t end
+          end
+        end
+        local kind = type(spec) == "table" and spec.kind or nil
+        if #tiles == 0 or (kind ~= "hshift" and kind ~= "frames" and kind ~= "toggle") or #out >= 32 then
+          warn("tileset_animation_bad", tid)
+        else
+          local entry = { tiles = json.array(tiles), kind = kind }
+          if int(spec.period, 0, 65535) then entry.period = spec.period end
+          if type(spec.offsets) == "table" then entry.offsets = json.array(byteSteps(spec.offsets)) end
+          if type(spec.sequence) == "table" then entry.sequence = json.array(byteSteps(spec.sequence)) end
+          if type(spec.images) == "table" then
+            local images = {}
+            for _, path in ipairs(spec.images) do
+              local id = addImage(path, tid)
+              if id and #images < 64 then images[#images + 1] = id end
+            end
+            entry.images = json.array(images)
+          end
+          if type(spec.image) == "string" then entry.image = addImage(spec.image, tid) end
+          if type(spec.stripOffsets) == "table" then
+            local offsets = {}
+            for i, t in ipairs(tiles) do
+              local o = spec.stripOffsets[t]
+              offsets[i] = int(o, 0, 255) and o or 0
+            end
+            entry.stripOffsets = json.array(offsets)
+          end
+          if sym(spec.gate) then entry.gate = spec.gate end
+          out[#out + 1] = entry
+        end
+      end
+      return out
+    end
+
     -- ---------------------------------------------- tilesets
     enter("tilesets")
     local tilesetIds = {}
@@ -592,6 +646,7 @@ function Export.new(opts)
           water = json.array(water), shore = json.array(shore),
           cutTree = json.array(bytes(engine.cutTreeTiles(tid))),
           spinner = json.array(bytes(engine.spinnerTiles(tid))), pads = json.array(pads),
+          animated = json.array(animatedOf(ts, tid)),
         })
       end
       checkpoint()
@@ -694,6 +749,14 @@ function Export.new(opts)
           if not sym(palette) then warn("palette_missing", id) palette = "ROUTE" end
           local border = def.borderBlock
           if not int(border, 0, 255) then warn("map_no_border", id) border = 0 end
+          -- What the engine really draws around the map (outdoors: the player's void fill).
+          local drawn = engine.borderBlockFor(def)
+          local borderDrawn = json.null
+          if int(drawn, 0, 255) then
+            borderDrawn = drawn
+          elseif drawn ~= false then
+            warn("map_bad_border_drawn", id)
+          end
           local blockList = {}
           for i = 1, #blocks do blockList[i] = blocks[i] end
           local p = parent[id]
@@ -701,7 +764,7 @@ function Export.new(opts)
           if lastMap and not sym(lastMap, MAP_ID) then lastMap = nil end
           put("map", id, {
             id = id, index = def.index, tileset = def.tileset, width = w, height = h,
-            blocks = json.array(blockList), border = border,
+            blocks = json.array(blockList), border = border, borderDrawn = borderDrawn,
             surface = surface[id] == true, outside = outside[id] == true,
             connections = connections, warps = json.array(warps), signs = json.array(signs),
             objects = json.array(objects), cells = json.array(rows),
@@ -822,7 +885,13 @@ function Export.new(opts)
         if v ~= nil then tables[k] = v end
       end
     end
-    put("field", "all", { tables = tables })
+    local fieldData = { tables = tables }
+    -- The display option that changes what the engine draws (the voxel plan's VD4): exported, never pinned.
+    local voidFill, voidFillDefault = engine.voidFill()
+    if type(voidFill) == "string" and #voidFill <= 32 and voidFill:match("^[a-z0-9_]+$") then
+      fieldData.display = { voidFill = voidFill, voidFillDefault = voidFillDefault == true }
+    end
+    put("field", "all", fieldData)
 
     -- ---------------------------------------------- names
     local function nameOk(n) return displayName(json, n) end

@@ -545,6 +545,13 @@
       "redact": ["/part"],
       "schema": "messages/world.index.schema.json"
     },
+    "world.shapes": {
+      "legs": ["s2c"],
+      "re": "never",
+      "rom": true,
+      "redact": ["/part"],
+      "schema": "messages/world.shapes.schema.json"
+    },
     "world.slots": {
       "legs": ["s2c"],
       "re": "never",

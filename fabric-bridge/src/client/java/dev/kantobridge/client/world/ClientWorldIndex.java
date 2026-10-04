@@ -19,14 +19,24 @@ import org.jetbrains.annotations.Nullable;
 /**
  * The client's copy of the server's WorldIndex (docs/PLAN.md §2.2), assembled from {@code world.index} parts and
  * checked against their hash, and of the world's slot map, from {@code world.slots} parts (M9: a joining player builds
- * their own art into these slots, PLAN §4.3 "Multiplayer clients"). Client thread only; cleared on disconnect. Logs carry
- * part counts and short hashes, never the contents.
+ * their own art into these slots, PLAN §4.3 "Multiplayer clients"), and of the world's shape data, from
+ * {@code world.shapes} parts (the voxel plan's V2: the shape index's text and the shape map's wire form, handed to
+ * {@code ClientShapes} once both are in). Client thread only; cleared on disconnect. Logs carry part counts and short
+ * hashes, never the contents.
  */
 public final class ClientWorldIndex {
 	private static final WorldIndexParts.Assembler ASSEMBLER = new WorldIndexParts.Assembler();
 	private static final WorldIndexParts.Assembler SLOT_ASSEMBLER = new WorldIndexParts.Assembler();
+	private static final WorldIndexParts.Assembler SHAPE_INDEX_ASSEMBLER = new WorldIndexParts.Assembler();
+	private static final WorldIndexParts.Assembler SHAPE_MAP_ASSEMBLER = new WorldIndexParts.Assembler();
 	private static @Nullable WorldIndex current;
+	/** The SHA-256 of the index's text, as the parts said and the assembler checked: what a shape map must name. */
+	private static @Nullable String currentHash;
 	private static @Nullable SlotMap slots;
+	private static @Nullable String shapeIndexText;
+	private static @Nullable String shapeMapWire;
+	/** Told when both shape documents are in: (index text, map wire). */
+	private static @Nullable java.util.function.BiConsumer<String, String> shapesListener;
 	/** Told whenever the index or the slot map arrives or goes (the render snapshot, ...). */
 	private static final List<Runnable> LISTENERS = new CopyOnWriteArrayList<>();
 
@@ -37,6 +47,7 @@ public final class ClientWorldIndex {
 	public static void init() {
 		ClientRelay.get().register(MsgTypes.WORLD_INDEX, ClientWorldIndex::onPart);
 		ClientRelay.get().register(MsgTypes.WORLD_SLOTS, ClientWorldIndex::onSlotsPart);
+		ClientRelay.get().register(MsgTypes.WORLD_SHAPES, ClientWorldIndex::onShapesPart);
 		ClientPlayConnectionEvents.DISCONNECT.register((listener, client) -> clear());
 	}
 
@@ -56,6 +67,16 @@ public final class ClientWorldIndex {
 		return current;
 	}
 
+	/** The SHA-256 of the current index's text, or null before it has arrived. */
+	public static @Nullable String currentHash() {
+		return currentHash;
+	}
+
+	/** The world's shape documents, once both are in: (the shape index's text, the shape map's wire form). */
+	public static void onShapes(java.util.function.BiConsumer<String, String> listener) {
+		shapesListener = listener;
+	}
+
 	/** The world's slot map (its hash checked against the parts' hash), or null before it has arrived or without one. */
 	public static @Nullable SlotMap slotMap() {
 		return slots;
@@ -63,9 +84,14 @@ public final class ClientWorldIndex {
 
 	public static void clear() {
 		current = null;
+		currentHash = null;
 		slots = null;
+		shapeIndexText = null;
+		shapeMapWire = null;
 		ASSEMBLER.reset();
 		SLOT_ASSEMBLER.reset();
+		SHAPE_INDEX_ASSEMBLER.reset();
+		SHAPE_MAP_ASSEMBLER.reset();
 		changed();
 	}
 
@@ -85,6 +111,7 @@ public final class ClientWorldIndex {
 				return;
 			}
 			current = WorldIndex.fromJson(json);
+			currentHash = hash;
 			KantoBridge.LOGGER.info("world.index: received ({} parts, hash {}, {} maps, {} story cells)", count, Hashes.shortHash(hash),
 					current.maps().size(), current.storyCells().size());
 			changed();
@@ -113,6 +140,39 @@ public final class ClientWorldIndex {
 			changed();
 		} catch (DataException e) {
 			KantoBridge.LOGGER.warn("world.slots: rejected ({})", e.problem());
+		}
+	}
+
+	static void onShapesPart(Envelope message) {
+		JsonObject data = message.data();
+		String doc = JsonFields.str(data, "doc");
+		long index = JsonFields.integer(data, "index", -1);
+		long count = JsonFields.integer(data, "count", -1);
+		String hash = JsonFields.str(data, "hash");
+		String part = JsonFields.str(data, "part");
+		boolean isIndex = "index".equals(doc);
+		if ((!isIndex && !"map".equals(doc)) || index < 0 || count < 1 || hash == null || part == null) {
+			KantoBridge.LOGGER.warn("world.shapes: dropped a malformed part");
+			return;
+		}
+		try {
+			String text = (isIndex ? SHAPE_INDEX_ASSEMBLER : SHAPE_MAP_ASSEMBLER).accept((int) index, (int) count, hash, part);
+			if (text == null) {
+				return;
+			}
+			if (isIndex) {
+				shapeIndexText = text;
+				// A new index makes any map received for the old one stale.
+				shapeMapWire = null;
+			} else {
+				shapeMapWire = text;
+			}
+			KantoBridge.LOGGER.info("world.shapes: {} received ({} parts, hash {})", doc, count, Hashes.shortHash(hash));
+			if (shapeIndexText != null && shapeMapWire != null && shapesListener != null) {
+				shapesListener.accept(shapeIndexText, shapeMapWire);
+			}
+		} catch (DataException e) {
+			KantoBridge.LOGGER.warn("world.shapes: {} rejected ({})", doc, e.problem());
 		}
 	}
 

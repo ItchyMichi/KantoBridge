@@ -495,7 +495,14 @@
     {
       "type": "texture.status",
       "seq": 11,
-      "redacted": {"ok": true, "slotMapHash": "a1b2c3d4e5f60718", "textures": 512, "missing": 0}
+      "redacted": {
+        "ok": true,
+        "slotMapHash": "a1b2c3d4e5f60718",
+        "textures": 512,
+        "missing": 0,
+        "shapes": 1830,
+        "shapeIndexHash": "b2c3d4e5f6071829"
+      }
     },
     {
       "type": "texture.status",
@@ -606,6 +613,28 @@
         "count": 1,
         "hash": "a1b2c3d4e5f60718",
         "part": "<rom:str:36:aaa8570b>"
+      }
+    },
+    {
+      "type": "world.shapes",
+      "seq": 12,
+      "redacted": {
+        "doc": "index",
+        "index": 0,
+        "count": 1,
+        "hash": "b2c3d4e5f6071829",
+        "part": "<rom:str:281:b1bb8040>"
+      }
+    },
+    {
+      "type": "world.shapes",
+      "seq": 13,
+      "redacted": {
+        "doc": "map",
+        "index": 0,
+        "count": 1,
+        "hash": "c3d4e5f607182930",
+        "part": "<rom:str:12:dcce15d7>"
       }
     },
     {

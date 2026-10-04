@@ -7,11 +7,15 @@ import dev.kantobridge.builder.export.ExportBundle;
 import dev.kantobridge.builder.pack.DatapackWriter;
 import dev.kantobridge.builder.pack.ResourcePackWriter;
 import dev.kantobridge.builder.place.BlockPlacer;
+import dev.kantobridge.builder.plan.BlockCode;
 import dev.kantobridge.builder.plan.Box3;
+import dev.kantobridge.builder.plan.MapModel;
 import dev.kantobridge.builder.plan.PlacedMap;
 import dev.kantobridge.builder.plan.PlanException;
 import dev.kantobridge.builder.plan.WorldPlan;
 import dev.kantobridge.builder.plan.WorldPlanner;
+import dev.kantobridge.builder.shape.ShapePlan;
+import dev.kantobridge.builder.shape.ShapeReport;
 import dev.kantobridge.server.HabitatService;
 import dev.kantobridge.server.WorldIndexSync;
 import dev.kantobridge.world.DataException;
@@ -47,6 +51,11 @@ public final class BuildTask {
 	public static final String DATA_FOLDER = "kantobridge";
 	public static final String INDEX_FILE = "world_index.json";
 	public static final String SLOT_MAP_FILE = "slot_map.json";
+	/** The voxel plan's shape files (docs/specs/VOXEL_BLOCKS_PLAN.md §4.1): keys, and positions → ids. */
+	public static final String SHAPE_INDEX_FILE = "shape_index.json";
+	public static final String SHAPE_MAP_FILE = "shape_map.bin";
+	/** The recorded self-check, per map id: beside the build report (and its copy). */
+	public static final String SELFCHECK_FILE = "shape_selfcheck.json";
 
 	private static final ExecutorService PLANNER = Executors.newSingleThreadExecutor(runnable -> {
 		Thread thread = new Thread(runnable, "kantobridge-builder");
@@ -65,7 +74,7 @@ public final class BuildTask {
 	}
 
 	private record Prepared(WorldPlan plan, @Nullable ResourcePackWriter.Result pack, List<Box3> previousVolumes,
-			List<WorldIndex.Habitat> previousHabitats, long planMs) {
+			List<WorldIndex.Habitat> previousHabitats, long planMs, @Nullable ShapeReport shapes) {
 	}
 
 	private final ServerLevel level;
@@ -154,12 +163,15 @@ public final class BuildTask {
 		long t0 = System.nanoTime();
 		try {
 			WorldPlan plan = WorldPlanner.plan(this.bundle, new WorldPlanner.Options(this.maps, this.options.originX(), this.options.originZ(),
-					this.minBuildHeight));
+					this.minBuildHeight, this.options.shapes()));
 			ResourcePackWriter.Result pack = this.options.writePack() ? ResourcePackWriter.write(plan, this.bundle, this.packDir, plan.warnings())
 					: null;
 			WorldIndex previous = previousIndex(this.worldDir);
+			// The geometry a client would build from the shape index, and the self-check of every placed map (recorded).
+			ShapeReport shapes = plan.shapes() == null || plan.scene() == null ? null
+					: ShapeReport.of(plan.scene(), plan.shapes(), plan.index().maps().values());
 			return new Prepared(plan, pack, previous == null ? List.of() : WorldPlan.volumesOf(previous),
-					previous == null ? List.of() : previous.habitats(), (System.nanoTime() - t0) / 1_000_000L);
+					previous == null ? List.of() : previous.habitats(), (System.nanoTime() - t0) / 1_000_000L, shapes);
 		} catch (BundleException e) {
 			throw new Failure(e.code(), e);
 		} catch (PlanException e) {
@@ -261,6 +273,15 @@ public final class BuildTask {
 			Files.createDirectories(data);
 			Files.writeString(data.resolve(SLOT_MAP_FILE), plan.slotMap().toJson(), StandardCharsets.UTF_8);
 			Files.writeString(data.resolve(INDEX_FILE), plan.index().toJson(), StandardCharsets.UTF_8);
+			ShapePlan shapes = plan.shapes();
+			if (shapes != null) {
+				Files.writeString(data.resolve(SHAPE_INDEX_FILE), shapes.index().toJson(), StandardCharsets.UTF_8);
+				Files.write(data.resolve(SHAPE_MAP_FILE), shapes.map().encode());
+			} else {
+				// An unshaped build leaves no stale shape files behind: a world without them shows cubes.
+				Files.deleteIfExists(data.resolve(SHAPE_INDEX_FILE));
+				Files.deleteIfExists(data.resolve(SHAPE_MAP_FILE));
+			}
 			if (this.options.writeDatapack()) {
 				DatapackWriter.write(this.worldDir, plan.pools());
 			}
@@ -274,8 +295,10 @@ public final class BuildTask {
 		this.report.status = "ok";
 		this.writeReport();
 		if (this.options.publishIndex()) {
-			// With its slot map, so players who join later (or are online now) can build their own art into these slots.
-			WorldIndexSync.publish(this.level.getServer(), plan.index(), plan.slotMap(), true);
+			// With its slot map and shapes, so players who join later (or are online now) draw it with their own art.
+			ShapePlan shapes = plan.shapes();
+			WorldIndexSync.publish(this.level.getServer(), plan.index(), plan.slotMap(), shapes == null ? null : shapes.index().toJson(),
+					shapes == null ? null : shapes.map().encode(), true);
 		}
 		this.phase = BuildPhase.DONE;
 		KantoBridge.LOGGER.info("builder: done: {} maps, {} story cells, {} habitat blocks, {} pools, {} blocks placed, {} cleared, {} chunks, {} textures, {} warnings, {} ms",
@@ -377,6 +400,64 @@ public final class BuildTask {
 			r.ledgeColliders = counts.ledgeColliders;
 			r.lightBlocks = counts.lights;
 			r.habitatBlocks = counts.habitatBlocks;
+			r.blocksByKind.clear();
+			r.blocksByKind.put("tile_full", counts.byKind[BlockCode.KIND_FULL]);
+			r.blocksByKind.put("tile_half", counts.byKind[BlockCode.KIND_HALF]);
+			r.blocksByKind.put("story_cell", counts.byKind[BlockCode.KIND_STORY]);
+			r.blocksByKind.put("story_tile", counts.byKind[BlockCode.KIND_STORY_TILE]);
+			r.blocksByKind.put("ledge", counts.byKind[BlockCode.KIND_LEDGE]);
+			r.blocksByKind.put("light", counts.byKind[BlockCode.KIND_LIGHT]);
+			r.blocksByKind.put("habitat", counts.habitatBlocks);
+		}
+		this.fillShapes(r, plan);
+	}
+
+	/** The voxel plan's groups: cells by kind, solid heights, the shape files and the recorded self-check. */
+	private void fillShapes(BuildReport r, WorldPlan plan) {
+		r.cellsByKind.clear();
+		r.solidCellsByHeight.clear();
+		for (PlacedMap map : plan.maps()) {
+			MapModel model = map.model();
+			for (int cy = 0; cy < model.cellHeight(); cy++) {
+				for (int cx = 0; cx < model.cellWidth(); cx++) {
+					MapModel.Kind kind = model.kind(cx, cy);
+					String name = switch (kind) {
+						case GROUND -> "ground";
+						case WATER -> "water";
+						case LEDGE -> "ledge";
+						case COUNTER -> "counter";
+						case SOLID -> "solid";
+					};
+					r.cellsByKind.merge(name, 1, Integer::sum);
+					if (kind == MapModel.Kind.SOLID) {
+						r.solidCellsByHeight.merge(Integer.toString(model.height(cx, cy)), 1, Integer::sum);
+					}
+				}
+			}
+		}
+		r.worldIndexBytes = plan.index().toJson().getBytes(StandardCharsets.UTF_8).length;
+		ShapePlan shapes = plan.shapes();
+		if (shapes == null) {
+			return;
+		}
+		r.shapeIndexHash = shapes.index().hash();
+		r.shapePlanner = shapes.index().planner();
+		r.shapeMapHash = shapes.map().hash();
+		r.shapeMapBytes = shapes.map().size();
+		r.shapeMapWireChars = shapes.map().wire().length();
+		r.shapeIndexBytes = shapes.index().toJson().getBytes(StandardCharsets.UTF_8).length;
+		r.shapeKeys = shapes.index().geoms().size();
+		r.shapeKeysByKind.clear();
+		shapes.keysByKind().forEach((kind, count) -> r.shapeKeysByKind.put(kind.id(), count));
+		r.shapeInstances = shapes.index().size();
+		r.shapedBlocks = shapes.shapedBlocks();
+		r.shapePlanMs = shapes.planMs();
+		ShapeReport report = this.prepared.shapes();
+		if (report != null) {
+			r.shapeTableMs = report.tableMs();
+			r.shapeQuadsTotal = report.table().quads();
+			r.selfCheck = new BuildReport.SelfCheckSummary(report.scores().size(), report.holes(), report.groundMatchMin(), report.structureMatchMin(),
+					report.structureMatchP05(), report.occludedGroundMax(), report.backFaces(), 0, report.checkMs());
 		}
 	}
 
@@ -402,6 +483,19 @@ public final class BuildTask {
 			}
 		} catch (IOException e) {
 			KantoBridge.LOGGER.error("builder: could not write the build report ({})", e.getClass().getSimpleName());
+		}
+		ShapeReport shapes = this.prepared != null ? this.prepared.shapes() : null;
+		if (shapes != null) {
+			// Scores per map id, numbers only: beside each copy of the report.
+			try {
+				Files.writeString(report.resolveSibling(SELFCHECK_FILE), shapes.toText(), StandardCharsets.UTF_8);
+				if (this.options.reportCopy() != null) {
+					Path copy = this.options.reportCopy().toAbsolutePath();
+					Files.writeString(copy.resolveSibling(SELFCHECK_FILE), shapes.toText(), StandardCharsets.UTF_8);
+				}
+			} catch (IOException e) {
+				KantoBridge.LOGGER.error("builder: could not write the self-check ({})", e.getClass().getSimpleName());
+			}
 		}
 	}
 }

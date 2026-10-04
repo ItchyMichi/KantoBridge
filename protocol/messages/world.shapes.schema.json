@@ -1,0 +1,22 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kantobridge.invalid/protocol/messages/world.shapes.schema.json",
+  "title": "world.shapes",
+  "description": "The world's shape data, in parts after the world.slots parts (on join and whenever a build publishes): the shape index (doc index: the text of shape_index.json, protocol/world/shape_index.schema.json) and the shape map (doc map: Base64 of the deflated bytes of shape_map.bin). Ids, tile numbers and hashes only; never geometry or art. Sent only when the shape map's header names the published WorldIndex.",
+  "x-type": "world.shapes",
+  "x-legs": ["s2c"],
+  "x-re": "never",
+  "type": "object",
+  "required": ["doc", "index", "count", "hash", "part"],
+  "additionalProperties": false,
+  "properties": {
+    "doc": {"enum": ["index", "map"], "description": "Which document the part belongs to."},
+    "index": {"type": "integer", "minimum": 0, "maximum": 65535},
+    "count": {"type": "integer", "minimum": 1, "maximum": 65536},
+    "hash": {
+      "$ref": "../defs.schema.json#/$defs/hash",
+      "description": "SHA-256 of this document's whole transmitted text."
+    },
+    "part": {"type": "string", "maxLength": 200000, "x-rom-derived": true}
+  }
+}

@@ -39,6 +39,12 @@
       "description": "width*height block ids, row-major."
     },
     "border": {"type": "integer", "minimum": 0, "maximum": 255},
+    "borderDrawn": {
+      "type": ["integer", "null"],
+      "minimum": 0,
+      "maximum": 255,
+      "description": "The block the engine really draws around the map (outdoor maps: the void fill of the player's option), or null when it draws none. Older exports leave it out; then it is border."
+    },
     "surface": {
       "type": "boolean",
       "description": "One of the connected outdoor maps laid out on the surface."

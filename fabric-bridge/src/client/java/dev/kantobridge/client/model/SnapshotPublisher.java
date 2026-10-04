@@ -2,9 +2,13 @@ package dev.kantobridge.client.model;
 
 import dev.kantobridge.KantoBridge;
 import dev.kantobridge.builder.pack.ArtKeys;
+import dev.kantobridge.builder.shape.geom.ShapeTable;
+import dev.kantobridge.builder.shape.geom.TextureKey;
+import dev.kantobridge.client.shape.ClientShapes;
 import dev.kantobridge.client.packs.LoadedPack;
 import dev.kantobridge.client.world.ClientWorldIndex;
 import dev.kantobridge.world.Hashes;
+import dev.kantobridge.world.ShapeMap;
 import dev.kantobridge.world.SlotMap;
 import dev.kantobridge.world.WorldIndex;
 import java.util.Map;
@@ -47,6 +51,8 @@ public final class SnapshotPublisher {
 	private static @Nullable SlotMap builtSlots;
 	private static @Nullable String builtArtSet;
 	private static boolean builtKanto;
+	private static ShapeMap.@Nullable Lookup builtShapes;
+	private static @Nullable ShapeTable builtTable;
 	private static long publishes;
 
 	private SnapshotPublisher() {
@@ -64,6 +70,7 @@ public final class SnapshotPublisher {
 		ClientPlayConnectionEvents.JOIN.register((handler, sender, client) -> request());
 		ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> request());
 		ClientWorldIndex.addListener(SnapshotPublisher::request);
+		ClientShapes.init(SnapshotPublisher::request);
 	}
 
 	/** Something the snapshot is built from changed: build again on the next client tick. */
@@ -112,7 +119,10 @@ public final class SnapshotPublisher {
 		String artSet = LoadedPack.artSet();
 		long generation = LoadedPack.generation();
 		boolean kanto = index != null;
-		boolean drawingChanges = generation != builtGeneration || slots != builtSlots || !Objects.equals(artSet, builtArtSet);
+		ShapeMap.Lookup shapes = kanto ? ClientShapes.lookup() : null;
+		ShapeTable table = shapes == null ? null : ClientShapes.table();
+		boolean drawingChanges = generation != builtGeneration || slots != builtSlots || !Objects.equals(artSet, builtArtSet) || shapes != builtShapes
+				|| table != builtTable;
 		if (!drawingChanges && kanto == builtKanto) {
 			return false;
 		}
@@ -126,17 +136,19 @@ public final class SnapshotPublisher {
 		}
 		long started = System.nanoTime();
 		RenderSnapshot snapshot = build(atlas, RendererAccess.INSTANCE.hasRenderer() ? RendererAccess.INSTANCE.getRenderer() : null, publishes,
-				kanto, slots, artSet);
+				kanto, slots, artSet, shapes, table);
 		RenderSnapshot.publish(snapshot);
 		publishes++;
 		builtGeneration = generation;
 		builtSlots = slots;
 		builtArtSet = artSet;
 		builtKanto = kanto;
+		builtShapes = shapes;
+		builtTable = table;
 		if (kanto && drawingChanges) {
-			KantoBridge.LOGGER.info("render: snapshot {} for slot map {}: {} keys, {} without art (art set {}), {} ms", publishes,
+			KantoBridge.LOGGER.info("render: snapshot {} for slot map {}: {} keys, {} without art (art set {}), shapes {}, {} ms", publishes,
 					slots == null ? "-" : Hashes.shortHash(slots.hash()), snapshot.keys(), snapshot.missing(), artSet == null ? "-" : artSet,
-					(System.nanoTime() - started) / 1_000_000L);
+					table == null ? "off" : table.built(), (System.nanoTime() - started) / 1_000_000L);
 		}
 		// Entering or leaving a Kanto world without a slot map draws the same placeholders: no re-mesh for that alone.
 		return drawingChanges;
@@ -144,9 +156,23 @@ public final class SnapshotPublisher {
 
 	/** A snapshot of the slot map's art from the atlas; every slot's cube baked for the renderer (none without one). */
 	static RenderSnapshot build(TextureAtlas atlas, @Nullable Renderer renderer, long generation, boolean kanto, @Nullable SlotMap slots,
-			@Nullable String artSet) {
+			@Nullable String artSet, ShapeMap.@Nullable Lookup shapes, @Nullable ShapeTable table) {
 		TextureAtlasSprite placeholder = atlas.getSprite(TileUnbakedModel.PLACEHOLDER);
 		RenderMaterial solid = renderer == null ? null : renderer.materialFinder().blendMode(BlendMode.SOLID).find();
+		RenderMaterial cutout = renderer == null ? null : renderer.materialFinder().blendMode(BlendMode.CUTOUT).find();
+		// The shape table's texture keys, each to this client's own sprite (a key it can't draw: the placeholder).
+		TextureAtlasSprite[] shapeSprites = new TextureAtlasSprite[table == null ? 0 : table.textureKeys().size()];
+		for (int i = 0; i < shapeSprites.length; i++) {
+			TextureKey key = TextureKey.parse(table.textureKeys().get(i));
+			if (key == null || artSet == null) {
+				continue;
+			}
+			TextureAtlasSprite sprite = atlas.getSprite(ResourceLocation.fromNamespaceAndPath(ArtKeys.NAMESPACE, ArtKeys.texturePath(artSet, key.atlas(),
+					key.palette(), key.tile())));
+			if (!MissingTextureAtlasSprite.getLocation().equals(sprite.contents().name())) {
+				shapeSprites[i] = sprite;
+			}
+		}
 		MeshBuilder builder = renderer == null ? null : renderer.meshBuilder();
 		Mesh[] placeholderCubes = new Mesh[2];
 		if (builder != null) {
@@ -182,6 +208,6 @@ public final class SnapshotPublisher {
 			}
 		}
 		return new RenderSnapshot(generation, placeholder, slots == null ? null : slots.hash(), sprites, cubes, placeholderCubes, solid, kanto,
-				artSet, keys, missing);
+				artSet, keys, missing, table == null ? null : shapes, table, shapeSprites, cutout);
 	}
 }

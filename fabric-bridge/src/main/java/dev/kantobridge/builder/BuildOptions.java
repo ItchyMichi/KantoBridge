@@ -20,9 +20,11 @@ import org.jetbrains.annotations.Nullable;
  * @param writeDatapack write the per-world datapack
  * @param publishIndex  make the new WorldIndex the one the server sends to joining players (and send it now)
  * @param tickBudgetMs  placement time per server tick (20–30 ms keeps the server responsive)
+ * @param shapes        plan the world's shapes (docs/specs/VOXEL_BLOCKS_PLAN.md §5.7): write and publish the shape index
+ *                      and shape map; off builds today's world without them (the invariant tests compare the two)
  */
 public record BuildOptions(int originX, int originZ, @Nullable Path worldDir, @Nullable Path packDir, @Nullable Path reportCopy,
-		boolean setWorldSpawn, boolean writePack, boolean writeDatapack, boolean publishIndex, int tickBudgetMs) {
+		boolean setWorldSpawn, boolean writePack, boolean writeDatapack, boolean publishIndex, int tickBudgetMs, boolean shapes) {
 	public static final int DEFAULT_TICK_BUDGET_MS = 25;
 
 	public BuildOptions {
@@ -32,43 +34,49 @@ public record BuildOptions(int originX, int originZ, @Nullable Path worldDir, @N
 	}
 
 	public static BuildOptions defaults() {
-		return new BuildOptions(0, 0, null, null, null, true, true, true, true, DEFAULT_TICK_BUDGET_MS);
+		return new BuildOptions(0, 0, null, null, null, true, true, true, true, DEFAULT_TICK_BUDGET_MS, true);
 	}
 
 	public BuildOptions withOrigin(int x, int z) {
 		return new BuildOptions(x, z, this.worldDir, this.packDir, this.reportCopy, this.setWorldSpawn, this.writePack, this.writeDatapack,
-				this.publishIndex, this.tickBudgetMs);
+				this.publishIndex, this.tickBudgetMs, this.shapes);
 	}
 
 	public BuildOptions withWorldDir(@Nullable Path dir) {
 		return new BuildOptions(this.originX, this.originZ, dir, this.packDir, this.reportCopy, this.setWorldSpawn, this.writePack,
-				this.writeDatapack, this.publishIndex, this.tickBudgetMs);
+				this.writeDatapack, this.publishIndex, this.tickBudgetMs, this.shapes);
 	}
 
 	public BuildOptions withPackDir(@Nullable Path dir) {
 		return new BuildOptions(this.originX, this.originZ, this.worldDir, dir, this.reportCopy, this.setWorldSpawn, this.writePack,
-				this.writeDatapack, this.publishIndex, this.tickBudgetMs);
+				this.writeDatapack, this.publishIndex, this.tickBudgetMs, this.shapes);
 	}
 
 	public BuildOptions withReportCopy(@Nullable Path path) {
 		return new BuildOptions(this.originX, this.originZ, this.worldDir, this.packDir, path, this.setWorldSpawn, this.writePack,
-				this.writeDatapack, this.publishIndex, this.tickBudgetMs);
+				this.writeDatapack, this.publishIndex, this.tickBudgetMs, this.shapes);
 	}
 
 	public BuildOptions withWorldSpawn(boolean set) {
 		return new BuildOptions(this.originX, this.originZ, this.worldDir, this.packDir, this.reportCopy, set, this.writePack,
-				this.writeDatapack, this.publishIndex, this.tickBudgetMs);
+				this.writeDatapack, this.publishIndex, this.tickBudgetMs, this.shapes);
 	}
 
 	/** False when the pack is already written, e.g. by the client's "Create Kanto world" flow before the level exists. */
 	public BuildOptions withWritePack(boolean write) {
 		return new BuildOptions(this.originX, this.originZ, this.worldDir, this.packDir, this.reportCopy, this.setWorldSpawn, write,
-				this.writeDatapack, this.publishIndex, this.tickBudgetMs);
+				this.writeDatapack, this.publishIndex, this.tickBudgetMs, this.shapes);
 	}
 
 	public BuildOptions withPublishIndex(boolean publish) {
 		return new BuildOptions(this.originX, this.originZ, this.worldDir, this.packDir, this.reportCopy, this.setWorldSpawn, this.writePack,
-				this.writeDatapack, publish, this.tickBudgetMs);
+				this.writeDatapack, publish, this.tickBudgetMs, this.shapes);
+	}
+
+	/** With or without the world's shapes. */
+	public BuildOptions withShapes(boolean plan) {
+		return new BuildOptions(this.originX, this.originZ, this.worldDir, this.packDir, this.reportCopy, this.setWorldSpawn, this.writePack,
+				this.writeDatapack, this.publishIndex, this.tickBudgetMs, plan);
 	}
 
 	/**

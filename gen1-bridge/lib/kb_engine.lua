@@ -5074,17 +5074,55 @@ function Engine.new(opts)
     return out
   end
 
-  -- The asset paths a tileset's tile animations draw from: the record's own
-  -- animatedTiles, else TileRenderer.defaultAnimatedTiles (the flower frames
-  -- and the spinner strip; src/render/TileRenderer.lua:313-334, precedence
-  -- :538-539). Each entry carries `images` (frames) or `image` (a strip).
-  function engine.animationImages(tileset)
+  -- A tileset's animated tiles as the engine describes them: the record's own
+  -- animatedTiles, else TileRenderer.defaultAnimatedTiles
+  -- (src/render/TileRenderer.lua:313-334, precedence :538-539). Each entry has
+  -- `tile` or `tiles`, a `kind` (hshift, frames, toggle), a `period`, and
+  -- `offsets`, or `images` + `sequence`, or `image` + `stripOffsets` and a
+  -- `gate`. Image fields are asset paths. The voxel plan's V2 exports them as
+  -- data (kb_export's tileset `animated`). Engine internals: re-check on every
+  -- pin change.
+  function engine.animatedTiles(tileset)
     local TileRenderer = try("src.render.TileRenderer")
     local specs = type(tileset) == "table" and tileset.animatedTiles or nil
     if specs == nil and TileRenderer and TileRenderer.defaultAnimatedTiles then
       local ok, list = pcall(TileRenderer.defaultAnimatedTiles, tileset)
       specs = ok and list or nil
     end
+    return type(specs) == "table" and specs or {}
+  end
+
+  -- The block the engine really draws around a map: TileRenderer.borderBlockFor
+  -- (src/render/TileRenderer.lua:23-32), which reads the map's tileset and
+  -- border block and, for OVERWORLD maps, the player's voidFill option. A
+  -- block id, or false when it draws none; the map's own border block when the
+  -- renderer can't be asked. Engine internals: re-check on every pin change.
+  function engine.borderBlockFor(def)
+    local TileRenderer = try("src.render.TileRenderer")
+    if type(def) ~= "table" then return nil end
+    if not (TileRenderer and type(TileRenderer.borderBlockFor) == "function") then return def.borderBlock end
+    local ok, block = pcall(TileRenderer.borderBlockFor, { def = def })
+    if not ok then return def.borderBlock end
+    return block
+  end
+
+  -- The player's void-fill option and whether it is the engine's default: the
+  -- renderer's TileRenderer.voidFill against the first of its
+  -- TileRenderer.VOID_FILLS (src/render/TileRenderer.lua:19-21; setVoidFill
+  -- falls back to it, :34-40). Decided here, so no engine constant is copied
+  -- into the builder. nil when the renderer can't be asked.
+  function engine.voidFill()
+    local TileRenderer = try("src.render.TileRenderer")
+    if not TileRenderer or type(TileRenderer.voidFill) ~= "string" then return nil, nil end
+    local modes = TileRenderer.VOID_FILLS
+    local default = type(modes) == "table" and modes[1] or nil
+    return TileRenderer.voidFill, default ~= nil and TileRenderer.voidFill == default
+  end
+
+  -- The asset paths a tileset's tile animations draw from (engine.animatedTiles):
+  -- each entry carries `images` (frames) or `image` (a strip).
+  function engine.animationImages(tileset)
+    local specs = engine.animatedTiles(tileset)
     local out = {}
     for _, spec in ipairs(type(specs) == "table" and specs or {}) do
       if type(spec) == "table" then

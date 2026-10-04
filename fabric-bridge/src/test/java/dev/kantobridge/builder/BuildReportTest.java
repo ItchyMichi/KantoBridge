@@ -39,7 +39,8 @@ class BuildReportTest {
 		assertEquals(1, json.getAsJsonObject("warning_codes").get("layout_overlap").getAsInt());
 		assertTrue(json.get("error").isJsonNull());
 		// Values are numbers, booleans, codes, ids and hashes only: no nested content beyond count maps.
-		Set<String> objects = Set.of("warning_codes", "notes", "story_cells_by_type", "throughput", "viewpoints");
+		Set<String> objects = Set.of("warning_codes", "notes", "story_cells_by_type", "throughput", "viewpoints", "blocks_by_kind", "cells_by_kind",
+				"solid_cells_by_height", "shape_keys_by_kind", "selfcheck");
 		for (String key : json.keySet()) {
 			assertTrue(!json.get(key).isJsonObject() || objects.contains(key), key + " is an unexpected object");
 			assertTrue(!json.get(key).isJsonArray(), key + " is an array");

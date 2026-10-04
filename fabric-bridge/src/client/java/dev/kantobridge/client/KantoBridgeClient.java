@@ -16,6 +16,7 @@ import dev.kantobridge.client.net.SessionRuntime;
 import dev.kantobridge.client.net.Versions;
 import dev.kantobridge.client.packs.TextureSyncRuntime;
 import dev.kantobridge.client.puppet.PuppetRuntime;
+import dev.kantobridge.client.shape.ClientShapes;
 import dev.kantobridge.client.story.ClientStoryView;
 import dev.kantobridge.client.story.StoryCellRenderer;
 import dev.kantobridge.client.ui.Notices;
@@ -68,6 +69,8 @@ public class KantoBridgeClient implements ClientModInitializer {
 		// game) and the save-pair mismatch warning.
 		Notices.init();
 		Versions.init(bridge);
+		// The world's shapes (the voxel plan's V2): what the shape table holds, or why the world draws cubes.
+		bridge.addDebugLine(ClientShapes::debugLine);
 		// Dev only (-Dkantobridge.meshstats=true): the rendering measurements of the voxel plan (§10).
 		MeshStatsRuntime.init(bridge);
 	}

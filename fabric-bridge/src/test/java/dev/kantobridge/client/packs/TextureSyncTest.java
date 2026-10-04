@@ -126,6 +126,36 @@ class TextureSyncTest {
 	}
 
 	@Test
+	void theShapesItDrawsAreReportedWithTheirIndex() {
+		// The voxel plan's V2: shape ids with geometry and the shape index they come from; a change is reported again.
+		PackInfo red = pack("red", 19);
+		String shapes = "d".repeat(64);
+		this.sync.tick(0, new TextureSync.Inputs("red", WORLD, red, true, 0, false, 0, null, "building"), false);
+		assertEquals(1, this.port.reports.size());
+		assertFalse(this.port.last().has("shapes"), "nothing to say while the table builds");
+		assertFalse(this.port.last().has("reason"));
+		this.sync.tick(50, new TextureSync.Inputs("red", WORLD, red, true, 0, false, 120, shapes, null), false);
+		assertEquals(2, this.port.reports.size(), "the finished table is reported");
+		JsonObject status = this.port.last();
+		assertTrue(status.get("ok").getAsBoolean());
+		assertEquals(120, status.get("shapes").getAsInt());
+		assertEquals(shapes, status.get("shapeIndexHash").getAsString());
+		this.sync.tick(100, new TextureSync.Inputs("red", WORLD, red, true, 0, false, 120, shapes, null), false);
+		assertEquals(2, this.port.reports.size(), "once");
+		// Cubes for a reason: said, while the art itself is fine.
+		this.sync.tick(150, new TextureSync.Inputs("red", WORLD, red, true, 0, false, 0, null, "shape_map_mismatch"), false);
+		status = this.port.last();
+		assertTrue(status.get("ok").getAsBoolean());
+		assertEquals(0, status.get("shapes").getAsInt());
+		assertEquals("shape_map_mismatch", status.get("reason").getAsString());
+		assertTrue(REASON.matcher(status.get("reason").getAsString()).matches());
+		// An art reason wins over a shapes reason.
+		this.sync.reset();
+		this.sync.tick(200, new TextureSync.Inputs("red", WORLD, red, true, 3, false, 0, null, "no_shapes"), false);
+		assertEquals("art_incomplete", this.port.last().get("reason").getAsString());
+	}
+
+	@Test
 	void aPackOnDiskThatIsntLoadedIsReloadedFirst() {
 		PackInfo red = pack("red", 19);
 		this.sync.tick(0, in("red", red, false, -1, false), false);

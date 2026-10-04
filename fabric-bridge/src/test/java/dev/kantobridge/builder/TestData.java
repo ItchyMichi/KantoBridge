@@ -41,6 +41,29 @@ public final class TestData {
 		return gametestResources().resolve("kantobridge/golden/synthetic_world_index.json");
 	}
 
+	/** The synthetic bundle's scene, in its serialised form (docs/specs/VOXEL_BLOCKS_PLAN.md §5.3). */
+	public static Path goldenScene() {
+		return gametestResources().resolve("kantobridge/golden/synthetic_scene.json");
+	}
+
+	/** The synthetic build's shape index and shape map hash (docs/specs/VOXEL_BLOCKS_PLAN.md §6.1). */
+	public static Path goldenShapes() {
+		return gametestResources().resolve("kantobridge/golden/synthetic_shapes.json");
+	}
+
+	/** Compares {@code actual} with a golden file, rewriting it first when the tests run with {@code -Pkb.updateGolden=true}. */
+	public static void assertGolden(Path golden, String actual, String what) throws java.io.IOException {
+		if (updateGolden()) {
+			Files.createDirectories(golden.getParent());
+			Files.writeString(golden, actual, java.nio.charset.StandardCharsets.UTF_8);
+		}
+		if (!Files.isRegularFile(golden)) {
+			throw new AssertionError("golden " + what + " missing: run the tests with -Pkb.updateGolden=true once");
+		}
+		org.junit.jupiter.api.Assertions.assertEquals(Files.readString(golden, java.nio.charset.StandardCharsets.UTF_8), actual,
+				"the synthetic " + what + " changed; review and update the golden");
+	}
+
 	public static boolean updateGolden() {
 		return Boolean.parseBoolean(System.getProperty("kb.updateGolden", "false"));
 	}

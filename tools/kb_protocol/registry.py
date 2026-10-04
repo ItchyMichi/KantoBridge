@@ -61,8 +61,11 @@ class Protocol:
         # The builder's WorldIndex (world.index parts, <world>/kantobridge/world_index.json) and slot map.
         self.world_index = _read_json(self.root / "world" / "world_index.schema.json")
         self.slot_map = _read_json(self.root / "world" / "slot_map.schema.json")
+        # The voxel plan's shape index (<world>/kantobridge/shape_index.json, world.shapes doc "index").
+        self.shape_index = _read_json(self.root / "world" / "shape_index.schema.json")
         self.documents = {self.envelope["$id"]: self.envelope, self.defs["$id"]: self.defs,
-                          self.world_index["$id"]: self.world_index, self.slot_map["$id"]: self.slot_map}
+                          self.world_index["$id"]: self.world_index, self.slot_map["$id"]: self.slot_map,
+                          self.shape_index["$id"]: self.shape_index}
         for schema in (*self.messages.values(), *self.exports.values()):
             self.documents[schema["$id"]] = schema
         self.registry = Registry().with_resources(
@@ -78,6 +81,7 @@ class Protocol:
         }
         self._world_index_validator = Draft202012Validator(self.world_index, registry=self.registry)
         self._slot_map_validator = Draft202012Validator(self.slot_map, registry=self.registry)
+        self._shape_index_validator = Draft202012Validator(self.shape_index, registry=self.registry)
 
     @property
     def types(self):
@@ -129,6 +133,11 @@ class Protocol:
         """Problems of a slot map against protocol/world/slot_map.schema.json."""
         return [Problem(_pointer(e.absolute_path), e.validator)
                 for e in sorted(self._slot_map_validator.iter_errors(data), key=lambda e: list(e.path))]
+
+    def check_shape_index(self, data):
+        """Problems of a shape index against protocol/world/shape_index.schema.json."""
+        return [Problem(_pointer(e.absolute_path), e.validator)
+                for e in sorted(self._shape_index_validator.iter_errors(data), key=lambda e: list(e.path))]
 
     def resolve(self, base_uri, ref):
         """Resolve a $ref against base_uri; returns (uri, subschema)."""

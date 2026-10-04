@@ -92,9 +92,17 @@ public final class TextureSync {
 	 * @param missing          the world's slot-map keys without a sprite in the atlas; -1 while that isn't known (no slot
 	 *                         map yet, or not resolved against the loaded pack yet)
 	 * @param bridgeCompatible the main link to gen1-bridge is up, and its game can draw this world
+	 * @param shapes           shape ids this client has geometry for (the voxel plan's V2); 0 while it draws cubes
+	 * @param shapeIndexHash   the shape index they come from, or null without shapes
+	 * @param shapesReason     why it draws cubes ({@code no_shapes}, {@code shape_map_mismatch}, {@code geometry_unsupported},
+	 *                         {@code shapes_off}; {@code building} while the table builds), or null when it draws its shapes
 	 */
 	public record Inputs(@Nullable String worldGame, @Nullable String worldSlotMapHash, @Nullable PackInfo local, boolean packLoaded,
-			int missing, boolean bridgeCompatible) {
+			int missing, boolean bridgeCompatible, int shapes, @Nullable String shapeIndexHash, @Nullable String shapesReason) {
+		public Inputs(@Nullable String worldGame, @Nullable String worldSlotMapHash, @Nullable PackInfo local, boolean packLoaded, int missing,
+				boolean bridgeCompatible) {
+			this(worldGame, worldSlotMapHash, local, packLoaded, missing, bridgeCompatible, 0, null, null);
+		}
 	}
 
 	/** What the glue does for the flow. Calls come on the client thread. */
@@ -202,7 +210,12 @@ public final class TextureSync {
 			this.missing = -1;
 			this.waitingSince = nowMs;
 		}
-		if (this.phase == Phase.FAILED || this.phase == Phase.READY) {
+		if (this.phase == Phase.READY) {
+			// Ready stays ready; only a change of shapes (their table finished, or went) is reported again.
+			this.queueReport(withShapes(ok(in.worldSlotMapHash(), textures(in.local()), 0), in));
+			return;
+		}
+		if (this.phase == Phase.FAILED) {
 			return;
 		}
 		Decision decision = decide(in, this.regenerated);
@@ -213,14 +226,14 @@ public final class TextureSync {
 				this.reason = null;
 				this.missing = 0;
 				this.readyAt = nowMs;
-				this.queueReport(ok(in.worldSlotMapHash(), textures(in.local()), 0));
+				this.queueReport(withShapes(ok(in.worldSlotMapHash(), textures(in.local()), 0), in));
 			}
 			case INCOMPLETE -> {
 				// Judged again every tick: gen1-bridge may still connect and refresh the art once.
 				this.phase = Phase.INCOMPLETE;
 				this.reason = "art_incomplete";
 				this.missing = in.missing();
-				this.queueReport(incomplete(in.worldSlotMapHash(), textures(in.local()), in.missing()));
+				this.queueReport(withShapes(incomplete(in.worldSlotMapHash(), textures(in.local()), in.missing()), in));
 			}
 			case RELOAD -> this.startReload();
 			case WAIT_SLOTS -> {
@@ -326,6 +339,21 @@ public final class TextureSync {
 		data.addProperty("textures", Math.max(0, textures));
 		data.addProperty("missing", Math.max(0, missing));
 		return data;
+	}
+
+	/**
+	 * A status with the shapes this client draws (V2): how many, from which shape index. A client that draws its own art
+	 * but cubes says why in {@code reason} (an art reason already there wins); "still building" is not reported.
+	 */
+	static JsonObject withShapes(JsonObject status, Inputs in) {
+		if (in.shapeIndexHash() != null) {
+			status.addProperty("shapes", Math.max(0, in.shapes()));
+			status.addProperty("shapeIndexHash", in.shapeIndexHash());
+		} else if (in.shapesReason() != null && !"building".equals(in.shapesReason()) && !status.has("reason")) {
+			status.addProperty("shapes", 0);
+			status.addProperty("reason", reasonCode(in.shapesReason()));
+		}
+		return status;
 	}
 
 	/** The {@code texture.status} of placeholders, with why. */
