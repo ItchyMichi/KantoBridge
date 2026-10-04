@@ -428,8 +428,8 @@ own rules as the fallback; the tree fallback is option 1; buildings follow the t
 |---|---|---|---|---|
 | P1 | Profile and outdoor units | **done** (play-test waits for you: install the mod, switched off, then a new world) | 2026-10-04 | `7dab639` |
 | P2 | Buildings | **done** (play-test waits for you; a new world) | 2026-10-04 | `5178d71` |
-| P3 | Boxes and interiors | **done** (play-test waits for you; a new world) | 2026-10-04 | `P3: boxes and interiors` |
-| P4 | Finish | to do | | |
+| P3 | Boxes and interiors | **done** (play-test waits for you; a new world) | 2026-10-04 | `6eaa772` |
+| P4 | Finish | **done** (your install waits for your go-ahead) | 2026-10-04 | `P4: finish` |
 
 **Why the trees were cubes** (counts from your world, which is identical to the e2e build): V4 made a repeating cell a
 unit only when all its tiles were in the map's drawn border block (voxel plan deviation 26). Pallet Town: 123 solid
@@ -473,6 +473,9 @@ Route 22: none. Over the 36 outdoor maps, 2,586 of 14,797 solid cells were units
   out of the structure score): no hole, ground 1.0, structure p05 0.730, min 0.530 (Fuchsia City; 0.632 and 0.364 with
   the boxes scored). Every gate holds.
   `tools/check.sh --e2e`: pytest **1455 passed** (the end-to-end tests included), then `gradlew build`: **847 JUnit**,
+  **92/92 GameTests**, the mixin checks.
+- **P4** (docs; a pack's styles kept off stairs and reliefs; a template's height counts its decor keys; the shape plan
+  is P3's): `tools/check.sh`: pytest **1418 passed** (37 end-to-end skipped), then `gradlew build`: **848 JUnit**,
   **92/92 GameTests**, the mixin checks.
 
 
@@ -562,13 +565,17 @@ Route 22: none. Over the 36 outdoor maps, 2,586 of 14,797 solid cells were units
     still count.
 30. **A part's `rise` may be negative** (one entry lowers a part under its plane; Dramaless doesn't range-check it): the
     model clips at the floor. `desk.plane`, which the research found mentioned but never read, isn't read either.
+31. **P4: a pack's `class:tree`/`class:prop` style doesn't reach stairs and reliefs** (they're neither, and stand on
+    walkable ground: a `columns` style would put cubes across the way); stumps and cans follow it as pinned cylinders do.
+32. **A template's height counts its decor keys** (P2's doorways and overhangs): `keys.json` reported a band building's
+    or hull's height as 0 (its columns are empty since P2), and a pack's `struct:` model couldn't fill a doorway. Both use
+    `Templates.Entry.keysAt` now.
 
 ### Profile plan: open issues
 
-- P4 (finish) is to do.
+- **Your own install** needs the mod, switched off (PLAYTEST.md, "Profile plan, P1"): waiting for your go-ahead, or do
+  it yourself. Then a new world shows P1–P3.
 - The `support` rule (deviation 28): standees on counters, tables and bookcases stand on the floor behind them.
-- Your own install needs the mod, switched off (PLAYTEST.md, "Profile plan, P1"). I can copy it for you if you say
-  so; switching it off is done in Gen1Recomp's launcher.
 
 ## Pre-flight (PLAN §0.6)
 

@@ -88,8 +88,9 @@ Pokémon Red/Blue's story runs in a **hidden Gen1Recomp**. It is displayed and p
 - **Dramaless Shape's profile** (the profile plan, the user's decision of 2026-10-04): its hand-made table
   (`data/voxel_heights.lua`) is read at runtime from the mod installed in Gen1Recomp, kept **switched off** there.
   gen1-bridge exports it as text (`profile/dramaless`); Java reads it as data, never runs it, and the planner turns its
-  pins into units. Its code is never copied, the table never committed, its `figures`/`mounted` masks never read.
-  Without it, our own rules apply.
+  pins into units and class boxes and its band tables into buildings and furniture (`kb-shapes/6..8`, P1–P3). Its code
+  is never copied (every rule re-implemented from the research notes), the table never committed, its
+  `figures`/`mounted` masks never read. Without it, our own rules apply.
 - **Characters** draw through a style chosen per sprite from its own sheet: thick cards by default, carved and
   rigged figures as settings (`characters.style`), a pack's sprite model; each falls back down rigged → carved →
   thick → flat. Players keep their Minecraft skins.

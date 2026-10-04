@@ -1,6 +1,6 @@
 # Plan: Dramaless Shape's profile in the Kanto world
 
-- **Status:** decided by the user on 2026-10-04 (§2.1); P1 starts at once.
+- **Status:** decided by the user on 2026-10-04 (§2.1); P1–P4 executed the same day (PROGRESS.md, "Profile plan").
 - **What it delivers:** the world's shapes follow Dramaless Shape's hand-authored profile
   (`data/voxel_heights.lua`) wherever it says something: every tree it calls round becomes a hull, its props, signs
   and fence posts become standees of their own depth, buildings become band-table models with real roofs and plain

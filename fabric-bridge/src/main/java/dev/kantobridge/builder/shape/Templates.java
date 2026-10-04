@@ -257,11 +257,26 @@ public final class Templates {
 			return column == null ? 0 : column.length;
 		}
 
-		/** The tallest column. */
+		/**
+		 * Blocks the template's keys stand at (x, y): its column, or for a band building a doorway's or an overhang's decor
+		 * blocks (P2), whichever is higher.
+		 */
+		public int keysAt(int x, int y) {
+			int blocks = this.blocks(x, y);
+			JsonObject volume = this.volume();
+			if (volume != null && volume.has("air")) {
+				blocks = Math.max(blocks, volume.getAsJsonArray("air").get(y * this.w + x).getAsInt());
+			}
+			return blocks;
+		}
+
+		/** The tallest column of keys. */
 		public int height() {
 			int max = 0;
-			for (ShapeKey[] column : this.columns) {
-				max = Math.max(max, column == null ? 0 : column.length);
+			for (int y = 0; y < this.d; y++) {
+				for (int x = 0; x < this.w; x++) {
+					max = Math.max(max, this.keysAt(x, y));
+				}
 			}
 			return max;
 		}

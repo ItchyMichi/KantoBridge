@@ -227,6 +227,16 @@ class BandBuildingTest {
 	}
 
 	@Test
+	void theTemplatesHeightCountsItsDoorways() {
+		Templates.Entry entry = entry(true, false);
+		assertEquals(3, entry.blocks(1, 3), "a solid position: its column");
+		assertEquals(3, entry.keysAt(2, 3), "a doorway: no column, but keys on decor");
+		assertEquals(0, entry.blocks(2, 0), "the awning's row north: no column");
+		assertEquals(3, entry.keysAt(2, 0), "but keys on decor");
+		assertEquals(3, entry.height(), "what a pack's model may fill");
+	}
+
+	@Test
 	void aClaimOnlyEntryDrawsNothingAndMissingArtFallsBack() {
 		TemplateRule.Template none = BandBuilding.build(entry(false, true), ATLAS, art());
 		assertTrue(none.blocks().isEmpty());

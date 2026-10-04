@@ -595,6 +595,9 @@ and the invisible blocks break into transparent particles. Nothing to rebuild.
 
 ## Profile plan
 
+One new world shows P1 to P3 together (an older world keeps the planner it was built with). The mod is installed and
+switched off once, as P1 says.
+
 ### P1: Dramaless Shape's table, trees, props, signs and posts
 
 Once, before a new world:

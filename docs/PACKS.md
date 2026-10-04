@@ -48,7 +48,8 @@ The game is not part of a key: `targets.games` names the games a manifest applie
 
 Keys are canonical: no leading zeros, nothing around the separators. `keys.json` lists the keys your export has:
 `tiles` (each with its palettes, generated sprite id, the block columns that show it as `uses` and the maps as
-`maps`), `sprites` (frames), `cells` (what each unit became: `hull`, `object` or `columns`; its class, `tree` for
+`maps`), `sprites` (frames), `cells` (what each unit became: `hull`, `object`, `columns`, or with the profile `stair`
+or `relief`; its class, `tree` for
 foliage else `prop`; the cells that use it), `maps` and `classes`.
 
 For one face or shape the more specific entry wins: `cell:` over `tile:…@PALETTE` over `tile:` over `class:` over the
@@ -126,6 +127,22 @@ each axis; palette index 0 is empty.
 **Check the axes once** with `reference/calibration.vox`: an 8 × 8 plate with a red post in its north-east corner and
 a blue strip on its south edge. Name any tree's `cell:` key with it (`"voxelsPerBlock": 8`) and look north from south
 of it: the post stands at the back right, the strip along the front.
+
+## Packs and the profile
+
+When Dramaless Shape's profile is installed (docs/specs/PROFILE_PLAN.md), it decides many shapes, and a pack still
+changes only its own client's look:
+
+- **`struct:` models** replace any template by its signature: a V7 building, and the profile's band-table buildings,
+  furniture and two-cell hulls (canopies, planters). `keys.json` lists them all under `structs`, with their size and
+  height; a model may fill every block that holds the template's keys, a doorway's or an awning's decor blocks too.
+  The `struct:` `bands` rule applies to V7's buildings only (a profile building has its own band table).
+- **`cell:` models** replace a unit by its four tiles, the profile's pinned ones too (round trees, standees, posts,
+  stumps, cans, stairs, reliefs).
+- **`class:tree` and `class:prop` rules** reach the profile's pinned hulls and standees as they reach ours; a stair or
+  a relief is neither and keeps its shape (both stand on walkable ground).
+- **The profile's class boxes** (cliffs, counters, tables, desks, bookcases, ledges, beds) have no pack key of their
+  own: retexture their tiles.
 
 ## Validation
 

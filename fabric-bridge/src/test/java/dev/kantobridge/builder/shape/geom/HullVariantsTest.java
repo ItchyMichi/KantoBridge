@@ -123,5 +123,9 @@ class HullVariantsTest {
 		assertFalse(stairs.blocks().get(CellUnits.block(2, 1, 1, 0)).isEmpty(), "the upper steps reach the second block");
 		CellUnits.Unit stump = CellUnits.build(tiles, CellUnits.Context.parse("g0_stump_k04"), 2, 8);
 		assertEquals(CellUnits.Kind.HULL, stump.kind());
+		assertEquals(CellUnits.Kind.STAIR, CellUnits.build(tiles, CellUnits.Context.parse("g0_stair_e_k16"), 2, 8, CellUnits.MAX_QUADS, "columns", 0)
+				.kind(), "a pack's prop style doesn't turn stairs into columns");
+		assertEquals(CellUnits.Kind.COLUMNS, CellUnits.build(tiles, CellUnits.Context.parse("g0_stump_k04"), 2, 8, CellUnits.MAX_QUADS, "columns", 0)
+				.kind(), "a stump follows it, as a pinned cylinder does");
 	}
 }

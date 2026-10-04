@@ -216,6 +216,12 @@ public final class CellUnits {
 	 */
 	public static Unit build(int @Nullable [][] tiles, Context context, int perCell, int artPx, int maxQuads, @Nullable String style, int depth) {
 		int w = perCell * artPx;
+		// A pack's tree or prop style (V6) doesn't reach a stair or a relief (P3): neither, and both stand on walkable ground.
+		String pinnedClass = context.pinned();
+		boolean walkable = pinnedClass != null && (pinnedClass.startsWith("stair_") || "relief".equals(pinnedClass));
+		if (walkable) {
+			style = null;
+		}
 		if ("columns".equals(style)) {
 			return columns(perCell, w);
 		}

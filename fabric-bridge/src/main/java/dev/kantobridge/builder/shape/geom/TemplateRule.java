@@ -568,7 +568,7 @@ public final class TemplateRule {
 			int bx = QuadMerger.blockX(e.getKey());
 			int by = QuadMerger.blockY(e.getKey());
 			int bz = QuadMerger.blockZ(e.getKey());
-			if (bx >= entry.w() || bz >= entry.d() || by >= entry.blocks(bx, bz)) {
+			if (bx >= entry.w() || bz >= entry.d() || by >= entry.keysAt(bx, bz)) {
 				return false;
 			}
 		}
