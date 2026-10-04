@@ -30,11 +30,14 @@ final class TileBakedModel implements BakedModel {
 	private final int slot;
 	/** The jar's placeholder, resolved when the model was baked: drawn before the first snapshot exists. */
 	private final TextureAtlasSprite placeholder;
+	/** The particle of a carrier without a slot: fully transparent (distant-terrain mods colour blocks by it). */
+	private final TextureAtlasSprite invisible;
 
-	TileBakedModel(CarrierKind kind, int slot, TextureAtlasSprite placeholder) {
+	TileBakedModel(CarrierKind kind, int slot, TextureAtlasSprite placeholder, TextureAtlasSprite invisible) {
 		this.kind = kind;
 		this.slot = slot;
 		this.placeholder = placeholder;
+		this.invisible = invisible;
 	}
 
 	@Override
@@ -93,7 +96,7 @@ final class TileBakedModel implements BakedModel {
 
 	@Override
 	public TextureAtlasSprite getParticleIcon() {
-		return this.kind.hasSlot() ? RenderSnapshot.current().sprite(this.kind, this.slot, this.placeholder) : this.placeholder;
+		return this.kind.hasSlot() ? RenderSnapshot.current().sprite(this.kind, this.slot, this.placeholder) : this.invisible;
 	}
 
 	@Override

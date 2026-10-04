@@ -43,7 +43,8 @@ pack below player packs; VD10 the JSON file.
 | V5 | Story art in the mesh | **done** (play-test waits for you; rebuild your world first) | 2026-10-04 | `144c669` |
 | V6 | Texture packs and `.vox` models | **done** (play-test and X5 wait for you; no rebuild needed) | 2026-10-04 | `0df5171` |
 | V7 | Structure templates and dressing | **done** (play-test waits for you; rebuild your world first) | 2026-10-04 | `cadd6b3` |
-| V8 | Characters | **done** (play-test and X7 wait for you; no rebuild needed) | 2026-10-04 | `V8: characters` |
+| V8 | Characters | **done** (play-test and X7 wait for you; no rebuild needed) | 2026-10-04 | `7b606a9` |
+| V9 | Clean-up, other renderers, docs | **done** (X6 and one question wait for you) | 2026-10-04 | `V9: clean-up` |
 
 **Measurements waiting on you** (agents never start the client; the plan's §10):
 
@@ -58,6 +59,8 @@ pack below player packs; VD10 the JSON file.
   axes and `VoxMesher` change together.
 - **X7** (V8: 64 puppets, flat against thick and carved): PLAYTEST.md "V8". If thick or carved cost more than the
   plan's limits, the quad budgets (256 and 600) come down.
+- **X6** (V9, optional: Sodium, Iris, Distant Horizons): PLAYTEST.md "V9". Nothing is pinned; any pin that follows is
+  your decision.
 
 ### Voxel plan: check results
 
@@ -160,6 +163,16 @@ pack below player packs; VD10 the JSON file.
   `sprites_by_frames` 1 × 1, 1 × 3, 2 × 6; `character_fallbacks`: rigged to carved 4 (its made-up sprites aren't
   people by the rig's test), carved to thick 0, rigged to thick 0, thick to flat 0. V8 changes no block, so it has no
   real build (its gate is "green"); the real export's numbers come with V9's `--e2e` run.
+- **V9:** `tools/check.sh --e2e`: pytest **1447 passed** (the end-to-end tests included), then `gradlew build`:
+  **768 JUnit** (`CubeEmitterTest` now reads the half cube V1 drew from its test resource), **92/92 GameTests**, the
+  mixin checks. The real build is V7's, block for block (2,467,050 blocks in 59.9 s at 47,730 blocks/s, 0 warnings,
+  every gate held), and now reports the characters: the export's 73 sprites have 1 frame (12), 3 (20) or 6 (41);
+  asked for rigged figures, 32 rig, 38 fall back to carved and 3 to thick; asked for carved, 3 fall back to thick;
+  thick cards never fall back to flat.
+
+**Where the voxel plan stands:** V1–V9 are done and committed. Waiting on you: the play-tests of PLAYTEST.md's
+"Voxel plan" sections (rebuild your world before V3's, V4's, V5's and V7's), the measurements X1–X7 above, and
+question 5 below (the fallback for worlds built before V5).
 
 ### Voxel plan: deviations
 
@@ -389,6 +402,16 @@ pack below player packs; VD10 the JSON file.
 74. **`character_fallbacks` also counts `thick_to_flat`** (an empty frame, or more than 256 quads).
 75. **The surfing sprite's upright card takes the NPCs' style** (keyed `SURF`); its flat form on the water stays a
     card.
+76. **The block-entity renderer and `StoryCellArt`'s slot path stay** (the plan's V9 removes the slot path, and its
+    definition of done says the renderer is gone). They are the fallback deviation 39 kept for worlds built before
+    V5, whose closed columns have no carrier above feet level: without it, such a world would show its Cut trees and
+    locked gates as invisible walls until rebuilt, against I3. A question for you below; removing it is a small change.
+77. **Layout 1's code paths were already only "read as no pack"** (`PackInfo`, `LoadedPack`, `TextureSync`): nothing
+    else of the old layout was left to remove.
+78. **The half cube V1 drew stays as a test resource** (`src/test/resources/kantobridge/v1_half_cube.json`):
+    `CubeEmitterTest` still proves the runtime model draws it exactly, now that the jar's file is gone.
+79. **Carriers without a slot (decoration, ledges, story tiles) show a transparent particle** through the runtime
+    model, as `invisible.json` does for story cells, for distant-terrain mods.
 
 ### Voxel plan: open issues
 
@@ -1182,7 +1205,11 @@ say how each was resolved:
 4. **Two dev clients on LAN (from M9).** Should a dev-only switch let a LAN host accept offline
    guests? Two dev clients share the local dedicated dev server instead (`launch.ps1 -Players 2`),
    which DESIGN's "a server, or LAN" allows.
-5. **The installer (M10)** has four questions in [INSTALLER.md](INSTALLER.md):
+5. **Worlds built before the voxel plan's V5 (from V9).** Their closed story art (a Cut tree, a locked gate) is
+   still drawn by the old block-entity renderer, because their closed columns have no carrier above feet level. The
+   plan's V9 removes that renderer. Removing it now would make those cells invisible walls until the world is
+   rebuilt. Keep the fallback (today), or remove it and rely on rebuilding? Deviation 76.
+6. **The installer (M10)** has four questions in [INSTALLER.md](INSTALLER.md):
    - bundle or download Prism Launcher, and use Prism's Microsoft client ID;
    - download the pinned files at install time;
    - PowerShell or a native installer;

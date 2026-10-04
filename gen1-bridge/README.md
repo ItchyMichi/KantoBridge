@@ -525,6 +525,13 @@ test drivers), guarded so the hook always calls `next`:
   `computeNeighbors`, image bytes through `Assets.imageData`, tile animations, spinner tiles) goes
   through `lib/kb_engine.lua`. Anything that can't be exported correctly is left out and counted
   under a warning code, logged with its count when the build ends.
+- **Two engine queries for the voxel plan** (docs/specs/VOXEL_BLOCKS_PLAN.md §4.6), both engine internals in
+  `lib/kb_engine.lua`, re-checked on every Gen1Recomp pin change: `engine.borderBlockFor(def)` wraps
+  `TileRenderer.borderBlockFor` and gives each map's `borderDrawn` (the block the engine really draws around it;
+  the map's own `border` when the engine lacks the function), and `engine.animatedTiles(tileset)` gives each
+  tileset's `animated` tiles as data (the tileset's own `animatedTiles`, else the renderer's defaults). The
+  field's `display` (the void-fill option and whether it is the default) is decided in `export/kb_export.lua`, so
+  no engine constant is copied into Java.
 
 Warnings and errors from `kb_log` are also sent to the client as `log` messages (at most 5 a
 second). Logs only ever show codes, engine symbols, counts, lengths and short hashes.

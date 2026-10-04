@@ -578,3 +578,17 @@ what fell back (and why). No rebuild needed.
       NPCs are in view (a busy town; two players' worth if you can), and measure frame time (F3's graph: average and 1%
       low) with `"style": "flat"`, then `"thick"`, then `"carved"` (restart in between). Pass: thick costs under 0.3 ms
       a frame more than flat, carved under 0.5 ms with about 20 figures in view and under 1.5 ms with 64.
+
+### V9: clean-up, and other renderers if you want them
+
+The jar no longer carries the tile blocks' placeholder block states and models (the runtime model never read them),
+and the invisible blocks break into transparent particles. Nothing to rebuild.
+
+- [ ] A world plays as at V8: tiles, shapes, story art, characters; F3+T changes nothing for the worse.
+- [ ] A world built **before V5** still shows its closed story art (a Cut tree before Cut, a locked gate). Tell me
+      if you'd rather drop that fallback (PROGRESS.md, "Questions for you").
+- [ ] **X6 (optional; nothing is pinned):** the same world with **Sodium** (`mc1.21.1-0.6.13-fabric` or
+      `mc1.21.1-0.8.13-fabric`), then with **Iris** on top (`1.8.8+1.21.1` with Sodium 0.6, `1.8.14-beta.1+1.21.1`
+      with Sodium 0.8) and a shader pack, then with **Distant Horizons** (`3.3.3-1.21.1`). For each: shapes, story
+      art, puppets and their styles draw; no crash; no black or missing faces; distant terrain shows the map's
+      colours (story and ledge blocks invisible). Any pin that follows is your decision and a VERSIONS.md change.

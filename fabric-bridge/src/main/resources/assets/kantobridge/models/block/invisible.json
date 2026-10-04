@@ -1,5 +1,5 @@
 {
   "textures": {
-    "particle": "kantobridge:block/tile_placeholder"
+    "particle": "kantobridge:block/invisible"
   }
 }

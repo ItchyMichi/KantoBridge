@@ -17,9 +17,10 @@ import org.junit.jupiter.api.Test;
 
 /**
  * "The same cubes, exactly" (docs/specs/VOXEL_BLOCKS_PLAN.md §5.1, §6.1): the runtime model's corner and UV tables equal
- * what vanilla's face bakery makes of {@code cube_all} (a 0..16 box, default UVs, a cull face per side) and of the jar's
- * {@code models/block/tile_half_placeholder.json}, vertex for vertex, using vanilla's own {@link FaceInfo} and
- * {@link BlockFaceUV}.
+ * what vanilla's face bakery makes of {@code cube_all} (a 0..16 box, default UVs, a cull face per side) and of the half
+ * cube the jar's {@code tile_half_placeholder.json} drew before V1 (kept as the test resource
+ * {@code kantobridge/v1_half_cube.json} since V9 removed the jar's file), vertex for vertex, using vanilla's own
+ * {@link FaceInfo} and {@link BlockFaceUV}.
  */
 class CubeEmitterTest {
 	private static final float EPS = 1e-6F;
@@ -68,8 +69,8 @@ class CubeEmitterTest {
 	@Test
 	void theHalfCubeIsTheJarsPlaceholderModel() throws Exception {
 		JsonObject model;
-		try (InputStream in = CubeEmitterTest.class.getResourceAsStream("/assets/kantobridge/models/block/tile_half_placeholder.json")) {
-			assertNotNull(in, "the jar's half-cube model");
+		try (InputStream in = CubeEmitterTest.class.getResourceAsStream("/kantobridge/v1_half_cube.json")) {
+			assertNotNull(in, "the half-cube model V1 drew");
 			model = ProtoJson.parseObject(new String(in.readAllBytes(), StandardCharsets.UTF_8));
 		}
 		JsonArray elements = model.getAsJsonArray("elements");

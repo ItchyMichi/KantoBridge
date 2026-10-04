@@ -15,6 +15,11 @@ Pokémon Red/Blue's story runs in a **hidden Gen1Recomp**. It is displayed and p
   defaults. [`docs/PROGRESS.md`](docs/PROGRESS.md) records where execution stands (milestones,
   spikes, deviations, open issues, blocked questions), and [`docs/PLAYTEST.md`](docs/PLAYTEST.md)
   is the user's manual checklist.
+- [`docs/specs/VOXEL_BLOCKS_PLAN.md`](docs/specs/VOXEL_BLOCKS_PLAN.md) is the voxel plan (V1–V9: the blocks'
+  runtime model, shapes, story art in the mesh, texture packs, structures and dressing, characters), executed and
+  recorded in PROGRESS.md's "Voxel plan" sections. [`docs/PACKS.md`](docs/PACKS.md) is the texture-pack format
+  (keys, the `kb_pack` manifest, `.vox` conventions, what may be shared); its schema is
+  `protocol/packs/kb_pack.schema.json`.
 - `refs/_research/` (git-ignored) holds the research notes, with verified `file:line` references,
   that the plan cites.
 
@@ -67,6 +72,19 @@ Pokémon Red/Blue's story runs in a **hidden Gen1Recomp**. It is displayed and p
   most complete result. Re-check every internal it touches whenever the Gen1Recomp pin changes.
 - **ROM-derived data** (dialogue text, trainer teams) **may pass through the Minecraft host's
   server.** Art never does: textures come from each player's own local resource pack.
+- **The block approach** (the voxel plan): tile blocks keep their slots and their collision; one runtime model
+  (Fabric's rendering API only, never Indigo) draws every carrier block from an immutable render snapshot with this
+  player's own art. A pixel-free shape planner (`kb-shapes/<n>`, shared by the server and the clients) decides each
+  block's shape key; the build writes `shape_index.json` and `shape_map.bin` beside the WorldIndex and relays them
+  (`world.shapes`). Each client builds the geometry from its own export: Tier A folded columns and roofs, Tier B units
+  (hulls, objects, tufts), Tier C building templates, interior dressing; anything that fails its self-check is drawn
+  as columns, never a hole. Closed story art is part of the mesh, per player.
+- **Texture packs** are ordinary resource packs with a `kb_pack` manifest: textures, shape rules and `.vox` models
+  that change only their own client's look (never collision or anything the server decides) and never travel. The
+  pack template is written only on the player's action; its generated files are ROM-derived and never shared.
+- **Characters** draw through a style chosen per sprite from its own sheet: thick cards by default, carved and
+  rigged figures as settings (`characters.style`), a pack's sprite model; each falls back down rigged → carved →
+  thick → flat. Players keep their Minecraft skins.
 - **No project licence.** This is a personal test project.
 - **Testing on the user's real game is allowed** through the separate test install
   `local/gen1recomp-e2e/` only, never the user's `local/gen1recomp/`. The conditions are in
@@ -88,8 +106,8 @@ Pokémon Red/Blue's story runs in a **hidden Gen1Recomp**. It is displayed and p
 | Path | Contents |
 |---|---|
 | `gen1-bridge/` | Gen1Recomp mod (Lua, mod API 2, `network` + `engine_internals`). `lib/`, `observe/`, `act/` and `export/` hold the `kb_*` modules; only `lib/kb_engine.lua` touches engine internals |
-| `fabric-bridge/` | Fabric mod `kantobridge` (Java, package `dev.kantobridge`): `src/main` (common, builder), `src/client`, `src/test` (JUnit), `src/gametest` (server GameTests) |
-| `protocol/` | Message schemas (JSON Schema 2020-12), synthetic examples, and the derived `catalog.json` and `redaction-vectors.json` ([`protocol/README.md`](protocol/README.md)) |
+| `fabric-bridge/` | Fabric mod `kantobridge` (Java, package `dev.kantobridge`): `src/main` (common, builder; `scene/`, `builder/shape/` with `geom/` and `dressing/`, `character/`), `src/client` (`model/` the runtime model, `shape/`, `packs/`, `puppet/style/`), `src/test` (JUnit), `src/gametest` (server GameTests) |
+| `protocol/` | Message schemas (JSON Schema 2020-12), synthetic examples, and the derived `catalog.json` and `redaction-vectors.json` ([`protocol/README.md`](protocol/README.md)); `world/` (the WorldIndex, slot map and shape index), `export/`, `packs/` (the texture-pack manifest) |
 | `datapack-templates/` | Habitat pool, biome and settings templates (never ROM data) |
 | `tools/` | `kb_protocol` (Python protocol helpers), the stand-ins `fake_gen1` and `fake_minecraft`, `lua/` (lupa test harness), `tests/`, `e2e/` (test-instance runner, drivers, `build_world.py`), `setup.*`, `check.*`, `launch.ps1` (starts Gen1Recomp, then Minecraft), `installer/` (skeleton only, see [`docs/INSTALLER.md`](docs/INSTALLER.md)) ([`tools/README.md`](tools/README.md)) |
 | `refs/` | Reference clones (ignored) |

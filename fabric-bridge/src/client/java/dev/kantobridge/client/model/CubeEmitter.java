@@ -11,7 +11,7 @@ import org.jetbrains.annotations.Nullable;
 
 /**
  * The plain cubes of a tile slot (docs/specs/VOXEL_BLOCKS_PLAN.md §5.1, "the same cubes, exactly"): the full cube of
- * {@code cube_all} and the half cube of the jar's {@code models/block/tile_half_placeholder.json}, with the vertex order
+ * {@code cube_all} and the half cube of the jar's former {@code models/block/tile_half_placeholder.json}, with the vertex order
  * of Fabric's {@code QuadEmitter#square}, which is vanilla's, the UVs of vanilla's default (UV-locked) face mapping, and
  * vanilla's UV shrink toward each face's centre by {@code sprite.uvShrinkRatio()}. So the runtime model draws exactly what
  * the generated JSON models drew. The tables are pure data ({@code CubeEmitterTest} compares them with the jar's model);

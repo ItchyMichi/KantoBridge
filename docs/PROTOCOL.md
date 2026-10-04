@@ -894,7 +894,12 @@ carrying the same envelope in both directions. Larger data is split at the appli
     (`no_bridge` and `slot_map_mismatch` are gone), and the generated pack's layout 2.
   - V2: `world.shapes` (S→C), the shape index and shape map files, `texture.status.shapes` and `shapeIndexHash`, and
     the export's `map.borderDrawn`, `tileset.animated` and `field.display` (all optional, so older bundles stay valid).
+  - V3 and V4 change no message: their keys (`slab`, `roof`, `tuft`, `cell`) and the planners `kb-shapes/2` and
+    `kb-shapes/3` live in the shape index, which already travels.
+  - V5: the shape map's closed story-cell overlays (per tile story cell, four stacks of ids of its closed art), and
+    `kb-shapes/4`; still `world.shapes`.
   - V6: `texture.status.packs` (optional). Texture packs themselves never travel: their manifest format is
     `protocol/packs/kb_pack.schema.json`, read only by the client that has them ([PACKS.md](PACKS.md)).
   - V7: the shape index's `templates` and `tmpl` keys, the `tint` modifier on keys (ceilings), and an interior placed
     with the outdoor biome (under the open sky, no ceiling). The planner is `kb-shapes/5`.
+  - V8 and V9 change no message (characters are drawn from each client's own sheets; V9 removes only jar files).

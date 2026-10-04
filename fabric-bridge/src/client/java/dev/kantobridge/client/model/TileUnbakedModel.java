@@ -17,13 +17,17 @@ import org.jetbrains.annotations.Nullable;
 
 /**
  * The unbaked model of one carrier state (docs/specs/VOXEL_BLOCKS_PLAN.md §5.1): no dependencies; baking only resolves the
- * jar's placeholder sprite and returns a {@link TileBakedModel} for the state's kind and slot. Every quad comes from the
- * {@link RenderSnapshot} at mesh time, so nothing slot-specific is baked here.
+ * jar's placeholder sprite (and, for a carrier without a slot of its own, the transparent particle) and returns a
+ * {@link TileBakedModel} for the state's kind and slot. Every quad comes from the {@link RenderSnapshot} at mesh time, so
+ * nothing slot-specific is baked here, and no blockstate or block model file of the jar is read for these blocks.
  */
 final class TileUnbakedModel implements UnbakedModel {
 	/** The jar's placeholder tile ({@code textures/block/tile_placeholder.png}, stitched into the block atlas). */
 	static final ResourceLocation PLACEHOLDER = ResourceLocation.fromNamespaceAndPath(KantoBridge.MOD_ID, "block/tile_placeholder");
 	static final Material PLACEHOLDER_MATERIAL = new Material(TextureAtlas.LOCATION_BLOCKS, PLACEHOLDER);
+	/** A fully transparent sprite: the particle of carriers that draw nothing of their own (decoration, ledges, story tiles). */
+	static final Material INVISIBLE_MATERIAL = new Material(TextureAtlas.LOCATION_BLOCKS,
+			ResourceLocation.fromNamespaceAndPath(KantoBridge.MOD_ID, "block/invisible"));
 
 	private final CarrierKind kind;
 	private final int slot;
@@ -44,6 +48,6 @@ final class TileUnbakedModel implements UnbakedModel {
 
 	@Override
 	public @Nullable BakedModel bake(ModelBaker baker, Function<Material, TextureAtlasSprite> sprites, ModelState state) {
-		return new TileBakedModel(this.kind, this.slot, sprites.apply(PLACEHOLDER_MATERIAL));
+		return new TileBakedModel(this.kind, this.slot, sprites.apply(PLACEHOLDER_MATERIAL), sprites.apply(INVISIBLE_MATERIAL));
 	}
 }
