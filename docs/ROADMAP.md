@@ -150,6 +150,14 @@ with one gate (a chunk-generator subclass, the project's first access widener, r
 answers to D1–D9, D16 and D17 (`:8660-8676`), the footprint and edge numbers the builder doesn't report yet, the
 experiments E1–E12 (`:8972-8983`), and a firm spec in `docs/specs/`, as the voxel and profile plans had.
 
+**Update (2026-10-09):** [specs/VANILLA_WORLD_PLAN.md](specs/VANILLA_WORLD_PLAN.md) proposes the first step from your
+brief of that day. Not decided yet:
+- every interior moves into one custom dimension;
+- Kanto sits contained in pre-generated vanilla land behind a buffer zone;
+- spikes S1–S9 on the RunPod pod come first, then milestones W1–W5.
+
+It replaces M11a's generator and leaves the gates and the rules by zone for later.
+
 ### Stage 8: regions and Johto
 
 After M14 ([NEXT_STAGES.md](NEXT_STAGES.md) §5): a Gen 2 bridge, a generation-neutral protocol (species up to 1,025,
