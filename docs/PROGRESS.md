@@ -1331,6 +1331,13 @@ Route 22: none. Over the 36 outdoor maps, 2,586 of 14,797 solid cells were units
        average ≤ 30.5.
 
      After the fixes, `test_perf` passed 6 of 6 runs.
+111. **`ReconnectFakeGen1IntegrationTest` had a timing race:** it dropped the link right after handing
+     `save.done` to the client, which sends on its writer thread. When fake_gen1 took the `drop`
+     first, the answer was lost (as it may be in play: `save.done` is log-only for gen1-bridge,
+     which doesn't ask again), and the last check failed. The test now waits for fake_gen1 to
+     count `save.done` before the drop. Found on a Linux pod: it failed once in a full check,
+     while the GameTest server started alongside. With every core kept busy, the old test failed
+     13 of 30 runs and the fixed one passed 20 of 20.
 
 ## Open issues
 

@@ -213,6 +213,9 @@ class ReconnectFakeGen1IntegrationTest {
 			done.addProperty("save", begin.get("save").getAsString());
 			done.addProperty("ok", true);
 			saves.fromServer(new Envelope(MsgTypes.SAVE_DONE, ++this.serverSeq, null, done), clock.millis());
+			// fake_gen1 must read the answer before the drop: the client sends on its writer thread, and an answer
+			// still on its way when the link drops is lost (save.done is log-only; gen1-bridge doesn't ask again).
+			assertTrue(awaitCounts(fake, "save.done=1").contains("save.done=1"), "the hidden game got the save's answer");
 
 			// Gen1Recomp drops the link: the client reconnects, binds again, and the new save.loaded goes up.
 			fake.command("drop");
