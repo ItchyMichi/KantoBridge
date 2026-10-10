@@ -1,7 +1,8 @@
 # Research: generated routes and dungeons between Kanto's spaces
 
-- **Status:** research for your brief of 2026-10-10. Nothing is built and nothing is decided. A plan follows once
-  you've made the choices in §11.
+- **Status:** research for your brief of 2026-10-10. Nothing is built. You made the choices in §11 the same day; the
+  plan that follows from them is [WILD_ROUTES_PLAN.md](../specs/WILD_ROUTES_PLAN.md). Where the two differ (no away
+  hold, route maps in the hidden game, one long route per R5), the plan wins.
 - **Replaces** the vanilla-world line of work. `docs/specs/VANILLA_WORLD_PLAN.md` (commit 9f82234) stays in the repo
   for reference only.
 - **Sources:**
