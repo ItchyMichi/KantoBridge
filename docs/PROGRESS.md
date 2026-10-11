@@ -591,7 +591,7 @@ RunPod budget and stop after each job; each phase runs its own tests, the full s
 | WR2 | The exit and the route map | **done**; checkpoint: pytest and JUnit green, GameTests wait for the pod (note 9) | 2026-10-11 | |
 | WR3 | Building the zone | done; GameTest and C2 run on the server | 2026-10-11 | 0a7ed03, dd5843f |
 | WR4 | Moving through the zone | done; warp GameTest passes; check C5 needs a client | 2026-10-11 | 571a68b |
-| WR5 | Trainers and items | done here; the end-to-end session needs your PC | 2026-10-11 | 6d63160, 198600d, (this) |
+| WR5 | Trainers and items | done here; the end-to-end session needs your PC | 2026-10-11 | 6d63160, 198600d, 548c2e8 |
 | WR6 | Wild Pokémon | | | |
 | WR7 | Dungeons | | | |
 | WR8 | Content and play-test | | | |
@@ -631,7 +631,7 @@ RunPod budget and stop after each job; each phase runs its own tests, the full s
    route map the culling area is the zone's box); `ZoneRuntime` forwards `route.*` between server and gen1-bridge
    (answers carry the server's own seq as `re`) and sends `route.give` for a ball in front of the player or a clicked
    ball puppet.
-3. **Trainers** (this commit): new message `route.sight` (S→C). The server (`ZoneService`, `ZoneEncounters`) checks Gen 1
+3. **Trainers** (`548c2e8`): new message `route.sight` (S→C). The server (`ZoneService`, `ZoneEncounters`) checks Gen 1
    sight every tick for free players in a zone; the client shows "!", holds the player and walks the puppet up
    (`WalkUps`); then `route.battle` with the party and a line (`data/kantobridge/wild_routes/lines.json`, our own text,
    at most 18 characters until check C6 shows how the engine wraps literal text). A win keeps the trainer quiet until
