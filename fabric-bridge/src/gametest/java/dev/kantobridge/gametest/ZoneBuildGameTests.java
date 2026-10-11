@@ -102,8 +102,8 @@ public class ZoneBuildGameTests implements FabricGameTest {
 			Vec3 x1 = index.toBlock("KB_ROUTE_TEST_ZONE", 1, 0);
 			helper.assertTrue(player.position().distanceTo(x1) < 0.01, "not on x1");
 			helper.assertTrue(index.zoneAt(player.getBlockX(), player.getBlockZ()) != null, "x1 isn't inside the zone's box");
-			BlockPos under = player.blockPosition().below();
-			helper.assertTrue(level.getBlockState(under).isSolidRender(level, under), "nothing to stand on at x1");
+			BlockPos under = BlockPos.containing(x1.x, ZonePlan.FLOOR, x1.z);
+			helper.assertTrue(!level.getBlockState(under).getCollisionShape(level, under).isEmpty(), "nothing to stand on at x1");
 			WarpService.Result back = WarpService.teleport(player, index, new Place("TEST_TOWN", 5, 8, Dir.DOWN));
 			helper.assertTrue(back.refusal() == null && index.zoneAt(player.getBlockX(), player.getBlockZ()) == null,
 					"the warp back didn't leave the zone");
@@ -127,7 +127,8 @@ public class ZoneBuildGameTests implements FabricGameTest {
 				BlockPos floor = new BlockPos(b[0], ZonePlan.FLOOR, b[1]);
 				BlockPos feet = floor.above();
 				if (role.walkable()) {
-					helper.assertTrue(level.getBlockState(floor).isSolidRender(level, floor), "no solid floor at " + x + "," + y);
+					// a dirt path is 15/16 high: something to stand on, not a full cube
+					helper.assertTrue(!level.getBlockState(floor).getCollisionShape(level, floor).isEmpty(), "no floor at " + x + "," + y);
 					helper.assertTrue(level.getBlockState(feet).getCollisionShape(level, feet).isEmpty()
 							&& level.getBlockState(feet.above()).isAir(), "no room above " + x + "," + y);
 					walkable++;

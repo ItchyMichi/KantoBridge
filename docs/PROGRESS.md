@@ -589,8 +589,8 @@ RunPod budget and stop after each job; each phase runs its own tests, the full s
 |---|---|---|---|---|
 | WR1 | The generators | **done** (19 JUnit tests, 10,000-seed checks on both generators) | 2026-10-11 | `2627e41` |
 | WR2 | The exit and the route map | **done**; checkpoint: pytest and JUnit green, GameTests wait for the pod (note 9) | 2026-10-11 | |
-| WR3 | Building the zone | done here; its GameTest and C2's second half run at the next pod session | 2026-10-11 | 0a7ed03, dd5843f |
-| WR4 | Moving through the zone | done here; the warp GameTest waits for a pod, check C5 for a client | 2026-10-11 | |
+| WR3 | Building the zone | done; GameTest and C2 run on the server | 2026-10-11 | 0a7ed03, dd5843f |
+| WR4 | Moving through the zone | done; warp GameTest passes; check C5 needs a client | 2026-10-11 | 571a68b |
 | WR5 | Trainers and items | | | |
 | WR6 | Wild Pokémon | | | |
 | WR7 | Dungeons | | | |
@@ -639,6 +639,15 @@ RunPod budget and stop after each job; each phase runs its own tests, the full s
 5. **D8 extended:** rocks stay vanilla boulders, and balls are puppets (WR5), so the prop block comes with the first
    thing that needs a model of its own, the dungeon entrance (WR7). Check C5 (a built zone and the fade at the
    trailhead, seen in a client) needs your PC or the pod under Xvfb.
+6. **GameTests run on the server now**, no pod needed: `./gradlew runGameTest` in a throwaway container capped at
+   2.7 GB (Gradle `-Xmx700m`, the game server at 46% of the cap), about 2 minutes. All 93 pass, including
+   `ZoneBuildGameTests` (the zone built block by block, then warps onto x1 and back). Its first run caught a wrong
+   check in the test itself: a dirt path is 15/16 of a block, so it isn't a full cube, but you stand on it (cells
+   still match: `WorldIndex.toCell` reaches 4 blocks below the feet level).
+7. **C2, second half, measured** (the GameTest, a one-area zone beside the synthetic Kanto): planned in 1.9 s; 631,065
+   blocks in 140 chunks placed in 152 ticks, 9.3 s of placing (about 68,000 blocks a second), longest tick 588 ms
+   (fresh chunks). A full zone (about 2.7 million blocks) is then about 40 s of placing. The long ticks don't matter
+   while a build holds players; a live rebuild would want smaller slices.
 
 ### Wild Routes: WR3 notes
 
