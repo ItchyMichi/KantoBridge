@@ -321,6 +321,9 @@ The client keeps each story cell of the WorldIndex open or closed for its own pl
   differs); an open cell whose built state is water lets only surfers through.
 - **`water` cells:** closed unless the player is surfing (`player.state.surf`).
 - **`boulder_area` cells:** closed where a boulder stands (the live `npc.*` boulders).
+- **`route` cells** (Wild Routes, WR5): a zone's item ball, keyed in its route map's grid, `obj` the ball's id in the
+  zone. Closed until the player's route progress (the snapshot's `routes`, then `route.progress`) lists the ball as
+  taken; the client decides, as for `object` cells.
 - **`story.flags`** reports the diff of `save.flags` every 10 logic steps, when a script ends and on
   a map load; **`story.lit`** reports every dark map while Flash's light holds (or its reset).
 - **Details:** `story.toggles.obj` is the map object's name; `visible` back at the default is reported
@@ -765,7 +768,10 @@ is what the builder writes to `<world>/kantobridge/world_index.json`:
 - (Wild Routes, WR3) the zones: each zone's box of blocks (`x, z, w, d`), the feet level of its floor (`y`), its theme,
   biome and route map. The route map is a `maps` entry of kind `route` placed at the zone's trailhead, so its cells A
   and x1 are the trailhead's; written only in a world that has zones
-  ([specs/WILD_ROUTES_PLAN.md](specs/WILD_ROUTES_PLAN.md) §4.4).
+  ([specs/WILD_ROUTES_PLAN.md](specs/WILD_ROUTES_PLAN.md) §4.4). WR5 adds each zone's `trainers` (`id`, cell `x, y`,
+  `facing`, `sight` in cells, `class`, `sprite`, `party[{species, level}]`) and `balls` (`id`, cell `x, y`, `item`),
+  with `ballSprite`. Their cells are in the route map's grid (A is 0,0, cells may be negative), so `cellOrigin` places
+  them; each ball's cell is also a `route` story cell. Party species are ROM-derived (logs carry counts only).
 
 Clients turn block positions into cells and back with it. The `parts` of `world.index` are slices of
 its JSON text (64 Ki characters each); `hash` is the SHA-256 of the whole text.

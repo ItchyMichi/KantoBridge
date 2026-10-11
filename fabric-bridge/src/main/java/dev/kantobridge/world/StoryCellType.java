@@ -15,7 +15,12 @@ public enum StoryCellType {
 	/** Water: closed unless the player is surfing. */
 	WATER,
 	/** A walkable cell of a map with Strength boulders: closed where a boulder stands. */
-	BOULDER_AREA;
+	BOULDER_AREA,
+	/**
+	 * A Wild Routes item ball (docs/specs/WILD_ROUTES_PLAN.md §4.6): closed until the player's route progress says it
+	 * was taken. Its cell is in the zone's route map's grid; {@code obj} names the ball.
+	 */
+	ROUTE;
 
 	public String id() {
 		return this.name().toLowerCase(Locale.ROOT);

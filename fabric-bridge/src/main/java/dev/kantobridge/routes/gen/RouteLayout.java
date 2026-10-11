@@ -82,6 +82,17 @@ public record RouteLayout(long seed, RouteSpec.Kind kind, String theme, int widt
 		return this.at(cell.x(), cell.y());
 	}
 
+	/** The index of the area whose square holds {@code cell}, or -1 (gates and scenery belong to none). */
+	public int areaOf(Cell cell) {
+		for (int i = 0; i < this.areas.size(); i++) {
+			AreaPlacement a = this.areas.get(i);
+			if (cell.x() >= a.x() && cell.x() < a.x() + AreaGenerator.SIZE && cell.y() >= a.y() && cell.y() < a.y() + AreaGenerator.SIZE) {
+				return i;
+			}
+		}
+		return -1;
+	}
+
 	public boolean inside(Cell cell) {
 		return cell.x() >= 0 && cell.y() >= 0 && cell.x() < this.width && cell.y() < this.height;
 	}

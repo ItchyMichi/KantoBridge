@@ -31,7 +31,19 @@ public final class WorldIndex {
 
 	private static final Set<String> ROOT_FIELDS = Set.of("version", "game", "exportHash", "scale", "maps", "slotMapHash",
 			"storyCells", "habitats", "zones");
-	private static final Set<String> ZONE_FIELDS = Set.of("id", "routeMap", "theme", "x", "y", "z", "w", "d", "biome");
+	private static final Set<String> ZONE_FIELDS = Set.of("id", "routeMap", "theme", "x", "y", "z", "w", "d", "biome", "trainers", "balls",
+			"ballSprite");
+	private static final Set<String> TRAINER_FIELDS = Set.of("id", "x", "y", "facing", "sight", "class", "sprite", "party");
+	private static final Set<String> MEMBER_FIELDS = Set.of("species", "level");
+	private static final Set<String> BALL_FIELDS = Set.of("id", "x", "y", "item");
+	/** A zone's trainer or ball, as its layout names it (protocol defs {@code routeObjectId}), e.g. a2.t1. */
+	public static final java.util.regex.Pattern ZONE_OBJECT_ID = java.util.regex.Pattern.compile("^[a-z0-9][a-z0-9_.-]{0,31}$");
+	/** The farthest a zone trainer sees, in cells. */
+	public static final int MAX_SIGHT = 8;
+	/** The most trainers, and the most balls, one zone lists. */
+	public static final int MAX_ZONE_OBJECTS = 64;
+	/** Zone cells lie within this many cells of the route map's A. */
+	public static final int MAX_ZONE_CELL = 4096;
 	private static final java.util.regex.Pattern ZONE_ID = java.util.regex.Pattern.compile("^[a-z][a-z0-9_]{0,31}$");
 	private static final Set<String> THEMES = Set.of("forest");
 	private static final Set<String> SCALE_FIELDS = Set.of("cellBlocks", "surfaceY", "layerStep");
@@ -58,7 +70,8 @@ public final class WorldIndex {
 	 * @param d the box's depth in blocks (Z)
 	 * @param y the feet level of the zone's walkable floor
 	 */
-	public record Zone(String id, String routeMap, String theme, int x, int y, int z, int w, int d, String biome) {
+	public record Zone(String id, String routeMap, String theme, int x, int y, int z, int w, int d, String biome, List<ZoneTrainer> trainers,
+			List<ZoneBall> balls, @Nullable String ballSprite) {
 		public Zone {
 			Objects.requireNonNull(id, "id");
 			Objects.requireNonNull(routeMap, "routeMap");
@@ -67,11 +80,101 @@ public final class WorldIndex {
 			if (w < 1 || d < 1) {
 				throw new IllegalArgumentException("zone size must be positive");
 			}
+			trainers = List.copyOf(trainers);
+			balls = List.copyOf(balls);
+			if (trainers.size() > MAX_ZONE_OBJECTS || balls.size() > MAX_ZONE_OBJECTS) {
+				throw new IllegalArgumentException("too many zone objects");
+			}
+			Set<String> ids = new java.util.HashSet<>();
+			for (ZoneTrainer t : trainers) {
+				if (!ids.add(t.id())) {
+					throw new IllegalArgumentException("duplicate zone object");
+				}
+			}
+			for (ZoneBall b : balls) {
+				if (!ids.add(b.id())) {
+					throw new IllegalArgumentException("duplicate zone object");
+				}
+			}
+			if (ballSprite != null && !DataReader.SYMBOL.matcher(ballSprite).matches()) {
+				throw new IllegalArgumentException("bad ball sprite");
+			}
+		}
+
+		/** A zone without trainers or balls. */
+		public Zone(String id, String routeMap, String theme, int x, int y, int z, int w, int d, String biome) {
+			this(id, routeMap, theme, x, y, z, w, d, biome, List.of(), List.of(), null);
 		}
 
 		/** True when block column (bx, bz) lies inside the zone's box. */
 		public boolean containsColumn(int bx, int bz) {
 			return bx >= this.x && bx < this.x + this.w && bz >= this.z && bz < this.z + this.d;
+		}
+
+		public @Nullable ZoneTrainer trainer(String trainerId) {
+			for (ZoneTrainer t : this.trainers) {
+				if (t.id().equals(trainerId)) {
+					return t;
+				}
+			}
+			return null;
+		}
+
+		public @Nullable ZoneBall ball(String ballId) {
+			for (ZoneBall b : this.balls) {
+				if (b.id().equals(ballId)) {
+					return b;
+				}
+			}
+			return null;
+		}
+	}
+
+	/** One Pokémon of a zone trainer's party: a species id (ROM-derived, never logged) and its level. */
+	public record PartyMember(String species, int level) {
+		public PartyMember {
+			if (species == null || !DataReader.SYMBOL.matcher(species).matches() || level < 1 || level > 100) {
+				throw new IllegalArgumentException("bad party member");
+			}
+		}
+	}
+
+	/**
+	 * A Wild Routes trainer (docs/specs/WILD_ROUTES_PLAN.md §4.6, WR5).
+	 *
+	 * @param x      its cell in the route map's grid (the trailhead's A is 0, 0), so {@link #cellOrigin} finds it
+	 * @param facing the way it looks
+	 * @param sight  how many cells ahead it sees (its lane is clear that far)
+	 * @param cls    its Gen 1 trainer class, e.g. OPP_YOUNGSTER
+	 * @param sprite its overworld sprite
+	 */
+	public record ZoneTrainer(String id, int x, int y, Dir facing, int sight, String cls, String sprite, List<PartyMember> party) {
+		public ZoneTrainer {
+			party = List.copyOf(party);
+			if (id == null || !ZONE_OBJECT_ID.matcher(id).matches() || Math.abs(x) > MAX_ZONE_CELL || Math.abs(y) > MAX_ZONE_CELL
+					|| facing == null || sight < 1 || sight > MAX_SIGHT || cls == null || !DataReader.SYMBOL.matcher(cls).matches()
+					|| sprite == null || !DataReader.SYMBOL.matcher(sprite).matches() || party.isEmpty() || party.size() > 6) {
+				throw new IllegalArgumentException("bad zone trainer");
+			}
+		}
+
+		/** True when cell (cx, cy) of the route map's grid is in this trainer's sight: straight ahead, within range. */
+		public boolean sees(int cx, int cy) {
+			int dx = cx - this.x;
+			int dy = cy - this.y;
+			int along = dx * this.facing.dx() + dy * this.facing.dy();
+			int across = dx * this.facing.dy() - dy * this.facing.dx();
+			return across == 0 && along >= 1 && along <= this.sight;
+		}
+	}
+
+	/** A Wild Routes item ball (WR5): its cell in the route map's grid and its item. */
+	public record ZoneBall(String id, int x, int y, String item) {
+		public ZoneBall {
+			if (id == null || !ZONE_OBJECT_ID.matcher(id).matches() || Math.abs(x) > MAX_ZONE_CELL || Math.abs(y) > MAX_ZONE_CELL
+					|| item == null || !DataReader.SYMBOL.matcher(item).matches()) {
+				throw new IllegalArgumentException("bad zone ball");
+			}
 		}
 	}
 
@@ -296,6 +399,40 @@ public final class WorldIndex {
 				item.addProperty("w", zone.w());
 				item.addProperty("d", zone.d());
 				item.addProperty("biome", zone.biome());
+				JsonArray trainers = new JsonArray();
+				for (ZoneTrainer t : zone.trainers()) {
+					JsonObject o = new JsonObject();
+					o.addProperty("id", t.id());
+					o.addProperty("x", t.x());
+					o.addProperty("y", t.y());
+					o.addProperty("facing", t.facing().id());
+					o.addProperty("sight", t.sight());
+					o.addProperty("class", t.cls());
+					o.addProperty("sprite", t.sprite());
+					JsonArray party = new JsonArray();
+					for (PartyMember m : t.party()) {
+						JsonObject member = new JsonObject();
+						member.addProperty("species", m.species());
+						member.addProperty("level", m.level());
+						party.add(member);
+					}
+					o.add("party", party);
+					trainers.add(o);
+				}
+				item.add("trainers", trainers);
+				JsonArray balls = new JsonArray();
+				for (ZoneBall b : zone.balls()) {
+					JsonObject o = new JsonObject();
+					o.addProperty("id", b.id());
+					o.addProperty("x", b.x());
+					o.addProperty("y", b.y());
+					o.addProperty("item", b.item());
+					balls.add(o);
+				}
+				item.add("balls", balls);
+				if (zone.ballSprite() != null) {
+					item.addProperty("ballSprite", zone.ballSprite());
+				}
 				zones.add(item);
 			}
 			root.add("zones", zones);
@@ -358,9 +495,34 @@ public final class WorldIndex {
 				if (!THEMES.contains(theme)) {
 					throw new DataException(item.path("theme"), "unknown theme");
 				}
+				List<ZoneTrainer> trainers = new ArrayList<>();
+				for (DataReader t : DataReader.objects(item.array("trainers"), item.path("trainers"))) {
+					t.allowOnly(TRAINER_FIELDS);
+					Dir facing = Dir.byId(t.string("facing"));
+					if (facing == null) {
+						throw new DataException(t.path("facing"), "unknown facing");
+					}
+					List<PartyMember> party = new ArrayList<>();
+					for (DataReader m : DataReader.objects(t.array("party"), t.path("party"))) {
+						m.allowOnly(MEMBER_FIELDS);
+						party.add(new PartyMember(m.string("species", DataReader.SYMBOL), m.integer("level", 1, 100)));
+					}
+					if (party.isEmpty() || party.size() > 6) {
+						throw new DataException(t.path("party"), "a party has 1 to 6 Pokémon");
+					}
+					trainers.add(new ZoneTrainer(t.string("id", ZONE_OBJECT_ID), t.integer("x", -MAX_ZONE_CELL, MAX_ZONE_CELL),
+							t.integer("y", -MAX_ZONE_CELL, MAX_ZONE_CELL), facing, t.integer("sight", 1, MAX_SIGHT), t.string("class", DataReader.SYMBOL),
+							t.string("sprite", DataReader.SYMBOL), party));
+				}
+				List<ZoneBall> balls = new ArrayList<>();
+				for (DataReader b : DataReader.objects(item.array("balls"), item.path("balls"))) {
+					b.allowOnly(BALL_FIELDS);
+					balls.add(new ZoneBall(b.string("id", ZONE_OBJECT_ID), b.integer("x", -MAX_ZONE_CELL, MAX_ZONE_CELL),
+							b.integer("y", -MAX_ZONE_CELL, MAX_ZONE_CELL), b.string("item", DataReader.SYMBOL)));
+				}
 				zones.add(new Zone(item.string("id", ZONE_ID), item.string("routeMap", DataReader.MAP_ID), theme, item.integer("x"),
 						item.integer("y"), item.integer("z"), item.integer("w", 1, Integer.MAX_VALUE), item.integer("d", 1, Integer.MAX_VALUE),
-						item.string("biome", DataReader.RESOURCE_ID)));
+						item.string("biome", DataReader.RESOURCE_ID), trainers, balls, item.optionalString("ballSprite", DataReader.SYMBOL)));
 			}
 		}
 		try {

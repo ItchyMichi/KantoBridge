@@ -49,13 +49,19 @@ class ZonePlanTest {
 
 	private static RouteLayout layout;
 	private static ZonePlan plan;
+	/** Layout cells holding a trainer or a ball (as "x,y"). */
+	private static final Set<String> OCCUPIED = new java.util.HashSet<>();
 
 	@BeforeAll
 	static void plan() {
 		layout = RouteGenerator.generate(RouteSpec.freeRoam(ForestTheme.INSTANCE).withChances(1, 1), 1);
+		ZoneObjects objects = ZoneObjects.make(ZoneObjectsTest.zone("TEST_TOWN", List.of("OPP_TEST")), layout, ZoneObjectsTest.CONTENT,
+				ZoneObjectsTest.TIERS, 1L);
 		// gentle hills: 66..78
 		plan = new ZonePlan("test_zone", "KB_ROUTE_TEST_ZONE", "TEST_PALETTE", layout, 0, 6400,
-				(x, z) -> 72 + (int) Math.round(6 * Math.sin(x / 23.0) * Math.cos(z / 31.0)));
+				(x, z) -> 72 + (int) Math.round(6 * Math.sin(x / 23.0) * Math.cos(z / 31.0)), objects);
+		objects.trainers().forEach(t -> OCCUPIED.add(t.cell().x() + "," + t.cell().y()));
+		objects.balls().forEach(b -> OCCUPIED.add(b.cell().x() + "," + b.cell().y()));
 	}
 
 	/** Every code of one column, by Y. */
@@ -94,7 +100,7 @@ class ZonePlanTest {
 		int checked = 0;
 		for (int y = 0; y < layout.height(); y++) {
 			for (int x = 0; x < layout.width(); x++) {
-				if (!layout.at(x, y).walkable()) {
+				if (!layout.at(x, y).walkable() || OCCUPIED.contains(x + "," + y)) {
 					continue;
 				}
 				for (int[] c : columnsOf(new Cell(x, y))) {
@@ -129,6 +135,58 @@ class ZonePlanTest {
 			}
 		}
 		assertTrue(walls > 500);
+	}
+
+	@Test
+	void trainersStandOnBarriersAndBallsOnTheirStoryCells() {
+		ZoneObjects objects = plan.objects();
+		assertFalse(objects.trainers().isEmpty());
+		assertFalse(objects.balls().isEmpty());
+		for (ZoneObjects.Trainer t : objects.trainers()) {
+			for (int[] c : columnsOf(t.cell())) {
+				Map<Integer, Integer> col = column(plan, c[0], c[1]);
+				assertEquals(ZoneBlock.BARRIER, block(col.get(ZonePlan.FEET)), "a blocker everyone bumps into");
+				assertTrue(WALKABLE_TOPS.contains(block(col.get(ZonePlan.FLOOR))));
+			}
+		}
+		int[] story = new int[objects.balls().size()];
+		for (int i = 0; i < story.length; i++) {
+			story[i] = 100 + i;
+		}
+		for (int i = 0; i < story.length; i++) {
+			for (int[] c : columnsOf(objects.balls().get(i).cell())) {
+				Map<Integer, Integer> col = new HashMap<>();
+				plan.renderColumn((bx, by, bz, code) -> col.put(by, code), c[0], c[1], story);
+				assertEquals(BlockCode.story(100 + i), col.get(ZonePlan.FEET), "the ball's story cell");
+				Integer without = column(plan, c[0], c[1]).get(ZonePlan.FEET);
+				assertTrue(without == null || PASSABLE.contains(block(without)), "no story cell without the table's indices");
+			}
+		}
+	}
+
+	@Test
+	void theIndexListsTrainersAndBallsInTheRouteMapsGrid() {
+		WorldIndex.Zone zone = plan.zone();
+		MapPlacement routeMap = plan.routeMap();
+		assertEquals(plan.objects().trainers().size(), zone.trainers().size());
+		for (int i = 0; i < zone.trainers().size(); i++) {
+			WorldIndex.ZoneTrainer t = zone.trainers().get(i);
+			int[] b = plan.blockOf(plan.objects().trainers().get(i).cell());
+			assertEquals(b[0], routeMap.x() + 2 * t.x(), "the route map's grid lines up with the zone's");
+			assertEquals(b[1], routeMap.z() + 2 * t.y());
+			assertTrue(t.sees(t.x() + t.facing().dx(), t.y() + t.facing().dy()), "the cell in front");
+			assertFalse(t.sees(t.x() - t.facing().dx(), t.y() - t.facing().dy()), "not behind");
+			assertFalse(t.sees(t.x() + t.facing().dx() * (t.sight() + 1), t.y() + t.facing().dy() * (t.sight() + 1)), "not past its sight");
+		}
+		List<dev.kantobridge.world.StoryCellTable.Entry> cells = plan.storyEntries();
+		assertEquals(zone.balls().size(), cells.size());
+		for (int i = 0; i < cells.size(); i++) {
+			WorldIndex.ZoneBall ball = zone.balls().get(i);
+			assertEquals("KB_ROUTE_TEST_ZONE:" + ball.x() + ":" + ball.y(), cells.get(i).key());
+			assertEquals(dev.kantobridge.world.StoryCellType.ROUTE, cells.get(i).type());
+			assertEquals(ball.id(), cells.get(i).obj());
+		}
+		assertEquals("SPRITE_TEST_BALL", zone.ballSprite());
 	}
 
 	@Test
@@ -348,6 +406,54 @@ class ZonePlanTest {
 		assertTrue(WorldPlan.volumesOf(index).stream().anyMatch(b -> b.equals(zone.volume())));
 		// the biome
 		assertTrue(plan.biomeRegions().stream().anyMatch(r -> r.biome().equals(ZonePlan.BIOME)));
+	}
+
+	/** A chunk's codes with story codes replaced by their entries' keys' hashes, so two tables can be compared. */
+	private static Map<Long, String> keyed(ChunkCodes chunk, WorldPlan plan) {
+		Map<Long, String> out = new HashMap<>();
+		for (Map.Entry<Integer, int[]> e : chunk.levels().entrySet()) {
+			int[] codes = e.getValue();
+			for (int i = 0; i < codes.length; i++) {
+				int code = codes[i];
+				out.put(((long) e.getKey() << 16) | i, BlockCode.isStory(code)
+						? BlockCode.kind(code) + "@" + plan.storyCells().entries().get(BlockCode.value(code)).key() : Integer.toString(code));
+			}
+		}
+		return out;
+	}
+
+	@Test
+	void zoneBallsJoinTheStoryTableAndKantosCellsKeepTheirEntries() throws Exception {
+		ExportBundle bundle = ExportBundle.open(TestData.syntheticBundle());
+		WorldPlan base = WorldPlanner.plan(bundle, new WorldPlanner.Options(null, TestData.ORIGIN_X, TestData.ORIGIN_Z, TestData.MIN_BUILD_HEIGHT));
+		WorldPlan plan = BuildTask.withZones(base, new ExportRoutes(List.of(zoneOn("TEST_TOWN"))), 1234L, () -> TerrainSampler.flat(70),
+				TestData.ORIGIN_X, TestData.ORIGIN_Z, ZoneObjectsTest.CONTENT);
+		ZonePlan zone = plan.zones().get(0);
+		int balls = zone.zone().balls().size();
+		assertTrue(balls > 0 && !zone.zone().trainers().isEmpty());
+		assertEquals(base.storyCells().size() + balls, plan.storyCells().size());
+		for (dev.kantobridge.world.StoryCellTable.Entry e : zone.storyEntries()) {
+			assertEquals(e, plan.storyCells().get(e.key()));
+		}
+		// "KB_ROUTE_..." sorts before the synthetic maps, so their entries moved: every story code still names the same cell
+		for (int cx = base.surfaceBox().minX() >> 4; cx <= base.surfaceBox().maxX() >> 4; cx++) {
+			for (int cz = base.surfaceBox().minZ() >> 4; cz <= base.surfaceBox().maxZ() >> 4; cz++) {
+				assertEquals(keyed(base.renderChunk(cx, cz, List.of()), base), keyed(plan.renderChunk(cx, cz, List.of()), plan));
+			}
+		}
+		// a ball's columns carry its story cell; the index round-trips the zone's trainers, balls and story cells
+		WorldIndex.ZoneBall ball = zone.zone().balls().get(0);
+		int bx = zone.routeMap().x() + 2 * ball.x();
+		int bz = zone.routeMap().z() + 2 * ball.y();
+		ChunkCodes chunk = plan.renderChunk(bx >> 4, bz >> 4, List.of());
+		int code = chunk.get(bx, ZonePlan.FEET, bz);
+		assertTrue(BlockCode.isStory(code));
+		assertEquals("KB_ROUTE_TEST_ZONE:" + ball.x() + ":" + ball.y(), plan.storyCells().entries().get(BlockCode.value(code)).key());
+		WorldIndex index = plan.index();
+		WorldIndex back = WorldIndex.fromJson(index.toJson());
+		assertEquals(index.toJson(), back.toJson());
+		assertEquals(zone.zone(), back.zones().get(0));
+		assertEquals(dev.kantobridge.world.StoryCellType.ROUTE, back.storyCells().get(zone.storyEntries().get(0).key()).type());
 	}
 
 	@Test

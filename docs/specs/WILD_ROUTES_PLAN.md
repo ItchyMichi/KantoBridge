@@ -300,6 +300,34 @@ The prototype does all of this (Appendix B). WR1 writes it in Java.
 - **Balls:** clicking one sends `route.give`. If the item went into your bag, the ball disappears, for good.
 - **Lines:** a list in the mod (our own text), chosen by trainer class.
 
+**How WR5 builds it:**
+
+- **One list for client and server:** the builder writes each zone's trainers and balls into its WorldIndex entry.
+  Their cells are in the route map's grid (A is 0,0), so puppets, story cells and the server's sight checks use the
+  index's own cell math.
+  - A trainer: id, cell, facing, sight in cells, class, sprite, and party (species ids and levels).
+  - A ball: id, cell, item. The zone also names the ball's sprite.
+- **Where the values come from (§4.3):**
+  - Parties: from the grass tables of the maps connected to the zone's town, 0–3 levels above the area's highest wild
+    level; 1–2 Pokémon in the first area, 2–3 after it.
+  - Sprites: from the export's map objects, the first object of the same class; the first item ball's sprite.
+  - Items: a tier table in the mod, by area, keeping only items the game's own item list has.
+- **Balls:** each ball's cell is a story cell of a new type, `route`. It's closed for you until your progress says you
+  took the ball, so you bump into it as into Kanto's balls, and another player taking it changes nothing for you. A
+  puppet draws it. Clicking it sends `route.give` straight to your hidden game; the `route.progress` that follows opens
+  the cell and removes the puppet.
+- **Trainers:** puppets drawn from the index, kept beside the hidden game's NPCs, each standing on a solid blocker
+  built into its cell.
+  - The server checks sight each tick for players in a zone: your cell against each trainer's facing and sight. Lanes
+    are clear by construction. Trainers you've beaten on this visit are skipped.
+  - On sight it sends `route.sight {route, id, x, y, frames}` (new): your client holds you still, shows "!" over the
+    trainer and walks it to the cell in front of you. After those frames the server sends `route.battle` with the
+    party and a line.
+- **Relay:** your client forwards `route.give`, `route.battle` and `route.blackout` to the hidden game, and
+  `route.result` and `route.progress` to the server.
+- **Visits:** the server keeps the trainers you've beaten on this visit. The visit ends when your hidden player leaves
+  the route map. The hidden save counts wins (WR2).
+
 ### 4.7 Wild Pokémon
 
 - At build time, each area gets a pool made from the zone's neighbouring pools with its levels (R6, Q5), written next
@@ -419,6 +447,8 @@ The tags are PLAN's: **[L]** gen1-bridge, **[C]** client, **[S]** server, **[B]*
 - **Pod:** about 1 hour.
 
 ### WR5: Trainers and items
+
+In three steps: the data (index, story cells, parties); the relay and balls; then trainers, sight and visits.
 
 - [S] Zone trainers and balls sent to clients; sight; the walk-up; `route.battle` and `route.give`; rematches;
   progress from the snapshot.

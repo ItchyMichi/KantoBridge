@@ -255,7 +255,8 @@ public final class StoryCellTable {
 			if (type == null) {
 				throw new DataException(item.path("type"), "unknown story cell type");
 			}
-			String obj = item.has("obj") ? item.string("obj", DataReader.SYMBOL) : null;
+			// a zone ball's obj is its id in the zone (a2.i1), every other obj a map object's name
+			String obj = item.has("obj") ? item.string("obj", type == StoryCellType.ROUTE ? WorldIndex.ZONE_OBJECT_ID : DataReader.SYMBOL) : null;
 			Swap swap = null;
 			if (item.has("swap")) {
 				DataReader s = item.object("swap").allowOnly(SWAP_FIELDS);

@@ -33,6 +33,13 @@ public final class ZonePlanner {
 	 */
 	public static List<ZonePlan> plan(ExportRoutes routes, long worldSeed, ZoneRegions regions, TerrainSampler terrain,
 			Function<String, String> paletteOf) {
+		return plan(routes, worldSeed, regions, terrain, paletteOf, ZoneContent.EMPTY);
+	}
+
+	/** {@link #plan} with trainers and balls made from {@code content} (WR5). */
+	public static List<ZonePlan> plan(ExportRoutes routes, long worldSeed, ZoneRegions regions, TerrainSampler terrain,
+			Function<String, String> paletteOf, ZoneContent content) {
+		ZoneObjects.ItemTiers tiers = ZoneObjects.ItemTiers.bundled();
 		List<ExportRoutes.Zone> zones = new ArrayList<>(routes.zones());
 		zones.sort(Comparator.comparing(ExportRoutes.Zone::id));
 		List<ZonePlan> out = new ArrayList<>();
@@ -40,7 +47,8 @@ public final class ZonePlanner {
 			ExportRoutes.Zone zone = zones.get(i);
 			RouteLayout layout = RouteGenerator.generate(specOf(zone), RouteSeeds.forRoute(worldSeed, zone.id()));
 			int[] slot = regions.slotOrigin(i);
-			out.add(new ZonePlan(zone.id(), zone.routeMap(), paletteOf.apply(zone.townMap()), layout, slot[0], slot[1], terrain));
+			ZoneObjects objects = ZoneObjects.make(zone, layout, content, tiers, worldSeed);
+			out.add(new ZonePlan(zone.id(), zone.routeMap(), paletteOf.apply(zone.townMap()), layout, slot[0], slot[1], terrain, objects));
 		}
 		return out;
 	}

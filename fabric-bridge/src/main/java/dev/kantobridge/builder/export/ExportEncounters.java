@@ -8,6 +8,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
+import org.jetbrains.annotations.Nullable;
 
 /**
  * The wild encounter tables (protocol/export/encounters.schema.json): the ten slot thresholds out of 256 and each map's
@@ -22,8 +23,14 @@ public record ExportEncounters(List<Integer> buckets, Map<String, Table> grass) 
 	public static final int SLOTS = 10;
 	public static final int ROLL = 256;
 
-	/** One slot of a table: a species by national dex number at one level. */
-	public record Slot(int dex, int level) {
+	/**
+	 * One slot of a table: a species by national dex number at one level, and the hidden game's own id for it (Wild
+	 * Routes trainers' parties name species that way; null in tables made without one).
+	 */
+	public record Slot(int dex, int level, @Nullable String species) {
+		public Slot(int dex, int level) {
+			this(dex, level, null);
+		}
 	}
 
 	/** A table: the encounter rate out of 256 per step, and its slots in slot order. */
@@ -72,7 +79,8 @@ public record ExportEncounters(List<Integer> buckets, Map<String, Table> grass) 
 			}
 			List<Slot> slots = new ArrayList<>();
 			for (DataReader slot : DataReader.objects(table.array("slots"), table.path("slots"))) {
-				slots.add(new Slot(slot.integer("dex", 1, GenOneIds.MAX_DEX), slot.integer("level", 1, 100)));
+				slots.add(new Slot(slot.integer("dex", 1, GenOneIds.MAX_DEX), slot.integer("level", 1, 100),
+						slot.has("species") ? slot.string("species", DataReader.SYMBOL) : null));
 			}
 			if (slots.isEmpty() || slots.size() > SLOTS) {
 				throw new DataException(table.path("slots"), "needs 1-10 slots");

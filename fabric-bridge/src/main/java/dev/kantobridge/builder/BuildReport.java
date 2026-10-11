@@ -51,9 +51,14 @@ public final class BuildReport {
 	public int lightBlocks;
 	public int habitatBlocks;
 	public int pools;
-	/** Wild Routes (WR3): zones built, their scenery trees and walkable cells, and the time their planning took. */
+	/**
+	 * Wild Routes (WR3): zones built, their scenery trees and walkable cells, and the time their planning took; WR5: their
+	 * trainers and item balls.
+	 */
 	public int zones;
 	public int zoneTrees;
+	public int zoneTrainers;
+	public int zoneBalls;
 	public int zoneWalkableCells;
 	public long zonePlanMs;
 	public int warnings;
@@ -180,6 +185,8 @@ public final class BuildReport {
 		out.addProperty("pools", this.pools);
 		out.addProperty("zones", this.zones);
 		out.addProperty("zone_trees", this.zoneTrees);
+		out.addProperty("zone_trainers", this.zoneTrainers);
+		out.addProperty("zone_balls", this.zoneBalls);
 		out.addProperty("zone_walkable_cells", this.zoneWalkableCells);
 		out.addProperty("zone_plan_ms", this.zonePlanMs);
 		out.addProperty("warnings", this.warnings);

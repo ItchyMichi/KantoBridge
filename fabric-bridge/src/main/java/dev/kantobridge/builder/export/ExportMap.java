@@ -63,13 +63,24 @@ public record ExportMap(String id, int index, String tileset, int width, int hei
 
 	/** A map object; {@code movement} is {@code WALK} or {@code STAY}; exactly one payload or none. */
 	public record MapObject(int index, String name, String sprite, int x, int y, String movement, String range, boolean hidden,
-			@Nullable String item, boolean trainer, boolean pokemon) {
+			@Nullable String item, boolean trainer, boolean pokemon, @Nullable String trainerClass) {
+		/** An object whose trainer class isn't known (only whether it is a trainer). */
+		public MapObject(int index, String name, String sprite, int x, int y, String movement, String range, boolean hidden,
+				@Nullable String item, boolean trainer, boolean pokemon) {
+			this(index, name, sprite, x, y, movement, range, hidden, item, trainer, pokemon, null);
+		}
+
 		public boolean stays() {
 			return "STAY".equals(this.movement);
 		}
 	}
 
 	private static final Pattern WARP_TARGET = Pattern.compile("^([A-Z0-9_]{1,64}|LAST_MAP)$");
+
+	/** A trainer object's class ({@code trainer.cls}), or null when the record doesn't name one. */
+	private static @Nullable String trainerClass(DataReader trainer) throws DataException {
+		return trainer.has("cls") ? trainer.string("cls", DataReader.SYMBOL) : null;
+	}
 
 	public ExportMap {
 		connections = Collections.unmodifiableMap(connections);
@@ -148,7 +159,7 @@ public record ExportMap(String id, int index, String tileset, int width, int hei
 			objects.add(new MapObject(o.integer("index", 1, 255), o.string("name", DataReader.SYMBOL),
 					o.string("sprite", DataReader.SYMBOL), o.integer("x", -4096, 4096), o.integer("y", -4096, 4096), movement,
 					o.string("range", DataReader.SYMBOL), o.bool("hidden"), o.has("item") ? o.string("item", DataReader.SYMBOL) : null,
-					o.has("trainer"), o.has("pokemon")));
+					o.has("trainer"), o.has("pokemon"), o.has("trainer") ? trainerClass(o.object("trainer")) : null));
 		}
 		JsonArray rows = r.array("cells");
 		int cellWidth = width * 2;

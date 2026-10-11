@@ -6,11 +6,19 @@ import dev.kantobridge.builder.plan.WorldPlan;
 import dev.kantobridge.routes.gen.Cell;
 import dev.kantobridge.routes.gen.CellRole;
 import dev.kantobridge.routes.gen.RouteLayout;
+import dev.kantobridge.world.CellPos;
 import dev.kantobridge.world.MapPlacement;
 import dev.kantobridge.world.Scale;
+import dev.kantobridge.world.StoryCellTable;
+import dev.kantobridge.world.StoryCellType;
 import dev.kantobridge.world.WorldIndex;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import org.jetbrains.annotations.Nullable;
 
 /**
  * One Wild Routes zone, planned (docs/specs/WILD_ROUTES_PLAN.md §4.4, the forest theme): its generated layout placed
@@ -74,6 +82,10 @@ public final class ZonePlan {
 	private final Map<Long, Tree> trees = new HashMap<>();
 	private final MapPlacement routeMap;
 	private final WorldIndex.Zone zone;
+	private final ZoneObjects objects;
+	/** Layout cells (as {@link #cellKey}) holding a trainer, and the ball index of each ball's cell. */
+	private final Set<Long> trainerCells = new HashSet<>();
+	private final Map<Long, Integer> ballCells = new HashMap<>();
 
 	/**
 	 * @param id       the zone's id
@@ -85,7 +97,18 @@ public final class ZonePlan {
 	 * @param terrain  the land's height
 	 */
 	public ZonePlan(String id, String routeMap, String palette, RouteLayout layout, int slotX, int slotZ, TerrainSampler terrain) {
+		this(id, routeMap, palette, layout, slotX, slotZ, terrain, ZoneObjects.NONE);
+	}
+
+	/**
+	 * A zone with its trainers and balls (WR5): each trainer stands on a barrier (a blocker shared by everyone), each ball
+	 * on a story cell (closed for each player until they take it); the WorldIndex entry lists both in the route map's
+	 * grid.
+	 */
+	public ZonePlan(String id, String routeMap, String palette, RouteLayout layout, int slotX, int slotZ, TerrainSampler terrain,
+			ZoneObjects objects) {
 		this.id = id;
+		this.objects = objects;
 		this.layout = layout;
 		this.width = Scale.cellToBlock(layout.width()) + 2 * PAD;
 		this.depth = Scale.cellToBlock(layout.height()) + 2 * PAD;
@@ -107,7 +130,41 @@ public final class ZonePlan {
 		Cell door = layout.trailhead().routeMapCells().get(0);
 		this.routeMap = new MapPlacement(routeMap, this.layoutX0 + Scale.cellToBlock(door.x()), FEET,
 				this.layoutZ0 + Scale.cellToBlock(door.y()), 2, 2, 0, MapPlacement.Kind.ROUTE, palette, BIOME, false, null);
-		this.zone = new WorldIndex.Zone(id, routeMap, THEME, this.x0, FEET, this.z0, this.width, this.depth, BIOME);
+		List<WorldIndex.ZoneTrainer> trainers = new ArrayList<>();
+		for (ZoneObjects.Trainer t : objects.trainers()) {
+			trainers.add(new WorldIndex.ZoneTrainer(t.id(), t.cell().x() - door.x(), t.cell().y() - door.y(), t.facing(), t.sight(), t.cls(),
+					t.sprite(), t.party()));
+			this.trainerCells.add(cellKey(t.cell().x(), t.cell().y()));
+		}
+		List<WorldIndex.ZoneBall> balls = new ArrayList<>();
+		for (int i = 0; i < objects.balls().size(); i++) {
+			ZoneObjects.Ball b = objects.balls().get(i);
+			balls.add(new WorldIndex.ZoneBall(b.id(), b.cell().x() - door.x(), b.cell().y() - door.y(), b.item()));
+			this.ballCells.put(cellKey(b.cell().x(), b.cell().y()), i);
+		}
+		this.zone = new WorldIndex.Zone(id, routeMap, THEME, this.x0, FEET, this.z0, this.width, this.depth, BIOME, trainers, balls,
+				objects.ballSprite());
+	}
+
+	private static long cellKey(int cx, int cy) {
+		return ((long) cx << 32) ^ (cy & 0xFFFFFFFFL);
+	}
+
+	/** The zone's trainers and balls, at layout cells. */
+	public ZoneObjects objects() {
+		return this.objects;
+	}
+
+	/**
+	 * The story cells of the zone's balls (type {@code route}), keyed in the route map's grid, in ball order. The world's
+	 * plan adds them to its table ({@link WorldPlan#withZones}).
+	 */
+	public List<StoryCellTable.Entry> storyEntries() {
+		List<StoryCellTable.Entry> out = new ArrayList<>();
+		for (WorldIndex.ZoneBall b : this.zone.balls()) {
+			out.add(new StoryCellTable.Entry(new CellPos(this.routeMap.id(), b.x(), b.y()), StoryCellType.ROUTE, b.id(), null));
+		}
+		return out;
 	}
 
 	public String id() {
@@ -159,11 +216,31 @@ public final class ZonePlan {
 
 	// ---- rendering ----
 
-	/** Writes block column (x, z) of the zone's box (outside the box, nothing). */
+	/** Writes block column (x, z) of the zone's box (outside the box, nothing), without its balls' story cells. */
 	public void renderColumn(WorldPlan.CodeSink sink, int x, int z) {
+		this.renderColumn(sink, x, z, null);
+	}
+
+	/**
+	 * Writes block column (x, z) of the zone's box (outside the box, nothing). {@code ballStory} gives each ball's index in
+	 * the world's story-cell table (by ball order), or is null for none.
+	 */
+	public void renderColumn(WorldPlan.CodeSink sink, int x, int z, int @Nullable [] ballStory) {
 		if (x < this.x0 || z < this.z0 || x >= this.x0 + this.width || z >= this.z0 + this.depth) {
 			return;
 		}
+		this.renderRole(sink, x, z);
+		long key = cellKey(Math.floorDiv(x - this.layoutX0, Scale.CELL_BLOCKS), Math.floorDiv(z - this.layoutZ0, Scale.CELL_BLOCKS));
+		if (this.trainerCells.contains(key)) {
+			sink.set(x, FEET, z, BlockCode.vanilla(ZoneBlock.BARRIER));
+		}
+		Integer ball = this.ballCells.get(key);
+		if (ball != null && ballStory != null && ballStory[ball] >= 0) {
+			sink.set(x, FEET, z, BlockCode.story(ballStory[ball]));
+		}
+	}
+
+	private void renderRole(WorldPlan.CodeSink sink, int x, int z) {
 		CellRole role = this.roleAt(x, z);
 		switch (role) {
 			case SCENERY -> this.scenery(sink, x, z);

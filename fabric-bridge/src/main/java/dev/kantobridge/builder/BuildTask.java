@@ -21,6 +21,7 @@ import dev.kantobridge.builder.shape.ShapePlanner;
 import dev.kantobridge.builder.shape.ShapeReport;
 import dev.kantobridge.builder.zone.TerrainSampler;
 import dev.kantobridge.builder.zone.VanillaTerrain;
+import dev.kantobridge.builder.zone.ZoneContent;
 import dev.kantobridge.builder.zone.ZonePlan;
 import dev.kantobridge.builder.zone.ZonePlanner;
 import dev.kantobridge.builder.zone.ZoneRegions;
@@ -179,9 +180,11 @@ public final class BuildTask {
 			// Wild Routes (WR3, docs/specs/WILD_ROUTES_PLAN.md §4.4): the zones the export lists, each in its slot on the
 			// vanilla overworld's land for this world's seed. A zone whose town isn't in this build is left out.
 			long zoneStarted = System.nanoTime();
-			WorldPlan plan = withZones(planned, this.bundle.routes(), this.level.getSeed(),
+			ExportRoutes routes = this.bundle.routes();
+			List<String> towns = routes.zones().stream().map(ExportRoutes.Zone::townMap).toList();
+			WorldPlan plan = withZones(planned, routes, this.level.getSeed(),
 					() -> VanillaTerrain.of(this.level.getServer().registryAccess(), this.level.getSeed()), this.options.originX(),
-					this.options.originZ());
+					this.options.originZ(), routes.zones().isEmpty() ? ZoneContent.EMPTY : ZoneContent.of(this.bundle, towns));
 			long zoneMs = (System.nanoTime() - zoneStarted) / 1_000_000L;
 			long packStarted = System.nanoTime();
 			ResourcePackWriter.Result pack = this.options.writePack() ? ResourcePackWriter.write(plan, this.bundle, this.packDir, plan.warnings())
@@ -204,13 +207,20 @@ public final class BuildTask {
 		}
 	}
 
-	/**
-	 * {@code plan} with the export's zones (Wild Routes, WR3): planned in id order into slots south of Kanto, on the
-	 * land {@code terrain} describes (made only when there are zones to plan). A zone whose town map isn't placed in
-	 * this build (a filtered build) is left out, with a warning.
-	 */
+	/** {@link #withZones} without trainers or balls. */
 	public static WorldPlan withZones(WorldPlan plan, ExportRoutes routes, long seed, java.util.function.Supplier<TerrainSampler> terrain,
 			int originX, int originZ) {
+		return withZones(plan, routes, seed, terrain, originX, originZ, ZoneContent.EMPTY);
+	}
+
+	/**
+	 * {@code plan} with the export's zones (Wild Routes, WR3): planned in id order into slots south of Kanto, on the
+	 * land {@code terrain} describes (made only when there are zones to plan), with trainers and balls from
+	 * {@code content} (WR5). A zone whose town map isn't placed in this build (a filtered build) is left out, with a
+	 * warning.
+	 */
+	public static WorldPlan withZones(WorldPlan plan, ExportRoutes routes, long seed, java.util.function.Supplier<TerrainSampler> terrain,
+			int originX, int originZ, ZoneContent content) {
 		if (routes.zones().isEmpty()) {
 			return plan;
 		}
@@ -227,7 +237,7 @@ public final class BuildTask {
 		}
 		ZoneRegions regions = ZoneRegions.of(plan.surfaceBox(), originX, originZ);
 		List<ZonePlan> zones = ZonePlanner.plan(new ExportRoutes(kept), seed, regions, terrain.get(),
-				town -> plan.index().map(town).palette());
+				town -> plan.index().map(town).palette(), content);
 		return plan.withZones(zones);
 	}
 
@@ -434,6 +444,8 @@ public final class BuildTask {
 		r.pools = plan.pools().size();
 		r.zones = plan.zones().size();
 		r.zoneTrees = plan.zones().stream().mapToInt(ZonePlan::trees).sum();
+		r.zoneTrainers = plan.zones().stream().mapToInt(z -> z.zone().trainers().size()).sum();
+		r.zoneBalls = plan.zones().stream().mapToInt(z -> z.zone().balls().size()).sum();
 		r.zoneWalkableCells = plan.zones().stream().mapToInt(z -> z.layout().stats().walkable()).sum();
 		r.zonePlanMs = this.prepared.zoneMs();
 		ResourcePackWriter.Result pack = this.prepared.pack();

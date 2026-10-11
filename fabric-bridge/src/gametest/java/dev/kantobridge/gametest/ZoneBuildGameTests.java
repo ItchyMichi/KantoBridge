@@ -8,7 +8,10 @@ import dev.kantobridge.builder.export.ExportRoutes;
 import dev.kantobridge.builder.place.BlockPlacer;
 import dev.kantobridge.builder.plan.WorldPlan;
 import dev.kantobridge.builder.plan.WorldPlanner;
+import dev.kantobridge.block.StoryCellBlockEntity;
 import dev.kantobridge.builder.zone.VanillaTerrain;
+import dev.kantobridge.builder.zone.ZoneContent;
+import dev.kantobridge.builder.zone.ZoneObjects;
 import dev.kantobridge.builder.zone.ZonePlan;
 import dev.kantobridge.routes.gen.Cell;
 import dev.kantobridge.routes.gen.CellRole;
@@ -64,9 +67,17 @@ public class ZoneBuildGameTests implements FabricGameTest {
 		} catch (BundleException | dev.kantobridge.builder.plan.PlanException e) {
 			throw new GameTestAssertException("the synthetic plan failed: " + e.getClass().getSimpleName());
 		}
-		ExportRoutes routes = new ExportRoutes(List.of(new ExportRoutes.Zone("test_zone", "TEST WILDS", "free_roam", "forest", "TEST_TOWN",
-				"KB_ROUTE_TEST_ZONE", 1, 1, 0.0, 0, 1, List.of(), 1, 3, 1.0)));
-		WorldPlan plan = BuildTask.withZones(base, routes, SEED, () -> VanillaTerrain.of(level.registryAccess(), SEED), ORIGIN_X, ORIGIN_Z);
+		// off TEST_HILL, whose neighbour TEST_TOWN has a grass table: trainers get parties from it (WR5)
+		ExportRoutes routes = new ExportRoutes(List.of(new ExportRoutes.Zone("test_zone", "TEST WILDS", "free_roam", "forest", "TEST_HILL",
+				"KB_ROUTE_TEST_ZONE", 1, 1, 0.0, 1, 3, List.of("OPP_TEST"), 1, 3, 1.0)));
+		ZoneContent content;
+		try {
+			content = ZoneContent.of(bundle, List.of("TEST_HILL"));
+		} catch (BundleException e) {
+			throw new GameTestAssertException("the synthetic content failed: " + e.code());
+		}
+		WorldPlan plan = BuildTask.withZones(base, routes, SEED, () -> VanillaTerrain.of(level.registryAccess(), SEED), ORIGIN_X, ORIGIN_Z,
+				content);
 		long planMs = (System.nanoTime() - t0) / 1_000_000L;
 		helper.assertTrue(plan.zones().size() == 1, "the zone wasn't planned");
 		BlockPlacer placer = new BlockPlacer(level, plan, List.of());
@@ -117,12 +128,31 @@ public class ZoneBuildGameTests implements FabricGameTest {
 		helper.assertTrue(trailhead.is(Blocks.DIRT_PATH) || trailhead.is(Blocks.GRASS_BLOCK), "the trailhead's A has no floor");
 		helper.assertTrue(level.getBlockState(new BlockPos(routeMap.x() + 2, ZonePlan.FEET, routeMap.z())).getCollisionShape(level,
 				new BlockPos(routeMap.x() + 2, ZonePlan.FEET, routeMap.z())).isEmpty(), "x1 is blocked");
+		// WR5: trainers stand on barriers; balls on story cells that know their key
+		java.util.Set<Cell> occupied = new java.util.HashSet<>();
+		helper.assertTrue(!zone.objects().trainers().isEmpty() && !zone.objects().balls().isEmpty(), "no trainers or balls");
+		for (ZoneObjects.Trainer t : zone.objects().trainers()) {
+			int[] b = zone.blockOf(t.cell());
+			helper.assertTrue(level.getBlockState(new BlockPos(b[0], ZonePlan.FEET, b[1])).is(Blocks.BARRIER), "a trainer without its blocker");
+			occupied.add(t.cell());
+		}
+		for (int i = 0; i < zone.objects().balls().size(); i++) {
+			ZoneObjects.Ball ball = zone.objects().balls().get(i);
+			int[] b = zone.blockOf(ball.cell());
+			String key = zone.storyEntries().get(i).key();
+			helper.assertTrue(level.getBlockEntity(new BlockPos(b[0], ZonePlan.FEET, b[1])) instanceof StoryCellBlockEntity cell
+					&& key.equals(cell.cellKey()), "a ball without its story cell");
+			occupied.add(ball.cell());
+		}
 		int walkable = 0;
 		int hedges = 0;
 		int ponds = 0;
 		for (int y = 0; y < layout.height(); y++) {
 			for (int x = 0; x < layout.width(); x++) {
 				CellRole role = layout.at(x, y);
+				if (occupied.contains(new Cell(x, y))) {
+					continue;
+				}
 				int[] b = zone.blockOf(new Cell(x, y));
 				BlockPos floor = new BlockPos(b[0], ZonePlan.FLOOR, b[1]);
 				BlockPos feet = floor.above();

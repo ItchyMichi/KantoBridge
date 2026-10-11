@@ -13,6 +13,7 @@ import dev.kantobridge.world.StoryCellType;
 import dev.kantobridge.world.WorldIndex;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeSet;
@@ -96,6 +97,8 @@ public final class WorldPlan {
 	private final @Nullable ShapePlan shapes;
 	/** Wild Routes zones (docs/specs/WILD_ROUTES_PLAN.md §4.4); empty unless {@link #withZones} added some. */
 	private final List<ZonePlan> zones;
+	/** Each zone's balls' indices in {@link #storyCells}, by zone, then ball order. */
+	private final List<int[]> zoneBallStory;
 
 	WorldPlan(String game, String exportHash, int originX, int originZ, List<PlacedMap> maps, @Nullable Box3 surfaceBox, int[] surfaceOwner,
 			boolean[] surfaceVoid, StoryCellTable storyCells, Map<String, int[]> storyIndex, ArtCatalog art, @Nullable Spawn spawn,
@@ -124,6 +127,7 @@ public final class WorldPlan {
 		this.scene = scene;
 		this.shapes = shapes;
 		this.zones = List.of();
+		this.zoneBallStory = List.of();
 		for (Map.Entry<SlotMap.Key, SlotMap.Slot> entry : this.slotMap.slots().entrySet()) {
 			SlotMap.Key key = entry.getKey();
 			TileSlots slots = this.tileSlots.computeIfAbsent(key.atlas() + "|" + key.palette(), k -> new TileSlots());
@@ -131,8 +135,9 @@ public final class WorldPlan {
 		}
 	}
 
-	/** A copy of {@code base} with zones and the index that lists them. */
-	private WorldPlan(WorldPlan base, List<ZonePlan> zones, WorldIndex index) {
+	/** A copy of {@code base} with zones, the story cells their balls joined, and the index that lists them. */
+	private WorldPlan(WorldPlan base, List<ZonePlan> zones, WorldIndex index, StoryCellTable storyCells, Map<String, int[]> storyIndex,
+			List<int[]> zoneBallStory) {
 		this.game = base.game;
 		this.exportHash = base.exportHash;
 		this.originX = base.originX;
@@ -141,8 +146,8 @@ public final class WorldPlan {
 		this.surfaceBox = base.surfaceBox;
 		this.surfaceOwner = base.surfaceOwner;
 		this.surfaceVoid = base.surfaceVoid;
-		this.storyCells = base.storyCells;
-		this.storyIndex = base.storyIndex;
+		this.storyCells = storyCells;
+		this.storyIndex = storyIndex;
 		this.art = base.art;
 		this.slotMap = base.slotMap;
 		this.tileSlots.putAll(base.tileSlots);
@@ -157,6 +162,7 @@ public final class WorldPlan {
 		this.scene = base.scene;
 		this.shapes = base.shapes;
 		this.zones = List.copyOf(zones);
+		this.zoneBallStory = List.copyOf(zoneBallStory);
 	}
 
 	/**
@@ -169,13 +175,39 @@ public final class WorldPlan {
 		}
 		List<MapPlacement> placements = new ArrayList<>(this.index.maps().values());
 		List<WorldIndex.Zone> entries = new ArrayList<>();
+		// WR5: the zones' balls join the story-cell table, which stays sorted, so the maps' cells are pointed at their
+		// entries' new places
+		List<StoryCellTable.Entry> cells = new ArrayList<>(this.storyCells.entries());
 		for (ZonePlan zone : zones) {
 			placements.add(zone.routeMap());
 			entries.add(zone.zone());
+			cells.addAll(zone.storyEntries());
 		}
-		WorldIndex withZones = new WorldIndex(this.game, this.exportHash, placements, this.index.slotMapHash(), this.storyCells,
-				this.index.habitats(), entries);
-		return new WorldPlan(this, zones, withZones);
+		StoryCellTable table = StoryCellTable.of(cells);
+		Map<String, Integer> place = new HashMap<>();
+		for (int i = 0; i < table.size(); i++) {
+			place.put(table.entries().get(i).key(), i);
+		}
+		Map<String, int[]> storyIndex = new HashMap<>();
+		this.storyIndex.forEach((map, old) -> {
+			int[] moved = new int[old.length];
+			for (int i = 0; i < old.length; i++) {
+				moved[i] = old[i] < 0 ? old[i] : place.get(this.storyCells.entries().get(old[i]).key());
+			}
+			storyIndex.put(map, moved);
+		});
+		List<int[]> ballStory = new ArrayList<>();
+		for (ZonePlan zone : zones) {
+			List<StoryCellTable.Entry> balls = zone.storyEntries();
+			int[] at = new int[balls.size()];
+			for (int i = 0; i < at.length; i++) {
+				at[i] = place.get(balls.get(i).key());
+			}
+			ballStory.add(at);
+		}
+		WorldIndex withZones = new WorldIndex(this.game, this.exportHash, placements, this.index.slotMapHash(), table, this.index.habitats(),
+				entries);
+		return new WorldPlan(this, zones, withZones, table, storyIndex, ballStory);
 	}
 
 	/** The plan's Wild Routes zones (empty for a build without any). */
@@ -458,14 +490,16 @@ public final class WorldPlan {
 				}
 			}
 		}
-		for (ZonePlan zone : this.zones) {
+		for (int zi = 0; zi < this.zones.size(); zi++) {
+			ZonePlan zone = this.zones.get(zi);
 			Box3 volume = zone.volume();
 			if (!volume.intersectsChunk(chunkX, chunkZ)) {
 				continue;
 			}
+			int[] ballStory = this.zoneBallStory.get(zi);
 			for (int z = Math.max(z0, volume.minZ()); z < Math.min(z0 + 16, volume.maxZ()); z++) {
 				for (int x = Math.max(x0, volume.minX()); x < Math.min(x0 + 16, volume.maxX()); x++) {
-					zone.renderColumn(out::set, x, z);
+					zone.renderColumn(out::set, x, z, ballStory);
 				}
 			}
 		}

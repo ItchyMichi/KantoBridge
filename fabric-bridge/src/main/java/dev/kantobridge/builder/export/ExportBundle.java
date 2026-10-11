@@ -257,6 +257,35 @@ public final class ExportBundle {
 				: ExportRoutes.empty();
 	}
 
+	/**
+	 * The game's own items that aren't key items (the names resource's {@code items}, by id; their names are never
+	 * read), for Wild Routes' item balls. Empty when the export has no names resource.
+	 */
+	public Set<String> itemIds() throws BundleException {
+		if (!this.has("names", "all")) {
+			return Set.of();
+		}
+		return this.typed("names", "all", ExportBundle::parseItemIds, ItemIds.class).ids();
+	}
+
+	private record ItemIds(Set<String> ids) {
+	}
+
+	private static ItemIds parseItemIds(DataReader r) throws DataException {
+		DataReader items = r.object("items");
+		Set<String> ids = new java.util.TreeSet<>();
+		for (String id : items.json().keySet()) {
+			if (!DataReader.SYMBOL.matcher(id).matches()) {
+				throw new DataException(items.path(), "bad item id");
+			}
+			DataReader item = items.object(id);
+			if (!(item.has("key") && item.bool("key"))) {
+				ids.add(id);
+			}
+		}
+		return new ItemIds(java.util.Collections.unmodifiableSet(ids));
+	}
+
 	/** The field tables the habitat planner reads; empty when the export has no field resource. */
 	public ExportField field() throws BundleException {
 		return this.has("field", "all") ? this.typed("field", "all", ExportField::parse, ExportField.class) : ExportField.empty();

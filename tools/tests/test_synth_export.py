@@ -89,8 +89,23 @@ def test_world_index_schema_accepts_a_synthetic_index():
                                            "palette": "TEST_PALETTE", "biome": "kantobridge:wild_forest", "dark": False,
                                            "parent": None}
     zoned["zones"] = [{"id": "test_zone", "routeMap": "KB_ROUTE_TEST_ZONE", "theme": "forest", "x": 0, "y": 64,
-                       "z": 3200, "w": 620, "d": 600, "biome": "kantobridge:wild_forest"}]
+                       "z": 3200, "w": 620, "d": 600, "biome": "kantobridge:wild_forest",
+                       # WR5: trainers and balls in the route map's grid; each ball is also a story cell of type route
+                       "trainers": [{"id": "a1.t1", "x": 12, "y": -3, "facing": "left", "sight": 4, "class": "OPP_TEST",
+                                     "sprite": "SPRITE_TEST_GUARD", "party": [{"species": "TESTMON_A", "level": 7}]}],
+                       "balls": [{"id": "a1.i1", "x": 20, "y": 5, "item": "POTION"}], "ballSprite": "SPRITE_TEST_BALL"}]
+    zoned["storyCells"].append({"key": "KB_ROUTE_TEST_ZONE:20:5", "type": "route", "obj": "a1.i1"})
     assert not PROTOCOL.check_world_index(zoned)
+    for path, bad in ((("theme",), "cave"), (("trainers", 0, "sight"), 9), (("trainers", 0, "party"), []),
+                      (("balls", 0, "id"), "A1"), (("trainers", 0, "facing"), "north")):
+        broken = json.loads(json.dumps(zoned))
+        target = broken["zones"][0]
+        for key in path[:-1]:
+            target = target[key]
+        target[path[-1]] = bad
+        assert PROTOCOL.check_world_index(broken), path
+    del zoned["zones"][0]["balls"]
+    assert PROTOCOL.check_world_index(zoned), "trainers and balls are required"
     zoned["zones"][0]["theme"] = "cave"
     assert PROTOCOL.check_world_index(zoned)
     index["maps"]["TEST_TOWN"]["kind"] = "outside"

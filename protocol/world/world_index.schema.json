@@ -87,10 +87,10 @@
         "additionalProperties": false,
         "properties": {
           "key": {"$ref": "../defs.schema.json#/$defs/cellKey"},
-          "type": {"enum": ["object", "tile", "water", "boulder_area"]},
+          "type": {"enum": ["object", "tile", "water", "boulder_area", "route"]},
           "obj": {
-            "$ref": "../defs.schema.json#/$defs/objName",
-            "description": "object: the map object (toggle name) standing here."
+            "anyOf": [{"$ref": "../defs.schema.json#/$defs/objName"}, {"$ref": "../defs.schema.json#/$defs/routeObjectId"}],
+            "description": "object: the map object (toggle name) standing here. route (a Wild Routes item ball, keyed in its zone's route map's grid): the ball's id in the zone."
           },
           "swap": {
             "type": "object",
@@ -173,7 +173,7 @@
       "description": "Wild Routes zones (docs/specs/WILD_ROUTES_PLAN.md §4.4), sorted by id; absent in a world built without any. Inside a zone's box the client sends no steps and the drift rule is off.",
       "items": {
         "type": "object",
-        "required": ["id", "routeMap", "theme", "x", "y", "z", "w", "d", "biome"],
+        "required": ["id", "routeMap", "theme", "x", "y", "z", "w", "d", "biome", "trainers", "balls"],
         "additionalProperties": false,
         "properties": {
           "id": {"$ref": "../defs.schema.json#/$defs/routeId"},
@@ -184,7 +184,58 @@
           "z": {"type": "integer", "description": "The box's north-west block Z."},
           "w": {"type": "integer", "minimum": 1, "description": "The box's width in blocks (X)."},
           "d": {"type": "integer", "minimum": 1, "description": "The box's depth in blocks (Z)."},
-          "biome": {"type": "string", "pattern": "^[a-z0-9_.-]+:[a-z0-9_./-]+$"}
+          "biome": {"type": "string", "pattern": "^[a-z0-9_.-]+:[a-z0-9_./-]+$"},
+          "trainers": {
+            "type": "array",
+            "maxItems": 64,
+            "description": "WR5: the zone's trainers. Cells are in the route map's grid (the trailhead's A is 0,0).",
+            "items": {
+              "type": "object",
+              "required": ["id", "x", "y", "facing", "sight", "class", "sprite", "party"],
+              "additionalProperties": false,
+              "properties": {
+                "id": {"$ref": "../defs.schema.json#/$defs/routeObjectId"},
+                "x": {"type": "integer", "minimum": -4096, "maximum": 4096},
+                "y": {"type": "integer", "minimum": -4096, "maximum": 4096},
+                "facing": {"$ref": "../defs.schema.json#/$defs/dir"},
+                "sight": {"type": "integer", "minimum": 1, "maximum": 8, "description": "Cells it sees straight ahead; its lane is clear that far."},
+                "class": {"$ref": "../defs.schema.json#/$defs/symbol", "description": "The Gen 1 trainer class, e.g. OPP_YOUNGSTER."},
+                "sprite": {"$ref": "../defs.schema.json#/$defs/symbol", "description": "Its overworld sprite, from the export's map objects."},
+                "party": {
+                  "type": "array",
+                  "minItems": 1,
+                  "maxItems": 6,
+                  "x-rom-derived": true,
+                  "items": {
+                    "type": "object",
+                    "required": ["species", "level"],
+                    "additionalProperties": false,
+                    "properties": {
+                      "species": {"$ref": "../defs.schema.json#/$defs/symbol"},
+                      "level": {"$ref": "../defs.schema.json#/$defs/level"}
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "balls": {
+            "type": "array",
+            "maxItems": 64,
+            "description": "WR5: the zone's item balls, each also a story cell of type route. Cells are in the route map's grid.",
+            "items": {
+              "type": "object",
+              "required": ["id", "x", "y", "item"],
+              "additionalProperties": false,
+              "properties": {
+                "id": {"$ref": "../defs.schema.json#/$defs/routeObjectId"},
+                "x": {"type": "integer", "minimum": -4096, "maximum": 4096},
+                "y": {"type": "integer", "minimum": -4096, "maximum": 4096},
+                "item": {"$ref": "../defs.schema.json#/$defs/itemId"}
+              }
+            }
+          },
+          "ballSprite": {"$ref": "../defs.schema.json#/$defs/symbol", "description": "WR5: the item ball's overworld sprite; absent when the zone has no balls or the export names none."}
         }
       }
     }
