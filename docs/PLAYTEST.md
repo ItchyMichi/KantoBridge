@@ -699,7 +699,10 @@ A new world (the mod installed and switched off, as for P1).
 ### WR6: wild Pokémon
 
 - [ ] Wild Pokémon appear on the zone's tall grass (Route 1, 2 and 22's species), stronger area by area (up to 3 levels
-      above the first area). Battle and catch them as on Route 1.
+      above the first area). Battle and catch them as on Route 1. They appear 8 to 32 blocks from you, on grass and
+      paths near the tall grass, about 3 to 6 a minute while you stand still, so the hedges often hide them: walk the
+      lanes for a minute or two. (Checked without a person, 2026-10-11: GameTest C3b stands a player in a test zone until
+      Cobblemon's own spawner has spawned 3 Pokémon, all from the zone's pool at its levels; under a minute.)
 - [ ] Lose a battle against a wild Pokémon (in the zone or in Kanto): you black out to the last Pokémon Center, with
       half your money, as in Gen 1.
 

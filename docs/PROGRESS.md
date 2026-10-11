@@ -643,6 +643,16 @@ RunPod budget and stop after each job; each phase runs its own tests, the full s
    tiers stay. Special areas: none yet.
 7. **Pods:** kb-dev's host stayed full, so `kb-dev2` (cpu5c x16, $0.56/hr, same volume) was made with your OK; about
    75 minutes in all, stopped. Since 2026-10-11 you allow creating and starting pods as needed.
+8. **Check C3b, wild Pokémon really spawn** (asked after the video showed none): `ZoneBuildGameTests` now stands a
+   player on the test zone's x1 while Cobblemon's own spawner runs as in a game, until 3 Pokémon spawned (limit 3
+   minutes). Every one must come from the zone's pool, at its levels, on the walking level within a habitat block's
+   reach. It passes (twice in a row): 3 to 6 a minute, 8 to 32 blocks away, mostly on grass and paths near the tall grass, which the
+   hedges hide from a camera on the lanes; the video's half minute in the zone likely just saw none. Two things the
+   test needed, neither a bug in the mod: the GameTest server's view distance is 0, so its mock players are never
+   ticked and Cobblemon (which only spawns when every chunk within 24 blocks of the spot has its entities loaded) never
+   ran; the test keeps 4 chunks around the player loaded, as the recorded run's render distance did. And the test
+   level's land is plains, whose own Pokémon (Sentret, Seviper) spawned at the zone's edge; a real Kanto world's land
+   is `kanto_outdoor` with no Cobblemon spawns of its own, which the test now gives the zone's surroundings too.
 
 ### Wild Routes: WR7 notes
 

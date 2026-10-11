@@ -2,6 +2,11 @@ package dev.kantobridge.gametest;
 
 import com.cobblemon.mod.common.Cobblemon;
 import com.cobblemon.mod.common.CobblemonBlocks;
+import com.cobblemon.mod.common.api.Priority;
+import com.cobblemon.mod.common.api.events.CobblemonEvents;
+import com.cobblemon.mod.common.api.events.entity.SpawnBucketChosenEvent;
+import com.cobblemon.mod.common.api.events.entity.SpawnEvent;
+import com.cobblemon.mod.common.api.reactive.ObservableSubscription;
 import com.cobblemon.mod.common.api.spawning.SpawnCause;
 import com.cobblemon.mod.common.api.spawning.SpawningZone;
 import com.cobblemon.mod.common.api.spawning.detail.PokemonSpawnDetail;
@@ -11,7 +16,14 @@ import com.cobblemon.mod.common.api.spawning.position.calculators.SpawnablePosit
 import com.cobblemon.mod.common.api.spawning.spawner.PlayerSpawner;
 import com.cobblemon.mod.common.api.spawning.spawner.SpawningZoneInput;
 import com.cobblemon.mod.common.block.habitat.HabitatBlockEntity;
+import com.cobblemon.mod.common.entity.pokemon.PokemonEntity;
+import com.cobblemon.mod.common.pokemon.Pokemon;
 import com.cobblemon.mod.common.util.PlayerExtensionsKt;
+import com.cobblemon.mod.common.util.WorldExtensionsKt;
+import com.cobblemon.mod.common.world.gamerules.CobblemonGameRules;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
 import dev.kantobridge.KantoBridge;
 import dev.kantobridge.block.KbBlocks;
 import dev.kantobridge.block.PropBlock;
@@ -20,7 +32,10 @@ import dev.kantobridge.builder.BuildTask;
 import dev.kantobridge.builder.export.BundleException;
 import dev.kantobridge.builder.export.ExportBundle;
 import dev.kantobridge.builder.export.ExportRoutes;
+import dev.kantobridge.builder.place.BiomeWriter;
 import dev.kantobridge.builder.place.BlockPlacer;
+import dev.kantobridge.builder.plan.Box3;
+import dev.kantobridge.builder.plan.HabitatPlanner;
 import dev.kantobridge.builder.plan.WorldPlan;
 import dev.kantobridge.builder.plan.WorldPlanner;
 import dev.kantobridge.builder.zone.VanillaTerrain;
@@ -36,7 +51,15 @@ import dev.kantobridge.world.Dir;
 import dev.kantobridge.world.MapPlacement;
 import dev.kantobridge.world.Place;
 import dev.kantobridge.world.WorldIndex;
+import java.util.EnumMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Queue;
+import java.util.Set;
+import java.util.TreeMap;
+import java.util.TreeSet;
+import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.atomic.AtomicInteger;
 import net.fabricmc.fabric.api.gametest.v1.FabricGameTest;
 import net.minecraft.core.BlockPos;
 import net.minecraft.gametest.framework.GameTest;
@@ -44,9 +67,11 @@ import net.minecraft.gametest.framework.GameTestAssertException;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.LeavesBlock;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 
 /**
@@ -56,7 +81,8 @@ import net.minecraft.world.phys.Vec3;
  * block by block: the trailhead's floor under the route map, walkable floors with room above, persistent leaves in the
  * hedges, barriers over ponds. The log line {@code C2b} records the planning and placing times for the plan's record.
  * Then WR4's warps (§4.5): the hidden warp into the route map lands a player on the trailhead's x1, standing on its
- * floor inside the zone's box, and the warp back lands them in town.
+ * floor inside the zone's box, and the warp back lands them in town. Then WR6's wild Pokémon: what the habitat blocks
+ * offer (check C3), and what Cobblemon's spawner really spawns while a player stands in the zone (C3b).
  */
 public class ZoneBuildGameTests implements FabricGameTest {
 	/** Far from SyntheticBuildGameTests' origin, so the two builds never meet. */
@@ -99,6 +125,7 @@ public class ZoneBuildGameTests implements FabricGameTest {
 		// WR6: the zone's habitat blocks get their pools, as a real build hands them over
 		BlockPlacer placer = new BlockPlacer(level, plan, List.of(), List.of(), HabitatService.ensurePools(plan.pools()));
 		long[] placing = {0, 0, 0};
+		SpawnWatch[] watch = {null};
 		helper.startSequence()
 				.thenWaitUntil(() -> {
 					long tick = System.nanoTime();
@@ -120,7 +147,175 @@ public class ZoneBuildGameTests implements FabricGameTest {
 							+ "placing, longest tick {} ms", planMs, placer.counts().blocksPlaced, placer.counts().chunks, placing[1],
 							placing[0] / 1_000_000L, placing[2] / 1_000_000L);
 				})
+				.thenExecute(() -> watch[0] = new SpawnWatch(helper, plan, plan.zones().get(0), level))
+				.thenWaitUntil(() -> watch[0].watch())
+				.thenExecute(() -> watch[0].finish())
 				.thenSucceed();
+	}
+
+	/**
+	 * Check C3b (WR6): Pokémon really spawn in the zone. A player stands on the trailhead's x1 while Cobblemon's own
+	 * spawner runs as in a game (it ticks at the end of the player's tick, a pass every {@code ticksBetweenSpawnAttempts},
+	 * 8 to 32 blocks away by Kanto's settings), until {@value #ENOUGH} Pokémon have spawned in the zone's box or
+	 * {@value #MAX_TICKS} ticks have passed (3 to 6 a minute spawn here). Each must be one of the zone's pools' species at
+	 * one of its levels, on the walking level within a habitat block's reach, and some must still be there at the end.
+	 * Counts go to the log line {@code C3b} (synthetic species only).
+	 */
+	private static final class SpawnWatch {
+		/** Spawns enough to end the watch. */
+		static final int ENOUGH = 3;
+		/** The watch's limit: three minutes of game time. */
+		static final int MAX_TICKS = 3600;
+		/**
+		 * The chunks kept loaded and ticking around the player, as a client's render distance does: the recorded run's
+		 * (client/dev/Autopilot). The GameTest server's view distance is 0, so a mock player loads nothing and isn't even
+		 * ticked; and Cobblemon passes over a spawn unless every chunk within 24 blocks of the spawning zone's centre (8 to
+		 * 32 blocks from the player) has its entities loaded.
+		 */
+		static final int VIEW_DISTANCE = 4;
+
+		/** One spawn in the zone's box: species id, level, the spawn position (the block it stands on), for the log its biome and influences. */
+		private record Spawn(String species, int level, BlockPos at, boolean playersSpawner, String biome, String influences) {
+		}
+
+		private final GameTestHelper helper;
+		private final ZonePlan zone;
+		private final ServerLevel level;
+		private final ServerPlayer player;
+		private final PlayerSpawner spawner;
+		private final AABB box;
+		/** The levels the zone's pools give each species. */
+		private final Map<String, Set<Integer>> levels = new TreeMap<>();
+		private final Queue<Spawn> spawns = new ConcurrentLinkedQueue<>();
+		private final AtomicInteger outside = new AtomicInteger();
+		private final Map<String, Integer> buckets = new java.util.concurrent.ConcurrentHashMap<>();
+		private final List<ChunkPos> forced = new java.util.ArrayList<>();
+		private final Vec3 x1;
+		private final long startTick;
+		private final ObservableSubscription<SpawnEvent<PokemonEntity>> spawned;
+		private final ObservableSubscription<SpawnBucketChosenEvent> bucketChosen;
+
+		SpawnWatch(GameTestHelper helper, WorldPlan plan, ZonePlan zone, ServerLevel level) {
+			this.helper = helper;
+			this.zone = zone;
+			this.level = level;
+			Box3 v = zone.volume();
+			this.box = new AABB(v.minX(), v.minY(), v.minZ(), v.maxX(), v.maxY(), v.maxZ());
+			for (String json : zone.pools().values()) {
+				for (JsonElement e : JsonParser.parseString(json).getAsJsonObject().getAsJsonArray("spawns")) {
+					JsonObject spawn = e.getAsJsonObject();
+					this.levels.computeIfAbsent(spawn.get("species").getAsString(), k -> new TreeSet<>())
+							.add(Integer.parseInt(spawn.get("levelRange").getAsString()));
+				}
+			}
+			this.player = MockPlayers.join(helper);
+			WarpService.Result in = WarpService.teleport(this.player, plan.index(), new Place(zone.routeMap().id(), 1, 0, Dir.RIGHT));
+			if (in.refusal() != null) {
+				MockPlayers.leave(helper, this.player);
+				throw new GameTestAssertException("the warp in was refused: " + in.refusal());
+			}
+			this.x1 = this.player.position();
+			ChunkPos home = this.player.chunkPosition();
+			for (int dz = -VIEW_DISTANCE; dz <= VIEW_DISTANCE; dz++) {
+				for (int dx = -VIEW_DISTANCE; dx <= VIEW_DISTANCE; dx++) {
+					if (level.setChunkForced(home.x + dx, home.z + dz, true)) {
+						this.forced.add(new ChunkPos(home.x + dx, home.z + dz));
+					}
+				}
+			}
+			// A real world's land around a zone is Kanto's flat void, all kantobridge:kanto_outdoor (no Cobblemon spawns of its
+			// own, walking level only); the test level's is plains, whose own Pokémon would spawn at the zone's edge.
+			Box3 around = new Box3((home.x - VIEW_DISTANCE) << 4, level.getMinBuildHeight(), (home.z - VIEW_DISTANCE) << 4,
+					(home.x + VIEW_DISTANCE + 1) << 4, level.getMaxBuildHeight(), (home.z + VIEW_DISTANCE + 1) << 4);
+			BiomeWriter biomes = new BiomeWriter(level, List.of(zone.biomeRegion(), new WorldPlan.BiomeRegion(around, WorldPlan.BIOME_OUTDOOR)));
+			for (int dz = -VIEW_DISTANCE; dz <= VIEW_DISTANCE; dz++) {
+				for (int dx = -VIEW_DISTANCE; dx <= VIEW_DISTANCE; dx++) {
+					biomes.apply(level.getChunk(home.x + dx, home.z + dz));
+				}
+			}
+			this.startTick = helper.getTick();
+			this.spawner = PlayerExtensionsKt.getSpawner(this.player);
+			this.spawned = CobblemonEvents.POKEMON_ENTITY_SPAWN.subscribe(Priority.NORMAL, event -> {
+				BlockPos at = event.getSpawnablePosition().getPosition();
+				boolean players = event.getSpawner() == this.spawner;
+				if (this.box.contains(at.getX() + 0.5, at.getY() + 0.5, at.getZ() + 0.5)) {
+					Pokemon pokemon = event.getEntity().getPokemon();
+					Set<String> kinds = new TreeSet<>();
+					event.getSpawnablePosition().getInfluences().forEach(i -> kinds.add(i.getClass().getSimpleName()));
+					this.spawns.add(new Spawn(pokemon.getSpecies().getResourceIdentifier().toString(), pokemon.getLevel(), at.immutable(), players,
+							String.valueOf(event.getSpawnablePosition().getBiomeName()), String.join("+", kinds)));
+				} else if (players) {
+					this.outside.incrementAndGet();
+				}
+			});
+			this.bucketChosen = CobblemonEvents.SPAWN_BUCKET_CHOSEN.subscribe(Priority.NORMAL, event -> {
+				if (event.getSpawner() == this.spawner) {
+					this.buckets.merge(event.getBucket(), 1, Integer::sum);
+				}
+			});
+		}
+
+		/** Waits (throws) until enough Pokémon spawned in the zone or the limit passed. */
+		void watch() {
+			if (this.spawns.size() < ENOUGH && this.helper.getTick() - this.startTick < MAX_TICKS) {
+				throw new GameTestAssertException("waiting for spawns");
+			}
+		}
+
+		void finish() {
+			this.spawned.unsubscribe();
+			this.bucketChosen.unsubscribe();
+			int present = this.level.getEntitiesOfClass(PokemonEntity.class, this.box, e -> e.getOwnerUUID() == null).size();
+			// What a spawner pass needs (Cobblemon's own checks), for the log: spawning on, the zone's surroundings loaded.
+			SpawningZoneInput input = this.spawner.getZoneInput(new SpawnCause(this.spawner, this.player));
+			String needs = "spawning " + Cobblemon.INSTANCE.getConfig().getEnableSpawning() + ", rule "
+					+ this.level.getGameRules().getBoolean(CobblemonGameRules.DO_POKEMON_SPAWNING) + ", active " + this.spawner.getActive()
+					+ ", next pass in " + this.spawner.getTicksUntilNextSpawn() + ", player ticking "
+					+ this.level.isPositionEntityTicking(this.player.blockPosition()) + ", " + this.forced.size() + " chunks forced, surroundings loaded "
+					+ (input != null && WorldExtensionsKt.isBoxLoaded(this.level, AABB.ofSize(input.getCenter(), 48, 1000, 48)));
+			MockPlayers.leave(this.helper, this.player);
+			for (ChunkPos chunk : this.forced) {
+				this.level.setChunkForced(chunk.x, chunk.z, false);
+			}
+			List<Spawn> all = List.copyOf(this.spawns);
+			Map<String, Integer> bySpecies = new TreeMap<>();
+			Map<CellRole, Integer> byRole = new EnumMap<>(CellRole.class);
+			int players = 0;
+			for (Spawn s : all) {
+				players += s.playersSpawner() ? 1 : 0;
+				bySpecies.merge(s.species(), 1, Integer::sum);
+				byRole.merge(this.zone.roleAt(s.at().getX(), s.at().getZ()), 1, Integer::sum);
+			}
+			KantoBridge.LOGGER.info("C3b: a player on x1 for {} ticks (a spawner pass every {} ticks; bucket picks {}): {} Pokémon spawned in the zone "
+					+ "({} by the player's spawner), {} wild ones there at the end, {} spawned outside it; species {}; on {}; {}",
+					this.helper.getTick() - this.startTick,
+					this.spawner.getTicksBetweenSpawns(), new TreeMap<>(this.buckets), all.size(), players, present, this.outside.get(), bySpecies,
+					byRole, needs);
+			for (Spawn s : all) {
+				KantoBridge.LOGGER.info("C3b: {} level {} on {} at y {} ({} blocks from x1), biome {}, influences {}", s.species(), s.level(),
+						this.zone.roleAt(s.at().getX(), s.at().getZ()), s.at().getY(),
+						(int) Math.sqrt(s.at().distSqr(BlockPos.containing(this.x1))), s.biome(), s.influences());
+			}
+			for (Spawn s : all) {
+				Set<Integer> given = this.levels.get(s.species());
+				this.helper.assertTrue(given != null, "a Pokémon outside the zone's pools spawned: " + s.species());
+				this.helper.assertTrue(given.contains(s.level()), "a Pokémon spawned at a level its pool doesn't give: " + s.species() + " " + s.level());
+				this.helper.assertTrue(s.at().getY() == ZonePlan.FLOOR, "a Pokémon spawned off the walking level, at y " + s.at().getY());
+				this.helper.assertTrue(this.withinReach(s.at()), "a Pokémon spawned beyond every habitat block's reach");
+			}
+			this.helper.assertTrue(!all.isEmpty(), "no Pokémon spawned in the zone in " + MAX_TICKS + " ticks");
+			this.helper.assertTrue(present > 0, "Pokémon spawned in the zone but none was there at the end");
+		}
+
+		/** Cobblemon's range check: the spawn's floor block within a habitat block's range of influence. */
+		private boolean withinReach(BlockPos at) {
+			for (WorldIndex.Habitat h : this.zone.habitats()) {
+				if (at.distSqr(new BlockPos(h.x(), h.y(), h.z())) <= HabitatPlanner.RANGE * HabitatPlanner.RANGE) {
+					return true;
+				}
+			}
+			return false;
+		}
 	}
 
 	/**
