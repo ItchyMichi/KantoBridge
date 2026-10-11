@@ -26,9 +26,13 @@ public record PmdParams(int roomDensity, int connectivity, boolean allowDeadEnds
 		}
 	}
 
-	/** The research's floor (room density 6, connectivity 20, no dead ends, 15 extra hallways, rivers, 10 lakes). */
+	/**
+	 * The research's floor (room density 6, connectivity 20, no dead ends, 15 extra hallways, rivers, 10 lakes), without
+	 * shops until the Mart stall exists: nothing fills a shop room yet, so it would stand empty (and keep the floor from a
+	 * Monster House).
+	 */
 	public static PmdParams standard() {
-		return new PmdParams(6, 20, false, 15, 8, 6, 0, true, 10, 4, 0, 6);
+		return new PmdParams(6, 20, false, 15, 0, 6, 0, true, 10, 4, 0, 6);
 	}
 
 	public PmdParams withTraps(int traps) {

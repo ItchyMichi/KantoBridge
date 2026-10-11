@@ -712,7 +712,8 @@ A new world (the mod installed and switched off, as for P1).
       about 5 seconds (a friend stepping on within those 5 seconds joins you), then a stone cave floor (rooms, corridors,
       water) with stairs.
 - [ ] Wild Pokémon roam the floor; Poké Balls lie around: step on one to get its item. A Monster House (a room that fills
-      with Pokémon when you walk in) turns up on some floors.
+      with Pokémon when you walk in) turns up on some floors: 8 to 11 appear around you, within 4 steps, never on your
+      own spot. No ball ever lies on the stairs.
 - [ ] The stairs take you down (3-5 floors for Viridian's dungeon). The last floor has a few balls by a glowing exit
       pad; step on it and you're back beside the entrance.
 - [ ] Black out inside (lose to a wild Pokémon): you wake at the Pokémon Center and the dungeon is gone; going back in

@@ -374,9 +374,10 @@ The prototype does all of this (Appendix B). WR1 writes it in Java.
 - **Moving:** a new server message, `route.fade`, fades the client out; the server teleports; the client fades in.
   Going in, the stairs (each player who steps on them goes down) and out (the last floor's exit, beside the entrance).
 - **Inside:** wild Pokémon from the area's pool at PMD's enemy spots, levels plus `DungeonRules.levelBonus`, with one
-  more every 30 seconds away from players, up to a cap. A Monster House fills when a player first steps in. Items are
-  Poké Ball displays you pick up by stepping on them, PMD's way: the server sends `route.give` with `keep: false`, so
-  dungeon items aren't recorded in the save's progress.
+  more every 30 seconds away from players, up to a cap. A Monster House fills when a player first steps in: 8–11
+  Pokémon on free cells within 4 of them, PMD's way (your choice, 2026-10-11). Items are Poké Ball displays you pick
+  up by stepping on them, PMD's way: the server sends `route.give` with `keep: false`, so dungeon items aren't
+  recorded in the save's progress. Nothing lies on the stairs. No shop rooms until the Mart stall exists.
 - **Leaving:** the exit, a blackout (the hidden game's warp takes you out) or logging off. A slot's blocks and
   entities are cleared when its last player is gone.
 - **Not yet:** refusing Fly inside. The hidden game allows it; flying out simply ends your visit.

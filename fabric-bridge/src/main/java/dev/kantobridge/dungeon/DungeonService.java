@@ -50,7 +50,7 @@ import org.jetbrains.annotations.Nullable;
  * <p>Inside ({@link DungeonContents}): the first time a floor is entered, its wild Pokémon (from the dungeon's habitat pool,
  * as Cobblemon knows it) roam from PMD's enemy spots, and Poké Ball item displays stand on its item spots. A player who
  * steps on an item gets {@code route.give} with {@code keep: false}; the item goes once the hidden game says it's in the
- * bag. A Monster House fills when someone first steps into it; more Pokémon appear over time. A cleared slot takes its
+ * bag. A Monster House fills around whoever first steps into it; more Pokémon appear over time. A cleared slot takes its
  * entities with it, and any left over from before a restart are discarded as they load. Logs carry slots, floors and
  * counts only. Server thread only.
  */
@@ -177,8 +177,10 @@ public final class DungeonService {
 			if (!here.houseFilled && here.house.contains(cell)) {
 				here.houseFilled = true;
 				List<DungeonContents.Mon> pool = poolOf(here);
-				for (int i = 0; i < DungeonContents.HOUSE && !pool.isEmpty() && !here.house.isEmpty(); i++) {
-					spawnMon(level, here, DungeonContents.pick(here.rng.pick(here.house), pool, here.floorNumber(), here.rng));
+				if (!pool.isEmpty()) {
+					for (Cell spot : DungeonContents.houseSpots(here.house, cell, standing(level, here, players), here.rng)) {
+						spawnMon(level, here, DungeonContents.pick(spot, pool, here.floorNumber(), here.rng));
+					}
 				}
 			}
 		}
@@ -198,6 +200,25 @@ public final class DungeonService {
 				spawnMon(level, here, DungeonContents.pick(spot, pool, here.floorNumber(), here.rng));
 			}
 		}
+	}
+
+	/** The cells of {@code floor} where a player or one of its Pokémon stands. */
+	private static Set<Cell> standing(ServerLevel level, FloorState floor, List<ServerPlayer> players) {
+		Set<Cell> out = new HashSet<>();
+		for (ServerPlayer player : players) {
+			Cell cell = floor.plan.cellAt(player.getBlockX(), player.getBlockZ());
+			if (cell != null && Math.abs(player.getY() - floor.plan.feet()) < 2) {
+				out.add(cell);
+			}
+		}
+		for (UUID id : floor.mons) {
+			Entity mon = level.getEntity(id);
+			Cell cell = mon == null || !mon.isAlive() ? null : floor.plan.cellAt(mon.getBlockX(), mon.getBlockZ());
+			if (cell != null) {
+				out.add(cell);
+			}
+		}
+		return out;
 	}
 
 	private static void execute(ServerLevel level, WorldIndex index, long tick, DungeonVisits v, DungeonPlacer p, DungeonVisits.Action action,

@@ -12,7 +12,9 @@ import org.jetbrains.annotations.Nullable;
 /**
  * Makes a dungeon floor the way PMD Red makes its standard floors (docs/research/ROUTES_RESEARCH.md §5), re-implemented
  * from the user's report in its order, with the report's known bugs fixed: the dead-end fix checks the neighbour it
- * links to, the whole grid starts out as wall, and every attempt starts from a clean state.
+ * links to, the whole grid starts out as wall, every attempt starts from a clean state, extra hallways stop short of
+ * row 30 (the layout's edge wipe would cut them there and strand a piece), and nothing is put on the stairs (the game
+ * drops an item put there).
  *
  * <p>The steps: a 2–6 × 2–4 grid of cells; a room or a one-tile anchor in each; a linking walk with momentum; dead ends
  * linked on; corridors with one jog on a cell edge; 5% room merges; repair of cells the walk missed; a shop or a
@@ -630,7 +632,7 @@ public final class PmdFloorGenerator {
 			}
 			int stride = 3 + this.rint(3);
 			while (true) {
-				if (x <= 1 || y <= 1 || x >= WIDTH - 1 || y >= HEIGHT - 1 || this.open(x, y) || this.imp[x][y]) {
+				if (x <= 1 || y <= 1 || x >= WIDTH - 1 || y >= HEIGHT - 2 || this.open(x, y) || this.imp[x][y]) {
 					break;
 				}
 				boolean square = false; // would this tile finish a 2×2 square of floor?
@@ -947,13 +949,14 @@ public final class PmdFloorGenerator {
 		if (st.isEmpty()) {
 			return;
 		}
-		this.stairs = st.get(this.rint(st.size()));
+		Cell stairsCell = st.get(this.rint(st.size()));
+		this.stairs = stairsCell;
 		int k = this.p.items() == 0 ? 0 : Math.max(1, this.rrange(this.p.items() - 2, this.p.items() + 2));
-		this.items = this.run(this.roomTiles((x, y) -> !this.shop[x][y] && !this.house[x][y]), k);
+		this.items = this.run(this.roomTiles((x, y) -> !this.shop[x][y] && !this.house[x][y] && !stairsCell.equals(new Cell(x, y))), k);
 		List<Cell> houseTiles = new ArrayList<>();
 		for (int x = 0; x < WIDTH; x++) {
 			for (int y = 0; y < HEIGHT; y++) {
-				if (this.house[x][y] && !this.junction[x][y] && this.t[x][y] == FLOOR) {
+				if (this.house[x][y] && !this.junction[x][y] && this.t[x][y] == FLOOR && !stairsCell.equals(new Cell(x, y))) {
 					houseTiles.add(new Cell(x, y));
 				}
 			}
@@ -971,12 +974,11 @@ public final class PmdFloorGenerator {
 			this.items.addAll(this.run(houseTiles, m));
 		}
 		Set<Cell> taken = new HashSet<>(this.items);
+		taken.add(stairsCell);
 		int kt = Math.min(56, this.rrange(this.p.traps() / 2, this.p.traps()));
 		this.traps = this.run(this.roomTiles((x, y) -> !this.shop[x][y] && !taken.contains(new Cell(x, y))), kt);
 		taken.addAll(this.traps);
-		Cell stairsCell = this.stairs;
-		List<Cell> pl = this.roomTiles((x, y) -> !this.shop[x][y] && !taken.contains(new Cell(x, y))
-				&& !new Cell(x, y).equals(stairsCell));
+		List<Cell> pl = this.roomTiles((x, y) -> !this.shop[x][y] && !taken.contains(new Cell(x, y)));
 		this.player = pl.isEmpty() ? null : pl.get(this.rint(pl.size()));
 		Cell playerCell = this.player;
 		Set<Cell> itemSet = new HashSet<>(this.items);

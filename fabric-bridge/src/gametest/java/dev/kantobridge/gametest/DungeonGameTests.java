@@ -1,7 +1,9 @@
 package dev.kantobridge.gametest;
 
+import com.cobblemon.mod.common.entity.pokemon.PokemonEntity;
 import dev.kantobridge.block.KbBlocks;
 import dev.kantobridge.block.PropBlock;
+import dev.kantobridge.builder.plan.Box3;
 import dev.kantobridge.dungeon.DungeonContents;
 import dev.kantobridge.dungeon.DungeonFloorPlan;
 import dev.kantobridge.dungeon.DungeonService;
@@ -9,11 +11,16 @@ import dev.kantobridge.dungeon.DungeonSlots;
 import dev.kantobridge.dungeon.DungeonVisits;
 import dev.kantobridge.proto.Envelope;
 import dev.kantobridge.proto.MsgTypes;
+import dev.kantobridge.routes.gen.Cell;
+import dev.kantobridge.routes.gen.PmdFloor;
+import dev.kantobridge.routes.gen.PmdParams;
 import dev.kantobridge.server.HabitatService;
 import dev.kantobridge.world.Dir;
 import dev.kantobridge.world.MapPlacement;
 import dev.kantobridge.world.StoryCellTable;
 import dev.kantobridge.world.WorldIndex;
+import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.function.BooleanSupplier;
 import net.fabricmc.fabric.api.gametest.v1.FabricGameTest;
@@ -28,7 +35,8 @@ import net.minecraft.world.level.block.state.BlockState;
 /**
  * Wild Routes dungeons in a real world (WR7, docs/specs/WILD_ROUTES_PLAN.md §4.8), with mock players and a made-up zoned
  * WorldIndex handed straight to {@link DungeonService#tickWith}: in through the entrance, down two floors (built while
- * the one before is played) and out beside the entrance, the slot cleared after; and two parties in two slots at once.
+ * the one before is played) and out beside the entrance, the slot cleared after; two parties in two slots at once; and a
+ * Monster House filling around whoever steps in.
  */
 public class DungeonGameTests implements FabricGameTest {
 	private static final String HASH = "0".repeat(64);
@@ -154,6 +162,55 @@ public class DungeonGameTests implements FabricGameTest {
 			helper.assertTrue(level.getEntitiesOfClass(com.cobblemon.mod.common.entity.pokemon.PokemonEntity.class, box).isEmpty(),
 					"the dungeon's Pokémon stayed after it was cleared");
 		}));
+		DungeonService.reset();
+		helper.succeed();
+	}
+
+	@GameTest(template = EMPTY_STRUCTURE, timeoutTicks = 2000)
+	public void aMonsterHouseFillsAroundWhoeverStepsIn(GameTestHelper helper) {
+		ServerLevel level = helper.getLevel();
+		DungeonService.reset();
+		HabitatService.ensurePools(java.util.Map.of(POOL, POOL_JSON));
+		WorldIndex index = index(POOL, List.of("POTION"));
+		DungeonVisits visits = DungeonService.visits(level);
+		visits.forceFloors(1);
+		visits.forceParams(PmdParams.standard().withRooms(0, 100, 0));
+		MockPlayers.with(helper, player -> {
+			List<ServerPlayer> players = List.of(player);
+			onEntrance(player);
+			long t = until(index, level, players, 40_000, 400, () -> visits.floorOf(player.getUUID()) == 1, "floor 1");
+			DungeonFloorPlan plan = visits.plan(player.getUUID(), 1);
+			PmdFloor pmd = plan.floor();
+			List<Cell> house = DungeonContents.house(pmd);
+			helper.assertTrue(!house.isEmpty(), "floor 1 has no Monster House");
+			Cell by = plan.cellAt(player.getBlockX(), player.getBlockZ());
+			if (!house.contains(by)) { // arrived outside it: step in where no Pokémon stands
+				by = house.stream().filter(c -> !pmd.enemies().contains(c)).findFirst().orElseThrow();
+				double[] c = plan.centre(by);
+				player.teleportTo(c[0], c[1], c[2]);
+			}
+			DungeonService.tickWith(level, index, t, players);
+			// the floor's Pokémon off its enemy spots are the house's (nothing has moved yet)
+			Box3 v = plan.volume();
+			List<Cell> cells = new ArrayList<>();
+			for (PokemonEntity mon : level.getEntitiesOfClass(PokemonEntity.class,
+					new net.minecraft.world.phys.AABB(v.minX(), v.minY(), v.minZ(), v.maxX(), v.maxY(), v.maxZ()))) {
+				Cell cell = plan.cellAt(mon.getBlockX(), mon.getBlockZ());
+				if (cell != null && !pmd.enemies().contains(cell)) {
+					cells.add(cell);
+				}
+			}
+			helper.assertTrue(cells.size() >= DungeonContents.HOUSE_MIN && cells.size() <= DungeonContents.HOUSE_MAX,
+					"the house holds " + cells.size());
+			helper.assertTrue(new HashSet<>(cells).size() == cells.size(), "two house Pokémon on one cell");
+			for (Cell c : cells) {
+				helper.assertTrue(house.contains(c) && !c.equals(by) && Math.max(Math.abs(c.x() - by.x()), Math.abs(c.y() - by.y()))
+						<= DungeonContents.HOUSE_NEAR, "a house Pokémon at " + c + ", the player at " + by);
+			}
+			// out, so the slot clears with its Pokémon before the next test takes it
+			player.teleportTo(AX - 800.0, 64, AZ - 800.0);
+			until(index, level, players, t + 1, 3000, () -> visits.visits() == 0 && DungeonService.placer(level).idle(), "the slot cleared");
+		});
 		DungeonService.reset();
 		helper.succeed();
 	}

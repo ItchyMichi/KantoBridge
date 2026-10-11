@@ -117,7 +117,7 @@ public final class DungeonVisits {
 	}
 
 	private final long worldSeed;
-	private final PmdParams params;
+	private PmdParams params;
 	private final Map<String, Gathering> gatherings = new HashMap<>();
 	private final Visit[] slots = new Visit[DungeonSlots.SLOTS];
 	private final boolean[] clearing = new boolean[DungeonSlots.SLOTS];
@@ -133,6 +133,11 @@ public final class DungeonVisits {
 	/** Tests: every visit gets this many floors (-1: the rules decide). */
 	public void forceFloors(int floors) {
 		this.floorsOverride = floors;
+	}
+
+	/** Tests: floors made from now on use {@code params}. */
+	public void forceParams(PmdParams params) {
+		this.params = params;
 	}
 
 	/** One tick: every online player's position; returns what to do, in order. */

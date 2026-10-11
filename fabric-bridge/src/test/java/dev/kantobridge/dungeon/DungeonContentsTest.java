@@ -97,4 +97,28 @@ class DungeonContentsTest {
 			assertTrue(pmd.house()[c.y() * pmd.width() + c.x()]);
 		}
 	}
+
+	@Test
+	void aMonsterHouseFillsAroundWhoeverStepsIn() {
+		PmdFloor pmd = PmdFloorGenerator.generate(PmdParams.standard().withRooms(0, 100, 0), 0x2B7);
+		List<Cell> house = DungeonContents.house(pmd);
+		assertFalse(house.isEmpty());
+		Cell by = house.get(0);
+		Cell other = house.get(1);
+		RouteRng rng = new RouteRng(8);
+		Set<Integer> counts = new HashSet<>();
+		for (int i = 0; i < 200; i++) {
+			List<Cell> spots = DungeonContents.houseSpots(house, by, Set.of(other), rng);
+			counts.add(spots.size());
+			assertEquals(spots.size(), new HashSet<>(spots).size(), "two on one cell");
+			for (Cell c : spots) {
+				assertTrue(house.contains(c) && !c.equals(by) && !c.equals(other), "on " + c);
+				assertTrue(Math.max(Math.abs(c.x() - by.x()), Math.abs(c.y() - by.y())) <= DungeonContents.HOUSE_NEAR, by + " far from " + c);
+			}
+		}
+		assertEquals(Set.of(8, 9, 10, 11), counts);
+		// with little room near you, what room there is
+		List<Cell> small = List.of(new Cell(5, 5), new Cell(6, 5), new Cell(7, 5), new Cell(20, 5));
+		assertEquals(List.of(new Cell(7, 5)), DungeonContents.houseSpots(small, new Cell(5, 5), Set.of(new Cell(6, 5)), rng));
+	}
 }

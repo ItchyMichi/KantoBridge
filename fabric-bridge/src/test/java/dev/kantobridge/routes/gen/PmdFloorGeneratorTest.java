@@ -35,9 +35,9 @@ class PmdFloorGeneratorTest {
 		assertEquals(GOLDEN_SHOP, shop.fingerprint());
 	}
 
-	private static final String GOLDEN_PLAIN = "97c3032c6817e421de622ffded0cadb460c7e41219ef3b00d56cc43b253c2601";
-	private static final String GOLDEN_HOUSE = "d769a9ae048dda5f7af896957cbf565a6e8661f3e55e1daf2a111e4815fb61e0";
-	private static final String GOLDEN_SHOP = "6997a46685024689e22993256b7d37ceb545898d66a3415ec7dfe4235e5e7edd";
+	private static final String GOLDEN_PLAIN = "7ba0853c7f7bf3ddfc7c02876cc6b5224224a05c9096fb7a07b849946448ce0f";
+	private static final String GOLDEN_HOUSE = "9b12ef85946c0091146f5f8f662ba9353bd153a4c5ee81771084f208e87d33d0";
+	private static final String GOLDEN_SHOP = "67938ae4b4e42ad184ea079e86b142995e7617e3f3db88e73dcd11917a88907f";
 
 	@Test
 	void tenThousandFloorsCanBeWalked() {
@@ -76,6 +76,14 @@ class PmdFloorGeneratorTest {
 	}
 
 	@Test
+	void plainFloorsPassTheirFirstCheck() {
+		// tunnels used to reach row 30, which the edge wipe clears: now and then that stranded a piece and forced a rebuild
+		for (int i = 0; i < 2_000; i++) {
+			assertEquals(1, PmdFloorGenerator.generate(PmdParams.standard(), i * 7919L + 1).spawnTries(), "floor " + i);
+		}
+	}
+
+	@Test
 	void speedOverOneThread() {
 		long t0 = System.nanoTime();
 		int open = 0;
@@ -102,6 +110,9 @@ class PmdFloorGeneratorTest {
 		}
 		if (f.player().equals(f.stairs())) {
 			out.add("you start on the stairs");
+		}
+		if (f.items().contains(f.stairs()) || f.traps().contains(f.stairs())) {
+			out.add("an item or a trap on the stairs");
 		}
 		for (List<Cell> list : List.of(f.items(), f.traps(), f.enemies())) {
 			for (Cell c : list) {

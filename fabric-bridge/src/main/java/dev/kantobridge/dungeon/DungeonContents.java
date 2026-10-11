@@ -6,6 +6,7 @@ import dev.kantobridge.routes.gen.DungeonRules;
 import dev.kantobridge.routes.gen.PmdFloor;
 import dev.kantobridge.routes.gen.RouteRng;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
@@ -17,9 +18,10 @@ import org.jetbrains.annotations.Nullable;
  *
  * <ul>
  * <li><b>Pokémon</b> at PMD's enemy spots, from the dungeon's pool by weight, at the pool's level plus
- * {@code DungeonRules.levelBonus} for the floor. A Monster House holds {@value #HOUSE} more, and one more appears every
- * {@value #LATER_EVERY_TICKS} ticks at least {@value #LATER_AWAY} cells from every player, up to {@value #LATER_CAP}
- * alive on a floor (the service keeps count).</li>
+ * {@code DungeonRules.levelBonus} for the floor. A Monster House fills when someone first steps in: {@value #HOUSE_MIN}–
+ * {@value #HOUSE_MAX} more appear on its free cells within {@value #HOUSE_NEAR} of them, as in PMD. One more appears
+ * every {@value #LATER_EVERY_TICKS} ticks at least {@value #LATER_AWAY} cells from every player, up to
+ * {@value #LATER_CAP} alive on a floor (the service keeps count).</li>
  * <li><b>Items</b> at PMD's item spots, and on the last floor a treasure of {@value #TREASURE} more on the floor cells
  * nearest the exit. Each from the item tiers the floor's depth draws on (deeper, better), kept to the dungeon's allowed
  * list (the game's own, never a Rare Candy or Master Ball), with at most one Nugget a visit. Ids are
@@ -29,7 +31,11 @@ import org.jetbrains.annotations.Nullable;
 public final class DungeonContents {
 	public static final String NUGGET = "NUGGET";
 	public static final int TREASURE = 4;
-	public static final int HOUSE = 6;
+	/** A Monster House's Pokémon: 8–11, PMD's count. */
+	public static final int HOUSE_MIN = 8;
+	public static final int HOUSE_MAX = 11;
+	/** How far from whoever sets a Monster House off its Pokémon appear, in cells either way (a square, as PMD counts). */
+	public static final int HOUSE_NEAR = 4;
 	public static final int LATER_EVERY_TICKS = 600;
 	public static final int LATER_CAP = 10;
 	public static final int LATER_AWAY = 8;
@@ -137,6 +143,23 @@ public final class DungeonContents {
 			}
 		}
 		return out;
+	}
+
+	/**
+	 * Where a Monster House's Pokémon appear when someone standing on {@code by} sets it off: {@value #HOUSE_MIN}–
+	 * {@value #HOUSE_MAX} different cells of {@code house} within {@value #HOUSE_NEAR} of {@code by}, none in
+	 * {@code taken} (where players and Pokémon stand) nor {@code by} itself; fewer when that's all the room there is.
+	 */
+	public static List<Cell> houseSpots(List<Cell> house, Cell by, Collection<Cell> taken, RouteRng rng) {
+		int count = rng.between(HOUSE_MIN, HOUSE_MAX);
+		List<Cell> free = new ArrayList<>();
+		for (Cell c : house) {
+			if (Math.max(Math.abs(c.x() - by.x()), Math.abs(c.y() - by.y())) <= HOUSE_NEAR && !c.equals(by) && !taken.contains(c)) {
+				free.add(c);
+			}
+		}
+		rng.shuffle(free);
+		return List.copyOf(free.subList(0, Math.min(count, free.size())));
 	}
 
 	/** A floor cell at least {@value #LATER_AWAY} cells from every player, for a Pokémon that appears later; null if none. */
