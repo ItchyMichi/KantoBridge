@@ -593,7 +593,7 @@ RunPod budget and stop after each job; each phase runs its own tests, the full s
 | WR4 | Moving through the zone | done; warp GameTest passes; check C5 needs a client | 2026-10-11 | 571a68b |
 | WR5 | Trainers and items | done here; the end-to-end session needs your PC | 2026-10-11 | 6d63160, 198600d, 548c2e8 |
 | WR6 | Wild Pokémon | done; checkpoint passed (JUnit 913, GameTests 94, Python and Lua 1,479) | 2026-10-11 | e7252f2 |
-| WR7 | Dungeons | done here; the end-to-end session needs your PC | 2026-10-11 | b49a42c, ef4343e, (this) |
+| WR7 | Dungeons | done here; the end-to-end session needs your PC | 2026-10-11 | b49a42c, ef4343e, c274bfa |
 | WR8 | Content and play-test | | | |
 
 ### Wild Routes: WR1 notes
@@ -630,7 +630,7 @@ RunPod budget and stop after each job; each phase runs its own tests, the full s
    a tick budget), the next floor as soon as the one before is entered; stairs fade a player down; the last floor's
    exit puts them beside the entrance; anything else that takes a player out of the slot (a blackout's warp, Fly) or
    offline leaves the visit; an empty visit is cleared. New message `route.fade` and the client's `ServerFade`.
-3. **Inside** (this commit): `DungeonContents` (plain Java): Pokémon from the dungeon's habitat pool at PMD's enemy
+3. **Inside** (`c274bfa`): `DungeonContents` (plain Java): Pokémon from the dungeon's habitat pool at PMD's enemy
    spots (levels plus one every second floor), more over time away from players, a Monster House that fills on first
    entry; items at PMD's item spots and a treasure of 4 beside the last floor's exit, by depth from the item tiers, no
    Rare Candy or Master Ball, at most one Nugget a visit. Items are Poké Ball item displays; stepping on one sends
