@@ -122,6 +122,26 @@ class DungeonVisitsTest {
 	}
 
 	@Test
+	void aFloorIsFilledOnceTheFirstTimeAnyoneEntersIt() {
+		Run run = new Run();
+		run.visits.forceFloors(2);
+		UUID a = UUID.randomUUID();
+		UUID b = UUID.randomUUID();
+		run.at.put(a, ENTRANCE.clone());
+		run.at.put(b, ENTRANCE.clone());
+		run.ticks((int) DungeonVisits.GATHER_TICKS + 2);
+		assertEquals(1, run.log.stream().filter(x -> x instanceof DungeonVisits.Populate p && p.floor() == 1).count(), "once for the party");
+		run.toStairs(a);
+		run.ticks(DungeonVisits.FADE_TICKS + 2);
+		run.toStairs(b);
+		run.ticks(DungeonVisits.FADE_TICKS + 2);
+		assertEquals(1, run.log.stream().filter(x -> x instanceof DungeonVisits.Populate p && p.floor() == 2).count());
+		DungeonVisits.Populate p = (DungeonVisits.Populate) run.log.stream().filter(x -> x instanceof DungeonVisits.Populate).findFirst().get();
+		assertEquals("z_zone", p.zone());
+		assertTrue(p.visit() >= 1);
+	}
+
+	@Test
 	void withEverySlotTakenAPartyIsPutBackOutside() {
 		Run run = new Run();
 		for (int i = 0; i < DungeonSlots.SLOTS; i++) {

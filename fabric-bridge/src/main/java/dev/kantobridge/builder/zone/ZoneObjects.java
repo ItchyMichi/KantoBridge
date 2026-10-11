@@ -38,8 +38,11 @@ import org.jetbrains.annotations.Nullable;
  * offset ({@link ZonePlan#pools}).</li>
  * </ul>
  */
-public record ZoneObjects(List<Trainer> trainers, List<Ball> balls, @Nullable String ballSprite, List<ZoneContent.Slot> pool) {
-	public static final ZoneObjects NONE = new ZoneObjects(List.of(), List.of(), null, List.of());
+public record ZoneObjects(List<Trainer> trainers, List<Ball> balls, @Nullable String ballSprite, List<ZoneContent.Slot> pool,
+		List<String> dungeonItems) {
+	public static final ZoneObjects NONE = new ZoneObjects(List.of(), List.of(), null, List.of(), List.of());
+	/** Items a dungeon never gives (§4.8's limits). */
+	public static final Set<String> NOT_IN_DUNGEONS = Set.of("RARE_CANDY", "MASTER_BALL");
 	/** Mixed into the zone's seed for its objects. */
 	private static final long SALT = 0x6F626A6563747321L;
 
@@ -58,6 +61,7 @@ public record ZoneObjects(List<Trainer> trainers, List<Ball> balls, @Nullable St
 		trainers = List.copyOf(trainers);
 		balls = List.copyOf(balls);
 		pool = List.copyOf(pool);
+		dungeonItems = List.copyOf(dungeonItems);
 	}
 
 	public static ZoneObjects make(ExportRoutes.Zone zone, RouteLayout layout, ZoneContent content, ItemTiers tiers, long worldSeed) {
@@ -110,7 +114,17 @@ public record ZoneObjects(List<Trainer> trainers, List<Ball> balls, @Nullable St
 			ballsPerArea[area]++;
 			balls.add(new Ball("a" + (area + 1) + ".i" + ballsPerArea[area], cell, rng.pick(choices)));
 		}
-		return new ZoneObjects(trainers, balls, balls.isEmpty() ? null : content.ballSprite(), pool);
+		// WR7: what a dungeon's floors may hold: every tier's items the game has, in tier order, minus the forbidden
+		List<String> dungeonItems = new ArrayList<>();
+		for (List<String> tier : tiers.tiers()) {
+			for (String item : tier) {
+				if (!dungeonItems.contains(item)) {
+					dungeonItems.add(item);
+				}
+			}
+		}
+		dungeonItems.removeIf(item -> !content.items().contains(item) || NOT_IN_DUNGEONS.contains(item));
+		return new ZoneObjects(trainers, balls, balls.isEmpty() ? null : content.ballSprite(), pool, dungeonItems);
 	}
 
 	private static ZoneContent.Slot weighted(List<ZoneContent.Slot> pool, RouteRng rng) {

@@ -607,7 +607,7 @@ engine symbols, and Pokémon identities as Cobblemon UUIDs (`uid`).
 
 | Type | Dir | Data | ROM |
 |---|---|---|---|
-| `route.give` | S→C, M→G | `route, id, item` (a zone's item ball) | |
+| `route.give` | S→C, M→G | `route, id, item, keep?` (a zone's item ball; WR7: `keep:false` for a dungeon's item, not recorded) | |
 | `route.battle` | S→C, M→G | `route, id, class, party[{species, level, moves[]?}], lines{before?}?` (a zone trainer) | yes |
 | `route.blackout` | S→C, M→G | `{}` (a wild battle lost in Cobblemon) | |
 | `route.result` | G→M, C→S | `op:"give"\|"battle"\|"blackout", ok, route?, id?, outcome?:"win"\|"lose"\|"abort", reason?`; `re` required | |
@@ -669,7 +669,14 @@ engine symbols, and Pokémon identities as Cobblemon UUIDs (`uid`).
   are the exit, back beside the entrance (its `out` side). Leaving the slot any other way (the hidden
   game's blackout warp, Fly) or going offline leaves the visit; a visit without players is cleared.
   The client fades out over at most 10 ticks, holds the player, stays dark until the teleport has
-  landed and the world there is drawn (or 15 s after it was due), then fades in.
+  landed and the world there is drawn (or 15 s after it was due), then fades in. Inside, the first
+  time a floor is entered: wild Pokémon from the dungeon's habitat pool roam from PMD's enemy spots
+  (levels plus one every second floor), Poké Ball displays stand on its item spots (on the last floor
+  also a treasure of four beside the exit), and its Monster House fills when someone first steps in;
+  one more Pokémon appears every 600 ticks away from players, up to ten. Stepping on an item sends
+  that player `route.give` with `keep:false` (given, never recorded: a dungeon's items are new each
+  visit); the display goes once the answer says it's in the bag. No Rare Candy or Master Ball, at
+  most one Nugget a visit. A cleared slot takes its entities with it.
 - **The client (WR5)** forwards the server's `route.give`, `route.battle` and `route.blackout` to
   gen1-bridge, and gen1-bridge's `route.result` for them back to the server with the server's own
   `seq` as `re`; every `route.progress` goes up too. The save pairing's gate decides, as for the

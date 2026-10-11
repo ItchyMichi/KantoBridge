@@ -238,7 +238,7 @@
           "ballSprite": {"$ref": "../defs.schema.json#/$defs/symbol", "description": "WR5: the item ball's overworld sprite; absent when the zone has no balls or the export names none."},
           "dungeon": {
             "type": "object",
-            "required": ["x", "y", "out", "level"],
+            "required": ["x", "y", "out", "level", "items"],
             "additionalProperties": false,
             "description": "WR7: the zone's dungeon; absent when the zone has none.",
             "properties": {
@@ -246,7 +246,8 @@
               "y": {"type": "integer", "minimum": -4096, "maximum": 4096},
               "out": {"$ref": "../defs.schema.json#/$defs/dir", "description": "The way to the entrance's one open neighbour, where you come back out."},
               "pool": {"type": "string", "pattern": "^[a-z0-9_.-]+:[a-z0-9_./-]+$", "description": "The habitat pool of the entrance's area: the dungeon's wild Pokémon."},
-              "level": {"$ref": "../defs.schema.json#/$defs/level", "description": "That area's highest wild level; the floor count follows it."}
+              "level": {"$ref": "../defs.schema.json#/$defs/level", "description": "That area's highest wild level; the floor count follows it."},
+              "items": {"type": "array", "maxItems": 64, "items": {"$ref": "../defs.schema.json#/$defs/itemId"}, "description": "The items its floors may hold: the game's own, by tier, never a Rare Candy or Master Ball."}
             }
           }
         }

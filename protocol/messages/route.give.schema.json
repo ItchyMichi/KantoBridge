@@ -12,6 +12,7 @@
   "properties": {
     "route": {"$ref": "../defs.schema.json#/$defs/routeId"},
     "id": {"$ref": "../defs.schema.json#/$defs/routeObjectId"},
-    "item": {"$ref": "../defs.schema.json#/$defs/itemId"}
+    "item": {"$ref": "../defs.schema.json#/$defs/itemId"},
+    "keep": {"type": "boolean", "description": "WR7: false for a dungeon's item, given but not recorded as taken in the save's progress. Default true."}
   }
 }

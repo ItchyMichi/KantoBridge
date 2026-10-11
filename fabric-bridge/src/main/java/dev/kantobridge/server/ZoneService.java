@@ -117,6 +117,10 @@ public final class ZoneService {
 		}
 		ENCOUNTERS.onResult(player.getUUID(), string(data, "op"), ok, string(data, "route"), string(data, "id"), outcome,
 				player.server.getTickCount());
+		if ("give".equals(string(data, "op"))) {
+			// WR7: a dungeon's item in the bag leaves the floor
+			dev.kantobridge.dungeon.DungeonService.onGiveResult(player, string(data, "id"), ok);
+		}
 	}
 
 	private static @Nullable String string(JsonObject data, String key) {

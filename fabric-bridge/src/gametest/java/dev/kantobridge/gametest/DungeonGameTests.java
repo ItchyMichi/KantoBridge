@@ -2,12 +2,14 @@ package dev.kantobridge.gametest;
 
 import dev.kantobridge.block.KbBlocks;
 import dev.kantobridge.block.PropBlock;
+import dev.kantobridge.dungeon.DungeonContents;
 import dev.kantobridge.dungeon.DungeonFloorPlan;
 import dev.kantobridge.dungeon.DungeonService;
 import dev.kantobridge.dungeon.DungeonSlots;
 import dev.kantobridge.dungeon.DungeonVisits;
 import dev.kantobridge.proto.Envelope;
 import dev.kantobridge.proto.MsgTypes;
+import dev.kantobridge.server.HabitatService;
 import dev.kantobridge.world.Dir;
 import dev.kantobridge.world.MapPlacement;
 import dev.kantobridge.world.StoryCellTable;
@@ -33,11 +35,20 @@ public class DungeonGameTests implements FabricGameTest {
 	/** Far from every other test: the route map's A at (6,000,000, 64, 6,000,000), the dungeon region north of it. */
 	private static final int AX = 6_000_000;
 	private static final int AZ = 6_000_000;
-	private static final WorldIndex INDEX = new WorldIndex("red", HASH,
-			List.of(new MapPlacement("KB_ROUTE_DG", AX, 64, AZ, 2, 2, 0, MapPlacement.Kind.ROUTE, "PAL", "kantobridge:wild_forest", false, null)),
-			HASH, StoryCellTable.empty(), List.of(), List.of(new WorldIndex.Zone("dg_zone", "KB_ROUTE_DG", "forest", AX - 20, 64, AZ - 40, 200, 200,
-					"kantobridge:wild_forest", List.of(), List.of(), null, new WorldIndex.ZoneDungeon(30, 4, Dir.LEFT, null, 8))),
-			new WorldIndex.Dungeons(AX, 64, AZ - 3_400, DungeonSlots.PER_ROW * DungeonSlots.SLOT_W, DungeonSlots.ROWS * DungeonSlots.SLOT_D));
+	private static final WorldIndex INDEX = index(null, List.of());
+	/** The third test's dungeon pool, handed to Cobblemon as a build would. */
+	private static final String POOL = "kantobridge:zone_dg_zone_a1";
+	private static final String POOL_JSON = "{\"name\":\"Kanto Bridge KB_ROUTE_DG a1\",\"spawns\":[{\"species\":\"cobblemon:pidgey\","
+			+ "\"spawnablePositionType\":\"grounded\",\"bucket\":\"common\",\"weight\":60.0,\"levelRange\":\"5\"},{\"species\":"
+			+ "\"cobblemon:rattata\",\"spawnablePositionType\":\"grounded\",\"bucket\":\"common\",\"weight\":40.0,\"levelRange\":\"6\"}]}";
+
+	private static WorldIndex index(@org.jetbrains.annotations.Nullable String pool, List<String> items) {
+		return new WorldIndex("red", HASH,
+				List.of(new MapPlacement("KB_ROUTE_DG", AX, 64, AZ, 2, 2, 0, MapPlacement.Kind.ROUTE, "PAL", "kantobridge:wild_forest", false, null)),
+				HASH, StoryCellTable.empty(), List.of(), List.of(new WorldIndex.Zone("dg_zone", "KB_ROUTE_DG", "forest", AX - 20, 64, AZ - 40, 200, 200,
+						"kantobridge:wild_forest", List.of(), List.of(), null, new WorldIndex.ZoneDungeon(30, 4, Dir.LEFT, pool, 8, items))),
+				new WorldIndex.Dungeons(AX, 64, AZ - 3_400, DungeonSlots.PER_ROW * DungeonSlots.SLOT_W, DungeonSlots.ROWS * DungeonSlots.SLOT_D));
+	}
 
 	private static void onEntrance(ServerPlayer player) {
 		player.teleportTo(AX + 61.0, 64, AZ + 9.0);
@@ -46,8 +57,13 @@ public class DungeonGameTests implements FabricGameTest {
 	/** Ticks the service until {@code done} (at most {@code limit} ticks); returns the tick it stopped at. */
 	private static long until(GameTestHelper helper, ServerLevel level, List<ServerPlayer> players, long tick, int limit, BooleanSupplier done,
 			String what) {
+		return until(INDEX, level, players, tick, limit, done, what);
+	}
+
+	private static long until(WorldIndex index, ServerLevel level, List<ServerPlayer> players, long tick, int limit, BooleanSupplier done,
+			String what) {
 		for (int i = 0; i < limit; i++) {
-			DungeonService.tickWith(level, INDEX, tick++, players);
+			DungeonService.tickWith(level, index, tick++, players);
 			if (done.getAsBoolean()) {
 				return tick;
 			}
@@ -93,6 +109,50 @@ public class DungeonGameTests implements FabricGameTest {
 			helper.assertTrue(level.getBlockState(new BlockPos(stairs[0], floor1.feet(), stairs[1])).isAir(), "floor 1 is still there");
 			long fades = sent.stream().map(Envelope::type).filter(MsgTypes.ROUTE_FADE::equals).count();
 			helper.assertTrue(fades >= 4, "fades " + fades);
+		}));
+		DungeonService.reset();
+		helper.succeed();
+	}
+
+	@GameTest(template = EMPTY_STRUCTURE, timeoutTicks = 2000)
+	public void floorsHoldPokemonAndItemsAndABlackoutEndsTheVisit(GameTestHelper helper) {
+		ServerLevel level = helper.getLevel();
+		DungeonService.reset();
+		HabitatService.ensurePools(java.util.Map.of(POOL, POOL_JSON));
+		WorldIndex index = index(POOL, List.of("POTION", "POKE_BALL"));
+		DungeonVisits visits = DungeonService.visits(level);
+		visits.forceFloors(2);
+		MockPlayers.with(helper, player -> RelayTap.capture(player, sent -> {
+			List<ServerPlayer> players = List.of(player);
+			onEntrance(player);
+			long t = until(index, level, players, 30_000, 400, () -> visits.floorOf(player.getUUID()) == 1, "floor 1");
+			helper.assertTrue(DungeonService.monsAround(player) > 0, "no Pokémon on floor 1");
+			List<DungeonContents.Item> items = DungeonService.itemsAround(player);
+			helper.assertTrue(!items.isEmpty(), "no items on floor 1");
+			// stepping on an item asks the hidden game, without recording it
+			DungeonContents.Item item = items.get(0);
+			double[] c = visits.plan(player.getUUID(), 1).centre(item.cell());
+			player.teleportTo(c[0], c[1], c[2]);
+			DungeonService.tickWith(level, index, t++, players);
+			Envelope give = sent.stream().filter(m -> m.type().equals(MsgTypes.ROUTE_GIVE) && m.data().get("id").getAsString().equals(item.id()))
+					.findFirst().orElse(null);
+			helper.assertTrue(give != null && !give.data().get("keep").getAsBoolean() && "dg_zone".equals(give.data().get("route").getAsString()),
+					"no route.give keep:false for the item stepped on");
+			com.google.gson.JsonObject result = new com.google.gson.JsonObject();
+			result.addProperty("op", "give");
+			result.addProperty("ok", true);
+			result.addProperty("route", "dg_zone");
+			result.addProperty("id", item.id());
+			dev.kantobridge.net.RelayService.get().handler(MsgTypes.ROUTE_RESULT).handle(player, new Envelope(MsgTypes.ROUTE_RESULT, 9, give.seq(), result));
+			helper.assertTrue(DungeonService.itemsAround(player).stream().noneMatch(i -> i.id().equals(item.id())), "the item stayed");
+			// a blackout's warp takes the player out: the visit ends and the slot clears, its Pokémon with it
+			int slot = visits.slotOf(player.getUUID());
+			player.teleportTo(AX - 800.0, 64, AZ - 800.0);
+			until(index, level, players, t, 3000, () -> visits.visits() == 0 && DungeonService.placer(level).idle(), "the slot cleared");
+			int[] o = DungeonSlots.slotOrigin(index.dungeons(), slot);
+			net.minecraft.world.phys.AABB box = new net.minecraft.world.phys.AABB(o[0], 40, o[1], o[0] + DungeonSlots.SLOT_W, 120, o[1] + DungeonSlots.SLOT_D);
+			helper.assertTrue(level.getEntitiesOfClass(com.cobblemon.mod.common.entity.pokemon.PokemonEntity.class, box).isEmpty(),
+					"the dungeon's Pokémon stayed after it was cleared");
 		}));
 		DungeonService.reset();
 		helper.succeed();

@@ -1,7 +1,9 @@
 -- kb_route: the Wild Routes acts (docs/PROTOCOL.md "Wild Routes (WR2)",
 -- docs/specs/WILD_ROUTES_PLAN.md §4.2) and the zones' progress.
 --
---   route.give{route, id, item}       -> route.result{op:"give", route, id, ok, reason?}
+--   route.give{route, id, item, keep?} -> route.result{op:"give", route, id, ok, reason?}
+--                                     (keep false, WR7: a dungeon's item, given
+--                                     but not recorded as taken)
 --   route.battle{route, id, class, party, lines?}
 --                                     -> route.result{op:"battle", route, id, ok, outcome?, reason?}
 --   route.blackout{}                  -> route.result{op:"blackout", ok, reason?}
@@ -167,7 +169,8 @@ function Route.new(opts)
       if not (sym(data.route, ROUTE_ID) and sym(data.id, OBJECT_ID) and #data.id <= 32 and sym(data.item, UPPER)) then
         return false, "bad_message"
       end
-      r.route, r.id, r.item = data.route, data.id, data.item
+      if data.keep ~= nil and type(data.keep) ~= "boolean" then return false, "bad_message" end
+      r.route, r.id, r.item, r.keep = data.route, data.id, data.item, data.keep ~= false
     elseif op == "battle" then
       local party = validParty(data.party)
       if not (sym(data.route, ROUTE_ID) and sym(data.id, OBJECT_ID) and #data.id <= 32 and sym(data.class, UPPER)
@@ -237,7 +240,7 @@ function Route.new(opts)
       if not f.inGame then return finish(out, false, "not_ingame") end
       if f.map ~= zone.mapId then return finish(out, false, "not_in_zone") end
       if r.op == "give" then
-        if entryOf(r.route).taken[r.id] then return finish(out, false, "taken") end
+        if r.keep and entryOf(r.route).taken[r.id] then return finish(out, false, "taken") end
         if has and not has("items", r.item) then return finish(out, false, "unknown_item") end
       else
         r.kbClass = zone.classes[r.class]
@@ -287,9 +290,11 @@ function Route.new(opts)
     if r.op == "give" then
       local after = engine.inventoryCount(r.item)
       if after > (r.before or 0) then
-        entryOf(r.route).taken[r.id] = true
-        dirty[r.route] = true
-        save()
+        if r.keep then
+          entryOf(r.route).taken[r.id] = true
+          dirty[r.route] = true
+          save()
+        end
         counts.given = counts.given + 1
         return finish(out, true)
       end

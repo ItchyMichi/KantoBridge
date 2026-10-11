@@ -183,7 +183,7 @@ public final class ZonePlan {
 			top = Math.max(top, slot.level());
 		}
 		int level = Math.min(100, top + (area >= 0 ? this.layout.areas().get(area).levelOffset() : 0));
-		return new WorldIndex.ZoneDungeon(entrance.x() - door.x(), entrance.y() - door.y(), out, pool, level);
+		return new WorldIndex.ZoneDungeon(entrance.x() - door.x(), entrance.y() - door.y(), out, pool, level, this.objects.dungeonItems());
 	}
 
 	/**

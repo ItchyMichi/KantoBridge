@@ -281,6 +281,20 @@ def test_a_ball_gives_its_item_through_the_engines_give_item_once():
     assert (st["routeGiven"], st["routeOk"], st["routeFailed"]) == (1, 1, 1)
 
 
+def test_a_dungeon_item_is_given_without_being_recorded():
+    g = R.RouteGame()
+    before = g.E.save.inventory[b"POTION"] or 0
+    g.send("route.give", {"route": "test_zone", "id": "v1.f2.i1", "item": "POTION", "keep": False})
+    g.read_texts(until=lambda g: any(r.get("id") == "v1.f2.i1" for r in g.results()))
+    assert [r for r in g.results() if r.get("id") == "v1.f2.i1"][-1]["ok"] is True
+    assert g.E.save.inventory[b"POTION"] == before + 1
+    assert not any("v1.f2.i1" in p.get("test_zone", {}).get("taken", []) for p in g.progress()), "not recorded"
+    # the same id again: given again (a new visit's item)
+    g.send("route.give", {"route": "test_zone", "id": "v1.f2.i1", "item": "POTION", "keep": False})
+    g.read_texts(until=lambda g: sum(1 for r in g.results() if r.get("id") == "v1.f2.i1") == 2)
+    assert g.E.save.inventory[b"POTION"] == before + 2
+
+
 def test_a_full_bag_keeps_the_ball():
     g = R.RouteGame()
     g.E.bagFull = True

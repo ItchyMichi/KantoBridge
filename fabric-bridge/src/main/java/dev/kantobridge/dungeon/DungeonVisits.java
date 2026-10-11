@@ -49,7 +49,11 @@ public final class DungeonVisits {
 	public static final int FADE_TICKS = 10;
 
 	/** What the server does. */
-	public sealed interface Action permits Fade, Build, Enter, Leave, Clear {
+	public sealed interface Action permits Fade, Build, Enter, Leave, Clear, Populate {
+	}
+
+	/** The first time anyone enters a floor: fill it ({@link DungeonContents}). */
+	public record Populate(int slot, int floor, DungeonFloorPlan plan, String zone, long visit, long seed) implements Action {
 	}
 
 	/** {@code route.fade}: the player will be moved in about {@code ticks}. */
@@ -91,8 +95,10 @@ public final class DungeonVisits {
 		final String zone;
 		final int slot;
 		final long seed;
+		final long number;
 		final int floors;
 		final Map<Integer, DungeonFloorPlan> plans = new HashMap<>();
+		final Set<Integer> populated = new HashSet<>();
 		final Set<Integer> built = new HashSet<>();
 		final Set<Integer> building = new HashSet<>();
 		/** The floor each member stands on (0 while waiting to enter). */
@@ -101,10 +107,11 @@ public final class DungeonVisits {
 		final Map<UUID, Integer> movingTo = new HashMap<>();
 		final Map<UUID, Long> movingAt = new HashMap<>();
 
-		Visit(String zone, int slot, long seed, int floors) {
+		Visit(String zone, int slot, long seed, long number, int floors) {
 			this.zone = zone;
 			this.slot = slot;
 			this.seed = seed;
+			this.number = number;
 			this.floors = floors;
 		}
 	}
@@ -254,6 +261,9 @@ public final class DungeonVisits {
 			visit.movingAt.remove(w.player());
 			visit.floorOf.put(w.player(), to);
 			out.add(new Enter(w.player(), plan, start[0], start[1], start[2]));
+			if (visit.populated.add(to)) {
+				out.add(new Populate(visit.slot, to, plan, visit.zone, visit.number, RouteRng.mix(visit.seed ^ (to * 0x9E3779B97F4A7C15L))));
+			}
 			if (to < visit.floors) {
 				this.ensureBuilt(visit, to + 1, region, out);
 			}
@@ -295,9 +305,10 @@ public final class DungeonVisits {
 			}
 			return;
 		}
-		long seed = RouteSeeds.forVisit(RouteSeeds.forRoute(this.worldSeed, zone.id()), ++this.visitCount);
+		long number = ++this.visitCount;
+		long seed = RouteSeeds.forVisit(RouteSeeds.forRoute(this.worldSeed, zone.id()), number);
 		int floors = this.floorsOverride > 0 ? this.floorsOverride : DungeonRules.floorCount(new RouteRng(seed), zone.dungeon().level());
-		Visit visit = new Visit(zone.id(), slot, seed, floors);
+		Visit visit = new Visit(zone.id(), slot, seed, number, floors);
 		this.slots[slot] = visit;
 		for (UUID player : g.members) {
 			this.visitOf.put(player, visit);

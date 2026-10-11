@@ -593,7 +593,7 @@ RunPod budget and stop after each job; each phase runs its own tests, the full s
 | WR4 | Moving through the zone | done; warp GameTest passes; check C5 needs a client | 2026-10-11 | 571a68b |
 | WR5 | Trainers and items | done here; the end-to-end session needs your PC | 2026-10-11 | 6d63160, 198600d, 548c2e8 |
 | WR6 | Wild Pokémon | done; checkpoint passed (JUnit 913, GameTests 94, Python and Lua 1,479) | 2026-10-11 | e7252f2 |
-| WR7 | Dungeons | | | |
+| WR7 | Dungeons | done here; the end-to-end session needs your PC | 2026-10-11 | b49a42c, ef4343e, (this) |
 | WR8 | Content and play-test | | | |
 
 ### Wild Routes: WR1 notes
@@ -616,6 +616,32 @@ RunPod budget and stop after each job; each phase runs its own tests, the full s
    7–9 from 60).
 5. **Where it ran:** the pod had no host capacity (six tries), so the tests ran in a throwaway JDK 21 container on the
    server with JUnit 5.11. The Gradle run is part of the WR2 checkpoint.
+
+### Wild Routes: WR7 notes
+
+1. **Geometry** (`b49a42c`): `DungeonSlots` (16 slots of 128×80 blocks, 3,000 blocks north of Kanto, floors 22 apart
+   from Kanto's walking level); `DungeonFloorPlan` draws a PMD floor 2×2 blocks a cell (stone walls under a stone
+   ceiling, coarse dirt floor, water behind barriers, lights, the stairs prop or, on the last floor, the exit prop).
+   The first prop block (`kantobridge:prop`: kind × quarter, no collision, built-in models over vanilla textures) marks
+   a zone's dungeon entrance. The WorldIndex lists each zone's dungeon (cell, way out, pool, level, allowed items) and
+   the dungeon region; a client in the region whose hidden player is on a route map is away, as in a zone.
+2. **Visits** (`ef4343e`): `DungeonVisits` (plain Java) and `DungeonService`: a party gathers for 5 s on the entrance
+   (faded out at once), takes a free slot, floor 1 is built behind the fade (`DungeonPlacer`, a chunk at a time within
+   a tick budget), the next floor as soon as the one before is entered; stairs fade a player down; the last floor's
+   exit puts them beside the entrance; anything else that takes a player out of the slot (a blackout's warp, Fly) or
+   offline leaves the visit; an empty visit is cleared. New message `route.fade` and the client's `ServerFade`.
+3. **Inside** (this commit): `DungeonContents` (plain Java): Pokémon from the dungeon's habitat pool at PMD's enemy
+   spots (levels plus one every second floor), more over time away from players, a Monster House that fills on first
+   entry; items at PMD's item spots and a treasure of 4 beside the last floor's exit, by depth from the item tiers, no
+   Rare Candy or Master Ball, at most one Nugget a visit. Items are Poké Ball item displays; stepping on one sends
+   `route.give` with the new `keep: false` (gen1-bridge gives it without recording it); the display goes on the
+   answer. A cleared slot takes its entities; leftovers from before a restart are discarded as they load.
+4. **Tests:** `DungeonSlotsTest`, `DungeonFloorPlanTest`, `PropModelsTest`, `DungeonVisitsTest` (5), `DungeonContentsTest`
+   (4), `ServerFadeTest`, a Lua test for `keep: false`; GameTests `DungeonGameTests` (in, down two floors and out with
+   real blocks built and cleared; two parties in two slots; a floor's Pokémon and items, an item picked up, a blackout
+   ending the visit and clearing its Pokémon). JUnit 930, GameTests 97, Python and Lua 1,484.
+5. **Not yet:** refusing Fly inside (flying out just ends the visit), and seeing a dungeon in a client (C5); the
+   end-to-end session with the real engine needs your PC.
 
 ### Wild Routes: WR6 notes
 

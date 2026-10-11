@@ -33,7 +33,7 @@ public final class WorldIndex {
 			"storyCells", "habitats", "zones", "dungeons");
 	private static final Set<String> ZONE_FIELDS = Set.of("id", "routeMap", "theme", "x", "y", "z", "w", "d", "biome", "trainers", "balls",
 			"ballSprite", "dungeon");
-	private static final Set<String> DUNGEON_FIELDS = Set.of("x", "y", "out", "pool", "level");
+	private static final Set<String> DUNGEON_FIELDS = Set.of("x", "y", "out", "pool", "level", "items");
 	private static final Set<String> DUNGEONS_FIELDS = Set.of("x", "y", "z", "w", "d");
 	private static final Set<String> TRAINER_FIELDS = Set.of("id", "x", "y", "facing", "sight", "class", "sprite", "party");
 	private static final Set<String> MEMBER_FIELDS = Set.of("species", "level");
@@ -145,13 +145,21 @@ public final class WorldIndex {
 	 * @param out   the way from the entrance to its one open neighbour, where you come back out
 	 * @param pool  the habitat pool of the entrance's area (the dungeon's wild Pokémon), or null when the zone has none
 	 * @param level that area's highest wild level (the floor count follows it)
+	 * @param items the items its floors may hold: the game's own, by tier, without the ones a dungeon never gives
 	 */
-	public record ZoneDungeon(int x, int y, Dir out, @Nullable String pool, int level) {
+	public record ZoneDungeon(int x, int y, Dir out, @Nullable String pool, int level, List<String> items) {
 		public ZoneDungeon {
+			items = List.copyOf(items);
 			if (Math.abs(x) > MAX_ZONE_CELL || Math.abs(y) > MAX_ZONE_CELL || out == null || level < 1 || level > 100
-					|| (pool != null && !DataReader.RESOURCE_ID.matcher(pool).matches())) {
+					|| (pool != null && !DataReader.RESOURCE_ID.matcher(pool).matches()) || items.size() > 64
+					|| !items.stream().allMatch(i -> DataReader.SYMBOL.matcher(i).matches())) {
 				throw new IllegalArgumentException("bad zone dungeon");
 			}
+		}
+
+		/** A dungeon whose floors hold no items. */
+		public ZoneDungeon(int x, int y, Dir out, @Nullable String pool, int level) {
+			this(x, y, out, pool, level, List.of());
 		}
 	}
 
@@ -500,6 +508,9 @@ public final class WorldIndex {
 						dungeon.addProperty("pool", zone.dungeon().pool());
 					}
 					dungeon.addProperty("level", zone.dungeon().level());
+					JsonArray items = new JsonArray();
+					zone.dungeon().items().forEach(items::add);
+					dungeon.add("items", items);
 					item.add("dungeon", dungeon);
 				}
 				zones.add(item);
@@ -605,8 +616,15 @@ public final class WorldIndex {
 					if (out == null) {
 						throw new DataException(d.path("out"), "unknown direction");
 					}
+					List<String> items = new ArrayList<>();
+					for (com.google.gson.JsonElement i : d.array("items")) {
+						if (!i.isJsonPrimitive() || !DataReader.SYMBOL.matcher(i.getAsString()).matches()) {
+							throw new DataException(d.path("items"), "bad item id");
+						}
+						items.add(i.getAsString());
+					}
 					dungeon = new ZoneDungeon(d.integer("x", -MAX_ZONE_CELL, MAX_ZONE_CELL), d.integer("y", -MAX_ZONE_CELL, MAX_ZONE_CELL), out,
-							d.optionalString("pool", DataReader.RESOURCE_ID), d.integer("level", 1, 100));
+							d.optionalString("pool", DataReader.RESOURCE_ID), d.integer("level", 1, 100), items);
 				}
 				zones.add(new Zone(item.string("id", ZONE_ID), item.string("routeMap", DataReader.MAP_ID), theme, item.integer("x"),
 						item.integer("y"), item.integer("z"), item.integer("w", 1, Integer.MAX_VALUE), item.integer("d", 1, Integer.MAX_VALUE),
