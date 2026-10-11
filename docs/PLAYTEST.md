@@ -659,11 +659,64 @@ A new world (the mod installed and switched off, as for P1).
 
 ## Wild Routes
 
-[specs/WILD_ROUTES_PLAN.md](specs/WILD_ROUTES_PLAN.md). The zone needs the parts of WR3 and WR4 before you can walk
-it in Minecraft; until then, only the spot is yours to give.
+[specs/WILD_ROUTES_PLAN.md](specs/WILD_ROUTES_PLAN.md). WR1-WR7 are built and tested without a person watching
+(JUnit, GameTests, the Lua and Python suites). Nothing of it shows in your game until the clearing's spot is set
+(WR2 below): `gen1-bridge/data/routes.json` leaves Viridian's zone switched off until then. After the spot, a rebuild of
+the world (Create Kanto world, or the headless build) builds the zone.
 
 ### WR2: the exit's spot
 
 - [ ] In Viridian City, stand on the path where the clearing should start, facing the trees it should cut through.
       Press **F7** and send the map, cell and facing it shows, and how deep the clearing should go (2 blocks, 4 steps,
       unless you say otherwise).
+- [ ] Check C6, once the spot is in: in Gen1Recomp's console, `[gen1-bridge]` logs `routes.installed` for
+      `viridian_forest_zone` (not a `routes.skipped` with a code). Walking through the new clearing in the hidden game
+      takes you to the route map; stepping back west takes you home.
+
+### WR3-WR4: the zone and moving through it
+
+- [ ] Walk into Viridian's clearing in Minecraft: a short fade, then the trailhead of a forest maze (hedges of leaves,
+      vanilla trees and hills around, coarse dirt in dead ends). The F3 line "Zone:" names `viridian_forest_zone`.
+- [ ] Walk the maze freely: nothing pulls you back, no "stuck" teleports; the hedges are solid and you can't walk off
+      the maze onto the land. Ponds keep you out (a barrier, as in Kanto until Surf).
+- [ ] Walk back to the trailhead and step west off its first cell: a fade, and you're back in Viridian City beside the
+      clearing, facing the town.
+- [ ] Rejoin the world while in the zone: you stay where you were (no teleport to the town).
+
+### WR5: trainers and items
+
+- [ ] Item balls stand in dead ends; walking into one bumps you. Face it and press A (or right-click it from the cell
+      beside it): the hidden game's "found ITEM!" box, the ball disappears, and it stays gone after a rejoin and after
+      saving and loading. With a full bag: the bag-full box, and the ball stays.
+- [ ] A trainer looking down a lane: walk into its line of sight. You're held, "!" shows over it, it walks up, says its
+      line (one short line of our own) and the battle starts in Cobblemon. Win: it walks back to its post and leaves you
+      alone; leave the zone and come back, and it challenges you again with the same team. Lose: you black out to the
+      last Pokémon Center.
+- [ ] The trainers' sprites match their class (Youngster, Bug Catcher, Lass, Jr. Trainer).
+
+### WR6: wild Pokémon
+
+- [ ] Wild Pokémon appear on the zone's tall grass (Route 1, 2 and 22's species), stronger area by area (up to 3 levels
+      above the first area). Battle and catch them as on Route 1.
+- [ ] Lose a battle against a wild Pokémon (in the zone or in Kanto): you black out to the last Pokémon Center, with
+      half your money, as in Gen 1.
+
+### WR7: dungeons
+
+- [ ] If the zone has a dungeon, its entrance is a dark pit with a mossy stone rim in a dead end. Step on it: a fade of
+      about 5 seconds (a friend stepping on within those 5 seconds joins you), then a stone cave floor (rooms, corridors,
+      water) with stairs.
+- [ ] Wild Pokémon roam the floor; Poké Balls lie around: step on one to get its item. A Monster House (a room that fills
+      with Pokémon when you walk in) turns up on some floors.
+- [ ] The stairs take you down (3-5 floors for Viridian's dungeon). The last floor has a few balls by a glowing exit
+      pad; step on it and you're back beside the entrance.
+- [ ] Black out inside (lose to a wild Pokémon): you wake at the Pokémon Center and the dungeon is gone; going back in
+      makes a new one.
+
+### WR8: content (with you)
+
+- [ ] The zone's name (now "VIRIDIAN WILDS"), the trainers' lines (`fabric-bridge/src/main/resources/data/kantobridge/
+      wild_routes/lines.json`), and the item tables (`items.json` beside it): change anything you like, or tell me.
+- [ ] Special areas from the research (rest stop, item clearing, hedge maze, Mart stall, trainer gauntlet), if you
+      want them.
+- [ ] Then: which city-to-city routes come first.
