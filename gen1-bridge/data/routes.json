@@ -1,0 +1,21 @@
+{
+  "version": 1,
+  "routes": [
+    {
+      "id": "viridian_forest_zone",
+      "name": "VIRIDIAN WILDS",
+      "kind": "free_roam",
+      "theme": "forest",
+      "from": {"games": ["red", "blue"], "map": "VIRIDIAN_CITY", "x": null, "y": null, "facing": null, "depth": 2},
+      "areas": {"main": [3, 4], "side": 0.5},
+      "levels": {"from": "neighbours", "perArea": 1, "maxRise": 3},
+      "trainers": {
+        "perArea": [1, 3],
+        "rematch": "each_visit",
+        "classes": ["OPP_YOUNGSTER", "OPP_BUG_CATCHER", "OPP_LASS", "OPP_JR_TRAINER_M", "OPP_JR_TRAINER_F"]
+      },
+      "dungeon": {"chance": 0.6, "floors": "by_level"},
+      "music": "Music_Routes1"
+    }
+  ]
+}

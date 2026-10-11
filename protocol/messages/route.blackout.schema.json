@@ -1,0 +1,12 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kantobridge.invalid/protocol/messages/route.blackout.schema.json",
+  "title": "route.blackout",
+  "description": "Wild Routes (WR2): the hidden game's own blackout, after a wild battle lost in Cobblemon.",
+  "x-type": "route.blackout",
+  "x-legs": ["m2g", "s2c"],
+  "x-re": "never",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {}
+}

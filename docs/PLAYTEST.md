@@ -656,3 +656,14 @@ A new world (the mod installed and switched off, as for P1).
 - [ ] **Stairs** (Red's house, the route gates, Mt. Moon): a rising stair shows four steps you walk through to the
       warp, as before; a stair down stays flat.
 - [ ] **Round stumps and cans** where the profile pins them: a cut top or an open mouth.
+
+## Wild Routes
+
+[specs/WILD_ROUTES_PLAN.md](specs/WILD_ROUTES_PLAN.md). The zone needs the parts of WR3 and WR4 before you can walk
+it in Minecraft; until then, only the spot is yours to give.
+
+### WR2: the exit's spot
+
+- [ ] In Viridian City, stand on the path where the clearing should start, facing the trees it should cut through.
+      Press **F7** and send the map, cell and facing it shows, and how deep the clearing should go (2 blocks, 4 steps,
+      unless you say otherwise).

@@ -1,0 +1,53 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kantobridge.invalid/protocol/messages/route.battle.schema.json",
+  "title": "route.battle",
+  "description": "Wild Routes (WR2): a zone trainer's battle, fought through the hidden game's scripted trainer battle with this party.",
+  "x-type": "route.battle",
+  "x-legs": ["m2g", "s2c"],
+  "x-re": "never",
+  "type": "object",
+  "required": ["route", "id", "class", "party"],
+  "additionalProperties": false,
+  "properties": {
+    "route": {"$ref": "../defs.schema.json#/$defs/routeId"},
+    "id": {"$ref": "../defs.schema.json#/$defs/routeObjectId"},
+    "class": {
+      "$ref": "../defs.schema.json#/$defs/symbol",
+      "description": "The Gen 1 trainer class, e.g. OPP_YOUNGSTER; the zone must list it."
+    },
+    "party": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 6,
+      "x-rom-derived": true,
+      "items": {
+        "type": "object",
+        "required": ["species", "level"],
+        "additionalProperties": false,
+        "properties": {
+          "species": {"$ref": "../defs.schema.json#/$defs/symbol"},
+          "level": {"$ref": "../defs.schema.json#/$defs/level"},
+          "moves": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 4,
+            "items": {"$ref": "../defs.schema.json#/$defs/symbol"}
+          }
+        }
+      }
+    },
+    "lines": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "before": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 160,
+          "description": "Our own text, shown before the battle."
+        }
+      }
+    }
+  }
+}

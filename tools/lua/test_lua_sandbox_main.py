@@ -17,6 +17,7 @@ LIB_FILES = [
     "lib/kb_net.lua",
     "lib/kb_proto.lua",
     "lib/kb_engine.lua",
+    "lib/kb_routes.lua",
     "lib/kb_catalog.lua",
     "lib/kb_session.lua",
     "lib/kb_perf.lua",
@@ -37,6 +38,7 @@ LIB_FILES = [
     "act/kb_save.lua",
     "act/kb_pairing.lua",
     "act/kb_pc.lua",
+    "act/kb_route.lua",
     "export/kb_cells.lua",
     "export/kb_images.lua",
     "export/kb_swapsites.lua",
@@ -114,7 +116,8 @@ def test_main_loads_modules_and_logs():
     before = b.env_keys()
     b.run_main()
     assert b.log_lines() == ["[info] [gen1-bridge] gen1-bridge loaded"]
-    assert b.read_calls == LIB_FILES
+    # every module, then (Wild Routes, WR2) the route list
+    assert b.read_calls == LIB_FILES + ["data/routes.json"]
     status = b.mod.exports
     assert (status.ready, status.modules, status.bridge, status.protocol) == (False, len(LIB_FILES), b"0.1.0", 1)
     assert b.env_keys() == before, "main.lua or a module leaked a global"

@@ -145,7 +145,7 @@ optional ones. The schemas give the exact types and limits.
 | `ping` | G→M, M→G | `t` (sender's ms clock) | |
 | `pong` | G→M, M→G | `t` (echoed); `re` required | |
 | `resync` | M→G | `{}`; asks for a `snapshot` | |
-| `snapshot` | G→M | `ingame` (false at the title screen and intro: `player` is then only the save's last position and must not move the Minecraft player), `player{map,x,y,facing}, state{…player.state}, flags[], toggles{map:{obj:bool}}, blocks[{map,bx,by,block}], lit[], bag{item:qty}, money, coins, badges[], party[{uid?,dex,level,nick?,moves[],hp?,maxhp?,status?}], dex{seen[],owned[]}, npcs{map,list[]}`; `re` optional (set when answering `resync`). `ui` is reserved and never sent: open UIs follow as `ui.open` messages (UI rules) | yes |
+| `snapshot` | G→M | `ingame` (false at the title screen and intro: `player` is then only the save's last position and must not move the Minecraft player), `player{map,x,y,facing}, state{…player.state}, flags[], toggles{map:{obj:bool}}, blocks[{map,bx,by,block}], lit[], bag{item:qty}, money, coins, badges[], party[{uid?,dex,level,nick?,moves[],hp?,maxhp?,status?}], dex{seen[],owned[]}, npcs{map,list[]}`, and (Wild Routes, WR2) `routes{<zone>:{taken[],wins{}}}`; `re` optional (set when answering `resync`). `ui` is reserved and never sent: open UIs follow as `ui.open` messages (UI rules) | yes |
 | `log` | G→M | `level, code, msg` (bridge diagnostics, never game text) | |
 | `error` | G→M, M→G, C→S, S→C | `code, msg`; `re` optional (the offending message) | |
 
@@ -600,12 +600,56 @@ engine symbols, and Pokémon identities as Cobblemon UUIDs (`uid`).
   is full. A `daycare.withdraw` of a Pokémon already in the party or PC is a no-op, so it never
   makes a duplicate.
 
+### Wild Routes (WR2)
+
+| Type | Dir | Data | ROM |
+|---|---|---|---|
+| `route.give` | S→C, M→G | `route, id, item` (a zone's item ball) | |
+| `route.battle` | S→C, M→G | `route, id, class, party[{species, level, moves[]?}], lines{before?}?` (a zone trainer) | yes |
+| `route.blackout` | S→C, M→G | `{}` (a wild battle lost in Cobblemon) | |
+| `route.result` | G→M, C→S | `op:"give"\|"battle"\|"blackout", ok, route?, id?, outcome?:"win"\|"lose"\|"abort", reason?`; `re` required | |
+| `route.progress` | G→M, C→S | `routes{<zone>:{taken[id], wins{id:n}}}` (the zones whose progress changed, each whole) | |
+
+#### Wild Routes rules (WR2)
+
+[specs/WILD_ROUTES_PLAN.md](specs/WILD_ROUTES_PLAN.md) §4.1-4.2 and `gen1-bridge/lib/kb_routes.lua`.
+
+- **The zones** are listed in `gen1-bridge/data/routes.json` (ids, map symbols, cell coordinates,
+  counts and our own text; never map contents). At boot, before the engine's merge, gen1-bridge
+  registers for each zone of the running game: the route map `KB_ROUTE_<ID>` (one block of the
+  clearing's floor, 2×2 cells: A at (0, 0), arrival x1 at (1, 0) facing right), two step scripts
+  (the clearing's last cells warp to x1; A warps back to the clearing's second-to-last cell, facing
+  the town; both are queued scripts of the engine's own `warp`, followed as warp kind `script`),
+  `KB_<CLASS>` copies of the zone's trainer classes, the route map's song when the music id exists,
+  and last the town's patched `blocks`. A zone whose spot is unset, or that fails the signature
+  check (the spot's block walkable, every opened block unwalkable and inside the map, nothing
+  standing in it, the clearing walkable afterwards), registers nothing.
+- **`route.give`** runs the engine's `give_item` in a queued script; `route.result.ok` says the item
+  went into the bag (the bag's count rose). Reasons: `unknown_route`, `not_ingame`, `not_in_zone`
+  (the hidden player isn't on the zone's route map), `taken`, `unknown_item`, `bag_full`, `busy`.
+- **`route.battle`** writes `party` into the zone's `KB_<CLASS>` record, then a queued script shows
+  `lines.before` (literal text) and runs `start_battle trainer KB_<CLASS> 1`: the battle itself is
+  the bridge's script battle (`battle.start` / `battle.result`, prize money and blackout as for any
+  scripted trainer). The answer comes when the script ends, with `outcome` `win`, `lose` or `abort`.
+  Reasons: `unknown_route`, `not_ingame`, `not_in_zone`, `unknown_class` (the zone doesn't list the
+  class), `bad_party` (a species the game doesn't have), `failed`, `busy`.
+- **`route.blackout`** runs the engine's own loss handling anywhere in the game (heal, half the
+  money, the warp to the last heal point; its `party.heal` follows the warp's arrival as for any
+  blackout). Reasons: `not_ingame`, `busy`, `failed`.
+- **One at a time:** requests wait (up to 120 logic steps, else `busy`) for an idle world: in the
+  game, standing, nothing scripted, no warp or battle. At most 8 wait; more are answered `busy`.
+  Requests of an old connection are dropped.
+- **Progress** (balls taken, each trainer's wins) lives in the hidden save's mod data
+  (`mod.save "routes"`), so an older save brings older progress back with its bag and money. It is
+  in every `snapshot` and goes out as `route.progress` when it changes and whole after a save loads
+  or a new game starts. "Beaten on this visit" (rematches) is the server's to keep.
+
 ### Export (builder role)
 
 | Type | Dir | Data | ROM |
 |---|---|---|---|
 | `export.index` | M→G, G→M | Request (M→G): `{}`. Reply (G→M, `re` set): `game, engine, bridge, resources[{kind,id,hash,size}]` | |
-| `export.get` | M→G | `kind:"map"\|"tileset"\|"image"\|"sprite"\|"palettes"\|"encounters"\|"field"\|"names"\|"layout"\|"swaps"\|"profile", id` | |
+| `export.get` | M→G | `kind:"map"\|"tileset"\|"image"\|"sprite"\|"palettes"\|"encounters"\|"field"\|"names"\|"layout"\|"swaps"\|"profile"\|"routes", id` | |
 | `export.data` | G→M | `kind, id, hash, data`; `re` required | yes |
 
 #### Export resources
@@ -641,6 +685,7 @@ A builder connection (role `builder`) asks for `export.index`, then fetches each
 | names | `all` | Species → dex, move → number, item → number, with display names |
 | layout | `kanto` | Block origins of the surface maps relative to `PALLET_TOWN`, from the engine's neighbour arithmetic |
 | swaps | `all` | Runtime block-change sites (cut trees, card-key doors, scripted swaps) the builder prepares story cells for |
+| routes | `all` | Wild Routes (WR2): the zones this game runs, always present (`routes` is empty when there are none). Each zone: `id`, `name`, `kind` (`free_roam`), `theme` (`forest`), `town{map, cleared[[bx,by]], triggers[[x,y]], back{x,y,facing}}` (the blocks turned into path, the cells whose step leads out, where the way back lands), `routeMap{id, width, height, a{x,y}, arrive{x,y,facing}}`, and the generator's settings `trainers{perArea, rematch, classes[]}`, `areas{main, side}`, `levels{from, perArea, maxRise}`, `dungeon{chance, floors}`. The town's own `map` resource carries the clearing in its `blocks` ([specs/WILD_ROUTES_PLAN.md](specs/WILD_ROUTES_PLAN.md) §4.1-4.2) |
 | profile | `dramaless` | Only when the Dramaless Shape mod (`DRAMALESS_SHAPE`) is installed in Gen1Recomp, enabled or not: its hand-authored shape profile `data/voxel_heights.lua` as text (never run), with the mod's version and whether it is enabled. The builder plans with it, and this player's client builds geometry with it ([specs/PROFILE_PLAN.md](specs/PROFILE_PLAN.md)); the file itself is never relayed |
 
 **Per-cell flags** (`map.cells`): one integer per 16-px cell, rows top to bottom. Like the engine,

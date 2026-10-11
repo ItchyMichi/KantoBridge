@@ -5234,6 +5234,67 @@ function Engine.new(opts)
     return png, w, h
   end
 
+  -- ---- Wild Routes (WR2: act/kb_route.lua, docs/specs/WILD_ROUTES_PLAN.md §4.2)
+
+  -- How many of an item the bag holds (save.inventory[ITEM] = qty,
+  -- src/inventory/Bag.lua); 0 for none.
+  function engine.inventoryCount(item)
+    local save = engine.save()
+    local inv = save and type(save.inventory) == "table" and save.inventory or nil
+    local n = inv and tonumber(inv[item]) or 0
+    return math.floor(n)
+  end
+
+  -- A zone trainer's party, written into its KB_<CLASS> record's first party
+  -- (Data.trainers: the table BattleState.newTrainer and engine.trainerTeam
+  -- read; parties are lists of { species, level, moves? }). False when the
+  -- record is missing.
+  function engine.writeTrainerParty(cls, party)
+    local data = gameData()
+    local tr = data and type(data.trainers) == "table" and data.trainers[cls] or nil
+    if type(tr) ~= "table" or type(party) ~= "table" or #party == 0 then return false end
+    local copy = {}
+    for i, m in ipairs(party) do
+      local slot = { species = m.species, level = m.level }
+      if type(m.moves) == "table" then
+        slot.moves = {}
+        for k, mv in ipairs(m.moves) do slot.moves[k] = mv end
+      end
+      copy[i] = slot
+    end
+    if type(tr.parties) ~= "table" then tr.parties = {} end
+    tr.parties[1] = copy
+    return true
+  end
+
+  -- The outcome a script's start_battle left in its context, "win" or
+  -- "lose" (Commands.start_battle sets ctx.lastBattleResult when the battle
+  -- resumes, src/script/Commands.lua:339-393; the runner keeps the context
+  -- as runner.ctx, src/script/ScriptRunner.lua:120-123); nil before that.
+  function engine.scriptBattleResult()
+    local ow = engine.overworld()
+    local runner = ow and ow.runner
+    local ctx = runner and type(runner.ctx) == "table" and runner.ctx or nil
+    local r = ctx and ctx.lastBattleResult
+    if r == "win" or r == "lose" then return r end
+    return nil
+  end
+
+  -- The engine's own blackout for a wild battle lost in Cobblemon:
+  -- OverworldState:afterBattle("lose") heals the party, takes half the money,
+  -- emits world.blacked_out and warps to the last heal point
+  -- (src/world/OverworldController.lua:5184-5225). Returns true, or false
+  -- plus a reason.
+  function engine.blackout()
+    local ow = engine.overworld()
+    if not ow then return false, "not_ingame" end
+    if ow.transitioning then return false, "busy" end
+    if type(ow.afterBattle) ~= "function" then return false, "failed" end
+    local ok = pcall(ow.afterBattle, ow, "lose", nil)
+    if not ok then return false, "failed" end
+    return true
+  end
+
   return engine
 end
 

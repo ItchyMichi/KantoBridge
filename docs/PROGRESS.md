@@ -579,6 +579,85 @@ Route 22: none. Over the 36 outdoor maps, 2,586 of 14,797 solid cells were units
   off is yours, in the launcher or with F10 (PLAYTEST.md, "Profile plan, P1"); then a new world shows P1–P3.
 - The `support` rule (deviation 28): standees on counters, tables and bookcases stand on the floor behind them.
 
+## Wild Routes
+
+Execution of [specs/WILD_ROUTES_PLAN.md](specs/WILD_ROUTES_PLAN.md) (WR1–WR8), from your choices R1–R9 (2026-10-10)
+and answers Q1–Q8 (2026-10-11): one free-roam forest zone off Viridian City first. Pods run without asking inside your
+RunPod budget and stop after each job; each phase runs its own tests, the full suite runs after WR2, WR4, WR6 and WR8.
+
+| # | Phase | Status | Date | Commit |
+|---|---|---|---|---|
+| WR1 | The generators | **done** (19 JUnit tests, 10,000-seed checks on both generators) | 2026-10-11 | `2627e41` |
+| WR2 | The exit and the route map | **done**; checkpoint: pytest and JUnit green, GameTests wait for the pod (note 9) | 2026-10-11 | |
+| WR3 | Building the zone | next | | |
+| WR4 | Moving through the zone | | | |
+| WR5 | Trainers and items | | | |
+| WR6 | Wild Pokémon | | | |
+| WR7 | Dungeons | | | |
+| WR8 | Content and play-test | | | |
+
+### Wild Routes: WR1 notes
+
+1. **Package `dev.kantobridge.routes.gen`**, pure Java with no Minecraft classes: `RouteRng` (xoshiro256** seeded by
+   SplitMix64, written out so goldens never drift), `RouteSeeds` (world seed + zone id; visits), our own block-shape
+   order and exit weights (DWM's tables from your notes stay in the prototype), `Theme` with `ForestTheme`,
+   `AreaGenerator`, `RouteGenerator`/`RouteSpec`/`RouteLayout`, `PmdFloorGenerator`/`PmdFloor`/`PmdParams`,
+   `DungeonRules`.
+2. **Numbers** (same 300 seeds as the prototype): 169–409 cells end to end (median 268), 2–17 dead ends, 1–10 balls,
+   3–14 trainers, at most one retry; 2.4 ms per route and 0.18 ms per floor in Java. 10,000 layouts and 10,000 floors
+   pass every invariant (openings meet in exactly 2 cells at every link, nothing overlaps, everything reachable with
+   balls and trainers in the way, trainers' sight clear and 8 cells apart, gates touching only their own area).
+3. **Fixed on the way:** a far gate could touch another area or the trailhead (a 2-cell shortcut in one route); an
+   item could block a lane next to another.
+4. **Decisions:** the first area always heads east, so the trailhead's A lies west of x1 as the unturned route map
+   `[A][x1]` needs (a connecting route's B lies east of x2); 1–2 balls per area (+1 30% of the time with 3+ dead
+   ends) instead of DWM's tier table; water and moats in floors are impassable; no traps (Gen 1 has none); D5 read
+   literally: one more floor at each end per **full** 10 levels above 20 (3–5 up to level 29, 4–6 for 30–39, up to
+   7–9 from 60).
+5. **Where it ran:** the pod had no host capacity (six tries), so the tests ran in a throwaway JDK 21 container on the
+   server with JUnit 5.11. The Gradle run is part of the WR2 checkpoint.
+
+### Wild Routes: WR2 notes
+
+1. **The exit needs no warp tile.** As the revised plan says: a step script on the town's map (map scripts compose, the
+   first truthy `onStep` wins, mods before the engine's own) queues the engine's own `warp` to the route map's x1; the
+   route map's A warps back to the clearing's second-to-last cell, facing the town. The bridge follows both as warp
+   kind `script`. `mod.world:queueScript` refuses while a script runs, so the step isn't consumed then and the player
+   can step again.
+2. **The route map** is one block (2×2 cells) of the block the chosen spot stands in, on the town's tileset (so the
+   engine treats it as outdoors) with the town's border block. Nothing else about it comes from a constant.
+3. **Registration order** keeps a failure harmless: the route map, the step scripts, the trainer classes and the song,
+   then the town's `blocks` patch last. A schema violation throws from the registry call for an api 2 mod
+   (`src/mods/Loader.lua:1202-1207`), so every call is guarded; a later failure tombstones the route map (`remove`)
+   and leaves the scripts inert. References only name ids that exist (the town's tileset, vanilla trainer fields; the
+   song only when `music:get` finds it), since a dangling one fails the whole mod after the merge.
+4. **Trainer classes:** `KB_<CLASS>` records copy the vanilla class (name, picture through `basePic`, money, AI) with
+   one party, the class's own first, rewritten before each zone battle (`engine.writeTrainerParty`). A class with no
+   usable party isn't registered and that zone just can't use it (`unknown_class`).
+5. **The battle's outcome** is read from the script's own context (`runner.ctx.lastBattleResult`, set when
+   `start_battle` resumes) while the script runs; the queued script's `onDone` (the real runner calls `ctx.onDone`)
+   ends the request. A loss blacks out through the engine's own path before the answer goes out.
+6. **The export** always carries `routes/all` (empty without zones) and the towns' clearings in their `blocks`
+   (the dataset view is the import, so the export applies the patch itself; on the live-copy path the patch is already
+   there and applying it again changes nothing). `fabric-bridge`'s bundle reader accepts the new kind; nothing on the
+   Java side reads it before WR3. The synthetic bundle (`fake_gen1`) has an empty list; its copy for GameTests was
+   regenerated and the goldens' `exportHash` updated (only that hash changed).
+7. **Lua tests** run on the server in a throwaway capped container (no venv here).
+   `tools/lua/test_lua_routes.py` (44 tests) on `tools/lua/routesim.py`, with new fakes `fake_registry.lua` (the
+   registries' fold and the compose rule) and `fake_worldapi.lua`, `give_item`/`warp` in `fake_script.lua`, and
+   `kblua.Bridge(files=, registries=, world_api=)`.
+8. **Viridian City's zone is listed but unset** (`x`, `y`, `facing` null), so nothing is registered and no world you
+   build shows a clearing yet. It waits for your F7 reading.
+9. **The checkpoint.** `kb-dev` couldn't start (its host had no free memory; eight tries on 2026-10-11), and
+   creating a replacement pod needs your permission in Claude Code. So the checkpoint ran on the server: the whole
+   pytest suite (1,474 passed, 45 e2e skipped), and fabric-bridge's JUnit tests through Gradle in a capped JDK 21
+   container (867 tests, 6 skipped that need the Python stand-ins; about 4.5 minutes, Gradle's cache in the
+   session's scratch folder). The GameTests run a Minecraft server, which doesn't fit beside Gradle in the server's
+   memory; they run at the next pod session. Two JUnit expectations followed the new
+   resource: the synthetic bundle has 21 resources, and the shapes golden's `mapHash` changed (nothing else in it).
+10. **The route list's own schema** is `protocol/world/route_list.schema.json`, checked against the shipped list and
+    the Lua tests' list (`tools/tests/test_route_list.py`).
+
 ## Pre-flight (PLAN §0.6)
 
 | Step | State |

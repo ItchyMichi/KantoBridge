@@ -1,0 +1,85 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kantobridge.invalid/protocol/world/route_list.schema.json",
+  "title": "route list",
+  "description": "Wild Routes (WR2): gen1-bridge/data/routes.json, the zones gen1-bridge registers at boot (lib/kb_routes.lua) and passes to the builder in the export's routes resource. Ids, map and class symbols, cell coordinates, counts and our own text only; never map contents (docs/specs/WILD_ROUTES_PLAN.md §4.1). gen1-bridge checks each entry itself too and leaves out one that doesn't check out, with a reason code.",
+  "type": "object",
+  "required": ["version", "routes"],
+  "additionalProperties": false,
+  "properties": {
+    "version": {"const": 1},
+    "routes": {
+      "type": "array",
+      "maxItems": 32,
+      "items": {
+        "type": "object",
+        "required": ["id", "name", "kind", "from"],
+        "additionalProperties": false,
+        "properties": {
+          "id": {"$ref": "../defs.schema.json#/$defs/routeId"},
+          "name": {"type": "string", "pattern": "^[A-Za-z0-9 '.-]+$", "minLength": 1, "maxLength": 24},
+          "kind": {"enum": ["free_roam"], "description": "connecting comes later (the plan's §4.10)."},
+          "theme": {"enum": ["forest"], "description": "Caves and the sea come later."},
+          "from": {
+            "type": "object",
+            "required": ["games", "map", "x", "y", "facing"],
+            "additionalProperties": false,
+            "description": "The exit: where the clearing starts and which way it cuts. x, y and facing are null until the spot is chosen (F7 shows them).",
+            "properties": {
+              "games": {
+                "type": "array",
+                "minItems": 1,
+                "maxItems": 9,
+                "uniqueItems": true,
+                "items": {"type": "string", "pattern": "^[a-z]+$"}
+              },
+              "map": {"$ref": "../defs.schema.json#/$defs/mapId"},
+              "x": {"type": ["integer", "null"], "minimum": 0, "maximum": 4095},
+              "y": {"type": ["integer", "null"], "minimum": 0, "maximum": 4095},
+              "facing": {"enum": ["up", "down", "left", "right", null]},
+              "depth": {"type": "integer", "minimum": 1, "maximum": 4, "description": "Blocks through the trees (default 2)."}
+            }
+          },
+          "areas": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "main": {"type": "array", "minItems": 2, "maxItems": 2, "items": {"type": "integer", "minimum": 1, "maximum": 8}},
+              "side": {"type": "number", "minimum": 0, "maximum": 1}
+            }
+          },
+          "levels": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "from": {"enum": ["neighbours"]},
+              "perArea": {"type": "integer", "minimum": 0, "maximum": 5},
+              "maxRise": {"type": "integer", "minimum": 0, "maximum": 20}
+            }
+          },
+          "trainers": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "perArea": {"type": "array", "minItems": 2, "maxItems": 2, "items": {"type": "integer", "minimum": 0, "maximum": 6}},
+              "rematch": {"enum": ["each_visit"]},
+              "classes": {"type": "array", "maxItems": 16, "items": {"$ref": "../defs.schema.json#/$defs/symbol"}}
+            }
+          },
+          "dungeon": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "chance": {"type": "number", "minimum": 0, "maximum": 1},
+              "floors": {"enum": ["by_level"]}
+            }
+          },
+          "music": {
+            "anyOf": [{"$ref": "../defs.schema.json#/$defs/symbol"}, {"type": "null"}],
+            "description": "The route map's song (a music id); used only when the game has it."
+          }
+        }
+      }
+    }
+  }
+}

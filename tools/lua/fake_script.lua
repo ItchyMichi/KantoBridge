@@ -535,6 +535,21 @@ function FakeScript.attach(E)
   end
 
   -- give_pokemon (Commands.lua:807-869)
+  -- Wild Routes (WR2). give_item <item> [count] (Commands.lua:250-292): the bag
+  -- (Bag.add), then the "got" box; E.bagFull makes the bag refuse: the refusal box
+  -- and a halt (math.huge), as the engine's own does. All text is made up.
+  function Commands.give_item(ctx, itemId, count)
+    if E.bagFull or not E.Bag.add(ctx.save, itemId, count or 1) then
+      Commands.show_text(ctx, "NO ROOM FOR MORE!")
+      return math.huge
+    end
+    Commands.show_text(ctx, "GOT " .. tostring(itemId) .. "!")
+  end
+  -- warp <map> <x> <y> [facing] (Commands.lua:395-401): the fake world's warp
+  function Commands.warp(ctx, mapId, x, y, facing)
+    E.startWarpTo(mapId, x, y, facing or "down")
+  end
+
   function Commands.give_pokemon(ctx, species, level, skipNickname)
     local gift = { ctx = ctx, species = species, level = level }
     E.runtime.emit("pokemon.before_give", gift)

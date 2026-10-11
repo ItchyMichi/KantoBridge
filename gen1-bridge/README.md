@@ -53,6 +53,12 @@ timeout, a New Game, a reconnect in a text box, a save, a gift, a kill, a relaun
 the same pair; 150-200 µs per logic step on average over a busy scenario; a hidden window at 60
 logic steps a second instead of 20).
 
+**Wild Routes (WR2)** adds the zones' exits and route maps at boot (`lib/kb_routes.lua`), the acts
+`route.give`, `route.battle` and `route.blackout` answered by `route.result`, the zones' progress
+(`route.progress`, the snapshot's `routes`), and the export's `routes` resource with the towns'
+clearings in their `blocks` ([docs/PROTOCOL.md](../docs/PROTOCOL.md#wild-routes-wr2)). Lua tests:
+`tools/lua/test_lua_routes.py` on `tools/lua/routesim.py`.
+
 ## What it does each logic step
 
 Everything runs from the `input.step` hook (about 60 times a second; `core.update` doesn't fire under
@@ -587,6 +593,9 @@ client are released at once.
 | `act/kb_uiact.lua` | UI answers (`ui.advance`, `ui.pick`, `ui.back`, `ui.qty`, `ui.name`) and `act.button`, applied as taps to the top state. |
 | `act/kb_interact.lua` | `act.interact`: face and press A in one step, confirmed by `world.interacted`, one retry for a moving NPC. |
 | `act/kb_field.lua` | M8: `act.field`: one request at a time, waiting for the player to stand, turning to a target cell, kb_engine's `fieldAction`, one `act.result` each (kinds and refusal reasons above). |
+| `lib/kb_routes.lua` | Wild Routes (WR2, [docs/specs/WILD_ROUTES_PLAN.md](../docs/specs/WILD_ROUTES_PLAN.md) §4.1-4.2): the route list (`data/routes.json`, checked entry by entry with reason codes) and, from the entry chunk before the engine's merge, each zone's registrations through the public content API: the route map `KB_ROUTE_<ID>` (one block of the clearing's floor, 2×2 cells), the map step scripts that lead out (the clearing's last cells) and back (A), the `KB_<CLASS>` trainer records, the route map's song, and last the town's patched `blocks`, after a signature check asked of `kb_engine.mapQuery`; every registration guarded, a failed one switching the zone off. Also the export's view (the patched blocks, the `routes` resource). |
+| `act/kb_route.lua` | Wild Routes (WR2): `route.give` (the engine's `give_item` in a queued script, the bag's count before and after), `route.battle` (the zone's `KB_<CLASS>` party written, then a queued `start_battle trainer` through the bridge's script-battle path; answered with the outcome), `route.blackout` (the engine's loss handling); one at a time, waiting for an idle world; progress (balls taken, trainers' wins) in `mod.save "routes"`, in the snapshot and as `route.progress`. |
+| `data/routes.json` | Wild Routes: the zone list. Ids, map and class symbols, cell coordinates, counts and our own text only; Viridian City's forest zone waits for its spot (`x`, `y`, `facing` null until chosen). |
 | `export/kb_export.lua` | The export service: roles, the request queue, the budgeted build coroutine, the cache, budgeted replies, and every resource's shaping (map records, surface, parents by BFS, the `LAST_MAP` memory, palettes, tile classes, images, sprites, encounters, field tables, names, layout). |
 | `export/kb_cells.lua` | The per-cell flag integers of one map, from `kb_engine`'s map queries plus `field.ledges`, `field.spinners`, the warps and signs. |
 | `export/kb_images.lua` | Base64, image ids from asset paths (`<folder>.<name>`), and the image and sprite resources. |

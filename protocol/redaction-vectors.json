@@ -341,6 +341,56 @@
     {"type": "relay.hello", "seq": 1, "redacted": {"protocol": 1, "mod": "0.10.0"}},
     {"type": "resync", "seq": 11, "redacted": {}},
     {
+      "type": "route.battle",
+      "seq": 22,
+      "redacted": {
+        "route": "test_zone",
+        "id": "a2.t1",
+        "class": "OPP_TEST_HIKER",
+        "party": "<rom:arr:2:15a5a5ce>",
+        "lines": {"before": "You're new around here!"}
+      }
+    },
+    {"type": "route.blackout", "seq": 23, "redacted": {}},
+    {
+      "type": "route.give",
+      "seq": 21,
+      "redacted": {"route": "test_zone", "id": "a1.i2", "item": "TEST_POTION"}
+    },
+    {
+      "type": "route.progress",
+      "seq": 35,
+      "redacted": {"routes": {"test_zone": {"taken": ["a1.i2"], "wins": {"a2.t1": 1}}}}
+    },
+    {
+      "type": "route.result",
+      "seq": 31,
+      "redacted": {"op": "give", "ok": true, "route": "test_zone", "id": "a1.i2"}
+    },
+    {
+      "type": "route.result",
+      "seq": 32,
+      "redacted": {
+        "op": "battle",
+        "ok": true,
+        "route": "test_zone",
+        "id": "a2.t1",
+        "outcome": "win"
+      }
+    },
+    {
+      "type": "route.result",
+      "seq": 33,
+      "redacted": {
+        "op": "give",
+        "ok": false,
+        "route": "test_zone",
+        "id": "a1.i3",
+        "reason": "bag_full"
+      }
+    },
+    {"type": "route.result", "seq": 34, "redacted": {"op": "blackout", "ok": true}},
+    {
       "type": "save.begin",
       "seq": 11,
       "redacted": {"save": "sv-1", "reason": "menu", "pair": "3f2a9c0d1e4b5a67", "at": 1790000000}

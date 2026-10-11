@@ -18,7 +18,7 @@ from rig import Rig, call
 pytestmark = pytest.mark.lua
 
 PROTOCOL = load_protocol()
-KINDS = {"map", "tileset", "image", "sprite", "palettes", "encounters", "field", "names", "layout", "swaps"}
+KINDS = {"map", "tileset", "image", "sprite", "palettes", "encounters", "field", "names", "layout", "swaps", "routes"}
 
 # per-cell flag bits (docs/PROTOCOL.md "Export resources")
 WALK, WATER, SHORE, GRASS, DOOR, WARP_TILE, COUNTER, CUT = 1, 2, 4, 8, 16, 32, 64, 128
@@ -140,12 +140,12 @@ def test_counts(exported):
     counts = {}
     for kind, _ in exported["data"]:
         counts[kind] = counts.get(kind, 0) + 1
-    assert counts == {"map": 13, "tileset": 7, "image": 12, "sprite": 3, "palettes": 1, "encounters": 1,
+    assert counts == {"map": 13, "tileset": 7, "image": 12, "sprite": 3, "palettes": 1, "encounters": 1, "routes": 1,
                       "field": 1, "names": 1, "layout": 1, "swaps": 1}
     ready = [line for line in exported["logs"] if "export.ready " in line]
-    assert len(ready) == 1 and " path=datasets " in ready[0] and " resources=41 " in ready[0]
-    assert any("export.counts encounters=1 field=1 image=12 layout=1 map=13 names=1 palettes=1 sprite=3 swaps=1"
-               " tileset=7" in line for line in exported["logs"])
+    assert len(ready) == 1 and " path=datasets " in ready[0] and " resources=42 " in ready[0]
+    assert any("export.counts encounters=1 field=1 image=12 layout=1 map=13 names=1 palettes=1 routes=1 sprite=3"
+               " swaps=1 tileset=7" in line for line in exported["logs"])
 
 
 # ------------------------------------------------------------ maps and cells
@@ -600,7 +600,7 @@ def test_datasets_unavailable_copies_the_live_data_at_boot():
 def test_a_broken_view_falls_back_while_the_live_data_is_pristine():
     rig, peer = export_rig(dataset_mode="broken")
     index = request(rig, peer, "export.index", {})
-    assert index["type"] == "export.index" and len(index["data"]["resources"]) == 41
+    assert index["type"] == "export.index" and len(index["data"]["resources"]) == 42
     assert any("export.live_copy" in line and "when=export" in line for line in rig.logs())
     assert status(rig)["exportLive"] is True
 
@@ -766,7 +766,7 @@ def test_logs_never_carry_game_text(exported):
 
 def test_debug_status_reports_the_export(exported):
     st = status(exported["rig"])
-    assert st["exportState"] == 2 and st["exportResources"] == 41
+    assert st["exportState"] == 2 and st["exportResources"] == 42
     assert st["exportServed"] >= 41 and st["exportBytes"] > 10000 and st["exportLargest"] > 1000
     assert st["exportDatasets"] is True and st["exportLive"] is False and st["exportBootLive"] is False
     assert st["exportWarnings"] == 1, "palette_ambiguous"

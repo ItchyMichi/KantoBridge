@@ -26,7 +26,8 @@
 local Export = {}
 
 Export.KINDS = { map = true, tileset = true, image = true, sprite = true, palettes = true,
-                 encounters = true, field = true, names = true, layout = true, swaps = true, profile = true }
+                 encounters = true, field = true, names = true, layout = true, swaps = true, profile = true,
+                 routes = true }
 Export.ROLES = { builder = true, test = true }
 Export.ROOT = "PALLET_TOWN"              -- layout root (PLAN section 2.2)
 Export.BUDGET = 0.006                    -- seconds of build work per logic step
@@ -124,10 +125,14 @@ end
 --   Cells, Images, SwapSites         the export helper modules
 --   catalog                          kb_catalog (exportPageBytes)
 --   bridge                           gen1-bridge's version
+--   Routes, routes                   lib/kb_routes.lua and its runtime (Wild Routes, WR2;
+--                                    optional): towns are exported with their zones'
+--                                    clearings, and the `routes` resource lists the zones
 --   budget, serveBytes, backlog      optional limits (tests)
 function Export.new(opts)
   local json, sha256, log, clock = opts.json, opts.sha256, opts.log, opts.clock
   local engine, Cells, Images, SwapSites = opts.engine, opts.Cells, opts.Images, opts.SwapSites
+  local Routes, routesRt = opts.Routes, opts.routes
   local pageLimit = (opts.catalog and opts.catalog.exportPageBytes) or 1048576
   local budget = opts.budget or Export.BUDGET
   local serveBytes = opts.serveBytes or Export.SERVE_BYTES
@@ -486,6 +491,22 @@ function Export.new(opts)
     end
     for _, r in ipairs(d.records.tilesets) do
       if type(r.value) == "table" then tilesets[r.id] = r.value end
+    end
+    -- Wild Routes (WR2): a town with a zone's exit is exported with its
+    -- clearing, as the hidden game runs it (lib/kb_routes.lua patches the
+    -- registry at boot; the dataset view is the import, without it)
+    if Routes and routesRt then
+      for _, id in ipairs(ids) do
+        local patched = Routes.patchedBlocks(routesRt, id)
+        local def = defs[id]
+        if patched and type(def.blocks) == "table" and #patched == #def.blocks then
+          local copy = {}
+          for k, v in pairs(def) do copy[k] = v end
+          copy.blocks = patched
+          defs[id] = copy
+          stats.routeTowns = (stats.routeTowns or 0) + 1
+        end
+      end
     end
     local dexOf = {}
     for _, r in ipairs(d.records.pokemon) do
@@ -946,6 +967,10 @@ function Export.new(opts)
       if blockAt(r[1], r[2], r[3]) ~= nil then swapRows[#swapRows + 1] = r end
     end
     put("swaps", "all", { sites = json.array(SwapSites.collect(swapRows, function(code) warn(code) end)) })
+    -- Wild Routes (WR2): the zones this game runs (docs/PROTOCOL.md "Export
+    -- resources"), always present, empty when there are none
+    put("routes", "all", Routes and Routes.exportData(json, routesRt)
+      or { version = 1, routes = json.array({}) })
 
     -- ---------------------------------------------- the shape profile
     -- Read at mods.loaded (ex.onModsLoaded), exported as the file's text;

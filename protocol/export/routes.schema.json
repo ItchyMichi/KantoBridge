@@ -1,0 +1,151 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kantobridge.invalid/protocol/export/routes.schema.json",
+  "title": "export routes",
+  "description": "Wild Routes (WR2): the zones this game runs: each zone's exit in its town, its route map in the hidden game, and the settings the builder and the server generate it with (gen1-bridge/data/routes.json, docs/specs/WILD_ROUTES_PLAN.md).",
+  "x-export-kind": "routes",
+  "type": "object",
+  "required": ["version", "routes"],
+  "additionalProperties": false,
+  "properties": {
+    "version": {"const": 1},
+    "routes": {
+      "type": "array",
+      "maxItems": 32,
+      "items": {
+        "type": "object",
+        "required": ["id", "name", "kind", "theme", "town", "routeMap", "trainers", "areas", "levels", "dungeon"],
+        "additionalProperties": false,
+        "properties": {
+          "id": {"$ref": "../defs.schema.json#/$defs/routeId"},
+          "name": {"type": "string", "pattern": "^[A-Za-z0-9 '.-]+$", "minLength": 1, "maxLength": 24},
+          "kind": {"enum": ["free_roam"]},
+          "theme": {"enum": ["forest"]},
+          "town": {
+            "type": "object",
+            "required": ["map", "cleared", "triggers", "back"],
+            "additionalProperties": false,
+            "properties": {
+              "map": {"$ref": "../defs.schema.json#/$defs/mapId"},
+              "cleared": {
+                "type": "array",
+                "minItems": 1,
+                "maxItems": 4,
+                "items": {
+                  "type": "array",
+                  "minItems": 2,
+                  "maxItems": 2,
+                  "items": {"type": "integer", "minimum": 0, "maximum": 4095}
+                },
+                "description": "The blocks (bx, by) turned into path."
+              },
+              "triggers": {
+                "type": "array",
+                "minItems": 1,
+                "maxItems": 2,
+                "items": {
+                  "type": "array",
+                  "minItems": 2,
+                  "maxItems": 2,
+                  "items": {"type": "integer", "minimum": 0, "maximum": 4095}
+                },
+                "description": "The cells (x, y) whose step leads into the zone."
+              },
+              "back": {
+                "type": "object",
+                "required": ["x", "y", "facing"],
+                "additionalProperties": false,
+                "properties": {
+                  "x": {"type": "integer", "minimum": 0, "maximum": 4095},
+                  "y": {"type": "integer", "minimum": 0, "maximum": 4095},
+                  "facing": {"$ref": "../defs.schema.json#/$defs/dir"}
+                }
+              }
+            }
+          },
+          "routeMap": {
+            "type": "object",
+            "required": ["id", "width", "height", "a", "arrive"],
+            "additionalProperties": false,
+            "properties": {
+              "id": {"$ref": "../defs.schema.json#/$defs/mapId"},
+              "width": {"type": "integer", "minimum": 1, "maximum": 4},
+              "height": {"type": "integer", "minimum": 1, "maximum": 4},
+              "a": {
+                "type": "object",
+                "required": ["x", "y"],
+                "additionalProperties": false,
+                "properties": {
+                  "x": {"type": "integer", "minimum": 0, "maximum": 4095},
+                  "y": {"type": "integer", "minimum": 0, "maximum": 4095}
+                }
+              },
+              "arrive": {
+                "type": "object",
+                "required": ["x", "y", "facing"],
+                "additionalProperties": false,
+                "properties": {
+                  "x": {"type": "integer", "minimum": 0, "maximum": 4095},
+                  "y": {"type": "integer", "minimum": 0, "maximum": 4095},
+                  "facing": {"$ref": "../defs.schema.json#/$defs/dir"}
+                }
+              }
+            }
+          },
+          "trainers": {
+            "type": "object",
+            "required": ["perArea", "rematch", "classes"],
+            "additionalProperties": false,
+            "properties": {
+              "perArea": {
+                "type": "array",
+                "minItems": 2,
+                "maxItems": 2,
+                "items": {"type": "integer", "minimum": 0, "maximum": 6}
+              },
+              "rematch": {"enum": ["each_visit"]},
+              "classes": {
+                "type": "array",
+                "maxItems": 16,
+                "items": {"$ref": "../defs.schema.json#/$defs/symbol"}
+              }
+            }
+          },
+          "areas": {
+            "type": "object",
+            "required": ["main", "side"],
+            "additionalProperties": false,
+            "properties": {
+              "main": {
+                "type": "array",
+                "minItems": 2,
+                "maxItems": 2,
+                "items": {"type": "integer", "minimum": 1, "maximum": 8}
+              },
+              "side": {"type": "number", "minimum": 0, "maximum": 1}
+            }
+          },
+          "levels": {
+            "type": "object",
+            "required": ["from", "perArea", "maxRise"],
+            "additionalProperties": false,
+            "properties": {
+              "from": {"enum": ["neighbours"]},
+              "perArea": {"type": "integer", "minimum": 0, "maximum": 5},
+              "maxRise": {"type": "integer", "minimum": 0, "maximum": 20}
+            }
+          },
+          "dungeon": {
+            "type": "object",
+            "required": ["chance", "floors"],
+            "additionalProperties": false,
+            "properties": {
+              "chance": {"type": "number", "minimum": 0, "maximum": 1},
+              "floors": {"enum": ["by_level"]}
+            }
+          }
+        }
+      }
+    }
+  }
+}

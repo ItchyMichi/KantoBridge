@@ -43,7 +43,7 @@ class ExportBundleTest {
 	void readsTheSyntheticBundle() throws Exception {
 		ExportBundle bundle = ExportBundle.open(TestData.syntheticBundle());
 		assertEquals("red", bundle.game());
-		assertEquals(20, bundle.resources().size());
+		assertEquals(21, bundle.resources().size());
 		// The profile plan: the synthetic world's made-up shape profile, as text.
 		ExportProfile profile = bundle.profile();
 		assertEquals(ExportProfile.MOD, profile.mod());

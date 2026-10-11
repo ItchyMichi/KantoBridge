@@ -32,6 +32,7 @@ return function(mod)
     Net = import("lib/kb_net.lua"),
     Proto = import("lib/kb_proto.lua"),
     Engine = import("lib/kb_engine.lua"),
+    Routes = import("lib/kb_routes.lua"),
     catalog = import("lib/kb_catalog.lua"),
     Session = import("lib/kb_session.lua"),
     Perf = import("lib/kb_perf.lua"),
@@ -52,6 +53,7 @@ return function(mod)
     Save = import("act/kb_save.lua"),
     Pairing = import("act/kb_pairing.lua"),
     Pc = import("act/kb_pc.lua"),
+    Route = import("act/kb_route.lua"),
     Cells = import("export/kb_cells.lua"),
     Images = import("export/kb_images.lua"),
     SwapSites = import("export/kb_swapsites.lua"),
@@ -65,6 +67,22 @@ return function(mod)
   })
   -- M10: the love facade too (love.window and love.timer for running hidden)
   local engine = kb.Engine.new({ require = require, log = log, ui = mod.ui, datasets = mod.datasets, love = love })
+
+  -- Wild Routes (WR2: lib/kb_routes.lua, docs/specs/WILD_ROUTES_PLAN.md
+  -- §4.2): the zones' exits, route maps, step scripts and trainer classes
+  -- are registered here, in the entry chunk, before the engine merges the
+  -- registries (src/mods/Loader.lua:2040-2060). A zone that doesn't check out
+  -- is switched off; nothing here can fail the entry chunk.
+  local routesText = mod:read("data/routes.json")
+  local okRoutes, routes = pcall(kb.Routes.install, {
+    json = kb.json, text = type(routesText) == "string" and routesText or nil,
+    content = mod.content, world = mod.world, game = engine.gameVersion(),
+    mapQuery = engine.mapQuery, log = log,
+  })
+  if not okRoutes then
+    routes = nil
+    log.error("routes.install_failed", {})
+  end
 
   -- The port is a mod option (F10 manager, or the launcher's mod settings);
   -- drivers can move it through exports.configure before the first bind. A
@@ -103,6 +121,8 @@ return function(mod)
   status.protocol = kb.Proto.PROTOCOL
   status.modules = loaded
   status.ready = false
+  -- Wild Routes (WR2): zones installed at boot
+  status.routesInstalled = 0
   status.port, status.portConfigured, status.portFallback = port, port, false
   status.connected, status.bound, status.role = false, false, nil
   status.sessions, status.quitRequested = 0, false
@@ -191,6 +211,17 @@ return function(mod)
     },
   })
   local pcs = kb.Pc.new({ engine = engine, log = log })
+  -- Wild Routes (WR2): the zones' acts and progress (act/kb_route.lua); the
+  -- progress is kept in mod.save "routes" (save.modData, so it loads and
+  -- saves with the hidden game)
+  local routeActs = kb.Route.new({
+    engine = engine, routes = routes, world = mod.world, json = kb.json, log = log,
+    store = {
+      get = function(key) return mod.save:get(key) end,
+      set = function(key, value) mod.save:set(key, value) end,
+    },
+    has = function(registry, id) return contentRecord(registry, id) ~= nil end,
+  })
   -- M9: online save pairing (act/kb_pairing.lua): session.bind's world gets
   -- its own save slot, switched to at runtime; the world -> slot map lives in
   -- mod.cache (installation-wide, src/mods/Loader.lua:1567-1569), never in
@@ -273,7 +304,10 @@ return function(mod)
       end,
       uidOf = engine.uidOf,
       story = storyParts,
+      -- Wild Routes (WR2): every zone's progress; its diffs start from here
+      routes = routeActs.progress(),
     })
+    routeActs.rebase()
     -- logged at the end of the step: a forwarded `log` must not land between
     -- hello.ok and the snapshot
     if dropped > 0 then pendingDropped = dropped end
@@ -330,6 +364,10 @@ return function(mod)
     merge("pc", pcs.stats())
     merge("story", story.stats())
     merge("field", field.stats())
+    -- Wild Routes (WR2): the acts (routeRequests, routeGiven, routeWins, ...)
+    -- and the boot's zones (routesListed, routesInstalled, routesSkipped, ...)
+    merge("route", routeActs.stats())
+    merge("routes", routes and routes.stats or {})
     -- M10: our own cost per logic step and per drawn frame (perfSteps,
     -- perfAvgUs, perfMaxUs, perfOver1ms, perfTotalUs, perfFrames,
     -- perfDrawAvgUs, ...), running hidden (hiddenActive, hiddenFaked,
@@ -413,7 +451,7 @@ return function(mod)
   exporter = kb.Export.new({
     json = kb.json, sha256 = kb.sha256, log = log, clock = clock, engine = engine,
     Cells = kb.Cells, Images = kb.Images, SwapSites = kb.SwapSites, catalog = kb.catalog,
-    bridge = mod.version,
+    bridge = mod.version, Routes = kb.Routes, routes = routes,
   })
   exporter.attach(session)
 
@@ -455,6 +493,11 @@ return function(mod)
   -- M8: field moves (act/kb_field.lua), answered by act.result
   session.on("act.field", queued(field.request))
   session.on("act.button", queued(uiAct.button))
+  -- Wild Routes (WR2): item balls, trainer battles and blackouts the server
+  -- decides, answered by route.result (act/kb_route.lua)
+  for _, op in ipairs({ "give", "battle", "blackout" }) do
+    session.on("route." .. op, queued(function(data, seq, gen) return routeActs.request(op, data, seq, gen) end))
+  end
   for _, t in ipairs({ "ui.advance", "ui.pick", "ui.back", "ui.qty", "ui.name" }) do
     session.on(t, queued(function(data, seq, gen) return uiAct.request(t, data, seq, gen) end))
   end
@@ -635,6 +678,13 @@ return function(mod)
     interact.step(facts, mode, ev, npcRaw, out, ctx)
     field.step(facts, mode, out, { live = live, generation = generation, moverBusy = ctx.moverBusy,
                                    interactBusy = interact.busy() })
+    -- Wild Routes (WR2): route.result and route.progress. Guarded like the
+    -- story: a fault there must not stop what follows in this step.
+    local okRoute, routeErr = pcall(routeActs.step, facts, mode, out, { live = live, generation = generation })
+    if not okRoute then
+      log.once("route.step_failed", "error", "route.step_failed",
+        { at = type(routeErr) == "string" and routeErr:match("[%w_/%.%-]+%.lua:%d+") or "unknown" })
+    end
     npcObs.step(npcRaw, npcMap, npcGen, emote, out, live)
     -- M8: story.blocks / story.lit every step, story.flags / story.toggles
     -- every few steps, when a script ends and on a map load. Guarded: the
@@ -761,8 +811,11 @@ return function(mod)
     engine.bridgeToken(sessionId:sub(3, 10))
     engine.attachBridge(bridge)
     party.adopt()
+    -- Wild Routes (WR2): the progress of the save that is up (a hot reload)
+    routeActs.reload()
     status.engine = version
     status.game = engine.gameVersion()
+    status.routesInstalled = routes and routes.stats.installed or 0
     status.ready = true
     log.info("game.ready", { engine = version, api = api, modules = loaded })
   end))
@@ -875,6 +928,8 @@ return function(mod)
     saves.restore()
     -- M10: a fresh playthrough (save.loaded{fresh:true} once in the world)
     saves.created(save)
+    -- Wild Routes (WR2): a new game has no progress
+    routeActs.reload()
   end))
 
   -- CONTINUE re-applies the stored options before this event
@@ -889,6 +944,8 @@ return function(mod)
     saves.restore()
     -- M10: the loaded save's own pair (save.loaded{fresh:false, pair})
     saves.loadedSave(type(payload) == "table" and payload.save or nil)
+    -- Wild Routes (WR2): the loaded save's progress goes out whole
+    routeActs.reload()
   end))
 
   -- M9: BRIDGE PORT changed in the F10 mod manager (ManagerState:setOption,

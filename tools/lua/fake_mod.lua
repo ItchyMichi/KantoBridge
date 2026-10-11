@@ -178,6 +178,10 @@ function FakeMod.new(opts)
   for name, records in pairs(opts.content or {}) do
     mod.content[name] = { get = function(_, id) return records[id] end }
   end
+  -- Wild Routes (WR2): full registries (fake_registry.lua) and mod.world
+  -- (fake_worldapi.lua) when a test provides them
+  if opts.registries then mod.content = opts.registries end
+  mod.world = opts.world
 
   -- Records button calls. When the game has an input with sources (the fake
   -- world's), presses go through it as the Loader's do

@@ -62,8 +62,12 @@ class Bridge:
 
     def __init__(self, permissions=PERMISSIONS, modules=None, developer=False, strict=True,
                  engine=False, mod_options=None, content=None, game="blue", graphics=False,
-                 script=False, mod_cache=None, save_files=False, window=False):
+                 script=False, mod_cache=None, save_files=False, window=False, files=None,
+                 registries=None, world_api=False):
         self.rt = luajit.LuaRuntime(unpack_returned_tuples=True, encoding=None)
+        # Wild Routes (WR2): mod:read sees these files first (rel -> text), e.g. a made-up
+        # data/routes.json
+        self.files = {k: _b(v) for k, v in (files or {}).items()}
         self.lua = self.rt.globals()
         self.Sandbox = self._load_harness("sandbox.lua")
         self.FakeMod = self._load_harness("fake_mod.lua")
@@ -146,6 +150,19 @@ class Bridge:
             mod_opts[b"options"] = self.to_lua(mod_options)
         if content:
             mod_opts[b"content"] = self.to_lua(content)
+        # Wild Routes (WR2): full content registries (fake_registry.lua; ``registries`` is
+        # {"records": {registry: {id: record}}, "reject": {registry: True}}) and mod.world
+        # (fake_worldapi.lua, on the fake engine)
+        self.registries = None
+        if registries is not None:
+            self.FakeRegistry = self._load_harness("fake_registry.lua")
+            self.registries = self.FakeRegistry.content(self.to_lua(registries))
+            mod_opts[b"registries"] = self.registries
+        self.world_api = None
+        if world_api:
+            assert self.engine is not None, "world_api needs engine=True"
+            self.world_api = self._load_harness("fake_worldapi.lua").new(self.engine)
+            mod_opts[b"world"] = self.world_api
         # M9: mod.cache's files (rel -> bytes), e.g. another run's, for a simulated restart
         mod_opts[b"cache"] = self.to_lua(mod_cache or {})
         self._mod_opts = mod_opts
@@ -287,6 +304,8 @@ class Bridge:
     def _read(self, rel):
         rel = rel.decode("utf-8") if isinstance(rel, bytes) else rel
         self.read_calls.append(rel)
+        if rel in self.files:
+            return self.files[rel]
         path = (BRIDGE / rel).resolve()
         if BRIDGE.resolve() not in path.parents or not path.is_file():
             return None, b"not found"

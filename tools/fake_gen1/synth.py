@@ -451,6 +451,8 @@ def resources(game="red"):
         {"map": "TEST_TOWN", "bx": 5, "by": 7, "kind": "cut", "before": B_CUT, "after": B_CUT_DONE}]}
     out[("profile", "dramaless")] = {"mod": "DRAMALESS_SHAPE", "version": "0.0.0-synthetic", "file": "data/voxel_heights.lua",
                                      "enabled": False, "text": PROFILE_TEXT}
+    # Wild Routes (WR2): gen1-bridge always exports the zone list; the synthetic world has none yet
+    out[("routes", "all")] = {"version": 1, "routes": []}
     return out
 
 

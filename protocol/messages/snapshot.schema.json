@@ -124,6 +124,10 @@
       "properties": {},
       "description": "The open UI, as its ui.open data, if any.",
       "x-rom-derived": true
+    },
+    "routes": {
+      "$ref": "../defs.schema.json#/$defs/routeProgress",
+      "description": "Wild Routes (WR2): every zone's progress in the hidden save."
     }
   }
 }

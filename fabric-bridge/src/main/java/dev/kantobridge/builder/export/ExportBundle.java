@@ -33,7 +33,7 @@ import org.jetbrains.annotations.Nullable;
  */
 public final class ExportBundle {
 	public static final Set<String> KINDS = Set.of("map", "tileset", "image", "sprite", "palettes", "encounters", "field", "names",
-			"layout", "swaps", "profile");
+			"layout", "swaps", "profile", "routes");
 	/** Ids that are safe as file names everywhere (no separators, colons or leading dots). */
 	private static final Pattern FILE_ID = Pattern.compile("^[A-Za-z0-9_][A-Za-z0-9_.-]{0,63}$");
 	private static final Pattern FULL_HASH = Pattern.compile("^[0-9a-f]{64}$");

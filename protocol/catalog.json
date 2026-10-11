@@ -354,6 +354,41 @@
       "redact": [],
       "schema": "messages/resync.schema.json"
     },
+    "route.battle": {
+      "legs": ["m2g", "s2c"],
+      "re": "never",
+      "rom": true,
+      "redact": ["/party"],
+      "schema": "messages/route.battle.schema.json"
+    },
+    "route.blackout": {
+      "legs": ["m2g", "s2c"],
+      "re": "never",
+      "rom": false,
+      "redact": [],
+      "schema": "messages/route.blackout.schema.json"
+    },
+    "route.give": {
+      "legs": ["m2g", "s2c"],
+      "re": "never",
+      "rom": false,
+      "redact": [],
+      "schema": "messages/route.give.schema.json"
+    },
+    "route.progress": {
+      "legs": ["g2m", "c2s"],
+      "re": "never",
+      "rom": false,
+      "redact": [],
+      "schema": "messages/route.progress.schema.json"
+    },
+    "route.result": {
+      "legs": ["g2m", "c2s"],
+      "re": "required",
+      "rom": false,
+      "redact": [],
+      "schema": "messages/route.result.schema.json"
+    },
     "save.begin": {
       "legs": ["g2m", "c2s"],
       "re": "never",
@@ -569,6 +604,7 @@
     "names": {"schema": "export/names.schema.json"},
     "palettes": {"schema": "export/palettes.schema.json"},
     "profile": {"schema": "export/profile.schema.json"},
+    "routes": {"schema": "export/routes.schema.json"},
     "sprite": {"schema": "export/sprite.schema.json"},
     "swaps": {"schema": "export/swaps.schema.json"},
     "tileset": {"schema": "export/tileset.schema.json"}

@@ -1,0 +1,6 @@
+[
+  {"type": "route.result", "seq": 31, "re": 21, "data": {"op": "give", "ok": true, "route": "test_zone", "id": "a1.i2"}},
+  {"type": "route.result", "seq": 32, "re": 22, "data": {"op": "battle", "ok": true, "route": "test_zone", "id": "a2.t1", "outcome": "win"}},
+  {"type": "route.result", "seq": 33, "re": 24, "data": {"op": "give", "ok": false, "route": "test_zone", "id": "a1.i3", "reason": "bag_full"}},
+  {"type": "route.result", "seq": 34, "re": 23, "data": {"op": "blackout", "ok": true}}
+]

@@ -252,8 +252,48 @@
         "names",
         "layout",
         "swaps",
-        "profile"
+        "profile",
+        "routes"
       ]
+    },
+    "routeId": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_]*$",
+      "minLength": 1,
+      "maxLength": 32,
+      "description": "A Wild Routes zone id from gen1-bridge/data/routes.json, e.g. viridian_forest_zone."
+    },
+    "routeObjectId": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9_.-]*$",
+      "minLength": 1,
+      "maxLength": 32,
+      "description": "A zone's trainer or item ball, as the zone's layout names it, e.g. a2.t1."
+    },
+    "routeProgress": {
+      "type": "object",
+      "description": "Wild Routes progress by zone id: the item balls taken and how often each trainer was beaten (kept in the hidden save's mod data).",
+      "propertyNames": {"$ref": "#/$defs/routeId"},
+      "maxProperties": 32,
+      "additionalProperties": {
+        "type": "object",
+        "required": ["taken", "wins"],
+        "additionalProperties": false,
+        "properties": {
+          "taken": {
+            "type": "array",
+            "items": {"$ref": "#/$defs/routeObjectId"},
+            "uniqueItems": true,
+            "maxItems": 512
+          },
+          "wins": {
+            "type": "object",
+            "propertyNames": {"$ref": "#/$defs/routeObjectId"},
+            "maxProperties": 512,
+            "additionalProperties": {"type": "integer", "minimum": 1, "maximum": 1000000}
+          }
+        }
+      }
     }
   }
 }

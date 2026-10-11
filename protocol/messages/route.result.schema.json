@@ -1,0 +1,20 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kantobridge.invalid/protocol/messages/route.result.schema.json",
+  "title": "route.result",
+  "description": "Wild Routes (WR2): the answer to route.give, route.battle or route.blackout.",
+  "x-type": "route.result",
+  "x-legs": ["g2m", "c2s"],
+  "x-re": "required",
+  "type": "object",
+  "required": ["op", "ok"],
+  "additionalProperties": false,
+  "properties": {
+    "op": {"enum": ["give", "battle", "blackout"]},
+    "ok": {"type": "boolean"},
+    "route": {"$ref": "../defs.schema.json#/$defs/routeId"},
+    "id": {"$ref": "../defs.schema.json#/$defs/routeObjectId"},
+    "outcome": {"enum": ["win", "lose", "abort"], "description": "route.battle: how the battle ended."},
+    "reason": {"type": "string", "pattern": "^[a-z][a-z0-9_.]*$", "maxLength": 64}
+  }
+}

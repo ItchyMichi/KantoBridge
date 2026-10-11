@@ -69,6 +69,8 @@ end
 --   story                   kb_story's rebase() parts { toggles, blocks, lit },
 --                           or nil (then the raw save.objectToggles, no
 --                           blocks, and every dark map while flashLit)
+--   routes                  Wild Routes (WR2): act/kb_route.lua's progress(),
+--                           already shaped (a json object), or nil
 -- Returns the snapshot data and the number of values left out.
 local UID = "^%x%x%x%x%x%x%x%x%-%x%x%x%x%-%x%x%x%x%-%x%x%x%x%-%x%x%x%x%x%x%x%x%x%x%x%x$"
 
@@ -204,6 +206,7 @@ function Snapshot.build(ctx)
     dex = { seen = dexList(pokedex.seen), owned = dexList(pokedex.owned) },
     npcs = { map = npcMap, list = json.array(npcList) },
   })
+  if type(ctx.routes) == "table" then data.routes = ctx.routes end
   return data, dropped
 end
 

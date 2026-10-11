@@ -88,6 +88,12 @@
       "size": 1587
     },
     {
+      "kind": "routes",
+      "id": "all",
+      "hash": "88edbfbf3f5c775c5568aafcb435468eb4311e84769a58da0ecc76d910ecb45f",
+      "size": 25
+    },
+    {
       "kind": "sprite",
       "id": "SPRITE_TEST_BALL",
       "hash": "8edf99e2d3126e305bc40f9f9b0587a24080978a0767f0e21f2e99b2fda5538f",

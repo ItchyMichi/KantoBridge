@@ -1,0 +1,17 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kantobridge.invalid/protocol/messages/route.give.schema.json",
+  "title": "route.give",
+  "description": "Wild Routes (WR2): give the item of a zone's item ball, with the hidden game's own give_item.",
+  "x-type": "route.give",
+  "x-legs": ["m2g", "s2c"],
+  "x-re": "never",
+  "type": "object",
+  "required": ["route", "id", "item"],
+  "additionalProperties": false,
+  "properties": {
+    "route": {"$ref": "../defs.schema.json#/$defs/routeId"},
+    "id": {"$ref": "../defs.schema.json#/$defs/routeObjectId"},
+    "item": {"$ref": "../defs.schema.json#/$defs/itemId"}
+  }
+}
