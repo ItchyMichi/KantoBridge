@@ -97,7 +97,7 @@ def test_world_index_schema_accepts_a_synthetic_index():
     zoned["storyCells"].append({"key": "KB_ROUTE_TEST_ZONE:20:5", "type": "route", "obj": "a1.i1"})
     assert not PROTOCOL.check_world_index(zoned)
     # WR7: the zone's dungeon entrance and the dungeon region
-    zoned["zones"][0]["dungeon"] = {"x": 30, "y": 9}
+    zoned["zones"][0]["dungeon"] = {"x": 30, "y": 9, "out": "left", "pool": "kantobridge:zone_test_zone_a2", "level": 6}
     zoned["dungeons"] = {"x": 0, "y": 64, "z": -3320, "w": 1024, "d": 160}
     assert not PROTOCOL.check_world_index(zoned)
     for bad in ({"x": 0, "y": 64, "z": 0, "w": 0, "d": 160}, {"x": 0, "y": 64, "z": 0, "w": 1, "d": 1, "slots": 3}):

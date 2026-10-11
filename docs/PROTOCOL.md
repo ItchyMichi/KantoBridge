@@ -613,6 +613,7 @@ engine symbols, and Pokémon identities as Cobblemon UUIDs (`uid`).
 | `route.result` | G→M, C→S | `op:"give"\|"battle"\|"blackout", ok, route?, id?, outcome?:"win"\|"lose"\|"abort", reason?`; `re` required | |
 | `route.progress` | G→M, C→S | `routes{<zone>:{taken[id], wins{id:n}}}` (the zones whose progress changed, each whole) | |
 | `route.sight` | S→C | `route, id, x, y, frames` (WR5: a zone trainer saw the player; it walks to cell `x, y` of the zone's route-map grid over `frames` after its "!") | |
+| `route.fade` | S→C | `ticks` (WR7: the server moves the player in about that many ticks: into a dungeon, down its stairs, out) | |
 
 #### Wild Routes rules (WR2)
 
@@ -660,6 +661,15 @@ engine symbols, and Pokémon identities as Cobblemon UUIDs (`uid`).
   the zone's box), anything else lets it look again after 100 ticks; with no answer while the player
   is free for 600 ticks, the server gives up the same way. After the answer the client walks the
   puppet back to its post.
+- **Dungeons (WR7)** are the server's too. A player standing on a zone's dungeon entrance starts a
+  gathering; everyone who steps on it within 100 ticks joins the party. Each gets `route.fade` at
+  once; when the window closes the party takes a free slot of the dungeon region, floor 1 is built
+  and they are teleported onto its start. A floor is built as soon as someone enters the one before
+  it. On a floor's stairs a player gets `route.fade` (10 ticks) and goes down; the last floor's stairs
+  are the exit, back beside the entrance (its `out` side). Leaving the slot any other way (the hidden
+  game's blackout warp, Fly) or going offline leaves the visit; a visit without players is cleared.
+  The client fades out over at most 10 ticks, holds the player, stays dark until the teleport has
+  landed and the world there is drawn (or 15 s after it was due), then fades in.
 - **The client (WR5)** forwards the server's `route.give`, `route.battle` and `route.blackout` to
   gen1-bridge, and gen1-bridge's `route.result` for them back to the server with the server's own
   `seq` as `re`; every `route.progress` goes up too. The save pairing's gate decides, as for the

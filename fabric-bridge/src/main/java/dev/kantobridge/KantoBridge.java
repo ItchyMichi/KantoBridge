@@ -7,6 +7,7 @@ import dev.kantobridge.battle.EncounterService;
 import dev.kantobridge.block.KbBlocks;
 import dev.kantobridge.builder.BuildTasks;
 import dev.kantobridge.builder.HeadlessBuild;
+import dev.kantobridge.dungeon.DungeonService;
 import dev.kantobridge.entity.DeferredRemovals;
 import dev.kantobridge.entity.KbEntities;
 import dev.kantobridge.net.RelayHandshake;
@@ -32,7 +33,6 @@ import dev.kantobridge.server.ZoneService;
 import dev.kantobridge.story.StoryStates;
 import dev.kantobridge.story.Surfing;
 import net.fabricmc.api.ModInitializer;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -74,6 +74,8 @@ public class KantoBridge implements ModInitializer {
 		BattleService.init();
 		// Wild Routes (WR5): zone trainers' sight, walk-ups and battles (route.sight, route.battle, route.result)
 		ZoneService.init();
+		// Wild Routes (WR7): dungeon visits, floors built while you play, route.fade
+		DungeonService.init();
 		// Static, surfing and fishing encounters (wild battle.start kinds), and Run for every wild battle in Kanto.
 		EncounterService.init();
 		// Cobblemon's battle themes are silenced for Kanto battles: the hidden game plays Gen 1's (P22).

@@ -352,6 +352,7 @@
       }
     },
     {"type": "route.blackout", "seq": 23, "redacted": {}},
+    {"type": "route.fade", "seq": 31, "redacted": {"ticks": 10}},
     {
       "type": "route.give",
       "seq": 21,

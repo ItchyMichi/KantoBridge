@@ -14,6 +14,7 @@ import dev.kantobridge.routes.gen.Cell;
 import dev.kantobridge.routes.gen.CellRole;
 import dev.kantobridge.routes.gen.RouteLayout;
 import dev.kantobridge.world.CellPos;
+import dev.kantobridge.world.Dir;
 import dev.kantobridge.world.MapPlacement;
 import dev.kantobridge.world.Scale;
 import dev.kantobridge.world.StoryCellTable;
@@ -153,11 +154,36 @@ public final class ZonePlan {
 			balls.add(new WorldIndex.ZoneBall(b.id(), b.cell().x() - door.x(), b.cell().y() - door.y(), b.item()));
 			this.ballCells.put(cellKey(b.cell().x(), b.cell().y()), i);
 		}
-		Cell entrance = layout.dungeon();
-		WorldIndex.ZoneCell dungeon = entrance == null ? null : new WorldIndex.ZoneCell(entrance.x() - door.x(), entrance.y() - door.y());
-		this.zone = new WorldIndex.Zone(id, routeMap, THEME, this.x0, FEET, this.z0, this.width, this.depth, BIOME, trainers, balls,
-				objects.ballSprite(), dungeon);
 		this.planWild(palette);
+		this.zone = new WorldIndex.Zone(id, routeMap, THEME, this.x0, FEET, this.z0, this.width, this.depth, BIOME, trainers, balls,
+				objects.ballSprite(), this.dungeon(door));
+	}
+
+	/**
+	 * WR7: the dungeon's entry, if the layout has one: its cell in the route map's grid, the way to its one open
+	 * neighbour, and its area's pool and highest wild level (another area's pool when its own has no grass).
+	 */
+	private WorldIndex.@Nullable ZoneDungeon dungeon(Cell door) {
+		Cell entrance = this.layout.dungeon();
+		if (entrance == null) {
+			return null;
+		}
+		Dir out = Dir.DOWN;
+		for (dev.kantobridge.routes.gen.Dir d : dev.kantobridge.routes.gen.Dir.values()) {
+			Cell next = entrance.step(d);
+			if (this.layout.inside(next) && this.layout.at(next).walkable()) {
+				out = ZoneObjects.dir(d);
+			}
+		}
+		int area = this.layout.areaOf(entrance);
+		String pool = area >= 0 && this.pools.containsKey(poolId(this.id, area)) ? poolId(this.id, area)
+				: this.pools.isEmpty() ? null : this.pools.keySet().iterator().next();
+		int top = 1;
+		for (ZoneContent.Slot slot : this.objects.pool()) {
+			top = Math.max(top, slot.level());
+		}
+		int level = Math.min(100, top + (area >= 0 ? this.layout.areas().get(area).levelOffset() : 0));
+		return new WorldIndex.ZoneDungeon(entrance.x() - door.x(), entrance.y() - door.y(), out, pool, level);
 	}
 
 	/**

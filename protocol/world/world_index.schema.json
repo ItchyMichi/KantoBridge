@@ -238,12 +238,15 @@
           "ballSprite": {"$ref": "../defs.schema.json#/$defs/symbol", "description": "WR5: the item ball's overworld sprite; absent when the zone has no balls or the export names none."},
           "dungeon": {
             "type": "object",
-            "required": ["x", "y"],
+            "required": ["x", "y", "out", "level"],
             "additionalProperties": false,
-            "description": "WR7: the dungeon's entrance cell in the route map's grid; absent when the zone has no dungeon.",
+            "description": "WR7: the zone's dungeon; absent when the zone has none.",
             "properties": {
-              "x": {"type": "integer", "minimum": -4096, "maximum": 4096},
-              "y": {"type": "integer", "minimum": -4096, "maximum": 4096}
+              "x": {"type": "integer", "minimum": -4096, "maximum": 4096, "description": "The entrance cell, in the route map's grid."},
+              "y": {"type": "integer", "minimum": -4096, "maximum": 4096},
+              "out": {"$ref": "../defs.schema.json#/$defs/dir", "description": "The way to the entrance's one open neighbour, where you come back out."},
+              "pool": {"type": "string", "pattern": "^[a-z0-9_.-]+:[a-z0-9_./-]+$", "description": "The habitat pool of the entrance's area: the dungeon's wild Pokémon."},
+              "level": {"$ref": "../defs.schema.json#/$defs/level", "description": "That area's highest wild level; the floor count follows it."}
             }
           }
         }

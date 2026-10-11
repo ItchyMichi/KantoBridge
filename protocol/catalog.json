@@ -368,6 +368,13 @@
       "redact": [],
       "schema": "messages/route.blackout.schema.json"
     },
+    "route.fade": {
+      "legs": ["s2c"],
+      "re": "never",
+      "rom": false,
+      "redact": [],
+      "schema": "messages/route.fade.schema.json"
+    },
     "route.give": {
       "legs": ["m2g", "s2c"],
       "re": "never",

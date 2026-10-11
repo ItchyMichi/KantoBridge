@@ -24,8 +24,11 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
+import net.fabricmc.fabric.api.client.rendering.v1.HudRenderCallback;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.player.LocalPlayer;
+import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.resources.language.I18n;
 import org.jetbrains.annotations.Nullable;
 
@@ -44,6 +47,8 @@ import org.jetbrains.annotations.Nullable;
  * opens the ball's story cell.</li>
  * <li><b>Trainers:</b> {@code route.sight} shows "!" over the trainer's puppet, holds the player and walks the puppet up
  * ({@link WalkUps}); when the battle's answer goes back to the server, the puppet walks back to its post.</li>
+ * <li><b>Dungeons:</b> {@code route.fade} fades out and holds the player until the server's teleport has landed and the
+ * world there is drawn ({@link ServerFade}).</li>
  * </ul>
  * Client thread only. Logs nothing itself; the F3 line counts.
  */
@@ -62,6 +67,7 @@ public final class ZoneRuntime {
 	/** Balls asked for (puppet id → when). */
 	private final Map<String, Long> giving = new HashMap<>();
 	private final WalkUps walkUps = new WalkUps();
+	private final ServerFade fade = new ServerFade();
 	private @Nullable WorldIndex index;
 	private @Nullable String zone;
 	private long progressVersion = -1;
@@ -87,7 +93,9 @@ public final class ZoneRuntime {
 			server.register(type, runtime::fromServer);
 		}
 		server.register(MsgTypes.ROUTE_SIGHT, runtime::onSight);
-		InputLock.holdWhile(() -> runtime.walkUps.holding(runtime.clock.millis()));
+		server.register(MsgTypes.ROUTE_FADE, runtime::onFade);
+		InputLock.holdWhile(() -> runtime.walkUps.holding(runtime.clock.millis()) || runtime.fade.holding());
+		HudRenderCallback.EVENT.register((graphics, delta) -> runtime.renderFade(graphics));
 		bridge.dispatcher().on(MsgTypes.ROUTE_RESULT, runtime::onResult);
 		bridge.dispatcher().on(MsgTypes.ROUTE_PROGRESS, runtime::onProgress);
 		ClientTickEvents.END_CLIENT_TICK.register(runtime::tick);
@@ -161,6 +169,24 @@ public final class ZoneRuntime {
 		return data.has(key) && data.get(key).isJsonPrimitive() ? data.get(key).getAsString() : null;
 	}
 
+	// ---- dungeon moves ----
+
+	/** {@code route.fade}: dark until the server's teleport has moved the player and the world there is drawn. */
+	private void onFade(Envelope message) {
+		LocalPlayer player = Minecraft.getInstance().player;
+		if (player != null && message.data().has("ticks")) {
+			this.fade.start(Math.max(0, Math.min(message.data().get("ticks").getAsInt(), 200)), player.getX(), player.getY(), player.getZ(),
+					this.clock.millis());
+		}
+	}
+
+	private void renderFade(GuiGraphics graphics) {
+		float alpha = this.fade.alpha(this.clock.millis());
+		if (alpha > 0.0F) {
+			graphics.fill(RenderType.guiOverlay(), 0, 0, graphics.guiWidth(), graphics.guiHeight(), Math.round(alpha * 255.0F) << 24);
+		}
+	}
+
 	// ---- trainers ----
 
 	/** {@code route.sight}: the "!" now, the walk once it's over, the player held meanwhile. */
@@ -228,6 +254,9 @@ public final class ZoneRuntime {
 		}
 		long now = this.clock.millis();
 		this.giving.values().removeIf(at -> now - at > GIVE_TIMEOUT_MS);
+		if (player != null) {
+			this.fade.tick(player.getX(), player.getY(), player.getZ(), minecraft.levelRenderer.isSectionCompiled(player.blockPosition()), now);
+		}
 		for (WalkUps.Walk walk : this.walkUps.due(now)) {
 			puppets.manager().zoneMove(walk.puppet(), walk.x(), walk.y(), walk.facing(), walk.frames());
 		}

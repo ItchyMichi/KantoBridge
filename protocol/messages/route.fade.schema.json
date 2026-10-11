@@ -1,0 +1,15 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kantobridge.invalid/protocol/messages/route.fade.schema.json",
+  "title": "route.fade",
+  "description": "Wild Routes (WR7): the server moves the player in about `ticks` (into a dungeon, down its stairs, out of it). The client fades out now (over at most 10 ticks), holds the player and stays dark until it has arrived and the world around it is drawn, then fades in.",
+  "x-type": "route.fade",
+  "x-legs": ["s2c"],
+  "x-re": "never",
+  "type": "object",
+  "required": ["ticks"],
+  "additionalProperties": false,
+  "properties": {
+    "ticks": {"type": "integer", "minimum": 0, "maximum": 200}
+  }
+}

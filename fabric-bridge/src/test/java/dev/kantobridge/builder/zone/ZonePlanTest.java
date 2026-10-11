@@ -236,7 +236,14 @@ class ZonePlanTest {
 		Cell entrance = layout.dungeon();
 		assertNotNull(entrance, "withChances(1, 1) always makes a dungeon");
 		Cell door = layout.trailhead().door();
-		assertEquals(new WorldIndex.ZoneCell(entrance.x() - door.x(), entrance.y() - door.y()), plan.zone().dungeon());
+		WorldIndex.ZoneDungeon dungeon = plan.zone().dungeon();
+		assertEquals(entrance.x() - door.x(), dungeon.x());
+		assertEquals(entrance.y() - door.y(), dungeon.y());
+		Cell out = new Cell(entrance.x() + dungeon.out().dx(), entrance.y() + dungeon.out().dy());
+		assertTrue(layout.at(out).walkable(), "the way out leads onto the maze");
+		assertNotNull(dungeon.pool());
+		assertTrue(plan.pools().containsKey(dungeon.pool()));
+		assertTrue(dungeon.level() >= 5, "at least the neighbours' top level");
 		Set<Integer> parts = new java.util.HashSet<>();
 		for (int[] c : columnsOf(entrance)) {
 			Integer code = column(plan, c[0], c[1]).get(ZonePlan.FEET);

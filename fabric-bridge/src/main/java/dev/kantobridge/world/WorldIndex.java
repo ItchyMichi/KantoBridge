@@ -33,7 +33,7 @@ public final class WorldIndex {
 			"storyCells", "habitats", "zones", "dungeons");
 	private static final Set<String> ZONE_FIELDS = Set.of("id", "routeMap", "theme", "x", "y", "z", "w", "d", "biome", "trainers", "balls",
 			"ballSprite", "dungeon");
-	private static final Set<String> CELL_FIELDS = Set.of("x", "y");
+	private static final Set<String> DUNGEON_FIELDS = Set.of("x", "y", "out", "pool", "level");
 	private static final Set<String> DUNGEONS_FIELDS = Set.of("x", "y", "z", "w", "d");
 	private static final Set<String> TRAINER_FIELDS = Set.of("id", "x", "y", "facing", "sight", "class", "sprite", "party");
 	private static final Set<String> MEMBER_FIELDS = Set.of("species", "level");
@@ -73,7 +73,7 @@ public final class WorldIndex {
 	 * @param y the feet level of the zone's walkable floor
 	 */
 	public record Zone(String id, String routeMap, String theme, int x, int y, int z, int w, int d, String biome, List<ZoneTrainer> trainers,
-			List<ZoneBall> balls, @Nullable String ballSprite, @Nullable ZoneCell dungeon) {
+			List<ZoneBall> balls, @Nullable String ballSprite, @Nullable ZoneDungeon dungeon) {
 		public Zone {
 			Objects.requireNonNull(id, "id");
 			Objects.requireNonNull(routeMap, "routeMap");
@@ -138,11 +138,19 @@ public final class WorldIndex {
 		}
 	}
 
-	/** A cell of a zone's route-map grid (WR7: the dungeon's entrance). */
-	public record ZoneCell(int x, int y) {
-		public ZoneCell {
-			if (Math.abs(x) > MAX_ZONE_CELL || Math.abs(y) > MAX_ZONE_CELL) {
-				throw new IllegalArgumentException("zone cell out of range");
+	/**
+	 * A zone's dungeon (WR7, docs/specs/WILD_ROUTES_PLAN.md §4.8).
+	 *
+	 * @param x     its entrance cell in the route map's grid
+	 * @param out   the way from the entrance to its one open neighbour, where you come back out
+	 * @param pool  the habitat pool of the entrance's area (the dungeon's wild Pokémon), or null when the zone has none
+	 * @param level that area's highest wild level (the floor count follows it)
+	 */
+	public record ZoneDungeon(int x, int y, Dir out, @Nullable String pool, int level) {
+		public ZoneDungeon {
+			if (Math.abs(x) > MAX_ZONE_CELL || Math.abs(y) > MAX_ZONE_CELL || out == null || level < 1 || level > 100
+					|| (pool != null && !DataReader.RESOURCE_ID.matcher(pool).matches())) {
+				throw new IllegalArgumentException("bad zone dungeon");
 			}
 		}
 	}
@@ -484,10 +492,15 @@ public final class WorldIndex {
 					item.addProperty("ballSprite", zone.ballSprite());
 				}
 				if (zone.dungeon() != null) {
-					JsonObject cell = new JsonObject();
-					cell.addProperty("x", zone.dungeon().x());
-					cell.addProperty("y", zone.dungeon().y());
-					item.add("dungeon", cell);
+					JsonObject dungeon = new JsonObject();
+					dungeon.addProperty("x", zone.dungeon().x());
+					dungeon.addProperty("y", zone.dungeon().y());
+					dungeon.addProperty("out", zone.dungeon().out().id());
+					if (zone.dungeon().pool() != null) {
+						dungeon.addProperty("pool", zone.dungeon().pool());
+					}
+					dungeon.addProperty("level", zone.dungeon().level());
+					item.add("dungeon", dungeon);
 				}
 				zones.add(item);
 			}
@@ -585,10 +598,15 @@ public final class WorldIndex {
 					balls.add(new ZoneBall(b.string("id", ZONE_OBJECT_ID), b.integer("x", -MAX_ZONE_CELL, MAX_ZONE_CELL),
 							b.integer("y", -MAX_ZONE_CELL, MAX_ZONE_CELL), b.string("item", DataReader.SYMBOL)));
 				}
-				ZoneCell dungeon = null;
+				ZoneDungeon dungeon = null;
 				if (item.has("dungeon")) {
-					DataReader cell = item.object("dungeon").allowOnly(CELL_FIELDS);
-					dungeon = new ZoneCell(cell.integer("x", -MAX_ZONE_CELL, MAX_ZONE_CELL), cell.integer("y", -MAX_ZONE_CELL, MAX_ZONE_CELL));
+					DataReader d = item.object("dungeon").allowOnly(DUNGEON_FIELDS);
+					Dir out = Dir.byId(d.string("out"));
+					if (out == null) {
+						throw new DataException(d.path("out"), "unknown direction");
+					}
+					dungeon = new ZoneDungeon(d.integer("x", -MAX_ZONE_CELL, MAX_ZONE_CELL), d.integer("y", -MAX_ZONE_CELL, MAX_ZONE_CELL), out,
+							d.optionalString("pool", DataReader.RESOURCE_ID), d.integer("level", 1, 100));
 				}
 				zones.add(new Zone(item.string("id", ZONE_ID), item.string("routeMap", DataReader.MAP_ID), theme, item.integer("x"),
 						item.integer("y"), item.integer("z"), item.integer("w", 1, Integer.MAX_VALUE), item.integer("d", 1, Integer.MAX_VALUE),
