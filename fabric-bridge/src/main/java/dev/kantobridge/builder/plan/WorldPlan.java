@@ -137,7 +137,7 @@ public final class WorldPlan {
 
 	/** A copy of {@code base} with zones, the story cells their balls joined, and the index that lists them. */
 	private WorldPlan(WorldPlan base, List<ZonePlan> zones, WorldIndex index, StoryCellTable storyCells, Map<String, int[]> storyIndex,
-			List<int[]> zoneBallStory) {
+			List<int[]> zoneBallStory, Map<String, String> pools) {
 		this.game = base.game;
 		this.exportHash = base.exportHash;
 		this.originX = base.originX;
@@ -153,7 +153,7 @@ public final class WorldPlan {
 		this.tileSlots.putAll(base.tileSlots);
 		this.spawn = base.spawn;
 		this.index = index;
-		this.pools = base.pools;
+		this.pools = java.util.Collections.unmodifiableMap(new java.util.TreeMap<>(pools));
 		this.warnings = base.warnings;
 		this.mapsRequested = base.mapsRequested;
 		this.mapsUnplaced = base.mapsUnplaced;
@@ -205,9 +205,17 @@ public final class WorldPlan {
 			}
 			ballStory.add(at);
 		}
-		WorldIndex withZones = new WorldIndex(this.game, this.exportHash, placements, this.index.slotMapHash(), table, this.index.habitats(),
-				entries);
-		return new WorldPlan(this, zones, withZones, table, storyIndex, ballStory);
+		// WR6: the zones' habitat blocks and pools join Kanto's
+		List<WorldIndex.Habitat> habitats = new ArrayList<>(this.index.habitats());
+		Map<String, String> pools = new java.util.TreeMap<>(this.pools);
+		for (ZonePlan zone : zones) {
+			habitats.addAll(zone.habitats());
+			pools.putAll(zone.pools());
+		}
+		habitats.sort(java.util.Comparator.comparing(WorldIndex.Habitat::map).thenComparingInt(WorldIndex.Habitat::z)
+				.thenComparingInt(WorldIndex.Habitat::x));
+		WorldIndex withZones = new WorldIndex(this.game, this.exportHash, placements, this.index.slotMapHash(), table, habitats, entries);
+		return new WorldPlan(this, zones, withZones, table, storyIndex, ballStory, pools);
 	}
 
 	/** The plan's Wild Routes zones (empty for a build without any). */

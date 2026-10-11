@@ -190,6 +190,48 @@ class ZonePlanTest {
 	}
 
 	@Test
+	void eachAreasTallGrassIsCoveredByItsOwnPoolAtItsLevels() throws Exception {
+		Map<String, String> pools = plan.pools();
+		List<WorldIndex.Habitat> habitats = plan.habitats();
+		assertFalse(habitats.isEmpty());
+		int reach2 = dev.kantobridge.builder.plan.HabitatPlanner.REACH2;
+		int grass = 0;
+		for (int y = 0; y < layout.height(); y++) {
+			for (int x = 0; x < layout.width(); x++) {
+				int area = layout.at(x, y) == CellRole.GRASS ? layout.areaOf(new Cell(x, y)) : -1;
+				if (area < 0) {
+					continue;
+				}
+				grass++;
+				String pool = ZonePlan.poolId("test_zone", area);
+				assertTrue(pools.containsKey(pool), pool);
+				for (int[] c : columnsOf(new Cell(x, y))) {
+					assertTrue(habitats.stream().anyMatch(h -> h.pool().equals(pool) && (h.x() - c[0]) * (h.x() - c[0]) + (h.z() - c[1]) * (h.z() - c[1]) <= reach2),
+							"grass at " + x + "," + y + " outside its area's spheres");
+				}
+			}
+		}
+		assertTrue(grass > 50, "grass " + grass);
+		for (WorldIndex.Habitat h : habitats) {
+			assertEquals(ZonePlan.FEET - 3, h.y(), "2 under the floor block, as in Kanto");
+			assertEquals("KB_ROUTE_TEST_ZONE", h.map());
+		}
+		// each area's pool: the neighbours' slots, levels raised by the area's offset (a mix: offsets differ between areas)
+		java.util.Set<Integer> offsets = new java.util.TreeSet<>();
+		for (Map.Entry<String, String> e : pools.entrySet()) {
+			int area = Integer.parseInt(e.getKey().substring(e.getKey().lastIndexOf("_a") + 2)) - 1;
+			int offset = layout.areas().get(area).levelOffset();
+			offsets.add(offset);
+			com.google.gson.JsonArray spawns = dev.kantobridge.proto.ProtoJson.parseObject(e.getValue()).getAsJsonArray("spawns");
+			assertEquals(2, spawns.size());
+			assertEquals("cobblemon:pidgey", spawns.get(0).getAsJsonObject().get("species").getAsString());
+			assertEquals(Integer.toString(3 + offset), spawns.get(0).getAsJsonObject().get("levelRange").getAsString());
+			assertEquals(Integer.toString(5 + offset), spawns.get(1).getAsJsonObject().get("levelRange").getAsString());
+		}
+		assertTrue(offsets.size() > 1, "areas at different levels: " + offsets);
+	}
+
+	@Test
 	void theMazeIsClosedThereIsNoWalkingOffIt() {
 		int edges = 0;
 		for (int y = 0; y < layout.height(); y++) {
@@ -453,6 +495,10 @@ class ZonePlanTest {
 		WorldIndex back = WorldIndex.fromJson(index.toJson());
 		assertEquals(index.toJson(), back.toJson());
 		assertEquals(zone.zone(), back.zones().get(0));
+		// WR6: the zone's habitat blocks and pools join Kanto's
+		assertTrue(index.habitats().containsAll(zone.habitats()) && index.habitats().containsAll(base.index().habitats()));
+		assertEquals(base.index().habitats().size() + zone.habitats().size(), index.habitats().size());
+		assertTrue(plan.pools().keySet().containsAll(zone.pools().keySet()) && plan.pools().keySet().containsAll(base.pools().keySet()));
 		assertEquals(dev.kantobridge.world.StoryCellType.ROUTE, back.storyCells().get(zone.storyEntries().get(0).key()).type());
 	}
 

@@ -126,7 +126,7 @@ public final class HabitatPlanner {
 	 * Greedy cover of the cells' floor blocks; returns habitat columns as absolute {@code {x, z}} block positions. Every
 	 * floor block ends within {@link #REACH2} (horizontally) of one of them.
 	 */
-	static List<int[]> cover(MapPlacement p, List<int[]> cells) {
+	public static List<int[]> cover(MapPlacement p, List<int[]> cells) {
 		int w = p.w() * Scale.CELL_BLOCKS;
 		int h = p.h() * Scale.CELL_BLOCKS;
 		boolean[] target = new boolean[w * h];

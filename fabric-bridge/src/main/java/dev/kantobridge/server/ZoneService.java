@@ -43,6 +43,8 @@ public final class ZoneService {
 		RelayService.get().register(MsgTypes.ROUTE_PROGRESS, (player, message) -> {
 		});
 		ServerTickEvents.END_SERVER_TICK.register(ZoneService::tick);
+		// WR6: a lost natural wild battle blacks the player out, in zones and in Kanto
+		WildBlackouts.init();
 		ServerPlayConnectionEvents.DISCONNECT.register((handler, server) -> ENCOUNTERS.forget(handler.getPlayer().getUUID()));
 	}
 

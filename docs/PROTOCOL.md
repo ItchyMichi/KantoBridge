@@ -639,7 +639,9 @@ engine symbols, and Pokémon identities as Cobblemon UUIDs (`uid`).
   class), `bad_party` (a species the game doesn't have), `failed`, `busy`.
 - **`route.blackout`** runs the engine's own loss handling anywhere in the game (heal, half the
   money, the warp to the last heal point; its `party.heal` follows the warp's arrival as for any
-  blackout). Reasons: `not_ingame`, `busy`, `failed`.
+  blackout). Reasons: `not_ingame`, `busy`, `failed`. (WR6) The server sends it when Cobblemon ends a
+  natural wild battle (a habitat's Pokémon, in a zone or in Kanto) with the player among the losers;
+  a catch doesn't count, and battles the hidden game started answer through `battle.result`.
 - **One at a time:** requests wait (up to 120 logic steps, else `busy`) for an idle world: in the
   game, standing, nothing scripted, no warp or battle. At most 8 wait; more are answered `busy`.
   Requests of an old connection are dropped.
@@ -783,7 +785,8 @@ is what the builder writes to `<world>/kantobridge/world_index.json`:
   objects carry their `hidden` default; tile cells their `start` block, `water`, and `closed{block,
   pass, height, art}` with the closed art's four slot indices, so each client draws and collides
   its own player's closed cells);
-- the habitat block positions and pools;
+- the habitat block positions and pools (WR6: a zone's too, `map` its route map, one pool per area
+  with tall grass, `kantobridge:zone_<zone>_a<n>`);
 - (Wild Routes, WR3) the zones: each zone's box of blocks (`x, z, w, d`), the feet level of its floor (`y`), its theme,
   biome and route map. The route map is a `maps` entry of kind `route` placed at the zone's trailhead, so its cells A
   and x1 are the trailhead's; written only in a world that has zones

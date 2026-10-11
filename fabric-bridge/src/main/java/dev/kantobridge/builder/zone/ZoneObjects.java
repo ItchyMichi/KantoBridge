@@ -23,8 +23,9 @@ import java.util.Set;
 import org.jetbrains.annotations.Nullable;
 
 /**
- * A zone's trainers and item balls (docs/specs/WILD_ROUTES_PLAN.md §4.3, §4.6, WR5): the cells the layout chose, with
- * what the export gives them. Seeded apart from the layout, so a change here never moves a wall.
+ * A zone's trainers and item balls (docs/specs/WILD_ROUTES_PLAN.md §4.3, §4.6, WR5) and its wild Pokémon's pool (§4.7,
+ * WR6): the cells the layout chose, with what the export gives them. Seeded apart from the layout, so a change here
+ * never moves a wall.
  *
  * <ul>
  * <li><b>Trainers:</b> a class from the zone's list (one whose sprite the export knows); 1–2 Pokémon in the first
@@ -33,10 +34,12 @@ import org.jetbrains.annotations.Nullable;
  * no pool gets no trainers.</li>
  * <li><b>Balls:</b> an item from the tiers the area's level offset draws on ({@link ItemTiers}), keeping only the game's
  * own items. Named {@code a<area>.i<n>}.</li>
+ * <li><b>Wild Pokémon:</b> the town's neighbour pool; each area's habitat pool raises its levels by the area's level
+ * offset ({@link ZonePlan#pools}).</li>
  * </ul>
  */
-public record ZoneObjects(List<Trainer> trainers, List<Ball> balls, @Nullable String ballSprite) {
-	public static final ZoneObjects NONE = new ZoneObjects(List.of(), List.of(), null);
+public record ZoneObjects(List<Trainer> trainers, List<Ball> balls, @Nullable String ballSprite, List<ZoneContent.Slot> pool) {
+	public static final ZoneObjects NONE = new ZoneObjects(List.of(), List.of(), null, List.of());
 	/** Mixed into the zone's seed for its objects. */
 	private static final long SALT = 0x6F626A6563747321L;
 
@@ -54,6 +57,7 @@ public record ZoneObjects(List<Trainer> trainers, List<Ball> balls, @Nullable St
 	public ZoneObjects {
 		trainers = List.copyOf(trainers);
 		balls = List.copyOf(balls);
+		pool = List.copyOf(pool);
 	}
 
 	public static ZoneObjects make(ExportRoutes.Zone zone, RouteLayout layout, ZoneContent content, ItemTiers tiers, long worldSeed) {
@@ -106,7 +110,7 @@ public record ZoneObjects(List<Trainer> trainers, List<Ball> balls, @Nullable St
 			ballsPerArea[area]++;
 			balls.add(new Ball("a" + (area + 1) + ".i" + ballsPerArea[area], cell, rng.pick(choices)));
 		}
-		return new ZoneObjects(trainers, balls, balls.isEmpty() ? null : content.ballSprite());
+		return new ZoneObjects(trainers, balls, balls.isEmpty() ? null : content.ballSprite(), pool);
 	}
 
 	private static ZoneContent.Slot weighted(List<ZoneContent.Slot> pool, RouteRng rng) {

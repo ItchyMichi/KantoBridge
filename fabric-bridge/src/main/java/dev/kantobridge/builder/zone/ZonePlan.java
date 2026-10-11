@@ -1,8 +1,14 @@
 package dev.kantobridge.builder.zone;
 
+import com.google.gson.JsonArray;
+import com.google.gson.JsonObject;
+import dev.kantobridge.builder.pack.HabitatPoolWriter;
 import dev.kantobridge.builder.plan.BlockCode;
 import dev.kantobridge.builder.plan.Box3;
+import dev.kantobridge.builder.plan.HabitatPlanner;
 import dev.kantobridge.builder.plan.WorldPlan;
+import dev.kantobridge.pokemon.GenOneIds;
+import dev.kantobridge.proto.ProtoJson;
 import dev.kantobridge.routes.gen.Cell;
 import dev.kantobridge.routes.gen.CellRole;
 import dev.kantobridge.routes.gen.RouteLayout;
@@ -18,6 +24,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.TreeMap;
 import org.jetbrains.annotations.Nullable;
 
 /**
@@ -83,6 +90,9 @@ public final class ZonePlan {
 	private final MapPlacement routeMap;
 	private final WorldIndex.Zone zone;
 	private final ZoneObjects objects;
+	/** WR6: the habitat blocks over each area's tall grass, and each such area's pool (canonical JSON by pool id). */
+	private final List<WorldIndex.Habitat> habitats = new ArrayList<>();
+	private final Map<String, String> pools = new TreeMap<>();
 	/** Layout cells (as {@link #cellKey}) holding a trainer, and the ball index of each ball's cell. */
 	private final Set<Long> trainerCells = new HashSet<>();
 	private final Map<Long, Integer> ballCells = new HashMap<>();
@@ -144,6 +154,72 @@ public final class ZonePlan {
 		}
 		this.zone = new WorldIndex.Zone(id, routeMap, THEME, this.x0, FEET, this.z0, this.width, this.depth, BIOME, trainers, balls,
 				objects.ballSprite());
+		this.planWild(palette);
+	}
+
+	/**
+	 * WR6 (docs/specs/WILD_ROUTES_PLAN.md §4.7): each area with tall grass gets a habitat pool from the town's neighbours,
+	 * its levels raised by the area's level offset, and habitat blocks 3 under the feet covering its grass the way
+	 * Kanto's are planned ({@link HabitatPlanner#cover}).
+	 */
+	private void planWild(String palette) {
+		if (this.objects.pool().isEmpty()) {
+			return;
+		}
+		Map<Integer, List<int[]>> grass = new TreeMap<>();
+		for (int y = 0; y < this.layout.height(); y++) {
+			for (int x = 0; x < this.layout.width(); x++) {
+				int area = this.layout.at(x, y) == CellRole.GRASS ? this.layout.areaOf(new Cell(x, y)) : -1;
+				if (area >= 0) {
+					grass.computeIfAbsent(area, a -> new ArrayList<>()).add(new int[] {x, y});
+				}
+			}
+		}
+		// the layout's grid as a map, so the cover runs as it does on Kanto's maps
+		MapPlacement grid = new MapPlacement(this.routeMap.id(), this.layoutX0, FEET, this.layoutZ0, this.layout.width(), this.layout.height(), 0,
+				MapPlacement.Kind.ROUTE, palette, BIOME, false, null);
+		for (Map.Entry<Integer, List<int[]>> e : grass.entrySet()) {
+			String pool = poolId(this.id, e.getKey());
+			this.pools.put(pool, ProtoJson.write(pool(this.routeMap.id(), e.getKey(), this.objects.pool(),
+					this.layout.areas().get(e.getKey()).levelOffset())));
+			for (int[] block : HabitatPlanner.cover(grid, e.getValue())) {
+				this.habitats.add(new WorldIndex.Habitat(this.routeMap.id(), block[0], FEET - HabitatPlanner.BELOW_FEET, block[1], pool));
+			}
+		}
+	}
+
+	/** An area's habitat pool id: {@code kantobridge:zone_<zone>_a<area>}. */
+	public static String poolId(String zone, int area) {
+		return HabitatPlanner.POOL_NAMESPACE + ":zone_" + zone + "_a" + (area + 1);
+	}
+
+	/** An area's pool, in the format of Kanto's ({@link HabitatPoolWriter#pool}), levels raised by {@code levelOffset}. */
+	static JsonObject pool(String routeMap, int area, List<ZoneContent.Slot> slots, int levelOffset) {
+		JsonArray spawns = new JsonArray();
+		for (ZoneContent.Slot slot : slots) {
+			JsonObject spawn = new JsonObject();
+			spawn.addProperty("species", GenOneIds.NAMESPACE + ":" + GenOneIds.speciesId(slot.dex()));
+			spawn.addProperty("spawnablePositionType", HabitatPoolWriter.POSITION);
+			spawn.addProperty("bucket", HabitatPoolWriter.BUCKET);
+			spawn.addProperty("weight", slot.weight());
+			spawn.addProperty("levelRange", Integer.toString(Math.max(1, Math.min(100, slot.level() + levelOffset))));
+			spawns.add(spawn);
+		}
+		JsonObject pool = new JsonObject();
+		// the habitat editor shows this name; a map symbol and an area number, not game text
+		pool.addProperty("name", "Kanto Bridge " + routeMap + " a" + (area + 1));
+		pool.add("spawns", spawns);
+		return pool;
+	}
+
+	/** The habitat blocks over the zone's tall grass (WR6), sorted by Z, then X within each area. */
+	public List<WorldIndex.Habitat> habitats() {
+		return List.copyOf(this.habitats);
+	}
+
+	/** The zone's habitat pools (WR6): canonical JSON by pool id. */
+	public Map<String, String> pools() {
+		return java.util.Collections.unmodifiableMap(this.pools);
 	}
 
 	private static long cellKey(int cx, int cy) {

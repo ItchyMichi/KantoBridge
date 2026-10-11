@@ -29,8 +29,11 @@ public record ZoneContent(Map<String, List<Slot>> pools, Map<String, String> cla
 	/** Nothing: zones get no trainers or balls. */
 	public static final ZoneContent EMPTY = new ZoneContent(Map.of(), Map.of(), null, Set.of());
 
-	/** One grass slot of a neighbour: the hidden game's species id, the level, and the slot's share of encounters (percent). */
-	public record Slot(String species, int level, double weight) {
+	/**
+	 * One grass slot of a neighbour: the hidden game's species id, its national dex number (Cobblemon's species), the
+	 * level, and the slot's share of encounters (percent).
+	 */
+	public record Slot(String species, int dex, int level, double weight) {
 	}
 
 	public ZoneContent {
@@ -62,7 +65,7 @@ public record ZoneContent(Map<String, List<Slot>> pools, Map<String, String> cla
 					for (int i = 0; i < table.slots().size(); i++) {
 						ExportEncounters.Slot slot = table.slots().get(i);
 						if (slot.species() != null) {
-							pool.add(new Slot(slot.species(), slot.level(), encounters.percent(i)));
+							pool.add(new Slot(slot.species(), slot.dex(), slot.level(), encounters.percent(i)));
 						}
 					}
 				}

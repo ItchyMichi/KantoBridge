@@ -29,7 +29,7 @@ import org.junit.jupiter.api.Test;
 class ZoneObjectsTest {
 	/** Two neighbours' slots (levels 3 and 5), two classes of which only one has a sprite, three items. */
 	static final ZoneContent CONTENT = new ZoneContent(
-			Map.of("TEST_TOWN", List.of(new ZoneContent.Slot("TESTMON_A", 3, 60), new ZoneContent.Slot("TESTMON_B", 5, 40))),
+			Map.of("TEST_TOWN", List.of(new ZoneContent.Slot("TESTMON_A", 16, 3, 60), new ZoneContent.Slot("TESTMON_B", 19, 5, 40))),
 			Map.of("OPP_TEST", "SPRITE_TEST_GUARD"), "SPRITE_TEST_BALL", Set.of("POTION", "POKE_BALL", "SUPER_POTION"));
 	static final ZoneObjects.ItemTiers TIERS = ZoneObjects.ItemTiers.bundled();
 

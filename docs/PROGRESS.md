@@ -592,7 +592,7 @@ RunPod budget and stop after each job; each phase runs its own tests, the full s
 | WR3 | Building the zone | done; GameTest and C2 run on the server | 2026-10-11 | 0a7ed03, dd5843f |
 | WR4 | Moving through the zone | done; warp GameTest passes; check C5 needs a client | 2026-10-11 | 571a68b |
 | WR5 | Trainers and items | done here; the end-to-end session needs your PC | 2026-10-11 | 6d63160, 198600d, 548c2e8 |
-| WR6 | Wild Pokémon | | | |
+| WR6 | Wild Pokémon | done; checkpoint passed (JUnit 913, GameTests 94, Python and Lua 1,479) | 2026-10-11 | (this) |
 | WR7 | Dungeons | | | |
 | WR8 | Content and play-test | | | |
 
@@ -616,6 +616,26 @@ RunPod budget and stop after each job; each phase runs its own tests, the full s
    7–9 from 60).
 5. **Where it ran:** the pod had no host capacity (six tries), so the tests ran in a throwaway JDK 21 container on the
    server with JUnit 5.11. The Gradle run is part of the WR2 checkpoint.
+
+### Wild Routes: WR6 notes
+
+1. **Pools:** one per area with tall grass, `kantobridge:zone_<zone>_a<n>`, from the town's neighbour grass slots
+   (species by dex, weights the slots' shares), levels raised by the area's level offset (`ZonePlan.pools`). They join
+   Kanto's in the plan, so the world's datapack holds them and the build hands them to Cobblemon at once.
+2. **Habitat blocks:** 3 under the feet, covering each area's grass the way Kanto's are planned (`HabitatPlanner.cover`
+   over the layout's grid), listed in the WorldIndex's `habitats` with the route map as their map, so `HabitatService`
+   checks them at run time like Kanto's.
+3. **The spawn rule** `walking_level_only` lists `kantobridge:wild_forest` (floors at Y 63). The zone's biome is in none
+   of Cobblemon's spawn tags, so only the pools spawn there.
+4. **Blackouts:** a lost natural wild battle (a habitat's Pokémon, in a zone or in Kanto) sends `route.blackout`
+   (`WildBlackouts`, on Cobblemon's battle victory event): the hidden game's own loss handling. Not after a catch, and
+   not for battles the hidden game started (they answer through `battle.result`).
+5. **Check C3, measured** (`ZoneBuildGameTests`, a one-area zone in a real world): 4 habitat blocks, each configured
+   with the zone's pool; Cobblemon's own spawner offers the pool's two species at levels 2-5 on 136 grass positions,
+   and nothing off the walking level.
+6. **Tests:** `ZonePlanTest` (+1: every area's grass inside its own pool's spheres, levels raised per area, a mix of
+   offsets), the plan merge, `WildBlackoutsTest` (the rule; the spawn rule lists the biome), C3 above. The event wiring
+   of a real lost battle is left to the end-to-end session.
 
 ### Wild Routes: WR5 notes
 

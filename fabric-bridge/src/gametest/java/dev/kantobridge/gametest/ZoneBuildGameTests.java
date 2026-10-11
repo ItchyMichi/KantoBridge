@@ -1,6 +1,19 @@
 package dev.kantobridge.gametest;
 
+import com.cobblemon.mod.common.Cobblemon;
+import com.cobblemon.mod.common.CobblemonBlocks;
+import com.cobblemon.mod.common.api.spawning.SpawnCause;
+import com.cobblemon.mod.common.api.spawning.SpawningZone;
+import com.cobblemon.mod.common.api.spawning.detail.PokemonSpawnDetail;
+import com.cobblemon.mod.common.api.spawning.detail.SpawnDetail;
+import com.cobblemon.mod.common.api.spawning.position.AreaSpawnablePosition;
+import com.cobblemon.mod.common.api.spawning.position.calculators.SpawnablePositionCalculator;
+import com.cobblemon.mod.common.api.spawning.spawner.PlayerSpawner;
+import com.cobblemon.mod.common.api.spawning.spawner.SpawningZoneInput;
+import com.cobblemon.mod.common.block.habitat.HabitatBlockEntity;
+import com.cobblemon.mod.common.util.PlayerExtensionsKt;
 import dev.kantobridge.KantoBridge;
+import dev.kantobridge.block.StoryCellBlockEntity;
 import dev.kantobridge.builder.BuildTask;
 import dev.kantobridge.builder.export.BundleException;
 import dev.kantobridge.builder.export.ExportBundle;
@@ -8,7 +21,6 @@ import dev.kantobridge.builder.export.ExportRoutes;
 import dev.kantobridge.builder.place.BlockPlacer;
 import dev.kantobridge.builder.plan.WorldPlan;
 import dev.kantobridge.builder.plan.WorldPlanner;
-import dev.kantobridge.block.StoryCellBlockEntity;
 import dev.kantobridge.builder.zone.VanillaTerrain;
 import dev.kantobridge.builder.zone.ZoneContent;
 import dev.kantobridge.builder.zone.ZoneObjects;
@@ -16,6 +28,7 @@ import dev.kantobridge.builder.zone.ZonePlan;
 import dev.kantobridge.routes.gen.Cell;
 import dev.kantobridge.routes.gen.CellRole;
 import dev.kantobridge.routes.gen.RouteLayout;
+import dev.kantobridge.server.HabitatService;
 import dev.kantobridge.server.WarpService;
 import dev.kantobridge.world.Dir;
 import dev.kantobridge.world.MapPlacement;
@@ -28,6 +41,7 @@ import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestAssertException;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.LeavesBlock;
 import net.minecraft.world.level.block.state.BlockState;
@@ -80,7 +94,8 @@ public class ZoneBuildGameTests implements FabricGameTest {
 				content);
 		long planMs = (System.nanoTime() - t0) / 1_000_000L;
 		helper.assertTrue(plan.zones().size() == 1, "the zone wasn't planned");
-		BlockPlacer placer = new BlockPlacer(level, plan, List.of());
+		// WR6: the zone's habitat blocks get their pools, as a real build hands them over
+		BlockPlacer placer = new BlockPlacer(level, plan, List.of(), List.of(), HabitatService.ensurePools(plan.pools()));
 		long[] placing = {0, 0, 0};
 		helper.startSequence()
 				.thenWaitUntil(() -> {
@@ -95,6 +110,7 @@ public class ZoneBuildGameTests implements FabricGameTest {
 					try {
 						verify(helper, plan.zones().get(0), level);
 						warps(helper, plan, level);
+						wild(helper, plan.zones().get(0), level);
 					} finally {
 						placer.release();
 					}
@@ -103,6 +119,70 @@ public class ZoneBuildGameTests implements FabricGameTest {
 							placing[0] / 1_000_000L, placing[2] / 1_000_000L);
 				})
 				.thenSucceed();
+	}
+
+	/**
+	 * Check C3 (WR6): every habitat block of the zone is configured with its area's pool, and Cobblemon's own spawner (as
+	 * {@code /checkspawn} runs it) offers that pool's Pokémon, at its levels, on the zone's tall grass at the walking
+	 * level, and nothing above it.
+	 */
+	private static void wild(GameTestHelper helper, ZonePlan zone, ServerLevel level) {
+		helper.assertTrue(!zone.habitats().isEmpty() && !zone.pools().isEmpty(), "no habitats or pools in the zone");
+		WorldIndex.Habitat first = null;
+		for (WorldIndex.Habitat habitat : zone.habitats()) {
+			BlockPos pos = new BlockPos(habitat.x(), habitat.y(), habitat.z());
+			helper.assertTrue(level.getBlockState(pos).is(CobblemonBlocks.HABITAT_BLOCK) && level.getBlockEntity(pos) instanceof HabitatBlockEntity,
+					"a zone habitat block is missing");
+			HabitatBlockEntity entity = (HabitatBlockEntity) level.getBlockEntity(pos);
+			helper.assertTrue(entity.getPool().getId().toString().equals(habitat.pool()) && HabitatService.configuredFor(entity, habitat.pool()),
+					"a zone habitat block without its pool");
+			if (first == null && habitat.pool().equals(ZonePlan.poolId(zone.id(), 0))) {
+				first = habitat;
+			}
+		}
+		helper.assertTrue(first != null, "the first area has no habitat");
+		HabitatBlockEntity habitat = (HabitatBlockEntity) level.getBlockEntity(new BlockPos(first.x(), first.y(), first.z()));
+		ServerPlayer player = MockPlayers.join(helper);
+		try {
+			PlayerSpawner spawner = PlayerExtensionsKt.getSpawner(player);
+			int x0 = first.x() - 8;
+			int z0 = first.z() - 8;
+			for (int cx = x0 >> 4; cx <= (x0 + 16) >> 4; cx++) {
+				for (int cz = z0 >> 4; cz <= (z0 + 16) >> 4; cz++) {
+					level.getChunk(cx, cz);
+				}
+			}
+			SpawningZoneInput input = new SpawningZoneInput(new SpawnCause(spawner, player), level, x0, 60, z0, 16, 10, 16);
+			SpawningZone spawning = Cobblemon.INSTANCE.getSpawningZoneGenerator().generate(spawner, input);
+			List<AreaSpawnablePosition> positions = Cobblemon.INSTANCE.getAreaSpawnablePositionResolver().resolve(spawner,
+					SpawnablePositionCalculator.Companion.getPrioritizedAreaCalculators(), spawning);
+			int offered = 0;
+			java.util.Set<String> species = new java.util.HashSet<>();
+			for (AreaSpawnablePosition position : positions) {
+				List<SpawnDetail> details = spawner.getMatchingSpawns("common", position);
+				if (position.getPosition().getY() != ZonePlan.FLOOR) {
+					helper.assertTrue(details.isEmpty(), "something may spawn off the walking level, at y " + position.getPosition().getY());
+					continue;
+				}
+				if (details.isEmpty() || position.getPosition().distSqr(habitat.getBlockPos()) > 14 * 14) {
+					continue;
+				}
+				offered++;
+				for (SpawnDetail detail : details) {
+					PokemonSpawnDetail pokemon = (PokemonSpawnDetail) detail;
+					species.add(pokemon.getPokemon().getSpecies());
+					kotlin.ranges.IntRange levels = pokemon.getLevelRange();
+					// the first area keeps the neighbours' levels (the synthetic grass table's 2 to 5)
+					helper.assertTrue(levels != null && levels.getFirst() >= 2 && levels.getLast() <= 5, "levels out of range");
+				}
+			}
+			helper.assertTrue(offered > 0, "no zone grass offers the pool (" + positions.size() + " positions)");
+			helper.assertTrue(species.equals(java.util.Set.of("pidgey", "rattata")), "the pool's species don't come through: " + species);
+			KantoBridge.LOGGER.info("C3: zone habitats {}, pools {}; the first area's pool offered on {} grass positions", zone.habitats().size(),
+					zone.pools().size(), offered);
+		} finally {
+			MockPlayers.leave(helper, player);
+		}
 	}
 
 	private static void warps(GameTestHelper helper, WorldPlan plan, ServerLevel level) {

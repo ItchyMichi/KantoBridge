@@ -335,6 +335,9 @@ The prototype does all of this (Appendix B). WR1 writes it in Java.
 - The zone's biome belongs to none of Cobblemon's spawn tags. Floors sit at Y 63, so today's spawn rule applies once
   it lists the zone's biome.
 - Losing a wild battle sends `route.blackout`, in Kanto too.
+- **As built (WR6):** a pool per area with tall grass (`kantobridge:zone_<zone>_a<n>`), habitat blocks covering that
+  area's grass as in Kanto, and the server sends `route.blackout` after Cobblemon ends a natural wild battle with the
+  player losing (not after a catch, not for the hidden game's own battles).
 
 ### 4.8 Dungeons
 
