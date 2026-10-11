@@ -3,6 +3,7 @@ package dev.kantobridge.client;
 import dev.kantobridge.block.KbBlocks;
 import dev.kantobridge.client.act.ActRuntime;
 import dev.kantobridge.client.bridge.BridgeRuntime;
+import dev.kantobridge.client.dev.Autopilot;
 import dev.kantobridge.client.fx.BlockadeFade;
 import dev.kantobridge.client.fx.SpeechBubbles;
 import dev.kantobridge.client.fx.SurfSprite;
@@ -90,5 +91,7 @@ public class KantoBridgeClient implements ClientModInitializer {
 		bridge.addDebugLine(KbPackReload::debugLine);
 		// Dev only (-Dkantobridge.meshstats=true): the rendering measurements of the voxel plan (§10).
 		MeshStatsRuntime.init(bridge);
+		// Dev only (-Dkantobridge.autopilot=<scene>): a scripted scene for recorded showcases (Wild Routes check C5).
+		Autopilot.init();
 	}
 }

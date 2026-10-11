@@ -192,7 +192,8 @@ public final class CreateKantoWorldFlow {
 
 	// ---- what the screen shows ----
 
-	Step step() {
+	/** Where the flow is (also read by the dev autopilot). */
+	public Step step() {
 		return this.step;
 	}
 

@@ -62,6 +62,36 @@ if (kbMeshStats) {
 	}
 }
 
+// Recorded showcases and Wild Routes check C5 (docs/specs/WILD_ROUTES_PLAN.md §8): `./gradlew runClient -Pkb.autopilot=wild_zone
+// [-Pkb.autopilotWorld=<level folder>] [-Pkb.autopilotRecord=<file.mp4>] [-Pkb.autopilotQuit=true] [-Pkb.autopilotPort=<port>]`
+// lets the dev-only Autopilot (client/dev/Autopilot.java) play its scene in a 1280x720 window, recording it with ffmpeg; its
+// steps go to local/reports/autopilot.log (ids, cells, counts). Agents run it on the pod under Xvfb: tools/e2e/showcase.py.
+def kbAutopilot = providers.gradleProperty("kb.autopilot").getOrNull()
+if (kbAutopilot != null && !kbAutopilot.isBlank()) {
+	def kbAutopilotWorld = providers.gradleProperty("kb.autopilotWorld").getOrNull()
+	def kbAutopilotRecord = providers.gradleProperty("kb.autopilotRecord").getOrNull()
+	def kbAutopilotPort = providers.gradleProperty("kb.autopilotPort").getOrNull()
+	loom {
+		runs {
+			client {
+				vmArg "-Dkantobridge.autopilot=${kbAutopilot.trim()}"
+				vmArg "-Dkantobridge.autopilot.log=${file('../local/reports/autopilot.log').absolutePath}"
+				vmArg "-Dkantobridge.autopilot.quit=${providers.gradleProperty('kb.autopilotQuit').getOrElse('false')}"
+				if (kbAutopilotWorld != null && !kbAutopilotWorld.isBlank()) {
+					vmArg "-Dkantobridge.autopilot.world=${kbAutopilotWorld.trim()}"
+				}
+				if (kbAutopilotRecord != null && !kbAutopilotRecord.isBlank()) {
+					vmArg "-Dkantobridge.autopilot.record=${file(kbAutopilotRecord.trim()).absolutePath}"
+				}
+				if (kbAutopilotPort != null && !kbAutopilotPort.isBlank()) {
+					vmArg "-Dkantobridge.port=${kbAutopilotPort.trim()}"
+				}
+				programArgs "--width", "1280", "--height", "720"
+			}
+		}
+	}
+}
+
 // A second dev client for multiplayer play-tests (docs/PLAN.md §6 M9): `./gradlew runClient2` starts "Player2" in its own
 // game folder, ../local/minecraft-p2 (its own options, generated pack and export), linked to a second Gen1Recomp whose
 // gen1-bridge listens on port 27152. Agents never start it; the user does.
