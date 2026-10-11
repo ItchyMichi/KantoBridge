@@ -680,6 +680,12 @@ A new world (the mod installed and switched off, as for P1).
 - [ ] **Walking and battles** are exactly as before; the light under the canopy is as before.
 - [ ] **The Safari Zone** keeps its open sky.
 
+### CW4: vines in the wild zone
+
+- [ ] **The maze:** vines drape some hedges from the top, never lower than two blocks; you can't climb them or walk
+      through a hedge; trainers, balls and wild Pokémon as before.
+- [ ] **The forest around it:** vines hang from some tree crowns.
+
 ## Wild Routes
 
 [specs/WILD_ROUTES_PLAN.md](specs/WILD_ROUTES_PLAN.md). WR1-WR7 are built and tested without a person watching

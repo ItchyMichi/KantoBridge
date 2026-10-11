@@ -590,8 +590,21 @@ Execution of [specs/CAVES_AND_WOODS_PLAN.md](specs/CAVES_AND_WOODS_PLAN.md) (CW1
 | CW1 | Cave rock | **done** (13 new JUnit tests; JUnit 948 green; the GameTests run at CW2) | 2026-10-11 | `CW1: cave rock` |
 | CW2 | The forest canopy and vines | **done**; checkpoint: JUnit 958, GameTests 98, Python and Lua 1,484 | 2026-10-11 | `CW2: the forest canopy and vines` |
 | CW3 | The forest's apron | waits for your decision after CW2 | | |
-| CW4 | Vines in the wild zone | to do | | |
+| CW4 | Vines in the wild zone | **done** (zone JUnit 27 green; the zone GameTests run at CW5) | 2026-10-11 | `CW4: vines in the wild zone` |
 | CW5 | Finish | to do | | |
+
+### Caves and woods: CW4 notes
+
+1. **Where:** Minecraft vines (new `ZoneBlock`s, one per facing) on the maze's hedges over walkable columns, from the
+   hedge's top down two to four blocks but never below feet + 2, and on the scenery trees: a column just outside a
+   crown's four wide faces hangs one from the upper wide layer, two blocks clear of the ground, none where another tree
+   is in the way. One face in nine, by the zone's own hash.
+2. **Why feet + 2:** vines are climbable from the block a player's feet are in; a player who can't jump never has feet
+   there, so the maze stays closed. `ZonePlanTest` checks every vine: out of reach beside the maze, hanging on leaves or
+   the vine above, never over a wall, rock or pond. The old check "nothing above head height on a maze cell" now allows
+   vines from feet + 2.
+3. **Placement:** blocks go in with "known shape" flags (no neighbour updates), so a vine placed before its leaves stays;
+   vine spreading is off (`KantoGameRules`).
 
 ### Caves and woods: CW2 notes
 

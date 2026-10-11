@@ -71,6 +71,10 @@ public final class ZonePlan {
 	public static final double RELIEF = 2.0;
 	/** Our scenery trees stand on a jittered grid of this spacing. */
 	public static final int TREE_SPACING = 7;
+	/** A vine hangs on about one leaf face in this many (the canopy's density; docs/specs/CAVES_AND_WOODS_PLAN.md §5.5). */
+	public static final int VINE_EVERY = 9;
+	/** Vines beside the maze keep this high: a player who can't jump never reaches one to climb out over a hedge. */
+	public static final int VINE_LOW = FEET + 2;
 	public static final String BIOME = "kantobridge:wild_forest";
 	public static final String THEME = "forest";
 
@@ -382,6 +386,42 @@ public final class ZonePlan {
 			}
 			default -> this.ground(sink, x, z, FLOOR, ZoneBlock.GRASS_BLOCK);
 		}
+		if (role.walkable()) {
+			this.hedgeVines(sink, x, z);
+		}
+	}
+
+	/** Column offsets north, east, south, west. */
+	private static final int[] DX = {0, 1, 0, -1};
+	private static final int[] DZ = {-1, 0, 1, 0};
+
+	/**
+	 * Vines on a hedge's side over a walkable column (CW4): on the first hedge beside it (north, east, south, west) whose
+	 * face the hash picks, from the hedge's top down two to four blocks, never below {@link #VINE_LOW}.
+	 */
+	private void hedgeVines(WorldPlan.CodeSink sink, int x, int z) {
+		for (int d = 0; d < 4; d++) {
+			int nx = x + DX[d];
+			int nz = z + DZ[d];
+			if (!this.inBox(nx, nz) || this.roleAt(nx, nz) != CellRole.WALL || hash(x, z, 37 + d) % VINE_EVERY != 0) {
+				continue;
+			}
+			int top = FEET + hedgeHeight(nx, nz) - 1;
+			int bottom = Math.max(VINE_LOW, top - 1 - hash(x, z, 41 + d) % 3);
+			for (int y = bottom; y <= top; y++) {
+				sink.set(x, y, z, BlockCode.vanilla(ZoneBlock.vineOn(d)));
+			}
+			return;
+		}
+	}
+
+	private boolean inBox(int x, int z) {
+		return x >= this.x0 && z >= this.z0 && x < this.x0 + this.width && z < this.z0 + this.depth;
+	}
+
+	/** A hedge's height at (x, z): 3..5 blocks, one per cell. */
+	private static int hedgeHeight(int x, int z) {
+		return 3 + hash(x >> 1, z >> 1, 11) % 3;
 	}
 
 	/** Stone and dirt from the bottom of the zone up to {@code top}, which gets {@code surface}. */
@@ -397,7 +437,7 @@ public final class ZonePlan {
 		int cx = x >> 1;
 		int cz = z >> 1;
 		int h = hash(cx, cz, 11);
-		int height = 3 + h % 3;
+		int height = hedgeHeight(x, z);
 		ZoneBlock[] kind = leafKind(h >>> 8);
 		boolean trunk = (h >>> 4) % 5 == 0 && (x & 1) == 0 && (z & 1) == 0;
 		for (int y = FEET; y < FEET + height; y++) {
@@ -434,6 +474,72 @@ public final class ZonePlan {
 		if (top < SCENERY_MAX - 6 && hash(x, z, 13) % 9 == 0 && sinkFree(x, z)) {
 			sink.set(x, top + 1, z, BlockCode.vanilla(hash(x, z, 17) % 4 == 0 ? ZoneBlock.FERN : ZoneBlock.SHORT_GRASS));
 		}
+		this.treeVines(sink, x, z, top);
+	}
+
+	/**
+	 * Vines on a scenery tree's crown (CW4): a column just outside one of its four wide faces (three out along an axis,
+	 * at most one across), when the hash picks it, hangs a vine from the upper wide layer down two to four blocks, kept two
+	 * blocks above the ground; none where another tree is in the way.
+	 */
+	private void treeVines(WorldPlan.CodeSink sink, int x, int z, int ground) {
+		int gx = Math.floorDiv(x - this.x0, TREE_SPACING);
+		int gz = Math.floorDiv(z - this.z0, TREE_SPACING);
+		for (int dz = -1; dz <= 1; dz++) {
+			for (int dx = -1; dx <= 1; dx++) {
+				Tree tree = this.trees.get(key(gx + dx, gz + dz));
+				if (tree == null) {
+					continue;
+				}
+				int ox = x - tree.x;
+				int oz = z - tree.z;
+				int d = ox == 3 && Math.abs(oz) <= 1 ? 3 : ox == -3 && Math.abs(oz) <= 1 ? 1 : oz == 3 && Math.abs(ox) <= 1 ? 0
+						: oz == -3 && Math.abs(ox) <= 1 ? 2 : -1;
+				if (d < 0 || hash(x, z, 43) % VINE_EVERY != 0) {
+					continue;
+				}
+				int top = this.sceneryHeight(tree.x, tree.z) + 1 + tree.trunk - 1;
+				int bottom = Math.max(ground + 2, top - 1 - hash(x, z, 47) % 3);
+				for (int y = bottom; y <= top; y++) {
+					if (this.treeBlockAt(x, y, z)) {
+						// Another tree's crown or trunk is in the way: no vine here.
+						return;
+					}
+				}
+				for (int y = bottom; y <= top; y++) {
+					sink.set(x, y, z, BlockCode.vanilla(ZoneBlock.vineOn(d)));
+				}
+				return;
+			}
+		}
+	}
+
+	/** True when a scenery tree's trunk or leaves take (x, y, z). */
+	private boolean treeBlockAt(int x, int y, int z) {
+		int gx = Math.floorDiv(x - this.x0, TREE_SPACING);
+		int gz = Math.floorDiv(z - this.z0, TREE_SPACING);
+		for (int dz = -1; dz <= 1; dz++) {
+			for (int dx = -1; dx <= 1; dx++) {
+				Tree tree = this.trees.get(key(gx + dx, gz + dz));
+				if (tree == null) {
+					continue;
+				}
+				int ax = Math.abs(x - tree.x);
+				int az = Math.abs(z - tree.z);
+				int base = this.sceneryHeight(tree.x, tree.z) + 1;
+				int crown = base + tree.trunk;
+				if (ax == 0 && az == 0 && y >= base && y < crown) {
+					return true;
+				}
+				if (y >= crown - 2 && y < crown + 2) {
+					int r = y < crown ? 2 : 1;
+					if (ax <= r && az <= r && !(ax == r && az == r && (y < crown || y == crown + 1))) {
+						return true;
+					}
+				}
+			}
+		}
+		return false;
 	}
 
 	/** No tree trunk or leaves at this column's first block above the ground (so grass never sits in a trunk). */

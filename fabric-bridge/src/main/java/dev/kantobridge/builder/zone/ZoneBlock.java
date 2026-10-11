@@ -2,11 +2,12 @@ package dev.kantobridge.builder.zone;
 
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.LeavesBlock;
+import net.minecraft.world.level.block.VineBlock;
 import net.minecraft.world.level.block.state.BlockState;
 
 /**
  * The vanilla blocks a Wild Routes zone is built from (docs/specs/WILD_ROUTES_PLAN.md §4.4, the forest theme): the
- * land, the maze's hedges and trees, ponds and their barriers. Planned as {@code BlockCode.vanilla(block)}; the
+ * land, the maze's hedges and trees, ponds and their barriers, vines. Planned as {@code BlockCode.vanilla(block)}; the
  * ordinal is the code's value, so new blocks go at the end.
  */
 public enum ZoneBlock {
@@ -33,7 +34,15 @@ public enum ZoneBlock {
 	/** Invisible and solid: keeps you out of a pond, as Kanto's water does until Surf. */
 	BARRIER,
 	MOSS_BLOCK,
-	GRAVEL;
+	GRAVEL,
+	/**
+	 * Vines (the caves and woods plan's CW4), each hanging on the leaves to its north, east, south or west; never lower
+	 * than feet + 2 beside the maze, where a player who can't jump never reaches one to climb.
+	 */
+	VINE_NORTH,
+	VINE_EAST,
+	VINE_SOUTH,
+	VINE_WEST;
 
 	/** The block state; only called on the server (the plan itself never needs Minecraft's registries). */
 	public BlockState state() {
@@ -61,6 +70,20 @@ public enum ZoneBlock {
 			case BARRIER -> Blocks.BARRIER.defaultBlockState();
 			case MOSS_BLOCK -> Blocks.MOSS_BLOCK.defaultBlockState();
 			case GRAVEL -> Blocks.GRAVEL.defaultBlockState();
+			case VINE_NORTH -> Blocks.VINE.defaultBlockState().setValue(VineBlock.NORTH, true);
+			case VINE_EAST -> Blocks.VINE.defaultBlockState().setValue(VineBlock.EAST, true);
+			case VINE_SOUTH -> Blocks.VINE.defaultBlockState().setValue(VineBlock.SOUTH, true);
+			case VINE_WEST -> Blocks.VINE.defaultBlockState().setValue(VineBlock.WEST, true);
+		};
+	}
+
+	/** The vine hanging on a block in direction {@code d}: 0 north, 1 east, 2 south, 3 west. */
+	public static ZoneBlock vineOn(int d) {
+		return switch (d) {
+			case 0 -> VINE_NORTH;
+			case 1 -> VINE_EAST;
+			case 2 -> VINE_SOUTH;
+			default -> VINE_WEST;
 		};
 	}
 

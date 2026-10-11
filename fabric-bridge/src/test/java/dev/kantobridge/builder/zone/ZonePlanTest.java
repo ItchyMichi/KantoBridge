@@ -46,6 +46,7 @@ class ZonePlanTest {
 			ZoneBlock.AZURE_BLUET, ZoneBlock.OXEYE_DAISY);
 	private static final Set<ZoneBlock> HEDGE = Set.of(ZoneBlock.OAK_LEAVES, ZoneBlock.OAK_LOG, ZoneBlock.BIRCH_LEAVES, ZoneBlock.BIRCH_LOG,
 			ZoneBlock.DARK_OAK_LEAVES, ZoneBlock.DARK_OAK_LOG);
+	private static final Set<ZoneBlock> VINES = Set.of(ZoneBlock.VINE_NORTH, ZoneBlock.VINE_EAST, ZoneBlock.VINE_SOUTH, ZoneBlock.VINE_WEST);
 
 	private static RouteLayout layout;
 	private static ZonePlan plan;
@@ -364,7 +365,7 @@ class ZonePlanTest {
 					continue;
 				}
 				for (Map.Entry<Integer, Integer> e : col.entrySet()) {
-					if (e.getKey() >= ZonePlan.FEET + 1) {
+					if (e.getKey() >= ZonePlan.FEET + 1 && !(VINES.contains(block(e.getValue())) && e.getKey() >= ZonePlan.VINE_LOW)) {
 						throw new AssertionError("something above head height on a " + role + " cell at " + x + "," + z);
 					}
 				}
@@ -549,5 +550,49 @@ class ZonePlanTest {
 				TestData.ORIGIN_X, TestData.ORIGIN_Z);
 		assertTrue(unchanged.zones().isEmpty());
 		assertEquals(1, unchanged.warnings().warnings().getOrDefault("zone_town_unbuilt", 0));
+	}
+
+	/**
+	 * Vines (docs/specs/CAVES_AND_WOODS_PLAN.md §5.5, CW4): beside the maze only at feet + 2 or higher (a player who can't
+	 * jump never reaches one to climb a hedge), each hanging on the hedge or leaves its facing names or on the vine above,
+	 * never on a wall, rock or pond, in the scenery two blocks over the ground; about one face in nine.
+	 */
+	@Test
+	void vinesHangOnLeavesOutOfReach() {
+		Box3 v = plan.volume();
+		int beside = 0;
+		int onTrees = 0;
+		Map<Long, Map<Integer, Integer>> columns = new HashMap<>();
+		java.util.function.BiFunction<Integer, Integer, Map<Integer, Integer>> at = (x, z) -> columns.computeIfAbsent(
+				((long) z << 32) ^ (x & 0xFFFFFFFFL), k -> column(plan, x, z));
+		for (int z = v.minZ() + 1; z < v.maxZ() - 1; z++) {
+			for (int x = v.minX() + 1; x < v.maxX() - 1; x++) {
+				CellRole role = plan.roleAt(x, z);
+				Map<Integer, Integer> col = at.apply(x, z);
+				for (Map.Entry<Integer, Integer> e : col.entrySet()) {
+					if (BlockCode.kind(e.getValue()) != BlockCode.KIND_VANILLA || !VINES.contains(block(e.getValue()))) {
+						continue;
+					}
+					int y = e.getKey();
+					ZoneBlock vine = block(e.getValue());
+					assertTrue(role.walkable() || role == CellRole.SCENERY, "a vine over a " + role + " cell");
+					if (role.walkable()) {
+						assertTrue(y >= ZonePlan.VINE_LOW, "out of reach beside the maze");
+						beside++;
+					} else {
+						assertTrue(y >= plan.sceneryHeight(x, z) + 2, "two blocks over the ground");
+						onTrees++;
+					}
+					int d = vine.ordinal() - ZoneBlock.VINE_NORTH.ordinal();
+					int[][] steps = {{0, -1}, {1, 0}, {0, 1}, {-1, 0}};
+					Integer held = at.apply(x + steps[d][0], z + steps[d][1]).get(y);
+					Integer above = col.get(y + 1);
+					boolean onLeaves = held != null && BlockCode.kind(held) == BlockCode.KIND_VANILLA && HEDGE.contains(block(held));
+					boolean underVine = above != null && above.intValue() == e.getValue().intValue();
+					assertTrue(onLeaves || underVine, "a vine hangs on leaves or the vine above at " + x + "," + y + "," + z);
+				}
+			}
+		}
+		assertTrue(beside > 20 && onTrees > 20, beside + " beside the maze, " + onTrees + " on trees");
 	}
 }
