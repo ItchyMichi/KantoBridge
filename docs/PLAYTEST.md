@@ -670,6 +670,16 @@ A new world (the mod installed and switched off, as for P1).
 - [ ] **Rock Tunnel:** dark until Flash, as before; the rock is there once it's lit.
 - [ ] **Seafoam Islands:** surfing, nothing in your face over the water.
 
+### CW2: Viridian Forest's canopy and vines
+
+- [ ] **The canopy:** a roof of leaves five to eight blocks up, in the forest's own tree art, its underside stepped and
+      mottled; here and there a light well showing brighter leaves higher up; no sky anywhere above the forest.
+- [ ] **The edge:** the forest closes in leaves up to the canopy all round; you can't see out.
+- [ ] **Vines:** strands of leaves and green stem-and-stub strands hang from the canopy, some long; none comes below
+      head height on a path, none hangs into a tree.
+- [ ] **Walking and battles** are exactly as before; the light under the canopy is as before.
+- [ ] **The Safari Zone** keeps its open sky.
+
 ## Wild Routes
 
 [specs/WILD_ROUTES_PLAN.md](specs/WILD_ROUTES_PLAN.md). WR1-WR7 are built and tested without a person watching

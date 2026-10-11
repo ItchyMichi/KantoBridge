@@ -3,6 +3,7 @@ package dev.kantobridge.builder.plan;
 import dev.kantobridge.builder.export.CellFlags;
 import dev.kantobridge.builder.shape.ShapePlan;
 import dev.kantobridge.builder.shape.ShapePlanner;
+import dev.kantobridge.builder.shape.dressing.Canopy;
 import dev.kantobridge.builder.zone.ZonePlan;
 import dev.kantobridge.scene.Scene;
 import dev.kantobridge.world.MapPlacement;
@@ -379,10 +380,28 @@ public final class WorldPlan {
 		return p.kind() == MapPlacement.Kind.INTERIOR && BIOME_OUTDOOR.equals(p.biome());
 	}
 
-	/** The volume of an interior: its footprint and enclosure ring, from the floor block up to the ceiling. */
+	/**
+	 * The volume of an interior: its footprint and enclosure ring, from the floor block up to the ceiling; under the open
+	 * sky up to a wood's canopy (the caves and woods plan's CW2), which the packer keeps free above it anyway.
+	 */
 	public static Box3 interiorVolume(MapPlacement p) {
 		InteriorPacker.Box box = InteriorPacker.footprint(p.x(), p.z(), p.blockWidth(), p.blockDepth());
-		return new Box3(box.minX(), p.y() - 1, box.minZ(), box.maxX(), p.y() + CEILING_ABOVE_FEET + 1, box.maxZ());
+		int top = openSky(p) ? Canopy.TOP_LEVEL : CEILING_ABOVE_FEET;
+		return new Box3(box.minX(), p.y() - 1, box.minZ(), box.maxX(), p.y() + top + 1, box.maxZ());
+	}
+
+	/** The columns of an interior's enclosure ring, as {x, z}. */
+	public static List<int[]> ringColumns(MapPlacement p) {
+		InteriorPacker.Box box = InteriorPacker.footprint(p.x(), p.z(), p.blockWidth(), p.blockDepth());
+		List<int[]> out = new ArrayList<>();
+		for (int z = box.minZ(); z < box.maxZ(); z++) {
+			for (int x = box.minX(); x < box.maxX(); x++) {
+				if (!p.containsColumn(x, z)) {
+					out.add(new int[] {x, z});
+				}
+			}
+		}
+		return out;
 	}
 
 	/** The surface volume around surface maps placed at {@code placements}. */
@@ -449,7 +468,8 @@ public final class WorldPlan {
 			}
 			Box3 v = interiorVolume(map.placement()).inflateXZ(4);
 			int feet = map.placement().y();
-			out.add(new BiomeRegion(new Box3(v.minX(), feet - 4, v.minZ(), v.maxX(), feet + 8, v.maxZ()), map.placement().biome()));
+			int top = openSky(map.placement()) ? Canopy.TOP_LEVEL + 2 : 8;
+			out.add(new BiomeRegion(new Box3(v.minX(), feet - 4, v.minZ(), v.maxX(), feet + top, v.maxZ()), map.placement().biome()));
 		}
 		for (ZonePlan zone : this.zones) {
 			out.add(zone.biomeRegion());
@@ -591,6 +611,12 @@ public final class WorldPlan {
 		for (int y = p.y() - 1; y <= p.y() + CEILING_ABOVE_FEET; y++) {
 			sink.set(x, y, z, code);
 		}
+		if (planned != null && planned.curtain() != null && openSky(p)) {
+			// An open-sky wood's leaf curtain above the ring (CW2), on decor carriers: the ring keeps its collision.
+			for (int k = Canopy.CURTAIN_FROM; k < Canopy.TOP_LEVEL; k++) {
+				sink.set(x, p.y() + k, z, BlockCode.decor(true));
+			}
+		}
 	}
 
 	private void renderMapColumn(CodeSink sink, PlacedMap map, int x, int z) {
@@ -666,14 +692,16 @@ public final class WorldPlan {
 		// A carrier wins: the light goes only where the position is still air, or a hanging's carrier there gives it.
 		boolean light = map.interior() && !p.dark() && Math.floorMod(tx, LIGHT_SPACING) == 1 && Math.floorMod(ty, LIGHT_SPACING) == 1
 				&& column <= LIGHT_ABOVE_FEET;
-		int hung = planned == null ? 0 : planned.hungMask()[planIndex];
+		int hung = planned == null ? 0 : ShapePlanner.hungFits(planned.hungMask()[planIndex], ShapePlanner.hangTop(p));
+		int leaves = planned == null ? 0 : planned.hungLeaves()[planIndex];
 		for (int k = 0; k < 31 && hung >> k != 0; k++) {
 			if ((hung >> k & 1) == 0 || (taken >> k & 1) != 0) {
 				continue;
 			}
-			// A hanging (CW1): a decor carrier for its piece; the one on a light's position gives the light (CD15).
+			// A hanging (CW1, CW2): a decor carrier for its piece, foliage for a wood's; the one on a light's position gives
+			// the light (CD15).
 			boolean lit = light && k == LIGHT_ABOVE_FEET;
-			sink.set(x, feet + k, z, BlockCode.decor(false, lit));
+			sink.set(x, feet + k, z, BlockCode.decor((leaves >> k & 1) != 0, lit));
 			light &= !lit;
 			taken |= 1L << k;
 		}

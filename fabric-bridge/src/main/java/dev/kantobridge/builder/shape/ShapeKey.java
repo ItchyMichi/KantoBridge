@@ -23,6 +23,8 @@ import org.jetbrains.annotations.Nullable;
  * box:&lt;a&gt;|&lt;u&gt;,&lt;n&gt;,&lt;s&gt;,&lt;w&gt;,&lt;e&gt;|&lt;h&gt;              a box h/16 high without a bottom (P3's class boxes)
  * hang:&lt;a&gt;|&lt;t&gt;|&lt;y0&gt;|&lt;d&gt;,&lt;b&gt;,&lt;p&gt;,&lt;w&gt;,&lt;x&gt;,&lt;z&gt;        a box hanging from the block's top down to y0, and a spike
  *                                              (docs/specs/CAVES_AND_WOODS_PLAN.md §4.1)
+ * vine:&lt;a&gt;|&lt;t&gt;|&lt;x&gt;,&lt;z&gt;,&lt;w&gt;,&lt;r&gt;|&lt;top&gt;,&lt;len&gt;,&lt;k&gt;|&lt;n&gt;,&lt;s1&gt;,&lt;s2&gt;,&lt;e1&gt;,&lt;e2&gt;   one block of a leaf strand (CW2)
+ * strand:&lt;a&gt;|&lt;x&gt;,&lt;z&gt;,&lt;r&gt;|&lt;top&gt;,&lt;len&gt;,&lt;k&gt;         one block of a stem-and-stub strand (CW2)
  * modifiers, in this order when present:  |tint=&lt;0..3&gt;  |v=&lt;variant&gt;
  * </pre>
  *
@@ -39,7 +41,9 @@ public final class ShapeKey implements Comparable<ShapeKey> {
 		CELL("cell", 4, 1, 3),
 		TMPL("tmpl", 3),
 		BOX("box", 5, 1),
-		HANG("hang", 1, 1, 6);
+		HANG("hang", 1, 1, 6),
+		VINE("vine", 1, 4, 3, 5),
+		STRAND("strand", 3, 3);
 
 		private final String id;
 		private final int[] groups;
@@ -111,6 +115,9 @@ public final class ShapeKey implements Comparable<ShapeKey> {
 			case TMPL -> check(numbers[0] >= 0 && numbers[1] >= 0 && numbers[2] >= 0, "negative block offset");
 			case BOX -> check(numbers[5] >= 1 && numbers[5] <= 16, "box height out of range");
 			case HANG -> check(hangValid(numbers), "hanging box or spike out of range");
+			case VINE -> check(strandValid(numbers[1], numbers[2], numbers[4], numbers[5], numbers[6], numbers[7]) && numbers[0] >= 0 && numbers[3] >= 1
+					&& numbers[3] <= 8 && stubsValid(numbers), "vine out of range");
+			case STRAND -> check(strandValid(numbers[0], numbers[1], numbers[2], numbers[3], numbers[4], numbers[5]), "strand out of range");
 			default -> {
 			}
 		}
@@ -135,6 +142,24 @@ public final class ShapeKey implements Comparable<ShapeKey> {
 		if (!ok) {
 			throw new IllegalArgumentException(problem);
 		}
+	}
+
+	/**
+	 * A strand's place: (x, z) in its column, a turn of r × π/16, its top in its top block, its length, and k, the blocks
+	 * this one lies below the top block; the strand must reach into block k.
+	 */
+	private static boolean strandValid(int x, int z, int r, int top, int len, int k) {
+		return x >= 0 && x <= 16 && z >= 0 && z <= 16 && r >= 0 && r <= 15 && top >= 1 && top <= 16 && len >= 1 && len <= 255 && k >= 0
+				&& k <= 15 && top - len + 16 * k < 16;
+	}
+
+	/** A vine's stubs: one or two, each a height above the tail and a side; the second all 0 when there is one. */
+	private static boolean stubsValid(int[] n) {
+		int len = n[6];
+		if (n[8] < 1 || n[8] > 2 || n[9] < 0 || n[9] > len || (n[11] != 0 && n[11] != 1)) {
+			return false;
+		}
+		return n[8] == 1 ? n[10] == 0 && n[12] == 0 : n[10] >= 0 && n[10] <= len && (n[12] == 0 || n[12] == 1);
 	}
 
 	/** A hanging box's numbers: tile, y0, then the spike (direction, base, apex, half-width, x, z; all 0 for none). */
@@ -203,6 +228,26 @@ public final class ShapeKey implements Comparable<ShapeKey> {
 	 */
 	public static ShapeKey hang(int atlas, int tile, int y0, int dir, int base, int apex, int w, int x, int z) {
 		return new ShapeKey(Kind.HANG, atlas, new int[] {tile, y0, dir, base, apex, w, x, z}, null, 0, null);
+	}
+
+	/**
+	 * One block of a leaf strand (CW2's vines): two crossed quads of half-width {@code w} about ({@code x}, {@code z}), turned
+	 * {@code r} × π/16, hanging from {@code top} (in its top block) down {@code len}, wearing {@code tile} stretched along
+	 * it; {@code stubs} stubs at heights {@code s1}, {@code s2} above the tail on sides {@code e1}, {@code e2} (0 west, 1
+	 * east). This key draws block {@code k} below the top block.
+	 */
+	public static ShapeKey vine(int atlas, int tile, int x, int z, int w, int r, int top, int len, int k, int stubs, int s1, int s2, int e1,
+			int e2) {
+		return new ShapeKey(Kind.VINE, atlas, new int[] {tile, x, z, w, r, top, len, k, stubs, s1, s2, e1, e2}, null, 0, null);
+	}
+
+	/**
+	 * One block of a stem-and-stub strand (CW2's second vine kind): the pattern in three greens on two crossed planes
+	 * turned {@code r} × π/16 about ({@code x}, {@code z}), hanging from {@code top} (in its top block) down {@code len};
+	 * this key draws block {@code k} below the top block.
+	 */
+	public static ShapeKey strand(int atlas, int x, int z, int r, int top, int len, int k) {
+		return new ShapeKey(Kind.STRAND, atlas, new int[] {x, z, r, top, len, k}, null, 0, null);
 	}
 
 	/** A carrier that draws nothing: a solid cell's blocks over a shape lower than its column (PD7). */

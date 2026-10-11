@@ -127,6 +127,10 @@ public final class SceneJson {
 		env.addProperty("openAir", map.env().openAir());
 		env.addProperty("cave", map.env().cave());
 		env.addProperty("dark", map.env().dark());
+		if (map.env().canopy()) {
+			// The caves and woods plan's CW2; absent (false) in older scenes.
+			env.addProperty("canopy", true);
+		}
 		out.add("env", env);
 		out.addProperty("tileset", map.tileset());
 		out.addProperty("atlas", map.atlas());

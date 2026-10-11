@@ -110,6 +110,9 @@ public final class ShapeTable {
 					yield shades == null ? KeyGeometry.box(key.numbers(), texture) : KeyGeometry.paneBox(key.numbers(), shades, artPx, texture);
 				}
 				case HANG -> KeyGeometry.hang(key.numbers(), texture);
+				case VINE -> KeyGeometry.vine(key.numbers(), texture);
+				// The stem-and-stub strand's three greens are plain colours on the white sprite (CW2).
+				case STRAND -> KeyGeometry.strand(key.numbers(), rgb -> texture(colourKey(rgb), textures, keys));
 				case TUFT -> {
 					int tile = key.number(0);
 					List<ShapeQuad> tuft = tufts.computeIfAbsent(atlas + "|" + tile, k -> {

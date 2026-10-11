@@ -588,10 +588,30 @@ Execution of [specs/CAVES_AND_WOODS_PLAN.md](specs/CAVES_AND_WOODS_PLAN.md) (CW1
 | # | Milestone | Status | Date | Commit |
 |---|---|---|---|---|
 | CW1 | Cave rock | **done** (13 new JUnit tests; JUnit 948 green; the GameTests run at CW2) | 2026-10-11 | `CW1: cave rock` |
-| CW2 | The forest canopy and vines | to do | | |
+| CW2 | The forest canopy and vines | **done**; checkpoint: JUnit 958, GameTests 98, Python and Lua 1,484 | 2026-10-11 | `CW2: the forest canopy and vines` |
 | CW3 | The forest's apron | waits for your decision after CW2 | | |
 | CW4 | Vines in the wild zone | to do | | |
 | CW5 | Finish | to do | | |
+
+### Caves and woods: CW2 notes
+
+1. **Which wood:** `Env.canopy`, set by the Gen 1 front end for `VIRIDIAN_FOREST` only: Dramaless Shape's own canopy list
+   (`lib/DayNight.lua`, `DayNight.CANOPY`), which Kanto in First Person reads. The Safari Zone shares the forest tileset
+   and keeps its sky.
+2. **The canopy** is a filled mass (CD13): each cell's columns hold leaves from its underside (40–62 px, levels 5–7) up
+   to 80 px (feet + 10), in a leaf tile picked per cell from the wood's five commonest tall tiles; one cell in nine is a
+   light well showing the upper layer (74–79 px). The tests found a hole: an upper layer rounding to 80 px left a well
+   empty; it is clamped to 79.
+3. **Vines:** both of the mod's kinds, from its formulas; a strand's tail stays at head height over a path and at a
+   tree's top (`CanopyTest` checks every one). Where the underside lies inside a block, the strand's column leaves that
+   block empty instead of a box: the strand hangs from a small hollow, so one block never needs two pieces.
+4. **The 1/16 grid** turns the leaf strands to any of 16 directions, but the stem-and-stub strands' one-unit columns
+   only along the axes or the diagonals.
+5. **The curtain** on the enclosure ring is one key (the commonest leaf, darkened), where the mod picks a leaf per cell.
+6. **The volume:** an open-sky interior reaches feet + 11, its biome box feet + 12. A wood that kept its ceiling (no
+   sky spot) hangs nothing: under a ceiling a column's hangings stand only if all of them fit (`ShapePlanner.hungFits`).
+7. **In a built world** (`CanopyPlanTest`: the synthetic house renamed `VIRIDIAN_FOREST` and opened to the sky): every
+   hanging on a foliage carrier with its piece in the shape map, the ring's own blocks kept and the curtain above them.
 
 ### Caves and woods: CW1 notes
 

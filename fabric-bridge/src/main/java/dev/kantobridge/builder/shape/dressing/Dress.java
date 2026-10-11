@@ -24,9 +24,18 @@ public final class Dress {
 	final int[] decor;
 	final ShapeKey[][] hung;
 	final int[] hungMask;
+	final int[] hungLeaves;
 	final Map<String, Integer> tally;
 	int wallTile = -1;
 	@Nullable ShapeKey ceiling;
+	@Nullable ShapeKey curtain;
+	Classes classes = (tx, ty) -> null;
+
+	/** The profile's class at an art tile (Dramaless Shape's pins, P1-P3), or null where it says nothing. */
+	@FunctionalInterface
+	public interface Classes {
+		@Nullable String at(int tx, int ty);
+	}
 
 	/**
 	 * @param keys   per art tile, its column's keys (changed in place)
@@ -52,7 +61,24 @@ public final class Dress {
 		this.decor = decor;
 		this.hung = new ShapeKey[blocks.length][];
 		this.hungMask = new int[blocks.length];
+		this.hungLeaves = new int[blocks.length];
 		this.tally = tally;
+	}
+
+	/** The profile's classes, which the hangings read where it has them (CD4's fallback: without them, our own rules). */
+	public Dress withClasses(@Nullable Classes classes) {
+		this.classes = classes == null ? (tx, ty) -> null : classes;
+		return this;
+	}
+
+	/** Per art tile, bit k set when the hanging at level k is foliage (a {@code decor_leaves} carrier). */
+	public int[] hungLeaves() {
+		return this.hungLeaves;
+	}
+
+	/** The key the leaf curtain on an open-sky wood's enclosure ring wears (CW2), null for none. */
+	public @Nullable ShapeKey curtain() {
+		return this.curtain;
 	}
 
 	/** The room's dominant wall tile (the ring and the ceiling wear it), -1 when not dressed. */
@@ -94,6 +120,11 @@ public final class Dress {
 
 	/** Hangs {@code key} at level {@code k} of art tile {@code i} (which must be {@link #free}). */
 	void hang(int i, int k, ShapeKey key) {
+		this.hang(i, k, key, false);
+	}
+
+	/** The same, foliage or not (a {@code decor_leaves} carrier, so shader and LOD mods see leaves). */
+	void hang(int i, int k, ShapeKey key, boolean leaves) {
 		ShapeKey[] column = this.hung[i];
 		if (column == null || column.length <= k) {
 			column = column == null ? new ShapeKey[k + 1] : Arrays.copyOf(column, k + 1);
@@ -101,6 +132,9 @@ public final class Dress {
 		}
 		column[k] = key;
 		this.hungMask[i] |= 1 << k;
+		if (leaves) {
+			this.hungLeaves[i] |= 1 << k;
+		}
 	}
 
 	/** Counts one {@code name} in the planner's tally, as {@code dress_<name>}. */

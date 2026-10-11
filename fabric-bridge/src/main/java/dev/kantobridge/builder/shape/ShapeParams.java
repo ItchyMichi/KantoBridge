@@ -166,9 +166,15 @@ public record ShapeParams(String planner, String heights, int maxUnit, int minRe
 				true, true, 16, 4, true, true, TEMPLATE_MAX, true, true, true, true, false);
 	}
 
+	/** CW2: CW1's planner plus Viridian Forest's canopy and vines (docs/specs/CAVES_AND_WOODS_PLAN.md §5.2-§5.3). */
+	public static ShapeParams cw2() {
+		return new ShapeParams("kb-shapes/10", MEASURED, HeightRules.MAX_UNIT, HeightRules.MIN_REPEAT_ROWS, 2, HeightRules.INTERIOR_WALL,
+				true, true, 16, 4, true, true, TEMPLATE_MAX, true, true, true, true, true);
+	}
+
 	/** The parameters a build plans with. */
 	public static ShapeParams current() {
-		return cw1();
+		return cw2();
 	}
 
 	/** The parameters as they appear in the shape index. */

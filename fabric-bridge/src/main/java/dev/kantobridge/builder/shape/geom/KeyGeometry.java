@@ -28,6 +28,15 @@ import org.jetbrains.annotations.Nullable;
  *                              the top (16 - y0)/2 pixel rows of t, as a cube's face would show them there; and when
  *                              d > 0 a square pyramid of half-width w, its base centred at (x, z) at height b, its apex
  *                              at (x, p, z): four triangles, each the whole tile squeezed to the apex (CW1's cave rock)
+ * vine  a|t|x,z,w,r|top,len,k|n,s1,s2,e1,e2
+ *                              block k below its top block of a strand hanging from top down len about (x, z): two
+ *                              crossed cards of half-width w turned r × π/16 and a quarter more, the whole tile
+ *                              stretched along the strand; n stubs, flat 6 × 3 cards along x at heights s above the
+ *                              tail, west (e = 0) or east; both faces of every card (CW2's leaf strands)
+ * strand a|x,z,r|top,len,k     the same place for the stem-and-stub pattern: 8 columns by 16 rows over a card 10 wide,
+ *                              a two-column stem the whole length, two-column stubs on alternate sides every five rows,
+ *                              each a quad of one of three greens; the cards along the axes, or the diagonals when
+ *                              r ÷ 4 is odd (the 1/16 grid can't turn a one-unit column any finer) (CW2)
  * </pre>
  */
 final class KeyGeometry {
@@ -43,8 +52,117 @@ final class KeyGeometry {
 					texture);
 			case BOX -> key.variant() == null ? box(key.numbers(), texture) : null;
 			case HANG -> hang(key.numbers(), texture);
+			case VINE -> vine(key.numbers(), texture);
 			default -> null;
 		};
+	}
+
+	/**
+	 * Key order tile; x, z, half-width, turn; top, length, block; stubs, their heights and sides. Cards seen from both
+	 * sides, without ambient occlusion (a thin card would darken its neighbours).
+	 */
+	static List<ShapeQuad> vine(int[] n, IntUnaryOperator texture) {
+		int t = texture.applyAsInt(n[0]);
+		int x = n[1];
+		int z = n[2];
+		int w = n[3];
+		int top = n[5] + 16 * n[7];
+		int tail = top - n[6];
+		List<ShapeQuad> out = new ArrayList<>();
+		int y1 = Math.min(16, top);
+		int y0 = Math.max(0, tail);
+		if (y1 > y0) {
+			int v1 = along(top, n[6], y1);
+			int v0 = along(top, n[6], y0);
+			for (int plane = 0; plane < 2; plane++) {
+				double a = (n[4] + 8 * plane) * Math.PI / 16;
+				int dx = (int) Math.round(StrictMath.cos(a) * w);
+				int dz = (int) Math.round(StrictMath.sin(a) * w);
+				if (dx == 0 && dz == 0) {
+					continue;
+				}
+				card(out, new int[] {x - dx, y1, z - dz}, new int[] {x + dx, y1, z + dz}, y0, t, v1, v0);
+			}
+		}
+		for (int i = 0; i < n[8]; i++) {
+			int sy = tail + n[9 + i];
+			if (sy >= 0 && sy < 16) {
+				int side = n[11 + i] == 1 ? STUB : -STUB;
+				card(out, new int[] {x, Math.min(16, sy + STUB_H), z}, new int[] {x + side, Math.min(16, sy + STUB_H), z}, sy, t, 0, 16);
+			}
+		}
+		return out;
+	}
+
+	/** A vine's stub: 3.2 × 1.6 pixels, in 1/16 block. */
+	static final int STUB = 6;
+	static final int STUB_H = 3;
+
+	/** The texture's v (0 at the strand's top, 16 at its tail) at height y of a strand from top down len. */
+	private static int along(int top, int len, int y) {
+		return (int) Math.round(16.0 * (top - y) / len);
+	}
+
+	/**
+	 * A two-sided vertical card from {@code a} to {@code b} (both at the top height) down to {@code y0}: the front facing
+	 * one way, a mirrored back facing the other; u runs from a to b, v from {@code vTop} to {@code vBottom}.
+	 */
+	private static void card(List<ShapeQuad> out, int[] a, int[] b, int y0, int texture, int vTop, int vBottom) {
+		int[] a0 = {a[0], y0, a[2]};
+		int[] b0 = {b[0], y0, b[2]};
+		out.add(ShapeQuad.sloped(new int[][] {a, a0, b0, b}, new int[][] {{0, vTop}, {0, vBottom}, {16, vBottom}, {16, vTop}}, texture, -1,
+				ShapeQuad.NO_AO));
+		out.add(ShapeQuad.sloped(new int[][] {b, b0, a0, a}, new int[][] {{16, vTop}, {16, vBottom}, {0, vBottom}, {0, vTop}}, texture, -1,
+				ShapeQuad.NO_AO));
+	}
+
+	// The stem-and-stub pattern: the mod's 8 × 16 texels (columns 1..6 used) over a card 10 units wide, column c from
+	// STRAND_EDGES[c - 1] to STRAND_EDGES[c] (its 1.25-unit texels on the 1/16 grid), in three greens.
+	private static final int[] STRAND_EDGES = {-4, -2, -1, 0, 1, 2, 4};
+	static final int STEM = 0x428A47;
+	static final int STEM_SHADE = 0x296633;
+	static final int STUB_LIGHT = 0x579E57;
+	private static final int STRAND_ROWS = 16;
+
+	/** Key order x, z, turn; top, length, block. {@code colour} turns an RGB colour into a texture index. */
+	static List<ShapeQuad> strand(int[] n, IntUnaryOperator colour) {
+		int x = n[0];
+		int z = n[1];
+		boolean diagonal = (n[2] / 4) % 2 == 1;
+		int top = n[3] + 16 * n[5];
+		int len = n[4];
+		List<ShapeQuad> out = new ArrayList<>();
+		for (int plane = 0; plane < 2; plane++) {
+			// Unit steps along the card: east or south on the axes, south-east or south-west on the diagonals.
+			int ux = diagonal ? 1 : plane == 0 ? 1 : 0;
+			int uz = diagonal ? (plane == 0 ? 1 : -1) : plane == 0 ? 0 : 1;
+			strandPiece(out, x, z, ux, uz, 3, top, top - len, colour.applyAsInt(STEM));
+			strandPiece(out, x, z, ux, uz, 4, top, top - len, colour.applyAsInt(STEM_SHADE));
+			for (int row = 0; row < STRAND_ROWS; row++) {
+				int y1 = top - (int) Math.round(row * len / (double) STRAND_ROWS);
+				int y0 = top - (int) Math.round((row + 1) * len / (double) STRAND_ROWS);
+				if (row % 5 == 2) {
+					strandPiece(out, x, z, ux, uz, 2, y1, y0, colour.applyAsInt(STUB_LIGHT));
+					strandPiece(out, x, z, ux, uz, 1, y1, y0, colour.applyAsInt(STEM));
+				} else if (row % 5 == 4) {
+					strandPiece(out, x, z, ux, uz, 5, y1, y0, colour.applyAsInt(STUB_LIGHT));
+					strandPiece(out, x, z, ux, uz, 6, y1, y0, colour.applyAsInt(STEM));
+				}
+			}
+		}
+		return out;
+	}
+
+	/** Column {@code c} of the pattern from y1 down to y0 (clipped to the block), as a two-sided card of one colour. */
+	private static void strandPiece(List<ShapeQuad> out, int x, int z, int ux, int uz, int c, int y1, int y0, int texture) {
+		int top = Math.min(16, y1);
+		int bottom = Math.max(0, y0);
+		if (top <= bottom) {
+			return;
+		}
+		int lo = STRAND_EDGES[c - 1];
+		int hi = STRAND_EDGES[c];
+		card(out, new int[] {x + lo * ux, top, z + lo * uz}, new int[] {x + hi * ux, top, z + hi * uz}, bottom, texture, 0, 16);
 	}
 
 	/** Key order tile, y0, then the spike's direction, base, apex, half-width, x, z; quads sorted by face. */

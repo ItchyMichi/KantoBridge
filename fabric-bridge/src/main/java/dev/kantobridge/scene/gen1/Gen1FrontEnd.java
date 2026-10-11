@@ -46,6 +46,12 @@ public final class Gen1FrontEnd implements GameFrontEnd {
 	public static final String FAMILY = "gen1";
 	/** Gen 1 caves are drawn with this tileset. */
 	static final String CAVE_TILESET = WorldPlanner.CAVE_TILESET;
+	/**
+	 * The woods under a leaf canopy (docs/specs/CAVES_AND_WOODS_PLAN.md §5.2): Dramaless Shape's own list
+	 * ({@code lib/DayNight.lua}, {@code DayNight.CANOPY}), which Kanto in First Person roofs. The Safari Zone shares the
+	 * forest tileset and keeps its sky.
+	 */
+	public static final java.util.Set<String> CANOPY_MAPS = java.util.Set.of("VIRIDIAN_FOREST");
 	static final int CELL_PX = 16;
 	static final int ART_PX = 8;
 	/** Art tiles along a cell's edge. */
@@ -186,8 +192,9 @@ public final class Gen1FrontEnd implements GameFrontEnd {
 			}
 		}
 		boolean outdoor = map.outside();
-		Env env = new Env(outdoor, outdoor || tileset.id().equals(forest), CAVE_TILESET.equals(tileset.id()),
-				map.dark() ? Env.DARK_FLASH : Env.DARK_NEVER);
+		boolean openAir = outdoor || tileset.id().equals(forest);
+		Env env = new Env(outdoor, openAir, CAVE_TILESET.equals(tileset.id()), map.dark() ? Env.DARK_FLASH : Env.DARK_NEVER,
+				openAir && !map.surface() && CANOPY_MAPS.contains(map.id()));
 		return new SceneMap(map.id(), map.index(), tileset.id(), tileset.image(), map.palette(), w, h, PER_CELL, map.surface(), env, tiles,
 				closedTiles, kinds, tags, dirs, border, ownBorder, objects, sites);
 	}

@@ -30,7 +30,7 @@
     "geoms": {
       "type": "array",
       "description": "Sorted canonical shape keys (cube, slab, roof, tuft, cell, tmpl; box from P3); geom id = index.",
-      "items": {"type": "string", "pattern": "^(cube|slab|roof|tuft|cell|tmpl|box|hang):[0-9]{1,5}\\|[-0-9a-z,|=_]+$", "maxLength": 256},
+      "items": {"type": "string", "pattern": "^(cube|slab|roof|tuft|cell|tmpl|box|hang|vine|strand):[0-9]{1,5}\\|[-0-9a-z,|=_]+$", "maxLength": 256},
       "uniqueItems": true,
       "x-rom-derived": true
     },
@@ -57,7 +57,7 @@
           "outdoor": {"type": "boolean"},
           "columns": {
             "type": "array",
-            "items": {"type": "array", "maxItems": 8, "items": {"type": "string", "pattern": "^(cube|slab|roof|tuft|cell|tmpl|box|hang):[0-9]{1,5}\\|[-0-9a-z,|=_]+$", "maxLength": 256}}
+            "items": {"type": "array", "maxItems": 8, "items": {"type": "string", "pattern": "^(cube|slab|roof|tuft|cell|tmpl|box|hang|vine|strand):[0-9]{1,5}\\|[-0-9a-z,|=_]+$", "maxLength": 256}}
           },
           "band": {
             "type": "object",

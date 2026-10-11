@@ -45,7 +45,7 @@ class ShapePlannerSyntheticTest {
 		golden.addProperty("mapHash", shapes.map().hash());
 		golden.addProperty("shapedBlocks", shapes.shapedBlocks());
 		TestData.assertGolden(TestData.goldenShapes(), ProtoJson.write(golden), "shapes");
-		assertEquals("kb-shapes/9", shapes.index().planner());
+		assertEquals("kb-shapes/10", shapes.index().planner());
 		assertEquals(2, shapes.keysByKind().get(ShapeKey.Kind.TUFT), "the grass and the flower");
 		assertEquals(7 * 8, shapes.keysByKind().get(ShapeKey.Kind.CELL), "seven units of eight blocks: the tree wall (with and without walkable "
 				+ "ground south), the town's post, the cut tree, the hill's sign, the hill's round tree (the synthetic profile pins it), and "

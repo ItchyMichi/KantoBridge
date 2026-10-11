@@ -74,14 +74,16 @@ public final class ShapePlanner {
 	 * @param hung      per art tile, its hangings' keys by level from feet, null where none (docs/specs/CAVES_AND_WOODS_PLAN.md
 	 *                  §3): decoration outside {@code open}, so the self-check never sees it
 	 * @param hungMask  per art tile, bit k set when a hanging takes level k: a {@code decor} carrier at feet + k
+	 * @param hungLeaves per art tile, bit k set when that carrier is {@code decor_leaves} (a wood's canopy and vines, CW2)
+	 * @param curtain   the leaf curtain an open-sky wood's enclosure ring carries above its top (CW2), null for none
 	 */
 	public record MapShapes(String map, ShapeKey[][] open, ShapeKey[][] closed, int[] blocks, int[] shapeMask, int[] floor, int[] decor,
 			List<Units.Cell> units, ShapeKey[][] overlay, List<Templates.Placed> templates, int wallTile, @Nullable ShapeKey ceiling,
-			ShapeKey[][] hung, int[] hungMask) {
+			ShapeKey[][] hung, int[] hungMask, int[] hungLeaves, @Nullable ShapeKey curtain) {
 		/** The plan of a map without Tier B (no floor change, no decor, no unit, no overlay). */
 		public MapShapes(String map, ShapeKey[][] open, ShapeKey[][] closed, int[] blocks, int[] shapeMask) {
 			this(map, open, closed, blocks, shapeMask, filled(blocks.length, -1), new int[blocks.length], List.of(), new ShapeKey[blocks.length][],
-					List.of(), -1, null, new ShapeKey[blocks.length][], new int[blocks.length]);
+					List.of(), -1, null, new ShapeKey[blocks.length][], new int[blocks.length], new int[blocks.length], null);
 		}
 
 		/** The tile the floor block of art tile {@code i} wears, given its own. */
@@ -93,15 +95,25 @@ public final class ShapePlanner {
 	/** One state's plan of a map. */
 	record Columns(ShapeKey[][] keys, int[] blocks, int[] shapeMask, int[] floor, int[] decor, List<Units.Cell> units,
 			List<Structures.MeasuredRun> runs, List<Templates.Placed> templates, int wallTile, @Nullable ShapeKey ceiling, ShapeKey[][] hung,
-			int[] hungMask) {
+			int[] hungMask, int[] hungLeaves, @Nullable ShapeKey curtain) {
 		Columns(ShapeKey[][] keys, int[] blocks, int[] shapeMask) {
 			this(keys, blocks, shapeMask, List.of());
 		}
 
 		Columns(ShapeKey[][] keys, int[] blocks, int[] shapeMask, List<Structures.MeasuredRun> runs) {
 			this(keys, blocks, shapeMask, filled(blocks.length, -1), new int[blocks.length], List.of(), runs, List.of(), -1, null,
-					new ShapeKey[blocks.length][], new int[blocks.length]);
+					new ShapeKey[blocks.length][], new int[blocks.length], new int[blocks.length], null);
 		}
+	}
+
+	/** The levels a placement's hangings may take: under its ceiling, or (open sky, the surface) any. */
+	public static int hangTop(MapPlacement placement) {
+		return placement.kind() == MapPlacement.Kind.INTERIOR && !WorldPlan.openSky(placement) ? WorldPlan.CEILING_ABOVE_FEET : 31;
+	}
+
+	/** A column's hanging mask as built: all of it when every level lies below {@code top}, else none. */
+	public static int hungFits(int mask, int top) {
+		return top >= 31 || mask >>> top == 0 ? mask : 0;
 	}
 
 	static int[] filled(int n, int value) {
@@ -154,6 +166,9 @@ public final class ShapePlanner {
 			}
 			if (planned.ceiling() != null) {
 				uses.add(new ShapeIndex.Use(planned.ceiling(), map.palette()));
+			}
+			if (planned.curtain() != null) {
+				uses.add(new ShapeIndex.Use(planned.curtain(), map.palette()));
 			}
 			for (ShapeKey key : borderUnitKeys(map, scene.atlas(map.atlas()), atlas, params)) {
 				uses.add(new ShapeIndex.Use(key, map.palette()));
@@ -244,18 +259,29 @@ public final class ShapePlanner {
 					}
 				}
 			}
-			// The hangings (CW1): each on the decor carrier the builder adds at its level, under the ceiling or the sky.
-			int hangTop = placement.kind() == MapPlacement.Kind.INTERIOR && !WorldPlan.openSky(placement) ? WorldPlan.CEILING_ABOVE_FEET
-					: ShapeMap.MAX_STACK;
+			// The hangings (CW1, CW2): each on the decor carrier the builder adds at its level; under a ceiling, a column's
+			// hangings stand only if all of them fit below it (a wood that kept its ceiling hangs no canopy and no vines).
+			int hangTop = hangTop(placement);
 			for (int ty = 0; ty < map.artRows(); ty++) {
 				for (int tx = 0; tx < cols; tx++) {
-					int mask = planned.hungMask()[ty * cols + tx];
+					int mask = hungFits(planned.hungMask()[ty * cols + tx], hangTop);
 					ShapeKey[] column = planned.hung()[ty * cols + tx];
-					for (int k = 0; column != null && k < column.length && k < hangTop; k++) {
+					for (int k = 0; column != null && k < column.length; k++) {
 						if ((mask >> k & 1) != 0 && column[k] != null) {
 							grid.set(placement.x() + tx, placement.y() + k, placement.z() + ty, index.shapeId(column[k], map.palette()));
 							shaped++;
 						}
+					}
+				}
+			}
+			if (planned.curtain() != null && WorldPlan.openSky(placement)) {
+				// An open-sky wood's leaf curtain (CW2): its enclosure ring carries it above the ring's top, up to the canopy's.
+				int curtain = index.shapeId(planned.curtain(), map.palette());
+				for (int[] xz : WorldPlan.ringColumns(placement)) {
+					for (int k = dev.kantobridge.builder.shape.dressing.Canopy.CURTAIN_FROM; k < dev.kantobridge.builder.shape.dressing.Canopy.TOP_LEVEL;
+							k++) {
+						grid.set(xz[0], placement.y() + k, xz[1], curtain);
+						shaped++;
 					}
 				}
 			}
@@ -453,7 +479,7 @@ public final class ShapePlanner {
 			}
 		}
 		return new MapShapes(map.id(), open.keys(), closed, open.blocks(), open.shapeMask(), open.floor(), open.decor(), open.units(), overlay,
-				open.templates(), open.wallTile(), open.ceiling(), open.hung(), open.hungMask());
+				open.templates(), open.wallTile(), open.ceiling(), open.hung(), open.hungMask(), open.hungLeaves(), open.curtain());
 	}
 
 	/**
@@ -544,7 +570,8 @@ public final class ShapePlanner {
 		Dress dress = null;
 		if (params.dressing()) {
 			// Dressing (kb-shapes/5): interior walls up to the ceiling, the ceiling in the room's wall art.
-			dress = Dressing.dress(map, new Dress(atlas, columns.keys(), columns.blocks(), columns.shapeMask(), columns.runs(), decor, tally));
+			dress = Dressing.dress(map, new Dress(atlas, columns.keys(), columns.blocks(), columns.shapeMask(), columns.runs(), decor, tally)
+					.withClasses(classes == null ? null : classes::at));
 			wallTile = dress.wallTile();
 			ceiling = dress.ceiling();
 		}
@@ -556,10 +583,10 @@ public final class ShapePlanner {
 			// The hangings (kb-shapes/9: cave rock), last, over the final columns.
 			Dressing.hang(map, dress, params);
 		}
-		ShapeKey[][] hung = dress == null ? new ShapeKey[columns.blocks().length][] : dress.hung();
-		int[] hungMask = dress == null ? new int[columns.blocks().length] : dress.hungMask();
+		int n = columns.blocks().length;
 		return new Columns(columns.keys(), columns.blocks(), columns.shapeMask(), floor, decor, List.copyOf(units), columns.runs(), templates,
-				wallTile, ceiling, hung, hungMask);
+				wallTile, ceiling, dress == null ? new ShapeKey[n][] : dress.hung(), dress == null ? new int[n] : dress.hungMask(),
+				dress == null ? new int[n] : dress.hungLeaves(), dress == null ? null : dress.curtain());
 	}
 
 	// ---- kb-shapes/1: today's classified heights, folded ----

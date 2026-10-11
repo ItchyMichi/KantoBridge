@@ -1,6 +1,6 @@
 # Plan: caves and woods (first-person dressing from Kanto in First Person)
 
-- **Status:** decided by the user on 2026-10-11 (§2.1); CW1–CW5 to execute.
+- **Status:** decided by the user on 2026-10-11 (§2.1); CW1 and CW2 done (PROGRESS.md, "Caves and woods"), CW3–CW5 to come.
 - **What it delivers:** the caves get a sagging rock roof with stalactites and stalagmites; Viridian Forest gets a leaf
   canopy with light wells and hanging vines; the Wild Routes forest zone gets Minecraft vines. The placements and sizes
   are those of the Gen1Recomp mod Kanto in First Person (`ds_fp_ceiling` v1.57.2): the same cells, by the same
