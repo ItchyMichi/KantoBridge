@@ -646,6 +646,13 @@ engine symbols, and Pokémon identities as Cobblemon UUIDs (`uid`).
   (`mod.save "routes"`), so an older save brings older progress back with its bag and money. It is
   in every `snapshot` and goes out as `route.progress` when it changes and whole after a save loads
   or a new game starts. "Beaten on this visit" (rematches) is the server's to keep.
+- **The client (WR5)** forwards the server's `route.give`, `route.battle` and `route.blackout` to
+  gen1-bridge, and gen1-bridge's `route.result` for them back to the server with the server's own
+  `seq` as `re`; every `route.progress` goes up too. The save pairing's gate decides, as for the
+  other relays: while it holds, nothing passes and the server asks again. For a zone's item ball the
+  client sends `route.give` itself (an A press at the ball in front of the player, or a click on its
+  puppet from the cell beside it); that answer stays on the client, and the `route.progress` that
+  follows opens the ball's `route` story cell and takes its puppet away.
 
 ### Export (builder role)
 

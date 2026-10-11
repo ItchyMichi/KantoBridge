@@ -84,6 +84,35 @@ class StoryRulesTest {
 		this.rules.setIndex(world());
 	}
 
+	/** A world with a Wild Routes zone whose two balls are route story cells (WR5). */
+	static WorldIndex zonedWorld() {
+		WorldIndex base = world();
+		List<MapPlacement> maps = new java.util.ArrayList<>(base.maps().values());
+		maps.add(new MapPlacement("KB_ROUTE_Z", 0, 64, 4000, 2, 2, 0, MapPlacement.Kind.ROUTE, "PAL", "kantobridge:wild_forest", false, null));
+		List<StoryCellTable.Entry> cells = new java.util.ArrayList<>(base.storyCells().entries());
+		cells.add(new StoryCellTable.Entry(CellPos.parse("KB_ROUTE_Z:12:-3"), StoryCellType.ROUTE, "a1.i1", null));
+		cells.add(new StoryCellTable.Entry(CellPos.parse("KB_ROUTE_Z:30:4"), StoryCellType.ROUTE, "a2.i1", null));
+		WorldIndex.Zone zone = new WorldIndex.Zone("z_zone", "KB_ROUTE_Z", "forest", -20, 64, 3980, 200, 200, "kantobridge:wild_forest",
+				List.of(), List.of(new WorldIndex.ZoneBall("a1.i1", 12, -3, "POTION"), new WorldIndex.ZoneBall("a2.i1", 30, 4, "POKE_BALL")), "BALL");
+		return new WorldIndex("red", HASH, maps, HASH, StoryCellTable.of(cells), List.of(), List.of(zone));
+	}
+
+	@Test
+	void aZonesBallsAreClosedUntilTheProgressSaysTaken() throws Exception {
+		this.rules.setIndex(zonedWorld());
+		assertTrue(active().containsAll(Set.of("KB_ROUTE_Z:12:-3", "KB_ROUTE_Z:30:4")), "no progress yet: both balls are there");
+		this.rules.onSnapshot(json("{\"ingame\":true,\"player\":{\"map\":\"KB_ROUTE_Z\",\"x\":1,\"y\":0,\"facing\":\"right\"},"
+				+ "\"routes\":{\"z_zone\":{\"taken\":[\"a1.i1\"],\"wins\":{}}}}"));
+		assertFalse(active().contains("KB_ROUTE_Z:12:-3"), "taken in the save");
+		assertTrue(active().contains("KB_ROUTE_Z:30:4"));
+		this.rules.onRouteProgress(json("{\"routes\":{\"z_zone\":{\"taken\":[\"a1.i1\",\"a2.i1\"],\"wins\":{}}}}"));
+		assertFalse(active().contains("KB_ROUTE_Z:30:4"), "taken just now");
+		assertTrue(this.rules.routeProgress().taken("z_zone", "a2.i1"));
+		// another save's snapshot without that progress brings both back
+		this.rules.onSnapshot(json("{\"ingame\":true,\"player\":{\"map\":\"TOWN\",\"x\":1,\"y\":1,\"facing\":\"up\"}}"));
+		assertTrue(active().containsAll(Set.of("KB_ROUTE_Z:12:-3", "KB_ROUTE_Z:30:4")));
+	}
+
 	@Test
 	void mapDefaultsDecideBeforeAnyReport() {
 		assertEquals(Set.of(BALL, MOM, TREE, HULL), active(), "visible objects, the standing tree and the ship's hull; the stamped door "

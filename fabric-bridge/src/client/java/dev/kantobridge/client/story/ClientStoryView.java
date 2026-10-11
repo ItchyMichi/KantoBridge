@@ -14,6 +14,7 @@ import dev.kantobridge.client.puppet.PuppetRuntime;
 import dev.kantobridge.client.world.ClientWorldIndex;
 import dev.kantobridge.net.KbJsonPayload;
 import dev.kantobridge.proto.MsgTypes;
+import dev.kantobridge.story.RouteProgress;
 import dev.kantobridge.story.StoryRules;
 import dev.kantobridge.story.StoryState;
 import dev.kantobridge.story.StoryStateMessages;
@@ -85,6 +86,7 @@ public final class ClientStoryView {
 		dispatcher.on(MsgTypes.STORY_TOGGLES, message -> rules.onToggles(message.data()));
 		dispatcher.on(MsgTypes.STORY_BLOCKS, message -> rules.onBlocks(message.data()));
 		dispatcher.on(MsgTypes.STORY_LIT, message -> rules.onLit(message.data()));
+		dispatcher.on(MsgTypes.ROUTE_PROGRESS, message -> rules.onRouteProgress(message.data()));
 		ClientPlayConnectionEvents.JOIN.register((handler, sender, client) -> view.fullSent = false);
 		ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> {
 			view.fullSent = false;
@@ -106,6 +108,14 @@ public final class ClientStoryView {
 		ClientStoryView view = instance;
 		return view == null ? Set.of() : view.drawn;
 	}
+
+	/** The local player's Wild Routes progress (empty before client init). */
+	public static RouteProgress routeProgress() {
+		ClientStoryView view = instance;
+		return view == null ? EMPTY_PROGRESS : view.rules.routeProgress();
+	}
+
+	private static final RouteProgress EMPTY_PROGRESS = new RouteProgress();
 
 	/** True while the hidden player surfs (the field moves a click means depend on it). */
 	public static boolean surfing() {

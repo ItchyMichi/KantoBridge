@@ -193,7 +193,16 @@ public final class PuppetRuntime implements PuppetManager.Listener {
 		this.areaIndex = index;
 		this.areaMap = map;
 		MapPlacement placement = index == null || map == null ? null : index.map(map);
-		this.area = placement == null ? null : PuppetCulling.Area.of(placement);
+		WorldIndex.Zone zone = null;
+		if (placement != null && placement.kind() == MapPlacement.Kind.ROUTE) {
+			for (WorldIndex.Zone z : index.zones()) {
+				if (z.routeMap().equals(map)) {
+					zone = z;
+				}
+			}
+		}
+		// Wild Routes: on a route map the hidden player stands for the whole zone, whose puppets are all on its grid
+		this.area = zone != null ? PuppetCulling.Area.of(zone) : placement == null ? null : PuppetCulling.Area.of(placement);
 	}
 
 	private void countInRange(Minecraft minecraft) {

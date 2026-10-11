@@ -2,6 +2,7 @@ package dev.kantobridge.client.puppet;
 
 import dev.kantobridge.world.MapPlacement;
 import dev.kantobridge.world.Scale;
+import dev.kantobridge.world.WorldIndex;
 import org.jetbrains.annotations.Nullable;
 
 /**
@@ -28,6 +29,11 @@ public final class PuppetCulling {
 		/** A map's area: its footprint (cells × 2 blocks) at its walking level. */
 		public static Area of(MapPlacement map) {
 			return new Area(map.x(), map.z(), map.x() + map.blockWidth(), map.z() + map.blockDepth(), map.y());
+		}
+
+		/** A Wild Routes zone's area (its route map stands for the whole zone): the zone's box at its floor's level. */
+		public static Area of(WorldIndex.Zone zone) {
+			return new Area(zone.x(), zone.z(), zone.x() + zone.w(), zone.z() + zone.d(), zone.y());
 		}
 
 		/** True when a point stands on this map: within its footprint plus the margin, and on its layer. */

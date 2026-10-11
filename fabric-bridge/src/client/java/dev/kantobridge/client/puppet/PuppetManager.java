@@ -24,10 +24,20 @@ import org.jetbrains.annotations.Nullable;
  * <p>Each puppet gets a negative entity id, counting down from {@link #FIRST_ID}, which it keeps for its life (also
  * when it is re-added to a new world): server entity ids are positive, so a puppet never collides with one. Messages are
  * checked like the schemas do; a malformed one changes nothing and is counted by code.
+ *
+ * <p>Wild Routes (WR5): a second list, the zone puppets (a zone's trainers and balls, from the WorldIndex), set with
+ * {@link #setZone}. Their ids start with {@link #ZONE_PREFIX}, which no NPC id can, and the hidden game's lists and a
+ * dropped link leave them alone.
  */
 public final class PuppetManager {
 	/** The first puppet's entity id; later ones count down. */
 	public static final int FIRST_ID = -1_000_000;
+	/** Zone puppets' ids start with this. */
+	public static final String ZONE_PREFIX = "zone:";
+
+	/** A zone puppet: a Wild Routes trainer or ball at its post, in its route map's grid. */
+	public record ZoneSpec(String id, String map, String sprite, String kind, int x, int y, Dir facing) {
+	}
 
 	private static final Pattern NPC_ID = Pattern.compile("^[A-Za-z0-9_]{1,96}$");
 	private static final Pattern SYMBOL = Pattern.compile("^[A-Z0-9_]{1,64}$");
@@ -91,7 +101,7 @@ public final class PuppetManager {
 		this.stats.sets++;
 		this.map = setMap;
 		for (Puppet puppet : List.copyOf(this.puppets.values())) {
-			if (!ids.contains(puppet.id())) {
+			if (!ids.contains(puppet.id()) && !isZone(puppet)) {
 				this.remove(puppet);
 			}
 		}
@@ -177,10 +187,12 @@ public final class PuppetManager {
 		puppet.emote(bubble, (int) frames);
 	}
 
-	/** Every puppet goes (the link dropped; a snapshot will bring the current ones back). */
+	/** Every puppet of the hidden game goes (the link dropped; a snapshot will bring the current ones back). */
 	public void clear() {
 		for (Puppet puppet : List.copyOf(this.puppets.values())) {
-			this.remove(puppet);
+			if (!isZone(puppet)) {
+				this.remove(puppet);
+			}
 		}
 		this.map = null;
 		this.playerBubble = null;
@@ -196,6 +208,60 @@ public final class PuppetManager {
 				this.playerBubbleFrames = 0;
 			}
 		}
+	}
+
+	// ---- Wild Routes zone puppets ----
+
+	/**
+	 * The zone puppets now: those not listed go, new ones appear at their posts, and ones still listed stay as they are
+	 * (a trainer walking up keeps walking).
+	 */
+	public void setZone(List<ZoneSpec> specs) {
+		Set<String> ids = new HashSet<>();
+		for (ZoneSpec spec : specs) {
+			ids.add(spec.id());
+		}
+		for (Puppet puppet : List.copyOf(this.puppets.values())) {
+			if (isZone(puppet) && !ids.contains(puppet.id())) {
+				this.remove(puppet);
+			}
+		}
+		for (ZoneSpec spec : specs) {
+			if (!spec.id().startsWith(ZONE_PREFIX) || this.puppets.containsKey(spec.id())) {
+				continue;
+			}
+			Puppet puppet = new Puppet(spec.id(), this.nextId--, spec.map(), spec.sprite(), spec.kind(), spec.x(), spec.y(), spec.facing(), false);
+			this.puppets.put(spec.id(), puppet);
+			this.byEntity.put(puppet.entityId(), puppet);
+			this.listener.added(puppet);
+		}
+	}
+
+	/** A zone puppet walks (or, with 0 frames, jumps) to a cell of its route map's grid. */
+	public void zoneMove(String id, int x, int y, Dir facing, int frames) {
+		Puppet puppet = this.puppets.get(id);
+		if (puppet != null && isZone(puppet)) {
+			puppet.move(x, y, facing, Math.max(0, Math.min(frames, MAX_FRAMES)));
+		}
+	}
+
+	public void zoneFace(String id, Dir facing) {
+		Puppet puppet = this.puppets.get(id);
+		if (puppet != null && isZone(puppet)) {
+			puppet.face(facing);
+		}
+	}
+
+	/** A bubble over a zone puppet ({@code null} takes it away). */
+	public void zoneEmote(String id, @Nullable String bubble, int frames) {
+		Puppet puppet = this.puppets.get(id);
+		if (puppet != null && isZone(puppet) && (bubble == null || BUBBLES.contains(bubble))) {
+			puppet.emote(bubble, Math.max(0, Math.min(frames, MAX_FRAMES)));
+		}
+	}
+
+	public static boolean isZone(Puppet puppet) {
+		return puppet.id().startsWith(ZONE_PREFIX);
 	}
 
 	// ---- views ----

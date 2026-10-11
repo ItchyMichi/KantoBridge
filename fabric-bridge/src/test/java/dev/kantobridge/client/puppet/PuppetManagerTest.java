@@ -51,6 +51,34 @@ class PuppetManagerTest {
 			+ npc("TEST_TOWN_obj_3", "SPRITE_TEST_GUARD", "trainer", 12, 10, "left") + "]}";
 
 	@Test
+	void zonePuppetsKeepTheirOwnListApartFromTheHiddenGames() throws Exception {
+		this.manager.onSet(json(TOWN));
+		this.events.clear();
+		PuppetManager.ZoneSpec trainer = new PuppetManager.ZoneSpec("zone:z:a1.t1", "KB_ROUTE_Z", "SPRITE_TEST_GUARD", "trainer", 12, -3,
+				Dir.LEFT);
+		PuppetManager.ZoneSpec ball = new PuppetManager.ZoneSpec("zone:z:a1.i1", "KB_ROUTE_Z", "SPRITE_TEST_BALL", "item", 20, 5, Dir.DOWN);
+		this.manager.setZone(List.of(trainer, ball));
+		assertEquals(List.of("+zone:z:a1.t1@-1000003", "+zone:z:a1.i1@-1000004"), this.events);
+		assertTrue(PuppetManager.isZone(this.manager.get("zone:z:a1.t1")));
+		// the hidden game's next list (the route map has no NPCs) and a dropped link leave zone puppets alone
+		this.manager.onSet(json("{\"map\":\"KB_ROUTE_Z\",\"list\":[]}"));
+		this.manager.clear();
+		assertEquals(2, this.manager.size());
+		// a walk keeps going through a resync of the same list; a taken ball goes
+		this.manager.zoneMove("zone:z:a1.t1", 10, -3, Dir.LEFT, 32);
+		this.manager.zoneEmote("zone:z:a1.t1", "!", 30);
+		this.events.clear();
+		this.manager.setZone(List.of(trainer));
+		assertEquals(List.of("-zone:z:a1.i1"), this.events);
+		assertEquals(10, this.manager.get("zone:z:a1.t1").x(), "still walking to where it was sent");
+		// an id without the prefix is never a zone puppet
+		this.manager.setZone(List.of(trainer, new PuppetManager.ZoneSpec("a1.t9", "KB_ROUTE_Z", "S", "trainer", 0, 0, Dir.UP)));
+		assertNull(this.manager.get("a1.t9"));
+		this.manager.setZone(List.of());
+		assertEquals(0, this.manager.size());
+	}
+
+	@Test
 	void aFullListAddsPuppetsWithNegativeIdsCountingDown() throws Exception {
 		this.manager.onSet(json(TOWN));
 		assertEquals(List.of("+TEST_TOWN_obj_1@-1000000", "+TEST_TOWN_obj_2@-1000001", "+TEST_TOWN_obj_3@-1000002"), this.events);

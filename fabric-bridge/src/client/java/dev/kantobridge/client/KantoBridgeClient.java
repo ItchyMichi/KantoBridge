@@ -25,6 +25,7 @@ import dev.kantobridge.client.ui.Notices;
 import dev.kantobridge.client.ui.UiRuntime;
 import dev.kantobridge.client.world.ClientWorldIndex;
 import dev.kantobridge.client.world.CreateKantoWorldFlow;
+import dev.kantobridge.client.zone.ZoneRuntime;
 import net.fabricmc.api.ClientModInitializer;
 import net.minecraft.client.renderer.blockentity.BlockEntityRenderers;
 
@@ -69,6 +70,8 @@ public class KantoBridgeClient implements ClientModInitializer {
 		GameRelayRuntime.init(bridge);
 		// Saving in both games, Bill's PC as Cobblemon's PC, and the world's id for the save pairing (session.bind).
 		SessionRuntime.init(bridge);
+		// Wild Routes (WR5): a zone's trainers and balls as puppets, route.* between the server and gen1-bridge, balls taken.
+		ZoneRuntime.init(bridge);
 		// The title screen's "Create Kanto world" button: export, pack, new level, build. No pause overlay while it runs (M10).
 		CreateKantoWorldFlow.init();
 		bridge.pauseExcludedWhile(() -> CreateKantoWorldFlow.active() != null);

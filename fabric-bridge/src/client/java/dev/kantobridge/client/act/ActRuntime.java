@@ -13,11 +13,13 @@ import dev.kantobridge.client.model.RenderSnapshot;
 import dev.kantobridge.client.move.InputLock;
 import dev.kantobridge.client.move.MoveRuntime;
 import dev.kantobridge.client.puppet.Puppet;
+import dev.kantobridge.client.puppet.PuppetManager;
 import dev.kantobridge.client.puppet.PuppetRuntime;
 import dev.kantobridge.client.story.ClientStoryView;
 import dev.kantobridge.client.ui.Keybinds;
 import dev.kantobridge.client.ui.UiRuntime;
 import dev.kantobridge.client.world.ClientWorldIndex;
+import dev.kantobridge.client.zone.ZoneRuntime;
 import dev.kantobridge.entity.PuppetEntity;
 import dev.kantobridge.proto.Envelope;
 import dev.kantobridge.proto.MsgTypes;
@@ -151,6 +153,9 @@ public final class ActRuntime {
 		if (target != null) {
 			// A has no ground to aim at: it never means a dismount (walking ashore does that).
 			this.act(index, target, false);
+		} else if (ZoneRuntime.get() != null) {
+			// Wild Routes: out in a zone, A reaches the zone's balls
+			ZoneRuntime.get().pressA(player);
 		}
 	}
 
@@ -165,6 +170,13 @@ public final class ActRuntime {
 		Puppet puppet = puppets == null ? null : puppets.manager().byEntityId(entity.getId());
 		WorldIndex index = ClientWorldIndex.current();
 		String map = this.bridge.state().map();
+		if (hand == InteractionHand.MAIN_HAND && puppet != null && PuppetManager.isZone(puppet)) {
+			// Wild Routes: a zone's puppets aren't the hidden game's NPCs
+			if (ZoneRuntime.get() != null && this.idle() && this.gate.tryInteract(this.clock.millis()) && player instanceof LocalPlayer local) {
+				ZoneRuntime.get().clickPuppet(local, puppet);
+			}
+			return InteractionResult.FAIL;
+		}
 		if (hand == InteractionHand.MAIN_HAND && puppet != null && index != null && map != null && this.idle()
 				&& this.gate.tryInteract(this.clock.millis())) {
 			CellPos target = InteractTarget.cellOf(index, map, puppet.map(), puppet.x(), puppet.y());

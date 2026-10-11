@@ -38,6 +38,8 @@ import org.jetbrains.annotations.Nullable;
  * cell whose built state is water ({@code water}) is active unless the player surfs, like a water cell.</li>
  * <li><b>{@code boulder_area}</b> cells are closed where a live boulder stands (the NPC list's {@code boulder}s).</li>
  * <li><b>{@code water}</b> cells are never active: they close unless the player surfs ({@link StoryState#blocks}).</li>
+ * <li><b>{@code route}</b> cells (a Wild Routes ball) are closed until the player's {@link RouteProgress} lists the ball as
+ * taken, in the zone whose route map keys the cell.</li>
  * </ul>
  * Surf and bike come from {@code player.state}; lit maps from the snapshot's {@code lit}, {@code story.lit} and
  * {@code player.state}'s {@code dark}/{@code lit} for the current map. Malformed parts of a message are skipped; logs
@@ -67,6 +69,10 @@ public final class StoryRules {
 	private final List<StoryCellTable.Entry> objects = new ArrayList<>();
 	private final List<StoryCellTable.Entry> tiles = new ArrayList<>();
 	private final List<StoryCellTable.Entry> boulders = new ArrayList<>();
+	private final List<StoryCellTable.Entry> routeBalls = new ArrayList<>();
+	/** The zone id of each zone's route map. */
+	private final Map<String, String> zoneByRouteMap = new HashMap<>();
+	private final RouteProgress progress = new RouteProgress();
 	/** Effective object visibility that differs from the map defaults: map → object → visible. */
 	private final Map<String, Map<String, Boolean>> toggles = new HashMap<>();
 	/** The map whose live blocks are known, and those blocks by {@code by * 256 + bx}. */
@@ -94,15 +100,21 @@ public final class StoryRules {
 		this.objects.clear();
 		this.tiles.clear();
 		this.boulders.clear();
+		this.routeBalls.clear();
+		this.zoneByRouteMap.clear();
 		if (index != null) {
 			for (StoryCellTable.Entry entry : index.storyCells().entries()) {
 				switch (entry.type()) {
 					case OBJECT -> this.objects.add(entry);
 					case TILE -> this.tiles.add(entry);
 					case BOULDER_AREA -> this.boulders.add(entry);
+					case ROUTE -> this.routeBalls.add(entry);
 					case WATER -> {
 					}
 				}
+			}
+			for (WorldIndex.Zone zone : index.zones()) {
+				this.zoneByRouteMap.put(zone.routeMap(), zone.id());
 			}
 		}
 		this.dirty = true;
@@ -164,7 +176,19 @@ public final class StoryRules {
 		if (npcs != null) {
 			this.setNpcs(mapId(npcs, "map"), npcList(npcs.get("list")));
 		}
+		this.progress.replaceAll(object(data, "routes"));
 		this.dirty = true;
+	}
+
+	/** {@code route.progress}: the listed zones' progress (Wild Routes). */
+	public void onRouteProgress(JsonObject data) {
+		this.progress.update(object(data, "routes"));
+		this.dirty = true;
+	}
+
+	/** The player's Wild Routes progress, as last reported. */
+	public RouteProgress routeProgress() {
+		return this.progress;
 	}
 
 	/** {@code player.state} (or a snapshot's {@code state}): surf, bike, and the current dark map's Flash. */
@@ -333,6 +357,12 @@ public final class StoryRules {
 		}
 		for (StoryCellTable.Entry entry : this.boulders) {
 			if (entry.cell().map().equals(this.npcMap) && this.boulderCells.contains(pack(entry.cell().x(), entry.cell().y()))) {
+				active.add(entry.key());
+			}
+		}
+		for (StoryCellTable.Entry entry : this.routeBalls) {
+			String zone = this.zoneByRouteMap.get(entry.cell().map());
+			if (zone != null && entry.obj() != null && !this.progress.taken(zone, entry.obj())) {
 				active.add(entry.key());
 			}
 		}
