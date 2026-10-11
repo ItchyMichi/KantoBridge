@@ -29,8 +29,20 @@ public final class CodeStates {
 			case BlockCode.KIND_STORY -> KbBlocks.STORY_CELL.defaultBlockState();
 			case BlockCode.KIND_STORY_TILE -> KbBlocks.STORY_TILE.defaultBlockState();
 			case BlockCode.KIND_VANILLA -> this.vanilla(value);
+			case BlockCode.KIND_PROP -> prop(value);
 			default -> Blocks.AIR.defaultBlockState();
 		};
+	}
+
+	/** A Wild Routes prop (WR7): kind and quarter from the code's value. */
+	private static BlockState prop(int value) {
+		dev.kantobridge.block.PropBlock.Kind[] kinds = dev.kantobridge.block.PropBlock.Kind.values();
+		int kind = value / 4;
+		if (kind < 0 || kind >= kinds.length) {
+			return Blocks.AIR.defaultBlockState();
+		}
+		return KbBlocks.PROP.defaultBlockState().setValue(dev.kantobridge.block.PropBlock.KIND, kinds[kind])
+				.setValue(dev.kantobridge.block.PropBlock.PART, value % 4);
 	}
 
 	/** A Wild Routes zone's vanilla block (leaves placed persistent, so they never decay). */

@@ -2,6 +2,7 @@ package dev.kantobridge.builder.zone;
 
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
+import dev.kantobridge.block.PropBlock;
 import dev.kantobridge.builder.pack.HabitatPoolWriter;
 import dev.kantobridge.builder.plan.BlockCode;
 import dev.kantobridge.builder.plan.Box3;
@@ -152,8 +153,10 @@ public final class ZonePlan {
 			balls.add(new WorldIndex.ZoneBall(b.id(), b.cell().x() - door.x(), b.cell().y() - door.y(), b.item()));
 			this.ballCells.put(cellKey(b.cell().x(), b.cell().y()), i);
 		}
+		Cell entrance = layout.dungeon();
+		WorldIndex.ZoneCell dungeon = entrance == null ? null : new WorldIndex.ZoneCell(entrance.x() - door.x(), entrance.y() - door.y());
 		this.zone = new WorldIndex.Zone(id, routeMap, THEME, this.x0, FEET, this.z0, this.width, this.depth, BIOME, trainers, balls,
-				objects.ballSprite());
+				objects.ballSprite(), dungeon);
 		this.planWild(palette);
 	}
 
@@ -332,7 +335,12 @@ public final class ZonePlan {
 				sink.set(x, FLOOR, z, BlockCode.vanilla(ZoneBlock.WATER));
 				sink.set(x, FEET, z, BlockCode.vanilla(ZoneBlock.BARRIER));
 			}
-			case DUNGEON -> this.ground(sink, x, z, FLOOR, ZoneBlock.COARSE_DIRT);
+			case DUNGEON -> {
+				// WR7: the dungeon's entrance, a prop drawn a quarter a block
+				this.ground(sink, x, z, FLOOR, ZoneBlock.COARSE_DIRT);
+				int part = ((z - this.layoutZ0) & 1) * 2 + ((x - this.layoutX0) & 1);
+				sink.set(x, FEET, z, BlockCode.prop(PropBlock.Kind.DUNGEON_ENTRANCE, part));
+			}
 			case PATH -> this.ground(sink, x, z, FLOOR, ZoneBlock.DIRT_PATH);
 			case GRASS -> {
 				this.ground(sink, x, z, FLOOR, ZoneBlock.GRASS_BLOCK);

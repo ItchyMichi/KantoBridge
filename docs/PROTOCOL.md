@@ -793,7 +793,10 @@ is what the builder writes to `<world>/kantobridge/world_index.json`:
   ([specs/WILD_ROUTES_PLAN.md](specs/WILD_ROUTES_PLAN.md) §4.4). WR5 adds each zone's `trainers` (`id`, cell `x, y`,
   `facing`, `sight` in cells, `class`, `sprite`, `party[{species, level}]`) and `balls` (`id`, cell `x, y`, `item`),
   with `ballSprite`. Their cells are in the route map's grid (A is 0,0, cells may be negative), so `cellOrigin` places
-  them; each ball's cell is also a `route` story cell. Party species are ROM-derived (logs carry counts only).
+  them; each ball's cell is also a `route` story cell. Party species are ROM-derived (logs carry counts only). WR7 adds
+  a zone's `dungeon` (its entrance cell in the same grid), and the world's `dungeons` region (every dungeon slot's box,
+  `x, z, w, d`, and the first floors' feet level `y`): a client inside it whose hidden player is on a route map is
+  away, as in a zone.
 
 Clients turn block positions into cells and back with it. The `parts` of `world.index` are slices of
 its JSON text (64 Ki characters each); `hash` is the SHA-256 of the whole text.

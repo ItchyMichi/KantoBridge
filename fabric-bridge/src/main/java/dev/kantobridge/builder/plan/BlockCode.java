@@ -26,6 +26,8 @@ public final class BlockCode {
 	 * {@link dev.kantobridge.builder.zone.ZoneBlock}'s ordinal.
 	 */
 	public static final int KIND_VANILLA = 9;
+	/** Wild Routes' props (WR7): value {@code kind × 4 + part} ({@link dev.kantobridge.block.PropBlock}). */
+	public static final int KIND_PROP = 10;
 
 	private static final int SHIFT = 24;
 	private static final int VALUE_MASK = (1 << SHIFT) - 1;
@@ -54,6 +56,11 @@ public final class BlockCode {
 	}
 
 	/** A zone's vanilla block. */
+	/** A prop: its kind's ordinal and the quarter of its cell (0 NW, 1 NE, 2 SW, 3 SE). */
+	public static int prop(dev.kantobridge.block.PropBlock.Kind kind, int part) {
+		return (KIND_PROP << SHIFT) | (kind.ordinal() * 4 + (part & 3));
+	}
+
 	public static int vanilla(dev.kantobridge.builder.zone.ZoneBlock block) {
 		return (KIND_VANILLA << SHIFT) | block.ordinal();
 	}

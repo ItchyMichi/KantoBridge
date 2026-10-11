@@ -146,7 +146,21 @@ class MovementSyncTest {
 				"kantobridge:wild_forest", false, null));
 		return new WorldIndex(world.game(), world.exportHash(), maps, world.slotMapHash(), world.storyCells(), world.habitats(),
 				List.of(new WorldIndex.Zone("test_zone", "KB_ROUTE_TEST_ZONE", "forest", 3_200_000, 64, 3_210_000, 400, 400,
-						"kantobridge:wild_forest")));
+						"kantobridge:wild_forest")), new WorldIndex.Dungeons(3_200_000, 64, 3_190_000, 1024, 160));
+	}
+
+	@Test
+	void inTheDungeonRegionTheHiddenPlayerOnItsRouteMapWaits() {
+		WorldIndex zoned = zoned();
+		Rig rig = Rig.at(zoned, "KB_ROUTE_TEST_ZONE", 1, 0, Dir.RIGHT);
+		rig.x = 3_200_300;
+		rig.z = 3_190_050;
+		assertEquals(List.of(), rig.ticks((int) (MovementSync.DRIFT_MS / 50) * 4), "a dungeon floor: away, as in the zone");
+		// with the hidden player in town, the dungeon region is just somewhere off the map: back to town
+		Rig lost = Rig.at(zoned, "TEST_TOWN", 5, 8, Dir.UP);
+		lost.x = 3_200_300;
+		lost.z = 3_190_050;
+		assertTrue(lost.ticks((int) (MovementSync.DRIFT_MS / 50) + 4).stream().anyMatch(c -> c.startsWith("teleport")));
 	}
 
 	@Test

@@ -30,9 +30,11 @@ public final class WorldIndex {
 	public static final int VERSION = 1;
 
 	private static final Set<String> ROOT_FIELDS = Set.of("version", "game", "exportHash", "scale", "maps", "slotMapHash",
-			"storyCells", "habitats", "zones");
+			"storyCells", "habitats", "zones", "dungeons");
 	private static final Set<String> ZONE_FIELDS = Set.of("id", "routeMap", "theme", "x", "y", "z", "w", "d", "biome", "trainers", "balls",
-			"ballSprite");
+			"ballSprite", "dungeon");
+	private static final Set<String> CELL_FIELDS = Set.of("x", "y");
+	private static final Set<String> DUNGEONS_FIELDS = Set.of("x", "y", "z", "w", "d");
 	private static final Set<String> TRAINER_FIELDS = Set.of("id", "x", "y", "facing", "sight", "class", "sprite", "party");
 	private static final Set<String> MEMBER_FIELDS = Set.of("species", "level");
 	private static final Set<String> BALL_FIELDS = Set.of("id", "x", "y", "item");
@@ -71,7 +73,7 @@ public final class WorldIndex {
 	 * @param y the feet level of the zone's walkable floor
 	 */
 	public record Zone(String id, String routeMap, String theme, int x, int y, int z, int w, int d, String biome, List<ZoneTrainer> trainers,
-			List<ZoneBall> balls, @Nullable String ballSprite) {
+			List<ZoneBall> balls, @Nullable String ballSprite, @Nullable ZoneCell dungeon) {
 		public Zone {
 			Objects.requireNonNull(id, "id");
 			Objects.requireNonNull(routeMap, "routeMap");
@@ -103,7 +105,13 @@ public final class WorldIndex {
 
 		/** A zone without trainers or balls. */
 		public Zone(String id, String routeMap, String theme, int x, int y, int z, int w, int d, String biome) {
-			this(id, routeMap, theme, x, y, z, w, d, biome, List.of(), List.of(), null);
+			this(id, routeMap, theme, x, y, z, w, d, biome, List.of(), List.of(), null, null);
+		}
+
+		/** A zone without a dungeon. */
+		public Zone(String id, String routeMap, String theme, int x, int y, int z, int w, int d, String biome, List<ZoneTrainer> trainers,
+				List<ZoneBall> balls, @Nullable String ballSprite) {
+			this(id, routeMap, theme, x, y, z, w, d, biome, trainers, balls, ballSprite, null);
 		}
 
 		/** True when block column (bx, bz) lies inside the zone's box. */
@@ -127,6 +135,31 @@ public final class WorldIndex {
 				}
 			}
 			return null;
+		}
+	}
+
+	/** A cell of a zone's route-map grid (WR7: the dungeon's entrance). */
+	public record ZoneCell(int x, int y) {
+		public ZoneCell {
+			if (Math.abs(x) > MAX_ZONE_CELL || Math.abs(y) > MAX_ZONE_CELL) {
+				throw new IllegalArgumentException("zone cell out of range");
+			}
+		}
+	}
+
+	/**
+	 * The dungeon region (WR7, docs/specs/WILD_ROUTES_PLAN.md §4.8): the box of every dungeon slot, its first floors' feet
+	 * level {@code y}. A player inside it whose hidden player is on a route map is away, as in a zone.
+	 */
+	public record Dungeons(int x, int y, int z, int w, int d) {
+		public Dungeons {
+			if (w < 1 || d < 1) {
+				throw new IllegalArgumentException("dungeon region size must be positive");
+			}
+		}
+
+		public boolean containsColumn(int bx, int bz) {
+			return bx >= this.x && bx < this.x + this.w && bz >= this.z && bz < this.z + this.d;
 		}
 	}
 
@@ -187,21 +220,27 @@ public final class WorldIndex {
 	private final StoryCellTable storyCells;
 	private final List<Habitat> habitats;
 	private final List<Zone> zones;
+	private final @Nullable Dungeons dungeons;
 	private final String json;
 	private final String hash;
 
 	public WorldIndex(String game, String exportHash, Collection<MapPlacement> maps, String slotMapHash, StoryCellTable storyCells,
 			List<Habitat> habitats) {
-		this(game, exportHash, Scale.SURFACE_Y, Scale.LAYER_STEP, maps, slotMapHash, storyCells, habitats, List.of());
+		this(game, exportHash, Scale.SURFACE_Y, Scale.LAYER_STEP, maps, slotMapHash, storyCells, habitats, List.of(), null);
 	}
 
 	public WorldIndex(String game, String exportHash, Collection<MapPlacement> maps, String slotMapHash, StoryCellTable storyCells,
 			List<Habitat> habitats, List<Zone> zones) {
-		this(game, exportHash, Scale.SURFACE_Y, Scale.LAYER_STEP, maps, slotMapHash, storyCells, habitats, zones);
+		this(game, exportHash, Scale.SURFACE_Y, Scale.LAYER_STEP, maps, slotMapHash, storyCells, habitats, zones, null);
+	}
+
+	public WorldIndex(String game, String exportHash, Collection<MapPlacement> maps, String slotMapHash, StoryCellTable storyCells,
+			List<Habitat> habitats, List<Zone> zones, @Nullable Dungeons dungeons) {
+		this(game, exportHash, Scale.SURFACE_Y, Scale.LAYER_STEP, maps, slotMapHash, storyCells, habitats, zones, dungeons);
 	}
 
 	private WorldIndex(String game, String exportHash, int surfaceY, int layerStep, Collection<MapPlacement> maps, String slotMapHash,
-			StoryCellTable storyCells, List<Habitat> habitats, List<Zone> zones) {
+			StoryCellTable storyCells, List<Habitat> habitats, List<Zone> zones, @Nullable Dungeons dungeons) {
 		if (!GAMES.contains(game)) {
 			throw new IllegalArgumentException("unknown game");
 		}
@@ -235,6 +274,7 @@ public final class WorldIndex {
 			}
 		}
 		this.zones = List.copyOf(sortedZones);
+		this.dungeons = dungeons;
 		this.json = ProtoJson.write(this.toJsonObject());
 		this.hash = Hashes.sha256(this.json);
 	}
@@ -279,6 +319,16 @@ public final class WorldIndex {
 	/** Wild Routes zones, sorted by id (empty in a world built without any). */
 	public List<Zone> zones() {
 		return this.zones;
+	}
+
+	/** The dungeon region (WR7), or null in a world without dungeons. */
+	public @Nullable Dungeons dungeons() {
+		return this.dungeons;
+	}
+
+	/** True when block column (bx, bz) lies in the dungeon region. */
+	public boolean inDungeons(int bx, int bz) {
+		return this.dungeons != null && this.dungeons.containsColumn(bx, bz);
 	}
 
 	/** The zone whose box holds block column (bx, bz), or null. */
@@ -433,9 +483,24 @@ public final class WorldIndex {
 				if (zone.ballSprite() != null) {
 					item.addProperty("ballSprite", zone.ballSprite());
 				}
+				if (zone.dungeon() != null) {
+					JsonObject cell = new JsonObject();
+					cell.addProperty("x", zone.dungeon().x());
+					cell.addProperty("y", zone.dungeon().y());
+					item.add("dungeon", cell);
+				}
 				zones.add(item);
 			}
 			root.add("zones", zones);
+		}
+		if (this.dungeons != null) {
+			JsonObject region = new JsonObject();
+			region.addProperty("x", this.dungeons.x());
+			region.addProperty("y", this.dungeons.y());
+			region.addProperty("z", this.dungeons.z());
+			region.addProperty("w", this.dungeons.w());
+			region.addProperty("d", this.dungeons.d());
+			root.add("dungeons", region);
 		}
 		return root;
 	}
@@ -520,13 +585,24 @@ public final class WorldIndex {
 					balls.add(new ZoneBall(b.string("id", ZONE_OBJECT_ID), b.integer("x", -MAX_ZONE_CELL, MAX_ZONE_CELL),
 							b.integer("y", -MAX_ZONE_CELL, MAX_ZONE_CELL), b.string("item", DataReader.SYMBOL)));
 				}
+				ZoneCell dungeon = null;
+				if (item.has("dungeon")) {
+					DataReader cell = item.object("dungeon").allowOnly(CELL_FIELDS);
+					dungeon = new ZoneCell(cell.integer("x", -MAX_ZONE_CELL, MAX_ZONE_CELL), cell.integer("y", -MAX_ZONE_CELL, MAX_ZONE_CELL));
+				}
 				zones.add(new Zone(item.string("id", ZONE_ID), item.string("routeMap", DataReader.MAP_ID), theme, item.integer("x"),
 						item.integer("y"), item.integer("z"), item.integer("w", 1, Integer.MAX_VALUE), item.integer("d", 1, Integer.MAX_VALUE),
-						item.string("biome", DataReader.RESOURCE_ID), trainers, balls, item.optionalString("ballSprite", DataReader.SYMBOL)));
+						item.string("biome", DataReader.RESOURCE_ID), trainers, balls, item.optionalString("ballSprite", DataReader.SYMBOL), dungeon));
 			}
 		}
+		Dungeons dungeons = null;
+		if (root.has("dungeons")) {
+			DataReader region = root.object("dungeons").allowOnly(DUNGEONS_FIELDS);
+			dungeons = new Dungeons(region.integer("x"), region.integer("y"), region.integer("z"), region.integer("w", 1, Integer.MAX_VALUE),
+					region.integer("d", 1, Integer.MAX_VALUE));
+		}
 		try {
-			return new WorldIndex(game, exportHash, surfaceY, layerStep, maps, slotMapHash, storyCells, habitats, zones);
+			return new WorldIndex(game, exportHash, surfaceY, layerStep, maps, slotMapHash, storyCells, habitats, zones, dungeons);
 		} catch (IllegalArgumentException e) {
 			throw new DataException("/zones", e.getMessage());
 		}

@@ -235,8 +235,31 @@
               }
             }
           },
-          "ballSprite": {"$ref": "../defs.schema.json#/$defs/symbol", "description": "WR5: the item ball's overworld sprite; absent when the zone has no balls or the export names none."}
+          "ballSprite": {"$ref": "../defs.schema.json#/$defs/symbol", "description": "WR5: the item ball's overworld sprite; absent when the zone has no balls or the export names none."},
+          "dungeon": {
+            "type": "object",
+            "required": ["x", "y"],
+            "additionalProperties": false,
+            "description": "WR7: the dungeon's entrance cell in the route map's grid; absent when the zone has no dungeon.",
+            "properties": {
+              "x": {"type": "integer", "minimum": -4096, "maximum": 4096},
+              "y": {"type": "integer", "minimum": -4096, "maximum": 4096}
+            }
+          }
         }
+      }
+    },
+    "dungeons": {
+      "type": "object",
+      "required": ["x", "y", "z", "w", "d"],
+      "additionalProperties": false,
+      "description": "WR7: the dungeon region, every dungeon slot's box north of Kanto, with its first floors' feet level y; absent in a world without dungeons. A player inside it whose hidden player is on a route map is away, as in a zone.",
+      "properties": {
+        "x": {"type": "integer"},
+        "y": {"type": "integer"},
+        "z": {"type": "integer"},
+        "w": {"type": "integer", "minimum": 1},
+        "d": {"type": "integer", "minimum": 1}
       }
     }
   }

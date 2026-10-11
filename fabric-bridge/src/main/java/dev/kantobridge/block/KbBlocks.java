@@ -48,6 +48,8 @@ public final class KbBlocks {
 	public static LedgeColliderBlock LEDGE_COLLIDER;
 	public static DecorBlock DECOR;
 	public static DecorBlock DECOR_LEAVES;
+	/** Wild Routes' props (WR7): the dungeon entrance, stairs and exit. */
+	public static PropBlock PROP;
 	public static BlockEntityType<StoryCellBlockEntity> STORY_CELL_ENTITY;
 	public static BlockEntityType<StoryCellBlockEntity> STORY_TILE_ENTITY;
 
@@ -93,6 +95,9 @@ public final class KbBlocks {
 		LEDGE_COLLIDER = register("ledge_collider", new LedgeColliderBlock(invisibleProperties()));
 		DECOR = register("decor", new DecorBlock(decorProperties()));
 		DECOR_LEAVES = register("decor_leaves", new DecorBlock(decorProperties()));
+		PROP = register("prop", new PropBlock(BlockBehaviour.Properties.of().mapColor(MapColor.STONE).strength(-1.0F, 3_600_000.0F)
+				.noLootTable().noOcclusion().noCollission().isSuffocating((state, level, pos) -> false)
+				.isViewBlocking((state, level, pos) -> false)));
 		CARRIERS.add(new Carrier(DECOR, CarrierKind.DECOR, 0));
 		CARRIERS.add(new Carrier(DECOR_LEAVES, CarrierKind.DECOR_LEAVES, 0));
 		CARRIERS.add(new Carrier(LEDGE_COLLIDER, CarrierKind.LEDGE, 0));

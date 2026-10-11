@@ -2,6 +2,7 @@ package dev.kantobridge.client.move;
 
 import dev.kantobridge.world.CellPos;
 import dev.kantobridge.world.Dir;
+import dev.kantobridge.world.MapPlacement;
 import dev.kantobridge.world.Place;
 import dev.kantobridge.world.Scale;
 import dev.kantobridge.world.WorldIndex;
@@ -36,8 +37,8 @@ import org.jetbrains.annotations.Nullable;
  * unless already there. After a warp, the player walks to wherever the hidden player went meanwhile (a door walk-out),
  * or is teleported if that is far.</li>
  * <li><b>Wild Routes zones</b> (docs/specs/WILD_ROUTES_PLAN.md §4.5). Inside a zone's box, off its route map's cells,
- * while the hidden player stands on that route map, the player is out in the zone: no steps, faces or drift fixes, and
- * no teleport back on joining. Walking back onto the trailhead's x1 needs nothing; stepping on to A is an ordinary
+ * while the hidden player stands on that route map (or anywhere in the dungeon region while it stands on a route map),
+ * the player is out in the zone: no steps, faces or drift fixes, and no teleport back on joining. Walking back onto the trailhead's x1 needs nothing; stepping on to A is an ordinary
  * step, and A's script takes the hidden player home.</li>
  * </ul>
  *
@@ -492,15 +493,21 @@ public final class MovementSync {
 	}
 
 	/**
-	 * Wild Routes (docs/specs/WILD_ROUTES_PLAN.md §4.5): true inside a zone's box, off every map's cells, while the
-	 * hidden player stands on that zone's route map.
+	 * Wild Routes (docs/specs/WILD_ROUTES_PLAN.md §4.5, §4.8): true off every map's cells while the hidden player stands
+	 * on a zone's route map and the player is inside that zone's box, or in the dungeon region.
 	 */
 	private boolean awayInZone(@Nullable Spot here, double x, double z) {
 		if (here != null || this.index == null || this.hidden == null) {
 			return false;
 		}
-		WorldIndex.Zone zone = this.index.zoneAt((int) Math.floor(x), (int) Math.floor(z));
-		return zone != null && zone.routeMap().equals(this.hidden.map());
+		int bx = (int) Math.floor(x);
+		int bz = (int) Math.floor(z);
+		WorldIndex.Zone zone = this.index.zoneAt(bx, bz);
+		if (zone != null) {
+			return zone.routeMap().equals(this.hidden.map());
+		}
+		MapPlacement map = this.index.inDungeons(bx, bz) ? this.index.map(this.hidden.map()) : null;
+		return map != null && map.kind() == MapPlacement.Kind.ROUTE;
 	}
 
 	private void drift(@Nullable Spot here, long now) {

@@ -214,7 +214,10 @@ public final class WorldPlan {
 		}
 		habitats.sort(java.util.Comparator.comparing(WorldIndex.Habitat::map).thenComparingInt(WorldIndex.Habitat::z)
 				.thenComparingInt(WorldIndex.Habitat::x));
-		WorldIndex withZones = new WorldIndex(this.game, this.exportHash, placements, this.index.slotMapHash(), table, habitats, entries);
+		// WR7: a world with a dungeon gets the dungeon region, north of Kanto
+		boolean dungeons = entries.stream().anyMatch(z -> z.dungeon() != null);
+		WorldIndex withZones = new WorldIndex(this.game, this.exportHash, placements, this.index.slotMapHash(), table, habitats, entries,
+				dungeons ? dev.kantobridge.dungeon.DungeonSlots.region(this.surfaceBox, this.originX, this.originZ) : null);
 		return new WorldPlan(this, zones, withZones, table, storyIndex, ballStory, pools);
 	}
 

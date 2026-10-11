@@ -1,0 +1,139 @@
+{
+  "parent": "minecraft:block/block",
+  "textures": {
+    "pit": "minecraft:block/black_concrete",
+    "rim": "minecraft:block/stone_bricks",
+    "particle": "minecraft:block/stone_bricks",
+    "step": "minecraft:block/polished_andesite"
+  },
+  "elements": [
+    {
+      "from": [
+        0,
+        0,
+        0
+      ],
+      "to": [
+        16,
+        0.5,
+        16
+      ],
+      "faces": {
+        "north": {
+          "texture": "#pit"
+        },
+        "south": {
+          "texture": "#pit"
+        },
+        "east": {
+          "texture": "#pit"
+        },
+        "west": {
+          "texture": "#pit"
+        },
+        "up": {
+          "texture": "#pit"
+        },
+        "down": {
+          "texture": "#pit"
+        }
+      }
+    },
+    {
+      "from": [
+        0,
+        0,
+        0
+      ],
+      "to": [
+        16,
+        2,
+        3
+      ],
+      "faces": {
+        "north": {
+          "texture": "#rim"
+        },
+        "south": {
+          "texture": "#rim"
+        },
+        "east": {
+          "texture": "#rim"
+        },
+        "west": {
+          "texture": "#rim"
+        },
+        "up": {
+          "texture": "#rim"
+        },
+        "down": {
+          "texture": "#rim"
+        }
+      }
+    },
+    {
+      "from": [
+        13,
+        0,
+        0
+      ],
+      "to": [
+        16,
+        2,
+        16
+      ],
+      "faces": {
+        "north": {
+          "texture": "#rim"
+        },
+        "south": {
+          "texture": "#rim"
+        },
+        "east": {
+          "texture": "#rim"
+        },
+        "west": {
+          "texture": "#rim"
+        },
+        "up": {
+          "texture": "#rim"
+        },
+        "down": {
+          "texture": "#rim"
+        }
+      }
+    },
+    {
+      "from": [
+        0,
+        0,
+        3
+      ],
+      "to": [
+        16,
+        1.5,
+        9
+      ],
+      "faces": {
+        "north": {
+          "texture": "#step"
+        },
+        "south": {
+          "texture": "#step"
+        },
+        "east": {
+          "texture": "#step"
+        },
+        "west": {
+          "texture": "#step"
+        },
+        "up": {
+          "texture": "#step"
+        },
+        "down": {
+          "texture": "#step"
+        }
+      }
+    }
+  ]
+}

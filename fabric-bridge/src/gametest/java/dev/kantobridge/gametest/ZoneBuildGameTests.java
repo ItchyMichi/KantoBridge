@@ -13,6 +13,8 @@ import com.cobblemon.mod.common.api.spawning.spawner.SpawningZoneInput;
 import com.cobblemon.mod.common.block.habitat.HabitatBlockEntity;
 import com.cobblemon.mod.common.util.PlayerExtensionsKt;
 import dev.kantobridge.KantoBridge;
+import dev.kantobridge.block.KbBlocks;
+import dev.kantobridge.block.PropBlock;
 import dev.kantobridge.block.StoryCellBlockEntity;
 import dev.kantobridge.builder.BuildTask;
 import dev.kantobridge.builder.export.BundleException;
@@ -223,6 +225,14 @@ public class ZoneBuildGameTests implements FabricGameTest {
 			helper.assertTrue(level.getBlockEntity(new BlockPos(b[0], ZonePlan.FEET, b[1])) instanceof StoryCellBlockEntity cell
 					&& key.equals(cell.cellKey()), "a ball without its story cell");
 			occupied.add(ball.cell());
+		}
+		// WR7: the dungeon's entrance is a prop block, a quarter a block
+		if (layout.dungeon() != null) {
+			int[] b = zone.blockOf(layout.dungeon());
+			BlockState prop = level.getBlockState(new BlockPos(b[0] + 1, ZonePlan.FEET, b[1] + 1));
+			helper.assertTrue(prop.is(KbBlocks.PROP) && prop.getValue(PropBlock.KIND) == PropBlock.Kind.DUNGEON_ENTRANCE
+					&& prop.getValue(PropBlock.PART) == 3, "the dungeon's entrance isn't its prop");
+			occupied.add(layout.dungeon());
 		}
 		int walkable = 0;
 		int hedges = 0;

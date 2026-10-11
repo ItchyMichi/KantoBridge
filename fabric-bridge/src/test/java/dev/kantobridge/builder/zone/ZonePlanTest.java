@@ -232,6 +232,22 @@ class ZonePlanTest {
 	}
 
 	@Test
+	void theDungeonsEntranceIsAPropInTheIndexsGrid() {
+		Cell entrance = layout.dungeon();
+		assertNotNull(entrance, "withChances(1, 1) always makes a dungeon");
+		Cell door = layout.trailhead().door();
+		assertEquals(new WorldIndex.ZoneCell(entrance.x() - door.x(), entrance.y() - door.y()), plan.zone().dungeon());
+		Set<Integer> parts = new java.util.HashSet<>();
+		for (int[] c : columnsOf(entrance)) {
+			Integer code = column(plan, c[0], c[1]).get(ZonePlan.FEET);
+			assertEquals(BlockCode.KIND_PROP, BlockCode.kind(code));
+			assertEquals(dev.kantobridge.block.PropBlock.Kind.DUNGEON_ENTRANCE.ordinal(), BlockCode.value(code) / 4);
+			parts.add(BlockCode.value(code) % 4);
+		}
+		assertEquals(Set.of(0, 1, 2, 3), parts);
+	}
+
+	@Test
 	void theMazeIsClosedThereIsNoWalkingOffIt() {
 		int edges = 0;
 		for (int y = 0; y < layout.height(); y++) {
@@ -495,6 +511,12 @@ class ZonePlanTest {
 		WorldIndex back = WorldIndex.fromJson(index.toJson());
 		assertEquals(index.toJson(), back.toJson());
 		assertEquals(zone.zone(), back.zones().get(0));
+		// WR7: a zone with a dungeon brings the dungeon region, north of Kanto
+		if (zone.zone().dungeon() != null) {
+			assertNotNull(index.dungeons());
+			assertTrue(index.dungeons().z() + index.dungeons().d() <= base.surfaceBox().minZ() - dev.kantobridge.dungeon.DungeonSlots.GAP);
+			assertEquals(index.dungeons(), back.dungeons());
+		}
 		// WR6: the zone's habitat blocks and pools join Kanto's
 		assertTrue(index.habitats().containsAll(zone.habitats()) && index.habitats().containsAll(base.index().habitats()));
 		assertEquals(base.index().habitats().size() + zone.habitats().size(), index.habitats().size());

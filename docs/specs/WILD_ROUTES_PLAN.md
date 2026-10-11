@@ -360,6 +360,27 @@ The prototype does all of this (Appendix B). WR1 writes it in Java.
 - **Limits:** dungeon item tables have no Rare Candy or Master Ball, and at most one valuable item (a Nugget) per
   visit. A slot is cleared when its last player leaves.
 
+**How WR7 builds it:**
+
+- **Where:** dungeon slots north of Kanto (3,000 blocks past its box), 128×80 blocks each, 8 to a row. A visit's floors
+  stack in its slot 22 blocks apart, floor 1 at Kanto's walking level. The WorldIndex lists the dungeon region, so a
+  client there knows it's away from its hidden player, as in a zone.
+- **The entrance:** the zone's dungeon cell (now in its WorldIndex entry) holds the first prop block, a cave mouth
+  drawn from its block state. Standing on it starts a visit; everyone who steps on within 5 seconds joins.
+- **Floors:** PMD's standard floor (WR1), seeded from the zone, the visit and the floor number. Each cell is 2×2
+  blocks: stone walls under a stone ceiling, a floor of the theme's blocks, water behind a barrier, light, and the
+  stairs prop. A small placer builds a floor within a time budget per tick: the first behind the fade, each next one
+  as soon as the one before is entered.
+- **Moving:** a new server message, `route.fade`, fades the client out; the server teleports; the client fades in.
+  Going in, the stairs (each player who steps on them goes down) and out (the last floor's exit, beside the entrance).
+- **Inside:** wild Pokémon from the area's pool at PMD's enemy spots, levels plus `DungeonRules.levelBonus`, with one
+  more every 30 seconds away from players, up to a cap. A Monster House fills when a player first steps in. Items are
+  Poké Ball displays you pick up by stepping on them, PMD's way: the server sends `route.give` with `keep: false`, so
+  dungeon items aren't recorded in the save's progress.
+- **Leaving:** the exit, a blackout (the hidden game's warp takes you out) or logging off. A slot's blocks and
+  entities are cleared when its last player is gone.
+- **Not yet:** refusing Fly inside. The hidden game allows it; flying out simply ends your visit.
+
 ### 4.9 Multiplayer
 
 - Zones are shared places. Trainers and balls are per player: puppets per client, progress in each player's hidden
@@ -469,6 +490,9 @@ In three steps: the data (index, story cells, parties); the relay and balls; the
 - **Pod:** about 30 minutes.
 
 ### WR7: Dungeons
+
+In three steps: the geometry (regions, floors, the entrance prop); the visit (parties, slots, building, fades, stairs,
+leaving); then what's inside (Pokémon, Monster Houses, items, blackouts).
 
 - [S][B] The dungeon zone and its slots; parties; the floor count; floors built behind the fade; stairs; spawns and
   Monster Houses; items; the treasure room; leaving; the limits.

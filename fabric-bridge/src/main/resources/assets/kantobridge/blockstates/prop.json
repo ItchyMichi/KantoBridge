@@ -1,0 +1,40 @@
+{
+  "variants": {
+    "kind=dungeon_entrance,part=0": {
+      "model": "kantobridge:block/prop_dungeon_entrance_0"
+    },
+    "kind=dungeon_entrance,part=1": {
+      "model": "kantobridge:block/prop_dungeon_entrance_1"
+    },
+    "kind=dungeon_entrance,part=2": {
+      "model": "kantobridge:block/prop_dungeon_entrance_2"
+    },
+    "kind=dungeon_entrance,part=3": {
+      "model": "kantobridge:block/prop_dungeon_entrance_3"
+    },
+    "kind=stairs,part=0": {
+      "model": "kantobridge:block/prop_stairs_0"
+    },
+    "kind=stairs,part=1": {
+      "model": "kantobridge:block/prop_stairs_1"
+    },
+    "kind=stairs,part=2": {
+      "model": "kantobridge:block/prop_stairs_2"
+    },
+    "kind=stairs,part=3": {
+      "model": "kantobridge:block/prop_stairs_3"
+    },
+    "kind=exit,part=0": {
+      "model": "kantobridge:block/prop_exit_0"
+    },
+    "kind=exit,part=1": {
+      "model": "kantobridge:block/prop_exit_1"
+    },
+    "kind=exit,part=2": {
+      "model": "kantobridge:block/prop_exit_2"
+    },
+    "kind=exit,part=3": {
+      "model": "kantobridge:block/prop_exit_3"
+    }
+  }
+}
