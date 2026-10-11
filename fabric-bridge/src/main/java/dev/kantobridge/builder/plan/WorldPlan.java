@@ -160,7 +160,9 @@ public final class WorldPlan {
 		this.edgeMismatches = base.edgeMismatches;
 		this.overlaps = base.overlaps;
 		this.scene = base.scene;
-		this.shapes = base.shapes;
+		// the shape map names the index it goes with (WorldIndexSync and every client check it): the new one, which lists the
+		// zones, or nobody would get the shapes
+		this.shapes = base.shapes == null ? null : base.shapes.withIndexHash(index.hash());
 		this.zones = List.copyOf(zones);
 		this.zoneBallStory = List.copyOf(zoneBallStory);
 	}

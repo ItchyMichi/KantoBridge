@@ -524,6 +524,11 @@ class ZonePlanTest {
 			assertTrue(index.dungeons().z() + index.dungeons().d() <= base.surfaceBox().minZ() - dev.kantobridge.dungeon.DungeonSlots.GAP);
 			assertEquals(index.dungeons(), back.dungeons());
 		}
+		// the shape map names this index, the one with the zone (a stale hash and no client would draw the shapes)
+		assertNotNull(base.shapes());
+		assertEquals(base.index().hash(), base.shapes().map().indexHash());
+		assertEquals(index.hash(), plan.shapes().map().indexHash());
+		assertEquals(base.shapes().map().shapeHash(), plan.shapes().map().shapeHash());
 		// WR6: the zone's habitat blocks and pools join Kanto's
 		assertTrue(index.habitats().containsAll(zone.habitats()) && index.habitats().containsAll(base.index().habitats()));
 		assertEquals(base.index().habitats().size() + zone.habitats().size(), index.habitats().size());
