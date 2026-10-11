@@ -660,18 +660,20 @@ A new world (the mod installed and switched off, as for P1).
 ## Wild Routes
 
 [specs/WILD_ROUTES_PLAN.md](specs/WILD_ROUTES_PLAN.md). WR1-WR7 are built and tested without a person watching
-(JUnit, GameTests, the Lua and Python suites). Nothing of it shows in your game until the clearing's spot is set
-(WR2 below): `gen1-bridge/data/routes.json` leaves Viridian's zone switched off until then. After the spot, a rebuild of
-the world (Create Kanto world, or the headless build) builds the zone.
+(JUnit, GameTests, the Lua and Python suites). Since 2026-10-11 the clearing's spot is set (WR2 below), so a new world
+(Create Kanto world, or the headless build) has the zone; a world made before then doesn't.
 
 ### WR2: the exit's spot
 
-- [ ] In Viridian City, stand on the path where the clearing should start, facing the trees it should cut through.
-      Press **F7** and send the map, cell and facing it shows, and how deep the clearing should go (2 blocks, 4 steps,
-      unless you say otherwise).
-- [ ] Check C6, once the spot is in: in Gen1Recomp's console, `[gen1-bridge]` logs `routes.installed` for
-      `viridian_forest_zone` (not a `routes.skipped` with a code). Walking through the new clearing in the hidden game
-      takes you to the route map; stepping back west takes you home.
+- [ ] The spot, at your request "the bottom right of Viridian": `VIRIDIAN_CITY` cell (35, 29), facing **right**,
+      2 blocks deep: the reachable spot nearest the town's bottom-right corner whose clearing runs east to the map's
+      edge (`tools/e2e/drivers/kb_wildspot.lua` lists the others). In Viridian, check that the path into the trees
+      there looks right; if you'd rather have it elsewhere, stand there, press **F7** and send the map, cell and facing.
+- [x] Check C6 on the real game (the pod's test instance, 2026-10-11, `tools/e2e/test_wild_routes.py`):
+      `routes.installed` for `viridian_forest_zone` with its five classes; the clearing's last cell warps to the route
+      map's x1; its lower row is closed; a ball's item through the hidden game's own box (once), a dungeon's item (each
+      time); stepping west onto A takes you home, facing the town. The zone trainer's battle part runs once an export
+      bundle exists on the pod.
 
 ### WR3-WR4: the zone and moving through it
 
@@ -715,8 +717,10 @@ the world (Create Kanto world, or the headless build) builds the zone.
 
 ### WR8: content (with you)
 
-- [ ] The zone's name (now "VIRIDIAN WILDS"), the trainers' lines (`fabric-bridge/src/main/resources/data/kantobridge/
-      wild_routes/lines.json`), and the item tables (`items.json` beside it): change anything you like, or tell me.
+- [ ] **Placeholder content is in (2026-10-11), to be replaced later:** the zone's name "VIRIDIAN WILDS", six lines of our
+      own for each trainer class and six defaults (`fabric-bridge/src/main/resources/data/kantobridge/wild_routes/
+      lines.json`, one text-box line each), and the item tiers (`items.json` beside it). Change anything you like, or
+      tell me.
 - [ ] Special areas from the research (rest stop, item clearing, hedge maze, Mart stall, trainer gauntlet), if you
       want them.
 - [ ] Then: which city-to-city routes come first.

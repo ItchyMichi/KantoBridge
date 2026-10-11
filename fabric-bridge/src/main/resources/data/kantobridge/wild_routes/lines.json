@@ -1,11 +1,11 @@
 {
   "version": 1,
   "byClass": {
-    "default": ["Hey! Let's battle!", "You look strong!", "I won't lose!"],
-    "OPP_YOUNGSTER": ["Ready? Let's go!", "My team rules!", "I train every day!"],
-    "OPP_BUG_CATCHER": ["Bugs are the best!", "My bugs are tough!", "Caught you!"],
-    "OPP_LASS": ["Don't go easy!", "I like your style!", "Let's have fun!"],
-    "OPP_JR_TRAINER_M": ["I train out here!", "Show me your best!", "No way past me!"],
-    "OPP_JR_TRAINER_F": ["This is my spot!", "Ready when you are", "You found me!"]
+    "default": ["Hey! Let's battle!", "You look strong!", "I won't lose!", "Our eyes met!", "Battle time!", "Show me your team!"],
+    "OPP_YOUNGSTER": ["Ready? Let's go!", "My team rules!", "I train every day!", "Shorts are comfy!", "I'm the best here!", "Bet you can't win!"],
+    "OPP_BUG_CATCHER": ["Bugs are the best!", "My bugs are tough!", "Caught you!", "Watch my net!", "Bugs love woods!", "Stings hurt, huh?"],
+    "OPP_LASS": ["Don't go easy!", "I like your style!", "Let's have fun!", "Aren't I cute?", "Don't look away!", "Picnic time's over"],
+    "OPP_JR_TRAINER_M": ["I train out here!", "Show me your best!", "No way past me!", "The woods are mine", "Back to basics!", "Let's test my team"],
+    "OPP_JR_TRAINER_F": ["This is my spot!", "Ready when you are", "You found me!", "I won't hold back!", "I know these woods", "Lost? Battle me!"]
   }
 }
