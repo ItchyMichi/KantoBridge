@@ -579,6 +579,37 @@ Route 22: none. Over the 36 outdoor maps, 2,586 of 14,797 solid cells were units
   off is yours, in the launcher or with F10 (PLAYTEST.md, "Profile plan, P1"); then a new world shows P1–P3.
 - The `support` rule (deviation 28): standees on counters, tables and bookcases stand on the floor behind them.
 
+## Caves and woods
+
+Execution of [specs/CAVES_AND_WOODS_PLAN.md](specs/CAVES_AND_WOODS_PLAN.md) (CW1–CW5), from your choices of 2026-10-11
+(CD1–CD6; the defaults CD7–CD15): Kanto in First Person's cave rock, canopy and vines, re-implemented from its rules
+(never installed, nothing copied). Feature tests per milestone; the full suite at CW2 and CW5.
+
+| # | Milestone | Status | Date | Commit |
+|---|---|---|---|---|
+| CW1 | Cave rock | **done** (13 new JUnit tests; JUnit 948 green; the GameTests run at CW2) | 2026-10-11 | `CW1: cave rock` |
+| CW2 | The forest canopy and vines | to do | | |
+| CW3 | The forest's apron | waits for your decision after CW2 | | |
+| CW4 | Vines in the wild zone | to do | | |
+| CW5 | Finish | to do | | |
+
+### Caves and woods: CW1 notes
+
+1. **The position hash** gives the mod's cells: Java's `StrictMath` matches CPython's libm to 1e-12 on six probes and
+   picks the same 2,040 "one in five" cells of a 100 × 100 grid (`CellHashTest`).
+2. **Hangings are a layer of their own** (`MapShapes.hung`, `hungMask`), planned last over the final columns (after
+   P3's class boxes), so the self-check, unit tallies and puppets never see them. `Dress.free` leaves the feet level,
+   a column's blocks and any decor carrier alone; swap-site cells get none.
+3. **In a built world** (the synthetic house drawn as a cave), every roofed column's block under the ceiling is a decor
+   carrier whose piece the shape map holds; carriers on the light grid are `lit` and no light block goes there
+   (`CaveRockPlanTest`). Budgets count the pieces (QuadCounter reads the shape map).
+4. **Sizes in our three-block caves** (CD8): the rock 16–22 px above the floor (2–2.75 blocks); a stalactite over a path
+   at most 6 px long (it ends at head height); stalagmites 2–4 px on rock tops. Most spikes are small: the mod's full
+   sizes need its four-block room (your CD5).
+5. **No GameTest yet:** the synthetic world has no cave. The build's codes are checked by `CaveRockPlanTest`, the decor
+   block's collision and light by `ShapeBlockTest`; the GameTests run at the CW2 checkpoint.
+6. **Golden:** `synthetic_shapes.json` changed only in its planner (`kb-shapes/9`), parameters (`caveRock`) and hashes.
+
 ## Wild Routes
 
 Execution of [specs/WILD_ROUTES_PLAN.md](specs/WILD_ROUTES_PLAN.md) (WR1–WR8), from your choices R1–R9 (2026-10-10)

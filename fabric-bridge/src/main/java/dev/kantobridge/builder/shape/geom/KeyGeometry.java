@@ -24,6 +24,10 @@ import org.jetbrains.annotations.Nullable;
  * box   ...|v=p                its south face's panes sunk one pixel (a bookcase's, P3; needs the south tile's art): a
  *                              pane is a 4-connected region of non-black pixels the face's edges don't touch; its reveals
  *                              wear the pixels beside them; more than PANE_QUADS quads: the flat face
+ * hang  a|t|y0|d,b,p,w,x,z     a box 0..16 × y0..16 × 0..16 without a top (y0 = 16: none): the bottom wearing t, the sides
+ *                              the top (16 - y0)/2 pixel rows of t, as a cube's face would show them there; and when
+ *                              d > 0 a square pyramid of half-width w, its base centred at (x, z) at height b, its apex
+ *                              at (x, p, z): four triangles, each the whole tile squeezed to the apex (CW1's cave rock)
  * </pre>
  */
 final class KeyGeometry {
@@ -38,8 +42,64 @@ final class KeyGeometry {
 			case ROOF -> roof(key.number(0), key.number(1), key.number(2), key.number(3), key.number(4), key.number(5) == 1, key.number(6) == 1,
 					texture);
 			case BOX -> key.variant() == null ? box(key.numbers(), texture) : null;
+			case HANG -> hang(key.numbers(), texture);
 			default -> null;
 		};
+	}
+
+	/** Key order tile, y0, then the spike's direction, base, apex, half-width, x, z; quads sorted by face. */
+	static List<ShapeQuad> hang(int[] n, IntUnaryOperator texture) {
+		int t = texture.applyAsInt(n[0]);
+		int y0 = n[1];
+		List<ShapeQuad> quads = new ArrayList<>(9);
+		if (y0 < 16) {
+			quads.add(ShapeQuad.face(ShapeQuad.DOWN, 0, y0, 0, 16, y0, 16, t, 0, 0, 16, 16, y0 == 0 ? ShapeQuad.DOWN : -1, 0));
+			for (int face : new int[] {ShapeQuad.NORTH, ShapeQuad.SOUTH, ShapeQuad.WEST, ShapeQuad.EAST}) {
+				int x0 = face == ShapeQuad.EAST ? 16 : 0;
+				int x1 = face == ShapeQuad.WEST ? 0 : 16;
+				int z0 = face == ShapeQuad.SOUTH ? 16 : 0;
+				int z1 = face == ShapeQuad.NORTH ? 0 : 16;
+				quads.add(ShapeQuad.face(face, x0, y0, z0, x1, 16, z1, t, 0, 0, 16, 16 - y0, face, 0));
+			}
+		}
+		if (n[2] != ShapeKey.SPIKE_NONE) {
+			spike(quads, n[3], n[4], n[5], n[6], n[7], t);
+		}
+		quads.sort(Comparator.comparingInt(ShapeQuad::face));
+		return quads;
+	}
+
+	/**
+	 * A square pyramid: its base at height {@code base}, half-width {@code w} about ({@code x}, {@code z}), its apex at
+	 * height {@code apex} over the centre; four triangles facing out, each wearing the whole tile, its base edge on the
+	 * tile's edge nearest the base and the apex at the opposite edge's middle.
+	 */
+	private static void spike(List<ShapeQuad> out, int base, int apex, int w, int x, int z, int texture) {
+		int[][] corners = {{x - w, base, z - w}, {x + w, base, z - w}, {x + w, base, z + w}, {x - w, base, z + w}};
+		int[] top = {x, apex, z};
+		int vb = apex < base ? 0 : 16;
+		int va = 16 - vb;
+		for (int i = 0; i < 4; i++) {
+			int[] p = corners[i];
+			int[] q = corners[(i + 1) & 3];
+			// Front: the normal (q - p) × (top - p) points away from the axis (vanilla's counter-clockwise order).
+			long ux = q[0] - p[0];
+			long uy = q[1] - p[1];
+			long uz = q[2] - p[2];
+			long vx = top[0] - p[0];
+			long vy = top[1] - p[1];
+			long vz = top[2] - p[2];
+			long nx = uy * vz - uz * vy;
+			long nz = ux * vy - uy * vx;
+			long outX = p[0] + q[0] - 2L * x;
+			long outZ = p[2] + q[2] - 2L * z;
+			if (nx * outX + nz * outZ < 0) {
+				int[] swap = p;
+				p = q;
+				q = swap;
+			}
+			out.add(ShapeQuad.sloped(new int[][] {p, q, top}, new int[][] {{0, vb}, {16, vb}, {8, va}}, texture, -1, 0));
+		}
 	}
 
 	/** Key order up, down, north, south, west, east; quads sorted by face. */

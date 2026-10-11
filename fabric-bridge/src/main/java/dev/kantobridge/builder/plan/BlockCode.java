@@ -19,7 +19,7 @@ public final class BlockCode {
 	public static final int KIND_STORY_TILE = 6;
 	/** A shaped tile ({@code shape_full}): full collision around shaped art; the value is its slot index (V3). */
 	public static final int KIND_SHAPE = 7;
-	/** Decoration: value 0 {@code decor}, 1 {@code decor_leaves} (V3). */
+	/** Decoration: value bit 0 {@code decor_leaves} rather than {@code decor} (V3), bit 1 {@code lit} (CW1). */
 	public static final int KIND_DECOR = 8;
 	/**
 	 * A vanilla block of a Wild Routes zone (docs/specs/WILD_ROUTES_PLAN.md §4.4): the value is a
@@ -52,7 +52,12 @@ public final class BlockCode {
 
 	/** A decoration block: foliage or not. */
 	public static int decor(boolean leaves) {
-		return (KIND_DECOR << SHIFT) | (leaves ? 1 : 0);
+		return decor(leaves, false);
+	}
+
+	/** A decoration block: foliage or not, giving an interior light's light or not (CW1). */
+	public static int decor(boolean leaves, boolean lit) {
+		return (KIND_DECOR << SHIFT) | (leaves ? 1 : 0) | (lit ? 2 : 0);
 	}
 
 	/** A zone's vanilla block. */

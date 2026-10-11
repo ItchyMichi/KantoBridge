@@ -23,7 +23,8 @@ public final class CodeStates {
 			case BlockCode.KIND_FULL -> this.tile(this.full, true, value);
 			case BlockCode.KIND_HALF -> this.tile(this.half, false, value);
 			case BlockCode.KIND_SHAPE -> this.shape(value);
-			case BlockCode.KIND_DECOR -> (value == 1 ? KbBlocks.DECOR_LEAVES : KbBlocks.DECOR).defaultBlockState();
+			case BlockCode.KIND_DECOR -> ((value & 1) != 0 ? KbBlocks.DECOR_LEAVES : KbBlocks.DECOR).defaultBlockState()
+					.setValue(dev.kantobridge.block.DecorBlock.LIT, (value & 2) != 0);
 			case BlockCode.KIND_LEDGE -> KbBlocks.LEDGE_COLLIDER.defaultBlockState().setValue(LedgeColliderBlock.FACING, downhill(value));
 			case BlockCode.KIND_LIGHT -> Blocks.LIGHT.defaultBlockState().setValue(LightBlock.LEVEL, Math.min(15, value));
 			case BlockCode.KIND_STORY -> KbBlocks.STORY_CELL.defaultBlockState();

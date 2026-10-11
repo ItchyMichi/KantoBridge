@@ -606,6 +606,8 @@ public final class WorldPlan {
 		ShapePlanner.MapShapes planned = this.shapes == null ? null : this.shapes.shapes(map.id());
 		int planIndex = ty * model.cellWidth() * Scale.CELL_BLOCKS + tx;
 		int story = this.storyIndex.get(map.id())[cy * model.cellWidth() + cx];
+		// The levels from feet a block already takes: the hangings (CW1) go only where nothing is.
+		long taken = 0;
 		switch (model.kind(cx, cy)) {
 			case GROUND -> {
 				int floorTile = planned == null ? tile : planned.floorTile(planIndex, tile);
@@ -617,6 +619,7 @@ public final class WorldPlan {
 					if ((decor >> k & 1) != 0 && (k > 0 || story < 0)) {
 						sink.set(x, feet + k, z, BlockCode.decor(false));
 						column = Math.max(column, k + 1);
+						taken |= 1L << k;
 					}
 				}
 			}
@@ -624,6 +627,7 @@ public final class WorldPlan {
 			case LEDGE -> {
 				sink.set(x, feet - 1, z, BlockCode.full(this.slot(map, tile, false)));
 				sink.set(x, feet, z, BlockCode.ledge(CellFlags.ledgeDir(model.flags(cx, cy))));
+				taken |= 1L;
 			}
 			case COUNTER, SOLID -> {
 				int slot = this.slot(map, tile, false);
@@ -638,6 +642,7 @@ public final class WorldPlan {
 					sink.set(x, feet + k, z, (shaped >> k & 1) != 0 ? BlockCode.shape(slot) : code);
 				}
 				column = blocks;
+				taken |= (1L << Math.min(blocks, 62)) - 1;
 			}
 		}
 		if (story >= 0) {
@@ -645,6 +650,7 @@ public final class WorldPlan {
 			StoryCellTable.Entry entry = this.storyCells.entries().get(story);
 			boolean swapCell = entry.type() == StoryCellType.TILE;
 			sink.set(x, feet, z, swapCell ? BlockCode.storyTile(story) : BlockCode.story(story));
+			taken |= 1L;
 			ShapePlan.Closed closed = swapCell && this.shapes != null ? this.shapes.closed(entry.key()) : null;
 			if (closed != null) {
 				// The rest of this column of the closed art (V5): decor carriers in the air above, drawn only for players who
@@ -654,7 +660,22 @@ public final class WorldPlan {
 					sink.set(x, feet + k, z, BlockCode.decor(closed.leaves()));
 				}
 				column = Math.max(column, h);
+				taken |= (1L << Math.min(h, 62)) - 1;
 			}
+		}
+		// A carrier wins: the light goes only where the position is still air, or a hanging's carrier there gives it.
+		boolean light = map.interior() && !p.dark() && Math.floorMod(tx, LIGHT_SPACING) == 1 && Math.floorMod(ty, LIGHT_SPACING) == 1
+				&& column <= LIGHT_ABOVE_FEET;
+		int hung = planned == null ? 0 : planned.hungMask()[planIndex];
+		for (int k = 0; k < 31 && hung >> k != 0; k++) {
+			if ((hung >> k & 1) == 0 || (taken >> k & 1) != 0) {
+				continue;
+			}
+			// A hanging (CW1): a decor carrier for its piece; the one on a light's position gives the light (CD15).
+			boolean lit = light && k == LIGHT_ABOVE_FEET;
+			sink.set(x, feet + k, z, BlockCode.decor(false, lit));
+			light &= !lit;
+			taken |= 1L << k;
 		}
 		if (map.interior()) {
 			if (!openSky(p)) {
@@ -662,8 +683,7 @@ public final class WorldPlan {
 				int ceiling = planned != null && planned.wallTile() >= 0 ? planned.wallTile() : model.borderTile(tx, ty);
 				sink.set(x, feet + CEILING_ABOVE_FEET, z, BlockCode.full(this.slot(map, ceiling, false)));
 			}
-			// A carrier wins: the light goes only where the position is still air.
-			if (!p.dark() && Math.floorMod(tx, LIGHT_SPACING) == 1 && Math.floorMod(ty, LIGHT_SPACING) == 1 && column <= LIGHT_ABOVE_FEET) {
+			if (light) {
 				sink.set(x, feet + LIGHT_ABOVE_FEET, z, BlockCode.light(LIGHT_LEVEL));
 			}
 		}

@@ -92,7 +92,11 @@ class ShapeBlockTest {
 			assertFalse(state.canOcclude());
 			assertEquals(0, state.getLightBlock(level, BlockPos.ZERO));
 			assertEquals(RenderShape.MODEL, state.getRenderShape());
-			assertEquals(1, decor.getStateDefinition().getPossibleStates().size());
+			assertEquals(0, state.getLightEmission(), "dark unless it stands in for a light (CW1)");
+			BlockState lit = state.setValue(DecorBlock.LIT, true);
+			assertEquals(DecorBlock.LIGHT, lit.getLightEmission());
+			assertTrue(lit.getCollisionShape(level, BlockPos.ZERO, CollisionContext.empty()).isEmpty(), "lit, still nothing to collide with");
+			assertEquals(2, decor.getStateDefinition().getPossibleStates().size(), "lit or not");
 		}
 		assertSame(KbBlocks.DECOR, KbBlocks.carriers().get(48).block());
 	}

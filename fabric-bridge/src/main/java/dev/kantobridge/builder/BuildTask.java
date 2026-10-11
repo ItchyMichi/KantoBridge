@@ -543,9 +543,17 @@ public final class BuildTask {
 		r.unitsBySource.clear();
 		r.profileBuildings.clear();
 		r.profileClasses.clear();
-		shapes.unitTally().forEach((k, v) -> (k.startsWith("building") ? r.profileBuildings
-				: k.startsWith("box_") || k.startsWith("bookcase_") || k.startsWith("canopy") || k.startsWith("planter") ? r.profileClasses
-						: r.unitsBySource).put(k, (long) v));
+		r.dressing.clear();
+		shapes.unitTally().forEach((k, v) -> {
+			if (k.startsWith("dress_")) {
+				// The caves and woods plan's hangings (§4.2), by piece.
+				r.dressing.put(k.substring(6), (long) v);
+				return;
+			}
+			(k.startsWith("building") ? r.profileBuildings
+					: k.startsWith("box_") || k.startsWith("bookcase_") || k.startsWith("canopy") || k.startsWith("planter") ? r.profileClasses
+							: r.unitsBySource).put(k, (long) v);
+		});
 		r.shapeIndexHash = shapes.index().hash();
 		r.shapePlanner = shapes.index().planner();
 		r.shapeMapHash = shapes.map().hash();

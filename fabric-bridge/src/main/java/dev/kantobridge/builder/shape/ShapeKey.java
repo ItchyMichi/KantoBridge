@@ -21,6 +21,8 @@ import org.jetbrains.annotations.Nullable;
  * cell:&lt;a&gt;|&lt;t0&gt;,&lt;t1&gt;,&lt;t2&gt;,&lt;t3&gt;|&lt;g&gt;|&lt;bx&gt;,&lt;by&gt;,&lt;bz&gt;     one block of a cell-sized unit
  * tmpl:&lt;a&gt;|&lt;sig&gt;|&lt;bx&gt;,&lt;by&gt;,&lt;bz&gt;                     one block of a bounded structure
  * box:&lt;a&gt;|&lt;u&gt;,&lt;n&gt;,&lt;s&gt;,&lt;w&gt;,&lt;e&gt;|&lt;h&gt;              a box h/16 high without a bottom (P3's class boxes)
+ * hang:&lt;a&gt;|&lt;t&gt;|&lt;y0&gt;|&lt;d&gt;,&lt;b&gt;,&lt;p&gt;,&lt;w&gt;,&lt;x&gt;,&lt;z&gt;        a box hanging from the block's top down to y0, and a spike
+ *                                              (docs/specs/CAVES_AND_WOODS_PLAN.md §4.1)
  * modifiers, in this order when present:  |tint=&lt;0..3&gt;  |v=&lt;variant&gt;
  * </pre>
  *
@@ -36,7 +38,8 @@ public final class ShapeKey implements Comparable<ShapeKey> {
 		TUFT("tuft", 1),
 		CELL("cell", 4, 1, 3),
 		TMPL("tmpl", 3),
-		BOX("box", 5, 1);
+		BOX("box", 5, 1),
+		HANG("hang", 1, 1, 6);
 
 		private final String id;
 		private final int[] groups;
@@ -107,6 +110,7 @@ public final class ShapeKey implements Comparable<ShapeKey> {
 			case CELL -> check(numbers[5] >= 0 && numbers[6] >= 0 && numbers[7] >= 0, "negative block offset");
 			case TMPL -> check(numbers[0] >= 0 && numbers[1] >= 0 && numbers[2] >= 0, "negative block offset");
 			case BOX -> check(numbers[5] >= 1 && numbers[5] <= 16, "box height out of range");
+			case HANG -> check(hangValid(numbers), "hanging box or spike out of range");
 			default -> {
 			}
 		}
@@ -131,6 +135,20 @@ public final class ShapeKey implements Comparable<ShapeKey> {
 		if (!ok) {
 			throw new IllegalArgumentException(problem);
 		}
+	}
+
+	/** A hanging box's numbers: tile, y0, then the spike (direction, base, apex, half-width, x, z; all 0 for none). */
+	private static boolean hangValid(int[] n) {
+		if (n[0] < 0 || n[1] < 0 || n[1] > 16) {
+			return false;
+		}
+		int d = n[2];
+		if (d == 0) {
+			return n[3] == 0 && n[4] == 0 && n[5] == 0 && n[6] == 0 && n[7] == 0;
+		}
+		boolean ends = d == 1 ? n[4] < n[3] : d == 2 && n[3] < n[4];
+		return ends && n[3] >= 0 && n[3] <= 16 && n[4] >= 0 && n[4] <= 16 && n[5] >= 1 && n[5] <= 8 && n[6] >= 0 && n[6] <= 16 && n[7] >= 0
+				&& n[7] <= 16;
 	}
 
 	// ---- factories ----
@@ -171,6 +189,20 @@ public final class ShapeKey implements Comparable<ShapeKey> {
 	 */
 	public static ShapeKey box(int atlas, int up, int north, int south, int west, int east, int h) {
 		return new ShapeKey(Kind.BOX, atlas, new int[] {up, north, south, west, east, h}, null, 0, null);
+	}
+
+	/** A spike's direction in a {@code hang} key: none, hanging (a stalactite), standing (a stalagmite). */
+	public static final int SPIKE_NONE = 0;
+	public static final int SPIKE_DOWN = 1;
+	public static final int SPIKE_UP = 2;
+
+	/**
+	 * A box hanging from the block's top down to {@code y0}/16 (16: none), wearing {@code tile}, and a spike: a square
+	 * pyramid of half-width {@code w}, its base centred at ({@code x}, {@code z}) at height {@code base}, its apex at
+	 * {@code apex} ({@code dir} {@link #SPIKE_NONE} with every spike number 0 for none). Cave rock (CW1).
+	 */
+	public static ShapeKey hang(int atlas, int tile, int y0, int dir, int base, int apex, int w, int x, int z) {
+		return new ShapeKey(Kind.HANG, atlas, new int[] {tile, y0, dir, base, apex, w, x, z}, null, 0, null);
 	}
 
 	/** A carrier that draws nothing: a solid cell's blocks over a shape lower than its column (PD7). */

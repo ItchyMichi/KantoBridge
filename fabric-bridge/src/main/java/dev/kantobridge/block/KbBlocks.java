@@ -161,9 +161,10 @@ public final class KbBlocks {
 				.isRedstoneConductor((state, level, pos) -> false);
 	}
 
-	// Decoration: nothing to collide with or to pick; drawn by the runtime model only.
+	// Decoration: nothing to collide with or to pick; drawn by the runtime model only. A lit one gives an interior
+	// light's light (CW1).
 	private static BlockBehaviour.Properties decorProperties() {
-		return invisibleProperties().noCollission();
+		return invisibleProperties().noCollission().lightLevel(state -> state.getValue(DecorBlock.LIT) ? DecorBlock.LIGHT : 0);
 	}
 
 	// Invisible blocks: no occlusion, never suffocating or view-blocking (their cached collision is a full cube).

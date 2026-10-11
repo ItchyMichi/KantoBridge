@@ -27,10 +27,13 @@ import java.util.Objects;
  * @param profileBuildings the profile's band-table buildings (docs/specs/PROFILE_PLAN.md §5.5; from P2)
  * @param profileBoxes  the profile's class boxes, furniture parts, hull variants, stairs and reliefs
  *                      (docs/specs/PROFILE_PLAN.md §5.6; from P3)
+ * @param caveRock      the caves' sagging roof, stalactites and stalagmites (docs/specs/CAVES_AND_WOODS_PLAN.md §5.1;
+ *                      from CW1)
+ * @param canopy        Viridian Forest's canopy and vines (docs/specs/CAVES_AND_WOODS_PLAN.md §5.2-§5.3; from CW2)
  */
 public record ShapeParams(String planner, String heights, int maxUnit, int minRepeatRows, int hullRing, int interiorWall, boolean tierB,
 		boolean tierC, int roofRise, int ledgeLip, boolean storyArt, boolean dressing, int templateMax, boolean profileUnits,
-		boolean profileBuildings, boolean profileBoxes) {
+		boolean profileBuildings, boolean profileBoxes, boolean caveRock, boolean canopy) {
 	public static final String CLASSIFIED = "classified";
 	public static final String MEASURED = "measured";
 
@@ -45,6 +48,17 @@ public record ShapeParams(String planner, String heights, int maxUnit, int minRe
 		if (tierC ? templateMax < 4 || templateMax > 64 : templateMax != 0) {
 			throw new IllegalArgumentException("a template size needs Tier C, and lies in 4..64");
 		}
+		if ((caveRock || canopy) && !dressing) {
+			throw new IllegalArgumentException("hangings need dressing");
+		}
+	}
+
+	/** Parameters before CW1 (no hangings). */
+	public ShapeParams(String planner, String heights, int maxUnit, int minRepeatRows, int hullRing, int interiorWall, boolean tierB,
+			boolean tierC, int roofRise, int ledgeLip, boolean storyArt, boolean dressing, int templateMax, boolean profileUnits,
+			boolean profileBuildings, boolean profileBoxes) {
+		this(planner, heights, maxUnit, minRepeatRows, hullRing, interiorWall, tierB, tierC, roofRise, ledgeLip, storyArt, dressing, templateMax,
+				profileUnits, profileBuildings, profileBoxes, false, false);
 	}
 
 	/** Parameters before P3 (no class boxes). */
@@ -146,9 +160,15 @@ public record ShapeParams(String planner, String heights, int maxUnit, int minRe
 				true, true, 16, 4, true, true, TEMPLATE_MAX, true, true, true);
 	}
 
+	/** CW1: P3's planner plus the caves' rock (docs/specs/CAVES_AND_WOODS_PLAN.md §5.1). */
+	public static ShapeParams cw1() {
+		return new ShapeParams("kb-shapes/9", MEASURED, HeightRules.MAX_UNIT, HeightRules.MIN_REPEAT_ROWS, 2, HeightRules.INTERIOR_WALL,
+				true, true, 16, 4, true, true, TEMPLATE_MAX, true, true, true, true, false);
+	}
+
 	/** The parameters a build plans with. */
 	public static ShapeParams current() {
-		return p3();
+		return cw1();
 	}
 
 	/** The parameters as they appear in the shape index. */
@@ -184,6 +204,12 @@ public record ShapeParams(String planner, String heights, int maxUnit, int minRe
 		}
 		if (this.profileBoxes) {
 			out.addProperty("profileBoxes", true);
+		}
+		if (this.caveRock) {
+			out.addProperty("caveRock", true);
+		}
+		if (this.canopy) {
+			out.addProperty("canopy", true);
 		}
 		return out;
 	}

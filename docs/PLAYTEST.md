@@ -657,6 +657,19 @@ A new world (the mod installed and switched off, as for P1).
       warp, as before; a stair down stays flat.
 - [ ] **Round stumps and cans** where the profile pins them: a cut top or an open mouth.
 
+## Caves and woods
+
+[specs/CAVES_AND_WOODS_PLAN.md](specs/CAVES_AND_WOODS_PLAN.md). A new planner version: rebuild your world first.
+
+### CW1: cave rock
+
+- [ ] **Mt. Moon:** the roof hangs unevenly under the ceiling in the cave's own rock art, some cells darker; small
+      stalactites hang from it and small stalagmites stand on the rock; nothing hangs into your face on a path; walking
+      is exactly as before.
+- [ ] **Light:** the caves are as bright as before, with no dark patches where the roof hangs.
+- [ ] **Rock Tunnel:** dark until Flash, as before; the rock is there once it's lit.
+- [ ] **Seafoam Islands:** surfing, nothing in your face over the water.
+
 ## Wild Routes
 
 [specs/WILD_ROUTES_PLAN.md](specs/WILD_ROUTES_PLAN.md). WR1-WR7 are built and tested without a person watching

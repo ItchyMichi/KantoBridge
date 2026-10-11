@@ -71,13 +71,17 @@ public final class ShapePlanner {
 	 * @param templates the map's structure templates (V7), in region order
 	 * @param wallTile  a dressed interior's dominant wall tile, which its ring and ceiling wear (V7); -1 when not dressed
 	 * @param ceiling   a dressed interior's ceiling key (V7), null when not dressed
+	 * @param hung      per art tile, its hangings' keys by level from feet, null where none (docs/specs/CAVES_AND_WOODS_PLAN.md
+	 *                  §3): decoration outside {@code open}, so the self-check never sees it
+	 * @param hungMask  per art tile, bit k set when a hanging takes level k: a {@code decor} carrier at feet + k
 	 */
 	public record MapShapes(String map, ShapeKey[][] open, ShapeKey[][] closed, int[] blocks, int[] shapeMask, int[] floor, int[] decor,
-			List<Units.Cell> units, ShapeKey[][] overlay, List<Templates.Placed> templates, int wallTile, @Nullable ShapeKey ceiling) {
+			List<Units.Cell> units, ShapeKey[][] overlay, List<Templates.Placed> templates, int wallTile, @Nullable ShapeKey ceiling,
+			ShapeKey[][] hung, int[] hungMask) {
 		/** The plan of a map without Tier B (no floor change, no decor, no unit, no overlay). */
 		public MapShapes(String map, ShapeKey[][] open, ShapeKey[][] closed, int[] blocks, int[] shapeMask) {
 			this(map, open, closed, blocks, shapeMask, filled(blocks.length, -1), new int[blocks.length], List.of(), new ShapeKey[blocks.length][],
-					List.of(), -1, null);
+					List.of(), -1, null, new ShapeKey[blocks.length][], new int[blocks.length]);
 		}
 
 		/** The tile the floor block of art tile {@code i} wears, given its own. */
@@ -88,13 +92,15 @@ public final class ShapePlanner {
 
 	/** One state's plan of a map. */
 	record Columns(ShapeKey[][] keys, int[] blocks, int[] shapeMask, int[] floor, int[] decor, List<Units.Cell> units,
-			List<Structures.MeasuredRun> runs, List<Templates.Placed> templates, int wallTile, @Nullable ShapeKey ceiling) {
+			List<Structures.MeasuredRun> runs, List<Templates.Placed> templates, int wallTile, @Nullable ShapeKey ceiling, ShapeKey[][] hung,
+			int[] hungMask) {
 		Columns(ShapeKey[][] keys, int[] blocks, int[] shapeMask) {
 			this(keys, blocks, shapeMask, List.of());
 		}
 
 		Columns(ShapeKey[][] keys, int[] blocks, int[] shapeMask, List<Structures.MeasuredRun> runs) {
-			this(keys, blocks, shapeMask, filled(blocks.length, -1), new int[blocks.length], List.of(), runs, List.of(), -1, null);
+			this(keys, blocks, shapeMask, filled(blocks.length, -1), new int[blocks.length], List.of(), runs, List.of(), -1, null,
+					new ShapeKey[blocks.length][], new int[blocks.length]);
 		}
 	}
 
@@ -152,7 +158,7 @@ public final class ShapePlanner {
 			for (ShapeKey key : borderUnitKeys(map, scene.atlas(map.atlas()), atlas, params)) {
 				uses.add(new ShapeIndex.Use(key, map.palette()));
 			}
-			for (ShapeKey[][] state : new ShapeKey[][][] {planned.open(), planned.closed(), planned.overlay()}) {
+			for (ShapeKey[][] state : new ShapeKey[][][] {planned.open(), planned.closed(), planned.overlay(), planned.hung()}) {
 				for (ShapeKey[] column : state) {
 					if (column == null) {
 						continue;
@@ -235,6 +241,21 @@ public final class ShapePlanner {
 						int id = index.shapeId(column[k], map.palette());
 						grid.set(placement.x() + tx, placement.y() + k, placement.z() + ty, id);
 						shaped++;
+					}
+				}
+			}
+			// The hangings (CW1): each on the decor carrier the builder adds at its level, under the ceiling or the sky.
+			int hangTop = placement.kind() == MapPlacement.Kind.INTERIOR && !WorldPlan.openSky(placement) ? WorldPlan.CEILING_ABOVE_FEET
+					: ShapeMap.MAX_STACK;
+			for (int ty = 0; ty < map.artRows(); ty++) {
+				for (int tx = 0; tx < cols; tx++) {
+					int mask = planned.hungMask()[ty * cols + tx];
+					ShapeKey[] column = planned.hung()[ty * cols + tx];
+					for (int k = 0; column != null && k < column.length && k < hangTop; k++) {
+						if ((mask >> k & 1) != 0 && column[k] != null) {
+							grid.set(placement.x() + tx, placement.y() + k, placement.z() + ty, index.shapeId(column[k], map.palette()));
+							shaped++;
+						}
 					}
 				}
 			}
@@ -432,7 +453,7 @@ public final class ShapePlanner {
 			}
 		}
 		return new MapShapes(map.id(), open.keys(), closed, open.blocks(), open.shapeMask(), open.floor(), open.decor(), open.units(), overlay,
-				open.templates(), open.wallTile(), open.ceiling());
+				open.templates(), open.wallTile(), open.ceiling(), open.hung(), open.hungMask());
 	}
 
 	/**
@@ -520,9 +541,10 @@ public final class ShapePlanner {
 		}
 		int wallTile = -1;
 		ShapeKey ceiling = null;
+		Dress dress = null;
 		if (params.dressing()) {
 			// Dressing (kb-shapes/5): interior walls up to the ceiling, the ceiling in the room's wall art.
-			Dress dress = Dressing.dress(map, new Dress(atlas, columns.keys(), columns.blocks(), columns.shapeMask(), columns.runs()));
+			dress = Dressing.dress(map, new Dress(atlas, columns.keys(), columns.blocks(), columns.shapeMask(), columns.runs(), decor, tally));
 			wallTile = dress.wallTile();
 			ceiling = dress.ceiling();
 		}
@@ -530,8 +552,14 @@ public final class ShapePlanner {
 			int ground = sceneAtlas == null ? -1 : Units.mapGround(map, sceneAtlas.grassTiles(), sceneAtlas.frameTiles());
 			ClassBoxes.plan(map, atlas, classes, box, held, ground, columns.keys(), columns.blocks(), columns.shapeMask(), floor, tally);
 		}
+		if (dress != null) {
+			// The hangings (kb-shapes/9: cave rock), last, over the final columns.
+			Dressing.hang(map, dress, params);
+		}
+		ShapeKey[][] hung = dress == null ? new ShapeKey[columns.blocks().length][] : dress.hung();
+		int[] hungMask = dress == null ? new int[columns.blocks().length] : dress.hungMask();
 		return new Columns(columns.keys(), columns.blocks(), columns.shapeMask(), floor, decor, List.copyOf(units), columns.runs(), templates,
-				wallTile, ceiling);
+				wallTile, ceiling, hung, hungMask);
 	}
 
 	// ---- kb-shapes/1: today's classified heights, folded ----

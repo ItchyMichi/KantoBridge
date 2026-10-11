@@ -71,6 +71,10 @@ Conventions:
     `geom/Furniture`, `HullVariants`, `BigHull`); no code is copied.
 - **Kanto in First Person:** no licence anywhere in the repo (its README's "Credits and licence"
   section grants none). Ideas only: never copy its code, panoramas, pictures, sounds or sprites.
+  - **The caves and woods plan (2026-10-11):** its placement rules and numbers (the common fract-of-sine position hash,
+    densities, sizes, salts) for the cave rock (CW1) and the woods (CW2) are re-implemented in our own Java from the notes
+    `refs/_research/KFP_CAVES_INTERIORS.md` and `KFP_WOODS.md`, with credit. Nothing is copied, and the mod is never
+    installed or read at runtime (it stores no positions: every one is computed from a cell's coordinates).
 - **gen1coop, SkyCraft:** MIT. Code can be reused with the notice. SkyCraft bundles an unmodified
   Prism Launcher under GPL-3.0.
 - **Gen1Online:** MIT for code. Never reuse `assets/followers/` (converted from pokeemerald

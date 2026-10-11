@@ -35,7 +35,7 @@ import org.jetbrains.annotations.Nullable;
  */
 public final class ShapeTable {
 	/** The geometry version: what this code builds from a key. Not part of any world hash; it keys the client's cache. */
-	public static final int GEOMETRY = 4;
+	public static final int GEOMETRY = 5;
 	public static final String NO_OVERRIDES = "0".repeat(64);
 	private static final byte[] MAGIC = "KBST".getBytes(StandardCharsets.US_ASCII);
 	private static final int FORMAT = 1;
@@ -109,6 +109,7 @@ public final class ShapeTable {
 					int[] shades = "p".equals(key.variant()) && key.number(2) >= 0 ? art.tileShades(atlas, key.number(2)) : null;
 					yield shades == null ? KeyGeometry.box(key.numbers(), texture) : KeyGeometry.paneBox(key.numbers(), shades, artPx, texture);
 				}
+				case HANG -> KeyGeometry.hang(key.numbers(), texture);
 				case TUFT -> {
 					int tile = key.number(0);
 					List<ShapeQuad> tuft = tufts.computeIfAbsent(atlas + "|" + tile, k -> {
