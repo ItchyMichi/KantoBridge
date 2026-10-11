@@ -3,7 +3,12 @@
     python tools/e2e/run_gen1recomp.py kb_ready.lua [--game blue] [--timeout 180]
 
 Only ``local/gen1recomp-e2e/`` is ever launched, never the user's own
-``local/gen1recomp/``. The game boots in driver mode (POKEPORT_DRIVER, see
+``local/gen1recomp/``. On Linux (the RunPod dev pod, which has no instance of
+the user's own) the test instance is the official release's extracted AppImage
+in ``local/gen1recomp-linux/`` with ``local/gen1recomp-data/`` as its
+XDG_DATA_HOME: LÖVE keeps the fused game's folder (imports, mods, saves) in
+``local/gen1recomp-data/pokemon-love2d/``, the counterpart of the portable
+folder, and that folder is what ``INSTALL`` names there. The game boots in driver mode (POKEPORT_DRIVER, see
 refs/gen1recomp/main.lua:641-645 and :993-1011): the driver is a coroutine
 resumed once per frame, and the process exits 0 when it ends, 1 on a driver
 error and 3 on any uncaught Lua error (main.lua:77-83).
@@ -36,7 +41,14 @@ from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
 REPO = HERE.parents[1]
-INSTALL = REPO / "local" / "gen1recomp-e2e"
+LINUX = sys.platform.startswith("linux")
+WINDOWS_INSTALL = REPO / "local" / "gen1recomp-e2e"
+# Linux: the extracted AppImage (AppRun runs bin/love --fused game.love) and its data home (XDG_DATA_HOME).
+LINUX_APP = REPO / "local" / "gen1recomp-linux"
+LINUX_HOME = REPO / "local" / "gen1recomp-data"
+IDENTITY = "pokemon-love2d"  # the game's LÖVE identity: its data folder's name
+# The folder holding the imports (red/, blue/), mods/, saves/ and mod_cache/.
+INSTALL = LINUX_HOME / IDENTITY if LINUX else WINDOWS_INSTALL
 DRIVERS = HERE / "drivers"
 REPORTS = REPO / "local" / "reports"
 VERSIONS = ("red", "blue")
@@ -60,10 +72,14 @@ def preflight(install: Path = INSTALL) -> Preflight:
     """Checks the test install by listing names only."""
     reasons: list[str] = []
     names = set(os.listdir(install)) if install.is_dir() else set()
-    if "gen1recomp.exe" not in names:
-        reasons.append("gen1recomp.exe missing")
-    if "portable.txt" not in names:
-        reasons.append("portable.txt missing (the install would not be portable)")
+    if LINUX:
+        if not (LINUX_APP / "AppRun").is_file():
+            reasons.append("local/gen1recomp-linux/AppRun missing (the extracted AppImage)")
+    else:
+        if "gen1recomp.exe" not in names:
+            reasons.append("gen1recomp.exe missing")
+        if "portable.txt" not in names:
+            reasons.append("portable.txt missing (the install would not be portable)")
     mods = install / "mods"
     if not (mods.is_dir() and "gen1-bridge" in os.listdir(mods)):
         reasons.append("mods/gen1-bridge junction missing")
@@ -96,8 +112,10 @@ def safe_line(line: str) -> str | None:
 
 
 def crash_log() -> Path | None:
+    if LINUX:
+        return INSTALL / "lua-error.log"  # LÖVE's save folder, as %APPDATA%'s on Windows
     appdata = os.environ.get("APPDATA")
-    return Path(appdata) / "pokemon-love2d" / "lua-error.log" if appdata else None
+    return Path(appdata) / IDENTITY / "lua-error.log" if appdata else None
 
 
 def _stat(path: Path | None):
@@ -251,10 +269,15 @@ def _start(driver: Path | None, game: str | None, extra_env: dict[str, str] | No
     })
     if driver is not None:
         env["POKEPORT_DRIVER"] = str(driver)
+    if LINUX:
+        # the data home holds the folder `install` names; OpenAL gets no sound device on a headless pod
+        env.update({"XDG_DATA_HOME": str(install.parent), "ALSOFT_DRIVERS": "null"})
+        command, cwd = [str(LINUX_APP / "AppRun"), f"--game={game}"], LINUX_APP
+    else:
+        command, cwd = [str(install / "gen1recomp.exe"), f"--game={game}"], install  # never --console: it takes stdout away
     env.update(extra_env or {})
     proc = subprocess.Popen(
-        [str(install / "gen1recomp.exe"), f"--game={game}"],  # never --console: it takes stdout away
-        cwd=str(install), env=env,
+        command, cwd=str(cwd), env=env,
         stdin=subprocess.DEVNULL, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
     )
     return Launch(proc, crash_log(), echo)
@@ -313,7 +336,7 @@ def main(argv=None) -> int:
     if args.report:
         print(f"report: {write_report(Path(args.driver).stem, result)}")
     if result.crash_log_touched:
-        print("note: Gen1Recomp's crash log was written (not opened): %APPDATA%\\pokemon-love2d\\lua-error.log")
+        print(f"note: Gen1Recomp's crash log was written (not opened): {crash_log()}")
     return 0 if (result.returncode == 0 and not result.timed_out) else 1
 
 

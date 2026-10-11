@@ -72,14 +72,15 @@ def plan(b, Routes, js, z, town=None):
 # ------------------------------------------------------------ the route list
 
 
-def test_the_shipped_list_has_viridians_zone_waiting_for_its_spot():
+def test_the_shipped_list_has_viridians_zone_at_its_spot():
     b, Routes, js = routes_module()
     from kblua import BRIDGE
     out, problems = Routes.parse(js, (BRIDGE / "data" / "routes.json").read_bytes())
     assert len(out) == 1 and len(problems) == 0
     e = out[1]
-    assert e.id == b"viridian_forest_zone" and e.unset is True and e.mapId == b"KB_ROUTE_VIRIDIAN_FOREST_ZONE"
+    assert e.id == b"viridian_forest_zone" and not e.unset and e.mapId == b"KB_ROUTE_VIRIDIAN_FOREST_ZONE"
     assert e[b"from"].map == b"VIRIDIAN_CITY" and e[b"from"].depth == 2
+    assert (e[b"from"].x, e[b"from"].y, e[b"from"].facing) == (35, 29, b"right")
     assert e[b"from"].games[b"red"] and e[b"from"].games[b"blue"]
     assert [c.decode() for c in lua_list(e.classes)] == [
         "OPP_YOUNGSTER", "OPP_BUG_CATCHER", "OPP_LASS", "OPP_JR_TRAINER_M", "OPP_JR_TRAINER_F"]

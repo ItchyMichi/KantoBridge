@@ -6,7 +6,7 @@
       "name": "VIRIDIAN WILDS",
       "kind": "free_roam",
       "theme": "forest",
-      "from": {"games": ["red", "blue"], "map": "VIRIDIAN_CITY", "x": null, "y": null, "facing": null, "depth": 2},
+      "from": {"games": ["red", "blue"], "map": "VIRIDIAN_CITY", "x": 35, "y": 29, "facing": "right", "depth": 2},
       "areas": {"main": [3, 4], "side": 0.5},
       "levels": {"from": "neighbours", "perArea": 1, "maxRise": 3},
       "trainers": {

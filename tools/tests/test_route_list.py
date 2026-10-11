@@ -15,10 +15,11 @@ def test_the_shipped_route_list_matches_the_schema():
     assert not problems, [str(p) for p in problems]
 
 
-def test_viridians_zone_waits_for_its_spot():
+def test_viridians_zone_has_its_spot():
+    # the bottom-right corner's best spot, found on the real game by tools/e2e/drivers/kb_wildspot.lua (2026-10-11)
     zone = json.loads(SHIPPED.read_text(encoding="utf-8"))["routes"][0]
     assert zone["id"] == "viridian_forest_zone" and zone["from"]["map"] == "VIRIDIAN_CITY"
-    assert (zone["from"]["x"], zone["from"]["y"], zone["from"]["facing"]) == (None, None, None)
+    assert (zone["from"]["x"], zone["from"]["y"], zone["from"]["facing"], zone["from"]["depth"]) == (35, 29, "right", 2)
 
 
 def test_the_lua_tests_list_matches_the_schema():
