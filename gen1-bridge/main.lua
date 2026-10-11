@@ -905,11 +905,24 @@ return function(mod)
     return nextFn(ctx)
   end)
   -- Every collision verdict passes this hook (src/world/Collision.lua:84-96);
-  -- the player's are recorded for the step driver, and the verdict itself is
-  -- never changed.
+  -- the player's are recorded for the step driver. The verdict is changed
+  -- only on a Wild Routes route map, whose lower row is closed
+  -- (kb_routes.closedMove): refused as a tile, like a wall.
+  local function currentMapId()
+    local ow = engine.overworld()
+    return type(ow) == "table" and type(ow.map) == "table" and ow.map.id or nil
+  end
   mod.hooks:wrap("movement.collision", function(nextFn, allowed, ctx)
     local result = nextFn(allowed, ctx)
     local t0 = clock()
+    if result and routes ~= nil then
+      local okClosed, closed = pcall(kb.Routes.closedMove, routes, ctx, currentMapId)
+      if okClosed and closed then
+        ctx.reason = "tile"
+        result = false
+        routes.stats.closed = routes.stats.closed + 1
+      end
+    end
     local ok, verdict = pcall(engine.playerVerdict, ctx, result)
     if ok and verdict then capped(events.verdicts, verdict) end
     perf.add(clock() - t0)

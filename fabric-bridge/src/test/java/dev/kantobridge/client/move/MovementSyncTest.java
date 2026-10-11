@@ -137,6 +137,58 @@ class MovementSyncTest {
 		}
 	}
 
+	// ---- Wild Routes zones (docs/specs/WILD_ROUTES_PLAN.md §4.5) ----
+
+	/** The synthetic world with a made-up zone: its route map's 2x2 cells at the trailhead, inside a 400-block box. */
+	private static WorldIndex zoned() {
+		List<MapPlacement> maps = new ArrayList<>(world.maps().values());
+		maps.add(new MapPlacement("KB_ROUTE_TEST_ZONE", 3_200_100, 64, 3_210_100, 2, 2, 0, MapPlacement.Kind.ROUTE, "TEST_PALETTE",
+				"kantobridge:wild_forest", false, null));
+		return new WorldIndex(world.game(), world.exportHash(), maps, world.slotMapHash(), world.storyCells(), world.habitats(),
+				List.of(new WorldIndex.Zone("test_zone", "KB_ROUTE_TEST_ZONE", "forest", 3_200_000, 64, 3_210_000, 400, 400,
+						"kantobridge:wild_forest")));
+	}
+
+	@Test
+	void outInAZoneNothingIsSentAndNothingPullsYouBack() {
+		WorldIndex zoned = zoned();
+		Rig rig = Rig.at(zoned, "KB_ROUTE_TEST_ZONE", 1, 0, Dir.RIGHT);
+		rig.x += 30;
+		rig.z += 17;
+		assertEquals(List.of(), rig.tick(), "off the trailhead: no step");
+		rig.yaw = Dir.UP.yaw();
+		assertEquals(List.of(), rig.ticks((int) (MovementSync.DRIFT_MS / 50) * 4), "no drift fix and no faces out in the zone");
+		assertEquals(0, rig.sync.stats().drifts);
+		assertTrue(rig.sync.stats().zoneTicks > 0);
+		// back onto x1: nothing; then on to A, an ordinary step west (A's script takes the hidden player home)
+		rig.moveTo("KB_ROUTE_TEST_ZONE", 1, 0);
+		rig.yaw = Dir.RIGHT.yaw();
+		assertEquals(List.of(), rig.tick());
+		rig.moveTo("KB_ROUTE_TEST_ZONE", 0, 0);
+		assertEquals(List.of("step left 1"), rig.tick());
+	}
+
+	@Test
+	void joiningOutInAZoneLeavesYouWhereYouAre() {
+		WorldIndex zoned = zoned();
+		Rig rig = new Rig(zoned);
+		rig.moveTo("KB_ROUTE_TEST_ZONE", 1, 0);
+		rig.x += 120;
+		rig.sync.onSnapshot(true, new Place("KB_ROUTE_TEST_ZONE", 1, 0, Dir.RIGHT), "idle");
+		rig.sync.setLinked(true);
+		assertEquals(List.of(), rig.ticks(40), "the hidden player waits on x1; you stay out in the zone");
+	}
+
+	@Test
+	void aZoneDoesntHideAHiddenPlayerSomewhereElse() {
+		WorldIndex zoned = zoned();
+		Rig rig = Rig.at(zoned, "TEST_TOWN", 5, 8, Dir.UP);
+		rig.x = 3_200_150;
+		rig.z = 3_210_150;
+		List<String> calls = rig.ticks((int) (MovementSync.DRIFT_MS / 50) + 4);
+		assertTrue(calls.stream().anyMatch(c -> c.startsWith("teleport")), "in a zone's box but the hidden player is in town: back to town " + calls);
+	}
+
 	@Test
 	void crossingsInAllFourDirectionsSendNumberedSteps() {
 		Rig rig = Rig.at(world, "TEST_TOWN", 5, 8, Dir.UP);

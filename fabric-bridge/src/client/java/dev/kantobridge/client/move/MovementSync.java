@@ -35,6 +35,10 @@ import org.jetbrains.annotations.Nullable;
  * player leaving creative or spectator) and after a snapshot, the player is teleported onto the hidden player's cell
  * unless already there. After a warp, the player walks to wherever the hidden player went meanwhile (a door walk-out),
  * or is teleported if that is far.</li>
+ * <li><b>Wild Routes zones</b> (docs/specs/WILD_ROUTES_PLAN.md §4.5). Inside a zone's box, off its route map's cells,
+ * while the hidden player stands on that route map, the player is out in the zone: no steps, faces or drift fixes, and
+ * no teleport back on joining. Walking back onto the trailhead's x1 needs nothing; stepping on to A is an ordinary
+ * step, and A's script takes the hidden player home.</li>
  * </ul>
  *
  * Steps, faces and drift corrections happen only while linked (connected, hidden game in its overworld), in mode
@@ -106,6 +110,8 @@ public final class MovementSync {
 		public long syncs;
 		public long lost;
 		public long jumps;
+		/** Ticks spent out in a Wild Routes zone, off the route map's cells. */
+		public long zoneTicks;
 	}
 
 	private final Port port;
@@ -199,17 +205,22 @@ public final class MovementSync {
 			this.expire(now);
 		}
 		boolean ready = this.linked && this.index != null && !this.port.warping() && !this.port.forcedMoving();
+		// Wild Routes: out in a zone, where the hidden player waits on the route map
+		boolean away = this.awayInZone(here, x, z);
+		if (away) {
+			this.stats.zoneTicks++;
+		}
 		boolean moved = false;
 		if (ready && this.rejoinWanted) {
 			this.rejoinWanted = false;
 			this.settleWanted = false;
-			moved = this.rejoin(here, now);
+			moved = !away && this.rejoin(here, now);
 		} else if (ready && this.settleWanted) {
 			this.settleWanted = false;
-			moved = this.settle(here, now);
+			moved = !away && this.settle(here, now);
 		}
 		// A teleport or walk just asked for replaces this tick's own crossing: never both.
-		if (ready && !moved && IDLE.equals(this.mode) && this.hasLast && !this.port.forcedMoving()) {
+		if (ready && !moved && !away && IDLE.equals(this.mode) && this.hasLast && !this.port.forcedMoving()) {
 			this.crossings(here, x, z, now);
 			this.push(intent, here, x, z, now);
 			this.face(intent, yaw, x, z, now);
@@ -478,6 +489,18 @@ public final class MovementSync {
 			this.stats.faces++;
 			this.port.face(quadrant);
 		}
+	}
+
+	/**
+	 * Wild Routes (docs/specs/WILD_ROUTES_PLAN.md §4.5): true inside a zone's box, off every map's cells, while the
+	 * hidden player stands on that zone's route map.
+	 */
+	private boolean awayInZone(@Nullable Spot here, double x, double z) {
+		if (here != null || this.index == null || this.hidden == null) {
+			return false;
+		}
+		WorldIndex.Zone zone = this.index.zoneAt((int) Math.floor(x), (int) Math.floor(z));
+		return zone != null && zone.routeMap().equals(this.hidden.map());
 	}
 
 	private void drift(@Nullable Spot here, long now) {

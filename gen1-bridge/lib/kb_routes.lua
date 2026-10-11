@@ -295,6 +295,28 @@ function Routes.routeMapDef(e, p, def)
   return out
 end
 
+-- A route map is one block, 2x2 cells, but only its top row is walkable: A
+-- and x1. The zone has a hedge under x1 (RouteGenerator), so the hidden game
+-- closes the lower row too and the two players can't part there
+-- (docs/specs/WILD_ROUTES_PLAN.md §4.2). True for a move the engine allowed
+-- onto that row: ctx is the movement.collision hook's (map, mover, dir, toX,
+-- toY), currentMap() the overworld's map id, for a ctx without its map.
+function Routes.closedMove(rt, ctx, currentMap)
+  if type(rt) ~= "table" or type(rt.byMap) ~= "table" or next(rt.byMap) == nil or type(ctx) ~= "table" then
+    return false
+  end
+  local mapId
+  if type(ctx.map) == "table" and ctx.map.id ~= nil then mapId = ctx.map.id else mapId = currentMap() end
+  if mapId == nil or rt.byMap[mapId] == nil then return false end
+  local y = ctx.toY
+  if type(y) ~= "number" then
+    local m, d = ctx.mover, DIRS[ctx.dir]
+    if type(m) ~= "table" or type(m.cellY) ~= "number" or d == nil then return false end
+    y = m.cellY + d[2]
+  end
+  return y >= 1
+end
+
 -- A KB_<CLASS> record: the vanilla class's own fields (name, picture, money,
 -- AI, theme, palette) with one party, the class's first, rewritten before
 -- every zone battle. nil when the class has no usable party.
@@ -336,7 +358,7 @@ function Routes.install(opts)
   local json, content, world, log = opts.json, opts.content or {}, opts.world, opts.log
   local rt = { zones = {}, byMap = {}, byTown = {}, entries = {}, problems = {}, world = world,
                stats = { listed = 0, installed = 0, skipped = 0, unset = 0, otherGame = 0, classes = 0,
-                         warpsOut = 0, warpsBack = 0, warpsBusy = 0 } }
+                         warpsOut = 0, warpsBack = 0, warpsBusy = 0, closed = 0 } }
   local entries, problems = Routes.parse(json, opts.text)
   rt.entries = entries
   rt.stats.listed = #entries

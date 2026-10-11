@@ -232,6 +232,22 @@ def test_the_clearings_end_leads_to_the_route_map_and_its_a_leads_back():
     assert [w["kind"] for w in warps][-2:] == ["script", "script"]
 
 
+def test_the_route_maps_lower_row_is_closed_like_a_wall():
+    g = R.RouteGame()
+    g.send("move.step", {"dir": "down", "n": 1})
+    blocked = g.until(lambda m: m["type"] in ("player.pos", "player.blocked") and m["data"].get("n") == 1)
+    assert blocked["type"] == "player.blocked"
+    assert (blocked["data"]["reason"], blocked["data"]["map"], blocked["data"]["x"], blocked["data"]["y"]) == (
+        "tile", R.ROUTE_MAP, 1, 0)
+    assert g.where() == (R.ROUTE_MAP, 1, 0)
+    assert g.status()["routesClosed"] >= 1
+    # the town's cells are the engine's own: the same step there walks
+    t = R.RouteGame(start=("TEST_WOODS", 2, 2, "down"))
+    t.send("move.step", {"dir": "down", "n": 1})
+    walked = t.until(lambda m: m["type"] in ("player.pos", "player.blocked") and m["data"].get("n") == 1)
+    assert walked["type"] == "player.pos" and t.status()["routesClosed"] == 0
+
+
 def test_the_way_out_waits_while_a_script_runs():
     g = R.RouteGame(start=("TEST_WOODS", 2, 1, "up"))
     g.script([["show_text", "WAIT A MOMENT."]])

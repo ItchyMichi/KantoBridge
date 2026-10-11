@@ -1,6 +1,7 @@
 package dev.kantobridge.builder.zone;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -18,6 +19,7 @@ import dev.kantobridge.builder.plan.WorldPlan;
 import dev.kantobridge.builder.plan.WorldPlanner;
 import dev.kantobridge.routes.gen.Cell;
 import dev.kantobridge.routes.gen.CellRole;
+import dev.kantobridge.routes.gen.Dir;
 import dev.kantobridge.routes.gen.ForestTheme;
 import dev.kantobridge.routes.gen.RouteGenerator;
 import dev.kantobridge.routes.gen.RouteLayout;
@@ -130,6 +132,32 @@ class ZonePlanTest {
 	}
 
 	@Test
+	void theMazeIsClosedThereIsNoWalkingOffIt() {
+		int edges = 0;
+		for (int y = 0; y < layout.height(); y++) {
+			for (int x = 0; x < layout.width(); x++) {
+				if (!layout.at(x, y).walkable()) {
+					continue;
+				}
+				for (Dir d : Dir.values()) {
+					Cell n = new Cell(x, y).step(d);
+					CellRole role = layout.at(n);
+					if (role.walkable() || role == CellRole.DUNGEON) {
+						continue;
+					}
+					assertNotEquals(CellRole.SCENERY, role, "the maze opens onto the land at " + x + "," + y);
+					for (int[] c : columnsOf(n)) {
+						Integer feet = column(plan, c[0], c[1]).get(ZonePlan.FEET);
+						assertTrue(feet != null && !PASSABLE.contains(block(feet)), "a way off the maze at " + n);
+					}
+					edges++;
+				}
+			}
+		}
+		assertTrue(edges > 500, "edges " + edges);
+	}
+
+	@Test
 	void pondsHaveABarrierAboveTheWater() {
 		int ponds = 0;
 		for (int y = 0; y < layout.height(); y++) {
@@ -163,6 +191,13 @@ class ZonePlanTest {
 		assertEquals(2, p.w());
 		assertEquals(2, p.h());
 		assertTrue(cells.get(0).equals(layout.trailhead().door()), "A is the trailhead's door");
+		// only A and x1 can be stood on, as in the hidden game: the lower row and A's other sides are hedges
+		Cell door = layout.trailhead().door();
+		for (Cell closed : List.of(door.step(Dir.SOUTH), cells.get(1).step(Dir.SOUTH), door.step(Dir.WEST), door.step(Dir.NORTH))) {
+			assertEquals(CellRole.WALL, layout.at(closed), "closed at " + closed);
+			int[] b = plan.blockOf(closed);
+			assertTrue(HEDGE.contains(block(column(plan, b[0], b[1]).get(ZonePlan.FEET + 1))), "a hedge at " + closed);
+		}
 		for (Cell cell : cells) {
 			assertTrue(WALKABLE_TOPS.contains(block(column(plan, plan.blockOf(cell)[0], plan.blockOf(cell)[1]).get(ZonePlan.FLOOR))));
 		}

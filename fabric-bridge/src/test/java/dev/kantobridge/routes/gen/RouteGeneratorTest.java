@@ -54,9 +54,9 @@ class RouteGeneratorTest {
 		assertNotNull(branched.dungeon());
 	}
 
-	private static final String GOLDEN_ZONE = "6ff992f6d6d63eda5318287151ef5f22a8f2190e3cc6e0b3af8ef21fc25bc36a";
-	private static final String GOLDEN_ROUTE = "158d567a308a1e3dd791022ae73fb005209d6ddf558e8d6108df8e0139ec1361";
-	private static final String GOLDEN_BRANCHED = "6eeb767b185bafc7e4174c76da4cebb733f8531a5a76080dc384e6e57b099a72";
+	private static final String GOLDEN_ZONE = "9287126d8ec5f36a8a069a816b455f4a8dfa67a97e2127285b20f853795fcaf3";
+	private static final String GOLDEN_ROUTE = "aa31f46260a0ebd3e367026b9768ec8668d70b5623555826f352281ad7c6f8bf";
+	private static final String GOLDEN_BRANCHED = "b01aed167adb910e12ae1a3572109cec2626ea931d55fdf4dcf2fdac2559928a";
 
 	@Test
 	void tenThousandSeedsKeepEveryRule() {
@@ -129,10 +129,29 @@ class RouteGeneratorTest {
 			y0 = Math.min(Math.min(y0, g.y()), g.door().y());
 			x1 = Math.max(Math.max(x1, g.x() + g.width()), g.door().x() + 1);
 			y1 = Math.max(Math.max(y1, g.y() + g.height()), g.door().y() + 1);
+			Cell underStand = g.stand().step(Dir.SOUTH);
 			for (int y = g.y(); y < g.y() + g.height(); y++) {
 				for (int x = g.x(); x < g.x() + g.width(); x++) {
-					if (l.at(x, y) != CellRole.PATH) {
+					if (l.at(x, y) != CellRole.PATH && !underStand.equals(new Cell(x, y))) {
 						out.add("a gate cell isn't path");
+					}
+				}
+			}
+			// the route map's lower row (under the door and the stand) is closed, as in the hidden game
+			if (l.at(underStand) != CellRole.WALL || l.at(g.door().step(Dir.SOUTH)) != CellRole.WALL) {
+				out.add("the route map's lower row at " + g.door() + " isn't wall");
+			}
+		}
+		// the maze is closed: no walkable cell beside the scenery or on the layout's edge
+		for (int y = 0; y < l.height(); y++) {
+			for (int x = 0; x < l.width(); x++) {
+				if (!l.at(x, y).walkable()) {
+					continue;
+				}
+				for (Dir d : Dir.values()) {
+					Cell n = new Cell(x, y).step(d);
+					if (!l.inside(n) || l.at(n) == CellRole.SCENERY) {
+						out.add("the maze opens onto the scenery at " + x + "," + y);
 					}
 				}
 			}

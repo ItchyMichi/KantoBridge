@@ -589,8 +589,8 @@ RunPod budget and stop after each job; each phase runs its own tests, the full s
 |---|---|---|---|---|
 | WR1 | The generators | **done** (19 JUnit tests, 10,000-seed checks on both generators) | 2026-10-11 | `2627e41` |
 | WR2 | The exit and the route map | **done**; checkpoint: pytest and JUnit green, GameTests wait for the pod (note 9) | 2026-10-11 | |
-| WR3 | Building the zone | in progress: planning, blocks and the WorldIndex done; the GameTest and C2's second half wait for a pod | 2026-10-11 | |
-| WR4 | Moving through the zone | | | |
+| WR3 | Building the zone | done here; its GameTest and C2's second half run at the next pod session | 2026-10-11 | 0a7ed03, dd5843f |
+| WR4 | Moving through the zone | done here; the warp GameTest waits for a pod, check C5 for a client | 2026-10-11 | |
 | WR5 | Trainers and items | | | |
 | WR6 | Wild Pokémon | | | |
 | WR7 | Dungeons | | | |
@@ -616,6 +616,29 @@ RunPod budget and stop after each job; each phase runs its own tests, the full s
    7–9 from 60).
 5. **Where it ran:** the pod had no host capacity (six tries), so the tests ran in a throwaway JDK 21 container on the
    server with JUnit 5.11. The Gradle run is part of the WR2 checkpoint.
+
+### Wild Routes: WR4 notes
+
+1. **MovementSync** (client): out in a zone (inside its box, off every map's cells, while the hidden player is on
+   that zone's route map) nothing is sent: no steps, turns or drift fixes, and joining, reconnecting or settling after
+   a warp doesn't pull you back. Walking back onto x1 needs nothing; A is an ordinary step whose script takes the
+   hidden player home. In a zone's box with the hidden player elsewhere (after Fly or a blackout), you're pulled back
+   as anywhere else. Counter `zoneTicks`. JUnit: three new cases in `MovementSyncTest`.
+2. **The route map's lower row is closed** in the hidden game: main.lua's `movement.collision` wrapper refuses a move
+   onto a route map's row 1 as `tile` (`kb_routes.closedMove`, status `routesClosed`). The verdict changes nowhere
+   else. Lua test: a step down from x1 is blocked as `tile`; the same step in town walks.
+3. **The maze is closed** (generator): each gate is ringed with hedges where it meets the land, and the cell under the
+   stand is a hedge, so A and x1 are the route map's only open cells in Minecraft too. Before this, the trailhead's
+   plaza opened onto the scenery, and you could have walked off the maze there. `RouteGeneratorTest` gains the rule
+   "no walkable cell beside the scenery or on the edge" for every seed (the areas already kept it; only the gates
+   leaked), and its golden fingerprints changed. `ZonePlanTest` checks the same in blocks: from every walkable cell,
+   each closed neighbour is solid at feet height.
+4. **Warps** need no change: `WarpService` finds any placed map, the route map included. Kanto's rules (Adventure, no
+   jumping, noon, Peaceful) are server-wide, so they hold in zones. `ZoneBuildGameTests` now also warps a mock player
+   onto x1 and back (it runs at the next pod session).
+5. **D8 extended:** rocks stay vanilla boulders, and balls are puppets (WR5), so the prop block comes with the first
+   thing that needs a model of its own, the dungeon entrance (WR7). Check C5 (a built zone and the fade at the
+   trailhead, seen in a client) needs your PC or the pod under Xvfb.
 
 ### Wild Routes: WR3 notes
 

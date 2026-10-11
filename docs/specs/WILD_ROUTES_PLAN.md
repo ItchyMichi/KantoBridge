@@ -173,6 +173,9 @@ in its entry chunk, before the engine merges everything:
   - Its floor block is picked at boot by asking the engine which of the tileset's blocks are plain floor, the way
     `engine.tileProbe` already probes tiles.
   - Nobody sees it: Minecraft doesn't draw it, and the hidden window is hidden.
+  - A map is whole blocks, so it is really 2×2 cells. Its lower row is closed (WR4): gen1-bridge's
+    `movement.collision` hook refuses a move onto it as a wall, and the zone has hedges there too, so the hidden
+    player and you can never part on it.
   - A connecting route's route map later is `[A][x1][x2][B]`, with B leading into the far map.
 - **Trainer classes:** at boot, `KB_<CLASS>` records are registered as copies of the Gen 1 classes the zone uses (the
   name, picture, prize money and AI). Each has one party, rewritten before every zone battle.
@@ -250,8 +253,10 @@ The prototype does all of this (Appendix B). WR1 writes it in Java.
   - Around the maze, trees of vanilla blocks (oak, birch, dark oak), grass and ferns, so the maze sits inside a forest.
     Never on a lane.
   - A forest biome of our own sets the colours.
-- **Props:** rocks, balls, signs and dungeon entrances become prop blocks that carry their kind in their block state,
-  and the client draws each one by kind (research §6.2).
+- **Rocks** are 2×2-block boulders of cobblestone and mossy cobblestone (D8).
+- **Balls** are puppets (WR5): each player's own hidden game says whether a ball is still there.
+- **Props:** signs and dungeon entrances become prop blocks that carry their kind in their block state, and the client
+  draws each one by kind (research §6.2). The first comes with the dungeon entrance (WR7).
   - They use built-in models we make.
   - Texture packs can replace them through `prop:` keys.
 - **The trailhead** is a small clearing, never turned. Its two mapped cells match the route map's `[A][x1]`. The
@@ -268,8 +273,12 @@ The prototype does all of this (Appendix B). WR1 writes it in Java.
 
 - **Into the zone:** the hidden warp into the route map is followed like any other warp. `WarpService` finds x1 in the
   route map's piece, at the trailhead.
-- **In the zone:** inside the zone's box, `MovementSync` sends no steps and the drift rule is off. The hidden player
-  stands on x1.
+- **In the zone:** inside the zone's box and off the route map's cells, while the hidden player is on that route map,
+  `MovementSync` sends no steps or turns, the drift rule is off, and joining or reconnecting doesn't pull you back. The
+  hidden player stands on x1.
+- **The maze is closed:** every gate is ringed with hedges where it meets the land, and the cells under A and x1 are
+  hedges, matching the route map's closed lower row. So you can stand on the route map only at A and x1, and only by
+  walking in from the zone onto x1, where the hidden player is.
 - **Out again:** walking back onto x1 needs nothing. Stepping onto A is an ordinary step; A's script warps you to
   Viridian City, and Minecraft follows.
 - **Leaving any other way** (Fly, Teleport, a blackout) is a hidden warp, and Minecraft follows it as it does today.
@@ -402,8 +411,7 @@ The tags are PLAN's: **[L]** gen1-bridge, **[C]** client, **[S]** server, **[B]*
 
 ### WR4: Moving through the zone ✔
 
-- [C] `MovementSync` inside zone boxes and at the trailhead. Props drawn from their block state, with the built-in
-  models.
+- [C] `MovementSync` inside zone boxes and at the trailhead. (Props moved to WR7, with the dungeon entrance: D8.)
 - [S] `WarpService` into the route map's piece; the zone's rules.
 - [T] JUnit for the movement cases; GameTests for the warps.
 - Check C5 needs a client: your PC, or the pod under Xvfb.
@@ -497,7 +505,7 @@ Your answers left a few small things open. I went with these; change any.
 | D5 | The dungeon's floors at higher levels | One more at each end per 10 levels above 20, up to 7–9 |
 | D6 | The dungeon's Pokémon | A level stronger every second floor |
 | D7 | Full test runs | After WR2, WR4, WR6 and WR8 |
-| D8 | The forest's walls and trees | Vanilla leaves and logs: the Minecraft look, solid to walk into, no client work. Voxel props stay for rocks, balls, signs and the dungeon entrance |
+| D8 | The forest's walls, trees and rocks | Vanilla leaves, logs and cobblestone: the Minecraft look, solid to walk into, no client work. Balls are puppets (WR5); voxel props stay for signs and the dungeon entrance, from WR7 |
 
 ## Appendix A: references
 

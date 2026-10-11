@@ -13,7 +13,11 @@ import dev.kantobridge.builder.zone.ZonePlan;
 import dev.kantobridge.routes.gen.Cell;
 import dev.kantobridge.routes.gen.CellRole;
 import dev.kantobridge.routes.gen.RouteLayout;
+import dev.kantobridge.server.WarpService;
+import dev.kantobridge.world.Dir;
 import dev.kantobridge.world.MapPlacement;
+import dev.kantobridge.world.Place;
+import dev.kantobridge.world.WorldIndex;
 import java.util.List;
 import net.fabricmc.fabric.api.gametest.v1.FabricGameTest;
 import net.minecraft.core.BlockPos;
@@ -24,6 +28,7 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.LeavesBlock;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.phys.Vec3;
 
 /**
  * A Wild Routes zone built into the test level (docs/specs/WILD_ROUTES_PLAN.md §4.4; check C2's second half): a small
@@ -31,6 +36,8 @@ import net.minecraft.world.level.block.state.BlockState;
  * {@link BlockPlacer} beside the synthetic Kanto (at its own origin, away from the other build tests), then checked
  * block by block: the trailhead's floor under the route map, walkable floors with room above, persistent leaves in the
  * hedges, barriers over ponds. The log line {@code C2b} records the planning and placing times for the plan's record.
+ * Then WR4's warps (§4.5): the hidden warp into the route map lands a player on the trailhead's x1, standing on its
+ * floor inside the zone's box, and the warp back lands them in town.
  */
 public class ZoneBuildGameTests implements FabricGameTest {
 	/** Far from SyntheticBuildGameTests' origin, so the two builds never meet. */
@@ -76,6 +83,7 @@ public class ZoneBuildGameTests implements FabricGameTest {
 				.thenExecute(() -> {
 					try {
 						verify(helper, plan.zones().get(0), level);
+						warps(helper, plan, level);
 					} finally {
 						placer.release();
 					}
@@ -84,6 +92,22 @@ public class ZoneBuildGameTests implements FabricGameTest {
 							placing[0] / 1_000_000L, placing[2] / 1_000_000L);
 				})
 				.thenSucceed();
+	}
+
+	private static void warps(GameTestHelper helper, WorldPlan plan, ServerLevel level) {
+		WorldIndex index = plan.index();
+		MockPlayers.with(helper, player -> {
+			WarpService.Result in = WarpService.teleport(player, index, new Place("KB_ROUTE_TEST_ZONE", 1, 0, Dir.RIGHT));
+			helper.assertTrue(in.refusal() == null, "the warp in was refused: " + in.refusal());
+			Vec3 x1 = index.toBlock("KB_ROUTE_TEST_ZONE", 1, 0);
+			helper.assertTrue(player.position().distanceTo(x1) < 0.01, "not on x1");
+			helper.assertTrue(index.zoneAt(player.getBlockX(), player.getBlockZ()) != null, "x1 isn't inside the zone's box");
+			BlockPos under = player.blockPosition().below();
+			helper.assertTrue(level.getBlockState(under).isSolidRender(level, under), "nothing to stand on at x1");
+			WarpService.Result back = WarpService.teleport(player, index, new Place("TEST_TOWN", 5, 8, Dir.DOWN));
+			helper.assertTrue(back.refusal() == null && index.zoneAt(player.getBlockX(), player.getBlockZ()) == null,
+					"the warp back didn't leave the zone");
+		});
 	}
 
 	private static void verify(GameTestHelper helper, ZonePlan zone, ServerLevel level) {

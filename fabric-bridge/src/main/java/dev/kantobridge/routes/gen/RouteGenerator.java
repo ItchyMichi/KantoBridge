@@ -329,7 +329,12 @@ public final class RouteGenerator {
 		return new Rect(left, first.y() - (GATE_WIDTH - 2) / 2, GATE_DEPTH, GATE_WIDTH);
 	}
 
-	/** Paints a gate's plaza and door as path and returns it in the layout's coordinates. */
+	/**
+	 * Paints a gate's plaza and door as path and returns it in the layout's coordinates. Where they meet the scenery
+	 * they get a ring of wall, so the maze stays closed, and the cell under the stand is wall too: the route map is two
+	 * cells high, but only its top row (door and stand) is walkable, in the hidden game as well (kb_routes.closedMove),
+	 * so the two players can never part on its lower row.
+	 */
 	private static RouteLayout.Gate gate(Rect plaza, Cell door, Cell stand, int x0, int y0, CellRole[] cells,
 			int width) {
 		int gx = plaza.x() - x0;
@@ -340,7 +345,34 @@ public final class RouteGenerator {
 			}
 		}
 		cells[door.y() * width + door.x()] = CellRole.PATH;
+		cells[(stand.y() + 1) * width + stand.x()] = CellRole.WALL;
+		int left = Math.min(gx, door.x()) - 1;
+		int right = Math.max(gx + plaza.w() - 1, door.x()) + 1;
+		int top = Math.min(gy, door.y()) - 1;
+		int bottom = Math.max(gy + plaza.h() - 1, door.y()) + 1;
+		for (int y = top; y <= bottom; y++) {
+			for (int x = left; x <= right; x++) {
+				if (cells[y * width + x] == CellRole.SCENERY && touchesWalkable(cells, width, x, y)) {
+					cells[y * width + x] = CellRole.WALL;
+				}
+			}
+		}
 		return new RouteLayout.Gate(gx, gy, plaza.w(), plaza.h(), door, stand);
+	}
+
+	/** Whether any of the eight cells around (x, y) is walkable. */
+	private static boolean touchesWalkable(CellRole[] cells, int width, int x, int y) {
+		int height = cells.length / width;
+		for (int dy = -1; dy <= 1; dy++) {
+			for (int dx = -1; dx <= 1; dx++) {
+				int nx = x + dx;
+				int ny = y + dy;
+				if ((dx != 0 || dy != 0) && nx >= 0 && nx < width && ny >= 0 && ny < height && cells[ny * width + nx].walkable()) {
+					return true;
+				}
+			}
+		}
+		return false;
 	}
 
 	private static Cell shift(Cell c, int x0, int y0) {
