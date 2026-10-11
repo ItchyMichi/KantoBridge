@@ -593,7 +593,7 @@ RunPod budget and stop after each job; each phase runs its own tests, the full s
 | WR4 | Moving through the zone | done; warp GameTest passes; check C5 needs a client | 2026-10-11 | 571a68b |
 | WR5 | Trainers and items | done here; the end-to-end session needs your PC | 2026-10-11 | 6d63160, 198600d, 548c2e8 |
 | WR6 | Wild Pokémon | done; checkpoint passed (JUnit 913, GameTests 94, Python and Lua 1,479) | 2026-10-11 | e7252f2 |
-| WR7 | Dungeons | done here; the end-to-end session needs your PC | 2026-10-11 | b49a42c, ef4343e, c274bfa |
+| WR7 | Dungeons | done here; the end-to-end session needs your PC; quick fixes from your updated PMD report (notes below) | 2026-10-11 | b49a42c, ef4343e, c274bfa, 6b58156 |
 | WR8 | Content and play-test | placeholder content in; spot set; checks C5 (a recorded client run) and C6 (real engine) passed on the pod; your play-test and the real content to come | 2026-10-11 | 23e3bbb, 23b6d81, 6523d4e, d8dbf93, 3fa8f5c, e6da2f0 |
 
 ### Wild Routes: WR1 notes
@@ -653,6 +653,59 @@ RunPod budget and stop after each job; each phase runs its own tests, the full s
    ran; the test keeps 4 chunks around the player loaded, as the recorded run's render distance did. And the test
    level's land is plains, whose own Pokémon (Sentret, Seviper) spawned at the zone's edge; a real Kanto world's land
    is `kanto_outdoor` with no Cobblemon spawns of its own, which the test now gives the zone's surroundings too.
+
+### Wild Routes: your updated PMD report (2026-10-11)
+
+Your updated "PMD Red Dungeon Floor Generation — Technical Report", compared step by step with `PmdFloorGenerator` and
+the dungeon code, and measured over 20,000 floors in a scratch copy of the generator. Only your report was used; nothing
+from the decompilation itself was read or copied.
+
+1. **Already as the report says:**
+   - the grid roll, room sizes (odd, at most 3:2) and anchors;
+   - the linking walk, dead-end linking, corridors with one jog on a cell edge, 5% merges and the repair;
+   - extra hallways, rivers and lakes;
+   - the spawn counts and the way spots are picked;
+   - the 10 + 10 retries and the one-room fallback.
+
+   The report's bugs in those parts were already fixed: the dead-end neighbour check, the unset grid, leftover shop and
+   Monster House state, structures in deleted rooms, and the left corridor's target. Our reachability check (four
+   ways, floor only) gives the same answer as the game's own rule, except at an island's moat (below).
+2. **Fixed now** (`6b58156`):
+   - **Monster House:** 8–11 Pokémon (your choice) on free cells within 4 of whoever steps in. It was 6 on random
+     house cells, which could be the player's own.
+   - **No shop rooms** (`PmdParams.standard()` shop chance 0, was 8): nothing filled them, so 8% of floors had an
+     empty room, and those floors could have no Monster House.
+   - **Nothing on the stairs:** an item landed there on 2% of floors.
+   - **Extra hallways stop before row 30**, which the edge wipe clears. A cut tunnel used to force a rebuild on 0.5% of
+     floors; now none do.
+
+   Tests: the floor goldens re-pinned, plus nothing on the stairs, plain floors passing their first check, the house
+   spots, and the GameTest `aMonsterHouseFillsAroundWhoeverStepsIn`. JUnit 34 in the floor and dungeon packages pass,
+   and all 98 GameTests pass.
+
+**To do on your return** (nothing started):
+
+- [ ] **Mart stall**, then shops back on (the shop chance in `PmdParams.standard()`). The report's Kecleon shop
+      section has the room's shape, the trimming and the item block; the stairs already never go in a shop room.
+- [ ] **A real treasure room:** today the last floor has 4 balls next to the exit. The report's embedded fixed rooms
+      show how to set a hand-made room into a random floor: the grid sized so the room fits one cell, the room in a
+      room cell, and the linking walk starting from it. A boss room, or a vault opened with an HM later, works the same
+      way.
+- [ ] **Settings per floor** (the research's dungeon table): every floor uses `PmdParams.standard()` now. For example,
+      more Pokémon and items deeper down, and Monster Houses more often near the bottom.
+- [ ] **More layouts** (the report's fixed-shape layouts): Small or Medium, which use half or three quarters of the
+      width and are quicker to build and walk; Cross; Beetle; Crossroads; Outer Ring; Line.
+- [ ] **Room structures** are off (`structures` 0). Before turning them on:
+  - Islands are always rejected: our check ignores the moat's exception (the `cut` flags are never read), and 0 of
+    6,206 survived. They also lack the report's items and Warp Trap; they could become treasure you reach with Surf.
+  - Checkerboards fail the check 99% of the time, as the report says. Putting water only on tiles whose x and y
+    offsets are both odd would keep every floor tile reachable.
+  - The water maze is missing: a room with both sides odd should get the maze, but ours always gets the plus.
+  - The game lets a Monster House take a room picked for a structure and skips that structure; ours never does.
+  - The doorway pass should turn water next to a corridor back into floor.
+- [ ] **Tunnel turns:** the report says the edge check runs three times; ours runs once. That's harmless now that
+      tunnels stop before row 30.
+- [ ] **Buried items:** the report's items in the rock, as hidden items, if you want them.
 
 ### Wild Routes: WR7 notes
 
