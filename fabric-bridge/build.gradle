@@ -86,6 +86,8 @@ if (kbAutopilot != null && !kbAutopilot.isBlank()) {
 				if (kbAutopilotPort != null && !kbAutopilotPort.isBlank()) {
 					vmArg "-Dkantobridge.port=${kbAutopilotPort.trim()}"
 				}
+				// the caves and woods plan's tour (Autopilot scene "tour"): how many stops it looks round at
+				vmArg "-Dkantobridge.autopilot.stops=${providers.gradleProperty('kb.autopilotStops').getOrElse('2')}"
 				programArgs "--width", "1280", "--height", "720"
 			}
 		}

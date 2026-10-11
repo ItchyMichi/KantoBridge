@@ -1,7 +1,10 @@
 """Records a showcase of the real game in the dev client (Wild Routes check C5): Viridian's clearing, the warp and a
-walk through the zone, played by the client's Autopilot against the Gen1Recomp test instance.
+walk through the zone, played by the client's Autopilot against the Gen1Recomp test instance. With --scene tour (the
+caves and woods plan's CW5): a look round at each stop of drivers/kb_tour.lua (Mt. Moon, then Viridian Forest), each
+recorded into its own file and joined into --record.
 
     python tools/e2e/showcase.py --record /workspace/videos/wild-zone.mp4 [--world Kanto] [--port 27208]
+    python tools/e2e/showcase.py --scene tour --record /workspace/videos/caves-woods.mp4 --world KantoCW
 
 Linux with an X server (Xvfb on the pod): DISPLAY is Minecraft's screen; --game-display gives Gen1Recomp its own, so
 its window never covers Minecraft's in the recording.
@@ -94,8 +97,25 @@ def show_client(line: str) -> str | None:
     return None
 
 
+def join_parts(record: Path, stops: int) -> bool:
+    """Joins the tour's per-stop recordings (record-stop<n>.mp4) into record with ffmpeg's concat demuxer."""
+    parts = [record.with_name(f"{record.stem}-stop{n}{record.suffix}") for n in range(1, stops + 1)]
+    parts = [p for p in parts if p.is_file()]
+    if not parts:
+        return False
+    listing = record.with_name(record.stem + "-parts.txt")
+    listing.write_text("".join(f"file '{p.name}'\n" for p in parts), encoding="utf-8")
+    code = subprocess.call(["ffmpeg", "-y", "-loglevel", "error", "-f", "concat", "-safe", "0", "-i", str(listing), "-c", "copy",
+                            str(record)])
+    print(f"joined {len(parts)} parts: exit {code}", flush=True)
+    return code == 0
+
+
 def main(argv=None) -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
+    parser.add_argument("--scene", choices=("wild_zone", "tour"), default="wild_zone", help="the autopilot's scene")
+    parser.add_argument("--stops", default="MT_MOON_1F,VIRIDIAN_FOREST", help="with --scene tour: the stops' map symbols")
+    parser.add_argument("--stop-seconds", type=int, default=45, help="with --scene tour: each stop's time after the bind")
     parser.add_argument("--record", help="the .mp4 to write (default: no recording)")
     parser.add_argument("--world", help="a world folder in local/minecraft/saves to open instead of creating one")
     parser.add_argument("--port", type=int, default=27208, help="gen1-bridge's port for this run")
@@ -109,20 +129,26 @@ def main(argv=None) -> int:
     if not pf.ok and not args.game:
         print("pre-flight not done: " + "; ".join(pf.reasons), file=sys.stderr)
         return 2
-    f = spot()
-    if f.get("x") is None:
-        print("routes.json has no spot for the zone", file=sys.stderr)
-        return 2
-    env = {"KB_TEST_PORT": str(args.port), "KB_SPOT_MAP": f["map"], "KB_SPOT_X": str(f["x"]), "KB_SPOT_Y": str(f["y"]),
-           "KB_SPOT_FACING": f["facing"], "KB_PACE": "60", "KB_DATASET_MEMO": "30",
-           "KB_DRIVER_SECONDS": str(args.timeout + args.export_timeout)}
+    tour = args.scene == "tour"
+    if tour:
+        env = {"KB_TEST_PORT": str(args.port), "KB_TOUR_STOPS": args.stops, "KB_TOUR_SECONDS": str(args.stop_seconds),
+               "KB_PACE": "60", "KB_DATASET_MEMO": "30", "KB_DRIVER_SECONDS": str(args.timeout + args.export_timeout)}
+    else:
+        f = spot()
+        if f.get("x") is None:
+            print("routes.json has no spot for the zone", file=sys.stderr)
+            return 2
+        env = {"KB_TEST_PORT": str(args.port), "KB_SPOT_MAP": f["map"], "KB_SPOT_X": str(f["x"]), "KB_SPOT_Y": str(f["y"]),
+               "KB_SPOT_FACING": f["facing"], "KB_PACE": "60", "KB_DATASET_MEMO": "30",
+               "KB_DRIVER_SECONDS": str(args.timeout + args.export_timeout)}
     if args.game_display:
         env["DISPLAY"] = args.game_display
     AUTOPILOT_LOG.unlink(missing_ok=True)
     started = time.monotonic()
-    with launch("kb_wild.lua", game=args.game, extra_env=env, echo=False) as game:
-        ready = game.wait_marker("KB_WILD_READY", timeout=240)
-        print(ready or "Gen1Recomp: no KB_WILD_READY " + json.dumps(game.result.summary()), flush=True)
+    driver, marker = ("kb_tour.lua", "KB_TOUR_STOP") if tour else ("kb_wild.lua", "KB_WILD_READY")
+    with launch(driver, game=args.game, extra_env=env, echo=False) as game:
+        ready = game.wait_marker(marker, timeout=240)
+        print(ready or f"Gen1Recomp: no {marker} " + json.dumps(game.result.summary()), flush=True)
         if ready is None:
             return 1
         installed = [line for line in game.result.lines if "routes.installed" in line or "routes.skipped" in line]
@@ -135,7 +161,9 @@ def main(argv=None) -> int:
             print(f"export warmed in {time.monotonic() - t0:.0f} s", flush=True)
             if code != 0:
                 return 1
-        client = ["runClient", "-Pkb.autopilot=wild_zone", "-Pkb.autopilotQuit=true", f"-Pkb.autopilotPort={args.port}"]
+        client = ["runClient", f"-Pkb.autopilot={args.scene}", "-Pkb.autopilotQuit=true", f"-Pkb.autopilotPort={args.port}"]
+        if tour:
+            client.append(f"-Pkb.autopilotStops={len(args.stops.split(','))}")
         if args.record:
             client.append(f"-Pkb.autopilotRecord={args.record}")
         if world_exists:
@@ -146,6 +174,8 @@ def main(argv=None) -> int:
     print("Gen1Recomp:", json.dumps({k: v for k, v in result.summary().items() if k != "markers"}), flush=True)
     steps = AUTOPILOT_LOG.read_text(encoding="utf-8").splitlines() if AUTOPILOT_LOG.is_file() else []
     done = any(line.endswith("autopilot: done") for line in steps)
+    if tour and args.record:
+        done &= join_parts(Path(args.record), len(args.stops.split(",")))
     print(f"showcase: {'done' if done else 'not done'} in {time.monotonic() - started:.0f} s, {len(steps)} autopilot steps")
     return 0 if done and code == 0 else 1
 

@@ -58,10 +58,20 @@ import org.jetbrains.annotations.Nullable;
  * </ol>
  * Every step is logged ({@code autopilot: <event>} with map ids, cells, counts and times) and appended to the file
  * {@code kantobridge.autopilot.log} names. Nothing runs without the property. Client thread only.
+ *
+ * <p>Scene {@code tour} (the caves and woods plan's CW5 video, docs/specs/CAVES_AND_WOODS_PLAN.md §6): a test driver
+ * (tools/e2e/drivers/kb_tour.lua) warps the hidden player from stop to stop; at each one the autopilot looks round in
+ * first person, tilted up at the roof or the canopy, recording each look round into its own file (the record file
+ * with {@code -stop<n>}; {@code kantobridge.autopilot.stops}, default 2).
  */
 public final class Autopilot {
 	static final String PROPERTY = "kantobridge.autopilot";
 	static final String SCENE_WILD_ZONE = "wild_zone";
+	static final String SCENE_TOUR = "tour";
+	/** A tour's look round at a stop, in seconds, and its tilt: looking up by this much, swaying by that much. */
+	static final float TOUR_PAN_SECONDS = 16f;
+	static final float TOUR_PITCH = -22f;
+	static final float TOUR_SWAY = 16f;
 	static final int WALK_STEPS = 220;
 	static final double HALF_WIDTH = 0.35;
 	static final float TURN_PER_TICK = 6f;
@@ -83,7 +93,10 @@ public final class Autopilot {
 		OUTRO,
 		STOP,
 		DONE,
-		FAILED
+		FAILED,
+		TOUR_SETTLE,
+		TOUR_PAN,
+		TOUR_WAIT
 	}
 
 	private final Minecraft minecraft;
@@ -91,6 +104,9 @@ public final class Autopilot {
 	private final @Nullable Path record;
 	private final @Nullable Path log;
 	private final boolean quit;
+	private final boolean tour;
+	private final int stops;
+	private int stopsSeen;
 
 	private Phase phase = Phase.TITLE;
 	private int phaseTicks;
@@ -107,17 +123,21 @@ public final class Autopilot {
 	private int stuckTicks;
 	private int replans;
 	private @Nullable Process ffmpeg;
+	private @Nullable Path recording;
 	private long recordStartNanos;
 	private int fpsSamples;
 	private long fpsTotal;
 	private int fpsMin = Integer.MAX_VALUE;
 
-	private Autopilot(Minecraft minecraft, @Nullable String world, @Nullable Path record, @Nullable Path log, boolean quit) {
+	private Autopilot(Minecraft minecraft, @Nullable String world, @Nullable Path record, @Nullable Path log, boolean quit, boolean tour,
+			int stops) {
 		this.minecraft = minecraft;
 		this.world = world;
 		this.record = record;
 		this.log = log;
 		this.quit = quit;
+		this.tour = tour;
+		this.stops = stops;
 	}
 
 	/** Call once from client init; does nothing without {@value #PROPERTY}. */
@@ -126,7 +146,7 @@ public final class Autopilot {
 		if (scene == null || scene.isBlank()) {
 			return;
 		}
-		if (!SCENE_WILD_ZONE.equals(scene)) {
+		if (!SCENE_WILD_ZONE.equals(scene) && !SCENE_TOUR.equals(scene)) {
 			KantoBridge.LOGGER.warn("autopilot: unknown scene");
 			return;
 		}
@@ -135,7 +155,7 @@ public final class Autopilot {
 		String log = System.getProperty(PROPERTY + ".log");
 		Autopilot pilot = new Autopilot(Minecraft.getInstance(), world == null || world.isBlank() ? null : world,
 				record == null || record.isBlank() ? null : Path.of(record), log == null || log.isBlank() ? null : Path.of(log),
-				Boolean.getBoolean(PROPERTY + ".quit"));
+				Boolean.getBoolean(PROPERTY + ".quit"), SCENE_TOUR.equals(scene), Math.max(1, Integer.getInteger(PROPERTY + ".stops", 2)));
 		ClientTickEvents.END_CLIENT_TICK.register(minecraft -> pilot.tick());
 		pilot.mark("armed scene=" + scene + " record=" + (pilot.record != null));
 	}
@@ -161,6 +181,9 @@ public final class Autopilot {
 				case PAN -> this.pan();
 				case OUTRO -> this.outro();
 				case STOP -> this.stop();
+				case TOUR_SETTLE -> this.tourSettle();
+				case TOUR_PAN -> this.tourPan();
+				case TOUR_WAIT -> this.tourWait();
 				case DONE, FAILED -> {
 				}
 			}
@@ -225,7 +248,7 @@ public final class Autopilot {
 			this.startMap = state.map();
 			this.walkYaw = yawOf(state.facing());
 			this.mark("linked map=" + state.map() + " x=" + state.x() + " y=" + state.y() + " facing=" + state.facing());
-			this.next(Phase.SETTLE);
+			this.next(this.tour ? Phase.TOUR_SETTLE : Phase.SETTLE);
 		} else {
 			this.limit(5 * 60, "link");
 		}
@@ -394,6 +417,79 @@ public final class Autopilot {
 		}
 	}
 
+	// ---- the tour ----
+
+	/** First person, no HUD, facing the stop's way, a few seconds for the view to load; the recording starts at stop one. */
+	private void tourSettle() {
+		LocalPlayer player = this.minecraft.player;
+		if (player == null) {
+			this.fail("no_player");
+			return;
+		}
+		if (this.phaseTicks == 1) {
+			this.minecraft.options.setCameraType(CameraType.FIRST_PERSON);
+			this.minecraft.options.hideGui = true;
+		}
+		this.look(player, this.walkYaw, TOUR_PITCH);
+		this.minecraft.getToasts().clear();
+		if (this.phaseTicks >= 6 * TICKS) {
+			this.startRecording(this.part(this.stopsSeen + 1));
+			this.panFrom = this.walkYaw;
+			this.next(Phase.TOUR_PAN);
+		}
+	}
+
+	/** Once round, tilted up and swaying, so the roof (or the canopy) and the ground both show. */
+	private void tourPan() {
+		LocalPlayer player = this.minecraft.player;
+		ClientBridgeState state = this.state();
+		if (player == null || state == null) {
+			this.fail("no_player");
+			return;
+		}
+		float t = Math.min(1f, this.phaseTicks / (TOUR_PAN_SECONDS * TICKS));
+		float sway = (float) Math.sin(2 * Math.PI * t) * TOUR_SWAY;
+		this.look(player, this.panFrom + 360f * smoothstep(t), TOUR_PITCH + sway);
+		if (t >= 1f) {
+			this.stopsSeen++;
+			this.stopRecording();
+			this.mark("toured stop=" + this.stopsSeen + " map=" + state.map());
+			this.startMap = state.map();
+			this.next(this.stopsSeen >= this.stops ? Phase.OUTRO : Phase.TOUR_WAIT);
+		}
+	}
+
+	/** Stop {@code n}'s recording: the record file with {@code -stop<n>} before its extension (null without a file). */
+	private @Nullable Path part(int n) {
+		if (this.record == null) {
+			return null;
+		}
+		String name = this.record.getFileName().toString();
+		int dot = name.lastIndexOf('.');
+		return this.record.resolveSibling((dot < 0 ? name : name.substring(0, dot)) + "-stop" + n + (dot < 0 ? "" : name.substring(dot)));
+	}
+
+	/** Until the driver's next warp has put the player on a new map's cell, linked and free, for two seconds. */
+	private void tourWait() {
+		LocalPlayer player = this.minecraft.player;
+		WorldIndex index = ClientWorldIndex.current();
+		ClientBridgeState state = this.state();
+		if (player != null) {
+			this.look(player, player.getYRot(), TOUR_PITCH);
+		}
+		boolean ok = player != null && index != null && state != null && state.ingame() && state.map() != null
+				&& !state.map().equals(this.startMap) && !InputLock.locked() && this.minecraft.screen == null
+				&& this.onHiddenCell(player, index, state);
+		this.stableTicks = ok ? this.stableTicks + 1 : 0;
+		if (this.stableTicks >= 2 * TICKS) {
+			this.walkYaw = yawOf(state.facing());
+			this.mark("next map=" + state.map() + " x=" + state.x() + " y=" + state.y() + " facing=" + state.facing());
+			this.next(Phase.TOUR_SETTLE);
+		} else {
+			this.limit(3 * 60, "tour_wait");
+		}
+	}
+
 	private void outro() {
 		if (this.phaseTicks >= 2 * TICKS) {
 			this.next(Phase.STOP);
@@ -529,8 +625,14 @@ public final class Autopilot {
 	}
 
 	private void startRecording() {
+		this.startRecording(this.record);
+	}
+
+	/** Records the window into {@code file} (null: times the scene without a file). */
+	private void startRecording(@Nullable Path file) {
 		this.recordStartNanos = System.nanoTime();
-		if (this.record == null) {
+		this.recording = file;
+		if (file == null) {
 			this.mark("record_start file=false");
 			return;
 		}
@@ -540,10 +642,10 @@ public final class Autopilot {
 		List<String> command = new ArrayList<>(List.of(System.getProperty(PROPERTY + ".ffmpeg", "ffmpeg"), "-y", "-loglevel", "error",
 				"-f", "x11grab", "-draw_mouse", "0", "-framerate", "30", "-video_size", w + "x" + h, "-i",
 				(display == null ? ":0" : display) + "+0,0", "-c:v", "libx264", "-preset", "veryfast", "-crf", "21", "-pix_fmt",
-				"yuv420p", "-movflags", "+faststart", this.record.toString()));
+				"yuv420p", "-movflags", "+faststart", file.toString()));
 		try {
-			Files.createDirectories(this.record.toAbsolutePath().getParent());
-			Path ffLog = this.record.resolveSibling(this.record.getFileName() + ".ffmpeg.log");
+			Files.createDirectories(file.toAbsolutePath().getParent());
+			Path ffLog = file.resolveSibling(file.getFileName() + ".ffmpeg.log");
 			this.ffmpeg = new ProcessBuilder(command).redirectErrorStream(true).redirectOutput(ffLog.toFile()).start();
 			this.mark("record_start size=" + w + "x" + h);
 		} catch (IOException e) {
@@ -581,7 +683,7 @@ public final class Autopilot {
 		}
 		long bytes = -1;
 		try {
-			bytes = Files.size(this.record);
+			bytes = this.recording == null ? -1 : Files.size(this.recording);
 		} catch (IOException ignored) {
 			// reported as -1
 		}
