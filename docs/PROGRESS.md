@@ -594,7 +594,7 @@ RunPod budget and stop after each job; each phase runs its own tests, the full s
 | WR5 | Trainers and items | done here; the end-to-end session needs your PC | 2026-10-11 | 6d63160, 198600d, 548c2e8 |
 | WR6 | Wild Pokémon | done; checkpoint passed (JUnit 913, GameTests 94, Python and Lua 1,479) | 2026-10-11 | e7252f2 |
 | WR7 | Dungeons | done here; the end-to-end session needs your PC | 2026-10-11 | b49a42c, ef4343e, c274bfa |
-| WR8 | Content and play-test | | | |
+| WR8 | Content and play-test | placeholder content in; spot set; checks C5 (a recorded client run) and C6 (real engine) passed on the pod; your play-test and the real content to come | 2026-10-11 | 23e3bbb, 23b6d81, 6523d4e, d8dbf93, 3fa8f5c, e6da2f0 |
 
 ### Wild Routes: WR1 notes
 
@@ -616,6 +616,33 @@ RunPod budget and stop after each job; each phase runs its own tests, the full s
    7–9 from 60).
 5. **Where it ran:** the pod had no host capacity (six tries), so the tests ran in a throwaway JDK 21 container on the
    server with JUnit 5.11. The Gradle run is part of the WR2 checkpoint.
+
+### Wild Routes: WR8 notes (so far)
+
+1. **The spot** (`23e3bbb`), at your request "the bottom right of Viridian": a driver, `kb_wildspot.lua`, ran
+   gen1-bridge's own exit planner over the town on the real engine and listed the spots the doors reach on foot,
+   nearest the corner first. `routes.json` now has `VIRIDIAN_CITY` (35, 29), facing right, 2 blocks deep: a path east
+   to the map's edge. The zone is on from now on; a world made before today has none.
+2. **Check C6** (`23b6d81`, `tools/e2e/test_wild_routes.py`, on the pod's test install): `routes.installed` with five
+   classes; the clearing's last cell warps onto the route map's x1; its lower row is closed; a ball's item through
+   give_item once (`taken` the second time), a dungeon's item every time; a zone trainer's battle comes as `scripted`
+   (a script-started trainer, as PROTOCOL.md says) with `KB_OPP_YOUNGSTER`, won and counted; stepping onto A goes
+   home facing the town. Not checked: saving and loading inside the route map.
+3. **Bug found and fixed** (`6523d4e`): a world built with a zone sent no shapes. `WorldPlan.withZones` kept the shape
+   map bound to the index without the zones, the server refused it, and every client drew plain cubes. The first
+   real-game world showed it; the shape map now names the zoned index (ZonePlanTest checks it; GameTests 97 pass).
+4. **Check C5** (`3fa8f5c`, `e6da2f0`): a dev-only client autopilot (`-Pkb.autopilot=wild_zone`) and
+   `tools/e2e/showcase.py` recorded the real game on the pod under Xvfb with software GL: Create Kanto world (export,
+   pack, build: about 4.5 minutes), the player placed on the spot, the walk into the clearing, the fade and the
+   trailhead, then a 120-210 block walk along the lanes and a camera turn. 16-21 fps. Four takes; the last (40 s) is
+   the one to watch. The videos stay on the RunPod volume (`/workspace/videos/kanto-bridge-wild-zone-*.mp4`).
+5. **The pod's network disk:** gen1-bridge's first export took a quarter of an hour there, because the engine checks
+   its import cache (re-reading every decoded module) before each record a dataset view hands out. The test driver
+   lets a passed check stand 30 s (`KB_DATASET_MEMO`): 4 s. Only the test driver does this; gen1-bridge is unchanged.
+6. **Placeholder content** (`d8dbf93`): six lines of our own per trainer class plus six defaults; the name and item
+   tiers stay. Special areas: none yet.
+7. **Pods:** kb-dev's host stayed full, so `kb-dev2` (cpu5c x16, $0.56/hr, same volume) was made with your OK; about
+   75 minutes in all, stopped. Since 2026-10-11 you allow creating and starting pods as needed.
 
 ### Wild Routes: WR7 notes
 
