@@ -21,6 +21,11 @@ public final class BlockCode {
 	public static final int KIND_SHAPE = 7;
 	/** Decoration: value 0 {@code decor}, 1 {@code decor_leaves} (V3). */
 	public static final int KIND_DECOR = 8;
+	/**
+	 * A vanilla block of a Wild Routes zone (docs/specs/WILD_ROUTES_PLAN.md §4.4): the value is a
+	 * {@link dev.kantobridge.builder.zone.ZoneBlock}'s ordinal.
+	 */
+	public static final int KIND_VANILLA = 9;
 
 	private static final int SHIFT = 24;
 	private static final int VALUE_MASK = (1 << SHIFT) - 1;
@@ -46,6 +51,11 @@ public final class BlockCode {
 	/** A decoration block: foliage or not. */
 	public static int decor(boolean leaves) {
 		return (KIND_DECOR << SHIFT) | (leaves ? 1 : 0);
+	}
+
+	/** A zone's vanilla block. */
+	public static int vanilla(dev.kantobridge.builder.zone.ZoneBlock block) {
+		return (KIND_VANILLA << SHIFT) | block.ordinal();
 	}
 
 	/** A ledge collider; {@code dir} is the Gen 1 hop direction: 0 down, 1 up, 2 left, 3 right. */

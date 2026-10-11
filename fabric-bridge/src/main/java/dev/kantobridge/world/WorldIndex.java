@@ -21,7 +21,8 @@ import org.jetbrains.annotations.Nullable;
 /**
  * What the world builder writes to {@code <world>/kantobridge/world_index.json} and the server sends to clients on
  * join (protocol/world/world_index.schema.json): the scale, every map's placement, the slot-map hash, the
- * story-cell table and the habitat blocks. Clients turn block positions into cells and back with it.
+ * story-cell table, the habitat blocks and (Wild Routes) the zones. Clients turn block positions into cells and back
+ * with it.
  *
  * <p>The JSON is canonical (sorted keys, compact), so the same index always has the same text and hash.
  */
@@ -29,7 +30,10 @@ public final class WorldIndex {
 	public static final int VERSION = 1;
 
 	private static final Set<String> ROOT_FIELDS = Set.of("version", "game", "exportHash", "scale", "maps", "slotMapHash",
-			"storyCells", "habitats");
+			"storyCells", "habitats", "zones");
+	private static final Set<String> ZONE_FIELDS = Set.of("id", "routeMap", "theme", "x", "y", "z", "w", "d", "biome");
+	private static final java.util.regex.Pattern ZONE_ID = java.util.regex.Pattern.compile("^[a-z][a-z0-9_]{0,31}$");
+	private static final Set<String> THEMES = Set.of("forest");
 	private static final Set<String> SCALE_FIELDS = Set.of("cellBlocks", "surfaceY", "layerStep");
 	private static final Set<String> MAP_FIELDS = Set.of("x", "y", "z", "w", "h", "layer", "kind", "palette", "biome", "dark",
 			"parent");
@@ -43,6 +47,34 @@ public final class WorldIndex {
 	public record Habitat(String map, int x, int y, int z, String pool) {
 	}
 
+	/**
+	 * One Wild Routes zone (docs/specs/WILD_ROUTES_PLAN.md §4.4): the box of blocks it owns (its areas, gates and the
+	 * land around them), the feet level of its walkable floor, its route map (a {@link MapPlacement.Kind#ROUTE}
+	 * placement at the trailhead) and its biome. Inside the box, the client sends no steps and the drift rule is off.
+	 *
+	 * @param x the box's north-west block X
+	 * @param z the box's north-west block Z
+	 * @param w the box's width in blocks (X)
+	 * @param d the box's depth in blocks (Z)
+	 * @param y the feet level of the zone's walkable floor
+	 */
+	public record Zone(String id, String routeMap, String theme, int x, int y, int z, int w, int d, String biome) {
+		public Zone {
+			Objects.requireNonNull(id, "id");
+			Objects.requireNonNull(routeMap, "routeMap");
+			Objects.requireNonNull(theme, "theme");
+			Objects.requireNonNull(biome, "biome");
+			if (w < 1 || d < 1) {
+				throw new IllegalArgumentException("zone size must be positive");
+			}
+		}
+
+		/** True when block column (bx, bz) lies inside the zone's box. */
+		public boolean containsColumn(int bx, int bz) {
+			return bx >= this.x && bx < this.x + this.w && bz >= this.z && bz < this.z + this.d;
+		}
+	}
+
 	private final String game;
 	private final String exportHash;
 	private final int surfaceY;
@@ -51,16 +83,22 @@ public final class WorldIndex {
 	private final String slotMapHash;
 	private final StoryCellTable storyCells;
 	private final List<Habitat> habitats;
+	private final List<Zone> zones;
 	private final String json;
 	private final String hash;
 
 	public WorldIndex(String game, String exportHash, Collection<MapPlacement> maps, String slotMapHash, StoryCellTable storyCells,
 			List<Habitat> habitats) {
-		this(game, exportHash, Scale.SURFACE_Y, Scale.LAYER_STEP, maps, slotMapHash, storyCells, habitats);
+		this(game, exportHash, Scale.SURFACE_Y, Scale.LAYER_STEP, maps, slotMapHash, storyCells, habitats, List.of());
+	}
+
+	public WorldIndex(String game, String exportHash, Collection<MapPlacement> maps, String slotMapHash, StoryCellTable storyCells,
+			List<Habitat> habitats, List<Zone> zones) {
+		this(game, exportHash, Scale.SURFACE_Y, Scale.LAYER_STEP, maps, slotMapHash, storyCells, habitats, zones);
 	}
 
 	private WorldIndex(String game, String exportHash, int surfaceY, int layerStep, Collection<MapPlacement> maps, String slotMapHash,
-			StoryCellTable storyCells, List<Habitat> habitats) {
+			StoryCellTable storyCells, List<Habitat> habitats, List<Zone> zones) {
 		if (!GAMES.contains(game)) {
 			throw new IllegalArgumentException("unknown game");
 		}
@@ -81,6 +119,19 @@ public final class WorldIndex {
 		this.slotMapHash = slotMapHash;
 		this.storyCells = Objects.requireNonNull(storyCells, "storyCells");
 		this.habitats = List.copyOf(habitats);
+		List<Zone> sortedZones = new ArrayList<>(zones);
+		sortedZones.sort(java.util.Comparator.comparing(Zone::id));
+		for (int i = 0; i < sortedZones.size(); i++) {
+			Zone zone = sortedZones.get(i);
+			if (i > 0 && sortedZones.get(i - 1).id().equals(zone.id())) {
+				throw new IllegalArgumentException("duplicate zone");
+			}
+			MapPlacement routeMap = byId.get(zone.routeMap());
+			if (routeMap == null || routeMap.kind() != MapPlacement.Kind.ROUTE) {
+				throw new IllegalArgumentException("a zone's route map must be a route placement");
+			}
+		}
+		this.zones = List.copyOf(sortedZones);
 		this.json = ProtoJson.write(this.toJsonObject());
 		this.hash = Hashes.sha256(this.json);
 	}
@@ -120,6 +171,21 @@ public final class WorldIndex {
 
 	public List<Habitat> habitats() {
 		return this.habitats;
+	}
+
+	/** Wild Routes zones, sorted by id (empty in a world built without any). */
+	public List<Zone> zones() {
+		return this.zones;
+	}
+
+	/** The zone whose box holds block column (bx, bz), or null. */
+	public @Nullable Zone zoneAt(int bx, int bz) {
+		for (Zone zone : this.zones) {
+			if (zone.containsColumn(bx, bz)) {
+				return zone;
+			}
+		}
+		return null;
 	}
 
 	/** Canonical JSON text. */
@@ -216,6 +282,24 @@ public final class WorldIndex {
 			habitats.add(item);
 		}
 		root.add("habitats", habitats);
+		// Wild Routes: written only when there are zones, so a world without any keeps its bytes (and goldens)
+		if (!this.zones.isEmpty()) {
+			JsonArray zones = new JsonArray();
+			for (Zone zone : this.zones) {
+				JsonObject item = new JsonObject();
+				item.addProperty("id", zone.id());
+				item.addProperty("routeMap", zone.routeMap());
+				item.addProperty("theme", zone.theme());
+				item.addProperty("x", zone.x());
+				item.addProperty("y", zone.y());
+				item.addProperty("z", zone.z());
+				item.addProperty("w", zone.w());
+				item.addProperty("d", zone.d());
+				item.addProperty("biome", zone.biome());
+				zones.add(item);
+			}
+			root.add("zones", zones);
+		}
 		return root;
 	}
 
@@ -266,6 +350,23 @@ public final class WorldIndex {
 			habitats.add(new Habitat(item.string("map", DataReader.MAP_ID), item.integer("x"), item.integer("y"), item.integer("z"),
 					item.string("pool", DataReader.RESOURCE_ID)));
 		}
-		return new WorldIndex(game, exportHash, surfaceY, layerStep, maps, slotMapHash, storyCells, habitats);
+		List<Zone> zones = new ArrayList<>();
+		if (root.has("zones")) {
+			for (DataReader item : DataReader.objects(root.array("zones"), "/zones")) {
+				item.allowOnly(ZONE_FIELDS);
+				String theme = item.string("theme");
+				if (!THEMES.contains(theme)) {
+					throw new DataException(item.path("theme"), "unknown theme");
+				}
+				zones.add(new Zone(item.string("id", ZONE_ID), item.string("routeMap", DataReader.MAP_ID), theme, item.integer("x"),
+						item.integer("y"), item.integer("z"), item.integer("w", 1, Integer.MAX_VALUE), item.integer("d", 1, Integer.MAX_VALUE),
+						item.string("biome", DataReader.RESOURCE_ID)));
+			}
+		}
+		try {
+			return new WorldIndex(game, exportHash, surfaceY, layerStep, maps, slotMapHash, storyCells, habitats, zones);
+		} catch (IllegalArgumentException e) {
+			throw new DataException("/zones", e.getMessage());
+		}
 	}
 }

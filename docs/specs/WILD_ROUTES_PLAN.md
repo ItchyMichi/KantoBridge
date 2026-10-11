@@ -238,18 +238,20 @@ The prototype does all of this (Appendix B). WR1 writes it in Java.
   games' worlds. The wild and dungeon zones are at least 3,000 blocks from Kanto's box and from each other.
 - **Slots:** the wild zone is cut into slots of 640×640 blocks (40×40 chunks), one zone or route per slot.
 - **Terrain (R4)** comes from Minecraft's own overworld noise for a seed, sampled without generating any chunks: the
-  height and biome of each column, from a `RandomState` (research §6.1).
+  height of a column, from a `RandomState` (research §6.1). It costs about a millisecond a column, so it's sampled every
+  16 blocks, blended smoothly, with a little small-scale relief of our own.
   - In v1, walkable cells are flat at Kanto's walking level (feet at Y 64), so today's spawn rule and lines of sight
     work unchanged.
   - Walls and the land around the maze keep the noise's hills.
 - **The forest theme:**
-  - The maze's walls are rows of tree props, at least 2 blocks tall. Lanes are forest floor and path; tall grass and
-    flowers in the clearings; ponds.
-  - Around the maze, vanilla trees (oak, birch, dark oak), grass and flowers are placed from code, so the maze sits
-    inside a forest. Never on a lane.
-  - A forest biome of our own sets the colours and the music.
-- **Props:** maze walls, rocks, balls, signs and dungeon entrances are prop blocks that carry their kind in their block
-  state, and the client draws each one by kind (research §6.2).
+  - The maze's walls are hedges of vanilla leaves, 3–5 blocks tall, with a trunk in some of them (D8). Lanes are grass
+    and dirt path; tall grass and flowers in the clearings; ponds behind an invisible barrier, as Kanto's water is
+    until Surf.
+  - Around the maze, trees of vanilla blocks (oak, birch, dark oak), grass and ferns, so the maze sits inside a forest.
+    Never on a lane.
+  - A forest biome of our own sets the colours.
+- **Props:** rocks, balls, signs and dungeon entrances become prop blocks that carry their kind in their block state,
+  and the client draws each one by kind (research §6.2).
   - They use built-in models we make.
   - Texture packs can replace them through `prop:` keys.
 - **The trailhead** is a small clearing, never turned. Its two mapped cells match the route map's `[A][x1]`. The
@@ -258,7 +260,9 @@ The prototype does all of this (Appendix B). WR1 writes it in Java.
 - **A build stage** runs after Kanto's. It generates the zone, places it and writes it.
   - The WorldIndex gains the zone's box and the route map's piece.
   - The build report gains counts and times per zone.
-  - My estimate is 5–10 s per zone at today's placing speed. Check C2 measures it.
+  - Measured (check C2, first half): planning a zone takes about 1.5 s, and a zone is about 2.7 million blocks, so
+    placing it takes about a minute at today's speed. The other half of C2 (placing in a real world, the cost per tick)
+    waits for a pod.
 
 ### 4.5 Moving through it
 
@@ -466,7 +470,8 @@ The research's C1 becomes WR1. Its C4 becomes part of WR2's Lua tests, minus the
 - **Effects that count steps** (poison damage outside battle, Repel, the daycare's EXP) don't tick in zones, because
   no steps reach the hidden game there.
 - **Balance:** rematches pay prize money each visit, and balls pay once per player. Dungeon rewards are capped (§4.8).
-- **Build time and disk:** 5–10 s and about 2–4 MB per zone. Both are estimates; C2 measures them.
+- **Build time and disk:** about a minute of placing per zone at today's speed (measured), and an estimated 2–4 MB.
+  A faster way to place a zone's blocks can come later.
 - **Licences:** the generators are re-implemented from your notes, with our own tables. No DWM or PMD code, assets or
   names. Pools, sprites and trainer classes come from each player's own export and stay local.
 
@@ -492,6 +497,7 @@ Your answers left a few small things open. I went with these; change any.
 | D5 | The dungeon's floors at higher levels | One more at each end per 10 levels above 20, up to 7–9 |
 | D6 | The dungeon's Pokémon | A level stronger every second floor |
 | D7 | Full test runs | After WR2, WR4, WR6 and WR8 |
+| D8 | The forest's walls and trees | Vanilla leaves and logs: the Minecraft look, solid to walk into, no client work. Voxel props stay for rocks, balls, signs and the dungeon entrance |
 
 ## Appendix A: references
 

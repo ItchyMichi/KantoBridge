@@ -3,6 +3,7 @@ package dev.kantobridge.builder.place;
 import dev.kantobridge.block.KbBlocks;
 import dev.kantobridge.block.LedgeColliderBlock;
 import dev.kantobridge.builder.plan.BlockCode;
+import dev.kantobridge.builder.zone.ZoneBlock;
 import dev.kantobridge.world.SlotMap;
 import net.minecraft.core.Direction;
 import net.minecraft.world.level.block.Blocks;
@@ -14,6 +15,7 @@ public final class CodeStates {
 	private final BlockState[] full = new BlockState[SlotMap.CAPACITY];
 	private final BlockState[] half = new BlockState[SlotMap.CAPACITY];
 	private final BlockState[] shape = new BlockState[SlotMap.CAPACITY];
+	private final BlockState[] vanilla = new BlockState[ZoneBlock.values().length];
 
 	public BlockState state(int code) {
 		int value = BlockCode.value(code);
@@ -26,8 +28,22 @@ public final class CodeStates {
 			case BlockCode.KIND_LIGHT -> Blocks.LIGHT.defaultBlockState().setValue(LightBlock.LEVEL, Math.min(15, value));
 			case BlockCode.KIND_STORY -> KbBlocks.STORY_CELL.defaultBlockState();
 			case BlockCode.KIND_STORY_TILE -> KbBlocks.STORY_TILE.defaultBlockState();
+			case BlockCode.KIND_VANILLA -> this.vanilla(value);
 			default -> Blocks.AIR.defaultBlockState();
 		};
+	}
+
+	/** A Wild Routes zone's vanilla block (leaves placed persistent, so they never decay). */
+	private BlockState vanilla(int ordinal) {
+		if (ordinal < 0 || ordinal >= this.vanilla.length) {
+			return Blocks.AIR.defaultBlockState();
+		}
+		BlockState state = this.vanilla[ordinal];
+		if (state == null) {
+			state = ZoneBlock.values()[ordinal].state();
+			this.vanilla[ordinal] = state;
+		}
+		return state;
 	}
 
 	private BlockState tile(BlockState[] cache, boolean fullShape, int index) {

@@ -1,6 +1,7 @@
 """The synthetic export (fake_gen1.synth) matches the export schemas and the engine's cell rules."""
 import base64
 import hashlib
+import json
 import struct
 
 import pytest
@@ -82,6 +83,16 @@ def test_world_index_schema_accepts_a_synthetic_index():
         "habitats": [{"map": "TEST_TOWN", "x": 31, "y": 61, "z": 11, "pool": "kantobridge:test_town"}],
     }
     assert not PROTOCOL.check_world_index(index)
+    # Wild Routes (WR3): a zone and its route map, placed at the trailhead
+    zoned = json.loads(json.dumps(index))
+    zoned["maps"]["KB_ROUTE_TEST_ZONE"] = {"x": 32, "y": 64, "z": 3410, "w": 2, "h": 2, "layer": 0, "kind": "route",
+                                           "palette": "TEST_PALETTE", "biome": "kantobridge:wild_forest", "dark": False,
+                                           "parent": None}
+    zoned["zones"] = [{"id": "test_zone", "routeMap": "KB_ROUTE_TEST_ZONE", "theme": "forest", "x": 0, "y": 64,
+                       "z": 3200, "w": 620, "d": 600, "biome": "kantobridge:wild_forest"}]
+    assert not PROTOCOL.check_world_index(zoned)
+    zoned["zones"][0]["theme"] = "cave"
+    assert PROTOCOL.check_world_index(zoned)
     index["maps"]["TEST_TOWN"]["kind"] = "outside"
     assert PROTOCOL.check_world_index(index)
 

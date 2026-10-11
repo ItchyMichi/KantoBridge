@@ -51,6 +51,11 @@ public final class BuildReport {
 	public int lightBlocks;
 	public int habitatBlocks;
 	public int pools;
+	/** Wild Routes (WR3): zones built, their scenery trees and walkable cells, and the time their planning took. */
+	public int zones;
+	public int zoneTrees;
+	public int zoneWalkableCells;
+	public long zonePlanMs;
 	public int warnings;
 	public Map<String, Integer> warningCodes = new TreeMap<>();
 	public Map<String, Integer> notes = new TreeMap<>();
@@ -173,6 +178,10 @@ public final class BuildReport {
 		out.addProperty("light_blocks", this.lightBlocks);
 		out.addProperty("habitat_blocks", this.habitatBlocks);
 		out.addProperty("pools", this.pools);
+		out.addProperty("zones", this.zones);
+		out.addProperty("zone_trees", this.zoneTrees);
+		out.addProperty("zone_walkable_cells", this.zoneWalkableCells);
+		out.addProperty("zone_plan_ms", this.zonePlanMs);
 		out.addProperty("warnings", this.warnings);
 		out.add("warning_codes", counts(this.warningCodes));
 		out.add("notes", counts(this.notes));

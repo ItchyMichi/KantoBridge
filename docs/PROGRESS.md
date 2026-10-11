@@ -589,7 +589,7 @@ RunPod budget and stop after each job; each phase runs its own tests, the full s
 |---|---|---|---|---|
 | WR1 | The generators | **done** (19 JUnit tests, 10,000-seed checks on both generators) | 2026-10-11 | `2627e41` |
 | WR2 | The exit and the route map | **done**; checkpoint: pytest and JUnit green, GameTests wait for the pod (note 9) | 2026-10-11 | |
-| WR3 | Building the zone | next | | |
+| WR3 | Building the zone | in progress: planning, blocks and the WorldIndex done; the GameTest and C2's second half wait for a pod | 2026-10-11 | |
 | WR4 | Moving through the zone | | | |
 | WR5 | Trainers and items | | | |
 | WR6 | Wild Pokémon | | | |
@@ -616,6 +616,35 @@ RunPod budget and stop after each job; each phase runs its own tests, the full s
    7–9 from 60).
 5. **Where it ran:** the pod had no host capacity (six tries), so the tests ran in a throwaway JDK 21 container on the
    server with JUnit 5.11. The Gradle run is part of the WR2 checkpoint.
+
+### Wild Routes: WR3 notes
+
+1. **The WorldIndex** gains `zones` (each zone's box, floor level, theme, biome and route map) and a placement kind
+   `route` for route maps, placed at the trailhead so the route map's cells A and x1 are the trailhead's
+   (`WorldIndex.toCell` works on them unchanged). Written only when a world has zones, so every existing index and
+   golden keeps its bytes. A rebuild clears an older build's zones too.
+2. **The builder** reads the export's `routes` (`ExportRoutes`), plans the zones after Kanto (`BuildTask.withZones`,
+   `ZonePlanner`) and adds them to the plan (`WorldPlan.withZones`): their volumes, blocks (`renderChunk`), biome and
+   index entries. A zone whose town isn't in the build is left out (warning `zone_town_unbuilt`). The report counts
+   zones, their trees and walkable cells, and the planning time.
+3. **Slots** (`ZoneRegions`): 640×640 blocks, starting 3,000 blocks south of Kanto's box at its west edge, 8 to a row,
+   in zone-id order. North of Kanto is for dungeon slots (WR7); west and east are kept for other games' worlds.
+4. **Blocks** (`ZonePlan`, `BlockCode.KIND_VANILLA`, `ZoneBlock`): walkable cells flat at Y 63 (feet at Kanto's 64);
+   hedges of persistent leaves 3–5 high, now and then with a trunk; boulders 2 high; ponds of water at the floor with a
+   barrier above; the land from vanilla noise, with a ridge along the box's edge rising to Y 94 so the void never
+   shows; our own trees of vanilla blocks on the land only. The biome `kantobridge:wild_forest` is new.
+5. **Decision D8** (plan §9): the forest's walls and trees are vanilla blocks rather than voxel props: the Minecraft
+   look, solid collision, no client work. Props stay for rocks, balls, signs and the dungeon entrance.
+6. **C2, first half, measured here** (JUnit with Minecraft's built-in registries, `VanillaTerrainTest`): vanilla's
+   noise costs 1.1–2.9 ms per column on this server, so a 4-block grid made a zone take 30–75 s. With a 16-block grid,
+   sampled in parallel and blended smoothly with a little relief of our own, a zone plans in about 1.4 s. A zone is about
+   2.7 million blocks (the ground 10 blocks deep), so placing it takes about a minute at today's 49,000 blocks a second;
+   the plan's 5–10 s estimate was low. The second half (placing in a real world, the cost per tick) and a GameTest of a
+   built zone wait for a pod.
+7. **Tests:** `ZonePlanTest` (12: floors and room above every walkable cell, hedges at least 3 high, barriers over
+   ponds, the route map on the trailhead with A west of x1, the ridge, trees only on land, determinism, slots, the
+   zone in the plan and its index round trip, a zone without its town), `ExportRoutesTest`, `VanillaTerrainTest`; the
+   world, builder, server and movement JUnit packages (387 tests) and the Python schema tests still pass.
 
 ### Wild Routes: WR2 notes
 

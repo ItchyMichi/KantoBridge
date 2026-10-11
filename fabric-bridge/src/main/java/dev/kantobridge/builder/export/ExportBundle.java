@@ -251,6 +251,12 @@ public final class ExportBundle {
 		return this.has("profile", ExportProfile.ID) ? this.typed("profile", ExportProfile.ID, ExportProfile::parse, ExportProfile.class) : null;
 	}
 
+	/** Wild Routes (WR2): the zones the hidden game runs; none when the export has no routes resource (an older one). */
+	public ExportRoutes routes() throws BundleException {
+		return this.has("routes", ExportRoutes.ID) ? this.typed("routes", ExportRoutes.ID, ExportRoutes::parse, ExportRoutes.class)
+				: ExportRoutes.empty();
+	}
+
 	/** The field tables the habitat planner reads; empty when the export has no field resource. */
 	public ExportField field() throws BundleException {
 		return this.has("field", "all") ? this.typed("field", "all", ExportField::parse, ExportField.class) : ExportField.empty();

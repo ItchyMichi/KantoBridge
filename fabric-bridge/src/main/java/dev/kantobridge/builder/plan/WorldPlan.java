@@ -3,6 +3,7 @@ package dev.kantobridge.builder.plan;
 import dev.kantobridge.builder.export.CellFlags;
 import dev.kantobridge.builder.shape.ShapePlan;
 import dev.kantobridge.builder.shape.ShapePlanner;
+import dev.kantobridge.builder.zone.ZonePlan;
 import dev.kantobridge.scene.Scene;
 import dev.kantobridge.world.MapPlacement;
 import dev.kantobridge.world.Scale;
@@ -93,6 +94,8 @@ public final class WorldPlan {
 	private final int overlaps;
 	private final @Nullable Scene scene;
 	private final @Nullable ShapePlan shapes;
+	/** Wild Routes zones (docs/specs/WILD_ROUTES_PLAN.md §4.4); empty unless {@link #withZones} added some. */
+	private final List<ZonePlan> zones;
 
 	WorldPlan(String game, String exportHash, int originX, int originZ, List<PlacedMap> maps, @Nullable Box3 surfaceBox, int[] surfaceOwner,
 			boolean[] surfaceVoid, StoryCellTable storyCells, Map<String, int[]> storyIndex, ArtCatalog art, @Nullable Spawn spawn,
@@ -120,11 +123,64 @@ public final class WorldPlan {
 		this.overlaps = overlaps;
 		this.scene = scene;
 		this.shapes = shapes;
+		this.zones = List.of();
 		for (Map.Entry<SlotMap.Key, SlotMap.Slot> entry : this.slotMap.slots().entrySet()) {
 			SlotMap.Key key = entry.getKey();
 			TileSlots slots = this.tileSlots.computeIfAbsent(key.atlas() + "|" + key.palette(), k -> new TileSlots());
 			(key.shape() == SlotMap.Shape.FULL ? slots.full : slots.half)[key.tile()] = entry.getValue().index();
 		}
+	}
+
+	/** A copy of {@code base} with zones and the index that lists them. */
+	private WorldPlan(WorldPlan base, List<ZonePlan> zones, WorldIndex index) {
+		this.game = base.game;
+		this.exportHash = base.exportHash;
+		this.originX = base.originX;
+		this.originZ = base.originZ;
+		this.maps = base.maps;
+		this.surfaceBox = base.surfaceBox;
+		this.surfaceOwner = base.surfaceOwner;
+		this.surfaceVoid = base.surfaceVoid;
+		this.storyCells = base.storyCells;
+		this.storyIndex = base.storyIndex;
+		this.art = base.art;
+		this.slotMap = base.slotMap;
+		this.tileSlots.putAll(base.tileSlots);
+		this.spawn = base.spawn;
+		this.index = index;
+		this.pools = base.pools;
+		this.warnings = base.warnings;
+		this.mapsRequested = base.mapsRequested;
+		this.mapsUnplaced = base.mapsUnplaced;
+		this.edgeMismatches = base.edgeMismatches;
+		this.overlaps = base.overlaps;
+		this.scene = base.scene;
+		this.shapes = base.shapes;
+		this.zones = List.copyOf(zones);
+	}
+
+	/**
+	 * This plan with Wild Routes zones (docs/specs/WILD_ROUTES_PLAN.md §4.4): their volumes, blocks and biomes, and the
+	 * WorldIndex's route-map placements and zone entries. No zones, the same plan.
+	 */
+	public WorldPlan withZones(List<ZonePlan> zones) {
+		if (zones.isEmpty()) {
+			return this;
+		}
+		List<MapPlacement> placements = new ArrayList<>(this.index.maps().values());
+		List<WorldIndex.Zone> entries = new ArrayList<>();
+		for (ZonePlan zone : zones) {
+			placements.add(zone.routeMap());
+			entries.add(zone.zone());
+		}
+		WorldIndex withZones = new WorldIndex(this.game, this.exportHash, placements, this.index.slotMapHash(), this.storyCells,
+				this.index.habitats(), entries);
+		return new WorldPlan(this, zones, withZones);
+	}
+
+	/** The plan's Wild Routes zones (empty for a build without any). */
+	public List<ZonePlan> zones() {
+		return this.zones;
 	}
 
 	public String game() {
@@ -264,6 +320,9 @@ public final class WorldPlan {
 				out.add(interiorVolume(map.placement()));
 			}
 		}
+		for (ZonePlan zone : this.zones) {
+			out.add(zone.volume());
+		}
 		return out;
 	}
 
@@ -307,6 +366,10 @@ public final class WorldPlan {
 				out.add(interiorVolume(p));
 			}
 		}
+		// Wild Routes: an older build's zones are cleared too
+		for (WorldIndex.Zone zone : previous.zones()) {
+			out.add(new Box3(zone.x(), ZonePlan.MIN_Y, zone.z(), zone.x() + zone.w(), ZonePlan.MAX_Y, zone.z() + zone.d()));
+		}
 		return out;
 	}
 
@@ -342,6 +405,9 @@ public final class WorldPlan {
 			Box3 v = interiorVolume(map.placement()).inflateXZ(4);
 			int feet = map.placement().y();
 			out.add(new BiomeRegion(new Box3(v.minX(), feet - 4, v.minZ(), v.maxX(), feet + 8, v.maxZ()), map.placement().biome()));
+		}
+		for (ZonePlan zone : this.zones) {
+			out.add(zone.biomeRegion());
 		}
 		return out;
 	}
@@ -389,6 +455,17 @@ public final class WorldPlan {
 			for (int z = Math.max(z0, volume.minZ()); z < Math.min(z0 + 16, volume.maxZ()); z++) {
 				for (int x = Math.max(x0, volume.minX()); x < Math.min(x0 + 16, volume.maxX()); x++) {
 					this.renderInteriorColumn(out::set, map, x, z);
+				}
+			}
+		}
+		for (ZonePlan zone : this.zones) {
+			Box3 volume = zone.volume();
+			if (!volume.intersectsChunk(chunkX, chunkZ)) {
+				continue;
+			}
+			for (int z = Math.max(z0, volume.minZ()); z < Math.min(z0 + 16, volume.maxZ()); z++) {
+				for (int x = Math.max(x0, volume.minX()); x < Math.min(x0 + 16, volume.maxX()); x++) {
+					zone.renderColumn(out::set, x, z);
 				}
 			}
 		}

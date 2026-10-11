@@ -4,6 +4,7 @@ import com.cobblemon.mod.common.api.habitats.HabitatPool;
 import dev.kantobridge.KantoBridge;
 import dev.kantobridge.builder.export.BundleException;
 import dev.kantobridge.builder.export.ExportBundle;
+import dev.kantobridge.builder.export.ExportRoutes;
 import dev.kantobridge.builder.pack.DatapackWriter;
 import dev.kantobridge.builder.pack.ResourcePackWriter;
 import dev.kantobridge.builder.place.BlockPlacer;
@@ -18,6 +19,11 @@ import dev.kantobridge.builder.shape.QuadCounter;
 import dev.kantobridge.builder.shape.ShapePlan;
 import dev.kantobridge.builder.shape.ShapePlanner;
 import dev.kantobridge.builder.shape.ShapeReport;
+import dev.kantobridge.builder.zone.TerrainSampler;
+import dev.kantobridge.builder.zone.VanillaTerrain;
+import dev.kantobridge.builder.zone.ZonePlan;
+import dev.kantobridge.builder.zone.ZonePlanner;
+import dev.kantobridge.builder.zone.ZoneRegions;
 import dev.kantobridge.character.CharacterReport;
 import dev.kantobridge.scene.gen1.BundleArtSource;
 import dev.kantobridge.scene.profile.Profile;
@@ -80,7 +86,7 @@ public final class BuildTask {
 	}
 
 	private record Prepared(WorldPlan plan, @Nullable ResourcePackWriter.Result pack, @Nullable CharacterReport characters, List<Box3> previousVolumes,
-			List<WorldIndex.Habitat> previousHabitats, long planMs, @Nullable ShapeReport shapes, long packMs) {
+			List<WorldIndex.Habitat> previousHabitats, long planMs, @Nullable ShapeReport shapes, long packMs, long zoneMs) {
 	}
 
 	private final ServerLevel level;
@@ -168,8 +174,15 @@ public final class BuildTask {
 	private Prepared prepare() {
 		long t0 = System.nanoTime();
 		try {
-			WorldPlan plan = WorldPlanner.plan(this.bundle, new WorldPlanner.Options(this.maps, this.options.originX(), this.options.originZ(),
+			WorldPlan planned = WorldPlanner.plan(this.bundle, new WorldPlanner.Options(this.maps, this.options.originX(), this.options.originZ(),
 					this.minBuildHeight, this.options.shapes()));
+			// Wild Routes (WR3, docs/specs/WILD_ROUTES_PLAN.md §4.4): the zones the export lists, each in its slot on the
+			// vanilla overworld's land for this world's seed. A zone whose town isn't in this build is left out.
+			long zoneStarted = System.nanoTime();
+			WorldPlan plan = withZones(planned, this.bundle.routes(), this.level.getSeed(),
+					() -> VanillaTerrain.of(this.level.getServer().registryAccess(), this.level.getSeed()), this.options.originX(),
+					this.options.originZ());
+			long zoneMs = (System.nanoTime() - zoneStarted) / 1_000_000L;
 			long packStarted = System.nanoTime();
 			ResourcePackWriter.Result pack = this.options.writePack() ? ResourcePackWriter.write(plan, this.bundle, this.packDir, plan.warnings())
 					: null;
@@ -181,7 +194,7 @@ public final class BuildTask {
 			// The character styles' pure parts on the export's sprites (the voxel plan's V8): what each client would fall back to.
 			CharacterReport characters = plan.shapes() == null ? null : CharacterReport.of(this.bundle);
 			return new Prepared(plan, pack, characters, previous == null ? List.of() : WorldPlan.volumesOf(previous),
-					previous == null ? List.of() : previous.habitats(), (System.nanoTime() - t0) / 1_000_000L, shapes, packMs);
+					previous == null ? List.of() : previous.habitats(), (System.nanoTime() - t0) / 1_000_000L, shapes, packMs, zoneMs);
 		} catch (BundleException e) {
 			throw new Failure(e.code(), e);
 		} catch (PlanException e) {
@@ -189,6 +202,33 @@ public final class BuildTask {
 		} catch (IOException e) {
 			throw new Failure("io.pack", e);
 		}
+	}
+
+	/**
+	 * {@code plan} with the export's zones (Wild Routes, WR3): planned in id order into slots south of Kanto, on the
+	 * land {@code terrain} describes (made only when there are zones to plan). A zone whose town map isn't placed in
+	 * this build (a filtered build) is left out, with a warning.
+	 */
+	public static WorldPlan withZones(WorldPlan plan, ExportRoutes routes, long seed, java.util.function.Supplier<TerrainSampler> terrain,
+			int originX, int originZ) {
+		if (routes.zones().isEmpty()) {
+			return plan;
+		}
+		List<ExportRoutes.Zone> kept = new java.util.ArrayList<>();
+		for (ExportRoutes.Zone zone : routes.zones()) {
+			if (plan.index().map(zone.townMap()) != null) {
+				kept.add(zone);
+			} else {
+				plan.warnings().warn("zone_town_unbuilt");
+			}
+		}
+		if (kept.isEmpty()) {
+			return plan;
+		}
+		ZoneRegions regions = ZoneRegions.of(plan.surfaceBox(), originX, originZ);
+		List<ZonePlan> zones = ZonePlanner.plan(new ExportRoutes(kept), seed, regions, terrain.get(),
+				town -> plan.index().map(town).palette());
+		return plan.withZones(zones);
 	}
 
 	/** The volumes of the build this world had before, so this one clears them. */
@@ -392,6 +432,10 @@ public final class BuildTask {
 		r.surfaceBox = surface == null ? null
 				: new int[] {surface.minX(), surface.minY(), surface.minZ(), surface.maxX(), surface.maxY(), surface.maxZ()};
 		r.pools = plan.pools().size();
+		r.zones = plan.zones().size();
+		r.zoneTrees = plan.zones().stream().mapToInt(ZonePlan::trees).sum();
+		r.zoneWalkableCells = plan.zones().stream().mapToInt(z -> z.layout().stats().walkable()).sum();
+		r.zonePlanMs = this.prepared.zoneMs();
 		ResourcePackWriter.Result pack = this.prepared.pack();
 		if (pack != null) {
 			r.packTextures = pack.textures();

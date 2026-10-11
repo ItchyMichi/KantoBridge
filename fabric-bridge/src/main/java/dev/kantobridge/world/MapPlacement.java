@@ -12,17 +12,22 @@ import org.jetbrains.annotations.Nullable;
  * @param z       block Z of the north-west corner of the map's cell (0, 0)
  * @param w       width in cells
  * @param h       height in cells
- * @param layer   0 for the surface, {@code k ≥ 1} for interior layers
+ * @param layer   0 for the surface and route maps, {@code k ≥ 1} for interior layers
  * @param palette the SGB palette name (interiors take their outdoor parent's)
  * @param biome   the biome id written over the map's volume
  * @param dark    a dark map (no lights; Flash gives Night Vision)
- * @param parent  interiors: the map whose door leads here; null for surface maps
+ * @param parent  interiors: the map whose door leads here; null for surface and route maps
  */
 public record MapPlacement(String id, int x, int y, int z, int w, int h, int layer, Kind kind, String palette, String biome,
 		boolean dark, @Nullable String parent) {
 	public enum Kind {
 		SURFACE,
-		INTERIOR;
+		INTERIOR,
+		/**
+		 * A Wild Routes zone's route map (docs/specs/WILD_ROUTES_PLAN.md §4.2, §4.4): a small map of the hidden game's
+		 * own that no export draws, placed at the zone's trailhead so its cells A and x1 are the trailhead's.
+		 */
+		ROUTE;
 
 		public String id() {
 			return this.name().toLowerCase(Locale.ROOT);

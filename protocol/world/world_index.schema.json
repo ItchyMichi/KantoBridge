@@ -69,7 +69,7 @@
             "minimum": 0,
             "description": "0 for the surface; k >= 1 for interior layers."
           },
-          "kind": {"enum": ["surface", "interior"]},
+          "kind": {"enum": ["surface", "interior", "route"], "description": "route: a Wild Routes zone's route map, placed at its trailhead (docs/specs/WILD_ROUTES_PLAN.md §4.2)."},
           "palette": {"$ref": "../defs.schema.json#/$defs/symbol"},
           "biome": {"type": "string", "pattern": "^[a-z0-9_.-]+:[a-z0-9_./-]+$"},
           "dark": {"type": "boolean"},
@@ -165,6 +165,26 @@
           "y": {"type": "integer"},
           "z": {"type": "integer"},
           "pool": {"type": "string", "pattern": "^[a-z0-9_.-]+:[a-z0-9_./-]+$"}
+        }
+      }
+    },
+    "zones": {
+      "type": "array",
+      "description": "Wild Routes zones (docs/specs/WILD_ROUTES_PLAN.md §4.4), sorted by id; absent in a world built without any. Inside a zone's box the client sends no steps and the drift rule is off.",
+      "items": {
+        "type": "object",
+        "required": ["id", "routeMap", "theme", "x", "y", "z", "w", "d", "biome"],
+        "additionalProperties": false,
+        "properties": {
+          "id": {"$ref": "../defs.schema.json#/$defs/routeId"},
+          "routeMap": {"$ref": "../defs.schema.json#/$defs/mapId", "description": "The zone's route map: a maps entry of kind route."},
+          "theme": {"enum": ["forest"]},
+          "x": {"type": "integer", "description": "The box's north-west block X."},
+          "y": {"type": "integer", "description": "The feet level of the zone's walkable floor."},
+          "z": {"type": "integer", "description": "The box's north-west block Z."},
+          "w": {"type": "integer", "minimum": 1, "description": "The box's width in blocks (X)."},
+          "d": {"type": "integer", "minimum": 1, "description": "The box's depth in blocks (Z)."},
+          "biome": {"type": "string", "pattern": "^[a-z0-9_.-]+:[a-z0-9_./-]+$"}
         }
       }
     }
