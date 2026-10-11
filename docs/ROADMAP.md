@@ -137,10 +137,13 @@ checked by hash, the ROM import through Gen1Recomp's own importer); only a skele
 ### Stage 6: presentation (first-person dressing)
 
 Built: interior walls up to the ceiling, darkened ceilings, open-air forest and Safari, building backs, carved
-doorways, the forest's canopies. Not built ([NEXT_STAGES.md](NEXT_STAGES.md) §3): shaped doors, caves (rock roof,
-dripstone, pools, lanterns), trunks, terrain past the map edge, day/night, weather and sky, per-map fog and colours,
-particles, a ledge-hop and doorway camera, sound per tile class. Client-only items first; builder items in one batch,
-since each needs a rebuild. Day/night and weather clash with today's server rules (noon at every start).
+doorways, the forest's canopies; and from the caves and woods plan ([specs/CAVES_AND_WOODS_PLAN.md](specs/CAVES_AND_WOODS_PLAN.md),
+Kanto in First Person's rules): the caves' sagging rock roof, stalactites and stalagmites (CW1), Viridian Forest's leaf
+canopy, light wells and both kinds of vines (CW2), vines in the wild zone (CW4). Not built ([NEXT_STAGES.md](NEXT_STAGES.md)
+§3): the forest's apron past its edge (CW3, your decision), swaying vines, shaped doors, cave pools and lanterns, trunks,
+terrain past the map edge, day/night, weather and sky, per-map fog and colours, particles, a ledge-hop and doorway
+camera, sound per tile class. Client-only items first; builder items in one batch, since each needs a rebuild.
+Day/night and weather clash with today's server rules (noon at every start).
 
 ### Stage 7: Kanto inside a vanilla overworld (M11–M14)
 

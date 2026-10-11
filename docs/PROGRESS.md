@@ -591,7 +591,33 @@ Execution of [specs/CAVES_AND_WOODS_PLAN.md](specs/CAVES_AND_WOODS_PLAN.md) (CW1
 | CW2 | The forest canopy and vines | **done**; checkpoint: JUnit 958, GameTests 98, Python and Lua 1,484 | 2026-10-11 | `CW2: the forest canopy and vines` |
 | CW3 | The forest's apron | waits for your decision after CW2 | | |
 | CW4 | Vines in the wild zone | **done** (zone JUnit 27 green; the zone GameTests run at CW5) | 2026-10-11 | `CW4: vines in the wild zone` |
-| CW5 | Finish | to do | | |
+| CW5 | Finish | **done**: checkpoint JUnit 959, GameTests 98, Python and Lua 1,484; the real world built and filmed on the pod | 2026-10-11 | `5b61348`, `CW5: finish` |
+
+### Caves and woods: CW5 notes
+
+1. **Checkpoint:** JUnit 959, GameTests 98 (all on this server), Python and Lua 1,484.
+2. **The real world** (your Blue on the pod's test install, all 220 maps, a new pod `kb-dev3` because kb-dev's and
+   kb-dev2's hosts were full; about 12 minutes, stopped after): built by the dev client's "Create Kanto world"; the
+   headless build (`build_world.py`) needs the Minecraft EULA on the pod, which only you can accept (PLAN §0.6). Every
+   budget gate passes (`build_world.budget_gates`). Against the pod's last world (kb-shapes/8):
+
+   | | kb-shapes/8 | kb-shapes/10 | Budget |
+   |---|---|---|---|
+   | Shape map on the wire (characters) | 219,192 | 303,816 (58%) | 524,288 |
+   | Quads per block, max / mean | 76 / 11.6 | 76 / 10.4 | 96 / 24 |
+   | Quads per section, P95 / max | 6,416 / 24,064 | 6,416 / 24,064 | 12,000 / 30,000 |
+   | Self-check: holes, ground, structure P05 | 0, 1.0, 0.731 | 0, 1.0, 0.731 | 0, 1.0, 0.577 |
+
+   Pieces: 10,677 roofed cave cells, 1,259 stalactites, 77 stalagmites (807 spikes dropped by the clamps), 1,450 canopy
+   cells and 182 wells, 165 leaf strands and 288 stem-and-stub strands (12 crowded out).
+3. **The wire budget with the profile:** the pod's test install has no Dramaless Shape, so both pod worlds are without
+   it. P3's build with the profile measured 409,476 characters (78%, "Profile plan: check results"); this plan adds
+   about 85,000, so expect about 94% on a world built with the mod installed: inside the budget, with little room left.
+   If a build goes over (the gate `shape_map_fits` says so), the plan's §7 ladder applies (fewer roof steps, then
+   client-side variants).
+4. **The video** (31 s, 1280 × 720, about 55 fps): `showcase.py --scene tour`, a first-person look round Mt. Moon 1F and
+   then Viridian Forest; sent to you, the original on the volume
+   (`/workspace/videos/kanto-bridge-caves-woods-20261011-224130.mp4`); this server's copy deleted.
 
 ### Caves and woods: CW4 notes
 

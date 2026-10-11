@@ -202,6 +202,10 @@ it adds maps onto our setup like this.
   - Rock Tunnel stays dark until Flash.
 - **Viridian Forest:** a leaf canopy with gaps (light wells) and hanging vines, instead of today's
   opaque interior ceiling. Vine spreading is already off.
+- **Built (2026-10-11, [specs/CAVES_AND_WOODS_PLAN.md](specs/CAVES_AND_WOODS_PLAN.md)):** the rock roof, stalactites
+  and stalagmites in the cave's own art within today's three-block caves (not vanilla dripstone: your CD1), and
+  Viridian Forest's canopy, light wells and vines, both by Kanto in First Person's own placement rules re-implemented;
+  vines in the wild zone. Pools and lanterns stay ideas.
 - **Past the map edge:** each edge's terrain continues outward as non-walkable scenery that falls
   away, instead of today's 12-block ring of border art. Mountains or sea would fill the distance.
 - **Building backs and tall trees:** these come with section 2. Per-face textures stop a house's back
