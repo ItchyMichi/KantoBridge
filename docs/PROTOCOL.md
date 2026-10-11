@@ -612,6 +612,7 @@ engine symbols, and Pokémon identities as Cobblemon UUIDs (`uid`).
 | `route.blackout` | S→C, M→G | `{}` (a wild battle lost in Cobblemon) | |
 | `route.result` | G→M, C→S | `op:"give"\|"battle"\|"blackout", ok, route?, id?, outcome?:"win"\|"lose"\|"abort", reason?`; `re` required | |
 | `route.progress` | G→M, C→S | `routes{<zone>:{taken[id], wins{id:n}}}` (the zones whose progress changed, each whole) | |
+| `route.sight` | S→C | `route, id, x, y, frames` (WR5: a zone trainer saw the player; it walks to cell `x, y` of the zone's route-map grid over `frames` after its "!") | |
 
 #### Wild Routes rules (WR2)
 
@@ -646,6 +647,17 @@ engine symbols, and Pokémon identities as Cobblemon UUIDs (`uid`).
   (`mod.save "routes"`), so an older save brings older progress back with its bag and money. It is
   in every `snapshot` and goes out as `route.progress` when it changes and whole after a save loads
   or a new game starts. "Beaten on this visit" (rematches) is the server's to keep.
+- **Trainers (WR5)** are the server's: every tick, a player inside a zone's box who is free (not a
+  spectator, not held by a build, `activity` `none`, not in a Cobblemon battle) and in a trainer's
+  sight (straight ahead in the WorldIndex's `facing`, within `sight` cells) gets `route.sight`. The
+  client shows "!" over the trainer's puppet for 60 frames, holds the player, and walks the puppet to
+  the cell in front of the player (16 frames a cell). Once those frames have passed (plus 4 ticks)
+  the server sends `route.battle` with the trainer's party and a line by class (our own text,
+  `data/kantobridge/wild_routes/lines.json`, one text-box line each). One encounter at a time. The
+  answer ends it: a win keeps that trainer quiet for the rest of the visit (until the player leaves
+  the zone's box), anything else lets it look again after 100 ticks; with no answer while the player
+  is free for 600 ticks, the server gives up the same way. After the answer the client walks the
+  puppet back to its post.
 - **The client (WR5)** forwards the server's `route.give`, `route.battle` and `route.blackout` to
   gen1-bridge, and gen1-bridge's `route.result` for them back to the server with the server's own
   `seq` as `re`; every `route.progress` goes up too. The save pairing's gate decides, as for the

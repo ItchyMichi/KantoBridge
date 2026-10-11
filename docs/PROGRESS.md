@@ -591,7 +591,7 @@ RunPod budget and stop after each job; each phase runs its own tests, the full s
 | WR2 | The exit and the route map | **done**; checkpoint: pytest and JUnit green, GameTests wait for the pod (note 9) | 2026-10-11 | |
 | WR3 | Building the zone | done; GameTest and C2 run on the server | 2026-10-11 | 0a7ed03, dd5843f |
 | WR4 | Moving through the zone | done; warp GameTest passes; check C5 needs a client | 2026-10-11 | 571a68b |
-| WR5 | Trainers and items | | | |
+| WR5 | Trainers and items | done here; the end-to-end session needs your PC | 2026-10-11 | 6d63160, 198600d, (this) |
 | WR6 | Wild Pokémon | | | |
 | WR7 | Dungeons | | | |
 | WR8 | Content and play-test | | | |
@@ -616,6 +616,33 @@ RunPod budget and stop after each job; each phase runs its own tests, the full s
    7–9 from 60).
 5. **Where it ran:** the pod had no host capacity (six tries), so the tests ran in a throwaway JDK 21 container on the
    server with JUnit 5.11. The Gradle run is part of the WR2 checkpoint.
+
+### Wild Routes: WR5 notes
+
+1. **One list for client and server** (`6d63160`): the WorldIndex's zones list their trainers (cell, facing, sight,
+   class, sprite, party) and balls (cell, item), in the route map's grid (A is 0,0). The builder makes them from the
+   export (`ZoneContent`: the town's neighbour grass slots, each class's most used sprite, the ball sprite, the game's
+   own items; `ZoneObjects`: parties of 1-2 then 2-3, 0-3 levels above the area's top wild level; items by tier from
+   `data/kantobridge/wild_routes/items.json`). Trainers stand on a barrier; balls on a story cell of the new type
+   `route`. The balls' story cells join the plan's table, so Kanto's story codes are re-pointed (each cell keeps its
+   entry; tested).
+2. **The client** (`198600d`): `RouteProgress` from the snapshot and `route.progress`; `StoryRules` closes a ball's cell
+   until it's taken; zone puppets as a second list in `PuppetManager` (the hidden game's lists leave them alone; on a
+   route map the culling area is the zone's box); `ZoneRuntime` forwards `route.*` between server and gen1-bridge
+   (answers carry the server's own seq as `re`) and sends `route.give` for a ball in front of the player or a clicked
+   ball puppet.
+3. **Trainers** (this commit): new message `route.sight` (S→C). The server (`ZoneService`, `ZoneEncounters`) checks Gen 1
+   sight every tick for free players in a zone; the client shows "!", holds the player and walks the puppet up
+   (`WalkUps`); then `route.battle` with the party and a line (`data/kantobridge/wild_routes/lines.json`, our own text,
+   at most 18 characters until check C6 shows how the engine wraps literal text). A win keeps the trainer quiet until
+   the player leaves the zone's box (the visit); anything else lets it look again after 5 s; one encounter at a time.
+4. **Tests:** `ZoneObjectsTest`, `ZonePlanTest` (+3), `RouteProgressTest`, `StoryRulesTest` (+1), `PuppetManagerTest`
+   (+1), `ZoneViewTest`, `WalkUpsTest`, `ZoneEncountersTest` (5), `ZoneLinesTest`; GameTests `ZoneBuildGameTests` (the
+   blockers and story cells in a real world) and `ZoneEncounterGameTests` (sight, battle, the relayed win, the
+   rematch). JUnit 910, GameTests 94, Python and Lua 1,479.
+5. **Still needs you:** the end-to-end session on your PC (a ball taken and a trainer fought through the real engine),
+   with check C6 (the clearing, the route map, `give_item` and `start_battle` from a queued script) and C5 (seeing a
+   zone). The clearing's spot (F7) comes first.
 
 ### Wild Routes: WR4 notes
 

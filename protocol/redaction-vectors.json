@@ -391,6 +391,11 @@
     },
     {"type": "route.result", "seq": 34, "redacted": {"op": "blackout", "ok": true}},
     {
+      "type": "route.sight",
+      "seq": 30,
+      "redacted": {"route": "test_zone", "id": "a1.t1", "x": 10, "y": -3, "frames": 32}
+    },
+    {
       "type": "save.begin",
       "seq": 11,
       "redacted": {"save": "sv-1", "reason": "menu", "pair": "3f2a9c0d1e4b5a67", "at": 1790000000}

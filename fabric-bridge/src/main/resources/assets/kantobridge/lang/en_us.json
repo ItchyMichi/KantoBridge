@@ -97,7 +97,7 @@
   "kantobridge.debug.npcs": "NPCs: %s (%s shown, %s in range) on %s  moves %s  faces %s  emotes %s  dropped %s  missing sheets %s",
   "kantobridge.debug.story": "Story: closed %s  drawn %s  surf %s  bike %s  lit %s  relayed %s",
   "kantobridge.debug.act": "Act: interacts %s  field %s  start %s  results %s  refused %s (%s)",
-  "kantobridge.debug.zone": "Zone: %s  to game %s  to server %s  balls asked %s (%s waiting)  dropped %s",
+  "kantobridge.debug.zone": "Zone: %s  to game %s  to server %s  balls asked %s (%s waiting)  sightings %s  dropped %s",
   "kantobridge.debug.relay": "Relay: battles %s (pending %s)  results %s (resent %s, aborted here %s)  party %s (queued %s)  syncs %s  bag %s up, %s uses (queued %s)  activity %s",
   "kantobridge.debug.saves": "Saves: relayed %s (pending %s)  answered %s (failed %s, here %s)  repeats %s  PC: %s  opened %s  closed %s (here %s)  unlinks %s",
   "kantobridge.debug.world": "World: %s (%s)  bound %s (%s binds)  slot %s",

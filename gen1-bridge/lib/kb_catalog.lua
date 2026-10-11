@@ -66,6 +66,7 @@ return {
     ["route.give"] = { m2g = true, s2c = true, re = "never" },
     ["route.progress"] = { g2m = true, c2s = true, re = "never" },
     ["route.result"] = { g2m = true, c2s = true, re = "required" },
+    ["route.sight"] = { s2c = true, re = "never" },
     ["save.begin"] = { g2m = true, c2s = true, re = "never" },
     ["save.done"] = { m2g = true, s2c = true, re = "optional" },
     ["save.loaded"] = { g2m = true, c2s = true, re = "never" },

@@ -3,6 +3,7 @@ package dev.kantobridge.client.zone;
 import com.google.gson.JsonObject;
 import dev.kantobridge.client.bridge.BridgeClock;
 import dev.kantobridge.client.bridge.BridgeRuntime;
+import dev.kantobridge.client.move.InputLock;
 import dev.kantobridge.client.net.ClientRelay;
 import dev.kantobridge.client.net.SessionGate;
 import dev.kantobridge.client.net.SessionRuntime;
@@ -41,6 +42,8 @@ import org.jetbrains.annotations.Nullable;
  * <li><b>Balls:</b> an A press at a ball in front of the player, or a click on a ball's puppet from the cell beside it,
  * sends {@code route.give} straight to gen1-bridge; the {@code route.progress} that follows takes the puppet away and
  * opens the ball's story cell.</li>
+ * <li><b>Trainers:</b> {@code route.sight} shows "!" over the trainer's puppet, holds the player and walks the puppet up
+ * ({@link WalkUps}); when the battle's answer goes back to the server, the puppet walks back to its post.</li>
  * </ul>
  * Client thread only. Logs nothing itself; the F3 line counts.
  */
@@ -58,12 +61,14 @@ public final class ZoneRuntime {
 	private final Map<Long, Long> forwarded = new LinkedHashMap<>();
 	/** Balls asked for (puppet id → when). */
 	private final Map<String, Long> giving = new HashMap<>();
+	private final WalkUps walkUps = new WalkUps();
 	private @Nullable WorldIndex index;
 	private @Nullable String zone;
 	private long progressVersion = -1;
 	private long down;
 	private long up;
 	private long gives;
+	private long sights;
 	private long dropped;
 
 	private ZoneRuntime(BridgeRuntime bridge) {
@@ -81,6 +86,8 @@ public final class ZoneRuntime {
 		for (String type : List.of(MsgTypes.ROUTE_GIVE, MsgTypes.ROUTE_BATTLE, MsgTypes.ROUTE_BLACKOUT)) {
 			server.register(type, runtime::fromServer);
 		}
+		server.register(MsgTypes.ROUTE_SIGHT, runtime::onSight);
+		InputLock.holdWhile(() -> runtime.walkUps.holding(runtime.clock.millis()));
 		bridge.dispatcher().on(MsgTypes.ROUTE_RESULT, runtime::onResult);
 		bridge.dispatcher().on(MsgTypes.ROUTE_PROGRESS, runtime::onProgress);
 		ClientTickEvents.END_CLIENT_TICK.register(runtime::tick);
@@ -117,6 +124,9 @@ public final class ZoneRuntime {
 		Long serverSeq = message.re() == null ? null : this.forwarded.remove(message.re());
 		if (serverSeq != null) {
 			this.toServer(MsgTypes.ROUTE_RESULT, message.data(), serverSeq);
+			if ("battle".equals(stringField(message.data(), "op"))) {
+				this.walkBack(stringField(message.data(), "route"), stringField(message.data(), "id"));
+			}
 			return;
 		}
 		// one of this client's own balls: answered, so it may be asked again (the progress decides whether it's gone)
@@ -151,6 +161,50 @@ public final class ZoneRuntime {
 		return data.has(key) && data.get(key).isJsonPrimitive() ? data.get(key).getAsString() : null;
 	}
 
+	// ---- trainers ----
+
+	/** {@code route.sight}: the "!" now, the walk once it's over, the player held meanwhile. */
+	private void onSight(Envelope message) {
+		JsonObject data = message.data();
+		WorldIndex current = ClientWorldIndex.current();
+		WorldIndex.Zone zone = current == null ? null : zoneById(current, stringField(data, "route"));
+		String id = stringField(data, "id");
+		WorldIndex.ZoneTrainer trainer = zone == null || id == null ? null : zone.trainer(id);
+		PuppetRuntime puppets = PuppetRuntime.get();
+		if (trainer == null || puppets == null || !data.has("x") || !data.has("y") || !data.has("frames")) {
+			return;
+		}
+		this.sights++;
+		String puppet = ZoneView.puppetId(zone, trainer.id());
+		puppets.manager().zoneFace(puppet, trainer.facing());
+		puppets.manager().zoneEmote(puppet, "!", (int) (WalkUps.EXCLAIM_MS * 60 / 1000));
+		this.walkUps.sighted(puppet, data.get("x").getAsInt(), data.get("y").getAsInt(), trainer.facing(),
+				Math.max(0, Math.min(data.get("frames").getAsInt(), 3600)), this.clock.millis());
+	}
+
+	/** After a battle's answer: the trainer's puppet walks back to its post. */
+	private void walkBack(@Nullable String route, @Nullable String id) {
+		WorldIndex current = ClientWorldIndex.current();
+		WorldIndex.Zone zone = current == null ? null : zoneById(current, route);
+		WorldIndex.ZoneTrainer trainer = zone == null || id == null ? null : zone.trainer(id);
+		PuppetRuntime puppets = PuppetRuntime.get();
+		Puppet puppet = trainer == null || puppets == null ? null : puppets.manager().get(ZoneView.puppetId(zone, trainer.id()));
+		if (puppet == null) {
+			return;
+		}
+		int steps = Math.abs(puppet.x() - trainer.x()) + Math.abs(puppet.y() - trainer.y());
+		puppets.manager().zoneMove(puppet.id(), trainer.x(), trainer.y(), trainer.facing(), steps * 16);
+	}
+
+	private static WorldIndex.@Nullable Zone zoneById(WorldIndex index, @Nullable String id) {
+		for (WorldIndex.Zone zone : index.zones()) {
+			if (zone.id().equals(id)) {
+				return zone;
+			}
+		}
+		return null;
+	}
+
 	// ---- puppets ----
 
 	private void tick(Minecraft minecraft) {
@@ -164,6 +218,9 @@ public final class ZoneRuntime {
 		RouteProgress progress = ClientStoryView.routeProgress();
 		String id = here == null ? null : here.id();
 		if (current != this.index || !Objects.equals(id, this.zone) || progress.version() != this.progressVersion) {
+			if (!Objects.equals(id, this.zone)) {
+				this.walkUps.clear();
+			}
 			this.index = current;
 			this.zone = id;
 			this.progressVersion = progress.version();
@@ -171,6 +228,9 @@ public final class ZoneRuntime {
 		}
 		long now = this.clock.millis();
 		this.giving.values().removeIf(at -> now - at > GIVE_TIMEOUT_MS);
+		for (WalkUps.Walk walk : this.walkUps.due(now)) {
+			puppets.manager().zoneMove(walk.puppet(), walk.x(), walk.y(), walk.facing(), walk.frames());
+		}
 	}
 
 	// ---- balls ----
@@ -218,6 +278,6 @@ public final class ZoneRuntime {
 
 	private String debugLine() {
 		return I18n.get("kantobridge.debug.zone", this.zone == null ? "-" : this.zone, this.down, this.up, this.gives, this.giving.size(),
-				this.dropped);
+				this.sights, this.dropped);
 	}
 }

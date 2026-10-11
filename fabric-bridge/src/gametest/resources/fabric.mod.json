@@ -14,6 +14,7 @@
 			"dev.kantobridge.gametest.CollisionGameTests",
 			"dev.kantobridge.gametest.SyntheticBuildGameTests",
 			"dev.kantobridge.gametest.ZoneBuildGameTests",
+			"dev.kantobridge.gametest.ZoneEncounterGameTests",
 			"dev.kantobridge.gametest.ShapeBuildGameTests",
 			"dev.kantobridge.gametest.BuildHoldGameTests",
 			"dev.kantobridge.gametest.RulesGameTests",

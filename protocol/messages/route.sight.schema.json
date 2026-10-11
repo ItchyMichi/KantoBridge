@@ -1,0 +1,19 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kantobridge.invalid/protocol/messages/route.sight.schema.json",
+  "title": "route.sight",
+  "description": "Wild Routes (WR5): a zone trainer saw the player. The client holds the player still, shows \"!\" over the trainer's puppet for 60 frames, then walks it to the cell in front of the player; the server's route.battle follows.",
+  "x-type": "route.sight",
+  "x-legs": ["s2c"],
+  "x-re": "never",
+  "type": "object",
+  "required": ["route", "id", "x", "y", "frames"],
+  "additionalProperties": false,
+  "properties": {
+    "route": {"$ref": "../defs.schema.json#/$defs/routeId"},
+    "id": {"$ref": "../defs.schema.json#/$defs/routeObjectId"},
+    "x": {"type": "integer", "minimum": -4096, "maximum": 4096, "description": "The cell the trainer walks to, in the zone's route-map grid."},
+    "y": {"type": "integer", "minimum": -4096, "maximum": 4096},
+    "frames": {"type": "integer", "minimum": 0, "maximum": 3600, "description": "Gen 1 frames (60 a second) of the walk after the \"!\"; 0 when the trainer already stands in front of the player."}
+  }
+}

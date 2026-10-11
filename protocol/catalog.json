@@ -389,6 +389,13 @@
       "redact": [],
       "schema": "messages/route.result.schema.json"
     },
+    "route.sight": {
+      "legs": ["s2c"],
+      "re": "never",
+      "rom": false,
+      "redact": [],
+      "schema": "messages/route.sight.schema.json"
+    },
     "save.begin": {
       "legs": ["g2m", "c2s"],
       "re": "never",

@@ -1,0 +1,3 @@
+[
+  {"type": "route.sight", "seq": 30, "data": {"route": "test_zone", "id": "a1.t1", "x": 10, "y": -3, "frames": 32}}
+]
