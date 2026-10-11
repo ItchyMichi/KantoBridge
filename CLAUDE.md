@@ -23,6 +23,9 @@ Pokémon Red/Blue's story runs in a **hidden Gen1Recomp**. It is displayed and p
 - [`docs/specs/PROFILE_PLAN.md`](docs/specs/PROFILE_PLAN.md) is the profile plan (P1–P4): Dramaless Shape's
   hand-made table drives the shapes where it says something, our rules elsewhere; executed and recorded in
   PROGRESS.md's "Profile plan" sections.
+- [`docs/specs/CAVES_AND_WOODS_PLAN.md`](docs/specs/CAVES_AND_WOODS_PLAN.md) is the caves and woods plan (CW1–CW5): Kanto
+  in First Person's cave rock, forest canopy and vines, re-implemented from its rules (never installed, nothing
+  copied); executed and recorded in PROGRESS.md's "Caves and woods" sections.
 - `refs/_research/` (git-ignored) holds the research notes, with verified `file:line` references,
   that the plan cites.
 
