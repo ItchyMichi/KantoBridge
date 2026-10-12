@@ -723,7 +723,7 @@ the full suite at H1, H5 and H7.
 |---|---|---|---|---|
 | H1 | A position per cell | **done**; checkpoint: JUnit 979 (6 skipped), GameTests 98, Python and Lua 1,484 | 2026-10-12 | `H1: a position per cell` |
 | H2 | Edge walls on tile-pair edges | **done** (PairEdgesTest 4, a wall GameTest; JUnit builder suite, GameTests 99) | 2026-10-12 | `H2: edge walls on tile-pair edges` |
-| H3 | Caves in an area of their own | **done** (CavePlannerTest 8, the synthetic cave; JUnit, GameTests 99, Python); the real world's pod build follows | 2026-10-12 | `H3: caves in an area of their own` |
+| H3 | Caves in an area of their own | **done** (CavePlannerTest 8, the synthetic cave; JUnit 991, GameTests 99, Python 1,487); the real world's dry run on the pod: 0 warnings (note 8) | 2026-10-12 | `H3: caves in an area of their own` |
 | H4 | Raised ground in caves | | | |
 | H5 | Real ladders and holes | | | |
 | H6 | Pilot | | | |
@@ -792,6 +792,17 @@ the full suite at H1, H5 and H7.
    scene) were regenerated: only the cave's maps and habitats, and the town's new warp, changed.
 7. **Deviation (plan §3.1, §4.1):** no `caves` key in the WorldIndex. A rebuild clears the caves from their map
    placements, as any interior's (`volumesOf`), so the key had no reader.
+8. **The real world's dry run** (2026-10-12, kb-dev, about 8 minutes): `RealWorldDryRunTest` with
+   `-Pkb.realBundle=<the pod's export bundle>` plans the world and writes counts and map ids only to
+   `build/reports/caves3d_dry_run.json`. Your game's export:
+   - 220 maps (184 interiors, deepest layer 14, the same 1 deep spill and 5 moved sideways), **0 warnings**;
+   - **tile pairs:** all 14 read (`{land, water}` as the plan assumed), closing **642 edges** on 17 maps: Mt. Moon 1F
+     (131) and B2F (12), Rock Tunnel 1F (107) and B1F (144), Diglett's Cave (30), Cerulean Cave 1F (22) and B1F (23),
+     Seafoam B1F–B4F (7–19), Victory Road 1F–3F (8–18), and the Safari Zone's east, north and west areas (20–25);
+   - **the cave area:** 6 complexes, 19 maps (Diglett's Cave's two entrance rooms are cave maps and moved aside of
+     the cave on its level), floors from feet 64 down to 20 (Seafoam's five);
+   - habitat blocks: 117 of reach 14, **752 of reach 6** in the caves (296 in all before); the shape map 302,788
+     characters on the wire (58%, the pod has no profile).
 
 ## Wild Routes
 
