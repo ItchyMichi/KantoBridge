@@ -853,6 +853,28 @@ the full suite at H1, H5 and H7.
     (`CollisionGameTests.caveStepsClimbHalfABlockAtATime`); a story cell with sides keeps its story collision; in the
     built synthetic cave, a mock player walks up the stairs, along the floor, but neither up the cliff nor off the
     plateau; the walkability GameTest stands on each cell's own level.
+11. **The real world's dry run** (2026-10-12, kb-dev2 then kb-dev, two runs of a few minutes): `RealWorldDryRunTest`
+    now plans every cave in 3D (`kantobridge.caves3d=all`) and adds, per cave map, its outcome, regions, raised cells,
+    ramps by direction and the pair edges behind the high side; story cells on ramps by type; pair-edge blocks without
+    a wall; and the caves' quads.
+    - **The first run caught the cliff rule backwards.** Read as "the north side of an east–west pair edge is high",
+      all 29 staircases climbed south and most of each floor was raised (Mt. Moon 1F: 907 cells). A raised area's
+      south side is a solid cliff in the art, so the floor meets it flush only along its north edge: the high side
+      is south of the edge. Fixed (`b2de37c`); the plan's §3.4 says so now.
+    - **After the fix:** all 29 staircases climb north into their platforms, and in every cave every east–west pair
+      edge agrees on the high side (none the other way round). 12 of the 19 cave maps are raised (3,462 cells; Mt.
+      Moon 1F 237, B2F 552 with 6 stairs; Rock Tunnel 1F 305, B1F 206; Victory Road 63, 64, 61; Seafoam B1F–B3F
+      102–322; Cerulean Cave B1F 260; Diglett's Cave 1,176). 7 stay flat: Mt. Moon B1F, Cerulean Cave 2F and Diglett's
+      two entrance rooms have one side only, Seafoam B4F and Cerulean Cave 1F reach both sides through tiles in no
+      pair (`flat_mixed_region`), Seafoam 1F has no east–west pair edge (`flat_no_high_side`). The pod has no profile,
+      so every high side came from the cliff faces.
+    - **Story cells on stairs:** 20, all boulder areas (Victory Road and Seafoam B1F–B3F, where every walkable cell
+      is one): their blocks now stand on the steps. **Walls:** 2,550 wall blocks, none missing (Victory Road 2F's two
+      are on their story blocks). 0 warnings.
+    - **Load:** habitat blocks 1,038 of reach 6; the caves' shapes 135,527 shaped blocks, at most 7 quads a block,
+      sections p95 2,099 and at most 3,452 quads (budgets 12,000 and 30,000); the shape map 311,004 characters on the
+      wire.
+    - **The pilot** (HD11): Mt. Moon qualifies (1F and B2F raised, B1F flat).
 
 ## Wild Routes
 
