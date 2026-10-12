@@ -28,6 +28,13 @@ public final class BlockCode {
 	public static final int KIND_VANILLA = 9;
 	/** Wild Routes' props (WR7): value {@code kind × 4 + part} ({@link dev.kantobridge.block.PropBlock}). */
 	public static final int KIND_PROP = 10;
+	/**
+	 * An invisible wall on tile-pair edges (docs/specs/CAVES_3D_PLAN.md §3.2): the value is its side bits
+	 * ({@link dev.kantobridge.block.EdgeWallBlock#SIDE_NORTH} …).
+	 */
+	public static final int KIND_EDGE = 11;
+	/** One past the highest kind. */
+	public static final int KINDS = 12;
 
 	private static final int SHIFT = 24;
 	private static final int VALUE_MASK = (1 << SHIFT) - 1;
@@ -68,6 +75,11 @@ public final class BlockCode {
 
 	public static int vanilla(dev.kantobridge.builder.zone.ZoneBlock block) {
 		return (KIND_VANILLA << SHIFT) | block.ordinal();
+	}
+
+	/** An edge wall with walls on {@code sides} (1 north, 2 east, 4 south, 8 west). */
+	public static int edge(int sides) {
+		return (KIND_EDGE << SHIFT) | (sides & 15);
 	}
 
 	/** A ledge collider; {@code dir} is the Gen 1 hop direction: 0 down, 1 up, 2 left, 3 right. */

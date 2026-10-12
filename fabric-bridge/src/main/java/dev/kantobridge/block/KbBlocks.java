@@ -46,6 +46,8 @@ public final class KbBlocks {
 	public static StoryCellBlock STORY_CELL;
 	public static StoryTileBlock STORY_TILE;
 	public static LedgeColliderBlock LEDGE_COLLIDER;
+	/** Invisible walls on tile-pair edges (docs/specs/CAVES_3D_PLAN.md §3.2). */
+	public static EdgeWallBlock EDGE_WALL;
 	public static DecorBlock DECOR;
 	public static DecorBlock DECOR_LEAVES;
 	/** Wild Routes' props (WR7): the dungeon entrance, stairs and exit. */
@@ -93,6 +95,7 @@ public final class KbBlocks {
 		STORY_CELL = register("story_cell", new StoryCellBlock(invisibleProperties()));
 		STORY_TILE = register("story_tile", new StoryTileBlock(invisibleProperties()));
 		LEDGE_COLLIDER = register("ledge_collider", new LedgeColliderBlock(invisibleProperties()));
+		EDGE_WALL = register("edge_wall", new EdgeWallBlock(invisibleProperties()));
 		DECOR = register("decor", new DecorBlock(decorProperties()));
 		DECOR_LEAVES = register("decor_leaves", new DecorBlock(decorProperties()));
 		PROP = register("prop", new PropBlock(BlockBehaviour.Properties.of().mapColor(MapColor.STONE).strength(-1.0F, 3_600_000.0F)

@@ -65,7 +65,8 @@ public final class QuadCounter {
 	public static int quadsAt(World world, ShapeTable table, int x, int y, int z) {
 		int code = world.code(x, y, z);
 		int kind = BlockCode.kind(code);
-		if (kind <= 0 || kind == BlockCode.KIND_LIGHT || kind == BlockCode.KIND_STORY || kind == BlockCode.KIND_STORY_TILE) {
+		if (kind <= 0 || kind == BlockCode.KIND_LIGHT || kind == BlockCode.KIND_STORY || kind == BlockCode.KIND_STORY_TILE
+				|| kind == BlockCode.KIND_EDGE) {
 			return 0;
 		}
 		int id = world.shapeId(x, y, z);

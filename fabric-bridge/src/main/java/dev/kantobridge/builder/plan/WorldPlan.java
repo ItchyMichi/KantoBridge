@@ -740,6 +740,18 @@ public final class WorldPlan {
 				taken |= (1L << Math.min(h, 62)) - 1;
 			}
 		}
+		// An invisible wall on the cell's tile-pair edges (CAVES_3D_PLAN §3.2): at feet, else in the block above, where it
+		// still stops a player 1.8 blocks tall.
+		int edges = map.edges().blockSides(cx, cy, tx - cx * Scale.CELL_BLOCKS, ty - cy * Scale.CELL_BLOCKS);
+		if (edges != 0) {
+			if ((taken & 1) == 0) {
+				sink.set(x, feet, z, BlockCode.edge(edges));
+				taken |= 1;
+			} else if ((taken & 2) == 0) {
+				sink.set(x, feet + 1, z, BlockCode.edge(edges));
+				taken |= 2;
+			}
+		}
 		// A carrier wins: the light goes only where the position is still air, or a hanging's carrier there gives it.
 		boolean light = map.interior() && !p.dark() && Math.floorMod(tx, LIGHT_SPACING) == 1 && Math.floorMod(ty, LIGHT_SPACING) == 1
 				&& column <= LIGHT_ABOVE_FEET;

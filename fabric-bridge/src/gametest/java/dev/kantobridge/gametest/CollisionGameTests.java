@@ -1,5 +1,6 @@
 package dev.kantobridge.gametest;
 
+import dev.kantobridge.block.EdgeWallBlock;
 import dev.kantobridge.block.KbBlocks;
 import dev.kantobridge.block.LedgeColliderBlock;
 import dev.kantobridge.block.StoryCellBlockEntity;
@@ -179,6 +180,42 @@ public class CollisionGameTests implements FabricGameTest {
 			StoryStates.of(walker).clear();
 			StoryStates.of(surfer).clear();
 		}));
+		helper.succeed();
+	}
+
+	@GameTest(template = EMPTY_STRUCTURE)
+	public void edgeWallsStopPlayersAtFeetAndFromTheBlockAbove(GameTestHelper helper) {
+		// CAVES_3D_PLAN §3.2: a wall on the east side of a block, at feet level, then one in the block above feet level.
+		BlockPos rel = new BlockPos(3, 2, 3);
+		helper.setBlock(rel.below(), Blocks.STONE);
+		helper.setBlock(rel.below().east(), Blocks.STONE);
+		helper.setBlock(rel, KbBlocks.EDGE_WALL.withSides(EdgeWallBlock.SIDE_EAST));
+		BlockPos abs = helper.absolutePos(rel);
+		ServerLevel level = helper.getLevel();
+		BlockState state = level.getBlockState(abs);
+		helper.assertTrue(state.getShape(level, abs).isEmpty(), "an edge wall must have no outline");
+		helper.assertTrue(state.getCollisionShape(level, abs, CollisionContext.empty()).max(Direction.Axis.Y) == 1.5,
+				"its plate is 24 px high");
+		MockPlayers.with(helper, player -> {
+			// Walking east across the block's east face: stopped by the plate.
+			player.setPos(abs.getX() + 0.5, abs.getY(), abs.getZ() + 0.5);
+			player.move(MoverType.SELF, new Vec3(1.0, 0, 0));
+			helper.assertTrue(player.getX() < abs.getX() + 1.0, "a player walked through an edge wall");
+			// Walking west into it from the other side: stopped too.
+			player.setPos(abs.getX() + 1.6, abs.getY(), abs.getZ() + 0.5);
+			player.move(MoverType.SELF, new Vec3(-1.0, 0, 0));
+			helper.assertTrue(player.getX() > abs.getX() + 1.0, "a player walked through an edge wall from the far side");
+			// Walking south along it: free.
+			player.setPos(abs.getX() + 0.5, abs.getY(), abs.getZ() + 0.5);
+			player.move(MoverType.SELF, new Vec3(0, 0, 0.4));
+			helper.assertTrue(player.getZ() > abs.getZ() + 0.85, "the wall stopped a player walking along it");
+			// The same wall in the block above feet level still stops a player 1.8 tall.
+			level.setBlockAndUpdate(abs, Blocks.AIR.defaultBlockState());
+			level.setBlockAndUpdate(abs.above(), KbBlocks.EDGE_WALL.withSides(EdgeWallBlock.SIDE_EAST));
+			player.setPos(abs.getX() + 0.5, abs.getY(), abs.getZ() + 0.5);
+			player.move(MoverType.SELF, new Vec3(1.0, 0, 0));
+			helper.assertTrue(player.getX() < abs.getX() + 1.0, "a player walked under an edge wall a block up");
+		});
 		helper.succeed();
 	}
 

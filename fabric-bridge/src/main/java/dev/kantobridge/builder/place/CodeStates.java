@@ -31,6 +31,7 @@ public final class CodeStates {
 			case BlockCode.KIND_STORY_TILE -> KbBlocks.STORY_TILE.defaultBlockState();
 			case BlockCode.KIND_VANILLA -> this.vanilla(value);
 			case BlockCode.KIND_PROP -> prop(value);
+			case BlockCode.KIND_EDGE -> KbBlocks.EDGE_WALL.withSides(value);
 			default -> Blocks.AIR.defaultBlockState();
 		};
 	}

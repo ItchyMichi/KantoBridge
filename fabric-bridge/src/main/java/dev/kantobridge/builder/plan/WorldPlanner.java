@@ -224,8 +224,14 @@ public final class WorldPlanner {
 				warnings.warn("palette_missing");
 			}
 			boolean interior = placement.kind() == MapPlacement.Kind.INTERIOR;
-			placed.add(new PlacedMap(placement, MapModel.build(map, tileset, swapsByMap.getOrDefault(map.id(), List.of()), interior, warnings,
-					site -> siteNumbers.getOrDefault(site, -1))));
+			MapModel model = MapModel.build(map, tileset, swapsByMap.getOrDefault(map.id(), List.of()), interior, warnings,
+					site -> siteNumbers.getOrDefault(site, -1));
+			// The edges the engine's tile pairs close (CAVES_3D_PLAN §3.2): invisible walls in the map's cells along them
+			PairEdges edges = PairEdges.of(model, field.tilePairs());
+			if (edges.edges() > 0) {
+				warnings.note("tile_pair_edges", edges.edges());
+			}
+			placed.add(new PlacedMap(placement, model, edges));
 		}
 
 		// ---- surface void fill: each gap cell takes the border art of its nearest surface map ----

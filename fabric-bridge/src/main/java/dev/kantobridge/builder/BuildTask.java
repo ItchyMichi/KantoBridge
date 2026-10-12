@@ -472,6 +472,7 @@ public final class BuildTask {
 			r.blocksByKind.put("story_cell", counts.byKind[BlockCode.KIND_STORY]);
 			r.blocksByKind.put("story_tile", counts.byKind[BlockCode.KIND_STORY_TILE]);
 			r.blocksByKind.put("ledge", counts.byKind[BlockCode.KIND_LEDGE]);
+			r.blocksByKind.put("edge_wall", counts.byKind[BlockCode.KIND_EDGE]);
 			r.blocksByKind.put("light", counts.byKind[BlockCode.KIND_LIGHT]);
 			r.blocksByKind.put("habitat", counts.habitatBlocks);
 			r.blocksByKind.put("shape_full", counts.byKind[BlockCode.KIND_SHAPE]);

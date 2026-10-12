@@ -722,7 +722,7 @@ the full suite at H1, H5 and H7.
 | # | Milestone | Status | Date | Commit |
 |---|---|---|---|---|
 | H1 | A position per cell | **done**; checkpoint: JUnit 979 (6 skipped), GameTests 98, Python and Lua 1,484 | 2026-10-12 | `H1: a position per cell` |
-| H2 | Edge walls on tile-pair edges | next | | |
+| H2 | Edge walls on tile-pair edges | **done** (PairEdgesTest 4, a wall GameTest; JUnit builder suite, GameTests 99) | 2026-10-12 | `H2: edge walls on tile-pair edges` |
 | H3 | Caves in an area of their own | | | |
 | H4 | Raised ground in caves | | | |
 | H5 | Real ladders and holes | | | |
@@ -749,6 +749,21 @@ the full suite at H1, H5 and H7.
    untestable now. `WorldPlan.withZones` already carries layouts over.
 6. **New tests:** `MapLayoutTest` (8), plus cases in `ClosedArtTest`, `ShapeMapTest`, `PuppetCullingTest`,
    `EncounterRulesTest` and `BattleRulesTest`.
+
+### Caves in 3D: H2 notes
+
+1. **The table:** `ExportField.TilePairs` reads the field table `tilePairs` (`land` and `water` lists of
+   `{tileset, a, b}`, or `[tileset, a, b]`), either order of a pair. A table or entry shaped otherwise is left out, so a
+   build goes on without walls rather than failing. The real export's table hasn't been read yet: H3's pod build
+   reports the note `tile_pair_edges` (the plan's "a pod build counts the walls", moved there to share one pod run).
+2. **The edges:** `PairEdges` closes the edge between two neighbouring cells whose collision tiles (bottom-left tile)
+   form a land pair (both walked on) or a water pair (one of them water). Each cell walls its own side of the edge.
+3. **The wall:** `kantobridge:edge_wall` (`EdgeWallBlock`): invisible, no outline, plates 2 px thick and 24 px high on
+   its set sides, for every entity. `BlockCode.KIND_EDGE` (11); the plan puts it at the cell's feet, else in the block
+   above, which still stops a player 1.8 blocks tall (a GameTest checks both).
+4. **Deviation (plan §3.2):** no story-cell block carries walls. Feet or the block above is free on every walkable cell
+   the planner knows of (boulder and water cells take only feet), and both cells of an edge carry a wall, so one is
+   enough. If the pod build ever shows a side without room, the story-cell variant follows.
 
 ## Wild Routes
 
