@@ -616,6 +616,24 @@ installed, nothing copied). Feature tests per milestone; the full suite at CW2, 
    floor tile, the same apron every time), `CanopyTest` (kb-shapes/11 swaps the curtain for the apron; kb-shapes/10 and
    other maps unchanged), `CanopyPlanTest` (the built ring, every apron block as planned, no shape ids past the map).
    The golden synthetic shapes changed only in planner, parameters and hashes.
+7. **The real world** (your Blue on the pod's test install: kb-dev, because kb-dev3's host was full; about 24 minutes,
+   stopped after): 220 maps, 0 warnings, built in 75 s. Against the CW5 world (kb-shapes/10):
+
+   | | kb-shapes/10 | kb-shapes/11 | Budget |
+   |---|---|---|---|
+   | Shape map on the wire (characters) | 303,816 | 305,336 (58%) | 524,288 |
+   | Blocks placed | 4,217,788 | 4,362,390 | |
+   | Quads per block, max / mean | 76 / 10.41 | 76 / 10.44 | 96 / 24 |
+   | Quads per section, P95 / max | 6,416 / 24,064 | 6,416 / 24,064 | 12,000 / 30,000 |
+   | Self-check: holes, ground, structure P05 | 0, 1.0, 0.731 | 0, 1.0, 0.731 | 0, 1.0, 0.577 |
+
+   The apron costs the wire 1,520 characters (the wider grid's empty columns). Pieces: 720 apron cells (86 wells), 420
+   bushes (65 taller), 2 trunks (the forest's edge is trees almost everywhere; only its exits are open ground), 527
+   vines. Every budget gate passes except `template_fallbacks` (18 building placements against a floor of 20). It fails
+   the same way on the pod's kb-shapes/8 and kb-shapes/10 worlds: those builds have no Dramaless profile, so it is older
+   than this plan (see CW5 note 2).
+8. **The video** (16 s, 1280 × 720): `showcase.py --scene tour --stops VIRIDIAN_FOREST`, a look round from beside the
+   north exit; sent to you, the original on the volume (`/workspace/videos/kanto-bridge-apron-20261012-003552.mp4`).
 
 ### Caves and woods: CW5 notes
 
@@ -623,7 +641,9 @@ installed, nothing copied). Feature tests per milestone; the full suite at CW2, 
 2. **The real world** (your Blue on the pod's test install, all 220 maps, a new pod `kb-dev3` because kb-dev's and
    kb-dev2's hosts were full; about 12 minutes, stopped after): built by the dev client's "Create Kanto world"; the
    headless build (`build_world.py`) needs the Minecraft EULA on the pod, which only you can accept (PLAN §0.6). Every
-   budget gate passes (`build_world.budget_gates`). Against the pod's last world (kb-shapes/8):
+   gate a build report can check passes (`budget_gates(full_build=False)`). Correction found at CW3: of the full-build
+   gates, `template_fallbacks` fails on every pod world, kb-shapes/8 included (18 building placements against a floor
+   of 20; no Dramaless profile there), so it is older than this plan. Against the pod's last world (kb-shapes/8):
 
    | | kb-shapes/8 | kb-shapes/10 | Budget |
    |---|---|---|---|
