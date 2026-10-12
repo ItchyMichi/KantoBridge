@@ -304,15 +304,15 @@ There are no tile pairs outdoors, so there are two sources:
   to the sky). There are fewer than 20 cave floors *(general knowledge)*, and you go through their entrances far less
   often than through house doors. Houses, shops and gyms stay under their doors, and their doors stay instant.
   **You chose this on 2026-10-12** (§7).
-- **Missed in the first answer:** `docs/specs/VANILLA_WORLD_PLAN.md` (2026-10-09, not decided) moves every interior
-  into one dimension of its own (your U1). If it goes ahead, every door becomes a dimension change anyway, and the cave
-  area would sit in that dimension. That dimension's type could be as deep as needed without the overworld override.
+- **Missed in the first answer:** the plan of 2026-10-09 (`docs/specs/VANILLA_WORLD_PLAN.md`) moved every interior
+  into one dimension of its own. **You dropped it on 2026-10-12** (several dimensions loaded with players spread out,
+  puppets across dimensions), so the cave area stays in the overworld.
 
 ### 5.4 Growth: new places and other games (your question of 2026-10-12)
 
 - **Space is not the limit.**
   - Minecraft's world is about 60 million blocks across.
-  - Kanto is 704 × 744 blocks with its ring (VANILLA_WORLD_PLAN WD5). With its wild zones (from 3,000 blocks south,
+  - Kanto is 704 × 744 blocks with its ring (the dropped vanilla plan's WD5). With its wild zones (from 3,000 blocks south,
     rows of 8 slots of 640 blocks) and its dungeons (3,000 blocks north), it spans about 5,000 × 7,500 blocks.
   - West and east of Kanto are kept for other games' worlds (`builder/zone/ZoneRegions.java:9`,
     `docs/specs/WILD_ROUTES_PLAN.md` §4.10).

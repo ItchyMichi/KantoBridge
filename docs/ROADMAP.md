@@ -153,13 +153,10 @@ with one gate (a chunk-generator subclass, the project's first access widener, r
 answers to D1–D9, D16 and D17 (`:8660-8676`), the footprint and edge numbers the builder doesn't report yet, the
 experiments E1–E12 (`:8972-8983`), and a firm spec in `docs/specs/`, as the voxel and profile plans had.
 
-**Update (2026-10-09):** [specs/VANILLA_WORLD_PLAN.md](specs/VANILLA_WORLD_PLAN.md) proposes the first step from your
-brief of that day. Not decided yet:
-- every interior moves into one custom dimension;
-- Kanto sits contained in pre-generated vanilla land behind a buffer zone;
-- spikes S1–S9 on the RunPod pod come first, then milestones W1–W5.
-
-It replaces M11a's generator and leaves the gates and the rules by zone for later.
+**Dropped (2026-10-12):** the plan of 2026-10-09 (`docs/specs/VANILLA_WORLD_PLAN.md`, removed; last at `9f82234`)
+would have moved every interior into one custom dimension and set Kanto in pre-generated vanilla land. You dropped it:
+several dimensions would be loaded at once when players are spread out, and puppets would have to work across
+dimensions. Everything stays in the overworld.
 
 ### Stage 8: regions and Johto
 
