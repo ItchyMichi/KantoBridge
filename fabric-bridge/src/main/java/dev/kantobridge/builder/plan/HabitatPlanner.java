@@ -8,9 +8,12 @@ import dev.kantobridge.world.Scale;
 import dev.kantobridge.world.WorldIndex;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Set;
+import java.util.TreeMap;
 import java.util.TreeSet;
 
 /**
@@ -104,8 +107,19 @@ public final class HabitatPlanner {
 			}
 			MapPlacement p = map.placement();
 			int range = WorldPlan.BIOME_CAVE_3D.equals(p.biome()) ? CAVE_RANGE : RANGE;
-			for (int[] block : cover(p, cells, range)) {
-				out.add(new WorldIndex.Habitat(map.id(), block[0], p.y() - BELOW_FEET, block[1], poolId(map.id()), range));
+			// Raised ground (CAVES_3D_PLAN §3.4): habitat blocks stay under the map's floor, outside its volume, so a level's
+			// cells are covered with the reach left over their higher floor; a block two levels both pick is placed once.
+			Map<Integer, List<int[]>> byLevel = new TreeMap<>();
+			for (int[] cell : cells) {
+				byLevel.computeIfAbsent(map.level(cell[0], cell[1]), k -> new ArrayList<>()).add(cell);
+			}
+			Set<Long> placedAt = new HashSet<>();
+			for (Map.Entry<Integer, List<int[]>> level : byLevel.entrySet()) {
+				for (int[] block : cover(p, level.getValue(), range, FLOOR_ABOVE + level.getKey())) {
+					if (placedAt.add(((long) block[0] << 32) ^ (block[1] & 0xFFFFFFFFL))) {
+						out.add(new WorldIndex.Habitat(map.id(), block[0], p.y() - BELOW_FEET, block[1], poolId(map.id()), range));
+					}
+				}
 			}
 		}
 		out.sort(Comparator.comparing(WorldIndex.Habitat::map).thenComparingInt(WorldIndex.Habitat::z).thenComparingInt(WorldIndex.Habitat::x));
@@ -138,7 +152,12 @@ public final class HabitatPlanner {
 
 	/** The same for habitat blocks of another {@code RangeOfInfluence}. */
 	public static List<int[]> cover(MapPlacement p, List<int[]> cells, int range) {
-		int reach2 = range * range - FLOOR_ABOVE * FLOOR_ABOVE;
+		return cover(p, cells, range, FLOOR_ABOVE);
+	}
+
+	/** The same for floor blocks {@code floorAbove} blocks over the habitat blocks (a raised cave floor's are higher). */
+	public static List<int[]> cover(MapPlacement p, List<int[]> cells, int range, int floorAbove) {
+		int reach2 = range * range - floorAbove * floorAbove;
 		int w = p.w() * Scale.CELL_BLOCKS;
 		int h = p.h() * Scale.CELL_BLOCKS;
 		boolean[] target = new boolean[w * h];

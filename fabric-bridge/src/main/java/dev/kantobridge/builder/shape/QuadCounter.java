@@ -1,6 +1,7 @@
 package dev.kantobridge.builder.shape;
 
 import dev.kantobridge.builder.plan.BlockCode;
+import dev.kantobridge.builder.plan.Box3;
 import dev.kantobridge.builder.plan.ChunkCodes;
 import dev.kantobridge.builder.plan.WorldPlan;
 import dev.kantobridge.builder.shape.geom.FaceMasks;
@@ -126,13 +127,13 @@ public final class QuadCounter {
 			return closed;
 		}
 		if (kind != BlockCode.KIND_FULL && kind != BlockCode.KIND_HALF && kind != BlockCode.KIND_SHAPE && kind != BlockCode.KIND_DECOR
-				&& kind != BlockCode.KIND_LEDGE) {
+				&& kind != BlockCode.KIND_LEDGE && kind != BlockCode.KIND_STEP) {
 			return 0;
 		}
 		int id = world.shapeId(x, y, z);
 		ShapeMesh mesh = id == 0 || table == null ? null : table.mesh(id);
 		if (mesh == null) {
-			return closed + (kind == BlockCode.KIND_DECOR || kind == BlockCode.KIND_LEDGE ? 0 : 6);
+			return closed + (kind == BlockCode.KIND_DECOR || kind == BlockCode.KIND_LEDGE || kind == BlockCode.KIND_STEP ? 0 : 6);
 		}
 		int n = closed;
 		for (int q = 0; q < mesh.size(); q++) {
@@ -150,6 +151,11 @@ public final class QuadCounter {
 
 	/** Counts a planned world: every position of its volumes, the shape ids from its shape map. */
 	public static Stats count(WorldPlan plan, ShapeMap map, ShapeTable table) {
+		return count(plan, map, table, plan.volumes());
+	}
+
+	/** The same over the chunks of {@code volumes} only (a dry run's cave area, docs/specs/CAVES_3D_PLAN.md §3.4). */
+	public static Stats count(WorldPlan plan, ShapeMap map, ShapeTable table, List<Box3> volumes) {
 		ShapeMap.Lookup lookup = map.lookup();
 		Map<Long, ChunkCodes> cache = new HashMap<>();
 		World world = new World() {
@@ -166,7 +172,7 @@ public final class QuadCounter {
 				return lookup.shapeAt(x, y, z);
 			}
 		};
-		List<long[]> chunks = new ArrayList<>(WorldPlan.chunks(plan.volumes()));
+		List<long[]> chunks = new ArrayList<>(WorldPlan.chunks(volumes));
 		chunks.sort((a, b) -> a[1] != b[1] ? Long.compare(a[1], b[1]) : Long.compare(a[0], b[0]));
 		int[] histogram = new int[HISTOGRAM + 1];
 		long shaped = 0;

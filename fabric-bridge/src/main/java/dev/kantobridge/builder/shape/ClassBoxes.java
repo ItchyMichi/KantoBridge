@@ -103,6 +103,15 @@ final class ClassBoxes {
 	 */
 	static void plan(SceneMap map, int atlas, ProfileClasses classes, @Nullable String[] box, boolean[] held, int ground, ShapeKey[][] keys,
 			int[] blocks, int[] mask, int[] floor, Map<String, Integer> tally) {
+		plan(map, atlas, classes, box, held, ground, keys, blocks, mask, floor, tally, null);
+	}
+
+	/**
+	 * The same over raised ground (docs/specs/CAVES_3D_PLAN.md §3.4): {@code lift}, per art tile, the voxels its floor
+	 * stands above the map's (null: none), so a side is culled only where its neighbour really stands as high.
+	 */
+	static void plan(SceneMap map, int atlas, ProfileClasses classes, @Nullable String[] box, boolean[] held, int ground, ShapeKey[][] keys,
+			int[] blocks, int[] mask, int[] floor, Map<String, Integer> tally, int @Nullable [] lift) {
 		int cols = map.artCols();
 		int rows = map.artRows();
 		int n = cols * rows;
@@ -198,10 +207,10 @@ final class ClassBoxes {
 					}
 					int y1 = Math.min(h[i], 8 * k + 8);
 					int t = bands[i][k];
-					int north = (inner[i] & 1) != 0 || covered(cover, cols, rows, tx, ty - 1, y1) ? -1 : t;
-					int south = (inner[i] & 2) != 0 || covered(cover, cols, rows, tx, ty + 1, y1) ? -1 : t;
-					int west = covered(cover, cols, rows, tx - 1, ty, y1) ? -1 : t;
-					int east = covered(cover, cols, rows, tx + 1, ty, y1) ? -1 : t;
+					int north = (inner[i] & 1) != 0 || covered(cover, lift, cols, rows, i, tx, ty - 1, y1) ? -1 : t;
+					int south = (inner[i] & 2) != 0 || covered(cover, lift, cols, rows, i, tx, ty + 1, y1) ? -1 : t;
+					int west = covered(cover, lift, cols, rows, i, tx - 1, ty, y1) ? -1 : t;
+					int east = covered(cover, lift, cols, rows, i, tx + 1, ty, y1) ? -1 : t;
 					ShapeKey key = ShapeKey.box(atlas, k == nb - 1 ? top[i] : -1, north, south, west, east, 2 * (y1 - 8 * k));
 					column[k] = BOOKCASE.equals(box[i]) && south >= 0 && classes.tileset().bookcaseRelief() ? key.withVariant("p") : key;
 				}
@@ -279,8 +288,16 @@ final class ClassBoxes {
 	}
 
 	/** True when the neighbour at (tx, ty) covers a side up to {@code y1} pixels. */
-	private static boolean covered(int[] cover, int cols, int rows, int tx, int ty, int y1) {
-		return tx >= 0 && ty >= 0 && tx < cols && ty < rows && cover[ty * cols + tx] >= y1;
+	/**
+	 * True when the neighbour at (tx, ty) stands at least {@code y1} over tile {@code i}'s floor: a raised neighbour by its
+	 * lift more (rock fills it from the map's floor), a lower one by the difference less.
+	 */
+	private static boolean covered(int[] cover, int @Nullable [] lift, int cols, int rows, int i, int tx, int ty, int y1) {
+		if (tx < 0 || ty < 0 || tx >= cols || ty >= rows) {
+			return false;
+		}
+		int n = ty * cols + tx;
+		return cover[n] + (lift == null ? 0 : lift[n] - lift[i]) >= y1;
 	}
 
 	/** The full cubes a column stands from the floor: plain or cube-keyed blocks that aren't a carrier's shape. */

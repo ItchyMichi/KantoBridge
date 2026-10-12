@@ -47,9 +47,9 @@ class ShapePlannerSyntheticTest {
 		TestData.assertGolden(TestData.goldenShapes(), ProtoJson.write(golden), "shapes");
 		assertEquals("kb-shapes/11", shapes.index().planner());
 		assertEquals(2, shapes.keysByKind().get(ShapeKey.Kind.TUFT), "the grass and the flower");
-		assertEquals(7 * 8, shapes.keysByKind().get(ShapeKey.Kind.CELL), "seven units of eight blocks: the tree wall (with and without walkable "
-				+ "ground south), the town's post, the cut tree, the hill's sign, the hill's round tree (the synthetic profile pins it), and "
-				+ "the houses' stairs (P3: a rising stair, the same on both floors)");
+		assertEquals(9 * 8, shapes.keysByKind().get(ShapeKey.Kind.CELL), "nine units of eight blocks: the tree wall (with and without walkable "
+				+ "ground south), the town's post, the cut tree, the hill's sign, the hill's round tree (the synthetic profile pins it), "
+				+ "the houses' stairs (P3: a rising stair, the same on both floors), and the cave's two stairs (H4: ramps on different grounds)");
 		assertTrue(shapes.index().size() > 0);
 		// P2: the hill's house is the synthetic profile's band building; the town's door block stays a V7 template; P3: the
 		// house's counter row is its desk.

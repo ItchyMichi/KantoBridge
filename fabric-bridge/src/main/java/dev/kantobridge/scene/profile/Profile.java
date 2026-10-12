@@ -51,16 +51,17 @@ public final class Profile {
 		classes.put("flower", Mode.FLOWER);
 		classes.put("relief", Mode.RELIEF);
 		classes.put("bookcase", Mode.BOOKCASE);
-		for (String c : List.of("stair_e", "stair_w", "stair_down_e", "stair_down_w")) {
+		// stair_n and stair_s: Dramaless Shape names none, but a cave's stairs climb any way (docs/specs/CAVES_3D_PLAN.md §3.4).
+		for (String c : List.of("stair_e", "stair_w", "stair_n", "stair_s", "stair_down_e", "stair_down_w")) {
 			classes.put(c, Mode.STAIR);
 		}
 		CLASSES = Collections.unmodifiableMap(classes);
 		Map<String, Integer> heights = new TreeMap<>();
 		int[] values = {0, -2, 0, 6, 28, 7, 12, 16, 32, 16, 10, 12, 8, 12, 24, 16, 9, 16, 32, 32, 16, 16, 8, 16, 16, 16, 16, 16, 0, 0, 3, 32, 16, 16,
-				16, 16};
+				16, 16, 16, 16};
 		String[] names = {"ground", "water", "void", "ledge", "roof", "bed", "backrest", "wall", "cliff", "tree", "fence", "sign", "counter", "table",
 				"desk", "cylinder", "can", "stump", "canopy", "planter", "billboard", "signpost", "stool", "prop", "cutout", "bike", "console", "post",
-				"grass", "flower", "relief", "bookcase", "stair_e", "stair_w", "stair_down_e", "stair_down_w"};
+				"grass", "flower", "relief", "bookcase", "stair_e", "stair_w", "stair_n", "stair_s", "stair_down_e", "stair_down_w"};
 		for (int i = 0; i < names.length; i++) {
 			heights.put(names[i], values[i]);
 		}
@@ -118,6 +119,22 @@ public final class Profile {
 		/** The class pinned on {@code tile}, or null. */
 		public @Nullable String pin(int tile) {
 			return this.pins.get(tile);
+		}
+
+		/**
+		 * The class of {@code tile} where the tiles above and below it are {@code above} and {@code below}: its first
+		 * conditional pin that matches ({@code above} rules first, each in file order), else its pin, else null.
+		 */
+		public @Nullable String classAt(int tile, int above, int below) {
+			List<Cond> list = this.conds.get(tile);
+			if (list != null) {
+				for (Cond cond : list) {
+					if (cond.tiles().contains(cond.above() ? above : below)) {
+						return cond.cls();
+					}
+				}
+			}
+			return this.pin(tile);
 		}
 
 		/** A class's height in Game Boy pixels for this tileset (0 for an unknown class). */

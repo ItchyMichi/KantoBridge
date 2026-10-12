@@ -3,6 +3,7 @@ package dev.kantobridge.gametest;
 import dev.kantobridge.block.EdgeWallBlock;
 import dev.kantobridge.block.KbBlocks;
 import dev.kantobridge.block.LedgeColliderBlock;
+import dev.kantobridge.block.StepColliderBlock;
 import dev.kantobridge.block.StoryCellBlockEntity;
 import dev.kantobridge.story.StoryState;
 import dev.kantobridge.story.StoryStates;
@@ -226,6 +227,64 @@ public class CollisionGameTests implements FabricGameTest {
 			helper.assertTrue(player.getX() < abs.getX() + 1.0, "a player walked under an edge wall a block up");
 		});
 		helper.succeed();
+	}
+
+	@GameTest(template = EMPTY_STRUCTURE)
+	public void caveStepsClimbHalfABlockAtATime(GameTestHelper helper) {
+		// CAVES_3D_PLAN §3.4: stairs climbing east as the builder lays them (two half steps on the floor, a block with two
+		// more on it), then a plateau two blocks up; beside them, the plateau's bare face.
+		for (int x = 0; x < 8; x++) {
+			for (int z = 1; z < 7; z++) {
+				helper.setBlock(new BlockPos(x, 1, z), Blocks.STONE);
+			}
+		}
+		BlockState steps = KbBlocks.STEP_COLLIDER.defaultBlockState().setValue(StepColliderBlock.FACING, Direction.EAST);
+		for (int z = 2; z < 4; z++) {
+			helper.setBlock(new BlockPos(3, 2, z), steps);
+			helper.setBlock(new BlockPos(4, 2, z), Blocks.STONE);
+			helper.setBlock(new BlockPos(4, 3, z), steps);
+		}
+		for (int x = 5; x < 8; x++) {
+			for (int z = 2; z < 6; z++) {
+				helper.setBlock(new BlockPos(x, 2, z), Blocks.STONE);
+				helper.setBlock(new BlockPos(x, 3, z), Blocks.STONE);
+			}
+		}
+		ServerLevel level = helper.getLevel();
+		BlockPos low = helper.absolutePos(new BlockPos(3, 2, 2));
+		BlockState state = level.getBlockState(low);
+		helper.assertTrue(state.getShape(level, low).isEmpty(), "a step collider must have no outline");
+		helper.assertTrue(!state.isSolid(), "nor count as ground to spawn on");
+		helper.assertTrue(state.getCollisionShape(level, low, CollisionContext.empty()).max(Direction.Axis.Y) == 1.0, "its back half is a block high");
+		helper.assertTrue(StepColliderBlock.shape(Direction.EAST).bounds().equals(new net.minecraft.world.phys.AABB(0, 0, 0, 1, 1, 1))
+				&& StepColliderBlock.shape(Direction.NORTH).toAabbs().size() == 2, "two half steps filling the block's footprint");
+		BlockPos origin = helper.absolutePos(BlockPos.ZERO);
+		MockPlayers.with(helper, player -> {
+			// Up the stairs onto the plateau, half a block at a time.
+			player.setPos(origin.getX() + 1.5, origin.getY() + 2, origin.getZ() + 3.0);
+			walk(player, 0.25, 0, 20);
+			helper.assertTrue(player.getX() > origin.getX() + 5.5 && Math.abs(player.getY() - (origin.getY() + 4)) < 1e-6,
+					"the stairs didn't lead onto the plateau: " + player.position());
+			// The bare face beside them: two blocks, never climbed.
+			player.setPos(origin.getX() + 1.5, origin.getY() + 2, origin.getZ() + 5.0);
+			walk(player, 0.25, 0, 20);
+			helper.assertTrue(player.getX() < origin.getX() + 5.0 && player.getY() < origin.getY() + 2.1, "a player climbed a two-block face");
+			// And down them again.
+			player.setPos(origin.getX() + 6.5, origin.getY() + 4, origin.getZ() + 3.0);
+			walk(player, -0.25, 0, 24);
+			helper.assertTrue(player.getX() < origin.getX() + 3.0 && Math.abs(player.getY() - (origin.getY() + 2)) < 1e-6,
+					"the stairs didn't lead down: " + player.position());
+		});
+		helper.succeed();
+	}
+
+	/** Walks a player {@code steps} times by (dx, dz) as Minecraft moves it (0.6-block steps), falling onto what is under it. */
+	static void walk(ServerPlayer player, double dx, double dz, int steps) {
+		player.move(MoverType.SELF, new Vec3(0, -1.0, 0));
+		for (int i = 0; i < steps; i++) {
+			player.move(MoverType.SELF, new Vec3(dx, 0, dz));
+			player.move(MoverType.SELF, new Vec3(0, -1.0, 0));
+		}
 	}
 
 	@GameTest(template = EMPTY_STRUCTURE)

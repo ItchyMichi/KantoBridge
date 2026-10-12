@@ -5,22 +5,33 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import dev.kantobridge.builder.export.ExportBundle;
+import dev.kantobridge.builder.export.ExportProfile;
+import dev.kantobridge.builder.shape.QuadCounter;
+import dev.kantobridge.builder.shape.geom.ShapeTable;
 import dev.kantobridge.proto.ProtoJson;
+import dev.kantobridge.scene.gen1.BundleArtSource;
+import dev.kantobridge.scene.profile.Profile;
+import dev.kantobridge.scene.profile.ProfileSource;
+import dev.kantobridge.world.MapLayout;
 import dev.kantobridge.world.MapPlacement;
 import dev.kantobridge.world.WorldIndex;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.TreeMap;
+import net.minecraft.core.BlockPos;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledIfSystemProperty;
 
 /**
  * The caves in 3D plan's dry run on the real world (docs/specs/CAVES_3D_PLAN.md §0, H3–H5): plans the world from the
- * export bundle named by {@code -Pkb.realBundle} (the pod's, from the player's own game) and writes what the plan made
- * of it to {@code build/reports/caves3d_dry_run.json}: counts, reason codes and map ids only, never a tile or a pixel
- * (docs/specs/VOXEL_BLOCKS_PLAN.md §0.2). Skipped everywhere else.
+ * export bundle named by {@code -Pkb.realBundle} (the pod's, from the player's own game), every cave built in 3D, and
+ * writes what the plan made of it to {@code build/reports/caves3d_dry_run.json}: counts, reason codes and map ids only,
+ * never a tile or a pixel (docs/specs/VOXEL_BLOCKS_PLAN.md §0.2). Skipped everywhere else.
  */
 @EnabledIfSystemProperty(named = "kb.realBundle", matches = ".+")
 class RealWorldDryRunTest {
@@ -28,7 +39,7 @@ class RealWorldDryRunTest {
 	void dryRun() throws Exception {
 		ExportBundle bundle = ExportBundle.open(Path.of(System.getProperty("kb.realBundle")));
 		long started = System.nanoTime();
-		WorldPlan plan = WorldPlanner.plan(bundle, new WorldPlanner.Options(null, 0, 0, -256));
+		WorldPlan plan = WorldPlanner.plan(bundle, new WorldPlanner.Options(null, 0, 0, -256, true, Set.of(Caves3d.ALL)));
 		JsonObject out = new JsonObject();
 		out.addProperty("plan_ms", (System.nanoTime() - started) / 1_000_000L);
 		out.addProperty("maps", plan.maps().size());
@@ -66,6 +77,89 @@ class RealWorldDryRunTest {
 		out.add("habitats_by_range", counts(habitats));
 		if (plan.shapes() != null) {
 			out.addProperty("shape_map_wire_chars", plan.shapes().map().wire().length());
+		}
+		// H4: each cave's raised ground, or why it stays flat
+		ExportProfile carried = bundle.profile();
+		Profile profile = carried == null ? null : ProfileSource.read(carried.text(), carried.version(), carried.enabled()).profile();
+		out.addProperty("profile", profile != null);
+		JsonArray levels = new JsonArray();
+		List<Box3> caveVolumes = new ArrayList<>();
+		for (PlacedMap map : plan.maps()) {
+			if (!WorldPlan.BIOME_CAVE_3D.equals(map.placement().biome())) {
+				continue;
+			}
+			caveVolumes.add(WorldPlan.interiorVolume(map.placement(), WorldPlan.maxCeiling(map.layout())));
+			CaveLevels.Result result = CaveLevels.plan(map.model(), bundle.field().tilePairs(),
+					profile == null ? null : profile.tileset(map.model().tileset().id()));
+			JsonObject row = new JsonObject();
+			row.addProperty("map", map.id());
+			row.addProperty("outcome", result.outcome());
+			row.addProperty("high", result.high());
+			row.addProperty("regions", result.regions());
+			row.addProperty("raised_cells", result.raisedCells());
+			row.addProperty("ramps", result.stairs());
+			row.addProperty("stairs_profile_confirmed", result.stairsConfirmed());
+			row.addProperty("stairs_profile_other", result.stairsOther());
+			MapLayout layout = map.layout();
+			if (layout != null) {
+				Map<String, Integer> dirs = new TreeMap<>();
+				for (int i = 0; i < layout.w() * layout.h(); i++) {
+					MapLayout.Ramp ramp = layout.ramp(i % layout.w(), i / layout.w());
+					if (ramp != null) {
+						dirs.merge(ramp.dir().id(), 1, Integer::sum);
+					}
+				}
+				row.add("ramps_by_dir", counts(dirs));
+				row.addProperty("max_ceiling", WorldPlan.maxCeiling(layout));
+			}
+			levels.add(row);
+		}
+		out.add("cave_levels", levels);
+		// H2 and H4: every block along a pair edge has its wall, at its cell's feet or the block above
+		ChunkCodesView view = new ChunkCodesView(plan);
+		Map<String, Integer> unwalled = new TreeMap<>();
+		int walled = 0;
+		for (PlacedMap map : plan.maps()) {
+			if (map.edges().edges() == 0) {
+				continue;
+			}
+			MapPlacement p = map.placement();
+			for (int cy = 0; cy < p.h(); cy++) {
+				for (int cx = 0; cx < p.w(); cx++) {
+					BlockPos origin = plan.index().cellOrigin(map.id(), cx, cy);
+					for (int b = 0; b < 4; b++) {
+						if (map.edges().blockSides(cx, cy, b % 2, b / 2) == 0) {
+							continue;
+						}
+						int x = origin.getX() + b % 2;
+						int z = origin.getZ() + b / 2;
+						if (BlockCode.kind(view.code(x, origin.getY(), z)) == BlockCode.KIND_EDGE
+								|| BlockCode.kind(view.code(x, origin.getY() + 1, z)) == BlockCode.KIND_EDGE) {
+							walled++;
+						} else {
+							unwalled.merge(map.id(), 1, Integer::sum);
+						}
+					}
+				}
+			}
+		}
+		out.addProperty("edge_wall_blocks", walled);
+		out.add("edge_wall_blocks_missing_by_map", counts(unwalled));
+		// H4: what the caves draw, every one raised where it can be
+		if (plan.shapes() != null && !caveVolumes.isEmpty()) {
+			long t0 = System.nanoTime();
+			ShapeTable table = ShapeTable.build(plan.shapes().index(), BundleArtSource.of(bundle));
+			QuadCounter.Stats quads = QuadCounter.count(plan, plan.shapes().map(), table, caveVolumes);
+			JsonObject cave = new JsonObject();
+			cave.addProperty("shaped_blocks", quads.shapedBlocks());
+			cave.addProperty("shape_quads", quads.shapeQuads());
+			cave.addProperty("max_block", quads.maxBlock());
+			cave.addProperty("sections", quads.sections());
+			cave.addProperty("section_p50", quads.sectionP50());
+			cave.addProperty("section_p95", quads.sectionP95());
+			cave.addProperty("section_max", quads.sectionMax());
+			cave.addProperty("ms", (System.nanoTime() - t0) / 1_000_000L);
+			out.add("cave_quads", cave);
 		}
 		Path report = Path.of("reports", "caves3d_dry_run.json");
 		Files.createDirectories(report.getParent());

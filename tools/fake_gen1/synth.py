@@ -129,12 +129,13 @@ CAVE_BLOCKS = [
 ]
 CF, CR, CK, CS, CL, CH, CLR = range(7)
 # 1F: the low floor in the west, a plateau in the east with a ladder down to B1F's east room; a ladder down to its
-# west room, a hole into it, and the cave mouth out to TEST_TOWN.
+# west room, a hole into it, and the cave mouth out to TEST_TOWN. The plateau's south face looks over low floor, as a
+# Gen 1 cave draws a cliff (docs/specs/CAVES_3D_PLAN.md §3.4).
 CAVE_1F_BLOCKS = [
     [CK, CK, CK, CK, CK, CK],
     [CK, CF, CS, CR, CLR, CK],
     [CK, CL, CF, CR, CR, CK],
-    [CK, CL, CH, CK, CK, CK],
+    [CK, CL, CH, CF, CK, CK],
 ]
 # B1F: two rooms that only ladders join (a west room with the hole's landing, an east room).
 CAVE_B1F_BLOCKS = [
@@ -185,6 +186,11 @@ PROFILE_TEXT = "\n".join([
     f"      prop_ground = {{ [{CUT}] = {GROUND} }},",
     f"      prop_bg = {{ {{ tiles = {_lua_list([SIGN_TOP])}, shades = {{ \"white\" }} }} }},",
     f"      when_above = {{ [{ROOF2}] = {{ {{ above = {_lua_list([ROOF_EDGE])}, class = \"roof\" }} }} }},",
+    "    },",
+    # The cave (docs/specs/CAVES_3D_PLAN.md §3.4): its raised floor a ledge floor, as Dramaless pins one; its stairs.
+    "    CAVERN = {",
+    f"      ledge = {_lua_list([C_RAISED])},",
+    f"      stair_e = {_lua_list([C_STAIRS])},",
     "    },",
     "  },",
     "  buildings = {",

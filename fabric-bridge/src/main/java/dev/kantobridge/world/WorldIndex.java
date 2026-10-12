@@ -473,7 +473,35 @@ public final class WorldIndex {
 		if (origin == null) {
 			return null;
 		}
-		return new Vec3(origin.getX() + 1.0, origin.getY(), origin.getZ() + 1.0);
+		// A ramp's middle is where its second and third half steps meet: whoever stands there stands on the third.
+		MapLayout layout = this.layouts.get(map);
+		MapLayout.Ramp ramp = layout == null ? null : layout.ramp(x, y);
+		return new Vec3(origin.getX() + 1.0, origin.getY() + (ramp == null ? 0.0 : ramp.rise() * 0.75), origin.getZ() + 1.0);
+	}
+
+	/**
+	 * How far the floor has risen under point (cx, cy) of cell (rx, ry), both in cells (docs/specs/CAVES_3D_PLAN.md §3.4):
+	 * on a ramp, from 0 at its low edge to its rise at its high edge, evenly; 0 off one.
+	 */
+	public double rampLift(String map, int rx, int ry, double cx, double cy) {
+		MapLayout layout = this.layouts.get(map);
+		MapLayout.Ramp ramp = layout == null ? null : layout.ramp(rx, ry);
+		if (ramp == null) {
+			return 0.0;
+		}
+		double along = switch (ramp.dir()) {
+			case RIGHT -> cx - (rx - 0.5);
+			case LEFT -> rx + 0.5 - cx;
+			case DOWN -> cy - (ry - 0.5);
+			case UP -> ry + 0.5 - cy;
+		};
+		return ramp.rise() * Math.max(0.0, Math.min(1.0, along));
+	}
+
+	/** True when cell (x, y) of a map is a ramp. */
+	public boolean ramp(String map, int x, int y) {
+		MapLayout layout = this.layouts.get(map);
+		return layout != null && layout.ramp(x, y) != null;
 	}
 
 	/**

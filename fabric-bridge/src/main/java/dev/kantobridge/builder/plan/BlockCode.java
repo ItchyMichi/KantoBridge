@@ -36,8 +36,13 @@ public final class BlockCode {
 	 * ({@link dev.kantobridge.block.EdgeWallBlock#SIDE_NORTH} …).
 	 */
 	public static final int KIND_EDGE = 11;
+	/**
+	 * Two half steps of a cave's stairs (docs/specs/CAVES_3D_PLAN.md §3.4): the value is the way they climb, in Gen 1's
+	 * direction numbers as {@link #ledge}'s.
+	 */
+	public static final int KIND_STEP = 12;
 	/** One past the highest kind. */
-	public static final int KINDS = 12;
+	public static final int KINDS = 13;
 
 	private static final int SHIFT = 24;
 	private static final int VALUE_MASK = (1 << SHIFT) - 1;
@@ -93,6 +98,16 @@ public final class BlockCode {
 	/** A ledge collider; {@code dir} is the Gen 1 hop direction: 0 down, 1 up, 2 left, 3 right. */
 	public static int ledge(int dir) {
 		return (KIND_LEDGE << SHIFT) | dir;
+	}
+
+	/** A step collider climbing {@code climb}. */
+	public static int step(dev.kantobridge.world.Dir climb) {
+		return (KIND_STEP << SHIFT) | switch (climb) {
+			case DOWN -> 0;
+			case UP -> 1;
+			case LEFT -> 2;
+			case RIGHT -> 3;
+		};
 	}
 
 	public static int light(int level) {

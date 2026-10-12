@@ -55,6 +55,7 @@
   "block.kantobridge.story_tile": "Story Cell",
   "block.kantobridge.ledge_collider": "Ledge",
   "block.kantobridge.edge_wall": "Edge Wall",
+  "block.kantobridge.step_collider": "Steps",
   "entity.kantobridge.puppet": "Kanto NPC",
   "key.categories.kantobridge": "Kanto Bridge",
   "key.kantobridge.debug_overlay": "Bridge debug overlay",

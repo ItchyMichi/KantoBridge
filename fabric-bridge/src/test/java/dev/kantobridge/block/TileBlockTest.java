@@ -36,7 +36,8 @@ class TileBlockTest {
 	@Test
 	void everyTileFamilyIsACarrierWithItsSlots() {
 		List<KbBlocks.Carrier> carriers = KbBlocks.carriers();
-		assertEquals(3 * 16 + 4, carriers.size(), "the tile, half and shape families, decor, decor_leaves, the ledge collider and the story tile");
+		assertEquals(3 * 16 + 5, carriers.size(),
+				"the tile, half and shape families, decor, decor_leaves, the ledge and step colliders and the story tile");
 		for (int family = 0; family < KbBlocks.FAMILIES_PER_SHAPE; family++) {
 			KbBlocks.Carrier full = carriers.get(family);
 			KbBlocks.Carrier half = carriers.get(KbBlocks.FAMILIES_PER_SHAPE + family);
@@ -50,10 +51,11 @@ class TileBlockTest {
 			assertEquals(family, full.family());
 			assertEquals(family, shape.family());
 		}
-		assertEquals(List.of(CarrierKind.DECOR, CarrierKind.DECOR_LEAVES, CarrierKind.LEDGE),
-				carriers.subList(48, 51).stream().map(KbBlocks.Carrier::kind).toList());
+		assertEquals(List.of(CarrierKind.DECOR, CarrierKind.DECOR_LEAVES, CarrierKind.LEDGE, CarrierKind.STEP),
+				carriers.subList(48, 52).stream().map(KbBlocks.Carrier::kind).toList());
 		assertSame(KbBlocks.LEDGE_COLLIDER, carriers.get(50).block());
 		assertEquals(0, carriers.get(50).slotIndex(KbBlocks.LEDGE_COLLIDER.defaultBlockState()), "no slot");
+		assertSame(KbBlocks.STEP_COLLIDER, carriers.get(51).block());
 		KbBlocks.Carrier carrier = carriers.get(3);
 		TileBlock block = (TileBlock) carrier.block();
 		for (int slot : new int[] {0, 1, 17, 255}) {
@@ -63,7 +65,7 @@ class TileBlockTest {
 		assertTrue(CarrierKind.TILE_FULL.drawsCube() && CarrierKind.TILE_FULL.hasSlot());
 		assertTrue(CarrierKind.SHAPE_FULL.drawsCube() && CarrierKind.SHAPE_FULL.hasSlot() && !CarrierKind.SHAPE_FULL.half(),
 				"a shape tile's fallback is its slot's full cube");
-		for (CarrierKind kind : List.of(CarrierKind.DECOR, CarrierKind.DECOR_LEAVES, CarrierKind.LEDGE)) {
+		for (CarrierKind kind : List.of(CarrierKind.DECOR, CarrierKind.DECOR_LEAVES, CarrierKind.LEDGE, CarrierKind.STEP)) {
 			assertTrue(!kind.drawsCube() && !kind.hasSlot(), kind + " draws only its shape");
 		}
 	}

@@ -32,6 +32,7 @@ public final class CodeStates {
 			case BlockCode.KIND_VANILLA -> this.vanilla(value);
 			case BlockCode.KIND_PROP -> prop(value);
 			case BlockCode.KIND_EDGE -> KbBlocks.EDGE_WALL.withSides(value);
+			case BlockCode.KIND_STEP -> KbBlocks.STEP_COLLIDER.defaultBlockState().setValue(dev.kantobridge.block.StepColliderBlock.FACING, downhill(value));
 			default -> Blocks.AIR.defaultBlockState();
 		};
 	}
@@ -80,7 +81,10 @@ public final class CodeStates {
 		return state;
 	}
 
-	/** Gen 1 hop direction (0 down, 1 up, 2 left, 3 right) as a Minecraft direction: map down is +Z (south). */
+	/**
+	 * Gen 1 hop direction (0 down, 1 up, 2 left, 3 right) as a Minecraft direction: map down is +Z (south). A step
+	 * collider's climb uses the same numbers.
+	 */
 	public static Direction downhill(int gen1Dir) {
 		return switch (gen1Dir & 3) {
 			case 0 -> Direction.SOUTH;

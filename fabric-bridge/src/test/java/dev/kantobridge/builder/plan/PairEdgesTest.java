@@ -126,24 +126,25 @@ class PairEdgesTest {
 
 	@Test
 	void thePlanWallsEverySideOfAPairEdge() throws Exception {
-		// The synthetic bundle with its house drawn as a cave, whose floor and exit mat tiles form a pair.
+		// The synthetic bundle with its house in a tileset of its own whose floor and exit mat tiles form a pair (the
+		// profile pins nothing in it).
 		Path red = TestData.syntheticBundle();
 		JsonObject tileset = ProtoJson.parseObject(Files.readString(red.resolve("tileset/TEST.json")));
-		tileset.addProperty("id", "CAVERN");
+		tileset.addProperty("id", "PAIRED");
 		JsonObject house = ProtoJson.parseObject(Files.readString(red.resolve("map/TEST_HOUSE.json")));
-		house.addProperty("tileset", "CAVERN");
+		house.addProperty("tileset", "PAIRED");
 		JsonObject field = ProtoJson.parseObject(Files.readString(red.resolve("field/all.json")));
 		JsonObject pairs = new JsonObject();
 		JsonArray land = new JsonArray();
 		JsonObject pair = new JsonObject();
-		pair.addProperty("tileset", "CAVERN");
+		pair.addProperty("tileset", "PAIRED");
 		pair.addProperty("a", 9); // the synthetic tileset's FLOOR
 		pair.addProperty("b", 12); // and its MAT
 		land.add(pair);
 		pairs.add("land", land);
 		pairs.add("water", new JsonArray());
 		field.getAsJsonObject("tables").add("tilePairs", pairs);
-		Path copy = TestData.syntheticCopyWith(this.dir, Map.of("tileset/CAVERN", tileset, "map/TEST_HOUSE", house, "field/all", field));
+		Path copy = TestData.syntheticCopyWith(this.dir, Map.of("tileset/PAIRED", tileset, "map/TEST_HOUSE", house, "field/all", field));
 		WorldPlan plan = WorldPlanner.plan(ExportBundle.open(copy),
 				new WorldPlanner.Options(null, TestData.ORIGIN_X, TestData.ORIGIN_Z, TestData.MIN_BUILD_HEIGHT));
 		PlacedMap placed = plan.maps().stream().filter(m -> m.id().equals("TEST_HOUSE")).findFirst().orElseThrow();

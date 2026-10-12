@@ -19,6 +19,8 @@ public enum CarrierKind {
 	DECOR_LEAVES(false, false),
 	/** {@code ledge_collider}: the ledge's one-way wall; carries the ledge lip. */
 	LEDGE(false, false),
+	/** {@code step_collider}: two half steps of a cave's stairs (docs/specs/CAVES_3D_PLAN.md §3.4); carries the stair's art. */
+	STEP(false, false),
 	/**
 	 * {@code story_tile}: a swap site's cell at feet level, colliding per player; carries the bottom of the cell's closed
 	 * art, drawn for players who see the cell closed (V5).

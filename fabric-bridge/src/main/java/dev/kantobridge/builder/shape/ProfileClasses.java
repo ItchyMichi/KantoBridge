@@ -3,7 +3,6 @@ package dev.kantobridge.builder.shape;
 import dev.kantobridge.scene.Scene;
 import dev.kantobridge.scene.SceneMap;
 import dev.kantobridge.scene.profile.Profile;
-import java.util.List;
 import java.util.Set;
 import org.jetbrains.annotations.Nullable;
 
@@ -50,16 +49,7 @@ final class ProfileClasses {
 
 	/** The class at art tile (tx, ty), or null when the profile pins nothing there. */
 	@Nullable String at(int tx, int ty) {
-		int tile = this.map.tile(tx, ty);
-		List<Profile.Cond> conds = this.tileset.conds().get(tile);
-		if (conds != null) {
-			for (Profile.Cond cond : conds) {
-				if (cond.tiles().contains(this.neighbour(tx, cond.above() ? ty - 1 : ty + 1))) {
-					return cond.cls();
-				}
-			}
-		}
-		return this.tileset.pin(tile);
+		return this.tileset.classAt(this.map.tile(tx, ty), this.neighbour(tx, ty - 1), this.neighbour(tx, ty + 1));
 	}
 
 	/** The map's own tile, or its own border block's outside the map. */

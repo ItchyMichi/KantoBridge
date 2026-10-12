@@ -14,6 +14,7 @@ import dev.kantobridge.scene.Scene;
 import dev.kantobridge.scene.SceneAtlas;
 import dev.kantobridge.scene.SceneMap;
 import dev.kantobridge.scene.profile.Profile;
+import dev.kantobridge.world.MapLayout;
 import dev.kantobridge.world.MapPlacement;
 import dev.kantobridge.world.ShapeIndex;
 import dev.kantobridge.world.ShapeMap;
@@ -135,15 +136,23 @@ public final class ShapePlanner {
 		return plan(scene, placements, params, taken, null);
 	}
 
+	/** Plans a world's shapes, every map flat. */
+	public static ShapePlan plan(Scene scene, Collection<MapPlacement> placements, ShapeParams params, Occupancy taken,
+			@Nullable UnitProbe probe) {
+		return plan(scene, placements, params, taken, probe, Map.of());
+	}
+
 	/**
 	 * Plans a world's shapes.
 	 *
 	 * @param placements the maps the build places (their shape map positions)
 	 * @param taken      the positions the builder's story blocks take, and the surface's void fill
 	 * @param probe      asks the builder's own art whether a repeating cell stands as a unit (PD3), or null
+	 * @param layouts    the raised caves' layouts by map (docs/specs/CAVES_3D_PLAN.md §3.4): each cell's keys stand on its
+	 *                   level, its ceiling follows, and a ramp gets its stairs
 	 */
 	public static ShapePlan plan(Scene scene, Collection<MapPlacement> placements, ShapeParams params, Occupancy taken,
-			@Nullable UnitProbe probe) {
+			@Nullable UnitProbe probe, Map<String, MapLayout> layouts) {
 		long started = System.nanoTime();
 		List<String> atlases = new ArrayList<>(new TreeSet<>(scene.atlases().keySet()));
 		TreeSet<String> paletteSet = new TreeSet<>();
@@ -160,9 +169,10 @@ public final class ShapePlanner {
 			if (atlas < 0) {
 				continue;
 			}
+			MapLayout layout = layouts.get(map.id());
 			MapShapes planned = params.profileUnits()
-					? planMap(map, scene.atlas(map.atlas()), atlas, params, scene.profileTileset(map.tileset()), probe, unitSources)
-					: planMap(map, scene.atlas(map.atlas()), atlas, params);
+					? planMap(map, scene.atlas(map.atlas()), atlas, params, scene.profileTileset(map.tileset()), probe, unitSources, layout)
+					: planMap(map, scene.atlas(map.atlas()), atlas, params, null, null, new TreeMap<>(), layout);
 			shapes.put(map.id(), planned);
 			for (Templates.Placed template : planned.templates()) {
 				templates.putIfAbsent(template.sig(), template.entry());
@@ -209,10 +219,12 @@ public final class ShapePlanner {
 				continue;
 			}
 			ShapeMap.GridBuilder grid;
+			MapLayout layout = layouts.get(placement.id());
+			int per = map.perCell();
 			if (placement.kind() == MapPlacement.Kind.SURFACE) {
 				grid = surfaceGrid;
 			} else {
-				Box3 volume = WorldPlan.interiorVolume(placement);
+				Box3 volume = WorldPlan.interiorVolume(placement, WorldPlan.maxCeiling(layout));
 				grid = new ShapeMap.GridBuilder(volume.minX(), volume.minZ(), volume.maxX() - volume.minX(), volume.maxZ() - volume.minZ(),
 						placement.y());
 				grids.add(grid);
@@ -222,12 +234,15 @@ public final class ShapePlanner {
 			}
 			int cols = map.artCols();
 			if (planned.ceiling() != null && placement.kind() == MapPlacement.Kind.INTERIOR && !WorldPlan.openSky(placement)) {
-				// A dressed interior's ceiling (V7), over the map's footprint.
+				// A dressed interior's ceiling (V7), over the map's footprint; over raised ground, up to its neighbours'.
 				int ceiling = index.shapeId(planned.ceiling(), map.palette());
 				for (int ty = 0; ty < map.artRows(); ty++) {
 					for (int tx = 0; tx < cols; tx++) {
-						grid.set(placement.x() + tx, placement.y() + WorldPlan.CEILING_ABOVE_FEET, placement.z() + ty, ceiling);
-						shaped++;
+						int top = WorldPlan.ceilingTop(layout, tx / per, ty / per);
+						for (int k = WorldPlan.ceilingLevel(layout, tx / per, ty / per); k <= top; k++) {
+							grid.set(placement.x() + tx, placement.y() + k, placement.z() + ty, ceiling);
+							shaped++;
+						}
 					}
 				}
 			}
@@ -257,7 +272,7 @@ public final class ShapePlanner {
 							continue;
 						}
 						int id = index.shapeId(column[k], map.palette());
-						grid.set(placement.x() + tx, placement.y() + k, placement.z() + ty, id);
+						grid.set(placement.x() + tx, placement.y() + WorldPlan.level(layout, tx / per, ty / per) + k, placement.z() + ty, id);
 						shaped++;
 					}
 				}
@@ -269,9 +284,10 @@ public final class ShapePlanner {
 				for (int tx = 0; tx < cols; tx++) {
 					int mask = hungFits(planned.hungMask()[ty * cols + tx], hangTop);
 					ShapeKey[] column = planned.hung()[ty * cols + tx];
+					int base = WorldPlan.hangBase(layout, tx / per, ty / per);
 					for (int k = 0; column != null && k < column.length; k++) {
 						if ((mask >> k & 1) != 0 && column[k] != null) {
-							grid.set(placement.x() + tx, placement.y() + k, placement.z() + ty, index.shapeId(column[k], map.palette()));
+							grid.set(placement.x() + tx, placement.y() + base + k, placement.z() + ty, index.shapeId(column[k], map.palette()));
 							shaped++;
 						}
 					}
@@ -329,7 +345,8 @@ public final class ShapePlanner {
 				// A tile cell outside every swap site (not planned by a front end): its block entity's renderer draws it.
 				continue;
 			}
-			overlays.add(new ShapeMap.Overlay(cell.key(), placement.x() + cell.cx() * per, placement.y(), placement.z() + cell.cy() * per, columns));
+			int feet = placement.y() + WorldPlan.level(layouts.get(cell.map()), cell.cx(), cell.cy());
+			overlays.add(new ShapeMap.Overlay(cell.key(), placement.x() + cell.cx() * per, feet, placement.z() + cell.cy() * per, columns));
 			closedColumns.put(cell.key(), new ShapePlan.Closed(heights, leaves));
 		}
 		// ---- the void fill's ring: border trees as units within hullRing of a map body (V4) ----
@@ -444,6 +461,20 @@ public final class ShapePlanner {
 		return shaped;
 	}
 
+	/** Per art tile, the voxels its floor stands above the map's under {@code layout}; null without one. */
+	static int @Nullable [] lifts(SceneMap map, @Nullable MapLayout layout) {
+		if (layout == null) {
+			return null;
+		}
+		int cols = map.artCols();
+		int per = map.perCell();
+		int[] out = new int[cols * map.artRows()];
+		for (int i = 0; i < out.length; i++) {
+			out[i] = 8 * WorldPlan.level(layout, (i % cols) / per, (i / cols) / per);
+		}
+		return out;
+	}
+
 	/** One map's keys and columns, open and closed. */
 	static MapShapes planMap(SceneMap map, @Nullable SceneAtlas sceneAtlas, int atlas, ShapeParams params) {
 		return planMap(map, sceneAtlas, atlas, params, null, null, new TreeMap<>());
@@ -455,14 +486,20 @@ public final class ShapePlanner {
 	 */
 	static MapShapes planMap(SceneMap map, @Nullable SceneAtlas sceneAtlas, int atlas, ShapeParams params, Profile.@Nullable Tileset tileset,
 			@Nullable UnitProbe probe, Map<String, Integer> tally) {
-		Columns open = columns(map, sceneAtlas, atlas, params, tileset, probe, tally);
+		return planMap(map, sceneAtlas, atlas, params, tileset, probe, tally, null);
+	}
+
+	/** The same, with the map's layout (null: flat): its ramps get their stairs, its boxes cull against real heights. */
+	static MapShapes planMap(SceneMap map, @Nullable SceneAtlas sceneAtlas, int atlas, ShapeParams params, Profile.@Nullable Tileset tileset,
+			@Nullable UnitProbe probe, Map<String, Integer> tally, @Nullable MapLayout layout) {
+		Columns open = columns(map, sceneAtlas, atlas, params, tileset, probe, tally, layout);
 		ShapeKey[][] closed = new ShapeKey[open.keys().length][];
 		ShapeKey[][] overlay = new ShapeKey[open.keys().length][];
 		if (map.closedTiles() != null) {
 			// The closed state of the cells a swap site changes (a standing cut tree), planned on the map with every site
 			// closed, exactly as the open state is; kept for the cells that change only.
 			SceneMap shut = map.closedVariant();
-			Columns all = columns(shut, sceneAtlas, atlas, params, tileset, probe, new TreeMap<>());
+			Columns all = columns(shut, sceneAtlas, atlas, params, tileset, probe, new TreeMap<>(), layout);
 			int cols = map.artCols();
 			int per = map.perCell();
 			for (var site : map.swapSites()) {
@@ -521,6 +558,11 @@ public final class ShapePlanner {
 
 	static Columns columns(SceneMap map, @Nullable SceneAtlas sceneAtlas, int atlas, ShapeParams params, Profile.@Nullable Tileset tileset,
 			@Nullable UnitProbe probe, Map<String, Integer> tally) {
+		return columns(map, sceneAtlas, atlas, params, tileset, probe, tally, null);
+	}
+
+	static Columns columns(SceneMap map, @Nullable SceneAtlas sceneAtlas, int atlas, ShapeParams params, Profile.@Nullable Tileset tileset,
+			@Nullable UnitProbe probe, Map<String, Integer> tally, @Nullable MapLayout layout) {
 		if (!params.measured()) {
 			return classified(map, atlas, params);
 		}
@@ -551,7 +593,7 @@ public final class ShapePlanner {
 		if (params.tierB() && cells) {
 			// Tier B (kb-shapes/3): tufts and cell units over the measured columns.
 			Units.plan(map, sceneAtlas, atlas, columns.keys(), columns.blocks(), columns.shapeMask(), floor, decor, units, classes,
-					params.profileUnits() ? probe : null, tally, claims.isEmpty() && hulls.isEmpty() ? null : held);
+					params.profileUnits() ? probe : null, tally, claims.isEmpty() && hulls.isEmpty() ? null : held, layout);
 		}
 		List<Templates.Placed> templates = List.of();
 		if (params.tierC() && cells) {
@@ -589,7 +631,8 @@ public final class ShapePlanner {
 		}
 		if (box != null) {
 			int ground = sceneAtlas == null ? -1 : Units.mapGround(map, sceneAtlas.grassTiles(), sceneAtlas.frameTiles());
-			ClassBoxes.plan(map, atlas, classes, box, held, ground, columns.keys(), columns.blocks(), columns.shapeMask(), floor, tally);
+			ClassBoxes.plan(map, atlas, classes, box, held, ground, columns.keys(), columns.blocks(), columns.shapeMask(), floor, tally,
+					lifts(map, layout));
 		}
 		if (dress != null) {
 			// The hangings (kb-shapes/9: cave rock), last, over the final columns.

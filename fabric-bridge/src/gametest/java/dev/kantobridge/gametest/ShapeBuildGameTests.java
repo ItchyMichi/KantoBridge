@@ -34,6 +34,7 @@ import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.AABB;
+import net.minecraft.world.phys.Vec3;
 
 /**
  * The voxel plan's builder in a real level (docs/specs/VOXEL_BLOCKS_PLAN.md §6.2). {@link #carriers}: the synthetic
@@ -177,10 +178,13 @@ public class ShapeBuildGameTests implements FabricGameTest {
 						if (kind == MapModel.Kind.WATER) {
 							continue;
 						}
-						double x = p.x() + cx * 2 + 1.0;
-						double z = p.z() + cy * 2 + 1.0;
-						player.setPos(x, p.y(), z);
-						AABB box = new AABB(x - 0.3, p.y() + 0.01, z - 0.3, x + 0.3, p.y() + 1.8, z + 0.3);
+						// Where the cell is stood on: its centre on its own level, a ramp's on its third half step (CAVES_3D_PLAN §3.4).
+						Vec3 at = plan.index().toBlock(p.id(), cx, cy);
+						double x = at.x;
+						double y = at.y;
+						double z = at.z;
+						player.setPos(x, y, z);
+						AABB box = new AABB(x - 0.3, y + 0.01, z - 0.3, x + 0.3, y + 1.8, z + 0.3);
 						boolean free = level.noCollision(player, box);
 						boolean walkable = kind == MapModel.Kind.GROUND || kind == MapModel.Kind.LEDGE;
 						if (free != walkable) {

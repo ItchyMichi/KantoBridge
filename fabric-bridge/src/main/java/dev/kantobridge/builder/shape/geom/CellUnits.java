@@ -358,10 +358,12 @@ public final class CellUnits {
 				Unit columns = columns(perCell, w);
 				return new Unit(Kind.COLUMNS, Kind.HULL, score[0], score[1], columns.maxQuads(), columns.blocks(), columns.foreground());
 			}
-			case "stair_e", "stair_w", "relief" -> {
+			case "stair_e", "stair_w", "stair_n", "stair_s", "relief" -> {
 				boolean relief = "relief".equals(pinned);
+				int rise = Math.max(1, p0 / 4);
 				VoxelGrid grid = relief ? HullVariants.relief(shades, texels, skip, w, artPx, p0)
-						: HullVariants.stairs(texels, w, artPx, "stair_e".equals(pinned), Math.max(1, p0 / 4));
+						: "stair_n".equals(pinned) || "stair_s".equals(pinned) ? HullVariants.stairsAlong(texels, w, artPx, "stair_s".equals(pinned), rise)
+						: HullVariants.stairs(texels, w, artPx, "stair_e".equals(pinned), rise);
 				List<List<ShapeQuad>> blocks = slice(grid, perCell);
 				int quads = maxQuads(blocks);
 				boolean[] all = new boolean[w * w];

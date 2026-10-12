@@ -52,8 +52,12 @@ public final class CavePlanner {
 	/**
 	 * @param placements every cave's placement, in the complexes' order
 	 * @param area       the cave area's box ({@code minX, minZ, maxX, maxZ}), or null without caves
+	 * @param complexes  each complex's maps
 	 */
-	public record Result(List<MapPlacement> placements, int @Nullable [] area, int complexes) {
+	public record Result(List<MapPlacement> placements, int @Nullable [] area, List<List<String>> complexes) {
+		public Result {
+			complexes = complexes.stream().map(List::copyOf).toList();
+		}
 	}
 
 	private CavePlanner() {
@@ -108,7 +112,7 @@ public final class CavePlanner {
 	 */
 	public static Result place(Map<String, ExportMap> all, Set<String> caves, @Nullable Box3 kanto, int originX, int originZ, Warnings warnings) {
 		if (caves.isEmpty()) {
-			return new Result(List.of(), null, 0);
+			return new Result(List.of(), null, List.of());
 		}
 		List<List<String>> complexes = complexes(all, caves);
 		// Each complex laid out on its own (local block offsets), then the slots packed in rows.
@@ -154,7 +158,7 @@ public final class CavePlanner {
 		}
 		warnings.note("cave_complexes", complexes.size());
 		warnings.note("cave_maps", out.size());
-		return new Result(out, new int[] {areaX, areaZ, areaX + width, areaZ + depth}, complexes.size());
+		return new Result(out, new int[] {areaX, areaZ, areaX + width, areaZ + depth}, complexes);
 	}
 
 	/** Caves joined by warps (or by a door, parent to child), each complex in export order, complexes by their first map. */

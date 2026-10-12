@@ -247,13 +247,14 @@ public final class EncounterService {
 
 	/**
 	 * The top of the ground under a column, scanning down from about {@code fromY}: a tile block (a half one for water),
-	 * skipping our invisible story cells and ledge colliders, which are solid only to whoever they block.
+	 * skipping our invisible story cells and ledge colliders, which are solid only to whoever they block, and edge walls,
+	 * which are only plates at a cell's side (docs/specs/CAVES_3D_PLAN.md §3.2).
 	 */
 	static double groundY(ServerLevel level, double x, double z, double fromY) {
 		BlockPos.MutableBlockPos pos = new BlockPos.MutableBlockPos(Mth.floor(x), Mth.floor(fromY + 0.5), Mth.floor(z));
 		for (int i = 0; i < 6; i++) {
 			BlockState state = level.getBlockState(pos);
-			if (!(state.getBlock() instanceof StoryCellBlock) && !state.is(KbBlocks.LEDGE_COLLIDER)) {
+			if (!(state.getBlock() instanceof StoryCellBlock) && !state.is(KbBlocks.LEDGE_COLLIDER) && !state.is(KbBlocks.EDGE_WALL)) {
 				VoxelShape shape = state.getCollisionShape(level, pos, CollisionContext.empty());
 				if (!shape.isEmpty()) {
 					return pos.getY() + shape.max(Direction.Axis.Y);

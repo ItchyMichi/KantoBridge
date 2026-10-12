@@ -120,6 +120,7 @@ public class SyntheticBuildGameTests implements FabricGameTest {
 		helper.startSequence()
 				.thenWaitUntil(() -> waitFor(helper, first))
 				.thenExecute(() -> verifyFirstBuild(helper, first[0]))
+				.thenExecute(() -> verifyRaisedCave(helper, first[0]))
 				.thenExecute(() -> verifyStoryCells(helper, first[0]))
 				.thenExecute(() -> second[0] = start(helper, null))
 				.thenWaitUntil(() -> waitFor(helper, second))
@@ -179,8 +180,9 @@ public class SyntheticBuildGameTests implements FabricGameTest {
 		helper.assertTrue(Files.isRegularFile(task.worldDir().resolve("datapacks/kantobridge_generated/pack.mcmeta")), "datapack not written");
 		helper.assertTrue(Files.isRegularFile(task.worldDir().resolve("datapacks/kantobridge_generated/data/kantobridge/habitat_pools/test_town.json")),
 				"the town's habitat pool isn't in the datapack");
-		// The town's grass takes one; the cave's two floors five of a smaller reach (CAVES_3D_PLAN §3.3, HD8).
-		helper.assertTrue(report.habitatBlocks == 6, "habitat_blocks " + report.habitatBlocks);
+		// The town's grass takes one; the cave's two floors seven of a smaller reach (CAVES_3D_PLAN §3.3, HD8), 1F's
+		// plateau reached from under the map's floor (§3.4).
+		helper.assertTrue(report.habitatBlocks == 8, "habitat_blocks " + report.habitatBlocks);
 		helper.assertTrue(report.pools == 3, "pools " + report.pools + " (the town's and the cave's two floors')");
 		helper.assertTrue(Files.isRegularFile(task.packDir().resolve("pack.mcmeta")), "resource pack not written");
 
@@ -269,7 +271,7 @@ public class SyntheticBuildGameTests implements FabricGameTest {
 		// The habitat block under the grass: configured, a point of interest, and its influence where the grass is. Its
 		// chunk may have been saved and unloaded since the build (no player is near): the runtime check, which runs as
 		// chunks load, prepares a reloaded block before its chunk ticks.
-		helper.assertTrue(index.habitats().size() == 6, "habitats listed: " + index.habitats().size());
+		helper.assertTrue(index.habitats().size() == 8, "habitats listed: " + index.habitats().size());
 		HabitatBlockEntity habitat = assertHabitat(helper, level, town(index.habitats()));
 		assertCaveHabitat(helper, level, index.habitats());
 		assertInfluence(helper, level, index, habitat);
@@ -279,13 +281,55 @@ public class SyntheticBuildGameTests implements FabricGameTest {
 				report.storyCells, report.elapsedMs);
 	}
 
+	/**
+	 * TEST_CAVE_1F's plateau as built (CAVES_3D_PLAN §3.4): 2 blocks up on rock; a player walks up its stairs, along its
+	 * floor, but neither up its cliff nor off it.
+	 */
+	private static void verifyRaisedCave(GameTestHelper helper, BuildTask task) {
+		WorldIndex index = readIndex(helper, task);
+		helper.assertTrue(index.layout("TEST_CAVE_1F") != null, "the cave's levels aren't in the index");
+		MapPlacement cave = index.map("TEST_CAVE_1F");
+		ServerLevel level = helper.getLevel();
+		int x0 = cave.x();
+		int y0 = cave.y();
+		int z0 = cave.z();
+		for (int z = z0 - 16; z < z0 + 2 * cave.h() + 16; z += 16) {
+			for (int x = x0 - 16; x < x0 + 2 * cave.w() + 16; x += 16) {
+				level.getChunk(new BlockPos(x, y0, z));
+			}
+		}
+		BlockPos plateau = new BlockPos(x0 + 14, y0 + 1, z0 + 6);
+		helper.assertTrue(isTile(level, plateau) && isTile(level, plateau.below()) && level.getBlockState(plateau.above()).isAir(),
+				"the plateau isn't 2 up on rock");
+		helper.assertTrue(level.getBlockState(new BlockPos(x0 + 10, y0, z0 + 4)).is(KbBlocks.STEP_COLLIDER)
+				&& level.getBlockState(new BlockPos(x0 + 11, y0 + 1, z0 + 4)).is(KbBlocks.STEP_COLLIDER), "the stairs have no steps");
+		MockPlayers.with(helper, player -> {
+			// Up the stairs, from (4,2) onto (6,2).
+			player.setPos(x0 + 9.0, y0, z0 + 5.0);
+			CollisionGameTests.walk(player, 0.25, 0, 16);
+			helper.assertTrue(player.getX() > x0 + 12.3 && Math.abs(player.getY() - (y0 + 2)) < 1e-6, "the stairs didn't lead up: " + player.position());
+			// Not up the cliff, from (5,4) into (6,4).
+			player.setPos(x0 + 11.0, y0, z0 + 9.0);
+			CollisionGameTests.walk(player, 0.25, 0, 8);
+			helper.assertTrue(player.getX() < x0 + 12.0 && player.getY() < y0 + 0.1, "a player climbed the cliff");
+			// Not off the plateau's south face, from (6,5) to (6,6): its edge wall stops it.
+			player.setPos(x0 + 13.0, y0 + 2, z0 + 11.0);
+			CollisionGameTests.walk(player, 0, 0.25, 8);
+			helper.assertTrue(player.getZ() < z0 + 12.0 && Math.abs(player.getY() - (y0 + 2)) < 1e-6, "a player walked off the plateau");
+			// Along the floor, from (2,4) to (3,4): free.
+			player.setPos(x0 + 5.0, y0, z0 + 9.0);
+			CollisionGameTests.walk(player, 0.25, 0, 8);
+			helper.assertTrue(player.getX() > x0 + 6.9 && player.getY() < y0 + 0.1, "the floor stopped a player");
+		});
+	}
+
 	private static void verifyRebuild(GameTestHelper helper, BuildTask first, BuildTask second) {
 		BuildReport report = second.report();
 		helper.assertTrue(second.succeeded(), "rebuild failed: " + report.error);
 		helper.assertTrue(report.blocksPlaced == 0 && report.blocksCleared == 0,
 				"an identical rebuild changed blocks: placed " + report.blocksPlaced + ", cleared " + report.blocksCleared);
 		helper.assertTrue(report.worldIndexHash.equals(first.report().worldIndexHash), "an identical rebuild changed the index");
-		helper.assertTrue(report.habitatBlocks == 6, "the rebuild's habitat_blocks " + report.habitatBlocks);
+		helper.assertTrue(report.habitatBlocks == 8, "the rebuild's habitat_blocks " + report.habitatBlocks);
 		assertHabitat(helper, helper.getLevel(), town(first.plan().habitats()));
 	}
 

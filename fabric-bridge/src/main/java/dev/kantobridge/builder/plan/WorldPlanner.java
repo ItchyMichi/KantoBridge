@@ -8,6 +8,7 @@ import dev.kantobridge.builder.export.ExportField;
 import dev.kantobridge.builder.export.ExportLayout;
 import dev.kantobridge.builder.export.ExportMap;
 import dev.kantobridge.builder.export.ExportPalettes;
+import dev.kantobridge.builder.export.ExportProfile;
 import dev.kantobridge.builder.export.ExportSwaps;
 import dev.kantobridge.builder.export.ExportTileset;
 import dev.kantobridge.builder.pack.HabitatPoolWriter;
@@ -20,7 +21,10 @@ import dev.kantobridge.scene.FrontEnds;
 import dev.kantobridge.scene.GameFrontEnd;
 import dev.kantobridge.scene.Scene;
 import dev.kantobridge.scene.gen1.BundleArtSource;
+import dev.kantobridge.scene.profile.Profile;
+import dev.kantobridge.scene.profile.ProfileSource;
 import dev.kantobridge.world.DataReader;
+import dev.kantobridge.world.MapLayout;
 import dev.kantobridge.world.MapPlacement;
 import dev.kantobridge.world.Scale;
 import dev.kantobridge.world.SlotMap;
@@ -40,6 +44,7 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.TreeMap;
 import org.jetbrains.annotations.Nullable;
 
 /**
@@ -58,8 +63,17 @@ public final class WorldPlanner {
 	 * @param originZ        block Z of the root map's cell (0, 0)
 	 * @param minBuildHeight the world's lowest block (decides the deepest interior layer)
 	 * @param shapes         plan the world's shapes (the voxel plan's V2)
+	 * @param caves3d        the cave complexes built in 3D (docs/specs/CAVES_3D_PLAN.md §0, {@link Caves3d})
 	 */
-	public record Options(@Nullable List<String> maps, int originX, int originZ, int minBuildHeight, boolean shapes) {
+	public record Options(@Nullable List<String> maps, int originX, int originZ, int minBuildHeight, boolean shapes, Set<String> caves3d) {
+		public Options {
+			caves3d = Set.copyOf(caves3d);
+		}
+
+		public Options(@Nullable List<String> maps, int originX, int originZ, int minBuildHeight, boolean shapes) {
+			this(maps, originX, originZ, minBuildHeight, shapes, Caves3d.fromProperty());
+		}
+
 		public Options(@Nullable List<String> maps, int originX, int originZ, int minBuildHeight) {
 			this(maps, originX, originZ, minBuildHeight, true);
 		}
@@ -149,6 +163,13 @@ public final class WorldPlanner {
 		for (MapPlacement cave : caveArea.placements()) {
 			placements.put(cave.id(), cave);
 		}
+		// The caves built in 3D: every map of a complex the pilot switch names (CAVES_3D_PLAN §0)
+		Set<String> caves3d = new HashSet<>();
+		for (List<String> complex : caveArea.complexes()) {
+			if (Caves3d.in3d(options.caves3d(), complex)) {
+				caves3d.addAll(complex);
+			}
+		}
 		String forest = field.indoor() == null ? null : field.indoor().excludedTileset();
 		List<ExportMap> pending = new ArrayList<>();
 		for (String id : requested) {
@@ -217,6 +238,9 @@ public final class WorldPlanner {
 		Map<String, ExportTileset> tilesets = new HashMap<>();
 		ExportPalettes palettes = bundle.has("palettes", "sgb") ? bundle.palettes() : null;
 		List<PlacedMap> placed = new ArrayList<>();
+		// The shape profile, where the export carried one: its raised pins say which side of a cave's pairs is high (§3.4)
+		ExportProfile carried = caves3d.isEmpty() ? null : bundle.profile();
+		Profile profile = carried == null ? null : ProfileSource.read(carried.text(), carried.version(), carried.enabled()).profile();
 		for (MapPlacement placement : placements.values()) {
 			ExportMap map = all.get(placement.id());
 			ExportTileset tileset = tilesets.get(map.tileset());
@@ -238,7 +262,18 @@ public final class WorldPlanner {
 			if (edges.edges() > 0) {
 				warnings.note("tile_pair_edges", edges.edges());
 			}
-			placed.add(new PlacedMap(placement, model, edges));
+			// A cave built in 3D gets its raised ground (CAVES_3D_PLAN §3.4); the rest stays flat
+			MapLayout raised = null;
+			if (caves3d.contains(map.id())) {
+				CaveLevels.Result levels = CaveLevels.plan(model, field.tilePairs(), profile == null ? null : profile.tileset(map.tileset()));
+				warnings.note("cave_levels_" + levels.outcome(), Warnings.symbols("map", map.id(), "high", levels.high().isEmpty() ? null : levels.high()));
+				warnings.note("cave_raised_cells", levels.raisedCells());
+				warnings.note("cave_ramps", levels.stairs());
+				warnings.note("cave_stairs_profile_confirmed", levels.stairsConfirmed());
+				warnings.note("cave_stairs_profile_other", levels.stairsOther());
+				raised = levels.layout();
+			}
+			placed.add(new PlacedMap(placement, model, edges, raised));
 		}
 
 		// ---- surface void fill: each gap cell takes the border art of its nearest surface map ----
@@ -315,6 +350,15 @@ public final class WorldPlanner {
 			StoryCellTable.Entry entry = entries.get(i);
 			storyIndex.get(entry.cell().map())[entry.cell().y() * widths.get(entry.cell().map()) + entry.cell().x()] = i;
 		}
+		// A story block on a ramp would take its first step (CAVES_3D_PLAN §3.4): the step goes, and it says so.
+		for (PlacedMap map : placed) {
+			MapLayout raised = map.layout();
+			for (int i = 0; raised != null && i < raised.w() * raised.h(); i++) {
+				if (raised.ramp(i % raised.w(), i / raised.w()) != null && storyIndex.get(map.id())[i] >= 0) {
+					warnings.warn("cave_ramp_story_cell", Warnings.symbols("map", map.id()));
+				}
+			}
+		}
 
 		// ---- habitats: blocks for the built maps; pools for every wild map of the export (like the slot map) ----
 		List<WorldIndex.Habitat> habitats = encounters == null ? List.of() : HabitatPlanner.plan(placed, encounters, field, warnings);
@@ -325,7 +369,14 @@ public final class WorldPlanner {
 		if (spawn == null) {
 			warnings.warn("spawn_missing");
 		}
-		WorldIndex index = new WorldIndex(bundle.game(), bundle.exportHash(), placements.values(), slotMap.hash(), storyCells, habitats);
+		Map<String, MapLayout> layouts = new TreeMap<>();
+		for (PlacedMap map : placed) {
+			if (map.layout() != null) {
+				layouts.put(map.id(), map.layout());
+			}
+		}
+		WorldIndex index = new WorldIndex(bundle.game(), bundle.exportHash(), placements.values(), layouts, slotMap.hash(), storyCells, habitats,
+				List.of(), null);
 
 		// ---- shapes (docs/specs/VOXEL_BLOCKS_PLAN.md §5.4): keys of the whole export, positions of the placed maps ----
 		Scene scene = null;
@@ -338,7 +389,7 @@ public final class WorldPlanner {
 				scene = frontEnd.describe(bundle);
 				// The probe of the profile plan's PD3 asks this export's own art whether a repeating cell stands as a unit.
 				shapes = ShapePlanner.plan(scene, placements.values(), ShapeParams.current(),
-						occupancy(placed, storyIndex, storyCells, surfaceBox, owner, voidCells), new ArtUnitProbe(BundleArtSource.of(bundle)))
+						occupancy(placed, storyIndex, storyCells, surfaceBox, owner, voidCells), new ArtUnitProbe(BundleArtSource.of(bundle)), layouts)
 						.withIndexHash(index.hash());
 			}
 		}

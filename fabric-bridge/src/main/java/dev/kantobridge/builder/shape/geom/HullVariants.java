@@ -15,7 +15,8 @@ package dev.kantobridge.builder.shape.geom;
  * stairs  four steps rising across the cell (east: from the west edge), each a quarter of the class height higher and a
  *         quarter of the cell wide, as deep as the cell; every voxel the pixel the drawing shows at its column and its
  *         height (the drawing standing up), so the front and back are the drawing cut to the staircase, a tread the row at
- *         its height, a riser and the last step's side their edge columns
+ *         its height, a riser and the last step's side their edge columns; north and south (a cave's stairs), the drawing
+ *         lying flat instead
  * relief  the drawing lying flat: each pixel a flood from the drawing's border through the shades found on that border
  *         (not black) can't reach stands as a column of the class height, in its own texel
  * planter a {@code w × h} drawing (two cells, one above the other) carved row by row as a hull, every row its own height
@@ -147,6 +148,28 @@ final class HullVariants {
 					int row = Math.max(0, Math.min(w - 1, w - 1 - y));
 					for (int z = 0; z < w; z++) {
 						grid.set(x, y, z, texels[row * w + x]);
+					}
+				}
+			}
+		}
+		return grid;
+	}
+
+	/**
+	 * Four steps along the cell, rising {@code rise} pixels each, toward the south or the north (a cave's stairs,
+	 * docs/specs/CAVES_3D_PLAN.md §3.4): the drawing lying flat, so from above each tread shows the rows it covers, as the
+	 * game draws them, and a riser its front row.
+	 */
+	static VoxelGrid stairsAlong(int[] texels, int w, int artPx, boolean south, int rise) {
+		VoxelGrid grid = new VoxelGrid(w, w, w, artPx);
+		int run = w / 4;
+		for (int step = 0; step < 4; step++) {
+			int z0 = south ? step * run : w - run - step * run;
+			int high = Math.min(w, (step + 1) * Math.max(1, rise));
+			for (int z = z0; z < z0 + run; z++) {
+				for (int y = 0; y < high; y++) {
+					for (int x = 0; x < w; x++) {
+						grid.set(x, y, z, texels[z * w + x]);
 					}
 				}
 			}

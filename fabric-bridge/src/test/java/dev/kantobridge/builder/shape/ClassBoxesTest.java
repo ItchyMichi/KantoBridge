@@ -9,6 +9,8 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 
 import dev.kantobridge.scene.SceneMap;
 import dev.kantobridge.scene.profile.Profile;
+import dev.kantobridge.world.MapLayout;
+import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 import org.junit.jupiter.api.Test;
@@ -57,6 +59,23 @@ class ClassBoxesTest {
 				column(map, shapes, 2, 2), "the back tile: the same stack (its own tile where the run ends)");
 		assertEquals(3, shapes.blocks()[3 * map.artCols() + 2]);
 		assertEquals(0b111, shapes.shapeMask()[3 * map.artCols() + 2], "every block a carrier");
+	}
+
+	@Test
+	void aRaisedNeighbourCoversOnlyAsHighAsItReallyStands() throws Exception {
+		// Raised ground (docs/specs/CAVES_3D_PLAN.md §3.4): the cell west of the desk stands 2 blocks up, rock under it.
+		SceneMap map = surface("DESK",
+				"......",
+				"......",
+				"..AA..",
+				"..CC..",
+				"......",
+				"......");
+		MapLayout layout = MapLayout.flat(3, 3, new int[] {0, 0, 0, 2, 0, 0, 0, 0, 0}, List.of());
+		ShapePlanner.MapShapes shapes = ShapePlanner.planMap(map, ShapeFixtures.TIER_B, 0, ShapeParams.p3(),
+				ProfileUnitsTest.tileset("desk = { `A`, `C` }"), null, new TreeMap<>(), layout);
+		assertArrayEquals(new ShapeKey[] {box(-1, '-', 'C', '-', '-', 16), box(-1, '-', 'A', '-', '-', 16), box(tile('A'), '-', 'C', 'C', '-', 16)},
+				column(map, shapes, 2, 3), "its west face only over the raised floor's 16 pixels");
 	}
 
 	@Test

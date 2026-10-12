@@ -27,6 +27,19 @@ class HullVariantsTest {
 	}
 
 	@Test
+	void caveStairsAlsoClimbNorthAndSouthWithTheirDrawingLyingFlat() {
+		// A cave's stairs (docs/specs/CAVES_3D_PLAN.md §3.4): half a block a step, as the step colliders under them.
+		VoxelGrid north = HullVariants.stairsAlong(TEXELS, 16, 8, false, 4);
+		assertTrue(north.solid(0, 3, 15) && !north.solid(0, 4, 15), "climbing north: the first step at the south edge, four high");
+		assertTrue(north.solid(7, 7, 8) && !north.solid(7, 8, 8), "the second, eight");
+		assertTrue(north.solid(15, 15, 0) && !north.solid(15, 15, 4), "the last, sixteen, at the north edge, as wide as the cell");
+		assertEquals(TEXELS[3 * 16 + 5], north.at(5, 9, 3), "every voxel the drawing lying flat: its row is its depth");
+		VoxelGrid south = HullVariants.stairsAlong(TEXELS, 16, 8, true, 4);
+		assertTrue(south.solid(8, 3, 0) && !south.solid(8, 4, 0), "climbing south: the first step at the north edge");
+		assertTrue(south.solid(8, 15, 15));
+	}
+
+	@Test
 	void aReliefRaisesWhatItsOutlineEncloses() {
 		int[] shades = ArtFixtures.shades(
 				"2222222222222222",

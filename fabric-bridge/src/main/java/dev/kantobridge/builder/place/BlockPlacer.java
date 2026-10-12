@@ -59,6 +59,7 @@ public final class BlockPlacer {
 		public int blocksCleared;
 		public int storyCells;
 		public int ledgeColliders;
+		public int stepColliders;
 		public int lights;
 		public int chunks;
 		public int biomeChunks;
@@ -273,6 +274,7 @@ public final class BlockPlacer {
 				}
 			}
 			case BlockCode.KIND_LEDGE -> this.counts.ledgeColliders++;
+			case BlockCode.KIND_STEP -> this.counts.stepColliders++;
 			case BlockCode.KIND_LIGHT -> this.counts.lights++;
 			case BlockCode.KIND_DECOR -> this.counts.decorLeaves += BlockCode.value(code) == 1 ? 1 : 0;
 			default -> {

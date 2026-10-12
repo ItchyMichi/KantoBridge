@@ -48,7 +48,7 @@
     {
       "kind": "map",
       "id": "TEST_CAVE_1F",
-      "hash": "137265b2758a804eb625b22cf393cae7ca43e7a05f816726aa45dc42d03c8f11",
+      "hash": "6d3f1a6d90a74d1dd57ee7988ce6c4b9b9df9dfbd34aed212be3571c80736539",
       "size": 753
     },
     {
@@ -96,8 +96,8 @@
     {
       "kind": "profile",
       "id": "dramaless",
-      "hash": "fe6a03745dc93d54cc53a59ea3598bf17740d8a4ca4151bb0180549bc8632235",
-      "size": 1587
+      "hash": "ca30315866cd785f87e374ba611c9017eab9938233fefc8aeec58003b8dd7637",
+      "size": 1658
     },
     {
       "kind": "routes",

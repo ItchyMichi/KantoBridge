@@ -289,7 +289,9 @@ public final class PuppetRuntime implements PuppetManager.Listener {
 			return null;
 		}
 		double half = Scale.CELL_BLOCKS / 2.0;
-		int top = ClientShapes.topHeight(index, puppet.map(), rx, ry);
+		// Along a ramp it climbs as it walks (CAVES_3D_PLAN §3.4); elsewhere it stands on the cell's column, if any.
+		double top = index.ramp(puppet.map(), rx, ry) ? index.rampLift(puppet.map(), rx, ry, cx, cy)
+				: ClientShapes.topHeight(index, puppet.map(), rx, ry);
 		return new Vec3(origin.getX() + (cx - rx) * Scale.CELL_BLOCKS + half, origin.getY() + top,
 				origin.getZ() + (cy - ry) * Scale.CELL_BLOCKS + half);
 	}

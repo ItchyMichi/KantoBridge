@@ -724,7 +724,7 @@ the full suite at H1, H5 and H7.
 | H1 | A position per cell | **done**; checkpoint: JUnit 979 (6 skipped), GameTests 98, Python and Lua 1,484 | 2026-10-12 | `H1: a position per cell` |
 | H2 | Edge walls on tile-pair edges | **done** (PairEdgesTest 4, a wall GameTest; JUnit builder suite, GameTests 99) | 2026-10-12 | `H2: edge walls on tile-pair edges` |
 | H3 | Caves in an area of their own | **done** (CavePlannerTest 8, the synthetic cave; JUnit 991, GameTests 99, Python 1,487); the real world's dry run on the pod: 0 warnings (note 8) | 2026-10-12 | `H3: caves in an area of their own` |
-| H4 | Raised ground in caves | | | |
+| H4 | Raised ground in caves | **done** (CaveLevelsTest 8, RaisedCaveTest 7, two GameTests; JUnit 1,010, GameTests 100, Python 1,487); the real world's dry run on the pod: note 11 | 2026-10-12 | `H4: raised ground in caves` |
 | H5 | Real ladders and holes | | | |
 | H6 | Pilot | | | |
 | H7 | Every cave in 3D | | | |
@@ -803,6 +803,51 @@ the full suite at H1, H5 and H7.
      the cave on its level), floors from feet 64 down to 20 (Seafoam's five);
    - habitat blocks: 117 of reach 14, **752 of reach 6** in the caves (296 in all before); the shape map 302,788
      characters on the wire (58%, the pod has no profile).
+
+### Caves in 3D: H4 notes
+
+1. **Which caves:** `Caves3d`, the pilot switch: the system property `kantobridge.caves3d` (map ids, comma-separated,
+   or `all`), else the pilot, Mt. Moon and the synthetic cave. A complex is built in 3D when any of its maps is named.
+2. **The levels** (`CaveLevels`, §3.4 steps 1–7): a tileset's land pairs split its tiles into two sides (a 2-colouring;
+   tiles in no pair are neutral); a neutral floor cell with one side on one side and the other opposite is a stairs
+   cell; regions are a flood fill over the steps the engine allows; the high side comes from the profile's raised pins
+   (a walkable tile pinned to an upright or top class, `wall` aside), else the cliff face (across an east–west pair
+   edge, the north cell), else the map stays flat. Levels 0 and 2; rock as high as the highest cell around it; then the
+   check. Notes `cave_levels_<outcome>` (with the map, and `high`), `cave_raised_cells`, `cave_ramps`,
+   `cave_stairs_profile_confirmed`/`_other`. A flat map says why: `no_pairs`, `flat_one_side`, `flat_ledges`,
+   `flat_pairs_not_bipartite`, `flat_stairs_both_axes`, `flat_mixed_region`, `flat_no_high_side` or `flat_check_*`.
+   Stairs may stand side by side (a wide stair), not one onto another.
+3. **The index** carries a raised map's `levels` and `ramps` (H1's keys).
+4. **What gets built:**
+   - each cell's floor at its own level, rock in the ceiling's art under a raised floor down to the map's floor;
+   - a ceiling 3 blocks over each floor (over a ramp's top), closed up to the highest ceiling of its eight
+     neighbours; the enclosure ring and the volume reach the highest ceiling; hangings and lights count from a ramp's
+     top;
+   - ramps: `kantobridge:step_collider` (`StepColliderBlock`; `BlockCode.KIND_STEP` 12; carrier kind `STEP`, so the
+     stair's art draws on it): two half steps facing the climb, 8 px over its front half and 16 px over its back. The
+     low row has one on the floor, the high row a full block with one on top;
+   - edge walls at each cell's own feet; the low side keeps its own too (harmless).
+5. **The stairs' art:** every ramp gets a stair unit climbing its way, whatever the profile pins there (`Units`, source
+   `ramp`). East and west keep P3's stairs; north and south (`stair_n`, `stair_s`, two new profile classes) are the
+   drawing lying flat, so from above they look as in the game (`HullVariants.stairsAlong`).
+6. **Shapes:** each cell's keys stand on its level; the dressed ceiling runs from each cell's ceiling up to its top;
+   class boxes cull against their neighbours' real heights. **Deviation (§3.4, self-check):** the self-check scores each
+   map in its own frame, where floors are flat, so a raised floor can't count as hidden ground. Risers aren't scored.
+7. **Habitat blocks**, **deviation (§3.4, "3 under each cell's own feet"):** the placer keeps habitat blocks outside the
+   volumes, so they stay 3 under the map's floor. A raised level's cells are covered with the reach left after its
+   extra 2 blocks; a block two levels both pick is placed once. They still never reach another floor: the nearest,
+   the next floor down's raised ground, is 7 blocks away for a reach of 6.
+8. **Positions:** `toBlock` on a ramp stands on its third half step (1.5 up); puppets climb a ramp evenly
+   (`WorldIndex.rampLift`); the encounter's ground scan skips edge walls (an H2 gap: a Pokémon could have stood on one).
+9. **The synthetic cave:** the profile's CAVERN entry (the raised floor a `ledge` floor, the stairs `stair_e`) and a
+   south face onto low floor; 1F's plateau is raised by its pins, B1F stays flat (`flat_one_side`). The bundle copy and
+   the goldens were regenerated: 1F's levels, ramps and habitats, the two stair units.
+10. **Tests:** `CaveLevelsTest` (8), `RaisedCaveTest` (7), and cases in `ClassBoxesTest`, `HullVariantsTest`,
+    `CavePlannerTest` (both levels within a habitat's reach, from under the floor), `PairEdgesTest`. GameTests: a step
+    collider's half steps climbed and descended, a two-block face not climbed
+    (`CollisionGameTests.caveStepsClimbHalfABlockAtATime`); in the built synthetic cave, a mock player walks up the
+    stairs, along the floor, but neither up the cliff nor off the plateau; the walkability GameTest stands on each
+    cell's own level.
 
 ## Wild Routes
 

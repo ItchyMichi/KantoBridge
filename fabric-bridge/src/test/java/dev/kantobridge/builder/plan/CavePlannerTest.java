@@ -2,6 +2,7 @@ package dev.kantobridge.builder.plan;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -105,7 +106,7 @@ class CavePlannerTest {
 		assertEquals(b1.x() + 2 * 2, b2.x());
 		assertEquals(b1.z() + 3 * 2, b2.z());
 		assertTrue(by.values().stream().allMatch(p -> p.biome().equals(WorldPlan.BIOME_CAVE_3D) && p.kind() == MapPlacement.Kind.INTERIOR));
-		assertEquals(1, result.complexes());
+		assertEquals(1, result.complexes().size());
 		// The area lies whole chunks north of the dungeon region, from the origin's chunk (no Kanto box here).
 		int[] area = result.area();
 		assertEquals(0, area[0] % 16);
@@ -145,7 +146,7 @@ class CavePlannerTest {
 			all.put(id, map(id, i, "CAVERN", 20, 20, List.of(), new ExportMap.Parent("TOWN", i + 1, 0, 0)));
 		}
 		CavePlanner.Result result = CavePlanner.place(all, new java.util.LinkedHashSet<>(all.keySet()), null, 0, 0, new Warnings());
-		assertEquals(40, result.complexes());
+		assertEquals(40, result.complexes().size());
 		List<MapPlacement> placed = result.placements();
 		for (int i = 0; i < placed.size(); i++) {
 			for (int j = i + 1; j < placed.size(); j++) {
@@ -200,18 +201,52 @@ class CavePlannerTest {
 			assertEquals(HabitatPlanner.CAVE_RANGE, habitat.range());
 			String other = habitat.map().equals("TEST_CAVE_1F") ? "TEST_CAVE_B1F" : "TEST_CAVE_1F";
 			MapPlacement o = plan.index().map(other);
-			// No floor block of the other floor within the block's reach (I3).
+			// No floor block of the other floor within the block's reach (I3), raised floors (H4) included.
 			for (int cz = 0; cz < o.h(); cz++) {
 				for (int cx = 0; cx < o.w(); cx++) {
 					for (int b = 0; b < 4; b++) {
 						long dx = o.x() + cx * 2 + b % 2 - habitat.x();
-						long dy = o.y() - 1 - habitat.y();
+						long dy = o.y() + WorldPlan.level(plan.index().layout(other), cx, cz) - 1 - habitat.y();
 						long dz = o.z() + cz * 2 + b / 2 - habitat.z();
 						assertTrue(dx * dx + dy * dy + dz * dz > (long) habitat.range() * habitat.range(), habitat.map() + " reaches " + other);
 					}
 				}
 			}
 		}
-		assertNull(plan.index().layout("TEST_CAVE_1F"), "H3's floors are whole");
+		assertNotNull(plan.index().layout("TEST_CAVE_1F"), "1F's plateau is raised (H4)");
+		assertNull(plan.index().layout("TEST_CAVE_B1F"), "B1F has no raised ground");
+	}
+
+	@Test
+	void everyCaveFloorBlockIsInAHabitatsReach() {
+		// The raised floor's cells too, from habitat blocks that stay under the map's floor (H4).
+		for (PlacedMap map : plan.maps()) {
+			if (!map.id().startsWith("TEST_CAVE")) {
+				continue;
+			}
+			List<WorldIndex.Habitat> own = plan.habitats().stream().filter(h -> h.map().equals(map.id())).toList();
+			MapPlacement p = map.placement();
+			int raised = 0;
+			for (int cz = 0; cz < p.h(); cz++) {
+				for (int cx = 0; cx < p.w(); cx++) {
+					if (map.model().kind(cx, cz) != MapModel.Kind.GROUND) {
+						continue;
+					}
+					raised += map.level(cx, cz) > 0 ? 1 : 0;
+					for (int b = 0; b < 4; b++) {
+						long x = p.x() + cx * 2 + b % 2;
+						long y = p.y() + map.level(cx, cz) - 1;
+						long z = p.z() + cz * 2 + b / 2;
+						assertTrue(own.stream().anyMatch(h -> (x - h.x()) * (x - h.x()) + (y - h.y()) * (y - h.y()) + (z - h.z()) * (z - h.z())
+								<= (long) h.range() * h.range()), map.id() + " cell " + cx + "," + cz + " has no habitat in reach");
+					}
+				}
+			}
+			assertEquals(map.id().equals("TEST_CAVE_1F"), raised > 0);
+		}
+		for (WorldIndex.Habitat habitat : plan.habitats()) {
+			MapPlacement p = plan.index().map(habitat.map());
+			assertEquals(p.y() - HabitatPlanner.BELOW_FEET, habitat.y(), "under the map's floor, outside its volume");
+		}
 	}
 }

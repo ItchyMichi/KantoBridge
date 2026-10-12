@@ -7,6 +7,8 @@ import dev.kantobridge.scene.CellTag;
 import dev.kantobridge.scene.SceneAtlas;
 import dev.kantobridge.scene.SceneMap;
 import dev.kantobridge.scene.profile.Profile;
+import dev.kantobridge.world.Dir;
+import dev.kantobridge.world.MapLayout;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
@@ -39,6 +41,8 @@ import org.jetbrains.annotations.Nullable;
  *            is a rising stair or a relief is a unit on decor carriers (no collision), as high as its class height under the
  *            map's headroom, its floor the ground; a sunken stair would need its floor opened, which collision forbids:
  *            counted ({@code stair_down}), left flat
+ * ramp       a cave's stairs (docs/specs/CAVES_3D_PLAN.md §3.4): a stair climbing the ramp's way by its rise, whatever
+ *            the profile pins there; the builder stands it on step colliders, so it is walked up
  * </pre>
  */
 final class Units {
@@ -72,6 +76,13 @@ final class Units {
 	 */
 	static void plan(SceneMap map, SceneAtlas atlas, int atlasIndex, ShapeKey[][] keys, int[] blocks, int[] mask, int[] floor, int[] decor,
 			List<Cell> units, @Nullable ProfileClasses classes, @Nullable UnitProbe probe, Map<String, Integer> tally, boolean @Nullable [] held) {
+		plan(map, atlas, atlasIndex, keys, blocks, mask, floor, decor, units, classes, probe, tally, held, null);
+	}
+
+	/** {@link #plan} with the map's layout (null: none), whose ramps get their stairs. */
+	static void plan(SceneMap map, SceneAtlas atlas, int atlasIndex, ShapeKey[][] keys, int[] blocks, int[] mask, int[] floor, int[] decor,
+			List<Cell> units, @Nullable ProfileClasses classes, @Nullable UnitProbe probe, Map<String, Integer> tally, boolean @Nullable [] held,
+			@Nullable MapLayout layout) {
 		int per = map.perCell();
 		int cols = map.artCols();
 		Set<Integer> grass = atlas.grassTiles();
@@ -94,6 +105,12 @@ final class Units {
 			for (int cx = 0; cx < map.w(); cx++) {
 				if (held != null && heldCell(map, held, cx, cy)) {
 					// A building's claim holds a tile of this cell (P2).
+					continue;
+				}
+				MapLayout.Ramp ramp = layout == null ? null : layout.ramp(cx, cy);
+				if (ramp != null && map.kind(cx, cy) == CellKind.WALK) {
+					standUnit(map, atlas, atlasIndex, cx, cy, stairClass(ramp.dir()), List.of(clamp(8 * ramp.rise())), keys, decor, floor, units,
+							mapGround, indoor, tally, "ramp");
 					continue;
 				}
 				String pinned = classes == null ? null : classes.unitClass(cx, cy);
@@ -188,19 +205,38 @@ final class Units {
 		return Math.max(0, Math.min(99, value));
 	}
 
+	/** The stair class of a ramp climbing {@code climb}. */
+	static String stairClass(Dir climb) {
+		return switch (climb) {
+			case RIGHT -> "stair_e";
+			case LEFT -> "stair_w";
+			case UP -> "stair_n";
+			case DOWN -> "stair_s";
+		};
+	}
+
 	/**
 	 * A walkable cell's unit (P3: a rising stair or a relief): its tiles' columns as high as its class height on decor
 	 * carriers, its floor the ground.
 	 */
 	private static void decorUnit(SceneMap map, SceneAtlas atlas, int atlasIndex, ProfileClasses classes, int cx, int cy, String cls,
 			ShapeKey[][] keys, int[] decor, int[] floor, List<Cell> units, int mapGround, boolean indoor, Map<String, Integer> tally) {
+		standUnit(map, atlas, atlasIndex, cx, cy, cls, params(map, classes, cls), keys, decor, floor, units, mapGround, indoor, tally, "pin");
+	}
+
+	/**
+	 * A unit standing on a walkable cell, of class {@code cls} with {@code params} (its height first): its tiles' columns
+	 * as high as that on decor carriers, its floor the ground; tallied and listed as {@code source}.
+	 */
+	private static void standUnit(SceneMap map, SceneAtlas atlas, int atlasIndex, int cx, int cy, String cls, List<Integer> params,
+			ShapeKey[][] keys, int[] decor, int[] floor, List<Cell> units, int mapGround, boolean indoor, Map<String, Integer> tally,
+			String source) {
 		int per = map.perCell();
 		int cols = map.artCols();
-		List<Integer> params = params(map, classes, cls);
 		int h = params.isEmpty() ? 0 : params.get(0);
 		int high = Math.min(per, (h + 7) / 8);
 		if (high <= 0) {
-			tally.merge("pin_flat", 1, Integer::sum);
+			tally.merge(source + "_flat", 1, Integer::sum);
 			return;
 		}
 		int[] tiles = tiles(map, cx, cy);
@@ -220,8 +256,8 @@ final class Units {
 				floor[i] = g;
 			}
 		}
-		tally.merge("pin", 1, Integer::sum);
-		units.add(new Cell(cx, cy, first, false, "pin"));
+		tally.merge(source, 1, Integer::sum);
+		units.add(new Cell(cx, cy, first, false, source));
 	}
 
 	/** True when a building's claim holds any tile of cell (cx, cy). */

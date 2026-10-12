@@ -289,6 +289,7 @@ public final class MeshStatsRuntime {
 				case DECOR -> BlockCode.decor(false);
 				case DECOR_LEAVES -> BlockCode.decor(true);
 				case LEDGE -> BlockCode.ledge(0);
+				case STEP -> BlockCode.step(dev.kantobridge.world.Dir.RIGHT);
 				case STORY_TILE -> BlockCode.storyTile(0);
 			});
 		}

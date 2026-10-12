@@ -8,6 +8,8 @@ import dev.kantobridge.builder.shape.dressing.Canopy;
 import dev.kantobridge.builder.zone.ZoneBlock;
 import dev.kantobridge.builder.zone.ZonePlan;
 import dev.kantobridge.scene.Scene;
+import dev.kantobridge.world.Dir;
+import dev.kantobridge.world.MapLayout;
 import dev.kantobridge.world.MapPlacement;
 import dev.kantobridge.world.Scale;
 import dev.kantobridge.world.SlotMap;
@@ -376,7 +378,7 @@ public final class WorldPlan {
 		}
 		for (PlacedMap map : this.maps) {
 			if (map.interior()) {
-				out.add(interiorVolume(map.placement()));
+				out.add(interiorVolume(map.placement(), maxCeiling(map.layout())));
 			}
 		}
 		for (ZonePlan zone : this.zones) {
@@ -399,11 +401,82 @@ public final class WorldPlan {
 	 * {@link #SKY_MARGIN} past the map for a wood's apron (CW3).
 	 */
 	public static Box3 interiorVolume(MapPlacement p) {
+		return interiorVolume(p, CEILING_ABOVE_FEET);
+	}
+
+	/** The same, with its highest ceiling {@code ceiling} blocks above its feet (a raised cave's, {@link #maxCeiling}). */
+	public static Box3 interiorVolume(MapPlacement p, int ceiling) {
 		InteriorPacker.Box box = InteriorPacker.footprint(p.x(), p.z(), p.blockWidth(), p.blockDepth());
 		boolean sky = openSky(p);
-		int top = sky ? Canopy.TOP_LEVEL : CEILING_ABOVE_FEET;
+		int top = sky ? Canopy.TOP_LEVEL : ceiling;
 		int grow = sky ? SKY_MARGIN - InteriorPacker.RING : 0;
 		return new Box3(box.minX() - grow, p.y() - 1, box.minZ() - grow, box.maxX() + grow, p.y() + top + 1, box.maxZ() + grow);
+	}
+
+	// ---- raised ground (docs/specs/CAVES_3D_PLAN.md §3.4): heights in blocks above the placement's feet ----
+
+	/** A cell's level: how high its floor stands; 0 without a layout. */
+	public static int level(@Nullable MapLayout layout, int cx, int cy) {
+		return layout == null ? 0 : layout.level(cx, cy);
+	}
+
+	/** Where a cell's hangings and light count from: its floor, a ramp's top. */
+	public static int hangBase(@Nullable MapLayout layout, int cx, int cy) {
+		if (layout == null) {
+			return 0;
+		}
+		MapLayout.Ramp ramp = layout.ramp(cx, cy);
+		return layout.level(cx, cy) + (ramp == null ? 0 : ramp.rise());
+	}
+
+	/** A cell's ceiling: 3 blocks of air over its floor (U5), over a ramp's top. */
+	public static int ceilingLevel(@Nullable MapLayout layout, int cx, int cy) {
+		return hangBase(layout, cx, cy) + CEILING_ABOVE_FEET;
+	}
+
+	/**
+	 * The top of a cell's ceiling: as high as the highest ceiling of its eight neighbours, so no gap opens between ceilings
+	 * of different heights.
+	 */
+	public static int ceilingTop(@Nullable MapLayout layout, int cx, int cy) {
+		int top = ceilingLevel(layout, cx, cy);
+		if (layout == null) {
+			return top;
+		}
+		for (int dy = -1; dy <= 1; dy++) {
+			for (int dx = -1; dx <= 1; dx++) {
+				int nx = cx + dx;
+				int ny = cy + dy;
+				if (nx >= 0 && ny >= 0 && nx < layout.w() && ny < layout.h()) {
+					top = Math.max(top, ceilingLevel(layout, nx, ny));
+				}
+			}
+		}
+		return top;
+	}
+
+	/** A map's highest ceiling: {@link #CEILING_ABOVE_FEET} without a layout. */
+	public static int maxCeiling(@Nullable MapLayout layout) {
+		int top = CEILING_ABOVE_FEET;
+		if (layout == null) {
+			return top;
+		}
+		for (int cy = 0; cy < layout.h(); cy++) {
+			for (int cx = 0; cx < layout.w(); cx++) {
+				top = Math.max(top, ceilingLevel(layout, cx, cy));
+			}
+		}
+		return top;
+	}
+
+	/** True for a block of a ramp's high row: the half of its cell toward the way it climbs. */
+	static boolean highRow(Dir climb, int bx, int bz) {
+		return switch (climb) {
+			case RIGHT -> bx == 1;
+			case LEFT -> bx == 0;
+			case DOWN -> bz == 1;
+			case UP -> bz == 0;
+		};
 	}
 
 	/** The columns of an interior's enclosure ring, as {x, z}. */
@@ -443,7 +516,7 @@ public final class WorldPlan {
 		}
 		for (MapPlacement p : previous.maps().values()) {
 			if (p.kind() == MapPlacement.Kind.INTERIOR) {
-				out.add(interiorVolume(p));
+				out.add(interiorVolume(p, maxCeiling(previous.layout(p.id()))));
 			}
 		}
 		// Wild Routes: an older build's zones are cleared too
@@ -482,9 +555,10 @@ public final class WorldPlan {
 			if (!map.interior()) {
 				continue;
 			}
-			Box3 v = interiorVolume(map.placement()).inflateXZ(4);
+			int ceiling = maxCeiling(map.layout());
+			Box3 v = interiorVolume(map.placement(), ceiling).inflateXZ(4);
 			int feet = map.placement().y();
-			int top = openSky(map.placement()) ? Canopy.TOP_LEVEL + 2 : 8;
+			int top = openSky(map.placement()) ? Canopy.TOP_LEVEL + 2 : 8 + ceiling - CEILING_ABOVE_FEET;
 			out.add(new BiomeRegion(new Box3(v.minX(), feet - 4, v.minZ(), v.maxX(), feet + top, v.maxZ()), map.placement().biome()));
 		}
 		for (ZonePlan zone : this.zones) {
@@ -529,7 +603,7 @@ public final class WorldPlan {
 			if (!map.interior()) {
 				continue;
 			}
-			Box3 volume = interiorVolume(map.placement());
+			Box3 volume = interiorVolume(map.placement(), maxCeiling(map.layout()));
 			if (!volume.intersectsChunk(chunkX, chunkZ)) {
 				continue;
 			}
@@ -634,7 +708,7 @@ public final class WorldPlan {
 		// The enclosure ring: border-block art from the floor block up to the ceiling; a dressed room's wall tile (V7).
 		int tile = planned != null && planned.wallTile() >= 0 ? planned.wallTile() : this.ringTile(map, x - p.x(), z - p.z());
 		int code = BlockCode.full(this.slot(map, tile, false));
-		for (int y = p.y() - 1; y <= p.y() + CEILING_ABOVE_FEET; y++) {
+		for (int y = p.y() - 1; y <= p.y() + maxCeiling(map.layout()); y++) {
 			sink.set(x, y, z, code);
 		}
 		if (planned != null && planned.curtain() != null && openSky(p)) {
@@ -682,7 +756,12 @@ public final class WorldPlan {
 		int ty = z - p.z();
 		int cx = tx / Scale.CELL_BLOCKS;
 		int cy = ty / Scale.CELL_BLOCKS;
-		int feet = p.y();
+		// A cell of a cave's raised ground stands on its level; a ramp's steps climb from its floor (CAVES_3D_PLAN §3.4).
+		MapLayout layout = map.layout();
+		MapLayout.Ramp ramp = layout == null ? null : layout.ramp(cx, cy);
+		int feet = p.y() + level(layout, cx, cy);
+		// The hangings and the light count from a ramp's top.
+		int lift = hangBase(layout, cx, cy) - level(layout, cx, cy);
 		int tile = model.tile(tx, ty);
 		int column = 0;
 		ShapePlanner.MapShapes planned = this.shapes == null ? null : this.shapes.shapes(map.id());
@@ -694,10 +773,25 @@ public final class WorldPlan {
 			case GROUND -> {
 				int floorTile = planned == null ? tile : planned.floorTile(planIndex, tile);
 				sink.set(x, feet - 1, z, BlockCode.full(this.slot(map, floorTile, false)));
+				int from = 0;
+				if (ramp != null) {
+					// A ramp's two half steps: on the floor in its low row, on a block in its high row (whose carrier draws the
+					// stair's art there).
+					if (highRow(ramp.dir(), tx - cx * Scale.CELL_BLOCKS, ty - cy * Scale.CELL_BLOCKS)) {
+						sink.set(x, feet, z, BlockCode.full(this.slot(map, tile, false)));
+						sink.set(x, feet + 1, z, BlockCode.step(ramp.dir()));
+						from = 2;
+					} else {
+						sink.set(x, feet, z, BlockCode.step(ramp.dir()));
+						from = 1;
+					}
+					column = from;
+					taken |= (1L << from) - 1;
+				}
 				// A tuft (V4) stands on a decor carrier at feet level, unless a story block takes the position; a building's
-				// doorway or overhang (P2) on decor carriers up its column.
+				// doorway or overhang (P2) on decor carriers up its column; over a ramp's steps, the rest of its stair.
 				int decor = planned == null ? 0 : planned.decor()[planIndex];
-				for (int k = 0; k < 31 && decor >> k != 0; k++) {
+				for (int k = from; k < 31 && decor >> k != 0; k++) {
 					if ((decor >> k & 1) != 0 && (k > 0 || story < 0)) {
 						sink.set(x, feet + k, z, BlockCode.decor(false));
 						column = Math.max(column, k + 1);
@@ -759,7 +853,7 @@ public final class WorldPlan {
 		}
 		// A carrier wins: the light goes only where the position is still air, or a hanging's carrier there gives it.
 		boolean light = map.interior() && !p.dark() && Math.floorMod(tx, LIGHT_SPACING) == 1 && Math.floorMod(ty, LIGHT_SPACING) == 1
-				&& column <= LIGHT_ABOVE_FEET;
+				&& column <= LIGHT_ABOVE_FEET + lift;
 		int hung = planned == null ? 0 : ShapePlanner.hungFits(planned.hungMask()[planIndex], ShapePlanner.hangTop(p));
 		int leaves = planned == null ? 0 : planned.hungLeaves()[planIndex];
 		// The cave area's rock fill (CAVES_3D_PLAN §3.3, HD9): over rock, the air up to the ceiling is solid, so a floor is
@@ -767,15 +861,15 @@ public final class WorldPlan {
 		boolean fill = map.interior() && BIOME_CAVE_3D.equals(p.biome())
 				&& (model.kind(cx, cy) == MapModel.Kind.SOLID || model.kind(cx, cy) == MapModel.Kind.COUNTER);
 		for (int k = 0; k < 31 && hung >> k != 0; k++) {
-			if ((hung >> k & 1) == 0 || (taken >> k & 1) != 0) {
+			if ((hung >> k & 1) == 0 || (taken >> (k + lift) & 1) != 0) {
 				continue;
 			}
 			// A hanging (CW1, CW2): a decor carrier for its piece, foliage for a wood's; the one on a light's position gives
 			// the light (CD15).
 			boolean lit = light && k == LIGHT_ABOVE_FEET;
-			sink.set(x, feet + k, z, BlockCode.decor((leaves >> k & 1) != 0, lit, fill && k < CEILING_ABOVE_FEET));
+			sink.set(x, feet + lift + k, z, BlockCode.decor((leaves >> k & 1) != 0, lit, fill && k < CEILING_ABOVE_FEET));
 			light &= !lit;
-			taken |= 1L << k;
+			taken |= 1L << (k + lift);
 		}
 		if (fill) {
 			for (int k = column; k < CEILING_ABOVE_FEET; k++) {
@@ -790,13 +884,24 @@ public final class WorldPlan {
 			}
 		}
 		if (map.interior()) {
+			// The ceiling's art: the border block's; a dressed room's wall tile, its shape darkening it (V7).
+			int ceiling = planned != null && planned.wallTile() >= 0 ? planned.wallTile() : model.borderTile(tx, ty);
 			if (!openSky(p)) {
-				// The ceiling: the border block's art; a dressed room's wall tile, its shape darkening it (V7).
-				int ceiling = planned != null && planned.wallTile() >= 0 ? planned.wallTile() : model.borderTile(tx, ty);
-				sink.set(x, feet + CEILING_ABOVE_FEET, z, BlockCode.full(this.slot(map, ceiling, false)));
+				// The ceiling, and up to its neighbours' where theirs are higher (raised ground).
+				int rock = BlockCode.full(this.slot(map, ceiling, false));
+				for (int k = ceilingLevel(layout, cx, cy); k <= ceilingTop(layout, cx, cy); k++) {
+					sink.set(x, p.y() + k, z, rock);
+				}
+			}
+			if (feet > p.y()) {
+				// Under a raised floor, rock in the ceiling's art down to the map's floor level.
+				int rock = BlockCode.full(this.slot(map, ceiling, false));
+				for (int y = p.y() - 1; y < feet - 1; y++) {
+					sink.set(x, y, z, rock);
+				}
 			}
 			if (light) {
-				sink.set(x, feet + LIGHT_ABOVE_FEET, z, BlockCode.light(LIGHT_LEVEL));
+				sink.set(x, feet + lift + LIGHT_ABOVE_FEET, z, BlockCode.light(LIGHT_LEVEL));
 			}
 		}
 	}

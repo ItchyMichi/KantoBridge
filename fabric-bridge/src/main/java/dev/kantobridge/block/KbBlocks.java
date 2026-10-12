@@ -48,6 +48,8 @@ public final class KbBlocks {
 	public static LedgeColliderBlock LEDGE_COLLIDER;
 	/** Invisible walls on tile-pair edges (docs/specs/CAVES_3D_PLAN.md §3.2). */
 	public static EdgeWallBlock EDGE_WALL;
+	/** The half steps of a cave's stairs (docs/specs/CAVES_3D_PLAN.md §3.4). */
+	public static StepColliderBlock STEP_COLLIDER;
 	public static DecorBlock DECOR;
 	public static DecorBlock DECOR_LEAVES;
 	/** Wild Routes' props (WR7): the dungeon entrance, stairs and exit. */
@@ -96,6 +98,7 @@ public final class KbBlocks {
 		STORY_TILE = register("story_tile", new StoryTileBlock(invisibleProperties()));
 		LEDGE_COLLIDER = register("ledge_collider", new LedgeColliderBlock(invisibleProperties()));
 		EDGE_WALL = register("edge_wall", new EdgeWallBlock(invisibleProperties()));
+		STEP_COLLIDER = register("step_collider", new StepColliderBlock(invisibleProperties()));
 		DECOR = register("decor", new DecorBlock(decorProperties()));
 		DECOR_LEAVES = register("decor_leaves", new DecorBlock(decorProperties()));
 		PROP = register("prop", new PropBlock(BlockBehaviour.Properties.of().mapColor(MapColor.STONE).strength(-1.0F, 3_600_000.0F)
@@ -104,6 +107,7 @@ public final class KbBlocks {
 		CARRIERS.add(new Carrier(DECOR, CarrierKind.DECOR, 0));
 		CARRIERS.add(new Carrier(DECOR_LEAVES, CarrierKind.DECOR_LEAVES, 0));
 		CARRIERS.add(new Carrier(LEDGE_COLLIDER, CarrierKind.LEDGE, 0));
+		CARRIERS.add(new Carrier(STEP_COLLIDER, CarrierKind.STEP, 0));
 		CARRIERS.add(new Carrier(STORY_TILE, CarrierKind.STORY_TILE, 0));
 		// No data fixer: the block entities hold only our own two strings.
 		STORY_CELL_ENTITY = Registry.register(BuiltInRegistries.BLOCK_ENTITY_TYPE, id("story_cell"),
