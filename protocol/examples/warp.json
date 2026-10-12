@@ -8,5 +8,16 @@
       "kind": "door",
       "to": {"map": "TEST_HOUSE", "x": 2, "y": 7, "facing": "up"}
     }
+  },
+  {"type": "warp", "seq": 13, "re": 41, "data": {"phase": "start", "kind": "stairs"}},
+  {
+    "type": "warp",
+    "seq": 14,
+    "re": 41,
+    "data": {
+      "phase": "arrive",
+      "kind": "stairs",
+      "to": {"map": "TEST_CAVE_B1F", "x": 9, "y": 3, "facing": "down"}
+    }
   }
 ]

@@ -652,6 +652,16 @@
         "to": {"map": "TEST_HOUSE", "x": 2, "y": 7, "facing": "up"}
       }
     },
+    {"type": "warp", "seq": 13, "redacted": {"phase": "start", "kind": "stairs"}},
+    {
+      "type": "warp",
+      "seq": 14,
+      "redacted": {
+        "phase": "arrive",
+        "kind": "stairs",
+        "to": {"map": "TEST_CAVE_B1F", "x": 9, "y": 3, "facing": "down"}
+      }
+    },
     {
       "type": "warp.done",
       "seq": 11,
@@ -662,6 +672,26 @@
       "seq": 11,
       "redacted": {"to": {"map": "TEST_HOUSE", "x": 2, "y": 7, "facing": "up"}, "kind": "door"}
     },
+    {
+      "type": "warp.take",
+      "seq": 41,
+      "redacted": {
+        "from": {"map": "TEST_CAVE_1F", "x": 9, "y": 3},
+        "to": {"map": "TEST_CAVE_B1F", "x": 9, "y": 3, "facing": "down"},
+        "kind": "ladder"
+      }
+    },
+    {
+      "type": "warp.take",
+      "seq": 42,
+      "redacted": {
+        "from": {"map": "TEST_CAVE_1F", "x": 5, "y": 7},
+        "to": {"map": "TEST_CAVE_B1F", "x": 4, "y": 4, "facing": "down"},
+        "kind": "hole"
+      }
+    },
+    {"type": "warp.taken", "seq": 12, "redacted": {"ok": true}},
+    {"type": "warp.taken", "seq": 13, "redacted": {"ok": false, "reason": "busy"}},
     {
       "type": "world.index",
       "seq": 11,

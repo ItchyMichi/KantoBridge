@@ -31,6 +31,12 @@
 --                                   places the party menu allows each
 --   blackout                        a blackout's warp to the heal point
 --   script                          any other warp (cutscenes, mods)
+--
+-- A cave shaft's warp (act/kb_climb.lua, docs/PROTOCOL.md "Ladders and
+-- holes"): the act queues the engine's warp command and calls expect(kind,
+-- re); the next warp that isn't a warp-table one (a queued script's) takes
+-- that kind (stairs or hole) and both its messages carry the take's re. An
+-- expectation no warp follows within EXPECT steps lapses.
 -- Logs show codes, kinds and counts only.
 
 local Warp = {}
@@ -44,6 +50,8 @@ Warp.NOT_WARPS = { connection = true, reload = true, boot = true }
 -- current position anyway (a warp the engine dropped, e.g. a checkpoint
 -- restore, which enters a map without map.entered)
 Warp.ARRIVE_TIMEOUT = 1200
+-- logic steps a warp.take's expectation waits for its warp to start
+Warp.EXPECT = 120
 
 local floor = math.floor
 local DIRS = { up = true, down = true, left = true, right = true }
@@ -70,10 +78,17 @@ function Warp.new(opts)
   opts = opts or {}
   local log = opts.log
   local tracker = {}
-  local current       -- the warp under way: { kind, at }
+  local current       -- the warp under way: { kind, at, re }
   local hint          -- a departure seen before its fade: "fly", "teleport", "hole"
+  local expected      -- a warp.take's warp to come: { kind, re, at }
   local steps = 0
-  local counts = { started = 0, arrived = 0, late = 0, timeouts = 0, heldBack = 0 }
+  local counts = { started = 0, arrived = 0, late = 0, timeouts = 0, heldBack = 0, taken = 0, lapsed = 0 }
+
+  -- The next script warp is a cave shaft's (act/kb_climb.lua): kind
+  -- "stairs" or "hole", answering the warp.take with seq `re`.
+  function tracker.expect(kind, re)
+    expected = { kind = Warp.KINDS[kind] and kind or "stairs", re = re, at = steps }
+  end
 
   -- facts: kb_engine.observe() for this step; ev: the events since the last
   -- step (see above). Returns a list of { "warp", data, tag }.
@@ -82,16 +97,22 @@ function Warp.new(opts)
     ev = ev or {}
     local out = {}
 
-    local function start(kind)
-      current = { kind = kind, at = steps }
+    local function start(kind, taken)
+      local re
+      if taken and expected then
+        kind, re = expected.kind, expected.re
+        expected = nil
+        counts.taken = counts.taken + 1
+      end
+      current = { kind = kind, at = steps, re = re }
       counts.started = counts.started + 1
-      out[#out + 1] = { "warp", { phase = "start", kind = kind }, "warp" }
+      out[#out + 1] = { "warp", { phase = "start", kind = kind }, "warp", re = re }
     end
 
     local function arrive(why)
       local to = place(f)
       if to then
-        out[#out + 1] = { "warp", { phase = "arrive", kind = current.kind, to = to }, "warp" }
+        out[#out + 1] = { "warp", { phase = "arrive", kind = current.kind, to = to }, "warp", re = current.re }
         counts.arrived = counts.arrived + 1
       else
         counts.heldBack = counts.heldBack + 1
@@ -100,6 +121,11 @@ function Warp.new(opts)
       current = nil
     end
 
+    if expected and not current and steps - expected.at > Warp.EXPECT then
+      expected = nil
+      counts.lapsed = counts.lapsed + 1
+      if log then log.warn("warp.take_lapsed", { steps = Warp.EXPECT }) end
+    end
     if ev.warped and not current then start(Warp.departureKind(ev.warped)) end
     if ev.blackout and not current then start("blackout") end
     if not current then
@@ -109,7 +135,7 @@ function Warp.new(opts)
         hint = nil
       end
       if f.transitioning then
-        start(hint or "script")
+        start(hint or "script", hint == nil)
         hint = nil
       end
     end
@@ -118,7 +144,7 @@ function Warp.new(opts)
         if not current then
           -- a warp whose fade started and ended between two of our steps
           counts.late = counts.late + 1
-          start(e.via == "fly" and "fly" or hint or "script")
+          start(e.via == "fly" and "fly" or hint or "script", e.via ~= "fly" and hint == nil)
           hint = nil
         end
         arrive("entered")

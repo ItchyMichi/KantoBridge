@@ -159,7 +159,9 @@ optional ones. The schemas give the exact types and limits.
 | `player.pos` | G→M | `map, x, y, facing, kind:"walk"\|"bike"\|"surf"\|"ledge"\|"script"\|"spin"\|"current"\|"slope"\|"push"\|"sync", frames, n?`. Sent at step start (target cell) and on non-step changes | |
 | `player.blocked` | G→M | `dir, reason:"tile"\|"entity"\|"bounds"\|"script", map, x, y, n?` | |
 | `player.state` | G→M | `mode:"idle"\|"screen"\|"forced"\|"cutscene"\|"busy", bike, surf, slope, hidden, dark, lit` (all required) | |
-| `warp` | G→M | `phase:"start"\|"arrive", kind:"door"\|"stairs"\|"edge"\|"hole"\|"pad"\|"fly"\|"teleport"\|"dig"\|"rope"\|"blackout"\|"script"\|"elevator", to?{map,x,y,facing}` (required on arrive) | |
+| `warp` | G→M | `phase:"start"\|"arrive", kind:"door"\|"stairs"\|"edge"\|"hole"\|"pad"\|"fly"\|"teleport"\|"dig"\|"rope"\|"blackout"\|"script"\|"elevator", to?{map,x,y,facing}` (required on arrive); `re` optional: the `warp.take` it answers | |
+| `warp.take` | M→G | `from{map,x,y}, to{map,x,y,facing}, kind:"ladder"\|"hole"`: the player climbed or fell through a cave's shaft to its far end | |
+| `warp.taken` | G→M | `ok, reason?:"busy"\|"mode"\|"map"\|"far"`; `re` required | |
 | `emote` | G→M | `target:"player"\|<npc id>, bubble:"!"\|"?"\|"happy"\|null, frames` | |
 
 #### Movement rules (M3)
@@ -189,6 +191,24 @@ optional ones. The schemas give the exact types and limits.
 - **Connection crossings** (walking off a map edge into the connected map) are not warps: the step's
   `player.pos` simply names the new map and cell.
 - **Order within one logic step:** `player.state`, then `warp`, then `player.pos`/`player.blocked`.
+
+#### Ladders and holes (H5)
+
+A cave built in 3D has real shafts between its floors ([specs/CAVES_3D_PLAN.md](specs/CAVES_3D_PLAN.md) §3.6). The
+player climbs or falls in Minecraft while the hidden player waits where it was; the hidden game warps when the player
+reaches the far end.
+
+- **The client** never sends a step onto a shaft's end cell (the hidden game would warp at once). When the player
+  arrives at the far end (feet on the far floor going down, at the far end's feet level going up) it sends
+  `warp.take`: `from` the near end cell, `to` the far end and the facing to arrive with, `kind` `ladder` or `hole`.
+- **gen1-bridge** accepts it only in mode `idle` (else `mode`), on the take's `from` map (else `map`), with the hidden
+  player on the `from` cell or next to it (else `far`). It queues the engine's own `warp` command to `to`, as a
+  script; a world busy with another script answers `busy`, and the client retries for 1 s.
+- **Accepted:** `warp.taken{ok:true}`, then the warp's `start` and `arrive`, both with the take's `re`, kind `stairs`
+  (a ladder) or `hole`. The client shows no fade and doesn't teleport: the player already stands at `to`. The warp is
+  the engine's own: NPCs go back to their spawns, the map's enter script runs, and the arrival cell can't warp again
+  until the player steps off it.
+- **Refused, or no arrival within 3 s:** the client fades and puts the player back on the hidden player's cell.
 
 ### Interaction
 

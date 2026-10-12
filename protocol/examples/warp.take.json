@@ -1,0 +1,20 @@
+[
+  {
+    "type": "warp.take",
+    "seq": 41,
+    "data": {
+      "from": {"map": "TEST_CAVE_1F", "x": 9, "y": 3},
+      "to": {"map": "TEST_CAVE_B1F", "x": 9, "y": 3, "facing": "down"},
+      "kind": "ladder"
+    }
+  },
+  {
+    "type": "warp.take",
+    "seq": 42,
+    "data": {
+      "from": {"map": "TEST_CAVE_1F", "x": 5, "y": 7},
+      "to": {"map": "TEST_CAVE_B1F", "x": 4, "y": 4, "facing": "down"},
+      "kind": "hole"
+    }
+  }
+]

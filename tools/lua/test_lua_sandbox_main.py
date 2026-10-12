@@ -39,6 +39,7 @@ LIB_FILES = [
     "act/kb_pairing.lua",
     "act/kb_pc.lua",
     "act/kb_route.lua",
+    "act/kb_climb.lua",
     "export/kb_cells.lua",
     "export/kb_images.lua",
     "export/kb_swapsites.lua",

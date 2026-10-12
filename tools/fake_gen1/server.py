@@ -167,6 +167,8 @@ class FakeGen1:
             await conn.send("player.pos", self._pos("sync", 0))
         elif msg_type == "act.interact":
             await self._interact(conn, message)
+        elif msg_type == "warp.take":
+            await self._take(conn, message)
         elif msg_type == "act.button":
             await conn.send("act.result", {"ok": True}, re=seq)
         elif msg_type == "act.field":
@@ -332,6 +334,30 @@ class FakeGen1:
     async def set_mode(self, mode):
         self.state.mode = mode
         await self._send("player.state", self.state.as_data())
+
+    async def _take(self, conn, message):
+        """warp.take, a cave shaft's warp (docs/PROTOCOL.md "Ladders and holes (H5)"): taken while idle, on the
+        take's map, within a cell of its near end; then the warp, kind stairs or hole, with the take's re."""
+        data, seq = message["data"], message["seq"]
+        near = data["from"]
+        reason = None
+        if self.state.mode != "idle":
+            reason = "mode"
+        elif self.player.map != near["map"]:
+            reason = "map"
+        elif abs(self.player.x - near["x"]) + abs(self.player.y - near["y"]) > 1:
+            reason = "far"
+        if reason is not None:
+            await conn.send("warp.taken", {"ok": False, "reason": reason}, re=seq)
+            return
+        await conn.send("warp.taken", {"ok": True}, re=seq)
+        kind = "hole" if data["kind"] == "hole" else "stairs"
+        to = data["to"]
+        await conn.send("warp", {"phase": "start", "kind": kind}, re=seq)
+        self.player.map, self.player.x, self.player.y, self.player.facing = to["map"], to["x"], to["y"], to["facing"]
+        await conn.send("warp", {"phase": "arrive", "kind": kind, "to": self.player.as_data()}, re=seq)
+        await self._send("player.pos", self._pos("sync", 0))
+        await self._send("npc.set", self._npc_set())
 
     async def warp_to(self, map_id, x, y, facing, kind="door", n=None, walk_out=None):
         """A warp as gen1-bridge reports it: start, arrive at the entry cell, a sync (the step's

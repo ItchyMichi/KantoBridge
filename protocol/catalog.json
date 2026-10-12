@@ -568,7 +568,7 @@
     },
     "warp": {
       "legs": ["g2m"],
-      "re": "never",
+      "re": "optional",
       "rom": false,
       "redact": [],
       "schema": "messages/warp.schema.json"
@@ -586,6 +586,20 @@
       "rom": false,
       "redact": [],
       "schema": "messages/warp.request.schema.json"
+    },
+    "warp.take": {
+      "legs": ["m2g"],
+      "re": "never",
+      "rom": false,
+      "redact": [],
+      "schema": "messages/warp.take.schema.json"
+    },
+    "warp.taken": {
+      "legs": ["g2m"],
+      "re": "required",
+      "rom": false,
+      "redact": [],
+      "schema": "messages/warp.taken.schema.json"
     },
     "world.index": {
       "legs": ["s2c"],

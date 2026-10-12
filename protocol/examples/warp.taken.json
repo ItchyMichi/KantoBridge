@@ -1,0 +1,4 @@
+[
+  {"type": "warp.taken", "seq": 12, "re": 41, "data": {"ok": true}},
+  {"type": "warp.taken", "seq": 13, "re": 42, "data": {"ok": false, "reason": "busy"}}
+]

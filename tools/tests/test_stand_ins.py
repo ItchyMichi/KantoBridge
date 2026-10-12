@@ -206,6 +206,29 @@ def test_stairs_warp_between_floors():
     run(scenario())
 
 
+def test_a_cave_ladder_is_taken_where_the_player_climbed_to():
+    async def scenario():
+        gen1, mc = await _pair()
+        try:
+            await mc.hello()
+            await gen1.teleport("TEST_CAVE_1F", 8, 3, "right")
+            take = {"from": {"map": "TEST_CAVE_1F", "x": 9, "y": 3},
+                    "to": {"map": "TEST_CAVE_B1F", "x": 9, "y": 3, "facing": "down"}, "kind": "ladder"}
+            far = await mc.request("warp.take", dict(take, **{"from": {"map": "TEST_CAVE_1F", "x": 3, "y": 5}}),
+                                   reply_type="warp.taken")
+            assert far["data"] == {"ok": False, "reason": "far"}
+            taken = await mc.request("warp.take", take, reply_type="warp.taken")
+            assert taken["data"] == {"ok": True}
+            start = await mc.expect("warp")
+            assert start["re"] == taken["re"] and start["data"] == {"phase": "start", "kind": "stairs"}
+            arrive = await mc.expect("warp")
+            assert arrive["re"] == taken["re"] and arrive["data"]["to"] == take["to"]
+        finally:
+            await mc.close()
+            await gen1.stop()
+    run(scenario())
+
+
 def test_made_up_gift_and_battle_are_schema_valid():
     async def scenario():
         gen1, mc = await _pair()

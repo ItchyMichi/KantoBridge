@@ -511,6 +511,12 @@ test drivers), guarded so the hook always calls `next`:
    after the next snapshot). On a reconnect: `hello.ok`, `snapshot`, the open UIs again (their
    current page, line or cursor follows as `ui.update`), then, once the client binds,
    `session.bound`, whatever was queued (`party.*`, `save.begin`) and `save.loaded`.
+31. **Cave ladders and holes** (`act/kb_climb.lua`, docs/specs/CAVES_3D_PLAN.md §3.6, H5): the player climbs or
+   falls through a cave's shaft in Minecraft while the hidden player waits on or next to its near end; at the far end
+   `warp.take{from, to, kind}` queues the engine's own `warp` command (as the Wild Routes clearing does), answered by
+   `warp.taken{ok, reason?}`: only while idle (`mode`), on `from`'s map (`map`), within a cell of `from` (`far`), and
+   with no script running (`busy`). The warp observer then reports that warp with kind `stairs` or `hole` and the
+   take's `re`.
 
 ### Where the export's data comes from
 

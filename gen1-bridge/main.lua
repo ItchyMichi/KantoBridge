@@ -54,6 +54,7 @@ return function(mod)
     Pairing = import("act/kb_pairing.lua"),
     Pc = import("act/kb_pc.lua"),
     Route = import("act/kb_route.lua"),
+    Climb = import("act/kb_climb.lua"),
     Cells = import("export/kb_cells.lua"),
     Images = import("export/kb_images.lua"),
     SwapSites = import("export/kb_swapsites.lua"),
@@ -211,6 +212,9 @@ return function(mod)
     },
   })
   local pcs = kb.Pc.new({ engine = engine, log = log })
+  -- Caves in 3D (H5): a cave shaft's warp, taken when the player reaches its
+  -- far end in Minecraft (act/kb_climb.lua)
+  local climb = kb.Climb.new({ world = mod.world, warps = warps, log = log })
   -- Wild Routes (WR2): the zones' acts and progress (act/kb_route.lua); the
   -- progress is kept in mod.save "routes" (save.modData, so it loads and
   -- saves with the hidden game)
@@ -490,6 +494,7 @@ return function(mod)
     end
   end
   session.on("act.interact", queued(interact.request))
+  session.on("warp.take", queued(climb.request))
   -- M8: field moves (act/kb_field.lua), answered by act.result
   session.on("act.field", queued(field.request))
   session.on("act.button", queued(uiAct.button))
@@ -678,6 +683,7 @@ return function(mod)
     interact.step(facts, mode, ev, npcRaw, out, ctx)
     field.step(facts, mode, out, { live = live, generation = generation, moverBusy = ctx.moverBusy,
                                    interactBusy = interact.busy() })
+    climb.step(facts, mode, out, { live = live, generation = generation })
     -- Wild Routes (WR2): route.result and route.progress. Guarded like the
     -- story: a fault there must not stop what follows in this step.
     local okRoute, routeErr = pcall(routeActs.step, facts, mode, out, { live = live, generation = generation })

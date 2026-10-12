@@ -1,0 +1,17 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kantobridge.invalid/protocol/messages/warp.take.schema.json",
+  "title": "warp.take",
+  "description": "The player climbed or fell to the far end of a cave's ladder or hole: take its warp there.",
+  "x-type": "warp.take",
+  "x-legs": ["m2g"],
+  "x-re": "never",
+  "type": "object",
+  "required": ["from", "to", "kind"],
+  "additionalProperties": false,
+  "properties": {
+    "from": {"$ref": "../defs.schema.json#/$defs/cell"},
+    "to": {"$ref": "../defs.schema.json#/$defs/place"},
+    "kind": {"enum": ["ladder", "hole"]}
+  }
+}
