@@ -3,7 +3,8 @@
 - **Status:** research for your question of 2026-10-12: could the ROM world's floors sit at different heights (a cave
   whose stairs climb to raised ground, places outdoors where a height difference makes sense), how would it be built,
   and what would it change. Nothing is built. Decided so far: 2-block levels with 2 blocks of air on top, and caves
-  in an area of their own (§7). The other choices are open.
+  in an area of their own (§7). The plan that follows is [CAVES_3D_PLAN.md](../specs/CAVES_3D_PLAN.md), with real
+  ladders and holes too.
 - **Sources:** a read of today's code, docs and tests (file:line below; Java paths are under
   `fabric-bridge/src/{main,client}/java/dev/kantobridge/`), and the earlier research
   `docs/research/VOXEL_WORLD_REPORT.md` (VR). Nothing under `local/` and nothing ROM-derived was opened. Nothing ran on

@@ -145,6 +145,9 @@ terrain past the map edge, day/night, weather and sky, per-map fog and colours, 
 camera, sound per tile class. Client-only items first; builder items in one batch, since each needs a rebuild.
 Day/night and weather clash with today's server rules (noon at every start).
 
+**Next for caves (2026-10-12):** [specs/CAVES_3D_PLAN.md](specs/CAVES_3D_PLAN.md): raised ground, caves in an area of
+their own north of Kanto, and real ladders and holes between cave floors (H1–H7, a pilot cave before the rest).
+
 ### Stage 7: Kanto inside a vanilla overworld (M11–M14)
 
 Designed only in the research report (`docs/research/VOXEL_WORLD_REPORT.md:8690-8871`): M11 Kanto in a vanilla world
