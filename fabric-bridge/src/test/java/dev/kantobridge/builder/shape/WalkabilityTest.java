@@ -82,7 +82,7 @@ class WalkabilityTest {
 				}
 			}
 		}
-		assertEquals(20 * 18 + 16 * 12 + 10 * 10 + 8 * 8, cells, "every cell of the four maps");
+		assertEquals(20 * 18 + 16 * 12 + 10 * 10 + 8 * 8 + 2 * 12 * 8, cells, "every cell of the six maps (with the cave's two floors)");
 		assertTrue(roofs > 0, "the hill's house carries its roof in shape_full blocks");
 		assertTrue(tufts > 0, "the town's grass stands up on decor carriers");
 	}

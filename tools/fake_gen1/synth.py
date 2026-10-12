@@ -1,7 +1,8 @@
 """The synthetic world as export data (docs/PROTOCOL.md "Export"). Entirely made up; no ROM data.
 
-One tileset (TEST) with a procedurally drawn 128x48 atlas, maps built from its blocks (TEST_TOWN,
-10x9 blocks; TEST_HILL, 8x6 blocks north of it; TEST_HOUSE and TEST_HOUSE_2F), four sprite sheets,
+Two tilesets, TEST and CAVERN, over one procedurally drawn 128x48 atlas; maps built from their blocks (TEST_TOWN,
+10x9 blocks; TEST_HILL, 8x6 blocks north of it; TEST_HOUSE and TEST_HOUSE_2F; the cave TEST_CAVE_1F and
+TEST_CAVE_B1F, docs/specs/CAVES_3D_PLAN.md §3.3), four sprite sheets,
 three flower frames, one palette, a grass encounter table, field tables and names. Per-cell flags are
 derived from the blocks the same way the engine does it: a cell's behaviour comes from its bottom-left
 8x8 tile.
@@ -110,6 +111,39 @@ HOUSE_2F_BLOCKS = [
     [W, W, W, W],
 ]
 
+# --- the cave (docs/specs/CAVES_3D_PLAN.md §3.3) -------------------------------------------------------------
+# The CAVERN tileset draws with the same atlas. Its floor (the atlas's FLOOR tile) and raised floor (GROUND) form a
+# tile pair: the engine refuses a step between them, so the raised floor is a plateau the stairs (MAT, in no pair)
+# climb. Ladders are its warp tile (STAIRS); a hole is a pad of kind hole (the CUT tile's art).
+C_FLOOR, C_RAISED, C_ROCK, C_STAIRS, C_LADDER, C_HOLE, C_WATER = FLOOR, GROUND, WALL, MAT, STAIRS, CUT, WATER
+CAVE_WALKABLE = [C_RAISED, C_FLOOR, C_STAIRS, C_LADDER, C_HOLE]
+CAVE_BLOCKS = [
+    _uniform(C_FLOOR),                              # 0
+    _uniform(C_RAISED),                             # 1
+    _uniform(C_ROCK),                               # 2
+    _quad(C_FLOOR, C_STAIRS, C_FLOOR, C_STAIRS),    # 3: floor on the west, stairs climbing east
+    _quad(C_FLOOR, C_FLOOR, C_FLOOR, C_LADDER),     # 4: a ladder (or the cave mouth) in the bottom-right cell
+    _quad(C_FLOOR, C_FLOOR, C_FLOOR, C_HOLE),       # 5: a hole in the bottom-right cell
+    _quad(C_RAISED, C_RAISED, C_RAISED, C_LADDER),  # 6: a ladder on the raised floor
+    _uniform(C_WATER),                              # 7
+]
+CF, CR, CK, CS, CL, CH, CLR = range(7)
+# 1F: the low floor in the west, a plateau in the east with a ladder down to B1F's east room; a ladder down to its
+# west room, a hole into it, and the cave mouth out to TEST_TOWN.
+CAVE_1F_BLOCKS = [
+    [CK, CK, CK, CK, CK, CK],
+    [CK, CF, CS, CR, CLR, CK],
+    [CK, CL, CF, CR, CR, CK],
+    [CK, CL, CH, CK, CK, CK],
+]
+# B1F: two rooms that only ladders join (a west room with the hole's landing, an east room).
+CAVE_B1F_BLOCKS = [
+    [CK, CK, CK, CK, CK, CK],
+    [CK, CL, CF, CK, CL, CK],
+    [CK, CF, CF, CK, CF, CK],
+    [CK, CK, CK, CK, CK, CK],
+]
+
 # --- the shape profile (docs/specs/PROFILE_PLAN.md) ----------------------------------------------------
 # Made up in the format of Dramaless Shape's data/voxel_heights.lua, over this world's own tiles: the hill's round
 # tree pinned round, its sign a signpost (prop_bg: white only), the town's post a post, the cut tree a prop on plain
@@ -180,7 +214,7 @@ PROFILE_TEXT = "\n".join([
 MAPS = {
     "TEST_TOWN": {
         "index": 0, "blocks": TOWN_BLOCKS, "border": B_TREES, "surface": True, "outside": True,
-        "warps": [{"x": 5, "y": 5, "to": "TEST_HOUSE", "warp": 1}],
+        "warps": [{"x": 5, "y": 5, "to": "TEST_HOUSE", "warp": 1}, {"x": 17, "y": 9, "to": "TEST_CAVE_1F", "warp": 1}],
         "signs": [{"x": 11, "y": 5}],
         "objects": [
             {"index": 1, "name": "TESTTOWN_GIRL", "sprite": "SPRITE_TEST_GIRL", "x": 10, "y": 8,
@@ -217,6 +251,20 @@ MAPS = {
         "objects": [],
         "parent": {"map": "TEST_HOUSE", "warp": 3, "x": 7, "y": 2}, "lastMap": "TEST_TOWN",
     },
+    "TEST_CAVE_1F": {
+        "index": 59, "blocks": CAVE_1F_BLOCKS, "border": CK, "surface": False, "outside": False, "tileset": "CAVERN",
+        "warps": [{"x": 3, "y": 7, "to": "LAST_MAP", "warp": 2}, {"x": 9, "y": 3, "to": "TEST_CAVE_B1F", "warp": 2},
+                  {"x": 3, "y": 5, "to": "TEST_CAVE_B1F", "warp": 1}, {"x": 5, "y": 7, "to": "TEST_CAVE_B1F", "warp": 3}],
+        "signs": [], "objects": [],
+        "parent": {"map": "TEST_TOWN", "warp": 2, "x": 17, "y": 9}, "lastMap": "TEST_TOWN",
+    },
+    "TEST_CAVE_B1F": {
+        "index": 60, "blocks": CAVE_B1F_BLOCKS, "border": CK, "surface": False, "outside": False, "tileset": "CAVERN",
+        "warps": [{"x": 3, "y": 3, "to": "TEST_CAVE_1F", "warp": 3}, {"x": 9, "y": 3, "to": "TEST_CAVE_1F", "warp": 2},
+                  {"x": 4, "y": 4, "to": "TEST_CAVE_1F", "warp": 4}],
+        "signs": [], "objects": [],
+        "parent": {"map": "TEST_CAVE_1F", "warp": 3, "x": 3, "y": 5}, "lastMap": "TEST_TOWN",
+    },
 }
 
 SPRITES = {"SPRITE_TEST_GIRL": 6, "SPRITE_TEST_GUARD": 6, "SPRITE_TEST_MOM": 3, "SPRITE_TEST_BALL": 1}
@@ -231,11 +279,11 @@ LEDGE_DIRS = {"down": 0, "up": 1, "left": 2, "right": 3}
 LEDGES = [{"facing": "down", "input": "down", "standingTile": GROUND, "ledgeTile": LEDGE}]
 
 
-def cell_tile(blocks, cx, cy):
+def cell_tile(blocks, cx, cy, tileset="TEST"):
     """The collision tile of a cell: its bottom-left 8x8 tile (engine Map:cellTile)."""
     tx, ty = cx * 2, cy * 2 + 1
     block = blocks[ty // 4][tx // 4]
-    return BLOCKS[block][(ty % 4) * 4 + (tx % 4)]
+    return (CAVE_BLOCKS if tileset == "CAVERN" else BLOCKS)[block][(ty % 4) * 4 + (tx % 4)]
 
 
 def cell_flags(name):
@@ -244,6 +292,9 @@ def cell_flags(name):
     height, width = len(blocks) * 2, len(blocks[0]) * 2
     warps = {(w["x"], w["y"]) for w in m["warps"]}
     signs = {(s["x"], s["y"]) for s in m["signs"]}
+    if m.get("tileset") == "CAVERN":
+        return [[_cave_cell_flags(cell_tile(blocks, cx, cy, "CAVERN"), (cx, cy) in warps) for cx in range(width)]
+                for cy in range(height)]
     rows = []
     for cy in range(height):
         row = []
@@ -267,6 +318,16 @@ def cell_flags(name):
             row.append(f)
         rows.append(row)
     return rows
+
+
+def _cave_cell_flags(t, warp):
+    """A CAVERN cell's flags, by its tileset's lists: a hole is a hole only where a warp entry is (kb_cells.lua)."""
+    f = F_WALK if t in CAVE_WALKABLE else 0
+    f |= F_WATER if t == C_WATER else 0
+    f |= F_WARPTILE if t == C_LADDER else 0
+    f |= F_HOLE if t == C_HOLE and warp else 0
+    f |= F_WARP if warp else 0
+    return f
 
 
 # --- images ------------------------------------------------------------------------------------------
@@ -392,7 +453,7 @@ def resources(game="red"):
     for name, m in MAPS.items():
         blocks = m["blocks"]
         out[("map", name)] = {
-            "id": name, "index": m["index"], "tileset": "TEST",
+            "id": name, "index": m["index"], "tileset": m.get("tileset", "TEST"),
             "width": len(blocks[0]), "height": len(blocks),
             "blocks": [b for row in blocks for b in row],
             "border": m["border"], "surface": m["surface"], "outside": m["outside"],
@@ -414,6 +475,14 @@ def resources(game="red"):
              "images": ["tilesets.flower1", "tilesets.flower2", "tilesets.flower3"]},
         ],
     }
+    out[("tileset", "CAVERN")] = {
+        "id": "CAVERN", "image": "tilesets.test", "tilesPerRow": TILES_PER_ROW, "tiles": ATLAS_TILES,
+        "blocks": CAVE_BLOCKS, "animation": "TILEANIM_WATER",
+        "walkable": sorted(CAVE_WALKABLE), "counter": [], "grass": None, "door": [],
+        "warp": [C_LADDER], "water": [C_WATER], "shore": [], "cutTree": [], "spinner": [],
+        "pads": [{"tile": C_HOLE, "kind": "hole"}],
+        "animated": [{"tiles": [C_WATER], "kind": "hshift", "period": 20, "offsets": [1, 2, 3, 2, 1, 0, 7, 0]}],
+    }
     w, h, png = atlas_png()
     out[("image", "tilesets.test")] = {"id": "tilesets.test", "w": w, "h": h, "png": _b64(png)}
     for frame in (1, 2, 3):
@@ -429,15 +498,20 @@ def resources(game="red"):
         {"species": "TESTMON_A" if i % 2 == 0 else "TESTMON_B",
          "dex": SPECIES["TESTMON_A" if i % 2 == 0 else "TESTMON_B"][0], "level": 2 + i // 3}
         for i in range(10)]}
+    cave_grass = {"rate": 10, "slots": [
+        {"species": "TESTMON_B", "dex": SPECIES["TESTMON_B"][0], "level": 8 + i // 3} for i in range(10)]}
     out[("encounters", "all")] = {
         "buckets": [51, 102, 141, 166, 191, 216, 229, 242, 253, 256],
-        "maps": {"TEST_TOWN": {"grass": town_grass}},
+        "maps": {"TEST_TOWN": {"grass": town_grass}, "TEST_CAVE_1F": {"grass": cave_grass}, "TEST_CAVE_B1F": {"grass": cave_grass}},
         "rods": {"old": [{"species": "TESTMON_B", "dex": 19, "level": 5}], "good": [], "super": {}},
     }
     out[("field", "all")] = {"tables": {
         "ledges": LEDGES,
         "cutTreeSwaps": [{"before": B_CUT, "after": B_CUT_DONE}],
         "darkMaps": {"maps": []},
+        # the caves roll their table on every floor cell (Gen 1's indoor rule); the cave's floor and raised floor pair
+        "indoorEncounters": {"firstIndoorMap": 59, "excludedTileset": "FOREST"},
+        "tilePairs": {"land": [{"tileset": "CAVERN", "a": C_FLOOR, "b": C_RAISED}], "water": []},
     }, "display": {"voidFill": "trees", "voidFillDefault": True}}
     out[("names", "all")] = {
         "species": {k: {"dex": v[0], "name": v[1]} for k, v in SPECIES.items()},

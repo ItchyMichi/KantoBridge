@@ -133,7 +133,8 @@ public class SyntheticBuildGameTests implements FabricGameTest {
 	private static void verifyFirstBuild(GameTestHelper helper, BuildTask task) {
 		BuildReport report = task.report();
 		helper.assertTrue(task.succeeded(), "build failed: " + report.error);
-		helper.assertTrue(report.mapsBuilt == 4, "maps_built " + report.mapsBuilt);
+		// The town, the hill, the house's two floors and the cave's two floors in the cave area (CAVES_3D_PLAN §3.3).
+		helper.assertTrue(report.mapsBuilt == 6, "maps_built " + report.mapsBuilt);
 		helper.assertTrue(report.overlaps == 0, "overlaps " + report.overlaps);
 		helper.assertTrue(report.warnings == 0, "warnings " + report.warningCodes);
 		helper.assertTrue(report.storyCells == 20, "story_cells " + report.storyCells);
@@ -142,8 +143,8 @@ public class SyntheticBuildGameTests implements FabricGameTest {
 		helper.assertTrue(report.packTextures == 32, "pack_textures " + report.packTextures);
 		helper.assertTrue(report.worldIndex, "world_index not written");
 		helper.assertTrue(report.layers == 2, "layers " + report.layers);
-		helper.assertTrue(report.chunks == 30, "chunks " + report.chunks);
-		helper.assertTrue(report.biomeChunks == 30, "biome chunks " + report.biomeChunks);
+		helper.assertTrue(report.chunks == 36, "chunks " + report.chunks);
+		helper.assertTrue(report.biomeChunks == 36, "biome chunks " + report.biomeChunks);
 		helper.assertTrue(report.blocksPlaced > 5000, "blocks_placed " + report.blocksPlaced);
 		helper.assertTrue(report.lightBlocks > 0, "no interior lights");
 		helper.assertTrue("TEST_TOWN".equals(report.spawnMap), "spawn map " + report.spawnMap);
@@ -178,8 +179,9 @@ public class SyntheticBuildGameTests implements FabricGameTest {
 		helper.assertTrue(Files.isRegularFile(task.worldDir().resolve("datapacks/kantobridge_generated/pack.mcmeta")), "datapack not written");
 		helper.assertTrue(Files.isRegularFile(task.worldDir().resolve("datapacks/kantobridge_generated/data/kantobridge/habitat_pools/test_town.json")),
 				"the town's habitat pool isn't in the datapack");
-		helper.assertTrue(report.habitatBlocks == 1, "habitat_blocks " + report.habitatBlocks);
-		helper.assertTrue(report.pools == 1, "pools " + report.pools);
+		// The town's grass takes one; the cave's two floors five of a smaller reach (CAVES_3D_PLAN §3.3, HD8).
+		helper.assertTrue(report.habitatBlocks == 6, "habitat_blocks " + report.habitatBlocks);
+		helper.assertTrue(report.pools == 3, "pools " + report.pools + " (the town's and the cave's two floors')");
 		helper.assertTrue(Files.isRegularFile(task.packDir().resolve("pack.mcmeta")), "resource pack not written");
 
 		ServerLevel level = helper.getLevel();
@@ -267,8 +269,9 @@ public class SyntheticBuildGameTests implements FabricGameTest {
 		// The habitat block under the grass: configured, a point of interest, and its influence where the grass is. Its
 		// chunk may have been saved and unloaded since the build (no player is near): the runtime check, which runs as
 		// chunks load, prepares a reloaded block before its chunk ticks.
-		helper.assertTrue(index.habitats().size() == 1, "habitats listed: " + index.habitats().size());
-		HabitatBlockEntity habitat = assertHabitat(helper, level, index.habitats().get(0));
+		helper.assertTrue(index.habitats().size() == 6, "habitats listed: " + index.habitats().size());
+		HabitatBlockEntity habitat = assertHabitat(helper, level, town(index.habitats()));
+		assertCaveHabitat(helper, level, index.habitats());
 		assertInfluence(helper, level, index, habitat);
 		helper.assertTrue(HabitatService.counts().missingBlock.get() == 0 && HabitatService.counts().missingPool.get() == 0,
 				"the runtime check found a problem");
@@ -282,8 +285,8 @@ public class SyntheticBuildGameTests implements FabricGameTest {
 		helper.assertTrue(report.blocksPlaced == 0 && report.blocksCleared == 0,
 				"an identical rebuild changed blocks: placed " + report.blocksPlaced + ", cleared " + report.blocksCleared);
 		helper.assertTrue(report.worldIndexHash.equals(first.report().worldIndexHash), "an identical rebuild changed the index");
-		helper.assertTrue(report.habitatBlocks == 1, "the rebuild's habitat_blocks " + report.habitatBlocks);
-		assertHabitat(helper, helper.getLevel(), first.plan().habitats().get(0));
+		helper.assertTrue(report.habitatBlocks == 6, "the rebuild's habitat_blocks " + report.habitatBlocks);
+		assertHabitat(helper, helper.getLevel(), town(first.plan().habitats()));
 	}
 
 	private static void verifyTownOnly(GameTestHelper helper, BuildTask first, BuildTask third) {
@@ -311,8 +314,24 @@ public class SyntheticBuildGameTests implements FabricGameTest {
 		helper.assertTrue(level.getBlockState(new BlockPos(hill.x() + 4, 63, hill.z() + 2)).isAir(), "the hill outside the ring wasn't cleared");
 		WorldIndex after = readIndex(helper, third);
 		helper.assertTrue(after.maps().size() == 1 && after.map("TEST_HOUSE") == null, "the new index still lists the house");
-		helper.assertTrue(after.habitats().equals(before.habitats()), "the town keeps its habitat block");
+		helper.assertTrue(after.habitats().equals(List.of(town(before.habitats()))), "the town keeps its habitat block");
 		assertHabitat(helper, level, after.habitats().get(0));
+	}
+
+	/** The town's habitat block among a build's. */
+	private static WorldIndex.Habitat town(List<WorldIndex.Habitat> habitats) {
+		return habitats.stream().filter(h -> h.map().equals("TEST_TOWN")).findFirst().orElseThrow();
+	}
+
+	/** One of the cave's habitat blocks: configured with the cave area's smaller reach (CAVES_3D_PLAN §3.3, HD8). */
+	private static void assertCaveHabitat(GameTestHelper helper, ServerLevel level, List<WorldIndex.Habitat> habitats) {
+		WorldIndex.Habitat cave = habitats.stream().filter(h -> h.map().equals("TEST_CAVE_1F")).findFirst().orElseThrow();
+		helper.assertTrue(cave.range() == dev.kantobridge.builder.plan.HabitatPlanner.CAVE_RANGE, "the cave's habitat range " + cave.range());
+		BlockPos pos = new BlockPos(cave.x(), cave.y(), cave.z());
+		level.getChunk(pos);
+		helper.assertTrue(level.getBlockEntity(pos) instanceof HabitatBlockEntity entity
+				&& entity.getSpawningStyle() instanceof NaturalHabitatSpawning style && style.getRangeOfInfluence() == cave.range()
+				&& HabitatService.configuredFor(entity, cave.pool(), cave.range()), "the cave's habitat block isn't configured with its range");
 	}
 
 	/** A habitat block configured as PLAN §4.5 wants it, and a point of interest Cobblemon's spawner finds. */

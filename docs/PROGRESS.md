@@ -723,7 +723,7 @@ the full suite at H1, H5 and H7.
 |---|---|---|---|---|
 | H1 | A position per cell | **done**; checkpoint: JUnit 979 (6 skipped), GameTests 98, Python and Lua 1,484 | 2026-10-12 | `H1: a position per cell` |
 | H2 | Edge walls on tile-pair edges | **done** (PairEdgesTest 4, a wall GameTest; JUnit builder suite, GameTests 99) | 2026-10-12 | `H2: edge walls on tile-pair edges` |
-| H3 | Caves in an area of their own | | | |
+| H3 | Caves in an area of their own | **done** (CavePlannerTest 8, the synthetic cave; JUnit, GameTests 99, Python); the real world's pod build follows | 2026-10-12 | `H3: caves in an area of their own` |
 | H4 | Raised ground in caves | | | |
 | H5 | Real ladders and holes | | | |
 | H6 | Pilot | | | |
@@ -764,6 +764,34 @@ the full suite at H1, H5 and H7.
 4. **Deviation (plan §3.2):** no story-cell block carries walls. Feet or the block above is free on every walkable cell
    the planner knows of (boulder and water cells take only feet), and both cells of an edge carry a wall, so one is
    enough. If the pod build ever shows a side without room, the story-cell variant follows.
+
+### Caves in 3D: H3 notes
+
+1. **Which maps:** `CavePlanner.caves`: the requested non-surface maps of the CAVERN tileset, and any interior whose
+   door is in one of them. `WorldPlanner` places them before the interior rounds and leaves them out of those.
+2. **Complexes and floors:** caves joined by a warp or a door form a complex. A floor's rank comes from its id (`…nF`,
+   `…BnF`, else 0). The top floor stands at feet 64 and each lower floor 11 blocks under the one above (HD3). Breadth
+   first from the entrance, each floor sits so a warp between it and a floor already placed has both ends in one
+   column; a floor that would overlap another of its level moves east (note `cave_floor_moved_aside`).
+3. **The area:** slots of a complex's box plus 8 blocks, 64 apart, in rows up to 2,048 blocks wide, from Kanto's west
+   edge, whole chunks, the area's south edge 3,000 blocks north of the dungeon region. Caves keep kind INTERIOR;
+   their `layer` is 1 + the floor's rank. Notes `cave_complexes` and `cave_maps`.
+4. **Biome and spawns:** the caves get `kantobridge:cave_3d`, a copy of `kanto_cave` that the spawn rule's
+   walking-level test doesn't list. Two things keep wild Pokémon on floors instead:
+   - **the rock fill:** over a rock or counter cell, the air up to the ceiling is solid: a hanging there is a solid
+     carrier (`DecorBlock.SOLID`), a light's position a lit solid carrier, anywhere else a barrier;
+   - **no ground on the helpers:** Cobblemon 1.8.1 stands a Pokémon only on a block that `isSolid()` (its
+     `GroundedSpawnablePositionCalculator`), so the invisible blocks (edge walls, ledge colliders, story cells) are
+     `forceSolidOff()`. A GameTest checks it.
+5. **Habitat blocks** in the cave area reach 6 (`HabitatPlanner.CAVE_RANGE`, HD8), written as the habitat's `range`
+   (WorldIndex and schema; only when it isn't 14). `HabitatService` places, checks and repairs each block with its own
+   range. A JUnit test checks that no cave habitat reaches the other floor.
+6. **The synthetic cave:** `tools/fake_gen1/synth.py` has a CAVERN tileset and `TEST_CAVE_1F`/`TEST_CAVE_B1F`: a
+   plateau with stairs, a pair edge, a ladder that lines up whole, two that need pieces (H5), a hole, and a mouth off
+   `TEST_TOWN` (17, 9). The fake engine (`world.py`) knows its warps. The bundle copy and the goldens (index, shapes,
+   scene) were regenerated: only the cave's maps and habitats, and the town's new warp, changed.
+7. **Deviation (plan §3.1, §4.1):** no `caves` key in the WorldIndex. A rebuild clears the caves from their map
+   placements, as any interior's (`volumesOf`), so the key had no reader.
 
 ## Wild Routes
 

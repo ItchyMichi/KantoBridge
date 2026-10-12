@@ -308,7 +308,7 @@ public final class BlockPlacer {
 				this.counts.habitatFailures++;
 				continue;
 			}
-			switch (HabitatService.place(this.level, new BlockPos(habitat.x(), habitat.y(), habitat.z()), pool, work.flags)) {
+			switch (HabitatService.place(this.level, new BlockPos(habitat.x(), habitat.y(), habitat.z()), pool, work.flags, habitat.range())) {
 				case NEW -> {
 					this.counts.habitatBlocks++;
 					this.counts.blocksPlaced++;

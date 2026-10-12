@@ -54,6 +54,11 @@ public final class WorldPlan {
 	public static final String BIOME_OUTDOOR = "kantobridge:kanto_outdoor";
 	public static final String BIOME_INTERIOR = "kantobridge:kanto_interior";
 	public static final String BIOME_CAVE = "kantobridge:kanto_cave";
+	/**
+	 * The cave area's caves (docs/specs/CAVES_3D_PLAN.md §3.3): the cave biome, with wild Pokémon at any height (the
+	 * spawn rule's walking-level test leaves it out) and the air between rock and ceiling made solid.
+	 */
+	public static final String BIOME_CAVE_3D = "kantobridge:cave_3d";
 
 	/** One biome over a box of blocks. */
 	public record BiomeRegion(Box3 box, String biome) {
@@ -757,6 +762,10 @@ public final class WorldPlan {
 				&& column <= LIGHT_ABOVE_FEET;
 		int hung = planned == null ? 0 : ShapePlanner.hungFits(planned.hungMask()[planIndex], ShapePlanner.hangTop(p));
 		int leaves = planned == null ? 0 : planned.hungLeaves()[planIndex];
+		// The cave area's rock fill (CAVES_3D_PLAN §3.3, HD9): over rock, the air up to the ceiling is solid, so a floor is
+		// the only place a wild Pokémon can stand there.
+		boolean fill = map.interior() && BIOME_CAVE_3D.equals(p.biome())
+				&& (model.kind(cx, cy) == MapModel.Kind.SOLID || model.kind(cx, cy) == MapModel.Kind.COUNTER);
 		for (int k = 0; k < 31 && hung >> k != 0; k++) {
 			if ((hung >> k & 1) == 0 || (taken >> k & 1) != 0) {
 				continue;
@@ -764,9 +773,21 @@ public final class WorldPlan {
 			// A hanging (CW1, CW2): a decor carrier for its piece, foliage for a wood's; the one on a light's position gives
 			// the light (CD15).
 			boolean lit = light && k == LIGHT_ABOVE_FEET;
-			sink.set(x, feet + k, z, BlockCode.decor((leaves >> k & 1) != 0, lit));
+			sink.set(x, feet + k, z, BlockCode.decor((leaves >> k & 1) != 0, lit, fill && k < CEILING_ABOVE_FEET));
 			light &= !lit;
 			taken |= 1L << k;
+		}
+		if (fill) {
+			for (int k = column; k < CEILING_ABOVE_FEET; k++) {
+				if ((taken >> k & 1) != 0) {
+					continue;
+				}
+				// A light's position keeps its light, on a solid carrier; elsewhere an invisible barrier.
+				boolean lit = light && k == LIGHT_ABOVE_FEET;
+				sink.set(x, feet + k, z, lit ? BlockCode.decor(false, true, true) : BlockCode.vanilla(dev.kantobridge.builder.zone.ZoneBlock.BARRIER));
+				light &= !lit;
+				taken |= 1L << k;
+			}
 		}
 		if (map.interior()) {
 			if (!openSky(p)) {

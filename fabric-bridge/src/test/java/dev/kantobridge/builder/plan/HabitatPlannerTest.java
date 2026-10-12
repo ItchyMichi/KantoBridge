@@ -33,7 +33,7 @@ class HabitatPlannerTest {
 	void theSyntheticTownGetsOneBlockUnderItsGrass() throws Exception {
 		ExportBundle bundle = ExportBundle.open(TestData.syntheticBundle());
 		WorldPlan plan = WorldPlanner.plan(bundle, new WorldPlanner.Options(null, TestData.ORIGIN_X, TestData.ORIGIN_Z, TestData.MIN_BUILD_HEIGHT));
-		List<WorldIndex.Habitat> habitats = plan.habitats();
+		List<WorldIndex.Habitat> habitats = plan.habitats().stream().filter(h -> h.map().equals("TEST_TOWN")).toList();
 		assertEquals(1, habitats.size(), "a 4×4-cell patch fits in one sphere");
 		WorldIndex.Habitat habitat = habitats.get(0);
 		assertEquals("TEST_TOWN", habitat.map());
@@ -42,7 +42,9 @@ class HabitatPlannerTest {
 		// Near the patch's middle (cells 14-17 × 4-7, blocks 28-35 × 8-15 of the town).
 		assertEquals(TestData.ORIGIN_X + 32, habitat.x());
 		assertEquals(TestData.ORIGIN_Z + 12, habitat.z());
-		assertEquals(Set.of("kantobridge:test_town"), plan.pools().keySet(), "one pool per wild map of the export");
+		assertEquals(Set.of("kantobridge:test_town", "kantobridge:test_cave_1f", "kantobridge:test_cave_b1f"), plan.pools().keySet(),
+				"one pool per wild map of the export");
+		assertEquals(14, habitat.range());
 		assertEquals(1, plan.habitatsIn(habitat.x() >> 4, habitat.z() >> 4).size());
 		assertEquals(0, plan.habitatsIn((habitat.x() >> 4) + 1, habitat.z() >> 4).size());
 	}

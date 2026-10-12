@@ -96,7 +96,11 @@ class ShapeBlockTest {
 			BlockState lit = state.setValue(DecorBlock.LIT, true);
 			assertEquals(DecorBlock.LIGHT, lit.getLightEmission());
 			assertTrue(lit.getCollisionShape(level, BlockPos.ZERO, CollisionContext.empty()).isEmpty(), "lit, still nothing to collide with");
-			assertEquals(2, decor.getStateDefinition().getPossibleStates().size(), "lit or not");
+			assertEquals(4, decor.getStateDefinition().getPossibleStates().size(), "lit or not, solid or not");
+			// The cave area's rock fill (CAVES_3D_PLAN §3.3): a solid carrier collides as a full block, still with no outline.
+			BlockState solid = state.setValue(DecorBlock.SOLID, true);
+			assertEquals(net.minecraft.world.phys.shapes.Shapes.block(), solid.getCollisionShape(level, BlockPos.ZERO, CollisionContext.empty()));
+			assertTrue(solid.getShape(level, BlockPos.ZERO).isEmpty());
 		}
 		assertSame(KbBlocks.DECOR, KbBlocks.carriers().get(48).block());
 	}

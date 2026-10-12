@@ -69,7 +69,7 @@ class ShapePlannerSyntheticTest {
 		ShapeMap map = plan.shapes().map();
 		assertEquals(dev.kantobridge.world.Hashes.sha256(plan.index().toJson()), map.indexHash());
 		assertEquals(plan.shapes().index().hash(), map.shapeHash());
-		assertEquals(3, map.grids().size(), "the surface and the two interiors");
+		assertEquals(5, map.grids().size(), "the surface, the two interiors and the cave's two floors");
 		assertEquals(plan.shapes().shapedBlocks(), map.shapedBlocks());
 	}
 

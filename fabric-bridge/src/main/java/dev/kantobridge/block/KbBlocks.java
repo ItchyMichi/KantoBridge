@@ -181,7 +181,10 @@ public final class KbBlocks {
 				.isSuffocating((state, level, pos) -> false)
 				.isViewBlocking((state, level, pos) -> false)
 				.isRedstoneConductor((state, level, pos) -> false)
-				.pushReaction(PushReaction.BLOCK);
+				.pushReaction(PushReaction.BLOCK)
+				// Not ground to stand on for Cobblemon's spawner (it asks isSolid): no wild Pokémon on an invisible wall,
+				// ledge or story cell (docs/specs/CAVES_3D_PLAN.md §3.3)
+				.forceSolidOff();
 	}
 
 	private static ResourceLocation id(String path) {

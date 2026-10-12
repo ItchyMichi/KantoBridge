@@ -27,8 +27,13 @@ import java.util.TreeSet;
  * uncovered blocks, on a tie the one nearest the middle of what it covers, so spheres stay centred on their patch.
  */
 public final class HabitatPlanner {
-	/** {@code RangeOfInfluence} of every habitat block (PLAN §4.5). */
-	public static final int RANGE = 14;
+	/** {@code RangeOfInfluence} of a habitat block (PLAN §4.5). */
+	public static final int RANGE = WorldIndex.HABITAT_RANGE;
+	/**
+	 * The same in the cave area, whose floors lie 11 blocks apart: a floor's pool never reaches another floor's cells
+	 * (docs/specs/CAVES_3D_PLAN.md §3.3, HD8).
+	 */
+	public static final int CAVE_RANGE = 6;
 	/** Habitat blocks are 2 blocks under the ground block, which is 1 under the feet. */
 	public static final int BELOW_FEET = 3;
 	/** Vertical distance from a habitat block to the floor blocks it serves (Cobblemon measures from the floor block). */
@@ -98,8 +103,9 @@ public final class HabitatPlanner {
 				continue;
 			}
 			MapPlacement p = map.placement();
-			for (int[] block : cover(p, cells)) {
-				out.add(new WorldIndex.Habitat(map.id(), block[0], p.y() - BELOW_FEET, block[1], poolId(map.id())));
+			int range = WorldPlan.BIOME_CAVE_3D.equals(p.biome()) ? CAVE_RANGE : RANGE;
+			for (int[] block : cover(p, cells, range)) {
+				out.add(new WorldIndex.Habitat(map.id(), block[0], p.y() - BELOW_FEET, block[1], poolId(map.id()), range));
 			}
 		}
 		out.sort(Comparator.comparing(WorldIndex.Habitat::map).thenComparingInt(WorldIndex.Habitat::z).thenComparingInt(WorldIndex.Habitat::x));
@@ -127,6 +133,12 @@ public final class HabitatPlanner {
 	 * floor block ends within {@link #REACH2} (horizontally) of one of them.
 	 */
 	public static List<int[]> cover(MapPlacement p, List<int[]> cells) {
+		return cover(p, cells, RANGE);
+	}
+
+	/** The same for habitat blocks of another {@code RangeOfInfluence}. */
+	public static List<int[]> cover(MapPlacement p, List<int[]> cells, int range) {
+		int reach2 = range * range - FLOOR_ABOVE * FLOOR_ABOVE;
 		int w = p.w() * Scale.CELL_BLOCKS;
 		int h = p.h() * Scale.CELL_BLOCKS;
 		boolean[] target = new boolean[w * h];
@@ -142,7 +154,7 @@ public final class HabitatPlanner {
 				}
 			}
 		}
-		int reach = (int) Math.floor(Math.sqrt(REACH2));
+		int reach = (int) Math.floor(Math.sqrt(reach2));
 		List<int[]> chosen = new ArrayList<>();
 		int first = 0;
 		while (remaining > 0) {
@@ -160,7 +172,7 @@ public final class HabitatPlanner {
 			for (int[] cell : cells) {
 				int cx = cell[0] * Scale.CELL_BLOCKS;
 				int cz = cell[1] * Scale.CELL_BLOCKS;
-				if ((cx - tx) * (cx - tx) + (cz - tz) * (cz - tz) > REACH2) {
+				if ((cx - tx) * (cx - tx) + (cz - tz) * (cz - tz) > reach2) {
 					continue;
 				}
 				int count = 0;
@@ -168,7 +180,7 @@ public final class HabitatPlanner {
 				long sumZ = 0;
 				for (int z = Math.max(0, cz - reach); z <= Math.min(h - 1, cz + reach); z++) {
 					for (int x = Math.max(0, cx - reach); x <= Math.min(w - 1, cx + reach); x++) {
-						if (target[z * w + x] && (x - cx) * (x - cx) + (z - cz) * (z - cz) <= REACH2) {
+						if (target[z * w + x] && (x - cx) * (x - cx) + (z - cz) * (z - cz) <= reach2) {
 							count++;
 							sumX += x;
 							sumZ += z;
@@ -192,7 +204,7 @@ public final class HabitatPlanner {
 			}
 			for (int z = Math.max(0, bestZ - reach); z <= Math.min(h - 1, bestZ + reach); z++) {
 				for (int x = Math.max(0, bestX - reach); x <= Math.min(w - 1, bestX + reach); x++) {
-					if (target[z * w + x] && (x - bestX) * (x - bestX) + (z - bestZ) * (z - bestZ) <= REACH2) {
+					if (target[z * w + x] && (x - bestX) * (x - bestX) + (z - bestZ) * (z - bestZ) <= reach2) {
 						target[z * w + x] = false;
 						remaining--;
 					}

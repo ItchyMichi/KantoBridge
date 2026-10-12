@@ -803,7 +803,8 @@ is what the builder writes to `<world>/kantobridge/world_index.json`:
   pass, height, art}` with the closed art's four slot indices, so each client draws and collides
   its own player's closed cells);
 - the habitat block positions and pools (WR6: a zone's too, `map` its route map, one pool per area
-  with tall grass, `kantobridge:zone_<zone>_a<n>`);
+  with tall grass, `kantobridge:zone_<zone>_a<n>`), with `range`, the block's `RangeOfInfluence`, where it isn't 14
+  (the cave area's are 6: [specs/CAVES_3D_PLAN.md](specs/CAVES_3D_PLAN.md) §3.3);
 - (Wild Routes, WR3) the zones: each zone's box of blocks (`x, z, w, d`), the feet level of its floor (`y`), its theme,
   biome and route map. The route map is a `maps` entry of kind `route` placed at the zone's trailhead, so its cells A
   and x1 are the trailhead's; written only in a world that has zones

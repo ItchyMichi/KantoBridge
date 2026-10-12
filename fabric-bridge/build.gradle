@@ -549,6 +549,8 @@ test {
 	systemProperty "kb.gametestResources", gametestResources.asFile.absolutePath
 	// -Pkb.updateGolden=true rewrites the golden WorldIndex instead of comparing against it.
 	systemProperty "kb.updateGolden", providers.gradleProperty("kb.updateGolden").getOrElse("false")
+	// -Pkb.realBundle=<export bundle> runs the caves in 3D plan's dry run on the real world (pod only, counts and ids).
+	systemProperty "kb.realBundle", providers.gradleProperty("kb.realBundle").getOrElse("")
 	testLogging {
 		events "failed", "skipped"
 		exceptionFormat = "full"

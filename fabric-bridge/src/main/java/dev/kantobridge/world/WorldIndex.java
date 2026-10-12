@@ -51,7 +51,9 @@ public final class WorldIndex {
 	private static final Set<String> SCALE_FIELDS = Set.of("cellBlocks", "surfaceY", "layerStep");
 	private static final Set<String> MAP_FIELDS = Set.of("x", "y", "z", "w", "h", "layer", "kind", "palette", "biome", "dark",
 			"parent", "pieces", "levels", "ramps");
-	private static final Set<String> HABITAT_FIELDS = Set.of("map", "x", "y", "z", "pool");
+	private static final Set<String> HABITAT_FIELDS = Set.of("map", "x", "y", "z", "pool", "range");
+	/** A habitat block's {@code RangeOfInfluence} unless it says otherwise (PLAN §4.5). */
+	public static final int HABITAT_RANGE = 14;
 	private static final Set<String> GAMES = Set.of("red", "blue");
 	/** How far above or below a map's feet level a block still counts as on that map (layers are 22 apart). */
 	private static final int LAYER_REACH_DOWN = 4;
@@ -63,8 +65,23 @@ public final class WorldIndex {
 	private static final int PIECE_REACH_DOWN = 3;
 	private static final int PIECE_REACH_UP = 5;
 
-	/** One habitat block (M6). */
-	public record Habitat(String map, int x, int y, int z, String pool) {
+	/**
+	 * One habitat block (M6).
+	 *
+	 * @param range its {@code RangeOfInfluence}: {@link #HABITAT_RANGE}, or less in the cave area, where floors lie 11
+	 *              blocks apart (docs/specs/CAVES_3D_PLAN.md §3.3, HD8)
+	 */
+	public record Habitat(String map, int x, int y, int z, String pool, int range) {
+		public Habitat {
+			if (range < 1 || range > 64) {
+				throw new IllegalArgumentException("bad habitat range");
+			}
+		}
+
+		/** A habitat block of the usual range. */
+		public Habitat(String map, int x, int y, int z, String pool) {
+			this(map, x, y, z, pool, HABITAT_RANGE);
+		}
 	}
 
 	/**
@@ -533,6 +550,9 @@ public final class WorldIndex {
 			item.addProperty("y", habitat.y());
 			item.addProperty("z", habitat.z());
 			item.addProperty("pool", habitat.pool());
+			if (habitat.range() != HABITAT_RANGE) {
+				item.addProperty("range", habitat.range());
+			}
 			habitats.add(item);
 		}
 		root.add("habitats", habitats);
@@ -665,7 +685,7 @@ public final class WorldIndex {
 		for (DataReader item : DataReader.objects(root.array("habitats"), "/habitats")) {
 			item.allowOnly(HABITAT_FIELDS);
 			habitats.add(new Habitat(item.string("map", DataReader.MAP_ID), item.integer("x"), item.integer("y"), item.integer("z"),
-					item.string("pool", DataReader.RESOURCE_ID)));
+					item.string("pool", DataReader.RESOURCE_ID), item.has("range") ? item.integer("range", 1, 64) : HABITAT_RANGE));
 		}
 		List<Zone> zones = new ArrayList<>();
 		if (root.has("zones")) {

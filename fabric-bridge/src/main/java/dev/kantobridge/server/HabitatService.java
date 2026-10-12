@@ -171,6 +171,11 @@ public final class HabitatService {
 	 * Cobblemon's own refresh then updates its state flags.
 	 */
 	public static Placed place(ServerLevel level, BlockPos pos, HabitatPool pool, int flags) {
+		return place(level, pos, pool, flags, RANGE);
+	}
+
+	/** The same with a {@code RangeOfInfluence} of {@code range} (the cave area's are smaller, CAVES_3D_PLAN §3.3). */
+	public static Placed place(ServerLevel level, BlockPos pos, HabitatPool pool, int flags, int range) {
 		boolean isNew = !level.getBlockState(pos).is(CobblemonBlocks.HABITAT_BLOCK);
 		if (isNew) {
 			level.setBlock(pos, CobblemonBlocks.HABITAT_BLOCK.defaultBlockState(), flags);
@@ -178,18 +183,23 @@ public final class HabitatService {
 		if (!(level.getBlockEntity(pos) instanceof HabitatBlockEntity habitat)) {
 			return Placed.FAILED;
 		}
-		if (!isNew && configured(habitat, pool)) {
+		if (!isNew && configured(habitat, pool, range)) {
 			return Placed.UNCHANGED;
 		}
-		configure(habitat, pool);
+		configure(habitat, pool, range);
 		return isNew ? Placed.NEW : Placed.RECONFIGURED;
 	}
 
 	/** The block-entity configuration of PLAN §4.5. */
 	public static void configure(HabitatBlockEntity habitat, HabitatPool pool) {
+		configure(habitat, pool, RANGE);
+	}
+
+	/** The same with a {@code RangeOfInfluence} of {@code range}. */
+	public static void configure(HabitatBlockEntity habitat, HabitatPool pool, int range) {
 		NaturalHabitatSpawning style = new NaturalHabitatSpawning(habitat);
 		style.setReplaceSpawns(false);
-		style.setRangeOfInfluence(RANGE);
+		style.setRangeOfInfluence(range);
 		habitat.setSpawningStyle(style);
 		habitat.setPool(pool);
 		habitat.setPhaseOrder(HabitatPhaseOrder.SIMPLE);
@@ -201,13 +211,22 @@ public final class HabitatService {
 
 	/** True when the block is configured as planned with exactly this pool. */
 	public static boolean configured(HabitatBlockEntity habitat, HabitatPool pool) {
-		return habitat.getPool() == pool && configuredFor(habitat, pool.getId().toString());
+		return configured(habitat, pool, RANGE);
+	}
+
+	public static boolean configured(HabitatBlockEntity habitat, HabitatPool pool, int range) {
+		return habitat.getPool() == pool && configuredFor(habitat, pool.getId().toString(), range);
 	}
 
 	/** True when the block's settings are the planned ones and its pool has this id and spawns something. */
 	public static boolean configuredFor(HabitatBlockEntity habitat, String poolId) {
+		return configuredFor(habitat, poolId, RANGE);
+	}
+
+	/** The same for a block of {@code RangeOfInfluence} {@code range}. */
+	public static boolean configuredFor(HabitatBlockEntity habitat, String poolId, int range) {
 		return habitat.getSpawningStyle() instanceof NaturalHabitatSpawning style && !style.getReplaceSpawns()
-				&& style.getRangeOfInfluence() == RANGE && habitat.getPhaseOrder() == HabitatPhaseOrder.SIMPLE
+				&& style.getRangeOfInfluence() == range && habitat.getPhaseOrder() == HabitatPhaseOrder.SIMPLE
 				&& habitat.getPool().getId().toString().equals(poolId) && !habitat.getPool().getSpawns().isEmpty();
 	}
 
@@ -330,7 +349,7 @@ public final class HabitatService {
 			KantoBridge.LOGGER.warn("habitats: a listed habitat block is missing on {} ({} so far)", habitat.map(), n);
 			return;
 		}
-		if (configuredFor(block, habitat.pool())) {
+		if (configuredFor(block, habitat.pool(), habitat.range())) {
 			if (!block.getInitialized()) {
 				// Loaded from the save but not ticked yet (its chunk isn't ticking): prepare it as its first tick would, so its
 				// spawns are attached for the player spawner at once.
@@ -346,7 +365,7 @@ public final class HabitatService {
 			KantoBridge.LOGGER.warn("habitats: no pool for a habitat block on {} ({} so far)", habitat.map(), n);
 			return;
 		}
-		configure(block, pool);
+		configure(block, pool, habitat.range());
 		long n = COUNTS.repaired.incrementAndGet();
 		KantoBridge.LOGGER.info("habitats: reconfigured a habitat block on {} ({} so far)", habitat.map(), n);
 	}

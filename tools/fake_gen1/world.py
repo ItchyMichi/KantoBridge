@@ -27,6 +27,16 @@ ARRIVALS = {
     ("TEST_HOUSE", 5, 8): ("TEST_TOWN", 5, 5, "down", "edge", "down"),
     ("TEST_HOUSE", 7, 2): ("TEST_HOUSE_2F", 5, 2, "down", "stairs", None),
     ("TEST_HOUSE_2F", 5, 2): ("TEST_HOUSE", 7, 2, "down", "stairs", None),
+    # the cave (docs/specs/CAVES_3D_PLAN.md §3.3): its mouth off the town, ladders and a hole between its floors; the
+    # town's entry and the hole's landing have no warp tile, so stepping on them warps nowhere
+    ("TEST_TOWN", 17, 9): ("TEST_CAVE_1F", 3, 7, "up", "stairs", None),
+    ("TEST_CAVE_1F", 3, 7): ("TEST_TOWN", 17, 9, "down", "stairs", None),
+    ("TEST_CAVE_1F", 9, 3): ("TEST_CAVE_B1F", 9, 3, "down", "stairs", None),
+    ("TEST_CAVE_1F", 3, 5): ("TEST_CAVE_B1F", 3, 3, "down", "stairs", None),
+    ("TEST_CAVE_1F", 5, 7): ("TEST_CAVE_B1F", 4, 4, "down", "hole", None),
+    ("TEST_CAVE_B1F", 3, 3): ("TEST_CAVE_1F", 3, 5, "down", "stairs", None),
+    ("TEST_CAVE_B1F", 9, 3): ("TEST_CAVE_1F", 9, 3, "down", "stairs", None),
+    ("TEST_CAVE_B1F", 4, 4): ("TEST_CAVE_1F", 5, 7, "down", "hole", None),
 }
 OBJECT_KINDS = {"item": "item", "trainer": "trainer", "pokemon": "static"}
 

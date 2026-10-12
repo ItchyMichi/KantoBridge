@@ -142,11 +142,18 @@ public final class WorldPlanner {
 		Box3 surfaceVolume = WorldPlan.surfaceVolume(placements.values());
 		InteriorPacker.Box sky = !options.shapes() || surfaceVolume == null ? null
 				: new InteriorPacker.Box(surfaceVolume.minX(), surfaceVolume.minZ(), surfaceVolume.maxX(), surfaceVolume.maxZ());
+		// The cave area (docs/specs/CAVES_3D_PLAN.md §3.3): caves leave the interior layers for an area of their own north of
+		// Kanto, past the dungeon slots; their entrances fade over the distance, as Fly does.
+		Set<String> caves = CavePlanner.caves(all, requested, CAVE_TILESET);
+		CavePlanner.Result caveArea = CavePlanner.place(all, caves, surfaceVolume, options.originX(), options.originZ(), warnings);
+		for (MapPlacement cave : caveArea.placements()) {
+			placements.put(cave.id(), cave);
+		}
 		String forest = field.indoor() == null ? null : field.indoor().excludedTileset();
 		List<ExportMap> pending = new ArrayList<>();
 		for (String id : requested) {
 			ExportMap map = all.get(id);
-			if (map.surface()) {
+			if (map.surface() || caves.contains(id)) {
 				continue;
 			}
 			if (map.parent() == null) {

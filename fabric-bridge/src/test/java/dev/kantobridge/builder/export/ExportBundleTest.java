@@ -43,14 +43,14 @@ class ExportBundleTest {
 	void readsTheSyntheticBundle() throws Exception {
 		ExportBundle bundle = ExportBundle.open(TestData.syntheticBundle());
 		assertEquals("red", bundle.game());
-		assertEquals(21, bundle.resources().size());
+		assertEquals(24, bundle.resources().size(), "with the cave's two maps and its tileset (CAVES_3D_PLAN §3.3)");
 		// The profile plan: the synthetic world's made-up shape profile, as text.
 		ExportProfile profile = bundle.profile();
 		assertEquals(ExportProfile.MOD, profile.mod());
 		assertEquals(ExportProfile.FILE, profile.file());
 		assertEquals("0.0.0-synthetic", profile.version());
 		assertTrue(!profile.enabled() && profile.text().startsWith("-- A made-up shape profile"));
-		assertEquals(List.of("TEST_HILL", "TEST_HOUSE", "TEST_HOUSE_2F", "TEST_TOWN"), bundle.ids("map"));
+		assertEquals(List.of("TEST_CAVE_1F", "TEST_CAVE_B1F", "TEST_HILL", "TEST_HOUSE", "TEST_HOUSE_2F", "TEST_TOWN"), bundle.ids("map"));
 		String index = Files.readString(TestData.syntheticBundle().resolve("index.json"), StandardCharsets.UTF_8);
 		assertEquals(Hashes.sha256(ProtoJson.write(ProtoJson.parse(index))), bundle.exportHash());
 

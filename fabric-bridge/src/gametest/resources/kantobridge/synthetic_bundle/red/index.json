@@ -6,14 +6,14 @@
     {
       "kind": "encounters",
       "id": "all",
-      "hash": "f7c25a9109952b79302a81689d834426e799945402789d386d0688e3548318a6",
-      "size": 616
+      "hash": "a90a33927aaddd5c334b22e173a32f76f0d2a9c4b8d323f0f855fb574238fbb6",
+      "size": 1579
     },
     {
       "kind": "field",
       "id": "all",
-      "hash": "bd522f22602cd8fcab232bc5578ef148bcb9d4e756bd996845e5e9892319a690",
-      "size": 206
+      "hash": "7645890d415541b39446eb40f3301363fe662b2ca141f983a97d95d84f49bad2",
+      "size": 341
     },
     {
       "kind": "image",
@@ -47,6 +47,18 @@
     },
     {
       "kind": "map",
+      "id": "TEST_CAVE_1F",
+      "hash": "137265b2758a804eb625b22cf393cae7ca43e7a05f816726aa45dc42d03c8f11",
+      "size": 753
+    },
+    {
+      "kind": "map",
+      "id": "TEST_CAVE_B1F",
+      "hash": "ca08a5aaec46276336e23833733e5f430cd85d716d38fd287debf48b3a0952ad",
+      "size": 711
+    },
+    {
+      "kind": "map",
       "id": "TEST_HILL",
       "hash": "7532437437d74ac41bf4c908adf600ce23b3ef7418b8659f46237bb4fcbcb808",
       "size": 837
@@ -66,8 +78,8 @@
     {
       "kind": "map",
       "id": "TEST_TOWN",
-      "hash": "b3fc9808c53d7ff7e9fba0a9c8d47cbc647615eb839770dd9451dd275bdb8f2e",
-      "size": 1752
+      "hash": "67bb3bdcc63fec98226410b1d50606424102299c1b2788ec384958c1c54e8c67",
+      "size": 1799
     },
     {
       "kind": "names",
@@ -122,6 +134,12 @@
       "id": "all",
       "hash": "139338b829ee7811d5c9d9137d437d3898000cf8855a6545ede19bf4de1ed4a6",
       "size": 81
+    },
+    {
+      "kind": "tileset",
+      "id": "CAVERN",
+      "hash": "8e1f7200e757f4df9066292da5074814d285aaf3407ccf1ee5f23be8d55f524c",
+      "size": 640
     },
     {
       "kind": "tileset",

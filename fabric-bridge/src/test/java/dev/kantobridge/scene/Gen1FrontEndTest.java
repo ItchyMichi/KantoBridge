@@ -50,7 +50,8 @@ class Gen1FrontEndTest {
 		assertEquals(16, scene.cellPx());
 		assertEquals(8, scene.artPx());
 		assertEquals("TEST_TOWN", scene.layoutRoot());
-		assertEquals(List.of("TEST_HILL", "TEST_HOUSE", "TEST_HOUSE_2F", "TEST_TOWN"), List.copyOf(scene.maps().keySet()));
+		assertEquals(List.of("TEST_CAVE_1F", "TEST_CAVE_B1F", "TEST_HILL", "TEST_HOUSE", "TEST_HOUSE_2F", "TEST_TOWN"),
+				List.copyOf(scene.maps().keySet()));
 		assertEquals(List.of("SPRITE_TEST_BALL", "SPRITE_TEST_GIRL", "SPRITE_TEST_GUARD", "SPRITE_TEST_MOM"),
 				List.copyOf(scene.sprites().keySet()));
 		SceneAtlas atlas = scene.atlas("tilesets.test");

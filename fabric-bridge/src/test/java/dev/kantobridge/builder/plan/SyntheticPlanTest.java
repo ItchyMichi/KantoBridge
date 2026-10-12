@@ -45,8 +45,8 @@ class SyntheticPlanTest {
 	@Test
 	void placements() {
 		assertEquals(0, plan.warnings().total(), plan.warnings().warnings().toString());
-		assertEquals(4, plan.maps().size());
-		assertEquals(4, plan.mapsRequested());
+		assertEquals(6, plan.maps().size());
+		assertEquals(6, plan.mapsRequested());
 		MapPlacement town = plan.index().map("TEST_TOWN");
 		assertEquals(new MapPlacement("TEST_TOWN", ox(0), 64, oz(0), 20, 18, 0, MapPlacement.Kind.SURFACE, "TEST_PALETTE",
 				"kantobridge:kanto_outdoor", false, null), town);
@@ -65,6 +65,19 @@ class SyntheticPlanTest {
 		assertEquals(0, plan.overlaps());
 		assertEquals(0, plan.edgeMismatches());
 		assertEquals(new Box3(ox(-12), 63, oz(-36), ox(52), 95, oz(48)), plan.surfaceBox(), "ground + 32 since the profile plan's P2");
+		// The cave area (CAVES_3D_PLAN §3.3): north of the dungeon region, from Kanto's west edge, whole chunks; the cave's
+		// one complex in its slot (8 blocks of margin around its floors and their rings), 1F on top at feet 64 and B1F
+		// 11 blocks under it, placed so the ladder from 1F's plateau (9, 3) lands on B1F's (9, 3).
+		int areaX = Math.floorDiv(ox(-12), 16) * 16;
+		int dungeonsZ = Math.floorDiv(oz(-36) - dev.kantobridge.dungeon.DungeonSlots.GAP - 160, 16) * 16;
+		// the complex's box: 18 blocks deep (8 cells and the ring), with its margins
+		int areaZ = Math.floorDiv(dungeonsZ - CavePlanner.GAP - (18 + 2 * CavePlanner.MARGIN), 16) * 16;
+		assertEquals(new MapPlacement("TEST_CAVE_1F", areaX + 9, 64, areaZ + 9, 12, 8, 1, MapPlacement.Kind.INTERIOR, "TEST_PALETTE",
+				WorldPlan.BIOME_CAVE_3D, false, "TEST_TOWN"), plan.index().map("TEST_CAVE_1F"));
+		assertEquals(new MapPlacement("TEST_CAVE_B1F", areaX + 9, 64 - CavePlanner.FLOOR_STEP, areaZ + 9, 12, 8, 2, MapPlacement.Kind.INTERIOR,
+				"TEST_PALETTE", WorldPlan.BIOME_CAVE_3D, false, "TEST_CAVE_1F"), plan.index().map("TEST_CAVE_B1F"));
+		assertEquals(1, plan.warnings().noteCount("cave_complexes"));
+		assertEquals(2, plan.warnings().noteCount("cave_maps"));
 	}
 
 	@Test
@@ -183,10 +196,10 @@ class SyntheticPlanTest {
 	@Test
 	void volumesAndChunks() {
 		List<Box3> volumes = plan.volumes();
-		assertEquals(3, volumes.size(), "the surface (town and hill) and two interiors");
+		assertEquals(5, volumes.size(), "the surface (town and hill), two interiors and the cave's two floors");
 		List<long[]> chunks = WorldPlan.chunks(volumes);
-		assertEquals(30, chunks.size(), "5 × 6 chunks of surface; the interiors lie under it");
-		assertEquals(3, plan.biomeRegions().size());
+		assertEquals(30 + 6, chunks.size(), "5 × 6 chunks of surface, the interiors under it; 3 × 2 for the cave");
+		assertEquals(5, plan.biomeRegions().size());
 	}
 
 	@Test
@@ -233,8 +246,8 @@ class SyntheticPlanTest {
 		ExportBundle withArena = ExportBundle.open(TestData.syntheticCopyWith(temp, Map.of("map/TEST_ARENA", arena)));
 
 		WorldPlan full = WorldPlanner.plan(withArena, new WorldPlanner.Options(null, 0, 0, TestData.MIN_BUILD_HEIGHT));
-		assertEquals(4, full.mapsRequested(), "unreachable maps aren't requested by a full build");
-		assertEquals(4, full.maps().size());
+		assertEquals(6, full.mapsRequested(), "unreachable maps aren't requested by a full build");
+		assertEquals(6, full.maps().size());
 		assertEquals(0, full.warnings().total(), full.warnings().warnings().toString());
 		assertEquals(1, full.warnings().noteCount("map_unreachable"));
 

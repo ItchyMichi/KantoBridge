@@ -1,1 +1,1 @@
-{"display":{"voidFill":"trees","voidFillDefault":true},"tables":{"cutTreeSwaps":[{"after":15,"before":14}],"darkMaps":{"maps":[]},"ledges":[{"facing":"down","input":"down","ledgeTile":8,"standingTile":0}]}}
+{"display":{"voidFill":"trees","voidFillDefault":true},"tables":{"cutTreeSwaps":[{"after":15,"before":14}],"darkMaps":{"maps":[]},"indoorEncounters":{"excludedTileset":"FOREST","firstIndoorMap":59},"ledges":[{"facing":"down","input":"down","ledgeTile":8,"standingTile":0}],"tilePairs":{"land":[{"a":9,"b":0,"tileset":"CAVERN"}],"water":[]}}}

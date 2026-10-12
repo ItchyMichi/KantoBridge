@@ -196,6 +196,15 @@ public class CollisionGameTests implements FabricGameTest {
 		helper.assertTrue(state.getShape(level, abs).isEmpty(), "an edge wall must have no outline");
 		helper.assertTrue(state.getCollisionShape(level, abs, CollisionContext.empty()).max(Direction.Axis.Y) == 1.5,
 				"its plate is 24 px high");
+		// Cobblemon's spawner stands wild Pokémon only on blocks that are isSolid (CAVES_3D_PLAN §3.3): none of the invisible
+		// helpers is, so nothing appears on top of a wall, a ledge or a story cell.
+		helper.assertTrue(!state.isSolid(), "an edge wall must not count as ground to spawn on");
+		helper.assertTrue(!KbBlocks.LEDGE_COLLIDER.defaultBlockState().isSolid(), "nor a ledge collider");
+		helper.assertTrue(!KbBlocks.STORY_CELL.defaultBlockState().isSolid() && !KbBlocks.STORY_TILE.defaultBlockState().isSolid(),
+				"nor a story cell");
+		helper.assertTrue(KbBlocks.DECOR.defaultBlockState().setValue(dev.kantobridge.block.DecorBlock.SOLID, true)
+				.getCollisionShape(level, abs, CollisionContext.empty()).equals(net.minecraft.world.phys.shapes.Shapes.block()),
+				"the cave area's solid carrier collides as a full block");
 		MockPlayers.with(helper, player -> {
 			// Walking east across the block's east face: stopped by the plate.
 			player.setPos(abs.getX() + 0.5, abs.getY(), abs.getZ() + 0.5);

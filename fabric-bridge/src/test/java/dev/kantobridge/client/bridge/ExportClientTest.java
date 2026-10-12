@@ -139,7 +139,7 @@ class ExportClientTest {
 		assertEquals(resources, last[0]);
 		assertEquals(last[3], last[2], "every byte arrived");
 		assertEquals(done.bytes(), last[2]);
-		assertEquals(4, done.kinds().get("map"));
+		assertEquals(6, done.kinds().get("map"), "with the cave's two floors (CAVES_3D_PLAN §3.3)");
 
 		// The written bundle is the source bundle (written by fake_gen1 --write-bundle), byte for byte, and opens.
 		this.assertSameBundle(TestData.syntheticBundle(), done.bundleDir());
@@ -178,7 +178,8 @@ class ExportClientTest {
 		});
 		ExportClient.ExportException error = failure(result);
 		assertEquals("hash", error.code());
-		assertTrue(error.getMessage().contains("tileset/TEST"), error.getMessage());
+		// The first tileset asked for was tampered with (CAVERN or TEST, whichever comes first).
+		assertTrue(error.getMessage().contains("tileset/"), error.getMessage());
 		Map<String, byte[]> after = FakeExportPeer.files(previous);
 		assertEquals(before.keySet(), after.keySet());
 		this.assertNoLeftovers();

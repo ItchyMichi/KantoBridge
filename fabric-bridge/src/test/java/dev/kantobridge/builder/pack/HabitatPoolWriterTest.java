@@ -46,7 +46,8 @@ class HabitatPoolWriterTest {
 		ExportBundle bundle = ExportBundle.open(TestData.syntheticBundle());
 		ExportEncounters encounters = bundle.encounters();
 		Map<String, String> pools = HabitatPoolWriter.pools(encounters, bundle.field());
-		assertEquals(Set.of("kantobridge:test_town"), pools.keySet());
+		assertEquals(Set.of("kantobridge:test_town", "kantobridge:test_cave_1f", "kantobridge:test_cave_b1f"), pools.keySet(),
+				"the town's grass and the cave's floors (CAVES_3D_PLAN §3.3)");
 		JsonObject pool = ProtoJson.parseObject(pools.get("kantobridge:test_town"));
 		assertEquals(Set.of("name", "spawns"), pool.keySet());
 		JsonArray spawns = pool.getAsJsonArray("spawns");

@@ -209,7 +209,8 @@
           "x": {"type": "integer"},
           "y": {"type": "integer"},
           "z": {"type": "integer"},
-          "pool": {"type": "string", "pattern": "^[a-z0-9_.-]+:[a-z0-9_./-]+$"}
+          "pool": {"type": "string", "pattern": "^[a-z0-9_.-]+:[a-z0-9_./-]+$"},
+          "range": {"type": "integer", "minimum": 1, "maximum": 64, "description": "The block's RangeOfInfluence when it isn't 14: the cave area's are 6, its floors lying 11 blocks apart (docs/specs/CAVES_3D_PLAN.md §3.3)."}
         }
       }
     },

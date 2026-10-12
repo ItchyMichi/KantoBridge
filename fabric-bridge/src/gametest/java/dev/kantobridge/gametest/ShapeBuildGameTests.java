@@ -119,7 +119,7 @@ public class ShapeBuildGameTests implements FabricGameTest {
 		} catch (IOException | DataException e) {
 			throw new GameTestAssertException("shape files unreadable: " + e.getClass().getSimpleName());
 		}
-		helper.assertTrue(report.selfCheck != null && report.selfCheck.maps() == 4 && report.selfCheck.holes() == 0,
+		helper.assertTrue(report.selfCheck != null && report.selfCheck.maps() == 6 && report.selfCheck.holes() == 0,
 				"self-check " + report.selfCheck);
 		helper.assertTrue(report.shapeQuadsMaxBlock <= 96 && report.shapeQuadsSectionMax <= 30_000, "quads " + report.shapeQuadsMaxBlock + " per block, "
 				+ report.shapeQuadsSectionMax + " per section");

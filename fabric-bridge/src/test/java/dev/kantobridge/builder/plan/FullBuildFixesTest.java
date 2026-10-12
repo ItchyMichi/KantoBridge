@@ -130,7 +130,7 @@ class FullBuildFixesTest {
 		WorldPlan plan = WorldPlanner.plan(bundle, new WorldPlanner.Options(null, TestData.ORIGIN_X, TestData.ORIGIN_Z, 0));
 
 		assertEquals(2, Scale.maxLayer(0));
-		assertEquals(5, plan.maps().size(), "every map placed");
+		assertEquals(7, plan.maps().size(), "every map placed (the cave's two floors in the cave area)");
 		assertEquals(0, plan.mapsUnplaced());
 		assertEquals(0, plan.warnings().count("interior_unplaced"));
 		assertEquals(1, plan.warnings().noteCount("interior_deep_spill"));

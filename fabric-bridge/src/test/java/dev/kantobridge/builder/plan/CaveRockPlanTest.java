@@ -23,7 +23,8 @@ import org.junit.jupiter.api.io.TempDir;
  * Cave rock in a built world (docs/specs/CAVES_AND_WOODS_PLAN.md §5.1, CW1): the synthetic bundle with its house drawn
  * as a cave. Every hanging stands on a decor carrier in the block under the ceiling, the carrier on a light's position
  * gives the light (and no light block is placed there), the shape map draws the piece there, and nothing a player
- * could collide with is added.
+ * could collide with is added: a carrier over rock is solid, as the cave area fills the air between rock and ceiling
+ * (docs/specs/CAVES_3D_PLAN.md §3.3), but rock stops a player anyway.
  */
 class CaveRockPlanTest {
 	@TempDir
@@ -45,7 +46,8 @@ class CaveRockPlanTest {
 	@Test
 	void hangingsStandOnDecorCarriersUnderTheCeiling() {
 		MapPlacement p = plan.index().map("TEST_HOUSE");
-		assertEquals(WorldPlan.BIOME_CAVE, p.biome());
+		assertEquals(WorldPlan.BIOME_CAVE_3D, p.biome(), "a cave map goes to the cave area");
+		MapModel model = plan.map("TEST_HOUSE").model();
 		ShapePlanner.MapShapes planned = plan.shapes().shapes("TEST_HOUSE");
 		assertNotNull(planned);
 		ChunkCodesView view = new ChunkCodesView(plan);
@@ -69,10 +71,10 @@ class CaveRockPlanTest {
 				int id = plan.shapes().index().shapeId(key, p.palette());
 				assertEquals(id, plan.shapes().map().shapeAt(x, feet + CaveRock.LEVEL, z), "the shape map draws the piece there");
 				if (lightSpot) {
-					assertEquals(BlockCode.decor(false, true), code, "the carrier on a light's position gives the light");
+					assertEquals(BlockCode.decor(false, true, rock(model, tx, tz)), code, "the carrier on a light's position gives the light");
 					lit++;
 				} else {
-					assertEquals(BlockCode.decor(false, false), code);
+					assertEquals(BlockCode.decor(false, false, rock(model, tx, tz)), code);
 				}
 				assertTrue(BlockCode.kind(view.code(x, feet + WorldPlan.CEILING_ABOVE_FEET, z)) == BlockCode.KIND_FULL, "the ceiling stays");
 			}
@@ -80,6 +82,11 @@ class CaveRockPlanTest {
 		assertTrue(hung > 0, "the house is a cave now");
 		assertTrue(lit > 0, "some hangings took a light's position");
 		assertTrue(plan.shapes().unitTally().getOrDefault("dress_rock_roof", 0) > 0);
+	}
+
+	private static boolean rock(MapModel model, int tx, int tz) {
+		MapModel.Kind kind = model.kind(tx / 2, tz / 2);
+		return kind == MapModel.Kind.SOLID || kind == MapModel.Kind.COUNTER;
 	}
 
 	@Test
