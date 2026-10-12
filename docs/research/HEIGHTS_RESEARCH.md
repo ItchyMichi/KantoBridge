@@ -2,7 +2,8 @@
 
 - **Status:** research for your question of 2026-10-12: could the ROM world's floors sit at different heights (a cave
   whose stairs climb to raised ground, places outdoors where a height difference makes sense), how would it be built,
-  and what would it change. Nothing is built or decided; the choices are in §7.
+  and what would it change. Nothing is built. Decided so far: 2-block levels with 2 blocks of air on top (§7); the
+  other choices are open.
 - **Sources:** a read of today's code, docs and tests (file:line below; Java paths are under
   `fabric-bridge/src/{main,client}/java/dev/kantobridge/`), and the earlier research
   `docs/research/VOXEL_WORLD_REPORT.md` (VR). Nothing under `local/` and nothing ROM-derived was opened. Nothing ran on
@@ -28,8 +29,9 @@
 - **What it costs:**
   - it touches about a dozen areas: index format, movement, puppets, clicks, teleports, encounters, builder, shape
     planner, dressing, self-check, spawn rule, new collider blocks;
-  - vertical room is tight. All 14 interior layers are used, and the design's 16-block separation leaves a cave
-    2 blocks of height range where another interior lies right above or below it;
+  - vertical room is tight. All 14 interior layers are used, and the design's 16-block separation leaves each cave
+    room 1 spare block upward. That is enough for your choice of 2-block cliffs with 2 blocks of air on top; more
+    needs a deeper world (§5.2);
   - the shape map is expected at about 94% with the profile (about 31k characters left);
   - every world needs a rebuild.
 - **Recommended order:**
@@ -117,8 +119,8 @@ JUnit on synthetic maps.
 
 ### 3.2 Levels in caves and the Safari Zone
 
-Each walkable cell gets a level: blocks above the map's floor, where 0 is today. One level is 1 block (recommended)
-or 2.
+Each walkable cell gets a level: blocks above the map's floor, where 0 is today. One level is 2 blocks (your choice;
+1 block was the other option).
 
 1. Find the collision tile of each cell. Two neighbours whose tiles form a pair have a *split* edge between them.
    That sorts the cells into side A (tiles on one side of the tileset's pairs), side B (the other) and neutral.
@@ -152,8 +154,11 @@ or 2.
 ### 3.5 Ceilings, lights and cave rock
 
 - **Caves:**
-  - each cell keeps 3 blocks of air, so the ceiling sits at the cell's floor + 3 and steps with the floor;
-  - lights go at the floor + 2;
+  - low ground keeps 3 blocks of air, with the ceiling at feet + 3 as today;
+  - high ground (2 blocks up, your choice) gets 2 blocks of air, so its ceiling is at the map's feet + 4, one block
+    above today's (§5.2);
+  - lights go at feet + 2 on low ground. On high ground they go at head height (a light block has no collision) or
+    are left out, since the low ground's lights reach up;
   - CW1's rock, hangings and stalagmites measure from the cell's floor.
 - **Open-air maps** (Viridian Forest, the Safari Zone) have the sky above them.
 
@@ -230,15 +235,32 @@ There are no tile pairs outdoors, so there are two sources:
 ### 5.2 Technical
 
 - **Every world must be rebuilt:** the index format changes and there is a new `kb-shapes` version.
-- **Vertical room.**
-  - No interior layer is free: all 14 are used.
-  - Keeping DESIGN's 16 blocks of separation (`docs/DESIGN.md:40`), a cave can span 2 blocks of height where another
-    interior lies right above or below it: its base 1 block lower, its top 1 block higher. Today there are 17 blocks
-    between a floor and the ceiling below it (VR:576).
+- **Vertical room** (updated after your answer of 2026-10-12).
+  - **What limits it:** interiors are stacked under the surface, one layer every 22 blocks (`world/Scale.java:25`).
+    All 14 layers that fit above the world's bottom (Y −256, our override in
+    `data/minecraft/dimension_type/overworld.json`) are used. The depth was set by Silph Co.'s 11 floors (PLAN P4).
+  - **Each layer is 22 blocks:** a 5-block room (floor block, 3 blocks of air, ceiling at feet + 3,
+    `WorldPlan.java:42`) and a 17-block gap down to the ceiling of the room below (VR:576). DESIGN asks for at least
+    16 (`docs/DESIGN.md:40`), so each gap has 1 spare block. Only one of the two rooms it separates can spend it.
+  - **The rule that makes it work:** raised ground only ever goes up from the map's floor, never down. Each room then
+    spends only the gap above it, even where cave floors are stacked.
+  - **Your choice fits as it is:** a 2-block cliff with 2 blocks of air on top puts the ceiling over high ground at
+    feet + 4, one block above today's. That leaves 16 blocks. Layer 1 under the surface works the same (ground block
+    63, ceiling 46).
+  - **The limit:** one raised level per cave map. A third level, or 3 blocks of air on top, needs more room.
+  - **The gaps are empty air:** the Kanto preset is a void world (`data/kantobridge/worldgen/world_preset/kanto.json`,
+    flat with no layers), and each interior is a closed box of floor, ring and ceiling. The distance is what keeps
+    sound apart: Minecraft's sounds fade out at 16 blocks.
+  - **More room, if wanted later:** lower the world's bottom, as `docs/DESIGN.md:42` allows. Minecraft allows down to
+    −2032, in steps of 16. Fourteen layers need `63 − bottom ≥ 14 × step`:
+    - a 24-block step (2 more blocks per room) needs a bottom of −288;
+    - a 26-block step (4 more) needs −304.
+  - **What a deeper world costs:** empty sections cost almost nothing to store or draw. It touches the dimension override
+    (it applies to every world opened with the mod, VR L2), `Scale.LAYER_STEP`, the spawn rule's hard-coded 22
+    (`walking_level_only.json:8`), the golden test index and the tests that expect 14 layers at −256, and PLAN P4.
+  - **Less separation** is the other way to get more room. It is your rule, so it needs your call.
   - Open-air maps and the surface can rise freely. Tall buildings on raised ground need the surface volume's top
     (ground + 32, `WorldPlan.java:34-36`) raised.
-  - More room needs your call: less separation for caves, or a deeper world (a datapack lowers the bottom,
-    `docs/DESIGN.md:42`).
   - The voxel plan says to stop and ask before changing the layer layout (`docs/specs/VOXEL_BLOCKS_PLAN.md:1053`).
 - **The shape map budget.**
   - It is expected at about 94% with the profile, leaving about 31k characters.
@@ -271,11 +293,10 @@ There are no tile pairs outdoors, so there are two sources:
 
 ## 7. Your decisions
 
-1. **How high is one level?**
-   - 1 block (recommended): it fits the 16-block separation, the existing half and full blocks make the steps, and it
-     reads as a platform at hip height.
-   - 2 blocks: a real cliff above eye height. It needs step colliders, and either less separation or a deeper world.
-2. **Separation:** keep 16 blocks, which gives caves 2 blocks of range, or allow less for caves.
+1. **How high is one level?** **Decided 2026-10-12: 2 blocks, with 2 blocks of air on top.** A real cliff above eye
+   height. It needs step colliders (§3.3) and fits today's layout, keeping 16 blocks of separation (§5.2).
+2. **More room:** keep today's layout (one raised level per cave map), or lower the world's bottom for more levels or
+   more air on top (§5.2).
 3. **Scope and order** (E1–E4), and which cave to pilot.
 4. **Outdoors:** the islands only, or also places you name, with ramps the game doesn't draw.
 5. **E5:** later, or never.
