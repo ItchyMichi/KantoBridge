@@ -286,8 +286,10 @@ There are no tile pairs outdoors, so there are two sources:
   - 6 interiors already sit away from their doors: 5 sideways and 1 deep spill (`docs/PROGRESS.md:1557-1558`);
   - the fade stays dark until the arrival spot is drawn, for 3 s at most (`client/move/WarpFade.java:167-171`,
     `client/move/MoveRuntime.java:199-212`).
-- **Where:** the region table already holds the wild zones (south), the dungeons (north) and room for other games
-  (west and east, `docs/specs/WILD_ROUTES_PLAN.md` §4.10). A new region could go north, past the dungeon slots.
+- **Where:** the wild zones sit south (`builder/zone/ZoneRegions.java`) and the dungeons north
+  (`dungeon/DungeonSlots.java`), and west and east are kept for other games (`docs/specs/WILD_ROUTES_PLAN.md` §4.10).
+  The region table that would list them is only specified (`WILD_ROUTES_PLAN.md:239-241`), not built. A new region
+  could go north, past the dungeon slots.
 - **What it gives:** several levels per cave, tall ceilings, and walk-down shafts (E5) with any spacing. One cave's
   floors can still sit near each other, so its ladders stay short teleports.
 - **What it costs:**
@@ -298,8 +300,8 @@ There are no tile pairs outdoors, so there are two sources:
   - It changes DESIGN §3 (interiors under their buildings, caves under their mountains). That's your file.
   - New placement code (a grid instead of layers), its tests and a rebuild. The index format, the teleports and the
     bridge stay as they are.
-  - The world stays deep for now: dungeons stack their floors 22 blocks apart below Y 64
-    (`dungeon/DungeonSlots.java:22-25`).
+  - Dungeon floors stack upwards from Y 64 (`dungeon/DungeonSlots.java:65-68`), so only Kanto's interior layers need
+    the deep world.
 - **Middle ground:** move only the caves. They are the only roofed maps that need the height (the forest maps are open
   to the sky). There are fewer than 20 cave floors *(general knowledge)*, and you go through their entrances far less
   often than through house doors. Houses, shops and gyms stay under their doors, and their doors stay instant.
@@ -312,8 +314,8 @@ There are no tile pairs outdoors, so there are two sources:
 
 - **Space is not the limit.**
   - Minecraft's world is about 60 million blocks across.
-  - Kanto is 704 × 744 blocks with its ring (the dropped vanilla plan's WD5). With its wild zones (from 3,000 blocks south,
-    rows of 8 slots of 640 blocks) and its dungeons (3,000 blocks north), it spans about 5,000 × 7,500 blocks.
+  - Kanto is 704 × 744 blocks with its ring (the dropped vanilla plan's WD5). With its wild zones (from 3,000 blocks
+    south, rows of 8 slots of 640 blocks) and its dungeons (3,000 blocks north), it spans about 5,000 × 7,500 blocks.
   - West and east of Kanto are kept for other games' worlds (`builder/zone/ZoneRegions.java:9`,
     `docs/specs/WILD_ROUTES_PLAN.md` §4.10).
 - **Each region repeats the same parts,** placed from its own origin: its surface, houses in layers under their doors,
