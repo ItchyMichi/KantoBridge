@@ -2,6 +2,7 @@ package dev.kantobridge.builder.plan;
 
 import dev.kantobridge.builder.export.ExportMap;
 import dev.kantobridge.dungeon.DungeonSlots;
+import dev.kantobridge.world.MapLayout;
 import dev.kantobridge.world.MapPlacement;
 import dev.kantobridge.world.Scale;
 import java.util.ArrayDeque;
@@ -53,10 +54,22 @@ public final class CavePlanner {
 	 * @param placements every cave's placement, in the complexes' order
 	 * @param area       the cave area's box ({@code minX, minZ, maxX, maxZ}), or null without caves
 	 * @param complexes  each complex's maps
+	 * @param pieces     the maps built in 3D whose rooms lie apart (H5): their pieces, offsets from the placement
+	 * @param shafts     the ladders and holes lined up (H5), top cell over bottom cell
+	 * @param fades      the links of complexes built in 3D that keep their fade, by reason
 	 */
-	public record Result(List<MapPlacement> placements, int @Nullable [] area, List<List<String>> complexes) {
+	public record Result(List<MapPlacement> placements, int @Nullable [] area, List<List<String>> complexes,
+			Map<String, List<MapLayout.Piece>> pieces, List<CaveRooms.Link> shafts, Map<String, Integer> fades) {
 		public Result {
 			complexes = complexes.stream().map(List::copyOf).toList();
+			pieces = Map.copyOf(pieces);
+			shafts = List.copyOf(shafts);
+			fades = Map.copyOf(fades);
+		}
+
+		/** A result with no room laid out apart. */
+		public Result(List<MapPlacement> placements, int @Nullable [] area, List<List<String>> complexes) {
+			this(placements, area, complexes, Map.of(), List.of(), Map.of());
 		}
 	}
 
@@ -111,14 +124,34 @@ public final class CavePlanner {
 	 *              build's origin stands in for it
 	 */
 	public static Result place(Map<String, ExportMap> all, Set<String> caves, @Nullable Box3 kanto, int originX, int originZ, Warnings warnings) {
+		return place(all, caves, Set.of(), Map.of(), kanto, originX, originZ, warnings);
+	}
+
+	/**
+	 * The same, with the complexes built in 3D laid out room by room (H5, {@link CaveRooms}).
+	 *
+	 * @param in3d  the maps built in 3D (whole complexes)
+	 * @param sites each map's swap-site blocks
+	 */
+	public static Result place(Map<String, ExportMap> all, Set<String> caves, Set<String> in3d, Map<String, ? extends Collection<int[]>> sites,
+			@Nullable Box3 kanto, int originX, int originZ, Warnings warnings) {
 		if (caves.isEmpty()) {
 			return new Result(List.of(), null, List.of());
 		}
 		List<List<String>> complexes = complexes(all, caves);
 		// Each complex laid out on its own (local block offsets), then the slots packed in rows.
 		List<Local> locals = new ArrayList<>();
+		Map<String, List<MapLayout.Piece>> pieces = new TreeMap<>();
+		List<CaveRooms.Link> shafts = new ArrayList<>();
+		Map<String, Integer> fades = new TreeMap<>();
 		for (List<String> complex : complexes) {
-			locals.add(layOut(all, complex, warnings));
+			if (complex.stream().anyMatch(in3d::contains)) {
+				Local local = layOutRooms(all, complex, sites, pieces, fades);
+				shafts.addAll(local.shafts);
+				locals.add(local);
+			} else {
+				locals.add(layOut(all, complex, warnings));
+			}
 		}
 		int rowX = 0;
 		int rowZ = 0;
@@ -158,7 +191,10 @@ public final class CavePlanner {
 		}
 		warnings.note("cave_complexes", complexes.size());
 		warnings.note("cave_maps", out.size());
-		return new Result(out, new int[] {areaX, areaZ, areaX + width, areaZ + depth}, complexes);
+		warnings.note("cave_rooms", pieces.values().stream().mapToInt(List::size).sum());
+		warnings.note("cave_shafts", shafts.size());
+		fades.forEach((reason, count) -> warnings.note("cave_fades_" + reason, count));
+		return new Result(out, new int[] {areaX, areaZ, areaX + width, areaZ + depth}, complexes, pieces, shafts, fades);
 	}
 
 	/** Caves joined by warps (or by a door, parent to child), each complex in export order, complexes by their first map. */
@@ -207,15 +243,15 @@ public final class CavePlanner {
 	private static final class Local {
 		final Map<String, int[]> positions = new LinkedHashMap<>();
 		final Map<String, Integer> ranks = new HashMap<>();
+		final List<CaveRooms.Link> shafts = new ArrayList<>();
 		int minX = Integer.MAX_VALUE;
 		int minZ = Integer.MAX_VALUE;
 		int maxX = Integer.MIN_VALUE;
 		int maxZ = Integer.MIN_VALUE;
 	}
 
-	private static Local layOut(Map<String, ExportMap> all, List<String> complex, Warnings warnings) {
-		Local local = new Local();
-		// Ranks: floors from the top, 0 the highest (a tie between ids keeps them on one level).
+	/** Each map's floor rank in a complex: floors from the top, 0 the highest (a tie between ids keeps them on one level). */
+	private static Map<String, Integer> ranks(List<String> complex) {
 		TreeMap<Integer, Integer> floors = new TreeMap<>(Comparator.reverseOrder());
 		for (String id : complex) {
 			floors.put(floor(id), 0);
@@ -224,14 +260,75 @@ public final class CavePlanner {
 		for (Map.Entry<Integer, Integer> entry : floors.entrySet()) {
 			entry.setValue(r++);
 		}
+		Map<String, Integer> out = new HashMap<>();
 		for (String id : complex) {
-			local.ranks.put(id, floors.get(floor(id)));
+			out.put(id, floors.get(floor(id)));
 		}
-		// The entrance: the first map whose door is outside the complex; the layout grows from it, breadth first.
-		String entrance = complex.stream().filter(id -> {
+		return out;
+	}
+
+	/** The entrance: the first map whose door is outside the complex. */
+	private static String entrance(Map<String, ExportMap> all, List<String> complex) {
+		return complex.stream().filter(id -> {
 			ExportMap map = all.get(id);
 			return map.parent() == null || !complex.contains(map.parent().map());
 		}).findFirst().orElse(complex.get(0));
+	}
+
+	/**
+	 * A complex built in 3D, room by room ({@link CaveRooms}): each map placed where its first room's frame says, each
+	 * room a piece (so a map draws its rooms and the rock round them, and nothing the layout didn't count).
+	 */
+	private static Local layOutRooms(Map<String, ExportMap> all, List<String> complex, Map<String, ? extends Collection<int[]>> sites,
+			Map<String, List<MapLayout.Piece>> pieces, Map<String, Integer> fades) {
+		Local local = new Local();
+		local.ranks.putAll(ranks(complex));
+		CaveRooms.Plan plan = CaveRooms.layOut(all, complex, local.ranks, entrance(all, complex), sites);
+		for (String id : complex) {
+			ExportMap map = all.get(id);
+			List<CavePieces.Room> rooms = plan.rooms().get(id);
+			int[][] frames = plan.frames().get(id);
+			if (rooms.isEmpty()) {
+				// No floor at all: beside the complex, as a loose map.
+				local.positions.put(id, new int[] {plan.maxX() + FLOOR_GAP, plan.minZ() + InteriorPacker.RING});
+				continue;
+			}
+			int[] base = frames[0];
+			local.positions.put(id, base.clone());
+			List<MapLayout.Piece> list = new ArrayList<>();
+			for (CavePieces.Room room : rooms) {
+				java.util.BitSet mask = room.mask(map.cellWidth());
+				boolean whole = mask.cardinality() == room.w() * room.h();
+				int[] frame = frames[room.index()];
+				list.add(new MapLayout.Piece(room.x(), room.y(), room.w(), room.h(), whole ? null : mask, frame[0] - base[0], 0, frame[1] - base[1]));
+			}
+			pieces.put(id, list);
+		}
+		local.minX = Math.min(plan.minX(), local.positions.values().stream().mapToInt(p -> p[0] - InteriorPacker.RING).min().orElse(0));
+		local.minZ = Math.min(plan.minZ(), local.positions.values().stream().mapToInt(p -> p[1] - InteriorPacker.RING).min().orElse(0));
+		local.maxX = plan.maxX();
+		local.maxZ = plan.maxZ();
+		for (String id : complex) {
+			// A map without pieces is drawn whole at its placement: its box counts in full.
+			if (!pieces.containsKey(id)) {
+				int[] at = local.positions.get(id);
+				ExportMap map = all.get(id);
+				local.minX = Math.min(local.minX, at[0] - InteriorPacker.RING);
+				local.minZ = Math.min(local.minZ, at[1] - InteriorPacker.RING);
+				local.maxX = Math.max(local.maxX, at[0] + Scale.cellToBlock(map.cellWidth()) + InteriorPacker.RING);
+				local.maxZ = Math.max(local.maxZ, at[1] + Scale.cellToBlock(map.cellHeight()) + InteriorPacker.RING);
+			}
+		}
+		local.shafts.addAll(plan.shafts());
+		plan.fades().forEach((reason, count) -> fades.merge(reason, count, Integer::sum));
+		return local;
+	}
+
+	private static Local layOut(Map<String, ExportMap> all, List<String> complex, Warnings warnings) {
+		Local local = new Local();
+		local.ranks.putAll(ranks(complex));
+		// The layout grows from the entrance, breadth first.
+		String entrance = entrance(all, complex);
 		put(local, all.get(entrance), 0, 0);
 		Deque<String> queue = new ArrayDeque<>();
 		queue.add(entrance);

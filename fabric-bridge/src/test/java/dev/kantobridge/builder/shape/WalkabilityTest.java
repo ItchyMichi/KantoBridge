@@ -56,25 +56,32 @@ class WalkabilityTest {
 				for (int cx = 0; cx < model.cellWidth(); cx++) {
 					MapModel.Kind kind = model.kind(cx, cy);
 					cells++;
+					if (map.layout() != null && map.layout().pieceAt(cx, cy) == null) {
+						// A cave's rock far from every room: no room draws it (CAVES_3D_PLAN §3.5)
+						continue;
+					}
+					// The cell where its piece puts it, at its own level (raised ground, H4)
+					int[] at = WorldPlan.cellOrigin(p, map.layout(), cx, cy);
+					int feet = at[1];
 					for (int dz = 0; dz < 2; dz++) {
 						for (int dx = 0; dx < 2; dx++) {
-							int x = p.x() + cx * 2 + dx;
-							int z = p.z() + cy * 2 + dz;
+							int x = at[0] + dx;
+							int z = at[2] + dz;
 							String where = map.id() + " cell " + cx + "," + cy;
 							if (kind == MapModel.Kind.SOLID || kind == MapModel.Kind.COUNTER) {
-								assertTrue(collider(a.code(x, p.y(), z)), where + ": no collider at feet level");
-								assertTrue(collider(b.code(x, p.y(), z)), where + ": the unshaped build has none either");
-								for (int y = p.y(); y < p.y() + 8; y++) {
+								assertTrue(collider(a.code(x, feet, z)), where + ": no collider at feet level");
+								assertTrue(collider(b.code(x, feet, z)), where + ": the unshaped build has none either");
+								for (int y = feet; y < feet + 8; y++) {
 									roofs += BlockCode.kind(a.code(x, y, z)) == BlockCode.KIND_SHAPE ? 1 : 0;
 								}
 							} else {
-								for (int y = p.y(); y <= p.y() + 1; y++) {
+								for (int y = feet; y <= feet + 1; y++) {
 									int code = a.code(x, y, z);
 									if (BlockCode.kind(code) == BlockCode.KIND_DECOR && b.code(x, y, z) == BlockCode.AIR) {
 										tufts++;
 										continue;
 									}
-									assertEquals(b.code(x, y, z), code, where + ": feet + " + (y - p.y()));
+									assertEquals(b.code(x, y, z), code, where + ": feet + " + (y - feet));
 								}
 							}
 						}

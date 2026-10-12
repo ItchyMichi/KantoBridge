@@ -30,7 +30,11 @@ public final class WorldIndex {
 	public static final int VERSION = 1;
 
 	private static final Set<String> ROOT_FIELDS = Set.of("version", "game", "exportHash", "scale", "maps", "slotMapHash",
-			"storyCells", "habitats", "zones", "dungeons");
+			"storyCells", "habitats", "zones", "dungeons", "shafts");
+	private static final Set<String> SHAFT_FIELDS = Set.of("kind", "top", "bottom", "up", "x", "z", "y0", "y1");
+	private static final Set<String> SHAFT_END_FIELDS = Set.of("map", "x", "y");
+	/** The longest shaft, in blocks. */
+	public static final int MAX_SHAFT = 256;
 	private static final Set<String> ZONE_FIELDS = Set.of("id", "routeMap", "theme", "x", "y", "z", "w", "d", "biome", "trainers", "balls",
 			"ballSprite", "dungeon");
 	private static final Set<String> DUNGEON_FIELDS = Set.of("x", "y", "out", "pool", "level", "items");
@@ -240,6 +244,37 @@ public final class WorldIndex {
 		}
 	}
 
+	/**
+	 * A cave's real ladder or hole (docs/specs/CAVES_3D_PLAN.md §3.5, §4.1): its top cell straight over its bottom cell,
+	 * one 2 × 2 column at ({@code x}, {@code z}) from the bottom cell's feet {@code y0} up to the top cell's floor
+	 * {@code y1}.
+	 *
+	 * @param kind {@code ladder} or {@code hole}
+	 * @param up   it is climbed up too (a hole, or a ladder whose bottom leads elsewhere, isn't)
+	 */
+	public record Shaft(String kind, CellPos top, CellPos bottom, boolean up, int x, int z, int y0, int y1) {
+		public static final String LADDER = "ladder";
+		public static final String HOLE = "hole";
+
+		public Shaft {
+			if (!LADDER.equals(kind) && !HOLE.equals(kind) || top == null || bottom == null || y1 <= y0 || y1 - y0 > MAX_SHAFT
+					|| HOLE.equals(kind) && up) {
+				throw new IllegalArgumentException("bad shaft");
+			}
+		}
+
+		/** True when block (bx, by, bz) is inside the shaft: its column, over the bottom cell's feet, up to the top's floor. */
+		public boolean contains(int bx, int by, int bz) {
+			return bx >= this.x && bx < this.x + Scale.CELL_BLOCKS && bz >= this.z && bz < this.z + Scale.CELL_BLOCKS && by > this.y0
+					&& by <= this.y1;
+		}
+
+		/** True when {@code cell} is one of its two ends. */
+		public boolean end(CellPos cell) {
+			return this.top.equals(cell) || this.bottom.equals(cell);
+		}
+	}
+
 	/** A Wild Routes item ball (WR5): its cell in the route map's grid and its item. */
 	public record ZoneBall(String id, int x, int y, String item) {
 		public ZoneBall {
@@ -261,22 +296,23 @@ public final class WorldIndex {
 	private final List<Habitat> habitats;
 	private final List<Zone> zones;
 	private final @Nullable Dungeons dungeons;
+	private final List<Shaft> shafts;
 	private final String json;
 	private final String hash;
 
 	public WorldIndex(String game, String exportHash, Collection<MapPlacement> maps, String slotMapHash, StoryCellTable storyCells,
 			List<Habitat> habitats) {
-		this(game, exportHash, Scale.SURFACE_Y, Scale.LAYER_STEP, maps, Map.of(), slotMapHash, storyCells, habitats, List.of(), null);
+		this(game, exportHash, Scale.SURFACE_Y, Scale.LAYER_STEP, maps, Map.of(), slotMapHash, storyCells, habitats, List.of(), null, List.of());
 	}
 
 	public WorldIndex(String game, String exportHash, Collection<MapPlacement> maps, String slotMapHash, StoryCellTable storyCells,
 			List<Habitat> habitats, List<Zone> zones) {
-		this(game, exportHash, Scale.SURFACE_Y, Scale.LAYER_STEP, maps, Map.of(), slotMapHash, storyCells, habitats, zones, null);
+		this(game, exportHash, Scale.SURFACE_Y, Scale.LAYER_STEP, maps, Map.of(), slotMapHash, storyCells, habitats, zones, null, List.of());
 	}
 
 	public WorldIndex(String game, String exportHash, Collection<MapPlacement> maps, String slotMapHash, StoryCellTable storyCells,
 			List<Habitat> habitats, List<Zone> zones, @Nullable Dungeons dungeons) {
-		this(game, exportHash, Scale.SURFACE_Y, Scale.LAYER_STEP, maps, Map.of(), slotMapHash, storyCells, habitats, zones, dungeons);
+		this(game, exportHash, Scale.SURFACE_Y, Scale.LAYER_STEP, maps, Map.of(), slotMapHash, storyCells, habitats, zones, dungeons, List.of());
 	}
 
 	/**
@@ -285,12 +321,18 @@ public final class WorldIndex {
 	 */
 	public WorldIndex(String game, String exportHash, Collection<MapPlacement> maps, Map<String, MapLayout> layouts, String slotMapHash,
 			StoryCellTable storyCells, List<Habitat> habitats, List<Zone> zones, @Nullable Dungeons dungeons) {
-		this(game, exportHash, Scale.SURFACE_Y, Scale.LAYER_STEP, maps, layouts, slotMapHash, storyCells, habitats, zones, dungeons);
+		this(game, exportHash, Scale.SURFACE_Y, Scale.LAYER_STEP, maps, layouts, slotMapHash, storyCells, habitats, zones, dungeons, List.of());
+	}
+
+	/** The same with the caves' shafts (CAVES_3D_PLAN §3.5). */
+	public WorldIndex(String game, String exportHash, Collection<MapPlacement> maps, Map<String, MapLayout> layouts, String slotMapHash,
+			StoryCellTable storyCells, List<Habitat> habitats, List<Zone> zones, @Nullable Dungeons dungeons, List<Shaft> shafts) {
+		this(game, exportHash, Scale.SURFACE_Y, Scale.LAYER_STEP, maps, layouts, slotMapHash, storyCells, habitats, zones, dungeons, shafts);
 	}
 
 	private WorldIndex(String game, String exportHash, int surfaceY, int layerStep, Collection<MapPlacement> maps,
 			Map<String, MapLayout> layouts, String slotMapHash, StoryCellTable storyCells, List<Habitat> habitats, List<Zone> zones,
-			@Nullable Dungeons dungeons) {
+			@Nullable Dungeons dungeons, List<Shaft> shafts) {
 		if (!GAMES.contains(game)) {
 			throw new IllegalArgumentException("unknown game");
 		}
@@ -337,6 +379,12 @@ public final class WorldIndex {
 		}
 		this.zones = List.copyOf(sortedZones);
 		this.dungeons = dungeons;
+		for (Shaft shaft : shafts) {
+			if (!byId.containsKey(shaft.top().map()) || !byId.containsKey(shaft.bottom().map())) {
+				throw new IllegalArgumentException("a shaft's ends must be on placed maps");
+			}
+		}
+		this.shafts = List.copyOf(shafts);
 		this.json = ProtoJson.write(this.toJsonObject());
 		this.hash = Hashes.sha256(this.json);
 	}
@@ -389,6 +437,31 @@ public final class WorldIndex {
 	}
 
 	/** Wild Routes zones, sorted by id (empty in a world built without any). */
+	/** The caves' shafts (CAVES_3D_PLAN §3.5). */
+	public List<Shaft> shafts() {
+		return this.shafts;
+	}
+
+	/** The shaft whose inside holds block (x, y, z), or null. */
+	public @Nullable Shaft shaftAt(int x, int y, int z) {
+		for (Shaft shaft : this.shafts) {
+			if (shaft.contains(x, y, z)) {
+				return shaft;
+			}
+		}
+		return null;
+	}
+
+	/** The shaft {@code cell} is an end of, or null. */
+	public @Nullable Shaft shaftEnd(CellPos cell) {
+		for (Shaft shaft : this.shafts) {
+			if (shaft.end(cell)) {
+				return shaft;
+			}
+		}
+		return null;
+	}
+
 	public List<Zone> zones() {
 		return this.zones;
 	}
@@ -431,6 +504,10 @@ public final class WorldIndex {
 	 * a few blocks of {@code y}. Empty outside every map (gaps, borders, between layers and pieces).
 	 */
 	public Optional<CellPos> toCell(int x, int y, int z) {
+		if (this.shaftAt(x, y, z) != null) {
+			// Inside a shaft: between floors, in no cell
+			return Optional.empty();
+		}
 		for (MapPlacement map : this.maps.values()) {
 			MapLayout layout = this.layouts.get(map.id());
 			if (layout != null) {
@@ -659,7 +736,31 @@ public final class WorldIndex {
 			region.addProperty("d", this.dungeons.d());
 			root.add("dungeons", region);
 		}
+		if (!this.shafts.isEmpty()) {
+			JsonArray shafts = new JsonArray();
+			for (Shaft shaft : this.shafts) {
+				JsonObject item = new JsonObject();
+				item.addProperty("kind", shaft.kind());
+				item.add("top", end(shaft.top()));
+				item.add("bottom", end(shaft.bottom()));
+				item.addProperty("up", shaft.up());
+				item.addProperty("x", shaft.x());
+				item.addProperty("z", shaft.z());
+				item.addProperty("y0", shaft.y0());
+				item.addProperty("y1", shaft.y1());
+				shafts.add(item);
+			}
+			root.add("shafts", shafts);
+		}
 		return root;
+	}
+
+	private static JsonObject end(CellPos cell) {
+		JsonObject out = new JsonObject();
+		out.addProperty("map", cell.map());
+		out.addProperty("x", cell.x());
+		out.addProperty("y", cell.y());
+		return out;
 	}
 
 	/** Parses and checks a WorldIndex document against the schema's rules. */
@@ -776,8 +877,27 @@ public final class WorldIndex {
 			dungeons = new Dungeons(region.integer("x"), region.integer("y"), region.integer("z"), region.integer("w", 1, Integer.MAX_VALUE),
 					region.integer("d", 1, Integer.MAX_VALUE));
 		}
+		List<Shaft> shafts = new ArrayList<>();
+		if (root.has("shafts")) {
+			for (DataReader item : DataReader.objects(root.array("shafts"), "/shafts")) {
+				item.allowOnly(SHAFT_FIELDS);
+				DataReader top = item.object("top").allowOnly(SHAFT_END_FIELDS);
+				DataReader bottom = item.object("bottom").allowOnly(SHAFT_END_FIELDS);
+				String kind = item.string("kind", DataReader.SYMBOL);
+				int y0 = item.integer("y0");
+				int y1 = item.integer("y1");
+				boolean up = item.bool("up");
+				if (!Shaft.LADDER.equals(kind) && !Shaft.HOLE.equals(kind) || y1 <= y0 || y1 - y0 > MAX_SHAFT || Shaft.HOLE.equals(kind) && up) {
+					throw new DataException("/shafts", "bad shaft");
+				}
+				shafts.add(new Shaft(kind, new CellPos(top.string("map", DataReader.MAP_ID), top.integer("x", 0, 4096), top.integer("y", 0, 4096)),
+						new CellPos(bottom.string("map", DataReader.MAP_ID), bottom.integer("x", 0, 4096), bottom.integer("y", 0, 4096)), up,
+						item.integer("x"), item.integer("z"), y0, y1));
+			}
+		}
 		try {
-			return new WorldIndex(game, exportHash, surfaceY, layerStep, maps, layouts, slotMapHash, storyCells, habitats, zones, dungeons);
+			return new WorldIndex(game, exportHash, surfaceY, layerStep, maps, layouts, slotMapHash, storyCells, habitats, zones, dungeons,
+					shafts);
 		} catch (IllegalArgumentException e) {
 			throw new DataException("/zones", e.getMessage());
 		}

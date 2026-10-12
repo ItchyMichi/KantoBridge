@@ -69,7 +69,7 @@ class ShapePlannerSyntheticTest {
 		ShapeMap map = plan.shapes().map();
 		assertEquals(dev.kantobridge.world.Hashes.sha256(plan.index().toJson()), map.indexHash());
 		assertEquals(plan.shapes().index().hash(), map.shapeHash());
-		assertEquals(5, map.grids().size(), "the surface, the two interiors and the cave's two floors");
+		assertEquals(6, map.grids().size(), "the surface, the two interiors, the cave's 1F and B1F's two rooms (H5)");
 		assertEquals(plan.shapes().shapedBlocks(), map.shapedBlocks());
 	}
 
@@ -105,9 +105,9 @@ class ShapePlannerSyntheticTest {
 		assertNotEquals(plan.shapes().map().hash(), filtered.shapes().map().hash());
 
 		List<MapPlacement> placements = new ArrayList<>(plan.index().maps().values());
-		ShapePlan forward = ShapePlanner.plan(plan.scene(), placements, ShapeParams.v2());
+		ShapePlan forward = ShapePlanner.plan(plan.scene(), placements, ShapeParams.v2(), Occupancy.NONE, null, plan.index().layouts());
 		Collections.reverse(placements);
-		ShapePlan backward = ShapePlanner.plan(plan.scene(), placements, ShapeParams.v2());
+		ShapePlan backward = ShapePlanner.plan(plan.scene(), placements, ShapeParams.v2(), Occupancy.NONE, null, plan.index().layouts());
 		assertEquals(forward.index().hash(), backward.index().hash());
 		assertEquals(forward.map().hash(), backward.map().hash());
 		assertEquals(plan.shapes().map().grids().size(), backward.map().grids().size());

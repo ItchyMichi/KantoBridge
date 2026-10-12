@@ -50,6 +50,8 @@ public final class KbBlocks {
 	public static EdgeWallBlock EDGE_WALL;
 	/** The half steps of a cave's stairs (docs/specs/CAVES_3D_PLAN.md §3.4). */
 	public static StepColliderBlock STEP_COLLIDER;
+	/** A cave shaft's ladder (docs/specs/CAVES_3D_PLAN.md §3.5). */
+	public static ShaftLadderBlock SHAFT_LADDER;
 	public static DecorBlock DECOR;
 	public static DecorBlock DECOR_LEAVES;
 	/** Wild Routes' props (WR7): the dungeon entrance, stairs and exit. */
@@ -99,6 +101,8 @@ public final class KbBlocks {
 		LEDGE_COLLIDER = register("ledge_collider", new LedgeColliderBlock(invisibleProperties()));
 		EDGE_WALL = register("edge_wall", new EdgeWallBlock(invisibleProperties()));
 		STEP_COLLIDER = register("step_collider", new StepColliderBlock(invisibleProperties()));
+		SHAFT_LADDER = register("shaft_ladder", new ShaftLadderBlock(BlockBehaviour.Properties.of().mapColor(MapColor.WOOD).strength(-1.0F, 3_600_000.0F)
+				.noLootTable().noOcclusion().sound(net.minecraft.world.level.block.SoundType.LADDER).pushReaction(PushReaction.BLOCK)));
 		DECOR = register("decor", new DecorBlock(decorProperties()));
 		DECOR_LEAVES = register("decor_leaves", new DecorBlock(decorProperties()));
 		PROP = register("prop", new PropBlock(BlockBehaviour.Properties.of().mapColor(MapColor.STONE).strength(-1.0F, 3_600_000.0F)

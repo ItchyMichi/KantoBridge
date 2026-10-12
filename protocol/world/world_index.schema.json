@@ -311,6 +311,26 @@
         "w": {"type": "integer", "minimum": 1},
         "d": {"type": "integer", "minimum": 1}
       }
+    },
+    "shafts": {
+      "type": "array",
+      "description": "Caves in 3D (docs/specs/CAVES_3D_PLAN.md §3.5, H5): each real ladder or hole, its top cell straight over its bottom cell; one 2x2 column at x, z from the bottom cell's feet y0 up to the top cell's floor y1. Absent when there are none.",
+      "maxItems": 4096,
+      "items": {
+        "type": "object",
+        "required": ["kind", "top", "bottom", "up", "x", "z", "y0", "y1"],
+        "additionalProperties": false,
+        "properties": {
+          "kind": {"enum": ["ladder", "hole"]},
+          "top": {"$ref": "../defs.schema.json#/$defs/cell"},
+          "bottom": {"$ref": "../defs.schema.json#/$defs/cell"},
+          "up": {"type": "boolean", "description": "Climbed up too: false for a hole, or a ladder whose bottom leads elsewhere."},
+          "x": {"type": "integer"},
+          "z": {"type": "integer"},
+          "y0": {"type": "integer"},
+          "y1": {"type": "integer"}
+        }
+      }
     }
   }
 }

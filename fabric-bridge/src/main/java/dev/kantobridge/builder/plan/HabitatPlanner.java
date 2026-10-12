@@ -3,6 +3,7 @@ package dev.kantobridge.builder.plan;
 import dev.kantobridge.builder.export.CellFlags;
 import dev.kantobridge.builder.export.ExportEncounters;
 import dev.kantobridge.builder.export.ExportField;
+import dev.kantobridge.world.MapLayout;
 import dev.kantobridge.world.MapPlacement;
 import dev.kantobridge.world.Scale;
 import dev.kantobridge.world.WorldIndex;
@@ -108,16 +109,28 @@ public final class HabitatPlanner {
 			MapPlacement p = map.placement();
 			int range = WorldPlan.BIOME_CAVE_3D.equals(p.biome()) ? CAVE_RANGE : RANGE;
 			// Raised ground (CAVES_3D_PLAN §3.4): habitat blocks stay under the map's floor, outside its volume, so a level's
-			// cells are covered with the reach left over their higher floor; a block two levels both pick is placed once.
-			Map<Integer, List<int[]>> byLevel = new TreeMap<>();
+			// cells are covered with the reach left over their higher floor; a block two levels both pick is placed once. A
+			// cave's rooms lie apart (§3.5): each room's cells are covered under it.
+			MapLayout layout = map.layout();
+			Map<Long, List<int[]>> groups = new TreeMap<>();
 			for (int[] cell : cells) {
-				byLevel.computeIfAbsent(map.level(cell[0], cell[1]), k -> new ArrayList<>()).add(cell);
+				MapLayout.Piece piece = layout == null ? null : layout.pieceAt(cell[0], cell[1]);
+				long room = piece == null ? 0 : layout.pieces().indexOf(piece);
+				groups.computeIfAbsent(room * (MapLayout.MAX_LEVEL + 1) + map.level(cell[0], cell[1]), k -> new ArrayList<>()).add(cell);
 			}
 			Set<Long> placedAt = new HashSet<>();
-			for (Map.Entry<Integer, List<int[]>> level : byLevel.entrySet()) {
-				for (int[] block : cover(p, level.getValue(), range, FLOOR_ABOVE + level.getKey())) {
-					if (placedAt.add(((long) block[0] << 32) ^ (block[1] & 0xFFFFFFFFL))) {
-						out.add(new WorldIndex.Habitat(map.id(), block[0], p.y() - BELOW_FEET, block[1], poolId(map.id()), range));
+			for (Map.Entry<Long, List<int[]>> group : groups.entrySet()) {
+				int level = (int) (group.getKey() % (MapLayout.MAX_LEVEL + 1));
+				int[] first = group.getValue().get(0);
+				MapLayout.Piece piece = layout == null ? null : layout.pieceAt(first[0], first[1]);
+				int dx = piece == null ? 0 : piece.dx();
+				int dy = piece == null ? 0 : piece.dy();
+				int dz = piece == null ? 0 : piece.dz();
+				for (int[] block : cover(p, group.getValue(), range, FLOOR_ABOVE + level)) {
+					int x = block[0] + dx;
+					int z = block[1] + dz;
+					if (placedAt.add(((long) x << 32) ^ (z & 0xFFFFFFFFL))) {
+						out.add(new WorldIndex.Habitat(map.id(), x, p.y() + dy - BELOW_FEET, z, poolId(map.id()), range));
 					}
 				}
 			}

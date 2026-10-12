@@ -686,7 +686,7 @@
       "seq": 42,
       "redacted": {
         "from": {"map": "TEST_CAVE_1F", "x": 5, "y": 7},
-        "to": {"map": "TEST_CAVE_B1F", "x": 4, "y": 4, "facing": "down"},
+        "to": {"map": "TEST_CAVE_B1F", "x": 5, "y": 5, "facing": "down"},
         "kind": "hole"
       }
     },

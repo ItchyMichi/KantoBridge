@@ -266,7 +266,7 @@ MAPS = {
     "TEST_CAVE_B1F": {
         "index": 60, "blocks": CAVE_B1F_BLOCKS, "border": CK, "surface": False, "outside": False, "tileset": "CAVERN",
         "warps": [{"x": 3, "y": 3, "to": "TEST_CAVE_1F", "warp": 3}, {"x": 9, "y": 3, "to": "TEST_CAVE_1F", "warp": 2},
-                  {"x": 4, "y": 4, "to": "TEST_CAVE_1F", "warp": 4}],
+                  {"x": 5, "y": 5, "to": "TEST_CAVE_1F", "warp": 4}],
         "signs": [], "objects": [],
         "parent": {"map": "TEST_CAVE_1F", "warp": 3, "x": 3, "y": 5}, "lastMap": "TEST_TOWN",
     },

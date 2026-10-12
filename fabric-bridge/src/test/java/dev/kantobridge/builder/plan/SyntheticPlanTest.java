@@ -67,15 +67,20 @@ class SyntheticPlanTest {
 		assertEquals(new Box3(ox(-12), 63, oz(-36), ox(52), 95, oz(48)), plan.surfaceBox(), "ground + 32 since the profile plan's P2");
 		// The cave area (CAVES_3D_PLAN §3.3): north of the dungeon region, from Kanto's west edge, whole chunks; the cave's
 		// one complex in its slot (8 blocks of margin around its floors and their rings), 1F on top at feet 64 and B1F
-		// 11 blocks under it, placed so the ladder from 1F's plateau (9, 3) lands on B1F's (9, 3).
+		// 11 blocks under it. Its rooms lie apart (H5): B1F's east room under 1F's ladder at (9, 3), its west room (its
+		// first, so its placement's) 4 blocks south, under the ladder at (3, 5) and the hole at (5, 7).
 		int areaX = Math.floorDiv(ox(-12), 16) * 16;
 		int dungeonsZ = Math.floorDiv(oz(-36) - dev.kantobridge.dungeon.DungeonSlots.GAP - 160, 16) * 16;
 		// the complex's box: 18 blocks deep (8 cells and the ring), with its margins
 		int areaZ = Math.floorDiv(dungeonsZ - CavePlanner.GAP - (18 + 2 * CavePlanner.MARGIN), 16) * 16;
 		assertEquals(new MapPlacement("TEST_CAVE_1F", areaX + 9, 64, areaZ + 9, 12, 8, 1, MapPlacement.Kind.INTERIOR, "TEST_PALETTE",
 				WorldPlan.BIOME_CAVE_3D, false, "TEST_TOWN"), plan.index().map("TEST_CAVE_1F"));
-		assertEquals(new MapPlacement("TEST_CAVE_B1F", areaX + 9, 64 - CavePlanner.FLOOR_STEP, areaZ + 9, 12, 8, 2, MapPlacement.Kind.INTERIOR,
+		assertEquals(new MapPlacement("TEST_CAVE_B1F", areaX + 9, 64 - CavePlanner.FLOOR_STEP, areaZ + 9 + 4, 12, 8, 2, MapPlacement.Kind.INTERIOR,
 				"TEST_PALETTE", WorldPlan.BIOME_CAVE_3D, false, "TEST_CAVE_1F"), plan.index().map("TEST_CAVE_B1F"));
+		dev.kantobridge.world.MapLayout b1f = plan.index().layout("TEST_CAVE_B1F");
+		assertEquals(0, b1f.pieces().get(0).dz(), "the west room");
+		assertEquals(-4, b1f.pieces().get(1).dz(), "the east room, 4 blocks north of it");
+		assertEquals(3, plan.index().shafts().size(), "the two ladders and the hole, each lined up");
 		assertEquals(1, plan.warnings().noteCount("cave_complexes"));
 		assertEquals(2, plan.warnings().noteCount("cave_maps"));
 	}
@@ -196,10 +201,10 @@ class SyntheticPlanTest {
 	@Test
 	void volumesAndChunks() {
 		List<Box3> volumes = plan.volumes();
-		assertEquals(5, volumes.size(), "the surface (town and hill), two interiors and the cave's two floors");
+		assertEquals(9, volumes.size(), "the surface (town and hill), two interiors, the cave's 1F and B1F's two rooms, three shafts");
 		List<long[]> chunks = WorldPlan.chunks(volumes);
-		assertEquals(30 + 6, chunks.size(), "5 × 6 chunks of surface, the interiors under it; 3 × 2 for the cave");
-		assertEquals(5, plan.biomeRegions().size());
+		assertEquals(30 + 4, chunks.size(), "5 × 6 chunks of surface, the interiors under it; 2 × 2 for the cave's rooms and shafts");
+		assertEquals(6, plan.biomeRegions().size(), "the surface, the two interiors, one per cave room");
 	}
 
 	@Test

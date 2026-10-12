@@ -57,7 +57,10 @@ class RaisedCaveTest {
 		assertEquals(List.of(Map.of("map", "TEST_CAVE_B1F")), plan.warnings().details("cave_levels_flat_one_side"));
 		assertEquals(2, plan.warnings().notes().get("cave_stairs_profile_confirmed"));
 		assertNull(plan.warnings().notes().get("cave_stairs_profile_other"));
-		assertNull(plan.maps().stream().filter(m -> m.id().equals("TEST_CAVE_B1F")).findFirst().orElseThrow().layout());
+		MapLayout b1f = plan.maps().stream().filter(m -> m.id().equals("TEST_CAVE_B1F")).findFirst().orElseThrow().layout();
+		for (int i = 0; i < b1f.w() * b1f.h(); i++) {
+			assertEquals(0, b1f.level(i % b1f.w(), i / b1f.w()), "B1F stays flat; its layout holds its rooms (H5)");
+		}
 	}
 
 	@Test

@@ -159,16 +159,22 @@ public final class WorldPlanner {
 		// The cave area (docs/specs/CAVES_3D_PLAN.md §3.3): caves leave the interior layers for an area of their own north of
 		// Kanto, past the dungeon slots; their entrances fade over the distance, as Fly does.
 		Set<String> caves = CavePlanner.caves(all, requested, CAVE_TILESET);
-		CavePlanner.Result caveArea = CavePlanner.place(all, caves, surfaceVolume, options.originX(), options.originZ(), warnings);
-		for (MapPlacement cave : caveArea.placements()) {
-			placements.put(cave.id(), cave);
-		}
 		// The caves built in 3D: every map of a complex the pilot switch names (CAVES_3D_PLAN §0)
 		Set<String> caves3d = new HashSet<>();
-		for (List<String> complex : caveArea.complexes()) {
+		for (List<String> complex : CavePlanner.complexes(all, caves)) {
 			if (Caves3d.in3d(options.caves3d(), complex)) {
 				caves3d.addAll(complex);
 			}
+		}
+		// Their rooms never depend on the story: a swap site's cells count as walked on (§3.5)
+		Map<String, List<int[]>> siteBlocks = new HashMap<>();
+		for (ExportSwaps.Site site : bundle.swaps().sites()) {
+			siteBlocks.computeIfAbsent(site.map(), k -> new ArrayList<>()).add(new int[] {site.bx(), site.by()});
+		}
+		CavePlanner.Result caveArea = CavePlanner.place(all, caves, caves3d, siteBlocks, surfaceVolume, options.originX(), options.originZ(),
+				warnings);
+		for (MapPlacement cave : caveArea.placements()) {
+			placements.put(cave.id(), cave);
 		}
 		String forest = field.indoor() == null ? null : field.indoor().excludedTileset();
 		List<ExportMap> pending = new ArrayList<>();
@@ -272,6 +278,11 @@ public final class WorldPlanner {
 				warnings.note("cave_stairs_profile_confirmed", levels.stairsConfirmed());
 				warnings.note("cave_stairs_profile_other", levels.stairsOther());
 				raised = levels.layout();
+			}
+			// Its rooms, laid out apart so its ladders and holes line up (§3.5): its pieces, with the levels
+			List<MapLayout.Piece> pieces = caveArea.pieces().get(map.id());
+			if (pieces != null) {
+				raised = withPieces(model, pieces, raised);
 			}
 			placed.add(new PlacedMap(placement, model, edges, raised));
 		}
@@ -384,8 +395,9 @@ public final class WorldPlanner {
 				layouts.put(map.id(), map.layout());
 			}
 		}
+		List<WorldIndex.Shaft> shafts = shafts(caveArea.shafts(), placements, layouts);
 		WorldIndex index = new WorldIndex(bundle.game(), bundle.exportHash(), placements.values(), layouts, slotMap.hash(), storyCells, habitats,
-				List.of(), null);
+				List.of(), null, shafts);
 
 		// ---- shapes (docs/specs/VOXEL_BLOCKS_PLAN.md §5.4): keys of the whole export, positions of the placed maps ----
 		Scene scene = null;
@@ -398,7 +410,8 @@ public final class WorldPlanner {
 				scene = frontEnd.describe(bundle);
 				// The probe of the profile plan's PD3 asks this export's own art whether a repeating cell stands as a unit.
 				shapes = ShapePlanner.plan(scene, placements.values(), ShapeParams.current(),
-						occupancy(placed, storyIndex, storyCells, surfaceBox, owner, voidCells), new ArtUnitProbe(BundleArtSource.of(bundle)), layouts)
+						occupancy(placed, storyIndex, storyCells, surfaceBox, owner, voidCells), new ArtUnitProbe(BundleArtSource.of(bundle)), layouts,
+						shafts)
 						.withIndexHash(index.hash());
 			}
 		}
@@ -410,6 +423,55 @@ public final class WorldPlanner {
 		return new WorldPlan(bundle.game(), bundle.exportHash(), options.originX(), options.originZ(), placed, surfaceBox, owner, voidCells,
 				storyCells, storyIndex, art, spawn, index, pools, warnings, mapsRequested, unplaced, layout.edgeMismatches(), layout.overlaps(), scene,
 				shapes);
+	}
+
+	/** A map's layout with its rooms' pieces (CAVES_3D_PLAN §3.5) and, if it has any, its levels and ramps (§3.4). */
+	static MapLayout withPieces(MapModel model, List<MapLayout.Piece> pieces, @Nullable MapLayout levels) {
+		int w = model.cellWidth();
+		int h = model.cellHeight();
+		int[] lv = null;
+		List<MapLayout.Ramp> ramps = new ArrayList<>();
+		if (levels != null) {
+			lv = new int[w * h];
+			for (int cy = 0; cy < h; cy++) {
+				for (int cx = 0; cx < w; cx++) {
+					lv[cy * w + cx] = levels.level(cx, cy);
+				}
+			}
+			ramps.addAll(levels.ramps());
+		}
+		return MapLayout.of(w, h, pieces, lv, ramps);
+	}
+
+	/**
+	 * The shafts in the world (CAVES_3D_PLAN §3.5, §4.1): each lined-up ladder or hole, from its bottom cell's feet up
+	 * to its top cell's floor, in its top cell's column.
+	 */
+	static List<WorldIndex.Shaft> shafts(List<CaveRooms.Link> links, Map<String, MapPlacement> placements, Map<String, MapLayout> layouts) {
+		List<WorldIndex.Shaft> out = new ArrayList<>();
+		for (CaveRooms.Link link : links) {
+			MapPlacement top = placements.get(link.topMap());
+			MapPlacement bottom = placements.get(link.bottomMap());
+			if (top == null || bottom == null) {
+				continue;
+			}
+			int[] t = origin(top, layouts.get(link.topMap()), link.topX(), link.topY());
+			int[] b = origin(bottom, layouts.get(link.bottomMap()), link.bottomX(), link.bottomY());
+			if (t[0] != b[0] || t[2] != b[2] || b[1] >= t[1] - 1) {
+				continue;
+			}
+			out.add(new WorldIndex.Shaft(link.kind(), new dev.kantobridge.world.CellPos(link.topMap(), link.topX(), link.topY()),
+					new dev.kantobridge.world.CellPos(link.bottomMap(), link.bottomX(), link.bottomY()), link.up(), t[0], t[2], b[1], t[1] - 1));
+		}
+		return out;
+	}
+
+	/** A cell's north-west block at its feet: {x, y, z} (its piece's offset and its level counted). */
+	private static int[] origin(MapPlacement p, @Nullable MapLayout layout, int cx, int cy) {
+		MapLayout.Piece piece = layout == null ? null : layout.pieceAt(cx, cy);
+		int level = layout == null ? 0 : layout.level(cx, cy);
+		return new int[] {p.x() + Scale.cellToBlock(cx) + (piece == null ? 0 : piece.dx()), p.y() + (piece == null ? 0 : piece.dy()) + level,
+				p.z() + Scale.cellToBlock(cy) + (piece == null ? 0 : piece.dz())};
 	}
 
 	/**

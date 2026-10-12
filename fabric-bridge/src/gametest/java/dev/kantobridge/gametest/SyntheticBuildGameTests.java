@@ -121,6 +121,7 @@ public class SyntheticBuildGameTests implements FabricGameTest {
 				.thenWaitUntil(() -> waitFor(helper, first))
 				.thenExecute(() -> verifyFirstBuild(helper, first[0]))
 				.thenExecute(() -> verifyRaisedCave(helper, first[0]))
+				.thenExecute(() -> verifyShafts(helper, first[0]))
 				.thenExecute(() -> verifyStoryCells(helper, first[0]))
 				.thenExecute(() -> second[0] = start(helper, null))
 				.thenWaitUntil(() -> waitFor(helper, second))
@@ -144,8 +145,9 @@ public class SyntheticBuildGameTests implements FabricGameTest {
 		helper.assertTrue(report.packTextures == 32, "pack_textures " + report.packTextures);
 		helper.assertTrue(report.worldIndex, "world_index not written");
 		helper.assertTrue(report.layers == 2, "layers " + report.layers);
-		helper.assertTrue(report.chunks == 36, "chunks " + report.chunks);
-		helper.assertTrue(report.biomeChunks == 36, "biome chunks " + report.biomeChunks);
+		// The cave's rooms and shafts take 2 × 2 chunks (CAVES_3D_PLAN §3.5: no room draws the rock far from it).
+		helper.assertTrue(report.chunks == 34, "chunks " + report.chunks);
+		helper.assertTrue(report.biomeChunks == 34, "biome chunks " + report.biomeChunks);
 		helper.assertTrue(report.blocksPlaced > 5000, "blocks_placed " + report.blocksPlaced);
 		helper.assertTrue(report.lightBlocks > 0, "no interior lights");
 		helper.assertTrue("TEST_TOWN".equals(report.spawnMap), "spawn map " + report.spawnMap);
@@ -320,6 +322,39 @@ public class SyntheticBuildGameTests implements FabricGameTest {
 			player.setPos(x0 + 5.0, y0, z0 + 9.0);
 			CollisionGameTests.walk(player, 0.25, 0, 8);
 			helper.assertTrue(player.getX() > x0 + 6.9 && player.getY() < y0 + 0.1, "the floor stopped a player");
+		});
+	}
+
+	/**
+	 * The cave's shafts as built (CAVES_3D_PLAN §3.5): a player falls through the hole onto the cell it leads to, and the
+	 * ladders are Minecraft's climbable ladders.
+	 */
+	private static void verifyShafts(GameTestHelper helper, BuildTask task) {
+		WorldIndex index = readIndex(helper, task);
+		ServerLevel level = helper.getLevel();
+		helper.assertTrue(index.shafts().size() == 3, "shafts " + index.shafts().size());
+		for (WorldIndex.Shaft shaft : index.shafts()) {
+			for (int z = shaft.z() - 16; z <= shaft.z() + 16; z += 16) {
+				for (int x = shaft.x() - 16; x <= shaft.x() + 16; x += 16) {
+					level.getChunk(new BlockPos(x, shaft.y0(), z));
+				}
+			}
+		}
+		WorldIndex.Shaft hole = index.shafts().stream().filter(s -> WorldIndex.Shaft.HOLE.equals(s.kind())).findFirst().orElseThrow();
+		WorldIndex.Shaft ladder = index.shafts().stream().filter(s -> WorldIndex.Shaft.LADDER.equals(s.kind())).findFirst().orElseThrow();
+		BlockState rung = level.getBlockState(new BlockPos(ladder.x(), ladder.y0() + 3, ladder.z()));
+		helper.assertTrue(rung.is(KbBlocks.SHAFT_LADDER) && rung.is(net.minecraft.tags.BlockTags.CLIMBABLE), "no climbable ladder up the shaft: " + rung);
+		MockPlayers.with(helper, player -> {
+			// Fallen into the hole from its top cell: down the shaft onto the bottom cell's floor.
+			player.setPos(hole.x() + 1.0, hole.y1() + 1, hole.z() + 1.0);
+			for (int i = 0; i < 20; i++) {
+				player.move(MoverType.SELF, new Vec3(0, -1.0, 0));
+			}
+			helper.assertTrue(Math.abs(player.getY() - hole.y0()) < 1e-6, "the fall didn't end on the floor below: " + player.position());
+			helper.assertTrue(index.toCell(player.blockPosition()).map(hole.bottom()::equals).orElse(false), "landed off the hole's bottom cell");
+			// On the ladder, a player climbs.
+			player.setPos(ladder.x() + 0.5, ladder.y0() + 3, ladder.z() + 0.5);
+			helper.assertTrue(player.onClimbable(), "a player on the shaft's ladder can't climb it");
 		});
 	}
 

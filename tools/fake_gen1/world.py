@@ -33,10 +33,10 @@ ARRIVALS = {
     ("TEST_CAVE_1F", 3, 7): ("TEST_TOWN", 17, 9, "down", "stairs", None),
     ("TEST_CAVE_1F", 9, 3): ("TEST_CAVE_B1F", 9, 3, "down", "stairs", None),
     ("TEST_CAVE_1F", 3, 5): ("TEST_CAVE_B1F", 3, 3, "down", "stairs", None),
-    ("TEST_CAVE_1F", 5, 7): ("TEST_CAVE_B1F", 4, 4, "down", "hole", None),
+    ("TEST_CAVE_1F", 5, 7): ("TEST_CAVE_B1F", 5, 5, "down", "hole", None),
     ("TEST_CAVE_B1F", 3, 3): ("TEST_CAVE_1F", 3, 5, "down", "stairs", None),
     ("TEST_CAVE_B1F", 9, 3): ("TEST_CAVE_1F", 9, 3, "down", "stairs", None),
-    ("TEST_CAVE_B1F", 4, 4): ("TEST_CAVE_1F", 5, 7, "down", "hole", None),
+    ("TEST_CAVE_B1F", 5, 5): ("TEST_CAVE_1F", 5, 7, "down", "hole", None),
 }
 OBJECT_KINDS = {"item": "item", "trainer": "trainer", "pokemon": "static"}
 

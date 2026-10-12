@@ -235,7 +235,8 @@ public final class WorldPlan {
 		// WR7: a world with a dungeon gets the dungeon region, north of Kanto
 		boolean dungeons = entries.stream().anyMatch(z -> z.dungeon() != null);
 		WorldIndex withZones = new WorldIndex(this.game, this.exportHash, placements, this.index.layouts(), this.index.slotMapHash(), table,
-				habitats, entries, dungeons ? dev.kantobridge.dungeon.DungeonSlots.region(this.surfaceBox, this.originX, this.originZ) : null);
+				habitats, entries, dungeons ? dev.kantobridge.dungeon.DungeonSlots.region(this.surfaceBox, this.originX, this.originZ) : null,
+				this.index.shafts());
 		return new WorldPlan(this, zones, withZones, table, storyIndex, ballStory, pools);
 	}
 
@@ -378,8 +379,13 @@ public final class WorldPlan {
 		}
 		for (PlacedMap map : this.maps) {
 			if (map.interior()) {
-				out.add(interiorVolume(map.placement(), maxCeiling(map.layout())));
+				for (MapLayout.Piece piece : parts(map.placement(), map.layout())) {
+					out.add(partVolume(map.placement(), piece, maxCeiling(map.layout())));
+				}
 			}
+		}
+		for (WorldIndex.Shaft shaft : this.index.shafts()) {
+			out.add(shaftVolume(shaft));
 		}
 		for (ZonePlan zone : this.zones) {
 			out.add(zone.volume());
@@ -402,6 +408,38 @@ public final class WorldPlan {
 	 */
 	public static Box3 interiorVolume(MapPlacement p) {
 		return interiorVolume(p, CEILING_ABOVE_FEET);
+	}
+
+	/**
+	 * The parts a map is drawn in (CAVES_3D_PLAN §3.5): its layout's pieces, each at its offset with the rock round it,
+	 * or the whole map at its placement.
+	 */
+	public static List<MapLayout.Piece> parts(MapPlacement p, @Nullable MapLayout layout) {
+		return layout == null ? List.of(new MapLayout.Piece(0, 0, p.w(), p.h(), 0, 0, 0)) : layout.pieces();
+	}
+
+	/** The volume of one part of an interior: its rectangle and enclosure ring at its offset ({@link #interiorVolume}). */
+	public static Box3 partVolume(MapPlacement p, MapLayout.Piece piece, int ceiling) {
+		boolean sky = openSky(p);
+		int top = sky ? Canopy.TOP_LEVEL : ceiling;
+		int grow = sky ? SKY_MARGIN - InteriorPacker.RING : 0;
+		InteriorPacker.Box box = InteriorPacker.footprint(p.x() + piece.dx() + Scale.cellToBlock(piece.x()), p.z() + piece.dz() + Scale.cellToBlock(piece.y()),
+				Scale.cellToBlock(piece.w()), Scale.cellToBlock(piece.h()));
+		int feet = p.y() + piece.dy();
+		return new Box3(box.minX() - grow, feet - 1, box.minZ() - grow, box.maxX() + grow, feet + top + 1, box.maxZ() + grow);
+	}
+
+	/** A cell's north-west block at its feet, {x, y, z}: its piece's offset and its level counted. */
+	public static int[] cellOrigin(MapPlacement p, @Nullable MapLayout layout, int cx, int cy) {
+		MapLayout.Piece piece = layout == null ? null : layout.pieceAt(cx, cy);
+		return new int[] {p.x() + Scale.cellToBlock(cx) + (piece == null ? 0 : piece.dx()), p.y() + (piece == null ? 0 : piece.dy()) + level(layout, cx, cy),
+				p.z() + Scale.cellToBlock(cy) + (piece == null ? 0 : piece.dz())};
+	}
+
+	/** A shaft's volume: its column and the ring of rock round it, from its bottom cell's feet to its top cell's. */
+	public static Box3 shaftVolume(WorldIndex.Shaft shaft) {
+		return new Box3(shaft.x() - 1, shaft.y0(), shaft.z() - 1, shaft.x() + Scale.CELL_BLOCKS + 1, shaft.y1() + 2,
+				shaft.z() + Scale.CELL_BLOCKS + 1);
 	}
 
 	/** The same, with its highest ceiling {@code ceiling} blocks above its feet (a raised cave's, {@link #maxCeiling}). */
@@ -516,8 +554,14 @@ public final class WorldPlan {
 		}
 		for (MapPlacement p : previous.maps().values()) {
 			if (p.kind() == MapPlacement.Kind.INTERIOR) {
-				out.add(interiorVolume(p, maxCeiling(previous.layout(p.id()))));
+				MapLayout layout = previous.layout(p.id());
+				for (MapLayout.Piece piece : parts(p, layout)) {
+					out.add(partVolume(p, piece, maxCeiling(layout)));
+				}
 			}
+		}
+		for (WorldIndex.Shaft shaft : previous.shafts()) {
+			out.add(shaftVolume(shaft));
 		}
 		// Wild Routes: an older build's zones are cleared too
 		for (WorldIndex.Zone zone : previous.zones()) {
@@ -556,10 +600,12 @@ public final class WorldPlan {
 				continue;
 			}
 			int ceiling = maxCeiling(map.layout());
-			Box3 v = interiorVolume(map.placement(), ceiling).inflateXZ(4);
-			int feet = map.placement().y();
 			int top = openSky(map.placement()) ? Canopy.TOP_LEVEL + 2 : 8 + ceiling - CEILING_ABOVE_FEET;
-			out.add(new BiomeRegion(new Box3(v.minX(), feet - 4, v.minZ(), v.maxX(), feet + top, v.maxZ()), map.placement().biome()));
+			for (MapLayout.Piece piece : parts(map.placement(), map.layout())) {
+				Box3 v = partVolume(map.placement(), piece, ceiling).inflateXZ(4);
+				int feet = map.placement().y() + piece.dy();
+				out.add(new BiomeRegion(new Box3(v.minX(), feet - 4, v.minZ(), v.maxX(), feet + top, v.maxZ()), map.placement().biome()));
+			}
 		}
 		for (ZonePlan zone : this.zones) {
 			out.add(zone.biomeRegion());
@@ -603,14 +649,22 @@ public final class WorldPlan {
 			if (!map.interior()) {
 				continue;
 			}
-			Box3 volume = interiorVolume(map.placement(), maxCeiling(map.layout()));
-			if (!volume.intersectsChunk(chunkX, chunkZ)) {
-				continue;
-			}
-			for (int z = Math.max(z0, volume.minZ()); z < Math.min(z0 + 16, volume.maxZ()); z++) {
-				for (int x = Math.max(x0, volume.minX()); x < Math.min(x0 + 16, volume.maxX()); x++) {
-					this.renderInteriorColumn(out::set, map, x, z);
+			for (MapLayout.Piece piece : parts(map.placement(), map.layout())) {
+				Box3 volume = partVolume(map.placement(), piece, maxCeiling(map.layout()));
+				if (!volume.intersectsChunk(chunkX, chunkZ)) {
+					continue;
 				}
+				for (int z = Math.max(z0, volume.minZ()); z < Math.min(z0 + 16, volume.maxZ()); z++) {
+					for (int x = Math.max(x0, volume.minX()); x < Math.min(x0 + 16, volume.maxX()); x++) {
+						this.renderInteriorColumn(out::set, map, piece, x, z);
+					}
+				}
+			}
+		}
+		// The caves' shafts (CAVES_3D_PLAN §3.5), over the rooms they open into
+		for (WorldIndex.Shaft shaft : this.index.shafts()) {
+			if (shaftVolume(shaft).intersectsChunk(chunkX, chunkZ)) {
+				this.renderShaft(out, shaft, x0, z0);
 			}
 		}
 		for (int zi = 0; zi < this.zones.size(); zi++) {
@@ -688,10 +742,25 @@ public final class WorldPlan {
 		return ((z - box.minZ()) / Scale.CELL_BLOCKS) * w + (x - box.minX()) / Scale.CELL_BLOCKS;
 	}
 
-	private void renderInteriorColumn(CodeSink sink, PlacedMap map, int x, int z) {
+	private void renderInteriorColumn(CodeSink sink, PlacedMap map, MapLayout.Piece piece, int x, int z) {
 		MapPlacement p = map.placement();
-		if (p.containsColumn(x, z)) {
-			this.renderMapColumn(sink, map, x, z);
+		// The map's own cells as this part places them (its whole rectangle for a map in one piece)
+		int tx = x - p.x() - piece.dx();
+		int ty = z - p.z() - piece.dz();
+		int cx = Math.floorDiv(tx, Scale.CELL_BLOCKS);
+		int cy = Math.floorDiv(ty, Scale.CELL_BLOCKS);
+		boolean inside = cx >= piece.x() && cy >= piece.y() && cx < piece.x() + piece.w() && cy < piece.y() + piece.h();
+		if (inside && piece.contains(cx, cy)) {
+			this.renderMapColumn(sink, map, piece, x, z);
+			return;
+		}
+		if (this.drawnBySameFrame(map, piece, cx, cy, inside)) {
+			// Another piece at this offset draws the column (rooms of one map that didn't move apart)
+			return;
+		}
+		if (inside) {
+			// Another room's cell in this one's rectangle: rock (CAVES_3D_PLAN §3.5)
+			this.renderRingColumn(sink, map, piece, tx, ty, x, z);
 			return;
 		}
 		ShapePlanner.MapShapes planned = this.shapes == null ? null : this.shapes.shapes(map.id());
@@ -700,23 +769,142 @@ public final class WorldPlan {
 			this.renderApronColumn(sink, map, apron, x, z);
 			return;
 		}
-		InteriorPacker.Box footprint = InteriorPacker.footprint(p.x(), p.z(), p.blockWidth(), p.blockDepth());
+		InteriorPacker.Box footprint = InteriorPacker.footprint(p.x() + piece.dx() + Scale.cellToBlock(piece.x()),
+				p.z() + piece.dz() + Scale.cellToBlock(piece.y()), Scale.cellToBlock(piece.w()), Scale.cellToBlock(piece.h()));
 		if (x < footprint.minX() || x >= footprint.maxX() || z < footprint.minZ() || z >= footprint.maxZ()) {
 			// The margin a sky interior keeps for an apron (CW3): air without one.
 			return;
 		}
-		// The enclosure ring: border-block art from the floor block up to the ceiling; a dressed room's wall tile (V7).
-		int tile = planned != null && planned.wallTile() >= 0 ? planned.wallTile() : this.ringTile(map, x - p.x(), z - p.z());
-		int code = BlockCode.full(this.slot(map, tile, false));
-		for (int y = p.y() - 1; y <= p.y() + maxCeiling(map.layout()); y++) {
-			sink.set(x, y, z, code);
-		}
+		this.renderRingColumn(sink, map, piece, tx, ty, x, z);
 		if (planned != null && planned.curtain() != null && openSky(p)) {
 			// An open-sky wood's leaf curtain above the ring (CW2), on decor carriers: the ring keeps its collision.
 			for (int k = Canopy.CURTAIN_FROM; k < Canopy.TOP_LEVEL; k++) {
 				sink.set(x, p.y() + k, z, BlockCode.decor(true));
 			}
 		}
+	}
+
+	/**
+	 * A column of an enclosure ring, or of rock where a room's rectangle holds another room's cell: border-block art from
+	 * the floor block up to the highest ceiling; a dressed room's wall tile (V7). ({@code tx}, {@code ty}) is the column
+	 * in the map's own blocks.
+	 */
+	private void renderRingColumn(CodeSink sink, PlacedMap map, MapLayout.Piece piece, int tx, int ty, int x, int z) {
+		MapPlacement p = map.placement();
+		ShapePlanner.MapShapes planned = this.shapes == null ? null : this.shapes.shapes(map.id());
+		int tile = planned != null && planned.wallTile() >= 0 ? planned.wallTile() : this.ringTile(map, tx, ty);
+		int code = BlockCode.full(this.slot(map, tile, false));
+		int base = p.y() + piece.dy();
+		for (int y = base - 1; y <= base + maxCeiling(map.layout()); y++) {
+			sink.set(x, y, z, code);
+		}
+	}
+
+	/**
+	 * True when another piece of the map at the same offset draws column (cx, cy) (in the map's cells): it owns that cell,
+	 * or ({@code inside} false, a ring column) its rectangle holds it.
+	 */
+	private boolean drawnBySameFrame(PlacedMap map, MapLayout.Piece piece, int cx, int cy, boolean inside) {
+		MapLayout layout = map.layout();
+		if (layout == null) {
+			return false;
+		}
+		for (MapLayout.Piece other : layout.pieces()) {
+			if (other == piece || other.dx() != piece.dx() || other.dy() != piece.dy() || other.dz() != piece.dz()) {
+				continue;
+			}
+			boolean holds = cx >= other.x() && cy >= other.y() && cx < other.x() + other.w() && cy < other.y() + other.h();
+			if (inside ? other.contains(cx, cy) : holds) {
+				return true;
+			}
+		}
+		return false;
+	}
+
+	/**
+	 * A cave's shaft (CAVES_3D_PLAN §3.5): air from over its bottom cell's feet up through its top cell's floor; a ladder
+	 * (Minecraft's, climbed as one) up one wall from the bottom cell's feet to the top cell's, unless it is a hole; rock
+	 * round it where it runs between the two rooms; a light half way up unless the cave is dark.
+	 */
+	private void renderShaft(ChunkCodes out, WorldIndex.Shaft shaft, int x0, int z0) {
+		PlacedMap top = this.map(shaft.top().map());
+		PlacedMap bottom = this.map(shaft.bottom().map());
+		if (top == null || bottom == null) {
+			return;
+		}
+		Box3 topVolume = partVolume(top.placement(), part(top, shaft.top().x(), shaft.top().y()), maxCeiling(top.layout()));
+		Box3 bottomVolume = partVolume(bottom.placement(), part(bottom, shaft.bottom().x(), shaft.bottom().y()), maxCeiling(bottom.layout()));
+		Dir wall = WorldIndex.Shaft.LADDER.equals(shaft.kind()) ? ladderWall(top.model(), shaft.top().x(), shaft.top().y()) : null;
+		MapPlacement tp = top.placement();
+		int rock = BlockCode.full(this.slot(top, top.model().borderTile(shaft.top().x() * Scale.CELL_BLOCKS, shaft.top().y() * Scale.CELL_BLOCKS), false));
+		int middle = (shaft.y0() + shaft.y1()) / 2;
+		boolean lit = !bottom.placement().dark() && !tp.dark();
+		for (int z = shaft.z() - 1; z <= shaft.z() + Scale.CELL_BLOCKS; z++) {
+			for (int x = shaft.x() - 1; x <= shaft.x() + Scale.CELL_BLOCKS; x++) {
+				if (x < x0 || x >= x0 + 16 || z < z0 || z >= z0 + 16) {
+					continue;
+				}
+				int bx = x - shaft.x();
+				int bz = z - shaft.z();
+				boolean column = bx >= 0 && bz >= 0 && bx < Scale.CELL_BLOCKS && bz < Scale.CELL_BLOCKS;
+				if (!column) {
+					// The ring: rock where neither room's volume holds the position
+					for (int y = shaft.y0() + 1; y <= shaft.y1(); y++) {
+						if (!topVolume.contains(x, y, z) && !bottomVolume.contains(x, y, z)) {
+							out.set(x, y, z, rock);
+						}
+					}
+					continue;
+				}
+				boolean ladder = wall != null && onWall(wall, bx, bz);
+				for (int y = shaft.y0() + 1; y <= shaft.y1(); y++) {
+					out.set(x, y, z, BlockCode.AIR);
+				}
+				if (ladder) {
+					for (int y = shaft.y0(); y <= shaft.y1() + 1; y++) {
+						out.set(x, y, z, BlockCode.ladder(wall.opposite()));
+					}
+				} else if (lit && bx == (wall == Dir.LEFT ? 1 : 0) && bz == (wall == Dir.UP ? 1 : 0)) {
+					out.set(x, middle, z, BlockCode.light(LIGHT_LEVEL));
+				}
+			}
+		}
+	}
+
+	/** The piece that draws cell (cx, cy) of a map: its layout's, else the whole map. */
+	private static MapLayout.Piece part(PlacedMap map, int cx, int cy) {
+		MapLayout layout = map.layout();
+		MapLayout.Piece piece = layout == null ? null : layout.pieceAt(cx, cy);
+		return piece != null ? piece : parts(map.placement(), layout).get(0);
+	}
+
+	/**
+	 * The wall a shaft's ladder stands on (HD6): the one you face walking into its top cell, opposite the cell's only
+	 * walkable neighbour; north when it has several (or none).
+	 */
+	static Dir ladderWall(MapModel model, int cx, int cy) {
+		Dir from = null;
+		int count = 0;
+		for (Dir dir : Dir.values()) {
+			int nx = cx + dir.dx();
+			int ny = cy + dir.dy();
+			if (nx >= 0 && ny >= 0 && nx < model.cellWidth() && ny < model.cellHeight()
+					&& (model.kind(nx, ny) == MapModel.Kind.GROUND || model.kind(nx, ny) == MapModel.Kind.WATER)) {
+				from = dir;
+				count++;
+			}
+		}
+		return count == 1 ? from.opposite() : Dir.UP;
+	}
+
+	/** True when block (bx, bz) of a 2 × 2 column lies along its {@code wall} side. */
+	static boolean onWall(Dir wall, int bx, int bz) {
+		return switch (wall) {
+			case UP -> bz == 0;
+			case DOWN -> bz == 1;
+			case LEFT -> bx == 0;
+			case RIGHT -> bx == 1;
+		};
 	}
 
 	/**
@@ -750,16 +938,23 @@ public final class WorldPlan {
 	}
 
 	private void renderMapColumn(CodeSink sink, PlacedMap map, int x, int z) {
+		this.renderMapColumn(sink, map, parts(map.placement(), map.layout()).get(0), x, z);
+	}
+
+	/** A column of one of the map's cells as {@code piece} places it. */
+	private void renderMapColumn(CodeSink sink, PlacedMap map, MapLayout.Piece piece, int x, int z) {
 		MapPlacement p = map.placement();
 		MapModel model = map.model();
-		int tx = x - p.x();
-		int ty = z - p.z();
+		int tx = x - p.x() - piece.dx();
+		int ty = z - p.z() - piece.dz();
+		// The feet level of the map at this piece; each cell stands on its own level above it.
+		int base = p.y() + piece.dy();
 		int cx = tx / Scale.CELL_BLOCKS;
 		int cy = ty / Scale.CELL_BLOCKS;
 		// A cell of a cave's raised ground stands on its level; a ramp's steps climb from its floor (CAVES_3D_PLAN §3.4).
 		MapLayout layout = map.layout();
 		MapLayout.Ramp ramp = layout == null ? null : layout.ramp(cx, cy);
-		int feet = p.y() + level(layout, cx, cy);
+		int feet = base + level(layout, cx, cy);
 		// The hangings and the light count from a ramp's top.
 		int lift = hangBase(layout, cx, cy) - level(layout, cx, cy);
 		int tile = model.tile(tx, ty);
@@ -900,13 +1095,13 @@ public final class WorldPlan {
 				// The ceiling, and up to its neighbours' where theirs are higher (raised ground).
 				int rock = BlockCode.full(this.slot(map, ceiling, false));
 				for (int k = ceilingLevel(layout, cx, cy); k <= ceilingTop(layout, cx, cy); k++) {
-					sink.set(x, p.y() + k, z, rock);
+					sink.set(x, base + k, z, rock);
 				}
 			}
-			if (feet > p.y()) {
+			if (feet > base) {
 				// Under a raised floor, rock in the ceiling's art down to the map's floor level.
 				int rock = BlockCode.full(this.slot(map, ceiling, false));
-				for (int y = p.y() - 1; y < feet - 1; y++) {
+				for (int y = base - 1; y < feet - 1; y++) {
 					sink.set(x, y, z, rock);
 				}
 			}

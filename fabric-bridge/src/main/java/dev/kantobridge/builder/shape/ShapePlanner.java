@@ -18,6 +18,7 @@ import dev.kantobridge.world.MapLayout;
 import dev.kantobridge.world.MapPlacement;
 import dev.kantobridge.world.ShapeIndex;
 import dev.kantobridge.world.ShapeMap;
+import dev.kantobridge.world.WorldIndex;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -136,6 +137,22 @@ public final class ShapePlanner {
 		return plan(scene, placements, params, taken, null);
 	}
 
+	/** Sets a key in a grid; 1 when it did, 0 when the position takes none. */
+	@FunctionalInterface
+	private interface Setter {
+		int set(int x, int y, int z, int id);
+	}
+
+	/** True when (x, y, z) is in a shaft's column, from its bottom cell's feet to its top cell's. */
+	static boolean inShaft(List<WorldIndex.Shaft> shafts, int x, int y, int z) {
+		for (WorldIndex.Shaft shaft : shafts) {
+			if (x >= shaft.x() && x < shaft.x() + 2 && z >= shaft.z() && z < shaft.z() + 2 && y >= shaft.y0() && y <= shaft.y1() + 1) {
+				return true;
+			}
+		}
+		return false;
+	}
+
 	/** Plans a world's shapes, every map flat. */
 	public static ShapePlan plan(Scene scene, Collection<MapPlacement> placements, ShapeParams params, Occupancy taken,
 			@Nullable UnitProbe probe) {
@@ -153,6 +170,15 @@ public final class ShapePlanner {
 	 */
 	public static ShapePlan plan(Scene scene, Collection<MapPlacement> placements, ShapeParams params, Occupancy taken,
 			@Nullable UnitProbe probe, Map<String, MapLayout> layouts) {
+		return plan(scene, placements, params, taken, probe, layouts, List.of());
+	}
+
+	/**
+	 * The same with the caves' shafts (CAVES_3D_PLAN §3.5): no key in a shaft's column, from its bottom cell's feet to
+	 * its top cell's, where the builder leaves air and ladders.
+	 */
+	public static ShapePlan plan(Scene scene, Collection<MapPlacement> placements, ShapeParams params, Occupancy taken,
+			@Nullable UnitProbe probe, Map<String, MapLayout> layouts, List<WorldIndex.Shaft> shafts) {
 		long started = System.nanoTime();
 		List<String> atlases = new ArrayList<>(new TreeSet<>(scene.atlases().keySet()));
 		TreeSet<String> paletteSet = new TreeSet<>();
@@ -218,89 +244,107 @@ public final class ShapePlanner {
 			if (planned == null || map == null) {
 				continue;
 			}
-			ShapeMap.GridBuilder grid;
 			MapLayout layout = layouts.get(placement.id());
 			int per = map.perCell();
-			if (placement.kind() == MapPlacement.Kind.SURFACE) {
-				grid = surfaceGrid;
-			} else {
-				Box3 volume = WorldPlan.interiorVolume(placement, WorldPlan.maxCeiling(layout));
-				grid = new ShapeMap.GridBuilder(volume.minX(), volume.minZ(), volume.maxX() - volume.minX(), volume.maxZ() - volume.minZ(),
-						placement.y());
-				grids.add(grid);
-			}
-			if (grid == null) {
-				continue;
-			}
 			int cols = map.artCols();
-			if (planned.ceiling() != null && placement.kind() == MapPlacement.Kind.INTERIOR && !WorldPlan.openSky(placement)) {
-				// A dressed interior's ceiling (V7), over the map's footprint; over raised ground, up to its neighbours'.
-				int ceiling = index.shapeId(planned.ceiling(), map.palette());
+			// One grid per part (CAVES_3D_PLAN §3.5: a cave's rooms lie apart, each at its own offset); the surface's own grid
+			for (MapLayout.Piece piece : WorldPlan.parts(placement, layout)) {
+				ShapeMap.GridBuilder grid;
+				if (placement.kind() == MapPlacement.Kind.SURFACE) {
+					grid = surfaceGrid;
+				} else {
+					Box3 volume = WorldPlan.partVolume(placement, piece, WorldPlan.maxCeiling(layout));
+					grid = new ShapeMap.GridBuilder(volume.minX(), volume.minZ(), volume.maxX() - volume.minX(), volume.maxZ() - volume.minZ(),
+							placement.y() + piece.dy());
+					grids.add(grid);
+				}
+				if (grid == null) {
+					continue;
+				}
+				int ox = placement.x() + piece.dx();
+				int oy = placement.y() + piece.dy();
+				int oz = placement.z() + piece.dz();
+				ShapeMap.GridBuilder target = grid;
+				// A shaft's column takes no key (its air and ladders are the builder's)
+				Setter put = (x, y, z, id) -> {
+					if (!shafts.isEmpty() && inShaft(shafts, x, y, z)) {
+						return 0;
+					}
+					target.set(x, y, z, id);
+					return 1;
+				};
+				if (planned.ceiling() != null && placement.kind() == MapPlacement.Kind.INTERIOR && !WorldPlan.openSky(placement)) {
+					// A dressed interior's ceiling (V7), over the map's footprint; over raised ground, up to its neighbours'.
+					int ceiling = index.shapeId(planned.ceiling(), map.palette());
+					for (int ty = 0; ty < map.artRows(); ty++) {
+						for (int tx = 0; tx < cols; tx++) {
+							if (!piece.contains(tx / per, ty / per)) {
+								continue;
+							}
+							int top = WorldPlan.ceilingTop(layout, tx / per, ty / per);
+							for (int k = WorldPlan.ceilingLevel(layout, tx / per, ty / per); k <= top; k++) {
+								shaped += put.set(ox + tx, oy + k, oz + ty, ceiling);
+							}
+						}
+					}
+				}
 				for (int ty = 0; ty < map.artRows(); ty++) {
 					for (int tx = 0; tx < cols; tx++) {
-						int top = WorldPlan.ceilingTop(layout, tx / per, ty / per);
-						for (int k = WorldPlan.ceilingLevel(layout, tx / per, ty / per); k <= top; k++) {
-							grid.set(placement.x() + tx, placement.y() + k, placement.z() + ty, ceiling);
-							shaped++;
-						}
-					}
-				}
-			}
-			for (int ty = 0; ty < map.artRows(); ty++) {
-				for (int tx = 0; tx < cols; tx++) {
-					ShapeKey[] column = planned.open()[ty * cols + tx];
-					if (column == null) {
-						continue;
-					}
-					boolean story = taken.storyAt(map.id(), map.cellIndexOfTile(tx, ty));
-					if (story && column.length > 0 && column[0] != null && column[0].kind() == ShapeKey.Kind.CELL && column[0].variant() != null
-							&& column[0].variant().contains("_stair")) {
-						// A stair (P3) whose bottom block a story block takes would float: it stays out (counted).
-						decorSkipped++;
-						continue;
-					}
-					// Under a ceiling a column stops below it (an open-air interior has the ceiling's level too, P3).
-					int top = placement.kind() == MapPlacement.Kind.INTERIOR && !WorldPlan.openSky(placement) ? WorldPlan.CEILING_ABOVE_FEET
-							: column.length;
-					for (int k = 0; k < column.length && k < top; k++) {
-						if (column[k] == null) {
+						ShapeKey[] column = planned.open()[ty * cols + tx];
+						if (column == null || !piece.contains(tx / per, ty / per)) {
 							continue;
 						}
-						if (k == 0 && story) {
-							// The story block keeps the feet level; a tuft there is skipped (and counted).
-							decorSkipped += (planned.decor()[ty * cols + tx] & 1) != 0 ? 1 : 0;
+						boolean story = taken.storyAt(map.id(), map.cellIndexOfTile(tx, ty));
+						if (story && column.length > 0 && column[0] != null && column[0].kind() == ShapeKey.Kind.CELL && column[0].variant() != null
+								&& column[0].variant().contains("_stair")) {
+							// A stair (P3) whose bottom block a story block takes would float: it stays out (counted).
+							decorSkipped++;
 							continue;
 						}
-						int id = index.shapeId(column[k], map.palette());
-						grid.set(placement.x() + tx, placement.y() + WorldPlan.level(layout, tx / per, ty / per) + k, placement.z() + ty, id);
-						shaped++;
-					}
-				}
-			}
-			// The hangings (CW1, CW2): each on the decor carrier the builder adds at its level; under a ceiling, a column's
-			// hangings stand only if all of them fit below it (a wood that kept its ceiling hangs no canopy and no vines).
-			int hangTop = hangTop(placement);
-			for (int ty = 0; ty < map.artRows(); ty++) {
-				for (int tx = 0; tx < cols; tx++) {
-					int mask = hungFits(planned.hungMask()[ty * cols + tx], hangTop);
-					ShapeKey[] column = planned.hung()[ty * cols + tx];
-					int base = WorldPlan.hangBase(layout, tx / per, ty / per);
-					for (int k = 0; column != null && k < column.length; k++) {
-						if ((mask >> k & 1) != 0 && column[k] != null) {
-							grid.set(placement.x() + tx, placement.y() + base + k, placement.z() + ty, index.shapeId(column[k], map.palette()));
-							shaped++;
+						// Under a ceiling a column stops below it (an open-air interior has the ceiling's level too, P3).
+						int top = placement.kind() == MapPlacement.Kind.INTERIOR && !WorldPlan.openSky(placement) ? WorldPlan.CEILING_ABOVE_FEET
+								: column.length;
+						for (int k = 0; k < column.length && k < top; k++) {
+							if (column[k] == null) {
+								continue;
+							}
+							if (k == 0 && story) {
+								// The story block keeps the feet level; a tuft there is skipped (and counted).
+								decorSkipped += (planned.decor()[ty * cols + tx] & 1) != 0 ? 1 : 0;
+								continue;
+							}
+							int id = index.shapeId(column[k], map.palette());
+							shaped += put.set(ox + tx, oy + WorldPlan.level(layout, tx / per, ty / per) + k, oz + ty, id);
 						}
 					}
 				}
-			}
-			if (planned.curtain() != null && WorldPlan.openSky(placement)) {
-				// An open-sky wood's leaf curtain (CW2): its enclosure ring carries it above the ring's top, up to the canopy's.
-				int curtain = index.shapeId(planned.curtain(), map.palette());
-				for (int[] xz : WorldPlan.ringColumns(placement)) {
-					for (int k = dev.kantobridge.builder.shape.dressing.Canopy.CURTAIN_FROM; k < dev.kantobridge.builder.shape.dressing.Canopy.TOP_LEVEL;
-							k++) {
-						grid.set(xz[0], placement.y() + k, xz[1], curtain);
-						shaped++;
+				// The hangings (CW1, CW2): each on the decor carrier the builder adds at its level; under a ceiling, a column's
+				// hangings stand only if all of them fit below it (a wood that kept its ceiling hangs no canopy and no vines).
+				int hangTop = hangTop(placement);
+				for (int ty = 0; ty < map.artRows(); ty++) {
+					for (int tx = 0; tx < cols; tx++) {
+						if (!piece.contains(tx / per, ty / per)) {
+							continue;
+						}
+						int mask = hungFits(planned.hungMask()[ty * cols + tx], hangTop);
+						ShapeKey[] column = planned.hung()[ty * cols + tx];
+						int base = WorldPlan.hangBase(layout, tx / per, ty / per);
+						for (int k = 0; column != null && k < column.length; k++) {
+							if ((mask >> k & 1) != 0 && column[k] != null) {
+								shaped += put.set(ox + tx, oy + base + k, oz + ty, index.shapeId(column[k], map.palette()));
+							}
+						}
+					}
+				}
+				if (planned.curtain() != null && WorldPlan.openSky(placement)) {
+					// An open-sky wood's leaf curtain (CW2): its enclosure ring carries it above the ring's top, up to the canopy's.
+					int curtain = index.shapeId(planned.curtain(), map.palette());
+					for (int[] xz : WorldPlan.ringColumns(placement)) {
+						for (int k = dev.kantobridge.builder.shape.dressing.Canopy.CURTAIN_FROM; k < dev.kantobridge.builder.shape.dressing.Canopy.TOP_LEVEL;
+								k++) {
+							grid.set(xz[0], placement.y() + k, xz[1], curtain);
+							shaped++;
+						}
 					}
 				}
 			}
@@ -345,8 +389,9 @@ public final class ShapePlanner {
 				// A tile cell outside every swap site (not planned by a front end): its block entity's renderer draws it.
 				continue;
 			}
-			int feet = placement.y() + WorldPlan.level(layouts.get(cell.map()), cell.cx(), cell.cy());
-			overlays.add(new ShapeMap.Overlay(cell.key(), placement.x() + cell.cx() * per, feet, placement.z() + cell.cy() * per, columns));
+			// The cell's own spot: its piece's offset and its level (CAVES_3D_PLAN §3.1)
+			int[] at = WorldPlan.cellOrigin(placement, layouts.get(cell.map()), cell.cx(), cell.cy());
+			overlays.add(new ShapeMap.Overlay(cell.key(), at[0], at[1], at[2], columns));
 			closedColumns.put(cell.key(), new ShapePlan.Closed(heights, leaves));
 		}
 		// ---- the void fill's ring: border trees as units within hullRing of a map body (V4) ----

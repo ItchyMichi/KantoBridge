@@ -175,7 +175,8 @@ public class ShapeBuildGameTests implements FabricGameTest {
 				for (int cy = 0; cy < model.cellHeight(); cy++) {
 					for (int cx = 0; cx < model.cellWidth(); cx++) {
 						MapModel.Kind kind = model.kind(cx, cy);
-						if (kind == MapModel.Kind.WATER) {
+						if (kind == MapModel.Kind.WATER || placed.layout() != null && placed.layout().pieceAt(cx, cy) == null) {
+							// Water, or a cave's rock far from every room, which no room draws (CAVES_3D_PLAN §3.5)
 							continue;
 						}
 						// Where the cell is stood on: its centre on its own level, a ramp's on its third half step (CAVES_3D_PLAN §3.4).

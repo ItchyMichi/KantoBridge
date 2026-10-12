@@ -41,8 +41,13 @@ public final class BlockCode {
 	 * direction numbers as {@link #ledge}'s.
 	 */
 	public static final int KIND_STEP = 12;
+	/**
+	 * A cave shaft's ladder (docs/specs/CAVES_3D_PLAN.md §3.5): the value is the way it faces (away from its wall), in
+	 * Gen 1's direction numbers as {@link #ledge}'s.
+	 */
+	public static final int KIND_LADDER = 13;
 	/** One past the highest kind. */
-	public static final int KINDS = 13;
+	public static final int KINDS = 14;
 
 	private static final int SHIFT = 24;
 	private static final int VALUE_MASK = (1 << SHIFT) - 1;
@@ -106,7 +111,16 @@ public final class BlockCode {
 
 	/** A step collider climbing {@code climb}. */
 	public static int step(dev.kantobridge.world.Dir climb) {
-		return (KIND_STEP << SHIFT) | switch (climb) {
+		return (KIND_STEP << SHIFT) | gen1Dir(climb);
+	}
+
+	/** A shaft's ladder facing {@code facing} (away from its wall). */
+	public static int ladder(dev.kantobridge.world.Dir facing) {
+		return (KIND_LADDER << SHIFT) | gen1Dir(facing);
+	}
+
+	private static int gen1Dir(dev.kantobridge.world.Dir dir) {
+		return switch (dir) {
 			case DOWN -> 0;
 			case UP -> 1;
 			case LEFT -> 2;

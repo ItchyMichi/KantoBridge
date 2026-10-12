@@ -170,13 +170,18 @@ class CavePlannerTest {
 		int rockColumns = 0;
 		for (int ty = 0; ty < p.blockDepth(); ty++) {
 			for (int tx = 0; tx < p.blockWidth(); tx++) {
+				if (cave.layout() != null && cave.layout().pieceAt(tx / 2, ty / 2) == null) {
+					// Rock far from every room: no room draws it (H5)
+					continue;
+				}
 				MapModel.Kind kind = cave.model().kind(tx / 2, ty / 2);
-				int x = p.x() + tx;
-				int z = p.z() + ty;
+				int[] at = WorldPlan.cellOrigin(p, cave.layout(), tx / 2, ty / 2);
+				int x = at[0] + tx % 2;
+				int z = at[2] + ty % 2;
 				if (kind == MapModel.Kind.SOLID) {
 					rockColumns++;
 					for (int k = 0; k < WorldPlan.CEILING_ABOVE_FEET; k++) {
-						int code = view.code(x, p.y() + k, z);
+						int code = view.code(x, at[1] + k, z);
 						int kindAt = BlockCode.kind(code);
 						boolean solid = kindAt == BlockCode.KIND_FULL || kindAt == BlockCode.KIND_SHAPE || code == BlockCode.vanilla(ZoneBlock.BARRIER)
 								|| (kindAt == BlockCode.KIND_DECOR && (BlockCode.value(code) & 4) != 0);
@@ -184,7 +189,7 @@ class CavePlannerTest {
 					}
 				} else if (kind == MapModel.Kind.GROUND) {
 					for (int k = 0; k < WorldPlan.CEILING_ABOVE_FEET; k++) {
-						int code = view.code(x, p.y() + k, z);
+						int code = view.code(x, at[1] + k, z);
 						assertFalse(code == BlockCode.vanilla(ZoneBlock.BARRIER), "no barrier over a floor");
 					}
 				}
@@ -204,17 +209,24 @@ class CavePlannerTest {
 			// No floor block of the other floor within the block's reach (I3), raised floors (H4) included.
 			for (int cz = 0; cz < o.h(); cz++) {
 				for (int cx = 0; cx < o.w(); cx++) {
+					int[] at = WorldPlan.cellOrigin(o, plan.index().layout(other), cx, cz);
 					for (int b = 0; b < 4; b++) {
-						long dx = o.x() + cx * 2 + b % 2 - habitat.x();
-						long dy = o.y() + WorldPlan.level(plan.index().layout(other), cx, cz) - 1 - habitat.y();
-						long dz = o.z() + cz * 2 + b / 2 - habitat.z();
+						long dx = at[0] + b % 2 - habitat.x();
+						long dy = at[1] - 1 - habitat.y();
+						long dz = at[2] + b / 2 - habitat.z();
 						assertTrue(dx * dx + dy * dy + dz * dz > (long) habitat.range() * habitat.range(), habitat.map() + " reaches " + other);
 					}
 				}
 			}
 		}
 		assertNotNull(plan.index().layout("TEST_CAVE_1F"), "1F's plateau is raised (H4)");
-		assertNull(plan.index().layout("TEST_CAVE_B1F"), "B1F has no raised ground");
+		dev.kantobridge.world.MapLayout b1f = plan.index().layout("TEST_CAVE_B1F");
+		assertEquals(2, b1f.pieces().size(), "B1F's two rooms lie apart (H5)");
+		for (int cz = 0; cz < b1f.h(); cz++) {
+			for (int cx = 0; cx < b1f.w(); cx++) {
+				assertEquals(0, b1f.level(cx, cz), "B1F has no raised ground");
+			}
+		}
 	}
 
 	@Test
@@ -233,10 +245,11 @@ class CavePlannerTest {
 						continue;
 					}
 					raised += map.level(cx, cz) > 0 ? 1 : 0;
+					int[] at = WorldPlan.cellOrigin(p, map.layout(), cx, cz);
 					for (int b = 0; b < 4; b++) {
-						long x = p.x() + cx * 2 + b % 2;
-						long y = p.y() + map.level(cx, cz) - 1;
-						long z = p.z() + cz * 2 + b / 2;
+						long x = at[0] + b % 2;
+						long y = at[1] - 1;
+						long z = at[2] + b / 2;
 						assertTrue(own.stream().anyMatch(h -> (x - h.x()) * (x - h.x()) + (y - h.y()) * (y - h.y()) + (z - h.z()) * (z - h.z())
 								<= (long) h.range() * h.range()), map.id() + " cell " + cx + "," + cz + " has no habitat in reach");
 					}
