@@ -821,12 +821,18 @@ public final class WorldPlan {
 				taken |= (1L << Math.min(blocks, 62)) - 1;
 			}
 		}
+		// Where a story block stands, a level above the feet on a ramp's steps (CAVES_3D_PLAN §3.4), and its code.
+		int storyLevel = -1;
+		int storyCode = 0;
 		if (story >= 0) {
 			// Tile cells get the block that carries the bottom of their closed art; the others render nothing.
 			StoryCellTable.Entry entry = this.storyCells.entries().get(story);
 			boolean swapCell = entry.type() == StoryCellType.TILE;
-			sink.set(x, feet, z, swapCell ? BlockCode.storyTile(story) : BlockCode.story(story));
-			taken |= 1L;
+			// On a ramp the steps keep their places: any other story block (a boulder's, an object's) stands on them.
+			storyLevel = ramp == null || swapCell ? 0 : highRow(ramp.dir(), tx - cx * Scale.CELL_BLOCKS, ty - cy * Scale.CELL_BLOCKS) ? 2 : 1;
+			storyCode = swapCell ? BlockCode.storyTile(story) : BlockCode.story(story);
+			sink.set(x, feet + storyLevel, z, storyCode);
+			taken |= 1L << storyLevel;
 			ShapePlan.Closed closed = swapCell && this.shapes != null ? this.shapes.closed(entry.key()) : null;
 			if (closed != null) {
 				// The rest of this column of the closed art (V5): decor carriers in the air above, drawn only for players who
@@ -849,6 +855,10 @@ public final class WorldPlan {
 			} else if ((taken & 2) == 0) {
 				sink.set(x, feet + 1, z, BlockCode.edge(edges));
 				taken |= 2;
+			} else if (storyLevel == 0) {
+				// Neither is free (a swap site's closed art over its story block): the story block carries the plates.
+				sink.set(x, feet, z, BlockCode.kind(storyCode) == BlockCode.KIND_STORY_TILE ? BlockCode.storyTile(story, edges)
+						: BlockCode.story(story, edges));
 			}
 		}
 		// A carrier wins: the light goes only where the position is still air, or a hanging's carrier there gives it.

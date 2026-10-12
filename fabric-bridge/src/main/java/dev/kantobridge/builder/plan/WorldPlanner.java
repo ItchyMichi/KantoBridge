@@ -350,12 +350,21 @@ public final class WorldPlanner {
 			StoryCellTable.Entry entry = entries.get(i);
 			storyIndex.get(entry.cell().map())[entry.cell().y() * widths.get(entry.cell().map()) + entry.cell().x()] = i;
 		}
-		// A story block on a ramp would take its first step (CAVES_3D_PLAN §3.4): the step goes, and it says so.
+		if (storyCells.entries().size() > BlockCode.STORY_INDEX_MASK + 1) {
+			throw new PlanException("story_cells", "too many story cells for a block code: " + storyCells.entries().size());
+		}
+		// A story block on a ramp stands on its steps (CAVES_3D_PLAN §3.4), but a swap site's carries its closed art up
+		// from the floor: there it takes the first step, and says so.
 		for (PlacedMap map : placed) {
 			MapLayout raised = map.layout();
 			for (int i = 0; raised != null && i < raised.w() * raised.h(); i++) {
-				if (raised.ramp(i % raised.w(), i / raised.w()) != null && storyIndex.get(map.id())[i] >= 0) {
-					warnings.warn("cave_ramp_story_cell", Warnings.symbols("map", map.id()));
+				int story = storyIndex.get(map.id())[i];
+				if (raised.ramp(i % raised.w(), i / raised.w()) != null && story >= 0) {
+					if (storyCells.entries().get(story).type() == StoryCellType.TILE) {
+						warnings.warn("cave_ramp_swap_site", Warnings.symbols("map", map.id()));
+					} else {
+						warnings.note("cave_ramp_story_cells");
+					}
 				}
 			}
 		}

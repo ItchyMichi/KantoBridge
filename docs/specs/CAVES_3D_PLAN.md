@@ -182,7 +182,9 @@ Per piece (one piece per map until H5):
    profile's stair classes confirm it where Dramaless is installed (`scene/profile/Profile.java:30-66`).
 3. Regions: a flood fill over walkable and water cells that crosses no pair edge and no stairs cell.
 4. The high side: the profile's raised pins (`builder/shape/ClassBoxes.java:18-21, 41-42`), else the cliff-face rule
-   (the art draws a face south of higher ground, so across a face the north side is higher), else the map stays flat.
+   (the art draws a face south of higher ground; the face is solid, so the floor meets raised ground flush only along
+   its north edge, and across a pair edge running east to west the south side is higher), else the map stays flat.
+   *Corrected after H4's dry run: the first version read it the other way round; see PROGRESS, H4 note 11.*
 5. Levels: low regions 0, high regions 2 (U1). A stairs cell is a ramp from its low neighbour to its high one.
 6. A region reached only by warps takes whatever level fits; after H5 it is a piece of its own.
 7. **The check** (HR §3.1). For every pair of neighbouring cells, Minecraft must allow exactly the steps the game

@@ -77,12 +77,17 @@ class CaveLevelsTest {
 		return Profile.parse("return { version = 1, tilesets = { CAVERN = { " + classes + " } } }").tileset("CAVERN");
 	}
 
-	/** A plateau over a floor, its south face a cliff, stairs two cells wide climbing it from the floor. */
+	/**
+	 * A plateau as a Gen 1 cave draws one: its south side a cliff face (rock) with stairs two cells wide cut into it, its
+	 * north edge meeting the floor flush (the pair edges).
+	 */
 	private static final String[] PLATEAU = {
 			"########",
+			"#......#",
 			"#^^^^^^#",
 			"#^^^^^^#",
-			"#^^ss^^#",
+			"##ss####",
+			"#......#",
 			"#......#",
 			"########",
 	};
@@ -91,23 +96,27 @@ class CaveLevelsTest {
 	void theCliffFaceRaisesThePlateauAndTheStairsClimbIt() {
 		CaveLevels.Result result = CaveLevels.plan(cave(PLATEAU), PAIRS);
 		assertEquals("raised", result.outcome());
-		assertEquals(CaveLevels.HIGH_CLIFF_FACE, result.high(), "the face runs along the plateau's south side");
+		assertEquals(CaveLevels.HIGH_CLIFF_FACE, result.high(), "the high side south of every flush edge");
+		assertEquals(6, result.faces());
+		assertEquals(0, result.facesOther());
 		MapLayout layout = result.layout();
 		assertNotNull(layout);
-		assertEquals(2, layout.level(1, 1));
-		assertEquals(2, layout.level(6, 3), "beside the stairs, still the plateau");
-		assertEquals(0, layout.level(1, 4));
-		assertEquals(0, layout.level(3, 3), "a ramp sits at its low end");
-		assertEquals(new MapLayout.Ramp(3, 3, Dir.UP, CaveLevels.RISE), layout.ramp(3, 3));
-		assertEquals(new MapLayout.Ramp(4, 3, Dir.UP, CaveLevels.RISE), layout.ramp(4, 3), "side by side: a wide stair");
-		assertNull(layout.ramp(2, 3));
+		assertEquals(2, layout.level(1, 2));
+		assertEquals(2, layout.level(6, 3));
+		assertEquals(0, layout.level(1, 1), "the floor behind it");
+		assertEquals(0, layout.level(1, 5), "the floor in front of it");
+		assertEquals(0, layout.level(2, 4), "a ramp sits at its low end");
+		assertEquals(new MapLayout.Ramp(2, 4, Dir.UP, CaveLevels.RISE), layout.ramp(2, 4), "climbing north into the plateau");
+		assertEquals(new MapLayout.Ramp(3, 4, Dir.UP, CaveLevels.RISE), layout.ramp(3, 4), "side by side: a wide stair");
+		assertNull(layout.ramp(4, 4));
 		assertEquals(2, result.stairs());
-		assertEquals(16, result.raisedCells());
-		assertEquals(2, result.regions());
+		assertEquals(12, result.raisedCells());
+		assertEquals(3, result.regions());
 		// Rock stands as high as the highest cell around it.
-		assertEquals(2, layout.level(0, 0));
-		assertEquals(2, layout.level(0, 4), "diagonal to the plateau");
-		assertEquals(0, layout.level(1, 5));
+		assertEquals(0, layout.level(0, 0));
+		assertEquals(2, layout.level(1, 4), "the face");
+		assertEquals(2, layout.level(4, 4), "beside the stairs");
+		assertEquals(0, layout.level(0, 7));
 	}
 
 	@Test
@@ -116,13 +125,13 @@ class CaveLevelsTest {
 		CaveLevels.Result flipped = CaveLevels.plan(cave(PLATEAU), PAIRS, profile("ledge = { " + FLOOR + " }"));
 		assertEquals("raised", flipped.outcome());
 		assertEquals(CaveLevels.HIGH_PROFILE, flipped.high());
-		assertEquals(0, flipped.layout().level(1, 1));
-		assertEquals(2, flipped.layout().level(1, 4));
-		assertEquals(Dir.DOWN, flipped.layout().ramp(3, 3).dir());
+		assertEquals(0, flipped.layout().level(1, 2));
+		assertEquals(2, flipped.layout().level(1, 5));
+		assertEquals(Dir.DOWN, flipped.layout().ramp(3, 4).dir());
 		// Pinned as drawn, with its stairs a stair class: the same levels as the cliff face's, the stairs confirmed.
 		CaveLevels.Result pinned = CaveLevels.plan(cave(PLATEAU), PAIRS, profile("ledge = { " + RAISED + " }, stair_n = { " + STAIRS + " }"));
 		assertEquals(CaveLevels.HIGH_PROFILE, pinned.high());
-		assertEquals(2, pinned.layout().level(1, 1));
+		assertEquals(2, pinned.layout().level(1, 2));
 		assertEquals(2, pinned.stairsConfirmed());
 		assertEquals(0, pinned.stairsOther());
 		// A wall pin says nothing (the profile's fallback for solid tiles).
@@ -145,10 +154,10 @@ class CaveLevelsTest {
 	void stairsClimbEastAndWest() {
 		CaveLevels.Result result = CaveLevels.plan(cave(
 				"########",
-				"#^^^^^^#",
-				"#^^^^^^#",
+				"#......#",
+				"#......#",
 				"#.s^^s.#",
-				"#.#..#.#",
+				"########",
 				"########"), PAIRS);
 		assertEquals("raised", result.outcome());
 		assertEquals(Dir.RIGHT, result.layout().ramp(2, 3).dir());

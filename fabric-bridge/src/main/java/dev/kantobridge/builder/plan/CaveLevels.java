@@ -24,9 +24,9 @@ import org.jetbrains.annotations.Nullable;
  * <li>A neutral cell with one side's cell on one side and the other's on the opposite side is a stairs cell.</li>
  * <li>Regions: the walked-on and water cells joined by steps the engine allows, stairs cells left out.</li>
  * <li>The high side: the shape profile's raised pins where it has any (a walkable tile pinned to a class that stands up,
- * as Dramaless Shape raises it), else the art: it draws a cliff's face south of higher ground, so across a pair edge
- * running east to west, the cell to the north is the higher one. The side with more votes is high; a tie in both leaves
- * the map flat.</li>
+ * as Dramaless Shape raises it), else the art: a raised area's south side is a cliff face, solid, so the floor meets it
+ * flush only along its north edge; across a pair edge running east to west, the cell to the south is the higher one
+ * (and stairs climb north into it). The side with more votes is high; a tie in both leaves the map flat.</li>
  * <li>Levels: the high side's regions {@link #RISE}, the rest 0; each stairs cell a ramp from its low end to its high
  * one; a rock cell as high as the highest cell around it.</li>
  * <li>The check (§3.1): for every two neighbouring cells, Minecraft (jumping off, a 0.6-block step, invisible walls on
@@ -50,11 +50,13 @@ public final class CaveLevels {
 	 * @param outcome         {@code raised}, {@code no_pairs} (no tile pair in its tileset), or {@code flat_<reason>}
 	 * @param high            where the high side came from ({@link #HIGH_PROFILE}, {@link #HIGH_CLIFF_FACE}), or empty
 	 * @param stairsConfirmed stairs cells the profile pins to a stair class; {@code stairsOther} the rest, with a profile
+	 * @param faces           the pair edges running east to west with the high side south of them, and {@code facesOther}
+	 *                        those the other way round (how clearly the art said which side is high)
 	 */
 	public record Result(@Nullable MapLayout layout, String outcome, String high, int regions, int raisedCells, int stairs, int stairsConfirmed,
-			int stairsOther) {
+			int stairsOther, int faces, int facesOther) {
 		static Result flat(String reason) {
-			return new Result(null, reason, "", 0, 0, 0, 0, 0);
+			return new Result(null, reason, "", 0, 0, 0, 0, 0, 0, 0);
 		}
 	}
 
@@ -178,7 +180,7 @@ public final class CaveLevels {
 			}
 			regionSides.add(sidesSeen);
 		}
-		// The high side: the profile's raised pins, else north across a pair edge that runs east to west.
+		// The high side: the profile's raised pins, else south across a pair edge that runs east to west.
 		int[] pinned = new int[2];
 		if (profile != null) {
 			for (int i = 0; i < n; i++) {
@@ -193,7 +195,7 @@ public final class CaveLevels {
 				int a = cy * w + cx;
 				int b = a + w;
 				if (cellSide[a] >= 0 && cellSide[b] >= 0 && cellSide[a] != cellSide[b] && PairEdges.blocked(model, pairs, tileset, cx, cy, cx, cy + 1)) {
-					votes[cellSide[a]]++;
+					votes[cellSide[b]]++;
 				}
 			}
 		}
@@ -257,7 +259,7 @@ public final class CaveLevels {
 			return Result.flat("flat_nothing_raised");
 		}
 		return new Result(MapLayout.flat(w, h, levels, ramps), "raised", source, regionSides.size(), raised, ramps.size(), confirmed,
-				profile == null ? 0 : stairs - confirmed);
+				profile == null ? 0 : stairs - confirmed, votes[high], votes[1 - high]);
 	}
 
 	/** The profile's class of a cell's collision tile (its bottom-left 8×8 tile), the map's border outside it. */

@@ -100,6 +100,8 @@ class RealWorldDryRunTest {
 			row.addProperty("ramps", result.stairs());
 			row.addProperty("stairs_profile_confirmed", result.stairsConfirmed());
 			row.addProperty("stairs_profile_other", result.stairsOther());
+			row.addProperty("faces", result.faces());
+			row.addProperty("faces_other", result.facesOther());
 			MapLayout layout = map.layout();
 			if (layout != null) {
 				Map<String, Integer> dirs = new TreeMap<>();
@@ -115,6 +117,15 @@ class RealWorldDryRunTest {
 			levels.add(row);
 		}
 		out.add("cave_levels", levels);
+		// H4: story cells on ramps, by map and type (their blocks stand on the steps; a swap site's can't)
+		Map<String, Integer> rampStories = new TreeMap<>();
+		for (dev.kantobridge.world.StoryCellTable.Entry entry : plan.storyCells().entries()) {
+			MapLayout layout = plan.index().layout(entry.cell().map());
+			if (layout != null && layout.ramp(entry.cell().x(), entry.cell().y()) != null) {
+				rampStories.merge(entry.cell().map() + ":" + entry.type().id(), 1, Integer::sum);
+			}
+		}
+		out.add("ramp_story_cells", counts(rampStories));
 		// H2 and H4: every block along a pair edge has its wall, at its cell's feet or the block above
 		ChunkCodesView view = new ChunkCodesView(plan);
 		Map<String, Integer> unwalled = new TreeMap<>();
@@ -133,11 +144,13 @@ class RealWorldDryRunTest {
 						}
 						int x = origin.getX() + b % 2;
 						int z = origin.getZ() + b / 2;
-						if (BlockCode.kind(view.code(x, origin.getY(), z)) == BlockCode.KIND_EDGE
-								|| BlockCode.kind(view.code(x, origin.getY() + 1, z)) == BlockCode.KIND_EDGE) {
+						int feet = view.code(x, origin.getY(), z);
+						int above = view.code(x, origin.getY() + 1, z);
+						if (BlockCode.kind(feet) == BlockCode.KIND_EDGE || BlockCode.kind(above) == BlockCode.KIND_EDGE
+								|| BlockCode.isStory(feet) && BlockCode.storySides(feet) != 0) {
 							walled++;
 						} else {
-							unwalled.merge(map.id(), 1, Integer::sum);
+							unwalled.merge(map.id() + ":" + BlockCode.kind(feet) + "/" + BlockCode.kind(above), 1, Integer::sum);
 						}
 					}
 				}

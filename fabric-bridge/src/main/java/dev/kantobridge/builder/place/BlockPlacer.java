@@ -265,7 +265,7 @@ public final class BlockPlacer {
 		switch (kind) {
 			case BlockCode.KIND_STORY, BlockCode.KIND_STORY_TILE -> {
 				this.counts.storyCells++;
-				StoryCellTable.Entry entry = this.plan.storyCells().entries().get(BlockCode.value(code));
+				StoryCellTable.Entry entry = this.plan.storyCells().entries().get(BlockCode.storyIndex(code));
 				BlockEntity blockEntity = this.level.getBlockEntity(pos);
 				if (blockEntity instanceof StoryCellBlockEntity cell && cell.set(entry.key(), entry.type()) && current == desired
 						&& work.flags == FLAGS_SEEN) {

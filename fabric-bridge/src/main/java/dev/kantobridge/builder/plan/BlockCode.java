@@ -46,6 +46,10 @@ public final class BlockCode {
 
 	private static final int SHIFT = 24;
 	private static final int VALUE_MASK = (1 << SHIFT) - 1;
+	/** A story-cell code's value: its edge-wall sides in the top four bits, its table index in the rest. */
+	private static final int STORY_SIDES_SHIFT = 20;
+	/** Story-cell tables hold fewer entries than this. */
+	public static final int STORY_INDEX_MASK = (1 << STORY_SIDES_SHIFT) - 1;
 
 	private BlockCode() {
 	}
@@ -116,12 +120,35 @@ public final class BlockCode {
 
 	/** A story-cell block for entry {@code index} of the story-cell table. */
 	public static int story(int index) {
-		return (KIND_STORY << SHIFT) | index;
+		return story(index, 0);
+	}
+
+	/**
+	 * The same carrying an edge wall's plates on {@code sides} (docs/specs/CAVES_3D_PLAN.md §3.2): the value's top four
+	 * bits; the index takes the rest.
+	 */
+	public static int story(int index, int sides) {
+		return (KIND_STORY << SHIFT) | ((sides & 15) << STORY_SIDES_SHIFT) | (index & STORY_INDEX_MASK);
 	}
 
 	/** A tile story-cell block (a swap site's cell) for entry {@code index} of the story-cell table. */
 	public static int storyTile(int index) {
-		return (KIND_STORY_TILE << SHIFT) | index;
+		return storyTile(index, 0);
+	}
+
+	/** The same carrying an edge wall's plates on {@code sides}. */
+	public static int storyTile(int index, int sides) {
+		return (KIND_STORY_TILE << SHIFT) | ((sides & 15) << STORY_SIDES_SHIFT) | (index & STORY_INDEX_MASK);
+	}
+
+	/** A story-cell code's entry in the story-cell table. */
+	public static int storyIndex(int code) {
+		return value(code) & STORY_INDEX_MASK;
+	}
+
+	/** A story-cell code's edge-wall sides. */
+	public static int storySides(int code) {
+		return value(code) >>> STORY_SIDES_SHIFT & 15;
 	}
 
 	/** True for both story-cell kinds. */

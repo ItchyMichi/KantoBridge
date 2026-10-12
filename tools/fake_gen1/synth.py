@@ -129,13 +129,12 @@ CAVE_BLOCKS = [
 ]
 CF, CR, CK, CS, CL, CH, CLR = range(7)
 # 1F: the low floor in the west, a plateau in the east with a ladder down to B1F's east room; a ladder down to its
-# west room, a hole into it, and the cave mouth out to TEST_TOWN. The plateau's south face looks over low floor, as a
-# Gen 1 cave draws a cliff (docs/specs/CAVES_3D_PLAN.md §3.4).
+# west room, a hole into it, and the cave mouth out to TEST_TOWN.
 CAVE_1F_BLOCKS = [
     [CK, CK, CK, CK, CK, CK],
     [CK, CF, CS, CR, CLR, CK],
     [CK, CL, CF, CR, CR, CK],
-    [CK, CL, CH, CF, CK, CK],
+    [CK, CL, CH, CK, CK, CK],
 ]
 # B1F: two rooms that only ladders join (a west room with the hole's landing, an east room).
 CAVE_B1F_BLOCKS = [

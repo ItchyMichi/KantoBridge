@@ -27,8 +27,8 @@ public final class CodeStates {
 					.setValue(dev.kantobridge.block.DecorBlock.LIT, (value & 2) != 0).setValue(dev.kantobridge.block.DecorBlock.SOLID, (value & 4) != 0);
 			case BlockCode.KIND_LEDGE -> KbBlocks.LEDGE_COLLIDER.defaultBlockState().setValue(LedgeColliderBlock.FACING, downhill(value));
 			case BlockCode.KIND_LIGHT -> Blocks.LIGHT.defaultBlockState().setValue(LightBlock.LEVEL, Math.min(15, value));
-			case BlockCode.KIND_STORY -> KbBlocks.STORY_CELL.defaultBlockState();
-			case BlockCode.KIND_STORY_TILE -> KbBlocks.STORY_TILE.defaultBlockState();
+			case BlockCode.KIND_STORY -> KbBlocks.STORY_CELL.withSides(BlockCode.storySides(code));
+			case BlockCode.KIND_STORY_TILE -> KbBlocks.STORY_TILE.withSides(BlockCode.storySides(code));
 			case BlockCode.KIND_VANILLA -> this.vanilla(value);
 			case BlockCode.KIND_PROP -> prop(value);
 			case BlockCode.KIND_EDGE -> KbBlocks.EDGE_WALL.withSides(value);

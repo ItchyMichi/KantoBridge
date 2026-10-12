@@ -48,7 +48,7 @@ class RaisedCaveTest {
 		for (int[] cell : new int[][] {{6, 2}, {9, 2}, {9, 3}, {6, 5}, {9, 5}}) {
 			assertEquals(CaveLevels.RISE, layout.level(cell[0], cell[1]), "plateau " + cell[0] + "," + cell[1]);
 		}
-		for (int[] cell : new int[][] {{2, 2}, {4, 3}, {5, 4}, {6, 6}, {3, 7}}) {
+		for (int[] cell : new int[][] {{2, 2}, {4, 3}, {5, 4}, {4, 6}, {3, 7}}) {
 			assertEquals(0, layout.level(cell[0], cell[1]), "floor " + cell[0] + "," + cell[1]);
 		}
 		assertEquals(new MapLayout.Ramp(5, 2, Dir.RIGHT, CaveLevels.RISE), layout.ramp(5, 2));
@@ -106,9 +106,9 @@ class RaisedCaveTest {
 
 	@Test
 	void theCliffIsWalledOnItsHighSide() {
-		// The plateau's west face against the floor at (5,4)|(6,4), and its south face at (6,5)|(6,6).
+		// The plateau's west edge against the floor, (5,4)|(6,4) and (5,5)|(6,5).
 		assertEquals(BlockCode.edge(EdgeWallBlock.SIDE_WEST), code(6, 4, 0, 0, 2), "at the raised floor's feet");
-		assertEquals(BlockCode.edge(EdgeWallBlock.SIDE_SOUTH), code(6, 5, 1, 1, 2), "its east half: the west half meets (5,5) too");
+		assertEquals(BlockCode.edge(EdgeWallBlock.SIDE_WEST), code(6, 5, 0, 1, 2));
 		assertEquals(BlockCode.edge(EdgeWallBlock.SIDE_EAST), code(5, 4, 1, 0, 0), "the low side keeps its own (harmless)");
 	}
 

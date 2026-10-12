@@ -125,6 +125,21 @@ class PairEdgesTest {
 	}
 
 	@Test
+	void aStoryBlockCarriesWallSidesInItsCode() {
+		// Where neither feet nor the block above is free, the story block carries the wall (CAVES_3D_PLAN §3.2).
+		int code = BlockCode.story(123_456, EdgeWallBlock.SIDE_EAST | EdgeWallBlock.SIDE_SOUTH);
+		assertEquals(BlockCode.KIND_STORY, BlockCode.kind(code));
+		assertEquals(123_456, BlockCode.storyIndex(code));
+		assertEquals(EdgeWallBlock.SIDE_EAST | EdgeWallBlock.SIDE_SOUTH, BlockCode.storySides(code));
+		int tile = BlockCode.storyTile(BlockCode.STORY_INDEX_MASK, EdgeWallBlock.SIDE_WEST);
+		assertEquals(BlockCode.KIND_STORY_TILE, BlockCode.kind(tile));
+		assertEquals(BlockCode.STORY_INDEX_MASK, BlockCode.storyIndex(tile));
+		assertEquals(EdgeWallBlock.SIDE_WEST, BlockCode.storySides(tile));
+		assertEquals(BlockCode.story(7), BlockCode.story(7, 0), "no sides: the code as before");
+		assertTrue(BlockCode.isStory(code) && BlockCode.isStory(tile));
+	}
+
+	@Test
 	void thePlanWallsEverySideOfAPairEdge() throws Exception {
 		// The synthetic bundle with its house in a tileset of its own whose floor and exit mat tiles form a pair (the
 		// profile pins nothing in it).

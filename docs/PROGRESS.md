@@ -812,7 +812,7 @@ the full suite at H1, H5 and H7.
    tiles in no pair are neutral); a neutral floor cell with one side on one side and the other opposite is a stairs
    cell; regions are a flood fill over the steps the engine allows; the high side comes from the profile's raised pins
    (a walkable tile pinned to an upright or top class, `wall` aside), else the cliff face (across an east–west pair
-   edge, the north cell), else the map stays flat. Levels 0 and 2; rock as high as the highest cell around it; then the
+   edge, the south cell: note 11), else the map stays flat. Levels 0 and 2; rock as high as the highest cell around it; then the
    check. Notes `cave_levels_<outcome>` (with the map, and `high`), `cave_raised_cells`, `cave_ramps`,
    `cave_stairs_profile_confirmed`/`_other`. A flat map says why: `no_pairs`, `flat_one_side`, `flat_ledges`,
    `flat_pairs_not_bipartite`, `flat_stairs_both_axes`, `flat_mixed_region`, `flat_no_high_side` or `flat_check_*`.
@@ -826,7 +826,12 @@ the full suite at H1, H5 and H7.
    - ramps: `kantobridge:step_collider` (`StepColliderBlock`; `BlockCode.KIND_STEP` 12; carrier kind `STEP`, so the
      stair's art draws on it): two half steps facing the climb, 8 px over its front half and 16 px over its back. The
      low row has one on the floor, the high row a full block with one on top;
-   - edge walls at each cell's own feet; the low side keeps its own too (harmless).
+   - edge walls at each cell's own feet; the low side keeps its own too (harmless). Where neither feet nor the block
+     above is free (a swap site's story block under its closed art), the story block carries the wall's plates itself,
+     whatever the story says (§3.2's variant, which H2 left for this case; a GameTest checks it);
+   - a story block on a ramp stands on its steps (feet + 1 over the low row, + 2 over the high row), so the steps stay:
+     in a map with Strength boulders every walkable cell is a story cell. A swap site's can't (its closed art starts at
+     the floor), so it takes the first step, with the warning `cave_ramp_swap_site`;
 5. **The stairs' art:** every ramp gets a stair unit climbing its way, whatever the profile pins there (`Units`, source
    `ramp`). East and west keep P3's stairs; north and south (`stair_n`, `stair_s`, two new profile classes) are the
    drawing lying flat, so from above they look as in the game (`HullVariants.stairsAlong`).
@@ -839,15 +844,15 @@ the full suite at H1, H5 and H7.
    the next floor down's raised ground, is 7 blocks away for a reach of 6.
 8. **Positions:** `toBlock` on a ramp stands on its third half step (1.5 up); puppets climb a ramp evenly
    (`WorldIndex.rampLift`); the encounter's ground scan skips edge walls (an H2 gap: a Pokémon could have stood on one).
-9. **The synthetic cave:** the profile's CAVERN entry (the raised floor a `ledge` floor, the stairs `stair_e`) and a
-   south face onto low floor; 1F's plateau is raised by its pins, B1F stays flat (`flat_one_side`). The bundle copy and
-   the goldens were regenerated: 1F's levels, ramps and habitats, the two stair units.
+9. **The synthetic cave:** the profile's CAVERN entry (the raised floor a `ledge` floor, the stairs `stair_e`); 1F's
+   plateau is raised by its pins, B1F stays flat (`flat_one_side`). The bundle copy and the goldens were regenerated:
+   1F's levels, ramps and habitats, the two stair units.
 10. **Tests:** `CaveLevelsTest` (8), `RaisedCaveTest` (7), and cases in `ClassBoxesTest`, `HullVariantsTest`,
-    `CavePlannerTest` (both levels within a habitat's reach, from under the floor), `PairEdgesTest`. GameTests: a step
-    collider's half steps climbed and descended, a two-block face not climbed
-    (`CollisionGameTests.caveStepsClimbHalfABlockAtATime`); in the built synthetic cave, a mock player walks up the
-    stairs, along the floor, but neither up the cliff nor off the plateau; the walkability GameTest stands on each
-    cell's own level.
+    `CavePlannerTest` (both levels within a habitat's reach, from under the floor), `PairEdgesTest` (a story code's
+    sides). GameTests: a step collider's half steps climbed and descended, a two-block face not climbed
+    (`CollisionGameTests.caveStepsClimbHalfABlockAtATime`); a story cell with sides keeps its story collision; in the
+    built synthetic cave, a mock player walks up the stairs, along the floor, but neither up the cliff nor off the
+    plateau; the walkability GameTest stands on each cell's own level.
 
 ## Wild Routes
 

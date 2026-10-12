@@ -17,6 +17,7 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.MoverType;
 import net.minecraft.world.entity.decoration.ArmorStand;
+import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.RenderShape;
 import net.minecraft.world.level.block.state.BlockState;
@@ -225,6 +226,33 @@ public class CollisionGameTests implements FabricGameTest {
 			player.setPos(abs.getX() + 0.5, abs.getY(), abs.getZ() + 0.5);
 			player.move(MoverType.SELF, new Vec3(1.0, 0, 0));
 			helper.assertTrue(player.getX() < abs.getX() + 1.0, "a player walked under an edge wall a block up");
+		});
+		helper.succeed();
+	}
+
+	@GameTest(template = EMPTY_STRUCTURE)
+	public void aStoryCellWithSidesKeepsItsStoryCollision(GameTestHelper helper) {
+		// CAVES_3D_PLAN §3.2: where neither feet nor the block above is free for an edge wall, the story block carries it.
+		BlockPos abs = storyCell(helper, new BlockPos(3, 2, 3), StoryCellType.BOULDER_AREA);
+		ServerLevel level = helper.getLevel();
+		level.setBlock(abs, KbBlocks.STORY_CELL.withSides(EdgeWallBlock.SIDE_EAST), Block.UPDATE_ALL);
+		StoryCellBlockEntity kept = (StoryCellBlockEntity) level.getBlockEntity(abs);
+		helper.assertTrue(kept != null && KEY.equals(kept.cellKey()), "a side state lost the cell's key");
+		helper.assertTrue(solidFor(helper, abs, CollisionContext.empty()), "empty context must see a full cube");
+		MockPlayers.with(helper, player -> {
+			StoryState state = StoryStates.of(player);
+			state.clear();
+			// Open: only the plate on the east side collides.
+			player.setPos(abs.getX() + 0.5, abs.getY(), abs.getZ() + 0.5);
+			player.move(MoverType.SELF, new Vec3(1.0, 0, 0));
+			helper.assertTrue(player.getX() < abs.getX() + 1.0, "an open story cell with a side let a player through it");
+			player.setPos(abs.getX() + 0.5, abs.getY(), abs.getZ() - 0.31);
+			player.move(MoverType.SELF, new Vec3(0, 0, 0.5));
+			helper.assertTrue(player.getZ() > abs.getZ() + 0.1, "an open story cell's other sides stopped a player");
+			// Closed (a boulder stands there): a full block, as ever.
+			state.activate(KEY);
+			helper.assertTrue(walkSouthInto(player, abs) < -0.29, "a closed story cell with a side didn't stop the player at its face");
+			state.deactivate(KEY);
 		});
 		helper.succeed();
 	}
