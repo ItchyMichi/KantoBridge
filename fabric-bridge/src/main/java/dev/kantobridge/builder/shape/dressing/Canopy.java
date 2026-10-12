@@ -17,7 +17,8 @@ import java.util.TreeMap;
  * REFERENCES.md), at its own heights (the wood is open to the sky). Each cell's columns hold a mass of leaves from its
  * underside (40-62 pixels) up to the canopy's top; one cell in nine is a light well, showing the brighter upper layer
  * (74-80) instead (CD12, CD13). Strands hang from the underside, never below head height over a path or into a tree
- * (CD6, CD9); none hangs in a well or floats (CD14). The enclosure ring carries a leaf curtain up to the top.
+ * (CD6, CD9); none hangs in a well or floats (CD14). The enclosure ring carries a leaf curtain up to the top, unless the
+ * wood gets its apron ({@link Apron}, CW3).
  *
  * <p>Pixels here are Game Boy pixels, 8 to a block, from the floor; levels are blocks from feet.
  */
@@ -97,10 +98,9 @@ public final class Canopy implements HangingRule {
 					continue;
 				}
 				int leaf = palette.get((int) Math.floor(CellHash.hash01(cx, cy, SALT_LEAF) * palette.size()) % palette.size());
-				boolean well = CellHash.oneIn(cx, cy, SALT_GAP, GAP_EVERY);
-				double height = well ? UPPER + UPPER_SPAN * CellHash.hash01(cx, cy, SALT_UPPER) : LOW + SPAN * CellHash.hash01(cx, cy, SALT_HEIGHT);
-				// Whole pixels, under the top: an upper layer at 79.9 still shows a sliver of leaves.
-				int bottom = Math.min(TOP - 1, (int) Math.round(height));
+				boolean well = well(cx, cy);
+				double height = height(cx, cy);
+				int bottom = bottom(cx, cy);
 				int tint = well ? 0 : tintOf(0.30 + 0.26 * (height - LOW) / SPAN + 0.22 * CellHash.hash01(cx, cy, SALT_MOTTLE));
 				dress.count(well ? "canopy_well" : "canopy_cell");
 				List<Strand> strands = well ? List.of() : this.strands(map, dress, cx, cy, bottom, leaf);
@@ -134,6 +134,21 @@ public final class Canopy implements HangingRule {
 				}
 			}
 		}
+	}
+
+	/** Whether cell (cx, cy) is a light well: one in nine, by the position hash (the apron's cells too, CW3). */
+	static boolean well(int cx, int cy) {
+		return CellHash.oneIn(cx, cy, SALT_GAP, GAP_EVERY);
+	}
+
+	/** The height of cell (cx, cy)'s underside in pixels: 40..62, a well's upper layer 74..80. */
+	static double height(int cx, int cy) {
+		return well(cx, cy) ? UPPER + UPPER_SPAN * CellHash.hash01(cx, cy, SALT_UPPER) : LOW + SPAN * CellHash.hash01(cx, cy, SALT_HEIGHT);
+	}
+
+	/** {@link #height} in whole pixels, under the top: an upper layer at 79.9 still shows a sliver of leaves. */
+	static int bottom(int cx, int cy) {
+		return Math.min(TOP - 1, (int) Math.round(height(cx, cy)));
 	}
 
 	/** A strand's tile, its top block's level, and its keys from the top block down. */

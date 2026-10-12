@@ -3,7 +3,9 @@ package dev.kantobridge.builder.plan;
 import dev.kantobridge.builder.export.CellFlags;
 import dev.kantobridge.builder.shape.ShapePlan;
 import dev.kantobridge.builder.shape.ShapePlanner;
+import dev.kantobridge.builder.shape.dressing.Apron;
 import dev.kantobridge.builder.shape.dressing.Canopy;
+import dev.kantobridge.builder.zone.ZoneBlock;
 import dev.kantobridge.builder.zone.ZonePlan;
 import dev.kantobridge.scene.Scene;
 import dev.kantobridge.world.MapPlacement;
@@ -42,6 +44,12 @@ public final class WorldPlan {
 	public static final int LIGHT_LEVEL = 15;
 	public static final int LIGHT_ABOVE_FEET = 2;
 	public static final int LIGHT_SPACING = 4;
+	/**
+	 * How far past its map an interior under the open sky reaches, in blocks: a canopy wood's apron and its moss wall (the
+	 * caves and woods plan's CW3). Inside the packer's gap, so nothing else stands there; air around a sky interior without
+	 * an apron.
+	 */
+	public static final int SKY_MARGIN = Apron.CELLS * Scale.CELL_BLOCKS + 1;
 
 	public static final String BIOME_OUTDOOR = "kantobridge:kanto_outdoor";
 	public static final String BIOME_INTERIOR = "kantobridge:kanto_interior";
@@ -382,12 +390,15 @@ public final class WorldPlan {
 
 	/**
 	 * The volume of an interior: its footprint and enclosure ring, from the floor block up to the ceiling; under the open
-	 * sky up to a wood's canopy (the caves and woods plan's CW2), which the packer keeps free above it anyway.
+	 * sky up to a wood's canopy (the caves and woods plan's CW2), which the packer keeps free above it anyway, and out to
+	 * {@link #SKY_MARGIN} past the map for a wood's apron (CW3).
 	 */
 	public static Box3 interiorVolume(MapPlacement p) {
 		InteriorPacker.Box box = InteriorPacker.footprint(p.x(), p.z(), p.blockWidth(), p.blockDepth());
-		int top = openSky(p) ? Canopy.TOP_LEVEL : CEILING_ABOVE_FEET;
-		return new Box3(box.minX(), p.y() - 1, box.minZ(), box.maxX(), p.y() + top + 1, box.maxZ());
+		boolean sky = openSky(p);
+		int top = sky ? Canopy.TOP_LEVEL : CEILING_ABOVE_FEET;
+		int grow = sky ? SKY_MARGIN - InteriorPacker.RING : 0;
+		return new Box3(box.minX() - grow, p.y() - 1, box.minZ() - grow, box.maxX() + grow, p.y() + top + 1, box.maxZ() + grow);
 	}
 
 	/** The columns of an interior's enclosure ring, as {x, z}. */
@@ -604,8 +615,18 @@ public final class WorldPlan {
 			this.renderMapColumn(sink, map, x, z);
 			return;
 		}
-		// The enclosure ring: border-block art from the floor block up to the ceiling; a dressed room's wall tile (V7).
 		ShapePlanner.MapShapes planned = this.shapes == null ? null : this.shapes.shapes(map.id());
+		Apron.Plan apron = planned == null || !openSky(p) ? null : planned.apron();
+		if (apron != null) {
+			this.renderApronColumn(sink, map, apron, x, z);
+			return;
+		}
+		InteriorPacker.Box footprint = InteriorPacker.footprint(p.x(), p.z(), p.blockWidth(), p.blockDepth());
+		if (x < footprint.minX() || x >= footprint.maxX() || z < footprint.minZ() || z >= footprint.maxZ()) {
+			// The margin a sky interior keeps for an apron (CW3): air without one.
+			return;
+		}
+		// The enclosure ring: border-block art from the floor block up to the ceiling; a dressed room's wall tile (V7).
 		int tile = planned != null && planned.wallTile() >= 0 ? planned.wallTile() : this.ringTile(map, x - p.x(), z - p.z());
 		int code = BlockCode.full(this.slot(map, tile, false));
 		for (int y = p.y() - 1; y <= p.y() + CEILING_ABOVE_FEET; y++) {
@@ -615,6 +636,36 @@ public final class WorldPlan {
 			// An open-sky wood's leaf curtain above the ring (CW2), on decor carriers: the ring keeps its collision.
 			for (int k = Canopy.CURTAIN_FROM; k < Canopy.TOP_LEVEL; k++) {
 				sink.set(x, p.y() + k, z, BlockCode.decor(true));
+			}
+		}
+	}
+
+	/**
+	 * A column of a canopy wood's apron (the caves and woods plan's CW3), all vanilla but its floor: the floor block in the
+	 * forest's grass tile, the apron's leaves, logs and vines, the invisible wall's barriers on the enclosure ring, and the
+	 * moss wall around it all.
+	 */
+	private void renderApronColumn(CodeSink sink, PlacedMap map, Apron.Plan apron, int x, int z) {
+		MapPlacement p = map.placement();
+		int tx = x - p.x();
+		int ty = z - p.z();
+		byte kind = apron.kind(tx, ty);
+		if (kind == Apron.WALL) {
+			for (int k = -1; k <= Apron.WALL_TOP; k++) {
+				sink.set(x, p.y() + k, z, BlockCode.vanilla(ZoneBlock.MOSS_BLOCK));
+			}
+			return;
+		}
+		ZoneBlock[] column = apron.column(tx, ty);
+		if (kind != Apron.WOOD || column == null) {
+			return;
+		}
+		// The planner picks a floor tile the map shows on dry ground, so it has a slot; the ring's own tile if not.
+		int floor = this.hasSlot(map, apron.floorTile()) ? apron.floorTile() : this.ringTile(map, tx, ty);
+		sink.set(x, p.y() - 1, z, BlockCode.full(this.slot(map, floor, false)));
+		for (int k = 0; k < column.length; k++) {
+			if (column[k] != null) {
+				sink.set(x, p.y() + k, z, BlockCode.vanilla(column[k]));
 			}
 		}
 	}
@@ -723,6 +774,11 @@ public final class WorldPlan {
 	 */
 	private int ringTile(PlacedMap map, int tx, int ty) {
 		return this.shapes != null ? map.model().drawnBorderTile(tx, ty) : map.model().borderTile(tx, ty);
+	}
+
+	private boolean hasSlot(PlacedMap map, int tile) {
+		TileSlots slots = this.tileSlots.get(map.atlas() + "|" + map.palette());
+		return slots != null && tile >= 0 && tile < slots.full.length && slots.full[tile] >= 0;
 	}
 
 	private int slot(PlacedMap map, int tile, boolean half) {

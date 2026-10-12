@@ -30,10 +30,12 @@ import java.util.Objects;
  * @param caveRock      the caves' sagging roof, stalactites and stalagmites (docs/specs/CAVES_AND_WOODS_PLAN.md §5.1;
  *                      from CW1)
  * @param canopy        Viridian Forest's canopy and vines (docs/specs/CAVES_AND_WOODS_PLAN.md §5.2-§5.3; from CW2)
+ * @param apron         the forest's apron past its edge, in vanilla logs and leaves (docs/specs/CAVES_AND_WOODS_PLAN.md
+ *                      §5.4; from CW3)
  */
 public record ShapeParams(String planner, String heights, int maxUnit, int minRepeatRows, int hullRing, int interiorWall, boolean tierB,
 		boolean tierC, int roofRise, int ledgeLip, boolean storyArt, boolean dressing, int templateMax, boolean profileUnits,
-		boolean profileBuildings, boolean profileBoxes, boolean caveRock, boolean canopy) {
+		boolean profileBuildings, boolean profileBoxes, boolean caveRock, boolean canopy, boolean apron) {
 	public static final String CLASSIFIED = "classified";
 	public static final String MEASURED = "measured";
 
@@ -51,6 +53,17 @@ public record ShapeParams(String planner, String heights, int maxUnit, int minRe
 		if ((caveRock || canopy) && !dressing) {
 			throw new IllegalArgumentException("hangings need dressing");
 		}
+		if (apron && !canopy) {
+			throw new IllegalArgumentException("an apron needs the canopy");
+		}
+	}
+
+	/** Parameters before CW3 (no apron). */
+	public ShapeParams(String planner, String heights, int maxUnit, int minRepeatRows, int hullRing, int interiorWall, boolean tierB,
+			boolean tierC, int roofRise, int ledgeLip, boolean storyArt, boolean dressing, int templateMax, boolean profileUnits,
+			boolean profileBuildings, boolean profileBoxes, boolean caveRock, boolean canopy) {
+		this(planner, heights, maxUnit, minRepeatRows, hullRing, interiorWall, tierB, tierC, roofRise, ledgeLip, storyArt, dressing, templateMax,
+				profileUnits, profileBuildings, profileBoxes, caveRock, canopy, false);
 	}
 
 	/** Parameters before CW1 (no hangings). */
@@ -172,9 +185,15 @@ public record ShapeParams(String planner, String heights, int maxUnit, int minRe
 				true, true, 16, 4, true, true, TEMPLATE_MAX, true, true, true, true, true);
 	}
 
+	/** CW3: CW2's planner plus the forest's apron, in vanilla logs and leaves (docs/specs/CAVES_AND_WOODS_PLAN.md §5.4). */
+	public static ShapeParams cw3() {
+		return new ShapeParams("kb-shapes/11", MEASURED, HeightRules.MAX_UNIT, HeightRules.MIN_REPEAT_ROWS, 2, HeightRules.INTERIOR_WALL,
+				true, true, 16, 4, true, true, TEMPLATE_MAX, true, true, true, true, true, true);
+	}
+
 	/** The parameters a build plans with. */
 	public static ShapeParams current() {
-		return cw2();
+		return cw3();
 	}
 
 	/** The parameters as they appear in the shape index. */
@@ -216,6 +235,9 @@ public record ShapeParams(String planner, String heights, int maxUnit, int minRe
 		}
 		if (this.canopy) {
 			out.addProperty("canopy", true);
+		}
+		if (this.apron) {
+			out.addProperty("apron", true);
 		}
 		return out;
 	}

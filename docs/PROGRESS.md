@@ -582,16 +582,40 @@ Route 22: none. Over the 36 outdoor maps, 2,586 of 14,797 solid cells were units
 ## Caves and woods
 
 Execution of [specs/CAVES_AND_WOODS_PLAN.md](specs/CAVES_AND_WOODS_PLAN.md) (CW1–CW5), from your choices of 2026-10-11
-(CD1–CD6; the defaults CD7–CD15): Kanto in First Person's cave rock, canopy and vines, re-implemented from its rules
-(never installed, nothing copied). Feature tests per milestone; the full suite at CW2 and CW5.
+(CD1–CD6; the defaults CD7–CD15) and 2026-10-12 (CD16: the forest's apron, in Minecraft's own logs and leaves; its
+defaults CD17–CD24): Kanto in First Person's cave rock, canopy, vines and apron, re-implemented from its rules (never
+installed, nothing copied). Feature tests per milestone; the full suite at CW2, CW5 and CW3.
 
 | # | Milestone | Status | Date | Commit |
 |---|---|---|---|---|
 | CW1 | Cave rock | **done** (13 new JUnit tests; JUnit 948 green; the GameTests run at CW2) | 2026-10-11 | `CW1: cave rock` |
 | CW2 | The forest canopy and vines | **done**; checkpoint: JUnit 958, GameTests 98, Python and Lua 1,484 | 2026-10-11 | `CW2: the forest canopy and vines` |
-| CW3 | The forest's apron | waits for your decision after CW2 | | |
+| CW3 | The forest's apron | **done** in vanilla logs and leaves (CD16); JUnit 968, GameTests 98, Python golden and gates | 2026-10-12 | `CW3: the forest's apron` |
 | CW4 | Vines in the wild zone | **done** (zone JUnit 27 green; the zone GameTests run at CW5) | 2026-10-11 | `CW4: vines in the wild zone` |
 | CW5 | Finish | **done**: checkpoint JUnit 959, GameTests 98, Python and Lua 1,484; the real world built and filmed on the pod | 2026-10-11 | `5b61348`, `CW5: finish` |
+
+### Caves and woods: CW3 notes
+
+1. **Your call (2026-10-12):** yes to the apron, built from Minecraft's own logs and leaves so it costs the shape map
+   nothing and Minecraft's renderer draws it; CD7–CD15 kept. The forest's own canopy keeps the map's art.
+2. **What it is** (`Apron`, `kb-shapes/11`): four cells (8 blocks) of wood past Viridian Forest's edge, by the mod's
+   rules. Every apron block has a floor block in the forest's grass tile. 62% of the cells mirror the nearest map cell:
+   a solid one as a 2 × 2 × 2 bush of leaves (16% carried up to 3–6 blocks), an open one with a log trunk up into the
+   canopy 30% of the time. Oak or dark oak per cell, half each. The canopy carries on over the apron, thin: each cell's
+   underside block, filled up to where its neighbours' undersides start, and the upper layer at feet + 9. Vanilla vines
+   hang on its leaves' sides, one face in nine, 2–4 blocks, never below feet + 2. A moss wall 9 blocks out closes it,
+   from the floor block to feet + 9.
+3. **The edge you walk to:** the enclosure ring keeps its collision as barriers wherever the apron leaves air (the
+   apron's leaves and logs are solid already), so you see through it and can't pass. Its floor block wears the grass.
+   The CW2 curtain on the ring is gone: the apron's canopy covers the ring.
+4. **Room:** an open-sky interior's volume, shape-map grid and biome box now reach 9 blocks past the map. That is inside
+   the packer's 16-block gap, so nothing else can stand there. The Safari Zone keeps its ring; its margin is air.
+5. **Leaf colour:** the outdoor biome gets the wild zone's grass and foliage colours. It had none, so Minecraft would
+   have tinted the leaves savanna yellow. Nothing vanilla stood in it before, so nothing else changes.
+6. **Tests:** `ApronTest` (the box, mirrors, the thin canopy, an invisible wall without a gap, vines out of reach, the
+   floor tile, the same apron every time), `CanopyTest` (kb-shapes/11 swaps the curtain for the apron; kb-shapes/10 and
+   other maps unchanged), `CanopyPlanTest` (the built ring, every apron block as planned, no shape ids past the map).
+   The golden synthetic shapes changed only in planner, parameters and hashes.
 
 ### Caves and woods: CW5 notes
 

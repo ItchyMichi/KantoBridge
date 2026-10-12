@@ -674,11 +674,21 @@ A new world (the mod installed and switched off, as for P1).
 
 - [ ] **The canopy:** a roof of leaves five to eight blocks up, in the forest's own tree art, its underside stepped and
       mottled; here and there a light well showing brighter leaves higher up; no sky anywhere above the forest.
-- [ ] **The edge:** the forest closes in leaves up to the canopy all round; you can't see out.
+- [ ] **The edge:** you can't see out of the forest anywhere (since CW3 the edge opens onto the apron below).
 - [ ] **Vines:** strands of leaves and green stem-and-stub strands hang from the canopy, some long; none comes below
       head height on a path, none hangs into a tree.
 - [ ] **Walking and battles** are exactly as before; the light under the canopy is as before.
 - [ ] **The Safari Zone** keeps its open sky.
+
+### CW3: the forest's apron
+
+- [ ] **Past the edge:** four cells of Minecraft wood beyond the forest's trees all round: leaf bushes, some taller,
+      oak and dark-oak trunks up into the leaves, a floor of the forest's grass, the canopy carrying on overhead, and a
+      moss wall at the far side; nowhere a gap onto the sky or the void.
+- [ ] **The invisible wall:** at the forest's edge you can see into the apron but never walk into it, anywhere round
+      the edge (exits included); nothing to climb.
+- [ ] **Colour:** the leaves and vines are green, not yellow.
+- [ ] **Vines:** some hang from the apron's leaves, all out of reach.
 
 ### CW4: vines in the wild zone
 

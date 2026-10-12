@@ -4,6 +4,7 @@ import com.google.gson.JsonObject;
 import dev.kantobridge.builder.plan.Box3;
 import dev.kantobridge.builder.plan.HeightRules;
 import dev.kantobridge.builder.plan.WorldPlan;
+import dev.kantobridge.builder.shape.dressing.Apron;
 import dev.kantobridge.builder.shape.dressing.Dress;
 import dev.kantobridge.builder.shape.dressing.Dressing;
 import dev.kantobridge.builder.shape.geom.CellUnits;
@@ -22,6 +23,7 @@ import java.util.Collection;
 import java.util.EnumMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.TreeMap;
 import java.util.TreeSet;
 import org.jetbrains.annotations.Nullable;
@@ -76,14 +78,15 @@ public final class ShapePlanner {
 	 * @param hungMask  per art tile, bit k set when a hanging takes level k: a {@code decor} carrier at feet + k
 	 * @param hungLeaves per art tile, bit k set when that carrier is {@code decor_leaves} (a wood's canopy and vines, CW2)
 	 * @param curtain   the leaf curtain an open-sky wood's enclosure ring carries above its top (CW2), null for none
+	 * @param apron     a canopy wood's apron past its edge, in vanilla blocks (CW3; it replaces the curtain), null for none
 	 */
 	public record MapShapes(String map, ShapeKey[][] open, ShapeKey[][] closed, int[] blocks, int[] shapeMask, int[] floor, int[] decor,
 			List<Units.Cell> units, ShapeKey[][] overlay, List<Templates.Placed> templates, int wallTile, @Nullable ShapeKey ceiling,
-			ShapeKey[][] hung, int[] hungMask, int[] hungLeaves, @Nullable ShapeKey curtain) {
+			ShapeKey[][] hung, int[] hungMask, int[] hungLeaves, @Nullable ShapeKey curtain, Apron.@Nullable Plan apron) {
 		/** The plan of a map without Tier B (no floor change, no decor, no unit, no overlay). */
 		public MapShapes(String map, ShapeKey[][] open, ShapeKey[][] closed, int[] blocks, int[] shapeMask) {
 			this(map, open, closed, blocks, shapeMask, filled(blocks.length, -1), new int[blocks.length], List.of(), new ShapeKey[blocks.length][],
-					List.of(), -1, null, new ShapeKey[blocks.length][], new int[blocks.length], new int[blocks.length], null);
+					List.of(), -1, null, new ShapeKey[blocks.length][], new int[blocks.length], new int[blocks.length], null, null);
 		}
 
 		/** The tile the floor block of art tile {@code i} wears, given its own. */
@@ -478,8 +481,17 @@ public final class ShapePlanner {
 				}
 			}
 		}
+		ShapeKey curtain = open.curtain();
+		Apron.Plan apron = null;
+		if (params.apron() && curtain != null) {
+			// CW3: a canopy wood (the canopy found leaves, so it hung a curtain) gets its apron instead of the ring's curtain.
+			Set<Integer> grass = sceneAtlas == null ? Set.of() : sceneAtlas.grassTiles();
+			int ground = sceneAtlas == null ? -1 : Units.mapGround(map, grass, sceneAtlas.frameTiles());
+			apron = Apron.plan(map, Apron.floorTile(map, grass, ground), tally);
+			curtain = null;
+		}
 		return new MapShapes(map.id(), open.keys(), closed, open.blocks(), open.shapeMask(), open.floor(), open.decor(), open.units(), overlay,
-				open.templates(), open.wallTile(), open.ceiling(), open.hung(), open.hungMask(), open.hungLeaves(), open.curtain());
+				open.templates(), open.wallTile(), open.ceiling(), open.hung(), open.hungMask(), open.hungLeaves(), curtain, apron);
 	}
 
 	/**

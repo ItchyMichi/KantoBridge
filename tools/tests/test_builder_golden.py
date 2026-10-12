@@ -54,7 +54,7 @@ def test_golden_shape_index_matches_the_schema():
     problems = PROTOCOL.check_shape_index(golden["index"])
     assert not problems, [str(p) for p in problems]
     assert hashlib.sha256(canonical(golden["index"]).encode("utf-8")).hexdigest() == golden["indexHash"]
-    assert golden["index"]["planner"] == "kb-shapes/10"
+    assert golden["index"]["planner"] == "kb-shapes/11"
     assert golden["index"]["params"]["tierB"] is True
     assert golden["index"]["params"]["storyArt"] is True
     assert golden["index"]["params"]["tierC"] is True and golden["index"]["params"]["dressing"] is True

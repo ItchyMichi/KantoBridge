@@ -1,6 +1,6 @@
 # Plan: caves and woods (first-person dressing from Kanto in First Person)
 
-- **Status:** decided by the user on 2026-10-11 (§2.1); CW1, CW2, CW4 and CW5 done (PROGRESS.md, "Caves and woods"); CW3 waits for the user.
+- **Status:** decided by the user on 2026-10-11 and 2026-10-12 (§2.1); CW1–CW5 done (PROGRESS.md, "Caves and woods").
 - **What it delivers:** the caves get a sagging rock roof with stalactites and stalagmites; Viridian Forest gets a leaf
   canopy with light wells and hanging vines; the Wild Routes forest zone gets Minecraft vines. The placements and sizes
   are those of the Gen1Recomp mod Kanto in First Person (`ds_fp_ceiling` v1.57.2): the same cells, by the same
@@ -38,7 +38,7 @@
 | Caves | Every cave map (the CAVERN tileset): a sagging roof under the ceiling, stalactites, stalagmites, in the cave's rock art | CW1 |
 | Forest canopy | Viridian Forest: a leaf canopy over the map and its ring at the mod's heights, light wells showing a brighter layer above, the ring raised as a curtain | CW2 |
 | Vines | Viridian Forest: both of the mod's vine kinds (strands in the leaf art; stem-and-stub strands in three greens), static | CW2 |
-| The forest's apron | The mod's 4-cell ring of further trees past the map edge, with its curtain at the outer edge | CW3 (optional, the user decides after CW2) |
+| The forest's apron | The mod's 4-cell ring of further trees past the map edge, with its curtain at the outer edge, in Minecraft's own logs and leaves (CD16) | CW3 |
 | Wild zone | Minecraft vines on the Wild Routes forest's trees and hedges, above head height | CW4 |
 | Finish | Docs, the full suite, a real-world build on the pod (budgets), a video | CW5 |
 
@@ -57,6 +57,7 @@ UNDERGROUND tileset), interiors' doors, pictures, lamps and windows, the sky, ra
 | CD4 | The mod's positions and sizes, with a fallback where something is missing. Since it stores no positions, its formula and numbers are re-implemented (no install, nothing read at runtime). The one input with a fallback is Dramaless Shape's tile classes (the canopy's leaf tiles), read as today from the profile; without it, our own classification |
 | CD5 | Caves stay 3 blocks high (the mod's MID headroom); the roof and spikes are scaled to fit |
 | CD6 | Paths stay clear: over a cell you walk or surf on, nothing hangs below head height and no stalagmite stands |
+| CD16 | (2026-10-12, after the CW5 video) The forest's apron is built (CW3), in Minecraft's own logs and leaves instead of the map's art: vanilla blocks cost the shape map nothing and Minecraft draws them with its own renderer. The forest's own canopy keeps the map's art (CD1). CD7–CD15 accepted as they are |
 
 ### 2.2 Plan defaults (pre-approved; the user may change any)
 
@@ -71,6 +72,14 @@ UNDERGROUND tileset), interiors' doors, pictures, lamps and windows, the sky, ra
 | CD13 | The canopy is a filled mass hanging from the upper layer: the mod's panels are its underside and its skirts the steps between them; a light well is a shaft up to the upper layer (one geometry for caves and canopy, and the face masks cull it) |
 | CD14 | The mod's two quirks are not kept: a stem-and-stub strand never floats below its panel (it hangs from the canopy's underside, and none hangs in a well), and leaf tiles are ranked by frequency (the mod's "greenness" needs pixels) |
 | CD15 | Lights stay where they are: a decor carrier that takes a light's position emits the light itself (`decor` gains `lit`) |
+| CD17 | The apron's wood is oak or dark oak per cell, half each by the mod's leaf hash (salt 23); leaves are persistent. The outdoor biome takes the wild zone's grass and foliage colours: it had none, so Minecraft would tint the leaves savanna yellow |
+| CD18 | A mirrored solid cell is a bush of leaves, 2 × 2 × 2 blocks (the mod's 2-block box); its taller box is the bush's 2 × 2 column carried up to 3–6 blocks (the mod's 3–5.5, rounded; whole blocks have no inset) |
+| CD19 | A mirrored open cell's trunk is a column of logs in one of the cell's four blocks (by hash), from the floor up into the canopy. The mod's trunk is a 3–5.5-block post of leaves; a log post ending in mid-air would read as a stump |
+| CD20 | The apron's canopy is thin: each cell's underside block, filled up to where its neighbours' undersides start (the mod's skirts), and the upper layer at feet + 9 (a well: the upper layer only). A solid mass of vanilla leaves would draw all its inner faces |
+| CD21 | The curtain is a wall of moss blocks just outside the apron, from the floor block to the canopy's top: opaque, so the void never shows through leaves (the mod's curtain is opaque) |
+| CD22 | The apron's vines are vanilla vines on its leaves' side faces, at CW4's density (one face in nine), 2–4 blocks long, never below feet + 2 and never in the invisible wall |
+| CD23 | The apron's floor wears the forest's grass tile (the mod's), or the map's ground where the map shows no grass |
+| CD24 | The enclosure ring becomes an invisible wall: barriers from feet to feet + 3 wherever the apron leaves air there (its leaves and logs are solid already); its floor block wears the apron's floor |
 
 ## 3. Architecture
 
@@ -183,13 +192,31 @@ plus its enclosure ring (CW3 widens the ring to the mod's four cells).
 Pixels as in §5.1 (no scale: the forest is open). A strand spans the blocks from its top to its tail, one key per
 block. A strand clamped to under 2 px is dropped (counted).
 
-### 5.4 The forest's apron (CW3, optional)
+### 5.4 The forest's apron (CW3; CD16–CD24)
 
-The mod's ring of further wood: four cells past the map edge, each mirroring the nearest map cell (a solid one as a
-two-block box in its own tile, 16% of them with a taller inset box 3–5.5 blocks; a walkable one, 30% of them with an
-inset trunk), a floor in the forest's grass tile, both canopy layers continuing over it, and the curtain moving to its
-outer edge. It needs the open-sky footprint widened by 8 blocks (inside the packer's 16-block gap) and the enclosure
-ring turned into an invisible wall where the apron shows through. Decided by the user after seeing CW2.
+The mod's ring of further wood, four cells (8 blocks) deep past the map's edge, built from Minecraft's own blocks:
+nothing in it is in the shape map. It applies wherever the canopy does (and found leaves). Per apron cell (cx, cy),
+negative in the ring, with h = `hash01` and the canopy's own numbers (§5.2):
+
+| Piece | Rule |
+|---|---|
+| Floor | every apron block's floor block (feet − 1) wears the forest's grass tile (CD23) |
+| Mirror | when h(cx,cy,149) ≤ 0.62 (the mod's 62%), the nearest map cell (coordinates clamped into the map) is mirrored |
+| Bush | a solid source (anything but WALK and LEDGE): leaves on the cell's four blocks, feet to feet + 1 (CD18) |
+| Taller | 16% of bushes (h(cx,cy,151) < 0.16): the four columns carried up to round((24 + 20·h(cx,cy,157)) / 8) blocks, 3–6 |
+| Trunk | 30% of open sources (h(cx,cy,163) < 0.30): logs in block floor(4·h(cy,cx,163)) of the cell (0 NW, 1 NE, 2 SW, 3 SE), from feet up to the canopy's underside (CD19) |
+| Wood | oak when h(cx,cy,23) < 0.5, else dark oak (CD17) |
+| Canopy | leaves from the underside block, feet + ⌊bottom / 8⌋ (§5.2's bottom; a well's is its upper layer), up to one below the highest underside among its four neighbours (map cells too), at most feet + 8; and the upper layer at feet + 9 (CD20) |
+| Vines | at feet + 4 … feet + 8, wherever an apron leaf has air beside it: one face in nine (⌊9·h(x,z,307 + 4k + d)⌋ = 0, d 0 north … 3 west), a vine on that face, 2 + ⌊3·h(x,z,349)⌋ blocks down, stopping above anything there and at feet + 2 (CD22) |
+| Moss wall | the columns just outside the apron (9 blocks out): moss blocks from feet − 1 to feet + 9 (CD21) |
+| Invisible wall | the enclosure ring (1 block out): barriers from feet to feet + 3 wherever the apron leaves air (CD24) |
+
+- **Room:** an open-sky interior's volume, shape-map grid and biome box widen to the moss wall, 9 blocks past the map.
+  That is inside the packer's 16-block gap, so no other interior can stand there and the sky above stays clear. A sky
+  interior without an apron (the Safari Zone) keeps its ring; its widened margin is air.
+- **The curtain** of CW2 leaves the ring: the apron's canopy covers the ring, and the moss wall closes the edge.
+- Inside the map nothing changes. The plan is `MapShapes.apron` (from `kb-shapes/11`), rendered by WorldPlan as
+  vanilla codes; the report counts its pieces (`apron_*`).
 
 ### 5.5 The wild zone's vines (CW4)
 
@@ -217,9 +244,14 @@ Vine spreading is already off (`KantoGameRules`).
   clamps and spans, the curtain); a GameTest over a synthetic canopy map. **Full suite** (checkpoint).
 - **Commit "CW2: the forest canopy and vines".**
 
-### CW3: The forest's apron (if the user wants it)
+### CW3: The forest's apron
 
-As §5.4. **Commit "CW3: the forest's apron".**
+- As §5.4: `Apron`, `ShapeParams` `apron` = `kb-shapes/11`, WorldPlan's apron columns and widened sky volume, the
+  outdoor biome's colours.
+- **Tests:** JUnit over the rule (mirrors, bushes, trunks, the thin canopy, vines, an invisible wall without a gap,
+  nothing for other maps or before `kb-shapes/11`) and over the built plan (volume, floors, barriers, moss, no shape
+  ids in the apron); the full suite.
+- **Commit "CW3: the forest's apron".**
 
 ### CW4: Vines in the wild zone
 

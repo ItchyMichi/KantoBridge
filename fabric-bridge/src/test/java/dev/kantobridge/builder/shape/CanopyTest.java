@@ -20,7 +20,7 @@ import org.junit.jupiter.api.Test;
  * A wood's canopy and vines (docs/specs/CAVES_AND_WOODS_PLAN.md §5.2-§5.3, CW2): every cell's columns hold leaves from
  * its underside (40-62 px; a light well's 74-80) up to the canopy's top, all foliage; strands hang from the underside,
  * never below head height over a path nor into a tree, never in a well; nothing outside a canopy wood or before
- * kb-shapes/10.
+ * kb-shapes/10. From kb-shapes/11 the wood's apron (CW3) replaces the ring's curtain.
  */
 class CanopyTest {
 	static SceneMap wood(String id, boolean canopy, boolean openAir, String... rows) {
@@ -156,6 +156,24 @@ class CanopyTest {
 		}
 		ShapePlanner.MapShapes before = plan(wood("WOOD", true, true, wood(8, 8)), ShapeParams.cw1(), new TreeMap<>());
 		assertTrue(Arrays.stream(before.hungMask()).allMatch(m -> m == 0), "kb-shapes/9 plans no canopy");
+	}
+
+	@Test
+	void cw3GivesTheWoodItsApronInsteadOfTheCurtain() {
+		SceneMap map = wood("WOOD", true, true, wood(10, 9));
+		Map<String, Integer> tally = new TreeMap<>();
+		ShapePlanner.MapShapes shapes = plan(map, ShapeParams.cw3(), tally);
+		ShapePlanner.MapShapes before = plan(map, ShapeParams.cw2(), new TreeMap<>());
+		assertNull(shapes.curtain(), "the apron's canopy and moss wall replace the ring's curtain");
+		assertNotNull(shapes.apron());
+		assertEquals(ShapeFixtures.tile('.'), shapes.apron().floorTile(), "no grass shown: the map's ground");
+		assertTrue(Arrays.deepEquals(before.hung(), shapes.hung()), "the canopy itself is CW2's");
+		assertTrue(tally.get("dress_apron_cell") > 0);
+		assertNull(before.apron(), "kb-shapes/10 plans no apron");
+		assertNotNull(before.curtain());
+		for (SceneMap other : new SceneMap[] {wood("PARK", false, true, wood(8, 8)), wood("ROOM", true, false, wood(8, 8))}) {
+			assertNull(plan(other, ShapeParams.cw3(), new TreeMap<>()).apron(), other.id());
+		}
 	}
 
 	@Test

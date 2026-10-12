@@ -6,9 +6,10 @@ import java.util.List;
 
 /**
  * The dressing rules of V7 (VD7: interior walls and ceilings only), in order (§5.12), and the hangings of the caves and
- * woods plan (docs/specs/CAVES_AND_WOODS_PLAN.md: cave rock from CW1, the canopy and vines from CW2). Open-air interiors
- * (forests) get no walls or ceiling: the builder gives them the sky instead of a ceiling when their placement allows it.
- * Building backs are Tier A's plain north faces (V3); trunks are a later decision.
+ * woods plan (docs/specs/CAVES_AND_WOODS_PLAN.md: cave rock from CW1, the canopy and vines from CW2; the forest's apron of
+ * CW3 is {@link Apron}, planned after them in vanilla blocks). Open-air interiors (forests) get no walls or ceiling: the
+ * builder gives them the sky instead of a ceiling when their placement allows it. Building backs are Tier A's plain north
+ * faces (V3); trunks are a later decision.
  */
 public final class Dressing {
 	/** The rules, in the order they run. */
