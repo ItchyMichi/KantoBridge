@@ -167,6 +167,26 @@ class ShapeMapTest {
 	}
 
 	@Test
+	void stackedGridsAreToldApartByTheirStacks() {
+		// Two pieces 11 blocks apart in one column (CAVES_3D_PLAN §3.1): a tall stack in the lower grid would reach the
+		// upper one's floor, so a lookup goes on past a grid whose stack doesn't reach y.
+		ShapeMap.GridBuilder lower = new ShapeMap.GridBuilder(0, 0, 4, 4, 53);
+		lower.set(1, 53, 1, 5);
+		lower.set(2, 64, 2, 6);
+		ShapeMap.GridBuilder upper = new ShapeMap.GridBuilder(0, 0, 4, 4, 64);
+		upper.set(1, 64, 1, 7);
+		ShapeMap map = new ShapeMap(INDEX_HASH, SHAPE_HASH, List.of(lower.build(), upper.build()), List.of());
+		ShapeMap.Lookup lookup = map.lookup();
+		assertEquals(5, lookup.shapeAt(1, 53, 1));
+		assertEquals(7, lookup.shapeAt(1, 64, 1), "the upper grid's, past the lower grid whose range reaches 64");
+		assertEquals(6, lookup.shapeAt(2, 64, 2), "the lower grid's tall stack, where the upper grid has none");
+		assertEquals(5, map.shapeAt(1, 53, 1));
+		assertEquals(7, map.shapeAt(1, 64, 1));
+		assertEquals(6, map.shapeAt(2, 64, 2));
+		assertEquals(0, map.shapeAt(1, 70, 1));
+	}
+
+	@Test
 	void buildersRefusePositionsOutsideTheirBox() {
 		ShapeMap.GridBuilder grid = new ShapeMap.GridBuilder(0, 0, 4, 4, 64);
 		assertThrows(IllegalArgumentException.class, () -> grid.set(4, 64, 0, 1));

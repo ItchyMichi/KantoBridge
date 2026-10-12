@@ -1,9 +1,16 @@
 package dev.kantobridge.client.puppet;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import dev.kantobridge.world.MapLayout;
+import dev.kantobridge.world.MapPlacement;
 import dev.kantobridge.world.Scale;
+import dev.kantobridge.world.StoryCellTable;
+import dev.kantobridge.world.WorldIndex;
+import java.util.List;
+import java.util.Map;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -41,6 +48,24 @@ class PuppetCullingTest {
 		assertFalse(PuppetCulling.visible(110, 64 - Scale.LAYER_STEP, 210, 110, 64 - Scale.LAYER_STEP + 1.6, 210, TOWN));
 		// Without a known map only the distance counts.
 		assertTrue(PuppetCulling.visible(110, 64 - Scale.LAYER_STEP, 210, 110, 64 - Scale.LAYER_STEP + 1.6, 210, null));
+	}
+
+	@Test
+	void aPiecesAreaIsItsRectangleAtItsLevel() {
+		// A 6 × 4 cave whose east part (columns 3-5) sits 40 blocks east, 11 down and 8 south (CAVES_3D_PLAN §3.1).
+		MapPlacement cave = new MapPlacement("TEST_CAVE", 1000, 64, 2000, 6, 4, 1, MapPlacement.Kind.INTERIOR, "PAL", "kantobridge:kanto_cave",
+				false, null);
+		MapLayout layout = MapLayout.of(6, 4, List.of(new MapLayout.Piece(0, 0, 3, 4, 0, 0, 0), new MapLayout.Piece(3, 0, 3, 4, 40, -11, 8)), null,
+				List.of());
+		WorldIndex index = new WorldIndex("red", "a".repeat(64), List.of(cave), Map.of("TEST_CAVE", layout), "b".repeat(64),
+				StoryCellTable.of(List.of()), List.of(), List.of(), null);
+		PuppetCulling.Area east = PuppetCulling.Area.of(index, cave, 4, 1);
+		assertEquals(new PuppetCulling.Area(1046, 2008, 1052, 2016, 53, PuppetCulling.PIECE_REACH), east);
+		assertTrue(east.contains(1049, 53, 2011));
+		assertTrue(east.contains(1049, 55, 2011), "on raised ground");
+		assertFalse(east.contains(1049, 64, 2011), "the piece 11 blocks up");
+		assertEquals(PuppetCulling.Area.of(cave), PuppetCulling.Area.of(new WorldIndex("red", "a".repeat(64), List.of(cave), "b".repeat(64),
+				StoryCellTable.of(List.of()), List.of()), cave, 4, 1), "a map without a layout: the map's area");
 	}
 
 	@Test

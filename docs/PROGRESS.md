@@ -713,6 +713,43 @@ installed, nothing copied). Feature tests per milestone; the full suite at CW2, 
    block's collision and light by `ShapeBlockTest`; the GameTests run at the CW2 checkpoint.
 6. **Golden:** `synthetic_shapes.json` changed only in its planner (`kb-shapes/9`), parameters (`caveRock`) and hashes.
 
+## Caves in 3D
+
+Execution of [specs/CAVES_3D_PLAN.md](specs/CAVES_3D_PLAN.md) (H1–H7), approved by you on 2026-10-12 with its
+defaults: raised ground in caves, caves in an area of their own, real ladders and holes. Feature tests per milestone;
+the full suite at H1, H5 and H7.
+
+| # | Milestone | Status | Date | Commit |
+|---|---|---|---|---|
+| H1 | A position per cell | **done**; checkpoint: JUnit 979 (6 skipped), GameTests 98, Python and Lua 1,484 | 2026-10-12 | `H1: a position per cell` |
+| H2 | Edge walls on tile-pair edges | next | | |
+| H3 | Caves in an area of their own | | | |
+| H4 | Raised ground in caves | | | |
+| H5 | Real ladders and holes | | | |
+| H6 | Pilot | | | |
+| H7 | Every cave in 3D | | | |
+
+### Caves in 3D: H1 notes
+
+1. **The index:** `world/MapLayout` holds a map's `pieces` (cell rectangles with an optional run-length mask and a block
+   offset), `levels` (run-length, blocks above the piece's feet) and `ramps`. They are optional keys of a map's
+   WorldIndex entry, each written only when it differs from the default, so `version` stays 1 and a world without
+   layouts keeps its bytes (the goldens didn't change). The schema has the three keys.
+2. **Lookups:** `cellOrigin` and `toBlock` go through the piece and the level; `toCell` checks a layout map's pieces
+   with the cell's own window (feet − 3 to feet + 4); `levelOrigin` is the piece's feet, which a movement `Spot` now
+   keeps as its level, so a ramp won't look like a level change.
+3. **Readers moved:** puppets (position from the cell's origin; culling per piece, ±5.5 blocks), clicks (`ground`,
+   `ClosedArtPick`, `InteractTarget.cellOf`/`own`), story art, `ClientShapes.topHeight`, the dev autopilot. Server warps,
+   battles and encounters already went through `toBlock`. The encounter and proxy guards also refuse a cell more than
+   4 blocks above or below the player (another level).
+4. **First-match lookups fixed:** the shape map goes on past a grid whose stack doesn't reach y (`Grid.covers`), and
+   `ClosedArt.at(x, y, z)` picks, of the overlays in one column, the highest at or below y.
+5. **Deviation (plan §3.1, "every caller"):** the builder's own position maths (columns, shape grids, habitats, volumes,
+   biome boxes) moves when it starts producing layouts (H3–H5). It produces none yet, so the change would be
+   untestable now. `WorldPlan.withZones` already carries layouts over.
+6. **New tests:** `MapLayoutTest` (8), plus cases in `ClosedArtTest`, `ShapeMapTest`, `PuppetCullingTest`,
+   `EncounterRulesTest` and `BattleRulesTest`.
+
 ## Wild Routes
 
 Execution of [specs/WILD_ROUTES_PLAN.md](specs/WILD_ROUTES_PLAN.md) (WR1–WR8), from your choices R1–R9 (2026-10-10)

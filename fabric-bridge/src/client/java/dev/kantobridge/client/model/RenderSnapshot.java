@@ -144,7 +144,7 @@ public final class RenderSnapshot {
 	/** The shape id of the closed art drawn at a position for the local player, 0 for none (the dev mesh check). */
 	public int closedIdAt(int x, int y, int z) {
 		ClosedArt art = this.closedArt;
-		int[] at = art == null ? null : art.at(x, z);
+		int[] at = art == null ? null : art.at(x, y, z);
 		if (at == null || !this.closed.get(at[0])) {
 			return 0;
 		}
@@ -160,7 +160,7 @@ public final class RenderSnapshot {
 	 */
 	public int emitClosed(int x, int y, int z, TextureAtlasSprite fallback, QuadEmitter out) {
 		ClosedArt art = this.closedArt;
-		int[] at = art == null ? null : art.at(x, z);
+		int[] at = art == null ? null : art.at(x, y, z);
 		if (at == null || !this.closed.get(at[0])) {
 			return 0;
 		}

@@ -18,7 +18,6 @@ import dev.kantobridge.scene.gen1.BundleArtSource;
 import dev.kantobridge.world.DataException;
 import dev.kantobridge.world.Hashes;
 import dev.kantobridge.world.MapPlacement;
-import dev.kantobridge.world.Scale;
 import dev.kantobridge.world.ShapeIndex;
 import dev.kantobridge.world.ShapeMap;
 import dev.kantobridge.world.WorldIndex;
@@ -314,8 +313,8 @@ public final class ClientShapes {
 		if (cells[i] >= 0) {
 			return cells[i];
 		}
-		BlockPos feet = new BlockPos(placement.x() + cx * Scale.CELL_BLOCKS, placement.y(), placement.z() + cy * Scale.CELL_BLOCKS);
-		if (!level.hasChunkAt(feet)) {
+		BlockPos feet = worldIndex.cellOrigin(mapId, cx, cy);
+		if (feet == null || !level.hasChunkAt(feet)) {
 			return 0;
 		}
 		int top = 0;

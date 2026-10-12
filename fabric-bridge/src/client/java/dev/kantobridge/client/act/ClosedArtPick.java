@@ -1,6 +1,5 @@
 package dev.kantobridge.client.act;
 
-import dev.kantobridge.world.MapPlacement;
 import dev.kantobridge.world.Scale;
 import dev.kantobridge.world.StoryCellTable;
 import dev.kantobridge.world.StoryCellType;
@@ -8,6 +7,7 @@ import dev.kantobridge.world.WorldIndex;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.ToIntFunction;
+import net.minecraft.core.BlockPos;
 import org.jetbrains.annotations.Nullable;
 
 /**
@@ -62,13 +62,13 @@ public final class ClosedArtPick {
 			if (height <= 0) {
 				continue;
 			}
-			MapPlacement map = index.map(entry.cell().map());
-			if (map == null) {
+			BlockPos origin = index.cellOrigin(entry.cell().map(), entry.cell().x(), entry.cell().y());
+			if (origin == null) {
 				continue;
 			}
-			double minX = map.x() + Scale.cellToBlock(entry.cell().x());
-			double minZ = map.z() + Scale.cellToBlock(entry.cell().y());
-			double minY = map.y();
+			double minX = origin.getX();
+			double minZ = origin.getZ();
+			double minY = origin.getY();
 			Box box = new Box(key, minX, minY, minZ, minX + Scale.CELL_BLOCKS, minY + height, minZ + Scale.CELL_BLOCKS);
 			if (distanceSquared(box, eyeX, eyeY, eyeZ) <= reach * reach) {
 				out.add(box);

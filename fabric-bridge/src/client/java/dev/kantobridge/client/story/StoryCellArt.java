@@ -1,10 +1,10 @@
 package dev.kantobridge.client.story;
 
-import dev.kantobridge.world.MapPlacement;
 import dev.kantobridge.world.Scale;
 import dev.kantobridge.world.SlotMap;
 import dev.kantobridge.world.StoryCellTable;
 import dev.kantobridge.world.WorldIndex;
+import net.minecraft.core.BlockPos;
 import org.jetbrains.annotations.Nullable;
 
 /**
@@ -38,12 +38,12 @@ public final class StoryCellArt {
 	 */
 	public static @Nullable Piece piece(WorldIndex index, StoryCellTable.Entry entry, int x, int z) {
 		StoryCellTable.Closed closed = entry.closed();
-		MapPlacement map = index.map(entry.cell().map());
-		if (closed == null || map == null) {
+		BlockPos origin = index.cellOrigin(entry.cell().map(), entry.cell().x(), entry.cell().y());
+		if (closed == null || origin == null) {
 			return null;
 		}
-		int dx = x - (map.x() + Scale.cellToBlock(entry.cell().x()));
-		int dz = z - (map.z() + Scale.cellToBlock(entry.cell().y()));
+		int dx = x - origin.getX();
+		int dz = z - origin.getZ();
 		if (dx < 0 || dz < 0 || dx >= Scale.CELL_BLOCKS || dz >= Scale.CELL_BLOCKS) {
 			return null;
 		}

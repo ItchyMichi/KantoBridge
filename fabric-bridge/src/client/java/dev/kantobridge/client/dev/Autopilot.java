@@ -8,7 +8,6 @@ import dev.kantobridge.client.move.InputLock;
 import dev.kantobridge.client.world.ClientWorldIndex;
 import dev.kantobridge.client.world.CreateKantoWorldFlow;
 import dev.kantobridge.client.zone.ZoneView;
-import dev.kantobridge.world.MapPlacement;
 import dev.kantobridge.world.Scale;
 import dev.kantobridge.world.WorldIndex;
 import java.io.IOException;
@@ -581,13 +580,13 @@ public final class Autopilot {
 	// ---- helpers ----
 
 	private boolean onHiddenCell(LocalPlayer player, WorldIndex index, ClientBridgeState state) {
-		MapPlacement map = index.map(state.map());
-		if (map == null) {
+		BlockPos origin = state.map() == null ? null : index.cellOrigin(state.map(), state.x(), state.y());
+		if (origin == null) {
 			return false;
 		}
-		int cx = Scale.blockToCell((int) Math.floor(player.getX()) - map.x());
-		int cy = Scale.blockToCell((int) Math.floor(player.getZ()) - map.z());
-		return cx == state.x() && cy == state.y();
+		int bx = (int) Math.floor(player.getX());
+		int bz = (int) Math.floor(player.getZ());
+		return bx >= origin.getX() && bx < origin.getX() + Scale.CELL_BLOCKS && bz >= origin.getZ() && bz < origin.getZ() + Scale.CELL_BLOCKS;
 	}
 
 	private @Nullable ClientBridgeState state() {

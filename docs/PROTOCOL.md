@@ -813,7 +813,12 @@ is what the builder writes to `<world>/kantobridge/world_index.json`:
   them; each ball's cell is also a `route` story cell. Party species are ROM-derived (logs carry counts only). WR7 adds
   a zone's `dungeon` (its entrance cell in the same grid), and the world's `dungeons` region (every dungeon slot's box,
   `x, z, w, d`, and the first floors' feet level `y`): a client inside it whose hidden player is on a route map is
-  away, as in a zone.
+  away, as in a zone;
+- (caves in 3D, H1) a map's layout, written only for a map whose cells don't all sit at its placement
+  ([specs/CAVES_3D_PLAN.md](specs/CAVES_3D_PLAN.md) §3.1): `pieces` (parts placed apart: a cell rectangle `x, y, w, h`,
+  an optional `mask` of alternating runs, and a block offset `dx, dy, dz`), `levels` (each cell's floor above its
+  piece's feet, as `(level, count)` pairs) and `ramps` (stairs cells: `x, y`, the `dir` they climb and their `rise`).
+  `cellOrigin` and `toBlock` go through them; a cell's lookup window is then its own floor's, 3 below to 4 above.
 
 Clients turn block positions into cells and back with it. The `parts` of `world.index` are slices of
 its JSON text (64 Ki characters each); `hash` is the SHA-256 of the whole text.

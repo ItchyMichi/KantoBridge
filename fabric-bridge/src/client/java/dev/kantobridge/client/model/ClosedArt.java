@@ -97,10 +97,27 @@ public final class ClosedArt {
 		return this.keys[overlay];
 	}
 
-	/** The overlay column at block column (x, z): {overlay, column, feet y}, or null. Allocation-free. */
-	public int @Nullable [] at(int x, int z) {
-		int i = Arrays.binarySearch(this.columnKeys, pack(x, z));
-		return i < 0 ? null : this.columnInfo[i];
+	/**
+	 * The overlay column at block (x, y, z): of the overlays in that column, the one whose feet level is the highest at
+	 * or below {@code y} (stacked floors hold several); {overlay, column, feet y}, or null. Allocation-free.
+	 */
+	public int @Nullable [] at(int x, int y, int z) {
+		long key = pack(x, z);
+		int i = Arrays.binarySearch(this.columnKeys, key);
+		if (i < 0) {
+			return null;
+		}
+		while (i > 0 && this.columnKeys[i - 1] == key) {
+			i--;
+		}
+		int[] best = null;
+		for (; i < this.columnKeys.length && this.columnKeys[i] == key; i++) {
+			int[] info = this.columnInfo[i];
+			if (info[2] <= y && (best == null || info[2] > best[2])) {
+				best = info;
+			}
+		}
+		return best;
 	}
 
 	/** A column's shape ids, bottom-up from feet level. */

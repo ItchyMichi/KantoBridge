@@ -12,6 +12,8 @@ import org.jetbrains.annotations.Nullable;
 public final class ProxyPlacement {
 	/** Further than this from the player, a trainer cell is not trusted (another layer, a stale message). */
 	public static final double MAX_DISTANCE = 32.0;
+	/** Further than this above or below the player, it isn't trusted either: another level (EncounterPlacement.MAX_RISE). */
+	public static final double MAX_RISE = EncounterPlacement.MAX_RISE;
 	/** In front of the player when there is no usable trainer cell: two Gen 1 cells. */
 	public static final double IN_FRONT = 4.0;
 
@@ -24,7 +26,7 @@ public final class ProxyPlacement {
 	 * @param playerYaw   the player's yaw (degrees, Minecraft's convention)
 	 */
 	public static Vec3 choose(@Nullable Vec3 trainerCell, Vec3 player, float playerYaw) {
-		if (trainerCell != null && trainerCell.distanceTo(player) <= MAX_DISTANCE) {
+		if (trainerCell != null && trainerCell.distanceTo(player) <= MAX_DISTANCE && Math.abs(trainerCell.y - player.y) <= MAX_RISE) {
 			return trainerCell;
 		}
 		Vec3 ahead = Vec3.directionFromRotation(0.0F, playerYaw);

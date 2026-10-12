@@ -73,7 +73,52 @@
           "palette": {"$ref": "../defs.schema.json#/$defs/symbol"},
           "biome": {"type": "string", "pattern": "^[a-z0-9_.-]+:[a-z0-9_./-]+$"},
           "dark": {"type": "boolean"},
-          "parent": {"anyOf": [{"type": "null"}, {"$ref": "../defs.schema.json#/$defs/mapId"}]}
+          "parent": {"anyOf": [{"type": "null"}, {"$ref": "../defs.schema.json#/$defs/mapId"}]},
+          "pieces": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 256,
+            "description": "Parts of the map placed apart (docs/specs/CAVES_3D_PLAN.md §3.1). Absent: one piece, the whole map, at the placement. A walkable cell is in exactly one piece; the first piece listing a cell holds it for lookups by cell.",
+            "items": {
+              "type": "object",
+              "required": ["x", "y", "w", "h", "dx", "dy", "dz"],
+              "additionalProperties": false,
+              "properties": {
+                "x": {"type": "integer", "minimum": 0, "description": "North-west cell of the piece's rectangle."},
+                "y": {"type": "integer", "minimum": 0},
+                "w": {"type": "integer", "minimum": 1, "description": "Rectangle width in cells."},
+                "h": {"type": "integer", "minimum": 1},
+                "mask": {
+                  "type": "array",
+                  "items": {"type": "integer", "minimum": 0},
+                  "description": "Which cells of the rectangle are the piece's, row by row, as alternating runs starting with cells outside it (the first run may be 0). Absent: all of them."
+                },
+                "dx": {"type": "integer", "description": "Block offset from the map's placement (X)."},
+                "dy": {"type": "integer", "minimum": -1024, "maximum": 1024, "description": "Block offset from the map's feet level."},
+                "dz": {"type": "integer", "description": "Block offset from the map's placement (Z)."}
+              }
+            }
+          },
+          "levels": {
+            "type": "array",
+            "items": {"type": "integer", "minimum": 0},
+            "description": "Each cell's floor above its piece's feet level, in blocks, row by row, as (level, count) pairs covering every cell. Absent: all 0."
+          },
+          "ramps": {
+            "type": "array",
+            "description": "Stairs cells that climb between levels.",
+            "items": {
+              "type": "object",
+              "required": ["x", "y", "dir", "rise"],
+              "additionalProperties": false,
+              "properties": {
+                "x": {"type": "integer", "minimum": 0},
+                "y": {"type": "integer", "minimum": 0},
+                "dir": {"enum": ["up", "down", "left", "right"], "description": "The way the cell climbs (towards its high side)."},
+                "rise": {"type": "integer", "minimum": 1, "maximum": 8, "description": "Blocks climbed across the cell."}
+              }
+            }
+          }
         }
       }
     },

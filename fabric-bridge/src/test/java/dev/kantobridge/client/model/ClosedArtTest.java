@@ -42,12 +42,26 @@ class ClosedArtTest {
 			new ShapeMap.Overlay(RUG, 6, 64, 6, new int[][] {{3}, {3}, {3}, {3}})));
 
 	@Test
+	void stackedOverlaysAreToldApartByHeight() {
+		// Two closed cells in one block column, 11 blocks apart (the cave area's stacked pieces, CAVES_3D_PLAN §3.1).
+		ShapeMap stacked = new ShapeMap(HASH, HASH, List.of(), List.of(new ShapeMap.Overlay(TREE, 20, 64, 28, new int[][] {{5}, {6}, {7}, {8}}),
+				new ShapeMap.Overlay(RUG, 20, 53, 28, new int[][] {{3}, {3}, {3}, {3}})));
+		ClosedArt art = ClosedArt.of(stacked, WORLD);
+		assertArrayEquals(new int[] {art.overlay(TREE), 0, 64}, art.at(20, 64, 28));
+		assertArrayEquals(new int[] {art.overlay(TREE), 0, 64}, art.at(20, 70, 28));
+		assertArrayEquals(new int[] {art.overlay(RUG), 0, 53}, art.at(20, 53, 28));
+		assertArrayEquals(new int[] {art.overlay(RUG), 0, 53}, art.at(20, 60, 28));
+		assertNull(art.at(20, 52, 28));
+	}
+
+	@Test
 	void aPositionFindsItsColumnByItsBlockColumn() {
 		ClosedArt art = ClosedArt.of(MAP, WORLD);
 		int tree = art.overlay(TREE);
-		assertArrayEquals(new int[] {tree, 0, 64}, art.at(20, 28), "the north-west column, feet level 64");
-		assertArrayEquals(new int[] {tree, 3, 64}, art.at(21, 29), "the south-east column");
-		assertNull(art.at(22, 28));
+		assertArrayEquals(new int[] {tree, 0, 64}, art.at(20, 64, 28), "the north-west column, feet level 64");
+		assertArrayEquals(new int[] {tree, 3, 64}, art.at(21, 65, 29), "the south-east column");
+		assertNull(art.at(22, 64, 28));
+		assertNull(art.at(20, 63, 28), "below the cell's feet level");
 		assertArrayEquals(new int[] {7, 8}, art.ids(tree, 1), "bottom-up from feet level");
 		assertEquals(42, art.slot(tree, 1), "the closed art's slot of the north-east column (the fallback cube)");
 		assertEquals(2, art.height(tree));

@@ -20,9 +20,9 @@ import org.jetbrains.annotations.Nullable;
 
 /**
  * What the world builder writes to {@code <world>/kantobridge/world_index.json} and the server sends to clients on
- * join (protocol/world/world_index.schema.json): the scale, every map's placement, the slot-map hash, the
- * story-cell table, the habitat blocks and (Wild Routes) the zones. Clients turn block positions into cells and back
- * with it.
+ * join (protocol/world/world_index.schema.json): the scale, every map's placement (and, for a map whose cells don't all
+ * sit there, its {@link MapLayout}), the slot-map hash, the story-cell table, the habitat blocks and (Wild Routes) the
+ * zones. Clients turn block positions into cells and back with it.
  *
  * <p>The JSON is canonical (sorted keys, compact), so the same index always has the same text and hash.
  */
@@ -50,12 +50,18 @@ public final class WorldIndex {
 	private static final Set<String> THEMES = Set.of("forest");
 	private static final Set<String> SCALE_FIELDS = Set.of("cellBlocks", "surfaceY", "layerStep");
 	private static final Set<String> MAP_FIELDS = Set.of("x", "y", "z", "w", "h", "layer", "kind", "palette", "biome", "dark",
-			"parent");
+			"parent", "pieces", "levels", "ramps");
 	private static final Set<String> HABITAT_FIELDS = Set.of("map", "x", "y", "z", "pool");
 	private static final Set<String> GAMES = Set.of("red", "blue");
 	/** How far above or below a map's feet level a block still counts as on that map (layers are 22 apart). */
 	private static final int LAYER_REACH_DOWN = 4;
 	private static final int LAYER_REACH_UP = 6;
+	/**
+	 * The same for a cell of a map with a layout, from the cell's own feet level: narrower, since the cave area stacks
+	 * pieces 11 blocks apart (docs/specs/CAVES_3D_PLAN.md §3.1, HD3).
+	 */
+	private static final int PIECE_REACH_DOWN = 3;
+	private static final int PIECE_REACH_UP = 5;
 
 	/** One habitat block (M6). */
 	public record Habitat(String map, int x, int y, int z, String pool) {
@@ -232,6 +238,7 @@ public final class WorldIndex {
 	private final int surfaceY;
 	private final int layerStep;
 	private final Map<String, MapPlacement> maps;
+	private final Map<String, MapLayout> layouts;
 	private final String slotMapHash;
 	private final StoryCellTable storyCells;
 	private final List<Habitat> habitats;
@@ -242,21 +249,31 @@ public final class WorldIndex {
 
 	public WorldIndex(String game, String exportHash, Collection<MapPlacement> maps, String slotMapHash, StoryCellTable storyCells,
 			List<Habitat> habitats) {
-		this(game, exportHash, Scale.SURFACE_Y, Scale.LAYER_STEP, maps, slotMapHash, storyCells, habitats, List.of(), null);
+		this(game, exportHash, Scale.SURFACE_Y, Scale.LAYER_STEP, maps, Map.of(), slotMapHash, storyCells, habitats, List.of(), null);
 	}
 
 	public WorldIndex(String game, String exportHash, Collection<MapPlacement> maps, String slotMapHash, StoryCellTable storyCells,
 			List<Habitat> habitats, List<Zone> zones) {
-		this(game, exportHash, Scale.SURFACE_Y, Scale.LAYER_STEP, maps, slotMapHash, storyCells, habitats, zones, null);
+		this(game, exportHash, Scale.SURFACE_Y, Scale.LAYER_STEP, maps, Map.of(), slotMapHash, storyCells, habitats, zones, null);
 	}
 
 	public WorldIndex(String game, String exportHash, Collection<MapPlacement> maps, String slotMapHash, StoryCellTable storyCells,
 			List<Habitat> habitats, List<Zone> zones, @Nullable Dungeons dungeons) {
-		this(game, exportHash, Scale.SURFACE_Y, Scale.LAYER_STEP, maps, slotMapHash, storyCells, habitats, zones, dungeons);
+		this(game, exportHash, Scale.SURFACE_Y, Scale.LAYER_STEP, maps, Map.of(), slotMapHash, storyCells, habitats, zones, dungeons);
 	}
 
-	private WorldIndex(String game, String exportHash, int surfaceY, int layerStep, Collection<MapPlacement> maps, String slotMapHash,
+	/**
+	 * @param layouts the layouts of maps whose cells don't all sit at their placement (CAVES_3D_PLAN §3.1), by map id;
+	 *                trivial ones are dropped
+	 */
+	public WorldIndex(String game, String exportHash, Collection<MapPlacement> maps, Map<String, MapLayout> layouts, String slotMapHash,
 			StoryCellTable storyCells, List<Habitat> habitats, List<Zone> zones, @Nullable Dungeons dungeons) {
+		this(game, exportHash, Scale.SURFACE_Y, Scale.LAYER_STEP, maps, layouts, slotMapHash, storyCells, habitats, zones, dungeons);
+	}
+
+	private WorldIndex(String game, String exportHash, int surfaceY, int layerStep, Collection<MapPlacement> maps,
+			Map<String, MapLayout> layouts, String slotMapHash, StoryCellTable storyCells, List<Habitat> habitats, List<Zone> zones,
+			@Nullable Dungeons dungeons) {
 		if (!GAMES.contains(game)) {
 			throw new IllegalArgumentException("unknown game");
 		}
@@ -274,6 +291,18 @@ public final class WorldIndex {
 			}
 		}
 		this.maps = Collections.unmodifiableMap(byId);
+		Map<String, MapLayout> layoutsById = new TreeMap<>();
+		for (Map.Entry<String, MapLayout> entry : layouts.entrySet()) {
+			MapPlacement map = byId.get(entry.getKey());
+			MapLayout layout = Objects.requireNonNull(entry.getValue(), "layout");
+			if (map == null || layout.w() != map.w() || layout.h() != map.h()) {
+				throw new IllegalArgumentException("a layout must fit a placed map");
+			}
+			if (!layout.trivial()) {
+				layoutsById.put(entry.getKey(), layout);
+			}
+		}
+		this.layouts = Collections.unmodifiableMap(layoutsById);
 		this.slotMapHash = slotMapHash;
 		this.storyCells = Objects.requireNonNull(storyCells, "storyCells");
 		this.habitats = List.copyOf(habitats);
@@ -318,6 +347,16 @@ public final class WorldIndex {
 
 	public @Nullable MapPlacement map(String id) {
 		return this.maps.get(id);
+	}
+
+	/** The layouts of maps whose cells don't all sit at their placement, by id (sorted; none in most worlds). */
+	public Map<String, MapLayout> layouts() {
+		return this.layouts;
+	}
+
+	/** A map's layout, or null when its cells all sit at its placement (one piece, level 0). */
+	public @Nullable MapLayout layout(String id) {
+		return this.layouts.get(id);
 	}
 
 	public String slotMapHash() {
@@ -371,10 +410,19 @@ public final class WorldIndex {
 
 	/**
 	 * The cell under a block position: the map whose footprint holds the column and whose walking surface is within a
-	 * few blocks of {@code y}. Empty outside every map (gaps, borders, between layers).
+	 * few blocks of {@code y}; for a map with a layout, the piece whose cell holds the column and whose floor is within
+	 * a few blocks of {@code y}. Empty outside every map (gaps, borders, between layers and pieces).
 	 */
 	public Optional<CellPos> toCell(int x, int y, int z) {
 		for (MapPlacement map : this.maps.values()) {
+			MapLayout layout = this.layouts.get(map.id());
+			if (layout != null) {
+				CellPos cell = pieceCell(map, layout, x, y, z);
+				if (cell != null) {
+					return Optional.of(cell);
+				}
+				continue;
+			}
 			if (y < map.y() - LAYER_REACH_DOWN || y >= map.y() + LAYER_REACH_UP || !map.containsColumn(x, z)) {
 				continue;
 			}
@@ -383,26 +431,59 @@ public final class WorldIndex {
 		return Optional.empty();
 	}
 
+	private static @Nullable CellPos pieceCell(MapPlacement map, MapLayout layout, int x, int y, int z) {
+		for (MapLayout.Piece piece : layout.pieces()) {
+			int cx = Scale.blockToCell(x - map.x() - piece.dx());
+			int cy = Scale.blockToCell(z - map.z() - piece.dz());
+			if (!piece.contains(cx, cy)) {
+				continue;
+			}
+			int feet = map.y() + piece.dy() + layout.level(cx, cy);
+			if (y >= feet - PIECE_REACH_DOWN && y < feet + PIECE_REACH_UP) {
+				return new CellPos(map.id(), cx, cy);
+			}
+		}
+		return null;
+	}
+
 	public Optional<CellPos> toCell(BlockPos pos) {
 		return this.toCell(pos.getX(), pos.getY(), pos.getZ());
 	}
 
-	/** The centre of a cell's 2×2 footprint at feet level, or null for an unknown map. */
+	/** The centre of a cell's 2×2 footprint at its feet level, or null for an unknown map. */
 	public @Nullable Vec3 toBlock(String map, int x, int y) {
-		MapPlacement placement = this.maps.get(map);
-		if (placement == null) {
+		BlockPos origin = this.cellOrigin(map, x, y);
+		if (origin == null) {
 			return null;
 		}
-		return new Vec3(placement.x() + Scale.cellToBlock(x) + 1.0, placement.y(), placement.z() + Scale.cellToBlock(y) + 1.0);
+		return new Vec3(origin.getX() + 1.0, origin.getY(), origin.getZ() + 1.0);
 	}
 
-	/** The north-west block of a cell at feet level, or null for an unknown map. */
+	/**
+	 * The north-west block of a cell at its feet level (its piece's offset and its level included), or null for an
+	 * unknown map. A cell outside the map, or in no piece, sits at the map's placement.
+	 */
 	public @Nullable BlockPos cellOrigin(String map, int x, int y) {
 		MapPlacement placement = this.maps.get(map);
 		if (placement == null) {
 			return null;
 		}
-		return new BlockPos(placement.x() + Scale.cellToBlock(x), placement.y(), placement.z() + Scale.cellToBlock(y));
+		MapLayout layout = this.layouts.get(map);
+		MapLayout.Piece piece = layout == null ? null : layout.pieceAt(x, y);
+		int level = layout == null ? 0 : layout.level(x, y);
+		return new BlockPos(placement.x() + Scale.cellToBlock(x) + (piece == null ? 0 : piece.dx()),
+				placement.y() + (piece == null ? 0 : piece.dy()) + level, placement.z() + Scale.cellToBlock(y) + (piece == null ? 0 : piece.dz()));
+	}
+
+	/**
+	 * The north-west block of a cell at its level's feet: its piece's feet level, without the cell's own raise. Walking
+	 * never leaves a level (ramps climb within it), so this is the level a movement {@code Spot} keeps. Null for an
+	 * unknown map.
+	 */
+	public @Nullable BlockPos levelOrigin(String map, int x, int y) {
+		BlockPos origin = this.cellOrigin(map, x, y);
+		MapLayout layout = this.layouts.get(map);
+		return origin == null || layout == null ? origin : origin.below(layout.level(x, y));
 	}
 
 	// ---- JSON ----
@@ -434,6 +515,10 @@ public final class WorldIndex {
 				item.add("parent", JsonNull.INSTANCE);
 			} else {
 				item.addProperty("parent", map.parent());
+			}
+			MapLayout layout = this.layouts.get(map.id());
+			if (layout != null) {
+				layout.writeTo(item);
 			}
 			maps.add(map.id(), item);
 		}
@@ -554,6 +639,7 @@ public final class WorldIndex {
 		int layerStep = scale.integer("layerStep", 16, Integer.MAX_VALUE);
 		DataReader mapsReader = root.object("maps");
 		List<MapPlacement> maps = new ArrayList<>();
+		Map<String, MapLayout> layouts = new TreeMap<>();
 		for (String id : mapsReader.json().keySet()) {
 			if (!DataReader.MAP_ID.matcher(id).matches()) {
 				throw new DataException(mapsReader.path(), "bad map id");
@@ -563,10 +649,15 @@ public final class WorldIndex {
 			if (kind == null) {
 				throw new DataException(map.path("kind"), "unknown kind");
 			}
-			maps.add(new MapPlacement(id, map.integer("x"), map.integer("y"), map.integer("z"), map.integer("w", 1, Integer.MAX_VALUE),
-					map.integer("h", 1, Integer.MAX_VALUE), map.integer("layer", 0, Integer.MAX_VALUE), kind,
+			MapPlacement placement = new MapPlacement(id, map.integer("x"), map.integer("y"), map.integer("z"),
+					map.integer("w", 1, Integer.MAX_VALUE), map.integer("h", 1, Integer.MAX_VALUE), map.integer("layer", 0, Integer.MAX_VALUE), kind,
 					map.string("palette", DataReader.SYMBOL), map.string("biome", DataReader.RESOURCE_ID), map.bool("dark"),
-					map.optionalString("parent", DataReader.MAP_ID)));
+					map.optionalString("parent", DataReader.MAP_ID));
+			maps.add(placement);
+			MapLayout layout = MapLayout.read(map, placement.w(), placement.h());
+			if (layout != null) {
+				layouts.put(id, layout);
+			}
 		}
 		String slotMapHash = root.string("slotMapHash", DataReader.HASH);
 		StoryCellTable storyCells = StoryCellTable.fromJson(root.array("storyCells"), "/storyCells");
@@ -638,7 +729,7 @@ public final class WorldIndex {
 					region.integer("d", 1, Integer.MAX_VALUE));
 		}
 		try {
-			return new WorldIndex(game, exportHash, surfaceY, layerStep, maps, slotMapHash, storyCells, habitats, zones, dungeons);
+			return new WorldIndex(game, exportHash, surfaceY, layerStep, maps, layouts, slotMapHash, storyCells, habitats, zones, dungeons);
 		} catch (IllegalArgumentException e) {
 			throw new DataException("/zones", e.getMessage());
 		}

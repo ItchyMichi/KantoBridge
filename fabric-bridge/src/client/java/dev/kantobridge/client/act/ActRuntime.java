@@ -25,7 +25,6 @@ import dev.kantobridge.proto.Envelope;
 import dev.kantobridge.proto.MsgTypes;
 import dev.kantobridge.world.CellPos;
 import dev.kantobridge.world.Dir;
-import dev.kantobridge.world.MapPlacement;
 import dev.kantobridge.world.WorldIndex;
 import java.util.List;
 import java.util.Locale;
@@ -209,13 +208,13 @@ public final class ActRuntime {
 	}
 
 	/**
-	 * True when a click hit the ground surface of a land cell: its floor block (feet level - 1) with no column standing on
-	 * it, where a surfer can step ashore.
+	 * True when a click hit the ground surface of a land cell: its floor block (the cell's own feet level - 1) with no
+	 * column standing on it, where a surfer can step ashore.
 	 */
 	private static boolean ground(WorldIndex index, Level level, CellPos target, BlockPos pos) {
 		CellPos own = InteractTarget.own(index, target);
-		MapPlacement map = own == null ? null : index.map(own.map());
-		return map != null && pos.getY() == map.y() - 1 && !(level.getBlockState(pos.above()).getBlock() instanceof TileBlock);
+		BlockPos feet = own == null ? null : index.cellOrigin(own.map(), own.x(), own.y());
+		return feet != null && pos.getY() == feet.getY() - 1 && !(level.getBlockState(pos.above()).getBlock() instanceof TileBlock);
 	}
 
 	/** A press on {@code target}: a field move where one applies, else the ordinary A on it. */

@@ -6,6 +6,7 @@ import dev.kantobridge.world.MapPlacement;
 import dev.kantobridge.world.Place;
 import dev.kantobridge.world.Scale;
 import dev.kantobridge.world.WorldIndex;
+import net.minecraft.core.BlockPos;
 import org.jetbrains.annotations.Nullable;
 
 /**
@@ -60,11 +61,11 @@ public final class InteractTarget {
 		if (map.equals(playerMap)) {
 			return new CellPos(map, x, y);
 		}
-		MapPlacement placement = index.map(map);
-		if (placement == null) {
+		BlockPos origin = index.cellOrigin(map, x, y);
+		if (origin == null) {
 			return null;
 		}
-		return inPlayerMap(index, playerMap, map, placement.x() + Scale.cellToBlock(x), placement.z() + Scale.cellToBlock(y));
+		return inPlayerMap(index, playerMap, map, origin.getX(), origin.getZ());
 	}
 
 	/** True when gen1-bridge can face {@code target} from {@code x, y}: on one axis, 1 to {@link #REACH} cells away. */
@@ -94,7 +95,8 @@ public final class InteractTarget {
 		if (map.containsCell(named.x(), named.y())) {
 			return named;
 		}
-		return index.toCell(map.x() + Scale.cellToBlock(named.x()), map.y(), map.z() + Scale.cellToBlock(named.y())).orElse(null);
+		BlockPos origin = index.cellOrigin(named.map(), named.x(), named.y());
+		return origin == null ? null : index.toCell(origin).orElse(null);
 	}
 
 	private static @Nullable CellPos inPlayerMap(WorldIndex index, String playerMap, String otherMap, int blockX, int blockZ) {

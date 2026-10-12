@@ -63,6 +63,11 @@ class EncounterRulesTest {
 		assertEquals(new Vec3(10.5, 64.0, 16.5), EncounterPlacement.choose(new Vec3(100.0, 64.0, 20.0), player, 180.0F), "facing up (north)");
 		assertEquals(new Vec3(6.5, 64.0, 20.5), EncounterPlacement.choose(null, player, 90.0F), "facing left (west)");
 		assertEquals(new Vec3(14.5, 64.0, 20.5), EncounterPlacement.choose(null, player, -80.0F), "facing right (east), snapped");
+		// A raised cell 2 up is the same level; a piece stacked 11 blocks up or down is another (CAVES_3D_PLAN §3.1).
+		Vec3 raised = new Vec3(15.0, 66.0, 21.0);
+		assertEquals(raised, EncounterPlacement.choose(raised, player, 0.0F));
+		assertEquals(new Vec3(10.5, 64.0, 24.5), EncounterPlacement.choose(new Vec3(15.0, 75.0, 21.0), player, 0.0F));
+		assertEquals(new Vec3(10.5, 64.0, 24.5), EncounterPlacement.choose(new Vec3(15.0, 53.0, 21.0), player, 0.0F));
 		assertEquals(12.0F, EncounterService.FLEE_DISTANCE, "Appendix C's flee distance");
 	}
 }

@@ -71,6 +71,19 @@ public final class ShapeMap {
 			return x >= this.x0 && x < this.x0 + this.w && z >= this.z0 && z < this.z0 + this.d;
 		}
 
+		/**
+		 * True when the grid describes (x, y, z): the column is in the grid and its stack reaches {@code y}. Grids may
+		 * share columns where pieces are stacked (docs/specs/CAVES_3D_PLAN.md §3.1), so a lookup goes on to the next grid
+		 * when this one doesn't.
+		 */
+		public boolean covers(int x, int y, int z) {
+			if (!this.containsColumn(x, z)) {
+				return false;
+			}
+			int dy = y - this.baseY;
+			return dy >= 0 && dy < this.stacks[this.columns[(z - this.z0) * this.w + (x - this.x0)]].length;
+		}
+
 		/** The id at (x, y, z), 0 outside the grid or above its stack. */
 		public int at(int x, int y, int z) {
 			if (!this.containsColumn(x, z)) {
@@ -156,7 +169,7 @@ public final class ShapeMap {
 	/** The id at (x, y, z) by scanning the grids (the builder's and the tests' path; clients use {@link #lookup()}). */
 	public int shapeAt(int x, int y, int z) {
 		for (Grid grid : this.grids) {
-			if (y >= grid.baseY() && y < grid.maxY() && grid.containsColumn(x, z)) {
+			if (y >= grid.baseY() && y < grid.maxY() && grid.covers(x, y, z)) {
 				return grid.at(x, y, z);
 			}
 		}
@@ -530,7 +543,7 @@ public final class ShapeMap {
 			for (int g : list) {
 				if (y >= this.minY[g] && y < this.maxY[g]) {
 					Grid grid = this.grids[g];
-					if (grid.containsColumn(x, z)) {
+					if (grid.covers(x, y, z)) {
 						return grid.at(x, y, z);
 					}
 				}

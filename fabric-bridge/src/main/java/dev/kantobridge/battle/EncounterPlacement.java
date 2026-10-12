@@ -13,6 +13,11 @@ import org.jetbrains.annotations.Nullable;
 public final class EncounterPlacement {
 	/** Further than this from the player, a given cell is not trusted (another layer, a stale message). */
 	public static final double MAX_DISTANCE = 32.0;
+	/**
+	 * Further than this above or below the player, a given cell is not trusted either: another level (the cave area
+	 * stacks pieces 11 blocks apart, docs/specs/CAVES_3D_PLAN.md §3.1; a raised floor is 2 up).
+	 */
+	public static final double MAX_RISE = 4.0;
 	/** Closer than this (horizontally) the Pokémon would stand in the player: the player's own cell. */
 	public static final double MIN_DISTANCE = 1.5;
 	/** Two Gen 1 cells. */
@@ -27,7 +32,8 @@ public final class EncounterPlacement {
 	 * @param playerYaw the player's yaw (degrees, Minecraft's convention), snapped to the facing
 	 */
 	public static Vec3 choose(@Nullable Vec3 cell, Vec3 player, float playerYaw) {
-		if (cell != null && cell.distanceTo(player) <= MAX_DISTANCE && horizontal(cell, player) >= MIN_DISTANCE) {
+		if (cell != null && cell.distanceTo(player) <= MAX_DISTANCE && Math.abs(cell.y - player.y) <= MAX_RISE
+				&& horizontal(cell, player) >= MIN_DISTANCE) {
 			return cell;
 		}
 		Dir facing = Dir.fromYaw(playerYaw);

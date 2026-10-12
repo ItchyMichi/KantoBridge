@@ -12,6 +12,7 @@ import dev.kantobridge.client.world.ClientWorldIndex;
 import dev.kantobridge.entity.KbEntities;
 import dev.kantobridge.entity.PuppetEntity;
 import dev.kantobridge.proto.MsgTypes;
+import dev.kantobridge.world.MapLayout;
 import dev.kantobridge.world.MapPlacement;
 import dev.kantobridge.world.Scale;
 import dev.kantobridge.world.WorldIndex;
@@ -27,6 +28,7 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.resources.language.I18n;
+import net.minecraft.core.BlockPos;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.packs.PackType;
 import net.minecraft.server.packs.resources.ResourceManager;
@@ -52,6 +54,7 @@ public final class PuppetRuntime implements PuppetManager.Listener {
 	/** The hidden player's map area for culling, made again when the map or the WorldIndex changes (M10). */
 	private PuppetCulling.@Nullable Area area;
 	private @Nullable String areaMap;
+	private MapLayout.@Nullable Piece areaPiece;
 	private @Nullable WorldIndex areaIndex;
 	/** Puppets within drawing range at the last tick (F7). */
 	private int inRange;
@@ -183,15 +186,21 @@ public final class PuppetRuntime implements PuppetManager.Listener {
 		this.countInRange(minecraft);
 	}
 
-	/** The culling area follows the hidden player's map (only made again when the map or the WorldIndex changes). */
+	/**
+	 * The culling area follows the hidden player's map, or its piece in a map with a layout (only made again when the
+	 * map, the piece or the WorldIndex changes).
+	 */
 	private void updateArea() {
 		WorldIndex index = ClientWorldIndex.current();
 		String map = this.bridge.state().map();
-		if (index == this.areaIndex && java.util.Objects.equals(map, this.areaMap)) {
+		MapLayout layout = index == null || map == null ? null : index.layout(map);
+		MapLayout.Piece piece = layout == null ? null : layout.pieceAt(this.bridge.state().x(), this.bridge.state().y());
+		if (index == this.areaIndex && java.util.Objects.equals(map, this.areaMap) && piece == this.areaPiece) {
 			return;
 		}
 		this.areaIndex = index;
 		this.areaMap = map;
+		this.areaPiece = piece;
 		MapPlacement placement = index == null || map == null ? null : index.map(map);
 		WorldIndex.Zone zone = null;
 		if (placement != null && placement.kind() == MapPlacement.Kind.ROUTE) {
@@ -202,7 +211,8 @@ public final class PuppetRuntime implements PuppetManager.Listener {
 			}
 		}
 		// Wild Routes: on a route map the hidden player stands for the whole zone, whose puppets are all on its grid
-		this.area = zone != null ? PuppetCulling.Area.of(zone) : placement == null ? null : PuppetCulling.Area.of(placement);
+		this.area = zone != null ? PuppetCulling.Area.of(zone)
+				: placement == null ? null : PuppetCulling.Area.of(index, placement, this.bridge.state().x(), this.bridge.state().y());
 	}
 
 	private void countInRange(Minecraft minecraft) {
@@ -269,15 +279,19 @@ public final class PuppetRuntime implements PuppetManager.Listener {
 	 * (an item on a table, the voxel plan's §5.7); null for a map not in the world.
 	 */
 	static @Nullable Vec3 position(WorldIndex index, Puppet puppet, float partialFrames) {
-		MapPlacement map = index.map(puppet.map());
-		if (map == null) {
+		double cx = puppet.cellX(partialFrames);
+		double cy = puppet.cellY(partialFrames);
+		int rx = (int) Math.round(cx);
+		int ry = (int) Math.round(cy);
+		// The nearest cell's origin carries its piece's offset and its level (docs/specs/CAVES_3D_PLAN.md §3.1)
+		BlockPos origin = index.cellOrigin(puppet.map(), rx, ry);
+		if (origin == null) {
 			return null;
 		}
 		double half = Scale.CELL_BLOCKS / 2.0;
-		double cx = puppet.cellX(partialFrames);
-		double cy = puppet.cellY(partialFrames);
-		int top = ClientShapes.topHeight(index, puppet.map(), (int) Math.round(cx), (int) Math.round(cy));
-		return new Vec3(map.x() + cx * Scale.CELL_BLOCKS + half, map.y() + top, map.z() + cy * Scale.CELL_BLOCKS + half);
+		int top = ClientShapes.topHeight(index, puppet.map(), rx, ry);
+		return new Vec3(origin.getX() + (cx - rx) * Scale.CELL_BLOCKS + half, origin.getY() + top,
+				origin.getZ() + (cy - ry) * Scale.CELL_BLOCKS + half);
 	}
 
 	// ---- HUD and debug ----

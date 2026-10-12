@@ -8,14 +8,16 @@ import net.minecraft.core.BlockPos;
 import org.jetbrains.annotations.Nullable;
 
 /**
- * One physical cell of the built world: the block of its north-west corner at feet level. The outdoor maps share one
- * cell grid (PLAN §2.2), so spots compare across map seams, where the hidden game may still name a cell by the map it
- * is leaving ({@code y = -1}); interiors are told apart by their feet level.
+ * One physical cell of the built world: the block of its north-west corner at its level's feet (a map's feet level; for
+ * a map with a layout, its piece's, without the cell's own raise, so walking up a ramp stays on one level:
+ * docs/specs/CAVES_3D_PLAN.md §3.1). The outdoor maps share one cell grid (PLAN §2.2), so spots compare across map
+ * seams, where the hidden game may still name a cell by the map it is leaving ({@code y = -1}); interiors and pieces are
+ * told apart by their level.
  */
 public record Spot(int x, int y, int z) {
 	/** A map's cell (which may lie just outside the map), or null for a map this world doesn't have. */
 	public static @Nullable Spot of(WorldIndex index, String map, int cellX, int cellY) {
-		BlockPos origin = index.cellOrigin(map, cellX, cellY);
+		BlockPos origin = index.levelOrigin(map, cellX, cellY);
 		return origin == null ? null : new Spot(origin.getX(), origin.getY(), origin.getZ());
 	}
 

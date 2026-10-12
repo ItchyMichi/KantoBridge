@@ -63,6 +63,9 @@ class BattleRulesTest {
 		assertEquals(player.y, ahead.y, 1.0E-6);
 		Vec3 west = ProxyPlacement.choose(null, player, 90.0F);
 		assertEquals(player.x - ProxyPlacement.IN_FRONT, west.x, 1.0E-6, "yaw 90 looks west (-x)");
+		// A trainer cell in a piece stacked 11 blocks below (CAVES_3D_PLAN §3.1) is another level, though near.
+		assertEquals(player.z + ProxyPlacement.IN_FRONT, ProxyPlacement.choose(new Vec3(13.0, 53.0, 20.0), player, 0.0F).z, 1.0E-6);
+		assertEquals(new Vec3(13.0, 66.0, 20.0), ProxyPlacement.choose(new Vec3(13.0, 66.0, 20.0), player, 0.0F), "a raised cell is not");
 	}
 
 	@Test
