@@ -65,7 +65,8 @@ public final class MoveRuntime {
 		MoveRuntime runtime = new MoveRuntime(bridge);
 		instance = runtime;
 		Dispatcher dispatcher = bridge.dispatcher();
-		for (String type : new String[] {MsgTypes.SNAPSHOT, MsgTypes.PLAYER_POS, MsgTypes.PLAYER_BLOCKED, MsgTypes.PLAYER_STATE, MsgTypes.WARP}) {
+		for (String type : new String[] {MsgTypes.SNAPSHOT, MsgTypes.PLAYER_POS, MsgTypes.PLAYER_BLOCKED, MsgTypes.PLAYER_STATE, MsgTypes.WARP,
+				MsgTypes.WARP_TAKEN}) {
 			dispatcher.on(type, message -> {
 				// M9: while the save pairing waits, the hidden game may still run another world's save: its warps move
 				// nobody in this world (no warp.request); its positions are only noted.
@@ -188,6 +189,11 @@ public final class MoveRuntime {
 		@Override
 		public boolean toBridge(String type, JsonObject data) {
 			return MoveRuntime.this.bridge.client().send(type, data);
+		}
+
+		@Override
+		public long toBridgeTracked(String type, JsonObject data) {
+			return MoveRuntime.this.bridge.client().sendTracked(type, data);
 		}
 
 		@Override

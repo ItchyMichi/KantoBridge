@@ -6,6 +6,7 @@ import dev.kantobridge.world.MapPlacement;
 import dev.kantobridge.world.Place;
 import dev.kantobridge.world.Scale;
 import dev.kantobridge.world.WorldIndex;
+import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 import org.jetbrains.annotations.Nullable;
@@ -36,6 +37,14 @@ import org.jetbrains.annotations.Nullable;
  * player leaving creative or spectator) and after a snapshot, the player is teleported onto the hidden player's cell
  * unless already there. After a warp, the player walks to wherever the hidden player went meanwhile (a door walk-out),
  * or is teleported if that is far.</li>
+ * <li><b>Ladders and holes</b> (docs/specs/CAVES_3D_PLAN.md §3.6): no step is sent onto a cave shaft's end (the hidden
+ * game would warp at once): walking onto one, or dropping into a shaft from its top, starts a climb while the hidden
+ * player waits where it was; in the shaft nothing is sent and nothing is corrected. Arrived at the far end (feet on its
+ * floor going down, at its feet level going up) it sends {@code warp.take} and holds the controls; the warp that answers
+ * carries the take's {@code re} and needs no fade or teleport. Refused (after {@value #TAKE_RETRY_MS} ms of retries while
+ * the hidden game is busy) or unanswered for {@value #TAKE_TIMEOUT_MS} ms, the player goes back to the hidden cell.
+ * Stepping off an end to where the hidden player waits ends the climb; to another of its neighbours, the hidden player
+ * walks round the end to it (HD12; a refused step pulls the player back).</li>
  * <li><b>Wild Routes zones</b> (docs/specs/WILD_ROUTES_PLAN.md §4.5). Inside a zone's box, off its route map's cells,
  * while the hidden player stands on that route map (or anywhere in the dungeon region while it stands on a route map),
  * the player is out in the zone: no steps, faces or drift fixes, and no teleport back on joining. Walking back onto the trailhead's x1 needs nothing; stepping on to A is an ordinary
@@ -66,6 +75,9 @@ public final class MovementSync {
 
 		/** True while the forced mover drives the player. */
 		boolean forcedMoving();
+
+		/** Send {@code warp.take} (a cave shaft's warp, CAVES_3D_PLAN §3.6); its {@code seq}, or -1 when it was dropped. */
+		long take(CellPos from, Place to, String kind);
 	}
 
 	public static final String IDLE = "idle";
@@ -92,6 +104,21 @@ public final class MovementSync {
 	public static final int WALK_FRAMES = 16;
 	/** Frames per cell when snapping back after a refused step or a sync. */
 	public static final int SNAP_FRAMES = 6;
+	/** A {@code warp.take} whose warp hasn't arrived by then failed. */
+	public static final long TAKE_TIMEOUT_MS = 3000;
+	/** A busy hidden game is asked again for this long. */
+	public static final long TAKE_RETRY_MS = 1000;
+	/** Between two asks while it is busy. */
+	public static final long TAKE_RETRY_EVERY_MS = 200;
+	/** Blocks above the floor the feet may still be, going down, to count as arrived. */
+	static final double LANDED = 0.1;
+
+	/** A cave shaft being climbed (CAVES_3D_PLAN §3.6): the end the player came in by, and the one it leads to. */
+	private record Climb(WorldIndex.Shaft shaft, CellPos near, CellPos far) {
+		boolean down() {
+			return this.far.equals(this.shaft.bottom());
+		}
+	}
 
 	private record Pending(Dir dir, @Nullable Spot expected, long sentAt) {
 	}
@@ -113,6 +140,10 @@ public final class MovementSync {
 		public long jumps;
 		/** Ticks spent out in a Wild Routes zone, off the route map's cells. */
 		public long zoneTicks;
+		/** Shafts climbed into, warps taken at their far ends, and takes that failed (the player sent back). */
+		public long climbs;
+		public long takes;
+		public long takesFailed;
 	}
 
 	private final Port port;
@@ -149,6 +180,14 @@ public final class MovementSync {
 	private long lastFaceAt;
 	private long driftSince = -1;
 	private long teleportAllowedAt = Long.MIN_VALUE;
+	private @Nullable Climb climb;
+	/** The {@code warp.take} sent at the far end, waiting for its answer and its warp; -1 for none. */
+	private long takeSeq = -1;
+	private long takeSentAt;
+	/** When the first ask for the current far end went out (busy retries stop after {@link #TAKE_RETRY_MS}). */
+	private long takeFirstAt = -1;
+	/** A busy answer came: ask again from then on. */
+	private long takeRetryAt = -1;
 
 	public MovementSync(Port port) {
 		this.port = port;
@@ -166,6 +205,7 @@ public final class MovementSync {
 		this.hasLast = false;
 		this.tail = null;
 		this.rejoinWanted = index != null;
+		this.endClimb();
 		this.calm();
 	}
 
@@ -176,6 +216,7 @@ public final class MovementSync {
 		}
 		this.linked = linked;
 		this.pending.clear();
+		this.endClimb();
 		this.calm();
 		if (linked) {
 			this.rejoinWanted = true;
@@ -188,6 +229,7 @@ public final class MovementSync {
 		this.hasLast = false;
 		this.tail = null;
 		this.rejoinWanted = true;
+		this.endClimb();
 		this.calm();
 	}
 
@@ -220,8 +262,10 @@ public final class MovementSync {
 			this.settleWanted = false;
 			moved = !away && this.settle(here, now);
 		}
-		// A teleport or walk just asked for replaces this tick's own crossing: never both.
-		if (ready && !moved && !away && IDLE.equals(this.mode) && this.hasLast && !this.port.forcedMoving()) {
+		// A cave shaft (CAVES_3D_PLAN §3.6): climbing in it, or waiting for its warp, sends nothing else.
+		if (ready && !moved && !away && IDLE.equals(this.mode) && this.hasLast && this.climbing(here, x, y, z, yaw, now)) {
+			this.calm();
+		} else if (ready && !moved && !away && IDLE.equals(this.mode) && this.hasLast && !this.port.forcedMoving()) {
 			this.crossings(here, x, z, now);
 			this.push(intent, here, x, z, now);
 			this.face(intent, yaw, x, z, now);
@@ -334,7 +378,48 @@ public final class MovementSync {
 	public void onWarpStart() {
 		this.pending.clear();
 		this.tail = null;
+		this.endClimb();
 		this.calm();
+	}
+
+	/** True when {@code re} names the {@code warp.take} waiting for its warp: that warp needs no fade. */
+	public boolean takes(@Nullable Long re) {
+		return re != null && this.takeSeq >= 0 && re == this.takeSeq;
+	}
+
+	/** The {@code warp.take}'s own warp: the player already stands at {@code to}; the climb is over. */
+	public void onTakenWarp(String phase, @Nullable Place to) {
+		if (!"arrive".equals(phase) || to == null) {
+			return;
+		}
+		this.hidden = to;
+		this.pending.clear();
+		this.tail = null;
+		this.endClimb();
+		this.stats.takes++;
+	}
+
+	/** {@code warp.taken}: an answer to a {@code warp.take}; a refusal sends the player back (busy: asked again). */
+	public void onTaken(@Nullable Long re, boolean ok, @Nullable String reason, long now) {
+		if (!this.takes(re) || ok) {
+			return;
+		}
+		this.takeSeq = -1;
+		if ("busy".equals(reason) && now - this.takeFirstAt < TAKE_RETRY_MS) {
+			this.takeRetryAt = now + TAKE_RETRY_EVERY_MS;
+			return;
+		}
+		this.failTake(now);
+	}
+
+	/** True while a {@code warp.take} waits for its warp: the controls are held. */
+	public boolean takeHolding() {
+		return this.takeSeq >= 0 || this.takeRetryAt >= 0;
+	}
+
+	/** True while the player climbs a cave shaft (or stands at its end, the hidden player waiting beside it). */
+	public boolean climbing() {
+		return this.climb != null;
 	}
 
 	/** {@code warp{arrive}}: the hidden player is at the destination. */
@@ -409,6 +494,144 @@ public final class MovementSync {
 	}
 
 	// ---- internals ----
+
+	/**
+	 * A cave shaft (CAVES_3D_PLAN §3.6): starts a climb when the player steps onto one of its ends or drops into it, takes
+	 * the warp at its far end, and ends it when the player steps off. Returns true while a climb lasts: the tick then
+	 * sends no steps and makes no corrections.
+	 */
+	private boolean climbing(@Nullable Spot here, double x, double y, double z, float yaw, long now) {
+		WorldIndex world = this.index;
+		if (world == null || world.shafts().isEmpty()) {
+			return false;
+		}
+		CellPos cell = here == null ? null : here.cell(world);
+		CellPos hiddenCell = this.hidden == null ? null : new CellPos(this.hidden.map(), this.hidden.x(), this.hidden.y());
+		WorldIndex.Shaft inside = world.shaftAt((int) Math.floor(x), (int) Math.floor(y), (int) Math.floor(z));
+		if (this.climb == null) {
+			WorldIndex.Shaft end = cell == null ? null : climbableEnd(world, cell);
+			if (end != null && !cell.equals(hiddenCell)) {
+				// Onto an end: no step (the game would warp at once); the hidden player waits beside it.
+				this.climb = new Climb(end, cell, cell.equals(end.top()) ? end.bottom() : end.top());
+				this.stats.climbs++;
+				return true;
+			}
+			if (inside != null && hiddenCell != null) {
+				// Dropped in from an end the hidden player stands on or beside (after a climb up, it stands on the top).
+				CellPos near = beside(hiddenCell, inside.top()) ? inside.top() : inside.up() && beside(hiddenCell, inside.bottom()) ? inside.bottom() : null;
+				if (near != null) {
+					this.climb = new Climb(inside, near, near.equals(inside.top()) ? inside.bottom() : inside.top());
+					this.stats.climbs++;
+					return true;
+				}
+			}
+			return false;
+		}
+		Climb c = this.climb;
+		if (this.takeSeq >= 0) {
+			// Waiting for the take's warp (or its answer).
+			if (now - this.takeSentAt > TAKE_TIMEOUT_MS) {
+				this.takeSeq = -1;
+				this.failTake(now);
+			}
+			return true;
+		}
+		boolean arrived = c.far().equals(cell) && (c.down() ? y < c.shaft().y0() + LANDED : y > c.shaft().y1() + 1 - LANDED);
+		if (arrived && (this.takeRetryAt < 0 || now >= this.takeRetryAt)) {
+			if (this.takeFirstAt < 0) {
+				this.takeFirstAt = now;
+			}
+			this.takeRetryAt = -1;
+			this.takeSentAt = now;
+			this.takeSeq = this.port.take(c.near(), new Place(c.far().map(), c.far().x(), c.far().y(), Dir.fromYaw(yaw)), c.shaft().kind());
+			if (this.takeSeq < 0) {
+				// Dropped (not connected): sent back.
+				this.failTake(now);
+			}
+			return true;
+		}
+		if (cell == null || cell.equals(c.near()) || cell.equals(c.far()) || inside == c.shaft()) {
+			// In the shaft, or at one of its ends.
+			return true;
+		}
+		// Stepped off its end: back where the hidden player waits needs nothing (and no crossing from the end).
+		if (cell.equals(hiddenCell)) {
+			this.endClimb();
+			return true;
+		}
+		this.endClimb();
+		this.walkRound(world, hiddenCell, cell, c.near(), now);
+		return true;
+	}
+
+	/** A shaft end the player may climb or drop from: a top, or the bottom of a ladder climbed up too. */
+	private static WorldIndex.@Nullable Shaft climbableEnd(WorldIndex world, CellPos cell) {
+		WorldIndex.Shaft shaft = world.shaftEnd(cell);
+		if (shaft == null) {
+			return null;
+		}
+		return cell.equals(shaft.top()) || shaft.up() ? shaft : null;
+	}
+
+	/** True when {@code a} is {@code b} or one of its four neighbours, on one map. */
+	private static boolean beside(CellPos a, CellPos b) {
+		return a.map().equals(b.map()) && Math.abs(a.x() - b.x()) + Math.abs(a.y() - b.y()) <= 1;
+	}
+
+	/**
+	 * HD12: the player stepped off a shaft's end onto another of its neighbours: the hidden player walks round the end to
+	 * it (two steps round a corner, four across), the steps answered as ones Minecraft already made. A refused step pulls
+	 * the player back, as any refused step does; a cell no walk round reaches is a pull back at once.
+	 */
+	private void walkRound(WorldIndex world, @Nullable CellPos from, CellPos to, CellPos end, long now) {
+		if (from == null || !from.map().equals(to.map()) || !beside(from, end) || !beside(to, end) || from.equals(end)) {
+			Spot back = this.hiddenSpot();
+			if (back != null) {
+				this.correct(this.last, back, WALK_FRAMES, now);
+			}
+			return;
+		}
+		int ax = from.x() - end.x();
+		int ay = from.y() - end.y();
+		int bx = to.x() - end.x();
+		int by = to.y() - end.y();
+		List<Dir> path = new java.util.ArrayList<>();
+		if (ax * bx + ay * by == 0) {
+			// Round the corner: along the side from's at, then onto to's.
+			path.add(Dir.of(bx, by));
+			path.add(Dir.of(-ax, -ay));
+		} else {
+			// Across: out to the side, along two, back in.
+			Dir side = Dir.of(ay, ax);
+			path.add(side);
+			path.add(Dir.of(-ax, -ay));
+			path.add(Dir.of(-ax, -ay));
+			path.add(side.opposite());
+		}
+		Spot at = Spot.of(world, from.map(), from.x(), from.y());
+		for (Dir dir : path) {
+			at = at == null ? null : at.offset(dir.dx(), dir.dy());
+			this.send(dir, at, false, now);
+		}
+	}
+
+	/** The take failed: back to the hidden player's cell, through the fade. */
+	private void failTake(long now) {
+		this.stats.takesFailed++;
+		this.endClimb();
+		Spot target = this.hiddenSpot();
+		if (target != null) {
+			this.teleportAllowedAt = Long.MIN_VALUE;
+			this.teleport(target, now);
+		}
+	}
+
+	private void endClimb() {
+		this.climb = null;
+		this.takeSeq = -1;
+		this.takeFirstAt = -1;
+		this.takeRetryAt = -1;
+	}
 
 	private void crossings(@Nullable Spot here, double x, double z, long now) {
 		Spot from = this.last;
@@ -535,6 +758,7 @@ public final class MovementSync {
 	private boolean rejoin(@Nullable Spot here, long now) {
 		Spot target = this.hiddenSpot();
 		this.driftSince = -1;
+		this.endClimb();
 		if (target == null || target.equals(here)) {
 			return false;
 		}

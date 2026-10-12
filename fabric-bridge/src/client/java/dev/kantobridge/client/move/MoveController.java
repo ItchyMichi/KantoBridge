@@ -5,6 +5,7 @@ import dev.kantobridge.client.bridge.ConnectionStatus;
 import dev.kantobridge.client.bridge.JsonFields;
 import dev.kantobridge.proto.Envelope;
 import dev.kantobridge.proto.MsgTypes;
+import dev.kantobridge.world.CellPos;
 import dev.kantobridge.world.Dir;
 import dev.kantobridge.world.Place;
 import dev.kantobridge.world.WorldIndex;
@@ -29,6 +30,11 @@ public final class MoveController {
 	public interface Port {
 		/** Sends a message to gen1-bridge; false when not connected (dropped). */
 		boolean toBridge(String type, JsonObject data);
+
+		/** The same for a request whose answer names it: its {@code seq}, or -1 when it was dropped. */
+		default long toBridgeTracked(String type, JsonObject data) {
+			return this.toBridge(type, data) ? 0 : -1;
+		}
 
 		/** Sends a message to the server relay; returns its {@code seq}, or -1 when it couldn't. */
 		long toServer(String type, JsonObject data);
@@ -100,8 +106,9 @@ public final class MoveController {
 		}
 		this.fade.tick(now);
 		ForcedMover.Velocity velocity = this.following ? this.mover.tick(frame.x(), frame.z()) : null;
+		// A cave shaft's warp being taken holds the controls too (CAVES_3D_PLAN §3.6).
 		this.reason = InputLock.reason(kanto, frame.freeCamera(), frame.battle(), frame.connected(), frame.ingame(), this.sync.hiddenUnbuilt(),
-				frame.mode(), this.fade.holding(), this.mover.active(), frame.holds());
+				frame.mode(), this.fade.holding() || this.sync.takeHolding(), this.mover.active(), frame.holds());
 		return velocity;
 	}
 
@@ -152,16 +159,22 @@ public final class MoveController {
 					this.sync.onMode(mode);
 				}
 			}
-			case MsgTypes.WARP -> this.onWarp(data, now);
+			case MsgTypes.WARP -> this.onWarp(data, message.re(), now);
+			case MsgTypes.WARP_TAKEN -> this.sync.onTaken(message.re(), JsonFields.bool(data, "ok", false), JsonFields.str(data, "reason"), now);
 			default -> {
 			}
 		}
 	}
 
-	private void onWarp(JsonObject data, long now) {
+	private void onWarp(JsonObject data, @Nullable Long re, long now) {
 		String phase = JsonFields.str(data, "phase");
 		String kind = JsonFields.str(data, "kind");
 		if (phase == null || kind == null) {
+			return;
+		}
+		if (this.sync.takes(re)) {
+			// A cave shaft's warp, taken where the player already stands (CAVES_3D_PLAN §3.6): no fade, no teleport.
+			this.sync.onTakenWarp(phase, Place.fromJson(data.get("to")));
 			return;
 		}
 		if (phase.equals("start")) {
@@ -321,6 +334,19 @@ public final class MoveController {
 		@Override
 		public boolean forcedMoving() {
 			return MoveController.this.mover.active();
+		}
+
+		@Override
+		public long take(CellPos from, Place to, String kind) {
+			JsonObject data = new JsonObject();
+			JsonObject near = new JsonObject();
+			near.addProperty("map", from.map());
+			near.addProperty("x", from.x());
+			near.addProperty("y", from.y());
+			data.add("from", near);
+			data.add("to", to.toJson());
+			data.addProperty("kind", kind);
+			return MoveController.this.port.toBridgeTracked(MsgTypes.WARP_TAKE, data);
 		}
 	}
 

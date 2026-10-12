@@ -37,6 +37,8 @@ class MovementSyncTest {
 		final List<String> calls = new ArrayList<>();
 		boolean warping;
 		boolean forced;
+		/** The next {@code warp.take}'s seq; -1 makes it a dropped one. */
+		long nextTake = 100;
 
 		FakePort(WorldIndex index) {
 			this.index = index;
@@ -71,6 +73,13 @@ class MovementSyncTest {
 		@Override
 		public boolean forcedMoving() {
 			return this.forced;
+		}
+
+		@Override
+		public long take(CellPos from, Place to, String kind) {
+			long seq = this.nextTake < 0 ? -1 : this.nextTake++;
+			this.calls.add("take " + from.key() + " " + to + " " + kind + " #" + seq);
+			return seq;
 		}
 
 		List<String> take() {

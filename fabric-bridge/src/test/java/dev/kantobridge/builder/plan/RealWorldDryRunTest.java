@@ -103,6 +103,8 @@ class RealWorldDryRunTest {
 			row.addProperty("faces", result.faces());
 			row.addProperty("faces_other", result.facesOther());
 			MapLayout layout = map.layout();
+			// H5: its rooms, drawn apart
+			row.addProperty("rooms", layout == null ? 1 : layout.pieces().size());
 			if (layout != null) {
 				Map<String, Integer> dirs = new TreeMap<>();
 				for (int i = 0; i < layout.w() * layout.h(); i++) {
@@ -117,6 +119,18 @@ class RealWorldDryRunTest {
 			levels.add(row);
 		}
 		out.add("cave_levels", levels);
+		// H5: the shafts lined up (counts and map ids only)
+		JsonArray shafts = new JsonArray();
+		for (WorldIndex.Shaft shaft : plan.index().shafts()) {
+			JsonObject row = new JsonObject();
+			row.addProperty("kind", shaft.kind());
+			row.addProperty("top", shaft.top().map());
+			row.addProperty("bottom", shaft.bottom().map());
+			row.addProperty("up", shaft.up());
+			row.addProperty("length", shaft.y1() - shaft.y0());
+			shafts.add(row);
+		}
+		out.add("shafts", shafts);
 		// H4: story cells on ramps, by map and type (their blocks stand on the steps; a swap site's can't)
 		Map<String, Integer> rampStories = new TreeMap<>();
 		for (dev.kantobridge.world.StoryCellTable.Entry entry : plan.storyCells().entries()) {

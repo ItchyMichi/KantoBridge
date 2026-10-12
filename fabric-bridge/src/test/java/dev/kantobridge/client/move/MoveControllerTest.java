@@ -52,6 +52,12 @@ class MoveControllerTest {
 		}
 
 		@Override
+		public long toBridgeTracked(String type, JsonObject data) {
+			this.bridge.add(type + " " + data);
+			return this.nextSeq++;
+		}
+
+		@Override
 		public boolean destinationReady(@Nullable Vec3 target) {
 			this.readyTarget = target;
 			return this.ready;
@@ -97,7 +103,11 @@ class MoveControllerTest {
 		}
 
 		void bridge(String type, String json) throws Exception {
-			this.controller.onBridgeMessage(new Envelope(type, 1, null, ProtoJson.parseObject(json)), this.now);
+			this.bridge(type, null, json);
+		}
+
+		void bridge(String type, @Nullable Long re, String json) throws Exception {
+			this.controller.onBridgeMessage(new Envelope(type, 1, re, ProtoJson.parseObject(json)), this.now);
 		}
 
 		void server(String type, @Nullable Long re, String json) throws Exception {
@@ -164,6 +174,30 @@ class MoveControllerTest {
 		assertEquals(InputLock.Reason.NONE, rig.controller.reason(), "free again while the screen opens");
 		assertEquals(0, rig.controller.sync().stats().teleports, "landed where the hidden player is: nothing to fix");
 		assertEquals(List.of(), rig.port.warnings);
+	}
+
+	@Test
+	void aCaveShaftsWarpIsTakenWhereThePlayerStandsWithoutAFade() throws Exception {
+		// CAVES_3D_PLAN §3.6: down the ladder at TEST_CAVE_1F (3, 5) onto B1F's (3, 3)
+		Rig rig = linkedAt("TEST_CAVE_1F", 2, 5, "right");
+		rig.at("TEST_CAVE_1F", 3, 5);
+		rig.tick(null, Dir.RIGHT.yaw());
+		rig.y -= 6;
+		rig.tick(null, Dir.RIGHT.yaw());
+		rig.at("TEST_CAVE_B1F", 3, 3);
+		rig.tick(null, Dir.RIGHT.yaw());
+		assertEquals(List.of("warp.take {\"from\":{\"map\":\"TEST_CAVE_1F\",\"x\":3,\"y\":5},\"to\":{\"map\":\"TEST_CAVE_B1F\",\"x\":3,"
+				+ "\"y\":3,\"facing\":\"right\"},\"kind\":\"ladder\"}"), rig.port.bridge, "no step onto the shaft, the take at the bottom");
+		rig.tick(null, Dir.RIGHT.yaw());
+		assertEquals(InputLock.Reason.WARP, rig.controller.reason(), "held while the hidden game takes it");
+		rig.bridge("warp.taken", 1L, "{\"ok\":true}");
+		rig.bridge("warp", 1L, "{\"phase\":\"start\",\"kind\":\"stairs\"}");
+		rig.bridge("warp", 1L, "{\"phase\":\"arrive\",\"kind\":\"stairs\",\"to\":{\"map\":\"TEST_CAVE_B1F\",\"x\":3,\"y\":3,\"facing\":\"right\"}}");
+		rig.tick(null, Dir.RIGHT.yaw());
+		assertEquals(InputLock.Reason.NONE, rig.controller.reason());
+		assertEquals(List.of(), rig.port.server, "no fade, no teleport: the player already stands there");
+		assertEquals(WarpFade.Phase.IDLE, rig.controller.fade().phase());
+		assertEquals(1, rig.controller.sync().stats().takes);
 	}
 
 	@Test
