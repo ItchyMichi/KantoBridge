@@ -131,6 +131,24 @@ class RealWorldDryRunTest {
 			shafts.add(row);
 		}
 		out.add("shafts", shafts);
+		// H5: per complex (by its cave maps' prefix: counts only), the links of each kind and what became of them
+		Map<String, Integer> links = new TreeMap<>();
+		for (PlacedMap map : plan.maps()) {
+			if (!WorldPlan.BIOME_CAVE_3D.equals(map.placement().biome())) {
+				continue;
+			}
+			for (dev.kantobridge.builder.export.ExportMap.Warp warp : map.model().map().warps()) {
+				int flags = map.model().map().flags(warp.x(), warp.y());
+				String kind = dev.kantobridge.builder.export.CellFlags.has(flags, dev.kantobridge.builder.export.CellFlags.HOLE) ? "hole"
+						: dev.kantobridge.builder.export.CellFlags.has(flags, dev.kantobridge.builder.export.CellFlags.DOOR) ? "door"
+						: dev.kantobridge.builder.export.CellFlags.has(flags, dev.kantobridge.builder.export.CellFlags.WARP_TILE) ? "warp_tile" : "other";
+				PlacedMap to = plan.map(warp.to());
+				String where = to == null ? "out" : WorldPlan.BIOME_CAVE_3D.equals(to.placement().biome()) ? "cave" : "out";
+				boolean shaft = plan.index().shaftEnd(new dev.kantobridge.world.CellPos(map.id(), warp.x(), warp.y())) != null;
+				links.merge(map.id() + ":" + kind + ":" + where + (shaft ? ":shaft" : ""), 1, Integer::sum);
+			}
+		}
+		out.add("cave_warps", counts(links));
 		// H4: story cells on ramps, by map and type (their blocks stand on the steps; a swap site's can't)
 		Map<String, Integer> rampStories = new TreeMap<>();
 		for (dev.kantobridge.world.StoryCellTable.Entry entry : plan.storyCells().entries()) {

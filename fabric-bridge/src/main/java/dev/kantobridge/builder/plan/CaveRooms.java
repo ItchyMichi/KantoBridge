@@ -92,6 +92,9 @@ final class CaveRooms {
 				Unit from = unit(rooms, a, warp.x(), warp.y());
 				Unit to = unit(rooms, b, arrival.x(), arrival.y());
 				if (from == null || to == null) {
+					// A warp from or to a cell in no room (not walked on): it keeps its fade, counted by what its cell is
+					int flags = a.flags(warp.x(), warp.y());
+					fades.merge(CellFlags.has(flags, CellFlags.HOLE) ? "hole_off_floor" : "off_floor", 1, Integer::sum);
 					continue;
 				}
 				Link shaft = shaftLink(all, ranks, a, warp, b, arrival, fades);
