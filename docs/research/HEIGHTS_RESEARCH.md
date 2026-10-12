@@ -275,6 +275,35 @@ There are no tile pairs outdoors, so there are two sources:
   - the Wild Routes zones and dungeons, whose walking cells are flat by design (`builder/zone/ZonePlan.java:38-40`).
 - **Build time** grows only a little.
 
+### 5.3 Interiors in an area of their own (your question of 2026-10-12)
+
+- **The idea:** build interiors in a region away from Kanto, the wild zones and the dungeons, instead of in layers
+  under their doors. Nothing would stack, so every map could be as tall as it needs.
+- **Today's code already allows it:**
+  - a warp lands wherever the index says the map is (`WorldIndex.toBlock`);
+  - long teleports already happen: Fly, Dig, Teleport, Escape Rope, the wild zones 3,000 blocks south
+    (`builder/zone/ZoneRegions.java:15`) and the dungeons 3,000 blocks north (`dungeon/DungeonSlots.java:21`);
+  - 6 interiors already sit away from their doors: 5 sideways and 1 deep spill (`docs/PROGRESS.md:1557-1558`);
+  - the fade stays dark until the arrival spot is drawn, for 3 s at most (`client/move/WarpFade.java:167-171`,
+    `client/move/MoveRuntime.java:199-212`).
+- **Where:** the region table already holds the wild zones (south), the dungeons (north) and room for other games
+  (west and east, `docs/specs/WILD_ROUTES_PLAN.md` §4.10). A new region could go north, past the dungeon slots.
+- **What it gives:** several levels per cave, tall ceilings, and walk-down shafts (E5) with any spacing. One cave's
+  floors can still sit near each other, so its ladders stay short teleports.
+- **What it costs:**
+  - **Doors stop being instant.** Today the room under a door is already loaded, because Minecraft loads whole chunk
+    columns (`docs/DESIGN.md:36`). From a far region each door waits for chunks: a longer dark pause going in. Going
+    back out, the spot you land on is drawn before the fade lifts, but the rest of the town pops in after it. The
+    pause needs measuring on a modest PC.
+  - It changes DESIGN §3 (interiors under their buildings, caves under their mountains). That's your file.
+  - New placement code (a grid instead of layers), its tests and a rebuild. The index format, the teleports and the
+    bridge stay as they are.
+  - The world stays deep for now: dungeons stack their floors 22 blocks apart below Y 64
+    (`dungeon/DungeonSlots.java:22-25`).
+- **Middle ground:** move only the caves. They are the only roofed maps that need the height (the forest maps are open
+  to the sky). There are fewer than 20 cave floors *(general knowledge)*, and you go through their entrances far less
+  often than through house doors. Houses, shops and gyms stay under their doors, and their doors stay instant.
+
 ## 6. Phases
 
 1. **E1 Groundwork (M).** Levels in the index, all 0, with `floorY`, `toCell`, `Spot`, teleports, puppets, clicks
