@@ -2,8 +2,8 @@
 
 - **Status:** research for your question of 2026-10-12: could the ROM world's floors sit at different heights (a cave
   whose stairs climb to raised ground, places outdoors where a height difference makes sense), how would it be built,
-  and what would it change. Nothing is built. Decided so far: 2-block levels with 2 blocks of air on top (§7); the
-  other choices are open.
+  and what would it change. Nothing is built. Decided so far: 2-block levels with 2 blocks of air on top, and caves
+  in an area of their own (§7). The other choices are open.
 - **Sources:** a read of today's code, docs and tests (file:line below; Java paths are under
   `fabric-bridge/src/{main,client}/java/dev/kantobridge/`), and the earlier research
   `docs/research/VOXEL_WORLD_REPORT.md` (VR). Nothing under `local/` and nothing ROM-derived was opened. Nothing ran on
@@ -255,8 +255,8 @@ There are no tile pairs outdoors, so there are two sources:
     −2032, in steps of 16. Fourteen layers need `63 − bottom ≥ 14 × step`:
     - a 24-block step (2 more blocks per room) needs a bottom of −288;
     - a 26-block step (4 more) needs −304.
-  - **What a deeper world costs:** empty sections cost almost nothing to store or draw. It touches the dimension override
-    (it applies to every world opened with the mod, VR L2), `Scale.LAYER_STEP`, the spawn rule's hard-coded 22
+  - **What a deeper world costs:** empty sections cost almost nothing to store or draw. It touches the dimension
+    override (it applies to every world opened with the mod, VR L2), `Scale.LAYER_STEP`, the spawn rule's hard-coded 22
     (`walking_level_only.json:8`), the golden test index and the tests that expect 14 layers at −256, and PLAN P4.
   - **Less separation** is the other way to get more room. It is your rule, so it needs your call.
   - Open-air maps and the surface can rise freely. Tall buildings on raised ground need the surface volume's top
@@ -303,6 +303,38 @@ There are no tile pairs outdoors, so there are two sources:
 - **Middle ground:** move only the caves. They are the only roofed maps that need the height (the forest maps are open
   to the sky). There are fewer than 20 cave floors *(general knowledge)*, and you go through their entrances far less
   often than through house doors. Houses, shops and gyms stay under their doors, and their doors stay instant.
+  **You chose this on 2026-10-12** (§7).
+- **Missed in the first answer:** `docs/specs/VANILLA_WORLD_PLAN.md` (2026-10-09, not decided) moves every interior
+  into one dimension of its own (your U1). If it goes ahead, every door becomes a dimension change anyway, and the cave
+  area would sit in that dimension. That dimension's type could be as deep as needed without the overworld override.
+
+### 5.4 Growth: new places and other games (your question of 2026-10-12)
+
+- **Space is not the limit.**
+  - Minecraft's world is about 60 million blocks across.
+  - Kanto is 704 × 744 blocks with its ring (VANILLA_WORLD_PLAN WD5). With its wild zones (from 3,000 blocks south,
+    rows of 8 slots of 640 blocks) and its dungeons (3,000 blocks north), it spans about 5,000 × 7,500 blocks.
+  - West and east of Kanto are kept for other games' worlds (`builder/zone/ZoneRegions.java:9`,
+    `docs/specs/WILD_ROUTES_PLAN.md` §4.10).
+- **Each region repeats the same parts,** placed from its own origin: its surface, houses in layers under their doors,
+  its own cave area, its wild zones and its dungeons.
+- **Height:** 14 layers hold Kanto's tallest stack, Silph Co.'s 11 floors (PLAN P4). Johto's tallest is Tin Tower,
+  9 floors and a roof *(general knowledge)*. A dry run would show how often the packer spills.
+- **Heights carry over.** Gen 3 stores an elevation per cell (§2), which maps straight onto the per-cell floor level.
+  Gen 3's bridges need a second floor per cell (§5.2, "One floor per cell").
+- **The cave area must be ready for regions:**
+  - placed from its region's origin, like `ZoneRegions` and `DungeonSlots`, with the region in its records;
+  - filled from the data (roofed maps with raised floors), not from a list of Kanto's caves.
+- **What fills up first, with Kanto alone:**
+  - **Block slots:** 3,926 of 4,096 full-shape slots (`docs/ROADMAP.md:35`), so Johto's tiles won't fit. The plans
+    favour a flexible block with no fixed capacity and textures per region (`docs/NEXT_STAGES.md` §4.2, §5).
+  - **The shape map on the wire:** 78% measured and about 94% expected with the profile, of an 8-part budget
+    (`docs/ROADMAP.md:34`, `docs/specs/VOXEL_BLOCKS_PLAN.md:295`). The voxel plan's noted fix is sending grids on
+    demand (R10, `:1385`). Per region, that means only the region the player is in.
+  - **One world, one game:** the WorldIndex, the server rules and the hidden game all assume Kanto.
+    `docs/NEXT_STAGES.md` §5 makes regions first-class, each with its own index, textures, rules and hidden game,
+    and it needs a Gen 2 bridge. A region-scoped world format doesn't exist yet (ROADMAP Stage 8).
+- **New places that aren't from a ROM** get slot areas like the wild zones and the dungeons.
 
 ## 6. Phases
 
@@ -324,8 +356,8 @@ There are no tile pairs outdoors, so there are two sources:
 
 1. **How high is one level?** **Decided 2026-10-12: 2 blocks, with 2 blocks of air on top.** A real cliff above eye
    height. It needs step colliders (§3.3) and fits today's layout, keeping 16 blocks of separation (§5.2).
-2. **More room:** keep today's layout (one raised level per cave map), or lower the world's bottom for more levels or
-   more air on top (§5.2).
+2. **More room:** **decided 2026-10-12: caves move to an area of their own** (§5.3), so they get all the height they
+   need. Houses, shops and gyms stay under their doors.
 3. **Scope and order** (E1–E4), and which cave to pilot.
 4. **Outdoors:** the islands only, or also places you name, with ramps the game doesn't draw.
 5. **E5:** later, or never.
