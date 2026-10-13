@@ -166,8 +166,10 @@ final class BridgeSession {
 				String tested = JsonFields.str(data, "tested");
 				this.phase = Phase.CONNECTED;
 				this.lastPingMs = nowMs;
+				// MG1: the family and the adapter's limits, or the catalogue's for the game when the message doesn't say
 				this.out.connected(new HelloOk(session, game, engine, bridge, tested != null && VERSION.matcher(tested).matches() ? tested : null,
-						HelloOk.unionRoomField(JsonFields.str(data, "union_room"))));
+						HelloOk.unionRoomField(JsonFields.str(data, "union_room")), HelloOk.familyField(JsonFields.str(data, "family"), game),
+						HelloOk.compatField(JsonFields.obj(data, "compat"), game)));
 				this.out.deliver(message);
 			}
 			case MsgTypes.HELLO_REJECT -> {

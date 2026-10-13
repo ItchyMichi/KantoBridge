@@ -1,0 +1,25 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kantobridge.invalid/protocol/messages/region.resume.schema.json",
+  "title": "region.resume",
+  "description": "Several games (MULTI_GAME_PLAN §4.3, MG2): release the hold. When the hidden player is not on `to`, the adapter queues the engine's own warp there, but only onto one of this mod's route maps (KB_ROUTE_*) or the saved away cell (story safety, §4.13: towns are entered through the route map's own step script). Answered by act.result{kind:\"resume\"}; refusals not_ingame, not_idle, busy, bad_target.",
+  "x-type": "region.resume",
+  "x-legs": [
+    "m2g"
+  ],
+  "x-re": "never",
+  "type": "object",
+  "required": [
+    "region",
+    "to"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "region": {
+      "$ref": "../defs.schema.json#/$defs/regionId"
+    },
+    "to": {
+      "$ref": "../defs.schema.json#/$defs/place"
+    }
+  }
+}

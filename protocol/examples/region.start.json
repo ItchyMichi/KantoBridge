@@ -1,0 +1,9 @@
+[
+  {
+    "type": "region.start",
+    "seq": 42,
+    "data": {
+      "region": "hoenn"
+    }
+  }
+]

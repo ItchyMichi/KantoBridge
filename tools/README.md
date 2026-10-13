@@ -66,6 +66,10 @@ cd tools
 .venv/Scripts/python.exe -m kb_protocol.catalog --write    # regenerate after a schema change
 ```
 
+`--write` also regenerates `gen1-bridge/lib/kb_games.lua` from `protocol/games.json`, the game
+catalogue (MULTI_GAME_PLAN §4.2); `kb_protocol.games.load_games()` reads it in Python, and
+`fake_gen1 --game <id>` accepts any catalogued id.
+
 ## Data safety
 
 The stand-ins and tests never contain ROM data: they use made-up maps, text and flags. Anything that

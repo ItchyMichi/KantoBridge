@@ -27,6 +27,13 @@
     {"type": "act.interact", "seq": 11, "redacted": {"map": "TEST_TOWN", "x": 3, "y": 8}},
     {"type": "act.result", "seq": 11, "redacted": {"ok": true}},
     {"type": "act.result", "seq": 12, "redacted": {"ok": false, "reason": "not_idle"}},
+    {"type": "act.result", "seq": 77, "redacted": {"ok": true, "kind": "park"}},
+    {"type": "act.result", "seq": 80, "redacted": {"ok": true, "kind": "start", "detail": "new"}},
+    {
+      "type": "act.result",
+      "seq": 81,
+      "redacted": {"ok": false, "kind": "resume", "reason": "bad_target"}
+    },
     {"type": "activity", "seq": 11, "redacted": {"activity": "dialogue"}},
     {"type": "bag.sync", "seq": 11, "redacted": {"items": {"POKE_BALL": 5, "POTION": 2}}},
     {"type": "bag.use", "seq": 11, "redacted": {"item": "POKE_BALL", "qty": 1}},
@@ -135,6 +142,34 @@
       }
     },
     {
+      "type": "game.status",
+      "seq": 9,
+      "redacted": {
+        "game": "blue",
+        "region": "kanto",
+        "playthrough": "saved",
+        "ingame": true,
+        "started": true,
+        "badges": 2,
+        "markers": {"starter": true, "champion": false},
+        "name": "<rom:str:6:92397ad4>",
+        "slot": 1
+      }
+    },
+    {
+      "type": "game.status",
+      "seq": 10,
+      "redacted": {
+        "game": "emerald",
+        "playthrough": "title",
+        "ingame": false,
+        "started": false,
+        "badges": 0,
+        "markers": {},
+        "slot": 2
+      }
+    },
+    {
       "type": "hello",
       "seq": 11,
       "redacted": {
@@ -164,7 +199,23 @@
         "union_room": "off"
       }
     },
+    {
+      "type": "hello.ok",
+      "seq": 12,
+      "redacted": {
+        "protocol": 1,
+        "bridge": "0.1.0",
+        "engine": "0.3.85",
+        "game": "blue",
+        "family": "gen1",
+        "compat": {"maxDex": 151, "maxMove": 165, "nick": 10},
+        "session": "s-7f3a92",
+        "tested": "0.3.85",
+        "union_room": "off"
+      }
+    },
     {"type": "hello.reject", "seq": 11, "redacted": {"reason": "protocol", "protocol": 1}},
+    {"type": "hello.reject", "seq": 12, "redacted": {"reason": "game", "protocol": 1}},
     {
       "type": "log",
       "seq": 11,
@@ -347,6 +398,16 @@
       }
     },
     {"type": "pong", "seq": 11, "redacted": {"t": 123456}},
+    {"type": "region.park", "seq": 40, "redacted": {"region": "kanto"}},
+    {
+      "type": "region.resume",
+      "seq": 41,
+      "redacted": {
+        "region": "hoenn",
+        "to": {"map": "KB_ROUTE_EASTERN_PASS", "x": 1, "y": 0, "facing": "right"}
+      }
+    },
+    {"type": "region.start", "seq": 42, "redacted": {"region": "hoenn"}},
     {"type": "relay.hello", "seq": 1, "redacted": {"protocol": 1, "mod": "0.10.0"}},
     {"type": "resync", "seq": 11, "redacted": {}},
     {
@@ -531,6 +592,57 @@
         "party": [],
         "dex": {"seen": [], "owned": []},
         "npcs": {"map": "TEST_TOWN", "list": []}
+      }
+    },
+    {
+      "type": "snapshot",
+      "seq": 14,
+      "redacted": {
+        "ingame": true,
+        "player": {"map": "TEST_TOWN", "x": 5, "y": 6, "facing": "down"},
+        "state": {
+          "mode": "idle",
+          "bike": false,
+          "surf": false,
+          "slope": false,
+          "hidden": false,
+          "dark": false,
+          "lit": false
+        },
+        "flags": ["EVENT_TEST_STARTED"],
+        "toggles": {"TEST_TOWN": {"TESTTOWN_HELPER": true}},
+        "blocks": "<rom:arr:1:5601b5d0>",
+        "lit": [],
+        "bag": {"POKE_BALL": 5, "POTION": 1},
+        "money": 3000,
+        "coins": 0,
+        "badges": [],
+        "party": [
+          {
+            "uid": "0f8b6a2e-1c2d-4e5f-8a9b-0c1d2e3f4a5b",
+            "dex": 7,
+            "level": 5,
+            "moves": [33, 39],
+            "hp": 20,
+            "maxhp": 20
+          }
+        ],
+        "dex": {"seen": [7, 16], "owned": [7]},
+        "npcs": {
+          "map": "TEST_TOWN",
+          "list": [
+            {
+              "id": "TEST_TOWN_obj_1",
+              "sprite": "SPRITE_TEST_GIRL",
+              "kind": "person",
+              "x": 3,
+              "y": 8,
+              "facing": "down",
+              "moving": false
+            }
+          ]
+        },
+        "away": {"map": "TEST_TOWN", "x": 5, "y": 8}
       }
     },
     {

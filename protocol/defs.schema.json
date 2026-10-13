@@ -4,6 +4,35 @@
   "title": "defs",
   "description": "Shared definitions for Kanto Bridge message schemas.",
   "$defs": {
+    "gameId": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_]{0,15}$",
+      "maxLength": 16,
+      "minLength": 1,
+      "description": "A Gen1Recomp game id (protocol/games.json): red, blue, yellow, gold, ..., emerald."
+    },
+    "regionId": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_]{0,23}$",
+      "maxLength": 24,
+      "minLength": 1,
+      "description": "A region of the one overworld built from one game's export, e.g. kanto, hoenn (MULTI_GAME_PLAN §4.1)."
+    },
+    "family": {
+      "enum": ["gen1", "gen2", "gen3"],
+      "description": "An engine family: gen1 (Red, Blue, Yellow), gen2 (Gold, Silver, Crystal), gen3 (FireRed, LeafGreen, Ruby, Sapphire, Emerald). One bridge adapter per family."
+    },
+    "compat": {
+      "type": "object",
+      "required": ["maxDex", "maxMove", "nick"],
+      "additionalProperties": false,
+      "properties": {
+        "maxDex": {"type": "integer", "minimum": 1, "maximum": 2000, "description": "The highest national dex number the game holds."},
+        "maxMove": {"type": "integer", "minimum": 1, "maximum": 2000, "description": "The highest move number the game holds."},
+        "nick": {"type": "integer", "minimum": 1, "maximum": 16, "description": "The longest nickname the game stores."}
+      },
+      "description": "A game's compatibility profile: what its shadow party can hold (MULTI_GAME_PLAN §4.9)."
+    },
     "symbol": {
       "type": "string",
       "pattern": "^[A-Za-z0-9_]+$",

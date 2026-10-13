@@ -21,6 +21,14 @@
 -- is tested with; when the running engine differs, each connection gets one
 -- `log` warning engine.untested (after its snapshot).
 --
+-- MG1 (docs/specs/MULTI_GAME_PLAN.md §4.2, §4.4): the game is an open
+-- catalogue id (lib/kb_games.lua, generated from protocol/games.json), never
+-- coerced. hello.ok names it with its engine `family` and the adapter's
+-- `compat` limits (the catalogue's for the Gen 1 adapter). A process running
+-- a game outside the catalogue, or outside the games this mod is for
+-- (opts.supported: the manifest's list, main.lua), answers every hello with
+-- hello.reject "game" and closes, so a client connecting to it is told why.
+--
 -- Everything outside the protocol is injected: the snapshot, the debug
 -- status and what quitting means. Streams (player.* and later the UI, NPCs
 -- and story) go only to established client and test sessions. Other
@@ -35,7 +43,6 @@ Session.MAX_LOG_MSG = 500
 Session.HELLO_SECONDS = 10
 
 local floor = math.floor
-local GAMES = { red = true, blue = true }
 
 local function wholeNumber(v, lo)
   return type(v) == "number" and v == floor(v) and v >= (lo or 0) and v <= 9007199254740991
@@ -109,7 +116,10 @@ end
 --   log          kb_log logger
 --   bridge       gen1-bridge's version string
 --   engine()     the engine version string
---   game()       "red" or "blue"
+--   game()       the running game's id (kb_engine.gameVersion), or nil
+--   games        MG1: lib/kb_games.lua (the catalogue: games[id].family, .compat)
+--   supported(game)  MG1: true when this mod is for the game (main.lua: the
+--                manifest's list); a game outside it is rejected ("game")
 --   sessionId    random per gen1-bridge start
 --   snapshot()   the snapshot data (and rebases the observers)
 --   status()     the debug.status reply data
@@ -131,8 +141,11 @@ function Session.new(opts)
     -- M10
     rejectedProtocol = 0, rejectedRole = 0, rejectedMalformed = 0, helloTimeouts = 0, untested = 0,
     badFirstLines = 0,
+    -- MG1: the running game has no adapter here
+    rejectedGame = 0,
   }
-  local REJECT_FIELD = { protocol = "rejectedProtocol", role = "rejectedRole", malformed = "rejectedMalformed" }
+  local REJECT_FIELD = { protocol = "rejectedProtocol", role = "rejectedRole", malformed = "rejectedMalformed",
+                         game = "rejectedGame" }
   local tokens, refilledAt = Session.LOG_PER_SECOND, 0
   local forwarding = false
   local generation = 0 -- counts connections, so a reply never reaches a newer one
@@ -188,13 +201,31 @@ function Session.new(opts)
     end,
   })
 
-  local function reject(msg, reason)
+  local function reject(msg, reason, detail)
     counts.rejected = counts.rejected + 1
     local field = REJECT_FIELD[reason]
     if field then counts[field] = counts[field] + 1 end
     proto.reply(msg, "hello.reject", { reason = reason, protocol = catalog.protocol })
     net.finish("rejected")
-    if log then log.info("session.rejected", { reason = reason }) end
+    if log then
+      local fields = { reason = reason }
+      for k, v in pairs(detail or {}) do fields[k] = v end
+      log.info("session.rejected", fields)
+    end
+  end
+
+  -- MG1: the running game's catalogue entry, or nil plus what is wrong with it
+  -- (an id is a symbol, safe to log; "none" when the engine names no game).
+  local function gameEntry()
+    local game = opts.game()
+    if type(game) ~= "string" or #game == 0 or #game > 16 or not game:find("^[a-z][a-z0-9_]*$") then
+      return nil, "none"
+    end
+    local games = opts.games and opts.games.games
+    local entry = type(games) == "table" and games[game] or nil
+    if not entry then return nil, game end
+    if type(opts.supported) == "function" and not opts.supported(game) then return nil, game end
+    return entry, game
   end
 
   proto.on("hello", function(data, msg)
@@ -204,15 +235,20 @@ function Session.new(opts)
     end
     local problem = Session.helloProblem(json, data, catalog.protocol)
     if problem then return reject(msg, problem) end
+    -- MG1: a game this mod can't follow (no adapter, or unknown) is told so
+    local entry, game = gameEntry()
+    if not entry then return reject(msg, "game", { game = game }) end
     role, established = data.role, true
     counts.sessions = counts.sessions + 1
-    local game = opts.game()
     local running = versionText(opts.engine())
+    local compat = type(entry.compat) == "table" and entry.compat or {}
     local ok = {
       protocol = catalog.protocol,
       bridge = versionText(opts.bridge),
       engine = running,
-      game = GAMES[game] and game or "red",
+      game = game,
+      family = entry.family,
+      compat = { maxDex = compat.maxDex, maxMove = compat.maxMove, nick = compat.nick },
       session = opts.sessionId,
     }
     local tested = opts.tested and versionText(opts.tested) or nil

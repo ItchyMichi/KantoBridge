@@ -4,7 +4,12 @@
     "seq": 11,
     "data": {
       "ingame": true,
-      "player": {"map": "TEST_TOWN", "x": 5, "y": 6, "facing": "down"},
+      "player": {
+        "map": "TEST_TOWN",
+        "x": 5,
+        "y": 6,
+        "facing": "down"
+      },
       "state": {
         "mode": "idle",
         "bike": false,
@@ -14,11 +19,27 @@
         "dark": false,
         "lit": false
       },
-      "flags": ["EVENT_TEST_STARTED"],
-      "toggles": {"TEST_TOWN": {"TESTTOWN_HELPER": true}},
-      "blocks": [{"map": "TEST_TOWN", "bx": 2, "by": 3, "block": 17}],
+      "flags": [
+        "EVENT_TEST_STARTED"
+      ],
+      "toggles": {
+        "TEST_TOWN": {
+          "TESTTOWN_HELPER": true
+        }
+      },
+      "blocks": [
+        {
+          "map": "TEST_TOWN",
+          "bx": 2,
+          "by": 3,
+          "block": 17
+        }
+      ],
       "lit": [],
-      "bag": {"POKE_BALL": 5, "POTION": 1},
+      "bag": {
+        "POKE_BALL": 5,
+        "POTION": 1
+      },
       "money": 3000,
       "coins": 0,
       "badges": [],
@@ -27,12 +48,23 @@
           "uid": "0f8b6a2e-1c2d-4e5f-8a9b-0c1d2e3f4a5b",
           "dex": 7,
           "level": 5,
-          "moves": [33, 39],
+          "moves": [
+            33,
+            39
+          ],
           "hp": 20,
           "maxhp": 20
         }
       ],
-      "dex": {"seen": [7, 16], "owned": [7]},
+      "dex": {
+        "seen": [
+          7,
+          16
+        ],
+        "owned": [
+          7
+        ]
+      },
       "npcs": {
         "map": "TEST_TOWN",
         "list": [
@@ -55,7 +87,12 @@
     "re": 9,
     "data": {
       "ingame": true,
-      "player": {"map": "TEST_HOUSE", "x": 2, "y": 4, "facing": "up"},
+      "player": {
+        "map": "TEST_HOUSE",
+        "x": 2,
+        "y": 4,
+        "facing": "up"
+      },
       "state": {
         "mode": "screen",
         "bike": false,
@@ -74,13 +111,29 @@
       "coins": 0,
       "badges": [],
       "party": [],
-      "dex": {"seen": [], "owned": []},
-      "npcs": {"map": "TEST_HOUSE", "list": []},
+      "dex": {
+        "seen": [],
+        "owned": []
+      },
+      "npcs": {
+        "map": "TEST_HOUSE",
+        "list": []
+      },
       "ui": {
         "ui": 3,
         "kind": "text",
-        "pages": [["Welcome to the", "test house!"]],
-        "cont": [[false, false]]
+        "pages": [
+          [
+            "Welcome to the",
+            "test house!"
+          ]
+        ],
+        "cont": [
+          [
+            false,
+            false
+          ]
+        ]
       }
     }
   },
@@ -89,7 +142,12 @@
     "seq": 13,
     "data": {
       "ingame": false,
-      "player": {"map": "TEST_TOWN", "x": 5, "y": 8, "facing": "down"},
+      "player": {
+        "map": "TEST_TOWN",
+        "x": 5,
+        "y": 8,
+        "facing": "down"
+      },
       "state": {
         "mode": "screen",
         "bike": false,
@@ -108,8 +166,101 @@
       "coins": 0,
       "badges": [],
       "party": [],
-      "dex": {"seen": [], "owned": []},
-      "npcs": {"map": "TEST_TOWN", "list": []}
+      "dex": {
+        "seen": [],
+        "owned": []
+      },
+      "npcs": {
+        "map": "TEST_TOWN",
+        "list": []
+      }
+    }
+  },
+  {
+    "type": "snapshot",
+    "seq": 14,
+    "data": {
+      "ingame": true,
+      "player": {
+        "map": "TEST_TOWN",
+        "x": 5,
+        "y": 6,
+        "facing": "down"
+      },
+      "state": {
+        "mode": "idle",
+        "bike": false,
+        "surf": false,
+        "slope": false,
+        "hidden": false,
+        "dark": false,
+        "lit": false
+      },
+      "flags": [
+        "EVENT_TEST_STARTED"
+      ],
+      "toggles": {
+        "TEST_TOWN": {
+          "TESTTOWN_HELPER": true
+        }
+      },
+      "blocks": [
+        {
+          "map": "TEST_TOWN",
+          "bx": 2,
+          "by": 3,
+          "block": 17
+        }
+      ],
+      "lit": [],
+      "bag": {
+        "POKE_BALL": 5,
+        "POTION": 1
+      },
+      "money": 3000,
+      "coins": 0,
+      "badges": [],
+      "party": [
+        {
+          "uid": "0f8b6a2e-1c2d-4e5f-8a9b-0c1d2e3f4a5b",
+          "dex": 7,
+          "level": 5,
+          "moves": [
+            33,
+            39
+          ],
+          "hp": 20,
+          "maxhp": 20
+        }
+      ],
+      "dex": {
+        "seen": [
+          7,
+          16
+        ],
+        "owned": [
+          7
+        ]
+      },
+      "npcs": {
+        "map": "TEST_TOWN",
+        "list": [
+          {
+            "id": "TEST_TOWN_obj_1",
+            "sprite": "SPRITE_TEST_GIRL",
+            "kind": "person",
+            "x": 3,
+            "y": 8,
+            "facing": "down",
+            "moving": false
+          }
+        ]
+      },
+      "away": {
+        "map": "TEST_TOWN",
+        "x": 5,
+        "y": 8
+      }
     }
   }
 ]

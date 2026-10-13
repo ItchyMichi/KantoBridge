@@ -1,6 +1,7 @@
 package dev.kantobridge.world;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -92,6 +93,40 @@ class WorldIndexTest {
 		assertThrows(DataException.class, () -> WorldIndex.fromJson(good.replace("\"start\":14", "\"start\":256")));
 		assertThrows(DataException.class, () -> WorldIndex.fromJson(good.replace("\"pass\":\"solid\"", "\"pass\":\"solid\",\"x\":1")));
 		assertThrows(DataException.class, () -> WorldIndex.fromJson(good.replace("\"pass\":\"solid\"", "\"pass\":\"lava\"")));
+	}
+
+	@Test
+	void anyCatalogueGameIsAccepted() throws Exception {
+		// MG1: the game is an open catalogue id (protocol/games.json), no longer red or blue only
+		WorldIndex yellow = new WorldIndex("yellow", HASH_A, sample().maps().values(), HASH_B, sample().storyCells(), List.of());
+		assertEquals("yellow", yellow.game());
+		assertEquals("yellow", WorldIndex.fromJson(yellow.toJson()).game());
+		String emerald = sample().toJson().replace("\"game\":\"red\"", "\"game\":\"emerald\"");
+		assertEquals("emerald", WorldIndex.fromJson(emerald).game());
+		assertThrows(IllegalArgumentException.class,
+				() -> new WorldIndex("nope", HASH_A, sample().maps().values(), HASH_B, sample().storyCells(), List.of()));
+		assertThrows(DataException.class, () -> WorldIndex.fromJson(sample().toJson().replace("\"game\":\"red\"", "\"game\":\"nope\"")));
+		assertThrows(DataException.class, () -> WorldIndex.fromJson(sample().toJson().replace("\"game\":\"red\"", "\"game\":\"Red\"")));
+	}
+
+	@Test
+	void theFamilyIsOptionalAndRoundTrips() throws Exception {
+		// MG1: an index without a family writes none (every golden stays byte-identical); one with it carries it
+		WorldIndex plain = sample();
+		assertNull(plain.family());
+		assertFalse(ProtoJson.parseObject(plain.toJson()).has("family"));
+		WorldIndex gen1 = plain.withFamily("gen1");
+		assertEquals("gen1", gen1.family());
+		assertEquals("gen1", ProtoJson.parseObject(gen1.toJson()).get("family").getAsString());
+		WorldIndex read = WorldIndex.fromJson(gen1.toJson());
+		assertEquals(gen1.toJson(), read.toJson());
+		assertEquals("gen1", read.family());
+		assertEquals(plain.maps(), gen1.maps());
+		assertTrue(!plain.hash().equals(gen1.hash()), "the family is part of the canonical text");
+		assertNull(gen1.withFamily(null).family());
+		assertEquals(plain.toJson(), gen1.withFamily(null).toJson());
+		assertThrows(IllegalArgumentException.class, () -> plain.withFamily("gen9"));
+		assertThrows(DataException.class, () -> WorldIndex.fromJson(gen1.toJson().replace("\"family\":\"gen1\"", "\"family\":\"gen9\"")));
 	}
 
 	@Test

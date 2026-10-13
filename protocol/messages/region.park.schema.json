@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kantobridge.invalid/protocol/messages/region.park.schema.json",
+  "title": "region.park",
+  "description": "Several games (MULTI_GAME_PLAN §4.3, MG2): hold this hidden game where it stands while another region is followed. The hidden player must be idle; input and steps are refused, scripts and NPC movement frozen, the music fades, and the save's mod data records the cell left (snapshot.away). Answered by act.result{kind:\"park\"}; refusals not_ingame, not_idle, busy.",
+  "x-type": "region.park",
+  "x-legs": [
+    "m2g"
+  ],
+  "x-re": "never",
+  "type": "object",
+  "required": [
+    "region"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "region": {
+      "$ref": "../defs.schema.json#/$defs/regionId"
+    }
+  }
+}

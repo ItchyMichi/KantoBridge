@@ -1,1 +1,20 @@
-[{"type": "hello.reject", "seq": 11, "re": 1, "data": {"reason": "protocol", "protocol": 1}}]
+[
+  {
+    "type": "hello.reject",
+    "seq": 11,
+    "re": 1,
+    "data": {
+      "reason": "protocol",
+      "protocol": 1
+    }
+  },
+  {
+    "type": "hello.reject",
+    "seq": 12,
+    "re": 1,
+    "data": {
+      "reason": "game",
+      "protocol": 1
+    }
+  }
+]

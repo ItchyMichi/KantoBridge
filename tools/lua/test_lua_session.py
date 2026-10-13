@@ -49,6 +49,8 @@ def test_hello_ok_then_snapshot():
     ok, snap = msgs
     assert ok["data"]["protocol"] == 1 and ok["data"]["bridge"] == "0.1.0"
     assert ok["data"]["engine"] == "0.3.85" and ok["data"]["game"] == "blue"
+    # MG1: the game's family and the adapter's limits, from the catalogue (lib/kb_games.lua)
+    assert ok["data"]["family"] == "gen1" and ok["data"]["compat"] == {"maxDex": 151, "maxMove": 165, "nick": 10}
     assert ok["data"]["session"] == rig.status.session.decode()
     assert (ok["seq"], snap["seq"]) == (1, 2) and "re" not in snap
     data = snap["data"]
@@ -529,6 +531,72 @@ def test_a_hello_with_every_optional_field_is_accepted():
     rig.step()
     msgs = peer.messages()
     assert msgs[0]["type"] == "hello.ok" and msgs[0]["re"] == seq and msgs[1]["type"] == "snapshot"
+
+
+# ------------------------------------------------------------ MG1: the game catalogue
+
+
+HELLO = {"protocol": 1, "role": "test", "mod": "rig-0.1.0"}
+
+
+@pytest.mark.parametrize("game,manifest,family,max_dex", [
+    ("yellow", ["yellow"], "gen1", 151),     # a version id, as the loader resolves the list
+    ("yellow", ["gen1"], "gen1", 151),       # a generation token (a raw manifest)
+    ("emerald", ["emerald"], "gen3", 386),
+    ("emerald", ["rse"], "gen3", 386),       # a Gen 3 layout token
+    ("crystal", ["all"], "gen2", 251),
+])
+def test_any_catalogued_game_the_mod_is_for_passes_through(game, manifest, family, max_dex):
+    # no coercion to "red": hello.ok names the running game with its family and limits
+    rig = Rig(game=game, manifest={"id": "gen1-bridge", "games": manifest})
+    rig.world()
+    peer = rig.connect()
+    seq = peer.hello()
+    ok, snap = peer.messages()[:2]
+    assert ok["type"] == "hello.ok" and ok["re"] == seq and snap["type"] == "snapshot"
+    assert (ok["data"]["game"], ok["data"]["family"], ok["data"]["compat"]["maxDex"]) == (game, family, max_dex)
+    assert rig.status.game == game.encode()
+
+
+@pytest.mark.parametrize("game,manifest", [
+    ("yellow", {"id": "gen1-bridge", "games": ["red", "blue"]}),   # outside the manifest's list
+    ("emerald", None),                                            # no list: Gen 1 only, as the engine reads it
+    ("nosuch", {"id": "gen1-bridge", "games": ["all"]}),          # outside the catalogue
+])
+def test_a_game_this_mod_is_not_for_is_rejected_as_game(game, manifest):
+    rig = Rig(game=game, manifest=manifest)
+    rig.world()
+    for _ in range(2):
+        peer = rig.connect()
+        seq = peer.send("hello", HELLO)
+        rig.step()
+        msgs = peer.messages()
+        assert [(m["type"], m["re"], m["data"]) for m in msgs] == [("hello.reject", seq, {"reason": "game", "protocol": 1})]
+        assert peer.closed()
+    line = [l for l in rig.logs() if "session.rejected" in l][-1]
+    assert f"game={game}" in line and "reason=game" in line
+    # counted: seen from a connection the process can serve (the engine switched to a game it is for)
+    rig.E.GameVersion.current = b"blue"
+    peer = rig.connect()
+    peer.hello()
+    peer.messages()
+    seq = peer.send("debug.status")
+    rig.step()
+    st = [m for m in peer.messages() if m["type"] == "debug.status" and m.get("re") == seq][0]["data"]
+    assert (st["sessionRejected"], st["sessionRejectedGame"], st["sessionRejectedProtocol"]) == (2, 2, 0)
+
+
+def test_an_engine_naming_no_game_is_rejected_as_game():
+    rig = Rig()
+    rig.world()
+    rig.E.GameVersion.current = None  # GameVersion.get() answers nil
+    peer = rig.connect()
+    seq = peer.send("hello", HELLO)
+    rig.step()
+    assert [(m["type"], m["re"], m["data"]["reason"]) for m in peer.messages()] == [("hello.reject", seq, "game")]
+    assert peer.closed()
+    line = [l for l in rig.logs() if "session.rejected" in l][-1]
+    assert "game=none" in line and "reason=game" in line
 
 
 def test_rejections_are_counted_by_reason():

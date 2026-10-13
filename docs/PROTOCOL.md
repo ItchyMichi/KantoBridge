@@ -98,6 +98,21 @@ closed.
   (Launcher Options → Union Room → OFF, then restart) plus an F7 suffix.
 - `hello.reject{reason:"protocol"}` makes the client's pause overlay show both protocol numbers and
   ask for matching gen1-bridge and kantobridge versions.
+- **The game catalogue (MG1, several games):** [`protocol/games.json`](../protocol/games.json)
+  (schema [`games.schema.json`](../protocol/games.schema.json)) is the one place that names the games:
+  for each Gen1Recomp game id (`red`, `blue`, `yellow`, `gold`, `silver`, `crystal`, `firered`,
+  `leafgreen`, `ruby`, `sapphire`, `emerald`) its engine `family` (`gen1`, `gen2`, `gen3`; one bridge
+  adapter per family), Gen1Recomp's `engine`, its `generation`, `label`, default `region` (its world
+  space: `kanto`, `johto`, `kanto_frlg`, `hoenn`), its `compat` profile (`maxDex`, `maxMove`, `nick`),
+  its `artSet`, whether gen1-bridge has an `adapter` for it, and the story `markers` `game.status`
+  reports. fabric-bridge bundles it in its jar (`Games`); gen1-bridge carries the generated copy
+  `lib/kb_games.lua` (`kb_protocol.catalog --write`); the stand-ins read it with `kb_protocol.games`.
+  Every `game` field of the protocol (`hello.ok`, `export.index`, the WorldIndex) is an open
+  catalogue id (`defs` `gameId`); nothing coerces an unknown id to `red` any more. `hello.ok` adds
+  `family` and `compat` (both optional on the wire: an older bridge omits them and the client takes
+  the catalogue's); a process running a game without an adapter answers
+  `hello.reject{reason:"game"}`. Rule: no new code names `"red"`, `"blue"`, `kanto`, `sgb`, 151 or
+  165 as literals; they come from the catalogue, the export or the record.
 - **Singleplayer only:** a world built from the other game (`WorldIndex.game` ≠ `hello.ok.game`)
   gets a one-time warning screen per world join. The story works, and wild Pokémon follow the
   world's version. Multiplayer guests may legitimately differ (M9).
@@ -150,12 +165,12 @@ optional ones. The schemas give the exact types and limits.
 | Type | Dir | Data | ROM |
 |---|---|---|---|
 | `hello` | M→G | `protocol:1, role:"client"\|"builder"\|"test", mod, minecraft?, player?{uuid,name}, world?{id,multiplayer}` | |
-| `hello.ok` | G→M | `protocol, bridge, engine, tested?, union_room?, game:"red"\|"blue", session`; `re` required. `tested`: the engine version gen1-bridge was tested with (M10); `union_room`: `"on"` while the engine's Union Room patched this boot's Centers (U3) | |
-| `hello.reject` | G→M | `reason:"protocol"\|"role"\|"malformed"\|"busy", protocol`; `re` required | |
+| `hello.ok` | G→M | `protocol, bridge, engine, tested?, union_room?, game, family?, compat?{maxDex,maxMove,nick}, session`; `re` required. `game` is the running game's id (any id of the game catalogue, MG1), `family` its engine family and `compat` the adapter's real limits (both from the catalogue when absent). `tested`: the engine version gen1-bridge was tested with (M10); `union_room`: `"on"` while the engine's Union Room patched this boot's Centers (U3) | |
+| `hello.reject` | G→M | `reason:"protocol"\|"role"\|"malformed"\|"busy"\|"game", protocol`; `re` required. `game` (MG1): the process runs a game this bridge has no engine adapter for | |
 | `ping` | G→M, M→G | `t` (sender's ms clock) | |
 | `pong` | G→M, M→G | `t` (echoed); `re` required | |
 | `resync` | M→G | `{}`; asks for a `snapshot` | |
-| `snapshot` | G→M | `ingame` (false at the title screen and intro: `player` is then only the save's last position and must not move the Minecraft player), `player{map,x,y,facing}, state{…player.state}, flags[], toggles{map:{obj:bool}}, blocks[{map,bx,by,block}], lit[], bag{item:qty}, money, coins, badges[], party[{uid?,dex,level,nick?,moves[],hp?,maxhp?,status?}], dex{seen[],owned[]}, npcs{map,list[]}`, and (Wild Routes, WR2) `routes{<zone>:{taken[],wins{}}}`; `re` optional (set when answering `resync`). `ui` is reserved and never sent: open UIs follow as `ui.open` messages (UI rules) | yes |
+| `snapshot` | G→M | `ingame` (false at the title screen and intro: `player` is then only the save's last position and must not move the Minecraft player), `player{map,x,y,facing}, state{…player.state}, flags[], toggles{map:{obj:bool}}, blocks[{map,bx,by,block}], lit[], bag{item:qty}, money, coins, badges[], party[{uid?,dex,level,nick?,moves[],hp?,maxhp?,status?}], dex{seen[],owned[]}, npcs{map,list[]}`, and (Wild Routes, WR2) `routes{<zone>:{taken[],wins{}}}`, and (MG2) `away?{map,x,y}` while a `region.park` hold is up; `re` optional (set when answering `resync`). `ui` is reserved and never sent: open UIs follow as `ui.open` messages (UI rules) | yes |
 | `log` | G→M | `level, code, msg` (bridge diagnostics, never game text) | |
 | `error` | G→M, M→G, C→S, S→C | `code, msg`; `re` optional (the offending message) | |
 
@@ -228,7 +243,7 @@ end. Every other cave link stays an ordinary warp with a fade.
 | `act.interact` | M→G | `map, x, y` (face the cell and press A) | |
 | `act.button` | M→G | `button, how:"tap"\|"down"\|"up"` (mirror screen, start menu) | |
 | `act.field` | M→G | `action:"cut"\|"surf"\|"strength"\|"flash"\|"dig"\|"teleport"\|"bicycle"\|"fish"\|"fly", x?, y?, dest?, item?` | |
-| `act.result` | G→M | `ok, kind?, reason?`; `re` required | |
+| `act.result` | G→M | `ok, kind?, reason?, detail?`; `re` required. MG2: also answers `region.park`/`region.resume`/`region.start` (kinds `park`, `resume`, `start`; `detail` `new`\|`continue` for a start) | |
 
 **`act.field` (M8):** each action runs through the hidden game's own entry points after its own
 checks (the move in the party, the badge, the place). `x`/`y` name an adjacent target cell (a cut
@@ -716,11 +731,62 @@ engine symbols, and Pokémon identities as Cobblemon UUIDs (`uid`).
   puppet from the cell beside it); that answer stays on the client, and the `route.progress` that
   follows opens the ball's `route` story cell and takes its puppet away.
 
+### Regions (MG2, several games)
+
+[specs/MULTI_GAME_PLAN.md](specs/MULTI_GAME_PLAN.md) §4.3, §4.7 and §4.8; `gen1-bridge/act/kb_region.lua`,
+`observe/kb_progress.lua`, `lib/kb_routes.lua` (routes v2).
+
+| Type | Dir | Data | ROM |
+|---|---|---|---|
+| `game.status` | G→M, C→S | `game, region?, playthrough:"title"\|"fresh"\|"saved", ingame, started, badges, markers{<name>:bool}, name?, slot?` (one hidden game's story progress; `name` is the save's player name, the player's own text) | yes |
+| `region.park` | M→G | `region` (hold this game where it stands) → `act.result{kind:"park"}` | |
+| `region.resume` | M→G | `region, to{map,x,y,facing}` (release the hold; warp onto `to` when not there) → `act.result{kind:"resume"}` | |
+| `region.start` | M→G | `region` (start the game from its title: CONTINUE or NEW GAME) → `act.result{kind:"start", detail:"new"\|"continue"}` | |
+
+#### Region rules (MG2)
+
+- **`game.status`** is built from the adapter's `playthrough` (`title`: no live game; `fresh`: a New
+  Game never saved; `saved`: loaded by CONTINUE or saved since), `ingame`, the badge count and the
+  game profile's **markers** (`protocol/games.json`: `starter`, `champion`, … → a flag each adapter
+  resolves in its own namespace; Gen 1 reads `save.flags[name]`). `started` is `playthrough ≠ title`.
+  Sent after every `snapshot`, after `session.bound`, on `save.created` and `save.loaded`, and when a
+  marker or the badge count changes (checked every 10 steps). The client forwards it with its link's
+  `region`; the server keeps one record per player and region (`kantobridge:progress`) and the pass
+  reads it to choose between resuming and starting the far game (MG5).
+- **`region.park`** needs the hidden player in the game and idle (standing, nothing scripted, no warp
+  or battle, no UI); it pushes a **hold** (the Bill's PC hold's pattern: a plain state over the
+  overworld that refuses input and steps and freezes scripts and NPC movement), fades the music out,
+  and writes `mod.save "region"` = `{away:{map,x,y}}`, which `snapshot.away` shows. Reasons:
+  `not_ingame`, `not_idle`, `busy`. A park while parked is answered `ok` again.
+- **`region.resume`** pops the hold and restores the music. When the hidden player is not on `to`,
+  the adapter queues the engine's own `warp` there — **only onto one of this mod's route maps
+  (`KB_ROUTE_*`) or the saved `away` cell** (story safety, MULTI_GAME_PLAN §4.13; towns are entered
+  through the route map's own step script), followed as warp kind `script`. Reasons: `not_ingame`,
+  `not_idle` (while a warp or battle is under way), `busy`, `bad_target`, `not_parked`.
+- **`region.start`** works from the title screen only (`not_title` otherwise): CONTINUE when the
+  active slot has a save (`detail:"continue"`), else NEW GAME (`detail:"new"`), driven through the
+  title menu the way the save-slot switch rebuilds it. The intro then runs as ordinary UI: `ui.open`
+  text boxes, the naming screen, the mirror for graphics; `game.status{ingame:true}` follows when the
+  game reaches its overworld. Nothing skips the intro (§4.13). Reasons: `not_title`, `busy`,
+  `failed`.
+- **A link drop** pops a hold so the game can be played alone; the `away` marker stays in the save
+  until a resume, and `snapshot.away` tells a reconnecting client.
+- **Routes v2** (`gen1-bridge/data/routes.json` `version: 2`, `protocol/world/route_list.schema.json`;
+  the export's `routes` resource v2): a `connecting` route has two **ends**, `from` and `to`, each
+  with `region`, `games`, `map`, `x`, `y`, `facing`, `depth`, and optionally its own `classes` and
+  `music` (else the route's). Each hidden game registers **only the end whose `games` include it**:
+  the clearing patch in its town and a route map `KB_ROUTE_<ID>` of today's `[A][x1]` form (A warps
+  back to the clearing; x1 is the arrival); the far cells live in the other process. The export item
+  carries `ends{from{region,games}, to{region,games}}` and `end` (`from`\|`to`: the half this game
+  registered, which its `town` and `routeMap` describe), so the builder knows the route is
+  connecting and which region each half belongs to. A free-roam zone is unchanged (its `from` may
+  name a `region`; absent means the legacy region).
+
 ### Export (builder role)
 
 | Type | Dir | Data | ROM |
 |---|---|---|---|
-| `export.index` | M→G, G→M | Request (M→G): `{}`. Reply (G→M, `re` set): `game, engine, bridge, resources[{kind,id,hash,size}]` | |
+| `export.index` | M→G, G→M | Request (M→G): `{}`. Reply (G→M, `re` set): `game` (a catalogue id, MG1)`, engine, bridge, resources[{kind,id,hash,size}]` | |
 | `export.get` | M→G | `kind:"map"\|"tileset"\|"image"\|"sprite"\|"palettes"\|"encounters"\|"field"\|"names"\|"layout"\|"swaps"\|"profile"\|"routes", id` | |
 | `export.data` | G→M | `kind, id, hash, data`; `re` required | yes |
 

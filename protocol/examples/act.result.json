@@ -1,4 +1,48 @@
 [
-  {"type": "act.result", "seq": 11, "re": 7, "data": {"ok": true}},
-  {"type": "act.result", "seq": 12, "re": 8, "data": {"ok": false, "reason": "not_idle"}}
+  {
+    "type": "act.result",
+    "seq": 11,
+    "re": 7,
+    "data": {
+      "ok": true
+    }
+  },
+  {
+    "type": "act.result",
+    "seq": 12,
+    "re": 8,
+    "data": {
+      "ok": false,
+      "reason": "not_idle"
+    }
+  },
+  {
+    "type": "act.result",
+    "seq": 77,
+    "re": 40,
+    "data": {
+      "ok": true,
+      "kind": "park"
+    }
+  },
+  {
+    "type": "act.result",
+    "seq": 80,
+    "re": 42,
+    "data": {
+      "ok": true,
+      "kind": "start",
+      "detail": "new"
+    }
+  },
+  {
+    "type": "act.result",
+    "seq": 81,
+    "re": 41,
+    "data": {
+      "ok": false,
+      "kind": "resume",
+      "reason": "bad_target"
+    }
+  }
 ]

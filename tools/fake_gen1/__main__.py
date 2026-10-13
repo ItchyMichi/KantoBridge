@@ -1,5 +1,8 @@
 """Run fake_gen1 by hand: python -m fake_gen1 [--port 27151] [--game red] (from tools/).
 
+--game takes any id of the game catalogue (protocol/games.json); hello.ok then carries that id, its
+family and its compat profile, while the synthetic world and export stay Gen 1-shaped.
+
 Type commands to drive the connected Minecraft client:
 
     pos X Y [DIR]          teleport within the current map
@@ -24,6 +27,8 @@ import argparse
 import asyncio
 import shlex
 import sys
+
+from kb_protocol import load_games
 
 from .server import FakeGen1
 
@@ -97,7 +102,8 @@ def main(argv=None):
                                      formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--host", default="127.0.0.1")
     parser.add_argument("--port", type=int, default=27151)
-    parser.add_argument("--game", choices=("red", "blue"), default="red")
+    # any catalogued game id (protocol/games.json, MG1); the synthetic world stays Gen 1-shaped
+    parser.add_argument("--game", choices=load_games().ids, default="red")
     parser.add_argument("--timeout", type=float, default=10.0, help="heartbeat timeout in seconds")
     parser.add_argument("--write-bundle", metavar="DIR",
                         help="write the synthetic export as a bundle under DIR/<game>/ and exit")

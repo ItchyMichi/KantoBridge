@@ -21,14 +21,21 @@
 -- The pairing, per game version: world id -> the engine's save slot id, and
 -- "home", the offline slot to come back to. It lives in mod.cache
 -- (installation-wide, never in a slot's own save: src/mods/ImportAccess.lua:
--- 72-122, under mod_cache/gen1-bridge/) as session/pairings.json:
+-- 72-122, under mod_cache/gen1-bridge/), one file per game since MG1
+-- (docs/specs/MULTI_GAME_PLAN.md §4.3: one process per game, each writing
+-- its own file, so two processes of one install never rewrite each other's),
+-- session/pairings.<game>.json, holding that game's entry only:
 --
 --   {"format":1,"games":{"blue":{"home":"slot1",
 --     "worlds":{"<world id>":{"slot":"slot2"}}}}}
 --
 -- written through a .tmp copy and kept with a .bak, so a launcher can read it
 -- too: gen1recomp.exe --game=blue --slot=slot2 (the id form: a bare number is
--- a 1-based list index, src/core/LaunchOptions.lua:349-374).
+-- a 1-based list index, src/core/LaunchOptions.lua:349-374). The legacy
+-- install-wide file, session/pairings.json (every game's entries in one
+-- file), is read ONCE, when the game's own file doesn't exist yet, for this
+-- game's entry; the entry lands in the per-game file on the next write. The
+-- legacy file is never rewritten or deleted.
 --
 -- What a bind does:
 --   * multiplayer: the world's slot, created on its first bind (a new empty
@@ -72,7 +79,8 @@
 
 local Pairing = {}
 
-Pairing.FILE = "session/pairings.json"
+-- the legacy install-wide file (before MG1), read once for the game's entry
+Pairing.LEGACY_FILE = "session/pairings.json"
 Pairing.FORMAT = 1
 Pairing.LABEL = "MULTIPLAYER "
 Pairing.RETRY_SECONDS = 5
@@ -99,6 +107,11 @@ local function protocolSlot(id)
 end
 
 local function blank() return { format = Pairing.FORMAT, games = {} } end
+
+-- MG1: the game's own pairing file (its id is a version id, [a-z0-9_]+).
+function Pairing.fileFor(game)
+  return "session/pairings." .. game .. ".json"
+end
 
 -- The decoded file, checked field by field; nil when it isn't one.
 function Pairing.decode(json, bytes)
@@ -151,10 +164,10 @@ function Pairing.new(opts)
   local onBound = opts.onBound or function() end
   local onPending = opts.onPending or function() end
   local onSwitch = opts.onSwitch or function() end
-  local TMP, BAK = Pairing.FILE .. ".tmp", Pairing.FILE .. ".bak"
 
   local pairing = {}
   local data      -- the pairing file, decoded on first use
+  local FILE, TMP, BAK -- MG1: the game's own file, named on first use (the game is known by then)
   local req       -- the bind being worked on
   local loaded = setmetatable({}, { __mode = "k" }) -- save tables a CONTINUE brought
   local counts = {
@@ -164,6 +177,7 @@ function Pairing.new(opts)
     waits = 0, waitBusy = 0, waitNewGame = 0, waitSaveFailed = 0, saveFailed = 0, dropped = 0,
     storeWrites = 0, storeFailed = 0, storeRecovered = 0, storeUnreadable = 0,
     waitingSent = 0, -- M10: session.waiting messages
+    storeLegacy = 0, -- MG1: the legacy install-wide file gave this game's entry
   }
   local WAIT_FIELD = { busy = "waitBusy", new_game = "waitNewGame", save_failed = "waitSaveFailed" }
   -- M10: a switch's kind as session.bound.switched (no switch: "none")
@@ -177,22 +191,53 @@ function Pairing.new(opts)
     return ok and type(bytes) == "string" and bytes or nil
   end
 
+  -- MG1: the game's own file, once the engine names the game (a version id,
+  -- src/core/GameVersion.lua:200); nil before that.
+  local function fileName()
+    if FILE then return FILE end
+    local version = engine.gameVersion()
+    if type(version) ~= "string" or not version:find("^[a-z0-9_]+$") or #version > 16 then return nil end
+    FILE = Pairing.fileFor(version)
+    TMP, BAK = FILE .. ".tmp", FILE .. ".bak"
+    return FILE
+  end
+
   local function load()
     if data then return data end
-    for _, rel in ipairs({ Pairing.FILE, TMP, BAK }) do
-      local okDecode, d = pcall(Pairing.decode, json, readFile(rel))
-      if okDecode and d then
-        data = d
-        if rel ~= Pairing.FILE then
-          counts.storeRecovered = counts.storeRecovered + 1
-          if log then log.warn("session.store_recovered", { from = rel == TMP and "tmp" or "bak" }) end
+    local file = fileName()
+    if file then
+      for _, rel in ipairs({ file, TMP, BAK }) do
+        local okDecode, d = pcall(Pairing.decode, json, readFile(rel))
+        if okDecode and d then
+          data = d
+          if rel ~= file then
+            counts.storeRecovered = counts.storeRecovered + 1
+            if log then log.warn("session.store_recovered", { from = rel == TMP and "tmp" or "bak" }) end
+          end
+          return data
         end
-        return data
       end
-    end
-    if readFile(Pairing.FILE) ~= nil then
-      counts.storeUnreadable = counts.storeUnreadable + 1
-      if log then log.warn("session.store_unreadable", {}) end
+      if readFile(file) ~= nil then
+        counts.storeUnreadable = counts.storeUnreadable + 1
+        if log then log.warn("session.store_unreadable", {}) end
+      else
+        -- MG1: no file of its own yet: the legacy install-wide file's entry
+        -- for this game, read once (the file itself is left as it is)
+        local okLegacy, legacy = pcall(Pairing.decode, json, readFile(Pairing.LEGACY_FILE))
+        local version = engine.gameVersion()
+        local entry = okLegacy and legacy and legacy.games[version] or nil
+        if entry then
+          data = blank()
+          data.games[version] = entry
+          counts.storeLegacy = counts.storeLegacy + 1
+          if log then log.info("session.store_legacy", { worlds = (function()
+            local n = 0
+            for _ in pairs(entry.worlds) do n = n + 1 end
+            return n
+          end)() }) end
+          return data
+        end
+      end
     end
     data = blank()
     return data
@@ -200,12 +245,13 @@ function Pairing.new(opts)
 
   -- Writes the file: the .tmp copy, read back, then the file, then the .bak.
   local function persist()
-    local text = store and Pairing.encode(json, load()) or nil
+    local file = fileName()
+    local text = store and file and Pairing.encode(json, load()) or nil
     local function put(rel)
       local ok, done = pcall(store.write, rel, text)
       return ok and done ~= nil and done ~= false and readFile(rel) == text
     end
-    if not (text and put(TMP) and put(Pairing.FILE)) then
+    if not (text and put(TMP) and put(file)) then
       counts.storeFailed = counts.storeFailed + 1
       if log then log.warn("session.store_failed", { count = counts.storeFailed }) end
       return false

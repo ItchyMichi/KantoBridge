@@ -10,7 +10,10 @@
   "required": ["reason", "protocol"],
   "additionalProperties": false,
   "properties": {
-    "reason": {"enum": ["protocol", "role", "malformed", "busy"]},
+    "reason": {
+      "enum": ["protocol", "role", "malformed", "busy", "game"],
+      "description": "game (MG1): the running game has no engine adapter in this bridge mod."
+    },
     "protocol": {
       "type": "integer",
       "minimum": 1,

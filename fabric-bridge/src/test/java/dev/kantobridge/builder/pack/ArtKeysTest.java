@@ -64,8 +64,9 @@ class ArtKeysTest {
 		assertTrue(Games.compatible("red", "blue"));
 		assertTrue(Games.compatible("blue", "red"));
 		assertFalse(Games.compatible("red", null));
-		assertFalse(Games.compatible("gold", "red"), "an unknown game shares nothing");
+		assertFalse(Games.compatible("gold", "red"), "another family shares nothing");
 		assertTrue(Games.compatible("gold", "gold"), "but always its own");
+		assertFalse(Games.compatible("nope", "red"), "nor does an unknown game");
 		assertEquals("gen1", Games.family("blue"));
 	}
 }

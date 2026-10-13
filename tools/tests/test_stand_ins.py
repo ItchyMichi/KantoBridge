@@ -38,6 +38,23 @@ def test_handshake_then_snapshot():
     run(scenario())
 
 
+def test_hello_ok_names_the_catalogue_family_and_compat():
+    # MG1: hello.ok carries the game's family and the adapter's limits; --game takes any catalogued id
+    async def scenario():
+        for game, family, max_dex in (("red", "gen1", 151), ("yellow", "gen1", 151), ("emerald", "gen3", 386)):
+            gen1 = await FakeGen1(port=0, game=game).start()
+            mc = await FakeMinecraft(port=gen1.port, role="test", ping_ms=0).connect()
+            try:
+                ok = (await mc.hello())["data"]
+                assert (ok["game"], ok["family"], ok["compat"]["maxDex"]) == (game, family, max_dex), game
+                await mc.expect("snapshot")
+                assert not mc.conn.problems
+            finally:
+                await mc.close()
+                await gen1.stop()
+    run(scenario())
+
+
 def test_protocol_mismatch_is_rejected():
     async def scenario():
         gen1, mc = await _pair()

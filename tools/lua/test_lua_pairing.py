@@ -19,7 +19,15 @@ from centersim import CenterGame
 pytestmark = pytest.mark.lua
 
 A, B, SOLO = "world-a-0001", "world-b-0002", "solo-world-03"
-FILE = "session/pairings.json"
+# MG1: one pairing file per game (the process's own); the legacy install-wide file is read once
+LEGACY = "session/pairings.json"
+
+
+def file_for(game):
+    return f"session/pairings.{game}.json"
+
+
+FILE = file_for("blue")
 
 
 # ------------------------------------------------------------ helpers
@@ -71,8 +79,8 @@ def label(g, slot):
     return v.decode() if v is not None else None
 
 
-def store(g):
-    raw = g.b.cache_files().get(FILE)
+def store(g, game="blue"):
+    raw = g.b.cache_files().get(file_for(game))
     return json.loads(raw.decode("utf-8")) if raw is not None else None
 
 
@@ -505,19 +513,59 @@ def test_a_slot_id_handed_out_again_drops_the_stale_pairing():
     assert active(g) == "slot3", "A gets a slot of its own again"
 
 
-def test_each_game_version_pairs_on_its_own():
+def test_each_game_version_pairs_on_its_own_in_its_own_file():
+    # MG1: a second process of the install, running Red, keeps session/pairings.red.json and never
+    # reads (or rewrites) Blue's file
     g = game()
     bind(g, A)
     files = g.b.cache_files()
+    blue_text = files[FILE]
     red = CenterGame(game="red", mod_cache=files)
     red.E.SaveData.setActiveSlot(b"red", b"slot1")
     red.E.game.returnToTitle(red.E.game)
     red.run(1)
     bind(red, A)
     assert bounds(red)[-1][0] == 2 and calls(red, "createSlot") == 1, "Red's own slot for the world"
-    games = store(red)["games"]
-    assert games["blue"]["worlds"] == {A: {"slot": "slot2"}} and games["red"]["worlds"] == {A: {"slot": "slot2"}}
-    assert games["red"]["home"] == "slot1"
+    assert store(red, "red") == {"format": 1, "games": {"red": {"home": "slot1", "worlds": {A: {"slot": "slot2"}}}}}
+    assert store(red, "blue") == json.loads(blue_text.decode("utf-8")) and red.b.cache_files()[FILE] == blue_text
+    assert set(red.b.cache_files()) == {FILE, FILE + ".bak", file_for("red"), file_for("red") + ".bak"}
+    assert red.status()["pairingStoreLegacy"] == 0
+
+
+def test_the_legacy_install_wide_file_is_read_once_for_this_game_and_left_alone():
+    # before MG1 every game's entries shared session/pairings.json; a process finding no file of its
+    # own takes its game's entry from it, and writes its own file on the next change
+    legacy = json.dumps({"format": 1, "games": {
+        "blue": {"home": "slot1", "worlds": {A: {"slot": "slot2"}}},
+        "red": {"home": "slot1", "worlds": {A: {"slot": "slot3"}}},
+    }}, sort_keys=True, separators=(",", ":")).encode("utf-8")
+    g = CenterGame(mod_cache={LEGACY: legacy})
+    for slot in ("slot1", "slot2"):
+        g.E.SaveData.setActiveSlot(b"blue", slot.encode())
+    g.E.SaveData.setActiveSlot(b"blue", b"slot1")
+    g.E.game.returnToTitle(g.E.game)
+    g.run(1)
+    bind(g, A)
+    assert bounds(g)[-1][0] == 2 and calls(g, "createSlot") == 0, "the legacy entry's slot"
+    assert g.status()["pairingStoreLegacy"] == 1
+    assert any("session.store_legacy worlds=1" in line for line in g.b.log_lines())
+    assert g.b.cache_files() == {LEGACY: legacy}, "nothing written for a reused pairing"
+    bind(g, B)
+    assert bounds(g)[-1][0] == 3 and calls(g, "createSlot") == 1
+    files = g.b.cache_files()
+    assert files[LEGACY] == legacy, "the legacy file is never rewritten"
+    assert set(files) == {LEGACY, FILE, FILE + ".bak"}
+    assert store(g) == {"format": 1, "games": {"blue": {"home": "slot1",
+                                                          "worlds": {A: {"slot": "slot2"}, B: {"slot": "slot3"}}}}}
+    # a restart reads the per-game file, not the legacy one again
+    h = CenterGame(mod_cache=files)
+    for slot in ("slot1", "slot2", "slot3"):
+        h.E.SaveData.setActiveSlot(b"blue", slot.encode())
+    h.E.SaveData.setActiveSlot(b"blue", b"slot1")
+    h.E.game.returnToTitle(h.E.game)
+    h.run(1)
+    bind(h, B)
+    assert bounds(h)[-1][0] == 3 and h.status()["pairingStoreLegacy"] == 0
 
 
 def test_driver_exports():

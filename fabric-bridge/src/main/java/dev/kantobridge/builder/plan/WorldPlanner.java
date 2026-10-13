@@ -123,7 +123,7 @@ public final class WorldPlanner {
 				surface.put(map.id(), map);
 			}
 		}
-		ExportLayout exported = bundle.has("layout", "kanto") ? bundle.layout() : null;
+		ExportLayout exported = bundle.hasLayout() ? bundle.layout() : null;
 		String root = exported != null ? exported.root() : DEFAULT_ROOT;
 		Set<String> builtSurface = new LinkedHashSet<>();
 		for (String id : requested) {
@@ -242,7 +242,7 @@ public final class WorldPlanner {
 			}
 		}
 		Map<String, ExportTileset> tilesets = new HashMap<>();
-		ExportPalettes palettes = bundle.has("palettes", "sgb") ? bundle.palettes() : null;
+		ExportPalettes palettes = bundle.hasPalettes() ? bundle.palettes() : null;
 		List<PlacedMap> placed = new ArrayList<>();
 		// The shape profile, where the export carried one: its raised pins say which side of a cave's pairs is high (§3.4)
 		ExportProfile carried = caves3d.isEmpty() ? null : bundle.profile();

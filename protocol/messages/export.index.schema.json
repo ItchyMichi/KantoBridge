@@ -13,7 +13,7 @@
       "required": ["game", "engine", "bridge", "resources"],
       "additionalProperties": false,
       "properties": {
-        "game": {"enum": ["red", "blue"]},
+        "game": {"$ref": "../defs.schema.json#/$defs/gameId"},
         "engine": {"type": "string", "pattern": "^[0-9A-Za-z.+_-]+$", "maxLength": 32},
         "bridge": {"type": "string", "pattern": "^[0-9A-Za-z.+_-]+$", "maxLength": 32},
         "resources": {

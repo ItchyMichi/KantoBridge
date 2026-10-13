@@ -2,16 +2,34 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://kantobridge.invalid/protocol/messages/act.result.schema.json",
   "title": "act.result",
-  "description": "Outcome of an act.* request.",
+  "description": "Outcome of an act.* request; MG2: also of region.park, region.resume and region.start (kind park|resume|start; detail new|continue for a start).",
   "x-type": "act.result",
-  "x-legs": ["g2m"],
+  "x-legs": [
+    "g2m"
+  ],
   "x-re": "required",
   "type": "object",
-  "required": ["ok"],
+  "required": [
+    "ok"
+  ],
   "additionalProperties": false,
   "properties": {
-    "ok": {"type": "boolean"},
-    "kind": {"$ref": "../defs.schema.json#/$defs/symbol"},
-    "reason": {"type": "string", "pattern": "^[a-z][a-z0-9_.]*$", "maxLength": 64}
+    "ok": {
+      "type": "boolean"
+    },
+    "kind": {
+      "$ref": "../defs.schema.json#/$defs/symbol"
+    },
+    "reason": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_.]*$",
+      "maxLength": 64
+    },
+    "detail": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_]*$",
+      "maxLength": 32,
+      "description": "What the act did, when the kind has variants: a region.start's \"new\" or \"continue\"."
+    }
   }
 }

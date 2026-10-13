@@ -78,7 +78,7 @@ public final class ResourcePackWriter {
 	 */
 	public static Result generate(ArtCatalog art, ExportBundle bundle, PackFiles files, Warnings warnings) throws BundleException {
 		SlotMap slotMap = art.slotMap();
-		ExportPalettes palettes = bundle.has("palettes", "sgb") ? bundle.palettes() : null;
+		ExportPalettes palettes = bundle.hasPalettes() ? bundle.palettes() : null;
 		String artSet = bundle.game();
 
 		JsonObject pack = new JsonObject();

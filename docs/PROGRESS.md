@@ -1458,6 +1458,61 @@ still 2 and the save format still 5.
    `test_s5_ready.py` derives the module count from `main.lua`. (f) `test_multiplayer.py`'s port-fallback test
    matched the end of the `net.listening` line, which now ends with `reuseaddr=true` off Windows.
 
+## Several games (MULTI_GAME_PLAN, 2026-10-13)
+
+Execution of [specs/MULTI_GAME_PLAN.md](specs/MULTI_GAME_PLAN.md) (MG0–MG8) from your decisions D1–D14 of 2026-10-13
+(plan §9): one bridge mod with an engine adapter per family, one hidden process per game, regions as data in the one
+flat overworld, connecting routes with gate houses, per-game story progress and one trainer economy. Protocol and schema
+changes come first inside each milestone (PLAN §7), the protocol number stays 1 (D10), feature tests while building and
+the full suite at the ✔ checkpoints (MG2, MG3, MG5, MG6). Pods run inside your RunPod budget and stop after each job.
+
+| # | Phase | Status | Date | Commit |
+|---|---|---|---|---|
+| MG0 | Decisions and spikes | decisions answered (plan §9); the spikes S1–S5 are yours (your PC, your imports; S2–S3 on Emerald) | 2026-10-13 | |
+| MG1 | The game catalogue and an open protocol | **done** (notes 1–3); check: pytest and Lua 1,615 passed, JUnit 1,059 (0 failures), GameTests 101 on the pod (kb-dev7); the golden synthetic index byte-identical | 2026-10-13 | |
+| MG2 | Core and adapters in the bridge mod; the region acts on Gen 1 | schemas written first (note 4); the rest in progress | 2026-10-13 | |
+| MG3 | Regions as data | pending | | |
+| MG4 | Links | pending | | |
+| MG5 | Crossings | pending | | |
+| MG6 | One trainer economy | pending | | |
+| MG7 | The second family (Emerald): adapter and export | pending (its own spec, after your spikes S2–S4) | | |
+| MG8 | Hoenn and the pass to it | pending | | |
+
+### Several games: notes
+
+1. **The game catalogue** (MG1, plan §4.2): `protocol/games.json` (schema `games.schema.json`) names the eleven
+   Gen1Recomp game ids with their family, engine, generation, label, default region (the world space: `kanto`,
+   `johto`, `kanto_frlg`, `hoenn`), compat profile, art set, adapter flag and story markers (Gen 1: `starter` =
+   `EVENT_GOT_STARTER`, `champion` = `EVENT_BEAT_CHAMPION_RIVAL`, the flag the Hall of Fame sets; the other families'
+   markers are filled in with their adapters). `defs` gained `gameId`, `regionId`, `family` and `compat`; `hello.ok`,
+   `export.index` and the WorldIndex carry an open `game`; `hello.ok` adds `family` and `compat` (optional on the wire,
+   the catalogue's when absent); `hello.reject` gained the reason `game`; the WorldIndex an optional `family` (never
+   written for a legacy build, so every golden is byte-identical). `kb_protocol.catalog --write` generates
+   `gen1-bridge/lib/kb_games.lua`; Gradle bundles the file in the jar beside `catalog.json`; `kb_protocol.games`
+   reads it for the stand-ins and tests; `fake_gen1 --game` takes any catalogued id. **Deviation from the plan's
+   sketch:** Gen 3's `compat.nick` is 10 (the Gen 3 nickname limit), not the sketch's 7 (its player-name limit);
+   the adapter's `hello.ok.compat` wins anyway (MG7).
+2. **gen1-bridge** (MG1): `kb_session` sends the running game's id with its family and compat, never coerces to
+   `red`, and answers `hello.reject{reason:"game"}` for a game outside the mod manifest's `games` list (the loader
+   hands the validated manifest over as `mod.manifest`, its list resolved to version ids; the catalogue's `adapter`
+   flag decides when no manifest is reachable); `kb_export` writes the real id and puts the layout resource under the
+   game's default region (`layout/kanto` for Red and Blue, unchanged bytes) and fails the build for a game outside the
+   catalogue (`export.unknown_game`); the pairing lives in one file per game, `session/pairings.<game>.json`, with the
+   legacy install-wide `pairings.json` read once for the game's entry and never rewritten (one process per game must
+   never clobber another's). `main.lua` imports 34 modules now (`kb_games`).
+3. **fabric-bridge** (MG1): `Games` reads the bundled catalogue (`known`, `ids`, `family`, `compat`, `region`, `label`,
+   `artSet`, `adapter`, `withAdapter`, `compatible`); `WorldIndex`, `ExportBundle` and `ExportClient` ask it instead
+   of their `{red, blue}` sets; the layout resource id is `Games.region(game)` and the Gen 1 palettes id `sgb` lives in
+   one constant (`ExportBundle.GEN1_PALETTES_ID`); `HelloOk` carries `family` and `compat` (parsed from the message,
+   else the catalogue's). JUnit: `GamesTest` (the bundled resource equals `protocol/games.json` byte for byte),
+   `WorldIndexTest` (any catalogue id accepted, `family` round trip), `ExportBundleTest`, `ClientSideStateTest`,
+   `BridgeSessionTest`. Rule from now on (plan §4.2): no new code names `red`, `blue`, `kanto`, `sgb`, 151 or 165.
+4. **MG2's schemas** (plan §4.4, written first): `game.status` (G→M, C→S), `region.park`, `region.resume`,
+   `region.start` (M→G) answered by `act.result` kinds `park`/`resume`/`start` with a new optional `detail`
+   (`new`/`continue`), `snapshot.away`, the route list v2 (`kind: connecting`, two ends with their own region, classes
+   and music) and the export's `routes` v2 (`ends`, `end`); PROTOCOL.md "Regions (MG2)". A free-roam list and export
+   keep `version: 1` and their bytes.
+
 ## Pre-flight (PLAN §0.6)
 
 | Step | State |

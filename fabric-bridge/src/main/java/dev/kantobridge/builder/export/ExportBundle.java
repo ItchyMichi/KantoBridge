@@ -6,6 +6,7 @@ import dev.kantobridge.proto.ProtoJson;
 import dev.kantobridge.proto.ProtocolException;
 import dev.kantobridge.world.DataException;
 import dev.kantobridge.world.DataReader;
+import dev.kantobridge.world.Games;
 import dev.kantobridge.world.Hashes;
 import java.io.IOException;
 import java.io.InputStream;
@@ -18,6 +19,7 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.regex.Pattern;
@@ -37,7 +39,11 @@ public final class ExportBundle {
 	/** Ids that are safe as file names everywhere (no separators, colons or leading dots). */
 	private static final Pattern FILE_ID = Pattern.compile("^[A-Za-z0-9_][A-Za-z0-9_.-]{0,63}$");
 	private static final Pattern FULL_HASH = Pattern.compile("^[0-9a-f]{64}$");
-	private static final Set<String> GAMES = Set.of("red", "blue");
+	/**
+	 * The id of the Gen 1 family's palettes resource (SGB palettes, protocol/export/palettes.schema.json): the one place
+	 * that names it. Another family's export carries its own palette model (MULTI_GAME_PLAN §4.10).
+	 */
+	public static final String GEN1_PALETTES_ID = "sgb";
 
 	/** One entry of the index. */
 	public record Resource(String kind, String id, String hash, long size) {
@@ -109,7 +115,7 @@ public final class ExportBundle {
 		try {
 			DataReader r = DataReader.of(index, "index.json");
 			game = r.string("game");
-			if (!GAMES.contains(game)) {
+			if (!Games.known(game)) {
 				throw new DataException(r.path("game"), "unknown game");
 			}
 			engine = r.string("engine", Pattern.compile("^[A-Za-z0-9_.+-]{1,64}$"));
@@ -225,12 +231,35 @@ public final class ExportBundle {
 		return this.typed("sprite", id, ExportImage::parseSprite, ExportImage.class);
 	}
 
+	/** The id of this export's palettes resource: the Gen 1 family's ({@link #GEN1_PALETTES_ID}). */
+	public String palettesId() {
+		return GEN1_PALETTES_ID;
+	}
+
+	/** True when the export carries its palettes resource. */
+	public boolean hasPalettes() {
+		return this.has("palettes", this.palettesId());
+	}
+
 	public ExportPalettes palettes() throws BundleException {
-		return this.typed("palettes", "sgb", ExportPalettes::parse, ExportPalettes.class);
+		return this.typed("palettes", this.palettesId(), ExportPalettes::parse, ExportPalettes.class);
+	}
+
+	/**
+	 * The id of this export's surface layout resource: gen1-bridge exports the layout under the game's default region id
+	 * (the catalogue's; {@code kanto} for Red and Blue), MULTI_GAME_PLAN §4.2.
+	 */
+	public String layoutId() {
+		return Objects.requireNonNull(Games.region(this.game), "layout id");
+	}
+
+	/** True when the export carries its surface layout resource. */
+	public boolean hasLayout() {
+		return this.has("layout", this.layoutId());
 	}
 
 	public ExportLayout layout() throws BundleException {
-		return this.typed("layout", "kanto", ExportLayout::parse, ExportLayout.class);
+		return this.typed("layout", this.layoutId(), ExportLayout::parse, ExportLayout.class);
 	}
 
 	/** The swap sites; none when the export has no swaps resource. */

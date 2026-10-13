@@ -9,6 +9,7 @@ import dev.kantobridge.proto.Envelope;
 import dev.kantobridge.proto.MsgTypes;
 import dev.kantobridge.proto.ProtoJson;
 import dev.kantobridge.proto.ProtocolException;
+import dev.kantobridge.world.Games;
 import dev.kantobridge.world.Hashes;
 import java.io.BufferedOutputStream;
 import java.io.IOException;
@@ -59,7 +60,6 @@ public final class ExportClient {
 	private static final Pattern VERSION = Pattern.compile("^[0-9A-Za-z.+_-]{1,32}$");
 	/** The export kinds a bundle may hold: the bundle reader's list (the profile plan added {@code profile}). */
 	private static final Set<String> KINDS = ExportBundle.KINDS;
-	private static final Set<String> GAMES = Set.of("red", "blue");
 	/** The protocol's limits: at most 4096 resources, each at most 1 MiB (export.index.schema.json). */
 	private static final int MAX_RESOURCES = 4096;
 	private static final long MAX_RESOURCE_BYTES = 1L << 20;
@@ -418,7 +418,7 @@ public final class ExportClient {
 			String parsedEngine = JsonFields.str(data, "engine");
 			String parsedBridge = JsonFields.str(data, "bridge");
 			JsonElement list = data.get("resources");
-			if (parsedGame == null || !GAMES.contains(parsedGame) || parsedEngine == null || !VERSION.matcher(parsedEngine).matches()
+			if (parsedGame == null || !Games.known(parsedGame) || parsedEngine == null || !VERSION.matcher(parsedEngine).matches()
 					|| parsedBridge == null || !VERSION.matcher(parsedBridge).matches() || list == null || !list.isJsonArray()) {
 				this.fail("bad_index", "header");
 				return;

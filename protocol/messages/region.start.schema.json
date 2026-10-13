@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kantobridge.invalid/protocol/messages/region.start.schema.json",
+  "title": "region.start",
+  "description": "Several games (MULTI_GAME_PLAN §4.3, MG2): start this game from its title screen: CONTINUE when the active slot has a save, else NEW GAME, driven through the title menu as the save-slot switch rebuilds it. The intro then runs as ordinary UI (ui.open text boxes, the naming screen, the mirror for graphics). Answered by act.result{kind:\"start\", detail:\"new\"|\"continue\"}; refusals not_title, busy, failed.",
+  "x-type": "region.start",
+  "x-legs": [
+    "m2g"
+  ],
+  "x-re": "never",
+  "type": "object",
+  "required": [
+    "region"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "region": {
+      "$ref": "../defs.schema.json#/$defs/regionId"
+    }
+  }
+}

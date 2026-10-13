@@ -467,6 +467,8 @@ dependencies {
 // The derived protocol catalog (docs/PROTOCOL.md). -Pkb.catalog=<path> points at another copy.
 def protocolDir = layout.projectDirectory.dir("../protocol")
 def catalogFile = layout.projectDirectory.file(providers.gradleProperty("kb.catalog").orElse("../protocol/catalog.json"))
+// The game catalogue (docs/specs/MULTI_GAME_PLAN.md §4.2): the one place that names the games. -Pkb.games=<path> points at another copy.
+def gamesFile = layout.projectDirectory.file(providers.gradleProperty("kb.games").orElse("../protocol/games.json"))
 
 /** Writes MsgTypes.java: one String constant per message type in the catalog. */
 abstract class GenerateProtocolTypes extends DefaultTask {
@@ -543,6 +545,11 @@ processResources {
 	from(catalogFile) {
 		into "kantobridge/protocol"
 		rename { "catalog.json" }
+	}
+	// And the game catalogue, which dev.kantobridge.world.Games reads (MG1): ids, families, regions, compat profiles.
+	from(gamesFile) {
+		into "kantobridge/protocol"
+		rename { "games.json" }
 	}
 }
 

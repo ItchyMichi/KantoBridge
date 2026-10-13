@@ -1,0 +1,33 @@
+[
+  {
+    "type": "game.status",
+    "seq": 9,
+    "data": {
+      "game": "blue",
+      "region": "kanto",
+      "playthrough": "saved",
+      "ingame": true,
+      "started": true,
+      "badges": 2,
+      "markers": {
+        "starter": true,
+        "champion": false
+      },
+      "name": "TESTER",
+      "slot": 1
+    }
+  },
+  {
+    "type": "game.status",
+    "seq": 10,
+    "data": {
+      "game": "emerald",
+      "playthrough": "title",
+      "ingame": false,
+      "started": false,
+      "badges": 0,
+      "markers": {},
+      "slot": 2
+    }
+  }
+]

@@ -1,18 +1,23 @@
-"""Derives protocol/catalog.json and protocol/redaction-vectors.json from the message schemas.
+"""Derives protocol/catalog.json and protocol/redaction-vectors.json from the message schemas, and
+gen1-bridge/lib/kb_games.lua from protocol/games.json (MG1: the game catalogue).
 
     tools/.venv/Scripts/python.exe -m kb_protocol.catalog --write   (run from tools/)
     tools/.venv/Scripts/python.exe -m kb_protocol.catalog --check
 
-Both files are checked in: Java bundles the catalog, and Java's Redact is tested against the
-vectors. tools/tests fails when either is stale.
+All three files are checked in: Java bundles the catalog, Java's Redact is tested against the
+vectors, and gen1-bridge can't read protocol/ at runtime. tools/tests fails when any is stale.
 """
 import argparse
 import json
 import sys
 
+from .games import read_games, render_lua
 from .jsonfmt import pretty
+from .paths import REPO_ROOT
 from .redact import placeholder, redact_data
 from .registry import load_protocol
+
+KB_GAMES_LUA = REPO_ROOT / "gen1-bridge" / "lib" / "kb_games.lua"
 
 PROTOCOL_NUMBER = 1
 LIMITS = {"maxLineBytes": 4 * 1024 * 1024, "exportPageBytes": 1024 * 1024, "relayMaxBytes": 256 * 1024}
@@ -128,6 +133,7 @@ def expected_files(protocol=None):
     return {
         protocol.root / "catalog.json": pretty(catalog),
         protocol.root / "redaction-vectors.json": pretty(vectors),
+        KB_GAMES_LUA: render_lua(read_games(protocol.root)),
     }
 
 

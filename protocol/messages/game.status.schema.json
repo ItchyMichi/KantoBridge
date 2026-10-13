@@ -1,0 +1,74 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kantobridge.invalid/protocol/messages/game.status.schema.json",
+  "title": "game.status",
+  "description": "Several games (MULTI_GAME_PLAN §4.7, MG2): one hidden game's story progress, built by observe/kb_progress.lua after the snapshot, after session.bound, on save.created and save.loaded, and when a marker or the badge count changes. The client forwards it to the server with its link's region; the server keeps one record per player and region and shows it on F7; the pass reads it to decide between resuming and starting the far game.",
+  "x-type": "game.status",
+  "x-legs": [
+    "g2m",
+    "c2s"
+  ],
+  "x-re": "never",
+  "type": "object",
+  "required": [
+    "game",
+    "playthrough",
+    "ingame",
+    "started",
+    "badges",
+    "markers"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "game": {
+      "$ref": "../defs.schema.json#/$defs/gameId"
+    },
+    "region": {
+      "$ref": "../defs.schema.json#/$defs/regionId"
+    },
+    "playthrough": {
+      "enum": [
+        "title",
+        "fresh",
+        "saved"
+      ],
+      "description": "title: no live game (the boot screens, the title, its menus); fresh: a New Game never saved; saved: loaded by CONTINUE or saved since."
+    },
+    "ingame": {
+      "type": "boolean",
+      "description": "True when the hidden game is in its overworld."
+    },
+    "started": {
+      "type": "boolean",
+      "description": "playthrough is not title."
+    },
+    "badges": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 16
+    },
+    "markers": {
+      "type": "object",
+      "propertyNames": {
+        "pattern": "^[a-z][a-z0-9_]{0,15}$"
+      },
+      "additionalProperties": {
+        "type": "boolean"
+      },
+      "description": "The game profile's markers (protocol/games.json), each resolved by the adapter in its own flag namespace: starter, champion, ..."
+    },
+    "name": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 16,
+      "x-rom-derived": true,
+      "description": "The save's player name (the player's own text; D6: the client enters it for a game it starts), absent at the title."
+    },
+    "slot": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 255,
+      "description": "The active save slot (0: the flat legacy save), as session.bound carries it."
+    }
+  }
+}

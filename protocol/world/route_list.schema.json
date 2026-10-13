@@ -2,51 +2,155 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://kantobridge.invalid/protocol/world/route_list.schema.json",
   "title": "route list",
-  "description": "Wild Routes (WR2): gen1-bridge/data/routes.json, the zones gen1-bridge registers at boot (lib/kb_routes.lua) and passes to the builder in the export's routes resource. Ids, map and class symbols, cell coordinates, counts and our own text only; never map contents (docs/specs/WILD_ROUTES_PLAN.md §4.1). gen1-bridge checks each entry itself too and leaves out one that doesn't check out, with a reason code.",
+  "description": "Wild Routes (WR2): gen1-bridge/data/routes.json, the zones gen1-bridge registers at boot (lib/kb_routes.lua) and passes to the builder in the export's routes resource. Ids, map and class symbols, cell coordinates, counts and our own text only; never map contents (docs/specs/WILD_ROUTES_PLAN.md §4.1). gen1-bridge checks each entry itself too and leaves out one that doesn't check out, with a reason code. Version 2 (MULTI_GAME_PLAN §4.8, MG2): a `connecting` route has two ends, `from` and `to`, each in its own region and registered only by the games it names; each end may carry its own trainer classes and music, else the route's apply to both.",
   "type": "object",
-  "required": ["version", "routes"],
+  "required": [
+    "version",
+    "routes"
+  ],
   "additionalProperties": false,
   "properties": {
-    "version": {"const": 1},
+    "version": {
+      "enum": [
+        1,
+        2
+      ],
+      "description": "2 once the list holds a connecting route (MG2)."
+    },
     "routes": {
       "type": "array",
       "maxItems": 32,
       "items": {
         "type": "object",
-        "required": ["id", "name", "kind", "from"],
+        "required": [
+          "id",
+          "name",
+          "kind",
+          "from"
+        ],
         "additionalProperties": false,
         "properties": {
-          "id": {"$ref": "../defs.schema.json#/$defs/routeId"},
-          "name": {"type": "string", "pattern": "^[A-Za-z0-9 '.-]+$", "minLength": 1, "maxLength": 24},
-          "kind": {"enum": ["free_roam"], "description": "connecting comes later (the plan's §4.10)."},
-          "theme": {"enum": ["forest"], "description": "Caves and the sea come later."},
+          "id": {
+            "$ref": "../defs.schema.json#/$defs/routeId"
+          },
+          "name": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9 '.-]+$",
+            "minLength": 1,
+            "maxLength": 24
+          },
+          "kind": {
+            "enum": [
+              "free_roam",
+              "connecting"
+            ],
+            "description": "connecting (MG2): two halves, one per region, joined by a pass (gate houses)."
+          },
+          "theme": {
+            "enum": [
+              "forest"
+            ],
+            "description": "Caves and the sea come later."
+          },
           "from": {
             "type": "object",
-            "required": ["games", "map", "x", "y", "facing"],
+            "required": [
+              "games",
+              "map",
+              "x",
+              "y",
+              "facing"
+            ],
             "additionalProperties": false,
-            "description": "The exit: where the clearing starts and which way it cuts. x, y and facing are null until the spot is chosen (F7 shows them).",
+            "description": "The exit (an end): where the clearing starts and which way it cuts, and which games register it. x, y and facing are null until the spot is chosen (F7 shows them). MG2: a connecting route's near end; `to` has the same shape.",
             "properties": {
               "games": {
                 "type": "array",
                 "minItems": 1,
                 "maxItems": 9,
                 "uniqueItems": true,
-                "items": {"type": "string", "pattern": "^[a-z]+$"}
+                "items": {
+                  "type": "string",
+                  "pattern": "^[a-z]+$"
+                }
               },
-              "map": {"$ref": "../defs.schema.json#/$defs/mapId"},
-              "x": {"type": ["integer", "null"], "minimum": 0, "maximum": 4095},
-              "y": {"type": ["integer", "null"], "minimum": 0, "maximum": 4095},
-              "facing": {"enum": ["up", "down", "left", "right", null]},
-              "depth": {"type": "integer", "minimum": 1, "maximum": 4, "description": "Blocks through the trees (default 2)."}
+              "map": {
+                "$ref": "../defs.schema.json#/$defs/mapId"
+              },
+              "x": {
+                "type": [
+                  "integer",
+                  "null"
+                ],
+                "minimum": 0,
+                "maximum": 4095
+              },
+              "y": {
+                "type": [
+                  "integer",
+                  "null"
+                ],
+                "minimum": 0,
+                "maximum": 4095
+              },
+              "facing": {
+                "enum": [
+                  "up",
+                  "down",
+                  "left",
+                  "right",
+                  null
+                ]
+              },
+              "depth": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 4,
+                "description": "Blocks through the trees (default 2)."
+              },
+              "region": {
+                "$ref": "../defs.schema.json#/$defs/regionId",
+                "description": "MG2: the region this end's half is built in; absent = the end's games' default region (the legacy region for a free_roam zone)."
+              },
+              "classes": {
+                "type": "array",
+                "maxItems": 16,
+                "items": {
+                  "$ref": "../defs.schema.json#/$defs/symbol"
+                },
+                "description": "MG2: this end's trainer classes (its game's); absent = trainers.classes."
+              },
+              "music": {
+                "anyOf": [
+                  {
+                    "$ref": "../defs.schema.json#/$defs/symbol"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "description": "MG2: this end's route-map song (its game's music id); absent = the route's music."
+              }
             }
           },
           "areas": {
             "type": "object",
             "additionalProperties": false,
             "properties": {
-              "main": {"type": "array", "minItems": 2, "maxItems": 2, "items": {"type": "integer", "minimum": 1, "maximum": 8}},
+              "main": {
+                "type": "array",
+                "minItems": 2,
+                "maxItems": 2,
+                "items": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 8
+                }
+              },
               "side": {
-                "type": "integer", "minimum": 0, "maximum": 100,
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 100,
                 "description": "The chance of a side area, in whole percent (canonical JSON carries no fractions)."
               }
             }
@@ -55,18 +159,49 @@
             "type": "object",
             "additionalProperties": false,
             "properties": {
-              "from": {"enum": ["neighbours"]},
-              "perArea": {"type": "integer", "minimum": 0, "maximum": 5},
-              "maxRise": {"type": "integer", "minimum": 0, "maximum": 20}
+              "from": {
+                "enum": [
+                  "neighbours"
+                ]
+              },
+              "perArea": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 5
+              },
+              "maxRise": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 20
+              }
             }
           },
           "trainers": {
             "type": "object",
             "additionalProperties": false,
             "properties": {
-              "perArea": {"type": "array", "minItems": 2, "maxItems": 2, "items": {"type": "integer", "minimum": 0, "maximum": 6}},
-              "rematch": {"enum": ["each_visit"]},
-              "classes": {"type": "array", "maxItems": 16, "items": {"$ref": "../defs.schema.json#/$defs/symbol"}}
+              "perArea": {
+                "type": "array",
+                "minItems": 2,
+                "maxItems": 2,
+                "items": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 6
+                }
+              },
+              "rematch": {
+                "enum": [
+                  "each_visit"
+                ]
+              },
+              "classes": {
+                "type": "array",
+                "maxItems": 16,
+                "items": {
+                  "$ref": "../defs.schema.json#/$defs/symbol"
+                }
+              }
             }
           },
           "dungeon": {
@@ -74,17 +209,130 @@
             "additionalProperties": false,
             "properties": {
               "chance": {
-                "type": "integer", "minimum": 0, "maximum": 100,
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 100,
                 "description": "The chance of a dungeon, in whole percent (canonical JSON carries no fractions)."
               },
-              "floors": {"enum": ["by_level"]}
+              "floors": {
+                "enum": [
+                  "by_level"
+                ]
+              }
             }
           },
           "music": {
-            "anyOf": [{"$ref": "../defs.schema.json#/$defs/symbol"}, {"type": "null"}],
+            "anyOf": [
+              {
+                "$ref": "../defs.schema.json#/$defs/symbol"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "description": "The route map's song (a music id); used only when the game has it."
+          },
+          "to": {
+            "type": "object",
+            "required": [
+              "games",
+              "map",
+              "x",
+              "y",
+              "facing"
+            ],
+            "additionalProperties": false,
+            "description": "MG2: a connecting route's far end, in the other region; the games listed register only this end. Required when kind is connecting.",
+            "properties": {
+              "games": {
+                "type": "array",
+                "minItems": 1,
+                "maxItems": 9,
+                "uniqueItems": true,
+                "items": {
+                  "type": "string",
+                  "pattern": "^[a-z]+$"
+                }
+              },
+              "map": {
+                "$ref": "../defs.schema.json#/$defs/mapId"
+              },
+              "x": {
+                "type": [
+                  "integer",
+                  "null"
+                ],
+                "minimum": 0,
+                "maximum": 4095
+              },
+              "y": {
+                "type": [
+                  "integer",
+                  "null"
+                ],
+                "minimum": 0,
+                "maximum": 4095
+              },
+              "facing": {
+                "enum": [
+                  "up",
+                  "down",
+                  "left",
+                  "right",
+                  null
+                ]
+              },
+              "depth": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 4,
+                "description": "Blocks through the trees (default 2)."
+              },
+              "region": {
+                "$ref": "../defs.schema.json#/$defs/regionId",
+                "description": "MG2: the region this end's half is built in; absent = the end's games' default region (the legacy region for a free_roam zone)."
+              },
+              "classes": {
+                "type": "array",
+                "maxItems": 16,
+                "items": {
+                  "$ref": "../defs.schema.json#/$defs/symbol"
+                },
+                "description": "MG2: this end's trainer classes (its game's); absent = trainers.classes."
+              },
+              "music": {
+                "anyOf": [
+                  {
+                    "$ref": "../defs.schema.json#/$defs/symbol"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "description": "MG2: this end's route-map song (its game's music id); absent = the route's music."
+              }
+            }
           }
-        }
+        },
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "kind": {
+                  "const": "connecting"
+                }
+              },
+              "required": [
+                "kind"
+              ]
+            },
+            "then": {
+              "required": [
+                "to"
+              ]
+            }
+          }
+        ]
       }
     }
   }

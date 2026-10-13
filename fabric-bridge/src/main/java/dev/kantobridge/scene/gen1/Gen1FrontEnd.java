@@ -119,7 +119,7 @@ public final class Gen1FrontEnd implements GameFrontEnd {
 			ExportImage sprite = bundle.sprite(id);
 			sprites.put(id, new SceneSprite(id, id, CELL_PX, CELL_PX, sprite.frames(), true));
 		}
-		String root = bundle.has("layout", "kanto") ? bundle.layout().root() : WorldPlanner.DEFAULT_ROOT;
+		String root = bundle.hasLayout() ? bundle.layout().root() : WorldPlanner.DEFAULT_ROOT;
 		// The profile plan: another mod's shape profile, when the export carried one (read as data, never run).
 		ExportProfile carried = bundle.profile();
 		ProfileSource profile = carried == null ? null : ProfileSource.read(carried.text(), carried.version(), carried.enabled());

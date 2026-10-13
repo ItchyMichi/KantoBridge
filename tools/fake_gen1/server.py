@@ -7,7 +7,7 @@ Movement, warps and text boxes are simplified but use the real message shapes.
 import asyncio
 import secrets
 
-from kb_protocol import load_protocol
+from kb_protocol import load_games, load_protocol
 from kb_protocol.aio import STREAM_LIMIT, Connection
 from kb_protocol.framing import FramingError
 
@@ -26,6 +26,9 @@ class FakeGen1:
         self.host = host
         self.port = port
         self.game = game
+        # MG1: the game's catalogue entry (family, compat) for hello.ok; an id outside the catalogue is
+        # allowed here so tests can play a bridge whose game the client doesn't know
+        self.catalogue = load_games().get(game)
         self.timeout_s = timeout_s
         self.log = log or (lambda line: None)
         self.protocol = load_protocol()
@@ -134,10 +137,13 @@ class FakeGen1:
             await conn.send("hello.reject", {"reason": "malformed", "protocol": PROTOCOL_NUMBER}, re=hello["seq"])
             return
         self.role = data["role"]
-        await conn.send("hello.ok", {"protocol": PROTOCOL_NUMBER, "bridge": BRIDGE_VERSION, "engine": ENGINE_VERSION,
-                                     "tested": ENGINE_VERSION, "game": self.game, "session": self.session,
-                                     "union_room": "off"},  # ENGINE_UPGRADE_PLAN U3: the real bridge says what it found
-                        re=hello["seq"])
+        ok = {"protocol": PROTOCOL_NUMBER, "bridge": BRIDGE_VERSION, "engine": ENGINE_VERSION,
+              "tested": ENGINE_VERSION, "game": self.game, "session": self.session,
+              "union_room": "off"}  # ENGINE_UPGRADE_PLAN U3: the real bridge says what it found
+        if self.catalogue is not None:  # MG1: the family and the adapter's limits, as gen1-bridge sends them
+            ok["family"] = self.catalogue.family
+            ok["compat"] = dict(self.catalogue.compat)
+        await conn.send("hello.ok", ok, re=hello["seq"])
         await conn.send("snapshot", self.snapshot())
         while True:
             before = len(conn.problems)  # recv() records a failed schema check

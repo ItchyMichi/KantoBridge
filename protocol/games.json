@@ -1,0 +1,60 @@
+{
+  "version": 1,
+  "games": {
+    "red": {
+      "family": "gen1", "engine": "gen1", "generation": 1, "label": "Red", "region": "kanto",
+      "compat": {"maxDex": 151, "maxMove": 165, "nick": 10}, "artSet": "red", "adapter": true,
+      "markers": {"starter": "EVENT_GOT_STARTER", "champion": "EVENT_BEAT_CHAMPION_RIVAL"}
+    },
+    "blue": {
+      "family": "gen1", "engine": "gen1", "generation": 1, "label": "Blue", "region": "kanto",
+      "compat": {"maxDex": 151, "maxMove": 165, "nick": 10}, "artSet": "blue", "adapter": true,
+      "markers": {"starter": "EVENT_GOT_STARTER", "champion": "EVENT_BEAT_CHAMPION_RIVAL"}
+    },
+    "yellow": {
+      "family": "gen1", "engine": "gen1", "generation": 1, "label": "Yellow", "region": "kanto",
+      "compat": {"maxDex": 151, "maxMove": 165, "nick": 10}, "artSet": "yellow", "adapter": false,
+      "markers": {"starter": "EVENT_GOT_STARTER", "champion": "EVENT_BEAT_CHAMPION_RIVAL"}
+    },
+    "gold": {
+      "family": "gen2", "engine": "gs", "generation": 2, "label": "Gold", "region": "johto",
+      "compat": {"maxDex": 251, "maxMove": 251, "nick": 10}, "artSet": "gold", "adapter": false,
+      "markers": {}
+    },
+    "silver": {
+      "family": "gen2", "engine": "gs", "generation": 2, "label": "Silver", "region": "johto",
+      "compat": {"maxDex": 251, "maxMove": 251, "nick": 10}, "artSet": "silver", "adapter": false,
+      "markers": {}
+    },
+    "crystal": {
+      "family": "gen2", "engine": "crystal", "generation": 2, "label": "Crystal", "region": "johto",
+      "compat": {"maxDex": 251, "maxMove": 251, "nick": 10}, "artSet": "crystal", "adapter": false,
+      "markers": {}
+    },
+    "firered": {
+      "family": "gen3", "engine": "game3", "generation": 3, "label": "FireRed", "region": "kanto_frlg",
+      "layout": "frlg", "compat": {"maxDex": 386, "maxMove": 354, "nick": 10}, "artSet": "firered", "adapter": false,
+      "markers": {}
+    },
+    "leafgreen": {
+      "family": "gen3", "engine": "game3", "generation": 3, "label": "LeafGreen", "region": "kanto_frlg",
+      "layout": "frlg", "compat": {"maxDex": 386, "maxMove": 354, "nick": 10}, "artSet": "leafgreen", "adapter": false,
+      "markers": {}
+    },
+    "ruby": {
+      "family": "gen3", "engine": "game3", "generation": 3, "label": "Ruby", "region": "hoenn",
+      "layout": "rse", "compat": {"maxDex": 386, "maxMove": 354, "nick": 10}, "artSet": "ruby", "adapter": false,
+      "markers": {}
+    },
+    "sapphire": {
+      "family": "gen3", "engine": "game3", "generation": 3, "label": "Sapphire", "region": "hoenn",
+      "layout": "rse", "compat": {"maxDex": 386, "maxMove": 354, "nick": 10}, "artSet": "sapphire", "adapter": false,
+      "markers": {}
+    },
+    "emerald": {
+      "family": "gen3", "engine": "game3", "generation": 3, "label": "Emerald", "region": "hoenn",
+      "layout": "rse", "compat": {"maxDex": 386, "maxMove": 354, "nick": 10}, "artSet": "emerald", "adapter": false,
+      "markers": {}
+    }
+  }
+}

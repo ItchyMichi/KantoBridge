@@ -223,6 +223,21 @@ class BridgeSessionTest {
 	}
 
 	@Test
+	void helloOkCarriesTheFamilyAndTheLimits() {
+		// MG1: what the bridge says, else the catalogue's for the game
+		this.session.open(0);
+		JsonObject said = data("protocol", 1, "bridge", "0.1.0", "engine", "0.3.85", "game", "emerald", "family", "gen3", "session", "s-1");
+		said.add("compat", data("maxDex", 386, "maxMove", 354, "nick", 7));
+		this.receive(line("hello.ok", 1, 1L, said), 10);
+		assertEquals(new HelloOk("s-1", "emerald", "0.3.85", "0.1.0", null, null, "gen3", new dev.kantobridge.world.Games.Compat(386, 354, 7)),
+				this.out.connected);
+		this.setUp();
+		this.connect();
+		assertEquals("gen1", this.out.connected.family(), "not said: the catalogue's");
+		assertEquals(new dev.kantobridge.world.Games.Compat(151, 165, 10), this.out.connected.compat());
+	}
+
+	@Test
 	void messagesBeforeHelloOkAreDroppedQuietly() {
 		this.session.open(0);
 		this.receive(line("snapshot", 1, null, new JsonObject()), 5);

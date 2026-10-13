@@ -206,7 +206,8 @@ def test_each_world_gets_its_own_save_slot_and_the_offline_save_is_untouched():
             (1, False, 2, home)
         assert st["ingame"] is False and st["saveBegun"] == 0
         assert r1["errors"] == [] and r1["problems"] == 0
-        assert pairing_file_names() == ["pairings.json", "pairings.json.bak"], "the pairing file, by name"
+        # MG1: one pairing file per game (the process's own), session/pairings.<game>.json
+        assert pairing_file_names() == [f"pairings.{game}.json", f"pairings.{game}.json.bak"], "the pairing file, by name"
         mid = save_files(game)
         assert slot_files(mid, home) == slot_files(before, home), "the offline save untouched"
         assert not slot_files(mid, a) and not slot_files(mid, b), "no saves in the new slots yet"

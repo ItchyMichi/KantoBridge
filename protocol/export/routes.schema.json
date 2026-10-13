@@ -2,31 +2,74 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://kantobridge.invalid/protocol/export/routes.schema.json",
   "title": "export routes",
-  "description": "Wild Routes (WR2): the zones this game runs: each zone's exit in its town, its route map in the hidden game, and the settings the builder and the server generate it with (gen1-bridge/data/routes.json, docs/specs/WILD_ROUTES_PLAN.md).",
+  "description": "Wild Routes (WR2): the zones this game runs: each zone's exit in its town, its route map in the hidden game, and the settings the builder and the server generate it with (gen1-bridge/data/routes.json, docs/specs/WILD_ROUTES_PLAN.md). Version 2 (MULTI_GAME_PLAN §4.8, MG2): a `connecting` route lists both ends (region and games) and which end this game registered, whose half `town` and `routeMap` describe; the far half comes from the other region's game's export.",
   "x-export-kind": "routes",
   "type": "object",
-  "required": ["version", "routes"],
+  "required": [
+    "version",
+    "routes"
+  ],
   "additionalProperties": false,
   "properties": {
-    "version": {"const": 1},
+    "version": {
+      "enum": [
+        1,
+        2
+      ],
+      "description": "2 when a connecting route is listed (MG2)."
+    },
     "routes": {
       "type": "array",
       "maxItems": 32,
       "items": {
         "type": "object",
-        "required": ["id", "name", "kind", "theme", "town", "routeMap", "trainers", "areas", "levels", "dungeon"],
+        "required": [
+          "id",
+          "name",
+          "kind",
+          "theme",
+          "town",
+          "routeMap",
+          "trainers",
+          "areas",
+          "levels",
+          "dungeon"
+        ],
         "additionalProperties": false,
         "properties": {
-          "id": {"$ref": "../defs.schema.json#/$defs/routeId"},
-          "name": {"type": "string", "pattern": "^[A-Za-z0-9 '.-]+$", "minLength": 1, "maxLength": 24},
-          "kind": {"enum": ["free_roam"]},
-          "theme": {"enum": ["forest"]},
+          "id": {
+            "$ref": "../defs.schema.json#/$defs/routeId"
+          },
+          "name": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9 '.-]+$",
+            "minLength": 1,
+            "maxLength": 24
+          },
+          "kind": {
+            "enum": [
+              "free_roam",
+              "connecting"
+            ]
+          },
+          "theme": {
+            "enum": [
+              "forest"
+            ]
+          },
           "town": {
             "type": "object",
-            "required": ["map", "cleared", "triggers", "back"],
+            "required": [
+              "map",
+              "cleared",
+              "triggers",
+              "back"
+            ],
             "additionalProperties": false,
             "properties": {
-              "map": {"$ref": "../defs.schema.json#/$defs/mapId"},
+              "map": {
+                "$ref": "../defs.schema.json#/$defs/mapId"
+              },
               "cleared": {
                 "type": "array",
                 "minItems": 1,
@@ -35,7 +78,11 @@
                   "type": "array",
                   "minItems": 2,
                   "maxItems": 2,
-                  "items": {"type": "integer", "minimum": 0, "maximum": 4095}
+                  "items": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 4095
+                  }
                 },
                 "description": "The blocks (bx, by) turned into path."
               },
@@ -47,110 +94,299 @@
                   "type": "array",
                   "minItems": 2,
                   "maxItems": 2,
-                  "items": {"type": "integer", "minimum": 0, "maximum": 4095}
+                  "items": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 4095
+                  }
                 },
                 "description": "The cells (x, y) whose step leads into the zone."
               },
               "back": {
                 "type": "object",
-                "required": ["x", "y", "facing"],
+                "required": [
+                  "x",
+                  "y",
+                  "facing"
+                ],
                 "additionalProperties": false,
                 "properties": {
-                  "x": {"type": "integer", "minimum": 0, "maximum": 4095},
-                  "y": {"type": "integer", "minimum": 0, "maximum": 4095},
-                  "facing": {"$ref": "../defs.schema.json#/$defs/dir"}
+                  "x": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 4095
+                  },
+                  "y": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 4095
+                  },
+                  "facing": {
+                    "$ref": "../defs.schema.json#/$defs/dir"
+                  }
                 }
               }
             }
           },
           "routeMap": {
             "type": "object",
-            "required": ["id", "width", "height", "a", "arrive"],
+            "required": [
+              "id",
+              "width",
+              "height",
+              "a",
+              "arrive"
+            ],
             "additionalProperties": false,
             "properties": {
-              "id": {"$ref": "../defs.schema.json#/$defs/mapId"},
-              "width": {"type": "integer", "minimum": 1, "maximum": 4},
-              "height": {"type": "integer", "minimum": 1, "maximum": 4},
+              "id": {
+                "$ref": "../defs.schema.json#/$defs/mapId"
+              },
+              "width": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 4
+              },
+              "height": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 4
+              },
               "a": {
                 "type": "object",
-                "required": ["x", "y"],
+                "required": [
+                  "x",
+                  "y"
+                ],
                 "additionalProperties": false,
                 "properties": {
-                  "x": {"type": "integer", "minimum": 0, "maximum": 4095},
-                  "y": {"type": "integer", "minimum": 0, "maximum": 4095}
+                  "x": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 4095
+                  },
+                  "y": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 4095
+                  }
                 }
               },
               "arrive": {
                 "type": "object",
-                "required": ["x", "y", "facing"],
+                "required": [
+                  "x",
+                  "y",
+                  "facing"
+                ],
                 "additionalProperties": false,
                 "properties": {
-                  "x": {"type": "integer", "minimum": 0, "maximum": 4095},
-                  "y": {"type": "integer", "minimum": 0, "maximum": 4095},
-                  "facing": {"$ref": "../defs.schema.json#/$defs/dir"}
+                  "x": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 4095
+                  },
+                  "y": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 4095
+                  },
+                  "facing": {
+                    "$ref": "../defs.schema.json#/$defs/dir"
+                  }
                 }
               }
             }
           },
           "trainers": {
             "type": "object",
-            "required": ["perArea", "rematch", "classes"],
+            "required": [
+              "perArea",
+              "rematch",
+              "classes"
+            ],
             "additionalProperties": false,
             "properties": {
               "perArea": {
                 "type": "array",
                 "minItems": 2,
                 "maxItems": 2,
-                "items": {"type": "integer", "minimum": 0, "maximum": 6}
+                "items": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 6
+                }
               },
-              "rematch": {"enum": ["each_visit"]},
+              "rematch": {
+                "enum": [
+                  "each_visit"
+                ]
+              },
               "classes": {
                 "type": "array",
                 "maxItems": 16,
-                "items": {"$ref": "../defs.schema.json#/$defs/symbol"}
+                "items": {
+                  "$ref": "../defs.schema.json#/$defs/symbol"
+                }
               }
             }
           },
           "areas": {
             "type": "object",
-            "required": ["main", "side"],
+            "required": [
+              "main",
+              "side"
+            ],
             "additionalProperties": false,
             "properties": {
               "main": {
                 "type": "array",
                 "minItems": 2,
                 "maxItems": 2,
-                "items": {"type": "integer", "minimum": 1, "maximum": 8}
+                "items": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 8
+                }
               },
               "side": {
-                "type": "integer", "minimum": 0, "maximum": 100,
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 100,
                 "description": "The chance of a side area, in whole percent (canonical JSON carries no fractions)."
               }
             }
           },
           "levels": {
             "type": "object",
-            "required": ["from", "perArea", "maxRise"],
+            "required": [
+              "from",
+              "perArea",
+              "maxRise"
+            ],
             "additionalProperties": false,
             "properties": {
-              "from": {"enum": ["neighbours"]},
-              "perArea": {"type": "integer", "minimum": 0, "maximum": 5},
-              "maxRise": {"type": "integer", "minimum": 0, "maximum": 20}
+              "from": {
+                "enum": [
+                  "neighbours"
+                ]
+              },
+              "perArea": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 5
+              },
+              "maxRise": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 20
+              }
             }
           },
           "dungeon": {
             "type": "object",
-            "required": ["chance", "floors"],
+            "required": [
+              "chance",
+              "floors"
+            ],
             "additionalProperties": false,
             "properties": {
               "chance": {
-                "type": "integer", "minimum": 0, "maximum": 100,
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 100,
                 "description": "The chance of a dungeon, in whole percent (canonical JSON carries no fractions)."
               },
-              "floors": {"enum": ["by_level"]}
+              "floors": {
+                "enum": [
+                  "by_level"
+                ]
+              }
+            }
+          },
+          "ends": {
+            "type": "object",
+            "required": [
+              "from",
+              "to"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "from": {
+                "type": "object",
+                "required": [
+                  "region",
+                  "games"
+                ],
+                "additionalProperties": false,
+                "properties": {
+                  "region": {
+                    "$ref": "../defs.schema.json#/$defs/regionId"
+                  },
+                  "games": {
+                    "type": "array",
+                    "minItems": 1,
+                    "maxItems": 9,
+                    "uniqueItems": true,
+                    "items": {
+                      "$ref": "../defs.schema.json#/$defs/gameId"
+                    }
+                  }
+                }
+              },
+              "to": {
+                "type": "object",
+                "required": [
+                  "region",
+                  "games"
+                ],
+                "additionalProperties": false,
+                "properties": {
+                  "region": {
+                    "$ref": "../defs.schema.json#/$defs/regionId"
+                  },
+                  "games": {
+                    "type": "array",
+                    "minItems": 1,
+                    "maxItems": 9,
+                    "uniqueItems": true,
+                    "items": {
+                      "$ref": "../defs.schema.json#/$defs/gameId"
+                    }
+                  }
+                }
+              }
+            },
+            "description": "MG2 (connecting only): both ends, by region and games."
+          },
+          "end": {
+            "enum": [
+              "from",
+              "to"
+            ],
+            "description": "MG2 (connecting only): the end this game registered; town and routeMap describe its half."
+          }
+        },
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "kind": {
+                  "const": "connecting"
+                }
+              },
+              "required": [
+                "kind"
+              ]
+            },
+            "then": {
+              "required": [
+                "ends",
+                "end"
+              ]
             }
           }
-        }
+        ]
       }
     }
   }

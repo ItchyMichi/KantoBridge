@@ -34,6 +34,7 @@ return function(mod)
     Engine = import("lib/kb_engine.lua"),
     Routes = import("lib/kb_routes.lua"),
     catalog = import("lib/kb_catalog.lua"),
+    games = import("lib/kb_games.lua"),
     Session = import("lib/kb_session.lua"),
     Perf = import("lib/kb_perf.lua"),
     Player = import("observe/kb_player.lua"),
@@ -388,8 +389,8 @@ return function(mod)
     merge("perf", perf.stats())
     merge("hidden", engine.hiddenStats())
     local hello = {}
-    for _, k in ipairs({ "rejected", "rejectedProtocol", "rejectedRole", "rejectedMalformed", "helloTimeouts",
-                         "timeouts", "untested", "badFirstLines" }) do
+    for _, k in ipairs({ "rejected", "rejectedProtocol", "rejectedRole", "rejectedMalformed", "rejectedGame",
+                         "helloTimeouts", "timeouts", "untested", "badFirstLines" }) do
       hello[k] = stats[k]
     end
     merge("session", hello)
@@ -434,11 +435,45 @@ return function(mod)
     return out
   end
 
+  -- MG1 (docs/specs/MULTI_GAME_PLAN.md §4.2): the games this process may be
+  -- followed for. The engine loads a mod only for the games its manifest
+  -- targets (ModTargets.supports, src/mods/ModTargets.lua:117-129) and hands
+  -- the validated manifest over as mod.manifest (src/mods/Loader.lua:1434),
+  -- its `games` resolved to version ids (src/mods/Manifest.lua:392-402; an
+  -- omitted list means Gen 1 only). The check is defensive: a running game
+  -- outside the list, or outside the catalogue, is answered with
+  -- hello.reject{reason:"game"} (kb_session). A manifest handed over raw (a
+  -- test's) may still carry the tokens the loader expands: a game id,
+  -- "gen<n>", a Gen 3 layout ("frlg", "rse") or "all". Without a manifest the
+  -- catalogue's `adapter` flag decides.
+  local function supported(game)
+    local entry = kb.games.games[game]
+    if not entry then return false end
+    local manifest = mod.manifest
+    if type(manifest) ~= "table" then return entry.adapter == true end
+    local list = manifest.games
+    if type(list) ~= "table" or #list == 0 then return entry.generation == 1 end
+    for _, token in ipairs(list) do
+      if type(token) == "string" then
+        local key = token:lower():gsub("%s+", "")
+        if key == "all" or key == game or key == entry.family or key == "gen" .. tostring(entry.generation)
+            or (entry.layout ~= nil and key == entry.layout) then
+          return true
+        end
+      end
+    end
+    return false
+  end
+
   session = kb.Session.new({
     json = kb.json,
     Net = kb.Net,
     Proto = kb.Proto,
     catalog = kb.catalog,
+    -- MG1: the game catalogue and the manifest's gate (hello.ok game, family
+    -- and compat; hello.reject "game")
+    games = kb.games,
+    supported = supported,
     socket = function() return require("socket") end,
     port = port,
     portSpan = PORT_SPAN,
@@ -468,6 +503,9 @@ return function(mod)
     json = kb.json, sha256 = kb.sha256, log = log, clock = clock, engine = engine,
     Cells = kb.Cells, Images = kb.Images, SwapSites = kb.SwapSites, catalog = kb.catalog,
     bridge = mod.version, Routes = kb.Routes, routes = routes,
+    -- MG1: the index's game id and the layout resource's id (the game's
+    -- default region) come from the catalogue
+    games = kb.games,
   })
   exporter.attach(session)
 

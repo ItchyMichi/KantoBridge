@@ -144,6 +144,13 @@
       "redact": [],
       "schema": "messages/export.index.schema.json"
     },
+    "game.status": {
+      "legs": ["g2m", "c2s"],
+      "re": "never",
+      "rom": true,
+      "redact": ["/name"],
+      "schema": "messages/game.status.schema.json"
+    },
     "hello": {
       "legs": ["m2g"],
       "re": "never",
@@ -339,6 +346,27 @@
       "rom": false,
       "redact": [],
       "schema": "messages/pong.schema.json"
+    },
+    "region.park": {
+      "legs": ["m2g"],
+      "re": "never",
+      "rom": false,
+      "redact": [],
+      "schema": "messages/region.park.schema.json"
+    },
+    "region.resume": {
+      "legs": ["m2g"],
+      "re": "never",
+      "rom": false,
+      "redact": [],
+      "schema": "messages/region.resume.schema.json"
+    },
+    "region.start": {
+      "legs": ["m2g"],
+      "re": "never",
+      "rom": false,
+      "redact": [],
+      "schema": "messages/region.start.schema.json"
     },
     "relay.hello": {
       "legs": ["s2c", "c2s"],

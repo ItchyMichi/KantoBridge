@@ -93,6 +93,40 @@ class ClientSideStateTest {
 	}
 
 	@Test
+	void theHandshakeCarriesTheFamilyAndTheLimits() throws Exception {
+		// MG1: hello.ok.family and compat when the bridge says them, else the catalogue's for the game
+		Dispatcher dispatcher = new Dispatcher(CATALOG);
+		ClientBridgeState state = new ClientBridgeState();
+		state.attach(dispatcher);
+		dispatcher.stateChanged(ConnectionState.CONNECTED, "red");
+		dispatcher.message(message("hello.ok", 1,
+				"{\"protocol\":1,\"bridge\":\"0.1.0\",\"engine\":\"0.3.85\",\"game\":\"red\",\"session\":\"s-1\"}"));
+		dispatcher.drain(100);
+		HelloOk fromCatalogue = state.handshake();
+		assertEquals("gen1", fromCatalogue.family());
+		assertEquals(new dev.kantobridge.world.Games.Compat(151, 165, 10), fromCatalogue.compat());
+		assertTrue(fromCatalogue.knownGame());
+		dispatcher.message(message("hello.ok", 2, "{\"protocol\":1,\"bridge\":\"0.1.0\",\"engine\":\"0.3.85\",\"game\":\"emerald\","
+				+ "\"family\":\"gen3\",\"compat\":{\"maxDex\":386,\"maxMove\":354,\"nick\":7},\"session\":\"s-2\"}"));
+		dispatcher.drain(100);
+		HelloOk said = state.handshake();
+		assertEquals(new HelloOk("s-2", "emerald", "0.3.85", "0.1.0", null, null, "gen3", new dev.kantobridge.world.Games.Compat(386, 354, 7)), said);
+		dispatcher.message(message("hello.ok", 3, "{\"protocol\":1,\"bridge\":\"0.1.0\",\"engine\":\"0.3.85\",\"game\":\"blue\","
+				+ "\"family\":\"gen7\",\"compat\":{\"maxDex\":0,\"maxMove\":165,\"nick\":10},\"session\":\"s-3\"}"));
+		dispatcher.drain(100);
+		HelloOk odd = state.handshake();
+		assertEquals(new HelloOk("s-3", "blue", "0.3.85", "0.1.0"), odd, "a family or limits that don't fit are the catalogue's");
+		assertEquals("gen1", odd.family());
+		dispatcher.message(message("hello.ok", 4,
+				"{\"protocol\":1,\"bridge\":\"0.1.0\",\"engine\":\"0.3.85\",\"game\":\"nope\",\"session\":\"s-4\"}"));
+		dispatcher.drain(100);
+		HelloOk unknown = state.handshake();
+		assertFalse(unknown.knownGame());
+		assertNull(unknown.family());
+		assertNull(unknown.compat());
+	}
+
+	@Test
 	void stateFollowsSnapshotPositionsStateAndWarps() throws Exception {
 		Dispatcher dispatcher = new Dispatcher(CATALOG);
 		ClientBridgeState state = new ClientBridgeState();

@@ -450,6 +450,25 @@ def test_the_build_runs_once_and_is_cached():
     assert third["data"] == first["data"] and rig.E.datasetReads == reads
 
 
+def test_the_index_names_the_running_game_and_the_layout_its_region():
+    # MG1: no coercion; the layout resource is named after the game's default region (the
+    # catalogue's): kanto for Red and Blue, hoenn for Emerald
+    rig, peer = export_rig(game="emerald", manifest={"id": "gen1-bridge", "games": ["emerald"]})
+    index = request(rig, peer, "export.index", {})
+    assert index["type"] == "export.index" and index["data"]["game"] == "emerald"
+    keys = {(e["kind"], e["id"]) for e in index["data"]["resources"]}
+    assert ("layout", "hoenn") in keys and ("layout", "kanto") not in keys
+
+
+def test_a_game_outside_the_catalogue_fails_the_build():
+    rig, peer = export_rig()
+    rig.E.GameVersion.current = b"nosuch"  # after the handshake: the export never coerces it
+    reply = request(rig, peer, "export.index", {})
+    assert reply["type"] == "error" and reply["data"]["code"] == "export_failed"
+    assert rig.status.exportState == b"failed"
+    assert any("export.failed at=export.unknown_game" in line for line in rig.logs())
+
+
 def test_requests_before_the_index_wait_for_the_build():
     rig, peer = export_rig()
     seq = peer.send("export.get", {"kind": "map", "id": "TEST_LAB"})
@@ -533,7 +552,8 @@ def make_service(rig, **opts):
                        "clock": clock, "engine": engine, "Cells": b.module("export/kb_cells.lua"),
                        "Images": b.module("export/kb_images.lua"),
                        "SwapSites": b.module("export/kb_swapsites.lua"),
-                       "catalog": b.module("lib/kb_catalog.lua"), "bridge": b"0.1.0"}.items():
+                       "catalog": b.module("lib/kb_catalog.lua"), "bridge": b"0.1.0",
+                       "games": b.module("lib/kb_games.lua")}.items():
         o[key.encode()] = value
     for key, value in opts.items():
         o[key.encode()] = value

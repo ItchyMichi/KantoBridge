@@ -13,7 +13,18 @@
     "protocol": {"type": "integer", "minimum": 1, "maximum": 1000},
     "bridge": {"type": "string", "pattern": "^[0-9A-Za-z.+_-]+$", "maxLength": 32},
     "engine": {"type": "string", "pattern": "^[0-9A-Za-z.+_-]+$", "maxLength": 32},
-    "game": {"enum": ["red", "blue"]},
+    "game": {
+      "$ref": "../defs.schema.json#/$defs/gameId",
+      "description": "The game this process runs (protocol/games.json); the client checks it against the link's configured game."
+    },
+    "family": {
+      "$ref": "../defs.schema.json#/$defs/family",
+      "description": "The game's engine family, from the catalogue (MG1; absent on an older bridge: the client takes it from the catalogue)."
+    },
+    "compat": {
+      "$ref": "../defs.schema.json#/$defs/compat",
+      "description": "The adapter's real compatibility limits (MG1); absent means the catalogue's profile for the game."
+    },
     "session": {
       "$ref": "../defs.schema.json#/$defs/id",
       "description": "Random per gen1-bridge start, so a client can tell a restart from a reconnect."

@@ -19,6 +19,7 @@ LIB_FILES = [
     "lib/kb_engine.lua",
     "lib/kb_routes.lua",
     "lib/kb_catalog.lua",
+    "lib/kb_games.lua",
     "lib/kb_session.lua",
     "lib/kb_perf.lua",
     "observe/kb_player.lua",

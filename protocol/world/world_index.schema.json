@@ -17,7 +17,8 @@
   "additionalProperties": false,
   "properties": {
     "version": {"const": 1},
-    "game": {"enum": ["red", "blue"]},
+    "game": {"$ref": "../defs.schema.json#/$defs/gameId", "description": "The game whose export built this index (protocol/games.json)."},
+    "family": {"$ref": "../defs.schema.json#/$defs/family", "description": "The game's engine family (MG1, optional; a legacy index has none)."},
     "exportHash": {
       "$ref": "../defs.schema.json#/$defs/hash",
       "description": "SHA-256 of the export bundle's index.json canonical JSON: which export built this world."

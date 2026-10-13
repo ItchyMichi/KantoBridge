@@ -53,7 +53,8 @@ class Bridge:
 
     ``engine=True`` adds ``fake_engine.lua``: its modules join ``modules``,
     its UI tables become ``mod.ui``, and ``self.engine`` controls the fake
-    game. ``love.timer.getTime`` reads ``self.now`` (seconds), which
+    game. ``game`` is the id the fake engine's GameVersion reports (MG1: any
+    catalogue id); ``manifest`` the fake mod's manifest (its ``games`` list). ``love.timer.getTime`` reads ``self.now`` (seconds), which
     ``step()`` advances by one logic step at a time. ``graphics=True`` adds a fake
     ``love.graphics`` and ``love.data`` (``fake_love.lua``, controlled through ``self.love``).
     """
@@ -63,7 +64,7 @@ class Bridge:
     def __init__(self, permissions=PERMISSIONS, modules=None, developer=False, strict=True,
                  engine=False, mod_options=None, content=None, game="blue", graphics=False,
                  script=False, mod_cache=None, save_files=False, window=False, files=None,
-                 registries=None, world_api=False, jit_os="Windows"):
+                 registries=None, world_api=False, jit_os="Windows", manifest=None):
         self.rt = luajit.LuaRuntime(unpack_returned_tuples=True, encoding=None)
         # the platform main.lua sees (jit.os): Windows by default, whatever the host, so every test
         # runs the same on a PC and a Linux pod; "Linux"/"OSX" for the SO_REUSEADDR rule
@@ -169,6 +170,11 @@ class Bridge:
             mod_opts[b"world"] = self.world_api
         # M9: mod.cache's files (rel -> bytes), e.g. another run's, for a simulated restart
         mod_opts[b"cache"] = self.to_lua(mod_cache or {})
+        # MG1: the mod's manifest as the loader hands it over (mod.manifest; its `games` list),
+        # e.g. {"id": "gen1-bridge", "games": ["red", "blue"]}; None is the fake mod's bare
+        # manifest (no `games`: Gen 1 only, as the engine reads an omitted list)
+        if manifest is not None:
+            mod_opts[b"manifest"] = self.to_lua(manifest)
         self._mod_opts = mod_opts
         self.mod = self.FakeMod.new(mod_opts)
         if self.engine is not None:

@@ -1,0 +1,51 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kantobridge.invalid/protocol/games.schema.json",
+  "title": "game catalogue",
+  "description": "protocol/games.json, the one place that names the games (docs/specs/MULTI_GAME_PLAN.md §4.2): for each Gen1Recomp game id its engine family, engine, the region it builds by default, its compatibility profile, its art set, whether the bridge mod has an engine adapter for it, and the story markers game.status reports. Copied into the fabric-bridge jar and generated into gen1-bridge/lib/kb_games.lua. Ids and symbols only, never game content.",
+  "type": "object",
+  "required": ["version", "games"],
+  "additionalProperties": false,
+  "properties": {
+    "version": {"const": 1},
+    "games": {
+      "type": "object",
+      "minProperties": 1,
+      "propertyNames": {"$ref": "defs.schema.json#/$defs/gameId"},
+      "additionalProperties": {
+        "type": "object",
+        "required": ["family", "engine", "generation", "label", "region", "compat", "artSet", "adapter", "markers"],
+        "additionalProperties": false,
+        "properties": {
+          "family": {"$ref": "defs.schema.json#/$defs/family"},
+          "engine": {
+            "enum": ["gen1", "gs", "crystal", "game3"],
+            "description": "Gen1Recomp's engine for the game (src/core/GameVersion.lua)."
+          },
+          "generation": {"type": "integer", "minimum": 1, "maximum": 3},
+          "label": {"type": "string", "pattern": "^[A-Za-z0-9 '.-]+$", "minLength": 1, "maxLength": 24},
+          "region": {
+            "$ref": "defs.schema.json#/$defs/regionId",
+            "description": "The region id \"Add a region\" offers for the game: its world space (every version of one world space shares it)."
+          },
+          "layout": {"enum": ["frlg", "rse"], "description": "Gen 3 only: the map layout family."},
+          "compat": {
+            "$ref": "defs.schema.json#/$defs/compat",
+            "description": "The region's default compatibility profile; an adapter's hello.ok.compat wins."
+          },
+          "artSet": {"$ref": "defs.schema.json#/$defs/gameId"},
+          "adapter": {
+            "type": "boolean",
+            "description": "Whether gen1-bridge has an engine adapter for the game today (the mod's manifest lists these)."
+          },
+          "markers": {
+            "type": "object",
+            "propertyNames": {"pattern": "^[a-z][a-z0-9_]{0,15}$"},
+            "additionalProperties": {"$ref": "defs.schema.json#/$defs/flagId"},
+            "description": "game.status markers: marker name -> the flag the game's adapter resolves it with (Gen 1 EVENT_* names; other families fill theirs in when their adapter is written)."
+          }
+        }
+      }
+    }
+  }
+}

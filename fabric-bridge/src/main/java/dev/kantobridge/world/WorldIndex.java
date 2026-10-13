@@ -29,7 +29,7 @@ import org.jetbrains.annotations.Nullable;
 public final class WorldIndex {
 	public static final int VERSION = 1;
 
-	private static final Set<String> ROOT_FIELDS = Set.of("version", "game", "exportHash", "scale", "maps", "slotMapHash",
+	private static final Set<String> ROOT_FIELDS = Set.of("version", "game", "family", "exportHash", "scale", "maps", "slotMapHash",
 			"storyCells", "habitats", "zones", "dungeons", "shafts");
 	private static final Set<String> SHAFT_FIELDS = Set.of("kind", "top", "bottom", "up", "x", "z", "y0", "y1", "wall");
 	private static final Set<String> SHAFT_END_FIELDS = Set.of("map", "x", "y");
@@ -58,7 +58,6 @@ public final class WorldIndex {
 	private static final Set<String> HABITAT_FIELDS = Set.of("map", "x", "y", "z", "pool", "range");
 	/** A habitat block's {@code RangeOfInfluence} unless it says otherwise (PLAN §4.5). */
 	public static final int HABITAT_RANGE = 14;
-	private static final Set<String> GAMES = Set.of("red", "blue");
 	/** How far above or below a map's feet level a block still counts as on that map (layers are 22 apart). */
 	private static final int LAYER_REACH_DOWN = 4;
 	private static final int LAYER_REACH_UP = 6;
@@ -303,6 +302,8 @@ public final class WorldIndex {
 	}
 
 	private final String game;
+	/** The game's engine family when the index says it (MG1); a legacy index says nothing. */
+	private final @Nullable String family;
 	private final String exportHash;
 	private final int surfaceY;
 	private final int layerStep;
@@ -319,17 +320,20 @@ public final class WorldIndex {
 
 	public WorldIndex(String game, String exportHash, Collection<MapPlacement> maps, String slotMapHash, StoryCellTable storyCells,
 			List<Habitat> habitats) {
-		this(game, exportHash, Scale.SURFACE_Y, Scale.LAYER_STEP, maps, Map.of(), slotMapHash, storyCells, habitats, List.of(), null, List.of());
+		this(game, null, exportHash, Scale.SURFACE_Y, Scale.LAYER_STEP, maps, Map.of(), slotMapHash, storyCells, habitats, List.of(), null,
+				List.of());
 	}
 
 	public WorldIndex(String game, String exportHash, Collection<MapPlacement> maps, String slotMapHash, StoryCellTable storyCells,
 			List<Habitat> habitats, List<Zone> zones) {
-		this(game, exportHash, Scale.SURFACE_Y, Scale.LAYER_STEP, maps, Map.of(), slotMapHash, storyCells, habitats, zones, null, List.of());
+		this(game, null, exportHash, Scale.SURFACE_Y, Scale.LAYER_STEP, maps, Map.of(), slotMapHash, storyCells, habitats, zones, null,
+				List.of());
 	}
 
 	public WorldIndex(String game, String exportHash, Collection<MapPlacement> maps, String slotMapHash, StoryCellTable storyCells,
 			List<Habitat> habitats, List<Zone> zones, @Nullable Dungeons dungeons) {
-		this(game, exportHash, Scale.SURFACE_Y, Scale.LAYER_STEP, maps, Map.of(), slotMapHash, storyCells, habitats, zones, dungeons, List.of());
+		this(game, null, exportHash, Scale.SURFACE_Y, Scale.LAYER_STEP, maps, Map.of(), slotMapHash, storyCells, habitats, zones, dungeons,
+				List.of());
 	}
 
 	/**
@@ -338,25 +342,30 @@ public final class WorldIndex {
 	 */
 	public WorldIndex(String game, String exportHash, Collection<MapPlacement> maps, Map<String, MapLayout> layouts, String slotMapHash,
 			StoryCellTable storyCells, List<Habitat> habitats, List<Zone> zones, @Nullable Dungeons dungeons) {
-		this(game, exportHash, Scale.SURFACE_Y, Scale.LAYER_STEP, maps, layouts, slotMapHash, storyCells, habitats, zones, dungeons, List.of());
+		this(game, null, exportHash, Scale.SURFACE_Y, Scale.LAYER_STEP, maps, layouts, slotMapHash, storyCells, habitats, zones, dungeons,
+				List.of());
 	}
 
 	/** The same with the caves' shafts (CAVES_3D_PLAN §3.5). */
 	public WorldIndex(String game, String exportHash, Collection<MapPlacement> maps, Map<String, MapLayout> layouts, String slotMapHash,
 			StoryCellTable storyCells, List<Habitat> habitats, List<Zone> zones, @Nullable Dungeons dungeons, List<Shaft> shafts) {
-		this(game, exportHash, Scale.SURFACE_Y, Scale.LAYER_STEP, maps, layouts, slotMapHash, storyCells, habitats, zones, dungeons, shafts);
+		this(game, null, exportHash, Scale.SURFACE_Y, Scale.LAYER_STEP, maps, layouts, slotMapHash, storyCells, habitats, zones, dungeons, shafts);
 	}
 
-	private WorldIndex(String game, String exportHash, int surfaceY, int layerStep, Collection<MapPlacement> maps,
+	private WorldIndex(String game, @Nullable String family, String exportHash, int surfaceY, int layerStep, Collection<MapPlacement> maps,
 			Map<String, MapLayout> layouts, String slotMapHash, StoryCellTable storyCells, List<Habitat> habitats, List<Zone> zones,
 			@Nullable Dungeons dungeons, List<Shaft> shafts) {
-		if (!GAMES.contains(game)) {
+		if (!Games.known(game)) {
 			throw new IllegalArgumentException("unknown game");
+		}
+		if (family != null && !Games.FAMILIES.contains(family)) {
+			throw new IllegalArgumentException("unknown family");
 		}
 		if (!DataReader.HASH.matcher(exportHash).matches() || !DataReader.HASH.matcher(slotMapHash).matches()) {
 			throw new IllegalArgumentException("invalid hash");
 		}
 		this.game = game;
+		this.family = family;
 		this.exportHash = exportHash;
 		this.surfaceY = surfaceY;
 		this.layerStep = layerStep;
@@ -408,6 +417,20 @@ public final class WorldIndex {
 
 	public String game() {
 		return this.game;
+	}
+
+	/** The game's engine family as the index records it (MG1), or null for an index that doesn't say (every legacy index). */
+	public @Nullable String family() {
+		return this.family;
+	}
+
+	/**
+	 * The same index recording {@code family} (null for none): a region's index names its game's family; a legacy world's
+	 * never does, so every golden stays byte-identical.
+	 */
+	public WorldIndex withFamily(@Nullable String family) {
+		return new WorldIndex(this.game, family, this.exportHash, this.surfaceY, this.layerStep, this.maps.values(), this.layouts,
+				this.slotMapHash, this.storyCells, this.habitats, this.zones, this.dungeons, this.shafts);
 	}
 
 	public String exportHash() {
@@ -631,6 +654,9 @@ public final class WorldIndex {
 		JsonObject root = new JsonObject();
 		root.addProperty("version", VERSION);
 		root.addProperty("game", this.game);
+		if (this.family != null) {
+			root.addProperty("family", this.family);
+		}
 		root.addProperty("exportHash", this.exportHash);
 		JsonObject scale = new JsonObject();
 		scale.addProperty("cellBlocks", Scale.CELL_BLOCKS);
@@ -796,8 +822,12 @@ public final class WorldIndex {
 			throw new DataException(root.path("version"), "unsupported version");
 		}
 		String game = root.string("game");
-		if (!GAMES.contains(game)) {
+		if (!Games.known(game)) {
 			throw new DataException(root.path("game"), "unknown game");
+		}
+		String family = root.has("family") ? root.string("family") : null;
+		if (family != null && !Games.FAMILIES.contains(family)) {
+			throw new DataException(root.path("family"), "unknown family");
 		}
 		String exportHash = root.string("exportHash", DataReader.HASH);
 		DataReader scale = root.object("scale").allowOnly(SCALE_FIELDS);
@@ -918,8 +948,8 @@ public final class WorldIndex {
 			}
 		}
 		try {
-			return new WorldIndex(game, exportHash, surfaceY, layerStep, maps, layouts, slotMapHash, storyCells, habitats, zones, dungeons,
-					shafts);
+			return new WorldIndex(game, family, exportHash, surfaceY, layerStep, maps, layouts, slotMapHash, storyCells, habitats, zones,
+					dungeons, shafts);
 		} catch (IllegalArgumentException e) {
 			throw new DataException("/zones", e.getMessage());
 		}

@@ -20,6 +20,7 @@ Gen1Recomp) and `fabric-bridge` (Java, inside Minecraft), plus the test stand-in
 | `examples/<type>.json` | A JSON array of complete, synthetic example envelopes for that type |
 | `export/<kind>.schema.json` | The `data` of one export resource kind (`export.data`); docs/PROTOCOL.md "Export resources". The synthetic world in `tools/fake_gen1/synth.py` exercises every kind |
 | `catalog.json` | **Derived** from the message schemas by `tools/kb_protocol/catalog.py`. Checked in so Java can bundle it. A test fails when it is stale |
+| `games.json` | The game catalogue (MULTI_GAME_PLAN §4.2; schema `games.schema.json`): every Gen1Recomp game id with its family, engine, default region, compat profile, art set, adapter flag and story markers. Bundled in the fabric-bridge jar; `tools/kb_protocol/catalog.py --write` generates `gen1-bridge/lib/kb_games.lua` from it |
 
 All schemas are JSON Schema **2020-12**. Their `$id`s live under
 `https://kantobridge.invalid/protocol/` (the `.invalid` TLD is reserved, so nothing is ever

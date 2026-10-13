@@ -128,11 +128,16 @@ end
 --   Routes, routes                   lib/kb_routes.lua and its runtime (Wild Routes, WR2;
 --                                    optional): towns are exported with their zones'
 --                                    clearings, and the `routes` resource lists the zones
+--   games                            lib/kb_games.lua (MG1, the game catalogue): the index's
+--                                    `game` is the running game's id, which must be a
+--                                    catalogue id (else the build fails: export.unknown_game),
+--                                    and the layout resource's id is the game's default region
 --   budget, serveBytes, backlog      optional limits (tests)
 function Export.new(opts)
   local json, sha256, log, clock = opts.json, opts.sha256, opts.log, opts.clock
   local engine, Cells, Images, SwapSites = opts.engine, opts.Cells, opts.Images, opts.SwapSites
   local Routes, routesRt = opts.Routes, opts.routes
+  local games = opts.games
   local pageLimit = (opts.catalog and opts.catalog.exportPageBytes) or 1048576
   local budget = opts.budget or Export.BUDGET
   local serveBytes = opts.serveBytes or Export.SERVE_BYTES
@@ -170,6 +175,21 @@ function Export.new(opts)
     end
     w.count = w.count + 1
     if w.first == nil and sym(example) then w.first = example end
+  end
+
+  -- MG1: the running game's catalogue entry. The export's `game` is an open
+  -- id (defs gameId) that the builder resolves through the same catalogue,
+  -- so a game it doesn't list can't be exported: one warning, then the build
+  -- fails (never a coerced id).
+  local function gameEntry()
+    local game = engine.gameVersion()
+    local entry = type(game) == "string" and type(games) == "table" and type(games.games) == "table"
+      and games.games[game] or nil
+    if not entry then
+      warn("unknown_game")
+      error("export.unknown_game", 0)
+    end
+    return entry, game
   end
 
   local function checkpoint()
@@ -953,7 +973,10 @@ function Export.new(opts)
     put("names", "all", { species = species, moves = moves, items = items })
 
     -- ---------------------------------------------- layout and swaps
-    put("layout", "kanto", layoutData)
+    -- MG1: the layout is named after the game's default region (kanto for
+    -- Red and Blue, as before), never a literal
+    local gameEntryRec = gameEntry()
+    put("layout", gameEntryRec.region, layoutData)
     local function blockAt(mapId, bx, by)
       local def = defs[mapId]
       if not (def and int(bx, 0, 255) and int(by, 0, 255) and int(def.width, 1, 255)) then return nil end
@@ -992,8 +1015,9 @@ function Export.new(opts)
     end)
     local entries = {}
     for i, e in ipairs(index) do entries[i] = { kind = e.kind, id = e.id, hash = e.hash, size = e.size } end
-    local game = engine.gameVersion()
-    if game ~= "red" and game ~= "blue" then warn("unknown_game") game = "red" end
+    -- MG1: the running game's id, a catalogue id (gameEntry fails the build
+    -- otherwise)
+    local _, game = gameEntry()
     local engineVersion = engine.version()
     if type(engineVersion) ~= "string" or not engineVersion:find("^[0-9A-Za-z.+_-]+$") or #engineVersion > 32 then
       engineVersion = "unknown"

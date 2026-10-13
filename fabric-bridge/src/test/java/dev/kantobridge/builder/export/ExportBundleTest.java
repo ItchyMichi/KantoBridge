@@ -71,6 +71,10 @@ class ExportBundleTest {
 		assertEquals("tilesets.test", tileset.image());
 		assertTrue(tileset.animatesWater());
 		assertEquals(25, tileset.blocks().length, "the town's and house's 17 blocks and the hill's 8");
+		// MG1: the layout's id is the game's default region, the palettes' the Gen 1 family's
+		assertEquals("kanto", bundle.layoutId());
+		assertEquals(ExportBundle.GEN1_PALETTES_ID, bundle.palettesId());
+		assertTrue(bundle.hasLayout() && bundle.hasPalettes());
 		assertEquals("TEST_TOWN", bundle.layout().root());
 		assertEquals(1, bundle.swaps().sites().size());
 		assertEquals(4, bundle.palettes().colours("TEST_PALETTE").length);
