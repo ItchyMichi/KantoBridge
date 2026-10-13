@@ -37,13 +37,13 @@ file was never committed here). §4.9 names where it plugs in.
    - One commit per milestone, `MG<n>: <title>`; PROGRESS.md gets a "Several games" section; PLAYTEST.md gets the
      checks only the user can do.
    - **Stop and ask** when a step is ambiguous or an engine fact below turns out wrong on the pin.
-3. **What is "the system" and what is "per game":** MG1–MG5 are game-neutral and are proven with the stand-ins and
-   with **Red ↔ Blue on the real engine** (both are Gen 1 games gen1-bridge already runs, so a Kanto-in-Blue ↔
-   Kanto-in-Red crossing exercises every new mechanism with no new engine work). MG6 onward is per game family and
-   per ROM, each with its own short spec written when its spikes are done.
-4. **The user's part** (pre-flight, §9 lists the decisions): answer D1–D14 or accept the defaults; on the PC, one
-   Gen1Recomp install per game (§4.11) with that game's ROM imported; a second e2e import for the Red ↔ Blue test
-   (§5, MG5); the spikes that need the PC (S1, S2–S4 on Emerald); the play-tests.
+3. **What is "the system" and what is "per game":** MG1–MG6 are game-neutral and are proven with the stand-ins and
+   with **two real Gen 1 engines** (Red and Blue, which gen1-bridge already runs) in a **test-only world** that holds
+   a second Kanto under a test id — never a product configuration: Red and Blue are one world space and one region
+   (§4.12). MG7 onward is per game family and per ROM, each with its own short spec written when its spikes are done.
+4. **The user's part** (pre-flight, §9 lists the decisions, answered 2026-10-13): on the PC, one Gen1Recomp install
+   per game (§4.11) with that game's ROM imported; a second e2e import for the two-engine test (§5, MG5); the spikes
+   that need the PC (S1, S2–S4 on Emerald); the play-tests; DESIGN.md §6's ownership line for bag and money (§4.9).
 
 ## 1. Your questions, answered
 
@@ -81,12 +81,12 @@ a facade (§8).
 
 **"An almost seamless transition through the wild routes."** A **connecting route** (WILD_ROUTES_PLAN §4.10, the
 generator's unused `CONNECTING` kind and far gate, `routes/gen/RouteSpec.java:26,56`, `RouteLayout.java:27-32`) is
-built as **two zone halves**, one in each region's zone area, each ending in a **pass** (a tunnel mouth, the dungeon
-entrance's prop). Walking into the pass fades the screen for about half a second, teleports you to the other half's
-pass, and swaps the followed link; the hidden player of the game you left stays parked on its route map, and the hidden
+built as **two zone halves**, one in each region's zone area, each ending in a **gate house** whose far doorway is the
+**pass** (D12). Stepping through it fades the screen for about half a second, teleports you into the other half's gate
+house, and swaps the followed link; the hidden player of the game you left stays parked on its route map, and the hidden
 player of the game you enter stands on *its* route map. From there you walk out into that game's town through its
 clearing, as today's zone exit works (§4.8). Regions sit about 8 km apart (§4.6), so a continuous 8-km corridor is
-neither buildable nor walkable; the fade is the same one dungeons and cave mouths already use.
+neither buildable nor walkable; the fade is the same one doors, dungeons and cave mouths already use.
 
 **"Detect storyline progression so players can start the story of a hidden game if they haven't."** Each hidden game
 already exposes the signals: `engine.playthrough()` says `title`, `fresh` (New Game never saved) or `saved`
@@ -109,26 +109,31 @@ are data in the game profile, resolved by each adapter in its own flag namespace
   zones south and dungeons north — the same areas Kanto has, relative to Hoenn's origin.
 - **The pass.** A connecting route in `routes.json` names an exit in a Kanto map and an exit in a Hoenn map. The build
   makes two forest halves, one in Kanto's zone area with a trailhead clearing in the Kanto town, one in Hoenn's zone
-  area with a clearing in the Hoenn town, each ending in a tunnel mouth. The route's trainers and items belong to the
-  half they stand in: their prize money and items go to that game's bag.
+  area with a clearing in the Hoenn town, each ending in a gate house. The route's trainers and items belong to the
+  half they stand in; what they give goes to that game's bag and from there into your one wallet and ledger.
 - **First crossing.** You walk from the Kanto town into its half (the hidden Blue player parks on Blue's route map, as in
-  today's zones), through its areas, into the tunnel. Fade. Hoenn has never been started for this world, so the HUD
-  says "Starting Emerald…"; the title screen's NEW GAME runs; Birch's intro, the naming screen (your Kanto name offered
-  as the default) and the truck play as Minecraft screens; when Emerald reaches its overworld, Minecraft puts you in
-  Brendan's room in Littleroot. From here Emerald is the followed game: you walk its story. Blue waits on its route map.
-- **Later crossings.** From Littleroot you walk back into the Hoenn half and into the tunnel. Fade. Emerald parks;
-  Blue's hidden player is already on Blue's route map; you come out of the Kanto half's tunnel and walk on to Viridian.
-  Next time you cross into Hoenn, Emerald's hidden player is warped onto Hoenn's route map and you walk out of the
-  Hoenn half's clearing into Littleroot: no teleport, no intro.
+  today's zones), through its areas, into the **gate house** at its far end. Inside, the far door is the pass. Fade.
+  Hoenn has never been started for this world, so the HUD says "Starting Emerald…": your whole party is moved into
+  Cobblemon's PC first (the new story's starter needs room, and nothing is lost), the title screen's NEW GAME runs,
+  Birch's intro and the truck play as Minecraft screens, your name is entered for you, and when Emerald reaches its
+  overworld Minecraft puts you in Brendan's room in Littleroot. From here Emerald is the followed game: you walk its
+  story. Blue waits on its route map. Your Pokémon are in the PC at the first Pokémon Center.
+- **Later crossings.** From Littleroot you walk back into the Hoenn half and into its gate house. Fade. Emerald parks;
+  Blue's hidden player is already on Blue's route map; you come out of the Kanto half's gate house and walk on to
+  Viridian. Next time you cross into Hoenn, Emerald's hidden player is warped onto Hoenn's route map and you walk out
+  of the Hoenn half's clearing into Littleroot: no teleport, no intro.
 - **What you keep.** Your Pokémon, PC and Pokédex are Cobblemon's and go everywhere; in each region, the Pokémon that
   region's game cannot hold are left out of its shadow party and the HUD says how many (the visitor plan removes that
-  limit later). Money, bag, badges and story stay per game, as DESIGN.md's ownership says.
+  limit later). **Money and items are yours too** (§4.9): one wallet and one bag ledger, projected into whichever game
+  you are playing and read back when you leave it; a Potion bought in Viridian heals in Hoenn, prize money from a Hoenn
+  trainer buys balls in Pewter. Badges, key items, HMs and the story stay per game.
 - **The HUD** (F7) shows each link: game, port, state (followed / parked / down), that region's progress (not started,
   badges, champion), and where its hidden player waits.
-- **Multiplayer.** Each player runs their own processes and crosses on their own; the world holds both regions for
-  everyone. A player with no Emerald link sees Hoenn built but cannot cross (the pass refuses: "Emerald isn't running")
-  and draws Hoenn's blocks as placeholders unless their own Emerald export exists, as a guest without a compatible game
-  does today.
+- **Multiplayer.** One region is one world space for everyone: a Red player and a Blue player both live in the one
+  `kanto`, as today (the host's version built it and decides wild exclusives; the guest draws it with their own art).
+  Each player runs their own processes and crosses on their own; two friends can be in Kanto and Hoenn at the same
+  time. A player with no Emerald link cannot cross (the gate house's far door stays shut: "Emerald isn't running");
+  Hoenn's terrain exists for everyone but is reachable only through a pass.
 
 ## 3. What changes
 
@@ -140,8 +145,9 @@ are data in the game profile, resolved by each adapter in its own flag namespace
 | The client | One `BridgeClient` singleton; one `ClientWorldIndex`; one art set | **Links**: one per game; one followed, the rest parked; `ClientRegions`; art set per region |
 | The world | One WorldIndex, slot map, shape index/map, datapack, generated pack per world; areas anchored on Kanto's box | **Regions**: `regions.json` (the region table), `regions/<id>/{region.json, world_index.json, shape_index.json, shape_map.bin}`; one world-level slot map with a family range per region; areas anchored on each region's own box |
 | The server | One published index; services read it; no idea which game a client runs; one save pair and one slot per player | `Regions.of(server)`; services take the region from the player's position or the message; per-region pairing, save pairs, daycare, story state; a **progress** record per region |
-| Routes | `free_roam` only; one end; progress in the active save | `connecting` routes with two **ends**, each registered by its own game; two halves with **passes**; a pass service |
-| Protocol | 77 types | + `game.status`, `region.park`, `region.resume`, `region.start`, `region.state`, `world.regions`, `pass.cross`, `pass.abort`; optional `region` on the relayed types; open `game` + `family`; `hello.reject{reason:"game"}` |
+| Routes | `free_roam` only; one end; progress in the active save | `connecting` routes with two **ends**, each registered by its own game; two halves ending in **gate houses** whose far door is the pass; a pass service |
+| Money and items | Each hidden game owns its bag and money; `bag.sync` mirrors the hidden bag's battle items into the Minecraft inventory | **One trainer economy**: a server-side wallet and item ledger per player, projected into the followed game and read back on park; the Minecraft mirror follows the ledger, once per player |
+| Protocol | 77 types | + `game.status`, `region.park`, `region.resume`, `region.start`, `region.state`, `world.regions`, `pass.cross`, `pass.abort`, `party.stash`, `bag.set`; `bag.sync` gains `money`; optional `region` on the relayed types; open `game` + `family`; `hello.reject{reason:"game"}` |
 | Builder input | `ExportBundle` → Gen 1 record types read everywhere; `scene/` used by the shape planner only | New code reads the **Scene**; a `GameFrontEnd` per family (`scene/GameFrontEnd.java` exists with `Gen1FrontEnd`); Gen 3 arrives as `Gen3FrontEnd` + a scene-shaped export |
 
 ## 4. Design
@@ -155,9 +161,10 @@ are data in the game profile, resolved by each adapter in its own flag namespace
 | **Region** | An area of the one overworld built from one game's export: a record + its own index, shape documents, pairing, story state and progress. Id `^[a-z][a-z0-9_]{0,23}$` (`kanto`, `hoenn`); the game is a field of the record, so `kanto` (Blue) and a later `kanto_frlg` stay distinct. Kanto is the **legacy** region of every existing world |
 | **Region slot** | A place in the **region table**: slot `n` has its origin at `x = 8192·n, z = 0` (D8); a region owns the surface box, interior spill, zone area, dungeon area and cave area the builder plans around that origin |
 | **Link** | A TCP connection from the client to one hidden game process. Exactly one link is **followed** (movement, screens, NPCs, story relays go through it); the others are **parked**: connected, heartbeat on, `party.sync`/`dex.sync` still applied, their hidden player held still |
-| **Pass** | A connecting route's far gate in a zone half: the cell where a crossing starts, with a tunnel-mouth prop |
-| **Crossing** | Fade → park the followed link → resume or start the target link → teleport to the other half's pass → follow the target |
-| **Progress record** | Per (player, region): `{state: none\|title\|fresh\|saved, ingame, started, badges, markers{…}, at}` |
+| **Gate house** | The small building at a connecting route half's far end (D12): you enter by its near door; its far door is the **pass**, the cell where a crossing starts |
+| **Crossing** | Fade → park the followed link → (stash the party and) resume or start the target link → teleport into the other half's gate house → follow the target |
+| **Progress record** | Per (player, region): `{state: none\|title\|fresh\|saved, ingame, started, badges, markers{…}, name, at}` |
+| **Trainer ledger** | Per player, server-side: the wallet (money) and the item ledger (canonical item id → quantity), projected into the followed game's save and read back when that game is parked |
 
 ### 4.2 The game catalogue
 
@@ -252,7 +259,10 @@ All additive. Protocol number stays 1 (D10). Schemas first, then `catalog.json`,
 | `hello.ok` | G→M | + `family`, + `compat?{maxDex, maxMove, nick}`; `game` becomes an open game id | `family` from `GameVersion.engine()` through the catalogue |
 | `hello.reject` | G→M | + reason `game` | the running game has no adapter |
 | `export.index` | G→M | `game` open | |
-| `game.status` | G→M, C→S | `game, region?, playthrough:"title"\|"fresh"\|"saved", ingame, started, badges, markers{<name>:bool}, slot?` | after `snapshot`, after `session.bound`, on `save.created`/`save.loaded`, when a marker or the badge count changes (checked with the story flags, every 10 steps) |
+| `game.status` | G→M, C→S | `game, region?, playthrough:"title"\|"fresh"\|"saved", ingame, started, badges, markers{<name>:bool}, name?, slot?` | after `snapshot`, after `session.bound`, on `save.created`/`save.loaded`, when a marker or the badge count changes (checked with the story flags, every 10 steps). `name` is the save's player name (the player's own text, marked like other text) |
+| `party.stash` | C→S | `region` | before a `region.start`: the server moves every party member into Cobblemon's PC; answers `act.result{kind:"stash", moved}` or `error{code:"stash.pc_full"}` |
+| `bag.sync` | G→M | + `money` | the followed game's bag and money, as today's bag diff (§4.9) |
+| `bag.set` | M→G | `items{<symbol>:qty}, money, stamp` | the ledger's projection into the followed game's save on resume/start; answered by `act.result{kind:"bag.set"}`; reasons `not_ingame`, `busy`, `too_many` (with what did not fit) |
 | `region.park` | M→G | `region` | → `act.result{kind:"park"}` |
 | `region.resume` | M→G | `region, to{map,x,y,facing}` | → `act.result{kind:"resume"}` |
 | `region.start` | M→G | `region` | → `act.result{kind:"start", detail}` |
@@ -411,15 +421,21 @@ The server never learns which game a client runs (`relay.hello` carries `{protoc
   whose link is absent shows `none`.
 - **At a pass** (§4.8) the target region's record decides: `fresh`/`saved` → `region.resume` onto the route map;
   `title` → `region.start` (CONTINUE if the slot has a save, else NEW GAME); no link → refused.
-- **The first start** (D5): NEW GAME runs as the game wrote it. The intro's text, choices and naming screens are the
-  client's screens (M4/M5); graphics (Birch's slide show, the truck) are the mirror. The naming screen's default name is
-  the player's name from the followed Kanto save (`snapshot` carries the player; D6). When the game first reports
-  `ingame:true`, the client relinks `MovementSync` from the hidden spot with a teleport allowed (the "one accepted
-  teleport" of a first join), which puts the player in that game's first room. Nothing skips the intro: skipping would
-  break the opening scripts (the rival, the starter), and the hidden player would land where no script expects it.
-- **Compatibility at a start:** a new game's story gives a starter; the party already holds the player's Pokémon.
-  Cobblemon's party is the truth; the region's compat profile decides what the shadow party shows (§4.9). Level caps or
-  a region-only party are later decisions (§8).
+- **The first start** (D5, decided 2026-10-13): first the client sends `party.stash` and the server moves **every party
+  member into Cobblemon's PC** (the first free slots; `stash.pc_full` refuses the start with a HUD line), so the new
+  story's starter has room and no Pokémon is lost or left out of a full-party script. An empty `party.sync` reaches the
+  new game. Then NEW GAME runs as the game wrote it. The intro's text, choices and naming screens are the client's
+  screens (M4/M5); graphics (Birch's slide show, the truck) are the mirror. **The player's name is entered
+  automatically** (D6): the client answers the naming screen with the followed save's name (`game.status.name`),
+  truncated to the new game's limit (`compat.nick` for nicknames; the player-name limit is the adapter's); the screen is
+  shown only when the name was truncated or when the game asks something else (Emerald's gender choice, Gen 1's rival
+  name), which stays the player's. When the game first reports `ingame:true`, the client relinks `MovementSync` from
+  the hidden spot with a teleport allowed (the "one accepted teleport" of a first join), which puts the player in that
+  game's first room. Nothing skips the intro: skipping would break the opening scripts (the rival, the starter), and
+  the hidden player would land where no script expects it.
+- **After the start:** the stashed Pokémon are in Cobblemon's PC, which every region's Pokémon Center PC opens (one PC,
+  DESIGN.md §6); the region's compat profile decides what its shadow party can show (§4.9). Level caps or a region-only
+  party are later decisions (§8).
 
 ### 4.8 Connecting routes and the pass
 
@@ -453,26 +469,31 @@ hidden player waits on the route map and `MovementSync` is "away" (`client/move/
   holds one half of the plan's `[A][x1][x2][B]`; the far cells live in the other process. The export's `routes`
   resource carries both ends so the builder knows the route is connecting and which region each half belongs to.
 - **The halves.** The builder makes a zone per end with `RouteSpec.connecting(theme)`: the trailhead gate at the town's
-  clearing, the far gate = the **pass**, a tunnel-mouth prop (a `kantobridge:prop` variant beside `prop_dungeon_entrance_*`)
-  on the far gate's cells. Each half sits in its region's zone area; levels interpolate across the two halves by the
-  layout's `progress` (`RouteLayout.java:60`). The WorldIndex zone entry gains `pass{x, y, route, toRegion}`.
+  clearing, the far gate = the **gate house** (D12): a small building in the zone's vanilla blocks (walls, roof, floor,
+  two doorways on the route's line, a window or two), 7×5 cells inside, built by a `ZoneBlock` structure at the far
+  gate's cells the way the dungeon entrance's prop is placed; its far doorway's cells are the **pass**. Inside it the
+  fade is natural, as a door's is. Each half sits in its region's zone area; levels interpolate across the two halves by
+  the layout's `progress` (`RouteLayout.java:60`). The WorldIndex zone entry gains `pass{cells[], route, toRegion}` and
+  `gateHouse{x, y, w, d, facing}`. A gate house whose far region isn't built, or whose game the player lacks, keeps its
+  far doorway shut (a `story`-like per-player collider: `pass_closed`). A guard puppet with a line is a later flourish.
 - **The pass service** (server, `server/PassService`, modelled on the dungeon gathering):
-  1. The client sees the pass cell under its feet and sends `pass.cross{route, dir}`.
+  1. The client sees a pass cell under its feet and sends `pass.cross{route, dir}`.
   2. The server checks: the player stands on that pass; the target region exists and is built (`pass.no_region`,
      `pass.not_built`); the player's `region.state` lists a link for the target's game (`pass.no_link`); no crossing in
      progress (`pass.busy`). It answers `route.fade{ticks:10}` and starts a 15 s timer.
   3. The client (`client/zone/PassRuntime`): on the fade, `region.park` to the followed link (the hidden player is on
-     the route map already; `not_in_zone` or any refusal → `pass.abort`), then on the target link: `fresh`/`saved` →
-     `region.resume{to: that game's route map x1}`; `title` → `region.start`, then wait for `game.status{ingame:true}`
-     (up to 10 s; the intro's screens are shown meanwhile and the fade lifts for them). Then `Links.follow(target)` and
-     `region.state{followed: target, parked: […]}`.
-  4. On `region.state` the server teleports the player to the other half's pass, `out` side (as the dungeon exit does)
-     — or, after a `start`, leaves the teleport to the client's relink (the first room). The client fades in when the
-     chunk is drawn or 15 s after it was due. On `pass.abort` or the timer: `error{code:"pass.timeout"}`, the fade lifts
-     where the player stands, the followed link is unchanged.
+     the route map already; `not_in_zone` or any refusal → `pass.abort`); the server reads the parked game's bag and
+     money into the ledger (§4.9). Then on the target link: `fresh`/`saved` → `region.resume{to: that game's route map
+     x1}` followed by `bag.set` (the ledger's projection); `title` → `party.stash`, then `region.start`, then wait for
+     `game.status{ingame:true}` (up to 10 s after the intro ends; the intro's screens are shown meanwhile and the fade
+     lifts for them), then `bag.set`. Then `Links.follow(target)` and `region.state{followed: target, parked: […]}`.
+  4. On `region.state` the server teleports the player into the other half's gate house, just inside its far doorway
+     (as the dungeon exit does) — or, after a `start`, leaves the teleport to the client's relink (the first room). The
+     client fades in when the chunk is drawn or 15 s after it was due. On `pass.abort` or the timer:
+     `error{code:"pass.timeout"}`, the fade lifts where the player stands, the followed link is unchanged.
 - **Items and trainers** of a half belong to its region: the server already keys them by zone; the client forwards
-  `route.give` / `route.battle` to the link of the zone's region, and prize money and items land in that game's bag
-  (WILD_ROUTES_PLAN §4.10: "items always go into the active game's bag"). `RouteProgress` is keyed by region and zone.
+  `route.give` / `route.battle` to the link of the zone's region. Prize money and items land in that game's bag and
+  from there in the ledger (§4.9), so they are the player's wherever they go. `RouteProgress` is keyed by region and zone.
 - **Leaving a half towards its town** is today's exit: the player walks onto the route map's placement at the trailhead,
   A's step script warps the hidden player back to the clearing and the client follows (warp kind `script`).
 
@@ -492,7 +513,35 @@ hidden player waits on the route map and `MovementSync` is "away" (`client/move/
   of this plan.
 - **`dex.sync`** per link sends the species that game knows (`DexService` today sends `GenOneIds.SPECIES` only,
   `pokemon/DexService.java:104-111`): the per-link species list comes from the link's compat profile.
-- **Bag, money, badges** stay per game (DESIGN.md §6 ownership). A trainer-level wallet across games is D7 (no).
+- **One trainer economy** (D7, decided 2026-10-13: Pokémon, money and items cross; the user's note "Pokémon and items
+  from outside Gen 1" is the companion):
+  - **Facts.** Each hidden game owns `save.money` and its bag; gen1-bridge writes both already (prize money
+    `kb_engine.lua:2103`; `Bag.remove` `:2987,3045,4317`; `give_item` in `kb_route.lua:259-283`). `bag.sync` (G→M)
+    mirrors the hidden bag's battle items into the Minecraft inventory as Cobblemon items through `BagItems`
+    (`bag/BagItems.java:24-57`), and `bag.use` (M→G) reports what Cobblemon used; the mirror counts every such stack as
+    the hidden bag's (the note's 2.4.2). The snapshot carries `bag{item:qty}` and `money`.
+  - **The ledger** is server-side, per player (attachment `kantobridge:ledger`, persistent): `money` and
+    `items{<canonical id>: qty}`. **Canonical items** are a catalogue, `protocol/items.json`: id → class (`ball`,
+    `medicine`, `battle`, `held`, `valuable`, `tm`, `key`), the Cobblemon item id (today's `BagItems` table, moved),
+    and each game's symbol (`POTION` in every generation; Gen 3 names from its adapter). Items a game lacks have no
+    symbol for it. **Per game, never in the ledger:** key items, HMs, badges, story items; TMs cross **by move**
+    (Gen 1's TM01 and Gen 3's TM01 are different moves), only when the target game has a TM for that move.
+  - **Projection and read-back.** On `region.resume` or after a `region.start`, the server sends `bag.set{items, money,
+    stamp}` to the followed link: the adapter writes `save.money` and replaces the bag's non-key items with the
+    projection, within the game's limits (Gen 1: 20 bag slots, 99 a stack); what does not fit stays in the ledger and is
+    listed on F7 ("in your trunk"). The `stamp` is written into the save's mod data. While followed, every `bag.sync`
+    (now with `money`) updates the ledger: the diff of that game's bag and money since the last projection, so prize
+    money, purchases, found items and blackout halving all flow back. On park, the last `bag.sync` is final. **A save
+    adopted for the first time** (no `stamp`) merges: its money is added to the wallet and its items join the ledger,
+    once. A save restored to an older state (`save.mismatch` kinds) keeps the ledger's view and re-projects.
+  - **The Minecraft mirror** (`bag.sync` → Cobblemon items → `bag.use`) becomes **one per player from the ledger**,
+    not one per hidden game: Cobblemon battles anywhere throw the ledger's balls and drink its potions; a use reduces
+    the ledger and reaches the followed game through the next projection diff. Stacks the mirror creates are marked
+    (the note's marked stacks), so items found in Minecraft stay the player's and are never deleted by the mirror.
+  - **Ownership.** DESIGN.md §6 gives bag and money to the hidden game; in a multi-game world they belong to the
+    player, projected into each game. **DESIGN.md is the user's to update.** A legacy single-region world keeps today's
+    behaviour until the user opts in (`regions.json` present).
+  - **Badges** stay per game.
 
 ### 4.10 The builder per game
 
@@ -501,7 +550,7 @@ hidden player waits on the route map and `MovementSync` is "away" (`client/move/
   model. Today only the shape planner reads the scene; `WorldPlanner`, `Layout`, `MapModel`, `CavePlanner`,
   `HabitatPlanner`, `StoryCellPlanner`, `ArtCatalog`, the pack writers and `ZoneContent` read Gen 1 export types. Rule:
   new code reads the scene; existing classes are converted only when touched (the report's B7.2 table lists each).
-- **Gen 3 (Emerald) specifics** for MG6's spec, from the engine facts (Appendix A.5): cells are 16 px (so `cellBlocks`
+- **Gen 3 (Emerald) specifics** for MG7's spec, from the engine facts (Appendix A.5): cells are 16 px (so `cellBlocks`
   2 holds); art is a 16×16 metatile per cell in up to three planes (under, middle, over) with 16-colour palettes; the
   front end **splits each metatile into 8-px quarters** so the existing 8-px pipeline, slot keys and shape planner work
   unchanged (D13); the `over` plane becomes a cutout layer above sprites; per-cell `elev` 0..15 maps onto H1's `levels`
@@ -526,16 +575,24 @@ hidden player waits on the route map and `MovementSync` is "away" (`client/move/
 - The Linux e2e runner (`tools/e2e/run_gen1recomp.py`) already isolates a data home per process through
   `XDG_DATA_HOME`; a second game needs a second data home with its own import (the user's).
 
-### 4.12 Multiplayer
+### 4.12 Multiplayer and world spaces
 
+- **One region is one world space**, shared by every player. Red, Blue (and Yellow) are the same world space, Kanto,
+  so a world has **one** `kanto` region, built from the host's version; a player whose game is the other version joins
+  it as the compatible guest of today (`Games.compatible`; "Red vs Blue: the host's version decides wild exclusives,
+  and players trade for the rest", DESIGN.md §8). The same holds for FireRed/LeafGreen later (one `kanto_frlg`) and for
+  Ruby/Sapphire/Emerald (one `hoenn`). **There is no route between two versions of one world space in the product.**
+  The two-Kanto world of MG5's e2e test is a throwaway test world under a test id (`test_kanto2`), never written by
+  "Add a region" (which refuses a region whose world space is already in the table: `build.region_exists`).
 - Regions and the table are the host's world data and reach every client through the relay (layout data, like the
-  index). Each player's links are their own; `region.state` is per player; the pass refuses players without the target
-  game's link.
+  index). Each player's links are their own; `region.state`, progress and the ledger are per player; two players can
+  be in different regions at once and see each other's bodies and Pokémon when near. The pass refuses a player without
+  the target game's link; a player cannot otherwise reach another region (void between them, no Fly across).
 - Pairing is per link and per region: gen1-bridge already keys pairings by game version, so Kanto-in-Blue and
-  Hoenn-in-Emerald never share a slot; the `region` key only matters for two regions of one game (Red-Kanto and Blue-Kanto
-  in one world).
-- A player standing in a region whose game they don't run: allowed (it is just terrain and other players' Pokémon);
-  their links are all parked there; no story objects of that region are drawn for them.
+  Hoenn-in-Emerald never share a slot; the `region` key only matters for two regions of one game, which only the test
+  world has.
+- A player standing in a region whose game they don't run (brought there by another means later, say a spectator
+  visit, §8): allowed; their links are all parked there; no story objects of that region are drawn for them.
 
 ### 4.13 Story safety rules
 
@@ -576,7 +633,7 @@ Sizes as in PLAN.md §6: **S** about M1, **M** about M6/M7, **L** about M8, **XL
 - **S4 (test install, Gen 1):** start NEW GAME and CONTINUE from the title under a connected test session, driven from
   the mod (title-menu taps or `Game:startNewGame`), 10 times each. Pass: the game reaches the overworld and `save.loaded`
   arrives each time; no stray input reaches the intro.
-- Output: PROGRESS "Several games: spikes"; `docs/specs/GEN3_BRIDGE_PLAN.md` is written only at MG6 from S2–S3.
+- Output: PROGRESS "Several games: spikes"; `docs/specs/GEN3_BRIDGE_PLAN.md` is written only at MG7 from S2–S3.
 
 ### MG1: The game catalogue and an open protocol (S–M)
 
@@ -647,26 +704,50 @@ Sizes as in PLAN.md §6: **S** about M1, **M** about M6/M7, **L** about M8, **XL
 
 ### MG5: Crossings (L) ✔
 
-- [B] `ZonePlanner` builds a connecting route as two halves (`RouteSpec.connecting`, far gate = pass, prop variant
-  `pass`), one per region, levels by `progress`; WorldIndex `zones[].pass`; a route whose other region isn't built yet
-  gets its half with the pass closed (prop `pass_closed`, refused with `pass.not_built`).
-- [S] `PassService` (§4.8 steps 1–4), `pass.cross`/`pass.abort`, the error codes, the timer; `RouteProgress` per region
-  and zone; `route.give`/`route.battle` of a half to its region.
-- [C] `PassRuntime`: the choreography (park → resume | start → follow → `region.state`), the fade, the HUD lines
-  ("Starting Emerald…", refusals), the naming default (D6).
-- [L] nothing new beyond MG2 (x1 arrival, A's warp back, the hold) — verified on the real engine.
-- [D] `pass.cross`, `pass.abort`, the WorldIndex `pass` field, PROTOCOL.md "Crossings"; PLAYTEST.md "Several games".
-- [T] JUnit `PassRuntimeTest` (every path: resume, start, refusals, timeout, link drop mid-crossing); GameTests: two
-  synthetic regions joined by a synthetic connecting route (the synthetic bundle's `routes` v2 gains one), the server
-  half of a crossing (`pass.cross` → `route.fade` → `region.state` → teleport to the far pass; abort and timeout
-  paths; a player without the link refused). e2e: two `fake_gen1` (one `--state title`) through the whole choreography;
-  then **Red ↔ Blue on the real engine**: the test install (Red or Blue) plus the user's second e2e install, a world with
-  regions `kanto` (slot 0) and `kanto_red` (slot 1) and one connecting route, 20 crossings each way, one `start`.
-- **Check:** full suite; the e2e logs hold only ids, counts and hashes. **Play-test (user):** cross from Viridian's
-  half into the other Kanto; the first time the other game's NEW GAME intro appears and you end in its bedroom; cross
-  back; cross again (a plain resume). **Commit `MG5`.**
+- [B] `ZonePlanner` builds a connecting route as two halves (`RouteSpec.connecting`), one per region, levels by
+  `progress`; the **gate house** structure at each far gate (D12) with the pass on its far doorway; WorldIndex
+  `zones[].pass` and `gateHouse`; a half whose other region isn't built keeps the far doorway shut (`pass_closed`).
+- [S] `PassService` (§4.8 steps 1–4), `pass.cross`/`pass.abort`, the error codes, the timer; `party.stash` (every party
+  member to Cobblemon's PC; `stash.pc_full`); `RouteProgress` per region and zone; `route.give`/`route.battle` of a half
+  to its region; "Add a region" refuses a second region of one world space (`build.region_exists`).
+- [C] `PassRuntime`: the choreography (park → stash + start | resume → follow → `region.state`), the fade that lifts for
+  the intro's screens, the HUD lines ("Starting Emerald…", refusals), the **automatic name** (D6: `game.status.name`,
+  truncated to the limit, shown only when truncated).
+- [L] `game.status.name`; otherwise nothing beyond MG2 (x1 arrival, A's warp back, the hold) — verified on the real
+  engine.
+- [D] `pass.cross`, `pass.abort`, `party.stash`, the WorldIndex `pass`/`gateHouse` fields, PROTOCOL.md "Crossings";
+  PLAYTEST.md "Several games".
+- [T] JUnit `PassRuntimeTest` (every path: resume, stash + start, a full PC, refusals, timeout, link drop
+  mid-crossing); GameTests: two synthetic regions joined by a synthetic connecting route (the synthetic bundle's
+  `routes` v2 gains one), the server half of a crossing (`pass.cross` → `route.fade` → `region.state` → teleport into
+  the far gate house; `party.stash` empties the party into the PC; abort and timeout paths; a player without the link
+  refused). e2e: two `fake_gen1` (one `--state title`) through the whole choreography; then **two real engines**: the
+  test install (Blue) plus the user's second e2e install (Red), a **test-only world** with regions `kanto` (slot 0) and
+  `test_kanto2` (slot 1) and one connecting route, 20 crossings each way, one `start` with a stash.
+- **Check:** full suite; the e2e logs hold only ids, counts and hashes. **Play-test (user, test world):** cross from
+  Viridian's half through the gate house into the other Kanto; the first time your party goes to the PC, the other
+  game's NEW GAME intro appears with your name entered, and you end in its bedroom; cross back; cross again (a plain
+  resume). **Commit `MG5`.**
 
-### MG6: The second family (Emerald): adapter and export (XL, its own spec)
+### MG6: One trainer economy (M–L) ✔
+
+- [D] `protocol/items.json` + schema (canonical items: class, Cobblemon id, per-game symbols); `bag.sync.money`;
+  `bag.set`; `act.result{kind:"bag.set"}`; PROTOCOL.md "One economy".
+- [S] `kantobridge:ledger` (wallet + items, persistent, copied on death); `LedgerService`: read-back from `bag.sync`
+  diffs, the first-adoption merge, projection on resume/start (`bag.set` with the game's limits from the catalogue),
+  "in your trunk"; the Minecraft mirror moved from the per-game `BagService` to the ledger (marked stacks, the note's
+  2.4.2 fixed on the way); a legacy world (no `regions.json`) keeps today's per-game path.
+- [L] `bag.sync` carries `money`; `bag.set` writes `save.money` and the bag's non-key items within limits
+  (`Bag.add/remove`), answers what did not fit, stamps the save's mod data; the adapter's item table (symbol ↔
+  canonical id) and its "key item" predicate.
+- [C] `bag.set` after `region.resume`/`start`; F7 lines (wallet, trunk count).
+- [T] JUnit `LedgerTest` (projection within limits, read-back diffs, first adoption once, TM-by-move, key items never
+  cross); lupa `bag.set` on the fake engine (limits, refusals); GameTests: a crossing moves prize money and a Potion
+  across two synthetic regions; the mirror never deletes an unmarked stack. e2e on the real engine: buy a Potion, cross,
+  the Potion is in the other game's bag; black out there, the wallet halves.
+- **Check:** full suite. **Commit `MG6`.** DESIGN.md §6 (bag and money ownership) is the user's to update.
+
+### MG7: The second family (Emerald): adapter and export (XL, its own spec)
 
 - Write `docs/specs/GEN3_BRIDGE_PLAN.md` from S2–S3: the `game3` adapter group by group in this order — boot and
   identity; observe (position, facing, state) and move (taps); warps (`warp.destination`, `player.warped`); UI (Gen 3
@@ -676,22 +757,22 @@ Sizes as in PLAN.md §6: **S** about M1, **M** about M6/M7, **L** about M8, **XL
   reach `gen3Scripts`, else the `warp.destination` hook). Each group lands with lupa tests on a `game3` fake engine.
 - [L] the Gen 3 export: scene-shaped resources per the report's B3.3 (cells `kind/tags/dir/elev`, metatile quarters per
   plane as atlases, 16×16 palettes, sprites with frame tables, connections in cells, per-cell swap sites from the
-  override audit); the manifest's `games` gains `emerald`.
+  override audit); the manifest's `games` gains `emerald`; the Gen 3 item symbols in `protocol/items.json`.
 - [B][S] `Gen3FrontEnd` → Scene (artPx 8 by quarters, planes, `elev`); `WorldPlanner` reads the Scene for Gen 3
   (converting the B7.2 classes it needs); flat Hoenn with edge walls on elevation mismatches; habitat pools from Gen 3
-  encounters (national dex → Cobblemon ids, compat 386); `ProxyClass`/`BagItems`/`wild_routes` data per family.
+  encounters (national dex → Cobblemon ids, compat 386); `ProxyClass`/`wild_routes` data per family.
 - [T] a synthetic `gen3` bundle in `fake_gen1 --family gen3`; goldens; GameTests for a synthetic Gen 3 region.
 - **Check:** full suite; e2e on an Emerald test install (the user's import): walk Littleroot, a door, a text box, a
-  save. **Commit `MG6` (several commits by group).**
+  save. **Commit `MG7` (several commits by group).**
 
-### MG7: Hoenn and the pass to it (L) ✔
+### MG8: Hoenn and the pass to it (L) ✔
 
 - `routes.json`: the Kanto ↔ Hoenn pass (the user picks both exits with F7, as for the Viridian zone). The pod build of
   Hoenn at slot 1 (Littleroot and Route 101 first, then all maps); the budgets per region; videos; PLAYTEST "Hoenn".
 - Per-map tweaks as they come up, each a small item in PROGRESS (the user's "each ROM requires its own tweaks").
-- **Commit `MG7`.**
+- **Commit `MG8`.**
 
-### MG8: Later (not in this plan; §8)
+### MG9: Later (not in this plan; §8)
 
 ## 6. Checks
 
@@ -700,8 +781,9 @@ Sizes as in PLAN.md §6: **S** about M1, **M** about M6/M7, **L** about M8, **XL
 2. **Two regions in one world** (GameTest): both indices relayed, distinct pools, warps per region, a legacy world
    untouched.
 3. **Two links** (e2e with stand-ins): follow/park swap; a parked drop never pauses; wrong game never followed.
-4. **A crossing** (e2e with stand-ins, then Red ↔ Blue on the real engine): 20 crossings each way, 0 teleports other
-   than the pass teleport, the hidden players' cells unchanged by a park/resume pair, one `start` reaching the overworld.
+4. **A crossing** (e2e with stand-ins, then two real engines in the test world): 20 crossings each way, 0 teleports
+   other than the pass teleport, the hidden players' cells unchanged by a park/resume pair, one `start` reaching the
+   overworld with the party stashed and the name entered; money and a Potion carried across (MG6).
 5. **Budgets:** shape-map characters per region under 524,288; block-state memory with 32 families measured and noted;
    RAM of two hidden processes noted (S1).
 6. **Logs:** ids, counts and hashes only, as today.
@@ -731,27 +813,31 @@ Sizes as in PLAN.md §6: **S** about M1, **M** about M6/M7, **L** about M8, **XL
   for FRLG only.
 - **The visitor plan** (foreign Pokémon playable in every region) and per-region rules (Gen 3 running shoes, bike speeds).
 - **Heights for Hoenn outdoors** (elevation → levels), Gen 3 bridges (two floors in one cell), per-region moods.
-- **A trainer wallet** across games (money, items) — a decision of the user's; DESIGN.md keeps them per game today.
+- **Spectator visits**: a player without a region's game brought into it with placeholder art.
 - **Yellow** (accepted by the Gen 1 adapter; `isYellow` branches exist; the manifest and catalogue list it).
+- **Level caps or a region-only party** at a story start (balance), and a guard puppet with lines in the gate house.
 
-## 9. Decisions and defaults
+## 9. Decisions
 
-| # | Decision | Options | Default taken | Needed by |
+Answered by the user on 2026-10-13 ("I agree with all the defaults except" 4, 5, 6, 7 and 12). "Decided" is what the
+plan now does.
+
+| # | Decision | Options | Decided | Needed by |
 |---|---|---|---|---|
 | D1 | The bridge mod's shape | one mod with `lib/engine/<engine>.lua` adapters (CLAUDE.md's rule becomes "only `lib/engine/*.lua`"); or one mod per family sharing a copied core | **one mod, adapters** | MG2 |
 | D2 | Hidden game processes | one per game on its own port; or one process switching game | **one per game** | MG4 |
 | D3 | Installs | one portable install per game; or one install with `POKEPORT_IDENTITY` per process (spike) | **one per game** | MG4 |
-| D4 | The first second game | Emerald (Hoenn, the user's wish; `game3`, beta, no Gen3Compat); FireRed/LeafGreen (Gen3Compat helps, but Kanto again); Gold ("under construction", bytecode) | **Emerald**, after the system is proven with Red ↔ Blue | MG6 |
-| D5 | A never-started game at a pass | start it (NEW GAME, the intro, the first room); or skip into the route map | **start it** | MG5 |
-| D6 | The new game's player name | the followed save's name as the naming screen's default; or nothing | **default offered** | MG5 |
-| D7 | What crosses besides Pokémon | nothing (money, bag, badges per game); or a trainer wallet | **nothing** | — |
+| D4 | The first second game, and world spaces | Emerald (Hoenn; `game3`, beta, no Gen3Compat); FireRed/LeafGreen (Kanto again); Gold ("under construction", bytecode). Red and Blue: one region or two? | **Emerald.** Red and Blue are **one world space, one region `kanto`**, as in multiplayer today; no route between them in the product. The two-Kanto world is a **test-only** world for the two-real-engine e2e (§4.12) | MG5, MG7 |
+| D5 | A never-started game at a pass | start it (NEW GAME, the intro, the first room); or skip into the route map | **start it, after moving the whole party into Cobblemon's PC** (`party.stash`), so nothing is lost and no full-party script breaks | MG5 |
+| D6 | The new game's player name | offered as the naming screen's default; entered automatically; nothing | **entered automatically** (truncated to the limit; shown only when truncated) | MG5 |
+| D7 | What crosses besides Pokémon | nothing (money, bag, badges per game); or money and items too | **Pokémon, money and items**: one trainer economy (§4.9, MG6); badges, key items, HMs and the story stay per game; DESIGN.md §6 is the user's to update | MG6 |
 | D8 | The region table | slots 8,192 blocks apart along +X, Kanto at 0; or ±X both ways; or a 2-D grid | **+X, 8,192** | MG3 |
 | D9 | Slot capacity | `FAMILIES_PER_SHAPE` 32 with a range per region; or per-region slot maps (impossible: block states are global) | **32, measured** | MG3 |
 | D10 | Protocol number | stay 1 with new types and optional fields; or bump to 2 | **stay 1** | MG1 |
-| D11 | Gen1Recomp pin | v0.3.49 for all; or bump to v0.3.85 (Ruby/Sapphire, Gen 3 fixes; Kanto rebuild) | **stay**; revisit at MG6 | MG6 |
-| D12 | The pass's look | a tunnel mouth prop (the dungeon entrance's); or a gate house | **tunnel mouth** | MG5 |
-| D13 | Gen 3 art unit | split metatiles into 8-px quarters (pipeline unchanged); or teach the geometry 16-px art | **quarters** | MG6 |
-| D14 | The Red ↔ Blue harness | a second e2e install imported by the user; or two processes on one data home (shared `options.lua`, unconfirmed safe) | **second install** | MG5 |
+| D11 | Gen1Recomp pin | v0.3.49 for all; or bump to v0.3.85 (Ruby/Sapphire, Gen 3 fixes; Kanto rebuild) | **stay**; revisit at MG7 | MG7 |
+| D12 | The pass's look | a tunnel mouth prop (the dungeon entrance's); or a gate house | **gate house** (the pass is its far doorway) | MG5 |
+| D13 | Gen 3 art unit | split metatiles into 8-px quarters (pipeline unchanged); or teach the geometry 16-px art | **quarters** | MG7 |
+| D14 | The two-engine harness | a second e2e install imported by the user; or two processes on one data home (shared `options.lua`, unconfirmed safe) | **second install** | MG5 |
 
 ## Appendix A: Gen1Recomp facts this plan rests on
 

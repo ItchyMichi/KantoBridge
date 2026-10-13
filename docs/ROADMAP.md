@@ -166,13 +166,15 @@ dimensions. Everything stays in the overworld.
 
 ### Stage 8: regions and other games
 
-**Planned 2026-10-13: [specs/MULTI_GAME_PLAN.md](specs/MULTI_GAME_PLAN.md)** (MG0–MG7), which replaces Stage 7's
-vanilla-overworld premise with the user's flat-world design: a game catalogue and an open protocol (MG1), the bridge
-mod split into a core and engine adapters per family with `region.park/resume/start` and `game.status` (MG2), regions
-as data in the one flat overworld with a region table, per-region indices, shape documents, pairing and progress (MG3),
-one hidden Gen1Recomp process per game behind a client link manager (MG4), connecting routes built as two zone halves
-joined by a pass that swaps the followed game or starts its story (MG5), then the Gen 3 adapter and export for Emerald
-(MG6) and Hoenn itself (MG7). The system is proven first with Red ↔ Blue on the real engine. Earlier notes
+**Planned 2026-10-13: [specs/MULTI_GAME_PLAN.md](specs/MULTI_GAME_PLAN.md)** (MG0–MG8; the user's decisions are in
+its §9), which replaces Stage 7's vanilla-overworld premise with the user's flat-world design: a game catalogue and an
+open protocol (MG1), the bridge mod split into a core and engine adapters per family with `region.park/resume/start`
+and `game.status` (MG2), regions as data in the one flat overworld with a region table, per-region indices, shape
+documents, pairing and progress (MG3), one hidden Gen1Recomp process per game behind a client link manager (MG4),
+connecting routes built as two zone halves ending in gate houses whose pass swaps the followed game or starts its story
+with the party stashed in the PC (MG5), one trainer economy (a wallet and item ledger projected into the followed game,
+MG6), then the Gen 3 adapter and export for Emerald (MG7) and Hoenn itself (MG8). The system is proven first with two
+real Gen 1 engines in a test-only world (Red and Blue are one world space in real worlds). Earlier notes
 ([NEXT_STAGES.md](NEXT_STAGES.md) §5) stay as background.
 
 ## 3. Decisions waiting on you
