@@ -8,6 +8,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.google.gson.JsonObject;
 import dev.kantobridge.proto.ProtoJson;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import net.minecraft.core.BlockPos;
@@ -217,5 +218,43 @@ class WorldIndexTest {
 		catalog.check(message, dev.kantobridge.proto.Catalog.Leg.S2C);
 		int bytes = message.toJson().getBytes(java.nio.charset.StandardCharsets.UTF_8).length;
 		assertTrue(bytes <= catalog.relayMaxBytes(), "a world.index part of " + bytes + " bytes exceeds the relay limit");
+	}
+
+	@Test
+	void aZonesPassComesWithItsGateHouse() throws Exception {
+		WorldIndex.Pass pass = new WorldIndex.Pass(List.of(new int[] {9, 0}), "eastern_pass", "hoenn", "from");
+		WorldIndex.GateHouse house = new WorldIndex.GateHouse(1, -3, 9, 7, Dir.RIGHT);
+		WorldIndex.Zone half = new WorldIndex.Zone("eastern_pass", "KB_ROUTE_EASTERN_PASS", "forest", 1000, 64, 5000, 200, 200,
+				"kantobridge:wild_forest", List.of(), List.of(), null, null, pass, house);
+		assertTrue(half.passCell(9, 0));
+		assertFalse(half.passCell(8, 0));
+		assertEquals("to", pass.dir());
+		assertTrue(house.contains(9, 0) && !house.contains(10, 0));
+		// a zone's route map is a route placement inside its box
+		List<MapPlacement> maps = new ArrayList<>(sample().maps().values());
+		maps.add(new MapPlacement("KB_ROUTE_EASTERN_PASS", 1010, 64, 5010, 2, 2, 0, MapPlacement.Kind.ROUTE, "TEST_PALETTE",
+				"kantobridge:wild_forest", false, null));
+		maps.add(new MapPlacement("KB_ROUTE_PLAIN", 1020, 64, 5020, 2, 2, 0, MapPlacement.Kind.ROUTE, "TEST_PALETTE",
+				"kantobridge:wild_forest", false, null));
+		WorldIndex index = new WorldIndex("red", HASH_A, maps, HASH_B, StoryCellTable.empty(), List.of(), List.of(half));
+		WorldIndex back = WorldIndex.fromJson(index.toJson());
+		assertEquals(index.toJson(), back.toJson());
+		assertEquals(half, back.zones().get(0));
+		assertEquals(pass, back.zones().get(0).pass());
+		// a free-roam zone writes neither field
+		WorldIndex.Zone plain = new WorldIndex.Zone("plain", "KB_ROUTE_PLAIN", "forest", 1000, 64, 5000, 200, 200, "kantobridge:wild_forest");
+		String plainJson = new WorldIndex("red", HASH_A, maps, HASH_B, StoryCellTable.empty(), List.of(), List.of(plain)).toJson();
+		assertFalse(plainJson.contains("\"pass\"") || plainJson.contains("\"gateHouse\""));
+		// refusals
+		assertThrows(IllegalArgumentException.class, () -> new WorldIndex.Zone("x", "KB_ROUTE_X", "forest", 0, 64, 0, 1, 1, "kantobridge:wild_forest",
+				List.of(), List.of(), null, null, pass, null));
+		assertThrows(IllegalArgumentException.class, () -> new WorldIndex.Pass(List.of(), "eastern_pass", "hoenn", "from"));
+		assertThrows(IllegalArgumentException.class, () -> new WorldIndex.Pass(List.of(new int[] {9, 0}), "eastern_pass", "hoenn", "middle"));
+		assertThrows(IllegalArgumentException.class, () -> new WorldIndex.Pass(List.of(new int[] {9, 0}), "eastern_pass", "Hoenn", "from"));
+		assertThrows(IllegalArgumentException.class, () -> new WorldIndex.GateHouse(1, -3, 0, 7, Dir.RIGHT));
+		String json = index.toJson();
+		assertThrows(DataException.class, () -> WorldIndex.fromJson(json.replace("\"end\":\"from\"", "\"end\":\"middle\"")));
+		assertThrows(DataException.class, () -> WorldIndex.fromJson(json.replace("\"gateHouse\":", "\"hut\":")));
+		assertThrows(DataException.class, () -> WorldIndex.fromJson(json.replace("\"cells\":[[9,0]]", "\"cells\":[[9,0,1]]")));
 	}
 }

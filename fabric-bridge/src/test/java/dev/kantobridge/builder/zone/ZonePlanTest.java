@@ -82,7 +82,11 @@ class ZonePlanTest {
 	}
 
 	private static List<int[]> columnsOf(Cell cell) {
-		int[] b = plan.blockOf(cell);
+		return columnsOf(plan, cell);
+	}
+
+	private static List<int[]> columnsOf(ZonePlan zone, Cell cell) {
+		int[] b = zone.blockOf(cell);
 		return List.of(new int[] {b[0], b[1]}, new int[] {b[0] + 1, b[1]}, new int[] {b[0], b[1] + 1}, new int[] {b[0] + 1, b[1] + 1});
 	}
 
@@ -594,5 +598,146 @@ class ZonePlanTest {
 			}
 		}
 		assertTrue(beside > 20 && onTrees > 20, beside + " beside the maze, " + onTrees + " on trees");
+	}
+
+	// ---- MG5: a connecting route's half, its gate house and its pass ----
+
+	/** One half of a connecting route, as the game registering its `from` end exports it (routes v2). */
+	private static ExportRoutes.Zone halfOn(String town) {
+		return new ExportRoutes.Zone("test_pass", "TEST PASS", "connecting", "forest", town, "KB_ROUTE_TEST_PASS", 3, 4, 0.5, 1, 3,
+				List.of("OPP_TEST"), 1, 3, 0.0, "kanto", "test2", "from");
+	}
+
+	@Test
+	void aConnectingHalfEndsInAGateHouseWhoseFarDoorIsThePass() {
+		RouteLayout route = RouteGenerator.generate(RouteSpec.connecting(ForestTheme.INSTANCE), 2);
+		RouteLayout.Gate far = route.farGate();
+		assertNotNull(far);
+		ZoneObjects objects = ZoneObjects.make(halfOn("TEST_TOWN"), route, ZoneObjectsTest.CONTENT, ZoneObjectsTest.TIERS, 2L);
+		ZonePlan half = new ZonePlan("test_pass", "KB_ROUTE_TEST_PASS", "TEST_PALETTE", route, 0, 6400, TerrainSampler.flat(70), objects, "",
+				new ZonePlan.Crossing("test_pass", "test2", "from"));
+		Cell a = route.trailhead().routeMapCells().get(0);
+		Cell b = far.door();
+		// the WorldIndex entry: the pass cell relative to A, the house around the far plaza, facing from the stand to B
+		WorldIndex.Zone zone = half.zone();
+		assertNotNull(zone.pass());
+		assertNotNull(zone.gateHouse());
+		assertEquals(List.of(List.of(b.x() - a.x(), b.y() - a.y())), zone.pass().cells().stream().map(c -> List.of(c[0], c[1])).toList());
+		assertEquals("test_pass", zone.pass().route());
+		assertEquals("test2", zone.pass().toRegion());
+		assertEquals("from", zone.pass().end());
+		assertEquals("to", zone.pass().dir());
+		assertEquals(new WorldIndex.GateHouse(far.x() - 1 - a.x(), far.y() - 1 - a.y(), far.width() + 2, far.height() + 2,
+				dev.kantobridge.world.Dir.RIGHT), zone.gateHouse());
+		assertTrue(zone.passCell(b.x() - a.x(), b.y() - a.y()));
+		assertFalse(zone.passCell(0, 0));
+		assertTrue(zone.gateHouse().contains(far.x() - a.x(), far.y() - a.y()));
+		assertEquals(new ZonePlan.Crossing("test_pass", "test2", "from"), half.crossing());
+		// the story entries: the balls, then the pass (obj: the zone)
+		List<dev.kantobridge.world.StoryCellTable.Entry> entries = half.storyEntries();
+		assertEquals(zone.balls().size() + 1, entries.size());
+		dev.kantobridge.world.StoryCellTable.Entry pass = entries.get(entries.size() - 1);
+		assertEquals(dev.kantobridge.world.StoryCellType.PASS, pass.type());
+		assertEquals("test_pass", pass.obj());
+		assertEquals("KB_ROUTE_TEST_PASS:" + (b.x() - a.x()) + ":" + (b.y() - a.y()), pass.key());
+		assertEquals(List.of(b), half.passCells());
+		// the house: plank walls (some with a window) under a dark plank roof on the ring, a roofed path inside
+		int wallColumns = 0;
+		int windows = 0;
+		int insideColumns = 0;
+		for (int y = far.y() - 1; y <= far.y() + far.height(); y++) {
+			for (int x = far.x() - 1; x <= far.x() + far.width(); x++) {
+				Cell cell = new Cell(x, y);
+				if (route.areaOf(cell) >= 0 || cell.equals(b)) {
+					continue;
+				}
+				boolean ring = x == far.x() - 1 || x == far.x() + far.width() || y == far.y() - 1 || y == far.y() + far.height();
+				for (int[] c : columnsOf(half, cell)) {
+					Map<Integer, Integer> col = column(half, c[0], c[1]);
+					assertEquals(ZoneBlock.DARK_OAK_PLANKS, block(col.get(ZonePlan.FEET + ZonePlan.HOUSE_WALL)), "roof at " + cell);
+					if (ring || route.at(cell) == CellRole.WALL) {
+						assertEquals(ZoneBlock.OAK_PLANKS, block(col.get(ZonePlan.FEET)), "wall at " + cell);
+						assertEquals(ZoneBlock.OAK_PLANKS, block(col.get(ZonePlan.FEET + 2)), "wall at " + cell);
+						ZoneBlock eye = block(col.get(ZonePlan.FEET + 1));
+						assertTrue(eye == ZoneBlock.OAK_PLANKS || eye == ZoneBlock.GLASS_PANE, "a wall or a window at " + cell);
+						if (eye == ZoneBlock.GLASS_PANE) {
+							windows++;
+						}
+						wallColumns++;
+					} else {
+						assertEquals(ZoneBlock.DIRT_PATH, block(col.get(ZonePlan.FLOOR)), "the floor inside at " + cell);
+						assertNull(col.get(ZonePlan.FEET), "room to walk inside at " + cell);
+						Integer under = col.get(ZonePlan.FEET + ZonePlan.HOUSE_WALL - 1);
+						assertTrue(under == null || BlockCode.kind(under) == BlockCode.KIND_LIGHT, "only lights under the roof");
+						insideColumns++;
+					}
+				}
+			}
+		}
+		assertTrue(wallColumns > 0 && windows > 0 && insideColumns > 0, wallColumns + " walls, " + windows + " windows, " + insideColumns + " inside");
+		// the pass: a path cell under the roof; its story cell is written when the table gives its index
+		int[] bb = half.blockOf(b);
+		Map<Integer, Integer> doorway = column(half, bb[0], bb[1]);
+		assertEquals(ZoneBlock.DIRT_PATH, block(doorway.get(ZonePlan.FLOOR)));
+		assertEquals(ZoneBlock.DARK_OAK_PLANKS, block(doorway.get(ZonePlan.FEET + ZonePlan.HOUSE_WALL)));
+		assertNull(doorway.get(ZonePlan.FEET), "nothing closes the pass but its story cell");
+		int[] story = new int[entries.size()];
+		java.util.Arrays.fill(story, -1);
+		story[entries.size() - 1] = 77;
+		Map<Integer, Integer> withStory = new HashMap<>();
+		half.renderColumn((x, y, z, code) -> withStory.put(y, code), bb[0], bb[1], story);
+		assertTrue(BlockCode.isStory(withStory.get(ZonePlan.FEET)));
+		assertEquals(77, BlockCode.storyIndex(withStory.get(ZonePlan.FEET)));
+		// a connecting layout needs its crossing, a free-roam one takes none
+		assertThrows(IllegalArgumentException.class,
+				() -> new ZonePlan("x", "KB_ROUTE_X", "TEST_PALETTE", route, 0, 6400, TerrainSampler.flat(70)));
+		assertThrows(IllegalArgumentException.class, () -> new ZonePlan("x", "KB_ROUTE_X", "TEST_PALETTE", layout, 0, 6400,
+				TerrainSampler.flat(70), ZoneObjects.NONE, "", new ZonePlan.Crossing("x", "test2", "from")));
+	}
+
+	@Test
+	void aConnectingHalfJoinsTheWorldPlanAndItsIndexRoundTrips() throws Exception {
+		ExportBundle bundle = ExportBundle.open(TestData.syntheticBundle());
+		WorldPlan base = WorldPlanner.plan(bundle, new WorldPlanner.Options(null, TestData.ORIGIN_X, TestData.ORIGIN_Z, TestData.MIN_BUILD_HEIGHT));
+		WorldPlan plan = BuildTask.withZones(base, new ExportRoutes(List.of(halfOn("TEST_TOWN"))), 1234L, () -> TerrainSampler.flat(70),
+				TestData.ORIGIN_X, TestData.ORIGIN_Z, ZoneObjectsTest.CONTENT);
+		ZonePlan half = plan.zones().get(0);
+		WorldIndex index = plan.index();
+		WorldIndex.Zone zone = index.zones().get(0);
+		assertEquals("test_pass", zone.id());
+		assertNotNull(zone.pass());
+		assertNotNull(zone.gateHouse());
+		WorldIndex back = WorldIndex.fromJson(index.toJson());
+		assertEquals(index.toJson(), back.toJson());
+		assertEquals(zone, back.zones().get(0));
+		dev.kantobridge.world.StoryCellTable.Entry passEntry = half.storyEntries().get(half.storyEntries().size() - 1);
+		assertEquals(dev.kantobridge.world.StoryCellType.PASS, back.storyCells().get(passEntry.key()).type());
+		assertEquals("test_pass", back.storyCells().get(passEntry.key()).obj());
+		// the pass's columns carry its story cell, pointing at the PASS entry
+		int[] cell = zone.pass().cells().get(0);
+		int bx = half.routeMap().x() + 2 * cell[0];
+		int bz = half.routeMap().z() + 2 * cell[1];
+		ChunkCodes chunk = plan.renderChunk(bx >> 4, bz >> 4, List.of());
+		int code = chunk.get(bx, ZonePlan.FEET, bz);
+		assertTrue(BlockCode.isStory(code));
+		assertEquals(passEntry.key(), plan.storyCells().entries().get(BlockCode.storyIndex(code)).key());
+		// strictness: the pass comes with its gate house; the end is from or to; the far region is an id
+		String json = index.toJson();
+		assertThrows(DataException.class, () -> WorldIndex.fromJson(json.replace("\"gateHouse\":", "\"gateHut\":")));
+		assertThrows(DataException.class, () -> WorldIndex.fromJson(json.replace("\"end\":\"from\"", "\"end\":\"middle\"")));
+		assertThrows(DataException.class, () -> WorldIndex.fromJson(json.replace("\"toRegion\":\"test2\"", "\"toRegion\":\"Test2\"")));
+	}
+
+	@Test
+	void bothEndsOfARouteInOneGameAreTwoZones() {
+		ExportRoutes.Zone from = halfOn("TEST_TOWN");
+		ExportRoutes.Zone to = new ExportRoutes.Zone("test_pass", "TEST PASS", "connecting", "forest", "TEST_TOWN", "KB_ROUTE_TEST_PASS_TO", 3, 4,
+				0.5, 1, 3, List.of("OPP_TEST"), 1, 3, 0.0, "test2", "kanto", "to");
+		List<ExportRoutes.Zone> both = List.of(from, to);
+		assertEquals("test_pass", ZonePlanner.zoneId(both, from));
+		assertEquals("test_pass_to", ZonePlanner.zoneId(both, to));
+		assertEquals("test_pass", ZonePlanner.zoneId(List.of(to), to), "alone, the to end keeps the route's id");
+		assertEquals(RouteSpec.Kind.CONNECTING, ZonePlanner.specOf(from).kind());
+		assertEquals(RouteSpec.Kind.FREE_ROAM, ZonePlanner.specOf(zoneOn("TEST_TOWN")).kind());
 	}
 }

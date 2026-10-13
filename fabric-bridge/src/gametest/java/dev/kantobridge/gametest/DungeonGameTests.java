@@ -79,7 +79,10 @@ public class DungeonGameTests implements FabricGameTest {
 		throw new net.minecraft.gametest.framework.GameTestAssertException("never: " + what);
 	}
 
-	@GameTest(template = EMPTY_STRUCTURE, timeoutTicks = 2000)
+	// One batch per test (MG5): a batch's tests run at the same time, and these reset the DungeonService's static state
+	// (visits, slots) at their start and end; in defaultBatch, under load, one test's reset wiped another's slot mid-visit
+	// ("the house holds 0", "the dungeon's Pokémon stayed after it was cleared").
+	@GameTest(template = EMPTY_STRUCTURE, timeoutTicks = 2000, batch = "kantobridge_dungeon_1")
 	public void inDownTwoFloorsAndOut(GameTestHelper helper) {
 		ServerLevel level = helper.getLevel();
 		DungeonService.reset();
@@ -122,7 +125,7 @@ public class DungeonGameTests implements FabricGameTest {
 		helper.succeed();
 	}
 
-	@GameTest(template = EMPTY_STRUCTURE, timeoutTicks = 2000)
+	@GameTest(template = EMPTY_STRUCTURE, timeoutTicks = 2000, batch = "kantobridge_dungeon_2")
 	public void floorsHoldPokemonAndItemsAndABlackoutEndsTheVisit(GameTestHelper helper) {
 		ServerLevel level = helper.getLevel();
 		DungeonService.reset();
@@ -166,7 +169,7 @@ public class DungeonGameTests implements FabricGameTest {
 		helper.succeed();
 	}
 
-	@GameTest(template = EMPTY_STRUCTURE, timeoutTicks = 2000)
+	@GameTest(template = EMPTY_STRUCTURE, timeoutTicks = 2000, batch = "kantobridge_dungeon_3")
 	public void aMonsterHouseFillsAroundWhoeverStepsIn(GameTestHelper helper) {
 		ServerLevel level = helper.getLevel();
 		DungeonService.reset();
@@ -215,7 +218,7 @@ public class DungeonGameTests implements FabricGameTest {
 		helper.succeed();
 	}
 
-	@GameTest(template = EMPTY_STRUCTURE, timeoutTicks = 2000)
+	@GameTest(template = EMPTY_STRUCTURE, timeoutTicks = 2000, batch = "kantobridge_dungeon_4")
 	public void twoPartiesTakeTwoSlotsAtOnce(GameTestHelper helper) {
 		ServerLevel level = helper.getLevel();
 		DungeonService.reset();

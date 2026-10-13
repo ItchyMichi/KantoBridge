@@ -593,3 +593,54 @@ def test_a_game_at_its_title_is_started_by_region_start():
                 await mc.close()
                 await gen1.stop()
     run(scenario())
+
+
+def test_a_crossing_between_two_fakes():
+    # MULTI_GAME_PLAN §4.8 / MG5 [T]: the M->G half of a crossing against two hidden games: the followed game is parked,
+    # the far game is started from its title (an empty party.sync reaches it first), later the far game is parked and
+    # the first one resumed onto its route map's arrival cell (a warp of kind script). The Minecraft half (the fade,
+    # the teleport, region.state) is the server's and the client's, covered by the GameTests and JUnit.
+    async def scenario():
+        a, mc_a, snap_a, status_a = await _region_pair(game="red")
+        b, mc_b, snap_b, status_b = await _region_pair(game="blue", state="title", slot_has_save=False)
+        try:
+            assert status_a["playthrough"] == "saved" and status_b["playthrough"] == "title"
+            cell_a = snap_a["player"]
+            # 1. park the followed game where it stands
+            parked = await mc_a.request("region.park", {"region": "kanto"}, reply_type="act.result")
+            assert parked["data"] == {"ok": True, "kind": "park"}
+            assert a.parked and not b.ingame
+            # 2. the far game is at its title: stash (the server's job) and start it; the empty party reaches it
+            await mc_b.send("party.sync", {"party": [], "box": {"count": 0}})
+            started = await mc_b.request("region.start", {"region": "test_kanto2"}, reply_type="act.result")
+            assert started["data"] == {"ok": True, "kind": "start", "detail": "new"}
+            assert (await mc_b.expect("player.pos"))["data"]["kind"] == "sync"
+            assert (await mc_b.expect("save.loaded"))["data"]["fresh"] is True
+            after_b = (await mc_b.expect("game.status"))["data"]
+            assert (after_b["playthrough"], after_b["ingame"], after_b["started"]) == ("fresh", True, True)
+            assert b.ingame and a.parked, "the first game waits on its route map while the second is played"
+            # 3. back: park the far game, resume the first onto its route map's arrival cell
+            parked_b = await mc_b.request("region.park", {"region": "test_kanto2"}, reply_type="act.result")
+            assert parked_b["data"]["ok"] is True
+            sent = await mc_a.send("region.resume", {"region": "kanto",
+                                                     "to": {"map": "KB_ROUTE_TEST", "x": 1, "y": 0, "facing": "right"}})
+            start = await mc_a.expect("warp")
+            arrive = await mc_a.expect("warp")
+            assert (start["data"]["kind"], arrive["data"]["phase"]) == ("script", "arrive")
+            assert arrive["data"]["to"] == {"map": "KB_ROUTE_TEST", "x": 1, "y": 0, "facing": "right"}
+            assert (await mc_a.expect("act.result", re=sent["seq"]))["data"]["ok"] is True
+            resumed = (await mc_a.request("resync", reply_type="snapshot"))["data"]
+            assert "away" not in resumed and resumed["player"]["map"] == "KB_ROUTE_TEST"
+            await mc_a.expect("game.status")
+            # 4. and over again: resume the far game onto its own away cell (a plain resume, no intro)
+            resumed_b = await mc_b.request("region.resume", {"region": "test_kanto2", "to": b.player.as_data()},
+                                           reply_type="act.result")
+            assert resumed_b["data"] == {"ok": True, "kind": "resume"}
+            assert not b.parked and not mc_a.conn.problems and not mc_b.conn.problems
+            assert cell_a["map"] != "KB_ROUTE_TEST", "the first game's hidden player left its town for the route map"
+        finally:
+            await mc_a.close()
+            await mc_b.close()
+            await a.stop()
+            await b.stop()
+    run(scenario())

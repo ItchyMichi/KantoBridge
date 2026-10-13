@@ -128,6 +128,11 @@ public final class UiRuntime {
 		return false;
 	}
 
+	/** True while one of our screens (the hidden game's text, menus, naming, mirror) is the open screen. */
+	public static boolean screensOpen() {
+		return Minecraft.getInstance().screen instanceof BridgeScreen;
+	}
+
 	public UiRouter router() {
 		return this.router;
 	}
@@ -189,6 +194,10 @@ public final class UiRuntime {
 		boolean allowed = minecraft.level != null && minecraft.player != null && MoveRuntime.following() && !ClientBattles.active()
 				&& !suspended();
 		UiRouter.View view = allowed ? this.nativeBattle.view(this.router) : null;
+		if (view != null && view.overlay() == null && this.router.autoAnswered(view.main())) {
+			// MG5 (D6): a naming screen answered with the parked save's name is never shown.
+			view = null;
+		}
 		Screen current = minecraft.screen;
 		if (view == null) {
 			if (current instanceof BridgeScreen) {

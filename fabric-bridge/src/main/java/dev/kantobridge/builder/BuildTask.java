@@ -221,6 +221,18 @@ public final class BuildTask {
 				region = this.prepareRegion(data);
 				originX = region.originX();
 				originZ = region.originZ();
+				// MG5 (D4): one region per world space. The default region id of a world space (Games.region) is refused
+				// once another game of that space has a region in the table; a test world's second Kanto uses its own id
+				// (test_kanto2), which is always allowed, as is anything under -Dkantobridge.testRegions=true.
+				String space = Games.region(this.bundle.game());
+				if (space != null && space.equals(this.options.region()) && !Boolean.getBoolean("kantobridge.testRegions")) {
+					for (RegionRecord other : region.others().values()) {
+						if (space.equals(Games.region(other.game()))) {
+							KantoBridge.LOGGER.error("builder: region {} already holds the world space of game {}", other.id(), this.bundle.game());
+							throw new Failure("build.region_exists", null);
+						}
+					}
+				}
 			} else if (Files.isRegularFile(data.resolve(RegionTable.FILE))) {
 				// A world with regions takes region builds only: a legacy build would write a root index beside them.
 				throw new Failure("build.region_required", null);
@@ -812,6 +824,8 @@ public final class BuildTask {
 		r.zoneTrees = plan.zones().stream().mapToInt(ZonePlan::trees).sum();
 		r.zoneTrainers = plan.zones().stream().mapToInt(z -> z.zone().trainers().size()).sum();
 		r.zoneBalls = plan.zones().stream().mapToInt(z -> z.zone().balls().size()).sum();
+		// MG5: the connecting halves' pass cells (one gate house each)
+		r.zonePasses = plan.zones().stream().mapToInt(z -> z.zone().pass() == null ? 0 : z.zone().pass().cells().size()).sum();
 		r.zoneWalkableCells = plan.zones().stream().mapToInt(z -> z.layout().stats().walkable()).sum();
 		r.zonePlanMs = this.prepared.zoneMs();
 		ResourcePackWriter.Result pack = this.prepared.pack();

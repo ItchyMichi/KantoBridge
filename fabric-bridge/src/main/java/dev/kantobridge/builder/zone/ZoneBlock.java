@@ -7,8 +7,8 @@ import net.minecraft.world.level.block.state.BlockState;
 
 /**
  * The vanilla blocks a Wild Routes zone is built from (docs/specs/WILD_ROUTES_PLAN.md §4.4, the forest theme): the
- * land, the maze's hedges and trees, ponds and their barriers, vines. Planned as {@code BlockCode.vanilla(block)}; the
- * ordinal is the code's value, so new blocks go at the end.
+ * land, the maze's hedges and trees, ponds and their barriers, vines, and (MG5) a connecting route's gate house. Planned
+ * as {@code BlockCode.vanilla(block)}; the ordinal is the code's value, so new blocks go at the end.
  */
 public enum ZoneBlock {
 	STONE,
@@ -42,7 +42,14 @@ public enum ZoneBlock {
 	VINE_NORTH,
 	VINE_EAST,
 	VINE_SOUTH,
-	VINE_WEST;
+	VINE_WEST,
+	/**
+	 * The gate house at a connecting route's far gate (docs/specs/MULTI_GAME_PLAN.md §4.8, D12; MG5): plank walls with
+	 * glass-pane windows under a dark plank roof.
+	 */
+	OAK_PLANKS,
+	DARK_OAK_PLANKS,
+	GLASS_PANE;
 
 	/** The block state; only called on the server (the plan itself never needs Minecraft's registries). */
 	public BlockState state() {
@@ -74,6 +81,9 @@ public enum ZoneBlock {
 			case VINE_EAST -> Blocks.VINE.defaultBlockState().setValue(VineBlock.EAST, true);
 			case VINE_SOUTH -> Blocks.VINE.defaultBlockState().setValue(VineBlock.SOUTH, true);
 			case VINE_WEST -> Blocks.VINE.defaultBlockState().setValue(VineBlock.WEST, true);
+			case OAK_PLANKS -> Blocks.OAK_PLANKS.defaultBlockState();
+			case DARK_OAK_PLANKS -> Blocks.DARK_OAK_PLANKS.defaultBlockState();
+			case GLASS_PANE -> Blocks.GLASS_PANE.defaultBlockState();
 		};
 	}
 

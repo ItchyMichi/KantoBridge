@@ -74,6 +74,8 @@ public final class RegionPresenceService {
 		}
 		RegionPresence.set(player, presence);
 		STATES.incrementAndGet();
+		// MG5: a crossing ends when the client follows the far region (the teleport into its gate house)
+		PassService.onRegionState(player, presence);
 	}
 
 	/**

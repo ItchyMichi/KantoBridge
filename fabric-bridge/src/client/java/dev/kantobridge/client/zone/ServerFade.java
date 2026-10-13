@@ -5,6 +5,10 @@ package dev.kantobridge.client.zone;
  * stay dark (and hold the player) until the server's teleport has moved the player and the world there is drawn (or
  * {@link #TIMEOUT_MS} after the move was due), then fade in over {@link #IN_MS}. A second fade while dark only pushes the
  * wait back. Plain Java, times in milliseconds.
+ *
+ * <p>MG5: a crossing ({@link PassChoreography}) runs under the fade. It {@link #extend}s the wait while the far game's
+ * intro shows its screens, {@link #lift}s it when the crossing fails where the player stands, and starts it again for
+ * the final teleport.
  */
 final class ServerFade {
 	static final long OUT_MS = 400;
@@ -34,6 +38,21 @@ final class ServerFade {
 		this.fromY = y;
 		this.fromZ = z;
 		this.deadline = now + ticks * 50L + TIMEOUT_MS;
+	}
+
+	/** MG5: the move is still coming (a crossing waits for the far game): the wait ends no sooner than a timeout from now. */
+	void extend(long now) {
+		if (this.phase == Phase.OUT || this.phase == Phase.HOLD) {
+			this.deadline = Math.max(this.deadline, now + TIMEOUT_MS);
+		}
+	}
+
+	/** MG5: no move is coming (the crossing failed where the player stands): fade back in. */
+	void lift(long now) {
+		if (this.phase == Phase.OUT || this.phase == Phase.HOLD) {
+			this.phase = Phase.IN;
+			this.since = now;
+		}
 	}
 
 	void tick(double x, double y, double z, boolean drawn, long now) {

@@ -20,7 +20,13 @@ public enum StoryCellType {
 	 * A Wild Routes item ball (docs/specs/WILD_ROUTES_PLAN.md §4.6): closed until the player's route progress says it
 	 * was taken. Its cell is in the zone's route map's grid; {@code obj} names the ball.
 	 */
-	ROUTE;
+	ROUTE,
+	/**
+	 * A connecting route's pass (docs/specs/MULTI_GAME_PLAN.md §4.8, MG5): the far doorway of a half's gate house, closed
+	 * for a player while the far region isn't built or they have no link to its game ({@code pass_closed}). Its cell is
+	 * in the zone's route map's grid; {@code obj} names the zone.
+	 */
+	PASS;
 
 	public String id() {
 		return this.name().toLowerCase(Locale.ROOT);

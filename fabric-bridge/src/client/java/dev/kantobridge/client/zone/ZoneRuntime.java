@@ -2,7 +2,9 @@ package dev.kantobridge.client.zone;
 
 import com.google.gson.JsonObject;
 import dev.kantobridge.client.bridge.BridgeClock;
+import dev.kantobridge.client.bridge.BridgeLink;
 import dev.kantobridge.client.bridge.BridgeRuntime;
+import dev.kantobridge.client.bridge.Links;
 import dev.kantobridge.client.move.InputLock;
 import dev.kantobridge.client.net.ClientRelay;
 import dev.kantobridge.client.net.SessionGate;
@@ -11,12 +13,14 @@ import dev.kantobridge.client.puppet.Puppet;
 import dev.kantobridge.client.puppet.PuppetManager;
 import dev.kantobridge.client.puppet.PuppetRuntime;
 import dev.kantobridge.client.story.ClientStoryView;
+import dev.kantobridge.client.ui.UiRuntime;
 import dev.kantobridge.client.world.ClientWorldIndex;
 import dev.kantobridge.proto.Envelope;
 import dev.kantobridge.proto.MsgTypes;
 import dev.kantobridge.story.RouteProgress;
 import dev.kantobridge.world.Dir;
 import dev.kantobridge.world.WorldIndex;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
@@ -41,33 +45,38 @@ import org.jetbrains.annotations.Nullable;
  * <li><b>Relay:</b> the server's {@code route.give}, {@code route.battle} and {@code route.blackout} go to gen1-bridge;
  * gen1-bridge's answers to them ({@code route.result}, carrying the server's {@code seq} as {@code re}) and every
  * {@code route.progress} go to the server. The save pairing's gate decides, as for the other relays: while it holds,
- * nothing passes (the server asks again).</li>
+ * nothing passes (the server asks again). MG5: a zone's items and trainers belong to its region, so a request tagged with
+ * a {@code region} goes to that region's link (else the followed one), and the answers go back tagged with that link's
+ * region.</li>
  * <li><b>Balls:</b> an A press at a ball in front of the player, or a click on a ball's puppet from the cell beside it,
  * sends {@code route.give} straight to gen1-bridge; the {@code route.progress} that follows takes the puppet away and
  * opens the ball's story cell.</li>
  * <li><b>Trainers:</b> {@code route.sight} shows "!" over the trainer's puppet, holds the player and walks the puppet up
  * ({@link WalkUps}); when the battle's answer goes back to the server, the puppet walks back to its post.</li>
  * <li><b>Dungeons:</b> {@code route.fade} fades out and holds the player until the server's teleport has landed and the
- * world there is drawn ({@link ServerFade}).</li>
+ * world there is drawn ({@link ServerFade}). MG5: a crossing ({@link PassRuntime}) runs under the same fade, which it
+ * hears start here, and the fade shows nothing while one of the hidden game's screens is open over it.</li>
  * </ul>
  * Client thread only. Logs nothing itself; the F3 line counts.
  */
 public final class ZoneRuntime {
 	/** A ball asked for and not answered is asked again after this long. */
 	static final long GIVE_TIMEOUT_MS = 5_000;
-	/** The most server requests waiting for gen1-bridge's answer. */
+	/** The most server requests waiting for gen1-bridge's answer, per link. */
 	static final int MAX_PENDING = 32;
 
 	private static @Nullable ZoneRuntime instance;
 
 	private final BridgeRuntime bridge;
+	private final Links links;
 	private final BridgeClock clock = BridgeClock.system();
-	/** gen1-bridge's seq of a forwarded server request → the server's seq, for the answer's {@code re}. */
-	private final Map<Long, Long> forwarded = new LinkedHashMap<>();
+	/** Per link: gen1-bridge's seq of a forwarded server request → the server's seq, for the answer's {@code re}. */
+	private final Map<BridgeLink, Map<Long, Long>> forwarded = new LinkedHashMap<>();
 	/** Balls asked for (puppet id → when). */
 	private final Map<String, Long> giving = new HashMap<>();
 	private final WalkUps walkUps = new WalkUps();
 	private final ServerFade fade = new ServerFade();
+	private final List<Runnable> fadeListeners = new ArrayList<>();
 	private @Nullable WorldIndex index;
 	private @Nullable String zone;
 	private long progressVersion = -1;
@@ -79,6 +88,10 @@ public final class ZoneRuntime {
 
 	private ZoneRuntime(BridgeRuntime bridge) {
 		this.bridge = bridge;
+		this.links = bridge.links();
+		for (BridgeLink link : this.links.all()) {
+			this.forwarded.put(link, new LinkedHashMap<>());
+		}
 	}
 
 	/** Call once from the client entrypoint, after the story view, the puppets and the relays. */
@@ -89,15 +102,18 @@ public final class ZoneRuntime {
 		ZoneRuntime runtime = new ZoneRuntime(bridge);
 		instance = runtime;
 		ClientRelay server = ClientRelay.get();
+		// MG5: a request tagged with a region goes to that region's link; an untagged one to the legacy or followed link.
 		for (String type : List.of(MsgTypes.ROUTE_GIVE, MsgTypes.ROUTE_BATTLE, MsgTypes.ROUTE_BLACKOUT)) {
-			server.register(type, runtime::fromServer);
+			runtime.links.onServer(type, false, runtime::fromServer);
 		}
 		server.register(MsgTypes.ROUTE_SIGHT, runtime::onSight);
 		server.register(MsgTypes.ROUTE_FADE, runtime::onFade);
 		InputLock.holdWhile(() -> runtime.walkUps.holding(runtime.clock.millis()) || runtime.fade.holding());
 		HudRenderCallback.EVENT.register((graphics, delta) -> runtime.renderFade(graphics));
-		bridge.dispatcher().on(MsgTypes.ROUTE_RESULT, runtime::onResult);
-		bridge.dispatcher().on(MsgTypes.ROUTE_PROGRESS, runtime::onProgress);
+		for (BridgeLink link : runtime.links.all()) {
+			link.dispatcher().on(MsgTypes.ROUTE_RESULT, message -> runtime.onResult(link, message));
+			link.dispatcher().on(MsgTypes.ROUTE_PROGRESS, message -> runtime.onProgress(link, message));
+		}
 		ClientTickEvents.END_CLIENT_TICK.register(runtime::tick);
 		bridge.addDebugLine(runtime::debugLine);
 	}
@@ -108,30 +124,35 @@ public final class ZoneRuntime {
 
 	// ---- relay ----
 
-	private void fromServer(Envelope message) {
-		SessionGate gate = gate();
+	private void fromServer(BridgeLink link, Envelope message) {
+		SessionGate gate = gate(link);
 		if (gate != null && !gate.bridgeOpen()) {
 			this.dropped++;
 			return;
 		}
-		long seq = this.bridge.client().sendTracked(message.type(), message.data().deepCopy());
+		long seq = link.client().sendTracked(message.type(), message.data().deepCopy());
 		if (seq <= 0) {
 			this.dropped++;
 			return;
 		}
 		this.down++;
-		this.forwarded.put(seq, message.seq());
-		Iterator<Long> oldest = this.forwarded.keySet().iterator();
-		while (this.forwarded.size() > MAX_PENDING && oldest.hasNext()) {
+		Map<Long, Long> pending = this.pending(link);
+		pending.put(seq, message.seq());
+		Iterator<Long> oldest = pending.keySet().iterator();
+		while (pending.size() > MAX_PENDING && oldest.hasNext()) {
 			oldest.next();
 			oldest.remove();
 		}
 	}
 
-	private void onResult(Envelope message) {
-		Long serverSeq = message.re() == null ? null : this.forwarded.remove(message.re());
+	private Map<Long, Long> pending(BridgeLink link) {
+		return this.forwarded.computeIfAbsent(link, key -> new LinkedHashMap<>());
+	}
+
+	private void onResult(BridgeLink link, Envelope message) {
+		Long serverSeq = message.re() == null ? null : this.pending(link).remove(message.re());
 		if (serverSeq != null) {
-			this.toServer(MsgTypes.ROUTE_RESULT, message.data(), serverSeq);
+			this.toServer(link, MsgTypes.ROUTE_RESULT, message.data(), serverSeq);
 			if ("battle".equals(stringField(message.data(), "op"))) {
 				this.walkBack(stringField(message.data(), "route"), stringField(message.data(), "id"));
 			}
@@ -147,22 +168,23 @@ public final class ZoneRuntime {
 		}
 	}
 
-	private void onProgress(Envelope message) {
-		this.toServer(MsgTypes.ROUTE_PROGRESS, message.data(), null);
+	private void onProgress(BridgeLink link, Envelope message) {
+		this.toServer(link, MsgTypes.ROUTE_PROGRESS, message.data(), null);
 	}
 
-	private void toServer(String type, JsonObject data, @Nullable Long re) {
-		SessionGate gate = gate();
-		if ((gate == null || gate.serverOpen()) && ClientRelay.get().send(type, data.deepCopy(), re)) {
+	/** To the server, tagged with {@code link}'s region (MG5), once that link's pairing lets the world's data flow. */
+	private void toServer(BridgeLink link, String type, JsonObject data, @Nullable Long re) {
+		SessionGate gate = gate(link);
+		if ((gate == null || gate.serverOpen()) && link.toServer(type, data.deepCopy(), re)) {
 			this.up++;
 		} else {
 			this.dropped++;
 		}
 	}
 
-	private static @Nullable SessionGate gate() {
+	private static @Nullable SessionGate gate(BridgeLink link) {
 		SessionRuntime session = SessionRuntime.get();
-		return session == null ? null : session.gate();
+		return session == null ? null : session.gate(link);
 	}
 
 	private static @Nullable String stringField(JsonObject data, String key) {
@@ -177,14 +199,49 @@ public final class ZoneRuntime {
 		if (player != null && message.data().has("ticks")) {
 			this.fade.start(Math.max(0, Math.min(message.data().get("ticks").getAsInt(), 200)), player.getX(), player.getY(), player.getZ(),
 					this.clock.millis());
+			for (Runnable listener : this.fadeListeners) {
+				listener.run();
+			}
 		}
 	}
 
 	private void renderFade(GuiGraphics graphics) {
+		// MG5: the far game's intro shows its screens under a crossing's fade; they are what the player should see.
+		if (UiRuntime.screensOpen()) {
+			return;
+		}
 		float alpha = this.fade.alpha(this.clock.millis());
 		if (alpha > 0.0F) {
 			graphics.fill(RenderType.guiOverlay(), 0, 0, graphics.guiWidth(), graphics.guiHeight(), Math.round(alpha * 255.0F) << 24);
 		}
+	}
+
+	/** MG5: called on the client thread each time a {@code route.fade} starts (a crossing's acceptance arrives this way). */
+	public void onFadeStarted(Runnable listener) {
+		this.fadeListeners.add(listener);
+	}
+
+	/** MG5: the fade's move is still coming; it won't time out before a timeout from now. */
+	void extendFade() {
+		this.fade.extend(this.clock.millis());
+	}
+
+	/** MG5: dark again (from where the player stands) until the next teleport lands. */
+	void restartFade() {
+		LocalPlayer player = Minecraft.getInstance().player;
+		if (player != null) {
+			this.fade.start(0, player.getX(), player.getY(), player.getZ(), this.clock.millis());
+		}
+	}
+
+	/** MG5: no move is coming: fade back in where the player stands. */
+	void liftFade() {
+		this.fade.lift(this.clock.millis());
+	}
+
+	/** True while the fade holds the player (dark, or going dark). */
+	public boolean fading() {
+		return this.fade.holding();
 	}
 
 	// ---- trainers ----

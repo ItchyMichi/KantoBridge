@@ -321,4 +321,52 @@ class UiRouterTest {
 		assertEquals(TextBoxModel.Stop.END, text.text().stop());
 		assertEquals("text#1", text.toString(), "kind and id only: safe for logs");
 	}
+
+	// ---- MG5 (D6): the parked save's name answers the started game's naming screen ----
+
+	@Test
+	void anArmedNameThatFitsAnswersTheNamingScreenWithoutShowingIt() throws Exception {
+		this.router.setAutoName(() -> "RED");
+		this.open(NAMING_5);
+		assertEquals(List.of("ui.name {\"glyphs\":[\"R\",\"E\",\"D\"],\"ui\":5}"), this.port.take());
+		UiSession naming = this.router.top();
+		assertNotNull(naming);
+		assertTrue(this.router.autoAnswered(naming), "nothing to show for it");
+		assertTrue(naming.answered(0));
+		assertEquals(1, this.router.stats().autoNamed);
+		this.router.onClose(json("{\"ui\":5}"));
+		assertFalse(this.router.autoAnswered(naming));
+		// One prompt only: the rival's name is the player's to type.
+		this.open("{\"ui\":6,\"kind\":\"naming\",\"title\":\"RIVAL's NAME?\",\"max\":7,\"presets\":[],\"value\":\"\"}");
+		assertEquals(List.of(), this.port.take());
+		assertFalse(this.router.autoAnswered(this.router.top()));
+		assertEquals(List.of(), this.router.top().naming().typed());
+	}
+
+	@Test
+	void anArmedNameTooLongForTheGameIsShownPrefilledAndCut() throws Exception {
+		this.router.setAutoName(() -> "ABCDEFGHIJ");
+		this.open(NAMING_5);
+		assertEquals(List.of(), this.port.take(), "the player confirms or finishes it");
+		UiSession naming = this.router.top();
+		assertFalse(this.router.autoAnswered(naming));
+		assertEquals(List.of("A", "B", "C", "D", "E", "F", "G"), naming.naming().typed());
+		assertEquals(NamingModel.Phase.GRID, naming.naming().phase());
+		assertEquals(NamingModel.Control.END, naming.naming().cell().control(), "the cursor waits on ED");
+		assertEquals(List.of("A", "B", "C", "D", "E", "F", "G"), naming.naming().confirm());
+	}
+
+	@Test
+	void theArmedNameIsOnlyForANamingScreenAndCanBeDisarmed() throws Exception {
+		this.router.setAutoName(() -> "RED");
+		this.open(TEXT_1);
+		assertEquals(List.of(), this.port.take());
+		this.router.setAutoName(null);
+		this.open(NAMING_5);
+		assertEquals(List.of(), this.port.take());
+		assertFalse(this.router.autoAnswered(this.router.top()));
+		this.router.setAutoName(() -> null);
+		this.open("{\"ui\":7,\"kind\":\"naming\",\"title\":\"NAME?\",\"max\":7,\"presets\":[],\"value\":\"\"}");
+		assertEquals(List.of(), this.port.take(), "a parked save without a name arms nothing");
+	}
 }

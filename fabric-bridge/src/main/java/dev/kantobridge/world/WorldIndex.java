@@ -36,7 +36,13 @@ public final class WorldIndex {
 	/** The longest shaft, in blocks. */
 	public static final int MAX_SHAFT = 256;
 	private static final Set<String> ZONE_FIELDS = Set.of("id", "routeMap", "theme", "x", "y", "z", "w", "d", "biome", "trainers", "balls",
-			"ballSprite", "dungeon");
+			"ballSprite", "dungeon", "pass", "gateHouse");
+	private static final Set<String> PASS_FIELDS = Set.of("cells", "route", "toRegion", "end");
+	private static final Set<String> GATE_HOUSE_FIELDS = Set.of("x", "y", "w", "d", "facing");
+	/** The most pass cells a gate house's far doorway spans. */
+	public static final int MAX_PASS_CELLS = 4;
+	/** The biggest gate house footprint, in cells. */
+	public static final int MAX_GATE_HOUSE = 16;
 	private static final Set<String> DUNGEON_FIELDS = Set.of("x", "y", "out", "pool", "level", "items");
 	private static final Set<String> DUNGEONS_FIELDS = Set.of("x", "y", "z", "w", "d");
 	private static final Set<String> TRAINER_FIELDS = Set.of("id", "x", "y", "facing", "sight", "class", "sprite", "party");
@@ -99,7 +105,7 @@ public final class WorldIndex {
 	 * @param y the feet level of the zone's walkable floor
 	 */
 	public record Zone(String id, String routeMap, String theme, int x, int y, int z, int w, int d, String biome, List<ZoneTrainer> trainers,
-			List<ZoneBall> balls, @Nullable String ballSprite, @Nullable ZoneDungeon dungeon) {
+			List<ZoneBall> balls, @Nullable String ballSprite, @Nullable ZoneDungeon dungeon, @Nullable Pass pass, @Nullable GateHouse gateHouse) {
 		public Zone {
 			Objects.requireNonNull(id, "id");
 			Objects.requireNonNull(routeMap, "routeMap");
@@ -107,6 +113,9 @@ public final class WorldIndex {
 			Objects.requireNonNull(biome, "biome");
 			if (w < 1 || d < 1) {
 				throw new IllegalArgumentException("zone size must be positive");
+			}
+			if ((pass == null) != (gateHouse == null)) {
+				throw new IllegalArgumentException("a pass comes with its gate house");
 			}
 			trainers = List.copyOf(trainers);
 			balls = List.copyOf(balls);
@@ -140,6 +149,25 @@ public final class WorldIndex {
 			this(id, routeMap, theme, x, y, z, w, d, biome, trainers, balls, ballSprite, null);
 		}
 
+		/** A free-roam zone (no pass): every zone before MG5. */
+		public Zone(String id, String routeMap, String theme, int x, int y, int z, int w, int d, String biome, List<ZoneTrainer> trainers,
+				List<ZoneBall> balls, @Nullable String ballSprite, @Nullable ZoneDungeon dungeon) {
+			this(id, routeMap, theme, x, y, z, w, d, biome, trainers, balls, ballSprite, dungeon, null, null);
+		}
+
+		/** True when cell (cx, cy) of the route map's grid is one of this zone's pass cells (MG5). */
+		public boolean passCell(int cx, int cy) {
+			if (this.pass == null) {
+				return false;
+			}
+			for (int[] cell : this.pass.cells()) {
+				if (cell[0] == cx && cell[1] == cy) {
+					return true;
+				}
+			}
+			return false;
+		}
+
 		/** True when block column (bx, bz) lies inside the zone's box. */
 		public boolean containsColumn(int bx, int bz) {
 			return bx >= this.x && bx < this.x + this.w && bz >= this.z && bz < this.z + this.d;
@@ -161,6 +189,85 @@ public final class WorldIndex {
 				}
 			}
 			return null;
+		}
+	}
+
+	/**
+	 * A connecting route's pass (docs/specs/MULTI_GAME_PLAN.md §4.8, D12; MG5): the far doorway of this half's gate house,
+	 * where a crossing into the other region starts.
+	 *
+	 * @param cells    the pass cells in the route map's grid (the trailhead's A is 0, 0), each {@code {x, y}}
+	 * @param route    the connecting route's id (both halves share it)
+	 * @param toRegion the region of the other half
+	 * @param end      which end of the route this half is: {@code from} or {@code to}
+	 */
+	public record Pass(List<int[]> cells, String route, String toRegion, String end) {
+		public static final String END_FROM = "from";
+		public static final String END_TO = "to";
+
+		public Pass {
+			cells = cells.stream().map(c -> new int[] {c[0], c[1]}).toList();
+			if (cells.isEmpty() || cells.size() > MAX_PASS_CELLS || route == null || !ZONE_ID.matcher(route).matches() || toRegion == null
+					|| !Games.REGION_ID.matcher(toRegion).matches() || !(END_FROM.equals(end) || END_TO.equals(end))) {
+				throw new IllegalArgumentException("bad pass");
+			}
+			for (int[] cell : cells) {
+				if (cell.length != 2 || Math.abs(cell[0]) > MAX_ZONE_CELL || Math.abs(cell[1]) > MAX_ZONE_CELL) {
+					throw new IllegalArgumentException("bad pass cell");
+				}
+			}
+		}
+
+		/** The end a player standing in this half heads for when crossing: the other one. */
+		public String dir() {
+			return END_FROM.equals(this.end) ? END_TO : END_FROM;
+		}
+
+		@Override
+		public boolean equals(Object o) {
+			if (!(o instanceof Pass other) || !this.route.equals(other.route) || !this.toRegion.equals(other.toRegion)
+					|| !this.end.equals(other.end) || this.cells.size() != other.cells.size()) {
+				return false;
+			}
+			for (int i = 0; i < this.cells.size(); i++) {
+				if (!java.util.Arrays.equals(this.cells.get(i), other.cells.get(i))) {
+					return false;
+				}
+			}
+			return true;
+		}
+
+		@Override
+		public int hashCode() {
+			int h = Objects.hash(this.route, this.toRegion, this.end);
+			for (int[] cell : this.cells) {
+				h = 31 * h + java.util.Arrays.hashCode(cell);
+			}
+			return h;
+		}
+	}
+
+	/**
+	 * The gate house at a connecting route half's far gate (MG5, D12): its footprint in the route map's grid (walls
+	 * included), and the way from its near doorway toward the pass.
+	 *
+	 * @param x      the footprint's north-west cell
+	 * @param w      the footprint's width in cells (X)
+	 * @param d      the footprint's depth in cells (Y)
+	 * @param facing from the near doorway toward the pass (the server teleports a crossing player just inside the pass,
+	 *               one cell against it)
+	 */
+	public record GateHouse(int x, int y, int w, int d, Dir facing) {
+		public GateHouse {
+			if (Math.abs(x) > MAX_ZONE_CELL || Math.abs(y) > MAX_ZONE_CELL || w < 1 || w > MAX_GATE_HOUSE || d < 1 || d > MAX_GATE_HOUSE
+					|| facing == null) {
+				throw new IllegalArgumentException("bad gate house");
+			}
+		}
+
+		/** True when cell (cx, cy) of the route map's grid lies in the footprint. */
+		public boolean contains(int cx, int cy) {
+			return cx >= this.x && cx < this.x + this.w && cy >= this.y && cy < this.y + this.d;
 		}
 	}
 
@@ -826,6 +933,29 @@ public final class WorldIndex {
 					dungeon.add("items", items);
 					item.add("dungeon", dungeon);
 				}
+				// MG5: a connecting route's half, written only when the zone has a pass (free-roam zones keep their bytes)
+				if (zone.pass() != null && zone.gateHouse() != null) {
+					JsonObject pass = new JsonObject();
+					JsonArray cells = new JsonArray();
+					for (int[] cell : zone.pass().cells()) {
+						JsonArray c = new JsonArray();
+						c.add(cell[0]);
+						c.add(cell[1]);
+						cells.add(c);
+					}
+					pass.add("cells", cells);
+					pass.addProperty("route", zone.pass().route());
+					pass.addProperty("toRegion", zone.pass().toRegion());
+					pass.addProperty("end", zone.pass().end());
+					item.add("pass", pass);
+					JsonObject house = new JsonObject();
+					house.addProperty("x", zone.gateHouse().x());
+					house.addProperty("y", zone.gateHouse().y());
+					house.addProperty("w", zone.gateHouse().w());
+					house.addProperty("d", zone.gateHouse().d());
+					house.addProperty("facing", zone.gateHouse().facing().id());
+					item.add("gateHouse", house);
+				}
 				zones.add(item);
 			}
 			root.add("zones", zones);
@@ -976,9 +1106,45 @@ public final class WorldIndex {
 					dungeon = new ZoneDungeon(d.integer("x", -MAX_ZONE_CELL, MAX_ZONE_CELL), d.integer("y", -MAX_ZONE_CELL, MAX_ZONE_CELL), out,
 							d.optionalString("pool", DataReader.RESOURCE_ID), d.integer("level", 1, 100), items);
 				}
+				// MG5: the pass and its gate house come together or not at all
+				if (item.has("pass") != item.has("gateHouse")) {
+					throw new DataException(item.path(), "a pass comes with its gate house");
+				}
+				Pass pass = null;
+				GateHouse gateHouse = null;
+				if (item.has("pass")) {
+					DataReader p = item.object("pass").allowOnly(PASS_FIELDS);
+					List<int[]> cells = new ArrayList<>();
+					for (com.google.gson.JsonElement c : p.array("cells")) {
+						if (!c.isJsonArray()) {
+							throw new DataException(p.path("cells"), "a pass cell is [x, y]");
+						}
+						int[] cell = DataReader.intArray(c.getAsJsonArray(), p.path("cells"), -MAX_ZONE_CELL, MAX_ZONE_CELL);
+						if (cell.length != 2) {
+							throw new DataException(p.path("cells"), "a pass cell is [x, y]");
+						}
+						cells.add(cell);
+					}
+					if (cells.isEmpty() || cells.size() > MAX_PASS_CELLS) {
+						throw new DataException(p.path("cells"), "a pass has 1 to " + MAX_PASS_CELLS + " cells");
+					}
+					String end = p.string("end");
+					if (!Pass.END_FROM.equals(end) && !Pass.END_TO.equals(end)) {
+						throw new DataException(p.path("end"), "unknown end");
+					}
+					pass = new Pass(cells, p.string("route", ZONE_ID), p.string("toRegion", Games.REGION_ID), end);
+					DataReader h = item.object("gateHouse").allowOnly(GATE_HOUSE_FIELDS);
+					Dir facing = Dir.byId(h.string("facing"));
+					if (facing == null) {
+						throw new DataException(h.path("facing"), "unknown facing");
+					}
+					gateHouse = new GateHouse(h.integer("x", -MAX_ZONE_CELL, MAX_ZONE_CELL), h.integer("y", -MAX_ZONE_CELL, MAX_ZONE_CELL),
+							h.integer("w", 1, MAX_GATE_HOUSE), h.integer("d", 1, MAX_GATE_HOUSE), facing);
+				}
 				zones.add(new Zone(item.string("id", ZONE_ID), item.string("routeMap", DataReader.MAP_ID), theme, item.integer("x"),
 						item.integer("y"), item.integer("z"), item.integer("w", 1, Integer.MAX_VALUE), item.integer("d", 1, Integer.MAX_VALUE),
-						item.string("biome", DataReader.RESOURCE_ID), trainers, balls, item.optionalString("ballSprite", DataReader.SYMBOL), dungeon));
+						item.string("biome", DataReader.RESOURCE_ID), trainers, balls, item.optionalString("ballSprite", DataReader.SYMBOL), dungeon,
+						pass, gateHouse));
 			}
 		}
 		Dungeons dungeons = null;

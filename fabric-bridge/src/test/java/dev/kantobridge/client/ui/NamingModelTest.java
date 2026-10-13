@@ -167,4 +167,20 @@ class NamingModelTest {
 		assertEquals(7, plain(7).max());
 		assertEquals(10, new NamingModel("?", 999, List.of(), "", null, null).max(), "the limit is capped at 10");
 	}
+
+	@Test
+	void prefillTypesWhatTheGridCanUpToTheLimitAndWaitsOnEd() {
+		NamingModel naming = new NamingModel("YOUR NAME?", 7, List.of("ASH", "GARY"), "", null, null);
+		assertEquals(NamingModel.Phase.PRESETS, naming.phase());
+		naming.prefill(List.of("R", "E", "<BAD>", "D"));
+		assertEquals(NamingModel.Phase.GRID, naming.phase());
+		assertEquals(List.of("R", "E", "D"), naming.typed(), "a token the grid can't type is skipped");
+		assertTrue(naming.cell().control() != NamingModel.Control.END, "room left: the cursor stays where it was");
+		naming.prefill(List.of("A", "B", "C", "D", "E", "F", "G", "H"));
+		assertEquals(List.of("A", "B", "C", "D", "E", "F", "G"), naming.typed());
+		assertEquals(NamingModel.Control.END, naming.cell().control());
+		assertEquals(List.of("A", "B", "C", "D", "E", "F", "G"), naming.confirm());
+		naming.prefill(List.of("X"));
+		assertEquals(NamingModel.Phase.SENT, naming.phase(), "nothing changes once the name went out");
+	}
 }

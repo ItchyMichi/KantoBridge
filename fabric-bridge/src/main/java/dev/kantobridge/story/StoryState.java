@@ -16,7 +16,8 @@ import java.util.Set;
  *
  * <p>Whether a cell blocks depends on its type ({@link #blocks}):
  * <ul>
- * <li>{@code object}, {@code tile} and {@code route} (a Wild Routes ball): closed while the cell is in the active set;</li>
+ * <li>{@code object}, {@code tile}, {@code route} (a Wild Routes ball) and {@code pass} (a connecting route's pass, MG5): closed
+ * while the cell is in the active set;</li>
  * <li>{@code water}: closed unless the player surfs, or while the cell is active;</li>
  * <li>{@code boulder_area}: closed where one of the player's boulders stands, or while the cell is active.</li>
  * </ul>
@@ -32,7 +33,7 @@ public final class StoryState {
 	/** True when a story cell of this type and key closes for this player. */
 	public boolean blocks(String key, StoryCellType type) {
 		return switch (type) {
-			case OBJECT, TILE, ROUTE -> this.active.contains(key);
+			case OBJECT, TILE, ROUTE, PASS -> this.active.contains(key);
 			case WATER -> !this.surf || this.active.contains(key);
 			case BOULDER_AREA -> this.boulders.contains(key) || this.active.contains(key);
 		};

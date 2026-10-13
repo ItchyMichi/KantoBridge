@@ -55,7 +55,10 @@ class RouteGeneratorTest {
 	}
 
 	private static final String GOLDEN_ZONE = "9287126d8ec5f36a8a069a816b455f4a8dfa67a97e2127285b20f853795fcaf3";
-	private static final String GOLDEN_ROUTE = "aa31f46260a0ebd3e367026b9768ec8668d70b5623555826f352281ad7c6f8bf";
+	// MG5 changed the connecting layout (the far gate's house-sized plaza, levels by progress): regenerate this fingerprint
+	// from the "[routes-gen] golden ... route <hash>" line of a test run and paste it here (the free-roam goldens are unchanged).
+	// MG5: the far gate is a 7x5 gate house and connecting levels follow the layout's progress (re-stamped from the pod run)
+	private static final String GOLDEN_ROUTE = "f0c876c57e5a346b72403710b3c388ca0a46ae3b46349521f56805b438ca8af6";
 	private static final String GOLDEN_BRANCHED = "b01aed167adb910e12ae1a3572109cec2626ea931d55fdf4dcf2fdac2559928a";
 
 	@Test
@@ -195,11 +198,16 @@ class RouteGeneratorTest {
 		if (areas.size() > main && sideLinks != 1) {
 			out.add("the side area has " + sideLinks + " links");
 		}
-		// levels
+		// levels: a step per area in a zone; toward the pass along a connecting route (MG5)
 		for (int i = 0; i < main; i++) {
-			if (areas.get(i).levelOffset() != Math.min(i * spec.levelStep(), spec.levelCap())) {
+			int expected = spec.kind() == RouteSpec.Kind.CONNECTING ? RouteGenerator.levelOffset(areas.get(i).progress(), spec.levelCap())
+					: Math.min(i * spec.levelStep(), spec.levelCap());
+			if (areas.get(i).levelOffset() != expected) {
 				out.add("area " + i + " level offset " + areas.get(i).levelOffset());
 			}
+		}
+		if (l.farGate() != null) {
+			out.addAll(houseRules(l, areas.get(main - 1)));
 		}
 		// everything reachable from the trailhead, with balls and trainers in the way
 		Set<Cell> blocked = new HashSet<>(l.items());
@@ -259,6 +267,37 @@ class RouteGeneratorTest {
 		}
 		if (l.stats().through() < N) {
 			out.add("too short a way through: " + l.stats().through());
+		}
+		return out;
+	}
+
+	/**
+	 * MG5: the far gate is a gate house: its plaza (the inside) is HOUSE_DEPTH along the way out and HOUSE_WIDTH across, and
+	 * the ring around it (its walls) is closed everywhere but at its own area's opening and the door B.
+	 */
+	private static List<String> houseRules(RouteLayout l, RouteLayout.AreaPlacement own) {
+		List<String> out = new ArrayList<>();
+		RouteLayout.Gate g = l.farGate();
+		boolean east = g.width() == RouteGenerator.HOUSE_DEPTH && g.height() == RouteGenerator.HOUSE_WIDTH;
+		boolean northSouth = g.width() == RouteGenerator.HOUSE_WIDTH && g.height() == RouteGenerator.HOUSE_DEPTH;
+		if (!east && !northSouth) {
+			out.add("the gate house's inside is " + g.width() + "x" + g.height());
+		}
+		for (int y = g.y() - 1; y <= g.y() + g.height(); y++) {
+			for (int x = g.x() - 1; x <= g.x() + g.width(); x++) {
+				boolean ring = x == g.x() - 1 || x == g.x() + g.width() || y == g.y() - 1 || y == g.y() + g.height();
+				boolean ownArea = x >= own.x() && x < own.x() + N && y >= own.y() && y < own.y() + N;
+				Cell c = new Cell(x, y);
+				if (!ring || ownArea || c.equals(g.door())) {
+					continue;
+				}
+				if (!l.inside(c) || l.at(c) != CellRole.WALL) {
+					out.add("the gate house's wall is open at " + c);
+				}
+			}
+		}
+		if (l.at(g.door()) != CellRole.PATH) {
+			out.add("the pass isn't path");
 		}
 		return out;
 	}

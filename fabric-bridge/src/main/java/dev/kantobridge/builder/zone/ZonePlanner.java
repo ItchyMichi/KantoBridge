@@ -47,22 +47,43 @@ public final class ZonePlanner {
 			Function<String, String> paletteOf, ZoneContent content, String poolPrefix) {
 		ZoneObjects.ItemTiers tiers = ZoneObjects.ItemTiers.bundled();
 		List<ExportRoutes.Zone> zones = new ArrayList<>(routes.zones());
-		zones.sort(Comparator.comparing(ExportRoutes.Zone::id));
+		// MG5: a connecting route's two ends in one game (a test world) are two zones; the far end's gets its own id, after
+		// the near end's in id order, so the slots stay stable
+		zones.sort(Comparator.comparing(ExportRoutes.Zone::id).thenComparing(z -> z.end() == null ? "" : z.end()));
 		List<ZonePlan> out = new ArrayList<>();
 		for (int i = 0; i < zones.size(); i++) {
 			ExportRoutes.Zone zone = zones.get(i);
-			RouteLayout layout = RouteGenerator.generate(specOf(zone), RouteSeeds.forRoute(worldSeed, zone.id()));
+			String zoneId = zoneId(zones, zone);
+			// the layout's seed follows the zone's id, so the two halves of one route are different mazes
+			RouteLayout layout = RouteGenerator.generate(specOf(zone), RouteSeeds.forRoute(worldSeed, zoneId));
 			int[] slot = regions.slotOrigin(i);
 			ZoneObjects objects = ZoneObjects.make(zone, layout, content, tiers, worldSeed);
-			out.add(new ZonePlan(zone.id(), zone.routeMap(), paletteOf.apply(zone.townMap()), layout, slot[0], slot[1], terrain, objects,
-					poolPrefix));
+			ZonePlan.Crossing crossing = zone.connecting() ? new ZonePlan.Crossing(zone.id(), zone.toRegion(), zone.end()) : null;
+			out.add(new ZonePlan(zoneId, zone.routeMap(), paletteOf.apply(zone.townMap()), layout, slot[0], slot[1], terrain, objects,
+					poolPrefix, crossing));
 		}
 		return out;
 	}
 
-	/** The generator's spec for an export zone (only free-roam forest zones exist so far). */
+	/**
+	 * The zone's id: the route's, unless the export lists both ends of a connecting route (one game holding both halves, a
+	 * test world): then the {@code to} end's zone is {@code <id>_to}, like its route map.
+	 */
+	static String zoneId(List<ExportRoutes.Zone> zones, ExportRoutes.Zone zone) {
+		if (ExportRoutes.END_TO.equals(zone.end())) {
+			for (ExportRoutes.Zone other : zones) {
+				if (other != zone && other.id().equals(zone.id())) {
+					return zone.id() + "_to";
+				}
+			}
+		}
+		return zone.id();
+	}
+
+	/** The generator's spec for an export zone: a free-roam zone, or (MG5) one half of a connecting route. */
 	static RouteSpec specOf(ExportRoutes.Zone zone) {
-		return new RouteSpec(RouteSpec.Kind.FREE_ROAM, zone.areasMin(), zone.areasMax(), zone.sideAreaChance(), zone.dungeonChance(),
+		RouteSpec.Kind kind = zone.connecting() ? RouteSpec.Kind.CONNECTING : RouteSpec.Kind.FREE_ROAM;
+		return new RouteSpec(kind, zone.areasMin(), zone.areasMax(), zone.sideAreaChance(), zone.dungeonChance(),
 				zone.trainersMin(), zone.trainersMax(), ITEMS_MIN, ITEMS_MAX, zone.levelStep(), zone.levelCap(), RouteSpec.DEFAULT_BOUND,
 				ForestTheme.INSTANCE);
 	}

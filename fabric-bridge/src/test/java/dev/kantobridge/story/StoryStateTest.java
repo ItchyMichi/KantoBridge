@@ -39,6 +39,22 @@ class StoryStateTest {
 	}
 
 	@Test
+	void routeBallsAndPassesCloseOnlyWhileActive() {
+		// WR5's balls and MG5's passes (a connecting route's far doorway) follow the active set like objects
+		StoryState state = new StoryState();
+		String ball = "KB_ROUTE_Z:12:-3";
+		String pass = "KB_ROUTE_EASTERN_PASS:40:0";
+		assertFalse(state.blocks(ball, StoryCellType.ROUTE));
+		assertFalse(state.blocks(pass, StoryCellType.PASS));
+		state.setActive(List.of(ball, pass));
+		assertTrue(state.blocks(ball, StoryCellType.ROUTE));
+		assertTrue(state.blocks(pass, StoryCellType.PASS));
+		assertFalse(StoryState.blocksWithoutState(StoryCellType.PASS), "a player without state passes (the client decides)");
+		state.clear();
+		assertFalse(state.blocks(pass, StoryCellType.PASS));
+	}
+
+	@Test
 	void waterClosesUnlessSurfing() {
 		StoryState state = new StoryState();
 		String key = "PALLET_TOWN:8:16";

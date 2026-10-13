@@ -306,6 +306,26 @@ public final class NamingModel {
 		return List.copyOf(glyphs);
 	}
 
+	/**
+	 * MG5 (D6): opens the grid with {@code glyphs} already typed (those this grid can type, up to the limit), the cursor on
+	 * ED when the name is full; the player finishes or confirms it.
+	 */
+	public void prefill(List<String> glyphs) {
+		if (this.phase == Phase.SENT) {
+			return;
+		}
+		this.phase = Phase.GRID;
+		this.typed.clear();
+		for (String glyph : glyphs) {
+			if (this.typed.size() < this.max && this.charset.contains(glyph)) {
+				this.typed.add(glyph);
+			}
+		}
+		if (this.typed.size() >= this.max) {
+			this.toEnd();
+		}
+	}
+
 	private void toEnd() {
 		List<List<Cell>> rows = this.pages.get(this.page);
 		for (int r = 0; r < rows.size(); r++) {

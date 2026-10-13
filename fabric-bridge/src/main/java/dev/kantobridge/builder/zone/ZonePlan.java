@@ -40,6 +40,11 @@ import org.jetbrains.annotations.Nullable;
  * short grass on top, flower cells a flower.</li>
  * <li><b>Walls</b> are hedges of leaves 3–5 blocks tall, now and then with a trunk in them; rocks are 2-block
  * boulders; ponds are water at the floor with a barrier above, so they stop you as Kanto's water does until Surf.</li>
+ * <li><b>The gate house</b> (MG5, docs/specs/MULTI_GAME_PLAN.md §4.8, D12): a connecting route's half ends in a small
+ * building at its far gate: plank walls with glass-pane windows on the ring the generator closed around the plaza, two
+ * doorways on the route's line (the opening toward the last area and the far door B), a dark plank roof at feet + 4 with
+ * lights under it, a dirt-path floor. B is the <b>pass</b>: a story cell closed per player until the far region is built
+ * and they have a link to its game; the WorldIndex zone entry carries {@code pass} and {@code gateHouse}.</li>
  * <li><b>The land around it</b> follows the {@link TerrainSampler} (Minecraft's own noise in a real build), sampled
  * every {@link #GRID} blocks (vanilla's noise costs about a millisecond a column, check C2) and blended smoothly between,
  * with a little small-scale relief of our own, kept between {@code FLOOR - 4} and {@link #SCENERY_MAX}, with a ridge
@@ -77,8 +82,33 @@ public final class ZonePlan {
 	public static final int VINE_LOW = FEET + 2;
 	public static final String BIOME = "kantobridge:wild_forest";
 	public static final String THEME = "forest";
+	/** The gate house's walls reach this high over the feet level; its roof sits on top of them (MG5). */
+	public static final int HOUSE_WALL = 4;
+	/** The light under the gate house's roof (a light block's level). */
+	public static final int HOUSE_LIGHT = 14;
 
 	private record Tree(int x, int z, int trunk, ZoneBlock log, ZoneBlock leaves) {
+	}
+
+	/**
+	 * A connecting route's half (MG5): which route, the region of the other half, and which end this half is ({@code from}
+	 * or {@code to}).
+	 */
+	public record Crossing(String route, String toRegion, String end) {
+		public Crossing {
+			java.util.Objects.requireNonNull(route, "route");
+			java.util.Objects.requireNonNull(toRegion, "toRegion");
+			if (!WorldIndex.Pass.END_FROM.equals(end) && !WorldIndex.Pass.END_TO.equals(end)) {
+				throw new IllegalArgumentException("end is from or to");
+			}
+		}
+	}
+
+	/** The gate house's footprint in layout cells: the far plaza grown by one cell on every side (its walls). */
+	private record House(int x, int y, int w, int h) {
+		boolean contains(int cx, int cy) {
+			return cx >= this.x && cx < this.x + this.w && cy >= this.y && cy < this.y + this.h;
+		}
 	}
 
 	private final String id;
@@ -104,6 +134,10 @@ public final class ZonePlan {
 	/** Layout cells (as {@link #cellKey}) holding a trainer, and the ball index of each ball's cell. */
 	private final Set<Long> trainerCells = new HashSet<>();
 	private final Map<Long, Integer> ballCells = new HashMap<>();
+	/** MG5: the pass cells (as {@link #cellKey}) and their order, and the gate house around the far plaza; null for a free-roam zone. */
+	private final Map<Long, Integer> passCells = new HashMap<>();
+	private final @Nullable House house;
+	private final @Nullable Crossing crossing;
 
 	/**
 	 * @param id       the zone's id
@@ -134,10 +168,23 @@ public final class ZonePlan {
 	 */
 	public ZonePlan(String id, String routeMap, String palette, RouteLayout layout, int slotX, int slotZ, TerrainSampler terrain,
 			ZoneObjects objects, String poolPrefix) {
+		this(id, routeMap, palette, layout, slotX, slotZ, terrain, objects, poolPrefix, null);
+	}
+
+	/**
+	 * A connecting route's half (MG5): its layout has a far gate, built as a gate house whose far door is the pass into
+	 * {@code crossing}'s other region. A free-roam layout takes no crossing, a connecting one needs it.
+	 */
+	public ZonePlan(String id, String routeMap, String palette, RouteLayout layout, int slotX, int slotZ, TerrainSampler terrain,
+			ZoneObjects objects, String poolPrefix, @Nullable Crossing crossing) {
 		this.id = id;
 		this.poolPrefix = java.util.Objects.requireNonNull(poolPrefix, "poolPrefix");
 		this.objects = objects;
 		this.layout = layout;
+		this.crossing = crossing;
+		if ((layout.farGate() != null) != (crossing != null)) {
+			throw new IllegalArgumentException("zone " + id + ": a connecting layout needs its crossing, a free-roam one none");
+		}
 		this.width = Scale.cellToBlock(layout.width()) + 2 * PAD;
 		this.depth = Scale.cellToBlock(layout.height()) + 2 * PAD;
 		if (this.width > ZoneRegions.SLOT || this.depth > ZoneRegions.SLOT) {
@@ -171,8 +218,36 @@ public final class ZonePlan {
 			this.ballCells.put(cellKey(b.cell().x(), b.cell().y()), i);
 		}
 		this.planWild(palette);
+		// MG5: the gate house around the far plaza and its far door, the pass
+		WorldIndex.Pass pass = null;
+		WorldIndex.GateHouse gateHouse = null;
+		RouteLayout.Gate far = layout.farGate();
+		if (far != null && crossing != null) {
+			this.house = new House(far.x() - 1, far.y() - 1, far.width() + 2, far.height() + 2);
+			Cell b = far.door();
+			this.passCells.put(cellKey(b.x(), b.y()), 0);
+			pass = new WorldIndex.Pass(List.of(new int[] {b.x() - door.x(), b.y() - door.y()}), crossing.route(), crossing.toRegion(),
+					crossing.end());
+			Dir facing = Dir.of(Integer.signum(b.x() - far.stand().x()), Integer.signum(b.y() - far.stand().y()));
+			gateHouse = new WorldIndex.GateHouse(this.house.x() - door.x(), this.house.y() - door.y(), this.house.w(), this.house.h(),
+					facing == null ? Dir.RIGHT : facing);
+		} else {
+			this.house = null;
+		}
 		this.zone = new WorldIndex.Zone(id, routeMap, THEME, this.x0, FEET, this.z0, this.width, this.depth, BIOME, trainers, balls,
-				objects.ballSprite(), this.dungeon(door));
+				objects.ballSprite(), this.dungeon(door), pass, gateHouse);
+	}
+
+	/** MG5: the connecting route this half belongs to, or null for a free-roam zone. */
+	public @Nullable Crossing crossing() {
+		return this.crossing;
+	}
+
+	/** MG5: the pass cells (layout cells) in the order of their story entries; empty for a free-roam zone. */
+	public List<Cell> passCells() {
+		Cell[] out = new Cell[this.passCells.size()];
+		this.passCells.forEach((key, i) -> out[i] = new Cell((int) (key >> 32), key.intValue()));
+		return List.of(out);
 	}
 
 	/**
@@ -282,13 +357,19 @@ public final class ZonePlan {
 	}
 
 	/**
-	 * The story cells of the zone's balls (type {@code route}), keyed in the route map's grid, in ball order. The world's
-	 * plan adds them to its table ({@link WorldPlan#withZones}).
+	 * The story cells of the zone's balls (type {@code route}), keyed in the route map's grid, in ball order, then (MG5) its
+	 * pass cells (type {@code pass}, {@code obj} the zone's id), in pass order. The world's plan adds them to its table
+	 * ({@link WorldPlan#withZones}) and hands {@link #renderColumn} their indices in that order.
 	 */
 	public List<StoryCellTable.Entry> storyEntries() {
 		List<StoryCellTable.Entry> out = new ArrayList<>();
 		for (WorldIndex.ZoneBall b : this.zone.balls()) {
 			out.add(new StoryCellTable.Entry(new CellPos(this.routeMap.id(), b.x(), b.y()), StoryCellType.ROUTE, b.id(), null));
+		}
+		if (this.zone.pass() != null) {
+			for (int[] cell : this.zone.pass().cells()) {
+				out.add(new StoryCellTable.Entry(new CellPos(this.routeMap.id(), cell[0], cell[1]), StoryCellType.PASS, this.id, null));
+			}
 		}
 		return out;
 	}
@@ -348,10 +429,11 @@ public final class ZonePlan {
 	}
 
 	/**
-	 * Writes block column (x, z) of the zone's box (outside the box, nothing). {@code ballStory} gives each ball's index in
-	 * the world's story-cell table (by ball order), or is null for none.
+	 * Writes block column (x, z) of the zone's box (outside the box, nothing). {@code objectStory} gives the index in the
+	 * world's story-cell table of each entry of {@link #storyEntries()}, in that order (the balls, then the pass cells), or
+	 * is null for none.
 	 */
-	public void renderColumn(WorldPlan.CodeSink sink, int x, int z, int @Nullable [] ballStory) {
+	public void renderColumn(WorldPlan.CodeSink sink, int x, int z, int @Nullable [] objectStory) {
 		if (x < this.x0 || z < this.z0 || x >= this.x0 + this.width || z >= this.z0 + this.depth) {
 			return;
 		}
@@ -361,13 +443,69 @@ public final class ZonePlan {
 			sink.set(x, FEET, z, BlockCode.vanilla(ZoneBlock.BARRIER));
 		}
 		Integer ball = this.ballCells.get(key);
-		if (ball != null && ballStory != null && ballStory[ball] >= 0) {
-			sink.set(x, FEET, z, BlockCode.story(ballStory[ball]));
+		if (ball != null && objectStory != null && objectStory[ball] >= 0) {
+			sink.set(x, FEET, z, BlockCode.story(objectStory[ball]));
 		}
+		// MG5: the pass is a story cell too, after the balls in the entries' order
+		Integer pass = this.passCells.get(key);
+		if (pass != null && objectStory != null) {
+			int at = this.ballCells.size() + pass;
+			if (at < objectStory.length && objectStory[at] >= 0) {
+				sink.set(x, FEET, z, BlockCode.story(objectStory[at]));
+			}
+		}
+	}
+
+	/** MG5: true when layout cell (cx, cy) is part of the gate house (its walls or its inside), never an area's own cell. */
+	private boolean houseCell(int cx, int cy) {
+		return this.house != null && this.house.contains(cx, cy) && this.layout.areaOf(new Cell(cx, cy)) < 0;
+	}
+
+	/**
+	 * MG5: a wall cell of the gate house gets a window at eye level when it is flanked by walls along its own wall (never
+	 * beside a doorway) on every other cell.
+	 */
+	private boolean windowAt(int cx, int cy) {
+		boolean alongX = cy == this.house.y() || cy == this.house.y() + this.house.h() - 1;
+		int ax = alongX ? 1 : 0;
+		int ay = alongX ? 0 : 1;
+		for (int s = -1; s <= 1; s += 2) {
+			Cell n = new Cell(cx + s * ax, cy + s * ay);
+			if (!this.layout.inside(n) || this.layout.at(n) != CellRole.WALL || !this.houseCell(n.x(), n.y())) {
+				return false;
+			}
+		}
+		return ((cx + cy) & 1) == 0;
+	}
+
+	/** The gate house's column at (x, z) of layout cell (cx, cy): a wall or a roofed inside. */
+	private void houseColumn(WorldPlan.CodeSink sink, int x, int z, int cx, int cy, CellRole role) {
+		if (role == CellRole.WALL) {
+			this.ground(sink, x, z, FLOOR, ZoneBlock.COBBLESTONE);
+			boolean window = this.windowAt(cx, cy);
+			for (int y = FEET; y < FEET + HOUSE_WALL; y++) {
+				sink.set(x, y, z, BlockCode.vanilla(window && y == FEET + 1 ? ZoneBlock.GLASS_PANE : ZoneBlock.OAK_PLANKS));
+			}
+		} else {
+			// the inside and the doorways: the plaza's own floor, lit under the roof
+			this.ground(sink, x, z, FLOOR, role == CellRole.PATH ? ZoneBlock.DIRT_PATH : ZoneBlock.GRASS_BLOCK);
+			int ix = cx - this.house.x();
+			int iy = cy - this.house.y();
+			if (ix % 3 == 2 && iy % 3 == 2 && (x & 1) == 0 && (z & 1) == 0) {
+				sink.set(x, FEET + HOUSE_WALL - 1, z, BlockCode.light(HOUSE_LIGHT));
+			}
+		}
+		sink.set(x, FEET + HOUSE_WALL, z, BlockCode.vanilla(ZoneBlock.DARK_OAK_PLANKS));
 	}
 
 	private void renderRole(WorldPlan.CodeSink sink, int x, int z) {
 		CellRole role = this.roleAt(x, z);
+		int cx = Math.floorDiv(x - this.layoutX0, Scale.CELL_BLOCKS);
+		int cy = Math.floorDiv(z - this.layoutZ0, Scale.CELL_BLOCKS);
+		if (this.houseCell(cx, cy)) {
+			this.houseColumn(sink, x, z, cx, cy, role);
+			return;
+		}
 		switch (role) {
 			case SCENERY -> this.scenery(sink, x, z);
 			case WALL -> this.hedge(sink, x, z);

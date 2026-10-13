@@ -119,6 +119,8 @@ public final class BuildReport {
 	public int zoneTrees;
 	public int zoneTrainers;
 	public int zoneBalls;
+	/** MG5: the connecting halves' pass cells (their gate houses' far doorways). */
+	public int zonePasses;
 	public int zoneWalkableCells;
 	public long zonePlanMs;
 	public int warnings;
@@ -250,6 +252,7 @@ public final class BuildReport {
 		out.addProperty("zone_trees", this.zoneTrees);
 		out.addProperty("zone_trainers", this.zoneTrainers);
 		out.addProperty("zone_balls", this.zoneBalls);
+		out.addProperty("zone_passes", this.zonePasses);
 		out.addProperty("zone_walkable_cells", this.zoneWalkableCells);
 		out.addProperty("zone_plan_ms", this.zonePlanMs);
 		out.addProperty("warnings", this.warnings);

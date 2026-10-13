@@ -5,9 +5,12 @@ import com.google.gson.JsonObject;
 import dev.kantobridge.client.bridge.JsonFields;
 import dev.kantobridge.proto.MsgTypes;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.TreeMap;
+import java.util.function.Supplier;
 import org.jetbrains.annotations.Nullable;
 
 /**
@@ -27,6 +30,10 @@ import org.jetbrains.annotations.Nullable;
  * from its {@code ui} (the UI open at that moment, as its {@code ui.open} data). As a safety net, the hidden player staying
  * in mode {@code idle} for {@link #IDLE_GRACE_MS} closes whatever is still open: no UI can be up then (the grace lets a
  * {@code ui.close} sent just after the mode change arrive first).</li>
+ * <li><b>The name</b> (MG5, D6). A crossing that starts a far game arms {@link #setAutoName} with the parked save's player
+ * name: the next naming screen is answered with it at once when it fits (and isn't shown, {@link #autoAnswered}), or is
+ * shown prefilled with the name cut to the game's limit. One prompt only; the rival's name and anything else are the
+ * player's.</li>
  * </ul>
  *
  * Nothing here logs: problems are counted by short code and reported through the {@link Port}.
@@ -72,6 +79,8 @@ public final class UiRouter {
 		public long backs;
 		public long quantities;
 		public long names;
+		/** MG5: naming screens answered with the parked save's name, without being shown. */
+		public long autoNamed;
 	}
 
 	/** How long the hidden player must stay idle before UIs still open here count as stale. */
@@ -83,6 +92,10 @@ public final class UiRouter {
 	private long idleSince = -1;
 	private final Map<String, Long> warnings = new TreeMap<>();
 	private final Stats stats = new Stats();
+	/** MG5: the name for the next naming screen, or null while none is armed. */
+	private @Nullable Supplier<String> autoName;
+	/** The ids of naming UIs answered from {@link #autoName} (not shown while they stay open). */
+	private final Set<Integer> autoAnswered = new HashSet<>();
 
 	public UiRouter(Port port) {
 		this.port = port;
@@ -105,8 +118,52 @@ public final class UiRouter {
 		} else {
 			this.stack.add(session);
 		}
+		this.autoAnswered.remove(session.id());
 		this.idleSince = -1;
 		this.stats.opened++;
+		this.port.changed();
+		if (session.kind() == UiKind.NAMING && this.autoName != null) {
+			this.autoAnswer(session, now);
+		}
+	}
+
+	/**
+	 * MG5 (D6): arms the answer to the next naming screen (a crossing started the far game; the parked save's player name
+	 * names its player), or disarms it with null. One prompt only.
+	 */
+	public void setAutoName(@Nullable Supplier<String> name) {
+		this.autoName = name;
+	}
+
+	/** True while {@code session} is a naming UI answered from the armed name: nothing to show for it. */
+	public boolean autoAnswered(UiSession session) {
+		return this.autoAnswered.contains(session.id());
+	}
+
+	private void autoAnswer(UiSession session, long now) {
+		Supplier<String> armed = this.autoName;
+		this.autoName = null;
+		NamingModel naming = session.naming();
+		String name = armed == null ? null : armed.get();
+		if (naming == null || name == null) {
+			return;
+		}
+		List<String> glyphs = Gen1Text.glyphs(name);
+		if (glyphs.isEmpty()) {
+			return;
+		}
+		if (glyphs.size() <= naming.max() && NamingModel.valid(glyphs, naming.max())) {
+			long before = this.stats.names;
+			this.name(session, glyphs, now);
+			if (this.stats.names > before) {
+				this.autoAnswered.add(session.id());
+				this.stats.autoNamed++;
+				this.port.changed();
+			}
+			return;
+		}
+		// Too long for this game (or a glyph it can't type): the screen shows what fits, for the player to finish.
+		naming.prefill(glyphs.size() > naming.max() ? glyphs.subList(0, naming.max()) : glyphs);
 		this.port.changed();
 	}
 
@@ -160,6 +217,7 @@ public final class UiRouter {
 			return;
 		}
 		this.stack.remove(at);
+		this.autoAnswered.remove(id);
 		if (at == this.stack.size() && !this.stack.isEmpty()) {
 			// The UI under it is on top again and takes input, as when a Gen 1 submenu closes.
 			this.stack.get(this.stack.size() - 1).clearAnswered();
@@ -338,6 +396,7 @@ public final class UiRouter {
 	}
 
 	private void clear() {
+		this.autoAnswered.clear();
 		if (!this.stack.isEmpty()) {
 			this.stats.cleared += this.stack.size();
 			this.stack.clear();

@@ -84,6 +84,31 @@ class StoryRulesTest {
 		this.rules.setIndex(world());
 	}
 
+	/** A world with a connecting route's half whose far doorway is a pass story cell (MG5). */
+	static WorldIndex passWorld() {
+		List<MapPlacement> maps = List.of(
+				new MapPlacement("KB_ROUTE_EASTERN_PASS", 0, 64, 4000, 2, 2, 0, MapPlacement.Kind.ROUTE, "PAL", "kantobridge:wild_forest", false,
+						null));
+		List<StoryCellTable.Entry> cells = List.of(
+				new StoryCellTable.Entry(CellPos.parse("KB_ROUTE_EASTERN_PASS:40:0"), StoryCellType.PASS, "eastern_pass", null),
+				new StoryCellTable.Entry(CellPos.parse("KB_ROUTE_EASTERN_PASS:40:1"), StoryCellType.PASS, "eastern_pass", null));
+		return new WorldIndex("red", HASH, maps, HASH, StoryCellTable.of(cells), List.of(), List.of());
+	}
+
+	@Test
+	void aPassIsClosedUntilItsRouteIsOpen() {
+		this.rules.setIndex(passWorld());
+		assertTrue(active().containsAll(Set.of("KB_ROUTE_EASTERN_PASS:40:0", "KB_ROUTE_EASTERN_PASS:40:1")), "pass_closed by default");
+		this.rules.setOpenPasses(Set.of("western_pass"));
+		assertTrue(active().contains("KB_ROUTE_EASTERN_PASS:40:0"), "another route's pass opening changes nothing here");
+		this.rules.setOpenPasses(Set.of("eastern_pass"));
+		assertFalse(active().contains("KB_ROUTE_EASTERN_PASS:40:0"), "the far region is built and its game linked: open");
+		assertFalse(active().contains("KB_ROUTE_EASTERN_PASS:40:1"));
+		assertEquals(Set.of("eastern_pass"), this.rules.openPasses());
+		this.rules.setOpenPasses(Set.of());
+		assertTrue(active().contains("KB_ROUTE_EASTERN_PASS:40:0"), "the link dropped: shut again");
+	}
+
 	/** A world with a Wild Routes zone whose two balls are route story cells (WR5). */
 	static WorldIndex zonedWorld() {
 		WorldIndex base = world();

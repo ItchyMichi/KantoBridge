@@ -231,6 +231,7 @@ public final class WorldPlan {
 			}
 			storyIndex.put(map, moved);
 		});
+		// each zone's entries' places in the table, in storyEntries() order: its balls, then (MG5) its pass cells
 		List<int[]> ballStory = new ArrayList<>();
 		for (ZonePlan zone : zones) {
 			List<StoryCellTable.Entry> balls = zone.storyEntries();

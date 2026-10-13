@@ -255,8 +255,9 @@ public final class StoryCellTable {
 			if (type == null) {
 				throw new DataException(item.path("type"), "unknown story cell type");
 			}
-			// a zone ball's obj is its id in the zone (a2.i1), every other obj a map object's name
-			String obj = item.has("obj") ? item.string("obj", type == StoryCellType.ROUTE ? WorldIndex.ZONE_OBJECT_ID : DataReader.SYMBOL) : null;
+			// a zone ball's obj is its id in the zone (a2.i1), a pass's its zone's id (MG5), every other obj a map object's name
+			boolean zoneObject = type == StoryCellType.ROUTE || type == StoryCellType.PASS;
+			String obj = item.has("obj") ? item.string("obj", zoneObject ? WorldIndex.ZONE_OBJECT_ID : DataReader.SYMBOL) : null;
 			Swap swap = null;
 			if (item.has("swap")) {
 				DataReader s = item.object("swap").allowOnly(SWAP_FIELDS);

@@ -20,9 +20,16 @@ import org.jetbrains.annotations.Nullable;
  * east of x2.
  */
 public final class RouteGenerator {
-	/** A gate plaza's depth and width in cells. */
+	/** A gate plaza's depth and width in cells (the trailhead's). */
 	static final int GATE_DEPTH = 4;
 	static final int GATE_WIDTH = 6;
+	/**
+	 * A connecting route's far gate is a gate house (docs/specs/MULTI_GAME_PLAN.md §4.8, D12): its plaza is the house's
+	 * inside, 7 cells deep along the way out and 5 across; the builder draws the ring around it as walls, the opening
+	 * toward the last area and the door B as its two doorways. The trailhead keeps the plain plaza.
+	 */
+	public static final int HOUSE_DEPTH = 7;
+	public static final int HOUSE_WIDTH = 5;
 	/** Scenery around the areas and gates, in cells. */
 	static final int MARGIN = 6;
 	private static final int ATTEMPTS = 200;
@@ -114,8 +121,10 @@ public final class RouteGenerator {
 			if (area == null) {
 				return null;
 			}
-			int offset = Math.min(i * spec.levelStep(), spec.levelCap());
 			double progress = areas > 1 ? (double) i / (areas - 1) : 0;
+			// a connecting route's levels rise with the progress toward the pass, so both halves meet at the cap there
+			// (MULTI_GAME_PLAN §4.8); a free-roam zone adds a step per area, as before
+			int offset = connecting ? levelOffset(progress, spec.levelCap()) : Math.min(i * spec.levelStep(), spec.levelCap());
 			placed.add(new Placed(area, k, origin, main, branch, offset, progress, false));
 			rects.add(new Rect(origin.x(), origin.y(), N, N));
 			if (main != null) {
@@ -162,7 +171,7 @@ public final class RouteGenerator {
 			Placed last = placed.get(areas - 1);
 			Dir out = last.main().turn(last.k());
 			List<Cell> farCells = last.area().openings.get(last.main()).stream().map(last::world).sorted().toList();
-			farPlaza = gateRect(farCells, out);
+			farPlaza = gateRect(farCells, out, HOUSE_DEPTH, HOUSE_WIDTH);
 			int row = switch (out) {
 				case EAST -> farCells.get(0).y();
 				case NORTH -> farPlaza.y();
@@ -318,15 +327,25 @@ public final class RouteGenerator {
 		return new Cell(x, y);
 	}
 
+	/** The level offset of a connecting route's area at {@code progress} (0..1): the cap at the pass, rounded between. */
+	public static int levelOffset(double progress, int levelCap) {
+		return (int) Math.round(progress * levelCap);
+	}
+
 	/** A gate plaza outside a 2-cell opening, reaching out along {@code d}. */
 	private static Rect gateRect(List<Cell> opening, Dir d) {
+		return gateRect(opening, d, GATE_DEPTH, GATE_WIDTH);
+	}
+
+	/** A plaza of {@code depth} cells along {@code d} and {@code width} across, outside a 2-cell opening. */
+	private static Rect gateRect(List<Cell> opening, Dir d, int depth, int width) {
 		Cell first = opening.get(0);
 		if (d.dy != 0) {
-			int top = d == Dir.SOUTH ? first.y() + 1 : first.y() - GATE_DEPTH;
-			return new Rect(first.x() - (GATE_WIDTH - 2) / 2, top, GATE_WIDTH, GATE_DEPTH);
+			int top = d == Dir.SOUTH ? first.y() + 1 : first.y() - depth;
+			return new Rect(first.x() - (width - 2) / 2, top, width, depth);
 		}
-		int left = d == Dir.EAST ? first.x() + 1 : first.x() - GATE_DEPTH;
-		return new Rect(left, first.y() - (GATE_WIDTH - 2) / 2, GATE_DEPTH, GATE_WIDTH);
+		int left = d == Dir.EAST ? first.x() + 1 : first.x() - depth;
+		return new Rect(left, first.y() - (width - 2) / 2, depth, width);
 	}
 
 	/**

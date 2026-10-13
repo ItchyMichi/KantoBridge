@@ -40,6 +40,8 @@ import org.jetbrains.annotations.Nullable;
  * <li><b>{@code water}</b> cells are never active: they close unless the player surfs ({@link StoryState#blocks}).</li>
  * <li><b>{@code route}</b> cells (a Wild Routes ball) are closed until the player's {@link RouteProgress} lists the ball as
  * taken, in the zone whose route map keys the cell.</li>
+ * <li><b>{@code pass}</b> cells (MG5: a connecting route's pass, the far doorway of its gate house) are closed unless
+ * {@link #setOpenPasses} names their route: its far region is built and this player has a link for its game.</li>
  * </ul>
  * Surf and bike come from {@code player.state}; lit maps from the snapshot's {@code lit}, {@code story.lit} and
  * {@code player.state}'s {@code dark}/{@code lit} for the current map. Malformed parts of a message are skipped; logs
@@ -70,6 +72,9 @@ public final class StoryRules {
 	private final List<StoryCellTable.Entry> tiles = new ArrayList<>();
 	private final List<StoryCellTable.Entry> boulders = new ArrayList<>();
 	private final List<StoryCellTable.Entry> routeBalls = new ArrayList<>();
+	/** MG5: the pass cells of connecting routes ({@code obj} names the route's zone), closed unless the route is open. */
+	private final List<StoryCellTable.Entry> passes = new ArrayList<>();
+	private Set<String> openPasses = Set.of();
 	/** The zone id of each zone's route map. */
 	private final Map<String, String> zoneByRouteMap = new HashMap<>();
 	private final RouteProgress progress = new RouteProgress();
@@ -101,6 +106,7 @@ public final class StoryRules {
 		this.tiles.clear();
 		this.boulders.clear();
 		this.routeBalls.clear();
+		this.passes.clear();
 		this.zoneByRouteMap.clear();
 		if (index != null) {
 			for (StoryCellTable.Entry entry : index.storyCells().entries()) {
@@ -109,6 +115,7 @@ public final class StoryRules {
 					case TILE -> this.tiles.add(entry);
 					case BOULDER_AREA -> this.boulders.add(entry);
 					case ROUTE -> this.routeBalls.add(entry);
+					case PASS -> this.passes.add(entry);
 					case WATER -> {
 					}
 				}
@@ -122,6 +129,22 @@ public final class StoryRules {
 
 	public @Nullable WorldIndex index() {
 		return this.index;
+	}
+
+	/**
+	 * MG5: the connecting routes whose pass is open for this player (the far region is built and a link for its game is
+	 * connected), by the zone id the pass cells carry as {@code obj}; every other pass cell stays closed ({@code pass_closed}).
+	 */
+	public void setOpenPasses(Set<String> routes) {
+		Set<String> next = Set.copyOf(routes);
+		if (!next.equals(this.openPasses)) {
+			this.openPasses = next;
+			this.dirty = true;
+		}
+	}
+
+	public Set<String> openPasses() {
+		return this.openPasses;
 	}
 
 	// ---- the hidden game's reports ----
@@ -363,6 +386,12 @@ public final class StoryRules {
 		for (StoryCellTable.Entry entry : this.routeBalls) {
 			String zone = this.zoneByRouteMap.get(entry.cell().map());
 			if (zone != null && entry.obj() != null && !this.progress.taken(zone, entry.obj())) {
+				active.add(entry.key());
+			}
+		}
+		for (StoryCellTable.Entry entry : this.passes) {
+			// MG5: a pass is shut until its far region is built and this player has a link to its game (pass_closed)
+			if (entry.obj() == null || !this.openPasses.contains(entry.obj())) {
 				active.add(entry.key());
 			}
 		}
