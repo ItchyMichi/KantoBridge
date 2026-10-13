@@ -330,7 +330,7 @@ public final class MovementSync {
 				// A turn (move.face), a step that set off a warp or moved the player without a visible step, a script
 				// teleport. Steps still waiting explain any difference for now.
 				this.answer(n);
-				if (this.pending.isEmpty() && !target.equals(this.from())) {
+				if (this.pending.isEmpty() && !target.equals(this.from()) && !this.waitsForClimb(target)) {
 					this.correct(this.from(), target, SNAP_FRAMES, now);
 				}
 			}
@@ -345,7 +345,7 @@ public final class MovementSync {
 				// script, spin, current, ledge, push: the game moves the player itself (a Strength push leaves the
 				// player where it is, frames 0).
 				this.answer(n);
-				if (!target.equals(this.from())) {
+				if (!target.equals(this.from()) && !this.waitsForClimb(target)) {
 					this.forced(target, frames, now);
 				}
 			}
@@ -367,7 +367,7 @@ public final class MovementSync {
 		}
 		Spot target = Spot.of(this.index, cell);
 		Spot from = this.from();
-		if (target == null || target.equals(from)) {
+		if (target == null || target.equals(from) || this.waitsForClimb(target)) {
 			return;
 		}
 		this.stats.snaps++;
@@ -562,6 +562,18 @@ public final class MovementSync {
 		this.endClimb();
 		this.walkRound(world, hiddenCell, cell, c.near(), now);
 		return true;
+	}
+
+	/**
+	 * True while climbing when {@code target} is where the hidden player waits, on or beside the climb's near end: a late
+	 * answer (to a turn or a push made before the climb) moves nobody out of the shaft, where the player stands in no
+	 * cell.
+	 */
+	private boolean waitsForClimb(@Nullable Spot target) {
+		Climb c = this.climb;
+		WorldIndex world = this.index;
+		CellPos cell = c == null || target == null || world == null ? null : target.cell(world);
+		return cell != null && beside(cell, c.near());
 	}
 
 	/** A shaft end the player may climb or drop from: a top, or the bottom of a ladder climbed up too. */

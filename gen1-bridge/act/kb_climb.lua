@@ -121,7 +121,7 @@ function Climb.new(opts)
     if type(queue) ~= "function" then return answer(out, r, false, "busy") end
     local ok, queued = pcall(queue, world, { { "warp", r.to.map, r.to.x, r.to.y, r.to.facing } })
     if not (ok and queued) then return answer(out, r, false, "busy") end
-    if warps then warps.expect(KINDS[r.kind], r.seq) end
+    if warps then warps.expect(KINDS[r.kind], r.seq, r.gen) end
     return answer(out, r, true)
   end
 

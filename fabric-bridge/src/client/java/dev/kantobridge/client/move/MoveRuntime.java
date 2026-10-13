@@ -114,6 +114,12 @@ public final class MoveRuntime {
 		return runtime == null ? null : runtime.controller.sync().stats();
 	}
 
+	/** The movement sync (the dev client's autopilot traces its climbs), or null before init. */
+	public static @Nullable MovementSync sync() {
+		MoveRuntime runtime = instance;
+		return runtime == null ? null : runtime.controller.sync();
+	}
+
 	/** True while the movement sync follows the hidden game for this player (a Kanto world, not a free camera). */
 	public static boolean following() {
 		MoveRuntime runtime = instance;

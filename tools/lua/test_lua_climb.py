@@ -24,7 +24,7 @@ class Climb:
         world.queueScript = self.b.eval("function(f) return function(...) return f(...) end end")(
             lambda _world, rows: self._queue(rows))
         warps = self.b.table()
-        warps.expect = lambda kind, re: self.expected.append((kind.decode(), re))
+        warps.expect = lambda kind, re, gen: self.expected.append((kind.decode(), re, gen))
         opts = self.b.table()
         opts.world, opts.warps = world, warps
         self.act = self.b.module("act/kb_climb.lua").new(opts)
@@ -55,7 +55,7 @@ def test_a_take_next_to_the_near_end_queues_the_engines_warp_and_is_answered_ok(
     assert c.request()
     assert c.step() == [("warp.taken", {"ok": True}, 7, 1)]
     assert c.queued == [[["warp", "TEST_CAVE_B1F", 9, 3, "down"]]]
-    assert c.expected == [("stairs", 7)], "the observer labels the warp a ladder's: kind stairs, re 7"
+    assert c.expected == [("stairs", 7, 1)], "the observer labels the warp a ladder's: kind stairs, re 7, the take's connection"
     assert c.step() == []
 
 
@@ -63,7 +63,7 @@ def test_a_hole_is_labelled_hole():
     c = Climb()
     c.request(dict(TAKE, kind="hole"))
     c.step(x=9, y=3)
-    assert c.expected == [("hole", 7)]
+    assert c.expected == [("hole", 7, 1)]
 
 
 @pytest.mark.parametrize("facts, reason", [
@@ -131,19 +131,35 @@ class Tracker:
         out = self.t.step(self.b.to_lua(f), self.b.to_lua(ev or {}))
         return [(m[2].phase.decode(), m[2].kind.decode(), m.re) for m in out.values()]
 
+    def gens(self, ev=None, **facts):
+        f = dict(STAND)
+        f.update(facts)
+        out = self.t.step(self.b.to_lua(f), self.b.to_lua(ev or {}))
+        return [(m[2].phase.decode(), m.re, m.gen) for m in out.values()]
+
 
 def test_the_observer_gives_the_takes_warp_its_kind_and_re():
     t = Tracker()
-    t.t.expect(b"stairs", 7)
+    t.t.expect(b"stairs", 7, 1)
     assert t.step(transitioning=True) == [("start", "stairs", 7)]
     assert t.step({"entered": [{"map": "TEST_CAVE_B1F", "via": "warp"}]}, map="TEST_CAVE_B1F", x=9, y=3) == [
         ("arrive", "stairs", 7)]
     assert t.step(transitioning=True) == [("start", "script", None)], "only the one warp"
 
 
+def test_the_takes_warp_messages_carry_its_connections_generation():
+    # main.lua sends a message with a re as a reply, and only when its gen is the live connection's: without the gen
+    # the take's warp messages were dropped (the H6 pilot's first take on the real game timed out)
+    t = Tracker()
+    t.t.expect(b"stairs", 7, 3)
+    assert t.gens(transitioning=True) == [("start", 7, 3)]
+    assert t.gens({"entered": [{"map": "TEST_CAVE_B1F", "via": "warp"}]}, map="TEST_CAVE_B1F", x=9, y=3) == [("arrive", 7, 3)]
+    assert t.gens(transitioning=True) == [("start", None, None)], "an ordinary warp is streamed"
+
+
 def test_an_expectation_no_warp_follows_lapses():
     t = Tracker()
-    t.t.expect(b"hole", 9)
+    t.t.expect(b"hole", 9, 1)
     for _ in range(121):
         t.step()
     assert t.step(transitioning=True) == [("start", "script", None)]
@@ -151,5 +167,25 @@ def test_an_expectation_no_warp_follows_lapses():
 
 def test_a_warp_table_warp_keeps_its_own_kind():
     t = Tracker()
-    t.t.expect(b"stairs", 7)
+    t.t.expect(b"stairs", 7, 1)
     assert t.step({"warped": {"kind": "door", "map": "TEST_CAVE_1F"}}, transitioning=True) == [("start", "door", None)]
+
+
+def test_the_main_loop_sends_the_takes_warp_as_its_answer():
+    # Through gen1-bridge's main.lua (the simulated route game: mod.world's queueScript on the fake script runner):
+    # the take's warp.taken and both its warp messages go out with the take's re (the H6 pilot found them dropped)
+    from routesim import ROUTE_MAP, RouteGame
+
+    g = RouteGame()
+    m, x, y = g.where()
+    assert m == ROUTE_MAP
+    seq = g.send("warp.take", {"from": {"map": m, "x": x, "y": y}, "to": {"map": "TEST_WOODS", "x": 4, "y": 4, "facing": "down"},
+                               "kind": "ladder"})
+    taken = g.until(lambda msg: msg["type"] == "warp.taken")
+    assert taken.get("re") == seq and taken["data"] == {"ok": True}
+    start = g.until(lambda msg: msg["type"] == "warp" and msg["data"]["phase"] == "start")
+    assert start.get("re") == seq and start["data"]["kind"] == "stairs"
+    arrive = g.until(lambda msg: msg["type"] == "warp" and msg["data"]["phase"] == "arrive")
+    assert arrive.get("re") == seq
+    assert arrive["data"]["to"] == {"map": "TEST_WOODS", "x": 4, "y": 4, "facing": "down"}
+    assert g.where() == ("TEST_WOODS", 4, 4)

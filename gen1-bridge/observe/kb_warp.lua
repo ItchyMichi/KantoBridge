@@ -34,9 +34,11 @@
 --
 -- A cave shaft's warp (act/kb_climb.lua, docs/PROTOCOL.md "Ladders and
 -- holes"): the act queues the engine's warp command and calls expect(kind,
--- re); the next warp that isn't a warp-table one (a queued script's) takes
--- that kind (stairs or hole) and both its messages carry the take's re. An
--- expectation no warp follows within EXPECT steps lapses.
+-- re, gen); the next warp that isn't a warp-table one (a queued script's)
+-- takes that kind (stairs or hole) and both its messages carry the take's re
+-- and its connection's generation (main.lua sends a message with a re as a
+-- reply, and only to the connection that asked). An expectation no warp
+-- follows within EXPECT steps lapses.
 -- Logs show codes, kinds and counts only.
 
 local Warp = {}
@@ -78,16 +80,17 @@ function Warp.new(opts)
   opts = opts or {}
   local log = opts.log
   local tracker = {}
-  local current       -- the warp under way: { kind, at, re }
+  local current       -- the warp under way: { kind, at, re, gen }
   local hint          -- a departure seen before its fade: "fly", "teleport", "hole"
-  local expected      -- a warp.take's warp to come: { kind, re, at }
+  local expected      -- a warp.take's warp to come: { kind, re, gen, at }
   local steps = 0
   local counts = { started = 0, arrived = 0, late = 0, timeouts = 0, heldBack = 0, taken = 0, lapsed = 0 }
 
   -- The next script warp is a cave shaft's (act/kb_climb.lua): kind
-  -- "stairs" or "hole", answering the warp.take with seq `re`.
-  function tracker.expect(kind, re)
-    expected = { kind = Warp.KINDS[kind] and kind or "stairs", re = re, at = steps }
+  -- "stairs" or "hole", answering the warp.take with seq `re` from the
+  -- connection of generation `gen`.
+  function tracker.expect(kind, re, gen)
+    expected = { kind = Warp.KINDS[kind] and kind or "stairs", re = re, gen = gen, at = steps }
   end
 
   -- facts: kb_engine.observe() for this step; ev: the events since the last
@@ -98,21 +101,22 @@ function Warp.new(opts)
     local out = {}
 
     local function start(kind, taken)
-      local re
+      local re, gen
       if taken and expected then
-        kind, re = expected.kind, expected.re
+        kind, re, gen = expected.kind, expected.re, expected.gen
         expected = nil
         counts.taken = counts.taken + 1
       end
-      current = { kind = kind, at = steps, re = re }
+      current = { kind = kind, at = steps, re = re, gen = gen }
       counts.started = counts.started + 1
-      out[#out + 1] = { "warp", { phase = "start", kind = kind }, "warp", re = re }
+      out[#out + 1] = { "warp", { phase = "start", kind = kind }, "warp", re = re, gen = gen }
     end
 
     local function arrive(why)
       local to = place(f)
       if to then
-        out[#out + 1] = { "warp", { phase = "arrive", kind = current.kind, to = to }, "warp", re = current.re }
+        out[#out + 1] = { "warp", { phase = "arrive", kind = current.kind, to = to }, "warp", re = current.re,
+          gen = current.gen }
         counts.arrived = counts.arrived + 1
       else
         counts.heldBack = counts.heldBack + 1

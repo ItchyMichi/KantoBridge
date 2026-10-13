@@ -862,6 +862,16 @@ public final class Autopilot {
 		boolean inColumn = player.getX() >= shaft.x() && player.getX() < shaft.x() + Scale.CELL_BLOCKS && player.getZ() >= shaft.z()
 				&& player.getZ() < shaft.z() + Scale.CELL_BLOCKS;
 		this.stepTicks++;
+		if (this.stepTicks % 5 == 0) {
+			MovementSync sync = MoveRuntime.sync();
+			this.trace(String.format(Locale.ROOT,
+					"ladder step=%d t=%d y=%.2f wall=%.2f column=%b ground=%b ladder=%b bump=%b locked=%b keys=%b/%b climb=%s take=%s hidden=%s mode=%s",
+					this.step, this.stepTicks, player.getY(), toWall, inColumn, player.onGround(), player.onClimbable(), player.horizontalCollision,
+					InputLock.locked(), this.minecraft.options.keyUp.isDown(), this.minecraft.options.keyShift.isDown(),
+					sync == null ? "-" : sync.climbing(), sync == null ? "-" : sync.takeHolding(),
+					state == null ? "-" : state.map() + ":" + state.x() + ":" + state.y() + ":" + state.facing(), state == null ? "-" : state.mode())
+					+ this.climbStats());
+		}
 		switch (this.step) {
 			case 0 -> {
 				// a look at the shaft's top
@@ -1001,8 +1011,9 @@ public final class Autopilot {
 
 	private String climbStats() {
 		MovementSync.Stats stats = MoveRuntime.stats();
-		return stats == null ? "" : " steps=" + stats.steps + " blocked=" + stats.blocked + " snaps=" + stats.snaps + " drifts=" + stats.drifts
-				+ " teleports=" + stats.teleports + " climbs=" + stats.climbs + " takes=" + stats.takes + " takes_failed=" + stats.takesFailed;
+		return stats == null ? "" : " steps=" + stats.steps + " pushes=" + stats.pushes + " blocked=" + stats.blocked + " snaps=" + stats.snaps
+				+ " steers=" + stats.steers + " drifts=" + stats.drifts + " syncs=" + stats.syncs + " teleports=" + stats.teleports + " climbs="
+				+ stats.climbs + " takes=" + stats.takes + " takes_failed=" + stats.takesFailed;
 	}
 
 	private void nextStep() {
@@ -1249,6 +1260,18 @@ public final class Autopilot {
 		this.phase = Phase.FAILED;
 		if (this.quit) {
 			this.minecraft.stop();
+		}
+	}
+
+	/** A line for the log file only (the pilot's tick-by-tick trace of a climb): positions, flags and counts. */
+	private void trace(String event) {
+		if (this.log != null) {
+			try {
+				Files.writeString(this.log, Instant.now() + " autopilot: " + event + "\n", StandardCharsets.UTF_8, StandardOpenOption.CREATE,
+						StandardOpenOption.APPEND);
+			} catch (IOException ignored) {
+				// a trace line less
+			}
 		}
 	}
 

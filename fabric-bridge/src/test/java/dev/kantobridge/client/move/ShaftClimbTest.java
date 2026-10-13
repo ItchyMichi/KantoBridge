@@ -137,6 +137,23 @@ class ShaftClimbTest {
 	}
 
 	@Test
+	void lateAnswersAboutTheWaitingHiddenPlayerLeaveTheClimberInTheShaft() {
+		// the H6 pilot's climb up was pulled back down: an answer to a turn made just before it came while the player stood
+		// in the shaft, in no cell, and looked like a drift
+		MovementSyncTest.Rig rig = atTheTop();
+		rig.y = shaft("TEST_CAVE_1F", 3, 5).y0() + 5;
+		assertEquals(List.of(), rig.tick());
+		rig.pos("TEST_CAVE_1F", 2, 5, Dir.UP, "sync", 0, null);
+		rig.sync.onBlocked(new Place("TEST_CAVE_1F", 2, 5, Dir.UP), null, rig.now);
+		assertEquals(List.of(), rig.tick(), "no teleport out of the shaft");
+		assertTrue(rig.sync.climbing());
+		assertEquals(0, rig.sync.stats().teleports + rig.sync.stats().snaps + rig.sync.stats().steers);
+		// the hidden game moving the hidden player elsewhere still counts
+		rig.pos("TEST_CAVE_1F", 6, 5, Dir.UP, "sync", 0, null);
+		assertEquals(List.of("teleport TEST_CAVE_1F:6:5:up"), rig.tick());
+	}
+
+	@Test
 	void steppingBackOffTheTopEndsTheClimb() {
 		MovementSyncTest.Rig rig = atTheTop();
 		rig.moveTo("TEST_CAVE_1F", 2, 5);
