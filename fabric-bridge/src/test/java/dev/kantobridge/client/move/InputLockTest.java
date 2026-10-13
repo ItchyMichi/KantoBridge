@@ -15,6 +15,7 @@ class InputLockTest {
 	@AfterEach
 	void unlock() {
 		InputLock.set(false);
+		InputLock.setHoldOnLadder(false);
 	}
 
 	private static InputLock.Reason reason(boolean kanto, boolean free, boolean connected, boolean ingame, boolean unbuilt, String mode,
@@ -71,6 +72,20 @@ class InputLockTest {
 		assertFalse(input.up || input.down || input.left || input.right);
 		assertFalse(input.jumping);
 		assertFalse(input.shiftKeyDown);
+	}
+
+	@Test
+	void heldOnALadderDuringAClimbsTakeTheSneakStaysDown() {
+		Input input = new Input();
+		fill(input);
+		InputLock.setHoldOnLadder(true);
+		InputLock.apply(input);
+		assertEquals(1.0F, input.forwardImpulse, "unlocked: untouched");
+		InputLock.set(true);
+		InputLock.apply(input);
+		assertEquals(0.0F, input.forwardImpulse);
+		assertFalse(input.jumping);
+		assertTrue(input.shiftKeyDown, "hanging on: no slide back down the shaft");
 	}
 
 	@Test

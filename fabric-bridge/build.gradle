@@ -88,6 +88,11 @@ if (kbAutopilot != null && !kbAutopilot.isBlank()) {
 				}
 				// the caves and woods plan's tour (Autopilot scene "tour"): how many stops it looks round at
 				vmArg "-Dkantobridge.autopilot.stops=${providers.gradleProperty('kb.autopilotStops').getOrElse('2')}"
+				// the caves in 3D plan's pilot (Autopilot scene "pilot"): the folder it and the test driver swap requests in
+				def kbAutopilotPilotDir = providers.gradleProperty("kb.autopilotPilotDir").getOrNull()
+				if (kbAutopilotPilotDir != null && !kbAutopilotPilotDir.isBlank()) {
+					vmArg "-Dkantobridge.autopilot.pilotDir=${file(kbAutopilotPilotDir.trim()).absolutePath}"
+				}
 				programArgs "--width", "1280", "--height", "720"
 			}
 		}
@@ -551,6 +556,8 @@ test {
 	systemProperty "kb.updateGolden", providers.gradleProperty("kb.updateGolden").getOrElse("false")
 	// -Pkb.realBundle=<export bundle> runs the caves in 3D plan's dry run on the real world (pod only, counts and ids).
 	systemProperty "kb.realBundle", providers.gradleProperty("kb.realBundle").getOrElse("")
+	// -Pkb.caves3d=pilot: the dry run with only the pilot's caves in 3D (the build's default) instead of all
+	systemProperty "kb.caves3d", providers.gradleProperty("kb.caves3d").getOrElse("all")
 	testLogging {
 		events "failed", "skipped"
 		exceptionFormat = "full"

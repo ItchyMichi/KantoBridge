@@ -1,13 +1,21 @@
 package dev.kantobridge.client.dev;
 
 import dev.kantobridge.KantoBridge;
+import dev.kantobridge.builder.export.BundleException;
+import dev.kantobridge.builder.export.CellFlags;
+import dev.kantobridge.builder.export.ExportBundle;
+import dev.kantobridge.builder.export.ExportMap;
 import dev.kantobridge.client.bridge.BridgeRuntime;
 import dev.kantobridge.client.bridge.ClientBridgeState;
 import dev.kantobridge.client.bridge.ConnectionState;
 import dev.kantobridge.client.move.InputLock;
+import dev.kantobridge.client.move.MoveRuntime;
+import dev.kantobridge.client.move.MovementSync;
 import dev.kantobridge.client.world.ClientWorldIndex;
 import dev.kantobridge.client.world.CreateKantoWorldFlow;
 import dev.kantobridge.client.zone.ZoneView;
+import dev.kantobridge.world.CellPos;
+import dev.kantobridge.world.Dir;
 import dev.kantobridge.world.Scale;
 import dev.kantobridge.world.WorldIndex;
 import java.io.IOException;
@@ -15,12 +23,15 @@ import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
 import java.nio.file.StandardOpenOption;
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
@@ -36,6 +47,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.phys.Vec3;
 import org.jetbrains.annotations.Nullable;
 
 /**
@@ -62,11 +74,29 @@ import org.jetbrains.annotations.Nullable;
  * (tools/e2e/drivers/kb_tour.lua) warps the hidden player from stop to stop; at each one the autopilot looks round in
  * first person, tilted up at the roof or the canopy, recording each look round into its own file (the record file
  * with {@code -stop<n>}; {@code kantobridge.autopilot.stops}, default 2).
+ *
+ * <p>Scene {@code pilot} (the caves in 3D plan's H6 video, docs/specs/CAVES_3D_PLAN.md): it plans two shots from the
+ * world index and the export's cells ({@link PilotPlan}): up a cave's stairs to its raised ground and on to the cliff's
+ * edge, then down a ladder's shaft and back up. For each it asks the test driver (tools/e2e/drivers/kb_pilot.lua) to
+ * put the hidden player on the shot's first cell, through the files in {@code kantobridge.autopilot.pilotDir}, and
+ * records the shot in first person into its own file (as the tour's stops).
  */
 public final class Autopilot {
 	static final String PROPERTY = "kantobridge.autopilot";
 	static final String SCENE_WILD_ZONE = "wild_zone";
 	static final String SCENE_TOUR = "tour";
+	static final String SCENE_PILOT = "pilot";
+	/** The pilot's pitches: looking where it walks, down over the edge, down the shaft and up it. */
+	static final float PILOT_WALK_PITCH = 14f;
+	static final float PILOT_EDGE_PITCH = 55f;
+	static final float PILOT_DOWN_PITCH = 62f;
+	static final float PILOT_UP_PITCH = -58f;
+	static final float PILOT_SWAY = 40f;
+	static final double PILOT_REACHED = 0.3;
+	/** On the ladder: the player's middle this close to its wall, the body clear of the floor kept beside it. */
+	static final double PILOT_ON_LADDER = 0.62;
+	static final String SHOT_STAIRS = "stairs";
+	static final String SHOT_LADDER = "ladder";
 	/** A tour's look round at a stop, in seconds, and its tilt: looking up by this much, swaying by that much. */
 	static final float TOUR_PAN_SECONDS = 16f;
 	static final float TOUR_PITCH = -22f;
@@ -95,7 +125,13 @@ public final class Autopilot {
 		FAILED,
 		TOUR_SETTLE,
 		TOUR_PAN,
-		TOUR_WAIT
+		TOUR_WAIT,
+		PILOT_PLAN,
+		PILOT_PLACE,
+		PILOT_SETTLE,
+		PILOT_STAIRS,
+		PILOT_EDGE,
+		PILOT_LADDER
 	}
 
 	private final Minecraft minecraft;
@@ -106,6 +142,15 @@ public final class Autopilot {
 	private final boolean tour;
 	private final int stops;
 	private int stopsSeen;
+	private final boolean pilot;
+	private final @Nullable Path pilotDir;
+	private final List<String> shots = new ArrayList<>();
+	private int shot;
+	private int requestSeq;
+	private PilotPlan.@Nullable Stairs stairs;
+	private PilotPlan.@Nullable Ladder ladder;
+	private int step;
+	private int stepTicks;
 
 	private Phase phase = Phase.TITLE;
 	private int phaseTicks;
@@ -129,7 +174,7 @@ public final class Autopilot {
 	private int fpsMin = Integer.MAX_VALUE;
 
 	private Autopilot(Minecraft minecraft, @Nullable String world, @Nullable Path record, @Nullable Path log, boolean quit, boolean tour,
-			int stops) {
+			int stops, boolean pilot, @Nullable Path pilotDir) {
 		this.minecraft = minecraft;
 		this.world = world;
 		this.record = record;
@@ -137,6 +182,8 @@ public final class Autopilot {
 		this.quit = quit;
 		this.tour = tour;
 		this.stops = stops;
+		this.pilot = pilot;
+		this.pilotDir = pilotDir;
 	}
 
 	/** Call once from client init; does nothing without {@value #PROPERTY}. */
@@ -145,16 +192,18 @@ public final class Autopilot {
 		if (scene == null || scene.isBlank()) {
 			return;
 		}
-		if (!SCENE_WILD_ZONE.equals(scene) && !SCENE_TOUR.equals(scene)) {
+		if (!SCENE_WILD_ZONE.equals(scene) && !SCENE_TOUR.equals(scene) && !SCENE_PILOT.equals(scene)) {
 			KantoBridge.LOGGER.warn("autopilot: unknown scene");
 			return;
 		}
 		String world = System.getProperty(PROPERTY + ".world");
 		String record = System.getProperty(PROPERTY + ".record");
 		String log = System.getProperty(PROPERTY + ".log");
+		String pilotDir = System.getProperty(PROPERTY + ".pilotDir");
 		Autopilot pilot = new Autopilot(Minecraft.getInstance(), world == null || world.isBlank() ? null : world,
 				record == null || record.isBlank() ? null : Path.of(record), log == null || log.isBlank() ? null : Path.of(log),
-				Boolean.getBoolean(PROPERTY + ".quit"), SCENE_TOUR.equals(scene), Math.max(1, Integer.getInteger(PROPERTY + ".stops", 2)));
+				Boolean.getBoolean(PROPERTY + ".quit"), SCENE_TOUR.equals(scene), Math.max(1, Integer.getInteger(PROPERTY + ".stops", 2)),
+				SCENE_PILOT.equals(scene), pilotDir == null || pilotDir.isBlank() ? null : Path.of(pilotDir));
 		ClientTickEvents.END_CLIENT_TICK.register(minecraft -> pilot.tick());
 		pilot.mark("armed scene=" + scene + " record=" + (pilot.record != null));
 	}
@@ -183,6 +232,12 @@ public final class Autopilot {
 				case TOUR_SETTLE -> this.tourSettle();
 				case TOUR_PAN -> this.tourPan();
 				case TOUR_WAIT -> this.tourWait();
+				case PILOT_PLAN -> this.pilotPlan();
+				case PILOT_PLACE -> this.pilotPlace();
+				case PILOT_SETTLE -> this.pilotSettle();
+				case PILOT_STAIRS -> this.pilotStairs();
+				case PILOT_EDGE -> this.pilotEdge();
+				case PILOT_LADDER -> this.pilotLadder();
 				case DONE, FAILED -> {
 				}
 			}
@@ -247,7 +302,7 @@ public final class Autopilot {
 			this.startMap = state.map();
 			this.walkYaw = yawOf(state.facing());
 			this.mark("linked map=" + state.map() + " x=" + state.x() + " y=" + state.y() + " facing=" + state.facing());
-			this.next(this.tour ? Phase.TOUR_SETTLE : Phase.SETTLE);
+			this.next(this.pilot ? Phase.PILOT_PLAN : this.tour ? Phase.TOUR_SETTLE : Phase.SETTLE);
 		} else {
 			this.limit(5 * 60, "link");
 		}
@@ -505,6 +560,445 @@ public final class Autopilot {
 		}
 	}
 
+	// ---- the caves pilot ----
+
+	/** The shots, planned from the index and the export's cells (the chunks far off aren't loaded yet). */
+	private void pilotPlan() {
+		WorldIndex index = ClientWorldIndex.current();
+		if (index == null || this.pilotDir == null) {
+			this.fail("no_index_or_pilot_dir");
+			return;
+		}
+		List<String> caves = PilotPlan.caves3d(index);
+		Map<String, ExportMap> maps = new HashMap<>();
+		try {
+			ExportBundle bundle = ExportBundle.open(this.minecraft.gameDirectory.toPath().resolve("kantobridge").resolve("export").resolve(index.game()));
+			for (String id : caves) {
+				maps.put(id, bundle.map(id));
+			}
+		} catch (BundleException | RuntimeException e) {
+			this.fail("no_export " + e.getClass().getSimpleName());
+			return;
+		}
+		// Floor a player stands on: walkable, no water, no warp of any kind (the driver checks objects with the game)
+		PilotPlan.Cells cells = (map, cx, cy) -> {
+			ExportMap m = maps.get(map);
+			if (m == null || cx < 0 || cy < 0 || cx >= m.cellWidth() || cy >= m.cellHeight()) {
+				return false;
+			}
+			int flags = m.flags(cx, cy);
+			return CellFlags.has(flags, CellFlags.WALKABLE) && !CellFlags.has(flags, CellFlags.WATER) && !CellFlags.has(flags, CellFlags.WARP_TILE)
+					&& !CellFlags.has(flags, CellFlags.DOOR) && !CellFlags.has(flags, CellFlags.HOLE);
+		};
+		this.stairs = PilotPlan.stairs(index, caves, cells);
+		this.ladder = PilotPlan.ladder(index, caves, cells);
+		this.shots.clear();
+		if (this.stairs != null) {
+			this.shots.add(SHOT_STAIRS);
+		}
+		if (this.ladder != null) {
+			this.shots.add(SHOT_LADDER);
+		}
+		PilotPlan.Stairs s = this.stairs;
+		PilotPlan.Ladder l = this.ladder;
+		this.mark("pilot_plan caves=" + caves.size() + " shafts=" + index.shafts().size()
+				+ (s == null ? " stairs=none" : " stairs=" + s.map() + " x=" + s.start()[0] + " y=" + s.start()[1] + " cells=" + s.path().size()
+						+ " edge_x=" + s.edge()[0] + " edge_y=" + s.edge()[1] + " look=" + s.look().id())
+				+ (l == null ? " ladder=none" : " ladder=" + l.shaft().top().map() + " x=" + l.x() + " y=" + l.y() + " facing=" + l.facing().id()
+						+ " to=" + l.shaft().bottom().map() + " length=" + (l.shaft().y1() - l.shaft().y0()) + " up=" + l.shaft().up()));
+		if (this.shots.isEmpty()) {
+			this.fail("nothing_to_film");
+			return;
+		}
+		this.shot = 0;
+		this.request();
+	}
+
+	/** Asks the driver to put the hidden player on the current shot's first cell (request.txt, written whole). */
+	private void request() {
+		String shot = this.shots.get(this.shot);
+		StringBuilder line = new StringBuilder().append(++this.requestSeq).append(' ');
+		if (SHOT_STAIRS.equals(shot)) {
+			PilotPlan.Stairs s = this.stairs;
+			line.append("walk ").append(s.map()).append(' ').append(s.facing().id());
+			for (int[] c : s.path()) {
+				line.append(' ').append(c[0]).append(',').append(c[1]);
+			}
+		} else {
+			PilotPlan.Ladder l = this.ladder;
+			CellPos top = l.shaft().top();
+			line.append("ladder ").append(top.map()).append(' ').append(l.facing().id()).append(' ').append(l.x()).append(',').append(l.y())
+					.append(' ').append(top.x()).append(',').append(top.y());
+		}
+		try {
+			Files.createDirectories(this.pilotDir);
+			Path tmp = this.pilotDir.resolve("request.txt.tmp");
+			Files.writeString(tmp, line + "\n", StandardCharsets.UTF_8);
+			Files.move(tmp, this.pilotDir.resolve("request.txt"), StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);
+		} catch (IOException e) {
+			this.fail("request " + e.getClass().getSimpleName());
+			return;
+		}
+		this.mark("request n=" + this.requestSeq + " shot=" + shot);
+		this.next(Phase.PILOT_PLACE);
+	}
+
+	private @Nullable String answer() {
+		try {
+			Path file = this.pilotDir.resolve("answer.txt");
+			return Files.isRegularFile(file) ? Files.readString(file, StandardCharsets.UTF_8).trim() : null;
+		} catch (IOException e) {
+			return null;
+		}
+	}
+
+	/** Until the driver has put the hidden player on the shot's first cell and the player stands there, free, for two seconds. */
+	private void pilotPlace() {
+		String answer = this.answer();
+		String shot = this.shots.get(this.shot);
+		if (answer != null && answer.startsWith(this.requestSeq + " refused")) {
+			this.mark("refused shot=" + shot + " why=" + answer.substring(answer.indexOf("refused") + 7).trim().replace(' ', '_'));
+			this.nextShot();
+			return;
+		}
+		LocalPlayer player = this.minecraft.player;
+		WorldIndex index = ClientWorldIndex.current();
+		ClientBridgeState state = this.state();
+		String map = SHOT_STAIRS.equals(shot) ? this.stairs.map() : this.ladder.shaft().top().map();
+		int x = SHOT_STAIRS.equals(shot) ? this.stairs.start()[0] : this.ladder.x();
+		int y = SHOT_STAIRS.equals(shot) ? this.stairs.start()[1] : this.ladder.y();
+		boolean ok = (this.requestSeq + " ok").equals(answer) && player != null && index != null && state != null && state.ingame()
+				&& map.equals(state.map()) && state.x() == x && state.y() == y && !InputLock.locked() && this.minecraft.screen == null
+				&& this.onHiddenCell(player, index, state);
+		this.stableTicks = ok ? this.stableTicks + 1 : 0;
+		if (this.stableTicks >= 2 * TICKS) {
+			this.mark("placed shot=" + shot + " map=" + map + " x=" + x + " y=" + y);
+			this.next(Phase.PILOT_SETTLE);
+		} else if (this.phaseTicks > 90 * TICKS) {
+			this.mark("place_timeout shot=" + shot + " answered=" + (answer != null) + " at=" + (state == null ? "-" : state.map() + ":" + state.x()
+					+ ":" + state.y()) + " locked=" + InputLock.locked());
+			this.nextShot();
+		}
+	}
+
+	/** First person, no HUD, facing the shot's way, a few seconds for the view to load; then the shot's recording starts. */
+	private void pilotSettle() {
+		LocalPlayer player = this.minecraft.player;
+		if (player == null) {
+			this.fail("no_player");
+			return;
+		}
+		boolean stairsShot = SHOT_STAIRS.equals(this.shots.get(this.shot));
+		if (this.phaseTicks == 1) {
+			this.minecraft.options.setCameraType(CameraType.FIRST_PERSON);
+			this.minecraft.options.hideGui = true;
+			this.keys(false, false, false);
+		}
+		this.look(player, (stairsShot ? this.stairs.facing() : this.ladder.facing()).yaw(), stairsShot ? PILOT_WALK_PITCH : 30f);
+		this.minecraft.getToasts().clear();
+		if (this.phaseTicks >= 6 * TICKS) {
+			this.startRecording(this.part(this.shot + 1));
+			this.step = 0;
+			this.stepTicks = 0;
+			this.stuckTicks = 0;
+			this.lastX = player.getX();
+			this.lastZ = player.getZ();
+			this.next(stairsShot ? Phase.PILOT_STAIRS : Phase.PILOT_LADDER);
+		}
+	}
+
+	/** Along the planned cells: a run-up, the stairs, then over the raised ground to the edge. */
+	private void pilotStairs() {
+		LocalPlayer player = this.minecraft.player;
+		WorldIndex index = ClientWorldIndex.current();
+		PilotPlan.Stairs s = this.stairs;
+		if (player == null || index == null) {
+			this.fail("no_player");
+			return;
+		}
+		if (this.phaseTicks == 1) {
+			List<double[]> points = new ArrayList<>();
+			for (int i = 1; i < s.path().size(); i++) {
+				Vec3 c = index.toBlock(s.map(), s.path().get(i)[0], s.path().get(i)[1]);
+				if (c != null) {
+					points.add(new double[] {c.x, c.z});
+				}
+			}
+			this.waypoints = points;
+			this.waypoint = 0;
+		}
+		if (this.waypoint >= this.waypoints.size()) {
+			this.forward(false);
+			this.mark(String.format(Locale.ROOT, "stairs_walked ticks=%d y=%.2f", this.phaseTicks, player.getY()));
+			this.lastX = player.getX();
+			this.lastZ = player.getZ();
+			this.stuckTicks = 0;
+			this.next(Phase.PILOT_EDGE);
+			return;
+		}
+		double[] target = this.waypoints.get(this.waypoint);
+		double dx = target[0] - player.getX();
+		double dz = target[1] - player.getZ();
+		if (dx * dx + dz * dz < PILOT_REACHED * PILOT_REACHED) {
+			this.waypoint++;
+			return;
+		}
+		float want = (float) (Mth.atan2(-dx, dz) * Mth.RAD_TO_DEG);
+		float yaw = approach(player.getYRot(), want, TURN_PER_TICK);
+		this.look(player, yaw, PILOT_WALK_PITCH);
+		this.forward(Math.abs(Mth.wrapDegrees(want - yaw)) < 30f && !InputLock.locked());
+		double moved = Math.hypot(player.getX() - this.lastX, player.getZ() - this.lastZ);
+		this.lastX = player.getX();
+		this.lastZ = player.getZ();
+		this.stuckTicks = moved < 0.01 && !InputLock.locked() ? this.stuckTicks + 1 : 0;
+		// a step the climb didn't take: a hop
+		this.minecraft.options.keyJump.setDown(this.stuckTicks > 10 && this.stuckTicks % 10 < 3);
+		if (this.stuckTicks > 6 * TICKS || this.phaseTicks > 60 * TICKS) {
+			this.stuck(player, target);
+			this.endShot("stairs_stuck");
+		}
+	}
+
+	/** On toward the drop until the edge's wall stops the player; a look down over it and along it. */
+	private void pilotEdge() {
+		LocalPlayer player = this.minecraft.player;
+		if (player == null) {
+			this.fail("no_player");
+			return;
+		}
+		float lookYaw = this.stairs.look().yaw();
+		this.stepTicks++;
+		switch (this.step) {
+			case 0 -> {
+				float yaw = approach(player.getYRot(), lookYaw, TURN_PER_TICK);
+				this.look(player, yaw, PILOT_WALK_PITCH);
+				boolean facing = Math.abs(Mth.wrapDegrees(lookYaw - yaw)) < 5f;
+				this.forward(facing);
+				double moved = Math.hypot(player.getX() - this.lastX, player.getZ() - this.lastZ);
+				this.lastX = player.getX();
+				this.lastZ = player.getZ();
+				this.stuckTicks = facing && moved < 0.005 ? this.stuckTicks + 1 : 0;
+				if (this.stuckTicks > 5 || this.stepTicks > 3 * TICKS) {
+					this.forward(false);
+					this.mark(String.format(Locale.ROOT, "edge y=%.2f ticks=%d stopped=%b", player.getY(), this.stepTicks, this.stuckTicks > 5));
+					this.nextStep();
+				}
+			}
+			case 1 -> {
+				float t = Math.min(1f, this.stepTicks / (1.5f * TICKS));
+				this.look(player, lookYaw, Mth.lerp(smoothstep(t), PILOT_WALK_PITCH, PILOT_EDGE_PITCH));
+				if (this.stepTicks >= 4 * TICKS) {
+					this.nextStep();
+				}
+			}
+			case 2 -> {
+				float t = Math.min(1f, this.stepTicks / (5f * TICKS));
+				this.look(player, lookYaw + PILOT_SWAY * (float) Math.sin(2 * Math.PI * t), PILOT_EDGE_PITCH);
+				if (t >= 1f) {
+					this.nextStep();
+				}
+			}
+			default -> {
+				if (this.stepTicks >= TICKS) {
+					this.endShot("edge_done");
+				}
+			}
+		}
+	}
+
+	/**
+	 * The ladder: into the shaft's top onto the ladder, hands off down it (the take at the bottom), a look round, then up
+	 * it against the wall, hanging on at the top until the hidden player is there, and back onto the floor beside it.
+	 */
+	private void pilotLadder() {
+		LocalPlayer player = this.minecraft.player;
+		WorldIndex index = ClientWorldIndex.current();
+		ClientBridgeState state = this.state();
+		if (player == null || index == null) {
+			this.fail("no_player");
+			return;
+		}
+		PilotPlan.Ladder l = this.ladder;
+		WorldIndex.Shaft shaft = l.shaft();
+		Dir wall = shaft.wall();
+		float wallYaw = wall.yaw();
+		double toWall = wallDistance(shaft, player.getX(), player.getZ());
+		boolean inColumn = player.getX() >= shaft.x() && player.getX() < shaft.x() + Scale.CELL_BLOCKS && player.getZ() >= shaft.z()
+				&& player.getZ() < shaft.z() + Scale.CELL_BLOCKS;
+		this.stepTicks++;
+		switch (this.step) {
+			case 0 -> {
+				// a look at the shaft's top
+				this.look(player, l.facing().yaw(), 30f);
+				if (this.stepTicks >= TICKS) {
+					this.nextStep();
+				}
+			}
+			case 1 -> {
+				// in, onto the ladder (the ladder's half of the top cell is open)
+				double[] p = ladderPoint(shaft);
+				double dx = p[0] - player.getX();
+				double dz = p[1] - player.getZ();
+				float want = (float) (Mth.atan2(-dx, dz) * Mth.RAD_TO_DEG);
+				float yaw = approach(player.getYRot(), want, TURN_PER_TICK);
+				this.look(player, yaw, Mth.lerp(Math.min(1f, this.stepTicks / (float) TICKS), 30f, PILOT_DOWN_PITCH));
+				this.forward(Math.abs(Mth.wrapDegrees(want - yaw)) < 30f);
+				if (inColumn && toWall <= PILOT_ON_LADDER) {
+					this.forward(false);
+					player.setDeltaMovement(0, player.getDeltaMovement().y, 0);
+					this.mark(String.format(Locale.ROOT, "on_ladder y=%.2f wall=%.2f ticks=%d", player.getY(), toWall, this.stepTicks));
+					this.nextStep();
+				} else if (this.stepTicks > 6 * TICKS) {
+					this.endShot(String.format(Locale.ROOT, "walk_in_timeout wall=%.2f column=%b", toWall, inColumn));
+				}
+			}
+			case 2 -> {
+				// down, hands off: the ladder slows the fall; the take at the bottom moves the hidden player down
+				this.look(player, approach(player.getYRot(), wallYaw, TURN_PER_TICK), PILOT_DOWN_PITCH);
+				boolean onFloor = player.onGround() && player.getY() > shaft.y1() + 0.5;
+				// still on the top cell's floor beside the ladder: a nudge on
+				this.forward(onFloor && this.stepTicks > 10 && this.stepTicks % 10 < 2);
+				boolean down = state != null && shaft.bottom().map().equals(state.map()) && state.x() == shaft.bottom().x()
+						&& state.y() == shaft.bottom().y();
+				if (down && player.onGround() && !InputLock.locked()) {
+					this.mark(String.format(Locale.ROOT, "down y=%.2f ticks=%d", player.getY(), this.stepTicks) + this.climbStats());
+					this.nextStep();
+				} else if (this.stepTicks > 20 * TICKS) {
+					this.endShot(String.format(Locale.ROOT, "down_timeout y=%.2f at=%s", player.getY(),
+							state == null ? "-" : state.map() + ":" + state.x() + ":" + state.y()) + this.climbStats());
+				}
+			}
+			case 3 -> {
+				// a look round the floor below (turned away from the ladder), then back to it, looking up the shaft
+				float t = this.stepTicks / (float) TICKS;
+				if (t <= 2f) {
+					this.look(player, wallYaw + 180f * smoothstep(t / 2f), Mth.lerp(smoothstep(t / 2f), PILOT_DOWN_PITCH, 8f));
+				} else if (t <= 3f) {
+					this.look(player, wallYaw + 180f, 8f);
+				} else if (t <= 5f) {
+					float u = smoothstep((t - 3f) / 2f);
+					this.look(player, wallYaw + 180f - 180f * u, Mth.lerp(u, 8f, PILOT_UP_PITCH));
+				} else {
+					this.nextStep();
+				}
+			}
+			case 4 -> {
+				// up, pressing against the ladder (the take is sent at the top cell's feet)
+				this.look(player, wallYaw, PILOT_UP_PITCH);
+				this.forward(true);
+				if (player.getY() >= shaft.y1() + 1.3) {
+					this.forward(false);
+					this.sneak(true);
+					this.mark(String.format(Locale.ROOT, "up y=%.2f ticks=%d", player.getY(), this.stepTicks));
+					this.nextStep();
+				} else if (this.stepTicks > 20 * TICKS) {
+					this.endShot(String.format(Locale.ROOT, "up_timeout y=%.2f", player.getY()) + this.climbStats());
+				}
+			}
+			case 5 -> {
+				// hanging on at the top until the hidden player stands on it, then round to the floor beside the ladder
+				boolean top = state != null && shaft.top().map().equals(state.map()) && state.x() == shaft.top().x() && state.y() == shaft.top().y();
+				if ((!top || InputLock.locked()) && this.stepTicks < 8 * TICKS) {
+					this.look(player, wallYaw, Mth.lerp(Math.min(1f, this.stepTicks / (float) TICKS), PILOT_UP_PITCH, 10f));
+					return;
+				}
+				float back = wallYaw + 180f;
+				float yaw = approach(player.getYRot(), back, TURN_PER_TICK);
+				this.look(player, yaw, 10f);
+				if (Math.abs(Mth.wrapDegrees(back - yaw)) < 1f) {
+					this.mark(String.format(Locale.ROOT, "top hidden_on_top=%b y=%.2f ticks=%d", top, player.getY(), this.stepTicks) + this.climbStats());
+					this.nextStep();
+				}
+			}
+			case 6 -> {
+				// off the ladder onto the floor beside it, and on to the cell the walk in came from
+				this.sneak(false);
+				Vec3 a = index.toBlock(shaft.top().map(), l.x(), l.y());
+				if (a == null) {
+					this.endShot("no_cell");
+					return;
+				}
+				double dx = a.x - player.getX();
+				double dz = a.z - player.getZ();
+				float want = (float) (Mth.atan2(-dx, dz) * Mth.RAD_TO_DEG);
+				float yaw = approach(player.getYRot(), want, TURN_PER_TICK);
+				this.look(player, yaw, 10f);
+				this.forward(Math.abs(Mth.wrapDegrees(want - yaw)) < 30f && !InputLock.locked());
+				if (dx * dx + dz * dz < PILOT_REACHED * PILOT_REACHED || this.stepTicks > 4 * TICKS) {
+					this.forward(false);
+					this.mark(String.format(Locale.ROOT, "off y=%.2f at=%s ticks=%d", player.getY(),
+							state == null ? "-" : state.map() + ":" + state.x() + ":" + state.y(), this.stepTicks));
+					this.nextStep();
+				}
+			}
+			default -> {
+				this.look(player, player.getYRot(), 10f);
+				if (this.stepTicks >= 2 * TICKS) {
+					this.endShot("ladder_done");
+				}
+			}
+		}
+	}
+
+	/** The player's middle to the plane of the shaft's ladder wall, in blocks. */
+	static double wallDistance(WorldIndex.Shaft shaft, double x, double z) {
+		return switch (shaft.wall()) {
+			case UP -> z - shaft.z();
+			case DOWN -> shaft.z() + Scale.CELL_BLOCKS - z;
+			case LEFT -> x - shaft.x();
+			case RIGHT -> shaft.x() + Scale.CELL_BLOCKS - x;
+		};
+	}
+
+	/** Where the walk in aims: the middle of the ladder's half of the column, {@link #PILOT_ON_LADDER} less a little from the wall. */
+	static double[] ladderPoint(WorldIndex.Shaft shaft) {
+		double in = PILOT_ON_LADDER - 0.12;
+		double cx = shaft.x() + Scale.CELL_BLOCKS / 2.0;
+		double cz = shaft.z() + Scale.CELL_BLOCKS / 2.0;
+		return switch (shaft.wall()) {
+			case UP -> new double[] {cx, shaft.z() + in};
+			case DOWN -> new double[] {cx, shaft.z() + Scale.CELL_BLOCKS - in};
+			case LEFT -> new double[] {shaft.x() + in, cz};
+			case RIGHT -> new double[] {shaft.x() + Scale.CELL_BLOCKS - in, cz};
+		};
+	}
+
+	private String climbStats() {
+		MovementSync.Stats stats = MoveRuntime.stats();
+		return stats == null ? "" : " climbs=" + stats.climbs + " takes=" + stats.takes + " takes_failed=" + stats.takesFailed + " teleports="
+				+ stats.teleports;
+	}
+
+	private void nextStep() {
+		LocalPlayer player = this.minecraft.player;
+		this.step++;
+		this.stepTicks = 0;
+		this.stuckTicks = 0;
+		if (player != null) {
+			this.lastX = player.getX();
+			this.lastZ = player.getZ();
+		}
+	}
+
+	/** The shot is over (done or not): its recording stops and the next one is asked for. */
+	private void endShot(String why) {
+		this.keys(false, false, false);
+		this.mark("shot_end shot=" + this.shots.get(this.shot) + " why=" + why);
+		this.stopRecording();
+		this.nextShot();
+	}
+
+	private void nextShot() {
+		this.keys(false, false, false);
+		this.shot++;
+		if (this.shot < this.shots.size()) {
+			this.request();
+		} else {
+			this.mark("pilot_shots done=" + this.shots.size() + this.climbStats());
+			this.next(Phase.OUTRO);
+		}
+	}
+
 	// ---- the walk ----
 
 	private void plan(WorldIndex index, WorldIndex.Zone zone, LocalPlayer player) {
@@ -623,6 +1117,16 @@ public final class Autopilot {
 		this.minecraft.options.keyUp.setDown(down);
 	}
 
+	private void sneak(boolean down) {
+		this.minecraft.options.keyShift.setDown(down);
+	}
+
+	private void keys(boolean forward, boolean sneak, boolean jump) {
+		this.forward(forward);
+		this.sneak(sneak);
+		this.minecraft.options.keyJump.setDown(jump);
+	}
+
 	private void startRecording() {
 		this.startRecording(this.record);
 	}
@@ -702,7 +1206,7 @@ public final class Autopilot {
 	}
 
 	private void fail(String why) {
-		this.forward(false);
+		this.keys(false, false, false);
 		this.mark("failed phase=" + this.phase.name().toLowerCase(Locale.ROOT) + " " + why);
 		this.stopRecording();
 		this.phase = Phase.FAILED;

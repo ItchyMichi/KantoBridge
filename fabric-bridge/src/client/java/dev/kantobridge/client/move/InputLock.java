@@ -46,6 +46,8 @@ public final class InputLock {
 	private static volatile boolean locked;
 	/** Sneak never crouches (Cycling Road: the key is the brake, {@link SlopeBrake}). */
 	private static volatile boolean noSneak;
+	/** Held on a ladder: the lock keeps sneak down, so the player hangs on instead of sliding down (a cave shaft's take). */
+	private static volatile boolean holdOnLadder;
 	/** Other reasons to hold the player as if one of our screens were open (a hidden UI whose screen is covered). */
 	private static final List<BooleanSupplier> HOLDS = new CopyOnWriteArrayList<>();
 
@@ -67,6 +69,14 @@ public final class InputLock {
 
 	public static boolean noSneak() {
 		return noSneak;
+	}
+
+	/**
+	 * While set and locked, sneak stays down: a player held on a ladder hangs on (Minecraft's sneak stops the slide down)
+	 * instead of sliding back into the shaft while the hidden game takes the climb's warp (CAVES_3D_PLAN §3.6).
+	 */
+	public static void setHoldOnLadder(boolean value) {
+		holdOnLadder = value;
 	}
 
 	/** Adds a condition under which the player is held like with one of our screens open (client thread). */
@@ -147,8 +157,9 @@ public final class InputLock {
 		input.right = false;
 		input.forwardImpulse = 0.0F;
 		input.leftImpulse = 0.0F;
-		// No jump (auto-jump included) and no sneak: sneaking would stop a forced walk at a ledge's edge.
+		// No jump (auto-jump included) and no sneak: sneaking would stop a forced walk at a ledge's edge. On a ladder
+		// during a climb's take, sneak holds on.
 		input.jumping = false;
-		input.shiftKeyDown = false;
+		input.shiftKeyDown = holdOnLadder;
 	}
 }

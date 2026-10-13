@@ -38,9 +38,12 @@ class RealWorldDryRunTest {
 	@Test
 	void dryRun() throws Exception {
 		ExportBundle bundle = ExportBundle.open(Path.of(System.getProperty("kb.realBundle")));
+		// every cave in 3D (H7's world), or with -Pkb.caves3d=pilot the pilot's only (the build's default until H6 is approved)
+		boolean pilot = "pilot".equals(System.getProperty("kb.caves3d"));
 		long started = System.nanoTime();
-		WorldPlan plan = WorldPlanner.plan(bundle, new WorldPlanner.Options(null, 0, 0, -256, true, Set.of(Caves3d.ALL)));
+		WorldPlan plan = WorldPlanner.plan(bundle, new WorldPlanner.Options(null, 0, 0, -256, true, pilot ? Caves3d.PILOT : Set.of(Caves3d.ALL)));
 		JsonObject out = new JsonObject();
+		out.addProperty("caves3d", pilot ? "pilot" : Caves3d.ALL);
 		out.addProperty("plan_ms", (System.nanoTime() - started) / 1_000_000L);
 		out.addProperty("maps", plan.maps().size());
 		out.addProperty("interiors", plan.maps().stream().filter(PlacedMap::interior).count());
@@ -206,7 +209,7 @@ class RealWorldDryRunTest {
 			cave.addProperty("ms", (System.nanoTime() - t0) / 1_000_000L);
 			out.add("cave_quads", cave);
 		}
-		Path report = Path.of("reports", "caves3d_dry_run.json");
+		Path report = Path.of("reports", pilot ? "caves3d_dry_run_pilot.json" : "caves3d_dry_run.json");
 		Files.createDirectories(report.getParent());
 		Files.writeString(report, ProtoJson.write(out), StandardCharsets.UTF_8);
 		assertTrue(plan.maps().size() > 0);

@@ -82,6 +82,7 @@ public final class MoveRuntime {
 			runtime.controller.onLeave();
 			InputLock.set(false);
 			InputLock.setNoSneak(false);
+			InputLock.setHoldOnLadder(false);
 		});
 		// A new link has no hold yet: a brake still held is sent again.
 		dispatcher.onState((state, detail) -> runtime.brake.reset());
@@ -107,6 +108,12 @@ public final class MoveRuntime {
 		return gate != null && gate.holdsPlayer();
 	}
 
+	/** The movement sync's counts (the dev client's autopilot logs them), or null before init. */
+	public static MovementSync.@Nullable Stats stats() {
+		MoveRuntime runtime = instance;
+		return runtime == null ? null : runtime.controller.sync().stats();
+	}
+
 	/** True while the movement sync follows the hidden game for this player (a Kanto world, not a free camera). */
 	public static boolean following() {
 		MoveRuntime runtime = instance;
@@ -119,6 +126,7 @@ public final class MoveRuntime {
 		if (player == null || player.level() != level) {
 			InputLock.set(false);
 			InputLock.setNoSneak(false);
+			InputLock.setHoldOnLadder(false);
 			return;
 		}
 		MoveController.Frame frame = new MoveController.Frame(ClientWorldIndex.current(), player.isSpectator() || player.isCreative(),
@@ -130,6 +138,7 @@ public final class MoveRuntime {
 			player.setDeltaMovement(velocity.x(), player.getDeltaMovement().y, velocity.z());
 		}
 		InputLock.set(this.controller.reason() != InputLock.Reason.NONE);
+		InputLock.setHoldOnLadder(this.controller.sync().takeHolding() && player.onClimbable());
 		this.brake(minecraft);
 	}
 
