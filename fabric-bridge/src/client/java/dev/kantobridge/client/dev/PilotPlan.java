@@ -66,6 +66,13 @@ final class PilotPlan {
 	 * away from the stairs. Null when no map has one.
 	 */
 	static @Nullable Stairs stairs(WorldIndex index, Collection<String> maps, Cells cells) {
+		List<Stairs> all = allStairs(index, maps, cells);
+		return all.isEmpty() ? null : all.get(0);
+	}
+
+	/** Every stairs {@link #stairs} could pick, in its order (the hidden game may refuse a walk: the next one is tried). */
+	static List<Stairs> allStairs(WorldIndex index, Collection<String> maps, Cells cells) {
+		List<Stairs> out = new ArrayList<>();
 		for (String map : maps) {
 			MapLayout layout = index.layout(map);
 			if (layout == null) {
@@ -76,11 +83,11 @@ final class PilotPlan {
 			for (MapLayout.Ramp ramp : ramps) {
 				Stairs stairs = stairs(layout, map, ramp, cells);
 				if (stairs != null) {
-					return stairs;
+					out.add(stairs);
 				}
 			}
 		}
-		return null;
+		return out;
 	}
 
 	private static @Nullable Stairs stairs(MapLayout layout, String map, MapLayout.Ramp ramp, Cells cells) {
@@ -168,6 +175,16 @@ final class PilotPlan {
 
 	/** The same with each shaft's wall from {@code wall} (null: no ladder to film). */
 	static @Nullable Ladder ladder(WorldIndex index, Collection<String> maps, Cells cells, Function<WorldIndex.Shaft, @Nullable Dir> wall) {
+		List<Ladder> all = ladders(index, maps, cells, wall);
+		return all.isEmpty() ? null : all.get(0);
+	}
+
+	/**
+	 * Every ladder and standable cell beside its top, best first: by ladder in the index's order, the cell across from
+	 * the wall before the ones at its sides (the hidden game may refuse a cell, an object on it: the next one is tried).
+	 */
+	static List<Ladder> ladders(WorldIndex index, Collection<String> maps, Cells cells, Function<WorldIndex.Shaft, @Nullable Dir> wall) {
+		List<Ladder> out = new ArrayList<>();
 		for (WorldIndex.Shaft shaft : index.shafts()) {
 			if (!WorldIndex.Shaft.LADDER.equals(shaft.kind()) || !maps.contains(shaft.top().map())) {
 				continue;
@@ -183,11 +200,11 @@ final class PilotPlan {
 				int ax = top.x() - facing.dx();
 				int ay = top.y() - facing.dy();
 				if (ax >= 0 && ay >= 0 && cells.standable(top.map(), ax, ay) && index.shaftEnd(new CellPos(top.map(), ax, ay)) == null) {
-					return new Ladder(shaft, ax, ay, facing);
+					out.add(new Ladder(shaft, ax, ay, facing));
 				}
 			}
 		}
-		return null;
+		return out;
 	}
 
 	private static long key(int cx, int cy) {

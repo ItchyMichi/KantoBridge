@@ -82,4 +82,17 @@ class PilotPlanTest {
 		// No ladder shown: none planned.
 		assertNull(PilotPlan.ladder(index, PilotPlan.caves3d(index), cells, s -> null));
 	}
+
+	@Test
+	void everyOptionInOrderForWhenTheGameRefusesOne() {
+		List<PilotPlan.Ladder> ladders = PilotPlan.ladders(index, PilotPlan.caves3d(index), cells, WorldIndex.Shaft::wall);
+		// (9, 3): across from its wall (9, 4), then walking right from (8, 3) (left from the east is rock); (3, 5): (3, 6), then
+		// walking left from (4, 5), then right from (2, 5)
+		assertEquals(5, ladders.size());
+		assertArrayEquals(new int[] {9, 4, 8, 3, 3, 6, 4, 5, 2, 5}, ladders.stream().flatMapToInt(l -> java.util.stream.IntStream.of(l.x(), l.y()))
+				.toArray());
+		List<PilotPlan.Stairs> stairs = PilotPlan.allStairs(index, PilotPlan.caves3d(index), cells);
+		assertEquals(2, stairs.size(), "both stairs cells");
+		assertArrayEquals(new int[] {3, 3}, stairs.get(1).start());
+	}
 }
