@@ -100,9 +100,10 @@ are data in the game profile, resolved by each adapter in its own flag namespace
 
 ## 2. How it plays
 
-- **Setup.** You install Gen1Recomp once per game you want (`local/gen1recomp-emerald/`, portable, with the bridge mod
-  linked) and import that game's ROM into it. `launch.ps1 -Games blue,emerald` starts both hidden games (ports 27151,
-  27152) and Minecraft; the client's config lists the two links.
+- **Setup.** You drop your ROM files into `local/rom-inbox/` and run `tools/setup_games.ps1`: it makes one portable
+  Gen1Recomp install per world space (`local/gen1recomp-kanto/`, `-hoenn/`, …), links the bridge mod, has
+  Gen1Recomp's own importer import each file, detects which game appeared, and writes the launcher's and the client's
+  config. `launch.ps1` then starts every imported game that has an adapter (ports 27151, 27152, …) and Minecraft.
 - **Building.** Your Kanto world is region `kanto` at the origin, as today. "Add a region" on the title screen (or the
   headless build) exports Emerald through its link and builds **Hoenn** at the next region slot, 8,192 blocks east:
   its towns at feet level, its interiors underground, its forests open-air, its caves in their own 3D area, its wild
@@ -560,20 +561,50 @@ hidden player waits on the route map and `MovementSync` is "away" (`client/move/
 - **Capacity per region**: slot families (§4.6), shape documents per region, the block-quads and section budgets are
   per section and unaffected.
 
-### 4.11 Launcher and installs
+### 4.11 Installs, imports and the launcher
 
-- **One portable install per game**: `local/gen1recomp/` stays Blue (compatibility); `local/gen1recomp-<game>/` for
-  the others, each with `portable.txt`, its own `options.lua`, saves, ROM import and a `mods/gen1-bridge` junction.
-  Reason: `options.lua` holds every game's slot registry and mod state and is rewritten whole with no writer lock, so
-  two processes of one install can clobber each other (Appendix A.2; the README already forbids two players on one
-  install). `POKEPORT_IDENTITY=<name>` gives a process a whole separate data home and is an alternative to spike
-  (D3), but each identity still needs its own import by the user.
-- **`tools/launch.ps1 -Games blue,emerald`**: `launch.json` gains `games: {blue: {dir, port}, emerald: {dir, port}}`;
-  ports default to 27151 + i (player 2's processes at +10); it starts each `gen1recomp.exe --game=<id>`, waits for each
-  port (the existing `Wait-Listener`), and passes `-Dkantobridge.links=…` to the dev client. `-Watch` restarts any that
-  closes.
-- The Linux e2e runner (`tools/e2e/run_gen1recomp.py`) already isolates a data home per process through
-  `XDG_DATA_HOME`; a second game needs a second data home with its own import (the user's).
+**Facts.** Gen1Recomp keeps one data root per install (portable mode: the install folder itself). Each imported game
+gets a folder in it named by the game, holding the ROM-derived cache and a completion marker, `rom-cache.complete`
+(Appendix A.2; `src/core/Data.lua:8-15`, `src/import/CacheContract.lua:29`). `tools/e2e/run_gen1recomp.py:54-92`
+already detects imports that way: it lists the install's folder names and checks the marker, nothing more. The
+importer identifies a ROM by SHA-1 and can run headless: `POKEPORT_IMPORT_ONLY=1 POKEPORT_IMPORT_ROM=<path>` imports
+then quits (`main.lua` ~L863-870 at v0.3.49; `tools/reimport.sh`); `POKEPORT_FORCE_IMPORT=1` redoes one; archives
+(`.zip`/`.7z`) are accepted only from v0.3.85 (`src/import/RomArchive.lua`). `options.lua` (slot registry, mod state)
+is shared by every game of an install and rewritten whole with no writer lock, so two **concurrent** processes must not
+share an install (the README already forbids two players on one install). `POKEPORT_IDENTITY=<name>` gives a process a
+separate data home (saves, options, caches); whether it is honoured when `portable.txt` is present is ⚠ not confirmed.
+
+**One install per world space** (D3, refined 2026-10-13). The games of one world space are never played at the same
+time, so they share an install: `local/gen1recomp-kanto/` (Red, Blue, Yellow imports), `-johto/` (Gold, Silver,
+Crystal), `-hoenn/` (Ruby, Sapphire, Emerald), `-kanto_frlg/` (FireRed, LeafGreen). Today's `local/gen1recomp/` is
+the `kanto` install. One install **per engine** would not do: FireRed and Emerald are both `game3` and are two regions
+that run at once. One exe with a data home per region (`POKEPORT_IDENTITY`) is the alternative to spike (S5).
+
+**Detection.** `tools/kb_games.py` (used by the setup tool, `launch.ps1` and the e2e runner): for each install in
+`launch.json`, list its folders, keep those whose name is a catalogued game and that contain `rom-cache.complete`; the
+result is `{install: [games]}`. It reads **names and the marker's presence only**, never a file's contents. At
+runtime every connected link reports its game in `hello.ok`, and the client's F7 and "Add a region" list the games
+that are actually running; `game.status` adds each one's progress.
+
+**Auto setup and auto import**, `tools/setup_games.ps1` (and `.sh` for the Linux e2e install):
+1. For each ROM file the user put in `local/rom-inbox/`: pick the install by the game's world space once the game is
+   known (step 3), or create one first: unpack the pinned Gen1Recomp release (official GitHub only, SHA-256 checked, as
+   INSTALLER.md step 3 says), write `portable.txt`, link `mods/gen1-bridge` (`mklink /J`), copy nothing else.
+2. Run **Gen1Recomp's own importer** headless on that file: `gen1recomp.exe` with `POKEPORT_IMPORT_ONLY=1` and
+   `POKEPORT_IMPORT_ROM=<path>` (plus `POKEPORT_CONSOLE=1` so its output is a pipe), wait for it to quit.
+3. Detect the new `<game>/rom-cache.complete` folder; that is the game. Move the file? **No**: the tool never reads,
+   copies, checks or moves a ROM (CLAUDE.md, INSTALLER.md); Gen1Recomp's portable import may keep its own copy in
+   `roms/`. The tool deletes nothing in the inbox; the user clears it.
+4. Write `launch.json` (`installs{kanto: {dir, games[], play: "blue"}, hoenn: {…}}`, ports) and the client's
+   `config/kantobridge-client.json` `links`.
+5. Zips: at v0.3.49 the user unzips first; with a pin at or past v0.3.85 the tool can hand the archive to the importer
+   (D11). Logs hold file names and game ids only, never hashes of a ROM or its contents.
+
+**The launcher.** `tools/launch.ps1 -Games blue,emerald` (or `-Regions kanto,hoenn`, reading each install's `play`),
+default: every install that has a game with an adapter. Per install it starts `gen1recomp.exe --game=<id>`, waits for
+its port (`Wait-Listener`; ports 27151 + i, player 2's at +10) and passes `-Dkantobridge.links=…` to the dev client.
+`-Watch` restarts any that closes. The Linux e2e runner isolates a data home per process through `XDG_DATA_HOME`
+already; a second region there needs a second data home with its own import (the user's).
 
 ### 4.12 Multiplayer and world spaces
 
@@ -633,6 +664,10 @@ Sizes as in PLAN.md §6: **S** about M1, **M** about M6/M7, **L** about M8, **XL
 - **S4 (test install, Gen 1):** start NEW GAME and CONTINUE from the title under a connected test session, driven from
   the mod (title-menu taps or `Game:startNewGame`), 10 times each. Pass: the game reaches the overworld and `save.loaded`
   arrives each time; no stray input reaches the intro.
+- **S5 (user's PC, a throwaway install, a ROM the user already imported elsewhere):** the headless import on the fused
+  Windows exe: `POKEPORT_IMPORT_ONLY=1 POKEPORT_IMPORT_ROM=<path>` against a fresh portable install. Pass: the exe
+  quits by itself and `<game>/rom-cache.complete` exists; the tool learns the game from the folder name. Also:
+  `POKEPORT_IDENTITY` with and without `portable.txt` (which data home is used), noted for D3's alternative.
 - Output: PROGRESS "Several games: spikes"; `docs/specs/GEN3_BRIDGE_PLAN.md` is written only at MG7 from S2–S3.
 
 ### MG1: The game catalogue and an open protocol (S–M)
@@ -697,9 +732,13 @@ Sizes as in PLAN.md §6: **S** about M1, **M** about M6/M7, **L** about M8, **XL
   `Links.follow`; `wrong_game`; the pause overlay for the followed link only; F7 lines per link; `region.state`.
 - [C] "Add a region" in the title-screen flow (pick a link, region id, slot → export → build on the integrated server).
 - [S] `region.state` handling; `RegionPresence` from it; the join-time S→C `region.state`.
-- [T] `tools/launch.ps1 -Games` (installs per game, ports, `-Dkantobridge.links`); `fake_minecraft --links`; JUnit
+- [T] `tools/kb_games.py` (import detection: folder names + `rom-cache.complete`, names only); `tools/setup_games.ps1`
+  / `.sh` (§4.11: installs per world space from the pinned release, the mod link, Gen1Recomp's headless importer per
+  inbox file, `launch.json` and the client links written; a dry run prints the plan); `tools/launch.ps1 -Games` /
+  `-Regions` with the detection as its default, ports, `-Dkantobridge.links`; `fake_minecraft --links`; JUnit
   `LinksTest` (two fake dispatchers: follow/park swap closes screens and relinks; a parked drop never pauses; a wrong
-  game is never followed); e2e `test_links.py` with two `fake_gen1` processes.
+  game is never followed); e2e `test_links.py` with two `fake_gen1` processes; a pytest for `kb_games.py` on a fake
+  install tree (empty folders and marker files, no data).
 - **Check:** with one link configured, the full e2e on the test install behaves as before (regression). **Commit `MG4`.**
 
 ### MG5: Crossings (L) ✔
@@ -796,7 +835,8 @@ Sizes as in PLAN.md §6: **S** about M1, **M** about M6/M7, **L** about M8, **XL
 | No documented Gen 3 map scripts; `movement.collision` and `fieldmove.eligibility` aren't raised by `game3` | The route exit and the closed lower row rely on them in Gen 1 | S2 decides: `map_scripts` → `gen3Scripts`, or the `warp.destination` hook (raised on all three engines) for the exit; the lower row closed by the zone's hedges alone |
 | Gen 2 runs cart bytecode (no `map_scripts`, numeric flags) | A Johto adapter can't reuse the Gen 1 exit trick | Out of this plan; §8 names the research |
 | RAM and windows per hidden game on the player's PC | Two LÖVE processes beside Minecraft | S1 measures; minimised windows keep full speed (M10) |
-| Shared `options.lua` across processes of one install | Slot registry clobbered | One install per game (D3) |
+| Shared `options.lua` across processes of one install | Slot registry clobbered | One install per world space (D3); the setup tool never puts two concurrently played games in one install |
+| Headless import flags on the fused Windows exe ⚠ | The setup tool's auto import depends on them | Spike S5 first; the fallback is INSTALLER.md's path (the user imports in Gen1Recomp's launcher, the tool only detects) |
 | Slot capacity and block-state memory | 32 families ≈ +10–15 MB per side | Measured at MG3 (D9); the family count stays a constant that can be raised again |
 | The client refactor (one singleton → links; 18 index call sites) | Large, touches every runtime | MG3's shim first, MG4 behind one `Links` facade with one link configured as the regression gate |
 | Story safety of warps | A warp to the wrong cell skips triggers | §4.13: only our route maps or the saved cell; a start never skips the intro |
@@ -826,7 +866,7 @@ plan now does.
 |---|---|---|---|---|
 | D1 | The bridge mod's shape | one mod with `lib/engine/<engine>.lua` adapters (CLAUDE.md's rule becomes "only `lib/engine/*.lua`"); or one mod per family sharing a copied core | **one mod, adapters** | MG2 |
 | D2 | Hidden game processes | one per game on its own port; or one process switching game | **one per game** | MG4 |
-| D3 | Installs | one portable install per game; or one install with `POKEPORT_IDENTITY` per process (spike) | **one per game** | MG4 |
+| D3 | Installs | one portable install per game; one per world space (its versions are never played at once); one per engine (breaks for FireRed + Emerald); or one exe with a data home per region (`POKEPORT_IDENTITY`, spike S5) | **one per world space** (`-kanto`, `-johto`, `-hoenn`, `-kanto_frlg`), set up and imported by `tools/setup_games` through Gen1Recomp's own importer (asked 2026-10-13) | MG4 |
 | D4 | The first second game, and world spaces | Emerald (Hoenn; `game3`, beta, no Gen3Compat); FireRed/LeafGreen (Kanto again); Gold ("under construction", bytecode). Red and Blue: one region or two? | **Emerald.** Red and Blue are **one world space, one region `kanto`**, as in multiplayer today; no route between them in the product. The two-Kanto world is a **test-only** world for the two-real-engine e2e (§4.12) | MG5, MG7 |
 | D5 | A never-started game at a pass | start it (NEW GAME, the intro, the first room); or skip into the route map | **start it, after moving the whole party into Cobblemon's PC** (`party.stash`), so nothing is lost and no full-party script breaks | MG5 |
 | D6 | The new game's player name | offered as the naming screen's default; entered automatically; nothing | **entered automatically** (truncated to the limit; shown only when truncated) | MG5 |
