@@ -855,8 +855,8 @@ def test_a_resync_sends_the_open_uis_again_with_their_ids():
     after = g.log[g.log.index(snap):]
     assert [(m["type"], m["data"].get("ui"), m["data"].get("kind")) for m in after] == [
         ("snapshot", None, None), ("npc.set", None, None), ("ui.open", 1, "text"), ("ui.open", 2, "choice"),
-        ("ui.update", 1, None), ("bag.sync", None, None)]
-    assert after[-2]["data"] == {"ui": 1, "line": 1, "done": True}, "where the text box is now"
+        ("ui.update", 1, None), ("bag.sync", None, None), ("game.status", None, None)]
+    assert after[-3]["data"] == {"ui": 1, "line": 1, "done": True}, "where the text box is now"
     g.send("ui.back", {"ui": 2})
     g.until(lambda m: m["type"] == "ui.close" and m["data"]["ui"] == 1)
     assert answers == [False]

@@ -27,6 +27,10 @@ function FakeEngine.new(opts)
   function E.GameVersion.get() return E.GameVersion.current end       -- GameVersion.lua:209
   function E.GameVersion.isYellow() return false end                   -- :217
   function E.GameVersion.generation() return 1 end                     -- :231
+  -- MG2: the engine the game runs on (:236-238: info(id).engine or "gen1";
+  -- the fake plays one engine for every game, opts.engineId, "gen1" by default)
+  E.engineId = opts.engineId or "gen1"
+  function E.GameVersion.engine() return E.engineId end
   E.GameModule = { logicStep = 0 }
   -- src/core/Strings.lua: the module is called for a translated label
   -- (:215, __call -> Strings.get :174) and Strings.source hands its argument

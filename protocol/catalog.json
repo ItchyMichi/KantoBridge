@@ -636,6 +636,13 @@
       "redact": ["/part"],
       "schema": "messages/world.index.schema.json"
     },
+    "world.regions": {
+      "legs": ["s2c"],
+      "re": "never",
+      "rom": false,
+      "redact": [],
+      "schema": "messages/world.regions.schema.json"
+    },
     "world.shapes": {
       "legs": ["s2c"],
       "re": "never",

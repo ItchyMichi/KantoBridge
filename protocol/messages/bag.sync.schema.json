@@ -4,17 +4,32 @@
   "title": "bag.sync",
   "description": "The battle-usable bag subset, mirrored into the Minecraft inventory.",
   "x-type": "bag.sync",
-  "x-legs": ["g2m", "c2s"],
+  "x-legs": [
+    "g2m",
+    "c2s"
+  ],
   "x-re": "never",
   "type": "object",
-  "required": ["items"],
+  "required": [
+    "items"
+  ],
   "additionalProperties": false,
   "properties": {
     "items": {
       "type": "object",
-      "additionalProperties": {"type": "integer", "minimum": 0, "maximum": 9999},
+      "additionalProperties": {
+        "type": "integer",
+        "minimum": 0,
+        "maximum": 9999
+      },
       "properties": {},
-      "propertyNames": {"$ref": "../defs.schema.json#/$defs/itemId"}
+      "propertyNames": {
+        "$ref": "../defs.schema.json#/$defs/itemId"
+      }
+    },
+    "region": {
+      "$ref": "../defs.schema.json#/$defs/regionId",
+      "description": "MG3 (several games): the region this message belongs to; absent = the legacy region. The client tags what it relays with its link's region; the server routes a tagged message to that region's link."
     }
   }
 }

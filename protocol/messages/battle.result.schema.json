@@ -4,25 +4,65 @@
   "title": "battle.result",
   "description": "How a Cobblemon battle ended.",
   "x-type": "battle.result",
-  "x-legs": ["m2g", "s2c"],
+  "x-legs": [
+    "m2g",
+    "s2c"
+  ],
   "x-re": "never",
   "type": "object",
-  "required": ["battle", "outcome"],
+  "required": [
+    "battle",
+    "outcome"
+  ],
   "additionalProperties": false,
   "properties": {
-    "battle": {"$ref": "../defs.schema.json#/$defs/id"},
-    "outcome": {"enum": ["win", "lose", "fled", "caught", "aborted"]},
+    "battle": {
+      "$ref": "../defs.schema.json#/$defs/id"
+    },
+    "outcome": {
+      "enum": [
+        "win",
+        "lose",
+        "fled",
+        "caught",
+        "aborted"
+      ]
+    },
     "caught": {
       "type": "object",
-      "required": ["uid", "dex", "level"],
+      "required": [
+        "uid",
+        "dex",
+        "level"
+      ],
       "additionalProperties": false,
       "properties": {
-        "uid": {"$ref": "../defs.schema.json#/$defs/uid"},
-        "dex": {"$ref": "../defs.schema.json#/$defs/nationalDex"},
-        "level": {"$ref": "../defs.schema.json#/$defs/level"}
+        "uid": {
+          "$ref": "../defs.schema.json#/$defs/uid"
+        },
+        "dex": {
+          "$ref": "../defs.schema.json#/$defs/nationalDex"
+        },
+        "level": {
+          "$ref": "../defs.schema.json#/$defs/level"
+        }
+      }
+    },
+    "region": {
+      "$ref": "../defs.schema.json#/$defs/regionId",
+      "description": "MG3 (several games): the region this message belongs to; absent = the legacy region. The client tags what it relays with its link's region; the server routes a tagged message to that region's link."
+    }
+  },
+  "if": {
+    "properties": {
+      "outcome": {
+        "const": "caught"
       }
     }
   },
-  "if": {"properties": {"outcome": {"const": "caught"}}},
-  "then": {"required": ["caught"]}
+  "then": {
+    "required": [
+      "caught"
+    ]
+  }
 }

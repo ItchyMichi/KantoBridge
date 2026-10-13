@@ -4,13 +4,33 @@
   "title": "battle.native",
   "description": "A special battle runs natively in the hidden game (shown on the mirror).",
   "x-type": "battle.native",
-  "x-legs": ["g2m"],
+  "x-legs": [
+    "g2m"
+  ],
   "x-re": "never",
   "type": "object",
-  "required": ["kind", "phase"],
+  "required": [
+    "kind",
+    "phase"
+  ],
   "additionalProperties": false,
   "properties": {
-    "kind": {"enum": ["safari", "old_man", "ghost"]},
-    "phase": {"enum": ["start", "end"]}
+    "kind": {
+      "enum": [
+        "safari",
+        "old_man",
+        "ghost"
+      ]
+    },
+    "phase": {
+      "enum": [
+        "start",
+        "end"
+      ]
+    },
+    "region": {
+      "$ref": "../defs.schema.json#/$defs/regionId",
+      "description": "MG3 (several games): the region this message belongs to; absent = the legacy region. The client tags what it relays with its link's region; the server routes a tagged message to that region's link."
+    }
   }
 }

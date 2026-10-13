@@ -2,27 +2,158 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://kantobridge.invalid/protocol/world/slot_map.schema.json",
   "title": "slot map",
-  "description": "Written by the builder to <world>/kantobridge/slot_map.json. Gives every (atlas, palette, tile, shape) the export uses a tile block: family f of that shape (kantobridge:tile_<shape>_<ff>) and slot s (block state hi = s >> 4, lo = s & 15). Derived from the whole export, never from a build's map filter, and authoritative in multiplayer. The WorldIndex's slotMapHash is the SHA-256 of this file's canonical JSON. Entries are sorted by atlas, palette, tile, shape.",
+  "description": "Written by the builder to <world>/kantobridge/slot_map.json. Gives every (atlas, palette, tile, shape) the export uses a tile block: family f of that shape (kantobridge:tile_<shape>_<ff>) and slot s (block state hi = s >> 4, lo = s & 15). Derived from the whole export, never from a build's map filter, and authoritative in multiplayer. Entries are sorted by atlas, palette, tile, shape (version 2: by region first). Version 2 (MULTI_GAME_PLAN §4.6, MG3): one map per world shared by every region; `regions` gives each region its art set and its family range, and every entry names its region; families run 0..31. A region's WorldIndex `slotMapHash` is the SHA-256 of the canonical version-1 form of that region's entries alone (its slice), so a rebuild of one region never changes another's hash; the legacy region at families 0..15 keeps today's hash exactly.",
   "type": "object",
-  "required": ["version", "slots"],
+  "required": [
+    "version",
+    "slots"
+  ],
   "additionalProperties": false,
   "properties": {
-    "version": {"const": 1},
+    "version": {
+      "enum": [
+        1,
+        2
+      ]
+    },
     "slots": {
       "type": "array",
       "items": {
         "type": "object",
-        "required": ["atlas", "palette", "tile", "shape", "family", "slot"],
+        "required": [
+          "atlas",
+          "palette",
+          "tile",
+          "shape",
+          "family",
+          "slot"
+        ],
         "additionalProperties": false,
         "properties": {
-          "atlas": {"$ref": "../defs.schema.json#/$defs/id", "description": "The export image id of the tileset atlas."},
-          "palette": {"$ref": "../defs.schema.json#/$defs/symbol", "description": "The SGB palette the tile is coloured with."},
-          "tile": {"type": "integer", "minimum": 0, "maximum": 1023},
-          "shape": {"enum": ["full", "half"]},
-          "family": {"type": "integer", "minimum": 0, "maximum": 15},
-          "slot": {"type": "integer", "minimum": 0, "maximum": 255}
+          "atlas": {
+            "$ref": "../defs.schema.json#/$defs/id",
+            "description": "The export image id of the tileset atlas."
+          },
+          "palette": {
+            "$ref": "../defs.schema.json#/$defs/symbol",
+            "description": "The SGB palette the tile is coloured with."
+          },
+          "tile": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 1023
+          },
+          "shape": {
+            "enum": [
+              "full",
+              "half"
+            ]
+          },
+          "family": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 31
+          },
+          "slot": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 255
+          },
+          "region": {
+            "$ref": "../defs.schema.json#/$defs/regionId",
+            "description": "Version 2 only: the region whose export this key comes from."
+          }
+        }
+      }
+    },
+    "regions": {
+      "type": "object",
+      "propertyNames": {
+        "$ref": "../defs.schema.json#/$defs/regionId"
+      },
+      "additionalProperties": {
+        "type": "object",
+        "required": [
+          "set",
+          "families"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "set": {
+            "$ref": "../defs.schema.json#/$defs/gameId",
+            "description": "The art set the region's keys are drawn with (its game's export)."
+          },
+          "families": {
+            "type": "array",
+            "minItems": 2,
+            "maxItems": 2,
+            "items": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 31
+            },
+            "description": "The region's family range [first, last]."
+          }
+        }
+      },
+      "description": "Version 2 only: the regions sharing this map."
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "version": {
+            "const": 1
+          }
+        }
+      },
+      "then": {
+        "not": {
+          "required": [
+            "regions"
+          ]
+        },
+        "properties": {
+          "slots": {
+            "items": {
+              "properties": {
+                "family": {
+                  "maximum": 15
+                }
+              },
+              "not": {
+                "required": [
+                  "region"
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "version": {
+            "const": 2
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "regions"
+        ],
+        "properties": {
+          "slots": {
+            "items": {
+              "required": [
+                "region"
+              ]
+            }
+          }
         }
       }
     }
-  }
+  ]
 }

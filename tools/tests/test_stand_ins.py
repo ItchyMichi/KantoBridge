@@ -119,6 +119,7 @@ def test_silent_client_is_dropped():
         try:
             await mc.hello(start_pings=False)
             await mc.expect("snapshot")
+            await mc.expect("game.status")  # MG2: the progress follows every snapshot
             assert await mc.next(timeout=3) is None
         finally:
             await mc.close()
@@ -135,6 +136,7 @@ def test_new_connection_replaces_old():
             second = await FakeMinecraft(port=gen1.port, ping_ms=0).connect()
             await second.hello()
             await first.expect("snapshot")
+            await first.expect("game.status")
             assert await first.next(timeout=3) is None, "the old connection is closed"
             assert gen1.connections == 2
             assert (await second.request("debug.status"))["data"]["connections"] == 2
@@ -432,6 +434,7 @@ def test_oversize_line_drops_the_connection():
         try:
             await mc.hello()
             await mc.expect("snapshot")
+            await mc.expect("game.status")
             await mc.conn.send_bytes(b"x" * (4 * 1024 * 1024 + 16) + b"\n")
             assert await mc.next(timeout=10) is None
         finally:
@@ -464,3 +467,129 @@ def test_client_reconnects_with_backoff():
 def test_frames_are_canonical_lines():
     line = encode_line({"type": "ping", "seq": 1, "data": {"t": 2}})
     assert line == b'{"data":{"t":2},"seq":1,"type":"ping"}\n'
+
+
+# --- MG2: game.status and the region acts (docs/PROTOCOL.md "Regions (MG2)") ---------------------
+
+
+async def _region_pair(**gen1_kw):
+    gen1 = await FakeGen1(port=0, **gen1_kw).start()
+    mc = await FakeMinecraft(port=gen1.port, role="test", ping_ms=0).connect()
+    await mc.hello()
+    snap = (await mc.expect("snapshot"))["data"]
+    status = (await mc.expect("game.status"))["data"]
+    return gen1, mc, snap, status
+
+
+def test_game_status_follows_the_snapshot_and_marker_changes():
+    async def scenario():
+        gen1, mc, snap, status = await _region_pair()
+        try:
+            assert snap["ingame"] is True and "away" not in snap
+            assert status == {"game": "red", "playthrough": "saved", "ingame": True, "started": True, "badges": 0,
+                              "markers": {"champion": False, "starter": False}, "name": "TESTER", "slot": 1}
+            # a resync's snapshot is followed by the status again; a bind too
+            await mc.send("resync")
+            await mc.expect("snapshot")
+            await mc.expect("game.status")
+            bind = (await mc.send("session.bind", {"world": "w-regions", "multiplayer": False}))["seq"]
+            await mc.expect("session.bound", re=bind)
+            assert (await mc.expect("game.status"))["data"]["slot"] == 1
+            await mc.expect("save.loaded")
+            # a marker flag changes: the status says so; an ordinary flag does not
+            await gen1.set_flag("EVENT_GOT_STARTER", True)
+            await mc.expect("story.flags")
+            assert (await mc.expect("game.status"))["data"]["markers"] == {"champion": False, "starter": True}
+            await gen1.set_flag("EVENT_TEST_OTHER", True)
+            await mc.expect("story.flags")
+            await gen1.set_badge("BOULDERBADGE", True)
+            changed = await mc.expect("game.status")
+            assert changed["data"]["badges"] == 1 and changed["data"]["markers"]["starter"] is True
+            assert mc.counts["game.status"] == 5, "no status for the plain flag"
+            assert not mc.conn.problems
+        finally:
+            await mc.close()
+            await gen1.stop()
+    run(scenario())
+
+
+def test_park_holds_the_player_and_resume_releases_it():
+    async def scenario():
+        gen1, mc, snap, _ = await _region_pair()
+        try:
+            cell = snap["player"]
+            parked = await mc.request("region.park", {"region": "kanto"}, reply_type="act.result")
+            assert parked["data"] == {"ok": True, "kind": "park"}
+            await mc.send("move.step", {"dir": "up", "n": 1})
+            blocked = (await mc.expect("player.blocked"))["data"]
+            assert (blocked["reason"], blocked["x"], blocked["y"]) == ("script", cell["x"], cell["y"])
+            again = await mc.request("region.park", {"region": "kanto"}, reply_type="act.result")
+            assert again["data"]["ok"] is True, "a park while parked is ok again"
+            held = (await mc.request("resync", reply_type="snapshot"))["data"]
+            assert held["away"] == {"map": cell["map"], "x": cell["x"], "y": cell["y"]}
+            await mc.expect("game.status")
+            # a target that is neither a route map nor the away cell's map is refused; the hold stays
+            bad = await mc.request("region.resume", {"region": "kanto", "to": {"map": "TEST_NOWHERE", "x": 1, "y": 1,
+                                                                                "facing": "down"}}, reply_type="act.result")
+            assert bad["data"] == {"ok": False, "kind": "resume", "reason": "bad_target"}
+            assert gen1.parked
+            resumed = await mc.request("region.resume", {"region": "kanto", "to": cell}, reply_type="act.result")
+            assert resumed["data"] == {"ok": True, "kind": "resume"}
+            after = (await mc.request("resync", reply_type="snapshot"))["data"]
+            assert after["player"] == cell and "away" not in after, "the cell is unchanged by a park/resume pair"
+            await mc.expect("game.status")
+            twice = await mc.request("region.resume", {"region": "kanto", "to": cell}, reply_type="act.result")
+            assert twice["data"] == {"ok": False, "kind": "resume", "reason": "not_parked"}
+            # a resume onto a route map's arrival cell is a warp of kind script
+            await mc.request("region.park", {"region": "kanto"}, reply_type="act.result")
+            sent = await mc.send("region.resume", {"region": "kanto",
+                                                   "to": {"map": "KB_ROUTE_TEST", "x": 1, "y": 0, "facing": "right"}})
+            start = await mc.expect("warp")
+            arrive = await mc.expect("warp")
+            assert (start["data"]["kind"], arrive["data"]["phase"]) == ("script", "arrive")
+            assert arrive["data"]["to"] == {"map": "KB_ROUTE_TEST", "x": 1, "y": 0, "facing": "right"}
+            assert (await mc.expect("act.result", re=sent["seq"]))["data"]["ok"] is True
+            # a start while in the game
+            started = await mc.request("region.start", {"region": "kanto"}, reply_type="act.result")
+            assert started["data"] == {"ok": False, "kind": "start", "reason": "not_title"}
+            # not idle: a text box is open
+            await gen1.open_text([["Made-up line."]])
+            await mc.expect("ui.open")
+            busy = await mc.request("region.park", {"region": "kanto"}, reply_type="act.result")
+            assert busy["data"] == {"ok": False, "kind": "park", "reason": "not_idle"}
+            assert not mc.conn.problems
+        finally:
+            await mc.close()
+            await gen1.stop()
+    run(scenario())
+
+
+def test_a_game_at_its_title_is_started_by_region_start():
+    async def scenario():
+        for slot_has_save, detail, playthrough in ((True, "continue", "saved"), (False, "new", "fresh")):
+            gen1, mc, snap, status = await _region_pair(state="title", slot_has_save=slot_has_save)
+            try:
+                assert snap["ingame"] is False
+                assert (status["playthrough"], status["started"], status["ingame"]) == ("title", False, False)
+                assert "name" not in status
+                await mc.send("move.step", {"dir": "up", "n": 1})
+                assert (await mc.expect("player.blocked"))["data"]["reason"] == "script"
+                parked = await mc.request("region.park", {"region": "kanto"}, reply_type="act.result")
+                assert parked["data"] == {"ok": False, "kind": "park", "reason": "not_ingame"}
+                started = await mc.request("region.start", {"region": "kanto"}, reply_type="act.result")
+                assert started["data"] == {"ok": True, "kind": "start", "detail": detail}
+                sync = await mc.expect("player.pos")
+                assert sync["data"]["kind"] == "sync"
+                loaded = (await mc.expect("save.loaded"))["data"]
+                assert loaded["fresh"] is (detail == "new") and (("pair" in loaded) is (detail == "continue"))
+                after = (await mc.expect("game.status"))["data"]
+                assert (after["playthrough"], after["started"], after["ingame"], after["name"]) == \
+                    (playthrough, True, True, "TESTER")
+                again = await mc.request("region.start", {"region": "kanto"}, reply_type="act.result")
+                assert again["data"]["reason"] == "not_title"
+                assert (await mc.request("resync", reply_type="snapshot"))["data"]["ingame"] is True
+                assert not mc.conn.problems
+            finally:
+                await mc.close()
+                await gen1.stop()
+    run(scenario())

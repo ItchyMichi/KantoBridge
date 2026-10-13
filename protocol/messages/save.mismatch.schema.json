@@ -4,14 +4,25 @@
   "title": "save.mismatch",
   "description": "The hidden game's save and this world's last save pair don't match (crash recovery): the client warns the player.",
   "x-type": "save.mismatch",
-  "x-legs": ["s2c"],
+  "x-legs": [
+    "s2c"
+  ],
   "x-re": "never",
   "type": "object",
-  "required": ["kind"],
+  "required": [
+    "kind"
+  ],
   "additionalProperties": false,
   "properties": {
     "kind": {
-      "enum": ["hidden_behind", "world_behind", "hidden_older", "hidden_newer", "new_game", "other"],
+      "enum": [
+        "hidden_behind",
+        "world_behind",
+        "hidden_older",
+        "hidden_newer",
+        "new_game",
+        "other"
+      ],
       "description": "hidden_behind: same pair, but the hidden game went back to it (Pokémon received since are still in Minecraft and the story may repeat them); world_behind: same pair, but Minecraft went back to an earlier save (Pokémon the story gave since are missing); hidden_older/hidden_newer: the hidden game runs from another save than the world's pair, older or newer; new_game: a New Game in a world that has a pair; other: a different save of unknown age."
     },
     "ops": {
@@ -19,7 +30,17 @@
       "minimum": 0,
       "description": "How many Pokémon operations differ (hidden_behind, world_behind)."
     },
-    "hiddenAt": {"type": "integer", "minimum": 0},
-    "worldAt": {"type": "integer", "minimum": 0}
+    "hiddenAt": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "worldAt": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "region": {
+      "$ref": "../defs.schema.json#/$defs/regionId",
+      "description": "MG3 (several games): the region this message belongs to; absent = the legacy region. The client tags what it relays with its link's region; the server routes a tagged message to that region's link."
+    }
   }
 }

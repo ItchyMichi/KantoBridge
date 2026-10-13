@@ -89,7 +89,7 @@ def test_the_shipped_list_has_viridians_zone_at_its_spot():
 @pytest.mark.parametrize("change,code", [
     ({"id": "Bad-Id"}, "bad_id"),
     ({"name": ""}, "bad_name"),
-    ({"kind": "connecting"}, "kind_later"),
+    ({"kind": "connecting"}, "bad_to"),  # MG2: a connecting route needs its far end
     ({"kind": "teleporter"}, "bad_kind"),
     ({"theme": "cave"}, "theme_later"),
     ({"map": "not a map"}, "bad_from"),
@@ -112,9 +112,12 @@ def test_duplicate_ids_and_bad_files():
     got, probs = parse([zone(), zone()])
     assert len(got) == 1 and probs == [("test_zone", "duplicate_id")]
     b, Routes, js = routes_module()
-    for text in (b"not json", json.dumps({"version": 2, "routes": []}).encode(), None):
+    for text in (b"not json", json.dumps({"version": 3, "routes": []}).encode(), None):
         out, problems = Routes.parse(js, text)
         assert len(out) == 0 and problems[1].code in (b"bad_file", b"no_file")
+    # MG2: version 2 (connecting routes) is read like version 1
+    out, problems = Routes.parse(js, json.dumps({"version": 2, "routes": [R.ZONE]}).encode())
+    assert len(out) == 1 and len(problems) == 0
 
 
 # ------------------------------------------------------------ the exit's block maths
@@ -421,3 +424,120 @@ def test_the_snapshot_carries_progress_and_a_loaded_save_sends_its_own():
     g.b.emit("save.loaded", payload)
     g.run(3)
     assert g.progress()[-1] == {"test_zone": {"taken": ["a3.i9"], "wins": {"a1.t2": 3}}}
+
+
+# ------------------------------------------------------------ routes v2: connecting routes (MG2)
+
+
+def export_routes(g):
+    """The `routes` export resource's data (main.lua's status.routesExport, for test drivers), as Python."""
+    return json.loads(g.rig.status.routesExport().decode("utf-8"))
+
+
+def route_map_ids(g):
+    return sorted(k.decode() for k in g.rig.status.routeMapIds().keys())
+
+
+def test_a_connecting_route_parses_both_ends_with_their_own_classes_and_music():
+    got, probs = parse([R.CONNECTING])
+    assert probs == [] and len(got) == 1
+    e = got[0]
+    assert e.kind == b"connecting" and not e.unset and e.mapId == b"KB_ROUTE_TEST_PASS"
+    assert e[b"from"].region == b"kanto" and e.to.region == b"hoenn"
+    assert sorted(k.decode() for k in e[b"from"].games.keys()) == ["blue", "red"]
+    assert lua_list(e.to.gameList) == [b"emerald"] and e.to.map == b"TEST_WOODS2"
+    assert (e.to.x, e.to.y, e.to.facing, e.to.depth) == (9, 4, b"right", 1)
+    assert [c.decode() for c in lua_list(e.to.classes)] == ["OPP_TEST"] and e.to.music is False, "null: no song"
+    assert e[b"from"].classes is None, "the route's trainers.classes apply to an end without its own"
+    assert [c.decode() for c in lua_list(e.classes)] == ["OPP_TEST", "OPP_NOBODY"] and e.music == b"TEST_SONG"
+
+
+@pytest.mark.parametrize("change,code", [
+    ({"to": None}, "bad_to"),
+    ({"to": {"games": ["emerald"], "map": "lower case", "x": 1, "y": 1, "facing": "up"}}, "bad_to"),
+    ({"to": {"games": [], "map": "TEST_WOODS2", "x": 1, "y": 1, "facing": "up"}}, "bad_games"),
+    ({"to": {"games": ["emerald"], "map": "TEST_WOODS2", "x": 1, "y": 1, "facing": "up", "region": "Hoenn"}}, "bad_region"),
+    ({"to": {"games": ["emerald"], "map": "TEST_WOODS2", "x": 1, "y": 1, "facing": "up", "classes": ["lower"]}}, "bad_classes"),
+    ({"to": {"games": ["emerald"], "map": "TEST_WOODS2", "x": 1, "y": 1, "facing": "up", "music": "no spaces"}}, "bad_music"),
+])
+def test_a_bad_far_end_is_refused_with_a_code(change, code):
+    c = json.loads(json.dumps(R.CONNECTING))
+    for k, v in change.items():
+        if v is None:
+            c.pop(k)
+        else:
+            c[k] = v
+    got, probs = parse([c])
+    assert got == [] and probs == [("test_pass", code)]
+
+
+def test_a_free_roam_zone_refuses_a_far_end():
+    got, probs = parse([zone(to=R.CONNECTING["to"])])
+    assert got == [] and probs == [("test_zone", "bad_to")]
+
+
+def test_a_connecting_route_registers_only_the_end_whose_games_name_this_game():
+    # the fake runs Blue: the `from` end's clearing in the woods and KB_ROUTE_TEST_PASS; Emerald's end is not ours
+    g = R.RouteGame(zones=[R.CONNECTING])
+    st = g.status()
+    assert (st["routesInstalled"], st["routesConnecting"], st["routesOtherGame"]) == (1, 1, 0)
+    maps = g.writes("maps")
+    assert [(w.op.decode(), w.id.decode()) for w in maps] == [("register", R.PASS_MAP), ("patch", "TEST_WOODS")]
+    assert [w.id.decode() for w in g.writes("map_scripts")] == [R.PASS_MAP, "TEST_WOODS"]
+    songs = g.writes("map_songs")
+    assert [(w.id.decode(), w.value.decode()) for w in songs] == [(R.PASS_MAP, "TEST_SONG")], "the route's music"
+    assert route_map_ids(g) == [R.PASS_MAP]
+    # the export: both ends named, and which half this game registered
+    data = export_routes(g)
+    assert data["version"] == 2 and [r["id"] for r in data["routes"]] == ["test_pass"]
+    item = data["routes"][0]
+    assert item["kind"] == "connecting" and item["end"] == "from"
+    assert item["ends"] == {"from": {"region": "kanto", "games": ["red", "blue"]},
+                            "to": {"region": "hoenn", "games": ["emerald"]}}
+    assert item["town"]["map"] == "TEST_WOODS" and item["routeMap"]["id"] == R.PASS_MAP
+    assert item["trainers"]["classes"] == ["OPP_TEST"], "the registered copies of the route's classes"
+
+
+def test_a_connecting_route_for_other_games_only_counts_as_another_games():
+    c = json.loads(json.dumps(R.CONNECTING))
+    c["from"]["games"] = ["red"]
+    g = R.RouteGame(zones=[c])
+    st = g.status()
+    assert (st["routesInstalled"], st["routesOtherGame"]) == (0, 1)
+    assert g.writes("maps") == []
+
+
+def test_both_ends_in_one_game_make_two_zones_with_the_to_ends_own_map_classes_and_region():
+    c = json.loads(json.dumps(R.CONNECTING))
+    c["to"]["games"] = ["blue"]
+    c["to"].pop("region")  # absent: the catalogue's default region for Blue, kanto
+    g = R.RouteGame(zones=[c])
+    st = g.status()
+    assert (st["routesInstalled"], st["routesConnecting"]) == (2, 2)
+    maps = g.writes("maps")
+    assert [(w.op.decode(), w.id.decode()) for w in maps] == [
+        ("register", R.PASS_MAP), ("patch", "TEST_WOODS"), ("register", R.PASS_MAP_TO), ("patch", "TEST_WOODS2")]
+    assert [w.id.decode() for w in g.writes("map_scripts")] == [R.PASS_MAP, "TEST_WOODS", R.PASS_MAP_TO, "TEST_WOODS2"]
+    songs = g.writes("map_songs")
+    assert [(w.id.decode(), w.value.decode()) for w in songs] == [(R.PASS_MAP, "TEST_SONG")], "the to end's music is null"
+    data = export_routes(g)
+    assert data["version"] == 2 and [(r["id"], r["end"]) for r in data["routes"]] == [("test_pass", "from"), ("test_pass", "to")]
+    far = data["routes"][1]
+    assert far["town"]["map"] == "TEST_WOODS2" and far["routeMap"]["id"] == R.PASS_MAP_TO
+    assert far["ends"]["to"] == {"region": "kanto", "games": ["blue"]} and far["trainers"]["classes"] == ["OPP_TEST"]
+    # the second patch cleared block (5, 2) of the second town: the exit faces right from cell (9, 4)
+    assert sorted(far["town"]["cleared"]) == [[5, 2]] and sorted(far["town"]["triggers"]) == [[11, 4], [11, 5]]
+
+
+def test_a_free_roam_list_exports_version_1_unchanged():
+    g = R.RouteGame()
+    data = export_routes(g)
+    assert data["version"] == 1 and data["routes"][0]["kind"] == "free_roam"
+    assert "ends" not in data["routes"][0] and "end" not in data["routes"][0]
+
+
+def test_route_map_ids_name_every_installed_route_map():
+    c = json.loads(json.dumps(R.CONNECTING))
+    c["to"]["games"] = ["blue"]
+    g = R.RouteGame(zones=[R.ZONE, c])
+    assert route_map_ids(g) == sorted([R.ROUTE_MAP, R.PASS_MAP, R.PASS_MAP_TO])

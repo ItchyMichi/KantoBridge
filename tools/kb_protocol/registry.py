@@ -67,10 +67,14 @@ class Protocol:
         self.route_list = _read_json(self.root / "world" / "route_list.schema.json")
         # Several games (MG1): the game catalogue, protocol/games.json.
         self.games_schema = _read_json(self.root / "games.schema.json")
+        # Several games (MG3): the region table (<world>/kantobridge/regions.json) and a region record.
+        self.regions = _read_json(self.root / "world" / "regions.schema.json")
+        self.region = _read_json(self.root / "world" / "region.schema.json")
         self.documents = {self.envelope["$id"]: self.envelope, self.defs["$id"]: self.defs,
                           self.world_index["$id"]: self.world_index, self.slot_map["$id"]: self.slot_map,
                           self.shape_index["$id"]: self.shape_index, self.route_list["$id"]: self.route_list,
-                          self.games_schema["$id"]: self.games_schema}
+                          self.games_schema["$id"]: self.games_schema, self.regions["$id"]: self.regions,
+                          self.region["$id"]: self.region}
         for schema in (*self.messages.values(), *self.exports.values()):
             self.documents[schema["$id"]] = schema
         self.registry = Registry().with_resources(
@@ -89,6 +93,8 @@ class Protocol:
         self._shape_index_validator = Draft202012Validator(self.shape_index, registry=self.registry)
         self._route_list_validator = Draft202012Validator(self.route_list, registry=self.registry)
         self._games_validator = Draft202012Validator(self.games_schema, registry=self.registry)
+        self._regions_validator = Draft202012Validator(self.regions, registry=self.registry)
+        self._region_validator = Draft202012Validator(self.region, registry=self.registry)
 
     @property
     def types(self):
@@ -155,6 +161,16 @@ class Protocol:
         """Problems of a game catalogue against protocol/games.schema.json (MG1)."""
         return [Problem(_pointer(e.absolute_path), e.validator)
                 for e in sorted(self._games_validator.iter_errors(data), key=lambda e: list(e.path))]
+
+    def check_regions(self, data):
+        """Problems of a region table against protocol/world/regions.schema.json (MG3)."""
+        return [Problem(_pointer(e.absolute_path), e.validator)
+                for e in sorted(self._regions_validator.iter_errors(data), key=lambda e: list(e.path))]
+
+    def check_region(self, data):
+        """Problems of a region record against protocol/world/region.schema.json (MG3)."""
+        return [Problem(_pointer(e.absolute_path), e.validator)
+                for e in sorted(self._region_validator.iter_errors(data), key=lambda e: list(e.path))]
 
     def resolve(self, base_uri, ref):
         """Resolve a $ref against base_uri; returns (uri, subschema)."""

@@ -1,6 +1,7 @@
 """The Gen1Recomp pin, everywhere it is written, agrees with ``Engine.CHECKED`` (ENGINE_UPGRADE_PLAN 1.4; UP1 item 2).
 
-``Engine.CHECKED = "<version>"`` in gen1-bridge/lib/kb_engine.lua is the one source of truth. Every file in PINS is
+``Engine.CHECKED = "<version>"`` in gen1-bridge/lib/kb_engine.lua (the adapter loader, MG2) is the one source of
+truth; the Gen 1 adapter, lib/engine/gen1.lua, gets it as ``opts.checked`` and cites the pinned release in its header. Every file in PINS is
 read as text, its ``0.3.N`` literals are collected (``v0.3.49`` counts; ``0.4.0`` and the like do not), the file's
 rule drops the literals that are not the pin, and what is left must be exactly {CHECKED}: a stale file fails by name,
 with its stray literals. Java sources are out of scope, their literals are self-consistent fakes (plan decision U6).
@@ -103,6 +104,7 @@ def PINS_JSON(text, checked):
 
 PINS = [
     ("gen1-bridge/lib/kb_engine.lua", CODE),
+    ("gen1-bridge/lib/engine/gen1.lua", CODE),
     ("gen1-bridge/export/kb_swapsites.lua", ALL),
     ("gen1-bridge/manifest.json", JSON_RANGE),
     ("gen1-bridge/mod.card", ALL),

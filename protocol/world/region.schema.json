@@ -1,0 +1,376 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kantobridge.invalid/protocol/world/region.schema.json",
+  "title": "region record",
+  "description": "Several games (MULTI_GAME_PLAN §4.6, MG3): <world>/kantobridge/regions/<id>/region.json, canonical JSON: one region of the overworld built from one game's export: its slot and origin, the box it owns, the areas the client and server use for \"which region am I in\", the slot-map family range its tiles use, its documents and their hashes, the generator, its rules and namespaces. Relayed inside world.regions. Ids, numbers and hashes only.",
+  "type": "object",
+  "required": [
+    "version",
+    "id",
+    "game",
+    "family",
+    "exportHash",
+    "slot",
+    "origin",
+    "bounds",
+    "areas",
+    "families",
+    "files",
+    "hashes",
+    "generator",
+    "rules",
+    "namespaces"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "version": {
+      "const": 1
+    },
+    "id": {
+      "$ref": "../defs.schema.json#/$defs/regionId"
+    },
+    "game": {
+      "$ref": "../defs.schema.json#/$defs/gameId"
+    },
+    "family": {
+      "$ref": "../defs.schema.json#/$defs/family"
+    },
+    "exportHash": {
+      "$ref": "../defs.schema.json#/$defs/hash",
+      "description": "The export bundle this region was built from (its index's canonical JSON)."
+    },
+    "slot": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 63
+    },
+    "origin": {
+      "type": "object",
+      "required": [
+        "x",
+        "y",
+        "z"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "x": {
+          "type": "integer"
+        },
+        "y": {
+          "type": "integer"
+        },
+        "z": {
+          "type": "integer"
+        }
+      },
+      "description": "The block the region's surface plans from: (pitch * slot, surfaceY, 0)."
+    },
+    "bounds": {
+      "type": "object",
+      "required": [
+        "minX",
+        "minZ",
+        "maxX",
+        "maxZ",
+        "minY",
+        "maxY"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "minX": {
+          "type": "integer"
+        },
+        "minZ": {
+          "type": "integer"
+        },
+        "maxX": {
+          "type": "integer"
+        },
+        "maxZ": {
+          "type": "integer"
+        },
+        "minY": {
+          "type": "integer"
+        },
+        "maxY": {
+          "type": "integer"
+        }
+      },
+      "description": "The union of the areas and the interior spill (inclusive); no two regions' bounds overlap."
+    },
+    "areas": {
+      "type": "object",
+      "required": [
+        "surface",
+        "zones",
+        "dungeons",
+        "caves"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "surface": {
+          "type": "object",
+          "required": [
+            "x",
+            "z",
+            "w",
+            "d"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "x": {
+              "type": "integer"
+            },
+            "z": {
+              "type": "integer"
+            },
+            "w": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "d": {
+              "type": "integer",
+              "minimum": 0
+            }
+          },
+          "description": "A box of blocks on the ground plane: its north-west corner (x, z), width (X) and depth (Z); zero size means the area was not built."
+        },
+        "zones": {
+          "type": "object",
+          "required": [
+            "x",
+            "z",
+            "w",
+            "d"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "x": {
+              "type": "integer"
+            },
+            "z": {
+              "type": "integer"
+            },
+            "w": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "d": {
+              "type": "integer",
+              "minimum": 0
+            }
+          },
+          "description": "A box of blocks on the ground plane: its north-west corner (x, z), width (X) and depth (Z); zero size means the area was not built."
+        },
+        "dungeons": {
+          "type": "object",
+          "required": [
+            "x",
+            "z",
+            "w",
+            "d"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "x": {
+              "type": "integer"
+            },
+            "z": {
+              "type": "integer"
+            },
+            "w": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "d": {
+              "type": "integer",
+              "minimum": 0
+            }
+          },
+          "description": "A box of blocks on the ground plane: its north-west corner (x, z), width (X) and depth (Z); zero size means the area was not built."
+        },
+        "caves": {
+          "type": "object",
+          "required": [
+            "x",
+            "z",
+            "w",
+            "d"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "x": {
+              "type": "integer"
+            },
+            "z": {
+              "type": "integer"
+            },
+            "w": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "d": {
+              "type": "integer",
+              "minimum": 0
+            }
+          },
+          "description": "A box of blocks on the ground plane: its north-west corner (x, z), width (X) and depth (Z); zero size means the area was not built."
+        }
+      },
+      "description": "Where the region's parts are: the towns and routes at feet level, the wild-zone slots, the dungeon slots, the cave area."
+    },
+    "families": {
+      "type": "array",
+      "minItems": 2,
+      "maxItems": 2,
+      "items": {
+        "type": "integer",
+        "minimum": 0,
+        "maximum": 31
+      },
+      "description": "The slot-map family range [first, last] this region's tiles use (the slot map is one per world)."
+    },
+    "files": {
+      "type": "object",
+      "required": [
+        "index",
+        "shapeIndex",
+        "shapeMap"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "index": {
+          "type": "string",
+          "pattern": "^regions/[a-z][a-z0-9_]{0,23}/[A-Za-z0-9_.-]+$",
+          "maxLength": 96
+        },
+        "shapeIndex": {
+          "type": "string",
+          "pattern": "^regions/[a-z][a-z0-9_]{0,23}/[A-Za-z0-9_.-]+$",
+          "maxLength": 96
+        },
+        "shapeMap": {
+          "type": "string",
+          "pattern": "^regions/[a-z][a-z0-9_]{0,23}/[A-Za-z0-9_.-]+$",
+          "maxLength": 96
+        }
+      },
+      "description": "The region's documents, relative to <world>/kantobridge/."
+    },
+    "hashes": {
+      "type": "object",
+      "required": [
+        "index",
+        "shapeIndex",
+        "shapeMap"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "index": {
+          "$ref": "../defs.schema.json#/$defs/hash"
+        },
+        "shapeIndex": {
+          "$ref": "../defs.schema.json#/$defs/hash"
+        },
+        "shapeMap": {
+          "$ref": "../defs.schema.json#/$defs/hash"
+        }
+      }
+    },
+    "generator": {
+      "type": "object",
+      "required": [
+        "shapes"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "shapes": {
+          "type": "string",
+          "pattern": "^kb-shapes/[0-9]+$",
+          "maxLength": 32
+        }
+      }
+    },
+    "rules": {
+      "type": "object",
+      "required": [
+        "profile",
+        "compat"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "profile": {
+          "$ref": "../defs.schema.json#/$defs/family"
+        },
+        "movement": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "walk": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 64
+            },
+            "bike": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 64
+            }
+          },
+          "description": "Frames per cell, when a game needs its own speeds (absent: the engine's)."
+        },
+        "compat": {
+          "type": "object",
+          "required": [
+            "maxDex",
+            "maxMove",
+            "onIncompatible"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "maxDex": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 2000
+            },
+            "maxMove": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 2000
+            },
+            "nick": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 16
+            },
+            "onIncompatible": {
+              "enum": [
+                "leave_out",
+                "visitor"
+              ]
+            }
+          }
+        }
+      }
+    },
+    "namespaces": {
+      "type": "object",
+      "required": [
+        "artSet",
+        "pools"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "artSet": {
+          "$ref": "../defs.schema.json#/$defs/gameId"
+        },
+        "pools": {
+          "type": "string",
+          "pattern": "^kantobridge:[a-z][a-z0-9_]{0,23}$",
+          "maxLength": 40,
+          "description": "The habitat pool id prefix: kantobridge:<region> (the legacy region's pools stay kantobridge:<map>)."
+        }
+      }
+    }
+  }
+}

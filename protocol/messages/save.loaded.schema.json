@@ -4,13 +4,22 @@
   "title": "save.loaded",
   "description": "Which save the hidden game is running from: sent after session.bound while in game, and whenever the hidden game loads a save or starts a New Game. The server compares it with the player's last save pair (crash recovery).",
   "x-type": "save.loaded",
-  "x-legs": ["g2m", "c2s"],
+  "x-legs": [
+    "g2m",
+    "c2s"
+  ],
   "x-re": "never",
   "type": "object",
-  "required": ["fresh", "ops"],
+  "required": [
+    "fresh",
+    "ops"
+  ],
   "additionalProperties": false,
   "properties": {
-    "fresh": {"type": "boolean", "description": "A New Game that has never been saved (no pair)."},
+    "fresh": {
+      "type": "boolean",
+      "description": "A New Game that has never been saved (no pair)."
+    },
     "pair": {
       "$ref": "../defs.schema.json#/$defs/hash",
       "description": "The save the hidden game loaded or last wrote (save.begin's pair)."
@@ -28,8 +37,22 @@
     "daycare": {
       "$ref": "../defs.schema.json#/$defs/uid",
       "description": "The Pokémon in the hidden game's daycare, if any."
+    },
+    "region": {
+      "$ref": "../defs.schema.json#/$defs/regionId",
+      "description": "MG3 (several games): the region this message belongs to; absent = the legacy region. The client tags what it relays with its link's region; the server routes a tagged message to that region's link."
     }
   },
-  "if": {"properties": {"fresh": {"const": false}}},
-  "then": {"required": ["pair"]}
+  "if": {
+    "properties": {
+      "fresh": {
+        "const": false
+      }
+    }
+  },
+  "then": {
+    "required": [
+      "pair"
+    ]
+  }
 }

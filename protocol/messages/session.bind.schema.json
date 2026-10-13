@@ -4,13 +4,27 @@
   "title": "session.bind",
   "description": "Pair the hidden game's save slot with this Minecraft world. The server tells its client the world id (S→C); the client passes it to gen1-bridge (M→G).",
   "x-type": "session.bind",
-  "x-legs": ["m2g", "s2c"],
+  "x-legs": [
+    "m2g",
+    "s2c"
+  ],
   "x-re": "never",
   "type": "object",
-  "required": ["world", "multiplayer"],
+  "required": [
+    "world",
+    "multiplayer"
+  ],
   "additionalProperties": false,
   "properties": {
-    "world": {"$ref": "../defs.schema.json#/$defs/id"},
-    "multiplayer": {"type": "boolean"}
+    "world": {
+      "$ref": "../defs.schema.json#/$defs/id"
+    },
+    "multiplayer": {
+      "type": "boolean"
+    },
+    "region": {
+      "$ref": "../defs.schema.json#/$defs/regionId",
+      "description": "MG3 (several games): the region this message belongs to; absent = the legacy region. The client tags what it relays with its link's region; the server routes a tagged message to that region's link."
+    }
   }
 }

@@ -824,6 +824,16 @@
       }
     },
     {
+      "type": "world.regions",
+      "seq": 3,
+      "redacted": {
+        "index": 0,
+        "count": 1,
+        "hash": "9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08",
+        "part": "{\"version\":1,\"world\":\"kb-world\",\"table\":{\"version\":1,\"pitch\":8192,\"regions\":[{\"id\":\"kanto\",\"game\":\"red\",\"slot\":0}]},\"regions\":[]}"
+      }
+    },
+    {
       "type": "world.shapes",
       "seq": 12,
       "redacted": {

@@ -110,8 +110,9 @@ today. Next, by value against effort:
    as Gradle test inputs (`build.gradle:506-518`); a missing venv failing `check.*` instead of silently skipping six
    integration tests; a testable step machine pulled out of `CreateKantoWorldFlow` (615 lines, no tests); `fake_gen1`
    simulating `party.sync`, `dex.sync`, `battle.result` and `bag.use`.
-8. **Split `kb_engine.lua`** (5,240 lines, one closure) by its milestone sections into `lib/engine/*.lua`. Needs your OK:
-   CLAUDE.md lets only `lib/kb_engine.lua` touch engine internals.
+8. **Split `kb_engine.lua`** — done differently by MULTI_GAME_PLAN MG2 (2026-10-13, D1): the file moved whole to
+   `lib/engine/gen1.lua` as the Gen 1 engine adapter behind the loader `lib/kb_engine.lua`; CLAUDE.md lets only the
+   adapters under `lib/engine/` touch engine internals. Splitting the adapter by milestone sections is still open.
 9. **Portability:** the JDK path hard-coded in `tools/check.*` and `build_world.py:80` (`KB_JAVA_HOME` overrides it),
    `PLAYTEST.md:41,44`'s absolute path, and the Windows crash-log path in a player-facing message
    (`lang/en_us.json:167`). The mod code itself is portable; the scripts and the pinned Gen1Recomp build are Windows.

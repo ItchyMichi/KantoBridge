@@ -4,14 +4,26 @@
   "title": "route.battle",
   "description": "Wild Routes (WR2): a zone trainer's battle, fought through the hidden game's scripted trainer battle with this party.",
   "x-type": "route.battle",
-  "x-legs": ["m2g", "s2c"],
+  "x-legs": [
+    "m2g",
+    "s2c"
+  ],
   "x-re": "never",
   "type": "object",
-  "required": ["route", "id", "class", "party"],
+  "required": [
+    "route",
+    "id",
+    "class",
+    "party"
+  ],
   "additionalProperties": false,
   "properties": {
-    "route": {"$ref": "../defs.schema.json#/$defs/routeId"},
-    "id": {"$ref": "../defs.schema.json#/$defs/routeObjectId"},
+    "route": {
+      "$ref": "../defs.schema.json#/$defs/routeId"
+    },
+    "id": {
+      "$ref": "../defs.schema.json#/$defs/routeObjectId"
+    },
     "class": {
       "$ref": "../defs.schema.json#/$defs/symbol",
       "description": "The Gen 1 trainer class, e.g. OPP_YOUNGSTER; the zone must list it."
@@ -23,16 +35,25 @@
       "x-rom-derived": true,
       "items": {
         "type": "object",
-        "required": ["species", "level"],
+        "required": [
+          "species",
+          "level"
+        ],
         "additionalProperties": false,
         "properties": {
-          "species": {"$ref": "../defs.schema.json#/$defs/symbol"},
-          "level": {"$ref": "../defs.schema.json#/$defs/level"},
+          "species": {
+            "$ref": "../defs.schema.json#/$defs/symbol"
+          },
+          "level": {
+            "$ref": "../defs.schema.json#/$defs/level"
+          },
           "moves": {
             "type": "array",
             "minItems": 1,
             "maxItems": 4,
-            "items": {"$ref": "../defs.schema.json#/$defs/symbol"}
+            "items": {
+              "$ref": "../defs.schema.json#/$defs/symbol"
+            }
           }
         }
       }
@@ -48,6 +69,10 @@
           "description": "Our own text, shown before the battle."
         }
       }
+    },
+    "region": {
+      "$ref": "../defs.schema.json#/$defs/regionId",
+      "description": "MG3 (several games): the region this message belongs to; absent = the legacy region. The client tags what it relays with its link's region; the server routes a tagged message to that region's link."
     }
   }
 }

@@ -14,15 +14,22 @@
 return function(mod)
   local loaded = 0
 
-  local function import(rel)
+  -- loadFile compiles one of our files into this sandbox; import counts it
+  -- among the modules (status.modules; the e2e smoke test derives the count
+  -- from this file's import calls). kb_engine loads the engine adapter with
+  -- loadFile (MG2), so the count stays main.lua's own.
+  local function loadFile(rel)
     local source, err = mod:read(rel)
     if type(source) ~= "string" then
       error(("gen1-bridge: cannot read %s (%s)"):format(rel, tostring(err)), 0)
     end
     local chunk, compileErr = load(source, "@" .. rel)
     if not chunk then error(compileErr, 0) end
-    loaded = loaded + 1
     return chunk()
+  end
+  local function import(rel)
+    loaded = loaded + 1
+    return loadFile(rel)
   end
 
   local kb = {
@@ -45,6 +52,7 @@ return function(mod)
     Ui = import("observe/kb_ui.lua"),
     Mirror = import("observe/kb_mirror.lua"),
     Bag = import("observe/kb_bag.lua"),
+    Progress = import("observe/kb_progress.lua"),
     Move = import("act/kb_move.lua"),
     Interact = import("act/kb_interact.lua"),
     Field = import("act/kb_field.lua"),
@@ -56,6 +64,7 @@ return function(mod)
     Pc = import("act/kb_pc.lua"),
     Route = import("act/kb_route.lua"),
     Climb = import("act/kb_climb.lua"),
+    Region = import("act/kb_region.lua"),
     Cells = import("export/kb_cells.lua"),
     Images = import("export/kb_images.lua"),
     SwapSites = import("export/kb_swapsites.lua"),
@@ -67,8 +76,14 @@ return function(mod)
     hash = kb.sha256.short,
     debug = mod.developer == true,
   })
-  -- M10: the love facade too (love.window and love.timer for running hidden)
-  local engine = kb.Engine.new({ require = require, log = log, ui = mod.ui, datasets = mod.datasets, love = love })
+  -- M10: the love facade too (love.window and love.timer for running hidden).
+  -- MG2: kb_engine is the adapter loader (docs/specs/MULTI_GAME_PLAN.md §4.3):
+  -- it loads lib/engine/<engine>.lua for the running game's engine through
+  -- `import`, or hands back a stub for an engine without an adapter yet (the
+  -- mod then rejects every hello with reason "game").
+  local engine = kb.Engine.new({
+    require = require, log = log, ui = mod.ui, datasets = mod.datasets, love = love, import = loadFile,
+  })
 
   -- Wild Routes (WR2: lib/kb_routes.lua, docs/specs/WILD_ROUTES_PLAN.md
   -- §4.2): the zones' exits, route maps, step scripts and trainer classes
@@ -80,6 +95,8 @@ return function(mod)
     json = kb.json, text = type(routesText) == "string" and routesText or nil,
     content = mod.content, world = mod.world, game = engine.gameVersion(),
     mapQuery = engine.mapQuery, log = log,
+    -- MG2 (routes v2): an end's default region comes from the catalogue
+    games = kb.games,
   })
   if not okRoutes then
     routes = nil
@@ -233,6 +250,21 @@ return function(mod)
     },
     has = function(registry, id) return contentRecord(registry, id) ~= nil end,
   })
+  -- MG2: the region acts (act/kb_region.lua): region.park holds the hidden
+  -- game where it stands while another region is followed, region.resume
+  -- releases it (warping onto one of our route maps or the saved cell only),
+  -- region.start starts it from the title; the parked cell is kept in
+  -- mod.save "region" (save.modData) and shown by snapshot.away
+  local regionActs = kb.Region.new({
+    engine = engine, routes = routes, world = mod.world, log = log,
+    store = {
+      get = function(key) return mod.save:get(key) end,
+      set = function(key, value) mod.save:set(key, value) end,
+    },
+  })
+  -- MG2: the story progress, game.status (observe/kb_progress.lua), after
+  -- the snapshot, after a bind, on New Game and CONTINUE, and on change
+  local progressObs
   -- M9: online save pairing (act/kb_pairing.lua): session.bind's world gets
   -- its own save slot, switched to at runtime; the world -> slot map lives in
   -- mod.cache (installation-wide, src/mods/Loader.lua:1641-1643), never in
@@ -245,7 +277,10 @@ return function(mod)
       write = function(rel, bytes) return cache:write(rel, bytes) end,
       remove = function(rel) return cache:delete(rel) end,
     } or nil,
-    onBound = function(world, multiplayer, slot) saves.bound(world, multiplayer, slot) end,
+    onBound = function(world, multiplayer, slot)
+      saves.bound(world, multiplayer, slot)
+      progressObs.changed() -- MG2: game.status follows session.bound
+    end,
     -- what Cobblemon sent before a switching bind is the old world's
     onPending = function() party.forget() end,
     -- a New Game moved to the paired slot as it is: its gifts, operations
@@ -256,6 +291,11 @@ return function(mod)
         bagObs.rebase()
       end
     end,
+  })
+  progressObs = kb.Progress.new({
+    engine = engine, games = kb.games, json = kb.json, log = log,
+    -- the playthrough as the pairing judges it (the save tables CONTINUE brought)
+    playthrough = pairing.playthrough,
   })
   -- M8: the story diffs (story.flags, story.toggles, story.blocks,
   -- story.lit) and field moves from Minecraft (act.field)
@@ -317,8 +357,13 @@ return function(mod)
       story = storyParts,
       -- Wild Routes (WR2): every zone's progress; its diffs start from here
       routes = routeActs.progress(),
+      -- MG2: the parked cell, while a region.park hold is up or its marker is
+      -- still in the save after a link drop
+      away = regionActs.marker(),
     })
     routeActs.rebase()
+    -- MG2: game.status follows every snapshot
+    progressObs.rebase()
     -- logged at the end of the step: a forwarded `log` must not land between
     -- hello.ok and the snapshot
     if dropped > 0 then pendingDropped = dropped end
@@ -351,6 +396,11 @@ return function(mod)
       -- ENGINE_UPGRADE_PLAN UP1 / U3: what game.ready found
       engineMissing = status.engineMissing or {},
       unionRoom = status.unionRoom or "off",
+      -- MG2: whether this mod has an adapter for the running game's engine,
+      -- and how many interface groups the adapter lacks (the names are in the
+      -- exports, status.engineGroupsMissing, with status.engineId)
+      engineAdapter = engine.hasAdapter(),
+      engineGroupsMissing = #(status.engineGroupsMissing or {}),
     }
     for k, v in pairs(exporter.status()) do out[k] = v end
     -- counts per service, prefixed: moveRequests, warpStarted, uiOpened,
@@ -382,6 +432,10 @@ return function(mod)
     -- and the boot's zones (routesListed, routesInstalled, routesSkipped, ...)
     merge("route", routeActs.stats())
     merge("routes", routes and routes.stats or {})
+    -- MG2: the region acts (regionParks, regionResumes, regionStarts,
+    -- regionHeld, ...) and game.status (progressSent, progressChanges)
+    merge("region", regionActs.stats())
+    merge("progress", progressObs.stats())
     -- M10: our own cost per logic step and per drawn frame (perfSteps,
     -- perfAvgUs, perfMaxUs, perfOver1ms, perfTotalUs, perfFrames,
     -- perfDrawAvgUs, ...), running hidden (hiddenActive, hiddenFaked,
@@ -449,6 +503,8 @@ return function(mod)
   local function supported(game)
     local entry = kb.games.games[game]
     if not entry then return false end
+    -- MG2: no adapter for the running engine (kb_engine's stub) means no game can be followed
+    if not engine.hasAdapter() then return false end
     local manifest = mod.manifest
     if type(manifest) ~= "table" then return entry.adapter == true end
     local list = manifest.games
@@ -552,6 +608,10 @@ return function(mod)
   -- decides, answered by route.result (act/kb_route.lua)
   for _, op in ipairs({ "give", "battle", "blackout" }) do
     session.on("route." .. op, queued(function(data, seq, gen) return routeActs.request(op, data, seq, gen) end))
+  end
+  -- MG2: the region acts, answered by act.result (act/kb_region.lua)
+  for _, op in ipairs({ "park", "resume", "start" }) do
+    session.on("region." .. op, queued(function(data, seq, gen) return regionActs.request(op, data, seq, gen) end))
   end
   for _, t in ipairs({ "ui.advance", "ui.pick", "ui.back", "ui.qty", "ui.name" }) do
     session.on(t, queued(function(data, seq, gen) return uiAct.request(t, data, seq, gen) end))
@@ -675,6 +735,14 @@ return function(mod)
   -- M10, for test drivers: start the per-step cost counts over (a scenario's
   -- own numbers, without the boot, the export or the handshake)
   status.perfReset = function() perf.reset() end
+  -- MG2, for test drivers: the `routes` export resource as canonical JSON
+  -- text (the zones this game registered, both ends of a connecting route)
+  -- and the route map ids installed
+  status.routesExport = function()
+    if not routes then return nil end
+    return (kb.json.encode(kb.Routes.exportData(kb.json, routes)))
+  end
+  status.routeMapIds = function() return routes and kb.Routes.routeMapIds(routes) or {} end
 
   local PIN_EVERY = 60 -- steps between checks that the display pin still holds
   local steps = 0
@@ -741,6 +809,12 @@ return function(mod)
       log.once("route.step_failed", "error", "route.step_failed",
         { at = type(routeErr) == "string" and routeErr:match("[%w_/%.%-]+%.lua:%d+") or "unknown" })
     end
+    -- MG2: the region acts (park, resume, start), guarded the same way
+    local okRegion, regionErr = pcall(regionActs.step, facts, mode, out, { live = live, generation = generation })
+    if not okRegion then
+      log.once("region.step_failed", "error", "region.step_failed",
+        { at = type(regionErr) == "string" and regionErr:match("[%w_/%.%-]+%.lua:%d+") or "unknown" })
+    end
     npcObs.step(npcRaw, npcMap, npcGen, emote, out, live)
     -- M8: story.blocks / story.lit every step, story.flags / story.toggles
     -- every few steps, when a script ends and on a map load. Guarded: the
@@ -765,6 +839,13 @@ return function(mod)
     saves.watch(link)
     party.step(out, link)
     bagObs.step(out, link)
+    -- MG2: game.status, after the snapshot's followers (npc.set, bag.sync)
+    -- and whenever the progress changes; guarded like the story
+    local okProgress, progressErr = pcall(progressObs.step, out, { live = live })
+    if not okProgress then
+      log.once("progress.step_failed", "error", "progress.step_failed",
+        { at = type(progressErr) == "string" and progressErr:match("[%w_/%.%-]+%.lua:%d+") or "unknown" })
+    end
     saves.step(out, link)
     -- M10: which save the hidden game runs from, after a bind and on
     -- entering the game, behind this step's party.* and save.begin
@@ -810,6 +891,8 @@ return function(mod)
     local sv = saves.stats()
     status.saves, status.centerSaves, status.sessionBinds = sv.begun, sv.centerWritten, sv.binds
     status.pcHeld = engine.pcHeld()
+    -- MG2: a region.park hold is up
+    status.regionHeld = regionActs.held()
     -- M9: the active save slot (0: the flat legacy save) and a waiting switch
     status.slot, status.pairingPending = engine.saveSlot(), pairing.blocked()
     if steps % 30 == 0 then
@@ -865,6 +948,12 @@ return function(mod)
     local missing = engine.checkRequired()
     status.engineMissing = missing
     if #missing > 0 then log.warn("engine.missing", { count = #missing, first = missing[1] }) end
+    -- MG2: the interface groups the adapter lacks entirely (kb_engine's
+    -- Engine.GROUPS; the stub lacks every one), named once
+    local groups = kb.Engine.missingGroups(engine)
+    status.engineGroupsMissing = groups
+    status.engineId, status.engineAdapter = engine.engineId(), engine.hasAdapter()
+    if #groups > 0 then log.warn("engine.groups", { count = #groups, first = groups[1], adapter = engine.hasAdapter() }) end
     -- U3: the Union Room must be off (Engine.CLASSIC pins the option); a
     -- boot that found it on already runs with patched Centers: say so once,
     -- refuse the export (export/kb_export.lua) and write it off for the next
@@ -1012,6 +1101,8 @@ return function(mod)
     saves.created(save)
     -- Wild Routes (WR2): a new game has no progress
     routeActs.reload()
+    -- MG2: game.status for the new game
+    progressObs.changed()
   end))
 
   -- CONTINUE re-applies the stored options before this event
@@ -1028,6 +1119,8 @@ return function(mod)
     saves.loadedSave(type(payload) == "table" and payload.save or nil)
     -- Wild Routes (WR2): the loaded save's progress goes out whole
     routeActs.reload()
+    -- MG2: game.status for the loaded save
+    progressObs.changed()
   end))
 
   -- M9: BRIDGE PORT changed in the F10 mod manager (ManagerState:setOption,

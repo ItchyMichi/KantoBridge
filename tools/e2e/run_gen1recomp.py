@@ -42,7 +42,7 @@ from pathlib import Path
 HERE = Path(__file__).resolve().parent
 REPO = HERE.parents[1]
 LINUX = sys.platform.startswith("linux")
-# The Gen1Recomp release gen1-bridge is tested with (lib/kb_engine.lua Engine.TESTED; tools/tests/test_pins.py
+# The Gen1Recomp release gen1-bridge is tested with (lib/kb_engine.lua Engine.TESTED, the adapter loader; tools/tests/test_pins.py
 # keeps every copy of this number in step).
 PINNED = "0.3.85"
 # A slow host builds the world export slowly (the RunPod pod under Xvfb: about 460 s on either engine release,

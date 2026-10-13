@@ -750,7 +750,8 @@ engine symbols, and Pokémon identities as Cobblemon UUIDs (`uid`).
   game profile's **markers** (`protocol/games.json`: `starter`, `champion`, … → a flag each adapter
   resolves in its own namespace; Gen 1 reads `save.flags[name]`). `started` is `playthrough ≠ title`.
   Sent after every `snapshot`, after `session.bound`, on `save.created` and `save.loaded`, and when a
-  marker or the badge count changes (checked every 10 steps). The client forwards it with its link's
+  marker or the badge count changes (checked every 10 steps). At the title the boot skeleton's save
+  says nothing: `badges` 0, every marker false, no `name`. The client forwards it with its link's
   `region`; the server keeps one record per player and region (`kantobridge:progress`) and the pass
   reads it to choose between resuming and starting the far game (MG5).
 - **`region.park`** needs the hidden player in the game and idle (standing, nothing scripted, no warp
@@ -779,8 +780,11 @@ engine symbols, and Pokémon identities as Cobblemon UUIDs (`uid`).
   back to the clearing; x1 is the arrival); the far cells live in the other process. The export item
   carries `ends{from{region,games}, to{region,games}}` and `end` (`from`\|`to`: the half this game
   registered, which its `town` and `routeMap` describe), so the builder knows the route is
-  connecting and which region each half belongs to. A free-roam zone is unchanged (its `from` may
-  name a `region`; absent means the legacy region).
+  connecting and which region each half belongs to. An end's `music: null` means no song for that
+  half (absent: the route's `music`); an end's `region` absent means its games' default region from
+  the catalogue. When both ends list the running game (a one-engine test world only), the `to` end's
+  route map is `KB_ROUTE_<ID>_TO` and the export lists one item per end. A free-roam zone is
+  unchanged (its `from` may name a `region`; absent means the legacy region).
 
 ### Export (builder role)
 
@@ -888,6 +892,7 @@ bytes. A downloaded export is stored as an **export bundle**, which stays under 
 | `world.index` | S→C | `index, count, hash, part` (the WorldIndex JSON in parts, on join) | yes |
 | `world.slots` | S→C | `index, count, hash, part` (the slot-map JSON in parts, on join, so a joining player can build their own pack against the host's slots; M9) | yes |
 | `world.shapes` | S→C | `doc, index, count, hash, part` (the shape index, `doc:"index"`, and the shape map, `doc:"map"`, in parts after `world.slots`; the voxel plan's V2) | yes |
+| `world.regions` | S→C | `index, count, hash, part` (MG3: the region table and records, in parts on join before the regions' `world.index` parts; ids, numbers and hashes only) | |
 
 **The WorldIndex** ([`protocol/world/world_index.schema.json`](../protocol/world/world_index.schema.json))
 is what the builder writes to `<world>/kantobridge/world_index.json`:
@@ -935,6 +940,38 @@ block: family `f` of that shape (`kantobridge:tile_full_ff` or `tile_half_ff`) a
 state `hi = s >> 4`, `lo = s & 15`). It is computed from the **whole export, never from a build's map
 filter**, so every build from the same export, and every player's pack, agrees. `slotMapHash` is the
 SHA-256 of its canonical JSON. Capacity: 16 families × 256 slots per shape.
+
+**Regions (MG3, several games)** ([`protocol/world/regions.schema.json`](../protocol/world/regions.schema.json),
+[`region.schema.json`](../protocol/world/region.schema.json); MULTI_GAME_PLAN §4.6, §4.14):
+
+- **The region table** `<world>/kantobridge/regions.json` lists the regions of the one flat overworld, each built
+  from one game's export at a slot: slot `n` has its origin at `(pitch · n, 64, 0)` along +X (`pitch` 8192, D8).
+  **The region record** `<world>/kantobridge/regions/<id>/region.json` (canonical JSON) holds the region's game and
+  family, export hash, slot and origin, its `bounds` (no two regions' overlap: `build.region_overlap`), its `areas`
+  (surface, zones, dungeons, caves: "which region am I in"), its slot-map family range, its documents
+  (`regions/<id>/world_index.json`, `shape_index.json`, `shape_map.bin`) with their hashes, the shape generator, its
+  rules (profile, movement, compat) and namespaces (art set; habitat pools `kantobridge:<region>_<map>`).
+- **The legacy rule:** a world without `regions.json` is one implicit region `kanto` at slot 0 with families 0..15,
+  its index at the root, every message without `region`, one link. Nothing is rewritten until a build with a region
+  writes the new layout (then the root index and shape files go). Every golden and every existing world stays
+  byte-identical.
+- **The slot map is one per world** (`slot_map.json` version 2): each region owns a family range of the 32 families
+  per shape and its keys carry the region and its art set, so a rebuild of one region never renumbers another's
+  blocks. A region's `WorldIndex.slotMapHash` is the hash of the version-1 form of **that region's slice** of the map
+  (the legacy region at 0..15 keeps today's hash exactly); `world.slots` carries the whole document's hash.
+- **On join** a region world sends `world.regions` (the table and every record), then each region's `world.index`
+  parts tagged with `region`, the one `world.slots`, then each region's `world.shapes` tagged with `region`
+  (`doc:"index"` then `doc:"map"`). A legacy world sends exactly today's sequence.
+- **The `region` field:** every relayed type the client sends for its hidden game (`story.state`, `warp.request`,
+  `session.*`, `save.*`, `route.*`, `party.*`, `daycare.*`, `bag.*`, `battle.*`, `pc.*`, `texture.status`,
+  `game.status`) carries an optional `region`, the region of the link it came from; absent means the legacy region.
+  The server resolves a region from the message's `region`, else from the player's position, else the legacy one;
+  its `region`-tagged messages are routed by the client to that region's link. Services keyed by region: warps
+  (`warp.request.to.map` against that region's index), zones and dungeons, habitats, Flash, encounters, battles,
+  texture status, the session record (format 2: `players{uuid:{slot, regions:{<id>:{slot}}}}`, format 1 read), the
+  save pairs (`kantobridge:save_pairs`, the old `kantobridge:save_pair` read once as the legacy region's), the daycare
+  (`regions/<id>/daycare/<uuid>.json`), the per-player progress record (`kantobridge:progress`, fed by `game.status`).
+
 
 **The shape index** ([`protocol/world/shape_index.schema.json`](../protocol/world/shape_index.schema.json)),
 `<world>/kantobridge/shape_index.json` (the voxel plan's V2, [specs/VOXEL_BLOCKS_PLAN.md](specs/VOXEL_BLOCKS_PLAN.md)

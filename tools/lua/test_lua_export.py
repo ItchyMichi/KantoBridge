@@ -38,7 +38,9 @@ def export_rig(world=None, role="builder", **kw):
     rig.step()
     peer = rig.connect()
     peer.hello(role=role)
-    assert [m["type"] for m in peer.messages()] == ["hello.ok", "snapshot"]
+    # MG2: game.status (the title's) follows the snapshot for the roles that get streams
+    follow = ["game.status"] if role in ("client", "test") else []
+    assert [m["type"] for m in peer.messages()] == ["hello.ok", "snapshot"] + follow
     return rig, peer
 
 
@@ -528,10 +530,7 @@ def make_service(rig, **opts):
     """kb_export on its own, with a fake session that records replies."""
     b = rig.b
     Engine = b.module("lib/kb_engine.lua")
-    eo = b.table()
-    eo[b"require"] = b.env.require
-    eo[b"datasets"] = rig.E.datasets
-    engine = Engine.new(eo)
+    engine = Engine.new(b.engine_opts())  # MG2: the loader picks lib/engine/gen1.lua through the importer
     engine.setGame(rig.E.game)
     sent = []
     sess = b.eval("""function(sent, py)

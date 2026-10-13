@@ -4,10 +4,23 @@
   "title": "pc.closed",
   "description": "Cobblemon's PC screen closed (or couldn't open). pc: the pc.open's id.",
   "x-type": "pc.closed",
-  "x-legs": ["m2g", "s2c"],
+  "x-legs": [
+    "m2g",
+    "s2c"
+  ],
   "x-re": "never",
   "type": "object",
   "additionalProperties": false,
-  "properties": {"pc": {"$ref": "../defs.schema.json#/$defs/id"}},
-  "required": ["pc"]
+  "properties": {
+    "pc": {
+      "$ref": "../defs.schema.json#/$defs/id"
+    },
+    "region": {
+      "$ref": "../defs.schema.json#/$defs/regionId",
+      "description": "MG3 (several games): the region this message belongs to; absent = the legacy region. The client tags what it relays with its link's region; the server routes a tagged message to that region's link."
+    }
+  },
+  "required": [
+    "pc"
+  ]
 }

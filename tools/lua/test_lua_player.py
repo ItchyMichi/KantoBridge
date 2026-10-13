@@ -196,10 +196,7 @@ def test_title_screen_sends_state_but_no_position():
 def engine_for(rig):
     b = rig.b
     Engine = b.module("lib/kb_engine.lua")
-    opts = b.table()
-    opts[b"require"] = b.env.require
-    opts[b"ui"] = rig.E.ui
-    eng = Engine.new(opts)
+    eng = Engine.new(b.engine_opts(ui=rig.E.ui))  # MG2: the loader picks lib/engine/gen1.lua
     eng.setGame(rig.E.game)
     return eng
 

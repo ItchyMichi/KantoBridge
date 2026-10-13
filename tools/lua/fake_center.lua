@@ -206,6 +206,11 @@ function FakeCenter.attach(E)
     E.musicRestores = E.musicRestores + 1
     E.musicRestoreCalls[#E.musicRestoreCalls + 1] = { reason = reason, data = data }
   end }
+  -- MG2: Music.fadeOut(control) (src/core/Music.lua:363-392) and MAP_FADE
+  -- (:437), as the park hold fades the map song: counted
+  E.musicFades = 0
+  E.modules["src.core.Music"].MAP_FADE = 10
+  E.modules["src.core.Music"].fadeOut = function(control) E.musicFades = E.musicFades + 1 end
 
   -- ------------------------------------------------------------ save slots (M9)
 
@@ -351,11 +356,9 @@ function FakeCenter.attach(E)
     E.stack.states = { ow }
     return save
   end
-  -- CONTINUE (Game:restoreSave, Game.lua:1537-1610): the active slot's save
-  -- (M10, with save files: a deep copy of the slot's file), settled through
-  -- UnionSafety.settle (:1554; nil with the Union Room off), its modData
-  -- adopted (:1563) before save.loaded (:1605)
-  function E.continueGame()
+  -- The active slot's save as CONTINUE loads it (M10, with save files: a deep
+  -- copy of the slot's file; else a made-up saved game)
+  local function loadedSave()
     local file = E.saveFiles and E.slotSaves[E.activeSlot or "flat"] or nil
     local save
     if file then
@@ -365,10 +368,44 @@ function FakeCenter.attach(E)
       save = freshSave()
       save.meta = { format = 1, savedAt = 100 }
     end
+    return save
+  end
+  -- MG2: SaveData.load (src/core/SaveData.lua:2845), as the title menu's
+  -- CONTINUE row and Game:makeTitleState's onContinue call it: the active
+  -- slot's save when the slot holds one, else nil (no CONTINUE row)
+  function SaveData.load()
+    call("load")
+    local active = E.activeSlot or E.slotReg.active
+    if not (active and E.slotFiles[active]) then return nil end
+    return loadedSave(), false
+  end
+  -- CONTINUE (Game:restoreSave, Game.lua:1537-1610): the loaded save settled
+  -- through UnionSafety.settle (:1554; nil with the Union Room off), its
+  -- modData adopted (:1563) before save.loaded (:1605). MG2: the method the
+  -- title's onContinue calls (Game.lua:230-235); E.continueGame() is the
+  -- tests' shortcut over the made-up save
+  function E.game.restoreSave(_, save, recovered, restoreOpts)
+    E.restores = (E.restores or 0) + 1
+    E.lastRestoreOpts = restoreOpts
     UnionSafety.settle(save, E.data)
     E.save, E.game.save = save, save
     E.stack.states = { ow }
     E.runtime.emit("save.loaded", { save = save, meta = save.meta })
+    return save
+  end
+  function E.continueGame()
+    return E.game:restoreSave(loadedSave(), nil, {})
+  end
+  -- MG2: Game:startNewGame (Game.lua:181-200) as the title's NEW GAME row calls
+  -- it (TitleState.lua:560-562 -> onNewGame, Game.lua:229): the fresh save,
+  -- the overworld, then the intro's first screen unless opts.intro == false
+  -- (a made-up one-page text box standing for Oak's speech)
+  function E.game.startNewGame(_, newOpts)
+    local save = E.startNewGame()
+    if not (newOpts and newOpts.intro == false) and type(E.textBox) == "function" then
+      E.intros = (E.intros or 0) + 1
+      E.uiPush(E.textBox("TEST INTRO.", { onDone = function() end }))
+    end
     return save
   end
 

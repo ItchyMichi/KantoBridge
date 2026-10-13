@@ -1,5 +1,5 @@
 """M10 end to end, on the real engine: running hidden (DESIGN section 9, "Gen1Recomp keeps full speed
-while minimized and unfocused"; lib/kb_engine.lua "reliability (M10)").
+while minimized and unfocused"; lib/engine/gen1.lua "reliability (M10)").
 
 The engine's loop caps a window that isn't visible at 10 frames a second and then catches up at most
 about 2 logic steps a frame (refs/gen1recomp/main.lua:1907-1924, src/core/FixedStep.lua:75-86): a

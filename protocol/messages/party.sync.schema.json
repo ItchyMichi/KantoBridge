@@ -4,44 +4,89 @@
   "title": "party.sync",
   "description": "The Cobblemon party (authoritative); gen1-bridge rebuilds the shadow party.",
   "x-type": "party.sync",
-  "x-legs": ["m2g", "s2c"],
+  "x-legs": [
+    "m2g",
+    "s2c"
+  ],
   "x-re": "never",
   "type": "object",
-  "required": ["party", "box"],
+  "required": [
+    "party",
+    "box"
+  ],
   "additionalProperties": false,
   "properties": {
     "party": {
       "type": "array",
       "items": {
         "type": "object",
-        "required": ["uid", "dex", "level", "moves", "hp", "maxhp"],
+        "required": [
+          "uid",
+          "dex",
+          "level",
+          "moves",
+          "hp",
+          "maxhp"
+        ],
         "additionalProperties": false,
         "properties": {
-          "uid": {"$ref": "../defs.schema.json#/$defs/uid"},
+          "uid": {
+            "$ref": "../defs.schema.json#/$defs/uid"
+          },
           "give": {
             "$ref": "../defs.schema.json#/$defs/id",
             "description": "The party.give id this Pokémon came from, when it was a gift (exact gift matching)."
           },
-          "dex": {"$ref": "../defs.schema.json#/$defs/nationalDex"},
-          "level": {"$ref": "../defs.schema.json#/$defs/level"},
-          "nick": {"type": "string", "maxLength": 32, "x-rom-derived": true},
+          "dex": {
+            "$ref": "../defs.schema.json#/$defs/nationalDex"
+          },
+          "level": {
+            "$ref": "../defs.schema.json#/$defs/level"
+          },
+          "nick": {
+            "type": "string",
+            "maxLength": 32,
+            "x-rom-derived": true
+          },
           "moves": {
             "type": "array",
-            "items": {"$ref": "../defs.schema.json#/$defs/moveNum"},
+            "items": {
+              "$ref": "../defs.schema.json#/$defs/moveNum"
+            },
             "maxItems": 4
           },
-          "hp": {"type": "integer", "minimum": 0, "maximum": 9999},
-          "maxhp": {"type": "integer", "minimum": 1, "maximum": 9999},
-          "status": {"$ref": "../defs.schema.json#/$defs/gen1Status"}
+          "hp": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9999
+          },
+          "maxhp": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 9999
+          },
+          "status": {
+            "$ref": "../defs.schema.json#/$defs/gen1Status"
+          }
         }
       },
       "maxItems": 6
     },
     "box": {
       "type": "object",
-      "required": ["count"],
+      "required": [
+        "count"
+      ],
       "additionalProperties": false,
-      "properties": {"count": {"$ref": "../defs.schema.json#/$defs/count"}}
+      "properties": {
+        "count": {
+          "$ref": "../defs.schema.json#/$defs/count"
+        }
+      }
+    },
+    "region": {
+      "$ref": "../defs.schema.json#/$defs/regionId",
+      "description": "MG3 (several games): the region this message belongs to; absent = the legacy region. The client tags what it relays with its link's region; the server routes a tagged message to that region's link."
     }
   }
 }

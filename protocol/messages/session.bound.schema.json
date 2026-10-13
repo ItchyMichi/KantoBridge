@@ -4,16 +4,34 @@
   "title": "session.bound",
   "description": "The save slot now paired with the world: gen1-bridge tells the client (G→M), which records it on the server (C→S).",
   "x-type": "session.bound",
-  "x-legs": ["g2m", "c2s"],
+  "x-legs": [
+    "g2m",
+    "c2s"
+  ],
   "x-re": "optional",
   "type": "object",
-  "required": ["slot"],
+  "required": [
+    "slot"
+  ],
   "additionalProperties": false,
   "properties": {
-    "slot": {"type": "integer", "minimum": 0, "maximum": 255},
+    "slot": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 255
+    },
     "switched": {
-      "enum": ["none", "title", "saved", "moved"],
+      "enum": [
+        "none",
+        "title",
+        "saved",
+        "moved"
+      ],
       "description": "How the hidden game reached the slot: none (it was already on it: held messages may go on), title (moved at the title screen), saved (the running game was saved into its own slot first, then returned to the title), moved (a never-saved New Game moved into the empty slot as it is). Absent: unknown (treat as a switch)."
+    },
+    "region": {
+      "$ref": "../defs.schema.json#/$defs/regionId",
+      "description": "MG3 (several games): the region this message belongs to; absent = the legacy region. The client tags what it relays with its link's region; the server routes a tagged message to that region's link."
     }
   }
 }

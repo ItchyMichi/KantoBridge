@@ -1,0 +1,50 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kantobridge.invalid/protocol/world/regions.schema.json",
+  "title": "region table",
+  "description": "Several games (MULTI_GAME_PLAN §4.6, MG3): <world>/kantobridge/regions.json, the regions of one flat overworld: each built from one game's export at a slot of the table, slot n at origin (pitch * n, 64, 0) along +X (D8). A world without this file is a legacy world: one implicit region `kanto` at slot 0 (§4.14). Ids only.",
+  "type": "object",
+  "required": [
+    "version",
+    "pitch",
+    "regions"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "version": {
+      "const": 1
+    },
+    "pitch": {
+      "type": "integer",
+      "minimum": 4096,
+      "maximum": 65536,
+      "description": "Blocks between slot origins along X (8192)."
+    },
+    "regions": {
+      "type": "array",
+      "maxItems": 64,
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "game",
+          "slot"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "$ref": "../defs.schema.json#/$defs/regionId"
+          },
+          "game": {
+            "$ref": "../defs.schema.json#/$defs/gameId"
+          },
+          "slot": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 63
+          }
+        }
+      }
+    }
+  }
+}

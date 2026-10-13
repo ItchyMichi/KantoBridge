@@ -4,13 +4,29 @@
   "title": "bag.use",
   "description": "Items consumed in Minecraft.",
   "x-type": "bag.use",
-  "x-legs": ["m2g", "s2c"],
+  "x-legs": [
+    "m2g",
+    "s2c"
+  ],
   "x-re": "never",
   "type": "object",
-  "required": ["item", "qty"],
+  "required": [
+    "item",
+    "qty"
+  ],
   "additionalProperties": false,
   "properties": {
-    "item": {"$ref": "../defs.schema.json#/$defs/itemId"},
-    "qty": {"type": "integer", "minimum": 1, "maximum": 999}
+    "item": {
+      "$ref": "../defs.schema.json#/$defs/itemId"
+    },
+    "qty": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 999
+    },
+    "region": {
+      "$ref": "../defs.schema.json#/$defs/regionId",
+      "description": "MG3 (several games): the region this message belongs to; absent = the legacy region. The client tags what it relays with its link's region; the server routes a tagged message to that region's link."
+    }
   }
 }

@@ -4,14 +4,24 @@
   "title": "party.item",
   "description": "An item used on a Pokémon: stone, TM/HM or Rare Candy.",
   "x-type": "party.item",
-  "x-legs": ["g2m", "c2s"],
+  "x-legs": [
+    "g2m",
+    "c2s"
+  ],
   "x-re": "never",
   "type": "object",
-  "required": ["item", "uid"],
+  "required": [
+    "item",
+    "uid"
+  ],
   "additionalProperties": false,
   "properties": {
-    "item": {"$ref": "../defs.schema.json#/$defs/itemId"},
-    "uid": {"$ref": "../defs.schema.json#/$defs/uid"},
+    "item": {
+      "$ref": "../defs.schema.json#/$defs/itemId"
+    },
+    "uid": {
+      "$ref": "../defs.schema.json#/$defs/uid"
+    },
     "slot": {
       "type": "integer",
       "minimum": 0,
@@ -21,6 +31,10 @@
     "move": {
       "$ref": "../defs.schema.json#/$defs/gen1Move",
       "description": "TM/HM: the move taught."
+    },
+    "region": {
+      "$ref": "../defs.schema.json#/$defs/regionId",
+      "description": "MG3 (several games): the region this message belongs to; absent = the legacy region. The client tags what it relays with its link's region; the server routes a tagged message to that region's link."
     }
   }
 }

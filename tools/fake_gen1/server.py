@@ -3,6 +3,13 @@
 It follows gen1-bridge's connection rules: one client at a time (a new one replaces the old),
 hello first, a snapshot after hello.ok, pong for ping, and a drop after the heartbeat timeout.
 Movement, warps and text boxes are simplified but use the real message shapes.
+
+MG2 (several games, docs/PROTOCOL.md "Regions"): ``state`` plays the hidden game's playthrough
+(``title``: not in the game, ``fresh``: a New Game never saved, ``saved``), ``game.status`` follows the
+snapshot, a bind, a save, a reload and every marker or badge change, and the region acts are
+answered: ``region.park`` holds the player (steps refused, ``snapshot.away``), ``region.resume``
+releases the hold (a warp onto a route map or the away cell), ``region.start`` starts a game at its
+title (CONTINUE when ``slot_has_save``, else NEW GAME).
 """
 import asyncio
 import secrets
@@ -12,17 +19,23 @@ from kb_protocol.aio import STREAM_LIMIT, Connection
 from kb_protocol.framing import FramingError
 
 from . import synth
-from .world import DIRS, Player, State, Story, build_world
+from .world import DIRS, MapDef, Player, State, Story, build_world
 
 PROTOCOL_NUMBER = 1
 BRIDGE_VERSION = "fake_gen1-0.1.0"
 ENGINE_VERSION = "0.0.0-fake"
 ROLES = ("client", "builder", "test")
 WALK_FRAMES = 16
+PLAYTHROUGHS = ("title", "fresh", "saved")
+START_FRAMES = 10  # frames a region.start takes to reach the overworld
+ROUTE_MAP_PREFIX = "KB_ROUTE_"  # the bridge's route maps: the only warp targets a resume accepts
 
 
 class FakeGen1:
-    def __init__(self, host="127.0.0.1", port=27151, game="red", timeout_s=10.0, log=None):
+    def __init__(self, host="127.0.0.1", port=27151, game="red", timeout_s=10.0, log=None, state="saved",
+                 slot_has_save=True):
+        if state not in PLAYTHROUGHS:
+            raise ValueError(f"state must be one of {PLAYTHROUGHS}")
         self.host = host
         self.port = port
         self.game = game
@@ -55,6 +68,15 @@ class FakeGen1:
         self.pc_open = None
         # A session.bind that waits before session.bound: (reason, seconds), used once.
         self.bind_wait = None
+        # MG2: the playthrough (title: not in the game), whether the slot a region.start would CONTINUE
+        # holds a save, the region.park hold (the cell parked on), and the markers' last values
+        self.playthrough = state
+        self.slot_has_save = slot_has_save
+        self.slot = 1
+        self.away = None
+        self.markers = dict(self.catalogue.markers) if self.catalogue is not None else {}
+        self._status_sent = None
+        self._start_task = None
 
     # --- lifecycle -------------------------------------------------------------------------------
 
@@ -145,6 +167,7 @@ class FakeGen1:
             ok["compat"] = dict(self.catalogue.compat)
         await conn.send("hello.ok", ok, re=hello["seq"])
         await conn.send("snapshot", self.snapshot())
+        await conn.send("game.status", self.game_status())  # MG2: the progress follows every snapshot
         while True:
             before = len(conn.problems)  # recv() records a failed schema check
             message = await self._recv(conn)
@@ -167,6 +190,7 @@ class FakeGen1:
             await conn.send("pong", {"t": data["t"]}, re=seq)
         elif msg_type == "resync":
             await conn.send("snapshot", self.snapshot(), re=seq)
+            await conn.send("game.status", self.game_status())
         elif msg_type == "move.step":
             await self._step(conn, data["dir"], data["n"])
         elif msg_type == "move.face":
@@ -190,6 +214,12 @@ class FakeGen1:
         elif msg_type == "pc.closed":
             if self.pc_open == data["pc"]:
                 self.pc_open = None
+        elif msg_type == "region.park":
+            await self._park(conn, seq)
+        elif msg_type == "region.resume":
+            await self._resume(conn, seq, data["to"])
+        elif msg_type == "region.start":
+            await self._start(conn, seq)
         elif msg_type in ("export.index", "export.get"):
             await self._export(conn, message)
         elif msg_type == "debug.status":
@@ -214,16 +244,124 @@ class FakeGen1:
             await conn.send("session.waiting", {"slot": 1, "reason": reason}, re=seq)
             await asyncio.sleep(seconds)
             switched = "title"
-        await conn.send("session.bound", {"slot": 1, "switched": switched}, re=seq)
+        await conn.send("session.bound", {"slot": self.slot, "switched": switched}, re=seq)
+        await conn.send("game.status", self.game_status())  # MG2: after session.bound
         await conn.send("save.loaded", self.loaded())
 
     def loaded(self):
+        if self.playthrough == "fresh":  # a New Game never saved has no pair yet
+            return {"fresh": True, "ops": self.ops}
         return {"fresh": False, "pair": self.pair, "at": self.saved_at, "ops": self.ops}
+
+    # --- regions (MG2) ---------------------------------------------------------------------------
+
+    @property
+    def ingame(self):
+        return self.playthrough != "title"
+
+    @property
+    def parked(self):
+        return self.away is not None
+
+    def game_status(self):
+        """game.status as gen1-bridge builds it (observe/kb_progress.lua): the playthrough, the badge count
+        and the game profile's markers, each a flag of the synthetic story."""
+        data = {"game": self.game, "playthrough": self.playthrough, "ingame": self.ingame,
+                "started": self.playthrough != "title", "badges": len(self.story.badges),
+                "markers": {name: flag in self.story.flags for name, flag in sorted(self.markers.items())},
+                "slot": self.slot}
+        if self.ingame:
+            data["name"] = "TESTER"
+        return data
+
+    async def _status_if_changed(self):
+        """game.status when a marker or the badge count changed since the last one sent."""
+        now = self.game_status()
+        key = (now["badges"], tuple(sorted(now["markers"].items())))
+        if key != self._status_sent:
+            self._status_sent = key
+            await self._send("game.status", now)
+
+    def _idle(self):
+        return self.ingame and self.state.mode == "idle"
+
+    async def _park(self, conn, seq):
+        """region.park: hold the player where it stands (a park while parked is ok again)."""
+        if not self.ingame:
+            await conn.send("act.result", {"ok": False, "kind": "park", "reason": "not_ingame"}, re=seq)
+        elif self.parked:
+            await conn.send("act.result", {"ok": True, "kind": "park"}, re=seq)
+        elif not self._idle():
+            await conn.send("act.result", {"ok": False, "kind": "park", "reason": "not_idle"}, re=seq)
+        else:
+            self.away = self._cell()
+            await conn.send("act.result", {"ok": True, "kind": "park"}, re=seq)
+
+    async def _resume(self, conn, seq, to):
+        """region.resume: release the hold; a target other than a route map or the away cell is refused
+        (story safety, MULTI_GAME_PLAN §4.13); another cell is a warp of kind script."""
+        if not self.ingame:
+            await conn.send("act.result", {"ok": False, "kind": "resume", "reason": "not_ingame"}, re=seq)
+            return
+        if not self.parked:
+            await conn.send("act.result", {"ok": False, "kind": "resume", "reason": "not_parked"}, re=seq)
+            return
+        if not (to["map"].startswith(ROUTE_MAP_PREFIX) or to["map"] == self.away["map"]):
+            await conn.send("act.result", {"ok": False, "kind": "resume", "reason": "bad_target"}, re=seq)
+            return
+        self.away = None
+        if (to["map"], to["x"], to["y"]) != (self.player.map, self.player.x, self.player.y):
+            await self.warp_to(to["map"], to["x"], to["y"], to["facing"], "script")
+        else:
+            self.player.facing = to["facing"]
+        await conn.send("act.result", {"ok": True, "kind": "resume"}, re=seq)
+
+    async def _start(self, conn, seq):
+        """region.start: from the title only; CONTINUE when the slot holds a save, else NEW GAME. The game
+        reaches its overworld START_FRAMES later: a sync, the map's NPCs, save.loaded and game.status."""
+        if self.ingame or (self._start_task is not None and not self._start_task.done()):
+            reason = "busy" if not self.ingame else "not_title"
+            await conn.send("act.result", {"ok": False, "kind": "start", "reason": reason}, re=seq)
+            return
+        detail = "continue" if self.slot_has_save else "new"
+        await conn.send("act.result", {"ok": True, "kind": "start", "detail": detail}, re=seq)
+        self._start_task = asyncio.create_task(self._reach_overworld(detail))
+
+    async def _reach_overworld(self, detail):
+        await asyncio.sleep(START_FRAMES / 60)
+        self.playthrough = "saved" if detail == "continue" else "fresh"
+        if detail == "new":
+            self.ops = 0
+        await self._send("player.pos", self._pos("sync", 0))
+        await self._send("npc.set", self._npc_set())
+        await self._send("save.loaded", self.loaded())
+        await self._send("game.status", self.game_status())
+
+    async def start_game(self):
+        """The CLI's startgame: as a region.start from the title (no answer to send)."""
+        if self.ingame:
+            return False
+        detail = "continue" if self.slot_has_save else "new"
+        await self._reach_overworld(detail)
+        return True
+
+    async def set_badge(self, item, on=True):
+        """A badge gained or lost (the badges are bag items in Gen 1); game.status follows a change."""
+        if on and item not in self.story.badges:
+            self.story.badges.append(item)
+        elif not on and item in self.story.badges:
+            self.story.badges.remove(item)
+        await self._status_if_changed()
 
     # --- world behaviour -------------------------------------------------------------------------
 
     def _map(self):
-        return self.world[self.player.map]
+        here = self.world.get(self.player.map)
+        if here is None:
+            # a map outside the synthetic world: a bridge route map a region.resume warped onto (MG2), a
+            # 2x2 block with nothing on it, like gen1-bridge's KB_ROUTE_<ID>
+            here = self.world[self.player.map] = MapDef(self.player.map, 2, 2)
+        return here
 
     def _pos(self, kind, frames, n=None):
         data = dict(self.player.as_data(), kind=kind, frames=frames)
@@ -232,12 +370,16 @@ class FakeGen1:
         return data
 
     def _flags(self, x, y):
-        cells = self.exports[("map", self.player.map)]["cells"]
+        exported = self.exports.get(("map", self.player.map))
+        if exported is None:  # a route map outside the synthetic export: no doors, no warp tiles
+            return 0
+        cells = exported["cells"]
         return cells[y][x] if 0 <= y < len(cells) and 0 <= x < len(cells[0]) else 0
 
     async def _step(self, conn, direction, n):
         self.player.facing = direction
-        if self.state.mode != "idle":
+        # not in the game, a region.park hold (MG2) or a screen: the hidden game takes no steps
+        if not self.ingame or self.parked or self.state.mode != "idle":
             await conn.send("player.blocked", dict(self._cell(), dir=direction, reason="script", n=n))
             return
         dx, dy = DIRS[direction]
@@ -348,7 +490,7 @@ class FakeGen1:
         data, seq = message["data"], message["seq"]
         near = data["from"]
         reason = None
-        if self.state.mode != "idle":
+        if not self._idle() or self.parked:
             reason = "mode"
         elif self.player.map != near["map"]:
             reason = "map"
@@ -398,18 +540,26 @@ class FakeGen1:
             self.ops += 1
 
     async def save(self, reason="menu"):
-        """A made-up hidden-game save (save.begin): a new save pair, operations counted from zero."""
+        """A made-up hidden-game save (save.begin): a new save pair, operations counted from zero. A fresh
+        playthrough becomes a saved one (MG2: game.status follows)."""
         self.save_counter += 1
         self.pair = secrets.token_hex(8)
         self.saved_at += 60
         self.ops = 0
         await self._send("save.begin", {"save": f"sv-fake-{self.save_counter}", "reason": reason,
                                         "pair": self.pair, "at": self.saved_at})
+        if self.playthrough == "fresh":
+            self.playthrough = "saved"
+        self.slot_has_save = True
+        await self._send("game.status", self.game_status())
 
     async def reload_save(self):
         """As if the hidden game went back to its last save (crash and CONTINUE): save.loaded with ops 0."""
         self.ops = 0
+        if self.playthrough == "fresh":
+            self.playthrough = "saved"
         await self._send("save.loaded", self.loaded())
+        await self._send("game.status", self.game_status())
 
     async def open_pc(self):
         """Bill's PC chosen (pc.open); the matching pc.closed ends it."""
@@ -439,6 +589,7 @@ class FakeGen1:
     async def set_flag(self, flag, on=True):
         (self.story.flags.add if on else self.story.flags.discard)(flag)
         await self._send("story.flags", {"set": [flag] if on else [], "clear": [] if on else [flag]})
+        await self._status_if_changed()  # MG2: a marker flag changed
 
     # --- views -----------------------------------------------------------------------------------
 
@@ -448,7 +599,7 @@ class FakeGen1:
     def snapshot(self):
         story = self.story
         data = {
-            "ingame": True,  # fake_gen1 is always in its overworld
+            "ingame": self.ingame,  # false at the title (MG2 state title): player is the save's position
             "player": self.player.as_data(),
             "state": self.state.as_data(),
             "flags": sorted(story.flags),
@@ -463,11 +614,17 @@ class FakeGen1:
             "dex": {"seen": sorted(story.seen), "owned": sorted(story.owned)},
             "npcs": self._npc_set(),
         }
+        if self.parked:  # MG2: the hold is up
+            data["away"] = dict(self.away)
+        self._status_sent = (len(story.badges), tuple(sorted((n, f in story.flags) for n, f in self.markers.items())))
         return data
 
     def status(self):
-        return {"npcs": len(self._map().npcs), "topState": "FakeOverworld" if not self.open_ui else "FakeTextBox",
+        top = "FakeTitle" if not self.ingame else "FakeOverworld" if not self.open_ui else "FakeTextBox"
+        return {"npcs": len(self._map().npcs), "topState": top,
                 "mode": self.state.mode, "flags": len(self.story.flags), "connections": self.connections,
-                "ops": self.ops, "pcHeld": self.pc_open is not None,
+                "ops": self.ops, "pcHeld": self.pc_open is not None, "ingame": self.ingame,
+                # MG2: the hold (debug.status carries counts and booleans only; the playthrough is game.status's)
+                "regionParked": self.parked,
                 # ENGINE_UPGRADE_PLAN UP1 / U3: what the real bridge reports at game.ready
                 "engineMissing": [], "unionRoom": "off"}

@@ -1,0 +1,39 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kantobridge.invalid/protocol/messages/world.regions.schema.json",
+  "title": "world.regions",
+  "description": "Several games (MULTI_GAME_PLAN §4.6, MG3): the world's region table and records, in parts on join before the regions' world.index parts: the text of {\"version\":1,\"world\":\"<id>\",\"table\":{...regions.json...},\"regions\":[<region record>...]}. A legacy world sends one implicit record for kanto. Ids, numbers and hashes only.",
+  "x-type": "world.regions",
+  "x-legs": [
+    "s2c"
+  ],
+  "x-re": "never",
+  "type": "object",
+  "required": [
+    "index",
+    "count",
+    "hash",
+    "part"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "index": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 65535
+    },
+    "count": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 65536
+    },
+    "hash": {
+      "$ref": "../defs.schema.json#/$defs/hash",
+      "description": "SHA-256 of the whole document's text."
+    },
+    "part": {
+      "type": "string",
+      "maxLength": 200000
+    }
+  }
+}

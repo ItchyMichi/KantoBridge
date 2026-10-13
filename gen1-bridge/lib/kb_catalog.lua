@@ -100,6 +100,7 @@ return {
     ["warp.take"] = { m2g = true, re = "never" },
     ["warp.taken"] = { g2m = true, re = "required" },
     ["world.index"] = { s2c = true, re = "never" },
+    ["world.regions"] = { s2c = true, re = "never" },
     ["world.shapes"] = { s2c = true, re = "never" },
     ["world.slots"] = { s2c = true, re = "never" },
   },

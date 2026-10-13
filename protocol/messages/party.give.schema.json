@@ -4,24 +4,62 @@
   "title": "party.give",
   "description": "The hidden game gives a Pokémon (starter, gift, trade, prize, native catch).",
   "x-type": "party.give",
-  "x-legs": ["g2m", "c2s"],
+  "x-legs": [
+    "g2m",
+    "c2s"
+  ],
   "x-re": "never",
   "type": "object",
-  "required": ["give", "dex", "level", "source"],
+  "required": [
+    "give",
+    "dex",
+    "level",
+    "source"
+  ],
   "additionalProperties": false,
   "properties": {
-    "give": {"$ref": "../defs.schema.json#/$defs/id"},
-    "dex": {"$ref": "../defs.schema.json#/$defs/dex"},
-    "level": {"$ref": "../defs.schema.json#/$defs/level"},
+    "give": {
+      "$ref": "../defs.schema.json#/$defs/id"
+    },
+    "dex": {
+      "$ref": "../defs.schema.json#/$defs/dex"
+    },
+    "level": {
+      "$ref": "../defs.schema.json#/$defs/level"
+    },
     "moves": {
       "type": "array",
-      "items": {"$ref": "../defs.schema.json#/$defs/gen1Move"},
+      "items": {
+        "$ref": "../defs.schema.json#/$defs/gen1Move"
+      },
       "maxItems": 4,
       "minItems": 1
     },
-    "dvs": {"$ref": "../defs.schema.json#/$defs/dvs"},
-    "nick": {"type": "string", "maxLength": 32, "x-rom-derived": true},
-    "ot": {"type": "string", "maxLength": 32, "x-rom-derived": true},
-    "source": {"enum": ["starter", "gift", "trade", "prize", "native_catch"]}
+    "dvs": {
+      "$ref": "../defs.schema.json#/$defs/dvs"
+    },
+    "nick": {
+      "type": "string",
+      "maxLength": 32,
+      "x-rom-derived": true
+    },
+    "ot": {
+      "type": "string",
+      "maxLength": 32,
+      "x-rom-derived": true
+    },
+    "source": {
+      "enum": [
+        "starter",
+        "gift",
+        "trade",
+        "prize",
+        "native_catch"
+      ]
+    },
+    "region": {
+      "$ref": "../defs.schema.json#/$defs/regionId",
+      "description": "MG3 (several games): the region this message belongs to; absent = the legacy region. The client tags what it relays with its link's region; the server routes a tagged message to that region's link."
+    }
   }
 }

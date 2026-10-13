@@ -509,6 +509,11 @@ function Pairing.new(opts)
   -- True while a bind waits for its switch: the new world's data waits too.
   function pairing.blocked() return req ~= nil and req.switch == true end
 
+  -- MG2: the live playthrough as the pairing judges it (kb_engine.playthrough
+  -- with the save tables CONTINUE brought): "title", "fresh" or "saved", for
+  -- observe/kb_progress.lua's game.status.
+  function pairing.playthrough() return engine.playthrough(loaded) end
+
   -- save.loaded: this save table came from CONTINUE (not a fresh game).
   function pairing.loaded(save)
     if type(save) == "table" then loaded[save] = true end

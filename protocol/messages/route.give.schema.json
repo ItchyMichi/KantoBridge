@@ -4,15 +4,35 @@
   "title": "route.give",
   "description": "Wild Routes (WR2): give the item of a zone's item ball, with the hidden game's own give_item.",
   "x-type": "route.give",
-  "x-legs": ["m2g", "s2c"],
+  "x-legs": [
+    "m2g",
+    "s2c"
+  ],
   "x-re": "never",
   "type": "object",
-  "required": ["route", "id", "item"],
+  "required": [
+    "route",
+    "id",
+    "item"
+  ],
   "additionalProperties": false,
   "properties": {
-    "route": {"$ref": "../defs.schema.json#/$defs/routeId"},
-    "id": {"$ref": "../defs.schema.json#/$defs/routeObjectId"},
-    "item": {"$ref": "../defs.schema.json#/$defs/itemId"},
-    "keep": {"type": "boolean", "description": "WR7: false for a dungeon's item, given but not recorded as taken in the save's progress. Default true."}
+    "route": {
+      "$ref": "../defs.schema.json#/$defs/routeId"
+    },
+    "id": {
+      "$ref": "../defs.schema.json#/$defs/routeObjectId"
+    },
+    "item": {
+      "$ref": "../defs.schema.json#/$defs/itemId"
+    },
+    "keep": {
+      "type": "boolean",
+      "description": "WR7: false for a dungeon's item, given but not recorded as taken in the save's progress. Default true."
+    },
+    "region": {
+      "$ref": "../defs.schema.json#/$defs/regionId",
+      "description": "MG3 (several games): the region this message belongs to; absent = the legacy region. The client tags what it relays with its link's region; the server routes a tagged message to that region's link."
+    }
   }
 }

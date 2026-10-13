@@ -64,7 +64,7 @@ class Bridge:
     def __init__(self, permissions=PERMISSIONS, modules=None, developer=False, strict=True,
                  engine=False, mod_options=None, content=None, game="blue", graphics=False,
                  script=False, mod_cache=None, save_files=False, window=False, files=None,
-                 registries=None, world_api=False, jit_os="Windows", manifest=None):
+                 registries=None, world_api=False, jit_os="Windows", manifest=None, engine_id="gen1"):
         self.rt = luajit.LuaRuntime(unpack_returned_tuples=True, encoding=None)
         # the platform main.lua sees (jit.os): Windows by default, whatever the host, so every test
         # runs the same on a PC and a Linux pod; "Linux"/"OSX" for the SO_REUSEADDR rule
@@ -84,6 +84,9 @@ class Bridge:
             FakeEngine = self._load_harness("fake_engine.lua")
             eopts = self.table()
             eopts[b"game"] = _b(game)
+            # MG2: what GameVersion.engine() reports ("gen1" | "gs" | "crystal" | "game3"); kb_engine
+            # loads the adapter for it, or its stub
+            eopts[b"engineId"] = _b(engine_id)
             self.engine = FakeEngine.new(eopts)
             self._load_harness("fake_world.lua").attach(self.engine)
             self._load_harness("fake_ui.lua").attach(self.engine)
@@ -342,6 +345,32 @@ class Bridge:
         source = (BRIDGE / rel).read_bytes()
         # `import` is a Python keyword, so call the Lua function by index
         return self.Sandbox[b"import"](self.env, source, _b(rel))
+
+    def importer(self):
+        """A Lua `import(rel)` over gen1-bridge's files, as main.lua's: what kb_engine's loader takes
+        to load the adapter (MG2). Files given with ``files=`` come first, like mod:read."""
+        if getattr(self, "_importer", None) is None:
+            def read(rel):
+                got = self._read(rel)
+                return got if isinstance(got, bytes) else None
+            self._importer = self.eval("""function(read, imp, env) return function(rel)
+              local src = read(rel)
+              if type(src) ~= "string" then error(("cannot read %s"):format(tostring(rel)), 0) end
+              return imp(env, src, "@" .. rel)
+            end end""")(read, self.Sandbox[b"import"], self.env)
+        return self._importer
+
+    def engine_opts(self, **extra):
+        """The opts main.lua hands kb_engine.new: require, datasets, ui and the importer, plus extra."""
+        o = self.table()
+        o[b"require"] = self.env.require
+        o[b"import"] = self.importer()
+        if self.engine is not None:
+            o[b"datasets"] = self.engine.datasets
+            o[b"ui"] = self.engine.ui
+        for k, v in extra.items():
+            o[_b(k)] = v
+        return o
 
     def run_main(self):
         """Runs main.lua as the loader would (Loader.lua:1793-1803)."""

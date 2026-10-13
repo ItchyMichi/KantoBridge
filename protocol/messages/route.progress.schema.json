@@ -4,12 +4,23 @@
   "title": "route.progress",
   "description": "Wild Routes (WR2): the zones whose progress changed, each whole.",
   "x-type": "route.progress",
-  "x-legs": ["g2m", "c2s"],
+  "x-legs": [
+    "g2m",
+    "c2s"
+  ],
   "x-re": "never",
   "type": "object",
-  "required": ["routes"],
+  "required": [
+    "routes"
+  ],
   "additionalProperties": false,
   "properties": {
-    "routes": {"$ref": "../defs.schema.json#/$defs/routeProgress"}
+    "routes": {
+      "$ref": "../defs.schema.json#/$defs/routeProgress"
+    },
+    "region": {
+      "$ref": "../defs.schema.json#/$defs/regionId",
+      "description": "MG3 (several games): the region this message belongs to; absent = the legacy region. The client tags what it relays with its link's region; the server routes a tagged message to that region's link."
+    }
   }
 }

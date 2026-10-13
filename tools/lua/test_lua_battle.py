@@ -53,9 +53,7 @@ def engine_game():
 def engine_of(g):
     """A kb_engine instance on the fake game (the same tables main.lua's sees)."""
     Engine = g.b.module("lib/kb_engine.lua")
-    opts = g.b.table()
-    opts[b"require"] = g.b.env.require
-    eng = Engine.new(opts)
+    eng = Engine.new(g.b.engine_opts())  # MG2: the loader picks lib/engine/gen1.lua through the importer
     eng.setGame(g.E.game)
     return eng
 
@@ -112,14 +110,14 @@ def test_special_moves_lone_team_and_champion(engine_game):
 
 
 def test_special_move_slot_rule_on_short_move_lists(engine_game):
-    Engine = engine_game.b.module("lib/kb_engine.lua")
+    Gen1 = engine_game.b.module("lib/engine/gen1.lua")  # the Gen 1 adapter's statics (MG2)
     party = engine_game.b.to_lua([{"species": "X", "moves": ["A"]}, {"species": "Y", "moves": ["A"]}])
-    Engine.applySpecialMoves(b"OPP_BROCK", 1, party)
+    Gen1.applySpecialMoves(b"OPP_BROCK", 1, party)
     assert lua_list(party[2].moves) == [b"A", b"BIDE"]          # one move: lands in slot 2
     party = engine_game.b.to_lua([{"species": "X", "moves": ["A"]}] * 5)
-    Engine.applySpecialMoves(b"OPP_GIOVANNI", 1, party)          # Giovanni only in party 3
+    Gen1.applySpecialMoves(b"OPP_GIOVANNI", 1, party)          # Giovanni only in party 3
     assert lua_list(party[5].moves) == [b"A"]
-    Engine.applySpecialMoves(b"OPP_GIOVANNI", 3, party)
+    Gen1.applySpecialMoves(b"OPP_GIOVANNI", 3, party)
     assert lua_list(party[5].moves) == [b"A", b"FISSURE"]
 
 

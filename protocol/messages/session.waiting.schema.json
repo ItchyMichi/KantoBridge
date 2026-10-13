@@ -4,16 +4,33 @@
   "title": "session.waiting",
   "description": "A session.bind can't be answered yet: why gen1-bridge is still waiting to put the hidden game on the world's slot. re: the bind's seq.",
   "x-type": "session.waiting",
-  "x-legs": ["g2m"],
+  "x-legs": [
+    "g2m"
+  ],
   "x-re": "optional",
   "type": "object",
-  "required": ["slot", "reason"],
+  "required": [
+    "slot",
+    "reason"
+  ],
   "additionalProperties": false,
   "properties": {
-    "slot": {"type": "integer", "minimum": 0, "maximum": 255},
+    "slot": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 255
+    },
     "reason": {
-      "enum": ["busy", "new_game", "save_failed"],
+      "enum": [
+        "busy",
+        "new_game",
+        "save_failed"
+      ],
       "description": "busy: the engine's save gate is closed (a menu, script or battle); new_game: an unsaved New Game waits for the title; save_failed: saving the running game into its own slot failed and is retried."
+    },
+    "region": {
+      "$ref": "../defs.schema.json#/$defs/regionId",
+      "description": "MG3 (several games): the region this message belongs to; absent = the legacy region. The client tags what it relays with its link's region; the server routes a tagged message to that region's link."
     }
   }
 }

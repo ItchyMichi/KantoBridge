@@ -31,13 +31,27 @@
 -- exist (the town's tileset, vanilla trainer fields), since a dangling one
 -- would fail the whole mod after the merge (src/mods/Loader.lua:1934-1964).
 --
+-- Routes v2 (MULTI_GAME_PLAN §4.8, MG2): a `connecting` route joins two
+-- regions. It has two **ends**, `from` and `to`, each of the exit's shape
+-- (region, games, map, x, y, facing, depth, and its own classes and music --
+-- a null music means none -- else the route's), and each hidden game
+-- registers **only the end whose
+-- `games` include it**: that end's clearing and a route map of today's
+-- [A][x1] form; the far cells live in the other game's process, and the
+-- builder joins the two halves with a pass (MG5). The export item names both
+-- ends (region and games) and which end this game registered. An end's
+-- region defaults to its first game's default region in the catalogue
+-- (kb_games).
+--
 -- Nothing ROM-derived is in the route list or in this file: map and class
 -- symbols, cell coordinates, counts and our own text. Logs show route ids,
 -- codes and counts only.
 
 local Routes = {}
 
-Routes.VERSION = 1
+Routes.VERSION = 1                         -- the version written for a free-roam list's export
+Routes.VERSIONS = { [1] = true, [2] = true } -- route list versions read (2: connecting routes, MG2)
+Routes.VERSION_CONNECTING = 2
 Routes.MAX_ROUTES = 32
 Routes.MAX_DEPTH = 4
 Routes.MAX_CLASSES = 16
@@ -47,7 +61,8 @@ Routes.CLASS_PREFIX = "KB_"
 Routes.CELL_A = { x = 0, y = 0 }
 Routes.CELL_X1 = { x = 1, y = 0 }
 Routes.ARRIVE_FACING = "right"
-Routes.KINDS = { free_roam = true }        -- `connecting` comes later (the plan's §4.10)
+Routes.KINDS = { free_roam = true, connecting = true } -- connecting: two ends, one per region (MG2)
+Routes.ENDS = { "from", "to" }
 Routes.THEMES = { forest = true }          -- caves and the sea come later
 Routes.REMATCH = { each_visit = true }
 
@@ -71,10 +86,78 @@ local function range(v, lo, hi)
 end
 local function isNull(json, v) return v == nil or (json and v == json.null) end
 
-function Routes.mapId(id) return Routes.MAP_PREFIX .. id:upper() end
+-- The route map's id: KB_ROUTE_<ID>; the `to` end of a connecting route
+-- registered by the same game as its `from` end (a one-engine test world)
+-- gets KB_ROUTE_<ID>_TO.
+function Routes.mapId(id, which)
+  return Routes.MAP_PREFIX .. id:upper() .. (which == "to" and "_TO" or "")
+end
 function Routes.classId(cls) return Routes.CLASS_PREFIX .. cls end
 
 -- ------------------------------------------------------------ the route list
+
+-- A list of trainer class symbols (deduplicated), or nil plus a code.
+local function classList(list)
+  if type(list) ~= "table" or #list > Routes.MAX_CLASSES then return nil, "bad_classes" end
+  local out, seen = {}, {}
+  for _, cls in ipairs(list) do
+    if not sym(cls, "^[A-Z0-9_]+$") or #cls > 48 then return nil, "bad_classes" end
+    if not seen[cls] then
+      seen[cls] = true
+      out[#out + 1] = cls
+    end
+  end
+  return out
+end
+
+-- One end of a route (the exit's shape), checked and normalized: { map,
+-- games, gameList, depth, x, y, facing, region?, classes?, music?, unset }.
+-- nil plus a code: bad_from / bad_to, bad_games, bad_depth, bad_spot,
+-- bad_region, bad_classes, bad_music.
+local function routeEnd(json, f, which)
+  local badEnd = which == "to" and "bad_to" or "bad_from"
+  if type(f) ~= "table" or not sym(f.map, "^[A-Z0-9_]+$") then return nil, badEnd end
+  local games, gameList = {}, {}
+  if type(f.games) ~= "table" or #f.games < 1 or #f.games > 9 then return nil, "bad_games" end
+  for _, g in ipairs(f.games) do
+    if not sym(g, "^[a-z][a-z0-9_]*$") or #g > 16 then return nil, "bad_games" end
+    if not games[g] then
+      games[g] = true
+      gameList[#gameList + 1] = g
+    end
+  end
+  local depth = isNull(json, f.depth) and 2 or f.depth
+  if not whole(depth, 1, Routes.MAX_DEPTH) then return nil, "bad_depth" end
+  local out = { map = f.map, games = games, gameList = gameList, depth = depth }
+  -- the spot: unset until the player chose it (the plan's §4.2, "Your part")
+  if isNull(json, f.x) and isNull(json, f.y) and isNull(json, f.facing) then
+    out.unset = true
+  elseif whole(f.x, 0, 4095) and whole(f.y, 0, 4095) and DIRS[f.facing] then
+    out.x, out.y, out.facing = f.x, f.y, f.facing
+  else
+    return nil, "bad_spot"
+  end
+  -- MG2: the end's region (absent: the games' default region, filled in by
+  -- install from the catalogue), its own classes and music
+  if not isNull(json, f.region) then
+    if not sym(f.region, "^[a-z][a-z0-9_]*$") or #f.region > 24 then return nil, "bad_region" end
+    out.region = f.region
+  end
+  if f.classes ~= nil then
+    local classes, code = classList(f.classes)
+    if not classes then return nil, code end
+    out.classes = classes
+  end
+  if f.music ~= nil then
+    if isNull(json, f.music) then
+      out.music = false -- this end has no song (absent: the route's)
+    else
+      if not sym(f.music, "^[A-Za-z0-9_]+$") then return nil, "bad_music" end
+      out.music = f.music
+    end
+  end
+  return out
+end
 
 -- One route list entry, checked and normalized; nil plus a reason code.
 local function entry(json, r)
@@ -83,36 +166,30 @@ local function entry(json, r)
   if type(r.name) ~= "string" or #r.name < 1 or #r.name > 24 or not r.name:find("^[%w %-'%.]+$") then
     return nil, "bad_name"
   end
-  if r.kind == "connecting" then return nil, "kind_later" end
   if not Routes.KINDS[r.kind] then return nil, "bad_kind" end
   if r.theme ~= nil and not Routes.THEMES[r.theme] then
     if type(r.theme) == "string" then return nil, "theme_later" end
     return nil, "bad_theme"
   end
-  local f = r.from
-  if type(f) ~= "table" or not sym(f.map, "^[A-Z0-9_]+$") then return nil, "bad_from" end
-  local games = {}
-  if type(f.games) ~= "table" or #f.games < 1 or #f.games > 9 then return nil, "bad_games" end
-  for _, g in ipairs(f.games) do
-    if not sym(g, "^[a-z]+$") then return nil, "bad_games" end
-    games[g] = true
-  end
-  local depth = isNull(json, f.depth) and 2 or f.depth
-  if not whole(depth, 1, Routes.MAX_DEPTH) then return nil, "bad_depth" end
+  local from, code = routeEnd(json, r.from, "from")
+  if not from then return nil, code end
   local out = {
     id = r.id, name = r.name, kind = r.kind, theme = r.theme or "forest",
     mapId = Routes.mapId(r.id),
-    from = { map = f.map, games = games, depth = depth },
+    from = from,
     classes = {}, music = nil,
   }
-  -- the spot: unset until the player chose it (the plan's §4.2, "Your part")
-  if isNull(json, f.x) and isNull(json, f.y) and isNull(json, f.facing) then
-    out.unset = true
-  elseif whole(f.x, 0, 4095) and whole(f.y, 0, 4095) and DIRS[f.facing] then
-    out.from.x, out.from.y, out.from.facing = f.x, f.y, f.facing
-  else
-    return nil, "bad_spot"
+  if r.kind == "connecting" then
+    -- MG2: the far end, in the other region
+    if r.to == nil then return nil, "bad_to" end
+    local to
+    to, code = routeEnd(json, r.to, "to")
+    if not to then return nil, code end
+    out.to = to
+  elseif r.to ~= nil then
+    return nil, "bad_to"
   end
+  out.unset = from.unset == true or (out.to ~= nil and out.to.unset == true) or nil
   -- generator settings: checked here, used by the builder (the export's
   -- `routes` resource) and the server
   local a = r.areas
@@ -135,15 +212,10 @@ local function entry(json, r)
       return nil, "bad_trainers"
     end
     if t.classes ~= nil then
-      if type(t.classes) ~= "table" or #t.classes > Routes.MAX_CLASSES then return nil, "bad_classes" end
-      local seen = {}
-      for _, cls in ipairs(t.classes) do
-        if not sym(cls, "^[A-Z0-9_]+$") or #cls > 48 then return nil, "bad_classes" end
-        if not seen[cls] then
-          seen[cls] = true
-          out.classes[#out.classes + 1] = cls
-        end
-      end
+      local classes
+      classes, code = classList(t.classes)
+      if not classes then return nil, code end
+      out.classes = classes
     end
   end
   local d = r.dungeon
@@ -167,7 +239,7 @@ end
 function Routes.parse(json, text)
   if type(text) ~= "string" then return {}, { { code = "no_file" } } end
   local doc = json.decode(text, 262144)
-  if type(doc) ~= "table" or doc.version ~= Routes.VERSION or type(doc.routes) ~= "table" then
+  if type(doc) ~= "table" or not Routes.VERSIONS[doc.version] or type(doc.routes) ~= "table" then
     return {}, { { code = "bad_file" } }
   end
   local out, problems, seen = {}, {}, {}
@@ -205,17 +277,19 @@ local function blockCells(bx, by)
   return { { 2 * bx, 2 * by }, { 2 * bx + 1, 2 * by }, { 2 * bx, 2 * by + 1 }, { 2 * bx + 1, 2 * by + 1 } }
 end
 
--- The exit's plan for one entry on its map's record (def) and the engine's
--- map query over it (q: walkable/water per cell, from kb_engine.mapQuery).
--- `occupied` (optional) is a set of cellKey -> true the clearing must not
--- cover (warps, signs, objects, hidden items). Returns
+-- The exit's plan for one end of an entry on its map's record (def) and the
+-- engine's map query over it (q: walkable/water per cell, from
+-- kb_engine.mapQuery): the entry's `from` end, its `to` end when `which` is
+-- "to" (MG2), or `e` itself when it is a bare end. `occupied` (optional) is
+-- a set of cellKey -> true the clearing must not cover (warps, signs,
+-- objects, hidden items). Returns
 --   { blocks, source, cleared = { {bx, by} }, triggers = { [key] = true },
 --     triggerList = { {x, y} }, back = { x, y, facing }, exitFacing }
 -- or nil plus a code: spot_outside, spot_unwalkable, outside_map,
 -- not_trees, occupied. (not_walkable_after is check() below, on the
 -- patched record.)
-function Routes.plan(e, def, q, occupied)
-  local f = e.from
+function Routes.plan(e, def, q, occupied, which)
+  local f = (which == "to" and e.to) or e.from or e
   local w, h = def.width, def.height
   if not (whole(w, 1, 1024) and whole(h, 1, 1024) and type(def.blocks) == "table" and #def.blocks == w * h) then
     return nil, "bad_map"
@@ -292,10 +366,11 @@ end
 -- Fly and Teleport work from it as on any route, which WILD_ROUTES_PLAN §4
 -- allows (flying out ends the visit), and the engine never rolls a wild
 -- encounter off its grass (OverworldState.rollsIndoorEncounters, OC:4782-
--- 4788; the zone's wild Pokemon are Minecraft's anyway, WR5).
-function Routes.routeMapDef(e, p, def)
+-- 4788; the zone's wild Pokemon are Minecraft's anyway, WR5). `mapId` (MG2)
+-- is the route map's id when it isn't the entry's own (a `to` end's).
+function Routes.routeMapDef(e, p, def, mapId)
   local out = {
-    id = e.mapId, width = 1, height = 1, blocks = { p.source }, tileset = def.tileset,
+    id = mapId or e.mapId, width = 1, height = 1, blocks = { p.source }, tileset = def.tileset,
     warps = {}, signs = {}, objects = {}, outdoor = true,
   }
   if whole(def.borderBlock, 0, 255) then out.borderBlock = def.borderBlock end
@@ -350,6 +425,15 @@ end
 
 -- ------------------------------------------------------------ install
 
+-- The region an end's half is built in: its own `region`, else the default
+-- region of its first game in the catalogue (lib/kb_games.lua), else nil.
+function Routes.endRegion(e, games)
+  if e.region then return e.region end
+  local g = e.gameList and e.gameList[1]
+  local entry = g and type(games) == "table" and type(games.games) == "table" and games.games[g] or nil
+  return type(entry) == "table" and type(entry.region) == "string" and entry.region or nil
+end
+
 -- opts:
 --   json      kb_json
 --   text      data/routes.json's text (nil when the file is missing)
@@ -357,15 +441,18 @@ end
 --             trainers, map_songs, music, field)
 --   world     mod.world (queueScript, warpTo)
 --   game      the running game ("red", "blue", ...)
+--   games     lib/kb_games.lua (MG2: an end's default region), optional
 --   mapQuery  kb_engine.mapQuery(def, tileset)
 --   log       kb_log logger (optional)
--- Returns the runtime: zones (by route id and by route map id), the entries,
--- the problems and stats. Never throws.
+-- Returns the runtime: zones (by route id -- a connecting route whose two
+-- ends this game both registers keeps the `from` end's zone there and the
+-- `to` end's under "<id>:to" -- and by route map id), the entries, the
+-- problems and stats. Never throws.
 function Routes.install(opts)
   local json, content, world, log = opts.json, opts.content or {}, opts.world, opts.log
-  local rt = { zones = {}, byMap = {}, byTown = {}, entries = {}, problems = {}, world = world,
+  local rt = { zones = {}, byMap = {}, byTown = {}, entries = {}, problems = {}, world = world, games = opts.games,
                stats = { listed = 0, installed = 0, skipped = 0, unset = 0, otherGame = 0, classes = 0,
-                         warpsOut = 0, warpsBack = 0, warpsBusy = 0, closed = 0 } }
+                         warpsOut = 0, warpsBack = 0, warpsBusy = 0, closed = 0, connecting = 0 } }
   local entries, problems = Routes.parse(json, opts.text)
   rt.entries = entries
   rt.stats.listed = #entries
@@ -401,90 +488,119 @@ function Routes.install(opts)
   local townScripted = {}
   local classDone = {}
 
+  -- Installs one end of an entry as a zone: `which` is "from" or "to"; the
+  -- `to` end's zone is keyed "<id>:to" and its route map KB_ROUTE_<ID>_TO
+  -- (both ends in one game: a test world).
+  local function installEnd(e, which)
+    local f = which == "to" and e.to or e.from
+    local zoneKey = which == "to" and (e.id .. ":to") or e.id
+    local mapId = Routes.mapId(e.id, which == "to" and "to" or nil)
+    local def = get("maps", f.map)
+    local ts = type(def) == "table" and get("tilesets", def.tileset) or nil
+    local q = def and ts and opts.mapQuery and opts.mapQuery(def, ts) or nil
+    if not q then
+      problem(e.id, def and "no_query" or "no_map")
+      return
+    end
+    local hidden = get("field", "hiddenItems")
+    local p, code = Routes.plan(e, def, q, Routes.occupiedCells(def, type(hidden) == "table" and hidden[f.map] or nil), which)
+    if p then
+      local patched = {}
+      for k, v in pairs(def) do patched[k] = v end
+      patched.blocks = p.blocks
+      local q2 = opts.mapQuery(patched, ts)
+      if not q2 then p, code = nil, "no_query" else
+        local ok
+        ok, code = Routes.check(p, q2)
+        if not ok then p = nil end
+      end
+    end
+    if not p then
+      problem(e.id, code)
+      return
+    end
+    if get("maps", mapId) ~= nil then
+      problem(e.id, "map_taken")
+      return
+    end
+    local zone = { id = e.id, key = zoneKey, which = which, entry = e, finish = f, mapId = mapId, town = f.map,
+                   plan = p, active = false, classes = {} }
+    -- 1. the route map; 2. its step script and the town's; 3. the
+    -- town's blocks. A later failure undoes the route map (a tombstone)
+    -- and leaves the scripts inert (zone.active stays false).
+    local okMap = call("maps", "register", mapId, Routes.routeMapDef(e, p, def, mapId))
+    local okScripts = okMap and call("map_scripts", "register", mapId, {
+      onStep = function(_, _, x, y)
+        if zone.active and x == Routes.CELL_A.x and y == Routes.CELL_A.y then
+          return Routes.warpTo(rt, zone, "back")
+        end
+        return false
+      end,
+    })
+    if okScripts and not townScripted[f.map] then
+      okScripts = call("map_scripts", "register", f.map, { onStep = townStep(f.map) })
+      townScripted[f.map] = okScripts or nil
+    end
+    local okPatch = okScripts and call("maps", "patch", f.map, { blocks = p.blocks })
+    if not okPatch then
+      if okMap then call("maps", "remove", mapId) end
+      problem(e.id, not okMap and "map_rejected" or not okScripts and "scripts_rejected" or "patch_rejected")
+      return
+    end
+    zone.active = true
+    rt.zones[zoneKey] = zone
+    rt.byMap[mapId] = zone
+    rt.byTown[f.map] = rt.byTown[f.map] or {}
+    table.insert(rt.byTown[f.map], zone)
+    rt.stats.installed = rt.stats.installed + 1
+    if e.kind == "connecting" then rt.stats.connecting = rt.stats.connecting + 1 end
+    -- the trainer classes: the end's own, else the route's (a class that
+    -- can't be copied only takes that class's battles away)
+    zone.classList = f.classes or e.classes
+    for _, cls in ipairs(zone.classList) do
+      local id = Routes.classId(cls)
+      if classDone[cls] == nil then
+        local rec = get("trainers", id) == nil and Routes.classRecord(cls, get("trainers", cls)) or nil
+        classDone[cls] = rec ~= nil and call("trainers", "register", id, rec) or false
+        if classDone[cls] then rt.stats.classes = rt.stats.classes + 1 end
+      end
+      if classDone[cls] then zone.classes[cls] = id end
+    end
+    -- the song (the end's own -- null means none -- else the route's), only
+    -- when the music id exists (a dangling one would fail the whole mod
+    -- after the merge)
+    local music = f.music
+    if music == nil then music = e.music end
+    if music and get("music", music) ~= nil then call("map_songs", "register", mapId, music) end
+    if log then
+      log.info("routes.installed", { route = e.id, ["end"] = which, depth = f.depth, classes = rt.stats.classes })
+    end
+  end
+
   for _, e in ipairs(entries) do
-    if not e.from.games[opts.game] then
+    -- the ends this game registers: a free-roam zone's exit, or the end(s)
+    -- of a connecting route whose `games` name it (MG2)
+    local ends = {}
+    if e.from.games[opts.game] then ends[#ends + 1] = "from" end
+    if e.to and e.to.games[opts.game] then ends[#ends + 1] = "to" end
+    if #ends == 0 then
       rt.stats.otherGame = rt.stats.otherGame + 1
     elseif e.unset then
       rt.stats.unset = rt.stats.unset + 1
       rt.problems[#rt.problems + 1] = { id = e.id, code = "unset" }
     else
-      local def = get("maps", e.from.map)
-      local ts = type(def) == "table" and get("tilesets", def.tileset) or nil
-      local q = def and ts and opts.mapQuery and opts.mapQuery(def, ts) or nil
-      if not q then
-        problem(e.id, def and "no_query" or "no_map")
-      else
-        local hidden = get("field", "hiddenItems")
-        local p, code = Routes.plan(e, def, q, Routes.occupiedCells(def, type(hidden) == "table" and hidden[e.from.map] or nil))
-        local patched
-        if p then
-          patched = {}
-          for k, v in pairs(def) do patched[k] = v end
-          patched.blocks = p.blocks
-          local q2 = opts.mapQuery(patched, ts)
-          if not q2 then p, code = nil, "no_query" else
-            local ok
-            ok, code = Routes.check(p, q2)
-            if not ok then p = nil end
-          end
-        end
-        if not p then
-          problem(e.id, code)
-        elseif get("maps", e.mapId) ~= nil then
-          problem(e.id, "map_taken")
-        else
-          local zone = { id = e.id, entry = e, mapId = e.mapId, town = e.from.map, plan = p, active = false,
-                         classes = {} }
-          -- 1. the route map; 2. its step script and the town's; 3. the
-          -- town's blocks. A later failure undoes the route map (a tombstone)
-          -- and leaves the scripts inert (zone.active stays false).
-          local okMap = call("maps", "register", e.mapId, Routes.routeMapDef(e, p, def))
-          local okScripts = okMap and call("map_scripts", "register", e.mapId, {
-            onStep = function(_, _, x, y)
-              if zone.active and x == Routes.CELL_A.x and y == Routes.CELL_A.y then
-                return Routes.warpTo(rt, zone, "back")
-              end
-              return false
-            end,
-          })
-          if okScripts and not townScripted[e.from.map] then
-            okScripts = call("map_scripts", "register", e.from.map, { onStep = townStep(e.from.map) })
-            townScripted[e.from.map] = okScripts or nil
-          end
-          local okPatch = okScripts and call("maps", "patch", e.from.map, { blocks = p.blocks })
-          if not okPatch then
-            if okMap then call("maps", "remove", e.mapId) end
-            problem(e.id, not okMap and "map_rejected" or not okScripts and "scripts_rejected" or "patch_rejected")
-          else
-            zone.active = true
-            rt.zones[e.id] = zone
-            rt.byMap[e.mapId] = zone
-            rt.byTown[e.from.map] = rt.byTown[e.from.map] or {}
-            table.insert(rt.byTown[e.from.map], zone)
-            rt.stats.installed = rt.stats.installed + 1
-            -- the trainer classes (a class that can't be copied only takes
-            -- that class's battles away)
-            for _, cls in ipairs(e.classes) do
-              local id = Routes.classId(cls)
-              if classDone[cls] == nil then
-                local rec = get("trainers", id) == nil and Routes.classRecord(cls, get("trainers", cls)) or nil
-                classDone[cls] = rec ~= nil and call("trainers", "register", id, rec) or false
-                if classDone[cls] then rt.stats.classes = rt.stats.classes + 1 end
-              end
-              if classDone[cls] then zone.classes[cls] = id end
-            end
-            -- the song, only when the music id exists (a dangling one would
-            -- fail the whole mod after the merge)
-            if e.music and get("music", e.music) ~= nil then call("map_songs", "register", e.mapId, e.music) end
-            if log then
-              log.info("routes.installed", { route = e.id, depth = e.from.depth, classes = rt.stats.classes })
-            end
-          end
-        end
-      end
+      for _, which in ipairs(ends) do installEnd(e, which) end
     end
   end
   return rt
+end
+
+-- The route map ids this boot installed (act/kb_region.lua: a resume may warp
+-- onto one of them).
+function Routes.routeMapIds(rt)
+  local out = {}
+  for id in pairs(rt and rt.byMap or {}) do out[id] = true end
+  return out
 end
 
 -- The warps of the step scripts, as a queued script of the engine's own
@@ -530,26 +646,43 @@ function Routes.patchedBlocks(rt, mapId)
   return blocks
 end
 
+-- One end of a connecting route as the export names it: its region (the
+-- catalogue's default when the list gives none) and its games, in list order.
+local function exportEnd(json, rt, f)
+  return json.object({ region = Routes.endRegion(f, rt.games) or "kanto", games = json.array(f.gameList) })
+end
+
 function Routes.exportData(json, rt)
   local list = {}
+  local connecting = false
   for _, e in ipairs(rt and rt.entries or {}) do
-    local zone = rt.zones[e.id]
-    if zone and zone.active then
-      local p = zone.plan
+    -- one item per end this game registered (a connecting route both of
+    -- whose ends it holds, a test world, lists two items with its id: the
+    -- export schema puts no uniqueness rule on `id`, and `end` tells them
+    -- apart)
+    for _, which in ipairs(Routes.ENDS) do
+    local zone = rt.zones[which == "to" and (e.id .. ":to") or e.id]
+    if zone and zone.active and zone.which == which then
+      local p, f = zone.plan, zone.finish or e.from
       local cleared, triggers = {}, {}
       for _, b in ipairs(p.cleared) do cleared[#cleared + 1] = { b[1], b[2] } end
       for _, c in ipairs(p.triggerList) do triggers[#triggers + 1] = { c[1], c[2] } end
       local raw = e.raw
       local item = {
         id = e.id, name = e.name, kind = e.kind, theme = e.theme,
-        town = { map = e.from.map, cleared = cleared, triggers = triggers,
+        town = { map = f.map, cleared = cleared, triggers = triggers,
                  back = { x = p.back.x, y = p.back.y, facing = p.back.facing } },
-        routeMap = { id = e.mapId, width = 1, height = 1,
+        routeMap = { id = zone.mapId, width = 1, height = 1,
                      a = { x = Routes.CELL_A.x, y = Routes.CELL_A.y },
                      arrive = { x = Routes.CELL_X1.x, y = Routes.CELL_X1.y, facing = Routes.ARRIVE_FACING } },
       }
+      if e.kind == "connecting" then
+        connecting = true
+        item.ends = json.object({ from = exportEnd(json, rt, e.from), to = exportEnd(json, rt, e.to) })
+        item["end"] = which
+      end
       local classes = {}
-      for _, cls in ipairs(e.classes) do
+      for _, cls in ipairs(zone.classList or e.classes) do
         if zone.classes[cls] then classes[#classes + 1] = cls end
       end
       item.trainers = json.object({
@@ -572,8 +705,10 @@ function Routes.exportData(json, rt)
       })
       list[#list + 1] = item
     end
+    end
   end
-  return { version = Routes.VERSION, routes = json.array(list) }
+  -- a free-roam list keeps version 1 (and its bytes); a connecting route makes it 2
+  return { version = connecting and Routes.VERSION_CONNECTING or Routes.VERSION, routes = json.array(list) }
 end
 
 return Routes

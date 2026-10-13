@@ -30,6 +30,7 @@ LIB_FILES = [
     "observe/kb_ui.lua",
     "observe/kb_mirror.lua",
     "observe/kb_bag.lua",
+    "observe/kb_progress.lua",
     "act/kb_move.lua",
     "act/kb_interact.lua",
     "act/kb_field.lua",
@@ -41,6 +42,7 @@ LIB_FILES = [
     "act/kb_pc.lua",
     "act/kb_route.lua",
     "act/kb_climb.lua",
+    "act/kb_region.lua",
     "export/kb_cells.lua",
     "export/kb_images.lua",
     "export/kb_swapsites.lua",
@@ -119,7 +121,8 @@ def test_main_loads_modules_and_logs():
     b.run_main()
     assert b.log_lines() == ["[info] [gen1-bridge] gen1-bridge loaded"]
     # every module, then (Wild Routes, WR2) the route list
-    assert b.read_calls == LIB_FILES + ["data/routes.json"]
+    # MG2: kb_engine's loader reads the Gen 1 adapter after main.lua's own imports (not counted as a module)
+    assert b.read_calls == LIB_FILES + ["lib/engine/gen1.lua", "data/routes.json"]
     status = b.mod.exports
     assert (status.ready, status.modules, status.bridge, status.protocol) == (False, len(LIB_FILES), b"0.1.0", 1)
     assert b.env_keys() == before, "main.lua or a module leaked a global"
@@ -174,12 +177,14 @@ def engine_on(rig_or_game):
     """kb_engine's seam table on a rig's fake game (as main.lua builds it)."""
     b, E = rig_or_game.b, rig_or_game.E
     Engine = b.module("lib/kb_engine.lua")
-    opts = b.table()
-    opts[b"require"] = b.env.require
-    opts[b"ui"] = E.ui
-    eng = Engine.new(opts)
+    eng = Engine.new(b.engine_opts(ui=E.ui))  # MG2: the loader picks lib/engine/gen1.lua
     eng.setGame(E.game)
     return Engine, eng
+
+
+def gen1_statics(rig_or_game):
+    """The Gen 1 adapter module (lib/engine/gen1.lua, MG2): its statics (REQUIRES, CLASSIC, ...)."""
+    return rig_or_game.b.module("lib/engine/gen1.lua")
 
 
 def test_the_pin_is_the_upgraded_engine_and_the_fake_plays_it():
@@ -198,7 +203,7 @@ def test_required_internals_are_listed_and_all_present_on_the_fakes():
     from battlesim import BattleGame
     g = BattleGame()  # the fullest fake: script, wild, center and content modules attached
     Engine, eng = engine_on(g)
-    required = {k.decode(): [m.decode() for m in v.values()] for k, v in Engine.REQUIRED.items()}
+    required = {k.decode(): [m.decode() for m in v.values()] for k, v in gen1_statics(g).REQUIRES.items()}
     assert len(required) >= 20 and all(name.startswith("src.") for name in required)
     assert required["src.inventory.Bag"] == ["remove"] and "src.core.Music" in required
     assert list(eng.checkRequired().values()) == [], "every module and member the seam reads exists on the fakes"
@@ -223,7 +228,7 @@ def test_the_union_room_is_pinned_off_with_the_display_options():
     from rig import Rig
     rig = Rig()
     Engine, eng = engine_on(rig)
-    assert Engine.CLASSIC.unionRoom is False
+    assert gen1_statics(rig).CLASSIC.unionRoom is False
     assert rig.E.save.options.unionRoom is False, "pinned at game.ready like the display keys"
     assert eng.displayPinned(rig.E.save.options) is True
     rig.E.save.options.unionRoom = True
@@ -286,11 +291,34 @@ def test_no_generated_paths_or_module_names():
 
 
 def test_lib_layout_and_no_self_require():
+    # MG2: lib/engine/<engine>.lua are the engine adapters (one per Gen1Recomp engine id, D1); the
+    # loader lib/kb_engine.lua names each in Engine.ADAPTERS
     for path in (BRIDGE / "lib").iterdir():
+        if path.name == "engine":
+            assert path.is_dir()
+            adapters = sorted(p.name for p in path.iterdir())
+            assert adapters == ["gen1.lua"], adapters
+            continue
         assert path.name.startswith("kb_") and path.suffix == ".lua", path
     for path in BRIDGE.rglob("*.lua"):
         text = path.read_text(encoding="utf-8")
         assert not re.search(r"""require\s*\(?\s*["'](lib|kb_)""", text), path
+
+
+def test_only_the_engine_adapters_require_engine_modules():
+    # D1: only lib/engine/*.lua touch engine internals (CLAUDE.md's rule); the loader asks only
+    # for GameVersion's engine id, the stub for Version and GameVersion
+    for path in BRIDGE.rglob("*.lua"):
+        rel = path.relative_to(BRIDGE).as_posix()
+        if rel.startswith("lib/engine/"):
+            continue
+        text = path.read_text(encoding="utf-8")
+        found = set(re.findall(r"""requireFn,\s*["'](src\.[A-Za-z.]+)["']|try\(["'](src\.[A-Za-z.]+)["']""", text))
+        names = {a or b for a, b in found}
+        if rel == "lib/kb_engine.lua":
+            assert names <= {"src.core.GameVersion", "src.core.Version"}, names
+        else:
+            assert not names, (rel, names)
 
 
 def test_manifest():
@@ -298,3 +326,53 @@ def test_manifest():
     assert manifest["api"] == 2 and manifest["entry"] == "main.lua"
     assert {"network", "engine_internals"} <= set(manifest["permissions"])
     assert set(manifest["games"]) == {"red", "blue"}
+
+
+# ------------------------------------------------------------ MG2: the adapter loader
+
+
+def test_the_loader_picks_the_gen1_adapter_for_the_gen1_engine():
+    from rig import Rig
+    rig = Rig()
+    Engine, eng = engine_on(rig)
+    assert eng.hasAdapter() is True and eng.engineId() == b"gen1" and eng.family() == b"gen1"
+    assert Engine.ADAPTERS.gen1 == b"lib/engine/gen1.lua"
+    assert list(Engine.missingGroups(eng).values()) == [], "the Gen 1 adapter implements every group"
+    groups = {k.decode() for k in Engine.GROUPS.keys()}
+    assert groups == {"boot", "interaction", "ui", "movement", "party", "items", "saving", "battles", "story",
+                      "sessions", "reliability", "export", "routes", "region"}
+    assert (rig.status.engineId, rig.status.engineAdapter) == (b"gen1", True)
+    assert list(rig.status.engineGroupsMissing.values()) == []
+    assert not any("engine.groups" in line or "engine.no_adapter" in line for line in rig.logs())
+
+
+def test_an_engine_without_an_adapter_gets_the_stub_and_rejects_every_hello():
+    from rig import Rig
+    rig = Rig(engine_id="game3")
+    assert (rig.status.engineId, rig.status.engineAdapter, rig.status.ready) == (b"game3", False, True)
+    assert len(rig.status.engineGroupsMissing) == 14
+    assert sum("engine.no_adapter engine=game3" in line for line in rig.logs()) == 1
+    assert sum("engine.groups adapter=false count=14" in line for line in rig.logs()) == 1
+    rig.step(3)
+    peer = rig.connect()
+    peer.hello()
+    msgs = peer.messages()
+    assert [m["type"] for m in msgs] == ["hello.reject"] and msgs[0]["data"]["reason"] == "game"
+    assert peer.closed()
+    assert any("session.rejected game=blue reason=game" in line for line in rig.logs())
+    rig.step(3)  # the stub answers every per-step call without a fault
+    assert not any("step_failed" in line for line in rig.logs())
+
+
+def test_the_stubs_hook_wrappers_pass_through():
+    from rig import Rig
+    rig = Rig(engine_id="gs")
+    Engine, eng = engine_on(rig)
+    assert eng.hasAdapter() is False and eng.engineId() == b"gs"
+    nxt = rig.b.eval("function(...) return select('#', ...), ... end")
+    assert tuple(eng.scriptCommand(nxt, b"ctx", b"name", b"args")) == (3, b"ctx", b"name", b"args")
+    assert tuple(eng.pcItems(nxt, b"g", b"items")) == (2, b"g", b"items")
+    assert tuple(eng.encounterRoll(nxt, b"def", b"ctx")) == (2, b"def", b"ctx")
+    assert eng.takeOver(nxt) is False and eng.version()[0] == b"0.3.85"
+    assert eng.observe().inGame is False and eng.playthrough() == b"title" and eng.saveSlot() == 0
+    assert eng.noSuchFunction() is None, "anything else is a function returning nothing"

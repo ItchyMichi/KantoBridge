@@ -1470,7 +1470,7 @@ the full suite at the ✔ checkpoints (MG2, MG3, MG5, MG6). Pods run inside your
 |---|---|---|---|---|
 | MG0 | Decisions and spikes | decisions answered (plan §9); the spikes S1–S5 are yours (your PC, your imports; S2–S3 on Emerald) | 2026-10-13 | |
 | MG1 | The game catalogue and an open protocol | **done** (notes 1–3); check: pytest and Lua 1,615 passed, JUnit 1,059 (0 failures), GameTests 101 on the pod (kb-dev7); the golden synthetic index byte-identical | 2026-10-13 | |
-| MG2 | Core and adapters in the bridge mod; the region acts on Gen 1 | schemas written first (note 4); the rest in progress | 2026-10-13 | |
+| MG2 | Core and adapters in the bridge mod; the region acts on Gen 1 | **done** (notes 4–7); checkpoint passed on the pod (kb-dev7): pytest and Lua 1,658, JUnit 1,059 (0 failures), GameTests 101; e2e on the real engine (Blue, v0.3.85): `test_regions.py` 2 passed (a `start` from the title ×3 NEW GAME and ×3 CONTINUE, the park/resume round trip), `test_s5_ready.py`, `test_handshake.py` | 2026-10-13 | |
 | MG3 | Regions as data | pending | | |
 | MG4 | Links | pending | | |
 | MG5 | Crossings | pending | | |
@@ -1512,6 +1512,33 @@ the full suite at the ✔ checkpoints (MG2, MG3, MG5, MG6). Pods run inside your
    (`new`/`continue`), `snapshot.away`, the route list v2 (`kind: connecting`, two ends with their own region, classes
    and music) and the export's `routes` v2 (`ends`, `end`); PROTOCOL.md "Regions (MG2)". A free-roam list and export
    keep `version: 1` and their bytes.
+
+5. **The adapter split** (MG2, D1): `lib/kb_engine.lua` moved whole to `lib/engine/gen1.lua` (history kept): the Gen 1
+   engine adapter, its `Gen1.REQUIRES` table (was `Engine.REQUIRED`; the three Game-object slots documented) and the new
+   region group (`holdAway`, `releaseAway`, `awayHeld`, `startFromTitle`, `progressMarkers`). The new `lib/kb_engine.lua`
+   is the **loader**: it reads Gen1Recomp's engine id (`GameVersion.engine`) and loads `lib/engine/<engine>.lua` (only
+   `gen1` exists); for `gs`, `crystal` and `game3` it hands the core a **stub** that answers every call harmlessly,
+   reports `hasAdapter() == false` and logs `engine.no_adapter` once, so a process running such a game answers every
+   `hello` with `hello.reject{reason:"game"}`. `Engine.GROUPS` names Appendix B's 14 groups; `engine.groups` logs the
+   groups an adapter lacks (`engineGroupsMissing` in the exports). CLAUDE.md's rule reads "only the engine adapters
+   `lib/engine/*.lua` touch engine internals"; `tools/tests/test_pins.py` checks both files. `main.lua` imports 36 modules.
+6. **The region acts and the progress observer** (MG2): `act/kb_region.lua` answers `region.park` (the hidden player
+   idle in the game → a hold state on the engine's stack modelled on Bill's PC hold, kept in the process-lifetime slot so
+   a hot reload keeps it; the music fades; `mod.save "region" = {away}`), `region.resume` (the hold popped, the marker
+   cleared, the engine's own `warp` queued only onto one of this mod's route maps or the away cell, answered on arrival)
+   and `region.start` (from the title only: `SaveData.load` + `Game:restoreSave` for CONTINUE, else `Game:startNewGame`
+   with the intro; an open title menu is closed first with `Game:returnToTitle`), one request at a time like the Wild
+   Routes acts; a link drop pops the hold and leaves the marker for the next snapshot (`snapshot.away`).
+   `observe/kb_progress.lua` builds `game.status` (playthrough, ingame, started, badges, the catalogue's markers resolved
+   through the adapter, the save's player name, the active slot) after every snapshot, after `session.bound`, on
+   `save.created`/`save.loaded` and when a marker, the badge count or the playthrough changes (checked every 10 steps).
+7. **Routes v2** (MG2): `kb_routes` accepts list versions 1 and 2 and `kind: connecting` with `from`/`to` ends (each with
+   its own `region`, `classes`, `music`); a game registers only the end(s) whose `games` include it; the export lists one
+   item per registered end with `ends` and `end` and writes `version: 2` only when a connecting route is listed, so a
+   free-roam export's bytes are unchanged. `fake_gen1` gained `--state title|fresh|saved`, the three acts and
+   `game.status`; `tools/e2e/test_regions.py` (driver `kb_regions.lua`) runs the acts on the real engine: a `start` from
+   the title on an empty slot (NEW GAME, the intro's first text box, no stray input) and on a saved slot (CONTINUE,
+   `save.loaded{fresh:false}`), and a park/resume round trip with the cell unchanged.
 
 ## Pre-flight (PLAN §0.6)
 

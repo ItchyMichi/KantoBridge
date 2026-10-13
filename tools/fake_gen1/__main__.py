@@ -2,6 +2,9 @@
 
 --game takes any id of the game catalogue (protocol/games.json); hello.ok then carries that id, its
 family and its compat profile, while the synthetic world and export stay Gen 1-shaped.
+--state title|fresh|saved (MG2) is the playthrough the fake starts in: at the title it is not in the
+game (snapshot ingame false, steps refused) until a region.start; --no-slot-save makes that start a
+NEW GAME (act.result detail new) instead of CONTINUE.
 
 Type commands to drive the connected Minecraft client:
 
@@ -18,6 +21,11 @@ Type commands to drive the connected Minecraft client:
     reload                 as if the hidden game went back to its last save (save.loaded, ops 0)
     pc                     choose Bill's PC (pc.open)
     waitbind REASON SECS   make the next session.bind wait (session.waiting busy|new_game|save_failed)
+    badge ITEM on|off      gain or lose a badge (game.status follows)
+    park                   hold the player as region.park does (steps refused, snapshot.away)
+    resume [MAP X Y DIR]   release the hold, warping to the cell when one is given
+    startgame              leave the title as a region.start does (CONTINUE or NEW GAME)
+    state                  print the playthrough, the hold and the game.status data
     counts                 print how many of each message type the client has sent
     status                 print the connection and world state
     drop                   drop the connection (the client should reconnect)
@@ -79,6 +87,21 @@ async def _commands(fake):
                 await fake.open_pc()
             elif cmd == "waitbind":
                 fake.bind_wait = (args[0], float(args[1]))
+            elif cmd == "badge":
+                await fake.set_badge(args[0], args[1] == "on")
+            elif cmd == "park":
+                if fake.ingame and not fake.parked:
+                    fake.away = fake._cell()
+                print(f"parked={fake.parked} away={fake.away}")
+            elif cmd == "resume":
+                fake.away = None
+                if args:
+                    await fake.warp_to(args[0], int(args[1]), int(args[2]), args[3], "script")
+                print("parked=False")
+            elif cmd == "startgame":
+                print(f"started={await fake.start_game()} playthrough={fake.playthrough}")
+            elif cmd == "state":
+                print(f"playthrough={fake.playthrough} parked={fake.parked} status={fake.game_status()}")
             elif cmd == "counts":
                 print("counts " + " ".join(f"{t}={n}" for t, n in sorted(fake.counts().items())))
             elif cmd == "status":
@@ -93,7 +116,8 @@ async def _commands(fake):
 
 
 async def _main(args):
-    async with FakeGen1(args.host, args.port, game=args.game, timeout_s=args.timeout, log=print) as fake:
+    async with FakeGen1(args.host, args.port, game=args.game, timeout_s=args.timeout, log=print, state=args.state,
+                        slot_has_save=args.slot_has_save) as fake:
         await _commands(fake)
 
 
@@ -105,6 +129,11 @@ def main(argv=None):
     # any catalogued game id (protocol/games.json, MG1); the synthetic world stays Gen 1-shaped
     parser.add_argument("--game", choices=load_games().ids, default="red")
     parser.add_argument("--timeout", type=float, default=10.0, help="heartbeat timeout in seconds")
+    # MG2: the playthrough the fake starts in, and whether a region.start finds a save to CONTINUE
+    parser.add_argument("--state", choices=("title", "fresh", "saved"), default="saved",
+                        help="the playthrough at start: title (not in the game), fresh or saved")
+    parser.add_argument("--no-slot-save", dest="slot_has_save", action="store_false",
+                        help="a region.start from the title runs NEW GAME instead of CONTINUE")
     parser.add_argument("--write-bundle", metavar="DIR",
                         help="write the synthetic export as a bundle under DIR/<game>/ and exit")
     args = parser.parse_args(argv)

@@ -4,19 +4,49 @@
   "title": "texture.status",
   "description": "Whether the client draws the world with its own art (its generated pack), against which slot map, and what it lacks.",
   "x-type": "texture.status",
-  "x-legs": ["c2s"],
+  "x-legs": [
+    "c2s"
+  ],
   "x-re": "never",
   "type": "object",
-  "required": ["ok"],
+  "required": [
+    "ok"
+  ],
   "additionalProperties": false,
   "properties": {
-    "ok": {"type": "boolean"},
-    "slotMapHash": {"$ref": "../defs.schema.json#/$defs/hash"},
-    "textures": {"$ref": "../defs.schema.json#/$defs/count"},
-    "missing": {"$ref": "../defs.schema.json#/$defs/count", "description": "Slot-map keys whose sprite this client lacks (drawn as placeholders)."},
-    "shapes": {"$ref": "../defs.schema.json#/$defs/count", "description": "Shape ids this client has geometry for; 0 while it draws cubes."},
-    "shapeIndexHash": {"$ref": "../defs.schema.json#/$defs/hash", "description": "The shape index it built them from."},
-    "packs": {"$ref": "../defs.schema.json#/$defs/count", "description": "Texture-pack manifests this client applied (omitted when none)."},
-    "reason": {"type": "string", "pattern": "^[a-z][a-z0-9_.]*$", "maxLength": 64}
+    "ok": {
+      "type": "boolean"
+    },
+    "slotMapHash": {
+      "$ref": "../defs.schema.json#/$defs/hash"
+    },
+    "textures": {
+      "$ref": "../defs.schema.json#/$defs/count"
+    },
+    "missing": {
+      "$ref": "../defs.schema.json#/$defs/count",
+      "description": "Slot-map keys whose sprite this client lacks (drawn as placeholders)."
+    },
+    "shapes": {
+      "$ref": "../defs.schema.json#/$defs/count",
+      "description": "Shape ids this client has geometry for; 0 while it draws cubes."
+    },
+    "shapeIndexHash": {
+      "$ref": "../defs.schema.json#/$defs/hash",
+      "description": "The shape index it built them from."
+    },
+    "packs": {
+      "$ref": "../defs.schema.json#/$defs/count",
+      "description": "Texture-pack manifests this client applied (omitted when none)."
+    },
+    "reason": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_.]*$",
+      "maxLength": 64
+    },
+    "region": {
+      "$ref": "../defs.schema.json#/$defs/regionId",
+      "description": "MG3 (several games): the region this message belongs to; absent = the legacy region. The client tags what it relays with its link's region; the server routes a tagged message to that region's link."
+    }
   }
 }

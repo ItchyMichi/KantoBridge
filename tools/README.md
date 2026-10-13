@@ -49,7 +49,7 @@ and installs nothing; `-Verify <file> -Id <pin>` checks a downloaded file agains
 | `kb_protocol/` | Shared protocol helpers: strict NDJSON framing, the schema registry and message checker, envelope builders, redaction, and the generator of `protocol/catalog.json` and `protocol/redaction-vectors.json` |
 | `fake_gen1/` | Listens like gen1-bridge with a synthetic world (`synth.py`: a procedurally drawn tileset, TEST_TOWN and TEST_HOUSE built from its blocks, NPCs, a sign, a trainer). Serves the full export, answers `session.bind` (`session.bound` with `switched`, then `save.loaded`), and can send made-up gifts, battles, saves (`save.begin` with a new pair), a reload of the last save, Bill's PC (`pc.open` with an id) and a waiting bind (`session.waiting`). `python -m fake_gen1 --help` for the interactive commands; `--write-bundle DIR` writes the synthetic export bundle |
 | `fake_minecraft/` | Connects like the fabric-bridge client, checks every message against the schemas, keeps the heartbeat, and logs only types and sizes (redacted messages with `--verbose`). `python -m fake_minecraft --help` |
-| `tests/` | pytest suites for the protocol, `kb_protocol`, the stand-ins, `launch.ps1` (dry runs and its port probe), the installer skeleton and the engine pin (`test_pins.py`: every place the Gen1Recomp version is written agrees with `Engine.CHECKED` in `gen1-bridge/lib/kb_engine.lua`) |
+| `tests/` | pytest suites for the protocol, `kb_protocol`, the stand-ins, `launch.ps1` (dry runs and its port probe), the installer skeleton and the engine pin (`test_pins.py`: every place the Gen1Recomp version is written agrees with `Engine.CHECKED` in `gen1-bridge/lib/kb_engine.lua`, the adapter loader, and the Gen 1 adapter `lib/engine/gen1.lua`) |
 | `launch.ps1` | The launcher (above) |
 | `installer/` | The installer skeleton and its pins (above) |
 | `lua/` | The Lua test harness: gen1-bridge modules run under lupa's LuaJIT 2.1 in a sandbox-parity environment, with a fake LuaSocket. Its pytest files live beside it |
@@ -68,7 +68,9 @@ cd tools
 
 `--write` also regenerates `gen1-bridge/lib/kb_games.lua` from `protocol/games.json`, the game
 catalogue (MULTI_GAME_PLAN §4.2); `kb_protocol.games.load_games()` reads it in Python, and
-`fake_gen1 --game <id>` accepts any catalogued id.
+`fake_gen1 --game <id>` accepts any catalogued id. `fake_gen1 --state title|fresh|saved` (MG2) is the
+playthrough it starts in: at the title it is not in the game until a `region.start` (CONTINUE, or NEW GAME
+with `--no-slot-save`); it answers `region.park`/`region.resume` and sends `game.status` as gen1-bridge does.
 
 ## Data safety
 

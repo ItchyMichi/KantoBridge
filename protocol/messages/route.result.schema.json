@@ -4,17 +4,50 @@
   "title": "route.result",
   "description": "Wild Routes (WR2): the answer to route.give, route.battle or route.blackout.",
   "x-type": "route.result",
-  "x-legs": ["g2m", "c2s"],
+  "x-legs": [
+    "g2m",
+    "c2s"
+  ],
   "x-re": "required",
   "type": "object",
-  "required": ["op", "ok"],
+  "required": [
+    "op",
+    "ok"
+  ],
   "additionalProperties": false,
   "properties": {
-    "op": {"enum": ["give", "battle", "blackout"]},
-    "ok": {"type": "boolean"},
-    "route": {"$ref": "../defs.schema.json#/$defs/routeId"},
-    "id": {"$ref": "../defs.schema.json#/$defs/routeObjectId"},
-    "outcome": {"enum": ["win", "lose", "abort"], "description": "route.battle: how the battle ended."},
-    "reason": {"type": "string", "pattern": "^[a-z][a-z0-9_.]*$", "maxLength": 64}
+    "op": {
+      "enum": [
+        "give",
+        "battle",
+        "blackout"
+      ]
+    },
+    "ok": {
+      "type": "boolean"
+    },
+    "route": {
+      "$ref": "../defs.schema.json#/$defs/routeId"
+    },
+    "id": {
+      "$ref": "../defs.schema.json#/$defs/routeObjectId"
+    },
+    "outcome": {
+      "enum": [
+        "win",
+        "lose",
+        "abort"
+      ],
+      "description": "route.battle: how the battle ended."
+    },
+    "reason": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_.]*$",
+      "maxLength": 64
+    },
+    "region": {
+      "$ref": "../defs.schema.json#/$defs/regionId",
+      "description": "MG3 (several games): the region this message belongs to; absent = the legacy region. The client tags what it relays with its link's region; the server routes a tagged message to that region's link."
+    }
   }
 }

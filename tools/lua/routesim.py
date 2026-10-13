@@ -50,9 +50,31 @@ ZONE = {
 }
 ROUTE_MAP = "KB_ROUTE_TEST_ZONE"
 
+# MG2 (routes v2): a connecting route between two regions. Its `from` end is in the woods (cell (2, 7)
+# facing left: block (1, 3) -> (0, 3), beside the zone's spot), its `to` end in a second town,
+# TEST_WOODS2 (the same shape), registered by another
+# game's process in the product; the tests also run both ends in one game (the route map of the
+# `to` end is then KB_ROUTE_TEST_PASS_TO). The `to` end carries its own classes and music.
+TOWN2 = dict(TOWN, id="TEST_WOODS2", index=4)
+CONNECTING = {
+    "id": "test_pass", "name": "TEST PASS", "kind": "connecting", "theme": "forest",
+    "from": {"region": "kanto", "games": ["red", "blue"], "map": "TEST_WOODS", "x": 2, "y": 7, "facing": "left", "depth": 1},
+    "to": {"region": "hoenn", "games": ["emerald"], "map": "TEST_WOODS2", "x": 9, "y": 4, "facing": "right", "depth": 1,
+           "classes": ["OPP_TEST"], "music": None},
+    "areas": {"main": [2, 3], "side": 50},
+    "levels": {"from": "neighbours", "perArea": 1, "maxRise": 3},
+    "trainers": {"perArea": [1, 2], "rematch": "each_visit", "classes": ["OPP_TEST", "OPP_NOBODY"]},
+    "dungeon": {"chance": 0},
+    "music": "TEST_SONG",
+}
+PASS_MAP, PASS_MAP_TO = "KB_ROUTE_TEST_PASS", "KB_ROUTE_TEST_PASS_TO"
+
 
 def route_list(*zones):
-    return json.dumps({"version": 1, "routes": list(zones) or [ZONE]})
+    zones = list(zones) or [ZONE]
+    # MG2: a list holding a connecting route is version 2 (the schema's and kb_routes' rule)
+    version = 2 if any(z.get("kind") == "connecting" for z in zones) else 1
+    return json.dumps({"version": version, "routes": zones})
 
 
 def registries(town=None, reject=None):
@@ -60,7 +82,7 @@ def registries(town=None, reject=None):
     moves = {k: {"index": v["index"]} for k, v in MOVES.items()}
     return {
         "records": {
-            "maps": {"TEST_WOODS": town or TOWN},
+            "maps": {"TEST_WOODS": town or TOWN, "TEST_WOODS2": TOWN2},
             "tilesets": {"TEST_WOODS_TILES": TILESET},
             "trainers": copy.deepcopy(TRAINERS),
             "music": {"TEST_SONG": {"id": "TEST_SONG"}},
@@ -77,7 +99,7 @@ def registries(town=None, reject=None):
 SIM_TOWN = {"rows": ["##..########", "##..########", "##........##", "##........##", "##........##",
                      "##........##", "##....ww..##", "##....ww..##", "############", "############"]}
 SIM_ROUTE = {"rows": ["..", ".."]}
-ROUTE_MAPS = dict(MAPS, TEST_WOODS=SIM_TOWN, **{ROUTE_MAP: SIM_ROUTE})
+ROUTE_MAPS = dict(MAPS, TEST_WOODS=SIM_TOWN, TEST_WOODS2=SIM_TOWN, **{ROUTE_MAP: SIM_ROUTE, PASS_MAP: SIM_ROUTE, PASS_MAP_TO: SIM_ROUTE})
 
 
 class RouteGame(BattleGame):
