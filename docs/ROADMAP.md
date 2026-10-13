@@ -164,11 +164,16 @@ would have moved every interior into one custom dimension and set Kanto in pre-g
 several dimensions would be loaded at once when players are spread out, and puppets would have to work across
 dimensions. Everything stays in the overworld.
 
-### Stage 8: regions and Johto
+### Stage 8: regions and other games
 
-After M14 ([NEXT_STAGES.md](NEXT_STAGES.md) §5): a Gen 2 bridge, a generation-neutral protocol (species up to 1,025,
-Gen 2 items, the clock), one hidden game per region (or a switch at a crossing), per-region rules. Groundwork exists (the
-neutral `scene/` layer, packs that name their game); a region-scoped world format and a configurable map edge don't.
+**Planned 2026-10-13: [specs/MULTI_GAME_PLAN.md](specs/MULTI_GAME_PLAN.md)** (MG0–MG7), which replaces Stage 7's
+vanilla-overworld premise with the user's flat-world design: a game catalogue and an open protocol (MG1), the bridge
+mod split into a core and engine adapters per family with `region.park/resume/start` and `game.status` (MG2), regions
+as data in the one flat overworld with a region table, per-region indices, shape documents, pairing and progress (MG3),
+one hidden Gen1Recomp process per game behind a client link manager (MG4), connecting routes built as two zone halves
+joined by a pass that swaps the followed game or starts its story (MG5), then the Gen 3 adapter and export for Emerald
+(MG6) and Hoenn itself (MG7). The system is proven first with Red ↔ Blue on the real engine. Earlier notes
+([NEXT_STAGES.md](NEXT_STAGES.md) §5) stay as background.
 
 ## 3. Decisions waiting on you
 

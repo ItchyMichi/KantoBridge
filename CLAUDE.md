@@ -26,6 +26,11 @@ Pokémon Red/Blue's story runs in a **hidden Gen1Recomp**. It is displayed and p
 - [`docs/specs/CAVES_AND_WOODS_PLAN.md`](docs/specs/CAVES_AND_WOODS_PLAN.md) is the caves and woods plan (CW1–CW5): Kanto
   in First Person's cave rock, forest canopy and vines, re-implemented from its rules (never installed, nothing
   copied); executed and recorded in PROGRESS.md's "Caves and woods" sections.
+- [`docs/specs/MULTI_GAME_PLAN.md`](docs/specs/MULTI_GAME_PLAN.md) is the plan for several games in one world
+  (MG0–MG7): a game catalogue, engine adapters per family inside the one bridge mod, one hidden process per game,
+  regions as data in the flat overworld, connecting routes with passes, and per-game story progress. The user's
+  design statement of 2026-10-13 (one dimension, flat generation, interiors underground, forests open-air, caves in
+  their own 3D area) governs it; the research report's vanilla-overworld track (M11–M13) is not the direction.
 - `refs/_research/` (git-ignored) holds the research notes, with verified `file:line` references,
   that the plan cites.
 
