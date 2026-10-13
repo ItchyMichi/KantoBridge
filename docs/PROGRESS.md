@@ -726,7 +726,7 @@ the full suite at H1, H5 and H7.
 | H3 | Caves in an area of their own | **done** (CavePlannerTest 8, the synthetic cave; JUnit 991, GameTests 99, Python 1,487); the real world's dry run on the pod: 0 warnings (note 8) | 2026-10-12 | `H3: caves in an area of their own` |
 | H4 | Raised ground in caves | **done** (CaveLevelsTest 8, RaisedCaveTest 7, two GameTests; JUnit 1,010, GameTests 100, Python 1,487); the real world's dry run on the pod: note 11 | 2026-10-12 | `H4: raised ground in caves` |
 | H5 | Real ladders and holes | **done**; checkpoint: JUnit 1,032 (7 skipped), GameTests 101, Python and Lua 1,516; the real world's dry run: note 13 | 2026-10-13 | `H5 (1/3)`–`(3/3)` |
-| H6 | Pilot | | | |
+| H6 | Pilot | **done**, waiting on your call: Mt. Moon built in 3D on the pod, every budget holds, the video sent; note 9 | 2026-10-13 | `cda5000`–`9546fe1`, `H6: pilot` |
 | H7 | Every cave in 3D | | | |
 
 ### Caves in 3D: H1 notes
@@ -936,6 +936,58 @@ the full suite at H1, H5 and H7.
     ladder's `wall` (HD6) and its `contains` leaves that floor out; the shape map keeps its shapes. Goldens: the index's
     walls, the shape map's hash only. JUnit 1,036, GameTests 101 (the two flaky dungeon tests failed once more, then
     passed), Python 1,516.
+
+### Caves in 3D: H6 notes
+
+1. **The pilot on the pod's test install** (2026-10-13): Mt. Moon in 3D (this build's default: `kantobridge.caves3d`
+   unset), built by the dev client's "Create Kanto world" (world "Kanto (3)"), every other cave flat in its slot.
+   kb-dev, kb-dev2 and kb-dev3's hosts were full, so two new pods: kb-dev4 (cpu5c ×16, $0.56/hr) and kb-dev5 (cpu5c ×8,
+   $0.28/hr). Four runs, about 40 minutes in all (about $0.31), each pod stopped after its run.
+2. **Budgets**, the build report against CW3's world ("Kanto (2)"):
+
+   | | CW3 | The pilot | Budget |
+   |---|---|---|---|
+   | Shape map on the wire (characters) | 305,336 | 307,000 (59%) | 524,288 |
+   | Quads per block, max / mean | 76 / 10.44 | 76 / 10.42 | 96 / 24 |
+   | Quads per section, P95 / max | 6,416 / 24,064 | 6,524 / 24,064 | 12,000 / 30,000 |
+   | Self-check: holes, structure P05 | 0, 0.731 | 0, 0.731 | 0, 0.577 |
+   | Place time | 68 s | 73 s | |
+
+   220 maps, 0 warnings; 5,115,727 blocks (+753,337: mostly H3's cave area, 142 more chunks); by kind, edge walls
+   2,548, ladder blocks 68, step colliders 24, habitat blocks 970 (+645). With the profile installed (the pod's test
+   install has none) the shape map would be about 95% of its budget (CW5 note 3's 94%, plus 1,664); with every cave in
+   3D (H7) about 97% (the H5 dry run's 319,136, 13,800 over CW3). Tight: H7 measures it again.
+3. **The pilot's own dry run** (`-Pkb.caves3d=pilot`): Mt. Moon 10 rooms, 1F and B2F raised (789 cells), 6 stairs (all
+   on B2F), 3 shafts (1F to B1F twice, 10 blocks; B1F to B2F, 8), 4 fades kept (1 `loop`, 3 `moved_aside`); 0 warnings.
+4. **The video** (31 s, sent; on the volume as `/workspace/videos/kanto-bridge-caves3d-pilot-20261013-011810.mp4`),
+   from the autopilot's log:
+   - **the stairs** (B2F): put at (26, 17), feet 42; on the stairs cell 43.5; on the raised ground 44; five steps, every
+     one taken by the hidden game; the edge's wall stopped the player at (26, 12), looking down over the drop and along it;
+   - **the ladder** (1F's (5, 5), down to B1F): the game refused the cell across from the ladder, (5, 6) (not plain: an
+     object, most likely), so the walk in came from (6, 5); down in 4.3 s (the take: no fade, no teleport), a look round
+     at the bottom, up in 5.5 s (the take at the top), off onto the floor beside the ladder and a step to (6, 5). In all
+     6 steps, no push, no refusal, no correction; 2 takes, none failed.
+5. **Found by the runs and fixed** (each with a test):
+   - the ladder's top cell keeps its floor beside the ladder (H5 note 14, `7697198`);
+   - while a take holds the controls, sneak stays down on a ladder: no slide back into the shaft (`cda5000`);
+   - gen1-bridge dropped a take's warp messages (they carried the take's re but not its connection's generation, so
+     main.lua sent them nowhere): the client waited 3 s and pulled the player back. A test drives a take through
+     main.lua on the simulated game; it fails on the old code (`469ad05`);
+   - a late answer about the waiting hidden player teleported a climber out of the shaft, where the player stands in no
+     cell (`469ad05`);
+   - at a ladder's bottom with open floor behind the ladder (1F's ladder lands so on B1F), pressing on the ladder rose a
+     block on the bottom cell, looked like a push, and the game took it, walking the hidden player away. Leaving that
+     floor now starts the climb, pressing toward the ladder from its bottom is never a push, and a hop off the bottom is
+     an ordinary step (`9546fe1`).
+6. **Tooling:** `client/dev/PilotPlan` (the shots from the index and the export's cells, every option in order),
+   Autopilot scene `pilot` (requests through files, a clip per shot, a tick trace of the ladder in its log),
+   `tools/e2e/drivers/kb_pilot.lua`, `showcase.py --scene pilot`, the dry run's `-Pkb.caves3d=pilot`.
+7. **Checks:** JUnit 1,041 (7 skipped) at the end; GameTests 101 after the shaft fix (the two flaky dungeon tests, H5
+   note 11, failed once more and passed on the rerun); Python and Lua 1,518.
+8. **Not shown:** a hole (Mt. Moon has none, and no cave warp cell in the export has the hole flag: H5 note 13). The
+   client's log has two errors at start-up, both from Minecraft's sound engine (no audio device under Xvfb).
+9. **Your call** (the plan's H6): go on to H7 (every cave in 3D, the full suite, a second video), or change something
+   first.
 
 ## Wild Routes
 
