@@ -5,7 +5,8 @@
 --   hello  -> hello.ok (re) then snapshot; or hello.reject (re) and close
 --   other first message -> error no_hello, close
 --   ping -> pong{t} (re); resync -> snapshot (re)
---   10 s without a received message -> drop
+--   10 s without a received message -> drop (time the hidden game itself
+--   didn't run, a stall of over a second between two steps, doesn't count)
 --   debug.status / debug.quit: role "test" only (else error test_only)
 --
 -- M10 (handshake hardening): hello is checked against its schema field by
@@ -41,6 +42,11 @@ Session.STREAM_ROLES = { client = true, test = true }
 Session.LOG_PER_SECOND = 5
 Session.MAX_LOG_MSG = 500
 Session.HELLO_SECONDS = 10
+-- A gap between two logic steps longer than this is the hidden game's own stall (a long data
+-- read, a frozen window): steps run about 60 times a second, so no client could have been
+-- heard meanwhile. Such time doesn't count as the client's silence (MG3's pod: a 10.8 s
+-- dataset read dropped a builder session during the export).
+Session.STALL_SECONDS = 1
 
 local floor = math.floor
 
@@ -143,12 +149,14 @@ function Session.new(opts)
     badFirstLines = 0,
     -- MG1: the running game has no adapter here
     rejectedGame = 0,
+    stalls = 0, -- steps that followed a stall of the hidden game (the silence clock moved along)
   }
   local REJECT_FIELD = { protocol = "rejectedProtocol", role = "rejectedRole", malformed = "rejectedMalformed",
                          game = "rejectedGame" }
   local tokens, refilledAt = Session.LOG_PER_SECOND, 0
   local forwarding = false
   local generation = 0 -- counts connections, so a reply never reaches a newer one
+  local lastStep -- the clock at the previous step, for the stall rule
   local net, proto
 
   local function reset()
@@ -302,6 +310,16 @@ function Session.new(opts)
   -- One logic step: keep the listener up, move bytes, and drop a silent
   -- client (M10: and one that hasn't said hello in time).
   function session.step()
+    local now = clock()
+    if lastStep ~= nil and now - lastStep > Session.STALL_SECONDS then
+      -- the hidden game itself stalled: the time it didn't run is not the client's silence
+      local stalled = now - lastStep
+      lastRx = lastRx + stalled
+      if helloBy ~= math.huge then helloBy = helloBy + stalled end
+      counts.stalls = counts.stalls + 1
+      if log then log.info("session.stalled", { seconds = math.floor(stalled) }) end
+    end
+    lastStep = now
     net.pump()
     if net.connected() and not established and clock() > helloBy then
       counts.helloTimeouts = counts.helloTimeouts + 1

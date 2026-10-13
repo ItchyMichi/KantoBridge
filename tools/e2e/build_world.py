@@ -175,15 +175,26 @@ async def _quit_driver(port):
         await tester.close()
 
 
-def export_bundle(port=EXPORT_PORT, timeout=600):
-    """Steps 1-3. Returns the bundle folder (local/minecraft/kantobridge/export/<game>)."""
+def export_bundle(port=EXPORT_PORT, timeout=None):
+    """Steps 1-3. Returns the bundle folder (local/minecraft/kantobridge/export/<game>).
+
+    The export's index wait follows run_gen1recomp's INDEX_TIMEOUT (KB_EXPORT_INDEX_TIMEOUT: a slow host builds
+    the export in minutes), passed to ExportCli as -Pkb.exportTimeout; the driver memoises the engine's dataset
+    readiness checks for KB_DATASET_MEMO seconds (default 30, as showcase.py: the pod's network disk otherwise
+    stretches the export from seconds to a quarter of an hour; 0 switches it off).
+    """
+    from run_gen1recomp import INDEX_TIMEOUT
+    if timeout is None:
+        timeout = max(600, int(INDEX_TIMEOUT) + 180)
     pf = preflight()
     if not pf.ok:
         raise RuntimeError("pre-flight not done: " + "; ".join(pf.reasons))
-    with launch("kb_export.lua", extra_env={"KB_TEST_PORT": str(port)}) as running:
+    memo = os.environ.get("KB_DATASET_MEMO", "30")
+    with launch("kb_export.lua", extra_env={"KB_TEST_PORT": str(port), "KB_DATASET_MEMO": memo}) as running:
         if running.wait_marker("KB_TITLE", timeout=150) is None:
             raise RuntimeError("the test instance never reached the title screen")
-        code = _gradle(["exportCli", f"-Pkb.exportPort={port}", f"-Pkb.exportOut={EXPORT_DIR}", "--console=plain"],
+        code = _gradle(["exportCli", f"-Pkb.exportPort={port}", f"-Pkb.exportOut={EXPORT_DIR}",
+                        f"-Pkb.exportTimeout={int(INDEX_TIMEOUT)}", "--console=plain"],
                        timeout, "exportCli")
         asyncio.run(_quit_driver(port))
         result = running.wait(timeout=60)

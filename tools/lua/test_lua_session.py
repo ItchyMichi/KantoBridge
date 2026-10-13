@@ -138,18 +138,35 @@ def test_silence_for_ten_seconds_drops_the_client():
         peer.send("ping", {"t": 1})
         rig.step()
     assert not peer.closed()
-    rig.advance(10.5)
-    rig.step()
+    for _ in range(21):  # 10.5 s of ordinary steps without a message (a single jump would be the engine's own stall)
+        rig.advance(0.5)
+        rig.step()
     assert peer.closed() and rig.status.connected is False
     assert any("session.timeout" in line for line in rig.logs())
+
+
+def test_a_stall_of_the_hidden_game_is_not_the_clients_silence():
+    # the engine froze for 12 s (a long data read, a dragged window): no client could have been heard,
+    # so the silence clock moves along with the stall and the client stays
+    rig, peer, _ = established()
+    rig.advance(12)
+    rig.step()
+    assert not peer.closed() and rig.status.connected is True
+    assert any("session.stalled" in line for line in rig.logs())
+    # ordinary silence after the stall still drops it
+    for _ in range(21):
+        rig.advance(0.5)
+        rig.step()
+    assert peer.closed()
 
 
 def test_a_client_that_never_says_hello_times_out_too():
     rig = Rig()
     rig.step()
     peer = rig.connect()
-    rig.advance(11)
-    rig.step()
+    for _ in range(22):  # 11 s of steps without a hello
+        rig.advance(0.5)
+        rig.step()
     assert peer.closed()
 
 
@@ -436,14 +453,17 @@ def test_a_connection_without_hello_is_closed_after_ten_seconds():
     rig = Rig()
     rig.step()
     peer = rig.connect()
-    rig.advance(4)
-    rig.step()
+    for _ in range(8):  # 4 s of steps (a single jump would be the engine's own stall, which doesn't count)
+        rig.advance(0.5)
+        rig.step()
     peer.send_raw(b'{"type":"hel')  # a line that never ends keeps nothing alive
-    rig.advance(5)
-    rig.step()
+    for _ in range(10):  # 9 s in all
+        rig.advance(0.5)
+        rig.step()
     assert not peer.closed()
-    rig.advance(1.5)
-    rig.step()
+    for _ in range(3):  # 10.5 s
+        rig.advance(0.5)
+        rig.step()
     assert [(m["type"], m["data"]["code"], m["data"]["msg"]) for m in peer.messages()] == \
         [("error", "no_hello", "hello_timeout")]
     assert peer.closed() and rig.status.connected is False
