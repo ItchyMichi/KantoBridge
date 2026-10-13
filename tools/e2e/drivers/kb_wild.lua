@@ -33,7 +33,8 @@
 io.stdout:setvbuf("no") -- LÖVE block-buffers stdout; this also unbuffers mod.log
 
 local PORT = tonumber(os.getenv("KB_TEST_PORT") or "") or 27206
-local SECONDS_LIMIT = tonumber(os.getenv("KB_DRIVER_SECONDS") or "") or 600
+local EXTRA_SECONDS = tonumber(os.getenv("KB_DRIVER_EXTRA") or "") or 0 -- the runner's export allowance
+local SECONDS_LIMIT = tonumber(os.getenv("KB_DRIVER_SECONDS") or "") or (600 + EXTRA_SECONDS)
 local MAP = os.getenv("KB_SPOT_MAP") or "VIRIDIAN_CITY"
 local SPOT_X = tonumber(os.getenv("KB_SPOT_X") or "")
 local SPOT_Y = tonumber(os.getenv("KB_SPOT_Y") or "")

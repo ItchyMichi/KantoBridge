@@ -32,7 +32,8 @@ TEST_PORT = 27197
 INDEX_TIMEOUT = int(os.environ.get("KB_EXPORT_INDEX_TIMEOUT", "240"))
 TEST_TIMEOUT = int(os.environ.get("KB_EXPORT_TEST_TIMEOUT", "600"))
 PAGE_LIMIT = 1048576
-KINDS = ("encounters", "field", "image", "layout", "map", "names", "palettes", "sprite", "swaps", "tileset")
+KINDS = ("encounters", "field", "image", "layout", "map", "names", "palettes", "routes", "sprite", "swaps",
+         "tileset")
 # The profile plan (docs/specs/PROFILE_PLAN.md §5.8): with Dramaless Shape installed in the test install
 # (tools/e2e/install_profile_mod.py), the export carries its table as profile/dramaless.
 PROFILE_MOD = INSTALL / "mods" / "DRAMALESS_SHAPE"
@@ -125,7 +126,7 @@ async def _export(port, game):
     fetch_seconds = time.monotonic() - fetch_started
     assert not builder.conn.problems, "every message passed its schema (strict)"
 
-    problems, mismatches = {}, 0
+    problems, mismatches = {}, []
     for e in entries:
         key = (e["kind"], e["id"])
         found = protocol.check_export(e["kind"], pages[key])
@@ -133,9 +134,12 @@ async def _export(port, game):
             problems[f"{key[0]}:{key[1]}"] = sorted({str(p) for p in found})[:5]
         raw = canonical(pages[key]).encode("utf-8")
         if len(raw) != e["size"] or hashlib.sha256(raw).hexdigest() != e["hash"]:
-            mismatches += 1
+            # named, with both sizes and the first 80 bytes of Python's form: a resource whose Lua and
+            # Python canonical forms differ (a number's spelling, an escape) is found by name, not by count
+            mismatches.append(f"{key[0]}:{key[1]} index size {e['size']} python size {len(raw)} "
+                              f"python starts {raw[:80]!r}")
     assert not problems, problems
-    assert mismatches == 0, f"{mismatches} resources whose hash or size differs from the index"
+    assert not mismatches, f"{len(mismatches)} resources whose hash or size differs from the index: {mismatches[:5]}"
     if "profile" in _kinds():
         # The installed mod's table, byte for byte (compared by hash only), and the mod switched off.
         profile = pages[("profile", "dramaless")]

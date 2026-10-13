@@ -11,7 +11,8 @@
 io.stdout:setvbuf("no") -- LÖVE block-buffers stdout; this also unbuffers mod.log
 
 local PORT = tonumber(os.getenv("KB_TEST_PORT") or "") or 27199
-local SECONDS_LIMIT = tonumber(os.getenv("KB_DRIVER_SECONDS") or "") or 120
+local EXTRA_SECONDS = tonumber(os.getenv("KB_DRIVER_EXTRA") or "") or 0 -- the runner's export allowance
+local SECONDS_LIMIT = tonumber(os.getenv("KB_DRIVER_SECONDS") or "") or (120 + EXTRA_SECONDS)
 
 local function word(v)
   local s = tostring(v)

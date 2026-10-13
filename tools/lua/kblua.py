@@ -63,8 +63,11 @@ class Bridge:
     def __init__(self, permissions=PERMISSIONS, modules=None, developer=False, strict=True,
                  engine=False, mod_options=None, content=None, game="blue", graphics=False,
                  script=False, mod_cache=None, save_files=False, window=False, files=None,
-                 registries=None, world_api=False):
+                 registries=None, world_api=False, jit_os="Windows"):
         self.rt = luajit.LuaRuntime(unpack_returned_tuples=True, encoding=None)
+        # the platform main.lua sees (jit.os): Windows by default, whatever the host, so every test
+        # runs the same on a PC and a Linux pod; "Linux"/"OSX" for the SO_REUSEADDR rule
+        self.jit_os = jit_os
         # Wild Routes (WR2): mod:read sees these files first (rel -> text), e.g. a made-up
         # data/routes.json
         self.files = {k: _b(v) for k, v in (files or {}).items()}
@@ -137,6 +140,7 @@ class Bridge:
         opts[b"modules"] = mods
         opts[b"strict"] = strict
         opts[b"love"] = love
+        opts[b"jitOs"] = _b(self.jit_os)
         self._env_opts = opts
         self.env = self.Sandbox.env(opts)
 

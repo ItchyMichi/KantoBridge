@@ -1359,10 +1359,10 @@ suites at the gates. The gates wait for the pod and your PC: their results are f
 | # | Phase | Status | Date | Commit |
 |---|---|---|---|---|
 | UP0 | Your pre-flight | the pod's imports done (Blue, Crystal, Emerald, through the upload page); the Windows test install not reported yet | 2026-10-13 | |
-| UP1 | Tooling: `pin_check.py --restamp`, `test_pins.py`, the boot check, the Union Room pin, guard and driver | in progress (notes 1–3, 6) | 2026-10-13 | |
-| UP2 | The engine seams in gen1-bridge (B3–B6, the re-stamped citations) | in progress (note 4) | 2026-10-13 | |
-| UP3 | The fakes and unit tests (lupa; the literals, U6) | in progress (note 5) | 2026-10-13 | |
-| UP4 | The pod: the Linux build, gates G1–G4 | pending (note 7) | | |
+| UP1 | Tooling: `pin_check.py --restamp`, `test_pins.py`, the boot check, the Union Room pin, guard and driver | **done** (notes 1–3, 6) | 2026-10-13 | |
+| UP2 | The engine seams in gen1-bridge (B3–B6, the re-stamped citations) | **done** (note 4; the press signal, note 9) | 2026-10-13 | |
+| UP3 | The fakes and unit tests (lupa; the literals, U6) | **done** (note 5) | 2026-10-13 | |
+| UP4 | The pod: the Linux build, gates G1–G4 | **done** (notes 7, 9) | 2026-10-13 | |
 | UP5 | Your PC: the Windows build, gate G5 and the playtest | pending | | |
 | UP6 | Pins, docs and records | **done** (note 8) | 2026-10-13 | |
 
@@ -1376,8 +1376,8 @@ still 2 and the save format still 5.
 | G0 static | this server (JUnit on the pod) | `pin_check.py`: 0 missing files (v0.3.49 → v0.3.85, then v0.3.85 → v0.3.85 on the re-stamped code); every changed row of Appendix B applied; lupa and JUnit counts at least the last checkpoint's (H7: JUnit 1,044, Python and Lua 1,518; the plan's floors 925 Lua / 913 JUnit are WR6's) | **passed 2026-10-13**: `pin_check` v0.3.49 → v0.3.85 893 citations (216 same, 586 shifted, 80 changed, 0 missing; 506 re-stamped by the tool, the rest by hand), then v0.3.85 → v0.3.85 895 same / 0 shifted / 0 changed; pytest tests+lua 1,565 passed, 8 skipped (here and on the pod); JUnit on the pod 1,050 tests, 0 failures, 1 skipped |
 | G1 smoke | pod | `test_s5_ready.py` (`KB_READY engine=0.3.85 status_engine=0.3.85 modules=33 mod_errors=0 missing=0 union_room=off`), `test_handshake.py` (`hello.ok` engine and `tested` both 0.3.85, no `engine.untested`), `test_hot_reload.py`; the crash log untouched | **passed 2026-10-13** on kb-import (cpu3c x16, xvfb): 4 passed; `KB_READY state=loaded engine=0.3.85 status_engine=0.3.85 modules=33 mod_errors=0 missing=0 union_room=off` (the module count is derived from `main.lua` now: 33 since Wild Routes, not M10's 30); the first boot after the import ran patched and wrote the Union Room off (`KB_UNION_OFF ok=true was=off patched_this_boot=true`), the next one was clean; the boot check first flagged `Game.logicStep`, a counter the first logic step creates, dropped from `Engine.REQUIRED` |
 | G2 export | pod | `test_export.py`: the same counts as today (222 maps, 36 surface, 36 layout, 186 interiors, 242 LAST_MAP warps, 802 warps, 24 tilesets, 151 species, 165 moves), every schema strict, hashes match Python's, the swap audit unchanged; the index and per-resource hashes compared with the v0.3.49 report in `local/reports/` (differences listed by resource name only) | **passed 2026-10-13** on kb-import: the export's index from the v0.3.85 engine (blue, the pod's re-import) against the index from the v0.3.49 engine with its own data home and the pre-upgrade mod (the plan commit, a worktree): 360 resources each, **every hash identical** (222 maps, 24 tilesets, 73 sprites, 34 images, 1 each of layout, palettes, encounters, swaps, routes, names, field): no world rebuild (G6 not needed). The pod builds the export at a few steps a second under Xvfb (463 s new, 452 s old) so `test_export.py`'s default 240 s index wait is too short there on both releases; its assertions (schemas, swap audit, counts) run in G4 with `KB_EXPORT_INDEX_TIMEOUT`/`KB_EXPORT_TEST_TIMEOUT` raised |
-| G3 seams | pod | `test_walk.py` (warp kinds, B7), `test_ui.py` and `test_opening.py` (pages, the arrow, naming, B3), `test_battle.py` both outcomes (B5), `test_route1.py` (bag totals, B4), `test_viridian.py`, `test_content.py`, `test_endgame.py` (no map song restored on the champion win), `test_wild_routes.py`; the existing assertions plus the new music and union ones | pending |
-| G4 full | pod | `kb-pod check --e2e` and `gradlew build` with GameTests: pytest, JUnit and GameTests at least the last checkpoint's (H7: 1,518 / 1,044 / 101) plus the new tests; `test_perf.py` within its budgets (gen1-bridge under 1 ms a step, the mirror at most 30 fps) | pending |
+| G3 seams | pod | `test_walk.py` (warp kinds, B7), `test_ui.py` and `test_opening.py` (pages, the arrow, naming, B3), `test_battle.py` both outcomes (B5), `test_route1.py` (bag totals, B4), `test_viridian.py`, `test_content.py`, `test_endgame.py` (no map song restored on the champion win), `test_wild_routes.py`; the existing assertions plus the new music and union ones | **passed 2026-10-13** on kb-import, in two runs (note 9): the first failed 20 of 23 on one cause, the client's press signal (v0.3.85 draws no arrow on a `{DONE}` text while still taking the press; `ui.update.waiting` now means "a press does something", as the client and the tests read it); the second passed 17 and timed out 6 (walk, ui, opening, battle ×2, route1) fetching the export, which the pod builds in 7–8 minutes on both releases; those 6 passed in G4 with the waits stretched |
+| G4 full | pod | `kb-pod check --e2e` and `gradlew build` with GameTests: pytest, JUnit and GameTests at least the last checkpoint's (H7: 1,518 / 1,044 / 101) plus the new tests; `test_perf.py` within its budgets (gen1-bridge under 1 ms a step, the mirror at most 30 fps) | **passed 2026-10-13** on kb-import (16 vCPU, Xvfb): three full `tools/check.sh --e2e` runs, each fixing what the one before found (note 9): 1,596 passed / 6 failed (the drivers' own time limits during the export, the TIME_WAIT bind), 1,603 / 2 (the option that never took on a `tcp()` socket, the `routes` kind), 1,605 / 2 (the `net.listening` suffix, the `routes` fractions), then a targeted run of the unit and Lua suites with `test_export.py` and `test_multiplayer.py`: 1,573 passed, 0 failed (every e2e test has passed in one of the last two runs); JUnit 1,050 passed, 0 failed, 1 skipped (rerun after the Java change); GameTests 101 passed (16:00 UTC, before the routes change, which touches no GameTest fixture); `test_perf.py` passed within its budgets on the pod. Floors (H7: 1,518 / 1,044 / 101) all cleared |
 | G5 Windows | your PC | `tools/check.sh --e2e` on the test install (`test_hidden.py` included); the playtest items of UP5 step 3 ticked in PLAYTEST.md | pending |
 | G6 world | your PC | only if G2 found a changed `maps`, `tilesets`, `palettes` or `sprites` hash: `tools/e2e/build_world.py --maps all` within its gates (220 maps placed, 0 warnings, the self-check floors) and the client joins the rebuilt world; otherwise the existing worlds stay valid | pending |
 
@@ -1426,6 +1426,37 @@ still 2 and the save format still 5.
    `pin_check.py`), ROADMAP.md (the upgrade watch; Stage 4 items 1–2 done), PLAN.md, MULTI_GAME_PLAN.md (§0 and D11
    bumped; A.2: returning to the launcher restarts the process on desktop, B9; §4.11 step 5: archives import
    directly), `tools/e2e/README.md` (the driver, `KB_READY`'s fields, the versioned folders).
+9. **What the pod's gates found** (UP4, 2026-10-13), each fixed at its seam: (a) the press signal: v0.3.85's
+   `TextBox` hides the arrow on a `{DONE}` ending (`arrowVisible`) while a press still ends the page, and the
+   Minecraft client (`TextBoxModel`) and the e2e tests press only while `ui.update.waiting` is true, so following
+   the engine's drawn arrow froze every scripted text; `kb_engine`'s `textArrow` now reports whether a press does
+   something now (`waiting`, `done` with no choice, a `stay.press` box), the box's `arrowVisible` stays the engine's
+   (`test_lua_ui.py`). (b) The pod builds the export at a few steps a second (CPU-bound Lua, LuaJIT on, the volume
+   fast; 7–8 minutes on both releases): `KB_EXPORT_INDEX_TIMEOUT`/`KB_EXPORT_TEST_TIMEOUT` raise the tests' waits,
+   every export-dependent wait stretches by the same `EXPORT_EXTRA`, and the runner passes it to the drivers as
+   `KB_DRIVER_EXTRA` (their own `KB_DRIVER_SECONDS` defaults, 300–420 s, had quit the game mid-export:
+   `KB_FAIL timeout phase=serve`). (c) `test_crash.py`'s second launch bound its port `addr_in_use` and fell back to
+   the next one: Linux keeps a killed instance's server-closed sockets in TIME_WAIT for a minute (seen with a
+   `/proc/net/tcp` sampler: three on the port, 60 s), and the bridge bound without `SO_REUSEADDR`, a rule made for
+   Windows, where the option lets a second listener share a port. `kb_net` now takes `opts.reuseaddr`, `main.lua`
+   sets it on every platform but Windows (`jit.os`, which the engine's sandbox hands over), the listener is created
+   with `socket.tcp4()`: LuaSocket's `socket.tcp()` has no descriptor until its bind picks the family, so an
+   option set on it fails silently (`setsockopt failed`, seen on the pod's LÖVE), which is why the first attempt
+   changed nothing; a refused option logs `net.option_failed` once and `net.listening` logs `reuseaddr=true`.
+   Verified with Python on the pod: the bind over TIME_WAIT needs the flag on both the dead instance's sockets and
+   the new one, so the first relaunch after this change waits the minute once. The fake socket mirrors the
+   descriptor rule and TIME_WAIT (`net:linger`, `optionFails`), `Bridge(jit_os=)` pins the platform the tests see
+   ("Windows" by default, whatever the host). (d) `test_export.py`'s kind list lacked `routes`, exported since Wild
+   Routes, and once checked, that resource was the one whose Python canonical form differed from the index's hash:
+   it carried the side-area and dungeon chances as fractions (0.5, 0.6), which the protocol's canonical JSON never
+   does (protocol/README.md: "no fractional numbers, so the hash is the same in Python, Java and Lua"; Lua spells
+   0.6 as 0.59999999999999998, Python as 0.6, Java kept the text it was given). The two chances are whole percent
+   now (50, 60) in `data/routes.json`, the `routes` schema, `kb_routes`' check and export, and the Java reader
+   (`ExportRoutes`, which still hands the generator its 0..1); the `routes` resource's hash changes, which calls
+   for no world rebuild (G6 lists maps, tilesets, palettes and sprites). The test now names a mismatching resource.
+   (e) `Game.logicStep` is created lazily (`Game.lua:317`), so the boot check no longer requires it, and
+   `test_s5_ready.py` derives the module count from `main.lua`. (f) `test_multiplayer.py`'s port-fallback test
+   matched the end of the `net.listening` line, which now ends with `reuseaddr=true` off Windows.
 
 ## Pre-flight (PLAN §0.6)
 

@@ -19,8 +19,12 @@ Gen1Recomp side needs the sandbox's `network` permission (see [REFERENCES.md](RE
 
 - **Listening.** gen1-bridge listens on **`127.0.0.1:27151`**: loopback only, so no firewall
   prompt. Both sides read the port from config, so two pairs can run on one PC.
-  - gen1-bridge binds lazily on its first logic step, **without `SO_REUSEADDR`**, and retries every
-    second while the port is busy.
+  - gen1-bridge binds lazily on its first logic step and retries every second while the port is
+    busy. A port is never taken over: **`SO_REUSEADDR` stays off on Windows**, where it would let a
+    second listener bind a port in use; on every other platform it is set, where it only lets the
+    listener bind over its own predecessor's TIME_WAIT remnants (a crashed instance's server-closed
+    connections keep the port "in use" for a minute without it) and a port another listener holds
+    stays busy.
   - It serves one connection at a time; a new connection replaces the old one.
   - Gen1Recomp mods only start once a game boots, so the listener exists from then on.
   - **Why this way round:** the Lua side is single-threaded and sandboxed, and polling `accept()`

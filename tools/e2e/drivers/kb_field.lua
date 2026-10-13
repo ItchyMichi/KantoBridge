@@ -43,7 +43,8 @@ io.stdout:setvbuf("no") -- LÖVE block-buffers stdout; this also unbuffers mod.l
 
 local PORT = tonumber(os.getenv("KB_TEST_PORT") or "") or 27187
 local SCENE = os.getenv("KB_SCENE") or "cut"
-local SECONDS_LIMIT = tonumber(os.getenv("KB_DRIVER_SECONDS") or "") or 600
+local EXTRA_SECONDS = tonumber(os.getenv("KB_DRIVER_EXTRA") or "") or 0 -- the runner's export allowance
+local SECONDS_LIMIT = tonumber(os.getenv("KB_DRIVER_SECONDS") or "") or (600 + EXTRA_SECONDS)
 local STARTER_DEX = 7
 local CUT_TREE_TILE = 0x3d -- OverworldState:tryCut's OVERWORLD tree tile (OC:3416)
 local AWAY_MAP = "ROUTE_1"

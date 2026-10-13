@@ -332,10 +332,11 @@ def test_busy_ports_of_the_span_are_skipped():
 def test_a_refused_port_falls_back_too():
     h = fallback_harness()
     fake = h.lua.net
-    # a port Windows keeps for itself (WSAEACCES): bind says "permission denied"
+    # a port Windows keeps for itself (WSAEACCES): bind says "permission denied" (the listener is a
+    # tcp4() socket, so that creator is the one patched)
     master = h.lua.eval("""function(fake, host, port)
-      local real = fake.socket.tcp
-      fake.socket.tcp = function()
+      local real = fake.socket.tcp4
+      fake.socket.tcp4 = function()
         local s = real()
         local bind = s.bind
         s.bind = function(self, h, p)
@@ -434,3 +435,71 @@ def test_a_broken_listener_starts_over_from_the_configured_port():
     h.time = 4.2
     h.pump()
     assert h.net.port() == PORT and listening_on(h, PORT)
+
+
+# ------------------------------------------------------------ SO_REUSEADDR (off on Windows only)
+
+
+def test_a_predecessors_time_wait_blocks_a_plain_bind_but_not_a_reuseaddr_one():
+    # Linux keeps a crashed listener's server-closed connections in TIME_WAIT for a minute, and a
+    # plain bind fails on the port until then; with SO_REUSEADDR (main.lua asks for it off Windows)
+    # the next instance binds over them at once
+    h = Harness()
+    fake = h.lua.net
+    call(fake, "linger", HOST, PORT)
+    h.pump()
+    assert not h.net.listening() and fake.reuseaddrSet == 0
+    assert [line for line in h.logs if line.startswith("net.")] == [
+        "net.bind_failed err=addr_in_use port=27151 retry=1 stage=bind",
+    ]
+    h2 = Harness(reuseaddr=True)
+    fake2 = h2.lua.net
+    call(fake2, "linger", HOST, PORT)
+    h2.pump()
+    assert h2.net.listening() and listening_on(h2, PORT) and not h2.net.fallback()
+    assert fake2.reuseaddrSet == 1 and fake2.bindHelperUsed == 0, "set by hand, never socket.bind()"
+    assert [line for line in h2.logs if line.startswith("net.")] == [
+        "net.listening host=127.0.0.1 port=27151 reuseaddr=true",
+    ]
+
+
+def test_reuseaddr_never_takes_a_live_listener_over():
+    # a port another listener holds stays busy with the option set: the M9 grace and fallback apply
+    h = Harness(reuseaddr=True, portSpan=8, fallbackAfter=3)
+    fake = h.lua.net
+    call(fake, "occupy", HOST, PORT)
+    h.pump()
+    assert not h.net.listening()
+    h.time = 3.0
+    h.pump()
+    assert listening_on(h, PORT + 1) and not listening_on(h, PORT) and h.net.fallback()
+    assert fake.reuseaddrSet == 3 and fake.bindHelperUsed == 0  # one per bind attempt, none shared
+    assert [line for line in h.logs if line.startswith("net.")] == [
+        "net.bind_failed err=addr_in_use port=27151 retry=1 stage=bind",
+        "net.listening configured=27151 fallback=true host=127.0.0.1 port=27152 reuseaddr=true",
+    ]
+
+
+def test_the_option_goes_on_a_socket_with_a_family_so_it_takes():
+    # LuaSocket's socket.tcp() has no descriptor until its bind() picks the family, and an option set
+    # on it before the bind fails; the listener comes from tcp4(), where it takes (the pod found the
+    # option silently refused on a plain tcp() master, ENGINE_UPGRADE_PLAN G4)
+    h = Harness(reuseaddr=True)
+    socket = h.lua.fake.socket
+    plain = call(socket, "tcp")
+    assert tuple(plain.setoption(plain, b"reuseaddr", True)) == (None, b"setsockopt failed")
+    h.pump()
+    assert h.net.listening() and h.lua.net.reuseaddrSet == 1
+    assert h.lua.net.created == 2  # the probe above and the listener
+
+
+def test_a_refused_option_is_logged_once_and_the_listener_still_binds():
+    h = Harness(reuseaddr=True)
+    fake = h.lua.net
+    fake.optionFails[b"reuseaddr"] = True
+    h.pump()
+    assert h.net.listening() and fake.reuseaddrSet == 0
+    assert [line for line in h.logs if line.startswith("net.")] == [
+        "net.option_failed option=reuseaddr port=27151",
+        "net.listening host=127.0.0.1 port=27151 reuseaddr=true",
+    ]

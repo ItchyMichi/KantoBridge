@@ -63,7 +63,9 @@ end
 local function whole(v, lo, hi)
   return type(v) == "number" and v == floor(v) and v >= lo and v <= hi
 end
-local function chance(v) return type(v) == "number" and v >= 0 and v <= 1 end
+-- a chance in whole percent: the export carries it, and canonical JSON (hashed
+-- alike in Python, Java and Lua) carries no fractional numbers (protocol/README.md)
+local function percent(v) return whole(v, 0, 100) end
 local function range(v, lo, hi)
   return type(v) == "table" and whole(v[1], lo, hi) and whole(v[2], lo, hi) and v[1] <= v[2] and v[3] == nil
 end
@@ -115,7 +117,7 @@ local function entry(json, r)
   -- `routes` resource) and the server
   local a = r.areas
   if a ~= nil then
-    if type(a) ~= "table" or not range(a.main, 1, 8) or (a.side ~= nil and not chance(a.side)) then
+    if type(a) ~= "table" or not range(a.main, 1, 8) or (a.side ~= nil and not percent(a.side)) then
       return nil, "bad_areas"
     end
   end
@@ -146,7 +148,7 @@ local function entry(json, r)
   end
   local d = r.dungeon
   if d ~= nil then
-    if type(d) ~= "table" or (d.chance ~= nil and not chance(d.chance))
+    if type(d) ~= "table" or (d.chance ~= nil and not percent(d.chance))
         or (d.floors ~= nil and d.floors ~= "by_level") then
       return nil, "bad_dungeon"
     end
@@ -557,7 +559,7 @@ function Routes.exportData(json, rt)
       })
       item.areas = json.object({
         main = type(raw.areas) == "table" and raw.areas.main or { 3, 4 },
-        side = type(raw.areas) == "table" and raw.areas.side or 0.5,
+        side = type(raw.areas) == "table" and raw.areas.side or 50,
       })
       item.levels = json.object({
         from = "neighbours",
@@ -565,7 +567,7 @@ function Routes.exportData(json, rt)
         maxRise = type(raw.levels) == "table" and raw.levels.maxRise or 3,
       })
       item.dungeon = json.object({
-        chance = type(raw.dungeon) == "table" and raw.dungeon.chance or 0.6,
+        chance = type(raw.dungeon) == "table" and raw.dungeon.chance or 60,
         floors = "by_level",
       })
       list[#list + 1] = item

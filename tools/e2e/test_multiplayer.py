@@ -316,8 +316,9 @@ def test_a_busy_port_makes_the_instance_take_the_next_free_one():
     assert facts == {"port": str(FALLBACK_PORT + 2), "configured": str(FALLBACK_PORT), "fallback": "true"}
     assert reply == {"port": FALLBACK_PORT + 2, "portConfigured": FALLBACK_PORT, "portFallback": True}
     assert problems == 0 and errs == []
-    assert any(ln.endswith(f"net.listening configured={FALLBACK_PORT} fallback=true host=127.0.0.1 "
-                           f"port={FALLBACK_PORT + 2}") for ln in result.lines)
+    # the line ends with `reuseaddr=true` on every platform but Windows (gen1-bridge README, "Network")
+    assert any(f"net.listening configured={FALLBACK_PORT} fallback=true host=127.0.0.1 "
+               f"port={FALLBACK_PORT + 2}" in ln for ln in result.lines)
     assert not result.timed_out and result.returncode == 0, result.summary()
     assert result.marker("KB_QUIT") is not None and result.marker("KB_FAIL") is None
     assert not result.crash_log_touched and not result.error_spots

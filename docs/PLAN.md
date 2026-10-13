@@ -505,7 +505,8 @@ hot reload), A and B (mod system and engine).
 #### The listener
 
 - Bind lazily on the first `input.step`, not in the entry chunk.
-- Bind without `reuseaddr`; retry every second while the port is busy, logging once.
+- Bind without `reuseaddr` on Windows (elsewhere it only clears a crashed predecessor's TIME_WAIT
+  remnants, never a live listener's port); retry every second while the port is busy, logging once.
 - On `game.ready`, run `collectgarbage("collect")` once, so an old instance's sockets left by hot
   reload are closed.
 - Call `settimeout(0)` on accepted clients.

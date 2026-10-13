@@ -84,6 +84,8 @@ Sandbox.compile = compile
 -- opts.modules      what the real require would hand back, by name: a value,
 --                   or a function(name) returning one (fakes for socket, src.*)
 -- opts.love         a fake love table for the facade (optional)
+-- opts.jitOs        what jit.os reads in the sandbox (default: this host's), so a test
+--                   pins the platform main.lua sees (its SO_REUSEADDR rule)
 -- opts.strict       fail on reads of unknown globals and on new globals
 function Sandbox.env(opts)
   opts = opts or {}
@@ -98,7 +100,8 @@ function Sandbox.env(opts)
     setmetatable = setmetatable, getmetatable = getmetatable, print = print,
     collectgarbage = collectgarbage, _VERSION = _VERSION,
     coroutine = copy(coroutine), math = copy(math), string = copy(string),
-    table = copy(table), bit = copy(bit), jit = jit,
+    table = copy(table), bit = copy(bit),
+    jit = opts.jitOs and setmetatable({ os = opts.jitOs }, { __index = jit }) or jit,
     os = { time = os.time, date = os.date, clock = os.clock, difftime = os.difftime },
   }
   env.love = loveFacade(opts.love, permissions)

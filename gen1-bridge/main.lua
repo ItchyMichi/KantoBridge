@@ -92,6 +92,12 @@ return function(mod)
   -- one of the PORT_SPAN after it (kb_net), so a second instance on the same
   -- PC still listens; exports.port and debug.status say which.
   local PORT_SPAN = 8
+  -- A port is never taken over. SO_REUSEADDR would let a second listener
+  -- bind a port in use on Windows, so it stays off there; elsewhere it only
+  -- lets the listener bind over its own predecessor's TIME_WAIT remnants,
+  -- which keep the port "in use" for a minute after a crash (kb_net). The
+  -- platform comes from LuaJIT's jit.os, which the sandbox hands over.
+  local REUSEADDR = type(jit) == "table" and type(jit.os) == "string" and jit.os ~= "Windows"
   local function validPort(v)
     v = tonumber(v)
     if v and v == math.floor(v) and v >= 1024 and v <= 65535 then return v end
@@ -436,6 +442,7 @@ return function(mod)
     socket = function() return require("socket") end,
     port = port,
     portSpan = PORT_SPAN,
+    reuseaddr = REUSEADDR,
     clock = clock,
     log = log,
     bridge = mod.version,

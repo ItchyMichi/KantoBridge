@@ -10,7 +10,12 @@
 -- listener take the next free port of the span (configured + 1 .. + span),
 -- logging the port it took; when every port of the span is busy it starts
 -- over from the configured port every retry, logging once. A port is never
--- taken over: no reuseaddr, ever. Once bound, the listener stays on its port
+-- taken over: SO_REUSEADDR stays off on Windows, where it lets a second
+-- listener bind a port in use; elsewhere (opts.reuseaddr, main.lua) it is
+-- set, which there only lets the listener bind over its own predecessor's
+-- TIME_WAIT remnants (a crashed instance's server-closed connections keep
+-- the port "in use" for a minute without it) and still refuses a port
+-- another listener holds. Once bound, the listener stays on its port
 -- until setPort() or a broken listener sends it back to the configured one.
 --
 -- The socket module is injected (LuaSocket in game, a fake in tests) and only
@@ -19,7 +24,11 @@
 -- LuaSocket 3.0-rc1 details this relies on (LÖVE 11.5's bundled copy):
 --   * socket.bind() sets reuseaddr, which on Windows can let a second
 --     listener share the port silently, so the listener is built by hand
---     with tcp() + bind() + listen() and no reuseaddr;
+--     with tcp4()/tcp6() + bind() + listen(), reuseaddr only where
+--     opts.reuseaddr asks for it; socket.tcp() has no descriptor until its
+--     bind() picks the family, so an option set on it before the bind
+--     fails ("setsockopt failed"), which is why the listener is created
+--     with the family known, as socket.bind() itself does;
 --   * an accepted client starts out blocking (timeout -1), so settimeout(0)
 --     comes first, or the first receive would freeze the game;
 --   * receive(n) on a non-blocking socket returns nil, "timeout", partial when
@@ -113,6 +122,8 @@ local BIND_ERRORS = {
 --                 configured port may fall back to (default 0: none)
 --   fallbackAfter M9: seconds the configured port must stay busy first
 --                 (default Net.FALLBACK_AFTER)
+--   reuseaddr     set SO_REUSEADDR before every bind (default off; main.lua
+--                 asks for it on every platform but Windows, see above)
 function Net.new(opts)
   assert(type(opts) == "table", "kb_net.new expects options")
   local host = opts.host or "127.0.0.1"
@@ -120,6 +131,7 @@ function Net.new(opts)
   local port = configured               -- the port listened on, or being tried
   local span = opts.portSpan or 0
   local fallbackAfter = opts.fallbackAfter or Net.FALLBACK_AFTER
+  local reuseaddr = opts.reuseaddr == true
   local clock = assert(opts.clock, "kb_net needs a clock")
   local log = opts.log
   local maxLine = opts.maxLine or Net.MAX_LINE
@@ -190,10 +202,16 @@ function Net.new(opts)
   end
 
   -- One listener on p: the socket, or nil plus the stage and the error.
+  -- The family is fixed at creation (tcp4/tcp6 by the host's shape), so the
+  -- socket exists before the bind and takes options; see the header.
   local function listenOn(socket, p)
-    local master, err = socket.tcp()
+    local create = (find(host, ":", 1, true) and socket.tcp6) or socket.tcp4 or socket.tcp
+    local master, err = create()
     if not master then return nil, "create", err end
     master:settimeout(0)
+    if reuseaddr and not master:setoption("reuseaddr", true) then
+      once("option:reuseaddr", "warn", "net.option_failed", { option = "reuseaddr", port = p })
+    end
     local ok
     ok, err = master:bind(host, p)
     if not ok then pcall(master.close, master); return nil, "bind", err end
@@ -205,10 +223,11 @@ function Net.new(opts)
   local function bound(master, p)
     server, port, busySince = master, p, nil
     rearm()
+    local reuse = reuseaddr or nil -- logged only where set, so a log shows what the bind had
     if p == configured then
-      info("net.listening", { host = host, port = p })
+      info("net.listening", { host = host, port = p, reuseaddr = reuse })
     else
-      info("net.listening", { host = host, port = p, configured = configured, fallback = true })
+      info("net.listening", { host = host, port = p, configured = configured, fallback = true, reuseaddr = reuse })
     end
   end
 

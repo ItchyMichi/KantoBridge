@@ -296,6 +296,14 @@ Done when the lupa count is at least today's (925 Lua tests at the M10 gate; 1,4
    (prints only a line count). The agent then checks, by names only, that `local/gen1recomp-data/pokemon-love2d/blue/`
    has `rom-cache.complete` with a new modification time, and runs `kb_union_off.lua` once.
 3. Gates G1–G4 (§5). A stale import shows as `kb_ready` timing out with the launcher open: the runner's message says so.
+   *As carried out (2026-10-13): G0–G2 passed first time apart from the lazily created `Game.logicStep` (out of the
+   boot check) and the export's speed on the pod (7–8 minutes on both releases, so the e2e waits scale through
+   `KB_EXPORT_INDEX_TIMEOUT`/`KB_EXPORT_TEST_TIMEOUT`, and the drivers' own limits through `KB_DRIVER_EXTRA`); G3
+   found the press-signal regression (the client presses only while `waiting`, v0.3.85 hides the arrow on `{DONE}`
+   texts); G4 found the Linux TIME_WAIT bind after a crash (`SO_REUSEADDR` off Windows now, through `tcp4()`), a stale
+   kind list in `test_export.py`, and the `routes` resource carrying its two chances as fractions against the
+   protocol's canonical-number rule (whole percent now, so its hash changes; no rebuild). PROGRESS.md note 9 has
+   the details.*
 
 ### UP5: the user's PC, the Windows build
 

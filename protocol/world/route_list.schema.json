@@ -45,7 +45,10 @@
             "additionalProperties": false,
             "properties": {
               "main": {"type": "array", "minItems": 2, "maxItems": 2, "items": {"type": "integer", "minimum": 1, "maximum": 8}},
-              "side": {"type": "number", "minimum": 0, "maximum": 1}
+              "side": {
+                "type": "integer", "minimum": 0, "maximum": 100,
+                "description": "The chance of a side area, in whole percent (canonical JSON carries no fractions)."
+              }
             }
           },
           "levels": {
@@ -70,7 +73,10 @@
             "type": "object",
             "additionalProperties": false,
             "properties": {
-              "chance": {"type": "number", "minimum": 0, "maximum": 1},
+              "chance": {
+                "type": "integer", "minimum": 0, "maximum": 100,
+                "description": "The chance of a dungeon, in whole percent (canonical JSON carries no fractions)."
+              },
               "floors": {"enum": ["by_level"]}
             }
           },

@@ -104,6 +104,7 @@ end
 --   socket       LuaSocket, or a function returning it (resolved lazily)
 --   port         listening port (the configured one)
 --   portSpan, fallbackAfter   M9: kb_net's fallback when the port is busy
+--   reuseaddr    kb_net's SO_REUSEADDR (off on Windows)
 --   clock        seconds (love.timer.getTime in game)
 --   log          kb_log logger
 --   bridge       gen1-bridge's version string
@@ -146,6 +147,7 @@ function Session.new(opts)
     port = opts.port,
     portSpan = opts.portSpan,
     fallbackAfter = opts.fallbackAfter,
+    reuseaddr = opts.reuseaddr,
     clock = clock,
     log = log,
     maxLine = catalog.maxLineBytes,

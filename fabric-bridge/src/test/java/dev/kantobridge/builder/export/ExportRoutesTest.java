@@ -16,9 +16,9 @@ class ExportRoutesTest {
 			  "town": {"map": "TEST_TOWN", "cleared": [[1, 0]], "triggers": [[2, 0], [3, 0]], "back": {"x": 2, "y": 1, "facing": "down"}},
 			  "routeMap": {"id": "KB_ROUTE_TEST_ZONE", "width": 1, "height": 1, "a": {"x": 0, "y": 0}, "arrive": {"x": 1, "y": 0, "facing": "right"}},
 			  "trainers": {"perArea": [1, 3], "rematch": "each_visit", "classes": ["OPP_TEST"]},
-			  "areas": {"main": [3, 4], "side": 0.5},
+			  "areas": {"main": [3, 4], "side": 50},
 			  "levels": {"from": "neighbours", "perArea": 1, "maxRise": 3},
-			  "dungeon": {"chance": 0.6, "floors": "by_level"}}]}""";
+			  "dungeon": {"chance": 60, "floors": "by_level"}}]}""";
 
 	private static ExportRoutes parse(String text) throws Exception {
 		return ExportRoutes.parse(DataReader.of(ProtoJson.parse(text), "routes/all.json"));
@@ -37,7 +37,8 @@ class ExportRoutesTest {
 		assertThrows(DataException.class, () -> parse(ZONE.replace("\"free_roam\"", "\"connecting\"")));
 		assertThrows(DataException.class, () -> parse(ZONE.replace("\"forest\"", "\"cave\"")));
 		assertThrows(DataException.class, () -> parse(ZONE.replace("[3, 4]", "[4, 3]")));
-		assertThrows(DataException.class, () -> parse(ZONE.replace("\"side\": 0.5", "\"side\": 1.5")));
+		assertThrows(DataException.class, () -> parse(ZONE.replace("\"side\": 50", "\"side\": 150")));
+		assertThrows(DataException.class, () -> parse(ZONE.replace("\"side\": 50", "\"side\": 0.5")), "whole percent, never a fraction");
 		assertThrows(DataException.class, () -> parse(ZONE.replace("\"version\": 1", "\"version\": 2")));
 		assertThrows(DataException.class, () -> parse(ZONE.replace("\"test_zone\"", "\"Test-Zone\"")));
 	}

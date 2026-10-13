@@ -35,7 +35,8 @@
 io.stdout:setvbuf("no")
 
 local PORT = tonumber(os.getenv("KB_TEST_PORT") or "") or 27209
-local SECONDS_LIMIT = tonumber(os.getenv("KB_DRIVER_SECONDS") or "") or 1200
+local EXTRA_SECONDS = tonumber(os.getenv("KB_DRIVER_EXTRA") or "") or 0 -- the runner's export allowance
+local SECONDS_LIMIT = tonumber(os.getenv("KB_DRIVER_SECONDS") or "") or (1200 + EXTRA_SECONDS)
 local MAPS = os.getenv("KB_PILOT_MAPS") or "MT_MOON_1F,MT_MOON_B1F,MT_MOON_B2F"
 local FIRST = os.getenv("KB_PILOT_FIRST")
 local DIR = os.getenv("KB_PILOT_DIR")

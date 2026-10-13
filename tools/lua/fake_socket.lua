@@ -11,8 +11,13 @@
 --   * receive(n): data; or nil, "timeout"|"closed", partial (buffer.c);
 --     "*l" drops CRs and also hands back its partial line on timeout;
 --   * send(s, i, j): index of the last byte sent; or nil, err, last;
---   * bind() on a busy port: nil, "address already in use";
---   * socket.bind() sets reuseaddr (socket.lua), which tests can detect.
+--   * bind() on a busy port: nil, "address already in use"; on a port a
+--     predecessor left in TIME_WAIT (net:linger) too, unless the socket
+--     set reuseaddr, as on Linux;
+--   * socket.bind() sets reuseaddr (socket.lua), which tests can detect;
+--   * socket.tcp() has no descriptor until bind() or connect() picks the
+--     family, so setoption() on it fails first ("setsockopt failed");
+--     tcp4() and tcp6() have one from the start, as in LuaSocket.
 --
 -- Test side:
 --   local fake = FakeSocket.new()
@@ -21,6 +26,8 @@
 --   peer:send("line\n"); peer:take() -> bytes the server sent; peer:close()
 --   peer:setWindow(n)          -- server may send n more bytes, then "timeout"
 --   fake.net:occupy(host, port) -- another process holds the port
+--   fake.net:linger(host, port) -- a dead listener's TIME_WAIT remnant on it
+--   fake.net.optionFails[name] = true  -- setoption(name) fails on every socket
 
 local FakeSocket = {}
 
@@ -38,7 +45,7 @@ local function checkAny(obj, method)
 end
 
 function FakeSocket.new()
-  local net = { listeners = {}, occupied = {}, time = 0, nextPort = 50000,
+  local net = { listeners = {}, occupied = {}, lingering = {}, optionFails = {}, time = 0, nextPort = 50000,
                 created = 0, reuseaddrSet = 0, bindHelperUsed = 0, accepted = 0 }
   local socket = { _VERSION = "LuaSocket 3.0-rc1" }
 
@@ -67,6 +74,9 @@ function FakeSocket.new()
 
   function Tcp:setoption(name, value)
     checkAny(self, "setoption")
+    if (self._class == "tcp{master}" and not self.family) or net.optionFails[name] then
+      return nil, "setsockopt failed"
+    end
     self.options[name] = value
     if name == "reuseaddr" and value then net.reuseaddrSet = net.reuseaddrSet + 1 end
     return 1
@@ -87,7 +97,8 @@ function FakeSocket.new()
     end
     local k = key(host, port)
     if net.occupied[k] or net.listeners[k] then return nil, "address already in use" end
-    self.host, self.port = host, port
+    if net.lingering[k] and not self.options.reuseaddr then return nil, "address already in use" end
+    self.host, self.port, self.family = host, port, self.family or "inet"
     return 1
   end
 
@@ -238,22 +249,33 @@ function FakeSocket.new()
     return "127.0.0.1", self.conn.peerPort, "inet"
   end
   function Tcp:dirty() return self.conn ~= nil and #self.conn.toServer > 0 end
-  function Tcp:getfamily() return "inet" end
+  function Tcp:getfamily() return self.family or "unspec" end
   Tcp.__tostring = function(self) return self._class .. ": fake" end
 
   -- ------------------------------------------------------------ module
 
   function socket.tcp()
     net.created = net.created + 1
-    return newTcp("tcp{master}")
+    return newTcp("tcp{master}") -- no family, so no descriptor, until bind()
   end
-  socket.tcp4 = socket.tcp
+  function socket.tcp4()
+    net.created = net.created + 1
+    local sock = newTcp("tcp{master}")
+    sock.family = "inet"
+    return sock
+  end
+  function socket.tcp6()
+    net.created = net.created + 1
+    local sock = newTcp("tcp{master}")
+    sock.family = "inet6"
+    return sock
+  end
   function socket.gettime() return net.time end
 
-  -- socket.lua _M.bind: sets reuseaddr, which gen1-bridge must avoid
+  -- socket.lua _M.bind: sets reuseaddr (on a tcp4() socket), which gen1-bridge must avoid
   function socket.bind(host, port, backlog)
     net.bindHelperUsed = net.bindHelperUsed + 1
-    local sock = socket.tcp()
+    local sock = socket.tcp4()
     sock:setoption("reuseaddr", true)
     local ok, err = sock:bind(host, port)
     if not ok then sock:close() return nil, err end
@@ -278,7 +300,8 @@ function FakeSocket.new()
   end
 
   function net:occupy(host, port) net.occupied[key(host, port)] = true end
-  function net:free(host, port) net.occupied[key(host, port)] = nil end
+  function net:free(host, port) net.occupied[key(host, port)] = nil; net.lingering[key(host, port)] = nil end
+  function net:linger(host, port) net.lingering[key(host, port)] = true end
   function net:listening(host, port)
     local l = net.listeners[key(host, port)]
     return l ~= nil and not l.closed

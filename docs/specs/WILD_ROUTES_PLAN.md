@@ -141,10 +141,10 @@ the world export, so both halves use the same list. Today it has one entry.
 | `from` | The exit: game, map, cell, facing and the clearing's depth | `red` or `blue`, `VIRIDIAN_CITY`, your spot |
 | `to` | The far end, for a connecting route | none |
 | `theme` | The look and the props | `forest` |
-| `areas` | Areas on the main line, and the chance of a side area | 3–4, 0.5 |
+| `areas` | Areas on the main line, and the chance of a side area (whole percent) | 3–4, 50 |
 | `levels` | Where species and levels come from, and the rise per area | `neighbours`, +1 per area, up to +3 |
 | `trainers` | Per area, and when they want a rematch | 1–3, `each_visit` |
-| `dungeon` | The chance of one, and its floors | 0.6, by level (§4.8) |
+| `dungeon` | The chance of one (whole percent), and its floors | 60, by level (§4.8) |
 | `music` | The route map's song | a Gen 1 route theme |
 
 Every map in the list is named with its game. The file holds nothing from a map's contents.

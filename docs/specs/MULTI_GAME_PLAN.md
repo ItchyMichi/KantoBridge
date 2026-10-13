@@ -463,7 +463,7 @@ hidden player waits on the route map and `MovementSync` is "away" (`client/move/
            "classes": ["OPP_HIKER", "OPP_YOUNGSTER"], "music": "Music_Routes1"},
   "to":   {"region": "hoenn", "games": ["emerald"], "map": "<engine map id>", "x": 0, "y": 0, "facing": "left", "depth": 2,
            "classes": ["<gen 3 classes>"], "music": "<gen 3 song>"},
-  "areas": {"main": [2, 3], "side": 0.5}, "levels": {"from": "neighbours", "perArea": 1, "maxRise": 3},
+  "areas": {"main": [2, 3], "side": 50}, "levels": {"from": "neighbours", "perArea": 1, "maxRise": 3},
   "trainers": {"perArea": [1, 2], "rematch": "each_visit"}, "dungeon": {"chance": 0}
 }
 ```

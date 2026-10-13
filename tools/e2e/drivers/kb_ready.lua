@@ -10,7 +10,8 @@
 io.stdout:setvbuf("no") -- LÖVE block-buffers stdout; this also unbuffers mod.log
 
 local FRAME_LIMIT = tonumber(os.getenv("KB_DRIVER_FRAMES") or "") or 3600
-local SECONDS_LIMIT = tonumber(os.getenv("KB_DRIVER_SECONDS") or "") or 60
+local EXTRA_SECONDS = tonumber(os.getenv("KB_DRIVER_EXTRA") or "") or 0 -- the runner's export allowance
+local SECONDS_LIMIT = tonumber(os.getenv("KB_DRIVER_SECONDS") or "") or (60 + EXTRA_SECONDS)
 
 local function fail(reason)
   print("KB_FAIL " .. reason)

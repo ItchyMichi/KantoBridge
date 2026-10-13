@@ -42,10 +42,10 @@ TOWN = {
 ZONE = {
     "id": "test_zone", "name": "TEST WILDS", "kind": "free_roam", "theme": "forest",
     "from": {"games": ["red", "blue"], "map": "TEST_WOODS", "x": 2, "y": 2, "facing": "up", "depth": 1},
-    "areas": {"main": [3, 4], "side": 0.5},
+    "areas": {"main": [3, 4], "side": 50},
     "levels": {"from": "neighbours", "perArea": 1, "maxRise": 3},
     "trainers": {"perArea": [1, 3], "rematch": "each_visit", "classes": ["OPP_TEST", "OPP_NOBODY"]},
-    "dungeon": {"chance": 0.6, "floors": "by_level"},
+    "dungeon": {"chance": 60, "floors": "by_level"},
     "music": "TEST_SONG",
 }
 ROUTE_MAP = "KB_ROUTE_TEST_ZONE"

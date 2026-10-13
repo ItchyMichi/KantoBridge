@@ -47,7 +47,9 @@ LINUX = sys.platform.startswith("linux")
 PINNED = "0.3.85"
 # A slow host builds the world export slowly (the RunPod pod under Xvfb: about 460 s on either engine release,
 # ENGINE_UPGRADE_PLAN G2): the tests that fetch the export wait INDEX_TIMEOUT for export.index and add EXPORT_EXTRA
-# to their own limits; a PC keeps the defaults (240 s, 0). Set KB_EXPORT_INDEX_TIMEOUT to raise them.
+# to their own limits; a PC keeps the defaults (240 s, 0). Set KB_EXPORT_INDEX_TIMEOUT to raise them. The drivers'
+# own time limits (their KB_DRIVER_SECONDS defaults) stretch by the same allowance: launch() passes it as
+# KB_DRIVER_EXTRA, so a slow export never trips a driver before the test's own (stretched) wait does.
 INDEX_TIMEOUT = int(os.environ.get("KB_EXPORT_INDEX_TIMEOUT", "240"))
 EXPORT_EXTRA = max(0, INDEX_TIMEOUT - 240)
 
@@ -308,6 +310,8 @@ def _start(driver: Path | None, game: str | None, extra_env: dict[str, str] | No
         command, cwd = [str(LINUX_APP / "AppRun"), f"--game={game}"], LINUX_APP
     else:
         command, cwd = [str(install / "gen1recomp.exe"), f"--game={game}"], install  # never --console: it takes stdout away
+    if EXPORT_EXTRA > 0:
+        env.setdefault("KB_DRIVER_EXTRA", str(EXPORT_EXTRA))
     env.update(extra_env or {})
     proc = subprocess.Popen(
         command, cwd=str(cwd), env=env,

@@ -25,7 +25,8 @@
 io.stdout:setvbuf("no") -- LÖVE block-buffers stdout; this also unbuffers mod.log
 
 local PORT = tonumber(os.getenv("KB_TEST_PORT") or "") or 27191
-local SECONDS_LIMIT = tonumber(os.getenv("KB_DRIVER_SECONDS") or "") or 600
+local EXTRA_SECONDS = tonumber(os.getenv("KB_DRIVER_EXTRA") or "") or 0 -- the runner's export allowance
+local SECONDS_LIMIT = tonumber(os.getenv("KB_DRIVER_SECONDS") or "") or (600 + EXTRA_SECONDS)
 local MAP = "ROUTE_1"
 local STARTER_DEX = 4
 -- two battle items (PLAN Appendix B), a key item and a field item

@@ -59,7 +59,8 @@ io.stdout:setvbuf("no") -- LÖVE block-buffers stdout; this also unbuffers mod.l
 
 local PORT = tonumber(os.getenv("KB_TEST_PORT") or "") or 27173
 local SCENE = os.getenv("KB_SCENE") or "e4"
-local SECONDS_LIMIT = tonumber(os.getenv("KB_DRIVER_SECONDS") or "") or 900
+local EXTRA_SECONDS = tonumber(os.getenv("KB_DRIVER_EXTRA") or "") or 0 -- the runner's export allowance
+local SECONDS_LIMIT = tonumber(os.getenv("KB_DRIVER_SECONDS") or "") or (900 + EXTRA_SECONDS)
 local LEAD_DEX = 7
 local CREDITS_SPEED = 10
 local DELTA = { up = { 0, -1 }, down = { 0, 1 }, left = { -1, 0 }, right = { 1, 0 } }

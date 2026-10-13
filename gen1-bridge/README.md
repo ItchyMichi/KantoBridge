@@ -64,8 +64,10 @@ clearings in their `blocks` ([docs/PROTOCOL.md](../docs/PROTOCOL.md#wild-routes-
 Everything runs from the `input.step` hook (about 60 times a second; `core.update` doesn't fire under
 test drivers), guarded so the hook always calls `next`:
 
-1. **Network:** the listener binds lazily on the first step (no `SO_REUSEADDR`, ever; a busy port is
-   retried every second and logged once), takes one client at a time (a newer one replaces it), and
+1. **Network:** the listener binds lazily on the first step (a busy port is retried every second and
+   logged once; `SO_REUSEADDR` only off Windows, where it merely clears a crashed predecessor's
+   TIME_WAIT remnants and never shares a live listener's port, logged as `reuseaddr=true` on
+   `net.listening`), takes one client at a time (a newer one replaces it), and
    moves bytes without ever blocking. **M9:** when the configured port stays busy (or refused) for
    3 seconds, the listener takes the next free port of the 8 after it (27152 … 27159 for the default
    27151), logs `net.listening port=<n> configured=<p> fallback=true`, and reports it in the exports

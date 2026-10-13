@@ -34,6 +34,16 @@ def test_listener_binds_lazily_on_the_first_step():
     assert rig.b.net.reuseaddrSet == 0 and rig.b.net.bindHelperUsed == 0
 
 
+def test_the_listener_sets_reuseaddr_on_every_platform_but_windows():
+    # off on Windows, where SO_REUSEADDR would let a second listener bind a port in use; on
+    # elsewhere, where it only clears a crashed predecessor's TIME_WAIT remnants (kb_net)
+    for jit_os, expected in (("Windows", 0), ("Linux", 1), ("OSX", 1)):
+        rig = Rig(jit_os=jit_os)
+        rig.step()
+        assert rig.listening() and rig.status.bound is True, jit_os
+        assert (rig.b.net.reuseaddrSet, rig.b.net.bindHelperUsed) == (expected, 0), jit_os
+
+
 def test_hello_ok_then_snapshot():
     rig, peer, msgs = established()
     ok, snap = msgs

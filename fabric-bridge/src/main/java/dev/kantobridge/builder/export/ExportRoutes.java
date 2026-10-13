@@ -85,15 +85,8 @@ public record ExportRoutes(List<Zone> zones) {
 		return new ExportRoutes(zones);
 	}
 
+	/** A chance the export carries in whole percent (canonical JSON carries no fractions), as the 0..1 the generator rolls. */
 	private static double chance(DataReader r, String name) throws DataException {
-		var e = r.element(name);
-		if (!e.isJsonPrimitive() || !e.getAsJsonPrimitive().isNumber()) {
-			throw new DataException(r.path(name), "not a number");
-		}
-		double v = e.getAsDouble();
-		if (!(v >= 0 && v <= 1)) {
-			throw new DataException(r.path(name), "out of range");
-		}
-		return v;
+		return r.integer(name, 0, 100) / 100.0;
 	}
 }

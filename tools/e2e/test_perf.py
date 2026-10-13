@@ -26,7 +26,7 @@ import time
 import pytest
 
 from fake_minecraft import FakeMinecraft
-from run_gen1recomp import launch, preflight
+from run_gen1recomp import EXPORT_EXTRA, launch, preflight
 from test_ui import ENGINE_ROWS, UiWalker
 from test_walk import DOOR, PALLET_MIN_ROW, WARP_TILE, _export_maps
 
@@ -158,7 +158,7 @@ async def _scenario(port, running):
 
 
 @pytest.mark.e2e
-@pytest.mark.timeout(600)
+@pytest.mark.timeout(600 + EXPORT_EXTRA)
 def test_the_per_step_budget_and_the_mirror_rate_over_a_busy_scenario():
     pf = preflight()
     if not pf.ok:
@@ -166,7 +166,7 @@ def test_the_per_step_budget_and_the_mirror_rate_over_a_busy_scenario():
     with launch("kb_perf.lua", extra_env={"KB_TEST_PORT": str(TEST_PORT)}) as running:
         marker = running.wait_marker("KB_OVERWORLD", timeout=150)
         assert marker is not None, running.result.summary()
-        w, report, st = asyncio.run(asyncio.wait_for(_scenario(TEST_PORT, running), 480))
+        w, report, st = asyncio.run(asyncio.wait_for(_scenario(TEST_PORT, running), 480 + EXPORT_EXTRA))
         result = running.wait(timeout=60)
 
     perf = {k: st[k] for k in ("perfSteps", "perfAvgUs", "perfMaxUs", "perfOver1ms", "perfTotalUs", "perfFrames",
