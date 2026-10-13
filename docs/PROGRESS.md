@@ -725,7 +725,7 @@ the full suite at H1, H5 and H7.
 | H2 | Edge walls on tile-pair edges | **done** (PairEdgesTest 4, a wall GameTest; JUnit builder suite, GameTests 99) | 2026-10-12 | `H2: edge walls on tile-pair edges` |
 | H3 | Caves in an area of their own | **done** (CavePlannerTest 8, the synthetic cave; JUnit 991, GameTests 99, Python 1,487); the real world's dry run on the pod: 0 warnings (note 8) | 2026-10-12 | `H3: caves in an area of their own` |
 | H4 | Raised ground in caves | **done** (CaveLevelsTest 8, RaisedCaveTest 7, two GameTests; JUnit 1,010, GameTests 100, Python 1,487); the real world's dry run on the pod: note 11 | 2026-10-12 | `H4: raised ground in caves` |
-| H5 | Real ladders and holes | | | |
+| H5 | Real ladders and holes | **done**; checkpoint: JUnit 1,032 (7 skipped), GameTests 101, Python and Lua 1,516; the real world's dry run: note 13 | 2026-10-13 | `H5 (1/3)`–`(3/3)` |
 | H6 | Pilot | | | |
 | H7 | Every cave in 3D | | | |
 
@@ -875,6 +875,61 @@ the full suite at H1, H5 and H7.
       sections p95 2,099 and at most 3,452 quads (budgets 12,000 and 30,000); the shape map 311,004 characters on the
       wire.
     - **The pilot** (HD11): Mt. Moon qualifies (1F and B2F raised, B1F flat).
+
+### Caves in 3D: H5 notes
+
+1. **The protocol, first:** `warp.take` (M→G) `{from{map,x,y}, to{map,x,y,facing}, kind: ladder|hole}`;
+   `warp.taken` (G→M) `{ok, reason?}` (`busy`, `mode`, `map`, `far`) with `re`; `warp` may carry the take's `re`.
+   Schemas, examples, both catalogs, PROTOCOL.md's "Ladders and holes (H5)" and its WorldIndex `shafts`.
+2. **gen1-bridge** (`act/kb_climb.lua`): a take is accepted only while idle, on `from`'s map, with the hidden player on
+   `from` or beside it; it queues the engine's own `warp` command (as `Routes.warpTo`), a running script answering
+   `busy`. The warp observer gives the next script warp the take's kind (`stairs` or `hole`) and `re`; an expectation
+   no warp follows lapses after 120 steps. fake_gen1 answers it the same way.
+3. **Rooms** (`CavePieces`): a cave map's walk-graph parts (walkable and water cells; a swap site's cells count as
+   walked on, so rooms never depend on the story), each with the rock round it.
+4. **The layout** (`CaveRooms`): a link per warp between two maps of the complex; a shaft's when it runs between two
+   floors from a hole or a ladder (a warp tile, not a door); a ladder works up too when its bottom leads back (HD10).
+   Breadth first from the entrance's room, shafts' links first. A room that would clash with another of its floor moves
+   east; rooms of one map may share a rock wall but never a floor, another map's keep H3's 16 blocks. Every map of a
+   complex built in 3D is drawn as its rooms (pieces). Fades by reason, as notes `cave_fades_<reason>`: `loop` (a room
+   placed by another link), `moved_aside`, `same_floor`, `one_way_up`, `hole_up`, `crosses_floor`, `off_floor`.
+5. **Deviations (§3.5):**
+   - a hole is the export's hole flag (a pad of its own), not a warp tile;
+   - a shaft that would cross a room of a floor between its ends keeps its fade (`crosses_floor`) rather than moving
+     that room down. Gen 1's ladders join neighbouring floors, and the dry run found none.
+6. **What gets built:**
+   - each room at its offset with its own ring; other rooms' cells in its rectangle are rock;
+   - per shaft: air from over the bottom cell's feet up through the top cell's floor;
+   - `kantobridge:shaft_ladder` (`BlockCode.KIND_LADDER` 13) up the wall you face walking into the top cell (HD6),
+     from the bottom cell's feet to the top's. It is Minecraft's ladder model, in the `climbable` tag, and stands with
+     no wall behind it. A hole has none;
+   - rock round the column where neither room's volume reaches, and a light half way unless the cave is dark;
+   - shape keys stay out of shaft columns; habitats, shape grids and biome boxes follow the rooms.
+7. **The index:** `shafts` (written only when there are any); a block inside one is in no cell; `shaftAt`, `shaftEnd`.
+8. **The client** (`MovementSync`): no step onto a shaft's end (a top, or a bottom climbed up too). Walking onto one,
+   or dropping in from its top, starts a climb; in the shaft nothing is sent or corrected. At the far end (feet on its
+   floor going down, at its feet level going up) it sends `warp.take` and holds the controls (lock reason `WARP`); the
+   warp with its `re` needs no fade or teleport. A refusal (`busy` retried every 200 ms for a second) or no warp in 3 s
+   sends the player back through the fade. Stepping back to the hidden player ends the climb. **Deviation (HD12):**
+   stepping onto another neighbour walks the hidden player round the end (two steps round a corner, four across)
+   without checking the cells first, since the client doesn't know which are walkable; a refused step pulls the
+   player back, as any refused step does.
+9. **The synthetic cave:** B1F's two rooms lie apart (its east room 4 blocks north of its west room); the hole's
+   landing moved to (5, 5) so that it lines up with the ladder into the same room: three shafts.
+10. **Tests:** `CaveRoomsTest` (6), `ShaftTest` (5), `ShaftClimbTest` (10), a `MoveControllerTest` case, 14 Lua tests
+    (`test_lua_climb.py`), a stand-in test; GameTests: a player falls through the hole onto its bottom cell; the
+    ladder is climbable; walkability over rooms.
+11. **Flaky:** two dungeon GameTests (Wild Routes' monster house and a cleared slot) failed once and passed on the
+    next runs; nothing in H5 touches them.
+12. **The checkpoint:** JUnit 1,032 (7 skipped), GameTests 101, Python and Lua 1,516 (46 skipped).
+13. **The real world's dry run** (2026-10-13, kb-dev2, two runs of about 4 minutes; kb-dev's host had no room):
+    - **87 rooms** on the 19 cave maps (Rock Tunnel 21 and 20, Mt. Moon 3, 4 and 3), 0 warnings, no wall missing;
+    - **37 ladders** between cave floors, and no hole (no cave warp cell has the hole flag): **15 are real shafts**,
+      8 or 10 blocks long. 22 keep their fade: 10 `loop`, 10 `moved_aside`, and Diglett's Cave's two entrance rooms on
+      its own floor (`same_floor`);
+    - **Mt. Moon (the pilot):** 3 of its 7 ladders are shafts (two from 1F to B1F, one from B1F to B2F);
+    - load: habitat blocks 1,059 of reach 6; the caves' sections p95 2,138 and at most 3,479 quads; the shape map
+      319,136 characters on the wire.
 
 ## Wild Routes
 

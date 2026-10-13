@@ -228,7 +228,8 @@ What gets built:
 - **Links.** A link is a warp between two cave maps whose source cell is a warp tile (cell flag 32) and not a door: a
   hole if the cell has the hole flag (512), else a ladder (`gen1-bridge/export/kb_cells.lua:17-22, 124-127`). The
   exported warps are `{x, y, to, warp}` (`protocol/export/map.schema.json:98-112`). A ladder works both ways when the
-  warp at its bottom leads back to its top (HD10).
+  warp at its bottom leads back to its top (HD10). *As built (H5): a hole is the hole flag alone (a pad, not a warp
+  tile); PROGRESS, H5 note 5.*
 - **Pieces.** A cave map's pieces are the connected parts of its walk graph: walkable and water cells joined by any
   edge the game could ever use. Pairs, ledges and story blockers count as joined, so pieces never depend on the story.
   Rock cells belong to the pieces they border. Inside its rectangle, a piece draws other pieces' cells as rock.
@@ -237,7 +238,8 @@ What gets built:
      the two end cells share a column. A link that disagrees with a piece already placed (a loop that doesn't close)
      keeps the fade (HD5).
   2. **Down:** pieces go in floor order, with the top floor at feet 64. A piece sits at least 11 blocks (HD3) below
-     every piece above that it overlaps or links to. A piece in the way of a shaft moves down until it isn't.
+     every piece above that it overlaps or links to. A piece in the way of a shaft moves down until it isn't. *As
+     built (H5): that shaft keeps its fade instead; the real world has none (PROGRESS, H5 notes 5 and 13).*
   3. Pieces no link joins (a part with no ladder, or one whose links kept the fade) keep their map's arrangement among
      themselves and sit beside the rest.
   4. A complex that can't be laid out, deeper than Y −200 or wider than its slot rules allow, falls back to H3's whole
