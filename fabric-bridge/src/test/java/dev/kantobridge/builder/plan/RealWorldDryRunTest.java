@@ -21,7 +21,6 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.TreeMap;
 import net.minecraft.core.BlockPos;
 import org.junit.jupiter.api.Test;
@@ -38,10 +37,10 @@ class RealWorldDryRunTest {
 	@Test
 	void dryRun() throws Exception {
 		ExportBundle bundle = ExportBundle.open(Path.of(System.getProperty("kb.realBundle")));
-		// every cave in 3D (H7's world), or with -Pkb.caves3d=pilot the pilot's only (the build's default until H6 is approved)
+		// every cave in 3D (the build's default since H7), or with -Pkb.caves3d=pilot the pilot's only (H6's world)
 		boolean pilot = "pilot".equals(System.getProperty("kb.caves3d"));
 		long started = System.nanoTime();
-		WorldPlan plan = WorldPlanner.plan(bundle, new WorldPlanner.Options(null, 0, 0, -256, true, pilot ? Caves3d.PILOT : Set.of(Caves3d.ALL)));
+		WorldPlan plan = WorldPlanner.plan(bundle, new WorldPlanner.Options(null, 0, 0, -256, true, pilot ? Caves3d.PILOT : Caves3d.EVERY));
 		JsonObject out = new JsonObject();
 		out.addProperty("caves3d", pilot ? "pilot" : Caves3d.ALL);
 		out.addProperty("plan_ms", (System.nanoTime() - started) / 1_000_000L);

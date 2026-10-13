@@ -95,4 +95,19 @@ class PilotPlanTest {
 		assertEquals(2, stairs.size(), "both stairs cells");
 		assertArrayEquals(new int[] {3, 3}, stairs.get(1).start());
 	}
+
+	@Test
+	void aListOfShotsFilmsWhatItNamesInItsOrder() {
+		List<String> caves = PilotPlan.caves3d(index);
+		List<PilotPlan.Shot> pilot = PilotPlan.shots(index, caves, cells, null);
+		assertEquals(List.of("stairs", "ladder"), pilot.stream().map(PilotPlan.Shot::kind).toList(), "no list: the pilot's two");
+		assertEquals(List.of(2, 5), pilot.stream().map(PilotPlan.Shot::options).toList(), "with every option of every cave");
+		// B1F has no stairs, TEST_HOUSE is no cave in 3D, and "walk" is no shot
+		List<PilotPlan.Shot> listed = PilotPlan.shots(index, caves, cells,
+				"ladder:TEST_CAVE_1F, stairs:TEST_CAVE_B1F,stairs:TEST_CAVE_1F,ladder:TEST_HOUSE,walk:TEST_CAVE_1F,TEST_CAVE_1F");
+		assertEquals(List.of("ladder", "stairs"), listed.stream().map(PilotPlan.Shot::kind).toList());
+		assertEquals(new CellPos("TEST_CAVE_1F", 9, 3), listed.get(0).ladders().get(0).shaft().top());
+		assertArrayEquals(new int[] {3, 2}, listed.get(1).stairs().get(0).start());
+		assertEquals(List.of(), PilotPlan.shots(index, caves, cells, "stairs:TEST_CAVE_B1F"), "nothing to film");
+	}
 }

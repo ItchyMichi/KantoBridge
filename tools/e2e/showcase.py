@@ -4,10 +4,13 @@ caves and woods plan's CW5): a look round at each stop of drivers/kb_tour.lua (M
 recorded into its own file and joined into --record. With --scene pilot (the caves in 3D plan's H6): the autopilot
 plans its shots from the world index (a cave's stairs to its raised ground and the cliff's edge, a ladder down and back
 up) and drivers/kb_pilot.lua puts the hidden player where each starts; each shot is its own file, joined into --record.
+--shots names the shots instead (H7's video): stairs:<map> or ladder:<map>, comma-separated.
 
     python tools/e2e/showcase.py --record /workspace/videos/wild-zone.mp4 [--world Kanto] [--port 27208]
     python tools/e2e/showcase.py --scene tour --record /workspace/videos/caves-woods.mp4 --world KantoCW
     python tools/e2e/showcase.py --scene pilot --record /workspace/videos/caves-3d.mp4
+    python tools/e2e/showcase.py --scene pilot --maps ROCK_TUNNEL_1F,ROCK_TUNNEL_B1F \
+        --shots ladder:ROCK_TUNNEL_1F --record /workspace/videos/rock-tunnel.mp4
 
 Linux with an X server (Xvfb on the pod): DISPLAY is Minecraft's screen; --game-display gives Gen1Recomp its own, so
 its window never covers Minecraft's in the recording.
@@ -120,6 +123,8 @@ def main(argv=None) -> int:
     parser.add_argument("--scene", choices=("wild_zone", "tour", "pilot"), default="wild_zone", help="the autopilot's scene")
     parser.add_argument("--maps", default="MT_MOON_1F,MT_MOON_B1F,MT_MOON_B2F",
                         help="with --scene pilot: the cave's maps (their trainers are marked beaten; the first is the first stop)")
+    parser.add_argument("--shots", default="",
+                        help="with --scene pilot: stairs:<map> or ladder:<map>, comma-separated (default: a stairs and a ladder)")
     parser.add_argument("--stops", default="MT_MOON_1F,VIRIDIAN_FOREST", help="with --scene tour: the stops' map symbols")
     parser.add_argument("--stop-seconds", type=int, default=45, help="with --scene tour: each stop's time after the bind")
     parser.add_argument("--record", help="the .mp4 to write (default: no recording)")
@@ -182,6 +187,8 @@ def main(argv=None) -> int:
             client.append(f"-Pkb.autopilotStops={len(args.stops.split(','))}")
         if pilot:
             client.append(f"-Pkb.autopilotPilotDir={PILOT_DIR}")
+            if args.shots:
+                client.append(f"-Pkb.autopilotShots={args.shots}")
         if args.record:
             client.append(f"-Pkb.autopilotRecord={args.record}")
         if world_exists:
@@ -197,7 +204,7 @@ def main(argv=None) -> int:
     if pilot:
         print("driver:", [line for line in result.lines if line.startswith(("KB_PILOT_REQUEST", "KB_PILOT_ARRIVED"))], flush=True)
         if args.record:
-            done &= join_parts(Path(args.record), 2)
+            done &= join_parts(Path(args.record), len(args.shots.split(",")) if args.shots else 2)
     print(f"showcase: {'done' if done else 'not done'} in {time.monotonic() - started:.0f} s, {len(steps)} autopilot steps")
     return 0 if done and code == 0 else 1
 

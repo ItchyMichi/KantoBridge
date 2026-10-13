@@ -93,6 +93,11 @@ if (kbAutopilot != null && !kbAutopilot.isBlank()) {
 				if (kbAutopilotPilotDir != null && !kbAutopilotPilotDir.isBlank()) {
 					vmArg "-Dkantobridge.autopilot.pilotDir=${file(kbAutopilotPilotDir.trim()).absolutePath}"
 				}
+				// and the shots it films (H7's video): stairs:<map> or ladder:<map>, comma-separated
+				def kbAutopilotShots = providers.gradleProperty("kb.autopilotShots").getOrNull()
+				if (kbAutopilotShots != null && !kbAutopilotShots.isBlank()) {
+					vmArg "-Dkantobridge.autopilot.shots=${kbAutopilotShots.trim()}"
+				}
 				programArgs "--width", "1280", "--height", "720"
 			}
 		}
@@ -556,7 +561,7 @@ test {
 	systemProperty "kb.updateGolden", providers.gradleProperty("kb.updateGolden").getOrElse("false")
 	// -Pkb.realBundle=<export bundle> runs the caves in 3D plan's dry run on the real world (pod only, counts and ids).
 	systemProperty "kb.realBundle", providers.gradleProperty("kb.realBundle").getOrElse("")
-	// -Pkb.caves3d=pilot: the dry run with only the pilot's caves in 3D (the build's default) instead of all
+	// -Pkb.caves3d=pilot: the dry run with only the pilot's caves in 3D (H6's world) instead of all (the build's default)
 	systemProperty "kb.caves3d", providers.gradleProperty("kb.caves3d").getOrElse("all")
 	testLogging {
 		events "failed", "skipped"

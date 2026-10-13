@@ -79,7 +79,8 @@ import org.jetbrains.annotations.Nullable;
  * world index and the export's cells ({@link PilotPlan}): up a cave's stairs to its raised ground and on to the cliff's
  * edge, then down a ladder's shaft and back up. For each it asks the test driver (tools/e2e/drivers/kb_pilot.lua) to
  * put the hidden player on the shot's first cell, through the files in {@code kantobridge.autopilot.pilotDir}, and
- * records the shot in first person into its own file (as the tour's stops).
+ * records the shot in first person into its own file (as the tour's stops). With {@code kantobridge.autopilot.shots}
+ * (H7's video) it films the shots that names instead, {@code stairs:<map>} or {@code ladder:<map>}, comma-separated.
  */
 public final class Autopilot {
 	static final String PROPERTY = "kantobridge.autopilot";
@@ -95,8 +96,6 @@ public final class Autopilot {
 	static final double PILOT_REACHED = 0.3;
 	/** On the ladder: the player's middle this close to its wall, the body clear of the floor kept beside it. */
 	static final double PILOT_ON_LADDER = 0.62;
-	static final String SHOT_STAIRS = "stairs";
-	static final String SHOT_LADDER = "ladder";
 	/** A tour's look round at a stop, in seconds, and its tilt: looking up by this much, swaying by that much. */
 	static final float TOUR_PAN_SECONDS = 16f;
 	static final float TOUR_PITCH = -22f;
@@ -144,13 +143,12 @@ public final class Autopilot {
 	private int stopsSeen;
 	private final boolean pilot;
 	private final @Nullable Path pilotDir;
-	private final List<String> shots = new ArrayList<>();
+	private final @Nullable String shotList;
+	private final List<PilotPlan.Shot> shots = new ArrayList<>();
 	private int shot;
 	private int requestSeq;
 	private PilotPlan.@Nullable Stairs stairs;
 	private PilotPlan.@Nullable Ladder ladder;
-	private List<PilotPlan.Stairs> stairsOptions = List.of();
-	private List<PilotPlan.Ladder> ladderOptions = List.of();
 	private int option;
 	private int step;
 	private int stepTicks;
@@ -177,7 +175,7 @@ public final class Autopilot {
 	private int fpsMin = Integer.MAX_VALUE;
 
 	private Autopilot(Minecraft minecraft, @Nullable String world, @Nullable Path record, @Nullable Path log, boolean quit, boolean tour,
-			int stops, boolean pilot, @Nullable Path pilotDir) {
+			int stops, boolean pilot, @Nullable Path pilotDir, @Nullable String shotList) {
 		this.minecraft = minecraft;
 		this.world = world;
 		this.record = record;
@@ -187,6 +185,7 @@ public final class Autopilot {
 		this.stops = stops;
 		this.pilot = pilot;
 		this.pilotDir = pilotDir;
+		this.shotList = shotList;
 	}
 
 	/** Call once from client init; does nothing without {@value #PROPERTY}. */
@@ -203,10 +202,12 @@ public final class Autopilot {
 		String record = System.getProperty(PROPERTY + ".record");
 		String log = System.getProperty(PROPERTY + ".log");
 		String pilotDir = System.getProperty(PROPERTY + ".pilotDir");
+		String shots = System.getProperty(PROPERTY + ".shots");
 		Autopilot pilot = new Autopilot(Minecraft.getInstance(), world == null || world.isBlank() ? null : world,
 				record == null || record.isBlank() ? null : Path.of(record), log == null || log.isBlank() ? null : Path.of(log),
 				Boolean.getBoolean(PROPERTY + ".quit"), SCENE_TOUR.equals(scene), Math.max(1, Integer.getInteger(PROPERTY + ".stops", 2)),
-				SCENE_PILOT.equals(scene), pilotDir == null || pilotDir.isBlank() ? null : Path.of(pilotDir));
+				SCENE_PILOT.equals(scene), pilotDir == null || pilotDir.isBlank() ? null : Path.of(pilotDir),
+				shots == null || shots.isBlank() ? null : shots.trim());
 		ClientTickEvents.END_CLIENT_TICK.register(minecraft -> pilot.tick());
 		pilot.mark("armed scene=" + scene + " record=" + (pilot.record != null));
 	}
@@ -593,54 +594,62 @@ public final class Autopilot {
 			return CellFlags.has(flags, CellFlags.WALKABLE) && !CellFlags.has(flags, CellFlags.WATER) && !CellFlags.has(flags, CellFlags.WARP_TILE)
 					&& !CellFlags.has(flags, CellFlags.DOOR) && !CellFlags.has(flags, CellFlags.HOLE);
 		};
-		this.stairsOptions = PilotPlan.allStairs(index, caves, cells);
-		this.ladderOptions = PilotPlan.ladders(index, caves, cells, WorldIndex.Shaft::wall);
-		this.stairs = this.stairsOptions.isEmpty() ? null : this.stairsOptions.get(0);
-		this.ladder = this.ladderOptions.isEmpty() ? null : this.ladderOptions.get(0);
 		this.shots.clear();
-		if (this.stairs != null) {
-			this.shots.add(SHOT_STAIRS);
+		this.shots.addAll(PilotPlan.shots(index, caves, cells, this.shotList));
+		this.mark("pilot_plan caves=" + caves.size() + " shafts=" + index.shafts().size() + " shots=" + this.shots.size() + " listed="
+				+ (this.shotList != null));
+		for (int i = 0; i < this.shots.size(); i++) {
+			PilotPlan.Shot shot = this.shots.get(i);
+			if (shot.stairsShot()) {
+				PilotPlan.Stairs s = shot.stairs().get(0);
+				this.mark("pilot_shot n=" + (i + 1) + " kind=" + shot.kind() + " options=" + shot.options() + " map=" + s.map() + " x="
+						+ s.start()[0] + " y=" + s.start()[1] + " cells=" + s.path().size() + " edge_x=" + s.edge()[0] + " edge_y=" + s.edge()[1]
+						+ " look=" + s.look().id());
+			} else {
+				PilotPlan.Ladder l = shot.ladders().get(0);
+				this.mark("pilot_shot n=" + (i + 1) + " kind=" + shot.kind() + " options=" + shot.options() + " map=" + l.shaft().top().map()
+						+ " x=" + l.x() + " y=" + l.y() + " facing=" + l.facing().id() + " to=" + l.shaft().bottom().map() + " length="
+						+ (l.shaft().y1() - l.shaft().y0()) + " up=" + l.shaft().up());
+			}
 		}
-		if (this.ladder != null) {
-			this.shots.add(SHOT_LADDER);
-		}
-		PilotPlan.Stairs s = this.stairs;
-		PilotPlan.Ladder l = this.ladder;
-		this.mark("pilot_plan caves=" + caves.size() + " shafts=" + index.shafts().size() + " stairs_options=" + this.stairsOptions.size()
-				+ " ladder_options=" + this.ladderOptions.size()
-				+ (s == null ? " stairs=none" : " stairs=" + s.map() + " x=" + s.start()[0] + " y=" + s.start()[1] + " cells=" + s.path().size()
-						+ " edge_x=" + s.edge()[0] + " edge_y=" + s.edge()[1] + " look=" + s.look().id())
-				+ (l == null ? " ladder=none" : " ladder=" + l.shaft().top().map() + " x=" + l.x() + " y=" + l.y() + " facing=" + l.facing().id()
-						+ " to=" + l.shaft().bottom().map() + " length=" + (l.shaft().y1() - l.shaft().y0()) + " up=" + l.shaft().up()));
 		if (this.shots.isEmpty()) {
 			this.fail("nothing_to_film");
 			return;
 		}
 		this.shot = 0;
 		this.option = 0;
+		this.pick();
 		this.request();
+	}
+
+	/** The current shot's current option, as the stairs or the ladder filmed. */
+	private void pick() {
+		PilotPlan.Shot shot = this.shots.get(this.shot);
+		if (shot.stairsShot()) {
+			this.stairs = shot.stairs().get(this.option);
+		} else {
+			this.ladder = shot.ladders().get(this.option);
+		}
+	}
+
+	private boolean stairsShot() {
+		return this.shots.get(this.shot).stairsShot();
 	}
 
 	/** The current shot's next option (another stairs, another ladder or cell beside one), or false when none is left. */
 	private boolean nextOption() {
-		boolean stairsShot = SHOT_STAIRS.equals(this.shots.get(this.shot));
-		List<?> options = stairsShot ? this.stairsOptions : this.ladderOptions;
-		if (++this.option >= Math.min(options.size(), 16)) {
+		if (++this.option >= Math.min(this.shots.get(this.shot).options(), 16)) {
 			return false;
 		}
-		if (stairsShot) {
-			this.stairs = this.stairsOptions.get(this.option);
-		} else {
-			this.ladder = this.ladderOptions.get(this.option);
-		}
+		this.pick();
 		return true;
 	}
 
 	/** Asks the driver to put the hidden player on the current shot's first cell (request.txt, written whole). */
 	private void request() {
-		String shot = this.shots.get(this.shot);
+		String shot = this.shots.get(this.shot).kind();
 		StringBuilder line = new StringBuilder().append(++this.requestSeq).append(' ');
-		if (SHOT_STAIRS.equals(shot)) {
+		if (this.stairsShot()) {
 			PilotPlan.Stairs s = this.stairs;
 			line.append("walk ").append(s.map()).append(' ').append(s.facing().id());
 			for (int[] c : s.path()) {
@@ -661,7 +670,7 @@ public final class Autopilot {
 			this.fail("request " + e.getClass().getSimpleName());
 			return;
 		}
-		if (SHOT_STAIRS.equals(shot)) {
+		if (this.stairsShot()) {
 			this.mark("request n=" + this.requestSeq + " shot=" + shot + " option=" + this.option + " map=" + this.stairs.map() + " x="
 					+ this.stairs.start()[0] + " y=" + this.stairs.start()[1]);
 		} else {
@@ -684,7 +693,7 @@ public final class Autopilot {
 	/** Until the driver has put the hidden player on the shot's first cell and the player stands there, free, for two seconds. */
 	private void pilotPlace() {
 		String answer = this.answer();
-		String shot = this.shots.get(this.shot);
+		String shot = this.shots.get(this.shot).kind();
 		if (answer != null && answer.startsWith(this.requestSeq + " refused")) {
 			this.mark("refused shot=" + shot + " option=" + this.option + " why=" + answer.substring(answer.indexOf("refused") + 7).trim()
 					.replace(' ', '_'));
@@ -698,9 +707,9 @@ public final class Autopilot {
 		LocalPlayer player = this.minecraft.player;
 		WorldIndex index = ClientWorldIndex.current();
 		ClientBridgeState state = this.state();
-		String map = SHOT_STAIRS.equals(shot) ? this.stairs.map() : this.ladder.shaft().top().map();
-		int x = SHOT_STAIRS.equals(shot) ? this.stairs.start()[0] : this.ladder.x();
-		int y = SHOT_STAIRS.equals(shot) ? this.stairs.start()[1] : this.ladder.y();
+		String map = this.stairsShot() ? this.stairs.map() : this.ladder.shaft().top().map();
+		int x = this.stairsShot() ? this.stairs.start()[0] : this.ladder.x();
+		int y = this.stairsShot() ? this.stairs.start()[1] : this.ladder.y();
 		boolean ok = (this.requestSeq + " ok").equals(answer) && player != null && index != null && state != null && state.ingame()
 				&& map.equals(state.map()) && state.x() == x && state.y() == y && !InputLock.locked() && this.minecraft.screen == null
 				&& this.onHiddenCell(player, index, state);
@@ -722,7 +731,7 @@ public final class Autopilot {
 			this.fail("no_player");
 			return;
 		}
-		boolean stairsShot = SHOT_STAIRS.equals(this.shots.get(this.shot));
+		boolean stairsShot = this.stairsShot();
 		if (this.phaseTicks == 1) {
 			this.minecraft.options.setCameraType(CameraType.FIRST_PERSON);
 			this.minecraft.options.hideGui = true;
@@ -1030,7 +1039,7 @@ public final class Autopilot {
 	/** The shot is over (done or not): its recording stops and the next one is asked for. */
 	private void endShot(String why) {
 		this.keys(false, false, false);
-		this.mark("shot_end shot=" + this.shots.get(this.shot) + " why=" + why + this.climbStats());
+		this.mark("shot_end shot=" + this.shots.get(this.shot).kind() + " why=" + why + this.climbStats());
 		this.stopRecording();
 		this.nextShot();
 	}
@@ -1040,6 +1049,7 @@ public final class Autopilot {
 		this.shot++;
 		this.option = 0;
 		if (this.shot < this.shots.size()) {
+			this.pick();
 			this.request();
 		} else {
 			this.mark("pilot_shots done=" + this.shots.size() + this.climbStats());

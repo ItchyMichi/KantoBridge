@@ -15,8 +15,8 @@ import java.util.function.Function;
 import org.jetbrains.annotations.Nullable;
 
 /**
- * The caves pilot's video (docs/specs/CAVES_3D_PLAN.md, H6), planned from the world index: a walk up a cave's stairs to
- * its raised ground and on to the cliff's edge, and a ladder climbed down and back up. Which cells a player can stand on
+ * The caves pilot's video (docs/specs/CAVES_3D_PLAN.md, H6) and H7's, planned from the world index: walks up a cave's
+ * stairs to its raised ground and on to the cliff's edge, and ladders climbed down and back up. Which cells a player can stand on
  * comes from {@link Cells} (the scene asks Minecraft's blocks); the hidden game checks the cells again before the walk
  * (no warp, no object on them). Pure logic.
  */
@@ -44,6 +44,20 @@ final class PilotPlan {
 	record Ladder(WorldIndex.Shaft shaft, int x, int y, Dir facing) {
 	}
 
+	/** A shot of the video, stairs or a ladder, with every option for it, best first (the hidden game may refuse one). */
+	record Shot(String kind, List<Stairs> stairs, List<Ladder> ladders) {
+		static final String STAIRS = "stairs";
+		static final String LADDER = "ladder";
+
+		boolean stairsShot() {
+			return STAIRS.equals(this.kind);
+		}
+
+		int options() {
+			return this.stairsShot() ? this.stairs.size() : this.ladders.size();
+		}
+	}
+
 	private PilotPlan() {
 	}
 
@@ -55,6 +69,42 @@ final class PilotPlan {
 			if (layout != null && (!layout.ramps().isEmpty() || layout.pieces().size() > 1 || index.shafts().stream().anyMatch(
 					s -> s.top().map().equals(e.getKey()) || s.bottom().map().equals(e.getKey())))) {
 				out.add(e.getKey());
+			}
+		}
+		return out;
+	}
+
+	/**
+	 * The shots: one per entry of {@code list}, in its order, {@code stairs:<map>} (stairs on the map) or
+	 * {@code ladder:<map>} (a ladder whose top is on it), an entry with nothing to film on {@code maps} left out (H7's
+	 * video); with no list, the pilot's two (H6): the first stairs and the first ladder of any of {@code maps}.
+	 */
+	static List<Shot> shots(WorldIndex index, List<String> maps, Cells cells, @Nullable String list) {
+		List<Shot> out = new ArrayList<>();
+		if (list == null || list.isBlank()) {
+			List<Stairs> stairs = allStairs(index, maps, cells);
+			List<Ladder> ladders = ladders(index, maps, cells, WorldIndex.Shaft::wall);
+			if (!stairs.isEmpty()) {
+				out.add(new Shot(Shot.STAIRS, stairs, List.of()));
+			}
+			if (!ladders.isEmpty()) {
+				out.add(new Shot(Shot.LADDER, List.of(), ladders));
+			}
+			return out;
+		}
+		for (String entry : list.split(",")) {
+			String[] parts = entry.trim().split(":");
+			if (parts.length != 2 || !maps.contains(parts[1])) {
+				continue;
+			}
+			List<String> map = List.of(parts[1]);
+			Shot shot = switch (parts[0]) {
+				case Shot.STAIRS -> new Shot(Shot.STAIRS, allStairs(index, map, cells), List.of());
+				case Shot.LADDER -> new Shot(Shot.LADDER, List.of(), ladders(index, map, cells, WorldIndex.Shaft::wall));
+				default -> null;
+			};
+			if (shot != null && shot.options() > 0) {
+				out.add(shot);
 			}
 		}
 		return out;

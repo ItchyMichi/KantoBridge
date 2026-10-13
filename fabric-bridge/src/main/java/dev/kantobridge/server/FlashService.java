@@ -65,16 +65,27 @@ public final class FlashService {
 		return current != null;
 	}
 
-	/** Night Vision is due when the player stands on a dark map that their hidden game has lit with Flash. */
+	/**
+	 * Night Vision is due when the player stands on a dark map that their hidden game has lit with Flash, or climbs a
+	 * shaft from or to one (a shaft is in no cell: docs/specs/CAVES_3D_PLAN.md §3.5).
+	 */
 	public static boolean wants(@Nullable WorldIndex index, @Nullable StoryState state, double x, double y, double z) {
 		if (index == null || state == null || state.lit().isEmpty()) {
 			return false;
 		}
-		Optional<CellPos> cell = index.toCell(Mth.floor(x), Mth.floor(y), Mth.floor(z));
-		if (cell.isEmpty()) {
-			return false;
+		int bx = Mth.floor(x);
+		int by = Mth.floor(y);
+		int bz = Mth.floor(z);
+		Optional<CellPos> cell = index.toCell(bx, by, bz);
+		if (cell.isPresent()) {
+			return litDark(index, state, cell.get().map());
 		}
-		MapPlacement map = index.map(cell.get().map());
+		WorldIndex.Shaft shaft = index.shaftAt(bx, by, bz);
+		return shaft != null && (litDark(index, state, shaft.top().map()) || litDark(index, state, shaft.bottom().map()));
+	}
+
+	private static boolean litDark(WorldIndex index, StoryState state, String id) {
+		MapPlacement map = index.map(id);
 		return map != null && map.dark() && state.isLit(map.id());
 	}
 

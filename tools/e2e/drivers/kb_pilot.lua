@@ -1,8 +1,9 @@
 -- Kanto Bridge test driver (the caves in 3D plan's H6 pilot video,
 -- docs/specs/CAVES_3D_PLAN.md): moves gen1-bridge to the test port, starts a
 -- new game without the intro (src/core/Game.lua:171-198), gives the player a
--- starter (as kb_wild.lua does), marks every map trainer of KB_PILOT_MAPS
--- beaten (as kb_endgame.lua does, so nobody sights the player), and warps
+-- level 100 starter and REPEL steps (as kb_field.lua does: no wild battle
+-- interrupts a shot), marks every map trainer of KB_PILOT_MAPS beaten (as
+-- kb_endgame.lua does, so nobody sights the player), and warps
 -- through the supported mod.world facade (WorldAPI:warpTo,
 -- src/world/WorldAPI.lua:358-371) to a plain cell beside the first warp of
 -- KB_PILOT_FIRST (default: the first of KB_PILOT_MAPS).
@@ -15,7 +16,9 @@
 -- object, no warp), the hidden player put on the first; kind "ladder": the
 -- first cell plain and the second a warp (the ladder's top). It answers in
 -- KB_PILOT_DIR/answer.txt: "<seq> ok" once the hidden player stands there, or
--- "<seq> refused <reason> [<x>,<y>]".
+-- "<seq> refused <reason> [<x>,<y>]". On each arrival it sets save.flashLit,
+-- as Flash does, so a dark cave (Rock Tunnel) is lit for the camera (the
+-- engine drops it again on any map that isn't dark, OC:507-515).
 --
 -- It prints KB_PILOT_READY map= x= y= facing= port= at the first stop,
 -- KB_PILOT_REQUEST n= kind= map= cells= verdict= for each request,
@@ -219,7 +222,10 @@ return function(game)
           if type(def) == "table" and def.dex == STARTER_DEX and (species == nil or id < species) then species = id end
         end
         if not species then fail("no_starter_species") end
-        local mon = require("src.pokemon.Pokemon").new(data, species, 5)
+        -- level 100 and REPEL steps: the engine's own REPEL filter keeps every
+        -- wild Pokemon weaker than the lead away (OC:4793-4799)
+        local mon = require("src.pokemon.Pokemon").new(data, species, 100)
+        save.repelSteps = 9999
         require("src.battle.BattleState").stampOT(save, mon)
         if not require("src.pokemon.Party").add(save.party, mon) then fail("party_full") end
         local beaten = 0
@@ -256,6 +262,7 @@ return function(game)
         local p = ow and ow.player
         if arrived and ow and game.stack:top() == ow and ow.map and ow.map.id == pending.map and p and p.cellX == pending.x
             and p.cellY == pending.y then
+          game.save.flashLit = true
           print(("KB_PILOT_ARRIVED n=%d map=%s x=%d y=%d"):format(pending.seq, word(pending.map), pending.x, pending.y))
           answer(pending.seq, "ok")
           pending = nil
