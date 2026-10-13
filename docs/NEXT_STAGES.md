@@ -207,6 +207,14 @@ it adds maps onto our setup like this.
   Viridian Forest's canopy, light wells and vines, both by Kanto in First Person's own placement rules re-implemented;
   vines in the wild zone; and (2026-10-12) the forest's apron past its edge, in Minecraft's own logs and leaves. Pools
   and lanterns stay ideas.
+- **Built (2026-10-13, [specs/CAVES_3D_PLAN.md](specs/CAVES_3D_PLAN.md)):** caves in an area of their own north of
+  Kanto, raised ground with stairs and cliff edges, real ladders between floors that line up (15 of 37), and invisible
+  walls on every edge the game blocks. That plan's later ideas (its §8):
+  - raised ground in Viridian Forest and the Safari Zone (open sky: the room is there already), and outdoors
+    ([research/HEIGHTS_RESEARCH.md](research/HEIGHTS_RESEARCH.md) §3.6);
+  - tunnels for the cave links that can't line up (22 ladders keep their fade), and a guided climb as an option;
+  - Gen 3's bridges (two floors in one cell);
+  - real stairs between a building's floors.
 - **Past the map edge:** each edge's terrain continues outward as non-walkable scenery that falls
   away, instead of today's 12-block ring of border art. Mountains or sea would fill the distance.
 - **Building backs and tall trees:** these come with section 2. Per-face textures stop a house's back

@@ -194,9 +194,10 @@ optional ones. The schemas give the exact types and limits.
 
 #### Ladders and holes (H5)
 
-A cave built in 3D has real shafts between its floors ([specs/CAVES_3D_PLAN.md](specs/CAVES_3D_PLAN.md) §3.6). The
-player climbs or falls in Minecraft while the hidden player waits where it was; the hidden game warps when the player
-reaches the far end.
+A cave built in 3D (every cave since H7, unless the builder's option `kantobridge.caves3d` names fewer) has real
+shafts between its floors where they line up ([specs/CAVES_3D_PLAN.md](specs/CAVES_3D_PLAN.md) §3.6). The player climbs
+or falls in Minecraft while the hidden player waits where it was; the hidden game warps when the player reaches the far
+end. Every other cave link stays an ordinary warp with a fade.
 
 - **The client** never sends a step onto a shaft's end cell (the hidden game would warp at once). When the player
   arrives at the far end (feet on the far floor going down, at the far end's feet level going up) it sends
@@ -844,7 +845,8 @@ is what the builder writes to `<world>/kantobridge/world_index.json`:
   built in 3D, `kind` (`ladder`, `hole`), its `top{map,x,y}` cell straight over its `bottom{map,x,y}`, `up` (climbed up
   too), and its column: `x, z` and the blocks `y0` (the bottom cell's feet) to `y1` (the top cell's floor); a ladder's
   `wall` (`up`, `down`, `left`, `right`: the side of the column its ladder stands on). A ladder's top cell keeps its floor
-  in the half away from the ladder, to step off onto. A block inside a shaft (its air) is in no cell.
+  in the half away from the ladder, to step off onto. A block inside a shaft (its air) is in no cell; a server rule that
+  asks which map a player is on there (Flash's Night Vision) uses the shaft's ends.
 
 Clients turn block positions into cells and back with it. The `parts` of `world.index` are slices of
 its JSON text (64 Ki characters each); `hash` is the SHA-256 of the whole text.

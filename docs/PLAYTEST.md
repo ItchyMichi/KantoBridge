@@ -696,6 +696,40 @@ A new world (the mod installed and switched off, as for P1).
       through a hedge; trainers, balls and wild Pokémon as before.
 - [ ] **The forest around it:** vines hang from some tree crowns.
 
+## Caves in 3D
+
+[specs/CAVES_3D_PLAN.md](specs/CAVES_3D_PLAN.md). Every cave is built in 3D since H7: make a new world first (Create
+Kanto world, or the headless build); a world made before then keeps its flat caves.
+
+### Getting in and around
+
+- [ ] **Entering a cave** from any entrance: a fade over a long distance (up to 3 s, as Fly is), and the same out.
+- [ ] **Raised ground:** where the Game Boy draws a plateau, the floor really rises 2 blocks; its stairs climb it, and
+      there are 3 blocks of air over you on top.
+- [ ] **Cliff edges:** you can't walk off raised ground, or up onto it, except by its stairs, and no step pulls you
+      back. The same invisible walls stand on the edges in Viridian Forest and the Safari Zone.
+- [ ] **A ladder down:** walk onto the ladder at its top and let go: you slide down the shaft (sneak holds you) and step
+      off at the bottom with no fade; the hidden game is on the floor below when you land.
+- [ ] **A ladder up:** walk into the ladder at the bottom and hold forward; at the top, step off onto the floor beside
+      it. No fade.
+- [ ] **Changing your mind:** half way down, climb back up and step off where you started: the hidden game never moves.
+- [ ] **The ladders that keep their fade** (links that can't line up: 22 of the 37) fade as before.
+- [ ] **If a climb fails** (the game says no, or nothing happens within 3 s) the screen fades and you're back beside
+      the hidden player. Tell the next run where it happened.
+- [ ] **A trainer who spots you** while you climb: you're put back beside the ladder and the battle starts as usual.
+
+### Every cave, end to end
+
+- [ ] **Mt. Moon:** Route 3 to Route 4 through all three floors, the fossils and Team Rocket; three of its ladders are
+      real (two from 1F down, one from B1F down).
+- [ ] **Rock Tunnel without Flash:** dark everywhere, in the shafts too.
+- [ ] **Rock Tunnel with Flash:** lit on both floors, and still lit all the way up and down its two real ladders.
+- [ ] **Seafoam Islands:** the boulder puzzle (boulders pushed into the holes land on the floor below until the
+      lowest floor's currents stop), surfing the currents, Articuno; the stairs on B1F, B2F and B3F.
+- [ ] **Victory Road:** every boulder and switch (Strength) on all three floors, and the stairs on each.
+- [ ] **Cerulean Cave:** all three floors, surfing, the stairs on B1F, Mewtwo.
+- [ ] **Diglett's Cave:** Route 11 to Route 2 and back; its entrance ladders keep their fades.
+
 ## Wild Routes
 
 [specs/WILD_ROUTES_PLAN.md](specs/WILD_ROUTES_PLAN.md). WR1-WR7 are built and tested without a person watching

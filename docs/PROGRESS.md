@@ -717,7 +717,7 @@ installed, nothing copied). Feature tests per milestone; the full suite at CW2, 
 
 Execution of [specs/CAVES_3D_PLAN.md](specs/CAVES_3D_PLAN.md) (H1–H7), approved by you on 2026-10-12 with its
 defaults: raised ground in caves, caves in an area of their own, real ladders and holes. Feature tests per milestone;
-the full suite at H1, H5 and H7.
+the full suite at H1, H5 and H7. **All seven are done** (2026-10-13): every cave is built in 3D.
 
 | # | Milestone | Status | Date | Commit |
 |---|---|---|---|---|
@@ -726,8 +726,8 @@ the full suite at H1, H5 and H7.
 | H3 | Caves in an area of their own | **done** (CavePlannerTest 8, the synthetic cave; JUnit 991, GameTests 99, Python 1,487); the real world's dry run on the pod: 0 warnings (note 8) | 2026-10-12 | `H3: caves in an area of their own` |
 | H4 | Raised ground in caves | **done** (CaveLevelsTest 8, RaisedCaveTest 7, two GameTests; JUnit 1,010, GameTests 100, Python 1,487); the real world's dry run on the pod: note 11 | 2026-10-12 | `H4: raised ground in caves` |
 | H5 | Real ladders and holes | **done**; checkpoint: JUnit 1,032 (7 skipped), GameTests 101, Python and Lua 1,516; the real world's dry run: note 13 | 2026-10-13 | `H5 (1/3)`–`(3/3)` |
-| H6 | Pilot | **done**, waiting on your call: Mt. Moon built in 3D on the pod, every budget holds, the video sent; note 9 | 2026-10-13 | `cda5000`–`9546fe1`, `H6: pilot` |
-| H7 | Every cave in 3D | | | |
+| H6 | Pilot | **done**: Mt. Moon built in 3D on the pod, every budget holds, the video sent; you said go on (note 9) | 2026-10-13 | `cda5000`–`9546fe1`, `H6: pilot` |
+| H7 | Every cave in 3D | **done**; checkpoint: JUnit 1,044 (7 skipped), GameTests 101, Python and Lua 1,518; every budget holds (the shape map about 97% with the profile); the video sent; note 10 | 2026-10-13 | `H7 (1/2)`, `H7: every cave in 3D` |
 
 ### Caves in 3D: H1 notes
 
@@ -987,7 +987,61 @@ the full suite at H1, H5 and H7.
 8. **Not shown:** a hole (Mt. Moon has none, and no cave warp cell in the export has the hole flag: H5 note 13). The
    client's log has two errors at start-up, both from Minecraft's sound engine (no audio device under Xvfb).
 9. **Your call** (the plan's H6): go on to H7 (every cave in 3D, the full suite, a second video), or change something
-   first.
+   first. You said "Continue to H7" (2026-10-13), with no change.
+
+### Caves in 3D: H7 notes
+
+1. **Every cave in 3D:** the build's default is now every complex (`kantobridge.caves3d` unset). Map ids name fewer,
+   and a value that names no cave (`none`) builds them all flat, as before H4. `Caves3dTest`.
+2. **Found and fixed:** Flash's Night Vision (`FlashService`) asked which cell the player stands in, and a shaft is in
+   no cell (H5 note 7), so in a lit Rock Tunnel it went dark half way up a ladder. It now follows the shaft's ends
+   (`FlashServiceTest`; the old code fails it).
+3. **A test brought up to date:** `CaveRockPlanTest` draws the synthetic house as a cave. Built in 3D, the house's
+   stairs to its upper floor are a real ladder, and the shaft's column rightly takes no stalactite: the test now checks
+   that, where it expected a carrier.
+4. **The real world's dry run** (every cave in 3D): the same as H5's (note 13): 87 rooms on the 19 cave maps, 12 maps
+   raised (3,462 cells, 29 stairs), 15 real ladders of 37 (22 keep their fade: 10 `loop`, 10 `moved_aside`, Diglett's
+   Cave's 2 `same_floor`), no hole, 0 warnings.
+5. **The world on the pod's test install** ("Kanto (4)", built by the dev client's "Create Kanto world"):
+
+   | | CW3 | The pilot (H6) | Every cave (H7) | Budget |
+   |---|---|---|---|---|
+   | Shape map on the wire (characters) | 305,336 | 307,000 | 319,132 (61%) | 524,288 |
+   | Quads per block, max / mean | 76 / 10.44 | 76 / 10.42 | 76 / 10.23 | 96 / 24 |
+   | Quads per section, P95 / max | 6,416 / 24,064 | 6,524 / 24,064 | 6,424 / 24,064 | 12,000 / 30,000 |
+   | Self-check: holes, structure P05 | 0, 0.731 | 0, 0.731 | 0, 0.731 | 0, 0.577 |
+   | Plan / place time | 6.5 / 68 s | 7.6 / 73 s | 15.2 / 94 s | |
+
+   220 maps, 0 warnings; 4,195,703 blocks (920,000 fewer than the pilot's world: rooms need less rock than whole flat
+   floors), 2,808 chunks; ladder blocks 344, step colliders 116, habitat blocks 1,192. The densest section is the same
+   one as in CW3's world, outside the caves.
+6. **The shape map with the profile** (the pod's test install has none): P3's 409,476 plus the 99,940 this plan and the
+   caves and woods plan added since make about 509,400, **97%** of the budget, with about 14,900 characters to spare.
+   Inside, as the plan expected; but the next feature that adds shapes should first send grids on demand (the voxel
+   plan's R10).
+7. **The video** (2 min 9 s, sent; on the volume as
+   `/workspace/videos/kanto-bridge-caves3d-all-20261013-035218.mp4`, sent as a 26.6 MB copy), one shot per cave, each
+   with its first option:
+   - Rock Tunnel: 1F's ladder down to B1F and back up, lit (the driver sets Flash's flag, as Flash does);
+   - Victory Road: 2F's stairs to the edge; 3F's ladder down to 2F and back;
+   - Seafoam Islands: B3F's stairs and a 12-cell walk to the edge; 1F's ladder down to B1F and back;
+   - Cerulean Cave: B1F's stairs; 2F's ladder down to 1F and back.
+
+   27 steps, 12 climbs and 8 takes, none failed; no push, refusal or correction. Down 3.6–4.3 s, up 4.7–5.5 s. The
+   client's log has three errors at start-up, as before: Adorn's optional class and Minecraft's sound engine twice (no
+   audio device under Xvfb).
+8. **Tooling:** the autopilot's `kantobridge.autopilot.shots` (`showcase.py --shots`: `stairs:<map>`, `ladder:<map>`);
+   `kb_pilot.lua` gives a level 100 starter with REPEL steps (no wild battle in a shot) and sets Flash's flag on each
+   arrival.
+9. **The checkpoint:** JUnit 1,044 (7 skipped), GameTests 101 (the flaky monster house test, H5 note 11, failed once
+   more and passed on the rerun), Python and Lua 1,518 (46 skipped). Pod: the hosts of kb-dev to kb-dev5 were all full,
+   so a new pod, kb-dev6 (cpu3c ×16, 32 GB, $0.48/hr): one run of 16 minutes (about $0.13), stopped after.
+10. **For you:**
+    - **Play-test** in a new world: PLAYTEST.md "Caves in 3D" (every cave end to end, Rock Tunnel with and without
+      Flash). A world made before H7 keeps its flat caves.
+    - **DESIGN.md:39-41 is out of date:** caves no longer sit under their mountains but in an area of their own; rooms
+      of one cave may share a rock wall (HD3, under 16 blocks apart); and 15 cave ladders are climbed, not faded. It's
+      your file to update.
 
 ## Wild Routes
 
@@ -2098,6 +2152,9 @@ say how each was resolved:
    - also support the official launcher.
 
    Nothing is downloaded or bundled until you answer.
+7. **DESIGN.md:39-41 (from the caves in 3D plan's H7).** It says caves sit under their mountains, 16 blocks apart, and
+   every ladder fades. Since H7 caves stand in an area of their own, rooms of one cave may share a rock wall, and 15
+   ladders are climbed. Your file: update it when you like.
 
 ### Known gaps
 
@@ -2193,3 +2250,5 @@ Nothing.
 - PLAYTEST.md M9: two players on one PC (a second Gen1Recomp install, the dev server, two clients).
 - PLAYTEST.md M10: `tools/launch.ps1`, crash recovery (the pause overlay, CONTINUE, the save-went-back
   warning, the daycare), minimising, and the multiplayer extras (the ⏸ bubble, others' surf sprite).
+- PLAYTEST.md "Caves in 3D": in a new world, every cave end to end: raised ground, cliff edges, the real ladders, Rock
+  Tunnel with and without Flash.

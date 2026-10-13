@@ -1,7 +1,8 @@
 # Plan: caves in 3D (raised ground, an area of their own, real ladders and holes)
 
-- **Status:** written on 2026-10-12 from your answers of that day (§2.1); nothing is built yet. The defaults in §2.2
-  are the agent's; change any of them and the plan follows.
+- **Status:** written on 2026-10-12 from your answers of that day (§2.1), approved the same day with the defaults in
+  §2.2, and **built** (H1–H7, 2026-10-12 to 2026-10-13): every cave in 3D since H7. What was built, the deviations and
+  the measurements are in [PROGRESS.md](../PROGRESS.md), "Caves in 3D".
 - **What it delivers:**
   - **Raised ground in caves.** Where the Game Boy fakes a plateau with its tile-pair rule, the cave floor really
     rises 2 blocks, and the cave's stairs climb it. Every cell keeps 3 blocks of air.

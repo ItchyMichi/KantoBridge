@@ -24,7 +24,8 @@ import org.junit.jupiter.api.io.TempDir;
  * as a cave. Every hanging stands on a decor carrier in the block under the ceiling, the carrier on a light's position
  * gives the light (and no light block is placed there), the shape map draws the piece there, and nothing a player
  * could collide with is added: a carrier over rock is solid, as the cave area fills the air between rock and ceiling
- * (docs/specs/CAVES_3D_PLAN.md §3.3), but rock stops a player anyway.
+ * (docs/specs/CAVES_3D_PLAN.md §3.3), but rock stops a player anyway. Built in 3D (every cave since H7), the house's
+ * stairs are a real ladder down from its upper floor: the shaft's column takes no hanging.
  */
 class CaveRockPlanTest {
 	@TempDir
@@ -55,6 +56,7 @@ class CaveRockPlanTest {
 		int cols = p.blockWidth();
 		int hung = 0;
 		int lit = 0;
+		int shafted = 0;
 		for (int tz = 0; tz < p.blockDepth(); tz++) {
 			for (int tx = 0; tx < cols; tx++) {
 				int i = tz * cols + tx;
@@ -63,6 +65,13 @@ class CaveRockPlanTest {
 				int code = view.code(x, feet + CaveRock.LEVEL, z);
 				boolean lightSpot = Math.floorMod(tx, WorldPlan.LIGHT_SPACING) == 1 && Math.floorMod(tz, WorldPlan.LIGHT_SPACING) == 1;
 				if ((planned.hungMask()[i] >> CaveRock.LEVEL & 1) == 0) {
+					continue;
+				}
+				if (plan.index().shaftAt(x, feet + CaveRock.LEVEL, z) != null) {
+					// The ladder's shaft (CAVES_3D_PLAN §3.5): its ladder and air are the builder's, and the shape map draws nothing
+					assertTrue(BlockCode.kind(code) == BlockCode.KIND_LADDER || code == BlockCode.AIR, "the shaft at " + tx + "," + tz);
+					assertEquals(0, plan.shapes().map().shapeAt(x, feet + CaveRock.LEVEL, z), "no hanging in the shaft");
+					shafted++;
 					continue;
 				}
 				hung++;
@@ -80,6 +89,8 @@ class CaveRockPlanTest {
 			}
 		}
 		assertTrue(hung > 0, "the house is a cave now");
+		assertEquals(1, plan.index().shafts().stream().filter(s -> s.bottom().map().equals("TEST_HOUSE")).count(), "its stairs, a ladder");
+		assertTrue(shafted > 0, "the shaft's column took the hangings planned there");
 		assertTrue(lit > 0, "some hangings took a light's position");
 		assertTrue(plan.shapes().unitTally().getOrDefault("dress_rock_roof", 0) > 0);
 	}

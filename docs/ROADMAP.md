@@ -145,8 +145,11 @@ terrain past the map edge, day/night, weather and sky, per-map fog and colours, 
 camera, sound per tile class. Client-only items first; builder items in one batch, since each needs a rebuild.
 Day/night and weather clash with today's server rules (noon at every start).
 
-**Next for caves (2026-10-12):** [specs/CAVES_3D_PLAN.md](specs/CAVES_3D_PLAN.md): raised ground, caves in an area of
-their own north of Kanto, and real ladders and holes between cave floors (H1–H7, a pilot cave before the rest).
+**Caves in 3D (built 2026-10-13, [specs/CAVES_3D_PLAN.md](specs/CAVES_3D_PLAN.md)):** every cave stands in an area of
+its own north of Kanto, with raised ground, stairs and cliff edges where the Game Boy draws them, and real ladders
+between its floors where they line up (15 of 37; the rest fade as before, and a cave's entrance fades over the
+distance). Invisible walls stand on every edge the game blocks, Viridian Forest and the Safari Zone included. Later
+ideas (raised ground outdoors, tunnels for the ladders that still fade): [NEXT_STAGES.md](NEXT_STAGES.md) §3.
 
 ### Stage 7: Kanto inside a vanilla overworld (M11–M14)
 
