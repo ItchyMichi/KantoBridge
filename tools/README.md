@@ -54,6 +54,7 @@ and installs nothing; `-Verify <file> -Id <pin>` checks a downloaded file agains
 | `installer/` | The installer skeleton and its pins (above) |
 | `lua/` | The Lua test harness: gen1-bridge modules run under lupa's LuaJIT 2.1 in a sandbox-parity environment, with a fake LuaSocket. Its pytest files live beside it |
 | `e2e/` | End-to-end runner for the test Gen1Recomp instance, our own driver scripts, and e2e tests (marker `e2e`, run only with `--e2e`). `build_world.py` is the headless real-data build: export from the test instance through `ExportCli`, then a headless server build; `--maps pallet\|route1\|viridian\|all\|<ids>`, `--world <name>` (default `Kanto`), `--fresh`, `--skip-export` (with `--game red\|blue`). Automated tests build into `saves/KantoE2E` |
+| `pin_check.py` | The first step of a Gen1Recomp pin change ([docs/specs/ENGINE_UPGRADE_PLAN.md](../docs/specs/ENGINE_UPGRADE_PLAN.md)): `python3 -I tools/pin_check.py refs/gen1recomp v0.3.49 v0.3.85 --report local/reports/pin_check.json` classes every `file:line` citation of an engine source in this repository as same, shifted (stale numbers), changed (re-check the behaviour) or missing, reading the clone only through `git`. Exits 1 when a cited file is gone |
 | `pytest.ini`, `conftest.py` | pytest configuration (`--e2e` option, markers) |
 | `requirements.txt` | Exact pins (see `docs/VERSIONS.md`) |
 

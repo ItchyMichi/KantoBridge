@@ -196,7 +196,7 @@ real Gen 1 engines in a test-only world (Red and Blue are one world space in rea
 
 | Component | Pin | What an upgrade involves |
 |---|---|---|
-| Gen1Recomp | v0.3.49 | It ships often. Re-check every internal in `gen1-bridge/lib/kb_engine.lua` (about 144 functions), the patched functions and the e2e drivers' `require`s; a new export means a world rebuild |
+| Gen1Recomp | v0.3.49 | It ships often. [`specs/ENGINE_UPGRADE_PLAN.md`](specs/ENGINE_UPGRADE_PLAN.md) (2026-10-13) is the plan for v0.3.85: `tools/pin_check.py` audits every cited engine line first (696 citations; 49 on changed code), every ROM is re-imported (the cache generation changed), the Union Room must be OFF, and the text box, bag and battle-music seams change; a new export means a world rebuild |
 | Cobblemon | 1.8.1 | Re-check its 9 mixins (3 in common code) and 73 imports, some from non-API packages |
 | Minecraft | 1.21.1 | Needs Cobblemon for that version, Loom 1.18+ (Gradle on JDK 25), and the model API re-researched |
 | Fabric Loader, Fabric API, Parchment | 0.19.5, 0.116.17, 2024.11.17 | Already the newest for 1.21.1 |

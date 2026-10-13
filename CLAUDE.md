@@ -32,6 +32,11 @@ Pokémon Red/Blue's story runs in a **hidden Gen1Recomp**. It is displayed and p
   economy (money and items projected into the followed game). Its §9 holds the user's decisions of 2026-10-13. The user's
   design statement of 2026-10-13 (one dimension, flat generation, interiors underground, forests open-air, caves in
   their own 3D area) governs it; the research report's vanilla-overworld track (M11–M13) is not the direction.
+- [`docs/specs/ENGINE_UPGRADE_PLAN.md`](docs/specs/ENGINE_UPGRADE_PLAN.md) is the plan for moving the Gen1Recomp pin
+  from v0.3.49 to v0.3.85 (UP0–UP6, gates G0–G6; written 2026-10-13): the audit of every cited engine line
+  (`tools/pin_check.py`), the re-import every ROM needs, the Union Room (on by default upstream since v0.3.61; it
+  rewrites Gen 1's Pokémon Centers at data load, so every KantoBridge install runs with it OFF), and the seams that
+  changed (text boxes, the bag, battle music). It waits for the user's go (its decisions U1–U6).
 - `refs/_research/` (git-ignored) holds the research notes, with verified `file:line` references,
   that the plan cites.
 

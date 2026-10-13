@@ -26,9 +26,11 @@ file was never committed here). §4.9 names where it plugs in.
 2. **Ground rules** (CLAUDE.md's hard rules apply unchanged):
    - Nothing ROM-derived is opened, copied or committed. Imports are the user's. Tests use the stand-ins
      (`tools/fake_gen1`, `tools/fake_minecraft`); the real engine only on the test install, counts and ids in logs.
-   - **The Gen1Recomp pin stays v0.3.49.** A bump is a separate decision (D11): 36 releases and 252 commits landed
-     between v0.3.49 and v0.3.85, `OverworldController.lua` changed in 423 lines, and the Union Room changes every
-     Pokémon Center's map (a world rebuild).
+   - **The Gen1Recomp pin stays v0.3.49 until the user says go on [`ENGINE_UPGRADE_PLAN.md`](ENGINE_UPGRADE_PLAN.md)**
+     (D11): 36 releases and 252 commits landed between v0.3.49 and v0.3.85, `OverworldController.lua` changed in 423
+     lines, every ROM needs a re-import, and the Union Room (on by default upstream) rewrites every Gen 1 Pokémon
+     Center at data load, so it must be switched off in every install. That plan can run before MG0 (recommended) or
+     at the latest before MG7.
    - Protocol and schema changes come first inside a milestone (PLAN.md §7); regenerate `catalog.json`; both stand-ins
      follow. **Protocol stays 1**: every change here is a new message type or an optional field (D10).
    - Feature tests while building; the full suite (`tools/check`, GameTests) at the checkpoints marked ✔ below. Pods
@@ -874,7 +876,7 @@ plan now does.
 | D8 | The region table | slots 8,192 blocks apart along +X, Kanto at 0; or ±X both ways; or a 2-D grid | **+X, 8,192** | MG3 |
 | D9 | Slot capacity | `FAMILIES_PER_SHAPE` 32 with a range per region; or per-region slot maps (impossible: block states are global) | **32, measured** | MG3 |
 | D10 | Protocol number | stay 1 with new types and optional fields; or bump to 2 | **stay 1** | MG1 |
-| D11 | Gen1Recomp pin | v0.3.49 for all; or bump to v0.3.85 (Ruby/Sapphire, Gen 3 fixes; Kanto rebuild) | **stay**; revisit at MG7 | MG7 |
+| D11 | Gen1Recomp pin | v0.3.49 for all; or bump to v0.3.85 (Ruby/Sapphire, Gen 3 fixes, archive import; every ROM re-imported; the Union Room off) | **stay** until the user says go on `ENGINE_UPGRADE_PLAN.md` (its U1–U6); recommended before MG0, at the latest before MG7 | MG0 / MG7 |
 | D12 | The pass's look | a tunnel mouth prop (the dungeon entrance's); or a gate house | **gate house** (the pass is its far doorway) | MG5 |
 | D13 | Gen 3 art unit | split metatiles into 8-px quarters (pipeline unchanged); or teach the geometry 16-px art | **quarters** | MG7 |
 | D14 | The two-engine harness | a second e2e install imported by the user; or two processes on one data home (shared `options.lua`, unconfirmed safe) | **second install** | MG5 |
