@@ -143,10 +143,14 @@ public final class ShapePlanner {
 		int set(int x, int y, int z, int id);
 	}
 
-	/** True when (x, y, z) is in a shaft's column, from its bottom cell's feet to its top cell's. */
+	/**
+	 * True when (x, y, z) is in a shaft's column, from its bottom cell's feet to its top cell's; beside a ladder, the top
+	 * cell's floor and feet keep their shapes (the floor stays there).
+	 */
 	static boolean inShaft(List<WorldIndex.Shaft> shafts, int x, int y, int z) {
 		for (WorldIndex.Shaft shaft : shafts) {
-			if (x >= shaft.x() && x < shaft.x() + 2 && z >= shaft.z() && z < shaft.z() + 2 && y >= shaft.y0() && y <= shaft.y1() + 1) {
+			if (x >= shaft.x() && x < shaft.x() + 2 && z >= shaft.z() && z < shaft.z() + 2 && y >= shaft.y0() && y <= shaft.y1() + 1
+					&& (y < shaft.y1() || shaft.wall() == null || shaft.ladderAt(x, z))) {
 				return true;
 			}
 		}

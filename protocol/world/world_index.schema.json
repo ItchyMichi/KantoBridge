@@ -314,7 +314,7 @@
     },
     "shafts": {
       "type": "array",
-      "description": "Caves in 3D (docs/specs/CAVES_3D_PLAN.md §3.5, H5): each real ladder or hole, its top cell straight over its bottom cell; one 2x2 column at x, z from the bottom cell's feet y0 up to the top cell's floor y1. Absent when there are none.",
+      "description": "Caves in 3D (docs/specs/CAVES_3D_PLAN.md §3.5, H5): each real ladder or hole, its top cell straight over its bottom cell; one 2x2 column at x, z from the bottom cell's feet y0 up to the top cell's floor y1 (a ladder's top cell keeps its floor in the half away from the ladder). Absent when there are none.",
       "maxItems": 4096,
       "items": {
         "type": "object",
@@ -328,7 +328,8 @@
           "x": {"type": "integer"},
           "z": {"type": "integer"},
           "y0": {"type": "integer"},
-          "y1": {"type": "integer"}
+          "y1": {"type": "integer"},
+          "wall": {"$ref": "../defs.schema.json#/$defs/dir", "description": "A ladder's only (required there): the side of the column its ladder stands on (HD6)."}
         }
       }
     }

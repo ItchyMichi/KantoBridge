@@ -395,7 +395,11 @@ public final class WorldPlanner {
 				layouts.put(map.id(), map.layout());
 			}
 		}
-		List<WorldIndex.Shaft> shafts = shafts(caveArea.shafts(), placements, layouts);
+		Map<String, MapModel> models = new HashMap<>();
+		for (PlacedMap map : placed) {
+			models.put(map.id(), map.model());
+		}
+		List<WorldIndex.Shaft> shafts = shafts(caveArea.shafts(), placements, layouts, models);
 		WorldIndex index = new WorldIndex(bundle.game(), bundle.exportHash(), placements.values(), layouts, slotMap.hash(), storyCells, habitats,
 				List.of(), null, shafts);
 
@@ -445,9 +449,10 @@ public final class WorldPlanner {
 
 	/**
 	 * The shafts in the world (CAVES_3D_PLAN §3.5, §4.1): each lined-up ladder or hole, from its bottom cell's feet up
-	 * to its top cell's floor, in its top cell's column.
+	 * to its top cell's floor, in its top cell's column; a ladder on the wall {@link WorldPlan#ladderWall} picks.
 	 */
-	static List<WorldIndex.Shaft> shafts(List<CaveRooms.Link> links, Map<String, MapPlacement> placements, Map<String, MapLayout> layouts) {
+	static List<WorldIndex.Shaft> shafts(List<CaveRooms.Link> links, Map<String, MapPlacement> placements, Map<String, MapLayout> layouts,
+			Map<String, MapModel> models) {
 		List<WorldIndex.Shaft> out = new ArrayList<>();
 		for (CaveRooms.Link link : links) {
 			MapPlacement top = placements.get(link.topMap());
@@ -457,11 +462,14 @@ public final class WorldPlanner {
 			}
 			int[] t = origin(top, layouts.get(link.topMap()), link.topX(), link.topY());
 			int[] b = origin(bottom, layouts.get(link.bottomMap()), link.bottomX(), link.bottomY());
-			if (t[0] != b[0] || t[2] != b[2] || b[1] >= t[1] - 1) {
+			MapModel model = models.get(link.topMap());
+			if (t[0] != b[0] || t[2] != b[2] || b[1] >= t[1] - 1 || model == null) {
 				continue;
 			}
+			dev.kantobridge.world.Dir wall = WorldIndex.Shaft.LADDER.equals(link.kind()) ? WorldPlan.ladderWall(model, link.topX(), link.topY()) : null;
 			out.add(new WorldIndex.Shaft(link.kind(), new dev.kantobridge.world.CellPos(link.topMap(), link.topX(), link.topY()),
-					new dev.kantobridge.world.CellPos(link.bottomMap(), link.bottomX(), link.bottomY()), link.up(), t[0], t[2], b[1], t[1] - 1));
+					new dev.kantobridge.world.CellPos(link.bottomMap(), link.bottomX(), link.bottomY()), link.up(), t[0], t[2], b[1], t[1] - 1,
+					wall));
 		}
 		return out;
 	}

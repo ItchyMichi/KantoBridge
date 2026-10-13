@@ -64,15 +64,23 @@ class ShaftTest {
 		WorldIndex.Shaft s = shaft(9, 3);
 		// The top cell on the plateau has walkable neighbours west, north and south: its ladder is on the north wall (HD6).
 		assertEquals(Dir.UP, WorldPlan.ladderWall(plan.map("TEST_CAVE_1F").model(), 9, 3));
+		assertEquals(Dir.UP, s.wall(), "the index says so");
 		int ladder = BlockCode.ladder(Dir.DOWN);
 		for (int y = s.y0(); y <= s.y1() + 1; y++) {
 			assertEquals(ladder, view.code(s.x(), y, s.z()), "the ladder from the bottom cell's feet to the top cell's, " + y);
 			assertEquals(ladder, view.code(s.x() + 1, y, s.z()));
 		}
 		int middle = (s.y0() + s.y1()) / 2;
-		for (int y = s.y0() + 1; y <= s.y1(); y++) {
+		for (int y = s.y0() + 1; y < s.y1(); y++) {
 			int code = view.code(s.x() + 1, y, s.z() + 1);
-			assertEquals(BlockCode.AIR, code, "air up the shaft, the top cell's floor open, " + y);
+			assertTrue(code == BlockCode.AIR || y == middle, "air up the shaft beside the ladder, " + y);
+		}
+		// Beside the ladder the top cell keeps its floor: a player climbing up steps back onto it.
+		for (int bx = 0; bx < 2; bx++) {
+			int floor = view.code(s.x() + bx, s.y1(), s.z() + 1);
+			assertTrue(floor != BlockCode.AIR && BlockCode.kind(floor) != BlockCode.KIND_LADDER, "the top cell's floor beside the ladder");
+			assertFalse(s.contains(s.x() + bx, s.y1(), s.z() + 1));
+			assertTrue(s.contains(s.x() + bx, s.y1(), s.z()), "the ladder's half is open through the floor");
 		}
 		assertEquals(BlockCode.light(WorldPlan.LIGHT_LEVEL), view.code(s.x(), middle, s.z() + 1), "a light half way up");
 		// Between the floors, the ring round the column is rock.
@@ -98,7 +106,8 @@ class ShaftTest {
 		WorldIndex index = plan.index();
 		WorldIndex.Shaft s = shaft(3, 5);
 		assertTrue(index.toCell(s.x(), s.y0() + 4, s.z()).isEmpty(), "between the floors");
-		assertEquals(s, index.shaftAt(s.x() + 1, s.y1(), s.z() + 1));
+		assertEquals(s, index.shaftAt(s.x() + 1, s.y1(), s.z()), "the ladder's half, through the top cell's floor");
+		assertNull(index.shaftAt(s.x() + 1, s.y1(), s.z() + 1), "the floor kept beside it");
 		assertNull(index.shaftAt(s.x() + 2, s.y0() + 4, s.z()), "beside it");
 		assertEquals(new CellPos("TEST_CAVE_B1F", 3, 3), index.toCell(s.x(), s.y0(), s.z()).orElseThrow(), "standing on its bottom cell");
 		assertEquals(new CellPos("TEST_CAVE_1F", 3, 5), index.toCell(s.x(), s.y1() + 1, s.z()).orElseThrow(), "at its top cell's feet");

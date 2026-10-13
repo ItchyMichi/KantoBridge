@@ -930,6 +930,12 @@ the full suite at H1, H5 and H7.
     - **Mt. Moon (the pilot):** 3 of its 7 ladders are shafts (two from 1F to B1F, one from B1F to B2F);
     - load: habitat blocks 1,059 of reach 6; the caves' sections p95 2,138 and at most 3,479 quads; the shape map
       319,136 characters on the wire.
+14. **Fixed while planning H6's video (2026-10-13):** the whole 2 × 2 top cell was open, so a player climbing back up
+    had a block of open shaft behind them and no floor to step back onto. A ladder's top cell now keeps its floor in
+    the half away from the ladder (as a ladder up through a hole in vanilla); a hole stays open. The index carries each
+    ladder's `wall` (HD6) and its `contains` leaves that floor out; the shape map keeps its shapes. Goldens: the index's
+    walls, the shape map's hash only. JUnit 1,036, GameTests 101 (the two flaky dungeon tests failed once more, then
+    passed), Python 1,516.
 
 ## Wild Routes
 

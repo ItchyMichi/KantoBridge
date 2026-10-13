@@ -842,8 +842,9 @@ is what the builder writes to `<world>/kantobridge/world_index.json`:
   `cellOrigin` and `toBlock` go through them; a cell's lookup window is then its own floor's, 3 below to 4 above.
 - `shafts` (optional, H5, [specs/CAVES_3D_PLAN.md](specs/CAVES_3D_PLAN.md) §3.5): each real ladder or hole of a cave
   built in 3D, `kind` (`ladder`, `hole`), its `top{map,x,y}` cell straight over its `bottom{map,x,y}`, `up` (climbed up
-  too), and its column: `x, z` and the blocks `y0` (the bottom cell's feet) to `y1` (the top cell's floor). A block
-  inside a shaft is in no cell.
+  too), and its column: `x, z` and the blocks `y0` (the bottom cell's feet) to `y1` (the top cell's floor); a ladder's
+  `wall` (`up`, `down`, `left`, `right`: the side of the column its ladder stands on). A ladder's top cell keeps its floor
+  in the half away from the ladder, to step off onto. A block inside a shaft (its air) is in no cell.
 
 Clients turn block positions into cells and back with it. The `parts` of `world.index` are slices of
 its JSON text (64 Ki characters each); `hash` is the SHA-256 of the whole text.

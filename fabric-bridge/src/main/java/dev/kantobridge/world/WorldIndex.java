@@ -31,7 +31,7 @@ public final class WorldIndex {
 
 	private static final Set<String> ROOT_FIELDS = Set.of("version", "game", "exportHash", "scale", "maps", "slotMapHash",
 			"storyCells", "habitats", "zones", "dungeons", "shafts");
-	private static final Set<String> SHAFT_FIELDS = Set.of("kind", "top", "bottom", "up", "x", "z", "y0", "y1");
+	private static final Set<String> SHAFT_FIELDS = Set.of("kind", "top", "bottom", "up", "x", "z", "y0", "y1", "wall");
 	private static final Set<String> SHAFT_END_FIELDS = Set.of("map", "x", "y");
 	/** The longest shaft, in blocks. */
 	public static final int MAX_SHAFT = 256;
@@ -251,22 +251,39 @@ public final class WorldIndex {
 	 *
 	 * @param kind {@code ladder} or {@code hole}
 	 * @param up   it is climbed up too (a hole, or a ladder whose bottom leads elsewhere, isn't)
+	 * @param wall the side of the column a ladder stands on (HD6); null for a hole
 	 */
-	public record Shaft(String kind, CellPos top, CellPos bottom, boolean up, int x, int z, int y0, int y1) {
+	public record Shaft(String kind, CellPos top, CellPos bottom, boolean up, int x, int z, int y0, int y1, @Nullable Dir wall) {
 		public static final String LADDER = "ladder";
 		public static final String HOLE = "hole";
 
 		public Shaft {
 			if (!LADDER.equals(kind) && !HOLE.equals(kind) || top == null || bottom == null || y1 <= y0 || y1 - y0 > MAX_SHAFT
-					|| HOLE.equals(kind) && up) {
+					|| HOLE.equals(kind) && up || LADDER.equals(kind) != (wall != null)) {
 				throw new IllegalArgumentException("bad shaft");
 			}
 		}
 
-		/** True when block (bx, by, bz) is inside the shaft: its column, over the bottom cell's feet, up to the top's floor. */
+		/**
+		 * True when block (bx, by, bz) is inside the shaft: its column, over the bottom cell's feet, up to the top cell's
+		 * floor. A ladder's top cell keeps its floor beside the ladder, to step off onto.
+		 */
 		public boolean contains(int bx, int by, int bz) {
 			return bx >= this.x && bx < this.x + Scale.CELL_BLOCKS && bz >= this.z && bz < this.z + Scale.CELL_BLOCKS && by > this.y0
-					&& by <= this.y1;
+					&& (by < this.y1 || by == this.y1 && (this.wall == null || this.ladderAt(bx, bz)));
+		}
+
+		/** True when block column (bx, bz) is in the half of the shaft's column along its ladder's wall. */
+		public boolean ladderAt(int bx, int bz) {
+			if (this.wall == null || bx < this.x || bx >= this.x + Scale.CELL_BLOCKS || bz < this.z || bz >= this.z + Scale.CELL_BLOCKS) {
+				return false;
+			}
+			return switch (this.wall) {
+				case UP -> bz == this.z;
+				case DOWN -> bz == this.z + 1;
+				case LEFT -> bx == this.x;
+				case RIGHT -> bx == this.x + 1;
+			};
 		}
 
 		/** True when {@code cell} is one of its two ends. */
@@ -748,6 +765,9 @@ public final class WorldIndex {
 				item.addProperty("z", shaft.z());
 				item.addProperty("y0", shaft.y0());
 				item.addProperty("y1", shaft.y1());
+				if (shaft.wall() != null) {
+					item.addProperty("wall", shaft.wall().id());
+				}
 				shafts.add(item);
 			}
 			root.add("shafts", shafts);
@@ -887,12 +907,14 @@ public final class WorldIndex {
 				int y0 = item.integer("y0");
 				int y1 = item.integer("y1");
 				boolean up = item.bool("up");
-				if (!Shaft.LADDER.equals(kind) && !Shaft.HOLE.equals(kind) || y1 <= y0 || y1 - y0 > MAX_SHAFT || Shaft.HOLE.equals(kind) && up) {
+				Dir wall = item.has("wall") ? Dir.byId(item.string("wall", DataReader.SYMBOL)) : null;
+				if (!Shaft.LADDER.equals(kind) && !Shaft.HOLE.equals(kind) || y1 <= y0 || y1 - y0 > MAX_SHAFT || Shaft.HOLE.equals(kind) && up
+						|| Shaft.LADDER.equals(kind) != (wall != null)) {
 					throw new DataException("/shafts", "bad shaft");
 				}
 				shafts.add(new Shaft(kind, new CellPos(top.string("map", DataReader.MAP_ID), top.integer("x", 0, 4096), top.integer("y", 0, 4096)),
 						new CellPos(bottom.string("map", DataReader.MAP_ID), bottom.integer("x", 0, 4096), bottom.integer("y", 0, 4096)), up,
-						item.integer("x"), item.integer("z"), y0, y1));
+						item.integer("x"), item.integer("z"), y0, y1, wall));
 			}
 		}
 		try {

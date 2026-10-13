@@ -823,8 +823,9 @@ public final class WorldPlan {
 
 	/**
 	 * A cave's shaft (CAVES_3D_PLAN §3.5): air from over its bottom cell's feet up through its top cell's floor; a ladder
-	 * (Minecraft's, climbed as one) up one wall from the bottom cell's feet to the top cell's, unless it is a hole; rock
-	 * round it where it runs between the two rooms; a light half way up unless the cave is dark.
+	 * (Minecraft's, climbed as one) up one wall from the bottom cell's feet to the top cell's, unless it is a hole, and
+	 * then the top cell's floor kept beside it, so a player climbing up steps off onto it; rock round it where it runs
+	 * between the two rooms; a light half way up unless the cave is dark.
 	 */
 	private void renderShaft(ChunkCodes out, WorldIndex.Shaft shaft, int x0, int z0) {
 		PlacedMap top = this.map(shaft.top().map());
@@ -834,7 +835,7 @@ public final class WorldPlan {
 		}
 		Box3 topVolume = partVolume(top.placement(), part(top, shaft.top().x(), shaft.top().y()), maxCeiling(top.layout()));
 		Box3 bottomVolume = partVolume(bottom.placement(), part(bottom, shaft.bottom().x(), shaft.bottom().y()), maxCeiling(bottom.layout()));
-		Dir wall = WorldIndex.Shaft.LADDER.equals(shaft.kind()) ? ladderWall(top.model(), shaft.top().x(), shaft.top().y()) : null;
+		Dir wall = shaft.wall();
 		MapPlacement tp = top.placement();
 		int rock = BlockCode.full(this.slot(top, top.model().borderTile(shaft.top().x() * Scale.CELL_BLOCKS, shaft.top().y() * Scale.CELL_BLOCKS), false));
 		int middle = (shaft.y0() + shaft.y1()) / 2;
@@ -858,7 +859,9 @@ public final class WorldPlan {
 				}
 				boolean ladder = wall != null && onWall(wall, bx, bz);
 				for (int y = shaft.y0() + 1; y <= shaft.y1(); y++) {
-					out.set(x, y, z, BlockCode.AIR);
+					if (shaft.contains(x, y, z)) {
+						out.set(x, y, z, BlockCode.AIR);
+					}
 				}
 				if (ladder) {
 					for (int y = shaft.y0(); y <= shaft.y1() + 1; y++) {
