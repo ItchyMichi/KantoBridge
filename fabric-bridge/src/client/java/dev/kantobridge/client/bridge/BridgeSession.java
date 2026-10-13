@@ -166,7 +166,8 @@ final class BridgeSession {
 				String tested = JsonFields.str(data, "tested");
 				this.phase = Phase.CONNECTED;
 				this.lastPingMs = nowMs;
-				this.out.connected(new HelloOk(session, game, engine, bridge, tested != null && VERSION.matcher(tested).matches() ? tested : null));
+				this.out.connected(new HelloOk(session, game, engine, bridge, tested != null && VERSION.matcher(tested).matches() ? tested : null,
+						HelloOk.unionRoomField(JsonFields.str(data, "union_room"))));
 				this.out.deliver(message);
 			}
 			case MsgTypes.HELLO_REJECT -> {

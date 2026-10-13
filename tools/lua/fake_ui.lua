@@ -9,8 +9,13 @@
 --   FakeUi.attach(E)          after FakeWorld.attach
 --   E.uiPush(state) / E.uiPop()   push/pop with enter/exit and the
 --                             screen.pushed / screen.popped events
---   E.textBox(text, opts)     \f pages, \n lines, \v scrolled lines;
---                             opts: auto, stay, instant, choice, onDone
+--   E.textBox(text, opts)     \f pages, \n lines, \v scrolled lines, a
+--                             trailing {DONE}/{PROMPT}; opts: auto, stay,
+--                             instant, choice, onDone, waitButton, sfxWait,
+--                             noLetterDelay (TextBox.lua at v0.3.85: the
+--                             rows in `shownSource`, visibleText,
+--                             arrowVisible, sfxHeld over E.sfxBusyFrames,
+--                             stay.press)
 --   E.choiceBox(onChoose, opts), E.menuState(items, opts),
 --   E.listMenu(title, items, opts), E.quantityBox(opts),
 --   E.namingScreen(opts), E.pokedexMenu(items), E.prizeCounter(prizes, opts),
@@ -83,29 +88,126 @@ function FakeUi.attach(E)
     return pages
   end
 
+  -- TextBox.ending / TextBox.strip (TextBox.lua:72-86): a trailing {PROMPT}
+  -- or {DONE} token names how the text ends and never reaches the box
+  local function ending(text)
+    if text:find("{PROMPT}%s*$") then return "prompt" end
+    if text:find("{DONE}%s*$") then return "done" end
+    return nil
+  end
+  local function strip(text)
+    text = text:gsub("{DONE}%s*$", ""):gsub("{PROMPT}%s*$", "")
+    return (text:gsub("{DONE}", ""):gsub("{PROMPT}", ""))
+  end
+
+  -- Sound.sfxBusy as TextBox:sfxHeld polls it (:415-420): E.sfxBusyFrames
+  -- is how many more polls still find a sound effect playing
+  E.sfxBusyFrames = 0
+  function E.sfxBusy()
+    if E.sfxBusyFrames > 0 then
+      E.sfxBusyFrames = E.sfxBusyFrames - 1
+      return true
+    end
+    return false
+  end
+
+  -- src/render/TextBox.lua at v0.3.85 (UP3/B3). opts: auto, stay (a table
+  -- with prompt/press/onShown, or true), instant, choice, onDone, and the
+  -- v0.3.85 ones -- waitButton, sfxWait, noLetterDelay. The fake tolerates
+  -- `stay = true` and `auto = true`, which the engine's tables never are.
   function E.textBox(text, opts)
     opts = opts or {}
     local s = setmetatable({ isTextBox = true }, E.ui.TextBox)
-    s.pages = paginate(text)
+    local tail = ending(text)
+    s.pages = paginate(strip(text))
     s.pageIndex, s.lineIndex, s.charIndex = 1, 1, 0
-    s.shown = { {} }
-    s.waiting, s.done = false, false
+    -- the rows in view and their sources (TextBox.new :193-194): one entry
+    -- per row, the page line it shows or false for a blank row
+    s.shown, s.shownSource = {}, {}
+    s.waiting, s.contAdvance, s.done = false, false, false
     s.auto, s.stay, s.choice, s.instant = opts.auto, opts.stay, opts.choice, opts.instant
     s.choiceLabels, s.defaultNo = opts.choiceLabels, opts.defaultNo
     s.onDone = opts.onDone
-    -- the lines in view, at most two (TextBox:beginLine keeps them so)
+    -- TextBox.new :145-157: noLetterDelay prints a line in one frame,
+    -- sfxWait holds the box while a sound effect plays, waitButton takes
+    -- the closing press without the arrow (a {DONE} ending, unless the
+    -- caller said otherwise; a {PROMPT} ending shows it)
+    s.noLetterDelay, s.sfxWait, s.waitButton = opts.noLetterDelay, opts.sfxWait, opts.waitButton
+    if tail == "prompt" then
+      s.waitButton = false
+    elseif tail == "done" and s.waitButton == nil then
+      s.waitButton = true
+    end
+    -- a Gen 1 save: the fixed two-row box (:179-181)
+    s.fixedGen1Rows = true
+
+    -- beginLine (:386-401): a scrolled line that follows a lone row gets a
+    -- blank row above it (pokered home/text.asm:262: the box scrolls
+    -- twice), then at most two rows stay, the oldest scrolled out
     local function beginLine(self)
       self.charIndex = 0
-      if #self.shown >= 2 then table.remove(self.shown, 1) end
-      self.shown[#self.shown + 1] = {}
+      local conts = self.pages.contBefore[self.pageIndex]
+      if self.fixedGen1Rows and conts and conts[self.lineIndex] and #self.shown == 1 then
+        table.insert(self.shown, {})
+        table.insert(self.shownSource, false)
+      end
+      if #self.shown >= 2 then
+        table.remove(self.shown, 1)
+        table.remove(self.shownSource, 1)
+      end
+      table.insert(self.shown, {})
+      table.insert(self.shownSource, self.lineIndex)
+    end
+    -- visibleText (:404-412): the shown rows as the page's lines, "" for a
+    -- blank one
+    function s.visibleText(self)
+      local page = self.pages[self.pageIndex]
+      if not page then return nil end
+      local out = {}
+      for _, source in ipairs(self.shownSource) do
+        out[#out + 1] = source and page[source] or ""
+      end
+      return #out > 0 and out or nil
+    end
+    -- sfxHeld (:415-420): true while the awaited sound effect plays; the
+    -- wait is cleared the first time it is over
+    function s.sfxHeld(self)
+      if not self.sfxWait then return false end
+      if E.sfxBusy() then return true end
+      self.sfxWait = nil
+      return false
+    end
+    -- arrowVisible (:428-440): hidden by a sound effect, shown at a page
+    -- break or scroll; then waitButton hides it unless an auto.promptFirst
+    -- or stay.prompt press is due; else shown on a finished box without a
+    -- choice whose auto/stay prompt is still due
+    function s.arrowVisible(self)
+      if self.sfxWait then return false end
+      if self.waiting then return true end
+      local auto, stay = self.auto, self.stay
+      local autoPrompt = type(auto) == "table" and auto.promptFirst and not self.autoPrompted
+      local stayPrompt = type(stay) == "table" and stay.prompt and not self.stayShown
+      if self.waitButton and not (autoPrompt or stayPrompt) then return false end
+      return not not (self.done and not self.choice
+        and (not auto or autoPrompt)
+        and (not stay or stayPrompt))
     end
     if s.instant then
+      -- the last page up already typed (:186-211): every line begun in
+      -- turn, so the rows are the page's last two (or a blank and the last)
       s.pageIndex = #s.pages
-      s.lineIndex = #s.pages[s.pageIndex]
-      s.charIndex = #s.pages[s.pageIndex][s.lineIndex]
-      s.shown = { {}, {} }
+      local page = s.pages[s.pageIndex]
+      for index = 1, #page do
+        s.lineIndex = index
+        beginLine(s)
+      end
+      s.lineIndex = #page
+      s.charIndex = #page[#page]
       s.done = true
+    else
+      beginLine(s)
     end
+    -- TextBox:update's step (:478-725), in its order
     function s.update(self)
       local input = E.game.input
       if (self.holdFrames or 0) > 0 then
@@ -115,28 +217,38 @@ function FakeUi.attach(E)
       if self.done then
         if self.stay then
           if not self.stayShown then
-            if type(self.stay) == "table" and self.stay.prompt
-                and not (pressed(input, "a") or pressed(input, "b")) then
+            if self:sfxHeld() then return end
+            -- stay.prompt: the arrowed A/B wait; stay.press (v0.3.85): the
+            -- same press without the arrow (:541-548)
+            local stay = type(self.stay) == "table" and self.stay or {}
+            if (stay.prompt or stay.press) and not (pressed(input, "a") or pressed(input, "b")) then
               return
             end
             self.stayShown = true
-            if type(self.stay) == "table" and self.stay.onShown then self.stay.onShown(self) end
+            if stay.onShown then stay.onShown(self) end
           end
           return
         end
         if self.auto then
-          -- M8 wave 3: auto.sound plays once at the end (TextBox.lua:535-540);
-          -- auto.wait then hands the box to the plain A/B wait (:569-572)
-          if type(self.auto) == "table" and self.auto.sound and not self.autoStarted then
-            self.autoStarted = true
-            self.auto.sound()
+          local auto = type(self.auto) == "table" and self.auto or {}
+          -- auto.promptFirst: one press before the auto wait (:559-563)
+          if auto.promptFirst and not self.autoPrompted then
+            if not (pressed(input, "a") or pressed(input, "b")) then return end
+            self.autoPrompted = true
+            return
           end
-          if type(self.auto) == "table" and self.auto.wait then
+          -- M8 wave 3: auto.sound plays once at the end (:564-569);
+          -- auto.wait then hands the box to the plain A/B wait (:584-602)
+          if auto.sound and not self.autoStarted then
+            self.autoStarted = true
+            auto.sound()
+          end
+          if auto.wait then
             self.auto = nil
             return
           end
           self.autoTimer = (self.autoTimer or 0) + 1
-          if self.autoTimer >= ((type(self.auto) == "table" and self.auto.delay) or 3) then
+          if self.autoTimer >= (auto.delay or 3) then
             E.uiPop()
             if self.onDone then self.onDone() end
           end
@@ -152,6 +264,9 @@ function FakeUi.attach(E)
           end
           return
         end
+        -- the plain A/B close (:636-643): a sound effect holds it first;
+        -- waitButton only mutes the press sound
+        if self:sfxHeld() then return end
         if pressed(input, "a") or pressed(input, "b") then
           E.uiPop()
           if self.onDone then self.onDone() end
@@ -159,31 +274,42 @@ function FakeUi.attach(E)
         return
       end
       if self.waiting then
+        -- the arrow is up for three frames that swallow the button (:647-652)
         if (self.preWait or 0) > 0 then
           self.preWait = self.preWait - 1
           return
         end
+        if self:sfxHeld() then return end
         if pressed(input, "a") or pressed(input, "b") then
           self.waiting = false
           if self.contAdvance then
+            -- ContText: keep the box, scroll one line (:659-668)
             self.contAdvance = false
             self.lineIndex = self.lineIndex + 1
             beginLine(self)
             self.holdFrames = 10
           else
+            -- the page clear (:669-676)
             self.pageIndex, self.lineIndex = self.pageIndex + 1, 1
-            self.shown = {}
+            self.shown, self.shownSource = {}, {}
             beginLine(self)
             self.holdFrames = 20
           end
         end
         return
       end
-      -- typing, one character a frame (text speed FAST)
+      -- typing, one character a frame (text speed FAST, :680-690); with
+      -- noLetterDelay (:688, delay 0) the whole line in one frame, its end
+      -- handled in the same frame
       local page = self.pages[self.pageIndex]
-      if self.charIndex < #page[self.lineIndex] then
-        self.charIndex = self.charIndex + 1
-        return
+      local line = page[self.lineIndex]
+      if self.charIndex < #line then
+        if self.noLetterDelay then
+          self.charIndex = #line
+        else
+          self.charIndex = self.charIndex + 1
+          return
+        end
       end
       if self.lineIndex < #page then
         if self.pages.contBefore[self.pageIndex][self.lineIndex + 1] then
@@ -274,7 +400,7 @@ function FakeUi.attach(E)
     s.cursorRows, s.footer, s.dialogue, s.money = opts.cursorRows, opts.footer, opts.dialogue, opts.money
     s.screenId, s.kind, s.script, s.wrap = opts.screenId, opts.kind or title, opts.script, opts.wrap
     s.onChoose, s.onCancel = opts.onChoose, opts.onCancel
-    -- ListMenu:removeCurrent / :close (src/ui/ListMenu.lua:263-271)
+    -- ListMenu:removeCurrent / :close (src/ui/ListMenu.lua:264-272)
     function s.removeCurrent(self)
       table.remove(self.items, self.index)
       self.index = math.max(1, math.min(self.index, #self.items))
@@ -532,7 +658,7 @@ function FakeUi.attach(E)
     return nil
   end
 
-  -- OverworldState:talkTo (OC:3440-3560), shortened: the NPC freezes and
+  -- OverworldState:talkTo (OC:3552-3672), shortened: the NPC freezes and
   -- turns to the player; an undefeated trainer battles, anything else talks
   -- (fake_content.lua adds statics and talk scripts, M8)
   function E.talkTo(npc)
@@ -541,7 +667,7 @@ function FakeUi.attach(E)
     npc.facing = OPPOSITE[p.facing]
     local unfreeze = function() npc.frozen = false end
     if npc.def and npc.def.trainerClass and E.engageTrainer and not E.trainerDefeated(npc) then
-      -- an undefeated trainer battles (OC:3516-3519; fake_script.lua)
+      -- an undefeated trainer battles (OC:3628-3631; fake_script.lua)
       E.engageTrainer(npc, unfreeze)
     else
       E.uiPush(E.textBox(E.talk[npc.id] or "HELLO!\fGOOD LUCK!", { onDone = unfreeze }))
@@ -564,7 +690,7 @@ function FakeUi.attach(E)
     end
     if npc then
       if not npc.moving then
-        -- the world.talk hook around talkTo (OC:2561-2566; M8)
+        -- the world.talk hook around talkTo (OC:2674-2679; M8)
         E.runtime.call("world.talk", function(_, target) return E.talkTo(target) end, w, npc)
       end
       return interacted("npc", npc)
@@ -579,7 +705,7 @@ function FakeUi.attach(E)
   end
 
   -- the overworld's standing poll: A interacts, START opens the menu
-  -- (OC:1712-1721)
+  -- (OC:1825-1834)
   function E.overworldButtons(input)
     if input:wasPressed("a") then
       E.interact()

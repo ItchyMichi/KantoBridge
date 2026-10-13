@@ -1,6 +1,9 @@
 -- A stand-in for the `mod` object Gen1Recomp's loader hands a mod
--- (refs/gen1recomp/src/mods/Loader.lua:1340-1752 in v0.3.49), with just the
--- parts gen1-bridge uses, plus test controls. Written for Kanto Bridge.
+-- (refs/gen1recomp/src/mods/Loader.lua:1414-1826 in v0.3.85; the object is
+-- the previous pin's (v0.3.49), 74 lines down: the loader's fast require path, :247-300,
+-- serves engine code with no owning mod and never a mod's own require),
+-- with just the parts gen1-bridge uses, plus test controls. Written for
+-- Kanto Bridge.
 --
 --   local mod = FakeMod.new({ read = fn(rel) -> source | nil, err })
 --   FakeMod.emit(mod, "game.ready", { game = fakeGame })   -- engine events
@@ -31,10 +34,26 @@ function FakeMod.new(opts)
     _input = {},
   }
 
-  -- Logger.emit (src/core/Logger.lua:5-13): "[level] " .. string.format(fmt, ...)
+  -- Logger.emit (src/core/Logger.lua:26-32): "[level] " .. format(fmt, ...),
+  -- where format (:5-24, since v0.3.85) never throws: when the arguments
+  -- don't fit the directives, every directive becomes %s over tostring'd
+  -- arguments and the error rides along on the line
+  local function format(fmt, ...)
+    local n = select("#", ...)
+    if n == 0 then return tostring(fmt) end
+    local ok, msg = pcall(string.format, fmt, ...)
+    if ok then return msg end
+    local plain, wanted = tostring(fmt):gsub("%%%%", "\0"):gsub("%%[-+ #0]*%d*%.?%d*%a", "%%s")
+    local args = { ... }
+    n = math.max(n, wanted)
+    for i = 1, n do args[i] = tostring(args[i]) end
+    local okPlain, text = pcall(string.format, (plain:gsub("%z", "%%%%")), unpack(args, 1, n))
+    if not okPlain then text = tostring(fmt) .. " " .. table.concat(args, " ", 1, n) end
+    return string.format("%s (bad log format: %s)", text, tostring(msg))
+  end
   local function logger(level)
     return function(_, fmt, ...)
-      local msg = string.format("[%s] " .. fmt, id, ...)
+      local msg = format("[%s] " .. fmt, id, ...)
       lines[#lines + 1] = ("[%s] %s"):format(level, msg)
     end
   end
@@ -84,7 +103,7 @@ function FakeMod.new(opts)
     end,
   }
 
-  -- mod.options (Loader.lua:1597-1615): define stores the schema; get returns
+  -- mod.options (Loader.lua:1671-1689): define stores the schema; get returns
   -- a stored value (opts.options, as the F10 manager would save it), else
   -- the row's default.
   local stored = opts.options or {}
@@ -108,8 +127,8 @@ function FakeMod.new(opts)
     end,
   }
 
-  -- mod.save (Loader.lua:1541-1556): this mod's bucket of the save's
-  -- modData (Game:adoptSave, src/core/Game.lua:1314-1324). Tests reach the
+  -- mod.save (Loader.lua:1615-1630): this mod's bucket of the save's
+  -- modData (Game:adoptSave, src/core/Game.lua:1348-1360). Tests reach the
   -- bucket as mod._save (opts.save to start with values).
   local bucket = opts.save or {}
   mod._save = bucket
@@ -122,7 +141,7 @@ function FakeMod.new(opts)
     set = function(_, key, value) bucket[key] = value end,
   }
 
-  -- mod.cache (Loader.lua:1567-1569, src/mods/ImportAccess.lua:72-122):
+  -- mod.cache (Loader.lua:1641-1643, src/mods/ImportAccess.lua:72-122):
   -- installation-wide bytes under mod_cache/<id>/, not tied to a playthrough.
   -- opts.cache is the backing table (rel -> bytes), so a test can hand the
   -- same files to a "restarted" mod; mod._cacheControl.failWrites makes
@@ -167,12 +186,12 @@ function FakeMod.new(opts)
   -- mod.ui: the UI module tables (src/ui/ModUI.lua:8-27); tests pass fakes.
   mod.ui = opts.ui or {}
 
-  -- mod.datasets (Loader.lua:1361-1369): open(version) -> a read-only view,
+  -- mod.datasets (Loader.lua:1435-1443): open(version) -> a read-only view,
   -- or nil plus a reason. The fake engine provides one; without it the API
   -- is absent, as on an engine that predates dataset views.
   mod.datasets = opts.datasets
 
-  -- mod.content.<registry>:get(id) (Loader.lua:1262-1265), over plain tables
+  -- mod.content.<registry>:get(id) (Loader.lua:1336-1339), over plain tables
   -- of records the test provides: opts.content = { pokemon = { ID = rec } }.
   mod.content = {}
   for name, records in pairs(opts.content or {}) do
@@ -185,7 +204,7 @@ function FakeMod.new(opts)
 
   -- Records button calls. When the game has an input with sources (the fake
   -- world's), presses go through it as the Loader's do
-  -- (src/mods/Loader.lua:1393-1431): every call is its own
+  -- (src/mods/Loader.lua:1467-1505): every call is its own
   -- "mod:<id>:<n>" source, and release only knows this mod's tokens.
   local input = mod._input
   local ledger, seq = {}, 0

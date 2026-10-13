@@ -6,14 +6,14 @@
 -- does everything else over the bridge.
 --
 -- It also prints KB_MAP_ENTERED map=<symbol> via=<word> for each map.entered
--- event (src/world/OverworldController.lua:686-691), KB_TITLE once the game
+-- event (src/world/OverworldController.lua:685-690), KB_TITLE once the game
 -- is back at the title screen after having been in the overworld (the
--- start menu's QUIT answered YES: Game:returnToTitle, src/core/Game.lua:245-249),
+-- start menu's QUIT answered YES: Game:returnToTitle, src/core/Game.lua:247-251),
 -- and at the end gen1-bridge's UI, NPC and mirror counters from its status
 -- table.
 --
 -- Runs unsandboxed as a POKEPORT_DRIVER coroutine, resumed once per frame
--- (refs/gen1recomp/main.lua:641-645, :993-1011). Data safety: prints only
+-- (refs/gen1recomp/main.lua:755-759, :1136-1157). Data safety: prints only
 -- markers, map symbols and counts.
 
 io.stdout:setvbuf("no") -- LÖVE block-buffers stdout; this also unbuffers mod.log
@@ -64,7 +64,7 @@ return function(game)
     if phase == "ready" then
       if status and status.ready then
         status.configure({ port = PORT })
-        -- New Game without Oak's speech (src/core/Game.lua:171-198)
+        -- New Game without Oak's speech (src/core/Game.lua:173-200)
         game:startNewGame({ intro = false })
         phase = "world"
       end

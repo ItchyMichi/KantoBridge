@@ -15,8 +15,8 @@
 --
 --   cut       facing a cuttable tree (OVERWORLD tile $3d in a block with a
 --             field.cutTreeSwaps row, OverworldState:tryCut's own gate,
---             OC:3292-3313) from a plain cell. Once the engine has recorded
---             the cut (ow.cutBlocks, OC:3318-3322) and the player stands on
+--             OC:3404-3425) from a plain cell. Once the engine has recorded
+--             the cut (ow.cutBlocks, OC:3430-3434) and the player stands on
 --             the scene cell again, idle, turned away from the tree (the
 --             test's signal that it is done there), the driver warps it away
 --             to ROUTE_1 (KB_AWAY) and back onto the scene cell facing the
@@ -35,7 +35,7 @@
 -- (exit 1).
 --
 -- Runs unsandboxed as a POKEPORT_DRIVER coroutine, resumed once per frame
--- (refs/gen1recomp/main.lua:641-645, :993-1011). Data safety: prints only
+-- (refs/gen1recomp/main.lua:755-759, :1136-1157). Data safety: prints only
 -- markers, map, move and item symbols, cells and counts -- never a species,
 -- a name, a block id or any text.
 
@@ -45,7 +45,7 @@ local PORT = tonumber(os.getenv("KB_TEST_PORT") or "") or 27187
 local SCENE = os.getenv("KB_SCENE") or "cut"
 local SECONDS_LIMIT = tonumber(os.getenv("KB_DRIVER_SECONDS") or "") or 600
 local STARTER_DEX = 7
-local CUT_TREE_TILE = 0x3d -- OverworldState:tryCut's OVERWORLD tree tile (OC:3304)
+local CUT_TREE_TILE = 0x3d -- OverworldState:tryCut's OVERWORLD tree tile (OC:3416)
 local AWAY_MAP = "ROUTE_1"
 local DELTA = { up = { 0, -1 }, down = { 0, 1 }, left = { -1, 0 }, right = { 1, 0 } }
 local DIRS = { "up", "down", "left", "right" }
@@ -266,8 +266,8 @@ end
 local FIND = { cut = cutSpot, surf = surfSpot, spin = spinSpot, elevator = elevatorSpot, strength = boulderSpot }
 
 -- every map trainer of a map beaten, so nobody sights the player
--- (checkTrainerSight skips beaten ones, OC:4372-4420; the header's event,
--- Data:trainerHeader, src/core/Data.lua:425-428)
+-- (checkTrainerSight skips beaten ones, OC:4506-4554; the header's event,
+-- Data:trainerHeader, src/core/Data.lua:426-429)
 local function beatTrainers(game, mapId)
   local def = game.data.maps[mapId]
   local n = 0
@@ -334,7 +334,7 @@ return function(game)
     if phase == "ready" then
       if status and status.ready then
         status.configure({ port = PORT })
-        -- New Game without Oak's speech (src/core/Game.lua:171-198)
+        -- New Game without Oak's speech (src/core/Game.lua:173-200)
         game:startNewGame({ intro = false })
         phase = "world"
       end
@@ -350,7 +350,7 @@ return function(game)
         end
         if not species then fail("no_starter_species") end
         -- level 100 and REPEL steps: the engine's own REPEL filter keeps every
-        -- wild Pokemon weaker than the lead away (OC:4793-4799), so no surfing
+        -- wild Pokemon weaker than the lead away (OC:4934-4940), so no surfing
         -- encounter interrupts a scene
         local mon = require("src.pokemon.Pokemon").new(data, species, 100)
         save.repelSteps = 9999

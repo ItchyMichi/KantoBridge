@@ -6,7 +6,7 @@
 --
 -- Only while the classifier says "idle", on the hidden player's map, with
 -- the target cell orthogonally adjacent, or two cells away straight ahead
--- across a counter tile (the A press reaches over counters, OC:2542-2547).
+-- across a counter tile (the A press reaches over counters, OC:2655-2660).
 -- A request made while the player is still walking (or the step driver is
 -- busy) waits up to WAIT steps for the player to stand.
 --

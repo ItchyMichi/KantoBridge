@@ -8,7 +8,7 @@
 --   save.loaded{fresh, ops, pair?, at?, daycare?}         G->M (M10)
 --
 -- Every hidden-game save announces itself through the engine's save.writing
--- event (Game:writeSave, src/core/Game.lua:1328-1351), and Minecraft saves
+-- event (Game:writeSave, src/core/Game.lua:1362-1385), and Minecraft saves
 -- with it: save.begin goes out with an id unique per gen1-bridge process
 -- ("v-<token>-<n>") and a reason. "center" is the save gen1-bridge makes
 -- itself after the nurse's heal; every other one (the start menu's SAVE,
@@ -425,7 +425,7 @@ function Save.new(opts)
   -- in game: at the title the bucket is the boot skeleton's, and the save
   -- New Game makes or CONTINUE loads brings its own, which restore() then
   -- fills (its bucket is adopted before save.created / save.loaded,
-  -- src/core/Game.lua:186-187, :1500).
+  -- src/core/Game.lua:188-189, :1563).
   local function store_(anytime)
     if not (bound and store) or not (anytime or engine.inGame()) then return false end
     local ok = pcall(store.set, "session", { world = bound.world, multiplayer = bound.multiplayer, slot = bound.slot })

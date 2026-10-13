@@ -6,12 +6,12 @@
 -- the bridge.
 --
 -- It also listens to the engine's map.entered event
--- (src/world/OverworldController.lua:686-691) and prints each one as
+-- (src/world/OverworldController.lua:685-690) and prints each one as
 -- KB_MAP_ENTERED map=<symbol> via=<word>, and at the end prints the step
 -- driver's and warp tracker's counters from gen1-bridge's status table.
 --
 -- Runs unsandboxed as a POKEPORT_DRIVER coroutine, resumed once per frame
--- (refs/gen1recomp/main.lua:641-645, :993-1011). Data safety: prints only
+-- (refs/gen1recomp/main.lua:755-759, :1136-1157). Data safety: prints only
 -- markers, map symbols and counts.
 
 io.stdout:setvbuf("no") -- LÖVE block-buffers stdout; this also unbuffers mod.log
@@ -35,7 +35,7 @@ return function(game)
   local phase = "ready"
   local entered = 0
   -- the loader's event bus is live before the first resume (Game:load runs
-  -- the mod loader, main.lua:636 before :641)
+  -- the mod loader, main.lua:750 before :641)
   local Runtime = require("src.mods.Runtime")
   Runtime.events:on("map.entered", function(payload)
     entered = entered + 1
@@ -48,7 +48,7 @@ return function(game)
     if phase == "ready" then
       if status and status.ready then
         status.configure({ port = PORT })
-        -- New Game without Oak's speech (src/core/Game.lua:171-198)
+        -- New Game without Oak's speech (src/core/Game.lua:173-200)
         game:startNewGame({ intro = false })
         phase = "world"
       end

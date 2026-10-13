@@ -1,6 +1,6 @@
 -- Kanto Bridge test driver (Wild Routes, WR2's spot): finds where Viridian
 -- City's clearing can go near the map's bottom-right corner. After New Game
--- without the intro (src/core/Game.lua:171-198) it runs gen1-bridge's own exit
+-- without the intro (src/core/Game.lua:173-200) it runs gen1-bridge's own exit
 -- planner over the town, loaded from the mod's file (lib/kb_routes.lua has no
 -- requires): Routes.plan for every block and the facings right and down, with
 -- the cells the clearing must not cover (Routes.occupiedCells: warps, signs,
@@ -13,7 +13,7 @@
 -- `edge`: the clearing's last block touches the map's border.
 --
 -- Runs unsandboxed as a POKEPORT_DRIVER coroutine, resumed once per frame
--- (refs/gen1recomp/main.lua:641-645, :993-1011). Data safety: prints only
+-- (refs/gen1recomp/main.lua:755-759, :1136-1157). Data safety: prints only
 -- markers, cells, counts and directions -- never a block, a tile or any text.
 
 io.stdout:setvbuf("no") -- LÖVE block-buffers stdout; this also unbuffers mod.log

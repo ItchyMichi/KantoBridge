@@ -1,6 +1,6 @@
 -- Kanto Bridge test driver (Wild Routes check C6, docs/specs/WILD_ROUTES_PLAN.md
 -- §8): moves gen1-bridge to the test port, starts a new game without the
--- intro (src/core/Game.lua:171-198), gives the player a starter (as
+-- intro (src/core/Game.lua:173-200), gives the player a starter (as
 -- kb_route1.lua does: Pokemon.new + Party.add, the OT stamped) and warps onto
 -- the clearing's spot in its town through the supported mod.world facade
 -- (WorldAPI:warpTo, src/world/WorldAPI.lua:358-371), facing its trees. The
@@ -14,7 +14,7 @@
 -- at the end KB_END with the map, the party's size and the bag's POTION count.
 --
 -- KB_PACE=<n> paces the serving to n frames a second (a driver turns the
--- engine's own pacing off, main.lua:1637-1642, so a real client playing
+-- engine's own pacing off, main.lua:1776-1781, so a real client playing
 -- against it -- tools/e2e/showcase.py -- would see the hidden game run several
 -- times too fast): the driver sleeps out the rest of each frame.
 --
@@ -26,7 +26,7 @@
 -- stand that many seconds. The test install's cache never changes mid-run.
 --
 -- Runs unsandboxed as a POKEPORT_DRIVER coroutine, resumed once per frame
--- (refs/gen1recomp/main.lua:641-645, :993-1011). Data safety: prints only
+-- (refs/gen1recomp/main.lua:755-759, :1136-1157). Data safety: prints only
 -- markers, map symbols, cells and counts -- never a species, a name or any
 -- text.
 

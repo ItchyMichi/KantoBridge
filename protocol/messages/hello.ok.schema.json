@@ -23,6 +23,10 @@
       "pattern": "^[0-9A-Za-z.+_-]+$",
       "maxLength": 32,
       "description": "The engine version this gen1-bridge was tested with; the client warns when engine differs."
+    },
+    "union_room": {
+      "enum": ["on", "off"],
+      "description": "Whether the engine's Union Room setting patched this boot's Pokemon Centers (it must be off: the export never sees the patch); the client shows what to switch off while it is on."
     }
   }
 }

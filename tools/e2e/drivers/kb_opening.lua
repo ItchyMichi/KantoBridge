@@ -8,13 +8,13 @@
 -- reports a debug.quit (exit 0) or the time limit passes (exit 1).
 --
 -- It prints KB_MAP_ENTERED map=<symbol> via=<word> for each map.entered
--- event (src/world/OverworldController.lua:686-691), KB_FLAG name=<symbol>
+-- event (src/world/OverworldController.lua:685-690), KB_FLAG name=<symbol>
 -- when one of the escort's flags turns on (data/scripts/story2.lua:159,
--- :178-179 write them straight into save.flags, so they are polled), and at
+-- :183-184 write them straight into save.flags, so they are polled), and at
 -- the end gen1-bridge's counters.
 --
 -- Runs unsandboxed as a POKEPORT_DRIVER coroutine, resumed once per frame
--- (refs/gen1recomp/main.lua:641-645, :993-1011). Data safety: prints only
+-- (refs/gen1recomp/main.lua:755-759, :1136-1157). Data safety: prints only
 -- markers, map and flag symbols and counts.
 
 io.stdout:setvbuf("no") -- LÖVE block-buffers stdout; this also unbuffers mod.log

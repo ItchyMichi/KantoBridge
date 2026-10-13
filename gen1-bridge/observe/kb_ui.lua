@@ -308,8 +308,13 @@ function Ui.new(opts)
       local c = engine.uiCursor(e.key) or {}
       data = { labels = texts(f.labels, Ui.MAX_LABELS), index = clampInt((c.index or 1) - 1, 0, 255) }
       if f.question and #f.question > 0 then
+        -- the rows the box shows, joined; a blank row (Gen 1's fixed two-row box keeps one above a
+        -- continued line since v0.3.85, kb_engine visibleLines) adds nothing to the question
         local q = {}
-        for i = 1, #f.question do q[i] = text(f.question[i]) end
+        for i = 1, #f.question do
+          local row = text(f.question[i])
+          if type(row) == "string" and row ~= "" then q[#q + 1] = row end
+        end
         data.question = text(concat(q, " "))
       end
       e.sent = { index = data.index }
@@ -317,7 +322,7 @@ function Ui.new(opts)
       local c = engine.uiCursor(e.key) or {}
       local items = shapeItems(f.items)
       -- a menu's box shows min(maxVisible, rows) rows (Menu.lua:48-50); a
-      -- list keeps its window size (ListMenu.lua:158)
+      -- list keeps its window size (ListMenu.lua:159)
       local rows = f.rows or #items
       if kind == "menu" and rows > #items then rows = #items end
       data = {

@@ -38,7 +38,7 @@ def test_hello_ok_then_snapshot():
     rig, peer, msgs = established()
     ok, snap = msgs
     assert ok["data"]["protocol"] == 1 and ok["data"]["bridge"] == "0.1.0"
-    assert ok["data"]["engine"] == "0.3.49" and ok["data"]["game"] == "blue"
+    assert ok["data"]["engine"] == "0.3.85" and ok["data"]["game"] == "blue"
     assert ok["data"]["session"] == rig.status.session.decode()
     assert (ok["seq"], snap["seq"]) == (1, 2) and "re" not in snap
     data = snap["data"]
@@ -294,7 +294,7 @@ def test_oversize_line_gets_an_error_then_the_close():
     for key, value in {
         "json": json_mod, "Net": b.module("lib/kb_net.lua"), "Proto": b.module("lib/kb_proto.lua"),
         "catalog": catalog, "socket": b.fake.socket, "port": 27151, "clock": lambda: b.now,
-        "bridge": b"0.1.0", "engine": lambda: b"0.3.49", "game": lambda: b"red", "sessionId": b"s-test",
+        "bridge": b"0.1.0", "engine": lambda: b"0.3.85", "game": lambda: b"red", "sessionId": b"s-test",
         "snapshot": lambda: b.eval("{}"), "status": lambda: b.eval("{}"), "onQuit": lambda code: None,
     }.items():
         o[key.encode()] = value
@@ -393,7 +393,7 @@ UUID = "0123abcd-4567-89ab-cdef-0123456789ab"
 def test_hello_ok_says_which_engine_this_bridge_is_tested_with():
     rig, peer, msgs = established()
     ok = msgs[0]["data"]
-    assert ok["tested"] == "0.3.49" == ok["engine"]
+    assert ok["tested"] == "0.3.85" == ok["engine"]
     rig.step(2)
     assert not [m for m in peer.messages() if m["type"] == "log"]
     assert not any("engine.untested" in line for line in rig.logs())
@@ -401,17 +401,17 @@ def test_hello_ok_says_which_engine_this_bridge_is_tested_with():
 
 def test_an_untested_engine_gets_one_warning_per_connection():
     rig = Rig()
-    rig.E.Version.engine = b"0.3.50"
+    rig.E.Version.engine = b"0.3.86"
     rig.world()
     for n in (1, 2):
         peer = rig.connect()
         peer.hello()
         msgs = peer.messages()
         ok = msgs[0]["data"]
-        assert (ok["engine"], ok["tested"]) == ("0.3.50", "0.3.49")
+        assert (ok["engine"], ok["tested"]) == ("0.3.86", "0.3.85")
         warns = [m["data"] for m in msgs if m["type"] == "log" and m["data"]["code"] == "engine.untested"]
         assert len(warns) == 1 and warns[0]["level"] == "warn"
-        assert "engine=0.3.50" in warns[0]["msg"] and "tested=0.3.49" in warns[0]["msg"]
+        assert "engine=0.3.86" in warns[0]["msg"] and "tested=0.3.85" in warns[0]["msg"]
         kinds = [m["type"] for m in msgs]
         assert kinds.index("snapshot") < kinds.index("log"), "nothing between hello.ok and the snapshot"
         rig.step(3)

@@ -237,7 +237,7 @@ function UiAct.new(opts)
       counts.buttonTaps = counts.buttonTaps + 1
       ok = true
     elseif b.button == "start" and b.how == "tap" and top == nil and mode == "idle" and f.inGame then
-      -- overworld START is an edge read on a standing poll (OC:1702-1721): wait
+      -- overworld START is an edge read on a standing poll (OC:1815-1834): wait
       -- for the player to stand and the step driver to finish
       if f.moving or ctx.moverBusy or not budget.can() then
         if steps - b.since <= UiAct.BUTTON_WAIT then return end

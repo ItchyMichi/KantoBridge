@@ -9,40 +9,40 @@
 --
 -- OverworldState methods on E.ow, the ones kb_engine.fieldAction calls:
 --   partyKnows(move)        the badge of constants.hmBadges in the bag, then
---                           a party member knowing the move (OC:2214-2237)
+--                           a party member knowing the move (OC:2327-2350)
 --   useCutFieldMove()       "ok" facing a T (tree) or g (grass) cell whose
 --                           block has a field.cutTreeSwaps row, else
---                           "nothing" / "no_badge" (OC:3415-3438)
+--                           "nothing" / "no_badge" (OC:3527-3550)
 --   tryCut(fx, fy)          the text box, then the cut: ow.cutBlocks gets
 --                           { bx, by, block } and the block is swapped
---                           (OC:3292-3347)
+--                           (OC:3404-3459)
 --   useSurfFieldMove()      "ok" facing water ('w'), "dismount" facing land
 --                           while surfing, "no_place", "no_water",
---                           "forced_bike", "no_badge" (OC:3352-3404)
+--                           "forced_bike", "no_badge" (OC:3464-3516)
 --   trySurf / stopSurfing   the text box, then p.surfing and one scripted
---                           step forward (OC:3237-3280)
+--                           step forward (OC:3349-3392)
 --   facingIsShoreOrWater()  the cell in front is water
---   useStrengthFieldMove()  strengthActive and two text boxes (OC:1074-1095)
---   useFlashFieldMove()     flashLit while dark, ow.dark off (OC:1057-1072)
+--   useStrengthFieldMove()  strengthActive and two text boxes (OC:1193-1214)
+--   useFlashFieldMove()     flashLit while dark, ow.dark off (OC:1176-1191)
 --   beginTeleportOut()      the 135-frame spin, then the heal point's warp
 --                           (save.lastHeal = { map, x, y }), nothing without
---                           one (OC:2470-2499, :5387-5404)
+--                           one (OC:2583-2612, :5387-5404)
 --   flyTo(mapId)            flyFade, then the warp to field.flyWarps[mapId]
---   useBicycle(), bikeAllowed(mapId)   (OC:1021-1052)
+--   useBicycle(), bikeAllowed(mapId)   (OC:1140-1171)
 --   useFishingRod(rod)      E.goFishing (fake_wild.lua) facing water
---   replaceBlock(bx, by, b) Map:setBlock on the current map (OC:5644-5649)
--- Map loads (E.onMapLoad, in setMap's order, OC:479-515): Cut regrowth from
+--   replaceBlock(bx, by, b) Map:setBlock on the current map (OC:5803-5808)
+-- Map loads (E.onMapLoad, in setMap's order, OC:486-522): Cut regrowth from
 -- ow.cutBlocks, the card-key stamps (field.cardKeyDoors.closedDoors),
 -- darkness (field.darkMaps and save.flashLit), the slope flag (a map
 -- spec's `slope`). E.mapScripts[map] = { onEnter = fn(E, ow), onStep =
 -- fn(E, ow, x, y) } stand for the hand-ported map scripts.
--- Steps (E.stepHooks, onStepComplete's order, OC:4689-4710): the map's
+-- Steps (E.stepHooks, onStepComplete's order, OC:4831-4852): the map's
 -- onStep, spinners (field.spinners: runSpinnerMoves sets p.spinning, 48
 -- frames a cell, then onStepComplete again), Seafoam currents
 -- (field.seafoam: currents, entryCurrent, forcedExit; noSpin).
 -- Modules: src.world.FieldDefaults (constant, fieldValue, field),
 -- src.ui.Screens (push: TownMap's fly list), and on the existing fakes
--- OverworldController.objectVisible (OC:227-243) and Map.isFlyTown.
+-- OverworldController.objectVisible (OC:232-248) and Map.isFlyTown.
 
 local FakeField = {}
 
@@ -64,9 +64,15 @@ function FakeField.attach(E)
 
   -- ------------------------------------------------------------ modules
 
-  -- FieldDefaults (src/world/FieldDefaults.lua:230-259): data first, then
-  -- the engine's own seeds (only hmBadges here)
-  local FieldDefaults = { FIELD = {}, CONSTANTS = { hmBadges = HM_BADGES } }
+  -- FieldDefaults (src/world/FieldDefaults.lua:230-268): data first, then
+  -- the engine's own seeds (only hmBadges and the daycare's step exp here)
+  local FieldDefaults = { FIELD = {}, CONSTANTS = { hmBadges = HM_BADGES, world = { daycareExpPerStep = 1 } } }
+  -- world (:263-268): data.constants.world[key], else the seed
+  function FieldDefaults.world(data, key)
+    local world = data and data.constants and data.constants.world
+    if world and world[key] ~= nil then return world[key] end
+    return FieldDefaults.CONSTANTS.world[key]
+  end
   function FieldDefaults.field(data, key)
     local f = data and data.field
     if f and f[key] ~= nil then return f[key] end
@@ -84,10 +90,14 @@ function FakeField.attach(E)
   end
   E.modules["src.world.FieldDefaults"] = FieldDefaults
 
-  -- Bag.remove (src/inventory/Bag.lua:166-181), unless fake_wild.lua's
-  -- fuller Bag follows
+  -- Bag.remove(save, id, qty, data, slot) (src/inventory/Bag.lua:464-469),
+  -- unless fake_wild.lua's fuller Bag follows; the call is recorded in
+  -- E.bagRemoves either way (UP3/B4: kb_engine passes the live data)
+  E.bagRemoves = E.bagRemoves or {}
   E.modules["src.inventory.Bag"] = E.modules["src.inventory.Bag"] or {
-    remove = function(s, id, qty)
+    remove = function(s, id, qty, data, slot)
+      E.bagRemoves[#E.bagRemoves + 1] = { id = id, qty = qty, data = data, slot = slot,
+                                          args = select("#", s, id, qty, data, slot) }
       local inv = s.inventory
       inv[id] = (inv[id] or 0) - (qty or 1)
       if inv[id] <= 0 then inv[id] = nil end
@@ -110,7 +120,7 @@ function FakeField.attach(E)
     end,
   }
 
-  -- objectVisible (OC:227-243), exposed as OverworldState.objectVisible
+  -- objectVisible (OC:232-248), exposed as OverworldState.objectVisible
   local OC = E.modules["src.world.OverworldController"]
   function OC.objectVisible(s, mapId, obj)
     local toggles = s.objectToggles and s.objectToggles[mapId] or {}
@@ -141,7 +151,7 @@ function FakeField.attach(E)
     return nil
   end
 
-  -- partyKnowsVanilla (OC:2214-2228)
+  -- partyKnowsVanilla (OC:2327-2341)
   function ow.partyKnows(_, move)
     local gate = FieldDefaults.constant(E.data, "hmBadges")[move]
     if gate and not (save().inventory or {})[gate.badge] then return nil end
@@ -309,7 +319,7 @@ function FakeField.attach(E)
     self.map:setBlock(bx, by, block)
   end
 
-  -- setMap's part (OC:479-515): regrowth, the stamps, the darkness, the slope
+  -- setMap's part (OC:486-522): regrowth, the stamps, the darkness, the slope
   function E.onMapLoad(mapId)
     local m = ow.map
     if ow.cutBlocks and ow.cutBlocks[mapId] then
@@ -340,7 +350,7 @@ function FakeField.attach(E)
     if hooks and hooks.onEnter then hooks.onEnter(E, ow) end
   end
 
-  -- a card key opening a door (tryCardKeyDoor's openDoor, OC:2937-2948)
+  -- a card key opening a door (tryCardKeyDoor's openDoor, OC:3049-3060)
   function E.openCardKeyDoor(bx, by, openBlock)
     ow:replaceBlock(bx, by, openBlock)
     local ck = field().cardKeyDoors

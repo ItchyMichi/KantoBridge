@@ -2,9 +2,9 @@
 while minimized and unfocused"; lib/kb_engine.lua "reliability (M10)").
 
 The engine's loop caps a window that isn't visible at 10 frames a second and then catches up at most
-about 2 logic steps a frame (refs/gen1recomp/main.lua:1739-1756, src/core/FixedStep.lua:75-86): a
+about 2 logic steps a frame (refs/gen1recomp/main.lua:1907-1924, src/core/FixedStep.lua:75-86): a
 third of the logic speed. A test driver can't show that: a driver run turns the frame pacing off and
-steps the game once per frame (main.lua:1637-1642, :993-1011). So this test launches the test
+steps the game once per frame (main.lua:1776-1781, :1136-1157). So this test launches the test
 instance WITHOUT a driver (run_gen1recomp.launch_plain: the paced loop a player runs), finds the port
 gen1-bridge listens on from the process's own listening socket, reads gen1-bridge's logic step counter
 (debug.status steps, Game.logicStep) and drawn frames (perfFrames) over TCP, and changes the window

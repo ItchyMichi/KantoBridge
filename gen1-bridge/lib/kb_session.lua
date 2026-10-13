@@ -215,6 +215,10 @@ function Session.new(opts)
     }
     local tested = opts.tested and versionText(opts.tested) or nil
     if tested ~= nil and tested ~= "unknown" then ok.tested = tested end
+    -- U3: "on" while this boot runs with the Union Room's patched Centers
+    -- (main.lua at game.ready); absent before game.ready or on an older bridge
+    local union = type(opts.unionRoom) == "function" and opts.unionRoom() or nil
+    if union == "on" or union == "off" then ok.union_room = union end
     proto.reply(msg, "hello.ok", ok)
     proto.send("snapshot", opts.snapshot())
     if log then log.info("session.established", { role = role, count = counts.sessions }) end

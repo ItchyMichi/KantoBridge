@@ -11,7 +11,9 @@ from rig import CONTENT, Rig
 pytestmark = pytest.mark.lua
 
 CLASSIC = {"tilt": 0, "zoom": 0, "battleLayout": b"og", "battleFit": b"fixed",
-           "uiLayout": b"centered", "textSpeed": 1}
+           "uiLayout": b"centered", "textSpeed": 1,
+           # ENGINE_UPGRADE_PLAN U3: the Union Room setting (absent means ON) pinned off with them
+           "unionRoom": False}
 
 
 def options(rig):
@@ -29,7 +31,7 @@ def test_game_ready_pins_and_reapplies():
     assert o.pipelines.test_voxel == 0 and o.pipelines.test_off == 0
     assert o.colors == b"gbc", "colours are left alone"
     assert list(rig.E.applied.values()) == [b"Tilt", b"Pipelines", b"Zoom"]
-    assert "[info] [gen1-bridge] options.pinned changed=7" in rig.logs()
+    assert "[info] [gen1-bridge] options.pinned changed=8" in rig.logs()
 
 
 def test_new_game_options_are_pinned_before_the_engine_applies_them():

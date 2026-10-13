@@ -105,7 +105,7 @@ def cells(exported, map_id):
 def test_every_resource_validates_and_its_hash_and_size_match(exported):
     index = exported["index"]["data"]
     assert {e["kind"] for e in index["resources"]} == KINDS
-    assert (index["game"], index["engine"], index["bridge"]) == ("blue", "0.3.49", "0.1.0")
+    assert (index["game"], index["engine"], index["bridge"]) == ("blue", "0.3.85", "0.1.0")
     keys = [(e["kind"], e["id"]) for e in index["resources"]]
     assert keys == sorted(keys), "the index is sorted by kind, then id"
     for e in index["resources"]:

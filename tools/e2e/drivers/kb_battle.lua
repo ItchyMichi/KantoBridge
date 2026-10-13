@@ -4,10 +4,10 @@
 -- the escort's flags (EVENT_FOLLOWED_OAK_INTO_LAB, _2 and
 -- EVENT_OAK_ASKED_TO_CHOOSE_MON, written straight into save.flags as the
 -- escort itself does, data/scripts/story2.lua:178-179, :159), the lab's Oak
--- swap (Commands.hide_object / show_object, src/script/Commands.lua:640-646,
+-- swap (Commands.hide_object / show_object, src/script/Commands.lua:641-647,
 -- as story2.lua:173-174 does) and a scripted warp into OAKS_LAB below a
 -- starter ball, facing it (OverworldState:startWarpTo,
--- src/world/OverworldController.lua:5411). Then it prints KB_LAB_READY and
+-- src/world/OverworldController.lua:5561). Then it prints KB_LAB_READY and
 -- serves until gen1-bridge reports a debug.quit (exit 0) or the time limit
 -- passes (exit 1). The test (tools/e2e/test_battle.py) does everything else
 -- over the bridge: picks the starter, walks to the rival's trigger, answers
@@ -19,7 +19,7 @@
 -- battle screen appears (there should be none: Cobblemon fights them).
 --
 -- Runs unsandboxed as a POKEPORT_DRIVER coroutine, resumed once per frame
--- (refs/gen1recomp/main.lua:641-645, :993-1011). Data safety: prints only
+-- (refs/gen1recomp/main.lua:755-759, :1136-1157). Data safety: prints only
 -- markers, map and flag symbols, cells and counts.
 
 io.stdout:setvbuf("no") -- LÖVE block-buffers stdout; this also unbuffers mod.log
@@ -77,7 +77,7 @@ return function(game)
     if phase == "ready" then
       if status and status.ready then
         status.configure({ port = PORT })
-        -- New Game without Oak's speech (src/core/Game.lua:171-198)
+        -- New Game without Oak's speech (src/core/Game.lua:173-200)
         game:startNewGame({ intro = false })
         phase = "world"
       end

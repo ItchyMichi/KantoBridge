@@ -14,11 +14,11 @@
 --   * registers two step scripts (map_scripts compose; onStep's first truthy
 --     return consumes, mods before the engine's own:
 --     src/script/MapScripts.lua:1-27, called after every completed step,
---     src/world/OverworldController.lua:4691-4698): the clearing's last
+--     src/world/OverworldController.lua:4833-4840): the clearing's last
 --     cells warp to x1, the route map's A warps back to the clearing's
 --     second-to-last cells, facing the town. Both warps are queued scripts
 --     (mod.world:queueScript, src/world/WorldAPI.lua:626-632) running the
---     engine's own `warp` command (src/script/Commands.lua:395-401), which
+--     engine's own `warp` command (src/script/Commands.lua:395-402), which
 --     the bridge follows as kind "script" (observe/kb_warp.lua);
 --   * registers KB_<CLASS> trainer records, copies of the classes the zone's
 --     trainers use, whose one party route.battle rewrites (act/kb_route.lua);
@@ -26,10 +26,10 @@
 --   * patches the exit's map last (mod.content.maps:patch with the whole
 --     `blocks` list: lists replace wholesale in a record registry).
 -- A schema violation is thrown by the registry call itself for an api 2 mod
--- (src/mods/Loader.lua:1202-1207), so every registration is guarded and a
+-- (src/mods/Loader.lua:1276-1281), so every registration is guarded and a
 -- failure switches that zone off; references are only ever to ids that
 -- exist (the town's tileset, vanilla trainer fields), since a dangling one
--- would fail the whole mod after the merge (src/mods/Loader.lua:1860-1890).
+-- would fail the whole mod after the merge (src/mods/Loader.lua:1934-1964).
 --
 -- Nothing ROM-derived is in the route list or in this file: map and class
 -- symbols, cell coordinates, counts and our own text. Logs show route ids,
@@ -286,10 +286,15 @@ end
 
 -- The route map's record: one block of the clearing's floor, on the town's
 -- tileset (so the engine treats it as outdoors) with the town's border.
+-- `outdoor` (src/mods/Schemas.lua:1938, since v0.3.85) says so explicitly:
+-- Fly and Teleport work from it as on any route, which WILD_ROUTES_PLAN §4
+-- allows (flying out ends the visit), and the engine never rolls a wild
+-- encounter off its grass (OverworldState.rollsIndoorEncounters, OC:4782-
+-- 4788; the zone's wild Pokemon are Minecraft's anyway, WR5).
 function Routes.routeMapDef(e, p, def)
   local out = {
     id = e.mapId, width = 1, height = 1, blocks = { p.source }, tileset = def.tileset,
-    warps = {}, signs = {}, objects = {},
+    warps = {}, signs = {}, objects = {}, outdoor = true,
   }
   if whole(def.borderBlock, 0, 255) then out.borderBlock = def.borderBlock end
   return out

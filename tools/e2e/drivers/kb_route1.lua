@@ -3,7 +3,7 @@
 -- (Pokemon.new + Party.add, src/pokemon/Pokemon.lua:60-88,
 -- src/pokemon/Party.lua:7-13, the OT stamped as gifts are,
 -- BattleState.stampOT :698-705), fills the bag through the engine's own
--- Bag.add (src/inventory/Bag.lua:139-164) with two battle items, one key
+-- Bag.add (src/inventory/Bag.lua:443-460) with two battle items, one key
 -- item and one field item, and warps onto ROUTE_1 through the supported
 -- mod.world facade (WorldAPI:warpTo, src/world/WorldAPI.lua:358-371). The
 -- arrival cell is found with the engine's own map queries (Map.new,
@@ -18,7 +18,7 @@
 -- KB_BLACKOUT when the engine blacks out.
 --
 -- Runs unsandboxed as a POKEPORT_DRIVER coroutine, resumed once per frame
--- (refs/gen1recomp/main.lua:641-645, :993-1011). Data safety: prints only
+-- (refs/gen1recomp/main.lua:755-759, :1136-1157). Data safety: prints only
 -- markers, map and item symbols, cells and counts -- never a species, a
 -- name or any text.
 
@@ -118,7 +118,7 @@ return function(game)
     if phase == "ready" then
       if status and status.ready then
         status.configure({ port = PORT })
-        -- New Game without Oak's speech (src/core/Game.lua:171-198)
+        -- New Game without Oak's speech (src/core/Game.lua:173-200)
         game:startNewGame({ intro = false })
         phase = "world"
       end

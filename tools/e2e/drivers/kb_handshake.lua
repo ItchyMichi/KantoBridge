@@ -4,7 +4,7 @@
 -- a debug.quit (exit 0) or the time limit passes (exit 1).
 --
 -- Runs unsandboxed as a POKEPORT_DRIVER coroutine, resumed once per frame
--- with the Game (refs/gen1recomp/main.lua:641-645, :993-1011). The first
+-- with the Game (refs/gen1recomp/main.lua:755-759, :1136-1157). The first
 -- resume comes before the first Game:step, so the port change lands before
 -- the listener binds. Data safety: prints only markers, symbols and counts.
 
@@ -33,7 +33,7 @@ return function(game)
     if phase == "ready" then
       if status and status.ready then
         status.configure({ port = PORT })
-        -- New Game without Oak's speech (src/core/Game.lua:171-198)
+        -- New Game without Oak's speech (src/core/Game.lua:173-200)
         game:startNewGame({ intro = false })
         phase = "world"
       end

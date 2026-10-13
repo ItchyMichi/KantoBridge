@@ -57,7 +57,8 @@ public final class ClientBridgeState {
 		String bridge = JsonFields.str(data, "bridge");
 		if (session != null && game != null && engine != null && bridge != null) {
 			String tested = JsonFields.str(data, "tested");
-			this.handshake = new HelloOk(session, game, engine, bridge, tested != null && VERSION.matcher(tested).matches() ? tested : null);
+			this.handshake = new HelloOk(session, game, engine, bridge, tested != null && VERSION.matcher(tested).matches() ? tested : null,
+					HelloOk.unionRoomField(JsonFields.str(data, "union_room")));
 		}
 	}
 

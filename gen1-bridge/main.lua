@@ -8,7 +8,7 @@
 -- into this mod's sandbox. Never require our own files: require would run
 -- them with the engine's globals and cache them across hot reloads.
 --
--- Everything runs from input.step (src/core/Game.lua:320), about 60 times a
+-- Everything runs from input.step (src/core/Game.lua:322), about 60 times a
 -- second; core.update doesn't fire under test drivers. Hooks and events die
 -- with the loader on a hot reload, so nothing here outlives its instance.
 return function(mod)
@@ -72,7 +72,7 @@ return function(mod)
   -- Wild Routes (WR2: lib/kb_routes.lua, docs/specs/WILD_ROUTES_PLAN.md
   -- §4.2): the zones' exits, route maps, step scripts and trainer classes
   -- are registered here, in the entry chunk, before the engine merges the
-  -- registries (src/mods/Loader.lua:2040-2060). A zone that doesn't check out
+  -- registries (src/mods/Loader.lua:2114-2134). A zone that doesn't check out
   -- is switched off; nothing here can fail the entry chunk.
   local routesText = mod:read("data/routes.json")
   local okRoutes, routes = pcall(kb.Routes.install, {
@@ -134,7 +134,7 @@ return function(mod)
   local pendingDropped
 
   -- The step driver (act/kb_move.lua) presses through the supported
-  -- mod.input (src/mods/Loader.lua:1393-1431) with the live game.
+  -- mod.input (src/mods/Loader.lua:1467-1505) with the live game.
   local mover = kb.Move.new({
     engine = engine,
     Player = kb.Player,
@@ -146,7 +146,7 @@ return function(mod)
 
   -- Engine events and the player's collision verdicts between two of our
   -- steps; each step takes them (they all happen during the stack update
-  -- that follows input.step, src/core/Game.lua:320 vs :356).
+  -- that follows input.step, src/core/Game.lua:322 vs :356).
   local EVENT_CAP = 16
   local events = { verdicts = {}, entered = {}, interacted = {} }
   local mapsEntered = 0
@@ -186,7 +186,7 @@ return function(mod)
   local mirror = kb.Mirror.new({ love = love, clock = clock, log = log, base64 = kb.Images.base64 })
 
   -- M5: battles fought in Cobblemon, gifts, heals and the shadow party.
-  -- party uids persist through mod.save (save.modData, src/core/Game.lua:1314-1324).
+  -- party uids persist through mod.save (save.modData, src/core/Game.lua:1348-1358).
   local battles = kb.Battle.new({ engine = engine, log = log, markup = kb.Ui.markup })
   local saves -- act/kb_save.lua, below (M10: it counts the Pokemon operations party sends)
   local party = kb.Party.new({
@@ -201,7 +201,7 @@ return function(mod)
   local bagObs = kb.Bag.new({ engine = engine, json = kb.json, log = log })
   -- M7: saving (save.begin/done, the Pokemon Center's heal and save),
   -- session pairing, and Bill's PC as Cobblemon's PC. The bound world is
-  -- kept in mod.save too (save.modData, src/core/Game.lua:1314-1324). M10:
+  -- kept in mod.save too (save.modData, src/core/Game.lua:1348-1358). M10:
   -- every save's pair is written into its own mod data (save.begin.pair,
   -- save.loaded).
   saves = kb.Save.new({
@@ -228,7 +228,7 @@ return function(mod)
   })
   -- M9: online save pairing (act/kb_pairing.lua): session.bind's world gets
   -- its own save slot, switched to at runtime; the world -> slot map lives in
-  -- mod.cache (installation-wide, src/mods/Loader.lua:1567-1569), never in
+  -- mod.cache (installation-wide, src/mods/Loader.lua:1641-1643), never in
   -- a slot's own save, as session/pairings.json.
   local cache = mod.cache
   local pairing = kb.Pairing.new({
@@ -257,8 +257,8 @@ return function(mod)
 
   -- One injected tap per logic step (PLAN section 2.3), shared by the
   -- interaction and the UI answers: mod.input:tap with the live game
-  -- (src/mods/Loader.lua:1393-1431), issued from input.step so the edge lands
-  -- in this very step (src/core/Game.lua:320-321).
+  -- (src/mods/Loader.lua:1467-1505), issued from input.step so the edge lands
+  -- in this very step (src/core/Game.lua:322-323).
   local tapped = false
   local tapBudget = {
     can = function() return not tapped end,
@@ -341,6 +341,9 @@ return function(mod)
       steps = engine.logicStep(),
       optionsPinned = engine.displayPinned(save and save.options),
       mapsEntered = mapsEntered,
+      -- ENGINE_UPGRADE_PLAN UP1 / U3: what game.ready found
+      engineMissing = status.engineMissing or {},
+      unionRoom = status.unionRoom or "off",
     }
     for k, v in pairs(exporter.status()) do out[k] = v end
     -- counts per service, prefixed: moveRequests, warpStarted, uiOpened,
@@ -439,6 +442,8 @@ return function(mod)
     engine = function() return (engine.version()) end,
     -- M10: hello.ok.tested, and engine.untested when the running one differs
     tested = kb.Engine.TESTED,
+    -- U3: hello.ok.union_room, so the client can say what to switch off
+    unionRoom = function() return status.unionRoom end,
     game = engine.gameVersion,
     sessionId = sessionId,
     snapshot = snapshot,
@@ -586,7 +591,7 @@ return function(mod)
     return engine.itemUse(nextFn, g, battle, id, target, list, moveIndex, picker, bridge)
   end))
   -- M7 (lib/kb_engine.lua "the Pokemon Center, saving, the PC, sessions"):
-  -- the Pokemon Center PC's rows (OC:3664): the box row opens Cobblemon's
+  -- the Pokemon Center PC's rows (OC:3776): the box row opens Cobblemon's
   -- PC while a client or test session is connected. A hook, so a hot
   -- reload drops it; a menu already built keeps asking the current
   -- instance through kb_engine's slot.
@@ -594,8 +599,8 @@ return function(mod)
     return engine.pcItems(nextFn, g, items)
   end))
   -- M8 (lib/kb_engine.lua "direct battles, native catches, the daycare,
-  -- renames"): the A press on an object (world.talk, OC:2561-2566) and a
-  -- completed step (world.stepped, OC:4675-4678) arm the text boxes they
+  -- renames"): the A press on an object (world.talk, OC:2674-2679) and a
+  -- completed step (world.stepped, OC:4817-4820) arm the text boxes they
   -- push, so a battle their continuation pushes directly (a static
   -- Pokemon object, the ghost Marowak with the SILPH_SCOPE, Giovanni in
   -- the Rocket Hideout) is fought in Cobblemon; pokemon.caught (a native
@@ -606,7 +611,7 @@ return function(mod)
   mod.events:on("world.stepped", perf.timed(function() pcall(engine.directStepped) end))
   mod.events:on("pokemon.caught", perf.timed(function(payload) pcall(engine.nativeCaught, payload) end))
   -- Every hidden-game save (Game:writeSave emits save.writing before the
-  -- file is written, src/core/Game.lua:1342-1345): Minecraft saves too
+  -- file is written, src/core/Game.lua:1376-1378): Minecraft saves too
   -- (except the one before an M9 slot switch).
   mod.events:on("save.writing", perf.timed(function() saves.writing() end))
 
@@ -809,6 +814,19 @@ return function(mod)
     collectgarbage("collect")
     local version, api = engine.version()
     engine.checkPin()
+    -- ENGINE_UPGRADE_PLAN UP1: the internals lib/kb_engine.lua relies on,
+    -- checked once; the list is in debug.status (engineMissing) and KB_READY
+    -- (missing=), so an engine change is loud instead of a silent fallback
+    local missing = engine.checkRequired()
+    status.engineMissing = missing
+    if #missing > 0 then log.warn("engine.missing", { count = #missing }) end
+    -- U3: the Union Room must be off (Engine.CLASSIC pins the option); a
+    -- boot that found it on already runs with patched Centers: say so once,
+    -- refuse the export (export/kb_export.lua) and write it off for the next
+    -- boot, which starts clean
+    local unionOn = engine.unionRoomPatched()
+    status.unionRoom = unionOn and "on" or "off"
+    if unionOn then log.warn("engine.union_room_on", { written = engine.unionRoomOff() and 1 or 0 }) end
     pinOptions(true)
     -- battle and gift ids carry the first instance's token (kept by the slot
     -- through hot reloads); the party's uids come back from mod.save; the
@@ -827,7 +845,7 @@ return function(mod)
   end))
 
   -- The mod merge is done and nothing is on the stack yet
-  -- (src/mods/Loader.lua:2163, src/core/Game.lua:52-119): the export checks
+  -- (src/mods/Loader.lua:2237, src/core/Game.lua:52-121): the export checks
   -- that its dataset view opens, and copies the live Data now if it doesn't.
   mod.events:on("mods.loaded", perf.timed(function(payload)
     -- M8: the map data the story diffs compare with, copied before any map
@@ -837,14 +855,14 @@ return function(mod)
     exporter.onModsLoaded(payload)
   end))
   -- From the first map load on, the live Data may differ from the import
-  -- (map.entered, src/world/OverworldController.lua:686).
+  -- (map.entered, src/world/OverworldController.lua:685).
   mod.events:on("map.entered", perf.timed(function() exporter.onMapEntered() end))
 
   -- Warps and steps (M3). Events and hooks only: they die with this
   -- instance's loader on a hot reload. player.warped comes from takeWarp
-  -- before anything moves (OverworldController.lua:5306-5309), so the
-  -- departure is read right there; map.entered carries `via` (:686-691);
-  -- world.blacked_out precedes the heal-point warp (:5212-5214).
+  -- before anything moves (OverworldController.lua:5456-5459), so the
+  -- departure is read right there; map.entered carries `via` (:685-690);
+  -- world.blacked_out precedes the heal-point warp (:5362-5364).
   mod.events:on("player.warped", perf.timed(function()
     events.warped = engine.warpDeparture() or {}
   end))
@@ -853,7 +871,7 @@ return function(mod)
     payload = type(payload) == "table" and payload or {}
     capped(events.entered, { map = payload.mapId, via = payload.via })
   end))
-  -- a blackout heals the hidden party (OC:5204-5207); Cobblemon's heals too,
+  -- a blackout heals the hidden party (OC:5354-5357); Cobblemon's heals too,
   -- once the blackout's warp has arrived (M7)
   mod.events:on("world.blacked_out", perf.timed(function()
     events.blackout = true
@@ -862,7 +880,7 @@ return function(mod)
 
   -- M4. Pushes and pops only wake the UI observer, which polls the stack
   -- itself (src/core/StateStack.lua:28-45 fire them after enter/exit);
-  -- world.interacted reports what an A press hit (OC:2532-2535).
+  -- world.interacted reports what an A press hit (OC:2645-2648).
   mod.events:on("screen.pushed", perf.timed(function(payload)
     wake = true
     screenEvents = screenEvents + 1
@@ -884,10 +902,10 @@ return function(mod)
   -- The mirror (observe/kb_mirror.lua): the output seam is asked for only
   -- while a client watches, and render.output stays a pure observer -- it
   -- always returns next(ctx), so the engine presents the frame itself
-  -- (Renderer.lua:939-962, :1374-1419; docs/modding.md "render.output").
+  -- (Renderer.lua:987-1010, :1428-1473; docs/modding.md "render.output").
   -- Hooks die with this instance's loader on a hot reload.
   -- (M10: render.output_enabled is asked once per drawn frame while
-  -- render.output has a wrapper, Renderer.lua:942-943; it counts the frames,
+  -- render.output has a wrapper, Renderer.lua:990-991; it counts the frames,
   -- and the capture's time is the frame's draw-phase cost in kb_perf)
   mod.hooks:wrap("render.output_enabled", function(nextFn, ...)
     perf.frame()
@@ -936,7 +954,7 @@ return function(mod)
   end)
 
   -- New Game builds a fresh save and applies its options right after this
-  -- event (src/core/Game.lua:179-183), so pinning the table is enough.
+  -- event (src/core/Game.lua:181-185), so pinning the table is enough.
   mod.events:on("save.created", perf.timed(function(payload)
     local save = payload and payload.save
     local changed = engine.pinDisplay(type(save) == "table" and save.options or nil, false)
@@ -952,7 +970,7 @@ return function(mod)
   end))
 
   -- CONTINUE re-applies the stored options before this event
-  -- (src/core/Game.lua:1502 vs :1533), so pin and re-apply. The loaded
+  -- (src/core/Game.lua:1565 vs :1533), so pin and re-apply. The loaded
   -- party gets its uids back, then Cobblemon's party (the last sync) again.
   mod.events:on("save.loaded", perf.timed(function(payload)
     -- M9: a loaded game belongs to its slot (never "a New Game never saved")

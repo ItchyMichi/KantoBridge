@@ -135,7 +135,8 @@ class FakeGen1:
             return
         self.role = data["role"]
         await conn.send("hello.ok", {"protocol": PROTOCOL_NUMBER, "bridge": BRIDGE_VERSION, "engine": ENGINE_VERSION,
-                                     "tested": ENGINE_VERSION, "game": self.game, "session": self.session},
+                                     "tested": ENGINE_VERSION, "game": self.game, "session": self.session,
+                                     "union_room": "off"},  # ENGINE_UPGRADE_PLAN U3: the real bridge says what it found
                         re=hello["seq"])
         await conn.send("snapshot", self.snapshot())
         while True:
@@ -461,4 +462,6 @@ class FakeGen1:
     def status(self):
         return {"npcs": len(self._map().npcs), "topState": "FakeOverworld" if not self.open_ui else "FakeTextBox",
                 "mode": self.state.mode, "flags": len(self.story.flags), "connections": self.connections,
-                "ops": self.ops, "pcHeld": self.pc_open is not None}
+                "ops": self.ops, "pcHeld": self.pc_open is not None,
+                # ENGINE_UPGRADE_PLAN UP1 / U3: what the real bridge reports at game.ready
+                "engineMissing": [], "unionRoom": "off"}

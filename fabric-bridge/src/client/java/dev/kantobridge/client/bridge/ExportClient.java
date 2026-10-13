@@ -177,6 +177,7 @@ public final class ExportClient {
 	 *
 	 * @throws ExportException      with a code: {@code unreachable}, {@code rejected}, {@code closed}, {@code index_timeout},
 	 *                              {@code stalled}, {@code role}, {@code not_found}, {@code bad_message}, {@code export_failed},
+	 *                              {@code union_room_on} (gen1-bridge refuses the index while Gen1Recomp's Union Room is on),
 	 *                              {@code peer_error}, {@code bad_index}, {@code bad_reply}, {@code size}, {@code hash},
 	 *                              {@code not_a_bundle}, {@code io} or {@code cancelled}
 	 * @throws InterruptedException if the calling thread is interrupted
@@ -558,7 +559,7 @@ public final class ExportClient {
 			}
 			String detail = resource != null ? resource.path() : re != null && re == this.indexSeq ? "export.index" : null;
 			switch (code == null ? "" : code) {
-				case "role", "not_found", "bad_message", "export_failed" -> this.fail(code, detail);
+				case "role", "not_found", "bad_message", "export_failed", "union_room_on" -> this.fail(code, detail);
 				default -> this.fail("peer_error", code == null ? detail : code + (detail == null ? "" : " " + detail));
 			}
 		}

@@ -391,7 +391,7 @@ function Move.new(opts)
     end
 
     -- a Cycling Road roll: a bike step down that nobody asked for
-    -- (handleInput's pull with no d-pad and no A/B held, OC:1770-1792)
+    -- (handleInput's pull with no d-pad and no A/B held, OC:1883-1905)
     local msg = find(out, "step")
     if msg and f.slope and msg[2].kind == "bike" and msg[2].facing == "down" then
       msg[2].kind = "slope"

@@ -36,6 +36,8 @@ import org.slf4j.LoggerFactory;
  * would send it away anyway).</li>
  * <li><b>gen1-bridge's engine</b> ({@code hello.ok.engine} against {@code tested}): a toast, once per pair of
  * versions, and the F7 line.</li>
+ * <li><b>Gen1Recomp's Union Room</b> ({@code hello.ok.union_room}, ENGINE_UPGRADE_PLAN UP1 item 4): on, a toast that says
+ * what to click, once per gen1-bridge start, and the F7 line.</li>
  * <li><b>The game</b>: singleplayer only, a world built from the other version than Gen1Recomp runs gets a warning
  * screen once per world join: the story works, wild Pokémon follow the world's version.</li>
  * <li><b>The save pair</b> ({@code save.mismatch}): a warning screen with the kind's own text, once per distinct
@@ -48,6 +50,7 @@ public final class Versions {
 	private static final Logger LOGGER = LoggerFactory.getLogger("kantobridge");
 	private static final Set<String> KINDS = Set.of("hidden_behind", "world_behind", "hidden_older", "hidden_newer", "new_game", "other");
 	private static final SystemToast.SystemToastId ENGINE_TOAST = new SystemToast.SystemToastId(10_000L);
+	private static final SystemToast.SystemToastId UNION_TOAST = new SystemToast.SystemToastId(10_000L);
 	private static final DateTimeFormatter TIME = DateTimeFormatter.ofLocalizedDateTime(FormatStyle.SHORT).withZone(ZoneId.systemDefault());
 	private static @Nullable Versions instance;
 
@@ -81,16 +84,26 @@ public final class Versions {
 		bridge.addDebugLine(versions::debugLine);
 	}
 
-	/** gen1-bridge's handshake: an engine it wasn't tested with gets a toast (once per pair of versions). */
+	/**
+	 * gen1-bridge's handshake: an engine it wasn't tested with gets a toast (once per pair of versions); Gen1Recomp's Union
+	 * Room being on gets one (once per gen1-bridge start) that says what to click.
+	 */
 	private void helloOk() {
 		HelloOk ok = this.bridge.client().handshake();
-		if (ok == null || !this.check.engineNotice(ok)) {
+		if (ok == null) {
 			return;
 		}
-		LOGGER.warn("bridge: Gen1Recomp {} isn't the engine gen1-bridge was tested with ({})", ok.engine(), ok.tested());
 		Minecraft minecraft = Minecraft.getInstance();
-		SystemToast.addOrUpdate(minecraft.getToasts(), ENGINE_TOAST, Component.translatable("kantobridge.version.engine.title", ok.engine()),
-				Component.translatable("kantobridge.version.engine.text", ok.tested()));
+		if (this.check.engineNotice(ok)) {
+			LOGGER.warn("bridge: Gen1Recomp {} isn't the engine gen1-bridge was tested with ({})", ok.engine(), ok.tested());
+			SystemToast.addOrUpdate(minecraft.getToasts(), ENGINE_TOAST, Component.translatable("kantobridge.version.engine.title", ok.engine()),
+					Component.translatable("kantobridge.version.engine.text", ok.tested()));
+		}
+		if (this.check.unionNotice(ok)) {
+			LOGGER.warn("bridge: Gen1Recomp's Union Room is on: turn it off in Launcher Options and restart Gen1Recomp");
+			SystemToast.addOrUpdate(minecraft.getToasts(), UNION_TOAST, Component.translatable("kantobridge.version.union.title"),
+					Component.translatable("kantobridge.version.union.text"));
+		}
 	}
 
 	/** The server's {@code relay.hello}: answered with ours; another protocol means this client can't stay. */
@@ -162,6 +175,7 @@ public final class Versions {
 		return I18n.get("kantobridge.debug.versions", RelayHandshake.modVersion(), RelayHandshake.protocol(),
 				this.serverMod == null ? "-" : this.serverMod, this.serverProtocol < 0 ? "-" : Integer.toString(this.serverProtocol),
 				ok == null ? "-" : ok.engine(), ok == null || ok.tested() == null ? "-" : ok.tested(),
-				ok != null && ok.untestedEngine() ? I18n.get("kantobridge.debug.versions.untested") : "");
+				(ok != null && ok.untestedEngine() ? I18n.get("kantobridge.debug.versions.untested") : "")
+						+ (ok != null && ok.unionRoomOn() ? I18n.get("kantobridge.debug.versions.union") : ""));
 	}
 }

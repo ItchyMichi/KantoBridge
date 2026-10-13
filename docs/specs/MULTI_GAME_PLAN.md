@@ -6,7 +6,8 @@ across. This plan is the **fundamental system**: everything game-specific (a Gen
 each ROM's tweaks) hooks into it later, one game at a time.
 
 Written 2026-10-13 from a read of the code at `fef0e41` (H7: every cave in 3D), the docs, and Gen1Recomp's official
-repository (the pin v0.3.49 and the latest release, v0.3.85). `file:line` references are as they stood at `fef0e41`.
+repository (the pin at the time, v0.3.49, and the latest release, v0.3.85: the pin since 2026-10-13). `file:line`
+references are as they stood at `fef0e41`.
 The user's design statement of 2026-10-13 governs where the docs disagree: **one dimension, the flat preset, interiors
 underground, forests open-air, caves in their own area with 3D height (heights may spread to everything later).** The
 research report's vanilla-overworld track (`docs/research/VOXEL_WORLD_REPORT.md` M11–M13: a chunk generator,
@@ -26,11 +27,12 @@ file was never committed here). §4.9 names where it plugs in.
 2. **Ground rules** (CLAUDE.md's hard rules apply unchanged):
    - Nothing ROM-derived is opened, copied or committed. Imports are the user's. Tests use the stand-ins
      (`tools/fake_gen1`, `tools/fake_minecraft`); the real engine only on the test install, counts and ids in logs.
-   - **The Gen1Recomp pin stays v0.3.49 until the user says go on [`ENGINE_UPGRADE_PLAN.md`](ENGINE_UPGRADE_PLAN.md)**
-     (D11): 36 releases and 252 commits landed between v0.3.49 and v0.3.85, `OverworldController.lua` changed in 423
-     lines, every ROM needs a re-import, and the Union Room (on by default upstream) rewrites every Gen 1 Pokémon
-     Center at data load, so it must be switched off in every install. That plan can run before MG0 (recommended) or
-     at the latest before MG7.
+   - **The Gen1Recomp pin is v0.3.85, bumped on 2026-10-13** ([`ENGINE_UPGRADE_PLAN.md`](ENGINE_UPGRADE_PLAN.md) with
+     its defaults U1–U6; D11): 36 releases and 252 commits landed between v0.3.49 and v0.3.85, `OverworldController.lua`
+     changed in 423 lines, every ROM was re-imported (Blue, Crystal and Emerald on the pod), and the Union Room (on by
+     default upstream) rewrites every Gen 1 Pokémon Center at data load, so it is switched off in every install
+     (gen1-bridge pins and guards it). That plan runs before MG0, as recommended; its gates G0–G6 are recorded in
+     PROGRESS.md ("Engine upgrade").
    - Protocol and schema changes come first inside a milestone (PLAN.md §7); regenerate `catalog.json`; both stand-ins
      follow. **Protocol stays 1**: every change here is a new message type or an optional field (D10).
    - Feature tests while building; the full suite (`tools/check`, GameTests) at the checkpoints marked ✔ below. Pods
@@ -599,8 +601,8 @@ that are actually running; `game.status` adds each one's progress.
    `roms/`. The tool deletes nothing in the inbox; the user clears it.
 4. Write `launch.json` (`installs{kanto: {dir, games[], play: "blue"}, hoenn: {…}}`, ports) and the client's
    `config/kantobridge-client.json` `links`.
-5. Zips: at v0.3.49 the user unzips first; with a pin at or past v0.3.85 the tool can hand the archive to the importer
-   (D11). Logs hold file names and game ids only, never hashes of a ROM or its contents.
+5. Zips: the tool hands a `.zip` or `.7z` to the importer as it is (archive import since the v0.3.85 pin, D11): no
+   unzip step. Logs hold file names and game ids only, never hashes of a ROM or its contents.
 
 **The launcher.** `tools/launch.ps1 -Games blue,emerald` (or `-Regions kanto,hoenn`, reading each install's `play`),
 default: every install that has a game with an adapter. Per install it starts `gen1recomp.exe --game=<id>`, waits for
@@ -876,15 +878,15 @@ plan now does.
 | D8 | The region table | slots 8,192 blocks apart along +X, Kanto at 0; or ±X both ways; or a 2-D grid | **+X, 8,192** | MG3 |
 | D9 | Slot capacity | `FAMILIES_PER_SHAPE` 32 with a range per region; or per-region slot maps (impossible: block states are global) | **32, measured** | MG3 |
 | D10 | Protocol number | stay 1 with new types and optional fields; or bump to 2 | **stay 1** | MG1 |
-| D11 | Gen1Recomp pin | v0.3.49 for all; or bump to v0.3.85 (Ruby/Sapphire, Gen 3 fixes, archive import; every ROM re-imported; the Union Room off) | **stay** until the user says go on `ENGINE_UPGRADE_PLAN.md` (its U1–U6); recommended before MG0, at the latest before MG7 | MG0 / MG7 |
+| D11 | Gen1Recomp pin | v0.3.49 for all; or bump to v0.3.85 (Ruby/Sapphire, Gen 3 fixes, archive import; every ROM re-imported; the Union Room off) | **bumped to v0.3.85 on 2026-10-13** (`ENGINE_UPGRADE_PLAN.md`, the defaults U1–U6; its gates pending in PROGRESS.md), before MG0 as recommended | MG0 |
 | D12 | The pass's look | a tunnel mouth prop (the dungeon entrance's); or a gate house | **gate house** (the pass is its far doorway) | MG5 |
 | D13 | Gen 3 art unit | split metatiles into 8-px quarters (pipeline unchanged); or teach the geometry 16-px art | **quarters** | MG7 |
 | D14 | The two-engine harness | a second e2e install imported by the user; or two processes on one data home (shared `options.lua`, unconfirmed safe) | **second install** | MG5 |
 
 ## Appendix A: Gen1Recomp facts this plan rests on
 
-Read on 2026-10-13 from <https://github.com/bryanthaboi/gen1recomp> at tags `v0.3.49` (the pin) and `v0.3.85` (the
-latest). Paths are the engine's. Anything marked ⚠ was not confirmed.
+Read on 2026-10-13 from <https://github.com/bryanthaboi/gen1recomp> at tags `v0.3.49` (the pin until 2026-10-13) and
+`v0.3.85` (the latest, the pin since). Paths are the engine's. Anything marked ⚠ was not confirmed.
 
 **A.1 Games.** v0.3.49 imports Red, Blue, Yellow, Gold, Silver, Crystal, FireRed, LeafGreen and Emerald side by side
 (`README.md`); "Gen 2 support is still under construction", "FireRed, LeafGreen, and Emerald support is in beta".
@@ -894,8 +896,10 @@ document claims any game is playable to completion ⚠.
 
 **A.2 One game per process; no mod API to switch.** `main.lua` keeps one `Game`; `bootGame(version)` mounts that
 version's cache and picks `Game`, `Game2` or `Game3`; `returnToLauncher` ends the session (unmount, unload generated
-data, mod `Runtime.reset`, `Loader.endSession`) and rebuilds the launcher, from which another imported game can boot in
-the same Lua state. The mod facades (`src/mods/Loader.lua`) have no launcher, session or restart entry; `love.event.quit`
+data, mod `Runtime.reset`, `Loader.endSession`) and, on desktop, **restarts the process** through `HostShell.restart`
+with a handoff file (v0.3.85 `main.lua:625-645`; ENGINE_UPGRADE_PLAN B9), so another imported game boots in a fresh
+process, never the same Lua state (corrected 2026-10-13 by UP6: at v0.3.49 the launcher was rebuilt in place). The mod
+facades (`src/mods/Loader.lua`) have no launcher, session or restart entry; `love.event.quit`
 is a no-op for mods; `core.quit_to_launcher` is a veto hook only. `--game=<id>` (aliases incl. `emerald`/`em`),
 `--slot`, `--launcher`, `POKEPORT_GAME`, `POKEPORT_VERSION` select at start (`src/core/LaunchOptions.lua`,
 `docs/guides/launch-options.md`). Saves: `saves/<version>/slotN.lua`; `options.lua` is **shared by all games** of an
@@ -980,7 +984,7 @@ slots `kantoBridgeCloseInstance`, `kantoBridgeState`, `kantoBridgeWindow`.
 ## Appendix C: message sketches
 
 ```json
-{"type":"hello.ok","seq":1,"re":1,"data":{"protocol":1,"bridge":"0.1.0","engine":"0.3.49","tested":"0.3.49",
+{"type":"hello.ok","seq":1,"re":1,"data":{"protocol":1,"bridge":"0.1.0","engine":"0.3.85","tested":"0.3.85",
   "game":"emerald","family":"gen3","compat":{"maxDex":386,"maxMove":354,"nick":7},"session":"s-1a2b3c4d"}}
 {"type":"game.status","seq":9,"data":{"game":"emerald","region":"hoenn","playthrough":"title","ingame":false,
   "started":false,"badges":0,"markers":{"starter":false,"champion":false},"slot":2}}

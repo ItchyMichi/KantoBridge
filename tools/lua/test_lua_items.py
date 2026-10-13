@@ -164,6 +164,49 @@ def test_a_tm_the_species_cannot_learn_stays_native():
     assert g.status()["tmWatching"] is False
 
 
+def bag_list_on(g, item):
+    """The fake BagMenu list with its cursor on the item's row, as opts for E.useItem."""
+    lst = g.E.bagList()
+    lst.index = [i for i in range(1, len(lst[b"items"]) + 1) if lst[b"items"][i].value == item.encode()][0]
+    opts = g.b.table()
+    opts[b"list"] = lst
+    return lst, opts
+
+
+def last_remove(g):
+    last = list(g.E.bagRemoves.values())[-1]
+    same = g.b.eval("function(a, b) return rawequal(a, b) end")
+    return last.id, last.qty, last.slot, bool(same(last.data, g.E.data))
+
+
+def test_bag_rows_carry_their_slot_and_a_native_use_consumes_by_it():
+    """BagMenu.lua at v0.3.85: rows carry `slot` and `stack` (buildItems :20-40) and consume takes
+    one out of the stack under the cursor with the live data (:42-48); a TM taught natively goes
+    through it."""
+    g = items_game()
+    lst, opts = bag_list_on(g, "TM_SAND_T")
+    rows = {r.value.decode(): (r.slot, r.stack, r.count) for r in lst[b"items"].values() if r.value is not None}
+    assert rows["RARE_CANDY"] == (1, 3, 3) and rows["FIRE_STONE"] == (1, 1, 1)
+    assert rows["HM_WHIRL_T"] == (1, 1, None), "an HM shows no count"
+    g.E.useItem(b"TM_SAND_T", mon(g, 1), opts)
+    g.run()
+    assert native_items(g) == [("learned", "TM_SAND_T")]
+    assert last_remove(g) == (b"TM_SAND_T", 1, 1, True), "the stack under the cursor, with the live data"
+    assert row(lst, "TM_SAND_T") is None, "its row is gone"
+
+
+def test_an_item_cobblemon_applies_is_consumed_with_the_live_data():
+    """kb_engine's own consume (ENGINE_UPGRADE_PLAN B4): Bag.remove(save, id, 1, data) -- the total
+    is right either way; the plan keeps the slot out of it (Appendix B, BagMenu.lua:39-46)."""
+    g = items_game()
+    lst, opts = bag_list_on(g, "RARE_CANDY")
+    g.E.useItem(b"RARE_CANDY", mon(g, 0), opts)
+    g.run()
+    assert not native_items(g) and items_sent(g) == [{"item": "RARE_CANDY", "uid": U1}]
+    assert last_remove(g) == (b"RARE_CANDY", 1, None, True)
+    assert g.E.save.inventory.RARE_CANDY == 2
+
+
 # ------------------------------------------------------------ what stays native
 
 

@@ -14,8 +14,8 @@ import org.jetbrains.annotations.Nullable;
  *
  * Arguments: {@code --port <n>} (default 27151), {@code --out <dir>} (required), {@code --timeout <seconds>} (how long
  * to wait for the index, default 120). It prints one line starting with {@code export:} (counts, game and index hash,
- * or the failure code) and exits 0 on success, 1 when the export failed and 2 on bad arguments. The bundle is
- * ROM-derived, so nothing of its content is printed.
+ * or the failure code; {@code union_room_on} also says what to click) and exits 0 on success, 1 when the export failed
+ * and 2 on bad arguments. The bundle is ROM-derived, so nothing of its content is printed.
  */
 public final class ExportCli {
 	public static final int EXIT_OK = 0;
@@ -56,12 +56,24 @@ public final class ExportCli {
 			out.println(summary(result));
 			return EXIT_OK;
 		} catch (ExportClient.ExportException e) {
-			out.println("export: failed " + e.getMessage() + " port=" + parsed.port());
+			out.println(failed(e, parsed.port()));
 			return EXIT_FAILED;
 		} catch (InterruptedException e) {
 			out.println("export: failed interrupted");
 			return EXIT_FAILED;
 		}
+	}
+
+	/**
+	 * The one line the CLI prints when the export failed: the code with its detail and the port; gen1-bridge's
+	 * {@code union_room_on} refusal (Gen1Recomp's Union Room rewrites the Pokémon Centers, so there is nothing to export
+	 * until it is off) says what to click instead of the detail.
+	 */
+	static String failed(ExportClient.ExportException e, int port) {
+		String reason = e.code().equals("union_room_on")
+				? "union_room_on (the hidden game's Union Room is on: Launcher Options → Union Room → OFF, then restart Gen1Recomp)"
+				: e.getMessage();
+		return "export: failed " + reason + " port=" + port;
 	}
 
 	/** The one line the CLI prints on success: counts, the game and the index hash. */

@@ -1,23 +1,27 @@
 -- Fake Pokemon Center, PC, Mart, saving and trainer sight for the fake
 -- engine (M7). Written for Kanto Bridge from the engine behaviour
--- lib/kb_engine.lua cites: Game:writeSave / quickSaveAllowed
--- (src/core/Game.lua:1328-1369), the nurse (OverworldState:nurseHeal,
--- OC:3806-3912), the PC menu (OverworldState:openPC, OC:3568-3700, with the
+-- lib/kb_engine.lua cites (v0.3.85): Game:writeSave / quickSaveAllowed
+-- (src/core/Game.lua:1362-1407), the nurse (OverworldState:nurseHeal,
+-- OC:3943-4049), the PC menu (OverworldState:openPC, OC:3680-3812, with the
 -- ui.pc.items hook), the Mart (src/ui/ShopMenu.lua), trainer sight
--- (OverworldState:checkTrainerSight, OC:4372-4420); the code is our own,
+-- (OverworldState:checkTrainerSight, OC:4506-4554); the code is our own,
 -- and every text, price and map the tests install is made up. The PC
 -- menu's box-row labels are the engine's English source labels, which
 -- kb_engine matches.
 --
 --   FakeCenter.attach(E)      after FakeWild.attach
---   E.game:writeSave()        captureSave, save.writing, then the write;
+--   E.game:writeSave()        captureSave, save.writing, then the write
+--                             through UnionSafety.write (UP3/B8: the
+--                             identity with the Union Room off, counted in
+--                             E.unionSafety.writes; E.unionSafety.identity
+--                             says the writer got the live save table);
 --                             E.saveVeto (the save.write veto: false, no
 --                             event) and E.saveFails (the write fails after
 --                             the event); E.saveWrites counts the events
 --   E.game:quickSaveAllowed() the F1 gate
 --   E.activeSlot              what SaveData.activeSlot returns ("slot2", nil):
 --                             the process cache of the active slot
---   M9, SaveData's save slots (src/core/SaveData.lua:1222-1872) over a
+--   M9, SaveData's save slots (src/core/SaveData.lua:1254-2095) over a
 --   made-up registry -- E.slotReg = { list, active, names } (options.lua's
 --   saveSlots[version]); E.slotFiles[id] (the slot holds a save: a write
 --   into the active slot marks it; E.slotWrites[id or "flat"] counts them);
@@ -26,20 +30,24 @@
 --   call's name) -- and the title: E.game:returnToTitle() (everything
 --   popped, a TitleState screen pushed; E.titleRebuilds), E.titleState(),
 --   E.startNewGame() (a fresh save table without meta.savedAt, save.created,
---   the overworld), E.continueGame() (a loaded save table, the overworld,
---   save.loaded)
+--   the overworld), E.continueGame() (a loaded save table settled through
+--   UnionSafety.settle (E.unionSafety.settles), the overworld, save.loaded)
 --   M10, save files (E.useSaveFiles(mod), once; kblua's save_files=True):
 --   mod.save is the live save table's own modData bucket (Game:adoptSave,
---   src/core/Game.lua:1314-1324), writeSave stores a deep copy of the save
+--   src/core/Game.lua:1348-1360), writeSave stores a deep copy of the save
 --   table -- modData and meta included -- as the active slot's file
---   (E.slotSaves[slot or "flat"], SaveData.save :2585-2638), and
+--   (E.slotSaves[slot or "flat"], SaveData.save :2785-2843), and
 --   continueGame loads a deep copy of that file (new tables, as
 --   SaveData.load does), so what a mod wrote during save.writing comes back
 --   exactly when that save is loaded; meta.savedAt is a made-up Unix time.
 --   E.restartProcess() leaves what a new process would find: the save files,
 --   the slot registry, mod.cache -- and nothing on the Game object (kblua's
 --   Bridge.restart runs main.lua again).
---   E.musicRestores           Music.restoreMap calls
+--   UP3: the options file (SaveData.saveOptions :896 / loadOptions :1025):
+--   E.optionsFile holds the keys a saveOptions wrote (the Union Room
+--   setting kb_engine's unionRoomOff writes off); E.optionsWrites counts
+--   E.musicRestores           Music.restoreMap calls (E.musicRestoreCalls:
+--                             each call's `reason`, Music.lua:539-545)
 --   E.nurseHeal(npc, onDone)  welcome + HEAL/CANCEL, the machine (heal,
 --                             lastHeal, healAnim of E.healFrames), the bow,
 --                             the farewell
@@ -84,8 +92,41 @@ function FakeCenter.attach(E)
   E.slotSaves = {}
   E.unixBase = 1790000000
 
-  -- Game:writeSave (Game.lua:1328-1351): the save.write veto, captureSave,
-  -- save.writing, SaveData.save's result
+  -- UP3/B8: src/world/gen1/UnionSafety.lua, as a boot with the Union Room
+  -- off sees it. write(save, data, writer) (:113-123) hands the writer the
+  -- save itself when the player stands on vanilla cells (forWrite :101-109
+  -- returns `save` unless offVanilla :51-59, which never holds without the
+  -- patched Centers) and settle(save, data) (:92-99) is then nil. Both
+  -- are the identity here; the fake only counts them.
+  E.unionSafety = { writes = 0, settles = 0 }
+  local UnionSafety = {}
+  function UnionSafety.write(save, data, writer)
+    E.unionSafety.writes = E.unionSafety.writes + 1
+    E.unionSafety.lastData = data
+    local out = save -- forWrite's answer with the setting off
+    E.unionSafety.identity = out == save
+    return writer(out)
+  end
+  function UnionSafety.settle(save, data)
+    E.unionSafety.settles = E.unionSafety.settles + 1
+    E.unionSafety.lastData = data
+    return nil
+  end
+  E.modules["src.world.gen1.UnionSafety"] = UnionSafety
+
+  -- SaveData.save (SaveData.lua:2785-2843): the file lands in the active
+  -- slot (the flat legacy file without one)
+  local function saveDataSave(save)
+    local key = E.activeSlot or "flat"
+    E.slotWrites[key] = (E.slotWrites[key] or 0) + 1
+    if E.activeSlot then E.slotFiles[E.activeSlot] = true else E.legacySave = true end
+    if E.saveFiles then E.slotSaves[key] = deepCopy(save) end
+    return true
+  end
+
+  -- Game:writeSave (Game.lua:1362-1385): the save.write veto, captureSave,
+  -- buildMeta, save.writing, then SaveData.save through UnionSafety.write
+  -- (:1379) and its result
   function E.game.writeSave(_)
     if E.saveVeto then return false end
     local p, m = ow.player, ow.map
@@ -94,8 +135,8 @@ function FakeCenter.attach(E)
       E.save.player.facing = p.facing
     end
     if E.saveFiles then
-      -- buildMeta (SaveData.lua:2331-2362): savedAt is os.time()
-      E.save.meta = { format = 5, engine = "0.3.49", savedAt = E.unixBase + 60 * (E.saveWrites + 1),
+      -- buildMeta (SaveData.lua:2531-2560): savedAt is os.time() (:2547)
+      E.save.meta = { format = 5, engine = "0.3.85", savedAt = E.unixBase + 60 * (E.saveWrites + 1),
                       sessionStart = E.unixBase }
     else
       E.save.meta = { savedAt = E.saveWrites + 1 }
@@ -103,12 +144,7 @@ function FakeCenter.attach(E)
     E.runtime.emit("save.writing", { save = E.save, meta = E.save.meta })
     E.saveWrites = E.saveWrites + 1
     if E.saveFails then return false end
-    -- SaveData.save lands in the active slot (the flat legacy file without one)
-    local key = E.activeSlot or "flat"
-    E.slotWrites[key] = (E.slotWrites[key] or 0) + 1
-    if E.activeSlot then E.slotFiles[E.activeSlot] = true else E.legacySave = true end
-    if E.saveFiles then E.slotSaves[key] = deepCopy(E.save) end
-    return true
+    return UnionSafety.write(E.save, E.data, saveDataSave)
   end
 
   -- M10: mod.save backed by the live save's modData (Game:adoptSave)
@@ -143,7 +179,7 @@ function FakeCenter.attach(E)
     if E.saveFiles then E.useSaveFiles(mod) end
   end
 
-  -- Game:quickSaveAllowed (Game.lua:1353-1369)
+  -- Game:quickSaveAllowed (Game.lua:1387-1407)
   function E.game.quickSaveAllowed(_)
     if not (ow and ow.player) then return true end
     local top = E.stack:top()
@@ -161,7 +197,15 @@ function FakeCenter.attach(E)
     return true
   end
 
-  E.modules["src.core.Music"] = { restoreMap = function() E.musicRestores = E.musicRestores + 1 end }
+  -- Music.restoreMap(data, reason) (src/core/Music.lua:539-545; the reason
+  -- is optional since v0.3.85 and names why the map's song comes back):
+  -- counted, and each call's reason kept (fake_content.lua adds the rest of
+  -- the music API)
+  E.musicRestoreCalls = {}
+  E.modules["src.core.Music"] = { restoreMap = function(data, reason)
+    E.musicRestores = E.musicRestores + 1
+    E.musicRestoreCalls[#E.musicRestoreCalls + 1] = { reason = reason, data = data }
+  end }
 
   -- ------------------------------------------------------------ save slots (M9)
 
@@ -176,8 +220,8 @@ function FakeCenter.attach(E)
     return false
   end
   local SaveData = {}
-  -- activeSlot (:1717-1731): resolved once per process (ensureSlots
-  -- :1407-1438); refreshSlotResolution asks for it again
+  -- activeSlot (:1771-1785): resolved once per process (ensureSlots
+  -- :1454-1485); refreshSlotResolution asks for it again
   function SaveData.activeSlot()
     call("activeSlot")
     if E.slotsUnchecked then
@@ -186,7 +230,7 @@ function FakeCenter.attach(E)
       if #reg.list > 0 then
         E.activeSlot = reg.active or reg.list[1]
       elseif E.legacySave then
-        -- tryMigrateLegacy (:1338-1373): the flat save becomes slot1
+        -- tryMigrateLegacy (:1376-1411): the flat save becomes slot1
         E.legacySave = false
         E.slotFiles.slot1 = true
         if E.slotSaves and E.slotSaves.flat then E.slotSaves.slot1, E.slotSaves.flat = E.slotSaves.flat, nil end
@@ -199,8 +243,8 @@ function FakeCenter.attach(E)
     end
     return E.activeSlot
   end
-  function SaveData.refreshSlotResolution() call("refreshSlotResolution") E.slotsUnchecked = true end
-  -- setActiveSlot (:1661-1686): registered if new, active in the registry
+  function SaveData.refreshSlotResolution() call("refreshSlotResolution") E.slotsUnchecked = true end -- :2063
+  -- setActiveSlot (:1726-1753): registered if new, active in the registry
   -- and in the process cache
   function SaveData.setActiveSlot(_, id)
     call("setActiveSlot")
@@ -209,7 +253,7 @@ function FakeCenter.attach(E)
     E.activeSlot = id
     return id
   end
-  -- createSlot (:1688-1715): one past the highest number, not active
+  -- createSlot (:1755-1769): one past the highest number, not active
   function SaveData.createSlot()
     call("createSlot")
     if E.createFails then return nil end
@@ -222,13 +266,13 @@ function FakeCenter.attach(E)
     E.slotReg.list[#E.slotReg.list + 1] = id
     return id
   end
-  function SaveData.renameSlot(_, id, label)
+  function SaveData.renameSlot(_, id, label) -- :1699-1724
     call("renameSlot")
     if not registered(id) then return false, "slot not registered" end
     E.slotReg.names[id] = label
     return true
   end
-  -- deleteSlot (:1800-1856): files and row gone; an active one moves to list[1]
+  -- deleteSlot (:1896-1952): files and row gone; an active one moves to list[1]
   function SaveData.deleteSlot(_, id)
     call("deleteSlot")
     if not registered(id) then return false, "slot not registered" end
@@ -240,14 +284,33 @@ function FakeCenter.attach(E)
     if E.activeSlot == id then E.activeSlot = E.slotReg.active end
     return true
   end
-  function SaveData.getCart() return E.cart end
+  function SaveData.getCart() return E.cart end -- :2095
+  -- loadOptions (:1025): the whole options.lua table -- the slot registry
+  -- plus whatever a saveOptions wrote (E.optionsFile, the made-up file)
+  E.optionsFile, E.optionsWrites = {}, 0
   function SaveData.loadOptions()
     local list, names = {}, {}
     for i, v in ipairs(E.slotReg.list) do list[i] = v end
     for k, v in pairs(E.slotReg.names) do names[k] = v end
-    return { saveSlots = { [E.GameVersion.current] = { list = list, active = E.slotReg.active, names = names } } }
+    local out = {}
+    for k, v in pairs(E.optionsFile) do out[k] = v end
+    out.saveSlots = { [E.GameVersion.current] = { list = list, active = E.slotReg.active, names = names } }
+    return out
   end
-  -- persistenceFs (:565-567) with the slot files (saves/<version>/<id>.lua)
+  -- saveOptions (:896-930): a whole-file rewrite keeping every key the
+  -- table holds (UP3: the keys land in E.optionsFile; the slot registry
+  -- stays E.slotReg's)
+  function SaveData.saveOptions(opts)
+    call("saveOptions")
+    if type(opts) ~= "table" then return false end
+    if E.optionsWriteFails then return false end
+    E.optionsWrites = E.optionsWrites + 1
+    for k, v in pairs(opts) do
+      if k ~= "saveSlots" then E.optionsFile[k] = v end
+    end
+    return true
+  end
+  -- persistenceFs (:566-570) with the slot files (saves/<version>/<id>.lua)
   function SaveData.persistenceFs()
     return { getInfo = function(path)
       local version, id = path:match("^saves/([%w_]+)/(slot%d+)%.lua$")
@@ -258,9 +321,9 @@ function FakeCenter.attach(E)
   E.SaveData = SaveData
   E.modules["src.core.SaveData"] = SaveData
 
-  -- Game:makeTitleState's screen (Game.lua:222-240)
+  -- Game:makeTitleState's screen (Game.lua:226-245)
   function E.titleState() return { screenId = "TitleState" } end
-  -- Game:returnToTitle (Game.lua:245-249)
+  -- Game:returnToTitle (Game.lua:247-251)
   function E.game.returnToTitle(_)
     E.titleRebuilds = E.titleRebuilds + 1
     while #E.stack.states > 0 do E.uiPop() end
@@ -277,8 +340,8 @@ function FakeCenter.attach(E)
     save.modData = {}
     return save
   end
-  -- Game:startNewGame (Game.lua:179-198) without the intro: SaveData.newGame's
-  -- skeleton has no meta.savedAt (SaveData.lua:3026-3036)
+  -- Game:startNewGame (Game.lua:181-200) without the intro: SaveData.newGame's
+  -- skeleton has no meta.savedAt (SaveData.lua:3229-3239)
   function E.startNewGame()
     local save = freshSave()
     save.meta = { format = 1, mods = {} }
@@ -288,9 +351,10 @@ function FakeCenter.attach(E)
     E.stack.states = { ow }
     return save
   end
-  -- CONTINUE (Game:restoreSave, Game.lua:1475-1537): the active slot's save
-  -- (M10, with save files: a deep copy of the slot's file, its modData
-  -- adopted before save.loaded)
+  -- CONTINUE (Game:restoreSave, Game.lua:1537-1610): the active slot's save
+  -- (M10, with save files: a deep copy of the slot's file), settled through
+  -- UnionSafety.settle (:1554; nil with the Union Room off), its modData
+  -- adopted (:1563) before save.loaded (:1605)
   function E.continueGame()
     local file = E.saveFiles and E.slotSaves[E.activeSlot or "flat"] or nil
     local save
@@ -301,6 +365,7 @@ function FakeCenter.attach(E)
       save = freshSave()
       save.meta = { format = 1, savedAt = 100 }
     end
+    UnionSafety.settle(save, E.data)
     E.save, E.game.save = save, save
     E.stack.states = { ow }
     E.runtime.emit("save.loaded", { save = save, meta = save.meta })
@@ -326,12 +391,6 @@ function FakeCenter.attach(E)
     while #E.stack.states > 0 do E.uiPop() end
     E.uiPush(E.titleState())
     return save
-  end
-
-  -- Bag.order (src/inventory/Bag.lua): the acquisition order
-  function E.Bag.order(save)
-    save.bagOrder = save.bagOrder or {}
-    return save.bagOrder
   end
 
   -- ------------------------------------------------------------ the nurse
@@ -583,7 +642,7 @@ function FakeCenter.attach(E)
 
   -- ------------------------------------------------------------ trainer sight
 
-  -- OverworldState:checkTrainerSight (OC:4372-4420), on cells: an
+  -- OverworldState:checkTrainerSight (OC:4506-4554), on cells: an
   -- undefeated trainer facing the standing player in a line within its
   -- header's range walks up and engages (fake_script's startTrainerApproach
   -- with the distance); a cancelled sighting waits until the player moves.

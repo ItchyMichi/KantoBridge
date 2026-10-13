@@ -1,7 +1,7 @@
 -- Kanto Bridge test driver (docs/specs/PROFILE_PLAN.md §5.8): switches the Dramaless Shape mod off in the test
 -- install, so no test boot runs its renderer, hotkeys or day/night hooks; gen1-bridge reads its table either way.
--- Gen1Recomp saves the switch for the next boot (Loader:setEnabled, refs/gen1recomp/src/mods/Loader.lua:511-522; the
--- Game owns its loader as game.mods, src/core/Game.lua:52).
+-- Gen1Recomp saves the switch for the next boot (Loader:setEnabled, refs/gen1recomp/src/mods/Loader.lua:585-596; the
+-- Game owns its loader as game.mods, src/core/Game.lua:54).
 --
 -- Gen1Recomp runs a driver unsandboxed inside its main.lua (POKEPORT_DRIVER): the returned function becomes a
 -- coroutine, resumed once per frame with the Game. Data safety: print only markers and booleans.

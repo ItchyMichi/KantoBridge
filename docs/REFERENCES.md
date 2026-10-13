@@ -16,7 +16,7 @@ Conventions:
 
 | Reference | Folder in `refs/` | Version studied | Licence | Use in Kanto Bridge |
 |---|---|---|---|---|
-| [Gen1Recomp](#gen1recomp) | `gen1recomp/` | `dev` @ `cb02aeb` (2026-10-02), included in release v0.3.49 | GPL-3.0 with Section 7 terms: a credit line is required, and the launcher files are proprietary | The hidden game, and the mod platform `gen1-bridge` runs on |
+| [Gen1Recomp](#gen1recomp) | `gen1recomp/` | `dev` @ `e50c396` (2026-10-12), the commit release v0.3.85 was built from (the pin since 2026-10-13); first studied at `dev` @ `cb02aeb` (2026-10-02, in v0.3.49) | GPL-3.0 with Section 7 terms: a credit line is required, and the launcher files are proprietary | The hidden game, and the mod platform `gen1-bridge` runs on |
 | [Gen1Recomp mod index](#gen1recomp-mod-index) | `gen1recomp-mod-index/` | `main` @ `67c40b2` | None stated; treat as all rights reserved | Finding comparable mods; the index schema |
 | [Dramaless Shape](#dramaless-shape-voxel-mod) (voxel mod) | `DRAMALESS_SHAPE-main/` | v2.0.4 zip (no git) | MIT for the 2.0 line; the Dramatic Shape base is unverifiable | How a Gen1Recomp map becomes 3D; height rules |
 | [Kanto in First Person](#kanto-in-first-person-ds_fp_ceiling) (`ds_fp_ceiling`) | `kanto-first-person/` | `main` @ `94d0151`, v1.57.2 (cloned 2026-10-03) | None stated; treat as all rights reserved, its art and sounds included | Ideas for first-person dressing: interiors, caves, sky, canopy, camera feel |
@@ -93,10 +93,18 @@ Conventions:
 
 ## Gen1Recomp
 
-- **Source:** `https://github.com/bryanthaboi/gen1recomp`, default branch `dev`. Commit
-  `cb02aebd01a9d3eff1ca0c6e5e5f633a4c1a89b9` (2026-10-02) is included in release **v0.3.49**
-  (2026-10-02), **the pinned version** (see [VERSIONS.md](VERSIONS.md)). Several releases go out per
-  day, so always pin a tag.
+The `file.lua:NN` line numbers in this section were read at `dev` @ `cb02aeb` (v0.3.49); most of them
+moved in v0.3.85, though the code they point at is largely unchanged (ENGINE_UPGRADE_PLAN §1.1: of the
+696 citations in this repository, 474 only shifted and 49 fall on changed code). They are not re-stamped
+by hand: `tools/pin_check.py` (`python3 -I tools/pin_check.py refs/gen1recomp v0.3.49 v0.3.85`) is the
+way to resolve a citation against the current tag; it classes each one as same, shifted (with its new
+start line) or changed.
+
+- **Source:** `https://github.com/bryanthaboi/gen1recomp`, default branch `dev`. Release **v0.3.85**
+  (2026-10-12), built from `dev` @ `e50c396` (2026-10-12), is **the pinned version** since 2026-10-13
+  (see [VERSIONS.md](VERSIONS.md) and [`specs/ENGINE_UPGRADE_PLAN.md`](specs/ENGINE_UPGRADE_PLAN.md)).
+  This section was first written at commit `cb02aebd01a9d3eff1ca0c6e5e5f633a4c1a89b9` (2026-10-02),
+  included in release v0.3.49. Several releases go out per day, so always pin a tag.
 - **Official sources** per `README.md:12`: *"This GitHub repository, the Discord, and
   https://gen1re.com are the only official sources for this project."* The same line warns that
   `gen1recomp[.]com` impersonates the project. Never download from it.
@@ -358,10 +366,10 @@ The authoritative validator is `src/mods/Manifest.lua:293-488`. The human-readab
   - **What moves into that folder:** `save.lua`, `options.lua` (including mod enable state), the
     whole ROM cache, `mods/`, `roms/`, `imports/`, `baseroms/`, `shaders/` and `prints/`. There's no
     env var or flag, only the marker, and Flatpak ignores it.
-  - **Our layout** (decided 2026-10-03; see [`CLAUDE.md`](../CLAUDE.md)): the official v0.3.49
-    Windows release is unzipped into `local/gen1recomp/`, with `portable.txt` beside its fused
-    `gen1recomp.exe`. For a fused exe the source-base directory is the exe's own folder, so all
-    Gen1Recomp data lands in `local/gen1recomp/`.
+  - **Our layout** (decided 2026-10-03; see [`CLAUDE.md`](../CLAUDE.md)): the official Windows
+    release (v0.3.85 since 2026-10-13; v0.3.49 before) is unzipped into `local/gen1recomp/`, with
+    `portable.txt` beside its fused `gen1recomp.exe`. For a fused exe the source-base directory is
+    the exe's own folder, so all Gen1Recomp data lands in `local/gen1recomp/`.
   - Never run Gen1Recomp from `refs/`.
 - **Running hidden:**
   - When the window is minimised the frame cap drops to 10 fps (`main.lua:1739-1745`), and catch-up

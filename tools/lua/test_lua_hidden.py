@@ -1,6 +1,6 @@
 """M10 running hidden (DESIGN section 9; lib/kb_engine.lua "reliability (M10)"): while a client or
 test session is connected, love.window.isVisible answers true for a window that isn't shown, so the
-engine's loop keeps its normal frame cap (main.lua:1739-1756) and draws; a frame it fakes is paced to
+engine's loop keeps its normal frame cap (main.lua:1907-1924) and draws; a frame it fakes is paced to
 at most 60 a second, and so is a minimised window's (which the loop would otherwise spin through at
 hundreds a second); the wrapper is taken out when the link drops, when its keep-alive runs out, and
 on a hot reload; nothing changes for a window that is shown, without a client, for a builder

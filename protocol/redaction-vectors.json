@@ -86,7 +86,15 @@
     {
       "type": "debug.status",
       "seq": 12,
-      "redacted": {"npcs": 2, "topState": "OverworldState", "mode": "idle", "flags": 1, "party": 1}
+      "redacted": {
+        "npcs": 2,
+        "topState": "OverworldState",
+        "mode": "idle",
+        "flags": 1,
+        "party": 1,
+        "engineMissing": [],
+        "unionRoom": "off"
+      }
     },
     {"type": "dex.sync", "seq": 11, "redacted": {"seen": [7, 16, 19], "owned": [7, 16]}},
     {
@@ -149,10 +157,11 @@
       "redacted": {
         "protocol": 1,
         "bridge": "0.1.0",
-        "engine": "0.3.49",
+        "engine": "0.3.85",
         "game": "red",
         "session": "s-7f3a91",
-        "tested": "0.3.49"
+        "tested": "0.3.85",
+        "union_room": "off"
       }
     },
     {"type": "hello.reject", "seq": 11, "redacted": {"reason": "protocol", "protocol": 1}},

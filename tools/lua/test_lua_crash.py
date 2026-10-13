@@ -190,6 +190,9 @@ def test_the_pair_comes_back_after_a_crash_and_continue():
     g.E.continueGame()
     g.run(2)
     assert loaded(g)[-1]["pair"] == begin["pair"]
+    # ENGINE_UPGRADE_PLAN B8: each CONTINUE settles the loaded save through UnionSafety.settle
+    # (Game.lua:1554; nil with the Union Room off) before save.loaded
+    assert g.E.unionSafety.settles == 2
 
 
 def test_a_save_after_the_operations_comes_back_with_them():

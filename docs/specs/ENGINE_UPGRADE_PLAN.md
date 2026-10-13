@@ -8,7 +8,8 @@ git-ignored `refs/gen1recomp/`, never run) at the tags `v0.3.49` (the pin) and `
 
 It can run **before** [`MULTI_GAME_PLAN.md`](MULTI_GAME_PLAN.md) (recommended: every spike and test of that plan then
 runs on the engine Hoenn needs, and the ROMs are re-imported once, not twice) or after it, at the latest before MG7.
-Its decision D11 ("the pin stays v0.3.49; revisit at MG7") is answered by this plan once the user says go.
+Its decision D11 ("the pin stays v0.3.49; revisit at MG7") is answered by this plan once the user says go (they did,
+on 2026-10-13, with the defaults: §0).
 
 ## 0. Execute
 
@@ -30,6 +31,10 @@ Its decision D11 ("the pin stays v0.3.49; revisit at MG7") is answered by this p
 | U4 | Upgrade style on the user's PC | **fresh folders** (`local/gen1recomp-e2e` and `local/gen1recomp` re-created from the new zip, imports redone there, the old folders kept as `-0.3.49` until G5 passes); or in place (unzip over the old folder; data stays; the launcher asks to re-import) | **fresh folders** |
 | U5 | The fallback | **keep the v0.3.49 folders and the pod's old AppImage until G6 passes**, then the user deletes them; or delete at once | **keep** |
 | U6 | JUnit literals | **update** the `"0.3.49"` strings in `fabric-bridge/src/test` too (they are self-consistent fakes, so they pass either way); or leave them | **update** |
+
+**Decided 2026-10-13:** the user chose the defaults (U1–U6); U2 was carried out through the pod's upload page (Blue,
+Crystal, Emerald imported into `local/gen1recomp-data-0.3.85`). The gates are recorded in PROGRESS.md ("Engine
+upgrade").
 
 ## 1. What the inspection found
 
@@ -206,8 +211,9 @@ and a second round of re-checks. One engine version for Kanto and Hoenn: v0.3.85
 2. **The Windows test install** (U4): unzip the zip's inner `gen1recomp-win64\` into `local\gen1recomp-e2e-0.3.85\`,
    create an empty `portable.txt` beside the exe, link the mod (`mklink /J local\gen1recomp-e2e-0.3.85\mods\gen1-bridge
    gen1-bridge` in `cmd`), start the exe, import the ROM in its launcher, open **Launcher Options → Union Room → OFF**,
-   close it. Rename `local\gen1recomp-e2e` to `local\gen1recomp-e2e-0.3.49` and the new folder to `local\gen1recomp-e2e`
-   (the e2e runner's fixed path).
+   close it. Renaming `local\gen1recomp-e2e` to `local\gen1recomp-e2e-0.3.49` and the new folder to
+   `local\gen1recomp-e2e` is optional now (UP1): the e2e runner prefers `local\gen1recomp-e2e-0.3.85` when it exists
+   (`KB_GEN1RECOMP_INSTALL` overrides it), so either name works.
 3. **The pod:** put the ROM in the volume's `rom-inbox/` (it was empty on 2026-10-09). The agent prepares the AppImage
    (§4.1); the import itself is the user's command in §4.1.
 4. **Say go** with any changes to U1–U6.
@@ -279,6 +285,10 @@ Done when the lupa count is at least today's (925 Lua tests at the M10 gate; 1,4
    release into its own new directory, check its SHA-256 against §UP0, extract it (`./gen1recomp-0.3.85-linux-x86_64.AppImage
    --appimage-extract`), move `local/gen1recomp-linux` to `local/gen1recomp-linux-0.3.49` and the extracted tree to
    `local/gen1recomp-linux`. The data home `local/gen1recomp-data/` stays (its import is the user's).
+   *As carried out (2026-10-13): the pod keeps both builds side by side instead of renaming. The extracted tree is
+   `local/gen1recomp-linux-0.3.85` with its own data home `local/gen1recomp-data-0.3.85` (imported through the pod's
+   upload page: Blue, Crystal, Emerald), and the v0.3.49 folders `local/gen1recomp-linux` and `local/gen1recomp-data`
+   are untouched (U5); the runner prefers the versioned names, `KB_GEN1RECOMP_APP`/`KB_GEN1RECOMP_HOME` override them.*
 2. **The re-import is the user's** (U2), from their phone through `!`:
    ```sh
    ! ssh kb-dev 'cd /workspace && XDG_DATA_HOME=/workspace/local/gen1recomp-data ALSOFT_DRIVERS=null POKEPORT_CONSOLE=1 POKEPORT_IMPORT_ONLY=1 POKEPORT_IMPORT_ROM=/workspace/rom-inbox/<file> xvfb-run -a local/gen1recomp-linux/AppRun --game=blue 2>&1 | grep -c .'

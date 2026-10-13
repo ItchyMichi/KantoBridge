@@ -2,8 +2,10 @@
 -- internals (the manifest's `engine_internals` permission).
 --
 -- Every function names the engine source it relies on, as `file:line` in the
--- pinned v0.3.49 (identical to refs/gen1recomp at cb02aeb). When the pin
--- changes, re-check each reference below before anything else (CLAUDE.md).
+-- pinned v0.3.85 (refs/gen1recomp at e50c396, the `dev` head of 2026-10-12
+-- the release was built from). When the pin changes, re-check each reference
+-- below before anything else (CLAUDE.md; tools/pin_check.py lists the
+-- citations that moved or changed, and re-stamps the ones that only moved).
 -- Elsewhere, gen1-bridge reaches the engine only through this table and the
 -- supported mod API (mod.events, mod.hooks, mod.input, mod.world; the
 -- export's dataset views come through here too).
@@ -17,19 +19,68 @@ local Engine = {}
 -- The engine release whose internals this file was checked against, and
 -- the one gen1-bridge is tested with (M10: hello.ok.tested; a connection to
 -- a different engine gets one engine.untested warning).
-Engine.CHECKED = "0.3.49"
+Engine.CHECKED = "0.3.85"
 Engine.TESTED = Engine.CHECKED
 
 -- PLAN P21: the hidden game's display options pinned to classic, so mirror
 -- frames have the fixed 160x144 geometry, and text at FAST. Keys and
--- defaults: SaveData.defaultOptions (src/core/SaveData.lua:569-654).
+-- defaults: SaveData.defaultOptions (src/core/SaveData.lua:572-713).
 Engine.CLASSIC = {
   tilt = 0,                -- src/render/Tilt.lua:80-91
   zoom = 0,                -- src/render/Zoom.lua:113-115 (0 = FIT)
   battleLayout = "og",     -- src/battle/BattleState.lua:79-81 (not "wide")
   battleFit = "fixed",     -- src/battle/BattleState.lua:94-96 (not "fill")
-  uiLayout = "centered",   -- src/core/Game.lua:573-580 (not "dynamic")
-  textSpeed = 1,           -- src/render/TextBox.lua:652-654: 1 frame per glyph = FAST
+  uiLayout = "centered",   -- src/core/Game.lua:588-595 (not "dynamic")
+  textSpeed = 1,           -- src/render/TextBox.lua:684-686: 1 frame per glyph = FAST
+  -- ENGINE_UPGRADE_PLAN U3: the Union Room (src/online/union/Setting.lua:3-7;
+  -- an absent key means ON) rewrites Gen 1's Pokemon Centers at data load
+  -- (src/core/Data.lua:185 -> src/world/gen1/UnionCenters.lua:297-390,
+  -- :392-394), which the export never sees (DatasetViews.lua:427): the
+  -- hidden game and the Minecraft world would disagree at every Center.
+  -- Pinned off with the display keys; the boot that first finds it on still
+  -- runs patched (engine.unionRoomPatched), and writes it off for the next.
+  unionRoom = false,
+}
+
+-- ENGINE_UPGRADE_PLAN UP1: every engine module this file loads through
+-- try() and the functions and fields its code reads from each, by name.
+-- engine.checkRequired walks it once at game.ready, so an engine that
+-- renamed or dropped one shows up as one engine.missing warning,
+-- debug.status.engineMissing and KB_READY missing=<n>, instead of as a
+-- silent fallback somewhere below. Modules reached only behind a guard
+-- with a fallback (the menu classes, data.scripts.victories,
+-- OC.objectVisible) stay out of it; the citations beside each use say what
+-- the member has to do.
+Engine.REQUIRED = {
+  ["src.battle.BattleState"] = { "stampOT" },
+  ["src.core.Game"] = { "logicStep" },
+  ["src.core.GameVersion"] = { "get", "isYellow" },
+  ["src.core.Music"] = { "playBattle", "playVictory", "restoreMap" },
+  ["src.core.SaveData"] = { "activeSlot", "createSlot", "deleteSlot", "getCart", "loadOptions", "persistenceFs",
+                            "refreshSlotResolution", "renameSlot", "saveOptions", "setActiveSlot" },
+  ["src.core.Strings"] = {},
+  ["src.core.Version"] = { "engine", "modApi" },
+  ["src.inventory.Badges"] = { "itemFor", "list" },
+  ["src.inventory.Bag"] = { "remove" },
+  ["src.inventory.ItemEffects"] = { "isStone" },
+  ["src.mods.Runtime"] = { "call", "wantsHook" },
+  ["src.pokemon.Growth"] = { "expForLevel" },
+  ["src.pokemon.Pokemon"] = { "movesAtLevel", "new" },
+  ["src.pokemon.Stats"] = { "calc" },
+  ["src.render.Assets"] = { "imageData" },
+  ["src.render.Pipelines"] = { "applyOptions" },
+  ["src.render.TextBox"] = { "new", "soundOpts" },
+  ["src.render.TileRenderer"] = { "SPINNER_ARROW_TILES", "VOID_FILLS", "borderBlockFor", "defaultAnimatedTiles",
+                                  "voidFill" },
+  ["src.render.Tilt"] = { "applyOptions" },
+  ["src.render.Transition"] = { "whiteFlash" },
+  ["src.render.Zoom"] = { "applyOptions" },
+  ["src.script.Commands"] = { "show_object" },
+  ["src.script.Flags"] = { "set" },
+  ["src.ui.Screens"] = { "push" },
+  ["src.world.FieldDefaults"] = { "constant", "field", "fieldValue", "world" },
+  ["src.world.Map"] = { "ghostBattles", "inRegion", "isFlyTown", "isOutside", "new" },
+  ["src.world.OverworldController"] = { "computeNeighbors" },
 }
 
 local SYMBOL = "^[A-Za-z0-9_]+$"
@@ -47,11 +98,11 @@ end
 -- with everything else on a pin change.
 
 -- Fixed trainer DVs, unless constants.trainerDvs overrides them
--- (src/battle/BattleState.lua:543-545, :925-934).
+-- (src/battle/BattleState.lua:543-545, :959-968).
 Engine.TRAINER_DVS = { attack = 9, defense = 8, speed = 8, special = 8 }
 
 -- The boss moves written into a team's third move slot
--- (src/battle/BattleState.lua:837-889, from pokered's
+-- (src/battle/BattleState.lua:871-923, from pokered's
 -- data/trainers/special_moves.asm): a gym leader's n-th Pokemon (Giovanni
 -- only in party 3), the fifth Pokemon of each Elite Four member, and the
 -- Champion's first Pokemon plus his starter's final form.
@@ -63,7 +114,7 @@ Engine.LONE_MOVES = {
 Engine.TEAM_MOVES = { OPP_LORELEI = "BLIZZARD", OPP_BRUNO = "FISSURE", OPP_AGATHA = "TOXIC", OPP_LANCE = "BARRIER" }
 Engine.RIVAL_STARTER_MOVES = { VENUSAUR = "MEGA_DRAIN", CHARIZARD = "FIRE_BLAST", BLASTOISE = "BLIZZARD" }
 -- GetTrainerName_: the rival classes are named after the rival
--- (src/battle/BattleState.lua:902-909)
+-- (src/battle/BattleState.lua:936-943)
 Engine.RIVAL_CLASSES = { OPP_RIVAL1 = true, OPP_RIVAL2 = true, OPP_RIVAL3 = true }
 
 -- ------------------------------------------------------------ M7 constants
@@ -74,19 +125,19 @@ Engine.HEAL_HOLD_STEPS = 600
 
 -- The PC menu's box row, by the English source label it carries while the
 -- ui.pc.items hook sees it: "BILL'S PC", or "SOMEONE'S PC" before meeting
--- Bill (OC:3592-3593; Strings.source returns its argument,
+-- Bill (OC:3704-3705; Strings.source returns its argument,
 -- src/core/Strings.lua:211-213; rows are translated only after the hook,
--- OC:3672-3689).
+-- OC:3784-3801).
 Engine.BOX_PC_LABELS = { ["BILL'S PC"] = true, ["SOMEONE'S PC"] = true }
 
--- One move list (ids) after setThirdMove (src/battle/BattleState.lua:864-869):
+-- One move list (ids) after setThirdMove (src/battle/BattleState.lua:898-903):
 -- the move lands in slot min(3, #moves + 1).
 local function setThirdMove(moves, moveId)
   if type(moves) ~= "table" then return end
   moves[math.min(3, #moves + 1)] = moveId
 end
 
--- applySpecialMoves (src/battle/BattleState.lua:871-889) over plain
+-- applySpecialMoves (src/battle/BattleState.lua:905-923) over plain
 -- { species, moves = {ids} } entries.
 function Engine.applySpecialMoves(oppClass, partyIndex, party)
   local lone = Engine.LONE_MOVES[oppClass]
@@ -116,8 +167,8 @@ end
 -- re-checked with everything else on a pin change.
 
 -- Cuttable tree tiles per tileset: OVERWORLD $3d and GYM $50
--- (OverworldState:tryCut, src/world/OverworldController.lua:3304-3307, and
--- the same gate in useCutFieldMove :3424-3427). OVERWORLD $52 is cuttable
+-- (OverworldState:tryCut, src/world/OverworldController.lua:3416-3419, and
+-- the same gate in useCutFieldMove :3536-3539). OVERWORLD $52 is cuttable
 -- tall grass, not a tree, so it is left out.
 Engine.CUT_TREE_TILES = { OVERWORLD = { 0x3d }, GYM = { 0x50 } }
 
@@ -166,7 +217,7 @@ end
 -- opts.require:  the mod's (sandboxed) require; tests pass a fake
 -- opts.log:      kb_log logger (optional)
 -- opts.ui:       mod.ui, the UI module tables (src/ui/ModUI.lua:8-27)
--- opts.datasets: mod.datasets, the dataset views (src/mods/Loader.lua:1361-1369)
+-- opts.datasets: mod.datasets, the dataset views (src/mods/Loader.lua:1435-1443)
 -- opts.love:     the sandbox's love facade (M10: love.window and love.timer
 --                for running hidden; optional)
 function Engine.new(opts)
@@ -185,8 +236,8 @@ function Engine.new(opts)
   end
 
   -- The Game object from the game.ready payload { game = self }
-  -- (src/core/Game.lua:119, emitted once services are up, before the title).
-  -- input.step also passes it (src/core/Game.lua:320).
+  -- (src/core/Game.lua:121, emitted once services are up, before the title).
+  -- input.step also passes it (src/core/Game.lua:322).
   function engine.setGame(g) if g ~= nil then game = g end end
   function engine.game() return game end
 
@@ -212,7 +263,7 @@ function Engine.new(opts)
   end
 
   -- Engine release and mod API: src/core/Version.lua:6-23 (`engine`, stamped
-  -- "0.3.49" in the release build; "0.0.0-dev[+commit]" in a source checkout,
+  -- "0.3.85" in the release build; "0.0.0-dev[+commit]" in a source checkout,
   -- :70-88) and `modApi` (:19).
   function engine.version()
     local Version = try("src.core.Version")
@@ -234,27 +285,77 @@ function Engine.new(opts)
     return ok
   end
 
-  -- "red" or "blue": GameVersion.get (src/core/GameVersion.lua:178-180).
+  -- UP1: the modules and members of Engine.REQUIRED this engine lacks, as
+  -- sorted "module" / "module.member" strings; empty when all are there.
+  -- main.lua logs one engine.missing at game.ready and keeps the list in
+  -- its status (debug.status.engineMissing, KB_READY missing=).
+  function engine.checkRequired()
+    local missing = {}
+    for name, members in pairs(Engine.REQUIRED) do
+      local m = try(name)
+      if m == nil then
+        missing[#missing + 1] = name
+      else
+        for i = 1, #members do
+          if m[members[i]] == nil then missing[#missing + 1] = name .. "." .. members[i] end
+        end
+      end
+    end
+    table.sort(missing)
+    return missing
+  end
+
+  -- U3: true when this boot's data carries the Union Room's second floor
+  -- (UnionCenters.FLOOR_2F, src/world/gen1/UnionCenters.lua:7, one of the
+  -- maps UnionCenters.apply adds, :297-390, when Setting.patchesOn,
+  -- :392-394): the live Centers then differ from the import the export
+  -- reads, until the setting is off and the engine restarted.
+  function engine.unionRoomPatched()
+    local data = game and game.data
+    local maps = type(data) == "table" and type(data.maps) == "table" and data.maps or nil
+    return maps ~= nil and maps.POKECENTER_2F ~= nil
+  end
+
+  -- U3: writes the Union Room setting off for the next boot:
+  -- SaveData.loadOptions (src/core/SaveData.lua:1025, the full on-disk
+  -- table under the defaults) then saveOptions (:896; a whole-file rewrite
+  -- that keeps every key the table holds, :904-930). The in-memory pin
+  -- (Engine.CLASSIC) covers this boot's options table; this covers the
+  -- file the setting is read from at data load. True when written or
+  -- already off.
+  function engine.unionRoomOff()
+    local SaveData = try("src.core.SaveData")
+    if not (SaveData and type(SaveData.loadOptions) == "function" and type(SaveData.saveOptions) == "function") then
+      return false
+    end
+    local ok, opts = pcall(SaveData.loadOptions)
+    if not ok or type(opts) ~= "table" then return false end
+    if opts.unionRoom == false then return true end
+    opts.unionRoom = false
+    return pcall(SaveData.saveOptions, opts) == true
+  end
+
+  -- "red" or "blue": GameVersion.get (src/core/GameVersion.lua:209-211).
   function engine.gameVersion()
     local GameVersion = try("src.core.GameVersion")
     local v = GameVersion and GameVersion.get and GameVersion.get()
     return type(v) == "string" and v or nil
   end
 
-  -- Game.logicStep counts fixed logic steps (src/core/Game.lua:311-315).
+  -- Game.logicStep counts fixed logic steps (src/core/Game.lua:313-317).
   function engine.logicStep()
     local Game = try("src.core.Game")
     return Game and tonumber(Game.logicStep) or 0
   end
 
-  -- The live save table (src/core/Game.lua:95, :1496 on load). Callers read
+  -- The live save table (src/core/Game.lua:97, :1559 on load). Callers read
   -- it; only pinDisplay writes to it.
   function engine.save()
     return game and type(game.save) == "table" and game.save or nil
   end
 
   -- The top state of the screen stack: src/core/StateStack.lua:47
-  -- (game.stack is StateStack, src/core/Game.lua:93).
+  -- (game.stack is StateStack, src/core/Game.lua:95).
   function engine.top()
     local stack = game and game.stack
     return stack and stack.top and stack:top() or nil
@@ -263,7 +364,7 @@ function Engine.new(opts)
   -- The overworld when it is on the stack (it stays under menus and
   -- battles). StateStack.states is the stack, bottom to top
   -- (src/core/StateStack.lua:9-11); the overworld module marks itself with
-  -- isOverworld (OC:35). Same authority WorldAPI:overworld uses
+  -- isOverworld (OC:37). Same authority WorldAPI:overworld uses
   -- (src/world/WorldAPI.lua:96-109), minus its fallback to a stale module
   -- table after a return to the title.
   function engine.overworld()
@@ -285,7 +386,7 @@ function Engine.new(opts)
   -- Classifies a state: "overworld", "screen" (it takes input: text, menus,
   -- battles, full screens) or "busy" (a fade, a flash, a slide or a panel
   -- with no input), plus a symbol naming it.
-  --   isOverworld OC:35; screenId stamped by Screens.build
+  --   isOverworld OC:37; screenId stamped by Screens.build
   --   (src/ui/Screens.lua:174); isTextBox (src/render/TextBox.lua:22);
   --   isBattleState (src/battle/BattleState.lua:49); the mod.ui module
   --   tables are the instances' metatables (src/ui/ModUI.lua:8-27); isMenu
@@ -309,7 +410,7 @@ function Engine.new(opts)
     return "busy", "Busy"
   end
 
-  -- Rock Tunnel and friends: field.darkMaps (OC:216-222). Built once per data
+  -- Rock Tunnel and friends: field.darkMaps (OC:221-227). Built once per data
   -- table, since observe() asks every step.
   local darkFor, darkSet = nil, {}
   local function darkMapSet()
@@ -347,15 +448,15 @@ function Engine.new(opts)
   end
 
   local function playerScripted(ow, p)
-    -- OC:5655-5660: { entity, dir, remaining, onDone, collide }
+    -- OC:5814-5819: { entity, dir, remaining, onDone, collide }
     for _, mv in ipairs(type(ow.scriptMoves) == "table" and ow.scriptMoves or {}) do
       if mv.entity == p then return true end
     end
     return false
   end
 
-  -- A Strength boulder on the move: a scriptMoves entry (OC:5655-5660) whose
-  -- entity is a pushable object, as checkBoulderPush queues it (OC:1864).
+  -- A Strength boulder on the move: a scriptMoves entry (OC:5814-5819) whose
+  -- entity is a pushable object, as checkBoulderPush queues it (OC:1977).
   -- Pushable is Map.isPushable's rule (src/world/Map.lua:188-191): the
   -- object's own `pushable`, else sprite SPRITE_BOULDER. Returns its
   -- direction, or nil.
@@ -379,12 +480,12 @@ function Engine.new(opts)
 
   -- M8: a Seafoam current is a chain of the player's scripted steps that
   -- checkSeafoamCurrent starts on one of the map's current cells while
-  -- surfing (OC:5028-5078: runSpinnerMoves with noSpin, :4839-4864, which
+  -- surfing (OC:5176-5226: runSpinnerMoves with noSpin, :4980-5005, which
   -- sets neither p.spinning nor spinnerSliding; the B4F stair push-back,
-  -- :5043-5054, is one too). Nothing marks those steps, so a chain is
+  -- :5191-5202, is one too). Nothing marks those steps, so a chain is
   -- recognised by where it began: when the player's scripted moves start
-  -- (OC:5655-5660) on such a cell while surfing. The surf mount's own
-  -- scripted step (stepForwardOrCrossEdge, OC:2162-2170) starts on land.
+  -- (OC:5814-5819) on such a cell while surfing. The surf mount's own
+  -- scripted step (stepForwardOrCrossEdge, OC:2275-2283) starts on land.
   local chain = { active = false, current = false }
 
   local function currentStart(ow, p)
@@ -405,13 +506,13 @@ function Engine.new(opts)
     return false
   end
 
-  -- M8: which escape a teleportOut spin is (OC:2470-2499, shared by DIG,
+  -- M8: which escape a teleportOut spin is (OC:2583-2612, shared by DIG,
   -- TELEPORT and the ESCAPE ROPE): the one gen1-bridge started (act.field)
   -- or saw the bag start (the item.use wrapper below) is marked with its
   -- teleportOut table; otherwise the party menu's rules say it: TELEPORT
   -- works only outside, DIG only in the dungeon tilesets
-  -- (src/ui/PartyMenu.lua:708-735), so the map tells them apart. A warp
-  -- pad's spin is a warp-table warp (player.warped, OC:5307-5343), which
+  -- (src/ui/PartyMenu.lua:740-767), so the map tells them apart. A warp
+  -- pad's spin is a warp-table warp (player.warped, OC:5457-5493), which
   -- kb_warp names first.
   local DIG_TILESETS = { FOREST = true, CEMETERY = true, CAVERN = true, FACILITY = true, INTERIOR = true }
 
@@ -435,7 +536,7 @@ function Engine.new(opts)
   end
 
   -- Everything the player observer needs, as plain values. The input.step
-  -- hook runs before the stack updates (src/core/Game.lua:320 vs :356), so
+  -- hook runs before the stack updates (src/core/Game.lua:322 vs :356), so
   -- this is the world as the previous step left it.
   function engine.observe()
     local facts = { inGame = false }
@@ -448,11 +549,11 @@ function Engine.new(opts)
     facts.inGame = true
     facts.map = ow.map.id                       -- WorldAPI.lua:116-118 reads the same
     facts.x, facts.y = p.cellX, p.cellY         -- Player.lua:247 (snapped on landing)
-    facts.facing = p.facing                     -- "up"/"down"/"left"/"right" (OC:67)
+    facts.facing = p.facing                     -- "up"/"down"/"left"/"right" (OC:69)
     facts.moving = p.moving == true             -- Player.lua:150, :178-184
     if facts.moving then
-      facts.tx, facts.ty = p.targetX, p.targetY -- set at step start (Player.lua:179, OC:5711)
-      facts.frames = p.stepFramesCur            -- Player.lua:183, OC:5714
+      facts.tx, facts.ty = p.targetX, p.targetY -- set at step start (Player.lua:179, OC:5870)
+      facts.frames = p.stepFramesCur            -- Player.lua:183, OC:5873
       facts.progress = tonumber(p.progress)     -- frames done, Player.lua:182, :237
     end
     facts.playerScripted = playerScripted(ow, p)
@@ -465,21 +566,21 @@ function Engine.new(opts)
       chain.active, chain.ow, chain.current = false, nil, false
     end
     facts.current = (chain.current and p.surfing) and true or false
-    facts.ledge = p.ledgeHop and true or false  -- OC:1985-2037, Player.lua:124
-    -- a hop's whole length, both cells: stepLength() * 2 (OC:2017-2018, :2029-2030)
+    facts.ledge = p.ledgeHop and true or false  -- OC:2098-2150, Player.lua:124
+    -- a hop's whole length, both cells: stepLength() * 2 (OC:2130-2131, :2142-2143)
     facts.hopFrames = facts.ledge and tonumber(p.hopTotal) or nil
     facts.boulderPush = boulderMoving(ow, p)
-    facts.spinning = (p.spinning or ow.spinnerSliding) and true or false -- OC:4825-4871
-    -- departures and arrivals that move or hide the player (OC:1366-1498,
-    -- :1546-1552) and the locks set with them (Player.lua:97, :150; OC:2456,
-    -- :2486, :5329, :5354, :5522, :5528)
+    facts.spinning = (p.spinning or ow.spinnerSliding) and true or false -- OC:4966-5012
+    -- departures and arrivals that move or hide the player (OC:1485-1617,
+    -- :1665-1671) and the locks set with them (Player.lua:97, :152; OC:2569,
+    -- :2599, :5479, :5504, :5681, :5687)
     facts.forcedPhase = (ow.teleportOut or ow.flyFade or ow.flyAnim or ow.flyArrive
       or ow.holeFall or ow.holeArrive or ow.spinArrive or p.inputLocked) and true or false
     -- which departure is under way before a warp's fade starts (P1 6.5):
-    -- Fly's fade and bird (flyTo, OC:2441-2458; OC:1366-1408), the spin of
-    -- Dig/Teleport/Escape Rope and of a warp pad (teleportOut, OC:2470-2499,
-    -- :5339-5342, :1436-1463), a hole's sink (fallThroughHole, OC:5353-5359,
-    -- :1466-1477)
+    -- Fly's fade and bird (flyTo, OC:2554-2571; OC:1485-1527), the spin of
+    -- Dig/Teleport/Escape Rope and of a warp pad (teleportOut, OC:2583-2612,
+    -- :5489-5492, :1555-1582), a hole's sink (fallThroughHole, OC:5503-5509,
+    -- :1585-1596)
     if ow.flyFade or ow.flyAnim then
       facts.departure = "fly"
     elseif ow.teleportOut then
@@ -487,49 +588,49 @@ function Engine.new(opts)
     elseif ow.holeFall then
       facts.departure = "hole"
     end
-    facts.hopLand = tonumber(ow.hopLand) or 0     -- OC:1548, :1572
-    facts.transitioning = ow.transitioning and true or false -- OC:5423, :5550-5552
-    facts.emote = ow.emote ~= nil and ow.emote ~= false      -- OC:1510-1527
+    facts.hopLand = tonumber(ow.hopLand) or 0     -- OC:1667, :1691
+    facts.transitioning = ow.transitioning and true or false -- OC:5573, :5709-5711
+    facts.emote = ow.emote ~= nil and ow.emote ~= false      -- OC:1629-1646
     facts.anim = (ow.cutAnim or (ow.dustAnim and ow.dustAnim.boulder)) and true or false
     local runner = ow.runner
     local running = runner and runner.isRunning and runner:isRunning() or false
-    -- the rest of OC:1546-1552's `scripted`, plus the early-return holds
-    -- healAnim and pikaHop (OC:1344-1363)
+    -- the rest of OC:1665-1671's `scripted`, plus the early-return holds
+    -- healAnim and pikaHop (OC:1463-1482)
     facts.scripted = (running or #(ow.scriptMoves or {}) > 0 or ow.engaging
       or ow.healAnim or ow.pikaHop) and true or false
     -- M8: the main script runner alone (a script's end is a story-diff
     -- moment; ScriptRunner:isRunning, src/script/ScriptRunner.lua:120-139)
     facts.runner = running and true or false
-    facts.dark = ow.dark and true or false                          -- OC:507-515, :1063
+    facts.dark = ow.dark and true or false                          -- OC:514-522, :1182
     facts.surf = p.surfing and true or false                         -- Player.lua:139, :331
-    facts.bike = (save and save.onBike) and true or false            -- OC:1301-1302
+    facts.bike = (save and save.onBike) and true or false            -- OC:1420-1421
     facts.slope = (facts.bike and p.slopeMap) and true or false      -- Player.lua:128
-    facts.hidden = ow.playerHidden and true or false                 -- OC:6491-6494
-    facts.darkMap = darkMapSet()[facts.map] == true                  -- OC:510-515
-    facts.flashLit = (save and save.flashLit) and true or false      -- OC:510-513, :1063
+    facts.hidden = ow.playerHidden and true or false                 -- OC:6725-6728
+    facts.darkMap = darkMapSet()[facts.map] == true                  -- OC:517-522
+    facts.flashLit = (save and save.flashLit) and true or false      -- OC:517-520, :1182
     facts.npcs = type(ow.npcs) == "table" and #ow.npcs or 0
     -- a battle Cobblemon is fighting holds this world (M5, engine.battle*)
     facts.battle = engine.battleHolds(ow)
     return facts
   end
 
-  -- ow.npcs is rebuilt as a new table by every setMap (OC:551-558: warps,
+  -- ow.npcs is rebuilt as a new table by every setMap (OC:558-565: warps,
   -- seam crossings, same-map warps), so its identity tells a map (re)load
   -- from NPCs coming and going on the same map. The generation counts the
   -- tables seen.
   local npcTable, npcGeneration = nil, 0
 
   -- The live NPCs of the current map, as PLAN section 4.1 "NPCs" describes
-  -- them: ow.npcs holds the visible ones (NPC.lua:32-64, OC:551-558); sprite
-  -- is appearance or def.sprite (NPC.lua:68-79); item balls have def.item
-  -- (except the ITEM_NONE sentinels "0" and 0, OC:3451-3456); boulders are
+  -- them: ow.npcs holds the visible ones (NPC.lua:39-71, OC:558-565); sprite
+  -- is appearance or def.sprite (NPC.lua:75-86); item balls have def.item
+  -- (except the ITEM_NONE sentinels "0" and 0, OC:3563-3568); boulders are
   -- SPRITE_BOULDER or pushable (Map.lua:188-191); statics have def.pokemon;
   -- trainers trainerClass. Per NPC also its step: moving, targetX/Y, the
-  -- step length (stepFrames or 32, NPC.lua:9, :109), marching (the
-  -- walk-in-place cycle, NPC.lua:116-124), progress, and `via` when a
-  -- scripted move drives it: scriptMoves entries (OC:5655-5671) are "march"
+  -- step length (stepFrames or 32, NPC.lua:9, :116), marching (the
+  -- walk-in-place cycle, NPC.lua:123-131), progress, and `via` when a
+  -- scripted move drives it: scriptMoves entries (OC:5814-5830) are "march"
   -- for an inPlace beat, "push" for a pushable object (a Strength boulder,
-  -- OC:1864), else "script".
+  -- OC:1977), else "script".
   -- Returns the list, the map id and the npc-table generation, or nil
   -- outside the overworld.
   function engine.npcs()
@@ -579,8 +680,8 @@ function Engine.new(opts)
   end
 
   -- The global emotion-bubble hold, ow.emote = { npc, frames, bubble,
-  -- onDone } (OC:1510-1527; Commands.emote, src/script/Commands.lua:1184-1200):
-  -- bubble nil or 1 is "!", 2 "?", 3 happy, false a silent hold (OC:6055-6075).
+  -- onDone } (OC:1629-1646; Commands.emote, src/script/Commands.lua:1191-1207):
+  -- bubble nil or 1 is "!", 2 "?", 3 happy, false a silent hold (OC:6279-6299).
   -- Each new hold gets a new serial. target is "player" (ow.player), an NPC
   -- id, or nil (a silent cutscene beat with no entity).
   local emoteSerials = setmetatable({}, { __mode = "k" })
@@ -609,10 +710,10 @@ function Engine.new(opts)
   -- ------------------------------------------------------------ interaction (M4)
 
   -- world.interacted { mapId, x, y, kind, target } fires after the A press
-  -- was handled, in the same logic step (OC:2532-2535, :2537-2614). kind is
+  -- was handled, in the same logic step (OC:2645-2648, :2650-2727). kind is
   -- npc, sign, door, hidden, script, bookshelf or none; for npc the target
   -- is the NPC, which was talked to only if it stood still (a moving NPC
-  -- gets no world.talk, OC:2550-2567). Plain values only.
+  -- gets no world.talk, OC:2663-2680). Plain values only.
   function engine.interactedFacts(payload)
     if type(payload) ~= "table" then return nil end
     local target = payload.target
@@ -630,9 +731,9 @@ function Engine.new(opts)
 
   -- Whether (x, y) is a cell of the current map (Map:inBounds,
   -- src/world/Map.lua:213-215), or nil outside the overworld. The A press
-  -- looks only at the current map (OC:2537-2614): a cell across a seam holds
+  -- looks only at the current map (OC:2650-2727): a cell across a seam holds
   -- nothing it can reach, the neighbour map's NPCs being drawn ghosts that
-  -- never talk (OC:785-803).
+  -- never talk (OC:904-922).
   function engine.cellInMap(x, y)
     local ow = engine.overworld()
     local m = ow and ow.map
@@ -643,7 +744,7 @@ function Engine.new(opts)
   end
 
   -- True when (x, y) of the current map is a counter tile: the A press
-  -- then reaches one cell further (OC:2542-2547; Map:isCounterCell,
+  -- then reaches one cell further (OC:2655-2660; Map:isCounterCell,
   -- src/world/Map.lua:272).
   function engine.counterCell(x, y)
     local ow = engine.overworld()
@@ -679,7 +780,7 @@ function Engine.new(opts)
 
   -- The engine's string catalog, an identity function without a
   -- translation mod (src/core/Strings.lua:46-90); labels pass through it
-  -- when drawn (e.g. ChoiceBox.lua:90-91, ListMenu.lua:370).
+  -- when drawn (e.g. ChoiceBox.lua:90-91, ListMenu.lua:374).
   local function S(text)
     if type(text) ~= "string" then return nil end
     local Strings = try("src.core.Strings")
@@ -767,37 +868,51 @@ function Engine.new(opts)
     return math.floor(v)
   end
 
-  -- TextBox (src/render/TextBox.lua): the lines currently in the box,
-  -- TextBox:visibleText's rule (:391-399): the page's lines up to lineIndex,
-  -- as many as `shown` holds (at most two).
+  -- TextBox (src/render/TextBox.lua): the rows currently in the box.
+  -- TextBox:visibleText (:404-412) maps `shownSource` (one entry per shown
+  -- row, kept by beginLine :386-401: the page line it came from, or false
+  -- for the blank continuation row Gen 1's fixed two-row box inserts) to
+  -- the page's lines, "" for a blank row. A box without shownSource (an
+  -- older engine, a fake) keeps the v0.3.49 rule: the page's lines up to
+  -- lineIndex, as many as `shown` holds (at most two).
   local function visibleLines(s)
     local pages = type(s.pages) == "table" and s.pages or {}
     local page = pages[int(s.pageIndex, 1)]
     if type(page) ~= "table" then return {} end
+    local out = {}
+    if type(s.shownSource) == "table" then
+      for i = 1, #s.shownSource do
+        local source = s.shownSource[i]
+        local text = source and page[source] or nil
+        out[#out + 1] = type(text) == "string" and text or ""
+      end
+      return out
+    end
     local shown = count(s.shown)
     local line = int(s.lineIndex, 1)
-    local out = {}
     for i = math.max(1, line - shown + 1), line do
       if type(page[i]) == "string" then out[#out + 1] = page[i] end
     end
     return out
   end
 
-  -- The box takes an A/B tap this logic step (P2 3.3; TextBox.lua:457-698,
-  -- in update order): nothing while a scroll or page clear holds
-  -- (holdFrames, :476-479), a PAUSE or sound waits (preSound :461-472,
-  -- pauseFrames :481-499, pauseSrc :500-506) or a sound effect holds
-  -- (sfxWait, :402-407). Finished: A/B closes a plain box (:607-614); a
-  -- stay.prompt box takes one press (:511-526) and an auto.promptFirst box
-  -- one press (:529-534); other stay, auto and choice boxes take none
-  -- (:527-605). Mid-text: waiting at a page break or scroll once the
-  -- 3-frame preWait has run out (:617-627).
+  -- The box takes an A/B tap this logic step (P2 3.3; TextBox:update
+  -- :478-725, in its order): nothing while a PAUSE or sound waits (preSound
+  -- :490-504, pauseFrames :510-528, pauseSrc :529-534), a scroll or page
+  -- clear holds (holdFrames, :505-509) or a sound effect holds (sfxWait,
+  -- cleared by sfxHeld :415-420 once the effect ends; checked before every
+  -- press below). Finished: a stay.prompt or stay.press box takes one press
+  -- (:535-556), an auto.promptFirst box one press (:557-565; auto.wait
+  -- hands the box to the plain path, :572-578); other stay and auto boxes
+  -- and a choice box take none (:566-635); A/B closes a plain box
+  -- (:636-643, waitButton only mutes the press sound). Mid-text: waiting at
+  -- a page break or scroll once the 3-frame preWait has run out (:647-660).
   local function textReady(s)
     if int(s.holdFrames, 0) > 0 then return false end
     if s.preSound or s.pauseFrames or s.pauseSrc or s.sfxWait then return false end
     if s.done then
       if s.stay then
-        return type(s.stay) == "table" and s.stay.prompt and not s.stayShown and true or false
+        return type(s.stay) == "table" and (s.stay.prompt or s.stay.press) and not s.stayShown and true or false
       end
       if s.auto then
         return type(s.auto) == "table" and s.auto.promptFirst and not s.autoPrompted and true or false
@@ -807,22 +922,25 @@ function Engine.new(opts)
     return s.waiting == true and int(s.preWait, 0) == 0
   end
 
-  -- The blinking arrow is up: TextBox:arrowVisible's rule (:415-426) for a
-  -- Gen 1 save.
+  -- The blinking arrow is up: TextBox:arrowVisible's rule (:428-440), on
+  -- every generation since v0.3.85: hidden by a sound effect, shown at a
+  -- page break or scroll; then waitButton (a box the caller holds for a
+  -- press of its own, :152-157) hides it unless an auto.promptFirst or
+  -- stay.prompt press is due; else shown on a finished box without a
+  -- choice whose auto/stay prompt is still due.
   local function textArrow(s)
     if s.sfxWait then return false end
     if s.waiting then return true end
+    local autoPrompt = type(s.auto) == "table" and s.auto.promptFirst and not s.autoPrompted and true or false
+    local stayPrompt = type(s.stay) == "table" and s.stay.prompt and not s.stayShown and true or false
+    if s.waitButton and not (autoPrompt or stayPrompt) then return false end
     if not s.done or s.choice then return false end
-    if s.auto and not (type(s.auto) == "table" and s.auto.promptFirst and not s.autoPrompted) then
-      return false
-    end
-    if s.stay and not (type(s.stay) == "table" and s.stay.prompt and not s.stayShown) then
-      return false
-    end
+    if s.auto and not autoPrompt then return false end
+    if s.stay and not stayPrompt then return false end
     return true
   end
 
-  -- Menu rows are drawn as their labels (Menu.lua:176-180); callers built
+  -- Menu rows are drawn as their labels (Menu.lua:180-184); callers built
   -- them through Strings already (e.g. StartMenu.lua:32-165).
   local function menuItems(items)
     local out = {}
@@ -833,7 +951,7 @@ function Engine.new(opts)
     return out
   end
 
-  -- ListMenu rows (src/ui/ListMenu.lua:1-3, drawn :322-344, :374-398): the
+  -- ListMenu rows (src/ui/ListMenu.lua:1-3, drawn :322-344, :378-402): the
   -- right-hand column is a level (`sub`), a price, a count (×N) or `right`.
   local function listItems(items)
     local out = {}
@@ -888,7 +1006,7 @@ function Engine.new(opts)
   end
 
   -- The NamingScreen's letter pages, as NamingScreen:grid gives them
-  -- (src/ui/NamingScreen.lua:176-187, the ui.naming.grid hook included),
+  -- (src/ui/NamingScreen.lua:186-197, the ui.naming.grid hook included),
   -- for both cases: `lower` is flipped only around the call and restored.
   -- The ED cell and the case-switch row are controls, not glyphs (findMeta's
   -- rule, :72-84), so they are left out.
@@ -931,8 +1049,8 @@ function Engine.new(opts)
 
   -- The money a menu-like UI shows (M7): the Mart's BUY/SELL/QUIT menu
   -- draws save.money in its MONEY box (ShopMenu's drawClerk,
-  -- src/ui/ShopMenu.lua:274-284); its BUY and SELL lists are dialogue lists
-  -- with a money() reader (ShopMenu.lua:78-84, :185-191; ListMenu.lua
+  -- src/ui/ShopMenu.lua:280-290); its BUY and SELL lists are dialogue lists
+  -- with a money() reader (ShopMenu.lua:78-84, :188-194; ListMenu.lua
   -- :135, :140, :414-421). nil for anything else.
   local function shopMoney(s, screen)
     if screen == "ShopMenu" then
@@ -976,7 +1094,9 @@ function Engine.new(opts)
       local auto, stay = s.auto, s.stay
       f.auto = auto ~= nil and auto ~= false
         and not (type(auto) == "table" and (auto.promptFirst or auto.wait))
-      f.stay = stay ~= nil and stay ~= false and not (type(stay) == "table" and stay.prompt)
+      -- a stay.prompt or stay.press box takes one press at its end (TextBox.lua:535-556), so it is
+      -- not a "stays up" box to the client; the engine's own screens never pass stay = true
+      f.stay = stay ~= nil and stay ~= false and not (type(stay) == "table" and (stay.prompt or stay.press))
       f.instant = s.instant == true
       f.choice = s.choice ~= nil
     elseif cls == "ChoiceBox" then
@@ -1005,7 +1125,7 @@ function Engine.new(opts)
       f.title = type(s.title) == "string" and S(s.title) or nil
       f.rows = int(s.rows, nil)
       f.footer = type(s.footer) == "string" and s.footer or nil
-      f.wrap = s.wrap == true -- clamps unless opts.wrap (ListMenu.lua:122, :163-173)
+      f.wrap = s.wrap == true -- clamps unless opts.wrap (ListMenu.lua:123, :164-174)
       f.money = shopMoney(s, screen)
       f.script = s.script ~= nil
     elseif cls == "QuantityBox" then
@@ -1059,7 +1179,7 @@ function Engine.new(opts)
       return { index = int(s.index, 1), scroll = int(s.scroll, 0), count = count(s.items),
                busy = s.frozen == true } -- frozen ignores input (Menu.lua:89)
     elseif cls == "ListMenu" then
-      -- script: the old man's demo list reads no input (ListMenu.lua:128-131, :219-222)
+      -- script: the old man's demo list reads no input (ListMenu.lua:129-132, :220-223)
       return { index = int(s.index, 1), scroll = int(s.scroll, 0), count = count(s.items),
                script = s.script ~= nil }
     elseif cls == "QuantityBox" then
@@ -1092,7 +1212,7 @@ function Engine.new(opts)
   -- A menu-like UI's footer (raw) and money, which change while it is open
   -- (M7): the Mart's clerk lines (ShopMenu's say, src/ui/ShopMenu.lua:32-40,
   -- and list.footer, :107, :119, :137), its money box after a purchase or a
-  -- sale (:130, :250), the PC lists' prompts (src/ui/PlayerPC.lua). The
+  -- sale (:130, :255), the PC lists' prompts (src/ui/PlayerPC.lua). The
   -- same rules as uiOpenFacts; nil for other classes.
   function engine.uiMoneyFooter(key)
     local s = keyStates[key]
@@ -1104,7 +1224,7 @@ function Engine.new(opts)
 
   -- Moves a cursor to `index` (1-based), keeping the scroll window around
   -- it as the widget itself would on its next update: Menu:clampScroll
-  -- (Menu.lua:74-84), ListMenu's syncScroll (ListMenu.lua:175-181),
+  -- (Menu.lua:74-84), ListMenu's syncScroll (ListMenu.lua:176-182),
   -- PokedexMenu:syncScroll (PokedexMenu.lua:118-127). ChoiceBox index
   -- 1/2 (:17), PrizeCounter rows 1-4 (PrizeCounter.lua:13, :20), TownMap's
   -- fly cursor `sel` (TownMap.lua:303). Returns true when it moved.
@@ -1179,12 +1299,12 @@ function Engine.new(opts)
 
   -- Turns the standing player in place by writing ow.player.facing, as the
   -- engine's own cutscenes do (Commands.face_player_dir,
-  -- src/script/Commands.lua:546-548) and as handleInput does before an edge,
-  -- ledge or boulder check (OC:1729-1732, which also ends a wall-bonk cycle
+  -- src/script/Commands.lua:547-549) and as handleInput does before an edge,
+  -- ledge or boulder check (OC:1842-1845, which also ends a wall-bonk cycle
   -- by clearing bumpFrames). turnArmed and turnTimer are left alone, so a
   -- held direction then steps at once with no 4-frame turn
   -- (Player:tryMove, src/world/Player.lua:151-165), and nothing fires: map
-  -- onStep scripts run only from onStepComplete (OC:4691-4697). Refused
+  -- onStep scripts run only from onStepComplete (OC:4833-4839). Refused
   -- mid-step, where the pixel interpolation follows the facing
   -- (Player.lua:242-245). Returns true when the player now faces dir.
   function engine.setFacing(dir)
@@ -1199,10 +1319,10 @@ function Engine.new(opts)
   end
 
   -- True while any source holds a Game Boy button: Input:isDown
-  -- (src/core/Input.lua:705-709) on game.input, the one mod.input presses
-  -- into (src/mods/Loader.lua:1393-1431). Input:reset on a focus or
+  -- (src/core/Input.lua:761-765) on game.input, the one mod.input presses
+  -- into (src/mods/Loader.lua:1467-1505). Input:reset on a focus or
   -- visibility change wipes every source, mods' holds included
-  -- (Input.lua:182-203; src/core/Game.lua:1120-1139).
+  -- (Input.lua:193-216; src/core/Game.lua:1151, :1164).
   function engine.buttonDown(btn)
     local input = game and game.input
     if type(input) ~= "table" or type(input.isDown) ~= "function" then return false end
@@ -1216,7 +1336,7 @@ function Engine.new(opts)
   -- (src/world/Collision.lua:84-96); the engine's reasons are bounds, tile
   -- and entity (Collision.lua:56-73), and a wrapper may rewrite them.
   -- Player:tryMove asks it for every attempted step (Player.lua:166-177);
-  -- the door walk-out probe (OC:5542) and collide-moves (OC:5699-5703) do
+  -- the door walk-out probe (OC:5701) and collide-moves (OC:5858-5862) do
   -- too, which callers tell apart by timing.
   function engine.playerVerdict(ctx, allowed)
     if type(ctx) ~= "table" or livePlayer == nil or ctx.mover ~= livePlayer then return nil end
@@ -1230,22 +1350,22 @@ function Engine.new(opts)
 
   -- Where a warp the player is taking leaves from, for the protocol's warp
   -- kinds. Called from the player.warped event, which takeWarp emits before
-  -- anything moves (OC:5306-5309), so the player still stands on the
+  -- anything moves (OC:5456-5459), so the player still stands on the
   -- departure cell; Warp.lua's three triggers (src/world/Warp.lua:1-10)
   -- then read:
   --   pad, hole  Map:warpPadOrHoleAt (src/world/Map.lua:265-269), the test
-  --              takeWarp branches on (OC:5320-5347)
+  --              takeWarp branches on (OC:5470-5497)
   --   door       a door tile underfoot (Map:isDoorTileCell, Map.lua:253-255)
   --   stairs     another warp-activating tile (Map:isWarpTileCell,
   --              Map.lua:258-261): stairs, ladders, cave mouths
   --   edge       neither, with the facing pointing off the map: an exit mat,
-  --              taken by walking off the edge (checkEdgeExit, OC:2047-2061;
+  --              taken by walking off the edge (checkEdgeExit, OC:2160-2174;
   --              Warp.onEdge, Warp.lua:77-86) or by arriving on it facing the
   --              edge with the d-pad held (Warp.extraCheck's facing-edge
-  --              test, Warp.lua:38-45; onStepComplete, OC:4750-4757)
+  --              test, Warp.lua:38-45; onStepComplete, OC:4892-4899)
   --   door       neither, facing into the map: the carpet maps' collision
   --              warps (route-gate doorways, the dock: Warp.extraCheck's
-  --              warp-tile-in-front test, Warp.lua:46-61; OC:1743-1749)
+  --              warp-tile-in-front test, Warp.lua:46-61; OC:1856-1862)
   -- Returns { kind, map, x, y, facing } or nil outside the overworld.
   function engine.warpDeparture()
     local ow = engine.overworld()
@@ -1294,10 +1414,10 @@ function Engine.new(opts)
   -- (src/render/Tilt.lua:80-91), Pipelines.applyOptions
   -- (src/render/Pipelines.lua:230-252) and Zoom.applyOptions
   -- (src/render/Zoom.lua:113-115), in Game:applyOptions' order
-  -- (src/core/Game.lua:1431-1436). battleLayout, battleFit, uiLayout and
+  -- (src/core/Game.lua:1493-1498). battleLayout, battleFit, uiLayout and
   -- textSpeed are read live. Nothing is written to disk here; the engine
   -- persists options only when its own OPTIONS screen saves them
-  -- (Game:writeOptions, src/core/Game.lua:1418-1421).
+  -- (Game:writeOptions, src/core/Game.lua:1452-1455).
   function engine.pinDisplay(options, reapply)
     if type(options) ~= "table" then return 0 end
     local changed = 0
@@ -1333,21 +1453,21 @@ function Engine.new(opts)
   -- (PLAN section 4.1 "Battles"), through two seams:
   --   * script.command (src/script/ScriptRunner.lua:168-172, inside the
   --     script's coroutine): the rows start_battle, rival_battle and
-  --     static_battle (src/script/Commands.lua:339-393, :1047-1076,
+  --     static_battle (src/script/Commands.lua:339-393, :1054-1083,
   --     :991-1000) wait on runner.waitingCheck, exactly as push_screen
-  --     waits for its screen (Commands.lua:1344-1364; ScriptRunner:update,
+  --     waits for its screen (Commands.lua:1351-1371; ScriptRunner:update,
   --     ScriptRunner.lua:290-308). The result then goes through
   --     start_battle's own resume path (ctx.resumeBattle, Commands.lua:
-  --     342-358): lastBattleResult, lastCheck and afterBattle (OC:5184-5225),
+  --     342-358): lastBattleResult, lastCheck and afterBattle (OC:5334-5375),
   --     whose lose branch keeps the Oak's-lab rival loss in the lab
-  --     (OC:5195-5201). static_battle's beat flag and object toggle follow
-  --     on their own (Commands.lua:993-999).
-  --   * trainer.before_battle (OC:4038-4059, :4147-4167; docs/modding.md
+  --     (OC:5345-5351). static_battle's beat flag and object toggle follow
+  --     on their own (Commands.lua:1000-1006).
+  --   * trainer.before_battle (OC:4172-4193, :4281-4301; docs/modding.md
   --     "trainer.before_battle"): map trainers are deferred; a result applies
-  --     engageTrainer's own win side effects (OC:4127-4144) and ends the
-  --     encounter with continue({ cancel = true }) (OC:4048-4049), which runs
+  --     engageTrainer's own win side effects (OC:4261-4278) and ends the
+  --     encounter with continue({ cancel = true }) (OC:4182-4183), which runs
   --     the encounter's completion callback and suppresses the sight at the
-  --     player's cell (OC:4157-4166). M8 wave 3: a win instead runs the
+  --     player's cell (OC:4291-4300). M8 wave 3: a win instead runs the
   --     encounter's own start with the battle stood in for, and its onFinish
   --     (startTrainerBattle below), so a loss line the caller handed over
   --     is shown too.
@@ -1402,8 +1522,8 @@ function Engine.new(opts)
   end
 
   -- ---- data lookups (the live Data registries: pokemon[id].dex,
-  -- RomExtractor.lua:1214; moves[id].index = the Gen 1 move number, the
-  -- moveOrder position, RomExtractor.lua:607-623)
+  -- RomExtractor.lua:1215; moves[id].index = the Gen 1 move number, the
+  -- moveOrder position, RomExtractor.lua:608-624)
 
   function engine.dexOf(species)
     local data = gameData()
@@ -1587,15 +1707,15 @@ function Engine.new(opts)
   --
   -- While a battle Cobblemon fights holds the hidden game, the hidden game
   -- plays the Gen 1 battle theme that battle would have had: Music.playBattle
-  -- (src/core/Music.lua:418-425, kind "wild" | "trainer" | "gym" | "final")
+  -- (src/core/Music.lua:461-468, kind "wild" | "trainer" | "gym" | "final")
   -- with BattleState:computeMusicKind's choice (src/battle/BattleState.lua
   -- :1791-1818): "final" for OPP_RIVAL3, "gym" for a badge fight (a
   -- data/scripts/victories.lua reward with a badge for class#party, the
   -- eight gym battles, :1801-1803) or OPP_LANCE, "trainer" for every other
   -- trainer, "wild" for wild Pokemon. A direct battle (below) plays its own
   -- BattleState:playBattleTheme (:1838-1841), as OverworldState:pushBattle
-  -- does at the wipe (OC:1154-1158). A win with texts to show plays the
-  -- victory theme under them (Music.playVictory, Music.lua:431-440; the
+  -- does at the wipe (OC:1273-1277). A win with texts to show plays the
+  -- victory theme under them (Music.playVictory, Music.lua:474-483; the
   -- final battle shares the gym leaders' theme, BattleState.lua:5803-5810),
   -- and every result brings the map's song back (restoreMapMusic, M7).
   local musicCounts = { battle = 0, victory = 0, failed = 0 }
@@ -1642,10 +1762,21 @@ function Engine.new(opts)
     end
   end
 
+  -- The victory jingle's kind, BattleState:playVictoryMusic's rule
+  -- (src/battle/BattleState.lua:5897-5911): the gym leaders' theme for the
+  -- final battle and for a badge fight (the engine's isGymLeader), the
+  -- trainer jingle for a gym-kind battle that isn't a leader's (Lance), else
+  -- the battle's own kind; Music.playVictory (src/core/Music.lua:474).
   local function playVictoryMusic(rec)
     local Music, data = try("src.core.Music"), gameData()
     if not (Music and type(Music.playVictory) == "function" and data and rec.music) then return end
-    local ok, err = pcall(Music.playVictory, data, rec.music == "final" and "gym" or rec.music)
+    local kind = rec.music
+    if kind == "final" or badgeFight(rec.cls, rec.party) then
+      kind = "gym"
+    elseif kind == "gym" then
+      kind = "trainer"
+    end
+    local ok, err = pcall(Music.playVictory, data, kind)
     if ok then
       musicCounts.victory = musicCounts.victory + 1
     else
@@ -1654,7 +1785,7 @@ function Engine.new(opts)
     end
   end
 
-  -- Commands.rival_battle's party offset for Red/Blue (Commands.lua:1063-1075).
+  -- Commands.rival_battle's party offset for Red/Blue (Commands.lua:1070-1082).
   local function rivalOffset(save, offsets)
     local flags = type(save) == "table" and type(save.flags) == "table" and save.flags or {}
     local data = gameData()
@@ -1693,7 +1824,7 @@ function Engine.new(opts)
     elseif name == "start_battle" then
       f.cls, f.party = args[2], tonumber(args[3]) or 1
     else
-      -- Yellow keys its rival parties off save.rivalStarter (Commands.lua:1035-1062)
+      -- Yellow keys its rival parties off save.rivalStarter (Commands.lua:1042-1069)
       if isYellow() or type(args[2]) ~= "number" then return nil end
       f.cls, f.party, f.rival = args[1], args[2] + rivalOffset(ctx.save, args[3]), true
     end
@@ -1712,8 +1843,8 @@ function Engine.new(opts)
 
   -- An aborted static_battle (M8): the object its script hid before the
   -- fight (hide_object writes objectToggles[map][name] = false,
-  -- Commands.lua:602-646) comes back through Commands.show_object, unless
-  -- its beat flag (static_battle's third argument, Commands.lua:991-1000)
+  -- Commands.lua:603-647) comes back through Commands.show_object, unless
+  -- its beat flag (static_battle's third argument, Commands.lua:998-1007)
   -- is set. Nothing else of the script is undone.
   local function reshowStatic(ctx, args)
     local npc, ow, save = ctx.npc, ctx.overworld, ctx.save
@@ -1772,9 +1903,9 @@ function Engine.new(opts)
   end
 
   -- trainer.before_battle's wrapper body: defers a map trainer's battle.
-  -- context = { trainerClass, partyIndex, mapId, npcId } (OC:4152-4157).
+  -- context = { trainerClass, partyIndex, mapId, npcId } (OC:4286-4291).
   -- While it waits, the world is held as a trainer sight holds it
-  -- (ow.engaging, part of OC:1546-1552's `scripted`), also for the talk path.
+  -- (ow.engaging, part of OC:1665-1671's `scripted`), also for the talk path.
   function engine.trainerBeforeBattle(nextFn, g, context, continueBattle, bridge)
     if type(context) ~= "table" or type(continueBattle) ~= "function" then return nextFn(g, context, continueBattle) end
     local okLive, live = pcall(bridge.live)
@@ -1804,7 +1935,7 @@ function Engine.new(opts)
     -- wave 3) runs the encounter's own start on a win (startTrainerBattle)
     record.continueBattle = continueBattle
     -- the trainer header's event flag and loss line (Data:trainerHeader,
-    -- src/core/Data.lua:425-428; OC:4073-4087, :4130-4132): what a win
+    -- src/core/Data.lua:426-429; OC:4207-4221, :4264-4266): what a win
     -- shows and applies when that start can't run (M5's own path)
     if npc and type(npc.def) == "table" and type(ow.map) == "table" and type(ow.map.def) == "table"
         and type(data.trainerHeader) == "function" then
@@ -1847,10 +1978,10 @@ function Engine.new(opts)
   -- A win's loss line as the battle screen shows it (BattleState.lua
   -- :5006-5037): its \f pages, empty ones skipped, the trainer's tag on the
   -- first; and (M8 wave 3) the sound the line carries (engageTrainer's
-  -- endBattleSound, OC:4121-4123: a gym leader's badge jingle) played once
+  -- endBattleSound, OC:4255-4257: a gym leader's badge jingle) played once
   -- the page endBattleSoundPage (default 1) has typed: the pages up to that
-  -- one make a box that plays it (TextBox.soundOpts, TextBox.lua:220-238,
-  -- the reward chain's way, OC:4201-4248), the rest a second box. A sound
+  -- one make a box that plays it (TextBox.soundOpts, TextBox.lua:225-243,
+  -- the reward chain's way, OC:4335-4382), the rest a second box. A sound
   -- page past the line's last page plays nothing, as on the battle screen.
   local function lossLineBoxes(rec, texts)
     local pages = {}
@@ -1873,7 +2004,7 @@ function Engine.new(opts)
   end
 
   -- The text boxes a result shows (raw engine text, substituted by
-  -- TextBox.new itself, TextBox.lua:170), and the prize. A box is its
+  -- TextBox.new itself, TextBox.lua:172), and the prize. A box is its
   -- text, or { text, sound } for one that plays a sound (lossLineBoxes).
   local function resultTexts(rec, result)
     local save = engine.save()
@@ -1903,7 +2034,7 @@ function Engine.new(opts)
   -- Pushes text boxes one after the other (TextBox.new, TextBox.lua:129;
   -- A/B pops each and calls its onDone), then runs onDone. An entry
   -- { text, sound } plays its sound once its last page has typed and holds
-  -- until it is over (TextBox.soundOpts, TextBox.lua:220-238).
+  -- until it is over (TextBox.soundOpts, TextBox.lua:225-243).
   local function pushTexts(list, onDone)
     local TextBox = try("src.render.TextBox")
     local i = 0
@@ -1932,31 +2063,31 @@ function Engine.new(opts)
   -- battle, run when Cobblemon reports a win. An engageTrainer caller may
   -- hand the battle its own loss line and what goes with it
   -- (endBattleText, endBattleSound, endBattleIsReward, endBattleSoundPage;
-  -- OC:4067-4087, :4119-4126): Silph Co Giovanni
+  -- OC:4201-4221, :4253-4260): Silph Co Giovanni
   -- (data/scripts/story.lua:885-901), the Game Corner rocket
   -- (story3.lua:597-643), the Karate Master (story4.lua:233-258), the Nugget
   -- Bridge recruiter (story4.lua:668-679) and every gym leader's badge lines
   -- (data/scripts/gyms.lua:94-131). Those live only in the start's closure:
-  -- the trainer.before_battle context carries none of them (OC:4152-4157)
+  -- the trainer.before_battle context carries none of them (OC:4286-4291)
   -- and the mod sandbox has no debug library. So the continuation captured
   -- when the battle was deferred runs the start (continueBattle(),
-  -- OC:4045-4054 -> startBattle, OC:4098-4146), with two engine functions
+  -- OC:4179-4188 -> startBattle, OC:4232-4280), with two engine functions
   -- shadowed for that one synchronous call and put back at once, error or
   -- not: BattleState.newTrainer (looked up on the module table at the call,
-  -- OC:4089, :4101) hands back a stand-in instead of building a battle
-  -- (src/battle/BattleState.lua:891-969: nothing is marked in the Pokedex,
-  -- no pic or cry loads), and OverworldState.pushBattle (OC:4145) keeps what
-  -- the start filled in instead of pushing it (OC:1142-1176; the overworld
-  -- on the stack is the module table itself, src/core/Game.lua:127, :190).
+  -- OC:4223, :4235) hands back a stand-in instead of building a battle
+  -- (src/battle/BattleState.lua:925-1003: nothing is marked in the Pokedex,
+  -- no pic or cry loads), and OverworldState.pushBattle (OC:4279) keeps what
+  -- the start filled in instead of pushing it (OC:1261-1295; the overworld
+  -- on the stack is the module table itself, src/core/Game.lua:129, :192).
   -- The stand-in then carries what the battle screen would use -- the
   -- substituted endBattleText (the caller's line, else the header's won
   -- line), endBattleSound, endBattleSoundPage, rewardDialogueShown -- and
-  -- the encounter's own onFinish (OC:4127-4144: defeatedTrainers, the
+  -- the encounter's own onFinish (OC:4261-4278: defeatedTrainers, the
   -- header's event, checkVictoryRewards with rewardDialogueShown,
   -- afterBattle, the caller's onDone), which applies the win
   -- (finishTrainer). The start's other writes are harmless here: the
-  -- sighting suppression is cleared (OC:4099) and the meet sting stays
-  -- silent while the world is held engaging (OC:4093-4097). A loss and an
+  -- sighting suppression is cleared (OC:4233) and the meet sting stays
+  -- silent while the world is held engaging (OC:4227-4231). A loss and an
   -- abort never run it: they keep M5's path, continue({cancel = true}).
   -- Returns the stand-in (or whatever the start pushed), or nil.
   local function startTrainerBattle(rec)
@@ -1975,7 +2106,7 @@ function Engine.new(opts)
     local ownNew, ownPush = rawget(BattleState, "newTrainer"), rawget(ow, "pushBattle")
     rawset(BattleState, "newTrainer", newShadow)
     rawset(ow, "pushBattle", pushShadow)
-    rec.continueBattle = nil -- spent either way (OC:4046-4047)
+    rec.continueBattle = nil -- spent either way (OC:4180-4181)
     local ok, err = pcall(continueBattle)
     if rawget(ow, "pushBattle") == pushShadow then rawset(ow, "pushBattle", ownPush) end
     if rawget(BattleState, "newTrainer") == newShadow then rawset(BattleState, "newTrainer", ownNew) end
@@ -1992,7 +2123,7 @@ function Engine.new(opts)
     local ow, save = rec.ow, engine.save()
     if type(ow) == "table" and ow == engine.overworld() and type(save) == "table" then
       if result == "win" and type(rec.built) == "table" then
-        -- M8 wave 3: the encounter's own win (OC:4127-4144), the world let
+        -- M8 wave 3: the encounter's own win (OC:4261-4278), the world let
         -- go first as the battle screen's exit would
         if rec.heldEngaging then ow.engaging = false end
         local ok, err = pcall(rec.built.onFinish, "win")
@@ -2028,9 +2159,9 @@ function Engine.new(opts)
 
   -- M6: a surfing or fishing encounter held for Cobblemon (engine.encounter*
   -- below). The world lets go, then the engine's own wild-battle ending
-  -- runs as the native battle's onFinish would (OC:4820, :2429):
-  -- OverworldState:afterBattle (OC:5184-5225) gives a wild battle its
-  -- encounter grace steps (:5188-5190), and "lose" blacks out (:5196-5214).
+  -- runs as the native battle's onFinish would (OC:4961, :2542):
+  -- OverworldState:afterBattle (OC:5334-5375) gives a wild battle its
+  -- encounter grace steps (:5338-5340), and "lose" blacks out (:5346-5364).
   -- "caught" needs nothing more here: the Pokemon is Cobblemon's and comes
   -- back through party.sync, its Pokedex entry through dex.sync. "abort"
   -- applies nothing at all.
@@ -2045,10 +2176,11 @@ function Engine.new(opts)
   end
 
   -- Leaving a battle screen brings the map's song back: BattleState's exit
-  -- calls Music.restoreMap (src/battle/BattleState.lua:5859-5865, and
-  -- :1878 for a battle that ends before it starts; src/core/Music.lua
-  -- :491-497). A battle Cobblemon fought never had that exit, so the
-  -- trainer's sighting theme (OC:4429-4430, :4096) would play on (M7).
+  -- calls Music.restoreMap (src/battle/BattleState.lua:5963-5970, unless a
+  -- final battle was won; and :1878 for a battle that ends before it
+  -- starts; src/core/Music.lua:545, whose `reason` argument is optional). A
+  -- battle Cobblemon fought never had that exit, so the trainer's sighting
+  -- theme (OC:4429-4430, :4096) would play on (M7).
   local function restoreMapMusic()
     local Music, data = try("src.core.Music"), gameData()
     if Music and type(Music.restoreMap) == "function" and data then
@@ -2058,9 +2190,9 @@ function Engine.new(opts)
   end
 
   -- M8: a direct battle (engine.worldTalk / directPushed below) ends the
-  -- way BattleState:finish ends it (src/battle/BattleState.lua:5812-5890):
+  -- way BattleState:finish ends it (src/battle/BattleState.lua:5912-5993):
   -- the battle's own onFinish continuation with the result -- the
-  -- talk-path static's removal and afterBattle (OC:3497-3507), the ghost
+  -- talk-path static's removal and afterBattle (OC:3609-3619), the ghost
   -- Marowak's departure or its step off the trigger
   -- (data/scripts/story3.lua:156-190), Giovanni's hideout aftermath
   -- (story3.lua:484-507). "abort" ends it as a flight ("run"): nothing is
@@ -2105,8 +2237,11 @@ function Engine.new(opts)
     if result == "win" and #texts > 0 and rec.music then playVictoryMusic(rec) end
     pushTexts(texts, function()
       -- as the battle screen's exit would, before its onFinish (M7); M8:
-      -- also after an abort, when the battle's theme was playing
-      if result ~= "abort" or rec.music then restoreMapMusic() end
+      -- also after an abort, when the battle's theme was playing; never
+      -- after a won final battle (BattleState:finish, :5963-5970: the Hall
+      -- of Fame sequence owns the music from there)
+      local wonFinal = result == "win" and rec.music == "final"
+      if not wonFinal and (result ~= "abort" or rec.music) then restoreMapMusic() end
       if rec.path == "script" then
         rec.state = "done" -- the script's waitingCheck resumes it
       else
@@ -2141,8 +2276,8 @@ function Engine.new(opts)
     }
   end
 
-  -- give_pokemon (Commands.lua:807-869) runs as usual -- Party.add or the
-  -- box, the Pokedex, the native nickname prompt (askNickname, :761-794) --
+  -- give_pokemon (Commands.lua:808-870) runs as usual -- Party.add or the
+  -- box, the Pokedex, the native nickname prompt (askNickname, :762-795) --
   -- and the gift is captured once it returns: the party member that wasn't
   -- there before (Party.add appends, src/pokemon/Party.lua:7-13), or the box
   -- deposit's last entry (Boxes.deposit, src/pokemon/Boxes.lua:33-43; taken
@@ -2199,7 +2334,7 @@ function Engine.new(opts)
   -- Changes the hidden game makes to the party that Cobblemon must follow,
   -- queued in the process-lifetime slot until a client takes them:
   --   take      party.take{uid, reason}: an in-game trade sent this member
-  --             away (Commands.trade, src/script/Commands.lua:1086-1177)
+  --             away (Commands.trade, src/script/Commands.lua:1093-1184)
   --   deposit   daycare.deposit{uid}: the daycare took it (the gentleman's
   --             talk, data/scripts/story2.lua:1155-1180)
   --   withdraw  daycare.withdraw{uid, steps}: it came back (:1132-1150)
@@ -2275,10 +2410,10 @@ function Engine.new(opts)
     return out
   end
 
-  -- Commands.trade (src/script/Commands.lua:1086-1177) runs natively -- the
+  -- Commands.trade (src/script/Commands.lua:1093-1184) runs natively -- the
   -- YES/NO, the party menu, the TradeAnim, the texts -- and the trade is
   -- read from the party afterwards: the member that left (table.remove,
-  -- :1154) and the one that arrived at the end (Pokemon.new with the
+  -- :1161) and the one that arrived at the end (Pokemon.new with the
   -- trade's nickname, traded, OT "TRAINER", :1149-1155). The member sent
   -- goes as a take (by its Cobblemon uid), the one received as a gift with
   -- source "trade" (its nickname and OT). A party.sync waits while the
@@ -2330,7 +2465,7 @@ function Engine.new(opts)
     if name == "give_pokemon" then return scriptGive(nextFn, ctx, name, args) end
     if name == "trade" then return scriptTrade(nextFn, ctx, name, args) end
     if name == "heal_party" then
-      -- HealParty (Commands.lua:750-755): Cobblemon's party heals too
+      -- HealParty (Commands.lua:751-756): Cobblemon's party heals too
       local jump = nextFn(ctx, name, args)
       local st = bridgeState()
       if st then st.heals = st.heals + 1 end
@@ -2338,7 +2473,7 @@ function Engine.new(opts)
     end
     if name == "record_hall_of_fame" then
       -- M8: the Hall of Fame heals the hidden party once THE END is up
-      -- (Commands.record_hall_of_fame, Commands.lua:910-933); Cobblemon's
+      -- (Commands.record_hall_of_fame, Commands.lua:917-940); Cobblemon's
       -- party heals too, and the save it writes there is a menu save
       -- (save.writing, M7)
       local st = bridgeState()
@@ -2390,7 +2525,7 @@ function Engine.new(opts)
 
   -- Heals for Cobblemon's party (party.heal). kind "blackout" (M7): the
   -- blackout heals the hidden party before its warp to the heal point
-  -- (OC:5202-5214), but Minecraft gets the heal after the warp's arrival:
+  -- (OC:5352-5364), but Minecraft gets the heal after the warp's arrival:
   -- the heal waits until releaseHeals() (main.lua calls it when the
   -- blackout's warp arrive goes out) or HEAL_HOLD_STEPS live steps.
   function engine.queueHeal(kind)
@@ -2624,36 +2759,36 @@ function Engine.new(opts)
   --
   -- Wild encounters (PLAN section 4.1 "Battles", P8, P9). Every random
   -- encounter the overworld rolls goes through OverworldState:rollEncounter
-  -- (OC:4635-4646), whose encounter.roll chain may return nil to suppress it
-  -- (OC:4641-4645; docs/modding.md "Effective wild-encounter distribution").
+  -- (OC:4769-4780), whose encounter.roll chain may return nil to suppress it
+  -- (OC:4775-4779; docs/modding.md "Effective wild-encounter distribution").
   -- ctx.terrain is "grass" (a grass cell), "water" (surfing on water: the
   -- map's water table) or "indoor" (every step of an indoor map), in
-  -- onStepComplete's order (OC:4781-4790). While a client or test session is
+  -- onStepComplete's order (OC:4790-4932: the roll :4926-4931; rollsIndoorEncounters :4782-4788 says whether an indoor map rolls at all). While a client or test session is
   -- connected:
   --   * a roll the engine would turn into a Safari Zone battle (a Safari game
-  --     on a SAFARI-region map, OC:4812-4814) or an unidentifiable ghost
-  --     battle (Map.ghostBattles without its item, OC:4805-4810) runs
+  --     on a SAFARI-region map, OC:4953-4955) or an unidentifiable ghost
+  --     battle (Map.ghostBattles without its item, OC:4946-4951) runs
   --     natively, shown on the mirror (P9);
   --   * grass and indoor rolls return nil without rolling: Cobblemon's
   --     habitat pools spawn those Pokemon in Minecraft (P8);
   --   * a water roll is the engine's own (the vanilla link, then
-  --     encounter.species as OC:4642-4644 runs it), filtered by REPEL as
-  --     OC:4793-4799 does, and then held for Cobblemon instead of the native
-  --     battle (OC:4800-4822): the world waits (ow.engaging, as a trainer's
+  --     encounter.species as OC:4776-4778 runs it), filtered by REPEL as
+  --     OC:4934-4940 does, and then held for Cobblemon instead of the native
+  --     battle (OC:4941-4963): the world waits (ow.engaging, as a trainer's
   --     encounter holds it) until battle.result.
-  -- Fishing: OverworldState:goFishing (OC:2375-2407) rolls through
-  -- encounter.fishing (OC:2382-2388). No bite ("Not even a nibble!", "nothing
-  -- here") stays native, and so does a Safari Zone bite (OC:2426-2428). A
+  -- Fishing: OverworldState:goFishing (OC:2488-2520) rolls through
+  -- encounter.fishing (OC:2495-2501). No bite ("Not even a nibble!", "nothing
+  -- here") stays native, and so does a Safari Zone bite (OC:2539-2541). A
   -- bite plays its cast animation natively in the TextBox goFishing pushes
-  -- right after the roll (OC:2394-2406); that one box's continuation
-  -- (self.onDone, called when it pops: src/render/TextBox.lua:586-588,
-  -- fishVerdict OC:2397-2399) is replaced with fishVerdict's bite text and
-  -- its field resets (OC:2421-2423) and then the hold, so the native battle
+  -- right after the roll (OC:2507-2519); that one box's continuation
+  -- (self.onDone, called when it pops: src/render/TextBox.lua:616-618,
+  -- fishVerdict OC:2510-2512) is replaced with fishVerdict's bite text and
+  -- its field resets (OC:2534-2536) and then the hold, so the native battle
   -- (:2424-2430) never starts.
   -- Without a client the hidden game fights everything itself (M5's rule).
 
   local DIR_DELTA = { up = { 0, -1 }, down = { 0, 1 }, left = { -1, 0 }, right = { 1, 0 } }
-  -- BattleState:battleKind (src/battle/BattleState.lua:1857-1862): the
+  -- BattleState:battleKind (src/battle/BattleState.lua:1909-1914): the
   -- special battles that stay native (P9), in the protocol's words
   local NATIVE_KINDS = { safari = "safari", ghost = "ghost", oldman = "old_man" }
   local encounterCounts = {
@@ -2682,7 +2817,7 @@ function Engine.new(opts)
 
   -- The engine would make this a Safari Zone battle: a Safari game under way
   -- (save.safari) on a SAFARI-region map (Map.inRegion,
-  -- src/world/Map.lua:173-176; tested so at OC:4812 and :2426).
+  -- src/world/Map.lua:173-176; tested so at OC:4953 and :2539).
   local function safariHere(ow, save)
     local def = type(ow) == "table" and type(ow.map) == "table" and ow.map.def or nil
     if not (type(save) == "table" and save.safari and type(def) == "table") then return false end
@@ -2694,7 +2829,7 @@ function Engine.new(opts)
 
   -- ... or an unidentifiable ghost battle: the map's ghostBattles
   -- (src/world/Map.lua:179-185: the Pokemon Tower floors) without its
-  -- unlessItem in the bag (OC:4807-4810).
+  -- unlessItem in the bag (OC:4948-4951).
   local function ghostHere(ow, save)
     local def = type(ow) == "table" and type(ow.map) == "table" and ow.map.def or nil
     if type(def) ~= "table" then return false end
@@ -2746,8 +2881,8 @@ function Engine.new(opts)
     return nil
   end
 
-  -- encounter.roll's wrapper body (OC:4641; next is the vanilla roll,
-  -- OC:4628).
+  -- encounter.roll's wrapper body (OC:4775; next is the vanilla roll,
+  -- OC:4762).
   function engine.encounterRoll(nextFn, encDef, ctx, bridge)
     local terrain = type(ctx) == "table" and ctx.terrain or nil
     local ow, save = engine.overworld(), engine.save()
@@ -2784,7 +2919,7 @@ function Engine.new(opts)
       if ok then enc = out end
       if type(enc) ~= "table" then return nil end
     end
-    -- REPEL blocks wild Pokemon weaker than the lead (OC:4793-4799)
+    -- REPEL blocks wild Pokemon weaker than the lead (OC:4934-4940)
     local lead = type(save) == "table" and type(save.party) == "table" and save.party[1] or nil
     local repel = type(save) == "table" and tonumber(save.repelSteps) or 0
     if repel > 0 and type(lead) == "table" and tonumber(lead.level) and tonumber(enc.level)
@@ -2805,7 +2940,7 @@ function Engine.new(opts)
     return nil
   end
 
-  -- encounter.fishing's wrapper body (OC:2384-2387: next rolls the
+  -- encounter.fishing's wrapper body (OC:2497-2500: next rolls the
   -- candidates, or the Old Rod's `always`).
   function engine.encounterFishing(nextFn, rod, mapId, pool, bridge)
     local ow, save = engine.overworld(), engine.save()
@@ -2899,10 +3034,10 @@ function Engine.new(opts)
   -- ---- the Pokedex
   --
   -- save.pokedex.seen / owned: species -> true (SaveData.newGame's skeleton,
-  -- src/core/SaveData.lua:3061); the engine marks both on a gift, a trade or
+  -- src/core/SaveData.lua:3264); the engine marks both on a gift, a trade or
   -- an evolution (src/pokemon/Evolution.lua:105-108,
-  -- src/link/Protocol.lua:1199-1200) and counts entries with pairs (Oak's
-  -- rating, OC:3740-3743; the start menu, src/ui/StartMenu.lua:68).
+  -- src/link/Protocol.lua:1227-1228) and counts entries with pairs (Oak's
+  -- rating, OC:3870-3873; the start menu, src/ui/StartMenu.lua:68).
 
   function engine.inGame() return engine.overworld() ~= nil end
 
@@ -2954,8 +3089,8 @@ function Engine.new(opts)
   --
   -- save.inventory: item -> quantity, badges included (as true; Bag.isBadge,
   -- src/inventory/Bag.lua:23-26); key items carry keyItem in their record
-  -- (RomExtractor.lua:883-886). The engine changes it through Bag.add /
-  -- Bag.remove (Bag.lua:139-181).
+  -- (RomExtractor.lua:884-887). The engine changes it through Bag.add /
+  -- Bag.remove (Bag.lua:443-469).
 
   -- The quantities of the listed items the bag holds (1 or more), never a
   -- key item.
@@ -2974,9 +3109,12 @@ function Engine.new(opts)
     return out
   end
 
-  -- Takes up to qty of an item out of the bag with Bag.remove (the slot and
-  -- its bagOrder entry go at zero, Bag.lua:166-181); never below zero.
-  -- Returns how many were taken and how many there were.
+  -- Takes up to qty of an item out of the bag with Bag.remove(save, id, qty,
+  -- data, slot) (Bag.lua:464-469: the slot and its bagOrder entry go at
+  -- zero; since v0.3.85 the game data decides whether the item is kept in
+  -- stacks of 99, save.bagStacks :333-348, so it is passed; no slot: the
+  -- total is what the bridge mirrors); never below zero. Returns how many
+  -- were taken and how many there were.
   function engine.bagRemove(id, qty)
     local save = engine.save()
     local inv = type(save) == "table" and type(save.inventory) == "table" and save.inventory or nil
@@ -2986,7 +3124,7 @@ function Engine.new(opts)
     if n <= 0 then return 0, held end
     local Bag = try("src.inventory.Bag")
     if not (Bag and type(Bag.remove) == "function") then return 0, held end
-    local ok = pcall(Bag.remove, save, id, n)
+    local ok = pcall(Bag.remove, save, id, n, gameData())
     if not ok then return 0, held end
     return n, held
   end
@@ -2994,18 +3132,18 @@ function Engine.new(opts)
   -- ---- items used on a party member
   --
   -- BagMenu runs every use-flow through the item.use hook
-  -- (src/ui/BagMenu.lua:513-516; the wrapped dispatch is vanillaUseOn, :89),
+  -- (src/ui/BagMenu.lua:525-528; the wrapped dispatch is vanillaUseOn, :95),
   -- so the wrapper sees (game, battle, id, target, list, moveIndex, picker)
   -- before anything happens. Outside battles, while a client or test
   -- session is connected, on a member with a Cobblemon uid (PLAN P14, DESIGN
   -- section 5 "Items and moves crossing over"):
   --   * an evolution stone the member's species evolves with (ItemEffects.use's
-  --     own test, src/inventory/ItemEffects.lua:510-531; Yellow's starter
+  --     own test, src/inventory/ItemEffects.lua:518-539; Yellow's starter
   --     Pikachu refusal left native) and RARE_CANDY below level 100 (:490-492):
   --     the engine's effect is skipped -- Cobblemon applies it (party.item),
   --     and the next party.sync brings it back. The bag side stays BagMenu's:
   --     the item is consumed and its row refreshed (consume and removeUsed,
-  --     BagMenu.lua:39-46, :362-374), and the party menu closes behind the
+  --     BagMenu.lua:42-52, :368-373), and the party menu closes behind the
   --     bag's white flash (closePicker, :94-101; BAG_RETURN_WHITE, :17);
   --   * a TM or HM runs natively -- its forget prompt (MoveLearnMenu) is the
   --     slot picker, HMs stay in the bag and TMs are used up (BagMenu.lua
@@ -3044,7 +3182,7 @@ function Engine.new(opts)
     local save = g.save
     local Bag = try("src.inventory.Bag")
     if not (type(save) == "table" and Bag and type(Bag.remove) == "function") then return false end
-    if not pcall(Bag.remove, save, id, 1) then return false end
+    if not pcall(Bag.remove, save, id, 1, gameData()) then return false end
     local inv = type(save.inventory) == "table" and save.inventory or {}
     if not inv[id] then
       g.bagSavedMenuItem, g.bagListScrollOffset = 0, 0
@@ -3101,13 +3239,13 @@ function Engine.new(opts)
     return nil
   end
 
-  -- item.use's wrapper body (BagMenu.lua:513-516).
+  -- item.use's wrapper body (BagMenu.lua:525-528).
   function engine.itemUse(nextFn, g, battle, id, target, list, moveIndex, picker, bridge)
     local function native()
       return nextFn(g, battle, id, target, list, moveIndex, picker)
     end
     -- M8: the bag's ESCAPE ROPE (BagMenu's escape_rope branch runs
-    -- beginTeleportOut inside this dispatch, src/ui/BagMenu.lua:323-347):
+    -- beginTeleportOut inside this dispatch, src/ui/BagMenu.lua:329-353):
     -- its spin is marked so the warp goes out as kind "rope"
     if id == "ESCAPE_ROPE" and battle == nil and target == nil then
       local ow = engine.overworld()
@@ -3189,32 +3327,32 @@ function Engine.new(opts)
 
   -- ------------------------------------------------------------ the Pokemon Center, saving, the PC, sessions (M7)
   --
-  -- The nurse (OverworldState:nurseHeal, OC:3806-3912) has no event or
+  -- The nurse (OverworldState:nurseHeal, OC:3943-4049) has no event or
   -- hook. Her machine() heals the hidden party, writes save.lastHeal -- the
-  -- blackout return point, SetLastBlackoutMap (OC:3850-3857) -- and starts
-  -- ow.healAnim (OC:3858-3864), the one place that field is set; the
-  -- machine runs for dozens of frames (OC:1348-1360, stepHealAnim), so a
+  -- blackout return point, SetLastBlackoutMap (OC:3987-3994) -- and starts
+  -- ow.healAnim (OC:3995-4001), the one place that field is set; the
+  -- machine runs for dozens of frames (OC:1467-1479, stepHealAnim), so a
   -- new healAnim table, polled every step, is a nurse heal. Cobblemon's
   -- party heals too (party.heal), and while a client or test session is
   -- connected the hidden game saves itself once her lines are done and the
-  -- player stands: Game:writeSave (src/core/Game.lua:1328-1351: the save.write
+  -- player stands: Game:writeSave (src/core/Game.lua:1362-1385: the save.write
   -- veto, captureSave, the meta stamp, save.writing, SaveData.save), gated
   -- exactly as the engine gates its own F1 quick save (Game:quickSaveAllowed,
-  -- Game.lua:1353-1369; :861-863). That save's save.writing has the reason
+  -- Game.lua:1387-1403; :861-863). That save's save.writing has the reason
   -- "center"; every other one -- the start menu's SAVE
   -- (src/ui/StartMenu.lua:117-125), F1, the Hall of Fame
-  -- (src/script/Commands.lua:943) -- is "menu". gen1-bridge never writes
+  -- (src/script/Commands.lua:950) -- is "menu". gen1-bridge never writes
   -- lastHeal itself.
   --
-  -- Bill's PC: OverworldState:openPC (OC:3568-3700) passes the PC menu's
-  -- rows through the ui.pc.items hook (OC:3664) with their English source
+  -- Bill's PC: OverworldState:openPC (OC:3680-3812) passes the PC menu's
+  -- rows through the ui.pc.items hook (OC:3776) with their English source
   -- labels (Engine.BOX_PC_LABELS). The box row keeps the menu open
   -- (keepOpen, src/ui/Menu.lua:104-105) and its onSelect plays the sound, pushes
   -- the "Accessed ... PC" text box whose onDone opens BoxMenu through
-  -- openSub (OC:3581-3608), then calls done(). While a client or test
+  -- openSub (OC:3693-3720), then calls done(). While a client or test
   -- session is connected the wrapper runs that onSelect as it is and then
   -- gives the text box another continuation (TextBox's onDone, read when it
-  -- pops: src/render/TextBox.lua:132, :612-613): a hold state on top of the
+  -- pops: src/render/TextBox.lua:132, :642-643): a hold state on top of the
   -- still-open PC menu -- a plain state with no input and nothing drawn
   -- (src/core/StateStack.lua:1-3), busy to the classifier -- until
   -- pc.closed; it then pops itself and the PC menu takes input again. The
@@ -3333,9 +3471,9 @@ function Engine.new(opts)
   end
 
   -- The hidden game's active save slot as a number: SaveData.activeSlot
-  -- (src/core/SaveData.lua:1721-1731) names it "slot<N>" (valid_slot_id,
-  -- :1256-1258), resolved once per process (the title's CONTINUE gate
-  -- already did, saveNames :1442-1453); nil there means the flat legacy
+  -- (src/core/SaveData.lua:1765-1775) names it "slot<N>" (valid_slot_id,
+  -- :1288-1290), resolved once per process (the title's CONTINUE gate
+  -- already did, saveNames :1486-1497); nil there means the flat legacy
   -- save file, 0 here.
   function engine.saveSlot()
     local SaveData = try("src.core.SaveData")
@@ -3397,7 +3535,7 @@ function Engine.new(opts)
     return unpack(results, 1, table.maxn(results))
   end
 
-  -- ui.pc.items's wrapper body (OC:3664; the (next, game, items)
+  -- ui.pc.items's wrapper body (OC:3776; the (next, game, items)
   -- decorate-after-next convention, docs/modding.md "ui.title_menu.items"):
   -- the box row's onSelect is wrapped, the rest is left as it is.
   function engine.pcItems(nextFn, g, items)
@@ -3457,28 +3595,28 @@ function Engine.new(opts)
   --
   -- Direct battles. Three Red/Blue battles never pass the M5 seams: their
   -- code builds the BattleState itself and hands it to
-  -- OverworldState:pushBattle (OC:1142-1176) from a text box's continuation:
-  --   * a static Pokemon object talked to (talkTo, OC:3488-3510: the
+  -- OverworldState:pushBattle (OC:1261-1295) from a text box's continuation:
+  --   * a static Pokemon object talked to (talkTo, OC:3600-3622: the
   --     legendary birds, Mewtwo, the Power Plant's Voltorb and Electrode),
-  --     an A press through the world.talk hook (OC:2561-2566);
+  --     an A press through the world.talk hook (OC:2674-2679);
   --   * the ghost Marowak (data/scripts/story3.lua:134-194), a step trigger
-  --     (the map's onStep, OC:4692-4697, right after world.stepped,
-  --     :4675-4678); with the SILPH_SCOPE it is an ordinary wild battle
-  --     (makeUnveiledGhost, src/battle/BattleState.lua:999-1002); without it
+  --     (the map's onStep, OC:4834-4839, right after world.stepped,
+  --     :4817-4820); with the SILPH_SCOPE it is an ordinary wild battle
+  --     (makeUnveiledGhost, src/battle/BattleState.lua:1033-1036); without it
   --     the unidentified ghost (makeGhost, :986-989: battleKind "ghost")
   --     stays native (P9);
   --   * Giovanni in the Rocket Hideout (story3.lua:458-513), a talk script.
   -- The seam: a text box pushed while a talk (the world.talk wrapper) or a
   -- completed step (world.stepped, same logic step) is under way gets a new
-  -- continuation (TextBox's onDone, read when it pops: TextBox.lua:604-614,
+  -- continuation (TextBox's onDone, read when it pops: TextBox.lua:634-644,
   -- as M6's fishing and M7's PC do), which runs the native one with
   -- OverworldState.pushBattle shadowed for that one synchronous call. (The
   -- overworld on the stack is the OverworldState module table itself,
-  -- src/core/Game.lua:127, :190, so the method is its own field; it is put
+  -- src/core/Game.lua:129, :192, so the method is its own field; it is put
   -- back as soon as the call returns, error or not.) A battle pushed then
   -- that is not native (battleKind, :1857-1862), not an engageTrainer or
   -- script-runner battle (checkpointOrigin.kind "trainer_encounter",
-  -- OC:4108-4115, or "script_battle", src/script/ScriptRunner.lua:210-245:
+  -- OC:4242-4249, or "script_battle", src/script/ScriptRunner.lua:210-245:
   -- those were offered through trainer.before_battle / script.command
   -- already) and that kb_battle
   -- can express is held for Cobblemon as kind "static" (wild: dex, level,
@@ -3500,7 +3638,7 @@ function Engine.new(opts)
   --
   -- The daycare (P15): data/scripts/story2.lua:1020-1210 keeps the boarded
   -- member in save.daycare = { mon, steps, depositLevel } (removed from
-  -- save.party, :1168-1173), adds a step's exp per step (OC:4712-4716),
+  -- save.party, :1168-1173), adds a step's exp per step (OC:4854-4858),
   -- folds the steps into mon.exp on every talk (:1046-1047) and puts the
   -- member back at the end of the party on a paid withdrawal (:1132-1145).
   -- A member with a Cobblemon uid going in is a deposit; coming back, a
@@ -3565,7 +3703,7 @@ function Engine.new(opts)
     -- ghost, safari, oldman (P9) and link battles stay native
     if kind ~= "wild" and kind ~= "trainer" then return false end
     -- engageTrainer's and the script runner's battles (their checkpoint
-    -- origins, OC:4108-4115, src/script/ScriptRunner.lua:210-245) were
+    -- origins, OC:4242-4249, src/script/ScriptRunner.lua:210-245) were
     -- offered through trainer.before_battle / script.command already
     local origin = battle.checkpointOrigin
     if type(origin) == "table" and (origin.kind == "trainer_encounter" or origin.kind == "script_battle") then
@@ -3617,7 +3755,7 @@ function Engine.new(opts)
     return unpack(results, 2, table.maxn(results))
   end
 
-  -- world.talk's wrapper body (OC:2561-2566; docs/modding.md "world.talk"):
+  -- world.talk's wrapper body (OC:2674-2679; docs/modding.md "world.talk"):
   -- text boxes the talk pushes are armed (engine.directPushed).
   function engine.worldTalk(nextFn, ow, target)
     local st = bridgeState()
@@ -3630,7 +3768,7 @@ function Engine.new(opts)
     return unpack(results, 2, table.maxn(results))
   end
 
-  -- world.stepped (OC:4675-4678, before the map's onStep, :4692-4697): text
+  -- world.stepped (OC:4817-4820, before the map's onStep, :4834-4839): text
   -- boxes pushed in this same logic step are armed.
   function engine.directStepped()
     local st, ow = bridgeState(), engine.overworld()
@@ -3857,18 +3995,18 @@ function Engine.new(opts)
   --     src/world/MapLoader.lua:33-46; Map.new keeps it as `def`,
   --     Map.lua:112-114), so the live block array is ow.map.def.blocks and
   --     the pristine one must be copied before any map loads: at mods.loaded
-  --     (src/mods/Loader.lua:2163), which a boot runs before anything is on
-  --     the stack (src/core/Game.lua:47-119) and a hot reload runs right
+  --     (src/mods/Loader.lua:2237), which a boot runs before anything is on
+  --     the stack (src/core/Game.lua:47-121) and a hot reload runs right
   --     after Data:reloadGenerated put the generated records back
-  --     (src/dev/HotReload.lua:31-41; src/core/Data.lua:372-378). A map the
+  --     (src/dev/HotReload.lua:31-41; src/core/Data.lua:373-379). A map the
   --     copy lacks is read from the dataset view (the export's own source).
   --   * objects: an object's effective visibility is the engine's spawn
-  --     filter, OverworldState.objectVisible (OC:227-243, exposed :244):
+  --     filter, OverworldState.objectVisible (OC:232-248, exposed :244):
   --     the record's `hidden` default, then save.objectToggles by name,
   --     items taken and beaten statics by "<MAP>_obj_<index>".
   --   * a map (re)load is a new ow.npcs table: setMap is its only writer
-  --     (OC:551), for warps, seam crossings, same-map warps and reloads; Cut
-  --     regrowth and the door stamps happen there too (OC:479-488).
+  --     (OC:558), for warps, seam crossings, same-map warps and reloads; Cut
+  --     regrowth and the door stamps happen there too (OC:486-495).
 
   do
     local pristine = { maps = {}, captured = false, source = nil }
@@ -3881,7 +4019,7 @@ function Engine.new(opts)
       for i = 1, #def.blocks do blocks[i] = def.blocks[i] end
       local objs = {}
       for _, o in ipairs(type(def.objects) == "table" and def.objects or {}) do
-        -- runtime objects a mod adds (OC:5591-5605) are never map data
+        -- runtime objects a mod adds (OC:5750-5764) are never map data
         if type(o) == "table" and not o.runtime then
           objs[#objs + 1] = { index = o.index, name = o.name, hidden = o.hidden, item = o.item, pokemon = o.pokemon }
         end
@@ -3942,7 +4080,7 @@ function Engine.new(opts)
     end
 
     -- The current map for the story: its id, size in blocks and a load
-    -- serial that changes on every setMap (a new ow.npcs table, OC:551).
+    -- serial that changes on every setMap (a new ow.npcs table, OC:558).
     local loadTable, loadSerial = nil, 0
     function engine.storyMap()
       local ow = engine.overworld()
@@ -3983,8 +4121,8 @@ function Engine.new(opts)
     end
 
     -- The engine's own record of this visit's cuts on a map, { bx, by,
-    -- block = the block before the cut } (tryCut, OC:3318-3322; cleared by
-    -- the regrowth on the map's next load, OC:481-487), copied.
+    -- block = the block before the cut } (tryCut, OC:3430-3434; cleared by
+    -- the regrowth on the map's next load, OC:488-494), copied.
     function engine.cutRecords(mapId)
       local ow = engine.overworld()
       local list = ow and type(ow.cutBlocks) == "table" and ow.cutBlocks[mapId] or nil
@@ -3996,7 +4134,7 @@ function Engine.new(opts)
     end
 
     -- field.cutTreeSwaps as before -> after (tryCut takes the first row
-    -- whose before matches, OC:3310-3313).
+    -- whose before matches, OC:3422-3425).
     function engine.cutSwaps()
       local data = gameData()
       local rows = data and type(data.field) == "table" and data.field.cutTreeSwaps or nil
@@ -4037,7 +4175,7 @@ function Engine.new(opts)
     end
 
     -- objects of every map, from the pristine copy (or the live records
-    -- when there is none: map objects never change in play, OC:5591-5605
+    -- when there is none: map objects never change in play, OC:5750-5764
     -- adds only runtime ones, which are skipped)
     local function objectIndex()
       if objects then return objects end
@@ -4062,7 +4200,7 @@ function Engine.new(opts)
       return objects
     end
 
-    -- objectVisible's rule (OC:227-243), for an engine that doesn't expose it
+    -- objectVisible's rule (OC:232-248), for an engine that doesn't expose it
     local function ruleVisible(save, mapId, obj)
       local toggles = type(save.objectToggles) == "table" and save.objectToggles[mapId] or nil
       local visible = not obj.hidden
@@ -4140,27 +4278,27 @@ function Engine.new(opts)
   --   the move                a shadow-party member knows it, and the badge
   --                           of constants.hmBadges (src/world/FieldDefaults
   --                           .lua:220-224) is in the bag: partyKnowsVanilla
-  --                           (OC:2214-2228); then OverworldState:partyKnows
-  --                           itself (OC:2230-2237), which a mod's
+  --                           (OC:2327-2341); then OverworldState:partyKnows
+  --                           itself (OC:2343-2350), which a mod's
   --                           fieldmove.eligibility hook may answer
-  --   cut                     useCutFieldMove (OC:3415-3438), tryCut on the
-  --                           cell in front (OC:3292-3347)
-  --   surf                    useSurfFieldMove (OC:3352-3404), trySurf
-  --                           (OC:3237-3271) or stopSurfing (OC:3273-3280)
-  --   strength                useStrengthFieldMove (OC:1074-1095), not when
+  --   cut                     useCutFieldMove (OC:3527-3550), tryCut on the
+  --                           cell in front (OC:3404-3459)
+  --   surf                    useSurfFieldMove (OC:3464-3516), trySurf
+  --                           (OC:3349-3383) or stopSurfing (OC:3385-3392)
+  --   strength                useStrengthFieldMove (OC:1193-1214), not when
   --                           already active (the facade's own rule)
-  --   flash                   useFlashFieldMove (OC:1057-1072), only while
+  --   flash                   useFlashFieldMove (OC:1176-1191), only while
   --                           the map is dark (ow.dark, the facade's rule)
-  --   dig / teleport          beginTeleportOut (OC:2470-2499) where the party
+  --   dig / teleport          beginTeleportOut (OC:2583-2612) where the party
   --                           menu allows it (PartyMenu.lua:708-735) and a
   --                           heal point exists
   --   rope                    action dig with item ESCAPE_ROPE: the bag's
-  --                           branch (BagMenu.lua:323-347): the item used up
-  --                           with Bag.remove (src/inventory/Bag.lua:166-181)
-  --   bicycle                 useBicycle (OC:1035-1052) after the bag's checks
-  --                           (BagMenu.lua:167-212; ItemEffects.lua:636-647)
-  --   fish                    useFishingRod (OC:2431-2437) with the rod
-  --   fly                     flyTo (OC:2441-2458) to a destination the Town
+  --                           branch (BagMenu.lua:329-353): the item used up
+  --                           with Bag.remove (src/inventory/Bag.lua:464-469)
+  --   bicycle                 useBicycle (OC:1154-1171) after the bag's checks
+  --                           (BagMenu.lua:173-218; ItemEffects.lua:636-647)
+  --   fish                    useFishingRod (OC:2544-2550) with the rod
+  --   fly                     flyTo (OC:2554-2571) to a destination the Town
   --                           Map would list (WorldAPI.lua:69-80), or, with no
   --                           destination, the native fly list: Screens.push
   --                           TownMap { fly, onFly } as the party menu does
@@ -4315,7 +4453,7 @@ function Engine.new(opts)
       end
       if rope then
         local Bag = try("src.inventory.Bag")
-        if not (Bag and type(Bag.remove) == "function" and pcall(Bag.remove, save, "ESCAPE_ROPE", 1)) then
+        if not (Bag and type(Bag.remove) == "function" and pcall(Bag.remove, save, "ESCAPE_ROPE", 1, gameData())) then
           return false, "failed"
         end
         return teleportOut(ow, "rope")
@@ -4408,46 +4546,46 @@ function Engine.new(opts)
   -- DESIGN section 8 "Saving": each multiplayer world gets its own paired
   -- online story save, kept apart from the offline one (act/kb_pairing.lua).
   -- Gen1Recomp keeps a version's playthroughs in numbered slots,
-  -- saves/<version>/slot<N>.lua (src/core/SaveData.lua:1222-1264),
+  -- saves/<version>/slot<N>.lua (src/core/SaveData.lua:1254-1296),
   -- registered in options.lua as saveSlots[version] = { list, active, names }
-  -- (:1295-1313, read through SaveData.loadOptions :993-1032). The ACTIVE
-  -- slot is where SaveData.save (:2585-2638) and SaveData.load (:2645-2684)
-  -- land, through saveNames (:1440-1453), which resolves it once per process
-  -- (ensureSlots :1407-1438: an existing registry wins; else a flat legacy
-  -- save is migrated into slot1, :1338-1373; else orphaned slot files are
-  -- adopted, :1375-1405; else the flat legacy path, "slot 0" here).
+  -- (:1327-1345, read through SaveData.loadOptions :1025-1064). The ACTIVE
+  -- slot is where SaveData.save (:2785-2838) and SaveData.load (:2845-2887)
+  -- land, through saveNames (:1484-1497), which resolves it once per process
+  -- (ensureSlots :1451-1482: an existing registry wins; else a flat legacy
+  -- save is migrated into slot1, :1370-1405; else orphaned slot files are
+  -- adopted, :1419-1449; else the flat legacy path, "slot 0" here).
   --
   -- Switching at runtime goes through the engine's own slot API:
-  --   * SaveData.setActiveSlot(version, id) (:1661-1686) registers id if it
+  --   * SaveData.setActiveSlot(version, id) (:1705-1730) registers id if it
   --     is new and makes it active in options.lua AND in the process cache:
   --     the very next CONTINUE or save lands there;
-  --   * SaveData.createSlot(version) (:1688-1715) registers a new empty slot
+  --   * SaveData.createSlot(version) (:1732-1759) registers a new empty slot
   --     one past the highest number (never a lingering file's id) without
-  --     activating it; renameSlot (:1626-1659) labels it for the launcher;
-  --     deleteSlot (:1800-1856) takes one back;
-  --   * refreshSlotResolution (:1858-1872) drops the once-per-process
+  --     activating it; renameSlot (:1670-1703) labels it for the launcher;
+  --     deleteSlot (:1844-1900) takes one back;
+  --   * refreshSlotResolution (:2058-2072) drops the once-per-process
   --     resolution, so a flat save written in this process is migrated into
   --     slot1 before any slot is registered beside it (a registry hides a
-  --     flat save for good, :1419-1421);
+  --     flat save for good, :1463-1465);
   --   * a progress save rewrites options.lua from the live options snapshot,
   --     but rememberPlaythroughId copies the slot registry from disk first
-  --     (:2164-2178), so a switch is never undone by a later save;
+  --     (:2364-2378), so a switch is never undone by a later save;
   --   * at the title, CONTINUE reads the active slot when it is chosen
-  --     (Game:makeTitleState, src/core/Game.lua:222-240), and the title menu
+  --     (Game:makeTitleState, src/core/Game.lua:224-242), and the title menu
   --     builds its CONTINUE row from the active slot's file when it opens
-  --     (src/ui/TitleState.lua:469-477, :533-551), so a menu already open is
-  --     rebuilt with Game:returnToTitle (Game.lua:242-249, the START menu
+  --     (src/ui/TitleState.lua:469-477, :541-559), so a menu already open is
+  --     rebuilt with Game:returnToTitle (Game.lua:244-251, the START menu
   --     QUIT's own path);
   --   * in game, the live playthrough belongs to the active slot: it is saved
-  --     there first (Game:writeSave, Game.lua:1326-1351, behind the F1
+  --     there first (Game:writeSave, Game.lua:1362-1385, behind the F1
   --     quick-save gate :1353-1371, as the center save), then the slot
   --     switches and the game goes back to the title. A New Game never saved
   --     has no meta.savedAt (SaveData.newGame :3026-3036; buildMeta stamps it
-  --     on every writeSave, :2331-2362, Game.lua:1339-1341).
+  --     on every writeSave, :2331-2362, Game.lua:1373-1375).
   -- A cart (SaveData.getCart :1895-1897) has its own slot scope
   -- (activeScopeKey :1290-1293), which the version's registry doesn't reach.
   -- The --slot launch option is the same setActiveSlot, by id ("slot2") or
-  -- by 1-based list index (src/core/LaunchOptions.lua:347-372).
+  -- by 1-based list index (src/core/LaunchOptions.lua:349-374).
 
   local function slotId(v)
     return type(v) == "string" and v:find("^slot%d+$") ~= nil and #v <= 16
@@ -4581,7 +4719,7 @@ function Engine.new(opts)
 
   -- True while something is open over the title (its menu, CONTINUE's info
   -- box, OPTION): its rows were built for the slot that was active then.
-  -- Game:makeTitleState stamps screenId "TitleState" (Game.lua:238).
+  -- Game:makeTitleState stamps screenId "TitleState" (Game.lua:240).
   function engine.titleMenuOpen()
     local states = game and game.stack and game.stack.states
     if type(states) ~= "table" then return false end
@@ -4653,23 +4791,23 @@ function Engine.new(opts)
   -- Save pairs (crash recovery; act/kb_save.lua, docs/PROTOCOL.md "Saving").
   -- Game:writeSave stamps the save's meta first (SaveData.buildMeta: savedAt
   -- = os.time(), sessionStart, the playthrough id carried over;
-  -- src/core/Game.lua:1337-1341, src/core/SaveData.lua:2331-2362) and then
+  -- src/core/Game.lua:1371-1375, src/core/SaveData.lua:2531-2562) and then
   -- emits save.writing, the moment "mods snapshot runtime state into their
-  -- namespace" (Game.lua:1337-1344). mod.save IS the save table's own modData
-  -- (Game:adoptSave, Game.lua:1314-1324; src/mods/Loader.lua:1543-1556), and
+  -- namespace" (Game.lua:1371-1378). mod.save IS the save table's own modData
+  -- (Game:adoptSave, Game.lua:1348-1358; src/mods/Loader.lua:1617-1630), and
   -- SaveData.save serializes the whole save table -- modData and meta
   -- included -- into the active slot's file in one write (a .tmp witness and
-  -- a .bak of the previous file, SaveData.lua:2585-2638). So what kb_save
+  -- a .bak of the previous file, SaveData.lua:2785-2838). So what kb_save
   -- writes into mod.save during save.writing is part of that very save, and
   -- comes back with it on every CONTINUE: Game:restoreSave adopts the loaded
-  -- save's modData before save.loaded (Game.lua:1475-1537), and F2 takes
+  -- save's modData before save.loaded (Game.lua:1537-1608), and F2 takes
   -- the same path (:864-873). Not used, because they live apart from the
   -- save: mod.storage writes its own files at once (src/mods/Storage.lua:
   -- 183-229, "independent of the vanilla progress checkpoint"), and the
   -- playthrough id names a playthrough, not one of its saves, and is filled
   -- in from options.lua on load when the file lacks it (SaveData.lua:
   -- 2675-2681). The Hall of Fame writes its save twice, the second time with
-  -- SaveData.save and no event (src/script/Commands.lua:943-950): the same
+  -- SaveData.save and no event (src/script/Commands.lua:950-957): the same
   -- save table, modData and meta, so the same pair.
 
   -- A save table's meta as plain values: savedAt and sessionStart (Unix
@@ -4702,11 +4840,11 @@ function Engine.new(opts)
   end
 
   -- Running hidden (DESIGN section 9). love.run picks each frame's cap from
-  -- love.window.isVisible() (main.lua:1739-1756): a window that isn't
+  -- love.window.isVisible() (main.lua:1907-1924): a window that isn't
   -- visible is capped at 10 frames a second, while Game:update catches up at
   -- most about 2 logic steps a frame (FixedStep.catchupLimit,
-  -- src/core/FixedStep.lua:75-86, Game.lua:427-434): logic at a third of
-  -- its speed. It also isn't drawn (main.lua:1762-1769), so the mirror gets
+  -- src/core/FixedStep.lua:75-86, Game.lua:430-437): logic at a third of
+  -- its speed. It also isn't drawn (main.lua:1930-1937), so the mirror gets
   -- no frames. Measured on Windows (tools/e2e/test_hidden.py): LÖVE 11.5's
   -- isVisible reads only SDL_WINDOW_SHOWN, which a MINIMISED window keeps,
   -- so minimising never slowed anything (60 logic steps a second); a HIDDEN
@@ -4720,7 +4858,7 @@ function Engine.new(opts)
   -- isVisible functions are other modules). A frame faked visible is paced
   -- to at most 60 a second here, since present() needn't wait on a window
   -- that isn't shown and the loop trusts it when vsync paces the cap
-  -- (main.lua:1773-1792, PresentSync.hardwarePacesCap). The same holds for a
+  -- (main.lua:1941-1960, PresentSync.hardwarePacesCap). The same holds for a
   -- MINIMISED window, which the loop runs at its normal cap: its present()
   -- returns at once, so the loop spun at 170-350 drawn frames a second
   -- (measured), taking CPU and GPU time from Minecraft; while a client or
@@ -4769,7 +4907,7 @@ function Engine.new(opts)
     slot.nextFrame = deadline + Engine.HIDDEN_FRAME
   end
 
-  -- love.window.isVisible, as the loop asks it once a frame (main.lua:1739):
+  -- love.window.isVisible, as the loop asks it once a frame (main.lua:1907):
   -- the window's own answer, except while the keep-alive is fresh: a window
   -- that isn't shown answers true (the normal cap, drawn), and its frames
   -- and a minimised window's are paced. Never throws.
@@ -4870,13 +5008,13 @@ function Engine.new(opts)
   -- blocks (src/world/Map.lua:244-249) for Cut, card-key doors and script
   -- swaps, and elevator panels rewrite warps. So the export reads one of two
   -- sources, both of which hand out detached plain tables:
-  --   * "datasets": mod.datasets:open(version) (src/mods/Loader.lua:1361-1369,
+  --   * "datasets": mod.datasets:open(version) (src/mods/Loader.lua:1435-1443,
   --     src/mods/DatasetViews.lua:427-479) decodes the version's cache again
   --     and copies every record it hands out (get/each, :368-405);
   --   * "live": PLAN section 8's fallback, a deep copy of the live Data taken
   --     before any map has loaded (the mods.loaded payload's `data`,
-  --     src/mods/Loader.lua:2163; Game:load runs the loader before anything
-  --     is on the stack, src/core/Game.lua:47-119).
+  --     src/mods/Loader.lua:2237; Game:load runs the loader before anything
+  --     is on the stack, src/core/Game.lua:47-121).
   --
   -- A source has: path ("datasets" or "live"); records(name, checkpoint),
   -- the sorted { {id, value}, ... } of a record registry (nil plus a reason
@@ -4970,7 +5108,7 @@ function Engine.new(opts)
   end
 
   -- liveSource over the Game's own Data table (Game:load sets self.data =
-  -- Data, src/core/Game.lua:44), so the live table never leaves this file.
+  -- Data, src/core/Game.lua:46), so the live table never leaves this file.
   function engine.liveSourceFromGame(checkpoint)
     return engine.liveSource(game and type(game.data) == "table" and game.data or nil, checkpoint)
   end
@@ -5009,7 +5147,7 @@ function Engine.new(opts)
 
   -- Map.isOutside (src/world/Map.lua:146-158): OVERWORLD maps, plus the
   -- outsideTilesets the overworld passes in (field.outsideTilesets, as at
-  -- src/world/OverworldController.lua:5419). This is what sets the LAST_MAP
+  -- src/world/OverworldController.lua:5569). This is what sets the LAST_MAP
   -- memory.
   function engine.isOutside(def, outsideTilesets)
     local Map = mapModule()
@@ -5062,7 +5200,7 @@ function Engine.new(opts)
   end
 
   -- Spinner-arrow tiles of a tileset, the tiles the spinner toggle patches:
-  -- TileRenderer.SPINNER_ARROW_TILES (src/render/TileRenderer.lua:134-137).
+  -- TileRenderer.SPINNER_ARROW_TILES (src/render/TileRenderer.lua:139-142).
   function engine.spinnerTiles(tilesetId)
     local TileRenderer = try("src.render.TileRenderer")
     local list = TileRenderer and type(TileRenderer.SPINNER_ARROW_TILES) == "table"
@@ -5076,7 +5214,7 @@ function Engine.new(opts)
 
   -- A tileset's animated tiles as the engine describes them: the record's own
   -- animatedTiles, else TileRenderer.defaultAnimatedTiles
-  -- (src/render/TileRenderer.lua:313-334, precedence :538-539). Each entry has
+  -- (src/render/TileRenderer.lua:311-332, precedence :538-539). Each entry has
   -- `tile` or `tiles`, a `kind` (hshift, frames, toggle), a `period`, and
   -- `offsets`, or `images` + `sequence`, or `image` + `stripOffsets` and a
   -- `gate`. Image fields are asset paths. The voxel plan's V2 exports them as
@@ -5093,7 +5231,7 @@ function Engine.new(opts)
   end
 
   -- The block the engine really draws around a map: TileRenderer.borderBlockFor
-  -- (src/render/TileRenderer.lua:23-32), which reads the map's tileset and
+  -- (src/render/TileRenderer.lua:25-34), which reads the map's tileset and
   -- border block and, for OVERWORLD maps, the player's voidFill option. A
   -- block id, or false when it draws none; the map's own border block when the
   -- renderer can't be asked. Engine internals: re-check on every pin change.
@@ -5108,8 +5246,8 @@ function Engine.new(opts)
 
   -- The player's void-fill option and whether it is the engine's default: the
   -- renderer's TileRenderer.voidFill against the first of its
-  -- TileRenderer.VOID_FILLS (src/render/TileRenderer.lua:19-21; setVoidFill
-  -- falls back to it, :34-40). Decided here, so no engine constant is copied
+  -- TileRenderer.VOID_FILLS (src/render/TileRenderer.lua:21-23; setVoidFill
+  -- falls back to it, :36-42). Decided here, so no engine constant is copied
   -- into the builder. nil when the renderer can't be asked.
   function engine.voidFill()
     local TileRenderer = try("src.render.TileRenderer")
@@ -5121,11 +5259,11 @@ function Engine.new(opts)
 
   -- Another installed mod's data file, as text (the profile plan,
   -- docs/specs/PROFILE_PLAN.md): mods.loaded's payload carries the loader
-  -- (src/mods/Loader.lua:2163), whose `mods` lists every mod found under mods/,
-  -- enabled or not, as { manifest, path } (:545-566; a disabled one is marked
-  -- in `disabled`, :395-404), and whose `fs` is love.filesystem unless a test
-  -- injects one (:319-345). The sandbox keeps mod:read inside a mod's own
-  -- folder (:1712-1716), so this reads through the loader. The text is only
+  -- (src/mods/Loader.lua:2237), whose `mods` lists every mod found under mods/,
+  -- enabled or not, as { manifest, path } (:619-640; a disabled one is marked
+  -- in `disabled`, :469-478), and whose `fs` is love.filesystem unless a test
+  -- injects one (:393-419). The sandbox keeps mod:read inside a mod's own
+  -- folder (:1786-1790), so this reads through the loader. The text is only
   -- returned, never run. Returns text, version, enabled; or nil and a reason
   -- code (no_loader, absent, no_file, too_big, unreadable). Engine internals:
   -- re-check on every pin change.
@@ -5168,8 +5306,8 @@ function Engine.new(opts)
   end
 
   -- The engine's own neighbour placement: OverworldState.computeNeighbors
-  -- (src/world/OverworldController.lua:296-345; the module returns
-  -- OverworldState, :6683), a BFS over the connections that composes the
+  -- (src/world/OverworldController.lua:301-344; the module returns
+  -- OverworldState, :6914), a BFS over the connections that composes the
   -- strip offsets. With an unbounded hop count it places every connected
   -- map. Returns { {id, ox, oy}, ... } in world pixels (32 per block),
   -- without the root.
@@ -5188,9 +5326,9 @@ function Engine.new(opts)
   end
 
   -- The SGB palette cascade of OverworldState:paletteNameFor
-  -- (src/world/OverworldController.lua:897-919): a map's own `palette`, then
+  -- (src/world/OverworldController.lua:1016-1038): a map's own `palette`, then
   -- field.palettes byMap, byTileset and the byPrefix rows (its local
-  -- paletteLookup, :854-866, restated here because it is a local); nil when
+  -- paletteLookup, :973-985, restated here because it is a local); nil when
   -- nothing matches, which is when an interior takes its remembered outdoor
   -- map's palette, and then `default`.
   function engine.paletteLookup(palettes, mapId, tilesetId, ownPalette)
@@ -5210,10 +5348,10 @@ function Engine.new(opts)
   end
 
   -- PNG bytes of one asset, loaded the way the engine loads it:
-  -- Assets.imageData (src/render/Assets.lua:67-71; mod overrides first, then
+  -- Assets.imageData (src/render/Assets.lua:141-148; mod overrides first, then
   -- the active version's mounted cache), encoded like the importer writes
   -- PNGs, ImageData:encode("png") with no filename
-  -- (src/import/ImageWriter.lua:170-182). Returns png, width, height, or nil
+  -- (src/import/ImageWriter.lua:167-179). Returns png, width, height, or nil
   -- plus a reason.
   function engine.imagePng(path)
     local Assets = try("src.render.Assets")
@@ -5283,7 +5421,7 @@ function Engine.new(opts)
   -- The engine's own blackout for a wild battle lost in Cobblemon:
   -- OverworldState:afterBattle("lose") heals the party, takes half the money,
   -- emits world.blacked_out and warps to the last heal point
-  -- (src/world/OverworldController.lua:5184-5225). Returns true, or false
+  -- (src/world/OverworldController.lua:5334-5375). Returns true, or false
   -- plus a reason.
   function engine.blackout()
     local ow = engine.overworld()

@@ -16,7 +16,17 @@
         "npcs": {"$ref": "../defs.schema.json#/$defs/count"},
         "topState": {"$ref": "../defs.schema.json#/$defs/symbol"},
         "mode": {"enum": ["idle", "screen", "forced", "cutscene", "busy"]},
-        "flags": {"$ref": "../defs.schema.json#/$defs/count"}
+        "flags": {"$ref": "../defs.schema.json#/$defs/count"},
+        "engineMissing": {
+          "type": "array",
+          "maxItems": 256,
+          "items": {"type": "string", "pattern": "^[A-Za-z0-9_.]+$", "maxLength": 96},
+          "description": "Engine modules and members gen1-bridge relies on that this engine lacks (module or module.member); empty on the tested engine."
+        },
+        "unionRoom": {
+          "enum": ["on", "off"],
+          "description": "Whether the engine's Union Room setting patched this boot's Pokemon Centers (must be off)."
+        }
       }
     }
   ]

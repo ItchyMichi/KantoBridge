@@ -116,7 +116,8 @@ own ROM. A world is shared by:
 `tools/installer/pins.json` lists every third-party file. Pinned so far, from the official
 repositories the build already uses:
 
-- Gen1Recomp v0.3.49 (its release `sha256sums.txt`, see VERSIONS.md);
+- Gen1Recomp v0.3.85 (its release `sha256sums.txt`, see VERSIONS.md; the first-run flow must also switch
+  its Union Room off, as INSTALL.md step 6 does);
 - Fabric API 0.116.17+1.21.1;
 - Cobblemon 1.8.1, the Maven artifact, SHA-256 taken from the Gradle cache.
 

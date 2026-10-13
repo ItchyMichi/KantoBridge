@@ -12,6 +12,9 @@ import org.jetbrains.annotations.Nullable;
  * <ul>
  * <li><b>The engine</b>: gen1-bridge names the Gen1Recomp version it was tested with ({@code hello.ok.tested}); another
  * engine gets one toast per pair of versions in a client run (and a line on F7).</li>
+ * <li><b>The Union Room</b>: gen1-bridge says whether Gen1Recomp's Union Room is on ({@code hello.ok.union_room}); on, it
+ * gets one toast per gen1-bridge start (the toast says to restart it, so a restart with the room still on is told again;
+ * a reconnect isn't) and a word on the F7 line.</li>
  * <li><b>The game</b>: in singleplayer (the integrated server's own player), a world built from one version (its
  * WorldIndex's {@code game}) while Gen1Recomp runs the other gets one warning per world join. Multiplayer guests may
  * differ on purpose (M9: the host's version decides wild exclusives).</li>
@@ -21,12 +24,18 @@ import org.jetbrains.annotations.Nullable;
  */
 public final class VersionCheck {
 	private final Set<String> enginesShown = new HashSet<>();
+	private final Set<String> unionShown = new HashSet<>();
 	private final Set<String> mismatchesShown = new HashSet<>();
 	private boolean gameShown;
 
 	/** {@code hello.ok}: true when the untested-engine toast is due now (once per pair of versions). */
 	public boolean engineNotice(HelloOk ok) {
 		return ok.untestedEngine() && this.enginesShown.add(ok.engine() + "|" + ok.tested());
+	}
+
+	/** {@code hello.ok}: true when the Union Room toast is due now (once per gen1-bridge start while the room is on). */
+	public boolean unionNotice(HelloOk ok) {
+		return ok.unionRoomOn() && this.unionShown.add(ok.session());
 	}
 
 	/** The player joined a world: the game warning and the save mismatches may show again. */

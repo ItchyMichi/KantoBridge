@@ -4,10 +4,10 @@
   "files": [
     {
       "id": "gen1recomp",
-      "version": "0.3.49",
-      "url": "https://github.com/bryanthaboi/gen1recomp/releases/download/v0.3.49/gen1recomp-0.3.49-windows.zip",
-      "sha256": "7816b1fd93a06197aa395658f73d7e8087ee6421b3da6452f7be8ff69f3ae878",
-      "size": null,
+      "version": "0.3.85",
+      "url": "https://github.com/bryanthaboi/gen1recomp/releases/download/v0.3.85/gen1recomp-0.3.85-windows.zip",
+      "sha256": "20cff4a16cf7235d224fe6dc32c0490f482a9d768d29a194bae5fff93c82c53a",
+      "size": 51220042,
       "licence": "see license.txt in the release",
       "source": "the release's own sha256sums.txt (docs/VERSIONS.md); official repository only, never gen1recomp.com"
     },

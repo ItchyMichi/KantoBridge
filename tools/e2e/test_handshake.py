@@ -22,7 +22,7 @@ async def _talk(port, game):
     await first.connect(attempts=20)
     ok = await first.hello()
     data = ok["data"]
-    assert (data["protocol"], data["engine"], data["game"]) == (1, "0.3.49", game)
+    assert (data["protocol"], data["engine"], data["game"]) == (1, "0.3.85", game)
     snap = await first.expect("snapshot", timeout=10)
     player = snap["data"]["player"]
     assert {"map", "x", "y", "facing"} <= set(player), sorted(player)

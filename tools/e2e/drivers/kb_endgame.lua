@@ -4,7 +4,7 @@
 -- port, starts a new game without the intro, gives the player one level-100
 -- party member (Pokemon.new + Party.add, src/pokemon/Pokemon.lua:60-88,
 -- src/pokemon/Party.lua:7-13, the OT stamped as the engine stamps gifts,
--- BattleState.stampOT :698-705) and REPEL steps (no wild encounter, OC:4793-
+-- BattleState.stampOT :698-705) and REPEL steps (no wild encounter, OC:4934-
 -- 4799), sets the scene's flags, badges (e4, champion: all eight, the
 -- league's own precondition; Badges.list / itemFor,
 -- src/inventory/Badges.lua:16-26) and bag, and warps the player onto a plain
@@ -12,7 +12,7 @@
 -- src/world/WorldAPI.lua:358-371). The scenes (KB_SCENE), found with the
 -- engine's own data and map queries (Map.new, src/world/Map.lua:112; warps'
 -- destMap, src/world/Warp.lua:93-111; OverworldState.objectVisible,
--- OC:227-244):
+-- OC:232-249):
 --
 --   e4         INDIGO_PLATEAU_LOBBY, one step from the door into
 --              LORELEIS_ROOM (walk=): entering runs the room's own walk-in
@@ -28,17 +28,17 @@
 --              CHAMPIONS_ROOM (walk=): entering queues the rival's entrance
 --              and his battle (data/scripts/story.lua:1141-1163). While the
 --              Credits screen is up the driver runs the logic 10 times a
---              frame (Game.driverSpeed, main.lua:263-267: the credits roll
+--              frame (Game.driverSpeed, main.lua:347-351: the credits roll
 --              is about 5,900 frames); once the Hall of Fame and the credits
 --              are over and the game left the overworld (Commands
---              .record_hall_of_fame, src/script/Commands.lua:913-964), it
+--              .record_hall_of_fame, src/script/Commands.lua:920-971), it
 --              prints KB_END_STATE (the top screen's id, the save's home map).
 --   rocket     facing the Game Corner rocket (TEXT_GAMECORNER_ROCKET, whose
 --              talk hands engageTrainer his own loss line,
 --              data/scripts/story3.lua:597-643): the M8 wave 3 loss-line
 --              check on the real engine.
 --   snorlax    beside a sleeping Snorlax (ROUTE_12 first; ItemEffects'
---              SNORLAX_ROUTES, src/inventory/ItemEffects.lua:171-174), facing
+--              SNORLAX_ROUTES, src/inventory/ItemEffects.lua:175-178), facing
 --              it, the POKE_FLUTE the only item in the bag. Once Snorlax is
 --              gone for good (its beat flag) and the world idle, the driver
 --              warps onto the same cell (a reload of the map: KB_BEATEN, then
@@ -51,7 +51,7 @@
 -- gen1-bridge reports a debug.quit (exit 0) or the time limit passes (exit 1).
 --
 -- Runs unsandboxed as a POKEPORT_DRIVER coroutine, resumed once per logic
--- step (refs/gen1recomp/main.lua:641-645, :993-1011). Data safety: prints
+-- step (refs/gen1recomp/main.lua:755-759, :1136-1157). Data safety: prints
 -- only markers, map, screen and NPC id symbols, directions, counts and
 -- booleans -- never a species, a name, a team, a coordinate or any text.
 
@@ -134,8 +134,8 @@ end
 local function npcId(mapId, o) return mapId .. "_obj_" .. o.index end
 
 -- every map trainer of a map beaten, so nobody sights the player
--- (checkTrainerSight skips beaten ones, OC:4372-4420; the header's event,
--- Data:trainerHeader, src/core/Data.lua:425-428)
+-- (checkTrainerSight skips beaten ones, OC:4506-4554; the header's event,
+-- Data:trainerHeader, src/core/Data.lua:426-429)
 local function beatTrainers(game, mapId)
   local def = game.data.maps[mapId]
   local n = 0
@@ -419,7 +419,7 @@ return function(game)
     if phase == "ready" then
       if status and status.ready then
         status.configure({ port = PORT })
-        -- New Game without Oak's speech (src/core/Game.lua:171-198)
+        -- New Game without Oak's speech (src/core/Game.lua:173-200)
         game:startNewGame({ intro = false })
         phase = "world"
       end

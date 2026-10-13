@@ -1,9 +1,21 @@
 [
-  {"type": "debug.status", "seq": 11, "data": {}},
+  {
+    "type": "debug.status",
+    "seq": 11,
+    "data": {}
+  },
   {
     "type": "debug.status",
     "seq": 12,
     "re": 5,
-    "data": {"npcs": 2, "topState": "OverworldState", "mode": "idle", "flags": 1, "party": 1}
+    "data": {
+      "npcs": 2,
+      "topState": "OverworldState",
+      "mode": "idle",
+      "flags": 1,
+      "party": 1,
+      "engineMissing": [],
+      "unionRoom": "off"
+    }
   }
 ]

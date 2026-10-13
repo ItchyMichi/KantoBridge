@@ -4,13 +4,13 @@
 -- (Pokemon.new + Party.add, src/pokemon/Pokemon.lua:60-88,
 -- src/pokemon/Party.lua:7-13, the OT stamped as the engine stamps gifts,
 -- BattleState.stampOT :698-705), REPEL steps (no wild encounter: with the
--- strong lead the engine's REPEL keeps them away, OC:4793-4799), beats the
+-- strong lead the engine's REPEL keeps them away, OC:4934-4940), beats the
 -- scene map's other trainers, and warps the player onto a plain cell next to
 -- the scene's object, facing it, through the supported mod.world facade
 -- (WorldAPI:warpTo, src/world/WorldAPI.lua:358-371). The scenes (KB_SCENE),
 -- found with the engine's own data, map scripts and map queries (Map.new,
 -- src/world/Map.lua:112; MapScripts.talkScript, src/script/MapScripts.lua
--- :239-243; OverworldState.objectVisible, OC:227-244):
+-- :239-243; OverworldState.objectVisible, OC:232-249):
 --
 --   static     a visible static Pokemon object (pokemon + level; on Red/Blue
 --              every one has a hand-ported talk script ending in
@@ -46,13 +46,13 @@
 -- In every scene, when gen1-bridge first holds a battle for Cobblemon
 -- (status.battleHeld), the driver reports whether the hidden game plays the
 -- Gen 1 battle theme the battle's kind calls for (KB_HELD music=true|false|
--- none: Music.current against data.audio.battle, src/core/Music.lua:418-425,
+-- none: Music.current against data.audio.battle, src/core/Music.lua:461-468,
 -- :481-485). It prints KB_BATTLE_PUSHED for any native battle screen and
 -- serves until gen1-bridge reports a debug.quit (exit 0) or the time limit
 -- passes (exit 1).
 --
 -- Runs unsandboxed as a POKEPORT_DRIVER coroutine, resumed once per frame
--- (refs/gen1recomp/main.lua:641-645, :993-1011). Data safety: prints only
+-- (refs/gen1recomp/main.lua:755-759, :1136-1157). Data safety: prints only
 -- markers, map and class symbols, cells, dex numbers, levels, counts and
 -- booleans -- never a species, a name, a block id or any text.
 
@@ -153,7 +153,7 @@ local function visible(game, mapId, o)
 end
 
 -- where to stand to talk to an object: a plain cell next to it, or across a
--- counter (the A press reaches over one, OC:2542-2547), facing it
+-- counter (the A press reaches over one, OC:2655-2660), facing it
 local function besideObject(game, mapId, o)
   local m, def = mapQuery(game, mapId)
   if not m then return nil end
@@ -174,8 +174,8 @@ local function besideObject(game, mapId, o)
 end
 
 -- every map trainer of a map beaten, so nobody sights the player
--- (checkTrainerSight skips beaten ones, OC:4372-4420; the header's event,
--- Data:trainerHeader, src/core/Data.lua:425-428); `except` stays unbeaten
+-- (checkTrainerSight skips beaten ones, OC:4506-4554; the header's event,
+-- Data:trainerHeader, src/core/Data.lua:426-429); `except` stays unbeaten
 local function beatTrainers(game, mapId, except)
   local def = game.data.maps[mapId]
   local n = 0
@@ -361,7 +361,7 @@ return function(game)
     if phase == "ready" then
       if status and status.ready then
         status.configure({ port = PORT })
-        -- New Game without Oak's speech (src/core/Game.lua:171-198)
+        -- New Game without Oak's speech (src/core/Game.lua:173-200)
         game:startNewGame({ intro = false })
         phase = "world"
       end

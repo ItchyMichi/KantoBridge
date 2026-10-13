@@ -111,6 +111,43 @@ def test_indoor_rolls_are_suppressed_too():
     assert g.status()["encounterIndoor"] == 4
 
 
+def test_an_outdoor_map_never_rolls_off_grass():
+    """OverworldState.rollsIndoorEncounters (OC:4782-4788, v0.3.85; ENGINE_UPGRADE_PLAN B6): a map
+    with the `outdoor` field (Schemas.lua:1938, what gen1-bridge's route maps declare) is never an
+    indoor-rolling map, whatever its tileset or index -- with a client and without one."""
+    g = BattleGame(start=("WILD_CAVE", 1, 1, "right"))
+    give_starter(g)
+    g.E.ow.map[b"def"].outdoor = True             # (`def` is a Python keyword)
+    roll(g, "indoor", "BIRDMON", 3)
+    Walker(g).walk(["right", "down", "left", "up"])
+    assert not starts(g) and not native_battles(g) and rolls(g, "indoor") == 0
+    assert g.status()["encounterIndoor"] == 0, "the hook never saw an indoor roll"
+    g.peer.close()
+    g.rig.step(3)
+    hold(g, "right")
+    hold(g, "left")
+    assert rolls(g, "indoor") == 0 and not native_battles(g), "nor does the hidden game roll on its own"
+
+
+def test_the_indoor_rule_follows_the_engines():
+    """rollsIndoorEncounters(def, indoor) on plain defs: Map.isOutdoor first (the def's `outdoor`,
+    else the OVERWORLD tileset), then the ROM's index/tileset range when the field data carries it;
+    the made-up maps' `indoor` flag stands in for that range otherwise."""
+    g = BattleGame(start=("WILD_CAVE", 1, 1, "right"))
+    rule = g.E.rollsIndoorEncounters
+    d = g.b.to_lua
+    assert rule(d({"id": "A", "indoor": True}), None) is True
+    assert rule(d({"id": "A", "indoor": True, "outdoor": True}), None) is False
+    assert rule(d({"id": "A", "indoor": True, "tileset": "OVERWORLD"}), None) is False
+    assert rule(d({"id": "A"}), None) is False
+    indoor = d({"firstIndoorMap": 10, "excludedTileset": "FOREST"})
+    assert rule(d({"id": "B", "index": 5, "tileset": "CAVERN"}), indoor) is False, "before the first indoor map"
+    assert rule(d({"id": "B", "index": 12, "tileset": "CAVERN"}), indoor) is True
+    assert rule(d({"id": "B", "index": 12, "tileset": "FOREST"}), indoor) is False, "the excluded tileset"
+    assert rule(d({"id": "B", "index": 12, "tileset": "CAVERN", "outdoor": True}), indoor) is False
+    assert rule(d({"id": "B", "tileset": "CAVERN"}), indoor) is True, "a mod map without an index"
+
+
 def test_without_a_client_the_hidden_game_rolls_and_fights_natively():
     g = route_game()
     g.peer.close()

@@ -1,26 +1,34 @@
 # tools/e2e
 
-End-to-end runs on the **test** Gen1Recomp install, `local/gen1recomp-e2e/`, never the user's own
-`local/gen1recomp/`. They need the pre-flight in docs/PLAN.md §0.6 (the user's ROM import) and run
-only with `--e2e`; without the pre-flight they skip.
+End-to-end runs on the **test** Gen1Recomp install, `local/gen1recomp-e2e-0.3.85/` (the folder named for the
+runner's pinned release, `PINNED`; the unversioned `local/gen1recomp-e2e/` when no versioned folder exists), never
+the user's own `local/gen1recomp/`. They need the pre-flight in docs/PLAN.md §0.6 (the user's ROM import, made by
+the pinned release: an import from another release is stale) and run only with `--e2e`; without the pre-flight they
+skip. The install's Union Room must be off (ENGINE_UPGRADE_PLAN U3; `kb_union_off.lua` below does it headlessly).
 
 On Linux (the RunPod dev pod, which holds no instance of the user's own) the test install is the official release's
-extracted AppImage in `local/gen1recomp-linux/` with `local/gen1recomp-data/` as its `XDG_DATA_HOME` (the game's
-folder, imports and mods, is `local/gen1recomp-data/pokemon-love2d/`); it needs an X server (Xvfb) in `DISPLAY`. The
-pod's network disk makes gen1-bridge's first export build take many minutes (Windows: about 10 s).
+extracted AppImage in `local/gen1recomp-linux-0.3.85/` with `local/gen1recomp-data-0.3.85/` as its `XDG_DATA_HOME`
+(the game's folder, imports and mods, is `local/gen1recomp-data-0.3.85/pokemon-love2d/`; the unversioned
+`local/gen1recomp-linux/` and `local/gen1recomp-data/` when the versioned ones don't exist, so two releases sit side
+by side); it needs an X server (Xvfb) in `DISPLAY`. The environment overrides `KB_GEN1RECOMP_INSTALL` (the Windows
+install), `KB_GEN1RECOMP_APP` (the extracted AppImage) and `KB_GEN1RECOMP_HOME` (its data home) win over both names.
+The pod's network disk makes gen1-bridge's first export build take many minutes (Windows: about 10 s).
 
 - `run_gen1recomp.py` launches the test install in driver mode (`POKEPORT_DRIVER`) with stdout piped,
   and **prints only safe lines**: our drivers' `KB_` markers, gen1-bridge's own `[gen1-bridge]` log
   lines, the engine's `loaded mod gen1-bridge` line, and only the `file.lua:NN` locations of Lua
   errors and of other engine lines that mention the mod (`KB_ENGINE_NOTE`). Everything else is
   counted and hashed. It checks the install by file names only and never opens anything under
-  `local/`. `--report` writes a counts-only summary to `local/reports/e2e_<driver>.json`.
+  `local/`. `--report` writes a counts-only summary to `local/reports/e2e_<driver>.json`. A run that
+  times out with nothing printed carries a hint that the import may be stale: an import made by
+  another Gen1Recomp release stops at the launcher's re-import prompt (ENGINE_UPGRADE_PLAN B1).
   - `run(driver, ...)` waits for the game to exit; `launch(driver, ...)` returns at once, so a test
     can wait for a marker (`wait_marker`), talk to gen1-bridge over TCP, then `wait()` for the exit.
     Leaving `with launch(...)` kills the game if it is still running.
   - M10: `launch_plain(...)` starts the test install **without** a driver, so the engine's own paced
     main loop runs as it does for a player (a driver turns frame pacing off and steps once per frame,
-    refs/gen1recomp/main.lua:1637-1642). Its stdout stays block-buffered, so a test talks to
+    refs/gen1recomp/main.lua:1776-1781; `POKEPORT_DRIVER_PACED=1`, new in v0.3.85, keeps the engine's
+    own pacing under a driver). Its stdout stays block-buffered, so a test talks to
     gen1-bridge over TCP (finding its port from the process's own listening socket) instead of
     waiting for markers, and kills the game at the end (it never saves anything).
 - `drivers/*.lua` are our own driver scripts (unsandboxed, run inside the engine's `main.lua`). A
@@ -29,8 +37,9 @@ pod's network disk makes gen1-bridge's first export build take many minutes (Win
 
 | Driver | Test | What it checks |
 |---|---|---|
-| `kb_ready.lua` | `test_s5_ready.py` | Spike S5: the mod loads in the real loader and reports ready after `game.ready` |
-| `kb_handshake.lua` | `test_handshake.py` | M1: on a test port (27199), after New Game without the intro, `fake_minecraft` gets `hello.ok` (protocol 1, engine 0.3.49, the imported game), a valid `snapshot`, pongs, reconnects to the same session, reads `debug.status` (display options pinned) and quits the game with `debug.quit` |
+| `kb_ready.lua` | `test_s5_ready.py` | Spike S5: the mod loads in the real loader and reports ready after `game.ready`. `KB_READY` ends with `missing=<n>` (the engine modules and members of `Engine.REQUIRED` that gen1-bridge found absent, from `debug.status.engineMissing`) and `union_room=<on\|off>` (`debug.status.unionRoom`); the test asserts `missing=0 union_room=off` |
+| `kb_union_off.lua` | (by hand, once per install) | ENGINE_UPGRADE_PLAN U3: switches Gen1Recomp's Union Room setting off through the engine's own `SaveData.loadOptions`/`saveOptions` (`unionRoom = false` in `options.lua`) and quits, for the headless pod, where the launcher's option can't be clicked. Prints `KB_UNION_OFF ok=<bool> was=<on\|off> patched_this_boot=<bool>`: the boot it runs in keeps whatever it loaded; the next one starts with vanilla Pokémon Centers |
+| `kb_handshake.lua` | `test_handshake.py` | M1: on a test port (27199), after New Game without the intro, `fake_minecraft` gets `hello.ok` (protocol 1, engine 0.3.85, the imported game), a valid `snapshot`, pongs, reconnects to the same session, reads `debug.status` (display options pinned) and quits the game with `debug.quit` |
 | `kb_reload.lua` | `test_hot_reload.py` | M1: an F5-style hot reload closes the old instance's connection at once, the new instance binds the same port (27198) cleanly, and a reconnect gets a new session |
 | `kb_export.lua` | `test_export.py` | M2: at the title screen, on port 27197, a `builder` connection gets `export.index` and every resource; all messages pass their schemas (strict), every resource passes its export schema, every hash and size matches Python's canonical JSON + SHA-256, the counts match Kanto (222 maps, 36 surface maps whose 78 directed connection edges all agree with the layout, 24 tilesets, 151 species, ...). The driver measures the longest frame while the export builds. Writes the counts-only `local/reports/export_report.json` (counts, ids, sizes, times and the index hash; no data) |
 | `kb_walk.lua` | `test_walk.py` | M3: on port 27196, after New Game without the intro, the test fetches three maps' cell flags as a `builder` (kept in memory, never printed), then as `test` walks with `move.step` (each step sent as soon as the one before starts): onto the upstairs stairs (`warp` kind `stairs`), onto the exit mat downstairs (kind `edge`), into a wall as a push (`player.blocked` `tile`), back through the house door (kind `door`) and a push against the mat (kind `edge`, the push answered by a `sync`). Every `move.step` is answered exactly once with its `n`, steps sent while walking chained on the landing poll (`moveChained`), `map.entered` fired for each warp (the driver's `KB_MAP_ENTERED map=<symbol> via=<word>` markers), every message passed its schema. Prints only types, kinds, counts, map symbols and step counts |

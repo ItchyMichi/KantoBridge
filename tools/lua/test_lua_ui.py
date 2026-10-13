@@ -216,6 +216,162 @@ def test_a_builder_cannot_answer():
     assert errors(g) == [("role", seq)] and not g.received("ui.open")
 
 
+# ------------------------------------------------------------ text: the v0.3.85 rules (ENGINE_UPGRADE_PLAN B3)
+
+
+def updates(g, ui=1):
+    return [m["data"] for m in g.received("ui.update") if m["data"]["ui"] == ui]
+
+
+def test_a_scrolled_line_after_a_lone_row_shows_under_a_blank_row():
+    """TextBox:beginLine (:386-401): Gen 1's fixed two-row box scrolls a lone first row out when
+    the next line is a cont, so the box shows a blank row and the new line; visibleText (:404-412)
+    maps shownSource to the page's lines."""
+    g = Game()
+    box = g.push(g.E.textBox(g.s("FIRST\vSECOND\vTHIRD"), g.opts()))
+    g.run()
+    assert list(box.shownSource.values()) == [1]
+    g.send("ui.advance", {"ui": 1})
+    g.until(lambda m: m["type"] == "ui.update" and m["data"].get("line") == 1)
+    assert list(box.shownSource.values()) == [False, 2], "the lone row scrolled out, a blank one above"
+    assert [v.decode() for v in box.visibleText(box).values()] == ["", "SECOND"]
+    g.send("ui.advance", {"ui": 1})
+    g.until(lambda m: m["type"] == "ui.update" and m["data"].get("line") == 2)
+    assert list(box.shownSource.values()) == [2, 3], "two rows in view: no blank"
+    assert [v.decode() for v in box.visibleText(box).values()] == ["SECOND", "THIRD"]
+
+
+def test_a_choice_question_reads_the_rows_in_view():
+    g = Game()
+    answers = []
+    g.push(g.E.textBox(g.s("THE LONG\vQUESTION?"), g.opts(choice=lambda yes: answers.append(yes))))
+    g.run()
+    g.send("ui.advance", {"ui": 1})  # the scroll
+    choice = g.until(lambda m: m["type"] == "ui.open" and m["data"]["kind"] == "choice")
+    # the first row scrolled out of the fixed two-row box; the blank row adds no words
+    assert choice["data"]["question"] == "QUESTION?"
+    g.send("ui.back", {"ui": 2})
+    g.until(lambda m: m["type"] == "ui.close" and m["data"]["ui"] == 1)
+    assert answers == [False]
+
+
+def test_an_instant_box_holds_the_pages_last_rows():
+    g = Game()
+    box = g.push(g.E.textBox(g.s("ONE\nTWO\nTHREE"), g.opts(instant=True)))
+    g.run()
+    assert list(box.shownSource.values()) == [2, 3]
+    assert [v.decode() for v in box.visibleText(box).values()] == ["TWO", "THREE"]
+    box2 = g.push(g.E.textBox(g.s("ALONE\vLAST"), g.opts(instant=True)))
+    g.run()
+    assert list(box2.shownSource.values()) == [False, 2], "a cont after a lone row: the blank row again"
+
+
+@pytest.mark.parametrize("text, arrow", [("ALL DONE{DONE}", False), ("ALL DONE{PROMPT}", True), ("ALL DONE", True)])
+def test_a_done_ending_takes_its_press_without_the_arrow(text, arrow):
+    """TextBox.new (:150-157): a {DONE} ending sets waitButton, which arrowVisible (:435) hides the
+    arrow for; the press still closes the box (:636-643), so an advance taps A all the same."""
+    g = Game()
+    box = g.push(g.E.textBox(g.s(text), g.opts()))
+    g.run()
+    (op,) = opened(g)
+    assert op["pages"] == [["ALL DONE"]], "the ending token never reaches the box"
+    done = g.until(lambda m: m["type"] == "ui.update" and m["data"].get("done") is True)
+    assert done["data"].get("waiting", False) is arrow
+    assert bool(box.waitButton) is (not arrow) and box.arrowVisible(box) is arrow
+    g.send("ui.advance", {"ui": 1})
+    g.until(lambda m: m["type"] == "ui.close")
+    assert g.tapped() == ["a"] and g.depth() == 1
+
+
+def test_a_caller_may_hold_a_prompt_ending_for_its_own_press():
+    g = Game()
+    box = g.push(g.E.textBox(g.s("HELD{PROMPT}"), g.opts(waitButton=True)))
+    g.run()
+    done = g.until(lambda m: m["type"] == "ui.update" and m["data"].get("done") is True)
+    assert done["data"]["waiting"] is True and box.waitButton is False, "{PROMPT} wins over the caller"
+
+
+def test_stay_press_takes_one_press_with_no_arrow():
+    """TextBox:update (:541-548): stay.press waits for A/B like stay.prompt but shows no arrow
+    (arrowVisible :434-440); the box then stays up."""
+    g = Game()
+    shown = []
+    g.push(g.E.textBox(g.s("PRESS TO GO ON"), g.opts(stay={"press": True, "onShown": lambda box: shown.append(1)})))
+    g.run()
+    (op,) = opened(g)
+    assert "stay" not in op, "its end takes a press"
+    done = g.until(lambda m: m["type"] == "ui.update" and m["data"].get("done") is True)
+    # ui.update carries only the parts that moved (kb_ui.lua, `e.sent`): waiting never left false
+    assert done["data"].get("waiting", False) is False, "no arrow"
+    g.run(5)
+    assert g.tapped() == [] and not shown
+    g.send("ui.advance", {"ui": 1})
+    g.run(3)
+    assert g.tapped() == ["a"] and g.top().stayShown and shown == [1] and g.depth() == 2
+    assert not any(u.get("waiting") for u in updates(g)), "never an arrow"
+    assert updates(g)[-1] == {"ui": 1, "waiting": False} or updates(g)[-1].get("done") is True
+
+
+def test_auto_prompt_first_takes_one_press_then_closes_itself():
+    """TextBox:update (:559-563): auto.promptFirst waits out one arrowed press, then the auto delay
+    runs and the box pops itself (:603-621)."""
+    g = Game()
+    g.push(g.E.textBox(g.s("ONE PRESS"), g.opts(auto={"promptFirst": True, "delay": 4})))
+    g.run()
+    (op,) = opened(g)
+    assert "auto" not in op, "its end takes a press"
+    done = g.until(lambda m: m["type"] == "ui.update" and m["data"].get("done") is True)
+    assert done["data"]["waiting"] is True, "the arrow for the one press"
+    g.run(10)
+    assert g.depth() == 2 and g.tapped() == []
+    g.send("ui.advance", {"ui": 1})
+    g.until(lambda m: m["type"] == "ui.close", limit=20)
+    assert g.tapped() == ["a"] and g.depth() == 1
+    assert [u.get("waiting") for u in updates(g)][-1] is False, "no arrow during the auto delay"
+
+
+def test_a_sound_effect_holds_a_finished_box():
+    """TextBox:sfxHeld (:415-420) over Sound.sfxBusy: a box with sfxWait neither shows its arrow
+    (:429) nor takes the press (:636) until the effect is over; the wait then clears."""
+    g = Game()
+    g.E.sfxBusyFrames = 12
+    box = g.push(g.E.textBox(g.s("DING!"), g.opts(sfxWait=True)))
+    g.run()
+    done = g.until(lambda m: m["type"] == "ui.update" and m["data"].get("done") is True)
+    assert done["data"].get("waiting", False) is False and box.sfxWait is True
+    g.send("ui.advance", {"ui": 1})
+    g.run(5)
+    assert g.tapped() == [] and g.depth() == 2, "held while the effect plays"
+    arrow = g.until(lambda m: m["type"] == "ui.update" and m["data"].get("waiting") is True, limit=20)
+    assert arrow["data"] == {"ui": 1, "waiting": True} and box.sfxWait is None
+    g.until(lambda m: m["type"] == "ui.close", limit=20)
+    assert g.tapped() == ["a"]
+
+
+def test_a_sound_effect_holds_a_scroll_too():
+    g = Game()
+    g.E.sfxBusyFrames = 10
+    box = g.push(g.E.textBox(g.s("ONE\fTWO"), g.opts(sfxWait=True)))
+    g.run()
+    g.send("ui.advance", {"ui": 1})
+    g.run(12)
+    assert box.waiting and box.preWait == 0 and g.tapped() == [], "the arrow would be up, the effect holds it"
+    g.until(lambda m: m["type"] == "ui.update" and m["data"].get("page") == 1, limit=30)
+    assert g.tapped() == ["a"]
+
+
+def test_no_letter_delay_prints_a_line_a_frame():
+    """TextBox:update (:687-689): noLetterDelay makes the typewriter's delay 0, a whole line a frame."""
+    g = Game()
+    slow = g.push(g.E.textBox(g.s("ABCDEFGHIJ\nKLMNOPQRST"), g.opts()))
+    g.run(4)
+    assert slow.charIndex == 4 and not slow.done
+    g.E.uiPop()
+    fast = g.push(g.E.textBox(g.s("ABCDEFGHIJ\nKLMNOPQRST"), g.opts(noLetterDelay=True)))
+    g.run(2)
+    assert fast.done and fast.lineIndex == 2, "two lines, two frames"
+
+
 # ------------------------------------------------------------ YES/NO
 
 
@@ -727,7 +883,9 @@ def test_status_counts_ui_work():
     st = g.status()
     assert (st["uiOpened"], st["uiClosed"], st["uiOpen"]) == (1, 1, 0)
     assert st["uiactBacks"] == 1 and st["uiactButtons"] == 1 and st["screenEvents"] >= 2
-    assert all(isinstance(v, (int, bool)) for k, v in st.items() if k not in ("mode", "topState"))
+    # the words: mode, topState, unionRoom ("on"/"off"); the list: engineMissing (UP1)
+    assert all(isinstance(v, (int, bool)) for k, v in st.items()
+               if k not in ("mode", "topState", "unionRoom", "engineMissing"))
 
 
 def test_logs_never_carry_ui_text():

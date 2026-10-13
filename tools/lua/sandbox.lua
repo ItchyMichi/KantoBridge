@@ -1,11 +1,13 @@
 -- Test copy of the environment Gen1Recomp gives a mod's code, so gen1-bridge
 -- runs under lupa with the same globals it gets in game.
 --
--- Mirrors refs/gen1recomp/src/mods/Sandbox.lua in the pinned v0.3.49:
+-- Mirrors refs/gen1recomp/src/mods/Sandbox.lua in the pinned v0.3.85:
 --   baseGlobals        :172-185   (the global list, per-mod copies, safe os)
 --   require deny lists :25-89, :239-254
 --   load / loadstring  :203-232   (string or reader, no bytecode, mod env)
 --   envFor             :256-276   (love facade, _G = env)
+-- (unchanged since the previous pin, v0.3.49; the tag added only Sandbox.evalData, :296-304,
+-- which the loader uses for data files and no mod environment sees).
 -- Re-check it whenever the Gen1Recomp pin changes.
 --
 -- Deliberately stricter in one way: the engine also adds LegacyCompat shims
@@ -145,7 +147,7 @@ function Sandbox.import(env, source, rel)
   return chunk()
 end
 
--- Runs an entry chunk the way the loader does (src/mods/Loader.lua:1793-1803):
+-- Runs an entry chunk the way the loader does (src/mods/Loader.lua:1867-1877):
 -- chunk(api), and if that returns a function, call it with api too.
 function Sandbox.runEntry(env, source, rel, api)
   local chunk, err = compile(source, "@" .. rel, env)

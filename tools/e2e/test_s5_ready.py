@@ -22,10 +22,14 @@ def test_s5_driver_reports_ready():
     facts = result.facts("KB_READY")
     assert facts, result.lines
     assert facts["state"] == "loaded"
-    assert facts["engine"] == "0.3.49" and facts["status_engine"] == "0.3.49"
+    assert facts["engine"] == "0.3.85" and facts["status_engine"] == "0.3.85"
     # 30 modules since M10 (lib/kb_perf.lua); tools/lua/test_lua_sandbox_main.py lists them
     assert facts["bridge"] == "0.1.0" and facts["protocol"] == "1" and facts["modules"] == "30"
     assert facts["mod_errors"] == "0"
+    # ENGINE_UPGRADE_PLAN G1: every engine member lib/kb_engine.lua relies on is present, and the
+    # Union Room (which rewrites the Centers the export never sees) is off: drivers/kb_union_off.lua sets it
+    assert facts["missing"] == "0", facts
+    assert facts["union_room"] == "off", facts
     assert "[info] [gen1-bridge] gen1-bridge loaded" in result.lines
     assert any(line.startswith("[info] [gen1-bridge] game.ready ") for line in result.lines)
     assert not result.crash_log_touched

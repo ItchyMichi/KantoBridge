@@ -193,7 +193,7 @@ class Bridge:
         self._clock[b"perCall"] = value
 
     def ready(self):
-        """Emits game.ready with the fake game, as Game:load does (Game.lua:119)."""
+        """Emits game.ready with the fake game, as Game:load does (Game.lua:121)."""
         payload = self.table()
         payload[b"game"] = self.engine.game if self.engine is not None else self.table()
         self.emit("game.ready", payload)
@@ -237,7 +237,7 @@ class Bridge:
         for _ in range(n):
             self.now = self.now + self.STEP
             if self.engine is not None:
-                # Game.logicStep counts fixed steps before input.step runs (Game.lua:311-321)
+                # Game.logicStep counts fixed steps before input.step runs (Game.lua:313-323)
                 gm = self.engine.GameModule
                 gm[b"logicStep"] = (gm[b"logicStep"] or 0) + 1
             self.FakeMod.call(self.mod, b"input.step", vanilla, game, self.STEP)
@@ -262,7 +262,7 @@ class Bridge:
         (E.restartProcess, which also closes the old instance's sockets as the OS would and
         leaves the title up with a boot skeleton); main.lua runs again in a fresh sandbox env with
         a fresh mod object: mods.loaded, save.created for the skeleton, then game.ready, in
-        Game:load's order (src/core/Game.lua:41-119)."""
+        Game:load's order (src/core/Game.lua:43-121)."""
         save = self.engine.restartProcess()
         self.env = self.Sandbox.env(self._env_opts)
         self.mod = self.FakeMod.new(self._mod_opts)

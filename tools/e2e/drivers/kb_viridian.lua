@@ -4,12 +4,12 @@
 -- src/pokemon/Party.lua:7-13, the OT stamped as gifts are,
 -- BattleState.stampOT :698-705), the story flags that make the Viridian
 -- Mart a shop (the parcel delivered: data/scripts/story.lua:12-66), a bag
--- through the engine's own Bag.add (src/inventory/Bag.lua:139-164), and
+-- through the engine's own Bag.add (src/inventory/Bag.lua:443-460), and
 -- walks it into a scene through the supported mod.world facade
 -- (WorldAPI:warpTo, src/world/WorldAPI.lua:358-370): first onto
 -- VIRIDIAN_CITY below the scene building's door, so the engine remembers
 -- the town as the outdoor side (OverworldState:startWarpTo,
--- OC:5411-5425: lastOutdoor, which the nurse's lastHeal keeps, OC:3850-3857),
+-- OC:5512-5515, rememberOutdoor: lastOutdoor, which the nurse's lastHeal keeps, OC:3987-3994),
 -- then into the building. The scene (KB_SCENE, environment) is:
 --
 --   story  in VIRIDIAN_POKECENTER across the counter from the nurse
@@ -17,34 +17,34 @@
 --          (save.lastHeal changes) it prints KB_HEALED with lastHeal's map and
 --          town. Once gen1-bridge reports a session.bind (status.sessionBinds)
 --          and the world is idle (Game:quickSaveAllowed, src/core/Game.lua
---          :1353-1369), it warps beside a map trainer's line of sight
+--          :1387-1405), it warps beside a map trainer's line of sight
 --          (KB_SCENE scene=trainer_a); once that trainer is beaten, then
 --          talked to (world.interacted) and the world idle, beside a second
 --          one (KB_SCENE scene=trainer_b).
 --   pc     in VIRIDIAN_POKECENTER facing the PC tile
---          (field.hiddenExtras.pcTiles, OC:2826-2841): KB_SCENE scene=pc
+--          (field.hiddenExtras.pcTiles, OC:2938-2953): KB_SCENE scene=pc
 --   mart   in VIRIDIAN_MART across the counter from the clerk:
 --          KB_SCENE scene=mart
 --
 -- Trainers are found with the engine's own data and queries, nothing
 -- printed but symbols, cells and counts: a visible (objectVisible,
--- OC:227-242), unbeaten STAY trainer facing a pinned direction (NPC.new,
--- src/world/NPC.lua:46-58) with a header range of 2 or more
--- (Data:trainerHeader, src/core/Data.lua:425-428), a line of plain
+-- OC:232-247), unbeaten STAY trainer facing a pinned direction (NPC.new,
+-- src/world/NPC.lua:53-65) with a header range of 2 or more
+-- (Data:trainerHeader, src/core/Data.lua:426-429), a line of plain
 -- walkable cells 2..min(range, 3) long (checkTrainerSight's rules,
--- OC:4372-4420: a straight line, on screen), and a free cell beside the
+-- OC:4506-4554: a straight line, on screen), and a free cell beside the
 -- line's end that no trainer can see, from which one step enters the line.
 -- Maps with entry or step scripts (MapScripts.get) are skipped.
 --
 -- Markers: KB_SAVE_WRITTEN n=<count> for every save.writing (Game:writeSave
--- emits it, src/core/Game.lua:1342-1345), KB_BLACKOUT for world.blacked_out,
+-- emits it, src/core/Game.lua:1376-1378), KB_BLACKOUT for world.blacked_out,
 -- KB_BATTLE_PUSHED for a native battle screen, KB_SCREEN_PUSHED id=<screen
 -- id> for the ShopMenu, BoxMenu and PlayerPC screens. It serves until
 -- gen1-bridge reports a debug.quit (exit 0) or the time limit passes
 -- (exit 1).
 --
 -- Runs unsandboxed as a POKEPORT_DRIVER coroutine, resumed once per frame
--- (refs/gen1recomp/main.lua:641-645, :993-1011). Data safety: prints only
+-- (refs/gen1recomp/main.lua:755-759, :1136-1157). Data safety: prints only
 -- markers, map, flag, class and item symbols, NPC ids, cells and counts --
 -- never a species, a name, a price or any text.
 
@@ -253,7 +253,7 @@ return function(game)
   local arrived = false
   local saves, pushedBattles = 0, 0
   local healSeen, target, trainers
-  local talkedTo = {} -- npc ids talked to (world.interacted, OC:2532-2535)
+  local talkedTo = {} -- npc ids talked to (world.interacted, OC:2645-2648)
   local beatenSeen = false
   local Runtime = require("src.mods.Runtime")
   Runtime.events:on("save.writing", function()
@@ -301,7 +301,7 @@ return function(game)
     if phase == "ready" then
       if status and status.ready then
         status.configure({ port = PORT })
-        -- New Game without Oak's speech (src/core/Game.lua:171-198)
+        -- New Game without Oak's speech (src/core/Game.lua:173-200)
         game:startNewGame({ intro = false })
         phase = "world"
       end

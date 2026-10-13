@@ -28,7 +28,7 @@
 --
 -- written through a .tmp copy and kept with a .bak, so a launcher can read it
 -- too: gen1recomp.exe --game=blue --slot=slot2 (the id form: a bare number is
--- a 1-based list index, src/core/LaunchOptions.lua:347-372).
+-- a 1-based list index, src/core/LaunchOptions.lua:349-374).
 --
 -- What a bind does:
 --   * multiplayer: the world's slot, created on its first bind (a new empty

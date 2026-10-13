@@ -142,7 +142,7 @@ async def _crash1(port, running):
 
     # b. the test's own connection; the world's own slot at the title, then a New Game there
     mc, ok, snap = await connect(port)
-    report["hello_ok"] = {"tested": ok.get("tested") == ok["engine"] == "0.3.49", "ingame": snap["ingame"]}
+    report["hello_ok"] = {"tested": ok.get("tested") == ok["engine"] == "0.3.85", "ingame": snap["ingame"]}
     bound, seq = await bind(mc)
     report["bound_title"] = {"switched": bound["data"]["switched"], "re": bound["re"] == seq,
                              "slot": bound["data"]["slot"]}

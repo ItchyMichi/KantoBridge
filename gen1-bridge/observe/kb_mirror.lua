@@ -8,10 +8,10 @@
 --
 -- Capture (P2 1.7, recipe A): main.lua wraps render.output_enabled to
 -- answer true only while a client is subscribed (the engine then composes
--- the frame into a full-window canvas, Renderer.lua:942-962), and wraps
+-- the frame into a full-window canvas, Renderer.lua:990-1010), and wraps
 -- render.output as a pure observer: it captures, then returns next(ctx)
 -- unchanged, so the engine presents the frame exactly as before
--- (Renderer.lua:1383-1419). It never hides a state, never takes the output
+-- (Renderer.lua:1437-1473). It never hides a state, never takes the output
 -- over and never writes a file (P2 9).
 --
 -- One capture: the game rectangle (gameX/Y/Width/Height of ctx.canvas,

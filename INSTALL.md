@@ -22,8 +22,8 @@ importer does that.
 - **Minecraft: Java Edition.** The development setup downloads Minecraft 1.21.1, Fabric Loader 0.19.5, Fabric API
   0.116.17 and Cobblemon 1.8.1 through Gradle by itself ([`docs/VERSIONS.md`](docs/VERSIONS.md)).
 - **Your own Pokémon Red or Blue ROM**, legally obtained.
-- **Gen1Recomp v0.3.49**, the Windows release zip, **only** from
-  https://github.com/bryanthaboi/gen1recomp/releases/tag/v0.3.49. `gen1recomp[.]com` is an impersonation site: never
+- **Gen1Recomp v0.3.85**, the Windows release zip, **only** from
+  https://github.com/bryanthaboi/gen1recomp/releases/tag/v0.3.85. `gen1recomp[.]com` is an impersonation site: never
   download anything from it.
 
 ## 1. Get the code
@@ -53,11 +53,11 @@ lands in `fabric-bridge\build\libs\kantobridge-0.1.0.jar`; the development clien
 
 ## 3. Set up Gen1Recomp, the hidden game
 
-1. **Download** `gen1recomp-0.3.49-windows.zip` from the release above and check it. Its SHA-256 must be
-   `7816b1fd93a06197aa395658f73d7e8087ee6421b3da6452f7be8ff69f3ae878`:
+1. **Download** `gen1recomp-0.3.85-windows.zip` from the release above and check it. Its SHA-256 must be
+   `20cff4a16cf7235d224fe6dc32c0490f482a9d768d29a194bae5fff93c82c53a`:
 
    ```powershell
-   Get-FileHash .\gen1recomp-0.3.49-windows.zip -Algorithm SHA256
+   Get-FileHash .\gen1recomp-0.3.85-windows.zip -Algorithm SHA256
    ```
 
    (or `.\tools\installer\install.ps1 -Verify <path to the zip> -Id gen1recomp`).
@@ -74,7 +74,17 @@ lands in `fabric-bridge\build\libs\kantobridge-0.1.0.jar`; the development clien
 
    (A junction keeps it up to date with the repository. Remove it only with `rmdir`, never by deleting through it.)
 5. **Import your ROM:** start `local\gen1recomp\gen1recomp.exe` on its own. Its launcher opens; import your own Red or
-   Blue ROM there, then close it.
+   Blue ROM there (a zipped or 7z ROM can be imported as it is). An import made by an older Gen1Recomp release is
+   stale and must be redone: the launcher asks to re-import.
+6. **Switch the Union Room off**, in the same launcher: **Launcher Options → Union Room → OFF**, then close Gen1Recomp
+   and start it again once (the setting applies from the next start). Every Kanto Bridge install runs with it off: it
+   is on by default and adds a floor to every Pokémon Center that the Minecraft world doesn't have. While it is on,
+   the bridge refuses to export and Minecraft shows a notice saying what to switch off.
+
+Upgrading from the previous pin (v0.3.49, until 2026-10-13): set v0.3.85 up in a fresh folder the same way and import your ROM
+again (the release changed its import cache for every game); copy your saves (`save.lua`, `options.lua`, the slot
+files and `mod_cache\`) from the old folder before the first start, never the ROM cache, and keep the old folder until
+you have played on the new one.
 
 Gen1Recomp's window has to stay open while you play (it plays the sound, too), but it can sit behind Minecraft or be
 minimised: it keeps full speed.
@@ -155,8 +165,8 @@ Texture packs that change Kanto's look are ordinary resource packs with a small 
 
 Each player needs their own Gen1Recomp install with their own ROM:
 
-1. Set up a second install the same way in `local\gen1recomp-p2\` (its own `portable.txt`, mod link and ROM import),
-   and in its mod manager (F10) set BRIDGE PORT to 27152.
+1. Set up a second install the same way in `local\gen1recomp-p2\` (its own `portable.txt`, mod link, ROM import and
+   Union Room off), and in its mod manager (F10) set BRIDGE PORT to 27152.
 2. Build the world once as above (**Create Kanto world**; it lands in `local\minecraft\saves\Kanto`), then close
    Minecraft.
 3. Create `local\minecraft\eula.txt` containing `eula=true` (you accept Minecraft's EULA), and
@@ -198,7 +208,8 @@ More: [`docs/PLAYTEST.md`](docs/PLAYTEST.md) (what to check), [`docs/PROGRESS.md
 1. `.\tools\setup.ps1` creates the project's Python venv in `tools\.venv` (Python 3.12, wheels only).
 2. `.\tools\check.ps1` runs every automated test: pytest, then the Gradle build with its JUnit tests and GameTests.
    Set `KB_JAVA_HOME` to your JDK 21 first. `-NoGradle` skips Gradle; `-E2E` adds the end-to-end tests, which need a
-   separate Gen1Recomp test install in `local\gen1recomp-e2e\` set up like the one above.
+   separate Gen1Recomp test install in `local\gen1recomp-e2e\` (or `local\gen1recomp-e2e-0.3.85\`, which the runner
+   prefers when it exists) set up like the one above, Union Room off included.
 
 How the project is organised and worked on: [`CLAUDE.md`](CLAUDE.md), [`tools/README.md`](tools/README.md),
 [`docs/ROADMAP.md`](docs/ROADMAP.md).

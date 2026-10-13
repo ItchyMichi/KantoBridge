@@ -194,7 +194,7 @@ function SimMap:warpAtCell(x, y)
   return self.warpAt[y * self.widthCells + x]
 end
 function SimMap:ledgeAt(x, y) return LEDGES[self:char(x, y)] end
--- C: a counter tile, which the A press reaches across (OC:2542-2547)
+-- C: a counter tile, which the A press reaches across (OC:2655-2660)
 function SimMap:isCounterCell(x, y) return self:char(x, y) == "C" end
 
 -- ------------------------------------------------------------ the simulation
@@ -290,7 +290,7 @@ function FakeWorld.attach(E)
     list[#list + 1] = { entity = entity, dir = dir, remaining = tiles, onDone = onDone }
   end
   E.scriptMove = scriptMove
-  -- OverworldState:marchInPlace: one walk-in-place beat (OC:5667-5671)
+  -- OverworldState:marchInPlace: one walk-in-place beat (OC:5826-5830)
   function E.marchInPlace(entity, onDone)
     local list = E.ow.scriptMoves
     list[#list + 1] = { entity = entity, inPlace = true, remaining = 1, onDone = onDone }
@@ -303,7 +303,7 @@ function FakeWorld.attach(E)
     w.map = sim.maps[mapId]
     w.strengthActive = false
     -- M8 (fake_field.lua): Cut regrowth, the card-key stamps, darkness, the
-    -- slope flag, in setMap's order (OC:479-515)
+    -- slope flag, in setMap's order (OC:486-522)
     if E.onMapLoad then E.onMapLoad(mapId, opts) end
     w.npcs = npcsFor(mapId)
     p.cellX, p.cellY = x, y
@@ -315,7 +315,7 @@ function FakeWorld.attach(E)
       mapId = mapId, map = w.map, fromMapId = from,
       via = opts.via or (opts.seamless and "connection") or (from and "warp" or "boot"),
     })
-    -- the map's onEnter hook (OC:695-707; fake_field.lua's E.mapScripts)
+    -- the map's onEnter hook (OC:694-706; fake_field.lua's E.mapScripts)
     if E.onMapEnter then E.onMapEnter(mapId, from) end
   end
 
@@ -527,7 +527,7 @@ function FakeWorld.attach(E)
         local result = tryMove(dir)
         E.lastTry = result
         -- a step from the water onto land ends the surf (stopSurfingOntoLand,
-        -- OC:1739, :3283-3290)
+        -- OC:1852, :3395-3402)
         if result == "moved" and p.surfing and w.map:isWalkableCell(p.targetX, p.targetY) then
           p.surfing = false
         end
@@ -568,7 +568,7 @@ function FakeWorld.attach(E)
     if not n.moving then return end
     n.progress = n.progress + 1
     if n.marching then
-      -- a walk-in-place beat: no translation (NPC.lua:116-124)
+      -- a walk-in-place beat: no translation (NPC.lua:123-131)
       if n.progress >= (n.stepFrames or 32) then n.progress, n.moving, n.marching = 0, false, false end
       return
     end
@@ -622,7 +622,7 @@ function FakeWorld.attach(E)
     emit("world.stepped", { mapId = w.map.id, x = p.cellX, y = p.cellY })
     if p.surfing and w.map:isWalkableCell(p.cellX, p.cellY) then p.surfing = false end
     -- M8 (fake_field.lua): a map's onStep, spinners and Seafoam currents
-    -- (OC:4689-4710)
+    -- (OC:4831-4852)
     if E.stepHooks and E.stepHooks() then return end
     w.boulderTried = nil
     local entry = w.warpEntryCell
@@ -647,7 +647,7 @@ function FakeWorld.attach(E)
 
   local function owUpdate()
     local w, p = ow(), player()
-    -- the script runner's frame waits and condition polls (OC:1297;
+    -- the script runner's frame waits and condition polls (OC:1416;
     -- ScriptRunner:update, src/script/ScriptRunner.lua:290-308)
     if w.runner and type(w.runner.update) == "function" then w.runner:update() end
     p.onBike = E.save.onBike
@@ -655,7 +655,7 @@ function FakeWorld.attach(E)
       w.dustAnim.frames = w.dustAnim.frames - 1
       if w.dustAnim.frames <= 0 then w.dustAnim = nil end
     end
-    -- the Cut tree's split (startCutTreeAnim, OC:3355-3362; M8)
+    -- the Cut tree's split (startCutTreeAnim, OC:3467-3474; M8)
     if w.cutAnim then
       w.cutAnim.frames = w.cutAnim.frames - 1
       if w.cutAnim.frames <= 0 then w.cutAnim = nil end
@@ -692,7 +692,7 @@ function FakeWorld.attach(E)
     if w.emote then
       w.emote.frames = w.emote.frames - 1
       if w.emote.frames <= 0 then
-        -- the hold's continuation runs when it ends (OC:1510-1527)
+        -- the hold's continuation runs when it ends (OC:1629-1646)
         local done = w.emote.onDone
         w.emote = nil
         if done then done() end
@@ -700,7 +700,7 @@ function FakeWorld.attach(E)
       playerUpdate()
       return
     end
-    -- the Pokemon Center's machine holds the world (OC:1348-1360; M7,
+    -- the Pokemon Center's machine holds the world (OC:1467-1479; M7,
     -- fake_center.lua)
     if w.healAnim then
       w.healAnim.frames = w.healAnim.frames - 1
@@ -715,7 +715,7 @@ function FakeWorld.attach(E)
     updateScriptMoves()
     local scripted = w.runner:isRunning() or #w.scriptMoves > 0 or (w.hopLand or 0) > 0
       or w.engaging or w.emote or w.teleportOut or (w.dustAnim and w.dustAnim.boulder) or w.cutAnim
-    -- trainers' sight before the player's input (OC:1553-1566; M7,
+    -- trainers' sight before the player's input (OC:1672-1685; M7,
     -- fake_center.lua's E.sightCheck)
     if not scripted and not w.transitioning and E.sightCheck and E.sightCheck() then scripted = true end
     if not scripted and not w.transitioning and E.stack:top() == w then handleInput() end

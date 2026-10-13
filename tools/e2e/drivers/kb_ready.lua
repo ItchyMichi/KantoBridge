@@ -3,8 +3,8 @@
 -- engine quit with exit code 0.
 --
 -- Gen1Recomp runs a driver unsandboxed inside its main.lua (POKEPORT_DRIVER,
--- refs/gen1recomp/main.lua:641-645): the returned function becomes a
--- coroutine, resumed once per frame with the Game (main.lua:993-1011).
+-- refs/gen1recomp/main.lua:755-759): the returned function becomes a
+-- coroutine, resumed once per frame with the Game (main.lua:1136-1157).
 -- Data safety: print only markers, ids, versions and counts.
 
 io.stdout:setvbuf("no") -- LÖVE block-buffers stdout; this also unbuffers mod.log
@@ -40,9 +40,13 @@ return function(game)
       if game.modStatus and type(game.modStatus.errors) == "table" then
         for _ in pairs(game.modStatus.errors) do errors = errors + 1 end
       end
-      print(("KB_READY state=%s engine=%s status_engine=%s bridge=%s protocol=%s modules=%s mod_errors=%d frames=%d")
+      -- ENGINE_UPGRADE_PLAN UP1: the engine members gen1-bridge found missing (a count) and whether this
+      -- boot's Pokemon Centers carry the Union Room's patch ("on" fails the smoke gate: it must be off)
+      local missing = type(status.engineMissing) == "table" and #status.engineMissing or -1
+      print(("KB_READY state=%s engine=%s status_engine=%s bridge=%s protocol=%s modules=%s mod_errors=%d frames=%d missing=%d union_room=%s")
         :format(word(record.state), word(okV and Version.engine or "?"), word(status.engine),
-          word(status.bridge), word(status.protocol), word(status.modules), errors, frames))
+          word(status.bridge), word(status.protocol), word(status.modules), errors, frames, missing,
+          word(status.unionRoom or "?")))
       return
     end
     if frames >= FRAME_LIMIT or love.timer.getTime() - started > SECONDS_LIMIT then

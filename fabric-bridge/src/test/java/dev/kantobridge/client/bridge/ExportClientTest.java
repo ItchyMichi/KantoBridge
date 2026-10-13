@@ -237,6 +237,31 @@ class ExportClientTest {
 		});
 		// Answer the index request with export_failed, as gen1-bridge does when the game data can't be read.
 		FakeExportPeer peer = seen[0];
+		Envelope ask = indexRequest(peer);
+		peer.pipe.serverSend(peer.error(ask.seq(), "export_failed"));
+		assertEquals("export_failed", failure(result).code());
+	}
+
+	@Test
+	void aUnionRoomRefusalOnTheIndexKeepsItsCode() throws Exception {
+		FakeExportPeer[] seen = new FakeExportPeer[1];
+		CompletableFuture<ExportClient.Result> result = this.export(this.client(QUICK), peer -> {
+			seen[0] = peer;
+			peer.answerIndex = false;
+		});
+		// gen1-bridge refuses the index while Gen1Recomp's Union Room is on (ENGINE_UPGRADE_PLAN UP1 item 4): the code
+		// reaches the caller as it is, so the CLI and the create-world flow can say what to click.
+		FakeExportPeer peer = seen[0];
+		Envelope ask = indexRequest(peer);
+		peer.pipe.serverSend(peer.error(ask.seq(), "union_room_on"));
+		ExportClient.ExportException error = failure(result);
+		assertEquals("union_room_on", error.code());
+		assertEquals("export.index", error.detail());
+		assertNoLeftovers();
+	}
+
+	/** The peer's {@code export.index} request, once the client has sent it. */
+	private static Envelope indexRequest(FakeExportPeer peer) throws InterruptedException {
 		long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(5);
 		Envelope ask = null;
 		while (ask == null && System.nanoTime() < deadline) {
@@ -244,8 +269,7 @@ class ExportClientTest {
 			Thread.sleep(5);
 		}
 		assertNotNull(ask);
-		peer.pipe.serverSend(peer.error(ask.seq(), "export_failed"));
-		assertEquals("export_failed", failure(result).code());
+		return ask;
 	}
 
 	@Test

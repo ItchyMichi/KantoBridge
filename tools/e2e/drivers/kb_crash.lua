@@ -16,7 +16,7 @@
 --   crash2   the same install after the kill: once the test has bound W again
 --            (the game at the title, already on W's slot), the driver
 --            continues the saved game the way the title's CONTINUE does
---            (SaveData.load + Game:restoreSave, src/core/Game.lua:222-240,
+--            (SaveData.load + Game:restoreSave, src/core/Game.lua:224-242,
 --            :1475-1537; KB_CONTINUED); at debug.quit it forgets W, deletes W's
 --            slot and makes the home slot active again (KB_CLEANED).
 --   cleanup  only the clean-up, then quits (after a failed run).
@@ -27,7 +27,7 @@
 -- the world id is the test's made-up string and is never printed.
 --
 -- Runs unsandboxed as a POKEPORT_DRIVER coroutine, resumed once per frame
--- (refs/gen1recomp/main.lua:641-645, :993-1011).
+-- (refs/gen1recomp/main.lua:755-759, :1136-1157).
 
 io.stdout:setvbuf("no") -- LÖVE block-buffers stdout; this also unbuffers mod.log
 
@@ -131,7 +131,7 @@ return function(game)
       local paired = WORLD and status.pairedSlot(WORLD)
       if SCENE == "crash1" then
         if step == "wait" and paired and a == paired and not ingame and (status.sessionBinds or 0) >= 1 then
-          -- New Game without Oak's speech (src/core/Game.lua:171-198)
+          -- New Game without Oak's speech (src/core/Game.lua:173-200)
           game:startNewGame({ intro = false })
           print(("KB_NEWGAME slot=%d"):format(num(active())))
           step = "newgame"
@@ -159,7 +159,7 @@ return function(game)
       elseif SCENE == "crash2" then
         if step == "wait" and paired and a == paired and not ingame and (status.sessionBinds or 0) >= 1 then
           -- CONTINUE, as the title's menu runs it (Game:makeTitleState's
-          -- onContinue, src/core/Game.lua:229-240)
+          -- onContinue, src/core/Game.lua:231-242)
           local loaded, recovered = SaveData.load()
           if not loaded then fail("no_save") end
           game:restoreSave(loaded, recovered, { freshBoot = true, continued = true })

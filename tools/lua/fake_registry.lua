@@ -1,6 +1,6 @@
 -- Fake content registries for the Wild Routes tests (WR2): Gen1Recomp's
 -- src/mods/Registry.lua and the loader's per-mod accessor
--- (src/mods/Loader.lua:1190-1260) as gen1-bridge uses them, and the
+-- (src/mods/Loader.lua:1264-1334) as gen1-bridge uses them, and the
 -- map_scripts compose rule (src/script/MapScripts.lua:1-27). Written for
 -- Kanto Bridge; every record the tests install is made up.
 --

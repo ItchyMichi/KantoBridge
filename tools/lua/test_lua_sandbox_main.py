@@ -46,7 +46,7 @@ LIB_FILES = [
     "export/kb_export.lua",
 ]
 
-VERSION_OK = "{ engine = '0.3.49', modApi = 2 }"
+VERSION_OK = "{ engine = '0.3.85', modApi = 2 }"
 
 
 # ------------------------------------------------------------ the environment
@@ -131,14 +131,14 @@ def test_game_ready_sets_status():
     game = b.table()
     b.emit("game.ready", b.eval("function(g) return { game = g } end")(game))
     status = b.mod.exports
-    assert status.ready is True and status.engine == b"0.3.49"
-    assert b.log_lines()[-1] == f"[info] [gen1-bridge] game.ready api=2 engine=0.3.49 modules={len(LIB_FILES)}"
+    assert status.ready is True and status.engine == b"0.3.85"
+    assert b.log_lines()[-1] == f"[info] [gen1-bridge] game.ready api=2 engine=0.3.85 modules={len(LIB_FILES)}"
     assert b.env_keys() == before
 
 
 @pytest.mark.parametrize(
     "version, warns",
-    [("{ engine = '0.3.50', modApi = 2 }", True), ("{ engine = '0.0.0-dev+abcdef123456', modApi = 2 }", False)],
+    [("{ engine = '0.3.86', modApi = 2 }", True), ("{ engine = '0.0.0-dev+abcdef123456', modApi = 2 }", False)],
 )
 def test_pin_check(version, warns):
     b = Bridge(modules={"src.core.Version": version})
@@ -147,7 +147,7 @@ def test_pin_check(version, warns):
     warned = [line for line in b.log_lines() if "engine.unchecked_version" in line]
     assert bool(warned) == warns
     if warns:
-        assert warned == ["[warn] [gen1-bridge] engine.unchecked_version checked=0.3.49 engine=0.3.50"]
+        assert warned == ["[warn] [gen1-bridge] engine.unchecked_version checked=0.3.85 engine=0.3.86"]
 
 
 def test_missing_engine_modules_are_survivable():
@@ -164,6 +164,102 @@ def test_main_never_touches_the_socket_at_boot():
     b.run_main()
     b.emit("game.ready", b.eval("{}"))
     assert b.mod.exports.ready is True
+
+
+# ------------------------------------------------------------ ENGINE_UPGRADE_PLAN: the pin, the required internals, the Union Room
+
+
+def engine_on(rig_or_game):
+    """kb_engine's seam table on a rig's fake game (as main.lua builds it)."""
+    b, E = rig_or_game.b, rig_or_game.E
+    Engine = b.module("lib/kb_engine.lua")
+    opts = b.table()
+    opts[b"require"] = b.env.require
+    opts[b"ui"] = E.ui
+    eng = Engine.new(opts)
+    eng.setGame(E.game)
+    return Engine, eng
+
+
+def test_the_pin_is_the_upgraded_engine_and_the_fake_plays_it():
+    from rig import Rig
+    rig = Rig()
+    Engine, eng = engine_on(rig)
+    assert Engine.CHECKED == b"0.3.85" and Engine.TESTED == b"0.3.85"
+    assert eng.version() == (b"0.3.85", 2)
+    # the fake engine's Version module: src/core/Version.lua:6-23 at v0.3.85
+    V = rig.E.Version
+    assert (V.engine, V.shell, V.modApi, V.saveFormat) == (b"0.3.85", 3, 2, 5)
+    assert eng.checkPin() is True and not any("engine.unchecked_version" in line for line in rig.logs())
+
+
+def test_required_internals_are_listed_and_all_present_on_the_fakes():
+    from battlesim import BattleGame
+    g = BattleGame()  # the fullest fake: script, wild, center and content modules attached
+    Engine, eng = engine_on(g)
+    required = {k.decode(): [m.decode() for m in v.values()] for k, v in Engine.REQUIRED.items()}
+    assert len(required) >= 20 and all(name.startswith("src.") for name in required)
+    assert required["src.inventory.Bag"] == ["remove"] and "src.core.Music" in required
+    assert list(eng.checkRequired().values()) == [], "every module and member the seam reads exists on the fakes"
+    # main.lua checked it at game.ready: nothing missing, nothing logged
+    assert g.status()["engineMissing"] == []
+    assert not any("engine.missing" in line for line in g.rig.logs())
+
+
+def test_a_missing_internal_is_named_once_at_game_ready():
+    from rig import Rig
+    rig = Rig(ready=False, script=True)  # every module the seam reads (the plain rig lacks the M5+ ones)
+    rig.E.modules[b"src.inventory.Badges"][b"itemFor"] = None
+    rig.b.mods_loaded()
+    rig.b.ready()
+    _, eng = engine_on(rig)
+    assert list(eng.checkRequired().values()) == [b"src.inventory.Badges.itemFor"]
+    assert "[warn] [gen1-bridge] engine.missing count=1" in rig.logs()
+    assert sum("engine.missing" in line for line in rig.logs()) == 1
+
+
+def test_the_union_room_is_pinned_off_with_the_display_options():
+    from rig import Rig
+    rig = Rig()
+    Engine, eng = engine_on(rig)
+    assert Engine.CLASSIC.unionRoom is False
+    assert rig.E.save.options.unionRoom is False, "pinned at game.ready like the display keys"
+    assert eng.displayPinned(rig.E.save.options) is True
+    rig.E.save.options.unionRoom = True
+    assert eng.displayPinned(rig.E.save.options) is False
+    assert eng.pinDisplay(rig.E.save.options, False) == 1 and rig.E.save.options.unionRoom is False
+
+
+def test_union_room_patched_reads_the_added_second_floor():
+    from rig import Rig
+    rig = Rig(script=True)  # with fake_center's SaveData (loadOptions / saveOptions)
+    _, eng = engine_on(rig)
+    assert eng.unionRoomPatched() is False, "no POKECENTER_2F in the live maps"
+    assert rig.status.unionRoom == b"off"
+    rig.E.applyUnionRoom()
+    assert eng.unionRoomPatched() is True
+    # and written off for the next boot: SaveData.loadOptions then saveOptions
+    assert eng.unionRoomOff() is True
+    assert rig.E.optionsFile.unionRoom is False and rig.E.optionsWrites == 1
+    assert eng.unionRoomOff() is True and rig.E.optionsWrites == 1, "already off: nothing written again"
+
+
+def test_a_boot_that_finds_the_union_room_on_says_so_and_writes_it_off():
+    from rig import Rig
+    rig = Rig(ready=False, script=True)
+    rig.E.applyUnionRoom()
+    rig.b.mods_loaded()
+    rig.b.ready()
+    assert "[warn] [gen1-bridge] engine.union_room_on written=1" in rig.logs()
+    assert rig.status.unionRoom == b"on" and rig.E.optionsFile.unionRoom is False
+    rig.world()
+    peer = rig.connect()
+    peer.hello()
+    peer.messages()
+    seq = peer.send("debug.status")
+    rig.step()
+    status = [m for m in peer.messages() if m["type"] == "debug.status" and m.get("re") == seq][0]["data"]
+    assert status["unionRoom"] == "on" and status["engineMissing"] == []
 
 
 # ------------------------------------------------------------ mod folder rules

@@ -890,7 +890,7 @@ function Export.new(opts)
         return {}
       end
       -- field.fishing names the field key of the Super Rod's per-map groups
-      -- (fishingPool, src/world/OverworldController.lua:2299-2310)
+      -- (fishingPool, src/world/OverworldController.lua:2412-2423)
       local superDef = type(fishing.SUPER_ROD) == "table" and fishing.SUPER_ROD or {}
       local perMapKey = type(superDef.perMap) == "string" and superDef.perMap or "superRod"
       local perMap = field[perMapKey]
@@ -1103,6 +1103,13 @@ function Export.new(opts)
       session.sendError("role", msg.seq, "export needs role builder or test")
       return
     end
+    -- U3: with the Union Room on, the live Centers are not the import's
+    -- (lib/kb_engine.lua engine.unionRoomPatched): no world is built from
+    -- this boot; the client's notice says what to switch off
+    if what == "index" and engine.unionRoomPatched and engine.unionRoomPatched() then
+      session.sendError("union_room_on", msg.seq, "the hidden game's Union Room is on: Launcher Options, Union Room, OFF, then restart")
+      return
+    end
     local r = { what = what, seq = msg.seq, gen = session.generation() }
     if what == "get" then
       if not (Export.KINDS[data.kind] and type(data.id) == "string" and #data.id <= 64 and data.id:find(ID)) then
@@ -1123,7 +1130,7 @@ function Export.new(opts)
     sess.on("export.get", function(data, msg, role) request("get", data, msg, role) end)
   end
 
-  -- mods.loaded (src/mods/Loader.lua:2163): the cheap check that the dataset
+  -- mods.loaded (src/mods/Loader.lua:2237): the cheap check that the dataset
   -- view opens; when it doesn't, PLAN section 8's fallback copies the live
   -- Data right now, before any map has loaded.
   function ex.onModsLoaded(payload)

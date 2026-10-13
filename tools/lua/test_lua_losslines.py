@@ -1,5 +1,5 @@
 """M8 (wave 3): the loss line an engageTrainer caller hands its battle itself (endBattleText, with
-endBattleSound, endBattleIsReward and endBattleSoundPage, OC:4067-4126), shown after a Cobblemon win
+endBattleSound, endBattleIsReward and endBattleSoundPage, OC:4201-4260), shown after a Cobblemon win
 the way the battle screen shows it. lib/kb_engine.lua's startTrainerBattle runs the encounter's own
 start on a win (the continuation captured when the battle was deferred) with BattleState.newTrainer
 stood in for and pushBattle diverted, then the encounter's own onFinish.

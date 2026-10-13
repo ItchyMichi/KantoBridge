@@ -354,9 +354,11 @@ public final class CreateKantoWorldFlow {
 			PackGenerator.generate(result.bundleDir(), this.packDir);
 			writeKeys(result.bundleDir());
 		} catch (ExportClient.ExportException e) {
-			this.workerError = e.code().equals("rejected")
-					? Component.translatable("kantobridge.create.error.rejected", String.valueOf(e.detail()))
-					: Component.translatable("kantobridge.create.error.export", e.getMessage());
+			this.workerError = switch (e.code()) {
+				case "rejected" -> Component.translatable("kantobridge.create.error.rejected", String.valueOf(e.detail()));
+				case "union_room_on" -> Component.translatable("kantobridge.create.error.union_room");
+				default -> Component.translatable("kantobridge.create.error.export", e.getMessage());
+			};
 		} catch (BundleException e) {
 			this.workerError = Component.translatable("kantobridge.create.error.pack", e.code());
 		} catch (PlanException e) {

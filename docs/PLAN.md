@@ -121,7 +121,7 @@ one condition: **the agent never reads or prints game content.**
 | U2 | **The agent may run the test Gen1Recomp and the world builder on the user's imported game**, under §0.3. The user does the ROM imports and all in-game play-testing. |
 | U3 | **Battles use modern Cobblemon rules** (`GEN_9_SINGLES`). Trainer teams keep Gen 1 species, levels and moves. |
 | U4 | **Sound passes through Gen1Recomp.** Its window plays the music and effects; Minecraft's music is silenced; Cobblemon provides cries. |
-| U5 | **Gen1Recomp v0.3.49**, the official Windows release zip, runs portable from `local/gen1recomp/` (the user's) and `local/gen1recomp-e2e/` (tests). |
+| U5 | **Gen1Recomp v0.3.85** (the pin since 2026-10-13, [`specs/ENGINE_UPGRADE_PLAN.md`](specs/ENGINE_UPGRADE_PLAN.md); v0.3.49 during the run), the official Windows release zip, runs portable from `local/gen1recomp/` (the user's) and `local/gen1recomp-e2e/` (tests). |
 | U6 | **The Gen1Recomp window stays visible behind Minecraft** and is never minimised. |
 | U7 | **`gen1-bridge` may use engine internals** wherever that gives the most complete result. All internals go through one adapter module. |
 | U8 | **ROM-derived data may pass through the host's Minecraft server**: text and trainer teams. Art never does. |
@@ -177,7 +177,7 @@ These are pre-approved. Edit this table before execution to change any of them.
 ### 2.1 Components
 
 ```
-Gen1Recomp v0.3.49 (visible, behind MC)        Minecraft client                         Minecraft server (integrated or dedicated)
+Gen1Recomp v0.3.85 (visible, behind MC)        Minecraft client                         Minecraft server (integrated or dedicated)
   gen1-bridge (Lua)                              fabric-bridge (client)                     fabric-bridge (server) + Cobblemon 1.8.1
   - observes: player, NPCs, UI, story,   TCP     - BridgeClient (socket thread)   Fabric     - StoryState per player (attachment)
     bag, party, battles, saves       127.0.0.1   - movement sync, input lock,     payload    - story-cell collision (shared code)
@@ -483,7 +483,7 @@ hot reload), A and B (mod system and engine).
 | `lib/kb_net.lua` | Lazy listener (see below) |
 | `lib/kb_proto.lua` | Envelope, sequence numbers, dispatch table, request/reply |
 | `lib/kb_log.lua` | Redacted logging to stdout through `mod.log`, plus a `log` message to Minecraft |
-| `lib/kb_engine.lua` | **The only file that touches engine internals.** Each function documents its engine `file:line` (v0.3.49) and is re-checked on any pin change |
+| `lib/kb_engine.lua` | **The only file that touches engine internals.** Each function documents its engine `file:line` (v0.3.85 since 2026-10-13; `tools/pin_check.py` re-stamps the ones that only moved) and is re-checked on any pin change |
 | `observe/kb_player.lua` | Player position, the classifier and `player.*` messages |
 | `observe/kb_npcs.lua` | NPC diffing |
 | `observe/kb_story.lua` | Flag, toggle, block and light diffs |
@@ -1265,7 +1265,7 @@ bubbles, a trade and a battle.
 | `render.output` capture misbehaves or is slow | M4 mirror test, fps and size | Option B in `refs/_research/P2_gen1_ui.md` §1.7 (compose observer at UI canvas scale). Failing that, native adapters only, and the user looks at the Gen1Recomp window for graphical screens |
 | `--console` doesn't work on the fused exe | Pre-flight step 2 | Rely on piped stdout in automation and on `log` messages shown in Minecraft (debug overlay) |
 | Step driver desyncs (missed or duplicate steps) | M3 e2e, drift counters | Lower the queue to 1; resync with `player.pos{kind:sync}` and a client snap; last resort `mod.world:warpTo` (resets NPCs, so log it) |
-| Engine internals behave differently from the research notes | Unit and e2e failures | Re-read the cited source in `refs/gen1recomp` (identical to v0.3.49) and adjust inside `kb_engine.lua` only |
+| Engine internals behave differently from the research notes | Unit and e2e failures | Re-read the cited source in `refs/gen1recomp` (at the pinned tag: v0.3.85 since 2026-10-13) and adjust inside `kb_engine.lua` only |
 | Habitat blocks don't attach or spawn | M6 GameTest | The activated style (`TICK`, chance 0.02, `maxSpawns` 4). Failing that, our own spawner: spawn from the pool near players on route grass cells through the Cobblemon API |
 | Proxy NPC battle problems | M5 GameTest and play-test | Our own `NPCBattleActor` subclass through `BattleRegistry.startBattle`, with our own owner-only entity |
 | Story-cell collision rubber-banding | GameTest and play-test | Make the blockade client-only, with a server check that teleports back to the last valid cell |

@@ -5,11 +5,12 @@
 -- the Name Rater, the daycare, native catches (pokemon.caught), the Hall of
 -- Fame, a ghost trigger like the Marowak's, a hideout boss like Giovanni's,
 -- and the music API as a recorder. Written for Kanto Bridge from the
--- engine behaviour lib/kb_engine.lua cites (OC:1142-1176 pushBattle,
--- OC:3488-3510 talkTo's static branch, src/battle/BattleState.lua:816-1090
--- and :5555-5620, src/script/Commands.lua:910-933 and :1086-1177,
+-- engine behaviour lib/kb_engine.lua cites (v0.3.85: OC:1261-1295
+-- pushBattle, OC:3600-3622 talkTo's static branch,
+-- src/battle/BattleState.lua:850-1120 and :5649-5714,
+-- src/script/Commands.lua:920-943 and :1093-1184,
 -- data/scripts/story2.lua:1020-1210, story3.lua:134-194 and :458-513,
--- story4.lua:744-818, src/core/Music.lua:418-497); the code is our own and
+-- story4.lua:744-818, src/core/Music.lua:439-545); the code is our own and
 -- every species, trainer, text and map the tests install is made up.
 --
 --   FakeContent.attach(E)     after FakeCenter.attach
@@ -28,7 +29,8 @@
 --   E.nameRaterTalk, E.daycareTalk, E.bossTalk   talk functions
 --   E.ghostTrigger(map, x, y, species, level, flag)   a step trigger
 --   E.catchBattle(species, level, opts)   a native battle that catches on A
---   E.music                   { battle = { {kind, trainer, own} }, victory = { kind } }
+--   E.music                   { battle = { {kind, trainer, own} }, victory = { kind },
+--                             victoryCalls = { {kind, trainer} }, map = { {map, song, ...} } }
 
 local FakeContent = {}
 
@@ -39,20 +41,29 @@ function FakeContent.attach(E)
   local Commands = E.Commands
   E.pushes = {}
   E.talkFns, E.talkRows = {}, {}
-  E.music = { battle = {}, victory = {} }
+  E.music = { battle = {}, victory = {}, victoryCalls = {}, map = {} }
 
   -- ------------------------------------------------------------ the music API
 
-  -- Music.playBattle / playVictory (src/core/Music.lua:418-440), recorded;
-  -- restoreMap stays fake_center's counter
+  -- The music API as the battle seam calls it (src/core/Music.lua at
+  -- v0.3.85, the old positional arguments plus optional extras, UP3/B5):
+  -- playMap(data, mapId, onBike, surfing, fade, song) (:439-451),
+  -- playBattle(data, kind, trainerId, song) (:461-467), playVictory(data,
+  -- kind, trainerId) (:474-483) and current() (:524-526), recorded;
+  -- restoreMap(data, reason) stays fake_center's counter (:545)
   local Music = E.modules["src.core.Music"]
+  function Music.playMap(_, mapId, onBike, surfing, fade, song)
+    E.music.map[#E.music.map + 1] = { map = mapId, onBike = onBike, surfing = surfing, fade = fade, song = song }
+  end
   function Music.playBattle(_, kind, trainerId, song)
     E.music.battle[#E.music.battle + 1] = { kind = kind, trainer = trainerId, song = song }
   end
-  function Music.playVictory(_, kind)
+  function Music.playVictory(_, kind, trainerId)
     E.music.victory[#E.music.victory + 1] = kind
+    E.music.victoryCalls[#E.music.victoryCalls + 1] = { kind = kind, trainer = trainerId }
     return true
   end
+  function Music.current() return E.music.currentSong end
 
   -- data/scripts/victories.lua as the music rule reads it: the tests' E.victories
   E.modules["data.scripts.victories"] = setmetatable({}, {
@@ -63,17 +74,17 @@ function FakeContent.attach(E)
 
   local Battle = {}
   Battle.__index = Battle
-  -- BattleState:battleKind (BattleState.lua:1857-1862)
+  -- BattleState:battleKind (BattleState.lua:1909-1914)
   function Battle:battleKind()
     if self.ghost then return "ghost" end
     if self.safari then return "safari" end
     if self.demo then return "oldman" end
     return self.kind
   end
-  function Battle:makeGhost() self.ghost = true end              -- :986-989
-  function Battle:makeUnveiledGhost() self.scopeReveal = true end -- :999-1002
+  function Battle:makeGhost() self.ghost = true end              -- :1020-1023
+  function Battle:makeUnveiledGhost() self.scopeReveal = true end -- :1033-1036
   function Battle:makeOldManDemo() self.demo = true end
-  -- playBattleTheme (:1838-1841): the engine's own choice, recorded
+  -- playBattleTheme (:1890-1893): the engine's own choice, recorded
   function Battle:playBattleTheme()
     E.music.battle[#E.music.battle + 1] = { kind = self.kind == "trainer" and "trainer" or "wild",
                                             trainer = self.oppClass, own = true }
@@ -86,16 +97,19 @@ function FakeContent.attach(E)
   function E.newTrainer(cls, party)
     return setmetatable({ kind = "trainer", oppClass = cls, partyIndex = party or 1, trainer = { id = cls } }, Battle)
   end
-  -- BattleState.newTrainer (BattleState.lua:891-969), the one engageTrainer's
+  -- BattleState.newTrainer (BattleState.lua:925-1003), the one engageTrainer's
   -- start calls (fake_script.lua); E.trainerBuilds counts real builds
   E.modules["src.battle.BattleState"].newTrainer = function(_, cls, party)
     E.trainerBuilds = (E.trainerBuilds or 0) + 1
     return E.newTrainer(cls, party)
   end
 
-  -- OverworldState:pushBattle (OC:1142-1176): the battle's theme with the
+  -- OverworldState:pushBattle (OC:1261-1295): the battle's theme with the
   -- wipe, then the battle screen; BattleState:finish hands the result to
-  -- onFinish after the pop (BattleState.lua:5812-5890)
+  -- onFinish after the pop (BattleState.lua:5912-5990; since v0.3.85 its
+  -- Music.restoreMap, :5963-5970, is skipped after a won final battle --
+  -- the fake's native screen plays no music at all, so the rule lives in
+  -- kb_engine's own restore for the battles Cobblemon fights)
   function ow.pushBattle(self, battle, trainerNpc)
     local mon = battle.enemy and battle.enemy.mon
     E.pushes[#E.pushes + 1] = { kind = battle.kind, species = mon and mon.species, level = mon and mon.level,
@@ -112,9 +126,9 @@ function FakeContent.attach(E)
 
   -- ------------------------------------------------------------ the talk path
 
-  -- talkTo with the branches M8 needs (OC:3440-3560): a hand-ported talk
+  -- talkTo with the branches M8 needs (OC:3552-3672): a hand-ported talk
   -- script (a function or command rows) wins, then a static Pokemon object
-  -- (OC:3488-3510: its text, then BattleState.newWild pushed directly; a
+  -- (OC:3600-3622: its text, then BattleState.newWild pushed directly; a
   -- win or a catch beats it for good, lose and run leave it), then
   -- fake_ui's own talk
   local baseTalk = E.talkTo
@@ -207,7 +221,7 @@ function FakeContent.attach(E)
 
   -- ------------------------------------------------------------ a party menu to pick from
 
-  -- PartyMenu with pickOnly (src/ui/PartyMenu.lua:790-798): A picks the
+  -- PartyMenu with pickOnly (src/ui/PartyMenu.lua:826-834): A picks the
   -- member under the cursor (the menu pops first), B cancels
   function E.partyPick(onSwitch, onCancel)
     local PartyMenu = E.modules["src.ui.PartyMenu"]
@@ -231,7 +245,7 @@ function FakeContent.attach(E)
 
   -- ------------------------------------------------------------ in-game trades
 
-  -- Commands.trade (Commands.lua:1086-1177): the offer, the pick, the
+  -- Commands.trade (Commands.lua:1093-1184): the offer, the pick, the
   -- species check, the flag, the swap (the received member joins at the
   -- end with the trade's nickname, traded, OT "TRAINER"), the TradeAnim
   -- screen, the thanks
@@ -381,7 +395,7 @@ function FakeContent.attach(E)
     end }))
   end
 
-  -- a boarded member gains a step's exp per step (OC:4712-4716)
+  -- a boarded member gains a step's exp per step (OC:4855-4859)
   local afterStep = E.afterStep
   function E.afterStep()
     local dc = E.save.daycare
@@ -392,7 +406,7 @@ function FakeContent.attach(E)
   -- ------------------------------------------------------------ native catches
 
   -- a native battle that catches on A (storeCaughtMon,
-  -- BattleState.lua:5555-5620): the member joins the party, or the current
+  -- BattleState.lua:5649-5714): the member joins the party, or the current
   -- box when it is full; pokemon.caught (not for the old man's demo); the
   -- nickname prompt over the battle; then the battle leaves.
   -- opts: safari, demo, onFinish(result)
@@ -449,7 +463,7 @@ function FakeContent.attach(E)
 
   -- ------------------------------------------------------------ the Hall of Fame
 
-  -- Commands.record_hall_of_fame (Commands.lua:910-960), shortened: the
+  -- Commands.record_hall_of_fame (Commands.lua:920-970), shortened: the
   -- record, the HallOfFame and Credits screens, the heal and the save while
   -- THE END is up
   function Commands.record_hall_of_fame(ctx)
@@ -466,7 +480,7 @@ function FakeContent.attach(E)
     runner:yield()
   end
 
-  -- Commands.show_object / hide_object (Commands.lua:602-646): the toggle,
+  -- Commands.show_object / hide_object (Commands.lua:603-649): the toggle,
   -- and the live NPC added or removed in place on the current map
   function Commands.show_object(ctx, mapId, name)
     ctx.save.objectToggles = ctx.save.objectToggles or {}

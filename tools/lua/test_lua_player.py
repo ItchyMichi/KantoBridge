@@ -300,7 +300,7 @@ def test_npcs_are_read_and_classified():
         ("TEST_TOWN_obj_6", "SPRITE_TEST_OTHER", "trainer"),  # appearance wins
     ]
     assert generation == 1 and eng.npcs()[2] == 1, "the same ow.npcs table: the same generation"
-    E.ow.npcs = b.table()  # setMap builds a new table (OC:551-558)
+    E.ow.npcs = b.table()  # setMap builds a new table (OC:558-565)
     assert eng.npcs()[2] == 2
 
 

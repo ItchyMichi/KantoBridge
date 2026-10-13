@@ -96,7 +96,7 @@ class BridgeSessionTest {
 	}
 
 	static String helloOk(long re) {
-		return line("hello.ok", 1, re, data("protocol", 1, "bridge", "0.1.0", "engine", "0.3.49", "game", "blue", "session", "s-1"));
+		return line("hello.ok", 1, re, data("protocol", 1, "bridge", "0.1.0", "engine", "0.3.85", "game", "blue", "session", "s-1"));
 	}
 
 	private void receive(String line, long now) {
@@ -135,7 +135,7 @@ class BridgeSessionTest {
 	void helloOkConnectsAndLaterMessagesAreDelivered() {
 		this.connect();
 		assertTrue(this.session.isConnected());
-		assertEquals(new HelloOk("s-1", "blue", "0.3.49", "0.1.0"), this.out.connected);
+		assertEquals(new HelloOk("s-1", "blue", "0.3.85", "0.1.0"), this.out.connected);
 		this.receive(line("snapshot", 2, null, new JsonObject()), 20);
 		assertEquals(List.of("hello.ok", "snapshot"), this.out.delivered.stream().map(Envelope::type).toList());
 		assertEquals(2, this.stats.messagesIn.get());
@@ -183,18 +183,43 @@ class BridgeSessionTest {
 	@Test
 	void helloOkCarriesTheTestedEngine() {
 		this.session.open(0);
-		this.receive(line("hello.ok", 1, 1L, data("protocol", 1, "bridge", "0.1.0", "engine", "0.3.50", "tested", "0.3.49", "game", "blue",
+		this.receive(line("hello.ok", 1, 1L, data("protocol", 1, "bridge", "0.1.0", "engine", "0.3.86", "tested", "0.3.85", "game", "blue",
 				"session", "s-1")), 10);
 		HelloOk ok = this.out.connected;
-		assertEquals(new HelloOk("s-1", "blue", "0.3.50", "0.1.0", "0.3.49"), ok);
+		assertEquals(new HelloOk("s-1", "blue", "0.3.86", "0.1.0", "0.3.85"), ok);
 		assertTrue(ok.untestedEngine());
-		assertFalse(new HelloOk("s-1", "blue", "0.3.49", "0.1.0", "0.3.49").untestedEngine());
-		assertFalse(new HelloOk("s-1", "blue", "0.3.49", "0.1.0").untestedEngine(), "no tested version: nothing to warn about");
+		assertFalse(new HelloOk("s-1", "blue", "0.3.85", "0.1.0", "0.3.85").untestedEngine());
+		assertFalse(new HelloOk("s-1", "blue", "0.3.85", "0.1.0").untestedEngine(), "no tested version: nothing to warn about");
 		this.setUp();
 		this.session.open(0);
-		this.receive(line("hello.ok", 1, 1L, data("protocol", 1, "bridge", "0.1.0", "engine", "0.3.50", "tested", "not a version!", "game",
+		this.receive(line("hello.ok", 1, 1L, data("protocol", 1, "bridge", "0.1.0", "engine", "0.3.86", "tested", "not a version!", "game",
 				"blue", "session", "s-1")), 10);
 		assertNull(this.out.connected.tested(), "a malformed tested version is left out");
+	}
+
+	@Test
+	void helloOkCarriesTheUnionRoomSetting() {
+		this.session.open(0);
+		this.receive(line("hello.ok", 1, 1L, data("protocol", 1, "bridge", "0.1.0", "engine", "0.3.85", "tested", "0.3.85", "game", "blue",
+				"session", "s-1", "union_room", "on")), 10);
+		HelloOk ok = this.out.connected;
+		assertEquals(new HelloOk("s-1", "blue", "0.3.85", "0.1.0", "0.3.85", "on"), ok);
+		assertTrue(ok.unionRoomOn());
+		assertFalse(ok.untestedEngine(), "the tested engine with the room on: only the room is news");
+		assertFalse(new HelloOk("s-1", "blue", "0.3.85", "0.1.0", "0.3.85", "off").unionRoomOn());
+		assertFalse(new HelloOk("s-1", "blue", "0.3.85", "0.1.0").unionRoomOn(), "an older gen1-bridge doesn't say: taken as off");
+		this.setUp();
+		this.session.open(0);
+		this.receive(line("hello.ok", 1, 1L, data("protocol", 1, "bridge", "0.1.0", "engine", "0.3.85", "game", "blue", "session", "s-1",
+				"union_room", "maybe")), 10);
+		assertNull(this.out.connected.unionRoom(), "a value that isn't on or off is left out");
+		assertFalse(this.out.connected.unionRoomOn());
+		this.setUp();
+		this.session.open(0);
+		this.receive(line("hello.ok", 1, 1L, data("protocol", 1, "bridge", "0.1.0", "engine", "0.3.85", "game", "blue", "session", "s-1",
+				"union_room", "off")), 10);
+		assertEquals("off", this.out.connected.unionRoom());
+		assertFalse(this.out.connected.unionRoomOn());
 	}
 
 	@Test

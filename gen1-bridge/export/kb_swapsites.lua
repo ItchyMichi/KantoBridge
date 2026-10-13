@@ -12,27 +12,31 @@
 -- cut trees, the Elite Four exits, Lance's doorway, the Victory Road
 -- barriers and the S.S. Anne ship `before`; the card-key doors and the
 -- Rocket Hideout lift gates ship `after` (the engine stamps them shut on map
--- load, OC:378-421), and so may the Pokemon Mansion rows whose switched-off
+-- load, OC:385-428), and so may the Pokemon Mansion rows whose switched-off
 -- state is the open floor. So the exported block equals `before` or `after`,
 -- never something else (tools/e2e/test_export.py counts the three cases).
 --
--- The audit of the engine's runtime block changes (v0.3.49, every
--- Map:setBlock caller: src/world/Map.lua:244-249 is the only write into a
--- map's blocks; OverworldState:replaceBlock, OC:5644-5649, and the script
--- command replace_block, src/script/Commands.lua:1306-1310, go through it;
--- no data script uses that command). OC = src/world/OverworldController.lua.
+-- The audit of the engine's runtime block changes (v0.3.85, every
+-- Map:setBlock caller: src/world/Map.lua:244-249 is the only runtime write
+-- into a Gen 1 map's blocks; OverworldState:replaceBlock, OC:5803-5806, and
+-- the script command replace_block, src/script/Commands.lua:1313-1319, go
+-- through it; no data script uses that command. Two writers outside it are
+-- not runtime changes of a Gen 1 map: the Union Room patches map DEFINITIONS
+-- at data load, src/world/gen1/UnionCenters.lua:64, :347, which decision U3
+-- keeps off; src/core/game3/field.lua:2238 is Gen 3's own map).
+-- OC = src/world/OverworldController.lua.
 --
---   cut       OverworldState:tryCut (OC:3292-3330) swaps a tree block by its
+--   cut       OverworldState:tryCut (OC:3404-3442) swaps a tree block by its
 --             field.cutTreeSwaps row; the regrowth on the map's next load
---             (OC:479-487) puts the block back. Sites: every block holding
+--             (OC:486-494) puts the block back. Sites: every block holding
 --             a cuttable tree cell (kb_cells' cut bit). Cutting tall grass
 --             ($52, the same function) is a cosmetic change with no site:
 --             the runtime check knows it from the engine's own cut record
 --             (ow.cutBlocks).
 --   card_key  field.cardKeyDoors.closedDoors on the card-key floors:
 --             stampClosedDoors on every map load and after a battle
---             (OC:390-421, :488, :5219), the CARD KEY's opening
---             (tryCardKeyDoor, OC:2910-2955; its open block is
+--             (OC:397-428, :495, :5369), the CARD KEY's opening
+--             (tryCardKeyDoor, OC:3022-3067; its open block is
 --             cardKeyDoors.openBlock, or silphCo11F.openBlock on 11F).
 --   script    the closedDoors rows of other floors (the Rocket Hideout lift
 --             gates; FieldDefaults.FIELD.cardKeyDoors seeds them,
@@ -41,11 +45,11 @@
 --             Vermilion Gym door (closed $24 on entry until
 --             EVENT_2ND_LOCK_OPENED, data/scripts/seafoam.lua:18-24; opened
 --             to hiddenExtras.trashCans.doorBlock by the trash-can puzzle,
---             OC:3024-3036); the Elite Four exits and Lance's doorway
+--             OC:3136-3148); the Elite Four exits and Lance's doorway
 --             (data/scripts/story4.lua:862-985); the Pokemon Mansion switch
 --             blocks and the Cinnabar Gym quiz gates
 --             (data/scripts/story6.lua:25-170); the S.S. Anne's departure
---             (data/scripts/story3.lua:947-1000, OC:1897-1915: her hull and
+--             (data/scripts/story3.lua:947-1000, OC:2010-2028: her hull and
 --             deck blocks become water).
 --   boulder   the Victory Road boulder-switch barriers
 --             (data/scripts/story.lua:945-1030).
@@ -104,7 +108,7 @@ SwapSites.CURATED = {
 SwapSites.VERMILION_GYM_CLOSED = 0x24
 
 -- The S.S. Anne's hull and deck blocks and the water each becomes when she
--- sails (data/scripts/story3.lua:947-954; the same box as OC:178-187).
+-- sails (data/scripts/story3.lua:947-954; the same box as OC:183-192).
 -- `before` is the dock's own block there (the ship), read from the map.
 SwapSites.SHIP = {
   map = "VERMILION_DOCK", source = "EVENT_SS_ANNE_LEFT",
@@ -254,7 +258,7 @@ end
 -- the set of block ids a site lets that block take (its before and after;
 -- a card-key door also the CARD KEY's open block, which tryCardKeyDoor
 -- writes: cardKeyDoors.openBlock, or silphCo11F.openBlock on SILPH_CO_11F,
--- OC:2918-2927). Cut sites are not listed: the engine's own cut record
+-- OC:3030-3039). Cut sites are not listed: the engine's own cut record
 -- covers every cut (kb_story).
 --   field, version, blockAt: as doorSites; blockAt also feeds the ship rows
 -- Returns the index and the number of sites in it.

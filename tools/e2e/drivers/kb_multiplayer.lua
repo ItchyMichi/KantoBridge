@@ -29,8 +29,8 @@
 -- the world ids are the test's made-up strings and are never printed.
 --
 -- Runs unsandboxed as a POKEPORT_DRIVER coroutine, resumed once per frame
--- (refs/gen1recomp/main.lua:641-645, :993-1011). It uses the engine's own
--- slot API (src/core/SaveData.lua:1661-1856) for the clean-up only.
+-- (refs/gen1recomp/main.lua:755-759, :1136-1157). It uses the engine's own
+-- slot API (src/core/SaveData.lua:1705-1900) for the clean-up only.
 
 io.stdout:setvbuf("no") -- LÖVE block-buffers stdout; this also unbuffers mod.log
 
@@ -140,7 +140,7 @@ return function(game)
         local pa = WORLD_A and status.pairedSlot(WORLD_A)
         local pb = WORLD_B and status.pairedSlot(WORLD_B)
         if step2 == "wantA" and pa and a == pa and not ingame then
-          -- New Game without Oak's speech (src/core/Game.lua:171-198)
+          -- New Game without Oak's speech (src/core/Game.lua:173-200)
           game:startNewGame({ intro = false })
           step2 = "newA"
         elseif step2 == "newA" and onTop(game) then

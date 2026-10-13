@@ -1,4 +1,4 @@
--- A tiny stand-in for the parts of Gen1Recomp v0.3.49 that gen1-bridge's
+-- A tiny stand-in for the parts of Gen1Recomp v0.3.85 that gen1-bridge's
 -- kb_engine reads: the Game object (stack, save, data), the overworld with
 -- its player, and the engine modules it requires. Written for Kanto Bridge;
 -- field names follow the engine (see lib/kb_engine.lua for the file:line of
@@ -8,6 +8,8 @@
 --   bridge modules: E.modules (require name -> table), mod.ui: E.ui
 --   E.enterWorld("TEST_TOWN", 5, 6, "down"); E.startStep("up"); E.land()
 --   E.push(state) / E.pop(); E.text() makes a TextBox-like state
+--   E.applyUnionRoom()         the Union Room's maps in the live data, as a
+--                              boot with the setting on has them (U3)
 
 local FakeEngine = {}
 
@@ -17,10 +19,20 @@ function FakeEngine.new(opts)
   opts = opts or {}
   local E = { applied = {} }
 
-  E.Version = { engine = opts.engine or "0.3.49", modApi = 2 }
+  -- src/core/Version.lua:6-23: the release (:7, stamped by CI; the fake
+  -- plays a release build), the native-shell contract (:10, 3 since
+  -- v0.3.85), the mod API major (:20) and the save format (:22)
+  E.Version = { engine = opts.engine or "0.3.85", shell = 3, modApi = 2, saveFormat = 5 }
   E.GameVersion = { current = opts.game or "blue" }
-  function E.GameVersion.get() return E.GameVersion.current end
+  function E.GameVersion.get() return E.GameVersion.current end       -- GameVersion.lua:209
+  function E.GameVersion.isYellow() return false end                   -- :217
+  function E.GameVersion.generation() return 1 end                     -- :231
   E.GameModule = { logicStep = 0 }
+  -- src/core/Strings.lua: the module is called for a translated label
+  -- (:215, __call -> Strings.get :174) and Strings.source hands its argument
+  -- back (:211-213); without a translation mod both return the text itself
+  E.Strings = setmetatable({ source = function(text) return text end },
+                           { __call = function(_, text) return text end })
   E.Badges = {
     list = function() return { { id = "BOULDERBADGE" }, { id = "CASCADEBADGE" }, { id = "TESTBADGE", item = "TEST_BADGE_ITEM" } } end,
     itemFor = function(entry) return entry.item or entry.id end,
@@ -35,6 +47,7 @@ function FakeEngine.new(opts)
     ["src.core.Version"] = E.Version,
     ["src.core.GameVersion"] = E.GameVersion,
     ["src.core.Game"] = E.GameModule,
+    ["src.core.Strings"] = E.Strings,
     ["src.inventory.Badges"] = E.Badges,
     ["src.render.Tilt"] = recorder("Tilt"),
     ["src.render.Pipelines"] = recorder("Pipelines"),
@@ -66,6 +79,22 @@ function FakeEngine.new(opts)
   }
   E.data = { field = { darkMaps = { maps = { "TEST_CAVE" } } } }
   E.game = { stack = stack, save = E.save, data = E.data }
+
+  -- U3: what a boot with the Union Room setting on leaves in the live data.
+  -- Data:load seeds it for every Gen 1 boot (src/core/Data.lua:185) and
+  -- UnionCenters.apply (src/world/gen1/UnionCenters.lua:297-390, when
+  -- Setting.patchesOn, :392-394) adds the second floor and the union room
+  -- (UnionCenters.FLOOR_2F / UNION_ROOM, :7-9) beside the patched Centers.
+  -- The fake adds only the two map records; kb_engine's unionRoomPatched
+  -- reads the floor's presence.
+  function E.applyUnionRoom()
+    E.data.maps = E.data.maps or {}
+    E.data.maps.POKECENTER_2F = { id = "POKECENTER_2F", label = "POKECENTER_2F", tileset = "POKECENTER",
+                                  width = 7, height = 4, blocks = {}, warps = {}, objects = {} }
+    E.data.maps.UNION_ROOM = { id = "UNION_ROOM", label = "UNION_ROOM", tileset = "POKECENTER",
+                               width = 7, height = 4, blocks = {}, warps = {}, objects = {} }
+    E.unionRoomApplied = true
+  end
 
   -- the overworld module table: isOverworld, plus the fields kb_engine reads
   local runner = { running = false }

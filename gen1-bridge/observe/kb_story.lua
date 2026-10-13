@@ -22,7 +22,7 @@
 --                                      lit set is every dark map while
 --                                      save.flashLit holds (the engine keeps
 --                                      the light across dark floors and drops
---                                      it on any other map, OC:507-515)
+--                                      it on any other map, OC:514-522)
 --
 -- The snapshot carries the same state in full (rebase): every effective
 -- visibility that differs from its default (`toggles`), the current map's
@@ -113,7 +113,7 @@ function Story.new(opts)
   -- true when the block at index i of the current map may now be `block`:
   -- back to the map data (a regrown tree, a re-closed door), a swap site's
   -- state, or what the engine's cut record explains (the cut block,
-  -- OC:3318-3322)
+  -- OC:3430-3434)
   local function known(map, width, i, block, cuts, swaps, pristine)
     if pristine and pristine[i] == block then return true end
     local bx, by = (i - 1) % width, floor((i - 1) / width)

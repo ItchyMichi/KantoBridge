@@ -9,9 +9,9 @@ in ``local/gen1recomp-linux/`` with ``local/gen1recomp-data/`` as its
 XDG_DATA_HOME: LÖVE keeps the fused game's folder (imports, mods, saves) in
 ``local/gen1recomp-data/pokemon-love2d/``, the counterpart of the portable
 folder, and that folder is what ``INSTALL`` names there. The game boots in driver mode (POKEPORT_DRIVER, see
-refs/gen1recomp/main.lua:641-645 and :993-1011): the driver is a coroutine
+refs/gen1recomp/main.lua:755-759 and :1136-1157): the driver is a coroutine
 resumed once per frame, and the process exits 0 when it ends, 1 on a driver
-error and 3 on any uncaught Lua error (main.lua:77-83).
+error and 3 on any uncaught Lua error (main.lua:84-90).
 
 Data safety (docs/PLAN.md section 0.3). The game's output can contain
 ROM-derived text, so every line is filtered before anything is printed:
@@ -42,17 +42,36 @@ from pathlib import Path
 HERE = Path(__file__).resolve().parent
 REPO = HERE.parents[1]
 LINUX = sys.platform.startswith("linux")
-WINDOWS_INSTALL = REPO / "local" / "gen1recomp-e2e"
+# The Gen1Recomp release gen1-bridge is tested with (lib/kb_engine.lua Engine.TESTED; tools/tests/test_pins.py
+# keeps every copy of this number in step).
+PINNED = "0.3.85"
+
+
+def _versioned(name: str, env: str) -> Path:
+    """ENGINE_UPGRADE_PLAN UP4 / U5: the folder ``local/<name>`` an engine build or data home lives in.
+
+    An environment override (``KB_GEN1RECOMP_INSTALL``, ``KB_GEN1RECOMP_APP``, ``KB_GEN1RECOMP_HOME``) wins;
+    else ``local/<name>-<PINNED>`` when it exists, so two engine releases sit side by side and the
+    previous one stays untouched as the fallback until the upgrade's last gate; else ``local/<name>``.
+    """
+    override = os.environ.get(env)
+    if override:
+        return Path(override)
+    versioned = REPO / "local" / f"{name}-{PINNED}"
+    return versioned if versioned.is_dir() else REPO / "local" / name
+
+
+WINDOWS_INSTALL = _versioned("gen1recomp-e2e", "KB_GEN1RECOMP_INSTALL")
 # Linux: the extracted AppImage (AppRun runs bin/love --fused game.love) and its data home (XDG_DATA_HOME).
-LINUX_APP = REPO / "local" / "gen1recomp-linux"
-LINUX_HOME = REPO / "local" / "gen1recomp-data"
+LINUX_APP = _versioned("gen1recomp-linux", "KB_GEN1RECOMP_APP")
+LINUX_HOME = _versioned("gen1recomp-data", "KB_GEN1RECOMP_HOME")
 IDENTITY = "pokemon-love2d"  # the game's LÖVE identity: its data folder's name
 # The folder holding the imports (red/, blue/), mods/, saves/ and mod_cache/.
 INSTALL = LINUX_HOME / IDENTITY if LINUX else WINDOWS_INSTALL
 DRIVERS = HERE / "drivers"
 REPORTS = REPO / "local" / "reports"
 VERSIONS = ("red", "blue")
-MARKER = "rom-cache.complete"  # src/import/CacheContract.lua:29, inside the version folder
+MARKER = "rom-cache.complete"  # src/import/CacheContract.lua:35, inside the version folder
 
 BRIDGE_TAG = "[gen1-bridge]"
 # Our own mod.log lines (kb_log writes only symbols, counts and hashes).
@@ -74,7 +93,7 @@ def preflight(install: Path = INSTALL) -> Preflight:
     names = set(os.listdir(install)) if install.is_dir() else set()
     if LINUX:
         if not (LINUX_APP / "AppRun").is_file():
-            reasons.append("local/gen1recomp-linux/AppRun missing (the extracted AppImage)")
+            reasons.append(f"{LINUX_APP.name}/AppRun missing (the extracted AppImage, under local/)")
     else:
         if "gen1recomp.exe" not in names:
             reasons.append("gen1recomp.exe missing")
@@ -85,7 +104,8 @@ def preflight(install: Path = INSTALL) -> Preflight:
         reasons.append("mods/gen1-bridge junction missing")
     imported = [v for v in VERSIONS if v in names and MARKER in os.listdir(install / v)]
     if not imported:
-        reasons.append("no completed ROM import (red/ or blue/ with its completion marker)")
+        reasons.append(f"no completed ROM import in {install.parent.name}/{install.name} (red/ or blue/ with its "
+                       "completion marker; an import made by an older engine release is stale too: ENGINE_UPGRADE_PLAN B1)")
     game = imported[0] if len(imported) == 1 else None
     if len(imported) > 1:
         reasons.append("both red and blue are imported: pass --game")
@@ -135,6 +155,7 @@ class RunResult:
     other_sha8: str = ""
     error_spots: list[str] = field(default_factory=list)
     crash_log_touched: bool = False
+    hint: str | None = None  # the runner's reading of a silent timeout (ENGINE_UPGRADE_PLAN B1)
 
     def marker(self, name: str) -> str | None:
         for line in self.lines:
@@ -157,6 +178,7 @@ class RunResult:
             "error_spots": self.error_spots,
             "crash_log_touched": self.crash_log_touched,
             "markers": [line.split()[0] for line in self.lines if line.startswith("KB_")],
+            "hint": self.hint,
         }
 
 
@@ -230,6 +252,12 @@ class Launch:
             self.result.timed_out = True
             self.proc.kill()
             self.result.returncode = self.proc.wait(timeout=30)
+            if not any(line.startswith("KB_") for line in self.result.lines):
+                # ENGINE_UPGRADE_PLAN B1: an import made by another engine release is "not imported": the
+                # scripted boot stops at the importer and no driver marker ever prints (the launcher waits)
+                self.result.hint = ("no driver marker before the timeout: the game is still at its launcher or "
+                                    "importer; a ROM import from another Gen1Recomp release is stale and must be "
+                                    "redone for this one (ENGINE_UPGRADE_PLAN B1)")
         self._reader.join(timeout=10)
         self.result.elapsed = time.monotonic() - self._start
         self.result.other_sha8 = self._digest.hexdigest()[:8]
@@ -297,7 +325,7 @@ def launch(driver: str | Path, game: str | None = None, extra_env: dict[str, str
 def launch_plain(game: str | None = None, extra_env: dict[str, str] | None = None, echo: bool = True,
                  install: Path = INSTALL) -> Launch:
     """M10: starts the test instance WITHOUT a driver, so the engine's own paced main loop runs as it
-    does for a player (a driver turns its frame pacing off, refs/gen1recomp/main.lua:1637-1642, and
+    does for a player (a driver turns its frame pacing off, refs/gen1recomp/main.lua:1776-1781, and
     steps the game once per frame). It boots straight into the game's title (--game=); gen1-bridge
     listens on its configured port. Without a driver stdout stays block-buffered, so its lines come
     late: talk to gen1-bridge over TCP instead of waiting for markers. Nothing ends it but the

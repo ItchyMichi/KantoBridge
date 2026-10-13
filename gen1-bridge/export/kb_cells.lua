@@ -18,7 +18,7 @@
 --   bit  9   512  hole                     q.padOrHole == "hole", on a warp entry
 --                                          (the engine asks only when a warp is
 --                                          taken or reached, src/world/
---                                          OverworldController.lua:5320, :5507;
+--                                          OverworldController.lua:5470, :5666;
 --                                          elsewhere those tiles are floor art)
 --   bit 10  1024  spinner tile             a field.spinners cell of this map
 --   bit 11  2048  a warp entry is here     the map record's warps

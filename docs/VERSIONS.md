@@ -1,7 +1,7 @@
 # Versions
 
-Pinned versions for Kanto Bridge, all looked up from official sources on **2026-10-03**. Change
-them only deliberately:
+Pinned versions for Kanto Bridge, all looked up from official sources on **2026-10-03** (Gen1Recomp
+re-pinned on **2026-10-13**). Change them only deliberately:
 
 1. Update `fabric-bridge/gradle.properties`, and `fabric.mod.json` `depends` if needed.
 2. Update this file, including where the new value came from.
@@ -43,7 +43,8 @@ from npm (source `FabricMC/fabricmc.net`).
 
 | Component | Version | Where it was found | Notes |
 |---|---|---|---|
-| Gen1Recomp | **v0.3.49**: the official Windows release zip `gen1recomp-0.3.49-windows.zip`, SHA-256 `7816b1fd93a06197aa395658f73d7e8087ee6421b3da6452f7be8ff69f3ae878` | <https://github.com/bryanthaboi/gen1recomp/releases/tag/v0.3.49> (2026-10-02, the latest release when pinned on 2026-10-03). The checksum matches the release's own `sha256sums.txt`. Official source only; never gen1recomp[.]com. | You chose the latest release; I chose the release zip over a source checkout, because it needs no LÖVE install and is the exact build players would get. Installed portable in `local/gen1recomp/`. The references were studied at `dev` @ `cb02aeb`, which v0.3.49 contains. `gen1-bridge/manifest.json` declares `"game_version": "0.0.0-dev \|\| >=0.3.49 <0.4.0"`. |
+| Gen1Recomp | **v0.3.85** (current): the official Windows release zip `gen1recomp-0.3.85-windows.zip` (51,220,042 bytes), SHA-256 `20cff4a16cf7235d224fe6dc32c0490f482a9d768d29a194bae5fff93c82c53a` | <https://github.com/bryanthaboi/gen1recomp/releases/tag/v0.3.85> (released 2026-10-12, the latest release when pinned on 2026-10-13; built from `dev` @ `e50c396`, 2026-10-12). The checksums here come from the release's own `sha256sums.txt`. Official source only; never gen1recomp[.]com. | Pinned through [`specs/ENGINE_UPGRADE_PLAN.md`](specs/ENGINE_UPGRADE_PLAN.md) (you chose its defaults U1–U6 on 2026-10-13); the release zip over a source checkout, as before. The references were re-checked at `dev` @ `e50c396` (v0.3.85); the mod API is unchanged. `gen1-bridge/manifest.json` declares `"game_version": "0.0.0-dev \|\| >=0.3.85 <0.4.0"` and `lib/kb_engine.lua` `Engine.CHECKED = "0.3.85"`. The pod's Linux build is `gen1recomp-0.3.85-linux-x86_64.AppImage` (51,016,896 bytes), SHA-256 `ed558a8c53667b157baadee301889ef81174b03198b98e10772df11efd38fa89`, from the same `sha256sums.txt`. Every ROM import is redone for this release (its import cache generation changed for every game); zipped or 7z ROMs import as they are. Every install runs with its Union Room OFF (CLAUDE.md's hard rules). Installed portable in `local/gen1recomp/` (a fresh folder; the older pin's folders stay beside it, suffixed with their version, until gate G6 passes). |
+| Gen1Recomp (superseded) | v0.3.49: `gen1recomp-0.3.49-windows.zip`, SHA-256 `7816b1fd93a06197aa395658f73d7e8087ee6421b3da6452f7be8ff69f3ae878` | <https://github.com/bryanthaboi/gen1recomp/releases/tag/v0.3.49> (2026-10-02, the latest release when pinned on 2026-10-03). The checksum matched the release's own `sha256sums.txt`. | History: superseded on 2026-10-13 by ENGINE_UPGRADE_PLAN. The references were first studied at `dev` @ `cb02aeb`, which v0.3.49 contains; the manifest's range was `>=0.3.49 <0.4.0`. |
 | Gen1Recomp mod API | **2** | `src/core/Version.lua` (`modApi = 2`) | `"api": 2` in the manifest |
 | LÖVE | **11.5**, bundled | Gen1Recomp `conf.lua:64`; the release's `gen1recomp.exe` is fused with LÖVE (`love.dll`) | No separate install needed for the release build |
 | Dramaless Shape (voxel mod) | **2.0.4** | Your zip in `refs/`; GitHub release `v2.0.4` (2026-09-01) at <https://github.com/artyrambles/DRAMALESS_SHAPE> | Reference only; not pinned for players yet |

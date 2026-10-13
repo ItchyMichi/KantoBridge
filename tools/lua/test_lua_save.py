@@ -56,6 +56,11 @@ def test_the_nurse_heals_cobblemon_then_both_games_save():
     assert max(closes) < at and max(opens) < at
     assert g.E.save.lastHeal.map == b"TEST_CENTER", "the engine's own lastHeal, untouched"
     assert g.E.save.player.map == b"TEST_CENTER" and g.E.save.player.x == 3, "captureSave ran"
+    # ENGINE_UPGRADE_PLAN B8: Game:writeSave (Game.lua:1379) writes through UnionSafety.write, the
+    # identity with the Union Room off: the writer got the live save table, with the live data
+    u = g.E.unionSafety
+    assert (u.writes, u.identity, u.settles) == (1, True, 0)
+    assert bool(g.b.eval("function(a, b) return rawequal(a, b) end")(u.lastData, g.E.data))
     st = g.status()
     assert (st["saveHeals"], st["saveCenterArmed"], st["saveCenterWritten"], st["saveCenter"], st["saveBegun"],
             st["saveWrites"], st["saveCenterPending"]) == (1, 1, 1, 1, 1, 1, False)

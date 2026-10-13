@@ -26,11 +26,12 @@ return {
       "NPCs on a neighbouring map (across a map seam) aren't mirrored",
       "Pokémon Tower has no wild Pokémon once the SILPH SCOPE is held",
       "the pinned display options and text speed are written into Gen1Recomp's options.lua when the game saves",
+      "Gen1Recomp's Union Room is switched off (options.lua unionRoom = false) while this mod is on: its extra Pokémon Center floor isn't in the Minecraft world, so the world export is refused until it is off and the game restarted",
     },
   },
   credits = {
     { who = "Based on the Pokemon Gen 1 Recompilation Project by BOIS CLUB GAMES, LLC (https://github.com/bryanthaboi/gen1recomp)", for_ = "the engine and its mod platform" },
     { who = "Claude (Anthropic), in Claude Code", for_ = "writing the code (vibe coded)" },
   },
-  compat = { engine = "0.0.0-dev || >=0.3.49 <0.4.0", modApi = 2 },
+  compat = { engine = "0.0.0-dev || >=0.3.85 <0.4.0", modApi = 2 },
 }

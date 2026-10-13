@@ -62,9 +62,20 @@ class ExportCliTest {
 		TreeMap<String, Integer> kinds = new TreeMap<>();
 		kinds.put("map", 3);
 		kinds.put("image", 1);
-		String line = ExportCli.summary(new ExportClient.Result(this.temp.resolve("red"), "red", "0.3.49", "0.1.0", 4, 1234, "ab".repeat(32),
+		String line = ExportCli.summary(new ExportClient.Result(this.temp.resolve("red"), "red", "0.3.85", "0.1.0", 4, 1234, "ab".repeat(32),
 				kinds, 56));
 		assertEquals("export: ok game=red resources=4 bytes=1234 kinds=image:1,map:3 index=" + "ab".repeat(32)
-				+ " engine=0.3.49 bridge=0.1.0 ms=56", line);
+				+ " engine=0.3.85 bridge=0.1.0 ms=56", line);
+	}
+
+	@Test
+	void aFailureLineNamesTheCodeAndAUnionRoomRefusalSaysWhatToClick() {
+		assertEquals("export: failed not_found (sprite/x) port=27151",
+				ExportCli.failed(new ExportClient.ExportException("not_found", "sprite/x"), 27151));
+		assertEquals("export: failed unreachable port=27196", ExportCli.failed(new ExportClient.ExportException("unreachable", null), 27196));
+		// gen1-bridge refuses export.index while Gen1Recomp's Union Room is on (ENGINE_UPGRADE_PLAN UP1 item 4).
+		assertEquals("export: failed union_room_on (the hidden game's Union Room is on: Launcher Options → Union Room → OFF,"
+				+ " then restart Gen1Recomp) port=27151",
+				ExportCli.failed(new ExportClient.ExportException("union_room_on", "export.index"), 27151));
 	}
 }

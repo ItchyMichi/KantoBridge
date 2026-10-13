@@ -83,14 +83,17 @@ final behaviour.
 Already done while publishing: the licence travels inside the jar, and gen1-bridge's `mod.card` describes what it does
 today. Next, by value against effort:
 
-1. **Make engine upgrades loud.** `kb_engine.lua` loads 24 engine modules through a `try()` that returns nil silently
-   (`gen1-bridge/lib/kb_engine.lua:181-185`), and some seams are called through a discarded `pcall`
-   (`gen1-bridge/main.lua:812-814`). List the modules, patched functions and key fields in one table, check it at boot
-   with one warning naming what's missing, and assert it in an e2e smoke test. The 651 lupa tests run against v0.3.49
-   fakes, so they can't see engine drift.
-2. **A consistency test** for the versions in `gradle.properties`, `tools/installer/pins.json`, `fabric.mod.json` and
-   gen1-bridge's `manifest.json`/`mod.card`, the engine pin (`Engine.CHECKED`), the default port, and the build gates
-   `tools/e2e/build_world.py:60-79` copies from Java by hand.
+1. **Make engine upgrades loud.** Done 2026-10-13 (ENGINE_UPGRADE_PLAN UP1): `Engine.REQUIRED` in `kb_engine.lua`
+   lists the engine modules `try()` loads and the functions and fields each must have; `engine.checkRequired()` at
+   `game.ready` logs one `engine.missing` warning naming what is absent, `debug.status.engineMissing` lists it,
+   `KB_READY` prints `missing=<n>` and `test_s5_ready.py` asserts 0. (Before: the 24 modules were loaded through a
+   `try()` that returned nil silently, and some seams ran through a discarded `pcall`; the lupa tests run against
+   fakes, so they can't see engine drift.)
+2. **A consistency test for the pins.** Done 2026-10-13 (ENGINE_UPGRADE_PLAN UP1): `tools/tests/test_pins.py` fails
+   when any copy of the engine pin disagrees (`Engine.CHECKED`, `manifest.json`'s `game_version`,
+   `tools/installer/pins.json`, `VERSIONS.md`, `INSTALL.md`, `CLAUDE.md` and the e2e/lupa literals). Not part of it,
+   from the original item: `gradle.properties`, `fabric.mod.json` and `mod.card`'s versions, the default port, and the
+   build gates `tools/e2e/build_world.py:60-79` copies from Java by hand.
 3. **One home for the port.** 27151 is written in 8+ places, and the fallback span in three forms; when gen1-bridge falls
    back to +1..+8 the client still tries one port (`gen1-bridge/lib/kb_net.lua:227-241`). Put it in `catalog.json`, and
    let the client try the span (or let `launch.ps1` pass `-Dkantobridge.port`).
@@ -196,7 +199,7 @@ real Gen 1 engines in a test-only world (Red and Blue are one world space in rea
 
 | Component | Pin | What an upgrade involves |
 |---|---|---|
-| Gen1Recomp | v0.3.49 | It ships often. [`specs/ENGINE_UPGRADE_PLAN.md`](specs/ENGINE_UPGRADE_PLAN.md) (2026-10-13) is the plan for v0.3.85: `tools/pin_check.py` audits every cited engine line first (696 citations; 49 on changed code), every ROM is re-imported (the cache generation changed), the Union Room must be OFF, and the text box, bag and battle-music seams change; a new export means a world rebuild |
+| Gen1Recomp | v0.3.85 (2026-10-13) | It ships often. `tools/pin_check.py` is the first step of the next bump: it audits every cited engine line (for v0.3.49 → v0.3.85: 696 citations, 474 shifted, 49 on changed code) and `--restamp` rewrites the ones that only moved; `tools/tests/test_pins.py` fails while any copy of the pin lags. [`specs/ENGINE_UPGRADE_PLAN.md`](specs/ENGINE_UPGRADE_PLAN.md) (2026-10-13) is the record of that bump: every ROM re-imported (the cache generation changed), the Union Room OFF in every install, and the text box, bag and battle-music seams; a new export means a world rebuild |
 | Cobblemon | 1.8.1 | Re-check its 9 mixins (3 in common code) and 73 imports, some from non-API packages |
 | Minecraft | 1.21.1 | Needs Cobblemon for that version, Loom 1.18+ (Gradle on JDK 25), and the model API re-researched |
 | Fabric Loader, Fabric API, Parchment | 0.19.5, 0.116.17, 2024.11.17 | Already the newest for 1.21.1 |

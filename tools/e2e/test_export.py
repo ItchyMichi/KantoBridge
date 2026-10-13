@@ -86,14 +86,14 @@ async def _export(port, game):
     builder = FakeMinecraft(port=port, role="builder", ping_ms=1000)
     await builder.connect(attempts=20)
     ok = (await builder.hello())["data"]
-    assert (ok["protocol"], ok["engine"], ok["game"]) == (1, "0.3.49", game)
+    assert (ok["protocol"], ok["engine"], ok["game"]) == (1, "0.3.85", game)
     await builder.expect("snapshot", timeout=10)
 
     started = time.monotonic()
     reply = await builder.request("export.index", {}, reply_type="export.index", timeout=240)
     index_seconds = time.monotonic() - started
     index = reply["data"]
-    assert (index["game"], index["engine"], index["bridge"]) == (game, "0.3.49", "0.1.0")
+    assert (index["game"], index["engine"], index["bridge"]) == (game, "0.3.85", "0.1.0")
     entries = index["resources"]
     assert {e["kind"] for e in entries} == _kinds()
     assert len({(e["kind"], e["id"]) for e in entries}) == len(entries), "unique ids per kind"

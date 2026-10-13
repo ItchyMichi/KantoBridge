@@ -1,6 +1,6 @@
 -- Kanto Bridge test driver (the caves and woods plan's CW5 video,
 -- docs/specs/CAVES_AND_WOODS_PLAN.md §6): moves gen1-bridge to the test port,
--- starts a new game without the intro (src/core/Game.lua:171-198), gives the
+-- starts a new game without the intro (src/core/Game.lua:173-200), gives the
 -- player a starter (as kb_wild.lua does) and warps through the supported
 -- mod.world facade (WorldAPI:warpTo, src/world/WorldAPI.lua:358-371) to each
 -- stop of KB_TOUR_STOPS in turn (map symbols, comma-separated; default Mt.

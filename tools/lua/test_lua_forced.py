@@ -36,7 +36,7 @@ MAPS = {"TEST_GYM": GYM, "TEST_SEA": SEA}
 FIELD = {
     "spinners": {"TEST_GYM": [{"x": 3, "y": 2, "moves": [{"dir": "right", "count": 2}, {"dir": "down", "count": 1}]}]},
     # the currents run until their plug boulders fall (currentsDisabledByEvents; none listed would
-    # mean "all set", as in the engine's allSet, OC:5034-5039)
+    # mean "all set", as in the engine's allSet, OC:5182-5187)
     "seafoam": {"TEST_SEA": {"currents": [{"x": 4, "y": 1, "moves": [{"dir": "down", "count": 2}]}],
                              "currentsDisabledByEvents": ["EVENT_TEST_BOULDERS"],
                              "forcedExit": {"coords": [{"x": 6, "y": 3}], "activeUntilEvents": ["EVENT_TEST_PLUG"]}}},

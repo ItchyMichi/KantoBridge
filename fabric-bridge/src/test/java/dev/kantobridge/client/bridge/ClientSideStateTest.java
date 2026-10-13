@@ -67,6 +67,32 @@ class ClientSideStateTest {
 	}
 
 	@Test
+	void theHandshakeCarriesTheUnionRoomSetting() throws Exception {
+		Dispatcher dispatcher = new Dispatcher(CATALOG);
+		ClientBridgeState state = new ClientBridgeState();
+		state.attach(dispatcher);
+		dispatcher.stateChanged(ConnectionState.CONNECTED, "red");
+		dispatcher.message(message("hello.ok", 1,
+				"{\"protocol\":1,\"bridge\":\"0.1.0\",\"engine\":\"0.3.85\",\"game\":\"red\",\"session\":\"s-1\",\"union_room\":\"on\"}"));
+		dispatcher.drain(100);
+		HelloOk on = state.handshake();
+		assertEquals(new HelloOk("s-1", "red", "0.3.85", "0.1.0", null, "on"), on);
+		assertTrue(on.unionRoomOn());
+		dispatcher.message(message("hello.ok", 2,
+				"{\"protocol\":1,\"bridge\":\"0.1.0\",\"engine\":\"0.3.85\",\"game\":\"red\",\"session\":\"s-2\",\"union_room\":\"off\"}"));
+		dispatcher.drain(100);
+		HelloOk off = state.handshake();
+		assertEquals(new HelloOk("s-2", "red", "0.3.85", "0.1.0", null, "off"), off);
+		assertFalse(off.unionRoomOn());
+		dispatcher.message(message("hello.ok", 3,
+				"{\"protocol\":1,\"bridge\":\"0.1.0\",\"engine\":\"0.3.85\",\"game\":\"red\",\"session\":\"s-3\",\"union_room\":7}"));
+		dispatcher.drain(100);
+		HelloOk odd = state.handshake();
+		assertEquals(new HelloOk("s-3", "red", "0.3.85", "0.1.0"), odd, "a value that isn't on or off is left out");
+		assertFalse(odd.unionRoomOn());
+	}
+
+	@Test
 	void stateFollowsSnapshotPositionsStateAndWarps() throws Exception {
 		Dispatcher dispatcher = new Dispatcher(CATALOG);
 		ClientBridgeState state = new ClientBridgeState();
@@ -74,11 +100,11 @@ class ClientSideStateTest {
 		assertFalse(state.hasPosition());
 		dispatcher.stateChanged(ConnectionState.CONNECTED, "red");
 		dispatcher.message(message("hello.ok", 1,
-				"{\"protocol\":1,\"bridge\":\"0.1.0\",\"engine\":\"0.3.49\",\"game\":\"red\",\"session\":\"s-1\"}"));
+				"{\"protocol\":1,\"bridge\":\"0.1.0\",\"engine\":\"0.3.85\",\"game\":\"red\",\"session\":\"s-1\"}"));
 		dispatcher.message(message("snapshot", 2, "{\"player\":{\"map\":\"TEST_TOWN\",\"x\":5,\"y\":8,\"facing\":\"down\"},"
 				+ "\"state\":{\"mode\":\"idle\",\"bike\":false,\"surf\":false,\"slope\":false,\"hidden\":false,\"dark\":false,\"lit\":false}}"));
 		dispatcher.drain(100);
-		assertEquals(new HelloOk("s-1", "red", "0.3.49", "0.1.0"), state.handshake());
+		assertEquals(new HelloOk("s-1", "red", "0.3.85", "0.1.0"), state.handshake());
 		assertEquals("TEST_TOWN", state.map());
 		assertEquals(5, state.x());
 		assertEquals(8, state.y());

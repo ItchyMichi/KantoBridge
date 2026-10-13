@@ -26,7 +26,7 @@
 -- A ledge hop is one message: kind "ledge" at the LANDING cell, two cells
 -- away, with the whole hop's frames (both cells); its second cell and the
 -- stop between them send nothing. A hop that lands on a connected map
--- crosses the seam on its second cell (OC:2011-2023): that step is sent as
+-- crosses the seam on its second cell (OC:2124-2136): that step is sent as
 -- kind "ledge" too, with the new map and its own frames.
 --
 -- Each message carries a third, local element (never sent): a tag the step

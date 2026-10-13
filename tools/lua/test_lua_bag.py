@@ -89,6 +89,44 @@ def test_bag_use_takes_items_out_and_the_next_sync_shows_it():
     assert "X_ATTACK" not in syncs(g)[-1]
     st = g.status()
     assert st["bagUses"] == 2 and st["bagRemoved"] == 3 and st["bagMismatch"] == 0
+    # ENGINE_UPGRADE_PLAN B4: Bag.remove(save, id, qty, data, slot) gets the live game data, no slot
+    calls = [(c.id.decode(), c.qty, same(g, c.data, g.E.data), c.slot) for c in g.E.bagRemoves.values()]
+    assert calls == [("POKE_BALL", 2, True, None), ("X_ATTACK", 1, True, None)]
+
+
+def same(g, a, b):
+    """Lua identity (lupa wraps one table in different Python objects)."""
+    return bool(g.b.eval("function(a, b) return rawequal(a, b) end")(a, b))
+
+
+def rows(g):
+    return [(r.id.decode(), r.slot, r.count) for r in g.E.Bag.rows(g.E.save, g.E.data).values()]
+
+
+def test_stacks_split_at_99_and_the_mirror_carries_the_total():
+    """Bag.lua at v0.3.85: an item over 99 fills a second stack (addTo :383-425), rows are one per
+    stack (Bag.rows :369-373), bagStacks holds only a split that isn't the derived 99+rest shape
+    (setCounts :113-120); bag.use takes from the first stack on (removeFrom :427-463, no slot);
+    the mirror sees totals only."""
+    g = bag_game()
+    g.connect()
+    stock(g, POKE_BALL=150)                       # 5 + 150 = 155: two stacks, 99 and 56
+    g.run(2)
+    assert syncs(g)[-1]["POKE_BALL"] == 155, "totals, never stacks"
+    assert [r for r in rows(g) if r[0] == "POKE_BALL"] == [("POKE_BALL", 1, 99), ("POKE_BALL", 2, 56)]
+    assert g.E.save.bagStacks is None, "the derived shape needs no side table"
+    g.send("bag.use", {"item": "POKE_BALL", "qty": 60})
+    g.run()
+    assert g.E.save.inventory.POKE_BALL == 95 and syncs(g)[-1]["POKE_BALL"] == 95
+    assert [r for r in rows(g) if r[0] == "POKE_BALL"] == [("POKE_BALL", 1, 39), ("POKE_BALL", 2, 56)]
+    assert list(g.E.save.bagStacks.POKE_BALL.values()) == [39, 56], "no longer derived: kept beside the totals"
+    order = [v.decode() for v in g.E.save.bagOrder.values()]
+    assert order.count("POKE_BALL") == 2
+    g.send("bag.use", {"item": "POKE_BALL", "qty": 95})
+    g.run()
+    assert g.E.save.inventory.POKE_BALL is None and g.E.save.bagStacks is None
+    assert "POKE_BALL" not in [v.decode() for v in g.E.save.bagOrder.values()], "both stacks' order entries gone"
+    assert g.status()["bagRemoved"] == 155
 
 
 def test_using_more_than_the_bag_holds_never_goes_below_zero():

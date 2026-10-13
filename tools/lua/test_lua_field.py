@@ -75,7 +75,7 @@ def test_cut_refusals(moves, badges, start, reason):
 
 def test_the_engines_party_knows_decides_so_a_mod_may_allow_more():
     g = FieldGame()
-    # a mod's fieldmove.eligibility hook answering for CUT (OC:2230-2237) with no member knowing it
+    # a mod's fieldmove.eligibility hook answering for CUT (OC:2343-2350) with no member knowing it
     g.E.ow.partyKnows = g.b.eval("""function(real) return function(self, move)
         if move == 'CUT' then return { species = 'TESTMON' } end
         return real(self, move)
@@ -193,6 +193,10 @@ def test_the_escape_rope_is_dig_with_the_item():
     g.give("ESCAPE_ROPE", qty=2)
     assert g.field("dig", item="ESCAPE_ROPE") == {"ok": True, "kind": "rope"}
     assert g.E.save.inventory[b"ESCAPE_ROPE"] == 1
+    # ENGINE_UPGRADE_PLAN B4: Bag.remove(save, id, qty, data) with the live game data
+    rope = list(g.E.bagRemoves.values())[-1]
+    assert (rope.id, rope.qty, rope.slot) == (b"ESCAPE_ROPE", 1, None)
+    assert bool(g.b.eval("function(a, b) return rawequal(a, b) end")(rope.data, g.E.data))
     g.settle()
     assert [w["kind"] for w in warps(g)] == ["rope", "rope"]
     assert g.field("dig", item="POTION")["reason"] == "no_item"

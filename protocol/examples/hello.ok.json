@@ -6,10 +6,11 @@
     "data": {
       "protocol": 1,
       "bridge": "0.1.0",
-      "engine": "0.3.49",
+      "engine": "0.3.85",
       "game": "red",
       "session": "s-7f3a91",
-      "tested": "0.3.49"
+      "tested": "0.3.85",
+      "union_room": "off"
     }
   }
 ]

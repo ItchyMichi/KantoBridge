@@ -1,6 +1,6 @@
 -- Kanto Bridge test driver (the caves in 3D plan's H6 pilot video,
 -- docs/specs/CAVES_3D_PLAN.md): moves gen1-bridge to the test port, starts a
--- new game without the intro (src/core/Game.lua:171-198), gives the player a
+-- new game without the intro (src/core/Game.lua:173-200), gives the player a
 -- level 100 starter and REPEL steps (as kb_field.lua does: no wild battle
 -- interrupts a shot), marks every map trainer of KB_PILOT_MAPS beaten (as
 -- kb_endgame.lua does, so nobody sights the player), and warps
@@ -18,7 +18,7 @@
 -- KB_PILOT_DIR/answer.txt: "<seq> ok" once the hidden player stands there, or
 -- "<seq> refused <reason> [<x>,<y>]". On each arrival it sets save.flashLit,
 -- as Flash does, so a dark cave (Rock Tunnel) is lit for the camera (the
--- engine drops it again on any map that isn't dark, OC:507-515).
+-- engine drops it again on any map that isn't dark, OC:514-522).
 --
 -- It prints KB_PILOT_READY map= x= y= facing= port= at the first stop,
 -- KB_PILOT_REQUEST n= kind= map= cells= verdict= for each request,
@@ -126,8 +126,8 @@ end
 local function npcId(mapId, o) return mapId .. "_obj_" .. o.index end
 
 -- every map trainer of a map beaten, so nobody sights the player
--- (checkTrainerSight skips beaten ones, OC:4372-4420; the header's event,
--- Data:trainerHeader, src/core/Data.lua:425-428)
+-- (checkTrainerSight skips beaten ones, OC:4506-4554; the header's event,
+-- Data:trainerHeader, src/core/Data.lua:426-429)
 local function beatTrainers(game, mapId)
   local def = game.data.maps[mapId]
   local n = 0
@@ -223,7 +223,7 @@ return function(game)
         end
         if not species then fail("no_starter_species") end
         -- level 100 and REPEL steps: the engine's own REPEL filter keeps every
-        -- wild Pokemon weaker than the lead away (OC:4793-4799)
+        -- wild Pokemon weaker than the lead away (OC:4934-4940)
         local mon = require("src.pokemon.Pokemon").new(data, species, 100)
         save.repelSteps = 9999
         require("src.battle.BattleState").stampOT(save, mon)

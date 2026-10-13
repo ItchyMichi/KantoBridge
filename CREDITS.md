@@ -16,7 +16,7 @@ they run. **Forks must keep it.** Gen1Recomp's launcher is proprietary; nothing 
 
 ## Built on (needed at runtime, not included in this repository)
 
-- **Gen1Recomp** v0.3.49 (GPL-3.0 with additional terms): the hidden game, and the mod platform `gen1-bridge` runs on.
+- **Gen1Recomp** v0.3.85 (GPL-3.0 with additional terms): the hidden game, and the mod platform `gen1-bridge` runs on.
   Get it only from https://github.com/bryanthaboi/gen1recomp.
 - **Minecraft: Java Edition** 1.21.1 by Mojang Studios. NOT AN OFFICIAL MINECRAFT PRODUCT. NOT APPROVED BY OR
   ASSOCIATED WITH MOJANG OR MICROSOFT.

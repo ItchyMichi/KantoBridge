@@ -130,7 +130,7 @@ final class FakeExportPeer {
 				JsonObject ok = new JsonObject();
 				ok.addProperty("protocol", 1);
 				ok.addProperty("bridge", "0.1.0");
-				ok.addProperty("engine", "0.3.49");
+				ok.addProperty("engine", "0.3.85");
 				ok.addProperty("game", this.index.get("game").getAsString());
 				ok.addProperty("session", "s-test");
 				this.pipe.serverSend(this.reply("hello.ok", message.seq(), ok));

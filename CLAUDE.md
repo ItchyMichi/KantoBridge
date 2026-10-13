@@ -36,7 +36,9 @@ Pokémon Red/Blue's story runs in a **hidden Gen1Recomp**. It is displayed and p
   from v0.3.49 to v0.3.85 (UP0–UP6, gates G0–G6; written 2026-10-13): the audit of every cited engine line
   (`tools/pin_check.py`), the re-import every ROM needs, the Union Room (on by default upstream since v0.3.61; it
   rewrites Gen 1's Pokémon Centers at data load, so every KantoBridge install runs with it OFF), and the seams that
-  changed (text boxes, the bag, battle music). It waits for the user's go (its decisions U1–U6).
+  changed (text boxes, the bag, battle music). In progress since 2026-10-13 with its defaults (the user's answer to
+  U1–U6: v0.3.85, the user re-imports, the Union Room OFF, fresh folders, the v0.3.49 folders kept until the last
+  gate, the JUnit literals updated); PROGRESS.md's "Engine upgrade" section records the gates.
 - `refs/_research/` (git-ignored) holds the research notes, with verified `file:line` references,
   that the plan cites.
 
@@ -53,6 +55,12 @@ Pokémon Red/Blue's story runs in a **hidden Gen1Recomp**. It is displayed and p
   launcher files).
 - **Get Gen1Recomp only from <https://github.com/bryanthaboi/gen1recomp>.** `gen1recomp.com` is an
   impersonation site; never download anything from it.
+- **Every KantoBridge install runs with Gen1Recomp's Union Room OFF** (Launcher Options → Union Room → OFF,
+  then restart). It is on by default upstream and rewrites Gen 1's Pokémon Centers at data load, which the
+  export never sees. gen1-bridge pins the option off and guards it: it logs `engine.union_room_on` once if a
+  boot ran patched, refuses `export.index` with `error{code:"union_room_on"}`, and reports it in `hello.ok`
+  (`union_room`) and `debug.status` (`unionRoom`); the client shows a notice; the e2e driver
+  `tools/e2e/drivers/kb_union_off.lua` switches it off headlessly.
 - Never run Gen1Recomp from `refs/`, and never use its `Play-Windows.bat` or `scripts/setup.ps1`.
   They scan for a `.gb` and write ROM data into the source tree.
 - **If something is ambiguous or a step fails, stop and ask the user.** Don't improvise a workaround.
@@ -161,8 +169,9 @@ $env:JAVA_HOME = 'C:\Program Files\Eclipse Adoptium\jdk-21.0.12.101-hotspot'; .\
 **gen1-bridge** has no build step. It runs inside the pinned Gen1Recomp, whose **data lives in
 `local/` via portable mode**:
 
-- **The install:** Gen1Recomp **v0.3.49** (official Windows release zip, SHA-256 checked) is in
-  `local/gen1recomp/`.
+- **The install:** Gen1Recomp **v0.3.85** (official Windows release zip, SHA-256 checked; the pin
+  since 2026-10-13) is in `local/gen1recomp/`, a fresh folder from the new zip (ENGINE_UPGRADE_PLAN
+  UP5); the v0.3.49 folders stay beside it as `-0.3.49` until gate G6 passes.
 - **Portable mode:** an empty `portable.txt` beside `gen1recomp.exe` makes it keep all of its data
   in that folder: saves, `options.lua`, ROM cache, `roms/`, `mods/`.
 - **The mod link:** `local/gen1recomp/mods/gen1-bridge` is a junction to `gen1-bridge/`, so edits
@@ -183,10 +192,13 @@ $env:JAVA_HOME = 'C:\Program Files\Eclipse Adoptium\jdk-21.0.12.101-hotspot'; .\
     it at full speed (`gen1-bridge/README.md`).
   - While connected, gen1-bridge also paces a minimised window's drawing.
 - **Updating Gen1Recomp:** replace the release files (exe, DLLs, `license.txt`) and leave the data
-  folders alone. Update VERSIONS.md.
-- **The test install** `local/gen1recomp-e2e/` has the same layout, its own `portable.txt`, and its
-  own `mods/gen1-bridge` junction. Automated tests launch only this one, with a test driver script
-  (see the plan).
+  folders alone. Update VERSIONS.md. `tools/pin_check.py` is the first step (it audits every cited
+  engine line); when the release bumps the ROM cache generation (v0.3.85 did), the user re-imports
+  the ROM in the launcher, never the agent.
+- **The test install** `local/gen1recomp-e2e/` (or `local/gen1recomp-e2e-0.3.85/`: the e2e runner
+  prefers the folder named for its pin, `tools/e2e/README.md`) has the same layout, its own
+  `portable.txt`, and its own `mods/gen1-bridge` junction. Automated tests launch only this one, with
+  a test driver script (see the plan).
 - **The Minecraft dev run directory** is `local/minecraft/` (client and server; the user's EULA
   acceptance lives there). The plan keeps generated worlds and packs in `local/`.
 

@@ -94,7 +94,7 @@ class BridgeClientTest {
 		JsonObject data = new JsonObject();
 		data.addProperty("protocol", 1);
 		data.addProperty("bridge", "0.1.0");
-		data.addProperty("engine", "0.3.49");
+		data.addProperty("engine", "0.3.85");
 		data.addProperty("game", "blue");
 		data.addProperty("session", session);
 		return new Envelope("hello.ok", 1, re, data).toJson();
@@ -130,7 +130,7 @@ class BridgeClientTest {
 		step.addProperty("n", 1);
 		assertFalse(started.send("move.step", step), "nothing is sent before the handshake");
 		PipeTransport.Pipe pipe = this.handshake("s-1");
-		assertEquals(new HelloOk("s-1", "blue", "0.3.49", "0.1.0"), started.handshake());
+		assertEquals(new HelloOk("s-1", "blue", "0.3.85", "0.1.0"), started.handshake());
 		pipe.serverSend("{\"data\":{},\"seq\":2,\"type\":\"resync\"}"); // wrong leg: answered, not delivered
 		Envelope error = Envelope.parse(pipe.serverReadLine());
 		assertEquals("error", error.type());

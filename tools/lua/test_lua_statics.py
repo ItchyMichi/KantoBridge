@@ -1,6 +1,6 @@
 """M8 (wave 2) static encounters and direct battles (lib/kb_engine.lua "direct battles, native
 catches, the daycare, renames"; act/kb_battle.lua), wired by main.lua, on the simulated engine with
-fake_content.lua: a static Pokemon object talked to (the talk path, OC:3488-3510) goes to Cobblemon
+fake_content.lua: a static Pokemon object talked to (the talk path, OC:3600-3622) goes to Cobblemon
 as battle.start kind static with its cell; every result applied through the battle's own
 continuation (caught and win: gone for good; fled and lose: per Gen 1; aborted: as a flight); a
 ghost trigger like the Marowak's (with the SILPH_SCOPE: static and uncatchable; without: the native
@@ -335,6 +335,41 @@ def test_gym_and_final_themes_and_the_victory_for_a_badge_fight():
     g.send("battle.result", {"battle": data["battle"], "outcome": "lose"})
     g.read_texts()
     assert victories(g) == ["gym"], "no victory theme for a loss"
+
+
+def test_a_won_final_battle_plays_the_leaders_jingle_and_keeps_its_music():
+    """BattleState:playVictoryMusic (BattleState.lua:5897-5911, v0.3.85): the final battle shares the
+    gym leaders' jingle; finish (:5963-5970) no longer brings the map's song back after a WON final
+    battle (the Hall of Fame sequence owns the music), so kb_engine skips its restore too."""
+    g = ContentGame(at="static", start=("TEST_ROUTE", 5, 2, "up"))
+    g.give("STARTMON_C", 70)
+    g.script([["rival_battle", "OPP_RIVAL3", 1]])
+    data = held(g)
+    assert music(g)[-1] == ("final", "OPP_RIVAL3", False)
+    g.send("battle.result", {"battle": data["battle"], "outcome": "win"})
+    g.read_texts()
+    assert victories(g) == ["gym"]
+    assert [(c.kind.decode(), c.trainer) for c in g.E.music.victoryCalls.values()] == [("gym", None)]
+    assert g.E.musicRestores == 0, "never restored after a won final battle"
+    assert g.E.save.money > 0 and g.mode() == "idle"
+
+
+@pytest.mark.parametrize("cls,jingle", [("OPP_LANCE", "trainer"), ("OPP_BROCK", "gym"), ("OPP_LORELEI", "trainer")])
+def test_the_victory_jingle_is_the_leaders_only_for_a_badge_fight(cls, jingle):
+    """BattleState:playVictoryMusic (:5903-5909): a gym-kind battle that isn't a leader's (Lance:
+    the gym theme, no badge) wins to the trainer jingle; a badge fight (isGymLeader) to the leaders'."""
+    data = copy.deepcopy(CONTENT_DATA)
+    data["trainers"].setdefault(cls, {"name": "X", "baseMoney": 50,
+                                      "parties": [[{"species": "BIRDMON", "level": 50}]]})
+    g = ContentGame(at="static", start=("TEST_ROUTE", 5, 2, "up"), data=data)
+    g.give("STARTMON_C", 60)
+    g.E.victories = g.b.to_lua({"OPP_BROCK#1": {"badge": "BOULDERBADGE", "text": "TAKE THIS BADGE!"}})
+    g.script([["start_battle", "trainer", cls, 1]])
+    data = held(g)
+    g.send("battle.result", {"battle": data["battle"], "outcome": "win"})
+    g.read_texts()
+    assert victories(g) == [jingle]
+    assert g.E.musicRestores == 1, "the map's song again after an ordinary win"
 
 
 @pytest.mark.parametrize("cls,kind", [("OPP_LORELEI", "trainer"), ("OPP_LANCE", "gym"), ("OPP_GIOVANNI", "trainer")])

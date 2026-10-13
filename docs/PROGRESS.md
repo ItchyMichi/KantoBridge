@@ -1346,6 +1346,87 @@ from the decompilation itself was read or copied.
 10. **The route list's own schema** is `protocol/world/route_list.schema.json`, checked against the shipped list and
     the Lua tests' list (`tools/tests/test_route_list.py`).
 
+## Engine upgrade (ENGINE_UPGRADE_PLAN, 2026-10-13)
+
+Execution of [specs/ENGINE_UPGRADE_PLAN.md](specs/ENGINE_UPGRADE_PLAN.md) (UP0–UP6, gates G0–G6): the Gen1Recomp pin
+moves from v0.3.49 to **v0.3.85** (released 2026-10-12, the latest release when pinned on 2026-10-13; built from `dev`
+@ `e50c396`, 2026-10-12; official source only). You answered its decisions on 2026-10-13 with "go with the defaults":
+U1 v0.3.85; U2 you re-import (done through the upload page on the pod: Blue, Crystal and Emerald imported for v0.3.85
+into their own data home, `local/gen1recomp-data-0.3.85`); U3 the Union Room OFF in every install; U4 fresh folders;
+U5 the v0.3.49 folders kept until the last gate; U6 the JUnit literals updated. Feature tests while building; the full
+suites at the gates. The gates wait for the pod and your PC: their results are filled in after the runs.
+
+| # | Phase | Status | Date | Commit |
+|---|---|---|---|---|
+| UP0 | Your pre-flight | the pod's imports done (Blue, Crystal, Emerald, through the upload page); the Windows test install not reported yet | 2026-10-13 | |
+| UP1 | Tooling: `pin_check.py --restamp`, `test_pins.py`, the boot check, the Union Room pin, guard and driver | in progress (notes 1–3, 6) | 2026-10-13 | |
+| UP2 | The engine seams in gen1-bridge (B3–B6, the re-stamped citations) | in progress (note 4) | 2026-10-13 | |
+| UP3 | The fakes and unit tests (lupa; the literals, U6) | in progress (note 5) | 2026-10-13 | |
+| UP4 | The pod: the Linux build, gates G1–G4 | pending (note 7) | | |
+| UP5 | Your PC: the Windows build, gate G5 and the playtest | pending | | |
+| UP6 | Pins, docs and records | **done** (note 8) | 2026-10-13 | |
+
+**The audit** (`tools/pin_check.py refs/gen1recomp v0.3.49 v0.3.85`): 696 citations in 810 scanned files: 172 same,
+474 shifted, 49 changed (on 14 engine files, each with a disposition in the plan's Appendix B), 0 missing, 1 unresolved
+(a filter example in a test, not a citation). Upstream: 36 releases and 252 commits between the tags; the mod API is
+still 2 and the save format still 5.
+
+| Gate | Where | Passes when | Result |
+|---|---|---|---|
+| G0 static | this server (JUnit on the pod) | `pin_check.py`: 0 missing files (v0.3.49 → v0.3.85, then v0.3.85 → v0.3.85 on the re-stamped code); every changed row of Appendix B applied; lupa and JUnit counts at least the last checkpoint's (H7: JUnit 1,044, Python and Lua 1,518; the plan's floors 925 Lua / 913 JUnit are WR6's) | pending |
+| G1 smoke | pod | `test_s5_ready.py` (`KB_READY engine=0.3.85 status_engine=0.3.85 modules=30 mod_errors=0 missing=0 union_room=off`), `test_handshake.py` (`hello.ok` engine and `tested` both 0.3.85, no `engine.untested`), `test_hot_reload.py`; the crash log untouched | pending |
+| G2 export | pod | `test_export.py`: the same counts as today (222 maps, 36 surface, 36 layout, 186 interiors, 242 LAST_MAP warps, 802 warps, 24 tilesets, 151 species, 165 moves), every schema strict, hashes match Python's, the swap audit unchanged; the index and per-resource hashes compared with the v0.3.49 report in `local/reports/` (differences listed by resource name only) | pending |
+| G3 seams | pod | `test_walk.py` (warp kinds, B7), `test_ui.py` and `test_opening.py` (pages, the arrow, naming, B3), `test_battle.py` both outcomes (B5), `test_route1.py` (bag totals, B4), `test_viridian.py`, `test_content.py`, `test_endgame.py` (no map song restored on the champion win), `test_wild_routes.py`; the existing assertions plus the new music and union ones | pending |
+| G4 full | pod | `kb-pod check --e2e` and `gradlew build` with GameTests: pytest, JUnit and GameTests at least the last checkpoint's (H7: 1,518 / 1,044 / 101) plus the new tests; `test_perf.py` within its budgets (gen1-bridge under 1 ms a step, the mirror at most 30 fps) | pending |
+| G5 Windows | your PC | `tools/check.sh --e2e` on the test install (`test_hidden.py` included); the playtest items of UP5 step 3 ticked in PLAYTEST.md | pending |
+| G6 world | your PC | only if G2 found a changed `maps`, `tilesets`, `palettes` or `sprites` hash: `tools/e2e/build_world.py --maps all` within its gates (220 maps placed, 0 warnings, the self-check floors) and the client joins the rebuilt world; otherwise the existing worlds stay valid | pending |
+
+### Engine upgrade: notes
+
+1. **The boot check** (UP1 item 3; ROADMAP Stage 4 item 1): `Engine.REQUIRED` in `kb_engine.lua` lists the engine
+   modules `try()` loads and the functions and fields each must have; `engine.checkRequired()` walks it once at
+   `game.ready`, logs one `engine.missing` warning with the count, and `debug.status.engineMissing` lists what is
+   absent; `KB_READY` prints `missing=<n>` and `test_s5_ready.py` asserts `missing=0`.
+2. **The Union Room pin and guard** (U3; UP1 item 4): `Engine.CLASSIC` gains `unionRoom = false`, written by the
+   engine's own options write like the display pins; `engine.unionRoomPatched()` (the patch's `POKECENTER_2F` map
+   exists) is checked at `game.ready`: a boot that ran patched logs `engine.union_room_on` once,
+   `debug.status.unionRoom` says `"on"`, `export.index` is refused with `error{code:"union_room_on"}`, and `hello.ok`
+   carries `union_room`, so the client shows one notice ("Launcher Options → Union Room → OFF, then restart"). The
+   headless pod can't click the launcher: the driver `tools/e2e/drivers/kb_union_off.lua` sets the option off through
+   `SaveData.loadOptions`/`saveOptions` and quits (`KB_UNION_OFF ok= was= patched_this_boot=`); `KB_READY` ends with
+   `missing=<n> union_room=<on|off>` and `test_s5_ready.py` asserts `union_room=off`. The rule joins CLAUDE.md's hard
+   rules; `mod.card`'s `known` line names it; INSTALL.md has it as step 6.
+3. **The pins** (UP1 items 1–2): `tools/pin_check.py` gained `--restamp` (rewrites the line numbers of same and shifted
+   citations in place) and `--dry-run`; `tools/tests/test_pins.py` checks that every copy of the pin agrees
+   (`Engine.CHECKED`, `manifest.json`'s `game_version`, `pins.json`, VERSIONS.md, INSTALL.md, CLAUDE.md, the e2e and
+   lupa literals). ROADMAP Stage 4 items 1 and 2 are done with these.
+4. **The seams** (UP2): `Engine.CHECKED = "0.3.85"` (`TESTED` the same; the header names `e50c396`), `manifest.json`
+   `game_version` `"0.0.0-dev || >=0.3.85 <0.4.0"`; the shifted citations re-stamped by the tool and the changed ones
+   re-read per Appendix B; B3 the text box rules (`shownSource`, the arrow's precedence, `stay.press`), B4
+   `Bag.remove` with the engine's data as its fourth argument, B5 the victory jingle's kinds and no map song after a
+   won final battle, B6 the indoor-encounter rule (`rollsIndoorEncounters`, the `outdoor` map field).
+5. **The fakes and literals** (UP3): the lupa fakes model the new rules (`fake_ui`, `fake_wild`, `fake_content`,
+   `fake_center`, `fake_engine` at 0.3.85 with shell 3, `fake_mod`/`sandbox` re-checked against the new tag's loader),
+   and the `0.3.49` literals in the lupa, e2e and JUnit tests say `0.3.85` (U6).
+6. **The e2e runner:** `PINNED = "0.3.85"`; it prefers the versioned folders when they exist,
+   `local/gen1recomp-e2e-0.3.85` (Windows), `local/gen1recomp-linux-0.3.85` (the extracted AppImage) and
+   `local/gen1recomp-data-0.3.85` (its data home), over the unversioned names, with the overrides
+   `KB_GEN1RECOMP_INSTALL`, `KB_GEN1RECOMP_APP` and `KB_GEN1RECOMP_HOME`; so UP0's rename of the Windows test install
+   is optional. A silent ready timeout carries the hint that the import may be stale (B1: a stale cache stops at the
+   launcher's re-import prompt).
+7. **The pod** (UP4): both builds side by side, no renames: the v0.3.85 AppImage extracted to
+   `local/gen1recomp-linux-0.3.85` with the data home `local/gen1recomp-data-0.3.85` (your imports: Blue, Crystal and
+   Emerald, through the pod's upload page), the v0.3.49 `local/gen1recomp-linux` and `local/gen1recomp-data`
+   untouched (U5). Every ROM import is redone for v0.3.85 (the cache generation changed for every game: B1); zipped or
+   7z ROMs import as they are; Ruby and Sapphire became importable.
+8. **Records** (UP6, 2026-10-13): VERSIONS.md (the v0.3.85 row with the zip and AppImage hashes from the release's
+   `sha256sums.txt`; the v0.3.49 row kept as history), INSTALL.md (v0.3.85, the Union Room step, archive import, the
+   re-import), INSTALLER.md and `pins.json`, CREDITS.md, CLAUDE.md (the pin, the Union Room hard rule, the plan's
+   status), REFERENCES.md (`e50c396`; its Gen1Recomp line numbers stay at `cb02aeb` with a note pointing at
+   `pin_check.py`), ROADMAP.md (the upgrade watch; Stage 4 items 1–2 done), PLAN.md, MULTI_GAME_PLAN.md (§0 and D11
+   bumped; A.2: returning to the launcher restarts the process on desktop, B9; §4.11 step 5: archives import
+   directly), `tools/e2e/README.md` (the driver, `KB_READY`'s fields, the versioned folders).
+
 ## Pre-flight (PLAN §0.6)
 
 | Step | State |
@@ -2252,3 +2333,7 @@ Nothing.
   warning, the daycare), minimising, and the multiplayer extras (the ⏸ bubble, others' surf sprite).
 - PLAYTEST.md "Caves in 3D": in a new world, every cave end to end: raised ground, cliff edges, the real ladders, Rock
   Tunnel with and without Flash.
+- ENGINE_UPGRADE_PLAN UP5 (gate G5): on the Windows v0.3.85 test install, `tools/check.sh --e2e`; then the playtest
+  items that touch the changed seams (M1's F7 engine line 0.3.85 with no untested-engine toast, M3 doors and stairs, M4
+  dialogue pages and the arrow, M5 the rival battle's music and the map song after, M7 the Center, PC and Mart counts,
+  M8's Brock and the badge jingle, M10 hidden-window speed, Wild Routes WR3–WR4's warps).

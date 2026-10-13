@@ -146,7 +146,7 @@ function Npcs.new(opts)
             add(map, shaped, out)
             remember(n, shaped)
           elseif k.sprite ~= shaped.sprite or k.kind ~= shaped.kind then
-            -- a new appearance (NPC:setAppearance, NPC.lua:68-79): rebuilt
+            -- a new appearance (NPC:setAppearance, NPC.lua:75-86): rebuilt
             out[#out + 1] = { "npc.remove", { id = n.id }, "npc" }
             counts.removes = counts.removes + 1
             add(map, shaped, out)
@@ -154,7 +154,7 @@ function Npcs.new(opts)
           else
             local moving, marching = n.moving == true, n.marching == true
             if moving and marching then
-              -- a walk-in-place beat (NPC.lua:116-124): a new cycle restarts its progress
+              -- a walk-in-place beat (NPC.lua:123-131): a new cycle restarts its progress
               if not (k.moving and k.marching) or (n.progress or 0) < (k.progress or 0) then
                 move(n, n.x, n.y, "march", n.frames, out)
               elseif n.facing ~= k.facing then
@@ -188,7 +188,7 @@ function Npcs.new(opts)
       if emote.target then
         local bubble = emote.bubble
         if bubble == nil then
-          bubble = "!" -- nil draws the first crop, "!" (OC:6073)
+          bubble = "!" -- nil draws the first crop, "!" (OC:6297)
         elseif bubble == false then
           bubble = json.null
         else

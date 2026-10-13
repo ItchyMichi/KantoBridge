@@ -28,7 +28,7 @@ return function(E)
     local s = steps[speech.step]
     if s then s() else E.uiPop() speech.finished = true end
   end
-  -- TextBox.new substitutes {PLAYER}/{RIVAL} (fake_script.lua, TextBox.lua:170)
+  -- TextBox.new substitutes {PLAYER}/{RIVAL} (fake_script.lua, TextBox.lua:172)
   local function say(text) E.uiPush(E.modules["src.render.TextBox"].new(E.game, text, advance)) end
   local function hold(text)
     speech.holdBox = E.textBox(text, { stay = { prompt = true, onShown = function() advance() end } })

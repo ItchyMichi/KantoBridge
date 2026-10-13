@@ -86,6 +86,12 @@ closed.
 - `hello.ok.tested` is the engine version gen1-bridge was tested with. When `engine` differs,
   gen1-bridge logs `engine.untested` once per connection, and the client shows a one-time notice
   (a toast per pair of versions, plus an F7 line). It is a warning only.
+- `hello.ok.union_room` (optional, `"on"` or `"off"`) says whether the engine's Union Room setting
+  patched this boot's Pokémon Centers (ENGINE_UPGRADE_PLAN U3: it must be off, because the world is
+  built from the import, which never sees the patch). While `"on"`, gen1-bridge logs
+  `engine.union_room_on` once, writes the setting off for the next boot, refuses `export.index` with
+  `error{code:"union_room_on"}`, and the client shows a one-time notice naming the switch
+  (Launcher Options → Union Room → OFF, then restart) plus an F7 suffix.
 - `hello.reject{reason:"protocol"}` makes the client's pause overlay show both protocol numbers and
   ask for matching gen1-bridge and kantobridge versions.
 - **Singleplayer only:** a world built from the other game (`WorldIndex.game` ≠ `hello.ok.game`)
@@ -140,7 +146,7 @@ optional ones. The schemas give the exact types and limits.
 | Type | Dir | Data | ROM |
 |---|---|---|---|
 | `hello` | M→G | `protocol:1, role:"client"\|"builder"\|"test", mod, minecraft?, player?{uuid,name}, world?{id,multiplayer}` | |
-| `hello.ok` | G→M | `protocol, bridge, engine, tested?, game:"red"\|"blue", session`; `re` required. `tested`: the engine version gen1-bridge was tested with (M10) | |
+| `hello.ok` | G→M | `protocol, bridge, engine, tested?, union_room?, game:"red"\|"blue", session`; `re` required. `tested`: the engine version gen1-bridge was tested with (M10); `union_room`: `"on"` while the engine's Union Room patched this boot's Centers (U3) | |
 | `hello.reject` | G→M | `reason:"protocol"\|"role"\|"malformed"\|"busy", protocol`; `re` required | |
 | `ping` | G→M, M→G | `t` (sender's ms clock) | |
 | `pong` | G→M, M→G | `t` (echoed); `re` required | |
@@ -728,7 +734,9 @@ A builder connection (role `builder`) asks for `export.index`, then fetches each
 - **Size.** The real Red/Blue export is about 360 resources and 0.8 MB; the largest line is about
   33 KB (`encounters`).
 - **Errors:** `error{code}` with `role` (not a builder or test connection), `not_found` (no such
-  resource), `bad_message`, or `export_failed` (the game data couldn't be read).
+  resource), `bad_message`, `export_failed` (the game data couldn't be read), or `union_room_on`
+  (`export.index` while the engine's Union Room patched this boot's Centers: switch it off and
+  restart; no world is built from patched data).
 - **Image ids** are `<folder>.<name>` from the asset path: `tilesets.*` for atlases and animation
   strips, `fx.*` for overworld effects and emotion bubbles.
 - **Field tables** are a fixed list chosen by gen1-bridge (ledges, tile pairs, cut-tree swaps,
@@ -794,7 +802,7 @@ bytes. A downloaded export is stored as an **export bundle**, which stays under 
 
 | Type | Dir | Data | ROM |
 |---|---|---|---|
-| `debug.status` | M→G, G→M | Request: `{}`. Reply (`re` set): `npcs, topState, mode, flags`, plus other counts and flags; never content | |
+| `debug.status` | M→G, G→M | Request: `{}`. Reply (`re` set): `npcs, topState, mode, flags`, plus other counts and flags, `engineMissing` (the engine members gen1-bridge relies on that are absent: names only) and `unionRoom` (`"on"`/`"off"`); never content | |
 | `debug.quit` | M→G | `code?`: asks the test driver to exit | |
 
 ### Relay only (client ↔ server)

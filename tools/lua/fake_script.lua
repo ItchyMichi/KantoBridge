@@ -13,7 +13,7 @@
 --   E.engageTrainer(npc, onDone, endBattleText, skipBattleText, endBattleSound,
 --                   endBattleIsReward, endBattleSoundPage)
 --                              a map trainer: battle text, then
---                              trainer.before_battle (OC:4038-4174's shape)
+--                              trainer.before_battle (OC:4172-4308's shape)
 --   E.startTrainerApproach(npc)           the sight path: engaging, then engage
 --   E.nativeResult             what a native (not intercepted) battle ends
 --                              with when A is pressed on it (default "win")
@@ -52,7 +52,7 @@ function FakeScript.attach(E)
     for k, v in pairs(data) do E.data[k] = v end
     E.data.text = E.data.text or {}
     E.data.trainer_headers = E.data.trainer_headers or {}
-    -- Data:trainerHeader (src/core/Data.lua:425-428)
+    -- Data:trainerHeader (src/core/Data.lua:426-429)
     E.data.trainerHeader = function(self, label, index)
       local perMap = self.trainer_headers[label]
       return perMap and perMap[index] or nil
@@ -121,7 +121,7 @@ function FakeScript.attach(E)
   end
 
   local TextBox = {}
-  -- TextBox.new substitutes {PLAYER} and {RIVAL} itself (TextBox.lua:170)
+  -- TextBox.new substitutes {PLAYER} and {RIVAL} itself (TextBox.lua:172)
   function TextBox.substitute(_, text)
     local p = E.save.player
     return (text:gsub("{PLAYER}", p.name or ""):gsub("{RIVAL}", p.rival or ""))
@@ -132,7 +132,7 @@ function FakeScript.attach(E)
     o.onDone = onDone
     return E.textBox(TextBox.substitute(game, text), o)
   end
-  -- M8 wave 3: TextBox.soundOpts (TextBox.lua:220-238): a sound played once
+  -- M8 wave 3: TextBox.soundOpts (TextBox.lua:225-243): a sound played once
   -- the box's last page has typed, then the plain A/B wait (auto.wait);
   -- every sound played is recorded in E.sounds
   E.sounds = {}
@@ -175,7 +175,7 @@ function FakeScript.attach(E)
 
   local ow = E.ow
 
-  -- OverworldState:afterBattle (OC:5184-5225): a wild battle's encounter
+  -- OverworldState:afterBattle (OC:5334-5375): a wild battle's encounter
   -- grace steps; a lose blacks out, except the Oak's-lab rival
   function ow.afterBattle(self, result, battle)
     E.afterBattles[#E.afterBattles + 1] = { result = result, kind = battle and battle.kind,
@@ -186,7 +186,7 @@ function FakeScript.attach(E)
     for _, mon in ipairs(E.save.party) do Pokemon.heal(mon) end
     E.save.money = math.floor(E.save.money / 2)
     -- the heal point: a test's own, else (M7) the nurse's lastHeal town
-    -- (escapeWarpTarget's outdoor side, OC:5368-5383), else here
+    -- (escapeWarpTarget's outdoor side, OC:5518-5533), else here
     local last = E.save.lastHeal
     local heal = E.healPoint
       or (last and last.outdoor and { map = last.outdoor.id, x = last.outdoor.x, y = last.outdoor.y })
@@ -194,11 +194,11 @@ function FakeScript.attach(E)
     E.blackOutTo(heal.map, heal.x, heal.y)
   end
 
-  -- checkVictoryRewards (OC:4251-4312): recorded; a made-up reward (its flag
+  -- checkVictoryRewards (OC:4385-4446): recorded; a made-up reward (its flag
   -- once, its badge) shows its boxes one after the other (M8 wave 3: its
   -- `dialogue` only when it didn't ride the battle screen as the armed loss
-  -- line, `shown`, OC:4285-4288; then `text`, standing for its TM lines),
-  -- then the map's onVictory runs (runVictoryHook, OC:4334-4337)
+  -- line, `shown`, OC:4419-4422; then `text`, standing for its TM lines),
+  -- then the map's onVictory runs (runVictoryHook, OC:4468-4471)
   function ow.checkVictoryRewards(self, cls, party, shown)
     E.rewards[#E.rewards + 1] = { cls = cls, party = party, shown = shown }
     local reward = E.victories and E.victories[cls .. "#" .. tostring(party)]
@@ -220,7 +220,7 @@ function FakeScript.attach(E)
   -- A native battle: a graphical screen (isBattleState) that A ends with
   -- E.nativeResult, calling onFinish(result) after it pops. info.safari,
   -- info.ghost and info.demo make the special battles BattleState:battleKind
-  -- names (src/battle/BattleState.lua:1857-1862).
+  -- names (src/battle/BattleState.lua:1909-1914).
   function E.nativeBattle(info, onFinish)
     E.battles[#E.battles + 1] = info
     local s = { isBattleState = true, screenId = "BattleState", info = info,
@@ -248,7 +248,7 @@ function FakeScript.attach(E)
   end
   E.trainerDefeated = function(npc) return ow:trainerDefeated(npc) end
 
-  -- OverworldState.prepareTrainerBattle (OC:4038-4059)
+  -- OverworldState.prepareTrainerBattle (OC:4172-4193)
   local function prepareTrainerBattle(context, startBattle, cancelBattle)
     local wants = E.runtime.wants and E.runtime.wants("trainer.before_battle")
     if not wants then
@@ -273,9 +273,9 @@ function FakeScript.attach(E)
     return deferred == true
   end
 
-  -- OverworldState:engageTrainer (OC:4067-4174), shortened: the battle text
+  -- OverworldState:engageTrainer (OC:4201-4308), shortened: the battle text
   -- (skipped with skipBattleText), then the battle (deferrable). Its start
-  -- (OC:4098-4146) builds the battle through BattleState.newTrainer (looked
+  -- (OC:4232-4280) builds the battle through BattleState.newTrainer (looked
   -- up on the module at the call, fake_content.lua's stand-in), hands it the
   -- loss line (the caller's endBattleText, else the header's won text,
   -- substituted), the caller's sound and its page and rewardDialogueShown,
@@ -321,7 +321,7 @@ function FakeScript.attach(E)
     E.uiPush(E.textBox((header and header.battleText) or "LET'S BATTLE!", { onDone = prepareBattle }))
   end
 
-  -- OverworldState:startTrainerApproach (OC:4422-4467). With dist (M7: a
+  -- OverworldState:startTrainerApproach (OC:4556-4601). With dist (M7: a
   -- sighting, fake_center.lua's E.sightCheck), the "!" hold of 60 frames
   -- and the walk-up (dist - 1 scripted steps) come first; without it (the
   -- M5 tests) the trainer engages at once.
@@ -499,14 +499,14 @@ function FakeScript.attach(E)
     runner:yield()
   end
 
-  -- rival_battle (Commands.lua:1047-1076), Red/Blue
+  -- rival_battle (Commands.lua:1054-1083), Red/Blue
   function Commands.rival_battle(ctx, cls, base)
     local offset = 0
     if ctx.save.flags.EVENT_CHOSE_SQUIRTLE then offset = 1 elseif ctx.save.flags.EVENT_CHOSE_BULBASAUR then offset = 2 end
     Commands.start_battle(ctx, "trainer", cls, base + offset)
   end
 
-  -- static_battle (Commands.lua:991-1000)
+  -- static_battle (Commands.lua:998-1007)
   function Commands.static_battle(ctx, species, level, beatFlag)
     Commands.start_battle(ctx, "wild", species, level)
     if ctx.lastBattleResult ~= "lose" then
@@ -515,7 +515,7 @@ function FakeScript.attach(E)
     end
   end
 
-  -- AskName (Commands.lua:761-794): YES/NO, then the naming screen
+  -- AskName (Commands.lua:762-795): YES/NO, then the naming screen
   local function askNickname(ctx, mon)
     local runner = ctx.runner
     local success = ctx.lastCheck
@@ -534,7 +534,7 @@ function FakeScript.attach(E)
     runner:yield()
   end
 
-  -- give_pokemon (Commands.lua:807-869)
+  -- give_pokemon (Commands.lua:808-870)
   -- Wild Routes (WR2). give_item <item> [count] (Commands.lua:250-292): the bag
   -- (Bag.add), then the "got" box; E.bagFull makes the bag refuse: the refusal box
   -- and a halt (math.huge), as the engine's own does. All text is made up.
@@ -545,7 +545,7 @@ function FakeScript.attach(E)
     end
     Commands.show_text(ctx, "GOT " .. tostring(itemId) .. "!")
   end
-  -- warp <map> <x> <y> [facing] (Commands.lua:395-401): the fake world's warp
+  -- warp <map> <x> <y> [facing] (Commands.lua:395-402): the fake world's warp
   function Commands.warp(ctx, mapId, x, y, facing)
     E.startWarpTo(mapId, x, y, facing or "down")
   end
