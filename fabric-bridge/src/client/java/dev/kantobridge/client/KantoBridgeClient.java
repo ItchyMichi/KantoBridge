@@ -11,6 +11,7 @@ import dev.kantobridge.client.model.KbModelPlugin;
 import dev.kantobridge.client.model.MeshStatsRuntime;
 import dev.kantobridge.client.model.SnapshotPublisher;
 import dev.kantobridge.client.move.MoveRuntime;
+import dev.kantobridge.client.net.BagSetRuntime;
 import dev.kantobridge.client.net.ClientRelay;
 import dev.kantobridge.client.net.GameRelayRuntime;
 import dev.kantobridge.client.net.SessionRuntime;
@@ -24,9 +25,11 @@ import dev.kantobridge.client.story.ClientStoryView;
 import dev.kantobridge.client.story.StoryCellRenderer;
 import dev.kantobridge.client.ui.Notices;
 import dev.kantobridge.client.ui.UiRuntime;
+import dev.kantobridge.client.world.AddRegionFlow;
 import dev.kantobridge.client.world.ClientRegions;
 import dev.kantobridge.client.world.ClientWorldIndex;
 import dev.kantobridge.client.world.CreateKantoWorldFlow;
+import dev.kantobridge.client.zone.PassRuntime;
 import dev.kantobridge.client.zone.ZoneRuntime;
 import net.fabricmc.api.ClientModInitializer;
 import net.minecraft.client.renderer.blockentity.BlockEntityRenderers;
@@ -70,13 +73,20 @@ public class KantoBridgeClient implements ClientModInitializer {
 		ActRuntime.init(bridge);
 		// Battles and Pokémon between gen1-bridge and the server (battle.start/result, party.*, syncs) and the activity.
 		GameRelayRuntime.init(bridge);
+		// One trainer economy (MG6): the server's bag.set projections down to each hidden game, their results back up.
+		BagSetRuntime.init(bridge);
 		// Saving in both games, Bill's PC as Cobblemon's PC, and the world's id for the save pairing (session.bind).
 		SessionRuntime.init(bridge);
 		// Wild Routes (WR5): a zone's trainers and balls as puppets, route.* between the server and gen1-bridge, balls taken.
 		ZoneRuntime.init(bridge);
+		// Crossings (MG5): standing on a connecting route's pass parks the followed game and resumes or starts the far one.
+		PassRuntime.init(bridge);
 		// The title screen's "Create Kanto world" button: export, pack, new level, build. No pause overlay while it runs (M10).
 		CreateKantoWorldFlow.init();
 		bridge.pauseExcludedWhile(() -> CreateKantoWorldFlow.active() != null);
+		// Several games (MG4): the title screen's "Add a region" button: export another link's game, build it at the next slot.
+		AddRegionFlow.init();
+		bridge.pauseExcludedWhile(() -> AddRegionFlow.active() != null);
 		// Multiplayer (M9): this player's own art built into the world's slots when their pack doesn't fit it; speech
 		// bubbles over other players busy with their own hidden game; other players faded inside this player's blockades.
 		TextureSyncRuntime.init(bridge);

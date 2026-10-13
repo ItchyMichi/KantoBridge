@@ -7,8 +7,12 @@ import dev.kantobridge.net.RelayService;
 import dev.kantobridge.proto.Envelope;
 import dev.kantobridge.proto.Ids;
 import dev.kantobridge.proto.MsgTypes;
+import dev.kantobridge.server.Ledger;
+import dev.kantobridge.server.LedgerService;
+import dev.kantobridge.server.Regions;
 import dev.kantobridge.world.DataException;
 import dev.kantobridge.world.DataReader;
+import dev.kantobridge.world.RegionRecord;
 import java.util.HashMap;
 import java.util.IdentityHashMap;
 import java.util.LinkedHashMap;
@@ -21,6 +25,7 @@ import java.util.concurrent.atomic.AtomicLong;
 import net.fabricmc.fabric.api.entity.event.v1.ServerPlayerEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
+import net.minecraft.core.component.DataComponents;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.MinecraftServer;
@@ -29,6 +34,7 @@ import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
+import net.minecraft.world.item.component.CustomData;
 import org.jetbrains.annotations.Nullable;
 
 /**
@@ -46,12 +52,25 @@ import org.jetbrains.annotations.Nullable;
  * </ul>
  *
  * Items are taken from the main inventory before the hotbar. Logs carry counts and codes only. Server thread only.
+ *
+ * <p><b>Marked stacks</b> (MG6): every stack the mirror creates carries a custom-data mark ({@value #MARK}); only marked
+ * stacks are counted and only they are ever taken, so a ball or potion the player found in Minecraft is theirs for good
+ * (marked and unmarked stacks never merge: their components differ). <b>Several games</b> (MULTI_GAME_PLAN §4.9): in a
+ * region world the hidden bag no longer drives the mirror; {@code bag.sync} (now with {@code money} and the ledger
+ * {@code stamp}) feeds the player's {@link LedgerService ledger}, the mirror shows the ledger's battle items, and a use
+ * debits the ledger as well as going to the followed game. A legacy world keeps the per-game path exactly as it was.
  */
 public final class BagService {
 	static final int OBSERVE_EVERY_TICKS = 5;
 	/** {@code bag.use.qty}'s maximum; larger uses go out in parts. */
 	static final int MAX_USE = 999;
-	private static final Set<String> FIELDS = Set.of("items", "region");
+	private static final Set<String> FIELDS = Set.of("items", "region", "money", "stamp");
+	/** The custom-data key on every stack the mirror creates. */
+	static final String MARK = "kantobridge_bag";
+
+	/** One {@code bag.sync}: the hidden bag by item symbol, the save's money (-1 when absent), the ledger stamp or null. */
+	record Sync(Map<String, Integer> items, long money, @Nullable String stamp) {
+	}
 
 	/** One player's mirror. */
 	private static final class State {
@@ -83,9 +102,9 @@ public final class BagService {
 	// ---- bag.sync ----
 
 	static void onSync(ServerPlayer player, Envelope message) {
-		Map<String, Integer> bag;
+		Sync sync;
 		try {
-			bag = read(message.data());
+			sync = read(message.data());
 		} catch (DataException e) {
 			KantoBridge.LOGGER.debug("bag: malformed bag.sync at {} ({})", e.path(), e.problem());
 			warn("bad_message");
@@ -93,6 +112,19 @@ public final class BagService {
 			return;
 		}
 		SYNCS.incrementAndGet();
+		Map<String, Integer> bag = sync.items();
+		if (LedgerService.enabled(player.server)) {
+			// Several games: the report feeds the ledger; the mirror shows the ledger's battle items.
+			Regions regions = Regions.of(player.server);
+			RegionRecord region = regions == null ? null : regions.regionOf(player, message.data());
+			if (region == null) {
+				warn("bad_message");
+				RelayService.get().sendError(player, "bad_message", message.seq());
+				return;
+			}
+			LedgerService.onSync(player, region, sync.items(), sync.money(), sync.stamp());
+			bag = LedgerService.mirrorTargets(player);
+		}
 		State state = STATES.computeIfAbsent(player.getUUID(), id -> new State());
 		if (inBattle(player)) {
 			state.pending = bag;
@@ -101,8 +133,8 @@ public final class BagService {
 		apply(player, state, bag, player.server.getTickCount());
 	}
 
-	/** {@code bag.sync}'s {@code items}: item symbols to counts 0–9999, nothing else. */
-	static Map<String, Integer> read(JsonObject data) throws DataException {
+	/** {@code bag.sync}: item symbols to counts 0–9999, the optional {@code money} and {@code stamp} (MG6), nothing else. */
+	static Sync read(JsonObject data) throws DataException {
 		DataReader reader = DataReader.of(data, "").allowOnly(FIELDS);
 		DataReader entries = reader.object("items");
 		Map<String, Integer> bag = new LinkedHashMap<>();
@@ -112,7 +144,9 @@ public final class BagService {
 			}
 			bag.put(item, DataReader.asInt(entries.json().get(item), entries.path() + "/item", 0, BagLedger.MAX));
 		}
-		return bag;
+		long money = reader.has("money") ? reader.longValue("money", 0, Ledger.MAX_MONEY) : -1;
+		String stamp = reader.optionalString("stamp", DataReader.HASH);
+		return new Sync(bag, money, stamp);
 	}
 
 	private static void apply(ServerPlayer player, State state, Map<String, Integer> bag, long now) {
@@ -184,7 +218,12 @@ public final class BagService {
 	}
 
 	private static void report(ServerPlayer player, Map<String, Integer> used) {
+		boolean ledger = LedgerService.enabled(player.server);
 		for (Map.Entry<String, Integer> entry : used.entrySet()) {
+			if (ledger) {
+				// Several games: the player's own item was consumed; the followed game hears it through bag.use too
+				LedgerService.use(player, entry.getKey(), entry.getValue());
+			}
 			int left = entry.getValue();
 			while (left > 0) {
 				int qty = Math.min(MAX_USE, left);
@@ -201,14 +240,14 @@ public final class BagService {
 
 	// ---- the inventory ----
 
-	/** How many of each mirrored item the inventory holds (main, armour and off-hand slots). */
+	/** How many of each mirrored item the inventory holds in marked stacks (main, armour and off-hand slots). */
 	static Map<String, Integer> counts(ServerPlayer player) {
 		Map<Item, String> lookup = byItem();
 		Map<String, Integer> out = new LinkedHashMap<>();
 		Inventory inventory = player.getInventory();
 		for (int slot = 0; slot < inventory.getContainerSize(); slot++) {
 			ItemStack stack = inventory.getItem(slot);
-			String gen1 = stack.isEmpty() ? null : lookup.get(stack.getItem());
+			String gen1 = stack.isEmpty() || !marked(stack) ? null : lookup.get(stack.getItem());
 			if (gen1 != null) {
 				out.merge(gen1, stack.getCount(), Integer::sum);
 			}
@@ -216,13 +255,25 @@ public final class BagService {
 		return out;
 	}
 
-	/** Adds up to {@code count} of an item; returns how many fitted. */
+	/** True for a stack the mirror created (the player's own finds carry no mark and are never counted or taken). */
+	static boolean marked(ItemStack stack) {
+		CustomData data = stack.get(DataComponents.CUSTOM_DATA);
+		return data != null && data.contains(MARK);
+	}
+
+	/** Marks a stack as the mirror's. */
+	static ItemStack mark(ItemStack stack) {
+		CustomData.update(DataComponents.CUSTOM_DATA, stack, tag -> tag.putBoolean(MARK, true));
+		return stack;
+	}
+
+	/** Adds up to {@code count} of an item in marked stacks; returns how many fitted. */
 	static int add(Inventory inventory, Item item, int count) {
 		int added = 0;
 		int max = new ItemStack(item).getMaxStackSize();
 		while (added < count) {
 			int part = Math.min(max, count - added);
-			ItemStack stack = new ItemStack(item, part);
+			ItemStack stack = mark(new ItemStack(item, part));
 			inventory.add(stack);
 			int put = part - stack.getCount();
 			added += put;
@@ -233,7 +284,7 @@ public final class BagService {
 		return added;
 	}
 
-	/** Takes up to {@code count} of an item, main inventory first, then the off-hand, the hotbar last; returns how many. */
+	/** Takes up to {@code count} of an item from marked stacks, main inventory first, then the off-hand, the hotbar last; returns how many. */
 	static int remove(Inventory inventory, Item item, int count) {
 		int removed = 0;
 		int hotbar = Inventory.getSelectionSize();
@@ -252,7 +303,7 @@ public final class BagService {
 		}
 		for (int i = 0; i < n && removed < count; i++) {
 			ItemStack stack = inventory.getItem(order[i]);
-			if (!stack.isEmpty() && stack.is(item)) {
+			if (!stack.isEmpty() && stack.is(item) && marked(stack)) {
 				int take = Math.min(stack.getCount(), count - removed);
 				stack.shrink(take);
 				removed += take;

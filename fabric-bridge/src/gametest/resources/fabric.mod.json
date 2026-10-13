@@ -18,6 +18,8 @@
 			"dev.kantobridge.gametest.DungeonGameTests",
 			"dev.kantobridge.gametest.ShapeBuildGameTests",
 			"dev.kantobridge.gametest.RegionBuildGameTests",
+			"dev.kantobridge.gametest.PassGameTests",
+			"dev.kantobridge.gametest.LedgerGameTests",
 			"dev.kantobridge.gametest.BuildHoldGameTests",
 			"dev.kantobridge.gametest.RulesGameTests",
 			"dev.kantobridge.gametest.WarpGameTests",

@@ -70,7 +70,8 @@ Gen1.REQUIRES = {
   ["src.core.Strings"] = {},
   ["src.core.Version"] = { "engine", "modApi" },
   ["src.inventory.Badges"] = { "itemFor", "list" },
-  ["src.inventory.Bag"] = { "remove" },
+  -- MG6: add/capacity/slots for bag.set, isBadge for the key-item predicate
+  ["src.inventory.Bag"] = { "add", "capacity", "isBadge", "remove", "slots" },
   ["src.inventory.ItemEffects"] = { "isStone" },
   ["src.mods.Runtime"] = { "call", "wantsHook" },
   ["src.pokemon.Growth"] = { "expForLevel" },
@@ -239,6 +240,11 @@ function Gen1.new(opts)
   local ui = opts.ui
   local datasets = opts.datasets
   local CHECKED = assert(type(opts.checked) == "string" and opts.checked, "engine/gen1: opts.checked (the pin) is required")
+  -- MG6 (docs/specs/MULTI_GAME_PLAN.md §4.9): the canonical item catalogue
+  -- (lib/kb_items.lua, generated from protocol/items.json), whose gen1
+  -- symbols are this engine's import item ids; nil in tests that build the
+  -- adapter alone (then the item table is empty)
+  local itemsCatalogue = type(opts.items) == "table" and opts.items or nil
   local engine = {}
   local game
 
@@ -3116,21 +3122,152 @@ function Gen1.new(opts)
   -- (RomExtractor.lua:884-887). The engine changes it through Bag.add /
   -- Bag.remove (Bag.lua:443-469).
 
+  -- MG6: an item that never leaves this game (the plan's "per game, never in
+  -- the ledger"): a badge (Bag.isBadge: the id contains "BADGE",
+  -- src/inventory/Bag.lua:24-27, exported :58), a key item (`keyItem` set
+  -- from the ROM's KeyItemFlags at import, src/import/RomExtractor.lua:
+  -- 883-887) or an HM (its record's machine.kind "HM", RomExtractor.lua:
+  -- 889-897; TMs cross by move, HMs stay).
+  function engine.isKeyItem(id)
+    if type(id) ~= "string" then return false end
+    local Bag = try("src.inventory.Bag")
+    if Bag and type(Bag.isBadge) == "function" then
+      if Bag.isBadge(id) then return true end
+    elseif id:find("BADGE", 1, true) then
+      return true
+    end
+    local data = gameData()
+    local def = data and type(data.items) == "table" and data.items[id] or nil
+    if type(def) ~= "table" then return false end
+    if def.keyItem then return true end
+    return type(def.machine) == "table" and def.machine.kind == "HM"
+  end
+
   -- The quantities of the listed items the bag holds (1 or more), never a
-  -- key item.
+  -- key item (MG6: nor a badge or an HM, engine.isKeyItem).
   function engine.bagCounts(items)
-    local save, data = engine.save(), gameData()
+    local save = engine.save()
     local inv = type(save) == "table" and type(save.inventory) == "table" and save.inventory or nil
     local out = {}
     if not inv then return out end
     for _, id in ipairs(type(items) == "table" and items or {}) do
       local qty = inv[id]
-      local def = data and type(data.items) == "table" and data.items[id] or nil
-      if type(qty) == "number" and qty >= 1 and not (type(def) == "table" and def.keyItem) then
+      if type(qty) == "number" and qty >= 1 and not engine.isKeyItem(id) then
         out[id] = math.floor(qty)
       end
     end
     return out
+  end
+
+  -- MG6: the game's item table from the catalogue: this family's symbol ->
+  -- the canonical id, for every item the catalogue knows a gen1 symbol of.
+  -- Empty without a catalogue.
+  function engine.itemTable()
+    local out = {}
+    local cat = itemsCatalogue and type(itemsCatalogue.items) == "table" and itemsCatalogue.items or {}
+    local family = engine.family()
+    for cid, entry in pairs(cat) do
+      local sym = type(entry) == "table" and type(entry.symbols) == "table" and entry.symbols[family] or nil
+      if type(sym) == "string" then out[sym] = cid end
+    end
+    return out
+  end
+
+  -- MG6: the catalogue's class of one of this game's symbols (ball,
+  -- medicine, battle, field, stone, held, valuable, tm, key), or nil.
+  function engine.itemClass(symbol)
+    local cat = itemsCatalogue and type(itemsCatalogue.items) == "table" and itemsCatalogue.items or {}
+    local family = engine.family()
+    for _, entry in pairs(cat) do
+      if type(entry) == "table" and type(entry.symbols) == "table" and entry.symbols[family] == symbol then
+        return entry.class
+      end
+    end
+    return nil
+  end
+
+  -- MG6: the move a TM or HM teaches, as its Gen 1 move number: the item
+  -- record's machine.move (RomExtractor.lua:889-910, the move symbol) through
+  -- engine.moveNumOf; nil for anything else.
+  function engine.tmMove(id)
+    local data = gameData()
+    local def = data and type(data.items) == "table" and data.items[id] or nil
+    local m = type(def) == "table" and def.machine or nil
+    if type(m) ~= "table" or type(m.move) ~= "string" then return nil end
+    return engine.moveNumOf(m.move)
+  end
+
+  -- MG6: the bag's limits: Bag.capacity(data) (the ITEM pocket, every Gen 1
+  -- item's: data.constants.bagSize or 20, src/inventory/Bag.lua:43-55 with
+  -- pocketOf :31-36), 99 a stack (MAX_STACK, :59) and the slots in use
+  -- (Bag.slots(save, data), :344-349, one per stack).
+  function engine.bagLimits()
+    local Bag = try("src.inventory.Bag")
+    local save, data = engine.save(), gameData()
+    local out = { slots = 20, stack = 99, used = 0 }
+    if Bag and type(Bag.capacity) == "function" then
+      local ok, cap = pcall(Bag.capacity, data)
+      if ok and type(cap) == "number" and cap >= 1 then out.slots = math.floor(cap) end
+    end
+    if Bag and type(Bag.slots) == "function" and type(save) == "table" then
+      local ok, used = pcall(Bag.slots, save, data)
+      if ok and type(used) == "number" then out.used = math.floor(used) end
+    end
+    return out
+  end
+
+  -- MG6: bag.set's projection (docs/PROTOCOL.md "One economy"): every item of
+  -- the game's item table that isn't a key item is taken out of the bag with
+  -- Bag.remove (Bag.lua:464-469; an id the catalogue doesn't know -- a story
+  -- item -- is never touched), then the projection goes in with Bag.add
+  -- (Bag.lua:443-461) in class order (balls, medicine, battle items, field
+  -- items, stones, valuables, TMs; ids sorted within a class), one add per
+  -- 99: addTo refuses an add whole when it would pass a stack's 99 (:231)
+  -- or needs a slot the bag hasn't got (:243, :248), so a chunk that fails
+  -- leaves the rest of that item in `left`. save.money is written clamped to
+  -- the snapshot's range (0..999999). Returns ok (the Bag module and a live
+  -- save were there) and left { id = qty } (empty when everything fit).
+  Gen1.CLASS_ORDER = { ball = 1, medicine = 2, battle = 3, field = 4, stone = 5, valuable = 6, held = 7, tm = 8 }
+  function engine.bagSet(items, money)
+    local Bag = try("src.inventory.Bag")
+    local save, data = engine.save(), gameData()
+    if not (Bag and type(Bag.add) == "function" and type(Bag.remove) == "function" and type(save) == "table") then
+      return false, {}
+    end
+    local tbl = engine.itemTable()
+    if type(save.inventory) ~= "table" then save.inventory = {} end
+    local inv = save.inventory
+    local ids = {}
+    for id in pairs(tbl) do ids[#ids + 1] = id end
+    table.sort(ids)
+    for _, id in ipairs(ids) do
+      local held = type(inv[id]) == "number" and math.floor(inv[id]) or 0
+      if held > 0 and not engine.isKeyItem(id) then pcall(Bag.remove, save, id, held, data) end
+    end
+    local list = {}
+    for id, qty in pairs(type(items) == "table" and items or {}) do
+      if type(id) == "string" and tbl[id] and type(qty) == "number" and qty >= 1 and not engine.isKeyItem(id) then
+        list[#list + 1] = { id = id, qty = math.floor(qty), rank = Gen1.CLASS_ORDER[engine.itemClass(id) or ""] or 9 }
+      end
+    end
+    table.sort(list, function(a, b)
+      if a.rank ~= b.rank then return a.rank < b.rank end
+      return a.id < b.id
+    end)
+    local left = {}
+    for _, e in ipairs(list) do
+      local remaining = e.qty
+      while remaining > 0 do
+        local n = math.min(remaining, 99)
+        local ok, added = pcall(Bag.add, save, e.id, n, data)
+        if not (ok and added == true) then break end
+        remaining = remaining - n
+      end
+      if remaining > 0 then left[e.id] = remaining end
+    end
+    local m = tonumber(money)
+    if m then save.money = math.max(0, math.min(999999, math.floor(m))) end
+    return true, left
   end
 
   -- Takes up to qty of an item out of the bag with Bag.remove(save, id, qty,

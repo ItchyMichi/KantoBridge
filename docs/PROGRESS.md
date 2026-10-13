@@ -1471,10 +1471,10 @@ the full suite at the ✔ checkpoints (MG2, MG3, MG5, MG6). Pods run inside your
 | MG0 | Decisions and spikes | decisions answered (plan §9); the spikes S1–S5 are yours (your PC, your imports; S2–S3 on Emerald) | 2026-10-13 | |
 | MG1 | The game catalogue and an open protocol | **done** (notes 1–3); check: pytest and Lua 1,615 passed, JUnit 1,059 (0 failures), GameTests 101 on the pod (kb-dev7); the golden synthetic index byte-identical | 2026-10-13 | |
 | MG2 | Core and adapters in the bridge mod; the region acts on Gen 1 | **done** (notes 4–7); checkpoint passed on the pod (kb-dev7): pytest and Lua 1,658, JUnit 1,059 (0 failures), GameTests 101; e2e on the real engine (Blue, v0.3.85): `test_regions.py` 2 passed (a `start` from the title ×3 NEW GAME and ×3 CONTINUE, the park/resume round trip), `test_s5_ready.py`, `test_handshake.py` | 2026-10-13 | |
-| MG3 | Regions as data | **done** (notes 8, 10–13); checkpoint passed on the pod (kb-dev7): pytest and Lua 1,703, JUnit 1,122 (0 failures), GameTests 103 (`RegionBuildGameTests`: two regions in one world, the legacy build byte-identical to the kanto region, the join sequence, per-region warps, presence and progress; a legacy world keeps today's wire); the pod's real Kanto region build waits for your EULA (PLAYTEST "Several games"); D9 as an estimate: 32 families are 24,576 tile/shape block states (+12,288), about +15 MB a side at the measured 1.23 KB a state | 2026-10-13 | |
-| MG4 | Links | pending | | |
-| MG5 | Crossings | pending | | |
-| MG6 | One trainer economy | pending | | |
+| MG3 | Regions as data | **done** (notes 8, 10–13); checkpoint passed on the pod (kb-dev7): pytest and Lua 1,703, JUnit 1,122 (0 failures), GameTests 103 (`RegionBuildGameTests`: two regions in one world, the legacy build byte-identical to the kanto region, the join sequence, per-region warps, presence and progress; a legacy world keeps today's wire); pod check passed 2026-10-13 22:54 UTC (you accepted the EULA): the real Kanto built as region `kanto` at slot 0 (`regions/kanto/`, 220 maps, 4 min 36 s) and as a legacy world from the same export agree on every map placement, the dungeons, the shafts, the export hash and the **slot-map slice hash** (`42fd3f4d`, the region's `slotMapHash` = the legacy map's hash), the shape index byte-identical; only the Wild Routes zone differs, laid out from each fresh world's own seed (5 areas vs 4); D9 as an estimate: 32 families are 24,576 tile/shape block states (+12,288), about +15 MB a side at the measured 1.23 KB a state | 2026-10-13 | |
+| MG4 | Links | **done** (note 19); check: with one link the e2e scenarios behave as before (pod, real engine: `test_s5_ready`, `test_handshake`, `test_regions`, `test_multiplayer`, `test_crash`, `test_hot_reload` all passed), `tools/tests/test_links.py` (two `fake_gen1`: swap, a parked drop, a wrong game), JUnit `LinksTest` + `LinksFakeGen1IntegrationTest` (two real `fake_gen1` processes); one `test_multiplayer` assertion learnt that an install paired before MG1 keeps its legacy pairing file beside the per-game one. The MG4–MG6 checkpoint on the pod (kb-dev7): pytest and Lua 1,729, JUnit 1,193 (0 failures), GameTests 112 | 2026-10-13 | |
+| MG5 | Crossings | **done** (note 20); check: `PassGameTests` (6: the round trip into the far gate house with the exact arrival cell, every refusal, abort, the timeout, the start path, the stash, a built half whose pass is a story cell), `PassCrossingsTest`, `ZonePlanTest`, `WorldIndexTest`, `PassChoreographyTest` (16), the two-`fake_gen1` crossing in `tools/tests/test_stand_ins.py`; a crossing between two real engines waits for a second region whose game has an adapter (MG7/MG8) | 2026-10-13 | |
+| MG6 | One trainer economy | **done** (notes 18, 21); check: `LedgerGameTests` (two regions: adoption, stamped read-back, the crossing's projection, `too_many`/`left`, re-projection on an unknown stamp; a legacy world untouched), `BagGameTests` marked stacks, `LedgerTest`/`LedgerCodecTest`/`ItemsTest`/`BagSetRelayTest`, `test_lua_ledger.py`/`test_lua_bag.py`; the real engine's `bag.set` round trip is your play-test (PLAYTEST.md "MG6") | 2026-10-13 | |
 | MG7 | The second family (Emerald): adapter and export | pending (its own spec, after your spikes S2–S4) | | |
 | MG8 | Hoenn and the pass to it | pending | | |
 
@@ -1603,6 +1603,127 @@ the full suite at the ✔ checkpoints (MG2, MG3, MG5, MG6). Pods run inside your
     `ClientRelay` tags every relayed type (`RegionTags`, cross-checked against the schemas by a test) with the followed
     region in a region world only; `GameRelay` forwards `game.status`. The render snapshot still holds one shape
     lookup (the followed region's): other regions draw as textured cubes until followed (a later item).
+
+14. **Crossings, the builder** (MG5 [B], D12): `ExportRoutes` reads the `routes` resource v2 (`connecting`, `ends`,
+    `end`); `ZonePlanner` plans a connecting half as a `CONNECTING` layout (levels rise with the layout's `progress`
+    toward the pass) whose far gate is a **gate house**: the far plaza is 7×5 cells inside (the trailhead keeps its
+    4×6), walls of oak planks with glass panes, a dark-oak roof at feet+4 with lights under it, the near opening and
+    the far door walkable; the far door's cells are the **pass**, carried in the WorldIndex zone entry as
+    `pass{cells, route, toRegion, end}` with `gateHouse{x, y, w, d, facing}`, and placed as story cells of the new
+    type `pass` (closed per player: `pass_closed`). One game holding both ends (a test world) gets `<id>_to` as the
+    second zone. `build.region_exists` refuses a second region of one world space (unless
+    `-Dkantobridge.testRegions=true`); the report counts `zone_passes`. `RouteGeneratorTest`'s connecting fingerprint
+    (`GOLDEN_ROUTE`) changes with the bigger plaza and is re-stamped from the pod run.
+15. **Crossings, the server** (MG5 [S], D5): `server/PassCrossings` (pure decisions, the dungeon visits' pattern) and
+    `PassService`: `pass.cross` needs the player on a pass cell of the half named, the far region in the table
+    (`pass.no_region`), built with a half of that route (`pass.not_built`), a link for it (`pass.no_link`), no crossing
+    in progress (`pass.busy`) → `route.fade{ticks:10}` and a 15 s timer; on `region.state{followed: far}` the player
+    is teleported one cell inside the far gate house's door (or, after a `start`, left to the client's relink);
+    `pass.abort` or the timer → `error{code:"pass.timeout"}`. `pokemon/StashService` answers `party.stash` (every
+    party member into Cobblemon's PC, rolled back whole on a full PC: `stash.pc_full`; `stash.busy` in a battle or
+    under a build hold) with `act.result{kind:"stash", moved}`. `StoryState`/`StoryRules` close pass cells until the
+    client opens the route (the far region built and linked).
+16. **One economy, the bridge mod** (MG6 [L], D7): the Gen 1 adapter gains `isKeyItem`, `itemTable` (symbol →
+    canonical id through `kb_items.lua`), `tmMove`, `bagLimits`, `bagSet` (clears the catalogue's non-key items, adds
+    the projection in class order one `Bag.add` per 99, reports what did not fit); `kb_bag` syncs every non-key
+    catalogue symbol with the save's `money` and the ledger `stamp`, mirrors only the 29 Cobblemon items;
+    `act/kb_ledger.lua` answers `bag.set` (`not_ingame`, `busy`, `too_many` with `left`) and keeps the stamp in the
+    save's mod data. `main.lua` imports 38 modules.
+17. **The export driver on a slow disk** (found by the MG3 pod check): on the pod's network volume the engine
+    re-checks a dataset view's readiness on every record read and gen1-bridge's export takes a quarter of an hour;
+    the Wild Routes drivers' `KB_DATASET_MEMO` memo (seconds; `kb_wild.lua`) now also serves `kb_export.lua`, and
+    `build_world.py` passes it (default 30) with the export index timeout (`-Pkb.exportTimeout` from
+    `KB_EXPORT_INDEX_TIMEOUT`). gen1-bridge's heartbeat no longer counts a stall of the hidden game itself (over a
+    second between two logic steps) as the client's silence (`session.stalled`): a 10.8 s stall had dropped the
+    builder session mid-export.
+
+18. **One economy, the server** (MG6 [S]): `world/Items` reads the bundled catalogue; `server/Ledger` (the player's
+    wallet and item ledger, `kantobridge:ledger`, persistent, copied on death) with the pure `LedgerRules` (limits
+    gen1 20 slots / 99 a stack; `readBack`, `adopt`, `project`, `use`, `mirrorTargets`) and `LedgerService`: in a
+    region world every `bag.sync` is read back as the diff since the last projection (prize money, purchases, found
+    items, the blackout halving), a save without a stamp is adopted once (by its save pair; a never-saved New Game
+    once per region), a stamp the server doesn't remember re-projects, and after a crossing's teleport or relink (and
+    on the followed region's `save.loaded`) the ledger is projected into the game with `bag.set`; `too_many`'s `left`
+    stays in the ledger ("in your trunk"). `BagService` mirrors from the ledger in a region world and marks every
+    stack it creates (counting and taking only marked stacks, in legacy worlds too, which fixes the deletion of items
+    found in Minecraft); a use debits the ledger before `bag.use` goes to the followed game. `BagItems` is a view over
+    the catalogue's 29 mirrored items.
+
+19. **Links** (MG4, D2, D3): the client holds one `BridgeLink` per configured hidden game (`kantobridge-client.json`
+    `links[{game, port}]` or `-Dkantobridge.links=blue:27151,emerald:27152`; the legacy `port` is one link whose game
+    is learnt from `hello.ok`), each with its own `BridgeClient`, dispatcher, state, session gate and binder, save and
+    PC relays, game relay, story rules and texture sync; `Links` follows one (the first connected link whose game is
+    right, or the server's stored presence), parks the rest (connected, pinged, `party.sync`/`dex.sync` fanned out to
+    all), and swaps with `Links.follow(game, allowTeleport)`: the body's `FollowedDispatcher` emits a disconnect so
+    screens, puppets and the input lock clear themselves, `MovementSync.linkFrom` relinks from the new hidden place
+    (one ordinary step at most; a teleport only for a `start`), a `resync` re-seeds the body, `region.state` goes up.
+    A link whose `hello.ok.game` isn't its configured game is `wrong_game`: never followed, a HUD line. The pause
+    overlay follows the followed link only; F7 lists every link. `BridgeRuntime.client()/dispatcher()/state()/port()`
+    stay as shims to the followed link, so the per-body runtimes moved without edits. **"Add a region"** on the title
+    screen: a world, a connected link, a region id (the catalogue's default; a second region of one world space is
+    refused unless `-Dkantobridge.testRegions=true`) and the next free slot → that link's export → the existing world
+    opened with the region build (`withRegion`); the one generated texture pack holds Kanto's art only (the pack
+    cannot merge art sets yet: the region's blocks draw as cubes until that lands). Tools: `tools/kb_games.py` (import
+    detection: catalogued folder names holding `rom-cache.complete`, nothing read), `tools/setup_games.ps1/.sh`
+    (one portable install per world space from the pinned release, Gen1Recomp's own headless importer per inbox
+    file, the Union Room switched off, `launch.json` v2 and the client's `links` written; `-DryRun`),
+    `launch.ps1 -Games/-Regions` (every install with an adapter game, ports 27151 + i, player 2 at +10,
+    `-Pkb.links` to the dev client), `run_gen1recomp.py` detecting any catalogued import, `fake_minecraft --links`
+    with `tools/tests/test_links.py` (two `fake_gen1`: the follow/park swap, a parked drop never pauses, a wrong game
+    never followed).
+
+20. **Crossings** (MG5, D5, D6, D12): a connecting route is **two halves**, one per region, each ending in a 7×5
+    **gate house** (`RouteGenerator`: oak planks, glass panes, a dark-oak roof, lights; `HOUSE_DEPTH 7`, `HOUSE_WIDTH 5`,
+    the route goldens regenerated); its far doorway is the **pass**: `WorldIndex` zone entries carry `pass{cells, route,
+    toRegion, end}` and `gateHouse{x, y, w, d, facing}`, the pass cells are story cells of type `pass`
+    (`StoryCellType.PASS`, closed per player as `pass_closed` while the far region is unbuilt or the player has no link
+    to its game; `StoryRules.setOpenPasses`). The builder plans them as `ZonePlan.Crossing` (`ExportRoutes` v2 names
+    the connecting routes and their regions). **Server:** `PassCrossings`/`PassService` (`pass.cross` → standing on the
+    pass, `pass.no_region`, `pass.not_built`, `pass.no_link`, `pass.busy`, in that order → `route.fade{ticks:10}` and a
+    300-tick timer; `region.state` from the client → the teleport just inside the far gate house, or a relink after a
+    `start`; `pass.abort` or the timer → `error{pass.timeout}`; counters for F7 and the tests), `StashService`
+    (`party.stash` → every party member into Cobblemon's PC, `act.result{kind:"stash", moved}` or `stash.pc_full`).
+    **Client:** `PassChoreography` (the pure state machine: IDLE, CROSS_SENT, PARKING, STASHING, STARTING, RESUMING,
+    AWAIT_INGAME; one 15 s clock; every failure → `pass.abort{route, reason}`, the fade lifted, one HUD line) and
+    `PassRuntime` (its glue on MG4's links), `UiRouter.setAutoName` (D6: the parked save's name answers the started
+    game's first naming screen; shown only when cut or when the game asks something else), `ZoneRuntime` forwards a
+    half's `route.give`/`route.battle`/`blackout` to that region's link and can extend, restart or lift its fade.
+    **Tests:** `PassGameTests` (the round trip into the far gate house with the exact arrival cell, every refusal with
+    its `re`, abort, the timeout, the start path, the stash, a built half whose pass is a story cell), `PassCrossingsTest`,
+    `ZonePlanTest`, `WorldIndexTest`, `PassChoreographyTest` (16), the two-`fake_gen1` crossing in
+    `tools/tests/test_stand_ins.py` (park, stash, start, resume onto the route map; the M→G half). **A GameTest lesson:**
+    a batch's tests run at the same time, so tests that reset a service's static state (`PassService.reset`,
+    `WorldIndexSync.withdraw`, `DungeonService.reset`) each get **their own batch**; the dungeon tests, in `defaultBatch`
+    for a year, flaked that way under the longer run ("the house holds 0") and are batched now too. **Gaps:** a crossing
+    between two real engines needs a second region whose game has an adapter: Red and Blue are both Kanto (one region
+    per world space), Johto has no adapter, Hoenn is MG7/MG8; the GameTests and the stand-ins cover both halves
+    meanwhile. `stash.pc_full` has no test (no Cobblemon API in the tests to fill the PC). `BridgeClientTest`'s backoff
+    test raced `state()` against the listener's queue once on the pod: the state is now published after the listener
+    hears of it.
+
+21. **One economy, the rest** (MG6, D7; note 18 has the server): **gen1-bridge** `act/kb_ledger.lua` answers `bag.set`
+    (M→G) through the adapter's `bagSet` (`lib/engine/gen1.lua`: `isKeyItem`, `itemTable`, `tmMove`, `bagLimits` 20
+    slots × 99, `bagSet` replaces the bag's non-key items by the projection, writes `save.money` and keeps the `stamp`
+    in the save's mod data) with `act.result{kind:"bag.set"}`, `too_many` and `left` for what did not fit, `not_ingame`
+    and `busy` refusals; `observe/kb_bag.lua` was rewritten so every `bag.sync` carries `money` and, once projected,
+    the `stamp` (`lib/kb_items.lua` is the generated catalogue copy). **Client:** `BagSetRelay`/`BagSetRuntime` forward
+    a `bag.set` to the link of its `region` and the game's `act.result` back under the server's seq; `ActRuntime`
+    leaves kind `bag.set` alone; F7 has a `bag` line (money, items, trunk, stamp, counters). **Tests:**
+    `tools/lua/test_lua_ledger.py` (the projection, `too_many` with `left`, the stamp echoed, the refusals) and
+    `test_lua_bag.py` (money and stamp on the wire; `fake_wild.lua` grew `Bag.capacity`), `BagSetRelayTest`,
+    `LedgerTest`/`LedgerCodecTest`/`ItemsTest`, and the GameTests `LedgerGameTests` (two regions: adoption of an
+    unstamped save and its projection with a region-tagged `bag.set` and a 16-hex stamp; stamped read-back of a drunk
+    Potion and prize money with no re-projection; a crossing's projection into the second region with its own stamp
+    and the game's confirming sync changing nothing; `too_many`/`left` shrinking the remembered projection while the
+    ledger keeps the trunk; an unknown stamp counted as `reprojected` and projected afresh without a diff; a legacy
+    world keeping today's per-game bag with `LedgerService.enabled` false) and `BagGameTests`'
+    `thePlayersOwnFindsAreNeitherCountedNorTaken` (an unmarked stack survives the mirror and its use sends no
+    `bag.use`). **Not covered:** `stash.pc_full`, and a real engine's `bag.set` round trip beyond the Lua stand-in
+    (your play-test: PLAYTEST.md "MG6"). **Commits:** MG4, MG5 and MG6 were built in one working tree and are committed by
+    path group (`MG4: links`, `MG5: crossings`, `MG6: one trainer economy`, after `MG3 follow-up: the session stall rule
+    and the export memo shim`); the files they share (both entry points, the lang file, `build.gradle`, the GameTest
+    `fabric.mod.json`, the docs) are in MG6's commit, so the three roll back together
+    (`git revert --no-edit <MG4 commit>^..<MG6 commit>`), and a tree between them need not compile.
 
 ## Pre-flight (PLAN §0.6)
 

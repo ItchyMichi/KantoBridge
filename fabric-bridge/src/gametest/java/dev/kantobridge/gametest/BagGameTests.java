@@ -11,6 +11,7 @@ import dev.kantobridge.proto.MsgTypes;
 import java.util.List;
 import java.util.Map;
 import net.fabricmc.fabric.api.gametest.v1.FabricGameTest;
+import net.minecraft.core.component.DataComponents;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestHelper;
@@ -20,12 +21,15 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.component.CustomData;
 
 /**
  * The hidden game's battle items in the Minecraft inventory (docs/PLAN.md P17, §4.4 {@code BagService}): every mirrored
  * Gen 1 item is a real Cobblemon item, {@code bag.sync} adds and removes them until the inventory matches (and changes
  * nothing when it already does), and what Minecraft consumes goes back once as {@code bag.use}; during a battle only once
  * it is over. Consumption is simulated by shrinking a stack, as Cobblemon does when a ball is thrown or an item used.
+ * MG6: the mirror's stacks carry a custom-data mark; a stack the player found or crafted has none and is neither
+ * counted, taken nor reported.
  */
 public class BagGameTests implements FabricGameTest {
 	private static final String BATCH = "kantobridge_bag";
@@ -164,5 +168,76 @@ public class BagGameTests implements FabricGameTest {
 					helper.assertTrue(uses.size() == 1 && uses.get(0).data().get("item").getAsString().equals("POTION"), "wrong use");
 				});
 		MockPlayers.leaveAfterBattle(helper, end, relay::close, player);
+	}
+
+	// ---- marked stacks (MG6) ----
+
+	/** The custom-data mark on the mirror's stacks (docs/PROTOCOL.md "One economy"); the player's own finds carry none. */
+	private static final String MARK = "kantobridge_bag";
+
+	private static boolean marked(ItemStack stack) {
+		CustomData data = stack.isEmpty() ? null : stack.get(DataComponents.CUSTOM_DATA);
+		return data != null && data.contains(MARK);
+	}
+
+	/** How many of an item the inventory holds in marked stacks. */
+	static int marked(ServerPlayer player, String path) {
+		int n = 0;
+		Inventory inventory = player.getInventory();
+		for (int slot = 0; slot < inventory.getContainerSize(); slot++) {
+			ItemStack stack = inventory.getItem(slot);
+			if (stack.is(item(path)) && marked(stack)) {
+				n += stack.getCount();
+			}
+		}
+		return n;
+	}
+
+	/** Takes one of an item from an unmarked stack only: the player using their own find. */
+	static void consumeOwn(GameTestHelper helper, ServerPlayer player, String path) {
+		Inventory inventory = player.getInventory();
+		for (int slot = 0; slot < inventory.getContainerSize(); slot++) {
+			ItemStack stack = inventory.getItem(slot);
+			if (stack.is(item(path)) && !marked(stack)) {
+				stack.shrink(1);
+				return;
+			}
+		}
+		helper.fail("no unmarked " + path + " to consume");
+	}
+
+	@GameTest(template = EMPTY_STRUCTURE, batch = BATCH, timeoutTicks = 100)
+	public void thePlayersOwnFindsAreNeitherCountedNorTaken(GameTestHelper helper) {
+		ServerPlayer player = MockPlayers.join(helper);
+		RelayTap.Recorder relay = RelayTap.open(player);
+		try {
+			// The player's own find: an unmarked stack of balls, there before any sync.
+			helper.assertTrue(player.getInventory().add(new ItemStack(item("poke_ball"), 3)), "the find didn't fit");
+			sync(player, 1, "{\"POKE_BALL\":5}");
+			helper.assertTrue(marked(player, "poke_ball") == 5, "the mirror's stacks aren't 5 marked balls: " + marked(player, "poke_ball"));
+			helper.assertTrue(count(player, "poke_ball") == 8, "the find was counted as the mirror's: " + count(player, "poke_ball"));
+			helper.assertTrue(BagService.reference(player, "POKE_BALL") == 5, "the reference counts the find");
+			// The same bag again: the find doesn't make the mirror take anything.
+			long changed = BagService.stats()[1];
+			sync(player, 2, "{\"POKE_BALL\":5}");
+			helper.assertTrue(BagService.stats()[1] == changed && count(player, "poke_ball") == 8, "a matching sync changed the find");
+			// The bag empties: the mirror's balls go, the find stays.
+			sync(player, 3, "{}");
+			helper.assertTrue(marked(player, "poke_ball") == 0 && count(player, "poke_ball") == 3, "the find was taken with the mirror's balls");
+			// Using the find is the player's business: no bag.use.
+			consumeOwn(helper, player, "poke_ball");
+			helper.assertTrue(count(player, "poke_ball") == 2, "the find wasn't consumed");
+		} catch (RuntimeException e) {
+			relay.close();
+			MockPlayers.leave(helper, player);
+			throw e;
+		}
+		helper.startSequence()
+				.thenExecuteAfter(12, () -> helper.assertTrue(uses(relay).isEmpty(), "the player's own find was reported as a use"))
+				.thenExecute(() -> {
+					relay.close();
+					MockPlayers.leave(helper, player);
+				})
+				.thenSucceed();
 	}
 }

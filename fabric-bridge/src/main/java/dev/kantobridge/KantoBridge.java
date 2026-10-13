@@ -16,11 +16,14 @@ import dev.kantobridge.pokemon.DaycareService;
 import dev.kantobridge.pokemon.DexService;
 import dev.kantobridge.pokemon.PartyService;
 import dev.kantobridge.pokemon.PcService;
+import dev.kantobridge.pokemon.StashService;
 import dev.kantobridge.proto.Catalog;
 import dev.kantobridge.server.ActivityService;
 import dev.kantobridge.server.BuildHold;
 import dev.kantobridge.server.FlashService;
 import dev.kantobridge.server.HabitatService;
+import dev.kantobridge.server.LedgerService;
+import dev.kantobridge.server.PassService;
 import dev.kantobridge.server.ProgressService;
 import dev.kantobridge.server.RegionPresenceService;
 import dev.kantobridge.server.Rules;
@@ -78,6 +81,9 @@ public class KantoBridge implements ModInitializer {
 		ZoneService.init();
 		// Wild Routes (WR7): dungeon visits, floors built while you play, route.fade
 		DungeonService.init();
+		// Several games (MG5): crossings between regions through the gate houses, and the party stash before a first start
+		PassService.init();
+		StashService.init();
 		// Static, surfing and fishing encounters (wild battle.start kinds), and Run for every wild battle in Kanto.
 		EncounterService.init();
 		// Cobblemon's battle themes are silenced for Kanto battles: the hidden game plays Gen 1's (P22).
@@ -97,6 +103,8 @@ public class KantoBridge implements ModInitializer {
 		SessionService.init();
 		// Which hidden-game save the world last saved with, and the warning when the hidden game runs another (M10).
 		SavePairService.init();
+		// One trainer economy (MULTI_GAME_PLAN §4.9, MG6): the player's wallet and item ledger, projected into the followed game.
+		LedgerService.init();
 		// Each player's own generated pack against this world's slot map (texture.status, M9): hashes and counts only.
 		TextureStatusService.init();
 		// Several games (MULTI_GAME_PLAN §4.6-4.7, MG3): each player's story progress per region (game.status) and which

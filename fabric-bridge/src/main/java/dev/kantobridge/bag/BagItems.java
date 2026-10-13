@@ -1,5 +1,6 @@
 package dev.kantobridge.bag;
 
+import dev.kantobridge.world.Items;
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -7,76 +8,54 @@ import java.util.Set;
 import org.jetbrains.annotations.Nullable;
 
 /**
- * The Gen 1 battle items mirrored into the Minecraft inventory as Cobblemon items (docs/PLAN.md P17, Appendix B), by
- * the hidden game's item symbol. Ids were checked against Cobblemon 1.8.1's item registry (its {@code CobblemonItems}
- * and the jar's item models); a GameTest checks each one still resolves. Two differ from Appendix B's draft: Cobblemon
- * spells {@code x_defence}, and its Special Attack X item is {@code x_special_attack}. Items not listed (key items, TMs,
- * stones, Rare Candy, Repels, …) stay Gen 1-only; stones, TMs and Rare Candy reach Cobblemon as {@code party.item}. Plain
- * Java.
+ * The Gen 1 battle items Minecraft mirrors into the inventory as Cobblemon items (docs/PLAN.md Appendix B, P17): the
+ * item catalogue's mirrored entries ({@link Items#mirrored()}: class {@code ball}, {@code medicine} or {@code battle}
+ * with a Cobblemon item), keyed by their Gen 1 symbol. The one place the Minecraft side reads them; since MG6 the table
+ * is a view over {@code protocol/items.json}, so a change there changes the mirror.
  */
 public final class BagItems {
-	/** Cobblemon's item namespace. */
 	public static final String NAMESPACE = "cobblemon";
 
-	private static final Map<String, String> TABLE;
-
-	static {
-		Map<String, String> table = new LinkedHashMap<>();
-		// Balls.
-		table.put("POKE_BALL", "poke_ball");
-		table.put("GREAT_BALL", "great_ball");
-		table.put("ULTRA_BALL", "ultra_ball");
-		table.put("MASTER_BALL", "master_ball");
-		table.put("SAFARI_BALL", "safari_ball");
-		// Medicine.
-		table.put("POTION", "potion");
-		table.put("SUPER_POTION", "super_potion");
-		table.put("HYPER_POTION", "hyper_potion");
-		table.put("MAX_POTION", "max_potion");
-		table.put("FULL_RESTORE", "full_restore");
-		table.put("REVIVE", "revive");
-		table.put("MAX_REVIVE", "max_revive");
-		table.put("ANTIDOTE", "antidote");
-		table.put("BURN_HEAL", "burn_heal");
-		table.put("ICE_HEAL", "ice_heal");
-		table.put("AWAKENING", "awakening");
-		table.put("PARLYZ_HEAL", "paralyze_heal");
-		table.put("FULL_HEAL", "full_heal");
-		table.put("ETHER", "ether");
-		table.put("MAX_ETHER", "max_ether");
-		table.put("ELIXER", "elixir");
-		table.put("MAX_ELIXER", "max_elixir");
-		// X items. Gen 1's X Special raises the one Special stat; Cobblemon's raises Special Attack only.
-		table.put("X_ATTACK", "x_attack");
-		table.put("X_DEFEND", "x_defence");
-		table.put("X_SPEED", "x_speed");
-		table.put("X_SPECIAL", "x_special_attack");
-		table.put("X_ACCURACY", "x_accuracy");
-		table.put("DIRE_HIT", "dire_hit");
-		table.put("GUARD_SPEC", "guard_spec");
-		TABLE = Collections.unmodifiableMap(table);
-	}
+	private static volatile @Nullable Map<String, String> table;
 
 	private BagItems() {
 	}
 
-	/** Every mirrored Gen 1 item and its Cobblemon item path, in a fixed order. */
+	/** Every mirrored Gen 1 item and its Cobblemon item path, in a fixed order (the catalogue's). */
 	public static Map<String, String> table() {
-		return TABLE;
+		Map<String, String> out = table;
+		if (out == null) {
+			synchronized (BagItems.class) {
+				out = table;
+				if (out == null) {
+					Map<String, String> built = new LinkedHashMap<>();
+					for (String id : Items.mirrored()) {
+						String symbol = Items.symbolOf("gen1", id);
+						String path = Items.cobblemonPath(id);
+						if (symbol != null && path != null) {
+							built.put(symbol, path);
+						}
+					}
+					out = Collections.unmodifiableMap(built);
+					table = out;
+				}
+			}
+		}
+		return out;
 	}
 
 	public static Set<String> gen1Items() {
-		return TABLE.keySet();
+		return table().keySet();
 	}
 
 	/** The Cobblemon item path (in namespace {@value #NAMESPACE}) for a Gen 1 item symbol, or null when it stays Gen 1-only. */
 	public static @Nullable String cobblemonPath(String gen1) {
-		return TABLE.get(gen1);
+		return table().get(gen1);
 	}
 
 	/** The Gen 1 item symbol of a Cobblemon item path, or null. */
 	public static @Nullable String gen1Of(String cobblemonPath) {
-		for (Map.Entry<String, String> entry : TABLE.entrySet()) {
+		for (Map.Entry<String, String> entry : table().entrySet()) {
 			if (entry.getValue().equals(cobblemonPath)) {
 				return entry.getKey();
 			}

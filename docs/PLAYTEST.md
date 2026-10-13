@@ -807,10 +807,53 @@ Kanto world, or the headless build); a world made before then keeps its flat cav
 ### MG3: regions as data (with you)
 
 - [x] **Minecraft's EULA on the pod's volume** (`local/minecraft/eula.txt`): you accepted it on 2026-10-13 and I wrote
-      the file, so the headless real-Kanto region build (`tools/e2e/build_world.py --maps all --region kanto --slot 0`,
-      the plan's MG3 pod check) can run there.
+      the file; the real-Kanto region build ran there (`build_world.py --maps all --region kanto --slot 0`, world
+      `KantoMG3` on the volume; a legacy build `KantoMG3Legacy` from the same export agrees on everything but the
+      seeded wild zone).
 - [ ] On your PC: an existing Kanto world opens exactly as before (a legacy world: nothing is rewritten until a region
       build). F7 shows a "regions" line naming the implicit `kanto` region.
 - [ ] Rebuild Kanto with `--region kanto --slot 0` (your e2e world): the world looks identical; `kantobridge/regions.json`
       and `regions/kanto/` appear beside the old files, which go.
 
+### MG4: links (with you)
+
+- [ ] **Two defaults of `tools/setup_games.ps1` to confirm or change:** (1) the game of a ROM is only known after the
+      import, so the tool imports into a fresh `local\gen1recomp-new-<n>\` install first and then renames it to the
+      world space's install (`-kanto`, `-johto`, `-hoenn`, `-kanto_frlg`), or, when that install already exists,
+      re-runs the importer into it and deletes the fresh one (a cache the tool itself made minutes earlier; nothing
+      of yours); (2) player 2's ports moved from `+1` to `+10` (27161…), so two players' several games never collide
+      (INSTALL.md updated). The tool also runs each new install once headlessly to switch its Union Room off (a
+      window opens briefly).
+- [ ] `launch.ps1 -DryRun` on your PC lists your installs, their imported games and the ports it would use; then
+      `launch.ps1` starts every game that has an adapter and the dev client with `-Dkantobridge.links`.
+- [ ] With one link (today's setup) everything plays as before; F7 shows the one link as followed.
+- [ ] With Blue and a second install (Red, your e2e install) both running: F7 lists two links; the one whose game
+      matches a region is followed; stop the other one: no pause overlay (a parked link's drop is only an F7 line).
+- [ ] "Add a region" on the title screen: pick a world, a link and the next slot; the build runs in the opened world;
+      the new region's blocks draw as cubes for now (the texture pack cannot hold two games' art yet).
+
+### MG5: crossings (with you)
+
+- [ ] In a Kanto rebuilt with `--region kanto`: a connecting route's half ends in a 7×5 gate house (oak planks, glass
+      panes, a dark-oak roof, lights); its far doorway is the pass, and it stays closed while no built region lies beyond
+      it (F7's `pass` line names the route and the far region when you stand in the house).
+- [ ] The crossing itself (needs a second region whose game has an adapter: Hoenn after MG7/MG8): stand on the pass and
+      walk through: the screen fades, the followed game is parked on its route map, the far game is resumed (or
+      started, your name answering its first naming screen), and you arrive just inside the far gate house. Items and
+      trainers of a half go to that half's game. A failure (no link, a refusal, 15 s without an answer) lifts the fade
+      where you stand with one HUD line.
+- [ ] Until then, the crossing is covered by the GameTests (`PassGameTests`), the client's `PassChoreographyTest` and
+      a stand-in crossing between two `fake_gen1` (`tools/tests/test_stand_ins.py`).
+
+### MG6: one economy (with you)
+
+- [ ] Your existing legacy Kanto world (no `regions.json`): the bag mirror behaves exactly as before and no `bag.set`
+      reaches the game.
+- [ ] In a region world: the first resume adopts the save's money and non-key items into the ledger (F7's `bag` line:
+      money, items, trunk, stamp); prize money and a shop purchase in the hidden game show in that line after the
+      next `bag.sync`; using a mirrored Potion in Minecraft debits the ledger and the game's bag matches at the next
+      resume (`bag.set`).
+- [ ] An item you pick up in Minecraft (an unmarked stack) survives the bag mirror and is never spent on the game's
+      behalf; the mirrored stacks are marked and come and go with the ledger.
+- [ ] Restore an older copy of the save and resume: the game is re-projected from the ledger (F7's `reprojected` count
+      goes up); nothing is lost. What does not fit the game's bag (20 slots, 99 a stack) stays "in your trunk" on F7.

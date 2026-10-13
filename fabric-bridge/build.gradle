@@ -104,6 +104,20 @@ if (kbAutopilot != null && !kbAutopilot.isBlank()) {
 	}
 }
 
+// Several games (docs/specs/MULTI_GAME_PLAN.md §4.5, MG4): `./gradlew runClient -Pkb.links=blue:27151,emerald:27152` hands the
+// client its links as -Dkantobridge.links (ClientConfig.LINKS_PROPERTY; one hidden Gen1Recomp process per game, each on
+// its own port). Without it the client reads kantobridge-client.json (or -Dkantobridge.port, one legacy link).
+def kbLinks = providers.gradleProperty("kb.links").getOrNull()
+if (kbLinks != null && !kbLinks.isBlank()) {
+	loom {
+		runs {
+			client {
+				vmArg "-Dkantobridge.links=${kbLinks.trim()}"
+			}
+		}
+	}
+}
+
 // A second dev client for multiplayer play-tests (docs/PLAN.md §6 M9): `./gradlew runClient2` starts "Player2" in its own
 // game folder, ../local/minecraft-p2 (its own options, generated pack and export), linked to a second Gen1Recomp whose
 // gen1-bridge listens on port 27152. Agents never start it; the user does.
@@ -472,6 +486,8 @@ def protocolDir = layout.projectDirectory.dir("../protocol")
 def catalogFile = layout.projectDirectory.file(providers.gradleProperty("kb.catalog").orElse("../protocol/catalog.json"))
 // The game catalogue (docs/specs/MULTI_GAME_PLAN.md §4.2): the one place that names the games. -Pkb.games=<path> points at another copy.
 def gamesFile = layout.projectDirectory.file(providers.gradleProperty("kb.games").orElse("../protocol/games.json"))
+// The canonical item catalogue (MULTI_GAME_PLAN §4.9, MG6): the one trainer economy's items. -Pkb.items=<path> points at another copy.
+def itemsFile = layout.projectDirectory.file(providers.gradleProperty("kb.items").orElse("../protocol/items.json"))
 
 /** Writes MsgTypes.java: one String constant per message type in the catalog. */
 abstract class GenerateProtocolTypes extends DefaultTask {
@@ -553,6 +569,11 @@ processResources {
 	from(gamesFile) {
 		into "kantobridge/protocol"
 		rename { "games.json" }
+	}
+	// And the item catalogue, which dev.kantobridge.world.Items reads (MG6): classes, Cobblemon ids, moves, symbols.
+	from(itemsFile) {
+		into "kantobridge/protocol"
+		rename { "items.json" }
 	}
 }
 

@@ -144,6 +144,8 @@ public final class SavePairService {
 		}
 		// The daycare follows the hidden game's (it logs what came back).
 		DaycareService.reconcile(player, region, loaded.daycare());
+		// One trainer economy (MG6): a projection the game refused not_ingame is owed now.
+		LedgerService.onLoaded(player, region);
 	}
 
 	/** {@code save.loaded}'s data, checked like its schema (the relay checks envelopes only). */

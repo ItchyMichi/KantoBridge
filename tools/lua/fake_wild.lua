@@ -55,7 +55,7 @@ function FakeWild.attach(E)
   -- rows one per stack (stackRows :191-203, Bag.rows :369-373), addTo
   -- (:383-425: fill the last stack, open new ones), removeFrom (:427-463:
   -- the named slot first, then the rest in order; the order entry and the
-  -- stacks go at zero) -- and leaves out the pockets and the 20-slot cap
+  -- stacks go at zero) -- and leaves out the pockets; MG6 adds the 20-slot cap
   -- (the made-up bag never fills). Every item splits (Gen 1 and no
   -- `pocket`, :60-65); badges are never bag items (:23-26, :113).
   local MAX_STACK = 99
@@ -91,6 +91,24 @@ function FakeWild.attach(E)
     return math.ceil(n / MAX_STACK)
   end
   Bag.slotsFor = slotsFor
+  -- MG6: Bag.capacity(data, pocket) (:43-55): the ITEM pocket's cap (every Gen 1
+  -- item's), data.constants.bagSize or 20
+  function Bag.capacity(data, pocket)
+    if pocket and pocket ~= "ITEM" then return 20 end
+    local c = data and data.constants and data.constants.bagSize
+    if type(c) == "number" and c >= 1 then return math.floor(c) end
+    return 20
+  end
+  -- MG6: Bag.slots(save, data) (:344-349): the occupied slots, one per stack
+  -- (badges take none)
+  function Bag.slots(save, data)
+    if not save or not save.inventory then return 0 end
+    local n = 0
+    for id, total in pairs(save.inventory) do
+      n = n + slotsFor(id, total, data, save.bagStacks)
+    end
+    return n
+  end
   local function derivedCount(total, k, n)
     if type(total) ~= "number" or n <= 1 then return total end
     if k < n then return MAX_STACK end
@@ -217,7 +235,11 @@ function FakeWild.attach(E)
     local stacks = stacksOf(save)
     local old = inv[id]
     if type(old) == "number" and old <= 0 then old = nil end
+    -- MG6: the 20-slot cap (Bag.lua:243, :248: no free slot for a new stack
+    -- fails the add whole; :231: a non-splitting stack past 99)
+    local free = Bag.capacity(data) - Bag.slots(save, data)
     if not splits(id, data) then
+      if not old and free <= 0 then return false end
       if (old or 0) + qty > MAX_STACK then return false end
       inv[id] = (old or 0) + qty
       if not old then order[#order + 1] = id end
@@ -241,6 +263,7 @@ function FakeWild.attach(E)
       left = left - MAX_STACK
     end
     local before = #occurrences(order, id)
+    if #counts - #(old and countsOf(inv, id, data, stacks) or {}) > free then return false end
     setCounts(inv, id, counts, stacks)
     for _ = before + 1, #counts do order[#order + 1] = id end
     keepStacks(save, stacks)

@@ -52,7 +52,9 @@ Engine.GROUPS = {
             "queueHeal", "releaseHeals", "takeHeals", "uidOf", "partyUids", "adoptUids", "partySafe",
             "applyParty", "bridgeCounts" },
   items = { "attachBridge", "encounterRoll", "encounterFishing", "fishPushed", "nativeBattle", "encounterCounts",
-            "inGame", "applyDex", "bagCounts", "bagRemove", "tmWatchStep", "itemUse", "takeItemUses", "itemCounts" },
+            "inGame", "applyDex", "bagCounts", "bagRemove", "tmWatchStep", "itemUse", "takeItemUses", "itemCounts",
+            -- MG6 (one trainer economy): the key-item predicate, the catalogue's item table, bag.set
+            "isKeyItem", "itemTable", "itemClass", "tmMove", "bagLimits", "bagSet" },
   saving = { "nurseHealed", "armCenterSave", "centerSaveArmed", "centerSaveStep", "savingReason", "queueSave",
              "takeSave", "queuedSaveSerial", "saveSlot", "pcItems", "pcPending", "pcSent", "pcClose", "pcHeld",
              "pcCounts" },

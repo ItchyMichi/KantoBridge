@@ -85,6 +85,10 @@ closed.
   - A first line that isn't a valid envelope gets `error{code:"bad_envelope"}` and is closed.
   - The client drops a connection that brings no `hello.ok` within 10 s. That is the "not
     answering" case, for example Gen1Recomp stuck on its error screen.
+- **A stall of the hidden game is not the client's silence:** gen1-bridge drops a client after 10 s without
+  a received message, but time the engine itself didn't run (a gap of over a second between two logic steps:
+  a long data read during the export, a frozen window) moves that clock along and is logged as
+  `session.stalled`; the heartbeat keeps its meaning across stalls.
 - **`hello.reject` precedence:** `protocol`, then `malformed` (wrong types or missing fields), then
   `role`. A well-formed but unknown role string gets `role`.
 - `hello.ok.tested` is the engine version gen1-bridge was tested with. When `engine` differs,
@@ -808,10 +812,14 @@ engine symbols, and Pokémon identities as Cobblemon UUIDs (`uid`).
 - **The server** (`pass.cross`): the player must stand on that pass; the target region must exist and be built
   (`pass.no_region`, `pass.not_built`); the player's `region.state` must list a link for the target's game
   (`pass.no_link`); one crossing at a time (`pass.busy`). It answers `route.fade{ticks:10}` and starts a 15 s timer.
-- **The client** (on the fade): `region.park` on the followed link (a refusal → `pass.abort`); then, by the target's
-  last `game.status`: `fresh`/`saved` → `region.resume{to: that half's route map x1}`; `title` → `party.stash`, then
-  `region.start`, the intro's screens shown with the fade lifted, then `game.status{ingame:true}` (up to 10 s after the
-  intro ends). Then the target link is followed and `region.state{followed, parked[]}` goes up.
+- **The client** (on the fade; `client/zone/PassChoreography`): `region.park` on the followed link (a refusal →
+  `pass.abort`); then, by the target's last `game.status`: `fresh`/`saved` → `region.resume{to: that half's route map
+  x1}`, and the target link is followed once the resume is acknowledged; `title` → `party.stash`, then `region.start`,
+  and the target link is followed as soon as the start is acknowledged, so the intro's screens show on the player's own
+  body with the fade lifted; the crossing then waits for `game.status{ingame:true}` (or 10 s after the intro's last
+  screen closes). Following a link sends `region.state{followed, parked[]}` up (MG4). One 15 s clock runs from
+  `pass.cross` until the far link is followed; every failure sends `pass.abort{route, reason}`, lifts the fade and
+  posts a HUD line.
 - **On `region.state`** the server teleports the player into the other half's gate house, just inside its far
   doorway; after a `start` it leaves the teleport to the client's relink (the first room, the one accepted teleport).
   `pass.abort` or the timer → `error{code:"pass.timeout"}`: the fade lifts where the player stands and the followed
@@ -846,8 +854,9 @@ ids, e.g. `POTION`, `TM_MEGA_PUNCH`). fabric-bridge bundles it (`Items`); gen1-b
 - **The Minecraft mirror** (`bag.sync` → Cobblemon items → `bag.use`) is one per player from the ledger, not one per
   hidden game; the stacks it creates are **marked**, so items found in Minecraft are never counted or deleted by it
   and a use debits the ledger (reaching the followed game through the next projection).
-- **Legacy worlds** (no `regions.json`) keep today's per-game bag path: `bag.sync` without `money`/`stamp`, no
-  `bag.set`.
+- **Legacy worlds** (no `regions.json`) keep today's per-game bag path on the server: the hidden bag's battle
+  items mirrored as before and no `bag.set`. On the wire `bag.sync` always carries `money` (MG6) and carries
+  `stamp` only once the save was projected.
 
 ### Export (builder role)
 

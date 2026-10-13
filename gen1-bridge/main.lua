@@ -42,6 +42,7 @@ return function(mod)
     Routes = import("lib/kb_routes.lua"),
     catalog = import("lib/kb_catalog.lua"),
     games = import("lib/kb_games.lua"),
+    items = import("lib/kb_items.lua"),
     Session = import("lib/kb_session.lua"),
     Perf = import("lib/kb_perf.lua"),
     Player = import("observe/kb_player.lua"),
@@ -65,6 +66,7 @@ return function(mod)
     Route = import("act/kb_route.lua"),
     Climb = import("act/kb_climb.lua"),
     Region = import("act/kb_region.lua"),
+    Ledger = import("act/kb_ledger.lua"),
     Cells = import("export/kb_cells.lua"),
     Images = import("export/kb_images.lua"),
     SwapSites = import("export/kb_swapsites.lua"),
@@ -83,6 +85,8 @@ return function(mod)
   -- mod then rejects every hello with reason "game").
   local engine = kb.Engine.new({
     require = require, log = log, ui = mod.ui, datasets = mod.datasets, love = love, import = loadFile,
+    -- MG6: the canonical item catalogue (the adapter's item table, bag.set)
+    items = kb.items,
   })
 
   -- Wild Routes (WR2: lib/kb_routes.lua, docs/specs/WILD_ROUTES_PLAN.md
@@ -221,8 +225,21 @@ return function(mod)
     },
     onOp = function() saves.opSent() end,
   })
-  -- M6: the bag's battle items mirrored into Minecraft (P17)
-  local bagObs = kb.Bag.new({ engine = engine, json = kb.json, log = log })
+  -- M6: the bag's battle items mirrored into Minecraft (P17); MG6: every
+  -- non-key catalogue item synced for the server's ledger, with the money
+  -- and the projection stamp (mod.save "ledger")
+  local bagObs = kb.Bag.new({
+    engine = engine, json = kb.json, log = log, items = kb.items,
+    store = { get = function(key) return mod.save:get(key) end },
+  })
+  -- MG6: bag.set, the ledger's projection into this save (act/kb_ledger.lua)
+  local ledger = kb.Ledger.new({
+    engine = engine, json = kb.json, clock = clock, log = log,
+    store = {
+      get = function(key) return mod.save:get(key) end,
+      set = function(key, value) mod.save:set(key, value) end,
+    },
+  })
   -- M7: saving (save.begin/done, the Pokemon Center's heal and save),
   -- session pairing, and Bill's PC as Cobblemon's PC. The bound world is
   -- kept in mod.save too (save.modData, src/core/Game.lua:1348-1358). M10:
@@ -420,6 +437,9 @@ return function(mod)
     merge("battle", battles.stats())
     merge("party", party.stats())
     merge("bag", bagObs.stats())
+    -- MG6: bag.set (ledgerRequests, ledgerSets, ledgerTooMany, ledgerLeft, ...)
+    merge("ledger", ledger.stats())
+    out.ledgerStamp = ledger.stamp() ~= nil
     merge("encounter", engine.encounterCounts())
     merge("item", engine.itemCounts())
     merge("save", saves.stats())
@@ -613,6 +633,8 @@ return function(mod)
   for _, op in ipairs({ "park", "resume", "start" }) do
     session.on("region." .. op, queued(function(data, seq, gen) return regionActs.request(op, data, seq, gen) end))
   end
+  -- MG6: the ledger's projection, answered by act.result (act/kb_ledger.lua)
+  session.on("bag.set", queued(ledger.request))
   for _, t in ipairs({ "ui.advance", "ui.pick", "ui.back", "ui.qty", "ui.name" }) do
     session.on(t, queued(function(data, seq, gen) return uiAct.request(t, data, seq, gen) end))
   end
@@ -838,6 +860,13 @@ return function(mod)
     local link = { live = live, generation = generation, blocked = blocked }
     saves.watch(link)
     party.step(out, link)
+    -- MG6: a waiting bag.set applies first (guarded like the story), so the
+    -- bag.sync that follows in this very step confirms the projection
+    local okLedger, ledgerErr = pcall(ledger.step, facts, mode, out, link)
+    if not okLedger then
+      log.once("ledger.step_failed", "error", "ledger.step_failed",
+        { at = type(ledgerErr) == "string" and ledgerErr:match("[%w_/%.%-]+%.lua:%d+") or "unknown" })
+    end
     bagObs.step(out, link)
     -- MG2: game.status, after the snapshot's followers (npc.set, bag.sync)
     -- and whenever the progress changes; guarded like the story
@@ -893,6 +922,9 @@ return function(mod)
     status.pcHeld = engine.pcHeld()
     -- MG2: a region.park hold is up
     status.regionHeld = regionActs.held()
+    -- MG6, for test drivers: projections applied, items left over, a stamp in the save
+    local ls = ledger.stats()
+    status.bagSets, status.bagLeft, status.ledgerStamp = ls.sets, ls.left, ledger.stamp() ~= nil
     -- M9: the active save slot (0: the flat legacy save) and a waiting switch
     status.slot, status.pairingPending = engine.saveSlot(), pairing.blocked()
     if steps % 30 == 0 then

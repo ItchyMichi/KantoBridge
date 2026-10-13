@@ -1,10 +1,12 @@
 """M6 bag mirroring through main.lua on the simulated engine (observe/kb_bag.lua, kb_engine's bag
-seam over fake_wild.lua's Bag module): bag.sync carries only the battle items of PLAN Appendix B
-(never key items, badges or other items), after every snapshot and whenever those quantities change;
-bag.use takes items out of the hidden game's bag through Bag.remove (never below zero, a counted
-mismatch warning), refuses items that aren't mirrored, waits at the title, and is for client and
-test roles only. Every message the peer receives is schema-checked (rig.Peer, strict). All data is
-made up (battlesim.py)."""
+seam over fake_wild.lua's Bag module): bag.sync carries every non-key item of the canonical item
+catalogue the bag holds (MG6: balls, medicine, X items, field items, stones, valuables and TMs for
+the server's ledger; never key items, HMs or badges), with the money and the projection stamp,
+after every snapshot and whenever one of them changes; bag.use takes items out of the hidden game's
+bag through Bag.remove (never below zero, a counted mismatch warning), refuses items that aren't
+mirrored (the 29 battle items of PLAN Appendix B with a Cobblemon item), waits at the title, and is
+for client and test roles only. Every message the peer receives is schema-checked (rig.Peer,
+strict). All data is made up (battlesim.py)."""
 
 import pytest
 
@@ -26,6 +28,10 @@ def syncs(g):
     return [m["data"]["items"] for m in g.received("bag.sync")]
 
 
+def moneys(g):
+    return [m["data"].get("money") for m in g.received("bag.sync")]
+
+
 def errors(g):
     return [(m["data"]["code"], m.get("re")) for m in g.received("error")]
 
@@ -42,18 +48,33 @@ def bag_game(**kw):
     return g
 
 
-def test_the_battle_item_list_is_appendix_b():
+def lua_list(t):
+    return [t[i].decode() for i in range(1, len(t) + 1)]
+
+
+def test_the_mirrored_set_is_appendix_b_and_the_synced_set_every_non_key_item():
+    # MG6: both sets come from the canonical item catalogue (lib/kb_items.lua), never a literal list
     from kblua import Bridge
-    Bag = Bridge().module("observe/kb_bag.lua")
-    assert [Bag.ITEMS[i].decode() for i in range(1, len(Bag.ITEMS) + 1)] == APPENDIX_B
+    b = Bridge()
+    Bag = b.module("observe/kb_bag.lua")
+    mirrored, synced = Bag.sets(b.module("lib/kb_items.lua"), b"gen1")
+    assert sorted(k.decode() for k in mirrored.keys()) == sorted(APPENDIX_B)
+    synced = lua_list(synced)
+    assert synced == sorted(synced) and set(APPENDIX_B) <= set(synced)
+    assert {"REPEL", "RARE_CANDY", "NUGGET", "MOON_STONE", "TM_MEGA_PUNCH", "HP_UP"} <= set(synced)
+    assert not {"TOWN_MAP", "HM_CUT", "BOULDERBADGE", "BICYCLE", "COIN"} & set(synced), "key items, HMs and badges never"
+    assert len(synced) == 128 - 28, "the catalogue's 128 items minus its 28 key ones"
 
 
-def test_after_the_hello_only_battle_items_are_mirrored():
+def test_after_the_hello_every_non_key_item_and_the_money_are_synced():
     g = bag_game()
     g.connect()
     types = [m["type"] for m in g.log]
     assert types[:4] == ["hello.ok", "snapshot", "npc.set", "bag.sync"]
-    assert syncs(g) == [{"POKE_BALL": 5, "POTION": 2, "X_ATTACK": 1}], "no key item, badge or field item"
+    assert syncs(g) == [{"POKE_BALL": 5, "POTION": 2, "X_ATTACK": 1, "REPEL": 3, "RARE_CANDY": 2}], \
+        "field items and candy flow back to the ledger (MG6); no key item or badge"
+    first = g.received("bag.sync")[0]["data"]
+    assert first["money"] == 3000 and "stamp" not in first, "the fake save's money; never projected: no stamp"
     snap = g.received("snapshot")[0]["data"]
     assert snap["bag"]["TOWN_MAP"] == 1 and snap["bag"]["REPEL"] == 3, "the snapshot keeps the whole bag"
 
@@ -65,13 +86,17 @@ def test_changes_are_sent_and_nothing_else_is():
     assert len(syncs(g)) == 1, "nothing changed: nothing sent"
     stock(g, GREAT_BALL=2, REPEL=1)
     g.run(2)
-    assert syncs(g)[-1] == {"POKE_BALL": 5, "POTION": 2, "X_ATTACK": 1, "GREAT_BALL": 2}
+    assert syncs(g)[-1] == {"POKE_BALL": 5, "POTION": 2, "X_ATTACK": 1, "GREAT_BALL": 2, "REPEL": 4, "RARE_CANDY": 2}
     g.E.Bag.remove(g.E.save, b"POTION", 2)
     g.run(2)
-    assert syncs(g)[-1] == {"POKE_BALL": 5, "X_ATTACK": 1, "GREAT_BALL": 2}, "a used-up item leaves the map"
+    assert syncs(g)[-1] == {"POKE_BALL": 5, "X_ATTACK": 1, "GREAT_BALL": 2, "REPEL": 4, "RARE_CANDY": 2}, \
+        "a used-up item leaves the map"
     stock(g, TOWN_MAP=1)
     g.run(3)
     assert len(syncs(g)) == 3, "a key item never triggers one"
+    g.E.save.money = 2750
+    g.run(2)
+    assert len(syncs(g)) == 4 and moneys(g)[-1] == 2750, "money is part of the change test (MG6)"
 
 
 def test_bag_use_takes_items_out_and_the_next_sync_shows_it():

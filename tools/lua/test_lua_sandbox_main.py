@@ -20,6 +20,7 @@ LIB_FILES = [
     "lib/kb_routes.lua",
     "lib/kb_catalog.lua",
     "lib/kb_games.lua",
+    "lib/kb_items.lua",
     "lib/kb_session.lua",
     "lib/kb_perf.lua",
     "observe/kb_player.lua",
@@ -43,6 +44,7 @@ LIB_FILES = [
     "act/kb_route.lua",
     "act/kb_climb.lua",
     "act/kb_region.lua",
+    "act/kb_ledger.lua",
     "export/kb_cells.lua",
     "export/kb_images.lua",
     "export/kb_swapsites.lua",
@@ -205,7 +207,7 @@ def test_required_internals_are_listed_and_all_present_on_the_fakes():
     Engine, eng = engine_on(g)
     required = {k.decode(): [m.decode() for m in v.values()] for k, v in gen1_statics(g).REQUIRES.items()}
     assert len(required) >= 20 and all(name.startswith("src.") for name in required)
-    assert required["src.inventory.Bag"] == ["remove"] and "src.core.Music" in required
+    assert required["src.inventory.Bag"] == ["add", "capacity", "isBadge", "remove", "slots"] and "src.core.Music" in required  # MG6: bag.set
     assert list(eng.checkRequired().values()) == [], "every module and member the seam reads exists on the fakes"
     # main.lua checked it at game.ready: nothing missing, nothing logged
     assert g.status()["engineMissing"] == []

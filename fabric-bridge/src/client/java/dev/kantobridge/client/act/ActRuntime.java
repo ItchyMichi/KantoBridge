@@ -8,6 +8,7 @@ import dev.kantobridge.client.bridge.BridgeRuntime;
 import dev.kantobridge.client.bridge.ClientBridgeState;
 import dev.kantobridge.client.bridge.ConnectionState;
 import dev.kantobridge.client.bridge.JsonFields;
+import dev.kantobridge.client.net.BagSetRelay;
 import dev.kantobridge.client.model.ClosedArt;
 import dev.kantobridge.client.model.RenderSnapshot;
 import dev.kantobridge.client.move.InputLock;
@@ -261,6 +262,10 @@ public final class ActRuntime {
 
 	private void onResult(Envelope message) {
 		JsonObject data = message.data();
+		if (BagSetRelay.KIND.equals(JsonFields.str(data, "kind"))) {
+			// MG6: the server's bag projection, answered by BagSetRuntime; not a field move's result.
+			return;
+		}
 		this.results++;
 		boolean ok = JsonFields.bool(data, "ok", false);
 		String reason = JsonFields.str(data, "reason");

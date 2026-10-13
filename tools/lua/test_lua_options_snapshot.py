@@ -164,7 +164,7 @@ def test_resync_snapshot_matches_the_live_view():
     snap, npcs, bag, status = peer.messages()  # MG2: game.status follows the snapshot's followers
     assert npcs["type"] == "npc.set" and npcs["data"] == {"map": "TEST_TOWN", "list": []}
     assert status["type"] == "game.status"
-    assert bag["type"] == "bag.sync" and bag["data"] == {"items": {"POTION": 2}}
+    assert bag["type"] == "bag.sync" and bag["data"] == {"items": {"POTION": 2}, "money": 3000}  # MG6: the money too
     assert snap["re"] == seq and snap["data"]["player"] == {"map": "TEST_TOWN", "x": 5, "y": 5, "facing": "up"}
 
 
