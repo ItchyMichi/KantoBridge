@@ -45,6 +45,11 @@ LINUX = sys.platform.startswith("linux")
 # The Gen1Recomp release gen1-bridge is tested with (lib/kb_engine.lua Engine.TESTED; tools/tests/test_pins.py
 # keeps every copy of this number in step).
 PINNED = "0.3.85"
+# A slow host builds the world export slowly (the RunPod pod under Xvfb: about 460 s on either engine release,
+# ENGINE_UPGRADE_PLAN G2): the tests that fetch the export wait INDEX_TIMEOUT for export.index and add EXPORT_EXTRA
+# to their own limits; a PC keeps the defaults (240 s, 0). Set KB_EXPORT_INDEX_TIMEOUT to raise them.
+INDEX_TIMEOUT = int(os.environ.get("KB_EXPORT_INDEX_TIMEOUT", "240"))
+EXPORT_EXTRA = max(0, INDEX_TIMEOUT - 240)
 
 
 def _versioned(name: str, env: str) -> Path:

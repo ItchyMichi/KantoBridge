@@ -30,7 +30,7 @@ from collections import Counter, deque
 import pytest
 
 from fake_minecraft import FakeMinecraft
-from run_gen1recomp import launch, preflight
+from run_gen1recomp import EXPORT_EXTRA, INDEX_TIMEOUT, launch, preflight
 
 TEST_PORT = 27196
 MAPS = ("REDS_HOUSE_2F", "REDS_HOUSE_1F", "PALLET_TOWN")
@@ -237,7 +237,7 @@ async def _export_maps(port):
     await builder.connect(attempts=20)
     await builder.hello()
     await builder.expect("snapshot", timeout=10)
-    index = (await builder.request("export.index", {}, reply_type="export.index", timeout=240))["data"]
+    index = (await builder.request("export.index", {}, reply_type="export.index", timeout=INDEX_TIMEOUT))["data"]
     have = {(e["kind"], e["id"]) for e in index["resources"]}
     assert all(("map", m) in have for m in MAPS), "the export lacks one of Pallet's maps"
     grids = {}
@@ -338,7 +338,7 @@ async def _walk(port):
 
 
 @pytest.mark.e2e
-@pytest.mark.timeout(600)
+@pytest.mark.timeout(600 + EXPORT_EXTRA)
 def test_walking_stairs_doors_and_a_wall():
     pf = preflight()
     if not pf.ok:
@@ -347,7 +347,7 @@ def test_walking_stairs_doors_and_a_wall():
         marker = running.wait_marker("KB_OVERWORLD", timeout=150)
         assert marker is not None, running.result.summary()
         assert f"port={TEST_PORT}" in marker
-        w, legs, status = asyncio.run(asyncio.wait_for(_walk(TEST_PORT), 420))
+        w, legs, status = asyncio.run(asyncio.wait_for(_walk(TEST_PORT), 420 + EXPORT_EXTRA))
         result = running.wait(timeout=60)
 
     kinds = [(d["phase"], d["kind"]) for d in w.warps]

@@ -30,7 +30,7 @@ from collections import Counter
 import pytest
 
 from fake_minecraft import FakeMinecraft
-from run_gen1recomp import launch, preflight
+from run_gen1recomp import EXPORT_EXTRA, launch, preflight
 from story import StoryWalker, export_grids
 from test_walk import route
 
@@ -121,7 +121,7 @@ async def _lab(port, outcome):
 
 
 @pytest.mark.e2e
-@pytest.mark.timeout(900)
+@pytest.mark.timeout(900 + EXPORT_EXTRA)
 @pytest.mark.parametrize("outcome", ["win", "lose"])
 def test_the_starter_and_the_rival_battle_in_oaks_lab(outcome):
     pf = preflight()
@@ -132,7 +132,7 @@ def test_the_starter_and_the_rival_battle_in_oaks_lab(outcome):
         marker = running.wait_marker("KB_LAB_READY", timeout=150)
         assert marker is not None, running.result.summary()
         assert f"port={port}" in marker
-        w, report, before, held, after = asyncio.run(asyncio.wait_for(_lab(port, outcome), 600))
+        w, report, before, held, after = asyncio.run(asyncio.wait_for(_lab(port, outcome), 600 + EXPORT_EXTRA))
         result = running.wait(timeout=60)
 
     warps = [(d["phase"], d["kind"]) for d in w.warps]

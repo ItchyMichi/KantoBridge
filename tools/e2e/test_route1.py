@@ -32,7 +32,7 @@ from collections import Counter, deque
 import pytest
 
 from fake_minecraft import FakeMinecraft
-from run_gen1recomp import launch, preflight
+from run_gen1recomp import EXPORT_EXTRA, launch, preflight
 from story import StoryWalker, export_grids
 from test_walk import DELTA, WARP
 
@@ -231,7 +231,7 @@ async def _route1(port):
 
 
 @pytest.mark.e2e
-@pytest.mark.timeout(1200)
+@pytest.mark.timeout(1200 + EXPORT_EXTRA)
 def test_route1_grass_steps_bag_dex_and_party():
     pf = preflight()
     if not pf.ok:
@@ -240,7 +240,7 @@ def test_route1_grass_steps_bag_dex_and_party():
         marker = running.wait_marker("KB_ROUTE_READY", timeout=180)
         assert marker is not None, running.result.summary()
         assert f"port={TEST_PORT}" in marker and f"map={MAP}" in marker
-        w, report, before = asyncio.run(asyncio.wait_for(_route1(TEST_PORT), 900))
+        w, report, before = asyncio.run(asyncio.wait_for(_route1(TEST_PORT), 900 + EXPORT_EXTRA))
         result = running.wait(timeout=60)
 
     ready = result.facts("KB_ROUTE_READY")

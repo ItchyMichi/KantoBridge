@@ -29,7 +29,7 @@ from collections import Counter
 import pytest
 
 from fake_minecraft import FakeMinecraft
-from run_gen1recomp import launch, preflight
+from run_gen1recomp import EXPORT_EXTRA, INDEX_TIMEOUT, launch, preflight
 from story import StoryWalker, export_grids
 from test_walk import DOOR, WARP_TILE, route
 
@@ -124,7 +124,7 @@ async def _opening(port, running):
         return all(running.result.marker(f"KB_FLAG name={flag}") is not None for flag in ESCORT_FLAGS)
 
     await w.drive(lambda: escorted() and w.pos[0] == "OAKS_LAB" and w.mode == "idle" and not w.open_uis(),
-                  timeout=240)
+                  timeout=INDEX_TIMEOUT)
     await w.idle()
     report["escort"] = {
         "modes": w.modes[marks["modes"]:],
@@ -143,7 +143,7 @@ async def _opening(port, running):
 
 
 @pytest.mark.e2e
-@pytest.mark.timeout(900)
+@pytest.mark.timeout(900 + EXPORT_EXTRA)
 def test_the_opening_and_oaks_escort():
     pf = preflight()
     if not pf.ok:
@@ -152,7 +152,7 @@ def test_the_opening_and_oaks_escort():
         marker = running.wait_marker("KB_BOOTED", timeout=150)
         assert marker is not None, running.result.summary()
         assert f"port={TEST_PORT}" in marker
-        w, report = asyncio.run(asyncio.wait_for(_opening(TEST_PORT, running), 800))
+        w, report = asyncio.run(asyncio.wait_for(_opening(TEST_PORT, running), 800 + EXPORT_EXTRA))
         result = running.wait(timeout=60)
 
     print("report:", report)

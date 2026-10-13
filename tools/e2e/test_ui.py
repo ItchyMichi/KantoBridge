@@ -34,7 +34,7 @@ from collections import Counter
 import pytest
 
 from fake_minecraft import FakeMinecraft
-from run_gen1recomp import launch, preflight
+from run_gen1recomp import EXPORT_EXTRA, launch, preflight
 from test_walk import DELTA, DOOR, WARP_TILE, Walker, _export_maps
 
 TEST_PORT = 27195
@@ -266,7 +266,7 @@ async def _ui(port):
 
 
 @pytest.mark.e2e
-@pytest.mark.timeout(600)
+@pytest.mark.timeout(600 + EXPORT_EXTRA)
 def test_dialogue_menus_npcs_and_the_mirror():
     pf = preflight()
     if not pf.ok:
@@ -275,7 +275,7 @@ def test_dialogue_menus_npcs_and_the_mirror():
         marker = running.wait_marker("KB_OVERWORLD", timeout=150)
         assert marker is not None, running.result.summary()
         assert f"port={TEST_PORT}" in marker
-        w, report, status, after = asyncio.run(asyncio.wait_for(_ui(TEST_PORT), 480))
+        w, report, status, after = asyncio.run(asyncio.wait_for(_ui(TEST_PORT), 480 + EXPORT_EXTRA))
         result = running.wait(timeout=60)
 
     sizes = [size for _, _, size in w.frames]

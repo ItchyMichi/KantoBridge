@@ -13,6 +13,7 @@ import time
 from collections import Counter
 
 from fake_minecraft import FakeMinecraft
+from run_gen1recomp import INDEX_TIMEOUT
 from test_ui import UiWalker
 from test_walk import Grid
 
@@ -146,7 +147,7 @@ async def export_grids(port, maps):
     await builder.connect(attempts=20)
     await builder.hello()
     await builder.expect("snapshot", timeout=10)
-    index = (await builder.request("export.index", {}, reply_type="export.index", timeout=240))["data"]
+    index = (await builder.request("export.index", {}, reply_type="export.index", timeout=INDEX_TIMEOUT))["data"]
     have = {(e["kind"], e["id"]) for e in index["resources"]}
     assert all(("map", m) in have for m in maps), "the export lacks a map the test needs"
     grids = {}
