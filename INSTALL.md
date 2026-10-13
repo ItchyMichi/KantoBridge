@@ -81,6 +81,14 @@ lands in `fabric-bridge\build\libs\kantobridge-0.1.0.jar`; the development clien
    is on by default and adds a floor to every Pokémon Center that the Minecraft world doesn't have. While it is on,
    the bridge refuses to export and Minecraft shows a notice saying what to switch off.
 
+**Or let the setup tool do steps 1–6:** put your ROM file(s) into `local\rom-inbox\` and run
+`.\tools\setup_games.ps1` (`-DryRun` first shows the plan). It downloads and checks the pinned release, makes one
+portable install per **world space** (`local\gen1recomp` for Red/Blue/Yellow, `local\gen1recomp-hoenn` for
+Ruby/Sapphire/Emerald, `-johto`, `-kanto_frlg`), runs Gen1Recomp's own importer on each file, switches the Union Room
+off, and writes `local\launch.json` and the client's `links` (below). It never reads or copies your ROM; you clear the
+inbox afterwards. Games without a bridge adapter yet (everything but Red and Blue today) are imported and listed, but
+Minecraft can't follow them until their adapter exists ([`docs/specs/MULTI_GAME_PLAN.md`](docs/specs/MULTI_GAME_PLAN.md)).
+
 Upgrading from the previous pin (v0.3.49, until 2026-10-13): set v0.3.85 up in a fresh folder the same way and import your ROM
 again (the release changed its import cache for every game); copy your saves (`save.lua`, `options.lua`, the slot
 files and `mod_cache\`) from the old folder before the first start, never the ROM cache, and keep the old folder until
@@ -107,13 +115,15 @@ Without it, Kanto Bridge's own rules apply.
 1. **Start everything:** from the repository folder,
 
    ```powershell
-   .\tools\launch.ps1            # Blue; for Red: .\tools\launch.ps1 -Game red
+   .\tools\launch.ps1            # every install with an adapter (today: Blue, or Red: -Game red)
+   .\tools\launch.ps1 -Games blue,emerald    # or -Regions kanto,hoenn: one hidden game per install
    ```
 
-   It starts Gen1Recomp with the bridge, waits until the bridge listens, then starts the development Minecraft client.
-   It finds JDK 21 by itself (or pass `-JavaHome <path>`). `-DryRun` shows what it would do; `-Watch` restarts
-   Gen1Recomp if it closes. (By hand: start `gen1recomp.exe --game=blue` from its folder, then in `fabric-bridge`
-   run `.\gradlew.bat runClient` with `JAVA_HOME` set.)
+   It starts one Gen1Recomp per install with the bridge (the game it finds imported there, by folder names), waits
+   until each bridge listens (27151, 27152, ...), then starts the development Minecraft client with the links. It finds
+   JDK 21 by itself (or pass `-JavaHome <path>`). `-DryRun` shows what it would do; `-Watch` restarts a Gen1Recomp
+   that closes. (By hand: start `gen1recomp.exe --game=blue` from its folder, then in `fabric-bridge` run
+   `.\gradlew.bat runClient -Pkb.links=blue:27151` with `JAVA_HOME` set.)
 2. **Build your world once:** on Minecraft's title screen, press **Create Kanto world**. Gen1Recomp must be at its
    title screen or in game. It exports your game's art (about 15 seconds), builds every map of Kanto (about a minute),
    and lets you in, in Pallet Town.
@@ -147,13 +157,16 @@ The client's settings are in `local\minecraft\config\kantobridge-client.json` (i
 
 ```json
 {
-  "port": 27151,
+  "links": [{"game": "blue", "port": 27151}, {"game": "emerald", "port": 27152}],
   "shapes": "on",
   "characters": { "style": "thick", "packs": true }
 }
 ```
 
-- `port`: the bridge port, the same as Gen1Recomp's BRIDGE PORT (F10, its mod manager).
+- `links`: one entry per hidden game, its id and the port its gen1-bridge listens on (Gen1Recomp's BRIDGE PORT, F10
+  in its mod manager; `tools\setup_games.ps1` writes them). The older `port` key is one link whose game Minecraft
+  learns on connecting. `-Dkantobridge.links=blue:27151,emerald:27152` (what `launch.ps1` passes as `-Pkb.links`)
+  overrides the file for dev runs; `-Dkantobridge.port` still works for one link.
 - `shapes`: `"off"` draws plain cubes instead of the shaped world (a fallback).
 - `characters.style`: how people are drawn: `flat`, `thick` (the default), `carved` or `rigged`.
 - `characters.packs`: `false` keeps texture packs away from characters.
@@ -166,7 +179,8 @@ Texture packs that change Kanto's look are ordinary resource packs with a small 
 Each player needs their own Gen1Recomp install with their own ROM:
 
 1. Set up a second install the same way in `local\gen1recomp-p2\` (its own `portable.txt`, mod link, ROM import and
-   Union Room off), and in its mod manager (F10) set BRIDGE PORT to 27152.
+   Union Room off), and in its mod manager (F10) set BRIDGE PORT to **27161** (player 2's ports are 10 above player
+   1's, leaving room for player 1's other games; `launch.json`'s `ports.player2`).
 2. Build the world once as above (**Create Kanto world**; it lands in `local\minecraft\saves\Kanto`), then close
    Minecraft.
 3. Create `local\minecraft\eula.txt` containing `eula=true` (you accept Minecraft's EULA), and

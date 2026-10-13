@@ -5,6 +5,8 @@ import dev.kantobridge.KantoBridge;
 import dev.kantobridge.client.battle.ClientBattles;
 import dev.kantobridge.client.bridge.BridgeClock;
 import dev.kantobridge.client.bridge.BridgeRuntime;
+import dev.kantobridge.client.bridge.ClientBridgeState;
+import dev.kantobridge.client.bridge.Links;
 import dev.kantobridge.client.bridge.ConnectionState;
 import dev.kantobridge.client.bridge.Dispatcher;
 import dev.kantobridge.client.net.ClientRelay;
@@ -13,6 +15,7 @@ import dev.kantobridge.client.net.SessionRuntime;
 import dev.kantobridge.client.world.ClientWorldIndex;
 import dev.kantobridge.proto.MsgTypes;
 import dev.kantobridge.world.Dir;
+import dev.kantobridge.world.Place;
 import java.util.Locale;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
@@ -94,6 +97,12 @@ public final class MoveRuntime {
 		bridge.addHudLine(() -> pairing() ? null : runtime.controller.hint());
 		// The pause overlay (M10) shows only while the player follows the hidden game in a Kanto world.
 		bridge.setFollowing(MoveRuntime::following);
+		// MG4: another hidden game is followed: relink from its hidden player's cell (one step at most for a resume; the
+		// one accepted teleport for a game just started, MULTI_GAME_PLAN §4.7).
+		Links links = Links.get();
+		if (links != null) {
+			links.onFollow((link, teleport) -> runtime.controller.relink(placeOf(link.state()), teleport));
+		}
 		bridge.addDebugLine(runtime::debugSteps);
 		bridge.addDebugLine(runtime::debugFixes);
 	}
@@ -106,6 +115,15 @@ public final class MoveRuntime {
 		SessionRuntime session = SessionRuntime.get();
 		SessionGate gate = session == null ? null : session.gate();
 		return gate != null && gate.holdsPlayer();
+	}
+
+	/** A link's hidden player as a place, or null while it has no position yet. */
+	private static @Nullable Place placeOf(ClientBridgeState state) {
+		if (!state.hasPosition() || state.map() == null) {
+			return null;
+		}
+		Dir facing = Dir.byId(state.facing());
+		return new Place(state.map(), state.x(), state.y(), facing == null ? Dir.DOWN : facing);
 	}
 
 	/** The movement sync's counts (the dev client's autopilot logs them), or null before init. */

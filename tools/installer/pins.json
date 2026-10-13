@@ -12,6 +12,15 @@
       "source": "the release's own sha256sums.txt (docs/VERSIONS.md); official repository only, never gen1recomp.com"
     },
     {
+      "id": "gen1recomp-linux",
+      "version": "0.3.85",
+      "url": "https://github.com/bryanthaboi/gen1recomp/releases/download/v0.3.85/gen1recomp-0.3.85-linux-x86_64.AppImage",
+      "sha256": "ed558a8c53667b157baadee301889ef81174b03198b98e10772df11efd38fa89",
+      "size": 51016896,
+      "licence": "see license.txt in the release",
+      "source": "the release's own sha256sums.txt (docs/VERSIONS.md): the Linux build the RunPod pod and tools/setup_games.sh use; official repository only"
+    },
+    {
       "id": "fabric-api",
       "version": "0.116.17+1.21.1",
       "url": "https://maven.fabricmc.net/net/fabricmc/fabric-api/fabric-api/0.116.17+1.21.1/fabric-api-0.116.17+1.21.1.jar",

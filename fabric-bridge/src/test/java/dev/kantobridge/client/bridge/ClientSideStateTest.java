@@ -296,6 +296,64 @@ class ClientSideStateTest {
 		assertEquals(1, warnings.size());
 	}
 
+	@Test
+	void linksListSeveralHiddenGames(@TempDir Path dir) throws IOException {
+		// MG4: one link per hidden Gen1Recomp process; a link without a game learns it from hello.ok.
+		Path file = dir.resolve(ClientConfig.FILE_NAME);
+		List<String> warnings = new ArrayList<>();
+		Files.writeString(file, "{\"links\": [{\"game\": \"blue\", \"port\": 27151}, {\"port\": 27152}], \"shapes\": \"off\"}",
+				StandardCharsets.UTF_8);
+		ClientConfig config = ClientConfig.load(dir, new Properties(), warnings::add);
+		assertEquals(List.of(new ClientConfig.Link("blue", 27151), ClientConfig.Link.legacy(27152)), config.links());
+		assertEquals(27151, config.port(), "the first link is the one legacy callers mean");
+		assertFalse(config.shapes());
+		assertTrue(warnings.isEmpty());
+		// Without links the file is what it always was: one legacy link on port.
+		Files.writeString(file, "{\"port\": 27153}", StandardCharsets.UTF_8);
+		assertEquals(List.of(ClientConfig.Link.legacy(27153)), ClientConfig.load(dir, new Properties(), warnings::add).links());
+		assertTrue(warnings.isEmpty());
+		assertEquals(List.of(ClientConfig.Link.legacy(27151)), ClientConfig.DEFAULTS.links());
+		assertThrows(IllegalArgumentException.class, () -> new ClientConfig.Link("Blue", 27151), "a game id is lower-case");
+		assertThrows(IllegalArgumentException.class, () -> new ClientConfig.Link("blue", 0));
+	}
+
+	@Test
+	void linksSkipMistakesAndNeverRepeatAPortOrAGame(@TempDir Path dir) throws IOException {
+		Path file = dir.resolve(ClientConfig.FILE_NAME);
+		List<String> warnings = new ArrayList<>();
+		Files.writeString(file, "{\"port\": 27150, \"links\": [{\"game\": \"blue\", \"port\": 27151}, {\"game\": \"blue\", \"port\": 27153},"
+				+ " {\"port\": 27151}, {\"game\": \"nope\", \"port\": 27154}, {\"port\": 99999}, \"x\", {\"game\": \"red\", \"port\": 27155}]}",
+				StandardCharsets.UTF_8);
+		ClientConfig config = ClientConfig.load(dir, new Properties(), warnings::add);
+		assertEquals(List.of(new ClientConfig.Link("blue", 27151), new ClientConfig.Link("red", 27155)), config.links());
+		assertEquals(6, warnings.size(), "both keys, the repeated game, the repeated port, the unknown game, the bad port, the non-object");
+		warnings.clear();
+		Files.writeString(file, "{\"port\": 27152, \"links\": []}", StandardCharsets.UTF_8);
+		assertEquals(List.of(ClientConfig.Link.legacy(27152)), ClientConfig.load(dir, new Properties(), warnings::add).links(),
+				"no usable link: the port");
+		Files.writeString(file, "{\"links\": \"blue\"}", StandardCharsets.UTF_8);
+		assertEquals(List.of(ClientConfig.Link.legacy(27151)), ClientConfig.load(dir, new Properties(), warnings::add).links());
+		assertEquals(3, warnings.size());
+	}
+
+	@Test
+	void theLinksPropertyReplacesTheFilesLinks(@TempDir Path dir) throws IOException {
+		Files.writeString(dir.resolve(ClientConfig.FILE_NAME), "{\"port\": 27152}", StandardCharsets.UTF_8);
+		Properties properties = new Properties();
+		properties.setProperty(ClientConfig.LINKS_PROPERTY, "blue:27161, 27162");
+		properties.setProperty(ClientConfig.PORT_PROPERTY, "27170");
+		List<String> warnings = new ArrayList<>();
+		ClientConfig config = ClientConfig.load(dir, properties, warnings::add);
+		assertEquals(List.of(new ClientConfig.Link("blue", 27161), ClientConfig.Link.legacy(27162)), config.links(), "links wins over port");
+		assertTrue(warnings.isEmpty());
+		properties.setProperty(ClientConfig.LINKS_PROPERTY, "nope:27163, blue:x");
+		assertEquals(List.of(ClientConfig.Link.legacy(27152)), ClientConfig.load(dir, properties, warnings::add).links(),
+				"nothing usable: the file's links");
+		assertEquals(3, warnings.size(), "each entry, then the property as a whole");
+		assertEquals(List.of(new ClientConfig.Link("red", 27151), new ClientConfig.Link("blue", 27152)),
+				ClientConfig.parseLinks("red:27151,blue:27152", warnings::add));
+	}
+
 	/** ProtoJson.parseObject without the checked exception, for test setup. */
 	static final class ProtoJsonUnchecked {
 		static JsonObject parse(String text) {

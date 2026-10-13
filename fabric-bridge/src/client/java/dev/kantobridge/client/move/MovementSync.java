@@ -146,6 +146,9 @@ public final class MovementSync {
 		public long climbs;
 		public long takes;
 		public long takesFailed;
+		/** MG4: followed-link changes relinked here, and resumes refused because the hidden player was over a step away. */
+		public long relinks;
+		public long relinkFar;
 	}
 
 	private final Port port;
@@ -164,6 +167,13 @@ public final class MovementSync {
 	private boolean rejoinWanted;
 	/** A warp ended, or the hidden player moved during one: walk the player there if close (a door walk-out). */
 	private boolean settleWanted;
+	/**
+	 * MG4: the followed link changed to a game being resumed: the snapshot that follows settles instead of rejoining, and
+	 * that settle walks at most one ordinary step (never a teleport: the hidden player waits on the far gate house's
+	 * route map, where the server put this player too).
+	 */
+	private boolean relinking;
+	private boolean relinkStep;
 	private long nextN = 1;
 
 	private boolean hasLast;
@@ -293,9 +303,40 @@ public final class MovementSync {
 			this.mode = mode;
 		}
 		if (ingame) {
-			this.rejoinWanted = true;
+			if (this.relinking) {
+				// MG4: the resync after a follow: settle (one step at most), never the join's teleport.
+				this.settleWanted = true;
+				this.relinkStep = true;
+			} else {
+				this.rejoinWanted = true;
+			}
 		}
+		this.relinking = false;
 		this.calm();
+	}
+
+	/**
+	 * MG4 ({@code Links.follow}): the body follows another hidden game from now on. Steps in flight and the forced path
+	 * are forgotten; the new hidden player's cell is taken ({@code hidden}, when known). With {@code allowTeleport} (a
+	 * game started at a pass: its first room) the player is put on the hidden cell as on a join; otherwise (a resume)
+	 * the follow-up snapshot settles the player with at most one ordinary step, since the server teleported the body into
+	 * the far gate house already, and a farther hidden cell is reported, not chased.
+	 */
+	public void linkFrom(@Nullable Place hidden, boolean allowTeleport) {
+		this.pending.clear();
+		this.endClimb();
+		this.calm();
+		this.tail = null;
+		this.hasLast = false;
+		if (hidden != null) {
+			this.hidden = hidden;
+		}
+		// Without a cell yet, the snapshot the resync brings does it.
+		this.rejoinWanted = allowTeleport && hidden != null;
+		this.settleWanted = !allowTeleport && hidden != null;
+		this.relinking = !allowTeleport;
+		this.relinkStep = !allowTeleport;
+		this.stats.relinks++;
 	}
 
 	/** {@code player.state}'s mode. */
@@ -816,8 +857,20 @@ public final class MovementSync {
 	private boolean settle(@Nullable Spot here, long now) {
 		Spot target = this.hiddenSpot();
 		this.driftSince = -1;
+		boolean relink = this.relinkStep;
+		this.relinkStep = false;
 		if (target == null || target.equals(here)) {
 			return false;
+		}
+		if (relink) {
+			// MG4: after a follow, one ordinary step at most; farther is a mismatch to report, never a teleport.
+			if (here == null || !here.sameLevel(target) || here.cellsTo(target) > 1) {
+				this.stats.relinkFar++;
+				return false;
+			}
+			this.stats.syncs++;
+			this.walk(target, WALK_FRAMES);
+			return true;
 		}
 		this.stats.syncs++;
 		this.correct(here, target, WALK_FRAMES, now);

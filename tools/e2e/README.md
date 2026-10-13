@@ -4,7 +4,8 @@ End-to-end runs on the **test** Gen1Recomp install, `local/gen1recomp-e2e-0.3.85
 runner's pinned release, `PINNED`; the unversioned `local/gen1recomp-e2e/` when no versioned folder exists), never
 the user's own `local/gen1recomp/`. They need the pre-flight in docs/PLAN.md §0.6 (the user's ROM import, made by
 the pinned release: an import from another release is stale) and run only with `--e2e`; without the pre-flight they
-skip. The install's Union Room must be off (ENGINE_UPGRADE_PLAN U3; `kb_union_off.lua` below does it headlessly).
+skip. The import is detected by `tools/kb_games.py` (MG4): a game folder named like any id of the game catalogue
+holding `rom-cache.complete`, by names only; with several imports `--game` picks one. The install's Union Room must be off (ENGINE_UPGRADE_PLAN U3; `kb_union_off.lua` below does it headlessly).
 
 On Linux (the RunPod dev pod, which holds no instance of the user's own) the test install is the official release's
 extracted AppImage in `local/gen1recomp-linux-0.3.85/` with `local/gen1recomp-data-0.3.85/` as its `XDG_DATA_HOME`

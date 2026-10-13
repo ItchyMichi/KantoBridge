@@ -17,8 +17,11 @@ import org.slf4j.LoggerFactory;
  * Hands the socket thread's events to the client thread (PLAN §2.3): {@link BridgeClient} posts from its thread,
  * and the game drains the queue once per client tick, where every handler runs. Order is kept: a state change and
  * the messages around it arrive in the order they happened.
+ *
+ * <p>MG4 (several games): every hidden game's link has its own dispatcher; the body's runtimes subscribe to the
+ * {@link FollowedDispatcher}, which forwards only the followed link's traffic.
  */
-public final class Dispatcher implements BridgeClient.Listener {
+public class Dispatcher implements BridgeClient.Listener {
 	private static final Logger LOGGER = LoggerFactory.getLogger("kantobridge");
 
 	private record StateChange(ConnectionState state, @Nullable String detail) {

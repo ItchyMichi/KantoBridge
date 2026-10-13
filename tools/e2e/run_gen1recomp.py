@@ -21,8 +21,10 @@ ROM-derived text, so every line is filtered before anything is printed:
   * ``LUA ERROR`` and ``driver error:`` lines show only the marker and the
     ``file.lua:NN`` locations in them;
   * everything else is only counted and hashed in aggregate.
-Files under ``local/`` are never opened: pre-flight checks file names only, and
-the crash log (%APPDATA%/pokemon-love2d/lua-error.log) is only stat-ed.
+Files under ``local/`` are never opened: pre-flight checks file names only
+(tools/kb_games.py: the game folders with their completion marker, any id of
+the game catalogue), and the crash log
+(%APPDATA%/pokemon-love2d/lua-error.log) is only stat-ed.
 """
 
 from __future__ import annotations
@@ -77,14 +79,24 @@ IDENTITY = "pokemon-love2d"  # the game's LÖVE identity: its data folder's name
 INSTALL = LINUX_HOME / IDENTITY if LINUX else WINDOWS_INSTALL
 DRIVERS = HERE / "drivers"
 REPORTS = REPO / "local" / "reports"
-VERSIONS = ("red", "blue")
-MARKER = "rom-cache.complete"  # src/import/CacheContract.lua:35, inside the version folder
+# MG4: the imports are detected by tools/kb_games.py (folder names + the completion marker, any catalogued id).
+try:
+    import kb_games
+except ImportError:  # run as a script: tools/ isn't on the path
+    sys.path.insert(0, str(REPO / "tools"))
+    import kb_games
+VERSIONS = tuple(kb_games.load_games().ids)  # every catalogued game id (the old red/blue pair, widened)
+MARKER = kb_games.MARKER  # src/import/CacheContract.lua:35, inside the version folder
 
 BRIDGE_TAG = "[gen1-bridge]"
 # Our own mod.log lines (kb_log writes only symbols, counts and hashes).
 BRIDGE_LINE = re.compile(r"^\[(info|warn|error)\] \[gen1-bridge\] ")
 LOADED_LINE = re.compile(r"^\[(info|warn|error)\] loaded mod gen1-bridge [\w.+-]+$")
 LOCATION = re.compile(r"[\w./\\-]+\.lua:\d+")
+
+
+# The one pre-flight reason --game answers (several completed imports in the test install).
+SEVERAL_IMPORTED = "several games are imported: pass --game"
 
 
 @dataclass
@@ -109,13 +121,20 @@ def preflight(install: Path = INSTALL) -> Preflight:
     mods = install / "mods"
     if not (mods.is_dir() and "gen1-bridge" in os.listdir(mods)):
         reasons.append("mods/gen1-bridge junction missing")
-    imported = [v for v in VERSIONS if v in names and MARKER in os.listdir(install / v)]
+    imported = kb_games.detect(install)
     if not imported:
-        reasons.append(f"no completed ROM import in {install.parent.name}/{install.name} (red/ or blue/ with its "
-                       "completion marker; an import made by an older engine release is stale too: ENGINE_UPGRADE_PLAN B1)")
-    game = imported[0] if len(imported) == 1 else None
-    if len(imported) > 1:
-        reasons.append("both red and blue are imported: pass --game")
+        reasons.append(f"no completed ROM import in {install.parent.name}/{install.name} (a game's folder, blue/ or "
+                       "another catalogued id, with its completion marker; an import made by an older engine release is "
+                       "stale too: ENGINE_UPGRADE_PLAN B1)")
+    # The game to run is the one imported game gen1-bridge has an adapter for (red/blue today, protocol/games.json);
+    # imports of other families sit beside it (the pod holds Crystal and Emerald for later milestones) and don't count
+    # until their adapters exist. Several adapter games imported: pass --game.
+    playable = [g for g in imported if kb_games.load_games().adapter(g)]
+    game = playable[0] if len(playable) == 1 else None
+    if imported and not playable:
+        reasons.append("no imported game has an adapter yet (" + ", ".join(imported) + ")")
+    if len(playable) > 1:
+        reasons.append(SEVERAL_IMPORTED + " (" + ", ".join(playable) + ")")
     return Preflight(ok=not reasons, game=game, reasons=reasons)
 
 
@@ -288,11 +307,11 @@ class Launch:
 def _start(driver: Path | None, game: str | None, extra_env: dict[str, str] | None, echo: bool,
            install: Path) -> Launch:
     pf = preflight(install)
-    if not pf.ok and not (game and pf.reasons == ["both red and blue are imported: pass --game"]):
+    if not pf.ok and not (game and len(pf.reasons) == 1 and pf.reasons[0].startswith(SEVERAL_IMPORTED)):
         raise RuntimeError("pre-flight not done: " + "; ".join(pf.reasons))
     game = game or pf.game
     if game not in VERSIONS:
-        raise ValueError(f"game must be one of {VERSIONS}")
+        raise ValueError(f"game must be a catalogued game id, one of {VERSIONS}")
 
     env = dict(os.environ)
     env.pop("POKEPORT_DRIVER", None)
@@ -360,7 +379,7 @@ def write_report(name: str, result: RunResult) -> Path:
 def main(argv=None) -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("driver", help="driver file name in tools/e2e/drivers, or a path")
-    parser.add_argument("--game", choices=VERSIONS, help="default: the one imported in the test install")
+    parser.add_argument("--game", choices=VERSIONS, help="default: the one game imported in the test install")
     parser.add_argument("--timeout", type=float, default=180.0)
     parser.add_argument("--report", action="store_true", help="write local/reports/e2e_<driver>.json")
     args = parser.parse_args(argv)

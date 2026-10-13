@@ -207,7 +207,11 @@ def test_each_world_gets_its_own_save_slot_and_the_offline_save_is_untouched():
         assert st["ingame"] is False and st["saveBegun"] == 0
         assert r1["errors"] == [] and r1["problems"] == 0
         # MG1: one pairing file per game (the process's own), session/pairings.<game>.json
-        assert pairing_file_names() == [f"pairings.{game}.json", f"pairings.{game}.json.bak"], "the pairing file, by name"
+        # MG1: the game's own file (and its .bak); an install that paired before MG1 keeps its legacy install-wide
+        # pairings.json beside it, read once and never rewritten or deleted
+        names = set(pairing_file_names())
+        assert {f"pairings.{game}.json", f"pairings.{game}.json.bak"} <= names, "the pairing file, by name"
+        assert names <= {f"pairings.{game}.json", f"pairings.{game}.json.bak", "pairings.json", "pairings.json.bak"}, names
         mid = save_files(game)
         assert slot_files(mid, home) == slot_files(before, home), "the offline save untouched"
         assert not slot_files(mid, a) and not slot_files(mid, b), "no saves in the new slots yet"

@@ -8,6 +8,7 @@ import java.io.Writer;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
@@ -39,6 +40,14 @@ public final class FakeGen1Process implements AutoCloseable {
 
 	/** Starts fake_gen1 and waits for its port; null without the venv ({@code tools/setup.ps1} creates it). */
 	public static @Nullable FakeGen1Process start() throws IOException, InterruptedException {
+		return start(new String[0]);
+	}
+
+	/**
+	 * {@link #start()} with more fake_gen1 options after the port, e.g. {@code "--game", "blue"} (MG4: one fake per hidden
+	 * game).
+	 */
+	public static @Nullable FakeGen1Process start(String... options) throws IOException, InterruptedException {
 		Path tools = repoRoot().resolve("tools");
 		Path python = null;
 		for (String candidate : List.of(".venv/Scripts/python.exe", ".venv/bin/python")) {
@@ -50,7 +59,9 @@ public final class FakeGen1Process implements AutoCloseable {
 		if (python == null) {
 			return null;
 		}
-		ProcessBuilder builder = new ProcessBuilder(python.toString(), "-u", "-m", "fake_gen1", "--port", "0")
+		List<String> command = new ArrayList<>(List.of(python.toString(), "-u", "-m", "fake_gen1", "--port", "0"));
+		command.addAll(List.of(options));
+		ProcessBuilder builder = new ProcessBuilder(command)
 				.directory(tools.toFile())
 				.redirectErrorStream(true);
 		builder.environment().put("PYTHONUTF8", "1");

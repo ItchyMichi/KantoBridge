@@ -112,6 +112,18 @@ public final class MoveController {
 		return velocity;
 	}
 
+	/**
+	 * MG4 ({@code Links.follow}): the body follows another hidden game from now on. The forced path, the warp fade and
+	 * the teleport in flight belonged to the old one; the movement sync relinks from the new hidden player's cell.
+	 */
+	public void relink(@Nullable Place hidden, boolean allowTeleport) {
+		this.mover.clear();
+		this.fade.reset();
+		this.requestSeq = -1;
+		this.requestTarget = null;
+		this.sync.linkFrom(hidden, allowTeleport);
+	}
+
 	/** End of a world tick, after the player moved. */
 	public void afterMove(long now, double x, double y, double z, @Nullable Dir intent, float yaw) {
 		if (this.mover.takeStuck()) {

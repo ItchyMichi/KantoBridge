@@ -1,6 +1,7 @@
 package dev.kantobridge.client.net;
 
 import com.google.gson.JsonObject;
+import dev.kantobridge.client.bridge.BridgeLink;
 import dev.kantobridge.client.bridge.BridgeRuntime;
 import dev.kantobridge.client.bridge.HelloOk;
 import dev.kantobridge.client.bridge.JsonFields;
@@ -15,6 +16,8 @@ import java.time.Instant;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.time.format.FormatStyle;
+import java.util.LinkedHashMap;
+import java.util.Map;
 import java.util.Set;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
@@ -55,7 +58,10 @@ public final class Versions {
 	private static @Nullable Versions instance;
 
 	private final BridgeRuntime bridge;
+	/** The followed link's checks (the game and mismatch notices are the body's). */
 	private final VersionCheck check = new VersionCheck();
+	/** MG4: the engine and Union Room notices are per link (each hidden game has its own engine). */
+	private final Map<BridgeLink, VersionCheck> linkChecks = new LinkedHashMap<>();
 	/** The server's relay protocol and mod version from its {@code relay.hello}, or -1 / null. */
 	private int serverProtocol = -1;
 	private @Nullable String serverMod;
@@ -71,12 +77,19 @@ public final class Versions {
 		}
 		Versions versions = new Versions(bridge);
 		instance = versions;
-		bridge.dispatcher().on(MsgTypes.HELLO_OK, message -> versions.helloOk());
+		for (BridgeLink link : bridge.links().all()) {
+			VersionCheck check = new VersionCheck();
+			versions.linkChecks.put(link, check);
+			link.dispatcher().on(MsgTypes.HELLO_OK, message -> versions.helloOk(link, check));
+		}
 		ClientRelay relay = ClientRelay.get();
 		relay.register(MsgTypes.RELAY_HELLO, versions::serverHello);
 		relay.register(MsgTypes.SAVE_MISMATCH, versions::mismatch);
 		ClientPlayConnectionEvents.JOIN.register((handler, sender, client) -> {
 			versions.check.joined();
+			for (VersionCheck check : versions.linkChecks.values()) {
+				check.joined();
+			}
 			versions.serverProtocol = -1;
 			versions.serverMod = null;
 		});
@@ -88,18 +101,18 @@ public final class Versions {
 	 * gen1-bridge's handshake: an engine it wasn't tested with gets a toast (once per pair of versions); Gen1Recomp's Union
 	 * Room being on gets one (once per gen1-bridge start) that says what to click.
 	 */
-	private void helloOk() {
-		HelloOk ok = this.bridge.client().handshake();
+	private void helloOk(BridgeLink link, VersionCheck check) {
+		HelloOk ok = link.client().handshake();
 		if (ok == null) {
 			return;
 		}
 		Minecraft minecraft = Minecraft.getInstance();
-		if (this.check.engineNotice(ok)) {
+		if (check.engineNotice(ok)) {
 			LOGGER.warn("bridge: Gen1Recomp {} isn't the engine gen1-bridge was tested with ({})", ok.engine(), ok.tested());
 			SystemToast.addOrUpdate(minecraft.getToasts(), ENGINE_TOAST, Component.translatable("kantobridge.version.engine.title", ok.engine()),
 					Component.translatable("kantobridge.version.engine.text", ok.tested()));
 		}
-		if (this.check.unionNotice(ok)) {
+		if (check.unionNotice(ok)) {
 			LOGGER.warn("bridge: Gen1Recomp's Union Room is on: turn it off in Launcher Options and restart Gen1Recomp");
 			SystemToast.addOrUpdate(minecraft.getToasts(), UNION_TOAST, Component.translatable("kantobridge.version.union.title"),
 					Component.translatable("kantobridge.version.union.text"));
@@ -154,6 +167,7 @@ public final class Versions {
 		if (minecraft.level == null || minecraft.player == null) {
 			return;
 		}
+		// MG4: the followed region's game against the followed link's hello: never a parked game's hello against the index.
 		WorldIndex index = ClientWorldIndex.current();
 		HelloOk ok = this.bridge.client().handshake();
 		if (index == null || ok == null || !this.check.gameNotice(minecraft.isLocalServer(), index.game(), ok.game())) {

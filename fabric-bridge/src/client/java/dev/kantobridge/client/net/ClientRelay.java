@@ -82,22 +82,32 @@ public final class ClientRelay {
 		return this.post(type, data, re) > 0;
 	}
 
+	/** True while a server connection can take payloads (the relay is the client's only way up). */
+	public static boolean canSend() {
+		return ClientPlayNetworking.canSend(KbJsonPayload.TYPE);
+	}
+
 	/**
 	 * {@link #send}, returning the message's {@code seq} (which the server's reply carries as {@code re}), or -1 when it
 	 * wasn't sent.
 	 */
 	public long post(String type, JsonObject data, @Nullable Long re) {
-		if (!ClientPlayNetworking.canSend(KbJsonPayload.TYPE)) {
+		// MG3 (docs/PROTOCOL.md "Regions"): in a region world every relayed type carries the followed region; a legacy world
+		// sends today's bytes.
+		return this.post(type, data, re, ClientRegions.tagFor());
+	}
+
+	/**
+	 * {@link #post(String, JsonObject, Long)} tagged with {@code region} (MG4: a link's own region, which may differ from the
+	 * followed one), or untagged when it is null. A message that names its region already keeps it.
+	 */
+	public long post(String type, JsonObject data, @Nullable Long re, @Nullable String region) {
+		if (!canSend()) {
 			return -1;
 		}
-		// MG3 (docs/PROTOCOL.md "Regions"): in a region world every relayed type carries the followed region; a legacy world
-		// sends today's bytes. A message that names its region already keeps it.
-		if (RegionTags.tagged(type) && !data.has("region")) {
-			String region = ClientRegions.tagFor();
-			if (region != null) {
-				data = data.deepCopy();
-				data.addProperty("region", region);
-			}
+		if (region != null && RegionTags.tagged(type) && !data.has("region")) {
+			data = data.deepCopy();
+			data.addProperty("region", region);
 		}
 		Envelope message = new Envelope(type, this.nextSeq, re, data);
 		try {

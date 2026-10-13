@@ -1,7 +1,9 @@
-"""tools/launch.ps1 (M10): its dry-run plans against made-up installs, and its port probe.
+"""tools/launch.ps1 (M10, MG4): its dry-run plans against made-up installs, and its port probe.
 
 Nothing here starts Gen1Recomp, Gradle or Minecraft: -DryRun only prints the plan, and the probe
-waits for a socket this test opens itself.
+waits for a socket this test opens itself. The made-up installs hold empty files only: the executable,
+portable.txt, the mod link, and (MG4) a game folder with an empty completion marker, which is how the
+launcher detects imports (folder names and the marker's presence, never contents).
 """
 import json
 import os
@@ -37,11 +39,15 @@ def _run(shell, *args, timeout=60):
     return done.returncode, done.stdout + done.stderr
 
 
-def _install(folder):
-    """A made-up Gen1Recomp install: the files launch.ps1 checks for, all empty."""
+def _install(folder, *games):
+    """A made-up Gen1Recomp install: the files launch.ps1 checks for, all empty, plus a completed-import marker per
+    game (MG4 detection)."""
     os.makedirs(os.path.join(folder, "mods", "gen1-bridge"))
     for name in ("gen1recomp.exe", "portable.txt"):
         open(os.path.join(folder, name), "w").close()
+    for game in games:
+        os.makedirs(os.path.join(folder, game))
+        open(os.path.join(folder, game, "rom-cache.complete"), "w").close()
     return folder
 
 
@@ -54,8 +60,9 @@ def setup(tmp_path):
     minecraft.mkdir()
     (minecraft / "server.properties").write_text("online-mode=true\nlevel-name=saves/Kanto\n")
     return {
-        "gen1": _install(str(tmp_path / "gen1")),
-        "gen1p2": _install(str(tmp_path / "gen1p2")),
+        "gen1": _install(str(tmp_path / "gen1"), "blue"),
+        "gen1p2": _install(str(tmp_path / "gen1p2"), "blue"),
+        "hoenn": _install(str(tmp_path / "gen1-hoenn"), "emerald"),
         "jdk": str(jdk),
         "minecraft": str(minecraft),
         "config": str(tmp_path / "launch.json"),
@@ -63,18 +70,28 @@ def setup(tmp_path):
     }
 
 
-def _dev(setup, *extra):
-    return ["-DryRun", "-Config", setup["config"], "-Gen1Recomp", setup["gen1"], "-JavaHome", setup["jdk"],
-            "-MinecraftDir", setup["minecraft"], *extra]
+def _dev(setup, *extra, gen1=True):
+    args = ["-DryRun", "-Config", setup["config"], "-JavaHome", setup["jdk"], "-MinecraftDir", setup["minecraft"], *extra]
+    if gen1:
+        args[3:3] = ["-Gen1Recomp", setup["gen1"]]
+    return args
+
+
+def _v2(setup):
+    with open(setup["config"], "w", encoding="utf-8") as f:
+        json.dump({"installs": {"kanto": {"dir": setup["gen1"], "games": ["blue"], "play": "blue"},
+                                "hoenn": {"dir": setup["hoenn"]}},
+                   "ports": {"first": 27151, "player2": 10}}, f)
 
 
 @pytest.mark.parametrize("shell", SHELLS)
 def test_dev_plan_one_player(shell, setup):
     code, out = _run(shell, *_dev(setup))
     assert code == 0, out
-    assert "--game=blue --console" in out, "dev mode defaults: Blue, with the log console"
+    assert "--game=blue --console" in out, "dev mode defaults: the detected game, Blue, with the log console"
     assert "wait until Gen1Recomp listens on 127.0.0.1:27151" in out
-    assert "gradlew.bat runClient with JAVA_HOME=" + setup["jdk"] in out
+    assert "gradlew.bat runClient -Pkb.links=blue:27151 with JAVA_HOME=" + setup["jdk"] in out
+    assert "[plan] links: blue:27151" in out
     assert "runServer" not in out and "runClient2" not in out
     assert "[plan] done" in out
     assert "Based on the Pokemon Gen 1 Recompilation Project by BOIS CLUB GAMES, LLC" in out, "Gen1Recomp's required credit"
@@ -84,12 +101,24 @@ def test_dev_plan_one_player(shell, setup):
 def test_config_and_parameters(shell, setup):
     with open(setup["config"], "w", encoding="utf-8") as f:
         json.dump({"game": "red", "slot": "slot2"}, f)
+    os.makedirs(os.path.join(setup["gen1"], "red"))
+    open(os.path.join(setup["gen1"], "red", "rom-cache.complete"), "w").close()
     code, out = _run(shell, *_dev(setup, "-NoConsole", "-Watch"))
     assert code == 0, out
     assert "--game=red --slot=slot2" in out and "--console" not in out
     assert "watch: restart Gen1Recomp" in out
     code, out = _run(shell, *_dev(setup, "-Game", "blue"))
     assert code == 0 and "--game=blue" in out, "a parameter beats the config"
+    code, out = _run(shell, *_dev(setup, "-Games", "red,blue"))
+    assert code == 1 and "one install" in out, "two games of one install are one world space"
+
+
+@pytest.mark.parametrize("shell", SHELLS)
+def test_an_install_without_an_import_still_starts(shell, setup):
+    fresh = _install(str(setup["root"] / "fresh"))
+    code, out = _run(shell, *_dev(setup, "-Gen1Recomp", fresh, gen1=False))
+    assert code == 0, out
+    assert "no completed import" in out and "--game=blue" in out, "Gen1Recomp's launcher asks for the ROM"
 
 
 @pytest.mark.parametrize("shell", SHELLS)
@@ -97,12 +126,35 @@ def test_dev_plan_two_players(shell, setup):
     code, out = _run(shell, *_dev(setup, "-Players", "2", "-P2Gen1Recomp", setup["gen1p2"]))
     assert code == 0, out
     assert out.index("start Gen1Recomp") < out.index("start player 2's Gen1Recomp")
-    assert "player 2's Gen1Recomp listens on 127.0.0.1:27152" in out
+    assert "player 2's Gen1Recomp listens on 127.0.0.1:27161" in out, "player 2 is 10 ports up (MULTI_GAME_PLAN §4.11)"
     assert "set online-mode=false" in out
     assert "runServer" in out and "wait until the dev server listens on port 25565" in out
-    assert out.index("runServer") < out.index("runClient with") < out.index("runClient2")
+    assert out.index("runServer") < out.index("runClient -Pkb.links=blue:27151 with") < out.index("runClient2 -Pkb.links=blue:27161")
     with open(os.path.join(setup["minecraft"], "server.properties")) as f:
         assert "online-mode=true" in f.read(), "a dry run changes nothing"
+
+
+@pytest.mark.parametrize("shell", SHELLS)
+def test_several_installs(shell, setup):
+    _v2(setup)
+    code, out = _run(shell, *_dev(setup, gen1=False))
+    assert code == 0, out
+    assert "--game=blue --console" in out and "--game=emerald" not in out, "no adapter for Emerald yet: skipped by default"
+    assert "skipping hoenn (emerald)" in out and "links: blue:27151" in out
+    code, out = _run(shell, *_dev(setup, "-Regions", "kanto,hoenn", gen1=False))
+    assert code == 0, out
+    assert "start Gen1Recomp (kanto)" in out and "start Gen1Recomp (hoenn)" in out
+    assert "Gen1Recomp (hoenn) listens on 127.0.0.1:27152" in out
+    assert "runClient -Pkb.links=blue:27151,emerald:27152" in out
+    assert "no adapter for emerald" in out
+    code, out = _run(shell, *_dev(setup, "-Games", "emerald", gen1=False))
+    assert code == 0 and "--game=emerald" in out and "--game=blue" not in out, "a named game starts without an adapter"
+    code, out = _run(shell, *_dev(setup, "-Games", "gold", gen1=False))
+    assert code == 1 and "no install holds 'gold'" in out
+    code, out = _run(shell, *_dev(setup, "-Games", "nope", gen1=False))
+    assert code == 1 and "unknown game" in out
+    code, out = _run(shell, *_dev(setup, "-Regions", "johto", gen1=False))
+    assert code == 1 and "no install for region" in out
 
 
 @pytest.mark.parametrize("shell", SHELLS)
@@ -119,7 +171,7 @@ def test_refusals(shell, setup):
 @pytest.mark.parametrize("shell", SHELLS)
 def test_player_mode_plan(shell, setup):
     root = setup["root"] / "KantoBridge"
-    _install(str(root / "gen1recomp"))
+    _install(str(root / "gen1recomp"), "blue")
     (root / "prism").mkdir()
     (root / "prism" / "prismlauncher.exe").write_text("")
     code, out = _run(shell, "-Mode", "player", "-Root", str(root), "-DryRun")

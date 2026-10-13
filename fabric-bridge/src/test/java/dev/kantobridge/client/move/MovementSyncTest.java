@@ -628,6 +628,48 @@ class MovementSyncTest {
 	}
 
 	@Test
+	void aFollowedLinkChangeRelinksWithOneStepAtMost() {
+		// MG4 (Links.follow, a resume): the server moved the body into the far gate house already; the new hidden player is
+		// a step away at most, and that step is walked. Farther is a mismatch to report, never a teleport.
+		Rig rig = Rig.at(world, "TEST_TOWN", 5, 8, Dir.UP);
+		rig.sync.linkFrom(new Place("TEST_TOWN", 5, 7, Dir.UP), false);
+		assertEquals(List.of("walk TEST_TOWN:5:7 " + MovementSync.WALK_FRAMES), rig.tick());
+		assertEquals(1, rig.sync.stats().relinks);
+		// The forced walk carries the body there (the controller reports forced movement meanwhile, as in the game); the
+		// resync's snapshot then confirms the cell: nothing more, and no step is echoed to the hidden game for our own walk.
+		rig.port.forced = true;
+		rig.moveTo("TEST_TOWN", 5, 7);
+		assertEquals(List.of(), rig.tick());
+		rig.port.forced = false;
+		rig.sync.onSnapshot(true, new Place("TEST_TOWN", 5, 7, Dir.UP), "idle");
+		assertEquals(List.of(), rig.tick());
+
+		Rig far = Rig.at(world, "TEST_TOWN", 5, 8, Dir.UP);
+		far.sync.linkFrom(new Place("TEST_TOWN", 5, 5, Dir.UP), false);
+		assertEquals(List.of(), far.tick(), "three cells away: reported, not chased");
+		assertEquals(1, far.sync.stats().relinkFar);
+		far.sync.onSnapshot(true, new Place("TEST_TOWN", 5, 5, Dir.UP), "idle");
+		assertEquals(List.of(), far.tick(), "the snapshot after a resume never teleports either");
+		assertEquals(2, far.sync.stats().relinkFar);
+
+		// Without a cell yet, the snapshot the resync brings does the one step.
+		Rig blind = Rig.at(world, "TEST_TOWN", 5, 8, Dir.UP);
+		blind.sync.linkFrom(null, false);
+		assertEquals(List.of(), blind.tick());
+		blind.sync.onSnapshot(true, new Place("TEST_TOWN", 6, 8, Dir.RIGHT), "idle");
+		assertEquals(List.of("walk TEST_TOWN:6:8 " + MovementSync.WALK_FRAMES), blind.tick());
+	}
+
+	@Test
+	void aGameJustStartedIsJoinedWithTheOneTeleport() {
+		// MG4 (a start at a pass): the new game's first room is somewhere else entirely; the join's teleport is allowed once.
+		Rig rig = Rig.at(world, "TEST_TOWN", 5, 8, Dir.UP);
+		rig.sync.linkFrom(new Place("TEST_HOUSE", 4, 8, Dir.UP), true);
+		assertEquals(List.of("teleport TEST_HOUSE:4:8:up"), rig.tick());
+		assertEquals(1, rig.sync.stats().relinks);
+	}
+
+	@Test
 	void teleportsAreRateLimited() {
 		Rig rig = Rig.at(world, "TEST_TOWN", 5, 8, Dir.DOWN);
 		rig.moveTo("TEST_TOWN", 15, 2);

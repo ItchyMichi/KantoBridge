@@ -1,26 +1,35 @@
 <#
 .SYNOPSIS
-Starts Kanto Bridge: the hidden Gen1Recomp (visible window), waits for its bridge port, then Minecraft.
+Starts Kanto Bridge: the hidden Gen1Recomp games (visible windows), waits for their bridge ports, then Minecraft.
 
 .DESCRIPTION
 Dev mode (default) runs this repository's dev setup:
-  - one player:  local\gen1recomp, then `gradlew runClient`;
-  - -Players 2:  local\gen1recomp and a second install (local\gen1recomp-p2), the dedicated dev
-                 server (`gradlew runServer`, online-mode=false), then `runClient` and `runClient2`.
+  - one player:  one Gen1Recomp process per install (MG4: one hidden process per game, each on its own
+                 port: 27151, 27152, ...), then `gradlew runClient -Pkb.links=blue:27151,emerald:27152`;
+  - -Players 2:  the same, plus player 2's own Gen1Recomp install (local\gen1recomp-p2) on port 27151 + 10,
+                 the dedicated dev server (`gradlew runServer`, online-mode=false), then `runClient` and
+                 `runClient2`.
 Player mode (-Mode player) runs an installed setup laid out as in docs/INSTALLER.md: Gen1Recomp from
 <Root>\gen1recomp and Minecraft through the bundled Prism Launcher instance.
 
-Settings come from the parameters, then a JSON config (dev: local\launch.json; player:
-<Root>\launch.json), then the defaults. Config keys: game, gen1recomp, gen1recompP2, port, javaHome,
-slot, root, instance.
+Which games start (docs/specs/MULTI_GAME_PLAN.md §4.11): by default every install of the config whose game has an
+adapter in this bridge (protocol/games.json); -Games picks games (their installs are found by detection), -Regions
+picks installs (world spaces: kanto, hoenn, ...). Detection reads an install's folder names and the presence of each
+game folder's `rom-cache.complete` marker, nothing more (tools/kb_games.py does the same in Python).
+
+Settings come from the parameters, then a JSON config (dev: local\launch.json; player: <Root>\launch.json), then the
+defaults. Config (version 2): installs{<space>:{dir, games[], play}}, ports{first, player2}, javaHome, slot, root,
+instance; the older keys game, gen1recomp, gen1recompP2, port are still read as the kanto install.
 
 The script never touches Gen1Recomp's data (saves, ROM import, options): it only starts the program.
 It sets JAVA_HOME for its own Gradle runs only, never system-wide. It never stops Gen1Recomp, so
-unsaved progress is never lost; with -Watch it restarts Gen1Recomp if it exits while Minecraft runs.
+unsaved progress is never lost; with -Watch it restarts a Gen1Recomp that exits while Minecraft runs.
 
 .EXAMPLE
 .\tools\launch.ps1
 .\tools\launch.ps1 -Game red -Watch
+.\tools\launch.ps1 -Games blue,emerald
+.\tools\launch.ps1 -Regions kanto,hoenn
 .\tools\launch.ps1 -Players 2
 .\tools\launch.ps1 -Mode player
 .\tools\launch.ps1 -DryRun
@@ -29,7 +38,9 @@ unsaved progress is never lost; with -Watch it restarts Gen1Recomp if it exits w
 param(
 	[ValidateSet("dev", "player")] [string] $Mode = "dev",
 	[ValidateSet(1, 2)] [int] $Players = 1,
-	[ValidateSet("", "red", "blue")] [string] $Game = "",
+	[string] $Game = "",
+	[string[]] $Games = @(),
+	[string[]] $Regions = @(),
 	[string] $Gen1Recomp = "",
 	[string] $P2Gen1Recomp = "",
 	[int] $Port = 0,
@@ -56,8 +67,10 @@ $ErrorActionPreference = "Stop"
 $Repo = Split-Path -Parent $PSScriptRoot
 $PortSpan = 9                  # gen1-bridge takes the first free of the configured port and the next 8
 $ServerPort = 25565
-$RestartLimit = 3              # -Watch: at most this many restarts per player ...
+$RestartLimit = 3              # -Watch: at most this many restarts per process ...
 $RestartWindowSec = 600        # ... within this many seconds
+$Marker = "rom-cache.complete" # Gen1Recomp's completion marker inside a game's import folder (names only)
+$DefaultGame = "blue"          # when an install shows no completed import yet (its launcher asks for the ROM)
 
 # Gen1Recomp's licence (its LICENSE.MD, additional term 1) asks any front end that starts the game to show this credit.
 Write-Host "Based on the Pokemon Gen 1 Recompilation Project by BOIS CLUB GAMES, LLC (https://github.com/bryanthaboi/gen1recomp)"
@@ -119,6 +132,39 @@ if ($Probe) {
 	exit 1
 }
 
+# --- the game catalogue (protocol/games.json: ids, adapters, world spaces) ---------------------------
+
+$CataloguePath = Join-Path (Join-Path $Repo "protocol") "games.json"
+if (-not (Test-Path -LiteralPath $CataloguePath)) {
+	Fail "no game catalogue at $CataloguePath (a clone of the repository is needed)"
+}
+$Catalogue = Get-Content -LiteralPath $CataloguePath -Raw | ConvertFrom-Json
+$GameIds = @($Catalogue.games.PSObject.Properties | ForEach-Object { $_.Name })
+
+function Get-GameEntry([string] $id) {
+	$property = $Catalogue.games.PSObject.Properties[$id]
+	if ($property) { return $property.Value }
+	return $null
+}
+function Test-Adapter([string] $id) {
+	$entry = Get-GameEntry $id
+	return [bool] ($entry -and $entry.adapter -eq $true)
+}
+
+function Get-ImportedGames([string] $dir) {
+	# The catalogued games with a completed import in `dir`: a folder named like the game holding the marker.
+	# Folder names and the marker's presence only; nothing inside is ever opened (CLAUDE.md).
+	$out = @()
+	if (-not (Test-Path -LiteralPath $dir)) { return $out }
+	foreach ($id in $GameIds) {
+		$folder = Join-Path $dir $id
+		if ((Test-Path -LiteralPath $folder -PathType Container) -and (Test-Path -LiteralPath (Join-Path $folder $Marker) -PathType Leaf)) {
+			$out += $id
+		}
+	}
+	return $out
+}
+
 # --- settings --------------------------------------------------------------------------------------
 
 if ($Mode -eq "player") {
@@ -150,17 +196,53 @@ function Pick([string] $given, [string] $key, [string] $fallback) {
 	return $fallback
 }
 
-$Game = Pick $Game "game" "blue"
-if ($Game -notin @("red", "blue")) {
-	Fail "game must be red or blue, not '$Game'"
+function Resolve-InstallDir([string] $dir) {
+	if ([System.IO.Path]::IsPathRooted($dir)) { return $dir }
+	return Join-Path $Repo $dir
 }
+
+if ($Game) { $Games = @($Game) + $Games }
 $Slot = Pick $Slot "slot" ""
-$Port = [int] (Pick $(if ($Port -gt 0) { [string] $Port } else { "" }) "port" "27151")
+
+# Ports: ports.first (version 2) or port (version 1), the -Port parameter first; player 2 at first + ports.player2.
+$FirstPort = 27151
+$Player2Offset = 10
+if ($Settings.ContainsKey("ports") -and $Settings["ports"]) {
+	$ports = $Settings["ports"]
+	if ($ports.PSObject.Properties["first"] -and $ports.first) { $FirstPort = [int] $ports.first }
+	if ($ports.PSObject.Properties["player2"] -and $ports.player2) { $Player2Offset = [int] $ports.player2 }
+} elseif ($Settings.ContainsKey("port") -and $Settings["port"]) {
+	$FirstPort = [int] $Settings["port"]
+}
+if ($Port -gt 0) { $FirstPort = $Port }
+
+# The installs: @{Space; Dir; Games (declared, or $null for detection); Play (declared, or "")}, in config order.
+$Installs = @()
 if ($Mode -eq "player") {
-	$Gen1Recomp = Pick $Gen1Recomp "gen1recomp" (Join-Path $Root "gen1recomp")
+	$dir = Pick $Gen1Recomp "gen1recomp" (Join-Path $Root "gen1recomp")
+	$Installs += [pscustomobject]@{ Space = "kanto"; Dir = $dir; Games = $null; Play = (Pick "" "game" "") }
 	$Instance = Pick $Instance "instance" "KantoBridge"
 } else {
-	$Gen1Recomp = Pick $Gen1Recomp "gen1recomp" (Join-Path (Join-Path $Repo "local") "gen1recomp")
+	if ($Settings.ContainsKey("installs") -and $Settings["installs"]) {
+		foreach ($property in $Settings["installs"].PSObject.Properties) {
+			$entry = $property.Value
+			$dir = ""
+			if ($entry.PSObject.Properties["dir"] -and $entry.dir) { $dir = Resolve-InstallDir ([string] $entry.dir) }
+			if (-not $dir) {
+				$name = $(if ($property.Name -eq "kanto") { "gen1recomp" } else { "gen1recomp-$($property.Name)" })
+				$dir = Join-Path (Join-Path $Repo "local") $name
+			}
+			$declared = $null
+			if ($entry.PSObject.Properties["games"] -and $entry.games) { $declared = @($entry.games | ForEach-Object { [string] $_ }) }
+			$play = ""
+			if ($entry.PSObject.Properties["play"] -and $entry.play) { $play = [string] $entry.play }
+			$Installs += [pscustomobject]@{ Space = $property.Name; Dir = $dir; Games = $declared; Play = $play }
+		}
+	} else {
+		$dir = Pick $Gen1Recomp "gen1recomp" (Join-Path (Join-Path $Repo "local") "gen1recomp")
+		$Installs += [pscustomobject]@{ Space = "kanto"; Dir = $dir; Games = $null; Play = (Pick "" "game" "") }
+	}
+	if ($Gen1Recomp -and $Installs.Count -gt 0) { $Installs[0].Dir = $Gen1Recomp }   # the parameter beats the config's first install
 	$P2Gen1Recomp = Pick $P2Gen1Recomp "gen1recompP2" (Join-Path (Join-Path $Repo "local") "gen1recomp-p2")
 	if (-not $MinecraftDir) {
 		$MinecraftDir = Join-Path (Join-Path $Repo "local") "minecraft"
@@ -183,6 +265,92 @@ function Find-Jdk21 {
 	return ""
 }
 
+# --- which games start -----------------------------------------------------------------------------
+
+function Get-InstallGames($install) {
+	# The games an install holds: the config's list when given, else what detection finds.
+	if ($install.Games) { return @($install.Games) }
+	return @(Get-ImportedGames $install.Dir)
+}
+
+function Get-PlayGame($install, [string[]] $held) {
+	# What this install plays by default: its `play`, else its first game with an adapter, else its first game,
+	# else "" (an install before its first import).
+	if ($install.Play) { return [string] $install.Play }
+	foreach ($g in $held) { if (Test-Adapter $g) { return $g } }
+	if ($held.Count -gt 0) { return [string] $held[0] }
+	return ""
+}
+
+foreach ($g in $Games) {
+	if ($g -notin $GameIds) { Fail "unknown game '$g' (protocol/games.json lists: $($GameIds -join ', '))" }
+}
+$Selected = @()   # @{Space; Dir; Play}, then Who, Port and Exe
+if ($Regions.Count -gt 0) {
+	foreach ($space in $Regions) {
+		$install = @($Installs | Where-Object { $_.Space -eq $space })
+		if ($install.Count -eq 0) {
+			Fail "no install for region '$space' (installs in $Config`: $(($Installs | ForEach-Object { $_.Space }) -join ', '); tools\setup_games.ps1 adds one)"
+		}
+		$held = @(Get-InstallGames $install[0])
+		$play = Get-PlayGame $install[0] $held
+		if (-not $play) {
+			Say "warning: no completed import in $($install[0].Dir); starting --game=$DefaultGame anyway (Gen1Recomp's launcher asks for the ROM)"
+			$play = $DefaultGame
+		}
+		$Selected += [pscustomobject]@{ Space = $space; Dir = $install[0].Dir; Play = $play }
+	}
+} elseif ($Games.Count -gt 0) {
+	foreach ($g in $Games) {
+		$found = $null
+		foreach ($install in $Installs) {
+			if (@(Get-InstallGames $install) -contains $g) { $found = $install; break }
+		}
+		if (-not $found) {
+			if ($Installs.Count -eq 1 -and @(Get-InstallGames $Installs[0]).Count -eq 0) {
+				# the one install shows no completed import yet: start it with the asked game (the launcher asks for the ROM)
+				$found = $Installs[0]
+				Say "warning: no completed import in $($found.Dir); starting --game=$g anyway (Gen1Recomp's launcher asks for the ROM)"
+			} else {
+				Fail "no install holds '$g': import it first (tools\setup_games.ps1 with the ROM in local\rom-inbox), or list it under installs.<space>.games in $Config"
+			}
+		}
+		$same = @($Selected | Where-Object { $_.Dir -eq $found.Dir })
+		if ($same.Count -gt 0) {
+			Fail "games '$g' and '$($same[0].Play)' live in one install ($($found.Dir)): two processes of one install would share its save slots and options; they are one world space, pick one"
+		}
+		$Selected += [pscustomobject]@{ Space = $found.Space; Dir = $found.Dir; Play = $g }
+	}
+} else {
+	foreach ($install in $Installs) {
+		if ($Mode -eq "dev" -and $install.Space -like "*_p2") { continue }   # a version-1 player-2 install is player 2's
+		$held = @(Get-InstallGames $install)
+		$play = Get-PlayGame $install $held
+		if (-not $play) {
+			if ($Installs.Count -eq 1) {
+				Say "warning: no completed import in $($install.Dir); starting --game=$DefaultGame anyway (Gen1Recomp's launcher asks for the ROM)"
+				$play = $DefaultGame
+			} else {
+				Say "skipping $($install.Space) ($($install.Dir)): no completed import"
+				continue
+			}
+		}
+		if (-not (Test-Adapter $play) -and $Installs.Count -gt 1) {
+			Say "skipping $($install.Space) ($play): the bridge has no adapter for it yet (protocol/games.json); -Games $play or -Regions $($install.Space) starts it anyway"
+			continue
+		}
+		$Selected += [pscustomobject]@{ Space = $install.Space; Dir = $install.Dir; Play = $play }
+	}
+}
+if ($Selected.Count -eq 0) {
+	Fail "nothing to start: no install holds a game this bridge has an adapter for (installs: $(($Installs | ForEach-Object { $_.Space }) -join ', '))"
+}
+foreach ($s in $Selected) {
+	if (-not (Test-Adapter $s.Play)) {
+		Say "warning: the bridge has no adapter for $($s.Play) yet (protocol/games.json): its process starts, but Minecraft can't follow it (hello.reject game)"
+	}
+}
+
 # --- checks ----------------------------------------------------------------------------------------
 
 function Test-Install([string] $dir, [string] $who) {
@@ -199,16 +367,29 @@ function Test-Install([string] $dir, [string] $who) {
 	return $exe
 }
 
-$Gen1Exe = Test-Install $Gen1Recomp "Gen1Recomp"
-$P2Exe = $null
+$index = 0
+foreach ($s in $Selected) {
+	$who = $(if ($Selected.Count -eq 1) { "Gen1Recomp" } else { "Gen1Recomp ($($s.Space))" })
+	$s | Add-Member -NotePropertyName Who -NotePropertyValue $who
+	$s | Add-Member -NotePropertyName Port -NotePropertyValue ($FirstPort + $index)
+	$s | Add-Member -NotePropertyName Exe -NotePropertyValue (Test-Install $s.Dir $who)
+	$index++
+}
+$P2 = $null
 if ($Mode -eq "dev" -and $Players -eq 2) {
 	if (-not (Test-Path -LiteralPath $P2Gen1Recomp)) {
 		Fail "player 2's Gen1Recomp install $P2Gen1Recomp is missing (docs/PLAYTEST.md M9 'Setup'; -P2Gen1Recomp local\gen1recomp-e2e works for a quick try)"
 	}
-	if ((Resolve-Path -LiteralPath $Gen1Recomp).Path -eq (Resolve-Path -LiteralPath $P2Gen1Recomp).Path) {
-		Fail "player 2 needs a second Gen1Recomp install (two processes of one install would share its save slots)"
+	foreach ($s in $Selected) {
+		if ((Resolve-Path -LiteralPath $s.Dir).Path -eq (Resolve-Path -LiteralPath $P2Gen1Recomp).Path) {
+			Fail "player 2 needs a second Gen1Recomp install (two processes of one install would share its save slots)"
+		}
 	}
-	$P2Exe = Test-Install $P2Gen1Recomp "player 2's Gen1Recomp"
+	$p2Held = @(Get-ImportedGames $P2Gen1Recomp)
+	$p2Play = [string] $Selected[0].Play
+	if ($p2Held.Count -gt 0 -and ($p2Held -notcontains $p2Play)) { $p2Play = [string] $p2Held[0] }
+	$P2 = [pscustomobject]@{ Space = $Selected[0].Space; Dir = $P2Gen1Recomp; Play = $p2Play; Who = "player 2's Gen1Recomp"; Port = ($FirstPort + $Player2Offset) }
+	$P2 | Add-Member -NotePropertyName Exe -NotePropertyValue (Test-Install $P2Gen1Recomp $P2.Who)
 }
 
 $Gradle = Join-Path (Join-Path $Repo "fabric-bridge") "gradlew.bat"
@@ -229,7 +410,12 @@ if ($Mode -eq "dev") {
 	}
 }
 
-Say "mode $Mode, $Players player(s), game $Game, port $Port$(if ($Slot) { ", slot $Slot" })"
+# The client's links (MG4): game:port per hidden process, in the installs' order.
+$Links = ($Selected | ForEach-Object { "$($_.Play):$($_.Port)" }) -join ","
+$P2Links = $(if ($P2) { "$($P2.Play):$($P2.Port)" } else { "" })
+
+Say "mode $Mode, $Players player(s): $(($Selected | ForEach-Object { "$($_.Space) $($_.Play) on $($_.Port)" }) -join ', ')$(if ($Slot) { ", slot $Slot" })"
+if ($P2) { Say "player 2: $($P2.Play) on $($P2.Port)" }
 
 # --- Gen1Recomp --------------------------------------------------------------------------------
 
@@ -246,31 +432,33 @@ function Get-Running([string] $exe) {
 	return $null
 }
 
-function Start-Gen1([string] $exe, [string] $who) {
-	$arguments = @("--game=$Game")
+function Start-Gen1($g) {
+	$arguments = @("--game=$($g.Play)")
 	if ($UseConsole) { $arguments += "--console" }
 	if ($Slot) { $arguments += "--slot=$Slot" }
-	$folder = Split-Path -Parent $exe
+	$folder = Split-Path -Parent $g.Exe
 	if ($DryRun) {
-		Plan "start $who`: $exe $($arguments -join ' ') (in $folder, window visible)"
+		Plan "start $($g.Who)`: $($g.Exe) $($arguments -join ' ') (in $folder, window visible)"
 		return $null
 	}
-	$running = Get-Running $exe
+	$running = Get-Running $g.Exe
 	if ($running) {
-		Say "$who is already running (pid $($running.Id)); using it"
+		Say "$($g.Who) is already running (pid $($running.Id)); using it"
 		return $running
 	}
-	Say "starting $who`: $($arguments -join ' ')"
-	return Start-Process -FilePath $exe -ArgumentList $arguments -WorkingDirectory $folder -WindowStyle Normal -PassThru
+	Say "starting $($g.Who)`: $($arguments -join ' ')"
+	return Start-Process -FilePath $g.Exe -ArgumentList $arguments -WorkingDirectory $folder -WindowStyle Normal -PassThru
 }
 
-function Wait-Gen1([System.Diagnostics.Process] $process, [int] $expected, [string] $who) {
+function Wait-Gen1([System.Diagnostics.Process] $process, $g) {
+	$expected = [int] $g.Port
+	$who = $g.Who
 	if ($DryRun) {
 		Plan "wait until $who listens on 127.0.0.1:$expected (or the next free of $($PortSpan - 1) after it)"
 		return $expected
 	}
 	Say "waiting for $who's bridge port (keep its window open; the first boot takes a few seconds)"
-	$found = Wait-Listener $Port $PortSpan $process.Id $process $TimeoutSec
+	$found = Wait-Listener $expected $PortSpan $process.Id $process $TimeoutSec
 	if ($found -eq -1) {
 		Fail "$who closed before its bridge started (check its window or log; never share its crash log)"
 	}
@@ -279,25 +467,28 @@ function Wait-Gen1([System.Diagnostics.Process] $process, [int] $expected, [stri
 	}
 	Say "$who is listening on 127.0.0.1:$found"
 	if ($found -ne $expected) {
-		Say "warning: $who took port $found, but its Minecraft connects to ${expected}: free port $expected, or set BRIDGE PORT in $who's mod settings (F10) and the client's config\kantobridge-client.json {""port"":$found}"
+		Say "warning: $who took port $found, but its Minecraft connects to ${expected}: free port $expected, or set BRIDGE PORT in $who's mod settings (F10) to $expected and the client's config\kantobridge-client.json links entry {""game"":""$($g.Play)"",""port"":$found}"
 	}
 	return $found
 }
 
 # --- Minecraft --------------------------------------------------------------------------------------
 
-function Start-Gradle([string] $task, [bool] $ownWindow) {
+function Start-Gradle([string] $task, [bool] $ownWindow, [string] $links) {
+	# -Pkb.links reaches the dev client as -Dkantobridge.links (fabric-bridge/build.gradle maps it).
+	$arguments = @($task)
+	if ($links) { $arguments += "-Pkb.links=$links" }
 	if ($DryRun) {
-		Plan "run fabric-bridge\gradlew.bat $task with JAVA_HOME=$Jdk (this run only)$(if ($ownWindow) { ' in its own window' })"
+		Plan "run fabric-bridge\gradlew.bat $($arguments -join ' ') with JAVA_HOME=$Jdk (this run only)$(if ($ownWindow) { ' in its own window' })"
 		return $null
 	}
 	$env:JAVA_HOME = $Jdk   # this process and its children only
 	$folder = Split-Path -Parent $Gradle
-	Say "starting gradlew $task"
+	Say "starting gradlew $($arguments -join ' ')"
 	if ($ownWindow) {
-		return Start-Process -FilePath $Gradle -ArgumentList @($task) -WorkingDirectory $folder -PassThru
+		return Start-Process -FilePath $Gradle -ArgumentList $arguments -WorkingDirectory $folder -PassThru
 	}
-	return Start-Process -FilePath $Gradle -ArgumentList @($task) -WorkingDirectory $folder -NoNewWindow -PassThru
+	return Start-Process -FilePath $Gradle -ArgumentList $arguments -WorkingDirectory $folder -NoNewWindow -PassThru
 }
 
 function Set-DevServerProperties {
@@ -320,16 +511,19 @@ function Set-DevServerProperties {
 
 # --- run -------------------------------------------------------------------------------------------
 
-$gen1 = @()   # @{Exe; Who; Process; Expected; Restarts}
-$gen1 += [pscustomobject]@{ Exe = $Gen1Exe; Who = "Gen1Recomp"; Process = $null; Expected = $Port; Restarts = @() }
-if ($P2Exe) {
-	$gen1 += [pscustomobject]@{ Exe = $P2Exe; Who = "player 2's Gen1Recomp"; Process = $null; Expected = $Port + 1; Restarts = @() }
+$gen1 = @()   # @{Exe; Who; Play; Port; Process; Restarts}
+foreach ($s in $Selected) {
+	$gen1 += [pscustomobject]@{ Exe = $s.Exe; Who = $s.Who; Play = $s.Play; Port = $s.Port; Process = $null; Restarts = @() }
+}
+if ($P2) {
+	$gen1 += [pscustomobject]@{ Exe = $P2.Exe; Who = $P2.Who; Play = $P2.Play; Port = $P2.Port; Process = $null; Restarts = @() }
 }
 
 foreach ($g in $gen1) {
-	$g.Process = Start-Gen1 $g.Exe $g.Who
-	[void] (Wait-Gen1 $g.Process $g.Expected $g.Who)
+	$g.Process = Start-Gen1 $g
+	[void] (Wait-Gen1 $g.Process $g)
 }
+if ($DryRun) { Plan "links: $Links$(if ($P2Links) { " (player 2: $P2Links)" })" }
 
 $minecraft = @()
 if ($Mode -eq "player") {
@@ -340,14 +534,14 @@ if ($Mode -eq "player") {
 		$minecraft += Start-Process -FilePath $Prism -ArgumentList @("--launch", $Instance) -WorkingDirectory (Split-Path -Parent $Prism) -PassThru
 	}
 } elseif ($Players -eq 1) {
-	$minecraft += Start-Gradle "runClient" $false
+	$minecraft += Start-Gradle "runClient" $false $Links
 } else {
 	Set-DevServerProperties
 	$alreadyServing = @(Get-Listeners 0 | Where-Object { $_.Port -eq $ServerPort }).Count -gt 0
 	if ($alreadyServing -and -not $DryRun) {
 		Say "a server is already listening on port $ServerPort; using it"
 	} else {
-		$server = Start-Gradle "runServer" $true
+		$server = Start-Gradle "runServer" $true ""
 		if ($DryRun) {
 			Plan "wait until the dev server listens on port $ServerPort"
 		} else {
@@ -358,8 +552,8 @@ if ($Mode -eq "player") {
 			}
 		}
 	}
-	$minecraft += Start-Gradle "runClient" $true
-	$minecraft += Start-Gradle "runClient2" $true
+	$minecraft += Start-Gradle "runClient" $true $Links
+	$minecraft += Start-Gradle "runClient2" $true $P2Links
 	Say "in both clients: Multiplayer > Direct Connection > localhost"
 }
 
@@ -385,8 +579,8 @@ while (@($minecraft | Where-Object { $_ -and -not $_.HasExited }).Count -gt 0) {
 				}
 				$g.Restarts += $now
 				Say "$($g.Who) closed while Minecraft runs; restarting it (Minecraft waits paused; pick CONTINUE when it's back)"
-				$g.Process = Start-Gen1 $g.Exe $g.Who
-				[void] (Wait-Gen1 $g.Process $g.Expected $g.Who)
+				$g.Process = Start-Gen1 $g
+				[void] (Wait-Gen1 $g.Process $g)
 			}
 		}
 	}

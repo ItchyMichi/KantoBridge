@@ -517,8 +517,6 @@ public final class BridgeClient implements AutoCloseable {
 			if (previous == ConnectionState.STOPPED || (previous == next && Objects.equals(this.detail, why))) {
 				return;
 			}
-			this.state = next;
-			this.detail = why;
 		}
 		// While Gen1Recomp is closed the client cycles CONNECTING/DISCONNECTED every few seconds: keep that quiet.
 		boolean routine = next == ConnectionState.CONNECTING || next == ConnectionState.HANDSHAKE
@@ -528,6 +526,15 @@ public final class BridgeClient implements AutoCloseable {
 		} else {
 			LOGGER.info("bridge: {}{}", next, why == null ? "" : " (" + why + ")");
 		}
+		// The listener hears the change before state() shows it (the listener only queues: the Dispatcher), so whoever sees
+		// state() == CONNECTED on another thread also finds the event queued: no window between the two (MG4's tests).
 		this.listener.stateChanged(next, why);
+		synchronized (this.lock) {
+			if (this.state == ConnectionState.STOPPED) {
+				return;
+			}
+			this.state = next;
+			this.detail = why;
+		}
 	}
 }
