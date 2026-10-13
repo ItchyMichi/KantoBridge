@@ -79,6 +79,42 @@ class ShaftClimbTest {
 	}
 
 	@Test
+	void upFromTheBottomWhereTheHiddenPlayerStandsPressingOnTheLadderIsNoPush() {
+		// the H6 pilot's climb up: pressed against the ladder, the player rose a block on the bottom cell before the shaft's
+		// air; that was a push, the game (open floor behind the ladder) walked the hidden player away and the player after it
+		MovementSyncTest.Rig rig = MovementSyncTest.Rig.at(world, "TEST_CAVE_B1F", 3, 3, Dir.UP);
+		WorldIndex.Shaft s = shaft("TEST_CAVE_B1F", 3, 3);
+		rig.intent = Dir.UP;
+		assertEquals(List.of(), rig.ticks(MovementSync.PUSH_TICKS + 10), "against the ladder at its foot: no push");
+		rig.y = s.y0() + 0.4;
+		assertEquals(List.of(), rig.tick(), "lifted: climbing");
+		assertTrue(rig.sync.climbing());
+		rig.y = s.y0() + 0.9;
+		assertEquals(List.of(), rig.ticks(MovementSync.PUSH_TICKS + 10), "still on the bottom cell, climbing: nothing sent");
+		rig.y = s.y0() + 6;
+		assertEquals(List.of(), rig.ticks(10));
+		rig.moveTo("TEST_CAVE_1F", 3, 5);
+		assertEquals(List.of("take TEST_CAVE_B1F:3:3 TEST_CAVE_1F:3:5:up ladder #100"), rig.tick());
+	}
+
+	@Test
+	void aHopAtTheBottomIsNoClimbAndAStepOffItIsAStep() {
+		MovementSyncTest.Rig rig = MovementSyncTest.Rig.at(world, "TEST_CAVE_B1F", 3, 3, Dir.DOWN);
+		WorldIndex.Shaft s = shaft("TEST_CAVE_B1F", 3, 3);
+		rig.y = s.y0() + 0.5;
+		rig.tick();
+		assertTrue(rig.sync.climbing(), "off the floor: a climb, perhaps");
+		rig.y = s.y0();
+		assertEquals(List.of(), rig.tick());
+		assertFalse(rig.sync.climbing(), "down again on the hidden player's cell");
+		rig.y = s.y0() + 0.5;
+		rig.tick();
+		rig.moveTo("TEST_CAVE_B1F", 3, 4);
+		assertEquals(List.of("step down 1"), rig.tick(), "hopped off the ladder's foot: an ordinary step, no pull back");
+		assertFalse(rig.sync.climbing());
+	}
+
+	@Test
 	void throughAHoleTheWarpIsTakenOnTheFloorBelow() {
 		MovementSyncTest.Rig rig = MovementSyncTest.Rig.at(world, "TEST_CAVE_1F", 4, 7, Dir.RIGHT);
 		rig.moveTo("TEST_CAVE_1F", 5, 7);

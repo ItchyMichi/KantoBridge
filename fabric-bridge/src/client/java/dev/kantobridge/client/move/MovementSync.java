@@ -112,6 +112,8 @@ public final class MovementSync {
 	public static final long TAKE_RETRY_EVERY_MS = 200;
 	/** Blocks above the floor the feet may still be, going down, to count as arrived. */
 	static final double LANDED = 0.1;
+	/** Off a cell's floor by more than this: lifted (a ladder's climb up from its bottom begins). */
+	static final double LIFT = 0.05;
 
 	/** A cave shaft being climbed (CAVES_3D_PLAN §3.6): the end the player came in by, and the one it leads to. */
 	private record Climb(WorldIndex.Shaft shaft, CellPos near, CellPos far) {
@@ -525,6 +527,14 @@ public final class MovementSync {
 					return true;
 				}
 			}
+			WorldIndex.Shaft under = cell == null || !cell.equals(hiddenCell) ? null : ladderBottom(world, cell);
+			if (under != null && y > under.y0() + LIFT) {
+				// Lifted off the floor of a ladder's bottom where the hidden player stands: climbing up already (the shaft's
+				// air begins a block higher), so pressing on against the ladder is no push.
+				this.climb = new Climb(under, cell, under.top());
+				this.stats.climbs++;
+				return true;
+			}
 			return false;
 		}
 		Climb c = this.climb;
@@ -550,18 +560,36 @@ public final class MovementSync {
 			}
 			return true;
 		}
+		if (cell != null && inside == null && cell.equals(hiddenCell) && !cell.equals(c.far()) && this.onFloor(world, cell, y)) {
+			// On the floor of the cell the hidden player stands on (back where it waits, or down again from a hop at a
+			// ladder's bottom): no climb any more, and no crossing from the end.
+			this.endClimb();
+			return true;
+		}
 		if (cell == null || cell.equals(c.near()) || cell.equals(c.far()) || inside == c.shaft()) {
 			// In the shaft, or at one of its ends.
 			return true;
 		}
-		// Stepped off its end: back where the hidden player waits needs nothing (and no crossing from the end).
-		if (cell.equals(hiddenCell)) {
+		if (c.near().equals(hiddenCell)) {
+			// Off the end the hidden player stands on (a hop off a ladder's bottom): an ordinary step from it.
 			this.endClimb();
-			return true;
+			return false;
 		}
 		this.endClimb();
 		this.walkRound(world, hiddenCell, cell, c.near(), now);
 		return true;
+	}
+
+	/** True when {@code y} is on (or just over) the floor of {@code cell}. */
+	private boolean onFloor(WorldIndex world, CellPos cell, double y) {
+		net.minecraft.world.phys.Vec3 at = world.toBlock(cell.map(), cell.x(), cell.y());
+		return at != null && y <= at.y + LIFT;
+	}
+
+	/** The ladder whose bottom is {@code cell} and that is climbed up too, or null. */
+	private static WorldIndex.@Nullable Shaft ladderBottom(WorldIndex world, CellPos cell) {
+		WorldIndex.Shaft shaft = world.shaftEnd(cell);
+		return shaft != null && shaft.up() && WorldIndex.Shaft.LADDER.equals(shaft.kind()) && cell.equals(shaft.bottom()) ? shaft : null;
 	}
 
 	/**
@@ -687,7 +715,12 @@ public final class MovementSync {
 			this.resetPush(intent);
 		}
 		double progress = intent.dx() * (x - this.lastX) + intent.dy() * (z - this.lastZ);
-		if (progress > PUSH_PROGRESS) {
+		WorldIndex world = this.index;
+		CellPos cell = world == null ? null : here.cell(world);
+		WorldIndex.Shaft ladder = cell == null ? null : ladderBottom(world, cell);
+		if (progress > PUSH_PROGRESS || ladder != null && intent == ladder.wall()) {
+			// Moving, or pressing against a ladder from its bottom: that climbs it (behind the ladder the game may have
+			// open floor, where a push would walk the hidden player away).
 			this.resetPush(intent);
 			return;
 		}
