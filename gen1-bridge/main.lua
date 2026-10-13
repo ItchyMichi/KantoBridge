@@ -819,7 +819,7 @@ return function(mod)
     -- (missing=), so an engine change is loud instead of a silent fallback
     local missing = engine.checkRequired()
     status.engineMissing = missing
-    if #missing > 0 then log.warn("engine.missing", { count = #missing }) end
+    if #missing > 0 then log.warn("engine.missing", { count = #missing, first = missing[1] }) end
     -- U3: the Union Room must be off (Engine.CLASSIC pins the option); a
     -- boot that found it on already runs with patched Centers: say so once,
     -- refuse the export (export/kb_export.lua) and write it off for the next

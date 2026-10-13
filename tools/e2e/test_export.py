@@ -15,6 +15,7 @@ hashes are printed or reported. Assertion messages name keys, never values from 
 import asyncio
 import hashlib
 import json
+import os
 import time
 from collections import Counter
 
@@ -26,6 +27,10 @@ from kb_protocol.jsonfmt import canonical
 from run_gen1recomp import INSTALL, REPORTS, launch, preflight
 
 TEST_PORT = 27197
+# The index wait and the test's own limit; a slow host (the pod under Xvfb builds the export at a few steps a
+# second) raises them through the environment (ENGINE_UPGRADE_PLAN G2), a PC keeps the defaults.
+INDEX_TIMEOUT = int(os.environ.get("KB_EXPORT_INDEX_TIMEOUT", "240"))
+TEST_TIMEOUT = int(os.environ.get("KB_EXPORT_TEST_TIMEOUT", "600"))
 PAGE_LIMIT = 1048576
 KINDS = ("encounters", "field", "image", "layout", "map", "names", "palettes", "sprite", "swaps", "tileset")
 # The profile plan (docs/specs/PROFILE_PLAN.md §5.8): with Dramaless Shape installed in the test install
@@ -90,7 +95,7 @@ async def _export(port, game):
     await builder.expect("snapshot", timeout=10)
 
     started = time.monotonic()
-    reply = await builder.request("export.index", {}, reply_type="export.index", timeout=240)
+    reply = await builder.request("export.index", {}, reply_type="export.index", timeout=INDEX_TIMEOUT)
     index_seconds = time.monotonic() - started
     index = reply["data"]
     assert (index["game"], index["engine"], index["bridge"]) == (game, "0.3.85", "0.1.0")
@@ -181,6 +186,27 @@ def _swap_audit(swaps, pages):
             {key: dict(sorted(c.items())) for key, c in sorted(by_map.items())})
 
 
+def _hash_diff(old, new):
+    """Per kind: how many resources kept their hash, and the names (ids only) of the changed, added
+    and removed ones, capped at 50 names a list."""
+    out = {}
+    for key in sorted(set(old) | set(new)):
+        kind, id_ = key.split(":", 1)
+        d = out.setdefault(kind, {"same": 0, "changed": [], "added": [], "removed": []})
+        if key not in old:
+            d["added"].append(id_)
+        elif key not in new:
+            d["removed"].append(id_)
+        elif old[key] != new[key]:
+            d["changed"].append(id_)
+        else:
+            d["same"] += 1
+    for d in out.values():
+        for name in ("changed", "added", "removed"):
+            d[name] = d[name][:50]
+    return out
+
+
 def _summary(got):
     index, pages = got["index"], got["pages"]
     per_kind = {kind: 0 for kind in sorted(_kinds())}
@@ -261,7 +287,7 @@ def _summary(got):
 
 
 @pytest.mark.e2e
-@pytest.mark.timeout(600)
+@pytest.mark.timeout(TEST_TIMEOUT)
 def test_world_export_end_to_end():
     pf = preflight()
     if not pf.ok:
@@ -270,9 +296,19 @@ def test_world_export_end_to_end():
         marker = running.wait_marker("KB_TITLE", timeout=150)
         assert marker is not None, running.result.summary()
         assert f"port={TEST_PORT}" in marker and "overworld=false" in marker
-        got = asyncio.run(asyncio.wait_for(_export(TEST_PORT, pf.game), 420))
+        got = asyncio.run(asyncio.wait_for(_export(TEST_PORT, pf.game), INDEX_TIMEOUT + 180))
         result = running.wait(timeout=60)
     report = _summary(got)
+    # ENGINE_UPGRADE_PLAN G2/G6: every resource's hash by name, and the differences from a previous
+    # report kept as local/reports/export_report_previous.json (an engine upgrade's old export): a
+    # changed map, tileset, palette or sprite hash is what calls for a world rebuild (gate G6)
+    hashes = {f'{e["kind"]}:{e["id"]}': e["hash"] for e in got["index"]["resources"]}
+    report["hashes"] = hashes
+    report["index_hash"] = hashlib.sha256(canonical(hashes).encode("utf-8")).hexdigest()
+    previous = REPORTS / "export_report_previous.json"
+    if previous.is_file():
+        old = json.loads(previous.read_text(encoding="utf-8")).get("hashes") or {}
+        report["hashes_vs_previous"] = _hash_diff(old, hashes)
     frames = result.facts("KB_EXPORT_FRAMES")
     report["frames"] = {"while_building": int(frames.get("frames", -1)),
                         "max_gap_ms": int(frames.get("max_gap_ms", -1))}

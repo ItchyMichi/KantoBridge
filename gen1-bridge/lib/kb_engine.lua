@@ -53,7 +53,8 @@ Engine.CLASSIC = {
 -- the member has to do.
 Engine.REQUIRED = {
   ["src.battle.BattleState"] = { "stampOT" },
-  ["src.core.Game"] = { "logicStep" },
+  -- Game.logicStep is a counter the first logic step creates (nil at game.ready): not a member to require
+  ["src.core.Game"] = {},
   ["src.core.GameVersion"] = { "get", "isYellow" },
   ["src.core.Music"] = { "playBattle", "playVictory", "restoreMap" },
   ["src.core.SaveData"] = { "activeSlot", "createSlot", "deleteSlot", "getCart", "loadOptions", "persistenceFs",
@@ -922,21 +923,27 @@ function Engine.new(opts)
     return s.waiting == true and int(s.preWait, 0) == 0
   end
 
-  -- The blinking arrow is up: TextBox:arrowVisible's rule (:428-440), on
-  -- every generation since v0.3.85: hidden by a sound effect, shown at a
-  -- page break or scroll; then waitButton (a box the caller holds for a
-  -- press of its own, :152-157) hides it unless an auto.promptFirst or
-  -- stay.prompt press is due; else shown on a finished box without a
-  -- choice whose auto/stay prompt is still due.
+  -- `waiting` for the client and the tests: a press does something now.
+  -- Deliberately NOT TextBox:arrowVisible (:428-440) since v0.3.85: a text
+  -- ending in {DONE} (TextBox.ending :72-78 sets waitButton, TextBox.new
+  -- :152-157) hides the engine's arrow while its update still closes the
+  -- box on A/B (:636-643), and a stay.press box takes its press without one
+  -- (:541-548). The Minecraft dialogue and the e2e tests press only while
+  -- `waiting` is up (TextBoxModel; story.py), so the drawn arrow's rule left
+  -- every {DONE} box unpressable (G3, 2026-10-13). So `waiting` keeps its
+  -- v0.3.49 meaning, "takes a press": a sound effect hides it, a page break
+  -- or scroll shows it, a finished box shows it unless a choice box is up
+  -- or its auto/stay prompt was already taken.
   local function textArrow(s)
     if s.sfxWait then return false end
     if s.waiting then return true end
-    local autoPrompt = type(s.auto) == "table" and s.auto.promptFirst and not s.autoPrompted and true or false
-    local stayPrompt = type(s.stay) == "table" and s.stay.prompt and not s.stayShown and true or false
-    if s.waitButton and not (autoPrompt or stayPrompt) then return false end
     if not s.done or s.choice then return false end
-    if s.auto and not autoPrompt then return false end
-    if s.stay and not stayPrompt then return false end
+    if s.auto then
+      return type(s.auto) == "table" and s.auto.promptFirst and not s.autoPrompted and true or false
+    end
+    if s.stay then
+      return type(s.stay) == "table" and (s.stay.prompt or s.stay.press) and not s.stayShown and true or false
+    end
     return true
   end
 

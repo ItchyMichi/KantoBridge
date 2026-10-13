@@ -214,7 +214,7 @@ def test_a_missing_internal_is_named_once_at_game_ready():
     rig.b.ready()
     _, eng = engine_on(rig)
     assert list(eng.checkRequired().values()) == [b"src.inventory.Badges.itemFor"]
-    assert "[warn] [gen1-bridge] engine.missing count=1" in rig.logs()
+    assert "[warn] [gen1-bridge] engine.missing count=1 first=src.inventory.Badges.itemFor" in rig.logs()
     assert sum("engine.missing" in line for line in rig.logs()) == 1
 
 

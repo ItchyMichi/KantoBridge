@@ -43,10 +43,12 @@ return function(game)
       -- ENGINE_UPGRADE_PLAN UP1: the engine members gen1-bridge found missing (a count) and whether this
       -- boot's Pokemon Centers carry the Union Room's patch ("on" fails the smoke gate: it must be off)
       local missing = type(status.engineMissing) == "table" and #status.engineMissing or -1
-      print(("KB_READY state=%s engine=%s status_engine=%s bridge=%s protocol=%s modules=%s mod_errors=%d frames=%d missing=%d union_room=%s")
+      local names = {}
+      for i = 1, math.min(missing, 8) do names[i] = word(status.engineMissing[i]) end
+      print(("KB_READY state=%s engine=%s status_engine=%s bridge=%s protocol=%s modules=%s mod_errors=%d frames=%d missing=%d missing_names=%s union_room=%s")
         :format(word(record.state), word(okV and Version.engine or "?"), word(status.engine),
           word(status.bridge), word(status.protocol), word(status.modules), errors, frames, missing,
-          word(status.unionRoom or "?")))
+          #names > 0 and table.concat(names, "+") or "-", word(status.unionRoom or "?")))
       return
     end
     if frames >= FRAME_LIMIT or love.timer.getTime() - started > SECONDS_LIMIT then

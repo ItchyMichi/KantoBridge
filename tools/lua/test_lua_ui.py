@@ -269,14 +269,16 @@ def test_an_instant_box_holds_the_pages_last_rows():
 @pytest.mark.parametrize("text, arrow", [("ALL DONE{DONE}", False), ("ALL DONE{PROMPT}", True), ("ALL DONE", True)])
 def test_a_done_ending_takes_its_press_without_the_arrow(text, arrow):
     """TextBox.new (:150-157): a {DONE} ending sets waitButton, which arrowVisible (:435) hides the
-    arrow for; the press still closes the box (:636-643), so an advance taps A all the same."""
+    engine's arrow for; the press still closes the box (:636-643). The bridge's `waiting` is the
+    client's press signal, not the drawn arrow (kb_engine textArrow; G3 of the engine upgrade found
+    every {DONE} box unpressable otherwise), so it is up for all three endings."""
     g = Game()
     box = g.push(g.E.textBox(g.s(text), g.opts()))
     g.run()
     (op,) = opened(g)
     assert op["pages"] == [["ALL DONE"]], "the ending token never reaches the box"
     done = g.until(lambda m: m["type"] == "ui.update" and m["data"].get("done") is True)
-    assert done["data"].get("waiting", False) is arrow
+    assert done["data"].get("waiting", False) is True, "the press signal, whatever the drawn arrow"
     assert bool(box.waitButton) is (not arrow) and box.arrowVisible(box) is arrow
     g.send("ui.advance", {"ui": 1})
     g.until(lambda m: m["type"] == "ui.close")
@@ -292,8 +294,9 @@ def test_a_caller_may_hold_a_prompt_ending_for_its_own_press():
 
 
 def test_stay_press_takes_one_press_with_no_arrow():
-    """TextBox:update (:541-548): stay.press waits for A/B like stay.prompt but shows no arrow
-    (arrowVisible :434-440); the box then stays up."""
+    """TextBox:update (:541-548): stay.press waits for A/B like stay.prompt but the engine draws no
+    arrow (arrowVisible :434-440); the bridge's `waiting` (the press signal) is up until the press,
+    then the box stays up without it."""
     g = Game()
     shown = []
     g.push(g.E.textBox(g.s("PRESS TO GO ON"), g.opts(stay={"press": True, "onShown": lambda box: shown.append(1)})))
@@ -301,15 +304,13 @@ def test_stay_press_takes_one_press_with_no_arrow():
     (op,) = opened(g)
     assert "stay" not in op, "its end takes a press"
     done = g.until(lambda m: m["type"] == "ui.update" and m["data"].get("done") is True)
-    # ui.update carries only the parts that moved (kb_ui.lua, `e.sent`): waiting never left false
-    assert done["data"].get("waiting", False) is False, "no arrow"
+    assert done["data"].get("waiting") is True, "the press signal is up though the engine draws no arrow"
     g.run(5)
     assert g.tapped() == [] and not shown
     g.send("ui.advance", {"ui": 1})
     g.run(3)
     assert g.tapped() == ["a"] and g.top().stayShown and shown == [1] and g.depth() == 2
-    assert not any(u.get("waiting") for u in updates(g)), "never an arrow"
-    assert updates(g)[-1] == {"ui": 1, "waiting": False} or updates(g)[-1].get("done") is True
+    assert updates(g)[-1].get("waiting") is False, "the press was taken: the box stays up, nothing to press"
 
 
 def test_auto_prompt_first_takes_one_press_then_closes_itself():

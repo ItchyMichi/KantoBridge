@@ -4,9 +4,14 @@ instance with a driver that prints KB_READY after game.ready, and it exits.
 Runs only with --e2e. Skips when the pre-flight (PLAN section 0.6) isn't done.
 """
 
+import re
+from pathlib import Path
+
 import pytest
 
 from run_gen1recomp import preflight, run, safe_line
+
+HERE = Path(__file__).resolve().parent
 
 
 @pytest.mark.e2e
@@ -23,8 +28,10 @@ def test_s5_driver_reports_ready():
     assert facts, result.lines
     assert facts["state"] == "loaded"
     assert facts["engine"] == "0.3.85" and facts["status_engine"] == "0.3.85"
-    # 30 modules since M10 (lib/kb_perf.lua); tools/lua/test_lua_sandbox_main.py lists them
-    assert facts["bridge"] == "0.1.0" and facts["protocol"] == "1" and facts["modules"] == "30"
+    # every module gen1-bridge/main.lua imports (33 at the engine upgrade; tools/lua/test_lua_sandbox_main.py lists them)
+    main_lua = (HERE.parents[1] / "gen1-bridge" / "main.lua").read_text(encoding="utf-8")
+    assert facts["bridge"] == "0.1.0" and facts["protocol"] == "1"
+    assert facts["modules"] == str(len(re.findall(r'import\("[^"]+\.lua"\)', main_lua))), facts["modules"]
     assert facts["mod_errors"] == "0"
     # ENGINE_UPGRADE_PLAN G1: every engine member lib/kb_engine.lua relies on is present, and the
     # Union Room (which rewrites the Centers the export never sees) is off: drivers/kb_union_off.lua sets it

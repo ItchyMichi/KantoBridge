@@ -299,7 +299,7 @@ Done when the lupa count is at least today's (925 Lua tests at the M10 gate; 1,4
 
 ### UP5: the user's PC, the Windows build
 
-1. The e2e install from UP0 step 2: `tools/check.sh --e2e` (the Windows-only `test_hidden.py` included), G5.
+1. The e2e install from UP0 step 2: first copy the last v0.3.49 export report, `local\reports\export_report.json`, to `local\reports\export_report_previous.json` (the new report then lists, per kind, which resources changed hash: G2's comparison, which decides G6); then `tools/check.sh --e2e` (the Windows-only `test_hidden.py` included), G5. On the pod the export builds at a few steps a second (both releases alike) and the test's default waits are too short: `KB_EXPORT_INDEX_TIMEOUT`/`KB_EXPORT_TEST_TIMEOUT` raise them there.
 2. The user's own install, same recipe as UP0 step 2 into `local\gen1recomp-0.3.85\` (their saves: the user copies
    `save.lua`, `options.lua`, the slot files and `mod_cache\` from the old folder before the first start; the ROM cache
    is re-imported, never copied by the agent), Union Room OFF, then the rename. `launch.ps1` needs no change: it finds
