@@ -2,10 +2,12 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://kantobridge.invalid/protocol/messages/act.result.schema.json",
   "title": "act.result",
-  "description": "Outcome of an act.* request; MG2: also of region.park, region.resume and region.start (kind park|resume|start; detail new|continue for a start).",
+  "description": "Outcome of an act.* request; MG2: also of region.park, region.resume and region.start (kind park|resume|start; detail new|continue for a start); MG5: the server's answer to party.stash (kind stash, moved) travels S→C. MG6: the answer to bag.set (kind bag.set, left: what did not fit) is forwarded C→S by the client.",
   "x-type": "act.result",
   "x-legs": [
-    "g2m"
+    "g2m",
+    "s2c",
+    "c2s"
   ],
   "x-re": "required",
   "type": "object",
@@ -18,7 +20,10 @@
       "type": "boolean"
     },
     "kind": {
-      "$ref": "../defs.schema.json#/$defs/symbol"
+      "type": "string",
+      "pattern": "^[A-Za-z0-9_][A-Za-z0-9_.]*$",
+      "maxLength": 64,
+      "description": "What was done: an interact kind (npc, sign, ...), park, resume, start, stash, bag.set (MG6: a dotted kind names the request type it answers)."
     },
     "reason": {
       "type": "string",
@@ -30,6 +35,25 @@
       "pattern": "^[a-z][a-z0-9_]*$",
       "maxLength": 32,
       "description": "What the act did, when the kind has variants: a region.start's \"new\" or \"continue\"."
+    },
+    "moved": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 6,
+      "description": "MG5, kind stash: how many party members went into the PC."
+    },
+    "left": {
+      "type": "object",
+      "propertyNames": {
+        "$ref": "../defs.schema.json#/$defs/itemId"
+      },
+      "additionalProperties": {
+        "type": "integer",
+        "minimum": 1,
+        "maximum": 9999
+      },
+      "maxProperties": 128,
+      "description": "MG6, kind bag.set: the items and quantities the bag could not hold (they stay in the ledger: \"in your trunk\")."
     }
   }
 }

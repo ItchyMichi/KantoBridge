@@ -31,4 +31,17 @@ class DungeonSlotsTest {
 		WorldIndex.Dungeons fallback = DungeonSlots.region(null, 160, 320);
 		assertTrue(fallback.z() + fallback.d() <= 320 - DungeonSlots.GAP);
 	}
+
+	@Test
+	void theRegionFollowsAMovedKantoBoxExactly() {
+		// MG3: a region at another slot of the region table (8,192 blocks east) gets its dungeon slots moved by just that
+		Box3 kanto = new Box3(1000, 40, 5000, 1800, 120, 5900);
+		WorldIndex.Dungeons here = DungeonSlots.region(kanto, 0, 0);
+		WorldIndex.Dungeons there = DungeonSlots.region(new Box3(1000 + 8192, 40, 5000, 1800 + 8192, 120, 5900), 8192, 0);
+		assertEquals(here.x() + 8192, there.x());
+		assertEquals(here.z(), there.z());
+		assertEquals(here.w(), there.w());
+		assertEquals(here.d(), there.d());
+		assertEquals(here.y(), there.y());
+	}
 }

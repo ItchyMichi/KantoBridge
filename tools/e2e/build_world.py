@@ -1,6 +1,6 @@
 """Headless world build from the real game (docs/PLAN.md section 4.5, "Running the builder").
 
-    python tools/e2e/build_world.py --maps pallet [--world Kanto] [--fresh]
+    python tools/e2e/build_world.py --maps pallet [--world Kanto] [--fresh] [--region kanto --slot 0]
 
 1. Launches the Gen1Recomp test instance at the title screen (driver kb_export.lua on a test port).
 2. Runs ExportCli through Gradle, which downloads the export into
@@ -11,6 +11,14 @@
 6. Checks local/reports/build_report.json, which holds counts and hashes only.
 7. Writes local/reports/viewpoints.json: fixed spectator viewpoints for the voxel plan's measurements
    (docs/specs/VOXEL_BLOCKS_PLAN.md V1a, section 10), from the report's block coordinates.
+
+Several games (docs/specs/MULTI_GAME_PLAN.md section 4.6, MG3): with --region <id> --slot <n> (both or
+neither) the build is a region build: the server gets -Pkb.buildRegion/-Pkb.buildSlot (the system
+properties kantobridge.build.region / kantobridge.build.slot), plans from the slot's origin and writes
+<world>/kantobridge/regions/<id>/{world_index.json, shape_index.json, shape_map.bin, region.json} plus
+the region table <world>/kantobridge/regions.json; the report's `region` object (region, slot, origin,
+bounds, areas, families, shape_map_chars) is checked, and the written files against their schemas.
+Without the options the build is a legacy build (today's root files; the report's `region` is null).
 
 The voxel plan's shape gates (section 6.4) compare reports of several builds: shape_gates(); its budgets
 (section 3.8) and the self-check's gates (section 5.6) read one report: budget_gates().
@@ -42,6 +50,7 @@ sys.path.insert(0, str(TOOLS))
 sys.path.insert(0, str(HERE))
 
 from fake_minecraft import FakeMinecraft  # noqa: E402
+from kb_protocol import load_protocol  # noqa: E402
 from run_gen1recomp import launch, preflight  # noqa: E402
 
 MC_DIR = REPO / "local" / "minecraft"
@@ -56,8 +65,16 @@ VIEWPOINTS = REPORTS / "viewpoints.json"
 # The self-check's scores per map id (voxel plan V2), written by the build beside the report.
 SELFCHECK = REPORTS / "shape_selfcheck.json"
 # world.shapes travels in parts of this many characters (WorldIndexParts.PART_CHARS); the map must fit in 8.
+# MG3: the budget is per shape map, i.e. per region.
 PART_CHARS = 64 * 1024
 MAX_SHAPE_MAP_PARTS = 8
+# Several games (MG3): a region id (protocol defs regionId) and the region table's slots.
+REGION_ID = re.compile(r"[a-z][a-z0-9_]{0,23}")
+MAX_SLOT = 63
+# The builder's files (BuildTask.DATA_FOLDER and the per-region layout of MULTI_GAME_PLAN section 4.6).
+DATA_FOLDER = "kantobridge"
+REGIONS_FILE = "regions.json"
+REGION_FILES = ("world_index.json", "shape_index.json", "shape_map.bin", "region.json")
 # The voxel plan's budgets the build report can check (section 3.8).
 MAX_QUADS_PER_BLOCK = 96
 MAX_MEAN_QUADS_PER_BLOCK = 24
@@ -180,15 +197,29 @@ def export_bundle(port=EXPORT_PORT, timeout=600):
     return bundle
 
 
-def build(bundle, maps, world, timeout=3600):
-    """Steps 4-5."""
+def region_args(region, slot):
+    """The Gradle properties of a region build (MG3): both of --region/--slot, or neither (a legacy build)."""
+    if region is None and slot is None:
+        return []
+    if region is None or slot is None:
+        raise ValueError("--region and --slot go together")
+    if not REGION_ID.fullmatch(region):
+        raise ValueError("--region must match [a-z][a-z0-9_]{0,23}")
+    if not isinstance(slot, int) or isinstance(slot, bool) or not 0 <= slot <= MAX_SLOT:
+        raise ValueError(f"--slot must be a whole number from 0 to {MAX_SLOT}")
+    return [f"-Pkb.buildRegion={region}", f"-Pkb.buildSlot={slot}"]
+
+
+def build(bundle, maps, world, timeout=3600, region=None, slot=None):
+    """Steps 4-5. With region and slot (MG3) the build is a region build."""
+    extra = region_args(region, slot)
     _write_server_properties(world)
     REPORTS.mkdir(parents=True, exist_ok=True)
     for stale in (REPORT, DIAGNOSTICS):
         if stale.exists():
             stale.unlink()
     args = ["runServer", f"-Pkb.build={bundle}", f"-Pkb.buildReport={REPORT}", "-Pkb.buildExit=true",
-            "--args=nogui", "--console=plain"]
+            *extra, "--args=nogui", "--console=plain"]
     if maps:
         args.insert(2, "-Pkb.buildMaps=" + ",".join(maps))
     return _gradle(args, timeout, "build")
@@ -198,8 +229,12 @@ def build(bundle, maps, world, timeout=3600):
 ENCOUNTER_MAPS = {"ROUTE_1", "ROUTE_2", "ROUTE_22", "VIRIDIAN_FOREST"}
 
 
-def check_report(maps, report=REPORT):
-    """Step 6: the milestone gates on the counts-only report. Returns (report, failed checks)."""
+def check_report(maps, report=REPORT, region=None, slot=None, world=None):
+    """Step 6: the milestone gates on the counts-only report. Returns (report, failed checks).
+
+    MG3: for a region build (region and slot given) the report's `region` object and the files written under
+    <world>/kantobridge/ are checked too (region_checks); a legacy build's report must say `region: null`.
+    """
     data = json.loads(report.read_text(encoding="utf-8"))
     expected = len(maps) if maps else data.get("maps_requested")
     checks = {
@@ -214,7 +249,59 @@ def check_report(maps, report=REPORT):
     if not maps or ENCOUNTER_MAPS & set(maps):
         checks["habitat_blocks"] = (data.get("habitat_blocks") or 0) > 0
         checks["pools"] = (data.get("pools") or 0) > 0
+    if region is None:
+        checks["legacy_report"] = data.get("region") is None
+    else:
+        checks.update(region_checks(data, region, slot, (SAVES / world) if world else None))
     return data, [name for name, ok in checks.items() if not ok]
+
+
+def region_checks(data, region, slot, world_dir=None):
+    """MG3: the report's `region` object (region, slot, origin, bounds, areas, families, shape_map_chars) and, with the
+    world folder, the region's files and the region table against their schemas. Returns {check: ok}."""
+    rep = data.get("region") if isinstance(data.get("region"), dict) else {}
+    families = rep.get("families") if isinstance(rep.get("families"), list) else []
+    checks = {
+        "region_reported": rep.get("region") == region and rep.get("slot") == slot,
+        "region_origin": isinstance(rep.get("origin"), dict) and {"x", "y", "z"} <= set(rep["origin"]),
+        "region_bounds": isinstance(rep.get("bounds"), dict)
+        and {"minX", "minZ", "maxX", "maxZ", "minY", "maxY"} <= set(rep["bounds"]),
+        "region_areas": isinstance(rep.get("areas"), dict) and {"surface", "zones", "dungeons", "caves"} <= set(rep["areas"]),
+        "region_families": len(families) == 2 and all(isinstance(f, int) and 0 <= f <= 31 for f in families)
+        and families[0] <= families[1],
+        "region_shape_map_fits": 0 < (rep.get("shape_map_chars") or 0) <= MAX_SHAPE_MAP_PARTS * PART_CHARS,
+    }
+    if world_dir is not None:
+        checks.update(region_files(world_dir, region, slot))
+    return checks
+
+
+def region_files(world_dir, region, slot):
+    """MG3: the region's documents exist under <world>/kantobridge/regions/<id>/ and, with the region table, pass
+    their schemas (regions.schema.json, region.schema.json, world_index.schema.json). Returns {check: ok}."""
+    data_dir = Path(world_dir) / DATA_FOLDER
+    region_dir = data_dir / "regions" / region
+    checks = {f"region_file_{name}": (region_dir / name).is_file() for name in REGION_FILES}
+    checks["regions_table_file"] = (data_dir / REGIONS_FILE).is_file()
+    protocol = load_protocol()
+
+    def valid(path, check):
+        try:
+            return not check(json.loads(path.read_text(encoding="utf-8")))
+        except (OSError, ValueError):
+            return False
+
+    table_path = data_dir / REGIONS_FILE
+    checks["regions_table_schema"] = checks["regions_table_file"] and valid(table_path, protocol.check_regions)
+    if checks["regions_table_schema"]:
+        table = json.loads(table_path.read_text(encoding="utf-8"))
+        checks["regions_table_entry"] = any(e.get("id") == region and e.get("slot") == slot for e in table["regions"])
+    else:
+        checks["regions_table_entry"] = False
+    checks["region_record_schema"] = checks["region_file_region.json"] and valid(region_dir / "region.json", protocol.check_region)
+    checks["region_index_schema"] = checks["region_file_world_index.json"] \
+        and valid(region_dir / "world_index.json", protocol.check_world_index)
+    return checks
 
 
 def shape_gates(full, again, filtered):
@@ -306,11 +393,17 @@ def main(argv=None):
     parser.add_argument("--fresh", action="store_true", help="delete that world first")
     parser.add_argument("--skip-export", action="store_true", help="reuse the bundle already in local/")
     parser.add_argument("--game", default=None, help="with --skip-export: red or blue (default: the import)")
+    parser.add_argument("--region", default=None, help="MG3: build as this region of the world (with --slot)")
+    parser.add_argument("--slot", type=int, default=None, help=f"MG3: the region table slot, 0..{MAX_SLOT} (with --region)")
     args = parser.parse_args(argv)
 
     maps = [] if args.maps == "all" else MAP_SETS.get(args.maps) or args.maps.split(",")
     if not re.fullmatch(r"[A-Za-z0-9_-]+", args.world):
         parser.error("--world must be a plain folder name")
+    try:
+        region_args(args.region, args.slot)
+    except ValueError as exc:
+        parser.error(str(exc))
     if not (MC_DIR / "eula.txt").exists():
         print("local/minecraft/eula.txt is missing: the user accepts the EULA (PLAN section 0.6)")
         return 2
@@ -321,12 +414,13 @@ def main(argv=None):
     else:
         print("== export")
         bundle = export_bundle()
-    print(f"== build ({len(maps) or 'all'} maps) into saves/{args.world}")
-    code = build(bundle, maps, args.world)
+    where = f"saves/{args.world}" + (f" as region {args.region} (slot {args.slot})" if args.region is not None else "")
+    print(f"== build ({len(maps) or 'all'} maps) into {where}")
+    code = build(bundle, maps, args.world, region=args.region, slot=args.slot)
     if not REPORT.exists():
         print(f"no build report (server exit {code})")
         return 1
-    data, failed = check_report(maps)
+    data, failed = check_report(maps, region=args.region, slot=args.slot, world=args.world)
     print("report: " + json.dumps(data, sort_keys=True))
     if code != 0 or failed:
         print(f"FAILED: server exit {code}, checks {failed}")

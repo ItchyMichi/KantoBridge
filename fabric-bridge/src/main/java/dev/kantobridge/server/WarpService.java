@@ -6,6 +6,7 @@ import dev.kantobridge.KantoBridge;
 import dev.kantobridge.net.RelayService;
 import dev.kantobridge.proto.Envelope;
 import dev.kantobridge.proto.MsgTypes;
+import dev.kantobridge.world.DataReader;
 import dev.kantobridge.world.MapPlacement;
 import dev.kantobridge.world.Place;
 import dev.kantobridge.world.WorldIndex;
@@ -33,7 +34,7 @@ public final class WarpService {
 	public enum Refusal {
 		/** {@code to} is missing or malformed. */
 		BAD_REQUEST("bad_request"),
-		/** The server has no WorldIndex (not a built Kanto world). */
+		/** The server has no WorldIndex for the region (not a built Kanto world, or a region this world lacks). */
 		NO_INDEX("no_index"),
 		/** The map isn't in this world. */
 		UNKNOWN_MAP("unknown_map"),
@@ -64,7 +65,7 @@ public final class WarpService {
 		}
 	}
 
-	private static final Set<String> FIELDS = Set.of("to", "kind");
+	private static final Set<String> FIELDS = Set.of("to", "kind", "region");
 	/** protocol/defs.schema.json {@code warpKind}. */
 	private static final Set<String> KINDS = Set.of("door", "stairs", "edge", "hole", "pad", "fly", "teleport", "dig", "rope",
 			"blackout", "script", "elevator");
@@ -82,7 +83,9 @@ public final class WarpService {
 	static void onRequest(ServerPlayer player, Envelope message) {
 		JsonObject data = message.data();
 		Place to = wellFormed(data) ? Place.fromJson(data.get("to")) : null;
-		Result result = to == null ? Result.refused(Refusal.BAD_REQUEST) : teleport(player, WorldIndexSync.current(player.server), to);
+		// MG3: the map is looked up in the region the request names, else the one the player stands in (§4.6)
+		Result result = to == null ? Result.refused(Refusal.BAD_REQUEST)
+				: teleport(player, Regions.currentIndexFor(player, data.has("region") ? data.get("region").getAsString() : null), to);
 		JsonObject reply = new JsonObject();
 		reply.addProperty("ok", result.ok());
 		if (result.ok()) {
@@ -134,10 +137,19 @@ public final class WarpService {
 		return TELEPORTS.get();
 	}
 
-	/** The schema's rules for the message around {@code to}: no other fields, and {@code kind} one of the warp kinds. */
+	/**
+	 * The schema's rules for the message around {@code to}: no other fields, {@code kind} one of the warp kinds, and
+	 * {@code region} (MG3) a region id.
+	 */
 	private static boolean wellFormed(JsonObject data) {
 		for (String key : data.keySet()) {
 			if (!FIELDS.contains(key)) {
+				return false;
+			}
+		}
+		if (data.has("region")) {
+			JsonElement region = data.get("region");
+			if (!region.isJsonPrimitive() || !region.getAsJsonPrimitive().isString() || !DataReader.REGION_ID.matcher(region.getAsString()).matches()) {
 				return false;
 			}
 		}

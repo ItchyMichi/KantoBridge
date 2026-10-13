@@ -13,10 +13,12 @@ import dev.kantobridge.net.RelayService;
 import dev.kantobridge.proto.Envelope;
 import dev.kantobridge.proto.Ids;
 import dev.kantobridge.proto.MsgTypes;
+import dev.kantobridge.server.Regions;
 import dev.kantobridge.server.SavePairService;
 import dev.kantobridge.server.SaveService;
 import dev.kantobridge.world.DataException;
 import dev.kantobridge.world.DataReader;
+import dev.kantobridge.world.RegionRecord;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -65,7 +67,8 @@ public final class DaycareService {
 	/** Daycare experience's source, for Cobblemon's events: a side mod. */
 	static final String EXPERIENCE_SOURCE = "kantobridge_daycare";
 
-	private static final Map<MinecraftServer, Map<UUID, DaycareStore>> STORES = Collections.synchronizedMap(new WeakHashMap<>());
+	/** Per server: the stores read so far, by {@link #key(String, UUID)} (MG3: one daycare per region and player). */
+	private static final Map<MinecraftServer, Map<String, DaycareStore>> STORES = Collections.synchronizedMap(new WeakHashMap<>());
 	/** Per player: the uids withdrawn since the server started, so a repeated withdrawal is told from a mismatch. */
 	private static final Map<UUID, Set<UUID>> WITHDRAWN = new HashMap<>();
 	private static final Map<String, AtomicLong> WARNINGS = new ConcurrentHashMap<>();
@@ -92,34 +95,53 @@ public final class DaycareService {
 
 	static void onDeposit(ServerPlayer player, Envelope message) {
 		UUID uid;
+		String region;
 		try {
-			uid = UUID.fromString(DataReader.of(message.data(), "").allowOnly(Set.of("uid")).string("uid", Ids.UID));
+			DataReader reader = DataReader.of(message.data(), "").allowOnly(Set.of("uid", "region"));
+			uid = UUID.fromString(reader.string("uid", Ids.UID));
+			region = regionOf(player, reader);
 		} catch (DataException e) {
 			reject(player, message, "deposit", e);
 			return;
 		}
-		deposit(player, uid);
+		deposit(player, region, uid);
 	}
 
 	static void onWithdraw(ServerPlayer player, Envelope message) {
 		UUID uid;
 		int steps;
+		String region;
 		try {
-			DataReader reader = DataReader.of(message.data(), "").allowOnly(Set.of("uid", "steps"));
+			DataReader reader = DataReader.of(message.data(), "").allowOnly(Set.of("uid", "steps", "region"));
 			uid = UUID.fromString(reader.string("uid", Ids.UID));
 			steps = reader.integer("steps", 0, Integer.MAX_VALUE);
+			region = regionOf(player, reader);
 		} catch (DataException e) {
 			reject(player, message, "withdraw", e);
 			return;
 		}
-		withdraw(player, uid, steps);
+		withdraw(player, region, uid, steps);
+	}
+
+	/** MG3: the region a message is about (its {@code region}, else the player's); an unknown id is malformed. */
+	private static @Nullable String regionOf(ServerPlayer player, DataReader reader) throws DataException {
+		String region = Regions.currentRegionId(player, reader.optionalRegion());
+		if (reader.has("region") && region == null) {
+			throw new DataException(reader.path("region"), "unknown region");
+		}
+		return region;
 	}
 
 	// ---- the daycare ----
 
-	/** Boards a party (or PC) Pokémon at the daycare; true when it is there afterwards. */
+	/** Boards a party (or PC) Pokémon at the legacy region's daycare; true when it is there afterwards. */
 	public static boolean deposit(ServerPlayer player, UUID uid) {
-		DaycareStore store = store(player);
+		return deposit(player, null, uid);
+	}
+
+	/** {@link #deposit(ServerPlayer, UUID)} at a region's daycare (MG3; {@code null}: the legacy region). */
+	public static boolean deposit(ServerPlayer player, @Nullable String region, UUID uid) {
+		DaycareStore store = store(player, region);
 		if (store == null) {
 			return false;
 		}
@@ -132,7 +154,7 @@ public final class DaycareService {
 			fromPc = pokemon != null;
 		}
 		// Not in the party or PC: nothing to board, so gen1-bridge sent it again (or it's a mismatch, warned below).
-		SavePairService.operation(player, "deposit", uid.toString(), pokemon == null);
+		SavePairService.operation(player, region, "deposit", uid.toString(), pokemon == null);
 		if (pokemon == null) {
 			if (store.contains(uid)) {
 				// gen1-bridge repeats what it hasn't seen applied; the daycare has it already.
@@ -160,7 +182,7 @@ public final class DaycareService {
 		}
 		// The daycare gets it on disk first: should anything below fail, it is still in the party as well, never lost.
 		store.put(uid, data);
-		if (!write(player, store)) {
+		if (!write(player, region, store)) {
 			store.remove(uid);
 			warn("deposit_io");
 			return false;
@@ -168,7 +190,7 @@ public final class DaycareService {
 		boolean removed = fromPc ? pc.remove(pokemon) : party.remove(pokemon);
 		if (!removed) {
 			store.remove(uid);
-			write(player, store);
+			write(player, region, store);
 			warn("deposit_not_removed");
 			return false;
 		}
@@ -183,9 +205,14 @@ public final class DaycareService {
 		return true;
 	}
 
-	/** Brings a Pokémon back from the daycare with {@code steps}' worth of experience; true when it is back. */
+	/** Brings a Pokémon back from the legacy region's daycare with {@code steps}' worth of experience; true when it is back. */
 	public static boolean withdraw(ServerPlayer player, UUID uid, int steps) {
-		DaycareStore store = store(player);
+		return withdraw(player, null, uid, steps);
+	}
+
+	/** {@link #withdraw(ServerPlayer, UUID, int)} from a region's daycare (MG3; {@code null}: the legacy region). */
+	public static boolean withdraw(ServerPlayer player, @Nullable String region, UUID uid, int steps) {
+		DaycareStore store = store(player, region);
 		if (store == null) {
 			return false;
 		}
@@ -196,7 +223,7 @@ public final class DaycareService {
 			existing = PlayerExtensionsKt.pc(player).get(uid);
 		}
 		// Not boarded here: nothing to bring back, so gen1-bridge sent it again (or it's a mismatch, warned below).
-		SavePairService.operation(player, "withdraw", uid.toString(), data == null);
+		SavePairService.operation(player, region, "withdraw", uid.toString(), data == null);
 		if (data == null) {
 			if (existing != null) {
 				// Already back in the party or PC (a repeat, the reconcile, a hidden game gone back to an older save): it stays
@@ -232,7 +259,7 @@ public final class DaycareService {
 			}
 		}
 		store.remove(uid);
-		if (!write(player, store)) {
+		if (!write(player, region, store)) {
 			// It is back; a later withdrawal of the stale entry finds it in the party and only drops the entry.
 			warn("withdraw_io");
 		}
@@ -262,7 +289,12 @@ public final class DaycareService {
 	 * before its entry goes, so a crash in between leaves it in both, never in neither. Returns how many came back.
 	 */
 	public static int reconcile(ServerPlayer player, @Nullable UUID hidden) {
-		DaycareStore store = store(player);
+		return reconcile(player, null, hidden);
+	}
+
+	/** {@link #reconcile(ServerPlayer, UUID)} for a region's daycare (MG3; {@code null}: the legacy region). */
+	public static int reconcile(ServerPlayer player, @Nullable String region, @Nullable UUID hidden) {
+		DaycareStore store = store(player, region);
 		if (store == null || store.size() == 0) {
 			return 0;
 		}
@@ -312,7 +344,7 @@ public final class DaycareService {
 			store.remove(uid);
 			warn("reconcile_stale_entry");
 		}
-		if (!write(player, store)) {
+		if (!write(player, region, store)) {
 			// What came back is back; a later reconcile or withdrawal finds it in the party and only drops the entry.
 			warn("reconcile_io");
 		}
@@ -324,15 +356,36 @@ public final class DaycareService {
 		return back.size();
 	}
 
-	/** The uids the player's daycare holds (tests, diagnostics); empty when its file can't be read. */
+	/** The uids the player's legacy-region daycare holds (tests, diagnostics); empty when its file can't be read. */
 	public static Set<UUID> held(ServerPlayer player) {
-		DaycareStore store = store(player);
+		return held(player, null);
+	}
+
+	/** The uids a region's daycare holds for the player (MG3; {@code null}: the legacy region). */
+	public static Set<UUID> held(ServerPlayer player, @Nullable String region) {
+		DaycareStore store = store(player, region);
 		return store == null ? Set.of() : Set.copyOf(store.uids());
 	}
 
-	/** The player's daycare file. */
+	/** The player's daycare file for the legacy region. */
 	public static Path file(MinecraftServer server, UUID player) {
 		return server.getWorldPath(LevelResource.ROOT).resolve(BuildTask.DATA_FOLDER).resolve(FOLDER).resolve(player + ".json");
+	}
+
+	/**
+	 * The player's daycare file for a region (MG3): the legacy region's at {@code kantobridge/daycare/}, another's at
+	 * {@code kantobridge/regions/<id>/daycare/}.
+	 */
+	public static Path file(MinecraftServer server, @Nullable String region, UUID player) {
+		if (Regions.isLegacy(server, region)) {
+			return file(server, player);
+		}
+		return server.getWorldPath(LevelResource.ROOT).resolve(BuildTask.DATA_FOLDER).resolve(RegionRecord.DIR).resolve(region).resolve(FOLDER)
+				.resolve(player + ".json");
+	}
+
+	private static String key(@Nullable String region, UUID player) {
+		return (region == null ? "" : region) + "/" + player;
 	}
 
 	/** Forgets the daycares read so far (tests: the next access reads the files again, as after a restart). */
@@ -341,19 +394,21 @@ public final class DaycareService {
 		WITHDRAWN.clear();
 	}
 
-	private static @Nullable DaycareStore store(ServerPlayer player) {
-		Map<UUID, DaycareStore> stores = STORES.computeIfAbsent(player.server, key -> new HashMap<>());
-		DaycareStore store = stores.get(player.getUUID());
+	private static @Nullable DaycareStore store(ServerPlayer player, @Nullable String region) {
+		// the legacy region's daycare is the one every world had: one key for null and for its id
+		String regionKey = Regions.isLegacy(player.server, region) ? null : region;
+		Map<String, DaycareStore> stores = STORES.computeIfAbsent(player.server, server -> new HashMap<>());
+		DaycareStore store = stores.get(key(regionKey, player.getUUID()));
 		if (store != null) {
 			return store;
 		}
 		try {
-			DaycareStore.Loaded loaded = DaycareStore.load(file(player.server, player.getUUID()));
+			DaycareStore.Loaded loaded = DaycareStore.load(file(player.server, regionKey, player.getUUID()));
 			if (loaded.origin() == DaycareStore.Origin.REPLACED) {
 				warn("store_unreadable");
 				KantoBridge.LOGGER.warn("daycare: a player's daycare file was unreadable; moved aside");
 			}
-			stores.put(player.getUUID(), loaded.store());
+			stores.put(key(regionKey, player.getUUID()), loaded.store());
 			return loaded.store();
 		} catch (IOException e) {
 			warn("store_io");
@@ -361,9 +416,9 @@ public final class DaycareService {
 		}
 	}
 
-	private static boolean write(ServerPlayer player, DaycareStore store) {
+	private static boolean write(ServerPlayer player, @Nullable String region, DaycareStore store) {
 		try {
-			store.write(file(player.server, player.getUUID()));
+			store.write(file(player.server, Regions.isLegacy(player.server, region) ? null : region, player.getUUID()));
 			return true;
 		} catch (IOException e) {
 			KantoBridge.LOGGER.warn("daycare: the daycare file can't be written ({})", e.getClass().getSimpleName());

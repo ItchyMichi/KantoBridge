@@ -1,0 +1,22 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kantobridge.invalid/protocol/messages/party.stash.schema.json",
+  "title": "party.stash",
+  "description": "Several games (MULTI_GAME_PLAN §4.7, D5, MG5): before a region.start, move every party member into Cobblemon's PC (the first free slots), so the new story's starter has room and nothing is lost. Answered by act.result{kind:\"stash\", moved} (S→C), or error{code:\"stash.pc_full\"} with nothing moved.",
+  "x-type": "party.stash",
+  "x-legs": [
+    "c2s"
+  ],
+  "x-re": "never",
+  "type": "object",
+  "required": [
+    "region"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "region": {
+      "$ref": "../defs.schema.json#/$defs/regionId",
+      "description": "The region whose game is about to start."
+    }
+  }
+}

@@ -12,19 +12,25 @@ import dev.kantobridge.client.packs.GeneratedPack;
 import dev.kantobridge.client.packs.KbPackReload;
 import dev.kantobridge.client.packs.PackInfo;
 import dev.kantobridge.client.packs.PackOverrides;
+import dev.kantobridge.client.world.ClientRegions;
 import dev.kantobridge.client.world.ClientWorldIndex;
 import dev.kantobridge.scene.ArtSource;
 import dev.kantobridge.scene.gen1.BundleArtSource;
 import dev.kantobridge.world.DataException;
+import dev.kantobridge.world.Games;
 import dev.kantobridge.world.Hashes;
 import dev.kantobridge.world.MapPlacement;
+import dev.kantobridge.world.RegionRecord;
 import dev.kantobridge.world.ShapeIndex;
 import dev.kantobridge.world.ShapeMap;
 import dev.kantobridge.world.WorldIndex;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
 import net.fabricmc.loader.api.FabricLoader;
@@ -37,12 +43,15 @@ import net.minecraft.world.level.block.Block;
 import org.jetbrains.annotations.Nullable;
 
 /**
- * The world's shapes on this client (docs/specs/VOXEL_BLOCKS_PLAN.md §5.8): the shape index and shape map the server
- * sent ({@code world.shapes}), checked against each other and against the WorldIndex this client holds, and the shape
- * table built from them, off the client thread, with this client's own art (from V4: its export bundle, for tufts and
- * cell units); cached under {@code <gameDir>/kantobridge/shapes/} by index, geometry version and art (ROM-derived,
- * never sent). Until the table is ready, or when anything doesn't fit, the world draws cubes and {@link #reason()} says
- * why. Client thread only, except the table build.
+ * The world's shapes on this client (docs/specs/VOXEL_BLOCKS_PLAN.md §5.8), per region since MG3
+ * (docs/specs/MULTI_GAME_PLAN.md §4.6): each region's shape index and shape map the server sent ({@code world.shapes}
+ * tagged with the region), checked against each other and against that region's WorldIndex, and the shape table built
+ * from them, off the client thread, with this client's own art for that region's game (from V4: its export bundle, for
+ * tufts and cell units); cached under {@code <gameDir>/kantobridge/shapes/} by index, geometry version and art
+ * (ROM-derived, never sent). The render snapshot draws the followed region's shapes (the no-argument views); a region
+ * whose game this client has no art for builds its table without art (units as columns, tufts nothing). Until a table
+ * is ready, or when anything doesn't fit, that region draws cubes and {@link #reason(String)} says why. Client thread
+ * only, except the table builds.
  */
 public final class ClientShapes {
 	/** A shape map larger than this, inflated, is refused (the real build's is a few MB). */
@@ -50,19 +59,26 @@ public final class ClientShapes {
 	/** {@link #topHeight} counts at most this many blocks. */
 	static final int MAX_TOP = 8;
 
+	/** One region's shapes. */
+	private static final class Held {
+		@Nullable ShapeIndex index;
+		@Nullable ShapeMap map;
+		ShapeMap.@Nullable Lookup lookup;
+		@Nullable ShapeTable table;
+		@Nullable String reason = "no_shapes";
+		long generation;
+		long tableMs = -1;
+		boolean fromCache;
+		@Nullable String builtArt;
+		/** The shape map wire form this region's held documents were accepted from (so a pair is not accepted twice). */
+		@Nullable String acceptedMapWire;
+	}
+
 	private static boolean registered;
-	private static @Nullable ShapeIndex index;
-	private static @Nullable ShapeMap map;
-	private static ShapeMap.@Nullable Lookup lookup;
-	private static @Nullable ShapeTable table;
-	private static @Nullable String reason = "no_shapes";
-	private static long generation;
-	private static long tableMs = -1;
-	private static boolean fromCache;
-	private static @Nullable String builtArt;
+	private static final Map<String, Held> HELD = new LinkedHashMap<>();
 	private static @Nullable Runnable onChange;
-	/** Per map id, per cell: the colliding blocks from feet level up (-1 until the cell's chunk was loaded). */
-	private static final Map<String, int[]> TOPS = new HashMap<>();
+	/** Per index (identity), per map id, per cell: the colliding blocks from feet level up (-1 until the chunk was loaded). */
+	private static final Map<WorldIndex, Map<String, int[]>> TOPS = new HashMap<>();
 
 	private ClientShapes() {
 	}
@@ -74,14 +90,32 @@ public final class ClientShapes {
 		}
 		registered = true;
 		onChange = changed;
-		ClientWorldIndex.onShapes(ClientShapes::received);
-		ClientWorldIndex.addListener(() -> {
+		ClientRegions.onShapes(ClientShapes::received);
+		ClientRegions.addListener(() -> {
 			TOPS.clear();
-			// A new index (a rebuild) makes shapes bound to the old one stale until its own arrive.
-			ShapeMap held = map;
-			if (held != null && !held.indexHash().equals(ClientWorldIndex.currentHash())) {
-				clear();
+			// A region's new index (a rebuild) makes shapes bound to the old one stale until its own arrive; a region that
+			// left the set takes its shapes with it; a pair that arrived before its region was named is accepted now.
+			List<String> gone = new ArrayList<>();
+			for (Map.Entry<String, Held> entry : HELD.entrySet()) {
+				String region = entry.getKey();
+				ShapeMap map = entry.getValue().map;
+				if (ClientRegions.byId(region) == null) {
+					gone.add(region);
+				} else if (map != null && !map.indexHash().equals(ClientRegions.indexHash(region))) {
+					clearRegion(region);
+				}
 			}
+			for (String region : gone) {
+				HELD.remove(region);
+			}
+			for (String region : ClientRegions.indexed()) {
+				ClientRegions.ShapeDocs docs = ClientRegions.shapesOf(region);
+				Held held = HELD.get(region);
+				if (docs != null && (held == null || !docs.mapWire().equals(held.acceptedMapWire))) {
+					received(region, docs.indexText(), docs.mapWire());
+				}
+			}
+			changed();
 		});
 		ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> clear());
 	}
@@ -92,93 +126,159 @@ public final class ClientShapes {
 		return bridge == null || bridge.config().shapes();
 	}
 
-	/** The verified shape map's lookup, or null (cubes everywhere). */
+	/** The followed region's id, or null outside a region. */
+	private static @Nullable String followedId() {
+		RegionRecord record = ClientRegions.followed();
+		return record == null ? null : record.id();
+	}
+
+	private static @Nullable Held held(@Nullable String region) {
+		return region == null ? null : HELD.get(region);
+	}
+
+	private static Held heldOrNew(String region) {
+		return HELD.computeIfAbsent(region, id -> new Held());
+	}
+
+	/** The followed region's verified shape map lookup, or null (cubes everywhere). */
 	public static ShapeMap.@Nullable Lookup lookup() {
-		return enabled() && table != null ? lookup : null;
+		return lookup(followedId());
 	}
 
-	/** The shape table, or null while it builds or without shapes. */
+	/** A region's verified shape map lookup, or null (that region draws cubes). */
+	public static ShapeMap.@Nullable Lookup lookup(@Nullable String region) {
+		Held held = held(region);
+		return enabled() && held != null && held.table != null ? held.lookup : null;
+	}
+
+	/** The followed region's shape table, or null while it builds or without shapes. */
 	public static @Nullable ShapeTable table() {
-		return enabled() ? table : null;
+		return table(followedId());
 	}
 
-	/** The verified shape map (with the closed art's overlays, V5), or null; held even with shapes off. */
+	public static @Nullable ShapeTable table(@Nullable String region) {
+		Held held = held(region);
+		return enabled() && held != null ? held.table : null;
+	}
+
+	/** The followed region's verified shape map (with the closed art's overlays, V5), or null; held even with shapes off. */
 	public static @Nullable ShapeMap map() {
-		return map;
+		return map(followedId());
 	}
 
-	/** The verified shape index, or null. */
+	public static @Nullable ShapeMap map(@Nullable String region) {
+		Held held = held(region);
+		return held == null ? null : held.map;
+	}
+
+	/** The followed region's verified shape index, or null. */
 	public static @Nullable ShapeIndex index() {
-		return index;
+		return index(followedId());
 	}
 
-	/** Shape ids this client has geometry for; 0 while it draws cubes. */
+	public static @Nullable ShapeIndex index(@Nullable String region) {
+		Held held = held(region);
+		return held == null ? null : held.index;
+	}
+
+	/** Shape ids this client has geometry for in the followed region; 0 while it draws cubes. */
 	public static int shapes() {
 		ShapeTable built = table();
 		return built == null ? 0 : built.built();
 	}
 
-	/** Why the world draws cubes, or null when it draws its shapes. */
+	/** Why the followed region draws cubes, or null when it draws its shapes. */
 	public static @Nullable String reason() {
-		return enabled() ? reason : "shapes_off";
+		return reason(followedId());
+	}
+
+	/** Why a region draws cubes ({@code no_shapes} for one without documents yet), or null when it draws its shapes. */
+	public static @Nullable String reason(@Nullable String region) {
+		if (!enabled()) {
+			return "shapes_off";
+		}
+		Held held = held(region);
+		return held == null ? "no_shapes" : held.reason;
+	}
+
+	/** The regions holding shape documents (verified or refused). */
+	public static List<String> regions() {
+		return new ArrayList<>(HELD.keySet());
 	}
 
 	public static void clear() {
-		generation++;
-		index = null;
-		map = null;
-		lookup = null;
-		table = null;
-		builtArt = null;
-		reason = "no_shapes";
+		for (Held held : HELD.values()) {
+			held.generation++;
+		}
+		HELD.clear();
 		TOPS.clear();
 		changed();
 	}
 
-	/** Both shape documents are in: check them, then build the table off-thread. */
-	static void received(String indexText, String mapWire) {
-		generation++;
-		table = null;
-		lookup = null;
-		ShapeCheck.Accepted accepted;
-		try {
-			accepted = ShapeCheck.check(indexText, mapWire, ClientWorldIndex.currentHash(), MAX_MAP_BYTES);
-		} catch (ShapeCheck.Rejected e) {
-			fail(e.code(), "world.shapes: refused (" + e.getMessage() + "); drawing cubes");
+	private static void clearRegion(String region) {
+		Held held = HELD.get(region);
+		if (held == null) {
 			return;
 		}
-		index = accepted.index();
-		map = accepted.map();
-		reason = "building";
+		held.generation++;
+		held.index = null;
+		held.map = null;
+		held.lookup = null;
+		held.table = null;
+		held.builtArt = null;
+		held.acceptedMapWire = null;
+		held.reason = "no_shapes";
+	}
+
+	/** Both of a region's shape documents are in: check them, then build the table off-thread. */
+	static void received(String region, String indexText, String mapWire) {
+		Held held = heldOrNew(region);
+		held.generation++;
+		held.table = null;
+		held.lookup = null;
+		held.acceptedMapWire = mapWire;
+		ShapeCheck.Accepted accepted;
+		try {
+			accepted = ShapeCheck.check(indexText, mapWire, ClientRegions.indexHash(region), MAX_MAP_BYTES);
+		} catch (ShapeCheck.Rejected e) {
+			fail(held, e.code(), "world.shapes: " + region + " refused (" + e.getMessage() + "); drawing cubes");
+			return;
+		}
+		held.index = accepted.index();
+		held.map = accepted.map();
+		held.reason = "building";
 		changed();
-		startBuild();
+		startBuild(region, held);
 	}
 
 	/**
-	 * This player's art may have changed (a new export and pack): when the held table was built from other art, build it
-	 * again. Client thread.
+	 * This player's art may have changed (a new export and pack): every region whose held table was built from other art
+	 * builds it again. Client thread.
 	 */
 	public static void artChanged() {
-		if (index == null || map == null) {
-			return;
+		for (Map.Entry<String, Held> entry : HELD.entrySet()) {
+			Held held = entry.getValue();
+			if (held.index == null || held.map == null) {
+				continue;
+			}
+			Art art = Art.local(entry.getKey());
+			if (art.hash().equals(held.builtArt)) {
+				continue;
+			}
+			held.generation++;
+			startBuild(entry.getKey(), held);
 		}
-		Art art = Art.local();
-		if (art.hash().equals(builtArt)) {
-			return;
-		}
-		generation++;
-		startBuild();
 	}
 
-	/** Builds (or reads from the cache) the table for the held index and map, off the client thread. */
-	private static void startBuild() {
-		ShapeIndex parsed = index;
-		ShapeMap received = map;
+	/** Builds (or reads from the cache) a region's table for its held index and map, off the client thread. */
+	private static void startBuild(String region, Held held) {
+		ShapeIndex parsed = held.index;
+		ShapeMap received = held.map;
 		if (parsed == null || received == null) {
 			return;
 		}
-		long mine = generation;
-		Art art = Art.local();
+		long mine = held.generation;
+		Art art = Art.local(region);
 		Path cache = FabricLoader.getInstance().getGameDir().resolve("kantobridge").resolve("shapes")
 				.resolve(ShapeTable.cacheName(parsed.hash(), ShapeTable.GEOMETRY, art.hash()));
 		Minecraft minecraft = Minecraft.getInstance();
@@ -208,16 +308,16 @@ public final class ClientShapes {
 			long ms = (System.nanoTime() - started) / 1_000_000L;
 			ShapeMap.Lookup fast = received.lookup();
 			minecraft.execute(() -> {
-				if (mine != generation) {
+				if (mine != held.generation || HELD.get(region) != held) {
 					return;
 				}
-				table = done;
-				lookup = fast;
-				tableMs = ms;
-				fromCache = wasCached;
-				builtArt = art.hash();
-				reason = null;
-				KantoBridge.LOGGER.info("shapes: table for index {} ready: {} shapes, {} quads, {} textures, art {}, {} ms{}",
+				held.table = done;
+				held.lookup = fast;
+				held.tableMs = ms;
+				held.fromCache = wasCached;
+				held.builtArt = art.hash();
+				held.reason = null;
+				KantoBridge.LOGGER.info("shapes: table for region {} index {} ready: {} shapes, {} quads, {} textures, art {}, {} ms{}", region,
 						Hashes.shortHash(parsed.hash()), done.built(), done.quads(), done.textureKeys().size(),
 						art.source() == ArtSource.NONE ? "none" : Hashes.shortHash(art.hash()), ms, wasCached ? " (cache)" : "");
 				changed();
@@ -226,9 +326,10 @@ public final class ClientShapes {
 	}
 
 	/**
-	 * This client's art for geometry: the export bundle its generated pack was made from ({@code export/<game>/}), or none
-	 * (units then draw their column version and tufts nothing), with the texture packs' rules and models (V6). Its hash
-	 * names the export and the packs' geometry in the cache file's name.
+	 * This client's art for a region's geometry: the export bundle its generated pack was made from ({@code export/<game>/})
+	 * when that art can draw the region's game (the same game, or one family), else none (units then draw their column
+	 * version and tufts nothing: the region's game is one this client has no art for), with the texture packs' rules and
+	 * models (V6). Its hash names the export and the packs' geometry in the cache file's name.
 	 */
 	record Art(ArtSource source, String hash, PackOverrides packs) {
 		/** Without an export: units draw their column version, tufts nothing; a pack's models and rules still apply. */
@@ -237,11 +338,22 @@ public final class ClientShapes {
 			return new Art(ArtSource.NONE, geometry.equals(ShapeTable.NO_OVERRIDES) ? ShapeTable.NO_OVERRIDES : Hashes.sha256("art|-|" + geometry), packs);
 		}
 
+		/** The art for the followed region (a legacy world's one region). */
 		static Art local() {
+			RegionRecord record = ClientRegions.followed();
+			return local(record == null ? null : record.id());
+		}
+
+		static Art local(@Nullable String region) {
 			Path gameDir = FabricLoader.getInstance().getGameDir();
 			PackInfo pack = PackInfo.read(GeneratedPack.directory(gameDir));
 			PackOverrides packs = KbPackReload.current();
 			if (pack == null || !pack.usable()) {
+				return none(packs);
+			}
+			RegionRecord record = ClientRegions.byId(region);
+			if (record != null && !Games.compatible(pack.game(), record.game())) {
+				// Another family's region: this client has no art of its own for it.
 				return none(packs);
 			}
 			Path bundleDir = gameDir.resolve("kantobridge").resolve("export").resolve(pack.game());
@@ -292,7 +404,8 @@ public final class ClientShapes {
 	/**
 	 * How many blocks a puppet standing on cell (cx, cy) of a map stands on (docs/specs/VOXEL_BLOCKS_PLAN.md §5.7): the
 	 * colliding carriers from feet level up in the cell's north-west column of this client's level, so an item on a
-	 * table sits on the table. 0 for a walkable cell; cached per cell once its chunk is loaded.
+	 * table sits on the table. 0 for a walkable cell; cached per index and cell once its chunk is loaded (two regions may
+	 * both have a ROUTE_1, so the cache is per index).
 	 */
 	public static int topHeight(WorldIndex worldIndex, String mapId, int cx, int cy) {
 		MapPlacement placement = worldIndex.map(mapId);
@@ -303,11 +416,12 @@ public final class ClientShapes {
 		if (cx < 0 || cy < 0 || cx >= placement.w() || cy >= placement.h()) {
 			return 0;
 		}
-		int[] cells = TOPS.get(mapId);
+		Map<String, int[]> maps = TOPS.computeIfAbsent(worldIndex, index -> new HashMap<>());
+		int[] cells = maps.get(mapId);
 		if (cells == null) {
 			cells = new int[placement.w() * placement.h()];
 			java.util.Arrays.fill(cells, -1);
-			TOPS.put(mapId, cells);
+			maps.put(mapId, cells);
 		}
 		int i = cy * placement.w() + cx;
 		if (cells[i] >= 0) {
@@ -331,10 +445,10 @@ public final class ClientShapes {
 		return block instanceof ShapeBlock || (block instanceof TileBlock tile && KbBlocks.tileFull().contains(tile));
 	}
 
-	private static void fail(String code, String log) {
-		index = null;
-		map = null;
-		reason = code;
+	private static void fail(Held held, String code, String log) {
+		held.index = null;
+		held.map = null;
+		held.reason = code;
 		KantoBridge.LOGGER.warn(log);
 		changed();
 	}
@@ -345,13 +459,15 @@ public final class ClientShapes {
 		}
 	}
 
-	/** The F7 line. */
+	/** The F7 line: the followed region's shapes. */
 	public static String debugLine() {
-		ShapeTable built = table;
-		ShapeIndex known = index;
+		Held held = held(followedId());
+		ShapeTable built = held == null ? null : held.table;
+		ShapeIndex known = held == null ? null : held.index;
 		return I18n.get("kantobridge.debug.shapes", enabled() ? I18n.get("kantobridge.debug.yes") : I18n.get("kantobridge.debug.no"),
 				known == null ? "-" : Hashes.shortHash(known.hash()), known == null ? 0 : known.size(), built == null ? 0 : built.built(),
-				built == null ? 0 : built.quads(), tableMs, fromCache ? I18n.get("kantobridge.debug.yes") : I18n.get("kantobridge.debug.no"),
+				built == null ? 0 : built.quads(), held == null ? -1 : held.tableMs,
+				held != null && held.fromCache ? I18n.get("kantobridge.debug.yes") : I18n.get("kantobridge.debug.no"),
 				reason() == null ? "-" : reason());
 	}
 }

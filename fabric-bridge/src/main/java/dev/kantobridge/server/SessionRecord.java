@@ -13,6 +13,7 @@ import java.nio.file.AtomicMoveNotSupportedException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
+import java.util.Collections;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
@@ -26,6 +27,11 @@ import org.jetbrains.annotations.Nullable;
  * with this world (DESIGN §8 "Saving"), and the slot each player's hidden game reported back ({@code session.bound}),
  * kept for M9's multiplayer pairing and M10's mismatch warning.
  *
+ * <p><b>Format 2 (MULTI_GAME_PLAN §4.6, MG3):</b> with several regions a player pairs one slot per region:
+ * {@code players{uuid:{slot, regions:{<id>:{slot}}}}}, where {@code slot} is the legacy region's (format 1's one slot)
+ * and {@code regions} holds the others. Format 1 is read as before, and written as long as no player has paired a
+ * non-legacy region, so a legacy world's file stays byte for byte what it was.
+ *
  * <p>The id is created once and never changes, so it survives restarts, renames and copies of the world folder. The
  * file is replaced atomically on every write; an unreadable one is moved aside (never silently overwritten) and a new
  * id takes its place. Plain Java; the service keeps one per server and touches it on the server thread only.
@@ -35,8 +41,12 @@ public final class SessionRecord {
 	/** Where an unreadable record is moved, so a broken pairing can be recovered by hand. */
 	public static final String BROKEN_SUFFIX = ".broken";
 	static final int FORMAT = 1;
+	static final int FORMAT_2 = 2;
 	public static final int MAX_SLOT = 255;
 	private static final Set<String> FIELDS = Set.of("format", "world", "players");
+	private static final Set<String> PLAYER_FIELDS_1 = Set.of("slot");
+	private static final Set<String> PLAYER_FIELDS_2 = Set.of("slot", "regions");
+	private static final Set<String> REGION_FIELDS = Set.of("slot");
 
 	/** What {@link #loadOrCreate} found. */
 	public enum Origin {
@@ -51,8 +61,14 @@ public final class SessionRecord {
 	public record Loaded(SessionRecord record, Origin origin) {
 	}
 
+	/** One player's pairings: the legacy region's slot and the other regions'. */
+	private static final class Entry {
+		@Nullable Integer slot;
+		final Map<String, Integer> regions = new TreeMap<>();
+	}
+
 	private final String world;
-	private final Map<UUID, Integer> slots = new TreeMap<>();
+	private final Map<UUID, Entry> players = new TreeMap<>();
 
 	private SessionRecord(String world) {
 		this.world = world;
@@ -80,10 +96,11 @@ public final class SessionRecord {
 		return new Loaded(fresh, Origin.CREATED);
 	}
 
-	/** Reads a record's JSON strictly; a player entry that doesn't fit is an error, like any other. */
+	/** Reads a record's JSON strictly (format 1 or 2); a player entry that doesn't fit is an error, like any other. */
 	public static SessionRecord parse(String json) throws DataException, ProtocolException {
 		DataReader reader = DataReader.of(ProtoJson.parseObject(json), "").allowOnly(FIELDS);
-		if (reader.integer("format") != FORMAT) {
+		int format = reader.integer("format");
+		if (format != FORMAT && format != FORMAT_2) {
 			throw new DataException(reader.path("format"), "unknown format");
 		}
 		SessionRecord record = new SessionRecord(reader.string("world", Ids.ID));
@@ -93,8 +110,25 @@ public final class SessionRecord {
 			if (!Ids.UID.matcher(key).matches()) {
 				throw new DataException(players.path(key), "not a player uuid");
 			}
-			DataReader player = players.object(key).allowOnly(Set.of("slot"));
-			record.slots.put(UUID.fromString(key), player.integer("slot", 0, MAX_SLOT));
+			DataReader player = players.object(key).allowOnly(format == FORMAT ? PLAYER_FIELDS_1 : PLAYER_FIELDS_2);
+			Entry pairing = new Entry();
+			if (format == FORMAT || player.has("slot")) {
+				pairing.slot = player.integer("slot", 0, MAX_SLOT);
+			}
+			if (format == FORMAT_2 && player.has("regions")) {
+				DataReader regions = player.object("regions");
+				for (Map.Entry<String, JsonElement> region : regions.json().entrySet()) {
+					if (!DataReader.REGION_ID.matcher(region.getKey()).matches()) {
+						throw new DataException(regions.path(region.getKey()), "not a region id");
+					}
+					DataReader slot = regions.object(region.getKey()).allowOnly(REGION_FIELDS);
+					pairing.regions.put(region.getKey(), slot.integer("slot", 0, MAX_SLOT));
+				}
+			}
+			if (pairing.slot == null && pairing.regions.isEmpty()) {
+				throw new DataException(players.path(key), "no pairing");
+			}
+			record.players.put(UUID.fromString(key), pairing);
 		}
 		return record;
 	}
@@ -103,33 +137,86 @@ public final class SessionRecord {
 		return this.world;
 	}
 
-	/** The hidden-game save slot this player's gen1-bridge reported for this world, or null. */
+	/** The hidden-game save slot this player's gen1-bridge reported for this world's legacy region, or null. */
 	public @Nullable Integer slot(UUID player) {
-		return this.slots.get(player);
+		Entry entry = this.players.get(player);
+		return entry == null ? null : entry.slot;
 	}
 
-	/** Records a player's slot; false when it was already that. */
+	/** The slot the player paired with a region ({@code null}: the legacy region), or null. */
+	public @Nullable Integer slot(UUID player, @Nullable String region) {
+		if (region == null) {
+			return this.slot(player);
+		}
+		Entry entry = this.players.get(player);
+		return entry == null ? null : entry.regions.get(region);
+	}
+
+	/** The player's non-legacy pairings: region id → slot. */
+	public Map<String, Integer> regions(UUID player) {
+		Entry entry = this.players.get(player);
+		return entry == null ? Map.of() : Collections.unmodifiableMap(new TreeMap<>(entry.regions));
+	}
+
+	/** Records a player's slot for the legacy region; false when it was already that. */
 	public boolean put(UUID player, int slot) {
+		return this.put(player, null, slot);
+	}
+
+	/** Records a player's slot for a region ({@code null}: the legacy region); false when it was already that. */
+	public boolean put(UUID player, @Nullable String region, int slot) {
 		if (slot < 0 || slot > MAX_SLOT) {
 			throw new IllegalArgumentException("slot out of range");
 		}
-		Integer before = this.slots.put(player, slot);
+		if (region != null && !DataReader.REGION_ID.matcher(region).matches()) {
+			throw new IllegalArgumentException("not a region id");
+		}
+		Entry entry = this.players.computeIfAbsent(player, key -> new Entry());
+		Integer before;
+		if (region == null) {
+			before = entry.slot;
+			entry.slot = slot;
+		} else {
+			before = entry.regions.put(region, slot);
+		}
 		return before == null || before != slot;
 	}
 
 	public int players() {
-		return this.slots.size();
+		return this.players.size();
+	}
+
+	/** The format the record is written in: 2 once any player paired a non-legacy region, else 1. */
+	public int format() {
+		for (Entry entry : this.players.values()) {
+			if (!entry.regions.isEmpty()) {
+				return FORMAT_2;
+			}
+		}
+		return FORMAT;
 	}
 
 	public JsonObject toJson() {
+		int format = this.format();
 		JsonObject players = new JsonObject();
-		this.slots.forEach((player, slot) -> {
+		this.players.forEach((player, pairing) -> {
 			JsonObject entry = new JsonObject();
-			entry.addProperty("slot", slot);
+			if (pairing.slot != null) {
+				entry.addProperty("slot", pairing.slot);
+			}
+			if (format == FORMAT_2 && !pairing.regions.isEmpty()) {
+				JsonObject regions = new JsonObject();
+				pairing.regions.forEach((region, slot) -> {
+					JsonObject one = new JsonObject();
+					one.addProperty("slot", slot);
+					regions.add(region, one);
+				});
+				entry.add("regions", regions);
+			}
 			players.add(player.toString(), entry);
 		});
 		JsonObject data = new JsonObject();
-		data.addProperty("format", FORMAT);
+		data.addProperty("format", format);
 		data.addProperty("world", this.world);
 		data.add("players", players);
 		return data;

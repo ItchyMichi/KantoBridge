@@ -51,7 +51,7 @@ public final class BagService {
 	static final int OBSERVE_EVERY_TICKS = 5;
 	/** {@code bag.use.qty}'s maximum; larger uses go out in parts. */
 	static final int MAX_USE = 999;
-	private static final Set<String> FIELDS = Set.of("items");
+	private static final Set<String> FIELDS = Set.of("items", "region");
 
 	/** One player's mirror. */
 	private static final class State {

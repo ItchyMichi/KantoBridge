@@ -11,6 +11,7 @@ import dev.kantobridge.client.shape.ClientShapes;
 import dev.kantobridge.client.story.ClientStoryView;
 import dev.kantobridge.client.story.StoryDirty;
 import dev.kantobridge.client.world.ClientWorldIndex;
+import dev.kantobridge.world.Games;
 import dev.kantobridge.world.Hashes;
 import dev.kantobridge.world.ShapeMap;
 import dev.kantobridge.world.SlotMap;
@@ -229,6 +230,7 @@ public final class SnapshotPublisher {
 		Mesh[][] cubes = new Mesh[2][];
 		int keys = 0;
 		int missing = -1;
+		int foreign = 0;
 		if (slots != null) {
 			missing = 0;
 			for (int shape = CubeEmitter.FULL; shape <= CubeEmitter.HALF; shape++) {
@@ -240,6 +242,12 @@ public final class SnapshotPublisher {
 				int shape = CubeEmitter.shape(key.shape() == SlotMap.Shape.HALF);
 				int index = entry.getValue().index();
 				keys++;
+				// MG3: a version-2 map's key names the art set of its region's game; a key this client's art can't draw (another
+				// family's region) is a placeholder, not a missing texture of its own set.
+				if (!key.set().isEmpty() && (artSet == null || !Games.compatible(artSet, key.set()))) {
+					foreign++;
+					continue;
+				}
 				TextureAtlasSprite sprite = artSet == null ? null : tileSprite(atlas, packs, artSet, key.atlas(), key.palette(), key.tile());
 				if (sprite == null) {
 					missing++;
@@ -250,6 +258,9 @@ public final class SnapshotPublisher {
 					cubes[shape][index] = CubeEmitter.mesh(builder, shape, sprite, solid);
 				}
 			}
+		}
+		if (foreign > 0) {
+			KantoBridge.LOGGER.info("render: {} keys of other regions' art sets drawn as placeholders (art set {})", foreign, artSet == null ? "-" : artSet);
 		}
 		return new RenderSnapshot(generation, placeholder, slots == null ? null : slots.hash(), sprites, cubes, placeholderCubes, solid, kanto,
 				artSet, keys, missing, table == null ? null : shapes, table, shapeSprites, shapeTints, cutout, flat, closedArt, closed);

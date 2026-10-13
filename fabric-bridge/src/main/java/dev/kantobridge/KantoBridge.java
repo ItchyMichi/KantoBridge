@@ -21,6 +21,8 @@ import dev.kantobridge.server.ActivityService;
 import dev.kantobridge.server.BuildHold;
 import dev.kantobridge.server.FlashService;
 import dev.kantobridge.server.HabitatService;
+import dev.kantobridge.server.ProgressService;
+import dev.kantobridge.server.RegionPresenceService;
 import dev.kantobridge.server.Rules;
 import dev.kantobridge.server.SavePairService;
 import dev.kantobridge.server.SaveService;
@@ -97,6 +99,10 @@ public class KantoBridge implements ModInitializer {
 		SavePairService.init();
 		// Each player's own generated pack against this world's slot map (texture.status, M9): hashes and counts only.
 		TextureStatusService.init();
+		// Several games (MULTI_GAME_PLAN §4.6-4.7, MG3): each player's story progress per region (game.status) and which
+		// region their followed link belongs to (region.state), after WorldIndexSync so the join order holds.
+		ProgressService.init();
+		RegionPresenceService.init();
 		LOGGER.info("kantobridge loaded (protocol {}, {} message types)", Catalog.bundled().protocol(), Catalog.bundled().messages().size());
 	}
 }

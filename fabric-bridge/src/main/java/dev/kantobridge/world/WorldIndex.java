@@ -648,6 +648,66 @@ public final class WorldIndex {
 		return origin == null || layout == null ? origin : origin.below(layout.level(x, y));
 	}
 
+	// ---- regions (MG3) ----
+
+	/**
+	 * The box every placed block of this index lies in (docs/specs/MULTI_GAME_PLAN.md §4.6: the implicit legacy
+	 * region's bounds): the maps' footprints (a map with a layout by its pieces, up to their highest level) with the
+	 * reach a cell has below and above its feet, the zones' boxes, the dungeon region and the shafts. Inclusive on
+	 * every side; null for an index without maps.
+	 */
+	public @Nullable RegionRecord.Box boundsOfPlacements() {
+		int[] box = null;
+		for (MapPlacement map : this.maps.values()) {
+			MapLayout layout = this.layouts.get(map.id());
+			if (layout == null) {
+				box = extend(box, map.x(), map.z(), map.x() + Scale.cellToBlock(map.w()) - 1, map.z() + Scale.cellToBlock(map.h()) - 1,
+						map.y() - LAYER_REACH_DOWN, map.y() + LAYER_REACH_UP - 1);
+				continue;
+			}
+			for (MapLayout.Piece piece : layout.pieces()) {
+				int maxLevel = 0;
+				for (int cy = piece.y(); cy < piece.y() + piece.h(); cy++) {
+					for (int cx = piece.x(); cx < piece.x() + piece.w(); cx++) {
+						if (piece.contains(cx, cy)) {
+							maxLevel = Math.max(maxLevel, layout.level(cx, cy));
+						}
+					}
+				}
+				int x0 = map.x() + piece.dx() + Scale.cellToBlock(piece.x());
+				int z0 = map.z() + piece.dz() + Scale.cellToBlock(piece.y());
+				int feet = map.y() + piece.dy();
+				box = extend(box, x0, z0, x0 + Scale.cellToBlock(piece.w()) - 1, z0 + Scale.cellToBlock(piece.h()) - 1, feet - PIECE_REACH_DOWN,
+						feet + maxLevel + PIECE_REACH_UP - 1);
+			}
+		}
+		for (Zone zone : this.zones) {
+			box = extend(box, zone.x(), zone.z(), zone.x() + zone.w() - 1, zone.z() + zone.d() - 1, zone.y() - LAYER_REACH_DOWN,
+					zone.y() + LAYER_REACH_UP - 1);
+		}
+		if (this.dungeons != null) {
+			box = extend(box, this.dungeons.x(), this.dungeons.z(), this.dungeons.x() + this.dungeons.w() - 1,
+					this.dungeons.z() + this.dungeons.d() - 1, this.dungeons.y() - LAYER_REACH_DOWN, this.dungeons.y() + LAYER_REACH_UP - 1);
+		}
+		for (Shaft shaft : this.shafts) {
+			box = extend(box, shaft.x(), shaft.z(), shaft.x() + Scale.CELL_BLOCKS - 1, shaft.z() + Scale.CELL_BLOCKS - 1, shaft.y0(), shaft.y1());
+		}
+		return box == null ? null : new RegionRecord.Box(box[0], box[1], box[2], box[3], box[4], box[5]);
+	}
+
+	private static int[] extend(int @Nullable [] box, int minX, int minZ, int maxX, int maxZ, int minY, int maxY) {
+		if (box == null) {
+			return new int[] {minX, minZ, maxX, maxZ, minY, maxY};
+		}
+		box[0] = Math.min(box[0], minX);
+		box[1] = Math.min(box[1], minZ);
+		box[2] = Math.max(box[2], maxX);
+		box[3] = Math.max(box[3], maxZ);
+		box[4] = Math.min(box[4], minY);
+		box[5] = Math.max(box[5], maxY);
+		return box;
+	}
+
 	// ---- JSON ----
 
 	private JsonObject toJsonObject() {

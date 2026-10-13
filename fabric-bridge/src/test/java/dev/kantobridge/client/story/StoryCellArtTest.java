@@ -33,7 +33,8 @@ class StoryCellArtTest {
 		assertEquals(new StoryCellArt.Piece(302, 2), StoryCellArt.piece(index, tree, 120, 229), "south-west");
 		StoryCellArt.Piece last = StoryCellArt.piece(index, tree, 121, 229);
 		assertEquals(4095, last.slot());
-		assertEquals(SlotMap.FAMILIES_PER_SHAPE - 1, last.family(), "slot 4095 is the last state of the last family");
+		assertEquals(4095 / SlotMap.SLOTS_PER_FAMILY, last.family(), "slot 4095 is the last state of family 15, the legacy families' last");
+		assertEquals(SlotMap.LEGACY_FAMILIES.hi(), last.family());
 		assertEquals(255, last.state());
 		assertEquals(1, new StoryCellArt.Piece(300, 2).family());
 		assertEquals(44, new StoryCellArt.Piece(300, 2).state());

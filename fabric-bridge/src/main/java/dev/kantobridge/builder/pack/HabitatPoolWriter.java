@@ -36,9 +36,14 @@ public final class HabitatPoolWriter {
 
 	/** Every pool of the export, canonical JSON text by pool id ({@code kantobridge:route_1}). */
 	public static Map<String, String> pools(ExportEncounters encounters, ExportField field) {
+		return pools(encounters, field, "");
+	}
+
+	/** {@link #pools} with the pool ids of a region ({@code kantobridge:<prefix>route_1}, MULTI_GAME_PLAN §4.6, MG3). */
+	public static Map<String, String> pools(ExportEncounters encounters, ExportField field, String prefix) {
 		Map<String, String> out = new TreeMap<>();
 		for (String map : HabitatPlanner.wildMaps(encounters, field)) {
-			out.put(HabitatPlanner.poolId(map), ProtoJson.write(pool(map, encounters.grass().get(map), encounters)));
+			out.put(HabitatPlanner.poolId(prefix, map), ProtoJson.write(pool(map, encounters.grass().get(map), encounters)));
 		}
 		return out;
 	}

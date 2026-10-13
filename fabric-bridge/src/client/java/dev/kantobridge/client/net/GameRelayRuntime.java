@@ -69,6 +69,8 @@ public final class GameRelayRuntime {
 			dispatcher.on(type, runtime::fromBridge);
 		}
 		dispatcher.on(MsgTypes.BAG_SYNC, runtime::fromBridge);
+		// MG3: the hidden game's story progress goes up for the server's per-region progress record (MULTI_GAME_PLAN §4.7).
+		dispatcher.on(MsgTypes.GAME_STATUS, runtime::fromBridge);
 		dispatcher.on(MsgTypes.SNAPSHOT, message -> runtime.relay.bridgeSnapshot(message.data(), runtime.now()));
 		ClientRelay server = ClientRelay.get();
 		server.register(MsgTypes.BATTLE_RESULT, message -> runtime.relay.fromServer(message, runtime.now()));

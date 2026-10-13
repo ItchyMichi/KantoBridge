@@ -118,6 +118,32 @@ class CavePlannerTest {
 	}
 
 	@Test
+	void theCaveAreaFollowsAMovedKantoBoxExactly() {
+		// MG3: a region at another slot of the region table gets its cave area moved by just the slot's pitch
+		Map<String, ExportMap> all = new LinkedHashMap<>();
+		all.put("E_1F", map("E_1F", 1, "CAVERN", 3, 3, List.of(warp(0, 5, "LAST_MAP", 1), warp(3, 2, "E_B1F", 1)),
+				new ExportMap.Parent("TOWN", 1, 0, 0)));
+		all.put("E_B1F", map("E_B1F", 2, "CAVERN", 3, 3, List.of(warp(1, 1, "E_1F", 2)), new ExportMap.Parent("E_1F", 2, 3, 2)));
+		dev.kantobridge.builder.plan.Box3 kanto = new dev.kantobridge.builder.plan.Box3(1000, 40, 5000, 1800, 120, 5900);
+		dev.kantobridge.builder.plan.Box3 moved = new dev.kantobridge.builder.plan.Box3(1000 + 8192, 40, 5000, 1800 + 8192, 120, 5900);
+		CavePlanner.Result here = CavePlanner.place(all, new java.util.LinkedHashSet<>(all.keySet()), kanto, 0, 0, new Warnings());
+		CavePlanner.Result there = CavePlanner.place(all, new java.util.LinkedHashSet<>(all.keySet()), moved, 8192, 0, new Warnings());
+		assertEquals(here.area()[0] + 8192, there.area()[0]);
+		assertEquals(here.area()[2] + 8192, there.area()[2]);
+		assertEquals(here.area()[1], there.area()[1]);
+		assertEquals(here.area()[3], there.area()[3]);
+		assertEquals(here.placements().size(), there.placements().size());
+		for (int i = 0; i < here.placements().size(); i++) {
+			MapPlacement a = here.placements().get(i);
+			MapPlacement b = there.placements().get(i);
+			assertEquals(a.id(), b.id());
+			assertEquals(a.x() + 8192, b.x());
+			assertEquals(a.z(), b.z());
+			assertEquals(a.y(), b.y());
+		}
+	}
+
+	@Test
 	void aFloorThatWouldOverlapItsLevelMovesAside() {
 		// Two rooms on one level (no floor in their ids), both reached by ladders from 1F that would put them on one spot.
 		Map<String, ExportMap> all = new LinkedHashMap<>();

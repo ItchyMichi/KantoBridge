@@ -30,7 +30,7 @@ public record BattleStart(String battle, Kind kind, @Nullable Trainer trainer, L
 	static final int MAX_NAME = 32;
 	public static final int MAX_TEAM = 6;
 
-	private static final Set<String> FIELDS = Set.of("battle", "kind", "trainer", "team", "wild", "rules");
+	private static final Set<String> FIELDS = Set.of("battle", "kind", "trainer", "team", "wild", "rules", "region");
 	private static final Set<String> TRAINER_FIELDS = Set.of("cls", "party", "name", "npc", "map", "x", "y");
 	private static final Set<String> WILD_FIELDS = Set.of("dex", "level", "x", "y");
 	private static final Set<String> RULE_FIELDS = Set.of("catch", "flee");

@@ -11,6 +11,7 @@ import dev.kantobridge.scene.Scene;
 import dev.kantobridge.world.Dir;
 import dev.kantobridge.world.MapLayout;
 import dev.kantobridge.world.MapPlacement;
+import dev.kantobridge.world.RegionRecord;
 import dev.kantobridge.world.Scale;
 import dev.kantobridge.world.SlotMap;
 import dev.kantobridge.world.StoryCellTable;
@@ -115,11 +116,23 @@ public final class WorldPlan {
 	private final List<ZonePlan> zones;
 	/** Each zone's balls' indices in {@link #storyCells}, by zone, then ball order. */
 	private final List<int[]> zoneBallStory;
+	/** The cave area's box ({@code minX, minZ, maxX, maxZ}, max exclusive; CAVES_3D_PLAN §3.3), or null without caves. */
+	private final int @Nullable [] caveArea;
+	/** The region this plan builds (MULTI_GAME_PLAN §4.6, MG3), or null for a legacy build. */
+	private final @Nullable RegionBuild region;
 
 	WorldPlan(String game, String exportHash, int originX, int originZ, List<PlacedMap> maps, @Nullable Box3 surfaceBox, int[] surfaceOwner,
 			boolean[] surfaceVoid, StoryCellTable storyCells, Map<String, int[]> storyIndex, ArtCatalog art, @Nullable Spawn spawn,
 			WorldIndex index, Map<String, String> pools, Warnings warnings, int mapsRequested, int mapsUnplaced, int edgeMismatches, int overlaps,
 			@Nullable Scene scene, @Nullable ShapePlan shapes) {
+		this(game, exportHash, originX, originZ, maps, surfaceBox, surfaceOwner, surfaceVoid, storyCells, storyIndex, art, spawn, index, pools,
+				warnings, mapsRequested, mapsUnplaced, edgeMismatches, overlaps, scene, shapes, null, null);
+	}
+
+	WorldPlan(String game, String exportHash, int originX, int originZ, List<PlacedMap> maps, @Nullable Box3 surfaceBox, int[] surfaceOwner,
+			boolean[] surfaceVoid, StoryCellTable storyCells, Map<String, int[]> storyIndex, ArtCatalog art, @Nullable Spawn spawn,
+			WorldIndex index, Map<String, String> pools, Warnings warnings, int mapsRequested, int mapsUnplaced, int edgeMismatches, int overlaps,
+			@Nullable Scene scene, @Nullable ShapePlan shapes, int @Nullable [] caveArea, @Nullable RegionBuild region) {
 		this.game = game;
 		this.exportHash = exportHash;
 		this.originX = originX;
@@ -144,6 +157,8 @@ public final class WorldPlan {
 		this.shapes = shapes;
 		this.zones = List.of();
 		this.zoneBallStory = List.of();
+		this.caveArea = caveArea == null ? null : caveArea.clone();
+		this.region = region;
 		for (Map.Entry<SlotMap.Key, SlotMap.Slot> entry : this.slotMap.slots().entrySet()) {
 			SlotMap.Key key = entry.getKey();
 			TileSlots slots = this.tileSlots.computeIfAbsent(key.atlas() + "|" + key.palette(), k -> new TileSlots());
@@ -181,6 +196,8 @@ public final class WorldPlan {
 		this.shapes = base.shapes == null ? null : base.shapes.withIndexHash(index.hash());
 		this.zones = List.copyOf(zones);
 		this.zoneBallStory = List.copyOf(zoneBallStory);
+		this.caveArea = base.caveArea;
+		this.region = base.region;
 	}
 
 	/**
@@ -243,6 +260,91 @@ public final class WorldPlan {
 	/** The plan's Wild Routes zones (empty for a build without any). */
 	public List<ZonePlan> zones() {
 		return this.zones;
+	}
+
+	/** The region this plan builds (MULTI_GAME_PLAN §4.6, MG3), or null for a legacy build. */
+	public @Nullable RegionBuild region() {
+		return this.region;
+	}
+
+	/** What this build's habitat pool ids start with after {@code kantobridge:}: the region's prefix, nothing for a legacy build. */
+	public String poolPrefix() {
+		return this.region == null ? "" : this.region.poolPrefix();
+	}
+
+	/**
+	 * The world-level slot map (MG3): every region's entries for a region build; the same map as {@link #slotMap()} for a
+	 * legacy build. What {@code slot_map.json} holds.
+	 */
+	public SlotMap worldSlotMap() {
+		return this.art.worldSlotMap();
+	}
+
+	// ---- the region's bounds and areas (MULTI_GAME_PLAN §4.6, MG3) ----
+
+	/** The dungeon area the index reserves (the dungeon slots north of the surface), or none when no zone has a dungeon. */
+	public RegionRecord.Area dungeonArea() {
+		WorldIndex.Dungeons dungeons = this.index.dungeons();
+		return dungeons == null ? RegionRecord.Area.NONE : new RegionRecord.Area(dungeons.x(), dungeons.z(), dungeons.w(), dungeons.d());
+	}
+
+	/** The box of the zones built (their slots' land included), or none without zones. */
+	public RegionRecord.Area zoneArea() {
+		RegionRecord.Area out = RegionRecord.Area.NONE;
+		for (ZonePlan zone : this.zones) {
+			Box3 v = zone.volume();
+			out = out.union(new RegionRecord.Area(v.minX(), v.minZ(), v.maxX() - v.minX(), v.maxZ() - v.minZ()));
+		}
+		return out;
+	}
+
+	/** The cave area (CAVES_3D_PLAN §3.3), or none when the build placed no caves. */
+	public RegionRecord.Area caveArea() {
+		int[] a = this.caveArea;
+		if (a == null || a[2] <= a[0] || a[3] <= a[1]) {
+			return RegionRecord.Area.NONE;
+		}
+		return new RegionRecord.Area(a[0], a[1], a[2] - a[0], a[3] - a[1]);
+	}
+
+	/** The surface box on the ground plane (the surface maps and their void ring), or none without surface maps. */
+	public RegionRecord.Area surfaceArea() {
+		Box3 s = this.surfaceBox;
+		return s == null ? RegionRecord.Area.NONE : new RegionRecord.Area(s.minX(), s.minZ(), s.maxX() - s.minX(), s.maxZ() - s.minZ());
+	}
+
+	/** The region record's areas: where this build's parts are. */
+	public RegionRecord.Areas regionAreas() {
+		return new RegionRecord.Areas(this.surfaceArea(), this.zoneArea(), this.dungeonArea(), this.caveArea());
+	}
+
+	/**
+	 * The region record's bounds: the smallest box (inclusive) holding every volume this build owns (the surface and its
+	 * ring, the interiors with their spill, the shafts, the zones), the dungeon area when the index reserves one (a
+	 * generous height: its floors stack {@link dev.kantobridge.dungeon.DungeonSlots#FLOOR_STEP} apart) and the cave area.
+	 * Null for a plan with nothing placed.
+	 */
+	public RegionRecord.@Nullable Box regionBounds() {
+		RegionRecord.Box out = null;
+		for (Box3 v : this.volumes()) {
+			out = union(out, new RegionRecord.Box(v.minX(), v.minZ(), v.maxX() - 1, v.maxZ() - 1, v.minY(), v.maxY() - 1));
+		}
+		WorldIndex.Dungeons dungeons = this.index.dungeons();
+		if (dungeons != null) {
+			out = union(out, new RegionRecord.Box(dungeons.x(), dungeons.z(), dungeons.x() + dungeons.w() - 1, dungeons.z() + dungeons.d() - 1,
+					dungeons.y() - 2, dungeons.y() + dev.kantobridge.dungeon.DungeonSlots.FLOOR_STEP * 10));
+		}
+		int[] caves = this.caveArea;
+		if (caves != null && caves[2] > caves[0] && caves[3] > caves[1]) {
+			int minY = out == null ? Scale.GROUND_Y : out.minY();
+			int maxY = out == null ? Scale.SURFACE_Y + CEILING_ABOVE_FEET : out.maxY();
+			out = union(out, new RegionRecord.Box(caves[0], caves[1], caves[2] - 1, caves[3] - 1, minY, maxY));
+		}
+		return out;
+	}
+
+	private static RegionRecord.Box union(RegionRecord.@Nullable Box a, RegionRecord.Box b) {
+		return a == null ? b : a.union(b);
 	}
 
 	public String game() {

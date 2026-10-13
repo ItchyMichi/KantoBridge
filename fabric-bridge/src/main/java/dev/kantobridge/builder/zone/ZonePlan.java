@@ -82,6 +82,8 @@ public final class ZonePlan {
 	}
 
 	private final String id;
+	/** MG3: what the zone's pool ids start with after {@code kantobridge:} (its region's prefix; nothing for the legacy region). */
+	private final String poolPrefix;
 	private final RouteLayout layout;
 	private final int x0;
 	private final int z0;
@@ -123,7 +125,17 @@ public final class ZonePlan {
 	 */
 	public ZonePlan(String id, String routeMap, String palette, RouteLayout layout, int slotX, int slotZ, TerrainSampler terrain,
 			ZoneObjects objects) {
+		this(id, routeMap, palette, layout, slotX, slotZ, terrain, objects, "");
+	}
+
+	/**
+	 * A zone of a region (MULTI_GAME_PLAN §4.6, MG3): its pool ids carry the region's prefix ({@code poolPrefix}, nothing
+	 * for the legacy region), so two regions built from one game never share a zone's pools.
+	 */
+	public ZonePlan(String id, String routeMap, String palette, RouteLayout layout, int slotX, int slotZ, TerrainSampler terrain,
+			ZoneObjects objects, String poolPrefix) {
 		this.id = id;
+		this.poolPrefix = java.util.Objects.requireNonNull(poolPrefix, "poolPrefix");
 		this.objects = objects;
 		this.layout = layout;
 		this.width = Scale.cellToBlock(layout.width()) + 2 * PAD;
@@ -180,7 +192,7 @@ public final class ZonePlan {
 			}
 		}
 		int area = this.layout.areaOf(entrance);
-		String pool = area >= 0 && this.pools.containsKey(poolId(this.id, area)) ? poolId(this.id, area)
+		String pool = area >= 0 && this.pools.containsKey(poolId(this.poolPrefix, this.id, area)) ? poolId(this.poolPrefix, this.id, area)
 				: this.pools.isEmpty() ? null : this.pools.keySet().iterator().next();
 		int top = 1;
 		for (ZoneContent.Slot slot : this.objects.pool()) {
@@ -212,7 +224,7 @@ public final class ZonePlan {
 		MapPlacement grid = new MapPlacement(this.routeMap.id(), this.layoutX0, FEET, this.layoutZ0, this.layout.width(), this.layout.height(), 0,
 				MapPlacement.Kind.ROUTE, palette, BIOME, false, null);
 		for (Map.Entry<Integer, List<int[]>> e : grass.entrySet()) {
-			String pool = poolId(this.id, e.getKey());
+			String pool = poolId(this.poolPrefix, this.id, e.getKey());
 			this.pools.put(pool, ProtoJson.write(pool(this.routeMap.id(), e.getKey(), this.objects.pool(),
 					this.layout.areas().get(e.getKey()).levelOffset())));
 			for (int[] block : HabitatPlanner.cover(grid, e.getValue())) {
@@ -221,9 +233,14 @@ public final class ZonePlan {
 		}
 	}
 
-	/** An area's habitat pool id: {@code kantobridge:zone_<zone>_a<area>}. */
+	/** An area's habitat pool id in the legacy region: {@code kantobridge:zone_<zone>_a<area>}. */
 	public static String poolId(String zone, int area) {
-		return HabitatPlanner.POOL_NAMESPACE + ":zone_" + zone + "_a" + (area + 1);
+		return poolId("", zone, area);
+	}
+
+	/** An area's habitat pool id in a region (MG3): {@code kantobridge:<prefix>zone_<zone>_a<area>}. */
+	public static String poolId(String prefix, String zone, int area) {
+		return HabitatPlanner.POOL_NAMESPACE + ":" + prefix + "zone_" + zone + "_a" + (area + 1);
 	}
 
 	/** An area's pool, in the format of Kanto's ({@link HabitatPoolWriter#pool}), levels raised by {@code levelOffset}. */

@@ -14,7 +14,7 @@ import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.shapes.CollisionContext;
 
-/** Spike S2 in a running server: all 32 tile families exist with 256 states each, and states survive placement. */
+/** Spike S2 in a running server: every tile family (full and half; 32 per shape since MG3) exists with 256 states, and states survive placement. */
 public class TileBlockTests implements FabricGameTest {
 	@GameTest(template = EMPTY_STRUCTURE)
 	public void familiesRegistered(GameTestHelper helper) {
@@ -29,7 +29,8 @@ public class TileBlockTests implements FabricGameTest {
 				states += count;
 			}
 		}
-		helper.assertTrue(states == 8192, "expected 8192 tile states, got " + states);
+		int expected = 2 * KbBlocks.FAMILIES_PER_SHAPE * 256;
+		helper.assertTrue(states == expected, "expected " + expected + " tile states, got " + states);
 		KantoBridge.LOGGER.info("S2: {} tile blocks, {} tile states registered", KbBlocks.allTiles().size(), states);
 		helper.succeed();
 	}

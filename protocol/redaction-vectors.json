@@ -34,8 +34,32 @@
       "seq": 81,
       "redacted": {"ok": false, "kind": "resume", "reason": "bad_target"}
     },
+    {"type": "act.result", "seq": 82, "redacted": {"ok": true, "kind": "stash", "moved": 3}},
+    {
+      "type": "act.result",
+      "seq": 83,
+      "redacted": {"ok": false, "kind": "bag.set", "reason": "too_many", "left": {"POTION": 1}}
+    },
     {"type": "activity", "seq": 11, "redacted": {"activity": "dialogue"}},
+    {
+      "type": "bag.set",
+      "seq": 50,
+      "redacted": {
+        "items": {"POTION": 3, "POKE_BALL": 10},
+        "money": 3000,
+        "stamp": "0123456789abcdef0123456789abcdef"
+      }
+    },
     {"type": "bag.sync", "seq": 11, "redacted": {"items": {"POKE_BALL": 5, "POTION": 2}}},
+    {
+      "type": "bag.sync",
+      "seq": 12,
+      "redacted": {
+        "items": {"POKE_BALL": 5, "POTION": 2},
+        "money": 3000,
+        "stamp": "0123456789abcdef0123456789abcdef"
+      }
+    },
     {"type": "bag.use", "seq": 11, "redacted": {"item": "POKE_BALL", "qty": 1}},
     {"type": "battle.native", "seq": 11, "redacted": {"kind": "safari", "phase": "start"}},
     {"type": "battle.result", "seq": 11, "redacted": {"battle": "b-1", "outcome": "win"}},
@@ -326,6 +350,7 @@
       "seq": 11,
       "redacted": {"uid": "0f8b6a2e-1c2d-4e5f-8a9b-0c1d2e3f4a5b", "nick": "<rom:str:7:04f88a79>"}
     },
+    {"type": "party.stash", "seq": 15, "redacted": {"region": "hoenn"}},
     {
       "type": "party.sync",
       "seq": 11,
@@ -351,6 +376,8 @@
       "seq": 11,
       "redacted": {"uid": "0f8b6a2e-1c2d-4e5f-8a9b-0c1d2e3f4a5b", "reason": "trade"}
     },
+    {"type": "pass.abort", "seq": 14, "redacted": {"route": "eastern_pass", "reason": "not_idle"}},
+    {"type": "pass.cross", "seq": 12, "redacted": {"route": "eastern_pass", "dir": "to"}},
     {"type": "pc.closed", "seq": 11, "redacted": {"pc": "pc-1"}},
     {"type": "pc.open", "seq": 11, "redacted": {"pc": "pc-1"}},
     {"type": "ping", "seq": 11, "redacted": {"t": 123456}},
@@ -408,6 +435,8 @@
       }
     },
     {"type": "region.start", "seq": 42, "redacted": {"region": "hoenn"}},
+    {"type": "region.state", "seq": 13, "redacted": {"followed": "hoenn", "parked": ["kanto"]}},
+    {"type": "region.state", "seq": 14, "redacted": {"parked": []}},
     {"type": "relay.hello", "seq": 1, "redacted": {"protocol": 1, "mod": "0.10.0"}},
     {"type": "resync", "seq": 11, "redacted": {}},
     {

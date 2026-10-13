@@ -39,6 +39,12 @@ public final class ZonePlanner {
 	/** {@link #plan} with trainers and balls made from {@code content} (WR5). */
 	public static List<ZonePlan> plan(ExportRoutes routes, long worldSeed, ZoneRegions regions, TerrainSampler terrain,
 			Function<String, String> paletteOf, ZoneContent content) {
+		return plan(routes, worldSeed, regions, terrain, paletteOf, content, "");
+	}
+
+	/** {@link #plan} for the zones of a region: their pool ids start with {@code poolPrefix} (MULTI_GAME_PLAN §4.6, MG3). */
+	public static List<ZonePlan> plan(ExportRoutes routes, long worldSeed, ZoneRegions regions, TerrainSampler terrain,
+			Function<String, String> paletteOf, ZoneContent content, String poolPrefix) {
 		ZoneObjects.ItemTiers tiers = ZoneObjects.ItemTiers.bundled();
 		List<ExportRoutes.Zone> zones = new ArrayList<>(routes.zones());
 		zones.sort(Comparator.comparing(ExportRoutes.Zone::id));
@@ -48,7 +54,8 @@ public final class ZonePlanner {
 			RouteLayout layout = RouteGenerator.generate(specOf(zone), RouteSeeds.forRoute(worldSeed, zone.id()));
 			int[] slot = regions.slotOrigin(i);
 			ZoneObjects objects = ZoneObjects.make(zone, layout, content, tiers, worldSeed);
-			out.add(new ZonePlan(zone.id(), zone.routeMap(), paletteOf.apply(zone.townMap()), layout, slot[0], slot[1], terrain, objects));
+			out.add(new ZonePlan(zone.id(), zone.routeMap(), paletteOf.apply(zone.townMap()), layout, slot[0], slot[1], terrain, objects,
+					poolPrefix));
 		}
 		return out;
 	}

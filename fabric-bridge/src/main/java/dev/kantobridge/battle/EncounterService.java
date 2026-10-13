@@ -24,7 +24,7 @@ import dev.kantobridge.net.RelayService;
 import dev.kantobridge.pokemon.Gen1Mons;
 import dev.kantobridge.proto.MsgTypes;
 import dev.kantobridge.server.CobblemonSettings;
-import dev.kantobridge.server.WorldIndexSync;
+import dev.kantobridge.server.Regions;
 import dev.kantobridge.world.MapPlacement;
 import dev.kantobridge.world.WorldIndex;
 import java.util.ArrayList;
@@ -234,7 +234,8 @@ public final class EncounterService {
 
 	/** The centre of the given cell on the player's map, when the WorldIndex knows the map and the cell lies in it. */
 	private static @Nullable Vec3 givenCell(MinecraftServer server, ServerPlayer player, BattleStart.@Nullable Wild wild) {
-		WorldIndex index = WorldIndexSync.current(server);
+		// MG3: the index of the region the player stands in (the cell is on the player's own map)
+		WorldIndex index = Regions.currentIndexAt(player);
 		if (wild == null || wild.x() == null || wild.y() == null || index == null) {
 			return null;
 		}
@@ -300,7 +301,7 @@ public final class EncounterService {
 			return;
 		}
 		ServerPlayer player = event.getPlayer().getEntity();
-		if (battle.isPvW() && player != null && WorldIndexSync.current(player.server) != null) {
+		if (battle.isPvW() && player != null && Regions.exists(player.server)) {
 			STOPS.add(battle);
 		}
 	}

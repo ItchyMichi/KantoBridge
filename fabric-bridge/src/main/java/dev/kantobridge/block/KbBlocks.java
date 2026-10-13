@@ -20,8 +20,8 @@ import net.minecraft.world.phys.shapes.Shapes;
 import net.minecraft.world.phys.shapes.VoxelShape;
 
 /**
- * Block registration. Tile families: {@code tile_full_00..15} (full cubes), {@code tile_half_00..15} (half height) and
- * {@code shape_full_00..15} (full collision around shaped art, never occluding; the voxel plan's V3). Plus
+ * Block registration. Tile families: {@code tile_full_00..31} (full cubes), {@code tile_half_00..31} (half height) and
+ * {@code shape_full_00..31} (full collision around shaped art, never occluding; the voxel plan's V3). Plus
  * {@code decor} and {@code decor_leaves} (visual only), and the invisible world blocks: {@code story_cell} and
  * {@code story_tile} (a swap site's cell, whose closed art the client draws per player), each with its block entity,
  * and {@code ledge_collider} (which carries the ledge lip since V3).
@@ -30,8 +30,12 @@ import net.minecraft.world.phys.shapes.VoxelShape;
  * §3.3): each with its {@link CarrierKind} and family.
  */
 public final class KbBlocks {
-	/** Families per shape; 3 shapes × 16 families × 256 slots = 12,288 tile states. */
-	public static final int FAMILIES_PER_SHAPE = 16;
+	/**
+	 * Families per shape; 3 shapes × 32 families × 256 slots = 24,576 tile states. 16 were Kanto's (it uses 3,926 of
+	 * their 4,096 full slots); the other 16 are a second region's (docs/specs/MULTI_GAME_PLAN.md §4.6, MG3, D9): a world
+	 * of several games shares one slot map with a family range per region.
+	 */
+	public static final int FAMILIES_PER_SHAPE = 32;
 
 	private static final VoxelShape FULL = Shapes.block();
 	private static final VoxelShape HALF = Block.box(0, 0, 0, 16, 8, 16);
@@ -62,7 +66,7 @@ public final class KbBlocks {
 	/**
 	 * A block the client's runtime model draws.
 	 *
-	 * @param family the tile family (0..15) of a slot-carrying kind, 0 otherwise
+	 * @param family the tile family (0..31) of a slot-carrying kind, 0 otherwise
 	 */
 	public record Carrier(Block block, CarrierKind kind, int family) {
 		/** The slot index of a state: {@code family × 256 + hi × 16 + lo} for a slot-carrying kind, else 0. */

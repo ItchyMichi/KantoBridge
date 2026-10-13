@@ -26,7 +26,7 @@
       "schema": "messages/act.interact.schema.json"
     },
     "act.result": {
-      "legs": ["g2m"],
+      "legs": ["g2m", "s2c", "c2s"],
       "re": "required",
       "rom": false,
       "redact": [],
@@ -38,6 +38,13 @@
       "rom": false,
       "redact": [],
       "schema": "messages/activity.schema.json"
+    },
+    "bag.set": {
+      "legs": ["m2g", "s2c"],
+      "re": "never",
+      "rom": false,
+      "redact": [],
+      "schema": "messages/bag.set.schema.json"
     },
     "bag.sync": {
       "legs": ["g2m", "c2s"],
@@ -284,6 +291,13 @@
       "redact": ["/nick"],
       "schema": "messages/party.rename.schema.json"
     },
+    "party.stash": {
+      "legs": ["c2s"],
+      "re": "never",
+      "rom": false,
+      "redact": [],
+      "schema": "messages/party.stash.schema.json"
+    },
     "party.sync": {
       "legs": ["m2g", "s2c"],
       "re": "never",
@@ -297,6 +311,20 @@
       "rom": false,
       "redact": [],
       "schema": "messages/party.take.schema.json"
+    },
+    "pass.abort": {
+      "legs": ["c2s"],
+      "re": "never",
+      "rom": false,
+      "redact": [],
+      "schema": "messages/pass.abort.schema.json"
+    },
+    "pass.cross": {
+      "legs": ["c2s"],
+      "re": "never",
+      "rom": false,
+      "redact": [],
+      "schema": "messages/pass.cross.schema.json"
     },
     "pc.closed": {
       "legs": ["m2g", "s2c"],
@@ -367,6 +395,13 @@
       "rom": false,
       "redact": [],
       "schema": "messages/region.start.schema.json"
+    },
+    "region.state": {
+      "legs": ["c2s", "s2c"],
+      "re": "never",
+      "rom": false,
+      "redact": [],
+      "schema": "messages/region.state.schema.json"
     },
     "relay.hello": {
       "legs": ["s2c", "c2s"],

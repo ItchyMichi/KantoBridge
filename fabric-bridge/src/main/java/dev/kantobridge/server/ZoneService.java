@@ -9,6 +9,7 @@ import dev.kantobridge.net.RelayService;
 import dev.kantobridge.proto.Envelope;
 import dev.kantobridge.proto.MsgTypes;
 import dev.kantobridge.story.Activity;
+import dev.kantobridge.world.RegionRecord;
 import dev.kantobridge.world.WorldIndex;
 import java.util.concurrent.atomic.AtomicLong;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
@@ -53,21 +54,33 @@ public final class ZoneService {
 	}
 
 	private static void tick(MinecraftServer server) {
-		WorldIndex index = WorldIndexSync.current(server);
-		if (index == null || index.zones().isEmpty()) {
+		Regions regions = Regions.of(server);
+		if (regions == null) {
 			return;
 		}
 		long tick = server.getTickCount();
 		for (ServerPlayer player : server.getPlayerList().getPlayers()) {
-			tickPlayer(player, index, tick);
+			// MG3: each player against the index of the region they stand in
+			RegionRecord region = regions.regionAt(player);
+			WorldIndex index = region == null ? null : regions.indexOf(region.id());
+			if (index == null || index.zones().isEmpty()) {
+				ENCOUNTERS.tick(player.getUUID(), null, player.getX(), player.getZ(), false, tick);
+				continue;
+			}
+			tickPlayer(player, region.id(), index, tick);
 		}
 	}
 
 	/** One player's tick against {@code index} (GameTests call it with their own index and ticks). */
 	public static void tickPlayer(ServerPlayer player, WorldIndex index, long tick) {
+		tickPlayer(player, null, index, tick);
+	}
+
+	/** {@link #tickPlayer(ServerPlayer, WorldIndex, long)} in one region (MG3): its messages carry the region in a region world. */
+	public static void tickPlayer(ServerPlayer player, @Nullable String region, WorldIndex index, long tick) {
 		boolean free = !player.isSpectator() && !BuildHold.isHeld(player) && Activity.of(player) == Activity.NONE
 				&& BattleRegistry.getBattleByParticipatingPlayer(player) == null;
-		ZoneEncounters.Action action = ENCOUNTERS.tick(player.getUUID(), index, player.getX(), player.getZ(), free, tick);
+		ZoneEncounters.Action action = ENCOUNTERS.tick(player.getUUID(), region, index, player.getX(), player.getZ(), free, tick);
 		if (action instanceof ZoneEncounters.Sight sight) {
 			JsonObject data = new JsonObject();
 			data.addProperty("route", sight.route());
@@ -75,12 +88,13 @@ public final class ZoneService {
 			data.addProperty("x", sight.x());
 			data.addProperty("y", sight.y());
 			data.addProperty("frames", sight.frames());
+			Regions.tag(data, player.server, region);
 			if (RelayService.get().send(player, MsgTypes.ROUTE_SIGHT, data, null)) {
 				SIGHTS.incrementAndGet();
 				KantoBridge.LOGGER.debug("zone: {} saw a player in {}", sight.id(), sight.route());
 			}
 		} else if (action instanceof ZoneEncounters.Battle battle) {
-			if (RelayService.get().send(player, MsgTypes.ROUTE_BATTLE, battleData(battle), null)) {
+			if (RelayService.get().send(player, MsgTypes.ROUTE_BATTLE, Regions.tag(battleData(battle), player.server, region), null)) {
 				BATTLES.incrementAndGet();
 				KantoBridge.LOGGER.debug("zone: battle with {} in {}", battle.trainer().id(), battle.route());
 			}

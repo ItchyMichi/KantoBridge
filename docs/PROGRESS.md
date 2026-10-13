@@ -1471,7 +1471,7 @@ the full suite at the ✔ checkpoints (MG2, MG3, MG5, MG6). Pods run inside your
 | MG0 | Decisions and spikes | decisions answered (plan §9); the spikes S1–S5 are yours (your PC, your imports; S2–S3 on Emerald) | 2026-10-13 | |
 | MG1 | The game catalogue and an open protocol | **done** (notes 1–3); check: pytest and Lua 1,615 passed, JUnit 1,059 (0 failures), GameTests 101 on the pod (kb-dev7); the golden synthetic index byte-identical | 2026-10-13 | |
 | MG2 | Core and adapters in the bridge mod; the region acts on Gen 1 | **done** (notes 4–7); checkpoint passed on the pod (kb-dev7): pytest and Lua 1,658, JUnit 1,059 (0 failures), GameTests 101; e2e on the real engine (Blue, v0.3.85): `test_regions.py` 2 passed (a `start` from the title ×3 NEW GAME and ×3 CONTINUE, the park/resume round trip), `test_s5_ready.py`, `test_handshake.py` | 2026-10-13 | |
-| MG3 | Regions as data | pending | | |
+| MG3 | Regions as data | **done** (notes 8, 10–13); checkpoint passed on the pod (kb-dev7): pytest and Lua 1,703, JUnit 1,122 (0 failures), GameTests 103 (`RegionBuildGameTests`: two regions in one world, the legacy build byte-identical to the kanto region, the join sequence, per-region warps, presence and progress; a legacy world keeps today's wire); the pod's real Kanto region build waits for your EULA (PLAYTEST "Several games"); D9 as an estimate: 32 families are 24,576 tile/shape block states (+12,288), about +15 MB a side at the measured 1.23 KB a state | 2026-10-13 | |
 | MG4 | Links | pending | | |
 | MG5 | Crossings | pending | | |
 | MG6 | One trainer economy | pending | | |
@@ -1539,6 +1539,70 @@ the full suite at the ✔ checkpoints (MG2, MG3, MG5, MG6). Pods run inside your
    `game.status`; `tools/e2e/test_regions.py` (driver `kb_regions.lua`) runs the acts on the real engine: a `start` from
    the title on an empty slot (NEW GAME, the intro's first text box, no stray input) and on a saved slot (CONTINUE,
    `save.loaded{fresh:false}`), and a park/resume round trip with the cell unchanged.
+
+8. **MG3's schemas** (plan §4.6, written first): the region table `protocol/world/regions.schema.json`
+   (`<world>/kantobridge/regions.json`: `pitch` 8192, entries `{id, game, slot}`), the region record
+   `region.schema.json` (`regions/<id>/region.json`), `slot_map.schema.json` version 2 (one map per world; `regions{<id>:
+   {set, families[lo,hi]}}`, `region` per entry, families 0..31; version 1 unchanged with families 0..15), the WorldIndex's
+   closed-art slot cap 8191 (32 families), `world.regions` (S→C, parts), and an optional `region` on the 33 relayed types
+   (`world.index`, `world.shapes`, `texture.status`, `story.state`, `session.*`, `save.*`, `warp.request`, `route.*`,
+   `party.*`, `daycare.*`, `bag.*`, `battle.*`, `pc.*`); PROTOCOL.md "Regions (MG3)" (files, the legacy rule, the join
+   order, the slice-hash rule: a region's `slotMapHash` is the hash of its own slice of the one slot map, so the legacy
+   region's stays exactly today's). `kb_protocol.registry` gained `check_regions`/`check_region`.
+
+9. **MG4's, MG5's and MG6's schemas** (written first, PLAN §7, while MG3's tracks ran): `region.state` (C→S, S→C:
+   `followed?`, `parked[]`); `pass.cross{route, dir}`, `pass.abort{route, reason}`, `party.stash{region}` (C→S),
+   `act.result` travelling S→C for the stash's answer (`moved`) and C→S for `bag.set`'s (`left`), the WorldIndex zone
+   fields `pass{cells, route, toRegion, end}` and `gateHouse{x, y, w, d, facing}`, the story-cell type `pass`
+   (PROTOCOL.md "Crossings (MG5)"); `protocol/items.json` + `items.schema.json`, the canonical item catalogue (128 ids:
+   the 29 mirrored battle items with their Cobblemon ids, medicine, field items, the 5 stones, the Nugget, 28 key items
+   incl. the HMs, 50 TMs by Gen 1 move number; `symbols.gen1` from the engine's own import manifest
+   `tools/rom_manifest_blue.json`, i.e. `TM_<MOVE>` with the engine's move symbols such as `SOLARBEAM`, `PSYCHIC_M`),
+   generated into `gen1-bridge/lib/kb_items.lua` by `kb_protocol.catalog --write`; `bag.sync` + `money`, `stamp`;
+   `bag.set{items, money, stamp}` (S→C, M→G); `act.result.kind` may be dotted (`bag.set`); PROTOCOL.md "One economy
+   (MG6)". **Deviations from the plan's sketch:** item classes `field` and `stone` added to the plan's seven (repels,
+   ropes and dolls are neither battle items nor valuables; the stones are PartyItem's); `act.result` gains the `c2s`
+   leg instead of a separate `bag.result` type.
+
+10. **The region model** (MG3, plan §4.6): `world/RegionTable` (`regions.json`: slot `n` at `x = 8192·n`, D8),
+    `world/RegionRecord` (`regions/<id>/region.json`: game, family, export hash, slot, origin, bounds, the four areas,
+    the slot-map family range, the three documents with their hashes, generator, rules, namespaces; the implicit legacy
+    record for a world without the table), `world/Regions` (`at(x, z)`: bounds then areas; `legacy()`), `SlotMap` v2
+    (one map per world; `regions{id:{set, families}}`, keys carry region and art set, `enumerateRegion` assigns a
+    region's keys inside its own family range and never renumbers another's; `regionSlice`/`regionHash` give the
+    version-1 form of one region's entries, which is what that region's `WorldIndex.slotMapHash` names — the legacy
+    region at families 0..15 keeps today's hash to the byte); `FAMILIES_PER_SHAPE` 16 → 32 in `KbBlocks` and `SlotMap`
+    (+12,288 block states; the closed-art slot cap 8,191). Version-1 maps stay capped at families 0..15.
+11. **The builder** (MG3): `BuildOptions.withRegion(id, slot)` (`defaults()` is a legacy build, byte for byte today's);
+    the headless build takes `-Pkb.buildRegion`/`-Pkb.buildSlot` (`kantobridge.build.region`/`.slot`; `build_world.py
+    --region --slot`); `RegionBuild` carries the art set, the family range, the previous world slot map and the pool
+    prefix (`""` at slot 0, `<id>_` elsewhere) into `ArtCatalog`, `WorldPlanner`, `HabitatPlanner`, `ZonePlan`;
+    `WorldPlan.regionBounds()/regionAreas()` (surface, zone, dungeon and cave boxes); `BuildTask` reads the table,
+    refuses a legacy build into a region world (`build.region_required`), a taken slot, an overlap
+    (`build.region_overlap`) and a full slot map (`build.slot_map_full`), writes `regions/<id>/…`, the world slot map,
+    `regions.json` (and the implicit `kanto` record when another region is a legacy world's first region build), merges
+    the generated datapack's pools across regions, publishes per region, and reports a `region` object.
+12. **The server** (MG3): `server/Regions.of(server)` (`at`, `byId`, `legacy`, `indexOf`, `regionOf(player, data)`: the
+    message's `region`, else the player's position, else the legacy region); `WorldIndexSync` publishes per region
+    (`publishRegion`, `publishTable`) and sends, in a region world, `world.regions` → each region's `world.index{region}`
+    → one `world.slots` → each region's `world.shapes{region}` (a legacy world sends exactly today's sequence); warps,
+    zones (visits keyed by region and zone), dungeons (visits and slots per region), habitats, Flash, story state,
+    encounters, battles, battle music and texture status read the player's region; every strict reader of a relayed
+    type whitelists `region`; `SessionRecord` format 2 (`regions{<id>:{slot}}`, written only once a non-legacy region is
+    paired), `kantobridge:save_pairs` for non-legacy regions (the legacy pair stays in `kantobridge:save_pair`, so a
+    legacy world's player data is byte-identical), daycare files under `regions/<id>/daycare/`, `kantobridge:progress`
+    fed by `game.status` (`ProgressService`), `kantobridge:presence` fed by `region.state` (`RegionPresenceService`,
+    which clears the followed region's story state on a swap and sends the stored presence on join in a region world).
+13. **The client** (MG3): `client/world/RegionDocuments` (a pure state machine over the `world.regions`, `world.index` and
+    `world.shapes` parts, keyed by `region`; a legacy world's untagged index is the implicit `kanto`) behind the static
+    `ClientRegions` (`byId`, `byGame`, `at`, `followed()` — the legacy/only region, else the region under the player's
+    feet until MG4 binds it to the followed link — `indexOf`, `indexHash`, `shapesOf`, `tagFor`); `ClientWorldIndex`
+    is the shim (`current()` = the followed region's index; the 36 call sites stay on it); `ClientShapes` holds one
+    geometry set per region, checked against that region's index hash and built from that region's game's export
+    (`no_art` placeholders otherwise); `TextureSync` reports `texture.status{region}` with the region's slice hash;
+    `ClientRelay` tags every relayed type (`RegionTags`, cross-checked against the schemas by a test) with the followed
+    region in a region world only; `GameRelay` forwards `game.status`. The render snapshot still holds one shape
+    lookup (the followed region's): other regions draw as textured cubes until followed (a later item).
 
 ## Pre-flight (PLAN §0.6)
 

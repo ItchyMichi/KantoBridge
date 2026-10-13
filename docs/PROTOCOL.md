@@ -243,7 +243,7 @@ end. Every other cave link stays an ordinary warp with a fade.
 | `act.interact` | M→G | `map, x, y` (face the cell and press A) | |
 | `act.button` | M→G | `button, how:"tap"\|"down"\|"up"` (mirror screen, start menu) | |
 | `act.field` | M→G | `action:"cut"\|"surf"\|"strength"\|"flash"\|"dig"\|"teleport"\|"bicycle"\|"fish"\|"fly", x?, y?, dest?, item?` | |
-| `act.result` | G→M | `ok, kind?, reason?, detail?`; `re` required. MG2: also answers `region.park`/`region.resume`/`region.start` (kinds `park`, `resume`, `start`; `detail` `new`\|`continue` for a start) | |
+| `act.result` | G→M, S→C, C→S | `ok, kind?, reason?, detail?, moved?, left?`; `re` required. MG2: also answers `region.park`/`region.resume`/`region.start` (kinds `park`, `resume`, `start`; `detail` `new`\|`continue` for a start); MG5: the server's answer to `party.stash` (kind `stash`, `moved`) travels S→C; MG6: the answer to `bag.set` (kind `bag.set`, `left`) is forwarded C→S | |
 
 **`act.field` (M8):** each action runs through the hidden game's own entry points after its own
 checks (the move in the party, the badge, the place). `x`/`y` name an adjacent target cell (a cut
@@ -545,8 +545,9 @@ it for that player's collision.
 | `party.rename` | G→M, C→S | `uid, nick` (empty clears) | yes |
 | `party.item` | G→M, C→S | `item, uid, slot?, move?` (stone, TM/HM, Rare Candy) | |
 | `dex.sync` | S→C, M→G | `seen[dex], owned[dex]` (dex ≤ 151) | |
-| `bag.sync` | G→M, C→S | `items{item:qty}` (battle-usable subset) | |
+| `bag.sync` | G→M, C→S | `items{item:qty}` (battle-usable subset), and (MG6) `money?`, `stamp?` (the ledger stamp of the last projection) | |
 | `bag.use` | S→C, M→G | `item, qty` (consumed in Minecraft) | |
+| `bag.set` | S→C, M→G | `items{item:qty}, money, stamp` (MG6: the ledger's projection into the followed game's save on a resume or after a start) → `act.result{kind:"bag.set", left?}` (reasons `not_ingame`, `busy`, `too_many`) | |
 | `pc.open` | G→M, C→S | `pc` (id, M10) | |
 | `pc.closed` | S→C, M→G | `pc` (the `pc.open`'s id) | |
 | `daycare.deposit` | G→M, C→S | `uid` | |
@@ -742,6 +743,7 @@ engine symbols, and Pokémon identities as Cobblemon UUIDs (`uid`).
 | `region.park` | M→G | `region` (hold this game where it stands) → `act.result{kind:"park"}` | |
 | `region.resume` | M→G | `region, to{map,x,y,facing}` (release the hold; warp onto `to` when not there) → `act.result{kind:"resume"}` | |
 | `region.start` | M→G | `region` (start the game from its title: CONTINUE or NEW GAME) → `act.result{kind:"start", detail:"new"\|"continue"}` | |
+| `region.state` | C→S, S→C | `followed?, parked[]` (MG4: the client's links as it sees them, region ids; S→C once on join with the stored presence) | |
 
 #### Region rules (MG2)
 
@@ -785,6 +787,67 @@ engine symbols, and Pokémon identities as Cobblemon UUIDs (`uid`).
   the catalogue. When both ends list the running game (a one-engine test world only), the `to` end's
   route map is `KB_ROUTE_<ID>_TO` and the export lists one item per end. A free-roam zone is
   unchanged (its `from` may name a `region`; absent means the legacy region).
+
+### Crossings (MG5, several games)
+
+[specs/MULTI_GAME_PLAN.md](specs/MULTI_GAME_PLAN.md) §4.7, §4.8, §4.12, D5, D6, D12; `server/PassService`,
+`client/zone/PassRuntime`.
+
+| Type | Dir | Data | ROM |
+|---|---|---|---|
+| `pass.cross` | C→S | `route, dir:"to"\|"from"` (the player stands on that pass and heads for the other half) | |
+| `pass.abort` | C→S | `route, reason` (the client could not park, stash, start or resume) | |
+| `party.stash` | C→S | `region` (every party member into Cobblemon's PC before a `region.start`) → `act.result{kind:"stash", moved}` or `error{code:"stash.pc_full"}` | |
+
+#### Crossing rules (MG5)
+
+- **The pass** is the far doorway of a connecting route half's **gate house** (D12): the WorldIndex zone entry carries
+  `pass{cells[], route, toRegion, end}` and `gateHouse{x, y, w, d, facing}` (cells in the route map's grid). Its cells
+  are story cells of type `pass`, closed per player (`pass_closed`) while the far region isn't built or the player has
+  no link to its game.
+- **The server** (`pass.cross`): the player must stand on that pass; the target region must exist and be built
+  (`pass.no_region`, `pass.not_built`); the player's `region.state` must list a link for the target's game
+  (`pass.no_link`); one crossing at a time (`pass.busy`). It answers `route.fade{ticks:10}` and starts a 15 s timer.
+- **The client** (on the fade): `region.park` on the followed link (a refusal → `pass.abort`); then, by the target's
+  last `game.status`: `fresh`/`saved` → `region.resume{to: that half's route map x1}`; `title` → `party.stash`, then
+  `region.start`, the intro's screens shown with the fade lifted, then `game.status{ingame:true}` (up to 10 s after the
+  intro ends). Then the target link is followed and `region.state{followed, parked[]}` goes up.
+- **On `region.state`** the server teleports the player into the other half's gate house, just inside its far
+  doorway; after a `start` it leaves the teleport to the client's relink (the first room, the one accepted teleport).
+  `pass.abort` or the timer → `error{code:"pass.timeout"}`: the fade lifts where the player stands and the followed
+  link is unchanged.
+- **The name** (D6): the client answers the started game's first naming screen with the parked save's
+  `game.status.name`, truncated to the game's limit; the screen is shown only when the name was truncated or the game
+  asks something else (the rival's name, a gender).
+- **Items and trainers** of a half belong to its region (`route.give`/`route.battle` carry `region`; the client forwards
+  them to that region's link). "Add a region" refuses a second region of one world space (`build.region_exists`).
+
+### One economy (MG6, several games)
+
+[specs/MULTI_GAME_PLAN.md](specs/MULTI_GAME_PLAN.md) §4.9, D7: Pokémon, money and items are the player's; badges, key
+items, HMs and the story stay per game. [`protocol/items.json`](../protocol/items.json) (schema
+[`items.schema.json`](../protocol/items.schema.json)) is the **canonical item catalogue**: id → `class` (`ball`,
+`medicine`, `battle`, `field`, `stone`, `held`, `valuable`, `tm`, `key`), the Cobblemon item it is mirrored as (when it
+is), the `move` a machine teaches (TMs cross **by move**), and each family's symbol (`symbols.gen1`: the Gen 1 import's
+ids, e.g. `POTION`, `TM_MEGA_PUNCH`). fabric-bridge bundles it (`Items`); gen1-bridge carries the generated
+`lib/kb_items.lua`; `kb_protocol.items` reads it in Python.
+
+- **The ledger** is server-side, per player (`kantobridge:ledger`, persistent): the wallet (`money`) and the item
+  ledger (canonical id → quantity). Class `key` never enters it (key items, HMs, badges, story items).
+- **Projection:** on a `region.resume` or after a `region.start` the server sends `bag.set{items, money, stamp}` to
+  the followed link: the adapter writes `save.money` and replaces the bag's non-key items with the projection, within
+  the game's limits (Gen 1: 20 bag slots, 99 a stack; `too_many` with `left` for what did not fit, which stays in the
+  ledger: "in your trunk", shown on F7); the `stamp` goes into the save's mod data.
+- **Read-back:** while followed, every `bag.sync` carries `money` and the `stamp`; the server applies the diff of that
+  game's bag and money since the last projection to the ledger (prize money, purchases, found items, blackout
+  halving). On park the last `bag.sync` is final. A save with no `stamp` (never projected) is **adopted once**: its
+  money joins the wallet and its items the ledger; a save restored to an older state (`save.mismatch` kinds) keeps
+  the ledger's view and is re-projected.
+- **The Minecraft mirror** (`bag.sync` → Cobblemon items → `bag.use`) is one per player from the ledger, not one per
+  hidden game; the stacks it creates are **marked**, so items found in Minecraft are never counted or deleted by it
+  and a use debits the ledger (reaching the followed game through the next projection).
+- **Legacy worlds** (no `regions.json`) keep today's per-game bag path: `bag.sync` without `money`/`stamp`, no
+  `bag.set`.
 
 ### Export (builder role)
 

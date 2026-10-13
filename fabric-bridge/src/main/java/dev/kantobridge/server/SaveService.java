@@ -80,8 +80,9 @@ public final class SaveService {
 		String reason;
 		String pair;
 		long at;
+		String region;
 		try {
-			DataReader reader = DataReader.of(data, "").allowOnly(Set.of("save", "reason", "pair", "at"));
+			DataReader reader = DataReader.of(data, "").allowOnly(Set.of("save", "reason", "pair", "at", "region"));
 			save = reader.string("save", Ids.ID);
 			reason = reader.string("reason");
 			if (!REASONS.contains(reason)) {
@@ -89,6 +90,11 @@ public final class SaveService {
 			}
 			pair = reader.string("pair", DataReader.HASH);
 			at = reader.has("at") ? reader.longValue("at", 0, Long.MAX_VALUE) : -1;
+			// MG3: the region whose hidden game saved (its pair is kept per region)
+			region = Regions.currentRegionId(player, reader.optionalRegion());
+			if (reader.has("region") && region == null) {
+				throw new DataException(reader.path("region"), "unknown region");
+			}
 		} catch (DataException e) {
 			KantoBridge.LOGGER.debug("save: malformed save.begin at {} ({})", e.path(), e.problem());
 			warn("bad_message");
@@ -101,7 +107,7 @@ public final class SaveService {
 			return;
 		}
 		// The hidden game saved: its pair goes into the player's data before this save writes it (a repeat changes nothing).
-		SavePairService.saveBegun(player, pair, at);
+		SavePairService.saveBegun(player, region, pair, at);
 		LinkedHashMap<String, Boolean> answers = ANSWERS.computeIfAbsent(player.getUUID(), key -> new LinkedHashMap<>());
 		Boolean before = answers.get(save);
 		if (before != null) {

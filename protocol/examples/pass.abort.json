@@ -1,0 +1,10 @@
+[
+  {
+    "type": "pass.abort",
+    "seq": 14,
+    "data": {
+      "route": "eastern_pass",
+      "reason": "not_idle"
+    }
+  }
+]

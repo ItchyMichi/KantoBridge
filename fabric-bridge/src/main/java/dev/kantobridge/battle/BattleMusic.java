@@ -5,7 +5,7 @@ import com.cobblemon.mod.common.api.battles.model.PokemonBattle;
 import com.cobblemon.mod.common.api.battles.model.actor.BattleActor;
 import com.cobblemon.mod.common.api.events.CobblemonEvents;
 import com.cobblemon.mod.common.battles.actor.PlayerBattleActor;
-import dev.kantobridge.server.WorldIndexSync;
+import dev.kantobridge.server.Regions;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.UUID;
@@ -70,7 +70,7 @@ public final class BattleMusic {
 	}
 
 	private static boolean kanto(ServerPlayer player) {
-		return player != null && (STARTING.contains(player.getUUID()) || WorldIndexSync.current(player.server) != null);
+		return player != null && (STARTING.contains(player.getUUID()) || Regions.exists(player.server));
 	}
 
 	/** Battles whose Cobblemon theme was silenced. */

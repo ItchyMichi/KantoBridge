@@ -145,6 +145,7 @@ def _lua_value(value, indent):
     raise TypeError(type(value).__name__)
 
 
-def render_lua(data):
-    """gen1-bridge/lib/kb_games.lua's text for a catalogue document (sorted keys, deterministic)."""
-    return LUA_HEADER + "return " + _lua_value(data, 0) + "\n"
+def render_lua(data, header=LUA_HEADER):
+    """gen1-bridge/lib/kb_games.lua's text for a catalogue document (sorted keys, deterministic); another
+    header renders another catalogue the same way (kb_items.lua)."""
+    return header + "return " + _lua_value(data, 0) + "\n"

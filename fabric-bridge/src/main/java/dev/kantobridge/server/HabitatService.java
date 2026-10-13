@@ -242,12 +242,12 @@ public final class HabitatService {
 	// ---- run time ----
 
 	private static void onStarted(MinecraftServer server) {
-		WorldIndex index = WorldIndexSync.current(server);
-		if (index == null || index.habitats().isEmpty()) {
+		List<WorldIndex.Habitat> habitats = allHabitats(server);
+		if (habitats.isEmpty()) {
 			return;
 		}
 		Set<String> needed = new HashSet<>();
-		for (WorldIndex.Habitat habitat : index.habitats()) {
+		for (WorldIndex.Habitat habitat : habitats) {
 			needed.add(habitat.pool());
 		}
 		int known = 0;
@@ -266,18 +266,44 @@ public final class HabitatService {
 		// Chunks loaded during start-up (the spawn area) are checked now that the index is known.
 		int checked = verifyLoaded(server);
 		KantoBridge.LOGGER.info("habitats: {} habitat blocks on {} pools listed; {} loaded and checked ({} ok, {} reconfigured)",
-				index.habitats().size(), needed.size(), checked, COUNTS.ok.get(), COUNTS.repaired.get());
+				habitats.size(), needed.size(), checked, COUNTS.ok.get(), COUNTS.repaired.get());
+	}
+
+	/** Every published region's habitat blocks (MG3; a legacy world: its one index's). Pool ids are unique across regions. */
+	static List<WorldIndex.Habitat> allHabitats(MinecraftServer server) {
+		Regions regions = Regions.of(server);
+		if (regions == null) {
+			return List.of();
+		}
+		List<WorldIndex.Habitat> out = new ArrayList<>();
+		for (WorldIndex index : regions.indices().values()) {
+			out.addAll(index.habitats());
+		}
+		return out;
+	}
+
+	/** The hashes of every published index, joined: when it changes, the chunk table is rebuilt. */
+	private static String indicesKey(MinecraftServer server) {
+		Regions regions = Regions.of(server);
+		if (regions == null) {
+			return "";
+		}
+		StringBuilder key = new StringBuilder();
+		for (WorldIndex index : regions.indices().values()) {
+			key.append(index.hash()).append(';');
+		}
+		return key.toString();
 	}
 
 	/** Checks every listed habitat block whose chunk is loaded now; returns how many were checked. */
 	public static int verifyLoaded(MinecraftServer server) {
-		WorldIndex index = WorldIndexSync.current(server);
-		if (index == null) {
+		List<WorldIndex.Habitat> habitats = allHabitats(server);
+		if (habitats.isEmpty()) {
 			return 0;
 		}
 		ServerLevel level = server.overworld();
 		int checked = 0;
-		for (WorldIndex.Habitat habitat : index.habitats()) {
+		for (WorldIndex.Habitat habitat : habitats) {
 			if (level.isLoaded(new BlockPos(habitat.x(), habitat.y(), habitat.z()))) {
 				check(level, habitat);
 				checked++;
@@ -317,19 +343,19 @@ public final class HabitatService {
 		if (PENDING_CHUNKS.isEmpty()) {
 			return;
 		}
-		WorldIndex index = WorldIndexSync.current(server);
-		if (index == null || index.habitats().isEmpty()) {
+		List<WorldIndex.Habitat> habitats = allHabitats(server);
+		if (habitats.isEmpty()) {
 			PENDING_CHUNKS.clear();
 			return;
 		}
-		Map<Long, List<WorldIndex.Habitat>> byChunk = byChunk(index);
+		Map<Long, List<WorldIndex.Habitat>> byChunk = byChunk(indicesKey(server), habitats);
 		List<Long> chunks = new ArrayList<>(PENDING_CHUNKS);
 		PENDING_CHUNKS.removeAll(chunks);
 		ServerLevel level = server.overworld();
 		for (long chunk : chunks) {
-			List<WorldIndex.Habitat> habitats = byChunk.get(chunk);
-			if (habitats != null) {
-				for (WorldIndex.Habitat habitat : habitats) {
+			List<WorldIndex.Habitat> inChunk = byChunk.get(chunk);
+			if (inChunk != null) {
+				for (WorldIndex.Habitat habitat : inChunk) {
 					check(level, habitat);
 				}
 			}
@@ -370,13 +396,13 @@ public final class HabitatService {
 		KantoBridge.LOGGER.info("habitats: reconfigured a habitat block on {} ({} so far)", habitat.map(), n);
 	}
 
-	private static Map<Long, List<WorldIndex.Habitat>> byChunk(WorldIndex index) {
-		if (!index.hash().equals(indexedHash)) {
+	private static Map<Long, List<WorldIndex.Habitat>> byChunk(String key, List<WorldIndex.Habitat> habitats) {
+		if (!key.equals(indexedHash)) {
 			BY_CHUNK.clear();
-			for (WorldIndex.Habitat habitat : index.habitats()) {
-				BY_CHUNK.computeIfAbsent(ChunkPos.asLong(habitat.x() >> 4, habitat.z() >> 4), key -> new ArrayList<>()).add(habitat);
+			for (WorldIndex.Habitat habitat : habitats) {
+				BY_CHUNK.computeIfAbsent(ChunkPos.asLong(habitat.x() >> 4, habitat.z() >> 4), chunk -> new ArrayList<>()).add(habitat);
 			}
-			indexedHash = index.hash();
+			indexedHash = key;
 		}
 		return BY_CHUNK;
 	}

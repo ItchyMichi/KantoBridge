@@ -241,21 +241,21 @@
       "properties": {
         "index": {
           "type": "string",
-          "pattern": "^regions/[a-z][a-z0-9_]{0,23}/[A-Za-z0-9_.-]+$",
+          "pattern": "^(regions/[a-z][a-z0-9_]{0,23}/)?[A-Za-z0-9_.-]{1,64}$",
           "maxLength": 96
         },
         "shapeIndex": {
           "type": "string",
-          "pattern": "^regions/[a-z][a-z0-9_]{0,23}/[A-Za-z0-9_.-]+$",
+          "pattern": "^(regions/[a-z][a-z0-9_]{0,23}/)?[A-Za-z0-9_.-]{1,64}$",
           "maxLength": 96
         },
         "shapeMap": {
           "type": "string",
-          "pattern": "^regions/[a-z][a-z0-9_]{0,23}/[A-Za-z0-9_.-]+$",
+          "pattern": "^(regions/[a-z][a-z0-9_]{0,23}/)?[A-Za-z0-9_.-]{1,64}$",
           "maxLength": 96
         }
       },
-      "description": "The region's documents, relative to <world>/kantobridge/."
+      "description": "The region's documents, relative to <world>/kantobridge/: regions/<id>/... for a built region; the implicit legacy record (never written, relayed in world.regions) names the root documents."
     },
     "hashes": {
       "type": "object",

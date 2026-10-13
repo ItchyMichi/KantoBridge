@@ -24,6 +24,7 @@ import dev.kantobridge.client.story.ClientStoryView;
 import dev.kantobridge.client.story.StoryCellRenderer;
 import dev.kantobridge.client.ui.Notices;
 import dev.kantobridge.client.ui.UiRuntime;
+import dev.kantobridge.client.world.ClientRegions;
 import dev.kantobridge.client.world.ClientWorldIndex;
 import dev.kantobridge.client.world.CreateKantoWorldFlow;
 import dev.kantobridge.client.zone.ZoneRuntime;
@@ -88,6 +89,8 @@ public class KantoBridgeClient implements ClientModInitializer {
 		Versions.init(bridge);
 		// The world's shapes (the voxel plan's V2): what the shape table holds, or why the world draws cubes.
 		bridge.addDebugLine(ClientShapes::debugLine);
+		// Several games (MG3): the regions this world holds and the one followed.
+		bridge.addDebugLine(ClientRegions::debugLine);
 		bridge.addDebugLine(KbPackReload::debugLine);
 		// Dev only (-Dkantobridge.meshstats=true): the rendering measurements of the voxel plan (§10).
 		MeshStatsRuntime.init(bridge);

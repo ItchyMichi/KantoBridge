@@ -2,6 +2,7 @@ package dev.kantobridge.world;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -109,8 +110,9 @@ class SlotMapTest {
 	}
 
 	@Test
-	void aFullShapeFillsToTheLastStateAndClosedArtCanNameIt() throws Exception {
-		// Closed art (M8) names full-shape slots, so it competes for the same 4,096 states as every other full tile.
+	void aLegacyMapFillsItsSixteenFamiliesAndClosedArtCanNameIt() throws Exception {
+		// Closed art (M8) names full-shape slots, so it competes for the same 4,096 legacy states as every other full
+		// tile; a version-1 map never grows past families 0..15 (MG3: more needs regions and a version-2 map).
 		List<SlotMap.Key> keys = new ArrayList<>();
 		for (int p = 0; p < 4; p++) {
 			for (int tile = 0; tile < 1024; tile++) {
@@ -119,17 +121,25 @@ class SlotMapTest {
 		}
 		SlotMap full = SlotMap.enumerate(keys);
 		SlotMap.Slot last = full.slot(new SlotMap.Key("tilesets.a", "P3", 1023, SlotMap.Shape.FULL));
-		assertEquals(SlotMap.CAPACITY - 1, last.index());
+		assertEquals(SlotMap.LEGACY_FAMILIES.endIndex() - 1, last.index());
 		assertEquals("tile_full_15", last.blockPath());
 		assertEquals(List.of(0, 1, 2, last.index()), new StoryCellTable.Closed(1, true, 2, List.of(0, 1, 2, last.index())).art());
+		assertEquals(List.of(0, 1, 2, SlotMap.CAPACITY - 1), new StoryCellTable.Closed(1, true, 2, List.of(0, 1, 2, SlotMap.CAPACITY - 1)).art(),
+				"a region's closed art may name every family");
 		assertThrows(IllegalArgumentException.class, () -> new StoryCellTable.Closed(1, true, 2, List.of(0, 1, 2, SlotMap.CAPACITY)));
 		keys.add(new SlotMap.Key("tilesets.b", "P0", 0, SlotMap.Shape.FULL));
-		assertEquals(SlotMap.CAPACITY + 1, assertThrows(SlotMap.FullException.class, () -> SlotMap.enumerate(keys)).needed());
+		SlotMap.FullException overflow = assertThrows(SlotMap.FullException.class, () -> SlotMap.enumerate(keys));
+		assertEquals(SlotMap.LEGACY_FAMILIES.endIndex() + 1, overflow.needed());
+		assertEquals(4096, overflow.available());
+		assertNull(overflow.region());
 	}
 
 	@Test
 	void capacityMatchesTheRegisteredFamilies() {
 		assertEquals(KbBlocks.FAMILIES_PER_SHAPE, SlotMap.FAMILIES_PER_SHAPE);
+		assertEquals(32, SlotMap.FAMILIES_PER_SHAPE, "MG3 (D9): a second region's worth of families");
+		assertEquals(8192, SlotMap.CAPACITY);
+		assertEquals(4096, SlotMap.LEGACY_FAMILIES.endIndex(), "a legacy map keeps families 0..15");
 		assertTrue(SlotMap.CAPACITY >= 4096);
 	}
 }

@@ -1,5 +1,6 @@
 """Derives protocol/catalog.json and protocol/redaction-vectors.json from the message schemas, and
-gen1-bridge/lib/kb_games.lua from protocol/games.json (MG1: the game catalogue).
+gen1-bridge/lib/kb_games.lua from protocol/games.json (MG1: the game catalogue) and
+gen1-bridge/lib/kb_items.lua from protocol/items.json (MG6: the canonical items).
 
     tools/.venv/Scripts/python.exe -m kb_protocol.catalog --write   (run from tools/)
     tools/.venv/Scripts/python.exe -m kb_protocol.catalog --check
@@ -12,12 +13,14 @@ import json
 import sys
 
 from .games import read_games, render_lua
+from .items import read_items, render_items_lua
 from .jsonfmt import pretty
 from .paths import REPO_ROOT
 from .redact import placeholder, redact_data
 from .registry import load_protocol
 
 KB_GAMES_LUA = REPO_ROOT / "gen1-bridge" / "lib" / "kb_games.lua"
+KB_ITEMS_LUA = REPO_ROOT / "gen1-bridge" / "lib" / "kb_items.lua"
 
 PROTOCOL_NUMBER = 1
 LIMITS = {"maxLineBytes": 4 * 1024 * 1024, "exportPageBytes": 1024 * 1024, "relayMaxBytes": 256 * 1024}
@@ -134,6 +137,7 @@ def expected_files(protocol=None):
         protocol.root / "catalog.json": pretty(catalog),
         protocol.root / "redaction-vectors.json": pretty(vectors),
         KB_GAMES_LUA: render_lua(read_games(protocol.root)),
+        KB_ITEMS_LUA: render_items_lua(read_items(protocol.root)),
     }
 
 

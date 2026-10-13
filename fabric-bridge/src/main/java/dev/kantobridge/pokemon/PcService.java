@@ -104,7 +104,7 @@ public final class PcService {
 	static void onOpen(ServerPlayer player, Envelope message) {
 		String pcId;
 		try {
-			pcId = DataReader.of(message.data(), "").allowOnly(Set.of("pc")).string("pc", Ids.ID);
+			pcId = DataReader.of(message.data(), "").allowOnly(Set.of("pc", "region")).string("pc", Ids.ID);
 		} catch (DataException e) {
 			RelayService.get().sendError(player, "bad_message", message.seq());
 			String usable = idOf(message.data());

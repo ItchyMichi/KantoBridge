@@ -16,16 +16,28 @@
   ],
   "additionalProperties": false,
   "properties": {
-    "version": {"const": 1},
-    "game": {"$ref": "../defs.schema.json#/$defs/gameId", "description": "The game whose export built this index (protocol/games.json)."},
-    "family": {"$ref": "../defs.schema.json#/$defs/family", "description": "The game's engine family (MG1, optional; a legacy index has none)."},
+    "version": {
+      "const": 1
+    },
+    "game": {
+      "$ref": "../defs.schema.json#/$defs/gameId",
+      "description": "The game whose export built this index (protocol/games.json)."
+    },
+    "family": {
+      "$ref": "../defs.schema.json#/$defs/family",
+      "description": "The game's engine family (MG1, optional; a legacy index has none)."
+    },
     "exportHash": {
       "$ref": "../defs.schema.json#/$defs/hash",
       "description": "SHA-256 of the export bundle's index.json canonical JSON: which export built this world."
     },
     "scale": {
       "type": "object",
-      "required": ["cellBlocks", "surfaceY", "layerStep"],
+      "required": [
+        "cellBlocks",
+        "surfaceY",
+        "layerStep"
+      ],
       "additionalProperties": false,
       "properties": {
         "cellBlocks": {
@@ -45,10 +57,24 @@
     },
     "maps": {
       "type": "object",
-      "propertyNames": {"$ref": "../defs.schema.json#/$defs/mapId"},
+      "propertyNames": {
+        "$ref": "../defs.schema.json#/$defs/mapId"
+      },
       "additionalProperties": {
         "type": "object",
-        "required": ["x", "y", "z", "w", "h", "layer", "kind", "palette", "biome", "dark", "parent"],
+        "required": [
+          "x",
+          "y",
+          "z",
+          "w",
+          "h",
+          "layer",
+          "kind",
+          "palette",
+          "biome",
+          "dark",
+          "parent"
+        ],
         "additionalProperties": false,
         "properties": {
           "x": {
@@ -63,18 +89,49 @@
             "type": "integer",
             "description": "Block Z of the map's cell (0, 0) north-west corner."
           },
-          "w": {"type": "integer", "minimum": 1, "description": "Width in cells."},
-          "h": {"type": "integer", "minimum": 1, "description": "Height in cells."},
+          "w": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Width in cells."
+          },
+          "h": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Height in cells."
+          },
           "layer": {
             "type": "integer",
             "minimum": 0,
             "description": "0 for the surface; k >= 1 for interior layers."
           },
-          "kind": {"enum": ["surface", "interior", "route"], "description": "route: a Wild Routes zone's route map, placed at its trailhead (docs/specs/WILD_ROUTES_PLAN.md §4.2)."},
-          "palette": {"$ref": "../defs.schema.json#/$defs/symbol"},
-          "biome": {"type": "string", "pattern": "^[a-z0-9_.-]+:[a-z0-9_./-]+$"},
-          "dark": {"type": "boolean"},
-          "parent": {"anyOf": [{"type": "null"}, {"$ref": "../defs.schema.json#/$defs/mapId"}]},
+          "kind": {
+            "enum": [
+              "surface",
+              "interior",
+              "route"
+            ],
+            "description": "route: a Wild Routes zone's route map, placed at its trailhead (docs/specs/WILD_ROUTES_PLAN.md §4.2)."
+          },
+          "palette": {
+            "$ref": "../defs.schema.json#/$defs/symbol"
+          },
+          "biome": {
+            "type": "string",
+            "pattern": "^[a-z0-9_.-]+:[a-z0-9_./-]+$"
+          },
+          "dark": {
+            "type": "boolean"
+          },
+          "parent": {
+            "anyOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "../defs.schema.json#/$defs/mapId"
+              }
+            ]
+          },
           "pieces": {
             "type": "array",
             "minItems": 1,
@@ -82,27 +139,66 @@
             "description": "Parts of the map placed apart (docs/specs/CAVES_3D_PLAN.md §3.1). Absent: one piece, the whole map, at the placement. A walkable cell is in exactly one piece; the first piece listing a cell holds it for lookups by cell.",
             "items": {
               "type": "object",
-              "required": ["x", "y", "w", "h", "dx", "dy", "dz"],
+              "required": [
+                "x",
+                "y",
+                "w",
+                "h",
+                "dx",
+                "dy",
+                "dz"
+              ],
               "additionalProperties": false,
               "properties": {
-                "x": {"type": "integer", "minimum": 0, "description": "North-west cell of the piece's rectangle."},
-                "y": {"type": "integer", "minimum": 0},
-                "w": {"type": "integer", "minimum": 1, "description": "Rectangle width in cells."},
-                "h": {"type": "integer", "minimum": 1},
+                "x": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "description": "North-west cell of the piece's rectangle."
+                },
+                "y": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "w": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "description": "Rectangle width in cells."
+                },
+                "h": {
+                  "type": "integer",
+                  "minimum": 1
+                },
                 "mask": {
                   "type": "array",
-                  "items": {"type": "integer", "minimum": 0},
+                  "items": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
                   "description": "Which cells of the rectangle are the piece's, row by row, as alternating runs starting with cells outside it (the first run may be 0). Absent: all of them."
                 },
-                "dx": {"type": "integer", "description": "Block offset from the map's placement (X)."},
-                "dy": {"type": "integer", "minimum": -1024, "maximum": 1024, "description": "Block offset from the map's feet level."},
-                "dz": {"type": "integer", "description": "Block offset from the map's placement (Z)."}
+                "dx": {
+                  "type": "integer",
+                  "description": "Block offset from the map's placement (X)."
+                },
+                "dy": {
+                  "type": "integer",
+                  "minimum": -1024,
+                  "maximum": 1024,
+                  "description": "Block offset from the map's feet level."
+                },
+                "dz": {
+                  "type": "integer",
+                  "description": "Block offset from the map's placement (Z)."
+                }
               }
             }
           },
           "levels": {
             "type": "array",
-            "items": {"type": "integer", "minimum": 0},
+            "items": {
+              "type": "integer",
+              "minimum": 0
+            },
             "description": "Each cell's floor above its piece's feet level, in blocks, row by row, as (level, count) pairs covering every cell. Absent: all 0."
           },
           "ramps": {
@@ -110,45 +206,122 @@
             "description": "Stairs cells that climb between levels.",
             "items": {
               "type": "object",
-              "required": ["x", "y", "dir", "rise"],
+              "required": [
+                "x",
+                "y",
+                "dir",
+                "rise"
+              ],
               "additionalProperties": false,
               "properties": {
-                "x": {"type": "integer", "minimum": 0},
-                "y": {"type": "integer", "minimum": 0},
-                "dir": {"enum": ["up", "down", "left", "right"], "description": "The way the cell climbs (towards its high side)."},
-                "rise": {"type": "integer", "minimum": 1, "maximum": 8, "description": "Blocks climbed across the cell."}
+                "x": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "y": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "dir": {
+                  "enum": [
+                    "up",
+                    "down",
+                    "left",
+                    "right"
+                  ],
+                  "description": "The way the cell climbs (towards its high side)."
+                },
+                "rise": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 8,
+                  "description": "Blocks climbed across the cell."
+                }
               }
             }
           }
         }
       }
     },
-    "slotMapHash": {"$ref": "../defs.schema.json#/$defs/hash"},
+    "slotMapHash": {
+      "$ref": "../defs.schema.json#/$defs/hash"
+    },
     "storyCells": {
       "type": "array",
       "description": "Every cell that carries a story-cell block, with what decides whether it is closed for a player.",
       "items": {
         "type": "object",
-        "required": ["key", "type"],
+        "required": [
+          "key",
+          "type"
+        ],
         "additionalProperties": false,
         "properties": {
-          "key": {"$ref": "../defs.schema.json#/$defs/cellKey"},
-          "type": {"enum": ["object", "tile", "water", "boulder_area", "route"]},
+          "key": {
+            "$ref": "../defs.schema.json#/$defs/cellKey"
+          },
+          "type": {
+            "enum": [
+              "object",
+              "tile",
+              "water",
+              "boulder_area",
+              "route",
+              "pass"
+            ],
+            "description": "pass (MG5): a pass cell, closed per player while the far region is not built or the player has no link to its game (pass_closed)."
+          },
           "obj": {
-            "anyOf": [{"$ref": "../defs.schema.json#/$defs/objName"}, {"$ref": "../defs.schema.json#/$defs/routeObjectId"}],
+            "anyOf": [
+              {
+                "$ref": "../defs.schema.json#/$defs/objName"
+              },
+              {
+                "$ref": "../defs.schema.json#/$defs/routeObjectId"
+              }
+            ],
             "description": "object: the map object (toggle name) standing here. route (a Wild Routes item ball, keyed in its zone's route map's grid): the ball's id in the zone."
           },
           "swap": {
             "type": "object",
-            "required": ["bx", "by", "kind", "before", "after"],
+            "required": [
+              "bx",
+              "by",
+              "kind",
+              "before",
+              "after"
+            ],
             "additionalProperties": false,
             "description": "tile: the swap site (from the swaps export) this cell belongs to.",
             "properties": {
-              "bx": {"type": "integer", "minimum": 0, "maximum": 255},
-              "by": {"type": "integer", "minimum": 0, "maximum": 255},
-              "kind": {"enum": ["cut", "card_key", "script", "boulder"]},
-              "before": {"type": "integer", "minimum": 0, "maximum": 255},
-              "after": {"type": "integer", "minimum": 0, "maximum": 255}
+              "bx": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 255
+              },
+              "by": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 255
+              },
+              "kind": {
+                "enum": [
+                  "cut",
+                  "card_key",
+                  "script",
+                  "boulder"
+                ]
+              },
+              "before": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 255
+              },
+              "after": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 255
+              }
             }
           },
           "hidden": {
@@ -167,7 +340,12 @@
           },
           "closed": {
             "type": "object",
-            "required": ["block", "pass", "height", "art"],
+            "required": [
+              "block",
+              "pass",
+              "height",
+              "art"
+            ],
             "additionalProperties": false,
             "description": "tile: the cell's closed state, in force while the live block at the site is block.",
             "properties": {
@@ -178,7 +356,11 @@
                 "description": "The closing block: the site's before, or its after where only before is walkable at this cell."
               },
               "pass": {
-                "enum": ["solid", "water", "ground"],
+                "enum": [
+                  "solid",
+                  "water",
+                  "ground"
+                ],
                 "description": "Who crosses the closed cell: nobody, surfers, everybody (only its art differs)."
               },
               "height": {
@@ -189,7 +371,11 @@
               },
               "art": {
                 "type": "array",
-                "items": {"type": "integer", "minimum": 0, "maximum": 8191},
+                "items": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 8191
+                },
                 "minItems": 4,
                 "maxItems": 4,
                 "description": "Full-shape slot indices of the closed art: north-west, north-east, south-west, south-east."
@@ -203,15 +389,37 @@
       "type": "array",
       "items": {
         "type": "object",
-        "required": ["map", "x", "y", "z", "pool"],
+        "required": [
+          "map",
+          "x",
+          "y",
+          "z",
+          "pool"
+        ],
         "additionalProperties": false,
         "properties": {
-          "map": {"$ref": "../defs.schema.json#/$defs/mapId"},
-          "x": {"type": "integer"},
-          "y": {"type": "integer"},
-          "z": {"type": "integer"},
-          "pool": {"type": "string", "pattern": "^[a-z0-9_.-]+:[a-z0-9_./-]+$"},
-          "range": {"type": "integer", "minimum": 1, "maximum": 64, "description": "The block's RangeOfInfluence when it isn't 14: the cave area's are 6, its floors lying 11 blocks apart (docs/specs/CAVES_3D_PLAN.md §3.3)."}
+          "map": {
+            "$ref": "../defs.schema.json#/$defs/mapId"
+          },
+          "x": {
+            "type": "integer"
+          },
+          "y": {
+            "type": "integer"
+          },
+          "z": {
+            "type": "integer"
+          },
+          "pool": {
+            "type": "string",
+            "pattern": "^[a-z0-9_.-]+:[a-z0-9_./-]+$"
+          },
+          "range": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 64,
+            "description": "The block's RangeOfInfluence when it isn't 14: the cave area's are 6, its floors lying 11 blocks apart (docs/specs/CAVES_3D_PLAN.md §3.3)."
+          }
         }
       }
     },
@@ -220,34 +428,107 @@
       "description": "Wild Routes zones (docs/specs/WILD_ROUTES_PLAN.md §4.4), sorted by id; absent in a world built without any. Inside a zone's box the client sends no steps and the drift rule is off.",
       "items": {
         "type": "object",
-        "required": ["id", "routeMap", "theme", "x", "y", "z", "w", "d", "biome", "trainers", "balls"],
+        "required": [
+          "id",
+          "routeMap",
+          "theme",
+          "x",
+          "y",
+          "z",
+          "w",
+          "d",
+          "biome",
+          "trainers",
+          "balls"
+        ],
         "additionalProperties": false,
         "properties": {
-          "id": {"$ref": "../defs.schema.json#/$defs/routeId"},
-          "routeMap": {"$ref": "../defs.schema.json#/$defs/mapId", "description": "The zone's route map: a maps entry of kind route."},
-          "theme": {"enum": ["forest"]},
-          "x": {"type": "integer", "description": "The box's north-west block X."},
-          "y": {"type": "integer", "description": "The feet level of the zone's walkable floor."},
-          "z": {"type": "integer", "description": "The box's north-west block Z."},
-          "w": {"type": "integer", "minimum": 1, "description": "The box's width in blocks (X)."},
-          "d": {"type": "integer", "minimum": 1, "description": "The box's depth in blocks (Z)."},
-          "biome": {"type": "string", "pattern": "^[a-z0-9_.-]+:[a-z0-9_./-]+$"},
+          "id": {
+            "$ref": "../defs.schema.json#/$defs/routeId"
+          },
+          "routeMap": {
+            "$ref": "../defs.schema.json#/$defs/mapId",
+            "description": "The zone's route map: a maps entry of kind route."
+          },
+          "theme": {
+            "enum": [
+              "forest"
+            ]
+          },
+          "x": {
+            "type": "integer",
+            "description": "The box's north-west block X."
+          },
+          "y": {
+            "type": "integer",
+            "description": "The feet level of the zone's walkable floor."
+          },
+          "z": {
+            "type": "integer",
+            "description": "The box's north-west block Z."
+          },
+          "w": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "The box's width in blocks (X)."
+          },
+          "d": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "The box's depth in blocks (Z)."
+          },
+          "biome": {
+            "type": "string",
+            "pattern": "^[a-z0-9_.-]+:[a-z0-9_./-]+$"
+          },
           "trainers": {
             "type": "array",
             "maxItems": 64,
             "description": "WR5: the zone's trainers. Cells are in the route map's grid (the trailhead's A is 0,0).",
             "items": {
               "type": "object",
-              "required": ["id", "x", "y", "facing", "sight", "class", "sprite", "party"],
+              "required": [
+                "id",
+                "x",
+                "y",
+                "facing",
+                "sight",
+                "class",
+                "sprite",
+                "party"
+              ],
               "additionalProperties": false,
               "properties": {
-                "id": {"$ref": "../defs.schema.json#/$defs/routeObjectId"},
-                "x": {"type": "integer", "minimum": -4096, "maximum": 4096},
-                "y": {"type": "integer", "minimum": -4096, "maximum": 4096},
-                "facing": {"$ref": "../defs.schema.json#/$defs/dir"},
-                "sight": {"type": "integer", "minimum": 1, "maximum": 8, "description": "Cells it sees straight ahead; its lane is clear that far."},
-                "class": {"$ref": "../defs.schema.json#/$defs/symbol", "description": "The Gen 1 trainer class, e.g. OPP_YOUNGSTER."},
-                "sprite": {"$ref": "../defs.schema.json#/$defs/symbol", "description": "Its overworld sprite, from the export's map objects."},
+                "id": {
+                  "$ref": "../defs.schema.json#/$defs/routeObjectId"
+                },
+                "x": {
+                  "type": "integer",
+                  "minimum": -4096,
+                  "maximum": 4096
+                },
+                "y": {
+                  "type": "integer",
+                  "minimum": -4096,
+                  "maximum": 4096
+                },
+                "facing": {
+                  "$ref": "../defs.schema.json#/$defs/dir"
+                },
+                "sight": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 8,
+                  "description": "Cells it sees straight ahead; its lane is clear that far."
+                },
+                "class": {
+                  "$ref": "../defs.schema.json#/$defs/symbol",
+                  "description": "The Gen 1 trainer class, e.g. OPP_YOUNGSTER."
+                },
+                "sprite": {
+                  "$ref": "../defs.schema.json#/$defs/symbol",
+                  "description": "Its overworld sprite, from the export's map objects."
+                },
                 "party": {
                   "type": "array",
                   "minItems": 1,
@@ -255,11 +536,18 @@
                   "x-rom-derived": true,
                   "items": {
                     "type": "object",
-                    "required": ["species", "level"],
+                    "required": [
+                      "species",
+                      "level"
+                    ],
                     "additionalProperties": false,
                     "properties": {
-                      "species": {"$ref": "../defs.schema.json#/$defs/symbol"},
-                      "level": {"$ref": "../defs.schema.json#/$defs/level"}
+                      "species": {
+                        "$ref": "../defs.schema.json#/$defs/symbol"
+                      },
+                      "level": {
+                        "$ref": "../defs.schema.json#/$defs/level"
+                      }
                     }
                   }
                 }
@@ -272,45 +560,196 @@
             "description": "WR5: the zone's item balls, each also a story cell of type route. Cells are in the route map's grid.",
             "items": {
               "type": "object",
-              "required": ["id", "x", "y", "item"],
+              "required": [
+                "id",
+                "x",
+                "y",
+                "item"
+              ],
               "additionalProperties": false,
               "properties": {
-                "id": {"$ref": "../defs.schema.json#/$defs/routeObjectId"},
-                "x": {"type": "integer", "minimum": -4096, "maximum": 4096},
-                "y": {"type": "integer", "minimum": -4096, "maximum": 4096},
-                "item": {"$ref": "../defs.schema.json#/$defs/itemId"}
+                "id": {
+                  "$ref": "../defs.schema.json#/$defs/routeObjectId"
+                },
+                "x": {
+                  "type": "integer",
+                  "minimum": -4096,
+                  "maximum": 4096
+                },
+                "y": {
+                  "type": "integer",
+                  "minimum": -4096,
+                  "maximum": 4096
+                },
+                "item": {
+                  "$ref": "../defs.schema.json#/$defs/itemId"
+                }
               }
             }
           },
-          "ballSprite": {"$ref": "../defs.schema.json#/$defs/symbol", "description": "WR5: the item ball's overworld sprite; absent when the zone has no balls or the export names none."},
+          "ballSprite": {
+            "$ref": "../defs.schema.json#/$defs/symbol",
+            "description": "WR5: the item ball's overworld sprite; absent when the zone has no balls or the export names none."
+          },
           "dungeon": {
             "type": "object",
-            "required": ["x", "y", "out", "level", "items"],
+            "required": [
+              "x",
+              "y",
+              "out",
+              "level",
+              "items"
+            ],
             "additionalProperties": false,
             "description": "WR7: the zone's dungeon; absent when the zone has none.",
             "properties": {
-              "x": {"type": "integer", "minimum": -4096, "maximum": 4096, "description": "The entrance cell, in the route map's grid."},
-              "y": {"type": "integer", "minimum": -4096, "maximum": 4096},
-              "out": {"$ref": "../defs.schema.json#/$defs/dir", "description": "The way to the entrance's one open neighbour, where you come back out."},
-              "pool": {"type": "string", "pattern": "^[a-z0-9_.-]+:[a-z0-9_./-]+$", "description": "The habitat pool of the entrance's area: the dungeon's wild Pokémon."},
-              "level": {"$ref": "../defs.schema.json#/$defs/level", "description": "That area's highest wild level; the floor count follows it."},
-              "items": {"type": "array", "maxItems": 64, "items": {"$ref": "../defs.schema.json#/$defs/itemId"}, "description": "The items its floors may hold: the game's own, by tier, never a Rare Candy or Master Ball."}
+              "x": {
+                "type": "integer",
+                "minimum": -4096,
+                "maximum": 4096,
+                "description": "The entrance cell, in the route map's grid."
+              },
+              "y": {
+                "type": "integer",
+                "minimum": -4096,
+                "maximum": 4096
+              },
+              "out": {
+                "$ref": "../defs.schema.json#/$defs/dir",
+                "description": "The way to the entrance's one open neighbour, where you come back out."
+              },
+              "pool": {
+                "type": "string",
+                "pattern": "^[a-z0-9_.-]+:[a-z0-9_./-]+$",
+                "description": "The habitat pool of the entrance's area: the dungeon's wild Pokémon."
+              },
+              "level": {
+                "$ref": "../defs.schema.json#/$defs/level",
+                "description": "That area's highest wild level; the floor count follows it."
+              },
+              "items": {
+                "type": "array",
+                "maxItems": 64,
+                "items": {
+                  "$ref": "../defs.schema.json#/$defs/itemId"
+                },
+                "description": "The items its floors may hold: the game's own, by tier, never a Rare Candy or Master Ball."
+              }
             }
+          },
+          "pass": {
+            "type": "object",
+            "required": [
+              "cells",
+              "route",
+              "toRegion",
+              "end"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "cells": {
+                "type": "array",
+                "minItems": 1,
+                "maxItems": 4,
+                "items": {
+                  "type": "array",
+                  "minItems": 2,
+                  "maxItems": 2,
+                  "items": {
+                    "type": "integer",
+                    "minimum": -4096,
+                    "maximum": 4096
+                  }
+                },
+                "description": "The pass cells in the route map's grid (A is 0,0): the gate house's far doorway."
+              },
+              "route": {
+                "$ref": "../defs.schema.json#/$defs/routeId"
+              },
+              "toRegion": {
+                "$ref": "../defs.schema.json#/$defs/regionId",
+                "description": "The region of the other half."
+              },
+              "end": {
+                "enum": [
+                  "from",
+                  "to"
+                ],
+                "description": "Which end of the connecting route this half is."
+              }
+            },
+            "description": "MG5: a connecting route's half ends in a gate house whose far doorway is the pass (MULTI_GAME_PLAN §4.8); absent on a free-roam zone."
+          },
+          "gateHouse": {
+            "type": "object",
+            "required": [
+              "x",
+              "y",
+              "w",
+              "d",
+              "facing"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "x": {
+                "type": "integer",
+                "minimum": -4096,
+                "maximum": 4096
+              },
+              "y": {
+                "type": "integer",
+                "minimum": -4096,
+                "maximum": 4096
+              },
+              "w": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 16
+              },
+              "d": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 16
+              },
+              "facing": {
+                "$ref": "../defs.schema.json#/$defs/dir",
+                "description": "From the near doorway toward the pass."
+              }
+            },
+            "description": "MG5: the gate house's footprint in the route map's grid (cells), for the server's teleport into it and the client's fade."
           }
         }
       }
     },
     "dungeons": {
       "type": "object",
-      "required": ["x", "y", "z", "w", "d"],
+      "required": [
+        "x",
+        "y",
+        "z",
+        "w",
+        "d"
+      ],
       "additionalProperties": false,
       "description": "WR7: the dungeon region, every dungeon slot's box north of Kanto, with its first floors' feet level y; absent in a world without dungeons. A player inside it whose hidden player is on a route map is away, as in a zone.",
       "properties": {
-        "x": {"type": "integer"},
-        "y": {"type": "integer"},
-        "z": {"type": "integer"},
-        "w": {"type": "integer", "minimum": 1},
-        "d": {"type": "integer", "minimum": 1}
+        "x": {
+          "type": "integer"
+        },
+        "y": {
+          "type": "integer"
+        },
+        "z": {
+          "type": "integer"
+        },
+        "w": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "d": {
+          "type": "integer",
+          "minimum": 1
+        }
       }
     },
     "shafts": {
@@ -319,18 +758,50 @@
       "maxItems": 4096,
       "items": {
         "type": "object",
-        "required": ["kind", "top", "bottom", "up", "x", "z", "y0", "y1"],
+        "required": [
+          "kind",
+          "top",
+          "bottom",
+          "up",
+          "x",
+          "z",
+          "y0",
+          "y1"
+        ],
         "additionalProperties": false,
         "properties": {
-          "kind": {"enum": ["ladder", "hole"]},
-          "top": {"$ref": "../defs.schema.json#/$defs/cell"},
-          "bottom": {"$ref": "../defs.schema.json#/$defs/cell"},
-          "up": {"type": "boolean", "description": "Climbed up too: false for a hole, or a ladder whose bottom leads elsewhere."},
-          "x": {"type": "integer"},
-          "z": {"type": "integer"},
-          "y0": {"type": "integer"},
-          "y1": {"type": "integer"},
-          "wall": {"$ref": "../defs.schema.json#/$defs/dir", "description": "A ladder's only (required there): the side of the column its ladder stands on (HD6)."}
+          "kind": {
+            "enum": [
+              "ladder",
+              "hole"
+            ]
+          },
+          "top": {
+            "$ref": "../defs.schema.json#/$defs/cell"
+          },
+          "bottom": {
+            "$ref": "../defs.schema.json#/$defs/cell"
+          },
+          "up": {
+            "type": "boolean",
+            "description": "Climbed up too: false for a hole, or a ladder whose bottom leads elsewhere."
+          },
+          "x": {
+            "type": "integer"
+          },
+          "z": {
+            "type": "integer"
+          },
+          "y0": {
+            "type": "integer"
+          },
+          "y1": {
+            "type": "integer"
+          },
+          "wall": {
+            "$ref": "../defs.schema.json#/$defs/dir",
+            "description": "A ladder's only (required there): the side of the column its ladder stands on (HD6)."
+          }
         }
       }
     }

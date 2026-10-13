@@ -28,18 +28,26 @@ import org.jetbrains.annotations.Nullable;
  * plan's V3), and both blocks of its swap sites (the closed art
  * the story-cell renderer draws, whichever state a cell is built in). Besides the slot map it lists the NPC sheets and
  * the palettes that need the player's surfing sheet (maps with water).
+ *
+ * <p>Several games (docs/specs/MULTI_GAME_PLAN.md §4.6, MG3): a region build assigns its keys inside its own family range
+ * of the one world-level slot map ({@link #worldSlotMap()}, version 2, every other region's entries untouched);
+ * {@link #slotMap()} is then this region's <em>slice</em> of it (its keys with their absolute slots, in the version-1
+ * form), which is what the pack writer, the story cells and the WorldIndex's {@code slotMapHash} use, so a legacy build
+ * and the legacy region at families 0..15 give the same slots and the same hash.
  */
 public final class ArtCatalog {
 	private final SlotMap slotMap;
+	private final SlotMap worldSlotMap;
 	private final Map<String, Integer> tilesPerRow;
 	private final Map<String, List<ExportTileset.Animated>> animations;
 	private final Set<String> npcs;
 	private final @Nullable String surfSprite;
 	private final Set<String> surfPalettes;
 
-	private ArtCatalog(SlotMap slotMap, Map<String, Integer> tilesPerRow, Map<String, List<ExportTileset.Animated>> animations,
+	private ArtCatalog(SlotMap slotMap, SlotMap worldSlotMap, Map<String, Integer> tilesPerRow, Map<String, List<ExportTileset.Animated>> animations,
 			Set<String> npcs, @Nullable String surfSprite, Set<String> surfPalettes) {
 		this.slotMap = slotMap;
+		this.worldSlotMap = worldSlotMap;
 		this.tilesPerRow = Collections.unmodifiableMap(tilesPerRow);
 		this.animations = Collections.unmodifiableMap(animations);
 		this.npcs = Collections.unmodifiableSet(npcs);
@@ -52,6 +60,16 @@ public final class ArtCatalog {
 	 * later on its own.
 	 */
 	public static ArtCatalog of(ExportBundle bundle, Warnings warnings) throws BundleException, PlanException {
+		return of(bundle, warnings, null);
+	}
+
+	/**
+	 * Catalogues the whole export for a region build ({@code region}, MG3), or for a legacy build when it is null.
+	 *
+	 * @throws PlanException {@code slot_map.full} when a shape's keys don't fit the range, {@code slot_map.region} when the
+	 *                       region's range overlaps another's or the previous map can't take the region
+	 */
+	public static ArtCatalog of(ExportBundle bundle, Warnings warnings, @Nullable RegionBuild region) throws BundleException, PlanException {
 		Map<String, List<ExportSwaps.Site>> swapsByMap = new HashMap<>();
 		for (ExportSwaps.Site site : bundle.swaps().sites()) {
 			swapsByMap.computeIfAbsent(site.map(), k -> new ArrayList<>()).add(site);
@@ -125,18 +143,38 @@ public final class ArtCatalog {
 			surfSprite = null;
 		}
 		SlotMap slotMap;
+		SlotMap worldSlotMap;
 		try {
-			slotMap = SlotMap.enumerate(keys);
+			if (region == null) {
+				slotMap = SlotMap.enumerate(keys);
+				worldSlotMap = slotMap;
+			} else {
+				worldSlotMap = SlotMap.enumerateRegion(region.previousSlotMap(), region.id(), region.artSet(), region.families(), keys);
+				slotMap = worldSlotMap.regionSlice(region.id());
+			}
 		} catch (SlotMap.FullException e) {
 			throw new PlanException("slot_map.full", e.getMessage());
+		} catch (IllegalArgumentException e) {
+			throw new PlanException("slot_map.region", e.getMessage());
 		}
-		return new ArtCatalog(slotMap, tilesPerRow, animations, npcs, surfSprite,
+		return new ArtCatalog(slotMap, worldSlotMap, tilesPerRow, animations, npcs, surfSprite,
 				surfSprite == null ? Set.of() : waterPalettes);
 	}
 
-	/** The slot map of the whole export. */
+	/**
+	 * The slot map of the whole export: for a region build its slice of the world's map (its own keys with their absolute
+	 * slots, version-1 form); the one the pack, the story cells and the WorldIndex's {@code slotMapHash} use.
+	 */
 	public SlotMap slotMap() {
 		return this.slotMap;
+	}
+
+	/**
+	 * The world-level slot map (MG3): every region's entries, version 2, for a region build; the same map as
+	 * {@link #slotMap()} for a legacy build. What {@code slot_map.json} holds.
+	 */
+	public SlotMap worldSlotMap() {
+		return this.worldSlotMap;
 	}
 
 	/** Tiles per atlas row, by atlas image id. */

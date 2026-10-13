@@ -83,7 +83,17 @@ public final class WorldPlanner {
 	}
 
 	public static WorldPlan plan(ExportBundle bundle, Options options) throws BundleException, PlanException {
+		return plan(bundle, options, null);
+	}
+
+	/**
+	 * Plans a build of one region (docs/specs/MULTI_GAME_PLAN.md §4.6, MG3): the caller puts the region's slot origin into
+	 * {@code options}; {@code region} gives the slot-map range its keys take, the previous world map and the prefix of its
+	 * pool ids. Null plans a legacy build exactly as before regions existed.
+	 */
+	public static WorldPlan plan(ExportBundle bundle, Options options, @Nullable RegionBuild region) throws BundleException, PlanException {
 		Warnings warnings = new Warnings();
+		String poolPrefix = region == null ? "" : region.poolPrefix();
 
 		Map<String, ExportMap> all = new LinkedHashMap<>();
 		for (String id : bundle.ids("map")) {
@@ -340,7 +350,7 @@ public final class WorldPlanner {
 		}
 
 		// ---- slot map: from the whole export, so it (and the shared resource pack) never depends on the filter ----
-		ArtCatalog art = ArtCatalog.of(bundle, warnings);
+		ArtCatalog art = ArtCatalog.of(bundle, warnings, region);
 		SlotMap slotMap = art.slotMap();
 
 		// ---- story cells (their closed art names slots of the slot map) ----
@@ -381,8 +391,8 @@ public final class WorldPlanner {
 		}
 
 		// ---- habitats: blocks for the built maps; pools for every wild map of the export (like the slot map) ----
-		List<WorldIndex.Habitat> habitats = encounters == null ? List.of() : HabitatPlanner.plan(placed, encounters, field, warnings);
-		Map<String, String> pools = encounters == null ? Map.of() : HabitatPoolWriter.pools(encounters, field);
+		List<WorldIndex.Habitat> habitats = encounters == null ? List.of() : HabitatPlanner.plan(placed, encounters, field, warnings, poolPrefix);
+		Map<String, String> pools = encounters == null ? Map.of() : HabitatPoolWriter.pools(encounters, field, poolPrefix);
 
 		// ---- spawn and index ----
 		WorldPlan.Spawn spawn = chooseSpawn(placed, root, requested, storyIndex);
@@ -426,7 +436,7 @@ public final class WorldPlanner {
 		}
 		return new WorldPlan(bundle.game(), bundle.exportHash(), options.originX(), options.originZ(), placed, surfaceBox, owner, voidCells,
 				storyCells, storyIndex, art, spawn, index, pools, warnings, mapsRequested, unplaced, layout.edgeMismatches(), layout.overlaps(), scene,
-				shapes);
+				shapes, caveArea.area(), region);
 	}
 
 	/** A map's layout with its rooms' pieces (CAVES_3D_PLAN §3.5) and, if it has any, its levels and ramps (§3.4). */

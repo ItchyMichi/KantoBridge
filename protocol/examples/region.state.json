@@ -1,0 +1,19 @@
+[
+  {
+    "type": "region.state",
+    "seq": 13,
+    "data": {
+      "followed": "hoenn",
+      "parked": [
+        "kanto"
+      ]
+    }
+  },
+  {
+    "type": "region.state",
+    "seq": 14,
+    "data": {
+      "parked": []
+    }
+  }
+]

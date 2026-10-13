@@ -7,6 +7,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
 import org.jetbrains.annotations.Nullable;
@@ -49,6 +50,8 @@ public final class ZoneEncounters {
 	}
 
 	private static final class Visit {
+		/** The region the zone belongs to (MG3; null in a legacy world): both halves of a connecting route share a zone id. */
+		final @Nullable String region;
 		final String zone;
 		final Set<String> beaten = new HashSet<>();
 		/** Trainer id → the tick it may look again. */
@@ -58,7 +61,8 @@ public final class ZoneEncounters {
 		boolean battleSent;
 		long waitingSince;
 
-		Visit(String zone) {
+		Visit(@Nullable String region, String zone) {
+			this.region = region;
 			this.zone = zone;
 		}
 	}
@@ -70,14 +74,19 @@ public final class ZoneEncounters {
 	 * game, not held. Returns what to send them, or null.
 	 */
 	public @Nullable Action tick(UUID player, @Nullable WorldIndex index, double x, double z, boolean free, long tick) {
+		return this.tick(player, null, index, x, z, free, tick);
+	}
+
+	/** {@link #tick(UUID, WorldIndex, double, double, boolean, long)} in one region (MG3): a visit is per (region, zone). */
+	public @Nullable Action tick(UUID player, @Nullable String region, @Nullable WorldIndex index, double x, double z, boolean free, long tick) {
 		WorldIndex.Zone zone = index == null ? null : index.zoneAt((int) Math.floor(x), (int) Math.floor(z));
 		if (zone == null) {
 			this.visits.remove(player);
 			return null;
 		}
 		Visit visit = this.visits.get(player);
-		if (visit == null || !visit.zone.equals(zone.id())) {
-			visit = new Visit(zone.id());
+		if (visit == null || !visit.zone.equals(zone.id()) || !Objects.equals(visit.region, region)) {
+			visit = new Visit(region, zone.id());
 			this.visits.put(player, visit);
 		}
 		if (visit.trainer != null) {
@@ -166,5 +175,11 @@ public final class ZoneEncounters {
 	public @Nullable String zone(UUID player) {
 		Visit visit = this.visits.get(player);
 		return visit == null ? null : visit.zone;
+	}
+
+	/** The region of the zone {@code player} is visiting (MG3), or null. */
+	public @Nullable String region(UUID player) {
+		Visit visit = this.visits.get(player);
+		return visit == null ? null : visit.region;
 	}
 }

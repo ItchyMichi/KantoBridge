@@ -46,7 +46,7 @@ public final class StoryStateService {
 			Rules.applyMovement(player);
 		}
 		Surfing.set(player, StoryStates.of(player).surf());
-		FlashService.update(player, WorldIndexSync.current(player.server));
+		FlashService.update(player, Regions.currentIndexAt(player));
 		KantoBridge.LOGGER.debug("story.state: {} applied ({} cells changed)", applied.full() ? "full" : "delta", applied.cellsChanged());
 	}
 

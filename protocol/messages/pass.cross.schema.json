@@ -1,0 +1,29 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kantobridge.invalid/protocol/messages/pass.cross.schema.json",
+  "title": "pass.cross",
+  "description": "Several games (MULTI_GAME_PLAN §4.8, MG5): the player stands on a connecting route's pass (the far doorway of a gate house) and asks to cross into the other region. The server checks the pass, the target region (built, with a connected link) and that no crossing is under way, answers route.fade and waits for region.state; refusals come as error codes pass.no_region, pass.no_link, pass.not_built, pass.busy; pass.timeout ends a crossing that never finished.",
+  "x-type": "pass.cross",
+  "x-legs": [
+    "c2s"
+  ],
+  "x-re": "never",
+  "type": "object",
+  "required": [
+    "route",
+    "dir"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "route": {
+      "$ref": "../defs.schema.json#/$defs/routeId"
+    },
+    "dir": {
+      "enum": [
+        "to",
+        "from"
+      ],
+      "description": "The end the player is heading to: \"to\" when standing in the route's from half, \"from\" when in its to half (the zone's pass.end says which half this is)."
+    }
+  }
+}

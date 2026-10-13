@@ -88,6 +88,8 @@ public final class GameRelay {
 		public long bagSyncsRelayed;
 		public long bagUsesForwarded;
 		public long bagUsesQueued;
+		/** MG3: {@code game.status} messages relayed to the server. */
+		public long statusRelayed;
 	}
 
 	private enum State {
@@ -137,7 +139,10 @@ public final class GameRelay {
 
 	// ---- from gen1-bridge ----
 
-	/** A message from gen1-bridge; types other than {@code battle.start}, the party requests and {@code bag.sync} are ignored. */
+	/**
+	 * A message from gen1-bridge; types other than {@code battle.start}, the party requests, {@code bag.sync} and (MG3)
+	 * {@code game.status} are ignored.
+	 */
 	public void fromBridge(Envelope message, long now) {
 		if (message.type().equals(MsgTypes.BATTLE_START)) {
 			this.battleStart(message.data(), now);
@@ -145,7 +150,22 @@ public final class GameRelay {
 			this.partyRequest(message.type(), message.data());
 		} else if (message.type().equals(MsgTypes.BAG_SYNC)) {
 			this.bagSync(message.data().deepCopy());
+		} else if (message.type().equals(MsgTypes.GAME_STATUS)) {
+			this.gameStatus(message.data().deepCopy());
 		}
+	}
+
+	/**
+	 * The hidden game's story progress (MG3, MULTI_GAME_PLAN §4.7) goes to the server, which keeps it per region (the relay
+	 * tags it with the link's region); like the bag it is a whole state, so only the newest waits for a missing link.
+	 */
+	private void gameStatus(JsonObject data) {
+		if (this.queue.isEmpty() && this.port.toServer(MsgTypes.GAME_STATUS, data)) {
+			this.stats.statusRelayed++;
+			return;
+		}
+		this.queue.removeIf(queued -> queued.type().equals(MsgTypes.GAME_STATUS));
+		this.enqueue(MsgTypes.GAME_STATUS, data);
 	}
 
 	/**
@@ -399,6 +419,8 @@ public final class GameRelay {
 			this.queue.removeFirst();
 			if (next.type().equals(MsgTypes.BAG_SYNC)) {
 				this.stats.bagSyncsRelayed++;
+			} else if (next.type().equals(MsgTypes.GAME_STATUS)) {
+				this.stats.statusRelayed++;
 			} else {
 				this.stats.partyRelayed++;
 			}

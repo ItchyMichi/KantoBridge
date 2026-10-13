@@ -1,0 +1,42 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kantobridge.invalid/protocol/messages/bag.set.schema.json",
+  "title": "bag.set",
+  "description": "One trainer economy (MULTI_GAME_PLAN §4.9, MG6): the ledger's projection into the followed game's save on a region.resume or after a region.start (the server sends it, the client forwards it): the adapter writes save.money and replaces the bag's non-key items with `items` within the game's limits (Gen 1: 20 slots, 99 a stack); what did not fit is answered in act.result{kind:\"bag.set\", left}; `stamp` is written into the save's mod data and echoed by every bag.sync. Reasons not_ingame, busy, too_many.",
+  "x-type": "bag.set",
+  "x-legs": [
+    "m2g",
+    "s2c"
+  ],
+  "x-re": "never",
+  "type": "object",
+  "required": [
+    "items",
+    "money",
+    "stamp"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "items": {
+      "type": "object",
+      "propertyNames": {
+        "$ref": "../defs.schema.json#/$defs/itemId"
+      },
+      "additionalProperties": {
+        "type": "integer",
+        "minimum": 0,
+        "maximum": 9999
+      },
+      "maxProperties": 128,
+      "description": "The game's item symbols and quantities to hold (key items untouched)."
+    },
+    "money": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 999999
+    },
+    "stamp": {
+      "$ref": "../defs.schema.json#/$defs/hash"
+    }
+  }
+}

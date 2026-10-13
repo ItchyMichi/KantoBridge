@@ -1,0 +1,32 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kantobridge.invalid/protocol/messages/region.state.schema.json",
+  "title": "region.state",
+  "description": "Several games (MULTI_GAME_PLAN §4.5, §4.6, MG4): the client's links as it sees them: the region whose link is followed (movement, screens, NPCs and story go through it) and the regions whose links are parked. Sent C→S when a link is followed, connects or drops and on join once world.regions is in; sent S→C once on join with the stored presence (kantobridge:presence). A crossing (MG5) ends with it: the server then teleports the player into the far gate house. Region ids only.",
+  "x-type": "region.state",
+  "x-legs": [
+    "c2s",
+    "s2c"
+  ],
+  "x-re": "never",
+  "type": "object",
+  "required": [
+    "parked"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "followed": {
+      "$ref": "../defs.schema.json#/$defs/regionId",
+      "description": "The followed link's region; absent when no link is followed (every link down or wrong_game)."
+    },
+    "parked": {
+      "type": "array",
+      "maxItems": 16,
+      "uniqueItems": true,
+      "items": {
+        "$ref": "../defs.schema.json#/$defs/regionId"
+      },
+      "description": "The regions whose links are connected and parked."
+    }
+  }
+}

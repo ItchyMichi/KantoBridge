@@ -1,8 +1,10 @@
 package dev.kantobridge.builder;
 
 import com.google.gson.GsonBuilder;
+import com.google.gson.JsonArray;
 import com.google.gson.JsonNull;
 import com.google.gson.JsonObject;
+import dev.kantobridge.world.RegionRecord;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -24,13 +26,71 @@ import org.jetbrains.annotations.Nullable;
  * the surface box, from which {@code tools/e2e/build_world.py} writes the fixed spectator viewpoints. From V2 the groups
  * Blocks ({@code blocks_by_kind}, {@code cells_by_kind}, {@code solid_cells_by_height}), Shapes (the shape index and map:
  * hashes, sizes, key counts, {@code shaped_blocks}, {@code shape_plan_ms}) and the recorded self-check
- * ({@code selfcheck}: per-map scores aggregated; the per-map numbers go to {@code shape_selfcheck.json}).
+ * ({@code selfcheck}: per-map scores aggregated; the per-map numbers go to {@code shape_selfcheck.json}). Several games
+ * (docs/specs/MULTI_GAME_PLAN.md §4.6, MG3) add {@code region}: null for a legacy build, else the region built ({@code region},
+ * {@code slot}, {@code origin}, {@code bounds}, {@code areas}, {@code families}, {@code shape_map_chars}), which
+ * {@code tools/e2e/build_world.py} gates per region.
  */
 public final class BuildReport {
 	public static final String FILE = "build_report.json";
 
+	/**
+	 * The region a region build made (MG3): block coordinates, ranges and counts only.
+	 *
+	 * @param bounds        the record's bounds, or null when nothing was placed
+	 * @param shapeMapChars the region's shape map on the wire (the per-document budget is per region)
+	 */
+	public record RegionReport(String region, int slot, int originX, int originY, int originZ, RegionRecord.@Nullable Box bounds,
+			RegionRecord.Areas areas, int familyLo, int familyHi, long shapeMapChars) {
+		JsonObject toJson() {
+			JsonObject out = new JsonObject();
+			out.addProperty("region", this.region);
+			out.addProperty("slot", this.slot);
+			JsonObject origin = new JsonObject();
+			origin.addProperty("x", this.originX);
+			origin.addProperty("y", this.originY);
+			origin.addProperty("z", this.originZ);
+			out.add("origin", origin);
+			if (this.bounds == null) {
+				out.add("bounds", JsonNull.INSTANCE);
+			} else {
+				JsonObject bounds = new JsonObject();
+				bounds.addProperty("minX", this.bounds.minX());
+				bounds.addProperty("minZ", this.bounds.minZ());
+				bounds.addProperty("maxX", this.bounds.maxX());
+				bounds.addProperty("maxZ", this.bounds.maxZ());
+				bounds.addProperty("minY", this.bounds.minY());
+				bounds.addProperty("maxY", this.bounds.maxY());
+				out.add("bounds", bounds);
+			}
+			JsonObject areas = new JsonObject();
+			areas.add("surface", area(this.areas.surface()));
+			areas.add("zones", area(this.areas.zones()));
+			areas.add("dungeons", area(this.areas.dungeons()));
+			areas.add("caves", area(this.areas.caves()));
+			out.add("areas", areas);
+			JsonArray families = new JsonArray();
+			families.add(this.familyLo);
+			families.add(this.familyHi);
+			out.add("families", families);
+			out.addProperty("shape_map_chars", this.shapeMapChars);
+			return out;
+		}
+
+		private static JsonObject area(RegionRecord.Area area) {
+			JsonObject out = new JsonObject();
+			out.addProperty("x", area.x());
+			out.addProperty("z", area.z());
+			out.addProperty("w", area.w());
+			out.addProperty("d", area.d());
+			return out;
+		}
+	}
+
 	public String status = "running";
 	public @Nullable String error;
+	/** MG3: the region a region build made; null for a legacy build. */
+	public @Nullable RegionReport region;
 	public String game = "";
 	public String exportHash = "";
 	public String slotMapHash = "";
@@ -170,6 +230,7 @@ public final class BuildReport {
 			out.addProperty("error", this.error);
 		}
 		out.addProperty("game", this.game);
+		out.add("region", this.region == null ? JsonNull.INSTANCE : this.region.toJson());
 		out.addProperty("maps_requested", this.mapsRequested);
 		out.addProperty("maps_built", this.mapsBuilt);
 		out.addProperty("maps_unplaced", this.mapsUnplaced);

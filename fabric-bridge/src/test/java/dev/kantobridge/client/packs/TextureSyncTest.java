@@ -109,6 +109,38 @@ class TextureSyncTest {
 	}
 
 	@Test
+	void aRegionWorldsReportNamesTheRegionAndALegacyWorldsDoesNot() {
+		PackInfo red = pack("red", 19);
+		// MG3: the followed region's inputs; the status names it, with the region's slice hash as slotMapHash.
+		TextureSync.Inputs hoenn = in("red", red, true, 0, false).forRegion("kanto");
+		assertEquals("kanto", hoenn.region());
+		this.sync.tick(0, hoenn, false);
+		assertEquals(Phase.READY, this.sync.phase());
+		JsonObject status = this.port.last();
+		assertEquals("kanto", status.get("region").getAsString());
+		assertEquals(WORLD, status.get("slotMapHash").getAsString());
+		// Another region's inputs are another world for the flow: judged afresh, reported with its own region.
+		this.sync.tick(10, in("red", red, true, 3, false).forRegion("hoenn"), false);
+		assertEquals(Phase.INCOMPLETE, this.sync.phase());
+		assertEquals("hoenn", this.port.last().get("region").getAsString());
+		assertEquals(3, this.port.last().get("missing").getAsInt());
+		// Placeholders for a region name it too.
+		this.sync.reset();
+		this.sync.tick(20, in("red", null, false, -1, false).forRegion("hoenn"), false);
+		assertEquals(Phase.NO_ART, this.sync.phase());
+		assertEquals("hoenn", this.port.last().get("region").getAsString());
+		// A legacy world's report carries no region: today's bytes.
+		this.sync.reset();
+		this.sync.tick(30, in("red", red, true, 0, false), false);
+		assertFalse(this.port.last().has("region"));
+		// The region rides along unchanged through the other inputs.
+		TextureSync.Inputs full = new TextureSync.Inputs("red", WORLD, red, true, 0, false, 7, "d".repeat(64), null, 2).forRegion("kanto");
+		assertEquals(7, full.shapes());
+		assertEquals(2, full.packs());
+		assertEquals("kanto", full.region());
+	}
+
+	@Test
 	void aLoadedPackWithEveryTextureIsReportedOnce() {
 		PackInfo red = pack("red", 19);
 		this.sync.tick(0, in("red", red, true, 0, false), false);

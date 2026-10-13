@@ -14,6 +14,7 @@ import dev.kantobridge.client.bridge.Transport;
 import dev.kantobridge.client.model.RenderSnapshot;
 import dev.kantobridge.client.shape.ClientShapes;
 import dev.kantobridge.client.net.ClientRelay;
+import dev.kantobridge.client.world.ClientRegions;
 import dev.kantobridge.client.world.ClientWorldIndex;
 import dev.kantobridge.client.world.CreateKantoWorldFlow;
 import dev.kantobridge.proto.Catalog;
@@ -151,9 +152,11 @@ public final class TextureSyncRuntime {
 		boolean compatible = this.bridge.client().state() == ConnectionState.CONNECTED && hello != null && index != null
 				&& Games.compatible(hello.game(), index.game());
 		ShapeIndex shapes = ClientShapes.table() == null ? null : ClientShapes.index();
+		// MG3: the followed region's game and its index's slotMapHash (the hash of that region's slice of the one slot map);
+		// the report names the region in a region world, nothing in a legacy one.
 		TextureSync.Inputs inputs = new TextureSync.Inputs(index == null ? null : index.game(), index == null ? null : index.slotMapHash(),
 				this.local, packLoaded, missing, compatible, ClientShapes.shapes(), shapes == null ? null : shapes.hash(), ClientShapes.reason(),
-				KbPackReload.current().packs().size());
+				KbPackReload.current().packs().size(), ClientRegions.tagFor());
 		this.sync.tick(this.clock.millis(), inputs, busy);
 	}
 

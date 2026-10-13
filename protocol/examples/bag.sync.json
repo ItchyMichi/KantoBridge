@@ -1,1 +1,24 @@
-[{"type": "bag.sync", "seq": 11, "data": {"items": {"POKE_BALL": 5, "POTION": 2}}}]
+[
+  {
+    "type": "bag.sync",
+    "seq": 11,
+    "data": {
+      "items": {
+        "POKE_BALL": 5,
+        "POTION": 2
+      }
+    }
+  },
+  {
+    "type": "bag.sync",
+    "seq": 12,
+    "data": {
+      "items": {
+        "POKE_BALL": 5,
+        "POTION": 2
+      },
+      "money": 3000,
+      "stamp": "0123456789abcdef0123456789abcdef"
+    }
+  }
+]

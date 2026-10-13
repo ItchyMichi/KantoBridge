@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://kantobridge.invalid/protocol/messages/bag.sync.schema.json",
   "title": "bag.sync",
-  "description": "The battle-usable bag subset, mirrored into the Minecraft inventory.",
+  "description": "The battle-usable bag subset, mirrored into the Minecraft inventory. MG6: also carries the save's money and the ledger stamp of the last projection (absent for a save never projected: the first adoption merges it into the ledger once).",
   "x-type": "bag.sync",
   "x-legs": [
     "g2m",
@@ -30,6 +30,16 @@
     "region": {
       "$ref": "../defs.schema.json#/$defs/regionId",
       "description": "MG3 (several games): the region this message belongs to; absent = the legacy region. The client tags what it relays with its link's region; the server routes a tagged message to that region's link."
+    },
+    "money": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 999999,
+      "description": "MG6: save.money."
+    },
+    "stamp": {
+      "$ref": "../defs.schema.json#/$defs/hash",
+      "description": "MG6: the stamp bag.set wrote into the save's mod data; absent when the save was never projected."
     }
   }
 }

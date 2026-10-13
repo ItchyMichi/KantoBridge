@@ -2,6 +2,8 @@ package dev.kantobridge.client.net;
 
 import com.google.gson.JsonObject;
 import dev.kantobridge.KantoBridge;
+import dev.kantobridge.client.world.ClientRegions;
+import dev.kantobridge.client.world.RegionTags;
 import dev.kantobridge.net.KbJsonPayload;
 import dev.kantobridge.proto.Catalog;
 import dev.kantobridge.proto.Envelope;
@@ -87,6 +89,15 @@ public final class ClientRelay {
 	public long post(String type, JsonObject data, @Nullable Long re) {
 		if (!ClientPlayNetworking.canSend(KbJsonPayload.TYPE)) {
 			return -1;
+		}
+		// MG3 (docs/PROTOCOL.md "Regions"): in a region world every relayed type carries the followed region; a legacy world
+		// sends today's bytes. A message that names its region already keeps it.
+		if (RegionTags.tagged(type) && !data.has("region")) {
+			String region = ClientRegions.tagFor();
+			if (region != null) {
+				data = data.deepCopy();
+				data.addProperty("region", region);
+			}
 		}
 		Envelope message = new Envelope(type, this.nextSeq, re, data);
 		try {

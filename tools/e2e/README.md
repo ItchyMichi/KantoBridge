@@ -68,6 +68,18 @@ The pod's network disk makes gen1-bridge's first export build take many minutes 
 Drivers move gen1-bridge off 27151 through `game.mods.exports["gen1-bridge"].configure({ port = N })`,
 so a user instance running on 27151 can't interfere.
 
+`build_world.py` is the headless real-data build (docs/PLAN.md section 4.5): the export from the test instance
+through `ExportCli`, then a headless dev-server build into `local/minecraft/saves/<world>` with the counts-only
+`local/reports/build_report.json` checked (`--maps`, `--world`, `--fresh`, `--skip-export`; `test_build_world.py`
+runs it into `saves/KantoE2E` and `saves/KantoE2EPallet`). **Several games (MG3):** `--region <id> --slot <n>` (both or
+neither) makes it a region build: Gradle gets `-Pkb.buildRegion=<id> -Pkb.buildSlot=<n>` (the system properties
+`kantobridge.build.region` / `kantobridge.build.slot`), the server plans from the slot's origin and writes
+`<world>/kantobridge/regions/<id>/{world_index.json, shape_index.json, shape_map.bin, region.json}` and the region
+table `<world>/kantobridge/regions.json`; the report's `region` object (`region`, `slot`, `origin`, `bounds`, `areas`,
+`families`, `shape_map_chars`, the last within the 8-part `world.shapes` budget per region) and the written files are
+checked against their schemas (`check_regions`, `check_region`, `check_world_index`). Without the options the build is a
+legacy build and the report's `region` must be `null`.
+
 `showcase.py` records the real game in the dev client (Wild Routes check C5; Linux with Xvfb, so the pod): the test
 install with `kb_wild.lua` (60 frames a second, on port 27208), gen1-bridge's export warmed with ExportCli, then
 `runClient -Pkb.autopilot=wild_zone`: the client's dev-only `Autopilot` (`fabric-bridge/src/client/.../dev/`) creates

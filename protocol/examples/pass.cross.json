@@ -1,0 +1,10 @@
+[
+  {
+    "type": "pass.cross",
+    "seq": 12,
+    "data": {
+      "route": "eastern_pass",
+      "dir": "to"
+    }
+  }
+]

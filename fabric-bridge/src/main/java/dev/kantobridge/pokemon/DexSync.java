@@ -18,7 +18,7 @@ import java.util.TreeSet;
  * @param owned every species owned
  */
 public record DexSync(SortedSet<Integer> seen, SortedSet<Integer> owned) {
-	private static final Set<String> FIELDS = Set.of("seen", "owned");
+	private static final Set<String> FIELDS = Set.of("seen", "owned", "region");
 
 	public DexSync {
 		TreeSet<Integer> allSeen = new TreeSet<>();

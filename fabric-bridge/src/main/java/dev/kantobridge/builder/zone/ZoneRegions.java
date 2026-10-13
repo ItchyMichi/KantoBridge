@@ -6,7 +6,8 @@ import org.jetbrains.annotations.Nullable;
 /**
  * Where zones go (docs/specs/WILD_ROUTES_PLAN.md §4.4, §4.10): the wild zone starts {@link #GAP} blocks south of
  * Kanto's surface box and is cut into slots of {@link #SLOT} blocks, {@link #PER_ROW} to a row, east from Kanto's west
- * edge. North of Kanto is where dungeon slots will go (WR7); west and east are kept for other games' worlds.
+ * edge. North of Kanto is where dungeon slots will go (WR7). Several games (MULTI_GAME_PLAN §4.6, MG3): every region's
+ * zones anchor on its own surface box the same way, so a region at another slot of the region table gets its own row.
  */
 public final class ZoneRegions {
 	/** A slot's side in blocks (40 chunks): one zone, its gates and its land. */
@@ -34,6 +35,19 @@ public final class ZoneRegions {
 		}
 		// whole chunks, so a slot never shares a chunk with Kanto or another slot
 		return new ZoneRegions(Math.floorDiv(kanto.minX(), 16) * 16, Math.floorDiv(kanto.maxZ() + GAP + 15, 16) * 16);
+	}
+
+	/**
+	 * The box the first {@code zones} slots cover (MULTI_GAME_PLAN §4.6, MG3: a region's zone area), {@link ZonePlan#MIN_Y}
+	 * to {@link ZonePlan#MAX_Y}; null for no zones.
+	 */
+	public @Nullable Box3 area(int zones) {
+		if (zones <= 0) {
+			return null;
+		}
+		int columns = Math.min(zones, PER_ROW);
+		int rows = (zones + PER_ROW - 1) / PER_ROW;
+		return new Box3(this.originX, ZonePlan.MIN_Y, this.originZ, this.originX + columns * SLOT, ZonePlan.MAX_Y, this.originZ + rows * SLOT);
 	}
 
 	/** The north-west block (x, z) of slot {@code index}. */

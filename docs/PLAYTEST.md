@@ -801,3 +801,16 @@ Kanto world, or the headless build); a world made before then keeps its flat cav
 - [ ] Special areas from the research (rest stop, item clearing, hedge maze, Mart stall, trainer gauntlet), if you
       want them.
 - [ ] Then: which city-to-city routes come first.
+
+## Several games (specs/MULTI_GAME_PLAN.md)
+
+### MG3: regions as data (with you)
+
+- [x] **Minecraft's EULA on the pod's volume** (`local/minecraft/eula.txt`): you accepted it on 2026-10-13 and I wrote
+      the file, so the headless real-Kanto region build (`tools/e2e/build_world.py --maps all --region kanto --slot 0`,
+      the plan's MG3 pod check) can run there.
+- [ ] On your PC: an existing Kanto world opens exactly as before (a legacy world: nothing is rewritten until a region
+      build). F7 shows a "regions" line naming the implicit `kanto` region.
+- [ ] Rebuild Kanto with `--region kanto --slot 0` (your e2e world): the world looks identical; `kantobridge/regions.json`
+      and `regions/kanto/` appear beside the old files, which go.
+

@@ -16,7 +16,7 @@ import dev.kantobridge.proto.MsgTypes;
 import dev.kantobridge.routes.gen.Cell;
 import dev.kantobridge.routes.gen.PmdParams;
 import dev.kantobridge.routes.gen.RouteRng;
-import dev.kantobridge.server.WorldIndexSync;
+import dev.kantobridge.server.Regions;
 import dev.kantobridge.world.WorldIndex;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -63,10 +63,17 @@ public final class DungeonService {
 	/** A give that failed (a full bag) isn't asked again for this long. */
 	static final long GIVE_RETRY_TICKS = 100;
 
-	private static @Nullable DungeonVisits visits;
+	/** The visits per region (MG3; key {@link #LEGACY} for a legacy world or a GameTest's bare index). */
+	private static final Map<String, DungeonVisits> VISITS = new HashMap<>();
 	private static @Nullable DungeonPlacer placer;
-	/** What each slot's entered floors hold. */
-	private static final Map<Integer, SlotState> SLOTS = new HashMap<>();
+	/** What each slot's entered floors hold, per region. */
+	private static final Map<SlotKey, SlotState> SLOTS = new HashMap<>();
+	/** The visits key of a world without regions. */
+	static final String LEGACY = "";
+
+	/** A dungeon slot of one region's dungeon area. */
+	private record SlotKey(String region, int slot) {
+	}
 	/** Entities a dungeon spawned this run; others with the tag are leftovers. */
 	private static final Set<UUID> LIVE = new HashSet<>();
 	private static final List<Entity> LEFTOVERS = new ArrayList<>();
@@ -123,16 +130,26 @@ public final class DungeonService {
 			entity.discard();
 		}
 		LEFTOVERS.clear();
-		WorldIndex index = WorldIndexSync.current(server);
-		if (index == null || index.dungeons() == null) {
+		Regions regions = Regions.of(server);
+		if (regions == null) {
 			return;
 		}
-		tickWith(server.overworld(), index, server.getTickCount(), server.getPlayerList().getPlayers());
+		// MG3: every region with a dungeon area runs its own visits
+		for (Map.Entry<String, WorldIndex> entry : regions.indices().entrySet()) {
+			if (entry.getValue().dungeons() != null) {
+				tickWith(server.overworld(), entry.getKey(), entry.getValue(), server.getTickCount(), server.getPlayerList().getPlayers());
+			}
+		}
 	}
 
 	/** One tick against {@code index} for {@code players} (GameTests call it with their own index and ticks). */
 	public static void tickWith(ServerLevel level, WorldIndex index, long tick, List<ServerPlayer> players) {
-		DungeonVisits v = visits(level);
+		tickWith(level, LEGACY, index, tick, players);
+	}
+
+	/** {@link #tickWith(ServerLevel, WorldIndex, long, List)} for one region's dungeon area (MG3). */
+	public static void tickWith(ServerLevel level, String region, WorldIndex index, long tick, List<ServerPlayer> players) {
+		DungeonVisits v = visits(level, region);
 		DungeonPlacer p = placer(level);
 		Map<UUID, ServerPlayer> byId = new HashMap<>();
 		List<DungeonVisits.Where> where = new ArrayList<>();
@@ -141,19 +158,19 @@ public final class DungeonService {
 			where.add(new DungeonVisits.Where(player.getUUID(), player.getX(), player.getY(), player.getZ()));
 		}
 		for (DungeonVisits.Action action : v.tick(tick, index, where)) {
-			execute(level, index, tick, v, p, action, byId);
+			execute(level, region, index, tick, v, p, action, byId);
 		}
-		inside(level, tick, v, players);
+		inside(level, region, tick, v, players);
 		p.tick(System.nanoTime() + BUDGET_NANOS);
 	}
 
 	/** Items stepped on, Monster Houses entered, Pokémon that appear over time. */
-	private static void inside(ServerLevel level, long tick, DungeonVisits v, List<ServerPlayer> players) {
+	private static void inside(ServerLevel level, String region, long tick, DungeonVisits v, List<ServerPlayer> players) {
 		Map<FloorState, List<Cell>> occupied = new HashMap<>();
 		for (ServerPlayer player : players) {
 			int slot = v.slotOf(player.getUUID());
 			int floor = v.floorOf(player.getUUID());
-			SlotState state = SLOTS.get(slot);
+			SlotState state = SLOTS.get(new SlotKey(region, slot));
 			FloorState here = state == null ? null : state.floors.get(floor);
 			if (here == null || Math.abs(player.getY() - here.plan.feet()) >= 2) {
 				continue;
@@ -171,6 +188,7 @@ public final class DungeonService {
 					data.addProperty("id", item.id());
 					data.addProperty("item", item.item());
 					data.addProperty("keep", false);
+					Regions.tag(data, level.getServer(), LEGACY.equals(region) ? null : region);
 					RelayService.get().send(player, MsgTypes.ROUTE_GIVE, data, null);
 				}
 			}
@@ -221,13 +239,14 @@ public final class DungeonService {
 		return out;
 	}
 
-	private static void execute(ServerLevel level, WorldIndex index, long tick, DungeonVisits v, DungeonPlacer p, DungeonVisits.Action action,
-			Map<UUID, ServerPlayer> players) {
+	private static void execute(ServerLevel level, String region, WorldIndex index, long tick, DungeonVisits v, DungeonPlacer p,
+			DungeonVisits.Action action, Map<UUID, ServerPlayer> players) {
 		if (action instanceof DungeonVisits.Fade fade) {
 			ServerPlayer player = players.get(fade.player());
 			if (player != null) {
 				JsonObject data = new JsonObject();
 				data.addProperty("ticks", Math.min(fade.ticks(), 200));
+				Regions.tag(data, level.getServer(), LEGACY.equals(region) ? null : region);
 				RelayService.get().send(player, MsgTypes.ROUTE_FADE, data, null);
 			}
 		} else if (action instanceof DungeonVisits.Build build) {
@@ -238,9 +257,9 @@ public final class DungeonService {
 		} else if (action instanceof DungeonVisits.Leave leave) {
 			move(level, players.get(leave.player()), leave.x(), leave.y(), leave.z());
 		} else if (action instanceof DungeonVisits.Populate populate) {
-			populate(level, index, tick, populate);
+			populate(level, region, index, tick, populate);
 		} else if (action instanceof DungeonVisits.Clear clear) {
-			SlotState state = SLOTS.remove(clear.slot());
+			SlotState state = SLOTS.remove(new SlotKey(region, clear.slot()));
 			if (state != null) {
 				for (FloorState floor : state.floors.values()) {
 					discard(level, floor.mons);
@@ -260,7 +279,7 @@ public final class DungeonService {
 	}
 
 	/** Fills a floor the first time anyone enters it: its Pokémon and its items. */
-	private static void populate(ServerLevel level, WorldIndex index, long tick, DungeonVisits.Populate populate) {
+	private static void populate(ServerLevel level, String region, WorldIndex index, long tick, DungeonVisits.Populate populate) {
 		WorldIndex.Zone zone = null;
 		for (WorldIndex.Zone z : index.zones()) {
 			if (z.id().equals(populate.zone())) {
@@ -270,7 +289,7 @@ public final class DungeonService {
 		if (zone == null || zone.dungeon() == null) {
 			return;
 		}
-		SlotState slot = SLOTS.computeIfAbsent(populate.slot(), s -> new SlotState());
+		SlotState slot = SLOTS.computeIfAbsent(new SlotKey(region, populate.slot()), s -> new SlotState());
 		FloorState floor = new FloorState(populate.plan(), zone.id(), populate.seed(), tick);
 		floor.pool = zone.dungeon().pool();
 		floor.number = populate.floor();
@@ -366,25 +385,32 @@ public final class DungeonService {
 		}
 	}
 
+	/** The floor {@code player} stands on in whichever region's visits hold them, or null. */
+	private static @Nullable FloorState floorOf(ServerPlayer player) {
+		for (Map.Entry<String, DungeonVisits> entry : VISITS.entrySet()) {
+			DungeonVisits v = entry.getValue();
+			int slot = v.slotOf(player.getUUID());
+			if (slot < 0) {
+				continue;
+			}
+			SlotState state = SLOTS.get(new SlotKey(entry.getKey(), slot));
+			FloorState floor = state == null ? null : state.floors.get(v.floorOf(player.getUUID()));
+			if (floor != null) {
+				return floor;
+			}
+		}
+		return null;
+	}
+
 	/** Tests: the items still lying on {@code player}'s floor. */
 	public static List<DungeonContents.Item> itemsAround(ServerPlayer player) {
-		DungeonVisits v = visits;
-		if (v == null) {
-			return List.of();
-		}
-		SlotState slot = SLOTS.get(v.slotOf(player.getUUID()));
-		FloorState floor = slot == null ? null : slot.floors.get(v.floorOf(player.getUUID()));
+		FloorState floor = floorOf(player);
 		return floor == null ? List.of() : List.copyOf(floor.items.values());
 	}
 
 	/** Tests: the wild Pokémon spawned on {@code player}'s floor so far. */
 	public static int monsAround(ServerPlayer player) {
-		DungeonVisits v = visits;
-		if (v == null) {
-			return 0;
-		}
-		SlotState slot = SLOTS.get(v.slotOf(player.getUUID()));
-		FloorState floor = slot == null ? null : slot.floors.get(v.floorOf(player.getUUID()));
+		FloorState floor = floorOf(player);
 		return floor == null ? 0 : floor.mons.size();
 	}
 
@@ -395,12 +421,14 @@ public final class DungeonService {
 		}
 	}
 
-	/** The visits for {@code level}'s world (made with its seed on first use). */
+	/** The visits for {@code level}'s world without regions (made with its seed on first use). */
 	public static DungeonVisits visits(ServerLevel level) {
-		if (visits == null) {
-			visits = new DungeonVisits(level.getSeed(), PmdParams.standard());
-		}
-		return visits;
+		return visits(level, LEGACY);
+	}
+
+	/** The visits of one region's dungeon area (MG3), made with the world's seed on first use. */
+	public static DungeonVisits visits(ServerLevel level, String region) {
+		return VISITS.computeIfAbsent(region, key -> new DungeonVisits(level.getSeed(), PmdParams.standard()));
 	}
 
 	public static DungeonPlacer placer(ServerLevel level) {
@@ -412,7 +440,7 @@ public final class DungeonService {
 
 	/** Tests: forget every visit (a fresh service). */
 	public static void reset() {
-		visits = null;
+		VISITS.clear();
 		placer = null;
 		SLOTS.clear();
 	}

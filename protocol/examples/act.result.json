@@ -44,5 +44,28 @@
       "kind": "resume",
       "reason": "bad_target"
     }
+  },
+  {
+    "type": "act.result",
+    "seq": 82,
+    "re": 15,
+    "data": {
+      "ok": true,
+      "kind": "stash",
+      "moved": 3
+    }
+  },
+  {
+    "type": "act.result",
+    "seq": 83,
+    "re": 50,
+    "data": {
+      "ok": false,
+      "kind": "bag.set",
+      "reason": "too_many",
+      "left": {
+        "POTION": 1
+      }
+    }
   }
 ]

@@ -20,7 +20,7 @@ import org.jetbrains.annotations.Nullable;
  */
 public record PartyGive(String give, Gen1Mon mon, @Nullable String nick, @Nullable String ot, Source source) {
 	public static final int MAX_NAME = 32;
-	private static final Set<String> FIELDS = Set.of("give", "dex", "level", "moves", "dvs", "nick", "ot", "source");
+	private static final Set<String> FIELDS = Set.of("give", "dex", "level", "moves", "dvs", "nick", "ot", "source", "region");
 
 	/** Where the Pokémon comes from. */
 	public enum Source {

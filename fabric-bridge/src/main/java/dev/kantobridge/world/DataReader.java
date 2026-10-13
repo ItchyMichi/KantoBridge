@@ -24,6 +24,10 @@ public final class DataReader {
 	public static final Pattern RESOURCE_ID = Pattern.compile("^[a-z0-9_.-]+:[a-z0-9_./-]+$");
 	/** Lowercase hex SHA-256 (or a prefix of at least 8 digits). */
 	public static final Pattern HASH = Pattern.compile("^[0-9a-f]{8,64}$");
+	/** A game id (protocol defs {@code gameId}; protocol/games.json). */
+	public static final Pattern GAME_ID = Pattern.compile("^[a-z][a-z0-9_]{0,15}$");
+	/** A region id (protocol defs {@code regionId}; MULTI_GAME_PLAN §4.1). */
+	public static final Pattern REGION_ID = Pattern.compile("^[a-z][a-z0-9_]{0,23}$");
 
 	private final JsonObject object;
 	private final String path;
@@ -110,6 +114,14 @@ public final class DataReader {
 
 	public @Nullable String optionalString(String name, Pattern pattern) throws DataException {
 		return this.isNull(name) ? null : this.string(name, pattern);
+	}
+
+	/**
+	 * The optional {@code region} of a relayed message (MG3, docs/PROTOCOL.md "Regions (MG3)"): the region of the link
+	 * it came from, or null when absent (the legacy region). Every strict reader whitelists the field and reads it here.
+	 */
+	public @Nullable String optionalRegion() throws DataException {
+		return this.optionalString("region", REGION_ID);
 	}
 
 	public boolean bool(String name) throws DataException {

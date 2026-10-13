@@ -20,7 +20,7 @@ import org.jetbrains.annotations.Nullable;
  * @param move TM/HM: the Gen 1 move number taught
  */
 public record PartyItem(String item, UUID uid, @Nullable Integer slot, @Nullable Integer move) {
-	private static final Set<String> FIELDS = Set.of("item", "uid", "slot", "move");
+	private static final Set<String> FIELDS = Set.of("item", "uid", "slot", "move", "region");
 	public static final String RARE_CANDY = "RARE_CANDY";
 	/** Gen 1's evolution stones and Cobblemon's item paths for them (Appendix B). */
 	public static final Map<String, String> STONES = Map.of(

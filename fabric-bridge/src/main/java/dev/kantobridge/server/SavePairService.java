@@ -61,6 +61,7 @@ public final class SavePairService {
 	/** Call once from common init, after the relay. */
 	public static void init() {
 		SavePair.init();
+		SavePairs.init();
 		RelayService.get().register(MsgTypes.SAVE_LOADED, SavePairService::onLoaded);
 		ServerPlayerEvents.LEAVE.register(player -> LAST.remove(player.getUUID()));
 		ServerLifecycleEvents.SERVER_STOPPED.register(server -> LAST.clear());
@@ -73,11 +74,16 @@ public final class SavePairService {
 	 * no operations since. Call before the save writes the player's data. A repeated pair keeps its count.
 	 */
 	public static void saveBegun(ServerPlayer player, String pair, long at) {
-		SavePair before = SavePair.of(player);
+		saveBegun(player, null, pair, at);
+	}
+
+	/** {@link #saveBegun(ServerPlayer, String, long)} for a region (MG3; {@code null}: the legacy region). */
+	public static void saveBegun(ServerPlayer player, @Nullable String region, String pair, long at) {
+		SavePair before = SavePairs.of(player, region);
 		if (pair.equals(before.pair())) {
 			return;
 		}
-		SavePair.set(player, new SavePair(pair, Math.max(-1, at), 0));
+		SavePairs.set(player, region, new SavePair(pair, Math.max(-1, at), 0));
 		KantoBridge.LOGGER.debug("save pair: now {}", dev.kantobridge.world.Hashes.shortHash(pair));
 	}
 
@@ -89,6 +95,11 @@ public final class SavePairService {
 	 * @param repeat  it changes nothing: gen1-bridge sent it again
 	 */
 	public static void operation(ServerPlayer player, String type, String subject, boolean repeat) {
+		operation(player, null, type, subject, repeat);
+	}
+
+	/** {@link #operation(ServerPlayer, String, String, boolean)} counted on a region's pair (MG3; {@code null}: the legacy region). */
+	public static void operation(ServerPlayer player, @Nullable String region, String type, String subject, boolean repeat) {
 		Map<String, String> last = LAST.computeIfAbsent(player.getUUID(), key -> new LinkedHashMap<>(16, 0.75F, true) {
 			@Override
 			protected boolean removeEldestEntry(Map.Entry<String, String> eldest) {
@@ -100,7 +111,7 @@ public final class SavePairService {
 			REPEATS.incrementAndGet();
 			return;
 		}
-		SavePair.set(player, SavePair.of(player).counted());
+		SavePairs.set(player, region, SavePairs.of(player, region).counted());
 		OPS.incrementAndGet();
 	}
 
@@ -108,8 +119,15 @@ public final class SavePairService {
 
 	static void onLoaded(ServerPlayer player, Envelope message) {
 		SavePairRules.Loaded loaded;
+		String region;
 		try {
-			loaded = read(DataReader.of(message.data(), ""));
+			DataReader reader = DataReader.of(message.data(), "");
+			// MG3: the region whose hidden game loaded a save
+			region = Regions.currentRegionId(player, reader.optionalRegion());
+			if (reader.has("region") && region == null) {
+				throw new DataException(reader.path("region"), "unknown region");
+			}
+			loaded = read(reader);
 		} catch (DataException e) {
 			KantoBridge.LOGGER.debug("save pair: malformed save.loaded at {} ({})", e.path(), e.problem());
 			warn("bad_message");
@@ -117,7 +135,7 @@ public final class SavePairService {
 			return;
 		}
 		LOADED.incrementAndGet();
-		SavePairRules.Mismatch mismatch = SavePairRules.compare(SavePair.of(player), loaded);
+		SavePairRules.Mismatch mismatch = SavePairRules.compare(SavePairs.of(player, region), loaded);
 		if (mismatch != null) {
 			MISMATCHES.computeIfAbsent(mismatch.kind().id(), key -> new AtomicLong()).incrementAndGet();
 			KantoBridge.LOGGER.warn("save pair: the hidden game's save doesn't match this world's ({}, ops {})", mismatch.kind().id(),
@@ -125,12 +143,12 @@ public final class SavePairService {
 			RelayService.get().send(player, MsgTypes.SAVE_MISMATCH, mismatch.toJson(), null);
 		}
 		// The daycare follows the hidden game's (it logs what came back).
-		DaycareService.reconcile(player, loaded.daycare());
+		DaycareService.reconcile(player, region, loaded.daycare());
 	}
 
 	/** {@code save.loaded}'s data, checked like its schema (the relay checks envelopes only). */
 	static SavePairRules.Loaded read(DataReader reader) throws DataException {
-		reader.allowOnly(Set.of("fresh", "ops", "pair", "at", "daycare"));
+		reader.allowOnly(Set.of("fresh", "ops", "pair", "at", "daycare", "region"));
 		boolean fresh = reader.bool("fresh");
 		int ops = reader.integer("ops", 0, Integer.MAX_VALUE);
 		String pair = reader.optionalString("pair", DataReader.HASH);
@@ -176,9 +194,14 @@ public final class SavePairService {
 		return REPEATS.get();
 	}
 
-	/** The player's save pair (tests). */
+	/** The player's save pair for the legacy region (tests). */
 	public static SavePair of(ServerPlayer player) {
 		return SavePair.of(player);
+	}
+
+	/** The player's save pair for a region (MG3; {@code null}: the legacy region). */
+	public static SavePair of(ServerPlayer player, @Nullable String region) {
+		return SavePairs.of(player, region);
 	}
 
 	/** Forgets the remembered operations (tests: as after a restart). */

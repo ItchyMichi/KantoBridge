@@ -1,0 +1,28 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kantobridge.invalid/protocol/messages/pass.abort.schema.json",
+  "title": "pass.abort",
+  "description": "Several games (MULTI_GAME_PLAN §4.8, MG5): the client could not park, stash, start or resume during a crossing; the server lifts the crossing (error pass.timeout to the client, the fade lifts where the player stands, the followed link unchanged).",
+  "x-type": "pass.abort",
+  "x-legs": [
+    "c2s"
+  ],
+  "x-re": "never",
+  "type": "object",
+  "required": [
+    "route",
+    "reason"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "route": {
+      "$ref": "../defs.schema.json#/$defs/routeId"
+    },
+    "reason": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_.]*$",
+      "maxLength": 64,
+      "description": "The refusal that stopped it: the act.result reason, stash.pc_full, link_down, timeout, ..."
+    }
+  }
+}

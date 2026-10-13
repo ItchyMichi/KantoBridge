@@ -25,7 +25,8 @@ public final class StoryStateMessages {
 	/** Lit dark maps; Kanto has a handful. */
 	public static final int MAX_LIT = 256;
 
-	private static final Set<String> FIELDS = Set.of("full", "active", "add", "remove", "surf", "bike", "lit");
+	/** MG3: {@code region} is the client's link bookkeeping, read by the service, not applied here. */
+	private static final Set<String> FIELDS = Set.of("full", "active", "add", "remove", "surf", "bike", "lit", "region");
 
 	/** What one message changed. */
 	public record Applied(boolean full, boolean surfChanged, boolean bikeChanged, int cellsChanged) {

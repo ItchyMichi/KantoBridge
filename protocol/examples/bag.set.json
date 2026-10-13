@@ -1,0 +1,14 @@
+[
+  {
+    "type": "bag.set",
+    "seq": 50,
+    "data": {
+      "items": {
+        "POTION": 3,
+        "POKE_BALL": 10
+      },
+      "money": 3000,
+      "stamp": "0123456789abcdef0123456789abcdef"
+    }
+  }
+]

@@ -24,7 +24,7 @@ import dev.kantobridge.pokemon.Gen1Mons;
 import dev.kantobridge.proto.Envelope;
 import dev.kantobridge.proto.MsgTypes;
 import dev.kantobridge.server.BuildHold;
-import dev.kantobridge.server.WorldIndexSync;
+import dev.kantobridge.server.Regions;
 import dev.kantobridge.world.DataException;
 import dev.kantobridge.world.MapPlacement;
 import dev.kantobridge.world.WorldIndex;
@@ -246,7 +246,7 @@ public final class BattleService {
 	private static @Nullable NPCEntity spawnProxy(ServerLevel level, ServerPlayer player, BattleStart start, NPCClass npcClass, List<Pokemon> team) {
 		NPCEntity proxy = new NPCEntity(level);
 		proxy.setNpc(npcClass);
-		Vec3 at = ProxyPlacement.choose(trainerCell(player.server, start.trainer()), player.position(), player.getYRot());
+		Vec3 at = ProxyPlacement.choose(trainerCell(player, start.trainer()), player.position(), player.getYRot());
 		float yaw = ProxyPlacement.yawTowards(at, player.position());
 		proxy.moveTo(at.x, at.y, at.z, yaw, 0.0F);
 		proxy.setYHeadRot(yaw);
@@ -274,9 +274,12 @@ public final class BattleService {
 		return proxy;
 	}
 
-	/** The centre of the trainer's cell, if the WorldIndex knows the map and the cell lies in it. */
-	private static @Nullable Vec3 trainerCell(MinecraftServer server, BattleStart.@Nullable Trainer trainer) {
-		WorldIndex index = WorldIndexSync.current(server);
+	/**
+	 * The centre of the trainer's cell, if the WorldIndex of the region the player stands in (MG3: the trainer is on the
+	 * player's own map) knows the map and the cell lies in it.
+	 */
+	private static @Nullable Vec3 trainerCell(ServerPlayer player, BattleStart.@Nullable Trainer trainer) {
+		WorldIndex index = Regions.currentIndexAt(player);
 		if (trainer == null || !trainer.hasCell() || index == null) {
 			return null;
 		}

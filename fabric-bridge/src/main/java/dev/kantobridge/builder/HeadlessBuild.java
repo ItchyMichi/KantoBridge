@@ -25,9 +25,13 @@ import org.jetbrains.annotations.Nullable;
  * <li>{@code -Dkantobridge.build.maps=A,B,...}: only these maps (default: every map);</li>
  * <li>{@code -Dkantobridge.build.report=<path>}: also copy {@code build_report.json} there;</li>
  * <li>{@code -Dkantobridge.build.exit=true}: stop the server when the build ends; the process exits 0 when it
- * succeeded and 1 when it failed (the report's {@code status} says the same).</li>
+ * succeeded and 1 when it failed (the report's {@code status} says the same);</li>
+ * <li>{@code -Dkantobridge.build.region=<id> -Dkantobridge.build.slot=<n>} (both or neither): a region build
+ * (docs/specs/MULTI_GAME_PLAN.md §4.6, MG3) of region {@code <id>} at slot {@code <n>} of the region table; without
+ * them a legacy build. A malformed pair ends in a failed report ({@code build.region_option}).</li>
  * </ul>
- * Gradle passes them from {@code ./gradlew runServer -Pkb.build=... -Pkb.buildMaps=... -Pkb.buildReport=... -Pkb.buildExit=true}.</li>
+ * Gradle passes them from {@code ./gradlew runServer -Pkb.build=... -Pkb.buildMaps=... -Pkb.buildReport=... -Pkb.buildExit=true
+ * -Pkb.buildRegion=... -Pkb.buildSlot=...}.</li>
  * </ul>
  *
  * Both open the bundle and start the builder through {@link #start}.
@@ -37,6 +41,9 @@ public final class HeadlessBuild {
 	public static final String PROPERTY_MAPS = "kantobridge.build.maps";
 	public static final String PROPERTY_REPORT = "kantobridge.build.report";
 	public static final String PROPERTY_EXIT = "kantobridge.build.exit";
+	/** MG3: a region build's region id and slot. */
+	public static final String PROPERTY_REGION = "kantobridge.build.region";
+	public static final String PROPERTY_SLOT = "kantobridge.build.slot";
 	public static final int EXIT_OK = 0;
 	public static final int EXIT_FAILED = 1;
 
@@ -77,8 +84,7 @@ public final class HeadlessBuild {
 		String reportPath = System.getProperty(PROPERTY_REPORT);
 		boolean exit = Boolean.parseBoolean(System.getProperty(PROPERTY_EXIT, "false"));
 		BuildOptions options = BuildOptions.defaults().withReportCopy(reportPath == null || reportPath.isBlank() ? null : Path.of(reportPath));
-		KantoBridge.LOGGER.info("builder: headless build requested ({} maps, exit when done: {})", maps == null ? "all" : maps.size(), exit);
-		start(server, Path.of(bundleDir), maps, options, new BuildListener() {
+		BuildListener listener = new BuildListener() {
 			@Override
 			public void onFinished(BuildReport report) {
 				finish(server, exit, true);
@@ -88,7 +94,33 @@ public final class HeadlessBuild {
 			public void onFailed(BuildReport report) {
 				finish(server, exit, false);
 			}
-		});
+		};
+		BuildOptions.RegionOption region;
+		try {
+			region = BuildOptions.parseRegion(System.getProperty(PROPERTY_REGION), System.getProperty(PROPERTY_SLOT));
+		} catch (IllegalArgumentException e) {
+			// The options were typed by whoever ran the build: the message names only what is wrong with them.
+			KantoBridge.LOGGER.error("builder: bad region options ({})", e.getMessage());
+			failEarly("build.region_option", maps, options, listener);
+			return;
+		}
+		if (region != null) {
+			options = options.withRegion(region.region(), region.slot());
+		}
+		KantoBridge.LOGGER.info("builder: headless build requested ({} maps, exit when done: {}, {})", maps == null ? "all" : maps.size(), exit,
+				region == null ? "legacy build" : "region " + region.region() + " at slot " + region.slot());
+		start(server, Path.of(bundleDir), maps, options, listener);
+	}
+
+	/** A failed report before any build ran (copied if asked) and {@code onFailed}, the way an unopenable bundle ends. */
+	private static void failEarly(String code, @Nullable List<String> maps, BuildOptions options, BuildListener listener) {
+		BuildReport report = new BuildReport();
+		report.status = "failed";
+		report.error = code;
+		report.mapsRequested = maps == null ? 0 : maps.size();
+		writeCopy(report, options.reportCopy());
+		listener.onPhase(BuildPhase.FAILED);
+		listener.onFailed(report);
 	}
 
 	/** The folder name of the server's world: what {@link BuildRequest}s are matched by. */
@@ -148,13 +180,7 @@ public final class HeadlessBuild {
 		} catch (BundleException | RuntimeException e) {
 			String code = e instanceof BundleException bundleError ? bundleError.code() : "internal." + e.getClass().getSimpleName();
 			KantoBridge.LOGGER.error("builder: cannot open the export bundle ({})", code);
-			BuildReport report = new BuildReport();
-			report.status = "failed";
-			report.error = code;
-			report.mapsRequested = maps == null ? 0 : maps.size();
-			writeCopy(report, options.reportCopy());
-			listener.onPhase(BuildPhase.FAILED);
-			listener.onFailed(report);
+			failEarly(code, maps, options, listener);
 			return null;
 		}
 		return KantoWorldBuilder.start(server.overworld(), bundle, maps, options, listener);

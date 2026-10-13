@@ -42,9 +42,9 @@ public final class FlashService {
 		if (server.getTickCount() % CHECK_EVERY_TICKS != 0) {
 			return;
 		}
-		WorldIndex index = WorldIndexSync.current(server);
 		for (ServerPlayer player : server.getPlayerList().getPlayers()) {
-			update(player, index);
+			// MG3: the index of the region the player stands in
+			update(player, Regions.currentIndexAt(player));
 		}
 	}
 

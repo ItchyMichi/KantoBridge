@@ -138,7 +138,8 @@ loom {
 }
 
 // Headless world builds (docs/PLAN.md §4.5): `./gradlew runServer -Pkb.build=<bundle dir> [-Pkb.buildMaps=A,B]
-// [-Pkb.buildReport=<path>] [-Pkb.buildExit=true]` hands these to the server as -Dkantobridge.build* (HeadlessBuild).
+// [-Pkb.buildReport=<path>] [-Pkb.buildExit=true] [-Pkb.buildRegion=<id> -Pkb.buildSlot=<n>]` hands these to the server as
+// -Dkantobridge.build* (HeadlessBuild). The last two make a region build (docs/specs/MULTI_GAME_PLAN.md §4.6, MG3).
 // Relative paths resolve against this project directory. Added after the GameTest run is configured, so the GameTest
 // server (which inherits the server run) never gets them.
 def kbBuildProperties = [
@@ -146,6 +147,8 @@ def kbBuildProperties = [
 	"kb.buildMaps"  : ["kantobridge.build.maps", false],
 	"kb.buildReport": ["kantobridge.build.report", true],
 	"kb.buildExit"  : ["kantobridge.build.exit", false],
+	"kb.buildRegion": ["kantobridge.build.region", false],
+	"kb.buildSlot"  : ["kantobridge.build.slot", false],
 ]
 def kbBuildVmArgs = []
 kbBuildProperties.each { gradleName, spec ->

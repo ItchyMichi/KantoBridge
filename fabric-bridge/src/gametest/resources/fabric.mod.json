@@ -17,6 +17,7 @@
 			"dev.kantobridge.gametest.ZoneEncounterGameTests",
 			"dev.kantobridge.gametest.DungeonGameTests",
 			"dev.kantobridge.gametest.ShapeBuildGameTests",
+			"dev.kantobridge.gametest.RegionBuildGameTests",
 			"dev.kantobridge.gametest.BuildHoldGameTests",
 			"dev.kantobridge.gametest.RulesGameTests",
 			"dev.kantobridge.gametest.WarpGameTests",

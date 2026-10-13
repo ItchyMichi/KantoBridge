@@ -1,0 +1,70 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kantobridge.invalid/protocol/items.schema.json",
+  "title": "item catalogue",
+  "description": "protocol/items.json, the canonical items of the one trainer economy (MULTI_GAME_PLAN §4.9, MG6): every item the ledger can hold, its class, the Cobblemon item it is mirrored as (when it is), the move a machine teaches (TMs cross by move), and each game's symbol for it. Items a game lacks have no symbol for it; class key never crosses (key items, HMs, badges, story items). Copied into the fabric-bridge jar and generated into gen1-bridge/lib/kb_items.lua. Ids and symbols only, never game content.",
+  "type": "object",
+  "required": [
+    "version",
+    "items"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "version": {
+      "const": 1
+    },
+    "items": {
+      "type": "object",
+      "minProperties": 1,
+      "propertyNames": {
+        "pattern": "^[a-z][a-z0-9_]{0,31}$"
+      },
+      "additionalProperties": {
+        "type": "object",
+        "required": [
+          "class",
+          "symbols"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "class": {
+            "enum": [
+              "ball",
+              "medicine",
+              "battle",
+              "field",
+              "stone",
+              "held",
+              "valuable",
+              "tm",
+              "key"
+            ],
+            "description": "ball, medicine, battle (X items), field (repels, ropes, dolls), stone (evolution stones), held (Gen 2+), valuable, tm (crosses by move), key (never crosses)."
+          },
+          "cobblemon": {
+            "type": "string",
+            "pattern": "^[a-z0-9_./-]+$",
+            "maxLength": 64,
+            "description": "The Cobblemon item path (namespace cobblemon) the Minecraft mirror creates for it; absent = never mirrored (ledger only)."
+          },
+          "move": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2000,
+            "description": "tm/hm: the move taught, as its national (Showdown) move number; TMs match across games by it."
+          },
+          "symbols": {
+            "type": "object",
+            "propertyNames": {
+              "$ref": "defs.schema.json#/$defs/family"
+            },
+            "additionalProperties": {
+              "$ref": "defs.schema.json#/$defs/itemId"
+            },
+            "description": "Per family, the engine's item symbol (gen1: the import's ids, e.g. POTION, TM_MEGA_PUNCH; gen3 filled in with its adapter)."
+          }
+        }
+      }
+    }
+  }
+}

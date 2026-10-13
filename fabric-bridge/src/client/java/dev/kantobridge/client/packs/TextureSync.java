@@ -97,17 +97,31 @@ public final class TextureSync {
 	 * @param shapesReason     why it draws cubes ({@code no_shapes}, {@code shape_map_mismatch}, {@code geometry_unsupported},
 	 *                         {@code shapes_off}; {@code building} while the table builds), or null when it draws its shapes
 	 * @param packs            texture-pack manifests applied (the voxel plan's V6)
+	 * @param region           MG3 (docs/specs/MULTI_GAME_PLAN.md §4.6): the followed region's id in a region world, whose
+	 *                         game and slot-map slice hash the inputs are about; null in a legacy world (today's reports)
 	 */
 	public record Inputs(@Nullable String worldGame, @Nullable String worldSlotMapHash, @Nullable PackInfo local, boolean packLoaded,
-			int missing, boolean bridgeCompatible, int shapes, @Nullable String shapeIndexHash, @Nullable String shapesReason, int packs) {
+			int missing, boolean bridgeCompatible, int shapes, @Nullable String shapeIndexHash, @Nullable String shapesReason, int packs,
+			@Nullable String region) {
 		public Inputs(@Nullable String worldGame, @Nullable String worldSlotMapHash, @Nullable PackInfo local, boolean packLoaded, int missing,
 				boolean bridgeCompatible) {
-			this(worldGame, worldSlotMapHash, local, packLoaded, missing, bridgeCompatible, 0, null, null, 0);
+			this(worldGame, worldSlotMapHash, local, packLoaded, missing, bridgeCompatible, 0, null, null, 0, null);
 		}
 
 		public Inputs(@Nullable String worldGame, @Nullable String worldSlotMapHash, @Nullable PackInfo local, boolean packLoaded, int missing,
 				boolean bridgeCompatible, int shapes, @Nullable String shapeIndexHash, @Nullable String shapesReason) {
-			this(worldGame, worldSlotMapHash, local, packLoaded, missing, bridgeCompatible, shapes, shapeIndexHash, shapesReason, 0);
+			this(worldGame, worldSlotMapHash, local, packLoaded, missing, bridgeCompatible, shapes, shapeIndexHash, shapesReason, 0, null);
+		}
+
+		public Inputs(@Nullable String worldGame, @Nullable String worldSlotMapHash, @Nullable PackInfo local, boolean packLoaded, int missing,
+				boolean bridgeCompatible, int shapes, @Nullable String shapeIndexHash, @Nullable String shapesReason, int packs) {
+			this(worldGame, worldSlotMapHash, local, packLoaded, missing, bridgeCompatible, shapes, shapeIndexHash, shapesReason, packs, null);
+		}
+
+		/** These inputs for a region (MG3). */
+		public Inputs forRegion(@Nullable String regionId) {
+			return new Inputs(this.worldGame, this.worldSlotMapHash, this.local, this.packLoaded, this.missing, this.bridgeCompatible, this.shapes,
+					this.shapeIndexHash, this.shapesReason, this.packs, regionId);
 		}
 	}
 
@@ -141,6 +155,8 @@ public final class TextureSync {
 	private boolean regenerated;
 	private long readyAt;
 	private int missing = -1;
+	/** MG3: the region the current phase reports about, or null in a legacy world. */
+	private @Nullable String region;
 	private volatile @Nullable Work work;
 	private long reports;
 	private long regenerations;
@@ -205,7 +221,8 @@ public final class TextureSync {
 			this.phase = Phase.IDLE;
 			return;
 		}
-		String world = in.worldGame() + "|" + in.worldSlotMapHash();
+		this.region = in.region();
+		String world = in.worldGame() + "|" + in.worldSlotMapHash() + (in.region() == null ? "" : "|" + in.region());
 		if (!world.equals(this.forWorld)) {
 			// A new world, or a rebuild published a new index: judge it afresh.
 			this.token++;
@@ -218,7 +235,7 @@ public final class TextureSync {
 		}
 		if (this.phase == Phase.READY) {
 			// Ready stays ready; only a change of shapes (their table finished, or went) is reported again.
-			this.queueReport(withPacks(withShapes(ok(in.worldSlotMapHash(), textures(in.local()), 0), in), in));
+			this.queueReport(withRegion(withPacks(withShapes(ok(in.worldSlotMapHash(), textures(in.local()), 0), in), in), in.region()));
 			return;
 		}
 		if (this.phase == Phase.FAILED) {
@@ -232,14 +249,15 @@ public final class TextureSync {
 				this.reason = null;
 				this.missing = 0;
 				this.readyAt = nowMs;
-				this.queueReport(withPacks(withShapes(ok(in.worldSlotMapHash(), textures(in.local()), 0), in), in));
+				this.queueReport(withRegion(withPacks(withShapes(ok(in.worldSlotMapHash(), textures(in.local()), 0), in), in), in.region()));
 			}
 			case INCOMPLETE -> {
 				// Judged again every tick: gen1-bridge may still connect and refresh the art once.
 				this.phase = Phase.INCOMPLETE;
 				this.reason = "art_incomplete";
 				this.missing = in.missing();
-				this.queueReport(withPacks(withShapes(incomplete(in.worldSlotMapHash(), textures(in.local()), in.missing()), in), in));
+				this.queueReport(withRegion(withPacks(withShapes(incomplete(in.worldSlotMapHash(), textures(in.local()), in.missing()), in), in),
+						in.region()));
 			}
 			case RELOAD -> this.startReload();
 			case WAIT_SLOTS -> {
@@ -251,7 +269,7 @@ public final class TextureSync {
 			case NO_ART -> {
 				this.phase = Phase.NO_ART;
 				this.reason = "no_art";
-				this.queueReport(placeholders("no_art"));
+				this.queueReport(withRegion(placeholders("no_art"), in.region()));
 			}
 			case REGENERATE -> {
 				this.phase = Phase.WORKING;
@@ -295,7 +313,7 @@ public final class TextureSync {
 		this.phase = Phase.FAILED;
 		this.reason = code;
 		this.warn("textures." + code);
-		this.queueReport(placeholders(code));
+		this.queueReport(withRegion(placeholders(code), this.region));
 	}
 
 	private void startReload() {
@@ -358,6 +376,14 @@ public final class TextureSync {
 		} else if (in.shapesReason() != null && !"building".equals(in.shapesReason()) && !status.has("reason")) {
 			status.addProperty("shapes", 0);
 			status.addProperty("reason", reasonCode(in.shapesReason()));
+		}
+		return status;
+	}
+
+	/** MG3: a status about one region of a region world names it; a legacy world's carries no region (today's bytes). */
+	static JsonObject withRegion(JsonObject status, @Nullable String region) {
+		if (region != null) {
+			status.addProperty("region", region);
 		}
 		return status;
 	}

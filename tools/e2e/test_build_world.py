@@ -72,3 +72,94 @@ def test_full_build_from_the_real_export():
     points = build_world.viewpoints(full, "KantoE2E")["viewpoints"]
     assert [p["id"] for p in points] == ["spawn", "above"], points
     build_world.write_viewpoints(full, "KantoE2E")
+
+
+# ------------------------------------------------------------ MG3: the region build's helpers (no game needed)
+
+
+def test_region_args_take_both_options_or_neither():
+    assert build_world.region_args(None, None) == []
+    assert build_world.region_args("kanto", 0) == ["-Pkb.buildRegion=kanto", "-Pkb.buildSlot=0"]
+    assert build_world.region_args("test_kanto2", 63) == ["-Pkb.buildRegion=test_kanto2", "-Pkb.buildSlot=63"]
+    for region, slot in (("kanto", None), (None, 1), ("Kanto", 0), ("kanto", 64), ("kanto", -1), ("kanto", True)):
+        with pytest.raises(ValueError):
+            build_world.region_args(region, slot)
+
+
+def _region_report(region="kanto", slot=0, chars=4096):
+    return {"region": {"region": region, "slot": slot, "origin": {"x": 0, "y": 64, "z": 0},
+                       "bounds": {"minX": -300, "minZ": -9400, "maxX": 5400, "maxZ": 4200, "minY": -256, "maxY": 319},
+                       "areas": {"surface": {"x": 0, "z": 0, "w": 704, "d": 744}, "zones": {"x": 0, "z": 3744, "w": 5120, "d": 640},
+                                 "dungeons": {"x": 0, "z": -3600, "w": 1200, "d": 600}, "caves": {"x": 0, "z": -9400, "w": 0, "d": 0}},
+                       "families": [0, 15], "shape_map_chars": chars}}
+
+
+def _write_region_world(root, region="kanto", slot=0):
+    import hashlib
+    import json
+    from kb_protocol.paths import REPO_ROOT
+    golden = REPO_ROOT / "fabric-bridge" / "src" / "gametest" / "resources" / "kantobridge" / "golden" / "synthetic_world_index.json"
+    data = root / build_world.DATA_FOLDER
+    region_dir = data / "regions" / region
+    region_dir.mkdir(parents=True)
+    (region_dir / "world_index.json").write_text(golden.read_text(encoding="utf-8"), encoding="utf-8")
+    (region_dir / "shape_index.json").write_text("{}", encoding="utf-8")
+    (region_dir / "shape_map.bin").write_bytes(b"KBSM")
+    digest = hashlib.sha256(b"kb-test").hexdigest()
+    record = {"version": 1, "id": region, "game": "red", "family": "gen1", "exportHash": digest, "slot": slot,
+              "origin": {"x": 8192 * slot, "y": 64, "z": 0},
+              "bounds": {"minX": -300, "minZ": -9400, "maxX": 5400, "maxZ": 4200, "minY": -256, "maxY": 319},
+              "areas": {"surface": {"x": 0, "z": 0, "w": 704, "d": 744}, "zones": {"x": 0, "z": 3744, "w": 5120, "d": 640},
+                        "dungeons": {"x": 0, "z": -3600, "w": 1200, "d": 600}, "caves": {"x": 0, "z": -9400, "w": 0, "d": 0}},
+              "families": [0, 15],
+              "files": {"index": f"regions/{region}/world_index.json", "shapeIndex": f"regions/{region}/shape_index.json",
+                        "shapeMap": f"regions/{region}/shape_map.bin"},
+              "hashes": {"index": digest, "shapeIndex": digest, "shapeMap": digest},
+              "generator": {"shapes": "kb-shapes/11"},
+              "rules": {"profile": "gen1", "compat": {"maxDex": 151, "maxMove": 165, "nick": 10, "onIncompatible": "leave_out"}},
+              "namespaces": {"artSet": "red", "pools": f"kantobridge:{region}"}}
+    (region_dir / "region.json").write_text(json.dumps(record), encoding="utf-8")
+    (data / build_world.REGIONS_FILE).write_text(
+        json.dumps({"version": 1, "pitch": 8192, "regions": [{"id": region, "game": "red", "slot": slot}]}), encoding="utf-8")
+    return data
+
+
+def test_region_checks_pass_on_a_complete_region_world(tmp_path):
+    _write_region_world(tmp_path)
+    checks = build_world.region_checks(_region_report(), "kanto", 0, tmp_path)
+    assert checks and all(checks.values()), [name for name, ok in checks.items() if not ok]
+
+
+def test_region_checks_name_what_is_wrong(tmp_path):
+    data = _write_region_world(tmp_path)
+    # the report names another region, its shape map is empty
+    checks = build_world.region_checks(_region_report(region="hoenn", chars=0), "kanto", 0, tmp_path)
+    assert not checks["region_reported"] and not checks["region_shape_map_fits"]
+    assert checks["region_record_schema"] and checks["region_index_schema"]  # the files are fine
+    # a missing record and a table without the region
+    (data / "regions" / "kanto" / "region.json").unlink()
+    (data / build_world.REGIONS_FILE).write_text('{"version": 1, "pitch": 8192, "regions": []}', encoding="utf-8")
+    checks = build_world.region_files(tmp_path, "kanto", 0)
+    assert not checks["region_file_region.json"] and not checks["region_record_schema"]
+    assert checks["regions_table_schema"] and not checks["regions_table_entry"]
+    # a legacy report (region null) fails a region check
+    assert not build_world.region_checks({"region": None}, "kanto", 0)["region_reported"]
+
+
+def test_check_report_tells_legacy_and_region_builds_apart(tmp_path):
+    import json
+    base = {"maps_requested": 5, "maps_built": 5, "overlaps": 0, "story_cells": 3, "warnings": 0, "pack_textures": 9,
+            "world_index": True, "maps_unplaced": 0}
+    maps = build_world.MAP_SETS["pallet"]
+    report = tmp_path / "build_report.json"
+    report.write_text(json.dumps(dict(base, region=None)), encoding="utf-8")
+    data, failed = build_world.check_report(maps, report=report)
+    assert data["maps_built"] == 5 and failed == []
+    report.write_text(json.dumps(base), encoding="utf-8")  # an older report without the key is legacy too
+    assert build_world.check_report(maps, report=report)[1] == []
+    report.write_text(json.dumps(dict(base, **_region_report())), encoding="utf-8")
+    assert "legacy_report" in build_world.check_report(maps, report=report)[1]  # a region report in a legacy check
+    failed = build_world.check_report(maps, report=report, region="kanto", slot=0)[1]
+    assert failed == []  # the report alone (no world folder given)
+    failed = build_world.check_report(maps, report=report, region="hoenn", slot=1)[1]
+    assert failed == ["region_reported"]

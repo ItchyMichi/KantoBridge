@@ -281,7 +281,8 @@ public final class PartyService {
 	}
 
 	static void onHeal(ServerPlayer player, Envelope message) {
-		if (!message.data().keySet().isEmpty()) {
+		// {} apart from MG3's optional region tag
+		if (message.data().keySet().stream().anyMatch(key -> !key.equals("region"))) {
 			reject(player, message, "heal", null);
 			return;
 		}
@@ -293,7 +294,7 @@ public final class PartyService {
 		UUID uid;
 		String nick;
 		try {
-			DataReader reader = DataReader.of(message.data(), "").allowOnly(Set.of("uid", "nick"));
+			DataReader reader = DataReader.of(message.data(), "").allowOnly(Set.of("uid", "nick", "region"));
 			uid = UUID.fromString(reader.string("uid", Ids.UID));
 			nick = PartyGive.name(reader, "nick");
 		} catch (DataException e) {
@@ -314,7 +315,7 @@ public final class PartyService {
 		UUID uid;
 		String reason;
 		try {
-			DataReader reader = DataReader.of(message.data(), "").allowOnly(Set.of("uid", "reason"));
+			DataReader reader = DataReader.of(message.data(), "").allowOnly(Set.of("uid", "reason", "region"));
 			uid = UUID.fromString(reader.string("uid", Ids.UID));
 			reason = reader.string("reason");
 			if (!reason.equals("trade") && !reason.equals("daycare")) {

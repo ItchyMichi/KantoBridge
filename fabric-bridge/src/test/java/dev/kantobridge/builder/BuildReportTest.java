@@ -43,11 +43,38 @@ class BuildReportTest {
 		// Values are numbers, booleans, codes, ids and hashes only: no nested content beyond count maps.
 		Set<String> objects = Set.of("warning_codes", "notes", "story_cells_by_type", "throughput", "viewpoints", "blocks_by_kind", "cells_by_kind",
 				"solid_cells_by_height", "shape_keys_by_kind", "selfcheck", "densest_section", "structures_by_kind", "sprites_by_frames",
-				"character_fallbacks", "profile", "units_by_source", "buildings", "classes", "dressing");
+				"character_fallbacks", "profile", "units_by_source", "buildings", "classes", "dressing", "region");
 		for (String key : json.keySet()) {
 			assertTrue(!json.get(key).isJsonObject() || objects.contains(key), key + " is an unexpected object");
 			assertTrue(!json.get(key).isJsonArray(), key + " is an array");
 		}
+	}
+
+	@Test
+	void theRegionObjectNamesTheRegionBuilt() {
+		// MG3: null for a legacy build; the region's slot, origin, bounds, areas, families and shape-map chars otherwise
+		BuildReport report = new BuildReport();
+		assertTrue(report.toJson().get("region").isJsonNull(), "a legacy build has no region");
+		report.region = new BuildReport.RegionReport("hoenn", 1, 8192, 64, 0, new dev.kantobridge.world.RegionRecord.Box(8000, -9000, 13000, 4000, -256, 319),
+				new dev.kantobridge.world.RegionRecord.Areas(new dev.kantobridge.world.RegionRecord.Area(8180, -12, 700, 744),
+						dev.kantobridge.world.RegionRecord.Area.NONE, dev.kantobridge.world.RegionRecord.Area.NONE, dev.kantobridge.world.RegionRecord.Area.NONE),
+				16, 31, 12345L);
+		JsonObject region = report.toJson().getAsJsonObject("region");
+		assertEquals(Set.of("region", "slot", "origin", "bounds", "areas", "families", "shape_map_chars"), region.keySet());
+		assertEquals("hoenn", region.get("region").getAsString());
+		assertEquals(1, region.get("slot").getAsInt());
+		assertEquals(8192, region.getAsJsonObject("origin").get("x").getAsInt());
+		assertEquals(64, region.getAsJsonObject("origin").get("y").getAsInt());
+		assertEquals(-9000, region.getAsJsonObject("bounds").get("minZ").getAsInt());
+		assertEquals(319, region.getAsJsonObject("bounds").get("maxY").getAsInt());
+		assertEquals(Set.of("surface", "zones", "dungeons", "caves"), region.getAsJsonObject("areas").keySet());
+		assertEquals(700, region.getAsJsonObject("areas").getAsJsonObject("surface").get("w").getAsInt());
+		assertEquals(0, region.getAsJsonObject("areas").getAsJsonObject("zones").get("w").getAsInt(), "zero size: not built");
+		assertEquals(16, region.getAsJsonArray("families").get(0).getAsInt());
+		assertEquals(31, region.getAsJsonArray("families").get(1).getAsInt());
+		assertEquals(12345, region.get("shape_map_chars").getAsLong());
+		report.region = new BuildReport.RegionReport("hoenn", 1, 8192, 64, 0, null, dev.kantobridge.world.RegionRecord.Areas.NONE, 16, 31, 0);
+		assertTrue(report.toJson().getAsJsonObject("region").get("bounds").isJsonNull(), "nothing placed: no bounds");
 	}
 
 	@Test

@@ -113,10 +113,16 @@ public final class SessionService {
 		return record == null ? null : record.world();
 	}
 
-	/** The slot the player's gen1-bridge reported for this world, or null. */
+	/** The slot the player's gen1-bridge reported for this world's legacy region, or null. */
 	public static @Nullable Integer slotOf(MinecraftServer server, UUID player) {
 		SessionRecord record = RECORDS.get(server);
 		return record == null ? null : record.slot(player);
+	}
+
+	/** The slot the player paired with a region (MG3; {@code null} or the legacy id: the legacy slot), or null. */
+	public static @Nullable Integer slotOf(MinecraftServer server, UUID player, @Nullable String region) {
+		SessionRecord record = RECORDS.get(server);
+		return record == null ? null : record.slot(player, Regions.isLegacy(server, region) ? null : region);
 	}
 
 	/**
@@ -156,32 +162,47 @@ public final class SessionService {
 	 */
 	static void onBound(ServerPlayer player, Envelope message) {
 		int slot;
+		String region;
 		try {
-			DataReader reader = DataReader.of(message.data(), "").allowOnly(Set.of("slot", "switched"));
+			DataReader reader = DataReader.of(message.data(), "").allowOnly(Set.of("slot", "switched", "region"));
 			slot = reader.integer("slot", 0, SessionRecord.MAX_SLOT);
 			String switched = reader.has("switched") ? reader.string("switched") : null;
 			if (switched != null && !SWITCHES.contains(switched)) {
 				throw new DataException(reader.path("switched"), "unknown value");
+			}
+			// MG3: the region whose link bound; unknown to this world is a malformed message
+			region = Regions.currentRegionId(player, reader.optionalRegion());
+			if (reader.has("region") && region == null) {
+				throw new DataException(reader.path("region"), "unknown region");
 			}
 		} catch (DataException e) {
 			warn("bad_message");
 			RelayService.get().sendError(player, "bad_message", message.seq());
 			return;
 		}
-		record(player, slot);
+		record(player, region, slot);
 	}
 
 	/**
-	 * Records the save slot the player's hidden game paired with this world, and writes the record. False when there is
-	 * no record or it can't be written (a counted warning).
+	 * Records the save slot the player's hidden game paired with this world's legacy region, and writes the record. False
+	 * when there is no record or it can't be written (a counted warning).
 	 */
 	public static boolean record(ServerPlayer player, int slot) {
+		return record(player, null, slot);
+	}
+
+	/**
+	 * {@link #record(ServerPlayer, int)} for a region (MG3): {@code null} or the legacy region's id keeps format 1's one
+	 * slot; another region's slot goes under {@code regions} (format 2).
+	 */
+	public static boolean record(ServerPlayer player, @Nullable String region, int slot) {
 		SessionRecord record = RECORDS.get(player.server);
 		if (record == null) {
 			warn("no_record");
 			return false;
 		}
-		if (!record.put(player.getUUID(), slot)) {
+		String key = Regions.isLegacy(player.server, region) ? null : region;
+		if (!record.put(player.getUUID(), key, slot)) {
 			return true;
 		}
 		try {

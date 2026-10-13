@@ -53,14 +53,28 @@ public final class HabitatPlanner {
 	private HabitatPlanner() {
 	}
 
-	/** The habitat pool of a map: {@code kantobridge:<map id in lower case>}. */
+	/** The habitat pool of a map in the legacy region: {@code kantobridge:<map id in lower case>}. */
 	public static String poolId(String map) {
-		return POOL_NAMESPACE + ":" + poolPath(map);
+		return poolId("", map);
+	}
+
+	/**
+	 * The habitat pool of a map in a region (MULTI_GAME_PLAN §4.6, MG3): {@code kantobridge:<prefix><map id in lower
+	 * case>}; the prefix is the region's ({@code <region>_}, nothing for the legacy region), since two games both have a
+	 * ROUTE_1.
+	 */
+	public static String poolId(String prefix, String map) {
+		return POOL_NAMESPACE + ":" + poolPath(prefix, map);
 	}
 
 	/** The pool's path, also its file name in the datapack. */
 	public static String poolPath(String map) {
-		return map.toLowerCase(Locale.ROOT);
+		return poolPath("", map);
+	}
+
+	/** The pool's path with a region's prefix. */
+	public static String poolPath(String prefix, String map) {
+		return prefix + map.toLowerCase(Locale.ROOT);
 	}
 
 	public static boolean safari(String map, ExportField field) {
@@ -94,6 +108,12 @@ public final class HabitatPlanner {
 
 	/** The habitat blocks for the built maps, sorted by map, then Z, then X. */
 	public static List<WorldIndex.Habitat> plan(List<PlacedMap> placed, ExportEncounters encounters, ExportField field, Warnings warnings) {
+		return plan(placed, encounters, field, warnings, "");
+	}
+
+	/** {@link #plan} with the pool ids of a region ({@code prefix}, MG3). */
+	public static List<WorldIndex.Habitat> plan(List<PlacedMap> placed, ExportEncounters encounters, ExportField field, Warnings warnings,
+			String prefix) {
 		List<WorldIndex.Habitat> out = new ArrayList<>();
 		for (PlacedMap map : placed) {
 			if (!wild(map.id(), encounters, field)) {
@@ -130,7 +150,7 @@ public final class HabitatPlanner {
 					int x = block[0] + dx;
 					int z = block[1] + dz;
 					if (placedAt.add(((long) x << 32) ^ (z & 0xFFFFFFFFL))) {
-						out.add(new WorldIndex.Habitat(map.id(), x, p.y() + dy - BELOW_FEET, z, poolId(map.id()), range));
+						out.add(new WorldIndex.Habitat(map.id(), x, p.y() + dy - BELOW_FEET, z, poolId(prefix, map.id()), range));
 					}
 				}
 			}

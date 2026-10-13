@@ -7,6 +7,7 @@ import dev.kantobridge.proto.MsgTypes;
 import dev.kantobridge.world.DataException;
 import dev.kantobridge.world.DataReader;
 import dev.kantobridge.world.Hashes;
+import dev.kantobridge.world.RegionRecord;
 import dev.kantobridge.world.WorldIndex;
 import java.util.Map;
 import java.util.Set;
@@ -29,7 +30,8 @@ import org.jetbrains.annotations.Nullable;
  * codes. Server thread only.
  */
 public final class TextureStatusService {
-	private static final Set<String> FIELDS = Set.of("ok", "slotMapHash", "textures", "missing", "shapes", "shapeIndexHash", "packs", "reason");
+	private static final Set<String> FIELDS = Set.of("ok", "slotMapHash", "textures", "missing", "shapes", "shapeIndexHash", "packs", "reason",
+			"region");
 	private static final Pattern REASON = Pattern.compile("^[a-z][a-z0-9_.]{0,63}$");
 	/** protocol/defs.schema.json {@code count}. */
 	private static final int MAX_COUNT = Integer.MAX_VALUE;
@@ -41,13 +43,21 @@ public final class TextureStatusService {
 	 * @param shapes         shape ids the client has geometry for (V2); 0 while it draws cubes
 	 * @param shapeIndexHash the shape index it built them from, or null
 	 * @param packs          texture-pack manifests the client applied (V6); 0 when not said
-	 * @param matchesWorld   the client draws with its own art, resolved against the slot map the world's index names
+	 * @param matchesWorld   the client draws with its own art, resolved against the slot map the region's index names
+	 * @param region         the region the report is about (MG3; null in a legacy world or when the client didn't say)
 	 */
 	public record Status(boolean ok, @Nullable String slotMapHash, int textures, int missing, int shapes, @Nullable String shapeIndexHash,
-			int packs, @Nullable String reason, boolean matchesWorld) {
+			int packs, @Nullable String reason, boolean matchesWorld, @Nullable String region) {
+		/** A report without a region (a legacy world's). */
+		public Status(boolean ok, @Nullable String slotMapHash, int textures, int missing, int shapes, @Nullable String shapeIndexHash, int packs,
+				@Nullable String reason, boolean matchesWorld) {
+			this(ok, slotMapHash, textures, missing, shapes, shapeIndexHash, packs, reason, matchesWorld, null);
+		}
 	}
 
+	/** Each player's newest report (any region), and (MG3) their newest per region. */
 	private static final Map<UUID, Status> STATUS = new ConcurrentHashMap<>();
+	private static final Map<UUID, Map<String, Status>> BY_REGION = new ConcurrentHashMap<>();
 	private static final Map<String, AtomicLong> WARNINGS = new ConcurrentHashMap<>();
 
 	private TextureStatusService() {
@@ -56,8 +66,14 @@ public final class TextureStatusService {
 	/** Call once from common init, after the relay. */
 	public static void init() {
 		RelayService.get().register(MsgTypes.TEXTURE_STATUS, TextureStatusService::onStatus);
-		ServerPlayConnectionEvents.DISCONNECT.register((handler, server) -> STATUS.remove(handler.getPlayer().getUUID()));
-		ServerLifecycleEvents.SERVER_STOPPED.register(server -> STATUS.clear());
+		ServerPlayConnectionEvents.DISCONNECT.register((handler, server) -> {
+			STATUS.remove(handler.getPlayer().getUUID());
+			BY_REGION.remove(handler.getPlayer().getUUID());
+		});
+		ServerLifecycleEvents.SERVER_STOPPED.register(server -> {
+			STATUS.clear();
+			BY_REGION.clear();
+		});
 	}
 
 	static void onStatus(ServerPlayer player, Envelope message) {
@@ -72,15 +88,25 @@ public final class TextureStatusService {
 			String shapeIndexHash = reader.optionalString("shapeIndexHash", DataReader.HASH);
 			int packs = reader.has("packs") ? reader.integer("packs", 0, MAX_COUNT) : 0;
 			String reason = reader.optionalString("reason", REASON);
-			WorldIndex index = WorldIndexSync.current(player.server);
+			// MG3: the report is about one region's index (its slot-map slice); the player's region when the client didn't say
+			String region = reader.optionalRegion();
+			Regions regions = Regions.of(player.server);
+			RegionRecord record = regions == null ? null : regions.regionOf(player, region);
+			if (region != null && record == null) {
+				throw new DataException(reader.path("region"), "unknown region");
+			}
+			WorldIndex index = record == null ? null : regions.indexOf(record.id());
 			boolean matches = ok && hash != null && index != null && hash.equals(index.slotMapHash());
-			status = new Status(ok, hash, textures, missing, shapes, shapeIndexHash, packs, reason, matches);
+			status = new Status(ok, hash, textures, missing, shapes, shapeIndexHash, packs, reason, matches, record == null ? null : record.id());
 		} catch (DataException e) {
 			warn("bad_message");
 			RelayService.get().sendError(player, "bad_message", message.seq());
 			return;
 		}
 		STATUS.put(player.getUUID(), status);
+		if (status.region() != null) {
+			BY_REGION.computeIfAbsent(player.getUUID(), key -> new ConcurrentHashMap<>()).put(status.region(), status);
+		}
 		if (status.ok()) {
 			if (!status.matchesWorld()) {
 				// Not fatal (the client judged against what it received), but its tiles would show other art.
@@ -95,9 +121,15 @@ public final class TextureStatusService {
 		}
 	}
 
-	/** The player's last report, or null when their client hasn't sent one in this session. */
+	/** The player's last report (about any region), or null when their client hasn't sent one in this session. */
 	public static @Nullable Status of(ServerPlayer player) {
 		return STATUS.get(player.getUUID());
+	}
+
+	/** The player's last report about one region (MG3), or null. */
+	public static @Nullable Status of(ServerPlayer player, String region) {
+		Map<String, Status> reports = BY_REGION.get(player.getUUID());
+		return reports == null ? null : reports.get(region);
 	}
 
 	private static void warn(String code) {
