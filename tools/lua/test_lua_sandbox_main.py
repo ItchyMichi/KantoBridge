@@ -294,12 +294,15 @@ def test_no_generated_paths_or_module_names():
 
 def test_lib_layout_and_no_self_require():
     # MG2: lib/engine/<engine>.lua are the engine adapters (one per Gen1Recomp engine id, D1); the
-    # loader lib/kb_engine.lua names each in Engine.ADAPTERS
+    # loader lib/kb_engine.lua names each in Engine.ADAPTERS. MG7: the game3 adapter keeps its parts,
+    # one group each, in lib/engine/game3/ (GEN3_BRIDGE_PLAN.md §2)
     for path in (BRIDGE / "lib").iterdir():
         if path.name == "engine":
             assert path.is_dir()
             adapters = sorted(p.name for p in path.iterdir())
-            assert adapters == ["gen1.lua"], adapters
+            assert adapters == ["game3", "game3.lua", "gen1.lua"], adapters
+            parts = sorted(p.name for p in (path / "game3").iterdir())
+            assert parts and all(re.fullmatch(r"[a-z0-9_]+\.lua", n) for n in parts), parts
             continue
         assert path.name.startswith("kb_") and path.suffix == ".lua", path
     for path in BRIDGE.rglob("*.lua"):
@@ -308,7 +311,7 @@ def test_lib_layout_and_no_self_require():
 
 
 def test_only_the_engine_adapters_require_engine_modules():
-    # D1: only lib/engine/*.lua touch engine internals (CLAUDE.md's rule); the loader asks only
+    # D1: only lib/engine/** touch engine internals (CLAUDE.md's rule); the loader asks only
     # for GameVersion's engine id, the stub for Version and GameVersion
     for path in BRIDGE.rglob("*.lua"):
         rel = path.relative_to(BRIDGE).as_posix()
@@ -327,7 +330,8 @@ def test_manifest():
     manifest = json.loads((BRIDGE / "manifest.json").read_text(encoding="utf-8"))
     assert manifest["api"] == 2 and manifest["entry"] == "main.lua"
     assert {"network", "engine_internals"} <= set(manifest["permissions"])
-    assert set(manifest["games"]) == {"red", "blue"}
+    # MG7: Emerald has the game3 adapter (protocol/games.json adapter: true)
+    assert set(manifest["games"]) == {"red", "blue", "emerald"}
 
 
 # ------------------------------------------------------------ MG2: the adapter loader
@@ -350,10 +354,11 @@ def test_the_loader_picks_the_gen1_adapter_for_the_gen1_engine():
 
 def test_an_engine_without_an_adapter_gets_the_stub_and_rejects_every_hello():
     from rig import Rig
-    rig = Rig(engine_id="game3")
-    assert (rig.status.engineId, rig.status.engineAdapter, rig.status.ready) == (b"game3", False, True)
+    # MG7: game3 has an adapter now; gs (Gold, Silver) is still the stub's
+    rig = Rig(engine_id="gs")
+    assert (rig.status.engineId, rig.status.engineAdapter, rig.status.ready) == (b"gs", False, True)
     assert len(rig.status.engineGroupsMissing) == 14
-    assert sum("engine.no_adapter engine=game3" in line for line in rig.logs()) == 1
+    assert sum("engine.no_adapter engine=gs" in line for line in rig.logs()) == 1
     assert sum("engine.groups adapter=false count=14" in line for line in rig.logs()) == 1
     rig.step(3)
     peer = rig.connect()

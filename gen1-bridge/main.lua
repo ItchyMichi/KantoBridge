@@ -87,6 +87,8 @@ return function(mod)
     require = require, log = log, ui = mod.ui, datasets = mod.datasets, love = love, import = loadFile,
     -- MG6: the canonical item catalogue (the adapter's item table, bag.set)
     items = kb.items,
+    -- MG7: the mod's world and input facades (Gen 3 warps, flags and taps go through them)
+    world = mod.world, input = mod.input,
   })
 
   -- Wild Routes (WR2: lib/kb_routes.lua, docs/specs/WILD_ROUTES_PLAN.md
@@ -358,7 +360,7 @@ return function(mod)
       json = kb.json,
       Player = kb.Player,
       facts = facts,
-      save = engine.save(),
+      save = engine.saveView(),
       darkMaps = engine.darkMaps(),
       badgeItems = engine.badgeItems(),
       npcs = npcs,
@@ -389,7 +391,7 @@ return function(mod)
 
   local session, exporter
   local function debugStatus()
-    local save = engine.save()
+    local save = engine.saveView()
     local flags = 0
     for _, v in pairs(save and type(save.flags) == "table" and save.flags or {}) do
       if v == true then flags = flags + 1 end
@@ -769,7 +771,7 @@ return function(mod)
   local PIN_EVERY = 60 -- steps between checks that the display pin still holds
   local steps = 0
   local function pinOptions(reapply)
-    local save = engine.save()
+    local save = engine.saveView()
     local changed = engine.pinDisplay(save and save.options, reapply)
     if changed > 0 then log.info("options.pinned", { changed = changed }) end
   end
@@ -792,6 +794,14 @@ return function(mod)
     local facts = engine.observe()
     lastFacts = facts
     local ev = takeEvents()
+    -- MG7 (GEN3_BRIDGE_PLAN.md §4.3): an engine without the movement.collision hook (Gen 3) hands the
+    -- player's step verdicts over here, as that hook's handler does for Gen 1
+    if engine.takeVerdicts then
+      local okV, more = pcall(engine.takeVerdicts)
+      if okV and type(more) == "table" then
+        for _, v in ipairs(more) do capped(ev.verdicts, v) end
+      end
+    end
     local mode = kb.Player.classify(facts)
     local out = player.update(facts) -- player.state, then player.pos
     -- warp start/arrive go after player.state and before player.pos (the

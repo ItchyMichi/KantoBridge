@@ -54,7 +54,7 @@ function Progress.new(opts)
     if pt ~= "title" and pt ~= "fresh" and pt ~= "saved" then pt = "title" end
     -- at the title the live save is the boot skeleton: nothing of it counts
     local started = pt ~= "title"
-    local save = started and engine.save() or nil
+    local save = started and engine.saveView() or nil
     local inventory = type(save) == "table" and type(save.inventory) == "table" and save.inventory or {}
     local badges = 0
     for _, item in ipairs(engine.badgeItems() or {}) do

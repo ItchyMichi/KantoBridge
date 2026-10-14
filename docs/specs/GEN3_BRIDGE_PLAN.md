@@ -114,7 +114,8 @@ ty, progress, frames}`; `kind` = `trainer` when the object has sight, `item` for
   `isDown` only (`R/src/core/game3/bike/rse.lua:410-417`): holds, never taps.
 - **Verdicts**: the adapter wraps `Player.tryMove` (called through the module table, `player.lua:1503`) once per
   process; a `"blocked", why` return becomes a verdict `{allowed=false, dir, reason}` with `why` mapped to the
-  protocol's reasons (`bounds`/`tile`/`elevation`/`water` → `tile`, `entity` → `npc`), taken by `takeVerdicts()`.
+  protocol's reasons (`bounds` → `bounds`, `tile`/`elevation`/`water` → `tile`, `entity` → `entity`), taken by
+  `takeVerdicts()`.
 - **Warps**: `warpDeparture()` from the `warp.destination` context of the last announced warp (kind `door` →
   `door`, `exit_door` → `door`, `stairs`/`escalator` → `stairs`, `warp`/`teleport`/`rse_*` → `pad`, `fall`/`dive` →
   `hole`). Warps without `player.warped` (scripted warps, fly, whiteout) are caught by the observer's map change.
@@ -169,6 +170,8 @@ frames: `mirror.frame` gains Gen 3's size (§7).
   entry), `flags` (§4.6), `money` = `session.money`, `coins` from `Bag.Coins`, `inventory` from the bag pockets as
   `{item symbol = qty}` (Emerald symbols from `items_data`), `pokedex{seen, owned}` as counts-bearing lists of
   national dex numbers, `party` = [] until G3F (Cobblemon owns the party), `options` = `session.options`.
+  The view is built once per logic step (G3A, `boot.lua`); G3F's writes (`bag.set`, money, items) must drop that
+  cache, or a reader later in the same step sees the old bag.
 
 ### 4.8 Region (MG2 acts on Gen 3)
 
@@ -278,7 +281,7 @@ maps `G3_TEST_*`, `layout/hoenn`); a golden scene; a GameTest building a synthet
 
 | Phase | Delivers | Check |
 |---|---|---|
-| **G3A** core changes; adapter base, boot, observe, NPCs, movement, warps, interaction, saves and slots, region, reliability; catalogue and manifest; the fake engine | Emerald followable: hello.ok, snapshot, walking, warps, saves, game.status, region acts | lupa per part; e2e `test_emerald.py` (all but the text box) ✔ |
+| **G3A** core changes; adapter base, boot, observe, NPCs, movement, warps, interaction, saves and slots, region, reliability; catalogue and manifest; the fake engine | Emerald followable: hello.ok, snapshot, walking, warps, saves, game.status, region acts | lupa per part; e2e `test_emerald.py` (all but the text box) ✔ — **done 2026-10-14** (PROGRESS.md "Several games: MG7": the deviations `chainsHeld` and `starting`) |
 | **G3B** UI | text boxes, choices, lists, menus, naming, Birch's speech, the 240×160 mirror (Lua, schema, client) | lupa UI; e2e text box ✔ |
 | **G3C** story | flags, toggles, `story.cells` | lupa; e2e a flag and an override |
 | **G3D** export | `g3*` resources, baked quarters, encounters, layout; the measurement driver first | lupa on the fake; pod export counts and hashes ✔ |

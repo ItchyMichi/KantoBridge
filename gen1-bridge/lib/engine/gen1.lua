@@ -377,6 +377,8 @@ function Gen1.new(opts)
   function engine.save()
     return game and type(game.save) == "table" and game.save or nil
   end
+  -- MG7 (GEN3_BRIDGE_PLAN.md §3): the readers' save facts; Gen 1's save is already that shape
+  engine.saveView = engine.save
 
   -- The top state of the screen stack: src/core/StateStack.lua:47
   -- (game.stack is StateStack, src/core/Game.lua:95).

@@ -36,6 +36,11 @@
 --   * every hold is released the moment the state leaves "idle" (a held
 --     direction would walk on after a text box closes, a held B would close
 --     it), and the waiting steps are answered blocked/script;
+--   * MG7: an engine that chains a held direction straight into the next
+--     step, with no standing poll between them (Gen 3's Player.update,
+--     GEN3_BRIDGE_PLAN.md §4.3; the adapter's facts say chainsHeld), gets the
+--     press back as soon as its step is under way: the next queued step then
+--     starts on the landing poll like any other;
 --   * a push step (move.step push:true, the Minecraft player pushing against
 --     an exit mat, a gate or an edge) is held until the engine has tried it,
 --     then released: exit mats and edge warps fire on that blocked try.
@@ -223,6 +228,7 @@ function Move.new(opts)
     if a.phase == "moving" then
       -- answered at its start; done once the player stands again (the
       -- landing poll), or when the hop's first cell lands
+      if f.chainsHeld then releaseDirections() end
       if not f.moving then active = nil end
       return
     end
@@ -244,6 +250,7 @@ function Move.new(opts)
         attach(msg, a)
         counts.started = count(counts.started)
         a.phase = "moving"
+        if f.chainsHeld then releaseDirections() end
       else
         blocked(out, a, "script", f) -- the observer held the step back (malformed)
         active = nil

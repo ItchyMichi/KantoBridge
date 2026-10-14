@@ -224,8 +224,10 @@ function Region.new(opts)
       end
       if steps - r.startedAt > Region.ARRIVE then return finish(out, false, "failed") end
     elseif r.op == "start" then
-      -- the overworld is on the stack (the intro's screens may still be over it)
-      if f.inGame then
+      -- the overworld is on the stack (the intro's screens may still be over it); MG7: or the adapter
+      -- reports a NEW GAME's intro under way before any overworld exists (Gen 3's Birch speech runs in
+      -- the boot phase, GEN3_BRIDGE_PLAN.md §4.8)
+      if f.inGame or f.starting then
         counts.starts = counts.starts + 1
         if log then log.info("region.started", { detail = r.detail }) end
         return finish(out, true, nil, r.detail)

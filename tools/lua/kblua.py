@@ -13,6 +13,7 @@ data survives; use ``b.s("text")`` to pass text. Everything here is ROM-free.
 from __future__ import annotations
 
 import faulthandler
+import json
 from pathlib import Path
 
 # LuaJIT on Windows x64 unwinds every error() with an SEH exception (code
@@ -57,14 +58,34 @@ class Bridge:
     catalogue id); ``manifest`` the fake mod's manifest (its ``games`` list). ``love.timer.getTime`` reads ``self.now`` (seconds), which
     ``step()`` advances by one logic step at a time. ``graphics=True`` adds a fake
     ``love.graphics`` and ``love.data`` (``fake_love.lua``, controlled through ``self.love``).
+
+    MG7: ``family="gen3"`` loads ``fake_engine3.lua`` (Gen1Recomp's ``game3`` engine, which
+    ``lib/kb_engine.lua`` answers with ``lib/engine/game3.lua``) instead of the Gen 1 fake, and implies
+    ``engine=True``; ``game`` then defaults to "emerald", ``engine_id`` to "game3", and the mod's
+    manifest to gen1-bridge's own ``games`` (the engine loads the mod on Emerald only for a manifest that
+    names it). The Gen 1 fake's add-ons (``script``, ``save_files``, ``world_api``) are Gen 1's only.
     """
 
     STEP = 1 / 60
 
     def __init__(self, permissions=PERMISSIONS, modules=None, developer=False, strict=True,
-                 engine=False, mod_options=None, content=None, game="blue", graphics=False,
+                 engine=False, mod_options=None, content=None, game=None, graphics=False,
                  script=False, mod_cache=None, save_files=False, window=False, files=None,
-                 registries=None, world_api=False, jit_os="Windows", manifest=None, engine_id="gen1"):
+                 registries=None, world_api=False, jit_os="Windows", manifest=None, engine_id=None,
+                 family="gen1"):
+        assert family in ("gen1", "gen3"), family
+        gen3 = family == "gen3"
+        if gen3:
+            assert not (script or save_files or world_api), "the Gen 1 fake's add-ons have no Gen 3 counterpart"
+            engine = True
+            if manifest is None:
+                games = json.loads((BRIDGE / "manifest.json").read_text(encoding="utf-8"))["games"]
+                manifest = {"id": "gen1-bridge", "games": games}
+        if game is None:
+            game = "emerald" if gen3 else "blue"
+        if engine_id is None:
+            engine_id = "game3" if gen3 else "gen1"
+        self.family = family
         self.rt = luajit.LuaRuntime(unpack_returned_tuples=True, encoding=None)
         # the platform main.lua sees (jit.os): Windows by default, whatever the host, so every test
         # runs the same on a PC and a Linux pod; "Linux"/"OSX" for the SO_REUSEADDR rule
@@ -80,7 +101,13 @@ class Bridge:
         self.net = self.fake.net
         self.read_calls: list[str] = []
         self.engine = None
-        if engine:
+        if gen3:
+            # MG7 (GEN3_BRIDGE_PLAN.md §8.1): the game3 engine's modules and the Game3 object
+            eopts = self.table()
+            eopts[b"game"] = _b(game)
+            eopts[b"engineId"] = _b(engine_id)
+            self.engine = self._load_harness("fake_engine3.lua").new(eopts)
+        elif engine:
             FakeEngine = self._load_harness("fake_engine.lua")
             eopts = self.table()
             eopts[b"game"] = _b(game)
@@ -244,12 +271,13 @@ class Bridge:
 
     def step(self, n: int = 1):
         """Runs n logic steps: the clock advances and the input.step hooks run, then (with the
-        fake world simulating, fake_world.lua) Input:step and the top state's update."""
+        fake world simulating, fake_world.lua) Input:step and the top state's update (MG7: on the
+        Gen 3 fake, Input:step and Player.update's part, fake_engine3.lua)."""
         vanilla = self.eval("function() end")
         game = self.engine.game if self.engine is not None else self.table()
         for _ in range(n):
             self.now = self.now + self.STEP
-            if self.engine is not None:
+            if self.engine is not None and self.family == "gen1":
                 # Game.logicStep counts fixed steps before input.step runs (Game.lua:313-323)
                 gm = self.engine.GameModule
                 gm[b"logicStep"] = (gm[b"logicStep"] or 0) + 1

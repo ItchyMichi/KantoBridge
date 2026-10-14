@@ -285,7 +285,7 @@ function Story.new(opts)
   -- snapshot's toggles (a json object map -> name -> visible), blocks (the
   -- current map's differing blocks) and lit (sorted map ids).
   function obs.rebase()
-    local save = engine.save()
+    local save = engine.saveView()
     base = { flags = Story.flagSet(save), toggles = currentToggles(), lit = Story.litSet(save, engine.darkMaps()) }
     lastRunner = false
     local toggles = json.object()
@@ -322,7 +322,7 @@ function Story.new(opts)
       lastRunner = false
       return
     end
-    local save = engine.save()
+    local save = engine.saveView()
     local loaded = false
     if f.inGame then loaded = stepBlocks(out) else view = {} end
     stepLit(out, save)

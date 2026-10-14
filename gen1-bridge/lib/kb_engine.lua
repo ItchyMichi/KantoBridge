@@ -9,11 +9,16 @@
 -- and acts) its table. The core calls the adapter's functions, grouped as
 -- Engine.GROUPS lists them, and never requires an engine module itself.
 --
--- An engine without an adapter yet (`gs`, `crystal`, `game3`) gets a **stub**:
+-- An engine without an adapter yet (`gs`, `crystal`) gets a **stub**:
 -- a table that answers everything the core calls without touching the
 -- engine (no game, no save, no steps; every hook wrapper passes through), so
 -- the mod loads, listens, and answers each hello with hello.reject "game"
 -- (kb_session: engine.hasAdapter() is false), which tells a client why.
+-- The stub is also the base an adapter can grow from (MG7,
+-- docs/specs/GEN3_BRIDGE_PLAN.md §2): Engine.stub hands it out, the adapter
+-- overrides group by group, and every name it hasn't written yet keeps
+-- answering "no game" with the right type, which matters because the core
+-- calls many optional functions unguarded every step.
 --
 -- The pin lives here: Engine.CHECKED is the Gen1Recomp release the adapters'
 -- citations were checked against (tools/pin_check.py re-stamps them on a pin
@@ -32,6 +37,9 @@ Engine.TESTED = Engine.CHECKED
 -- "game3") -> the adapter file; an id outside the table has no adapter yet.
 Engine.ADAPTERS = {
   gen1 = "lib/engine/gen1.lua",
+  -- MG7: FireRed, LeafGreen, Ruby, Sapphire and Emerald's engine (Emerald first, GEN3_BRIDGE_PLAN.md);
+  -- the entry loads its parts from lib/engine/game3/
+  game3 = "lib/engine/game3.lua",
 }
 
 -- The adapter interface (MULTI_GAME_PLAN Appendix B), group by group: the
@@ -41,11 +49,16 @@ Engine.ADAPTERS = {
 Engine.GROUPS = {
   boot = { "setGame", "game", "takeOver", "version", "checkPin", "checkRequired", "gameVersion", "engineId",
            "family", "hasAdapter", "logicStep", "save", "top", "overworld", "classifyState", "darkMaps",
-           "badgeItems", "observe", "npcs", "emote", "unionRoomPatched", "unionRoomOff" },
+           "badgeItems", "observe", "npcs", "emote", "unionRoomPatched", "unionRoomOff",
+           -- MG7: the save facts the readers want, Gen 1-shaped (gen1: the save itself); save() stays the
+           -- object whose identity kb_save and kb_pairing compare with the save events' payloads
+           "saveView" },
   interaction = { "interactedFacts", "cellInMap", "counterCell" },
   ui = { "uiClass", "uiStack", "uiOpenFacts", "uiCursor", "uiItems", "uiMoneyFooter", "uiSetIndex", "uiSetQty",
          "uiSetGlyphs" },
-  movement = { "setFacing", "buttonDown", "playerVerdict", "warpDeparture", "displayPinned", "pinDisplay" },
+  movement = { "setFacing", "buttonDown", "playerVerdict", "warpDeparture", "displayPinned", "pinDisplay",
+               -- MG7: an engine without the movement.collision hook (Gen 3) hands its verdicts over per step
+               "takeVerdicts" },
   party = { "bridgeToken", "nextSerial", "dexOf", "speciesOfDex", "moveNumOf", "moveIdOfNum", "trainerTeam",
             "battlePending", "battleSent", "battleStale", "trainerBeforeBattle", "battleFinish", "ops", "opSent",
             "opSynced", "opDone", "excludedUids", "scriptCommand", "gifts", "giftSent", "giftSynced", "giftDone",
@@ -92,15 +105,19 @@ end
 
 -- The groups of Engine.GROUPS an adapter table lacks entirely (none of the
 -- group's functions present as its own fields), sorted; the stub lacks every
--- one (its functions only stand in for an engine that isn't there).
+-- one (its functions only stand in for an engine that isn't there), and so
+-- does an adapter grown from the stub for every group whose functions are all
+-- still the stub's (its `_stubbed` set names them).
 function Engine.missingGroups(adapter)
   local out = {}
   local isStub = type(adapter) ~= "table" or (type(rawget(adapter, "hasAdapter")) == "function" and adapter.hasAdapter() == false)
+  local stubbed = type(adapter) == "table" and rawget(adapter, "_stubbed") or nil
+  if type(stubbed) ~= "table" then stubbed = {} end
   for name, fns in pairs(Engine.GROUPS) do
     local any = false
     if not isStub then
       for _, fn in ipairs(fns) do
-        if type(rawget(adapter, fn)) == "function" then any = true break end
+        if type(rawget(adapter, fn)) == "function" and not stubbed[fn] then any = true break end
       end
     end
     if not any then out[#out + 1] = name end
@@ -140,7 +157,8 @@ local function stub(opts, id, requireFn)
     unionRoomPatched = function() return false end,
     unionRoomOff = function() return false end,
     logicStep = function() return 0 end,
-    save = nothing, top = nothing, overworld = nothing, npcs = nothing, emote = nothing,
+    save = nothing, saveView = nothing, top = nothing, overworld = nothing, npcs = nothing, emote = nothing,
+    takeVerdicts = empty,
     classifyState = function() return "none", "None" end,
     observe = facts, darkMaps = empty, badgeItems = empty,
     displayPinned = function() return true end,
@@ -187,6 +205,13 @@ local function stub(opts, id, requireFn)
   return setmetatable(s, { __index = function() return nothing end })
 end
 
+-- The stub, for an adapter to grow from (GEN3_BRIDGE_PLAN.md §2): a fresh
+-- table each call; the adapter records the names it took over in its
+-- `_stubbed` set (missingGroups reads it).
+function Engine.stub(opts, id, requireFn)
+  return stub(opts or {}, id or "none", requireFn or (opts and opts.require) or function() return nil end)
+end
+
 -- opts: main.lua's (require, log, ui, datasets, love) plus
 --   import(rel)   loads a gen1-bridge file the way main.lua does (the
 --                 adapter is loaded with it, so one mod can carry several
@@ -219,6 +244,8 @@ function Engine.new(opts)
     local aopts = {}
     for k, v in pairs(opts) do aopts[k] = v end
     aopts.checked, aopts.tested = Engine.CHECKED, Engine.TESTED
+    -- an adapter may grow from the stub (MG7: game3.lua does)
+    aopts.stub = function() return stub(opts, id, requireFn) end
     local adapter = module.new(aopts)
     if type(adapter.engineId) ~= "function" then adapter.engineId = function() return id end end
     if type(adapter.hasAdapter) ~= "function" then adapter.hasAdapter = function() return true end end

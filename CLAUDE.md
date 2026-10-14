@@ -94,8 +94,8 @@ Pokémon Red/Blue's story runs in a **hidden Gen1Recomp**. It is displayed and p
     Cobblemon.
   - Safari Zone battles run natively in the hidden game.
 - **`gen1-bridge` may use Gen1Recomp engine internals** (`engine_internals`) wherever they give the
-  most complete result, but only inside its engine adapters, `lib/engine/*.lua` (one per engine family,
-  MULTI_GAME_PLAN §4.3); the core never touches them. Re-check every internal an adapter touches whenever
+  most complete result, but only inside its engine adapters, `lib/engine/**` (one per engine family,
+  MULTI_GAME_PLAN §4.3; the Gen 3 adapter keeps its parts in `lib/engine/game3/`); the core never touches them. Re-check every internal an adapter touches whenever
   the Gen1Recomp pin changes.
 - **ROM-derived data** (dialogue text, trainer teams) **may pass through the Minecraft host's
   server.** Art never does: textures come from each player's own local resource pack.
@@ -140,7 +140,7 @@ Pokémon Red/Blue's story runs in a **hidden Gen1Recomp**. It is displayed and p
 
 | Path | Contents |
 |---|---|
-| `gen1-bridge/` | Gen1Recomp mod (Lua, mod API 2, `network` + `engine_internals`). `lib/`, `observe/`, `act/` and `export/` hold the `kb_*` modules; only the engine adapters `lib/engine/*.lua` touch engine internals (`gen1.lua` today; `lib/kb_engine.lua` is the loader that picks one by Gen1Recomp's engine id, MULTI_GAME_PLAN §4.3, D1) |
+| `gen1-bridge/` | Gen1Recomp mod (Lua, mod API 2, `network` + `engine_internals`). `lib/`, `observe/`, `act/` and `export/` hold the `kb_*` modules; only the engine adapters `lib/engine/**` touch engine internals (`gen1.lua`; since MG7 `game3.lua`, Emerald, with its parts in `lib/engine/game3/`, docs/specs/GEN3_BRIDGE_PLAN.md; `lib/kb_engine.lua` is the loader that picks one by Gen1Recomp's engine id, MULTI_GAME_PLAN §4.3, D1) |
 | `fabric-bridge/` | Fabric mod `kantobridge` (Java, package `dev.kantobridge`): `src/main` (common, builder; `scene/`, `builder/shape/` with `geom/` and `dressing/`, `character/`), `src/client` (`model/` the runtime model, `shape/`, `packs/`, `puppet/style/`), `src/test` (JUnit), `src/gametest` (server GameTests) |
 | `protocol/` | Message schemas (JSON Schema 2020-12), synthetic examples, and the derived `catalog.json` and `redaction-vectors.json` ([`protocol/README.md`](protocol/README.md)); `games.json` (the game catalogue, MULTI_GAME_PLAN §4.2: the one place that names the games; generated into `gen1-bridge/lib/kb_games.lua`); `world/` (the WorldIndex, slot map and shape index), `export/`, `packs/` (the texture-pack manifest) |
 | `datapack-templates/` | Habitat pool, biome and settings templates (never ROM data) |

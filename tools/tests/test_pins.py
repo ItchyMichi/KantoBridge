@@ -105,10 +105,18 @@ def PINS_JSON(text, checked):
 PINS = [
     ("gen1-bridge/lib/kb_engine.lua", CODE),
     ("gen1-bridge/lib/engine/gen1.lua", CODE),
+    # MG7: the Gen 3 adapter's parts name the release their citations were checked against
+    ("gen1-bridge/lib/engine/game3/base.lua", ALL),
+    ("gen1-bridge/lib/engine/game3/boot.lua", ALL),
+    ("gen1-bridge/lib/engine/game3/observe.lua", ALL),
+    ("gen1-bridge/lib/engine/game3/move.lua", ALL),
+    ("gen1-bridge/lib/engine/game3/saves.lua", ALL),
+    ("gen1-bridge/lib/engine/game3/region.lua", ALL),
     ("gen1-bridge/export/kb_swapsites.lua", ALL),
     ("gen1-bridge/manifest.json", JSON_RANGE),
     ("gen1-bridge/mod.card", ALL),
     ("tools/lua/fake_engine.lua", ALL),
+    ("tools/lua/fake_engine3.lua", ALL),
     ("tools/lua/fake_center.lua", ALL),
     ("tools/lua/sandbox.lua", ALL),
     ("tools/lua/fake_mod.lua", ALL),

@@ -53,8 +53,8 @@
     },
     "emerald": {
       "family": "gen3", "engine": "game3", "generation": 3, "label": "Emerald", "region": "hoenn",
-      "layout": "rse", "compat": {"maxDex": 386, "maxMove": 354, "nick": 10}, "artSet": "emerald", "adapter": false,
-      "markers": {}
+      "layout": "rse", "compat": {"maxDex": 386, "maxMove": 354, "nick": 10}, "artSet": "emerald", "adapter": true,
+      "markers": {"starter": "FLAG_SYS_POKEMON_GET", "champion": "FLAG_SYS_GAME_CLEAR"}
     }
   }
 }

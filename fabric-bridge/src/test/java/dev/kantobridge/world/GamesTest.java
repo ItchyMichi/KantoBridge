@@ -71,16 +71,19 @@ class GamesTest {
 		assertEquals(new Games.Compat(151, 165, 10), Games.compat("red"));
 		assertEquals(new Games.Compat(386, 354, 10), Games.compat("emerald"));
 		assertNull(Games.compat("nope"));
-		assertEquals(List.of("blue", "red"), Games.withAdapter());
+		// MG7: Emerald has the game3 adapter (GEN3_BRIDGE_PLAN.md)
+		assertEquals(List.of("blue", "emerald", "red"), Games.withAdapter());
 		assertTrue(Games.adapter("blue"));
-		assertFalse(Games.adapter("emerald"));
+		assertTrue(Games.adapter("emerald"));
+		assertFalse(Games.adapter("firered"));
 		assertFalse(Games.adapter("nope"));
 		assertEquals("Blue", Games.label("blue"));
 		assertEquals("blue", Games.artSet("blue"));
 		assertEquals("rse", Games.get("emerald").layout());
 		assertNull(Games.get("red").layout());
 		assertEquals(Map.of("starter", "EVENT_GOT_STARTER", "champion", "EVENT_BEAT_CHAMPION_RIVAL"), Games.get("red").markers());
-		assertEquals(Map.of(), Games.get("emerald").markers(), "Gen 3's markers wait for its adapter");
+		// MG7 (spike S3): Emerald's story markers are its own flag names
+		assertEquals(Map.of("starter", "FLAG_SYS_POKEMON_GET", "champion", "FLAG_SYS_GAME_CLEAR"), Games.get("emerald").markers());
 	}
 
 	@Test

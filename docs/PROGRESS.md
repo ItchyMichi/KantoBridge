@@ -1475,7 +1475,7 @@ the full suite at the ✔ checkpoints (MG2, MG3, MG5, MG6). Pods run inside your
 | MG4 | Links | **done** (note 19); check: with one link the e2e scenarios behave as before (pod, real engine: `test_s5_ready`, `test_handshake`, `test_regions`, `test_multiplayer`, `test_crash`, `test_hot_reload` all passed), `tools/tests/test_links.py` (two `fake_gen1`: swap, a parked drop, a wrong game), JUnit `LinksTest` + `LinksFakeGen1IntegrationTest` (two real `fake_gen1` processes); one `test_multiplayer` assertion learnt that an install paired before MG1 keeps its legacy pairing file beside the per-game one. The MG4–MG6 checkpoint on the pod (kb-dev7): pytest and Lua 1,729, JUnit 1,193 (0 failures), GameTests 112 | 2026-10-13 | |
 | MG5 | Crossings | **done** (note 20); check: `PassGameTests` (6: the round trip into the far gate house with the exact arrival cell, every refusal, abort, the timeout, the start path, the stash, a built half whose pass is a story cell), `PassCrossingsTest`, `ZonePlanTest`, `WorldIndexTest`, `PassChoreographyTest` (16), the two-`fake_gen1` crossing in `tools/tests/test_stand_ins.py`; a crossing between two real engines waits for a second region whose game has an adapter (MG7/MG8) | 2026-10-13 | |
 | MG6 | One trainer economy | **done** (notes 18, 21); check: `LedgerGameTests` (two regions: adoption, stamped read-back, the crossing's projection, `too_many`/`left`, re-projection on an unknown stamp; a legacy world untouched), `BagGameTests` marked stacks, `LedgerTest`/`LedgerCodecTest`/`ItemsTest`/`BagSetRelayTest`, `test_lua_ledger.py`/`test_lua_bag.py`; the real engine's `bag.set` round trip is your play-test (PLAYTEST.md "MG6") | 2026-10-13 | |
-| MG7 | The second family (Emerald): adapter and export | **in progress**: the spec [specs/GEN3_BRIDGE_PLAN.md](specs/GEN3_BRIDGE_PLAN.md) (2026-10-14), phases G3A–G3G | 2026-10-14 | |
+| MG7 | The second family (Emerald): adapter and export | **in progress**: the spec [specs/GEN3_BRIDGE_PLAN.md](specs/GEN3_BRIDGE_PLAN.md) (2026-10-14), phases G3A–G3G; **G3A done** (Emerald followable; "Several games: MG7") | 2026-10-14 | |
 | MG8 | Hoenn and the pass to it | pending | | |
 
 ### Several games: notes
@@ -1848,6 +1848,53 @@ Pods for S1, S4 and S5: kb-dev7's, kb-dev5's and kb-dev8's hosts were full, so `
 the same volume); about 20 minutes, then 5 more for the import, about $0.06 in all, stopped after each. The runners stay out of the repo, like S2's probe, in
 `~/kb-runpod/spike-s1/` and `~/kb-runpod/spike-s5/` on the agent's server; the filtered logs are on the volume
 (`/workspace/logs/s4-run1.log`, `s1-run1.log`, `s5-run1.log`, `s5-run2.log`, `s5-import.log`).
+
+### Several games: MG7, the Gen 3 bridge (GEN3_BRIDGE_PLAN.md)
+
+**G3A (2026-10-14): Emerald is followable.** The `game3` adapter, `gen1-bridge/lib/engine/game3.lua`, grows from the
+loader's stub (`Engine.stub`, so every function not written yet answers "no game" with the right type) and installs six
+parts from `lib/engine/game3/`: `boot` (identity, `REQUIRES`, the hot-reload takeover, `save()` = the live session and
+`saveView()` = the Gen 1-shaped facts the readers want: the player, every set flag by its Emerald name, the bag without
+`ITEM_`, the badges as `STONEBADGE`…, money, coins), `observe` (the facts and NPCs, ids `O<localId>`), `move` (a
+`Player.tryMove` tap queues the step verdicts Gen 3 has no hook for; warp departures from metatile behaviours;
+interaction), `saves` (gen1's slot functions on the shared registry, saves only through `quickSaveAllowed`, the nurse
+through `special HealPlayerParty` in the `script.command` hook, center saves, the save queue), `region` (the park is a
+private `kb_park` field lock, put back after the engine wipes the tags, released with retries; CONTINUE through the boot
+action, NEW GAME through the main menu's own `BootModules.startNewGame`) and `reliability`. `protocol/games.json` switches
+Emerald on (adapter, markers `FLAG_SYS_POKEMON_GET` and `FLAG_SYS_GAME_CLEAR`) and the manifest lists it.
+
+Core changes (GEN3_BRIDGE_PLAN.md §3): `Engine.stub`; `world` and `input` handed to the adapter; `engine.saveView()` read
+by the snapshot, story, progress, bag and debug.status (`save()` keeps the save identity for kb_save and kb_pairing;
+gen1's `saveView` is its save); `engine.takeVerdicts()` polled by main each step; the e2e runner defaults to the one Gen 1
+game when Emerald is imported beside Blue. **Deviations the real engine showed** (each a small, generic core change; Gen 1
+is untouched because its facts never carry the new fields): (1) Gen 3 chains a held direction straight into the next
+step, with no standing poll between steps, so one `move.step` walked ten cells: the facts now say `chainsHeld` and the
+mover lets go of the press as soon as the step is under way (`act/kb_move.lua`); (2) a NEW GAME's intro, Birch's speech,
+runs in the boot phase before any field exists, so the start act timed out as `failed`: the facts say `starting` there
+and the act accepts it (`act/kb_region.lua`), and `playthrough()` is `fresh` during the speech; (3) the park stored the
+whole playing-song record where `fadeInBgm` wants the song id (fixed in `region.lua`). The dex and move ceilings by
+`compat` (§3) move to G3F with party and battles: Gen 3's save view has no party or Pokédex until then.
+`Engine.missingGroups` reports five groups missing (battles, export, routes, story, ui): `party` and `items` count as
+present through names the core files under them (`bridgeToken`, `nextSerial`, `scriptCommand`, `inGame`).
+
+**Tests.** `tools/lua/fake_engine3.lua` fakes every Gen 3 module and member the parts read (made-up `EM_TEST_*` maps and
+flags; a FireRed table with other numbers, so a flag name handed to the engine reads the wrong flag as on the real
+engine; held directions chain as on the engine); `kblua.Bridge(family="gen3")`, `rig.Rig(family="gen3")` and
+`tools/lua/adapter3.py` boot it; `test_lua_game3_{boot,observe,move,saves,region,reliability,protocol}.py` (136 tests).
+e2e `tools/e2e/test_emerald.py` with `drivers/kb_emerald.lua` on the pod's Emerald import (tools/e2e/README.md).
+
+**Check** (pod kb-dev10, new: cpu5c ×4, $0.14/hr, the same volume; kb-dev7, kb-dev8 and kb-dev9's hosts were full):
+
+| Suite | Result |
+|---|---|
+| pytest and Lua (local) | 1,867 passed, 10 skipped (1,724 before G3A) |
+| JUnit / GameTests | 1,193 (0 failures) / 112 (0 failures) |
+| e2e Emerald (`test_emerald.py`) | 2 passed: hello.ok `emerald`/`gen3`; the snapshot in Littleroot; `fresh`; a step into the house wall refused `tile`; a step down; the game's save announced (`save.begin`, reason `menu`); two steps up through the door into May's house (`warp` kind `door`); park refuses a step (`script`), resume ok; CONTINUE (`saved`, `save.loaded{fresh:false}`) and NEW GAME (Birch's speech) from the title |
+| e2e Gen 1 regression on Blue | 10 passed (`test_s5_ready` ×2, `test_handshake`, `test_regions` ×2, `test_walk`, `test_multiplayer` ×2, `test_crash`, `test_hot_reload`) |
+
+**Not yet** (later phases): the UI (G3B: text boxes, choices, naming, Birch's speech as UI, the 240×160 mirror), the
+story's cells (G3C), the export and the builder (G3D–G3E), battles, party, items and routes (G3F). Emerald bikes bypass
+`tryMove`, so a bike bump gives no verdict yet (the mover answers `script` after its timeout).
 
 ### Handoff (2026-10-14): after MG6, for whoever continues
 

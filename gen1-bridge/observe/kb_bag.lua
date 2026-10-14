@@ -142,7 +142,7 @@ function Bag.new(opts)
     end
     if not (link and link.live and inGame) then return end
     local items = engine.bagCounts(SYNCED)
-    local save = engine.save()
+    local save = engine.saveView()
     local money = type(save) == "table" and tonumber(save.money) or 0
     money = math.max(0, math.min(Bag.MAX_MONEY, floor(money)))
     local stamp = ledgerStamp()

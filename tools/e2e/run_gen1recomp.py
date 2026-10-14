@@ -126,14 +126,22 @@ def preflight(install: Path = INSTALL) -> Preflight:
         reasons.append(f"no completed ROM import in {install.parent.name}/{install.name} (a game's folder, blue/ or "
                        "another catalogued id, with its completion marker; an import made by an older engine release is "
                        "stale too: ENGINE_UPGRADE_PLAN B1)")
-    # The game to run is the one imported game gen1-bridge has an adapter for (red/blue today, protocol/games.json);
-    # imports of other families sit beside it (the pod holds Crystal and Emerald for later milestones) and don't count
-    # until their adapters exist. Several adapter games imported: pass --game.
-    playable = [g for g in imported if kb_games.load_games().adapter(g)]
-    game = playable[0] if len(playable) == 1 else None
+    # The game to run is the one imported game gen1-bridge has an adapter for (protocol/games.json); imports of other
+    # families sit beside it (the pod holds Crystal for later) and don't count until their adapters exist. MG7: with
+    # Emerald switched on beside Blue, the default is the one Gen 1 game, since every test written before the Gen 3
+    # adapter is a Gen 1 test; Gen 3 tests name their game (game="emerald"). Several Gen 1 games: pass --game.
+    catalogue = kb_games.load_games()
+    playable = [g for g in imported if catalogue.adapter(g)]
+    gen1 = [g for g in playable if catalogue.family(g) == "gen1"]
+    if len(playable) == 1:
+        game = playable[0]
+    elif len(gen1) == 1:
+        game = gen1[0]
+    else:
+        game = None
     if imported and not playable:
         reasons.append("no imported game has an adapter yet (" + ", ".join(imported) + ")")
-    if len(playable) > 1:
+    if len(playable) > 1 and game is None:
         reasons.append(SEVERAL_IMPORTED + " (" + ", ".join(playable) + ")")
     return Preflight(ok=not reasons, game=game, reasons=reasons)
 

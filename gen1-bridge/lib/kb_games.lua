@@ -42,7 +42,7 @@ return {
       region = "johto",
     },
     emerald = {
-      adapter = false,
+      adapter = true,
       artSet = "emerald",
       compat = {
         maxDex = 386,
@@ -54,7 +54,10 @@ return {
       generation = 3,
       label = "Emerald",
       layout = "rse",
-      markers = {},
+      markers = {
+        champion = "FLAG_SYS_GAME_CLEAR",
+        starter = "FLAG_SYS_POKEMON_GET",
+      },
       region = "hoenn",
     },
     firered = {

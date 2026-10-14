@@ -7,6 +7,9 @@ fake engine, with fake Minecraft peers on the fake socket.
     peer.send("hello", {...}); rig.step()
     peer.messages()                    # decoded and schema-checked (leg g2m)
 
+    rig = Rig(family="gen3")           # MG7: Emerald on the game3 fake (fake_engine3.lua)
+    rig.world("EM_TEST_TOWN", 5, 6)    # the field is up (E.enterField)
+
 Every message a peer receives is checked against protocol/ with
 kb_protocol, strictly: a schema problem fails the test at once. Everything
 here is synthetic (made-up maps, items and text).
