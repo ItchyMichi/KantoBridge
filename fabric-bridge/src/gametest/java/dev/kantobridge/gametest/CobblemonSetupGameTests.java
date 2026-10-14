@@ -9,6 +9,7 @@ import com.cobblemon.mod.common.pokemon.Species;
 import dev.kantobridge.net.RelayService;
 import dev.kantobridge.pokemon.Gen1Mons;
 import dev.kantobridge.pokemon.GenOneIds;
+import dev.kantobridge.pokemon.NationalDexIds;
 import dev.kantobridge.proto.MsgTypes;
 import dev.kantobridge.server.CobblemonSettings;
 import dev.kantobridge.story.Activity;
@@ -44,6 +45,19 @@ public class CobblemonSetupGameTests implements FabricGameTest {
 		}
 		helper.assertTrue(Gen1Mons.species(0) == null && Gen1Mons.species(152) == null, "numbers beyond Gen 1 resolve");
 		helper.assertTrue(Gen1Mons.move(166) == null, "move numbers beyond Gen 1 resolve");
+		helper.succeed();
+	}
+
+	/** MG7 (G3E): the national dex numbers a Gen 3 export's habitat pools name, 1 to 386, are Cobblemon's own. */
+	@GameTest(template = EMPTY_STRUCTURE)
+	public void all386NationalDexIdsResolve(GameTestHelper helper) {
+		for (int dex = 1; dex <= NationalDexIds.MAX_DEX; dex++) {
+			Species species = PokemonSpecies.getByPokedexNumber(dex, GenOneIds.NAMESPACE);
+			helper.assertTrue(species != null, "no species for dex " + dex);
+			helper.assertTrue(species.getResourceIdentifier().getPath().equals(NationalDexIds.speciesId(dex)),
+					"species " + dex + " is " + species.getResourceIdentifier().getPath() + ", the table says " + NationalDexIds.speciesId(dex));
+			helper.assertTrue(NationalDexIds.dexOf(NationalDexIds.speciesId(dex)) == dex, "dexOf " + dex);
+		}
 		helper.succeed();
 	}
 

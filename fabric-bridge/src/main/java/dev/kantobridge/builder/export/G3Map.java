@@ -38,8 +38,15 @@ public record G3Map(String id, int w, int h, int trueW, int trueH, String pair, 
 	public record Warp(int x, int y, @Nullable String to, int warp, boolean dynamic) {
 	}
 
-	/** An object template: its local id, sprite, cell, elevation, hide flag (0 none) and kind. */
-	public record MapObject(int lid, String gfx, int x, int y, int elev, int flag, String kind) {
+	/**
+	 * An object template: its local id, sprite, cell, elevation, hide flag (0 none) and kind; {@code stays} whether it keeps
+	 * its cell (the engine's movement for it: it stands, turns or steps in place), null when the export doesn't say.
+	 */
+	public record MapObject(int lid, String gfx, int x, int y, int elev, int flag, String kind, @Nullable Boolean stays) {
+		/** Its name in the story: {@code O<lid>}, as the adapter's toggles and live objects name it (G3C). */
+		public String name() {
+			return "O" + this.lid;
+		}
 	}
 
 	/** The cell index of {@code (x, y)}, row-major over {@code w}. */
@@ -127,7 +134,8 @@ public record G3Map(String id, int w, int h, int trueW, int trueH, String pair, 
 				throw new DataException(o.path("kind"), "unknown object kind");
 			}
 			objects.add(new MapObject(o.integer("lid", 1, 254), o.string("gfx", GFX), o.integer("x", -64, 1087), o.integer("y", -64, 1087),
-					o.has("elev") ? o.integer("elev", 0, 15) : 0, o.has("flag") ? o.integer("flag", 1, 65534) : 0, kind));
+					o.has("elev") ? o.integer("elev", 0, 15) : 0, o.has("flag") ? o.integer("flag", 1, 65534) : 0, kind,
+					o.has("stays") ? o.bool("stays") : null));
 		}
 		return new G3Map(id, w, h, trueW, trueH, r.string("pair", PAIR), mids, coll, elev, new Border(bw, bh, border),
 				List.copyOf(connections), List.copyOf(warps), List.copyOf(objects), r.integer("mapType", 0, 255), r.string("kind", KIND),

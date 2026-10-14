@@ -22,6 +22,9 @@ WALK, BLOCKED, GRASS, WATER, DOOR, WARP_FACE, SIGN, COUNTER, LEDGE_S = 0x00, 0x0
 BEHAVIORS = {0: "MB_NORMAL", 2: "MB_TALL_GRASS", 0x11: "MB_POND_WATER", 0x3B: "MB_JUMP_SOUTH", 0x69: "MB_ANIMATED_DOOR",
              0x80: "MB_COUNTER", 0x65: "MB_SOUTH_ARROW_WARP"}
 
+# The behaviours whose cells roll land encounters (the engine's encounter tile bit without the surfable one).
+LAND_BEHAVIORS = {2}
+
 # The pairs: metatile -> (behaviour, its look: a colour and whether its quarters differ, over-plane art)
 PAIRS = {
     "TEST_PAIR_A": {
@@ -57,6 +60,11 @@ ROUTE = ["gggg~~",
          "......",
          "gg....",
          "......"]
+# A raised grass patch: elevation 4 at the west end of row 3, reached through a cell of elevation 0 (stairs: any
+# elevation steps on it); the rest of the route is the ground's 3, so the patch's other sides are walls.
+ROUTE_ELEV = {(0, 3): 4, (1, 3): 4, (2, 3): 0}
+# The land slots' chances, as the engine's roll uses them (made up here: Gen 3's well-known shape).
+LAND_WEIGHTS = [20, 20, 10, 10, 10, 10, 5, 5, 4, 4, 1, 1]
 HOUSE = ["####",   # 3 wide, padded to 4 (the fourth column shows the border)
          "#c.#",
          "#..#",
@@ -101,13 +109,14 @@ def _b64(data):
     return base64.b64encode(data).decode("ascii")
 
 
-def _cells(rows, table, w, h):
+def _cells(rows, table, w, h, elev=None):
+    """Cells of a map: elevation 3 (the ground's), else what ``elev`` gives by (x, y)."""
     out = bytearray()
     for y in range(h):
         row = rows[y] if y < len(rows) else ""
         for x in range(w):
             mid, coll = table[row[x]] if x < len(row) else (513, BLOCKED)
-            out += struct.pack("<HBB", mid, coll, 3)
+            out += struct.pack("<HBB", mid, coll, (elev or {}).get((x, y), 3))
     return _b64(bytes(out))
 
 
@@ -123,7 +132,7 @@ def tiles_and_pages():
         return known[data]
 
     for pair, mids in PAIRS.items():
-        entry = {"id": pair, "mids": [], "quarters": [], "beh": [], "over": [], "behaviors": {}}
+        entry = {"id": pair, "mids": [], "quarters": [], "beh": [], "over": [], "behaviors": {}, "land": []}
         for mid, (beh, rgb, varied, over) in sorted(mids.items()):
             qs = []
             for q in range(4):
@@ -136,6 +145,9 @@ def tiles_and_pages():
             entry["beh"].append(beh)
             entry["over"].append(over)
             entry["behaviors"][str(beh)] = BEHAVIORS[beh]
+            if beh in LAND_BEHAVIORS and beh not in entry["land"]:
+                entry["land"].append(beh)
+        entry["land"].sort()
         tiles[pair] = entry
     side = PAGE_SIDE * 8
     images = {}
@@ -166,14 +178,17 @@ def resources(game=GAME):
         "cells": _cells(TOWN, _T, 8, 6), "border": {"w": 2, "h": 2, "mids": [5, 5, 5, 5]},
         "connections": [{"dir": "north", "map": "EM_TEST_ROUTE", "offset": 1}],
         "warps": [{"x": 3, "y": 3, "warp": 0, "to": "EM_TEST_HOUSE"}],
-        "objects": [{"lid": 1, "gfx": "OBJ_EVENT_GFX_TEST_PERSON", "x": 5, "y": 5, "elev": 3, "kind": "person"},
+        "objects": [{"lid": 1, "gfx": "OBJ_EVENT_GFX_TEST_PERSON", "x": 5, "y": 5, "elev": 3, "kind": "person",
+                     "stays": True},
                     {"lid": 2, "gfx": "OBJ_EVENT_GFX_TEST_ITEM_BALL", "x": 6, "y": 1, "elev": 3, "flag": 257,
-                     "kind": "item"}],
+                     "kind": "item", "stays": True},
+                    {"lid": 3, "gfx": "OBJ_EVENT_GFX_TEST_PERSON", "x": 1, "y": 5, "elev": 3, "kind": "person",
+                     "stays": False}],
         "mapType": 1, "kind": "town", "music": 300, "weather": 2,
     }
     res[("g3map", "EM_TEST_ROUTE")] = {
         "id": "EM_TEST_ROUTE", "w": 6, "h": 5, "trueW": 6, "trueH": 5, "pair": "TEST_PAIR_A",
-        "cells": _cells(ROUTE, _T, 6, 5), "border": {"w": 2, "h": 2, "mids": [5, 5, 5, 5]},
+        "cells": _cells(ROUTE, _T, 6, 5, ROUTE_ELEV), "border": {"w": 2, "h": 2, "mids": [5, 5, 5, 5]},
         "connections": [{"dir": "south", "map": "EM_TEST_TOWN", "offset": -1}],
         "warps": [], "objects": [], "mapType": 3, "kind": "route", "music": 301, "weather": 0,
     }
@@ -181,7 +196,8 @@ def resources(game=GAME):
         "id": "EM_TEST_HOUSE", "w": 4, "h": 4, "trueW": 3, "trueH": 4, "pair": "TEST_PAIR_B",
         "cells": _cells(HOUSE, _H, 4, 4), "border": {"w": 1, "h": 1, "mids": [513]},
         "connections": [], "warps": [{"x": 1, "y": 3, "warp": 0, "to": "EM_TEST_TOWN"}],
-        "objects": [{"lid": 1, "gfx": "OBJ_EVENT_GFX_TEST_PERSON", "x": 1, "y": 0, "elev": 3, "kind": "person"}],
+        "objects": [{"lid": 1, "gfx": "OBJ_EVENT_GFX_TEST_PERSON", "x": 1, "y": 0, "elev": 3, "kind": "person",
+                     "stays": True}],
         "mapType": 8, "kind": "indoor", "music": 302, "weather": 0,
     }
     res[("g3layout", "hoenn")] = {"root": "EM_TEST_TOWN", "unit": "cells", "maps": {
@@ -196,7 +212,7 @@ def resources(game=GAME):
     res[("g3sprite", "OBJ_EVENT_GFX_TEST_PERSON")] = {
         "id": "OBJ_EVENT_GFX_TEST_PERSON", "gid": 7, "w": 16, "h": 32, "frames": frames,
         "png": _b64(_png_rgba(16, 32 * frames, bytes(sheet)))}
-    res[("g3encounters", "all")] = {"maps": {"EM_TEST_ROUTE": {
+    res[("g3encounters", "all")] = {"landWeights": LAND_WEIGHTS, "maps": {"EM_TEST_ROUTE": {
         "land": {"rate": 20, "slots": [{"dex": d, "min": 2, "max": 4} for d in (252, 255, 258, 252, 255, 258,
                                                                                  261, 261, 263, 263, 265, 265)]},
         "water": {"rate": 4, "slots": [{"dex": 270, "min": 5, "max": 10}] * 5}}}}

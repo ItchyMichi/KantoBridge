@@ -53,6 +53,25 @@ public final class LoadedPack {
 		return loaded != null && loaded.usable() ? loaded.artSet() : null;
 	}
 
+	/** Every art set the block atlas holds, the pack's own first (MG7: one per game family); empty when none can be drawn. */
+	public static java.util.List<String> artSets() {
+		PackInfo loaded = info;
+		return loaded != null && loaded.usable() ? loaded.artSets() : java.util.List.of();
+	}
+
+	/**
+	 * The loaded art set that draws {@code game}'s art (its own, else a compatible game's), or null when the atlas holds
+	 * none; the pack's own set when {@code game} is null.
+	 */
+	public static @Nullable String artSetFor(@Nullable String game) {
+		PackInfo loaded = info;
+		if (game == null) {
+			return artSet();
+		}
+		PackInfo.ArtSet set = loaded == null ? null : loaded.setFor(game);
+		return set == null ? null : set.artSet();
+	}
+
 	/** Counts resource reloads: a new value means a new block atlas. */
 	public static long generation() {
 		return generation;

@@ -41,6 +41,9 @@ Export3.DIRS = { north = "north", south = "south", west = "west", east = "east",
                  left = "west", right = "east", dive = "dive", emerge = "emerge" }
 Export3.AREAS = { land = "land", water = "water", rocks = "rock", fishing = "fish" }
 Export3.SLOTS = { land = 12, water = 5, rock = 5, fish = 10 }
+-- The engine's movements that leave the object's cell (GfxIds.MOVEMENT,
+-- scripting/gfx_ids.lua:144): the rest stand, turn or step in place.
+Export3.WALKS = { WALK = true, BACK_FORTH = true, SEQUENCE = true }
 
 local floor, char, byte = math.floor, string.char, string.byte
 local concat, sort = table.concat, table.sort
@@ -117,6 +120,19 @@ function Export3.install(b)
 
   -- The objects of a map's templates (the script bundle's, as Objects.loadMap
   -- prefers them, objects.lua:634-643), as the schema wants them.
+  -- Whether an object keeps its cell: the engine's own movement for its
+  -- template (Objects.canonMovementType, objects.lua:131-139; GfxIds.hostMovement,
+  -- scripting/gfx_ids.lua:136-151); walkers (WALK, BACK_FORTH, SEQUENCE) leave
+  -- it. Nil when the template has no movement type.
+  local function staysOf(d)
+    local mt = tonumber(d.movementType)
+    if not mt then return nil end
+    local canon = tonumber(b.ask(b.g3("objects"), "canonMovementType", mt, mt)) or mt
+    local spec = b.ask(b.g3("scripting.gfx_ids"), "hostMovement", nil, canon, d.rangeX, d.rangeY)
+    if type(spec) ~= "table" or type(spec.movement) ~= "string" then return nil end
+    return not Export3.WALKS[spec.movement]
+  end
+
   local function objectsOf(map, mdef, C)
     local Space = b.g3("scripting.space")
     local ev = type(Space) == "table" and type(Space.bundle) == "table" and type(Space.bundle.events) == "table"
@@ -141,6 +157,7 @@ function Export3.install(b)
           if elev and elev >= 0 and elev <= 15 then o.elev = floor(elev) end
           local flag = tonumber(d.flag or d.flagId)
           if flag and flag >= 1 and flag <= 65534 then o.flag = floor(flag) end
+          o.stays = staysOf(d)
           out[#out + 1] = o
         end
       end
@@ -280,6 +297,16 @@ function Export3.install(b)
       return id
     end
 
+    -- The behaviours whose cells roll land encounters: the engine's own rule
+    -- (encounter_rules/rse.lua:338-352, R.classify: the tile bits' encounter flag
+    -- without the surfable one), through Encounters.rules (encounters.lua:383-393).
+    local Rules = b.ask(b.g3("encounters"), "rules", nil)
+    local landOf = {}
+    local function land(bv)
+      if landOf[bv] == nil then landOf[bv] = b.ask(Rules, "classify", nil, bv) == "land" end
+      return landOf[bv]
+    end
+
     for _, pair in ipairs(sortedKeys(byPair)) do
       local ok, out = pcall(Decode.pair, cache, nativeRoot, pair)
       if not ok or type(out) ~= "table" or type(out.midToSlot) ~= "table" then
@@ -299,6 +326,7 @@ function Export3.install(b)
           local beh = type(behaviors[pair]) == "table" and behaviors[pair] or {}
           local mids = sortedKeys(out.midToSlot)
           local midList, quarters, behList, overList, names = {}, {}, {}, {}, json.object()
+          local landSeen, landList = {}, {}
           for _, mid in ipairs(mids) do
             local s = out.midToSlot[mid]
             if type(mid) == "number" and mid >= 0 and mid <= 1023 and type(s) == "number" and #midList < 1024 then
@@ -315,6 +343,10 @@ function Export3.install(b)
               local bv = floor(tonumber(beh[mid]) or 0) % 256
               midList[#midList + 1], quarters[#quarters + 1] = mid, qs
               behList[#behList + 1], overList[#overList + 1] = bv, anyOver
+              if Rules and not landSeen[bv] then
+                landSeen[bv] = true
+                if land(bv) then landList[#landList + 1] = bv end
+              end
               if names[tostring(bv)] == nil then
                 local name = b.ask(MB, "nameOf", nil, bv)
                 if b.symbol(name) then names[tostring(bv)] = name end
@@ -322,8 +354,10 @@ function Export3.install(b)
               if #midList % 32 == 0 then checkpoint() end
             end
           end
+          sort(landList)
           put("g3tiles", pair, { id = pair, mids = json.array(midList), quarters = json.array(quarters),
-                                 beh = json.array(behList), over = json.array(overList), behaviors = names })
+                                 beh = json.array(behList), over = json.array(overList), behaviors = names,
+                                 land = Rules and json.array(landList) or nil })
         end
       end
       out = nil
@@ -461,7 +495,21 @@ function Export3.install(b)
       end
       checkpoint()
     end
-    put("g3encounters", "all", { maps = encMaps })
+    -- The land slots' chances, the table the engine's roll uses
+    -- (encounters.lua:24 and :364, H.LAND_WEIGHTS; encounter_rules/rse.lua:116-118).
+    local H = type(Enc) == "table" and type(Enc._h) == "table" and Enc._h or nil
+    local weights = H and H.LAND_WEIGHTS
+    local landWeights
+    if type(weights) == "table" and #weights == Export3.SLOTS.land then
+      landWeights = {}
+      for i = 1, #weights do
+        local v = tonumber(weights[i])
+        if not v or v < 0 or v > 255 then landWeights = nil; break end
+        landWeights[i] = floor(v)
+      end
+    end
+    if not landWeights then warn("g3_land_weights_missing") end
+    put("g3encounters", "all", { maps = encMaps, landWeights = landWeights and json.array(landWeights) or nil })
 
     -- ---- names (the engine's constants; species by national dex)
     local function names(kind, prefix, value)

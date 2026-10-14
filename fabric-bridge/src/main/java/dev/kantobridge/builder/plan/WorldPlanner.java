@@ -20,7 +20,6 @@ import dev.kantobridge.builder.shape.ShapePlanner;
 import dev.kantobridge.scene.FrontEnds;
 import dev.kantobridge.scene.GameFrontEnd;
 import dev.kantobridge.scene.Scene;
-import dev.kantobridge.scene.gen1.BundleArtSource;
 import dev.kantobridge.scene.profile.Profile;
 import dev.kantobridge.scene.profile.ProfileSource;
 import dev.kantobridge.world.DataReader;
@@ -92,6 +91,10 @@ public final class WorldPlanner {
 	 * pool ids. Null plans a legacy build exactly as before regions existed.
 	 */
 	public static WorldPlan plan(ExportBundle bundle, Options options, @Nullable RegionBuild region) throws BundleException, PlanException {
+		if (bundle.isGen3()) {
+			// MG7 (GEN3_BRIDGE_PLAN §6): a Gen 3 export has its own maps, art and layout; Gen 1's path stays as it was.
+			return Gen3Planner.plan(bundle, options, region);
+		}
 		Warnings warnings = new Warnings();
 		String poolPrefix = region == null ? "" : region.poolPrefix();
 
@@ -299,55 +302,9 @@ public final class WorldPlanner {
 
 		// ---- surface void fill: each gap cell takes the border art of its nearest surface map ----
 		Box3 surfaceBox = WorldPlan.surfaceVolume(placements.values());
-		int[] owner = new int[0];
-		boolean[] voidCells = new boolean[0];
-		if (surfaceBox != null) {
-			int w = (surfaceBox.maxX() - surfaceBox.minX()) / Scale.CELL_BLOCKS;
-			int d = (surfaceBox.maxZ() - surfaceBox.minZ()) / Scale.CELL_BLOCKS;
-			owner = new int[w * d];
-			voidCells = new boolean[w * d];
-			Arrays.fill(owner, -1);
-			ArrayDeque<Integer> queue = new ArrayDeque<>();
-			for (int m = 0; m < placed.size(); m++) {
-				MapPlacement p = placed.get(m).placement();
-				if (p.kind() != MapPlacement.Kind.SURFACE) {
-					continue;
-				}
-				int cx0 = (p.x() - surfaceBox.minX()) / Scale.CELL_BLOCKS;
-				int cz0 = (p.z() - surfaceBox.minZ()) / Scale.CELL_BLOCKS;
-				for (int cy = 0; cy < p.h(); cy++) {
-					for (int cx = 0; cx < p.w(); cx++) {
-						int i = (cz0 + cy) * w + cx0 + cx;
-						if (owner[i] < 0) {
-							owner[i] = m;
-							queue.add(i);
-						}
-					}
-				}
-			}
-			int gaps = 0;
-			while (!queue.isEmpty()) {
-				int i = queue.poll();
-				int x = i % w;
-				int z = i / w;
-				int[][] steps = {{0, -1}, {-1, 0}, {1, 0}, {0, 1}};
-				for (int[] step : steps) {
-					int nx = x + step[0];
-					int nz = z + step[1];
-					if (nx < 0 || nz < 0 || nx >= w || nz >= d) {
-						continue;
-					}
-					int n = nz * w + nx;
-					if (owner[n] < 0) {
-						owner[n] = owner[i];
-						voidCells[n] = true;
-						gaps++;
-						queue.add(n);
-					}
-				}
-			}
-			warnings.note("void_fill_cells", gaps);
-		}
+		VoidFill fill = voidFill(placed, surfaceBox, (m, cx, cy) -> true, warnings);
+		int[] owner = fill.owner();
+		boolean[] voidCells = fill.voidCells();
 
 		// ---- slot map: from the whole export, so it (and the shared resource pack) never depends on the filter ----
 		ArtCatalog art = ArtCatalog.of(bundle, warnings, region);
@@ -358,22 +315,7 @@ public final class WorldPlanner {
 			SlotMap.Slot slot = tile < 0 || tile > 1023 ? null : slotMap.slot(new SlotMap.Key(atlas, palette, tile, SlotMap.Shape.FULL));
 			return slot == null ? -1 : slot.index();
 		});
-		Map<String, int[]> storyIndex = new HashMap<>();
-		Map<String, Integer> widths = new HashMap<>();
-		for (PlacedMap map : placed) {
-			int[] cells = new int[map.model().cellWidth() * map.model().cellHeight()];
-			Arrays.fill(cells, -1);
-			storyIndex.put(map.id(), cells);
-			widths.put(map.id(), map.model().cellWidth());
-		}
-		List<StoryCellTable.Entry> entries = storyCells.entries();
-		for (int i = 0; i < entries.size(); i++) {
-			StoryCellTable.Entry entry = entries.get(i);
-			storyIndex.get(entry.cell().map())[entry.cell().y() * widths.get(entry.cell().map()) + entry.cell().x()] = i;
-		}
-		if (storyCells.entries().size() > BlockCode.STORY_INDEX_MASK + 1) {
-			throw new PlanException("story_cells", "too many story cells for a block code: " + storyCells.entries().size());
-		}
+		Map<String, int[]> storyIndex = storyIndex(placed, storyCells);
 		// A story block on a ramp stands on its steps (CAVES_3D_PLAN §3.4), but a swap site's carries its closed art up
 		// from the floor: there it takes the first step, and says so.
 		for (PlacedMap map : placed) {
@@ -424,7 +366,7 @@ public final class WorldPlanner {
 				scene = frontEnd.describe(bundle);
 				// The probe of the profile plan's PD3 asks this export's own art whether a repeating cell stands as a unit.
 				shapes = ShapePlanner.plan(scene, placements.values(), ShapeParams.current(),
-						occupancy(placed, storyIndex, storyCells, surfaceBox, owner, voidCells), new ArtUnitProbe(BundleArtSource.of(bundle)), layouts,
+						occupancy(placed, storyIndex, storyCells, surfaceBox, owner, voidCells), new ArtUnitProbe(FrontEnds.artSource(bundle)), layouts,
 						shafts)
 						.withIndexHash(index.hash());
 			}
@@ -437,6 +379,97 @@ public final class WorldPlanner {
 		return new WorldPlan(bundle.game(), bundle.exportHash(), options.originX(), options.originZ(), placed, surfaceBox, owner, voidCells,
 				storyCells, storyIndex, art, spawn, index, pools, warnings, mapsRequested, unplaced, layout.edgeMismatches(), layout.overlaps(), scene,
 				shapes, caveArea.area(), region);
+	}
+
+	/** Which surface map's border art each cell of the surface box shows, and which of its cells are void (no map's). */
+	record VoidFill(int[] owner, boolean[] voidCells) {
+	}
+
+	/** Which of a placed map's cells claim the surface box first. */
+	@FunctionalInterface
+	interface CellFilter {
+		boolean first(int map, int cx, int cy);
+	}
+
+	/**
+	 * The surface void fill: each cell of the surface box that no surface map covers takes the border art of its nearest
+	 * surface map (breadth-first from the maps' cells). Where maps overlap, a cell goes to the first map in placement order
+	 * that claims it, the cells {@code first} accepts claiming before the rest (Gen 3: a map's own cells before its
+	 * padding, MG7).
+	 */
+	static VoidFill voidFill(List<PlacedMap> placed, @Nullable Box3 surfaceBox, CellFilter first, Warnings warnings) {
+		if (surfaceBox == null) {
+			return new VoidFill(new int[0], new boolean[0]);
+		}
+		int w = (surfaceBox.maxX() - surfaceBox.minX()) / Scale.CELL_BLOCKS;
+		int d = (surfaceBox.maxZ() - surfaceBox.minZ()) / Scale.CELL_BLOCKS;
+		int[] owner = new int[w * d];
+		boolean[] voidCells = new boolean[w * d];
+		Arrays.fill(owner, -1);
+		ArrayDeque<Integer> queue = new ArrayDeque<>();
+		for (int pass = 0; pass < 2; pass++) {
+			for (int m = 0; m < placed.size(); m++) {
+				MapPlacement p = placed.get(m).placement();
+				if (p.kind() != MapPlacement.Kind.SURFACE) {
+					continue;
+				}
+				int cx0 = (p.x() - surfaceBox.minX()) / Scale.CELL_BLOCKS;
+				int cz0 = (p.z() - surfaceBox.minZ()) / Scale.CELL_BLOCKS;
+				for (int cy = 0; cy < p.h(); cy++) {
+					for (int cx = 0; cx < p.w(); cx++) {
+						int i = (cz0 + cy) * w + cx0 + cx;
+						if (owner[i] < 0 && first.first(m, cx, cy) == (pass == 0)) {
+							owner[i] = m;
+							queue.add(i);
+						}
+					}
+				}
+			}
+		}
+		int gaps = 0;
+		while (!queue.isEmpty()) {
+			int i = queue.poll();
+			int x = i % w;
+			int z = i / w;
+			int[][] steps = {{0, -1}, {-1, 0}, {1, 0}, {0, 1}};
+			for (int[] step : steps) {
+				int nx = x + step[0];
+				int nz = z + step[1];
+				if (nx < 0 || nz < 0 || nx >= w || nz >= d) {
+					continue;
+				}
+				int n = nz * w + nx;
+				if (owner[n] < 0) {
+					owner[n] = owner[i];
+					voidCells[n] = true;
+					gaps++;
+					queue.add(n);
+				}
+			}
+		}
+		warnings.note("void_fill_cells", gaps);
+		return new VoidFill(owner, voidCells);
+	}
+
+	/** Each placed map's story cell index per cell (-1 for none), from the story cell table. */
+	static Map<String, int[]> storyIndex(List<PlacedMap> placed, StoryCellTable storyCells) throws PlanException {
+		Map<String, int[]> storyIndex = new HashMap<>();
+		Map<String, Integer> widths = new HashMap<>();
+		for (PlacedMap map : placed) {
+			int[] cells = new int[map.model().cellWidth() * map.model().cellHeight()];
+			Arrays.fill(cells, -1);
+			storyIndex.put(map.id(), cells);
+			widths.put(map.id(), map.model().cellWidth());
+		}
+		List<StoryCellTable.Entry> entries = storyCells.entries();
+		for (int i = 0; i < entries.size(); i++) {
+			StoryCellTable.Entry entry = entries.get(i);
+			storyIndex.get(entry.cell().map())[entry.cell().y() * widths.get(entry.cell().map()) + entry.cell().x()] = i;
+		}
+		if (storyCells.entries().size() > BlockCode.STORY_INDEX_MASK + 1) {
+			throw new PlanException("story_cells", "too many story cells for a block code: " + storyCells.entries().size());
+		}
+		return storyIndex;
 	}
 
 	/** A map's layout with its rooms' pieces (CAVES_3D_PLAN §3.5) and, if it has any, its levels and ramps (§3.4). */

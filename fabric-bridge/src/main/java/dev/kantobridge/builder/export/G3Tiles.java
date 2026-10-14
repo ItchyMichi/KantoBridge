@@ -5,7 +5,9 @@ import dev.kantobridge.world.DataReader;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Set;
 import java.util.TreeMap;
+import java.util.TreeSet;
 import java.util.regex.Pattern;
 import org.jetbrains.annotations.Nullable;
 
@@ -25,15 +27,18 @@ public final class G3Tiles {
 	private final int[] beh;
 	private final boolean[] over;
 	private final Map<Integer, String> behaviors;
+	private final @Nullable Set<Integer> land;
 	private final Map<Integer, Integer> slotOf = new HashMap<>();
 
-	private G3Tiles(String id, int[] mids, int[][] quarters, int[] beh, boolean[] over, Map<Integer, String> behaviors) {
+	private G3Tiles(String id, int[] mids, int[][] quarters, int[] beh, boolean[] over, Map<Integer, String> behaviors,
+			@Nullable Set<Integer> land) {
 		this.id = id;
 		this.mids = mids;
 		this.quarters = quarters;
 		this.beh = beh;
 		this.over = over;
 		this.behaviors = Collections.unmodifiableMap(behaviors);
+		this.land = land == null ? null : Collections.unmodifiableSet(land);
 		for (int i = 0; i < mids.length; i++) {
 			this.slotOf.put(mids[i], i);
 		}
@@ -67,6 +72,19 @@ public final class G3Tiles {
 	/** A metatile's behaviour name, or null. */
 	public @Nullable String behaviorName(int mid) {
 		return this.behaviors.get(this.behavior(mid));
+	}
+
+	/** True when the export says which behaviours roll land encounters ({@link #landEncounter}). */
+	public boolean knowsLand() {
+		return this.land != null;
+	}
+
+	/**
+	 * True when a cell showing the metatile rolls land encounters, by the engine's own rule for its behaviour (the
+	 * export's {@code land} list); false when it doesn't, or when the export doesn't say ({@link #knowsLand}).
+	 */
+	public boolean landEncounter(int mid) {
+		return this.land != null && this.slotOf.containsKey(mid) && this.land.contains(this.behavior(mid));
 	}
 
 	/** True when part of the metatile is drawn over sprites (roofs, tree tops). */
@@ -113,6 +131,13 @@ public final class G3Tiles {
 			}
 			behaviors.put(number, b.string(key, BEHAVIOR));
 		}
-		return new G3Tiles(id, mids, quarters, beh, over, behaviors);
+		Set<Integer> land = null;
+		if (r.has("land")) {
+			land = new TreeSet<>();
+			for (int number : DataReader.intArray(r.array("land"), r.path("land"), 0, 255)) {
+				land.add(number);
+			}
+		}
+		return new G3Tiles(id, mids, quarters, beh, over, behaviors, land);
 	}
 }

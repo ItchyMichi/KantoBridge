@@ -43,9 +43,10 @@ public final class ArtCatalog {
 	private final Set<String> npcs;
 	private final @Nullable String surfSprite;
 	private final Set<String> surfPalettes;
+	private final boolean baked;
 
 	private ArtCatalog(SlotMap slotMap, SlotMap worldSlotMap, Map<String, Integer> tilesPerRow, Map<String, List<ExportTileset.Animated>> animations,
-			Set<String> npcs, @Nullable String surfSprite, Set<String> surfPalettes) {
+			Set<String> npcs, @Nullable String surfSprite, Set<String> surfPalettes, boolean baked) {
 		this.slotMap = slotMap;
 		this.worldSlotMap = worldSlotMap;
 		this.tilesPerRow = Collections.unmodifiableMap(tilesPerRow);
@@ -53,6 +54,41 @@ public final class ArtCatalog {
 		this.npcs = Collections.unmodifiableSet(npcs);
 		this.surfSprite = surfSprite;
 		this.surfPalettes = Collections.unmodifiableSet(surfPalettes);
+		this.baked = baked;
+	}
+
+	/**
+	 * A Gen 3 export's catalogue (MG7, GEN3_BRIDGE_PLAN §6; {@link Gen3Planner#catalog}): its keys (quarter pages,
+	 * {@code QuarterPages.PALETTE}), every page {@code tilesPerRow} quarters wide, baked art, no animations, NPC sheets or
+	 * surf sheet yet.
+	 */
+	static ArtCatalog baked(Set<SlotMap.Key> keys, Map<String, Integer> tilesPerRow, @Nullable RegionBuild region) throws PlanException {
+		SlotMap[] maps = enumerate(keys, region);
+		return new ArtCatalog(maps[0], maps[1], new TreeMap<>(tilesPerRow), Map.of(), Set.of(), null, Set.of(), true);
+	}
+
+	/** {slice, world map}: the keys enumerated for a legacy build or into a region's range. */
+	private static SlotMap[] enumerate(Set<SlotMap.Key> keys, @Nullable RegionBuild region) throws PlanException {
+		try {
+			if (region == null) {
+				SlotMap slotMap = SlotMap.enumerate(keys);
+				return new SlotMap[] {slotMap, slotMap};
+			}
+			SlotMap worldSlotMap = SlotMap.enumerateRegion(region.previousSlotMap(), region.id(), region.artSet(), region.families(), keys);
+			return new SlotMap[] {worldSlotMap.regionSlice(region.id()), worldSlotMap};
+		} catch (SlotMap.FullException e) {
+			throw new PlanException("slot_map.full", e.getMessage());
+		} catch (IllegalArgumentException e) {
+			throw new PlanException("slot_map.region", e.getMessage());
+		}
+	}
+
+	/**
+	 * The catalogue of a whole export of either family, as the pack needs it (no region: the pack holds keys, never slots):
+	 * Gen 1's ({@link #of(ExportBundle, Warnings)}), or a Gen 3 export's baked one (MG7).
+	 */
+	public static ArtCatalog ofExport(ExportBundle bundle, Warnings warnings) throws BundleException, PlanException {
+		return bundle.isGen3() ? Gen3Planner.catalog(bundle, Gen3Planner.maps(bundle), null, warnings) : of(bundle, warnings);
 	}
 
 	/**
@@ -142,23 +178,8 @@ public final class ArtCatalog {
 			warnings.note("surf_sprite_missing");
 			surfSprite = null;
 		}
-		SlotMap slotMap;
-		SlotMap worldSlotMap;
-		try {
-			if (region == null) {
-				slotMap = SlotMap.enumerate(keys);
-				worldSlotMap = slotMap;
-			} else {
-				worldSlotMap = SlotMap.enumerateRegion(region.previousSlotMap(), region.id(), region.artSet(), region.families(), keys);
-				slotMap = worldSlotMap.regionSlice(region.id());
-			}
-		} catch (SlotMap.FullException e) {
-			throw new PlanException("slot_map.full", e.getMessage());
-		} catch (IllegalArgumentException e) {
-			throw new PlanException("slot_map.region", e.getMessage());
-		}
-		return new ArtCatalog(slotMap, worldSlotMap, tilesPerRow, animations, npcs, surfSprite,
-				surfSprite == null ? Set.of() : waterPalettes);
+		SlotMap[] maps = enumerate(keys, region);
+		return new ArtCatalog(maps[0], maps[1], tilesPerRow, animations, npcs, surfSprite, surfSprite == null ? Set.of() : waterPalettes, false);
 	}
 
 	/**
@@ -175,6 +196,14 @@ public final class ArtCatalog {
 	 */
 	public SlotMap worldSlotMap() {
 		return this.worldSlotMap;
+	}
+
+	/**
+	 * True for a Gen 3 export's catalogue (MG7): its art is baked RGBA (the quarter pages), drawn as it is, never coloured
+	 * with a palette.
+	 */
+	public boolean baked() {
+		return this.baked;
 	}
 
 	/** Tiles per atlas row, by atlas image id. */

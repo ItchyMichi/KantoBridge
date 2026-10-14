@@ -28,6 +28,11 @@ import org.jetbrains.annotations.Nullable;
  * {@code swap_site_overwritten}, and every cell of its block takes its flags from what it is built with). Any other
  * mismatch is a {@code swap_block_mismatch}. {@link #closedModel()} is the same map with every changing cell in its
  * other, closed state: the art and height the story-cell renderer draws.
+ *
+ * <p><b>Gen 3</b> (MG7, docs/specs/GEN3_BRIDGE_PLAN.md §6): {@link G3Cells} builds the same model from a {@code g3map}: its
+ * art tiles are the flattened quarter ids ({@code page × 1024 + index}), its flags come from the engine's collision bytes,
+ * its border repeats from the map's cell (0, 0), it has no swap sites, and each cell says whether wild Pokémon live on it
+ * ({@link #wild}). It has no Gen 1 export map or tileset: {@link #map()} and {@link #tileset()} refuse.
  */
 public final class MapModel {
 	/** What a cell is built as. */
@@ -44,8 +49,16 @@ public final class MapModel {
 		SOLID
 	}
 
-	private final ExportMap map;
-	private final ExportTileset tileset;
+	private final @Nullable ExportMap map;
+	private final @Nullable ExportTileset tileset;
+	/** A Gen 3 map's id; null for a Gen 1 map, whose id is its export map's. */
+	private final @Nullable String gen3Id;
+	/** A Gen 3 map's border in art tiles, {@code borderCols × borderRows}, repeated from the map's cell (0, 0). */
+	private final int @Nullable [] border;
+	private final int borderCols;
+	private final int borderRows;
+	/** Per cell: wild Pokémon live on it (Gen 3); null for a Gen 1 map, whose rule is the habitat planner's. */
+	private final boolean @Nullable [] wild;
 	private final boolean interior;
 	private final boolean closedState;
 	private final int cw;
@@ -83,6 +96,55 @@ public final class MapModel {
 		this.openBlock = openBlock;
 		this.closedBlock = closedBlock;
 		this.overwritten = overwritten;
+		this.gen3Id = null;
+		this.border = null;
+		this.borderCols = 0;
+		this.borderRows = 0;
+		this.wild = null;
+	}
+
+	/** A Gen 3 map's model (see {@link G3Cells}): its cells' art, flags and wild cells as given. */
+	private MapModel(String id, boolean interior, int cw, int ch, int[] tiles, int[] flags, boolean[] wild, int[] border, int borderCols,
+			int borderRows) {
+		if (tiles.length != cw * ch * 4 || flags.length != cw * ch || wild.length != cw * ch || borderCols < 1 || borderRows < 1
+				|| border.length != borderCols * borderRows) {
+			throw new IllegalArgumentException("a Gen 3 model's arrays don't fit its size");
+		}
+		this.map = null;
+		this.tileset = null;
+		this.interior = interior;
+		this.closedState = false;
+		this.cw = cw;
+		this.ch = ch;
+		this.tw = cw * 2;
+		this.th = ch * 2;
+		this.tiles = tiles;
+		this.flags = flags;
+		this.kinds = new Kind[cw * ch];
+		this.heights = new int[cw * ch];
+		this.sites = Map.of();
+		this.openBlock = new int[cw * ch];
+		this.closedBlock = new int[cw * ch];
+		Arrays.fill(this.openBlock, -1);
+		Arrays.fill(this.closedBlock, -1);
+		this.overwritten = new boolean[cw * ch];
+		this.gen3Id = id;
+		this.border = border;
+		this.borderCols = borderCols;
+		this.borderRows = borderRows;
+		this.wild = wild;
+	}
+
+	/**
+	 * A Gen 3 map's model (MG7): {@code tiles} its art, {@code (2 × cw) × (2 × ch)} quarter ids, row-major; {@code flags}
+	 * per cell ({@link CellFlags} bits, from the collision bytes); {@code wild} per cell; {@code border} its border's art
+	 * tiles, {@code borderCols × borderRows}. The arrays are taken as they are.
+	 */
+	static MapModel gen3(String id, boolean interior, int cw, int ch, int[] tiles, int[] flags, boolean[] wild, int[] border, int borderCols,
+			int borderRows) {
+		MapModel model = new MapModel(id, interior, cw, ch, tiles, flags, wild, border, borderCols, borderRows);
+		model.classify();
+		return model;
 	}
 
 	/**
@@ -219,13 +281,20 @@ public final class MapModel {
 					f = this.derivedFlags(cx, cy) | (f & (CellFlags.WARP | CellFlags.SIGN));
 				}
 				this.flags[i] = f;
-				this.kinds[i] = kindOf(f);
-				this.heights[i] = switch (this.kinds[i]) {
-					case COUNTER -> HeightRules.COUNTER;
-					case SOLID -> this.interior ? HeightRules.INTERIOR_WALL : 0;
-					default -> 0;
-				};
 			}
+		}
+		this.classify();
+	}
+
+	/** Each cell's kind and column height from its flags; a surface map's walls are measured from its art. */
+	private void classify() {
+		for (int i = 0; i < this.cw * this.ch; i++) {
+			this.kinds[i] = kindOf(this.flags[i]);
+			this.heights[i] = switch (this.kinds[i]) {
+				case COUNTER -> HeightRules.COUNTER;
+				case SOLID -> this.interior ? HeightRules.INTERIOR_WALL : 0;
+				default -> 0;
+			};
 		}
 		if (!this.interior) {
 			this.measureSurfaceHeights();
@@ -288,16 +357,37 @@ public final class MapModel {
 		}
 	}
 
+	/** The Gen 1 export map. A Gen 3 model has none. */
 	public ExportMap map() {
+		if (this.map == null) {
+			throw new IllegalStateException("a Gen 3 map has no Gen 1 export map");
+		}
 		return this.map;
 	}
 
+	/** The Gen 1 tileset. A Gen 3 model has none. */
 	public ExportTileset tileset() {
+		if (this.tileset == null) {
+			throw new IllegalStateException("a Gen 3 map has no Gen 1 tileset");
+		}
 		return this.tileset;
 	}
 
 	public String id() {
-		return this.map.id();
+		return this.gen3Id != null ? this.gen3Id : this.map().id();
+	}
+
+	/** True for a Gen 3 map's model (MG7). */
+	public boolean gen3() {
+		return this.gen3Id != null;
+	}
+
+	/**
+	 * True when wild Pokémon live on cell (cx, cy): for a Gen 3 map, the engine's land-encounter rule for its behaviour
+	 * (walkable cells only); always false for a Gen 1 map, whose rule is {@link HabitatPlanner}'s.
+	 */
+	public boolean wild(int cx, int cy) {
+		return this.wild != null && this.wild[cy * this.cw + cx];
 	}
 
 	public boolean interior() {
@@ -321,7 +411,10 @@ public final class MapModel {
 
 	/** The tile the map's border block shows at tile position (tx, ty), which may lie outside the map. */
 	public int borderTile(int tx, int ty) {
-		int tile = this.tileset.tile(this.map.border(), Math.floorMod(tx, 4), Math.floorMod(ty, 4));
+		if (this.border != null) {
+			return this.border[Math.floorMod(ty, this.borderRows) * this.borderCols + Math.floorMod(tx, this.borderCols)];
+		}
+		int tile = this.tileset().tile(this.map().border(), Math.floorMod(tx, 4), Math.floorMod(ty, 4));
 		return Math.max(tile, 0);
 	}
 
@@ -330,6 +423,10 @@ public final class MapModel {
 	 * map's own border block where it draws none, or where an older export doesn't say.
 	 */
 	public int drawnBorderTile(int tx, int ty) {
+		if (this.border != null) {
+			// Gen 3 has one border, the one the game draws.
+			return this.borderTile(tx, ty);
+		}
 		Integer drawn = this.map.borderDrawn();
 		int tile = this.tileset.tile(drawn == null ? this.map.border() : drawn, Math.floorMod(tx, 4), Math.floorMod(ty, 4));
 		return Math.max(tile, 0);
@@ -351,7 +448,7 @@ public final class MapModel {
 
 	/** The swap site covering cell (cx, cy), or null. */
 	public @Nullable ExportSwaps.Site site(int cx, int cy) {
-		return this.sites.get((cy / 2) * this.map.width() + cx / 2);
+		return this.sites.isEmpty() ? null : this.sites.get((cy / 2) * this.map().width() + cx / 2);
 	}
 
 	/** The swap sites applied to this map, by Gen 1 block index. */
@@ -372,7 +469,7 @@ public final class MapModel {
 
 	/** The block the map data has at the cell's Gen 1 block. */
 	public int dataBlock(int cx, int cy) {
-		return this.map.block(cx / 2, cy / 2);
+		return this.map().block(cx / 2, cy / 2);
 	}
 
 	/** True for the closed variant ({@link #closedModel()}). */
@@ -385,7 +482,8 @@ public final class MapModel {
 	 * first use; anomalies were already counted for this model, so none are counted again.
 	 */
 	public MapModel closedModel() {
-		if (this.closedState) {
+		if (this.closedState || this.gen3Id != null) {
+			// A Gen 3 map has no swap sites: nothing closes.
 			return this;
 		}
 		if (this.closed == null) {

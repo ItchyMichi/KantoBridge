@@ -28,8 +28,13 @@ class G3ReadersTest {
 		assertEquals(0xA3, town.coll(0, 4), "a ledge jumping south");
 		assertEquals(List.of(new G3Map.Connection("north", "EM_TEST_ROUTE", 1)), town.connections());
 		assertEquals(new G3Map.Warp(3, 3, "EM_TEST_HOUSE", 0, false), town.warps().get(0));
-		assertEquals(2, town.objects().size());
+		assertEquals(3, town.objects().size());
 		assertEquals(257, town.objects().get(1).flag());
+		assertEquals(Boolean.TRUE, town.objects().get(0).stays(), "a standing person");
+		assertEquals(Boolean.FALSE, town.objects().get(2).stays(), "a walker");
+		assertEquals("O3", town.objects().get(2).name());
+		assertEquals(0, bundle.g3map("EM_TEST_ROUTE").elev(2, 3), "the raised patch's stairs");
+		assertEquals(4, bundle.g3map("EM_TEST_ROUTE").elev(0, 3));
 		G3Map house = bundle.g3map("EM_TEST_HOUSE");
 		assertEquals(4, house.w());
 		assertEquals(3, house.trueW());
@@ -42,6 +47,11 @@ class G3ReadersTest {
 		assertTrue(a.over(5));
 		assertEquals("MB_TALL_GRASS", a.behaviorName(1));
 		assertNull(a.quarters(99));
+		assertTrue(a.knowsLand());
+		assertTrue(a.landEncounter(1), "tall grass rolls land encounters");
+		assertFalse(a.landEncounter(0));
+		assertFalse(a.landEncounter(99));
+		assertTrue(bundle.g3tiles("TEST_PAIR_B").knowsLand());
 		G3Data.Layout layout = bundle.g3layout();
 		assertEquals("EM_TEST_TOWN", layout.root());
 		assertEquals(new G3Data.Rect(1, -5, 6, 5), layout.maps().get("EM_TEST_ROUTE"));
@@ -51,6 +61,9 @@ class G3ReadersTest {
 		assertEquals(12, route.land().slots().size());
 		assertEquals(252, route.land().slots().get(0).dex());
 		assertNull(route.fish());
+		assertEquals(20, enc.landWeight(0));
+		assertEquals(1, enc.landWeight(11));
+		assertNull(enc.landWeight(12));
 		G3Data.Names names = bundle.g3names();
 		assertNotNull(names);
 		assertEquals(252, names.species().get("SPECIES_TEST_TREECKO"));

@@ -199,7 +199,8 @@ public final class Gen1FrontEnd implements GameFrontEnd {
 				closedTiles, kinds, tags, dirs, border, ownBorder, objects, sites);
 	}
 
-	static CellKind kind(MapModel.Kind kind) {
+	/** A cell model's kind as a neutral kind (every family's models share the kinds). */
+	public static CellKind kind(MapModel.Kind kind) {
 		return switch (kind) {
 			case GROUND -> CellKind.WALK;
 			case WATER -> CellKind.WATER;
@@ -209,8 +210,8 @@ public final class Gen1FrontEnd implements GameFrontEnd {
 		};
 	}
 
-	/** Gen 1's per-cell flag bits as neutral tags. */
-	static int tags(int flags) {
+	/** Gen 1's per-cell flag bits (which Gen 3's models use too, MG7) as neutral tags. */
+	public static int tags(int flags) {
 		int tags = 0;
 		tags |= CellFlags.has(flags, CellFlags.GRASS) ? CellTag.GRASS.bit() : 0;
 		tags |= CellFlags.has(flags, CellFlags.DOOR) ? CellTag.DOOR.bit() : 0;

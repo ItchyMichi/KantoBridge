@@ -34,10 +34,12 @@ public final class PuppetTextures {
 		if (map == null) {
 			return PLACEHOLDER;
 		}
-		Map<String, ResourceLocation> sprites = this.cache.computeIfAbsent(map.palette(), palette -> new HashMap<>());
+		// MG7: the sheets of the loaded art set of the world's game (a pack may hold several games' art)
+		String artSet = LoadedPack.artSetFor(index.game());
+		Map<String, ResourceLocation> sprites = this.cache.computeIfAbsent(artSet + "|" + map.palette(), key -> new HashMap<>());
 		ResourceLocation found = sprites.get(puppet.sprite());
 		if (found == null) {
-			found = this.lookup(map.palette(), puppet.sprite());
+			found = this.lookup(artSet, map.palette(), puppet.sprite());
 			sprites.put(puppet.sprite(), found);
 		}
 		return found;
@@ -52,14 +54,13 @@ public final class PuppetTextures {
 		return this.missing;
 	}
 
-	private ResourceLocation lookup(String palette, String sprite) {
+	private ResourceLocation lookup(@Nullable String artSet, String palette, String sprite) {
 		// A texture pack's sheet first (V6), when it exists.
 		String override = KbPackReload.current().spriteTexture(sprite);
 		ResourceLocation packed = override == null ? null : ResourceLocation.tryParse(override);
 		if (packed != null && Minecraft.getInstance().getResourceManager().getResource(packed).isPresent()) {
 			return packed;
 		}
-		String artSet = LoadedPack.artSet();
 		ResourceLocation location = artSet == null ? null : ResourceLocation.tryParse(ArtKeys.npcTexture(artSet, palette, sprite));
 		if (location != null && Minecraft.getInstance().getResourceManager().getResource(location).isPresent()) {
 			return location;

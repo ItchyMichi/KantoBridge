@@ -54,6 +54,13 @@
       },
       "propertyNames": {"pattern": "^[0-9]{1,3}$"},
       "description": "Behaviour number -> MB_* name, for the numbers used here."
+    },
+    "land": {
+      "type": "array",
+      "maxItems": 256,
+      "uniqueItems": true,
+      "items": {"type": "integer", "minimum": 0, "maximum": 255},
+      "description": "The behaviour numbers used here whose cells roll land encounters (the engine's own rule: the encounter tile bit without the surfable one), sorted. Left out when the engine's rule could not be read."
     }
   }
 }

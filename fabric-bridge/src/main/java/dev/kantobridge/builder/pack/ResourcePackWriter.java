@@ -36,6 +36,9 @@ import org.jetbrains.annotations.Nullable;
  * <li>the surfing player's sheet per palette of a map with water.</li>
  * </ul>
  *
+ * <p>A Gen 3 export's catalogue is baked (MG7, {@link ArtCatalog#baked}): each tile texture is its quarter page's own
+ * pixels ({@link BakedTextures}), without a palette or animations; its NPC and surf sheets come later.
+ *
  * <p>The client's runtime model draws the tile blocks: no blockstate or model file is written. The art comes from this
  * player's own export and never leaves the machine.
  */
@@ -62,10 +65,19 @@ public final class ResourcePackWriter {
 
 	/** Generates the pack and writes it to {@code packDir}, replacing any earlier generated pack there. */
 	public static Result write(ArtCatalog art, ExportBundle bundle, Path packDir, Warnings warnings) throws IOException, BundleException {
+		return write(List.of(new SetSource(art, bundle)), packDir, warnings);
+	}
+
+	/** Generates a pack of several art sets ({@link #generate(List, PackFiles, Warnings)}) and writes it to {@code packDir}. */
+	public static Result write(List<SetSource> sets, Path packDir, Warnings warnings) throws IOException, BundleException {
 		PackFiles files = new PackFiles();
-		Result result = generate(art, bundle, files, warnings);
+		Result result = generate(sets, files, warnings);
 		files.writeTo(packDir, "pack.mcmeta");
 		return result;
+	}
+
+	/** One art set of a pack: an export and the catalogue of its art (MG7: a pack holds a set per game family). */
+	public record SetSource(ArtCatalog art, ExportBundle bundle) {
 	}
 
 	public static Result generate(WorldPlan plan, ExportBundle bundle, PackFiles files, Warnings warnings) throws BundleException {
@@ -77,16 +89,63 @@ public final class ResourcePackWriter {
 	 * build places, so every build of one export writes the same pack.
 	 */
 	public static Result generate(ArtCatalog art, ExportBundle bundle, PackFiles files, Warnings warnings) throws BundleException {
-		SlotMap slotMap = art.slotMap();
-		ExportPalettes palettes = bundle.hasPalettes() ? bundle.palettes() : null;
-		String artSet = bundle.game();
+		return generate(List.of(new SetSource(art, bundle)), files, warnings);
+	}
 
+	/**
+	 * Generates a pack of one or several art sets in memory (MG7, docs/specs/GEN3_BRIDGE_PLAN.md §6 "Two art sets in one
+	 * pack"): each export's textures under its own art set (their paths never meet). The first set is the pack's own: the
+	 * info file's top level names it, as a one-set pack's does; a pack of several lists every set in {@code sets}, and
+	 * its counts are the sum. A one-set pack is byte for byte what it was before.
+	 */
+	public static Result generate(List<SetSource> sets, PackFiles files, Warnings warnings) throws BundleException {
+		if (sets.isEmpty()) {
+			throw new IllegalArgumentException("a pack has an art set");
+		}
 		JsonObject pack = new JsonObject();
 		JsonObject meta = new JsonObject();
 		meta.addProperty("pack_format", PACK_FORMAT);
 		meta.addProperty("description", "Kanto Bridge (generated)");
 		pack.add("pack", meta);
 		files.put("pack.mcmeta", ProtoJson.write(pack));
+		int tiles = 0;
+		int sprites = 0;
+		int animated = 0;
+		com.google.gson.JsonArray list = new com.google.gson.JsonArray();
+		for (SetSource set : sets) {
+			int[] counts = generateSet(set.art(), set.bundle(), files, warnings);
+			tiles += counts[0];
+			sprites += counts[1];
+			animated += counts[2];
+			JsonObject entry = new JsonObject();
+			entry.addProperty("artSet", set.bundle().game());
+			entry.addProperty("game", set.bundle().game());
+			entry.addProperty("exportHash", set.bundle().exportHash());
+			entry.addProperty("tiles", counts[0]);
+			entry.addProperty("sprites", counts[1]);
+			list.add(entry);
+		}
+		ExportBundle first = sets.get(0).bundle();
+		JsonObject info = new JsonObject();
+		info.addProperty("layout", ArtKeys.LAYOUT);
+		info.addProperty("artSet", first.game());
+		info.addProperty("game", first.game());
+		info.addProperty("exportHash", first.exportHash());
+		info.addProperty("tiles", tiles);
+		info.addProperty("sprites", sprites);
+		info.addProperty("textures", tiles + sprites);
+		if (sets.size() > 1) {
+			info.add("sets", list);
+		}
+		files.put(INFO_FILE, ProtoJson.write(info));
+		return new Result(tiles, sprites, animated, files.hash());
+	}
+
+	/** One art set's textures into {@code files}: {tile textures, NPC and surf sheets, animated tiles}. */
+	private static int[] generateSet(ArtCatalog art, ExportBundle bundle, PackFiles files, Warnings warnings) throws BundleException {
+		SlotMap slotMap = art.slotMap();
+		ExportPalettes palettes = bundle.hasPalettes() ? bundle.palettes() : null;
+		String artSet = bundle.game();
 		Map<String, int[]> frameShades = new HashMap<>();
 
 		// ---- tile textures ----
@@ -104,6 +163,18 @@ public final class ResourcePackWriter {
 					// Ids that differ only in case would share a file; the art could be wrong, so stop.
 					throw new IllegalStateException("two tile textures map to one file name");
 				}
+				continue;
+			}
+			if (art.baked()) {
+				// A Gen 3 quarter (MG7): its page's own pixels, never coloured.
+				Png.Image page = atlases.computeIfAbsent(key.atlas(), id -> decodePage(bundle, id, warnings));
+				int[] argb = page == null ? null : BakedTextures.quarter(page, art.tilesPerRow(key.atlas()), key.tile());
+				if (argb == null) {
+					blank++;
+					argb = new int[64];
+				}
+				files.put(path, Png.encode(BakedTextures.tile(argb)));
+				tileTextures++;
 				continue;
 			}
 			Png.Image atlas = atlases.computeIfAbsent(key.atlas(), id -> decodeImage(bundle, id, warnings));
@@ -185,17 +256,7 @@ public final class ResourcePackWriter {
 			}
 		}
 
-		JsonObject info = new JsonObject();
-		info.addProperty("layout", ArtKeys.LAYOUT);
-		info.addProperty("artSet", artSet);
-		info.addProperty("game", bundle.game());
-		info.addProperty("exportHash", bundle.exportHash());
-		info.addProperty("tiles", tileTextures);
-		info.addProperty("sprites", npcTextures);
-		info.addProperty("textures", tileTextures + npcTextures);
-		files.put(INFO_FILE, ProtoJson.write(info));
-
-		return new Result(tileTextures, npcTextures, animated, files.hash());
+		return new int[] {tileTextures, npcTextures, animated};
 	}
 
 	/** The block-atlas sprite id of a slot key's tile in an art set: one texture per (atlas, palette, tile), both shapes. */
@@ -206,6 +267,19 @@ public final class ResourcePackWriter {
 	private static int[] colours(@Nullable ExportPalettes palettes, String name) {
 		int[] colours = palettes != null ? palettes.colours(name) : null;
 		return colours != null ? colours : Textures.GREY_PALETTE;
+	}
+
+	/** A Gen 3 quarter page ({@code g3image}), or null when the export lacks it or it can't be read. */
+	private static @Nullable Png.Image decodePage(ExportBundle bundle, String id, Warnings warnings) {
+		if (!bundle.has("g3image", id)) {
+			return null;
+		}
+		try {
+			return Png.decode(bundle.g3image(id).png());
+		} catch (IOException | BundleException e) {
+			warnings.warn("image_unreadable");
+			return null;
+		}
 	}
 
 	private static @Nullable Png.Image decodeImage(ExportBundle bundle, String id, Warnings warnings) {

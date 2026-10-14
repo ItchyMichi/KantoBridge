@@ -37,6 +37,10 @@ public final class TestData {
 		return dir;
 	}
 
+	/** MG7: the synthetic Gen 3 build's origin; {@code Gen3BuildGameTests.ORIGIN_X/Z} must be the same. */
+	public static final int G3_ORIGIN_X = 4_800_000;
+	public static final int G3_ORIGIN_Z = 3_200_000;
+
 	/** MG7: the synthetic Gen 3 export (tools/fake_gen1/synth3.py, a tiny made-up Hoenn). */
 	public static Path syntheticGen3Bundle() {
 		Path dir = gametestResources().resolve("kantobridge/synthetic_bundle/emerald");
@@ -44,6 +48,19 @@ public final class TestData {
 			throw new IllegalStateException("synthetic Gen 3 bundle missing");
 		}
 		return dir;
+	}
+
+	/** MG7: the synthetic Gen 3 export's scene (Gen3FrontEnd), build index and shapes. */
+	public static Path goldenG3Scene() {
+		return gametestResources().resolve("kantobridge/golden/synthetic_g3_scene.json");
+	}
+
+	public static Path goldenG3Index() {
+		return gametestResources().resolve("kantobridge/golden/synthetic_g3_world_index.json");
+	}
+
+	public static Path goldenG3Shapes() {
+		return gametestResources().resolve("kantobridge/golden/synthetic_g3_shapes.json");
 	}
 
 	public static Path goldenIndex() {

@@ -132,7 +132,11 @@
             "maximum": 65534,
             "description": "Its hide flag (hidden while set), when it has one."
           },
-          "kind": {"enum": ["person", "item", "trainer", "boulder", "berry", "other"]}
+          "kind": {"enum": ["person", "item", "trainer", "boulder", "berry", "other"]},
+          "stays": {
+            "type": "boolean",
+            "description": "It keeps its cell (it stands, turns or steps in place); false for one that walks about. Left out when its template has no movement type."
+          }
         }
       }
     },

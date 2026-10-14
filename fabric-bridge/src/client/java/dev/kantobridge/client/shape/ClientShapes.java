@@ -15,9 +15,8 @@ import dev.kantobridge.client.packs.PackOverrides;
 import dev.kantobridge.client.world.ClientRegions;
 import dev.kantobridge.client.world.ClientWorldIndex;
 import dev.kantobridge.scene.ArtSource;
-import dev.kantobridge.scene.gen1.BundleArtSource;
+import dev.kantobridge.scene.FrontEnds;
 import dev.kantobridge.world.DataException;
-import dev.kantobridge.world.Games;
 import dev.kantobridge.world.Hashes;
 import dev.kantobridge.world.MapPlacement;
 import dev.kantobridge.world.RegionRecord;
@@ -352,15 +351,17 @@ public final class ClientShapes {
 				return none(packs);
 			}
 			RegionRecord record = ClientRegions.byId(region);
-			if (record != null && !Games.compatible(pack.game(), record.game())) {
-				// Another family's region: this client has no art of its own for it.
+			// MG7: the pack's set that draws the region's game (a pack may hold several games' art); another family's region
+			// whose art this client hasn't got draws none.
+			PackInfo.ArtSet set = record == null ? pack.setFor(pack.game()) : pack.setFor(record.game());
+			if (set == null) {
 				return none(packs);
 			}
-			Path bundleDir = gameDir.resolve("kantobridge").resolve("export").resolve(pack.game());
+			Path bundleDir = gameDir.resolve("kantobridge").resolve("export").resolve(set.game());
 			if (!Files.isRegularFile(bundleDir.resolve("index.json"))) {
 				return none(packs);
 			}
-			return new Art(new LazyArt(bundleDir), Hashes.sha256("art|" + pack.exportHash() + "|" + packs.geometryHash()), packs);
+			return new Art(new LazyArt(bundleDir), Hashes.sha256("art|" + set.exportHash() + "|" + packs.geometryHash()), packs);
 		}
 	}
 
@@ -376,7 +377,7 @@ public final class ClientShapes {
 		private synchronized ArtSource art() {
 			if (this.opened == null) {
 				try {
-					this.opened = BundleArtSource.of(ExportBundle.open(this.dir));
+					this.opened = FrontEnds.artSource(ExportBundle.open(this.dir));
 				} catch (BundleException | RuntimeException e) {
 					KantoBridge.LOGGER.warn("shapes: this player's export can't be read ({}); units draw as columns", e.getClass().getSimpleName());
 					this.opened = ArtSource.NONE;

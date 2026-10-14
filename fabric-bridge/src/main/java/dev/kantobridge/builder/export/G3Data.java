@@ -61,10 +61,19 @@ public final class G3Data {
 	public record MapTables(@Nullable Table land, @Nullable Table water, @Nullable Table rock, @Nullable Table fish) {
 	}
 
-	/** The wild encounter tables per map ({@code g3encounters/all}). */
-	public record Encounters(Map<String, MapTables> maps) {
+	/**
+	 * The wild encounter tables per map ({@code g3encounters/all}) and the land slots' chances in percent as the engine's
+	 * roll uses them ({@code landWeights}, 12 numbers; null when the export doesn't say).
+	 */
+	public record Encounters(Map<String, MapTables> maps, int @Nullable [] landWeights) {
 		public Encounters {
 			maps = Collections.unmodifiableMap(new TreeMap<>(maps));
+			landWeights = landWeights == null ? null : landWeights.clone();
+		}
+
+		/** The chance of land slot {@code slot} in percent, or null when the export doesn't say. */
+		public @Nullable Integer landWeight(int slot) {
+			return this.landWeights == null || slot < 0 || slot >= this.landWeights.length ? null : this.landWeights[slot];
 		}
 
 		static Encounters parse(DataReader r) throws DataException {
@@ -77,7 +86,14 @@ public final class G3Data {
 				DataReader t = m.object(id);
 				out.put(id, new MapTables(table(t, "land", 12), table(t, "water", 5), table(t, "rock", 5), table(t, "fish", 10)));
 			}
-			return new Encounters(out);
+			int[] weights = null;
+			if (r.has("landWeights")) {
+				weights = DataReader.intArray(r.array("landWeights"), r.path("landWeights"), 0, 255);
+				if (weights.length != 12) {
+					throw new DataException(r.path("landWeights"), "12 land slots");
+				}
+			}
+			return new Encounters(out, weights);
 		}
 
 		private static @Nullable Table table(DataReader t, String name, int maxSlots) throws DataException {

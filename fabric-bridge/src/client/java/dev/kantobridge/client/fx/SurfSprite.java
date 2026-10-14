@@ -199,13 +199,15 @@ public final class SurfSprite {
 		if (map == null) {
 			return null;
 		}
-		Optional<ResourceLocation> known = TEXTURES.get(map.palette());
+		// MG7: the sheet of the loaded art set of the world's game (a pack may hold several games' art)
+		String artSet = LoadedPack.artSetFor(index.game());
+		String key = artSet + "|" + map.palette();
+		Optional<ResourceLocation> known = TEXTURES.get(key);
 		if (known == null) {
-			String artSet = LoadedPack.artSet();
 			ResourceLocation location = artSet == null ? null : ResourceLocation.tryParse(ArtKeys.surfTexture(artSet, map.palette()));
 			boolean present = location != null && Minecraft.getInstance().getResourceManager().getResource(location).isPresent();
 			known = present ? Optional.of(location) : Optional.empty();
-			TEXTURES.put(map.palette(), known);
+			TEXTURES.put(key, known);
 		}
 		return known.orElse(null);
 	}

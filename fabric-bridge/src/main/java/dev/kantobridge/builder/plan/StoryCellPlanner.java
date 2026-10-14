@@ -132,7 +132,7 @@ public final class StoryCellPlanner {
 		return new StoryCellTable.Closed(model.closedBlock(cx, cy), pass, Math.min(height, StoryCellTable.MAX_CLOSED_HEIGHT), art);
 	}
 
-	private static void add(Map<String, StoryCellTable.Entry> out, MapModel model, StoryCellTable.Entry entry, Warnings warnings) {
+	static void add(Map<String, StoryCellTable.Entry> out, MapModel model, StoryCellTable.Entry entry, Warnings warnings) {
 		String key = entry.key();
 		if (out.containsKey(key)) {
 			return;

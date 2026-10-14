@@ -304,6 +304,56 @@ The world note and the export note give the facts; the shape is the scene draft'
   quarter id (palette 0).
 - **Habitats**: Gen 3 land slots → pools of `cobblemon:` species by national dex (Cobblemon's own registry, up to 386).
 - **Two art sets in one pack** (MG8's prerequisite, MULTI_GAME_PLAN): `PackGenerator` merges Kanto's and Hoenn's sets.
+- **As built (G3E, 2026-10-14).** `WorldPlanner.plan` hands a Gen 3 export to `Gen3Planner` (`J/builder/plan/`); Gen 1's
+  path is unchanged (its goldens are byte for byte the same).
+  - *Cells* (`G3Cells`): the collision byte gives the kind and flags (walk and cave floor `0x00`/`0x2B` walkable, tall
+    grass `0x18` walkable grass, water `0x29`, doors `0x71`, warps keeping the facing `0x72`, a sign `0x82` solid, a
+    counter `0x90`, ledges `0xA0`–`0xA3` hopping right, left, up, down, the rest solid; a byte outside the vocabulary is
+    built solid and warned); the cells of a map's warps are warps; a padded map's cells past its true size are solid
+    border. `MapModel` gains a Gen 3 form (art tiles are quarter ids, the border repeats from the map's cell (0, 0) as
+    the engine samples it, no swap sites) and says per cell whether wild Pokémon live there.
+  - *Placement*: the surface by `g3layout` (cells × 2 blocks); the loops that don't close count as
+    `layout_edge_mismatch` and `layout_overlap` (warnings, as Gen 1's); in the void fill a map's own cells claim before
+    padding. Interiors: breadth-first from the surface a layer at a time in id order, each map's warps in order (0-based
+    arrivals), then its connections (a dive or emerge leads to the same cells one above the other; a map entered by a
+    connection off the surface, like the Safari Zone's areas, is placed on its own near its neighbour); `InteriorPacker`
+    as Gen 1's. An outdoor map entered so gets the sky when shapes are planned. Maps reached by no warp or connection
+    (`map_unreachable`) and dynamic warps' targets are left out: on the real export that is 200 maps, among them the
+    places only scripts reach (the ferry, the Battle Frontier) and Sootopolis City, which has no dive or emerge link in
+    the engine's data (G3G or MG8 places them apart). Darkness isn't exported yet (every map lit).
+  - *Walls* (E8): `PairEdges.elevation`: an invisible wall between two walkable cells whose elevations differ and are
+    neither 0 (any) nor 15 (a bridge); none touching water.
+  - *Story cells* (`G3StoryCells`): objects that keep their cell (item balls and berry trees; people and trainers when
+    the export says `stays`), named `O<lid>`; every water cell; Strength-boulder maps' walkable cells. No tile cells:
+    Gen 3's terrain changes arrive as `story.cells` at run time.
+  - *Art*: slot keys `(g3q.<page>, BAKED, index, shape)` over the whole export (every quarter its maps' cells and
+    borders show, half-height on water); `ArtCatalog.baked`, `ArtCatalog.ofExport` (the client's pack generator).
+    The pack writer's baked branch crops each quarter from its page and doubles it, unchanged colours
+    (`BakedTextures`). The scene and the shape planner use one virtual atlas `g3q` with quarter ids; texture keys name
+    the page (`TextureKey.of`, `QuarterPages`). Palette `BAKED` (a symbol, where §6 above said 0).
+  - *Habitats*: cells whose behaviour rolls land encounters by the engine's own rule (the export's `land` list; tall
+    grass without it); pools from the land tables (`G3PoolWriter`): Cobblemon ids by national dex up to 386
+    (`NationalDexIds`, from Cobblemon's own species files; a GameTest checks all 386), weights from the export's
+    `landWeights` (the engine's `H.LAND_WEIGHTS`), level ranges `min-max`; the Safari Zone stays the hidden game's.
+  - *Front end* (`Gen3FrontEnd`, `kb-frontend-gen3/1`): `perCell` 2, `artPx` 8, palette model `baked`, kinds and tags
+    from the same cell model, outdoor/open air/cave from the map type, tall grass's quarters as the atlas's grass, an
+    outdoor border's quarters as foliage; `FrontEnds.artSource` picks `G3ArtSource` (the quarter pages) for Gen 3.
+  - *Export follow-ups* (G3D's): `g3map` objects' `stays` (the engine's `GfxIds.hostMovement`), `g3tiles.land`,
+    `g3encounters.landWeights`.
+  - *Two art sets in one pack*: the client's pack generator writes the export asked for as the pack's own art set and
+    the player's other exports on disk (`<gameDir>/kantobridge/export/<game>/`, one per game family) as further sets;
+    `kantobridge.json` lists them in `sets`. The client draws a region's tile keys with the loaded set of its own game,
+    the shapes, puppets and surf sheets with the followed region's (`PackInfo.setFor`, `LoadedPack.artSetFor`), and
+    the texture sync takes a pack whose set draws the world's game.
+  - *A real Hoenn is a region build*: its art takes 72 families (the dry run below), and a legacy world's slot map holds
+    16 (`slot_map.full`, "a Gen 3 export is built as a region").
+  - *Measured on the pod's Emerald export* (`RealGen3DryRunTest`, counts only): 319 maps placed (49 surface, 270
+    interiors, 14 layers deep), 200 unreachable left out, none unplaced; the 6 seam mismatches and 1 overlap; 36 warps
+    whose destination warp is a special id (the dynamic warp) arrive at the target's first warp
+    (`interior_arrival_missing`); 18,190 full and 316 half keys over 25 pages, 72 families; 356 elevation walls; story
+    cells: 50,388 water, 1,423 objects, 1,176 boulder-area cells; 386 habitat blocks, 81 pools; the shape plan 2.0 M
+    shaped blocks (155,135 keys) in 5 s; the plan takes 6.6 s, ran out of a test worker's default heap (about 2 GB on the
+    pod) and with 5 GB held 819 MB after it: G3G's real build checks the server's heap.
 
 ## 7. Protocol changes
 
@@ -353,7 +403,7 @@ maps `G3_TEST_*`, `layout/hoenn`); a golden scene; a GameTest building a synthet
 | **G3B** UI | text boxes, choices, lists, menus, naming, Birch's speech, the 240×160 mirror (Lua, schema, client) | lupa UI; e2e text box ✔ — **done 2026-10-14** (a Littleroot sign read through the UI; Birch's whole speech answered through the UI into the field) |
 | **G3C** story | flags, toggles, `story.cells` | lupa; e2e a flag and an override — **built 2026-10-14** (see §4.6 "As built") |
 | **G3D** export | `g3*` resources, baked quarters, encounters, layout; the measurement driver first | lupa on the fake; pod export counts and hashes ✔ — **done 2026-10-14** (§5 "Measured", "As built") |
-| **G3E** builder | `Gen3FrontEnd`, the Gen 3 planner path, baked textures, habitats, two art sets in one pack | JUnit, golden scene, GameTest ✔ |
+| **G3E** builder | `Gen3FrontEnd`, the Gen 3 planner path, baked textures, habitats, two art sets in one pack | JUnit, golden scene, GameTest ✔ — **done 2026-10-14** (§6 "As built") |
 | **G3F** battles, party, items, routes | headless battles with `Battle.abort`, party sync, bag projection, the route exit | lupa; e2e a wild and a trainer battle ✔ |
 | **G3G** | synthetic bundle, goldens, full suites; the pod's Hoenn build (MG8's first step) | full suite ✔ |
 

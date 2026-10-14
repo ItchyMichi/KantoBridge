@@ -1,5 +1,6 @@
 package dev.kantobridge.builder.shape.geom;
 
+import dev.kantobridge.scene.gen3.QuarterPages;
 import org.jetbrains.annotations.Nullable;
 
 /**
@@ -12,6 +13,14 @@ import org.jetbrains.annotations.Nullable;
  */
 public record TextureKey(String atlas, String palette, int tile) {
 	public static final String TILE = "tile:";
+
+	/**
+	 * The key of a scene's tile: as given, except a Gen 3 scene's virtual atlas, whose tiles are quarter ids, names the
+	 * quarter's page and its index there (MG7, {@link QuarterPages}), as its texture is keyed.
+	 */
+	public static TextureKey of(String atlas, String palette, int tile) {
+		return new TextureKey(QuarterPages.atlasOf(atlas, tile), palette, QuarterPages.tileOf(atlas, tile));
+	}
 
 	/** The key's text. */
 	public String text() {

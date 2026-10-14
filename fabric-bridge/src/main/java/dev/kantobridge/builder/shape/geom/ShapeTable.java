@@ -98,7 +98,7 @@ public final class ShapeTable {
 				continue;
 			}
 			String atlas = index.atlas(key.atlas());
-			java.util.function.IntUnaryOperator texture = tile -> texture(new TextureKey(atlas, palette, tile).text(), textures, keys);
+			java.util.function.IntUnaryOperator texture = tile -> texture(TextureKey.of(atlas, palette, tile).text(), textures, keys);
 			List<ShapeQuad> quads = switch (key.kind()) {
 				case CUBE -> KeyGeometry.cube(key.numbers(), texture);
 				case SLAB -> KeyGeometry.slab(key.number(0), key.number(1), texture);

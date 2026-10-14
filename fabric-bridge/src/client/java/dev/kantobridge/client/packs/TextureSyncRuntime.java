@@ -194,7 +194,7 @@ public final class TextureSyncRuntime {
 				result = client.run(exportDir, ExportClient.Listener.NONE);
 			}
 			this.sync.work(TextureSync.Work.PACK);
-			PackGenerator.Result pack = PackGenerator.generate(result.bundleDir(), GeneratedPack.directory(this.gameDir));
+			PackGenerator.Result pack = PackGenerator.generateWithOthers(result.bundleDir(), GeneratedPack.directory(this.gameDir));
 			LOGGER.info("textures: rebuilt this player's pack (art set {}, export {}, {} textures)", pack.game(), Hashes.shortHash(pack.exportHash()),
 					pack.pack().textures());
 			return null;

@@ -8,6 +8,13 @@
   "required": ["maps"],
   "additionalProperties": false,
   "properties": {
+    "landWeights": {
+      "type": "array",
+      "minItems": 12,
+      "maxItems": 12,
+      "items": {"type": "integer", "minimum": 0, "maximum": 255},
+      "description": "The land slots' chances in percent, slot by slot, as the engine's roll uses them. Left out when it could not be read."
+    },
     "maps": {
       "type": "object",
       "propertyNames": {"$ref": "../defs.schema.json#/$defs/mapId"},

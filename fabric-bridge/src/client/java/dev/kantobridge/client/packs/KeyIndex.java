@@ -19,11 +19,12 @@ import dev.kantobridge.builder.shape.ShapePlanner;
 import dev.kantobridge.builder.shape.Templates;
 import dev.kantobridge.builder.shape.geom.CellUnits;
 import dev.kantobridge.builder.shape.geom.ShapeTable;
+import dev.kantobridge.scene.ArtSource;
 import dev.kantobridge.scene.FrontEnds;
 import dev.kantobridge.scene.GameFrontEnd;
 import dev.kantobridge.scene.Scene;
 import dev.kantobridge.scene.SceneMap;
-import dev.kantobridge.scene.gen1.BundleArtSource;
+import dev.kantobridge.scene.gen3.QuarterPages;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -96,7 +97,7 @@ public final class KeyIndex {
 			Set<Integer> used = new TreeSet<>();
 			for (int tile : map.tiles()) {
 				used.add(tile);
-				uses.merge(map.atlas() + "/" + tile, 1, Integer::sum);
+				uses.merge(tileId(map.atlas(), tile), 1, Integer::sum);
 			}
 			for (int[] more : new int[][] {map.closedTiles(), map.ownBorder(), map.border()}) {
 				if (more != null) {
@@ -109,8 +110,9 @@ public final class KeyIndex {
 				if (tile < 0) {
 					continue;
 				}
-				String id = map.atlas() + "/" + tile;
-				palettes.computeIfAbsent(id, k -> new TreeMap<>()).put(map.palette(), ArtKeys.spriteId(bundle.game(), map.atlas(), map.palette(), tile));
+				String id = tileId(map.atlas(), tile);
+				palettes.computeIfAbsent(id, k -> new TreeMap<>()).put(map.palette(),
+						ArtKeys.spriteId(bundle.game(), QuarterPages.atlasOf(map.atlas(), tile), map.palette(), QuarterPages.tileOf(map.atlas(), tile)));
 				mapCounts.merge(id, 1, Integer::sum);
 			}
 		}
@@ -120,7 +122,7 @@ public final class KeyIndex {
 		for (String id : bundle.ids("sprite")) {
 			sprites.put(id, bundle.sprite(id).frames());
 		}
-		BundleArtSource art = BundleArtSource.of(bundle);
+		ArtSource art = FrontEnds.artSource(bundle);
 		ShapePlan plan = ShapePlanner.plan(scene, List.of(), ShapeParams.current(), Occupancy.NONE, new ArtUnitProbe(art));
 		ShapeTable table = ShapeTable.build(plan.index(), art);
 		Map<String, ShapePlan.CellUse> cellUses = plan.cellUses();
@@ -158,6 +160,11 @@ public final class KeyIndex {
 		}
 		return new KeyIndex(bundle.game(), bundle.exportHash(), plan.index().hash(), tiles, sprites, cells, structs,
 				new TreeSet<>(scene.maps().keySet()));
+	}
+
+	/** A tile's id in the keys: {@code <atlas>/<tile>}, a Gen 3 quarter by its page and index there (MG7). */
+	static String tileId(String atlas, int tile) {
+		return QuarterPages.atlasOf(atlas, tile) + "/" + QuarterPages.tileOf(atlas, tile);
 	}
 
 	public String game() {

@@ -73,7 +73,8 @@ return function(game)
       end
     elseif phase == "bind" then
       if status.bound then
-        local top = game.stack:top()
+        -- Gen 1's game keeps a UI stack; Gen 3's (MG7) has none at its title
+        local top = type(game.stack) == "table" and type(game.stack.top) == "function" and game.stack:top() or nil
         print(("KB_TITLE port=%s bound=%s overworld=%s"):format(word(status.port), word(status.bound),
           word(top ~= nil and top.isOverworld == true)))
         phase = "serve"

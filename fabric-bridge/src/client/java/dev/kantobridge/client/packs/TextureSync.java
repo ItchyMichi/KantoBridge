@@ -2,7 +2,6 @@ package dev.kantobridge.client.packs;
 
 import com.google.gson.JsonObject;
 import dev.kantobridge.client.bridge.ConnectionStatus;
-import dev.kantobridge.world.Games;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -171,7 +170,8 @@ public final class TextureSync {
 			return Decision.NONE;
 		}
 		PackInfo local = in.local();
-		boolean usable = local != null && local.usable() && Games.compatible(local.game(), in.worldGame());
+		// MG7: the pack may hold several games' art; it is usable when one of its sets draws this world's game
+		boolean usable = local != null && local.usable() && local.setFor(in.worldGame()) != null;
 		boolean canExport = in.bridgeCompatible() && !regenerated;
 		if (!usable) {
 			return canExport ? Decision.REGENERATE : Decision.NO_ART;

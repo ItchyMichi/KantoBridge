@@ -1,5 +1,6 @@
 package dev.kantobridge.builder.plan;
 
+import dev.kantobridge.scene.gen3.QuarterPages;
 import dev.kantobridge.world.MapLayout;
 import dev.kantobridge.world.MapPlacement;
 import org.jetbrains.annotations.Nullable;
@@ -36,9 +37,22 @@ public record PlacedMap(MapPlacement placement, MapModel model, PairEdges edges,
 		return this.placement.kind() == MapPlacement.Kind.INTERIOR;
 	}
 
-	/** The atlas image id of the map's tileset. */
+	/**
+	 * The atlas the map's art tiles index: its tileset's image (Gen 1), or the whole Gen 3 art's virtual atlas
+	 * ({@link QuarterPages#VIRTUAL}, whose tiles are quarter ids).
+	 */
 	public String atlas() {
-		return this.model.tileset().image();
+		return this.model.gen3() ? QuarterPages.VIRTUAL : this.model.tileset().image();
+	}
+
+	/** The atlas a slot or texture key names for one of the map's art tiles: its page for Gen 3 art. */
+	public String atlasOf(int tile) {
+		return QuarterPages.atlasOf(this.atlas(), tile);
+	}
+
+	/** The tile index a slot or texture key names for one of the map's art tiles: its index within its page for Gen 3. */
+	public int indexOf(int tile) {
+		return QuarterPages.tileOf(this.atlas(), tile);
 	}
 
 	public String palette() {

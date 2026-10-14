@@ -2,6 +2,7 @@ package dev.kantobridge.builder.plan;
 
 import dev.kantobridge.block.EdgeWallBlock;
 import dev.kantobridge.builder.export.ExportField;
+import dev.kantobridge.builder.export.G3Map;
 import dev.kantobridge.world.Scale;
 
 /**
@@ -51,6 +52,51 @@ public final class PairEdges {
 			}
 		}
 		return edges == 0 ? NONE : new PairEdges(w, h, sides, edges);
+	}
+
+	/**
+	 * A Gen 3 map's elevation edges (MG7, GEN3_BRIDGE_PLAN §10 E8, MULTI_GAME_PLAN §4.10): the engine refuses a step onto a
+	 * cell whose elevation differs from the walker's unless one of them is 0 (any elevation) or the cell's is 15 (a bridge,
+	 * which keeps the walker's), so a flat build walls each edge between two walkable cells (ground or ledge) whose
+	 * elevations differ and are neither 0 nor 15. Water gets none: surfing on and off is the engine's own move.
+	 */
+	public static PairEdges elevation(MapModel model, G3Map map) {
+		int w = model.cellWidth();
+		int h = model.cellHeight();
+		if (w != map.w() || h != map.h()) {
+			throw new IllegalArgumentException("the model is not the map's");
+		}
+		byte[] sides = new byte[w * h];
+		int edges = 0;
+		for (int cy = 0; cy < h; cy++) {
+			for (int cx = 0; cx < w; cx++) {
+				if (cx + 1 < w && elevationWall(model, map, cx, cy, cx + 1, cy)) {
+					sides[cy * w + cx] |= EdgeWallBlock.SIDE_EAST;
+					sides[cy * w + cx + 1] |= EdgeWallBlock.SIDE_WEST;
+					edges++;
+				}
+				if (cy + 1 < h && elevationWall(model, map, cx, cy, cx, cy + 1)) {
+					sides[cy * w + cx] |= EdgeWallBlock.SIDE_SOUTH;
+					sides[(cy + 1) * w + cx] |= EdgeWallBlock.SIDE_NORTH;
+					edges++;
+				}
+			}
+		}
+		return edges == 0 ? NONE : new PairEdges(w, h, sides, edges);
+	}
+
+	/** True when the engine refuses a step between cells (ax, ay) and (bx, by) for their elevations. */
+	static boolean elevationWall(MapModel model, G3Map map, int ax, int ay, int bx, int by) {
+		if (!walked(model.kind(ax, ay)) || !walked(model.kind(bx, by))) {
+			return false;
+		}
+		int a = map.elev(ax, ay);
+		int b = map.elev(bx, by);
+		return a != b && a != 0 && b != 0 && a != 15 && b != 15;
+	}
+
+	private static boolean walked(MapModel.Kind kind) {
+		return kind == MapModel.Kind.GROUND || kind == MapModel.Kind.LEDGE;
 	}
 
 	/** True when the engine refuses a step between cells (ax, ay) and (bx, by) of the map. */

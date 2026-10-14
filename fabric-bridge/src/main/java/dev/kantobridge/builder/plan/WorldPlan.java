@@ -1226,13 +1226,18 @@ public final class WorldPlan {
 	}
 
 	private boolean hasSlot(PlacedMap map, int tile) {
-		TileSlots slots = this.tileSlots.get(map.atlas() + "|" + map.palette());
-		return slots != null && tile >= 0 && tile < slots.full.length && slots.full[tile] >= 0;
+		if (tile < 0) {
+			return false;
+		}
+		TileSlots slots = this.tileSlots.get(map.atlasOf(tile) + "|" + map.palette());
+		int index = map.indexOf(tile);
+		return slots != null && index < slots.full.length && slots.full[index] >= 0;
 	}
 
+	/** The slot of one of a map's art tiles; a Gen 3 tile is keyed by its quarter page and its index there (MG7). */
 	private int slot(PlacedMap map, int tile, boolean half) {
-		TileSlots slots = this.tileSlots.get(map.atlas() + "|" + map.palette());
-		int index = slots == null ? -1 : (half ? slots.half : slots.full)[tile];
+		TileSlots slots = this.tileSlots.get(map.atlasOf(tile) + "|" + map.palette());
+		int index = slots == null ? -1 : (half ? slots.half : slots.full)[map.indexOf(tile)];
 		if (index < 0) {
 			// The planner collects a key for every tile it renders; a gap here is a bug, not bad data.
 			throw new IllegalStateException("no slot planned for a rendered tile on " + map.id());

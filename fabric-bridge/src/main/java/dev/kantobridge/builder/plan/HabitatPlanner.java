@@ -3,6 +3,7 @@ package dev.kantobridge.builder.plan;
 import dev.kantobridge.builder.export.CellFlags;
 import dev.kantobridge.builder.export.ExportEncounters;
 import dev.kantobridge.builder.export.ExportField;
+import dev.kantobridge.builder.export.G3Data;
 import dev.kantobridge.world.MapLayout;
 import dev.kantobridge.world.MapPlacement;
 import dev.kantobridge.world.Scale;
@@ -106,6 +107,26 @@ public final class HabitatPlanner {
 		return out;
 	}
 
+	/** A Gen 3 map whose wild battles stay the hidden game's own: the Safari Zone (MG7, as Kanto's, P9). */
+	public static boolean nativeEncountersGen3(String map) {
+		return map.contains(SAFARI_PREFIX);
+	}
+
+	/**
+	 * Every map of a Gen 3 export whose wild Pokémon come from a habitat pool (MG7): a land table that rolls, outside the
+	 * Safari Zone. Sorted.
+	 */
+	public static Set<String> wildMapsGen3(G3Data.Encounters encounters) {
+		Set<String> out = new TreeSet<>();
+		for (Map.Entry<String, G3Data.MapTables> entry : encounters.maps().entrySet()) {
+			G3Data.Table land = entry.getValue().land();
+			if (land != null && land.rate() > 0 && !nativeEncountersGen3(entry.getKey())) {
+				out.add(entry.getKey());
+			}
+		}
+		return out;
+	}
+
 	/** The habitat blocks for the built maps, sorted by map, then Z, then X. */
 	public static List<WorldIndex.Habitat> plan(List<PlacedMap> placed, ExportEncounters encounters, ExportField field, Warnings warnings) {
 		return plan(placed, encounters, field, warnings, "");
@@ -120,43 +141,72 @@ public final class HabitatPlanner {
 				continue;
 			}
 			boolean indoor = field.indoorEncounters(map.model().map().index(), map.model().map().tileset());
-			List<int[]> cells = wildCells(map.model(), indoor);
-			if (cells.isEmpty()) {
-				// A table without a cell to roll it on (water-only routes with a stray grass table): nothing to place.
-				warnings.note("habitat_map_without_cells");
-				continue;
-			}
-			MapPlacement p = map.placement();
-			int range = WorldPlan.BIOME_CAVE_3D.equals(p.biome()) ? CAVE_RANGE : RANGE;
-			// Raised ground (CAVES_3D_PLAN §3.4): habitat blocks stay under the map's floor, outside its volume, so a level's
-			// cells are covered with the reach left over their higher floor; a block two levels both pick is placed once. A
-			// cave's rooms lie apart (§3.5): each room's cells are covered under it.
-			MapLayout layout = map.layout();
-			Map<Long, List<int[]>> groups = new TreeMap<>();
-			for (int[] cell : cells) {
-				MapLayout.Piece piece = layout == null ? null : layout.pieceAt(cell[0], cell[1]);
-				long room = piece == null ? 0 : layout.pieces().indexOf(piece);
-				groups.computeIfAbsent(room * (MapLayout.MAX_LEVEL + 1) + map.level(cell[0], cell[1]), k -> new ArrayList<>()).add(cell);
-			}
-			Set<Long> placedAt = new HashSet<>();
-			for (Map.Entry<Long, List<int[]>> group : groups.entrySet()) {
-				int level = (int) (group.getKey() % (MapLayout.MAX_LEVEL + 1));
-				int[] first = group.getValue().get(0);
-				MapLayout.Piece piece = layout == null ? null : layout.pieceAt(first[0], first[1]);
-				int dx = piece == null ? 0 : piece.dx();
-				int dy = piece == null ? 0 : piece.dy();
-				int dz = piece == null ? 0 : piece.dz();
-				for (int[] block : cover(p, group.getValue(), range, FLOOR_ABOVE + level)) {
-					int x = block[0] + dx;
-					int z = block[1] + dz;
-					if (placedAt.add(((long) x << 32) ^ (z & 0xFFFFFFFFL))) {
-						out.add(new WorldIndex.Habitat(map.id(), x, p.y() + dy - BELOW_FEET, z, poolId(prefix, map.id()), range));
-					}
-				}
-			}
+			addHabitats(map, wildCells(map.model(), indoor), prefix, out, warnings);
 		}
 		out.sort(Comparator.comparing(WorldIndex.Habitat::map).thenComparingInt(WorldIndex.Habitat::z).thenComparingInt(WorldIndex.Habitat::x));
 		return out;
+	}
+
+	/**
+	 * The habitat blocks of a Gen 3 build (MG7, GEN3_BRIDGE_PLAN §6): for every built map of {@code wildMaps}, its wild
+	 * cells ({@link MapModel#wild}: the engine's land-encounter rule), covered as Gen 1's are.
+	 */
+	public static List<WorldIndex.Habitat> planGen3(List<PlacedMap> placed, Set<String> wildMaps, Warnings warnings, String prefix) {
+		List<WorldIndex.Habitat> out = new ArrayList<>();
+		for (PlacedMap map : placed) {
+			if (!wildMaps.contains(map.id())) {
+				continue;
+			}
+			List<int[]> cells = new ArrayList<>();
+			MapModel model = map.model();
+			for (int cy = 0; cy < model.cellHeight(); cy++) {
+				for (int cx = 0; cx < model.cellWidth(); cx++) {
+					if (model.kind(cx, cy) == MapModel.Kind.GROUND && model.wild(cx, cy)) {
+						cells.add(new int[] {cx, cy});
+					}
+				}
+			}
+			addHabitats(map, cells, prefix, out, warnings);
+		}
+		out.sort(Comparator.comparing(WorldIndex.Habitat::map).thenComparingInt(WorldIndex.Habitat::z).thenComparingInt(WorldIndex.Habitat::x));
+		return out;
+	}
+
+	/** One map's habitat blocks over {@code cells}, into {@code out}. */
+	private static void addHabitats(PlacedMap map, List<int[]> cells, String prefix, List<WorldIndex.Habitat> out, Warnings warnings) {
+		if (cells.isEmpty()) {
+			// A table without a cell to roll it on (water-only routes with a stray grass table): nothing to place.
+			warnings.note("habitat_map_without_cells");
+			return;
+		}
+		MapPlacement p = map.placement();
+		int range = WorldPlan.BIOME_CAVE_3D.equals(p.biome()) ? CAVE_RANGE : RANGE;
+		// Raised ground (CAVES_3D_PLAN §3.4): habitat blocks stay under the map's floor, outside its volume, so a level's
+		// cells are covered with the reach left over their higher floor; a block two levels both pick is placed once. A
+		// cave's rooms lie apart (§3.5): each room's cells are covered under it.
+		MapLayout layout = map.layout();
+		Map<Long, List<int[]>> groups = new TreeMap<>();
+		for (int[] cell : cells) {
+			MapLayout.Piece piece = layout == null ? null : layout.pieceAt(cell[0], cell[1]);
+			long room = piece == null ? 0 : layout.pieces().indexOf(piece);
+			groups.computeIfAbsent(room * (MapLayout.MAX_LEVEL + 1) + map.level(cell[0], cell[1]), k -> new ArrayList<>()).add(cell);
+		}
+		Set<Long> placedAt = new HashSet<>();
+		for (Map.Entry<Long, List<int[]>> group : groups.entrySet()) {
+			int level = (int) (group.getKey() % (MapLayout.MAX_LEVEL + 1));
+			int[] first = group.getValue().get(0);
+			MapLayout.Piece piece = layout == null ? null : layout.pieceAt(first[0], first[1]);
+			int dx = piece == null ? 0 : piece.dx();
+			int dy = piece == null ? 0 : piece.dy();
+			int dz = piece == null ? 0 : piece.dz();
+			for (int[] block : cover(p, group.getValue(), range, FLOOR_ABOVE + level)) {
+				int x = block[0] + dx;
+				int z = block[1] + dz;
+				if (placedAt.add(((long) x << 32) ^ (z & 0xFFFFFFFFL))) {
+					out.add(new WorldIndex.Habitat(map.id(), x, p.y() + dy - BELOW_FEET, z, poolId(prefix, map.id()), range));
+				}
+			}
+		}
 	}
 
 	/** The cells wild Pokémon live on: tall grass, or every walkable floor cell of an indoor encounter map. */

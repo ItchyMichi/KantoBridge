@@ -70,11 +70,11 @@ public final class PlannedGeometry implements SelfCheck.Geometry {
 		for (int ty = 0; ty < this.map.artRows(); ty++) {
 			for (int tx = 0; tx < this.cols; tx++) {
 				int i = ty * this.cols + tx;
-				TextureKey ownKey = new TextureKey(this.map.atlas(), this.map.palette(), this.map.tile(tx, ty));
+				TextureKey ownKey = TextureKey.of(this.map.atlas(), this.map.palette(), this.map.tile(tx, ty));
 				int blocks = this.blocks(tx, ty);
 				if (blocks == 0 || (this.shapes.shapeMask()[i] & 1) != 0) {
 					// The floor's top shows where nothing opaque stands on it: walkable tiles, and under a unit (its ground).
-					TextureKey floorKey = new TextureKey(this.map.atlas(), this.map.palette(), this.shapes.floorTile(i, this.map.tile(tx, ty)));
+					TextureKey floorKey = TextureKey.of(this.map.atlas(), this.map.palette(), this.shapes.floorTile(i, this.map.tile(tx, ty)));
 					visitor.quad(tx, -1, ty, ShapeQuad.fullFace(ShapeQuad.UP, 0), floorKey);
 				}
 				ShapeKey[] column = this.shapes.open()[ty * this.cols + tx];

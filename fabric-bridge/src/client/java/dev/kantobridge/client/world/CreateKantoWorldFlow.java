@@ -351,7 +351,7 @@ public final class CreateKantoWorldFlow {
 				return;
 			}
 			this.moveTo(Step.PACK);
-			PackGenerator.generate(result.bundleDir(), this.packDir);
+			PackGenerator.generateWithOthers(result.bundleDir(), this.packDir);
 			writeKeys(result.bundleDir());
 		} catch (ExportClient.ExportException e) {
 			this.workerError = switch (e.code()) {

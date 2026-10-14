@@ -29,7 +29,7 @@ import dev.kantobridge.builder.zone.ZonePlan;
 import dev.kantobridge.builder.zone.ZonePlanner;
 import dev.kantobridge.builder.zone.ZoneRegions;
 import dev.kantobridge.character.CharacterReport;
-import dev.kantobridge.scene.gen1.BundleArtSource;
+import dev.kantobridge.scene.FrontEnds;
 import dev.kantobridge.scene.profile.Profile;
 import dev.kantobridge.scene.profile.ProfileSource;
 import dev.kantobridge.server.HabitatService;
@@ -265,7 +265,7 @@ public final class BuildTask {
 			WorldIndex previous = region != null ? region.previousIndex() : previousIndex(this.worldDir);
 			// The geometry a client would build from the shape index, the self-check of every placed map (recorded) and the
 			// quads the planned world draws.
-			ShapeReport shapes = plan.shapes() == null || plan.scene() == null ? null : ShapeReport.of(plan, BundleArtSource.of(this.bundle));
+			ShapeReport shapes = plan.shapes() == null || plan.scene() == null ? null : ShapeReport.of(plan, FrontEnds.artSource(this.bundle));
 			// The character styles' pure parts on the export's sprites (the voxel plan's V8): what each client would fall back to.
 			CharacterReport characters = plan.shapes() == null ? null : CharacterReport.of(this.bundle);
 			return new Prepared(plan, pack, characters, previous == null ? List.of() : WorldPlan.volumesOf(previous),
@@ -789,7 +789,7 @@ public final class BuildTask {
 		long now = System.nanoTime();
 		r.elapsedMs = (now - this.startNanos) / 1_000_000L;
 		if (this.prepared == null) {
-			r.mapsRequested = this.maps == null ? this.bundle.ids("map").size() : this.maps.size();
+			r.mapsRequested = this.maps == null ? this.bundle.ids(this.bundle.isGen3() ? "g3map" : "map").size() : this.maps.size();
 			return;
 		}
 		WorldPlan plan = this.prepared.plan();

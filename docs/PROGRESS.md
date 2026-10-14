@@ -1475,7 +1475,7 @@ the full suite at the ✔ checkpoints (MG2, MG3, MG5, MG6). Pods run inside your
 | MG4 | Links | **done** (note 19); check: with one link the e2e scenarios behave as before (pod, real engine: `test_s5_ready`, `test_handshake`, `test_regions`, `test_multiplayer`, `test_crash`, `test_hot_reload` all passed), `tools/tests/test_links.py` (two `fake_gen1`: swap, a parked drop, a wrong game), JUnit `LinksTest` + `LinksFakeGen1IntegrationTest` (two real `fake_gen1` processes); one `test_multiplayer` assertion learnt that an install paired before MG1 keeps its legacy pairing file beside the per-game one. The MG4–MG6 checkpoint on the pod (kb-dev7): pytest and Lua 1,729, JUnit 1,193 (0 failures), GameTests 112 | 2026-10-13 | |
 | MG5 | Crossings | **done** (note 20); check: `PassGameTests` (6: the round trip into the far gate house with the exact arrival cell, every refusal, abort, the timeout, the start path, the stash, a built half whose pass is a story cell), `PassCrossingsTest`, `ZonePlanTest`, `WorldIndexTest`, `PassChoreographyTest` (16), the two-`fake_gen1` crossing in `tools/tests/test_stand_ins.py`; a crossing between two real engines waits for a second region whose game has an adapter (MG7/MG8) | 2026-10-13 | |
 | MG6 | One trainer economy | **done** (notes 18, 21); check: `LedgerGameTests` (two regions: adoption, stamped read-back, the crossing's projection, `too_many`/`left`, re-projection on an unknown stamp; a legacy world untouched), `BagGameTests` marked stacks, `LedgerTest`/`LedgerCodecTest`/`ItemsTest`/`BagSetRelayTest`, `test_lua_ledger.py`/`test_lua_bag.py`; the real engine's `bag.set` round trip is your play-test (PLAYTEST.md "MG6") | 2026-10-13 | |
-| MG7 | The second family (Emerald): adapter and export | **in progress**: the spec [specs/GEN3_BRIDGE_PLAN.md](specs/GEN3_BRIDGE_PLAN.md) (2026-10-14), phases G3A–G3G; **G3A done** (Emerald followable), **G3B done** (Emerald's UI), **G3C done** (story), **G3D done** (export; "Several games: MG7") | 2026-10-14 | |
+| MG7 | The second family (Emerald): adapter and export | **in progress**: the spec [specs/GEN3_BRIDGE_PLAN.md](specs/GEN3_BRIDGE_PLAN.md) (2026-10-14), phases G3A–G3G; **G3A done** (Emerald followable), **G3B done** (Emerald's UI), **G3C done** (story), **G3D done** (export), **G3E done** (builder; "Several games: MG7") | 2026-10-14 | |
 | MG8 | Hoenn and the pass to it | pending | | |
 
 ### Several games: notes
@@ -1954,6 +1954,38 @@ Verdanturf Town and Route 116, which also overlap): the builder joins those seam
 on pod kb-dev11: `test_g3_measure.py` and `test_emerald_export.py` passed (every resource passes its schema, hashes and
 sizes match Python's canonical JSON, counts match the measurement, every quarter is on a page). No Java change: the
 builder reads the g3* kinds from G3E on.
+
+**G3E (2026-10-14): Hoenn's builder.** `WorldPlanner.plan` hands a Gen 3 export to `Gen3Planner`; Gen 1's path is
+unchanged (its golden index, scene and shapes are byte for byte the same). In short (GEN3_BRIDGE_PLAN.md §6 "As built"
+has the details): readers for the g3* kinds; **96 families per shape** (E7: a Gen 1 region takes 16, a Gen 3 region 80);
+cells from the collision bytes (`G3Cells`) in a Gen 3 form of `MapModel`; the surface by the export's layout, interiors
+breadth-first over warps (0-based arrivals) and then dives and connections; invisible walls on elevation mismatches;
+story cells for objects that keep their cell, water and boulder maps; art keyed by quarter page (`g3q.<n>`, palette
+`BAKED`) and written baked (`BakedTextures`); habitats on the cells the engine rolls land encounters on, pools by
+national dex up to 386 with the engine's slot weights; the Gen 3 front end (`Gen3FrontEnd`, one virtual atlas of
+quarter ids) so the shape planner runs on Hoenn too; and **two art sets in one pack** on the client (the player's other
+exports join the pack, each region drawn with its own game's set). Three export facts were added for it (`stays`,
+`g3tiles.land`, `landWeights`; schemas, PROTOCOL.md). A real Hoenn is a **region build**: its art takes 72 families,
+more than a legacy world's 16.
+
+**Check:** pytest and Lua 1,926 passed (the export's new facts on `fake_export3`); JUnit 1,223 (2 skipped: the real-data
+dry runs) and GameTests 115, no failures (new: `G3ReadersTest`, `Gen3PlanTest` 15 with a golden index and golden shapes, `Gen3FrontEndTest` 4 with a
+golden scene, `TwoArtSetsTest` 5; GameTests `Gen3BuildGameTests` (the synthetic Hoenn as region `hoenn` alone at
+families 0..79 and after the synthetic Kanto at 16..95: files, record, slot map, pools, ground, ledge, water, story
+cells, the elevation wall, the house) and `all386NationalDexIdsResolve`). On pod kb-dev11 with the real Emerald:
+`test_emerald_export.py` passed with the new facts (2,638 objects keep their cell, 304 walk, none unknown; the land
+behaviours `TALL_GRASS`, `CAVE` and `INDOOR_ENCOUNTER` on 29,921 cells; the weights 20, 20, 10, 10, 10, 10, 5, 5, 4, 4,
+1, 1), and `RealGen3DryRunTest` planned the export as region `hoenn` (§6 "Measured": 319 maps, 72 families, 50,388
+water story cells; the plan ran out of a test worker's default heap, about 2 GB on the pod, and with 5 GB held 819 MB
+after it). The export driver `kb_export.lua` now runs on Gen 3 too (it read
+Gen 1's UI stack at the title).
+
+**Not yet:** NPC and surf sheets for Gen 3 (puppets draw placeholders), animated tiles, darkness; the outdoor groups
+entered by a door (the Safari Zone's six areas, Mt Pyre, Sky Pillar) are placed map by map; **200 maps aren't reached**
+from the surface by a warp, dive or connection and are left out: those only scripts reach (the ferry's destinations,
+the Battle Frontier, the islands) and **Sootopolis City with the maps behind its doors**, which has no dive or emerge link in the
+engine's data (nor has its underwater map); G3G or MG8 places them apart. The three seams are walls and overlaps until
+MG8 joins them, and the real Hoenn build in Minecraft (G3G) has its heap and its 50,000 water story cells measured.
 
 ### Handoff (2026-10-14): after MG6, for whoever continues
 

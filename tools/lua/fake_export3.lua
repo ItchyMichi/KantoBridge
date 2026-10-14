@@ -136,8 +136,21 @@ function FakeExport3.attach(E)
 
   -- ---- encounters (encounters.lua:11: mapId -> { land, water, rocks, fishing }, slots { species, minLevel,
   -- maxLevel }; ensureLoaded :116-125)
-  E.Encounters = { _tables = {} }
+  E.Encounters = { _tables = {}, _h = { LAND_WEIGHTS = { 20, 20, 10, 10, 10, 10, 5, 5, 4, 4, 1, 1 } } }
   function E.Encounters.ensureLoaded() E.encounterLoads = (E.encounterLoads or 0) + 1 return true end
+  -- the bound rules (encounters.lua:383-393) and their classify (encounter_rules/rse.lua:338-352): "land" for the
+  -- behaviours in E.landBehaviors
+  E.landBehaviors = {}
+  E.EncounterRules = { classify = function(beh) return E.landBehaviors[tonumber(beh) or -1] and "land" or nil end }
+  function E.Encounters.rules() return E.EncounterRules end
+
+  -- ---- object movement (objects.lua:131-139 canonMovementType; scripting/gfx_ids.lua:136-151 hostMovement):
+  -- made-up numbers, 1 LOOK, 2 WALK, 3 BACK_FORTH, 8 STAY
+  E.MOVEMENTS = { [1] = "LOOK", [2] = "WALK", [3] = "BACK_FORTH", [8] = "STAY" }
+  E.Objects.canonMovementType = function(mt) return tonumber(mt) end
+  E.GfxIds = { hostMovement = function(mt)
+    return { movement = E.MOVEMENTS[tonumber(mt) or -1] or "STAY", face = "down" }
+  end }
 
   -- ---- national dex (pokemon.lua:293-301): made up, species id + 250
   E.Pokemon = {}
@@ -164,6 +177,7 @@ function FakeExport3.attach(E)
   mods["src.core.game3.scripting.interaction_scripts"] = E.InteractionScripts
   mods["src.core.game3.ow_sprites"] = E.OwSprites
   mods["src.core.game3.encounters"] = E.Encounters
+  mods["src.core.game3.scripting.gfx_ids"] = E.GfxIds
   mods["src.core.game3.pokemon"] = E.Pokemon
   mods["src.import.gba.map_catalog"] = E.MapCatalog
 
@@ -207,6 +221,7 @@ function FakeExport3.attach(E)
                                               [7] = 0x10 }
     E.InteractionScripts.behaviors.TEST_B = { [512] = 0, [513] = 0x10 }
     E.MB_IDS.MB_TEST_GRASS, E.MB_IDS.MB_TEST_WATER, E.MB_IDS.MB_TEST_WALL = 0x40, 0x20, 0x10
+    E.landBehaviors[0x40] = true
     local mb = E.MB_IDS
     local byNum = {}
     for name, id in pairs(mb) do byNum[id] = name end
@@ -231,9 +246,9 @@ function FakeExport3.attach(E)
       layout(2, 3, 2, function(cx) return 512 + cx end, { 512, 513 }))
     E.game.data = { maps = maps }
     E.Space.bundle.events.EM_TEST_TOWN = { objects = {
-      { localId = 1, graphicsId = 1, x = 3, y = 2, elevation = 3, flag = 0x101 },
-      { localId = 2, graphicsId = 3, x = 5, y = 1, elevation = 3, flag = 0x102 },     -- an item ball
-      { localId = 3, graphicsId = 4, x = 0, y = 3, elevation = 3, trainerType = 1 },  -- a trainer
+      { localId = 1, graphicsId = 1, x = 3, y = 2, elevation = 3, flag = 0x101, movementType = 1 },  -- looks about
+      { localId = 2, graphicsId = 3, x = 5, y = 1, elevation = 3, flag = 0x102, movementType = 8 },  -- an item ball
+      { localId = 3, graphicsId = 4, x = 0, y = 3, elevation = 3, trainerType = 1, movementType = 2 },  -- a walking trainer
       { localId = 127, graphicsId = 1, x = 1, y = 1 },                                  -- the camera: left out
     } }
     E.Encounters._tables = {

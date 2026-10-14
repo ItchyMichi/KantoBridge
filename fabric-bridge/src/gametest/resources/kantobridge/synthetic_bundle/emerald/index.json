@@ -6,8 +6,8 @@
     {
       "kind": "g3encounters",
       "id": "all",
-      "hash": "41e7d0d97d621a879613b870bb3fe884edfed47200a4b58def0fea420824da09",
-      "size": 567
+      "hash": "24e57b43fb8466ff86bd1b8101430802b510c90d76204c933d727f47971fb736",
+      "size": 613
     },
     {
       "kind": "g3image",
@@ -24,20 +24,20 @@
     {
       "kind": "g3map",
       "id": "EM_TEST_HOUSE",
-      "hash": "b0908c82a8f937de558ed249de7ed4ae37d78194f31e259afeece02f74443c36",
-      "size": 425
+      "hash": "58e793d936319cf9837c66241827acafb1a6fed5a24dd5a6cba04967bc856f60",
+      "size": 438
     },
     {
       "kind": "g3map",
       "id": "EM_TEST_ROUTE",
-      "hash": "a9fbb91699b83d4cbc3a2979ecb37f13af8f895d45dc65c18597ef657ea2e7cd",
+      "hash": "e95b25a2721249ebcfbd9ee50a19b6398310b38712d19aae6c91a984d7cceaf2",
       "size": 426
     },
     {
       "kind": "g3map",
       "id": "EM_TEST_TOWN",
-      "hash": "c865c84c1f8514772348b2820d82a84c7e3e7a1f5c00ff80d66f00ef90dd194c",
-      "size": 736
+      "hash": "de2f4173d6a5f9650f286221651122fe39751e54f8908736634a9e0d4b170fab",
+      "size": 857
     },
     {
       "kind": "g3names",
@@ -54,14 +54,14 @@
     {
       "kind": "g3tiles",
       "id": "TEST_PAIR_A",
-      "hash": "8ce0836fc08be233e43d2fa6b442325984a28d72eeb7389a31b3e2c51eca85ca",
-      "size": 355
+      "hash": "3d7ea6c3946c94848a9e0072ca77022a99313004f5ca7dbe50b422ff61c7d30e",
+      "size": 366
     },
     {
       "kind": "g3tiles",
       "id": "TEST_PAIR_B",
-      "hash": "6fac3d11fe173cf1a14e554f56560676479b20a2df2f1e6ad59fa72991b0a744",
-      "size": 244
+      "hash": "20054d17d92cd2ec4b5696ba6b0dae4cbe81b7589961b35bc604183be3b30f9d",
+      "size": 254
     }
   ]
 }

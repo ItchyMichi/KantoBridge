@@ -18,10 +18,10 @@ import dev.kantobridge.builder.shape.geom.ShapeTable;
 import dev.kantobridge.builder.shape.geom.TemplateRule;
 import dev.kantobridge.builder.shape.geom.VoxelGrid;
 import dev.kantobridge.client.shape.vox.VoxFile;
+import dev.kantobridge.scene.ArtSource;
 import dev.kantobridge.scene.FrontEnds;
 import dev.kantobridge.scene.GameFrontEnd;
 import dev.kantobridge.scene.Scene;
-import dev.kantobridge.scene.gen1.BundleArtSource;
 import dev.kantobridge.world.Hashes;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -104,7 +104,7 @@ public final class PackTemplateWriter {
 		int models = 0;
 		if (front != null) {
 			Scene scene = front.describe(bundle);
-			BundleArtSource art = BundleArtSource.of(bundle);
+			ArtSource art = FrontEnds.artSource(bundle);
 			ShapeTable table = ShapeTable.build(ShapePlanner.plan(scene, List.of(), ShapeParams.current(), Occupancy.NONE, new ArtUnitProbe(art))
 					.index(), art);
 			for (Map.Entry<String, CellUnits.Unit> e : table.units().entrySet()) {
@@ -150,7 +150,7 @@ public final class PackTemplateWriter {
 	}
 
 	/** A unit's voxels as a {@code .vox} model in shades: vox x east, y north, z up; colours 1..4 the four shades. */
-	static VoxFile.Model vox(VoxelGrid grid, String atlas, int[] tiles, BundleArtSource art) {
+	static VoxFile.Model vox(VoxelGrid grid, String atlas, int[] tiles, ArtSource art) {
 		ByteArrayOutputStream voxels = new ByteArrayOutputStream();
 		int[][] shades = new int[tiles.length][];
 		for (int t = 0; t < tiles.length; t++) {

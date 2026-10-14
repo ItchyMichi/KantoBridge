@@ -144,8 +144,22 @@ def _report(got):
         if k == "g3image":
             raw = base64.b64decode(d["png"])
             page_dims.add(struct.unpack(">II", raw[16:24]))
-    enc = next(d for (k, _), d in pages.items() if k == "g3encounters")["maps"]
+    encounters = next(d for (k, _), d in pages.items() if k == "g3encounters")
+    enc = encounters["maps"]
     names = next(d for (k, _), d in pages.items() if k == "g3names")
+    # G3E's export facts: which objects keep their cell, which behaviours roll land encounters, the land slots' chances
+    stays = Counter("missing" if "stays" not in o else str(o["stays"]).lower() for m in maps.values() for o in m["objects"])
+    land_names = sorted({t["behaviors"].get(str(b), str(b)) for t in tiles.values() for b in t.get("land", [])})
+    land_cells = 0
+    for m in maps.values():
+        t = tiles.get(m["pair"])
+        land = set(t.get("land", [])) if t else set()
+        beh = dict(zip(t["mids"], t["beh"])) if t else {}
+        raw = base64.b64decode(m["cells"])
+        for y in range(m["trueH"]):
+            for x in range(m["trueW"]):
+                mid = raw[(y * m["w"] + x) * 4] | raw[(y * m["w"] + x) * 4 + 1] << 8
+                land_cells += beh.get(mid) in land
     return {
         "counts": dict(counts), "bytes": dict(sizes), "total_bytes": sum(sizes.values()),
         "largest": max(e["size"] for e in index["resources"]),
@@ -159,6 +173,8 @@ def _report(got):
         "encounter_kinds": dict(Counter(kind for m in enc.values() for kind in m)),
         "names": {k: len(v) for k, v in names.items()},
         "objects": sum(len(m["objects"]) for m in maps.values()),
+        "objects_stays": dict(stays), "pairs_with_land": sum(1 for t in tiles.values() if "land" in t),
+        "land_behaviors": land_names, "land_cells": land_cells, "land_weights": encounters.get("landWeights"),
         "warps": sum(len(m["warps"]) for m in maps.values()),
     }
 
@@ -192,3 +208,8 @@ def test_the_emerald_export_end_to_end():
     # diving); a few connections in the game's own data disagree with that placement (reported by name, for G3E)
     assert report["layout_root"] == "EM_LITTLEROOT_TOWN" and report["layout_maps"] == 49
     assert report["layout_edges_agree"] >= 100
+    # G3E's export facts: every object says whether it keeps its cell, every pair names its land behaviours, and the
+    # land slots' chances are the engine's
+    assert report["objects_stays"].get("missing", 0) == 0, report["objects_stays"]
+    assert report["pairs_with_land"] == 75 and report["land_cells"] > 0
+    assert report["land_weights"] == [20, 20, 10, 10, 10, 10, 5, 5, 4, 4, 1, 1]

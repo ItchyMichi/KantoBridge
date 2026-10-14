@@ -73,3 +73,31 @@ def test_golden_shape_index_matches_the_schema():
         blocks = (sum(len(column) for column in template["columns"]) + sum(band.get("solid", [])) + sum(band.get("air", []))
                   + sum(hull.get("solid", [])))
         assert sum(1 for g in golden["index"]["geoms"] if g.startswith("tmpl:") and "|" + template["sig"] + "|" in g) == blocks
+
+
+# ---- MG7 (G3E): the synthetic Gen 3 build ----
+G3_GOLDEN = GAMETEST / "golden" / "synthetic_g3_world_index.json"
+G3_SHAPES = GAMETEST / "golden" / "synthetic_g3_shapes.json"
+G3_BUNDLE = GAMETEST / "synthetic_bundle" / "emerald"
+
+
+def test_golden_gen3_world_index_matches_the_schema_and_the_bundle():
+    index = json.loads(G3_GOLDEN.read_text(encoding="utf-8"))
+    problems = PROTOCOL.check_world_index(index)
+    assert not problems, [str(p) for p in problems]
+    bundle_index = json.loads((G3_BUNDLE / "index.json").read_text(encoding="utf-8"))
+    assert index["game"] == bundle_index["game"] == "emerald"
+    assert index["exportHash"] == hashlib.sha256(canonical(bundle_index).encode("utf-8")).hexdigest()
+    assert set(index["maps"]) == {e["id"] for e in bundle_index["resources"] if e["kind"] == "g3map"}
+    assert {m["palette"] for m in index["maps"].values()} == {"BAKED"}, "Gen 3's art is baked: one palette"
+    house = index["maps"]["EM_TEST_HOUSE"]
+    assert (house["layer"], house["kind"], house["parent"]) == (1, "interior", "EM_TEST_TOWN")
+    assert [h["pool"] for h in index["habitats"]] == ["kantobridge:em_test_route"]
+
+
+def test_golden_gen3_shape_index_matches_the_schema():
+    golden = json.loads(G3_SHAPES.read_text(encoding="utf-8"))
+    problems = PROTOCOL.check_shape_index(golden["index"])
+    assert not problems, [str(p) for p in problems]
+    assert hashlib.sha256(canonical(golden["index"]).encode("utf-8")).hexdigest() == golden["indexHash"]
+    assert golden["index"]["atlases"] == ["g3q"] and golden["index"]["palettes"] == ["BAKED"]

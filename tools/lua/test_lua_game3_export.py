@@ -94,10 +94,13 @@ def test_a_map_carries_its_layouts_own_cells_and_its_events():
                                    {"dir": "dive", "map": "EM_TEST_SEA", "offset": 0}]
     assert res[("g3map", "EM_TEST_ROUTE")]["connections"] == [{"dir": "south", "map": "EM_TEST_TOWN", "offset": -1}]
     assert town["warps"] == [{"x": 2, "y": 1, "warp": 0, "to": "EM_TEST_HOUSE"}, {"x": 4, "y": 1, "warp": 0, "dynamic": True}]
+    # stays: the engine's movement for the template (looking about and standing keep the cell, walking leaves it)
     assert town["objects"] == [
-        {"lid": 1, "gfx": "OBJ_EVENT_GFX_TEST_HIKER", "x": 3, "y": 2, "elev": 3, "flag": 0x101, "kind": "person"},
-        {"lid": 2, "gfx": "OBJ_EVENT_GFX_TEST_ITEM_BALL", "x": 5, "y": 1, "elev": 3, "flag": 0x102, "kind": "item"},
-        {"lid": 3, "gfx": "OBJ_EVENT_GFX_TEST_GIRL", "x": 0, "y": 3, "elev": 3, "kind": "trainer"},
+        {"lid": 1, "gfx": "OBJ_EVENT_GFX_TEST_HIKER", "x": 3, "y": 2, "elev": 3, "flag": 0x101, "kind": "person",
+         "stays": True},
+        {"lid": 2, "gfx": "OBJ_EVENT_GFX_TEST_ITEM_BALL", "x": 5, "y": 1, "elev": 3, "flag": 0x102, "kind": "item",
+         "stays": True},
+        {"lid": 3, "gfx": "OBJ_EVENT_GFX_TEST_GIRL", "x": 0, "y": 3, "elev": 3, "kind": "trainer", "stays": False},
     ]
 
 
@@ -119,8 +122,9 @@ def test_pairs_flatten_their_planes_share_alike_quarters_and_name_behaviours():
     assert a["over"] == [False, False, True, False, False, False, False, False]
     assert a["beh"] == [0, 64, 64, 32, 32, 0, 0, 16]
     assert a["behaviors"] == {"0": "MB_NORMAL", "64": "MB_TEST_GRASS", "32": "MB_TEST_WATER", "16": "MB_TEST_WALL"}
+    assert a["land"] == [64], "the engine's rule: the grass rolls land encounters"
     b = res[("g3tiles", "TEST_B")]
-    assert b["mids"] == [512, 513] and b["over"] == [False, False]
+    assert b["mids"] == [512, 513] and b["over"] == [False, False] and b["land"] == []
     # the pages hold the flattened quarters at their ids
     pages = {int(i.split(".")[1]): png_rgba(d["png"]) for (k, i), d in res.items() if k == "g3image"}
     assert sorted(pages) == [0] and pages[0][:2] == (256, 256)
@@ -184,10 +188,27 @@ def test_encounters_by_national_dex_and_names():
         "fish": {"rate": 30, "slots": [{"dex": 253, "min": 5, "max": 10}]},
     }
     assert enc["EM_TEST_SEA"] == {"water": {"rate": 4, "slots": [{"dex": 252, "min": 20, "max": 30}]}}
+    assert res[("g3encounters", "all")]["landWeights"] == [20, 20, 10, 10, 10, 10, 5, 5, 4, 4, 1, 1]
     names = res[("g3names", "all")]
     assert names["species"] == {"SPECIES_TEST_NAMED": 253, "SPECIES_TEST_ONE": 251, "SPECIES_TEST_TWO": 252}
     assert names["moves"] == {"MOVE_TEST_SPLASH": 2, "MOVE_TEST_TACKLE": 1}
     assert names["items"]["ITEM_TEST_POTION"] == 2
+
+
+def test_without_the_engines_rules_the_optional_facts_are_left_out():
+    a = world()
+    a.E.Encounters.rules = None
+    a.E.Encounters._h = None
+    a.E.Objects.canonMovementType = None
+    a.E.GfxIds.hostMovement = None
+    res, warnings, ok, _ = exported(a)
+    assert ok is True
+    assert "land" not in res[("g3tiles", "TEST_A")]
+    assert "landWeights" not in res[("g3encounters", "all")]
+    assert all("stays" not in o for o in res[("g3map", "EM_TEST_TOWN")]["objects"])
+    assert "g3_land_weights_missing" in warnings
+    for key, data in res.items():
+        assert not PROTOCOL.check_export(key[0], data), key
 
 
 def test_no_maps_is_a_failure():
