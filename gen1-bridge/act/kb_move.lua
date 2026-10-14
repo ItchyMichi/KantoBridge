@@ -284,7 +284,24 @@ function Move.new(opts)
   end
 
   -- Starts the next request: the facing first, then only its direction held.
-  local function begin(req, f)
+  -- MG8 (docs/specs/HOENN_PASS_PLAN.md K2): on a route map an adapter stands
+  -- for itself (Gen 3's parked player) the adapter takes the step: true, the
+  -- step onto A, the way back (judged like a press); false plus a reason, a
+  -- wall; nil off its route maps (the press as ever).
+  local function begin(req, f, out)
+    local routeStep = rawget(engine, "routeStep")
+    if type(routeStep) == "function" then
+      local okS, taken, reason = pcall(routeStep, req.dir)
+      if okS and taken == false then
+        blocked(out, req, type(reason) == "string" and reason or "tile", f)
+        return
+      elseif okS and taken == true then
+        req.phase, req.since = "pressed", steps
+        req.from = { map = f.map, x = f.x, y = f.y }
+        active = req
+        return
+      end
+    end
     if f.facing ~= req.dir then engine.setFacing(req.dir) end
     for i = 1, #DIR_LIST do
       if DIR_LIST[i] ~= req.dir then unhold(DIR_LIST[i]) end
@@ -373,7 +390,7 @@ function Move.new(opts)
       if not f.moving then
         if active == nil and #queue > 0 then
           if landed then counts.chained = count(counts.chained) end
-          begin(table.remove(queue, 1), f)
+          begin(table.remove(queue, 1), f, out)
         end
         if active == nil then
           releaseDirections() -- the landing release

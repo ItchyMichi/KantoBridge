@@ -65,6 +65,12 @@ ROUTE = ["gggg~~",
 ROUTE_ELEV = {(0, 3): 4, (1, 3): 4, (2, 3): 0}
 # The land slots' chances, as the engine's roll uses them (made up here: Gen 3's well-known shape).
 LAND_WEIGHTS = [20, 20, 10, 10, 10, 10, 5, 5, 4, 4, 1, 1]
+# MG8 (docs/specs/HOENN_PASS_PLAN.md HP5): the pass variant's town, the same with two rows of trees below it, a
+# clearing cut through them under the cells (4, 4)-(5, 5) as the adapter opens one (exit block (2, 2) facing down,
+# depth 1: the cleared block (2, 3) baked in with the exit's metatile), and a trainer by the clearing.
+PASS_TOWN = TOWN + ["TTTT..TT",
+                    "TTTT..TT"]
+PASS_ROUTE = "test_pass"
 HOUSE = ["####",   # 3 wide, padded to 4 (the fourth column shows the border)
          "#c.#",
          "#..#",
@@ -166,7 +172,9 @@ def tiles_and_pages():
     return tiles, images
 
 
-def resources(game=GAME):
+def resources(game=GAME, variant=None):
+    """The synthetic export; variant "pass" (MG8) gives the town a Wild Routes end (the Hoenn half of a connecting
+    route), its clearing baked in, and the routes resource."""
     res = {}
     tiles, images = tiles_and_pages()
     for pair, data in tiles.items():
@@ -216,6 +224,24 @@ def resources(game=GAME):
         "land": {"rate": 20, "slots": [{"dex": d, "min": 2, "max": 4} for d in (252, 255, 258, 252, 255, 258,
                                                                                  261, 261, 263, 263, 265, 265)]},
         "water": {"rate": 4, "slots": [{"dex": 270, "min": 5, "max": 10}] * 5}}}}
+    if variant == "pass":
+        town = res[("g3map", "EM_TEST_TOWN")]
+        town["h"] = town["trueH"] = 8
+        town["cells"] = _cells(PASS_TOWN, _T, 8, 8)
+        town["objects"] = town["objects"] + [{"lid": 4, "gfx": "OBJ_EVENT_GFX_TEST_TRAINER", "x": 6, "y": 5, "elev": 3,
+                                              "kind": "trainer", "stays": True}]
+        res[("g3layout", "hoenn")]["maps"]["EM_TEST_TOWN"]["h"] = 8
+        res[("routes", "all")] = {"version": 2, "routes": [{
+            "id": PASS_ROUTE, "name": "TEST PASS", "kind": "connecting", "theme": "forest",
+            "town": {"map": "EM_TEST_TOWN", "cleared": [[2, 3]], "triggers": [[4, 7], [5, 7]],
+                     "back": {"x": 4, "y": 6, "facing": "up"}},
+            "routeMap": {"id": "KB_ROUTE_TEST_PASS_TO", "width": 1, "height": 1, "a": {"x": 0, "y": 0},
+                         "arrive": {"x": 1, "y": 0, "facing": "right"}},
+            "ends": {"from": {"region": "kanto", "games": ["red", "blue"]}, "to": {"region": "hoenn", "games": [game]}},
+            "end": "to",
+            "trainers": {"perArea": [1, 2], "rematch": "each_visit", "classes": ["TRAINER_CLASS_TEST"]},
+            "areas": {"main": [2, 3], "side": 50}, "levels": {"from": "neighbours", "perArea": 1, "maxRise": 3},
+            "dungeon": {"chance": 0, "floors": "by_level"}}]}
     res[("g3names", "all")] = {
         "species": {"SPECIES_TEST_TREECKO": 252, "SPECIES_TEST_TORCHIC": 255, "SPECIES_TEST_MUDKIP": 258,
                     "SPECIES_TEST_POOCHYENA": 261, "SPECIES_TEST_ZIGZAGOON": 263, "SPECIES_TEST_WURMPLE": 265,

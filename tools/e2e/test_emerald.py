@@ -22,6 +22,10 @@ the same before and after).
       its texts are read through the UI; a wild battle (dex 263) is answered fled; a second trainer battle is
       answered lose: the hidden player blacks out (half the money, a warp to the heal point) and party.heal
       reaches Minecraft.
+  route (MG8, one launch): on the exit cell of the Wild Routes test pass's Hoenn end (gen1-bridge/data/routes.json),
+      five steps down walk the clearing the adapter opened into its trigger: a warp of kind script onto the route map
+      KB_ROUTE_KANTO_HOENN_TEST_TO at x1; a step left there is the way back (a warp onto the clearing's back cell,
+      facing the town); then region.park and region.resume onto the route map land on it again.
   start (two launches): at the title with the slot saved, region.start CONTINUEs (act.result detail continue,
       game.status saved and in game, save.loaded fresh false); with the slot empty it starts NEW GAME (detail
       new), and (G3B) Birch's speech is answered through the UI as the client would (its text advanced, BOY
@@ -351,6 +355,55 @@ async def _battle(port, serving):
     return report
 
 
+ROUTE_MAP = "KB_ROUTE_KANTO_HOENN_TEST_TO"
+
+
+async def _route(port, serving):
+    x, y = int(serving["x"]), int(serving["y"])
+    mc, ok, snap, status = await connect(port)
+    assert (snap["player"]["map"], snap["player"]["x"], snap["player"]["y"]) == (TOWN, x, y), snap["player"]
+    report = {}
+    since = len(mc.received)
+    for n in range(1, 6):  # one at a time (the mover keeps a short waiting line)
+        await mc.send("move.step", {"dir": "down", "n": n})
+        step = await find_or_wait(mc, ("player.pos", "player.blocked"), 20, since, lambda m, n=n: m["data"].get("n") == n)
+        assert step["type"] == "player.pos", (n, step)
+    arrive = (await find_or_wait(mc, "warp", 60, since, lambda m: m["data"]["phase"] == "arrive"))["data"]
+    report["in"] = (arrive["kind"], arrive["to"])
+    assert arrive["kind"] == "script" and arrive["to"] == {"map": ROUTE_MAP, "x": 1, "y": 0, "facing": "right"}, report
+    blocked = [m["data"]["reason"] for m in mc.received[since:] if m["type"] == "player.blocked"]
+    report["blocked_on_the_way"] = blocked
+    assert blocked == [], report
+    await asyncio.sleep(1)
+    since = len(mc.received)
+    await mc.send("move.step", {"dir": "right", "n": 6})
+    wall = await find_or_wait(mc, ("player.blocked", "player.pos"), 20, since, lambda m: m["data"].get("n") == 6)
+    report["right"] = (wall["type"], wall["data"].get("reason"))
+    assert wall["type"] == "player.blocked", report
+    await mc.send("move.step", {"dir": "left", "n": 7})
+    back = (await find_or_wait(mc, "warp", 60, since, lambda m: m["data"]["phase"] == "arrive"))["data"]
+    report["back"] = back["to"]
+    assert back["to"] == {"map": TOWN, "x": x, "y": y + 4, "facing": "up"}, report
+    await asyncio.sleep(2)
+    parked = (await mc.request("region.park", {"region": "hoenn"}, reply_type="act.result", timeout=30))["data"]
+    report["park"] = parked
+    assert parked == {"ok": True, "kind": "park"}, parked
+    resumed = (await mc.request("region.resume", {"region": "hoenn", "to": {"map": ROUTE_MAP, "x": 1, "y": 0,
+                                                                           "facing": "right"}},
+                                reply_type="act.result", timeout=60))["data"]
+    report["resume"] = resumed
+    assert resumed == {"ok": True, "kind": "resume"}, resumed
+    here = (await mc.request("resync", reply_type="snapshot", timeout=10))["data"]["player"]
+    report["after_resume"] = (here["map"], here["x"], here["y"])
+    assert (here["map"], here["x"], here["y"]) == (ROUTE_MAP, 1, 0), report
+    report["errors"] = errors(mc)
+    report["problems"] = len(mc.conn.problems)
+    assert report["errors"] == [] and report["problems"] == 0, report
+    await mc.send("debug.quit", {"code": 0})
+    await mc.close()
+    return report
+
+
 NAME = ["K", "B"]
 
 
@@ -485,6 +538,22 @@ def test_emerald_battles_are_held_for_the_client():
         assert [int(t["id"]) for t in trainers] == [report["first"][2], report["third"][1]], (trainers, report)
         assert [int(t["members"]) for t in trainers] == [report["first"][3], report["third"][2]], (trainers, report)
         assert [(d["n"], d["result"]) for d in done] == [("1", "win"), ("2", "run"), ("3", "lose")], done
+        clean = True
+    finally:
+        if not clean:
+            _cleanup_run()
+    assert save_files() == before, "the test slot's files are gone and the rest untouched"
+
+
+@pytest.mark.e2e
+@pytest.mark.timeout(900)
+def test_the_passes_hoenn_end_is_walked_in_and_out():
+    _skip_without_emerald()
+    before = save_files()
+    clean = False
+    try:
+        result, report = _launch("route", "KB_SERVING", _route, 300)
+        assert any("routes.installed" in line and "own=true" in line for line in result.lines), "the adapter's end"
         clean = True
     finally:
         if not clean:

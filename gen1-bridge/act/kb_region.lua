@@ -194,7 +194,17 @@ function Region.new(opts)
       if log then log.info("region.resumed", { warped = false }) end
       return finish(out, true)
     end
-    if not queueWarp(to) then return finish(out, false, "busy") end
+    -- MG8 (docs/specs/HOENN_PASS_PLAN.md K2): a route map an adapter stands
+    -- for itself (Gen 3): the adapter warps onto the town's exit and parks the
+    -- player there, reporting the route map once it arrives
+    local zone = routes ~= nil and type(routes.byMap) == "table" and routes.byMap[to.map] or nil
+    local enter = rawget(engine, "routeEnter")
+    if zone and zone.own and type(enter) == "function" then
+      local okE, entered = pcall(enter, zone.key)
+      if not (okE and entered == true) then return finish(out, false, "busy") end
+    elseif not queueWarp(to) then
+      return finish(out, false, "busy")
+    end
     counts.warps = counts.warps + 1
     r.running, r.startedAt = true, steps
   end

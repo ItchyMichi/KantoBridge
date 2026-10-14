@@ -129,6 +129,8 @@ function Observe.install(b)
     local n = 0
     for _ in pairs(type(Objects) == "table" and type(Objects._byId) == "table" and Objects._byId or {}) do n = n + 1 end
     f.npcs = n
+    -- MG8: parked on a Wild Routes zone's trigger cell, the player stands for the route map (routes.lua)
+    if type(b.routeFacts) == "function" then f = b.routeFacts(f) end
     return f
   end)
 
@@ -152,6 +154,15 @@ function Observe.install(b)
     local Objects, Map = b.g3("objects"), b.g3("map")
     if type(Objects) ~= "table" or type(Objects._byId) ~= "table" then return nil end
     local mapId = type(Map) == "table" and Map.current or nil
+    -- MG8: on a Wild Routes zone's route map (routes.lua) nobody stands but the player
+    local routeMap = type(b.routeParkedMap) == "function" and b.routeParkedMap() or nil
+    if routeMap then
+      if lastMap ~= routeMap then
+        npcGeneration = npcGeneration + 1
+        lastTable, lastMap = nil, routeMap
+      end
+      return {}, routeMap, npcGeneration
+    end
     if Objects._byId ~= lastTable or mapId ~= lastMap then
       npcGeneration = npcGeneration + 1
       lastTable, lastMap = Objects._byId, mapId

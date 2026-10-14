@@ -128,7 +128,8 @@ function Story.install(b)
       local mid = type(ov) == "table" and tonumber(ov.mid) or nil
       if k and mid then
         local x, y = k % 1024, math.floor(k / 1024)
-        local base = baseMid(lay, x, y)
+        -- (MG8: a Wild Routes clearing's cells are the map's own: the export bakes them in, routes.lua)
+        local base = (type(b.routeBase) == "function" and b.routeBase(id, x, y)) or baseMid(lay, x, y)
         if base ~= nil and base ~= mid then cells[k] = mid end
       end
     end
@@ -137,9 +138,10 @@ function Story.install(b)
 
   -- The current map's own metatile at (x, y), or nil.
   def("cellBase", function(x, y)
-    local _, lay = layout()
+    local id, lay = layout()
     if not lay or type(x) ~= "number" or type(y) ~= "number" then return nil end
-    return baseMid(lay, math.floor(x), math.floor(y))
+    x, y = math.floor(x), math.floor(y)
+    return (type(b.routeBase) == "function" and b.routeBase(id, x, y)) or baseMid(lay, x, y)
   end)
 end
 

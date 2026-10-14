@@ -134,12 +134,14 @@ def main(argv=None):
                         help="the playthrough at start: title (not in the game), fresh or saved")
     parser.add_argument("--no-slot-save", dest="slot_has_save", action="store_false",
                         help="a region.start from the title runs NEW GAME instead of CONTINUE")
+    parser.add_argument("--variant", choices=["pass"], default=None,
+                        help="MG8: with --write-bundle and a Gen 3 game, the town with a Wild Routes end")
     parser.add_argument("--write-bundle", metavar="DIR",
                         help="write the synthetic export as a bundle under DIR/<game>/ and exit")
     args = parser.parse_args(argv)
     if args.write_bundle:
         from .bundle import write_bundle
-        print(f"wrote {write_bundle(args.write_bundle, args.game)}")
+        print(f"wrote {write_bundle(args.write_bundle, args.game, args.variant)}")
         return
     asyncio.run(_main(args))
 

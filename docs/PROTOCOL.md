@@ -804,6 +804,18 @@ compat profile (`hello.ok.compat`: Gen 1 151 and 165, Emerald 386 and 354), appl
   the catalogue. When both ends list the running game (a one-engine test world only), the `to` end's
   route map is `KB_ROUTE_<ID>_TO` and the export lists one item per end. A free-roam zone is
   unchanged (its `from` may name a `region`; absent means the legacy region).
+- **A Gen 3 end** (MG8, [specs/HOENN_PASS_PLAN.md](specs/HOENN_PASS_PLAN.md) K2–K4): Gen 3 takes no
+  route map, map script or patched exit (spike S2), so the game3 adapter installs its end itself.
+  The clearing opens at run time on every load of the town and is baked into the town's `g3map`
+  (no `story.cells` for it). Stepping onto the clearing's trigger cell parks the hidden player
+  there, reported on the route map at x1 facing right: a `warp` of kind `script` as on Gen 1, with
+  no engine warp. A `move.step` left from x1 (onto A) is the way back, the engine's warp to the
+  clearing's back cell facing the town; any other step there is refused `tile`. A `region.resume`
+  onto the route map warps to the trigger cell and parks there. `route.give` puts the item in the
+  bag with a found line; `route.battle` takes the first trainer of the class as the template
+  (`TRAINER_CLASS_*`) with the request's party by Emerald's constant names (`species` without
+  `SPECIES_`, `moves` without `MOVE_`), held for Cobblemon like any Gen 3 battle. A Gen 3 export
+  carries the `routes` resource too.
 
 ### Crossings (MG5, several games)
 

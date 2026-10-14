@@ -242,7 +242,7 @@ def test_main_serves_the_gen3_export_to_a_builder():
     data = index["data"]
     assert data["game"] == "emerald"
     kinds = {r["kind"] for r in data["resources"]}
-    assert kinds == G3_KINDS
+    assert kinds == G3_KINDS | {"routes"}, "MG8: the core adds the zones this game runs, as for Gen 1"
     entry = next(r for r in data["resources"] if r["kind"] == "g3map" and r["id"] == "EM_TEST_TOWN")
     seq = peer.send("export.get", {"kind": "g3map", "id": "EM_TEST_TOWN"})
     for _ in range(50):

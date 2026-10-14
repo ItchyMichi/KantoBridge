@@ -50,6 +50,15 @@ public final class TestData {
 		return dir;
 	}
 
+	/** MG8: the synthetic Gen 3 export's town with a Wild Routes end (synth3.resources(variant="pass")). */
+	public static Path syntheticGen3PassBundle() {
+		Path dir = gametestResources().resolve("kantobridge/synthetic_pass/emerald");
+		if (!Files.isRegularFile(dir.resolve("index.json"))) {
+			throw new IllegalStateException("synthetic Gen 3 pass bundle missing");
+		}
+		return dir;
+	}
+
 	/** MG7: the synthetic Gen 3 export's scene (Gen3FrontEnd), build index and shapes. */
 	public static Path goldenG3Scene() {
 		return gametestResources().resolve("kantobridge/golden/synthetic_g3_scene.json");

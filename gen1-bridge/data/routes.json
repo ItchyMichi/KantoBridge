@@ -1,5 +1,5 @@
 {
-  "version": 1,
+  "version": 2,
   "routes": [
     {
       "id": "viridian_forest_zone",
@@ -16,6 +16,25 @@
       },
       "dungeon": {"chance": 60, "floors": "by_level"},
       "music": "Music_Routes1"
+    },
+    {
+      "id": "kanto_hoenn_test",
+      "name": "TEST PASS",
+      "kind": "connecting",
+      "theme": "forest",
+      "from": {
+        "region": "kanto", "games": ["red", "blue"], "map": "VIRIDIAN_CITY", "x": 6, "y": 4, "facing": "up", "depth": 2,
+        "classes": ["OPP_YOUNGSTER", "OPP_BUG_CATCHER", "OPP_LASS", "OPP_HIKER"], "music": "Music_Routes1"
+      },
+      "to": {
+        "region": "hoenn", "games": ["emerald"], "map": "EM_LITTLEROOT_TOWN", "x": 18, "y": 14, "facing": "down", "depth": 2,
+        "classes": ["TRAINER_CLASS_YOUNGSTER", "TRAINER_CLASS_BUG_CATCHER", "TRAINER_CLASS_LASS", "TRAINER_CLASS_HIKER"],
+        "music": null
+      },
+      "areas": {"main": [2, 3], "side": 50},
+      "levels": {"from": "neighbours", "perArea": 1, "maxRise": 3},
+      "trainers": {"perArea": [1, 2], "rematch": "each_visit"},
+      "dungeon": {"chance": 0}
     }
   ]
 }

@@ -244,9 +244,13 @@ public final class BuildTask {
 			long zoneStarted = System.nanoTime();
 			ExportRoutes routes = this.bundle.routes();
 			List<String> towns = routes.zones().stream().map(ExportRoutes.Zone::townMap).toList();
+			// MG8: a Gen 3 export's zones take their pools, sprites and items from its g3 resources
+			ZoneContent content = routes.zones().isEmpty() ? ZoneContent.EMPTY
+					: this.bundle.isGen3()
+							? ZoneContent.ofGen3(this.bundle, towns, routes.zones().stream().flatMap(z -> z.classes().stream()).distinct().toList())
+							: ZoneContent.of(this.bundle, towns);
 			WorldPlan plan = withZones(planned, routes, this.level.getSeed(),
-					() -> VanillaTerrain.of(this.level.getServer().registryAccess(), this.level.getSeed()), originX, originZ,
-					routes.zones().isEmpty() ? ZoneContent.EMPTY : ZoneContent.of(this.bundle, towns));
+					() -> VanillaTerrain.of(this.level.getServer().registryAccess(), this.level.getSeed()), originX, originZ, content);
 			long zoneMs = (System.nanoTime() - zoneStarted) / 1_000_000L;
 			if (region != null) {
 				// MG3: a region never overlaps another's box (the record's bounds)

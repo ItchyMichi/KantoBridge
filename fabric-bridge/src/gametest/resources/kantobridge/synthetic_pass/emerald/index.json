@@ -1,0 +1,73 @@
+{
+  "game": "emerald",
+  "engine": "0.0.0-fake",
+  "bridge": "fake_gen1-0.1.0",
+  "resources": [
+    {
+      "kind": "g3encounters",
+      "id": "all",
+      "hash": "24e57b43fb8466ff86bd1b8101430802b510c90d76204c933d727f47971fb736",
+      "size": 613
+    },
+    {
+      "kind": "g3image",
+      "id": "g3q.0",
+      "hash": "6817402434f264c9fbbcff59b942c071038ce9b17a2ca2cb589d7cb98e9c5878",
+      "size": 2411
+    },
+    {
+      "kind": "g3layout",
+      "id": "hoenn",
+      "hash": "f02e3f4f4565b8f328fdd234b3b71f941ee111156d9a0db62b77db553165dfd1",
+      "size": 131
+    },
+    {
+      "kind": "g3map",
+      "id": "EM_TEST_HOUSE",
+      "hash": "58e793d936319cf9837c66241827acafb1a6fed5a24dd5a6cba04967bc856f60",
+      "size": 438
+    },
+    {
+      "kind": "g3map",
+      "id": "EM_TEST_ROUTE",
+      "hash": "e95b25a2721249ebcfbd9ee50a19b6398310b38712d19aae6c91a984d7cceaf2",
+      "size": 426
+    },
+    {
+      "kind": "g3map",
+      "id": "EM_TEST_TOWN",
+      "hash": "a24c4af53d95ecf1e5d57f95869f77f74b4e95b992144140dea75df0fe52d004",
+      "size": 1041
+    },
+    {
+      "kind": "g3names",
+      "id": "all",
+      "hash": "939e509378ecb5bf9d322f3cec3c3655f638fe9d695fbf1c7ce1d7e995892287",
+      "size": 311
+    },
+    {
+      "kind": "g3sprite",
+      "id": "OBJ_EVENT_GFX_TEST_PERSON",
+      "hash": "323297ce32d5eb0cd540cd2529dd23b992de420c75bfbcd94e6b6c5c522c27cd",
+      "size": 356
+    },
+    {
+      "kind": "g3tiles",
+      "id": "TEST_PAIR_A",
+      "hash": "3d7ea6c3946c94848a9e0072ca77022a99313004f5ca7dbe50b422ff61c7d30e",
+      "size": 366
+    },
+    {
+      "kind": "g3tiles",
+      "id": "TEST_PAIR_B",
+      "hash": "20054d17d92cd2ec4b5696ba6b0dae4cbe81b7589961b35bc604183be3b30f9d",
+      "size": 254
+    },
+    {
+      "kind": "routes",
+      "id": "all",
+      "hash": "dd0bf425916ada932d2beeef6caa63512d21b31add1056a6afcd5255e8d3daf3",
+      "size": 657
+    }
+  ]
+}

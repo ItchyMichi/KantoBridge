@@ -239,14 +239,16 @@ function Route.new(opts)
       if not (zone and zone.active) then return finish(out, false, "unknown_route") end
       if not f.inGame then return finish(out, false, "not_ingame") end
       if f.map ~= zone.mapId then return finish(out, false, "not_in_zone") end
+      -- (MG8: an adapter's own zone checks items and species itself, by its game's names)
+      r.own = zone.own == true and type(rawget(engine, "routeRun")) == "function"
       if r.op == "give" then
         if r.keep and entryOf(r.route).taken[r.id] then return finish(out, false, "taken") end
-        if has and not has("items", r.item) then return finish(out, false, "unknown_item") end
+        if has and not r.own and not has("items", r.item) then return finish(out, false, "unknown_item") end
       else
         r.kbClass = zone.classes[r.class]
         if not r.kbClass then return finish(out, false, "unknown_class") end
         for _, m in ipairs(r.party) do
-          if has and not has("pokemon", m.species) then return finish(out, false, "bad_party") end
+          if has and not r.own and not has("pokemon", m.species) then return finish(out, false, "bad_party") end
         end
       end
     elseif not f.inGame then
@@ -263,6 +265,26 @@ function Route.new(opts)
         return finish(out, true)
       end
       return finish(out, false, why or "failed")
+    end
+    if r.own then
+      -- MG8 (docs/specs/HOENN_PASS_PLAN.md K4): the adapter gives the item or starts the battle itself and
+      -- calls back once it is over (a battle with its result word); false plus a reason refuses
+      r.done = false
+      if r.op == "give" then r.before = engine.inventoryCount(r.item) end
+      local req = { op = r.op, item = r.item, class = r.class, party = r.party, line = r.line,
+                    onDone = function(result)
+                      if result ~= nil then r.result = result end
+                      r.done = true
+                    end }
+      local okRun, ran, why = pcall(rawget(engine, "routeRun"), r.op, req)
+      if not okRun then return finish(out, false, "failed") end
+      if ran ~= true then
+        if why == "busy" and steps - r.since <= Route.WAIT then return end
+        return finish(out, false, type(why) == "string" and why or "failed")
+      end
+      if r.op == "battle" then counts.battles = counts.battles + 1 end
+      r.running = true
+      return
     end
     if r.op == "give" then
       r.before = engine.inventoryCount(r.item)

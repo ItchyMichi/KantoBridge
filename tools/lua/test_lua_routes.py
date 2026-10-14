@@ -76,7 +76,7 @@ def test_the_shipped_list_has_viridians_zone_at_its_spot():
     b, Routes, js = routes_module()
     from kblua import BRIDGE
     out, problems = Routes.parse(js, (BRIDGE / "data" / "routes.json").read_bytes())
-    assert len(out) == 1 and len(problems) == 0
+    assert len(out) == 2 and len(problems) == 0
     e = out[1]
     assert e.id == b"viridian_forest_zone" and not e.unset and e.mapId == b"KB_ROUTE_VIRIDIAN_FOREST_ZONE"
     assert e[b"from"].map == b"VIRIDIAN_CITY" and e[b"from"].depth == 2
@@ -84,6 +84,13 @@ def test_the_shipped_list_has_viridians_zone_at_its_spot():
     assert e[b"from"].games[b"red"] and e[b"from"].games[b"blue"]
     assert [c.decode() for c in lua_list(e.classes)] == [
         "OPP_YOUNGSTER", "OPP_BUG_CATCHER", "OPP_LASS", "OPP_JR_TRAINER_M", "OPP_JR_TRAINER_F"]
+    # MG8: the temporary test pass to Hoenn (docs/specs/HOENN_PASS_PLAN.md K1), one end per region
+    p = out[2]
+    assert p.id == b"kanto_hoenn_test" and p.kind == b"connecting" and not p.unset
+    near, far = p[b"from"], p[b"to"]
+    assert (near.map, near.x, near.y, near.facing, near.depth, near.region) == (b"VIRIDIAN_CITY", 6, 4, b"up", 2, b"kanto")
+    assert (far.map, far.x, far.y, far.facing, far.depth, far.region) == (b"EM_LITTLEROOT_TOWN", 18, 14, b"down", 2, b"hoenn")
+    assert far.games[b"emerald"] and not far.games[b"blue"] and far.music is False, "null: no song"
 
 
 @pytest.mark.parametrize("change,code", [

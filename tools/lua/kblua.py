@@ -207,6 +207,10 @@ class Bridge:
             assert self.engine is not None, "world_api needs engine=True"
             self.world_api = self._load_harness("fake_worldapi.lua").new(self.engine)
             mod_opts[b"world"] = self.world_api
+        elif self.family == "gen3":
+            # MG8: mod.world's Gen 3 facade (warpTo, replaceBlock) on the fake (fake_engine3.lua)
+            self.world_api = self.engine.worldApi
+            mod_opts[b"world"] = self.world_api
         # M9: mod.cache's files (rel -> bytes), e.g. another run's, for a simulated restart
         mod_opts[b"cache"] = self.to_lua(mod_cache or {})
         # MG1: the mod's manifest as the loader hands it over (mod.manifest; its `games` list),

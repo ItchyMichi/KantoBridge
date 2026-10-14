@@ -24,6 +24,29 @@ def test_resource_validates(key):
     assert not problems, [str(p) for p in problems]
 
 
+PASS = synth3.resources(variant="pass")
+
+
+@pytest.mark.parametrize("key", sorted(k for k in PASS if PASS[k] != RESOURCES.get(k)), ids=lambda k: f"{k[0]}:{k[1]}")
+def test_the_pass_variants_own_resources_validate(key):
+    # MG8: the town with a Wild Routes end (its two tree rows, the clearing baked in, a trainer) and the routes resource
+    problems = PROTOCOL.check_export(key[0], PASS[key])
+    assert not problems, [str(p) for p in problems]
+
+
+def test_the_pass_variants_clearing_is_open():
+    town = PASS[("g3map", "EM_TEST_TOWN")]
+    raw = base64.b64decode(town["cells"])
+
+    def coll(x, y):
+        return raw[(y * town["w"] + x) * 4 + 2]
+
+    assert (town["h"], town["trueH"]) == (8, 8)
+    assert [coll(x, 7) for x in range(8)] == [0x07, 0x07, 0x07, 0x07, 0x00, 0x00, 0x07, 0x07]
+    item = PASS[("routes", "all")]["routes"][0]
+    assert item["town"]["cleared"] == [[2, 3]] and item["end"] == "to"
+
+
 def test_index_validates_and_names_emerald():
     index = synth3.index()
     assert index["game"] == "emerald"

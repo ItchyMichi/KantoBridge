@@ -22,6 +22,18 @@ def test_viridians_zone_has_its_spot():
     assert (zone["from"]["x"], zone["from"]["y"], zone["from"]["facing"], zone["from"]["depth"]) == (35, 29, "right", 2)
 
 
+def test_the_test_pass_has_its_temporary_spots():
+    # MG8 (docs/specs/HOENN_PASS_PLAN.md K1): the user's "a corner of the first or second town", found on the pods'
+    # exports by the clearing rules; Pallet Town had no spot, so Kanto's end is in Viridian City
+    route = json.loads(SHIPPED.read_text(encoding="utf-8"))["routes"][1]
+    assert route["id"] == "kanto_hoenn_test" and route["kind"] == "connecting"
+    near, far = route["from"], route["to"]
+    assert (near["region"], near["map"], near["x"], near["y"], near["facing"], near["depth"]) == (
+        "kanto", "VIRIDIAN_CITY", 6, 4, "up", 2)
+    assert (far["region"], far["games"], far["map"], far["x"], far["y"], far["facing"], far["depth"]) == (
+        "hoenn", ["emerald"], "EM_LITTLEROOT_TOWN", 18, 14, "down", 2)
+
+
 def test_the_lua_tests_list_matches_the_schema():
     import sys
     sys.path.insert(0, str(REPO_ROOT / "tools" / "lua"))

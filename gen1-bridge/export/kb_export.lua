@@ -497,8 +497,13 @@ function Export.new(opts)
       base64 = Images and Images.base64 or nil,
       region = type(entry) == "table" and type(entry.region) == "string" and entry.region or nil,
     }
+    -- MG8: the adapter's own route ends are planned before its export bakes their clearings in
+    local plan = rawget(engine, "routePlan")
+    if type(plan) == "function" then pcall(plan) end
     local ok, err = own(sink)
     if ok ~= true then error("export.adapter_failed:" .. tostring(err), 0) end
+    -- MG8 (docs/specs/HOENN_PASS_PLAN.md HP4): the zones this game runs, as for Gen 1
+    put("routes", "all", Routes and Routes.exportData(json, routesRt) or { version = 1, routes = json.array({}) })
   end
 
   local function build()

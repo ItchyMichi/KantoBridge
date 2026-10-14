@@ -4,6 +4,9 @@ import dev.kantobridge.builder.export.BundleException;
 import dev.kantobridge.builder.export.ExportBundle;
 import dev.kantobridge.builder.export.ExportEncounters;
 import dev.kantobridge.builder.export.ExportMap;
+import dev.kantobridge.builder.export.G3Data;
+import dev.kantobridge.builder.export.G3Map;
+import dev.kantobridge.world.DataReader;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -87,6 +90,93 @@ public record ZoneContent(Map<String, List<Slot>> pools, Map<String, String> cla
 		Map<String, String> classSprites = new HashMap<>();
 		byClass.forEach((cls, sprites) -> classSprites.put(cls, mostUsed(sprites)));
 		return new ZoneContent(pools, classSprites, balls.isEmpty() ? null : mostUsed(balls), bundle.itemIds());
+	}
+
+	/** Gen 3's species constants start so (the names resource keeps the prefix). */
+	static final String SPECIES_PREFIX = "SPECIES_";
+	/** And its items'. */
+	static final String ITEM_PREFIX = "ITEM_";
+	/** A trainer class's role: what follows this in Gen 3's class constants (TRAINER_CLASS_HIKER). */
+	static final String CLASS_PREFIX = "TRAINER_CLASS_";
+	/** The event-object graphics a role's trainer may wear (OBJ_EVENT_GFX_HIKER). */
+	static final String GFX_PREFIX = "OBJ_EVENT_GFX_";
+
+	/**
+	 * The content for zones off Gen 3 towns (MG8, docs/specs/HOENN_PASS_PLAN.md K5-K6): each town's pool is the land
+	 * slots of the maps its connections reach, by the engine's slot chances, each named by its constant in the names
+	 * resource (its {@code SPECIES_} off; the first name for a dex several share) at its range's top level; a class's
+	 * sprite is the graphic named like its role ({@code TRAINER_CLASS_HIKER} wears {@code OBJ_EVENT_GFX_HIKER}) when a
+	 * map places one, else the one most trainers wear; the ball's sprite is the item balls' most used; the items are the
+	 * names resource's, their {@code ITEM_} off.
+	 *
+	 * @param classes the zones' trainer classes
+	 */
+	public static ZoneContent ofGen3(ExportBundle bundle, Collection<String> towns, Collection<String> classes) throws BundleException {
+		G3Data.Encounters encounters = bundle.g3encounters();
+		G3Data.Names names = bundle.g3names();
+		Map<Integer, String> speciesOf = new TreeMap<>();
+		Set<String> items = new java.util.TreeSet<>();
+		if (names != null) {
+			names.species().forEach((name, dex) -> {
+				String symbol = name.startsWith(SPECIES_PREFIX) ? name.substring(SPECIES_PREFIX.length()) : name;
+				if (DataReader.SYMBOL.matcher(symbol).matches()) {
+					speciesOf.merge(dex, symbol, (a, b) -> a.compareTo(b) <= 0 ? a : b);
+				}
+			});
+			for (String name : names.items().keySet()) {
+				String symbol = name.startsWith(ITEM_PREFIX) ? name.substring(ITEM_PREFIX.length()) : name;
+				if (!symbol.equals("NONE") && DataReader.SYMBOL.matcher(symbol).matches()) {
+					items.add(symbol);
+				}
+			}
+		}
+		Map<String, List<Slot>> pools = new TreeMap<>();
+		for (String town : towns) {
+			List<Slot> pool = new ArrayList<>();
+			if (encounters != null && bundle.has("g3map", town)) {
+				// connections in the export's order, so the pool's order (and every pick from it) is stable
+				for (G3Map.Connection connection : bundle.g3map(town).connections()) {
+					G3Data.MapTables tables = encounters.maps().get(connection.map());
+					if (tables == null || tables.land() == null) {
+						continue;
+					}
+					List<G3Data.Slot> slots = tables.land().slots();
+					for (int i = 0; i < slots.size(); i++) {
+						G3Data.Slot slot = slots.get(i);
+						String species = speciesOf.get(slot.dex());
+						if (species != null) {
+							Integer weight = encounters.landWeight(i);
+							pool.add(new Slot(species, slot.dex(), slot.max(), weight == null ? 1 : weight));
+						}
+					}
+				}
+			}
+			pools.put(town, pool);
+		}
+		Map<String, Integer> trainerGfx = new TreeMap<>();
+		Map<String, Integer> ballGfx = new TreeMap<>();
+		Set<String> worn = new java.util.TreeSet<>();
+		for (String id : bundle.ids("g3map")) {
+			for (G3Map.MapObject object : bundle.g3map(id).objects()) {
+				worn.add(object.gfx());
+				if ("trainer".equals(object.kind())) {
+					trainerGfx.merge(object.gfx(), 1, Integer::sum);
+				} else if ("item".equals(object.kind())) {
+					ballGfx.merge(object.gfx(), 1, Integer::sum);
+				}
+			}
+		}
+		String common = mostUsed(trainerGfx);
+		Map<String, String> classSprites = new HashMap<>();
+		for (String cls : classes) {
+			String role = cls.startsWith(CLASS_PREFIX) ? cls.substring(CLASS_PREFIX.length()) : cls;
+			String own = GFX_PREFIX + role;
+			String sprite = worn.contains(own) ? own : common;
+			if (sprite != null) {
+				classSprites.put(cls, sprite);
+			}
+		}
+		return new ZoneContent(pools, classSprites, ballGfx.isEmpty() ? null : mostUsed(ballGfx), items);
 	}
 
 	/** The key counted most often; ties go to the first in order (the maps are sorted, so the choice is stable). */

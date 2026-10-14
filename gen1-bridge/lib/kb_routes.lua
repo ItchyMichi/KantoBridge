@@ -43,6 +43,15 @@
 -- region defaults to its first game's default region in the catalogue
 -- (kb_games).
 --
+-- MG8 (docs/specs/HOENN_PASS_PLAN.md K2-K4): an engine whose games can't
+-- take this end (Gen 3: no new maps, no map scripts, no patched exits, spike
+-- S2) installs it itself: when the adapter has routeInstall(zone), the end's
+-- zone record goes to it instead of the registries. The adapter plans the
+-- clearing on its own map data (filling zone.plan: cleared blocks, triggers,
+-- the way back; ready once planned, zone.active false when the spot doesn't
+-- check out), opens it at run time, triggers the way out and stands for the
+-- route map; such a zone is marked `own`.
+--
 -- Nothing ROM-derived is in the route list or in this file: map and class
 -- symbols, cell coordinates, counts and our own text. Logs show route ids,
 -- codes and counts only.
@@ -443,6 +452,7 @@ end
 --   game      the running game ("red", "blue", ...)
 --   games     lib/kb_games.lua (MG2: an end's default region), optional
 --   mapQuery  kb_engine.mapQuery(def, tileset)
+--   engine    kb_engine instance (MG8: routeInstall, when the adapter has its own route ends), optional
 --   log       kb_log logger (optional)
 -- Returns the runtime: zones (by route id -- a connecting route whose two
 -- ends this game both registers keeps the `from` end's zone there and the
@@ -577,6 +587,35 @@ function Routes.install(opts)
     end
   end
 
+  -- MG8: one end installed by the adapter (K2-K4): the zone record goes to
+  -- it, nothing to the registries; its classes are kept by symbol (the
+  -- adapter finds a trainer of the class at battle time)
+  local function installOwn(e, which, own)
+    local f = which == "to" and e.to or e.from
+    local zoneKey = which == "to" and (e.id .. ":to") or e.id
+    local mapId = Routes.mapId(e.id, which == "to" and "to" or nil)
+    local zone = { id = e.id, key = zoneKey, which = which, entry = e, finish = f, mapId = mapId, town = f.map,
+                   plan = { cleared = {}, triggers = {}, triggerList = {}, ready = false }, active = true,
+                   classes = {}, own = true }
+    local ok, accepted, code = pcall(own, zone)
+    if not ok or accepted ~= true then
+      problem(e.id, ok and (type(code) == "string" and code or "rejected") or "adapter_failed")
+      return
+    end
+    rt.zones[zoneKey] = zone
+    rt.byMap[mapId] = zone
+    rt.byTown[f.map] = rt.byTown[f.map] or {}
+    table.insert(rt.byTown[f.map], zone)
+    rt.stats.installed = rt.stats.installed + 1
+    rt.stats.own = (rt.stats.own or 0) + 1
+    if e.kind == "connecting" then rt.stats.connecting = rt.stats.connecting + 1 end
+    zone.classList = f.classes or e.classes
+    for _, cls in ipairs(zone.classList) do zone.classes[cls] = cls end
+    if log then log.info("routes.installed", { route = e.id, ["end"] = which, depth = f.depth, own = true }) end
+  end
+
+  local own = opts.engine ~= nil and rawget(opts.engine, "routeInstall") or nil
+  if type(own) ~= "function" then own = nil end
   for _, e in ipairs(entries) do
     -- the ends this game registers: a free-roam zone's exit, or the end(s)
     -- of a connecting route whose `games` name it (MG2)
@@ -589,7 +628,9 @@ function Routes.install(opts)
       rt.stats.unset = rt.stats.unset + 1
       rt.problems[#rt.problems + 1] = { id = e.id, code = "unset" }
     else
-      for _, which in ipairs(ends) do installEnd(e, which) end
+      for _, which in ipairs(ends) do
+        if own then installOwn(e, which, own) else installEnd(e, which) end
+      end
     end
   end
   return rt
@@ -637,7 +678,7 @@ function Routes.patchedBlocks(rt, mapId)
   -- several zones in one town: each clearing is laid over the town's blocks
   local blocks
   for _, zone in ipairs(zones) do
-    if zone.active then
+    if zone.active and not zone.own then -- (an adapter's own end bakes its clearing into its own export, MG8)
       local p = zone.plan
       blocks = blocks or copyList(p.blocks)
       for _, b in ipairs(p.cleared) do blocks[b[2] * p.width + b[1] + 1] = p.source end
@@ -662,7 +703,8 @@ function Routes.exportData(json, rt)
     -- apart)
     for _, which in ipairs(Routes.ENDS) do
     local zone = rt.zones[which == "to" and (e.id .. ":to") or e.id]
-    if zone and zone.active and zone.which == which then
+    -- (MG8: an adapter's own end goes out once it is planned)
+    if zone and zone.active and zone.which == which and zone.plan.ready ~= false then
       local p, f = zone.plan, zone.finish or e.from
       local cleared, triggers = {}, {}
       for _, b in ipairs(p.cleared) do cleared[#cleared + 1] = { b[1], b[2] } end

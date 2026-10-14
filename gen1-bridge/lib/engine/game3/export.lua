@@ -220,12 +220,16 @@ function Export3.install(b)
             warn("g3_map_size", map)
           else
             local parts = {}
+            -- MG8: a Wild Routes clearing's cells (routes.lua) are baked in, open, as the hidden game runs them
+            local opened = type(b.routeCells) == "function" and b.routeCells(map) or {}
             for cy = 0, h - 1 do
               for cx = 0, w - 1 do
                 local c = lay.cells[cy * w + cx + 1]
                 local mid = type(c) == "table" and floor(tonumber(c.mid) or 0) or 0
                 local coll = type(c) == "table" and floor(tonumber(c.coll) or 0xff) or 0xff
                 local elev = type(c) == "table" and floor(tonumber(c.elev) or 0) or 0
+                local o = opened[cy * 1024 + cx]
+                if o then mid, coll, elev = floor(o.mid), 0x00, floor(o.elev) end
                 parts[#parts + 1] = u16(mid % 1024) .. char(coll % 256, elev % 16)
               end
               if cy % 16 == 15 then checkpoint() end

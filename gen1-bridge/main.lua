@@ -101,6 +101,8 @@ return function(mod)
     json = kb.json, text = type(routesText) == "string" and routesText or nil,
     content = mod.content, world = mod.world, game = engine.gameVersion(),
     mapQuery = engine.mapQuery, log = log,
+    -- MG8: an adapter with its own route ends (Gen 3) installs them itself
+    engine = engine,
     -- MG2 (routes v2): an end's default region comes from the catalogue
     games = kb.games,
   })
@@ -750,7 +752,12 @@ return function(mod)
   mod.hooks:wrap("world.talk", perf.hook(function(nextFn, ow, target)
     return engine.worldTalk(nextFn, ow, target)
   end))
-  mod.events:on("world.stepped", perf.timed(function() pcall(engine.directStepped) end))
+  mod.events:on("world.stepped", perf.timed(function()
+    pcall(engine.directStepped)
+    -- MG8: Gen 3's route ends trigger on the step (no map scripts there, spike S2)
+    local routeStepped = rawget(engine, "routeStepped")
+    if type(routeStepped) == "function" then pcall(routeStepped) end
+  end))
   mod.events:on("pokemon.caught", perf.timed(function(payload) pcall(engine.nativeCaught, payload) end))
   -- Every hidden-game save (Game:writeSave emits save.writing before the
   -- file is written, src/core/Game.lua:1376-1378): Minecraft saves too
@@ -813,6 +820,16 @@ return function(mod)
       local okV, more = pcall(engine.takeVerdicts)
       if okV and type(more) == "table" then
         for _, v in ipairs(more) do capped(ev.verdicts, v) end
+      end
+    end
+    -- MG8 (docs/specs/HOENN_PASS_PLAN.md K2): an adapter that stands for a route map itself (Gen 3) hands over
+    -- the warp it made of entering one (no engine warp runs: the hidden player is parked where it stands)
+    local takeRoute = rawget(engine, "takeRouteEvents")
+    if type(takeRoute) == "function" then
+      local okR, rev = pcall(takeRoute)
+      if okR and type(rev) == "table" then
+        if rev.warped and not ev.warped then ev.warped = rev.warped end
+        for _, e in ipairs(type(rev.entered) == "table" and rev.entered or {}) do capped(ev.entered, e) end
       end
     end
     local mode = kb.Player.classify(facts)
@@ -1045,7 +1062,12 @@ return function(mod)
   end))
   -- From the first map load on, the live Data may differ from the import
   -- (map.entered, src/world/OverworldController.lua:685).
-  mod.events:on("map.entered", perf.timed(function() exporter.onMapEntered() end))
+  mod.events:on("map.entered", perf.timed(function(payload)
+    exporter.onMapEntered()
+    -- MG8: a Gen 3 map load clears the cells a route's clearing opened; the adapter opens them again
+    local routeEntered = rawget(engine, "routeMapEntered")
+    if type(routeEntered) == "function" then pcall(routeEntered, payload) end
+  end))
 
   -- Warps and steps (M3). Events and hooks only: they die with this
   -- instance's loader on a hot reload. player.warped comes from takeWarp

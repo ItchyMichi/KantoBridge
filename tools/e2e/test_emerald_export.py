@@ -58,7 +58,7 @@ async def _export(port):
     index = reply["data"]
     assert index["game"] == GAME
     entries = index["resources"]
-    assert {e["kind"] for e in entries} == KINDS, sorted({e["kind"] for e in entries})
+    assert {e["kind"] for e in entries} == KINDS | {"routes"}, sorted({e["kind"] for e in entries})  # MG8
     fetch_started = time.monotonic()
     want = {}
     for e in entries:
@@ -176,7 +176,18 @@ def _report(got):
         "objects_stays": dict(stays), "pairs_with_land": sum(1 for t in tiles.values() if "land" in t),
         "land_behaviors": land_names, "land_cells": land_cells, "land_weights": encounters.get("landWeights"),
         "warps": sum(len(m["warps"]) for m in maps.values()),
+        # MG8: the zones this game runs (our own route list's symbols and cells) and the test pass's clearing in
+        # Littleroot's cells (collision bytes only)
+        "routes": next((d for (k, _), d in pages.items() if k == "routes"), None),
+        "clearing_colls": _colls(maps.get("EM_LITTLEROOT_TOWN"), [(x, y) for y in (16, 17, 18, 19) for x in (18, 19)]),
     }
+
+
+def _colls(m, cells):
+    if not m:
+        return None
+    raw = base64.b64decode(m["cells"])
+    return [raw[(y * m["w"] + x) * 4 + 2] for x, y in cells]
 
 
 @pytest.mark.e2e
@@ -213,3 +224,12 @@ def test_the_emerald_export_end_to_end():
     assert report["objects_stays"].get("missing", 0) == 0, report["objects_stays"]
     assert report["pairs_with_land"] == 75 and report["land_cells"] > 0
     assert report["land_weights"] == [20, 20, 10, 10, 10, 10, 5, 5, 4, 4, 1, 1]
+    # MG8: the test pass's Hoenn end (docs/specs/HOENN_PASS_PLAN.md K1), its clearing baked in, open
+    routes = report["routes"]
+    assert routes["version"] == 2 and [r["id"] for r in routes["routes"]] == ["kanto_hoenn_test"], routes
+    item = routes["routes"][0]
+    assert item["end"] == "to" and item["ends"]["to"] == {"region": "hoenn", "games": ["emerald"]}
+    assert item["town"] == {"map": "EM_LITTLEROOT_TOWN", "cleared": [[9, 8], [9, 9]], "triggers": [[18, 19], [19, 19]],
+                            "back": {"x": 18, "y": 18, "facing": "up"}}, item["town"]
+    assert item["routeMap"]["id"] == "KB_ROUTE_KANTO_HOENN_TEST_TO"
+    assert report["clearing_colls"] == [0] * 8, report["clearing_colls"]

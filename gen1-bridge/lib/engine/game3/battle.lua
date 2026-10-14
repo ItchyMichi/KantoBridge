@@ -230,14 +230,15 @@ function Battle3.install(b)
     if st and st.battle == rec then st.battle = nil end
     rec.state = "done"
     local done = rec.done
-    if rec.aborted and not rec.firstBattle then
+    -- (MG8: a zone battle's act waits for its answer, so an abort answers it too, as a run)
+    if rec.aborted and not rec.firstBattle and not rec.route then
       -- a script stops here, so its trainer challenges again (gen1: "the script stops")
       local Space = b.g3("scripting.space")
       local vm = type(Space) == "table" and Space.vm or nil
       if type(vm) == "table" and type(vm.isRunning) == "function" and vm:isRunning() then pcall(vm.halt, vm) end
       return
     end
-    local word = rec.aborted and "win" or result
+    local word = rec.aborted and (rec.route and "run" or "win") or result
     showThen(rec.texts or {}, 1, function()
       if type(done) == "function" then pcall(done, word) end
     end)
@@ -267,6 +268,7 @@ function Battle3.install(b)
       id = plan.id, kind = plan.kind, data = plan.data, path = facts.path, state = "waiting", cls = facts.cls,
       wild = facts.wild, session = b.session(), done = opts.done, trainerId = facts.party, texts = {},
       firstBattle = opts.firstBattleKind ~= nil or opts.firstBattle == true, starting = true,
+      route = opts.kbRoute == true,
     }
     st.battle = rec
     local o = copy(opts)

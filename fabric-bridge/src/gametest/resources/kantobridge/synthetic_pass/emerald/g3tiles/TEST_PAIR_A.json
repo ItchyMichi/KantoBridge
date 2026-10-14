@@ -1,0 +1,1 @@
+{"beh":[0,2,17,0,105,0,59,0],"behaviors":{"0":"MB_NORMAL","105":"MB_ANIMATED_DOOR","17":"MB_POND_WATER","2":"MB_TALL_GRASS","59":"MB_JUMP_SOUTH"},"id":"TEST_PAIR_A","land":[2],"mids":[0,1,2,3,4,5,6,7],"over":[false,false,false,false,false,true,false,false],"quarters":[[0,0,0,0],[1,2,3,4],[5,6,7,8],[9,9,9,9],[10,11,12,13],[14,15,16,17],[18,19,20,21],[22,23,24,25]]}

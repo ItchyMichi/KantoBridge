@@ -108,6 +108,11 @@ function FakeBattle3.attach(E)
     return { species = party[1].species, level = party[1].level, party = party, trainerId = tonumber(id),
              trainerClass = t.class, trainerName = t.name, doubleBattle = t.double }
   end
+  -- Trainers.get (scripting/trainers.lua:90-132): the record by id (class, name, party)
+  function E.Trainers.get(id)
+    local t = E.trainerTable[tonumber(id)]
+    return t and { id = tonumber(id), class = t.class, className = t.className, name = t.name, party = t.party } or nil
+  end
   function E.Trainers.info(id)
     local t = E.trainerTable[tonumber(id)]
     return t and { class = t.class, className = t.className, name = t.name, party = t.party } or nil
@@ -254,6 +259,7 @@ function FakeBattle3.attach(E)
   E.hms, E.tms = {}, {}
   E.ItemsData = { CAPACITY = { ITEMS = 30, KEY_ITEMS = 30, POKE_BALLS = 16, TM_CASE = 64, BERRY_POUCH = 46 } }
   function E.ItemsData.pocketOf(id) return E.itemPockets[tonumber(id)] or "ITEMS" end
+  function E.ItemsData.displayName(id) return ("TEST ITEM %d"):format(tonumber(id) or 0) end
   function E.ItemsData.isHm(id) return E.hms[tonumber(id)] == true end
   function E.ItemsData.isTm(id) return E.tms[tonumber(id)] == true end
   local function pocketList(bag, id)

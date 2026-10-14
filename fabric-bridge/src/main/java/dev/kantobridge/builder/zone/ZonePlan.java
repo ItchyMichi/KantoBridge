@@ -9,6 +9,7 @@ import dev.kantobridge.builder.plan.Box3;
 import dev.kantobridge.builder.plan.HabitatPlanner;
 import dev.kantobridge.builder.plan.WorldPlan;
 import dev.kantobridge.pokemon.GenOneIds;
+import dev.kantobridge.pokemon.NationalDexIds;
 import dev.kantobridge.proto.ProtoJson;
 import dev.kantobridge.routes.gen.Cell;
 import dev.kantobridge.routes.gen.CellRole;
@@ -322,8 +323,12 @@ public final class ZonePlan {
 	static JsonObject pool(String routeMap, int area, List<ZoneContent.Slot> slots, int levelOffset) {
 		JsonArray spawns = new JsonArray();
 		for (ZoneContent.Slot slot : slots) {
+			// MG8: a Hoenn half's pool names the first three generations' species (Cobblemon's ids, NationalDexIds)
+			if (!NationalDexIds.isDex(slot.dex())) {
+				continue;
+			}
 			JsonObject spawn = new JsonObject();
-			spawn.addProperty("species", GenOneIds.NAMESPACE + ":" + GenOneIds.speciesId(slot.dex()));
+			spawn.addProperty("species", GenOneIds.NAMESPACE + ":" + NationalDexIds.speciesId(slot.dex()));
 			spawn.addProperty("spawnablePositionType", HabitatPoolWriter.POSITION);
 			spawn.addProperty("bucket", HabitatPoolWriter.BUCKET);
 			spawn.addProperty("weight", slot.weight());

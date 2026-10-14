@@ -124,6 +124,8 @@ function Move.install(b)
     local kind = (type(x) == "number" and type(y) == "number") and kindAt(x, y) or nil
     local d = DELTA[facing]
     if not kind and d and type(x) == "number" then kind = kindAt(x + d[1], y + d[2]) end
+    -- MG8: a Wild Routes end's own warps (the way back, a resume onto the route map) are script warps, as Gen 1's
+    if type(b.routeOwnWarp) == "function" and b.routeOwnWarp() then kind = "script" end
     out.kind = kind or "door"
     return out
   end)

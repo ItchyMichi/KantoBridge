@@ -16,10 +16,11 @@ from . import synth, synth3
 from .server import BRIDGE_VERSION, ENGINE_VERSION
 
 
-def write_bundle(directory, game="red"):
+def write_bundle(directory, game="red", variant=None):
+    """variant (MG8, Gen 3 only): "pass", the town with a Wild Routes end (synth3.resources)."""
     root = Path(directory) / game
     gen3 = load_games().family(game) == "gen3"
-    resources = synth3.resources(game) if gen3 else synth.resources(game)
+    resources = synth3.resources(game, variant=variant) if gen3 else synth.resources(game)
     index = synth.index(game, ENGINE_VERSION, BRIDGE_VERSION, resources)
     for (kind, rid), data in resources.items():
         path = root / kind / f"{rid}.json"

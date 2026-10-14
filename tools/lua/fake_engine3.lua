@@ -1025,15 +1025,7 @@ function FakeEngine3.new(opts)
     E.Runtime.active, E.Runtime.session = true, s
     F.running, F._locks, F._fieldCallback = true, {}, false
     E.Map.current = map
-    -- the layout (layout_native.lua:15-34): base cells with made-up metatiles (1 + (x + y) % 8), no
-    -- overrides (a map load clears them, field.lua:81-88)
-    local w, h = o.width or 20, o.height or 20
-    local cells = {}
-    for cy = 0, h - 1 do
-      for cx = 0, w - 1 do cells[cy * w + cx + 1] = { mid = 1 + (cx + cy) % 8, coll = 0, elev = 3 } end
-    end
-    E.Map._def = { id = map, midLayout = { width = w, height = h, trueWidth = w, trueHeight = h, cells = cells,
-                                           overrides = {}, _revision = 0 } }
+    E.Map._def = { id = map, midLayout = E.newLayout(map, o.width, o.height) }
     E.Objects._byId, E.Objects._order = {}, {}
     E.Space.store = { flags = deepCopy(s.flags or {}), vars = deepCopy(s.vars or {}) }
     E.Space.vm.running = false
@@ -1056,6 +1048,77 @@ function FakeEngine3.new(opts)
     E.Message.open = false
     E.game.phase, E.game.session = "boot", nil
     E.game.boot = { phase = bootPhase or "title" }
+  end
+
+  -- The layout of a map load (layout_native.lua:15-34): base cells with made-up metatiles (1 + (x + y) % 8,
+  -- plain ground, elevation 3) unless E.layouts[map](cx, cy) gives (mid, coll, elev); no overrides (a map
+  -- load clears them, field.lua:81-88); applyOverride and elevAt as layout_native.lua:96-131's.
+  E.layouts = {}
+  function E.newLayout(map, w, h)
+    w, h = w or 20, h or 20
+    local fn = E.layouts[map]
+    local cells = {}
+    for cy = 0, h - 1 do
+      for cx = 0, w - 1 do
+        if fn then
+          local mid, coll, elev = fn(cx, cy)
+          cells[cy * w + cx + 1] = { mid = mid, coll = coll, elev = elev }
+        else
+          cells[cy * w + cx + 1] = { mid = 1 + (cx + cy) % 8, coll = 0, elev = 3 }
+        end
+      end
+    end
+    local lay = { width = w, height = h, trueWidth = w, trueHeight = h, cells = cells, overrides = {}, _revision = 0 }
+    function lay.applyOverride(self, x, y, mid, coll, elev)
+      self._revision = (self._revision or 0) + 1
+      self.overrides[y * 1024 + x] = { mid = tonumber(mid) or 0, coll = coll ~= nil and coll or 0xff, elev = elev or 0 }
+    end
+    function lay.elevAt(self, x, y)
+      local ov = self.overrides[y * 1024 + x]
+      if ov then return ov.elev end
+      local c = self.cells[y * self.width + x + 1]
+      return c and c.elev or 0
+    end
+    return lay
+  end
+
+  -- Field.setMetatile (field.lua:2194-2241): the layout's override, its collision passable unless
+  -- impassable, its elevation the cell's (an override's first: elevAt).
+  function F.setMetatile(x, y, mid, impassable)
+    local l = E.Map._def and E.Map._def.midLayout
+    if not l then return end
+    l:applyOverride(x, y, mid, impassable and 0x07 or 0x00, l:elevAt(x, y))
+    E.setMetatiles = (E.setMetatiles or 0) + 1
+  end
+
+  -- A warp's map load (Warp.request -> Map.load, warp.lua:1378-1420): the map's layout new (every override
+  -- gone), its objects new, the player on the cell, map.entered{via="warp"} -- but not for a load of the map
+  -- the player is on (map.lua:776-786: a same-map load emits no map.entered); locks stay (Field.start isn't run).
+  function E.loadMap(map, x, y, facing)
+    local s = E.game.session
+    if s then s.map, s.x, s.y, s.facing = map, x, y, facing or s.facing end
+    local from = E.Map.current
+    E.Map.current = map
+    local old = E.Map._def and E.Map._def.midLayout
+    E.Map._def = { id = map, midLayout = E.newLayout(map, old and old.width, old and old.height) }
+    E.Objects._byId, E.Objects._order = {}, {}
+    P.cellX, P.cellY, P.facing = x, y, facing or P.facing
+    P.targetX, P.targetY, P.moving, P.progress = x, y, false, 0
+    if from ~= map then emit("map.entered", { mapId = map, via = "warp" }) end
+  end
+
+  -- mod.world's Gen 3 facade (src/world/game3/WorldAPI.lua): warpTo (:330-343; E.refuseWarp: "warp busy")
+  -- and replaceBlock (:419-430).
+  E.worldApi = { warps = {} }
+  function E.worldApi.warpTo(_, map, x, y, facing)
+    E.worldApi.warps[#E.worldApi.warps + 1] = { map = map, x = x, y = y, facing = facing }
+    if E.refuseWarp or not E.game.session then return nil, "warp busy" end
+    E.loadMap(map, x, y, facing or "down")
+    return true
+  end
+  function E.worldApi.replaceBlock(_, x, y, mid)
+    F.setMetatile(x, y, mid, false)
+    return true
   end
 
   -- Field.setMetatile (field.lua:2194-2241) on the current map: the layout's override for the cell

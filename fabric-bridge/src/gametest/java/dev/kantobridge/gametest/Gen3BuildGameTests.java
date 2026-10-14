@@ -48,6 +48,8 @@ public class Gen3BuildGameTests implements FabricGameTest {
 	static final int ORIGIN_Z = 3_200_000;
 	private static final String EMERALD = "kantobridge/synthetic_bundle/emerald/";
 	private static final String RED = "kantobridge/synthetic_bundle/red/";
+	/** MG8: the synthetic Hoenn's town with the Hoenn half of a connecting route (synth3's pass variant). */
+	private static final String EMERALD_PASS = "kantobridge/synthetic_pass/emerald/";
 	private static final String HOENN = "hoenn";
 	private static final String DATA = "kantobridge";
 	private static final String POOLS = "datapacks/kantobridge_generated/data/kantobridge/habitat_pools/";
@@ -162,6 +164,52 @@ public class Gen3BuildGameTests implements FabricGameTest {
 					helper.assertTrue("red".equals(slots.artSet(RegionRecord.LEGACY_ID)) && "emerald".equals(slots.artSet(HOENN)),
 							"the slot map's art sets: " + slots.artSet(RegionRecord.LEGACY_ID) + ", " + slots.artSet(HOENN));
 					helper.assertTrue(Files.isRegularFile(dir.resolve(POOLS + "test_town.json")), "kanto's pool left the datapack");
+				})
+				.thenExecute(() -> delete(dir))
+				.thenSucceed();
+	}
+
+	/**
+	 * MG8 (docs/specs/HOENN_PASS_PLAN.md HP5): the synthetic Hoenn's town with the Hoenn half of a connecting route,
+	 * built as region hoenn: the half in the region's index with its pass to Kanto and its gate house, trainers in the
+	 * trainers' graphic with the town's neighbours in their parties, the route map placed at the trailhead, and blocks in
+	 * the zone's box.
+	 */
+	@GameTest(template = EMPTY_STRUCTURE, batch = BATCH + "_pass", timeoutTicks = 12000)
+	public void hoennsHalfOfThePassIsBuilt(GameTestHelper helper) {
+		Path dir = temp("kantobridge-gen3-pass");
+		BuildTask[] task = {start(helper, dir, EMERALD_PASS, HOENN, 1)};
+		helper.startSequence()
+				.thenWaitUntil(() -> waitFor(helper, task))
+				.thenExecute(() -> {
+					helper.assertTrue(task[0].succeeded(), "hoenn build failed: " + task[0].report().error);
+					WorldIndex index = index(dir, HOENN);
+					helper.assertTrue(index.zones().size() == 1, "zones: " + index.zones().size());
+					WorldIndex.Zone zone = index.zones().get(0);
+					helper.assertTrue("test_pass".equals(zone.id()) && "KB_ROUTE_TEST_PASS_TO".equals(zone.routeMap()), "zone " + zone.id());
+					helper.assertTrue(zone.pass() != null && "kanto".equals(zone.pass().toRegion()) && "to".equals(zone.pass().end()),
+							"the pass to Kanto");
+					helper.assertTrue(zone.gateHouse() != null, "the gate house");
+					helper.assertTrue(!zone.trainers().isEmpty(), "trainers from the town's neighbours");
+					for (WorldIndex.ZoneTrainer trainer : zone.trainers()) {
+						helper.assertTrue("OBJ_EVENT_GFX_TEST_TRAINER".equals(trainer.sprite()), "sprite " + trainer.sprite());
+						for (WorldIndex.PartyMember member : trainer.party()) {
+							helper.assertTrue(member.species().startsWith("TEST_"), "species " + member.species());
+						}
+					}
+					helper.assertTrue(index.map("KB_ROUTE_TEST_PASS_TO") != null, "the route map's placement");
+					// something stands in the zone's box (its floor and walls)
+					int solid = 0;
+					for (int x = zone.x(); x < zone.x() + zone.w(); x += 4) {
+						for (int z = zone.z(); z < zone.z() + zone.d(); z += 4) {
+							for (int y = zone.y() - 2; y <= zone.y() + 2; y++) {
+								if (!helper.getLevel().getBlockState(new net.minecraft.core.BlockPos(x, y, z)).isAir()) {
+									solid++;
+								}
+							}
+						}
+					}
+					helper.assertTrue(solid > 0, "the zone's box is empty");
 				})
 				.thenExecute(() -> delete(dir))
 				.thenSucceed();

@@ -37,6 +37,10 @@
 --                   trainer's; each starts once the last one's done ran and
 --                   the field is idle. KB_TRAINER n= id= members=, KB_WILD
 --                   dex= level=, KB_BATTLE_DONE n= result=.
+--   route           (MG8) the same new game, then onto the exit cell of the
+--                   Wild Routes test pass's Hoenn end (data/routes.json:
+--                   EM_LITTLEROOT_TOWN (18, 14), facing down); serves: the
+--                   test walks the clearing into the route map and back.
 --   title_continue  the same new game saved into the test slot, then back to
 --                   the title (Game3:returnToTitle); serves: region.start
 --                   CONTINUEs.
@@ -171,7 +175,7 @@ return function(game)
           print(("KB_TITLE slot=%d hasSave=%s"):format(num(active()), word(slotHasSave(active()))))
           phase = "serve"
         elseif SCENE == "field" or SCENE == "title_continue" or SCENE == "sign" or SCENE == "story"
-            or SCENE == "battle" then
+            or SCENE == "battle" or SCENE == "route" then
           local ok, err = pcall(game._handleBootAction, game, { action = "new_game", name = "TEST", gender = 0 })
           if not ok then fail("new_game " .. word(err):sub(1, 40)) end
           phase = "newgame"
@@ -186,6 +190,8 @@ return function(game)
         local w = def and def.warps and def.warps[1]
         if not w then fail("no_town_warp") end
         start = { x = tonumber(w.x), y = tonumber(w.y) + 1 }
+        -- MG8: the test pass's exit cell (gen1-bridge/data/routes.json's `to` end)
+        if SCENE == "route" then start = { x = 18, y = 14 } end
         local Warp = mod3("warp")
         local ok = pcall(Warp.request, nil, game, TOWN, start.x, start.y, "down", { fade = false })
         if not ok then fail("warp_request") end
@@ -205,7 +211,7 @@ return function(game)
             wall = d[1]
           end
         end
-        if SCENE == "field" or SCENE == "story" or SCENE == "battle" then
+        if SCENE == "field" or SCENE == "story" or SCENE == "battle" or SCENE == "route" then
           print(("KB_SERVING map=%s x=%d y=%d wall=%s"):format(TOWN, start.x, start.y, wall))
           phase = "serve"
         elseif SCENE == "sign" then
