@@ -362,6 +362,28 @@ class Gen3PlanTest {
 		assertNull(Gen3Planner.startDoor(all, Set.of("A_TOWN"), doors, "A_TOWN", null));
 	}
 
+	@Test
+	void mapsOnlyAScriptReachesArePlacedUnderTheRoot() {
+		// the user's item 6: the ferry's islands, contest halls and the like; the start room first; the unused never
+		G3Map.Border border = new G3Map.Border(1, 1, new int[] {0});
+		G3Map town = map("A_TOWN", List.of(), List.of(new G3Map.Warp(1, 1, "A_HOUSE", 0, false)), border);
+		G3Map house = map("A_HOUSE", List.of(), List.of(new G3Map.Warp(0, 2, "A_TOWN", 0, false)), border);
+		G3Map truck = map("A_TRUCK", List.of(), List.of(new G3Map.Warp(3, 1, null, 0, true)), border);
+		G3Map harbor = map("A_ISLAND_HARBOR", List.of(), List.of(new G3Map.Warp(2, 1, "A_ISLAND_TOP", 0, false)), border);
+		G3Map top = map("A_ISLAND_TOP", List.of(), List.of(new G3Map.Warp(1, 2, "A_ISLAND_HARBOR", 0, false)), border);
+		G3Map hall = map("A_CONTEST_HALL", List.of(), List.of(), border);
+		G3Map unused = map("A_UNUSED_HALL", List.of(), List.of(), border);
+		Map<String, G3Map> all = Map.of("A_TOWN", town, "A_HOUSE", house, "A_TRUCK", truck, "A_ISLAND_HARBOR", harbor, "A_ISLAND_TOP", top,
+				"A_CONTEST_HALL", hall, "A_UNUSED_HALL", unused);
+		Map<String, Gen3Planner.Door> doors = Gen3Planner.doors(all, Set.of("A_TOWN"), "A_TOWN", new G3Data.Start("A_TRUCK", 2, 2));
+		assertEquals(new Gen3Planner.Door("A_TOWN", 2, 1, 2, 2, true, "start"), doors.get("A_TRUCK"));
+		assertEquals(new Gen3Planner.Door("A_TOWN", 2, 1, 0, 0, true, "script"), doors.get("A_CONTEST_HALL"), "no warps: its corner");
+		assertEquals(new Gen3Planner.Door("A_TOWN", 2, 1, 2, 1, true, "script"), doors.get("A_ISLAND_HARBOR"), "its first warp's cell");
+		assertEquals("warp", doors.get("A_ISLAND_TOP").via(), "the rest of the group through its warps");
+		assertFalse(doors.containsKey("A_UNUSED_HALL"));
+		assertFalse(Gen3Planner.doors(all, Set.of("A_TOWN")).containsKey("A_CONTEST_HALL"), "without a root: warps and exits only");
+	}
+
 	private static G3Map map(String id, List<G3Map.Connection> connections, List<G3Map.Warp> warps, G3Map.Border border) {
 		int n = 4 * 3;
 		return new G3Map(id, 4, 3, 4, 3, "P", new int[n], new int[n], new int[n], border, connections, warps, List.of(), 3, "route", 0, 0);

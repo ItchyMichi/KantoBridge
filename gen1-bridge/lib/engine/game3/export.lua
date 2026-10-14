@@ -242,7 +242,11 @@ function Export3.install(b)
             local warps = {}
             for _, wp in ipairs(type(mdef.warps) == "table" and mdef.warps or {}) do
               local wx, wy = tonumber(wp.x), tonumber(wp.y)
-              local id = tonumber(wp.destWarp or wp.warpId) or 0
+              -- the engine keeps a warp's landing 1-based (destWarp = warp_id + 1, src/import/gba/extract_map_events.lua:313;
+              -- Collision.resolveWarpDestination reads warps[destWarp]); the export's is 0-based
+              local id = tonumber(wp.destWarp)
+              id = id and id - 1 or tonumber(wp.warpId) or 0
+              if id < 0 then id = 0 end
               if wx and wy and wx >= 0 and wy >= 0 and wx <= 1023 and wy <= 1023 then
                 local e = { x = floor(wx), y = floor(wy), warp = floor(id) % 256 }
                 if b.symbol(wp.destMap) then e.to = wp.destMap else e.dynamic = true end

@@ -232,7 +232,7 @@ function FakeExport3.attach(E)
       -- the import's list form (connections.lua: { dir, map, offset }, the engine's up/right names)
       connections = { { dir = "up", map = "EM_TEST_ROUTE", offset = 1 }, { dir = "right", map = "EM_TEST_SEA", offset = -2 },
                       { dir = "dive", map = "EM_TEST_SEA", offset = 0 } },
-      warps = { { x = 2, y = 1, destMap = "EM_TEST_HOUSE", destWarp = 0 }, { x = 4, y = 1, destMap = nil, destWarp = 0,
+      warps = { { x = 2, y = 1, destMap = "EM_TEST_HOUSE", destWarp = 1 }, { x = 4, y = 1, destMap = nil, destWarp = 3,
                 mapGroup = 0, mapNum = 127 } } },
       layout(6, 4, 8, function(cx, cy) return (cx + cy * 6) % 8 end))
     maps.EM_TEST_ROUTE = E.lazyMap({ id = "EM_TEST_ROUTE", pair = "TEST_A", kind = "route", mapType = 3, music = 301,
@@ -242,7 +242,7 @@ function FakeExport3.attach(E)
       weather = 0, connections = { west = { map = "EM_TEST_TOWN", offset = 2 } }, warps = {} },
       layout(3, 3, 3, function() return 3 end))
     maps.EM_TEST_HOUSE = E.lazyMap({ id = "EM_TEST_HOUSE", pair = "TEST_B", kind = "indoor", mapType = 8, music = 303,
-      weather = 0, connections = {}, warps = { { x = 1, y = 2, destMap = "EM_TEST_TOWN", destWarp = 0 } } },
+      weather = 0, connections = {}, warps = { { x = 1, y = 2, destMap = "EM_TEST_TOWN", destWarp = 1 } } },
       layout(2, 3, 2, function(cx) return 512 + cx end, { 512, 513 }))
     E.game.data = { maps = maps }
     E.Space.bundle.events.EM_TEST_TOWN = { objects = {

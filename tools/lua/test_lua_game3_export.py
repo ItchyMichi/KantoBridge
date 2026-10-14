@@ -93,7 +93,8 @@ def test_a_map_carries_its_layouts_own_cells_and_its_events():
                                    {"dir": "east", "map": "EM_TEST_SEA", "offset": -2},
                                    {"dir": "dive", "map": "EM_TEST_SEA", "offset": 0}]
     assert res[("g3map", "EM_TEST_ROUTE")]["connections"] == [{"dir": "south", "map": "EM_TEST_TOWN", "offset": -1}]
-    assert town["warps"] == [{"x": 2, "y": 1, "warp": 0, "to": "EM_TEST_HOUSE"}, {"x": 4, "y": 1, "warp": 0, "dynamic": True}]
+    # the engine's landings are 1-based (destWarp 1 and 3), the export's 0-based
+    assert town["warps"] == [{"x": 2, "y": 1, "warp": 0, "to": "EM_TEST_HOUSE"}, {"x": 4, "y": 1, "warp": 2, "dynamic": True}]
     # stays: the engine's movement for the template (looking about and standing keep the cell, walking leaves it)
     assert town["objects"] == [
         {"lid": 1, "gfx": "OBJ_EVENT_GFX_TEST_HIKER", "x": 3, "y": 2, "elev": 3, "flag": 0x101, "kind": "person",

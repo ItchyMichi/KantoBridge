@@ -31,6 +31,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.TreeSet;
+import java.util.regex.Pattern;
 import org.jetbrains.annotations.Nullable;
 
 /**
@@ -86,15 +87,11 @@ final class Gen3Planner {
 				warnings.warn("layout_connection_missing_map");
 			}
 		}
-		Map<String, Door> doors = doors(all, surface);
-		Door startDoor = startDoor(all, surface, doors, root, layout.start());
-		if (startDoor != null) {
-			doors.put(layout.start().map(), startDoor);
-		}
+		Map<String, Door> doors = doors(all, surface, root, layout.start());
 
 		List<String> requested = new ArrayList<>();
 		if (options.maps() == null) {
-			// Every map that can be reached from the surface; the rest (event-only maps, dynamic warps' targets) is left out.
+			// Every map a player can be in: reached from the surface, or put there by a script (doors); the unused are left out.
 			for (String id : all.keySet()) {
 				if (surface.contains(id) || doors.containsKey(id)) {
 					requested.add(id);
@@ -251,16 +248,66 @@ final class Gen3Planner {
 		return all;
 	}
 
+	/** Maps no player ever enters (the decomp's leftovers): never placed by a script's rule. */
+	static final Pattern UNUSED = Pattern.compile(".*(UNUSED|PROTOTYPE).*");
+
+	/** {@link #doors(Map, Collection, String, G3Data.Start)} without a root: warps, connections and exits only. */
+	static Map<String, Door> doors(Map<String, G3Map> all, Collection<String> surface) {
+		return doors(all, surface, null, null);
+	}
+
 	/**
 	 * Every interior's door: breadth-first from the surface, a layer at a time in id order; each map's warps in order (the
 	 * first that leads into a map makes it that map's door; a dynamic warp leads nowhere known), then its connections to
 	 * maps off the surface (dive and emerge, and the areas of an outdoor group entered by a warp). Then the maps only left
-	 * by a warp (kind {@code exit}: the truck), under the cell their warp lands on.
+	 * by a warp (kind {@code exit}), under the cell their warp lands on; with a root, the room a new game starts in (kind
+	 * {@code start}, {@link #startDoor}) and every other map a player can be put in by a script, a ferry or a dynamic
+	 * warp (kind {@code script}: contest halls, the islands, secret bases), under the root's middle, each with the maps
+	 * its warps reach; the {@link #UNUSED} ones are left out.
 	 */
-	static Map<String, Door> doors(Map<String, G3Map> all, Collection<String> surface) {
+	static Map<String, Door> doors(Map<String, G3Map> all, Collection<String> surface, @Nullable String root, G3Data.@Nullable Start start) {
 		Map<String, Door> out = new LinkedHashMap<>();
 		Set<String> visited = new HashSet<>(surface);
-		List<String> layer = new ArrayList<>(new TreeSet<>(surface));
+		spread(all, out, visited, new TreeSet<>(surface));
+		boolean startDone = false;
+		boolean added = true;
+		while (added) {
+			added = exits(all, out, visited);
+			if (added || root == null || !all.containsKey(root)) {
+				continue;
+			}
+			if (!startDone) {
+				startDone = true;
+				Door door = startDoor(all, visited, out, root, start);
+				if (door != null) {
+					out.put(start.map(), door);
+					visited.add(start.map());
+					spread(all, out, visited, new TreeSet<>(Set.of(start.map())));
+					added = true;
+					continue;
+				}
+			}
+			for (String id : new TreeSet<>(all.keySet())) {
+				if (visited.contains(id) || UNUSED.matcher(id).matches()) {
+					continue;
+				}
+				G3Map rootMap = all.get(root);
+				G3Map head = all.get(id);
+				G3Map.Warp arrival = head.warps().isEmpty() ? null : head.warps().get(0);
+				out.put(id, new Door(root, rootMap.trueW() / 2, rootMap.trueH() / 2, arrival == null ? 0 : arrival.x(),
+						arrival == null ? 0 : arrival.y(), true, "script"));
+				visited.add(id);
+				spread(all, out, visited, new TreeSet<>(Set.of(id)));
+				added = true;
+				break;
+			}
+		}
+		return out;
+	}
+
+	/** Breadth-first from {@code layer} through warps and connections, a layer at a time in id order. */
+	private static void spread(Map<String, G3Map> all, Map<String, Door> out, Set<String> visited, Collection<String> first) {
+		List<String> layer = new ArrayList<>(first);
 		while (!layer.isEmpty()) {
 			Set<String> next = new TreeSet<>();
 			for (String id : layer) {
@@ -288,30 +335,32 @@ final class Gen3Planner {
 			}
 			layer = new ArrayList<>(next);
 		}
-		// MG8: a map no warp leads into but whose own warp leads out into the region (the moving truck every new game
-		// starts in) is placed as an interior under the cell that warp lands on, its warp's cell as the arrival, so the
-		// hidden player has somewhere to stand; in rounds, since such a map may lead into another one.
-		boolean added = true;
-		while (added) {
-			added = false;
-			for (String id : new TreeSet<>(all.keySet())) {
-				if (visited.contains(id)) {
+	}
+
+	/**
+	 * MG8: one round of the maps no warp leads into but whose own warp leads out into the placed ones (they may lead into
+	 * each other): each under the cell its warp lands on, its warp's cell as the arrival, so the hidden player has
+	 * somewhere to stand. True when one was added.
+	 */
+	private static boolean exits(Map<String, G3Map> all, Map<String, Door> out, Set<String> visited) {
+		boolean added = false;
+		for (String id : new TreeSet<>(all.keySet())) {
+			if (visited.contains(id)) {
+				continue;
+			}
+			for (G3Map.Warp warp : all.get(id).warps()) {
+				G3Map parent = warp.to() == null || warp.dynamic() || !visited.contains(warp.to()) ? null : all.get(warp.to());
+				if (parent == null || warp.warp() >= parent.warps().size()) {
 					continue;
 				}
-				for (G3Map.Warp warp : all.get(id).warps()) {
-					G3Map parent = warp.to() == null || warp.dynamic() || !visited.contains(warp.to()) ? null : all.get(warp.to());
-					if (parent == null || warp.warp() >= parent.warps().size()) {
-						continue;
-					}
-					G3Map.Warp landing = parent.warps().get(warp.warp());
-					out.put(id, new Door(parent.id(), landing.x(), landing.y(), warp.x(), warp.y(), true, "exit"));
-					visited.add(id);
-					added = true;
-					break;
-				}
+				G3Map.Warp landing = parent.warps().get(warp.warp());
+				out.put(id, new Door(parent.id(), landing.x(), landing.y(), warp.x(), warp.y(), true, "exit"));
+				visited.add(id);
+				added = true;
+				break;
 			}
 		}
-		return out;
+		return added;
 	}
 
 	/**
