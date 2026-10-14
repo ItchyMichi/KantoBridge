@@ -1725,6 +1725,69 @@ the full suite at the ✔ checkpoints (MG2, MG3, MG5, MG6). Pods run inside your
     `fabric.mod.json`, the docs) are in MG6's commit, so the three roll back together
     (`git revert --no-edit <MG4 commit>^..<MG6 commit>`), and a tree between them need not compile.
 
+### Handoff (2026-10-14): after MG6, for whoever continues
+
+**State.** MG1–MG6 of [specs/MULTI_GAME_PLAN.md](specs/MULTI_GAME_PLAN.md) are done and committed locally (never
+pushed): `8596e71` MG1, `d46083a` MG2, `f096bcc` MG3, `1598c58` MG3 follow-up, `19d69fd` MG4, `0460d66` MG5, `3a847f6`
+MG6. MG4–MG6 share files (both entry points, the lang file, `build.gradle`, the GameTest `fabric.mod.json`, the docs)
+and roll back together: `git revert --no-edit 19d69fd^..3a847f6`. Last checkpoint (pod kb-dev7): pytest + Lua 1,729;
+JUnit 1,193 (0 failures); GameTests 112; the one-link e2e regression on the real Blue engine (9 scenarios) passed. The
+✔ marks on some §5 headings of the plan predate the execution and are **not** completion marks; the table above is the
+status. The user has play-tested none of it yet: PLAYTEST.md "Several games" lists their MG3–MG6 items, and the two
+`tools/setup_games.ps1` defaults there need their confirmation. Known gaps: no test world for a crossing between two
+real engines (Red and Blue are one world space; Johto has no adapter), `stash.pc_full` untested, "Add a region" draws a
+second region's blocks as cubes (the texture pack holds one game's art).
+
+**How to work (what worked here).** Python and Lua tests run on this server: `cd tools && .venv/bin/python -m pytest
+-c pytest.ini --rootdir . -q` (~50 s; e2e tests need `--e2e` and an install). Java needs a pod (memory rules: create or
+start without asking, stop after each job): `~/kb-runpod/kb-pod sync` rsyncs the repo to the `kb-dev` ssh alias
+(repoint with `kb-pod host <ip> <port>` after a start; the pod's repo is `/root/kantobridge`, `local` → `/workspace/local`
+on the volume), then `cd /root/kantobridge/fabric-bridge && JAVA_HOME=/opt/java/openjdk ./gradlew build` (~1.5 min on 4
+vCPU; JUnit XML under `build/test-results/test/`, GameTests in `build/reports/gametest/TEST-gametest.xml`). E2e on the
+pod: Xvfb on `:99` (`pgrep -f "[X]vfb :99"`, never `pkill -f` a pattern that matches the ssh shell), `export DISPLAY=:99
+KB_DATASET_MEMO=30 KB_EXPORT_INDEX_TIMEOUT=900`, then `tools/.venv/bin/python -m pytest -c pytest.ini --rootdir . -q
+--e2e e2e/<test>.py`; the volume's data home holds Blue, Crystal and Emerald imports for v0.3.85 (the pre-flight picks
+the one with an adapter). GameTests that reset shared static state need one batch per test. One orchestrator writing
+schemas, PROTOCOL.md and PROGRESS.md first, then forks per plan §7 track with exclusive file ownership, then one pod
+build per checkpoint, worked.
+
+**What is next, in order.**
+1. **The user's spikes S1–S5** (plan MG0). S2 and S3 (Emerald on their PC: what the `game3` WorldAPI and datasets
+   expose, whether `map_scripts`/`maps:patch` reach `gen3Scripts` or the exit must use the `warp.destination` hook,
+   which hooks fire, the "has starter" and "champion" flag names) decide MG7's design; MG7 cannot start beyond reading
+   until they report. S4 (starts from the title, 10 times each) and S5 (the headless import on the Windows exe) gate the
+   crossing's start path and `setup_games.ps1`'s auto import on the user's PC.
+2. **MG7, the second family (XL, its own spec).** First write `docs/specs/GEN3_BRIDGE_PLAN.md` from S2–S3, then
+   implement in the plan's order (§5 MG7): the `game3` adapter `gen1-bridge/lib/engine/game3.lua` group by group
+   (Appendix B is the interface, `lib/engine/gen1.lua` the worked example, `lib/kb_engine.lua` the loader whose stub
+   rejects `game3` today; `protocol/games.json` `adapter: true` for `emerald` turns it on and `kb_session` then accepts
+   the game), each group with lupa tests on a `game3` fake engine (tools/lua; a `fake_gen1 --game emerald` stand-in with a
+   `gen3` family is to be written); the Gen 3 export (scene-shaped resources, metatile quarters per plane, 16×16
+   palettes, sprites with frame tables, connections in cells; `protocol/items.json` gains `symbols.gen3`); the builder's
+   `Gen3FrontEnd` → `Scene` (D13: 8-px quarters so the pipeline, slot keys and shape planner stay; a flat Hoenn with edge
+   walls on elevation mismatches; habitats from Gen 3 encounters, compat 386); a synthetic `gen3` bundle, goldens,
+   GameTests for a synthetic Gen 3 region; e2e on the pod's Emerald import (walk Littleroot, a door, a text box, a save).
+   Size: at least one session of this one's length after the spec, in several commits by group. Risks (plan §7): `game3`
+   is beta upstream and does not raise `movement.collision`/`fieldmove.eligibility`; the adapter's `REQUIRES` must make
+   drift loud.
+3. **MG8, Hoenn and the pass (L).** `routes.json` Kanto ↔ Hoenn pass (the user picks both exits with F7, as for the
+   Viridian zone), the Hoenn pod build at slot 1 (Littleroot and Route 101 first, then all maps), per-region budgets,
+   videos, PLAYTEST "Hoenn", per-map tweaks as small PROGRESS items. Prerequisite found in MG4: `PackGenerator` must
+   merge two art sets into the one texture pack.
+4. **Later** (plan §8, not in this plan): same-process game switching if upstream adds a facade, a Gen 2 adapter, FRLG
+   as a second Kanto, heights for Hoenn, spectator visits, Yellow.
+
+**Where things are.** Catalogues: `protocol/games.json` → `world/Games.java` and `gen1-bridge/lib/kb_games.lua`,
+`protocol/items.json` → `world/Items.java` and `lib/kb_items.lua` (`python -m kb_protocol.catalog --write` regenerates
+them with `catalog.json`; `tools/lua/gen_catalog.py` the Lua message catalog). Regions: `world/{RegionTable, RegionRecord,
+Regions, SlotMap}`, `server/WorldIndexSync`, `server/{ProgressService, RegionPresenceService}`. Links: `client/bridge/
+{Links, BridgeLink, FollowedDispatcher}`, `client/world/AddRegionFlow`. Crossings: `server/{PassCrossings, PassService}`,
+`pokemon/StashService`, `client/zone/{PassChoreography, PassRuntime}`, `builder/zone/ZonePlan`, `routes/gen/
+RouteGenerator`. Economy: `server/{Ledger, LedgerRules, LedgerService}`, `bag/BagService`, `gen1-bridge/act/kb_ledger.lua`,
+`observe/kb_bag.lua`. Builder per game: `scene/GameFrontEnd` with `FrontEnds.forGame` (only `Gen1FrontEnd` today) and
+`Scene`. Tools: `tools/kb_games.py`, `setup_games.ps1|.sh`, `launch.ps1`, `fake_minecraft --links`, `fake_gen1
+--game/--state`. Notes 1–21 above record each milestone's decisions; PROTOCOL.md has the wire format.
+
 ## Pre-flight (PLAN §0.6)
 
 | Step | State |
