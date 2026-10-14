@@ -4,7 +4,7 @@
 --
 --   mirror.sub{fps}    start (1-30 frames a second); belongs to the connection
 --   mirror.unsub{}     stop
---   mirror.frame{w:160, h:144, png, n}
+--   mirror.frame{w, h, png, n}  160x144 (Gen 1), 240x160 (Gen 3, MG7 G3B)
 --
 -- Capture (P2 1.7, recipe A): main.lua wraps render.output_enabled to
 -- answer true only while a client is subscribed (the engine then composes
@@ -16,7 +16,8 @@
 --
 -- One capture: the game rectangle (gameX/Y/Width/Height of ctx.canvas,
 -- the finished composite with colour, fades and wipes) is drawn scaled into
--- our own 160x144 canvas inside love.graphics.push("all")/pop(); each GB
+-- our own canvas of the engine's screen size (opts.size: 160x144, or Gen 3's
+-- 240x160) inside love.graphics.push("all")/pop(); each GB
 -- pixel is an SxS block of the integer-scaled frame, so sampling block
 -- centres gives exact colours. Then newImageData() (after pop: the canvas
 -- is no longer the target), a hash of the pixels to skip identical frames,
@@ -51,9 +52,19 @@ local floor = math.floor
 --   clock      seconds (love.timer.getTime)
 --   base64     fallback encoder (kb_images.base64) when love.data has none
 --   log        kb_log logger (optional)
+--   size       () -> w, h: the engine's screen (engine.screenSize); 160x144 without
 function Mirror.new(opts)
   local love, clock, log = opts.love, opts.clock, opts.log
   local m = {}
+  local W, H = Mirror.W, Mirror.H
+  -- the frame size: the engine's own, read when a capture needs a canvas
+  local function size()
+    if type(opts.size) ~= "function" then return Mirror.W, Mirror.H end
+    local ok, w, h = pcall(opts.size)
+    w, h = ok and tonumber(w) or nil, ok and tonumber(h) or nil
+    if (w == 160 and h == 144) or (w == 240 and h == 160) then return w, h end
+    return Mirror.W, Mirror.H
+  end
   local sub                 -- { fps, gen }
   local nextAt = -math.huge
   local lastHash
@@ -129,8 +140,14 @@ function Mirror.new(opts)
     if canvas == nil or not (gx and gy and gw and gh) or gw <= 0 or gh <= 0 then return end
     local g = love.graphics
     local t0 = clock()
+    local w, h = size()
+    if target ~= nil and (w ~= W or h ~= H) then
+      if target.release then pcall(target.release, target) end
+      target, lastHash = nil, nil
+    end
     if target == nil then
-      target = g.newCanvas(Mirror.W, Mirror.H, { dpiscale = 1 })
+      W, H = w, h
+      target = g.newCanvas(W, H, { dpiscale = 1 })
       target:setFilter("nearest", "nearest")
     end
     local cw, ch = canvas:getDimensions()
@@ -147,7 +164,7 @@ function Mirror.new(opts)
       g.setBlendMode("alpha")
       g.setColor(1, 1, 1, 1)
       g.clear(0, 0, 0, 1)
-      g.draw(canvas, quad, 0, 0, 0, Mirror.W / gw, Mirror.H / gh)
+      g.draw(canvas, quad, 0, 0, 0, W / gw, H / gh)
     end)
     g.pop()
     if not ok then error(err, 0) end
@@ -171,7 +188,7 @@ function Mirror.new(opts)
     local text = encode64(png)
     local t2 = clock()
     if #text <= Mirror.MAX_PNG_B64 then
-      pending = { png = text, bytes = #png }
+      pending = { png = text, bytes = #png, w = W, h = H }
     end
     local spent = floor((t2 - t0) * 1e6 + 0.5)
     counts.totalUs = counts.totalUs + spent
@@ -207,7 +224,7 @@ function Mirror.new(opts)
     counts.pngBytes = counts.pngBytes + frame.bytes
     sentTimes[#sentTimes + 1] = now
     if #sentTimes > counts.peakFps then counts.peakFps = #sentTimes end
-    out[#out + 1] = { "mirror.frame", { w = Mirror.W, h = Mirror.H, png = frame.png, n = frameNo }, "mirror" }
+    out[#out + 1] = { "mirror.frame", { w = frame.w, h = frame.h, png = frame.png, n = frameNo }, "mirror" }
   end
 
   function m.failed()

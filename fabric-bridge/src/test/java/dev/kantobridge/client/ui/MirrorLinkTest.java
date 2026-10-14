@@ -78,6 +78,28 @@ class MirrorLinkTest {
 	}
 
 	@Test
+	void gen3FramesAre240By160AndThePictureKeepsItsSize() {
+		this.link.show(7);
+		assertEquals(160, this.link.width(), "the Game Boy's size until a frame says otherwise");
+		JsonObject gba = frame(1, "gba");
+		gba.addProperty("w", 240);
+		gba.addProperty("h", 160);
+		this.link.onFrame(gba);
+		assertArrayEquals("gba".getBytes(StandardCharsets.US_ASCII), this.take());
+		assertEquals(240, this.link.width());
+		assertEquals(160, this.link.height());
+		JsonObject mixed = frame(2, "x");
+		mixed.addProperty("w", 240);
+		this.link.onFrame(mixed);
+		assertEquals(1, this.link.badFrames(), "240x144 is no screen");
+		this.link.onFrame(frame(3, "gb"));
+		assertArrayEquals("gb".getBytes(StandardCharsets.US_ASCII), this.take());
+		assertEquals(144, this.link.height());
+		assertTrue(MirrorLink.validSize(160, 144) && MirrorLink.validSize(240, 160));
+		assertFalse(MirrorLink.validSize(160, 160));
+	}
+
+	@Test
 	void showingTheSameUiAgainOffersItsPictureAnotherDoesNot() {
 		this.link.show(7);
 		this.link.onFrame(frame(1, "seven"));

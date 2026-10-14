@@ -16,8 +16,8 @@ import org.jetbrains.annotations.Nullable;
 /**
  * The mirror screen (docs/PLAN.md P10, §4.3 "UI"): Gen 1's graphical screens (party, summary, Pokédex pages, town map,
  * slots, …) as the hidden game draws them. It subscribes to {@code mirror.frame}s while shown ({@link MirrorLink}),
- * uploads the newest into one reused 160×144 texture with nearest filtering, and draws it at the largest whole number
- * of window pixels per Game Boy pixel that fits. Every button goes to the hidden game as {@code act.button} taps; the
+ * uploads the newest into one reused texture of the frame's size with nearest filtering (160×144, or Gen 3's 240×160,
+ * MG7), and draws it at the largest whole number of window pixels per game pixel that fits. Every button goes to the hidden game as {@code act.button} taps; the
  * key hints sit under the picture. The picture is ROM-derived art: it lives only in that texture. Native special
  * battles (the Safari Zone, the old man, the ghost) play here too, kept up between their own UIs ({@link NativeBattle}).
  */
@@ -45,22 +45,25 @@ public final class MirrorScreen extends BridgeScreen {
 	@Override
 	protected Gen1Canvas canvas() {
 		Window window = this.minecraft.getWindow();
-		return Gen1Canvas.mirror(window.getWidth(), window.getHeight(), window.getGuiScale(), HINT_HEIGHT);
+		MirrorLink link = this.runtime.mirror();
+		return Gen1Canvas.mirror(window.getWidth(), window.getHeight(), window.getGuiScale(), HINT_HEIGHT, link.width(), link.height());
 	}
 
 	@Override
 	protected void drawView(GuiGraphics graphics, Gen1Canvas canvas, long now) {
-		byte[] fresh = this.runtime.mirror().takeFresh(System.nanoTime());
-		if (fresh != null && !Picture.upload(this.minecraft, fresh)) {
-			this.runtime.mirror().badFrame();
+		MirrorLink link = this.runtime.mirror();
+		byte[] fresh = link.takeFresh(System.nanoTime());
+		if (fresh != null && !Picture.upload(this.minecraft, fresh, link.width(), link.height())) {
+			link.badFrame();
 		}
-		if (Picture.shown()) {
-			graphics.blit(Picture.ID, 0, 0, MirrorLink.WIDTH, MirrorLink.HEIGHT, 0.0F, 0.0F, MirrorLink.WIDTH, MirrorLink.HEIGHT,
-					MirrorLink.WIDTH, MirrorLink.HEIGHT);
+		int w = link.width();
+		int h = link.height();
+		if (Picture.shown() && Picture.width() == w) {
+			graphics.blit(Picture.id(), 0, 0, w, h, 0.0F, 0.0F, w, h, w, h);
 		} else {
-			new Gen1Box(0, 0, MirrorLink.WIDTH, MirrorLink.HEIGHT).draw(graphics);
+			new Gen1Box(0, 0, w, h).draw(graphics);
 			String waiting = I18n.get("kantobridge.ui.mirror.waiting");
-			graphics.drawCenteredString(this.font, waiting, MirrorLink.WIDTH / 2, MirrorLink.HEIGHT / 2 - 4, Gen1Draw.BLACK);
+			graphics.drawCenteredString(this.font, waiting, w / 2, h / 2 - 4, Gen1Draw.BLACK);
 		}
 	}
 
@@ -69,7 +72,7 @@ public final class MirrorScreen extends BridgeScreen {
 		String hint = I18n.get("kantobridge.ui.mirror.keys", Keybinds.a().getTranslatedKeyMessage().getString(),
 				Keybinds.b().getTranslatedKeyMessage().getString(), Keybinds.start().getTranslatedKeyMessage().getString(),
 				Keybinds.select().getTranslatedKeyMessage().getString());
-		int y = Math.round(canvas.y() + MirrorLink.HEIGHT * canvas.scale()) + 3;
+		int y = Math.round(canvas.y() + this.runtime.mirror().height() * canvas.scale()) + 3;
 		graphics.drawCenteredString(this.font, hint, this.width / 2, Math.min(y, this.height - 10), 0xFFFFFFFF);
 	}
 
@@ -81,26 +84,37 @@ public final class MirrorScreen extends BridgeScreen {
 		}
 	}
 
-	/** The one texture the picture goes into, made on first use (on the render thread) and kept for the session. */
+	/**
+	 * The textures the picture goes into, one per frame size (the Game Boy's, Gen 3's), each made on first use (on the
+	 * render thread) and kept for the session.
+	 */
 	static final class Picture {
 		static final ResourceLocation ID = ResourceLocation.fromNamespaceAndPath(KantoBridge.MOD_ID, "mirror");
+		static final ResourceLocation GBA_ID = ResourceLocation.fromNamespaceAndPath(KantoBridge.MOD_ID, "mirror_gba");
 		private static @Nullable DynamicTexture texture;
+		private static @Nullable DynamicTexture gbaTexture;
 		private static int shownUi;
 		private static boolean hasPicture;
+		/** The size of the picture shown: 160×144, or Gen 3's 240×160. */
+		private static int shownWidth = MirrorLink.WIDTH;
+		private static int shownHeight = MirrorLink.HEIGHT;
 
 		private Picture() {
 		}
 
-		/** Decodes a PNG frame into the texture; false when it isn't a 160×144 PNG. */
-		static boolean upload(Minecraft minecraft, byte[] png) {
-			DynamicTexture target = texture(minecraft);
+		/** Decodes a PNG frame of {@code width}×{@code height} into its texture; false when it isn't one. */
+		static boolean upload(Minecraft minecraft, byte[] png, int width, int height) {
+			if (!MirrorLink.validSize(width, height)) {
+				return false;
+			}
+			DynamicTexture target = texture(minecraft, width);
 			NativeImage pixels = target.getPixels();
 			if (pixels == null) {
 				return false;
 			}
 			// read(InputStream) copies to native memory itself; read(byte[]) would put the whole frame on the small stack.
 			try (NativeImage frame = NativeImage.read(new ByteArrayInputStream(png))) {
-				if (frame.getWidth() != MirrorLink.WIDTH || frame.getHeight() != MirrorLink.HEIGHT || frame.format() != pixels.format()) {
+				if (frame.getWidth() != width || frame.getHeight() != height || frame.format() != pixels.format()) {
 					return false;
 				}
 				pixels.copyFrom(frame);
@@ -109,6 +123,8 @@ public final class MirrorScreen extends BridgeScreen {
 			}
 			target.upload();
 			hasPicture = true;
+			shownWidth = width;
+			shownHeight = height;
 			return true;
 		}
 
@@ -116,12 +132,35 @@ public final class MirrorScreen extends BridgeScreen {
 			return hasPicture;
 		}
 
-		/** The last picture of mirror UI {@code ui}, if it is the one kept, drawn in canvas pixels. */
+		static int width() {
+			return shownWidth;
+		}
+
+		/** The texture of the picture shown. */
+		static ResourceLocation id() {
+			return shownWidth == MirrorLink.GBA_WIDTH ? GBA_ID : ID;
+		}
+
+		/**
+		 * The last picture of mirror UI {@code ui}, if it is the one kept, drawn in canvas pixels under another UI's
+		 * dialog canvas (160×144): Gen 3's 240×160 picture is scaled to the canvas's width, its bottom on the canvas's
+		 * bottom, where the game's own text box sits.
+		 */
 		static void drawUnder(GuiGraphics graphics, int ui) {
-			if (hasPicture && ui == shownUi) {
+			if (!hasPicture || ui != shownUi) {
+				return;
+			}
+			if (shownWidth == MirrorLink.WIDTH) {
 				graphics.blit(ID, 0, 0, MirrorLink.WIDTH, MirrorLink.HEIGHT, 0.0F, 0.0F, MirrorLink.WIDTH, MirrorLink.HEIGHT, MirrorLink.WIDTH,
 						MirrorLink.HEIGHT);
+				return;
 			}
+			float scale = (float) Gen1Canvas.WIDTH / shownWidth;
+			graphics.pose().pushPose();
+			graphics.pose().translate(0.0F, Gen1Canvas.HEIGHT - shownHeight * scale, 0.0F);
+			graphics.pose().scale(scale, scale, 1.0F);
+			graphics.blit(GBA_ID, 0, 0, shownWidth, shownHeight, 0.0F, 0.0F, shownWidth, shownHeight, shownWidth, shownHeight);
+			graphics.pose().popPose();
 		}
 
 		/** A new mirror UI starts without a picture (until its first frame, or the link's kept one, is uploaded). */
@@ -138,7 +177,14 @@ public final class MirrorScreen extends BridgeScreen {
 			hasPicture = false;
 		}
 
-		private static DynamicTexture texture(Minecraft minecraft) {
+		private static DynamicTexture texture(Minecraft minecraft, int width) {
+			if (width == MirrorLink.GBA_WIDTH) {
+				if (gbaTexture == null) {
+					gbaTexture = new DynamicTexture(MirrorLink.GBA_WIDTH, MirrorLink.GBA_HEIGHT, true);
+					minecraft.getTextureManager().register(GBA_ID, gbaTexture);
+				}
+				return gbaTexture;
+			}
 			if (texture == null) {
 				texture = new DynamicTexture(MirrorLink.WIDTH, MirrorLink.HEIGHT, true);
 				minecraft.getTextureManager().register(ID, texture);

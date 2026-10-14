@@ -14,12 +14,18 @@ import org.jetbrains.annotations.Nullable;
  *
  * <p>M10: the screen uploads at most {@link #FPS} frames a second ({@link FrameLimiter}), however fast frames arrive or
  * the screen renders; a frame that a newer one replaces before its upload is dropped (counted for F7), never decoded.
+ *
+ * <p>MG7 (G3B): a frame is the hidden engine's own screen, 160×144 on the Game Boy games and 240×160 on Gen 3
+ * ({@link #GBA_WIDTH}×{@link #GBA_HEIGHT}); the kept picture carries its size ({@link #width()}, {@link #height()}).
  */
 public final class MirrorLink {
 	/** Frames a second asked for: the protocol's maximum, smooth enough for the slot machine's reels. */
 	public static final int FPS = 30;
 	public static final int WIDTH = 160;
 	public static final int HEIGHT = 144;
+	/** Gen 3's screen (the GBA's), MG7. */
+	public static final int GBA_WIDTH = 240;
+	public static final int GBA_HEIGHT = 160;
 
 	/** Sends to gen1-bridge; false when not connected. */
 	@FunctionalInterface
@@ -35,6 +41,8 @@ public final class MirrorLink {
 	private long dropped;
 	private long lastN;
 	private byte @Nullable [] latest;
+	private int latestWidth = WIDTH;
+	private int latestHeight = HEIGHT;
 	private boolean fresh;
 	/** The UI the kept picture belongs to. */
 	private int pictureUi;
@@ -97,7 +105,9 @@ public final class MirrorLink {
 		}
 		long n = JsonFields.integer(data, "n", -1);
 		String png = JsonFields.str(data, "png");
-		if (JsonFields.integer(data, "w", -1) != WIDTH || JsonFields.integer(data, "h", -1) != HEIGHT || n < 1 || png == null) {
+		long w = JsonFields.integer(data, "w", -1);
+		long h = JsonFields.integer(data, "h", -1);
+		if (!validSize(w, h) || n < 1 || png == null) {
 			this.badFrames++;
 			return;
 		}
@@ -118,6 +128,8 @@ public final class MirrorLink {
 		}
 		this.lastN = n;
 		this.latest = bytes;
+		this.latestWidth = (int) w;
+		this.latestHeight = (int) h;
 		this.fresh = true;
 		this.waiting = true;
 		this.frames++;
@@ -143,6 +155,21 @@ public final class MirrorLink {
 
 	public boolean subscribed() {
 		return this.subscribed;
+	}
+
+	/** The two frame sizes there are: the Game Boy's 160×144 and Gen 3's 240×160. */
+	public static boolean validSize(long width, long height) {
+		return width == WIDTH && height == HEIGHT || width == GBA_WIDTH && height == GBA_HEIGHT;
+	}
+
+	/** The kept picture's width: 160 until a Gen 3 stream sends 240. */
+	public int width() {
+		return this.latestWidth;
+	}
+
+	/** The kept picture's height: 144, or Gen 3's 160. */
+	public int height() {
+		return this.latestHeight;
 	}
 
 	public boolean hasPicture() {

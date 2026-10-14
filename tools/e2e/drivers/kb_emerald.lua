@@ -15,15 +15,21 @@
 --                   is connected and the player has stepped one cell down,
 --                   the game saves itself once (Game3:saveGame), so the test
 --                   sees a save.begin.
+--   sign            (G3B) the same new game, then onto the cell below one of
+--                   Littleroot's signs (its first bg event with a script whose
+--                   cell below is open ground), facing up; serves: the test
+--                   reads the sign through act.interact and the UI.
+--                   KB_SERVING map= x= y= sx= sy= (the sign's cell).
 --   title_continue  the same new game saved into the test slot, then back to
 --                   the title (Game3:returnToTitle); serves: region.start
 --                   CONTINUEs.
 --   title_new       the empty test slot active at the title; serves:
---                   region.start starts NEW GAME (Birch's speech).
+--                   region.start starts NEW GAME, and the test answers Birch's
+--                   speech through the UI into the field (G3B).
 --   cleanup         only the clean-up (after a failed run), then quits.
 --
 -- Markers: KB_BOOTED scene= slot= home= precleaned=, KB_SERVING map= x= y=
--- wall=, KB_SAVED slot= ok=, KB_TITLE slot= hasSave=, KB_CLEANED deleted=
+-- wall= (or sx= sy=), KB_SAVED slot= ok=, KB_TITLE slot= hasSave=, KB_CLEANED deleted=
 -- active=, KB_QUIT sessions= code=; KB_FAIL <reason> on a timeout. Slot
 -- numbers, map symbols, cell numbers, directions, booleans and counts only.
 --
@@ -103,7 +109,7 @@ end
 return function(game)
   local started = love.timer.getTime()
   local phase = "ready"
-  local slot, start, wall
+  local slot, start, wall, sign
   local saved = false
   local waitUntil = 0
   while true do
@@ -129,7 +135,7 @@ return function(game)
         if SCENE == "title_new" then
           print(("KB_TITLE slot=%d hasSave=%s"):format(num(active()), word(slotHasSave(active()))))
           phase = "serve"
-        elseif SCENE == "field" or SCENE == "title_continue" then
+        elseif SCENE == "field" or SCENE == "title_continue" or SCENE == "sign" then
           local ok, err = pcall(game._handleBootAction, game, { action = "new_game", name = "TEST", gender = 0 })
           if not ok then fail("new_game " .. word(err):sub(1, 40)) end
           phase = "newgame"
@@ -166,6 +172,27 @@ return function(game)
         if SCENE == "field" then
           print(("KB_SERVING map=%s x=%d y=%d wall=%s"):format(TOWN, start.x, start.y, wall))
           phase = "serve"
+        elseif SCENE == "sign" then
+          -- a sign: a bg event with a script (field.lua:332-345, game.data.maps or the script bundle's events)
+          -- whose cell below is open ground; the player onto that cell, facing up
+          local def = game.data and game.data.maps and game.data.maps[TOWN]
+          local events = def and def.bgEvents
+          if not events then
+            local Space = mod3("scripting.space")
+            local ev = Space and Space.bundle and Space.bundle.events and Space.bundle.events[TOWN]
+            events = ev and ev.bgEvents
+          end
+          for _, ev in ipairs(type(events) == "table" and events or {}) do
+            local x, y = tonumber(ev.x), tonumber(ev.y)
+            if not sign and x and y and ev.scriptKey and C and C.isWalkable and C.isWalkable(x, y + 1)
+                and not (C.warpAt and C.warpAt(x, y + 1)) then
+              sign = { x = x, y = y }
+            end
+          end
+          if not sign then fail("no_sign") end
+          local ok = pcall(mod3("warp").request, nil, game, TOWN, sign.x, sign.y + 1, "up", { fade = false })
+          if not ok then fail("warp_request") end
+          phase = "signspot"
         else
           local ok, written = pcall(game.saveGame, game)
           print(("KB_SAVED slot=%d ok=%s"):format(num(active()), word(ok and written == true)))
@@ -174,6 +201,12 @@ return function(game)
           waitUntil = love.timer.getTime() + 1
           phase = "title"
         end
+      end
+    elseif phase == "signspot" then
+      local Map, P = mod3("map"), mod3("player")
+      if fieldReady(game) and Map and Map.current == TOWN and P.cellX == sign.x and P.cellY == sign.y + 1 then
+        print(("KB_SERVING map=%s x=%d y=%d sx=%d sy=%d"):format(TOWN, P.cellX, P.cellY, sign.x, sign.y))
+        phase = "serve"
       end
     elseif phase == "title" then
       if game.phase == "boot" and love.timer.getTime() >= waitUntil then

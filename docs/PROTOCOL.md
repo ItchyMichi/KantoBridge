@@ -276,7 +276,7 @@ request is in flight at a time; refusals show as one translated line over the ho
 | `ui.name` | M→G | `ui, glyphs[]` (Gen 1 glyph tokens, 1–10) | yes |
 | `mirror.sub` | M→G | `fps` (1–30) | |
 | `mirror.unsub` | M→G | `{}` | |
-| `mirror.frame` | G→M | `w:160, h:144, png` (base64), `n`. About 3–10 KB per frame | yes |
+| `mirror.frame` | G→M | `w, h, png` (base64), `n`: 160×144 on Gen 1, 240×160 on Gen 3 (the engine's own screen, MG7 G3B). About 3–10 KB per frame | yes |
 
 #### UI rules (M4)
 

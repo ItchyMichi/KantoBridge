@@ -6,7 +6,9 @@
 --                         a box that never waits for A (auto, stay, a
 --                         choice box's text) just lets its advances die with it
 --   ui.pick{ui, index}    choice: 0 = YES (the cursor on YES, then A), 1 = NO
---                         (B, which always answers NO, P2 4); menu and list:
+--                         (B, which always answers NO, P2 4; MG7: the cursor on
+--                         NO and A when the choice's cursor says noByCursor,
+--                         Gen 3's menus where B does nothing); menu and list:
 --                         the cursor on the row, then A
 --   ui.back{ui}           choice, menu, list, quantity: B
 --   ui.qty{ui, qty}       quantity: the number (1..max), then A
@@ -15,7 +17,9 @@
 --                         itself when the name is one) is picked; then, with
 --                         the grid on top, the glyphs are set and START is
 --                         tapped, which runs the screen's own confirm
---                         (NamingScreen.lua:201-203, :153-174)
+--                         (NamingScreen.lua:201-203, :153-174); MG7: the
+--                         adapter's uiSetGlyphs may name another button (Gen
+--                         3: A, its cursor put on OK)
 --   act.button{button, how}  answered by act.result: START tapped while idle
 --                         (the start menu then opens as a normal menu) or on
 --                         the start menu (which it closes); on a mirror
@@ -267,10 +271,10 @@ function UiAct.new(opts)
       return true
     elseif a.type == "ui.pick" then
       if kind == "choice" then
-        if a.index == 1 then
+        if a.index == 1 and not (top.cursor and top.cursor.noByCursor) then
           budget.tap("b") -- B always answers NO (ChoiceBox.lua:62-70)
         else
-          if not engine.uiSetIndex(top.key, 1) then errorOut(out, "bad_message", a) return true end
+          if not engine.uiSetIndex(top.key, a.index + 1) then errorOut(out, "bad_message", a) return true end
           budget.tap("a")
         end
       else
@@ -307,8 +311,9 @@ function UiAct.new(opts)
         a.phase = "presets"
         return false
       end
-      if not engine.uiSetGlyphs(top.key, a.glyphs) then errorOut(out, "bad_message", a) return true end
-      budget.tap("start")
+      local okGlyphs, button = engine.uiSetGlyphs(top.key, a.glyphs)
+      if not okGlyphs then errorOut(out, "bad_message", a) return true end
+      budget.tap(button == "a" and "a" or "start")
       counts.names = counts.names + 1
       return true
     end

@@ -138,12 +138,27 @@ the title, main menu and Birch's speech. Classes map onto the core's kinds (`GB/
 | `Choice.kind == "multi"`, `script_list_menu` | `ListMenu` | `options`/`labels`, cursor | d-pad, A, B |
 | stack `start` | `Menu` | `StartMenu.ENTRIES` labels, cursor | up/down, A, B (EXIT is never chosen for the player) |
 | stack `naming` | `NamingScreen` | `Naming._state.name`, `maxLen` | `uiSetGlyphs` → `Naming.close(name)` |
-| stack `shop` (quantity state) | `QuantityBox` | `qty`, `_maxQty` | up/down/left/right, A |
+| stack `shop` | `Screen` → mirror until G3F (its quantity box and bag projection come with the items; G3B decision) | the frame | taps from the mirror |
 | everything else (`party`, `bag`, `summary`, `pc_menu`, `box_storage`, `rse_pokedex`, `rse_region_map`, `trainer`, `option`, scene-kit screens) | `Screen` → mirror | the frame | taps from the mirror |
+| a battle | `BattleState` → one mirror, its own text and menus included, until G3F makes battles headless | the frame | taps |
+| the boot phase's title, intro and main menu | `Screen` "TitleState" → mirror (as Gen 1's title) | the frame | `region.start` |
 
 Birch's speech is in the boot phase, outside the HUD: its printer lines become `TextBox`es, its gender menu a
 `ChoiceBox`, its naming the `NamingScreen` with the automatic name (MULTI_GAME_PLAN D6). The mirror captures 240×160
 frames: `mirror.frame` gains Gen 3's size (§7).
+
+**As built (G3B, 2026-10-14; `GB/lib/engine/game3/ui.lua`).** The entries go bottom to top in the HUD's input order
+(`R/src/ui/game3/hud.lua:205-313`): the overworld, the message box, a choice, the stack's layers; keys are the
+instances (the message's page table, the choice's callback, a layer's table, Birch's printer or menu objects). Text:
+`TextIR.toTextBox`'s pages (two lines, `\n` between them) with the 0xFC codes (`TextIR.EXT_ARGS`) and `{…}` tags
+removed, `{PK}{MN}` as `<PK><MN>`, a raw `{STR_VAR_n}` filled from the VM. A box is `ready` when its page is shown in
+full, it is not a page an auto-scroll turns, and on a stay box's last page only once `Hud._waitButton` is armed.
+Birch's printer (`R/src/ui/game3/rse/scene_kit.lua:279-465`) is paged from its tokens (a para, scroll or wait ends a
+page); its waits and Birch's own "press before the name" are its stops. The start menu hides EXIT (it asks to quit to
+the title, `rse/start_menu_data.lua:143`) and MODS. Three small core changes, inert on Gen 1: a choice's cursor may say
+`noByCursor` (Gen 3's NO is the cursor and A: B does nothing on Birch's menus or with `ignoreBPress`); `uiSetGlyphs`
+may name the button to tap after it (Gen 3: the cursor put on OK, then A; Gen 1 keeps START); `engine.screenSize()`
+(new in the `ui` group) sizes the mirror's canvas and frames.
 
 ### 4.6 Story (link; G3C)
 
@@ -282,7 +297,7 @@ maps `G3_TEST_*`, `layout/hoenn`); a golden scene; a GameTest building a synthet
 | Phase | Delivers | Check |
 |---|---|---|
 | **G3A** core changes; adapter base, boot, observe, NPCs, movement, warps, interaction, saves and slots, region, reliability; catalogue and manifest; the fake engine | Emerald followable: hello.ok, snapshot, walking, warps, saves, game.status, region acts | lupa per part; e2e `test_emerald.py` (all but the text box) ✔ — **done 2026-10-14** (PROGRESS.md "Several games: MG7": the deviations `chainsHeld` and `starting`) |
-| **G3B** UI | text boxes, choices, lists, menus, naming, Birch's speech, the 240×160 mirror (Lua, schema, client) | lupa UI; e2e text box ✔ |
+| **G3B** UI | text boxes, choices, lists, menus, naming, Birch's speech, the 240×160 mirror (Lua, schema, client) | lupa UI; e2e text box ✔ — **done 2026-10-14** (a Littleroot sign read through the UI; Birch's whole speech answered through the UI into the field) |
 | **G3C** story | flags, toggles, `story.cells` | lupa; e2e a flag and an override |
 | **G3D** export | `g3*` resources, baked quarters, encounters, layout; the measurement driver first | lupa on the fake; pod export counts and hashes ✔ |
 | **G3E** builder | `Gen3FrontEnd`, the Gen 3 planner path, baked textures, habitats, two art sets in one pack | JUnit, golden scene, GameTest ✔ |

@@ -53,6 +53,21 @@ class Gen1CanvasTest {
 	}
 
 	@Test
+	void gen3sMirrorKeepsWholePixelsFor240By160() {
+		Gen1Canvas canvas = Gen1Canvas.mirror(1920, 1080, 4, 14, 240, 160);
+		assertEquals(6, canvas.windowPixels(4), "(1080 - 56) / 160");
+		assertEquals((1920 - 240 * 6) / 2 / 4.0F, canvas.x(), 1e-4, "centred");
+		for (int[] size : new int[][] {{854, 480}, {1280, 720}, {1920, 1080}, {2560, 1440}}) {
+			for (int gui = 1; gui <= 4; gui++) {
+				Gen1Canvas c = Gen1Canvas.mirror(size[0], size[1], gui, 14, 240, 160);
+				float px = c.scale() * gui;
+				assertEquals(Math.round(px), px, 1e-4);
+				assertTrue(c.x() * gui >= 0 && c.x() * gui + 240 * px <= size[0], "inside the window");
+			}
+		}
+	}
+
+	@Test
 	void boxesSitOnTheTileGrid() {
 		Gen1Box textBox = Gen1Box.tiles(0, 12, 20, 6);
 		assertEquals(new Gen1Box(0, 96, 160, 48), textBox, "Gen 1's text box: the bottom six tiles");

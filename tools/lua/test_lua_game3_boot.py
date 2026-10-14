@@ -18,23 +18,23 @@ def test_the_loader_picks_the_game3_adapter_grown_from_the_stub():
     assert eng.hasAdapter() is True
     assert (eng.engineId(), eng.family(), eng.gameVersion()) == (b"game3", b"gen3", b"emerald")
     assert [p.decode() for p in a.b.module("lib/engine/game3.lua").PARTS.values()] == [
-        "boot", "observe", "move", "saves", "region", "reliability"]
+        "boot", "observe", "move", "saves", "region", "reliability", "ui"]
 
 
 def test_missing_groups_name_the_groups_no_part_has_written():
     # A group counts once any of its functions is the adapter's own (kb_engine.missingGroups). The
     # parts written so far define every function of boot, interaction, movement, saving, sessions,
-    # reliability and region; ui, battles, export, routes and story are all still the stub's. party
+    # reliability, region and (G3B) ui; battles, export, routes and story are all still the stub's. party
     # and items count as present: the parts define bridgeToken, nextSerial and scriptCommand (party)
     # and inGame (items), which the core needs from the first step.
     a = Adapter3()
     missing = [g.decode() for g in a.Engine.missingGroups(a.eng).values()]
-    assert missing == ["battles", "export", "routes", "story", "ui"]
+    assert missing == ["battles", "export", "routes", "story"]  # the UI part came with G3B
     stubbed = {k.decode() for k in a.eng._stubbed.keys()}
     for name in ("bridgeToken", "nextSerial", "scriptCommand", "inGame", "observe", "takeVerdicts", "holdAway",
-                 "metaOf", "playthrough", "saveView"):
+                 "metaOf", "playthrough", "saveView", "uiStack", "uiSetGlyphs", "screenSize"):
         assert name not in stubbed, name
-    for name in ("uiStack", "storyToggles", "ops", "gifts", "partyNicks", "takeHeals", "releaseCatches"):
+    for name in ("storyToggles", "ops", "gifts", "partyNicks", "takeHeals", "releaseCatches"):
         assert name in stubbed, name
 
 
@@ -43,7 +43,9 @@ def test_the_stubbed_functions_answer_no_game_with_the_right_types():
     a = Adapter3()
     a.field()
     eng = a.eng
-    assert plain(eng.uiStack()) == {} and plain(eng.ops()) == {} and plain(eng.gifts()) == {}
+    # G3B's UI part answers with the overworld alone (nothing open)
+    assert [e["cls"] for e in plain(eng.uiStack())] == ["Overworld"]
+    assert plain(eng.ops()) == {} and plain(eng.gifts()) == {}
     assert plain(eng.partyNicks()) == {} and plain(eng.storyToggles()) == {} and plain(eng.bagCounts()) == {}
     assert eng.takeHeals() == 0 and eng.releaseCatches() == 0 and eng.inventoryCount() == 0
     assert eng.pcHeld() is False and eng.pcPending() is None and eng.noSuchFunction() is None

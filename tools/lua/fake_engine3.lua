@@ -16,6 +16,9 @@
 --   E.block(x, y, why)                           tryMove into (x, y): "blocked", why
 --   E.behavior(x, y, "MB_TEST_DOOR")             a cell's metatile behaviour
 --   E.openMessage("text"), E.pushLayer("start"), E.openChoice("yesno")
+--   E.scriptMessage("one\ftwo")                 a script's msgbox (stay box, VM, lock)
+--   E.StartMenu.show(), E.Naming.open{...}, E.ListMenu.showItems(labels, n, cb)
+--   E.newBirch() / E.birchStep(br, input)        Birch's speech (the boot phase "oak")
 --   E.setFlag("FLAG_TEST_ONE"), E.addObject(1, { x = 3, y = 4, gfx = 1 })
 --   E.slotSave("slot1", { map = ... })           a Gen 3 save in a slot
 --   E.bindMod(FakeMod, mod)                      events go to that mod object
@@ -399,34 +402,411 @@ function FakeEngine3.new(opts)
   E.Forced = { forced = false }
   function E.Forced.isForced() return E.Forced.forced == true end
 
-  -- ---- the HUD (src/ui/game3/*)
+  -- ---- the HUD (src/ui/game3/*; G3B, GEN3_BRIDGE_PLAN.md §4.5)
 
-  -- message.lua:260-275
-  E.Message = { open = false, _waiting = false, _pages = nil, _page = 1 }
-  function E.Message.isOpen() return E.Message.open == true end
-  function E.Message.isWaiting() return E.Message.open == true and E.Message._waiting == true end
-  function E.Message.currentPage()
-    local m = E.Message
-    return m._pages and m._pages[m._page] or ""
+  -- Made-up cartridge strings the UI reads through RomText.plain
+  -- (rom_text.lua:153-168): plain English, nothing from a game.
+  E.romTexts = { gText_YesNo = "YES\nNO", gText_Yes = "YES", gText_No = "NO", gText_BirchBoy = "BOY",
+                 gText_BirchGirl = "GIRL" }
+  E.RomText = {}
+  function E.RomText.plain(label) return E.romTexts[label] or "" end
+  -- scripting/text_ir.lua:246-250 (the 0xFC codes' argument counts)
+  E.TextIR = { EXT_ARGS = { [0x01] = 1, [0x02] = 1, [0x03] = 1, [0x04] = 3, [0x06] = 1, [0x08] = 1 } }
+
+  -- message.lua: show (:155-252, the pages split on \f as TextIR.splitPages
+  -- does, :284-303), isOpen/isWaiting/currentPage (:260-281), advance
+  -- (:296-325), close (:331-348), tick (:364-403: E.revealPerTick
+  -- characters a tick; instant by default). A stay box keeps its last page
+  -- until Hud._waitButton is armed (hud.lua:283-304).
+  E.revealPerTick = 1000
+  E.Message = { open = false, _waiting = false, _pages = nil, _page = 1, _stay = false, _revealed = 0, _total = 0 }
+  local M = E.Message
+  local function chars(s)
+    local _, cont = tostring(s or ""):gsub("[\128-\191]", "")
+    return #tostring(s or "") - cont
   end
-  -- choice.lua:10-11
-  E.Choice = { active = false, kind = nil }
-  -- stack.lua:17-21: layers { id, ... }
+  local function beginPage()
+    local page = M._pages and M._pages[M._page] or ""
+    M._total = chars((page:gsub("\n", "")))
+    M._revealed = 0
+    M._waiting = M._total == 0
+  end
+  function M.show(text, opts)
+    opts = type(opts) == "table" and opts or {}
+    M.open, M._stay, M._hold, M._held, M._done, M._choice = true, opts.stay == true, opts.hold == true, false, opts.done, nil
+    M._autoScroll = false
+    local pages = {}
+    for page in (tostring(text or "") .. "\f"):gmatch("(.-)\f") do
+      if page ~= "" then pages[#pages + 1] = page end
+    end
+    if #pages == 0 then pages[1] = "" end
+    M._pages, M._page = pages, 1
+    beginPage()
+    return M
+  end
+  function M.isOpen() return M.open == true end
+  function M.isWaiting() return M.open == true and M._waiting == true end
+  function M.currentPage() return M._pages and M._pages[M._page] or "" end
+  function M.tick()
+    if not M.open or M._waiting then return end
+    M._revealed = math.min(M._total, M._revealed + E.revealPerTick)
+    if M._revealed >= M._total then M._waiting = true end
+  end
+  function M.close()
+    local done = M._done
+    M.open, M._pages, M._page, M._done, M._stay, M._hold, M._held = false, nil, 1, nil, false, false, false
+    M._revealed, M._total, M._waiting, M._choice, M._autoScroll = 0, 0, false, nil, false
+    if done then done() end
+  end
+  function M.advance()
+    if not M.open or M._choice then return end
+    if not M._waiting then
+      M._revealed, M._waiting = M._total, true
+      return
+    end
+    if M._page < #M._pages then
+      M._page = M._page + 1
+      beginPage()
+      return
+    end
+    if M._stay then return end
+    M.close()
+  end
+
+  -- choice.lua: yesNo (:58-88), multi (:90-105), move (:107-143), confirm
+  -- (:145-163: yes/no -> cb(cursor == 1), multi -> cb(cursor - 1)), cancel
+  -- (:165-185: nothing with ignoreBPress, else cb(false) / cb(127)).
+  E.Choice = { active = false, kind = nil, options = nil, cursor = 1, done = nil, cols = 1, ignoreBPress = false }
+  local Ch = E.Choice
+  function Ch.yesNo(cb, layout)
+    Ch.active, Ch.kind, Ch.options, Ch.cursor, Ch.done, Ch.cols = true, "yesno", { "YES", "NO" }, 1, cb, 1
+    Ch.ignoreBPress = type(layout) == "table" and layout.ignoreBPress == true
+  end
+  function Ch.multi(options, defaultIdx, cb, layout)
+    Ch.active, Ch.kind, Ch.options, Ch.done, Ch.cols = true, "multi", options or {}, cb, 1
+    Ch.cursor = (tonumber(defaultIdx) or 0) + 1
+    if Ch.cursor < 1 or Ch.cursor > #Ch.options then Ch.cursor = 1 end
+    Ch.ignoreBPress = type(layout) == "table" and layout.ignoreBPress == true
+  end
+  function Ch.move(dy)
+    local n = Ch.options and #Ch.options or 0
+    if not Ch.active or n < 1 or not dy or dy == 0 then return end
+    Ch.cursor = ((Ch.cursor - 1 + dy) % n) + 1
+  end
+  local function choiceEnd()
+    local cb, kind, cursor = Ch.done, Ch.kind, Ch.cursor
+    Ch.active, Ch.kind, Ch.options, Ch.done, Ch.cols, Ch.ignoreBPress = false, nil, nil, nil, 1, false
+    return cb, kind, cursor
+  end
+  function Ch.confirm()
+    if not Ch.active then return end
+    local cb, kind, cursor = choiceEnd()
+    if cb then
+      if kind == "yesno" then cb(cursor == 1) else cb(cursor - 1) end
+    end
+  end
+  function Ch.cancel()
+    if not Ch.active or Ch.ignoreBPress then return end
+    local cb, kind = choiceEnd()
+    if cb then
+      if kind == "yesno" then cb(false) else cb(127) end
+    end
+  end
+
+  -- stack.lua: push (:25-47: a layer of the same id replaced; unless
+  -- hideBelow is false the open stay message closes), pop (:49-62), top,
+  -- has, busy
   E.Stack = { _layers = {} }
-  function E.Stack.top()
-    local n = #E.Stack._layers
+  local St = E.Stack
+  function St.top()
+    local n = #St._layers
     if n < 1 then return nil end
-    return E.Stack._layers[n]
+    return St._layers[n]
   end
+  function St.push(id, mod, o)
+    o = o or {}
+    if o.hideBelow ~= false and M.open and M._stay then
+      M._done = nil
+      M.close()
+    end
+    for i = #St._layers, 1, -1 do
+      if St._layers[i].id == id then table.remove(St._layers, i) end
+    end
+    St._layers[#St._layers + 1] = { id = id, mod = mod, isMenu = mod and mod.isMenu == true or false,
+                                    hideBelow = o.hideBelow ~= false, drawUnder = o.drawUnder == true }
+  end
+  function St.pop(id)
+    for i = #St._layers, 1, -1 do
+      if id == nil or St._layers[i].id == id then
+        table.remove(St._layers, i)
+        return true
+      end
+    end
+    return false
+  end
+  function St.has(id)
+    for _, l in ipairs(St._layers) do
+      if l.id == id then return true end
+    end
+    return false
+  end
+  function St.busy() return #St._layers > 0 end
+
   -- fade.lua:50 (isActive) and Fade.lockInput (Game3.lua:114)
   E.Fade = { active = false, lockInput = nil }
   function E.Fade.isActive() return E.Fade.active end
-  -- hud.lua:51-58
+  -- hud.lua:51-58 (busy), :60-66 (the script's wait for a button)
   E.Hud = { _waitButton = nil }
   function E.Hud.busy()
-    return E.Battle.isActive() or E.Message.isOpen() or E.Choice.active or E.Stack.top() ~= nil
+    return E.Battle.isActive() or M.isOpen() or Ch.active or St.top() ~= nil
       or E.Fade.isActive() == true or E.Hud._waitButton ~= nil
   end
+  function E.Hud.armWaitButton(cb) E.Hud._waitButton = cb end
+
+  -- start_menu.lua: show (:157-196, pushes "start"), close (:198-208), cancel
+  -- (:210-223), move (:225-238, round), confirm (:240-300: EXIT asks first,
+  -- rse/start_menu_data.lua:143; BAG opens the bag layer); E.startEntries the
+  -- rows (made-up labels), E.startPicks the rows chosen
+  E.startEntries = {
+    { id = "pokedex", label = "TEST DEX" }, { id = "pokemon", label = "TEST MON" }, { id = "bag", label = "TEST BAG" },
+    { id = "player", label = "TESTER" }, { id = "save", label = "TEST SAVE" }, { id = "option", label = "TEST OPTS" },
+    { id = "mods", label = "MODS" }, { id = "exit", label = "TEST EXIT" },
+  }
+  E.startPicks = {}
+  E.StartMenu = { isMenu = true, open = false, cursor = 1, ENTRIES = {}, _confirmExit = false, _scrollOffset = 0 }
+  local SM = E.StartMenu
+  function SM.show()
+    SM.open, SM._confirmExit = true, false
+    SM.ENTRIES = {}
+    for i, e in ipairs(E.startEntries) do SM.ENTRIES[i] = { id = e.id, label = e.label } end
+    if SM.cursor < 1 or SM.cursor > #SM.ENTRIES then SM.cursor = 1 end
+    St.push("start", SM, { hideBelow = true })
+  end
+  function SM.close()
+    SM.open, SM._confirmExit = false, false
+    St.pop("start")
+  end
+  function SM.cancel()
+    if SM._confirmExit then SM._confirmExit = false return end
+    SM.close()
+  end
+  function SM.move(d)
+    if SM._confirmExit then return end
+    local n = #SM.ENTRIES
+    if n > 0 then SM.cursor = ((SM.cursor - 1 + d) % n) + 1 end
+  end
+  function SM.clampScroll() SM._scrollOffset = 0 end
+  function SM.confirm()
+    local e = SM.ENTRIES[SM.cursor]
+    if not e then return end
+    E.startPicks[#E.startPicks + 1] = e.id
+    if e.id == "exit" then
+      SM._confirmExit = true
+    elseif e.id == "bag" then
+      St.push("bag", { isMenu = true }, { hideBelow = true })
+    end
+  end
+
+  -- naming.lua: open (:529-584: the state, the "naming" layer), close
+  -- (:592-605: a held screen calls back and stays), dismiss (:607-611),
+  -- handleInput (:636-760: A types the cell or, on the button column, PAGE /
+  -- BACK / OK; B deletes; START puts the cursor on OK). E.namingPages: the
+  -- keyboard pages (made-up letters), E.namedResults the names confirmed.
+  E.namingPages = {
+    { id = "UPPER", rows = { { "A", "B", "C" }, { "D", "E", "F" }, { "G", "H", "I" }, { "J", "K", " " } } },
+    { id = "LOWER", rows = { { "a", "b", "c" }, { "d", "e", "f" }, { "g", "h", "i" }, { "j", "k", " " } } },
+  }
+  E.namedResults = {}
+  E.Naming = { openFlag = false, _state = nil }
+  local N = E.Naming
+  local SIDE = { "PAGE", "BACK", "OK" }
+  local function colCount(st)
+    local page = st.pages[st.page]
+    local row = page and page.rows[st.row]
+    return row and #row or 0
+  end
+  function N.open(o)
+    o = o or {}
+    local st = { title = o.title or "TEST NAME?", maxLen = o.maxLen or 7, name = tostring(o.initialText or ""),
+                 seed = o.seed, page = 1, row = 1, col = 1, btn = 1, hold = o.hold, onDone = o.onDone,
+                 pages = E.namingPages, template = o.template or "PLAYER" }
+    N._state, N.openFlag = st, true
+    St.push("naming", N, { hideBelow = true })
+    return st
+  end
+  function N.isOpen() return N.openFlag == true end
+  function N.close(result)
+    local st = N._state
+    E.namedResults[#E.namedResults + 1] = result
+    if st and st.hold then
+      if st.finished then return end
+      st.finished = true
+      if st.onDone then st.onDone(result) end
+      return
+    end
+    local cb = st and st.onDone
+    N.openFlag, N._state = false, nil
+    St.pop("naming")
+    if cb then cb(result) end
+  end
+  function N.dismiss()
+    N.openFlag, N._state = false, nil
+    St.pop("naming")
+  end
+  function N.handleInput(input)
+    local st = N._state
+    if not (N.openFlag and st) or st.finished then return end
+    if input:wasPressed("start") then
+      st.col, st.row, st.btn = colCount(st) + 1, 4, 3
+    elseif input:wasPressed("b") then
+      st.name = st.name:sub(1, -2)
+    elseif input:wasPressed("a") then
+      if st.col > colCount(st) then
+        local role = SIDE[st.btn]
+        if role == "OK" then
+          local name = st.name
+          if name:match("^%s*$") then name = st.seed end
+          N.close(name)
+        elseif role == "PAGE" then
+          st.page = st.page % #st.pages + 1
+        else
+          st.name = st.name:sub(1, -2)
+        end
+      else
+        local ch = st.pages[st.page].rows[st.row][st.col]
+        if ch and chars(st.name) < st.maxLen then st.name = st.name .. ch end
+      end
+    end
+  end
+
+  -- scripting/natives_listmenu.lua: showItems (:157-188, the
+  -- "script_list_menu" layer, hideBelow false), selection (:199-201), move
+  -- (:203-220, stops at both ends), confirm (:223-236), cancel (:238-244),
+  -- handleInput (:246-253)
+  E.ListMenu = { open = false, labels = nil, count = 0, maxShowed = 1, scroll = 0, row = 1 }
+  local LM = E.ListMenu
+  function LM.showItems(labels, maxShowed, onPick)
+    LM.labels, LM.count = labels, #labels
+    LM.maxShowed = math.min(maxShowed or 1, #labels)
+    LM.scroll, LM.row, LM._onPick, LM.open = 0, 1, onPick, true
+    St.push("script_list_menu", LM, { hideBelow = false, drawUnder = true })
+  end
+  function LM.selection() return LM.scroll + LM.row - 1 end
+  function LM.close()
+    LM.open, LM._onPick = false, nil
+    St.pop("script_list_menu")
+  end
+  function LM.move(d)
+    if d < 0 then
+      if LM.row > 1 then LM.row = LM.row - 1 elseif LM.scroll > 0 then LM.scroll = LM.scroll - 1 end
+    elseif d > 0 then
+      if LM.row < LM.maxShowed and LM.selection() + 1 < LM.count then
+        LM.row = LM.row + 1
+      elseif LM.scroll + LM.maxShowed < LM.count then
+        LM.scroll = LM.scroll + 1
+      end
+    end
+  end
+  function LM.handleInput(input)
+    if not LM.open then return end
+    if input:wasPressed("up") then LM.move(-1)
+    elseif input:wasPressed("down") then LM.move(1)
+    elseif input:wasPressed("a") then
+      local cb, index = LM._onPick, LM.selection()
+      LM.close()
+      if cb then cb(index) end
+    elseif input:wasPressed("b") then
+      local cb = LM._onPick
+      LM.close()
+      if cb then cb(127) end
+    end
+  end
+
+  -- hud.lua:205-346, the input order: the naming layer, the stack's top
+  -- (its handleInput, or the start menu's fallback keys), a choice, the
+  -- message box, the script's wait for a button, START (field.lua's gates).
+  local function hudInput(input, fieldIdle)
+    local top = St.top()
+    if top and top.id == "naming" and top.mod and top.mod.handleInput then
+      top.mod.handleInput(input)
+      return
+    end
+    if E.Battle.isActive() then return end
+    if top then
+      if top.mod and top.mod.handleInput then
+        top.mod.handleInput(input)
+      elseif top.mod == SM then
+        if input:wasPressed("up") then SM.move(-1)
+        elseif input:wasPressed("down") then SM.move(1)
+        elseif input:wasPressed("a") then SM.confirm()
+        elseif input:wasPressed("b") or input:wasPressed("start") then SM.cancel()
+        end
+      elseif input:wasPressed("b") or input:wasPressed("start") then
+        St.pop() -- another screen: B closes it
+      end
+      return
+    end
+    if Ch.active then
+      if input:wasPressed("up") then Ch.move(-1)
+      elseif input:wasPressed("down") then Ch.move(1)
+      elseif input:wasPressed("a") then Ch.confirm()
+      elseif input:wasPressed("b") then Ch.cancel()
+      end
+      return
+    end
+    if M.isOpen() then
+      if input:wasPressed("a") or input:wasPressed("b") then
+        local onLast = M.isWaiting() and M._page >= #(M._pages or {})
+        if not M.isWaiting() then
+          -- pressAB: only speeds the text up
+        elseif M._stay and onLast then
+          local cb = E.Hud._waitButton
+          if cb then
+            E.Hud._waitButton = nil
+            cb()
+          end
+        else
+          M.advance()
+        end
+      end
+      return
+    end
+    if E.Hud._waitButton then
+      if input:wasPressed("a") or input:wasPressed("b") then
+        local cb = E.Hud._waitButton
+        E.Hud._waitButton = nil
+        cb()
+      end
+      return
+    end
+    if fieldIdle and input:wasPressed("start") then SM.show() end
+  end
+  E.hudInput = hudInput
+
+  -- A script's text box the way `msgbox` shows it (data/scripts: message,
+  -- waitmessage, waitbuttonpress, release): a stay box, the field locked and
+  -- the VM running until the last page's press; E.scriptPresses counts the
+  -- presses its waitbuttonpress took.
+  E.scriptPresses = 0
+  function E.scriptMessage(text, then_)
+    E.Space.vm.running = true
+    F.lock("default")
+    M.show(text, { stay = true })
+    E.pendingWait = function()
+      E.Hud.armWaitButton(function()
+        E.scriptPresses = E.scriptPresses + 1
+        M._done = nil
+        M.close()
+        if then_ then
+          then_()
+        else
+          E.Space.vm.running = false
+          F.unlock("default")
+        end
+      end)
+    end
+  end
+
   -- boot.lua:23-33 (the phases) and boot_modules.lua:111-117 (startNewGame:
   -- Birch's speech, the boot phase "oak")
   E.BootUi = { PHASE = { INTRO = "intro", TITLE = "title", MENU = "menu", OAK = "oak" } }
@@ -434,8 +814,135 @@ function FakeEngine3.new(opts)
   function E.BootModules.startNewGame(Boot, state)
     E.newGameStarts[#E.newGameStarts + 1] = { boot = Boot, state = state }
     if E.newGameFails then error("fake startNewGame failed") end
+    state.custom = type(state.custom) == "table" and state.custom or {}
+    state.custom.newGame = E.newBirch()
     state.phase = Boot.PHASE.OAK
     state.timer = 0
+  end
+
+  -- ---- Birch's speech (rse/birch_speech.lua; the boot phase "oak"): a short
+  -- made-up script with the real one's shapes: printers (Kit.printer,
+  -- rse/scene_kit.lua:314-465: toks, pos, lines, state, active), the gender
+  -- menu ({ cursor = 0 }, :564), the naming screen (Naming.open with hold,
+  -- :667-685, taking input only in its "input" stage, :687-726), the name's
+  -- yes/no (Kit.yesNo: cursor 0 YES, 1 NO, :767-788), then the boot action
+  -- new_game{name, gender} (:1012-1020 -> Game3:_handleBootAction). The
+  -- printer prints at once up to its next break (the real one a character a
+  -- frame). E.birchTexts: "\n" a line, "\f" a page, "\a" a wait for a press.
+  E.birchTexts = {
+    welcome = "WELCOME TO THE\nTEST WORLD!\fTHIS IS A\nTEST SPEECH.\a",
+    boyOrGirl = "ARE YOU A BOY?\nOR A GIRL?",
+    name = "WHAT IS YOUR\nNAME?",
+    confirm = "SO IT IS YOU?",
+    ready = "ARE YOU READY?\a",
+  }
+  E.birchSeed = "SEED"
+  local function printTokens(text)
+    local out = {}
+    for ch in text:gmatch("[%z\1-\127\194-\244][\128-\191]*") do
+      if ch == "\n" then out[#out + 1] = { t = "nl" }
+      elseif ch == "\f" then out[#out + 1] = { t = "para" }
+      elseif ch == "\a" then out[#out + 1] = { t = "wait" }
+      else out[#out + 1] = { t = "c", s = ch } end
+    end
+    return out
+  end
+  local function newPrinter(text)
+    return { toks = printTokens(text), pos = 1, lines = { "" }, active = true, state = "char" }
+  end
+  local function runPrinter(p, a)
+    if not p.active then return end
+    if p.state == "clear" or p.state == "wait" then
+      if not a then return end
+      if p.state == "clear" then p.lines = { "" } end
+      p.state = "char"
+    end
+    while p.active and p.state == "char" do
+      local tok = p.toks[p.pos]
+      p.pos = p.pos + 1
+      if tok == nil then p.active = false
+      elseif tok.t == "nl" then p.lines[#p.lines + 1] = ""
+      elseif tok.t == "para" then p.state = "clear"
+      elseif tok.t == "wait" then p.state = "wait"
+      else p.lines[#p.lines] = p.lines[#p.lines] .. tok.s end
+    end
+  end
+  function E.newBirch()
+    return { main = { func = "Welcome" }, showDialogue = true, gender = 0, playerName = "",
+             printer = newPrinter(E.birchTexts.welcome) }
+  end
+  -- one GBA frame of the speech; true while a printer was still printing
+  local function printing(br, a)
+    if br.printer and br.printer.active then
+      runPrinter(br.printer, a)
+      return br.printer.active
+    end
+    return false
+  end
+  function E.birchStep(br, input)
+    local a, b = input:wasPressed("a"), input:wasPressed("b")
+    local m = br.main
+    local f = m.func
+    if f == "Welcome" then
+      if printing(br, a) then return end
+      br.printer, m.func = newPrinter(E.birchTexts.boyOrGirl), "BoyOrGirl"
+    elseif f == "BoyOrGirl" then
+      if printing(br, a) then return end
+      br.genderMenu, m.func = { cursor = 0 }, "ChooseGender"
+    elseif f == "ChooseGender" then
+      local g = br.genderMenu
+      if a then
+        br.gender, br.genderMenu = g.cursor, nil
+        br.printer, m.func = newPrinter(E.birchTexts.name), "WhatsYourName"
+      elseif input:wasPressed("up") and g.cursor > 0 then g.cursor = g.cursor - 1
+      elseif input:wasPressed("down") and g.cursor < 1 then g.cursor = g.cursor + 1 end
+    elseif f == "WhatsYourName" then
+      if printing(br, a) then return end
+      m.func = "WaitPressBeforeNameChoice"
+    elseif f == "WaitPressBeforeNameChoice" then
+      if a or b then
+        br.printer, br.showDialogue = nil, false
+        br.naming = { stage = "setup", timer = 2 }
+        E.Naming.open({ template = "PLAYER", hold = true, seed = E.birchSeed, onDone = function(name)
+          if name and name ~= "" then br.playerName = name end
+          br.naming.stage, br.naming.timer = "fade_out", 2
+        end })
+        m.func = "Naming"
+      end
+    elseif f == "Naming" then
+      local n = br.naming
+      if n.stage == "setup" then
+        n.timer = n.timer - 1
+        if n.timer <= 0 then n.stage = "input" end
+      elseif n.stage == "input" then
+        E.Naming.handleInput(input)
+      elseif n.stage == "fade_out" then
+        n.timer = n.timer - 1
+        if n.timer <= 0 then
+          E.Naming.dismiss()
+          br.naming, br.showDialogue = nil, true
+          br.printer, m.func = newPrinter(E.birchTexts.confirm), "CreateNameYesNo"
+        end
+      end
+    elseif f == "CreateNameYesNo" then
+      if printing(br, a) then return end
+      br.yesNo, m.func = { cursor = 0 }, "ProcessNameYesNo"
+    elseif f == "ProcessNameYesNo" then
+      local y = br.yesNo
+      if (a and y.cursor == 0) then
+        br.yesNo = nil
+        br.printer, m.func = newPrinter(E.birchTexts.ready), "Ready"
+      elseif (a and y.cursor == 1) or b then
+        br.yesNo = nil
+        br.printer, m.func = newPrinter(E.birchTexts.boyOrGirl), "BoyOrGirl"
+      elseif input:wasPressed("up") and y.cursor > 0 then y.cursor = 0
+      elseif input:wasPressed("down") and y.cursor < 1 then y.cursor = 1 end
+    elseif f == "Ready" then
+      if printing(br, a) then return end
+      br.result = { action = "new_game", name = br.playerName, gender = br.gender }
+      m.func = "Done"
+      E.game:_handleBootAction(br.result)
+    end
   end
 
   E.modules = {
@@ -462,6 +969,11 @@ function FakeEngine3.new(opts)
     ["src.ui.game3.choice"] = E.Choice,
     ["src.ui.game3.stack"] = E.Stack,
     ["src.ui.game3.hud"] = E.Hud,
+    ["src.ui.game3.start_menu"] = E.StartMenu,
+    ["src.ui.game3.naming"] = E.Naming,
+    ["src.core.game3.scripting.natives_listmenu"] = E.ListMenu,
+    ["src.core.game3.rom_text"] = E.RomText,
+    ["src.core.game3.scripting.text_ir"] = E.TextIR,
     ["src.ui.game3.fade"] = E.Fade,
     ["src.ui.game3.boot"] = E.BootUi,
     ["src.ui.game3.boot_modules"] = E.BootModules,
@@ -551,12 +1063,23 @@ function FakeEngine3.new(opts)
   function E.behavior(x, y, name) E.behaviors[key(x, y)] = name and MB[name] or nil end
 
   function E.openMessage(text, waiting)
-    E.Message.open, E.Message._pages, E.Message._page = true, { text or "" }, 1
+    E.Message.show(text or "")
     E.Message._waiting = waiting == true
+    if waiting then E.Message._revealed = E.Message._total end
   end
-  function E.closeMessage() E.Message.open, E.Message._pages = false, nil end
-  function E.openChoice(kind) E.Choice.active, E.Choice.kind = true, kind or "yesno" end
-  function E.closeChoice() E.Choice.active, E.Choice.kind = false, nil end
+  function E.closeMessage()
+    E.Message._done = nil
+    E.Message.close()
+  end
+  function E.openChoice(kind)
+    if (kind or "yesno") == "yesno" then
+      E.Choice.yesNo(function(yes) E.choiceAnswers[#E.choiceAnswers + 1] = yes end)
+    else
+      E.Choice.multi({ "ONE", "TWO", "THREE" }, 0, function(i) E.choiceAnswers[#E.choiceAnswers + 1] = i end)
+    end
+  end
+  E.choiceAnswers = {}
+  function E.closeChoice() E.Choice.active, E.Choice.kind, E.Choice.done, E.Choice.options = false, nil, nil, nil end
   function E.pushLayer(id) E.Stack._layers[#E.Stack._layers + 1] = { id = id } end
   function E.popLayer() E.Stack._layers[#E.Stack._layers] = nil end
 
@@ -687,14 +1210,33 @@ function FakeEngine3.new(opts)
     E.ticks = E.ticks + 1
     local g = E.game
     g.input:step()
-    if g.phase ~= "field" or not E.Runtime.active or not F.running or E.Battle.isActive() then return end
-    if P.moving then
-      P.progress = P.progress + 1
-      if P.progress >= (P.stepFrames or 16) then E.land() end
+    if g.phase == "boot" then
+      -- Boot.update: Birch's speech (boot_modules.lua:150-172)
+      local custom = type(g.boot) == "table" and g.boot.phase == "oak" and g.boot.custom or nil
+      if type(custom) == "table" and custom.newGame then E.birchStep(custom.newGame, g.input) end
+      return
     end
-    if P.moving or fieldBusy() then return end
-    local dir = direction(g.input)
-    if dir then E.Player.tryMove(dir, g, false) end
+    if g.phase ~= "field" or not E.Runtime.active or not F.running then return end
+    if not E.Battle.isActive() then
+      -- Field.update: the step under way, a new one, the message box's reveal and the script's
+      -- waitbuttonpress once its last page is shown (E.scriptMessage)
+      if P.moving then
+        P.progress = P.progress + 1
+        if P.progress >= (P.stepFrames or 16) then E.land() end
+      end
+      if not P.moving and not fieldBusy() then
+        local dir = direction(g.input)
+        if dir then E.Player.tryMove(dir, g, false) end
+      end
+      E.Message.tick()
+      if E.pendingWait and E.Message.isWaiting() and E.Message._page >= #(E.Message._pages or {}) then
+        local arm = E.pendingWait
+        E.pendingWait = nil
+        arm()
+      end
+    end
+    -- Hud.update: the UI's input (START only on a standing, idle field)
+    E.hudInput(g.input, not P.moving and not fieldBusy())
   end
 
   -- Events go to the mod object main.lua runs on (FakeMod.emit).

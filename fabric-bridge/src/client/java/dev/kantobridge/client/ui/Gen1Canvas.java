@@ -33,11 +33,19 @@ public record Gen1Canvas(float scale, float x, float y) {
 	 * in the space above.
 	 */
 	public static Gen1Canvas mirror(int windowWidth, int windowHeight, double guiScale, int reservedBottom) {
+		return mirror(windowWidth, windowHeight, guiScale, reservedBottom, WIDTH, HEIGHT);
+	}
+
+	/**
+	 * The mirror canvas for a picture of {@code width}×{@code height} pixels (MG7: Gen 3's 240×160), with whole window
+	 * pixels per picture pixel.
+	 */
+	public static Gen1Canvas mirror(int windowWidth, int windowHeight, double guiScale, int reservedBottom, int width, int height) {
 		int gui = guiScale(guiScale);
-		int usable = Math.max(HEIGHT, windowHeight - reservedBottom * gui);
-		int pixels = Math.max(1, Math.min(windowWidth / WIDTH, usable / HEIGHT));
-		int left = (windowWidth - WIDTH * pixels) / 2;
-		int top = Math.max(0, (usable - HEIGHT * pixels) / 2);
+		int usable = Math.max(height, windowHeight - reservedBottom * gui);
+		int pixels = Math.max(1, Math.min(windowWidth / width, usable / height));
+		int left = (windowWidth - width * pixels) / 2;
+		int top = Math.max(0, (usable - height * pixels) / 2);
 		return new Gen1Canvas((float) pixels / gui, left / (float) gui, top / (float) gui);
 	}
 

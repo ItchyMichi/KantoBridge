@@ -1475,7 +1475,7 @@ the full suite at the ✔ checkpoints (MG2, MG3, MG5, MG6). Pods run inside your
 | MG4 | Links | **done** (note 19); check: with one link the e2e scenarios behave as before (pod, real engine: `test_s5_ready`, `test_handshake`, `test_regions`, `test_multiplayer`, `test_crash`, `test_hot_reload` all passed), `tools/tests/test_links.py` (two `fake_gen1`: swap, a parked drop, a wrong game), JUnit `LinksTest` + `LinksFakeGen1IntegrationTest` (two real `fake_gen1` processes); one `test_multiplayer` assertion learnt that an install paired before MG1 keeps its legacy pairing file beside the per-game one. The MG4–MG6 checkpoint on the pod (kb-dev7): pytest and Lua 1,729, JUnit 1,193 (0 failures), GameTests 112 | 2026-10-13 | |
 | MG5 | Crossings | **done** (note 20); check: `PassGameTests` (6: the round trip into the far gate house with the exact arrival cell, every refusal, abort, the timeout, the start path, the stash, a built half whose pass is a story cell), `PassCrossingsTest`, `ZonePlanTest`, `WorldIndexTest`, `PassChoreographyTest` (16), the two-`fake_gen1` crossing in `tools/tests/test_stand_ins.py`; a crossing between two real engines waits for a second region whose game has an adapter (MG7/MG8) | 2026-10-13 | |
 | MG6 | One trainer economy | **done** (notes 18, 21); check: `LedgerGameTests` (two regions: adoption, stamped read-back, the crossing's projection, `too_many`/`left`, re-projection on an unknown stamp; a legacy world untouched), `BagGameTests` marked stacks, `LedgerTest`/`LedgerCodecTest`/`ItemsTest`/`BagSetRelayTest`, `test_lua_ledger.py`/`test_lua_bag.py`; the real engine's `bag.set` round trip is your play-test (PLAYTEST.md "MG6") | 2026-10-13 | |
-| MG7 | The second family (Emerald): adapter and export | **in progress**: the spec [specs/GEN3_BRIDGE_PLAN.md](specs/GEN3_BRIDGE_PLAN.md) (2026-10-14), phases G3A–G3G; **G3A done** (Emerald followable; "Several games: MG7") | 2026-10-14 | |
+| MG7 | The second family (Emerald): adapter and export | **in progress**: the spec [specs/GEN3_BRIDGE_PLAN.md](specs/GEN3_BRIDGE_PLAN.md) (2026-10-14), phases G3A–G3G; **G3A done** (Emerald followable), **G3B done** (Emerald's UI; "Several games: MG7") | 2026-10-14 | |
 | MG8 | Hoenn and the pass to it | pending | | |
 
 ### Several games: notes
@@ -1892,9 +1892,31 @@ e2e `tools/e2e/test_emerald.py` with `drivers/kb_emerald.lua` on the pod's Emera
 | e2e Emerald (`test_emerald.py`) | 2 passed: hello.ok `emerald`/`gen3`; the snapshot in Littleroot; `fresh`; a step into the house wall refused `tile`; a step down; the game's save announced (`save.begin`, reason `menu`); two steps up through the door into May's house (`warp` kind `door`); park refuses a step (`script`), resume ok; CONTINUE (`saved`, `save.loaded{fresh:false}`) and NEW GAME (Birch's speech) from the title |
 | e2e Gen 1 regression on Blue | 10 passed (`test_s5_ready` ×2, `test_handshake`, `test_regions` ×2, `test_walk`, `test_multiplayer` ×2, `test_crash`, `test_hot_reload`) |
 
-**Not yet** (later phases): the UI (G3B: text boxes, choices, naming, Birch's speech as UI, the 240×160 mirror), the
-story's cells (G3C), the export and the builder (G3D–G3E), battles, party, items and routes (G3F). Emerald bikes bypass
-`tryMove`, so a bike bump gives no verdict yet (the mover answers `script` after its timeout).
+**Not yet** (later phases): the story's cells (G3C), the export and the builder (G3D–G3E), battles, party, items and
+routes (G3F). Emerald bikes bypass `tryMove`, so a bike bump gives no verdict yet (the mover answers `script` after its
+timeout).
+
+**G3B (2026-10-14): Emerald's UI.** The adapter's `ui` part (`gen1-bridge/lib/engine/game3/ui.lua`) builds the core's
+UI stack from Gen 3's scattered state, in the HUD's input order: the message box (`TextBox`: the engine's pages with
+its control codes and colour tags taken out; ready on a stay box's last page only once the script's `waitbuttonpress`
+is armed), a yes/no (`ChoiceBox`) or multichoice (`ListMenu`, its string variables filled in), and the stack's layers:
+the start menu as a `Menu` without EXIT (it asks to quit to the title) and MODS, the scrollable list menu as a
+`ListMenu`, the naming screen as a `NamingScreen` (its keyboard pages as the grid), every other screen a mirror. A
+battle is one mirror until G3F; so is the Mart. In the boot phase the title and main menu are the mirror
+("TitleState", as on Gen 1) and **Birch's speech** is its slide show (mirror) with its printers as text boxes, its
+gender menu and the name's yes/no as choices and its naming screen on top. Three small core changes, inert on Gen 1:
+a choice's cursor may say `noByCursor` (Gen 3's NO is the cursor and A, `act/kb_uiact.lua`), `uiSetGlyphs` may name
+the button to tap after it (Gen 3: the cursor on OK, then A), and `engine.screenSize()` (new in the `ui` group) sizes
+the mirror: `mirror.frame` is 160×144 or 240×160 (schema, PROTOCOL.md; the client's `MirrorLink` accepts both, the
+mirror screen keeps a texture per size and draws Gen 3's picture under a dialog scaled to the canvas width).
+
+**Check:** pytest and Lua 1,884 passed, 10 skipped (`test_lua_game3_ui.py`: 17; the fake engine's HUD now takes input
+as the engine's does); e2e on pod kb-dev10, `test_emerald.py` 3 passed: the G3A field run unchanged; **a Littleroot
+sign** read through `act.interact` and the UI (`act.result` kind sign, a text box advanced until it closes, the player
+walking again); CONTINUE; and **NEW GAME with Birch's whole speech answered through the UI** (9 text boxes, BOY, the
+name KB on the naming screen, YES) until `game.status` says in game with that name. JUnit 1,195 and GameTests 112 (0
+failures; `MirrorLinkTest` and `Gen1CanvasTest` cover the new size); the Gen 1 UI regression on Blue, `test_ui.py`
+(YES/NO by B and by A, the 160×144 mirror) and `test_opening.py` (Oak's naming screens by START), 2 passed.
 
 ### Handoff (2026-10-14): after MG6, for whoever continues
 

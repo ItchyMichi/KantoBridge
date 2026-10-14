@@ -55,7 +55,9 @@ Engine.GROUPS = {
            "saveView" },
   interaction = { "interactedFacts", "cellInMap", "counterCell" },
   ui = { "uiClass", "uiStack", "uiOpenFacts", "uiCursor", "uiItems", "uiMoneyFooter", "uiSetIndex", "uiSetQty",
-         "uiSetGlyphs" },
+         "uiSetGlyphs",
+         -- MG7 (G3B): the mirror's frame size, the engine's screen (Gen 1 160x144, Gen 3 240x160)
+         "screenSize" },
   movement = { "setFacing", "buttonDown", "playerVerdict", "warpDeparture", "displayPinned", "pinDisplay",
                -- MG7: an engine without the movement.collision hook (Gen 3) hands its verdicts over per step
                "takeVerdicts" },
@@ -170,6 +172,7 @@ local function stub(opts, id, requireFn)
     pcHeld = function() return false end,
     pcPending = nothing,
     uiStack = empty, uiOpenFacts = nothing,
+    screenSize = function() return 160, 144 end,
     encounterCounts = empty, itemCounts = empty, bridgeCounts = empty, contentCounts = empty, hiddenStats = empty,
     pcCounts = empty, bagCounts = empty, dexCounts = empty,
     -- lists and counts the acts read every step

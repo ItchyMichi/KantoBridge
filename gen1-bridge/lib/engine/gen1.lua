@@ -1310,6 +1310,9 @@ function Gen1.new(opts)
     return true
   end
 
+  -- The mirror's frame (MG7, G3B): the Game Boy's screen.
+  function engine.screenSize() return 160, 144 end
+
   -- NamingScreen: the typed glyphs, one grid cell per entry, as A would
   -- have inserted them (NamingScreen.lua:98, :242-245); confirm() joins them
   -- (:153-174) when START is pressed on the next update (:201-203).

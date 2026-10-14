@@ -213,7 +213,9 @@ return function(mod)
     release = function(token) return mod.input:release(token) end,
   })
   local interact = kb.Interact.new({ engine = engine, log = log })
-  local mirror = kb.Mirror.new({ love = love, clock = clock, log = log, base64 = kb.Images.base64 })
+  local mirror = kb.Mirror.new({ love = love, clock = clock, log = log, base64 = kb.Images.base64,
+                                 -- MG7 (G3B): Gen 3's frames are 240x160
+                                 size = function() return engine.screenSize() end })
 
   -- M5: battles fought in Cobblemon, gifts, heals and the shadow party.
   -- party uids persist through mod.save (save.modData, src/core/Game.lua:1348-1358).
