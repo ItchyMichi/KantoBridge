@@ -63,7 +63,7 @@ class Gen3ZoneTest {
 		assertEquals("OBJ_EVENT_GFX_TEST_TRAINER", content.classSprites().get("TRAINER_CLASS_TEST"));
 		assertEquals("OBJ_EVENT_GFX_TEST_TRAINER", content.classSprites().get("TRAINER_CLASS_NOBODY_WEARS"));
 		assertEquals("OBJ_EVENT_GFX_TEST_ITEM_BALL", content.ballSprite());
-		assertEquals(Set.of("TEST_POTION", "TEST_POKE_BALL"), content.items(), "the names resource's, ITEM_ off");
+		assertEquals(Set.of("TEST_POTION", "TEST_POKE_BALL", "POTION", "POKE_BALL"), content.items(), "the names resource's, ITEM_ off");
 	}
 
 	@Test
@@ -89,6 +89,10 @@ class Gen3ZoneTest {
 			for (WorldIndex.PartyMember member : trainer.party()) {
 				assertTrue(species.contains(member.species()), member.species());
 			}
+		}
+		assertFalse(zone.balls().isEmpty(), "item balls from the tiers the game has");
+		for (WorldIndex.ZoneBall ball : zone.balls()) {
+			assertTrue(Set.of("POTION", "POKE_BALL").contains(ball.item()), ball.item());
 		}
 		assertNotNull(index.map("KB_ROUTE_TEST_PASS_TO"), "the route map's placement at the trailhead");
 	}

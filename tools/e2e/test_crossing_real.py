@@ -1,8 +1,9 @@
 """MG8 (docs/specs/HOENN_PASS_PLAN.md HP7): the crossing between two real engines, at the links. Blue and Emerald
 run side by side, each with gen1-bridge, holding the two ends of the test pass (gen1-bridge/data/routes.json's
 kanto_hoenn_test: Viridian City's north-west corner, Littleroot Town's south-east corner); a fake Minecraft client
-holds a link to each (MG4) and does what the client's pass choreography does between them
-(client/zone/PassChoreography: park the game it leaves on its half's route map, resume the other onto its own).
+holds a link to each (MG4) and does what the client's pass choreography and the server do between them
+(client/zone/PassChoreography: park the game it leaves on its half's route map, resume the other onto its own; the
+server's ledger then projects the money and the bag into it, bag.set, MG6). MULTI_GAME_PLAN §6 check 4 at the links.
 
 Blue runs from the test install (drivers/kb_wild.lua, on the pass's Kanto spot); Emerald from a second data home on
 the pod's container disk, its import folder and gen1-bridge linked by name as spike S1 did (one process per game:
@@ -10,15 +11,22 @@ MULTI_GAME_PLAN §4.11), its Union Room switched off first (drivers/kb_union_off
 scene. Then:
 
   1. Blue walks its clearing into KB_ROUTE_KANTO_HOENN_TEST (a script warp onto x1, facing right);
-  2. Kanto -> Hoenn: Blue parked on its route map, Emerald resumed onto KB_ROUTE_KANTO_HOENN_TEST_TO: both answer
-     ok, and Emerald stands for its route map at x1;
-  3. on the Hoenn side, a step onto A takes Emerald home to Littleroot's clearing, facing the town, and five steps
-     take it back into its route map;
-  4. Hoenn -> Kanto: Emerald parked, Blue resumed onto its route map (where it stands): ok;
-  5. on the Kanto side, a step onto A takes Blue home to Viridian's clearing, facing the town.
+  2. KB_CROSSINGS times (20 by default) each way:
+     Kanto -> Hoenn: Blue parked on its route map, Emerald resumed onto KB_ROUTE_KANTO_HOENN_TEST_TO, standing for it
+     at x1; the ledger's projection (money and POTIONs, a new stamp) lands in Emerald's bag and comes back in its
+     bag.sync;
+     Hoenn -> Kanto: Emerald parked, Blue resumed onto its route map, on the cell it was parked on (a park/resume
+     pair leaves the hidden player where it was); the projection lands in Blue's bag likewise;
+     the money goes down by one each crossing and the POTIONs alternate, so each projection is new;
+  3. on the Hoenn side (after the first crossing), a step onto A takes Emerald home to Littleroot's clearing, facing
+     the town, and a step takes it back into its route map;
+  4. after the last crossing, a step onto A takes Blue home to Viridian's clearing, facing the town.
 
-Every message passes its schema (strict). Output: types, map symbols, cells and booleans only. The second home and
-its links vanish with the pod's container disk; nothing under local/ is opened (links are made by name).
+No warp ends by the warp observer's timeout (warp.no_arrival) and no error or schema problem comes. The two hidden
+processes' memory (the sum of each process tree's resident set) is sampled throughout and printed (§6 check 5).
+
+Every message passes its schema (strict). Output: types, map symbols, cells, numbers and booleans only. The second
+home and its links vanish with the pod's container disk; nothing under local/ is opened (links are made by name).
 """
 
 import asyncio
@@ -35,6 +43,8 @@ from run_gen1recomp import INSTALL, launch, preflight
 from test_emerald import find_or_wait, errors
 
 BLUE_PORT, EMERALD_PORT = 27232, 27233
+CROSSINGS = int(os.environ.get("KB_CROSSINGS", "20"))
+MONEY = 3000
 REPO = Path(__file__).resolve().parents[2]
 PASS = json.loads((REPO / "gen1-bridge" / "data" / "routes.json").read_text(encoding="utf-8"))["routes"][1]
 KANTO_MAP, HOENN_MAP = "KB_ROUTE_KANTO_HOENN_TEST", "KB_ROUTE_KANTO_HOENN_TEST_TO"
@@ -96,47 +106,94 @@ async def where(mc):
     return (await mc.request("resync", reply_type="snapshot", timeout=15))["data"]["player"]
 
 
-async def _crossing():
+def tree_rss_kb(root_pid):
+    """The resident set of a process and its descendants, in KiB (Linux /proc; 0 elsewhere)."""
+    children, rss = {}, {}
+    for entry in Path("/proc").iterdir() if Path("/proc").is_dir() else []:
+        if not entry.name.isdigit():
+            continue
+        try:
+            stat = (entry / "stat").read_text()
+            ppid = int(stat.rsplit(")", 1)[1].split()[1])
+            line = next((ln for ln in (entry / "status").read_text().splitlines() if ln.startswith("VmRSS:")), None)
+        except (OSError, ValueError, IndexError):
+            continue
+        children.setdefault(ppid, []).append(int(entry.name))
+        rss[int(entry.name)] = int(line.split()[1]) if line else 0
+    total, todo = 0, [root_pid]
+    while todo:
+        pid = todo.pop()
+        total += rss.get(pid, 0)
+        todo += children.get(pid, [])
+    return total
+
+
+async def project(mc, money, potions, stamp):
+    """The server's bag.set after a resume, and the bag.sync that reads it back."""
+    since = len(mc.received)
+    done = (await mc.request("bag.set", {"items": {"POTION": potions}, "money": money, "stamp": stamp},
+                             reply_type="act.result", timeout=30))["data"]
+    assert done == {"ok": True, "kind": "bag.set"}, (stamp, done)
+    synced = (await find_or_wait(mc, "bag.sync", 20, since, lambda m: m["data"].get("stamp") == stamp))["data"]
+    return synced.get("money") == money and synced["items"].get("POTION") == potions
+
+
+async def resume(mc, region, route_map):
+    """region.resume onto the route map's x1; where the hidden player then stands."""
+    done = (await mc.request("region.resume", {"region": region, "to": dict(X1, map=route_map)},
+                             reply_type="act.result", timeout=90))["data"]
+    assert done == {"ok": True, "kind": "resume"}, (region, done)
+    here = await where(mc)
+    return here["map"], here["x"], here["y"]
+
+
+async def park(mc, region):
+    done = (await mc.request("region.park", {"region": region}, reply_type="act.result", timeout=30))["data"]
+    assert done == {"ok": True, "kind": "park"}, (region, done)
+
+
+async def _crossing(pids, rss):
     near, far = PASS["from"], PASS["to"]
     blue, emerald = await connect(BLUE_PORT), await connect(EMERALD_PORT)
-    report = {}
-    # 1. Blue walks its clearing into its route map
+    report = {"crossings": 0, "projected": 0}
+
+    def sample():
+        rss.append(sum(tree_rss_kb(pid) for pid in pids))
+
+    # 1. Blue walks its clearing into its route map; Emerald waits parked
     since = await walk(blue, near["facing"], steps_to_trigger(near), 1)
     into = await arrival(blue, since)
     report["blue_in"] = (into["kind"], into["to"])
     assert into["kind"] == "script" and into["to"] == dict(X1, map=KANTO_MAP), report
-    # 2. Kanto -> Hoenn: park Blue there, resume Emerald onto its route map
-    parked = (await blue.request("region.park", {"region": "kanto"}, reply_type="act.result", timeout=30))["data"]
-    report["blue_park"] = parked
-    assert parked == {"ok": True, "kind": "park"}, parked
-    held = (await emerald.request("region.park", {"region": "hoenn"}, reply_type="act.result", timeout=30))["data"]
-    assert held == {"ok": True, "kind": "park"}, held
-    resumed = (await emerald.request("region.resume", {"region": "hoenn", "to": dict(X1, map=HOENN_MAP)},
-                                     reply_type="act.result", timeout=90))["data"]
-    report["emerald_resume"] = resumed
-    assert resumed == {"ok": True, "kind": "resume"}, resumed
-    here = await where(emerald)
-    report["emerald_at"] = (here["map"], here["x"], here["y"])
-    assert (here["map"], here["x"], here["y"]) == (HOENN_MAP, 1, 0), report
-    # 3. Hoenn's side: home through A, then back into the route map
-    since = len(emerald.received)
-    await emerald.send("move.step", {"dir": "left", "n": 50})
-    home = await arrival(emerald, since)
-    report["emerald_home"] = home["to"]
-    assert home["to"] == dict(way_back(far), map=far["map"]), report
-    await asyncio.sleep(1)
-    since = await walk(emerald, OPPOSITE[home["to"]["facing"]], 1, 60)
-    back = await arrival(emerald, since)
-    report["emerald_back_in"] = back["to"]
-    assert back["to"] == dict(X1, map=HOENN_MAP), report
-    # 4. Hoenn -> Kanto: park Emerald, resume Blue onto its route map (where it stands)
-    parked = (await emerald.request("region.park", {"region": "hoenn"}, reply_type="act.result", timeout=30))["data"]
-    assert parked == {"ok": True, "kind": "park"}, parked
-    resumed = (await blue.request("region.resume", {"region": "kanto", "to": dict(X1, map=KANTO_MAP)},
-                                  reply_type="act.result", timeout=60))["data"]
-    report["blue_resume"] = resumed
-    assert resumed == {"ok": True, "kind": "resume"}, resumed
-    # 5. Kanto's side: home through A
+    await park(emerald, "hoenn")
+    # 2. the crossings, each way
+    for k in range(CROSSINGS):
+        money = MONEY - k
+        potions = 3 + k % 2
+        await park(blue, "kanto")
+        at = await resume(emerald, "hoenn", HOENN_MAP)
+        assert at == (HOENN_MAP, 1, 0), (k, "emerald", at)
+        report["projected"] += await project(emerald, money, potions, f"{2 * k:032x}")
+        sample()
+        if k == 0:
+            # 3. Hoenn's side: home through A, then back into the route map
+            since = len(emerald.received)
+            await emerald.send("move.step", {"dir": "left", "n": 50})
+            home = await arrival(emerald, since)
+            report["emerald_home"] = home["to"]
+            assert home["to"] == dict(way_back(far), map=far["map"]), report
+            await asyncio.sleep(1)
+            since = await walk(emerald, OPPOSITE[home["to"]["facing"]], 1, 60)
+            back = await arrival(emerald, since)
+            report["emerald_back_in"] = back["to"]
+            assert back["to"] == dict(X1, map=HOENN_MAP), report
+        await park(emerald, "hoenn")
+        at = await resume(blue, "kanto", KANTO_MAP)
+        assert at == (KANTO_MAP, 1, 0), (k, "blue", at)
+        report["projected"] += await project(blue, money, potions, f"{2 * k + 1:032x}")
+        sample()
+        report["crossings"] += 1
+    # 4. Kanto's side: home through A
     since = len(blue.received)
     await blue.send("move.step", {"dir": "left", "n": 70})
     home = await arrival(blue, since)
@@ -145,6 +202,7 @@ async def _crossing():
     report["errors"] = errors(blue) + errors(emerald)
     report["problems"] = len(blue.conn.problems) + len(emerald.conn.problems)
     assert report["errors"] == [] and report["problems"] == 0, report
+    assert report["projected"] == 2 * CROSSINGS, report
     for mc in (blue, emerald):
         await mc.send("debug.quit", {"code": 0})
         await mc.close()
@@ -152,7 +210,7 @@ async def _crossing():
 
 
 @pytest.mark.e2e
-@pytest.mark.timeout(1500)
+@pytest.mark.timeout(2400)
 def test_a_crossing_between_two_real_engines():
     pf = preflight()
     if not pf.ok:
@@ -172,11 +230,17 @@ def test_a_crossing_between_two_real_engines():
                 launch("kb_emerald.lua", game="emerald", extra_env=emerald_env, install=home) as emerald_run:
             assert blue_run.wait_marker("KB_WILD_READY", timeout=300) is not None, blue_run.result.summary()
             assert emerald_run.wait_marker("KB_SERVING", timeout=300) is not None, emerald_run.result.summary()
-            report = asyncio.run(asyncio.wait_for(_crossing(), 600))
+            rss = []
+            report = asyncio.run(asyncio.wait_for(_crossing([blue_run.proc.pid, emerald_run.proc.pid], rss),
+                                                  120 + 30 * CROSSINGS))
             blue_result, emerald_result = blue_run.wait(timeout=120), emerald_run.wait(timeout=120)
+    if rss:
+        report["rss_mb"] = {"max": max(rss) // 1024, "last": rss[-1] // 1024}
     print("crossing:", report)
     for name, result in (("blue", blue_result), ("emerald", emerald_result)):
         assert not result.timed_out and result.returncode == 0, (name, result.summary())
         assert result.marker("KB_FAIL") is None, name
     assert any("routes.installed" in line and "route=kanto_hoenn_test" in line for line in blue_result.lines)
     assert any("routes.installed" in line and "own=true" in line for line in emerald_result.lines)
+    for name, result in (("blue", blue_result), ("emerald", emerald_result)):
+        assert not any("warp.no_arrival" in line for line in result.lines), (name, "a warp ended by the timeout")

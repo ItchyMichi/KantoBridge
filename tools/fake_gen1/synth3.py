@@ -248,6 +248,10 @@ def resources(game=GAME, variant=None):
                     "SPECIES_TEST_LOTAD": 270},
         "moves": {"MOVE_TEST_TACKLE": 33, "MOVE_TEST_POUND": 1},
         "items": {"ITEM_TEST_POTION": 13, "ITEM_TEST_POKE_BALL": 4}}
+    if variant == "pass":
+        # the zone's balls draw on the item tiers by name (data/kantobridge/wild_routes/items.json), as Gen 1's bundle
+        # does with its POTION and POKE_BALL
+        res[("g3names", "all")]["items"].update({"ITEM_POTION": 13, "ITEM_POKE_BALL": 4})
     return res
 
 

@@ -1476,7 +1476,7 @@ the full suite at the ✔ checkpoints (MG2, MG3, MG5, MG6). Pods run inside your
 | MG5 | Crossings | **done** (note 20); check: `PassGameTests` (6: the round trip into the far gate house with the exact arrival cell, every refusal, abort, the timeout, the start path, the stash, a built half whose pass is a story cell), `PassCrossingsTest`, `ZonePlanTest`, `WorldIndexTest`, `PassChoreographyTest` (16), the two-`fake_gen1` crossing in `tools/tests/test_stand_ins.py`; a crossing between two real engines waits for a second region whose game has an adapter (MG7/MG8) | 2026-10-13 | |
 | MG6 | One trainer economy | **done** (notes 18, 21); check: `LedgerGameTests` (two regions: adoption, stamped read-back, the crossing's projection, `too_many`/`left`, re-projection on an unknown stamp; a legacy world untouched), `BagGameTests` marked stacks, `LedgerTest`/`LedgerCodecTest`/`ItemsTest`/`BagSetRelayTest`, `test_lua_ledger.py`/`test_lua_bag.py`; the real engine's `bag.set` round trip is your play-test (PLAYTEST.md "MG6") | 2026-10-13 | |
 | MG7 | The second family (Emerald): adapter and export | **done**: the spec [specs/GEN3_BRIDGE_PLAN.md](specs/GEN3_BRIDGE_PLAN.md) (2026-10-14), phases G3A–G3G; **G3A done** (Emerald followable), **G3B done** (Emerald's UI), **G3C done** (story), **G3D done** (export), **G3E done** (builder), **G3F done** (battles, party, bag; the route exit moved to MG8), **G3G done** (the real Hoenn built in Minecraft) ("Several games: MG7") | 2026-10-14 | |
-| MG8 | Hoenn and the pass to it | pending | | |
+| MG8 | Hoenn and the pass to it | **done**: the spec [specs/HOENN_PASS_PLAN.md](specs/HOENN_PASS_PLAN.md) (2026-10-14), phases HP1–HP8; the test pass Viridian City ↔ Littleroot Town; Kanto and Hoenn in one world; 20 crossings each way between the real Blue and Emerald ("Several games: MG8") | 2026-10-14 | |
 
 ### Several games: notes
 
@@ -2076,6 +2076,76 @@ on a pod (kb-dev12, new: cpu5g ×4, 16 GB, $0.184/hr; kb-dev5's and kb-dev6's ho
 
 **Check (MG7's last checkpoint, pod kb-dev12):** pytest and Lua 1,954 passed (local); JUnit 1,225 (2 skipped) and
 GameTests 118, no failures; the Hoenn build passed its gates (`build OK`).
+
+### Several games: MG8, Hoenn and the pass (HOENN_PASS_PLAN.md)
+
+**The plan** ([specs/HOENN_PASS_PLAN.md](specs/HOENN_PASS_PLAN.md), 2026-10-14): MG5 had built the crossing machinery
+and MG7 Hoenn itself; what was missing was the Hoenn half of a route, since Gen 3 takes no route map, map script or
+patched exit (spike S2). Decisions K1–K8, phases HP1–HP8.
+
+**The test pass (K1).** You asked for temporary exits in "a corner of the first or second town". A one-off finder ran
+the clearing rules over both exports on a pod (reachable on foot, at least six cells from any object, warp, sign or
+door): Pallet Town has no spot that fits, so **Kanto's end is Viridian City (6, 4), north through two blocks of trees**
+(its north-west corner), and **Hoenn's is Littleroot Town (18, 14), south** (its south-east corner, a side with no
+route connection). `routes.json` (v2) holds them as `kanto_hoenn_test`, "TEST PASS", beside the Viridian zone; F7 and
+an edit move them.
+
+**Built (commit `622940c`):**
+- **Core hooks, inert on Gen 1** (raw lookups of the adapter's functions): `kb_routes` hands an end to the adapter
+  (`routeInstall`); `world.stepped` and `map.entered` reach it; main merges its route events into the step's;
+  `kb_move` lets it take a step on its route map; `kb_region` resumes onto its route map through it; `kb_route` runs
+  give and battle through it; the Gen 3 export carries the `routes` resource.
+- **The game3 `routes` part:** the clearing planned on the town's own cells (`Routes.plan`'s arithmetic over 2×2
+  blocks of metatiles), opened on every load of the town with the exit's metatiles and elevation, baked into the
+  export, counted as the map's own by the story part; the hidden player parked on the trigger cell and **reported as
+  the route map at x1**, so the core and the client follow the half as on Gen 1; the step onto A is the way back (a
+  warp to the clearing's back cell, facing the town); a resume onto the route map warps to the trigger cell and parks.
+  **A real-engine finding:** a warp within one map emits no `map.entered` but still clears the cell overrides
+  (`map.lua:776-786`), so the part checks each step that the clearing is open and that its own warp has landed, and
+  tells the core of the arrival itself (both are script warps, as on Gen 1). Zone acts: an item into the bag with a
+  found line; a battle with the class's first trainer as the template and the request's party, held for Cobblemon
+  (an abort answers too).
+- **Builder:** Gen 3 zone content (pools from the town's neighbours' land slots, named by the names resource; trainer
+  sprites by role, else the trainers' graphic; the game's items); a zone's wild pools name species by national number.
+  The synthetic Gen 3 export gained a pass variant (`synthetic_pass/`) for the tests.
+- **Tools:** `build_world.py --game` exports any imported game (Emerald beside Blue); the Emerald driver's `route`
+  scene.
+
+**Check:**
+
+| Suite | Result |
+|---|---|
+| pytest and Lua (local) | 1,978 passed (`test_lua_game3_routes.py` 18: the plan and every refusal, the clearing on each load, the park and the route map's facts, the way back, the resume, give and battle, main's walk in and out, the export) |
+| JUnit / GameTests (pod kb-dev11) | 1,230 (2 skipped) / 119, no failures (new: `Gen3ZoneTest` 5; `hoennsHalfOfThePassIsBuilt`: the synthetic Hoenn's half with its pass to Kanto and its gate house) |
+| e2e Emerald | `test_emerald.py` 6 passed, among them the new **route scene**: five steps through Littleroot's clearing, a script warp onto `KB_ROUTE_KANTO_HOENN_TEST_TO` at x1, a step right refused, a step left home to (18, 18) facing up, a park and a resume landing on the route map again; `test_emerald_export.py`: the `routes` resource names the end, Littleroot's clearing baked in open |
+| e2e Gen 1 | `test_wild_routes.py` (no route skipped: the pass's Kanto end installs on the real Blue), `test_regions`, `test_route1`, `test_viridian` 3, `test_battle` 2, `test_walk`: all passed |
+| **Two real engines** | `test_crossing_real.py` passed in 41 s: Blue and Emerald side by side (Emerald from a second data home, as spike S1), a fake client holding a link to each and doing what the client and the server do at a crossing. **20 crossings each way** (MULTI_GAME_PLAN §6 check 4): each time the game left parked on its route map, the other resumed onto its own at x1 (the cell it was parked on), and the ledger's projection (money and POTIONs, `bag.set`) landed and came back in `bag.sync`: 40 of 40; home through A on both sides; no error, no schema problem, no warp ended by the observer's timeout. Both hidden processes together: 620 MB at most. **MG5's open gap, a crossing between two real engines, is closed** |
+| The world (pod) | One world, `PassE2E`: Kanto (Blue, slot 0) 220 maps in 261 s, no warnings, with the Viridian zone and the pass's Kanto half (4 trainers, 4 balls, its gate house, the pass to Hoenn); Hoenn (Emerald, slot 1) 319 maps in 524 s with a 4 GB heap, the 43 known warnings (G3G), and the pass's Hoenn half: 4 trainers of 3 Emerald classes (10 Pokémon, levels 3–9, from Littleroot's neighbours), 4 balls from the item tiers, its gate house and the pass to Kanto |
+
+**HP6, server and client:** a Hoenn half needs nothing new on either side: the zone service sends the index's class
+and species names as they are, the client's ball sends its item as it is, and the game3 part prefixes them
+(`TRAINER_CLASS_`, `SPECIES_`, `ITEM_`). The item tiers (`data/kantobridge/wild_routes/items.json`) gained Gen 3's
+`PARALYZE_HEAL` (Gen 1 spells it `PARLYZ_HEAL`; a game keeps only the names it has, so Kanto's zones are unchanged).
+Checked by the Hoenn half's GameTest: its trainers' classes, its balls' items, and a trainer's `route.battle` to a
+player in front of it (Emerald class and species names).
+
+**Budgets per region (MULTI_GAME_PLAN §6 check 5):**
+
+| Budget | Kanto | Hoenn |
+|---|---|---|
+| Shape map on the wire (524,288 characters) | 319,136 (61%) | **1,682,040 (321%, over)**: sent in 26 parts, the Gen 3 gate allows 32 (G3G); voxel plan R10 is the fix (a region's shape map sent by part on demand) |
+| Build | 220 maps, 261 s | 319 maps, 524 s, 4 GB heap (8.2 M blocks) |
+| Two hidden processes (S1: about 600 MB) | 620 MB at most together during the crossings, both with gen1-bridge | |
+| Block-state memory, 32 families | measured at MG3 (D9), unchanged | |
+
+**Carried over, per map (the user's "each ROM requires its own tweaks"):**
+- Hoenn's seams: Dewford Town/Route 107, Fallarbor Town/Route 114, Verdanturf Town/Route 116 (edge mismatches) and
+  one overlap; 36 interiors with no arrival cell (G3G's warnings).
+- Unplaced Hoenn maps: Sootopolis, the Battle Frontier, the ferry's islands (no warp reaches them in the engine's data).
+- Hoenn's shape map size (above).
+- Emerald's trades, daycare and eggs are undone by the next party sync; people and the surf blob are placeholders;
+  animated tiles and darkness are not mirrored.
+- The test pass's exits are temporary (the user's choice, K1); F7 and `routes.json` move them.
 
 ### Handoff (2026-10-14): after MG6, for whoever continues
 

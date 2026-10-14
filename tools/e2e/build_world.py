@@ -184,8 +184,9 @@ async def _quit_driver(port):
         await tester.close()
 
 
-def export_bundle(port=EXPORT_PORT, timeout=None):
-    """Steps 1-3. Returns the bundle folder (local/minecraft/kantobridge/export/<game>).
+def export_bundle(port=EXPORT_PORT, timeout=None, game=None):
+    """Steps 1-3. Returns the bundle folder (local/minecraft/kantobridge/export/<game>). MG8: ``game`` exports that
+    imported game (emerald beside blue), else the pre-flight's.
 
     The export's index wait follows run_gen1recomp's INDEX_TIMEOUT (KB_EXPORT_INDEX_TIMEOUT: a slow host builds
     the export in minutes), passed to ExportCli as -Pkb.exportTimeout; the driver memoises the engine's dataset
@@ -199,7 +200,7 @@ def export_bundle(port=EXPORT_PORT, timeout=None):
     if not pf.ok:
         raise RuntimeError("pre-flight not done: " + "; ".join(pf.reasons))
     memo = os.environ.get("KB_DATASET_MEMO", "30")
-    with launch("kb_export.lua", extra_env={"KB_TEST_PORT": str(port), "KB_DATASET_MEMO": memo}) as running:
+    with launch("kb_export.lua", game=game, extra_env={"KB_TEST_PORT": str(port), "KB_DATASET_MEMO": memo}) as running:
         if running.wait_marker("KB_TITLE", timeout=150) is None:
             raise RuntimeError("the test instance never reached the title screen")
         code = _gradle(["exportCli", f"-Pkb.exportPort={port}", f"-Pkb.exportOut={EXPORT_DIR}",
@@ -211,7 +212,7 @@ def export_bundle(port=EXPORT_PORT, timeout=None):
         raise RuntimeError(f"ExportCli failed (exit {code})")
     if result.returncode != 0:
         raise RuntimeError(f"the test instance exited with {result.returncode}")
-    bundle = EXPORT_DIR / pf.game
+    bundle = EXPORT_DIR / (game or pf.game)
     if not (bundle / "index.json").is_file():
         raise RuntimeError("ExportCli wrote no index.json")
     return bundle
@@ -421,7 +422,8 @@ def main(argv=None):
     parser.add_argument("--world", default="Kanto", help="world folder under local/minecraft/saves")
     parser.add_argument("--fresh", action="store_true", help="delete that world first")
     parser.add_argument("--skip-export", action="store_true", help="reuse the bundle already in local/")
-    parser.add_argument("--game", default=None, help="with --skip-export: red or blue (default: the import)")
+    parser.add_argument("--game", default=None, help="the imported game to export or, with --skip-export, to build "
+                        "(default: the pre-flight's; MG8: emerald beside blue)")
     parser.add_argument("--region", default=None, help="MG3: build as this region of the world (with --slot)")
     parser.add_argument("--slot", type=int, default=None, help=f"MG3: the region table slot, 0..{MAX_SLOT} (with --region)")
     parser.add_argument("--heap", default=None, help="MG7: the server's heap, e.g. 8g (a full Hoenn needs more than the default)")
@@ -443,7 +445,7 @@ def main(argv=None):
         bundle = EXPORT_DIR / (args.game or preflight().game)
     else:
         print("== export")
-        bundle = export_bundle()
+        bundle = export_bundle(game=args.game)
     where = f"saves/{args.world}" + (f" as region {args.region} (slot {args.slot})" if args.region is not None else "")
     print(f"== build ({len(maps) or 'all'} maps) into {where}")
     code = build(bundle, maps, args.world, region=args.region, slot=args.slot, heap=args.heap)

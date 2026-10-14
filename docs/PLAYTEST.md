@@ -857,3 +857,33 @@ Kanto world, or the headless build); a world made before then keeps its flat cav
       behalf; the mirrored stacks are marked and come and go with the ledger.
 - [ ] Restore an older copy of the save and resume: the game is re-projected from the ledger (F7's `reprojected` count
       goes up); nothing is lost. What does not fit the game's bag (20 slots, 99 a stack) stays "in your trunk" on F7.
+
+### MG7 and MG8: Emerald, Hoenn and the pass (with you)
+
+Everything here ran on pods against your Emerald and Blue imports (PROGRESS.md "Several games: MG7", "MG8"); none of
+it has been seen in a real client yet.
+
+- [ ] **Setup:** gen1-bridge in an Emerald install as in your Blue one (one process per game; your e2e install holds
+      both imports, which the tests use that way); `launch.ps1 -DryRun` should list Emerald with its port, then
+      `launch.ps1` starts both games and the dev client with both links.
+- [ ] **Two regions in one world:** Kanto built as `--region kanto --slot 0`, then Hoenn as `--region hoenn --slot 1`
+      (or "Add a region" with the Emerald link). A Hoenn build places 319 maps in about 9 minutes and needs a 4 GB
+      heap: give Minecraft 6 GB or more in your launcher if you build in game. Not placed yet: Sootopolis, the Battle
+      Frontier and the ferry's islands (no warp reaches them in the engine's data).
+- [ ] **Following Emerald:** walking, doors, signs and text boxes, Birch's speech on a new game, saving. People and the
+      surf blob draw as placeholders for now.
+- [ ] **Battles in Hoenn:** a trainer is fought in Cobblemon; a win pays the prize in the hidden game and shows its two
+      texts; a loss blacks you out to the last heal point; wild Pokémon in the grass come from Hoenn's habitats.
+- [ ] **Items and evolutions:** a stone, Rare Candy or TM used on a party Pokémon from the hidden Emerald bag answers
+      "It won't have any effect" while you're connected (use them in Minecraft). In Hoenn a Pokémon may evolve into
+      anything up to #386 (Eevee into Espeon); in Kanto up to #151.
+- [ ] **The test pass** (temporary exits, your "a corner of the first or second town"): in Viridian City's north-west
+      corner a clearing opens north through the trees into the pass's Kanto half (a forest maze with trainers); its
+      end is a gate house whose far doorway crosses to Hoenn: you arrive in Hoenn's gate house, and Hoenn's half
+      leads back out through a clearing in Littleroot Town's south-east corner. Then the same the other way. Pallet
+      Town had no spot that fits a clearing, so Kanto's end is in Viridian.
+- [ ] **Your exits:** when you want them elsewhere, stand where each clearing should start, face the trees, press F7
+      and send me the map, cell and facing (as for the Viridian zone).
+- **Known gaps:** Hoenn's three seams (Dewford Town and Route 107, Fallarbor Town and Route 114, Verdanturf Town and
+  Route 116) are walls or overlaps; Emerald's in-game trades, daycare and eggs are undone by the next party sync;
+  Hoenn's shape map is about 1.7 MB, sent to each joining client.

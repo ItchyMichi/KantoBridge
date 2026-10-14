@@ -1,5 +1,7 @@
 package dev.kantobridge.gametest;
 
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
 import dev.kantobridge.block.EdgeWallBlock;
 import dev.kantobridge.block.KbBlocks;
 import dev.kantobridge.block.LedgeColliderBlock;
@@ -12,11 +14,15 @@ import dev.kantobridge.builder.BuildTask;
 import dev.kantobridge.builder.KantoWorldBuilder;
 import dev.kantobridge.builder.export.BundleException;
 import dev.kantobridge.builder.export.ExportBundle;
+import dev.kantobridge.proto.Envelope;
+import dev.kantobridge.proto.MsgTypes;
 import dev.kantobridge.scene.gen3.QuarterPages;
+import dev.kantobridge.server.ZoneService;
 import dev.kantobridge.world.DataException;
 import dev.kantobridge.world.MapPlacement;
 import dev.kantobridge.world.RegionRecord;
 import dev.kantobridge.world.RegionTable;
+import dev.kantobridge.world.Scale;
 import dev.kantobridge.world.SlotMap;
 import dev.kantobridge.world.StoryCellType;
 import dev.kantobridge.world.WorldIndex;
@@ -192,12 +198,19 @@ public class Gen3BuildGameTests implements FabricGameTest {
 					helper.assertTrue(zone.gateHouse() != null, "the gate house");
 					helper.assertTrue(!zone.trainers().isEmpty(), "trainers from the town's neighbours");
 					for (WorldIndex.ZoneTrainer trainer : zone.trainers()) {
+						helper.assertTrue("TRAINER_CLASS_TEST".equals(trainer.cls()), "class " + trainer.cls());
 						helper.assertTrue("OBJ_EVENT_GFX_TEST_TRAINER".equals(trainer.sprite()), "sprite " + trainer.sprite());
 						for (WorldIndex.PartyMember member : trainer.party()) {
 							helper.assertTrue(member.species().startsWith("TEST_"), "species " + member.species());
 						}
 					}
+					// HP6: the balls hold the game's items by name, as the hidden Emerald's route.give takes them
+					helper.assertTrue(!zone.balls().isEmpty(), "no item balls");
+					for (WorldIndex.ZoneBall ball : zone.balls()) {
+						helper.assertTrue("POTION".equals(ball.item()) || "POKE_BALL".equals(ball.item()), "ball " + ball.item());
+					}
 					helper.assertTrue(index.map("KB_ROUTE_TEST_PASS_TO") != null, "the route map's placement");
+					challenge(helper, index, zone);
 					// something stands in the zone's box (its floor and walls)
 					int solid = 0;
 					for (int x = zone.x(); x < zone.x() + zone.w(); x += 4) {
@@ -213,6 +226,33 @@ public class Gen3BuildGameTests implements FabricGameTest {
 				})
 				.thenExecute(() -> delete(dir))
 				.thenSucceed();
+	}
+
+	/**
+	 * HP6: a Hoenn half's trainer challenges a player in front of it: {@code route.battle} carries the Emerald class and
+	 * species names the hidden game's route end takes (gen1-bridge's game3 routes part).
+	 */
+	private static void challenge(GameTestHelper helper, WorldIndex index, WorldIndex.Zone zone) {
+		WorldIndex.ZoneTrainer trainer = zone.trainers().get(0);
+		MapPlacement routeMap = index.map(zone.routeMap());
+		int cx = trainer.x() + trainer.facing().dx();
+		int cy = trainer.y() + trainer.facing().dy();
+		MockPlayers.with(helper, player -> RelayTap.capture(player, sent -> {
+			player.teleportTo(routeMap.x() + cx * Scale.CELL_BLOCKS + 1.0, zone.y(), routeMap.z() + cy * Scale.CELL_BLOCKS + 1.0);
+			Envelope battle = null;
+			for (long tick = 1_000; tick < 1_100 && battle == null; tick++) {
+				ZoneService.tickPlayer(player, HOENN, index, tick);
+				battle = sent.stream().filter(m -> m.type().equals(MsgTypes.ROUTE_BATTLE)).findFirst().orElse(null);
+			}
+			helper.assertTrue(battle != null, "no route.battle from " + trainer.id());
+			JsonObject data = battle.data();
+			helper.assertTrue("TRAINER_CLASS_TEST".equals(data.get("class").getAsString()), "battle class " + data.get("class"));
+			helper.assertTrue(data.getAsJsonArray("party").size() == trainer.party().size(), "battle party");
+			for (JsonElement member : data.getAsJsonArray("party")) {
+				helper.assertTrue(member.getAsJsonObject().get("species").getAsString().startsWith("TEST_"), "battle species");
+			}
+			ZoneService.encounters().forget(player.getUUID());
+		}));
 	}
 
 	/** The hoenn region's files, record, slot-map range, pools and blocks. */
