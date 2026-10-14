@@ -703,6 +703,13 @@
   "exports": {
     "encounters": {"schema": "export/encounters.schema.json"},
     "field": {"schema": "export/field.schema.json"},
+    "g3encounters": {"schema": "export/g3encounters.schema.json"},
+    "g3image": {"schema": "export/g3image.schema.json"},
+    "g3layout": {"schema": "export/g3layout.schema.json"},
+    "g3map": {"schema": "export/g3map.schema.json"},
+    "g3names": {"schema": "export/g3names.schema.json"},
+    "g3sprite": {"schema": "export/g3sprite.schema.json"},
+    "g3tiles": {"schema": "export/g3tiles.schema.json"},
     "image": {"schema": "export/image.schema.json"},
     "layout": {"schema": "export/layout.schema.json"},
     "map": {"schema": "export/map.schema.json"},

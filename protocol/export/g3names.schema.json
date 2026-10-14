@@ -1,0 +1,42 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kantobridge.invalid/protocol/export/g3names.schema.json",
+  "title": "export Gen 3 names",
+  "description": "MG7 G3D: the engine's constant names: species -> national dex, moves -> move number, items -> item number.",
+  "x-export-kind": "g3names",
+  "type": "object",
+  "required": ["species", "moves", "items"],
+  "additionalProperties": false,
+  "properties": {
+    "species": {
+      "type": "object",
+      "propertyNames": {
+        "type": "string",
+        "pattern": "^[A-Z0-9_]+$",
+        "minLength": 1,
+        "maxLength": 64
+      },
+      "additionalProperties": {"type": "integer", "minimum": 1, "maximum": 2000}
+    },
+    "moves": {
+      "type": "object",
+      "propertyNames": {
+        "type": "string",
+        "pattern": "^[A-Z0-9_]+$",
+        "minLength": 1,
+        "maxLength": 64
+      },
+      "additionalProperties": {"type": "integer", "minimum": 1, "maximum": 2000}
+    },
+    "items": {
+      "type": "object",
+      "propertyNames": {
+        "type": "string",
+        "pattern": "^[A-Z0-9_]+$",
+        "minLength": 1,
+        "maxLength": 64
+      },
+      "additionalProperties": {"type": "integer", "minimum": 1, "maximum": 2000}
+    }
+  }
+}

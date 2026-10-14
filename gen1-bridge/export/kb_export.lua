@@ -27,7 +27,10 @@ local Export = {}
 
 Export.KINDS = { map = true, tileset = true, image = true, sprite = true, palettes = true,
                  encounters = true, field = true, names = true, layout = true, swaps = true, profile = true,
-                 routes = true }
+                 routes = true,
+                 -- MG7 (G3D): Gen 3's own kinds, built by its adapter (exportResources)
+                 g3map = true, g3tiles = true, g3image = true, g3sprite = true, g3layout = true,
+                 g3encounters = true, g3names = true }
 Export.ROLES = { builder = true, test = true }
 Export.ROOT = "PALLET_TOWN"              -- layout root (PLAN section 2.2)
 Export.BUDGET = 0.006                    -- seconds of build work per logic step
@@ -482,7 +485,25 @@ function Export.new(opts)
     return water, shore, pads
   end
 
+  -- MG7 (G3D): an engine whose adapter builds its own resources (Gen 3:
+  -- lib/engine/game3/export.lua, the g3* kinds) puts them through the same
+  -- cache, hashes and index; the Gen 1 path below stays as it is.
+  local function buildOwn(own)
+    enter("adapter")
+    local entry = gameEntry()
+    stats.path = "adapter"
+    local sink = {
+      put = put, checkpoint = checkpoint, warn = warn, json = json,
+      base64 = Images and Images.base64 or nil,
+      region = type(entry) == "table" and type(entry.region) == "string" and entry.region or nil,
+    }
+    local ok, err = own(sink)
+    if ok ~= true then error("export.adapter_failed:" .. tostring(err), 0) end
+  end
+
   local function build()
+    local own = rawget(engine, "exportResources")
+    if type(own) == "function" then return buildOwn(own) end
     local t0 = clock()
     enter("records")
     local src, reason = pickSource()

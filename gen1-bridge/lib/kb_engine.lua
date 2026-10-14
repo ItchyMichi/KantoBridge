@@ -84,6 +84,8 @@ Engine.GROUPS = {
                "toTitle", "dropPlaythrough" },
   reliability = { "metaOf", "persistent", "runHidden", "hiddenStats" },
   export = { "openDataset", "datasetSource", "liveSource", "worldShowing", "liveSourceFromGame", "mapQuery",
+             -- MG7 (G3D): an adapter that builds its family's own resources (Gen 3's g3* kinds)
+             "exportResources",
              "isOutside", "tileProbe", "shoreTiles", "cutTreeTiles", "spinnerTiles", "animatedTiles",
              "borderBlockFor", "voidFill", "modDataFile", "animationImages", "computeNeighbors", "paletteLookup",
              "imagePng" },

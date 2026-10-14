@@ -358,6 +358,18 @@ function FakeEngine3.new(opts)
     specials = { [7] = "HealPlayerParty", [8] = "TestOtherSpecial" },
   }
   local Methods = {}
+  -- :39-41 (raw: the generated table; here only byName)
+  function Methods:raw(kind)
+    local t = E.constTables[kind]
+    if t == nil then return nil end
+    local byName = {}
+    for _, sub in pairs(t) do
+      if type(sub) == "table" then
+        for id, name in pairs(sub) do byName[name] = id end
+      end
+    end
+    return { byName = byName }
+  end
   function Methods:name(kind, id, prefix)
     local t = E.constTables[kind]
     if t == nil then return nil end

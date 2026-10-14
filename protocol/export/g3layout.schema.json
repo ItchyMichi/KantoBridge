@@ -1,0 +1,29 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kantobridge.invalid/protocol/export/g3layout.schema.json",
+  "title": "export Gen 3 layout",
+  "description": "MG7 G3D: cell origins of the surface maps (those reached from the root through connections), from the maps' own connection offsets.",
+  "x-export-kind": "g3layout",
+  "type": "object",
+  "required": ["root", "unit", "maps"],
+  "additionalProperties": false,
+  "properties": {
+    "root": {"$ref": "../defs.schema.json#/$defs/mapId"},
+    "unit": {"const": "cells"},
+    "maps": {
+      "type": "object",
+      "propertyNames": {"$ref": "../defs.schema.json#/$defs/mapId"},
+      "additionalProperties": {
+        "type": "object",
+        "required": ["x", "y", "w", "h"],
+        "additionalProperties": false,
+        "properties": {
+          "x": {"type": "integer", "minimum": -16384, "maximum": 16384},
+          "y": {"type": "integer", "minimum": -16384, "maximum": 16384},
+          "w": {"type": "integer", "minimum": 1, "maximum": 1023},
+          "h": {"type": "integer", "minimum": 1, "maximum": 1023}
+        }
+      }
+    }
+  }
+}

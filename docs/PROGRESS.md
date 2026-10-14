@@ -1475,7 +1475,7 @@ the full suite at the ✔ checkpoints (MG2, MG3, MG5, MG6). Pods run inside your
 | MG4 | Links | **done** (note 19); check: with one link the e2e scenarios behave as before (pod, real engine: `test_s5_ready`, `test_handshake`, `test_regions`, `test_multiplayer`, `test_crash`, `test_hot_reload` all passed), `tools/tests/test_links.py` (two `fake_gen1`: swap, a parked drop, a wrong game), JUnit `LinksTest` + `LinksFakeGen1IntegrationTest` (two real `fake_gen1` processes); one `test_multiplayer` assertion learnt that an install paired before MG1 keeps its legacy pairing file beside the per-game one. The MG4–MG6 checkpoint on the pod (kb-dev7): pytest and Lua 1,729, JUnit 1,193 (0 failures), GameTests 112 | 2026-10-13 | |
 | MG5 | Crossings | **done** (note 20); check: `PassGameTests` (6: the round trip into the far gate house with the exact arrival cell, every refusal, abort, the timeout, the start path, the stash, a built half whose pass is a story cell), `PassCrossingsTest`, `ZonePlanTest`, `WorldIndexTest`, `PassChoreographyTest` (16), the two-`fake_gen1` crossing in `tools/tests/test_stand_ins.py`; a crossing between two real engines waits for a second region whose game has an adapter (MG7/MG8) | 2026-10-13 | |
 | MG6 | One trainer economy | **done** (notes 18, 21); check: `LedgerGameTests` (two regions: adoption, stamped read-back, the crossing's projection, `too_many`/`left`, re-projection on an unknown stamp; a legacy world untouched), `BagGameTests` marked stacks, `LedgerTest`/`LedgerCodecTest`/`ItemsTest`/`BagSetRelayTest`, `test_lua_ledger.py`/`test_lua_bag.py`; the real engine's `bag.set` round trip is your play-test (PLAYTEST.md "MG6") | 2026-10-13 | |
-| MG7 | The second family (Emerald): adapter and export | **in progress**: the spec [specs/GEN3_BRIDGE_PLAN.md](specs/GEN3_BRIDGE_PLAN.md) (2026-10-14), phases G3A–G3G; **G3A done** (Emerald followable), **G3B done** (Emerald's UI), **G3C done** (story; "Several games: MG7") | 2026-10-14 | |
+| MG7 | The second family (Emerald): adapter and export | **in progress**: the spec [specs/GEN3_BRIDGE_PLAN.md](specs/GEN3_BRIDGE_PLAN.md) (2026-10-14), phases G3A–G3G; **G3A done** (Emerald followable), **G3B done** (Emerald's UI), **G3C done** (story), **G3D done** (export; "Several games: MG7") | 2026-10-14 | |
 | MG8 | Hoenn and the pass to it | pending | | |
 
 ### Several games: notes
@@ -1935,6 +1935,25 @@ $0.08/hr, made when EU-RO-1 had no 4-vCPU stock): e2e `test_emerald.py` 4 passed
 snapshot carries `cells`; a cell changed through the engine's `Field.setMetatile` reported, then reported back with
 its own metatile; an object's hide flag set: `story.toggles` hides `O5`, `story.flags` lists the flag); JUnit 1,196 and
 GameTests 112, no failures.
+
+**G3D (2026-10-14): Emerald's export.** *Measured first* (`tools/e2e/test_g3_measure.py`, numbers only, in
+GEN3_BRIDGE_PLAN.md §5): 519 maps, 316,337 cells, 75 tileset pairs, 18,358 distinct flattened 8x8 quarters used by the
+maps (26,155 over every metatile), 239 sprite sheets, 116 maps with encounters. **Consequence (E7):** a flat Hoenn needs
+about 18,400 full-block texture slots, 72 families of 256 where a region has 16 today; E7's default (raise the families
+per shape, to 96: about 90 MB a side instead of 30) is G3E's. *Built:* the adapter's `export` part
+(`gen1-bridge/lib/engine/game3/export.lua`) gives the core its own resources (`exportResources`; the core caches,
+hashes and serves them as for Gen 1): `g3map` (the layout's whole grid with its true size, connections, warps,
+objects), `g3tiles` (each metatile's four quarters in the flattened art: over, else middle, else under; behaviours),
+`g3image` (26 pages of 1,024 quarters, RGBA, baked on the CPU from the engine's own prepared atlases), `g3sprite`,
+`g3layout` (the engine's own placement), `g3encounters` (national dex), `g3names`: seven new export kinds (schemas,
+PROTOCOL.md, catalogues). On the pod: 862 resources, 4.3 MB, built in about 24 s. **For G3E:** Hoenn's surface is 49
+maps; three of its loops don't close on a flat plane (Dewford Town and Route 107, Fallarbor Town and Route 114,
+Verdanturf Town and Route 116, which also overlap): the builder joins those seams another way.
+
+**Check:** pytest and Lua 1,904 passed, 10 skipped (`test_lua_game3_export.py`: 8, on `tools/lua/fake_export3.lua`);
+on pod kb-dev11: `test_g3_measure.py` and `test_emerald_export.py` passed (every resource passes its schema, hashes and
+sizes match Python's canonical JSON, counts match the measurement, every quarter is on a page). No Java change: the
+builder reads the g3* kinds from G3E on.
 
 ### Handoff (2026-10-14): after MG6, for whoever continues
 

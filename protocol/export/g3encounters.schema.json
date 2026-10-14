@@ -1,0 +1,134 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kantobridge.invalid/protocol/export/g3encounters.schema.json",
+  "title": "export Gen 3 encounters",
+  "description": "MG7 G3D: the wild encounter tables per map, Gen 3's shape: land 12 slots, water 5, rock smash 5, fishing 10 (old rod 0-1, good rod 2-4, super rod 5-9); national dex numbers.",
+  "x-export-kind": "g3encounters",
+  "type": "object",
+  "required": ["maps"],
+  "additionalProperties": false,
+  "properties": {
+    "maps": {
+      "type": "object",
+      "propertyNames": {"$ref": "../defs.schema.json#/$defs/mapId"},
+      "additionalProperties": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "land": {
+            "type": "object",
+            "required": ["rate", "slots"],
+            "additionalProperties": false,
+            "properties": {
+              "rate": {"type": "integer", "minimum": 0, "maximum": 255},
+              "slots": {
+                "type": "array",
+                "minItems": 1,
+                "maxItems": 12,
+                "items": {
+                  "type": "object",
+                  "required": ["dex", "min", "max"],
+                  "additionalProperties": false,
+                  "properties": {
+                    "dex": {
+                      "type": "integer",
+                      "minimum": 1,
+                      "maximum": 2000,
+                      "description": "National dex number."
+                    },
+                    "min": {"type": "integer", "minimum": 1, "maximum": 100},
+                    "max": {"type": "integer", "minimum": 1, "maximum": 100}
+                  }
+                }
+              }
+            }
+          },
+          "water": {
+            "type": "object",
+            "required": ["rate", "slots"],
+            "additionalProperties": false,
+            "properties": {
+              "rate": {"type": "integer", "minimum": 0, "maximum": 255},
+              "slots": {
+                "type": "array",
+                "minItems": 1,
+                "maxItems": 5,
+                "items": {
+                  "type": "object",
+                  "required": ["dex", "min", "max"],
+                  "additionalProperties": false,
+                  "properties": {
+                    "dex": {
+                      "type": "integer",
+                      "minimum": 1,
+                      "maximum": 2000,
+                      "description": "National dex number."
+                    },
+                    "min": {"type": "integer", "minimum": 1, "maximum": 100},
+                    "max": {"type": "integer", "minimum": 1, "maximum": 100}
+                  }
+                }
+              }
+            }
+          },
+          "rock": {
+            "type": "object",
+            "required": ["rate", "slots"],
+            "additionalProperties": false,
+            "properties": {
+              "rate": {"type": "integer", "minimum": 0, "maximum": 255},
+              "slots": {
+                "type": "array",
+                "minItems": 1,
+                "maxItems": 5,
+                "items": {
+                  "type": "object",
+                  "required": ["dex", "min", "max"],
+                  "additionalProperties": false,
+                  "properties": {
+                    "dex": {
+                      "type": "integer",
+                      "minimum": 1,
+                      "maximum": 2000,
+                      "description": "National dex number."
+                    },
+                    "min": {"type": "integer", "minimum": 1, "maximum": 100},
+                    "max": {"type": "integer", "minimum": 1, "maximum": 100}
+                  }
+                }
+              }
+            }
+          },
+          "fish": {
+            "type": "object",
+            "required": ["rate", "slots"],
+            "additionalProperties": false,
+            "properties": {
+              "rate": {"type": "integer", "minimum": 0, "maximum": 255},
+              "slots": {
+                "type": "array",
+                "minItems": 1,
+                "maxItems": 10,
+                "items": {
+                  "type": "object",
+                  "required": ["dex", "min", "max"],
+                  "additionalProperties": false,
+                  "properties": {
+                    "dex": {
+                      "type": "integer",
+                      "minimum": 1,
+                      "maximum": 2000,
+                      "description": "National dex number."
+                    },
+                    "min": {"type": "integer", "minimum": 1, "maximum": 100},
+                    "max": {"type": "integer", "minimum": 1, "maximum": 100}
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

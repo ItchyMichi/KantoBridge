@@ -18,18 +18,18 @@ def test_the_loader_picks_the_game3_adapter_grown_from_the_stub():
     assert eng.hasAdapter() is True
     assert (eng.engineId(), eng.family(), eng.gameVersion()) == (b"game3", b"gen3", b"emerald")
     assert [p.decode() for p in a.b.module("lib/engine/game3.lua").PARTS.values()] == [
-        "boot", "observe", "move", "saves", "region", "reliability", "ui", "story"]
+        "boot", "observe", "move", "saves", "region", "reliability", "ui", "story", "export"]
 
 
 def test_missing_groups_name_the_groups_no_part_has_written():
     # A group counts once any of its functions is the adapter's own (kb_engine.missingGroups). The
     # parts written so far define every function of boot, interaction, movement, saving, sessions,
-    # reliability, region, (G3B) ui and (G3C) story; battles, export and routes are still the stub's. party
+    # reliability, region, (G3B) ui, (G3C) story and (G3D) export; battles and routes are still the stub's. party
     # and items count as present: the parts define bridgeToken, nextSerial and scriptCommand (party)
     # and inGame (items), which the core needs from the first step.
     a = Adapter3()
     missing = [g.decode() for g in a.Engine.missingGroups(a.eng).values()]
-    assert missing == ["battles", "export", "routes"]  # the UI part came with G3B, the story with G3C
+    assert missing == ["battles", "routes"]  # the UI part came with G3B, the story with G3C, the export with G3D
     stubbed = {k.decode() for k in a.eng._stubbed.keys()}
     for name in ("bridgeToken", "nextSerial", "scriptCommand", "inGame", "observe", "takeVerdicts", "holdAway",
                  "metaOf", "playthrough", "saveView", "uiStack", "uiSetGlyphs", "screenSize"):

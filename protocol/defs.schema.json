@@ -282,7 +282,14 @@
         "layout",
         "swaps",
         "profile",
-        "routes"
+        "routes",
+        "g3map",
+        "g3tiles",
+        "g3image",
+        "g3sprite",
+        "g3layout",
+        "g3encounters",
+        "g3names"
       ]
     },
     "routeId": {

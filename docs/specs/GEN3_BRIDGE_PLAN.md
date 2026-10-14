@@ -247,6 +247,43 @@ The world note and the export note give the facts; the shape is the scene draft'
   (`paletteModel = "baked"`). Animated tiles (water, flowers) export their frames as extra quarters.
 - **Measure first**: before the builder work, a pod driver counts (numbers only) the unique quarters per plane and pair,
   the maps, and the quarters Hoenn's maps use, to size atlas pages and slot capacity (§10 E7).
+- **Measured (2026-10-14, `tools/e2e/test_g3_measure.py` with `drivers/kb_g3measure.lua` on the pod's Emerald import;
+  the driver reads the engine's own prepared atlases, `AssetDecode.pair`, CPU only):**
+
+  | What | Count |
+  |---|---|
+  | maps with a layout / cells / largest | 519 / 316,337 / 140×140 |
+  | tileset pairs (metatiles over all pairs) | 75 (35,116) |
+  | metatiles Hoenn's maps use (per pair, summed) | 13,262 |
+  | distinct 8×8 quarters, all / used: under | 21,190 / 14,635 |
+  | middle (opaque quarters) | 13,880 / 11,432 |
+  | over (opaque quarters) | 3,895 / 3,421 |
+  | distinct used quarters over all planes | 20,668 |
+  | **distinct used quarters, planes flattened** (over, else middle, else under: the art a flat first build draws, E5) | **18,358** |
+  | object sprite sheets / frames / most frames | 239 / 1,768 / 27 (sizes 16×16: 65, 16×32: 113, 32×32: 55, larger: 6) |
+  | encounter tables (land / water / fishing / rock) | 348 (261 / 165 / 159 / 18) |
+
+  **Consequence for E7:** a flat Hoenn needs about 18,400 texture slots for its full-block floor art, 72 families of
+  256, where a region gets 16 today (Kanto uses 3,926 of its 4,096). E7's default applies: the families per shape go up
+  (Kanto 16 + Hoenn 72 rounds to 96 per shape; MG3 measured about 15 MB a side per 16 families, so about 90 MB a side in
+  all instead of 30). That change is G3E's (the builder); the export pages quarters 1,024 to an atlas image (18 pages
+  for the flattened art).
+- **As built (G3D, 2026-10-14; `GB/lib/engine/game3/export.lua`).** The adapter defines `exportResources(sink)`; the
+  core (`GB/export/kb_export.lua`) calls it in place of the Gen 1 build when the adapter has it and puts every resource
+  through the same cache, SHA-256 and index. Kinds and schemas (`P/export/g3*.schema.json`): `g3map` (the layout's whole
+  grid, `w x h` as the engine places neighbours, with `trueW`/`trueH`: a small map is padded and its cells past the true
+  size show the border; 4 bytes a cell: metatile, collision, elevation; border; connections as a list, a direction may
+  have several, dive/emerge included; warps with `to` or `dynamic`; objects with kinds and hide flags), `g3tiles` (per
+  metatile its four flattened quarters, behaviour, over flag, behaviour names), `g3image` (`g3q.<n>`: 256x256 RGBA pages
+  of 1,024 quarters), `g3sprite` (RGBA strips), `g3layout` (the engine's own placement, `Map.computeWorld`, from
+  `EM_LITTLEROOT_TOWN`), `g3encounters` (national dex; Altering Cave's variants export variant 0, warned), `g3names`.
+  Every metatile of every pair gets quarters (story cells can show any of them): **26,155 distinct flattened quarters,
+  26 pages**. On the pod: 862 resources, 4.3 MB, built in about 24 s (18 s of CPU) while the game keeps its frames.
+  Animated tiles export their still frame (animation is later work). **For G3E:** Hoenn's surface from Littleroot is
+  49 maps (Sootopolis is reached by diving); placed the engine's way, 106 connection sides agree and 6 don't: Dewford
+  Town and Route 107, Fallarbor Town and Route 114, Verdanturf Town and Route 116 (which also overlap), loops that the
+  GBA's local connections never close. The builder treats those seams apart (a pass or a cut), as a flat world can't
+  join them; 341 of the 519 maps are padded.
 
 ## 6. The builder (G3E)
 
@@ -308,7 +345,7 @@ maps `G3_TEST_*`, `layout/hoenn`); a golden scene; a GameTest building a synthet
 | **G3A** core changes; adapter base, boot, observe, NPCs, movement, warps, interaction, saves and slots, region, reliability; catalogue and manifest; the fake engine | Emerald followable: hello.ok, snapshot, walking, warps, saves, game.status, region acts | lupa per part; e2e `test_emerald.py` (all but the text box) ✔ — **done 2026-10-14** (PROGRESS.md "Several games: MG7": the deviations `chainsHeld` and `starting`) |
 | **G3B** UI | text boxes, choices, lists, menus, naming, Birch's speech, the 240×160 mirror (Lua, schema, client) | lupa UI; e2e text box ✔ — **done 2026-10-14** (a Littleroot sign read through the UI; Birch's whole speech answered through the UI into the field) |
 | **G3C** story | flags, toggles, `story.cells` | lupa; e2e a flag and an override — **built 2026-10-14** (see §4.6 "As built") |
-| **G3D** export | `g3*` resources, baked quarters, encounters, layout; the measurement driver first | lupa on the fake; pod export counts and hashes ✔ |
+| **G3D** export | `g3*` resources, baked quarters, encounters, layout; the measurement driver first | lupa on the fake; pod export counts and hashes ✔ — **done 2026-10-14** (§5 "Measured", "As built") |
 | **G3E** builder | `Gen3FrontEnd`, the Gen 3 planner path, baked textures, habitats, two art sets in one pack | JUnit, golden scene, GameTest ✔ |
 | **G3F** battles, party, items, routes | headless battles with `Battle.abort`, party sync, bag projection, the route exit | lupa; e2e a wild and a trainer battle ✔ |
 | **G3G** | synthetic bundle, goldens, full suites; the pod's Hoenn build (MG8's first step) | full suite ✔ |

@@ -1,0 +1,23 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kantobridge.invalid/protocol/export/g3image.schema.json",
+  "title": "export Gen 3 image",
+  "description": "MG7 G3D: an RGBA image: a page of 1,024 8x8 quarters (32 x 32, ids g3q.<n>).",
+  "x-export-kind": "g3image",
+  "type": "object",
+  "required": ["id", "w", "h", "png"],
+  "additionalProperties": false,
+  "properties": {
+    "id": {"$ref": "../defs.schema.json#/$defs/id"},
+    "w": {"type": "integer", "minimum": 1, "maximum": 4096},
+    "h": {"type": "integer", "minimum": 1, "maximum": 4096},
+    "png": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9+/]*={0,2}$",
+      "maxLength": 1048576,
+      "contentEncoding": "base64",
+      "description": "PNG bytes (RGBA), base64.",
+      "x-rom-derived": true
+    }
+  }
+}
