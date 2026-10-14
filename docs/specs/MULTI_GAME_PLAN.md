@@ -673,6 +673,8 @@ Sizes as in PLAN.md §6: **S** about M1, **M** about M6/M7, **L** about M8, **XL
   quits by itself and `<game>/rom-cache.complete` exists; the tool learns the game from the folder name. Also:
   `POKEPORT_IDENTITY` with and without `portable.txt` (which data home is used), noted for D3's alternative.
 - Output: PROGRESS "Several games: spikes"; `docs/specs/GEN3_BRIDGE_PLAN.md` is written only at MG7 from S2–S3.
+  **S2 and S3 ran on the pod on 2026-10-14** (against the volume's Emerald import, at the user's request); S1, S4
+  and S5 are still the user's.
 
 ### MG1: The game catalogue and an open protocol (S–M)
 
@@ -836,7 +838,7 @@ Sizes as in PLAN.md §6: **S** about M1, **M** about M6/M7, **L** about M8, **XL
 | Risk | Why it matters | Mitigation |
 |---|---|---|
 | Gen 3 is `beta` upstream and its internals move fast (36 releases in 10 days) | The `game3` adapter patches internals of an engine still changing | Pin stays; `Adapter.REQUIRES` makes drift loud; the adapter is written against the pin and re-checked on any bump |
-| No documented Gen 3 map scripts; `movement.collision` and `fieldmove.eligibility` aren't raised by `game3` | The route exit and the closed lower row rely on them in Gen 1 | S2 decides: `map_scripts` → `gen3Scripts`, or the `warp.destination` hook (raised on all three engines) for the exit; the lower row closed by the zone's hedges alone |
+| No documented Gen 3 map scripts; `movement.collision` and `fieldmove.eligibility` aren't raised by `game3` | The route exit and the closed lower row rely on them in Gen 1 | S2 decided (2026-10-14): neither; the exit is `world.stepped` + `mod.world:warpTo` (map scripts are never called, a warp patched onto open ground stays inactive), `replaceBlock` opens its cells and `warp.destination` can redirect an existing door; the lower row closed by the zone's hedges alone |
 | Gen 2 runs cart bytecode (no `map_scripts`, numeric flags) | A Johto adapter can't reuse the Gen 1 exit trick | Out of this plan; §8 names the research |
 | RAM and windows per hidden game on the player's PC | Two LÖVE processes beside Minecraft | S1 measures; minimised windows keep full speed (M10) |
 | Shared `options.lua` across processes of one install | Slot registry clobbered | One install per world space (D3); the setup tool never puts two concurrently played games in one install |
@@ -930,7 +932,11 @@ Gen 3 field schema (`maps:patch("FR_PALLET_TOWN", …)` works); `tilesets, sprit
 dropped with a report. `mod.world:warpTo`, `queueScript`, `current`, `getFlag/setFlag` exist on all three WorldAPIs;
 flag namespaces differ (Gen 1 `EVENT_*` strings; Gen 2 numeric; Gen 3 FireRed names/ids via `Gen3Compat.flagId`, the
 `game3` flag store on Emerald). Gen3Compat serves the 15 Gen 1 module names only for `frlg` layouts; on Emerald such
-requires are reported with no adapter. Badges: no facade (Gen 1 inventory items; Gen 3 flags).
+requires are reported with no adapter. Badges: no facade (Gen 1 inventory items; Gen 3 flags). **S2 on Emerald
+(2026-10-14) corrects three points:** `render.output` does fire on Gen 3 once a mod enables output; `map_scripts`
+records land in `gen3Scripts` and are never called; `flag.changed` names Emerald flags from FireRed's table, so only
+its `id` is reliable. The dataset view reads `pokemon`, `moves` and `encounters` only, and reading `maps` invalidates
+it (PROGRESS.md "Several games: spikes").
 
 **A.5 Data model.** Gen 1: 32-px blocks of 4×4 8-px tiles, behaviour from the cell's bottom-left tile against tileset
 lists, one SGB palette per map, connections in blocks. Gen 2: COLL byte per cell, per-tile GBC attributes, eight

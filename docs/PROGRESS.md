@@ -1468,14 +1468,14 @@ the full suite at the ✔ checkpoints (MG2, MG3, MG5, MG6). Pods run inside your
 
 | # | Phase | Status | Date | Commit |
 |---|---|---|---|---|
-| MG0 | Decisions and spikes | decisions answered (plan §9); the spikes S1–S5 are yours (your PC, your imports; S2–S3 on Emerald) | 2026-10-13 | |
+| MG0 | Decisions and spikes | decisions answered (plan §9); **S2 and S3 done on the pod** ("Several games: spikes", 2026-10-14); S1, S4 and S5 are yours (your PC) | 2026-10-14 | |
 | MG1 | The game catalogue and an open protocol | **done** (notes 1–3); check: pytest and Lua 1,615 passed, JUnit 1,059 (0 failures), GameTests 101 on the pod (kb-dev7); the golden synthetic index byte-identical | 2026-10-13 | |
 | MG2 | Core and adapters in the bridge mod; the region acts on Gen 1 | **done** (notes 4–7); checkpoint passed on the pod (kb-dev7): pytest and Lua 1,658, JUnit 1,059 (0 failures), GameTests 101; e2e on the real engine (Blue, v0.3.85): `test_regions.py` 2 passed (a `start` from the title ×3 NEW GAME and ×3 CONTINUE, the park/resume round trip), `test_s5_ready.py`, `test_handshake.py` | 2026-10-13 | |
 | MG3 | Regions as data | **done** (notes 8, 10–13); checkpoint passed on the pod (kb-dev7): pytest and Lua 1,703, JUnit 1,122 (0 failures), GameTests 103 (`RegionBuildGameTests`: two regions in one world, the legacy build byte-identical to the kanto region, the join sequence, per-region warps, presence and progress; a legacy world keeps today's wire); pod check passed 2026-10-13 22:54 UTC (you accepted the EULA): the real Kanto built as region `kanto` at slot 0 (`regions/kanto/`, 220 maps, 4 min 36 s) and as a legacy world from the same export agree on every map placement, the dungeons, the shafts, the export hash and the **slot-map slice hash** (`42fd3f4d`, the region's `slotMapHash` = the legacy map's hash), the shape index byte-identical; only the Wild Routes zone differs, laid out from each fresh world's own seed (5 areas vs 4); D9 as an estimate: 32 families are 24,576 tile/shape block states (+12,288), about +15 MB a side at the measured 1.23 KB a state | 2026-10-13 | |
 | MG4 | Links | **done** (note 19); check: with one link the e2e scenarios behave as before (pod, real engine: `test_s5_ready`, `test_handshake`, `test_regions`, `test_multiplayer`, `test_crash`, `test_hot_reload` all passed), `tools/tests/test_links.py` (two `fake_gen1`: swap, a parked drop, a wrong game), JUnit `LinksTest` + `LinksFakeGen1IntegrationTest` (two real `fake_gen1` processes); one `test_multiplayer` assertion learnt that an install paired before MG1 keeps its legacy pairing file beside the per-game one. The MG4–MG6 checkpoint on the pod (kb-dev7): pytest and Lua 1,729, JUnit 1,193 (0 failures), GameTests 112 | 2026-10-13 | |
 | MG5 | Crossings | **done** (note 20); check: `PassGameTests` (6: the round trip into the far gate house with the exact arrival cell, every refusal, abort, the timeout, the start path, the stash, a built half whose pass is a story cell), `PassCrossingsTest`, `ZonePlanTest`, `WorldIndexTest`, `PassChoreographyTest` (16), the two-`fake_gen1` crossing in `tools/tests/test_stand_ins.py`; a crossing between two real engines waits for a second region whose game has an adapter (MG7/MG8) | 2026-10-13 | |
 | MG6 | One trainer economy | **done** (notes 18, 21); check: `LedgerGameTests` (two regions: adoption, stamped read-back, the crossing's projection, `too_many`/`left`, re-projection on an unknown stamp; a legacy world untouched), `BagGameTests` marked stacks, `LedgerTest`/`LedgerCodecTest`/`ItemsTest`/`BagSetRelayTest`, `test_lua_ledger.py`/`test_lua_bag.py`; the real engine's `bag.set` round trip is your play-test (PLAYTEST.md "MG6") | 2026-10-13 | |
-| MG7 | The second family (Emerald): adapter and export | pending (its own spec, after your spikes S2–S4) | | |
+| MG7 | The second family (Emerald): adapter and export | pending (its own spec; S2 and S3 reported 2026-10-14, S4 is yours) | | |
 | MG8 | Hoenn and the pass to it | pending | | |
 
 ### Several games: notes
@@ -1725,6 +1725,57 @@ the full suite at the ✔ checkpoints (MG2, MG3, MG5, MG6). Pods run inside your
     `fabric.mod.json`, the docs) are in MG6's commit, so the three roll back together
     (`git revert --no-edit <MG4 commit>^..<MG6 commit>`), and a tree between them need not compile.
 
+### Several games: spikes (2026-10-14)
+
+S2 and S3 (plan MG0) ran on a pod against the volume's Emerald import instead of on your PC, at your request ("Please
+use a pod to collect information for these spikes"). S1, S4 and S5 are still yours.
+
+**How.** A throwaway probe mod, `kb-s2-probe` (`games: ["emerald"]`, `engine_internals`), and a test driver ran through
+`tools/e2e/run_gen1recomp.py` with `--game emerald` on the v0.3.85 data home; the runner's filter lets only `KB_*` lines
+through and counts and hashes the rest. The probe was copied into the test install's `mods/` for each run and removed
+after; nothing of it was left behind. The driver started a new game in memory, straight into the field, with the action
+Birch's speech ends with (`Game3:_handleBootAction{action = "new_game"}`, no truck scene), never saved, and drove the
+hidden player with button holds and the mod's `mod.world` calls. Three runs (a baseline; the flag and dataset
+diagnostics fixed; the map patches and a new map on), each 1–3 minutes, exit 0, crash log untouched. Pod: `kb-dev8`
+(new: cpu5c ×4, $0.14/hr, the same volume), because kb-dev7's and kb-dev5's hosts were full and kb-dev6 started but had
+no container after 10 minutes and was stopped; about $0.11 in all, stopped after. The probe stays out of the repo (the
+plan: no spike code in `main`); a copy for re-runs after an engine bump is on the agent's server
+(`~/kb-runpod/spike-s2/`), and the filtered logs are on the volume (`/workspace/logs/s2-run{1,2,3}.log`).
+
+**S2: what the Gen 3 adapter can use on Emerald (Gen1Recomp v0.3.85)**
+
+| Asked | Result | For MG7 |
+|---|---|---|
+| Engine | `GameVersion.engine()` is `game3` (with or without the game id), layout `rse`, generation 3. `mod.world` is the Gen 3 WorldAPI (Emerald has no row of its own: the loader falls back by engine to FireRed's) and `mod.input` is there | the adapter keys on `game3` |
+| `mod.datasets:open("emerald")` | Opens. Reads `pokemon` (386), `moves` (354) and `encounters` (348). Empty: `items`, `trainers`, `text`, `map_scripts`, `scripts`, `rom_text`, `type_chart`, `growth_rates` and every Gen 1/Gen 2-only registry. **`maps` fails the registry schema** (a type check): the read returns nothing and marks the whole view invalid, so every later read in the session comes back empty and a new `open` answers `invalid_cache` | the Gen 3 export can't go through the dataset view as Gen 1's does: read the live engine (`game.data`, the native packs), and never read `maps` through the view |
+| `mod.world` | `current()` gives `mapId` (`EM_*` ids), `x`, `y` and `facing`. `warpTo(map, x, y, facing)` works, also when called from inside `world.stepped` or on the next `input.step`. `queueScript` runs `setflag`, `clearflag` and `warp` rows and refuses the rest (`heal`: unsupported command). `getFlag`/`setFlag` take Emerald names or numbers. `replaceBlock(x, y, metatile)` sets one 16-px metatile and makes the cell passable: a wall cell opened this way was walked into | movement, warps and story flags without patching internals |
+| `maps:patch` on an Emerald map | Accepted (an unknown field, and a whole `warps` list); the merged Littleroot still loads and plays as before. **A warp appended on open ground is not active**: the engine indexes a header warp only on a warp tile behaviour (`src/core/game3/collision.lua`, `installWarps`), and stepping on it did nothing | a map patch can't make an exit |
+| `maps:register` of a new map | Accepted (a copy of the truck's record under a new id), but `warpTo` to it answers true and never arrives (the player stays where they were; no crash): a Gen 3 map needs a native layout, which the engine finds by map id | no `KB_ROUTE_*` map of our own: the hidden player's route map must be an existing map, or the player is held (MG7 decides) |
+| `map_scripts` | A Gen 1-shaped record (`onStep`, `onEnter`, `onLoad`, `onFrame`) is accepted and lands in `gen3Scripts` (the ROM script bundle) under its id, and is **never called** (0 calls over 11 steps and 12 map entries) | Gen 1's step-script exit doesn't carry over |
+| Registries a Gen 3 boot drops | `tilesets`, `field`, `music`, `map_songs`: each write answers nil and the loader notes "has no Gen 3 target" | as plan A.4 says |
+| Hooks and events that fire | `world.stepped` (mapId, x, y, tile, facing; one per step), `map.entered` (`via` is `boot`, `warp` or `connection`), `map.exited`, `player.warped` (kinds `warp`, `door`, `exit_door`), `warp.destination` (destMap, x, y, ctx; for doors, exits and `warpTo`, **not** for walking over a map connection; its return **redirects** a door: May's door led into Brendan's house), `input.step` (each fixed step; game, dt), `world.interacted` (kind `npc`) and the `world.talk` hook, `script.command` (23 ops seen), `flag.changed` (see S3's caveat), `world.block_replaced` (twice per `replaceBlock`), `encounter.roll` (Route 101's grass), `render.output_enabled` (every frame) and **`render.output`** (every frame once a mod enables output; plan A.4 had it Gen 1/Gen 2 only), `save.created`, `game.ready`, `mods.loaded` | the mirror can capture frames on Gen 3 |
+| Never fired | `movement.collision`, `movement.speed`, `fieldmove.eligibility` (as A.4 says), `screen.pushed`/`screen.popped` (Gen 3's UI has its own stack), `core.update` (as on Gen 1 under a driver). Not exercised: battles, CONTINUE and saving (`save.loaded`, `save.writing`), `trainer.before_battle`, `item.use`, `ui.pc.items` | the UI group reads Gen 3's own UI stack |
+
+**The exit (S2's question): neither `map_scripts` nor a patched warp, but `world.stepped` + `mod.world:warpTo`.** The
+probe's trigger cell in Littleroot warped the player into another map, both straight from the event and deferred to the
+next `input.step`. `warp.destination` can redirect an existing door or warp, `replaceBlock` opens exit cells at run time
+(the part Gen 1's block patch does), and a route reached over a map edge shows as `map.exited` and `map.entered` with
+`via = "connection"`.
+
+**S3: Emerald's story flags**
+
+| Asked | Result |
+|---|---|
+| "Has starter" | `FLAG_SYS_POKEMON_GET` (0x860) |
+| "Champion" | `FLAG_SYS_GAME_CLEAR` (0x864) |
+| A flag through the `game3` store | `mod.world:getFlag` reads the live store (`Space.store`, `src/core/game3/scripting/space.lua`) by name or number; both flags were set, read and cleared on the new game. Unset reads `nil`, not `false`, and so does an unknown name, so names must be checked against `Flags.active(session).IDS`; `setFlag` refuses an unknown name ("unknown FireRed flag") |
+| The badge count | No mod facade. `Flags.countBadges(Space.store)` (`src/core/game3/scripting/flags.lua`) counts Emerald's own badge flags `FLAG_BADGE01_GET`…`FLAG_BADGE08_GET` (0x867–0x86E): 0 on a new game, 1 with badge 1 set, 0 again once cleared; `getBadgesMask` agrees |
+| **Caveat** | `flag.changed` names Emerald flags from FireRed's table: of 169 events, 160 carried FireRed's name for that number (id 86 came as `FLAG_HIDE_OLD_AMBER`; Emerald's is `FLAG_HIDE_CONTEST_POKE_BALL`) and 9 a bare number, never Emerald's name. Only `id` is reliable: the adapter names flags with `Flags.active(session).NAMES` |
+
+For MG7: the catalogue's Emerald markers (`protocol/games.json`, empty until the adapter exists) become `starter` =
+`FLAG_SYS_POKEMON_GET` and `champion` = `FLAG_SYS_GAME_CLEAR`. FireRed's table in the engine source has the same two
+names at 0x828 and 0x82C (not checked live: FireRed isn't imported).
+
 ### Handoff (2026-10-14): after MG6, for whoever continues
 
 **State.** MG1–MG6 of [specs/MULTI_GAME_PLAN.md](specs/MULTI_GAME_PLAN.md) are done and committed locally (never
@@ -1752,11 +1803,11 @@ schemas, PROTOCOL.md and PROGRESS.md first, then forks per plan §7 track with e
 build per checkpoint, worked.
 
 **What is next, in order.**
-1. **The user's spikes S1–S5** (plan MG0). S2 and S3 (Emerald on their PC: what the `game3` WorldAPI and datasets
-   expose, whether `map_scripts`/`maps:patch` reach `gen3Scripts` or the exit must use the `warp.destination` hook,
-   which hooks fire, the "has starter" and "champion" flag names) decide MG7's design; MG7 cannot start beyond reading
-   until they report. S4 (starts from the title, 10 times each) and S5 (the headless import on the Windows exe) gate the
-   crossing's start path and `setup_games.ps1`'s auto import on the user's PC.
+1. **The spikes** (plan MG0). S2 and S3 ran on the pod on 2026-10-14 ("Several games: spikes" above): the Gen 3 exit
+   is `world.stepped` + `mod.world:warpTo` (not `map_scripts`, not a patched warp), and the flags are
+   `FLAG_SYS_POKEMON_GET` and `FLAG_SYS_GAME_CLEAR`, so MG7's spec can start. Still the user's: S1 (two games at once on
+   their PC), S4 (starts from the title, 10 times each; Gen 1, so the pod's Blue import could run it too) and S5 (the
+   headless import on the Windows exe), which gate the crossing's start path and `setup_games.ps1`'s auto import.
 2. **MG7, the second family (XL, its own spec).** First write `docs/specs/GEN3_BRIDGE_PLAN.md` from S2–S3, then
    implement in the plan's order (§5 MG7): the `game3` adapter `gen1-bridge/lib/engine/game3.lua` group by group
    (Appendix B is the interface, `lib/engine/gen1.lua` the worked example, `lib/kb_engine.lua` the loader whose stub
