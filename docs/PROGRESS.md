@@ -1468,14 +1468,14 @@ the full suite at the ✔ checkpoints (MG2, MG3, MG5, MG6). Pods run inside your
 
 | # | Phase | Status | Date | Commit |
 |---|---|---|---|---|
-| MG0 | Decisions and spikes | decisions answered (plan §9); **S2 and S3 done on the pod** ("Several games: spikes", 2026-10-14); S1, S4 and S5 are yours (your PC) | 2026-10-14 | |
+| MG0 | Decisions and spikes | decisions answered (plan §9); **S2, S3 and S4 done on pods; S1 and S5 as far as a pod can** ("Several games: spikes", 2026-10-14); left: S1 beside Minecraft on your PC, S5's real import on the Windows build (your word) | 2026-10-14 | |
 | MG1 | The game catalogue and an open protocol | **done** (notes 1–3); check: pytest and Lua 1,615 passed, JUnit 1,059 (0 failures), GameTests 101 on the pod (kb-dev7); the golden synthetic index byte-identical | 2026-10-13 | |
 | MG2 | Core and adapters in the bridge mod; the region acts on Gen 1 | **done** (notes 4–7); checkpoint passed on the pod (kb-dev7): pytest and Lua 1,658, JUnit 1,059 (0 failures), GameTests 101; e2e on the real engine (Blue, v0.3.85): `test_regions.py` 2 passed (a `start` from the title ×3 NEW GAME and ×3 CONTINUE, the park/resume round trip), `test_s5_ready.py`, `test_handshake.py` | 2026-10-13 | |
 | MG3 | Regions as data | **done** (notes 8, 10–13); checkpoint passed on the pod (kb-dev7): pytest and Lua 1,703, JUnit 1,122 (0 failures), GameTests 103 (`RegionBuildGameTests`: two regions in one world, the legacy build byte-identical to the kanto region, the join sequence, per-region warps, presence and progress; a legacy world keeps today's wire); pod check passed 2026-10-13 22:54 UTC (you accepted the EULA): the real Kanto built as region `kanto` at slot 0 (`regions/kanto/`, 220 maps, 4 min 36 s) and as a legacy world from the same export agree on every map placement, the dungeons, the shafts, the export hash and the **slot-map slice hash** (`42fd3f4d`, the region's `slotMapHash` = the legacy map's hash), the shape index byte-identical; only the Wild Routes zone differs, laid out from each fresh world's own seed (5 areas vs 4); D9 as an estimate: 32 families are 24,576 tile/shape block states (+12,288), about +15 MB a side at the measured 1.23 KB a state | 2026-10-13 | |
 | MG4 | Links | **done** (note 19); check: with one link the e2e scenarios behave as before (pod, real engine: `test_s5_ready`, `test_handshake`, `test_regions`, `test_multiplayer`, `test_crash`, `test_hot_reload` all passed), `tools/tests/test_links.py` (two `fake_gen1`: swap, a parked drop, a wrong game), JUnit `LinksTest` + `LinksFakeGen1IntegrationTest` (two real `fake_gen1` processes); one `test_multiplayer` assertion learnt that an install paired before MG1 keeps its legacy pairing file beside the per-game one. The MG4–MG6 checkpoint on the pod (kb-dev7): pytest and Lua 1,729, JUnit 1,193 (0 failures), GameTests 112 | 2026-10-13 | |
 | MG5 | Crossings | **done** (note 20); check: `PassGameTests` (6: the round trip into the far gate house with the exact arrival cell, every refusal, abort, the timeout, the start path, the stash, a built half whose pass is a story cell), `PassCrossingsTest`, `ZonePlanTest`, `WorldIndexTest`, `PassChoreographyTest` (16), the two-`fake_gen1` crossing in `tools/tests/test_stand_ins.py`; a crossing between two real engines waits for a second region whose game has an adapter (MG7/MG8) | 2026-10-13 | |
 | MG6 | One trainer economy | **done** (notes 18, 21); check: `LedgerGameTests` (two regions: adoption, stamped read-back, the crossing's projection, `too_many`/`left`, re-projection on an unknown stamp; a legacy world untouched), `BagGameTests` marked stacks, `LedgerTest`/`LedgerCodecTest`/`ItemsTest`/`BagSetRelayTest`, `test_lua_ledger.py`/`test_lua_bag.py`; the real engine's `bag.set` round trip is your play-test (PLAYTEST.md "MG6") | 2026-10-13 | |
-| MG7 | The second family (Emerald): adapter and export | pending (its own spec; S2 and S3 reported 2026-10-14, S4 is yours) | | |
+| MG7 | The second family (Emerald): adapter and export | pending (its own spec; S2–S4 reported 2026-10-14) | | |
 | MG8 | Hoenn and the pass to it | pending | | |
 
 ### Several games: notes
@@ -1727,8 +1727,10 @@ the full suite at the ✔ checkpoints (MG2, MG3, MG5, MG6). Pods run inside your
 
 ### Several games: spikes (2026-10-14)
 
-S2 and S3 (plan MG0) ran on a pod against the volume's Emerald import instead of on your PC, at your request ("Please
-use a pod to collect information for these spikes"). S1, S4 and S5 are still yours.
+All five spikes (plan MG0) ran on pods instead of on your PC, at your requests ("Please use a pod to collect information
+for these spikes", then "Please complete S4 and any others you can": you are away from a computer for weeks). S2, S3 and
+S4 are complete. S1 and S5 are done as far as a pod can go: what still needs your PC, and S5's one step that needs your
+word, are at the end of each.
 
 **How.** A throwaway probe mod, `kb-s2-probe` (`games: ["emerald"]`, `engine_internals`), and a test driver ran through
 `tools/e2e/run_gen1recomp.py` with `--game emerald` on the v0.3.85 data home; the runner's filter lets only `KB_*` lines
@@ -1776,6 +1778,73 @@ For MG7: the catalogue's Emerald markers (`protocol/games.json`, empty until the
 `FLAG_SYS_POKEMON_GET` and `champion` = `FLAG_SYS_GAME_CLEAR`. FireRed's table in the engine source has the same two
 names at 0x828 and 0x82C (not checked live: FireRed isn't imported).
 
+**S4: NEW GAME and CONTINUE from the title (Gen 1, the pod's Blue import), 10 times each.** `tools/e2e/test_regions.py`'s
+first test (written for S4 at MG2) with `KB_REGION_REPEATS=10`: 20 launches in 118 s, each driven over TCP by a
+`fake_minecraft` test session with `region.start`, each on a fresh labelled test slot deleted after (the install's own
+saves unchanged, as the test asserts). Pod `kb-dev9` (below). **S4 passes.**
+
+| | NEW GAME ×10 | CONTINUE ×10 |
+|---|---|---|
+| `region.start` answer | `{ok, start, new}` every time | `{ok, start, continue}` every time |
+| `game.status` after | `fresh`, started, in game, every time | `saved`, started, in game, every time |
+| `save.loaded` | — | every time (`fresh: false`, with its pairing) |
+| Stray input | none: Oak's first text box stayed open and no step was taken, every time | — |
+| Errors, protocol problems | 0, 0 | 0, 0 |
+
+**S1: two hidden games at once, measured on the pod.** A throwaway runner started each game from its own install
+(on Linux an install is a data home): A, the volume's test home (Blue, with gen1-bridge); B, a second home with Emerald;
+C, a third with Blue again and its own bridge (B and C on the pod's container disk, their import folders linked to A's
+by name). Each process ran a meter driver under the engine's own pacing (`POKEPORT_DRIVER_PACED=1`) into the overworld,
+with nothing saved (Blue on a throwaway slot, deleted after; Emerald a new game in memory), for six 10-s windows, two of
+them walking, while the runner sampled each process's memory and CPU from outside and listed its listening ports. Pod:
+cpu5c, 4 CPUs, 8 GB, no GPU (Mesa's software renderer under Xvfb).
+
+| Scenario | Process | Memory, RSS (average, highest) | CPU, of one core | Frames and logic steps per second | Bridge port |
+|---|---|---|---|---|---|
+| Blue alone | Blue | 173 MB, 179 MB | 85 % | 60, idle and walking | 27230 |
+| Emerald alone | Emerald | 418 MB, 431 MB | 89 % | 60, except 52.6 in the first 10 s in the field and 57.8 in one walking window | none (no adapter yet) |
+| Blue and Emerald | Blue | 162 MB, 179 MB | 75 % | 60 | 27230 |
+| | Emerald | 419 MB, 424 MB | 89 % | 60, except 53.0 and 57.8 in the same windows as alone | none |
+| Blue and Blue, two installs | Blue A | 171 MB, 177 MB | 86 % | 60 | 27230 |
+| | Blue C | 173 MB, 178 MB | 82 % | 60 | 27231 |
+
+Emerald needs about 2.5 times Blue's memory (Lua heap about 95 MB against 20 MB, textures 17 MB against 0.3 MB), so
+Kanto and Hoenn together hidden take about 600 MB. Running together slows neither game: every window matches its run
+alone, and Emerald's dips are one-off loads (its texture memory grows in exactly those windows). Two installs give two
+bridges, each on its own port. The CPU figures are mostly software rendering on a pod without a GPU, so they overstate
+what a PC with a graphics card pays; the memory figures carry over roughly. **Still for your PC:** Minecraft running
+beside the two games, and Windows' own memory figures. Minimised windows keeping full speed was shown for Gen 1 at M10.
+
+**S5: the Windows build's headless import, under Wine on the pod, without a ROM.** The pinned Windows zip
+(`tools/installer/pins.json`; size and SHA-256 matched, kept on the volume as
+`/workspace/local/_downloads/gen1recomp-0.3.85/windows.zip`) ran under Wine 9.0, every case in a fresh throwaway copy
+on the container disk, with `portable.txt` unless the case says otherwise:
+
+| Case | Result |
+|---|---|
+| The launcher, `portable.txt` | its files are written beside the exe (`options.lua`, `launcher-window.cfg`); nothing in `%APPDATA%` |
+| The launcher, no `portable.txt` | `%APPDATA%\pokemon-love2d\` |
+| `POKEPORT_IDENTITY=kb-s5-hoenn`, no `portable.txt` | `%APPDATA%\kb-s5-hoenn\` |
+| The identity with `portable.txt` | beside the exe: portable mode wins and the identity separates nothing |
+| Import-only, a file that isn't a ROM | the importer refuses it ("Unsupported ROM") and the exe quits by itself with exit code 1 in about 3 s; nothing written |
+| Import-only, a path that doesn't exist | "Could not read the selected file", exit code 1, about 3 s |
+| Import-only with no path | the importer waits for a file until stopped (`setup_games.ps1` always passes one, and its `-TimeoutSec` covers a hang) |
+| The two refusals on the Linux AppImage | the same messages and exit code 1 |
+
+So the variables reach the fused Windows exe, a refused file ends the run at once with code 1 (which `setup_games.ps1`
+already reports as "no completed import"), and D3's alternative, one exe with a data home per region through
+`POKEPORT_IDENTITY`, works only without `portable.txt`. A first Wine pass showed window-creation failures; they came from
+displays left over between cases, and a re-run on clean displays behaved as above. The success path, a real ROM imported
+by the Windows exe, is the one step not run: it would mean importing one of your uploaded zips, which the repository's
+rules (CLAUDE.md) leave to you; with your word the pod can run it in about ten minutes. The same variables already
+imported Blue, Crystal and Emerald headlessly on the Linux build on 2026-10-13 (the ROM inbox: each quit by itself with
+exit code 0 and left `<game>/rom-cache.complete`).
+
+Pods for S1, S4 and S5: kb-dev7's, kb-dev5's and kb-dev8's hosts were full, so `kb-dev9` was made (cpu5c ×4, $0.14/hr,
+the same volume); about 20 minutes, about $0.05, stopped after. The runners stay out of the repo, like S2's probe, in
+`~/kb-runpod/spike-s1/` and `~/kb-runpod/spike-s5/` on the agent's server; the filtered logs are on the volume
+(`/workspace/logs/s4-run1.log`, `s1-run1.log`, `s5-run1.log`, `s5-run2.log`).
+
 ### Handoff (2026-10-14): after MG6, for whoever continues
 
 **State.** MG1–MG6 of [specs/MULTI_GAME_PLAN.md](specs/MULTI_GAME_PLAN.md) are done and committed locally (never
@@ -1803,11 +1872,12 @@ schemas, PROTOCOL.md and PROGRESS.md first, then forks per plan §7 track with e
 build per checkpoint, worked.
 
 **What is next, in order.**
-1. **The spikes** (plan MG0). S2 and S3 ran on the pod on 2026-10-14 ("Several games: spikes" above): the Gen 3 exit
-   is `world.stepped` + `mod.world:warpTo` (not `map_scripts`, not a patched warp), and the flags are
-   `FLAG_SYS_POKEMON_GET` and `FLAG_SYS_GAME_CLEAR`, so MG7's spec can start. Still the user's: S1 (two games at once on
-   their PC), S4 (starts from the title, 10 times each; Gen 1, so the pod's Blue import could run it too) and S5 (the
-   headless import on the Windows exe), which gate the crossing's start path and `setup_games.ps1`'s auto import.
+1. **The spikes** (plan MG0) ran on pods on 2026-10-14 ("Several games: spikes" above). S2: the Gen 3 exit is
+   `world.stepped` + `mod.world:warpTo` (not `map_scripts`, not a patched warp). S3: the flags are `FLAG_SYS_POKEMON_GET`
+   and `FLAG_SYS_GAME_CLEAR`. S4 passed 10 + 10. S1: Blue and Emerald together hidden take about 600 MB and keep full
+   speed. S5: the Windows build honours the import variables and quits with code 1 on a refused file. MG7's spec can
+   start. Left: S1 beside Minecraft on the user's PC, and S5's real import on the Windows build (it needs the user's
+   word: the agent never imports a ROM on its own).
 2. **MG7, the second family (XL, its own spec).** First write `docs/specs/GEN3_BRIDGE_PLAN.md` from S2–S3, then
    implement in the plan's order (§5 MG7): the `game3` adapter `gen1-bridge/lib/engine/game3.lua` group by group
    (Appendix B is the interface, `lib/engine/gen1.lua` the worked example, `lib/kb_engine.lua` the loader whose stub
