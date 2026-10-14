@@ -180,6 +180,16 @@ def test_the_layout_places_the_surface_by_its_connections():
     assert "EM_TEST_HOUSE" not in layout, "interiors are not on the surface"
 
 
+def test_the_layout_names_the_room_a_new_game_starts_in():
+    """MG8: the engine's newGameStart (map_ids.lua), when the export has that map; nothing otherwise."""
+    for map_id, expected in ((b"EM_TEST_HOUSE", {"map": "EM_TEST_HOUSE", "x": 2, "y": 1}), (b"EM_NOT_EXPORTED", None)):
+        a = world()
+        starts = a.b.eval("""function(map) return { newGameStart = function(game) return { map = map, x = 2, y = 1 } end } end""")
+        a.b._env_opts[b"modules"][b"src.core.game3.map_ids"] = starts(map_id)
+        res, _, _, _ = exported(a)
+        assert res[("g3layout", "hoenn")].get("start") == expected, map_id
+
+
 def test_encounters_by_national_dex_and_names():
     res, _, _, _ = exported(world())
     enc = res[("g3encounters", "all")]["maps"]

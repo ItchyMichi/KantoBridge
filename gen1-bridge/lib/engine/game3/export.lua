@@ -452,7 +452,17 @@ function Export3.install(b)
     else
       warn("g3_no_root", root)
     end
-    put("g3layout", x.region or "hoenn", { root = root, unit = "cells", maps = placed })
+    -- MG8: the room a new game starts in (map_ids.lua:33-36, the profile's newGameStart: the moving truck on RSE), so
+    -- the builder places it though no warp leads in
+    local layout = { root = root, unit = "cells", maps = placed }
+    local MapIds = b.g3("map_ids")
+    if type(MapIds) == "table" and type(MapIds.newGameStart) == "function" then
+      local okStart, st = pcall(MapIds.newGameStart, b.adapter.gameVersion())
+      if okStart and type(st) == "table" and type(st.map) == "string" and maps[st.map] and tonumber(st.x) and tonumber(st.y) then
+        layout.start = { map = st.map, x = floor(tonumber(st.x)), y = floor(tonumber(st.y)) }
+      end
+    end
+    put("g3layout", x.region or "hoenn", layout)
 
     -- ---- encounters (encounters.lua's tables; national dex numbers)
     local Enc, Pokemon = b.g3("encounters"), b.g3("pokemon")

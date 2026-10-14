@@ -14,6 +14,7 @@ import dev.kantobridge.block.EdgeWallBlock;
 import dev.kantobridge.builder.TestData;
 import dev.kantobridge.builder.export.CellFlags;
 import dev.kantobridge.builder.export.ExportBundle;
+import dev.kantobridge.builder.export.G3Data;
 import dev.kantobridge.builder.export.G3Map;
 import dev.kantobridge.builder.pack.ArtKeys;
 import dev.kantobridge.builder.pack.PackFiles;
@@ -318,6 +319,47 @@ class Gen3PlanTest {
 		assertEquals(new Gen3Planner.Door("A_SEA", 0, 0, 0, 0, true, "dive"), doors.get("A_DEEP"));
 		assertEquals(new Gen3Planner.Door("A_DEEP", 0, 0, 0, 0, true, "emerge"), doors.get("A_CITY"));
 		assertFalse(doors.containsKey("A_SEA"));
+	}
+
+	@Test
+	void aMapOnlyLeftByAWarpIsPlacedUnderItsLanding() {
+		// MG8: the moving truck a new game starts in: no warp leads in, its door leads out onto the town's warp 1
+		G3Map.Border border = new G3Map.Border(1, 1, new int[] {0});
+		G3Map town = map("A_TOWN", List.of(), List.of(new G3Map.Warp(1, 1, "A_HOUSE", 0, false), new G3Map.Warp(3, 2, "A_TRUCK", 0, false)),
+				border);
+		G3Map house = map("A_HOUSE", List.of(), List.of(new G3Map.Warp(0, 2, "A_TOWN", 0, false)), border);
+		G3Map truck = map("A_TRUCK", List.of(), List.of(new G3Map.Warp(3, 1, "A_TOWN", 1, false)), border);
+		G3Map nowhere = map("A_NOWHERE", List.of(), List.of(new G3Map.Warp(0, 0, "A_GONE", 0, false), new G3Map.Warp(1, 0, null, 0, true)),
+				border);
+		G3Map cabin = map("A_CABIN", List.of(), List.of(new G3Map.Warp(2, 2, "A_TRUCK", 0, false)), border);
+		Map<String, G3Map> all = Map.of("A_TOWN", town, "A_HOUSE", house, "A_TRUCK", truck, "A_NOWHERE", nowhere, "A_CABIN", cabin);
+		// the town's warp into the truck makes it an ordinary door; without it, the truck is placed by its way out
+		Map<String, Gen3Planner.Door> doors = Gen3Planner.doors(all, Set.of("A_TOWN"));
+		assertEquals("warp", doors.get("A_TRUCK").via());
+		G3Map townWithoutIt = map("A_TOWN", List.of(), List.of(new G3Map.Warp(1, 1, "A_HOUSE", 0, false), new G3Map.Warp(3, 2, "A_HOUSE", 0,
+				false)), border);
+		all = Map.of("A_TOWN", townWithoutIt, "A_HOUSE", house, "A_TRUCK", truck, "A_NOWHERE", nowhere, "A_CABIN", cabin);
+		doors = Gen3Planner.doors(all, Set.of("A_TOWN"));
+		assertEquals(new Gen3Planner.Door("A_TOWN", 3, 2, 3, 1, true, "exit"), doors.get("A_TRUCK"), "under the cell its warp lands on");
+		assertEquals(new Gen3Planner.Door("A_TRUCK", 3, 1, 2, 2, true, "exit"), doors.get("A_CABIN"), "a later round");
+		assertFalse(doors.containsKey("A_NOWHERE"), "its warps lead nowhere placed");
+	}
+
+	@Test
+	void theRoomANewGameStartsInIsPlacedUnderTheRoot() {
+		// MG8: the moving truck's door is a dynamic warp, so nothing reaches it; the export names it as the start
+		G3Map.Border border = new G3Map.Border(1, 1, new int[] {0});
+		G3Map town = map("A_TOWN", List.of(), List.of(new G3Map.Warp(1, 1, "A_HOUSE", 0, false)), border);
+		G3Map house = map("A_HOUSE", List.of(), List.of(new G3Map.Warp(0, 2, "A_TOWN", 0, false)), border);
+		G3Map truck = map("A_TRUCK", List.of(), List.of(new G3Map.Warp(3, 1, null, 0, true)), border);
+		Map<String, G3Map> all = Map.of("A_TOWN", town, "A_HOUSE", house, "A_TRUCK", truck);
+		Map<String, Gen3Planner.Door> doors = Gen3Planner.doors(all, Set.of("A_TOWN"));
+		assertFalse(doors.containsKey("A_TRUCK"), "a dynamic warp leads nowhere known");
+		assertEquals(new Gen3Planner.Door("A_TOWN", 2, 1, 2, 2, true, "start"),
+				Gen3Planner.startDoor(all, Set.of("A_TOWN"), doors, "A_TOWN", new G3Data.Start("A_TRUCK", 2, 2)), "under the root's middle");
+		assertNull(Gen3Planner.startDoor(all, Set.of("A_TOWN"), doors, "A_TOWN", new G3Data.Start("A_HOUSE", 0, 0)), "reached already");
+		assertNull(Gen3Planner.startDoor(all, Set.of("A_TOWN"), doors, "A_TOWN", new G3Data.Start("A_GONE", 0, 0)), "not exported");
+		assertNull(Gen3Planner.startDoor(all, Set.of("A_TOWN"), doors, "A_TOWN", null));
 	}
 
 	private static G3Map map(String id, List<G3Map.Connection> connections, List<G3Map.Warp> warps, G3Map.Border border) {

@@ -53,6 +53,19 @@ public final class Regions {
 		return data;
 	}
 
+	/**
+	 * The {@code region} a relayed message names (a region id), or null when it names none (a legacy world's wire): what a
+	 * reply about that message is tagged with (MG8: a hidden battle's result goes back to the link that sent its start).
+	 */
+	public static @Nullable String tagOf(JsonObject data) {
+		JsonElement value = data.get("region");
+		if (value == null || !value.isJsonPrimitive() || !value.getAsJsonPrimitive().isString()) {
+			return null;
+		}
+		String id = value.getAsString();
+		return DataReader.REGION_ID.matcher(id).matches() ? id : null;
+	}
+
 	/** True when the world has at least one published region (a Kanto world of any shape). */
 	public static boolean exists(@Nullable MinecraftServer server) {
 		return of(server) != null;

@@ -932,7 +932,7 @@ A builder connection (role `builder`) asks for `export.index`, then fetches each
 | g3tiles | pair id | **Gen 3**: a tileset pair: `mids`, per metatile its 4 quarters' ids in the flattened art (`quarters`, page × 1024 + index), its behaviour (`beh`, names in `behaviors`), and whether part of it draws over sprites (`over`); `land`: the behaviours used here whose cells roll land encounters, by the engine's own rule (G3E) |
 | g3image | `g3q.<n>` | **Gen 3**: an RGBA PNG page of 1,024 8×8 quarters (32 × 32, 256×256 px): the over, middle and under planes flattened (GBA pixels are opaque or clear) |
 | g3sprite | `OBJ_EVENT_GFX_*` | **Gen 3**: an object-event sheet, `gid, w, h, frames`, RGBA PNG strip (0-2 stand, 3-8 walk, 9-17 run where present) |
-| g3layout | region (`hoenn`) | **Gen 3**: `root, unit: "cells", maps{x, y, w, h}`: the surface maps' cell origins, by connections from the root |
+| g3layout | region (`hoenn`) | **Gen 3**: `root, unit: "cells", maps{x, y, w, h}`: the surface maps' cell origins, by connections from the root; MG8: `start{map, x, y}`, the room a new game starts in (the engine's `newGameStart`: the moving truck on RSE), which the builder places under the root since its door is a dynamic warp |
 | g3encounters | `all` | **Gen 3**: per map `land` (12 slots), `water` (5), `rock` (5), `fish` (10: old rod 0-1, good 2-4, super 5-9), each `{rate, slots[{dex, min, max}]}` with national dex numbers; `landWeights`: the 12 land slots' chances in percent as the engine's roll uses them (G3E) |
 | g3names | `all` | **Gen 3**: the engine's constant names: `species` → national dex, `moves` → number, `items` → number |
 

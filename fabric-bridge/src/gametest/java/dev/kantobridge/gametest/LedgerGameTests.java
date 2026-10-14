@@ -74,14 +74,14 @@ public class LedgerGameTests implements FabricGameTest {
 	}
 
 	/** Publishes both regions and their table; nothing is broadcast. */
-	private static void publish(MinecraftServer server) {
+	static void publish(MinecraftServer server) {
 		WorldIndexSync.withdraw(server);
 		WorldIndexSync.publishRegion(server, record(KANTO, 0), index(KANTO), null, null, null, false);
 		WorldIndexSync.publishRegion(server, record(TEST2, 1), index(TEST2), null, null, null, false);
 		WorldIndexSync.publishTable(server, new RegionTable(List.of(new RegionTable.Entry(KANTO, GAME, 0), new RegionTable.Entry(TEST2, GAME, 1))));
 	}
 
-	private static void restore(MinecraftServer server, @Nullable WorldIndex before) {
+	static void restore(MinecraftServer server, @Nullable WorldIndex before) {
 		WorldIndexSync.withdraw(server);
 		if (before != null) {
 			WorldIndexSync.publish(server, before, false);

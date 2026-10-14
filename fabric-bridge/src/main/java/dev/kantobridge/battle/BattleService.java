@@ -78,16 +78,20 @@ public final class BattleService {
 		final BattleStart.Kind kind;
 		final ProxyClass proxyClass;
 		final NPCEntity proxy;
+		/** The region its start was tagged with (MG8), or null in a legacy world. */
+		final @Nullable String region;
 		@Nullable PokemonBattle battle;
 		boolean answered;
 
-		Running(MinecraftServer server, UUID player, String id, BattleStart.Kind kind, ProxyClass proxyClass, NPCEntity proxy) {
+		Running(MinecraftServer server, UUID player, String id, BattleStart.Kind kind, ProxyClass proxyClass, NPCEntity proxy,
+				@Nullable String region) {
 			this.server = server;
 			this.player = player;
 			this.id = id;
 			this.kind = kind;
 			this.proxyClass = proxyClass;
 			this.proxy = proxy;
+			this.region = region;
 		}
 	}
 
@@ -137,6 +141,8 @@ public final class BattleService {
 
 	static void onStart(ServerPlayer player, Envelope message) {
 		JsonObject data = message.data();
+		// MG8: the result goes back tagged as the start came, so it reaches the link (the hidden game) that holds the battle
+		String region = Regions.tagOf(data);
 		BattleStart start;
 		try {
 			start = BattleStart.read(data);
@@ -146,7 +152,7 @@ public final class BattleService {
 			RelayService.get().sendError(player, "bad_message", message.seq());
 			String id = BattleStart.idOf(data);
 			if (id != null) {
-				refuse(player, id, "bad_message");
+				refuse(player, id, "bad_message", region);
 			} else {
 				warn("bad_message");
 			}
@@ -160,38 +166,38 @@ public final class BattleService {
 				DUPLICATES.incrementAndGet();
 				KantoBridge.LOGGER.debug("battle: ignored a repeated battle.start");
 			} else {
-				refuse(player, start.battle(), "busy");
+				refuse(player, start.battle(), "busy", region);
 			}
 			return;
 		}
 		if (BuildHold.isHeld(player)) {
-			refuse(player, start.battle(), "held");
+			refuse(player, start.battle(), "held", region);
 			return;
 		}
 		if (BattleRegistry.getBattleByParticipatingPlayer(player) != null) {
-			refuse(player, start.battle(), "busy");
+			refuse(player, start.battle(), "busy", region);
 			return;
 		}
 		if (!hasUsablePokemon(player)) {
-			refuse(player, start.battle(), "no_party");
+			refuse(player, start.battle(), "no_party", region);
 			return;
 		}
 		if (!start.hasTeam()) {
 			// Static, surfing and fishing encounters (and scripted wild battles): a wild Pokémon, not a trainer.
-			String refused = EncounterService.begin(player, start);
+			String refused = EncounterService.begin(player, start, region);
 			if (refused != null) {
-				refuse(player, start.battle(), refused);
+				refuse(player, start.battle(), refused, region);
 			}
 			return;
 		}
-		begin(player, start);
+		begin(player, start, region);
 	}
 
-	private static void begin(ServerPlayer player, BattleStart start) {
+	private static void begin(ServerPlayer player, BattleStart start, @Nullable String region) {
 		ProxyClass proxyClass = ProxyClass.of(start.kind(), start.trainer() == null ? null : start.trainer().cls());
 		NPCClass npcClass = NPCClasses.getByIdentifier(ResourceLocation.fromNamespaceAndPath(KantoBridge.MOD_ID, proxyClass.path()));
 		if (npcClass == null) {
-			refuse(player, start.battle(), "no_class");
+			refuse(player, start.battle(), "no_class", region);
 			return;
 		}
 		List<Pokemon> team = new ArrayList<>(start.team().size());
@@ -200,21 +206,21 @@ public final class BattleService {
 				team.add(Gen1Mons.trainerMon(mon));
 			}
 		} catch (Gen1Mons.Missing e) {
-			refuse(player, start.battle(), "missing_" + e.code());
+			refuse(player, start.battle(), "missing_" + e.code(), region);
 			return;
 		} catch (RuntimeException e) {
 			// Only the class: an exception's text could quote data.
 			KantoBridge.LOGGER.warn("battle: Cobblemon failed to build the team ({})", e.getClass().getName());
-			refuse(player, start.battle(), "team_failed");
+			refuse(player, start.battle(), "team_failed", region);
 			return;
 		}
 		ServerLevel level = player.serverLevel();
 		NPCEntity proxy = spawnProxy(level, player, start, npcClass, team);
 		if (proxy == null) {
-			refuse(player, start.battle(), "spawn_failed");
+			refuse(player, start.battle(), "spawn_failed", region);
 			return;
 		}
-		Running run = new Running(player.server, player.getUUID(), start.battle(), start.kind(), proxyClass, proxy);
+		Running run = new Running(player.server, player.getUUID(), start.battle(), start.kind(), proxyClass, proxy, region);
 		BattleStartResult result;
 		try {
 			// Modern rules (U3); the player's real party (no clone: damage and XP stick); no healing first, as in Gen 1. The
@@ -227,7 +233,7 @@ public final class BattleService {
 		}
 		if (!(result instanceof SuccessfulBattleStart started)) {
 			discardNow(proxy);
-			refuse(player, start.battle(), "start_failed");
+			refuse(player, start.battle(), "start_failed", region);
 			return;
 		}
 		PokemonBattle battle = started.getBattle();
@@ -321,19 +327,19 @@ public final class BattleService {
 			// Gone (a disconnect stops the battle): the client tells gen1-bridge the battle was aborted itself.
 			warn("player_gone");
 		} else {
-			answer(player, run.id, outcome);
+			answer(player, run.id, outcome, run.region);
 		}
 		KantoBridge.LOGGER.info("battle: a {} battle ended ({}, class {})", run.kind.id(), outcome.id(), run.proxyClass.path());
 	}
 
-	private static void answer(ServerPlayer player, String battle, BattleOutcome outcome) {
-		RelayService.get().send(player, MsgTypes.BATTLE_RESULT, outcome.result(battle), null);
+	private static void answer(ServerPlayer player, String battle, BattleOutcome outcome, @Nullable String region) {
+		RelayService.get().send(player, MsgTypes.BATTLE_RESULT, Regions.tag(outcome.result(battle), player.server, region), null);
 	}
 
 	/** Answers {@code aborted} for a battle that can't run, with a counted warning (codes only). */
-	private static void refuse(ServerPlayer player, String battle, String code) {
+	private static void refuse(ServerPlayer player, String battle, String code, @Nullable String region) {
 		warn(code);
-		answer(player, battle, BattleOutcome.ABORTED);
+		answer(player, battle, BattleOutcome.ABORTED, region);
 	}
 
 	// ---- clean-up ----

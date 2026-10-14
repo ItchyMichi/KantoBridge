@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import dev.kantobridge.builder.TestData;
@@ -55,6 +56,7 @@ class G3ReadersTest {
 		G3Data.Layout layout = bundle.g3layout();
 		assertEquals("EM_TEST_TOWN", layout.root());
 		assertEquals(new G3Data.Rect(1, -5, 6, 5), layout.maps().get("EM_TEST_ROUTE"));
+		assertNull(layout.start(), "the synthetic export names no start room");
 		G3Data.Encounters enc = bundle.g3encounters();
 		assertNotNull(enc);
 		G3Data.MapTables route = enc.maps().get("EM_TEST_ROUTE");
@@ -72,5 +74,18 @@ class G3ReadersTest {
 		assertArrayEquals(new byte[] {(byte) 0x89, 'P', 'N', 'G'}, java.util.Arrays.copyOf(page.png(), 4));
 		G3Data.Sprite person = bundle.g3sprite("OBJ_EVENT_GFX_TEST_PERSON");
 		assertEquals(9, person.frames());
+	}
+
+	@Test
+	void theLayoutNamesTheRoomANewGameStartsIn() throws Exception {
+		// MG8: the moving truck, which no warp leads into
+		com.google.gson.JsonObject json = com.google.gson.JsonParser.parseString(
+				"{\"root\":\"EM_TEST_TOWN\",\"unit\":\"cells\",\"maps\":{},\"start\":{\"map\":\"EM_TEST_TRUCK\",\"x\":2,\"y\":2}}")
+				.getAsJsonObject();
+		G3Data.Layout layout = G3Data.Layout.parse(dev.kantobridge.world.DataReader.of(json, "g3layout"));
+		assertEquals(new G3Data.Start("EM_TEST_TRUCK", 2, 2), layout.start());
+		json.getAsJsonObject("start").addProperty("x", 5000);
+		assertThrows(dev.kantobridge.world.DataException.class,
+				() -> G3Data.Layout.parse(dev.kantobridge.world.DataReader.of(json, "g3layout")), "a cell off any map");
 	}
 }

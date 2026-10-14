@@ -92,13 +92,16 @@ public final class EncounterService {
 		final PokemonEntity entity;
 		final UUID pokemon;
 		final boolean canFlee;
+		/** The region its start was tagged with (MG8), or null in a legacy world. */
+		final @Nullable String region;
 		@Nullable PokemonBattle battle;
 		boolean answered;
 		boolean fled;
 		@Nullable Caught caught;
 
-		Running(MinecraftServer server, UUID player, BattleStart start, PokemonEntity entity) {
+		Running(MinecraftServer server, UUID player, BattleStart start, PokemonEntity entity, @Nullable String region) {
 			this.server = server;
+			this.region = region;
 			this.player = player;
 			this.id = start.battle();
 			this.kind = start.kind();
@@ -154,7 +157,7 @@ public final class EncounterService {
 	 * Starts a wild encounter for a player whose other checks passed (no other battle, a usable Pokémon). Returns null
 	 * when the battle runs, else a refusal code for {@code aborted}.
 	 */
-	static @Nullable String begin(ServerPlayer player, BattleStart start) {
+	static @Nullable String begin(ServerPlayer player, BattleStart start, @Nullable String region) {
 		BattleStart.Wild wild = start.wild();
 		if (wild == null) {
 			return "bad_message";
@@ -178,7 +181,7 @@ public final class EncounterService {
 		if (entity == null) {
 			return "spawn_failed";
 		}
-		Running run = new Running(player.server, player.getUUID(), start, entity);
+		Running run = new Running(player.server, player.getUUID(), start, entity, region);
 		BattleStartResult result;
 		try {
 			// Modern rules (U3), the player's real party, no healing first; no running when the rules forbid it (-1). The
@@ -336,9 +339,10 @@ public final class EncounterService {
 			// Gone (a disconnect stops the battle): the client tells gen1-bridge the battle was aborted itself.
 			warn("player_gone");
 		} else if (caught != null) {
-			RelayService.get().send(player, MsgTypes.BATTLE_RESULT, BattleOutcome.caught(run.id, caught.uid(), caught.dex(), caught.level()), null);
+			RelayService.get().send(player, MsgTypes.BATTLE_RESULT,
+					Regions.tag(BattleOutcome.caught(run.id, caught.uid(), caught.dex(), caught.level()), run.server, run.region), null);
 		} else {
-			RelayService.get().send(player, MsgTypes.BATTLE_RESULT, outcome.result(run.id), null);
+			RelayService.get().send(player, MsgTypes.BATTLE_RESULT, Regions.tag(outcome.result(run.id), run.server, run.region), null);
 		}
 		KantoBridge.LOGGER.info("encounter: a {} encounter ended ({})", run.kind.id(), outcome.id());
 	}

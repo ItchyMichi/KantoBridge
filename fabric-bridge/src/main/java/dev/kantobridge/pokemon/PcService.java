@@ -15,6 +15,7 @@ import dev.kantobridge.proto.Envelope;
 import dev.kantobridge.proto.Ids;
 import dev.kantobridge.proto.MsgTypes;
 import dev.kantobridge.server.BuildHold;
+import dev.kantobridge.server.Regions;
 import dev.kantobridge.world.DataException;
 import dev.kantobridge.world.DataReader;
 import java.util.HashMap;
@@ -71,14 +72,19 @@ public final class PcService {
 		}
 	}
 
-	/** One open Bill's PC: Cobblemon's link and the id its {@code pc.closed} answers. */
+	/**
+	 * One open Bill's PC: Cobblemon's link, the id its {@code pc.closed} answers and (MG8) the region its {@code pc.open}
+	 * came with, so the answer reaches the hidden game that asked.
+	 */
 	private static final class Session {
 		final BridgePcLink link;
 		String pc;
+		@Nullable String region;
 
-		Session(BridgePcLink link, String pc) {
+		Session(BridgePcLink link, String pc, @Nullable String region) {
 			this.link = link;
 			this.pc = pc;
+			this.region = region;
 		}
 	}
 
@@ -102,6 +108,7 @@ public final class PcService {
 	}
 
 	static void onOpen(ServerPlayer player, Envelope message) {
+		String region = Regions.tagOf(message.data());
 		String pcId;
 		try {
 			pcId = DataReader.of(message.data(), "").allowOnly(Set.of("pc", "region")).string("pc", Ids.ID);
@@ -109,7 +116,7 @@ public final class PcService {
 			RelayService.get().sendError(player, "bad_message", message.seq());
 			String usable = idOf(message.data());
 			if (usable != null) {
-				refuse(player, usable, "bad_message");
+				refuse(player, usable, "bad_message", region);
 			} else {
 				// Nothing to echo, so the hidden game can't be told (gen1-bridge always sends an id).
 				warn("bad_id");
@@ -123,6 +130,7 @@ public final class PcService {
 			REPEATS.incrementAndGet();
 			if (!open.pc.equals(pcId)) {
 				open.pc = pcId;
+				open.region = region;
 				KantoBridge.LOGGER.debug("pc: the open PC now answers a newer pc.open");
 			} else {
 				KantoBridge.LOGGER.debug("pc: ignored a repeated pc.open");
@@ -130,11 +138,11 @@ public final class PcService {
 			return;
 		}
 		if (BuildHold.isHeld(player)) {
-			refuse(player, pcId, "held");
+			refuse(player, pcId, "held", region);
 			return;
 		}
 		if (BattleRegistry.getBattleByParticipatingPlayer(player) != null) {
-			refuse(player, pcId, "battle");
+			refuse(player, pcId, "battle", region);
 			return;
 		}
 		PCStore pc;
@@ -143,21 +151,21 @@ public final class PcService {
 		} catch (RuntimeException e) {
 			// Only the class: an exception's text could quote data.
 			KantoBridge.LOGGER.warn("pc: Cobblemon has no PC for the player ({})", e.getClass().getName());
-			refuse(player, pcId, "no_pc");
+			refuse(player, pcId, "no_pc", region);
 			return;
 		}
 		BridgePcLink link = new BridgePcLink(pc, id);
 		PCLinkManager.INSTANCE.addLink(link);
-		OPEN.put(id, new Session(link, pcId));
+		OPEN.put(id, new Session(link, pcId, region));
 		new OpenPCPacket(pc).sendToPlayer(player);
 		long count = OPENED.incrementAndGet();
 		KantoBridge.LOGGER.info("pc: opened Bill's PC; {} so far", count);
 	}
 
 	/** The PC can't open: the hidden game hears {@code pc.closed} at once. */
-	private static void refuse(ServerPlayer player, String pcId, String code) {
+	private static void refuse(ServerPlayer player, String pcId, String code, @Nullable String region) {
 		warn(code);
-		answer(player, pcId);
+		answer(player, pcId, region);
 	}
 
 	/** Ends sessions whose link is gone (the screen closed and unlinked) or was replaced by another PC. */
@@ -174,7 +182,7 @@ public final class PcService {
 			} else if (PCLinkManager.INSTANCE.getLink(entry.getKey()) != entry.getValue().link) {
 				it.remove();
 				CLOSED.incrementAndGet();
-				answer(player, entry.getValue().pc);
+				answer(player, entry.getValue().pc, entry.getValue().region);
 				KantoBridge.LOGGER.debug("pc: Bill's PC closed");
 			}
 		}
@@ -204,10 +212,10 @@ public final class PcService {
 		return true;
 	}
 
-	private static void answer(ServerPlayer player, String pcId) {
+	private static void answer(ServerPlayer player, String pcId, @Nullable String region) {
 		JsonObject data = new JsonObject();
 		data.addProperty("pc", pcId);
-		RelayService.get().send(player, MsgTypes.PC_CLOSED, data, null);
+		RelayService.get().send(player, MsgTypes.PC_CLOSED, Regions.tag(data, player.server, region), null);
 	}
 
 	/** The {@code pc} id of a malformed message, if it has a usable one. */

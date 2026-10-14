@@ -44,8 +44,9 @@ import org.jetbrains.annotations.Nullable;
  * cells claim the void fill before padding.</li>
  * <li><b>Interiors:</b> every other map reached from the surface, breadth-first a layer at a time in id order, each map's
  * warps in order (0-based arrivals), then its connections (a dive or emerge leads to the same cells one above the other;
- * a map entered by a connection, like the Safari Zone's areas, is placed on its own near its neighbour); placed under
- * its door by {@link InteriorPacker} as Gen 1's interiors are. An outdoor map entered so gets the sky when the build
+ * a map entered by a connection, like the Safari Zone's areas, is placed on its own near its neighbour), then the maps
+ * only left by a warp, and the room a new game starts in (the moving truck, whose door is a dynamic warp: MG8) under the
+ * root; placed under its door by {@link InteriorPacker} as Gen 1's interiors are. An outdoor map entered so gets the sky when the build
  * plans shapes.</li>
  * <li><b>Cells</b> by {@link G3Cells}; invisible walls on elevation mismatches ({@link PairEdges#elevation}).</li>
  * <li><b>Art:</b> every quarter the export's maps show, keyed by its page ({@link QuarterPages}), half-height on water;
@@ -86,6 +87,10 @@ final class Gen3Planner {
 			}
 		}
 		Map<String, Door> doors = doors(all, surface);
+		Door startDoor = startDoor(all, surface, doors, root, layout.start());
+		if (startDoor != null) {
+			doors.put(layout.start().map(), startDoor);
+		}
 
 		List<String> requested = new ArrayList<>();
 		if (options.maps() == null) {
@@ -249,7 +254,8 @@ final class Gen3Planner {
 	/**
 	 * Every interior's door: breadth-first from the surface, a layer at a time in id order; each map's warps in order (the
 	 * first that leads into a map makes it that map's door; a dynamic warp leads nowhere known), then its connections to
-	 * maps off the surface (dive and emerge, and the areas of an outdoor group entered by a warp).
+	 * maps off the surface (dive and emerge, and the areas of an outdoor group entered by a warp). Then the maps only left
+	 * by a warp (kind {@code exit}: the truck), under the cell their warp lands on.
 	 */
 	static Map<String, Door> doors(Map<String, G3Map> all, Collection<String> surface) {
 		Map<String, Door> out = new LinkedHashMap<>();
@@ -282,7 +288,44 @@ final class Gen3Planner {
 			}
 			layer = new ArrayList<>(next);
 		}
+		// MG8: a map no warp leads into but whose own warp leads out into the region (the moving truck every new game
+		// starts in) is placed as an interior under the cell that warp lands on, its warp's cell as the arrival, so the
+		// hidden player has somewhere to stand; in rounds, since such a map may lead into another one.
+		boolean added = true;
+		while (added) {
+			added = false;
+			for (String id : new TreeSet<>(all.keySet())) {
+				if (visited.contains(id)) {
+					continue;
+				}
+				for (G3Map.Warp warp : all.get(id).warps()) {
+					G3Map parent = warp.to() == null || warp.dynamic() || !visited.contains(warp.to()) ? null : all.get(warp.to());
+					if (parent == null || warp.warp() >= parent.warps().size()) {
+						continue;
+					}
+					G3Map.Warp landing = parent.warps().get(warp.warp());
+					out.put(id, new Door(parent.id(), landing.x(), landing.y(), warp.x(), warp.y(), true, "exit"));
+					visited.add(id);
+					added = true;
+					break;
+				}
+			}
+		}
 		return out;
+	}
+
+	/**
+	 * MG8: the door of the room a new game starts in when nothing else reaches it (the moving truck's door is a dynamic
+	 * warp): the root's middle cell, so it is placed under the root; null when it is reached or unknown.
+	 */
+	static @Nullable Door startDoor(Map<String, G3Map> all, Collection<String> surface, Map<String, Door> doors, String root,
+			G3Data.@Nullable Start start) {
+		if (start == null || !all.containsKey(start.map()) || surface.contains(start.map()) || doors.containsKey(start.map())
+				|| !all.containsKey(root)) {
+			return null;
+		}
+		G3Map rootMap = all.get(root);
+		return new Door(root, rootMap.trueW() / 2, rootMap.trueH() / 2, start.x(), start.y(), true, "start");
 	}
 
 	/**

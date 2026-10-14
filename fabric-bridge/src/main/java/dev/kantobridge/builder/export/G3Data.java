@@ -21,10 +21,17 @@ public final class G3Data {
 	private G3Data() {
 	}
 
-	/** The surface maps' cell origins ({@code g3layout/<region>}), relative to the root. */
-	public record Layout(String root, Map<String, Rect> maps) {
+	/**
+	 * The surface maps' cell origins ({@code g3layout/<region>}), relative to the root, and (MG8) the room a new game
+	 * starts in, or null when the export doesn't say.
+	 */
+	public record Layout(String root, Map<String, Rect> maps, @Nullable Start start) {
 		public Layout {
 			maps = Collections.unmodifiableMap(new TreeMap<>(maps));
+		}
+
+		public Layout(String root, Map<String, Rect> maps) {
+			this(root, maps, null);
 		}
 
 		static Layout parse(DataReader r) throws DataException {
@@ -41,8 +48,14 @@ public final class G3Data {
 				maps.put(id, new Rect(rect.integer("x", -16384, 16384), rect.integer("y", -16384, 16384), rect.integer("w", 1, 1023),
 						rect.integer("h", 1, 1023)));
 			}
-			return new Layout(r.string("root", DataReader.MAP_ID), maps);
+			DataReader start = r.optionalObject("start");
+			return new Layout(r.string("root", DataReader.MAP_ID), maps, start == null ? null
+					: new Start(start.string("map", DataReader.MAP_ID), start.integer("x", 0, 1023), start.integer("y", 0, 1023)));
 		}
+	}
+
+	/** The room a new game starts in and the cell there (MG8: the moving truck on RSE). */
+	public record Start(String map, int x, int y) {
 	}
 
 	/** Origin and size in cells. */
