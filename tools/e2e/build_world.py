@@ -1,6 +1,6 @@
 """Headless world build from the real game (docs/PLAN.md section 4.5, "Running the builder").
 
-    python tools/e2e/build_world.py --maps pallet [--world Kanto] [--fresh] [--region kanto --slot 0]
+    python tools/e2e/build_world.py --maps pallet [--world Kanto] [--fresh] [--region kanto --slot 0] [--heap 8g]
 
 1. Launches the Gen1Recomp test instance at the title screen (driver kb_export.lua on a test port).
 2. Runs ExportCli through Gradle, which downloads the export into
@@ -51,6 +51,7 @@ sys.path.insert(0, str(HERE))
 
 from fake_minecraft import FakeMinecraft  # noqa: E402
 from kb_protocol import load_protocol  # noqa: E402
+from kb_protocol.games import load_games  # noqa: E402
 from run_gen1recomp import launch, preflight  # noqa: E402
 
 MC_DIR = REPO / "local" / "minecraft"
@@ -68,6 +69,14 @@ SELFCHECK = REPORTS / "shape_selfcheck.json"
 # MG3: the budget is per shape map, i.e. per region.
 PART_CHARS = 64 * 1024
 MAX_SHAPE_MAP_PARTS = 8
+# MG7 G3G: a Gen 3 region's shape map is about three times Kanto's (the real Hoenn: 1,682,080 characters, 26 parts);
+# the eight parts above are Kanto's join-time budget (voxel plan R10), not a transport limit (world.shapes takes up to
+# 65,536 parts), so a Gen 3 region gets its own.
+MAX_SHAPE_MAP_PARTS_GEN3 = 32
+# MG7 G3G: the warnings a Gen 3 build may give until MG8 joins Hoenn's seams (GEN3_BRIDGE_PLAN.md §6 "Measured"): map
+# edges that disagree with the engine's own placement, overlaps of true sizes, interiors reached by a special warp
+# (no arrival cell). Any other warning fails the build.
+GEN3_KNOWN_WARNINGS = frozenset({"layout_edge_mismatch", "layout_overlap", "interior_arrival_missing"})
 # Several games (MG3): a region id (protocol defs regionId) and the region table's slots.
 REGION_ID = re.compile(r"[a-z][a-z0-9_]{0,23}")
 MAX_SLOT = 63
@@ -221,9 +230,13 @@ def region_args(region, slot):
     return [f"-Pkb.buildRegion={region}", f"-Pkb.buildSlot={slot}"]
 
 
-def build(bundle, maps, world, timeout=3600, region=None, slot=None):
-    """Steps 4-5. With region and slot (MG3) the build is a region build."""
+def build(bundle, maps, world, timeout=3600, region=None, slot=None, heap=None):
+    """Steps 4-5. With region and slot (MG3) the build is a region build; heap (MG7 G3G: "8g") sizes the server's."""
     extra = region_args(region, slot)
+    if heap is not None:
+        if not re.fullmatch(r"[0-9]+[mMgG]", heap):
+            raise ValueError("--heap must look like 8g or 6144m")
+        extra.append(f"-Pkb.serverHeap={heap}")
     _write_server_properties(world)
     REPORTS.mkdir(parents=True, exist_ok=True)
     for stale in (REPORT, DIAGNOSTICS):
@@ -248,11 +261,15 @@ def check_report(maps, report=REPORT, region=None, slot=None, world=None):
     """
     data = json.loads(report.read_text(encoding="utf-8"))
     expected = len(maps) if maps else data.get("maps_requested")
+    gen3 = load_games().family(data.get("game")) == "gen3"
+    codes = data.get("warning_codes") if isinstance(data.get("warning_codes"), dict) else {}
     checks = {
         "maps_built": data.get("maps_built") == expected,
-        "overlaps": data.get("overlaps") == 0,
+        # MG7 G3G: a Gen 3 layout's overlaps are known until MG8 (GEN3_KNOWN_WARNINGS)
+        "overlaps": data.get("overlaps") == 0 or (gen3 and set(codes) <= GEN3_KNOWN_WARNINGS),
         "story_cells": (data.get("story_cells") or 0) > 0,
-        "warnings": data.get("warnings") == 0,
+        "warnings": data.get("warnings") == 0 or (gen3 and set(codes) <= GEN3_KNOWN_WARNINGS
+                                                  and sum(codes.values()) == data.get("warnings")),
         "pack_textures": (data.get("pack_textures") or 0) > 0,
         "world_index": data.get("world_index") is True,
         "maps_unplaced": (data.get("maps_unplaced") or 0) == 0,
@@ -263,11 +280,12 @@ def check_report(maps, report=REPORT, region=None, slot=None, world=None):
     if region is None:
         checks["legacy_report"] = data.get("region") is None
     else:
-        checks.update(region_checks(data, region, slot, (SAVES / world) if world else None))
+        parts = MAX_SHAPE_MAP_PARTS_GEN3 if gen3 else MAX_SHAPE_MAP_PARTS
+        checks.update(region_checks(data, region, slot, (SAVES / world) if world else None, max_parts=parts))
     return data, [name for name, ok in checks.items() if not ok]
 
 
-def region_checks(data, region, slot, world_dir=None):
+def region_checks(data, region, slot, world_dir=None, max_parts=MAX_SHAPE_MAP_PARTS):
     """MG3: the report's `region` object (region, slot, origin, bounds, areas, families, shape_map_chars) and, with the
     world folder, the region's files and the region table against their schemas. Returns {check: ok}."""
     rep = data.get("region") if isinstance(data.get("region"), dict) else {}
@@ -280,7 +298,7 @@ def region_checks(data, region, slot, world_dir=None):
         "region_areas": isinstance(rep.get("areas"), dict) and {"surface", "zones", "dungeons", "caves"} <= set(rep["areas"]),
         "region_families": len(families) == 2 and all(isinstance(f, int) and 0 <= f <= 95 for f in families)
         and families[0] <= families[1],
-        "region_shape_map_fits": 0 < (rep.get("shape_map_chars") or 0) <= MAX_SHAPE_MAP_PARTS * PART_CHARS,
+        "region_shape_map_fits": 0 < (rep.get("shape_map_chars") or 0) <= max_parts * PART_CHARS,
     }
     if world_dir is not None:
         checks.update(region_files(world_dir, region, slot))
@@ -406,6 +424,7 @@ def main(argv=None):
     parser.add_argument("--game", default=None, help="with --skip-export: red or blue (default: the import)")
     parser.add_argument("--region", default=None, help="MG3: build as this region of the world (with --slot)")
     parser.add_argument("--slot", type=int, default=None, help=f"MG3: the region table slot, 0..{MAX_SLOT} (with --region)")
+    parser.add_argument("--heap", default=None, help="MG7: the server's heap, e.g. 8g (a full Hoenn needs more than the default)")
     args = parser.parse_args(argv)
 
     maps = [] if args.maps == "all" else MAP_SETS.get(args.maps) or args.maps.split(",")
@@ -427,7 +446,7 @@ def main(argv=None):
         bundle = export_bundle()
     where = f"saves/{args.world}" + (f" as region {args.region} (slot {args.slot})" if args.region is not None else "")
     print(f"== build ({len(maps) or 'all'} maps) into {where}")
-    code = build(bundle, maps, args.world, region=args.region, slot=args.slot)
+    code = build(bundle, maps, args.world, region=args.region, slot=args.slot, heap=args.heap)
     if not REPORT.exists():
         print(f"no build report (server exit {code})")
         return 1

@@ -421,7 +421,7 @@ maps `G3_TEST_*`, `layout/hoenn`); a golden scene; a GameTest building a synthet
 | **G3D** export | `g3*` resources, baked quarters, encounters, layout; the measurement driver first | lupa on the fake; pod export counts and hashes ✔ — **done 2026-10-14** (§5 "Measured", "As built") |
 | **G3E** builder | `Gen3FrontEnd`, the Gen 3 planner path, baked textures, habitats, two art sets in one pack | JUnit, golden scene, GameTest ✔ — **done 2026-10-14** (§6 "As built") |
 | **G3F** battles, party, items, routes | headless battles with `Battle.abort`, party sync, bag projection, the route exit | lupa; e2e a wild and a trainer battle ✔ — **done 2026-10-14** (§4.10 "As built"; the route exit moved to MG8) |
-| **G3G** | synthetic bundle, goldens, full suites; the pod's Hoenn build (MG8's first step) | full suite ✔ |
+| **G3G** | synthetic bundle, goldens, full suites; the pod's Hoenn build (MG8's first step) | full suite ✔ — **done 2026-10-14** (the synthetic parts came with G3E; the real Hoenn built as region `hoenn`: PROGRESS.md "Several games: MG7", with MG8's findings) |
 
 ## 10. Decisions (defaults proceed)
 

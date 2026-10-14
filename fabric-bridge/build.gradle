@@ -172,6 +172,13 @@ kbBuildProperties.each { gradleName, spec ->
 		kbBuildVmArgs << "-D${spec[0]}=${resolved}"
 	}
 }
+// -Pkb.serverHeap=8g: the server's heap for a large build (MG7 G3G: Hoenn is about three times Kanto; the JVM's default,
+// a quarter of the container's memory, ran out in the plan alone)
+def kbServerHeap = providers.gradleProperty("kb.serverHeap").getOrNull()
+if (kbServerHeap != null && !kbServerHeap.isBlank()) {
+	if (!(kbServerHeap ==~ /[0-9]+[mMgG]/)) throw new GradleException("kb.serverHeap must look like 8g or 6144m")
+	kbBuildVmArgs << "-Xmx${kbServerHeap}"
+}
 loom {
 	runs {
 		server {

@@ -124,6 +124,27 @@ def _write_region_world(root, region="kanto", slot=0):
     return data
 
 
+def test_a_heap_goes_to_the_server(monkeypatch, tmp_path):
+    # MG7 G3G: a full Hoenn needs more than the JVM's default heap (-Pkb.serverHeap -> -Xmx)
+    seen = []
+
+    def gradle(args, timeout, label):
+        seen.append(args)
+        return 0
+
+    monkeypatch.setattr(build_world, "_write_server_properties", lambda world: None)
+    monkeypatch.setattr(build_world, "REPORTS", tmp_path)
+    monkeypatch.setattr(build_world, "REPORT", tmp_path / "report.json")
+    monkeypatch.setattr(build_world, "DIAGNOSTICS", tmp_path / "diagnostics.json")
+    monkeypatch.setattr(build_world, "_gradle", gradle)
+    assert build_world.build(tmp_path / "bundle", [], "HoennE2E", region="hoenn", slot=0, heap="8g") == 0
+    assert "-Pkb.serverHeap=8g" in seen[0] and "-Pkb.buildRegion=hoenn" in seen[0]
+    assert build_world.build(tmp_path / "bundle", [], "KantoE2E") == 0
+    assert not any(a.startswith("-Pkb.serverHeap") for a in seen[1]), "the default heap without --heap"
+    with pytest.raises(ValueError):
+        build_world.build(tmp_path / "bundle", [], "HoennE2E", heap="lots")
+
+
 def test_region_checks_pass_on_a_complete_region_world(tmp_path):
     _write_region_world(tmp_path)
     checks = build_world.region_checks(_region_report(), "kanto", 0, tmp_path)
@@ -163,3 +184,26 @@ def test_check_report_tells_legacy_and_region_builds_apart(tmp_path):
     assert failed == []  # the report alone (no world folder given)
     failed = build_world.check_report(maps, report=report, region="hoenn", slot=1)[1]
     assert failed == ["region_reported"]
+
+
+def test_a_gen3_build_may_carry_hoenns_known_seams_only(tmp_path):
+    # MG7 G3G: until MG8 joins Hoenn's seams, a Gen 3 build's edge mismatches, overlaps and arrival-less interiors are
+    # known; any other warning fails, and so does any warning of a Gen 1 build. The shape map has a Gen 3 budget.
+    import json
+    codes = {"interior_arrival_missing": 36, "layout_edge_mismatch": 6, "layout_overlap": 1}
+    base = {"maps_requested": 319, "maps_built": 319, "overlaps": 1, "story_cells": 52987, "warnings": 43,
+            "warning_codes": codes, "pack_textures": 18358, "world_index": True, "maps_unplaced": 0, "habitat_blocks": 386,
+            "pools": 81}
+    report = tmp_path / "build_report.json"
+    hoenn = _region_report(region="hoenn", chars=1_682_080)
+    report.write_text(json.dumps(dict(base, game="emerald", **hoenn)), encoding="utf-8")
+    assert build_world.check_report([], report=report, region="hoenn", slot=0)[1] == []
+    report.write_text(json.dumps(dict(base, game="emerald", warnings=44, warning_codes=dict(codes, spawn_missing=1),
+                                      **hoenn)), encoding="utf-8")
+    assert build_world.check_report([], report=report, region="hoenn", slot=0)[1] == ["overlaps", "warnings"]
+    report.write_text(json.dumps(dict(base, game="blue", **_region_report(chars=1_682_080))), encoding="utf-8")
+    assert build_world.check_report([], report=report, region="kanto", slot=0)[1] == [
+        "overlaps", "warnings", "region_shape_map_fits"], "a Gen 1 build keeps every gate"
+    too_big = _region_report(region="hoenn", chars=build_world.MAX_SHAPE_MAP_PARTS_GEN3 * build_world.PART_CHARS + 1)
+    report.write_text(json.dumps(dict(base, game="emerald", **too_big)), encoding="utf-8")
+    assert build_world.check_report([], report=report, region="hoenn", slot=0)[1] == ["region_shape_map_fits"]

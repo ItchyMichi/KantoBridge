@@ -1475,7 +1475,7 @@ the full suite at the ✔ checkpoints (MG2, MG3, MG5, MG6). Pods run inside your
 | MG4 | Links | **done** (note 19); check: with one link the e2e scenarios behave as before (pod, real engine: `test_s5_ready`, `test_handshake`, `test_regions`, `test_multiplayer`, `test_crash`, `test_hot_reload` all passed), `tools/tests/test_links.py` (two `fake_gen1`: swap, a parked drop, a wrong game), JUnit `LinksTest` + `LinksFakeGen1IntegrationTest` (two real `fake_gen1` processes); one `test_multiplayer` assertion learnt that an install paired before MG1 keeps its legacy pairing file beside the per-game one. The MG4–MG6 checkpoint on the pod (kb-dev7): pytest and Lua 1,729, JUnit 1,193 (0 failures), GameTests 112 | 2026-10-13 | |
 | MG5 | Crossings | **done** (note 20); check: `PassGameTests` (6: the round trip into the far gate house with the exact arrival cell, every refusal, abort, the timeout, the start path, the stash, a built half whose pass is a story cell), `PassCrossingsTest`, `ZonePlanTest`, `WorldIndexTest`, `PassChoreographyTest` (16), the two-`fake_gen1` crossing in `tools/tests/test_stand_ins.py`; a crossing between two real engines waits for a second region whose game has an adapter (MG7/MG8) | 2026-10-13 | |
 | MG6 | One trainer economy | **done** (notes 18, 21); check: `LedgerGameTests` (two regions: adoption, stamped read-back, the crossing's projection, `too_many`/`left`, re-projection on an unknown stamp; a legacy world untouched), `BagGameTests` marked stacks, `LedgerTest`/`LedgerCodecTest`/`ItemsTest`/`BagSetRelayTest`, `test_lua_ledger.py`/`test_lua_bag.py`; the real engine's `bag.set` round trip is your play-test (PLAYTEST.md "MG6") | 2026-10-13 | |
-| MG7 | The second family (Emerald): adapter and export | **in progress**: the spec [specs/GEN3_BRIDGE_PLAN.md](specs/GEN3_BRIDGE_PLAN.md) (2026-10-14), phases G3A–G3G; **G3A done** (Emerald followable), **G3B done** (Emerald's UI), **G3C done** (story), **G3D done** (export), **G3E done** (builder), **G3F done** (battles, party, bag; the route exit moved to MG8) ("Several games: MG7") | 2026-10-14 | |
+| MG7 | The second family (Emerald): adapter and export | **done**: the spec [specs/GEN3_BRIDGE_PLAN.md](specs/GEN3_BRIDGE_PLAN.md) (2026-10-14), phases G3A–G3G; **G3A done** (Emerald followable), **G3B done** (Emerald's UI), **G3C done** (story), **G3D done** (export), **G3E done** (builder), **G3F done** (battles, party, bag; the route exit moved to MG8), **G3G done** (the real Hoenn built in Minecraft) ("Several games: MG7") | 2026-10-14 | |
 | MG8 | Hoenn and the pass to it | pending | | |
 
 ### Several games: notes
@@ -2048,6 +2048,35 @@ Gen 3's export doesn't use; since G3D).
 **Not yet:** the route exit (MG8); in-game trades, the daycare and eggs (the engine changes the shadow party natively and
 the next `party.sync` takes it back, as the research note warned); item uses on party members (refused, see above).
 
+**G3G (2026-10-14): the real Hoenn in Minecraft.** The synthetic bundle, its goldens and the GameTests came with G3E
+(`tools/fake_gen1/synth3.py`, `synthetic_g3_*`, `Gen3BuildGameTests`); G3G built the real Emerald export as region `hoenn`
+on a pod (kb-dev12, new: cpu5g ×4, 16 GB, $0.184/hr; kb-dev5's and kb-dev6's hosts were full), with
+`tools/e2e/build_world.py --skip-export --game emerald --maps all --world HoennE2E --fresh --region hoenn --slot 0`:
+
+| Measure | The real Hoenn |
+|---|---|
+| Maps | 319 placed (49 surface, 270 interiors); the 200 unreachable ones left out |
+| Blocks | 6,620,014 placed in 5,821 chunks; 52,987 story cells; 386 habitat blocks on 81 pools |
+| Art | 18,358 textures in 18,506 slots (families 0–79) |
+| Shape map | 1,682,080 characters: 26 parts of 64 KB on the wire (Kanto's budget is 8) |
+| Time | about 9 minutes, 5 of them writing the pack's 18,360 files on the pod's network disk |
+| Memory | a 4 GB heap is enough (peak 4.7 GB resident); with 8 GB the JVM grew to 5.5 GB |
+| Repeat | the second build gave the same shape index hash, blocks and story cells |
+
+**For MG8:**
+- **The shape map is 3.2 times the voxel plan's join budget** (risk R10). It travels (`world.shapes` takes up to 65,536
+  parts), but each joining client receives 1.7 MB of it. R10's mitigations (grids on demand per layer, no per-block ids
+  for plain repeats) are MG8's to weigh.
+- **Memory:** a single-player Hoenn build needs a 4 GB heap: a launcher's memory setting below that is likely too
+  small.
+- The 43 warnings are the known ones: 6 edge mismatches and 1 overlap (the three seams MG8 joins) and 36 interiors
+  reached by special warps (no arrival cell).
+- Tools: `build_world.py --heap` (the server's heap, `-Pkb.serverHeap`); its gates know a Gen 3 build: the three known
+  warning codes pass until MG8, any other warning fails, and the shape map's budget is 32 parts.
+
+**Check (MG7's last checkpoint, pod kb-dev12):** pytest and Lua 1,954 passed (local); JUnit 1,225 (2 skipped) and
+GameTests 118, no failures; the Hoenn build passed its gates (`build OK`).
+
 ### Handoff (2026-10-14): after MG6, for whoever continues
 
 **State.** MG1–MG6 of [specs/MULTI_GAME_PLAN.md](specs/MULTI_GAME_PLAN.md) are done and committed locally (never
@@ -2081,8 +2110,8 @@ build per checkpoint, worked.
    speed. S5: the Windows build honours the import variables, quits with code 1 on a refused file, and at the user's
    word imported their Blue zip (exit code 0, the marker, the game boots). MG7's spec can start. Left: S1 beside
    Minecraft on the user's PC.
-2. **MG7, the second family (XL, its own spec).** First write `docs/specs/GEN3_BRIDGE_PLAN.md` from S2–S3, then
-   implement in the plan's order (§5 MG7): the `game3` adapter `gen1-bridge/lib/engine/game3.lua` group by group
+2. **MG7 is done (2026-10-14)**: the spec `fb525bc`, G3A `2138127`, G3B `fc78db1`, G3C `98dd435`, G3D `404a634`,
+   G3E `90938d4` and `f3a5ce1`, G3F `c23bd33`, G3G after it ("Several games: MG7" above). What was planned: the `game3` adapter `gen1-bridge/lib/engine/game3.lua` group by group
    (Appendix B is the interface, `lib/engine/gen1.lua` the worked example, `lib/kb_engine.lua` the loader whose stub
    rejects `game3` today; `protocol/games.json` `adapter: true` for `emerald` turns it on and `kb_session` then accepts
    the game), each group with lupa tests on a `game3` fake engine (tools/lua; a `fake_gen1 --game emerald` stand-in with a
@@ -2096,8 +2125,11 @@ build per checkpoint, worked.
    drift loud.
 3. **MG8, Hoenn and the pass (L).** `routes.json` Kanto ↔ Hoenn pass (the user picks both exits with F7, as for the
    Viridian zone), the Hoenn pod build at slot 1 (Littleroot and Route 101 first, then all maps), per-region budgets,
-   videos, PLAYTEST "Hoenn", per-map tweaks as small PROGRESS items. Prerequisite found in MG4: `PackGenerator` must
-   merge two art sets into the one texture pack.
+   videos, PLAYTEST "Hoenn", per-map tweaks as small PROGRESS items. The two art sets in one pack came with G3E. Carried
+   over from MG7: the Wild Routes exit for Emerald (E6, `routes.lua`); Hoenn's three seams (Dewford/Route 107,
+   Fallarbor/Route 114, Verdanturf/Route 116); the 200 maps no warp reaches (Sootopolis and its interiors, the
+   ferry's and the Frontier's); the shape map's size (1.7 MB, risk R10); Gen 3's in-game trades, daycare and eggs;
+   NPC and surf sheets, animated tiles and darkness for Gen 3.
 4. **Later** (plan §8, not in this plan): same-process game switching if upstream adds a facade, a Gen 2 adapter, FRLG
    as a second Kanto, heights for Hoenn, spectator visits, Yellow.
 
