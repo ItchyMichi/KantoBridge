@@ -2138,6 +2138,8 @@ player in front of it (Emerald class and species names).
 | Two hidden processes (S1: about 600 MB) | 620 MB at most together during the crossings, both with gen1-bridge | |
 | Block-state memory, 32 families | measured at MG3 (D9), unchanged | |
 
+**What is left after MG8 is one checklist: [SEVERAL_GAMES_FOLLOWUPS.md](SEVERAL_GAMES_FOLLOWUPS.md).**
+
 **Carried over, per map (the user's "each ROM requires its own tweaks"):**
 - Hoenn's seams: Dewford Town/Route 107, Fallarbor Town/Route 114, Verdanturf Town/Route 116 (edge mismatches) and
   one overlap; 36 interiors with no arrival cell (G3G's warnings).
