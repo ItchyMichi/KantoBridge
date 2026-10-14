@@ -673,9 +673,9 @@ Sizes as in PLAN.md §6: **S** about M1, **M** about M6/M7, **L** about M8, **XL
   quits by itself and `<game>/rom-cache.complete` exists; the tool learns the game from the folder name. Also:
   `POKEPORT_IDENTITY` with and without `portable.txt` (which data home is used), noted for D3's alternative.
 - Output: PROGRESS "Several games: spikes"; `docs/specs/GEN3_BRIDGE_PLAN.md` is written only at MG7 from S2–S3.
-  **All five ran on pods on 2026-10-14** (the user is away from a computer): S2, S3 and S4 complete; S1 and S5 as
-  far as a pod can (Minecraft beside the games, and S5's real import on the Windows build, are left). S5 also found
-  that D3's `POKEPORT_IDENTITY` alternative separates data homes only without `portable.txt`.
+  **All five ran on pods on 2026-10-14** (the user is away from a computer): S2, S3, S4 and S5 complete (S5 under
+  Wine, its real import at the user's word); S1 as far as a pod can (Minecraft beside the games is left). S5 also
+  found that D3's `POKEPORT_IDENTITY` alternative separates data homes only without `portable.txt`.
 
 ### MG1: The game catalogue and an open protocol (S–M)
 
