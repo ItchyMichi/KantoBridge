@@ -98,6 +98,11 @@ if (kbAutopilot != null && !kbAutopilot.isBlank()) {
 				if (kbAutopilotShots != null && !kbAutopilotShots.isBlank()) {
 					vmArg "-Dkantobridge.autopilot.shots=${kbAutopilotShots.trim()}"
 				}
+				// and the remote pilot's game to wait for before the world opens (MG8's story video: emerald)
+				def kbAutopilotFollow = providers.gradleProperty("kb.autopilotFollow").getOrNull()
+				if (kbAutopilotFollow != null && !kbAutopilotFollow.isBlank()) {
+					vmArg "-Dkantobridge.autopilot.follow=${kbAutopilotFollow.trim()}"
+				}
 				programArgs "--width", "1280", "--height", "720"
 			}
 		}

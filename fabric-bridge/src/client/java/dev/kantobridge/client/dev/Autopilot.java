@@ -75,6 +75,8 @@ import org.jetbrains.annotations.Nullable;
  * first person, tilted up at the roof or the canopy, recording each look round into its own file (the record file
  * with {@code -stop<n>}; {@code kantobridge.autopilot.stops}, default 2).
  *
+ * <p>Scene {@code remote} (MG8's story video): {@link RemotePilot}, the client steered by a script outside it.
+ *
  * <p>Scene {@code pilot} (the caves in 3D plan's H6 video, docs/specs/CAVES_3D_PLAN.md): it plans two shots from the
  * world index and the export's cells ({@link PilotPlan}): up a cave's stairs to its raised ground and on to the cliff's
  * edge, then down a ladder's shaft and back up. For each it asks the test driver (tools/e2e/drivers/kb_pilot.lua) to
@@ -192,6 +194,14 @@ public final class Autopilot {
 	public static void init() {
 		String scene = System.getProperty(PROPERTY);
 		if (scene == null || scene.isBlank()) {
+			return;
+		}
+		if (RemotePilot.SCENE.equals(scene)) {
+			// MG8's story video: a script outside the client says what to do (RemotePilot)
+			String dir = System.getProperty(PROPERTY + ".pilotDir");
+			String log = System.getProperty(PROPERTY + ".log");
+			RemotePilot.init(Minecraft.getInstance(), System.getProperty(PROPERTY + ".world"), dir == null || dir.isBlank() ? null : Path.of(dir),
+					log == null || log.isBlank() ? null : Path.of(log), Boolean.getBoolean(PROPERTY + ".quit"), System.getProperty(PROPERTY + ".follow"));
 			return;
 		}
 		if (!SCENE_WILD_ZONE.equals(scene) && !SCENE_TOUR.equals(scene) && !SCENE_PILOT.equals(scene)) {
@@ -1096,7 +1106,7 @@ public final class Autopilot {
 	}
 
 	/** The zone cells the walk keeps out of: trainers and their sight, balls, the dungeon entrance and the way home (A). */
-	private Set<Long> avoidedCells(WorldIndex index, WorldIndex.Zone zone) {
+	static Set<Long> avoidedCells(WorldIndex index, WorldIndex.Zone zone) {
 		Set<Long> out = new HashSet<>();
 		out.add(key(0, 0)); // the route map's A: stepping on it takes the player home
 		for (WorldIndex.ZoneBall b : zone.balls()) {
@@ -1119,7 +1129,7 @@ public final class Autopilot {
 		return out;
 	}
 
-	private static boolean standable(ClientLevel level, int x, int feet, int z) {
+	static boolean standable(ClientLevel level, int x, int feet, int z) {
 		BlockPos floor = new BlockPos(x, feet - 1, z);
 		BlockPos body = new BlockPos(x, feet, z);
 		BlockPos head = new BlockPos(x, feet + 1, z);

@@ -2147,6 +2147,26 @@ player in front of it (Emerald class and species names).
   animated tiles and darkness are not mirrored.
 - The test pass's exits are temporary (the user's choice, K1); F7 and `routes.json` move them.
 
+**The story video (the user's request, 2026-10-14):** one take in the real dev client: a new game in Hoenn up to
+the starter, out through the test pass into Kanto with a new game there, Kanto's starter, and Bill's PC in Viridian
+City holding the Hoenn starter. The client is steered by `client/dev/RemotePilot.java` (scene `remote`: commands in
+`local/reports/story/commands.jsonl`, its state in `state.json`; a step is a walk to the next cell's middle, a button
+press goes into the open screen or the world, names are typed on the grid, Cobblemon battles take the first move with
+PP left, a Wild Routes half is walked to its pass in stages as its chunks load), and `tools/e2e/story_video.py` plays
+the story through it (walks planned on the export's cells; `--scene zone` starts at Littleroot's clearing for a quick
+test of the second half). Filming found and fixed:
+- **Emerald's moving truck was never built** (no warp leads in: its door is a dynamic warp). The Gen 3 export now names
+  the room a new game starts in (`g3layout.start`, the engine's `newGameStart`) and the builder places it under the
+  root; maps only left by a warp are placed under the cell their warp lands on. Hoenn: 357 maps (was 319), the same 43
+  known warnings.
+- **A hidden battle's result went to the wrong game:** `battle.result` (and `pc.closed`) reached the client untagged, so
+  the client handed it to the legacy region's link (Blue) and Emerald waited for ever after Birch's battle. Both now
+  carry the region their `battle.start` / `pc.open` came with (`BattleRegionGameTests`).
+- A fresh player follows the legacy region's link once it connects; the pilot follows Emerald first, as a player
+  choosing to start in Hoenn would.
+- The client can't confirm an empty nickname (the hidden game keeps the species name, but `ui.open` sends no default):
+  the pilot types the species' name. A gap for the user's play-test.
+
 ### Handoff (2026-10-14): after MG6, for whoever continues
 
 **State.** MG1–MG6 of [specs/MULTI_GAME_PLAN.md](specs/MULTI_GAME_PLAN.md) are done and committed locally (never

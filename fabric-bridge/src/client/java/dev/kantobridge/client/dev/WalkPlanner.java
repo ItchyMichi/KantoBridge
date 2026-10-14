@@ -4,6 +4,7 @@ import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Set;
 
 /**
  * The autopilot's walks ({@link Autopilot}): a breadth-first search over walkable block columns inside a box, then the
@@ -63,6 +64,99 @@ final class WalkPlanner {
 				int next = (nz - box.minZ()) * w + (nx - box.minX());
 				if (dist[next] < 0 && grid.walkable(nx, nz)) {
 					dist[next] = dist[at] + 1;
+					from[next] = at;
+					queue.add(next);
+				}
+			}
+		}
+		List<int[]> path = new ArrayList<>();
+		for (int at = best; at >= 0; at = from[at]) {
+			path.add(new int[] {at % w + box.minX(), at / w + box.minZ()});
+		}
+		java.util.Collections.reverse(path);
+		return path;
+	}
+
+	/**
+	 * The path, start to end, to the nearest column in {@code goals} (keys {@link Autopilot#key}), or an empty list when
+	 * none is reachable. Goal columns need not be walkable (a gate house's doorway may be a block the walk stops at).
+	 */
+	static List<int[]> toward(Grid grid, Box box, int sx, int sz, Set<Long> goals) {
+		int w = box.maxX() - box.minX() + 1;
+		int d = box.maxZ() - box.minZ() + 1;
+		int[] from = new int[w * d];
+		Arrays.fill(from, -2);
+		int start = (sz - box.minZ()) * w + (sx - box.minX());
+		from[start] = -1;
+		ArrayDeque<Integer> queue = new ArrayDeque<>();
+		queue.add(start);
+		int found = goals.contains(Autopilot.key(sx, sz)) ? start : -1;
+		while (!queue.isEmpty() && found < 0) {
+			int at = queue.poll();
+			int x = at % w + box.minX();
+			int z = at / w + box.minZ();
+			for (int[] s : STEPS) {
+				int nx = x + s[0];
+				int nz = z + s[1];
+				if (!box.contains(nx, nz)) {
+					continue;
+				}
+				int next = (nz - box.minZ()) * w + (nx - box.minX());
+				if (from[next] != -2) {
+					continue;
+				}
+				boolean goal = goals.contains(Autopilot.key(nx, nz));
+				if (goal || grid.walkable(nx, nz)) {
+					from[next] = at;
+					if (goal) {
+						found = next;
+						break;
+					}
+					queue.add(next);
+				}
+			}
+		}
+		List<int[]> path = new ArrayList<>();
+		for (int at = found; at >= 0; at = from[at]) {
+			path.add(new int[] {at % w + box.minX(), at / w + box.minZ()});
+		}
+		java.util.Collections.reverse(path);
+		return path;
+	}
+
+	/**
+	 * The path, start to end, to the reachable column nearest (straight-line) to {@code (tx, tz)}: the way towards a goal
+	 * the client hasn't loaded yet (its chunks read as air), to walk and plan again from. Just the start when nothing
+	 * else is reachable.
+	 */
+	static List<int[]> nearest(Grid grid, Box box, int sx, int sz, int tx, int tz) {
+		int w = box.maxX() - box.minX() + 1;
+		int d = box.maxZ() - box.minZ() + 1;
+		int[] from = new int[w * d];
+		Arrays.fill(from, -2);
+		int start = (sz - box.minZ()) * w + (sx - box.minX());
+		from[start] = -1;
+		ArrayDeque<Integer> queue = new ArrayDeque<>();
+		queue.add(start);
+		int best = start;
+		long bestDistance = Long.MAX_VALUE;
+		while (!queue.isEmpty()) {
+			int at = queue.poll();
+			int x = at % w + box.minX();
+			int z = at / w + box.minZ();
+			long distance = (long) (x - tx) * (x - tx) + (long) (z - tz) * (z - tz);
+			if (distance < bestDistance) {
+				bestDistance = distance;
+				best = at;
+			}
+			for (int[] s : STEPS) {
+				int nx = x + s[0];
+				int nz = z + s[1];
+				if (!box.contains(nx, nz)) {
+					continue;
+				}
+				int next = (nz - box.minZ()) * w + (nx - box.minX());
+				if (from[next] == -2 && grid.walkable(nx, nz)) {
 					from[next] = at;
 					queue.add(next);
 				}
