@@ -149,7 +149,7 @@ class SlotMapV2Test {
 				"the range overlaps test2's");
 		assertThrows(IllegalArgumentException.class, () -> SlotMap.enumerateRegion(both, "Johto", "gold", SECOND, otherKeys(1)), "bad id");
 		assertThrows(IllegalArgumentException.class, () -> SlotMap.enumerateRegion(both, "johto", "", SECOND, otherKeys(1)), "no set");
-		assertThrows(IllegalArgumentException.class, () -> new SlotMap.Range(0, 32));
+		assertThrows(IllegalArgumentException.class, () -> new SlotMap.Range(0, SlotMap.FAMILIES_PER_SHAPE));
 		assertThrows(IllegalArgumentException.class, () -> new SlotMap.Range(5, 4));
 		assertThrows(IllegalArgumentException.class, () -> new SlotMap.Key("kanto", "", "tilesets.a", "P", 0, SlotMap.Shape.FULL), "a region key names its set");
 
@@ -166,10 +166,10 @@ class SlotMapV2Test {
 		assertEquals(4096, full.available());
 		assertEquals("test2", full.region());
 		assertEquals(SlotMap.Shape.FULL, full.shape());
-		// exactly 4,096 fit, up to the last family
+		// exactly 4,096 fit, up to the range's last family
 		List<SlotMap.Key> exact = new ArrayList<>(tooMany.subList(0, 4096));
 		SlotMap filled = SlotMap.enumerateRegion(legacyRebuilt, "test2", "red", SECOND, exact);
-		assertEquals(SlotMap.CAPACITY - 1, filled.slot("test2", exact.get(4095)).index());
+		assertEquals((SECOND.hi() + 1) * SlotMap.SLOTS_PER_FAMILY - 1, filled.slot("test2", exact.get(4095)).index());
 		assertEquals("tile_full_31", filled.slot("test2", exact.get(4095)).blockPath());
 
 		// reading: no regions table, overlapping ranges, a family outside its region's range, an unknown region

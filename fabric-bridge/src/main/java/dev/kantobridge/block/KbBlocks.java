@@ -20,8 +20,8 @@ import net.minecraft.world.phys.shapes.Shapes;
 import net.minecraft.world.phys.shapes.VoxelShape;
 
 /**
- * Block registration. Tile families: {@code tile_full_00..31} (full cubes), {@code tile_half_00..31} (half height) and
- * {@code shape_full_00..31} (full collision around shaped art, never occluding; the voxel plan's V3). Plus
+ * Block registration. Tile families: {@code tile_full_00..95} (full cubes), {@code tile_half_00..95} (half height) and
+ * {@code shape_full_00..95} (full collision around shaped art, never occluding; the voxel plan's V3). Plus
  * {@code decor} and {@code decor_leaves} (visual only), and the invisible world blocks: {@code story_cell} and
  * {@code story_tile} (a swap site's cell, whose closed art the client draws per player), each with its block entity,
  * and {@code ledge_collider} (which carries the ledge lip since V3).
@@ -31,11 +31,12 @@ import net.minecraft.world.phys.shapes.VoxelShape;
  */
 public final class KbBlocks {
 	/**
-	 * Families per shape; 3 shapes × 32 families × 256 slots = 24,576 tile states. 16 were Kanto's (it uses 3,926 of
-	 * their 4,096 full slots); the other 16 are a second region's (docs/specs/MULTI_GAME_PLAN.md §4.6, MG3, D9): a world
-	 * of several games shares one slot map with a family range per region.
+	 * Families per shape; 3 shapes × 96 families × 256 slots = 73,728 tile states. A world of several games shares one
+	 * slot map with a family range per region (docs/specs/MULTI_GAME_PLAN.md §4.6, MG3, D9): Kanto's 16 (it uses 3,926
+	 * of their 4,096 full slots), and since MG7 a Gen 3 region's 80 (Hoenn's flattened art uses about 18,400 full
+	 * slots: docs/specs/GEN3_BRIDGE_PLAN.md §5 "Measured", §10 E7). MG3 measured about 15 MB a side per 16 families.
 	 */
-	public static final int FAMILIES_PER_SHAPE = 32;
+	public static final int FAMILIES_PER_SHAPE = 96;
 
 	private static final VoxelShape FULL = Shapes.block();
 	private static final VoxelShape HALF = Block.box(0, 0, 0, 16, 8, 16);

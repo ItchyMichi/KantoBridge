@@ -89,8 +89,8 @@ class WorldIndexTest {
 
 		String good = index.toJson();
 		assertThrows(DataException.class, () -> WorldIndex.fromJson(good.replace("\"art\":[13,13,13,4095]", "\"art\":[13,13,13]")));
-		// a closed-art slot past the slot map's capacity (8,192 with 32 families, MG3); 4095 itself is a family-15 slot
-		assertThrows(DataException.class, () -> WorldIndex.fromJson(good.replace("4095", "8192")));
+		// a closed-art slot past the slot map's capacity (24,576 with 96 families, MG7); 4095 itself is a family-15 slot
+		assertThrows(DataException.class, () -> WorldIndex.fromJson(good.replace("4095", "24576")));
 		assertThrows(DataException.class, () -> WorldIndex.fromJson(good.replace("\"height\":2", "\"height\":9")));
 		assertThrows(DataException.class, () -> WorldIndex.fromJson(good.replace("\"start\":14", "\"start\":256")));
 		assertThrows(DataException.class, () -> WorldIndex.fromJson(good.replace("\"pass\":\"solid\"", "\"pass\":\"solid\",\"x\":1")));

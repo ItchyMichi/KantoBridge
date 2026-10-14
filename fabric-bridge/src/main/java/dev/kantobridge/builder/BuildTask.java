@@ -326,7 +326,8 @@ public final class BuildTask {
 		if (implicitLegacy != null && !implicitLegacy.id().equals(id)) {
 			others.put(implicitLegacy.id(), implicitLegacy);
 		}
-		SlotMap.Range families = existing != null ? existing.families() : nextFreeRange(others.values());
+		SlotMap.Range families = existing != null ? existing.families()
+				: nextFreeRange(others.values(), SlotMap.familiesFor(Games.family(this.bundle.game())));
 		if (families == null) {
 			KantoBridge.LOGGER.error("builder: no free family range for region {} ({} families per shape)", id, SlotMap.FAMILIES_PER_SHAPE);
 			throw new Failure("build.slot_map_full", null);
@@ -358,9 +359,17 @@ public final class BuildTask {
 
 	/** The next free range of 16 families, or null when every range is taken (MULTI_GAME_PLAN §4.6, D9). */
 	static SlotMap.@Nullable Range nextFreeRange(Collection<RegionRecord> others) {
-		int per = SlotMap.LEGACY_FAMILIES.size();
-		for (int lo = 0; lo + per - 1 < SlotMap.FAMILIES_PER_SHAPE; lo += per) {
-			SlotMap.Range candidate = new SlotMap.Range(lo, lo + per - 1);
+		return nextFreeRange(others, SlotMap.LEGACY_FAMILIES.size());
+	}
+
+	/**
+	 * The next free range of {@code size} families starting on a multiple of 16 (MG7: a Gen 3 region takes 80, E7), or
+	 * null when none is free.
+	 */
+	static SlotMap.@Nullable Range nextFreeRange(Collection<RegionRecord> others, int size) {
+		int step = SlotMap.LEGACY_FAMILIES.size();
+		for (int lo = 0; lo + size - 1 < SlotMap.FAMILIES_PER_SHAPE; lo += step) {
+			SlotMap.Range candidate = new SlotMap.Range(lo, lo + size - 1);
 			boolean free = true;
 			for (RegionRecord other : others) {
 				if (other.families().overlaps(candidate)) {

@@ -72,17 +72,17 @@ class TileBlockTest {
 	}
 
 	@Test
-	void ninetySixFamiliesOf256States() {
-		// MG3: 32 families per shape (16 were Kanto's), 3 shapes, 256 states each = 24,576 tile states
+	void twoHundredEightyEightFamilyBlocksOf256States() {
+		// MG7 (E7): 96 families per shape (Kanto's 16, a Gen 3 region's 80), 3 shapes, 256 states each = 73,728 tile states
 		List<TileBlock> tiles = KbBlocks.allTiles();
 		assertEquals(3 * KbBlocks.FAMILIES_PER_SHAPE, tiles.size());
-		assertEquals(96, tiles.size());
+		assertEquals(288, tiles.size());
 		int states = 0;
 		for (TileBlock block : tiles) {
 			assertEquals(256, block.getStateDefinition().getPossibleStates().size());
 			states += block.getStateDefinition().getPossibleStates().size();
 		}
-		assertEquals(24576, states);
+		assertEquals(73728, states);
 		for (int family = 0; family < KbBlocks.FAMILIES_PER_SHAPE; family++) {
 			assertSame(KbBlocks.tileFull().get(family), byId(KbBlocks.tileId("full", family)));
 			assertSame(KbBlocks.tileHalf().get(family), byId(KbBlocks.tileId("half", family)));
@@ -90,7 +90,7 @@ class TileBlockTest {
 		}
 		assertEquals("tile_full_00", KbBlocks.tileId("full", 0));
 		assertEquals("tile_half_15", KbBlocks.tileId("half", 15));
-		assertEquals("tile_half_31", KbBlocks.tileId("half", KbBlocks.FAMILIES_PER_SHAPE - 1));
+		assertEquals("tile_half_95", KbBlocks.tileId("half", KbBlocks.FAMILIES_PER_SHAPE - 1));
 		assertEquals("shape_full_07", KbBlocks.shapeId(7));
 	}
 

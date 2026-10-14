@@ -226,7 +226,7 @@
       "items": {
         "type": "integer",
         "minimum": 0,
-        "maximum": 31
+        "maximum": 95
       },
       "description": "The slot-map family range [first, last] this region's tiles use (the slot map is one per world)."
     },

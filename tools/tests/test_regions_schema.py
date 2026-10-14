@@ -86,7 +86,7 @@ def test_the_region_record_matches_its_schema():
 def test_a_bad_region_record_is_refused():
     assert _problems(PROTOCOL.check_region, _record(id="Hoenn")) == ["/id: pattern"]
     assert _problems(PROTOCOL.check_region, _record(**{"areas.caves": None})) == ["/areas: required"]
-    assert _problems(PROTOCOL.check_region, _record(families=[16, 32])) == ["/families/1: maximum"]
+    assert _problems(PROTOCOL.check_region, _record(families=[16, 96])) == ["/families/1: maximum"]  # MG7: 96 per shape
     assert _problems(PROTOCOL.check_region, _record(**{"namespaces.pools": "cobblemon:hoenn"})) == ["/namespaces/pools: pattern"]
     # the implicit legacy record may name the root documents; anything outside the data folder is refused
     assert _problems(PROTOCOL.check_region, _record(**{"files.index": "world_index.json"})) == []
@@ -130,7 +130,7 @@ def test_a_bad_version_2_slot_map_is_refused():
     assert _problems(PROTOCOL.check_slot_map, v2)  # an entry without its region
     v2 = {"version": 2, "slots": [_entry("kanto", family=3)]}
     assert _problems(PROTOCOL.check_slot_map, v2)  # no region table
-    v2 = {"version": 2, "regions": {"kanto": {"set": "blue", "families": [0, 32]}}, "slots": [_entry("kanto")]}
-    assert _problems(PROTOCOL.check_slot_map, v2)  # a family range beyond 31
+    v2 = {"version": 2, "regions": {"kanto": {"set": "blue", "families": [0, 96]}}, "slots": [_entry("kanto")]}
+    assert _problems(PROTOCOL.check_slot_map, v2)  # a family range beyond 95 (MG7: 96 per shape)
     v2 = {"version": 2, "regions": {"Kanto": {"set": "blue", "families": [0, 15]}}, "slots": [_entry("kanto")]}
     assert _problems(PROTOCOL.check_slot_map, v2)  # a bad region id in the table

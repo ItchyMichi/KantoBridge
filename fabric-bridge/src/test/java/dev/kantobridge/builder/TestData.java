@@ -37,6 +37,15 @@ public final class TestData {
 		return dir;
 	}
 
+	/** MG7: the synthetic Gen 3 export (tools/fake_gen1/synth3.py, a tiny made-up Hoenn). */
+	public static Path syntheticGen3Bundle() {
+		Path dir = gametestResources().resolve("kantobridge/synthetic_bundle/emerald");
+		if (!Files.isRegularFile(dir.resolve("index.json"))) {
+			throw new IllegalStateException("synthetic Gen 3 bundle missing");
+		}
+		return dir;
+	}
+
 	public static Path goldenIndex() {
 		return gametestResources().resolve("kantobridge/golden/synthetic_world_index.json");
 	}

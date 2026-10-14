@@ -49,9 +49,22 @@ class RegionFilesTest {
 		assertEquals(SlotMap.LEGACY_FAMILIES, BuildTask.nextFreeRange(List.of()));
 		RegionRecord kanto = record("kanto", 0, SlotMap.LEGACY_FAMILIES);
 		assertEquals(new SlotMap.Range(16, 31), BuildTask.nextFreeRange(List.of(kanto)));
-		RegionRecord other = record("hoenn", 1, new SlotMap.Range(16, 31));
-		assertNull(BuildTask.nextFreeRange(List.of(kanto, other)), "32 families hold two regions of 16 (D9)");
+		RegionRecord other = record("johto", 1, new SlotMap.Range(16, 31));
+		assertEquals(new SlotMap.Range(32, 47), BuildTask.nextFreeRange(List.of(kanto, other)), "MG7: 96 families per shape");
 		assertEquals(SlotMap.LEGACY_FAMILIES, BuildTask.nextFreeRange(List.of(other)), "the first range is free again");
+	}
+
+	@Test
+	void aGen3RegionTakesEightyFamilies() {
+		// MG7 (GEN3_BRIDGE_PLAN §10 E7): Hoenn's flattened art needs about 72 families of 256
+		assertEquals(80, SlotMap.familiesFor("gen3"));
+		assertEquals(16, SlotMap.familiesFor("gen1"));
+		assertEquals(16, SlotMap.familiesFor(null));
+		RegionRecord kanto = record("kanto", 0, SlotMap.LEGACY_FAMILIES);
+		assertEquals(new SlotMap.Range(16, 95), BuildTask.nextFreeRange(List.of(kanto), 80), "Kanto and Hoenn fill the 96");
+		assertEquals(new SlotMap.Range(0, 79), BuildTask.nextFreeRange(List.of(), 80));
+		RegionRecord johto = record("johto", 1, new SlotMap.Range(16, 31));
+		assertNull(BuildTask.nextFreeRange(List.of(kanto, johto), 80), "80 contiguous families from 32 would pass 95");
 	}
 
 	@Test

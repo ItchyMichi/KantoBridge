@@ -284,6 +284,13 @@ The world note and the export note give the facts; the shape is the scene draft'
   Town and Route 107, Fallarbor Town and Route 114, Verdanturf Town and Route 116 (which also overlap), loops that the
   GBA's local connections never close. The builder treats those seams apart (a pass or a cut), as a flat world can't
   join them; 341 of the 519 maps are padded.
+- **The collision byte** (`g3map` cells' second byte) is the engine's own seeded code, Gen 2's vocabulary, set at import
+  from the metatile's behaviour and the map's collision bit (`R/src/core/game3/scripting/collision_rse.lua:57-89`,
+  `collision_frlg.lua:62-84, 148-175`): `0x00` walk (path, short grass, sand, stairs, decks), `0x07` blocked (trees,
+  cliffs, buildings, walls), `0x18` tall grass, `0x29` water (surf), `0x2B` cave, `0x71` door, `0x72` a warp that keeps
+  the facing (indoor exits, holes), `0x82` sign, `0x90` counter, `0x93` PC, `0xA0`-`0xA3` ledges jumping east, west,
+  north, south, `0xFF` nothing (padding, unknown). The behaviour (`g3tiles.beh`, named in `behaviors`) refines it
+  (grass, water kinds, doors, warps). G3E's cell kinds come from these two.
 
 ## 6. The builder (G3E)
 

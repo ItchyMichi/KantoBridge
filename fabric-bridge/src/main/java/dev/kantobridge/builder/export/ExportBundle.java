@@ -35,7 +35,9 @@ import org.jetbrains.annotations.Nullable;
  */
 public final class ExportBundle {
 	public static final Set<String> KINDS = Set.of("map", "tileset", "image", "sprite", "palettes", "encounters", "field", "names",
-			"layout", "swaps", "profile", "routes");
+			"layout", "swaps", "profile", "routes",
+			// MG7 (G3D): Gen 3's own kinds (docs/specs/GEN3_BRIDGE_PLAN.md §5)
+			"g3map", "g3tiles", "g3image", "g3sprite", "g3layout", "g3encounters", "g3names");
 	/** Ids that are safe as file names everywhere (no separators, colons or leading dots). */
 	private static final Pattern FILE_ID = Pattern.compile("^[A-Za-z0-9_][A-Za-z0-9_.-]{0,63}$");
 	private static final Pattern FULL_HASH = Pattern.compile("^[0-9a-f]{64}$");
@@ -313,6 +315,49 @@ public final class ExportBundle {
 			}
 		}
 		return new ItemIds(java.util.Collections.unmodifiableSet(ids));
+	}
+
+	// ---- Gen 3 (MG7 G3D; protocol/export/g3*.schema.json)
+
+	/** True for a Gen 3 export (it carries g3 maps). */
+	public boolean isGen3() {
+		return !this.ids("g3map").isEmpty();
+	}
+
+	public G3Map g3map(String id) throws BundleException {
+		return this.typed("g3map", id, G3Map::parse, G3Map.class);
+	}
+
+	public G3Tiles g3tiles(String pair) throws BundleException {
+		return this.typed("g3tiles", pair, G3Tiles::parse, G3Tiles.class);
+	}
+
+	/** The surface layout in cells, under the game's default region id (as {@link #layoutId()}). */
+	public G3Data.Layout g3layout() throws BundleException {
+		return this.typed("g3layout", this.layoutId(), G3Data.Layout::parse, G3Data.Layout.class);
+	}
+
+	public boolean hasG3Layout() {
+		return this.has("g3layout", this.layoutId());
+	}
+
+	/** The wild encounter tables, or null when the export has none. */
+	public G3Data.@Nullable Encounters g3encounters() throws BundleException {
+		return this.has("g3encounters", "all") ? this.typed("g3encounters", "all", G3Data.Encounters::parse, G3Data.Encounters.class) : null;
+	}
+
+	/** The constant names, or null when the export has none. */
+	public G3Data.@Nullable Names g3names() throws BundleException {
+		return this.has("g3names", "all") ? this.typed("g3names", "all", G3Data.Names::parse, G3Data.Names.class) : null;
+	}
+
+	/** A quarter page ({@code g3q.<n>}) or another RGBA image. */
+	public G3Data.Image g3image(String id) throws BundleException {
+		return this.typed("g3image", id, G3Data.Image::parse, G3Data.Image.class);
+	}
+
+	public G3Data.Sprite g3sprite(String id) throws BundleException {
+		return this.typed("g3sprite", id, G3Data.Sprite::parse, G3Data.Sprite.class);
 	}
 
 	/** The field tables the habitat planner reads; empty when the export has no field resource. */

@@ -137,8 +137,8 @@ class SlotMapTest {
 	@Test
 	void capacityMatchesTheRegisteredFamilies() {
 		assertEquals(KbBlocks.FAMILIES_PER_SHAPE, SlotMap.FAMILIES_PER_SHAPE);
-		assertEquals(32, SlotMap.FAMILIES_PER_SHAPE, "MG3 (D9): a second region's worth of families");
-		assertEquals(8192, SlotMap.CAPACITY);
+		assertEquals(96, SlotMap.FAMILIES_PER_SHAPE, "MG7 (E7): Kanto's 16 and a Gen 3 region's 80");
+		assertEquals(24576, SlotMap.CAPACITY);
 		assertEquals(4096, SlotMap.LEGACY_FAMILIES.endIndex(), "a legacy map keeps families 0..15");
 		assertTrue(SlotMap.CAPACITY >= 4096);
 	}
