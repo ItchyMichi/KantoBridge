@@ -51,8 +51,18 @@ def test_dex_numbers_with_no_species_are_counted_and_left_out():
     assert g.status()["partyDexUnknown"] == 2
 
 
+def test_numbers_beyond_the_games_ceiling_are_dropped_and_counted():
+    # MG7 (G3F): the server sends every species it can name (national numbers); a Gen 1 game keeps 1-151
+    g = BattleGame()
+    g.send("dex.sync", {"seen": [16, 252, 386], "owned": [7, 254]})
+    g.run(2)
+    assert dex(g, "seen") == ["BIRDMON", "STARTMON_C"] and dex(g, "owned") == ["STARTMON_C"]
+    st = g.status()
+    assert st["partyDexBeyond"] == 3 and st["partyDexUnknown"] == 0
+
+
 @pytest.mark.parametrize("bad", [
-    {"seen": [152], "owned": []},
+    {"seen": [2001], "owned": []},
     {"seen": [0], "owned": []},
     {"seen": [16, 16], "owned": []},
     {"seen": [16]},

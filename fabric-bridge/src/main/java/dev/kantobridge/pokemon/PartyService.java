@@ -28,9 +28,11 @@ import dev.kantobridge.proto.Envelope;
 import dev.kantobridge.proto.Ids;
 import dev.kantobridge.proto.MsgTypes;
 import dev.kantobridge.proto.ProtoJson;
+import dev.kantobridge.server.RegionPresenceService;
 import dev.kantobridge.server.SavePairService;
 import dev.kantobridge.world.DataException;
 import dev.kantobridge.world.DataReader;
+import dev.kantobridge.world.RegionRecord;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -72,7 +74,8 @@ import org.jetbrains.annotations.Nullable;
  * {@code forceEvolve} of the evolution that takes that stone), a TM/HM teaches its move into the given slot or a free one
  * (the move it replaces stays re-learnable, P13), Rare Candy gives the experience to the next level (Cobblemon's level-up
  * evolution prompt follows, P14).</li>
- * <li>Evolutions into species beyond 151 are blocked (P14).</li>
+ * <li>Evolutions into species beyond the owner's game are blocked (P14; MG7: the followed region's compat ceiling, Gen 1's
+ * 151 when there is none).</li>
  * <li><b>Player trades</b> (DESIGN §8, M9) run on Cobblemon's own trade; both players' {@code party.sync} (and
  * {@code dex.sync}, from Cobblemon's Pokédex events) follow from the stores' change observers, debounced as ever, and a
  * trade evolution is Cobblemon's own accept prompt for the receiver. A {@code give} id belongs to the hidden game that
@@ -391,7 +394,7 @@ public final class PartyService {
 		ItemInteractionEvolution.ItemInteractionContext context = new ItemInteractionEvolution.ItemInteractionContext(new ItemStack(stone),
 				player.level());
 		for (Evolution evolution : pokemon.getEvolutions()) {
-			// test() posts EVOLUTION_TESTED, so evolutions beyond 151 stay blocked (P14).
+			// test() posts EVOLUTION_TESTED, so evolutions beyond the owner's game stay blocked (P14).
 			if (evolution instanceof ItemInteractionEvolution byItem && byItem.testContext(pokemon, context) && byItem.test(pokemon)) {
 				byItem.forceEvolve(pokemon);
 				return true;
@@ -509,10 +512,21 @@ public final class PartyService {
 		}
 		String target = event.getEvolution().getResult().getSpecies();
 		Species species = target == null ? null : speciesById(target);
-		if (species != null && species.getNationalPokedexNumber() > GenOneIds.MAX_DEX) {
+		if (species != null && species.getNationalPokedexNumber() > evolutionCeilingOf(event.getPokemon().getOwnerPlayer())) {
 			event.setResult(false);
 			EVOLUTIONS_BLOCKED.incrementAndGet();
 		}
+	}
+
+	/** The highest dex a player's Pokémon may evolve into (MG7, MULTI_GAME_PLAN §4.9): their followed region's ceiling. */
+	static int evolutionCeilingOf(@Nullable ServerPlayer owner) {
+		RegionRecord followed = owner == null ? null : RegionPresenceService.followed(owner);
+		return evolutionCeiling(followed == null ? null : followed.rules().compat());
+	}
+
+	/** A compat profile's evolution ceiling: its maxDex; Gen 1's 151 without one (no owner online, no region). */
+	public static int evolutionCeiling(@Nullable RegionRecord.Compat compat) {
+		return compat == null ? GenOneIds.MAX_DEX : compat.maxDex();
 	}
 
 	private static @Nullable Species speciesById(String id) {

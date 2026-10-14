@@ -55,23 +55,34 @@ class ItemsTest {
 		}
 		Items parsed = Items.parse(new String(file, StandardCharsets.UTF_8));
 		assertEquals(parsed.entries(), Items.bundled().entries());
-		assertEquals(128, Items.ids().size(), "the catalogue written for MG6");
+		assertEquals(165, Items.ids().size(), "MG6's 128, and MG7's Sun Stone and 36 Gen 3 TMs");
 	}
 
 	@Test
-	void everyIdIsItsGen1SymbolAndRoundTrips() {
+	void everyGen1IdIsItsSymbolAndEverySymbolRoundTrips() {
+		int gen1 = 0;
 		for (String id : Items.ids()) {
 			Items.Item item = Items.get(id);
 			assertNotNull(item);
 			assertEquals(id, item.id());
+			assertFalse(item.symbols().isEmpty(), id);
+			for (Map.Entry<String, String> symbol : item.symbols().entrySet()) {
+				assertEquals(id, Items.canonicalOf(symbol.getKey(), symbol.getValue()), id + " in " + symbol.getKey());
+			}
 			String symbol = Items.symbolOf("gen1", id);
-			assertNotNull(symbol, id);
-			assertEquals(id, symbol.toLowerCase(Locale.ROOT), "the id is the Gen 1 symbol lower-cased");
-			assertEquals(id, Items.canonicalOf("gen1", symbol));
+			if (symbol != null) {
+				gen1++;
+				assertEquals(id, symbol.toLowerCase(Locale.ROOT), "a Gen 1 item's id is its Gen 1 symbol lower-cased");
+			}
 			assertTrue(Items.CLASSES.contains(item.clazz()), id);
 		}
+		assertEquals(128, gen1, "Gen 1's items, the catalogue written for MG6");
 		assertNull(Items.canonicalOf("gen1", "NO_SUCH_THING"));
-		assertNull(Items.canonicalOf("gen3", "POTION"), "no Gen 3 symbols until its adapter");
+		assertEquals("potion", Items.canonicalOf("gen3", "POTION"), "MG7: Emerald's symbols");
+		assertEquals("tm_toxic", Items.canonicalOf("gen3", "TM06"), "a TM both generations have is one entry");
+		assertEquals("sun_stone", Items.canonicalOf("gen3", "SUN_STONE"));
+		assertNull(Items.symbolOf("gen1", "sun_stone"), "Gen 1 has no Sun Stone");
+		assertNull(Items.canonicalOf("gen2", "POTION"), "no Gen 2 symbols");
 		assertNull(Items.symbolOf(null, "potion"));
 		assertFalse(Items.known("Potion"));
 		assertNull(Items.get(null));
@@ -111,13 +122,15 @@ class ItemsTest {
 			assertNull(Items.cobblemonPath(key), key);
 		}
 		long tms = Items.ids().stream().filter(id -> Items.TM.equals(Items.clazz(id))).count();
-		assertEquals(50, tms);
+		assertEquals(86, tms, "Gen 1's 50 and Gen 3's 50, 14 of them teaching the same move");
+		assertEquals(50, Items.ids().stream().filter(id -> Items.TM.equals(Items.clazz(id)) && Items.symbolOf("gen1", id) != null).count());
+		assertEquals(50, Items.ids().stream().filter(id -> Items.TM.equals(Items.clazz(id)) && Items.symbolOf("gen3", id) != null).count());
 		Set<Integer> moves = new HashSet<>();
 		for (String id : Items.ids()) {
 			if (Items.TM.equals(Items.clazz(id))) {
 				Integer move = Items.move(id);
 				assertNotNull(move, id);
-				assertTrue(move >= 1 && move <= 165, id);
+				assertTrue(move >= 1 && move <= (Items.symbolOf("gen1", id) != null ? 165 : 354), id);
 				assertTrue(moves.add(move), "one TM per move: " + id);
 			}
 		}

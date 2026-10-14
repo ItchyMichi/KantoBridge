@@ -63,6 +63,12 @@ local RIVALS = { OPP_RIVAL1 = true, OPP_RIVAL2 = true, OPP_RIVAL3 = true }
 local WILD_KINDS = { surf = "surf", fish = "fish" }
 local NATIVE_KINDS = { safari = true, old_man = true, ghost = true }
 local DV_KEYS = { "atk", "def", "spd", "spc" }
+local IV_KEYS = { "hp", "atk", "def", "spa", "spd", "spe" }
+-- MG7 (G3F): the running game's ceilings (the catalogue's compat); Gen 1's
+-- when the game didn't say
+Battle.GEN1 = { maxDex = 151, maxMove = 165 }
+-- Trainer ids: Gen 1's party index is 0-255; Emerald's trainer ids reach 854
+Battle.MAX_PARTY = 1023
 local UID = "^%x%x%x%x%x%x%x%x%-%x%x%x%x%-%x%x%x%x%-%x%x%x%x%-%x%x%x%x%x%x%x%x%x%x%x%x$"
 
 local function whole(v, lo, hi)
@@ -92,16 +98,35 @@ local function capChars(s, max)
 end
 Battle.capChars = capChars
 
+-- The highest dex and move numbers a game's compat allows (Gen 1's without one).
+local function ceilings(compat)
+  compat = type(compat) == "table" and compat or Battle.GEN1
+  local maxDex = whole(compat.maxDex, 1, 2000) and compat.maxDex or Battle.GEN1.maxDex
+  local maxMove = whole(compat.maxMove, 1, 2000) and compat.maxMove or Battle.GEN1.maxMove
+  return maxDex, maxMove
+end
+
 -- One team member as the protocol's teamMon, or nil when the engine's data
--- can't be expressed: dex 1-151, level 1-100, 1-4 moves 1-165, DVs 0-15.
-function Battle.teamMon(m)
-  if type(m) ~= "table" or not (whole(m.dex, 1, 151) and whole(m.level, 1, 100)) then return nil end
+-- can't be expressed: dex and 1-4 moves within the game's ceilings (Gen 1:
+-- 151 and 165), level 1-100, and Gen 1's DVs (0-15) or, MG7 (G3F), Gen 3's
+-- IVs (0-31, all six stats).
+function Battle.teamMon(m, compat)
+  local maxDex, maxMove = ceilings(compat)
+  if type(m) ~= "table" or not (whole(m.dex, 1, maxDex) and whole(m.level, 1, 100)) then return nil end
   local moves = {}
   for _, n in ipairs(type(m.moves) == "table" and m.moves or {}) do
-    if not whole(n, 1, 165) or #moves >= 4 then return nil end
+    if not whole(n, 1, maxMove) or #moves >= 4 then return nil end
     moves[#moves + 1] = n
   end
   if #moves == 0 then return nil end
+  if type(m.ivs) == "table" then
+    local ivs = {}
+    for _, k in ipairs(IV_KEYS) do
+      if not whole(m.ivs[k], 0, 31) then return nil end
+      ivs[k] = m.ivs[k]
+    end
+    return { dex = m.dex, level = m.level, moves = moves, ivs = ivs }
+  end
   local d = type(m.dvs) == "table" and m.dvs or {}
   local dvs = {}
   for _, k in ipairs(DV_KEYS) do
@@ -119,6 +144,9 @@ end
 --   log      kb_log logger (optional)
 function Battle.new(opts)
   local engine, log = opts.engine, opts.log
+  -- MG7 (G3F): the running game's compat (maxDex, maxMove); Gen 1's without one
+  local compat = type(opts.compat) == "table" and opts.compat or Battle.GEN1
+  local maxDex = ceilings(compat)
   local markup = opts.markup or function(s) return s, 0 end
   local battles = {}
   local resend = false -- a snapshot went out: send the pending battle again
@@ -144,31 +172,32 @@ function Battle.new(opts)
   -- hidden game fight it. facts: path ("script"|"trainer"|"wild"|"direct"),
   -- kind (wild: "surf"|"fish", else static), command, cls, party, wild,
   -- species, dex, level, map, npc, x, y, catch (false: the Pokemon can't be
-  -- caught, the ghost Marowak).
+  -- caught, the ghost Marowak). MG7 (G3F): flee (false: the battle can't be
+  -- fled, Birch's), rival (the trainer is the rival whatever its class).
   function battles.begin(facts)
     if type(facts) ~= "table" then return decline("facts") end
     local data, kind = {}, nil
     if facts.path == "direct" then counts.direct = counts.direct + 1 end
     if facts.wild then
-      if not (whole(facts.dex, 1, 151) and whole(facts.level, 1, 100)) then return decline("wild") end
+      if not (whole(facts.dex, 1, maxDex) and whole(facts.level, 1, 100)) then return decline("wild") end
       kind = WILD_KINDS[facts.kind] or "static"
       counts[kind] = counts[kind] + 1
       data.wild = { dex = facts.dex, level = facts.level }
       if coord(facts.x) and coord(facts.y) then data.wild.x, data.wild.y = facts.x, facts.y end
-      data.rules = { catch = facts.catch ~= false, flee = true }
+      data.rules = { catch = facts.catch ~= false, flee = facts.flee ~= false }
     else
-      if not (sym(facts.cls, "^[A-Za-z0-9_]+$") and whole(facts.party, 0, 255)) then return decline("trainer") end
+      if not (sym(facts.cls, "^[A-Za-z0-9_]+$") and whole(facts.party, 0, Battle.MAX_PARTY)) then return decline("trainer") end
       local team, name = engine.trainerTeam(facts.cls, facts.party)
       if type(team) ~= "table" or #team == 0 or #team > 6 then
         return decline("team", { cls = facts.cls })
       end
       local shaped = {}
       for i = 1, #team do
-        local t = Battle.teamMon(team[i])
+        local t = Battle.teamMon(team[i], compat)
         if not t then return decline("team_member", { cls = facts.cls, index = i }) end
         shaped[i] = t
       end
-      kind = RIVALS[facts.cls] and "rival" or (facts.path == "trainer" and "trainer" or "scripted")
+      kind = (RIVALS[facts.cls] or facts.rival == true) and "rival" or (facts.path == "trainer" and "trainer" or "scripted")
       local trainer = { cls = facts.cls, party = facts.party }
       if type(name) == "string" then
         local shown = capChars((markup(name)), Battle.MAX_NAME)

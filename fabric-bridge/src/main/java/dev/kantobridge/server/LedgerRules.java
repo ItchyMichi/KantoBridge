@@ -46,7 +46,13 @@ public final class LedgerRules {
 	public record Limits(int slots, int stack) {
 		/** Gen 1: 20 bag slots, 99 a stack (src/inventory/Bag.lua). */
 		public static final Limits GEN1 = new Limits(20, 99);
-		/** Other families until their adapters say (MG7 widens them from the engine's registries). */
+		/**
+		 * Gen 3 (MG7): the most kinds {@code bag.set} carries (its {@code items} hold 128; Emerald's non-key pockets hold 156:
+		 * items 30, balls 16, TM case 64, berries 46), 99 a slot; what a full pocket can't take comes back as
+		 * {@code act.result.left}.
+		 */
+		public static final Limits GEN3 = new Limits(128, 99);
+		/** Other families until their adapters say. */
 		public static final Limits DEFAULT = new Limits(30, 99);
 
 		public Limits {
@@ -56,7 +62,10 @@ public final class LedgerRules {
 		}
 
 		public static Limits of(@Nullable String family) {
-			return "gen1".equals(family) ? GEN1 : DEFAULT;
+			if ("gen1".equals(family)) {
+				return GEN1;
+			}
+			return "gen3".equals(family) ? GEN3 : DEFAULT;
 		}
 	}
 

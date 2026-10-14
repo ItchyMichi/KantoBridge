@@ -14,21 +14,22 @@ import org.jetbrains.annotations.Nullable;
  * from its bag on a party Pokémon, and Cobblemon must do the same (docs/PLAN.md §4.4 {@code PartyService}, P13, P14,
  * Appendix B). Checked strictly; problems are a JSON path and a reason. Plain Java.
  *
- * @param item the Gen 1 item symbol
+ * @param item the game's item symbol
  * @param uid  the Pokémon's Cobblemon uuid
  * @param slot TM/HM: the move slot replaced (0–3); absent when a slot was free
- * @param move TM/HM: the Gen 1 move number taught
+ * @param move TM/HM: the move number taught (Showdown's)
  */
 public record PartyItem(String item, UUID uid, @Nullable Integer slot, @Nullable Integer move) {
 	private static final Set<String> FIELDS = Set.of("item", "uid", "slot", "move", "region");
 	public static final String RARE_CANDY = "RARE_CANDY";
-	/** Gen 1's evolution stones and Cobblemon's item paths for them (Appendix B). */
+	/** The evolution stones (Gen 1's five, Appendix B; Gen 3 adds the Sun Stone) and Cobblemon's item paths for them. */
 	public static final Map<String, String> STONES = Map.of(
 			"FIRE_STONE", "fire_stone",
 			"WATER_STONE", "water_stone",
 			"THUNDER_STONE", "thunder_stone",
 			"LEAF_STONE", "leaf_stone",
-			"MOON_STONE", "moon_stone");
+			"MOON_STONE", "moon_stone",
+			"SUN_STONE", "sun_stone");
 
 	/** What the item does in Cobblemon. */
 	public enum Kind {
@@ -57,7 +58,7 @@ public record PartyItem(String item, UUID uid, @Nullable Integer slot, @Nullable
 		String item = reader.string("item", Ids.ITEM_ID);
 		UUID uid = UUID.fromString(reader.string("uid", Ids.UID));
 		Integer slot = reader.has("slot") ? reader.integer("slot", 0, 3) : null;
-		Integer move = reader.has("move") ? reader.integer("move", 1, GenOneIds.MAX_MOVE) : null;
+		Integer move = reader.has("move") ? reader.integer("move", 1, Gen1Mon.MAX_MOVE_NUM) : null;
 		if (slot != null && move == null) {
 			throw new DataException(reader.path("slot"), "a slot needs a move");
 		}

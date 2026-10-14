@@ -12,6 +12,7 @@ return {
       cobblemon = "antidote",
       symbols = {
         gen1 = "ANTIDOTE",
+        gen3 = "ANTIDOTE",
       },
     },
     awakening = {
@@ -19,6 +20,7 @@ return {
       cobblemon = "awakening",
       symbols = {
         gen1 = "AWAKENING",
+        gen3 = "AWAKENING",
       },
     },
     bicycle = {
@@ -38,18 +40,21 @@ return {
       cobblemon = "burn_heal",
       symbols = {
         gen1 = "BURN_HEAL",
+        gen3 = "BURN_HEAL",
       },
     },
     calcium = {
       class = "medicine",
       symbols = {
         gen1 = "CALCIUM",
+        gen3 = "CALCIUM",
       },
     },
     carbos = {
       class = "medicine",
       symbols = {
         gen1 = "CARBOS",
+        gen3 = "CARBOS",
       },
     },
     card_key = {
@@ -75,6 +80,7 @@ return {
       cobblemon = "dire_hit",
       symbols = {
         gen1 = "DIRE_HIT",
+        gen3 = "DIRE_HIT",
       },
     },
     dome_fossil = {
@@ -88,12 +94,14 @@ return {
       cobblemon = "elixir",
       symbols = {
         gen1 = "ELIXER",
+        gen3 = "ELIXIR",
       },
     },
     escape_rope = {
       class = "field",
       symbols = {
         gen1 = "ESCAPE_ROPE",
+        gen3 = "ESCAPE_ROPE",
       },
     },
     ether = {
@@ -101,6 +109,7 @@ return {
       cobblemon = "ether",
       symbols = {
         gen1 = "ETHER",
+        gen3 = "ETHER",
       },
     },
     exp_all = {
@@ -114,12 +123,14 @@ return {
       cobblemon = "fire_stone",
       symbols = {
         gen1 = "FIRE_STONE",
+        gen3 = "FIRE_STONE",
       },
     },
     fresh_water = {
       class = "medicine",
       symbols = {
         gen1 = "FRESH_WATER",
+        gen3 = "FRESH_WATER",
       },
     },
     full_heal = {
@@ -127,6 +138,7 @@ return {
       cobblemon = "full_heal",
       symbols = {
         gen1 = "FULL_HEAL",
+        gen3 = "FULL_HEAL",
       },
     },
     full_restore = {
@@ -134,6 +146,7 @@ return {
       cobblemon = "full_restore",
       symbols = {
         gen1 = "FULL_RESTORE",
+        gen3 = "FULL_RESTORE",
       },
     },
     gold_teeth = {
@@ -153,6 +166,7 @@ return {
       cobblemon = "great_ball",
       symbols = {
         gen1 = "GREAT_BALL",
+        gen3 = "GREAT_BALL",
       },
     },
     guard_spec = {
@@ -160,6 +174,7 @@ return {
       cobblemon = "guard_spec",
       symbols = {
         gen1 = "GUARD_SPEC",
+        gen3 = "GUARD_SPEC",
       },
     },
     helix_fossil = {
@@ -207,6 +222,7 @@ return {
       class = "medicine",
       symbols = {
         gen1 = "HP_UP",
+        gen3 = "HP_UP",
       },
     },
     hyper_potion = {
@@ -214,6 +230,7 @@ return {
       cobblemon = "hyper_potion",
       symbols = {
         gen1 = "HYPER_POTION",
+        gen3 = "HYPER_POTION",
       },
     },
     ice_heal = {
@@ -221,12 +238,14 @@ return {
       cobblemon = "ice_heal",
       symbols = {
         gen1 = "ICE_HEAL",
+        gen3 = "ICE_HEAL",
       },
     },
     iron = {
       class = "medicine",
       symbols = {
         gen1 = "IRON",
+        gen3 = "IRON",
       },
     },
     itemfinder = {
@@ -240,12 +259,14 @@ return {
       cobblemon = "leaf_stone",
       symbols = {
         gen1 = "LEAF_STONE",
+        gen3 = "LEAF_STONE",
       },
     },
     lemonade = {
       class = "medicine",
       symbols = {
         gen1 = "LEMONADE",
+        gen3 = "LEMONADE",
       },
     },
     lift_key = {
@@ -259,6 +280,7 @@ return {
       cobblemon = "master_ball",
       symbols = {
         gen1 = "MASTER_BALL",
+        gen3 = "MASTER_BALL",
       },
     },
     max_elixer = {
@@ -266,6 +288,7 @@ return {
       cobblemon = "max_elixir",
       symbols = {
         gen1 = "MAX_ELIXER",
+        gen3 = "MAX_ELIXIR",
       },
     },
     max_ether = {
@@ -273,6 +296,7 @@ return {
       cobblemon = "max_ether",
       symbols = {
         gen1 = "MAX_ETHER",
+        gen3 = "MAX_ETHER",
       },
     },
     max_potion = {
@@ -280,12 +304,14 @@ return {
       cobblemon = "max_potion",
       symbols = {
         gen1 = "MAX_POTION",
+        gen3 = "MAX_POTION",
       },
     },
     max_repel = {
       class = "field",
       symbols = {
         gen1 = "MAX_REPEL",
+        gen3 = "MAX_REPEL",
       },
     },
     max_revive = {
@@ -293,6 +319,7 @@ return {
       cobblemon = "max_revive",
       symbols = {
         gen1 = "MAX_REVIVE",
+        gen3 = "MAX_REVIVE",
       },
     },
     moon_stone = {
@@ -300,12 +327,14 @@ return {
       cobblemon = "moon_stone",
       symbols = {
         gen1 = "MOON_STONE",
+        gen3 = "MOON_STONE",
       },
     },
     nugget = {
       class = "valuable",
       symbols = {
         gen1 = "NUGGET",
+        gen3 = "NUGGET",
       },
     },
     oaks_parcel = {
@@ -331,6 +360,7 @@ return {
       cobblemon = "paralyze_heal",
       symbols = {
         gen1 = "PARLYZ_HEAL",
+        gen3 = "PARALYZE_HEAL",
       },
     },
     poke_ball = {
@@ -338,12 +368,14 @@ return {
       cobblemon = "poke_ball",
       symbols = {
         gen1 = "POKE_BALL",
+        gen3 = "POKE_BALL",
       },
     },
     poke_doll = {
       class = "field",
       symbols = {
         gen1 = "POKE_DOLL",
+        gen3 = "POKE_DOLL",
       },
     },
     poke_flute = {
@@ -363,30 +395,35 @@ return {
       cobblemon = "potion",
       symbols = {
         gen1 = "POTION",
+        gen3 = "POTION",
       },
     },
     pp_up = {
       class = "medicine",
       symbols = {
         gen1 = "PP_UP",
+        gen3 = "PP_UP",
       },
     },
     protein = {
       class = "medicine",
       symbols = {
         gen1 = "PROTEIN",
+        gen3 = "PROTEIN",
       },
     },
     rare_candy = {
       class = "medicine",
       symbols = {
         gen1 = "RARE_CANDY",
+        gen3 = "RARE_CANDY",
       },
     },
     repel = {
       class = "field",
       symbols = {
         gen1 = "REPEL",
+        gen3 = "REPEL",
       },
     },
     revive = {
@@ -394,6 +431,7 @@ return {
       cobblemon = "revive",
       symbols = {
         gen1 = "REVIVE",
+        gen3 = "REVIVE",
       },
     },
     s_s_ticket = {
@@ -407,6 +445,7 @@ return {
       cobblemon = "safari_ball",
       symbols = {
         gen1 = "SAFARI_BALL",
+        gen3 = "SAFARI_BALL",
       },
     },
     secret_key = {
@@ -425,6 +464,14 @@ return {
       class = "medicine",
       symbols = {
         gen1 = "SODA_POP",
+        gen3 = "SODA_POP",
+      },
+    },
+    sun_stone = {
+      class = "stone",
+      cobblemon = "sun_stone",
+      symbols = {
+        gen3 = "SUN_STONE",
       },
     },
     super_potion = {
@@ -432,12 +479,14 @@ return {
       cobblemon = "super_potion",
       symbols = {
         gen1 = "SUPER_POTION",
+        gen3 = "SUPER_POTION",
       },
     },
     super_repel = {
       class = "field",
       symbols = {
         gen1 = "SUPER_REPEL",
+        gen3 = "SUPER_REPEL",
       },
     },
     super_rod = {
@@ -457,6 +506,21 @@ return {
       cobblemon = "thunder_stone",
       symbols = {
         gen1 = "THUNDER_STONE",
+        gen3 = "THUNDER_STONE",
+      },
+    },
+    tm_aerial_ace = {
+      class = "tm",
+      move = 332,
+      symbols = {
+        gen3 = "TM40",
+      },
+    },
+    tm_attract = {
+      class = "tm",
+      move = 213,
+      symbols = {
+        gen3 = "TM45",
       },
     },
     tm_bide = {
@@ -471,6 +535,7 @@ return {
       move = 59,
       symbols = {
         gen1 = "TM_BLIZZARD",
+        gen3 = "TM14",
       },
     },
     tm_body_slam = {
@@ -480,11 +545,39 @@ return {
         gen1 = "TM_BODY_SLAM",
       },
     },
+    tm_brick_break = {
+      class = "tm",
+      move = 280,
+      symbols = {
+        gen3 = "TM31",
+      },
+    },
     tm_bubblebeam = {
       class = "tm",
       move = 61,
       symbols = {
         gen1 = "TM_BUBBLEBEAM",
+      },
+    },
+    tm_bulk_up = {
+      class = "tm",
+      move = 339,
+      symbols = {
+        gen3 = "TM08",
+      },
+    },
+    tm_bullet_seed = {
+      class = "tm",
+      move = 331,
+      symbols = {
+        gen3 = "TM09",
+      },
+    },
+    tm_calm_mind = {
+      class = "tm",
+      move = 347,
+      symbols = {
+        gen3 = "TM04",
       },
     },
     tm_counter = {
@@ -499,6 +592,7 @@ return {
       move = 91,
       symbols = {
         gen1 = "TM_DIG",
+        gen3 = "TM28",
       },
     },
     tm_double_edge = {
@@ -513,6 +607,14 @@ return {
       move = 104,
       symbols = {
         gen1 = "TM_DOUBLE_TEAM",
+        gen3 = "TM32",
+      },
+    },
+    tm_dragon_claw = {
+      class = "tm",
+      move = 337,
+      symbols = {
+        gen3 = "TM02",
       },
     },
     tm_dragon_rage = {
@@ -534,6 +636,7 @@ return {
       move = 89,
       symbols = {
         gen1 = "TM_EARTHQUAKE",
+        gen3 = "TM26",
       },
     },
     tm_egg_bomb = {
@@ -550,11 +653,19 @@ return {
         gen1 = "TM_EXPLOSION",
       },
     },
+    tm_facade = {
+      class = "tm",
+      move = 263,
+      symbols = {
+        gen3 = "TM42",
+      },
+    },
     tm_fire_blast = {
       class = "tm",
       move = 126,
       symbols = {
         gen1 = "TM_FIRE_BLAST",
+        gen3 = "TM38",
       },
     },
     tm_fissure = {
@@ -562,6 +673,48 @@ return {
       move = 90,
       symbols = {
         gen1 = "TM_FISSURE",
+      },
+    },
+    tm_flamethrower = {
+      class = "tm",
+      move = 53,
+      symbols = {
+        gen3 = "TM35",
+      },
+    },
+    tm_focus_punch = {
+      class = "tm",
+      move = 264,
+      symbols = {
+        gen3 = "TM01",
+      },
+    },
+    tm_frustration = {
+      class = "tm",
+      move = 218,
+      symbols = {
+        gen3 = "TM21",
+      },
+    },
+    tm_giga_drain = {
+      class = "tm",
+      move = 202,
+      symbols = {
+        gen3 = "TM19",
+      },
+    },
+    tm_hail = {
+      class = "tm",
+      move = 258,
+      symbols = {
+        gen3 = "TM07",
+      },
+    },
+    tm_hidden_power = {
+      class = "tm",
+      move = 237,
+      symbols = {
+        gen3 = "TM10",
       },
     },
     tm_horn_drill = {
@@ -576,6 +729,7 @@ return {
       move = 63,
       symbols = {
         gen1 = "TM_HYPER_BEAM",
+        gen3 = "TM15",
       },
     },
     tm_ice_beam = {
@@ -583,6 +737,21 @@ return {
       move = 58,
       symbols = {
         gen1 = "TM_ICE_BEAM",
+        gen3 = "TM13",
+      },
+    },
+    tm_iron_tail = {
+      class = "tm",
+      move = 231,
+      symbols = {
+        gen3 = "TM23",
+      },
+    },
+    tm_light_screen = {
+      class = "tm",
+      move = 113,
+      symbols = {
+        gen3 = "TM16",
       },
     },
     tm_mega_drain = {
@@ -620,6 +789,13 @@ return {
         gen1 = "TM_MIMIC",
       },
     },
+    tm_overheat = {
+      class = "tm",
+      move = 315,
+      symbols = {
+        gen3 = "TM50",
+      },
+    },
     tm_pay_day = {
       class = "tm",
       move = 6,
@@ -627,11 +803,19 @@ return {
         gen1 = "TM_PAY_DAY",
       },
     },
+    tm_protect = {
+      class = "tm",
+      move = 182,
+      symbols = {
+        gen3 = "TM17",
+      },
+    },
     tm_psychic_m = {
       class = "tm",
       move = 94,
       symbols = {
         gen1 = "TM_PSYCHIC_M",
+        gen3 = "TM29",
       },
     },
     tm_psywave = {
@@ -648,6 +832,13 @@ return {
         gen1 = "TM_RAGE",
       },
     },
+    tm_rain_dance = {
+      class = "tm",
+      move = 240,
+      symbols = {
+        gen3 = "TM18",
+      },
+    },
     tm_razor_wind = {
       class = "tm",
       move = 13,
@@ -660,6 +851,7 @@ return {
       move = 115,
       symbols = {
         gen1 = "TM_REFLECT",
+        gen3 = "TM33",
       },
     },
     tm_rest = {
@@ -667,6 +859,21 @@ return {
       move = 156,
       symbols = {
         gen1 = "TM_REST",
+        gen3 = "TM44",
+      },
+    },
+    tm_return = {
+      class = "tm",
+      move = 216,
+      symbols = {
+        gen3 = "TM27",
+      },
+    },
+    tm_roar = {
+      class = "tm",
+      move = 46,
+      symbols = {
+        gen3 = "TM05",
       },
     },
     tm_rock_slide = {
@@ -674,6 +881,34 @@ return {
       move = 157,
       symbols = {
         gen1 = "TM_ROCK_SLIDE",
+      },
+    },
+    tm_rock_tomb = {
+      class = "tm",
+      move = 317,
+      symbols = {
+        gen3 = "TM39",
+      },
+    },
+    tm_safeguard = {
+      class = "tm",
+      move = 219,
+      symbols = {
+        gen3 = "TM20",
+      },
+    },
+    tm_sandstorm = {
+      class = "tm",
+      move = 201,
+      symbols = {
+        gen3 = "TM37",
+      },
+    },
+    tm_secret_power = {
+      class = "tm",
+      move = 290,
+      symbols = {
+        gen3 = "TM43",
       },
     },
     tm_seismic_toss = {
@@ -690,6 +925,27 @@ return {
         gen1 = "TM_SELFDESTRUCT",
       },
     },
+    tm_shadow_ball = {
+      class = "tm",
+      move = 247,
+      symbols = {
+        gen3 = "TM30",
+      },
+    },
+    tm_shock_wave = {
+      class = "tm",
+      move = 351,
+      symbols = {
+        gen3 = "TM34",
+      },
+    },
+    tm_skill_swap = {
+      class = "tm",
+      move = 285,
+      symbols = {
+        gen3 = "TM48",
+      },
+    },
     tm_skull_bash = {
       class = "tm",
       move = 130,
@@ -704,6 +960,20 @@ return {
         gen1 = "TM_SKY_ATTACK",
       },
     },
+    tm_sludge_bomb = {
+      class = "tm",
+      move = 188,
+      symbols = {
+        gen3 = "TM36",
+      },
+    },
+    tm_snatch = {
+      class = "tm",
+      move = 289,
+      symbols = {
+        gen3 = "TM49",
+      },
+    },
     tm_softboiled = {
       class = "tm",
       move = 135,
@@ -716,6 +986,14 @@ return {
       move = 76,
       symbols = {
         gen1 = "TM_SOLARBEAM",
+        gen3 = "TM22",
+      },
+    },
+    tm_steel_wing = {
+      class = "tm",
+      move = 211,
+      symbols = {
+        gen3 = "TM47",
       },
     },
     tm_submission = {
@@ -730,6 +1008,13 @@ return {
       move = 164,
       symbols = {
         gen1 = "TM_SUBSTITUTE",
+      },
+    },
+    tm_sunny_day = {
+      class = "tm",
+      move = 241,
+      symbols = {
+        gen3 = "TM11",
       },
     },
     tm_swift = {
@@ -753,6 +1038,13 @@ return {
         gen1 = "TM_TAKE_DOWN",
       },
     },
+    tm_taunt = {
+      class = "tm",
+      move = 269,
+      symbols = {
+        gen3 = "TM12",
+      },
+    },
     tm_teleport = {
       class = "tm",
       move = 100,
@@ -760,11 +1052,19 @@ return {
         gen1 = "TM_TELEPORT",
       },
     },
+    tm_thief = {
+      class = "tm",
+      move = 168,
+      symbols = {
+        gen3 = "TM46",
+      },
+    },
     tm_thunder = {
       class = "tm",
       move = 87,
       symbols = {
         gen1 = "TM_THUNDER",
+        gen3 = "TM25",
       },
     },
     tm_thunder_wave = {
@@ -779,6 +1079,14 @@ return {
       move = 85,
       symbols = {
         gen1 = "TM_THUNDERBOLT",
+        gen3 = "TM24",
+      },
+    },
+    tm_torment = {
+      class = "tm",
+      move = 259,
+      symbols = {
+        gen3 = "TM41",
       },
     },
     tm_toxic = {
@@ -786,6 +1094,7 @@ return {
       move = 92,
       symbols = {
         gen1 = "TM_TOXIC",
+        gen3 = "TM06",
       },
     },
     tm_tri_attack = {
@@ -800,6 +1109,13 @@ return {
       move = 55,
       symbols = {
         gen1 = "TM_WATER_GUN",
+      },
+    },
+    tm_water_pulse = {
+      class = "tm",
+      move = 352,
+      symbols = {
+        gen3 = "TM03",
       },
     },
     tm_whirlwind = {
@@ -820,6 +1136,7 @@ return {
       cobblemon = "ultra_ball",
       symbols = {
         gen1 = "ULTRA_BALL",
+        gen3 = "ULTRA_BALL",
       },
     },
     water_stone = {
@@ -827,6 +1144,7 @@ return {
       cobblemon = "water_stone",
       symbols = {
         gen1 = "WATER_STONE",
+        gen3 = "WATER_STONE",
       },
     },
     x_accuracy = {
@@ -834,6 +1152,7 @@ return {
       cobblemon = "x_accuracy",
       symbols = {
         gen1 = "X_ACCURACY",
+        gen3 = "X_ACCURACY",
       },
     },
     x_attack = {
@@ -841,6 +1160,7 @@ return {
       cobblemon = "x_attack",
       symbols = {
         gen1 = "X_ATTACK",
+        gen3 = "X_ATTACK",
       },
     },
     x_defend = {
@@ -848,6 +1168,7 @@ return {
       cobblemon = "x_defence",
       symbols = {
         gen1 = "X_DEFEND",
+        gen3 = "X_DEFEND",
       },
     },
     x_special = {
@@ -855,6 +1176,7 @@ return {
       cobblemon = "x_special_attack",
       symbols = {
         gen1 = "X_SPECIAL",
+        gen3 = "X_SPECIAL",
       },
     },
     x_speed = {
@@ -862,6 +1184,7 @@ return {
       cobblemon = "x_speed",
       symbols = {
         gen1 = "X_SPEED",
+        gen3 = "X_SPEED",
       },
     },
   },

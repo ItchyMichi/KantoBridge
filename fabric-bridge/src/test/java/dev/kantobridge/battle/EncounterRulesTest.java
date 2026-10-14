@@ -29,9 +29,11 @@ class EncounterRulesTest {
 		BattleStart scripted = BattleStart.read(ProtoJson.parseObject(
 				"{\"battle\":\"w-3\",\"kind\":\"scripted\",\"wild\":{\"dex\":105,\"level\":30},\"rules\":{\"catch\":false,\"flee\":false}}"));
 		assertFalse(scripted.hasTeam(), "a scripted battle with a wild Pokémon is an encounter too");
-		// Gen 1 species only; a fish without its Pokémon is malformed.
+		// MG7: any game's species (Emerald's go to 386); beyond the protocol's numbers, or a fish without its Pokémon, is malformed.
+		assertEquals(386, BattleStart.read(ProtoJson.parseObject(
+				"{\"battle\":\"w-4\",\"kind\":\"fish\",\"wild\":{\"dex\":386,\"level\":5},\"rules\":{\"catch\":true,\"flee\":true}}")).wild().dex());
 		assertThrows(DataException.class, () -> BattleStart.read(ProtoJson.parseObject(
-				"{\"battle\":\"w-4\",\"kind\":\"fish\",\"wild\":{\"dex\":152,\"level\":5},\"rules\":{\"catch\":true,\"flee\":true}}")));
+				"{\"battle\":\"w-4\",\"kind\":\"fish\",\"wild\":{\"dex\":2001,\"level\":5},\"rules\":{\"catch\":true,\"flee\":true}}")));
 		assertThrows(DataException.class, () -> BattleStart.read(ProtoJson.parseObject(
 				"{\"battle\":\"w-5\",\"kind\":\"fish\",\"rules\":{\"catch\":true,\"flee\":true}}")));
 	}

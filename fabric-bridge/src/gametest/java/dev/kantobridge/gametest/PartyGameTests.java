@@ -16,9 +16,11 @@ import dev.kantobridge.net.RelayService;
 import dev.kantobridge.pokemon.Dvs;
 import dev.kantobridge.pokemon.Gen1Mon;
 import dev.kantobridge.pokemon.Gen1Mons;
+import dev.kantobridge.pokemon.Ivs;
 import dev.kantobridge.pokemon.PartyService;
 import dev.kantobridge.proto.Envelope;
 import dev.kantobridge.proto.MsgTypes;
+import dev.kantobridge.world.RegionRecord;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -194,7 +196,7 @@ public class PartyGameTests implements FabricGameTest {
 			// Malformed requests are refused with an error.
 			relay.receive(player, envelope(8, MsgTypes.PARTY_HEAL, "{\"all\":true}"));
 			relay.receive(player, envelope(9, MsgTypes.PARTY_RENAME, "{\"uid\":\"not-a-uid\",\"nick\":\"X\"}"));
-			relay.receive(player, envelope(10, MsgTypes.PARTY_GIVE, "{\"give\":\"ph-3\",\"dex\":200,\"level\":5,\"source\":\"gift\"}"));
+			relay.receive(player, envelope(10, MsgTypes.PARTY_GIVE, "{\"give\":\"ph-3\",\"dex\":2001,\"level\":5,\"source\":\"gift\"}"));
 			long errors = sent.stream().filter(message -> message.type().equals(MsgTypes.ERROR)).count();
 			helper.assertTrue(errors == 3, "expected 3 errors, got " + errors);
 		}));
@@ -230,6 +232,28 @@ public class PartyGameTests implements FabricGameTest {
 		helper.assertTrue(PartyService.evolutionsBlocked() == blocked + 1, "the block wasn't counted");
 		helper.succeed();
 	}
+	/** MG7: a Gen 3 gift (a national number past 151, IVs as they are), and the evolution ceiling by region. */
+	@GameTest(template = EMPTY_STRUCTURE, batch = BATCH)
+	public void gen3GiftsKeepTheirIvsAndCeilingsFollowTheRegion(GameTestHelper helper) {
+		Ivs ivs = new Ivs(1, 2, 3, 4, 5, 31);
+		Pokemon treecko;
+		try {
+			treecko = Gen1Mons.gift(new Gen1Mon(252, 5, List.of(1, 43, 71), null, ivs));
+		} catch (Gen1Mons.Missing e) {
+			throw new GameTestAssertException("Cobblemon lacks " + e.code());
+		}
+		helper.assertTrue(treecko.getSpecies().getNationalPokedexNumber() == 252 && treecko.getLevel() == 5, "not the gift's species and level");
+		helper.assertTrue(Gen1Mons.moveNumbers(treecko).equals(List.of(1, 43, 71)), "the gift's moves, exactly");
+		for (Dvs.Stat stat : Dvs.Stat.values()) {
+			int iv = treecko.getIvs().getOrDefault(Gen1Mons.cobblemonStat(stat));
+			helper.assertTrue(iv == ivs.ivFor(stat), "IV for " + stat + " is " + iv + ", want " + ivs.ivFor(stat));
+		}
+		helper.assertTrue(PartyService.evolutionCeiling(null) == 151, "no region: Gen 1's ceiling");
+		helper.assertTrue(PartyService.evolutionCeiling(new RegionRecord.Compat(386, 354, 10, RegionRecord.LEAVE_OUT)) == 386,
+				"an Emerald region's ceiling");
+		helper.succeed();
+	}
+
 	@GameTest(template = EMPTY_STRUCTURE, batch = BATCH)
 	public void itemsFromTheBagWorkInCobblemon(GameTestHelper helper) {
 		RelayService relay = RelayService.get();

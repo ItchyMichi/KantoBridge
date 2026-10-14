@@ -23,8 +23,11 @@ local Game3 = {}
 -- The parts, in install order (later parts may use what earlier ones put on
 -- the base). G3A: identity, observing, movement, saves and sessions, the
 -- region acts, reliability; G3B: the UI; G3C: the story (toggles, cells);
--- G3D: the export (the g3* resources).
-Game3.PARTS = { "boot", "observe", "move", "saves", "region", "reliability", "ui", "story", "export" }
+-- G3D: the export (the g3* resources); G3F: the party (before the battles,
+-- whose attachBridge installs its gift seam), battles, the bag (the items
+-- group; "items" is a name Gen1Recomp keeps for its own modules), routes.
+Game3.PARTS = { "boot", "observe", "move", "saves", "region", "reliability", "ui", "story", "export", "party", "battle",
+                "bag", "routes" }
 
 function Game3.new(opts)
   assert(type(opts) == "table" and opts.checked, "game3: the loader's pin (opts.checked) is required")

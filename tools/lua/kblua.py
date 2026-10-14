@@ -109,6 +109,8 @@ class Bridge:
             self.engine = self._load_harness("fake_engine3.lua").new(eopts)
             # G3D: the export's engine parts and love.image / love.data (fake_export3.lua)
             self._load_harness("fake_export3.lua").attach(self.engine)
+            # G3F: battles, the party, the bag (fake_battle3.lua)
+            self._load_harness("fake_battle3.lua").attach(self.engine)
         elif engine:
             FakeEngine = self._load_harness("fake_engine.lua")
             eopts = self.table()

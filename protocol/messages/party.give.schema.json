@@ -22,7 +22,7 @@
       "$ref": "../defs.schema.json#/$defs/id"
     },
     "dex": {
-      "$ref": "../defs.schema.json#/$defs/dex"
+      "$ref": "../defs.schema.json#/$defs/nationalDex"
     },
     "level": {
       "$ref": "../defs.schema.json#/$defs/level"
@@ -30,13 +30,17 @@
     "moves": {
       "type": "array",
       "items": {
-        "$ref": "../defs.schema.json#/$defs/gen1Move"
+        "$ref": "../defs.schema.json#/$defs/moveNum"
       },
       "maxItems": 4,
       "minItems": 1
     },
     "dvs": {
       "$ref": "../defs.schema.json#/$defs/dvs"
+    },
+    "ivs": {
+      "$ref": "../defs.schema.json#/$defs/ivs",
+      "description": "Gen 3's IVs (MG7 G3F), in place of Gen 1's DVs."
     },
     "nick": {
       "type": "string",

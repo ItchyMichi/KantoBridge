@@ -198,15 +198,28 @@ return function(mod)
     return ok and type(record) == "table" and record or nil
   end
   -- species -> national dex through the supported content API (pokemon.dex,
-  -- docs/modding/reference/registries.md)
+  -- docs/modding/reference/registries.md); MG7 (G3F): Gen 3's content
+  -- registries have other shapes, so its adapter answers itself
+  local engineNumbers = engine.family() ~= "gen1" and type(rawget(engine, "dexOf")) == "function"
   local function dexOf(species)
+    if engineNumbers then return tonumber(engine.dexOf(species)) end
     local r = contentRecord("pokemon", species)
     return r and tonumber(r.dex)
   end
+  local function moveNumOf(moveId)
+    if engineNumbers and type(rawget(engine, "moveNumOf")) == "function" then return tonumber(engine.moveNumOf(moveId)) end
+    local r = contentRecord("moves", moveId)
+    return r and tonumber(r.index)
+  end
+  -- MG7 (G3F): the running game's limits (the catalogue's compat: Gen 1's
+  -- 151 species and 165 moves, Emerald's 386 and 354) for the modules that
+  -- check species and moves
+  local gameEntry = kb.games.games[engine.gameVersion()]
+  local compat = type(gameEntry) == "table" and type(gameEntry.compat) == "table" and gameEntry.compat or nil
 
   -- M4: NPCs, UIs and their answers, interaction, the mirror.
   local npcObs = kb.Npcs.new({ json = kb.json, log = log })
-  local uiObs = kb.Ui.new({ engine = engine, json = kb.json, log = log, dexOf = dexOf })
+  local uiObs = kb.Ui.new({ engine = engine, json = kb.json, log = log, dexOf = dexOf, compat = compat })
   local uiAct = kb.UiAct.new({
     engine = engine, ui = uiObs, log = log,
     press = function(btn) return mod.input:press(engine.game(), btn) end,
@@ -219,10 +232,10 @@ return function(mod)
 
   -- M5: battles fought in Cobblemon, gifts, heals and the shadow party.
   -- party uids persist through mod.save (save.modData, src/core/Game.lua:1348-1358).
-  local battles = kb.Battle.new({ engine = engine, log = log, markup = kb.Ui.markup })
+  local battles = kb.Battle.new({ engine = engine, log = log, markup = kb.Ui.markup, compat = compat })
   local saves -- act/kb_save.lua, below (M10: it counts the Pokemon operations party sends)
   local party = kb.Party.new({
-    engine = engine, log = log, markup = kb.Ui.markup, clock = clock,
+    engine = engine, log = log, markup = kb.Ui.markup, clock = clock, compat = compat,
     store = {
       get = function(key) return mod.save:get(key) end,
       set = function(key, value) mod.save:set(key, value) end,
@@ -370,10 +383,8 @@ return function(mod)
       -- species and moves through the supported content API: pokemon.dex,
       -- moves.index (docs/modding/reference/registries.md)
       dexOf = dexOf,
-      moveNum = function(moveId)
-        local r = contentRecord("moves", moveId)
-        return r and tonumber(r.index)
-      end,
+      moveNum = moveNumOf,
+      compat = compat,
       uidOf = engine.uidOf,
       story = storyParts,
       -- Wild Routes (WR2): every zone's progress; its diffs start from here

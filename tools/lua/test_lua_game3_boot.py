@@ -18,23 +18,23 @@ def test_the_loader_picks_the_game3_adapter_grown_from_the_stub():
     assert eng.hasAdapter() is True
     assert (eng.engineId(), eng.family(), eng.gameVersion()) == (b"game3", b"gen3", b"emerald")
     assert [p.decode() for p in a.b.module("lib/engine/game3.lua").PARTS.values()] == [
-        "boot", "observe", "move", "saves", "region", "reliability", "ui", "story", "export"]
+        "boot", "observe", "move", "saves", "region", "reliability", "ui", "story", "export", "party", "battle", "bag",
+        "routes"]
 
 
 def test_missing_groups_name_the_groups_no_part_has_written():
-    # A group counts once any of its functions is the adapter's own (kb_engine.missingGroups). The
-    # parts written so far define every function of boot, interaction, movement, saving, sessions,
-    # reliability, region, (G3B) ui, (G3C) story and (G3D) export; battles and routes are still the stub's. party
-    # and items count as present: the parts define bridgeToken, nextSerial and scriptCommand (party)
-    # and inGame (items), which the core needs from the first step.
+    # A group counts once any of its functions is the adapter's own (kb_engine.missingGroups). Since G3F every
+    # group has a part: the UI came with G3B, the story with G3C, the export with G3D, the party, battles, items and
+    # routes with G3F. Gen 1's own seams (direct battles, the daycare, trades, the animated tiles) stay the stub's.
     a = Adapter3()
     missing = [g.decode() for g in a.Engine.missingGroups(a.eng).values()]
-    assert missing == ["battles", "routes"]  # the UI part came with G3B, the story with G3C, the export with G3D
+    assert missing == []
     stubbed = {k.decode() for k in a.eng._stubbed.keys()}
     for name in ("bridgeToken", "nextSerial", "scriptCommand", "inGame", "observe", "takeVerdicts", "holdAway",
-                 "metaOf", "playthrough", "saveView", "uiStack", "uiSetGlyphs", "screenSize"):
+                 "metaOf", "playthrough", "saveView", "uiStack", "uiSetGlyphs", "screenSize", "bagCounts", "gifts",
+                 "partyNicks", "takeHeals", "releaseCatches", "applyParty", "battleFinish", "blackout"):
         assert name not in stubbed, name
-    for name in ("animatedTiles", "bagCounts", "ops", "gifts", "partyNicks", "takeHeals", "releaseCatches"):
+    for name in ("animatedTiles", "ops", "worldTalk"):
         assert name in stubbed, name
 
 
@@ -46,7 +46,7 @@ def test_the_stubbed_functions_answer_no_game_with_the_right_types():
     # G3B's UI part answers with the overworld alone (nothing open)
     assert [e["cls"] for e in plain(eng.uiStack())] == ["Overworld"]
     assert plain(eng.ops()) == {} and plain(eng.gifts()) == {}
-    assert plain(eng.partyNicks()) == {} and plain(eng.bagCounts()) == {}
+    assert plain(eng.partyNicks()[0]) == {} and plain(eng.bagCounts()) == {}
     toggles, skipped = eng.storyToggles()  # G3C: no object hidden by its flag
     assert plain(toggles) == {} and skipped == 0
     assert eng.takeHeals() == 0 and eng.releaseCatches() == 0 and eng.inventoryCount() == 0

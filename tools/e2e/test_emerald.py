@@ -16,6 +16,12 @@ the same before and after).
       (Field.setMetatile) and story.cells reports it, puts it back and story.cells reports the map's own
       metatile, then sets one object's hide flag and story.toggles hides O<localId> while story.flags lists
       a flag set; the markers say which cell and which object.
+  battle (G3F, one launch): party.sync gives the hidden player one Pokemon; the driver starts a trainer
+      battle through the engine's BattleBridge and battle.start arrives held (national dex numbers, Showdown
+      moves, IVs, a TRAINER_CLASS_ role); battle.result win pays the engine's prize (the money goes up) and
+      its texts are read through the UI; a wild battle (dex 263) is answered fled; a second trainer battle is
+      answered lose: the hidden player blacks out (half the money, a warp to the heal point) and party.heal
+      reaches Minecraft.
   start (two launches): at the title with the slot saved, region.start CONTINUEs (act.result detail continue,
       game.status saved and in game, save.loaded fresh false); with the slot empty it starts NEW GAME (detail
       new), and (G3B) Birch's speech is answered through the UI as the client would (its text advanced, BOY
@@ -252,6 +258,99 @@ async def _story(port, serving):
     return report
 
 
+UID = "6b1f0d7e-3c2a-4e8b-9f10-2a3b4c5d6e7f"
+
+
+async def _advance_texts_until(mc, since, until, timeout):
+    """Advances every text box the hidden game opens (as the client does) until a message matches `until`;
+    returns that message and how many text boxes were advanced."""
+    answered, texts = set(), 0
+    deadline = time.monotonic() + timeout
+    seen = since
+    while True:
+        while seen < len(mc.received):
+            m = mc.received[seen]
+            seen += 1
+            if until(m):
+                return m, texts
+            if m["type"] == "ui.open" and m["data"]["kind"] == "text" and m["data"]["ui"] not in answered:
+                answered.add(m["data"]["ui"])
+                texts += 1
+                for _ in range(len(m["data"]["pages"]) + 1):
+                    await mc.send("ui.advance", {"ui": m["data"]["ui"]})
+        left = deadline - time.monotonic()
+        assert left > 0, f"nothing matched within {timeout} s; seen since: {seen_summary(mc, since)}"
+        try:
+            if await mc.next(min(left, 1.0)) is None:
+                raise ConnectionError("connection closed")
+        except asyncio.TimeoutError:
+            pass
+
+
+def _team_ok(team):
+    """Every member as the core sends a Gen 3 one: national dex, level, 1-4 Showdown moves, IVs and no DVs."""
+    return all(1 <= t["dex"] <= 386 and 1 <= t["level"] <= 100 and 1 <= len(t["moves"]) <= 4
+               and all(1 <= n <= 354 for n in t["moves"]) and "ivs" in t and "dvs" not in t for t in team)
+
+
+async def _money(mc):
+    return (await mc.request("resync", reply_type="snapshot", timeout=10))["data"]["money"]
+
+
+async def _battle(port, serving):
+    mc, ok, snap, status = await connect(port)
+    report = {}
+    since = len(mc.received)
+    await mc.send("party.sync", {"party": [{"uid": UID, "dex": 263, "level": 10, "moves": [33, 39], "hp": 30,
+                                            "maxhp": 30}], "box": {"count": 0}})
+    # 1: a trainer battle, won
+    first = (await find_or_wait(mc, "battle.start", 90, since))["data"]
+    report["first"] = (first["kind"], first["trainer"]["cls"].startswith("TRAINER_CLASS_"), first["trainer"]["party"],
+                       len(first["team"]), _team_ok(first["team"]), first["rules"])
+    assert first["kind"] in ("trainer", "scripted", "rival") and first["trainer"]["cls"].startswith("TRAINER_CLASS_"), report
+    assert _team_ok(first["team"]) and first["rules"] == {"catch": False, "flee": False}, report
+    before = await _money(mc)
+    since = len(mc.received)
+    await mc.send("battle.result", {"battle": first["battle"], "outcome": "win"})
+    # 2: the wild battle starts once the prize texts were read and the trainer's done ran (the bridge sends a
+    # pending battle.start again after every snapshot: a new battle has a new id)
+    def new_battle(m):
+        return m["type"] == "battle.start" and m["data"]["battle"] not in ids
+
+    ids = {first["battle"]}
+    wild, texts = await _advance_texts_until(mc, since, new_battle, 90)
+    wild = wild["data"]
+    won = await _money(mc)
+    report["win"] = (texts, won > before)
+    assert texts >= 1 and won > before, (report, before, won)
+    report["wild"] = (wild["kind"], wild["wild"]["dex"], wild["wild"]["level"], wild["rules"])
+    assert (wild["kind"], wild["wild"]["dex"], wild["wild"]["level"]) == ("static", 263, 3), report
+    assert wild["rules"] == {"catch": True, "flee": True}, report
+    since = len(mc.received)
+    ids.add(wild["battle"])
+    await mc.send("battle.result", {"battle": wild["battle"], "outcome": "fled"})
+    # 3: the second trainer battle, lost: the blackout
+    third, texts = await _advance_texts_until(mc, since, new_battle, 90)
+    third = third["data"]
+    report["fled_texts"] = texts
+    report["third"] = (third["kind"], third["trainer"]["party"], len(third["team"]), _team_ok(third["team"]))
+    assert _team_ok(third["team"]), report
+    money = await _money(mc)
+    since = len(mc.received)
+    await mc.send("battle.result", {"battle": third["battle"], "outcome": "lose"})
+    heal, texts = await _advance_texts_until(mc, since, lambda m: m["type"] == "party.heal", 120)
+    warps = [m for m in mc.received[since:] if m["type"] == "warp"]
+    after = (await mc.request("resync", reply_type="snapshot", timeout=10))["data"]
+    report["lose"] = (texts, len(warps), after["money"] == money // 2, after["player"]["map"])
+    assert warps and after["money"] == money // 2, (report, money, after["money"])
+    report["errors"] = errors(mc)
+    report["problems"] = len(mc.conn.problems)
+    assert report["errors"] == [] and report["problems"] == 0, report
+    await mc.send("debug.quit", {"code": 0})
+    await mc.close()
+    return report
+
+
 NAME = ["K", "B"]
 
 
@@ -366,6 +465,26 @@ def test_emeralds_story_cells_and_toggles_reach_the_client():
         assert report["cell"] == [(x, y, int(cell["metatile"]))], (report, cell)
         assert report["back"] == [(x, y, int(cell["base"]))], (report, cell)
         assert report["toggle"] == (TOWN, f"O{int(flag['lid'])}", False), (report, flag)
+        clean = True
+    finally:
+        if not clean:
+            _cleanup_run()
+    assert save_files() == before, "the test slot's files are gone and the rest untouched"
+
+
+@pytest.mark.e2e
+@pytest.mark.timeout(900)
+def test_emerald_battles_are_held_for_the_client():
+    _skip_without_emerald()
+    before = save_files()
+    clean = False
+    try:
+        result, report = _launch("battle", "KB_SERVING", _battle, 400)
+        trainers = [dict(p.split("=", 1) for p in line.split()[1:]) for line in result.lines if line.startswith("KB_TRAINER ")]
+        done = [dict(p.split("=", 1) for p in line.split()[1:]) for line in result.lines if line.startswith("KB_BATTLE_DONE ")]
+        assert [int(t["id"]) for t in trainers] == [report["first"][2], report["third"][1]], (trainers, report)
+        assert [int(t["members"]) for t in trainers] == [report["first"][3], report["third"][2]], (trainers, report)
+        assert [(d["n"], d["result"]) for d in done] == [("1", "win"), ("2", "run"), ("3", "lose")], done
         clean = True
     finally:
         if not clean:

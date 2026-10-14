@@ -15,15 +15,16 @@ import org.junit.jupiter.api.Test;
 class DexAndItemMessagesTest {
 	@Test
 	void ownedSpeciesCountAsSeen() throws Exception {
-		DexSync dex = DexSync.of(List.of(19, 16, 151, 152, 0), List.of(25, 7));
-		assertEquals(List.of(7, 16, 19, 25, 151), List.copyOf(dex.seen()), "sorted, owned included, beyond 151 dropped");
+		DexSync dex = DexSync.of(List.of(19, 16, 151, 386, 2001, 0), List.of(25, 7));
+		assertEquals(List.of(7, 16, 19, 25, 151, 386), List.copyOf(dex.seen()), "sorted, owned included, outside the protocol dropped");
 		assertEquals(List.of(7, 25), List.copyOf(dex.owned()));
-		assertEquals("{\"owned\":[7,25],\"seen\":[7,16,19,25,151]}", ProtoJson.write(dex.toJson()));
+		assertEquals("{\"owned\":[7,25],\"seen\":[7,16,19,25,151,386]}", ProtoJson.write(dex.toJson()));
 		DexSync read = DexSync.read(ProtoJson.parseObject("{\"seen\":[1,4],\"owned\":[4]}"));
 		assertEquals(Set.of(1, 4), read.seen());
 		assertEquals(Set.of(4), read.owned());
 		assertEquals(DexSync.of(List.of(), List.of()).toJson().toString(), "{\"seen\":[],\"owned\":[]}");
-		assertThrows(DataException.class, () -> DexSync.read(ProtoJson.parseObject("{\"seen\":[152],\"owned\":[]}")));
+		assertEquals(Set.of(152, 386), DexSync.read(ProtoJson.parseObject("{\"seen\":[152,386],\"owned\":[]}")).seen(), "MG7: any game's");
+		assertThrows(DataException.class, () -> DexSync.read(ProtoJson.parseObject("{\"seen\":[2001],\"owned\":[]}")));
 		assertThrows(DataException.class, () -> DexSync.read(ProtoJson.parseObject("{\"seen\":[1]}")));
 		assertThrows(DataException.class, () -> DexSync.read(ProtoJson.parseObject("{\"seen\":[],\"owned\":[],\"caught\":[]}")));
 	}
@@ -43,10 +44,12 @@ class DexAndItemMessagesTest {
 		assertNull(free.slot(), "a free slot");
 		assertEquals(PartyItem.Kind.RARE_CANDY, PartyItem.read(ProtoJson.parseObject("{\"item\":\"RARE_CANDY\",\"uid\":\"" + uid + "\"}")).kind());
 		assertEquals(PartyItem.Kind.OTHER, PartyItem.read(ProtoJson.parseObject("{\"item\":\"PP_UP\",\"uid\":\"" + uid + "\"}")).kind());
-		assertEquals(5, PartyItem.STONES.size(), "Gen 1's five stones");
-		// Malformed: a bad uid, a slot without a move, a move beyond Gen 1, an extra field.
+		assertEquals(6, PartyItem.STONES.size(), "Gen 1's five stones and Gen 3's Sun Stone");
+		assertEquals("sun_stone", PartyItem.STONES.get("SUN_STONE"));
+		assertEquals(354, PartyItem.read(ProtoJson.parseObject("{\"item\":\"TM50\",\"uid\":\"" + uid + "\",\"move\":354}")).move(), "MG7");
+		// Malformed: a bad uid, a slot without a move, a move beyond the protocol, an extra field.
 		for (String bad : List.of("{\"item\":\"RARE_CANDY\",\"uid\":\"nope\"}", "{\"item\":\"TM_X\",\"uid\":\"" + uid + "\",\"slot\":1}",
-				"{\"item\":\"TM_X\",\"uid\":\"" + uid + "\",\"move\":166}", "{\"item\":\"RARE_CANDY\",\"uid\":\"" + uid + "\",\"qty\":1}")) {
+				"{\"item\":\"TM_X\",\"uid\":\"" + uid + "\",\"move\":2001}", "{\"item\":\"RARE_CANDY\",\"uid\":\"" + uid + "\",\"qty\":1}")) {
 			assertThrows(DataException.class, () -> PartyItem.read(ProtoJson.parseObject(bad)), bad);
 		}
 	}

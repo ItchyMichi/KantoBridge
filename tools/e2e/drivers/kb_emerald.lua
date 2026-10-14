@@ -28,6 +28,15 @@
 --                   (Flags.setFlag on the live store, by its number).
 --                   KB_CELL x= y= metatile= base=, KB_CELL_BACK,
 --                   KB_FLAG lid= id=.
+--   battle          (G3F) the field scene's start; once a client watches and its
+--                   party.sync has filled the shadow party, three battles
+--                   through the engine's own BattleBridge (as trainerbattle
+--                   and the wild rolls start them): a trainer's (the first
+--                   single, non-double trainer of the engine's table), a wild
+--                   one (national dex 263, level 3), then the next such
+--                   trainer's; each starts once the last one's done ran and
+--                   the field is idle. KB_TRAINER n= id= members=, KB_WILD
+--                   dex= level=, KB_BATTLE_DONE n= result=.
 --   title_continue  the same new game saved into the test slot, then back to
 --                   the title (Game3:returnToTitle); serves: region.start
 --                   CONTINUEs.
@@ -37,9 +46,10 @@
 --   cleanup         only the clean-up (after a failed run), then quits.
 --
 -- Markers: KB_BOOTED scene= slot= home= precleaned=, KB_SERVING map= x= y=
--- wall= (or sx= sy=), KB_SAVED slot= ok=, KB_CELL / KB_CELL_BACK / KB_FLAG, KB_TITLE slot= hasSave=, KB_CLEANED deleted=
--- active=, KB_QUIT sessions= code=; KB_FAIL <reason> on a timeout. Slot
--- numbers, map symbols, cell numbers, directions, booleans and counts only.
+-- wall= (or sx= sy=), KB_SAVED slot= ok=, KB_CELL / KB_CELL_BACK / KB_FLAG, KB_TRAINER / KB_WILD /
+-- KB_BATTLE_DONE, KB_TITLE slot= hasSave=, KB_CLEANED deleted= active=, KB_QUIT sessions= code=; KB_FAIL
+-- <reason> on a timeout. Slot numbers, map symbols, cell numbers, trainer ids, directions, booleans and
+-- counts only.
 --
 -- Runs unsandboxed as a POKEPORT_DRIVER coroutine, resumed once per frame
 -- with the Game (refs/gen1recomp/main.lua:755-759, :1136-1157).
@@ -103,6 +113,21 @@ end
 
 local function mod3(name) return package.loaded["src.core.game3." .. name] end
 
+-- The first `count` trainers of the engine's table that fight alone (no double battle), as
+-- { id, foe } (scripting/trainers.lua:169-233).
+local function singleTrainers(count)
+  local Trainers, out = mod3("scripting.trainers"), {}
+  if not (Trainers and Trainers.foeFromId) then return out end
+  for id = 1, 1023 do
+    local ok, foe = pcall(Trainers.foeFromId, id)
+    if ok and type(foe) == "table" and type(foe.party) == "table" and #foe.party >= 1 and not foe.doubleBattle then
+      out[#out + 1] = { id = id, foe = foe }
+      if #out >= count then break end
+    end
+  end
+  return out
+end
+
 -- The field is up and settled: no lock, no warp, no fade, no step.
 local function fieldReady(game)
   local F, W, P = mod3("field"), mod3("warp"), mod3("player")
@@ -119,6 +144,7 @@ return function(game)
   local phase = "ready"
   local slot, start, wall, sign
   local storyStep, storyAt, cell = 0, nil, nil
+  local battleStep, battleDone, trainers = 0, {}, nil
   local saved = false
   local waitUntil = 0
   while true do
@@ -144,7 +170,8 @@ return function(game)
         if SCENE == "title_new" then
           print(("KB_TITLE slot=%d hasSave=%s"):format(num(active()), word(slotHasSave(active()))))
           phase = "serve"
-        elseif SCENE == "field" or SCENE == "title_continue" or SCENE == "sign" or SCENE == "story" then
+        elseif SCENE == "field" or SCENE == "title_continue" or SCENE == "sign" or SCENE == "story"
+            or SCENE == "battle" then
           local ok, err = pcall(game._handleBootAction, game, { action = "new_game", name = "TEST", gender = 0 })
           if not ok then fail("new_game " .. word(err):sub(1, 40)) end
           phase = "newgame"
@@ -178,7 +205,7 @@ return function(game)
             wall = d[1]
           end
         end
-        if SCENE == "field" or SCENE == "story" then
+        if SCENE == "field" or SCENE == "story" or SCENE == "battle" then
           print(("KB_SERVING map=%s x=%d y=%d wall=%s"):format(TOWN, start.x, start.y, wall))
           phase = "serve"
         elseif SCENE == "sign" then
@@ -283,6 +310,41 @@ return function(game)
           Flags.setFlag(Space.store, nil, pick.flag, true)
           print(("KB_FLAG lid=%d id=%d"):format(pick.lid, pick.flag))
           storyStep = 3
+        end
+      end
+      -- the battle scene's three battles, once a client watches and its party is the hidden game's
+      if SCENE == "battle" and (tonumber(status.sessions) or 0) >= 1 then
+        local Runtime, BB, Bt = mod3("runtime"), mod3("battle_bridge"), mod3("battle")
+        local session = Runtime and Runtime.getSession and Runtime.getSession()
+        local idle = fieldReady(game) and not (Bt and Bt.isActive and Bt.isActive())
+        local mod = Runtime and Runtime._mod
+        local function doneFor(n)
+          return function(result)
+            battleDone[n] = true
+            print(("KB_BATTLE_DONE n=%d result=%s"):format(n, word(result)))
+          end
+        end
+        local function trainerBattle(n, t)
+          print(("KB_TRAINER n=%d id=%d members=%d"):format(n, t.id, #t.foe.party))
+          local ok, err = pcall(BB.start, mod, game, t.foe, { wild = false, trainerId = t.id, done = doneFor(n) })
+          if not ok then fail("trainer_start " .. word(err):sub(1, 40)) end
+        end
+        if battleStep == 0 and idle and session and type(session.party) == "table" and #session.party >= 1 then
+          trainers = singleTrainers(2)
+          if #trainers < 2 then fail("no_trainers") end
+          trainerBattle(1, trainers[1])
+          battleStep = 1
+        elseif battleStep == 1 and battleDone[1] and idle then
+          local Pokemon = mod3("pokemon")
+          local species = Pokemon and Pokemon.speciesFromNational and Pokemon.speciesFromNational(263)
+          if not species then fail("no_species") end
+          print("KB_WILD dex=263 level=3")
+          local ok, err = pcall(BB.startWild, mod, game, { species = species, level = 3, item = 0 }, { done = doneFor(2) })
+          if not ok then fail("wild_start " .. word(err):sub(1, 40)) end
+          battleStep = 2
+        elseif battleStep == 2 and battleDone[2] and idle then
+          trainerBattle(3, trainers[2])
+          battleStep = 3
         end
       end
       if status.quitRequested then

@@ -7,9 +7,10 @@ and a bag through the engine's own APIs (two battle items, a key item, a field i
 ROUTE_1 through mod.world. The test fetches ROUTE_1's cell flags from the real export as a `builder`
 (kept in memory only), then connects as `test`:
 
-  1. the bag: right after the snapshot a bag.sync carries only the battle items (POKE_BALL x5,
-     POTION x3: never the key item or the field item); bag.use POKE_BALL x2 comes back as a bag.sync
-     with 3; bag.use of the key item is refused (error bag.not_mirrored)
+  1. the bag: right after the snapshot a bag.sync carries the battle items (POKE_BALL x5, POTION x3)
+     and, since MG6's one trainer economy, the field item (REPEL x2: the ledger reads every non-key
+     catalogue item), never the key item; bag.use POKE_BALL x2 comes back as a bag.sync with 3;
+     bag.use of the key item is refused (error bag.not_mirrored)
   2. 200 grass steps: routes over the export's tall-grass cells (walkable, no ledge, no warp), back
      and forth between two neighbouring grass cells, planning again around Route 1's NPCs. No native
      battle ever starts: no battle screen on the stack (the driver's KB_BATTLE_PUSHED never
@@ -41,6 +42,7 @@ MAP = "ROUTE_1"
 GRASS_STEPS = 200
 GRASS, WATER, LEDGE = 8, 2, 8192
 REVERSE = {"up": "down", "down": "up", "left": "right", "right": "left"}
+# the items Minecraft mirrors (PLAN Appendix B; test_viridian.py reads this set)
 BATTLE_ITEMS = {
     "POKE_BALL", "GREAT_BALL", "ULTRA_BALL", "MASTER_BALL", "SAFARI_BALL", "POTION", "SUPER_POTION",
     "HYPER_POTION", "MAX_POTION", "FULL_RESTORE", "REVIVE", "MAX_REVIVE", "ANTIDOTE", "BURN_HEAL",
@@ -254,9 +256,10 @@ def test_route1_grass_steps_bag_dex_and_party():
     assert not w.mc.conn.problems  # strict: every message passed its schema
     assert ready["party"] == "1", "the driver's starter"
     # 1. the bag: only battle items, then a use, then a refusal
-    assert set(report["bag_first"]) <= BATTLE_ITEMS
-    assert report["bag_first"] == {"POKE_BALL": 5, "POTION": 3}, "never the key item or the field item"
-    assert report["bag_after_use"] == {"POKE_BALL": 3, "POTION": 3}
+    # MG6: every catalogue item the bag holds but key items (the ledger reads them); Minecraft mirrors the battle ones
+    assert report["bag_first"] == {"POKE_BALL": 5, "POTION": 3, "REPEL": 2}, "never the key item"
+    assert set(report["bag_first"]) - BATTLE_ITEMS == {"REPEL"}, "the field item is synced, not mirrored"
+    assert report["bag_after_use"] == {"POKE_BALL": 3, "POTION": 3, "REPEL": 2}
     assert report["bag_refusal"] == ["bag.not_mirrored"]
     assert [code for code, _ in w.errors] == ["bag.not_mirrored"], w.errors
     # 2. no native battle on 200 grass steps: every roll suppressed, nothing started

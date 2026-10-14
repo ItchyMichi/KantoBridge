@@ -29,7 +29,7 @@
       "description": "TM/HM: the move slot replaced."
     },
     "move": {
-      "$ref": "../defs.schema.json#/$defs/gen1Move",
+      "$ref": "../defs.schema.json#/$defs/moveNum",
       "description": "TM/HM: the move taught."
     },
     "region": {

@@ -164,6 +164,8 @@ end
 function Ui.new(opts)
   local engine, json, log = opts.engine, opts.json, opts.log
   local dexOf = opts.dexOf or function() return nil end
+  -- MG7 (G3F): the running game's highest dex number (its compat; Gen 1's 151)
+  local maxDex = type(opts.compat) == "table" and tonumber(opts.compat.maxDex) or 151
   local obs = {}
   local open = {}          -- entries, in stack order
   local byKey, byId = {}, {}
@@ -263,7 +265,7 @@ function Ui.new(opts)
       presets = texts(f.presets, Ui.MAX_LABELS), value = text(f.value),
     }
     local dex = f.species and tonumber(dexOf(f.species)) or nil
-    if dex and dex == floor(dex) and dex >= 1 and dex <= 151 then data.mon = dex end
+    if dex and dex == floor(dex) and dex >= 1 and dex <= maxDex then data.mon = dex end
     local grid, set = {}, {}
     for p = 1, #(f.grid or {}) do
       if #grid >= Ui.MAX_GRID_PAGES then break end

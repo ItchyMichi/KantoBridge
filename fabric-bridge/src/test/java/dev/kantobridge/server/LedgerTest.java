@@ -53,9 +53,13 @@ class LedgerTest {
 		assertEquals(Map.of("POTION", 2), gen1.items());
 		assertEquals(Map.of("bicycle", 1), gen1.left(), "a key item never crosses");
 		LedgerRules.Projected gen3 = LedgerRules.project(ledger, CAT, "gen3", LedgerRules.Limits.of("gen3"));
-		assertTrue(gen3.items().isEmpty(), "no Gen 3 symbols until its adapter");
-		assertEquals(Map.of("bicycle", 1, "potion", 2), gen3.left());
-		assertEquals(LedgerRules.Limits.DEFAULT, LedgerRules.Limits.of("gen3"));
+		assertEquals(Map.of("POTION", 2), gen3.items(), "MG7: Emerald's symbols (protocol/items.json)");
+		assertEquals(Map.of("bicycle", 1), gen3.left());
+		LedgerRules.Projected gen2 = LedgerRules.project(ledger, CAT, "gen2", LedgerRules.Limits.of("gen2"));
+		assertTrue(gen2.items().isEmpty(), "a family without symbols holds nothing");
+		assertEquals(Map.of("bicycle", 1, "potion", 2), gen2.left());
+		assertEquals(LedgerRules.Limits.GEN3, LedgerRules.Limits.of("gen3"));
+		assertEquals(LedgerRules.Limits.DEFAULT, LedgerRules.Limits.of("gen2"));
 		assertEquals(GEN1, LedgerRules.Limits.of("gen1"));
 	}
 
@@ -65,7 +69,9 @@ class LedgerTest {
 		LedgerRules.Projected gen1 = LedgerRules.project(ledger, CAT, "gen1", GEN1);
 		assertEquals(Map.of("TM_MEGA_PUNCH", 1, "TM_SUBSTITUTE", 2), gen1.items());
 		assertEquals("TM_MEGA_PUNCH", LedgerRules.symbolFor(CAT, "gen1", "tm_mega_punch"));
-		assertNull(LedgerRules.symbolFor(CAT, "gen3", "tm_mega_punch"), "Gen 3 has no TM for the move yet");
+		assertNull(LedgerRules.symbolFor(CAT, "gen3", "tm_mega_punch"), "Gen 3 has no TM for the move");
+		assertEquals("TM06", LedgerRules.symbolFor(CAT, "gen3", "tm_toxic"), "a TM both generations have crosses by its move");
+		assertEquals("TM01", LedgerRules.symbolFor(CAT, "gen3", "tm_focus_punch"));
 		assertNull(LedgerRules.symbolFor(CAT, "gen1", "hm_cut"), "HMs are key items");
 		assertEquals(Map.of("tm_toxic", 1), LedgerRules.canonical(CAT, "gen1", Map.of("TM_TOXIC", 1, "HM_CUT", 1, "NO_SUCH", 3)));
 	}

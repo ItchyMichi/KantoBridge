@@ -16,11 +16,16 @@ def test_the_catalogue_matches_its_schema():
     assert not problems, [str(p) for p in problems]
 
 
-def test_every_item_has_a_gen1_symbol_and_an_id_derived_from_it():
+def test_every_item_has_a_symbol_and_gen1_ids_derive_from_theirs():
+    """A Gen 1 item's id is its gen1 symbol in lower case; MG7 (G3F): an item only Gen 3 has (SUN_STONE, Emerald's
+    TMs for moves no Gen 1 TM teaches) is named by its own symbol or move; every symbol maps back to its item."""
     for item_id in ITEMS.ids:
         item = ITEMS.get(item_id)
-        assert item.symbols["gen1"].lower() == item_id, item_id
-        assert ITEMS.canonical("gen1", item.symbols["gen1"]) == item_id
+        assert item.symbols, item_id
+        if "gen1" in item.symbols:
+            assert item.symbols["gen1"].lower() == item_id, item_id
+        for family, symbol in item.symbols.items():
+            assert ITEMS.canonical(family, symbol) == item_id, (family, symbol)
 
 
 def test_the_mirror_set_is_todays_29_battle_items():
@@ -32,8 +37,15 @@ def test_the_mirror_set_is_todays_29_battle_items():
 
 def test_machines_cross_by_move_and_keys_never_cross():
     tms = [i for i in ITEMS.ids if ITEMS.get(i).clazz == "tm"]
-    assert len(tms) == 50 and len({ITEMS.get(i).move for i in tms}) == 50
-    assert all(1 <= ITEMS.get(i).move <= 165 for i in tms)
+    assert len({ITEMS.get(i).move for i in tms}) == len(tms), "one entry per move"
+    gen1 = [i for i in tms if "gen1" in ITEMS.get(i).symbols]
+    assert len(gen1) == 50 and all(1 <= ITEMS.get(i).move <= 165 for i in gen1)
+    # MG7 (G3F): Emerald's 50 TMs, TM01..TM50; the 14 whose move a Gen 1 TM teaches share its entry
+    gen3 = {ITEMS.get(i).symbols["gen3"]: i for i in tms if "gen3" in ITEMS.get(i).symbols}
+    assert sorted(gen3) == ["TM%02d" % n for n in range(1, 51)]
+    assert all(1 <= ITEMS.get(i).move <= 354 for i in gen3.values())
+    assert gen3["TM06"] == "tm_toxic" and gen3["TM01"] == "tm_focus_punch"
+    assert len(set(gen1) & set(gen3.values())) == 14
     assert ITEMS.get("tm_mega_punch").move == 5 and ITEMS.get("tm_substitute").move == 164
     hms = [i for i in ITEMS.ids if i.startswith("hm_")]
     assert len(hms) == 5 and all(ITEMS.get(i).clazz == "key" for i in hms)

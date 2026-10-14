@@ -189,6 +189,9 @@ function Saves.install(b)
     if type(st) ~= "table" then return 0 end
     local n = (st.saveQueued ~= nil and 1 or 0) + (tonumber(st.heals) or 0)
     st.saveQueued, st.heals, st.healPending, st.centerSave = nil, 0, nil, nil
+    -- G3F: what the party part keeps for the dropped playthrough (gen1.lua:5062-5071)
+    n = n + (type(st.gifts) == "table" and #st.gifts or 0) + (type(st.catches) == "table" and #st.catches or 0)
+    st.gifts, st.catches, st.renames, st.healHold = {}, {}, {}, nil
     return n
   end)
 

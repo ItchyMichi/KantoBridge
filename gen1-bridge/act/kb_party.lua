@@ -26,10 +26,11 @@
 -- place; an entry whose `give` names a pending gift is that gift (exact,
 -- M6); a new uid without `give` that has a pending gift's species (dex) and
 -- at least its level is that gift (M5's fallback); other new uids are
--- created. Moves go by Gen 1 number, HP is
--- scaled to the Gen 1 maximum, status and nickname follow. Species beyond
--- Gen 1 and moves beyond 165 are left out and counted, with a warning each
--- time the count grows. A sync waits while applying it isn't safe
+-- created. Moves go by number, HP is
+-- scaled to the engine's maximum, status and nickname follow. Species and
+-- moves beyond the game's ceilings (its compat: Gen 1's 151 and 165, MG7:
+-- Emerald's 386 and 354) are left out and counted, with a warning each time
+-- the count grows. A sync waits while applying it isn't safe
 -- (kb_engine.partySafe: no overworld yet, a give under way, a native battle
 -- on the stack); the newest one wins, and the last one applied is applied
 -- again after New Game or CONTINUE. A gift that five syncs, the last one at
@@ -103,6 +104,9 @@ Party.GIVE_UP_AFTER = 5     -- syncs a sent gift may miss before it is given up 
 Party.GIVE_UP_SECONDS = 120 -- ... the last of them at least this long after it was first sent
 Party.MAX_NICK = 10       -- Gen 1 nickname glyphs (NamingScreen maxLen 10)
 Party.MAX_TEXT = 32       -- party.give nick / ot maxLength
+-- MG7 (G3F): the running game's ceilings (the catalogue's compat); Gen 1's
+-- when the game didn't say
+Party.GEN1 = { maxDex = 151, maxMove = 165 }
 
 local floor = math.floor
 local byte, find, gsub, sub = string.byte, string.find, string.gsub, string.sub
@@ -110,11 +114,21 @@ local byte, find, gsub, sub = string.byte, string.find, string.gsub, string.sub
 local UID = "^%x%x%x%x%x%x%x%x%-%x%x%x%x%-%x%x%x%x%-%x%x%x%x%-%x%x%x%x%x%x%x%x%x%x%x%x$"
 local STATUS = { slp = "SLP", psn = "PSN", brn = "BRN", frz = "FRZ", par = "PAR" }
 local DV_KEYS = { "atk", "def", "spd", "spc" }
+local IV_KEYS = { "hp", "atk", "def", "spa", "spd", "spe" }
 local SOURCES = { starter = true, gift = true, trade = true, prize = true, native_catch = true }
 
 local function whole(v, lo, hi)
   return type(v) == "number" and v == floor(v) and v >= lo and v <= hi
 end
+
+-- The highest dex and move numbers a game's compat allows (Gen 1's without one).
+local function ceilings(compat)
+  compat = type(compat) == "table" and compat or Party.GEN1
+  local maxDex = whole(compat.maxDex, 1, 2000) and compat.maxDex or Party.GEN1.maxDex
+  local maxMove = whole(compat.maxMove, 1, 2000) and compat.maxMove or Party.GEN1.maxMove
+  return maxDex, maxMove
+end
+Party.ceilings = ceilings
 
 -- At most `max` code points, cut on a character boundary.
 local function capChars(s, max)
@@ -187,23 +201,44 @@ function Party.validSync(data)
 end
 
 -- dex.sync data checked against its schema's shape: two lists of distinct
--- Gen 1 dex numbers; returns true or false.
+-- national dex numbers (protocol defs nationalDex); returns true or false.
+-- MG7 (G3F): numbers beyond the game's ceiling are valid (the server sends
+-- every species it can name, whatever game a client follows) and go in
+-- Party.withinDex.
+Party.MAX_NATIONAL = 2000
 function Party.validDex(data)
   if type(data) ~= "table" then return false end
   for _, key in ipairs({ "seen", "owned" }) do
     local list = data[key]
-    if type(list) ~= "table" or #list > 151 then return false end
+    if type(list) ~= "table" or #list > Party.MAX_NATIONAL then return false end
     local seen = {}
     for i, n in pairs(list) do
-      if type(i) ~= "number" or not whole(n, 1, 151) or seen[n] then return false end
+      if type(i) ~= "number" or not whole(n, 1, Party.MAX_NATIONAL) or seen[n] then return false end
       seen[n] = true
     end
   end
   return true
 end
 
+-- A valid dex.sync's lists cut to the game's ceiling (compat, Gen 1's 151
+-- without one), in order, and how many numbers went.
+function Party.withinDex(data, compat)
+  local maxDex = ceilings(compat)
+  local out, beyond = { seen = {}, owned = {} }, 0
+  for _, key in ipairs({ "seen", "owned" }) do
+    for _, n in ipairs(data[key]) do
+      if n <= maxDex then
+        out[key][#out[key] + 1] = n
+      else
+        beyond = beyond + 1
+      end
+    end
+  end
+  return out, beyond
+end
+
 -- A queued item use as party.item's payload, or nil when it can't be one.
-function Party.itemData(use)
+function Party.itemData(use, compat)
   if type(use) ~= "table" or type(use.item) ~= "string" or not find(use.item, "^[A-Z0-9_]+$")
       or #use.item > 64 or type(use.uid) ~= "string" or not find(use.uid, UID) then
     return nil
@@ -211,7 +246,8 @@ function Party.itemData(use)
   local data = { item = use.item, uid = use.uid }
   if use.move ~= nil or use.slot ~= nil then
     -- a TM/HM: the move it taught, and the slot it took when it replaced one
-    if not whole(use.move, 1, 165) then return nil end
+    local _, maxMove = ceilings(compat)
+    if not whole(use.move, 1, maxMove) then return nil end
     data.move = use.move
     if use.slot ~= nil then
       if not whole(use.slot, 0, 3) then return nil end
@@ -236,6 +272,9 @@ end
 --            withdraw) as it first goes out (optional)
 function Party.new(opts)
   local engine, log, store, clock = opts.engine, opts.log, opts.store, opts.clock
+  -- MG7 (G3F): the running game's compat (maxDex, maxMove); Gen 1's without one
+  local compat = type(opts.compat) == "table" and opts.compat or Party.GEN1
+  local maxDex, maxMove = ceilings(compat)
   local markup = opts.markup or function(s) return s, 0 end
   local onOp = opts.onOp or function() end
   local party = {}
@@ -248,7 +287,7 @@ function Party.new(opts)
     givesExact = 0,
     syncs = 0, applied = 0, deferred = 0, created = 0, matched = 0, kept = 0, failed = 0,
     nonGen1Species = 0, nonGen1Moves = 0, heals = 0,
-    dexSyncs = 0, dexApplied = 0, dexAddedSeen = 0, dexAddedOwned = 0, dexUnknown = 0,
+    dexSyncs = 0, dexApplied = 0, dexAddedSeen = 0, dexAddedOwned = 0, dexUnknown = 0, dexBeyond = 0,
     items = 0, itemsBad = 0,
     -- M8 (wave 2)
     takes = 0, deposits = 0, withdraws = 0, opsResent = 0, opsConfirmed = 0, opsGivenUp = 0,
@@ -270,23 +309,32 @@ function Party.new(opts)
   end
 
   -- The party.give payload of a captured gift, or nil when it can't be sent.
+  -- Gen 1 gifts carry DVs (0-15); Gen 3's IVs (0-31, MG7 G3F).
   local function giveData(g)
-    if not (type(g.give) == "string" and whole(g.dex, 1, 151) and whole(g.level, 1, 100)
+    if not (type(g.give) == "string" and whole(g.dex, 1, maxDex) and whole(g.level, 1, 100)
             and SOURCES[g.source]) then
       return nil
     end
     local data = { give = g.give, dex = g.dex, level = g.level, source = g.source }
     local moves = {}
     for _, n in ipairs(type(g.moves) == "table" and g.moves or {}) do
-      if whole(n, 1, 165) and #moves < 4 then moves[#moves + 1] = n end
+      if whole(n, 1, maxMove) and #moves < 4 then moves[#moves + 1] = n end
     end
     if #moves > 0 then data.moves = moves end
-    local d = type(g.dvs) == "table" and g.dvs or {}
-    local dvs, ok = {}, true
-    for _, k in ipairs(DV_KEYS) do
-      if whole(d[k], 0, 15) then dvs[k] = d[k] else ok = false end
+    if type(g.ivs) == "table" then
+      local ivs, ok = {}, true
+      for _, k in ipairs(IV_KEYS) do
+        if whole(g.ivs[k], 0, 31) then ivs[k] = g.ivs[k] else ok = false end
+      end
+      if ok then data.ivs = ivs end
+    else
+      local d = type(g.dvs) == "table" and g.dvs or {}
+      local dvs, ok = {}, true
+      for _, k in ipairs(DV_KEYS) do
+        if whole(d[k], 0, 15) then dvs[k] = d[k] else ok = false end
+      end
+      if ok then data.dvs = dvs end
     end
-    if ok then data.dvs = dvs end
     data.nick, data.ot = text(g.nick), text(g.ot)
     return data
   end
@@ -342,7 +390,7 @@ function Party.new(opts)
     local entries = {}
     local species0, moves0 = counts.nonGen1Species, counts.nonGen1Moves
     for _, e in ipairs(data.party) do
-      local species = e.dex <= 151 and engine.speciesOfDex(e.dex) or nil
+      local species = e.dex <= maxDex and engine.speciesOfDex(e.dex) or nil
       if excluded[e.uid] then
         -- traded away, or boarded at the daycare: not the hidden party's
         counts.excluded = counts.excluded + 1
@@ -351,7 +399,7 @@ function Party.new(opts)
       else
         local moves = {}
         for _, n in ipairs(e.moves) do
-          local id = n <= 165 and engine.moveIdOfNum(n) or nil
+          local id = n <= maxMove and engine.moveIdOfNum(n) or nil
           if id then moves[#moves + 1] = id else counts.nonGen1Moves = counts.nonGen1Moves + 1 end
         end
         local entry = {
@@ -434,7 +482,9 @@ function Party.new(opts)
   function party.dex(data)
     if not Party.validDex(data) then return false, "bad_message" end
     counts.dexSyncs = counts.dexSyncs + 1
-    pendingDex = data
+    local within, beyond = Party.withinDex(data, compat)
+    counts.dexBeyond = counts.dexBeyond + beyond
+    pendingDex = within
     return true
   end
 
@@ -456,7 +506,7 @@ function Party.new(opts)
   -- Items used on a party member (kb_engine's queue), once each, while live.
   local function sendItems(out)
     for _, use in ipairs(engine.takeItemUses()) do
-      local data = Party.itemData(use)
+      local data = Party.itemData(use, compat)
       if data then
         out[#out + 1] = { "party.item", data, "party" }
         counts.items = counts.items + 1

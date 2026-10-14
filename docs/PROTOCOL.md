@@ -401,7 +401,7 @@ it for that player's collision.
 
 | Type | Dir | Data | ROM |
 |---|---|---|---|
-| `battle.start` | G→M, C→S | `battle` (id), `kind:"trainer"\|"rival"\|"scripted"\|"static"\|"surf"\|"fish"`, `trainer?{cls,party,name?,npc?,map?,x?,y?}`, `team?[{dex,level,moves[],dvs{atk,def,spd,spc}}]`, `wild?{dex,level,x?,y?}`, `rules{catch,flee}`. Trainer and rival battles need `trainer` and `team`; static, surf and fish need `wild`; scripted needs `team` or `wild` | yes |
+| `battle.start` | G→M, C→S | `battle` (id), `kind:"trainer"\|"rival"\|"scripted"\|"static"\|"surf"\|"fish"`, `trainer?{cls,party,name?,npc?,map?,x?,y?}`, `team?[{dex,level,moves[],dvs{atk,def,spd,spc} or ivs{hp,atk,def,spa,spd,spe}}]`, `wild?{dex,level,x?,y?}`, `rules{catch,flee}`. Trainer and rival battles need `trainer` and `team`; static, surf and fish need `wild`; scripted needs `team` or `wild`. `party` is the party index within the class (Gen 1) or the trainer's id (Gen 3, up to 1023) | yes |
 | `battle.result` | S→C, M→G | `battle, outcome:"win"\|"lose"\|"fled"\|"caught"\|"aborted"`, `caught?{uid,dex,level}` (required when caught) | |
 | `battle.native` | G→M | `kind:"safari"\|"old_man"\|"ghost", phase:"start"\|"end"` | |
 
@@ -413,8 +413,10 @@ it for that player's collision.
   draws the trainer as a puppet. `trainer.name` is the name in Cobblemon's battle UI.
 - **AI skill** from `trainer.cls` (`OPP_*`, prefix optional): gym leaders (including
   `OPP_GIOVANNI`) 3; the Elite Four and `OPP_RIVAL3` 5; `OPP_RIVAL1`/`OPP_RIVAL2` or kind `rival` 3;
-  everyone else 1. Team members get IVs 2×DV+1 (HP from the derived HP DV), nature Hardy, the species'
-  first ability, no item, exact moves (a repeated move is kept once).
+  everyone else 1. Gen 3 (MG7) sends roles, `TRAINER_CLASS_*`: `LEADER`, `AQUA_LEADER` and
+  `MAGMA_LEADER` 3; `ELITE_FOUR` and `CHAMPION` 5; `RIVAL` or kind `rival` 3; everyone else 1.
+  Team members get IVs 2×DV+1 (HP from the derived HP DV) or the `ivs` as given (Gen 3), nature
+  Hardy, the species' first ability, no item, exact moves (a repeated move is kept once).
 - **Outcomes:** `win`; `lose` (a forfeit is a loss); `aborted` when the battle stopped with no winner,
   or couldn't start (no usable Pokémon, already in a battle, malformed start, and until M6 the wild
   kinds `static`/`surf`/`fish`); `fled` and `caught` from M6. A scripted battle with a team runs like a
@@ -552,12 +554,12 @@ it for that player's collision.
 | Type | Dir | Data | ROM |
 |---|---|---|---|
 | `party.sync` | S→C, M→G | `party[{uid, give?, dex, level, nick?, moves[], hp, maxhp, status?}], box{count}` (Cobblemon is authoritative) | yes |
-| `party.give` | G→M, C→S | `give` (id), `dex, level, moves[]?, dvs?, nick?, ot?, source:"starter"\|"gift"\|"trade"\|"prize"\|"native_catch"` | yes |
+| `party.give` | G→M, C→S | `give` (id), `dex, level, moves[]?, dvs?, ivs?, nick?, ot?, source:"starter"\|"gift"\|"trade"\|"prize"\|"native_catch"` (`ivs` over `dvs` when both) | yes |
 | `party.take` | G→M, C→S | `uid, reason:"trade"\|"daycare"` | |
 | `party.heal` | G→M, C→S | `{}` | |
 | `party.rename` | G→M, C→S | `uid, nick` (empty clears) | yes |
 | `party.item` | G→M, C→S | `item, uid, slot?, move?` (stone, TM/HM, Rare Candy) | |
-| `dex.sync` | S→C, M→G | `seen[dex], owned[dex]` (dex ≤ 151) | |
+| `dex.sync` | S→C, M→G | `seen[dex], owned[dex]`: every species the server can name (MG7: the first 386); each bridge keeps the ones its game holds (its compat `maxDex`) and counts the rest | |
 | `bag.sync` | G→M, C→S | `items{item:qty}` (battle-usable subset), and (MG6) `money?`, `stamp?` (the ledger stamp of the last projection) | |
 | `bag.use` | S→C, M→G | `item, qty` (consumed in Minecraft) | |
 | `bag.set` | S→C, M→G | `items{item:qty}, money, stamp` (MG6: the ledger's projection into the followed game's save on a resume or after a start) → `act.result{kind:"bag.set", left?}` (reasons `not_ingame`, `busy`, `too_many`) | |
@@ -566,8 +568,10 @@ it for that player's collision.
 | `daycare.deposit` | G→M, C→S | `uid` | |
 | `daycare.withdraw` | G→M, C→S | `uid, steps` | |
 
-Species travel as national dex numbers, moves as Gen 1 move ids (= Showdown numbers), items as
-engine symbols, and Pokémon identities as Cobblemon UUIDs (`uid`).
+Species travel as national dex numbers (defs `nationalDex`), moves as Showdown numbers (defs
+`moveNum`; Gen 1's move ids are the same numbers), items as engine symbols, and Pokémon identities
+as Cobblemon UUIDs (`uid`). The schemas carry any number up to 2000; what a game holds is its
+compat profile (`hello.ok.compat`: Gen 1 151 and 165, Emerald 386 and 354), applied by its bridge.
 
 ### Saving
 

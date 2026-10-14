@@ -1475,7 +1475,7 @@ the full suite at the ✔ checkpoints (MG2, MG3, MG5, MG6). Pods run inside your
 | MG4 | Links | **done** (note 19); check: with one link the e2e scenarios behave as before (pod, real engine: `test_s5_ready`, `test_handshake`, `test_regions`, `test_multiplayer`, `test_crash`, `test_hot_reload` all passed), `tools/tests/test_links.py` (two `fake_gen1`: swap, a parked drop, a wrong game), JUnit `LinksTest` + `LinksFakeGen1IntegrationTest` (two real `fake_gen1` processes); one `test_multiplayer` assertion learnt that an install paired before MG1 keeps its legacy pairing file beside the per-game one. The MG4–MG6 checkpoint on the pod (kb-dev7): pytest and Lua 1,729, JUnit 1,193 (0 failures), GameTests 112 | 2026-10-13 | |
 | MG5 | Crossings | **done** (note 20); check: `PassGameTests` (6: the round trip into the far gate house with the exact arrival cell, every refusal, abort, the timeout, the start path, the stash, a built half whose pass is a story cell), `PassCrossingsTest`, `ZonePlanTest`, `WorldIndexTest`, `PassChoreographyTest` (16), the two-`fake_gen1` crossing in `tools/tests/test_stand_ins.py`; a crossing between two real engines waits for a second region whose game has an adapter (MG7/MG8) | 2026-10-13 | |
 | MG6 | One trainer economy | **done** (notes 18, 21); check: `LedgerGameTests` (two regions: adoption, stamped read-back, the crossing's projection, `too_many`/`left`, re-projection on an unknown stamp; a legacy world untouched), `BagGameTests` marked stacks, `LedgerTest`/`LedgerCodecTest`/`ItemsTest`/`BagSetRelayTest`, `test_lua_ledger.py`/`test_lua_bag.py`; the real engine's `bag.set` round trip is your play-test (PLAYTEST.md "MG6") | 2026-10-13 | |
-| MG7 | The second family (Emerald): adapter and export | **in progress**: the spec [specs/GEN3_BRIDGE_PLAN.md](specs/GEN3_BRIDGE_PLAN.md) (2026-10-14), phases G3A–G3G; **G3A done** (Emerald followable), **G3B done** (Emerald's UI), **G3C done** (story), **G3D done** (export), **G3E done** (builder; "Several games: MG7") | 2026-10-14 | |
+| MG7 | The second family (Emerald): adapter and export | **in progress**: the spec [specs/GEN3_BRIDGE_PLAN.md](specs/GEN3_BRIDGE_PLAN.md) (2026-10-14), phases G3A–G3G; **G3A done** (Emerald followable), **G3B done** (Emerald's UI), **G3C done** (story), **G3D done** (export), **G3E done** (builder), **G3F done** (battles, party, bag; the route exit moved to MG8) ("Several games: MG7") | 2026-10-14 | |
 | MG8 | Hoenn and the pass to it | pending | | |
 
 ### Several games: notes
@@ -1986,6 +1986,67 @@ from the surface by a warp, dive or connection and are left out: those only scri
 the Battle Frontier, the islands) and **Sootopolis City with the maps behind its doors**, which has no dive or emerge link in the
 engine's data (nor has its underwater map); G3G or MG8 places them apart. The three seams are walls and overlaps until
 MG8 joins them, and the real Hoenn build in Minecraft (G3G) has its heap and its 50,000 water story cells measured.
+
+**G3F (2026-10-14): Emerald's battles, party and bag.** Four new adapter parts, `party`, `battle`, `bag` (the items
+group: `items` is a module name Gen1Recomp keeps for itself) and `routes`; every group now has a part.
+
+- **Battles** (`lib/engine/game3/battle.lua`): `BattleBridge.start`, which every Gen 3 battle passes (trainer scripts,
+  wild rolls, fishing, the story's specials), is wrapped once per process. While a client follows, a battle is **held**:
+  started headless without auto fight, its facts go out as `battle.start` (a trainer's `TRAINER_CLASS_*` role, its
+  trainer id as `party`, the team by national dex, level, Showdown moves and IVs; a wild one's national dex, level and
+  kind: static, surf or fish). `battle.result` answers it: a **win** pays the engine's own prize and shows the trainer's
+  defeat line and the money text in the field's message box (read through the UI); a **loss** runs the engine's
+  whiteout (half the money, the heal point); an **abort** stops the script, so the trainer challenges again (Birch's
+  first battle goes on as a win); then `Battle.abort` ends it. Link and facility battles, the Safari Zone and the
+  tutorials stay native. Land encounter rolls are the habitat pools' while a client follows; water and the rod go on as
+  surf and fish battles. **As on Gen 1, no experience, evolution or catch is written into the hidden game**: Cobblemon's
+  `party.sync` and `dex.sync` bring them back (a deviation from §4.10's first idea of writing them into the battle).
+- **Party** (`party.lua`): internal species and national dex both ways; `party.sync` rebuilds the shadow party in
+  place (new members made on a scratch session, so the live Pokédex isn't touched; HP scaled to the engine's maximum;
+  the battle's move overlay reset); gifts from the engine's `Party.giveMon` (the starter, `givemon`), their facts read
+  when the giving script ends (so its nickname is in), at once while a battle is held (Birch's battle follows the
+  starter); a box gift leaves the hidden box (Cobblemon's PC keeps it); Safari catches go out as gifts after their
+  battle; heals (the nurse, a blackout's once its warp lands), the Pokédex, nicknames.
+- **Bag** (`bag.lua`): Emerald's symbols in `protocol/items.json` (`symbols.gen3` on 101 items, among them the Sun Stone
+  and TM01–TM50; 36 new TM entries by move, 14 TMs shared with Gen 1); counts, removals and `bag.set`'s projection into
+  the pockets by class (99 a slot, all or nothing per 99, money clamped, key items and HMs untouched). A stone, Rare
+  Candy or TM used on a party member is refused while a client follows ("It won't have any effect."): those are used
+  in Minecraft. Java's ledger projects up to 128 kinds into a Gen 3 game (`LedgerRules.Limits.GEN3`).
+- **Routes** (`routes.lua`): the server's `route.blackout` (half the money and the heal point, the engine's own).
+  **Moved to MG8: the Wild Routes zone exit for Emerald** (E6, the hidden player parked on the exit cell): no Emerald
+  zone exists until Hoenn's routes data (MG8), so nothing could use or test it now; `writeTrainerParty` and
+  `scriptBattleResult` stay the stub's.
+- **Core and protocol** (inert on Gen 1): the dex and move ceilings come from the running game's `compat`
+  (`hello.ok.compat`) in battles, the party, the snapshot and the UI; defs `nationalDex` and `moveNum` (any number to
+  2000) and `ivs` (0–31, beside Gen 1's `dvs`) in `battle.start`, `party.give`, `party.item`, `dex.sync`, the snapshot
+  and `ui.open`; a trainer's `party` goes to 1023 (Emerald's trainer ids). **`dex.sync` now carries the first 386
+  species and each bridge keeps the ones its game holds** (`Party.withinDex`, counted as `partyDexBeyond`): before, a
+  Gen 1 bridge refused the whole message over one later species.
+- **Java:** `Gen1Mon` carries national numbers and IVs (`Ivs`); `Gen1Mons` resolves any species and move by number
+  (with `NationalDexIds` as the fallback); `ProxyClass` maps Gen 3's roles (`LEADER`, `AQUA_LEADER`, `MAGMA_LEADER`: gym
+  skill; `ELITE_FOUR`, `CHAMPION`: elite; `RIVAL`); `PartyGive`, `PartyItem` (and the Sun Stone), `DexSync` and
+  `DexService` take national numbers; **the evolution veto uses the followed region's ceiling** (an Emerald player's
+  Eevee may become Espeon; Gen 1's 151 without an owner or a region).
+
+**Check:**
+
+| Suite | Result |
+|---|---|
+| pytest and Lua (local) | 1,952 passed, 10 skipped (new: `test_lua_game3_battle.py` 10, `_party.py` 9, `_items.py` 6 on `tools/lua/fake_battle3.lua`) |
+| JUnit / GameTests (pod kb-dev11) | 1,225 (2 skipped) / 118, no failures (new GameTests: every Emerald number resolves; a Gen 3 gift keeps its IVs and the ceilings follow the region; a Gen 3 gym leader's battle in Cobblemon with Hoenn's Pokémon, IVs and moves) |
+| e2e Emerald battles (`test_emerald.py`, scene `battle`) | passed on the real engine: a trainer battle held (`battle.start` kind `scripted`, a `TRAINER_CLASS_` role, the team valid), won: the prize paid (money 3,000 → 3,840) and its two texts read through the UI; a wild battle (dex 263, level 3, catch and flee) fled; a second trainer battle lost: the money halved exactly, the warp to the heal point, `party.heal` sent |
+| e2e regression | Emerald: all of `test_emerald.py`, 5 passed (field, sign, story, battle, both title starts). Gen 1 on Blue: 14 passed (`test_battle` 2, `test_field` 5, `test_route1`, `test_ui`, `test_walk`, `test_opening`, `test_viridian` 3: among them the rival's battle, a Viridian Forest trainer won with its texts and money and another lost with the blackout to Viridian City) |
+
+The driver's shortcut new game skips the intro, so the blackout's heal point is still the moving truck: in a real
+game it is the player's house or the last Pokémon Center. **Two test fixes came with the regression:** the e2e drivers
+`kb_battle`, `kb_route1`, `kb_opening`, `kb_perf`, `kb_ui` and `kb_walk` now apply the `KB_DATASET_MEMO` shim as
+`kb_export` does (their tests fetch the export; on the pod's network disk that took about 4 minutes a launch, now
+seconds), and `test_route1.py` expects MG6's bag rule (`bag.sync` carries every non-key catalogue item, so its field
+item too; it hadn't run since MG6). A Gen 3 boot logs `export.live_copy_failed` (the core's Gen 1 dataset path, which
+Gen 3's export doesn't use; since G3D).
+
+**Not yet:** the route exit (MG8); in-game trades, the daycare and eggs (the engine changes the shadow party natively and
+the next `party.sync` takes it back, as the research note warned); item uses on party members (refused, see above).
 
 ### Handoff (2026-10-14): after MG6, for whoever continues
 

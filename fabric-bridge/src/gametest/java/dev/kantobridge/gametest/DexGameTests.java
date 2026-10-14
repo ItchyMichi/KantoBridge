@@ -48,9 +48,11 @@ public class DexGameTests implements FabricGameTest {
 			PokedexManager pokedex = PlayerExtensionsKt.pokedex(player);
 			pokedex.encounter(Gen1Mons.wild(16, 3));
 			pokedex.obtain(Gen1Mons.gift(new Gen1Mon(25, 5, List.of(84), null)));
-			// A species beyond Gen 1 stays out of the hidden game's Pokédex.
+			// MG7: the first three generations go (each game's bridge keeps what its game holds); later species stay out.
 			Pokemon chikorita = PokemonSpecies.getByPokedexNumber(152, "cobblemon").create(5);
 			pokedex.obtain(chikorita);
+			Pokemon turtwig = PokemonSpecies.getByPokedexNumber(387, "cobblemon").create(5);
+			pokedex.obtain(turtwig);
 		} catch (Gen1Mons.Missing | RuntimeException e) {
 			relay.close();
 			MockPlayers.leave(helper, player);
@@ -64,7 +66,8 @@ public class DexGameTests implements FabricGameTest {
 			Set<Integer> owned = numbers(data.getAsJsonArray("owned"));
 			helper.assertTrue(seen.contains(16) && seen.contains(25), "seen " + seen);
 			helper.assertTrue(owned.contains(25) && !owned.contains(16), "owned " + owned);
-			helper.assertTrue(!seen.contains(152) && !owned.contains(152), "a species beyond 151 was synced");
+			helper.assertTrue(owned.contains(152), "Chikorita (152) must be synced since MG7, owned " + owned);
+			helper.assertTrue(!seen.contains(387) && !owned.contains(387), "a species beyond 386 was synced");
 			helper.assertTrue(seen.containsAll(owned), "owned must count as seen");
 			relay.close();
 			MockPlayers.leave(helper, player);

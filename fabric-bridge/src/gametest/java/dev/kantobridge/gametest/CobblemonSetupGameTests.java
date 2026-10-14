@@ -7,12 +7,14 @@ import com.cobblemon.mod.common.api.pokemon.PokemonSpecies;
 import com.cobblemon.mod.common.config.CobblemonConfig;
 import com.cobblemon.mod.common.pokemon.Species;
 import dev.kantobridge.net.RelayService;
+import dev.kantobridge.pokemon.Gen1Mon;
 import dev.kantobridge.pokemon.Gen1Mons;
 import dev.kantobridge.pokemon.GenOneIds;
 import dev.kantobridge.pokemon.NationalDexIds;
 import dev.kantobridge.proto.MsgTypes;
 import dev.kantobridge.server.CobblemonSettings;
 import dev.kantobridge.story.Activity;
+import dev.kantobridge.world.Games;
 import java.util.Objects;
 import kotlin.ranges.IntRange;
 import net.fabricmc.fabric.api.gametest.v1.FabricGameTest;
@@ -43,8 +45,11 @@ public class CobblemonSetupGameTests implements FabricGameTest {
 			helper.assertTrue(move.getName().equals(GenOneIds.moveId(number)),
 					"move " + number + " is " + move.getName() + ", the table says " + GenOneIds.moveId(number));
 		}
-		helper.assertTrue(Gen1Mons.species(0) == null && Gen1Mons.species(152) == null, "numbers beyond Gen 1 resolve");
-		helper.assertTrue(Gen1Mons.move(166) == null, "move numbers beyond Gen 1 resolve");
+		// MG7: any national number resolves (everyEmeraldNumberResolves); outside the protocol's numbers nothing does
+		helper.assertTrue(Gen1Mons.species(0) == null && Gen1Mons.species(Gen1Mon.MAX_NATIONAL + 1) == null,
+				"numbers outside the protocol resolve");
+		helper.assertTrue(Gen1Mons.move(0) == null && Gen1Mons.move(Gen1Mon.MAX_MOVE_NUM + 1) == null,
+				"move numbers outside the protocol resolve");
 		helper.succeed();
 	}
 
@@ -57,6 +62,22 @@ public class CobblemonSetupGameTests implements FabricGameTest {
 			helper.assertTrue(species.getResourceIdentifier().getPath().equals(NationalDexIds.speciesId(dex)),
 					"species " + dex + " is " + species.getResourceIdentifier().getPath() + ", the table says " + NationalDexIds.speciesId(dex));
 			helper.assertTrue(NationalDexIds.dexOf(NationalDexIds.speciesId(dex)) == dex, "dexOf " + dex);
+		}
+		helper.succeed();
+	}
+
+	/** MG7: every species and move an Emerald battle or gift can name resolves by number (GEN3_BRIDGE_PLAN §4.10). */
+	@GameTest(template = EMPTY_STRUCTURE)
+	public void everyEmeraldNumberResolves(GameTestHelper helper) {
+		Games.Compat emerald = Games.compat("emerald");
+		helper.assertTrue(emerald != null && emerald.maxDex() == NationalDexIds.MAX_DEX, "the catalogue's Emerald ceilings");
+		for (int dex = 1; dex <= emerald.maxDex(); dex++) {
+			Species species = Gen1Mons.species(dex);
+			helper.assertTrue(species != null && species.getNationalPokedexNumber() == dex, "no species for dex " + dex);
+		}
+		for (int number = 1; number <= emerald.maxMove(); number++) {
+			MoveTemplate move = Gen1Mons.move(number);
+			helper.assertTrue(move != null && move.getNum() == number, "no move for number " + number);
 		}
 		helper.succeed();
 	}

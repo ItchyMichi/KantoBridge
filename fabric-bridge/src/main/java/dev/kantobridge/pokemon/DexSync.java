@@ -11,8 +11,9 @@ import java.util.SortedSet;
 import java.util.TreeSet;
 
 /**
- * The Pokédex as {@code dex.sync} carries it (protocol/messages/dex.sync.schema.json): the national dex numbers 1–151
- * seen and owned, sorted. As in Gen 1, an owned species counts as seen too. Plain Java.
+ * The Pokédex as {@code dex.sync} carries it (protocol/messages/dex.sync.schema.json): the national dex numbers seen and
+ * owned, sorted. As in Gen 1, an owned species counts as seen too. MG7: any game's numbers (defs {@code nationalDex}); each
+ * bridge keeps the ones its game holds (gen1-bridge {@code Party.withinDex}). Plain Java.
  *
  * @param seen  every species seen or owned
  * @param owned every species owned
@@ -23,13 +24,13 @@ public record DexSync(SortedSet<Integer> seen, SortedSet<Integer> owned) {
 	public DexSync {
 		TreeSet<Integer> allSeen = new TreeSet<>();
 		for (int dex : seen) {
-			if (GenOneIds.isDex(dex)) {
+			if (Gen1Mon.isNational(dex)) {
 				allSeen.add(dex);
 			}
 		}
 		TreeSet<Integer> allOwned = new TreeSet<>();
 		for (int dex : owned) {
-			if (GenOneIds.isDex(dex)) {
+			if (Gen1Mon.isNational(dex)) {
 				allOwned.add(dex);
 			}
 		}
@@ -53,7 +54,7 @@ public record DexSync(SortedSet<Integer> seen, SortedSet<Integer> owned) {
 		return data;
 	}
 
-	/** A {@code dex.sync} body (or a snapshot's {@code dex}): {@code seen} and {@code owned}, dex 1–151, nothing else. */
+	/** A {@code dex.sync} body (or a snapshot's {@code dex}): {@code seen} and {@code owned}, national numbers, nothing else. */
 	public static DexSync read(JsonElement element) throws DataException {
 		DataReader reader = DataReader.of(element, "").allowOnly(FIELDS);
 		return of(numbers(reader, "seen"), numbers(reader, "owned"));
@@ -63,7 +64,7 @@ public record DexSync(SortedSet<Integer> seen, SortedSet<Integer> owned) {
 		Set<Integer> out = new TreeSet<>();
 		int i = 0;
 		for (JsonElement value : reader.array(field)) {
-			out.add(DataReader.asInt(value, reader.path(field) + "/" + i++, 1, GenOneIds.MAX_DEX));
+			out.add(DataReader.asInt(value, reader.path(field) + "/" + i++, 1, Gen1Mon.MAX_NATIONAL));
 		}
 		return out;
 	}

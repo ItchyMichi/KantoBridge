@@ -17,6 +17,27 @@
 io.stdout:setvbuf("no") -- LÖVE block-buffers stdout; this also unbuffers mod.log
 
 local PORT = tonumber(os.getenv("KB_TEST_PORT") or "") or 27196
+-- KB_DATASET_MEMO=<seconds> (as kb_export.lua): the engine re-checks a dataset view's readiness on every
+-- record read, which on a network disk (the pod's volume) stretches gen1-bridge's export to many minutes;
+-- memoising the check for that many seconds brings it back to seconds (the data never changes during an
+-- export). Test-only: patches DatasetViews._ready (src/mods/DatasetViews.lua) in place.
+local DATASET_MEMO = tonumber(os.getenv("KB_DATASET_MEMO") or "") or 0
+local function memoDatasetChecks(seconds)
+  local ok, DatasetViews = pcall(require, "src.mods.DatasetViews")
+  if not ok or type(DatasetViews) ~= "table" or type(DatasetViews._ready) ~= "function" then return false end
+  local ready = DatasetViews._ready
+  DatasetViews._ready = function(self, view)
+    local now = love.timer.getTime()
+    if type(view) == "table" and view.kbReadyAt and now - view.kbReadyAt < seconds and not view.invalid
+        and not view.unavailable then
+      return true
+    end
+    local passed = ready(self, view)
+    if passed and type(view) == "table" then view.kbReadyAt = now end
+    return passed
+  end
+  return true
+end
 local EXTRA_SECONDS = tonumber(os.getenv("KB_DRIVER_EXTRA") or "") or 0 -- the runner's export allowance
 local SECONDS_LIMIT = tonumber(os.getenv("KB_DRIVER_SECONDS") or "") or (300 + EXTRA_SECONDS)
 
@@ -49,6 +70,9 @@ return function(game)
     if phase == "ready" then
       if status and status.ready then
         status.configure({ port = PORT })
+        if DATASET_MEMO > 0 then
+          print(("KB_DATASET_MEMO seconds=%d ok=%s"):format(DATASET_MEMO, tostring(memoDatasetChecks(DATASET_MEMO))))
+        end
         -- New Game without Oak's speech (src/core/Game.lua:173-200)
         game:startNewGame({ intro = false })
         phase = "world"

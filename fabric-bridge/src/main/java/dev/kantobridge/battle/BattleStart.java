@@ -4,7 +4,6 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import dev.kantobridge.pokemon.Gen1Mon;
-import dev.kantobridge.pokemon.GenOneIds;
 import dev.kantobridge.proto.Ids;
 import dev.kantobridge.world.DataException;
 import dev.kantobridge.world.DataReader;
@@ -29,6 +28,8 @@ public record BattleStart(String battle, Kind kind, @Nullable Trainer trainer, L
 	static final int MAX_COORD = 4096;
 	static final int MAX_NAME = 32;
 	public static final int MAX_TEAM = 6;
+	/** A trainer's party index (Gen 1, within its class) or id (Gen 3: Emerald's reach 854). */
+	public static final int MAX_PARTY = 1023;
 
 	private static final Set<String> FIELDS = Set.of("battle", "kind", "trainer", "team", "wild", "rules", "region");
 	private static final Set<String> TRAINER_FIELDS = Set.of("cls", "party", "name", "npc", "map", "x", "y");
@@ -54,8 +55,8 @@ public record BattleStart(String battle, Kind kind, @Nullable Trainer trainer, L
 	}
 
 	/**
-	 * The trainer: class symbol ({@code OPP_BROCK}), party index, and optionally the display name (ROM-derived), the NPC id
-	 * and its cell.
+	 * The trainer: class symbol ({@code OPP_BROCK} on Gen 1, {@code TRAINER_CLASS_LEADER} on Gen 3), party index or trainer
+	 * id, and optionally the display name (ROM-derived), the NPC id and its cell.
 	 */
 	public record Trainer(String cls, int party, @Nullable String name, @Nullable String npc, @Nullable String map, @Nullable Integer x,
 			@Nullable Integer y) {
@@ -125,7 +126,7 @@ public record BattleStart(String battle, Kind kind, @Nullable Trainer trainer, L
 	private static Trainer trainer(DataReader reader) throws DataException {
 		reader.allowOnly(TRAINER_FIELDS);
 		String cls = reader.string("cls", Ids.SYMBOL);
-		int party = reader.integer("party", 0, 255);
+		int party = reader.integer("party", 0, MAX_PARTY);
 		String name = null;
 		if (reader.has("name")) {
 			name = reader.string("name");
@@ -153,7 +154,7 @@ public record BattleStart(String battle, Kind kind, @Nullable Trainer trainer, L
 
 	private static Wild wild(DataReader reader) throws DataException {
 		reader.allowOnly(WILD_FIELDS);
-		int dex = reader.integer("dex", 1, GenOneIds.MAX_DEX);
+		int dex = reader.integer("dex", 1, Gen1Mon.MAX_NATIONAL);
 		int level = reader.integer("level", 1, Gen1Mon.MAX_LEVEL);
 		Integer x = reader.has("x") ? reader.integer("x", -MAX_COORD, MAX_COORD) : null;
 		Integer y = reader.has("y") ? reader.integer("y", -MAX_COORD, MAX_COORD) : null;

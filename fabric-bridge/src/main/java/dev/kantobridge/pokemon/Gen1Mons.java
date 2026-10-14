@@ -19,9 +19,10 @@ import org.jetbrains.annotations.Nullable;
 
 /**
  * Builds Cobblemon Pokémon from the hidden game's numbers (docs/PLAN.md U3, P11, Appendix B). Species are looked up by
- * national dex number and moves by Gen 1 move number (= Showdown {@code num}), each with a by-id fallback from
- * {@link GenOneIds}. Moves are set slot by slot: Cobblemon's {@code moves=} property would keep modern default moves in
- * the free slots. Server thread only (it reads Cobblemon's registries).
+ * national dex number and moves by Showdown {@code num} (= Gen 1's move numbers for Gen 1's moves), each with a by-id
+ * fallback: {@link NationalDexIds} for the first 386 species, {@link GenOneIds} for Gen 1's moves. Moves are set slot by
+ * slot: Cobblemon's {@code moves=} property would keep modern default moves in the free slots. Server thread only (it
+ * reads Cobblemon's registries).
  */
 public final class Gen1Mons {
 	/** Cobblemon lacks a species or move the hidden game asked for; the code says which, never the value. */
@@ -41,29 +42,31 @@ public final class Gen1Mons {
 	private Gen1Mons() {
 	}
 
-	/** The Cobblemon species for a Gen 1 dex number, or null. */
+	/** The Cobblemon species for a national dex number (MG7: any game's), or null. */
 	public static @Nullable Species species(int dex) {
-		if (!GenOneIds.isDex(dex)) {
+		if (!Gen1Mon.isNational(dex)) {
 			return null;
 		}
 		Species species = PokemonSpecies.getByPokedexNumber(dex, GenOneIds.NAMESPACE);
-		return species != null ? species
-				: PokemonSpecies.getByIdentifier(ResourceLocation.fromNamespaceAndPath(GenOneIds.NAMESPACE, GenOneIds.speciesId(dex)));
+		if (species != null || !NationalDexIds.isDex(dex)) {
+			return species;
+		}
+		return PokemonSpecies.getByIdentifier(ResourceLocation.fromNamespaceAndPath(GenOneIds.NAMESPACE, NationalDexIds.speciesId(dex)));
 	}
 
-	/** The Cobblemon move for a Gen 1 move number, or null. */
+	/** The Cobblemon move for a move number (Showdown's; MG7: any game's), or null. */
 	public static @Nullable MoveTemplate move(int number) {
-		if (!GenOneIds.isMove(number)) {
+		if (!Gen1Mon.isMoveNum(number)) {
 			return null;
 		}
 		MoveTemplate move = Moves.getByNumericalId(number);
-		return move != null ? move : Moves.getByName(GenOneIds.moveId(number));
+		return move != null || !GenOneIds.isMove(number) ? move : Moves.getByName(GenOneIds.moveId(number));
 	}
 
 	/**
 	 * A trainer's Pokémon (PLAN P11): the species at the level given, exactly the moves given, IVs of {@code 2·DV + 1}
-	 * (HP from the derived HP DV), nature Hardy, the species' first regular ability, no held item, never shiny, full HP and
-	 * PP.
+	 * (HP from the derived HP DV) or the IVs given (Gen 3), nature Hardy, the species' first regular ability, no held item,
+	 * never shiny, full HP and PP.
 	 */
 	public static Pokemon trainerMon(Gen1Mon mon) throws Missing {
 		Pokemon pokemon = base(mon);
@@ -74,7 +77,7 @@ public final class Gen1Mons {
 	}
 
 	/**
-	 * A Pokémon the hidden game gives the player: the species at the level given, the moves and DVs when given (else
+	 * A Pokémon the hidden game gives the player: the species at the level given, the moves and DVs or IVs when given (else
 	 * Cobblemon's defaults), Cobblemon's own nature and ability, no held item, never shiny, full HP and PP.
 	 */
 	public static Pokemon gift(Gen1Mon mon) throws Missing {
@@ -113,7 +116,9 @@ public final class Gen1Mons {
 		if (!pokemon.heldItem().isEmpty()) {
 			pokemon.removeHeldItem();
 		}
-		if (mon.dvs() != null) {
+		if (mon.ivs() != null) {
+			setIvs(pokemon, mon.ivs());
+		} else if (mon.dvs() != null) {
 			setIvs(pokemon, mon.dvs());
 		}
 		if (!moves.isEmpty()) {
@@ -142,6 +147,13 @@ public final class Gen1Mons {
 	public static void setIvs(Pokemon pokemon, Dvs dvs) {
 		for (Dvs.Stat stat : Dvs.Stat.values()) {
 			pokemon.setIV(cobblemonStat(stat), dvs.ivFor(stat));
+		}
+	}
+
+	/** IVs as Gen 3 keeps them: the same scale as Cobblemon's, so unchanged. */
+	public static void setIvs(Pokemon pokemon, Ivs ivs) {
+		for (Dvs.Stat stat : Dvs.Stat.values()) {
+			pokemon.setIV(cobblemonStat(stat), ivs.ivFor(stat));
 		}
 	}
 

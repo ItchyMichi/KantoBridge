@@ -39,12 +39,22 @@ class PartyMessagesTest {
 	}
 
 	@Test
+	void aGen3GiftReads() throws Exception {
+		// MG7: Emerald's starter: a national number past 151, a move past 165, IVs
+		PartyGive give = PartyGive.read(json("{\"give\":\"g-3\",\"dex\":252,\"level\":5,\"moves\":[1,43,71],"
+				+ "\"ivs\":{\"hp\":1,\"atk\":2,\"def\":3,\"spa\":4,\"spd\":5,\"spe\":6},\"source\":\"starter\"}"));
+		assertEquals(new Gen1Mon(252, 5, List.of(1, 43, 71), null, new Ivs(1, 2, 3, 4, 5, 6)), give.mon());
+		assertEquals(PartyGive.Source.STARTER, give.source());
+	}
+
+	@Test
 	void malformedGiftsAreRefused() throws Exception {
 		String base = "\"give\":\"g-1\",\"dex\":7,\"level\":5,\"source\":\"gift\"";
 		PartyGive.read(json("{" + base + "}"));
 		PartyGive.read(json("{" + base + ",\"nick\":\"\"}"));
 		for (String bad : new String[] {"{\"give\":\"g-1\",\"dex\":7,\"level\":5}", "{" + base.replace("\"gift\"", "\"stolen\"") + "}",
-				"{" + base.replace("\"dex\":7", "\"dex\":0") + "}", "{" + base + ",\"moves\":[]}", "{" + base + ",\"moves\":[200]}",
+				"{" + base.replace("\"dex\":7", "\"dex\":0") + "}", "{" + base + ",\"moves\":[]}", "{" + base + ",\"moves\":[2001]}",
+				"{" + base.replace("\"dex\":7", "\"dex\":2001") + "}", "{" + base + ",\"ivs\":{\"hp\":1}}",
 				"{" + base + ",\"nick\":\"" + "N".repeat(33) + "\"}", "{" + base + ",\"ot\":5}", "{" + base + ",\"uid\":\"x\"}",
 				"{" + base.replace("\"g-1\"", "\"g 1\"") + "}"}) {
 			assertThrows(DataException.class, () -> PartyGive.read(json(bad)), bad);

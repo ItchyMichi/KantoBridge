@@ -17,6 +17,7 @@ import dev.kantobridge.net.RelayService;
 import dev.kantobridge.pokemon.Dvs;
 import dev.kantobridge.pokemon.Gen1Mon;
 import dev.kantobridge.pokemon.Gen1Mons;
+import dev.kantobridge.pokemon.Ivs;
 import dev.kantobridge.proto.Envelope;
 import dev.kantobridge.proto.MsgTypes;
 import java.util.List;
@@ -87,6 +88,21 @@ public class BattleGameTests implements FabricGameTest {
 		PotentialAbility first = Gen1Mons.firstRegularAbility(pokemon);
 		helper.assertTrue(first != null && pokemon.getAbility().getTemplate() == first.getTemplate(), what + ": not the first ability");
 		helper.assertTrue(pokemon.heldItem().isEmpty(), what + ": holds an item");
+		helper.assertFalse(pokemon.getShiny(), what + ": shiny");
+		helper.assertTrue(pokemon.getCurrentHealth() == pokemon.getMaxHealth(), what + ": not at full HP");
+	}
+
+	/** MG7: a Gen 3 trainer Pokémon: the IVs as given (the same scale as Cobblemon's), else as {@link #assertTrainerMon}. */
+	static void assertGen3TrainerMon(GameTestHelper helper, Pokemon pokemon, int dex, int level, List<Integer> moves, Ivs ivs) {
+		String what = "trainer Pokémon " + dex;
+		helper.assertTrue(pokemon.getSpecies().getNationalPokedexNumber() == dex, what + ": species");
+		helper.assertTrue(pokemon.getLevel() == level, what + ": level");
+		helper.assertTrue(Gen1Mons.moveNumbers(pokemon).equals(moves), what + ": moves must be exactly the game's");
+		for (Dvs.Stat stat : Dvs.Stat.values()) {
+			int iv = pokemon.getIvs().getOrDefault(Gen1Mons.cobblemonStat(stat));
+			helper.assertTrue(iv == ivs.ivFor(stat), what + ": IV for " + stat + " is " + iv + ", want " + ivs.ivFor(stat));
+		}
+		helper.assertTrue(pokemon.getNature() == Natures.HARDY, what + ": nature must be Hardy");
 		helper.assertFalse(pokemon.getShiny(), what + ": shiny");
 		helper.assertTrue(pokemon.getCurrentHealth() == pokemon.getMaxHealth(), what + ": not at full HP");
 	}
@@ -163,6 +179,41 @@ public class BattleGameTests implements FabricGameTest {
 		GameTestSequence end = helper.startSequence()
 				.thenWaitUntil(() -> helper.assertTrue(discarded.isRemoved(), "the proxy wasn't discarded after the battle"))
 				.thenExecute(() -> helper.assertTrue(relay.of(MsgTypes.BATTLE_RESULT).size() == 2, "answered more than once"));
+		MockPlayers.leaveAfterBattle(helper, end, relay::close, player);
+	}
+
+	/** MG7: Emerald's numbers, IVs and class roles reach Cobblemon: a gym leader's proxy with Hoenn's Pokémon. */
+	@GameTest(template = EMPTY_STRUCTURE, batch = BATCH, timeoutTicks = 400)
+	public void aGen3TrainerBattleKeepsItsNumbersIvsAndRole(GameTestHelper helper) {
+		ServerPlayer player = MockPlayers.join(helper);
+		RelayTap.Recorder relay = RelayTap.open(player);
+		NPCEntity proxy;
+		try {
+			partner(player);
+			String team = "[{\"dex\":263,\"level\":12,\"moves\":[33,39],\"ivs\":{\"hp\":31,\"atk\":0,\"def\":5,\"spa\":10,\"spd\":20,\"spe\":30}},"
+					+ "{\"dex\":261,\"level\":14,\"moves\":[33,336,28],\"ivs\":{\"hp\":7,\"atk\":7,\"def\":7,\"spa\":7,\"spd\":7,\"spe\":7}}]";
+			String trainer = "{\"cls\":\"TRAINER_CLASS_LEADER\",\"party\":854,\"name\":\"TESTER\"}";
+			RelayService.get().receive(player, envelope(1, MsgTypes.BATTLE_START, start("bg-1", "trainer", trainer, team)));
+			proxy = BattleService.proxyOf(player);
+			helper.assertTrue(proxy != null, "no battle proxy (warnings: " + BattleService.warnings() + ")");
+			helper.assertTrue(proxy.getNpc().getId().equals(ResourceLocation.fromNamespaceAndPath(KantoBridge.MOD_ID, "battle_proxy_gym")),
+					"a Gen 3 leader is a gym leader");
+			helper.assertTrue(proxy.getNpc().getSkill() == 3, "gym leaders play at skill 3");
+			NPCPartyStore party = proxy.getParty();
+			helper.assertTrue(party != null && party.occupied() == 2, "the proxy's party isn't the team");
+			assertGen3TrainerMon(helper, party.get(0), 263, 12, List.of(33, 39), new Ivs(31, 0, 5, 10, 20, 30));
+			assertGen3TrainerMon(helper, party.get(1), 261, 14, List.of(33, 336, 28), new Ivs(7, 7, 7, 7, 7, 7));
+			BattleService.battleOf(player).stop();
+			List<Envelope> results = relay.of(MsgTypes.BATTLE_RESULT);
+			helper.assertTrue(results.size() == 1, "expected one answer for the stopped battle, got " + results.size());
+			assertResult(helper, results.get(0), "bg-1", "aborted");
+		} catch (RuntimeException e) {
+			cleanUp(helper, player, relay);
+			throw e;
+		}
+		NPCEntity discarded = proxy;
+		GameTestSequence end = helper.startSequence()
+				.thenWaitUntil(() -> helper.assertTrue(discarded.isRemoved(), "the proxy wasn't discarded after the battle"));
 		MockPlayers.leaveAfterBattle(helper, end, relay::close, player);
 	}
 

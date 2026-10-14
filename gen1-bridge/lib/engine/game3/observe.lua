@@ -30,13 +30,17 @@ function Observe.install(b)
   local def = b.def
 
   local function battleActive()
-    return b.ask(b.g3("battle.init"), "isActive", false) == true
+    return b.ask(b.g3("battle"), "isActive", false) == true
   end
 
   -- The name of what covers the field, or nil: a battle, a stack layer, a
-  -- choice, the message box (UI note §2).
+  -- choice, the message box (UI note §2). G3F: a battle held for Cobblemon
+  -- (battle.lua) covers nothing: the world is busy (f.battle), as on Gen 1.
   local function screenOver()
-    if battleActive() then return "BattleState" end
+    if battleActive() then
+      if type(b.heldBattle) == "function" and b.heldBattle() then return nil end
+      return "BattleState"
+    end
     local Stack = b.ui3("stack")
     local top = b.ask(Stack, "top", nil)
     local id = type(top) == "table" and top.id or (type(top) == "string" and top or nil)

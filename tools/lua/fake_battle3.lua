@@ -1,0 +1,353 @@
+-- The parts of Gen1Recomp v0.3.85's Gen 3 engine that the game3 adapter's
+-- G3F parts read (lib/engine/game3/battle.lua, party.lua, items.lua,
+-- routes.lua; GEN3_BRIDGE_PLAN.md §4.10), on top of fake_engine3.lua and
+-- fake_export3.lua: the battle bridge and the battle module, trainers and
+-- the prize, the party's giveMon, species and moves, the Pokedex, the bag and
+-- item data, the Safari Zone, the whiteout. Everything is made up: trainer
+-- ids, classes, names, species (internal = national - 250, as
+-- fake_export3's Pokemon.national), moves and items.
+--
+--   FakeBattle3.attach(E)         adds the modules and these helpers:
+--   E.trainerTable[id] = { class, className, name, party = {{species, level, ivs?, moves?}}, defeat?, double? }
+--   E.startTrainer(id, opts)      a script's trainerbattle: BattleBridge.start with a done that records the result
+--   E.startWild(species, level, opts)  a field encounter: BattleBridge.startWild
+--   E.fish(species, level)        Field.tryFishingEncounter (the rod's encounter)
+--   E.battleResults               what each start's done got, in order
+--   E.endNative(result)           ends a native (not held) battle as the engine would
+--   E.giveMon(species, level, nickname, toPC)  a script's givemon on the live session
+--
+-- Engine files (refs/gen1recomp/src/core/game3): battle_bridge.lua:122-132,
+-- :316-330, :397-501 (start, finish), :748-759 (startWild); battle/init.lua:
+-- 369-379, :408-488 (finish), :4279-4281 (abort); scripting/trainers.lua:
+-- 169-289; battle/prize.lua:167-200; party.lua:180-292; pokemon.lua:281-301,
+-- :472, :1089-1098, :1204; dex.lua:184-204; bag.lua:351-536;
+-- items_data.lua:333-385; safari.lua:118; field.lua:1714, :2054-2090;
+-- summary_data.lua:110; scripting/vm.lua:50-68.
+
+local FakeBattle3 = {}
+
+function FakeBattle3.attach(E)
+  local floor = math.floor
+
+  -- ---- species, moves (fake_export3's Pokemon.national: national = species + 250)
+  E.Pokemon = E.Pokemon or {}
+  function E.Pokemon.speciesFromNational(n)
+    n = tonumber(n)
+    if not n or n < 251 or n > 386 then return nil end
+    return n - 250
+  end
+  function E.Pokemon.movesAtLevel(species, level)
+    local moves = { 33 }
+    if (tonumber(level) or 1) >= 5 then moves[2] = 45 end
+    local pp = {}
+    for i = 1, #moves do pp[i] = 35 end
+    return moves, pp, pp
+  end
+  function E.Pokemon.movePp(id) return tonumber(id) and 20 + tonumber(id) % 20 or 0 end
+  function E.Pokemon.applyStats(mon)
+    mon.maxHp = 10 + 3 * (tonumber(mon.level) or 1)
+    if mon.hp == nil or mon.hp > mon.maxHp then mon.hp = mon.maxHp end
+    E.statsApplied = (E.statsApplied or 0) + 1
+  end
+  function E.Pokemon.moveFromTmItem(id) return E.tmMoves and E.tmMoves[tonumber(id)] or nil end
+
+  E.SummaryData = {}
+  function E.SummaryData.expForLevel(_rate, level) return (tonumber(level) or 1) ^ 3 end
+
+  E.Dex = {}
+  function E.Dex.setSeen(dex, species) dex.seen = dex.seen or {}; dex.seen[species] = true end
+  function E.Dex.setCaught(dex, species)
+    dex.seen, dex.owned = dex.seen or {}, dex.owned or {}
+    dex.seen[species], dex.owned[species] = true, true
+  end
+
+  -- ---- the party (party.lua:180-292): a record as giveMon makes one
+  E.monSerial = 0
+  E.Party = {}
+  function E.Party.giveMon(session, species, level, nickname, opts)
+    E.monSerial = E.monSerial + 1
+    local mon = {
+      species = tonumber(species), speciesId = tonumber(species), level = tonumber(level) or 5,
+      nickname = type(nickname) == "string" and nickname or "", moves = { 33 }, pp = { 35 }, maxPp = { 35 },
+      ivs = { hp = 1, atk = 2, def = 3, spa = 4, spd = 5, spe = 6 }, otName = session.name, growthRate = 0,
+      serial = E.monSerial,
+    }
+    E.Pokemon.applyStats(mon)
+    session.party = session.party or {}
+    local boxId, slot
+    if #session.party < 6 then
+      session.party[#session.party + 1] = mon
+    elseif type(opts) == "table" and opts.toPC then
+      session.storage = session.storage or { boxes = { { mons = {} } } }
+      local mons = session.storage.boxes[1].mons
+      slot = #mons + 1
+      mons[slot] = mon
+      boxId = 1
+    else
+      return false, 2, nil
+    end
+    session.dex = session.dex or { seen = {}, owned = {}, caught = {} }
+    session.dex.seen[mon.species], session.dex.owned[mon.species] = true, true
+    return true, boxId and 1 or 0, mon, boxId, slot
+  end
+  function E.giveMon(species, level, nickname, toPC)
+    return E.Party.giveMon(E.Runtime.getSession(), species, level, nickname, { toPC = toPC })
+  end
+
+  -- ---- trainers (scripting/trainers.lua:169-289) and the prize (battle/prize.lua:167-200)
+  E.trainerTable = {}
+  E.Trainers = {}
+  function E.Trainers.foeFromId(id)
+    local t = E.trainerTable[tonumber(id)]
+    if not t then return nil end
+    local party = {}
+    for i, m in ipairs(t.party) do
+      party[i] = { species = m.species, level = m.level, ivs = m.ivs or { hp = 7, atk = 7, def = 7, spa = 7, spd = 7, spe = 7 },
+                   iv = 7, moves = m.moves, trainerId = tonumber(id) }
+    end
+    return { species = party[1].species, level = party[1].level, party = party, trainerId = tonumber(id),
+             trainerClass = t.class, trainerName = t.name, doubleBattle = t.double }
+  end
+  function E.Trainers.info(id)
+    local t = E.trainerTable[tonumber(id)]
+    return t and { class = t.class, className = t.className, name = t.name, party = t.party } or nil
+  end
+  function E.Trainers.dialogs(id)
+    local t = E.trainerTable[tonumber(id)]
+    return t and { defeat = t.defeat } or {}
+  end
+  E.Prize = { MAX_MONEY = 999999 }
+  function E.Prize.rewardRse(id)
+    local t = E.trainerTable[tonumber(id)]
+    local last = t and t.party[#t.party]
+    return 40 * (last and last.level or 1)
+  end
+  function E.Prize.apply(session, amount)
+    local before = tonumber(session.money) or 0
+    session.money = math.min(E.Prize.MAX_MONEY, before + amount)
+    return session.money - before, session.money
+  end
+  function E.Prize.moneyMessage(name, amount) return ("%s got $%d for winning!"):format(tostring(name), amount) end
+
+  -- ---- the battle module (battle/init.lua): active, its state, abort -> finish -> onDone
+  E.Battle._active, E.Battle._st, E.Battle._onDone = false, nil, nil
+  function E.Battle.getState() return E.Battle._st end
+  function E.Battle.abort(result)
+    if not E.Battle._active then return end
+    E.Battle._active = false
+    E.aborts = (E.aborts or 0) + 1
+    if E.Field.unlock then E.Field.unlock() end
+    local cb = E.Battle._onDone
+    E.Battle._onDone = nil
+    if cb then cb(result or "run") end
+  end
+  function E.endNative(result) E.Battle.abort(result) end
+
+  -- ---- the whiteout (battle_bridge.lua:122-132; field.lua:2054-2090)
+  E.respawns = 0
+  function E.Field.respawnAtHeal()
+    E.respawns = E.respawns + 1
+    if E.Space.vm.running then E.Space.vm:halt(true) end
+  end
+  E.fishingFoe = nil
+  function E.Field.tryFishingEncounter(rod)
+    E.fishRods = (E.fishRods or 0) + 1
+    if E.fishingFoe then return E.BattleBridge.startWild(nil, E.game, E.fishingFoe, {}) end
+    return false
+  end
+  function E.Space.vm:halt(aborted)
+    self.running = false
+    E.halts = (E.halts or 0) + 1
+  end
+  function E.Space.returnToField() E.returnedToField = (E.returnedToField or 0) + 1 end
+
+  -- ---- the battle bridge (battle_bridge.lua:397-759): the start's checks, the battle, finish
+  E.outcomeCodes = { win = 1, lose = 2, run = 4, caught = 7 }
+  E.starts = {}
+  E.BattleBridge = {}
+  function E.BattleBridge.applyWhiteoutMoneyLoss(session)
+    local money = tonumber(session.money) or 0
+    local kept = floor(money / 2)
+    session.money = kept
+    return money - kept, kept
+  end
+  function E.BattleBridge.twoOpponentFoe(foe, idB)
+    local other = E.Trainers.foeFromId(idB)
+    local merged = {}
+    for k, v in pairs(foe) do merged[k] = v end
+    merged.party = {}
+    for _, m in ipairs(foe.party or {}) do merged.party[#merged.party + 1] = m end
+    for _, m in ipairs(other and other.party or {}) do merged.party[#merged.party + 1] = m end
+    return merged
+  end
+  function E.BattleBridge.start(mod, game, foe, opts)
+    opts = opts or {}
+    local session = E.Runtime.getSession()
+    E.starts[#E.starts + 1] = { foe = foe, opts = opts, headless = opts.headless == true, autoFight = opts.autoFight }
+    if not session then return nil, "no session" end
+    if #(session.party or {}) == 0 then return nil, "empty party" end
+    if E.failNextStart then
+      E.failNextStart = nil
+      if opts.done then opts.done("win") end
+      return nil, "start failed"
+    end
+    local done = opts.done
+    local st = {
+      trainerId = opts.trainerId or (foe and foe.trainerId), defeatText = opts.defeatText, double = opts.double,
+      wild = opts.wild == true, safari = opts.safari or (E.Safari.active and opts.wild) or nil, moneyMultiplier = 1,
+      kinds = { twoOpponents = opts.twoOpponents },
+    }
+    E.Battle._active, E.Battle._st = true, st
+    E.Field.lock("battle")
+    E.Battle._onDone = function(result)
+      session.battleOutcome = E.outcomeCodes[result] or 1
+      if result == "lose" then
+        E.BattleBridge.applyWhiteoutMoneyLoss(session)
+        E.Field.respawnAtHeal()
+      end
+      E.Space.returnToField()
+      if done then done(result) end
+    end
+    return true
+  end
+  function E.BattleBridge.startWild(mod, game, encounter, opts)
+    opts = opts or {}
+    opts.wild = true
+    return E.BattleBridge.start(mod, game, encounter, opts)
+  end
+
+  E.battleResults = {}
+  local function recorder(label)
+    return function(result)
+      E.battleResults[#E.battleResults + 1] = { label = label, result = result }
+    end
+  end
+  function E.startTrainer(id, opts)
+    opts = opts or {}
+    E.Space.vm.running = true
+    local foe = E.Trainers.foeFromId(id)
+    return E.BattleBridge.start(nil, E.game, foe, {
+      wild = false, trainerId = id, defeatText = opts.defeatText, double = opts.double, twoOpponents = opts.twoOpponents,
+      trainerIdB = opts.trainerIdB, done = recorder("trainer"),
+    })
+  end
+  function E.startWild(species, level, opts)
+    opts = opts or {}
+    local o = { done = opts.withDone and recorder("wild") or nil, firstBattleKind = opts.firstBattleKind,
+                safari = opts.safari, link = opts.link }
+    if opts.withDone then E.Space.vm.running = true end
+    return E.BattleBridge.startWild(nil, E.game, { species = species, level = level }, o)
+  end
+  function E.fish(species, level)
+    E.fishingFoe = { species = species, level = level }
+    local out = { E.Field.tryFishingEncounter(1) }
+    E.fishingFoe = nil
+    return (table.unpack or unpack)(out)
+  end
+
+  -- ---- the Safari Zone (safari.lua:118)
+  E.Safari = { active = false }
+  function E.Safari.isActive() return E.Safari.active == true end
+
+  -- ---- the bag (bag.lua:351-536): a made-up pocket layout, 99 a slot, ITEMS 30 slots
+  E.itemPockets = {}   -- id -> pocket name (default ITEMS)
+  E.hms, E.tms = {}, {}
+  E.ItemsData = { CAPACITY = { ITEMS = 30, KEY_ITEMS = 30, POKE_BALLS = 16, TM_CASE = 64, BERRY_POUCH = 46 } }
+  function E.ItemsData.pocketOf(id) return E.itemPockets[tonumber(id)] or "ITEMS" end
+  function E.ItemsData.isHm(id) return E.hms[tonumber(id)] == true end
+  function E.ItemsData.isTm(id) return E.tms[tonumber(id)] == true end
+  local function pocketList(bag, id)
+    bag.pockets = bag.pockets or {}
+    local pocket = E.ItemsData.pocketOf(id)
+    bag.pockets[pocket] = bag.pockets[pocket] or {}
+    return bag.pockets[pocket], pocket
+  end
+  function E.Bag.get(bag, id)
+    local list = pocketList(bag, id)
+    local n = 0
+    for _, row in ipairs(list) do
+      if row.id == tonumber(id) then n = n + row.qty end
+    end
+    return n
+  end
+  function E.Bag.add(bag, id, qty)
+    id, qty = tonumber(id), floor(tonumber(qty) or 1)
+    local list, pocket = pocketList(bag, id)
+    local have = E.Bag.get(bag, id)
+    local slotsNow = 0
+    for _, row in ipairs(list) do if row.id == id then slotsNow = slotsNow + 1 end end
+    local slotsNeeded = math.ceil((have + qty) / 99)
+    if #list - slotsNow + slotsNeeded > (E.ItemsData.CAPACITY[pocket] or 30) then return false, 0 end
+    for i = #list, 1, -1 do if list[i].id == id then table.remove(list, i) end end
+    local total = have + qty
+    while total > 0 do
+      local n = math.min(99, total)
+      list[#list + 1] = { id = id, qty = n }
+      total = total - n
+    end
+    return true, qty
+  end
+  function E.Bag.remove(bag, id, qty)
+    id, qty = tonumber(id), floor(tonumber(qty) or 1)
+    local have = E.Bag.get(bag, id)
+    if have < qty then return false end
+    local list = pocketList(bag, id)
+    for i = #list, 1, -1 do if list[i].id == id then table.remove(list, i) end end
+    local left = have - qty
+    while left > 0 do
+      local n = math.min(99, left)
+      list[#list + 1] = { id = id, qty = n }
+      left = left - n
+    end
+    return true
+  end
+
+  -- the flag store's vars (scripting/flags.lua): getVar(store, ctx, id)
+  function E.Flags.getVar(store, _ctx, id)
+    return type(store) == "table" and type(store.vars) == "table" and store.vars[tonumber(id)] or nil
+  end
+
+  -- the constants: items by name (C:id, constants.lua:39-41) and the trainer classes
+  local mt = getmetatable(E.Constants.of("emerald"))
+  local Methods = mt and mt.__index
+  if type(Methods) == "table" and Methods.id == nil then
+    function Methods:id(kind, name)
+      local t = E.constTables[kind]
+      for _, sub in pairs(type(t) == "table" and t or {}) do
+        if type(sub) == "table" then
+          for id, n in pairs(sub) do if n == name then return id end end
+        end
+      end
+      return nil
+    end
+  end
+  E.constTables.items = {
+    ITEM_ = { [1] = "ITEM_TEST_BALL", [2] = "ITEM_TEST_POTION", [3] = "ITEM_TEST_KEY", [4] = "ITEM_none",
+              [5] = "ITEM_POKE_BALL", [13] = "ITEM_POTION", [17] = "ITEM_PARALYZE_HEAL", [94] = "ITEM_FIRE_STONE",
+              [68] = "ITEM_RARE_CANDY", [289] = "ITEM_TM01", [294] = "ITEM_TM06", [339] = "ITEM_HM01",
+              [259] = "ITEM_MACH_BIKE", [110] = "ITEM_NUGGET", [93] = "ITEM_SUN_STONE" },
+  }
+  E.itemPockets[259], E.itemPockets[339] = "KEY_ITEMS", "TM_CASE"
+  E.itemPockets[289], E.itemPockets[294] = "TM_CASE", "TM_CASE"
+  E.itemPockets[5] = "POKE_BALLS"
+  E.hms[339] = true
+  E.tms[289], E.tms[294] = true, true
+  E.constTables.trainer_classes = {
+    TRAINER_CLASS_ = { [1] = "TRAINER_CLASS_YOUNGSTER", [2] = "TRAINER_CLASS_RIVAL", [3] = "TRAINER_CLASS_LEADER" },
+    FACILITY_CLASS_ = { [1] = "FACILITY_CLASS_WRONG" },
+  }
+
+  local mods = E.modules
+  mods["src.core.game3.battle"] = E.Battle
+  mods["src.core.game3.battle_bridge"] = E.BattleBridge
+  mods["src.core.game3.battle.prize"] = E.Prize
+  mods["src.core.game3.scripting.trainers"] = E.Trainers
+  mods["src.core.game3.pokemon"] = E.Pokemon
+  mods["src.core.game3.party"] = E.Party
+  mods["src.core.game3.summary_data"] = E.SummaryData
+  mods["src.core.game3.dex"] = E.Dex
+  mods["src.core.game3.items_data"] = E.ItemsData
+  mods["src.core.game3.safari"] = E.Safari
+end
+
+return FakeBattle3

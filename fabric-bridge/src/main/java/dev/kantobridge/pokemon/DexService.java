@@ -33,8 +33,8 @@ import net.minecraft.server.level.ServerPlayer;
  *
  * <ul>
  * <li><b>Cobblemon → the hidden game:</b> {@code POKEDEX_DATA_CHANGED_POST} (and Cobblemon's data sync on joining) make a
- * {@code dex.sync{seen, owned}} (dex ≤ 151) go to the client, at most every {@value #SYNC_EVERY_TICKS} ticks and only when
- * it changed; the client relays it to gen1-bridge.</li>
+ * {@code dex.sync{seen, owned}} (the first 386 species, MG7; each game's bridge keeps what its game holds) go to the
+ * client, at most every {@value #SYNC_EVERY_TICKS} ticks and only when it changed; the client relays it to gen1-bridge.</li>
  * <li><b>The hidden game → Cobblemon:</b> its entries (seen in a native battle: the Safari Zone, the old man's demo) are
  * written with {@code setKnowledgeProgress}, which posts no event, so the two directions never loop; owned is never
  * downgraded. They arrive as {@code dex.sync} C→S when the protocol's catalog gives that type a {@code c2s} leg (the
@@ -101,13 +101,13 @@ public final class DexService {
 		}
 	}
 
-	/** The player's Cobblemon Pokédex as {@code dex.sync} carries it: the first 151 species only. */
+	/** The player's Cobblemon Pokédex as {@code dex.sync} carries it: the species {@link NationalDexIds} names (1–386). */
 	public static DexSync snapshot(ServerPlayer player) {
 		TreeSet<Integer> seen = new TreeSet<>();
 		TreeSet<Integer> owned = new TreeSet<>();
 		for (Map.Entry<ResourceLocation, SpeciesDexRecord> entry : PlayerExtensionsKt.pokedex(player).getSpeciesRecords().entrySet()) {
 			ResourceLocation id = entry.getKey();
-			int dex = GenOneIds.NAMESPACE.equals(id.getNamespace()) ? GenOneIds.dexOf(id.getPath()) : 0;
+			int dex = GenOneIds.NAMESPACE.equals(id.getNamespace()) ? NationalDexIds.dexOf(id.getPath()) : 0;
 			if (dex == 0) {
 				continue;
 			}

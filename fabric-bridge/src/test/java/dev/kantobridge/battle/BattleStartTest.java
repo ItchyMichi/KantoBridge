@@ -12,6 +12,7 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import dev.kantobridge.pokemon.Dvs;
 import dev.kantobridge.pokemon.Gen1Mon;
+import dev.kantobridge.pokemon.Ivs;
 import dev.kantobridge.proto.ProtoJson;
 import dev.kantobridge.world.DataException;
 import java.nio.charset.StandardCharsets;
@@ -59,6 +60,24 @@ class BattleStartTest {
 	}
 
 	@Test
+	void aGen3TrainerBattleReads() throws Exception {
+		// MG7: national dex numbers past 151, Showdown moves past 165, IVs, Emerald's trainer ids past 255
+		BattleStart start = BattleStart.read(json("{\"battle\":\"b-3\",\"kind\":\"trainer\","
+				+ "\"trainer\":{\"cls\":\"TRAINER_CLASS_LEADER\",\"party\":854},"
+				+ "\"team\":[{\"dex\":254,\"level\":45,\"moves\":[345,348],\"ivs\":{\"hp\":31,\"atk\":0,\"def\":1,\"spa\":2,\"spd\":3,\"spe\":4}}],"
+				+ "\"rules\":{\"catch\":false,\"flee\":false}}"));
+		Gen1Mon sceptile = start.team().get(0);
+		assertEquals(254, sceptile.dex());
+		assertEquals(List.of(345, 348), sceptile.moves());
+		assertEquals(new Ivs(31, 0, 1, 2, 3, 4), sceptile.ivs());
+		assertNull(sceptile.dvs());
+		assertEquals(854, start.trainer().party());
+		BattleStart wild = BattleStart.read(json("{\"battle\":\"b-4\",\"kind\":\"static\",\"wild\":{\"dex\":386,\"level\":30},"
+				+ "\"rules\":{\"catch\":true,\"flee\":true}}"));
+		assertEquals(386, wild.wild().dex());
+	}
+
+	@Test
 	void kindsNeedTheirParts() throws Exception {
 		String rules = "\"rules\":{\"catch\":true,\"flee\":true}";
 		String team = "\"team\":[{\"dex\":1,\"level\":5,\"moves\":[33],\"dvs\":{\"atk\":1,\"def\":1,\"spd\":1,\"spc\":1}}]";
@@ -88,18 +107,23 @@ class BattleStartTest {
 		assertBad(with(good, "team", "[" + "{\"dex\":1,\"level\":5,\"moves\":[1],\"dvs\":{\"atk\":1,\"def\":1,\"spd\":1,\"spc\":1}},".repeat(6)
 				+ "{\"dex\":1,\"level\":5,\"moves\":[1],\"dvs\":{\"atk\":1,\"def\":1,\"spd\":1,\"spc\":1}}]"));
 		for (String mon : new String[] {
-				"{\"dex\":152,\"level\":5,\"moves\":[1],\"dvs\":{\"atk\":1,\"def\":1,\"spd\":1,\"spc\":1}}",
+				"{\"dex\":2001,\"level\":5,\"moves\":[1],\"dvs\":{\"atk\":1,\"def\":1,\"spd\":1,\"spc\":1}}",
 				"{\"dex\":1,\"level\":0,\"moves\":[1],\"dvs\":{\"atk\":1,\"def\":1,\"spd\":1,\"spc\":1}}",
 				"{\"dex\":1,\"level\":101,\"moves\":[1],\"dvs\":{\"atk\":1,\"def\":1,\"spd\":1,\"spc\":1}}",
 				"{\"dex\":1,\"level\":5,\"moves\":[],\"dvs\":{\"atk\":1,\"def\":1,\"spd\":1,\"spc\":1}}",
 				"{\"dex\":1,\"level\":5,\"moves\":[1,2,3,4,5],\"dvs\":{\"atk\":1,\"def\":1,\"spd\":1,\"spc\":1}}",
-				"{\"dex\":1,\"level\":5,\"moves\":[166],\"dvs\":{\"atk\":1,\"def\":1,\"spd\":1,\"spc\":1}}",
+				"{\"dex\":1,\"level\":5,\"moves\":[2001],\"dvs\":{\"atk\":1,\"def\":1,\"spd\":1,\"spc\":1}}",
 				"{\"dex\":1,\"level\":5,\"moves\":[1]}",
+				"{\"dex\":1,\"level\":5,\"moves\":[1],\"dvs\":{\"atk\":1,\"def\":1,\"spd\":1,\"spc\":1},"
+						+ "\"ivs\":{\"hp\":1,\"atk\":1,\"def\":1,\"spa\":1,\"spd\":1,\"spe\":1}}",
+				"{\"dex\":1,\"level\":5,\"moves\":[1],\"ivs\":{\"hp\":32,\"atk\":1,\"def\":1,\"spa\":1,\"spd\":1,\"spe\":1}}",
+				"{\"dex\":1,\"level\":5,\"moves\":[1],\"ivs\":{\"hp\":1,\"atk\":1,\"def\":1,\"spa\":1,\"spd\":1}}",
 				"{\"dex\":1,\"level\":5,\"moves\":[1],\"dvs\":{\"atk\":1,\"def\":1,\"spd\":1,\"spc\":1},\"shiny\":true}"}) {
 			assertBad(with(good, "team", "[" + mon + "]"));
 		}
 		assertBad(with(good, "trainer", "{\"cls\":\"OPP RIVAL\",\"party\":1}"));
-		assertBad(with(good, "trainer", "{\"cls\":\"OPP_RIVAL1\",\"party\":256}"));
+		assertBad(with(good, "trainer", "{\"cls\":\"OPP_RIVAL1\",\"party\":1024}"));
+		assertBad(json("{\"battle\":\"a\",\"kind\":\"static\",\"wild\":{\"dex\":2001,\"level\":30},\"rules\":{\"catch\":true,\"flee\":true}}"));
 		assertBad(with(good, "trainer", "{\"cls\":\"OPP_RIVAL1\",\"party\":1,\"name\":\"" + "X".repeat(33) + "\"}"));
 		assertBad(with(good, "trainer", "{\"cls\":\"OPP_RIVAL1\",\"party\":1,\"map\":\"oaks_lab\"}"));
 		assertBad(with(good, "trainer", "{\"cls\":\"OPP_RIVAL1\",\"party\":1,\"x\":5000}"));

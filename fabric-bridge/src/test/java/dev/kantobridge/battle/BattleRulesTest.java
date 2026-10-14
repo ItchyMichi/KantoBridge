@@ -27,6 +27,16 @@ class BattleRulesTest {
 		}
 		// The Champion is the rival's third class: Elite skill, even as a rival kind.
 		assertEquals(ProxyClass.ELITE, ProxyClass.of(BattleStart.Kind.RIVAL, "OPP_RIVAL3"));
+		// MG7: Gen 3's classes are roles (pokeemerald's TRAINER_CLASS_*), the team leaders as Giovanni.
+		assertEquals(ProxyClass.GYM, ProxyClass.of(BattleStart.Kind.TRAINER, "TRAINER_CLASS_LEADER"));
+		assertEquals(ProxyClass.GYM, ProxyClass.of(BattleStart.Kind.TRAINER, "TRAINER_CLASS_MAGMA_LEADER"));
+		assertEquals(ProxyClass.GYM, ProxyClass.of(BattleStart.Kind.TRAINER, "trainer_class_aqua_leader"));
+		assertEquals(ProxyClass.ELITE, ProxyClass.of(BattleStart.Kind.TRAINER, "TRAINER_CLASS_ELITE_FOUR"));
+		assertEquals(ProxyClass.ELITE, ProxyClass.of(BattleStart.Kind.RIVAL, "TRAINER_CLASS_CHAMPION"));
+		assertEquals(ProxyClass.RIVAL, ProxyClass.of(BattleStart.Kind.TRAINER, "TRAINER_CLASS_RIVAL"));
+		assertEquals(ProxyClass.RIVAL, ProxyClass.of(BattleStart.Kind.RIVAL, "TRAINER_CLASS_PKMN_TRAINER_1"));
+		assertEquals(ProxyClass.REGULAR, ProxyClass.of(BattleStart.Kind.TRAINER, "TRAINER_CLASS_YOUNGSTER"));
+		assertEquals(ProxyClass.REGULAR, ProxyClass.of(BattleStart.Kind.TRAINER, "TRAINER_CLASS_BROCK"), "Gen 1's names are not Gen 3's roles");
 		assertEquals(1, ProxyClass.REGULAR.skill());
 		assertEquals(3, ProxyClass.RIVAL.skill());
 		assertEquals(3, ProxyClass.GYM.skill());

@@ -286,7 +286,7 @@ function Ui.install(b)
   def("uiStack", function()
     local list = {}
     local g = b.game
-    local Battle = b.g3("battle.init")
+    local Battle = b.g3("battle")
     local inBattle = b.ask(Battle, "isActive", false) == true
     if inBattle then
       battleToken = battleToken or {}
@@ -295,7 +295,10 @@ function Ui.install(b)
     end
     if b.inField() then
       entry(list, b.session(), "Overworld", nil, "overworld")
-      if inBattle then
+      if inBattle and type(b.heldBattle) == "function" and b.heldBattle() then
+        -- G3F: a battle held for Cobblemon is no screen of ours (the world is busy)
+        battleToken = nil
+      elseif inBattle then
         entry(list, battleToken, "BattleState", "BattleState", "screen")
       else
         local M, Choice = b.ui3("message"), b.ui3("choice")

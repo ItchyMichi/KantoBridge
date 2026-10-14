@@ -20,7 +20,7 @@ import org.jetbrains.annotations.Nullable;
  */
 public record PartyGive(String give, Gen1Mon mon, @Nullable String nick, @Nullable String ot, Source source) {
 	public static final int MAX_NAME = 32;
-	private static final Set<String> FIELDS = Set.of("give", "dex", "level", "moves", "dvs", "nick", "ot", "source", "region");
+	private static final Set<String> FIELDS = Set.of("give", "dex", "level", "moves", "dvs", "ivs", "nick", "ot", "source", "region");
 
 	/** Where the Pokémon comes from. */
 	public enum Source {
@@ -43,17 +43,18 @@ public record PartyGive(String give, Gen1Mon mon, @Nullable String nick, @Nullab
 	public static PartyGive read(JsonObject data) throws DataException {
 		DataReader reader = DataReader.of(data, "").allowOnly(FIELDS);
 		String give = reader.string("give", Ids.ID);
-		int dex = reader.integer("dex", 1, GenOneIds.MAX_DEX);
+		int dex = reader.integer("dex", 1, Gen1Mon.MAX_NATIONAL);
 		int level = reader.integer("level", 1, Gen1Mon.MAX_LEVEL);
 		List<Integer> moves = reader.has("moves") ? Gen1Mon.readMoves(reader.array("moves"), reader.path("moves")) : List.of();
 		Dvs dvs = reader.has("dvs") ? Dvs.read(reader.element("dvs"), reader.path("dvs")) : null;
+		Ivs ivs = reader.has("ivs") ? Ivs.read(reader.element("ivs"), reader.path("ivs")) : null;
 		String nick = reader.has("nick") ? name(reader, "nick") : null;
 		String ot = reader.has("ot") ? name(reader, "ot") : null;
 		Source source = Source.byId(reader.string("source"));
 		if (source == null) {
 			throw new DataException(reader.path("source"), "unknown source");
 		}
-		return new PartyGive(give, new Gen1Mon(dex, level, moves, dvs), nick, ot, source);
+		return new PartyGive(give, new Gen1Mon(dex, level, moves, dvs, ivs), nick, ot, source);
 	}
 
 	/** A name field: a string of at most 32 characters (code points, as JSON Schema counts them). */

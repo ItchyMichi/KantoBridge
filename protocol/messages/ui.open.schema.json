@@ -89,7 +89,7 @@
       "x-rom-derived": true
     },
     "mon": {
-      "$ref": "../defs.schema.json#/$defs/dex",
+      "$ref": "../defs.schema.json#/$defs/nationalDex",
       "description": "naming: the Pokémon being named."
     },
     "grid": {

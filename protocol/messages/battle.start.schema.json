@@ -45,8 +45,8 @@
         "party": {
           "type": "integer",
           "minimum": 0,
-          "maximum": 255,
-          "description": "Party index within the class."
+          "maximum": 1023,
+          "description": "Party index within the class (Gen 1), or the trainer's id (Gen 3: Emerald's reach 854)."
         },
         "name": {
           "type": "string",
@@ -85,7 +85,7 @@
       "additionalProperties": false,
       "properties": {
         "dex": {
-          "$ref": "../defs.schema.json#/$defs/dex"
+          "$ref": "../defs.schema.json#/$defs/nationalDex"
         },
         "level": {
           "$ref": "../defs.schema.json#/$defs/level"

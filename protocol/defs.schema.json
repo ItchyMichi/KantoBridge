@@ -160,6 +160,20 @@
       },
       "description": "Gen 1 DVs. The HP DV is derived from these."
     },
+    "ivs": {
+      "type": "object",
+      "required": ["hp", "atk", "def", "spa", "spd", "spe"],
+      "additionalProperties": false,
+      "properties": {
+        "hp": {"type": "integer", "minimum": 0, "maximum": 31},
+        "atk": {"type": "integer", "minimum": 0, "maximum": 31},
+        "def": {"type": "integer", "minimum": 0, "maximum": 31},
+        "spa": {"type": "integer", "minimum": 0, "maximum": 31},
+        "spd": {"type": "integer", "minimum": 0, "maximum": 31},
+        "spe": {"type": "integer", "minimum": 0, "maximum": 31}
+      },
+      "description": "Gen 3 (and later) IVs, one per stat (MG7 G3F)."
+    },
     "cell": {
       "type": "object",
       "required": ["map", "x", "y"],
@@ -233,19 +247,22 @@
     },
     "teamMon": {
       "type": "object",
-      "required": ["dex", "level", "moves", "dvs"],
+      "required": ["dex", "level", "moves"],
       "additionalProperties": false,
       "properties": {
-        "dex": {"$ref": "#/$defs/dex"},
+        "dex": {"$ref": "#/$defs/nationalDex"},
         "level": {"$ref": "#/$defs/level"},
         "moves": {
           "type": "array",
-          "items": {"$ref": "#/$defs/gen1Move"},
+          "items": {"$ref": "#/$defs/moveNum"},
           "maxItems": 4,
           "minItems": 1
         },
-        "dvs": {"$ref": "#/$defs/dvs"}
-      }
+        "dvs": {"$ref": "#/$defs/dvs"},
+        "ivs": {"$ref": "#/$defs/ivs"}
+      },
+      "oneOf": [{"required": ["dvs"]}, {"required": ["ivs"]}],
+      "description": "A member of a team the hidden game hands over: Gen 1's with DVs, Gen 3's with IVs (MG7 G3F). Its numbers are within the game's compat (maxDex, maxMove), which the adapter keeps and the server checks."
     },
     "empty": {
       "type": "object",

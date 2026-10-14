@@ -231,6 +231,22 @@ window's pacing) as gen1, reading `love.window`; `hiddenStats` counts.
 - **Routes** (§1): the zone's exit is `world.stepped` at the exit cell → the pass; the hidden player's stand-in for the
   zone is the **parked exit cell** (no route map of its own, §10 E6); `replaceBlock` opens the exit cells.
 
+**As built (G3F, 2026-10-14).** Parts `party`, `battle`, `bag` (the items group; `items` is a module name Gen1Recomp
+keeps) and `routes` (PROGRESS.md "Several games: MG7" has the whole account). Differences from the text above:
+
+- **Side effects follow Gen 1, not the battle state.** Only the prize (the engine's `Prize.rewardRse`/`apply`) and the
+  battle's texts (the trainer's defeat line, the money message, shown in the field's message box after `Battle.abort`)
+  go into the hidden game; experience, evolutions and catches come back through Cobblemon's `party.sync` and
+  `dex.sync`, as on Gen 1 (`gen1.lua:2195-2202`). HP, status and PP likewise.
+- **Abort** stops the script (`Vm:halt`), so the trainer challenges again; Birch's first battle, which has no other
+  way out, goes on as a win.
+- **Item uses on party members** (stones, Rare Candy, TMs/HMs) are refused while a client follows instead of being
+  forwarded as `party.item`: the shadow party would lose them to the next sync.
+- **The route exit (E6) moved to MG8**: no Emerald zone exists until Hoenn's routes data; `routes.lua` answers the
+  server's `route.blackout` only.
+- **`dex.sync`** carries any game's numbers; each bridge keeps what its game holds (MULTI_GAME_PLAN §4.9's per-link
+  species list, applied on the bridge side, since the client relays one message to its link).
+
 ## 5. The Gen 3 export (G3D)
 
 The world note and the export note give the facts; the shape is the scene draft's (B3.3) with D13's quarters:
@@ -363,7 +379,7 @@ The world note and the export note give the facts; the shape is the scene draft'
 | G3B | `mirror.frame`: `w`/`h` either 160×144 or 240×160 |
 | G3C | `story.cells{map, cells[{x, y, metatile}]}` (Gen 3 runtime terrain) |
 | G3D | export kinds `g3map`, `g3tiles`, `g3sprites`; `encounters` and `names` gain Gen 3 shapes; `exportKind` enum |
-| G3F | dex/move ceilings by `compat` in `party.sync`, `battle.*`, the snapshot; `items.json` `symbols.gen3` |
+| G3F | dex/move ceilings by `compat` in `party.sync`, `battle.*`, the snapshot; `items.json` `symbols.gen3`; as built: defs `nationalDex`, `moveNum`, `ivs`; trainer `party` to 1023; `dex.sync` any game's numbers |
 
 Every change: schema, PROTOCOL.md, `kb_protocol.catalog --write`, the Java readers, as MG1–MG6 did.
 
@@ -404,7 +420,7 @@ maps `G3_TEST_*`, `layout/hoenn`); a golden scene; a GameTest building a synthet
 | **G3C** story | flags, toggles, `story.cells` | lupa; e2e a flag and an override — **built 2026-10-14** (see §4.6 "As built") |
 | **G3D** export | `g3*` resources, baked quarters, encounters, layout; the measurement driver first | lupa on the fake; pod export counts and hashes ✔ — **done 2026-10-14** (§5 "Measured", "As built") |
 | **G3E** builder | `Gen3FrontEnd`, the Gen 3 planner path, baked textures, habitats, two art sets in one pack | JUnit, golden scene, GameTest ✔ — **done 2026-10-14** (§6 "As built") |
-| **G3F** battles, party, items, routes | headless battles with `Battle.abort`, party sync, bag projection, the route exit | lupa; e2e a wild and a trainer battle ✔ |
+| **G3F** battles, party, items, routes | headless battles with `Battle.abort`, party sync, bag projection, the route exit | lupa; e2e a wild and a trainer battle ✔ — **done 2026-10-14** (§4.10 "As built"; the route exit moved to MG8) |
 | **G3G** | synthetic bundle, goldens, full suites; the pod's Hoenn build (MG8's first step) | full suite ✔ |
 
 ## 10. Decisions (defaults proceed)

@@ -12,12 +12,12 @@
   "properties": {
     "seen": {
       "type": "array",
-      "items": {"$ref": "../defs.schema.json#/$defs/dex"},
+      "items": {"$ref": "../defs.schema.json#/$defs/nationalDex"},
       "uniqueItems": true
     },
     "owned": {
       "type": "array",
-      "items": {"$ref": "../defs.schema.json#/$defs/dex"},
+      "items": {"$ref": "../defs.schema.json#/$defs/nationalDex"},
       "uniqueItems": true
     }
   }

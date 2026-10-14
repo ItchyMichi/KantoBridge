@@ -19,7 +19,8 @@ local Snapshot = {}
 local SYMBOL = "^[A-Za-z0-9_]+$"
 local UPPER = "^[A-Z0-9_]+$"
 local DIRS = { up = true, down = true, left = true, right = true }
-local STATUS = { SLP = "slp", PSN = "psn", BRN = "brn", FRZ = "frz", PAR = "par" }
+-- MG7 (G3F): Gen 3's bad poison (TOX) is poison to the protocol
+local STATUS = { SLP = "slp", PSN = "psn", BRN = "brn", FRZ = "frz", PAR = "par", TOX = "psn" }
 
 local floor = math.floor
 
@@ -83,6 +84,8 @@ function Snapshot.build(ctx)
   local save = type(ctx.save) == "table" and ctx.save or {}
   local dropped = 0
   local dexOf = ctx.dexOf or function() return nil end
+  -- MG7 (G3F): the running game's highest dex number (its compat; Gen 1's 151)
+  local maxDex = type(ctx.compat) == "table" and tonumber(ctx.compat.maxDex) or 151
   local moveNum = ctx.moveNum or function() return nil end
   local uidOf = ctx.uidOf or function() return nil end
 
@@ -150,14 +153,16 @@ function Snapshot.build(ctx)
     if dex and level then
       local moves = {}
       for _, mv in ipairs(type(mon.moves) == "table" and mon.moves or {}) do
-        local num = exact(type(mv) == "table" and moveNum(mv.id) or nil, 1, 2000)
+        -- Gen 1 keeps { id = ... } per move; MG7 (G3F): Gen 3 the move numbers themselves
+        local id = type(mv) == "table" and mv.id or mv
+        local num = exact(id ~= nil and moveNum(id) or nil, 1, 2000)
         if num and #moves < 4 then moves[#moves + 1] = num end
       end
       local entry = { dex = dex, level = level, moves = json.array(moves) }
       local uid = uidOf(mon)
       if type(uid) == "string" and uid:find(UID) and uid == uid:lower() then entry.uid = uid end
       local hp = int(mon.hp, 0, 9999)
-      local maxhp = int(type(mon.stats) == "table" and mon.stats.hp or nil, 1, 9999)
+      local maxhp = int(type(mon.stats) == "table" and mon.stats.hp or mon.maxHp, 1, 9999)
       if hp and maxhp then entry.hp, entry.maxhp = hp, maxhp end
       if STATUS[mon.status] then entry.status = STATUS[mon.status] end
       party[#party + 1] = entry
@@ -169,7 +174,7 @@ function Snapshot.build(ctx)
   local function dexList(set)
     local seen, out = {}, {}
     for species, v in pairs(type(set) == "table" and set or {}) do
-      local n = v and exact(dexOf(species), 1, 151) or nil
+      local n = v and exact(dexOf(species), 1, maxDex) or nil
       if n and not seen[n] then
         seen[n] = true
         out[#out + 1] = n

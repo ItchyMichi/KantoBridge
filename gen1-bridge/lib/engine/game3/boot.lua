@@ -18,7 +18,7 @@ Boot.REQUIRES = {
                             "persistenceFs", "loadOptions" },
   ["src.core.game3.runtime"] = { "getSession", "isActive" },
   ["src.core.game3.player"] = { "tryMove" },
-  ["src.core.game3.field"] = { "isLocked", "lock", "unlock", "callbackPending" },
+  ["src.core.game3.field"] = { "isLocked", "lock", "unlock", "callbackPending", "respawnAtHeal", "tryFishingEncounter" },
   ["src.core.game3.map"] = { "currentDef" },
   ["src.core.game3.warp"] = { "isBusy" },
   ["src.core.game3.objects"] = {},
@@ -26,9 +26,22 @@ Boot.REQUIRES = {
   ["src.core.game3.scripting.space"] = {},
   ["src.core.game3.scripting.flags"] = { "active", "getFlag", "countBadges" },
   ["src.core.game3.constants"] = { "of" },
-  ["src.core.game3.battle.init"] = { "isActive" },
+  -- the battle module under the name the engine loads it by (battle_bridge.lua's require)
+  ["src.core.game3.battle"] = { "isActive", "getState", "abort" },
+  -- G3F: battles, party, items (battle.lua, party.lua, items.lua, routes.lua)
+  ["src.core.game3.battle_bridge"] = { "start", "applyWhiteoutMoneyLoss", "twoOpponentFoe" },
+  ["src.core.game3.battle.prize"] = { "rewardRse", "apply", "moneyMessage" },
+  ["src.core.game3.scripting.trainers"] = { "foeFromId", "info", "dialogs" },
+  ["src.core.game3.pokemon"] = { "national", "speciesFromNational", "movesAtLevel", "movePp", "applyStats",
+                                 "moveFromTmItem" },
+  ["src.core.game3.party"] = { "giveMon" },
+  ["src.core.game3.summary_data"] = { "expForLevel" },
+  ["src.core.game3.dex"] = { "setSeen", "setCaught" },
+  ["src.core.game3.bag"] = { "get", "add", "remove" },
+  ["src.core.game3.items_data"] = { "pocketOf", "isHm", "isTm" },
+  ["src.core.game3.safari"] = { "isActive" },
   ["src.core.game3.audio"] = { "fadeOutBgm", "fadeInBgm", "currentSong" },
-  ["src.ui.game3.message"] = { "isOpen", "isWaiting", "currentPage" },
+  ["src.ui.game3.message"] = { "isOpen", "isWaiting", "currentPage", "show" },
   ["src.ui.game3.stack"] = { "top" },
   ["src.ui.game3.hud"] = { "busy" },
   ["src.ui.game3.fade"] = { "isActive" },
@@ -194,8 +207,32 @@ function Boot.install(b)
     return out
   end
 
-  -- Built at most once per logic step (setGame counts the steps).
+  -- The party's records as they are (snapshot reads species, level, moves,
+  -- hp, maxHp, status; uidOf knows them by identity), and the Pokedex by
+  -- species (session.dex.seen/owned, dex.lua:184-204).
+  local function partyOf(s)
+    local out = {}
+    for _, mon in ipairs(type(s.party) == "table" and s.party or {}) do
+      if type(mon) == "table" and #out < 6 then out[#out + 1] = mon end
+    end
+    return out
+  end
+  local function dexOf(s)
+    local dex = type(s.dex) == "table" and s.dex or {}
+    local seen, owned = {}, {}
+    for species, v in pairs(type(dex.seen) == "table" and dex.seen or {}) do
+      if v then seen[species] = true end
+    end
+    for species, v in pairs(type(dex.owned) == "table" and dex.owned or {}) do
+      if v then owned[species] = true end
+    end
+    return { seen = seen, owned = owned }
+  end
+
+  -- Built at most once per logic step (setGame counts the steps); G3F's
+  -- writes (the bag, money, the party) drop it (b.dropView).
   local cachedTick, cachedSession, cachedView = -1, nil, nil
+  function b.dropView() cachedView = nil end
   def("saveView", function()
     local s = b.session()
     if type(s) ~= "table" then return nil end
@@ -209,8 +246,8 @@ function Boot.install(b)
       inventory = inventory(s, store),
       money = tonumber(s.money) or 0,
       coins = tonumber(coins) or 0,
-      party = {},                       -- Cobblemon owns the party (GEN3_BRIDGE_PLAN.md G3F)
-      pokedex = { seen = {}, owned = {} },
+      party = partyOf(s),               -- the shadow of Cobblemon's party (G3F)
+      pokedex = dexOf(s),
       options = type(s.options) == "table" and s.options or nil,
       meta = type(s.meta) == "table" and s.meta or nil,
       version = type(s.version) == "string" and s.version or nil,
