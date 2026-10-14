@@ -106,6 +106,50 @@ def test_a_warp_that_never_arrives_arrives_from_where_the_player_stands():
     assert t.t.stats().timeouts == 1
 
 
+def test_the_fade_in_after_an_arrival_starts_no_warp():
+    # Emerald fades in after the map.entered that ended its warp (the user's item 11: a phantom warp after every door)
+    t = Tracker()
+    assert t.step(transitioning=True) == [{"phase": "start", "kind": "script"}]
+    arrive = t.step({"entered": [{"map": "TEST_UP", "via": "warp"}]}, transitioning=True, map="TEST_UP", x=1, y=1)
+    assert [d["phase"] for d in arrive] == ["arrive"]
+    for _ in range(5):
+        assert t.step(transitioning=True, map="TEST_UP", x=1, y=1) == []
+    assert t.step(map="TEST_UP", x=1, y=1) == []
+    assert t.step(transitioning=True, map="TEST_UP", x=1, y=1) == [{"phase": "start", "kind": "script"}], "a new one, later"
+    assert t.t.stats().tails == 5
+
+
+def test_a_fade_with_no_map_change_settles_where_the_player_stands():
+    # a cutscene's fade (Emerald's clock, a battle's end): over soon after the fade, not after the timeout
+    t = Tracker()
+    t.Warp.SETTLE = 3
+    assert t.step(transitioning=True) == [{"phase": "start", "kind": "script"}]
+    assert t.step(transitioning=True, top="screen") == []
+    out = []
+    for _ in range(4):
+        out += t.step()
+    assert out == [{"phase": "arrive", "kind": "script", "to": {"map": "TEST_TOWN", "x": 3, "y": 4, "facing": "down"}}]
+    stats = t.t.stats()
+    assert stats.settled == 1 and stats.timeouts == 0
+
+
+def test_warps_with_a_departure_never_settle_early():
+    # a door's, Fly's: only a map.entered or the timeout ends them
+    for first in ({"warped": {"kind": "door", "map": "TEST_TOWN"}}, None):
+        t = Tracker()
+        t.Warp.SETTLE = 2
+        t.Warp.ARRIVE_TIMEOUT = 50
+        if first:
+            assert t.step(first) == [{"phase": "start", "kind": "door"}]
+        else:
+            assert t.step(departure="fly") == []
+            assert t.step(transitioning=True) == [{"phase": "start", "kind": "fly"}]
+        out = []
+        for _ in range(10):
+            out += t.step()
+        assert out == [] and t.t.stats().settled == 0
+
+
 def test_an_arrival_that_doesnt_fit_the_schema_is_held_back():
     t = Tracker()
     t.step({"warped": {"kind": "door", "map": "TEST_TOWN"}})

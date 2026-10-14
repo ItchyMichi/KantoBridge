@@ -32,6 +32,14 @@
 --   blackout                        a blackout's warp to the heal point
 --   script                          any other warp (cutscenes, mods)
 --
+-- Two Gen 3 lessons (the user's item 11, 2026-10-14: Emerald's screen went
+-- dark for ten seconds after every door): an engine may keep fading in after
+-- the map.entered that ended a warp, so after an arrival a transition starts
+-- no warp until it has ended once; and a fade with no map change (a
+-- cutscene's, a battle's end) is no warp, so a "script" warp that only a
+-- transition started, whose transition is over for SETTLE steps without a
+-- map.entered, arrives from where the player stands (settled).
+--
 -- A cave shaft's warp (act/kb_climb.lua, docs/PROTOCOL.md "Ladders and
 -- holes"): the act queues the engine's warp command and calls expect(kind,
 -- re, gen); the next warp that isn't a warp-table one (a queued script's)
@@ -52,6 +60,9 @@ Warp.NOT_WARPS = { connection = true, reload = true, boot = true }
 -- current position anyway (a warp the engine dropped, e.g. a checkpoint
 -- restore, which enters a map without map.entered)
 Warp.ARRIVE_TIMEOUT = 1200
+-- logic steps a fade-started script warp waits, its transition over, for a
+-- map.entered before it counts as no warp at all
+Warp.SETTLE = 60
 -- logic steps a warp.take's expectation waits for its warp to start
 Warp.EXPECT = 120
 
@@ -84,7 +95,9 @@ function Warp.new(opts)
   local hint          -- a departure seen before its fade: "fly", "teleport", "hole"
   local expected      -- a warp.take's warp to come: { kind, re, gen, at }
   local steps = 0
-  local counts = { started = 0, arrived = 0, late = 0, timeouts = 0, heldBack = 0, taken = 0, lapsed = 0 }
+  local tail = false  -- an arrival's transition still under way: it starts no new warp
+  local counts = { started = 0, arrived = 0, late = 0, timeouts = 0, heldBack = 0, taken = 0, lapsed = 0, settled = 0,
+    tails = 0 }
 
   -- The next script warp is a cave shaft's (act/kb_climb.lua): kind
   -- "stairs" or "hole", answering the warp.take with seq `re` from the
@@ -100,14 +113,15 @@ function Warp.new(opts)
     ev = ev or {}
     local out = {}
 
-    local function start(kind, taken)
+    local function start(kind, taken, soft)
       local re, gen
       if taken and expected then
         kind, re, gen = expected.kind, expected.re, expected.gen
         expected = nil
         counts.taken = counts.taken + 1
+        soft = false
       end
-      current = { kind = kind, at = steps, re = re, gen = gen }
+      current = { kind = kind, at = steps, re = re, gen = gen, soft = soft and kind == "script" }
       counts.started = counts.started + 1
       out[#out + 1] = { "warp", { phase = "start", kind = kind }, "warp", re = re, gen = gen }
     end
@@ -123,6 +137,7 @@ function Warp.new(opts)
         if log then log.warn("warp.arrive_held_back", { kind = current.kind, why = why }) end
       end
       current = nil
+      tail = f.transitioning == true
     end
 
     if expected and not current and steps - expected.at > Warp.EXPECT then
@@ -132,14 +147,17 @@ function Warp.new(opts)
     end
     if ev.warped and not current then start(Warp.departureKind(ev.warped)) end
     if ev.blackout and not current then start("blackout") end
+    if not f.transitioning then tail = false end
     if not current then
       if f.departure then
         hint = f.departure
       elseif not f.transitioning then
         hint = nil
       end
-      if f.transitioning then
-        start(hint or "script", hint == nil)
+      if f.transitioning and tail then
+        counts.tails = counts.tails + 1
+      elseif f.transitioning then
+        start(hint or "script", hint == nil, hint == nil)
         hint = nil
       end
     end
@@ -152,6 +170,16 @@ function Warp.new(opts)
           hint = nil
         end
         arrive("entered")
+      end
+    end
+    if current and current.soft then
+      if f.transitioning then
+        current.quiet = nil
+      elseif not current.quiet then
+        current.quiet = steps
+      elseif steps - current.quiet >= Warp.SETTLE then
+        counts.settled = counts.settled + 1
+        arrive("settled")
       end
     end
     if current and steps - current.at > Warp.ARRIVE_TIMEOUT and not f.transitioning

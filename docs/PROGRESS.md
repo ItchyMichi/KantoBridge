@@ -2185,6 +2185,17 @@ test of the second half). Filming found and fixed:
   within two seconds (a forced move; no fade, no teleport). PLAYTEST.md's "walls or overlaps" note was wrong: it is now
   an item to try.
 
+**After MG8: the user's item 11, the ten-second stalls** (2026-10-14): Emerald keeps fading in after the
+`map.entered` that ends a warp (and fades for cutscenes, the clock and a battle's end without any map change); gen1-bridge's
+warp observer (`observe/kb_warp.lua`) started a `script` warp on that fade, which never arrived: the client faded out
+and held the player for its ten-second arrival timeout, after almost every door (14 times in one story run; the bridge
+logged `warp.no_arrival` 13 times). Now the transition that carried an arrival starts no warp until it has ended once
+(`tails`), and a fade-started script warp whose fade ends without a map change arrives `Warp.SETTLE` (60) steps later
+from the player's cell (`settled`); doors, Fly, teleports, cave shafts and blackouts are unchanged. Checks: lupa 3 new
+(`test_lua_warp.py`); Emerald's door e2e now asserts one start and one arrival (it fails on the old observer:
+`[start door, arrive door, start script]`); Emerald 6 and Gen 1 12 e2e passed; the story run in the real client: no
+`warp.no_arrival`, no client `arrive_timeout`, about three minutes faster.
+
 ### Handoff (2026-10-14): after MG6, for whoever continues
 
 **State.** MG1–MG6 of [specs/MULTI_GAME_PLAN.md](specs/MULTI_GAME_PLAN.md) are done and committed locally (never

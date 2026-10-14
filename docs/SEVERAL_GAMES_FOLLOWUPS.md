@@ -34,9 +34,12 @@ The multi-game plan ([specs/MULTI_GAME_PLAN.md](specs/MULTI_GAME_PLAN.md)) is do
       `ui.open` sends no default): send the species' name as the default, or allow an empty name.
 - [ ] **Starting in Hoenn:** a fresh player always follows Kanto's game first (the legacy region); there is no way to
       choose where to start (the video's autopilot forced Hoenn).
-- [ ] **Emerald's script warps** (Mom leading the player into the house, leaving the rival's house) end only by the
-      warp observer's 20-second timeout (`warp.no_arrival kind=script`, the client's `warp: arrive_timeout`): the
-      client may pause there.
+- [x] **Emerald's script warps** (2026-10-14): not the script warps themselves but every warp's tail. Emerald keeps
+      fading in after the map.entered that ends a warp, and gen1-bridge's warp observer took that fade for a new "script"
+      warp that never arrived: the client went dark and held the player for ten seconds after almost every door and
+      stairs (14 times in one story run), and cutscene fades with no map change (the clock, a battle's end, Birch's
+      lab) did the same. The fade that carried an arrival now starts no warp, and a fade-started script warp whose fade
+      ends without a map change arrives a second later where the player stands. The story run now: none.
 
 ## Later: not in the plan (§8 of the plan)
 

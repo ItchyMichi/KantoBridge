@@ -219,6 +219,10 @@ optional ones. The schemas give the exact types and limits.
   entry cell; a door walk-out follows as its own `player.pos` kind `script`.
 - **Connection crossings** (walking off a map edge into the connected map) are not warps: the step's
   `player.pos` simply names the new map and cell.
+- **A fade is not always a warp** (Gen 3, 2026-10-14): a `script` warp that only a screen transition started, and whose
+  transition ends without the map being entered, arrives about a second later at the player's own cell (a cutscene's
+  fade, a battle's end); and the fade-in after an arrival starts no new warp. Every other warp arrives when its map is
+  entered, or from the player's cell after 1,200 logic steps.
 - **Order within one logic step:** `player.state`, then `warp`, then `player.pos`/`player.blocked`.
 
 #### Ladders and holes (H5)

@@ -157,6 +157,11 @@ async def _field(port, serving):
     report["arrived"] = arrived["data"]["map"]
 
     await asyncio.sleep(2)  # the door's arrival settles
+    await asyncio.sleep(0.2)
+    # the user's item 11: the engine fades in after the map.entered that ended the warp; that tail starts no second warp
+    phases = [(m["data"]["phase"], m["data"]["kind"]) for m in mc.received[since:] if m["type"] == "warp"]
+    report["warp_messages"] = phases
+    assert phases == [("start", report["warp"][1]), ("arrive", report["warp"][1])], phases
     cell = (await mc.request("resync", reply_type="snapshot", timeout=10))["data"]["player"]
     parked = (await mc.request("region.park", {"region": "hoenn"}, reply_type="act.result", timeout=30))["data"]
     report["park"] = parked
