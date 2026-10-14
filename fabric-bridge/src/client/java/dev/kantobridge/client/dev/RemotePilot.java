@@ -22,6 +22,8 @@ import dev.kantobridge.client.bridge.BridgeRuntime;
 import dev.kantobridge.client.bridge.ClientBridgeState;
 import dev.kantobridge.client.bridge.Links;
 import dev.kantobridge.client.move.InputLock;
+import dev.kantobridge.client.move.MoveRuntime;
+import dev.kantobridge.client.move.MovementSync;
 import dev.kantobridge.client.ui.ChoiceModel;
 import dev.kantobridge.client.ui.Keybinds;
 import dev.kantobridge.client.ui.MenuModel;
@@ -915,6 +917,31 @@ final class RemotePilot {
 			out.addProperty("y", state.y());
 			out.addProperty("facing", state.facing());
 			out.addProperty("mode", state.mode());
+			WorldIndex index = ClientWorldIndex.current();
+			BlockPos cell = index == null || state.map() == null ? null : index.cellOrigin(state.map(), state.x(), state.y());
+			if (cell != null) {
+				// where the hidden player's cell is in the world (its north-west block)
+				JsonObject at = new JsonObject();
+				at.addProperty("x", cell.getX());
+				at.addProperty("z", cell.getZ());
+				out.add("hidden_block", at);
+			}
+		}
+		MovementSync.Stats move = MoveRuntime.stats();
+		if (move != null) {
+			JsonObject counts = new JsonObject();
+			counts.addProperty("steps", move.steps);
+			counts.addProperty("pushes", move.pushes);
+			counts.addProperty("blocked", move.blocked);
+			counts.addProperty("snaps", move.snaps);
+			counts.addProperty("drifts", move.drifts);
+			counts.addProperty("steers", move.steers);
+			counts.addProperty("teleports", move.teleports);
+			counts.addProperty("jumps", move.jumps);
+			counts.addProperty("forced", move.forced);
+			counts.addProperty("syncs", move.syncs);
+			counts.addProperty("positions", move.positions);
+			out.add("move", counts);
 		}
 		Links links = Links.get();
 		if (links != null) {

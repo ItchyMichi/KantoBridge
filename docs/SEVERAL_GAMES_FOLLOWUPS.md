@@ -15,12 +15,19 @@ The multi-game plan ([specs/MULTI_GAME_PLAN.md](specs/MULTI_GAME_PLAN.md)) is do
 
 ## Gaps to fix (development)
 
-- [ ] **Hoenn's shape map is too big:** 1,766,184 characters against a 524,288 budget (about 3.4 times), sent to every
-      player who joins. The fix is planned as voxel plan R10 (a region's shape map sent in parts, on demand).
-- [ ] **Three Hoenn seams** where neighbouring maps don't meet: Dewford Town / Route 107, Fallarbor Town / Route 114,
-      Verdanturf Town / Route 116 (plus one overlap).
-- [ ] **Hoenn maps not built:** Sootopolis and others that no door or warp reaches (the truck and the maps only left by
-      a warp are built since `6ce738b`); 36 interiors have no known arrival cell.
+- [ ] **Hoenn's shape map is too big:** 2,080,948 characters against a 524,288 budget (about 4 times; 1,766,184 before
+      the 151 maps built since), sent to every player who joins, and at the build's Gen 3 limit of 32 parts. The fix is
+      planned as voxel plan R10 (a region's shape map sent in parts, on demand).
+- [x] **Three Hoenn seams** where neighbouring maps don't meet (2026-10-14: checked, nothing to rebuild). The game's own
+      map data disagrees by two cells between western and eastern Hoenn, so one of the four joins can't meet. The build
+      keeps the narrow Petalburg City / Route 104 path (2 cells wide) straight and puts the seam on Fallarbor Town /
+      Route 114 and Dewford Town / Route 107; in the real client, walking across either, you are walked two cells
+      sideways just past the edge (`tools/e2e/seam_check.py`). Route 116 / Verdanturf Town can't be crossed in the
+      game; its overlap covers only trees and rocks.
+- [x] **Hoenn maps not built** (2026-10-14): every map a player can be put in is built now: 508 of 519 (the 11 left out
+      are the decomp's unused and prototype maps), among them Sootopolis, the S.S. Tidal, the contest halls, the ferry's
+      islands, Navel Rock and the secret bases. The 36 "no arrival" interiors were the export's warp landings, 1-based
+      where the protocol says 0-based: every interior now sits under its own door. Warnings: 7 (were 43).
 - [ ] **Emerald's trades, daycare and eggs** are undone by the next party sync.
 - [ ] **Hoenn's people and the surf blob** are drawn as placeholders; **animated tiles and darkness** aren't shown.
 - [ ] **An empty nickname can't be confirmed** in the client (the hidden game would keep the species' name, but

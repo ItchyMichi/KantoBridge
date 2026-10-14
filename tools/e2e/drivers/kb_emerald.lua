@@ -41,6 +41,9 @@
 --                   Wild Routes test pass's Hoenn end (data/routes.json:
 --                   EM_LITTLEROOT_TOWN (18, 14), facing down); serves: the
 --                   test walks the clearing into the route map and back.
+--   spot            the same new game, then onto KB_SPOT_MAP (KB_SPOT_X,
+--                   KB_SPOT_Y) facing KB_SPOT_FACING; serves (a seam's check:
+--                   tools/e2e/seam_check.py walks across it in the real client).
 --   title_continue  the same new game saved into the test slot, then back to
 --                   the title (Game3:returnToTitle); serves: region.start
 --                   CONTINUEs.
@@ -66,6 +69,10 @@ local EXTRA_SECONDS = tonumber(os.getenv("KB_DRIVER_EXTRA") or "") or 0
 local SECONDS_LIMIT = tonumber(os.getenv("KB_DRIVER_SECONDS") or "") or (300 + EXTRA_SECONDS)
 local LABEL = "KB_EMERALD_TEST"
 local TOWN = "EM_LITTLEROOT_TOWN"
+-- scene spot: another map and cell to serve from
+if SCENE == "spot" then TOWN = os.getenv("KB_SPOT_MAP") or TOWN end
+local SPOT_X, SPOT_Y = tonumber(os.getenv("KB_SPOT_X") or ""), tonumber(os.getenv("KB_SPOT_Y") or "")
+local SPOT_FACING = os.getenv("KB_SPOT_FACING") or "down"
 
 local SaveData = require("src.core.SaveData")
 local GameVersion = require("src.core.GameVersion")
@@ -175,7 +182,7 @@ return function(game)
           print(("KB_TITLE slot=%d hasSave=%s"):format(num(active()), word(slotHasSave(active()))))
           phase = "serve"
         elseif SCENE == "field" or SCENE == "title_continue" or SCENE == "sign" or SCENE == "story"
-            or SCENE == "battle" or SCENE == "route" then
+            or SCENE == "battle" or SCENE == "route" or SCENE == "spot" then
           local ok, err = pcall(game._handleBootAction, game, { action = "new_game", name = "TEST", gender = 0 })
           if not ok then fail("new_game " .. word(err):sub(1, 40)) end
           phase = "newgame"
@@ -192,8 +199,13 @@ return function(game)
         start = { x = tonumber(w.x), y = tonumber(w.y) + 1 }
         -- MG8: the test pass's exit cell (gen1-bridge/data/routes.json's `to` end)
         if SCENE == "route" then start = { x = 18, y = 14 } end
+        if SCENE == "spot" then
+          if not (SPOT_X and SPOT_Y) then fail("no_spot") end
+          start = { x = SPOT_X, y = SPOT_Y }
+        end
         local Warp = mod3("warp")
-        local ok = pcall(Warp.request, nil, game, TOWN, start.x, start.y, "down", { fade = false })
+        local ok = pcall(Warp.request, nil, game, TOWN, start.x, start.y, SCENE == "spot" and SPOT_FACING or "down",
+          { fade = false })
         if not ok then fail("warp_request") end
         phase = "town"
       end
@@ -211,7 +223,7 @@ return function(game)
             wall = d[1]
           end
         end
-        if SCENE == "field" or SCENE == "story" or SCENE == "battle" or SCENE == "route" then
+        if SCENE == "field" or SCENE == "story" or SCENE == "battle" or SCENE == "route" or SCENE == "spot" then
           print(("KB_SERVING map=%s x=%d y=%d wall=%s"):format(TOWN, start.x, start.y, wall))
           phase = "serve"
         elseif SCENE == "sign" then

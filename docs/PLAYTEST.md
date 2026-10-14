@@ -884,6 +884,10 @@ it has been seen in a real client yet.
       Town had no spot that fits a clearing, so Kanto's end is in Viridian.
 - [ ] **Your exits:** when you want them elsewhere, stand where each clearing should start, face the trees, press F7
       and send me the map, cell and facing (as for the Viridian zone).
-- **Known gaps:** Hoenn's three seams (Dewford Town and Route 107, Fallarbor Town and Route 114, Verdanturf Town and
-  Route 116) are walls or overlaps; Emerald's in-game trades, daycare and eggs are undone by the next party sync;
-  Hoenn's shape map is about 1.7 MB, sent to each joining client.
+- [ ] **Hoenn's two seams:** walk west from Fallarbor Town into Route 114, and east from Dewford Town into Route 107
+      (rows 10–11 on foot): just past the edge you are walked two cells sideways (south on Route 114, north on Route
+      107). The game's own map data disagrees by two cells there, so one of the four joins between western
+      and eastern Hoenn can't meet; the build keeps the narrow Petalburg City / Route 104 path straight and puts the
+      seam on these two wide ones (checked in the real client, 2026-10-14, `tools/e2e/seam_check.py`).
+- **Known gaps:** Emerald's in-game trades, daycare and eggs are undone by the next party sync; Hoenn's shape map is
+  about 1.7 MB, sent to each joining client.

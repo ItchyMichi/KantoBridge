@@ -2169,6 +2169,22 @@ test of the second half). Filming found and fixed:
 - The client can't confirm an empty nickname (the hidden game keeps the species name, but `ui.open` sends no default):
   the pilot types the species' name. A gap for the user's play-test.
 
+**After MG8: the user's items 5 and 6** ([SEVERAL_GAMES_FOLLOWUPS.md](SEVERAL_GAMES_FOLLOWUPS.md), 2026-10-14):
+- **Item 6, every map built:** the Gen 3 export wrote a warp's landing 1-based (the engine keeps `destWarp = warp_id + 1`,
+  `src/import/gba/extract_map_events.lua:313`) where PROTOCOL.md says 0-based, so every Hoenn interior sat one warp off
+  under its door and 36 fell off their target's list; it is 0-based now. The builder also places every map a player can
+  be put in by a script, a ferry or a dynamic warp (kind `script`, under the root, each group with its warps; the
+  decomp's UNUSED and PROTOTYPE maps never). Hoenn: 508 of 519 maps (was 357), warnings 7 (were 43: only the seams
+  below), 463 s; the shape map grew to 2,080,948 characters, 32 parts (item 4).
+- **Item 5, the seams, checked rather than rebuilt:** Hoenn's connections disagree by two cells between its west (Route
+  104, Rustboro City, Dewford Town, Routes 114–116) and the rest, so one side of four joins breaks whatever the layout:
+  Petalburg City / Route 104 (a path two cells wide, which a two-cell shift closes), or Dewford Town / Route 107, Fallarbor
+  Town / Route 114 and Route 116 / Verdanturf Town (wide ones, and a join nothing crosses). The engine's layout already
+  breaks the second group. `tools/e2e/seam_check.py` (drivers/kb_emerald.lua's new `spot` scene, the real client)
+  walked across both crossable seams: the client lands the player two cells off and walks them onto the hidden cell
+  within two seconds (a forced move; no fade, no teleport). PLAYTEST.md's "walls or overlaps" note was wrong: it is now
+  an item to try.
+
 ### Handoff (2026-10-14): after MG6, for whoever continues
 
 **State.** MG1–MG6 of [specs/MULTI_GAME_PLAN.md](specs/MULTI_GAME_PLAN.md) are done and committed locally (never
