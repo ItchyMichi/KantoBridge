@@ -102,6 +102,8 @@ public final class ClientStoryView {
 			});
 			dispatcher.on(MsgTypes.STORY_TOGGLES, message -> rules.onToggles(message.data()));
 			dispatcher.on(MsgTypes.STORY_BLOCKS, message -> rules.onBlocks(message.data()));
+			// MG7 (G3C): Gen 3's changed cells, kept for the Gen 3 world
+			dispatcher.on(MsgTypes.STORY_CELLS, message -> rules.onCells(message.data()));
 			dispatcher.on(MsgTypes.STORY_LIT, message -> rules.onLit(message.data()));
 			dispatcher.on(MsgTypes.ROUTE_PROGRESS, message -> rules.onRouteProgress(message.data()));
 		}

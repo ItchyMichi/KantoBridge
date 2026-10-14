@@ -201,6 +201,8 @@ function Snapshot.build(ctx)
     flags = json.array(flags),
     toggles = toggles,
     blocks = story and story.blocks or json.array({}),
+    -- MG7 (G3C): Gen 3's changed cells of the current map (absent on Gen 1)
+    cells = story and story.cells or nil,
     lit = json.array(lit),
     bag = bag,
     money = int(save.money, 0, 999999) or 0,

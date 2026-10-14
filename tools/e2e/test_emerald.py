@@ -12,6 +12,10 @@ the same before and after).
   sign (G3B, one launch): below one of Littleroot's signs, act.interact reads it (act.result kind sign); its
       script's text box opens as a ui.open text, is advanced page by page with ui.advance (the last page once
       the script's waitbuttonpress is armed) and closes; the player then walks again.
+  story (G3C, one launch): the snapshot carries the town's changed cells; the driver changes one cell
+      (Field.setMetatile) and story.cells reports it, puts it back and story.cells reports the map's own
+      metatile, then sets one object's hide flag and story.toggles hides O<localId> while story.flags lists
+      a flag set; the markers say which cell and which object.
   start (two launches): at the title with the slot saved, region.start CONTINUEs (act.result detail continue,
       game.status saved and in game, save.loaded fresh false); with the slot empty it starts NEW GAME (detail
       new), and (G3B) Birch's speech is answered through the UI as the client would (its text advanced, BOY
@@ -225,6 +229,29 @@ async def _sign(port, serving):
     return report
 
 
+async def _story(port, serving):
+    mc, ok, snap, status = await connect(port)
+    report = {"snapshot_cells": len(snap.get("cells") or []), "has_cells": "cells" in snap}
+    assert "cells" in snap, "Gen 3's snapshot carries its cells"
+    since = len(mc.received)
+    first = await find_or_wait(mc, "story.cells", 30, since)
+    report["cell"] = [(c["x"], c["y"], c["metatile"]) for c in first["data"]["cells"]]
+    assert first["data"]["map"] == TOWN
+    after = mc.received.index(first) + 1
+    back = await find_or_wait(mc, "story.cells", 30, after)
+    report["back"] = [(c["x"], c["y"], c["metatile"]) for c in back["data"]["cells"]]
+    toggle = (await find_or_wait(mc, "story.toggles", 30, since, lambda m: m["data"]["map"] == TOWN))["data"]
+    report["toggle"] = (toggle["map"], toggle["obj"], toggle["visible"])
+    flags = await find_or_wait(mc, "story.flags", 30, since, lambda m: len(m["data"]["set"]) > 0)
+    report["flags_set"] = len(flags["data"]["set"])
+    report["errors"] = errors(mc)
+    report["problems"] = len(mc.conn.problems)
+    assert report["errors"] == [] and report["problems"] == 0
+    await mc.send("debug.quit", {"code": 0})
+    await mc.close()
+    return report
+
+
 NAME = ["K", "B"]
 
 
@@ -319,6 +346,26 @@ def test_an_emerald_sign_is_read_through_the_ui():
     clean = False
     try:
         result, report = _launch("sign", "KB_SERVING", _sign, 300)
+        clean = True
+    finally:
+        if not clean:
+            _cleanup_run()
+    assert save_files() == before, "the test slot's files are gone and the rest untouched"
+
+
+@pytest.mark.e2e
+@pytest.mark.timeout(900)
+def test_emeralds_story_cells_and_toggles_reach_the_client():
+    _skip_without_emerald()
+    before = save_files()
+    clean = False
+    try:
+        result, report = _launch("story", "KB_SERVING", _story, 300)
+        cell, flag = result.facts("KB_CELL"), result.facts("KB_FLAG")
+        x, y = int(cell["x"]), int(cell["y"])
+        assert report["cell"] == [(x, y, int(cell["metatile"]))], (report, cell)
+        assert report["back"] == [(x, y, int(cell["base"]))], (report, cell)
+        assert report["toggle"] == (TOWN, f"O{int(flag['lid'])}", False), (report, flag)
         clean = True
     finally:
         if not clean:

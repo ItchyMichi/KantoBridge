@@ -18,6 +18,13 @@
 --                                      that changed since, so regrown trees
 --                                      go out too), then every change during
 --                                      the visit, checked every step
+--   story.cells{map, cells}            (MG7, G3C) Gen 3's runtime terrain: the
+--                                      current map's cells whose metatile
+--                                      differs from what the client holds
+--                                      (kb_engine.storyCells: the layout's
+--                                      overrides; a cell that went back is
+--                                      sent with its own metatile, cellBase),
+--                                      on a map load and every step after
 --   story.lit{map, lit}                a dark map lit by Flash, or reset: the
 --                                      lit set is every dark map while
 --                                      save.flashLit holds (the engine keeps
@@ -26,7 +33,8 @@
 --
 -- The snapshot carries the same state in full (rebase): every effective
 -- visibility that differs from its default (`toggles`), the current map's
--- differing blocks (`blocks`) and the lit maps (`lit`); diffs start from it.
+-- differing blocks (`blocks`), on Gen 3 its changed cells (`cells`) and the
+-- lit maps (`lit`); diffs start from it.
 -- Nothing is diffed while no client or test session is connected (the next
 -- one starts with a snapshot).
 --
@@ -39,6 +47,7 @@
 local Story = {}
 
 Story.EVERY = 10 -- logic steps between flag and toggle diffs
+Story.MAX_CELLS = 1024 -- cells in one story.cells (more go in the next message)
 
 local floor = math.floor
 local SYMBOL = "^[A-Za-z0-9_]+$"
@@ -89,11 +98,13 @@ function Story.new(opts)
   local steps = 0
   local base                      -- { flags, toggles, lit }: what the client has been told
   local view = {}                 -- the current map's blocks: { map, load, width, known }
+  local cellView = {}             -- MG7: the current map's cells the client holds: { map, known = { key -> metatile } }
   local sites                     -- SwapSites.runtimeIndex, built on first need
   local lastRunner = false
   local counts = {
     flagMsgs = 0, toggleMsgs = 0, blockMsgs = 0, litMsgs = 0, mapLoads = 0, blockChanges = 0,
     unknownBlocks = 0, noPristine = 0, toggleSkipped = 0, sites = 0, flagSet = 0, flagCleared = 0,
+    cellMsgs = 0, cellChanges = 0,
   }
 
   local function siteIndex()
@@ -204,6 +215,56 @@ function Story.new(opts)
     return loaded
   end
 
+  -- MG7 (G3C): the current map's cells (Gen 3; an engine without them gives nil). What the client holds
+  -- is the map's own cells plus the ones told during this visit: a new map starts from nothing told, a
+  -- same-map reload from what was told before it, so a cell its scripts no longer change goes back.
+  local function cellKey(k) return k % 1024, floor(k / 1024) end
+  local function readCells()
+    local sc = engine.storyCells and engine.storyCells() or nil
+    if type(sc) ~= "table" or not sym(sc.map, MAP_ID) or type(sc.cells) ~= "table" then return nil end
+    local now = {}
+    for k, mid in pairs(sc.cells) do
+      k, mid = tonumber(k), tonumber(mid)
+      if k and mid and k >= 0 and k == floor(k) and mid >= 0 and mid <= 1023 and mid == floor(mid) then
+        now[k] = mid
+      end
+    end
+    return sc.map, now
+  end
+
+  local function stepCells(out)
+    local map, now = readCells()
+    if not map then
+      cellView = {}
+      return
+    end
+    local prev = cellView.map == map and cellView.known or {}
+    local keys = {}
+    for k, mid in pairs(now) do
+      if prev[k] ~= mid then keys[#keys + 1] = k end
+    end
+    for k in pairs(prev) do
+      if now[k] == nil then keys[#keys + 1] = k end
+    end
+    cellView = { map = map, known = now }
+    if #keys == 0 then return end
+    table.sort(keys)
+    local cells = {}
+    for _, k in ipairs(keys) do
+      local x, y = cellKey(k)
+      local mid = now[k]
+      if mid == nil then mid = tonumber(engine.cellBase(x, y)) end
+      if mid and mid >= 0 and mid <= 1023 then cells[#cells + 1] = { x = x, y = y, metatile = mid } end
+    end
+    for i = 1, #cells, Story.MAX_CELLS do
+      local part = {}
+      for j = i, math.min(#cells, i + Story.MAX_CELLS - 1) do part[#part + 1] = cells[j] end
+      out[#out + 1] = { "story.cells", { map = map, cells = json.array(part) }, "story" }
+      counts.cellMsgs = counts.cellMsgs + 1
+      counts.cellChanges = counts.cellChanges + #part
+    end
+  end
+
   local function stepLit(out, save)
     local now = Story.litSet(save, engine.darkMaps())
     for _, id in ipairs(sortedKeys(now)) do
@@ -311,7 +372,22 @@ function Story.new(opts)
         end
       end
     end
-    return { toggles = toggles, blocks = json.array(blocks), lit = json.array(sortedKeys(base.lit)) }
+    local result = { toggles = toggles, blocks = json.array(blocks), lit = json.array(sortedKeys(base.lit)) }
+    -- MG7 (G3C): the current map's changed cells, in full
+    cellView = {}
+    local map, now = readCells()
+    if map then
+      local cells, keys = {}, {}
+      for k in pairs(now) do keys[#keys + 1] = k end
+      table.sort(keys)
+      for _, k in ipairs(keys) do
+        local x, y = cellKey(k)
+        cells[#cells + 1] = { map = map, x = x, y = y, metatile = now[k] }
+      end
+      cellView = { map = map, known = now }
+      result.cells = json.array(cells)
+    end
+    return result
   end
 
   -- One logic step. f: kb_engine.observe(); out: this step's messages;
@@ -324,7 +400,12 @@ function Story.new(opts)
     end
     local save = engine.saveView()
     local loaded = false
-    if f.inGame then loaded = stepBlocks(out) else view = {} end
+    if f.inGame then
+      loaded = stepBlocks(out)
+      stepCells(out)
+    else
+      view, cellView = {}, {}
+    end
     stepLit(out, save)
     local runner = f.runner == true
     local scriptEnded = lastRunner and not runner

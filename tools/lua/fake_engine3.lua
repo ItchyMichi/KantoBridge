@@ -19,6 +19,8 @@
 --   E.scriptMessage("one\ftwo")                 a script's msgbox (stay box, VM, lock)
 --   E.StartMenu.show(), E.Naming.open{...}, E.ListMenu.showItems(labels, n, cb)
 --   E.newBirch() / E.birchStep(br, input)        Birch's speech (the boot phase "oak")
+--   E.setMetatile(x, y, mid), E.reloadCells()    a cell's override, a same-map reload
+--   E.mapObjects(map, defs)                      a map's object templates (hide flags)
 --   E.setFlag("FLAG_TEST_ONE"), E.addObject(1, { x = 3, y = 4, gfx = 1 })
 --   E.slotSave("slot1", { map = ... })           a Gen 3 save in a slot
 --   E.bindMod(FakeMod, mod)                      events go to that mod object
@@ -341,7 +343,9 @@ function FakeEngine3.new(opts)
 
   -- scripting/space.lua:22-23 (vm, store): the live store, rebuilt on every
   -- map load from the session (E.enterField)
-  E.Space = { store = nil, vm = { running = false } }
+  -- bundle (space.lua:16-20): the script bundle; events[map].objects are the object templates
+  -- Objects.loadMap prefers (objects.lua:634-643), E.mapObjects(map, defs) sets them
+  E.Space = { store = nil, vm = { running = false }, bundle = { events = {} } }
   function E.Space.vm:isRunning() return self.running == true end -- vm.lua:68
 
   -- Constants.of(game) (constants.lua:108-116) with Methods:name (:51-66):
@@ -1009,7 +1013,15 @@ function FakeEngine3.new(opts)
     E.Runtime.active, E.Runtime.session = true, s
     F.running, F._locks, F._fieldCallback = true, {}, false
     E.Map.current = map
-    E.Map._def = { id = map, midLayout = { width = o.width or 20, height = o.height or 20 } }
+    -- the layout (layout_native.lua:15-34): base cells with made-up metatiles (1 + (x + y) % 8), no
+    -- overrides (a map load clears them, field.lua:81-88)
+    local w, h = o.width or 20, o.height or 20
+    local cells = {}
+    for cy = 0, h - 1 do
+      for cx = 0, w - 1 do cells[cy * w + cx + 1] = { mid = 1 + (cx + cy) % 8, coll = 0, elev = 3 } end
+    end
+    E.Map._def = { id = map, midLayout = { width = w, height = h, trueWidth = w, trueHeight = h, cells = cells,
+                                           overrides = {}, _revision = 0 } }
     E.Objects._byId, E.Objects._order = {}, {}
     E.Space.store = { flags = deepCopy(s.flags or {}), vars = deepCopy(s.vars or {}) }
     E.Space.vm.running = false
@@ -1033,6 +1045,18 @@ function FakeEngine3.new(opts)
     E.game.phase, E.game.session = "boot", nil
     E.game.boot = { phase = bootPhase or "title" }
   end
+
+  -- Field.setMetatile (field.lua:2194-2241) on the current map: the layout's override for the cell
+  -- (layout_native.lua:124-140); a nil metatile takes it away. E.reloadCells(): a same-map reload
+  -- (Map.load clears every override, field.lua:81-88).
+  function E.setMetatile(x, y, mid)
+    local l = assert(E.Map._def and E.Map._def.midLayout, "enter the field first")
+    l._revision = (l._revision or 0) + 1
+    l.overrides[y * 1024 + x] = mid ~= nil and { mid = mid, coll = 0, elev = 3 } or nil
+  end
+  function E.reloadCells() E.Map._def.midLayout.overrides = {} end
+  -- A map's object templates as the script bundle holds them: defs { localId, flag, x, y, ... }
+  function E.mapObjects(map, defs) E.Space.bundle.events[map] = { objects = defs } end
 
   -- Whether (x, y) is on the current map: nil out of the field.
   function E.inMap(x, y)

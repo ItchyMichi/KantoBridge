@@ -76,7 +76,9 @@ Engine.GROUPS = {
   battles = { "worldTalk", "directStepped", "directPushed", "nativeCaught", "releaseCatches", "daycareStep",
               "daycareUid", "partyNicks", "queueRename", "takeRenames", "contentCounts" },
   story = { "capturePristine", "pristineBlocks", "pristineCaptured", "pristineBlockAt", "storyMap", "liveBlocks",
-            "liveBlockChanges", "cutRecords", "cutSwaps", "swapField", "storyToggles", "fieldAction" },
+            "liveBlockChanges", "cutRecords", "cutSwaps", "swapField", "storyToggles", "fieldAction",
+            -- MG7 (G3C): Gen 3's runtime terrain, the current map's changed cells (gen1: none)
+            "storyCells", "cellBase" },
   sessions = { "slotState", "resolveActiveSlot", "slotRegistered", "slotHasSave", "labelSlot", "createSlot",
                "deleteSlot", "activateSlot", "playthrough", "titleMenuOpen", "switchGateOpen", "switchSave",
                "toTitle", "dropPlaythrough" },
@@ -173,6 +175,7 @@ local function stub(opts, id, requireFn)
     pcPending = nothing,
     uiStack = empty, uiOpenFacts = nothing,
     screenSize = function() return 160, 144 end,
+    storyCells = nothing, cellBase = nothing,
     encounterCounts = empty, itemCounts = empty, bridgeCounts = empty, contentCounts = empty, hiddenStats = empty,
     pcCounts = empty, bagCounts = empty, dexCounts = empty,
     -- lists and counts the acts read every step

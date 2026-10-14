@@ -349,6 +349,7 @@ comes from each player's own generated pack.
 | `story.toggles` | G→M | `map, obj, visible` | |
 | `story.blocks` | G→M | `map, changes[{bx,by,block}]` (live map block diff: Cut, doors, scripted swaps) | yes |
 | `story.lit` | G→M | `map, lit` | |
+| `story.cells` | G→M | `map, cells[{x,y,metatile}]` (Gen 3, MG7 G3C: the current map's cells whose metatile changed, or went back to the map's own) | yes |
 
 #### Story rules (M8)
 
@@ -383,6 +384,14 @@ The client keeps each story cell of the WorldIndex open or closed for its own pl
   block change no swap site or recorded Cut explains is still reported, and logged by gen1-bridge as
   the error `story.unknown_block` (map symbol and count only). Cut tall grass has no swap site (it's
   cosmetic) but is reported in `story.blocks`.
+- **Gen 3 (MG7, G3C):** `story.toggles.obj` is `O<localId>` (the NPC observer's id), and an object is
+  hidden while its hide flag is set (Gen 3's own rule), so `toggles` lists exactly the objects whose
+  flag is set; the default is visible. Gen 3 has no blocks: its runtime terrain is per cell (metatile
+  ids 0–1023, rebuilt by the map's scripts on every load and never saved), so **`story.cells{map,
+  cells[{x, y, metatile}]}`** reports the current map's cells whose metatile differs from what the
+  client holds: on entry every changed cell, after a reload of the same map also the cells that went
+  back (with the map's own metatile), then every change during the visit; the snapshot's `cells` holds
+  the current map's changed cells. A client drops a map's cells when the player's map changes.
 
 The client draws closed `tile` cells with the site's `before` art (per player, never in the world's
 blocks) and relays its active set with `story.state` (full on join, deltas after); the server uses

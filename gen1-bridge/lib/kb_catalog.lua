@@ -86,6 +86,7 @@ return {
     ["session.waiting"] = { g2m = true, re = "optional" },
     ["snapshot"] = { g2m = true, re = "optional" },
     ["story.blocks"] = { g2m = true, re = "never" },
+    ["story.cells"] = { g2m = true, re = "never" },
     ["story.flags"] = { g2m = true, re = "never" },
     ["story.lit"] = { g2m = true, re = "never" },
     ["story.state"] = { c2s = true, re = "never" },

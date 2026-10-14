@@ -20,6 +20,14 @@
 --                   cell below is open ground), facing up; serves: the test
 --                   reads the sign through act.interact and the UI.
 --                   KB_SERVING map= x= y= sx= sy= (the sign's cell).
+--   story           (G3C) the field scene's start; once a client watches, the
+--                   driver changes one cell near the player through the
+--                   engine's own Field.setMetatile (to the metatile of a cell
+--                   beside it), puts it back two seconds later, then sets the
+--                   hide flag of one of Littleroot's objects that is showing
+--                   (Flags.setFlag on the live store, by its number).
+--                   KB_CELL x= y= metatile= base=, KB_CELL_BACK,
+--                   KB_FLAG lid= id=.
 --   title_continue  the same new game saved into the test slot, then back to
 --                   the title (Game3:returnToTitle); serves: region.start
 --                   CONTINUEs.
@@ -29,7 +37,7 @@
 --   cleanup         only the clean-up (after a failed run), then quits.
 --
 -- Markers: KB_BOOTED scene= slot= home= precleaned=, KB_SERVING map= x= y=
--- wall= (or sx= sy=), KB_SAVED slot= ok=, KB_TITLE slot= hasSave=, KB_CLEANED deleted=
+-- wall= (or sx= sy=), KB_SAVED slot= ok=, KB_CELL / KB_CELL_BACK / KB_FLAG, KB_TITLE slot= hasSave=, KB_CLEANED deleted=
 -- active=, KB_QUIT sessions= code=; KB_FAIL <reason> on a timeout. Slot
 -- numbers, map symbols, cell numbers, directions, booleans and counts only.
 --
@@ -110,6 +118,7 @@ return function(game)
   local started = love.timer.getTime()
   local phase = "ready"
   local slot, start, wall, sign
+  local storyStep, storyAt, cell = 0, nil, nil
   local saved = false
   local waitUntil = 0
   while true do
@@ -135,7 +144,7 @@ return function(game)
         if SCENE == "title_new" then
           print(("KB_TITLE slot=%d hasSave=%s"):format(num(active()), word(slotHasSave(active()))))
           phase = "serve"
-        elseif SCENE == "field" or SCENE == "title_continue" or SCENE == "sign" then
+        elseif SCENE == "field" or SCENE == "title_continue" or SCENE == "sign" or SCENE == "story" then
           local ok, err = pcall(game._handleBootAction, game, { action = "new_game", name = "TEST", gender = 0 })
           if not ok then fail("new_game " .. word(err):sub(1, 40)) end
           phase = "newgame"
@@ -169,7 +178,7 @@ return function(game)
             wall = d[1]
           end
         end
-        if SCENE == "field" then
+        if SCENE == "field" or SCENE == "story" then
           print(("KB_SERVING map=%s x=%d y=%d wall=%s"):format(TOWN, start.x, start.y, wall))
           phase = "serve"
         elseif SCENE == "sign" then
@@ -231,6 +240,49 @@ return function(game)
           saved = true
           local ok, written = pcall(game.saveGame, game)
           print(("KB_SAVED slot=%d ok=%s"):format(num(active()), word(ok and written == true)))
+        end
+      end
+      -- the story scene's changes, once a client watches: a cell, the cell back, a hide flag
+      if SCENE == "story" and (tonumber(status.sessions) or 0) >= 1 then
+        local now = love.timer.getTime()
+        storyAt = storyAt or (now + 3)
+        local Field, Map = mod3("field"), mod3("map")
+        local def = Map and Map.currentDef and Map.currentDef()
+        local lay = def and def.midLayout
+        if storyStep == 0 and now >= storyAt and lay then
+          -- a cell two to the right of the player and one down, given the metatile of the cell left of it
+          cell = { x = start.x + 2, y = start.y + 1 }
+          cell.base = lay:midAt(cell.x, cell.y)
+          local other = lay:midAt(cell.x - 1, cell.y)
+          if other == cell.base then other = lay:midAt(cell.x, cell.y - 1) end
+          if other == cell.base then other = (cell.base + 1) % 512 end
+          cell.mid = other
+          local ok = pcall(Field.setMetatile, cell.x, cell.y, cell.mid, false)
+          if not ok then fail("set_metatile") end
+          print(("KB_CELL x=%d y=%d metatile=%d base=%d"):format(cell.x, cell.y, cell.mid, cell.base))
+          storyStep, storyAt = 1, now + 2
+        elseif storyStep == 1 and now >= storyAt then
+          local ok = pcall(Field.setMetatile, cell.x, cell.y, cell.base, false)
+          if not ok then fail("set_metatile_back") end
+          print("KB_CELL_BACK")
+          storyStep, storyAt = 2, now + 1
+        elseif storyStep == 2 and now >= storyAt then
+          -- an object of the town with a hide flag that is clear now (scripting/space.lua:663-671)
+          local Space, Flags = mod3("scripting.space"), mod3("scripting.flags")
+          local ev = Space and Space.bundle and Space.bundle.events and Space.bundle.events[TOWN]
+          local defs = ev and (ev.objects or ev.objectEvents) or (game.data.maps[TOWN] or {}).objects or {}
+          local pick
+          for _, d in ipairs(defs) do
+            local lid, flag = tonumber(d.localId or d.index), tonumber(d.flag or d.flagId)
+            if not pick and lid and lid > 0 and lid < 127 and flag and flag ~= 0 and flag ~= 0xFFFF
+                and not Flags.getFlag(Space.store, nil, flag) then
+              pick = { lid = lid, flag = flag }
+            end
+          end
+          if not pick then fail("no_hideable_object") end
+          Flags.setFlag(Space.store, nil, pick.flag, true)
+          print(("KB_FLAG lid=%d id=%d"):format(pick.lid, pick.flag))
+          storyStep = 3
         end
       end
       if status.quitRequested then

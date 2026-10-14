@@ -171,6 +171,15 @@ may name the button to tap after it (Gen 3: the cursor put on OK, then A; Gen 1 
   fit: G3C adds **`story.cells{map, cells[{x, y, metatile}]}`** for the current map's overrides against the pristine
   layout, and the export's per-cell swap sites (§5) give the builder both states. Until G3C, `storyMap()` is nil (the
   story module then sends no blocks).
+- **As built (G3C, 2026-10-14; `GB/lib/engine/game3/story.lua`).** Toggles come from every map's object templates
+  (the script bundle's `events[map].objects`, else `game.data.maps[map].objects`) with a hide flag (not 0 or 0xFFFF;
+  the camera and seam objects left out), read straight from the live store by number: `{map = {O<lid> = false}}` for
+  each object whose flag is set (the client's default is visible). `storyCells()` gives the current map's layout
+  overrides whose metatile differs from the layout's own cell (`midLayout.cells`), keyed `y*1024+x`; `cellBase(x, y)`
+  the cell's own metatile. The core's story observer diffs them per map (a new map starts from nothing told, a
+  same-map reload from what was told, so a cell its scripts no longer change goes back with its own metatile) and the
+  snapshot carries `cells`. The Gen 1 block functions stay the stub's. The client keeps the current map's cells
+  (`StoryRules.onCells`/`liveCells`) for the Gen 3 world (G3E).
 
 ### 4.7 Saves, slots, pairing and the Pokémon Center (link)
 
@@ -298,7 +307,7 @@ maps `G3_TEST_*`, `layout/hoenn`); a golden scene; a GameTest building a synthet
 |---|---|---|
 | **G3A** core changes; adapter base, boot, observe, NPCs, movement, warps, interaction, saves and slots, region, reliability; catalogue and manifest; the fake engine | Emerald followable: hello.ok, snapshot, walking, warps, saves, game.status, region acts | lupa per part; e2e `test_emerald.py` (all but the text box) ✔ — **done 2026-10-14** (PROGRESS.md "Several games: MG7": the deviations `chainsHeld` and `starting`) |
 | **G3B** UI | text boxes, choices, lists, menus, naming, Birch's speech, the 240×160 mirror (Lua, schema, client) | lupa UI; e2e text box ✔ — **done 2026-10-14** (a Littleroot sign read through the UI; Birch's whole speech answered through the UI into the field) |
-| **G3C** story | flags, toggles, `story.cells` | lupa; e2e a flag and an override |
+| **G3C** story | flags, toggles, `story.cells` | lupa; e2e a flag and an override — **built 2026-10-14** (see §4.6 "As built") |
 | **G3D** export | `g3*` resources, baked quarters, encounters, layout; the measurement driver first | lupa on the fake; pod export counts and hashes ✔ |
 | **G3E** builder | `Gen3FrontEnd`, the Gen 3 planner path, baked textures, habitats, two art sets in one pack | JUnit, golden scene, GameTest ✔ |
 | **G3F** battles, party, items, routes | headless battles with `Battle.abort`, party sync, bag projection, the route exit | lupa; e2e a wild and a trainer battle ✔ |

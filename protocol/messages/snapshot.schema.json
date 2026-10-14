@@ -95,6 +95,41 @@
       "description": "Live map blocks that differ from the map data.",
       "x-rom-derived": true
     },
+    "cells": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "map",
+          "x",
+          "y",
+          "metatile"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "map": {
+            "$ref": "../defs.schema.json#/$defs/mapId"
+          },
+          "x": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 1023
+          },
+          "y": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 1023
+          },
+          "metatile": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 1023
+          }
+        }
+      },
+      "description": "MG7 (G3C): Gen 3 only, the current map's cells whose metatile differs from the map data (story.cells)",
+      "x-rom-derived": true
+    },
     "lit": {
       "type": "array",
       "items": {

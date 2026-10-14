@@ -55,10 +55,10 @@ def test_main_boots_on_emerald_with_the_game3_adapter():
     st = rig.status
     assert (st.ready, st.engineId, st.engineAdapter, st.game, st.engine) == (True, b"game3", True, b"emerald",
                                                                              b"0.3.85")
-    assert [g.decode() for g in st.engineGroupsMissing.values()] == ["battles", "export", "routes", "story"]
+    assert [g.decode() for g in st.engineGroupsMissing.values()] == ["battles", "export", "routes"]
     assert list(st.engineMissing.values()) == []
     logs = rig.logs()
-    assert sum("engine.groups adapter=true count=4 first=battles" in line for line in logs) == 1
+    assert sum("engine.groups adapter=true count=3 first=battles" in line for line in logs) == 1
     assert not any("engine.missing" in line or "engine.no_adapter" in line for line in logs)
     no_faults(rig)
 
@@ -119,7 +119,7 @@ def test_hello_snapshot_and_steps_in_the_field():
     rig.step()
     st = next(m for m in peer.messages() if m.get("re") == seq)["data"]
     assert (st["ingame"], st["topState"], st["mode"], st["engineAdapter"], st["engineGroupsMissing"]) == (
-        True, "Overworld", "idle", True, 4)
+        True, "Overworld", "idle", True, 3)
     assert (st["badges"], st["money"], st["bagTotal"], st["npcs"]) == (1, 3000, 2, 3)
     no_faults(rig)
 

@@ -1,0 +1,31 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kantobridge.invalid/protocol/messages/story.cells.schema.json",
+  "title": "story.cells",
+  "description": "Gen 3's runtime terrain (MG7 G3C): cells of the current map whose metatile changed, or went back to the map's own.",
+  "x-type": "story.cells",
+  "x-legs": ["g2m"],
+  "x-re": "never",
+  "type": "object",
+  "required": ["map", "cells"],
+  "additionalProperties": false,
+  "properties": {
+    "map": {"$ref": "../defs.schema.json#/$defs/mapId"},
+    "cells": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 1024,
+      "items": {
+        "type": "object",
+        "required": ["x", "y", "metatile"],
+        "additionalProperties": false,
+        "properties": {
+          "x": {"type": "integer", "minimum": 0, "maximum": 1023},
+          "y": {"type": "integer", "minimum": 0, "maximum": 1023},
+          "metatile": {"type": "integer", "minimum": 0, "maximum": 1023}
+        }
+      },
+      "x-rom-derived": true
+    }
+  }
+}

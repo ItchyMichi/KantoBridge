@@ -139,6 +139,21 @@ class StoryRulesTest {
 	}
 
 	@Test
+	void gen3CellsFollowTheSnapshotTheirMessagesAndTheCurrentMap() throws Exception {
+		this.rules.onSnapshot(json("{\"ingame\":true,\"player\":{\"map\":\"EM_TOWN\",\"x\":1,\"y\":1,\"facing\":\"up\"},"
+				+ "\"cells\":[{\"map\":\"EM_TOWN\",\"x\":4,\"y\":2,\"metatile\":513},{\"map\":\"EM_OTHER\",\"x\":1,\"y\":1,\"metatile\":5}]}"));
+		assertEquals(java.util.Map.of(2 * 1024 + 4, 513), this.rules.liveCells("EM_TOWN"), "the current map's cells only");
+		this.rules.onCells(json("{\"map\":\"EM_TOWN\",\"cells\":[{\"x\":4,\"y\":2,\"metatile\":7},{\"x\":1023,\"y\":0,\"metatile\":1}]}"));
+		assertEquals(java.util.Map.of(2 * 1024 + 4, 7, 1023, 1), this.rules.liveCells("EM_TOWN"));
+		this.rules.onCells(json("{\"map\":\"EM_TOWN\",\"cells\":[{\"x\":1024,\"y\":0,\"metatile\":1},{\"x\":0,\"y\":0,\"metatile\":1024}]}"));
+		assertEquals(2, this.rules.liveCells("EM_TOWN").size(), "out of range: ignored");
+		this.rules.onPlayerMap("EM_HOUSE");
+		assertTrue(this.rules.liveCells("EM_TOWN").isEmpty(), "another map: the town shows its own cells again");
+		this.rules.onCells(json("{\"map\":\"EM_HOUSE\",\"cells\":[{\"x\":1,\"y\":2,\"metatile\":3}]}"));
+		assertEquals(java.util.Map.of(2 * 1024 + 1, 3), this.rules.liveCells("EM_HOUSE"));
+	}
+
+	@Test
 	void mapDefaultsDecideBeforeAnyReport() {
 		assertEquals(Set.of(BALL, MOM, TREE, HULL), active(), "visible objects, the standing tree and the ship's hull; the stamped door "
 				+ "shows its map data");

@@ -262,5 +262,56 @@
         "y": 8
       }
     }
+  },
+  {
+    "type": "snapshot",
+    "seq": 15,
+    "data": {
+      "ingame": false,
+      "player": {
+        "map": "EM_TEST_TOWN",
+        "x": 5,
+        "y": 8,
+        "facing": "down"
+      },
+      "state": {
+        "mode": "screen",
+        "bike": false,
+        "surf": false,
+        "slope": false,
+        "hidden": false,
+        "dark": false,
+        "lit": false
+      },
+      "flags": [],
+      "toggles": {
+        "EM_TEST_TOWN": {
+          "O1": false
+        }
+      },
+      "blocks": [],
+      "cells": [
+        {
+          "map": "EM_TEST_TOWN",
+          "x": 4,
+          "y": 2,
+          "metatile": 513
+        }
+      ],
+      "lit": [],
+      "bag": {},
+      "money": 0,
+      "coins": 0,
+      "badges": [],
+      "party": [],
+      "dex": {
+        "seen": [],
+        "owned": []
+      },
+      "npcs": {
+        "map": "EM_TEST_TOWN",
+        "list": []
+      }
+    }
   }
 ]

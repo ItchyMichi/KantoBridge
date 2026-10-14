@@ -519,7 +519,7 @@
       "legs": ["g2m"],
       "re": "optional",
       "rom": true,
-      "redact": ["/blocks", "/party/*/nick", "/ui"],
+      "redact": ["/blocks", "/cells", "/party/*/nick", "/ui"],
       "schema": "messages/snapshot.schema.json"
     },
     "story.blocks": {
@@ -528,6 +528,13 @@
       "rom": true,
       "redact": ["/changes"],
       "schema": "messages/story.blocks.schema.json"
+    },
+    "story.cells": {
+      "legs": ["g2m"],
+      "re": "never",
+      "rom": true,
+      "redact": ["/cells"],
+      "schema": "messages/story.cells.schema.json"
     },
     "story.flags": {
       "legs": ["g2m"],

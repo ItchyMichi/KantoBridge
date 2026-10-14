@@ -1475,7 +1475,7 @@ the full suite at the ✔ checkpoints (MG2, MG3, MG5, MG6). Pods run inside your
 | MG4 | Links | **done** (note 19); check: with one link the e2e scenarios behave as before (pod, real engine: `test_s5_ready`, `test_handshake`, `test_regions`, `test_multiplayer`, `test_crash`, `test_hot_reload` all passed), `tools/tests/test_links.py` (two `fake_gen1`: swap, a parked drop, a wrong game), JUnit `LinksTest` + `LinksFakeGen1IntegrationTest` (two real `fake_gen1` processes); one `test_multiplayer` assertion learnt that an install paired before MG1 keeps its legacy pairing file beside the per-game one. The MG4–MG6 checkpoint on the pod (kb-dev7): pytest and Lua 1,729, JUnit 1,193 (0 failures), GameTests 112 | 2026-10-13 | |
 | MG5 | Crossings | **done** (note 20); check: `PassGameTests` (6: the round trip into the far gate house with the exact arrival cell, every refusal, abort, the timeout, the start path, the stash, a built half whose pass is a story cell), `PassCrossingsTest`, `ZonePlanTest`, `WorldIndexTest`, `PassChoreographyTest` (16), the two-`fake_gen1` crossing in `tools/tests/test_stand_ins.py`; a crossing between two real engines waits for a second region whose game has an adapter (MG7/MG8) | 2026-10-13 | |
 | MG6 | One trainer economy | **done** (notes 18, 21); check: `LedgerGameTests` (two regions: adoption, stamped read-back, the crossing's projection, `too_many`/`left`, re-projection on an unknown stamp; a legacy world untouched), `BagGameTests` marked stacks, `LedgerTest`/`LedgerCodecTest`/`ItemsTest`/`BagSetRelayTest`, `test_lua_ledger.py`/`test_lua_bag.py`; the real engine's `bag.set` round trip is your play-test (PLAYTEST.md "MG6") | 2026-10-13 | |
-| MG7 | The second family (Emerald): adapter and export | **in progress**: the spec [specs/GEN3_BRIDGE_PLAN.md](specs/GEN3_BRIDGE_PLAN.md) (2026-10-14), phases G3A–G3G; **G3A done** (Emerald followable), **G3B done** (Emerald's UI; "Several games: MG7") | 2026-10-14 | |
+| MG7 | The second family (Emerald): adapter and export | **in progress**: the spec [specs/GEN3_BRIDGE_PLAN.md](specs/GEN3_BRIDGE_PLAN.md) (2026-10-14), phases G3A–G3G; **G3A done** (Emerald followable), **G3B done** (Emerald's UI), **G3C built** (story; its pod checks pending; "Several games: MG7") | 2026-10-14 | |
 | MG8 | Hoenn and the pass to it | pending | | |
 
 ### Several games: notes
@@ -1917,6 +1917,23 @@ walking again); CONTINUE; and **NEW GAME with Birch's whole speech answered thro
 name KB on the naming screen, YES) until `game.status` says in game with that name. JUnit 1,195 and GameTests 112 (0
 failures; `MirrorLinkTest` and `Gen1CanvasTest` cover the new size); the Gen 1 UI regression on Blue, `test_ui.py`
 (YES/NO by B and by A, the 160×144 mirror) and `test_opening.py` (Oak's naming screens by START), 2 passed.
+
+**G3C (2026-10-14): Emerald's story.** The adapter's `story` part (`gen1-bridge/lib/engine/game3/story.lua`): flags
+were already the save view's (G3A); **toggles** come from every map's object templates and their hide flags (the
+script bundle's events, else the game data's maps; read from the live store by number, Emerald's own ids), reported as
+`O<localId>` hidden while its flag is set; **cells**: Gen 3's runtime terrain is per cell (metatile ids up to 1023,
+rebuilt by the map's scripts on every load, never saved), so the new **`story.cells{map, cells[{x, y, metatile}]}`**
+reports the current map's cells whose metatile differs from what the client holds (on entry every changed cell, after
+a same-map reload also the cells that went back with their own metatile, then every change), and the snapshot carries
+`cells`. Core: `storyCells`/`cellBase` in the story group (Gen 1: none), `kb_story` diffs them per map; protocol:
+`story.cells` (schema, example, PROTOCOL.md "Gen 3"), the snapshot's `cells`, catalogue and Lua catalogue
+regenerated; client: `StoryRules` keeps the current map's cells for the Gen 3 world (G3E). A 240×160 `mirror.frame`
+example came with it (G3B's).
+
+**Check:** pytest and Lua 1,896 passed, 10 skipped (`test_lua_game3_story.py`: 6). **Pending:** the e2e scene `story`
+(`test_emerald.py`: a cell changed and put back through `Field.setMetatile`, a hide flag set) and the Gradle build
+(JUnit/GameTests with `StoryRulesTest`'s new case): no CPU pod could start in EU-RO-1 at 05:35 UTC (kb-dev10's host
+full; no cpu5c, cpu3c or cpu3g stock), to be run on the next pod.
 
 ### Handoff (2026-10-14): after MG6, for whoever continues
 

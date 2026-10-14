@@ -22,8 +22,8 @@ local Game3 = {}
 
 -- The parts, in install order (later parts may use what earlier ones put on
 -- the base). G3A: identity, observing, movement, saves and sessions, the
--- region acts, reliability; G3B: the UI.
-Game3.PARTS = { "boot", "observe", "move", "saves", "region", "reliability", "ui" }
+-- region acts, reliability; G3B: the UI; G3C: the story (toggles, cells).
+Game3.PARTS = { "boot", "observe", "move", "saves", "region", "reliability", "ui", "story" }
 
 function Game3.new(opts)
   assert(type(opts) == "table" and opts.checked, "game3: the loader's pin (opts.checked) is required")

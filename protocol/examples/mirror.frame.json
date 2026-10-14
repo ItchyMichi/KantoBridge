@@ -8,5 +8,15 @@
       "png": "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAAAAAA6fptVAAAACklEQVR4nGNgAAAAAgABSK+kcQAAAABJRU5ErkJggg==",
       "n": 1
     }
+  },
+  {
+    "type": "mirror.frame",
+    "seq": 12,
+    "data": {
+      "w": 240,
+      "h": 160,
+      "png": "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAAAAAA6fptVAAAACklEQVR4nGNgAAAAAgABSK+kcQAAAABJRU5ErkJggg==",
+      "n": 2
+    }
   }
 ]

@@ -250,6 +250,11 @@
       "seq": 11,
       "redacted": {"w": 160, "h": 144, "png": "<rom:str:92:b2db9613>", "n": 1}
     },
+    {
+      "type": "mirror.frame",
+      "seq": 12,
+      "redacted": {"w": 240, "h": 160, "png": "<rom:str:92:b2db9613>", "n": 2}
+    },
     {"type": "mirror.sub", "seq": 11, "redacted": {"fps": 20}},
     {"type": "mirror.unsub", "seq": 11, "redacted": {}},
     {"type": "move.face", "seq": 11, "redacted": {"dir": "right"}},
@@ -675,9 +680,43 @@
       }
     },
     {
+      "type": "snapshot",
+      "seq": 15,
+      "redacted": {
+        "ingame": false,
+        "player": {"map": "EM_TEST_TOWN", "x": 5, "y": 8, "facing": "down"},
+        "state": {
+          "mode": "screen",
+          "bike": false,
+          "surf": false,
+          "slope": false,
+          "hidden": false,
+          "dark": false,
+          "lit": false
+        },
+        "flags": [],
+        "toggles": {"EM_TEST_TOWN": {"O1": false}},
+        "blocks": "<rom:arr:0:4f53cda1>",
+        "cells": "<rom:arr:1:ba3f963a>",
+        "lit": [],
+        "bag": {},
+        "money": 0,
+        "coins": 0,
+        "badges": [],
+        "party": [],
+        "dex": {"seen": [], "owned": []},
+        "npcs": {"map": "EM_TEST_TOWN", "list": []}
+      }
+    },
+    {
       "type": "story.blocks",
       "seq": 11,
       "redacted": {"map": "TEST_TOWN", "changes": "<rom:arr:1:407b9bbf>"}
+    },
+    {
+      "type": "story.cells",
+      "seq": 12,
+      "redacted": {"map": "EM_TEST_TOWN", "cells": "<rom:arr:2:e87c6a3c>"}
     },
     {"type": "story.flags", "seq": 11, "redacted": {"set": ["EVENT_TEST_STARTED"], "clear": []}},
     {"type": "story.lit", "seq": 11, "redacted": {"map": "TEST_CAVE", "lit": true}},

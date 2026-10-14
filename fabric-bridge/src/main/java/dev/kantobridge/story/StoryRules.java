@@ -83,6 +83,13 @@ public final class StoryRules {
 	/** The map whose live blocks are known, and those blocks by {@code by * 256 + bx}. */
 	private @Nullable String blocksMap;
 	private final Map<Integer, Integer> liveBlocks = new HashMap<>();
+	/**
+	 * MG7 (G3C): Gen 3's runtime terrain, the map whose changed cells are known and those cells' metatiles by
+	 * {@code y * 1024 + x} ({@code story.cells}, the snapshot's {@code cells}). Kept for the Gen 3 world (G3E); no story
+	 * cell reads it yet.
+	 */
+	private @Nullable String cellsMap;
+	private final Map<Integer, Integer> liveCells = new HashMap<>();
 	private @Nullable String currentMap;
 	/** The live NPC list's map, and the cells its NPCs (and its boulders) stand on, as {@code x * 65536 + y}. */
 	private @Nullable String npcMap;
@@ -182,6 +189,17 @@ public final class StoryRules {
 				}
 			}
 		}
+		// MG7 (G3C): the snapshot's cells are the current map's changed cells (Gen 3 only)
+		this.cellsMap = this.currentMap;
+		this.liveCells.clear();
+		JsonElement cells = data.get("cells");
+		if (cells != null && cells.isJsonArray()) {
+			for (JsonElement item : cells.getAsJsonArray()) {
+				if (item.isJsonObject() && this.currentMap != null && this.currentMap.equals(mapId(item.getAsJsonObject(), "map"))) {
+					this.putCell(item.getAsJsonObject());
+				}
+			}
+		}
 		this.lit.clear();
 		JsonElement lit = data.get("lit");
 		if (lit != null && lit.isJsonArray()) {
@@ -250,6 +268,33 @@ public final class StoryRules {
 				this.dirty = true;
 			}
 		}
+		if (!map.equals(this.cellsMap)) {
+			this.cellsMap = map;
+			this.liveCells.clear();
+		}
+	}
+
+	/** MG7 (G3C): {@code story.cells{map, cells}}: changed cells of the hidden player's current map (Gen 3). */
+	public void onCells(JsonObject data) {
+		String map = mapId(data, "map");
+		JsonElement cells = data.get("cells");
+		if (map == null || cells == null || !cells.isJsonArray()) {
+			return;
+		}
+		if (!map.equals(this.cellsMap)) {
+			this.cellsMap = map;
+			this.liveCells.clear();
+		}
+		for (JsonElement item : cells.getAsJsonArray()) {
+			if (item.isJsonObject()) {
+				this.putCell(item.getAsJsonObject());
+			}
+		}
+	}
+
+	/** MG7 (G3C): the metatiles of {@code map}'s changed cells by {@code y * 1024 + x}; empty unless it is the current map. */
+	public Map<Integer, Integer> liveCells(String map) {
+		return map.equals(this.cellsMap) ? Map.copyOf(this.liveCells) : Map.of();
 	}
 
 	/** {@code story.toggles{map, obj, visible}}. */
@@ -416,6 +461,15 @@ public final class StoryRules {
 		long block = integer(change, "block");
 		if (bx >= 0 && bx <= 255 && by >= 0 && by <= 255 && block >= 0 && block <= 255) {
 			this.liveBlocks.put((int) (by * 256 + bx), (int) block);
+		}
+	}
+
+	private void putCell(JsonObject cell) {
+		long x = integer(cell, "x");
+		long y = integer(cell, "y");
+		long metatile = integer(cell, "metatile");
+		if (x >= 0 && x <= 1023 && y >= 0 && y <= 1023 && metatile >= 0 && metatile <= 1023) {
+			this.liveCells.put((int) (y * 1024 + x), (int) metatile);
 		}
 	}
 
