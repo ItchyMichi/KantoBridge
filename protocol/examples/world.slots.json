@@ -8,5 +8,16 @@
       "hash": "a1b2c3d4e5f60718",
       "part": "{\"slots\":[],\"version\":1}"
     }
+  },
+  {
+    "type": "world.slots",
+    "seq": 12,
+    "data": {
+      "index": 0,
+      "count": 1,
+      "hash": "4cde19ce6b794f6e5ba878756d69fe4752a3309cc270cf964e600ce4718a3126",
+      "part": "q1YqzskvKVayio7VUSpLLSrOzM9TsjKsBQA=",
+      "enc": "deflate"
+    }
   }
 ]

@@ -77,6 +77,11 @@ MAX_SHAPE_DOC_PARTS = 64
 # edges that disagree with the engine's own placement, overlaps of true sizes, interiors reached by a special warp
 # (no arrival cell). Any other warning fails the build.
 GEN3_KNOWN_WARNINGS = frozenset({"layout_edge_mismatch", "layout_overlap", "interior_arrival_missing"})
+# MG9 G2G: the warnings a Gen 2 build gives (GEN2_BRIDGE_PLAN.md §7 "As built (G2E)"; the real Crystal's: 3): Crystal's
+# Kanto joins Celadon City and Route 7 in a loop the layout can't close (an edge mismatch each way), and one object of
+# Goldenrod's Pokemon Center stands off its map (left out, as Gen 1's and 3's are). No overlaps.
+GEN2_KNOWN_WARNINGS = frozenset({"layout_edge_mismatch", "object_out_of_bounds"})
+KNOWN_WARNINGS = {"gen2": GEN2_KNOWN_WARNINGS, "gen3": GEN3_KNOWN_WARNINGS}
 # Several games (MG3): a region id (protocol defs regionId) and the region table's slots.
 REGION_ID = re.compile(r"[a-z][a-z0-9_]{0,23}")
 MAX_SLOT = 63
@@ -262,15 +267,15 @@ def check_report(maps, report=REPORT, region=None, slot=None, world=None):
     """
     data = json.loads(report.read_text(encoding="utf-8"))
     expected = len(maps) if maps else data.get("maps_requested")
-    gen3 = load_games().family(data.get("game")) == "gen3"
+    known = KNOWN_WARNINGS.get(load_games().family(data.get("game")), frozenset())
     codes = data.get("warning_codes") if isinstance(data.get("warning_codes"), dict) else {}
+    only_known = bool(known) and set(codes) <= known
     checks = {
         "maps_built": data.get("maps_built") == expected,
-        # MG7 G3G: a Gen 3 layout's overlaps are known until MG8 (GEN3_KNOWN_WARNINGS)
-        "overlaps": data.get("overlaps") == 0 or (gen3 and set(codes) <= GEN3_KNOWN_WARNINGS),
+        # MG7 G3G: a Gen 3 layout's overlaps are known until MG8 (GEN3_KNOWN_WARNINGS); a Gen 2 one has none
+        "overlaps": data.get("overlaps") == 0 or ("layout_overlap" in known and only_known),
         "story_cells": (data.get("story_cells") or 0) > 0,
-        "warnings": data.get("warnings") == 0 or (gen3 and set(codes) <= GEN3_KNOWN_WARNINGS
-                                                  and sum(codes.values()) == data.get("warnings")),
+        "warnings": data.get("warnings") == 0 or (only_known and sum(codes.values()) == data.get("warnings")),
         "pack_textures": (data.get("pack_textures") or 0) > 0,
         "world_index": data.get("world_index") is True,
         "maps_unplaced": (data.get("maps_unplaced") or 0) == 0,
@@ -287,7 +292,8 @@ def check_report(maps, report=REPORT, region=None, slot=None, world=None):
 
 def region_checks(data, region, slot, world_dir=None, max_parts=MAX_SHAPE_DOC_PARTS):
     """MG3: the report's `region` object (region, slot, origin, bounds, areas, families, shape_map_chars and, since item
-    4, shape_index_chars) and, with the world folder, the region's files and the region table against their schemas.
+    4, shape_index_chars, since MG9 G2G index_chars: the WorldIndex deflated, offered by hash too) and, with the world
+    folder, the region's files and the region table against their schemas.
     Returns {check: ok}."""
     rep = data.get("region") if isinstance(data.get("region"), dict) else {}
     families = rep.get("families") if isinstance(rep.get("families"), list) else []
@@ -301,6 +307,7 @@ def region_checks(data, region, slot, world_dir=None, max_parts=MAX_SHAPE_DOC_PA
         and families[0] <= families[1],
         "region_shape_map_fits": 0 < (rep.get("shape_map_chars") or 0) <= max_parts * PART_CHARS,
         "region_shape_index_fits": 0 < (rep.get("shape_index_chars") or 0) <= max_parts * PART_CHARS,
+        "region_index_fits": 0 < (rep.get("index_chars") or 0) <= max_parts * PART_CHARS,
     }
     if world_dir is not None:
         checks.update(region_files(world_dir, region, slot))

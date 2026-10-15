@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://kantobridge.invalid/protocol/messages/world.index.schema.json",
   "title": "world.index",
-  "description": "The WorldIndex JSON, in parts on join.",
+  "description": "The WorldIndex JSON, in parts: pushed on join by a server from before MG9 G2G; since G2G sent deflated when a client asks for it (world.index.get, after a world.index.offer).",
   "x-type": "world.index",
   "x-legs": [
     "s2c"
@@ -29,7 +29,7 @@
     },
     "hash": {
       "$ref": "../defs.schema.json#/$defs/hash",
-      "description": "SHA-256 of the whole WorldIndex JSON."
+      "description": "SHA-256 of the parts' whole text: without enc the WorldIndex JSON (what the region's shape map names); with enc its wire form (the index's hash is the offer's)."
     },
     "part": {
       "type": "string",
@@ -39,6 +39,13 @@
     "region": {
       "$ref": "../defs.schema.json#/$defs/regionId",
       "description": "MG3 (several games): the region this message belongs to; absent = the legacy region. The client tags what it relays with its link's region; the server routes a tagged message to that region's link."
+    },
+    "enc": {
+      "type": "string",
+      "enum": [
+        "deflate"
+      ],
+      "description": "MG9 G2G: the parts' text is Base64 of the raw-deflated UTF-8 WorldIndex JSON (sent when a client asks for it after an offer); absent: the text itself (a server from before G2G pushed it on join)."
     }
   }
 }

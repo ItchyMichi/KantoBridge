@@ -21,7 +21,9 @@ The multi-game plan ([specs/MULTI_GAME_PLAN.md](specs/MULTI_GAME_PLAN.md)) is do
       a first join now downloads 3.85 million once (the index deflated, 20 parts; the map, 32), a rejoin nothing (both
       checked in the real client, `tools/e2e/shapes_cache_check.py`). The build budget is now per region and per
       document (64 parts each), the same for every game. Hoenn's map itself is the same size (re-encoding it would
-      save only 5-15%).
+      save only 5-15%). Since MG9 G2G (2026-10-15) the regions' world indices and the slot map are offered the same
+      way, deflated: with Johto beside Kanto and Hoenn a join used to send 7.5 million characters of them, a first join
+      now downloads 0.63 million, a rejoin none.
 - [x] **Three Hoenn seams** where neighbouring maps don't meet (2026-10-14: checked, nothing to rebuild). The game's own
       map data disagrees by two cells between western and eastern Hoenn, so one of the four joins can't meet. The build
       keeps the narrow Petalburg City / Route 104 path (2 cells wide) straight and puts the seam on Fallarbor Town /

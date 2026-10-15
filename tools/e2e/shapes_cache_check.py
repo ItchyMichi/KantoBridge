@@ -4,9 +4,14 @@ documents (world.shapes.get) and keeps them; the second join takes them all from
 times every region's shape table must come up. The shapes come from the server; Blue only serves at its title
 (drivers/kb_serve.lua), because the dev client's autopilot opens the world once a hidden game is connected.
 
-    xvfb-run -a -s "-screen 0 1280x720x24" python tools/e2e/shapes_cache_check.py --world PassE2E
+Since MG9 G2G the regions' indices and the world's slot map are offered the same way (world.index.offer,
+world.slots.offer): the first join asks for each (deflated parts), the second takes them from the cache too and
+downloads nothing at all.
 
-Region ids and counts only (from the client's log).
+    xvfb-run -a -s "-screen 0 1280x720x24" python tools/e2e/shapes_cache_check.py --world PassE2E
+    ... --world ThreeRegionsE2E --regions kanto,hoenn,johto
+
+Region ids, counts and sizes only (from the client's log).
 """
 from __future__ import annotations
 
@@ -32,6 +37,13 @@ OFFER = re.compile(r"world\.shapes\.offer: region (\S+): from the cache (\d+), a
 HELD = re.compile(r"world\.shapes\.offer: region (\S+) holds both")
 RECEIVED = re.compile(r"world\.shapes: (index|map) received \(\d+ parts, hash \w+, region (\w+)")
 TABLE = re.compile(r"shapes: table for region (\S+) index \S+ ready")
+# MG9 G2G: the index and the slot map on demand
+INDEX_CACHED = re.compile(r"world\.index\.offer: region (\S+): from the cache")
+INDEX_ASKED = re.compile(r"world\.index\.offer: region (\S+): asked for it \(hash \w+, (\d+) chars\)")
+INDEX_RECEIVED = re.compile(r"world\.index: received \((\d+) parts deflated, hash \w+, region (\w+)")
+SLOTS_CACHED = re.compile(r"world\.slots\.offer: from the cache")
+SLOTS_ASKED = re.compile(r"world\.slots\.offer: asked for it \(hash \w+, (\d+) chars\)")
+SLOTS_RECEIVED = re.compile(r"world\.slots: received \((\d+) parts deflated")
 
 
 def join(world: str, regions: list[str], log_path: Path, timeout: float) -> dict:
@@ -45,7 +57,8 @@ def join(world: str, regions: list[str], log_path: Path, timeout: float) -> dict
                               stdin=subprocess.DEVNULL, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
     threading.Thread(target=sv.stream, args=(client, log_path), daemon=True).start()
     started = time.monotonic()
-    seen: dict = {"offers": {}, "held": [], "documents": [], "tables": [], "seconds": None}
+    seen: dict = {"offers": {}, "held": [], "documents": [], "tables": [], "seconds": None, "indices_cached": [],
+                  "indices_asked": {}, "indices_received": [], "slots_cached": False, "slots_asked": None, "slots_received": False}
     try:
         while time.monotonic() - started < timeout:
             if client.poll() is not None:
@@ -55,6 +68,13 @@ def join(world: str, regions: list[str], log_path: Path, timeout: float) -> dict
             seen["held"] = sorted({m.group(1) for m in HELD.finditer(text)})
             seen["documents"] = sorted({(m.group(2), m.group(1)) for m in RECEIVED.finditer(text)})
             seen["tables"] = sorted({m.group(1) for m in TABLE.finditer(text)})
+            seen["indices_cached"] = sorted({m.group(1) for m in INDEX_CACHED.finditer(text)})
+            seen["indices_asked"] = {m.group(1): int(m.group(2)) for m in INDEX_ASKED.finditer(text)}
+            seen["indices_received"] = sorted({m.group(2) for m in INDEX_RECEIVED.finditer(text)})
+            seen["slots_cached"] = SLOTS_CACHED.search(text) is not None
+            asked = SLOTS_ASKED.search(text)
+            seen["slots_asked"] = int(asked.group(1)) if asked else None
+            seen["slots_received"] = SLOTS_RECEIVED.search(text) is not None
             if set(regions) <= set(seen["tables"]):
                 seen["seconds"] = round(time.monotonic() - started, 1)
                 break
@@ -104,6 +124,13 @@ def main(argv=None) -> int:
     ok = (set(regions) <= set(first["tables"]) and all(first["offers"].get(r) == (0, 2) for r in regions)
           and set(regions) <= set(second["tables"]) and all(second["offers"].get(r) == (2, 0) for r in regions)
           and not second["documents"])
+    # G2G: the first join asked for every index and the slot map and got them; the second took them from the cache
+    downloaded = sum(first["indices_asked"].values()) + (first["slots_asked"] or 0)
+    sv.say("first join's index and slot downloads:", downloaded, "chars;", first["indices_asked"], "slots", first["slots_asked"])
+    ok = ok and (set(first["indices_asked"]) == set(regions) and first["indices_received"] == sorted(regions)
+                 and first["slots_asked"] and first["slots_received"]
+                 and second["indices_cached"] == sorted(regions) and not second["indices_asked"] and not second["indices_received"]
+                 and second["slots_cached"] and second["slots_asked"] is None and not second["slots_received"])
     sv.say("OK" if ok else "FAILED")
     return 0 if ok else 1
 

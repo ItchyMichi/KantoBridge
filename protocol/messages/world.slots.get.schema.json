@@ -1,0 +1,23 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kantobridge.invalid/protocol/messages/world.slots.get.schema.json",
+  "title": "world.slots.get",
+  "description": "The client asks for the world's slot map it doesn't hold (after a world.slots.offer), by the content hash the offer named. The server answers with the map's world.slots parts (deflated) while it still publishes it, else with nothing.",
+  "x-type": "world.slots.get",
+  "x-legs": [
+    "c2s"
+  ],
+  "x-re": "never",
+  "type": "object",
+  "required": [
+    "hash"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "hash": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$",
+      "description": "The slot map wanted: the offer's hash."
+    }
+  }
+}

@@ -37,6 +37,13 @@ import org.jetbrains.annotations.Nullable;
  * ({@code world.shapes.get}); the parts that come back are checked against the offer (a document of an older offer is
  * refused) and each completed one goes to the {@link DocumentListener} (the cache). Parts no offer announced (a server
  * from before item 4 pushes them on join) are taken as before, without the content check.
+ *
+ * <p>The index on demand too (MG9 G2G): a region's {@code world.index.offer} names its index by the SHA-256 of its text;
+ * {@link #onIndexOffer} says whether the region lacks it, the glue takes it from its cache ({@link #provideIndex}) or
+ * asks ({@code world.index.get}), and the deflated parts that answer must hold what the offer named; each one completed
+ * goes to the {@link IndexListener} (the cache). A held index stays until the one offered in its place is in. A region's
+ * shape pair is told only once its index is in (it may come later than its shapes now); the set's listeners see both
+ * then.
  */
 public final class RegionDocuments {
 	/** Where untagged parts collect before the legacy world's index named its region. */
@@ -61,6 +68,12 @@ public final class RegionDocuments {
 	@FunctionalInterface
 	public interface DocumentListener {
 		void document(String region, boolean isIndex, String hash, String wire, boolean deflated);
+	}
+
+	/** Told when an offered index has come in from parts: its content hash and the parts' text (Base64 of it deflated). */
+	@FunctionalInterface
+	public interface IndexListener {
+		void index(String region, String hash, String wire);
 	}
 
 	/** What a region lacks after its offer: each document's content hash, or null where the region holds it already. */
@@ -88,6 +101,8 @@ public final class RegionDocuments {
 		@Nullable String shapeMapHash;
 		@Nullable String offeredIndex;
 		@Nullable String offeredMap;
+		/** The content hash the region's last {@code world.index.offer} named (G2G), or null (pushed parts, unannounced). */
+		@Nullable String offeredWorld;
 	}
 
 	private final WorldIndexParts.Assembler tableParts = new WorldIndexParts.Assembler();
@@ -95,6 +110,7 @@ public final class RegionDocuments {
 	private final List<Runnable> listeners = new CopyOnWriteArrayList<>();
 	private @Nullable ShapesListener shapesListener;
 	private @Nullable DocumentListener documentListener;
+	private @Nullable IndexListener indexListener;
 	private @Nullable Regions regions;
 	/** True once a {@code world.regions} document named the regions (a region world); false for a legacy world. */
 	private boolean fromTable;
@@ -114,6 +130,11 @@ public final class RegionDocuments {
 
 	public void onShapes(@Nullable ShapesListener listener) {
 		this.shapesListener = listener;
+	}
+
+	/** Sets the one listener for offered indices that came in from parts. */
+	public void onIndexDocument(@Nullable IndexListener listener) {
+		this.indexListener = listener;
 	}
 
 	// ---- feeding ----
@@ -139,25 +160,91 @@ public final class RegionDocuments {
 	 * a region the table doesn't name is refused.
 	 */
 	public @Nullable WorldIndex onIndexPart(@Nullable String region, int index, int count, String hash, String part) throws DataException {
+		return this.onIndexPart(region, false, index, count, hash, part);
+	}
+
+	/**
+	 * {@link #onIndexPart(String, int, int, String, String)}; {@code deflated}: the parts' text is Base64 of the deflated
+	 * index ({@code enc:"deflate"}, G2G) and {@code hash} that text's. A completed index the region's offer doesn't name
+	 * (an older offer's, after a rebuild) is refused.
+	 */
+	public @Nullable WorldIndex onIndexPart(@Nullable String region, boolean deflated, int index, int count, String hash, String part)
+			throws DataException {
 		String key = this.key(region);
 		Held slot = this.held.computeIfAbsent(key, k -> new Held());
-		String json = slot.indexParts.accept(index, count, hash, part);
-		if (json == null) {
+		String text = slot.indexParts.accept(index, count, hash, part);
+		if (text == null) {
+			return null;
+		}
+		String json = deflated ? ShapeDocs.unwireText(text, MAX_DOC_BYTES) : text;
+		String contentHash = deflated ? Hashes.sha256(json) : hash;
+		if (slot.offeredWorld != null && !slot.offeredWorld.equals(contentHash)) {
+			throw new DataException("/", "not the offered document");
+		}
+		WorldIndex parsed = WorldIndex.fromJson(json);
+		String id = this.adoptIndex(key, slot, parsed, contentHash);
+		if (slot.offeredWorld != null && deflated && this.indexListener != null) {
+			this.indexListener.index(id, contentHash, text);
+		}
+		return parsed;
+	}
+
+	/**
+	 * A region's {@code world.index.offer} (null: untagged): the offered hash is noted, and returned when the region lacks
+	 * that index (else null). A held index stays until the one offered in its place is in.
+	 */
+	public @Nullable String onIndexOffer(@Nullable String region, String hash) throws DataException {
+		String key = this.key(region);
+		Held slot = this.held.computeIfAbsent(key, k -> new Held());
+		slot.offeredWorld = hash;
+		if (slot.index != null && hash.equals(slot.indexHash)) {
+			return null;
+		}
+		slot.indexParts.reset();
+		return hash;
+	}
+
+	/**
+	 * An offered index the glue found in its own cache (its text, checked against {@code hash}). Ignored (null) unless the
+	 * region's offer still names that hash; otherwise the index, adopted as if its parts had come in.
+	 */
+	public @Nullable WorldIndex provideIndex(@Nullable String region, String hash, String json) throws DataException {
+		String key = this.key(region);
+		Held slot = this.held.get(key);
+		if (slot == null || !hash.equals(slot.offeredWorld)) {
 			return null;
 		}
 		WorldIndex parsed = WorldIndex.fromJson(json);
+		slot.indexParts.reset();
+		this.adoptIndex(key, slot, parsed, hash);
+		return parsed;
+	}
+
+	/** Makes {@code parsed} the region's index and publishes; returns the id it is filed under (a legacy world's own). */
+	private String adoptIndex(String key, Held slot, WorldIndex parsed, String contentHash) {
 		slot.index = parsed;
-		slot.indexHash = hash;
+		slot.indexHash = contentHash;
 		if (!this.fromTable) {
 			// A legacy world: its one index names the implicit region (again after a rebuild: the bounds may have moved).
 			RegionRecord record = RegionRecord.legacy(parsed, null, null, null);
 			this.held.remove(key);
 			this.held.put(record.id(), slot);
 			this.adopt(Regions.legacy(record), false);
-		} else {
-			this.publish();
+			return record.id();
 		}
-		return parsed;
+		this.publish();
+		return key;
+	}
+
+	/** The content hash the region's last {@code world.index.offer} named, or null. */
+	public @Nullable String offeredIndex(@Nullable String region) {
+		Held slot;
+		try {
+			slot = this.held.get(this.key(region));
+		} catch (DataException e) {
+			return null;
+		}
+		return slot == null ? null : slot.offeredWorld;
 	}
 
 	/**
@@ -264,9 +351,12 @@ public final class RegionDocuments {
 		return this.tell(key, slot);
 	}
 
-	/** Tells the listener a region's complete pair; true when it is complete. */
+	/**
+	 * Tells the listener a region's complete pair; true when it is complete. Not before the region's index is in (G2G: the
+	 * shapes may come from the cache while the index comes from the server): the set's listeners see both once it is.
+	 */
 	private boolean tell(String key, Held slot) {
-		if (slot.shapeIndexText == null || slot.shapeMapWire == null) {
+		if (slot.shapeIndexText == null || slot.shapeMapWire == null || slot.index == null) {
 			return false;
 		}
 		if (this.shapesListener != null && !UNNAMED.equals(key)) {

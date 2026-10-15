@@ -248,23 +248,40 @@ public class MultiplayerGameTests implements FabricGameTest {
 	}
 
 	private static SlotMap reassemble(GameTestHelper helper, List<Envelope> parts) {
-		WorldIndexParts.Assembler assembler = new WorldIndexParts.Assembler();
-		String json = null;
 		try {
-			for (Envelope part : parts) {
-				json = assembler.accept(part.data().get("index").getAsInt(), part.data().get("count").getAsInt(), part.data().get("hash").getAsString(),
-						part.data().get("part").getAsString());
-			}
-			helper.assertTrue(json != null, "the world.slots parts don't make a whole slot map");
-			return SlotMap.fromJson(json);
+			return SlotMap.fromJson(reassembleText(helper, parts, "world.slots"));
 		} catch (DataException e) {
 			throw new GameTestAssertException("world.slots parts rejected: " + e.problem());
 		}
 	}
 
+	/** A document's text from its parts: deflated ones ({@code enc:"deflate"}, G2G) inflated. */
+	static String reassembleText(GameTestHelper helper, List<Envelope> parts, String what) {
+		WorldIndexParts.Assembler assembler = new WorldIndexParts.Assembler();
+		String text = null;
+		try {
+			for (Envelope part : parts) {
+				text = assembler.accept(part.data().get("index").getAsInt(), part.data().get("count").getAsInt(), part.data().get("hash").getAsString(),
+						part.data().get("part").getAsString());
+			}
+			helper.assertTrue(text != null, "the " + what + " parts don't make a whole document");
+			boolean deflated = parts.stream().allMatch(part -> part.data().has("enc") && part.data().get("enc").getAsString().equals(ShapeDocs.ENC_DEFLATE));
+			return deflated ? ShapeDocs.unwireText(text, 1 << 26) : text;
+		} catch (DataException e) {
+			throw new GameTestAssertException(what + " parts rejected: " + e.problem());
+		}
+	}
+
+	private static long chars(List<WorldIndexParts.Part> parts) {
+		return parts.stream().mapToLong(part -> part.text().length()).sum();
+	}
+
 	/**
 	 * A joining player gets the WorldIndex and then the world's slot map ({@code world.slots}), the one the index names, so
-	 * their client can draw its own art into the host's slots; a slot map the index doesn't name is never sent.
+	 * their client can draw its own art into the host's slots; a slot map the index doesn't name is never sent. Since MG9
+	 * G2G both are offered by hash ({@code world.index.offer}, {@code world.slots.offer}) and their parts (deflated) go
+	 * out when the client asks ({@code world.index.get}, {@code world.slots.get}); asked again at once nothing goes out, a
+	 * hash the server doesn't publish gets nothing, a request without one an error.
 	 */
 	@GameTest(template = EMPTY_STRUCTURE, batch = BATCH_SLOTS)
 	public void joiningPlayersGetTheWorldsSlotMapWithItsIndex(GameTestHelper helper) {
@@ -281,16 +298,45 @@ public class MultiplayerGameTests implements FabricGameTest {
 				helper.assertTrue(WorldIndexSync.send(server, player) == 0 && sent.isEmpty(), "a client without the mod was sent parts");
 				int count = WorldIndexSync.sendTo(server, player);
 				List<String> types = sent.stream().map(Envelope::type).toList();
-				int indexParts = WorldIndexSync.currentParts(server).size();
+				helper.assertTrue(count == 2 && types.equals(List.of(MsgTypes.WORLD_INDEX_OFFER, MsgTypes.WORLD_SLOTS_OFFER)),
+						"the index's offer, then the slots': " + types);
+				JsonObject indexOffer = sent.get(0).data();
+				JsonObject slotsOffer = sent.get(1).data();
+				String indexHash = dev.kantobridge.world.Hashes.sha256(golden.toJson());
+				helper.assertTrue(indexOffer.get("hash").getAsString().equals(indexHash) && indexHash.equals(WorldIndexSync.currentHash(server))
+						&& !indexOffer.has("region"), "the index's offer: its text's hash, untagged");
+				helper.assertTrue(indexOffer.get("chars").getAsLong() == chars(WorldIndexSync.currentParts(server)), "the index's wire size");
+				helper.assertTrue(slotsOffer.get("hash").getAsString().equals(golden.slotMapHash())
+						&& slotsOffer.get("chars").getAsLong() == chars(WorldIndexSync.currentSlotParts(server)), "the slots' offer names the index's map");
+
+				// The client asks for both: deflated parts that make the documents offered.
+				int before = sent.size();
+				RelayService.get().receive(player, BattleGameTests.envelope(1, MsgTypes.WORLD_INDEX_GET, "{\"hash\":\"" + indexHash + "\"}"));
+				List<Envelope> indexMessages = List.copyOf(sent.subList(before, sent.size()));
+				helper.assertTrue(indexMessages.size() == WorldIndexSync.currentParts(server).size()
+						&& indexMessages.stream().allMatch(m -> m.type().equals(MsgTypes.WORLD_INDEX) && !m.data().has("region")),
+						"the index's parts, untagged: " + indexMessages.size());
+				helper.assertTrue(reassembleText(helper, indexMessages, "world.index").equals(golden.toJson()), "another index arrived");
+				before = sent.size();
+				RelayService.get().receive(player, BattleGameTests.envelope(2, MsgTypes.WORLD_SLOTS_GET, "{\"hash\":\"" + golden.slotMapHash() + "\"}"));
+				List<Envelope> slotMessages = List.copyOf(sent.subList(before, sent.size()));
 				int slotParts = WorldIndexSync.currentSlotParts(server).size();
-				helper.assertTrue(slotParts >= 1 && count == indexParts + slotParts && sent.size() == count, "parts sent: " + count);
-				helper.assertTrue(types.subList(0, indexParts).stream().allMatch(MsgTypes.WORLD_INDEX::equals)
-						&& types.subList(indexParts, count).stream().allMatch(MsgTypes.WORLD_SLOTS::equals), "the index comes first, then the slots");
-				List<Envelope> slotMessages = sent.subList(indexParts, count);
-				helper.assertTrue(slotMessages.stream().allMatch(message -> message.data().get("hash").getAsString().equals(golden.slotMapHash())),
-						"every part names the index's slot-map hash");
+				helper.assertTrue(slotParts >= 1 && slotMessages.size() == slotParts && slotMessages.stream().allMatch(m -> m.type().equals(MsgTypes.WORLD_SLOTS)),
+						"the slots' parts: " + slotMessages.size());
 				SlotMap received = reassemble(helper, slotMessages);
 				helper.assertTrue(received.hash().equals(golden.slotMapHash()) && received.slots().equals(slots.slots()), "a different slot map arrived");
+
+				// Asked again at once: not sent twice; a document the server doesn't publish: nothing; naming none: an error.
+				before = sent.size();
+				RelayService.get().receive(player, BattleGameTests.envelope(3, MsgTypes.WORLD_INDEX_GET, "{\"hash\":\"" + indexHash + "\"}"));
+				RelayService.get().receive(player, BattleGameTests.envelope(4, MsgTypes.WORLD_SLOTS_GET, "{\"hash\":\"" + golden.slotMapHash() + "\"}"));
+				RelayService.get().receive(player, BattleGameTests.envelope(5, MsgTypes.WORLD_INDEX_GET, "{\"hash\":\"" + "0".repeat(64) + "\"}"));
+				RelayService.get().receive(player, BattleGameTests.envelope(6, MsgTypes.WORLD_SLOTS_GET, "{\"hash\":\"" + "0".repeat(64) + "\"}"));
+				helper.assertTrue(sent.size() == before, "a repeat or an unknown document went out: " + (sent.size() - before));
+				RelayService.get().receive(player, BattleGameTests.envelope(7, MsgTypes.WORLD_SLOTS_GET, "{}"));
+				RelayService.get().receive(player, BattleGameTests.envelope(8, MsgTypes.WORLD_INDEX_GET, "{\"region\":\"kanto\"}"));
+				helper.assertTrue(sent.size() == before + 2 && sent.get(before).type().equals(MsgTypes.ERROR) && sent.get(before + 1).type().equals(MsgTypes.ERROR),
+						"requests naming no document");
 			}));
 
 			// A slot map the index doesn't name (a stray file, another build's) is left out: clients keep their own packs.
@@ -305,8 +351,8 @@ public class MultiplayerGameTests implements FabricGameTest {
 					"a foreign slot map was published");
 			MockPlayers.with(helper, player -> RelayTap.capture(player, sent -> {
 				WorldIndexSync.sendTo(server, player);
-				helper.assertTrue(!sent.isEmpty() && sent.stream().noneMatch(message -> message.type().equals(MsgTypes.WORLD_SLOTS)),
-						"world.slots went out for a slot map the index doesn't name");
+				helper.assertTrue(!sent.isEmpty() && sent.stream().noneMatch(message -> message.type().equals(MsgTypes.WORLD_SLOTS)
+						|| message.type().equals(MsgTypes.WORLD_SLOTS_OFFER)), "world.slots went out for a slot map the index doesn't name");
 			}));
 		} finally {
 			WorldIndexSync.withdraw(server);
@@ -367,12 +413,10 @@ public class MultiplayerGameTests implements FabricGameTest {
 			helper.assertTrue(shapes.index().hash().equals(WorldIndexSync.currentShapesHash(server)), "the shapes weren't published");
 			MockPlayers.with(helper, player -> RelayTap.capture(player, sent -> {
 				int count = WorldIndexSync.sendTo(server, player);
-				int indexParts = WorldIndexSync.currentParts(server).size();
-				int slotParts = WorldIndexSync.currentSlotParts(server).size();
-				helper.assertTrue(count == indexParts + slotParts + 1 && sent.size() == count, "messages sent: " + count);
+				helper.assertTrue(count == 3 && sent.size() == count, "messages sent: " + count);
 				List<String> types = sent.stream().map(Envelope::type).toList();
-				helper.assertTrue(types.get(count - 1).equals(MsgTypes.WORLD_SHAPES_OFFER) && !types.contains(MsgTypes.WORLD_SHAPES),
-						"one offer after the slots, no shape parts on join: " + types.subList(indexParts + slotParts, count));
+				helper.assertTrue(types.equals(List.of(MsgTypes.WORLD_INDEX_OFFER, MsgTypes.WORLD_SLOTS_OFFER, MsgTypes.WORLD_SHAPES_OFFER)),
+						"three offers on join, no parts: " + types);
 				JsonObject offer = sent.get(count - 1).data();
 				List<WorldIndexParts.Part> parts = WorldIndexSync.currentShapeParts(server);
 				long chars = parts.stream().mapToLong(part -> part.text().length()).sum();

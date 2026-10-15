@@ -1477,7 +1477,7 @@ the full suite at the ✔ checkpoints (MG2, MG3, MG5, MG6). Pods run inside your
 | MG6 | One trainer economy | **done** (notes 18, 21); check: `LedgerGameTests` (two regions: adoption, stamped read-back, the crossing's projection, `too_many`/`left`, re-projection on an unknown stamp; a legacy world untouched), `BagGameTests` marked stacks, `LedgerTest`/`LedgerCodecTest`/`ItemsTest`/`BagSetRelayTest`, `test_lua_ledger.py`/`test_lua_bag.py`; the real engine's `bag.set` round trip is your play-test (PLAYTEST.md "MG6") | 2026-10-13 | |
 | MG7 | The second family (Emerald): adapter and export | **done**: the spec [specs/GEN3_BRIDGE_PLAN.md](specs/GEN3_BRIDGE_PLAN.md) (2026-10-14), phases G3A–G3G; **G3A done** (Emerald followable), **G3B done** (Emerald's UI), **G3C done** (story), **G3D done** (export), **G3E done** (builder), **G3F done** (battles, party, bag; the route exit moved to MG8), **G3G done** (the real Hoenn built in Minecraft) ("Several games: MG7") | 2026-10-14 | |
 | MG8 | Hoenn and the pass to it | **done**: the spec [specs/HOENN_PASS_PLAN.md](specs/HOENN_PASS_PLAN.md) (2026-10-14), phases HP1–HP8; the test pass Viridian City ↔ Littleroot Town; Kanto and Hoenn in one world; 20 crossings each way between the real Blue and Emerald ("Several games: MG8") | 2026-10-14 | |
-| MG9 | Johto (Gold, Silver, Crystal): the Gen 2 bridge | **in progress**: [specs/GEN2_BRIDGE_PLAN.md](specs/GEN2_BRIDGE_PLAN.md) (2026-10-15), from a static inspection of the Gen 2 engine (research notes `refs/_research/g2_*.md`); phases G2S and G2A–G2H; decisions J1–J14 with defaults. **G2S done** ("Johto (MG9): the inspection G2S"); **G2A done** (Crystal followable: "Johto (MG9): G2A notes"); **G2B done** (Crystal's UI: "Johto (MG9): G2B notes"); **G2C done** (Crystal's story: "Johto (MG9): G2C notes"); **G2D done** (Crystal's export: "Johto (MG9): G2D notes"); **G2E done** (the builder, 112 families: "Johto (MG9): G2E notes"); **G2F done** (battles, party, bag: "Johto (MG9): G2F notes"); next G2G | 2026-10-15 | |
+| MG9 | Johto (Gold, Silver, Crystal): the Gen 2 bridge | **in progress**: [specs/GEN2_BRIDGE_PLAN.md](specs/GEN2_BRIDGE_PLAN.md) (2026-10-15), from a static inspection of the Gen 2 engine (research notes `refs/_research/g2_*.md`); phases G2S and G2A–G2H; decisions J1–J14 with defaults. **G2S done** ("Johto (MG9): the inspection G2S"); **G2A done** (Crystal followable: "Johto (MG9): G2A notes"); **G2B done** (Crystal's UI: "Johto (MG9): G2B notes"); **G2C done** (Crystal's story: "Johto (MG9): G2C notes"); **G2D done** (Crystal's export: "Johto (MG9): G2D notes"); **G2E done** (the builder, 112 families: "Johto (MG9): G2E notes"); **G2F done** (battles, party, bag: "Johto (MG9): G2F notes"); **G2G done** (the real Johto at slot 2; indices and slots on demand: "Johto (MG9): G2G notes"); next G2H | 2026-10-15 | |
 
 ### Several games: notes
 
@@ -2382,6 +2382,34 @@ Crystal is followable (GEN2_BRIDGE_PLAN.md §3–§5, phase G2A), at your "Go" a
 - **Still the stub's** (later phases): the UI (G2B: until then a client gets no Gen 2 screens; the e2e driver answers
   Oak's speech), the story (G2C), the export (G2D: `export.live_copy_failed` is logged once at load), battles (G2F),
   routes (G2H).
+
+### Johto (MG9): G2G notes (2026-10-15)
+
+The real Johto beside Kanto and Hoenn, and the join's documents on demand (GEN2_BRIDGE_PLAN.md §8, phase G2G), in
+sequence after G2F as you asked.
+
+- **The world** `ThreeRegionsE2E` (on the volume; a copy of PassE2E with Kanto at slot 0 and Hoenn at 1): Johto built
+  at slot 2 from the pod's Crystal export: 388 maps, 4.36 million blocks, 3,825 textures, in 251 s with a 6 GB heap.
+  Every build gate passes; its 3 warnings are the ones G2E found (Celadon City and Route 7's loop, an edge each way;
+  one object off its map in Goldenrod's Pokémon Center), now Gen 2's known set in `build_world.py` (any other warning
+  or any overlap still fails a Gen 2 build).
+- **Indices and the slot map on demand** (the leftover of follow-up item 4): they were pushed whole on every join;
+  now each region's WorldIndex and the world's slot map are offered by hash (`world.index.offer`, `world.slots.offer`)
+  and sent deflated only to a client that lacks them (`world.index.get`, `world.slots.get`), which keeps them beside
+  the shapes. Measured on the three-region world in the real client: every join used to send 7.5 million characters
+  of indices and slot map (117 parts); the first join now downloads 626,000 of them (11 parts), a rejoin nothing, and
+  all three shape tables came up both times (the rejoin took every document from the cache).
+- **Budgets** (per region, on the wire): the index 81,416 (Kanto), 246,356 (Hoenn), 105,472 (Johto) characters
+  deflated; Johto's shape index and map 414,040 and 648,980 (7 + 10 parts; Hoenn's 20 + 32 stay the largest); the
+  slot map for all three 192,736. Each document's budget is 64 parts; the build report's region object gains
+  `index_chars` for the index's.
+- **Protocol**: four new types (`world.index.offer/get`, `world.slots.offer/get`), `enc` on `world.index` and
+  `world.slots`. A client still takes a server's pushed parts from before; a client from before G2G gets no index
+  from a G2G server, so a host and its players update together (as for item 4).
+- **Checks**: local pytest and Lua 2,205 passed (the Gen 2 gate in `test_build_world.py`). On the pod (kb-dev24): the
+  real client check above (`shapes_cache_check.py`, extended to the index and slots), and the full check: pytest 2,205, JUnit 1,281 (new tests for the offers, the cache's kinds, the report's `index_chars`), all 124 GameTests (the join sequences now offers, the documents asked for).
+- **Pods**: kb-dev23 and kb-dev22's hosts were full; kb-dev24 (cnax963rwilzko, cpu5g ×4, 16 GB, $0.184/hr) was created:
+  about 30 minutes, stopped.
 
 ### Johto (MG9): G2F notes (2026-10-15)
 

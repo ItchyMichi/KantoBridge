@@ -678,6 +678,20 @@
       "redact": ["/part"],
       "schema": "messages/world.index.schema.json"
     },
+    "world.index.get": {
+      "legs": ["c2s"],
+      "re": "never",
+      "rom": false,
+      "redact": [],
+      "schema": "messages/world.index.get.schema.json"
+    },
+    "world.index.offer": {
+      "legs": ["s2c"],
+      "re": "never",
+      "rom": false,
+      "redact": [],
+      "schema": "messages/world.index.offer.schema.json"
+    },
     "world.regions": {
       "legs": ["s2c"],
       "re": "never",
@@ -712,6 +726,20 @@
       "rom": true,
       "redact": ["/part"],
       "schema": "messages/world.slots.schema.json"
+    },
+    "world.slots.get": {
+      "legs": ["c2s"],
+      "re": "never",
+      "rom": false,
+      "redact": [],
+      "schema": "messages/world.slots.get.schema.json"
+    },
+    "world.slots.offer": {
+      "legs": ["s2c"],
+      "re": "never",
+      "rom": false,
+      "redact": [],
+      "schema": "messages/world.slots.offer.schema.json"
     }
   },
   "exports": {

@@ -16,6 +16,7 @@ import dev.kantobridge.proto.Envelope;
 import dev.kantobridge.proto.MsgTypes;
 import dev.kantobridge.world.DataException;
 import dev.kantobridge.world.Hashes;
+import dev.kantobridge.world.ShapeDocs;
 import dev.kantobridge.world.SlotMap;
 import dev.kantobridge.world.WorldIndex;
 import dev.kantobridge.world.WorldIndexParts;
@@ -90,6 +91,49 @@ class SlotMapTransferTest {
 		WorldIndexParts.Assembler assembler = new WorldIndexParts.Assembler();
 		assertThrows(DataException.class, () -> ClientWorldIndex.assembleSlots(assembler, 0, 1, hash, reordered),
 				"only the canonical slot map the index names is accepted");
+	}
+
+	@Test
+	void anOfferedSlotMapComesDeflatedAndMustBeTheOfferedOne() throws Exception {
+		// MG9 G2G: the parts that answer a world.slots.get are Base64 of the deflated canonical text; the map's own hash is
+		// checked against the text it inflates to, and against the offer
+		SlotMap map = synthetic();
+		String wire = ShapeDocs.wire(map.toJson());
+		List<WorldIndexParts.Part> parts = WorldIndexParts.split(wire, 50);
+		assertTrue(parts.size() > 1);
+		assertEquals(Hashes.sha256(wire), parts.get(0).hash(), "the parts' hash is the wire text's");
+		WorldIndexParts.Assembler assembler = new WorldIndexParts.Assembler();
+		String[] kept = new String[1];
+		SlotMap received = null;
+		for (WorldIndexParts.Part part : parts) {
+			received = ClientWorldIndex.assembleSlots(assembler, part.index(), part.count(), part.hash(), part.text(), true, map.hash(), kept);
+		}
+		assertNotNull(received);
+		assertEquals(map.hash(), received.hash());
+		assertEquals(wire, kept[0], "the wire text, for the cache");
+		// Another map than the offered one is refused, as a map whose text isn't canonical.
+		WorldIndexParts.Assembler other = new WorldIndexParts.Assembler();
+		WorldIndexParts.Part whole = WorldIndexParts.split(wire, 1 << 20).get(0);
+		assertThrows(DataException.class, () -> ClientWorldIndex.assembleSlots(other, 0, 1, whole.hash(), whole.text(), true, "a".repeat(64), null));
+		// Read back from the cache: the text must parse to the offered map.
+		assertEquals(map.hash(), ClientWorldIndex.cachedSlots(map.hash(), map.toJson().getBytes(StandardCharsets.UTF_8)).hash());
+		assertThrows(DataException.class, () -> ClientWorldIndex.cachedSlots("b".repeat(64), map.toJson().getBytes(StandardCharsets.UTF_8)));
+	}
+
+	@Test
+	void theOffersAndGetsFitTheCatalog() throws Exception {
+		Catalog catalog = Catalog.bundled();
+		JsonObject offer = new JsonObject();
+		offer.addProperty("hash", "a".repeat(64));
+		offer.addProperty("chars", 402116);
+		catalog.check(new Envelope(MsgTypes.WORLD_SLOTS_OFFER, 3, null, offer), Catalog.Leg.S2C);
+		offer.addProperty("region", "johto");
+		catalog.check(new Envelope(MsgTypes.WORLD_INDEX_OFFER, 4, null, offer), Catalog.Leg.S2C);
+		JsonObject get = new JsonObject();
+		get.addProperty("hash", "a".repeat(64));
+		catalog.check(new Envelope(MsgTypes.WORLD_SLOTS_GET, 5, null, get), Catalog.Leg.C2S);
+		get.addProperty("region", "johto");
+		catalog.check(new Envelope(MsgTypes.WORLD_INDEX_GET, 6, null, get), Catalog.Leg.C2S);
 	}
 
 	@Test

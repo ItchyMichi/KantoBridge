@@ -1,0 +1,19 @@
+[
+  {
+    "type": "world.index.offer",
+    "seq": 4,
+    "data": {
+      "hash": "5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e",
+      "chars": 402116,
+      "region": "johto"
+    }
+  },
+  {
+    "type": "world.index.offer",
+    "seq": 5,
+    "data": {
+      "hash": "d82a346e9dfc8ebea237c3b2ae3d7b1f7cf43ae92c323789d9f26bbd7252639e",
+      "chars": 48
+    }
+  }
+]

@@ -1,0 +1,30 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kantobridge.invalid/protocol/messages/world.slots.offer.schema.json",
+  "title": "world.slots.offer",
+  "description": "The world's slot map as the server publishes it, by content hash and wire size only (MG9 G2G): on join after the regions' index offers and whenever a build publishes, and only when the published indices name it. The client takes it from its own cache by hash, or asks for it with world.slots.get; the world.slots parts that answer carry it deflated.",
+  "x-type": "world.slots.offer",
+  "x-legs": [
+    "s2c"
+  ],
+  "x-re": "never",
+  "type": "object",
+  "required": [
+    "hash",
+    "chars"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "hash": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$",
+      "description": "SHA-256 of the slot map's canonical JSON text (the map's own hash)."
+    },
+    "chars": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 2147483647,
+      "description": "Its wire form's length: the world.slots parts' text, all together."
+    }
+  }
+}

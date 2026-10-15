@@ -359,18 +359,22 @@ public class RegionBuildGameTests implements FabricGameTest {
 			int test2Shapes = WorldIndexSync.currentShapeParts(server, TEST2).size();
 			helper.assertTrue(regionParts >= 1 && kantoParts >= 1 && test2Parts >= 1 && slotParts >= 1 && kantoShapes >= 2 && test2Shapes >= 2,
 					"parts: regions " + regionParts + ", indices " + kantoParts + "+" + test2Parts + ", slots " + slotParts + ", shapes " + kantoShapes + "+" + test2Shapes);
-			// item 4: one offer per region; the shape parts go out when a client asks for them
-			int expected = regionParts + kantoParts + test2Parts + slotParts + 2;
-			helper.assertTrue(count == expected && sent.size() == count, "parts sent: " + count + " (expected " + expected + ", captured " + sent.size() + ")");
+			// item 4 and G2G: every region's index and shapes, and the slots, are offered; parts go out when a client asks
+			int expected = regionParts + 2 + 1 + 2;
+			helper.assertTrue(count == expected && sent.size() == count, "messages sent: " + count + " (expected " + expected + ", captured " + sent.size() + ")");
 			int at = 0;
 			List<Envelope> regionMessages = List.copyOf(sent.subList(at, at += regionParts));
 			helper.assertTrue(regionMessages.stream().allMatch(m -> m.type().equals(MsgTypes.WORLD_REGIONS) && regionOf(m) == null), "world.regions comes first, untagged");
-			List<Envelope> kantoIndexMessages = List.copyOf(sent.subList(at, at += kantoParts));
-			helper.assertTrue(kantoIndexMessages.stream().allMatch(m -> m.type().equals(MsgTypes.WORLD_INDEX) && KANTO.equals(regionOf(m))), "kanto's index parts, tagged kanto");
-			List<Envelope> test2IndexMessages = List.copyOf(sent.subList(at, at += test2Parts));
-			helper.assertTrue(test2IndexMessages.stream().allMatch(m -> m.type().equals(MsgTypes.WORLD_INDEX) && TEST2.equals(regionOf(m))), "test2's index parts, tagged test2");
-			List<Envelope> slotMessages = List.copyOf(sent.subList(at, at += slotParts));
-			helper.assertTrue(slotMessages.stream().allMatch(m -> m.type().equals(MsgTypes.WORLD_SLOTS) && regionOf(m) == null), "one untagged world.slots after the indices");
+			Envelope kantoIndexOffer = sent.get(at++);
+			Envelope test2IndexOffer = sent.get(at++);
+			helper.assertTrue(kantoIndexOffer.type().equals(MsgTypes.WORLD_INDEX_OFFER) && KANTO.equals(regionOf(kantoIndexOffer))
+					&& test2IndexOffer.type().equals(MsgTypes.WORLD_INDEX_OFFER) && TEST2.equals(regionOf(test2IndexOffer)), "each region's index offer, tagged, in table order");
+			String test2IndexHash = WorldIndexSync.currentHash(server, TEST2);
+			helper.assertTrue(test2IndexOffer.data().get("hash").getAsString().equals(test2IndexHash)
+					&& kantoIndexOffer.data().get("hash").getAsString().equals(WorldIndexSync.currentHash(server, KANTO)), "the offers name the indices' hashes");
+			Envelope slotsOffer = sent.get(at++);
+			helper.assertTrue(slotsOffer.type().equals(MsgTypes.WORLD_SLOTS_OFFER) && regionOf(slotsOffer) == null
+					&& slotsOffer.data().get("hash").getAsString().equals(WorldIndexSync.currentSlotsHash(server)), "one untagged slots offer after the indices'");
 			Envelope kantoOffer = sent.get(at++);
 			Envelope test2Offer = sent.get(at++);
 			helper.assertTrue(kantoOffer.type().equals(MsgTypes.WORLD_SHAPES_OFFER) && KANTO.equals(regionOf(kantoOffer))
@@ -385,6 +389,15 @@ public class RegionBuildGameTests implements FabricGameTest {
 			List<Envelope> test2ShapeMessages = List.copyOf(sent.subList(before, sent.size()));
 			helper.assertTrue(test2ShapeMessages.size() == test2Shapes, "test2's shape parts: " + test2ShapeMessages.size() + " of " + test2Shapes);
 			assertShapes(helper, test2ShapeMessages, TEST2);
+			// test2's index, asked for as its client would: deflated parts tagged test2 that make the offered index
+			before = sent.size();
+			RelayService.get().receive(player, BattleGameTests.envelope(2, MsgTypes.WORLD_INDEX_GET, "{\"hash\":\"" + test2IndexHash + "\",\"region\":\"" + TEST2 + "\"}"));
+			List<Envelope> test2IndexMessages = List.copyOf(sent.subList(before, sent.size()));
+			helper.assertTrue(test2IndexMessages.size() == test2Parts && test2IndexMessages.stream().allMatch(m -> m.type().equals(MsgTypes.WORLD_INDEX)
+					&& TEST2.equals(regionOf(m))), "test2's index parts, tagged test2: " + test2IndexMessages.size() + " of " + test2Parts);
+			String test2Text = MultiplayerGameTests.reassembleText(helper, test2IndexMessages, "world.index");
+			helper.assertTrue(Hashes.sha256(test2Text).equals(test2IndexHash) && test2Text.equals(WorldIndexSync.current(server, TEST2).toJson()),
+					"another index arrived for test2");
 			// the world.regions document: the table and both records
 			JsonObject document = assemble(helper, regionMessages);
 			helper.assertTrue(document.get("version").getAsInt() == 1 && document.has("world"), "world.regions document " + document.keySet());
@@ -508,13 +521,12 @@ public class RegionBuildGameTests implements FabricGameTest {
 			helper.assertTrue(KANTO.equals(Regions.legacyId(server)), "legacy id " + Regions.legacyId(server));
 			MockPlayers.with(helper, player -> RelayTap.capture(player, sent -> {
 				int count = WorldIndexSync.sendTo(server, player);
-				int indexParts = WorldIndexSync.currentParts(server).size();
 				helper.assertTrue(WorldIndexSync.currentRegionParts(server).isEmpty(), "a legacy world has world.regions parts");
-				helper.assertTrue(count >= indexParts && sent.size() == count, "parts sent: " + count);
+				helper.assertTrue(count >= 1 && sent.size() == count, "messages sent: " + count);
 				helper.assertTrue(sent.stream().noneMatch(m -> m.type().equals(MsgTypes.WORLD_REGIONS)), "a legacy world sent world.regions");
-				helper.assertTrue(sent.stream().noneMatch(m -> m.data().has("region")), "a legacy world tagged a part with a region");
-				helper.assertTrue(sent.subList(0, indexParts).stream().allMatch(m -> m.type().equals(MsgTypes.WORLD_INDEX)), "the index comes first");
-				helper.assertTrue(sent.get(0).data().get("hash").getAsString().equals(golden.hash()), "another index arrived");
+				helper.assertTrue(sent.stream().noneMatch(m -> m.data().has("region")), "a legacy world tagged a message with a region");
+				helper.assertTrue(sent.get(0).type().equals(MsgTypes.WORLD_INDEX_OFFER), "the index's offer comes first (G2G)");
+				helper.assertTrue(sent.get(0).data().get("hash").getAsString().equals(golden.hash()), "another index was offered");
 				// a report without a region lands under the implicit region
 				RelayService.get().receive(player, envelope(MsgTypes.GAME_STATUS, 50, "{\"game\":\"red\",\"playthrough\":\"fresh\",\"ingame\":true,"
 						+ "\"started\":true,\"badges\":3,\"markers\":{\"starter\":true}}"));

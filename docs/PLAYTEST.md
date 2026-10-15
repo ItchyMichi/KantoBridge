@@ -903,6 +903,6 @@ it has been seen in a real client yet.
       world for its few seconds).
 - [ ] **Shapes download once:** the first time you join a world (and after a region is rebuilt) the world shows plain
       cubes for a moment while your client downloads that region's shapes; join again and they appear straight away
-      (taken from your client's cache, `kantobridge/shapes/docs/` in the game folder; nothing is downloaded).
-- **Known gaps:** each joining client still receives every region's world index as plain text (Hoenn's is about
-  2.9 MB, Kanto's 0.8 MB).
+      (taken from your client's cache, `kantobridge/shapes/docs/` in the game folder; nothing is downloaded). Since
+      MG9 G2G the regions' world indices and the slot map download once too (compressed: Hoenn's index is about
+      0.25 MB on the wire instead of 2.9 MB) and come from the same cache on a rejoin.

@@ -28,8 +28,8 @@ import org.jetbrains.annotations.Nullable;
  * hashes, sizes, key counts, {@code shaped_blocks}, {@code shape_plan_ms}) and the recorded self-check
  * ({@code selfcheck}: per-map scores aggregated; the per-map numbers go to {@code shape_selfcheck.json}). Several games
  * (docs/specs/MULTI_GAME_PLAN.md §4.6, MG3) add {@code region}: null for a legacy build, else the region built ({@code region},
- * {@code slot}, {@code origin}, {@code bounds}, {@code areas}, {@code families}, {@code shape_map_chars}), which
- * {@code tools/e2e/build_world.py} gates per region.
+ * {@code slot}, {@code origin}, {@code bounds}, {@code areas}, {@code families}, {@code shape_map_chars},
+ * {@code shape_index_chars} and since MG9 G2G {@code index_chars}), which {@code tools/e2e/build_world.py} gates per region.
  */
 public final class BuildReport {
 	public static final String FILE = "build_report.json";
@@ -40,13 +40,20 @@ public final class BuildReport {
 	 * @param bounds          the record's bounds, or null when nothing was placed
 	 * @param shapeMapChars   the region's shape map on the wire (the per-document budget is per region)
 	 * @param shapeIndexChars its shape index on the wire (deflated since the follow-up's item 4)
+	 * @param indexChars      its WorldIndex on the wire (deflated since MG9 G2G, offered by hash as the shapes are)
 	 */
 	public record RegionReport(String region, int slot, int originX, int originY, int originZ, RegionRecord.@Nullable Box bounds,
-			RegionRecord.Areas areas, int familyLo, int familyHi, long shapeMapChars, long shapeIndexChars) {
+			RegionRecord.Areas areas, int familyLo, int familyHi, long shapeMapChars, long shapeIndexChars, long indexChars) {
 		/** Without the index's size (reports from before item 4, tests). */
 		public RegionReport(String region, int slot, int originX, int originY, int originZ, RegionRecord.@Nullable Box bounds,
 				RegionRecord.Areas areas, int familyLo, int familyHi, long shapeMapChars) {
-			this(region, slot, originX, originY, originZ, bounds, areas, familyLo, familyHi, shapeMapChars, 0);
+			this(region, slot, originX, originY, originZ, bounds, areas, familyLo, familyHi, shapeMapChars, 0, 0);
+		}
+
+		/** Without the WorldIndex's size (reports from before G2G, tests). */
+		public RegionReport(String region, int slot, int originX, int originY, int originZ, RegionRecord.@Nullable Box bounds,
+				RegionRecord.Areas areas, int familyLo, int familyHi, long shapeMapChars, long shapeIndexChars) {
+			this(region, slot, originX, originY, originZ, bounds, areas, familyLo, familyHi, shapeMapChars, shapeIndexChars, 0);
 		}
 
 		JsonObject toJson() {
@@ -82,6 +89,7 @@ public final class BuildReport {
 			out.add("families", families);
 			out.addProperty("shape_map_chars", this.shapeMapChars);
 			out.addProperty("shape_index_chars", this.shapeIndexChars);
+			out.addProperty("index_chars", this.indexChars);
 			return out;
 		}
 
@@ -167,6 +175,8 @@ public final class BuildReport {
 	public long shapeIndexWireChars;
 	public long shapeIndexBytes;
 	public long worldIndexBytes;
+	/** The WorldIndex on the wire, deflated (MG9 G2G). */
+	public long worldIndexWireChars;
 	public int shapeKeys;
 	public Map<String, Integer> shapeKeysByKind = new TreeMap<>();
 	public int shapeInstances;
@@ -305,6 +315,7 @@ public final class BuildReport {
 		out.addProperty("shape_index_wire_chars", this.shapeIndexWireChars);
 		out.addProperty("shape_index_bytes", this.shapeIndexBytes);
 		out.addProperty("world_index_bytes", this.worldIndexBytes);
+		out.addProperty("world_index_wire_chars", this.worldIndexWireChars);
 		out.addProperty("shape_keys", this.shapeKeys);
 		out.add("shape_keys_by_kind", counts(this.shapeKeysByKind));
 		out.addProperty("shape_instances", this.shapeInstances);

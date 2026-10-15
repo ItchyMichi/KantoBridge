@@ -1027,8 +1027,12 @@ bytes. A downloaded export is stored as an **export bundle**, which stays under 
 | `activity` | C→S | `activity:"dialogue"\|"cutscene"\|"battle"\|"paused"\|"none"` (speech bubbles; `paused` while the player's Gen1Recomp is disconnected) | |
 | `relay.hello` | S→C, C→S | `protocol, mod` (the relay's version handshake on join; M10) | |
 | `texture.status` | C→S | `ok, slotMapHash?, textures?, missing?, shapes?, shapeIndexHash?, packs?, reason?` | |
-| `world.index` | S→C | `index, count, hash, part` (the WorldIndex JSON in parts, on join) | yes |
-| `world.slots` | S→C | `index, count, hash, part` (the slot-map JSON in parts, on join, so a joining player can build their own pack against the host's slots; M9) | yes |
+| `world.index` | S→C | `index, count, hash, part, enc?` (the WorldIndex JSON in parts: since MG9 G2G deflated, `enc:"deflate"`, when a client asks for it; a server from before G2G pushed it as text on join) | yes |
+| `world.index.offer` | S→C | `hash, chars` (MG9 G2G: a region's WorldIndex by the SHA-256 of its text and its wire size, after `world.regions` on join and whenever a build publishes) | |
+| `world.index.get` | C→S | `hash` (the offered index this client lacks) | |
+| `world.slots` | S→C | `index, count, hash, part, enc?` (the slot-map JSON in parts, so a joining player can build their own pack against the host's slots; M9; deflated and on request since G2G, as `world.index`) | yes |
+| `world.slots.offer` | S→C | `hash, chars` (MG9 G2G: the world's slot map by its hash and wire size, after the index offers) | |
+| `world.slots.get` | C→S | `hash` (the offered slot map this client lacks) | |
 | `world.shapes` | S→C | `doc, index, count, hash, part, enc?` (the shape index, `doc:"index"`, deflated with `enc:"deflate"`, and the shape map, `doc:"map"`, in parts, when a client asks for them; the voxel plan's V2) | yes |
 | `world.shapes.offer` | S→C | `index{hash, chars}, map{hash, chars}` (a region's shape documents by the SHA-256 of what they hold and their wire size, after `world.slots` on join and whenever a build publishes) | |
 | `world.shapes.get` | C→S | `index?, map?` (the content hashes of the offered documents this client lacks) | |
@@ -1101,10 +1105,11 @@ SHA-256 of its canonical JSON. Capacity: 16 families × 256 slots per shape.
   region and its art set, so a rebuild of one region never renumbers another's
   blocks. A region's `WorldIndex.slotMapHash` is the hash of the version-1 form of **that region's slice** of the map
   (the legacy region at 0..15 keeps today's hash exactly); `world.slots` carries the whole document's hash.
-- **On join** a region world sends `world.regions` (the table and every record), then each region's `world.index`
-  parts tagged with `region`, the one `world.slots`, then each region's `world.shapes.offer` tagged with `region`
-  (the `world.shapes` parts follow a `world.shapes.get`, also tagged). A legacy world sends today's sequence with an
-  untagged offer in place of the shape parts.
+- **On join** a region world sends `world.regions` (the table and every record), then each region's
+  `world.index.offer` tagged with `region`, the one `world.slots.offer`, then each region's `world.shapes.offer` tagged
+  with `region`; each document's parts follow the client's `get` for it (tagged as its offer; MG9 G2G, before which
+  the indices and the slot map went out as parts on every join). A legacy world sends the same offers untagged, without
+  `world.regions`.
 - **The `region` field:** every relayed type the client sends for its hidden game (`story.state`, `warp.request`,
   `session.*`, `save.*`, `route.*`, `party.*`, `daycare.*`, `bag.*`, `battle.*`, `pc.*`, `texture.status`,
   `game.status`) carries an optional `region`, the region of the link it came from; absent means the legacy region.
@@ -1165,9 +1170,10 @@ before V1) counts as no pack.
 
 #### Multiplayer rules (M9)
 
-- **`world.slots`** follows the `world.index` parts on join and whenever a build publishes; the
-  server sends it only when the slot map's hash equals the WorldIndex's `slotMapHash`, and the client
-  accepts it only when the text's and the parsed map's hashes both match. Each client draws the
+- **`world.slots`** is offered after the indices on join and whenever a build publishes (`world.slots.offer`; its
+  parts, deflated, answer a `world.slots.get` since MG9 G2G); the server offers it only when the slot map's hash
+  equals the WorldIndex's `slotMapHash`, and the client accepts it only when the text's and the parsed map's hashes
+  both match (and the offer's). Each client draws the
   world's tile blocks through it with its **own** art: a block's slot names a key, the key a texture
   of the client's own pack. The pack doesn't depend on the host's slot map (since V1), so joining a
   host with other slots is a re-mesh, never a re-export. A client re-exports its own art only when it
@@ -1175,8 +1181,18 @@ before V1) counts as no pack.
   world's slot map names, and only while gen1-bridge is connected to a compatible game (the same game,
   or Red with Blue), once per world. Art is never sent over the network. A world without a slot map
   (built before M9) shows placeholders.
+- **Indices and the slot map on demand** (MG9 G2G, specs/GEN2_BRIDGE_PLAN.md §8): a region's WorldIndex is offered
+  with **`world.index.offer{hash, chars}`** (the SHA-256 of its text, which its shape map names, and the deflated
+  parts' total size) and the world's slot map with **`world.slots.offer{hash, chars}`** (the map's own hash). The
+  client keeps both in the shapes' cache (`<hash>.world.z`, `<hash>.slots.z`) and asks for what it lacks with
+  **`world.index.get{hash}`** (tagged as the offer) or **`world.slots.get{hash}`**; the server answers with that
+  document's parts as Base64 of its deflated text (`enc:"deflate"`, `hash` that wire text's), each checked against the
+  offer, with the shapes' rules (only what it still publishes, once per 5 s, `bad_message` without a `hash`). A held
+  index stays until the one offered in its place is in; a region's shapes wait for its index. The real three-region
+  world (Kanto, Hoenn, Johto) shrank from 117 parts on every join (the indices 12 + 45 + 18, the slot map 42) to
+  8 + 3 parts on a first join and none on a rejoin.
 - **Shapes on demand** (2026-10-15, docs/SEVERAL_GAMES_FOLLOWUPS.md item 4, the voxel plan's R10): after the
-  `world.slots` parts the server sends each region's **`world.shapes.offer`**: its shape index and shape map, each by
+  `world.slots` offer the server sends each region's **`world.shapes.offer`**: its shape index and shape map, each by
   the SHA-256 of what it holds (the index's UTF-8 text, the map's file bytes) and its wire size in characters. The
   client looks each up in its own cache (`<gameDir>/kantobridge/shapes/docs/`, the deflated documents by hash, checked
   when read back, at most 64 MB, least recently used out first) and asks for the ones it lacks with one
@@ -1322,3 +1338,9 @@ carrying the same envelope in both directions. Larger data is split at the appli
 - Added after the several-games plan (docs/SEVERAL_GAMES_FOLLOWUPS.md item 4, the voxel plan's R10, 2026-10-15):
   `world.shapes.offer` (S→C) and `world.shapes.get` (C→S); `world.shapes.enc` (the index deflated). The shape
   documents go out when a client asks for them, not on every join.
+- Added in MG9 G2G (specs/GEN2_BRIDGE_PLAN.md §8, 2026-10-15): `world.index.offer` and `world.slots.offer` (S→C),
+  `world.index.get` and `world.slots.get` (C→S); `world.index.enc` and `world.slots.enc` (deflated parts). The indices
+  and the slot map are offered by hash as the shapes are and kept by the client beside them
+  (`<gameDir>/kantobridge/shapes/docs/`, `<hash>.world.z` and `<hash>.slots.z`): a rejoin of an unchanged world
+  downloads nothing. A client still takes parts no offer announced (a server from before G2G); a client from before
+  G2G gets no index from a G2G server, so a host and its players update together.

@@ -86,12 +86,12 @@ def test_region_args_take_both_options_or_neither():
             build_world.region_args(region, slot)
 
 
-def _region_report(region="kanto", slot=0, chars=4096, index_chars=8192):
+def _region_report(region="kanto", slot=0, chars=4096, index_chars=8192, world_chars=2048):
     return {"region": {"region": region, "slot": slot, "origin": {"x": 0, "y": 64, "z": 0},
                        "bounds": {"minX": -300, "minZ": -9400, "maxX": 5400, "maxZ": 4200, "minY": -256, "maxY": 319},
                        "areas": {"surface": {"x": 0, "z": 0, "w": 704, "d": 744}, "zones": {"x": 0, "z": 3744, "w": 5120, "d": 640},
                                  "dungeons": {"x": 0, "z": -3600, "w": 1200, "d": 600}, "caves": {"x": 0, "z": -9400, "w": 0, "d": 0}},
-                       "families": [0, 15], "shape_map_chars": chars, "shape_index_chars": index_chars}}
+                       "families": [0, 15], "shape_map_chars": chars, "shape_index_chars": index_chars, "index_chars": world_chars}}
 
 
 def _write_region_world(root, region="kanto", slot=0):
@@ -212,3 +212,30 @@ def test_a_gen3_build_may_carry_hoenns_known_seams_only(tmp_path):
     report.write_text(json.dumps(dict(base, game="emerald", **_region_report(region="hoenn", index_chars=0))), encoding="utf-8")
     assert build_world.check_report([], report=report, region="hoenn", slot=0)[1] == ["region_shape_index_fits"], \
         "a report from before item 4 (no index size) fails until rebuilt"
+    report.write_text(json.dumps(dict(base, game="emerald", **_region_report(region="hoenn", world_chars=too_big))), encoding="utf-8")
+    assert build_world.check_report([], report=report, region="hoenn", slot=0)[1] == ["region_index_fits"], \
+        "MG9 G2G: the WorldIndex is a region's third document on demand, with the same budget"
+    report.write_text(json.dumps(dict(base, game="emerald", **_region_report(region="hoenn", world_chars=0))), encoding="utf-8")
+    assert build_world.check_report([], report=report, region="hoenn", slot=0)[1] == ["region_index_fits"], \
+        "a report from before G2G (no index size) fails until rebuilt"
+
+
+def test_a_gen2_build_may_carry_crystals_known_warnings_only(tmp_path):
+    # MG9 G2G: the real Crystal's build gives 3 warnings: Celadon City and Route 7's loop (an edge mismatch each way) and
+    # one object off its map in Goldenrod's Pokemon Center. Any other warning, and any overlap, fails.
+    import json
+    codes = {"layout_edge_mismatch": 2, "object_out_of_bounds": 1}
+    base = {"maps_requested": 388, "maps_built": 388, "overlaps": 0, "story_cells": 19764, "warnings": 3,
+            "warning_codes": codes, "pack_textures": 3825, "world_index": True, "maps_unplaced": 0, "habitat_blocks": 555,
+            "pools": 91}
+    report = tmp_path / "build_report.json"
+    johto = _region_report(region="johto", slot=2, chars=648_980, index_chars=414_040, world_chars=402_116)
+    report.write_text(json.dumps(dict(base, game="crystal", **johto)), encoding="utf-8")
+    assert build_world.check_report([], report=report, region="johto", slot=2)[1] == []
+    report.write_text(json.dumps(dict(base, game="crystal", warnings=4, warning_codes=dict(codes, spawn_missing=1),
+                                      **johto)), encoding="utf-8")
+    assert build_world.check_report([], report=report, region="johto", slot=2)[1] == ["warnings"]
+    report.write_text(json.dumps(dict(base, game="crystal", overlaps=1, **johto)), encoding="utf-8")
+    assert build_world.check_report([], report=report, region="johto", slot=2)[1] == ["overlaps"], "Gen 2 has no known overlaps"
+    report.write_text(json.dumps(dict(base, game="blue", **_region_report())), encoding="utf-8")
+    assert build_world.check_report([], report=report, region="kanto", slot=0)[1] == ["warnings"], "a Gen 1 build keeps every gate"

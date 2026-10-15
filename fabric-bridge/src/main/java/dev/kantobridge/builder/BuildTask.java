@@ -148,6 +148,9 @@ public final class BuildTask {
 	/** {@link #indexWireChars}'s memo: the plan it was worked out for, and the size. */
 	private @Nullable ShapePlan indexWirePlan;
 	private long indexWireChars;
+	/** {@link #worldIndexWireChars}'s memo, as {@link #indexWirePlan}. */
+	private @Nullable WorldPlan worldIndexWirePlan;
+	private long worldIndexWireChars;
 	private int lastDecile = -1;
 
 	BuildTask(ServerLevel level, ExportBundle bundle, @Nullable List<String> maps, BuildOptions options, BuildListener listener) {
@@ -808,7 +811,7 @@ public final class BuildTask {
 			ShapePlan shapePlan = plan.shapes();
 			r.region = new BuildReport.RegionReport(setup.build().id(), setup.build().slot(), setup.originX(), Scale.SURFACE_Y, setup.originZ(),
 					plan.regionBounds(), plan.regionAreas(), families.lo(), families.hi(), shapePlan == null ? 0 : shapePlan.map().wire().length(),
-					shapePlan == null ? 0 : this.indexWireChars(shapePlan));
+					shapePlan == null ? 0 : this.indexWireChars(shapePlan), this.worldIndexWireChars(plan));
 		}
 		r.planMs = this.prepared.planMs();
 		r.placeMs = this.placeStartNanos == 0 ? 0 : (now - this.placeStartNanos) / 1_000_000L;
@@ -886,6 +889,15 @@ public final class BuildTask {
 
 	/** The voxel plan's groups: cells by kind, solid heights, the shape files and the recorded self-check. */
 	/** The shape index's wire form in characters (deflated, item 4), worked out once per plan. */
+	/** The plan's WorldIndex on the wire: Base64 of its deflated text (MG9 G2G), worked out once per plan. */
+	private long worldIndexWireChars(WorldPlan plan) {
+		if (this.worldIndexWirePlan != plan) {
+			this.worldIndexWirePlan = plan;
+			this.worldIndexWireChars = ShapeDocs.wire(plan.index().toJson()).length();
+		}
+		return this.worldIndexWireChars;
+	}
+
 	private long indexWireChars(ShapePlan shapes) {
 		if (this.indexWirePlan != shapes) {
 			this.indexWirePlan = shapes;
@@ -930,6 +942,7 @@ public final class BuildTask {
 			}
 		}
 		r.worldIndexBytes = plan.index().toJson().getBytes(StandardCharsets.UTF_8).length;
+		r.worldIndexWireChars = this.worldIndexWireChars(plan);
 		ProfileSource source = plan.scene() == null ? null : plan.scene().profile();
 		if (source != null) {
 			// The profile plan's report (§5.7): what the export carried, as counts and a short hash.

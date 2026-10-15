@@ -338,4 +338,102 @@ class ClientRegionsTest {
 		// An offer for a region the table doesn't name is refused.
 		assertThrows(DataException.class, () -> docs.onShapesOffer("johto", indexHash, mapHash));
 	}
+
+	// ---- the index on demand (MG9 G2G) ----
+
+	private static @org.jetbrains.annotations.Nullable WorldIndex feedIndexDeflated(RegionDocuments docs, String region, WorldIndex index)
+			throws DataException {
+		WorldIndex parsed = null;
+		for (WorldIndexParts.Part part : WorldIndexParts.split(ShapeDocs.wire(index.toJson()), 40)) {
+			parsed = docs.onIndexPart(region, true, part.index(), part.count(), part.hash(), part.text());
+		}
+		return parsed;
+	}
+
+	@Test
+	void anIndexOfferIsAnsweredFromTheCacheOrByDeflatedPartsThatMustHoldIt() throws Exception {
+		RegionDocuments docs = new RegionDocuments();
+		List<String> kept = new ArrayList<>();
+		docs.onIndexDocument((region, hash, wire) -> kept.add(region + "|" + hash + "|" + wire));
+		feedRegions(docs, document(twoRegions(), kanto(), hoenn()));
+		WorldIndex kantoIndex = index("blue", 100);
+		String kantoHash = Hashes.sha256(kantoIndex.toJson());
+		assertEquals(kantoHash, docs.onIndexOffer("kanto", kantoHash), "a region holding nothing lacks it");
+		assertEquals(kantoHash, docs.offeredIndex("kanto"));
+		// From the cache: only the offered one.
+		assertNull(docs.provideIndex("kanto", HASH, kantoIndex.toJson()), "not the offered hash");
+		long before = docs.epoch();
+		assertNotNull(docs.provideIndex("kanto", kantoHash, kantoIndex.toJson()));
+		assertTrue(docs.epoch() > before, "published as if its parts had come in");
+		assertEquals(kantoIndex.toJson(), docs.indexOf("kanto").toJson());
+		assertEquals(kantoHash, docs.indexHash("kanto"), "the text's hash: what the region's shape map names");
+		assertEquals(List.of("kanto"), docs.indexed());
+		assertTrue(kept.isEmpty(), "what came from the cache isn't written back");
+		assertNull(docs.onIndexOffer("kanto", kantoHash), "the same offer again (a rejoin): nothing lacking");
+
+		// Hoenn's from the server: deflated parts, checked against the offer, then kept.
+		WorldIndex hoennIndex = index("emerald", 8292);
+		String hoennHash = Hashes.sha256(hoennIndex.toJson());
+		assertEquals(hoennHash, docs.onIndexOffer("hoenn", hoennHash));
+		assertThrows(DataException.class, () -> feedIndexDeflated(docs, "hoenn", index("emerald", 9000)), "another index than the offered one");
+		assertNull(docs.indexOf("hoenn"));
+		assertNotNull(feedIndexDeflated(docs, "hoenn", hoennIndex));
+		assertEquals(hoennHash, docs.indexHash("hoenn"));
+		assertEquals(List.of("hoenn|" + hoennHash + "|" + ShapeDocs.wire(hoennIndex.toJson())), kept, "the wire text goes to the cache");
+
+		// A rebuild offers a new Kanto index: the old one stays until the new one is in.
+		WorldIndex rebuilt = index("blue", 140);
+		String rebuiltHash = Hashes.sha256(rebuilt.toJson());
+		assertEquals(rebuiltHash, docs.onIndexOffer("kanto", rebuiltHash));
+		assertEquals(kantoIndex.toJson(), docs.indexOf("kanto").toJson(), "the old index stays meanwhile");
+		assertNull(docs.provideIndex("kanto", kantoHash, kantoIndex.toJson()), "the old one isn't offered any more");
+		assertNotNull(feedIndexDeflated(docs, "kanto", rebuilt));
+		assertEquals(rebuiltHash, docs.indexHash("kanto"));
+		assertThrows(DataException.class, () -> docs.onIndexOffer("johto", kantoHash), "a region the table doesn't name");
+	}
+
+	@Test
+	void aLegacyWorldsIndexIsOfferedUntagged() throws Exception {
+		RegionDocuments docs = new RegionDocuments();
+		WorldIndex index = index("blue", 100);
+		String hash = Hashes.sha256(index.toJson());
+		assertEquals(hash, docs.onIndexOffer(null, hash));
+		assertNull(docs.set(), "nothing is known before the index is in");
+		assertNotNull(docs.provideIndex(null, hash, index.toJson()));
+		assertTrue(docs.legacyWorld());
+		assertEquals("kanto", docs.followed().id());
+		assertEquals(hash, docs.indexHash("kanto"));
+		assertEquals(hash, docs.offeredIndex(null), "the offer moved with the index to the implicit region");
+		assertNull(docs.onIndexOffer(null, hash), "held");
+		// Pushed parts (a server from before G2G) are taken as before, without an offer to match.
+		RegionDocuments old = new RegionDocuments();
+		feedIndex(old, null, index);
+		assertNull(old.offeredIndex(null));
+		assertEquals(hash, old.indexHash("kanto"));
+	}
+
+	@Test
+	void aShapePairWaitsForItsRegionsIndex() throws Exception {
+		// G2G: the shapes may come from the cache before the index comes from the server; the pair is told only once the
+		// index is in, by the set's listeners (ClientShapes reads the pair then)
+		RegionDocuments docs = new RegionDocuments();
+		List<String> told = new ArrayList<>();
+		docs.onShapes((region, indexText, mapWire) -> told.add(region));
+		feedRegions(docs, document(twoRegions(), kanto(), hoenn()));
+		WorldIndex hoennIndex = index("emerald", 8292);
+		docs.onIndexOffer("hoenn", Hashes.sha256(hoennIndex.toJson()));
+		String indexText = "{\"shape\":\"index\"}";
+		byte[] mapBytes = "KBSM pretend map bytes".getBytes(StandardCharsets.UTF_8);
+		docs.onShapesOffer("hoenn", Hashes.sha256(indexText), Hashes.sha256(mapBytes));
+		assertFalse(docs.provideShape("hoenn", true, Hashes.sha256(indexText), indexText));
+		assertFalse(docs.provideShape("hoenn", false, Hashes.sha256(mapBytes), ShapeDocs.wire(mapBytes)), "both in, the index not");
+		assertTrue(told.isEmpty());
+		assertEquals(indexText, docs.shapeIndexText("hoenn"), "kept meanwhile");
+		Watch watch = new Watch(docs);
+		feedIndexDeflated(docs, "hoenn", hoennIndex);
+		assertEquals(1, watch.epochs.size(), "the index's arrival is a change: the listeners find the pair complete then");
+		assertEquals(List.of("hoenn"), docs.indexed());
+		assertNotNull(docs.shapeMapWire("hoenn"));
+		assertTrue(told.isEmpty(), "told once, by the set's listener, not twice");
+	}
 }

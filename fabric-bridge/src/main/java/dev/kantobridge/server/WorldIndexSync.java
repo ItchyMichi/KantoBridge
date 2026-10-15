@@ -43,11 +43,16 @@ import net.minecraft.world.level.storage.LevelResource;
 import org.jetbrains.annotations.Nullable;
 
 /**
- * Sends the world's WorldIndex to every joining player as {@code world.index} parts (docs/PLAN.md §2.2, PROTOCOL.md
- * "Relay only"), so clients can map blocks to cells, followed by the world's slot map as {@code world.slots} parts (M9),
- * so a joining player whose own pack was made for other slots can build their art into the host's (PLAN §4.3
- * "Multiplayer clients"), and the shape documents as {@code world.shapes} (the voxel plan's V2). Only the slot
- * assignments travel; the art never leaves each player's machine.
+ * Gives every joining player the world's WorldIndex as {@code world.index} parts (docs/PLAN.md §2.2, PROTOCOL.md
+ * "Relay only"), so clients can map blocks to cells, the world's slot map as {@code world.slots} parts (M9), so a
+ * joining player whose own pack was made for other slots can build their art into the host's (PLAN §4.3 "Multiplayer
+ * clients"), and the shape documents as {@code world.shapes} (the voxel plan's V2). Only the slot assignments travel;
+ * the art never leaves each player's machine.
+ *
+ * <p><b>Every document on demand</b> (MG9 G2G, docs/specs/GEN2_BRIDGE_PLAN.md §8): the index and the slot map are
+ * offered as the shapes are: {@code world.index.offer} and {@code world.slots.offer} name each by the SHA-256 of its
+ * text with its wire size, and a client that lacks one asks with {@code world.index.get} or {@code world.slots.get};
+ * the parts that answer carry it deflated ({@code enc:"deflate"}). A rejoin of an unchanged world sends offers only.
  *
  * <p><b>Shapes on demand</b> (2026-10-15, docs/SEVERAL_GAMES_FOLLOWUPS.md item 4, the voxel plan's R10): a region's
  * shape documents are offered, not pushed: {@code world.shapes.offer} names each by the SHA-256 of what it holds (the
@@ -70,7 +75,10 @@ import org.jetbrains.annotations.Nullable;
  * Logs carry part counts and short hashes only.
  */
 public final class WorldIndexSync {
-	/** One region as published: its record (null when an invalid index was published raw), index and shape documents. */
+	/**
+	 * One region as published: its record (null when an invalid index was published raw), the SHA-256 of its index text
+	 * and that text's wire parts (deflated, G2G), its index, and its shape documents.
+	 */
 	private record Published(@Nullable RegionRecord region, String hash, List<WorldIndexParts.Part> parts, @Nullable WorldIndex index,
 			@Nullable String shapesHash, @Nullable String shapeMapHash, List<WorldIndexParts.Part> shapeIndexParts,
 			List<WorldIndexParts.Part> shapeMapParts) {
@@ -81,6 +89,7 @@ public final class WorldIndexSync {
 		/** The region table (pitch and order); null for a legacy world, which has one implicit region. */
 		@Nullable RegionTable table;
 		final LinkedHashMap<String, Published> regions = new LinkedHashMap<>();
+		/** The slot map's hash (of its canonical text) and that text's wire parts (deflated, G2G); null and empty for none. */
 		@Nullable String slotsHash;
 		List<WorldIndexParts.Part> slotParts = List.of();
 		@Nullable Regions view;
@@ -102,6 +111,8 @@ public final class WorldIndexSync {
 	static final long RESEND_MS = 5_000;
 	private static final Pattern CONTENT_HASH = Pattern.compile("^[0-9a-f]{64}$");
 	private static final Set<String> GET_FIELDS = Set.of("index", "map", "region");
+	private static final Set<String> INDEX_GET_FIELDS = Set.of("hash", "region");
+	private static final Set<String> SLOTS_GET_FIELDS = Set.of("hash");
 	/** Per player: when each document (region, doc, hash) last went out to them. Server thread. */
 	private static final Map<UUID, Map<String, Long>> SENT = new HashMap<>();
 
@@ -115,6 +126,8 @@ public final class WorldIndexSync {
 		ServerPlayConnectionEvents.JOIN.register((handler, sender, server) -> send(server, handler.getPlayer()));
 		ServerPlayConnectionEvents.DISCONNECT.register((handler, server) -> SENT.remove(handler.getPlayer().getUUID()));
 		RelayService.get().register(MsgTypes.WORLD_SHAPES_GET, WorldIndexSync::onShapesGet);
+		RelayService.get().register(MsgTypes.WORLD_INDEX_GET, WorldIndexSync::onIndexGet);
+		RelayService.get().register(MsgTypes.WORLD_SLOTS_GET, WorldIndexSync::onSlotsGet);
 	}
 
 	// ---- loading ----
@@ -308,15 +321,16 @@ public final class WorldIndexSync {
 
 	private static void publishInto(MinecraftServer server, World world, String key, @Nullable RegionRecord region, @Nullable WorldIndex index,
 			String json, @Nullable SlotMap slots, @Nullable String shapeIndex, byte @Nullable [] shapeMap, boolean broadcast) {
-		List<WorldIndexParts.Part> parts = WorldIndexParts.split(json, WorldIndexParts.PART_CHARS);
+		// G2G: the index goes out deflated when a client asks for it; its offer names the text's hash
+		List<WorldIndexParts.Part> parts = WorldIndexParts.split(ShapeDocs.wire(json), WorldIndexParts.PART_CHARS);
 		if (slots != null) {
 			String named = index == null ? null : index.slotMapHash();
 			// Version 2: a region's index names the hash of its own slice of the one map; version 1 names the whole map.
 			String mine = region != null && slots.version() == SlotMap.VERSION_2 && slots.regions().containsKey(region.id())
 					? slots.regionHash(region.id()) : slots.hash();
 			if (named != null && mine.equals(named)) {
-				// The canonical text: its SHA-256 is the whole map's hash, which the client checks on its own.
-				world.slotParts = WorldIndexParts.split(slots.toJson(), WorldIndexParts.PART_CHARS);
+				// The canonical text: its SHA-256 is the whole map's hash, which the client checks on its own (deflated, G2G).
+				world.slotParts = WorldIndexParts.split(ShapeDocs.wire(slots.toJson()), WorldIndexParts.PART_CHARS);
 				world.slotsHash = slots.hash();
 			} else {
 				KantoBridge.LOGGER.warn("world.slots: the slot map ({}) isn't the one the index names; not sent", Hashes.shortHash(slots.hash()));
@@ -347,12 +361,12 @@ public final class WorldIndexSync {
 				KantoBridge.LOGGER.warn("world.shapes: the shape map is unreadable ({}); not sent", e.problem());
 			}
 		}
-		Published published = new Published(region, parts.get(0).hash(), parts, index, shapesHash, shapeMapHash, shapeIndexParts,
+		Published published = new Published(region, Hashes.sha256(json), parts, index, shapesHash, shapeMapHash, shapeIndexParts,
 				shapeMapParts);
 		world.regions.put(key, published);
 		world.regionsWorldId = null;
 		world.view = view(world);
-		KantoBridge.LOGGER.info("world.index{}: {} parts, hash {}; world.slots: {} parts, hash {}; world.shapes: {}+{} parts on request, index {}",
+		KantoBridge.LOGGER.info("world.index{}: {} parts on request, hash {}; world.slots: {} parts on request, hash {}; world.shapes: {}+{} parts on request, index {}",
 				world.legacy() ? "" : " (" + key + ")", parts.size(), Hashes.shortHash(published.hash()), world.slotParts.size(),
 				world.slotsHash == null ? "-" : Hashes.shortHash(world.slotsHash), shapeIndexParts.size(), shapeMapParts.size(),
 				shapesHash == null ? "-" : Hashes.shortHash(shapesHash));
@@ -477,7 +491,7 @@ public final class WorldIndexSync {
 		return published == null ? null : published.hash();
 	}
 
-	/** The {@code world.index} parts the server would send for the primary region, or an empty list. */
+	/** The {@code world.index} parts the server sends for the primary region when asked (deflated, G2G), or an empty list. */
 	public static List<WorldIndexParts.Part> currentParts(MinecraftServer server) {
 		Published published = primary(CURRENT.get(server));
 		return published == null ? List.of() : published.parts();
@@ -494,7 +508,7 @@ public final class WorldIndexSync {
 		return world == null ? null : world.slotsHash;
 	}
 
-	/** The {@code world.slots} parts the server would send, or an empty list. */
+	/** The {@code world.slots} parts the server sends when asked (deflated, G2G), or an empty list. */
 	public static List<WorldIndexParts.Part> currentSlotParts(MinecraftServer server) {
 		World world = CURRENT.get(server);
 		return world == null ? List.of() : world.slotParts;
@@ -509,6 +523,25 @@ public final class WorldIndexSync {
 	public static @Nullable String currentShapesHash(MinecraftServer server, String regionId) {
 		Published published = region(server, regionId);
 		return published == null ? null : published.shapesHash();
+	}
+
+	/** The {@code world.index.offer} the server sends for the primary region, or null when none is published. */
+	public static @Nullable JsonObject currentIndexOffer(MinecraftServer server) {
+		World world = CURRENT.get(server);
+		Published published = primary(world);
+		return published == null ? null : indexOffer(published, world.legacy() ? null : regionIdOf(published));
+	}
+
+	public static @Nullable JsonObject currentIndexOffer(MinecraftServer server, String regionId) {
+		World world = CURRENT.get(server);
+		Published published = region(server, regionId);
+		return published == null ? null : indexOffer(published, world.legacy() ? null : regionIdOf(published));
+	}
+
+	/** The {@code world.slots.offer} the server sends, or null when it sends no slot map. */
+	public static @Nullable JsonObject currentSlotsOffer(MinecraftServer server) {
+		World world = CURRENT.get(server);
+		return world == null || world.slotsHash == null ? null : offerDoc(world.slotsHash, world.slotParts);
 	}
 
 	/** The {@code world.shapes.offer} the server sends the primary region's joining players, or null without shapes. */
@@ -568,11 +601,11 @@ public final class WorldIndexSync {
 	}
 
 	/**
-	 * {@link #send} without asking whether the player's client has our mod. A legacy world: the {@code world.index}
-	 * parts, the {@code world.slots} parts, the shapes' {@code world.shapes.offer}. A region world: {@code world.regions},
-	 * every region's {@code world.index}, the slots, every region's shape offer (the parts follow a
-	 * {@code world.shapes.get}). Returns the messages sent. GameTests use it (their mock players' connections never
-	 * register channels).
+	 * {@link #send} without asking whether the player's client has our mod. A legacy world: the index's
+	 * {@code world.index.offer}, the {@code world.slots.offer}, the shapes' {@code world.shapes.offer}. A region world:
+	 * {@code world.regions}, every region's index offer, the slots' offer, every region's shape offer. Every document's
+	 * parts follow a client's {@code get} (G2G). Returns the messages sent. GameTests use it (their mock players'
+	 * connections never register channels).
 	 */
 	public static int sendTo(MinecraftServer server, ServerPlayer player) {
 		World world = CURRENT.get(server);
@@ -583,22 +616,23 @@ public final class WorldIndexSync {
 			return sendLegacy(world, player);
 		}
 		List<WorldIndexParts.Part> regionParts = regionParts(server, world);
-		int sent = sendParts(player, MsgTypes.WORLD_REGIONS, regionParts, null);
+		int sent = sendParts(player, MsgTypes.WORLD_REGIONS, regionParts, null, false);
 		if (sent < regionParts.size()) {
 			return sent;
 		}
 		List<Published> regions = orderedRegions(world);
 		for (Published published : regions) {
-			int count = sendParts(player, MsgTypes.WORLD_INDEX, published.parts(), regionIdOf(published));
-			sent += count;
-			if (count < published.parts().size()) {
+			// G2G: the index is offered; the client asks for it when its cache lacks it
+			if (!send(player, MsgTypes.WORLD_INDEX_OFFER, indexOffer(published, regionIdOf(published)))) {
 				return sent;
 			}
+			sent++;
 		}
-		int slots = sendParts(player, MsgTypes.WORLD_SLOTS, world.slotParts, null);
-		sent += slots;
-		if (slots < world.slotParts.size()) {
-			return sent;
+		if (world.slotsHash != null) {
+			if (!send(player, MsgTypes.WORLD_SLOTS_OFFER, offerDoc(world.slotsHash, world.slotParts))) {
+				return sent;
+			}
+			sent++;
 		}
 		for (Published published : regions) {
 			// item 4: the shape documents are offered; the client asks for what it lacks
@@ -616,18 +650,23 @@ public final class WorldIndexSync {
 
 	private static int sendLegacy(World world, ServerPlayer player) {
 		Published published = world.regions.values().iterator().next();
-		int sent = sendParts(player, MsgTypes.WORLD_INDEX, published.parts(), null);
-		if (sent < published.parts().size()) {
-			return sent;
+		if (!send(player, MsgTypes.WORLD_INDEX_OFFER, indexOffer(published, null))) {
+			return 0;
 		}
-		int slots = sendParts(player, MsgTypes.WORLD_SLOTS, world.slotParts, null);
+		int slots = 0;
+		if (world.slotsHash != null) {
+			if (!send(player, MsgTypes.WORLD_SLOTS_OFFER, offerDoc(world.slotsHash, world.slotParts))) {
+				return 1;
+			}
+			slots = 1;
+		}
 		int shapes = 0;
-		if (slots == world.slotParts.size() && published.shapesHash() != null && sendOffer(player, published, null)) {
+		if (published.shapesHash() != null && sendOffer(player, published, null)) {
 			shapes = 1;
 		}
-		KantoBridge.LOGGER.debug("world.index: sent {} parts (hash {}), world.slots {} parts, world.shapes offers {}", sent,
-				Hashes.shortHash(published.hash()), slots, shapes);
-		return sent + slots + shapes;
+		KantoBridge.LOGGER.debug("world.index: offered (hash {}), world.slots offers {}, world.shapes offers {}", Hashes.shortHash(published.hash()),
+				slots, shapes);
+		return 1 + slots + shapes;
 	}
 
 	private static @Nullable String regionIdOf(Published published) {
@@ -669,6 +708,15 @@ public final class WorldIndexSync {
 		return world.regionParts;
 	}
 
+	/** A region's {@code world.index.offer}: its index text's hash and wire size, tagged with {@code tag} (null: untagged). */
+	private static JsonObject indexOffer(Published published, @Nullable String tag) {
+		JsonObject data = offerDoc(published.hash(), published.parts());
+		if (tag != null) {
+			data.addProperty("region", tag);
+		}
+		return data;
+	}
+
 	/**
 	 * A region's {@code world.shapes.offer}: each document by content hash and wire size (null when it has no shapes),
 	 * tagged with {@code tag} (null in a legacy world, whose messages carry no region).
@@ -695,6 +743,14 @@ public final class WorldIndexSync {
 		doc.addProperty("hash", hash);
 		doc.addProperty("chars", chars);
 		return doc;
+	}
+
+	private static boolean send(ServerPlayer player, String type, JsonObject data) {
+		if (!RelayService.get().send(player, type, data, null)) {
+			KantoBridge.LOGGER.error("{} could not be sent", type);
+			return false;
+		}
+		return true;
 	}
 
 	private static boolean sendOffer(ServerPlayer player, Published published, @Nullable String tag) {
@@ -740,13 +796,67 @@ public final class WorldIndexSync {
 		}
 		String tag = world.legacy() ? null : regionIdOf(published);
 		long now = System.currentTimeMillis();
-		Map<String, Long> sent = SENT.computeIfAbsent(player.getUUID(), key -> new HashMap<>());
+		Map<String, Long> sent = sentTo(player);
 		if (indexHash != null && indexHash.equals(published.shapesHash()) && due(sent, tag, "index", indexHash, now)) {
 			sendShapes(player, "index", published.shapeIndexParts(), tag);
 		}
 		if (mapHash != null && mapHash.equals(published.shapeMapHash()) && due(sent, tag, "map", mapHash, now)) {
 			sendShapes(player, "map", published.shapeMapParts(), tag);
 		}
+	}
+
+	/**
+	 * {@code world.index.get}: a region's index a client lacks, named by the hash its offer gave. The index the server still
+	 * publishes goes out as deflated {@code world.index} parts, once per {@link #RESEND_MS}; an older one (a rebuild came in
+	 * between: a new offer is on its way) is left out. Server thread.
+	 */
+	static void onIndexGet(ServerPlayer player, Envelope message) {
+		String region;
+		String hash;
+		try {
+			DataReader reader = DataReader.of(message.data(), "").allowOnly(INDEX_GET_FIELDS);
+			hash = reader.string("hash", CONTENT_HASH);
+			region = reader.optionalRegion();
+		} catch (DataException e) {
+			KantoBridge.LOGGER.debug("world.index.get: malformed at {} ({})", e.path(), e.problem());
+			RelayService.get().sendError(player, "bad_message", message.seq());
+			return;
+		}
+		// absent: the legacy region (a legacy world's one region, else slot 0's)
+		World world = CURRENT.get(player.server);
+		Published published = world == null ? null : region == null ? primary(world) : world.regions.get(region);
+		if (published == null) {
+			KantoBridge.LOGGER.debug("world.index.get: no such region");
+			return;
+		}
+		String tag = world.legacy() ? null : regionIdOf(published);
+		if (hash.equals(published.hash()) && due(sentTo(player), tag, "world", hash, System.currentTimeMillis())) {
+			sendParts(player, MsgTypes.WORLD_INDEX, published.parts(), tag, true);
+		}
+	}
+
+	/** {@code world.slots.get}: the slot map a client lacks, by the hash its offer gave; as {@link #onIndexGet}. Server thread. */
+	static void onSlotsGet(ServerPlayer player, Envelope message) {
+		String hash;
+		try {
+			hash = DataReader.of(message.data(), "").allowOnly(SLOTS_GET_FIELDS).string("hash", CONTENT_HASH);
+		} catch (DataException e) {
+			KantoBridge.LOGGER.debug("world.slots.get: malformed at {} ({})", e.path(), e.problem());
+			RelayService.get().sendError(player, "bad_message", message.seq());
+			return;
+		}
+		World world = CURRENT.get(player.server);
+		if (world == null || !hash.equals(world.slotsHash)) {
+			KantoBridge.LOGGER.debug("world.slots.get: not the published slot map");
+			return;
+		}
+		if (due(sentTo(player), null, "slots", hash, System.currentTimeMillis())) {
+			sendParts(player, MsgTypes.WORLD_SLOTS, world.slotParts, null, true);
+		}
+	}
+
+	private static Map<String, Long> sentTo(ServerPlayer player) {
+		return SENT.computeIfAbsent(player.getUUID(), key -> new HashMap<>());
 	}
 
 	/** True (and noted) when this document didn't go out to the player within {@link #RESEND_MS}. */
@@ -784,7 +894,8 @@ public final class WorldIndexSync {
 		return sent;
 	}
 
-	private static int sendParts(ServerPlayer player, String type, List<WorldIndexParts.Part> parts, @Nullable String region) {
+	/** Sends a document's parts; {@code deflated}: their text is the document's wire form ({@code enc:"deflate"}). */
+	private static int sendParts(ServerPlayer player, String type, List<WorldIndexParts.Part> parts, @Nullable String region, boolean deflated) {
 		int sent = 0;
 		for (WorldIndexParts.Part part : parts) {
 			JsonObject data = new JsonObject();
@@ -792,6 +903,9 @@ public final class WorldIndexSync {
 			data.addProperty("count", part.count());
 			data.addProperty("hash", part.hash());
 			data.addProperty("part", part.text());
+			if (deflated) {
+				data.addProperty("enc", ShapeDocs.ENC_DEFLATE);
+			}
 			if (region != null) {
 				data.addProperty("region", region);
 			}

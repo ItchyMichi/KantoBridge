@@ -552,6 +552,31 @@ measured 3,526 for the blocks the maps use), so 16 families should hold Johto; G
   trainers on the server by Gen 2 class symbols (`ProxyClass`), items by Gen 2 symbols, `LedgerRules.Limits` for Gen 2's
   pockets.
 
+**As built (G2G, 2026-10-15).** As above, with:
+- **The world** `ThreeRegionsE2E` on the volume: a copy of PassE2E (Kanto at slot 0, Hoenn at 1) with Johto built at
+  slot 2 (`build_world.py --game crystal --region johto --slot 2 --maps all --heap 6g`): 388 maps, 4,357,718 blocks in
+  4,036 chunks, 3,825 textures, families 96..111, origin (16,384, 0), bounds x 15,575..17,272, z −711..284, y −245..94;
+  251 s (plan 104 s, placing 146 s). Its warnings are G2E's three (Celadon City/Route 7's edges both ways, Goldenrod's
+  Pokémon Center object), now Gen 2's known set in the build gate (`GEN2_KNOWN_WARNINGS`; any other warning or an
+  overlap fails). A rebuild with nothing changed placed no block (153 s).
+- **The index and the slot map by hash** (§9): `world.index.offer{hash, chars}` per region and `world.slots.offer`,
+  answered by `world.index.get` / `world.slots.get` with deflated parts (`enc:"deflate"`); the client keeps both in the
+  shapes' cache (`<hash>.world.z`, `<hash>.slots.z`). A held index stays until the one offered in its place is in, and a
+  region's shape pair waits for its index (the shapes may come from the cache first now). The build report's region
+  object gains `index_chars` (the index on the wire), gated at 64 parts like the shape documents.
+- **Budgets** (the real three-region world):
+
+| Per region | Kanto (Blue) | Hoenn (Emerald) | Johto (Crystal) |
+|---|---|---|---|
+| WorldIndex: text / on the wire, deflated (64 parts each at most) | 781,917 / 81,416 (2 parts) | 2,899,005 / 246,356 (4) | 1,139,479 / 105,472 (2) |
+| Shape index + shape map on the wire | 3 + 5 parts | 20 + 32 parts | 414,040 + 648,980 (7 + 10 parts) |
+| Maps; the client's shape table | 222; 25,284 shapes, 151,301 quads | 509; 155,649 shapes, 847,502 quads | 388; 49,224 shapes, 270,404 quads |
+
+  The slot map (26,260 slots, 3 regions): 2,724,340 characters as text, 192,736 deflated (3 parts). **A join**: before
+  G2G every join pushed the indices and the slot map, 7,544,741 characters in 117 parts; now a first join downloads
+  625,980 of them (11 parts) and a rejoin none (offers only), measured in the real client
+  (`tools/e2e/shapes_cache_check.py --world ThreeRegionsE2E --regions kanto,hoenn,johto`).
+
 ## 9. Protocol changes
 
 | Phase | Change |
@@ -598,7 +623,7 @@ Every change: schema, PROTOCOL.md, `python -m kb_protocol.catalog --write`, the 
 | **G2D** export | the `g2*` kinds, baked tiles, pristine blocks, layout, encounters, sprites, animations, swaps | lupa on the fake; the pod's export, counts and hashes ✔ — **done 2026-10-15** (§6 "As built") |
 | **G2E** builder | families raised; `Gen2Planner`, `G2Cells`, `Gen2FrontEnd`, the Gen 2 `MapModel` form, placement, interiors, story cells, art, people, animations, darkness, habitats | JUnit, golden scene, GameTest; the pod's dry run ✔ — **done 2026-10-15** (§7 "As built") |
 | **G2F** battles, party, bag | held battles, party sync, gifts, trades, Day-Care and eggs, bag and money, Bill's PC, field moves | lupa; e2e (a wild, a trainer and the first rival battle; the starter) ✔ — **done 2026-10-15** (§5.10 "As built") |
-| **G2G** the real Johto | synthetic bundle, goldens, full suites; Johto built at slot 2 beside Kanto and Hoenn; index and slots by hash; budgets | full suite ✔; build gates |
+| **G2G** the real Johto | synthetic bundle, goldens, full suites; Johto built at slot 2 beside Kanto and Hoenn; index and slots by hash; budgets | full suite ✔; build gates ✔ — **done 2026-10-15** (§8 "As built") |
 | **G2H** the pass | `kanto_johto_test`; the Gen 2 route end; the Johto half's content; crossings between the real Blue and Crystal (20 each way); PLAYTEST "Johto"; a video if you want one | e2e ✔ |
 
 For scale: Emerald's seven phases and its pass (MG7, MG8) took about a day of sessions. Gen 2's adapter is closer to

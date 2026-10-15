@@ -1,0 +1,9 @@
+[
+  {
+    "type": "world.slots.get",
+    "seq": 5,
+    "data": {
+      "hash": "ff6f701595f0e8de0624fc5268536c079a62471afdc85e2467b1b11f274f39b2"
+    }
+  }
+]

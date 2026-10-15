@@ -18,8 +18,9 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
 /**
- * The client's cache of shape documents (the follow-up's item 4): kept by content hash as deflated bytes, read back
- * only when they inflate to that hash (a damaged file is dropped), the least recently used going first past its size.
+ * The client's cache of shape documents (the follow-up's item 4; since MG9 G2G also the world's indices and slot map):
+ * kept by content hash as deflated bytes, read back only when they inflate to that hash (a damaged file is dropped), the
+ * least recently used going first past its size.
  */
 class ShapeDocCacheTest {
 	@TempDir
@@ -46,6 +47,24 @@ class ShapeDocCacheTest {
 		assertNull(cache.read(hash, false, 1 << 20), "the index and the map are kept apart");
 		assertNull(cache.read("../" + hash.substring(3), true, 1 << 20), "never a path from outside");
 		assertThrows(IOException.class, () -> cache.write("NOT-A-HASH", true, new byte[] {1}));
+	}
+
+	@Test
+	void eachKindIsKeptApart() throws Exception {
+		// MG9 G2G: a region's WorldIndex and the world's slot map are kept beside the shapes, each kind in its own files
+		ShapeDocCache cache = new ShapeDocCache(this.dir, 1 << 20);
+		byte[] text = "{\"maps\":{},\"scale\":{\"cellBlocks\":2}}".getBytes(StandardCharsets.UTF_8);
+		String hash = Hashes.sha256(text);
+		cache.write(hash, ShapeDocCache.WORLD_INDEX, ShapeDocs.deflate(text));
+		assertTrue(Files.exists(this.dir.resolve(hash + ".world.z")));
+		assertArrayEquals(text, cache.read(hash, ShapeDocCache.WORLD_INDEX, 1 << 20).content());
+		for (String other : new String[] {ShapeDocCache.SLOT_MAP, ShapeDocCache.SHAPE_INDEX, ShapeDocCache.SHAPE_MAP}) {
+			assertNull(cache.read(hash, other, 1 << 20), other);
+		}
+		cache.write(hash, ShapeDocCache.SLOT_MAP, ShapeDocs.deflate(text));
+		assertNotNull(cache.read(hash, ShapeDocCache.SLOT_MAP, 1 << 20));
+		assertThrows(IOException.class, () -> cache.write(hash, "nope", ShapeDocs.deflate(text)), "only the known kinds");
+		assertNull(cache.read(hash, "../world", 1 << 20));
 	}
 
 	@Test

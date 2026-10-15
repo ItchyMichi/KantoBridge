@@ -8,5 +8,17 @@
       "hash": "a1b2c3d4e5f60718",
       "part": "{\"scale\":{\"cellBlocks\":2},\"maps\":{}}"
     }
+  },
+  {
+    "type": "world.index",
+    "seq": 12,
+    "data": {
+      "index": 0,
+      "count": 1,
+      "hash": "d50f94c97d1c5b3e9d3cf22ef29f25b703e48a720d651f476a2b6227dd48aafa",
+      "part": "q1YqTk7MSVWyqlZKTs3JccrJT84uVrIyqtVRyk0sALKqa2sB",
+      "enc": "deflate",
+      "region": "johto"
+    }
   }
 ]
