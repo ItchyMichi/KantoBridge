@@ -14,10 +14,12 @@ import dev.kantobridge.world.MapPlacement;
 import dev.kantobridge.world.RegionRecord;
 import dev.kantobridge.world.RegionTable;
 import dev.kantobridge.world.Regions;
+import dev.kantobridge.world.ShapeDocs;
 import dev.kantobridge.world.SlotMap;
 import dev.kantobridge.world.StoryCellTable;
 import dev.kantobridge.world.WorldIndex;
 import dev.kantobridge.world.WorldIndexParts;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 import org.junit.jupiter.api.Test;
@@ -281,5 +283,59 @@ class ClientRegionsTest {
 		assertEquals(RegionRecord.LEGACY_ID, RegionDocuments.legacyIdOf("nope"));
 		Regions legacy = Regions.legacy(RegionRecord.legacy(index("blue", 100), null, null, null));
 		assertTrue(legacy.isLegacyWorld());
+	}
+
+	// ---- shapes on demand (the follow-up's item 4) ----
+
+	private static boolean feedDoc(RegionDocuments docs, String region, boolean isIndex, boolean deflated, String wire) throws DataException {
+		boolean complete = false;
+		for (WorldIndexParts.Part part : WorldIndexParts.split(wire, 9)) {
+			complete = docs.onShapesPart(region, isIndex, deflated, part.index(), part.count(), part.hash(), part.text());
+		}
+		return complete;
+	}
+
+	@Test
+	void anOfferAsksForWhatTheRegionLacksAndChecksWhatComesBack() throws Exception {
+		RegionDocuments docs = new RegionDocuments();
+		List<String> told = new ArrayList<>();
+		List<String> kept = new ArrayList<>();
+		docs.onShapes((region, indexText, mapWire) -> told.add(region + "|" + indexText));
+		docs.onDocument((region, isIndex, hash, wire, deflated) -> kept.add(region + "|" + (isIndex ? "index" : "map") + "|" + hash + "|" + deflated));
+		feedRegions(docs, document(twoRegions(), kanto(), hoenn()));
+		feedIndex(docs, "hoenn", index("emerald", 8292));
+		String indexText = "{\"shape\":\"index\"}";
+		byte[] mapBytes = "KBSM pretend map bytes".getBytes(StandardCharsets.UTF_8);
+		String indexHash = Hashes.sha256(indexText);
+		String mapHash = Hashes.sha256(mapBytes);
+
+		RegionDocuments.Wants wants = docs.onShapesOffer("hoenn", indexHash, mapHash);
+		assertEquals(new RegionDocuments.Wants(indexHash, mapHash), wants, "a region holding nothing lacks both");
+		assertEquals(indexHash, docs.offered("hoenn", true));
+		assertEquals(mapHash, docs.offered("hoenn", false));
+		assertFalse(feedDoc(docs, "hoenn", true, true, ShapeDocs.wire(indexText)), "the index alone");
+		assertTrue(feedDoc(docs, "hoenn", false, true, ShapeDocs.wire(mapBytes)), "then the map: the pair");
+		assertEquals(List.of("hoenn|" + indexText), told);
+		assertEquals(indexText, docs.shapeIndexText("hoenn"), "the index is inflated");
+		assertEquals(List.of("hoenn|index|" + indexHash + "|true", "hoenn|map|" + mapHash + "|true"), kept, "each document goes to the cache");
+
+		// The same offer again (a rebuild that changed no shape): nothing lacking, nothing told.
+		assertFalse(docs.onShapesOffer("hoenn", indexHash, mapHash).any());
+		assertEquals(1, told.size());
+
+		// A new map: only the map is asked for; the parts of another document than the offered one are refused.
+		byte[] newMap = "KBSM another map".getBytes(StandardCharsets.UTF_8);
+		String newHash = Hashes.sha256(newMap);
+		assertEquals(new RegionDocuments.Wants(null, newHash), docs.onShapesOffer("hoenn", indexHash, newHash));
+		assertNull(docs.shapeMapWire("hoenn"), "the old map went with the offer that replaced it");
+		assertThrows(DataException.class, () -> feedDoc(docs, "hoenn", false, true, ShapeDocs.wire(mapBytes)));
+		assertNull(docs.shapeMapWire("hoenn"));
+		// From the cache: only for the hash the offer names.
+		assertFalse(docs.provideShape("hoenn", false, mapHash, ShapeDocs.wire(mapBytes)), "not offered any more");
+		assertTrue(docs.provideShape("hoenn", false, newHash, ShapeDocs.wire(newMap)));
+		assertEquals(2, told.size());
+		assertEquals(ShapeDocs.wire(newMap), docs.shapeMapWire("hoenn"));
+		// An offer for a region the table doesn't name is refused.
+		assertThrows(DataException.class, () -> docs.onShapesOffer("johto", indexHash, mapHash));
 	}
 }

@@ -2222,6 +2222,33 @@ gen1.lua's party operations do, with Gen 3's own seams:
   egg kept by a sync, then hatched by one real step (its "Huh?", the mirror, YES, the name KB) into
   `party.give{source:"egg", nick:"KB"}`.
 
+**After MG8: the user's item 4, the shape map's size** (2026-10-15; the voxel plan's R10): measured first (counts and
+sizes only, on the pod's PassE2E world). Hoenn's shape map is 11,092,268 bytes, 2,080,948 characters on the wire (31.75
+parts): 460 grids, the surface one 1,624 × 792 columns (81% empty, 67,170 distinct stacks, 634 KB deflated, 40%), the
+interiors the rest (409 of them up to 64 × 64 make 469 KB). Other encodings of the same content gain little under
+deflate (varint columns 9%, byte planes 13%, 2 × 2 patterns and 16 × 16 tile dictionaries 0-6%; xz would halve it but
+Java has no xz). The bigger problem was the **shape index**: 8,851,374 characters (135 parts) sent as plain text at
+every join. So every join sent about 12.4 million characters of shapes for the two regions (Kanto: index 1,150,960,
+map about 319,000), and the build's Gen 3 gate (32 parts) was full.
+- **The fix: shapes on demand.** On join (and on publish) the server sends each region's `world.shapes.offer` (each
+  document by the SHA-256 of what it holds, and its wire size) in place of the parts; the client takes what it can from
+  its cache (`<gameDir>/kantobridge/shapes/docs/`, the deflated documents by hash, checked when read back, at most 64 MB,
+  least recently used out first) and asks for the rest with one `world.shapes.get`; the server sends those parts (the
+  index deflated too, `enc:"deflate"`), once per 5 s per document. Parts must hold what the offer named. A server from
+  before still pushes; the client still takes that.
+- **Budgets:** the build gates now check a region's first download per document (map and index, 64 parts each, the same
+  for every game: `shape_map_fits`/`shape_index_fits`, `region_shape_map_fits`/`region_shape_index_fits`; the report
+  gains `shape_index_wire_chars` and the region's `shape_index_chars`). They replace the join-time 8 parts (Kanto) and
+  32 (Gen 3).
+- **Measured in the real client** (`tools/e2e/shapes_cache_check.py`, kb-dev16, PassE2E): the first join, cache empty,
+  asked for both documents of both regions (Kanto 3 + 5 parts, Hoenn 20 + 32: 3.85 million characters) and had both
+  shape tables ready about 10 s after joining; the second join took all four from the cache (2.9 MB on disk), asked for
+  nothing and downloaded no shape part. Kanto's table 1.2 s, Hoenn's 4.8-5.2 s (from the table cache).
+- **Left:** each join still sends every region's world index (Hoenn 45 parts, Kanto 12) and the slot map (36 parts) as
+  plain text; the same treatment would apply to them.
+- Checks: JUnit 1,241 (2 skipped, new `ShapeDocsTest`, `ShapeDocCacheTest`, an offer test in `ClientRegionsTest`),
+  GameTests 122 (the multiplayer and region join tests now see offers and ask), tools 682 passed.
+
 ### Handoff (2026-10-14): after MG6, for whoever continues
 
 **State.** MG1–MG6 of [specs/MULTI_GAME_PLAN.md](specs/MULTI_GAME_PLAN.md) are done and committed locally (never

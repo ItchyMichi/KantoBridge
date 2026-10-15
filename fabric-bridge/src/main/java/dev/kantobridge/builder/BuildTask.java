@@ -40,6 +40,7 @@ import dev.kantobridge.world.Hashes;
 import dev.kantobridge.world.RegionRecord;
 import dev.kantobridge.world.RegionTable;
 import dev.kantobridge.world.Scale;
+import dev.kantobridge.world.ShapeDocs;
 import dev.kantobridge.world.ShapeIndex;
 import dev.kantobridge.world.ShapeMap;
 import dev.kantobridge.world.SlotMap;
@@ -144,6 +145,9 @@ public final class BuildTask {
 	private @Nullable Prepared prepared;
 	private @Nullable BlockPlacer placer;
 	private long placeStartNanos;
+	/** {@link #indexWireChars}'s memo: the plan it was worked out for, and the size. */
+	private @Nullable ShapePlan indexWirePlan;
+	private long indexWireChars;
 	private int lastDecile = -1;
 
 	BuildTask(ServerLevel level, ExportBundle bundle, @Nullable List<String> maps, BuildOptions options, BuildListener listener) {
@@ -802,7 +806,8 @@ public final class BuildTask {
 			SlotMap.Range families = setup.build().families();
 			ShapePlan shapePlan = plan.shapes();
 			r.region = new BuildReport.RegionReport(setup.build().id(), setup.build().slot(), setup.originX(), Scale.SURFACE_Y, setup.originZ(),
-					plan.regionBounds(), plan.regionAreas(), families.lo(), families.hi(), shapePlan == null ? 0 : shapePlan.map().wire().length());
+					plan.regionBounds(), plan.regionAreas(), families.lo(), families.hi(), shapePlan == null ? 0 : shapePlan.map().wire().length(),
+					shapePlan == null ? 0 : this.indexWireChars(shapePlan));
 		}
 		r.planMs = this.prepared.planMs();
 		r.placeMs = this.placeStartNanos == 0 ? 0 : (now - this.placeStartNanos) / 1_000_000L;
@@ -879,6 +884,15 @@ public final class BuildTask {
 	}
 
 	/** The voxel plan's groups: cells by kind, solid heights, the shape files and the recorded self-check. */
+	/** The shape index's wire form in characters (deflated, item 4), worked out once per plan. */
+	private long indexWireChars(ShapePlan shapes) {
+		if (this.indexWirePlan != shapes) {
+			this.indexWirePlan = shapes;
+			this.indexWireChars = ShapeDocs.wire(shapes.index().toJson()).length();
+		}
+		return this.indexWireChars;
+	}
+
 	private void fillShapes(BuildReport r, WorldPlan plan) {
 		r.cellsByKind.clear();
 		r.solidCellsByHeight.clear();
@@ -956,6 +970,7 @@ public final class BuildTask {
 		r.shapeMapBytes = shapes.map().size();
 		r.shapeMapWireChars = shapes.map().wire().length();
 		r.shapeIndexBytes = shapes.index().toJson().getBytes(StandardCharsets.UTF_8).length;
+		r.shapeIndexWireChars = this.indexWireChars(shapes);
 		r.shapeKeys = shapes.index().geoms().size();
 		r.shapeKeysByKind.clear();
 		shapes.keysByKind().forEach((kind, count) -> r.shapeKeysByKind.put(kind.id(), count));

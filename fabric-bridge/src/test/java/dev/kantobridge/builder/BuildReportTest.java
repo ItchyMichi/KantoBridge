@@ -58,9 +58,9 @@ class BuildReportTest {
 		report.region = new BuildReport.RegionReport("hoenn", 1, 8192, 64, 0, new dev.kantobridge.world.RegionRecord.Box(8000, -9000, 13000, 4000, -256, 319),
 				new dev.kantobridge.world.RegionRecord.Areas(new dev.kantobridge.world.RegionRecord.Area(8180, -12, 700, 744),
 						dev.kantobridge.world.RegionRecord.Area.NONE, dev.kantobridge.world.RegionRecord.Area.NONE, dev.kantobridge.world.RegionRecord.Area.NONE),
-				16, 31, 12345L);
+				16, 31, 12345L, 6789L);
 		JsonObject region = report.toJson().getAsJsonObject("region");
-		assertEquals(Set.of("region", "slot", "origin", "bounds", "areas", "families", "shape_map_chars"), region.keySet());
+		assertEquals(Set.of("region", "slot", "origin", "bounds", "areas", "families", "shape_map_chars", "shape_index_chars"), region.keySet());
 		assertEquals("hoenn", region.get("region").getAsString());
 		assertEquals(1, region.get("slot").getAsInt());
 		assertEquals(8192, region.getAsJsonObject("origin").get("x").getAsInt());
@@ -73,6 +73,7 @@ class BuildReportTest {
 		assertEquals(16, region.getAsJsonArray("families").get(0).getAsInt());
 		assertEquals(31, region.getAsJsonArray("families").get(1).getAsInt());
 		assertEquals(12345, region.get("shape_map_chars").getAsLong());
+		assertEquals(6789, region.get("shape_index_chars").getAsLong(), "the shape index on the wire, deflated (item 4)");
 		report.region = new BuildReport.RegionReport("hoenn", 1, 8192, 64, 0, null, dev.kantobridge.world.RegionRecord.Areas.NONE, 16, 31, 0);
 		assertTrue(report.toJson().getAsJsonObject("region").get("bounds").isJsonNull(), "nothing placed: no bounds");
 	}

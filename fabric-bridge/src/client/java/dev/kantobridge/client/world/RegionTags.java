@@ -7,11 +7,12 @@ import java.util.Set;
  * The message types whose schemas carry an optional {@code region} (docs/PROTOCOL.md "Regions (MG3)": the relayed
  * types): what the client tags with its followed region's id in a region world ({@link ClientRegions#tagFor}). The set
  * is checked against {@code protocol/messages/*.schema.json} by a test, since Java bundles only the catalog, not the
- * schemas. Types the client never sends ({@code world.index}, {@code world.shapes}) are listed too: the tag only ever
- * lands on the client-to-server path.
+ * schemas. Types the client never sends ({@code world.index}, {@code world.shapes}, {@code world.shapes.offer}) are
+ * listed too: the tag only ever lands on the client-to-server path ({@code world.shapes.get} names its region itself).
  */
 public final class RegionTags {
-	public static final Set<String> TAGGED = Set.of(MsgTypes.WORLD_INDEX, MsgTypes.WORLD_SHAPES, MsgTypes.TEXTURE_STATUS, MsgTypes.STORY_STATE,
+	public static final Set<String> TAGGED = Set.of(MsgTypes.WORLD_INDEX, MsgTypes.WORLD_SHAPES, MsgTypes.WORLD_SHAPES_OFFER,
+			MsgTypes.WORLD_SHAPES_GET, MsgTypes.TEXTURE_STATUS, MsgTypes.STORY_STATE,
 			MsgTypes.SESSION_BIND, MsgTypes.SESSION_BOUND, MsgTypes.SESSION_WAITING, MsgTypes.SAVE_BEGIN, MsgTypes.SAVE_LOADED,
 			MsgTypes.SAVE_MISMATCH, MsgTypes.WARP_REQUEST, MsgTypes.ROUTE_GIVE, MsgTypes.ROUTE_BATTLE, MsgTypes.ROUTE_BLACKOUT,
 			MsgTypes.ROUTE_RESULT, MsgTypes.ROUTE_PROGRESS, MsgTypes.ROUTE_SIGHT, MsgTypes.ROUTE_FADE, MsgTypes.PARTY_GIVE, MsgTypes.PARTY_HEAL,

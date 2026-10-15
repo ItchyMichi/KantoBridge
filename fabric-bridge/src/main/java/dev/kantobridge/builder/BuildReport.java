@@ -37,11 +37,18 @@ public final class BuildReport {
 	/**
 	 * The region a region build made (MG3): block coordinates, ranges and counts only.
 	 *
-	 * @param bounds        the record's bounds, or null when nothing was placed
-	 * @param shapeMapChars the region's shape map on the wire (the per-document budget is per region)
+	 * @param bounds          the record's bounds, or null when nothing was placed
+	 * @param shapeMapChars   the region's shape map on the wire (the per-document budget is per region)
+	 * @param shapeIndexChars its shape index on the wire (deflated since the follow-up's item 4)
 	 */
 	public record RegionReport(String region, int slot, int originX, int originY, int originZ, RegionRecord.@Nullable Box bounds,
-			RegionRecord.Areas areas, int familyLo, int familyHi, long shapeMapChars) {
+			RegionRecord.Areas areas, int familyLo, int familyHi, long shapeMapChars, long shapeIndexChars) {
+		/** Without the index's size (reports from before item 4, tests). */
+		public RegionReport(String region, int slot, int originX, int originY, int originZ, RegionRecord.@Nullable Box bounds,
+				RegionRecord.Areas areas, int familyLo, int familyHi, long shapeMapChars) {
+			this(region, slot, originX, originY, originZ, bounds, areas, familyLo, familyHi, shapeMapChars, 0);
+		}
+
 		JsonObject toJson() {
 			JsonObject out = new JsonObject();
 			out.addProperty("region", this.region);
@@ -74,6 +81,7 @@ public final class BuildReport {
 			families.add(this.familyHi);
 			out.add("families", families);
 			out.addProperty("shape_map_chars", this.shapeMapChars);
+			out.addProperty("shape_index_chars", this.shapeIndexChars);
 			return out;
 		}
 
@@ -155,6 +163,8 @@ public final class BuildReport {
 	public String shapeMapHash = "";
 	public long shapeMapBytes;
 	public long shapeMapWireChars;
+	/** The shape index on the wire, deflated (the follow-up's item 4). */
+	public long shapeIndexWireChars;
 	public long shapeIndexBytes;
 	public long worldIndexBytes;
 	public int shapeKeys;
@@ -292,6 +302,7 @@ public final class BuildReport {
 		out.addProperty("shape_map_hash", this.shapeMapHash);
 		out.addProperty("shape_map_bytes", this.shapeMapBytes);
 		out.addProperty("shape_map_wire_chars", this.shapeMapWireChars);
+		out.addProperty("shape_index_wire_chars", this.shapeIndexWireChars);
 		out.addProperty("shape_index_bytes", this.shapeIndexBytes);
 		out.addProperty("world_index_bytes", this.worldIndexBytes);
 		out.addProperty("shape_keys", this.shapeKeys);

@@ -1,0 +1,41 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kantobridge.invalid/protocol/messages/world.shapes.get.schema.json",
+  "title": "world.shapes.get",
+  "description": "The client asks for a region's shape documents it doesn't hold (after a world.shapes.offer), each by the content hash the offer named. The server answers with that document's world.shapes parts while it still publishes it, else with nothing (a rebuild sends a new offer).",
+  "x-type": "world.shapes.get",
+  "x-legs": [
+    "c2s"
+  ],
+  "x-re": "never",
+  "type": "object",
+  "additionalProperties": false,
+  "anyOf": [
+    {
+      "required": [
+        "index"
+      ]
+    },
+    {
+      "required": [
+        "map"
+      ]
+    }
+  ],
+  "properties": {
+    "index": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$",
+      "description": "The shape index wanted: the offer's index hash."
+    },
+    "map": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$",
+      "description": "The shape map wanted: the offer's map hash."
+    },
+    "region": {
+      "$ref": "../defs.schema.json#/$defs/regionId",
+      "description": "MG3 (several games): the region this message belongs to; absent = the legacy region. The client tags what it relays with its link's region; the server routes a tagged message to that region's link."
+    }
+  }
+}

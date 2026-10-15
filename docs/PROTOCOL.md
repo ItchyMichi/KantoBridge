@@ -1011,7 +1011,9 @@ bytes. A downloaded export is stored as an **export bundle**, which stays under 
 | `texture.status` | C→S | `ok, slotMapHash?, textures?, missing?, shapes?, shapeIndexHash?, packs?, reason?` | |
 | `world.index` | S→C | `index, count, hash, part` (the WorldIndex JSON in parts, on join) | yes |
 | `world.slots` | S→C | `index, count, hash, part` (the slot-map JSON in parts, on join, so a joining player can build their own pack against the host's slots; M9) | yes |
-| `world.shapes` | S→C | `doc, index, count, hash, part` (the shape index, `doc:"index"`, and the shape map, `doc:"map"`, in parts after `world.slots`; the voxel plan's V2) | yes |
+| `world.shapes` | S→C | `doc, index, count, hash, part, enc?` (the shape index, `doc:"index"`, deflated with `enc:"deflate"`, and the shape map, `doc:"map"`, in parts, when a client asks for them; the voxel plan's V2) | yes |
+| `world.shapes.offer` | S→C | `index{hash, chars}, map{hash, chars}` (a region's shape documents by the SHA-256 of what they hold and their wire size, after `world.slots` on join and whenever a build publishes) | |
+| `world.shapes.get` | C→S | `index?, map?` (the content hashes of the offered documents this client lacks) | |
 | `world.regions` | S→C | `index, count, hash, part` (MG3: the region table and records, in parts on join before the regions' `world.index` parts; ids, numbers and hashes only) | |
 
 **The WorldIndex** ([`protocol/world/world_index.schema.json`](../protocol/world/world_index.schema.json))
@@ -1081,8 +1083,9 @@ SHA-256 of its canonical JSON. Capacity: 16 families × 256 slots per shape.
   blocks. A region's `WorldIndex.slotMapHash` is the hash of the version-1 form of **that region's slice** of the map
   (the legacy region at 0..15 keeps today's hash exactly); `world.slots` carries the whole document's hash.
 - **On join** a region world sends `world.regions` (the table and every record), then each region's `world.index`
-  parts tagged with `region`, the one `world.slots`, then each region's `world.shapes` tagged with `region`
-  (`doc:"index"` then `doc:"map"`). A legacy world sends exactly today's sequence.
+  parts tagged with `region`, the one `world.slots`, then each region's `world.shapes.offer` tagged with `region`
+  (the `world.shapes` parts follow a `world.shapes.get`, also tagged). A legacy world sends today's sequence with an
+  untagged offer in place of the shape parts.
 - **The `region` field:** every relayed type the client sends for its hidden game (`story.state`, `warp.request`,
   `session.*`, `save.*`, `route.*`, `party.*`, `daycare.*`, `bag.*`, `battle.*`, `pc.*`, `texture.status`,
   `game.status`) carries an optional `region`, the region of the link it came from; absent means the legacy region.
@@ -1153,13 +1156,24 @@ before V1) counts as no pack.
   world's slot map names, and only while gen1-bridge is connected to a compatible game (the same game,
   or Red with Blue), once per world. Art is never sent over the network. A world without a slot map
   (built before M9) shows placeholders.
-- **`world.shapes`** follows the `world.slots` parts: first the shape index's text (`doc:"index"`), then Base64 of
-  the shape map's deflated bytes (`doc:"map"`); `hash` is the SHA-256 of the document's whole transmitted text. The
-  server sends them only when both files exist and the shape map's header names the published WorldIndex. The client
-  accepts the pair when both documents assemble and match their hashes, the index parses with a known version, the
-  map's index hash is the hash of the `world.index` text it holds and its shape hash is the SHA-256 of the received
-  index text; otherwise it keeps drawing cubes and reports why. A guest builds geometry for the **host's** keys from
-  its own art; a key it can't build draws the plain cube.
+- **Shapes on demand** (2026-10-15, docs/SEVERAL_GAMES_FOLLOWUPS.md item 4, the voxel plan's R10): after the
+  `world.slots` parts the server sends each region's **`world.shapes.offer`**: its shape index and shape map, each by
+  the SHA-256 of what it holds (the index's UTF-8 text, the map's file bytes) and its wire size in characters. The
+  client looks each up in its own cache (`<gameDir>/kantobridge/shapes/docs/`, the deflated documents by hash, checked
+  when read back, at most 64 MB, least recently used out first) and asks for the ones it lacks with one
+  **`world.shapes.get{index?, map?}`** (the offer's hashes, tagged with the offer's region). The server answers with
+  that document's `world.shapes` parts while it still publishes it, else with nothing (a rebuild sends a new offer);
+  the same document asked for again within 5 s goes out once; a request naming no document is `bad_message`. A rejoin
+  of an unchanged world therefore downloads no shapes. Offered only when both files exist and the shape map's header
+  names the published WorldIndex and that shape index.
+- **`world.shapes`** (parts): the shape index (`doc:"index"`) as Base64 of its deflated UTF-8 text with
+  `enc:"deflate"` (a server from before 2026-10-15 pushed the text itself on join, without `enc`, and the client still
+  takes that), then Base64 of the shape map's deflated bytes (`doc:"map"`); `hash` is the SHA-256 of the document's
+  whole transmitted text. A completed document must hold what its region's offer named, else it is refused. The
+  client accepts the pair when both documents assemble and match their hashes, the index parses with a known version,
+  the map's index hash is the hash of the `world.index` text it holds and its shape hash is the SHA-256 of the
+  received index text; otherwise it keeps drawing cubes and reports why. A guest builds geometry for the **host's**
+  keys from its own art; a key it can't build draws the plain cube.
 - **`texture.status`:** `ok:true` means this client draws the world with its own art; it carries
   `slotMapHash` (the world's slot map it resolved its sprites against), `textures` and `missing` (0).
   `ok:false` carries `reason`: `no_art` (no usable pack, and gen1-bridge isn't connected to a
@@ -1286,3 +1300,6 @@ carrying the same envelope in both directions. Larger data is split at the appli
   - P3: the shape key kind `box` (`box:<a>|<u>,<n>,<s>,<w>,<e>|<h>`, `|v=p` for sunk panes); unit variants'
     parameters (`_k<two digits each>`); a template's `hull` (a canopy or a planter) and `band.parts` (a furniture
     entry's pieces); the planner `kb-shapes/8`. Still `world.shapes`.
+- Added after the several-games plan (docs/SEVERAL_GAMES_FOLLOWUPS.md item 4, the voxel plan's R10, 2026-10-15):
+  `world.shapes.offer` (S→C) and `world.shapes.get` (C→S); `world.shapes.enc` (the index deflated). The shape
+  documents go out when a client asks for them, not on every join.

@@ -65,14 +65,14 @@ DIAGNOSTICS = REPORTS / "build_diagnostics.json"
 VIEWPOINTS = REPORTS / "viewpoints.json"
 # The self-check's scores per map id (voxel plan V2), written by the build beside the report.
 SELFCHECK = REPORTS / "shape_selfcheck.json"
-# world.shapes travels in parts of this many characters (WorldIndexParts.PART_CHARS); the map must fit in 8.
-# MG3: the budget is per shape map, i.e. per region.
+# world.shapes travels in parts of this many characters (WorldIndexParts.PART_CHARS). Since the follow-up's item 4
+# (2026-10-15, the voxel plan's R10) a region's two shape documents go to a client once, when it asks for them
+# (world.shapes.offer / world.shapes.get; the client keeps them by hash), not on every join, and the index is deflated
+# too: the budget is a region's first download, per document (the map, and the index), the same for every game. It
+# replaces the join-time budgets of 8 parts (Kanto's map) and 32 (a Gen 3 region's map; the real Hoenn's is 31.75 and
+# its index, raw on every join until then, 135).
 PART_CHARS = 64 * 1024
-MAX_SHAPE_MAP_PARTS = 8
-# MG7 G3G: a Gen 3 region's shape map is about three times Kanto's (the real Hoenn: 1,682,080 characters, 26 parts);
-# the eight parts above are Kanto's join-time budget (voxel plan R10), not a transport limit (world.shapes takes up to
-# 65,536 parts), so a Gen 3 region gets its own.
-MAX_SHAPE_MAP_PARTS_GEN3 = 32
+MAX_SHAPE_DOC_PARTS = 64
 # MG7 G3G: the warnings a Gen 3 build may give until MG8 joins Hoenn's seams (GEN3_BRIDGE_PLAN.md §6 "Measured"): map
 # edges that disagree with the engine's own placement, overlaps of true sizes, interiors reached by a special warp
 # (no arrival cell). Any other warning fails the build.
@@ -281,14 +281,14 @@ def check_report(maps, report=REPORT, region=None, slot=None, world=None):
     if region is None:
         checks["legacy_report"] = data.get("region") is None
     else:
-        parts = MAX_SHAPE_MAP_PARTS_GEN3 if gen3 else MAX_SHAPE_MAP_PARTS
-        checks.update(region_checks(data, region, slot, (SAVES / world) if world else None, max_parts=parts))
+        checks.update(region_checks(data, region, slot, (SAVES / world) if world else None))
     return data, [name for name, ok in checks.items() if not ok]
 
 
-def region_checks(data, region, slot, world_dir=None, max_parts=MAX_SHAPE_MAP_PARTS):
-    """MG3: the report's `region` object (region, slot, origin, bounds, areas, families, shape_map_chars) and, with the
-    world folder, the region's files and the region table against their schemas. Returns {check: ok}."""
+def region_checks(data, region, slot, world_dir=None, max_parts=MAX_SHAPE_DOC_PARTS):
+    """MG3: the report's `region` object (region, slot, origin, bounds, areas, families, shape_map_chars and, since item
+    4, shape_index_chars) and, with the world folder, the region's files and the region table against their schemas.
+    Returns {check: ok}."""
     rep = data.get("region") if isinstance(data.get("region"), dict) else {}
     families = rep.get("families") if isinstance(rep.get("families"), list) else []
     checks = {
@@ -300,6 +300,7 @@ def region_checks(data, region, slot, world_dir=None, max_parts=MAX_SHAPE_MAP_PA
         "region_families": len(families) == 2 and all(isinstance(f, int) and 0 <= f <= 95 for f in families)
         and families[0] <= families[1],
         "region_shape_map_fits": 0 < (rep.get("shape_map_chars") or 0) <= max_parts * PART_CHARS,
+        "region_shape_index_fits": 0 < (rep.get("shape_index_chars") or 0) <= max_parts * PART_CHARS,
     }
     if world_dir is not None:
         checks.update(region_files(world_dir, region, slot))
@@ -344,7 +345,8 @@ def shape_gates(full, again, filtered):
         == (full.get("shape_index_hash"), full.get("shape_map_hash")),
         "rebuild_changes_nothing": again.get("blocks_placed") == 0 and again.get("blocks_cleared") == 0,
         "filtered_shares_the_index": filtered.get("shape_index_hash") == full.get("shape_index_hash"),
-        "shape_map_fits": 0 < (full.get("shape_map_wire_chars") or 0) <= MAX_SHAPE_MAP_PARTS * PART_CHARS,
+        "shape_map_fits": 0 < (full.get("shape_map_wire_chars") or 0) <= MAX_SHAPE_DOC_PARTS * PART_CHARS,
+        "shape_index_fits": 0 < (full.get("shape_index_wire_chars") or 0) <= MAX_SHAPE_DOC_PARTS * PART_CHARS,
         "selfcheck_recorded": isinstance(full.get("selfcheck"), dict) and (full["selfcheck"].get("maps") or 0) > 0,
     }
     return [name for name, ok in checks.items() if not ok]
@@ -368,7 +370,8 @@ def budget_gates(report, full_build=True):
         "selfcheck_ground": (selfcheck.get("ground_match_min") or 0) >= SELFCHECK_GROUND_MATCH_MIN,
         "selfcheck_structure": (selfcheck.get("structure_match_p05") or 0) >= SELFCHECK_STRUCTURE_P05_MIN
         and (selfcheck.get("structure_match_min") or 0) >= SELFCHECK_STRUCTURE_MIN,
-        "shape_map_fits": 0 < (report.get("shape_map_wire_chars") or 0) <= MAX_SHAPE_MAP_PARTS * PART_CHARS,
+        "shape_map_fits": 0 < (report.get("shape_map_wire_chars") or 0) <= MAX_SHAPE_DOC_PARTS * PART_CHARS,
+        "shape_index_fits": 0 < (report.get("shape_index_wire_chars") or 0) <= MAX_SHAPE_DOC_PARTS * PART_CHARS,
         # Tier B (V4): the void fill never holds a unit beyond its ring; skipped decoration and structures are reported.
         "void_hull_cells": report.get("void_hull_cells") == 0,
         "tier_b_reported": isinstance(report.get("shape_decor_skipped"), int) and isinstance(report.get("structures_by_kind"), dict),

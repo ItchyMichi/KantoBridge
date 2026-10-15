@@ -359,20 +359,31 @@ public class RegionBuildGameTests implements FabricGameTest {
 			int test2Shapes = WorldIndexSync.currentShapeParts(server, TEST2).size();
 			helper.assertTrue(regionParts >= 1 && kantoParts >= 1 && test2Parts >= 1 && slotParts >= 1 && kantoShapes >= 2 && test2Shapes >= 2,
 					"parts: regions " + regionParts + ", indices " + kantoParts + "+" + test2Parts + ", slots " + slotParts + ", shapes " + kantoShapes + "+" + test2Shapes);
-			int expected = regionParts + kantoParts + test2Parts + slotParts + kantoShapes + test2Shapes;
+			// item 4: one offer per region; the shape parts go out when a client asks for them
+			int expected = regionParts + kantoParts + test2Parts + slotParts + 2;
 			helper.assertTrue(count == expected && sent.size() == count, "parts sent: " + count + " (expected " + expected + ", captured " + sent.size() + ")");
 			int at = 0;
-			List<Envelope> regionMessages = sent.subList(at, at += regionParts);
+			List<Envelope> regionMessages = List.copyOf(sent.subList(at, at += regionParts));
 			helper.assertTrue(regionMessages.stream().allMatch(m -> m.type().equals(MsgTypes.WORLD_REGIONS) && regionOf(m) == null), "world.regions comes first, untagged");
-			List<Envelope> kantoIndexMessages = sent.subList(at, at += kantoParts);
+			List<Envelope> kantoIndexMessages = List.copyOf(sent.subList(at, at += kantoParts));
 			helper.assertTrue(kantoIndexMessages.stream().allMatch(m -> m.type().equals(MsgTypes.WORLD_INDEX) && KANTO.equals(regionOf(m))), "kanto's index parts, tagged kanto");
-			List<Envelope> test2IndexMessages = sent.subList(at, at += test2Parts);
+			List<Envelope> test2IndexMessages = List.copyOf(sent.subList(at, at += test2Parts));
 			helper.assertTrue(test2IndexMessages.stream().allMatch(m -> m.type().equals(MsgTypes.WORLD_INDEX) && TEST2.equals(regionOf(m))), "test2's index parts, tagged test2");
-			List<Envelope> slotMessages = sent.subList(at, at += slotParts);
+			List<Envelope> slotMessages = List.copyOf(sent.subList(at, at += slotParts));
 			helper.assertTrue(slotMessages.stream().allMatch(m -> m.type().equals(MsgTypes.WORLD_SLOTS) && regionOf(m) == null), "one untagged world.slots after the indices");
-			List<Envelope> kantoShapeMessages = sent.subList(at, at += kantoShapes);
-			List<Envelope> test2ShapeMessages = sent.subList(at, at += test2Shapes);
-			assertShapes(helper, kantoShapeMessages, KANTO);
+			Envelope kantoOffer = sent.get(at++);
+			Envelope test2Offer = sent.get(at++);
+			helper.assertTrue(kantoOffer.type().equals(MsgTypes.WORLD_SHAPES_OFFER) && KANTO.equals(regionOf(kantoOffer))
+					&& test2Offer.type().equals(MsgTypes.WORLD_SHAPES_OFFER) && TEST2.equals(regionOf(test2Offer)), "each region's offer, tagged, in table order");
+			helper.assertTrue(test2Offer.data().getAsJsonObject("index").get("hash").getAsString().equals(WorldIndexSync.currentShapesHash(server, TEST2)),
+					"test2's offer names its shape index");
+			// test2's documents, asked for as its client would: tagged test2, the index first
+			int before = sent.size();
+			RelayService.get().receive(player, BattleGameTests.envelope(1, MsgTypes.WORLD_SHAPES_GET, "{\"index\":\""
+					+ test2Offer.data().getAsJsonObject("index").get("hash").getAsString() + "\",\"map\":\""
+					+ test2Offer.data().getAsJsonObject("map").get("hash").getAsString() + "\",\"region\":\"" + TEST2 + "\"}"));
+			List<Envelope> test2ShapeMessages = List.copyOf(sent.subList(before, sent.size()));
+			helper.assertTrue(test2ShapeMessages.size() == test2Shapes, "test2's shape parts: " + test2ShapeMessages.size() + " of " + test2Shapes);
 			assertShapes(helper, test2ShapeMessages, TEST2);
 			// the world.regions document: the table and both records
 			JsonObject document = assemble(helper, regionMessages);

@@ -1,0 +1,67 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kantobridge.invalid/protocol/messages/world.shapes.offer.schema.json",
+  "title": "world.shapes.offer",
+  "description": "A region's shape documents as the server publishes them, by content hash and wire size only, after the world.slots parts on join and whenever a build publishes (SEVERAL_GAMES_FOLLOWUPS.md item 4, the voxel plan's R10): the client takes each from its own cache by hash, or asks for what it lacks with world.shapes.get. Sent only when the shape map's header names the published WorldIndex and that shape index.",
+  "x-type": "world.shapes.offer",
+  "x-legs": [
+    "s2c"
+  ],
+  "x-re": "never",
+  "type": "object",
+  "required": [
+    "index",
+    "map"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "index": {
+      "type": "object",
+      "required": [
+        "hash",
+        "chars"
+      ],
+      "additionalProperties": false,
+      "description": "The shape index (shape_index.json).",
+      "properties": {
+        "hash": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$",
+          "description": "SHA-256 of its UTF-8 text."
+        },
+        "chars": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 2147483647,
+          "description": "Its wire form's length: the world.shapes parts' text, all together."
+        }
+      }
+    },
+    "map": {
+      "type": "object",
+      "required": [
+        "hash",
+        "chars"
+      ],
+      "additionalProperties": false,
+      "description": "The shape map (shape_map.bin).",
+      "properties": {
+        "hash": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$",
+          "description": "SHA-256 of its bytes."
+        },
+        "chars": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 2147483647,
+          "description": "Its wire form's length: the world.shapes parts' text, all together."
+        }
+      }
+    },
+    "region": {
+      "$ref": "../defs.schema.json#/$defs/regionId",
+      "description": "MG3 (several games): the region this message belongs to; absent = the legacy region. The client tags what it relays with its link's region; the server routes a tagged message to that region's link."
+    }
+  }
+}

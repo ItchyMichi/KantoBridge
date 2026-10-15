@@ -20,5 +20,18 @@
       "hash": "c3d4e5f607182930",
       "part": "S0JTTQEAAA=="
     }
+  },
+  {
+    "type": "world.shapes",
+    "seq": 14,
+    "data": {
+      "doc": "index",
+      "index": 0,
+      "count": 1,
+      "hash": "d4e5f60718293a4b",
+      "part": "RYtLCoAwDAXvknVFuu1VxEWUoMU2LU1wU3p3K/jZzWPmVUANKCTgptnARik+6FkUeX1NxkCq/yp4h7V1DshMBRwcyyA7ZpLRggGl2NV3OamITwzOtgs=",
+      "enc": "deflate",
+      "region": "hoenn"
+    }
   }
 ]

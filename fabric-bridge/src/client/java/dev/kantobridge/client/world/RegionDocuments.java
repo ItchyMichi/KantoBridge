@@ -6,8 +6,10 @@ import dev.kantobridge.proto.ProtoJson;
 import dev.kantobridge.proto.ProtocolException;
 import dev.kantobridge.world.DataException;
 import dev.kantobridge.world.Games;
+import dev.kantobridge.world.Hashes;
 import dev.kantobridge.world.RegionRecord;
 import dev.kantobridge.world.Regions;
+import dev.kantobridge.world.ShapeDocs;
 import dev.kantobridge.world.WorldIndex;
 import dev.kantobridge.world.WorldIndexParts;
 import java.util.ArrayList;
@@ -28,6 +30,13 @@ import org.jetbrains.annotations.Nullable;
  * <p>A {@link RegionSet} is published (its epoch grows) when the table arrives, when a region's index is complete, on a
  * new table (a rebuild) and when everything is cleared; the shape pair of a region goes to the {@link ShapesListener}
  * once both documents are in. Plain Java, one thread (the client's); {@link ClientRegions} is the Minecraft glue.
+ *
+ * <p>Shapes on demand (the follow-up's item 4): a region's {@code world.shapes.offer} names its two documents by the
+ * SHA-256 of what they hold; {@link #onShapesOffer} drops held documents the offer replaced and says which the region
+ * lacks ({@link Wants}). The glue takes those from its cache ({@link #provideShape}) or asks the server
+ * ({@code world.shapes.get}); the parts that come back are checked against the offer (a document of an older offer is
+ * refused) and each completed one goes to the {@link DocumentListener} (the cache). Parts no offer announced (a server
+ * from before item 4 pushes them on join) are taken as before, without the content check.
  */
 public final class RegionDocuments {
 	/** Where untagged parts collect before the legacy world's index named its region. */
@@ -45,6 +54,25 @@ public final class RegionDocuments {
 		void shapes(String region, String indexText, String mapWire);
 	}
 
+	/**
+	 * Told when one offered shape document has come in from parts: its content hash and the parts' text, which is
+	 * Base64 of the deflated document when {@code deflated} (the map always; the index from servers since item 4).
+	 */
+	@FunctionalInterface
+	public interface DocumentListener {
+		void document(String region, boolean isIndex, String hash, String wire, boolean deflated);
+	}
+
+	/** What a region lacks after its offer: each document's content hash, or null where the region holds it already. */
+	public record Wants(@Nullable String index, @Nullable String map) {
+		public boolean any() {
+			return this.index != null || this.map != null;
+		}
+	}
+
+	/** The largest shape document accepted, inflated (the real Hoenn's index is about 9 MB, its map 11). */
+	public static final int MAX_DOC_BYTES = 64 * 1024 * 1024;
+
 	/** One region's documents, as far as they have arrived. */
 	private static final class Held {
 		final WorldIndexParts.Assembler indexParts = new WorldIndexParts.Assembler();
@@ -55,12 +83,18 @@ public final class RegionDocuments {
 		@Nullable String indexHash;
 		@Nullable String shapeIndexText;
 		@Nullable String shapeMapWire;
+		/** The content hashes of the held documents (the map's only when it was offered), and of the last offer. */
+		@Nullable String shapeIndexHash;
+		@Nullable String shapeMapHash;
+		@Nullable String offeredIndex;
+		@Nullable String offeredMap;
 	}
 
 	private final WorldIndexParts.Assembler tableParts = new WorldIndexParts.Assembler();
 	private final Map<String, Held> held = new LinkedHashMap<>();
 	private final List<Runnable> listeners = new CopyOnWriteArrayList<>();
 	private @Nullable ShapesListener shapesListener;
+	private @Nullable DocumentListener documentListener;
 	private @Nullable Regions regions;
 	/** True once a {@code world.regions} document named the regions (a region world); false for a legacy world. */
 	private boolean fromTable;
@@ -74,6 +108,10 @@ public final class RegionDocuments {
 	}
 
 	/** Sets the one listener for complete shape pairs. */
+	public void onDocument(@Nullable DocumentListener listener) {
+		this.documentListener = listener;
+	}
+
 	public void onShapes(@Nullable ShapesListener listener) {
 		this.shapesListener = listener;
 	}
@@ -123,23 +161,111 @@ public final class RegionDocuments {
 	}
 
 	/**
-	 * One {@code world.shapes} part for {@code region} (null: untagged). Returns true when the region's shape index and
-	 * shape map are both in (the {@link ShapesListener} has been told), else false.
+	 * A region's {@code world.shapes.offer} (null: untagged): held documents it replaced are dropped, and the documents the
+	 * region lacks are returned by content hash.
 	 */
+	public Wants onShapesOffer(@Nullable String region, String indexHash, String mapHash) throws DataException {
+		String key = this.key(region);
+		Held slot = this.held.computeIfAbsent(key, k -> new Held());
+		slot.offeredIndex = indexHash;
+		slot.offeredMap = mapHash;
+		if (!indexHash.equals(slot.shapeIndexHash)) {
+			slot.shapeIndexText = null;
+			slot.shapeIndexHash = null;
+			slot.shapeIndexParts.reset();
+		}
+		if (!mapHash.equals(slot.shapeMapHash)) {
+			slot.shapeMapWire = null;
+			slot.shapeMapHash = null;
+			slot.shapeMapParts.reset();
+		}
+		return new Wants(slot.shapeIndexText == null ? indexHash : null, slot.shapeMapWire == null ? mapHash : null);
+	}
+
+	/** The content hash the region's last offer gave a document (the index, else the map), or null. */
+	public @Nullable String offered(@Nullable String region, boolean isIndex) {
+		Held slot;
+		try {
+			slot = this.held.get(this.key(region));
+		} catch (DataException e) {
+			return null;
+		}
+		return slot == null ? null : isIndex ? slot.offeredIndex : slot.offeredMap;
+	}
+
+	/**
+	 * An offered document the glue found in its own cache (its content checked against {@code hash}): the index's text or
+	 * the map's wire form. Ignored unless the region's offer still names that hash. Returns true when the region's pair
+	 * is complete (the {@link ShapesListener} has been told).
+	 */
+	public boolean provideShape(@Nullable String region, boolean isIndex, String hash, String content) {
+		String key;
+		try {
+			key = this.key(region);
+		} catch (DataException e) {
+			return false;
+		}
+		Held slot = this.held.get(key);
+		if (slot == null || !hash.equals(isIndex ? slot.offeredIndex : slot.offeredMap)) {
+			return false;
+		}
+		if (isIndex) {
+			slot.shapeIndexText = content;
+			slot.shapeIndexHash = hash;
+			slot.shapeIndexParts.reset();
+		} else {
+			slot.shapeMapWire = content;
+			slot.shapeMapHash = hash;
+			slot.shapeMapParts.reset();
+		}
+		return this.tell(key, slot);
+	}
+
+	/** {@link #onShapesPart(String, boolean, boolean, int, int, String, String)} for a part that isn't deflated text. */
 	public boolean onShapesPart(@Nullable String region, boolean isIndex, int index, int count, String hash, String part) throws DataException {
+		return this.onShapesPart(region, isIndex, false, index, count, hash, part);
+	}
+
+	/**
+	 * One {@code world.shapes} part for {@code region} (null: untagged); {@code deflated}: an index part is Base64 of the
+	 * deflated text ({@code enc:"deflate"}). Returns true when the region's shape index and shape map are both in (the
+	 * {@link ShapesListener} has been told), else false. A completed document the region's offer doesn't name (an older
+	 * offer's, after a rebuild) is refused.
+	 */
+	public boolean onShapesPart(@Nullable String region, boolean isIndex, boolean deflated, int index, int count, String hash, String part)
+			throws DataException {
 		String key = this.key(region);
 		Held slot = this.held.computeIfAbsent(key, k -> new Held());
 		String text = (isIndex ? slot.shapeIndexParts : slot.shapeMapParts).accept(index, count, hash, part);
 		if (text == null) {
 			return false;
 		}
+		String offered = isIndex ? slot.offeredIndex : slot.offeredMap;
+		String content = isIndex && deflated ? ShapeDocs.unwireText(text, MAX_DOC_BYTES) : text;
+		String contentHash = isIndex ? Hashes.sha256(content) : offered == null ? null : Hashes.sha256(ShapeDocs.unwire(text, MAX_DOC_BYTES));
+		if (offered != null && !offered.equals(contentHash)) {
+			throw new DataException("/", "not the offered document");
+		}
 		if (isIndex) {
-			slot.shapeIndexText = text;
-			// A new shape index makes any map received for the old one stale.
-			slot.shapeMapWire = null;
+			slot.shapeIndexText = content;
+			slot.shapeIndexHash = contentHash;
+			if (offered == null) {
+				// pushed (a server from before item 4): a new shape index makes a map received for the old one stale
+				slot.shapeMapWire = null;
+				slot.shapeMapHash = null;
+			}
 		} else {
 			slot.shapeMapWire = text;
+			slot.shapeMapHash = contentHash;
 		}
+		if (offered != null && contentHash != null && this.documentListener != null && !UNNAMED.equals(key)) {
+			this.documentListener.document(key, isIndex, contentHash, text, !isIndex || deflated);
+		}
+		return this.tell(key, slot);
+	}
+
+	/** Tells the listener a region's complete pair; true when it is complete. */
+	private boolean tell(String key, Held slot) {
 		if (slot.shapeIndexText == null || slot.shapeMapWire == null) {
 			return false;
 		}

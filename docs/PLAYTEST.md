@@ -896,4 +896,8 @@ it has been seen in a real client yet.
       shows in Minecraft; when it hatches, the hatch screen appears as the game's own picture (press A for YES to a
       nickname) and the Pokémon arrives in your party. The trade's animation isn't shown (the client stays on the
       world for its few seconds).
-- **Known gaps:** Hoenn's shape map is about 2 MB, sent to each joining client.
+- [ ] **Shapes download once:** the first time you join a world (and after a region is rebuilt) the world shows plain
+      cubes for a moment while your client downloads that region's shapes; join again and they appear straight away
+      (taken from your client's cache, `kantobridge/shapes/docs/` in the game folder; nothing is downloaded).
+- **Known gaps:** each joining client still receives every region's world index as plain text (Hoenn's is about
+  2.9 MB, Kanto's 0.8 MB).

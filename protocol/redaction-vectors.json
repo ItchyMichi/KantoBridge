@@ -947,6 +947,62 @@
       }
     },
     {
+      "type": "world.shapes",
+      "seq": 14,
+      "redacted": {
+        "doc": "index",
+        "index": 0,
+        "count": 1,
+        "hash": "d4e5f60718293a4b",
+        "part": "<rom:str:116:bbc4277d>",
+        "enc": "deflate",
+        "region": "hoenn"
+      }
+    },
+    {
+      "type": "world.shapes.get",
+      "seq": 3,
+      "redacted": {
+        "index": "1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a",
+        "map": "2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b",
+        "region": "hoenn"
+      }
+    },
+    {
+      "type": "world.shapes.get",
+      "seq": 4,
+      "redacted": {"map": "4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d"}
+    },
+    {
+      "type": "world.shapes.offer",
+      "seq": 15,
+      "redacted": {
+        "index": {
+          "hash": "1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a",
+          "chars": 1264612
+        },
+        "map": {
+          "hash": "2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b",
+          "chars": 2080948
+        },
+        "region": "hoenn"
+      }
+    },
+    {
+      "type": "world.shapes.offer",
+      "seq": 16,
+      "redacted": {
+        "index": {
+          "hash": "3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c",
+          "chars": 812
+        },
+        "map": {
+          "hash": "4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d",
+          "chars": 16
+        }
+      }
+    },
+    {
       "type": "world.slots",
       "seq": 11,
       "redacted": {

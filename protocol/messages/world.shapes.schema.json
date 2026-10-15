@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://kantobridge.invalid/protocol/messages/world.shapes.schema.json",
   "title": "world.shapes",
-  "description": "The world's shape data, in parts after the world.slots parts (on join and whenever a build publishes): the shape index (doc index: the text of shape_index.json, protocol/world/shape_index.schema.json) and the shape map (doc map: Base64 of the deflated bytes of shape_map.bin). Ids, tile numbers and hashes only; never geometry or art. Sent only when the shape map's header names the published WorldIndex.",
+  "description": "The world's shape data, in parts: the shape index (doc index: Base64 of the deflated UTF-8 text of shape_index.json, protocol/world/shape_index.schema.json, with enc deflate; before 2026-10-15 the text itself, without enc) and the shape map (doc map: Base64 of the deflated bytes of shape_map.bin). Since 2026-10-15 a document goes out when a client asks for it (world.shapes.get, after a world.shapes.offer), not on every join. Ids, tile numbers and hashes only; never geometry or art. Sent only when the shape map's header names the published WorldIndex.",
   "x-type": "world.shapes",
   "x-legs": [
     "s2c"
@@ -43,6 +43,12 @@
       "type": "string",
       "maxLength": 200000,
       "x-rom-derived": true
+    },
+    "enc": {
+      "enum": [
+        "deflate"
+      ],
+      "description": "The index document's wire form is Base64 of its deflated UTF-8 text (raw deflate). Absent on doc index: the text itself. The map is always deflated."
     },
     "region": {
       "$ref": "../defs.schema.json#/$defs/regionId",

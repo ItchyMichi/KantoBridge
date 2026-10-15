@@ -292,7 +292,7 @@ Proposed in [B2.3](../research/VOXEL_WORLD_REPORT.md#b23-performance-measure); t
 | Heap | shape tables ≤ 32 MB; client lookup ≤ 16 MB; registry growth ≤ 12 MB per side | JUnit and user | V3 |
 | Resource reload; join to first full view | ≤ baseline + 2 s; ≤ baseline + 1 s | user | V1, V4 |
 | Build | placement ≥ 40,000 blocks/s; full build ≤ 90 s (today 49,237 and 56.7 s) | build report | V3 |
-| Shape map on the wire | ≤ 8 relay parts of 64 Ki characters | build report | V2 |
+| Shape map on the wire | ≤ 8 relay parts of 64 Ki characters (since 2026-10-15: ≤ 64 parts for the map and ≤ 64 for the deflated index, per region: a first download, see R10) | build report | V2 |
 
 ---
 
@@ -397,6 +397,15 @@ shapeAt(x, y, z):  g = the grid whose box holds (x, y, z)
 - **Overlays** hold the closed shapes of `tile` story cells ([§5.9](#59-story-art-in-the-mesh)).
 
 ### 4.4 `world.shapes` (server → client, relay only)
+
+> **Since 2026-10-15 (R10, the follow-up's item 4)** the two documents are no longer pushed: the server sends a
+> `world.shapes.offer` per region in their place (each document by the SHA-256 of what it holds, and its wire size),
+> and a client asks for the ones its cache lacks with `world.shapes.get`; the parts below then follow, the shape
+> index deflated like the map (`enc:"deflate"`). Measured on the real Hoenn: its map is 2,080,948 characters on the
+> wire (31.75 parts; the surface grid, 1,624 × 792 columns, is 40% of it, about 460 interior grids the rest; other
+> encodings of the same content save 5-15% under deflate) and its index, which travelled as plain text, 8,851,374
+> characters (135 parts; deflated 1,264,612, 19.3 parts). A client downloads a region's documents once per build;
+> rejoining downloads none. See PROTOCOL.md "Shapes on demand".
 
 Sent after the `world.slots` parts on join and whenever a build publishes
 (`server/WorldIndexSync.java:195-207`), only when both shape files exist and the shape map's header names
@@ -1382,7 +1391,7 @@ V1 ──► V2 ──► V3 ──► V4 ──► V7
 | R7 | A Minecraft or Fabric update changes the model pipeline | Compile errors | No bump is planned. The adapters are thin; the data design (keys, index, map, table) does not depend on them. ⚠ Not confirmed: how the APIs differ after 1.21.4 |
 | R8 | Full slots are 96% used (3,926 of 4,096) | `slot_map.full` fails the build | This plan stops spending slots: shapes and extra art are keys |
 | R9 | A player pack enlarges the atlas until stitching fails (a crash) | The atlas check before a reload | The pack's textures are refused with `pack.atlas_size` |
-| R10 | The shape map or index is too large for the relay | `shape_map_wire_chars`, `shape_keys` | Send grids on demand per layer; drop per-block ids of plain repeats |
+| R10 | The shape map or index is too large for the relay | `shape_map_wire_chars`, `shape_index_wire_chars`, `shape_keys` | **Done 2026-10-15 (docs/SEVERAL_GAMES_FOLLOWUPS.md item 4)** a different way: the documents are offered by content hash (`world.shapes.offer`), sent only when a client asks (`world.shapes.get`) and kept in its cache, and the index travels deflated. Grids on demand were measured and not needed (below) |
 | R11 | A guest's export lacks an atlas or tile the host's keys name | `texture.status.shapes`, F7 | That key draws the plain cube; counted |
 | R12 | Open-air interiors cannot get clear sky | `open_air_kept_ceiling` | Keep a raised ceiling |
 | R13 | Animated tiles stop animating under Sodium when quads use sub-tile UVs | X6 | Whole-tile quads for animated tiles |

@@ -3,6 +3,7 @@ package dev.kantobridge.gametest;
 import com.cobblemon.mod.common.battles.BattleRegistry;
 import com.cobblemon.mod.common.pokemon.Pokemon;
 import com.cobblemon.mod.common.util.PlayerExtensionsKt;
+import com.google.gson.JsonObject;
 import dev.kantobridge.builder.export.BundleException;
 import dev.kantobridge.builder.export.ExportBundle;
 import dev.kantobridge.builder.plan.ArtCatalog;
@@ -32,6 +33,7 @@ import dev.kantobridge.story.StoryState;
 import dev.kantobridge.story.StoryStates;
 import dev.kantobridge.story.Surfing;
 import dev.kantobridge.world.DataException;
+import dev.kantobridge.world.ShapeDocs;
 import dev.kantobridge.world.ShapeMap;
 import dev.kantobridge.world.SlotMap;
 import dev.kantobridge.world.WorldIndex;
@@ -346,12 +348,15 @@ public class MultiplayerGameTests implements FabricGameTest {
 	}
 
 	/**
-	 * The voxel plan's V2 (docs/specs/VOXEL_BLOCKS_PLAN.md §4.4): a joining player gets the world's shapes after its slot
-	 * map, the shape index first and then the shape map, and only when the map names the published index and that shape
-	 * index; otherwise no {@code world.shapes} goes out and clients draw cubes.
+	 * The voxel plan's V2 (docs/specs/VOXEL_BLOCKS_PLAN.md §4.4), on demand since the follow-up's item 4: a joining player
+	 * gets the world's shape offer after its slot map (each document by the SHA-256 of what it holds, with its wire size),
+	 * and the documents themselves only when its client asks ({@code world.shapes.get}): the shape index (deflated,
+	 * {@code enc:"deflate"}) first, then the shape map; the same request again within the resend time sends nothing, a
+	 * hash the server doesn't publish nothing, a request naming no document an error. Only a map naming the published
+	 * index and that shape index is offered; otherwise clients draw cubes.
 	 */
 	@GameTest(template = EMPTY_STRUCTURE, batch = BATCH_SLOTS)
-	public void joiningPlayersGetTheWorldsShapesAfterItsSlots(GameTestHelper helper) {
+	public void joiningPlayersAreOfferedTheWorldsShapesAndGetWhatTheyAskFor(GameTestHelper helper) {
 		MinecraftServer server = helper.getLevel().getServer();
 		WorldIndex golden = WarpGameTests.publishSyntheticIndex(helper);
 		SlotMap slots = syntheticSlots();
@@ -364,21 +369,46 @@ public class MultiplayerGameTests implements FabricGameTest {
 				int count = WorldIndexSync.sendTo(server, player);
 				int indexParts = WorldIndexSync.currentParts(server).size();
 				int slotParts = WorldIndexSync.currentSlotParts(server).size();
-				int shapeParts = WorldIndexSync.currentShapeParts(server).size();
-				helper.assertTrue(shapeParts >= 2 && count == indexParts + slotParts + shapeParts && sent.size() == count, "parts sent: " + count);
+				helper.assertTrue(count == indexParts + slotParts + 1 && sent.size() == count, "messages sent: " + count);
 				List<String> types = sent.stream().map(Envelope::type).toList();
-				helper.assertTrue(types.subList(indexParts + slotParts, count).stream().allMatch(MsgTypes.WORLD_SHAPES::equals)
-						&& types.subList(0, indexParts + slotParts).stream().noneMatch(MsgTypes.WORLD_SHAPES::equals), "the shapes come after the slots");
-				List<Envelope> shapeMessages = sent.subList(indexParts + slotParts, count);
+				helper.assertTrue(types.get(count - 1).equals(MsgTypes.WORLD_SHAPES_OFFER) && !types.contains(MsgTypes.WORLD_SHAPES),
+						"one offer after the slots, no shape parts on join: " + types.subList(indexParts + slotParts, count));
+				JsonObject offer = sent.get(count - 1).data();
+				List<WorldIndexParts.Part> parts = WorldIndexSync.currentShapeParts(server);
+				long chars = parts.stream().mapToLong(part -> part.text().length()).sum();
+				helper.assertTrue(offer.getAsJsonObject("index").get("hash").getAsString().equals(shapes.index().hash())
+						&& offer.getAsJsonObject("map").get("hash").getAsString().equals(shapes.map().hash()), "the offer names other documents");
+				helper.assertTrue(offer.getAsJsonObject("index").get("chars").getAsLong() + offer.getAsJsonObject("map").get("chars").getAsLong()
+						== chars, "the offer's sizes aren't the parts'");
+				helper.assertTrue(!offer.has("region"), "a legacy world's offer is untagged");
+
+				// The client asks for both: the index's parts (deflated), then the map's.
+				int before = sent.size();
+				RelayService.get().receive(player, BattleGameTests.envelope(1, MsgTypes.WORLD_SHAPES_GET,
+						"{\"index\":\"" + shapes.index().hash() + "\",\"map\":\"" + shapes.map().hash() + "\"}"));
+				List<Envelope> shapeMessages = List.copyOf(sent.subList(before, sent.size()));
+				helper.assertTrue(shapeMessages.size() == parts.size() && shapeMessages.stream().allMatch(m -> m.type().equals(MsgTypes.WORLD_SHAPES)),
+						"the documents' parts: " + shapeMessages.size() + " of " + parts.size());
 				List<String> docs = shapeMessages.stream().map(message -> message.data().get("doc").getAsString()).toList();
 				helper.assertTrue(docs.indexOf("map") == docs.lastIndexOf("index") + 1, "the shape index comes first, then the map");
-				helper.assertTrue(reassembleDoc(helper, shapeMessages, "index").equals(shapeIndex), "another shape index arrived");
+				helper.assertTrue(shapeMessages.stream().allMatch(m -> m.data().has("enc") == m.data().get("doc").getAsString().equals("index")),
+						"only the index parts carry enc");
 				try {
+					helper.assertTrue(ShapeDocs.unwireText(reassembleDoc(helper, shapeMessages, "index"), 1 << 26).equals(shapeIndex),
+							"another shape index arrived");
 					ShapeMap map = ShapeMap.fromWire(reassembleDoc(helper, shapeMessages, "map"), 1 << 24);
 					helper.assertTrue(map.hash().equals(shapes.map().hash()), "another shape map arrived");
 				} catch (DataException e) {
-					throw new GameTestAssertException("the shape map doesn't decode: " + e.problem());
+					throw new GameTestAssertException("a shape document doesn't decode: " + e.problem());
 				}
+				// Asked again at once: not sent twice; a document the server doesn't publish: nothing; naming none: an error.
+				before = sent.size();
+				RelayService.get().receive(player, BattleGameTests.envelope(2, MsgTypes.WORLD_SHAPES_GET,
+						"{\"map\":\"" + shapes.map().hash() + "\"}"));
+				RelayService.get().receive(player, BattleGameTests.envelope(3, MsgTypes.WORLD_SHAPES_GET, "{\"map\":\"" + "0".repeat(64) + "\"}"));
+				helper.assertTrue(sent.size() == before, "a repeat or an unknown document went out: " + (sent.size() - before));
+				RelayService.get().receive(player, BattleGameTests.envelope(4, MsgTypes.WORLD_SHAPES_GET, "{}"));
+				helper.assertTrue(sent.size() == before + 1 && sent.get(before).type().equals(MsgTypes.ERROR), "a request naming no document");
 			}));
 
 			// A map bound to another index (or another shape index) stays home.
@@ -390,8 +420,8 @@ public class MultiplayerGameTests implements FabricGameTest {
 			helper.assertTrue(WorldIndexSync.currentShapesHash(server) == null, "a shape map naming another shape index was published");
 			MockPlayers.with(helper, player -> RelayTap.capture(player, sent -> {
 				WorldIndexSync.sendTo(server, player);
-				helper.assertTrue(!sent.isEmpty() && sent.stream().noneMatch(message -> message.type().equals(MsgTypes.WORLD_SHAPES)),
-						"world.shapes went out for a map that doesn't match");
+				helper.assertTrue(!sent.isEmpty() && sent.stream().noneMatch(message -> message.type().equals(MsgTypes.WORLD_SHAPES)
+						|| message.type().equals(MsgTypes.WORLD_SHAPES_OFFER)), "shapes were offered for a map that doesn't match");
 			}));
 		} finally {
 			WorldIndexSync.withdraw(server);

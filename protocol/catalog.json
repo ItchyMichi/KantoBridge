@@ -692,6 +692,20 @@
       "redact": ["/part"],
       "schema": "messages/world.shapes.schema.json"
     },
+    "world.shapes.get": {
+      "legs": ["c2s"],
+      "re": "never",
+      "rom": false,
+      "redact": [],
+      "schema": "messages/world.shapes.get.schema.json"
+    },
+    "world.shapes.offer": {
+      "legs": ["s2c"],
+      "re": "never",
+      "rom": false,
+      "redact": [],
+      "schema": "messages/world.shapes.offer.schema.json"
+    },
     "world.slots": {
       "legs": ["s2c"],
       "re": "never",

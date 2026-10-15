@@ -45,6 +45,7 @@ public final class ClientWorldIndex {
 		ClientRelay.get().register(MsgTypes.WORLD_INDEX, ClientRegions::onIndexPart);
 		ClientRelay.get().register(MsgTypes.WORLD_SLOTS, ClientWorldIndex::onSlotsPart);
 		ClientRelay.get().register(MsgTypes.WORLD_SHAPES, ClientRegions::onShapesPart);
+		ClientRelay.get().register(MsgTypes.WORLD_SHAPES_OFFER, ClientRegions::onShapesOffer);
 		// A region's index arriving or going changes what the shim returns.
 		ClientRegions.addListener(ClientWorldIndex::changed);
 		ClientPlayConnectionEvents.DISCONNECT.register((listener, client) -> clear());

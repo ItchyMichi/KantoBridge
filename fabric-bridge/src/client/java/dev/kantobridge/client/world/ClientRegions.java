@@ -1,15 +1,25 @@
 package dev.kantobridge.client.world;
 
+import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import dev.kantobridge.KantoBridge;
 import dev.kantobridge.client.bridge.JsonFields;
+import dev.kantobridge.client.net.ClientRelay;
+import dev.kantobridge.client.shape.ShapeDocCache;
 import dev.kantobridge.proto.Envelope;
+import dev.kantobridge.proto.MsgTypes;
 import dev.kantobridge.world.DataException;
 import dev.kantobridge.world.Hashes;
 import dev.kantobridge.world.RegionRecord;
 import dev.kantobridge.world.Regions;
 import dev.kantobridge.world.WorldIndex;
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.util.Base64;
 import java.util.List;
+import java.util.regex.Pattern;
+import net.fabricmc.loader.api.FabricLoader;
+import net.minecraft.Util;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.player.LocalPlayer;
 import org.jetbrains.annotations.Nullable;
@@ -21,9 +31,20 @@ import org.jetbrains.annotations.Nullable;
  * {@link #followed()} is the region whose index {@code ClientWorldIndex.current()} returns: the one MG4's link manager
  * binds, else the only region, else the one under the player's feet. Client thread only. Logs carry ids, part counts
  * and short hashes, never the contents.
+ *
+ * <p>Shapes on demand (the follow-up's item 4): on a region's {@code world.shapes.offer} the documents it lacks are
+ * looked up in {@link ShapeDocCache} (off the client thread: reading back means inflating and hashing them), and the
+ * ones still missing are asked for with one {@code world.shapes.get}; every document that comes in is written to the
+ * cache. A rejoin of an unchanged world therefore downloads no shapes at all.
  */
 public final class ClientRegions {
 	private static final RegionDocuments DOCS = new RegionDocuments();
+	private static final Pattern CONTENT_HASH = Pattern.compile("^[0-9a-f]{64}$");
+	private static @Nullable ShapeDocCache cache;
+
+	static {
+		DOCS.onDocument(ClientRegions::keep);
+	}
 
 	private ClientRegions() {
 	}
@@ -207,20 +228,118 @@ public final class ClientRegions {
 		String hash = JsonFields.str(data, "hash");
 		String part = JsonFields.str(data, "part");
 		String region = JsonFields.str(data, "region");
+		String enc = JsonFields.str(data, "enc");
 		boolean isIndex = "index".equals(doc);
-		if ((!isIndex && !"map".equals(doc)) || index < 0 || count < 1 || hash == null || part == null) {
+		if ((!isIndex && !"map".equals(doc)) || index < 0 || count < 1 || hash == null || part == null
+				|| (enc != null && !dev.kantobridge.world.ShapeDocs.ENC_DEFLATE.equals(enc))) {
 			KantoBridge.LOGGER.warn("world.shapes: dropped a malformed part");
 			return;
 		}
 		try {
-			boolean complete = DOCS.onShapesPart(region, isIndex, (int) index, (int) count, hash, part);
-			if (DOCS.shapeIndexText(regionKey(region)) != null || DOCS.shapeMapWire(regionKey(region)) != null) {
+			boolean complete = DOCS.onShapesPart(region, isIndex, enc != null, (int) index, (int) count, hash, part);
+			String key = regionKey(region);
+			if (index == count - 1 && (isIndex ? DOCS.shapeIndexText(key) : DOCS.shapeMapWire(key)) != null) {
 				KantoBridge.LOGGER.info("world.shapes: {} received ({} parts, hash {}, region {}{})", doc, count, Hashes.shortHash(hash),
 						region == null ? "legacy" : region, complete ? ", both in" : "");
 			}
 		} catch (DataException e) {
 			KantoBridge.LOGGER.warn("world.shapes: {} rejected ({})", doc, e.problem());
 		}
+	}
+
+	/**
+	 * A region's {@code world.shapes.offer}: what it lacks comes from the cache when the cache has it (read off the client
+	 * thread), else from the server ({@code world.shapes.get}).
+	 */
+	static void onShapesOffer(Envelope message) {
+		JsonObject data = message.data();
+		String region = JsonFields.str(data, "region");
+		String indexHash = offeredHash(data.get("index"));
+		String mapHash = offeredHash(data.get("map"));
+		if (indexHash == null || mapHash == null) {
+			KantoBridge.LOGGER.warn("world.shapes.offer: dropped a malformed offer");
+			return;
+		}
+		RegionDocuments.Wants wants;
+		try {
+			wants = DOCS.onShapesOffer(region, indexHash, mapHash);
+		} catch (DataException e) {
+			KantoBridge.LOGGER.warn("world.shapes.offer: rejected ({})", e.problem());
+			return;
+		}
+		String label = region == null ? "legacy" : region;
+		if (!wants.any()) {
+			KantoBridge.LOGGER.info("world.shapes.offer: region {} holds both (index {}, map {})", label, Hashes.shortHash(indexHash),
+					Hashes.shortHash(mapHash));
+			return;
+		}
+		ShapeDocCache docs = cache();
+		Minecraft minecraft = Minecraft.getInstance();
+		Util.backgroundExecutor().execute(() -> {
+			ShapeDocCache.Loaded index = wants.index() == null ? null : docs.read(wants.index(), true, RegionDocuments.MAX_DOC_BYTES);
+			ShapeDocCache.Loaded map = wants.map() == null ? null : docs.read(wants.map(), false, RegionDocuments.MAX_DOC_BYTES);
+			minecraft.execute(() -> fromCache(region, label, wants, index, map));
+		});
+	}
+
+	/** Back on the client thread: the cached documents go in, the rest is asked for (only what the offer still names). */
+	private static void fromCache(@Nullable String region, String label, RegionDocuments.Wants wants, ShapeDocCache.@Nullable Loaded index,
+			ShapeDocCache.@Nullable Loaded map) {
+		if (index != null) {
+			DOCS.provideShape(region, true, wants.index(), new String(index.content(), StandardCharsets.UTF_8));
+		}
+		if (map != null) {
+			DOCS.provideShape(region, false, wants.map(), Base64.getEncoder().encodeToString(map.deflated()));
+		}
+		String askIndex = index == null && wants.index() != null && wants.index().equals(DOCS.offered(region, true)) ? wants.index() : null;
+		String askMap = map == null && wants.map() != null && wants.map().equals(DOCS.offered(region, false)) ? wants.map() : null;
+		KantoBridge.LOGGER.info("world.shapes.offer: region {}: from the cache {}, asked for {}", label,
+				(index != null ? 1 : 0) + (map != null ? 1 : 0), (askIndex != null ? 1 : 0) + (askMap != null ? 1 : 0));
+		if (askIndex == null && askMap == null) {
+			return;
+		}
+		JsonObject get = new JsonObject();
+		if (askIndex != null) {
+			get.addProperty("index", askIndex);
+		}
+		if (askMap != null) {
+			get.addProperty("map", askMap);
+		}
+		if (region != null) {
+			get.addProperty("region", region);
+		}
+		if (ClientRelay.get().post(MsgTypes.WORLD_SHAPES_GET, get, null, null) < 0) {
+			KantoBridge.LOGGER.warn("world.shapes.get: could not be sent (region {})", label);
+		}
+	}
+
+	private static @Nullable String offeredHash(@Nullable JsonElement element) {
+		if (element == null || !element.isJsonObject()) {
+			return null;
+		}
+		String hash = JsonFields.str(element.getAsJsonObject(), "hash");
+		return hash != null && CONTENT_HASH.matcher(hash).matches() ? hash : null;
+	}
+
+	/** A document that came in for an offer goes to the cache (written off the client thread). */
+	private static void keep(String region, boolean isIndex, String hash, String wire, boolean deflated) {
+		ShapeDocCache docs = cache();
+		Util.ioPool().execute(() -> {
+			try {
+				byte[] bytes = deflated ? Base64.getDecoder().decode(wire) : dev.kantobridge.world.ShapeDocs.deflate(wire.getBytes(StandardCharsets.UTF_8));
+				docs.write(hash, isIndex, bytes);
+			} catch (IOException | IllegalArgumentException e) {
+				KantoBridge.LOGGER.warn("world.shapes: could not keep a document ({})", e.getClass().getSimpleName());
+			}
+		});
+	}
+
+	private static synchronized ShapeDocCache cache() {
+		if (cache == null) {
+			cache = new ShapeDocCache(FabricLoader.getInstance().getGameDir().resolve("kantobridge").resolve("shapes").resolve("docs"),
+					ShapeDocCache.MAX_TOTAL_BYTES);
+		}
+		return cache;
 	}
 
 	/** The id an untagged part files under once the legacy region is known. */

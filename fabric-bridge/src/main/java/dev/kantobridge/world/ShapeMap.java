@@ -15,9 +15,6 @@ import java.util.HashMap;
 import java.util.HexFormat;
 import java.util.List;
 import java.util.Map;
-import java.util.zip.DataFormatException;
-import java.util.zip.Deflater;
-import java.util.zip.Inflater;
 import org.jetbrains.annotations.Nullable;
 
 /**
@@ -339,49 +336,14 @@ public final class ShapeMap {
 
 	// ---- wire form ----
 
-	/** The wire form: Base64 of the deflated file bytes (one {@code world.shapes} document). */
+	/** The wire form: Base64 of the deflated file bytes (one {@code world.shapes} document, {@link ShapeDocs#wire}). */
 	public String wire() {
-		Deflater deflater = new Deflater(Deflater.BEST_COMPRESSION, true);
-		deflater.setInput(this.bytes);
-		deflater.finish();
-		ByteArrayOutputStream out = new ByteArrayOutputStream();
-		byte[] buffer = new byte[65536];
-		while (!deflater.finished()) {
-			out.write(buffer, 0, deflater.deflate(buffer));
-		}
-		deflater.end();
-		return java.util.Base64.getEncoder().encodeToString(out.toByteArray());
+		return ShapeDocs.wire(this.bytes);
 	}
 
 	/** Reads the wire form; refuses more than {@code maxBytes} once inflated. */
 	public static ShapeMap fromWire(String text, int maxBytes) throws DataException {
-		byte[] deflated;
-		try {
-			deflated = java.util.Base64.getDecoder().decode(text);
-		} catch (IllegalArgumentException e) {
-			throw new DataException("/", "not base64");
-		}
-		Inflater inflater = new Inflater(true);
-		inflater.setInput(deflated);
-		ByteArrayOutputStream out = new ByteArrayOutputStream();
-		byte[] buffer = new byte[65536];
-		try {
-			while (!inflater.finished()) {
-				int n = inflater.inflate(buffer);
-				if (n == 0 && (inflater.needsInput() || inflater.needsDictionary())) {
-					throw new DataException("/", "truncated");
-				}
-				out.write(buffer, 0, n);
-				if (out.size() > maxBytes) {
-					throw new DataException("/", "too large");
-				}
-			}
-		} catch (DataFormatException e) {
-			throw new DataException("/", "not deflated");
-		} finally {
-			inflater.end();
-		}
-		return decode(out.toByteArray());
+		return decode(ShapeDocs.unwire(text, maxBytes));
 	}
 
 	// ---- building ----

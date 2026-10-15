@@ -15,9 +15,13 @@ The multi-game plan ([specs/MULTI_GAME_PLAN.md](specs/MULTI_GAME_PLAN.md)) is do
 
 ## Gaps to fix (development)
 
-- [ ] **Hoenn's shape map is too big:** 2,080,948 characters against a 524,288 budget (about 4 times; 1,766,184 before
-      the 151 maps built since), sent to every player who joins, and at the build's Gen 3 limit of 32 parts. The fix is
-      planned as voxel plan R10 (a region's shape map sent in parts, on demand).
+- [x] **Hoenn's shape map is too big** (2026-10-15): the shape documents are now offered by hash and sent only when a
+      client lacks them; the client keeps them, so a rejoin downloads none. Measured: every join used to send about
+      12.4 million characters of shapes (Hoenn's index alone 8.85 million, as plain text, plus its 2.08 million map);
+      a first join now downloads 3.85 million once (the index deflated, 20 parts; the map, 32), a rejoin nothing (both
+      checked in the real client, `tools/e2e/shapes_cache_check.py`). The build budget is now per region and per
+      document (64 parts each), the same for every game. Hoenn's map itself is the same size (re-encoding it would
+      save only 5-15%).
 - [x] **Three Hoenn seams** where neighbouring maps don't meet (2026-10-14: checked, nothing to rebuild). The game's own
       map data disagrees by two cells between western and eastern Hoenn, so one of the four joins can't meet. The build
       keeps the narrow Petalburg City / Route 104 path (2 cells wide) straight and puts the seam on Fallarbor Town /

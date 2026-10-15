@@ -86,12 +86,12 @@ def test_region_args_take_both_options_or_neither():
             build_world.region_args(region, slot)
 
 
-def _region_report(region="kanto", slot=0, chars=4096):
+def _region_report(region="kanto", slot=0, chars=4096, index_chars=8192):
     return {"region": {"region": region, "slot": slot, "origin": {"x": 0, "y": 64, "z": 0},
                        "bounds": {"minX": -300, "minZ": -9400, "maxX": 5400, "maxZ": 4200, "minY": -256, "maxY": 319},
                        "areas": {"surface": {"x": 0, "z": 0, "w": 704, "d": 744}, "zones": {"x": 0, "z": 3744, "w": 5120, "d": 640},
                                  "dungeons": {"x": 0, "z": -3600, "w": 1200, "d": 600}, "caves": {"x": 0, "z": -9400, "w": 0, "d": 0}},
-                       "families": [0, 15], "shape_map_chars": chars}}
+                       "families": [0, 15], "shape_map_chars": chars, "shape_index_chars": index_chars}}
 
 
 def _write_region_world(root, region="kanto", slot=0):
@@ -203,7 +203,12 @@ def test_a_gen3_build_may_carry_hoenns_known_seams_only(tmp_path):
     assert build_world.check_report([], report=report, region="hoenn", slot=0)[1] == ["overlaps", "warnings"]
     report.write_text(json.dumps(dict(base, game="blue", **_region_report(chars=1_682_080))), encoding="utf-8")
     assert build_world.check_report([], report=report, region="kanto", slot=0)[1] == [
-        "overlaps", "warnings", "region_shape_map_fits"], "a Gen 1 build keeps every gate"
-    too_big = _region_report(region="hoenn", chars=build_world.MAX_SHAPE_MAP_PARTS_GEN3 * build_world.PART_CHARS + 1)
-    report.write_text(json.dumps(dict(base, game="emerald", **too_big)), encoding="utf-8")
+        "overlaps", "warnings"], "a Gen 1 build keeps every warning gate; the shape budgets are the same for every game (item 4)"
+    too_big = build_world.MAX_SHAPE_DOC_PARTS * build_world.PART_CHARS + 1
+    report.write_text(json.dumps(dict(base, game="emerald", **_region_report(region="hoenn", chars=too_big))), encoding="utf-8")
     assert build_world.check_report([], report=report, region="hoenn", slot=0)[1] == ["region_shape_map_fits"]
+    report.write_text(json.dumps(dict(base, game="emerald", **_region_report(region="hoenn", index_chars=too_big))), encoding="utf-8")
+    assert build_world.check_report([], report=report, region="hoenn", slot=0)[1] == ["region_shape_index_fits"]
+    report.write_text(json.dumps(dict(base, game="emerald", **_region_report(region="hoenn", index_chars=0))), encoding="utf-8")
+    assert build_world.check_report([], report=report, region="hoenn", slot=0)[1] == ["region_shape_index_fits"], \
+        "a report from before item 4 (no index size) fails until rebuilt"
