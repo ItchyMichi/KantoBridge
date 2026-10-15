@@ -124,10 +124,11 @@ The facts the design needs (citations in the notes):
   `UNION_ROOM` map before mods load (`R/src/world/gen2/UnionCenter2F.lua:226-260`). Our pinned OFF leaves the cart's
   maps; the guard must cover Gen 2 too.
 - **Placement.** No engine-wide layout like Gen 3's `computeWorld`; `World.computeNeighbors` is Gen 1's strip BFS in
-  blocks, so the Gen 1 export's `layout()` fits. Johto and Crystal's Kanto are probably two surface areas joined only
-  through the Victory Road gate (an interior) and by train and boat.
+  blocks, so the Gen 1 export's `layout()` fits. Johto and Crystal's Kanto are two surface areas (31 and 35 maps) that no map
+  connection joins: the Victory Road gate (an interior), the train and the boat join them (measured, §2.1).
 - **Capacity.** The block families per shape are full: `FAMILIES_PER_SHAPE = 96` (`J/world/SlotMap.java:46`), Kanto takes
-  16 and Hoenn 80. Johto's day art is estimated at 5,000–7,500 baked tiles, 20–30 families of 256 (measured in G2S).
+  16 and Hoenn 80. Johto's day art measured 3,526 baked tiles over the blocks its maps use, 14 families of 256 (4,856 and
+  19 over every block; §2.1).
 - **Maturity.** The README still says "Gen 2 support is still under construction", but the code carries 162 ROM-free
   test suites and about 290 real-game drivers (mostly Crystal bug repros), and activity has slowed to bug fixing. Not
   ported: the link cable and mobile features (cable trades and battles, Mystery Gift, the printer); Crystal's own
@@ -154,7 +155,42 @@ GEN3_BRIDGE_PLAN §1 recorded S2–S5).
 | **G2-S8 The measure** (`kb_g2measure.lua`, counts only, as G3D's) | maps by environment, palette and area; surface components from `NEW_BARK_TOWN`; ids equal to Gen 1's; the COLL byte histogram; **distinct baked tiles** (day; day+night; all three); roof variants; animated tiles; (sprite, palette) pairs, big objects; encounter tables; swap sites by kind; whether the dataset view reads `gen2Maps`; a baked tile against the engine's own frame (hash); export time and size | J7, G2D, G2E |
 | **G2-S9 Resources** | memory and frame rate of Crystal alone, beside Blue, and beside Blue and Emerald | G2H |
 
-About one to two hours on a cpu3g ×4 pod ($0.16/hr).
+About one to two hours on a cpu3g ×4 pod ($0.16/hr). **Done 2026-10-15** (about 21 minutes on kb-dev19, PROGRESS.md
+"Johto (MG9): the inspection G2S").
+
+### 2.1 What the inspection settled (2026-10-15)
+
+- **Confirmed as planned**: the mod loads with `games: ["crystal"]`; `game:newGame()` with Oak's speech rewritten by
+  `fn` steps (clock, name) and Crystal's gender asked as `Gen2GenderSelect`; `save.created`/`save.loaded` carry
+  `game.save`; `writeSave` then `continueGame(Save.load(v))` lands on the saved cell; the Union Room is OFF on the
+  test install; taps don't walk; `movement.collision` gives Gen 1's verdicts (walls `tile`, NPCs `entity`, ledges a
+  refused `tile` then a hop); walked warps raise `warp.destination` (which redirects) and `player.warped`, every other
+  load shows as `map.entered` with `world.setupMethod` (0xF5 door, 0xF1 warp); a same-map warp reloads the map; the
+  battle hold works for wild and trainer battles, and `onDone(nil)` aborts without marking the trainer; a held loss
+  whites out with the money halved; the nurse is `HealParty` through `script.command`'s fifth argument; the mirror is
+  160×144; Johto and Crystal's Kanto are two surface areas that no map connection joins.
+- **Corrections**:
+  - **Parking**: no `World.step` wrapper is needed. Gen 1's hold state pushed on the shared stack freezes the whole
+    field step (no VM, NPCs or time events) and is the default; the wrapper stays the fallback (§5.8).
+  - **A turn is a hold of one tick** (§5.3).
+  - **A registered map can be entered and walked** (`KB_TEST_MAP`), so Gen 1's own route map carries over to Gen 2:
+    J9's default changes to it (§5.11, §12).
+  - **The starter marker is flag 26** on Crystal too (Gold's `EVENT_GOT_A_POKEMON_FROM_ELM`); `givepoke` names the
+    species by national dex number (155 for the fire starter) (J11).
+  - **`battle.started` fires once per held battle** (the model's), and `battle.ended` only when the adapter calls the
+    model's `endBattle`: the adapter calls it with the outcome before `onDone` (§5.10).
+  - **Texture slots: 14–19 families, not 20–30.** Day art over the blocks the maps use is 3,526 tiles (14 families);
+    over every block of every art variant 4,856 (19). The export bakes the blocks the maps use plus the swap sites'
+    blocks (J7).
+  - **The collision vocabulary is wider than §7's table** (0x21, 0x27 and the one-way 0xb2 on 2,343 cells, among
+    others): the export names each code's meaning from the engine's own predicates, and `G2Cells` reads those (§6, §7).
+  - **The dataset view reads `maps` cleanly** on Crystal (388), unlike Emerald's; the export still reads the live
+    tables (its other readers came back empty), with the view as a pristine source for map records.
+  - **Resources**: Crystal about 205 MB RSS; Blue, Emerald and Crystal together about 800 MB, all at 60 frames a second.
+- **Not checked** (the phases' e2e covers them): a phone call (none rang), the Cherrygrove rival, roamers, a surf
+  landing, Fly and Escape Rope, the catch tutorial, typed and empty names, Mom's scene downstairs (driver mode's
+  skeleton game skips it), a baked tile against the engine's own frame (G2D's export check), and the map ids equal to
+  Gen 1's (76 by the upstream name tables; G2A counts them live).
 
 ## 3. The adapter: structure
 
@@ -211,7 +247,7 @@ and forced movement (ice, currents, the Cycling Road). `npcs()` lists `world.npc
 ### 5.3 Movement and warps (link)
 
 - **Input**: directions are held through `mod.input:press/release` inside `input.step` (never tapped); a turn is a
-  hold of two ticks (the 4-frame turn waits, so no step follows); the mover releases once the step has started
+  hold of one or two ticks (the 4-frame turn waits, so no step follows; measured, §2.1); the mover releases once the step has started
   (`chainsHeld`). A, B, START, SELECT are taps. AutoInput and focus loss reset every source: the mover re-presses.
 - **Verdicts**: main's `movement.collision` wrapper and gen1's `playerVerdict`, filtered to `ctx.mover ==
   world.player`; a ledge arrives as a refused `tile` and then hops (the mover treats a refused step onto a ledge it
@@ -271,7 +307,7 @@ call `game:writeSave()` only when `quickSaveAllowed()`; `save.writing` drives `s
 - `holdAway`: gen1's hold state pushed on the shared stack (`GB/lib/engine/gen1.lua:3782, 3809`): while it is on top
   the field step is skipped (no VM, NPCs, phone calls or time events; while parked the client follows another game, so
   nothing reads this link's screens), and the music fades (`R/src/core/Music.lua`). `releaseAway` pops it and restores
-  the map's music. Fallback: a wrapper on `World.step` (G2-S7).
+  the map's music. Fallback: a wrapper on `World.step`. (G2-S7: 0 world steps and no NPC motion while it is up.)
 - `startFromTitle(mode)`: `continue` = `SaveData.setActiveSlot` then `game:continueGame(Save.load(v))` (only when
   `Save.exists`); `new` = `game:newGame()`, Oak's speech as §5.5, then the bedroom.
 - Resume warps: `mod.world:warpTo(map, x, y, facing)`.
@@ -286,7 +322,8 @@ the world is built with day colours (J6). Tests pin the clock.
 
 - **Battles** (J10): a wrapper on `World.startBattle` decides; a held battle skips the wipe (`pushBattleTransition`
   returns false) and gets a placeholder in place of `Gen2BattleState`, which freezes the field as any stack state does.
-  The client fights it in Cobblemon; on `battle.result` the placeholder sets the model's outcome, on a trainer win pays
+  The client fights it in Cobblemon; on `battle.result` the placeholder sets the model's outcome (the model's
+  `endBattle`, which raises `battle.ended`; nothing else does under the hold), on a trainer win pays
   the prize through the engine (`battle:awardPrizeMoney()`, Mom's share included) and shows the defeat and money lines as
   TextBoxes, then calls the engine's own `onDone(outcome)`, which runs the whole tail. Abort = `onDone(nil)`. Kinds: grass
   and cave rolls → none (the hook returns nil; habitats), surfing → `surf`, fishing → `fish`, headbutt, Rock Smash, Sweet
@@ -308,11 +345,13 @@ the world is built with day colours (J6). Tests pin the clock.
 
 ### 5.11 Routes (G2H)
 
-The Gen 2 end of a connecting route follows Gen 3's (`GB/lib/engine/game3/routes.lua`, HOENN_PASS_PLAN K2–K4): the
-trigger is `world.stepped` on the clearing's last cell, the hidden player is parked there and reported as the route map
-`KB_ROUTE_<ID>` at x1, a step back lets go. Two Gen 2 simplifications (J9): the clearing is a `maps:patch` of the town's
-blocks made at load, so it is the town's own art and is exported with it (Gen 2's blocks are the route planner's own
-unit); and verdicts come from `movement.collision`. The acts: give = `Bag.add` and a TextBox line; battle = a held
+The Gen 2 end of a connecting route follows **Gen 1's** (J9, changed by G2-S3: a registered map can be entered and
+walked on Gen 2): the route map `KB_ROUTE_<ID>` is registered (`maps:register`, on an existing tileset), the clearing is a
+`maps:patch` of the town's blocks made at load (the town's own art, exported with it; Gen 2's blocks are the route
+planner's own unit), the trigger is `world.stepped` on the clearing's last cell (Gen 2 has no `map_scripts`) followed
+by `mod.world:warpTo` into the route map, and the way back is a `warpTo` to the town. The closed lower row comes from
+`movement.collision`, as on Gen 1. Gen 3's design (the hidden player parked on the trigger cell and reported as a
+virtual route map) is the fallback. The acts: give = `Bag.add` and a TextBox line; battle = a held
 battle built from the class's first trainer as a template with the request's party; blackout = the engine's whiteout.
 
 ## 6. The Gen 2 export (G2D)
@@ -337,6 +376,9 @@ From the adapter's `exportResources(sink)` (the core caches, hashes and indexes,
   maps their own, dark maps their after-Flash look (flagged `dark`).
 - **Pristine blocks**: from a fresh `CacheFs.loadActive` of the map table plus our own patches, never the live
   `def.blocks` (a loaded map's Cut trees and story edits are in it).
+- **Collision codes carry their meaning**: `g2tiles` lists, for each COLL byte its blocks use, what the engine's own
+  predicates say about it (walkable, water, grass, ice, warp and its kind, ledge and its direction, one-way side,
+  counter, solid furniture), so the builder needs no table of its own (§2.1).
 - **Map ids** are prefixed (J4); the Union guard refuses the export as on Gen 1.
 
 ## 7. The builder (G2E)
@@ -346,7 +388,9 @@ From the adapter's `exportResources(sink)` (the core caches, hashes and indexes,
   art sets in one pack, region builds, `InteriorPacker`, the shape planner) and Gen 1's block-level parts (layout in
   blocks, swap sites and closed art per block, a one-block border). Gen 1's path stays untouched (its goldens byte for
   byte).
-- **`G2Cells`**, its own table (the vocabulary is wider than `G3Cells`, and 0x2B and 0x82 mean other things in Gen 2):
+- **`G2Cells`** builds cells from the meanings the export gives each code (§6); the table below is what those meanings
+  come to (the vocabulary is wider than `G3Cells`, and 0x2B and 0x82 mean other things in Gen 2; the inspection also
+  found 0x21, 0x27 and the one-way 0xb2, the commonest one-way side, on 2,343 cells):
 
   | COLL bytes | Built as |
   |---|---|
@@ -358,7 +402,7 @@ From the adapter's `exportResources(sink)` (the core caches, hashes and indexes,
   | 0x07 wall, 0x12 cut tree (a swap site), 0x15 headbutt tree, 0x90 counter, 0x91–0x9f furniture | solid |
   | 0x71 door, 0x72 ladder, 0x7a staircase, 0x7b cave, 0x7c warp panel, 0x60/0x68 pits | warps |
   | 0xa0–0xa5 ledges (incl. the two diagonals) | ledges |
-  | 0xb0–0xb2 side walls, 0xc0–0xc2 buoys | one-way edges (`PairEdges`-style walls; the neighbour rule per game, `sideWallArms`) |
+  | 0xb0–0xb2 side walls, 0xc0–0xc2 buoys (and 0x27, per the engine's predicates) | one-way edges (`PairEdges`-style walls; the neighbour rule per game, `sideWallArms`) |
   | 0xff (block 0, off-map) | solid border |
 
   Any other byte is built solid and warned. `CellFlags` has no free bit, so the Gen 2 form of `MapModel` carries its
@@ -380,10 +424,13 @@ From the adapter's `exportResources(sink)` (the core caches, hashes and indexes,
 - **Habitats**: wild cells are tall and long grass outdoors and every non-ice floor cell in caves and dungeons (the
   engine's own rule); pools from the grass tables, the three times of day merged into one pool (J6), Cobblemon ids by
   national dex (`NationalDexIds`, 251 fits); water, fishing, headbutt and Rock Smash stay the hidden game's rolls.
-- **Capacity** (J7): `FAMILIES_PER_SHAPE` 96 → 128 with `familiesFor("gen2")` = 32, unless the measure says otherwise.
+- **Capacity** (J7): measured 14 families for the blocks the maps use (§2.1), so `FAMILIES_PER_SHAPE` 96 → 112 with
+  `familiesFor("gen2")` = 16, if the blocks used plus the swap sites' blocks and the water halves fit 4,096 slots; else
+  128 with 32.
   Changes with it: `SlotMap`, `KbBlocks`, `SlotMapTest`, the family maxima in `P/world/slot_map.schema.json`,
   `region.schema.json` and `world_index.schema.json`, `T/e2e/build_world.py`'s range check, PROTOCOL.md. The cost (about
-  1 MB of block states a side per family, extrapolated from MG3's measure) is measured on the pod's client at G2E.
+  1 MB of block states a side per family, extrapolated from MG3's measure: +16 families about +15 MB) is measured on the
+  pod's client at G2E.
 - **Flat**, as Hoenn (E8): no heights or caves in 3D for Johto yet.
 - **The real dry run**: `RealGen2DryRunTest` (`-Pkb.realGen2Bundle`) on the pod's Crystal export: maps placed, warnings,
   slots and families, story cells, habitats, shape-plan size.
@@ -443,7 +490,7 @@ Every change: schema, PROTOCOL.md, `python -m kb_protocol.catalog --write`, the 
 
 | Phase | Delivers | Check |
 |---|---|---|
-| **G2S** inspection | spikes G2-S1–S9 and the measure (§2); PROGRESS "Johto: inspection"; this plan corrected | numbers on the pod |
+| **G2S** inspection | spikes G2-S1–S9 and the measure (§2); PROGRESS "Johto (MG9): the inspection G2S"; this plan corrected (§2.1) | numbers on the pod — **done 2026-10-15** |
 | **G2A** followable | the core changes (§4); adapter base, boot, observe, NPCs, held input and verdicts, warps, interaction, saves and slots, region acts, reliability; `common/` parts; map-id prefix; the fake engine | lupa per part; e2e `test_crystal.py` (title, new game, walk, door, save, CONTINUE, park/resume) ✔ |
 | **G2B** UI | text, yes/no, lists, START menu, naming, Oak's speech, phone calls, Elm's picture, mirrors | lupa UI; e2e (a sign, Oak's speech through the UI, a call) ✔ |
 | **G2C** story | numeric flags, toggles, `story.blocks`, swap sites, markers | lupa; e2e (the starter flag, a block change) |
@@ -466,11 +513,11 @@ Gen 1's where it reads the game, but its battles and gifts need more engine seam
 | J4 | Map names | **`G2_` before every Gen 2 map id** outside the adapter (76 of Crystal's ids are Gen 1's too): messages, logs, exports, route ends and F7 are never ambiguous, as Emerald's `EM_` ids | bare ids, with every map-keyed cache checked for its region |
 | J5 | The clock | **the real local time** in the hidden game (the cart's own behaviour); the clock and weekday questions answered automatically; tests pin it | the hidden clock driven by Minecraft's time (with day and night on in Johto) |
 | J6 | Time of day in the world | **day colours** baked (dark maps their after-Flash look); **one wild pool per place** with the morning, day and night Pokémon merged | per-time pools on Minecraft's clock (Cobblemon's `timeRange`); night art baked too (two to three times the texture slots) |
-| J7 | Texture slots | **measure first** (G2-S8), then raise the families per shape 96 → 128 (Johto 32), about +30 MB of block states a side, measured at G2E | a larger raise if the measure needs it; fewer art variants |
+| J7 | Texture slots | measured (G2-S8): 14 families for the blocks the maps use, 19 for every block. **Raise the families per shape 96 → 112 (Johto 16)**, about +15 MB of block states a side, if the blocks used plus the swap sites' fit; else 128 (Johto 32, about +30 MB) | bake every block (19 families, so 128) |
 | J8 | Builder path | **a `Gen2Planner`**: Gen 3's baked art and regions, Gen 1's blocks and story | export Gen 3-shaped cells and build Johto with `Gen3Planner` first (quicker first look, but terrain changes would not be drawn) |
-| J9 | The Wild Routes end | **Gen 3's design** (trigger cell, parked hidden player reported as the route map), the clearing as a patch of the town's blocks | Gen 1's own route map, if G2-S3 shows a registered map loads and walks |
+| J9 | The Wild Routes end | **Gen 1's own route map** (changed by G2-S3: a registered map loads and walks on Gen 2): `KB_ROUTE_<ID>` registered, the clearing a patch of the town's blocks, the trigger `world.stepped` | Gen 3's design (the hidden player parked on the trigger cell, reported as a virtual route map) |
 | J10 | Battles | **held for Cobblemon** through `World.startBattle`, the engine's own ending run afterwards; grass and caves from habitats; the Bug-Catching Contest, the catch tutorial and the Battle Tower native (mirror) | the contest in Cobblemon too |
-| J11 | Story markers | starter = **Crystal's flag number measured in G2-S4** (`E<n>`); champion = **Hall of Fame count > 0** (`KB_HALL_OF_FAME`; measuring the champion flag would mean beating the League on a pod); badges from the save (16) | our own name table for Crystal's flags (identifiers from the disassembly; a licence question first) |
+| J11 | Story markers | starter = **flag 26** (`E26`, measured in G2-S4: the same number as Gold's); champion = **Hall of Fame count > 0** (`KB_HALL_OF_FAME`; measuring the champion flag would mean beating the League on a pod); badges from the save (16) | our own name table for Crystal's flags (identifiers from the disassembly; a licence question first) |
 | J12 | Pokémon details | DVs and Cobblemon's IVs **reproduce gender, shininess and the Unown letter**; held items cross both ways; friendship carried; Pokérus dropped (Cobblemon has none); eggs as Emerald's; wild habitats stay never-shiny, as Kanto's | no held items in the first cut |
 | J13 | Money and PCs | Mom's savings **stay Crystal's** (her share of a prize leaves the shared wallet like spending); her question left to you in the UI; Bill's PC opens Cobblemon's PC; the item PC stays Crystal's | Mom's question answered NO automatically |
 | J14 | The pass | a **temporary test pass** `kanto_johto_test` (a Kanto corner not used by the Hoenn test, a New Bark Town corner), chosen on the pod; one world with Kanto at slot 0, Hoenn 1, Johto 2; the real exits later with F7 at your PC | a natural spot now (Route 22 or 27, your pick) |
