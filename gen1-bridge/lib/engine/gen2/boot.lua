@@ -21,13 +21,26 @@ Boot.REQUIRES = {
   ["src.core.Music"] = { "fadeOut" },
   ["src.world.gen2.World"] = { "step", "acceptsMenuInput", "restoreMapMusic", "playerCollision",
                                -- G2C: who stands where (story.lua)
-                               "hour", "clockTimeMask", "objectTimeVisible", "objectMaskKey" },
-  ["src.world.gen2.Permissions"] = { "isIce", "currentDirection", "doorForcedDirection" },
+                               "hour", "clockTimeMask", "objectTimeVisible", "objectMaskKey",
+                               -- G2D: the export's areas and animated tiles (export.lua)
+                               "region", "landmarkIndex", "animLayers", "animRow", "flowerFrameFor" },
+  ["src.world.gen2.Permissions"] = { "isIce", "currentDirection", "doorForcedDirection",
+                                     -- G2D: what a COLL byte means (export.lua)
+                                     "of", "isGrass", "isSuperTallGrass", "isEncounterCollision", "isWhirlpool",
+                                     "isCutTree", "isCuttable", "isHeadbuttTree", "isWaterfall", "isCounter",
+                                     "ledgeFacings", "sideBlocks", "neighborBlocks", "isWarpCollision",
+                                     "carpetDirection", "warpFacesDown" },
   ["src.world.gen2.Player"] = { "scriptFace" },
   ["src.world.gen2.Map"] = { "cellCollision", "inBounds", "warpAt", "isCounterCell" },
   ["src.world.gen2.FieldMoves"] = { "JOHTO_BADGES", "KANTO_BADGES", "CUT_BLOCKS", "WHIRLPOOL_BLOCKS" },
   ["src.world.gen2.Events"] = { "objectVisible" },
   ["src.core.gen2.Decorations"] = { "tiles", "ATTRIBUTES", "ACTIONS" },
+  -- G2D: the export (export.lua)
+  ["src.world.gen2.Palettes"] = { "daytimeFor", "bgSet", "spritePalette", "objectPaletteId" },
+  ["src.world.gen2.TileAttrs"] = { "forTile", "sheetTileId" },
+  ["src.world.gen2.Npc"] = { "bigFacing" },
+  ["src.render.Assets"] = { "resolve" },
+  ["src.battle.gen2.Encounter"] = { "GRASS_SLOT_CHANCES", "WATER_SLOT_CHANCES" },
   ["src.world.gen2.UnionCenter2F"] = { "isApplied" },
   ["src.render.TextBox"] = {},
   ["src.ui.ChoiceBox"] = {},

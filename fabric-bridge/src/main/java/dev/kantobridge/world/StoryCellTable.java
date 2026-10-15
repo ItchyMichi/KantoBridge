@@ -27,8 +27,8 @@ import org.jetbrains.annotations.Nullable;
  * closed state ({@link Closed}: the block that closes the cell, how it lets players through, and its art).
  */
 public final class StoryCellTable {
-	/** Swap kinds, as in protocol/export/swaps.schema.json. */
-	public static final Set<String> SWAP_KINDS = Set.of("cut", "card_key", "script", "boulder");
+	/** Swap kinds, as in protocol/export/swaps.schema.json (MG9: Gen 2's whirlpool). */
+	public static final Set<String> SWAP_KINDS = Set.of("cut", "card_key", "script", "boulder", "whirlpool");
 	/** Closed art covers the cell's 2×2 blocks: north-west, north-east, south-west, south-east. */
 	public static final int ART_BLOCKS = 4;
 	/** The tallest closed art: a roof column (4) plus room for measured heights. */

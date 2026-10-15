@@ -32,7 +32,10 @@ Export.KINDS = { map = true, tileset = true, image = true, sprite = true, palett
                  g3map = true, g3tiles = true, g3image = true, g3sprite = true, g3layout = true,
                  g3encounters = true, g3names = true,
                  -- item 8: the animated quarters
-                 g3anims = true }
+                 g3anims = true,
+                 -- MG9 (G2D): Gen 2's own kinds, built by its adapter (exportResources)
+                 g2map = true, g2tiles = true, g2image = true, g2anims = true, g2sprite = true, g2layout = true,
+                 g2encounters = true, g2names = true }
 Export.ROLES = { builder = true, test = true }
 Export.ROOT = "PALLET_TOWN"              -- layout root (PLAN section 2.2)
 Export.BUDGET = 0.006                    -- seconds of build work per logic step
@@ -488,8 +491,9 @@ function Export.new(opts)
   end
 
   -- MG7 (G3D): an engine whose adapter builds its own resources (Gen 3:
-  -- lib/engine/game3/export.lua, the g3* kinds) puts them through the same
-  -- cache, hashes and index; the Gen 1 path below stays as it is.
+  -- lib/engine/game3/export.lua, the g3* kinds; MG9: Gen 2's g2* kinds,
+  -- lib/engine/gen2/export.lua) puts them through the same cache, hashes and
+  -- index; the Gen 1 path below stays as it is.
   local function buildOwn(own)
     enter("adapter")
     local entry = gameEntry()

@@ -70,8 +70,8 @@ def test_main_boots_on_crystal_with_the_gen2_adapter():
     st = rig.status
     assert (st.ready, st.engineId, st.engineAdapter, st.game, st.engine) == (True, b"crystal", True, b"crystal",
                                                                              b"0.3.85")
-    # the export, battles and routes come with G2D-G2H
-    assert sorted(g.decode() for g in st.engineGroupsMissing.values()) == ["battles", "export", "routes"]
+    # battles and routes come with G2F-G2H
+    assert sorted(g.decode() for g in st.engineGroupsMissing.values()) == ["battles", "routes"]
     assert list(st.engineMissing.values()) == []
     logs = rig.logs()
     assert not any("engine.no_adapter" in line or "engine.missing" in line for line in logs)

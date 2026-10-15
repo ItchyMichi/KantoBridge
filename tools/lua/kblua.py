@@ -117,6 +117,8 @@ class Bridge:
             eopts[b"game"] = _b(game)
             eopts[b"engineId"] = _b(engine_id)
             self.engine = self._load_harness("fake_engine2.lua").new(eopts)
+            # G2D: the export's engine parts and love.image / love.data (fake_export2.lua)
+            self._load_harness("fake_export2.lua").attach(self.engine)
         elif gen3:
             # MG7 (GEN3_BRIDGE_PLAN.md §8.1): the game3 engine's modules and the Game3 object
             eopts = self.table()
@@ -175,8 +177,8 @@ class Bridge:
             self.love = self._load_harness("fake_love.lua").new()
             love[b"graphics"] = self.love.graphics
             love[b"data"] = self.love.data
-        if self.family == "gen3":
-            # G3D: love.image for the export's pages (and love.data unless the mirror's fake has it)
+        if self.family in ("gen3", "gen2"):
+            # G3D, G2D: love.image for the export's pages (and love.data unless the mirror's fake has it)
             love[b"image"] = self.engine.loveImage
             if not graphics:
                 love[b"data"] = self.engine.loveData

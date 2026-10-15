@@ -307,7 +307,15 @@
         "g3layout",
         "g3encounters",
         "g3names",
-        "g3anims"
+        "g3anims",
+        "g2map",
+        "g2tiles",
+        "g2image",
+        "g2anims",
+        "g2sprite",
+        "g2layout",
+        "g2encounters",
+        "g2names"
       ]
     },
     "routeId": {

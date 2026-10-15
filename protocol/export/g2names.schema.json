@@ -1,0 +1,58 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kantobridge.invalid/protocol/export/g2names.schema.json",
+  "title": "export Gen 2 names",
+  "description": "MG9 G2D: the engine's constant names by number: species by national dex number, moves and items by id.",
+  "x-export-kind": "g2names",
+  "type": "object",
+  "required": [
+    "species",
+    "moves",
+    "items"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "species": {
+      "type": "object",
+      "propertyNames": {
+        "type": "string",
+        "pattern": "^[A-Z0-9_]+$",
+        "minLength": 1,
+        "maxLength": 64
+      },
+      "additionalProperties": {
+        "type": "integer",
+        "minimum": 1,
+        "maximum": 251
+      }
+    },
+    "moves": {
+      "type": "object",
+      "propertyNames": {
+        "type": "string",
+        "pattern": "^[A-Z0-9_]+$",
+        "minLength": 1,
+        "maxLength": 64
+      },
+      "additionalProperties": {
+        "type": "integer",
+        "minimum": 1,
+        "maximum": 1023
+      }
+    },
+    "items": {
+      "type": "object",
+      "propertyNames": {
+        "type": "string",
+        "pattern": "^[A-Z0-9_]+$",
+        "minLength": 1,
+        "maxLength": 64
+      },
+      "additionalProperties": {
+        "type": "integer",
+        "minimum": 1,
+        "maximum": 1023
+      }
+    }
+  }
+}

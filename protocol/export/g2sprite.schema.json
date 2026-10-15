@@ -1,0 +1,67 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kantobridge.invalid/protocol/export/g2sprite.schema.json",
+  "title": "export Gen 2 sprite sheet",
+  "description": "MG9 G2D: an object sheet drawn with one OBJ palette (the DAY set): a 16-px-wide strip of 16x16 frames as the engine keeps it (walking 6, standing 3, still 1; a Pokemon doll 2), shade 0 transparent. The id is the sprite's, with .p<n> for a palette a map's object overrides it with.",
+  "x-export-kind": "g2sprite",
+  "type": "object",
+  "required": [
+    "id",
+    "sprite",
+    "palette",
+    "w",
+    "h",
+    "frames",
+    "png"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "id": {
+      "type": "string",
+      "pattern": "^[A-Z0-9_]+(\\.p[0-7])?$",
+      "minLength": 1,
+      "maxLength": 64
+    },
+    "sprite": {
+      "type": "string",
+      "pattern": "^[A-Z0-9_]+$",
+      "minLength": 1,
+      "maxLength": 64
+    },
+    "palette": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 7
+    },
+    "w": {
+      "const": 16
+    },
+    "h": {
+      "type": "integer",
+      "minimum": 16,
+      "maximum": 1024
+    },
+    "frames": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 64
+    },
+    "walker": {
+      "const": true
+    },
+    "type": {
+      "type": "string",
+      "pattern": "^[A-Z0-9_]+$",
+      "minLength": 1,
+      "maxLength": 64
+    },
+    "png": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9+/]*={0,2}$",
+      "maxLength": 1048576,
+      "contentEncoding": "base64",
+      "description": "PNG bytes (RGBA), base64.",
+      "x-rom-derived": true
+    }
+  }
+}

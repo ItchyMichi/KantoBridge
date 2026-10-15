@@ -39,7 +39,9 @@ public final class ExportBundle {
 			// MG7 (G3D): Gen 3's own kinds (docs/specs/GEN3_BRIDGE_PLAN.md §5)
 			"g3map", "g3tiles", "g3image", "g3sprite", "g3layout", "g3encounters", "g3names",
 			// the follow-up's item 8: the animated quarters
-			"g3anims");
+			"g3anims",
+			// MG9 (G2D): Gen 2's own kinds (docs/specs/GEN2_BRIDGE_PLAN.md §6); the builder reads them from G2E
+			"g2map", "g2tiles", "g2image", "g2anims", "g2sprite", "g2layout", "g2encounters", "g2names");
 	/** Ids that are safe as file names everywhere (no separators, colons or leading dots). */
 	private static final Pattern FILE_ID = Pattern.compile("^[A-Za-z0-9_][A-Za-z0-9_.-]{0,63}$");
 	private static final Pattern FULL_HASH = Pattern.compile("^[0-9a-f]{64}$");

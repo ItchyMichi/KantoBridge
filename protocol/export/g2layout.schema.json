@@ -1,0 +1,85 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kantobridge.invalid/protocol/export/g2layout.schema.json",
+  "title": "export Gen 2 surface layout",
+  "description": "MG9 G2D: the block origins of one surface area's maps (Johto from New Bark Town; Crystal's Kanto, joined to it by no connection, from Pallet Town), by the engine's own neighbour arithmetic.",
+  "x-export-kind": "g2layout",
+  "type": "object",
+  "required": [
+    "root",
+    "unit",
+    "maps"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "root": {
+      "$ref": "../defs.schema.json#/$defs/mapId"
+    },
+    "unit": {
+      "const": "blocks"
+    },
+    "maps": {
+      "type": "object",
+      "propertyNames": {
+        "$ref": "../defs.schema.json#/$defs/mapId"
+      },
+      "additionalProperties": {
+        "type": "object",
+        "required": [
+          "x",
+          "y",
+          "w",
+          "h"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "x": {
+            "type": "integer",
+            "minimum": -4096,
+            "maximum": 4096
+          },
+          "y": {
+            "type": "integer",
+            "minimum": -4096,
+            "maximum": 4096
+          },
+          "w": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 255
+          },
+          "h": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 255
+          }
+        }
+      }
+    },
+    "start": {
+      "type": "object",
+      "required": [
+        "map",
+        "x",
+        "y"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "map": {
+          "$ref": "../defs.schema.json#/$defs/mapId"
+        },
+        "x": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 511
+        },
+        "y": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 511
+        }
+      },
+      "description": "Where a new game starts (SPAWN_HOME), in cells."
+    }
+  }
+}

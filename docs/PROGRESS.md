@@ -1477,7 +1477,7 @@ the full suite at the ✔ checkpoints (MG2, MG3, MG5, MG6). Pods run inside your
 | MG6 | One trainer economy | **done** (notes 18, 21); check: `LedgerGameTests` (two regions: adoption, stamped read-back, the crossing's projection, `too_many`/`left`, re-projection on an unknown stamp; a legacy world untouched), `BagGameTests` marked stacks, `LedgerTest`/`LedgerCodecTest`/`ItemsTest`/`BagSetRelayTest`, `test_lua_ledger.py`/`test_lua_bag.py`; the real engine's `bag.set` round trip is your play-test (PLAYTEST.md "MG6") | 2026-10-13 | |
 | MG7 | The second family (Emerald): adapter and export | **done**: the spec [specs/GEN3_BRIDGE_PLAN.md](specs/GEN3_BRIDGE_PLAN.md) (2026-10-14), phases G3A–G3G; **G3A done** (Emerald followable), **G3B done** (Emerald's UI), **G3C done** (story), **G3D done** (export), **G3E done** (builder), **G3F done** (battles, party, bag; the route exit moved to MG8), **G3G done** (the real Hoenn built in Minecraft) ("Several games: MG7") | 2026-10-14 | |
 | MG8 | Hoenn and the pass to it | **done**: the spec [specs/HOENN_PASS_PLAN.md](specs/HOENN_PASS_PLAN.md) (2026-10-14), phases HP1–HP8; the test pass Viridian City ↔ Littleroot Town; Kanto and Hoenn in one world; 20 crossings each way between the real Blue and Emerald ("Several games: MG8") | 2026-10-14 | |
-| MG9 | Johto (Gold, Silver, Crystal): the Gen 2 bridge | **in progress**: [specs/GEN2_BRIDGE_PLAN.md](specs/GEN2_BRIDGE_PLAN.md) (2026-10-15), from a static inspection of the Gen 2 engine (research notes `refs/_research/g2_*.md`); phases G2S and G2A–G2H; decisions J1–J14 with defaults. **G2S done** ("Johto (MG9): the inspection G2S"); **G2A done** (Crystal followable: "Johto (MG9): G2A notes"); **G2B done** (Crystal's UI: "Johto (MG9): G2B notes"); **G2C done** (Crystal's story: "Johto (MG9): G2C notes"); next G2D | 2026-10-15 | |
+| MG9 | Johto (Gold, Silver, Crystal): the Gen 2 bridge | **in progress**: [specs/GEN2_BRIDGE_PLAN.md](specs/GEN2_BRIDGE_PLAN.md) (2026-10-15), from a static inspection of the Gen 2 engine (research notes `refs/_research/g2_*.md`); phases G2S and G2A–G2H; decisions J1–J14 with defaults. **G2S done** ("Johto (MG9): the inspection G2S"); **G2A done** (Crystal followable: "Johto (MG9): G2A notes"); **G2B done** (Crystal's UI: "Johto (MG9): G2B notes"); **G2C done** (Crystal's story: "Johto (MG9): G2C notes"); **G2D done** (Crystal's export: "Johto (MG9): G2D notes"); next G2E | 2026-10-15 | |
 
 ### Several games: notes
 
@@ -2382,6 +2382,39 @@ Crystal is followable (GEN2_BRIDGE_PLAN.md §3–§5, phase G2A), at your "Go" a
 - **Still the stub's** (later phases): the UI (G2B: until then a client gets no Gen 2 screens; the e2e driver answers
   Oak's speech), the story (G2C), the export (G2D: `export.live_copy_failed` is logged once at load), battles (G2F),
   routes (G2H).
+
+### Johto (MG9): G2D notes (2026-10-15)
+
+Crystal's world for the builder (GEN2_BRIDGE_PLAN.md §6, phase G2D), in sequence after G2C as you asked.
+
+- **The part**: `gen1-bridge/lib/engine/gen2/export.lua`, through the core's `exportResources` path as Gen 3's. Eight
+  kinds with schemas: `g2map` (blocks from the copy taken at boot, border, art variant, environment, palette, the baked
+  daytime, group, area by the engine's landmark rule, connections, warps 0-based with the remembered one as `dynamic`,
+  coord and bg events, objects with kinds, flags, hour windows, walkers, variable sprites, big dolls, palette
+  overrides), `g2tiles` (a tileset drawn with one palette set and roof: per block 16 baked tile ids and 4 COLL bytes,
+  and what the engine's own predicates say each byte means), `g2image` (pages of 1,024 baked tiles), `g2anims` (water,
+  flowers, whirlpools, the tower pillar, lava, currents: frames and loops from the tileset timer's 0), `g2sprite` (each
+  sheet through its OBJ palette, plus the palettes objects override it with), `g2layout` (one per surface area: Johto
+  from New Bark Town, Crystal's Kanto from Pallet Town), `g2encounters` (national dex) and `g2names`; `swaps` carries
+  the story's sites (kind `whirlpool` added to the schema, the world index and Java's swap kinds). The art is baked on
+  the CPU as `World:bakeMapImage` colours it (the sheets' shade from red, the map's eight BG palettes from the engine's
+  own `Palettes.bgSet`, roof sheets over tiles $0a-$12, Crystal's bank-1 tiles), in the cart's colours.
+- **Core changes**: `kb_export.KINDS` and `ExportBundle.KINDS` gain the `g2*` kinds (the builder reads them from G2E),
+  `defs.exportKind`, the catalogue, PROTOCOL.md.
+- **Found on the real export**: the engine places neighbours in table order, so where a loop of maps doesn't close on
+  a flat plane, a different edge gave way on each run (Crystal's Kanto: once Route 7/Saffron City, once Celadon
+  City/Route 7). The export now walks the directions in a fixed order (the same arithmetic): Celadon City and Route 7
+  give way every time, noted for G2E as Hoenn's three loops; Johto closes everywhere. LÖVE writes palette PNGs when the
+  colours fit, so the test decodes every PNG colour type (the builder's reader must too).
+- **Checks**: local pytest and Lua 2,147 passed (12 new: `tools/lua/test_lua_gen2_export.py` on `fake_export2.lua`). On
+  the pod (kb-dev22, cpu3g ×4, the real Crystal) `test_crystal_export.py` passed: 388 maps, 73 variants (11 with a roof
+  sheet), 5,097 baked tiles on 5 pages, 63 animated tiles, 238 sprite sheets, 1,312 warps (6 dynamic), 1,466 objects,
+  137 swap sites, 1.68 MB in all, built in 3.5 s; and **every one of 1,039 blocks the engine baked itself** (one map per
+  tileset, environment, palette and roof, 48 maps) **hashed exactly as the export's tiles for it** (140 blocks with an
+  animated tile left out on both sides). The checkpoint's full check (`tools/check.sh` on the pod): pytest 2,147, the
+  Gradle build with JUnit 1,249 and the GameTests (all 122) passed.
+- **Pods**: kb-dev21 and the older pods' hosts were full and cpu5c had no capacity, so kb-dev22 (fx3wud5n3ufpy2, cpu3g
+  ×4, 16 GB, $0.16/hr) was created: about 25 minutes, stopped.
 
 ### Johto (MG9): G2C notes (2026-10-15)
 

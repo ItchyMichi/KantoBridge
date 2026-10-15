@@ -1,0 +1,219 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kantobridge.invalid/protocol/export/g2tiles.schema.json",
+  "title": "export Gen 2 art variant",
+  "description": "MG9 G2D: a tileset as it is drawn on its maps (its own palette set, roof sheet and roof colours, at the baked daytime): per block its 16 8x8 tiles (row-major) in the baked art and its four cells' collision bytes (top left, top right, bottom left, bottom right), and what the engine's own predicates say each byte used here means.",
+  "x-export-kind": "g2tiles",
+  "type": "object",
+  "required": [
+    "id",
+    "tileset",
+    "blocks",
+    "coll",
+    "meanings"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "id": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9_]+$",
+      "minLength": 1,
+      "maxLength": 64
+    },
+    "tileset": {
+      "type": "string",
+      "pattern": "^[A-Z0-9_]+$",
+      "minLength": 1,
+      "maxLength": 64
+    },
+    "roof": {
+      "type": "string",
+      "pattern": "^[A-Z0-9_]+$",
+      "minLength": 1,
+      "maxLength": 64,
+      "description": "The roof sheet over tiles $0a-$12, when the tileset takes one."
+    },
+    "blocks": {
+      "type": "array",
+      "maxItems": 256,
+      "items": {
+        "type": "array",
+        "minItems": 16,
+        "maxItems": 16,
+        "items": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1048575
+        }
+      },
+      "description": "Per block id (from 0), its tiles' ids: page * 1024 + index into the g2image pages g2q.<page>."
+    },
+    "coll": {
+      "type": "array",
+      "maxItems": 256,
+      "items": {
+        "type": "array",
+        "minItems": 4,
+        "maxItems": 4,
+        "items": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 255
+        }
+      },
+      "description": "Per block id, its four cells' COLL_* bytes."
+    },
+    "meanings": {
+      "type": "object",
+      "propertyNames": {
+        "pattern": "^[0-9]{1,3}$"
+      },
+      "additionalProperties": {
+        "type": "object",
+        "required": [
+          "perm"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "perm": {
+            "enum": [
+              "land",
+              "water",
+              "wall"
+            ]
+          },
+          "grass": {
+            "const": true
+          },
+          "longGrass": {
+            "const": true
+          },
+          "encounter": {
+            "const": true
+          },
+          "ice": {
+            "const": true
+          },
+          "whirlpool": {
+            "const": true
+          },
+          "cutTree": {
+            "const": true
+          },
+          "cuttable": {
+            "const": true
+          },
+          "headbutt": {
+            "const": true
+          },
+          "waterfall": {
+            "const": true
+          },
+          "counter": {
+            "const": true
+          },
+          "current": {
+            "enum": [
+              "up",
+              "down",
+              "left",
+              "right"
+            ],
+            "description": "The direction a current or waterfall forces."
+          },
+          "ledge": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 4,
+            "items": {
+              "enum": [
+                "up",
+                "down",
+                "left",
+                "right"
+              ]
+            },
+            "description": "The facings that hop it."
+          },
+          "sides": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 4,
+            "items": {
+              "enum": [
+                "up",
+                "down",
+                "left",
+                "right"
+              ]
+            },
+            "description": "One-way: the directions a player standing on it may not leave by."
+          },
+          "neighbor": {
+            "type": "object",
+            "required": [],
+            "additionalProperties": false,
+            "properties": {
+              "up": {
+                "enum": [
+                  "up",
+                  "down",
+                  "left",
+                  "right"
+                ]
+              },
+              "down": {
+                "enum": [
+                  "up",
+                  "down",
+                  "left",
+                  "right"
+                ]
+              },
+              "left": {
+                "enum": [
+                  "up",
+                  "down",
+                  "left",
+                  "right"
+                ]
+              },
+              "right": {
+                "enum": [
+                  "up",
+                  "down",
+                  "left",
+                  "right"
+                ]
+              }
+            },
+            "description": "One-way: for a player on the cell in that direction of it, the direction it refuses (the game's own rule)."
+          },
+          "warp": {
+            "enum": [
+              "door",
+              "stairs",
+              "pad",
+              "hole",
+              "edge"
+            ]
+          },
+          "mat": {
+            "enum": [
+              "up",
+              "down",
+              "left",
+              "right"
+            ],
+            "description": "A mat: the press that takes the warp."
+          },
+          "facesDown": {
+            "const": true,
+            "description": "Arriving on it faces down."
+          }
+        }
+      },
+      "description": "COLL byte -> what it means, for the bytes used here."
+    }
+  }
+}

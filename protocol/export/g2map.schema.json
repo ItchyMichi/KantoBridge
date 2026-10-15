@@ -1,0 +1,358 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kantobridge.invalid/protocol/export/g2map.schema.json",
+  "title": "export Gen 2 map",
+  "description": "MG9 G2D: one Gen 2 map in 32-pixel blocks (2x2 cells of 16 px): its blocks as the import holds them, its border block, the art variant it is drawn with, where it is, its connections, warps, events and objects, read from the running engine. Map ids carry the G2_ prefix (GEN2_BRIDGE_PLAN J4).",
+  "x-export-kind": "g2map",
+  "type": "object",
+  "required": [
+    "id",
+    "w",
+    "h",
+    "blocks",
+    "border",
+    "variant",
+    "tileset",
+    "env",
+    "daytime",
+    "group",
+    "num",
+    "area",
+    "connections",
+    "warps",
+    "coords",
+    "signs",
+    "objects"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "id": {
+      "$ref": "../defs.schema.json#/$defs/mapId"
+    },
+    "w": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 255,
+      "description": "Width in blocks."
+    },
+    "h": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 255,
+      "description": "Height in blocks."
+    },
+    "blocks": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9+/]*={0,2}$",
+      "maxLength": 1048576,
+      "contentEncoding": "base64",
+      "description": "Row-major over w x h, one byte per block: the block id in the map's tileset (g2tiles). Block 0 draws as the border block and collides as a wall, as the engine reads it (BorderFill.blockFor).",
+      "x-rom-derived": true
+    },
+    "border": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 255,
+      "description": "The block tiled around the map (and drawn for block 0)."
+    },
+    "variant": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9_]+$",
+      "minLength": 1,
+      "maxLength": 64,
+      "description": "The g2tiles variant the map's blocks are drawn with."
+    },
+    "tileset": {
+      "type": "string",
+      "pattern": "^[A-Z0-9_]+$",
+      "minLength": 1,
+      "maxLength": 64
+    },
+    "env": {
+      "type": "string",
+      "pattern": "^[A-Z_]+$",
+      "maxLength": 32,
+      "description": "The engine's environment (TOWN, ROUTE, INDOOR, CAVE, GATE, DUNGEON); TOWN and ROUTE are outdoors."
+    },
+    "palette": {
+      "type": "string",
+      "pattern": "^[A-Z0-9_]+$",
+      "minLength": 1,
+      "maxLength": 64,
+      "description": "The map's PALETTE_* (AUTO follows the clock)."
+    },
+    "daytime": {
+      "enum": [
+        "MORN",
+        "DAY",
+        "NITE"
+      ],
+      "description": "The daytime the art is baked at: DAY for a map that follows the clock, a pinned map's own, a dark map's after Flash."
+    },
+    "group": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 255
+    },
+    "num": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 255
+    },
+    "area": {
+      "enum": [
+        "johto",
+        "kanto"
+      ],
+      "description": "The engine's region rule (the map's landmark)."
+    },
+    "dark": {
+      "const": true,
+      "description": "Black until Flash (PALETTE_DARK)."
+    },
+    "fishGroup": {
+      "type": "string",
+      "pattern": "^[A-Z0-9_]+$",
+      "minLength": 1,
+      "maxLength": 64,
+      "description": "Its fishing group in g2encounters."
+    },
+    "connections": {
+      "type": "array",
+      "maxItems": 4,
+      "items": {
+        "type": "object",
+        "required": [
+          "dir",
+          "map",
+          "offset"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "dir": {
+            "enum": [
+              "north",
+              "south",
+              "east",
+              "west"
+            ]
+          },
+          "map": {
+            "$ref": "../defs.schema.json#/$defs/mapId"
+          },
+          "offset": {
+            "type": "integer",
+            "minimum": -255,
+            "maximum": 255,
+            "description": "In blocks."
+          }
+        }
+      }
+    },
+    "warps": {
+      "type": "array",
+      "maxItems": 64,
+      "items": {
+        "type": "object",
+        "required": [
+          "x",
+          "y",
+          "warp"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "x": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 511,
+            "description": "In cells."
+          },
+          "y": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 511
+          },
+          "to": {
+            "$ref": "../defs.schema.json#/$defs/mapId"
+          },
+          "warp": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 255,
+            "description": "The destination's warp, 0-based."
+          },
+          "dynamic": {
+            "const": true,
+            "description": "The destination is the one remembered at run time (warp -1: an elevator, the shared Pokemon Center upstairs); `to`, when given, is the map's own fallback."
+          }
+        }
+      }
+    },
+    "coords": {
+      "type": "array",
+      "maxItems": 64,
+      "items": {
+        "type": "object",
+        "required": [
+          "x",
+          "y",
+          "scene"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "x": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 511
+          },
+          "y": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 511
+          },
+          "scene": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 255,
+            "description": "The map scene it runs in."
+          }
+        }
+      },
+      "description": "Step triggers (coord events), in cells."
+    },
+    "signs": {
+      "type": "array",
+      "maxItems": 64,
+      "items": {
+        "type": "object",
+        "required": [
+          "x",
+          "y",
+          "kind"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "x": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 511
+          },
+          "y": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 511
+          },
+          "kind": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 255,
+            "description": "The bg event's kind: 0 read, 1-4 read facing up, down, right, left, 5-6 by an event, 7 a hidden item."
+          }
+        }
+      },
+      "description": "Background events (signs, hidden items), in cells."
+    },
+    "objects": {
+      "type": "array",
+      "maxItems": 64,
+      "items": {
+        "type": "object",
+        "required": [
+          "lid",
+          "x",
+          "y",
+          "movement",
+          "kind",
+          "stays"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "lid": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 255,
+            "description": "Its index in the map (the bridge's O<lid>)."
+          },
+          "sprite": {
+            "type": "string",
+            "pattern": "^[A-Z0-9_]+$",
+            "minLength": 1,
+            "maxLength": 64
+          },
+          "var": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 255,
+            "description": "A sprite the hidden game names at run time (a variable sprite's raw id)."
+          },
+          "palette": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 7,
+            "description": "An OBJ palette that overrides the sprite's own (g2sprite <sprite>.p<n>)."
+          },
+          "x": {
+            "type": "integer",
+            "minimum": -16,
+            "maximum": 527,
+            "description": "In cells."
+          },
+          "y": {
+            "type": "integer",
+            "minimum": -16,
+            "maximum": 527
+          },
+          "movement": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 255
+          },
+          "kind": {
+            "enum": [
+              "person",
+              "trainer",
+              "item",
+              "boulder",
+              "rock"
+            ]
+          },
+          "flag": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 65534,
+            "description": "Its event flag: hidden while set."
+          },
+          "hours": {
+            "type": "array",
+            "prefixItems": [
+              {
+                "type": "integer",
+                "minimum": -1,
+                "maximum": 255
+              },
+              {
+                "type": "integer",
+                "minimum": -1,
+                "maximum": 255
+              }
+            ],
+            "minItems": 2,
+            "maxItems": 2,
+            "description": "Its hour window as the engine keeps it: a range of hours, or -1 and a morning/day/night bit mask."
+          },
+          "stays": {
+            "type": "boolean",
+            "description": "It keeps its cell (false: it walks about)."
+          },
+          "big": {
+            "enum": [
+              "sym",
+              "asym"
+            ],
+            "description": "Two cells by two (a big doll, the Snorlax), mirrored or not."
+          }
+        }
+      }
+    }
+  }
+}

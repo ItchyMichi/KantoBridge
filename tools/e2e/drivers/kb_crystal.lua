@@ -53,13 +53,24 @@
 --                   Ball on the table, the step that faces it, its cell and
 --                   index; KB_STARTER once flag 26 (EVENT_GOT_A_POKEMON_FROM_ELM)
 --                   is set, with whether that ball's object is masked now.
+--   export          (G2D) driver mode's start, as field; once the world
+--                   stands the driver bakes a sample of maps with the
+--                   engine's own World:bakeMapImage (one map per tileset,
+--                   environment, palette and roof; the export's daytime) and
+--                   prints, per map, a hash of each distinct block's 32x32
+--                   pixels (KB_BAKE map= daytime= n= skipped= ids=<block>:<md5
+--                   8 hex>+...; blocks with an animated tile left out, the
+--                   engine draws their frames over the bake), then
+--                   KB_EXPORT_READY and serves: the test fetches the export as
+--                   a builder and compares its baked tiles with these.
 --   cleanup         only the clean-up (after a failed run), then quits.
 --
 -- Markers: KB_BOOTED scene= slot= home= precleaned= phase=, KB_SERVING map= x= y= facing= wall= bump=
 -- stairs= into=, KB_SAVED slot= ok=, KB_TITLE slot= hasSave=, KB_SPEECH texts= choices= gender= names=
 -- screens=, KB_FIELD map= x= y= clock= stairs= into=, KB_INITCLOCK, KB_DAYWHEEL seen= frames=, KB_NPC map= path=
 -- face= x= y= index=, KB_BEDROOM edits= differ=, KB_EXIT path= into=, KB_LAB path= into=, KB_BALL path= face= x=
--- y= index=, KB_STARTER flag= masked=, KB_CLEANED deleted= active=, KB_QUIT sessions= code=;
+-- y= index=, KB_STARTER flag= masked=, KB_BAKE map= daytime= n= skipped= ids=, KB_EXPORT_READY maps= blocks= skipped=
+-- mode=, KB_CLEANED deleted= active=, KB_QUIT sessions= code=;
 -- KB_FAIL <reason> on a timeout. Slot numbers, map symbols, cell numbers, directions, booleans and counts only
 -- (the speech's text and the names are never printed).
 --
@@ -504,6 +515,85 @@ local function watchUi(game)
   end
 end
 
+-- ---------------------------------------------------------------- the engine's own bake (export, G2D)
+
+-- One map per tileset, environment, palette and roof group (sorted by id, at most 48), each baked whole by the
+-- engine (World:bakeMapImage, src/world/gen2/World.lua:8911-9020; daytime as the export bakes it: Palettes.daytimeFor
+-- with the clock at noon and Flash used) in the cart's colours (GbcPalette.mode "gbc"), then hashed per distinct
+-- block id at its first position. Prints KB_BAKE per map and returns the totals.
+local function bakeSample(game)
+  local w = game.world
+  local maps = game.data and game.data.gen2Maps or {}
+  local Map2 = require("src.world.gen2.Map")
+  local Palettes = require("src.world.gen2.Palettes")
+  local BorderFill = require("src.world.gen2.BorderFill")
+  local GbcPalette = require("src.render.GbcPalette")
+  local ids = {}
+  for id in pairs(maps) do ids[#ids + 1] = id end
+  table.sort(ids)
+  local picked, seenKey = {}, {}
+  for _, id in ipairs(ids) do
+    local def = maps[id]
+    local roofGroup = (def.tileset == "TILESET_JOHTO" or def.tileset == "TILESET_JOHTO_MODERN") and def.group or "-"
+    local k = table.concat({ tostring(def.tileset), tostring(def.environment), tostring(def.palette), tostring(roofGroup) }, "|")
+    if not seenKey[k] and #picked < 48 then
+      seenKey[k] = true
+      picked[#picked + 1] = id
+    end
+  end
+  local mode = GbcPalette.mode
+  GbcPalette.mode = "gbc"
+  local total, skippedAll = 0, 0
+  for _, id in ipairs(picked) do
+    local def = maps[id]
+    local ts = w.tilesets and w.tilesets[def.tileset]
+    local daytime = Palettes.daytimeFor(def, 12, true)
+    local okM, map = pcall(Map2.new, def, ts)
+    local okB, canvas = false, nil
+    if okM and map then okB, canvas = pcall(w.bakeMapImage, w, map, daytime) end
+    if okB and canvas then
+      local img = canvas:newImageData()
+      local raw, pw = img:getString(), map.width * 32
+      local okL, layers = pcall(w.animLayers, w, ts)
+      layers = okL and layers or {}
+      local seen, parts, skipped = {}, {}, 0
+      for by = 0, map.height - 1 do
+        for bx = 0, map.width - 1 do
+          local blockId = BorderFill.blockFor(def.blocks[by * map.width + bx + 1], def.borderBlock)
+          if not seen[blockId] then
+            seen[blockId] = true
+            local block = ts.blocks and ts.blocks[blockId + 1] or {}
+            local animated = false
+            for i = 1, 16 do
+              if layers[block[i] or 0] then animated = true end
+            end
+            if animated then
+              skipped = skipped + 1
+            else
+              local rows = {}
+              for r = 0, 31 do
+                local at = ((by * 32 + r) * pw + bx * 32) * 4 + 1
+                rows[r + 1] = raw:sub(at, at + 127)
+              end
+              local h = love.data.encode("string", "hex", love.data.hash("md5", table.concat(rows)))
+              parts[#parts + 1] = blockId .. ":" .. h:sub(1, 8)
+            end
+          end
+        end
+      end
+      if img.release then img:release() end
+      if canvas.release then canvas:release() end
+      total, skippedAll = total + #parts, skippedAll + skipped
+      print(("KB_BAKE map=%s daytime=%s n=%d skipped=%d ids=%s"):format(word(id), word(daytime), #parts, skipped,
+        #parts > 0 and table.concat(parts, "+") or "-"))
+    else
+      print(("KB_BAKE map=%s daytime=%s n=0 skipped=0 ids=failed"):format(word(id), word(daytime)))
+    end
+  end
+  GbcPalette.mode = mode
+  return #picked, total, skippedAll, mode
+end
+
 -- ---------------------------------------------------------------- the scene
 
 return function(game)
@@ -540,7 +630,7 @@ return function(game)
         if SaveData.setActiveSlot(v, slot) ~= slot then fail("activate_failed") end
         print(("KB_BOOTED scene=%s slot=%d home=%d precleaned=%d phase=%s"):format(word(SCENE), num(slot),
           num(homeRef), precleaned, word(game.phase)))
-        if SCENE == "field" or SCENE == "title_continue" then
+        if SCENE == "field" or SCENE == "title_continue" or SCENE == "export" then
           phase = "field"
         elseif SCENE == "title_new" or SCENE == "title_ui" or SCENE == "story" then
           if game.phase == "play" then pcall(game.returnToTitle, game) end
@@ -554,7 +644,11 @@ return function(game)
       if fieldReady(game) then
         local w = game.world
         if w.map.id ~= HOUSE then fail("not_in_house") end
-        if SCENE == "field" then
+        if SCENE == "export" then
+          local n, blocks, skipped, mode = bakeSample(game)
+          print(("KB_EXPORT_READY maps=%d blocks=%d skipped=%d mode=%s"):format(n, blocks, skipped, word(mode)))
+          phase = "serve"
+        elseif SCENE == "field" then
           start = { x = w.player.cellX, y = w.player.cellY }
           local wall, bump, stairs, into = walks(w)
           print(("KB_SERVING map=%s x=%d y=%d facing=%s wall=%s bump=%s stairs=%s into=%s"):format(HOUSE, start.x,

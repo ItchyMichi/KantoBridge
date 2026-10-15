@@ -127,6 +127,9 @@ function Story.install(b)
     return m
   end
 
+  -- G2D: the export reads the same map data
+  b.pristineMap = pristineMap
+
   local function blockAt(m, bx, by)
     if not (m and bx and by) or bx < 0 or by < 0 or bx >= m.width or by >= m.height then return nil end
     return m.blocks[by * m.width + bx + 1]

@@ -1,0 +1,73 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kantobridge.invalid/protocol/export/g2anims.schema.json",
+  "title": "export Gen 2 animated tiles",
+  "description": "MG9 G2D: the animated tiles of a Gen 2 export (water, flowers, whirlpools, the tower pillar, lava, currents and waterfalls). Each is a baked tile id of its own (its page holds its frame at the tileset timer's 0), with its frames (tile ids in the g2image pages) and its loop: [frame index, frames at 60 Hz] from the timer's 0, as the engine's tileset program runs it (a 0-7 timer ticking once a pass).",
+  "x-export-kind": "g2anims",
+  "type": "object",
+  "required": [
+    "id",
+    "anims"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "id": {
+      "const": "all"
+    },
+    "anims": {
+      "type": "array",
+      "maxItems": 65536,
+      "items": {
+        "type": "object",
+        "required": [
+          "q",
+          "f",
+          "s"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "q": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 1048575,
+            "description": "The animated tile's id."
+          },
+          "f": {
+            "type": "array",
+            "minItems": 2,
+            "maxItems": 8,
+            "items": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 1048575
+            },
+            "description": "Its frames."
+          },
+          "s": {
+            "type": "array",
+            "minItems": 2,
+            "maxItems": 8,
+            "items": {
+              "type": "array",
+              "prefixItems": [
+                {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 7
+                },
+                {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 4096
+                }
+              ],
+              "minItems": 2,
+              "maxItems": 2
+            },
+            "description": "Its loop: [frame index into f, frames]."
+          }
+        }
+      }
+    }
+  }
+}

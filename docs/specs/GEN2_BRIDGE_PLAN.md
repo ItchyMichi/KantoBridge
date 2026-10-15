@@ -407,6 +407,17 @@ From the adapter's `exportResources(sink)` (the core caches, hashes and indexes,
   counter, solid furniture), so the builder needs no table of its own (§2.1).
 - **Map ids** are prefixed (J4); the Union guard refuses the export as on Gen 1.
 
+**As built (G2D, 2026-10-15; `GB/lib/engine/gen2/export.lua`).** The kinds as the table says (schemas in
+`P/export/g2*.schema.json`), with: an art variant is a tileset drawn with one palette set and roof sheet (73 on
+Crystal, 11 with a roof), every one of its 128 blocks baked; the COLL meanings come per variant for the bytes it uses;
+sprites are baked per sheet with its own OBJ palette (DAY) plus each palette an object overrides it with (238 sheets);
+`g2layout` walks the connections in a fixed order with the engine's arithmetic, since the engine's own walk is in table
+order and Crystal's Kanto has one loop that doesn't close (it gives way between Celadon City and Route 7); the
+encounters carry the headbutt and rock sets and the contest too. The real export: 388 maps, 5,097 baked tiles on 5
+pages, 63 animated tiles, 137 swap sites, 1.68 MB, 3.5 s; 1,039 blocks baked by the engine itself match the export's
+tiles exactly (PROGRESS.md "Johto (MG9): G2D notes"). For J7: the tiles the maps' blocks name are fewer than 4,838 (G2S
+measured 3,526 for the blocks the maps use), so 16 families should hold Johto; G2E counts with the swap sites' blocks.
+
 ## 7. The builder (G2E)
 
 - **`Gen2Planner`** (`J/builder/plan/`, beside `Gen3Planner`), dispatched from `WorldPlanner.plan` on a `g2map` bundle
@@ -520,7 +531,7 @@ Every change: schema, PROTOCOL.md, `python -m kb_protocol.catalog --write`, the 
 | **G2A** followable | the core changes (§4); adapter base, boot, observe, NPCs, held input and verdicts, warps, interaction, saves and slots, region acts, reliability; `common/` parts; map-id prefix; the fake engine | lupa per part; e2e `test_crystal.py` (title, new game, walk, door, save, CONTINUE, park/resume) ✔ — **done 2026-10-15** (§3 "As built") |
 | **G2B** UI | text, yes/no, lists, START menu, naming, Oak's speech, phone calls, Elm's picture, mirrors | lupa UI; e2e (a sign, Oak's speech through the UI, a call) ✔ — **done 2026-10-15** (§5.5 "As built"; no call rang in the runs) |
 | **G2C** story | numeric flags, toggles, `story.blocks`, swap sites, markers | lupa; e2e (the starter flag, a block change) — **done 2026-10-15** (§5.6 "As built") |
-| **G2D** export | the `g2*` kinds, baked tiles, pristine blocks, layout, encounters, sprites, animations, swaps | lupa on the fake; the pod's export, counts and hashes ✔ |
+| **G2D** export | the `g2*` kinds, baked tiles, pristine blocks, layout, encounters, sprites, animations, swaps | lupa on the fake; the pod's export, counts and hashes ✔ — **done 2026-10-15** (§6 "As built") |
 | **G2E** builder | families raised; `Gen2Planner`, `G2Cells`, `Gen2FrontEnd`, the Gen 2 `MapModel` form, placement, interiors, story cells, art, people, animations, darkness, habitats | JUnit, golden scene, GameTest; the pod's dry run ✔ |
 | **G2F** battles, party, bag | held battles, party sync, gifts, trades, Day-Care and eggs, bag and money, Bill's PC, field moves | lupa; e2e (a wild, a trainer and the first rival battle; the starter) ✔ |
 | **G2G** the real Johto | synthetic bundle, goldens, full suites; Johto built at slot 2 beside Kanto and Hoenn; index and slots by hash; budgets | full suite ✔; build gates |

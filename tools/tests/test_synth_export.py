@@ -15,8 +15,9 @@ RESOURCES = synth.resources()
 
 def test_every_export_kind_is_covered():
     # MG7 (G3D): the g3* kinds are Gen 3's, built by its adapter (tools/lua/test_lua_game3_export.py covers them on
-    # the fake game3 engine); a synthetic Gen 3 bundle comes with G3G (docs/specs/GEN3_BRIDGE_PLAN.md §9)
-    gen1 = {kind for kind in PROTOCOL.exports if not kind.startswith("g3")}
+    # the fake game3 engine); a synthetic Gen 3 bundle comes with G3G (docs/specs/GEN3_BRIDGE_PLAN.md §9). MG9 (G2D):
+    # the g2* kinds likewise are Gen 2's (tools/lua/test_lua_gen2_export.py; the synthetic Gen 2 bundle is G2G's)
+    gen1 = {kind for kind in PROTOCOL.exports if not kind.startswith(("g3", "g2"))}
     assert {kind for kind, _ in RESOURCES} == gen1
     kinds = PROTOCOL.documents["https://kantobridge.invalid/protocol/defs.schema.json"]["$defs"]["exportKind"]["enum"]
     assert sorted(kinds) == sorted(PROTOCOL.exports), "defs exportKind and protocol/export/ differ"

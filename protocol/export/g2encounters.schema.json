@@ -1,0 +1,746 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kantobridge.invalid/protocol/export/g2encounters.schema.json",
+  "title": "export Gen 2 wild encounters",
+  "description": "MG9 G2D: the wild tables by map (national dex numbers): grass per time of day, water, the swarms, fishing groups (with their night rows), headbutt trees and Rock Smash rocks by set, the Bug-Catching Contest, and the grass and water slots' cumulative chances out of 100.",
+  "x-export-kind": "g2encounters",
+  "type": "object",
+  "required": [
+    "grass",
+    "water",
+    "swarmGrass",
+    "swarmWater",
+    "fish",
+    "trees",
+    "rocks",
+    "treeSets",
+    "contest"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "grass": {
+      "type": "object",
+      "propertyNames": {
+        "$ref": "../defs.schema.json#/$defs/mapId"
+      },
+      "additionalProperties": {
+        "type": "object",
+        "required": [
+          "rates",
+          "slots"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "rates": {
+            "type": "object",
+            "required": [
+              "MORN",
+              "DAY",
+              "NITE"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "MORN": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 255
+              },
+              "DAY": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 255
+              },
+              "NITE": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 255
+              }
+            },
+            "description": "Encounter rate out of 256, per time of day."
+          },
+          "slots": {
+            "type": "object",
+            "required": [
+              "MORN",
+              "DAY",
+              "NITE"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "MORN": {
+                "type": "array",
+                "maxItems": 16,
+                "items": {
+                  "type": "object",
+                  "required": [
+                    "dex",
+                    "level"
+                  ],
+                  "additionalProperties": false,
+                  "properties": {
+                    "dex": {
+                      "type": "integer",
+                      "minimum": 1,
+                      "maximum": 251
+                    },
+                    "level": {
+                      "type": "integer",
+                      "minimum": 1,
+                      "maximum": 100
+                    }
+                  }
+                }
+              },
+              "DAY": {
+                "type": "array",
+                "maxItems": 16,
+                "items": {
+                  "type": "object",
+                  "required": [
+                    "dex",
+                    "level"
+                  ],
+                  "additionalProperties": false,
+                  "properties": {
+                    "dex": {
+                      "type": "integer",
+                      "minimum": 1,
+                      "maximum": 251
+                    },
+                    "level": {
+                      "type": "integer",
+                      "minimum": 1,
+                      "maximum": 100
+                    }
+                  }
+                }
+              },
+              "NITE": {
+                "type": "array",
+                "maxItems": 16,
+                "items": {
+                  "type": "object",
+                  "required": [
+                    "dex",
+                    "level"
+                  ],
+                  "additionalProperties": false,
+                  "properties": {
+                    "dex": {
+                      "type": "integer",
+                      "minimum": 1,
+                      "maximum": 251
+                    },
+                    "level": {
+                      "type": "integer",
+                      "minimum": 1,
+                      "maximum": 100
+                    }
+                  }
+                }
+              }
+            },
+            "description": "The seven slots per time of day, in order."
+          }
+        }
+      }
+    },
+    "water": {
+      "type": "object",
+      "propertyNames": {
+        "$ref": "../defs.schema.json#/$defs/mapId"
+      },
+      "additionalProperties": {
+        "type": "object",
+        "required": [
+          "rate",
+          "slots"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "rate": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 255
+          },
+          "slots": {
+            "type": "array",
+            "maxItems": 8,
+            "items": {
+              "type": "object",
+              "required": [
+                "dex",
+                "level"
+              ],
+              "additionalProperties": false,
+              "properties": {
+                "dex": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 251
+                },
+                "level": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 100
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "swarmGrass": {
+      "type": "object",
+      "propertyNames": {
+        "$ref": "../defs.schema.json#/$defs/mapId"
+      },
+      "additionalProperties": {
+        "type": "object",
+        "required": [
+          "rates",
+          "slots"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "rates": {
+            "type": "object",
+            "required": [
+              "MORN",
+              "DAY",
+              "NITE"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "MORN": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 255
+              },
+              "DAY": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 255
+              },
+              "NITE": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 255
+              }
+            },
+            "description": "Encounter rate out of 256, per time of day."
+          },
+          "slots": {
+            "type": "object",
+            "required": [
+              "MORN",
+              "DAY",
+              "NITE"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "MORN": {
+                "type": "array",
+                "maxItems": 16,
+                "items": {
+                  "type": "object",
+                  "required": [
+                    "dex",
+                    "level"
+                  ],
+                  "additionalProperties": false,
+                  "properties": {
+                    "dex": {
+                      "type": "integer",
+                      "minimum": 1,
+                      "maximum": 251
+                    },
+                    "level": {
+                      "type": "integer",
+                      "minimum": 1,
+                      "maximum": 100
+                    }
+                  }
+                }
+              },
+              "DAY": {
+                "type": "array",
+                "maxItems": 16,
+                "items": {
+                  "type": "object",
+                  "required": [
+                    "dex",
+                    "level"
+                  ],
+                  "additionalProperties": false,
+                  "properties": {
+                    "dex": {
+                      "type": "integer",
+                      "minimum": 1,
+                      "maximum": 251
+                    },
+                    "level": {
+                      "type": "integer",
+                      "minimum": 1,
+                      "maximum": 100
+                    }
+                  }
+                }
+              },
+              "NITE": {
+                "type": "array",
+                "maxItems": 16,
+                "items": {
+                  "type": "object",
+                  "required": [
+                    "dex",
+                    "level"
+                  ],
+                  "additionalProperties": false,
+                  "properties": {
+                    "dex": {
+                      "type": "integer",
+                      "minimum": 1,
+                      "maximum": 251
+                    },
+                    "level": {
+                      "type": "integer",
+                      "minimum": 1,
+                      "maximum": 100
+                    }
+                  }
+                }
+              }
+            },
+            "description": "The seven slots per time of day, in order."
+          }
+        }
+      }
+    },
+    "swarmWater": {
+      "type": "object",
+      "propertyNames": {
+        "$ref": "../defs.schema.json#/$defs/mapId"
+      },
+      "additionalProperties": {
+        "type": "object",
+        "required": [
+          "rate",
+          "slots"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "rate": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 255
+          },
+          "slots": {
+            "type": "array",
+            "maxItems": 8,
+            "items": {
+              "type": "object",
+              "required": [
+                "dex",
+                "level"
+              ],
+              "additionalProperties": false,
+              "properties": {
+                "dex": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 251
+                },
+                "level": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 100
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "fish": {
+      "type": "object",
+      "propertyNames": {
+        "type": "string",
+        "pattern": "^[A-Z0-9_]+$",
+        "minLength": 1,
+        "maxLength": 64
+      },
+      "additionalProperties": {
+        "type": "object",
+        "required": [
+          "chance",
+          "old",
+          "good",
+          "super"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "chance": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 255
+          },
+          "old": {
+            "type": "array",
+            "maxItems": 16,
+            "items": {
+              "type": "object",
+              "required": [
+                "dex",
+                "level",
+                "chance"
+              ],
+              "additionalProperties": false,
+              "properties": {
+                "dex": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 251
+                },
+                "level": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 100
+                },
+                "chance": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 255,
+                  "description": "Cumulative chance out of 256, as the engine's table keeps it."
+                },
+                "nite": {
+                  "type": "object",
+                  "required": [
+                    "dex",
+                    "level"
+                  ],
+                  "additionalProperties": false,
+                  "properties": {
+                    "dex": {
+                      "type": "integer",
+                      "minimum": 1,
+                      "maximum": 251
+                    },
+                    "level": {
+                      "type": "integer",
+                      "minimum": 1,
+                      "maximum": 100
+                    }
+                  },
+                  "description": "A time group's row: what bites at night (the row itself is the day's)."
+                }
+              }
+            }
+          },
+          "good": {
+            "type": "array",
+            "maxItems": 16,
+            "items": {
+              "type": "object",
+              "required": [
+                "dex",
+                "level",
+                "chance"
+              ],
+              "additionalProperties": false,
+              "properties": {
+                "dex": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 251
+                },
+                "level": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 100
+                },
+                "chance": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 255,
+                  "description": "Cumulative chance out of 256, as the engine's table keeps it."
+                },
+                "nite": {
+                  "type": "object",
+                  "required": [
+                    "dex",
+                    "level"
+                  ],
+                  "additionalProperties": false,
+                  "properties": {
+                    "dex": {
+                      "type": "integer",
+                      "minimum": 1,
+                      "maximum": 251
+                    },
+                    "level": {
+                      "type": "integer",
+                      "minimum": 1,
+                      "maximum": 100
+                    }
+                  },
+                  "description": "A time group's row: what bites at night (the row itself is the day's)."
+                }
+              }
+            }
+          },
+          "super": {
+            "type": "array",
+            "maxItems": 16,
+            "items": {
+              "type": "object",
+              "required": [
+                "dex",
+                "level",
+                "chance"
+              ],
+              "additionalProperties": false,
+              "properties": {
+                "dex": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 251
+                },
+                "level": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 100
+                },
+                "chance": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 255,
+                  "description": "Cumulative chance out of 256, as the engine's table keeps it."
+                },
+                "nite": {
+                  "type": "object",
+                  "required": [
+                    "dex",
+                    "level"
+                  ],
+                  "additionalProperties": false,
+                  "properties": {
+                    "dex": {
+                      "type": "integer",
+                      "minimum": 1,
+                      "maximum": 251
+                    },
+                    "level": {
+                      "type": "integer",
+                      "minimum": 1,
+                      "maximum": 100
+                    }
+                  },
+                  "description": "A time group's row: what bites at night (the row itself is the day's)."
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "trees": {
+      "type": "object",
+      "propertyNames": {
+        "$ref": "../defs.schema.json#/$defs/mapId"
+      },
+      "additionalProperties": {
+        "type": "string",
+        "pattern": "^[A-Z0-9_]+$",
+        "minLength": 1,
+        "maxLength": 64
+      }
+    },
+    "rocks": {
+      "type": "object",
+      "propertyNames": {
+        "$ref": "../defs.schema.json#/$defs/mapId"
+      },
+      "additionalProperties": {
+        "type": "string",
+        "pattern": "^[A-Z0-9_]+$",
+        "minLength": 1,
+        "maxLength": 64
+      }
+    },
+    "treeSets": {
+      "type": "object",
+      "propertyNames": {
+        "type": "string",
+        "pattern": "^[A-Z0-9_]+$",
+        "minLength": 1,
+        "maxLength": 64
+      },
+      "additionalProperties": {
+        "type": "object",
+        "required": [],
+        "additionalProperties": false,
+        "properties": {
+          "common": {
+            "type": "array",
+            "maxItems": 16,
+            "items": {
+              "type": "object",
+              "required": [
+                "dex",
+                "level",
+                "chance"
+              ],
+              "additionalProperties": false,
+              "properties": {
+                "dex": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 251
+                },
+                "level": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 100
+                },
+                "chance": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 255,
+                  "description": "Cumulative chance out of 256, as the engine's table keeps it."
+                },
+                "nite": {
+                  "type": "object",
+                  "required": [
+                    "dex",
+                    "level"
+                  ],
+                  "additionalProperties": false,
+                  "properties": {
+                    "dex": {
+                      "type": "integer",
+                      "minimum": 1,
+                      "maximum": 251
+                    },
+                    "level": {
+                      "type": "integer",
+                      "minimum": 1,
+                      "maximum": 100
+                    }
+                  },
+                  "description": "A time group's row: what bites at night (the row itself is the day's)."
+                }
+              }
+            }
+          },
+          "rare": {
+            "type": "array",
+            "maxItems": 16,
+            "items": {
+              "type": "object",
+              "required": [
+                "dex",
+                "level",
+                "chance"
+              ],
+              "additionalProperties": false,
+              "properties": {
+                "dex": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 251
+                },
+                "level": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 100
+                },
+                "chance": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 255,
+                  "description": "Cumulative chance out of 256, as the engine's table keeps it."
+                },
+                "nite": {
+                  "type": "object",
+                  "required": [
+                    "dex",
+                    "level"
+                  ],
+                  "additionalProperties": false,
+                  "properties": {
+                    "dex": {
+                      "type": "integer",
+                      "minimum": 1,
+                      "maximum": 251
+                    },
+                    "level": {
+                      "type": "integer",
+                      "minimum": 1,
+                      "maximum": 100
+                    }
+                  },
+                  "description": "A time group's row: what bites at night (the row itself is the day's)."
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "contest": {
+      "type": "array",
+      "maxItems": 32,
+      "items": {
+        "type": "object",
+        "required": [
+          "dex",
+          "min",
+          "max",
+          "chance"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "dex": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 251
+          },
+          "min": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100
+          },
+          "max": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100
+          },
+          "chance": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 255
+          }
+        }
+      }
+    },
+    "grassChances": {
+      "type": "array",
+      "maxItems": 16,
+      "items": {
+        "type": "integer",
+        "minimum": 0,
+        "maximum": 100
+      }
+    },
+    "waterChances": {
+      "type": "array",
+      "maxItems": 16,
+      "items": {
+        "type": "integer",
+        "minimum": 0,
+        "maximum": 100
+      }
+    }
+  }
+}

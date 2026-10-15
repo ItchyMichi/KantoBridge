@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://kantobridge.invalid/protocol/export/swaps.schema.json",
   "title": "export swaps",
-  "description": "Runtime block-change sites the builder must prepare story cells for.",
+  "description": "Runtime block-change sites the builder must prepare story cells for (MG9: Gen 2's Whirlpools are kind whirlpool).",
   "x-export-kind": "swaps",
   "type": "object",
   "required": ["sites"],
@@ -18,7 +18,7 @@
           "map": {"$ref": "../defs.schema.json#/$defs/mapId"},
           "bx": {"type": "integer", "minimum": 0, "maximum": 255},
           "by": {"type": "integer", "minimum": 0, "maximum": 255},
-          "kind": {"enum": ["cut", "card_key", "script", "boulder"]},
+          "kind": {"enum": ["cut", "card_key", "script", "boulder", "whirlpool"]},
           "before": {"type": "integer", "minimum": 0, "maximum": 255},
           "after": {"type": "integer", "minimum": 0, "maximum": 255},
           "source": {
