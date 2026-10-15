@@ -27,16 +27,48 @@
 -- * dex.sync: Dex.setSeen / Dex.setCaught on the session's Pokedex.
 -- * Nicknames: renames in the hidden game (the Name Rater) go to Cobblemon.
 --
+-- Trades, the daycare and eggs (docs/SEVERAL_GAMES_FOLLOWUPS.md item 7):
+-- the engine changes the party natively, so each becomes what Cobblemon must
+-- follow, as gen1.lua's party operations do (kb_party sends them):
+-- * In-game trades: Trade.tradeMons (natives_trade.lua:303; the scene's
+--   onSwap, natives_trade.lua:431) is wrapped once per process. On the live
+--   session the member sent goes as party.take{reason:"trade"} by its uid and
+--   the one received as a gift with source "trade" (its nickname and OT, read
+--   once the trade's script has ended: a trade evolution comes first). A sync
+--   waits while a trade is armed (natives_trade.lua:481) or its scene is open
+--   (src/core/game3/trade_scene.lua:887).
+-- * The daycare holds two (src/core/game3/daycare.lua:76-130). It is watched
+--   every step, as gen1.lua's daycareStep: a member with a uid that it holds
+--   is daycare.deposit; back in the party, daycare.withdraw with the steps the
+--   daycare counted for it (src/core/game3/daycare.lua:450), the experience
+--   Daycare.withdraw (wrapped) gave it (src/core/game3/daycare.lua:313). The boarded
+--   uids, with each member's personality value, are kept in mod.save (part of
+--   the hidden save), so a CONTINUE finds them again.
+-- * Takes, deposits and withdrawals go out until a sync confirms them; a
+--   sync never brings a taken or boarded uid back, and a withdrawn member
+--   stays until a sync names it.
+-- * Eggs (the daycare's, breeding.lua:540-565, and Party.giveEgg,
+--   party.lua:294-304): Cobblemon has no eggs, so an egg lives in the hidden
+--   party only. It is never a gift; every sync keeps it after Cobblemon's
+--   members, in a hidden box while the party has no room and back once it
+--   has (src/core/game3/storage.lua:164). Hatching (Breeding.hatchMon,
+--   breeding.lua:568, wrapped; src/ui/game3/egg_hatch.lua:177) makes it a gift
+--   with source "egg", sent once the hatch screen and its nickname prompt are
+--   done (src/ui/game3/egg_hatch.lua:132).
+--
 -- Paths are refs/gen1recomp's (Gen1Recomp v0.3.85).
 
 local Party3 = {}
 
 Party3.MAX_MOVE = 354           -- Emerald's moves (constants/emerald/moves.lua: MOVES_COUNT 355)
 Party3.HEAL_HOLD_STEPS = 600    -- gen1's: a blackout's heal waits for its warp at most this long
--- stack layers that hold party members (ui.lua's SCREENS)
+-- stack layers that hold party members (ui.lua's SCREENS), and the egg hatching
 Party3.PARTY_SCREENS = { party = true, summary = true, box_storage = true, bag = true, evolution_scene = true,
-                         move_relearner = true, pc = true }
+                         move_relearner = true, pc = true, egg_hatch = true }
 Party3.STARTER_FLAG = "FLAG_SYS_POKEMON_GET"
+Party3.PARTY_SIZE = 6
+Party3.DAYCARE_SLOTS = 2        -- src/core/game3/daycare.lua:9 DAYCARE_MON_COUNT
+Party3.BOX_SLOTS = 30           -- src/core/game3/storage.lua:13 IN_BOX_COUNT
 
 function Party3.install(b)
   local def = b.def
@@ -52,6 +84,18 @@ function Party3.install(b)
     local ok, running = pcall(vm.isRunning, vm)
     return ok and running == true
   end
+
+  -- An egg (src/core/game3/pokemon.lua:1399, the engine's own test).
+  local function isEgg(mon)
+    if type(mon) ~= "table" then return false end
+    local ok, v = b.call(Pokemon(), "isEgg", mon)
+    if ok then return v == true end
+    return mon.isEgg == true or mon.egg == true
+  end
+
+  -- trades, the daycare and eggs (bridgeCounts; the logs carry these counts only)
+  local counts = { trades = 0, tradeNoUid = 0, deposits = 0, withdraws = 0, depositNoUid = 0, eggGifts = 0,
+                   eggsParked = 0, eggsBack = 0, eggsLost = 0, hatched = 0 }
 
   -- ---- numbers
 
@@ -106,6 +150,81 @@ function Party3.install(b)
       end
     end
     return n
+  end)
+
+  -- ---- party operations (kb_party's ops: takes, deposits, withdrawals), as gen1.lua's
+  --
+  -- Queued in the process-lifetime state, with the session they belong to (a new game or CONTINUE drops the
+  -- others); each goes out once and again after every snapshot until a party.sync confirms it.
+
+  local function opsOf(st)
+    local s = b.session()
+    local list = type(st) == "table" and type(st.ops) == "table" and st.ops or {}
+    for i = #list, 1, -1 do
+      if list[i].session ~= s then table.remove(list, i) end -- a new game or CONTINUE
+    end
+    return list
+  end
+
+  local function queueOp(op)
+    local st = b.state()
+    if not st then return nil end
+    st.ops = type(st.ops) == "table" and st.ops or {}
+    st.serial = st.serial + 1
+    op.id, op.state, op.syncs, op.session = st.serial, "new", 0, b.session()
+    st.ops[#st.ops + 1] = op
+    return op.id
+  end
+
+  -- The pending operations of this session, as plain values, oldest first.
+  def("ops", function()
+    local out = {}
+    for _, op in ipairs(opsOf(b.state())) do
+      out[#out + 1] = { id = op.id, serial = op.id, kind = op.kind, uid = op.uid, reason = op.reason,
+                        steps = op.steps, state = op.state, sentGen = op.sentGen, syncs = op.syncs }
+    end
+    return out
+  end)
+
+  local function opNamed(id)
+    local st = b.state()
+    for i, op in ipairs(type(st) == "table" and type(st.ops) == "table" and st.ops or {}) do
+      if op.id == id then return op, i, st end
+    end
+    return nil
+  end
+  def("opSent", function(id, generation)
+    local op = opNamed(id)
+    if op then op.state, op.sentGen = "sent", generation end
+  end)
+  def("opSynced", function(id)
+    local op = opNamed(id)
+    if op then op.syncs = op.syncs + 1 end
+  end)
+  def("opDone", function(id)
+    local op, i, st = opNamed(id)
+    if op then table.remove(st.ops, i) end
+  end)
+
+  -- The daycare watch's record for this session ({ session, list = { { mon, uid, steps, pid } } }), or nil.
+  local function boardedOf(st)
+    local rec = type(st) == "table" and st.boarded or nil
+    if type(rec) == "table" and rec.session == b.session() then return rec end
+    return nil
+  end
+
+  -- The uids no party.sync may put back into the hidden party: the pending takes and the members the daycare holds.
+  def("excludedUids", function()
+    local st = b.state()
+    local out = {}
+    for _, op in ipairs(opsOf(st)) do
+      if op.kind == "take" and op.uid then out[op.uid] = true end
+    end
+    local rec = boardedOf(st)
+    for _, e in ipairs(rec and rec.list or {}) do
+      if e.uid then out[e.uid] = true end
+    end
+    return out
   end)
 
   -- ---- gifts
@@ -169,6 +288,77 @@ function Party3.install(b)
     return ok, code, mon, boxId, slotIdx
   end
 
+  -- A gift of the live session's (st.gifts), as give records it.
+  local function addGift(st, s, mon, source, extra)
+    st.serial = st.serial + 1
+    local g = {
+      give = ("g-%s-%d"):format(st.token or "x", st.serial), serial = st.serial, state = "new", syncs = 0,
+      box = false, source = source, session = s, mon = mon, waitScript = false,
+    }
+    for k, v in pairs(extra or {}) do g[k] = v end
+    st.gifts[#st.gifts + 1] = g
+    return g
+  end
+
+  -- The engine's Trade.tradeMons (natives_trade.lua:303-343), wrapped: on the live session the member that
+  -- left is a take by its uid, the one that arrived a gift with source "trade" (its facts read once the
+  -- trade's script has ended, so a trade evolution comes first).
+  local function tradeMons(original, session, playerSlot, offered)
+    local s = b.session()
+    local sent = original(session, playerSlot, offered)
+    local st = b.state()
+    if type(sent) == "table" and type(offered) == "table" and st and type(s) == "table" and session == s then
+      counts.trades = counts.trades + 1
+      local uid = monUid[sent]
+      if uid then
+        queueOp({ kind = "take", uid = uid, reason = "trade" })
+      else
+        -- a member Cobblemon never named: a gift not yet sent is simply forgotten; anything else is counted
+        for i, g in ipairs(type(st.gifts) == "table" and st.gifts or {}) do
+          if g.mon == sent and g.state == "new" then table.remove(st.gifts, i) break end
+        end
+        counts.tradeNoUid = counts.tradeNoUid + 1
+        if b.log then b.log.warn("engine.trade_no_uid", { count = counts.tradeNoUid }) end
+      end
+      addGift(st, s, offered, "trade", { waitScript = vmRunning() })
+      if b.log then b.log.info("engine.trade", { count = counts.trades }) end
+    end
+    return sent
+  end
+
+  -- The engine's Breeding.hatchMon (breeding.lua:568-620; src/ui/game3/egg_hatch.lua:177), wrapped: on the
+  -- live session the egg that hatched is a gift with source "egg", sent once the hatch screen has closed
+  -- (its nickname prompt is part of it).
+  local function hatchMon(original, session, mon)
+    local wasEgg = isEgg(mon)
+    local result = original(session, mon)
+    local s, st = b.session(), b.state()
+    if wasEgg and type(mon) == "table" and not isEgg(mon) and st and type(s) == "table"
+        and (session == nil or session == s) then
+      counts.hatched = counts.hatched + 1
+      addGift(st, s, mon, "egg", { waitHatch = true })
+      if b.log then b.log.info("engine.egg_hatched", { count = counts.hatched }) end
+    end
+    return result
+  end
+
+  -- The engine's Daycare.withdraw (src/core/game3/daycare.lua:313-334; Daycare.take passes the steps the daycare
+  -- counted, src/core/game3/daycare.lua:357), wrapped: the steps each member came back with, for the daycare watch
+  -- (however many steps came since it last looked).
+  local function withdraw(original, session, mon, steps, stored)
+    local st = b.state()
+    if st and type(mon) == "table" then
+      st.withdrawn = type(st.withdrawn) == "table" and st.withdrawn or setmetatable({}, { __mode = "k" })
+      st.withdrawn[mon] = math.max(0, floor(tonumber(steps) or 0))
+    end
+    return original(session, mon, steps, stored)
+  end
+
+  -- The hatch screen is up (src/ui/game3/egg_hatch.lua:132).
+  local function hatching()
+    return b.ask(b.ui3("egg_hatch"), "isOpen", false) == true
+  end
+
   -- One wrapper per process; the handler is this instance's (a hot reload replaces it).
   local function wrap(M, key, handler)
     if type(M) ~= "table" or type(M[key]) ~= "function" then return end
@@ -185,9 +375,13 @@ function Party3.install(b)
   end
   Party3.wrap = wrap
 
-  -- Called by the battle part's attachBridge too: install the gift seam once per process.
+  -- Called by the battle part's attachBridge too: install the gift seams once per process (the giveMon gift, the
+  -- in-game trade's swap, the daycare's withdrawal, the egg hatching).
   function b.installGifts()
     wrap(b.g3("party"), "giveMon", give)
+    wrap(b.g3("scripting.natives_trade"), "tradeMons", tradeMons)
+    wrap(b.g3("daycare"), "withdraw", withdraw)
+    wrap(b.g3("breeding"), "hatchMon", hatchMon)
   end
 
   local function giftsOf(st)
@@ -204,9 +398,22 @@ function Party3.install(b)
     local out = {}
     local holding = type(b.heldBattle) == "function" and b.heldBattle()
     local scriptBusy = vmRunning()
-    for _, g in ipairs(giftsOf(st)) do
-      -- a new gift waits for the script that gave it (its nickname comes later), unless a battle is held now
-      if g.state ~= "new" or not g.waitScript or not scriptBusy or holding then
+    local list = giftsOf(st)
+    for i = #list, 1, -1 do
+      -- an egg (Party.giveEgg gives it through giveMon) stays in the hidden game until it hatches
+      if list[i].state == "new" and isEgg(list[i].mon) then
+        table.remove(list, i)
+        counts.eggGifts = counts.eggGifts + 1
+      end
+    end
+    local hatchOpen = hatching()
+    for _, g in ipairs(list) do
+      if g.waitHatch and not hatchOpen then g.waitHatch = false end
+      -- a new gift waits for the script that gave it (its nickname comes later), unless a battle is held now;
+      -- a hatched egg for the hatch screen (its nickname prompt)
+      if g.waitHatch then
+        -- not yet
+      elseif g.state ~= "new" or not g.waitScript or not scriptBusy or holding then
         g.waitScript = false
         local f = giftFacts(g.mon)
         if f then
@@ -317,6 +524,11 @@ function Party3.install(b)
     for _, g in ipairs(giftsOf(st)) do
       if g.state == "new" and g.waitScript and vmRunning() then return false end
     end
+    -- an in-game trade under way (its member chosen by party slot, natives_trade.lua:481, the swap in its scene)
+    -- and an egg hatching (the name prompt over its screen)
+    local Trade = b.g3("scripting.natives_trade")
+    if type(Trade) == "table" and rawget(Trade, "_offered") ~= nil and vmRunning() then return false end
+    if b.ask(b.g3("trade_scene"), "isOpen", false) == true or hatching() then return false end
     return true
   end)
 
@@ -368,6 +580,32 @@ function Party3.install(b)
     return nil
   end
 
+  -- An egg with no room in the party waits in the first open hidden box slot (src/core/game3/storage.lua:74,
+  -- :164); false when every box is full.
+  local function parkEgg(s, mon)
+    local Storage = b.g3("storage")
+    local ok, storage = b.call(Storage, "ensure", s)
+    if not (ok and type(storage) == "table" and type(storage.boxes) == "table") then return false end
+    local okSlot, boxId, slot = b.call(Storage, "findOpenSlot", storage)
+    local box = okSlot and boxId and storage.boxes[boxId] or nil
+    if not (type(box) == "table" and type(box.mons) == "table" and tonumber(slot)) then return false end
+    box.mons[slot] = mon
+    return true
+  end
+
+  -- The eggs in the hidden boxes, in box order: { mons, key, mon } each.
+  local function boxedEggs(s)
+    local out = {}
+    local storage = type(s) == "table" and s.storage or nil
+    for _, box in ipairs(type(storage) == "table" and type(storage.boxes) == "table" and storage.boxes or {}) do
+      local mons = type(box) == "table" and type(box.mons) == "table" and box.mons or nil
+      for k = 1, mons and Party3.BOX_SLOTS or 0 do
+        if isEgg(mons[k]) then out[#out + 1] = { mons = mons, key = k, mon = mons[k] } end
+      end
+    end
+    return out
+  end
+
   def("applyParty", function(entries)
     local p, s = party()
     local st = b.state()
@@ -406,6 +644,43 @@ function Party3.install(b)
         res.kept = res.kept + 1
       end
     end
+    -- a member back from the daycare that Cobblemon hasn't shown yet stays too (its withdrawal is pending)
+    for _, op in ipairs(opsOf(st)) do
+      if op.kind == "withdraw" and type(op.mon) == "table" and not seen[op.mon] and #out < Party3.PARTY_SIZE then
+        out[#out + 1] = op.mon
+        seen[op.mon] = true
+        res.kept = res.kept + 1
+      end
+    end
+    -- eggs live in the hidden game only: after Cobblemon's members, in a hidden box while the party has no
+    -- room, and back from the boxes once it has
+    res.eggs, res.parked, res.back = 0, 0, 0
+    for _, mon in ipairs(p) do
+      if not seen[mon] and isEgg(mon) then
+        seen[mon] = true
+        if #out < Party3.PARTY_SIZE then
+          out[#out + 1] = mon
+          res.eggs = res.eggs + 1
+        elseif parkEgg(s, mon) then
+          res.parked = res.parked + 1
+          counts.eggsParked = counts.eggsParked + 1
+        else
+          counts.eggsLost = counts.eggsLost + 1
+          if b.log then b.log.warn("engine.egg_no_room", { count = counts.eggsLost }) end
+        end
+      end
+    end
+    if #out < Party3.PARTY_SIZE then
+      for _, slot in ipairs(boxedEggs(s)) do
+        if #out < Party3.PARTY_SIZE and not seen[slot.mon] then
+          slot.mons[slot.key] = nil
+          out[#out + 1] = slot.mon
+          seen[slot.mon] = true
+          res.eggs, res.back = res.eggs + 1, res.back + 1
+          counts.eggsBack = counts.eggsBack + 1
+        end
+      end
+    end
     for i = #p, 1, -1 do p[i] = nil end
     for i, mon in ipairs(out) do p[i] = mon end
     s.move_overlay = {}
@@ -422,10 +697,154 @@ function Party3.install(b)
       if monUid[mon] then known = known + 1 end
     end
     local battle = st and st.battle
+    local rec, boarded, eggs = boardedOf(st), 0, 0
+    for _, e in ipairs(rec and rec.list or {}) do
+      if e.uid then boarded = boarded + 1 end
+    end
+    for _, mon in ipairs(p) do
+      if isEgg(mon) then eggs = eggs + 1 end
+    end
     return {
       party = #p, known = known, gifts = #giftsOf(st), heals = st and st.heals or 0,
       held = type(battle) == "table" and battle.state ~= "done" and 1 or 0, landRolls = st and st.landRolls or 0,
+      trades = counts.trades, tradeNoUid = counts.tradeNoUid, deposits = counts.deposits,
+      withdraws = counts.withdraws, depositNoUid = counts.depositNoUid, opsPending = #opsOf(st),
+      daycareHeld = boarded > 0, boarded = boarded, eggs = eggs, eggsBoxed = #boxedEggs(b.session()),
+      eggGifts = counts.eggGifts, eggsParked = counts.eggsParked, eggsBack = counts.eggsBack,
+      eggsLost = counts.eggsLost, hatched = counts.hatched,
     }
+  end)
+
+  -- ---- the daycare (two members, src/core/game3/daycare.lua:76-130)
+
+  -- What the daycare holds now: { mon, steps } per slot in use, or nil without one. Daycare.stateOf makes the
+  -- daycare's record on first use (src/core/game3/daycare.lua:53-83), as every step's Daycare.step does anyway
+  -- (step_events.lua:355).
+  local function boardedNow(s)
+    local Daycare = b.g3("daycare")
+    local ok, dc = b.call(Daycare, "stateOf", s)
+    if not (ok and type(dc) == "table") then return nil end
+    local out = {}
+    for i = 1, tonumber(Daycare.DAYCARE_MON_COUNT) or Party3.DAYCARE_SLOTS do
+      local okMon, mon = b.call(Daycare, "mon", dc, i)
+      if okMon and type(mon) == "table" and (tonumber(mon.species or mon.speciesId) or 0) ~= 0 then
+        out[#out + 1] = { mon = mon, steps = tonumber(type(dc.steps) == "table" and dc.steps[i]) or 0 }
+      end
+    end
+    return out
+  end
+
+  -- The record kb_party keeps in mod.save: { boarded = { { uid, pid } } } (pid: the member's personality value),
+  -- or false when the daycare holds nobody Cobblemon knows.
+  local function storeOf(rec)
+    local list = {}
+    for _, e in ipairs(rec.list) do
+      if e.uid then list[#list + 1] = { uid = e.uid, pid = e.pid } end
+    end
+    return #list > 0 and { boarded = list } or false
+  end
+
+  local function inParty(s, mon)
+    for _, m in ipairs(type(s.party) == "table" and s.party or {}) do
+      if m == mon then return true end
+    end
+    return false
+  end
+
+  -- One step of the daycare watch (kb_party's watchDaycare, as gen1.lua's engine.daycareStep). stored: the record
+  -- kept in mod.save (storeOf's) or nil. Returns what happened, or nil; `store` is the record to keep from now:
+  --   { kind = "deposit", uid, store }          a member with a uid went in (a daycare.deposit is queued)
+  --   { kind = "withdraw", uid, steps, store }  it came back (daycare.withdraw queued, with the steps the
+  --                                             daycare counted for it: the experience it was given)
+  --   { kind = "adopted", count }               the members of a loaded save got their uids back from `stored`
+  --   { kind = "unknown" }                      a member without a uid went in (or came with a loaded save)
+  --   { kind = "cleared" | "lost", store }      one left with nothing to tell (no uid; not back in the party)
+  def("daycareStep", function(stored)
+    local s, st = b.session(), b.state()
+    if not (st and type(s) == "table") then return nil end
+    local now = boardedNow(s)
+    if not now then return nil end
+    local rec = boardedOf(st)
+    if not rec then
+      -- a new game, a CONTINUE or a new process: what the daycare holds gets its uids back from mod.save (part
+      -- of the hidden save), matched by personality value
+      rec = { session = s, list = {} }
+      st.boarded = rec
+      local saved = type(stored) == "table" and type(stored.boarded) == "table" and stored.boarded or {}
+      local used, adopted = {}, 0
+      for _, h in ipairs(now) do
+        local uid
+        for i, e in ipairs(saved) do
+          if not used[i] and type(e) == "table" and type(e.uid) == "string" and e.pid == h.mon.personality then
+            uid, used[i] = e.uid, true
+            break
+          end
+        end
+        if uid then
+          monUid[h.mon] = uid
+          adopted = adopted + 1
+        end
+        rec.list[#rec.list + 1] = { mon = h.mon, uid = uid, steps = h.steps, pid = h.mon.personality }
+      end
+      if adopted < #now then return { kind = "unknown" } end
+      if adopted > 0 then return { kind = "adopted", count = adopted } end
+      return nil
+    end
+    local here = {}
+    for _, h in ipairs(now) do here[h.mon] = h end
+    -- what left: back in the party it is a withdrawal (with the steps Daycare.withdraw was given, else the steps
+    -- last counted for it), else it's gone
+    for i, e in ipairs(rec.list) do
+      local h = here[e.mon]
+      if h then
+        e.steps = h.steps
+      else
+        table.remove(rec.list, i)
+        local given = type(st.withdrawn) == "table" and st.withdrawn[e.mon] or nil
+        if given then st.withdrawn[e.mon] = nil end
+        if not e.uid then return { kind = "cleared", store = storeOf(rec) } end
+        if not inParty(s, e.mon) then return { kind = "lost", uid = e.uid, store = storeOf(rec) } end
+        local steps = given or e.steps
+        monUid[e.mon] = e.uid
+        queueOp({ kind = "withdraw", uid = e.uid, steps = steps, mon = e.mon })
+        counts.withdraws = counts.withdraws + 1
+        return { kind = "withdraw", uid = e.uid, steps = steps, store = storeOf(rec) }
+      end
+    end
+    -- what came in
+    local known = {}
+    for _, e in ipairs(rec.list) do known[e.mon] = true end
+    for _, h in ipairs(now) do
+      if not known[h.mon] then
+        local uid = monUid[h.mon]
+        rec.list[#rec.list + 1] = { mon = h.mon, uid = uid, steps = h.steps, pid = h.mon.personality }
+        if not uid then
+          counts.depositNoUid = counts.depositNoUid + 1
+          return { kind = "unknown" }
+        end
+        queueOp({ kind = "deposit", uid = uid })
+        counts.deposits = counts.deposits + 1
+        return { kind = "deposit", uid = uid, store = storeOf(rec) }
+      end
+    end
+    return nil
+  end)
+
+  -- The uids the daycare holds (save.loaded's daycare and boarded), in slot order as they went in.
+  def("daycareUids", function()
+    local out = {}
+    local rec = boardedOf(b.state())
+    for _, e in ipairs(rec and rec.list or {}) do
+      if e.uid then out[#out + 1] = e.uid end
+    end
+    return out
+  end)
+  def("daycareUid", function()
+    local rec = boardedOf(b.state())
+    for _, e in ipairs(rec and rec.list or {}) do
+      if e.uid then return e.uid end
+    end
+    return nil
   end)
 
   -- ---- the Pokedex (dex.sync: national numbers seen and owned in Cobblemon)

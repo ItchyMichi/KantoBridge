@@ -292,4 +292,47 @@ public class SavePairGameTests implements FabricGameTest {
 		}));
 		helper.succeed();
 	}
+
+	/**
+	 * The follow-up's item 7: Emerald's daycare holds two. {@code save.loaded} names both ({@code daycare} the first,
+	 * {@code boarded} all), and both stay boarded while one the hidden save never saw comes back; a malformed
+	 * {@code boarded} is refused.
+	 */
+	@GameTest(template = EMPTY_STRUCTURE, batch = BATCH, timeoutTicks = 200)
+	public void bothOfAGen3DaycaresPokemonStayBoarded(GameTestHelper helper) {
+		MockPlayers.with(helper, player -> RelayTap.capture(player, sent -> {
+			PlayerPartyStore party = PlayerExtensionsKt.party(player);
+			Pokemon first = gift(263, 8);
+			Pokemon second = gift(132, 10);
+			Pokemon stranded = gift(280, 5);
+			party.add(first);
+			party.add(second);
+			party.add(stranded);
+			saveBegin(player, 1, "sv-dc2", PAIR, 1_000);
+			long seq = 2;
+			for (Pokemon pokemon : List.of(first, second, stranded)) {
+				RelayService.get().receive(player, envelope(seq++, MsgTypes.DAYCARE_DEPOSIT, "{\"uid\":\"" + pokemon.getUuid() + "\"}"));
+			}
+			helper.assertTrue(DaycareService.held(player).size() == 3 && party.occupied() == 0, "all three boarded");
+
+			long returned = DaycareService.returned();
+			loaded(player, seq++, "{\"fresh\":false,\"pair\":\"" + PAIR + "\",\"ops\":2,\"daycare\":\"" + first.getUuid()
+					+ "\",\"boarded\":[\"" + first.getUuid() + "\",\"" + second.getUuid() + "\"]}");
+			helper.assertTrue(DaycareService.returned() == returned + 1, "one should have come back");
+			helper.assertTrue(DaycareService.held(player).equals(Set.of(first.getUuid(), second.getUuid())), "both should stay boarded");
+			helper.assertTrue(party.get(stranded.getUuid()) != null && party.occupied() == 1, "the one the hidden save never saw is back");
+			helper.assertTrue(sent.stream().noneMatch(message -> message.type().equals(MsgTypes.ERROR)), "a valid message was refused");
+
+			// one uid, a repeated one, or a uid that isn't one: refused, and nothing comes back
+			for (String bad : List.of("[\"" + first.getUuid() + "\"]", "[\"" + first.getUuid() + "\",\"" + first.getUuid() + "\"]",
+					"[\"" + first.getUuid() + "\",\"nope\"]")) {
+				loaded(player, seq++, "{\"fresh\":false,\"pair\":\"" + PAIR + "\",\"ops\":2,\"daycare\":\"" + first.getUuid()
+						+ "\",\"boarded\":" + bad + "}");
+			}
+			long errors = sent.stream().filter(message -> message.type().equals(MsgTypes.ERROR)).count();
+			helper.assertTrue(errors == 3, "malformed boarded lists refused: " + errors);
+			helper.assertTrue(DaycareService.held(player).size() == 2 && party.occupied() == 1, "a refused save.loaded changed the daycare");
+		}));
+		helper.succeed();
+	}
 }

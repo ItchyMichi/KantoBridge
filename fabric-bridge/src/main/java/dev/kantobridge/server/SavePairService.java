@@ -1,5 +1,6 @@
 package dev.kantobridge.server;
 
+import com.google.gson.JsonArray;
 import dev.kantobridge.KantoBridge;
 import dev.kantobridge.net.RelayService;
 import dev.kantobridge.pokemon.DaycareService;
@@ -9,6 +10,7 @@ import dev.kantobridge.proto.MsgTypes;
 import dev.kantobridge.world.DataException;
 import dev.kantobridge.world.DataReader;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Set;
@@ -38,7 +40,8 @@ import org.jetbrains.annotations.Nullable;
  * ({@link SavePairRules}); a mismatch is sent to the player's client as {@code save.mismatch}, every time (the client
  * shows each distinct one once). Then the daycare is brought in line with the hidden game's
  * ({@link DaycareService#reconcile}): a Pokémon the server boards that the hidden daycare doesn't (Gen1Recomp closed
- * without saving after a deposit) comes back to the party.</li>
+ * without saving after a deposit) comes back to the party. The hidden daycare's are {@code daycare} and, when it holds
+ * more than one (Gen 3's holds two), every uid in {@code boarded}.</li>
  * </ul>
  * The stored pair changes only with {@code save.begin} and the count, so a mismatch stands until both games save
  * together again. A client speaks only for its own player. Logs carry kinds, counts and short hashes. Server thread only.
@@ -46,6 +49,8 @@ import org.jetbrains.annotations.Nullable;
 public final class SavePairService {
 	/** Operations remembered per player for "the same operation twice in a row". */
 	static final int REMEMBERED = 128;
+	/** {@code save.loaded.boarded}'s most uids. */
+	static final int MAX_BOARDED = 3;
 
 	/** Per player: the last operation counted per gift id or Pokémon uid (in memory; a restart forgets it). */
 	private static final Map<UUID, Map<String, String>> LAST = new HashMap<>();
@@ -143,14 +148,14 @@ public final class SavePairService {
 			RelayService.get().send(player, MsgTypes.SAVE_MISMATCH, mismatch.toJson(), null);
 		}
 		// The daycare follows the hidden game's (it logs what came back).
-		DaycareService.reconcile(player, region, loaded.daycare());
+		DaycareService.reconcile(player, region, loaded.held());
 		// One trainer economy (MG6): a projection the game refused not_ingame is owed now.
 		LedgerService.onLoaded(player, region);
 	}
 
 	/** {@code save.loaded}'s data, checked like its schema (the relay checks envelopes only). */
 	static SavePairRules.Loaded read(DataReader reader) throws DataException {
-		reader.allowOnly(Set.of("fresh", "ops", "pair", "at", "daycare", "region"));
+		reader.allowOnly(Set.of("fresh", "ops", "pair", "at", "daycare", "boarded", "region"));
 		boolean fresh = reader.bool("fresh");
 		int ops = reader.integer("ops", 0, Integer.MAX_VALUE);
 		String pair = reader.optionalString("pair", DataReader.HASH);
@@ -159,7 +164,21 @@ public final class SavePairService {
 		if (!fresh && pair == null) {
 			throw new DataException(reader.path("pair"), "required unless fresh");
 		}
-		return new SavePairRules.Loaded(fresh, pair, at, ops, daycare == null ? null : UUID.fromString(daycare));
+		// a daycare that holds several (Gen 3's two) names them all
+		Set<UUID> boarded = new HashSet<>();
+		if (reader.has("boarded")) {
+			JsonArray list = reader.array("boarded");
+			if (list.size() < 2 || list.size() > MAX_BOARDED) {
+				throw new DataException(reader.path("boarded"), "2 to " + MAX_BOARDED + " uids");
+			}
+			for (int i = 0; i < list.size(); i++) {
+				String uid = DataReader.asString(list.get(i), reader.path("boarded") + "/" + i, Ids.UID);
+				if (!boarded.add(UUID.fromString(uid))) {
+					throw new DataException(reader.path("boarded") + "/" + i, "repeated");
+				}
+			}
+		}
+		return new SavePairRules.Loaded(fresh, pair, at, ops, daycare == null ? null : UUID.fromString(daycare), boarded);
 	}
 
 	// ---- views (tests, diagnostics) ----

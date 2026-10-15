@@ -44,6 +44,21 @@
 --   spot            the same new game, then onto KB_SPOT_MAP (KB_SPOT_X,
 --                   KB_SPOT_Y) facing KB_SPOT_FACING; serves (a seam's check:
 --                   tools/e2e/seam_check.py walks across it in the real client).
+--   party           (SEVERAL_GAMES_FOLLOWUPS.md item 7) the field scene's
+--                   start; once a client watches and its party.sync has filled
+--                   the shadow party with four, through the engine's own
+--                   functions: an in-game trade of the fourth member
+--                   (Trade.createTradeMon of trade 0, Trade.tradeMons); once
+--                   Cobblemon's sync confirmed it, the members of national dex
+--                   263 and 265 boarded (Daycare.deposit); once confirmed, six
+--                   seconds for the test's session.bind, then a save and back
+--                   to the title (the test CONTINUEs); in the loaded game ten
+--                   daycare steps (Daycare.step) and the first boarded taken
+--                   back (Daycare.take); once confirmed, a gift egg of national
+--                   dex 360 (Party.giveEgg) primed to hatch on the player's
+--                   next step (its cycles 0, the daycare's step counter 254).
+--                   KB_TRADE dex=, KB_BOARDED n=, KB_SAVED, KB_WITHDRAWN
+--                   steps=, KB_EGG dex=, KB_HATCHED.
 --   title_continue  the same new game saved into the test slot, then back to
 --                   the title (Game3:returnToTitle); serves: region.start
 --                   CONTINUEs.
@@ -54,7 +69,8 @@
 --
 -- Markers: KB_BOOTED scene= slot= home= precleaned=, KB_SERVING map= x= y=
 -- wall= (or sx= sy=), KB_SAVED slot= ok=, KB_CELL / KB_CELL_BACK / KB_FLAG, KB_TRAINER / KB_WILD /
--- KB_BATTLE_DONE, KB_TITLE slot= hasSave=, KB_CLEANED deleted= active=, KB_QUIT sessions= code=; KB_FAIL
+-- KB_BATTLE_DONE, KB_TRADE / KB_BOARDED / KB_WITHDRAWN / KB_EGG / KB_HATCHED, KB_TITLE slot= hasSave=,
+-- KB_CLEANED deleted= active=, KB_QUIT sessions= code=; KB_FAIL
 -- <reason> on a timeout. Slot numbers, map symbols, cell numbers, trainer ids, directions, booleans and
 -- counts only.
 --
@@ -156,6 +172,7 @@ return function(game)
   local slot, start, wall, sign
   local storyStep, storyAt, cell = 0, nil, nil
   local battleStep, battleDone, trainers = 0, {}, nil
+  local partyStep, partyAt, partyOld, partyHatching = 0, nil, nil, false
   local saved = false
   local waitUntil = 0
   while true do
@@ -182,7 +199,7 @@ return function(game)
           print(("KB_TITLE slot=%d hasSave=%s"):format(num(active()), word(slotHasSave(active()))))
           phase = "serve"
         elseif SCENE == "field" or SCENE == "title_continue" or SCENE == "sign" or SCENE == "story"
-            or SCENE == "battle" or SCENE == "route" or SCENE == "spot" then
+            or SCENE == "battle" or SCENE == "route" or SCENE == "spot" or SCENE == "party" then
           local ok, err = pcall(game._handleBootAction, game, { action = "new_game", name = "TEST", gender = 0 })
           if not ok then fail("new_game " .. word(err):sub(1, 40)) end
           phase = "newgame"
@@ -223,7 +240,8 @@ return function(game)
             wall = d[1]
           end
         end
-        if SCENE == "field" or SCENE == "story" or SCENE == "battle" or SCENE == "route" or SCENE == "spot" then
+        if SCENE == "field" or SCENE == "story" or SCENE == "battle" or SCENE == "route" or SCENE == "spot"
+            or SCENE == "party" then
           print(("KB_SERVING map=%s x=%d y=%d wall=%s"):format(TOWN, start.x, start.y, wall))
           phase = "serve"
         elseif SCENE == "sign" then
@@ -363,6 +381,72 @@ return function(game)
         elseif battleStep == 2 and battleDone[2] and idle then
           trainerBattle(3, trainers[2])
           battleStep = 3
+        end
+      end
+      -- the party scene: a trade, two boarded, a save and CONTINUE, a withdrawal, an egg (follow-up item 7)
+      if SCENE == "party" and (tonumber(status.sessions) or 0) >= 1 then
+        local Runtime, P = mod3("runtime"), mod3("pokemon")
+        local session = Runtime and Runtime.getSession and Runtime.getSession()
+        local party = session and type(session.party) == "table" and session.party or {}
+        -- the bridge's operations and gifts all confirmed by Cobblemon's syncs (its process-lifetime state)
+        local st = game and rawget(game, "kantoBridgeState")
+        local quiet = type(st) == "table" and #(type(st.ops) == "table" and st.ops or {}) == 0
+          and #(type(st.gifts) == "table" and st.gifts or {}) == 0
+        local now = love.timer.getTime()
+        local function slotOf(dex)
+          for i, mon in ipairs(party) do
+            if P.national(mon.species) == dex then return i end
+          end
+          return nil
+        end
+        if partyStep == 0 and #party == 4 and fieldReady(game) then
+          local T = mod3("scripting.natives_trade")
+          local offered = T.createTradeMon(0, T.levelOfSlot(3))
+          if not (offered and T.tradeMons(session, 3, offered)) then fail("trade") end
+          print(("KB_TRADE dex=%d"):format(P.national(offered.species)))
+          partyStep = 1
+        elseif partyStep == 1 and quiet and #party == 4 and fieldReady(game) then
+          local Daycare = mod3("daycare")
+          for _, dex in ipairs({ 263, 265 }) do
+            local i = slotOf(dex)
+            if not (i and Daycare.deposit(session, i)) then fail("deposit_" .. dex) end
+          end
+          print("KB_BOARDED n=2")
+          partyStep = 2
+        elseif partyStep == 2 and quiet then
+          -- the deposits confirmed: time for the test's session.bind, then a save and back to the title
+          partyAt = partyAt or (now + 6)
+          if now >= partyAt and fieldReady(game) then
+            local ok, written = pcall(game.saveGame, game)
+            print(("KB_SAVED slot=%d ok=%s"):format(num(active()), word(ok and written == true)))
+            if not (ok and written) then fail("save_failed") end
+            partyOld = session
+            pcall(game.returnToTitle, game, { skipIntro = true })
+            partyStep = 3
+          end
+        elseif partyStep == 3 and session and session ~= partyOld and quiet and fieldReady(game) then
+          -- CONTINUEd: ten steps in the daycare, then the first one boarded comes back
+          local Daycare = mod3("daycare")
+          for _ = 1, 10 do Daycare.step(session) end
+          if (tonumber(Daycare.take(session, 1)) or 0) == 0 then fail("take") end
+          print("KB_WITHDRAWN steps=10")
+          partyStep = 4
+        elseif partyStep == 4 and quiet and fieldReady(game) then
+          -- a gift egg, primed to hatch on the player's next step (daycare.lua's tickEggCycles at counter 255)
+          local ok, _, egg = mod3("party").giveEgg(session, P.speciesFromNational(360), {})
+          if not (ok and egg) then fail("egg") end
+          egg.friendship, egg.eggCycles = 0, 0
+          mod3("daycare").stateOf(session).stepCounter = 254
+          print("KB_EGG dex=360")
+          partyStep = 5
+        elseif partyStep == 5 then
+          local EggHatch = package.loaded["src.ui.game3.egg_hatch"]
+          local open = EggHatch and EggHatch.isOpen and EggHatch.isOpen()
+          if open then partyHatching = true end
+          if partyHatching and not open and fieldReady(game) then
+            print("KB_HATCHED")
+            partyStep = 6
+          end
         end
       end
       if status.quitRequested then

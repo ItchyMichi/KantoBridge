@@ -16,5 +16,17 @@
       "dvs": {"atk": 1, "def": 2, "spd": 3, "spc": 4},
       "source": "trade"
     }
+  },
+  {
+    "type": "party.give",
+    "seq": 13,
+    "data": {
+      "give": "g-3",
+      "dex": 255,
+      "level": 5,
+      "moves": [10, 45],
+      "ivs": {"hp": 1, "atk": 2, "def": 3, "spa": 4, "spd": 5, "spe": 6},
+      "source": "egg"
+    }
   }
 ]

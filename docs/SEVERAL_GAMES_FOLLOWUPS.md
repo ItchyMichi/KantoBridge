@@ -28,7 +28,13 @@ The multi-game plan ([specs/MULTI_GAME_PLAN.md](specs/MULTI_GAME_PLAN.md)) is do
       are the decomp's unused and prototype maps), among them Sootopolis, the S.S. Tidal, the contest halls, the ferry's
       islands, Navel Rock and the secret bases. The 36 "no arrival" interiors were the export's warp landings, 1-based
       where the protocol says 0-based: every interior now sits under its own door. Warnings: 7 (were 43).
-- [ ] **Emerald's trades, daycare and eggs** are undone by the next party sync.
+- [x] **Emerald's trades, daycare and eggs** (2026-10-15): the engine changed the party itself and the next sync took
+      it back. Now an in-game trade sends the Pokémon away in Minecraft and gives the one received (its nickname and
+      trainer); the daycare holds two, each taken from and given back to the Minecraft party (with the steps it
+      walked as experience), and both are found again after CONTINUE. Cobblemon has no eggs, so an egg stays in the
+      hidden game (never lost to a sync; parked in a hidden box while the party is full) and becomes a Minecraft
+      Pokémon when it hatches, with the nickname given on the hatch screen. Checked on the real Emerald
+      (`test_emerald.py`'s party scene).
 - [ ] **Hoenn's people and the surf blob** are drawn as placeholders; **animated tiles and darkness** aren't shown.
 - [ ] **An empty nickname can't be confirmed** in the client (the hidden game would keep the species' name, but
       `ui.open` sends no default): send the species' name as the default, or allow an empty name.

@@ -416,7 +416,7 @@ Sprite ids are engine symbols (`SPRITE_*`). The art comes from each player's own
 | Type | Dir | Data (key fields) | ROM |
 |---|---|---|---|
 | `party.sync` | M→G | `party[{uid, dex, level, nick?, moves[num], hp, maxhp, status?}], box:{count}` (Cobblemon is authoritative) | |
-| `party.give` | G→M | `give, dex, level, moves[num]?, nick?, ot?, source:"starter"\|"gift"\|"trade"\|"prize"\|"native_catch"` | yes |
+| `party.give` | G→M | `give, dex, level, moves[num]?, nick?, ot?, source:"starter"\|"gift"\|"trade"\|"prize"\|"native_catch"\|"egg"` | yes |
 | `party.take` | G→M | `uid, reason:"trade"\|"daycare"` | |
 | `party.heal` | G→M | `{}` | |
 | `party.rename` | G→M | `uid, nick` | yes |

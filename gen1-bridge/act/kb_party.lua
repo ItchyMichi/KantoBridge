@@ -70,7 +70,10 @@
 -- * The daycare (P15): a member with a uid boarded is daycare.deposit; back
 --   in the party, daycare.withdraw with the steps walked meanwhile. The
 --   boarded uid is kept in mod.save ("daycare": { uid, exp0 }) so a
---   CONTINUE finds it again.
+--   CONTINUE finds it again. An adapter whose daycare holds several keeps
+--   its own record there (the event's `store`; Gen 3's holds two).
+-- * Eggs (Gen 3): the hidden game keeps them; one that hatches is a gift
+--   with source "egg".
 -- * The Name Rater (P16): a nickname of a member with a uid that changes
 --   outside a sync goes out as party.rename (an empty nick clears it).
 -- Takes, deposits and withdrawals go out once and again after every
@@ -115,7 +118,7 @@ local UID = "^%x%x%x%x%x%x%x%x%-%x%x%x%x%-%x%x%x%x%-%x%x%x%x%-%x%x%x%x%x%x%x%x%x
 local STATUS = { slp = "SLP", psn = "PSN", brn = "BRN", frz = "FRZ", par = "PAR" }
 local DV_KEYS = { "atk", "def", "spd", "spc" }
 local IV_KEYS = { "hp", "atk", "def", "spa", "spd", "spe" }
-local SOURCES = { starter = true, gift = true, trade = true, prize = true, native_catch = true }
+local SOURCES = { starter = true, gift = true, trade = true, prize = true, native_catch = true, egg = true }
 
 local function whole(v, lo, hi)
   return type(v) == "number" and v == floor(v) and v >= lo and v <= hi
@@ -520,11 +523,23 @@ function Party.new(opts)
     end
   end
 
-  -- M8: the boarded member's record in mod.save, { uid, exp0 } or nil.
+  -- M8: the boarded member's record in mod.save, { uid, exp0 } or nil
+  -- (an adapter whose daycare holds several keeps its own record there).
   local function storedDaycare()
     if not store then return nil end
     local ok, rec = pcall(store.get, "daycare")
     return ok and type(rec) == "table" and rec or nil
+  end
+
+  -- The record to keep after a daycare event: the adapter's own (ev.store,
+  -- false for none: Gen 3's daycare holds two), else Gen 1's.
+  local function keepDaycare(ev, gen1)
+    if not store then return end
+    if ev.store ~= nil then
+      pcall(store.set, "daycare", ev.store or nil)
+    else
+      pcall(store.set, "daycare", gen1)
+    end
   end
 
   -- M8: the daycare watch (a deposit or a withdrawal queues its operation
@@ -533,11 +548,11 @@ function Party.new(opts)
     local ok, ev = pcall(engine.daycareStep, storedDaycare())
     if not ok or type(ev) ~= "table" then return end
     if ev.kind == "deposit" then
-      if store then pcall(store.set, "daycare", { uid = ev.uid, exp0 = ev.exp0 }) end
+      keepDaycare(ev, { uid = ev.uid, exp0 = ev.exp0 })
       persist()
       if log then log.info("party.daycare_in", {}) end
     elseif ev.kind == "withdraw" or ev.kind == "cleared" or ev.kind == "lost" then
-      if store then pcall(store.set, "daycare", nil) end
+      keepDaycare(ev, nil)
       persist()
       if log then log.info("party.daycare_out", { kind = ev.kind, steps = ev.steps }) end
     elseif ev.kind == "unknown" and log then

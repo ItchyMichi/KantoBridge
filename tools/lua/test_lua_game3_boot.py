@@ -25,16 +25,18 @@ def test_the_loader_picks_the_game3_adapter_grown_from_the_stub():
 def test_missing_groups_name_the_groups_no_part_has_written():
     # A group counts once any of its functions is the adapter's own (kb_engine.missingGroups). Since G3F every
     # group has a part: the UI came with G3B, the story with G3C, the export with G3D, the party, battles, items and
-    # routes with G3F. Gen 1's own seams (direct battles, the daycare, trades, the animated tiles) stay the stub's.
+    # routes with G3F, trades and the daycare with the follow-up's item 7. Gen 1's own seams (direct battles, the
+    # animated tiles) stay the stub's.
     a = Adapter3()
     missing = [g.decode() for g in a.Engine.missingGroups(a.eng).values()]
     assert missing == []
     stubbed = {k.decode() for k in a.eng._stubbed.keys()}
     for name in ("bridgeToken", "nextSerial", "scriptCommand", "inGame", "observe", "takeVerdicts", "holdAway",
                  "metaOf", "playthrough", "saveView", "uiStack", "uiSetGlyphs", "screenSize", "bagCounts", "gifts",
-                 "partyNicks", "takeHeals", "releaseCatches", "applyParty", "battleFinish", "blackout"):
+                 "partyNicks", "takeHeals", "releaseCatches", "applyParty", "battleFinish", "blackout", "ops",
+                 "opSent", "opSynced", "opDone", "excludedUids", "daycareStep", "daycareUid", "daycareUids"):
         assert name not in stubbed, name
-    for name in ("animatedTiles", "ops", "worldTalk"):
+    for name in ("animatedTiles", "worldTalk"):
         assert name in stubbed, name
 
 

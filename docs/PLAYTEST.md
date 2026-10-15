@@ -889,5 +889,11 @@ it has been seen in a real client yet.
       107). The game's own map data disagrees by two cells there, so one of the four joins between western
       and eastern Hoenn can't meet; the build keeps the narrow Petalburg City / Route 104 path straight and puts the
       seam on these two wide ones (checked in the real client, 2026-10-14, `tools/e2e/seam_check.py`).
-- **Known gaps:** Emerald's in-game trades, daycare and eggs are undone by the next party sync; Hoenn's shape map is
-  about 1.7 MB, sent to each joining client.
+- [ ] **Emerald's trades, daycare and eggs:** trade with an in-game trader (Rustboro City has the first): the
+      Pokémon you give leaves your Minecraft party and the one you get arrives with its nickname. Board two Pokémon
+      at the Route 117 daycare: both leave your party; walk, take one back (it has gained experience), save, quit and
+      CONTINUE: the other is still boarded. Hatch an egg (the daycare's, or Lavaridge's gift): the egg itself never
+      shows in Minecraft; when it hatches, the hatch screen appears as the game's own picture (press A for YES to a
+      nickname) and the Pokémon arrives in your party. The trade's animation isn't shown (the client stays on the
+      world for its few seconds).
+- **Known gaps:** Hoenn's shape map is about 2 MB, sent to each joining client.

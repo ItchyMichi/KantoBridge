@@ -38,6 +38,16 @@
       "$ref": "../defs.schema.json#/$defs/uid",
       "description": "The Pokémon in the hidden game's daycare, if any."
     },
+    "boarded": {
+      "type": "array",
+      "items": {
+        "$ref": "../defs.schema.json#/$defs/uid"
+      },
+      "minItems": 2,
+      "maxItems": 3,
+      "uniqueItems": true,
+      "description": "Every Pokémon the hidden game's daycare holds, when it holds more than one (Gen 3's holds two); daycare is the first of them."
+    },
     "region": {
       "$ref": "../defs.schema.json#/$defs/regionId",
       "description": "MG3 (several games): the region this message belongs to; absent = the legacy region. The client tags what it relays with its link's region; the server routes a tagged message to that region's link."

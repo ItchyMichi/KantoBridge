@@ -22,9 +22,9 @@ public record PartyGive(String give, Gen1Mon mon, @Nullable String nick, @Nullab
 	public static final int MAX_NAME = 32;
 	private static final Set<String> FIELDS = Set.of("give", "dex", "level", "moves", "dvs", "ivs", "nick", "ot", "source", "region");
 
-	/** Where the Pokémon comes from. */
+	/** Where the Pokémon comes from ({@code EGG}: an egg that hatched in the hidden game, which keeps eggs itself). */
 	public enum Source {
-		STARTER, GIFT, TRADE, PRIZE, NATIVE_CATCH;
+		STARTER, GIFT, TRADE, PRIZE, NATIVE_CATCH, EGG;
 
 		public String id() {
 			return this.name().toLowerCase(Locale.ROOT);

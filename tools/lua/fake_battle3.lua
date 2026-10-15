@@ -2,8 +2,10 @@
 -- G3F parts read (lib/engine/game3/battle.lua, party.lua, items.lua,
 -- routes.lua; GEN3_BRIDGE_PLAN.md §4.10), on top of fake_engine3.lua and
 -- fake_export3.lua: the battle bridge and the battle module, trainers and
--- the prize, the party's giveMon, species and moves, the Pokedex, the bag and
--- item data, the Safari Zone, the whiteout. Everything is made up: trainer
+-- the prize, the party's giveMon and giveEgg, species and moves, the Pokedex,
+-- the bag and item data, the Safari Zone, the whiteout; the in-game trade's
+-- swap, the daycare, eggs and their hatching, the hidden boxes' open slots
+-- (SEVERAL_GAMES_FOLLOWUPS.md item 7). Everything is made up: trainer
 -- ids, classes, names, species (internal = national - 250, as
 -- fake_export3's Pokemon.national), moves and items.
 --
@@ -15,6 +17,9 @@
 --   E.battleResults               what each start's done got, in order
 --   E.endNative(result)           ends a native (not held) battle as the engine would
 --   E.giveMon(species, level, nickname, toPC)  a script's givemon on the live session
+--   E.tradeMon(species, level, nickname, ot)   what Trade.createTradeMon makes (E.Trade.tradeMons swaps it in)
+--   E.Daycare.deposit / take / step, E.Breeding.giveEggFromDaycare / hatchMon, E.Party.giveEgg: the engine's
+--   E.TradeScene.open, E.EggHatch.open           the trade's scene and the hatch screen up
 --
 -- Engine files (refs/gen1recomp/src/core/game3): battle_bridge.lua:122-132,
 -- :316-330, :397-501 (start, finish), :748-759 (startWild); battle/init.lua:
@@ -70,7 +75,7 @@ function FakeBattle3.attach(E)
       species = tonumber(species), speciesId = tonumber(species), level = tonumber(level) or 5,
       nickname = type(nickname) == "string" and nickname or "", moves = { 33 }, pp = { 35 }, maxPp = { 35 },
       ivs = { hp = 1, atk = 2, def = 3, spa = 4, spd = 5, spe = 6 }, otName = session.name, growthRate = 0,
-      serial = E.monSerial,
+      serial = E.monSerial, personality = 7000 + E.monSerial, exp = (tonumber(level) or 5) ^ 3,
     }
     E.Pokemon.applyStats(mon)
     session.party = session.party or {}
@@ -93,6 +98,116 @@ function FakeBattle3.attach(E)
   function E.giveMon(species, level, nickname, toPC)
     return E.Party.giveMon(E.Runtime.getSession(), species, level, nickname, { toPC = toPC })
   end
+  -- Party.giveEgg (party.lua:294-304): a giveMon (the gift seam sees it) made an egg afterwards
+  function E.Party.giveEgg(session, species, opts)
+    local ok, code, egg = E.Party.giveMon(session, species, 5, "EGG", opts)
+    if ok and egg then
+      egg.isEgg, egg.name, egg.nickname = true, "EGG", "EGG"
+    end
+    return ok, code, egg
+  end
+  function E.Pokemon.isEgg(mon)
+    if not mon then return false end
+    return mon.isEgg == true or mon.egg == true or mon.species == 412
+  end
+
+  -- ---- trades, the daycare, eggs (natives_trade.lua:303-343, src/core/game3/daycare.lua:76-467,
+  -- breeding.lua:540-620, src/core/game3/storage.lua:74-183, src/ui/game3/egg_hatch.lua:132)
+  E.Trade = {}
+  function E.Trade.tradeMons(session, playerSlot, offered)
+    if not (session and offered) then return nil end
+    session.party = session.party or {}
+    local slot = (tonumber(playerSlot) or 0) + 1
+    local sent = session.party[slot]
+    if not sent then return nil end
+    session.party[slot] = offered
+    return sent
+  end
+  -- what Trade.createTradeMon makes: its own record (a scratch session's giveMon), the trade's nickname and trainer
+  function E.tradeMon(species, level, nickname, ot)
+    E.monSerial = E.monSerial + 1
+    local mon = {
+      species = species, speciesId = species, level = level, nickname = nickname, name = nickname, otName = ot, ot = ot,
+      moves = { 33 }, pp = { 35 }, maxPp = { 35 }, ivs = { hp = 9, atk = 9, def = 9, spa = 9, spd = 9, spe = 9 },
+      growthRate = 0, serial = E.monSerial, personality = 7000 + E.monSerial, exp = level ^ 3,
+    }
+    E.Pokemon.applyStats(mon)
+    return mon
+  end
+  E.TradeScene = { open = false }
+  function E.TradeScene.isOpen() return E.TradeScene.open == true end
+  E.Daycare = { DAYCARE_MON_COUNT = 2 }
+  function E.Daycare.stateOf(session)
+    if not session then return nil end
+    if type(session.daycare) ~= "table" then session.daycare = { steps = { 0, 0 }, stepCounter = 0 } end
+    E.daycareReads = (E.daycareReads or 0) + 1
+    return session.daycare
+  end
+  function E.Daycare.mon(dc, index) return dc and dc[index] or nil end
+  function E.Daycare.deposit(session, partySlot)
+    local dc = E.Daycare.stateOf(session)
+    local mon = session.party[partySlot]
+    local free = dc[1] == nil and 1 or (dc[2] == nil and 2 or nil)
+    if not (mon and free) then return nil end
+    dc[free], dc.steps[free] = mon, 0
+    table.remove(session.party, partySlot)
+    return free
+  end
+  function E.Daycare.step(session)
+    local dc = E.Daycare.stateOf(session)
+    for i = 1, 2 do
+      if dc[i] then dc.steps[i] = dc.steps[i] + 1 end
+    end
+  end
+  function E.Daycare.withdraw(session, mon, steps)
+    mon.exp = (mon.exp or 0) + (tonumber(steps) or 0)
+    session.party[#session.party + 1] = mon
+    return mon.species
+  end
+  function E.Daycare.take(session, index)
+    local dc = E.Daycare.stateOf(session)
+    local mon = dc[index]
+    if not mon then return 0 end
+    E.Daycare.withdraw(session, mon, dc.steps[index])
+    dc[index], dc.steps[index] = nil, 0
+    if dc[2] and not dc[1] then
+      dc[1], dc[2], dc.steps[1], dc.steps[2] = dc[2], nil, dc.steps[2], 0
+    end
+    return mon.species
+  end
+  E.Breeding = {}
+  function E.Breeding.giveEggFromDaycare(session)
+    E.monSerial = E.monSerial + 1
+    local egg = {
+      species = 5, speciesId = 5, level = 5, nickname = "", isEgg = true, eggCycles = 20, moves = { 33 }, pp = { 35 },
+      maxPp = { 35 }, ivs = { hp = 3, atk = 3, def = 3, spa = 3, spd = 3, spe = 3 }, otName = session.name,
+      growthRate = 0, serial = E.monSerial, personality = 7000 + E.monSerial,
+    }
+    session.party[#session.party + 1] = egg
+    return egg
+  end
+  function E.Breeding.hatchMon(session, mon)
+    mon.isEgg, mon.egg, mon.level, mon.nickname = false, false, 5, ""
+    mon.otName = (session or E.Runtime.getSession()).name
+    E.Pokemon.applyStats(mon)
+    return mon
+  end
+  E.Storage = { IN_BOX_COUNT = 30 }
+  function E.Storage.ensure(session)
+    if not session then return nil end
+    session.storage = session.storage or { boxes = { { mons = {} } } }
+    return session.storage
+  end
+  function E.Storage.findOpenSlot(storage)
+    for b, box in ipairs(storage and storage.boxes or {}) do
+      for slot = 1, E.Storage.IN_BOX_COUNT do
+        if box.mons[slot] == nil then return b, slot end
+      end
+    end
+    return nil, nil
+  end
+  E.EggHatch = { open = false }
+  function E.EggHatch.isOpen() return E.EggHatch.open == true end
 
   -- ---- trainers (scripting/trainers.lua:169-289) and the prize (battle/prize.lua:167-200)
   E.trainerTable = {}
@@ -354,6 +469,12 @@ function FakeBattle3.attach(E)
   mods["src.core.game3.dex"] = E.Dex
   mods["src.core.game3.items_data"] = E.ItemsData
   mods["src.core.game3.safari"] = E.Safari
+  mods["src.core.game3.scripting.natives_trade"] = E.Trade
+  mods["src.core.game3.trade_scene"] = E.TradeScene
+  mods["src.core.game3.daycare"] = E.Daycare
+  mods["src.core.game3.breeding"] = E.Breeding
+  mods["src.core.game3.storage"] = E.Storage
+  mods["src.ui.game3.egg_hatch"] = E.EggHatch
 end
 
 return FakeBattle3

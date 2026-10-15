@@ -334,6 +334,18 @@
         "source": "trade"
       }
     },
+    {
+      "type": "party.give",
+      "seq": 13,
+      "redacted": {
+        "give": "g-3",
+        "dex": 255,
+        "level": 5,
+        "moves": [10, 45],
+        "ivs": {"hp": 1, "atk": 2, "def": 3, "spa": 4, "spd": 5, "spe": 6},
+        "source": "egg"
+      }
+    },
     {"type": "party.heal", "seq": 11, "redacted": {}},
     {
       "type": "party.item",
@@ -512,6 +524,17 @@
       "redacted": {"fresh": false, "pair": "3f2a9c0d1e4b5a67", "at": 1790000000, "ops": 0}
     },
     {"type": "save.loaded", "seq": 14, "redacted": {"fresh": true, "ops": 0}},
+    {
+      "type": "save.loaded",
+      "seq": 15,
+      "redacted": {
+        "fresh": false,
+        "pair": "3f2a9c0d1e4b5a67",
+        "ops": 2,
+        "daycare": "11111111-1111-1111-1111-111111111111",
+        "boarded": ["11111111-1111-1111-1111-111111111111", "22222222-2222-2222-2222-222222222222"]
+      }
+    },
     {"type": "save.mismatch", "seq": 21, "redacted": {"kind": "hidden_behind", "ops": 2}},
     {
       "type": "save.mismatch",

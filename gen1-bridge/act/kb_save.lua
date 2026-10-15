@@ -5,7 +5,7 @@
 --   save.done{save, ok}                                   M->G (log only)
 --   session.bind{world, multiplayer}                      M->G
 --   session.bound{slot, switched}                         G->M (re set)
---   save.loaded{fresh, ops, pair?, at?, daycare?}         G->M (M10)
+--   save.loaded{fresh, ops, pair?, at?, daycare?, boarded?} G->M (M10)
 --
 -- Every hidden-game save announces itself through the engine's save.writing
 -- event (Game:writeSave, src/core/Game.lua:1362-1385), and Minecraft saves
@@ -60,7 +60,7 @@
 -- being left's identity: its record is the last pair that world heard of
 -- with ops = the operations sent since plus those the switch drops unsent,
 -- so coming back to that world later compares like for like.
---   save.loaded{fresh, ops, pair, at, daycare}: after every session.bound
+--   save.loaded{fresh, ops, pair, at, daycare, boarded}: after every session.bound
 -- while in game (behind this step's party.* and save.begin, so the server
 -- pairs a waiting save before it compares), and when the hidden game enters
 -- the world from the title -- CONTINUE: fresh false with the loaded save's
@@ -68,7 +68,8 @@
 -- connected. Never at the title. daycare is the Cobblemon uid of the
 -- Pokemon in the hidden daycare, read from the save itself (its daycare and
 -- the boarded uid kb_party keeps in its mod data), so it rolls back with
--- the save. The running save's identity lives in the process-lifetime slot
+-- the save; boarded names them all when the daycare holds more than one
+-- (Gen 3's holds two; engine.daycareUids). The running save's identity lives in the process-lifetime slot
 -- (kb_engine.persistent), so a hot reload keeps it.
 --
 -- session.bind (M7 basics; M9's pairing is act/kb_pairing.lua): once the
@@ -88,6 +89,7 @@ Save.PAIR_DIGITS = 16
 
 local ID = "^[A-Za-z0-9_.:-]+$"
 local UID = "^%x%x%x%x%x%x%x%x%-%x%x%x%x%-%x%x%x%x%-%x%x%x%x%-%x%x%x%x%x%x%x%x%x%x%x%x$"
+local MAX_BOARDED = 3 -- save.loaded.boarded's maxItems
 local floor = math.floor
 
 local function validId(v)
@@ -112,7 +114,7 @@ end
 --   engine   kb_engine instance (savingReason, queueSave, takeSave,
 --            nurseHealed, queueHeal, armCenterSave, centerSaveStep,
 --            centerSaveArmed, inGame; M10: save, metaOf, persistent,
---            bridgeToken, gifts, ops, daycareUid)
+--            bridgeToken, gifts, ops, daycareUid, daycareUids)
 --   store    { get(key), set(key, value) }: mod.save
 --   hex      M10: SHA-256 as lowercase hex (kb_sha256.hex), for pairs
 --   seed     M10: a string unique to this start (the session id)
@@ -383,12 +385,22 @@ function Save.new(opts)
     end
     local okUid, uid = pcall(engine.daycareUid)
     if okUid and type(uid) == "string" and uid:find(UID) and uid == uid:lower() then data.daycare = uid end
+    -- a daycare that holds several (Gen 3's two) names them all
+    local okAll, all = pcall(engine.daycareUids)
+    if data.daycare and okAll and type(all) == "table" and #all > 1 then
+      local list = {}
+      for _, u in ipairs(all) do
+        if type(u) == "string" and u:find(UID) and u == u:lower() and #list < MAX_BOARDED then list[#list + 1] = u end
+      end
+      if #list > 1 then data.boarded = list end
+    end
     out[#out + 1] = { "save.loaded", data, "save" }
     ps.bindDue, ps.enterDue = false, false
     counts.loadedSent = counts.loadedSent + 1
     if log then
       log.info("save.loaded", { fresh = data.fresh, pair = short(data.pair), ops = data.ops,
-                                daycare = data.daycare ~= nil, count = counts.loadedSent })
+                                daycare = data.daycare ~= nil, boarded = data.boarded and #data.boarded or nil,
+                                count = counts.loadedSent })
     end
   end
 

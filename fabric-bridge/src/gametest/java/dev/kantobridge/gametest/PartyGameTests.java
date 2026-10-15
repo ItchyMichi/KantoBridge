@@ -254,6 +254,29 @@ public class PartyGameTests implements FabricGameTest {
 		helper.succeed();
 	}
 
+	/**
+	 * The follow-up's item 7: Emerald keeps its eggs (Cobblemon has none), and one that hatches arrives as a gift with
+	 * source {@code egg}: the player's own, with its nickname, once however often gen1-bridge repeats it.
+	 */
+	@GameTest(template = EMPTY_STRUCTURE, batch = BATCH)
+	public void aHatchedEggArrivesAsThePlayersOwn(GameTestHelper helper) {
+		MockPlayers.with(helper, player -> RelayTap.capture(player, sent -> {
+			PlayerPartyStore party = PlayerExtensionsKt.party(player);
+			String hatched = "{\"give\":\"eg-1\",\"dex\":360,\"level\":5,\"moves\":[150],"
+					+ "\"ivs\":{\"hp\":31,\"atk\":2,\"def\":3,\"spa\":4,\"spd\":5,\"spe\":6},\"nick\":\"WOBBLY\",\"source\":\"egg\"}";
+			RelayService.get().receive(player, envelope(1, MsgTypes.PARTY_GIVE, hatched));
+			RelayService.get().receive(player, envelope(2, MsgTypes.PARTY_GIVE, hatched));
+			helper.assertTrue(sent.stream().noneMatch(message -> message.type().equals(MsgTypes.ERROR)), "the egg's gift was refused");
+			helper.assertTrue(party.occupied() == 1, "the hatched Pokémon should be in the party once, the party has " + party.occupied());
+			Pokemon wynaut = party.get(0);
+			helper.assertTrue(wynaut.getSpecies().getNationalPokedexNumber() == 360 && wynaut.getLevel() == 5, "species or level");
+			helper.assertTrue(wynaut.getNickname() != null && wynaut.getNickname().getString().equals("WOBBLY"), "its nickname");
+			helper.assertTrue(wynaut.getOriginalTrainerType() == OriginalTrainerType.PLAYER
+					&& player.getUUID().toString().equals(wynaut.getOriginalTrainer()), "the player's own");
+		}));
+		helper.succeed();
+	}
+
 	@GameTest(template = EMPTY_STRUCTURE, batch = BATCH)
 	public void itemsFromTheBagWorkInCobblemon(GameTestHelper helper) {
 		RelayService relay = RelayService.get();

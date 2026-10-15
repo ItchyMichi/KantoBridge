@@ -18,6 +18,7 @@ pytestmark = pytest.mark.lua
 TOWN = "EM_TEST_TOWN"
 UID1 = "11111111-1111-1111-1111-111111111111"
 UID2 = "22222222-2222-2222-2222-222222222222"
+UID3 = "33333333-3333-3333-3333-333333333333"
 
 
 def adapter(live=True):
@@ -161,6 +162,148 @@ def test_a_sync_waits_for_a_party_screen_and_a_battle():
     assert a.eng.partySafe() is True
 
 
+def test_a_sync_waits_for_a_trade_under_way_and_an_egg_hatching():
+    a, _ = adapter()
+    a.E.Trade._offered = a.lua({"species": 6})
+    a.E.Space.vm.running = True
+    assert a.eng.partySafe() is False, "the trade's member was chosen by its party slot"
+    a.E.Trade._offered = None
+    assert a.eng.partySafe() is True
+    a.E.TradeScene.open = True
+    assert a.eng.partySafe() is False
+    a.E.TradeScene.open = False
+    a.E.EggHatch.open = True
+    assert a.eng.partySafe() is False
+    a.E.EggHatch.open = False
+    a.E.Space.vm.running = False
+    assert a.eng.partySafe() is True
+
+
+# ------------------------------------------------------------ trades, the daycare, eggs (follow-up item 7)
+
+def test_a_trade_takes_the_member_sent_and_gives_the_one_received():
+    a, s = adapter()
+    a.eng.applyParty(a.lua([entry(UID1, 4, 5), entry(UID2, 5, 7)]))
+    sent = s.party[2]
+    a.E.Space.vm.running = True  # the trade's script runs on (its scene, a trade evolution)
+    offered = a.E.tradeMon(6, 7, b"DOTS", b"KOBE")
+    assert a.same(a.E.Trade.tradeMons(s, 1, offered), sent)
+    ops = plain(a.eng.ops())
+    assert [(o["kind"], o["uid"], o["reason"], o["state"]) for o in ops] == [("take", UID2, "trade", "new")]
+    assert set(plain(a.eng.excludedUids())) == {UID2}
+    assert plain(a.eng.gifts()) == {}, "the received one waits for the trade's script"
+    a.E.Space.vm.running = False
+    gifts = plain(a.eng.gifts())
+    assert [(g["source"], g["dex"], g["level"], g["nick"], g["ot"], g["box"]) for g in gifts] == [
+        ("trade", 256, 7, "DOTS", "KOBE", False)]
+    # Cobblemon's sync from before the take (the core leaves the taken uid out): the one received stays
+    res = plain(a.eng.applyParty(a.lua([entry(UID1, 4, 5)])))
+    assert res["kept"] == 1 and len(s.party) == 2 and a.same(s.party[2], offered)
+    # the sync after it: the take confirmed (the core's opDone), the gift matched
+    a.eng.opDone(ops[0]["id"])
+    a.eng.giftSent(gifts[0]["give"].encode(), 1)
+    res = plain(a.eng.applyParty(a.lua([entry(UID1, 4, 5), entry(UID3, 6, 7, give=gifts[0]["give"])])))
+    assert res["matched"] == 1 and a.same(s.party[2], offered) and a.eng.uidOf(offered) == UID3.encode()
+    assert plain(a.eng.ops()) == {} and plain(a.eng.excludedUids()) == {}
+    # a member Cobblemon never named (a gift not sent yet) is simply forgotten
+    a.E.giveMon(7, 3, b"", False)
+    a.E.Trade.tradeMons(s, 2, a.E.tradeMon(8, 3, b"X", b"Y"))
+    assert [g["source"] for g in plain(a.eng.gifts())] == ["trade"]
+    assert plain(a.eng.ops()) == {} and ("warn", "engine.trade_no_uid") in a.lines()
+    counts = plain(a.eng.bridgeCounts())
+    assert (counts["trades"], counts["tradeNoUid"]) == (2, 1)
+
+
+def test_the_daycare_boards_two_and_gives_each_back_with_its_steps():
+    a, s = adapter()
+    a.eng.applyParty(a.lua([entry(UID1, 4, 5), entry(UID2, 5, 7), entry(UID3, 6, 9)]))
+    first, second = s.party[2], s.party[1]
+    assert a.eng.daycareStep(None) is None, "nobody boarded"
+    a.E.Daycare.deposit(s, 2)
+    ev = plain(a.eng.daycareStep(None))
+    assert (ev["kind"], ev["uid"]) == ("deposit", UID2)
+    assert ev["store"] == {"boarded": [{"uid": UID2, "pid": first.personality}]}
+    a.E.Daycare.deposit(s, 1)
+    ev = plain(a.eng.daycareStep(a.lua(ev["store"])))
+    assert (ev["kind"], ev["uid"]) == ("deposit", UID1)
+    stored = ev["store"]
+    assert stored == {"boarded": [{"uid": UID2, "pid": first.personality}, {"uid": UID1, "pid": second.personality}]}
+    assert [(o["kind"], o["uid"]) for o in plain(a.eng.ops())] == [("deposit", UID2), ("deposit", UID1)]
+    assert set(plain(a.eng.excludedUids())) == {UID1, UID2}
+    assert plain(a.eng.daycareUids()) == [UID2, UID1] and a.eng.daycareUid() == UID2.encode()
+    for _ in range(3):
+        a.E.Daycare.step(s)
+        assert a.eng.daycareStep(a.lua(stored)) is None
+    for _ in range(4):
+        a.E.Daycare.step(s)  # steps the watch doesn't see one by one: Daycare.withdraw is given them all
+    a.E.Daycare.take(s, 1)  # the first one boarded, with its seven steps (the second moves up a slot)
+    ev = plain(a.eng.daycareStep(a.lua(stored)))
+    assert (ev["kind"], ev["uid"], ev["steps"]) == ("withdraw", UID2, 7)
+    assert ev["store"] == {"boarded": [{"uid": UID1, "pid": second.personality}]}
+    assert a.same(s.party[2], first) and a.eng.uidOf(first) == UID2.encode()
+    assert [(o["kind"], o["uid"], o.get("steps")) for o in plain(a.eng.ops())][2] == ("withdraw", UID2, 7)
+    # Cobblemon's sync from before the withdrawal (the core leaves the boarded uid out): the one back stays
+    res = plain(a.eng.applyParty(a.lua([entry(UID3, 6, 9)])))
+    assert res["kept"] == 1 and len(s.party) == 2 and a.same(s.party[2], first)
+    assert set(plain(a.eng.excludedUids())) == {UID1}
+    counts = plain(a.eng.bridgeCounts())
+    assert (counts["deposits"], counts["withdraws"], counts["boarded"], counts["daycareHeld"]) == (2, 1, 1, True)
+    # a CONTINUE (a new session from the save): the member the daycare holds gets its uid back from mod.save, by
+    # its personality value; the old session's operations are dropped
+    a.E.game.session = None
+    s2 = a.field()
+    loaded = a.lua({"species": 4, "speciesId": 4, "level": 5, "personality": second.personality, "moves": [33]})
+    s2.daycare = a.lua({"steps": [5, 0], "stepCounter": 0})
+    s2.daycare[1] = loaded
+    ev = plain(a.eng.daycareStep(a.lua({"boarded": [{"uid": UID1, "pid": second.personality}]})))
+    assert ev == {"kind": "adopted", "count": 1}
+    assert plain(a.eng.daycareUids()) == [UID1] and a.eng.uidOf(loaded) == UID1.encode()
+    assert plain(a.eng.ops()) == {}
+    # one the save's daycare holds that mod.save doesn't know
+    a.E.game.session = None
+    s3 = a.field()
+    s3.daycare = a.lua({"steps": [0, 0], "stepCounter": 0})
+    s3.daycare[1] = a.lua({"species": 4, "speciesId": 4, "level": 5, "personality": 1, "moves": [33]})
+    assert plain(a.eng.daycareStep(a.lua(stored))) == {"kind": "unknown"}
+    assert plain(a.eng.daycareUids()) == {}
+    s3.daycare[1] = None
+    assert plain(a.eng.daycareStep(None)) == {"kind": "cleared", "store": False}
+
+
+def test_eggs_stay_in_the_hidden_game_until_they_hatch():
+    a, s = adapter()
+    a.eng.applyParty(a.lua([entry(UID1, 4, 5)]))
+    egg = a.E.Breeding.giveEggFromDaycare(s)
+    ok, _, gift_egg = a.E.Party.giveEgg(s, 7, a.lua({}))[0:3]
+    assert ok and gift_egg.isEgg is True
+    assert plain(a.eng.gifts()) == {}, "an egg is never a gift (Cobblemon has no eggs)"
+    res = plain(a.eng.applyParty(a.lua([entry(UID1, 4, 5)])))
+    assert (res["eggs"], res["size"]) == (2, 3) and a.same(s.party[2], egg) and a.same(s.party[3], gift_egg)
+    # Cobblemon's party full: the eggs wait in a hidden box, and come back once it has room
+    six = [entry("%08d-1111-1111-1111-111111111111" % i, 4, 5) for i in range(6)]
+    res = plain(a.eng.applyParty(a.lua(six)))
+    assert (res["parked"], res["eggs"], res["size"]) == (2, 0, 6)
+    box = s.storage.boxes[1].mons
+    assert a.same(box[1], egg) and a.same(box[2], gift_egg)
+    res = plain(a.eng.applyParty(a.lua(six[:5])))
+    assert (res["back"], res["size"]) == (1, 6) and a.same(s.party[6], egg) and box[1] is None
+    res = plain(a.eng.applyParty(a.lua([entry(UID1, 4, 5)])))
+    assert (res["eggs"], res["back"], res["size"]) == (2, 1, 3) and box[2] is None
+    # hatching: a gift with source egg once the hatch screen (its nickname prompt) is done
+    a.E.EggHatch.open = True
+    a.E.Breeding.hatchMon(s, egg)
+    egg.nickname = b"SPROUT"
+    assert plain(a.eng.gifts()) == {} and a.eng.partySafe() is False
+    a.E.EggHatch.open = False
+    gifts = plain(a.eng.gifts())
+    assert [(g["source"], g["dex"], g["level"], g["nick"]) for g in gifts] == [("egg", 255, 5, "SPROUT")]
+    res = plain(a.eng.applyParty(a.lua([entry(UID1, 4, 5)])))
+    assert (res["kept"], res["eggs"], res["size"]) == (1, 1, 3)
+    counts = plain(a.eng.bridgeCounts())
+    assert (counts["hatched"], counts["eggGifts"], counts["eggsParked"], counts["eggsBack"], counts["eggs"],
+            counts["eggsLost"]) == (1, 1, 2, 2, 1, 0)
+
+
 # ------------------------------------------------------------ main.lua and a peer
 
 def pump(rig, peer, until, limit=30):
@@ -202,3 +345,57 @@ def test_main_gives_syncs_and_snapshots_the_gen3_party():
     assert [(p["dex"], p["level"], p["moves"]) for p in snap["party"]] == [(254, 6, [33, 354])]
     assert snap["party"][0]["uid"] == UID1
     assert 254 in snap["dex"]["owned"]
+
+
+def test_main_sends_trades_the_daycare_and_hatched_eggs():
+    rig = Rig(family="gen3")
+    rig.world(TOWN, 5, 6, "down")
+    peer = rig.connect()
+    peer.hello()
+    pump(rig, peer, lambda m: m["type"] == "snapshot")
+
+    def member(uid, dex):
+        return {"uid": uid, "dex": dex, "level": 10, "moves": [33], "hp": 30, "maxhp": 30}
+
+    team = [member(UID1, 254), member(UID2, 255), member(UID3, 256)]
+    peer.send("party.sync", {"party": team, "box": {"count": 0}})
+    rig.step(3)
+    s = rig.E.Runtime.getSession()
+    assert len(s.party) == 3
+    # an in-game trade: the member sent goes as party.take, the one received as party.give (source trade)
+    rig.E.Trade.tradeMons(s, 2, rig.E.tradeMon(7, 9, b"DOTS", b"KOBE"))
+    got = pump(rig, peer, lambda m: m["type"] == "party.give")
+    assert [m["data"] for m in got if m["type"] == "party.take"] == [{"uid": UID3, "reason": "trade"}]
+    give = next(m for m in got if m["type"] == "party.give")["data"]
+    assert (give["source"], give["dex"], give["level"], give["nick"], give["ot"]) == ("trade", 257, 9, "DOTS", "KOBE")
+    # two members boarded at the daycare
+    rig.E.Daycare.deposit(s, 1)
+    got = pump(rig, peer, lambda m: m["type"] == "daycare.deposit")
+    rig.E.Daycare.deposit(s, 1)
+    got += pump(rig, peer, lambda m: m["type"] == "daycare.deposit")
+    assert [m["data"] for m in got if m["type"] == "daycare.deposit"] == [{"uid": UID1}, {"uid": UID2}]
+    # Cobblemon's sync from before any of it changes nothing: the traded and boarded uids stay out, the one
+    # received stays
+    peer.send("party.sync", {"party": team, "box": {"count": 0}})
+    rig.step(3)
+    assert len(s.party) == 1 and s.party[1].nickname == b"DOTS"
+    # an egg from the daycare: nothing goes out until it hatches, then a gift with source egg
+    egg = rig.E.Breeding.giveEggFromDaycare(s)
+    assert not any(m["type"] == "party.give" for m in pump_for(rig, peer, 5))
+    rig.E.Breeding.hatchMon(s, egg)
+    got = pump(rig, peer, lambda m: m["type"] == "party.give")
+    hatched = next(m for m in got if m["type"] == "party.give")["data"]
+    assert (hatched["source"], hatched["dex"], hatched["level"]) == ("egg", 255, 5)
+    # save.loaded names both members the daycare holds
+    peer.send("session.bind", {"world": "hoenn-test-world", "multiplayer": False})
+    got = pump(rig, peer, lambda m: m["type"] == "save.loaded")
+    loaded = next(m for m in got if m["type"] == "save.loaded")["data"]
+    assert (loaded["daycare"], loaded["boarded"]) == (UID1, [UID1, UID2])
+
+
+def pump_for(rig, peer, steps):
+    got = []
+    for _ in range(steps):
+        rig.step()
+        got.extend(peer.messages())
+    return got

@@ -30,6 +30,17 @@ the same before and after).
       game.status saved and in game, save.loaded fresh false); with the slot empty it starts NEW GAME (detail
       new), and (G3B) Birch's speech is answered through the UI as the client would (its text advanced, BOY
       picked, the name KB given on the naming screen, YES to it) until the new game is in the field.
+  party (SEVERAL_GAMES_FOLLOWUPS.md item 7, one launch): the test plays Cobblemon (every party operation applied
+      once, a party.sync after each) and the client's UI. Four members; the engine's in-game trade of the fourth
+      is party.take{reason:"trade"} for it and party.give{source:"trade"} (nickname and OT) for the one received, and
+      a sync from before Cobblemon applied them changes nothing (the snapshot's party: the three and the one
+      received). Two boarded (Daycare.deposit) are two daycare.deposit; after a session.bind save.loaded names both
+      (daycare and boarded); the game saves, goes to the title, region.start CONTINUEs and save.loaded names both
+      again (their uids kept in the save's mod data). Ten daycare steps and Daycare.take are daycare.withdraw with
+      steps 10. A gift egg goes out as nothing and a sync keeps it (the snapshot's party has it, no uid); one step
+      down hatches it through the engine's own step events and hatch screen ("Huh?" as text, the screen as a
+      mirror where A is YES to a nickname, KB on the naming screen) and it goes out as party.give{source:"egg"}
+      with that nickname.
 
 Every message passes its schema (strict). Output: types, slot numbers, map symbols, cell numbers, counts and
 booleans only.
@@ -40,6 +51,8 @@ import os
 import time
 
 import pytest
+
+import uuid
 
 from fake_minecraft import FakeMinecraft
 from run_gen1recomp import INSTALL, launch, preflight
@@ -559,6 +572,190 @@ def test_the_passes_hoenn_end_is_walked_in_and_out():
     try:
         result, report = _launch("route", "KB_SERVING", _route, 300)
         assert any("routes.installed" in line and "own=true" in line for line in result.lines), "the adapter's end"
+        clean = True
+    finally:
+        if not clean:
+            _cleanup_run()
+    assert save_files() == before, "the test slot's files are gone and the rest untouched"
+
+
+UID_A = "a1a1a1a1-0000-4000-8000-000000000001"  # national dex 263: boarded, back after ten steps
+UID_B = "b2b2b2b2-0000-4000-8000-000000000002"  # 265: boarded
+UID_C = "c3c3c3c3-0000-4000-8000-000000000003"  # 261: stays
+UID_D = "d4d4d4d4-0000-4000-8000-000000000004"  # 280: traded away
+
+
+def _member(uid, dex, level, give=None):
+    m = {"uid": uid, "dex": dex, "level": level, "moves": [33], "hp": 20, "maxhp": 20}
+    if give:
+        m["give"] = give
+    return m
+
+
+class _Cobblemon:
+    """Cobblemon's side of the party scene: the party and the daycare by uid, each operation applied once (gen1-bridge
+    sends one again after every snapshot) and answered with a party.sync, as the server does."""
+
+    def __init__(self, mc, party):
+        self.mc, self.party, self.boarded, self.gives = mc, list(party), {}, {}
+
+    async def sync(self, party=None):
+        members = self.party if party is None else party
+        await self.mc.send("party.sync", {"party": [dict(m) for m in members], "box": {"count": 0}})
+
+    async def apply(self, m):
+        t, d = m["type"], m.get("data") or {}
+        uids = [p["uid"] for p in self.party]
+        if t == "party.take" and d["uid"] in uids:
+            self.party = [p for p in self.party if p["uid"] != d["uid"]]
+        elif t == "party.give" and d["give"] not in self.gives:
+            self.gives[d["give"]] = str(uuid.uuid4())
+            self.party.append(_member(self.gives[d["give"]], d["dex"], d["level"], give=d["give"]))
+        elif t == "daycare.deposit" and d["uid"] in uids:
+            self.boarded[d["uid"]] = next(p for p in self.party if p["uid"] == d["uid"])
+            self.party = [p for p in self.party if p["uid"] != d["uid"]]
+        elif t == "daycare.withdraw" and d["uid"] in self.boarded:
+            self.party.append(self.boarded.pop(d["uid"]))
+        else:
+            return False
+        await self.sync()
+        return True
+
+
+async def _serve(mc, cob, since, until, timeout, mirror_button=None):
+    """Plays Cobblemon (every party operation applied, then a sync) and the client's UI (texts advanced, the first
+    choice picked, the name KB; with `mirror_button`, that button tapped every 1.5 s while a mirror screen is the
+    newest UI, as a player answers a screen drawn by the hidden game) until a message matches `until` (checked after
+    it is applied); returns it and the counts of the UI kinds seen."""
+    answered, kinds, mirrors, pressed = set(), {}, [], 0.0
+    deadline = time.monotonic() + timeout
+    seen = since
+    while True:
+        while seen < len(mc.received):
+            m = mc.received[seen]
+            seen += 1
+            await cob.apply(m)
+            if until(m):
+                return m, kinds
+            if m["type"] == "ui.close" and m["data"]["ui"] in mirrors:
+                mirrors.remove(m["data"]["ui"])
+            if m["type"] == "ui.open" and m["data"]["ui"] not in answered:
+                d = m["data"]
+                answered.add(d["ui"])
+                kinds[d["kind"]] = kinds.get(d["kind"], 0) + 1
+                if d["kind"] == "text":
+                    for _ in range(len(d["pages"]) + 1):
+                        await mc.send("ui.advance", {"ui": d["ui"]})
+                elif d["kind"] == "choice":
+                    await mc.send("ui.pick", {"ui": d["ui"], "index": 0})
+                elif d["kind"] == "naming":
+                    await mc.send("ui.name", {"ui": d["ui"], "glyphs": NAME})
+                    mirrors.clear()
+                elif d["kind"] == "mirror":
+                    mirrors.append(d["ui"])
+        if mirror_button and mirrors and time.monotonic() - pressed >= 1.5:
+            pressed = time.monotonic()
+            kinds["presses"] = kinds.get("presses", 0) + 1
+            await mc.send("act.button", {"button": mirror_button, "how": "tap"})
+        left = deadline - time.monotonic()
+        assert left > 0, f"nothing matched within {timeout} s: {kinds}; seen since: {seen_summary(mc, since)}"
+        try:
+            if await mc.next(min(left, 1.0)) is None:
+                raise ConnectionError("connection closed")
+        except asyncio.TimeoutError:
+            pass
+
+
+async def _hidden_party(mc):
+    """The shadow party as a fresh snapshot shows it: (dex, uid or None) per member."""
+    snap = (await mc.request("resync", reply_type="snapshot", timeout=10))["data"]
+    return [(p["dex"], p.get("uid")) for p in snap["party"]]
+
+
+async def _party(port, serving):
+    mc, ok, snap, status = await connect(port)
+    report = {}
+    old = [_member(UID_A, 263, 8), _member(UID_B, 265, 6), _member(UID_C, 261, 5), _member(UID_D, 280, 5)]
+    cob = _Cobblemon(mc, old)
+    since = len(mc.received)
+    await cob.sync()
+    # 1. the in-game trade of the fourth member
+    take = (await find_or_wait(mc, "party.take", 90, since))["data"]
+    give = (await find_or_wait(mc, "party.give", 30, since, lambda m: m["data"]["source"] == "trade"))
+    report["trade"] = (take, give["data"]["dex"], give["data"]["level"], "nick" in give["data"], "ot" in give["data"])
+    assert take == {"uid": UID_D, "reason": "trade"} and "nick" in give["data"] and "ot" in give["data"], report
+    # Cobblemon's sync from before it applied them changes nothing
+    await cob.sync(old)
+    await asyncio.sleep(1.5)
+    report["stale"] = await _hidden_party(mc)
+    assert report["stale"] == [(263, UID_A), (265, UID_B), (261, UID_C), (give["data"]["dex"], None)], report
+    since = len(mc.received)
+    await cob.apply(give)
+    await cob.apply({"type": "party.take", "data": take})
+    # 2. two boarded
+    await _serve(mc, cob, since, lambda m: len(cob.boarded) == 2, 90)
+    report["boarded"] = sorted(cob.boarded)
+    assert set(cob.boarded) == {UID_A, UID_B}, report
+    since = len(mc.received)
+    await mc.send("session.bind", {"world": "hoenn-party-test", "multiplayer": False})
+    loaded = (await find_or_wait(mc, "save.loaded", 30, since))["data"]
+    report["loaded_bind"] = (loaded.get("daycare"), loaded.get("boarded"))
+    assert (loaded.get("daycare"), loaded.get("boarded")) == (UID_A, [UID_A, UID_B]), report
+    # 3. the game saves and goes back to the title; CONTINUE finds both boarded again
+    await _serve(mc, cob, since, lambda m: m["type"] == "game.status" and m["data"].get("ingame") is False, 90)
+    sent = await mc.send("region.start", {"region": "hoenn"})
+    since = len(mc.received)
+    result = (await find_or_wait(mc, "act.result", 90, since, lambda m: m.get("re") == sent["seq"]))["data"]
+    assert result == {"ok": True, "kind": "start", "detail": "continue"}, result
+    loaded = (await _serve(mc, cob, since, lambda m: m["type"] == "save.loaded", 90))[0]["data"]
+    report["loaded_continue"] = (loaded["fresh"], loaded.get("daycare"), loaded.get("boarded"))
+    assert report["loaded_continue"] == (False, UID_A, [UID_A, UID_B]), report
+    await cob.sync()
+    # 4. ten daycare steps, then the first one boarded comes back with them
+    withdraw = (await _serve(mc, cob, since, lambda m: m["type"] == "daycare.withdraw", 90))[0]["data"]
+    report["withdraw"] = withdraw
+    assert withdraw == {"uid": UID_A, "steps": 10}, report
+    # 5. a gift egg: nothing goes out for it, and a sync keeps it
+    since = len(mc.received)
+    deadline = time.monotonic() + 60
+    party = await _hidden_party(mc)
+    while (360, None) not in party:
+        assert time.monotonic() < deadline, f"no egg: {party}"
+        await asyncio.sleep(1.0)
+        party = await _hidden_party(mc)
+    await cob.sync()
+    await asyncio.sleep(1.5)
+    report["egg"] = await _hidden_party(mc)
+    assert (360, None) in report["egg"], report
+    assert not [m for m in mc.received[since:] if m["type"] == "party.give"], "an egg went out"
+    # 6. one step down: the engine's step events hatch it ("Huh?" as text, then its screen as a mirror: A on it is
+    # YES to a nickname), the name KB
+    since = len(mc.received)
+    await mc.send("move.step", {"dir": "down", "n": 61})
+    hatched, kinds = await _serve(mc, cob, since, lambda m: m["type"] == "party.give" and m["data"]["source"] == "egg",
+                                  180, mirror_button="a")
+    report["hatch"] = (hatched["data"]["dex"], hatched["data"]["level"], hatched["data"].get("nick"), kinds)
+    assert (hatched["data"]["dex"], hatched["data"]["level"], hatched["data"].get("nick")) == (360, 5, "KB"), report
+    assert kinds.get("mirror", 0) >= 1 and kinds.get("naming") == 1, report
+    report["errors"] = errors(mc)
+    report["problems"] = len(mc.conn.problems)
+    assert report["errors"] == [] and report["problems"] == 0, report
+    await mc.send("debug.quit", {"code": 0})
+    await mc.close()
+    return report
+
+
+@pytest.mark.e2e
+@pytest.mark.timeout(1200)
+def test_emeralds_trades_daycare_and_eggs_reach_cobblemon():
+    _skip_without_emerald()
+    before = save_files()
+    clean = False
+    try:
+        result, report = _launch("party", "KB_SERVING", _party, 900, extra=600)
+        markers = [line.split()[0] for line in result.lines if line.startswith("KB_")]
+        for marker in ("KB_TRADE", "KB_BOARDED", "KB_SAVED", "KB_WITHDRAWN", "KB_EGG", "KB_HATCHED"):
+            assert marker in markers, (marker, markers)
         clean = True
     finally:
         if not clean:

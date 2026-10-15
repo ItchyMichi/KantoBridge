@@ -1,7 +1,9 @@
 package dev.kantobridge.server;
 
 import com.google.gson.JsonObject;
+import java.util.HashSet;
 import java.util.Locale;
+import java.util.Set;
 import java.util.UUID;
 import org.jetbrains.annotations.Nullable;
 
@@ -39,8 +41,26 @@ public final class SavePairRules {
 	 * @param at      that save's time, or -1
 	 * @param ops     Pokémon operations sent since that save
 	 * @param daycare the Pokémon in the hidden game's daycare, or null
+	 * @param boarded every Pokémon it holds when it holds more than one (Gen 3's holds two), else empty
 	 */
-	public record Loaded(boolean fresh, @Nullable String pair, long at, int ops, @Nullable UUID daycare) {
+	public record Loaded(boolean fresh, @Nullable String pair, long at, int ops, @Nullable UUID daycare, Set<UUID> boarded) {
+		public Loaded {
+			boarded = Set.copyOf(boarded);
+		}
+
+		public Loaded(boolean fresh, @Nullable String pair, long at, int ops, @Nullable UUID daycare) {
+			this(fresh, pair, at, ops, daycare, Set.of());
+		}
+
+		/** Every Pokémon the hidden game's daycare holds. */
+		public Set<UUID> held() {
+			if (this.daycare == null) {
+				return this.boarded;
+			}
+			Set<UUID> all = new HashSet<>(this.boarded);
+			all.add(this.daycare);
+			return all;
+		}
 	}
 
 	/**

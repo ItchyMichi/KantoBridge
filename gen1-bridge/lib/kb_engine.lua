@@ -182,6 +182,7 @@ local function stub(opts, id, requireFn)
     pcCounts = empty, bagCounts = empty, dexCounts = empty,
     -- lists and counts the acts read every step
     gifts = empty, ops = empty, takeItemUses = empty, takeRenames = empty, partyUids = empty, excludedUids = empty,
+    daycareUids = empty,
     partyNicks = empty, animatedTiles = empty, animationImages = empty, liveBlocks = empty, liveBlockChanges = empty,
     storyToggles = empty, cutRecords = empty, cutSwaps = empty, pristineBlocks = empty,
     releaseCatches = function() return 0 end,

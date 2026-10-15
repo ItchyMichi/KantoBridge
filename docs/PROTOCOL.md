@@ -549,6 +549,17 @@ it for that player's collision.
   idempotent) moves the Pokémon from the Cobblemon party into a per-player daycare store on the
   server; `daycare.withdraw{uid, steps}` returns it to the party (the PC if full) with 1 XP per step,
   never past level 100. Repeats change nothing; mismatches are counted warnings. `party.sync` follows.
+- **Gen 3's trades, daycare and eggs** (2026-10-15, docs/SEVERAL_GAMES_FOLLOWUPS.md item 7): the same
+  messages as Gen 1's. An in-game trade (the engine's swap, `Trade.tradeMons`) is `party.take{reason:
+  "trade"}` for the member sent and `party.give{source:"trade"}` (its nickname and `ot`) for the one
+  received, sent once the trade's script has ended. Emerald's daycare holds two, each its own
+  `daycare.deposit` and `daycare.withdraw`; `steps` is what the daycare counted for that member (the
+  experience the engine gave it). The boarded uids are kept in mod.save with each member's personality
+  value, so a CONTINUE finds them again, and `save.loaded` names them all (`daycare` the first,
+  `boarded` every one when there are several). **Eggs never cross:** Cobblemon has no eggs, so the
+  hidden game keeps them (every `party.sync` keeps them after Cobblemon's members; with no room left
+  they wait in a hidden box and come back when there is room). An egg that hatches is
+  `party.give{source:"egg"}`, sent after the hatch screen and its nickname prompt.
 - `debug.status` (test role) adds `battle*`, `party*`, `giftsPending`, `healsPending`, `battleHeld`,
   `partySize`, `partyKnown`, and `playerNameLen`/`playerNameHash`, `rivalNameLen`/`rivalNameHash`
   (the first 7 hex digits of SHA-256, as an integer).
@@ -558,7 +569,7 @@ it for that player's collision.
 | Type | Dir | Data | ROM |
 |---|---|---|---|
 | `party.sync` | S→C, M→G | `party[{uid, give?, dex, level, nick?, moves[], hp, maxhp, status?}], box{count}` (Cobblemon is authoritative) | yes |
-| `party.give` | G→M, C→S | `give` (id), `dex, level, moves[]?, dvs?, ivs?, nick?, ot?, source:"starter"\|"gift"\|"trade"\|"prize"\|"native_catch"` (`ivs` over `dvs` when both) | yes |
+| `party.give` | G→M, C→S | `give` (id), `dex, level, moves[]?, dvs?, ivs?, nick?, ot?, source:"starter"\|"gift"\|"trade"\|"prize"\|"native_catch"\|"egg"` (`ivs` over `dvs` when both; `egg`: an egg that hatched in the hidden game) | yes |
 | `party.take` | G→M, C→S | `uid, reason:"trade"\|"daycare"` | |
 | `party.heal` | G→M, C→S | `{}` | |
 | `party.rename` | G→M, C→S | `uid, nick` (empty clears) | yes |
@@ -586,7 +597,7 @@ compat profile (`hello.ok.compat`: Gen 1 151 and 165, Emerald 386 and 354), appl
 | `session.bind` | S→C, M→G | `world, multiplayer` (save pairing: the server tells its client the world id; the client passes it on after joining and after every reconnect) | |
 | `session.bound` | G→M, C→S | `slot, switched?:"none"\|"title"\|"saved"\|"moved"`; `re` optional (the client records the pairing on the server) | |
 | `session.waiting` | G→M | `slot, reason:"busy"\|"new_game"\|"save_failed"`; `re` optional (the bind) | |
-| `save.loaded` | G→M, C→S | `fresh, ops, pair?, at?, daycare?` (which save the hidden game runs from; M10 crash recovery) | |
+| `save.loaded` | G→M, C→S | `fresh, ops, pair?, at?, daycare?, boarded?` (which save the hidden game runs from; M10 crash recovery; `boarded`: every uid the daycare holds when it holds more than one) | |
 | `save.mismatch` | S→C | `kind:"hidden_behind"\|"world_behind"\|"hidden_older"\|"hidden_newer"\|"new_game"\|"other", ops?, hiddenAt?, worldAt?` | |
 
 #### Crash recovery and save pairs (M10)
@@ -652,7 +663,8 @@ compat profile (`hello.ok.compat`: Gen 1 151 and 165, Emerald 386 and 354), appl
   CONTINUE gives `fresh:false` with the loaded save's `pair`, NEW GAME gives `fresh:true`.
   - The client holds it in the pairing gate like other story data.
 - **`daycare`** is the uid in the hidden game's **live** daycare. Right after a load, that is what
-  the loaded save holds.
+  the loaded save holds. **`boarded`** (2–3 uids) names every one when the daycare holds more than one
+  (Gen 3's holds two); `daycare` is then the first of them.
 - **The server compares** `save.loaded` with the stored pair, and sends `save.mismatch` or nothing:
 
   | Stored pair | `save.loaded` | Result |
@@ -667,8 +679,8 @@ compat profile (`hello.ok.compat`: Gen 1 151 and 165, Emerald 386 and 354), appl
   The client shows each distinct mismatch once per world join, as a warning screen with an OK
   button. It pauses singleplayer only.
 - **Daycare reconcile (every `save.loaded`):** if the server's daycare holds a Pokémon for this
-  player whose uid isn't `save.loaded.daycare`, it goes back to the party, or to the PC if the party
-  is full. A `daycare.withdraw` of a Pokémon already in the party or PC is a no-op, so it never
+  player whose uid isn't `save.loaded.daycare` (or in `boarded`), it goes back to the party, or to the
+  PC if the party is full. A `daycare.withdraw` of a Pokémon already in the party or PC is a no-op, so it never
   makes a duplicate.
 
 ### Wild Routes (WR2)

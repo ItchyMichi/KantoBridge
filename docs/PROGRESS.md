@@ -2196,6 +2196,32 @@ from the player's cell (`settled`); doors, Fly, teleports, cave shafts and black
 `[start door, arrive door, start script]`); Emerald 6 and Gen 1 12 e2e passed; the story run in the real client: no
 `warp.no_arrival`, no client `arrive_timeout`, about three minutes faster.
 
+**After MG8: the user's item 7, Emerald's trades, daycare and eggs** (2026-10-15): the engine changed the shadow
+party itself and the next `party.sync` took it back. The Gen 3 party part (`lib/engine/game3/party.lua`) now does what
+gen1.lua's party operations do, with Gen 3's own seams:
+- **Trades:** `Trade.tradeMons` (the in-game trade's swap) is wrapped: the member sent is `party.take{reason:"trade"}`
+  by its uid, the one received a gift with source `trade` (nickname and OT, read once the trade's script has ended). A
+  sync waits while a trade is armed or its scene is open. The trade's animation is not mirrored (it is no stack layer;
+  the client stays on the world for those seconds).
+- **The daycare (two):** watched every step as Gen 1's: a member with a uid it holds is `daycare.deposit`, one back in
+  the party `daycare.withdraw` with the steps `Daycare.withdraw` was given (wrapped: the first e2e run showed that a
+  per-step look misses steps that come faster than it looks). The boarded uids are kept in mod.save with each member's
+  personality value (`{ boarded = { { uid, pid } } }`, the adapter's own record, `ev.store` to kb_party), so CONTINUE
+  matches them again; `save.loaded` gained `boarded` (every uid when it holds more than one; the server's reconcile keeps
+  them all).
+- **Eggs:** Cobblemon has none, so they never cross: a gift egg (`Party.giveEgg` gives it through `giveMon`) is dropped
+  from the gifts, every sync keeps the party's eggs after Cobblemon's members, an egg with no room waits in a hidden box
+  and comes back once there is room, and hatching (`Breeding.hatchMon`, wrapped) is a gift with the new source `egg`,
+  sent once the hatch screen and its nickname prompt are done. The hatch screen reaches the client as a mirror (as the
+  evolution scene does): A on it answers YES/NO, the naming screen is the client's own.
+- Checks: lupa 5 new (`test_lua_game3_party.py`: trades, the daycare with CONTINUE, eggs with parking and hatching,
+  the sync's waits, main.lua's messages schema-checked), the full lupa suite 1318 passed; GameTests 2 new
+  (`aHatchedEggArrivesAsThePlayersOwn`, `bothOfAGen3DaycaresPokemonStayBoarded`), 122 passed; the real Emerald
+  (`test_emerald.py`'s new party scene, the test playing Cobblemon): a trade, a stale sync that changes nothing, two
+  boarded, `save.loaded` after a bind and after a save and CONTINUE naming both, a withdrawal with its 10 steps, a gift
+  egg kept by a sync, then hatched by one real step (its "Huh?", the mirror, YES, the name KB) into
+  `party.give{source:"egg", nick:"KB"}`.
+
 ### Handoff (2026-10-14): after MG6, for whoever continues
 
 **State.** MG1–MG6 of [specs/MULTI_GAME_PLAN.md](specs/MULTI_GAME_PLAN.md) are done and committed locally (never

@@ -57,7 +57,11 @@ import org.jetbrains.annotations.Nullable;
  * counted warning. A {@code party.take{reason:"daycare"}} is handled as a deposit. Logs carry codes and counts, never
  * names. Server thread only.
  *
- * <p>M10: the hidden game says which Pokémon its daycare holds ({@code save.loaded.daycare}); {@link #reconcile} sends
+ * <p>Emerald's daycare holds two (docs/SEVERAL_GAMES_FOLLOWUPS.md item 7): the store holds whatever the hidden game
+ * boards, each deposited and withdrawn on its own.
+ *
+ * <p>M10: the hidden game says which Pokémon its daycare holds ({@code save.loaded.daycare}, and {@code boarded} when it
+ * holds more than one); {@link #reconcile} sends
  * every other Pokémon this daycare holds for the player back to the party (the PC when full): Gen1Recomp closed without
  * saving after a deposit no longer strands it here. A withdrawal of a Pokémon already in the party or PC changes nothing,
  * whatever the reason. Deposits and withdrawals count as the save pair's operations ({@link SavePairService}).
@@ -289,17 +293,20 @@ public final class DaycareService {
 	 * before its entry goes, so a crash in between leaves it in both, never in neither. Returns how many came back.
 	 */
 	public static int reconcile(ServerPlayer player, @Nullable UUID hidden) {
-		return reconcile(player, null, hidden);
+		return reconcile(player, null, hidden == null ? Set.of() : Set.of(hidden));
 	}
 
-	/** {@link #reconcile(ServerPlayer, UUID)} for a region's daycare (MG3; {@code null}: the legacy region). */
-	public static int reconcile(ServerPlayer player, @Nullable String region, @Nullable UUID hidden) {
+	/**
+	 * {@link #reconcile(ServerPlayer, UUID)} for a region's daycare (MG3; {@code null}: the legacy region), whose hidden
+	 * daycare holds every uid in {@code hidden} (Gen 3's holds two).
+	 */
+	public static int reconcile(ServerPlayer player, @Nullable String region, Set<UUID> hidden) {
 		DaycareStore store = store(player, region);
 		if (store == null || store.size() == 0) {
 			return 0;
 		}
 		List<UUID> stray = store.uids();
-		stray.remove(hidden);
+		stray.removeAll(hidden);
 		if (stray.isEmpty()) {
 			return 0;
 		}

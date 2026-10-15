@@ -58,7 +58,8 @@
         "gift",
         "trade",
         "prize",
-        "native_catch"
+        "native_catch",
+        "egg"
       ]
     },
     "region": {
