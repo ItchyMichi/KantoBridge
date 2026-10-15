@@ -37,7 +37,9 @@ public final class ExportBundle {
 	public static final Set<String> KINDS = Set.of("map", "tileset", "image", "sprite", "palettes", "encounters", "field", "names",
 			"layout", "swaps", "profile", "routes",
 			// MG7 (G3D): Gen 3's own kinds (docs/specs/GEN3_BRIDGE_PLAN.md §5)
-			"g3map", "g3tiles", "g3image", "g3sprite", "g3layout", "g3encounters", "g3names");
+			"g3map", "g3tiles", "g3image", "g3sprite", "g3layout", "g3encounters", "g3names",
+			// the follow-up's item 8: the animated quarters
+			"g3anims");
 	/** Ids that are safe as file names everywhere (no separators, colons or leading dots). */
 	private static final Pattern FILE_ID = Pattern.compile("^[A-Za-z0-9_][A-Za-z0-9_.-]{0,63}$");
 	private static final Pattern FULL_HASH = Pattern.compile("^[0-9a-f]{64}$");
@@ -358,6 +360,12 @@ public final class ExportBundle {
 
 	public G3Data.Sprite g3sprite(String id) throws BundleException {
 		return this.typed("g3sprite", id, G3Data.Sprite::parse, G3Data.Sprite.class);
+	}
+
+	/** The animated quarters (item 8); none in an export from before them. */
+	public G3Data.Anims g3anims() throws BundleException {
+		return this.has("g3anims", "all") ? this.typed("g3anims", "all", G3Data.Anims::parse, G3Data.Anims.class)
+				: new G3Data.Anims(Map.of());
 	}
 
 	/** The field tables the habitat planner reads; empty when the export has no field resource. */

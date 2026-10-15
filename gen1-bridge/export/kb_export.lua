@@ -30,7 +30,9 @@ Export.KINDS = { map = true, tileset = true, image = true, sprite = true, palett
                  routes = true,
                  -- MG7 (G3D): Gen 3's own kinds, built by its adapter (exportResources)
                  g3map = true, g3tiles = true, g3image = true, g3sprite = true, g3layout = true,
-                 g3encounters = true, g3names = true }
+                 g3encounters = true, g3names = true,
+                 -- item 8: the animated quarters
+                 g3anims = true }
 Export.ROLES = { builder = true, test = true }
 Export.ROOT = "PALLET_TOWN"              -- layout root (PLAN section 2.2)
 Export.BUDGET = 0.006                    -- seconds of build work per logic step

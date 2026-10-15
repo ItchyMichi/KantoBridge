@@ -7,6 +7,10 @@ warp keeping the facing, 0x82 sign, 0x90 counter, 0xA0-0xA3 ledges east, west, n
 
     resources()            {(kind, id): data}
     index(...)             synth.index's shape, game "emerald"
+
+Item 8 (docs/SEVERAL_GAMES_FOLLOWUPS.md): the water metatile animates (g3anims: its quarters are animated quarters,
+ids of their own whose page holds the first frame, two frames a loop), and the sprites include the surf blob (no
+graphics id, three frames facing down, up and left) and an item ball of one frame.
 """
 import base64
 import struct
@@ -21,6 +25,10 @@ WALK, BLOCKED, GRASS, WATER, DOOR, WARP_FACE, SIGN, COUNTER, LEDGE_S = 0x00, 0x0
 # Behaviour numbers: made up, with the engine's MB_* names.
 BEHAVIORS = {0: "MB_NORMAL", 2: "MB_TALL_GRASS", 0x11: "MB_POND_WATER", 0x3B: "MB_JUMP_SOUTH", 0x69: "MB_ANIMATED_DOOR",
              0x80: "MB_COUNTER", 0x65: "MB_SOUTH_ARROW_WARP"}
+
+# Item 8: animated metatiles by pair: metatile -> GBA frames each of its two frames shows (its own look, then a lighter
+# one).
+ANIMATED = {"TEST_PAIR_A": {2: 16}}
 
 # The behaviours whose cells roll land encounters (the engine's encounter tile bit without the surfable one).
 LAND_BEHAVIORS = {2}
@@ -126,16 +134,37 @@ def _cells(rows, table, w, h, elev=None):
     return _b64(bytes(out))
 
 
-def tiles_and_pages():
-    """(g3tiles by pair, the page images): every metatile's quarters, shared where alike."""
+def _lighter(quarter):
+    """An animated quarter's second frame: every opaque pixel a little lighter."""
+    q = bytearray(quarter)
+    for i in range(0, len(q), 4):
+        q[i:i + 3] = bytes(min(255, c + 40) for c in q[i:i + 3])
+    return bytes(q)
+
+
+def tiles_and_pages(anims=None):
+    """(g3tiles by pair, the page images): every metatile's quarters, shared where alike. An animated metatile's
+    quarters (item 8) are quarters of their own, never shared with a static one; their frames are ordinary quarters,
+    and ``anims`` (a list) gets each one's g3anims entry."""
     known, pages = {}, []
     tiles = {}
+    animated = {}
 
     def qid(data):
         if data not in known:
             known[data] = len(pages)
             pages.append(data)
         return known[data]
+
+    def animated_qid(first, second, ticks):
+        frames = [qid(first), qid(second)]
+        key = (tuple(frames), ticks)
+        if key not in animated:
+            animated[key] = len(pages)
+            pages.append(first)
+            if anims is not None:
+                anims.append({"q": animated[key], "f": frames, "s": [[0, ticks], [1, ticks]]})
+        return animated[key]
 
     for pair, mids in PAIRS.items():
         entry = {"id": pair, "mids": [], "quarters": [], "beh": [], "over": [], "behaviors": {}, "land": []}
@@ -145,7 +174,8 @@ def tiles_and_pages():
                 data = _quarter(rgb, mid, q, varied)
                 if over and q == 0:
                     data = _over(data)
-                qs.append(qid(data))
+                ticks = ANIMATED.get(pair, {}).get(mid)
+                qs.append(animated_qid(data, _lighter(data), ticks) if ticks else qid(data))
             entry["mids"].append(mid)
             entry["quarters"].append(qs)
             entry["beh"].append(beh)
@@ -176,7 +206,9 @@ def resources(game=GAME, variant=None):
     """The synthetic export; variant "pass" (MG8) gives the town a Wild Routes end (the Hoenn half of a connecting
     route), its clearing baked in, and the routes resource."""
     res = {}
-    tiles, images = tiles_and_pages()
+    anims = []
+    tiles, images = tiles_and_pages(anims)
+    res[("g3anims", "all")] = {"id": "all", "anims": anims}
     for pair, data in tiles.items():
         res[("g3tiles", pair)] = data
     for pid, data in images.items():
@@ -220,6 +252,23 @@ def resources(game=GAME, variant=None):
     res[("g3sprite", "OBJ_EVENT_GFX_TEST_PERSON")] = {
         "id": "OBJ_EVENT_GFX_TEST_PERSON", "gid": 7, "w": 16, "h": 32, "frames": frames,
         "png": _b64(_png_rgba(16, 32 * frames, bytes(sheet)))}
+    # item 8: an object of one look (16 x 16), and the surf blob (32 x 32, facing down, up, left; no graphics id)
+    ball = bytearray()
+    for y in range(16):
+        for x in range(16):
+            inside = (x - 7.5) ** 2 + (y - 7.5) ** 2 <= 36
+            ball += bytes((220, 40, 40, 255) if inside and y < 8 else (240, 240, 240, 255) if inside else (0, 0, 0, 0))
+    res[("g3sprite", "OBJ_EVENT_GFX_TEST_ITEM_BALL")] = {
+        "id": "OBJ_EVENT_GFX_TEST_ITEM_BALL", "gid": 8, "w": 16, "h": 16, "frames": 1,
+        "png": _b64(_png_rgba(16, 16, bytes(ball)))}
+    blob = bytearray()
+    for f in range(3):
+        for y in range(32):
+            for x in range(32):
+                inside = ((x - 15.5) / 14) ** 2 + ((y - 20) / 9) ** 2 <= 1
+                blob += bytes((70 + f * 20, 110, 200, 255)) if inside else bytes((0, 0, 0, 0))
+    res[("g3sprite", "SURF_BLOB")] = {"id": "SURF_BLOB", "w": 32, "h": 32, "frames": 3,
+                                      "png": _b64(_png_rgba(32, 32 * 3, bytes(blob)))}
     res[("g3encounters", "all")] = {"landWeights": LAND_WEIGHTS, "maps": {"EM_TEST_ROUTE": {
         "land": {"rate": 20, "slots": [{"dex": d, "min": 2, "max": 4} for d in (252, 255, 258, 252, 255, 258,
                                                                                  261, 261, 263, 263, 265, 265)]},

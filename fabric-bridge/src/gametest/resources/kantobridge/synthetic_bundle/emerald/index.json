@@ -4,6 +4,12 @@
   "bridge": "fake_gen1-0.1.0",
   "resources": [
     {
+      "kind": "g3anims",
+      "id": "all",
+      "hash": "1f7e59f6a776ccbaf5ef0a6095d06d5e40db714eac912a7f2328533862aed65c",
+      "size": 181
+    },
+    {
       "kind": "g3encounters",
       "id": "all",
       "hash": "24e57b43fb8466ff86bd1b8101430802b510c90d76204c933d727f47971fb736",
@@ -12,8 +18,8 @@
     {
       "kind": "g3image",
       "id": "g3q.0",
-      "hash": "6817402434f264c9fbbcff59b942c071038ce9b17a2ca2cb589d7cb98e9c5878",
-      "size": 2411
+      "hash": "03b30b12f64b3945ba4439eb01f39189d917bf286f4ac4895e5d9ec2a3c74804",
+      "size": 2731
     },
     {
       "kind": "g3layout",
@@ -47,20 +53,32 @@
     },
     {
       "kind": "g3sprite",
+      "id": "OBJ_EVENT_GFX_TEST_ITEM_BALL",
+      "hash": "db0027dc65fbdf42bfd04047788047a2428f46d1bec1f4e8e99e250320906f43",
+      "size": 239
+    },
+    {
+      "kind": "g3sprite",
       "id": "OBJ_EVENT_GFX_TEST_PERSON",
       "hash": "323297ce32d5eb0cd540cd2529dd23b992de420c75bfbcd94e6b6c5c522c27cd",
       "size": 356
     },
     {
+      "kind": "g3sprite",
+      "id": "SURF_BLOB",
+      "hash": "33b899eb9a3f96df639fb27f9965d0ff7527af87ab57aca959788d61147c6db2",
+      "size": 360
+    },
+    {
       "kind": "g3tiles",
       "id": "TEST_PAIR_A",
-      "hash": "3d7ea6c3946c94848a9e0072ca77022a99313004f5ca7dbe50b422ff61c7d30e",
-      "size": 366
+      "hash": "a5c30d3120d0924686b45e5af1040d4943eb7ec11c164b6aa3b9a58c95a1eae1",
+      "size": 373
     },
     {
       "kind": "g3tiles",
       "id": "TEST_PAIR_B",
-      "hash": "20054d17d92cd2ec4b5696ba6b0dae4cbe81b7589961b35bc604183be3b30f9d",
+      "hash": "f4379071c0eaf12e74f03f95d7feab95066fb6093ff38ea91d3d19e47897eb38",
       "size": 254
     }
   ]

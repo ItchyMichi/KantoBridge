@@ -3,7 +3,8 @@ SEVERAL_GAMES_FOLLOWUPS.md): where two neighbouring maps' connection disagrees w
 hidden player crosses by the connection while the Minecraft player walks into the neighbour's placement. Emerald starts
 a new game on the given cell (drivers/kb_emerald.lua's spot scene), the dev client follows it (RemotePilot) and steps
 the given way; after each step and after a pause this prints the hidden map and cell, the player's block, the hidden
-cell's block and the movement sync's counters (steps, pushes, blocked, snaps, drifts, steers, teleports, jumps).
+cell's block and the movement sync's counters (steps, pushes, blocked, snaps, drifts, steers, teleports, jumps), and
+the people shown on the map with the sprites the pack had no sheet for (the follow-up's item 8).
 
     xvfb-run -a -s "-screen 0 1280x720x24" python tools/e2e/seam_check.py --world PassE2E \\
         --map EM_FALLARBOR_TOWN --x 2 --y 9 --dir left --steps 5 [--game-display :98]
@@ -36,7 +37,7 @@ def summary(st):
     if p and h:
         off = (round(p["x"] - (h["x"] + 1.0), 1), round(p["z"] - (h["z"] + 1.0), 1))
     return (f"{st.get('map')} ({st.get('x')}, {st.get('y')}) facing {st.get('facing')} mode {st.get('mode')} "
-            f"player-minus-hidden {off} move {json.dumps(st.get('move'))}")
+            f"player-minus-hidden {off} move {json.dumps(st.get('move'))} puppets {json.dumps(st.get('puppets'))}")
 
 
 def main(argv=None) -> int:

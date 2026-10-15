@@ -295,7 +295,8 @@ The world note and the export note give the facts; the shape is the scene draft'
   `EM_LITTLEROOT_TOWN`), `g3encounters` (national dex; Altering Cave's variants export variant 0, warned), `g3names`.
   Every metatile of every pair gets quarters (story cells can show any of them): **26,155 distinct flattened quarters,
   26 pages**. On the pod: 862 resources, 4.3 MB, built in about 24 s (18 s of CPU) while the game keeps its frames.
-  Animated tiles export their still frame (animation is later work). **For G3E:** Hoenn's surface from Littleroot is
+  Animated tiles export their still frame (animation is later work; done after MG8 as the follow-up's item 8: `g3anims`,
+  animated quarters of their own with their frames and loops, see docs/SEVERAL_GAMES_FOLLOWUPS.md). **For G3E:** Hoenn's surface from Littleroot is
   49 maps (Sootopolis is reached by diving); placed the engine's way, 106 connection sides agree and 6 don't: Dewford
   Town and Route 107, Fallarbor Town and Route 114, Verdanturf Town and Route 116 (which also overlap), loops that the
   GBA's local connections never close. The builder treats those seams apart (a pass or a cut), as a flat world can't

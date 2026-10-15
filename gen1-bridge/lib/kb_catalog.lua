@@ -108,6 +108,8 @@ return {
     ["world.index"] = { s2c = true, re = "never" },
     ["world.regions"] = { s2c = true, re = "never" },
     ["world.shapes"] = { s2c = true, re = "never" },
+    ["world.shapes.get"] = { c2s = true, re = "never" },
+    ["world.shapes.offer"] = { s2c = true, re = "never" },
     ["world.slots"] = { s2c = true, re = "never" },
   },
 }

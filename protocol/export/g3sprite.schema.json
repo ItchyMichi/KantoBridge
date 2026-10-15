@@ -2,10 +2,10 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://kantobridge.invalid/protocol/export/g3sprite.schema.json",
   "title": "export Gen 3 sprite",
-  "description": "MG7 G3D: an object-event sprite sheet: a vertical strip of w x h frames (RGBA). Frames 0-2 stand facing down, up, left; 3-8 walk; 9-17 run (where the sheet has them); right is left mirrored.",
+  "description": "MG7 G3D: an object-event sprite sheet: a vertical strip of w x h frames (RGBA). Frames 0-2 stand facing down, up, left; 3-8 walk; 9-17 run (where the sheet has them); right is left mirrored. Item 8 adds SURF_BLOB (no gid), the surf blob.",
   "x-export-kind": "g3sprite",
   "type": "object",
-  "required": ["id", "gid", "w", "h", "frames", "png"],
+  "required": ["id", "w", "h", "frames", "png"],
   "additionalProperties": false,
   "properties": {
     "id": {"type": "string", "pattern": "^[A-Z0-9_]+$", "minLength": 1, "maxLength": 64},
@@ -13,7 +13,7 @@
       "type": "integer",
       "minimum": 0,
       "maximum": 1023,
-      "description": "The engine's graphics id."
+      "description": "The engine's graphics id; absent for SURF_BLOB (item 8), the field effect under a surfing player, three frames facing down, up and left."
     },
     "w": {"type": "integer", "minimum": 1, "maximum": 256},
     "h": {"type": "integer", "minimum": 1, "maximum": 256},

@@ -39,7 +39,13 @@ The multi-game plan ([specs/MULTI_GAME_PLAN.md](specs/MULTI_GAME_PLAN.md)) is do
       hidden game (never lost to a sync; parked in a hidden box while the party is full) and becomes a Minecraft
       Pokémon when it hatches, with the nickname given on the hatch screen. Checked on the real Emerald
       (`test_emerald.py`'s party scene).
-- [ ] **Hoenn's people and the surf blob** are drawn as placeholders; **animated tiles and darkness** aren't shown.
+- [x] **Hoenn's people and the surf blob, animated tiles and darkness** (2026-10-15): people and objects now stand as
+      the game draws them (a person a block wide and two tall, as tall as Kanto's; facing and stepping), the surf blob
+      is under a surfer, Hoenn's water, flowers and other animated tiles move with the game's own timing (935
+      animations, 504 of them on built maps), and the four caves that need Flash (Granite Cave B1F/B2F, Victory Road
+      B1F/B2F) are dark until Flash is used, then lit by Night Vision as Kanto's are. Left out: the one tileset whose
+      colours cycle (they stay on the first), berry trees' growth stages, a walker's second step frame, the GBA's
+      Flash circle. An Emerald export from before needs exporting and Hoenn rebuilding to show them.
 - [ ] **An empty nickname can't be confirmed** in the client (the hidden game would keep the species' name, but
       `ui.open` sends no default): send the species' name as the default, or allow an empty name.
 - [ ] **Starting in Hoenn:** a fresh player always follows Kanto's game first (the legacy region); there is no way to

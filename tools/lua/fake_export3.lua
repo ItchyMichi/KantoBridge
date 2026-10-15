@@ -13,11 +13,15 @@
 --   E.pairArt[pair] = { mids, cols, pixel(plane, mid, x, y) -> r, g, b, a }
 --   E.encodes                    PNGs encoded; a fake PNG carries its size in
 --                                its IHDR and its RGBA bytes after "RAW"
+--   E.animateWorld()             item 8: TEST_A's tile animations (a manifest,
+--                                colour tables and pieces in the cache)
 --
 -- Engine files (refs/gen1recomp): src/core/game3/dataset.lua:99-447 (cache,
 -- lazy midLayout), asset_decode.lua:24-128 (pair, sprite),
 -- scripting/interaction_scripts.lua:50-55 (behaviors), ow_sprites.lua:43-48,
--- encounters.lua:11, 86-126, pokemon.lua:293-301, constants.lua:39-62.
+-- encounters.lua:11, 86-126, pokemon.lua:293-301, constants.lua:39-62;
+-- item 8: tileset_anim.lua:50-127 (the manifest, colour tables, rseFrame),
+-- palette.lua:17-22, field_effects.lua:279-385 (the surf blob's sheet).
 
 local FakeExport3 = {}
 
@@ -170,7 +174,31 @@ function FakeExport3.attach(E)
                                          [400] = "SPECIES_TEST_EGG" } }
   E.constTables.moves = { MOVE_ = { [0] = "MOVE_NONE", [1] = "MOVE_TEST_TACKLE", [2] = "MOVE_TEST_SPLASH" } }
 
+  -- ---- item 8: tile animations (tileset_anim.lua:114-127 rseFrame: the frame at a counter's timer; "mod" and
+  -- "slot" as the engine counts them) and the colour tables (palette.lua:17-22 Palette.load: { [slot] = { [c] =
+  -- {r, g, b} } }, here made up from the blob's length)
+  E.TilesetAnim = {}
+  function E.TilesetAnim.rseFrame(row, timer)
+    local t = math.floor(timer / row.period)
+    local frames = row.frames or 1
+    if row.fn == "slot" then return ((t - (row.slot or 0)) % 65536) % frames end
+    return t % frames
+  end
+  E.Palette = {}
+  function E.Palette.load(blob)
+    local rgb = {}
+    for p = 0, 15 do
+      rgb[p] = {}
+      for c = 0, 15 do rgb[p][c] = { p * 10, c * 10, #blob % 256 } end
+    end
+    return rgb
+  end
+  E.FieldEffects = {}
+
   local mods = E.modules
+  mods["src.core.game3.tileset_anim"] = E.TilesetAnim
+  mods["src.core.game3.palette"] = E.Palette
+  mods["src.core.game3.field_effects"] = E.FieldEffects
   mods["src.core.game3.dataset"] = E.Dataset
   mods["src.import.gba.extract_island1"] = E.Extract
   mods["src.core.game3.asset_decode"] = E.AssetDecode
@@ -260,7 +288,46 @@ function FakeExport3.attach(E)
       ["0:3"] = { mapGroup = 0, mapNum = 3, water = { rate = 4, slots = { { species = 2, minLevel = 20, maxLevel = 30 } } } },
     }
     E.MapCatalog.byGroup["0:3"] = "EM_TEST_SEA"
+    -- the surf blob (field_effects/objects.lua, its raw RGBA): three 32x32 frames, frame f all (100 + f, 7, 7);
+    -- each facing's animation starts on its frame, right flips left's
+    local fx = E.Extract.CACHE_ROOT .. "/field_effects/"
+    E.cacheFiles[fx .. "objects.lua"] = [[return { objects = { { name = "surf_blob", fw = 32, fh = 32, frames = 3,
+      rgba = "surf_blob.rgba", anims = { { { "frame", 0, 16 } }, { { "frame", 1, 16 } }, { { "frame", 2, 16 } },
+      { { "frame", 2, 16, true } } } } } }]]
+    E.cacheFiles[fx .. "surf_blob.rgba"] = string.rep(string.char(100, 7, 7, 255), 1024)
+      .. string.rep(string.char(101, 7, 7, 255), 1024) .. string.rep(string.char(102, 7, 7, 255), 1024)
     return maps
+  end
+
+  -- Item 8: TEST_A's tile animations in the cache (native/TEST_A: anim_manifest.lua, palettes.bin, the pieces).
+  -- The primary counter runs 32 frames, the secondary 24. Bank 1 ("water", primary, a frame every 8): metatile 3
+  -- whole and metatile 6's top-left quarter, two frames; piece pixels index (k * 16 + f + 1). Bank 2 ("flower",
+  -- secondary, period 4, phase 1, three frames): metatile 2's over plane, its bottom-right quarter only; piece
+  -- pixels index 0 (clear) in columns 0-11, (0x40 + f) in 12-15. Bank 3: a palette bank (left out).
+  function E.animateWorld()
+    local root = E.Extract.NATIVE_ROOT .. "/TEST_A/"
+    E.cacheFiles[root .. "anim_manifest.lua"] = [[return { family = "rse",
+      counters = { primary = { max = 32 }, secondary = { max = 24, start = "primary" } },
+      banks = {
+        { file = "anim_water.bin", mids = { 3, 6 }, quads = { 15, 1 }, frames = 2, period = 8 },
+        { overFile = "anim_flower.bin", mids = {}, overMids = { 2 }, overQuads = { 8 }, frames = 3, period = 4,
+          phase = 1, counter = "secondary" },
+        { kind = "palette", file = "anim_pal.bin", paletteSlot = 6, frames = 2, period = 16 },
+      } }]]
+    E.cacheFiles[root .. "palettes.bin"] = string.rep("\0", 40)
+    local water = {}
+    for f = 0, 1 do
+      for k = 1, 2 do water[#water + 1] = string.rep(string.char(k * 16 + f + 1), 256) end
+    end
+    E.cacheFiles[root .. "anim_water.bin"] = table.concat(water)
+    local flower = {}
+    for f = 0, 2 do
+      for y = 0, 15 do
+        flower[#flower + 1] = string.rep("\0", 12) .. string.rep(string.char(0x40 + f), 4)
+      end
+    end
+    E.cacheFiles[root .. "anim_flower.bin"] = table.concat(flower)
+    E.cacheFiles[root .. "anim_pal.bin"] = string.rep("\0", 64)
   end
 end
 

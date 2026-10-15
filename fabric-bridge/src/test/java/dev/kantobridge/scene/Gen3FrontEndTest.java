@@ -52,7 +52,7 @@ class Gen3FrontEndTest {
 		assertNull(scene.profile());
 		SceneAtlas atlas = scene.atlas(QuarterPages.VIRTUAL);
 		assertNotNull(atlas);
-		assertEquals(36, atlas.tiles(), "every quarter of the export");
+		assertEquals(44, atlas.tiles(), "every quarter of the export (item 8: the water's frames too)");
 		assertEquals(32, atlas.tilesPerRow());
 		assertEquals(3, scene.maps().size());
 		SceneMap town = scene.map("EM_TEST_TOWN");

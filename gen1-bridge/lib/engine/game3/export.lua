@@ -12,7 +12,10 @@
 --                    the flattened art, its behaviour, whether it draws over
 --                    sprites
 --   g3image/g3q.<n>  the flattened quarters, 1,024 to a 256x256 RGBA page
---   g3sprite/<gfx>   the object-event sheets (RGBA strips)
+--   g3sprite/<gfx>   the object-event sheets (RGBA strips); SURF_BLOB, the
+--                    field effect under a surfing player (item 8)
+--   g3anims/all      the animated quarters (item 8): per animated quarter its
+--                    frames (quarter ids) and its loop (frame, GBA frames)
 --   g3layout/<region> the surface maps' cell origins (connections, BFS from
 --                    the root)
 --   g3encounters/all, g3names/all
@@ -23,7 +26,9 @@
 -- touches the GPU or the engine's resident textures. A quarter is flattened
 -- the way the GBA draws a still frame: over, else middle, else under (GBA
 -- pixels are opaque or clear); identical quarters are shared (MD5 of their
--- bytes). Animated tiles export their still frame (a later phase animates).
+-- bytes). An animated quarter (item 8) is a quarter of its own, never shared
+-- with a static one, whose page holds its first frame; its frames are quarters
+-- too, and g3anims gives its loop.
 --
 -- Everything read is the game's own data: it goes to the builder only, and
 -- the logs carry codes, kinds and counts.
@@ -44,6 +49,127 @@ Export3.SLOTS = { land = 12, water = 5, rock = 5, fish = 10 }
 -- The engine's movements that leave the object's cell (GfxIds.MOVEMENT,
 -- scripting/gfx_ids.lua:144): the rest stand, turn or step in place.
 Export3.WALKS = { WALK = true, BACK_FORTH = true, SEQUENCE = true }
+-- The surf blob's sheet among the sprites (item 8): the field effect the engine draws under a surfing player.
+Export3.SURF_BLOB = "SURF_BLOB"
+
+-- Animated tiles (item 8): a quarter's loop is cut to its first counter's length past this many GBA frames.
+Export3.MAX_CYCLE = 4096
+
+local function gcd(a, b)
+  while b ~= 0 do a, b = b, a % b end
+  return a
+end
+
+-- The two counters' lengths in GBA frames before they wrap (src/core/game3/tileset_anim.lua:206-252: enterMap
+-- sets them from the manifest, stepRse counts them; a secondary of "primary" length runs as long as the primary).
+function Export3.counterMaxes(man)
+  local c = type(man) == "table" and type(man.counters) == "table" and man.counters or {}
+  local p = type(c.primary) == "table" and c.primary or {}
+  local sc = type(c.secondary) == "table" and c.secondary or {}
+  local pMax = tonumber(p.max) or 0
+  local sMax = (sc.max == "primary") and pMax or (tonumber(sc.max) or 0)
+  return pMax, sMax
+end
+
+-- A quarter's loop as segments of unchanged looks, as the engine's TilesetAnim.stepRse runs its banks (src/core/game3/
+-- tileset_anim.lua:254-281): each GBA frame both counters count (wrapping at their lengths); a bank whose counter
+-- meets its phase (timer % period == phase) works out its frame (frameAt, the engine's TilesetAnim.rseFrame, :114-127)
+-- and pastes it when it changed (rse_apply, :190-206), so a layer shows the bank that pasted last. entries: the banks
+-- that touch the quarter, in manifest order, { row, max (its counter's length), over (the layer) }. The loop is the
+-- counters' least common multiple (at most MAX_CYCLE, else the first bank's), from both counters at 0, run twice so
+-- what the wrap carries is in place. Returns { key, under = { entry, frame } or nil, over = ..., len } runs, or nil
+-- when nothing changes.
+function Export3.segments(entries, frameAt)
+  local cycle = 1
+  for _, e in ipairs(entries) do
+    local m = tonumber(e.max) or 0
+    if m > 0 then cycle = cycle / gcd(cycle, m) * m end
+  end
+  if cycle > Export3.MAX_CYCLE then cycle = math.max(1, tonumber(entries[1].max) or 0) end
+  if cycle < 2 then return nil end
+  local last, writer = {}, { under = nil, over = nil }
+  local segs, prev = {}, nil
+  for pass = 1, 2 do
+    for t = 0, cycle - 1 do
+      for i, e in ipairs(entries) do
+        local row = e.row
+        local period = tonumber(row.period) or 0
+        local m = tonumber(e.max) or 0
+        local timer = m > 0 and t % m or 0
+        if period > 0 and timer % period == (tonumber(row.phase) or 0) then
+          local ok, f = pcall(frameAt, row, timer)
+          f = ok and tonumber(f) or nil
+          if f and f ~= last[i] then
+            last[i] = f
+            writer[e.over and "over" or "under"] = { i, math.floor(f) }
+          end
+        end
+      end
+      if pass == 2 then
+        local u, o = writer.under, writer.over
+        local key = (u and (u[1] .. ":" .. u[2]) or "-") .. "|" .. (o and (o[1] .. ":" .. o[2]) or "-")
+        if key == prev then
+          segs[#segs].len = segs[#segs].len + 1
+        else
+          segs[#segs + 1] = { key = key, under = u, over = o, len = 1 }
+          prev = key
+        end
+      end
+    end
+  end
+  if #segs < 2 then return nil end
+  return segs
+end
+
+-- A map that needs Flash: the header's cave flag (FieldView.defaultFlashLevel's mapIsCave,
+-- src/core/game3/field_view.lua:1484-1487).
+function Export3.dark(mdef)
+  return type(mdef) == "table" and mdef.cave ~= nil and (tonumber(mdef.cave) or 0) ~= 0
+end
+
+-- The surf blob as three frames facing down, up and left (each fw x fh, a vertical strip of ImageData), or nil:
+-- the field effects' manifest entry (src/core/game3/field_effects.lua:279-301, :333-338) and its raw RGBA
+-- (:340-350, :352-371); each facing's frame is its animation's first (:1935-1941), else the six-frame order
+-- (down 0, up 2, left 4, :1942-1951).
+function Export3.surfBlob(cache, cacheRoot, FX, love)
+  if type(cache) ~= "table" or type(cacheRoot) ~= "string" or type(love) ~= "table" then return nil end
+  local root = cacheRoot .. "/field_effects/"
+  local okRead, src = pcall(cache.read, cache, root .. "objects.lua")
+  local chunk = okRead and type(src) == "string" and load(src, "@field_effects/objects.lua", "t", {}) or nil
+  local okRun, man = pcall(chunk or function() return nil end)
+  local o
+  if okRun and type(man) == "table" then
+    for _, list in ipairs({ man.objects or {}, man.extras or {} }) do
+      for _, e in pairs(list) do
+        if type(e) == "table" and e.name == "surf_blob" then o = e end
+      end
+    end
+  end
+  if type(FX) == "table" and type(FX.manifestObject) == "function" and not o then
+    local okO, found = pcall(FX.manifestObject, "surf_blob")
+    if okO and type(found) == "table" then o = found end
+  end
+  local fw, fh, n = tonumber(o and o.fw), tonumber(o and o.fh), tonumber(o and o.frames)
+  if not (o and type(o.rgba) == "string" and fw and fh and n and n >= 1 and fw <= 64 and fh <= 64) then return nil end
+  local okRgba, rgba = pcall(cache.read, cache, root .. o.rgba)
+  if not (okRgba and type(rgba) == "string" and #rgba == fw * fh * n * 4) then return nil end
+  local pick = {}
+  for d = 1, 3 do
+    local seq = type(o.anims) == "table" and o.anims[d] or nil
+    local cmd = type(seq) == "table" and seq[1] or nil
+    local f = type(cmd) == "table" and tonumber(cmd[2]) or nil
+    if f == nil and n >= 6 then f = (d - 1) * 2 end
+    pick[d] = (f and f >= 0 and f < n) and math.floor(f) or 0
+  end
+  local rows = {}
+  local frameBytes = fw * fh * 4
+  for d = 1, 3 do
+    rows[d] = rgba:sub(pick[d] * frameBytes + 1, (pick[d] + 1) * frameBytes)
+  end
+  local ok, data = pcall(love.image.newImageData, fw, fh * 3, "rgba8", table.concat(rows))
+  if not ok or not data then return nil end
+  return { w = math.floor(fw), h = math.floor(fh), data = data }
+end
 
 local floor, char, byte = math.floor, string.char, string.byte
 local concat, sort = table.concat, table.sort
@@ -59,6 +185,15 @@ function Export3.install(b)
   end
 
   local function u16(v) return char(v % 256, floor(v / 256) % 256) end
+
+  -- An object graphics id's name, as the observer names a puppet's sprite (observe.lua spriteOf): the engine's
+  -- OBJ_EVENT_GFX_ constant, else OBJ_EVENT_GFX_<id>; the map objects, the sheets and the puppets share it (item 8).
+  local function gfxName(C, gid)
+    local name = C and b.ask(C, "name", nil, C, "event_objects", gid, "OBJ_EVENT_GFX_") or nil
+    if type(name) == "string" and not name:find("^OBJ_EVENT_GFX_") then name = "OBJ_EVENT_GFX_" .. name end
+    if b.symbol(name) then return name end
+    return ("OBJ_EVENT_GFX_%d"):format(gid)
+  end
 
   -- A layer's 8x8 quarter q (0-3) of slot s as 256 RGBA bytes, and whether
   -- any pixel of it is opaque.
@@ -145,8 +280,7 @@ function Export3.install(b)
         local gid = tonumber(d.graphicsId or d.gfx)
         local x, y = tonumber(d.x), tonumber(d.y)
         if lid and lid >= 1 and lid <= 254 and lid ~= 127 and gid and x and y then
-          local gfx = C and b.ask(C, "name", nil, C, "event_objects", gid, "OBJ_EVENT_GFX_") or nil
-          if not b.symbol(gfx) then gfx = ("OBJ_EVENT_GFX_%d"):format(gid) end
+          local gfx = gfxName(C, gid)
           local kind = "person"
           if gfx:find("ITEM_BALL", 1, true) then kind = "item"
           elseif gfx:find("BOULDER", 1, true) then kind = "boulder"
@@ -261,6 +395,9 @@ function Export3.install(b)
               connections = json.array(conns), warps = json.array(warps), objects = json.array(objectsOf(map, mdef, C)),
               mapType = floor(tonumber(mdef.mapType) or 0) % 256, kind = kind,
               music = floor(tonumber(mdef.music) or 0) % 65536, weather = floor(tonumber(mdef.weather) or 0) % 256,
+              -- item 8: a cave that needs Flash (the map header's cave flag, FieldView.defaultFlashLevel's
+              -- mapIsCave, src/core/game3/field_view.lua:1484-1487)
+              dark = Export3.dark(mdef) or nil,
             })
           end
         else
@@ -294,6 +431,14 @@ function Export3.install(b)
       page, pageNo = {}, pageNo + 1
       checkpoint()
     end
+    -- a quarter of its own (an animated quarter's still frame): never shared with a static quarter of the same pixels
+    local function newQuarter(bytes)
+      local id = nextId
+      nextId = nextId + 1
+      page[#page + 1] = bytes
+      if #page >= Export3.PAGE then flush() end
+      return id
+    end
     local function idOf(bytes)
       local h = love.data.hash("md5", bytes)
       local id = known[h]
@@ -315,6 +460,146 @@ function Export3.install(b)
       return landOf[bv]
     end
 
+    -- ---- item 8: a pair's animated metatiles, from the engine's animation manifest (src/core/game3/tileset_anim.lua:
+    -- 50-64 read_manifest, :66-78 rse_luts, :80-101 rse_bank): per metatile and quarter the banks that paste into it
+    -- (each bank's metatiles, quads masks, under or over layer), with the pair's colour tables. A palette bank (one pair
+    -- in Emerald) is left out.
+    local Anim, Pal = b.g3("tileset_anim"), b.g3("palette")
+    local animKnown, anims, animCounts = {}, {}, { pairs = 0, quarters = 0, palette = 0 }
+    local function pairAnimations(pair)
+      if type(Anim) ~= "table" or type(Anim.rseFrame) ~= "function" or type(Pal) ~= "table" then return nil end
+      local okR, src = pcall(cache.read, cache, nativeRoot .. "/" .. pair .. "/anim_manifest.lua")
+      local chunk = okR and type(src) == "string" and load(src, "@anim_manifest.lua", "t", {}) or nil
+      local okM, man = pcall(chunk or function() return nil end)
+      if not (okM and type(man) == "table" and man.family == "rse" and type(man.banks) == "table") then return nil end
+      local okP, pals = pcall(cache.read, cache, nativeRoot .. "/" .. pair .. "/palettes.bin")
+      local okL, rgb = false, nil
+      if okP and type(pals) == "string" then okL, rgb = pcall(Pal.load, pals) end
+      if not (okL and type(rgb) == "table") then return nil end
+      local under, over = {}, {}
+      for v = 0, 255 do
+        local pal = rgb[floor(v / 16) % 16] or rgb[0]
+        local c = type(pal) == "table" and pal[v % 16] or nil
+        c = type(c) == "table" and c or { 0, 0, 0 }
+        under[v] = char(floor(c[1] or 0), floor(c[2] or 0), floor(c[3] or 0), 255)
+        over[v] = v == 0 and char(0, 0, 0, 0) or under[v]
+      end
+      local pMax, sMax = Export3.counterMaxes(man)
+      local byMid, blobs = {}, {}
+      for _, row in ipairs(man.banks) do
+        if row.kind == "palette" then
+          animCounts.palette = animCounts.palette + 1
+        elseif (tonumber(row.frames) or 0) >= 2 and (tonumber(row.period) or 0) >= 1 then
+          local max = row.counter == "secondary" and sMax or pMax
+          for layer = 1, 2 do
+            local file = layer == 1 and row.file or row.overFile
+            local list = layer == 1 and row.mids or row.overMids
+            local quads = layer == 1 and row.quads or row.overQuads
+            if type(file) == "string" and type(list) == "table" and #list > 0 then
+              if blobs[file] == nil then
+                local okB, bl = pcall(cache.read, cache, nativeRoot .. "/" .. pair .. "/" .. file)
+                blobs[file] = okB and type(bl) == "string" and bl or false
+              end
+              local data = blobs[file]
+              if data then
+                for k, mid in ipairs(list) do
+                  local mask = type(quads) == "table" and tonumber(quads[k]) or 15
+                  for q = 0, 3 do
+                    if floor(mask / 2 ^ q) % 2 == 1 then
+                      byMid[mid] = byMid[mid] or {}
+                      local entries = byMid[mid][q] or {}
+                      byMid[mid][q] = entries
+                      entries[#entries + 1] = { row = row, max = max, over = layer == 2, k = k, n = #list, blob = data }
+                    end
+                  end
+                end
+              end
+            end
+          end
+        end
+      end
+      return { byMid = byMid, under = under, over = over }
+    end
+
+    -- Frame f of a bank's k-th metatile, quarter q, as 256 RGBA bytes through the pair's colours (rse_piece and
+    -- rse_paste, src/core/game3/tileset_anim.lua:129-154, :156-187: 16x16 indexed pieces, frame after frame), or nil
+    -- past the frames' end.
+    local function piece(A, e, f, q)
+      local base = (f * e.n + (e.k - 1)) * 256
+      if #e.blob < base + 256 then return nil end
+      local lut = e.over and A.over or A.under
+      local ox, oy = (q % 2) * 8, floor(q / 2) * 8
+      local px = {}
+      for r = 0, 7 do
+        local at = base + (oy + r) * 16 + ox
+        for c = 1, 8 do px[#px + 1] = lut[byte(e.blob, at + c)] end
+      end
+      return concat(px)
+    end
+
+    -- An animated quarter: its frames flattened as the still one is, a quarter of its own whose page holds its first
+    -- frame, and its loop for g3anims; or nil when its frames never differ. Quarters touched by the same banks share
+    -- their loop's runs (segsOf).
+    local segsOf = {}
+    local function animatedQuarter(A, entries, q, u, m, o)
+      local sig = {}
+      for i, e in ipairs(entries) do sig[i] = tostring(e.row) .. (e.over and "o" or "u") .. e.max end
+      sig = concat(sig, ",")
+      local segs = segsOf[sig]
+      if segs == nil then
+        segs = Export3.segments(entries, Anim.rseFrame) or false
+        segsOf[sig] = segs
+      end
+      if not segs then return nil end
+      local frameOf, flats, seq = {}, {}, {}
+      for _, sg in ipairs(segs) do
+        local fi = frameOf[sg.key]
+        if not fi then
+          local uu, oo = u, o
+          if sg.under then uu = piece(A, entries[sg.under[1]], sg.under[2], q) or u end
+          if sg.over then oo = piece(A, entries[sg.over[1]], sg.over[2], q) or o end
+          fi = #flats + 1
+          flats[fi] = flatten(uu, m, oo)
+          frameOf[sg.key] = fi
+        end
+        seq[#seq + 1] = { fi - 1, sg.len }
+      end
+      -- each distinct picture once (two looks may draw the same pixels), the runs merged where they now meet; every
+      -- loop starts at the counters' 0, so quarters stay in step
+      local ids, slotOf, remap = {}, {}, {}
+      for i, flat in ipairs(flats) do
+        local qid = idOf(flat)
+        if not slotOf[qid] then
+          ids[#ids + 1] = qid
+          slotOf[qid] = #ids - 1
+        end
+        remap[i - 1] = slotOf[qid]
+      end
+      if #ids < 2 then return nil end
+      local runs = {}
+      for _, sq in ipairs(seq) do
+        local fi = remap[sq[1]]
+        if #runs > 0 and runs[#runs][1] == fi then
+          runs[#runs][2] = runs[#runs][2] + sq[2]
+        else
+          runs[#runs + 1] = { fi, sq[2] }
+        end
+      end
+      local parts = {}
+      for i, r in ipairs(runs) do parts[i] = r[1] .. ":" .. r[2] end
+      local key = concat(ids, ",") .. "|" .. concat(parts, ",")
+      local id = animKnown[key]
+      if not id then
+        id = newQuarter(flats[1])
+        animKnown[key] = id
+        local s2 = {}
+        for i, r in ipairs(runs) do s2[i] = json.array({ r[1], r[2] }) end
+        anims[#anims + 1] = { q = id, f = json.array(ids), s = json.array(s2) }
+      end
+      animCounts.quarters = animCounts.quarters + 1
+      return id
+    end
+
     for _, pair in ipairs(sortedKeys(byPair)) do
       local ok, out = pcall(Decode.pair, cache, nativeRoot, pair)
       if not ok or type(out) ~= "table" or type(out.midToSlot) ~= "table" then
@@ -333,6 +618,8 @@ function Export3.install(b)
           local atlasW = cols * 16
           local beh = type(behaviors[pair]) == "table" and behaviors[pair] or {}
           local mids = sortedKeys(out.midToSlot)
+          local A = pairAnimations(pair)
+          if A then animCounts.pairs = animCounts.pairs + 1 end
           local midList, quarters, behList, overList, names = {}, {}, {}, {}, json.object()
           local landSeen, landList = {}, {}
           for _, mid in ipairs(mids) do
@@ -345,8 +632,14 @@ function Export3.install(b)
                 if raws.middle then m, mOpaque = quarterOf(raws.middle, atlasW, cols, s, q) end
                 if raws.over then o, oOpaque = quarterOf(raws.over, atlasW, cols, s, q) end
                 if oOpaque then anyOver = true end
-                local flat = (mOpaque or oOpaque) and flatten(u, mOpaque and m or nil, oOpaque and o or nil) or u
-                qs[q + 1] = idOf(flat)
+                local entries = A and A.byMid[mid] and A.byMid[mid][q] or nil
+                local animated = entries and animatedQuarter(A, entries, q, u, mOpaque and m or nil, o) or nil
+                if animated then
+                  qs[q + 1] = animated
+                else
+                  local flat = (mOpaque or oOpaque) and flatten(u, mOpaque and m or nil, oOpaque and o or nil) or u
+                  qs[q + 1] = idOf(flat)
+                end
               end
               local bv = floor(tonumber(beh[mid]) or 0) % 256
               midList[#midList + 1], quarters[#quarters + 1] = mid, qs
@@ -372,6 +665,22 @@ function Export3.install(b)
       checkpoint()
     end
     flush()
+    -- item 8: the animated quarters' frames (quarter ids) and loops (frame, GBA frames)
+    put("g3anims", "all", { id = "all", anims = json.array(anims) })
+    if b.log then
+      b.log.info("export.g3_anims", { pairs = animCounts.pairs, animated = #anims, quarters = animCounts.quarters,
+                                      palette = animCounts.palette })
+    end
+
+    -- ---- the surf blob (item 8): a field effect's sheet, not an object event's (src/core/game3/field_effects.lua:
+    -- 352-385 load_sheet, :1923-1951 the facing's frame), as a sprite of three frames facing down, up and left
+    local blob = Export3.surfBlob(cache, cacheRoot, b.g3("field_effects"), love)
+    if blob then
+      put("g3sprite", Export3.SURF_BLOB, { id = Export3.SURF_BLOB, w = blob.w, h = blob.h, frames = 3, png = png(blob.data) })
+      if blob.data.release then blob.data:release() end
+    else
+      warn("g3_surf_blob_missing")
+    end
 
     -- ---- sprites: the object-event sheets (ow_extract's manifest, AssetDecode.sprite)
     local owRoot = cacheRoot .. "/ow"
@@ -387,8 +696,7 @@ function Export3.install(b)
     for _, gid in ipairs(sortedKeys(type(manifest.sprites) == "table" and manifest.sprites or {})) do
       local okS, meta = pcall(Decode.sprite, cache, owRoot, gid)
       if okS and type(meta) == "table" and meta.imageData then
-        local name = C and b.ask(C, "name", nil, C, "event_objects", gid, "OBJ_EVENT_GFX_") or nil
-        if not b.symbol(name) then name = ("OBJ_EVENT_GFX_%d"):format(gid) end
+        local name = gfxName(C, gid)
         if spriteIds[name] then name = ("%s_%d"):format(name, gid):sub(1, 64) end
         spriteIds[name] = true
         put("g3sprite", name, { id = name, gid = floor(gid), w = meta.width, h = meta.height,

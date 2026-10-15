@@ -12,7 +12,10 @@ import dev.kantobridge.builder.TestData;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 
-/** MG7 (G3D): the Gen 3 export's typed readers on the synthetic Gen 3 bundle (tools/fake_gen1/synth3.py). */
+/**
+ * MG7 (G3D): the Gen 3 export's typed readers on the synthetic Gen 3 bundle (tools/fake_gen1/synth3.py); item 8's
+ * animated quarters, sheets and dark maps.
+ */
 class G3ReadersTest {
 	@Test
 	void theSyntheticGen3BundleOpensAndReadsAsGen3() throws Exception {
@@ -74,6 +77,36 @@ class G3ReadersTest {
 		assertArrayEquals(new byte[] {(byte) 0x89, 'P', 'N', 'G'}, java.util.Arrays.copyOf(page.png(), 4));
 		G3Data.Sprite person = bundle.g3sprite("OBJ_EVENT_GFX_TEST_PERSON");
 		assertEquals(9, person.frames());
+		// item 8: the animated water, the surf blob's sheet (no graphics id), an object of one look; no dark map
+		G3Data.Anims anims = bundle.g3anims();
+		assertEquals(4, anims.byQuarter().size());
+		for (int q : a.quarters(2)) {
+			G3Data.Anims.Anim anim = anims.byQuarter().get(q);
+			assertNotNull(anim, "the water's quarters animate");
+			assertEquals(2, anim.frames().length);
+			assertArrayEquals(new int[] {0, 16}, anim.loop()[0]);
+			assertArrayEquals(new int[] {1, 16}, anim.loop()[1]);
+		}
+		assertEquals(-1, bundle.g3sprite(G3Data.Sprite.SURF_BLOB).gid());
+		assertEquals(3, bundle.g3sprite(G3Data.Sprite.SURF_BLOB).frames());
+		assertEquals(1, bundle.g3sprite("OBJ_EVENT_GFX_TEST_ITEM_BALL").frames());
+		assertFalse(town.dark() || house.dark());
+	}
+
+	@Test
+	void animatedQuartersReadAndRefuseWhatTheyCannotPlay() throws Exception {
+		G3Data.Anims anims = G3Data.Anims.parse(dev.kantobridge.world.DataReader.of(com.google.gson.JsonParser.parseString(
+				"{\"id\":\"all\",\"anims\":[{\"q\":40,\"f\":[3,4],\"s\":[[0,8],[1,8]]}]}").getAsJsonObject(), "g3anims"));
+		assertArrayEquals(new int[] {3, 4}, anims.byQuarter().get(40).frames());
+		for (String bad : List.of("{\"id\":\"all\",\"anims\":[{\"q\":40,\"f\":[3,4],\"s\":[[2,8],[1,8]]}]}",
+				"{\"id\":\"all\",\"anims\":[{\"q\":40,\"f\":[3,4],\"s\":[[0,8]]}]}",
+				"{\"id\":\"all\",\"anims\":[{\"q\":40,\"f\":[3],\"s\":[[0,8],[0,8]]}]}",
+				"{\"id\":\"all\",\"anims\":[{\"q\":40,\"f\":[3,4],\"s\":[[0,0],[1,8]]}]}",
+				"{\"id\":\"other\",\"anims\":[]}")) {
+			com.google.gson.JsonObject json = com.google.gson.JsonParser.parseString(bad).getAsJsonObject();
+			assertThrows(dev.kantobridge.world.DataException.class,
+					() -> G3Data.Anims.parse(dev.kantobridge.world.DataReader.of(json, "g3anims")), bad);
+		}
 	}
 
 	@Test

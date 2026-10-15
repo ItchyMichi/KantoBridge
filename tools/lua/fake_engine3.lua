@@ -300,6 +300,7 @@ function FakeEngine3.new(opts)
   local EM_FLAGS = {
     FLAG_TEST_ONE = 0x101, FLAG_TEST_TWO = 0x102, FLAG_TEST_THREE = 0x103,
     FLAG_SYS_POKEMON_GET = 0x210, FLAG_SYS_GAME_CLEAR = 0x214,
+    FLAG_SYS_USE_FLASH = 0x230,  -- item 8: Flash in use
   }
   local BADGE_NAMES = { "STONE", "KNUCKLE", "DYNAMO", "HEAT", "BALANCE", "FEATHER", "MIND", "RAIN" }
   local badges = {}

@@ -717,6 +717,7 @@
   "exports": {
     "encounters": {"schema": "export/encounters.schema.json"},
     "field": {"schema": "export/field.schema.json"},
+    "g3anims": {"schema": "export/g3anims.schema.json"},
     "g3encounters": {"schema": "export/g3encounters.schema.json"},
     "g3image": {"schema": "export/g3image.schema.json"},
     "g3layout": {"schema": "export/g3layout.schema.json"},

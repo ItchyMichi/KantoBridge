@@ -171,6 +171,31 @@ def test_badge_items_come_from_the_flag_tables_with_the_fallback():
     assert plain(a.eng.darkMaps()) == {}
 
 
+def test_dark_maps_are_the_caves_that_need_flash_and_flash_lights_them():
+    """Item 8: darkMaps lists the maps whose header has the cave flag (FieldView's mapIsCave); the view's flashLit
+    and the facts follow FLAG_SYS_USE_FLASH (FieldView's flashActive), the facts' darkMap the current map."""
+    a = Adapter3()
+    a.E.game.data = a.lua({"maps": {"EM_TEST_CAVE": {"id": "EM_TEST_CAVE", "cave": 1},
+                                    "EM_TEST_DEEP": {"id": "EM_TEST_DEEP", "cave": 1},
+                                    "EM_TEST_TOWN": {"id": "EM_TEST_TOWN", "cave": 0},
+                                    "EM_TEST_HOUSE": {"id": "EM_TEST_HOUSE"}}})
+    assert plain(a.eng.darkMaps()) == ["EM_TEST_CAVE", "EM_TEST_DEEP"]
+    a.field("EM_TEST_CAVE", 3, 4, "up")
+    f = a.facts()
+    assert (f["darkMap"], f["flashLit"]) == (True, False)
+    assert plain(a.eng.saveView())["flashLit"] is False
+    a.E.setFlag(b"FLAG_SYS_USE_FLASH")
+    a.eng.setGame(a.E.game)  # the next logic step
+    assert plain(a.eng.saveView())["flashLit"] is True
+    f = a.facts()
+    assert (f["darkMap"], f["flashLit"]) == (True, True)
+    state = plain(a.b.module("observe/kb_player.lua").state(a.eng.observe()))
+    assert (state["dark"], state["lit"]) == (True, True)
+    a.E.leaveField()
+    a.field("EM_TEST_TOWN")
+    assert a.facts()["darkMap"] is False
+
+
 def test_the_view_is_built_once_per_logic_step():
     a = Adapter3()
     a.field()

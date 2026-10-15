@@ -1,5 +1,6 @@
 """MG7 (GEN3_BRIDGE_PLAN.md §8.4): the synthetic Gen 3 export (fake_gen1.synth3) matches the g3* export schemas,
-its cells, quarters and pages agree, and a Gen 3 game's bundle is written with it."""
+its cells, quarters and pages agree, and a Gen 3 game's bundle is written with it. Item 8: its animated water and
+its sheets."""
 import base64
 import struct
 import zlib
@@ -89,7 +90,31 @@ def test_cells_quarters_and_pages_agree():
     assert rgba[(py * 256 + px) * 4:(py * 256 + px) * 4 + 4] == bytes((10, 40, 10, 255)), "the over plane's pixel"
 
 
+def test_the_water_animates_in_quarters_of_its_own():
+    """Item 8: an animated quarter is never shared with a static one; its frames are quarters on the pages, the first
+    its own page's look."""
+    tiles = RESOURCES[("g3tiles", "TEST_PAIR_A")]
+    anims = {a["q"]: a for a in RESOURCES[("g3anims", "all")]["anims"]}
+    water = tiles["quarters"][tiles["mids"].index(2)]
+    assert set(water) == set(anims) and len(set(water)) == 4
+    static = {q for row in tiles["quarters"] + RESOURCES[("g3tiles", "TEST_PAIR_B")]["quarters"] for q in row} - set(water)
+    assert not static & set(anims)
+    _, _, rgba = _png_rgba(RESOURCES[("g3image", "g3q.0")]["png"])
+
+    def at(q):
+        px, py = (q % 32) * 8, (q // 32) * 8
+        return b"".join(rgba[((py + r) * 256 + px) * 4:((py + r) * 256 + px + 8) * 4] for r in range(8))
+    for q, a in anims.items():
+        assert a["s"] == [[0, 16], [1, 16]] and at(q) == at(a["f"][0]) != at(a["f"][1])
+
+
+def test_the_sprites_include_the_surf_blob_and_an_object_of_one_look():
+    blob = RESOURCES[("g3sprite", "SURF_BLOB")]
+    assert "gid" not in blob and (blob["w"], blob["h"], blob["frames"]) == (32, 32, 3)
+    assert RESOURCES[("g3sprite", "OBJ_EVENT_GFX_TEST_ITEM_BALL")]["frames"] == 1
+
+
 def test_a_gen3_bundle_is_written_with_the_gen3_export(tmp_path):
     root = write_bundle(tmp_path, "emerald")
     kinds = {p.parent.name for p in root.rglob("*.json") if p.name != "index.json"}
-    assert kinds == {"g3map", "g3tiles", "g3image", "g3sprite", "g3layout", "g3encounters", "g3names"}
+    assert kinds == {"g3map", "g3tiles", "g3image", "g3sprite", "g3layout", "g3encounters", "g3names", "g3anims"}

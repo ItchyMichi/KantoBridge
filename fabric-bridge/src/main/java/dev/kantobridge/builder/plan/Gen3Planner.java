@@ -458,7 +458,7 @@ final class Gen3Planner {
 			if (spot != null) {
 				warnings.note("open_air_sky", detail);
 				return new MapPlacement(map.id(), spot.x(), Scale.feetY(spot.layer()), spot.z(), map.w(), map.h(), spot.layer(),
-						MapPlacement.Kind.INTERIOR, QuarterPages.PALETTE, WorldPlan.BIOME_OUTDOOR, false, parent.id());
+						MapPlacement.Kind.INTERIOR, QuarterPages.PALETTE, WorldPlan.BIOME_OUTDOOR, map.dark(), parent.id());
 			}
 			warnings.note("open_air_kept_ceiling", detail);
 		}
@@ -473,8 +473,9 @@ final class Gen3Planner {
 			warnings.note("interior_moved_sideways", detail);
 		}
 		boolean cave = wild || G3Cells.cave(map);
+		// item 8: a cave that needs Flash is dark (no lights; Flash gives Night Vision, FlashService)
 		return new MapPlacement(map.id(), spot.x(), Scale.feetY(spot.layer()), spot.z(), map.w(), map.h(), spot.layer(),
-				MapPlacement.Kind.INTERIOR, QuarterPages.PALETTE, cave ? WorldPlan.BIOME_CAVE : WorldPlan.BIOME_INTERIOR, false, parent.id());
+				MapPlacement.Kind.INTERIOR, QuarterPages.PALETTE, cave ? WorldPlan.BIOME_CAVE : WorldPlan.BIOME_INTERIOR, map.dark(), parent.id());
 	}
 
 	/**

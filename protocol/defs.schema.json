@@ -306,7 +306,8 @@
         "g3sprite",
         "g3layout",
         "g3encounters",
-        "g3names"
+        "g3names",
+        "g3anims"
       ]
     },
     "routeId": {

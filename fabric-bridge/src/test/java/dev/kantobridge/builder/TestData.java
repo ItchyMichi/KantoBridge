@@ -108,8 +108,12 @@ public final class TestData {
 	 * correct hashes and sizes. A resource the bundle already has (e.g. {@code swaps/all}) is replaced.
 	 */
 	public static Path syntheticCopyWith(Path dir, Map<String, com.google.gson.JsonObject> extra) throws java.io.IOException {
-		Path source = syntheticBundle();
-		Path copy = dir.resolve("red");
+		return copyWith(syntheticBundle(), dir, extra);
+	}
+
+	/** {@link #syntheticCopyWith} of any bundle ({@code source}, e.g. {@link #syntheticGen3Bundle}), under its own name. */
+	public static Path copyWith(Path source, Path dir, Map<String, com.google.gson.JsonObject> extra) throws java.io.IOException {
+		Path copy = dir.resolve(source.getFileName().toString());
 		try (java.util.stream.Stream<Path> walk = Files.walk(source)) {
 			for (Path file : walk.toList()) {
 				Path out = copy.resolve(source.relativize(file).toString());

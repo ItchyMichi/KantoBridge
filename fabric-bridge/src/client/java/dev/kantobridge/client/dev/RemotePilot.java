@@ -24,6 +24,7 @@ import dev.kantobridge.client.bridge.Links;
 import dev.kantobridge.client.move.InputLock;
 import dev.kantobridge.client.move.MoveRuntime;
 import dev.kantobridge.client.move.MovementSync;
+import dev.kantobridge.client.puppet.PuppetRuntime;
 import dev.kantobridge.client.ui.ChoiceModel;
 import dev.kantobridge.client.ui.Keybinds;
 import dev.kantobridge.client.ui.MenuModel;
@@ -975,6 +976,15 @@ final class RemotePilot {
 			counts.addProperty("timeouts", pass.stats().timeouts);
 			counts.addProperty("server_errors", pass.stats().serverErrors);
 			out.add("pass", counts);
+		}
+		PuppetRuntime puppets = PuppetRuntime.get();
+		if (puppets != null) {
+			// the people on the followed map, and the sprites the pack had no sheet for (drawn as the placeholder)
+			JsonObject counts = new JsonObject();
+			counts.addProperty("shown", puppets.manager().size());
+			counts.addProperty("map", puppets.manager().map());
+			counts.addProperty("missing_sheets", puppets.textures().missing());
+			out.add("puppets", counts);
 		}
 		ClientBattle battle = CobblemonClient.INSTANCE.getBattle();
 		out.addProperty("battle", battle != null);

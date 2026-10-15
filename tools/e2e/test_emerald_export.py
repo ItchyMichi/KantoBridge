@@ -5,9 +5,10 @@ The game stays at its title (drivers/kb_emerald.lua, scene title_new, on a fresh
 export reads the imported data, not a save. The test asks for export.index, fetches every resource, and checks that
 every message passes its schema (strict), every resource passes protocol/export/<kind>.schema.json, and every hash
 and size equals Python's canonical JSON + SHA-256 of the data received. It then checks the counts against the
-measurement (tools/e2e/test_g3_measure.py: 519 maps, 75 pairs, 239 sprite sheets), that the surface layout agrees
-with every connection between placed maps, and that every quarter id a pair names is on a page; a counts-only
-report goes to local/reports/emerald_export_report.json.
+measurement (tools/e2e/test_g3_measure.py: 519 maps, 75 pairs, 239 sprite sheets; item 8 adds the surf blob's), that
+the surface layout agrees with every connection between placed maps, and that every quarter id a pair names is on a
+page; item 8: the 7 caves that need Flash are dark, animated quarters are named by tiles and their frames are on
+pages. A counts-only report goes to local/reports/emerald_export_report.json.
 
 Data safety: only kinds, ids (engine symbols), counts, sizes, times and hashes are printed or reported. Resources stay
 in memory; assertion messages name keys, never values from the game.
@@ -32,7 +33,7 @@ from run_gen1recomp import INSTALL, REPORTS, launch, preflight
 TEST_PORT = 27221
 GAME = "emerald"
 INDEX_TIMEOUT = int(os.environ.get("KB_EXPORT_INDEX_TIMEOUT", "900"))
-KINDS = {"g3map", "g3tiles", "g3image", "g3sprite", "g3layout", "g3encounters", "g3names"}
+KINDS = {"g3map", "g3tiles", "g3image", "g3sprite", "g3layout", "g3encounters", "g3names", "g3anims"}
 OPPOSITE = {"north": "south", "south": "north", "east": "west", "west": "east"}
 
 
@@ -144,6 +145,10 @@ def _report(got):
         if k == "g3image":
             raw = base64.b64decode(d["png"])
             page_dims.add(struct.unpack(">II", raw[16:24]))
+    # item 8: the animated quarters (ids, counts and loop lengths only)
+    anims = next((d for (k, _), d in pages.items() if k == "g3anims"), {"anims": []})["anims"]
+    animated = {a["q"] for a in anims}
+    anim_frames = {f for a in anims for f in a["f"]}
     encounters = next(d for (k, _), d in pages.items() if k == "g3encounters")
     enc = encounters["maps"]
     names = next(d for (k, _), d in pages.items() if k == "g3names")
@@ -180,6 +185,14 @@ def _report(got):
         # Littleroot's cells (collision bytes only)
         "routes": next((d for (k, _), d in pages.items() if k == "routes"), None),
         "clearing_colls": _colls(maps.get("EM_LITTLEROOT_TOWN"), [(x, y) for y in (16, 17, 18, 19) for x in (18, 19)]),
+        # item 8
+        "dark_maps": sorted(i for i, m in maps.items() if m.get("dark")),
+        "animated_quarters": len(animated), "animated_in_tiles": len(animated & quarters),
+        "anim_frames": len(anim_frames),
+        "anim_on_pages": all(q // 1024 in page_ids for q in anim_frames | animated),
+        "anim_loop_lengths": dict(Counter(sum(step[1] for step in a["s"]) for a in anims)),
+        "anim_frame_counts": dict(Counter(len(a["f"]) for a in anims)),
+        "sheets_without_gid": sorted(i for (k, i), d in pages.items() if k == "g3sprite" and "gid" not in d),
     }
 
 
@@ -210,9 +223,9 @@ def test_the_emerald_export_end_to_end():
     print("emerald export report:", json.dumps(report, sort_keys=True))
     assert not result.timed_out and result.returncode == 0, result.summary()
     assert result.marker("KB_FAIL") is None and not result.error_spots
-    # the measurement (GEN3_BRIDGE_PLAN §5): 519 maps, 75 pairs, 239 sheets
+    # the measurement (GEN3_BRIDGE_PLAN §5): 519 maps, 75 pairs, 239 sheets (item 8: and the surf blob's)
     assert report["counts"]["g3map"] == 519 and report["counts"]["g3tiles"] == 75, report["counts"]
-    assert report["counts"]["g3sprite"] == 239, report["counts"]
+    assert report["counts"]["g3sprite"] == 240, report["counts"]
     assert report["bad_cell_sizes"] == 0 and report["cells"] == 316337
     assert report["quarters_on_pages"] and report["page_dims"] == [(256, 256)]
     # Hoenn's surface from Littleroot as the engine places it (Map.computeWorld): 49 maps (Sootopolis is reached by
@@ -233,3 +246,9 @@ def test_the_emerald_export_end_to_end():
                             "back": {"x": 18, "y": 18, "facing": "up"}}, item["town"]
     assert item["routeMap"]["id"] == "KB_ROUTE_KANTO_HOENN_TEST_TO"
     assert report["clearing_colls"] == [0] * 8, report["clearing_colls"]
+    # item 8: the caves that need Flash (the headers' cave flag, measured: 7), the animated tiles, the surf blob
+    assert len(report["dark_maps"]) == 7, report["dark_maps"]
+    assert report["animated_quarters"] > 0 and report["animated_in_tiles"] == report["animated_quarters"]
+    assert report["anim_on_pages"]
+    assert report["sheets_without_gid"] == ["SURF_BLOB"]
+    assert not [line for line in report["bridge_warning_lines"] if "g3_surf_blob_missing" in line]

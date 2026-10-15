@@ -6,10 +6,12 @@ import dev.kantobridge.builder.export.ExportBundle;
 import dev.kantobridge.builder.export.ExportImage;
 import dev.kantobridge.builder.export.ExportPalettes;
 import dev.kantobridge.builder.export.ExportTileset;
+import dev.kantobridge.builder.export.G3Data;
 import dev.kantobridge.builder.plan.ArtCatalog;
 import dev.kantobridge.builder.plan.Warnings;
 import dev.kantobridge.builder.plan.WorldPlan;
 import dev.kantobridge.proto.ProtoJson;
+import dev.kantobridge.scene.gen3.QuarterPages;
 import dev.kantobridge.world.SlotMap;
 import java.io.IOException;
 import java.nio.file.Path;
@@ -37,7 +39,10 @@ import org.jetbrains.annotations.Nullable;
  * </ul>
  *
  * <p>A Gen 3 export's catalogue is baked (MG7, {@link ArtCatalog#baked}): each tile texture is its quarter page's own
- * pixels ({@link BakedTextures}), without a palette or animations; its NPC and surf sheets come later.
+ * pixels ({@link BakedTextures}), without a palette. Since the follow-up's item 8 an animated quarter ({@code g3anims})
+ * is a vertical strip of its frames with an {@code .mcmeta} of its loop, and the NPC sheets and the surf sheet come from
+ * the export's {@code g3sprite} sheets in the generated layout ({@link BakedTextures#sheet}), under the one palette
+ * {@link QuarterPages#PALETTE}.
  *
  * <p>The client's runtime model draws the tile blocks: no blockstate or model file is written. The art comes from this
  * player's own export and never leaves the machine.
@@ -154,6 +159,8 @@ public final class ResourcePackWriter {
 		int tileTextures = 0;
 		int animated = 0;
 		int blank = 0;
+		// item 8: a Gen 3 export's animated quarters (none before them)
+		Map<Integer, G3Data.Anims.Anim> quarterAnims = art.baked() ? bundle.g3anims().byQuarter() : Map.of();
 		for (SlotMap.Key key : slotMap.slots().keySet()) {
 			String path = ArtKeys.textureFile(artSet, key.atlas(), key.palette(), key.tile());
 			String owner = key.atlas() + "|" + key.palette() + "|" + key.tile();
@@ -173,7 +180,17 @@ public final class ResourcePackWriter {
 					blank++;
 					argb = new int[64];
 				}
-				files.put(path, Png.encode(BakedTextures.tile(argb)));
+				int quarter = QuarterPages.quarter(key.atlas(), key.tile());
+				G3Data.Anims.Anim anim = quarter < 0 ? null : quarterAnims.get(quarter);
+				Png.Image strip = anim == null ? null : bakedStrip(bundle, atlases, anim, warnings);
+				if (strip != null) {
+					// item 8: its frames, one below the other, and its loop in Minecraft ticks
+					files.put(path, Png.encode(strip));
+					files.put(path + ".mcmeta", BakedTextures.loopMeta(anim.loop()));
+					animated++;
+				} else {
+					files.put(path, Png.encode(BakedTextures.tile(argb)));
+				}
 				tileTextures++;
 				continue;
 			}
@@ -211,6 +228,11 @@ public final class ResourcePackWriter {
 			tileTextures++;
 		}
 		warnings.note("tile_outside_atlas", blank);
+
+		// ---- item 8: a Gen 3 export's NPC sheets and surf sheet, from its g3sprite sheets ----
+		if (art.baked()) {
+			return new int[] {tileTextures, bakedSheets(bundle, artSet, files, warnings), animated};
+		}
 
 		// ---- NPC textures: each sprite in the palette of every map it appears on ----
 		int npcTextures = 0;
@@ -257,6 +279,53 @@ public final class ResourcePackWriter {
 		}
 
 		return new int[] {tileTextures, npcTextures, animated};
+	}
+
+	/**
+	 * An animated quarter's frames (item 8) as a 16×(16·n) strip, each frame its own quarter of the pages, or null when a
+	 * frame's page can't be read.
+	 */
+	private static Png.@Nullable Image bakedStrip(ExportBundle bundle, Map<String, Png.Image> pages, G3Data.Anims.Anim anim, Warnings warnings) {
+		List<int[]> frames = new ArrayList<>();
+		for (int frame : anim.frames()) {
+			String atlas = QuarterPages.page(frame);
+			Png.Image page = pages.computeIfAbsent(atlas, id -> decodePage(bundle, id, warnings));
+			int[] argb = page == null ? null : BakedTextures.quarter(page, QuarterPages.PER_ROW, QuarterPages.index(frame));
+			if (argb == null) {
+				warnings.warn("anim_frame_missing");
+				return null;
+			}
+			frames.add(argb);
+		}
+		return BakedTextures.strip(frames);
+	}
+
+	/**
+	 * A Gen 3 export's NPC sheets (item 8): every object-event sheet in the generated layout under the one palette
+	 * {@link QuarterPages#PALETTE}, and the surf blob as the surfing sheet. Returns how many were written.
+	 */
+	private static int bakedSheets(ExportBundle bundle, String artSet, PackFiles files, Warnings warnings) throws BundleException {
+		int written = 0;
+		for (String id : bundle.ids("g3sprite")) {
+			G3Data.Sprite sprite = bundle.g3sprite(id);
+			Png.Image strip;
+			try {
+				strip = Png.decode(sprite.png());
+			} catch (IOException e) {
+				warnings.warn("sprite_unreadable");
+				continue;
+			}
+			Png.Image sheet = BakedTextures.sheet(strip, sprite.w(), sprite.h(), sprite.frames());
+			if (sheet == null) {
+				warnings.warn("sprite_unreadable");
+				continue;
+			}
+			String file = G3Data.Sprite.SURF_BLOB.equals(id) ? ArtKeys.surfTexture(artSet, QuarterPages.PALETTE)
+					: ArtKeys.npcTexture(artSet, QuarterPages.PALETTE, id);
+			files.put(ArtKeys.file(file), Png.encode(sheet));
+			written++;
+		}
+		return written;
 	}
 
 	/** The block-atlas sprite id of a slot key's tile in an art set: one texture per (atlas, palette, tile), both shapes. */

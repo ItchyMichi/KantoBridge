@@ -42,10 +42,12 @@ import org.junit.jupiter.api.Test;
 class Gen3PlanTest {
 	private static ExportBundle bundle;
 	private static WorldPlan plan;
+	private static G3Data.Anims anims;
 
 	@BeforeAll
 	static void plan() throws Exception {
 		bundle = ExportBundle.open(TestData.syntheticGen3Bundle());
+		anims = bundle.g3anims();
 		plan = WorldPlanner.plan(bundle, new WorldPlanner.Options(null, TestData.G3_ORIGIN_X, TestData.G3_ORIGIN_Z, TestData.MIN_BUILD_HEIGHT, false));
 	}
 
@@ -165,13 +167,22 @@ class Gen3PlanTest {
 	void theSlotMapKeysQuarterPages() {
 		SlotMap slots = plan.slotMap();
 		long half = slots.slots().keySet().stream().filter(k -> k.shape() == SlotMap.Shape.HALF).count();
-		// synth3's quarters: 32 shown on land and borders, 4 on water (half height)
+		// synth3's quarters: 32 shown on land and borders, 4 on water (half height; item 8: animated quarters, whose frames
+		// are quarters too but never shown as themselves, so no slot's)
 		assertEquals(32, slots.slots().size() - half);
 		assertEquals(4, half);
+		java.util.Set<Integer> frames = new java.util.HashSet<>();
+		for (G3Data.Anims.Anim anim : anims.byQuarter().values()) {
+			for (int frame : anim.frames()) {
+				frames.add(frame);
+			}
+		}
 		for (SlotMap.Key key : slots.slots().keySet()) {
 			assertEquals("g3q.0", key.atlas());
 			assertEquals(QuarterPages.PALETTE, key.palette());
-			assertTrue(key.tile() < 36);
+			assertTrue(key.tile() < 44);
+			assertFalse(frames.contains(key.tile()), "a frame is no slot's");
+			assertEquals(key.shape() == SlotMap.Shape.HALF, anims.byQuarter().containsKey(key.tile()), "the water animates");
 		}
 		assertTrue(plan.art().baked());
 		assertEquals(32, plan.art().tilesPerRow("g3q.0"));
@@ -238,8 +249,30 @@ class Gen3PlanTest {
 		Warnings warnings = new Warnings();
 		ResourcePackWriter.Result result = ResourcePackWriter.generate(plan.art(), bundle, files, warnings);
 		assertEquals(36, result.tileTextures(), "one texture per quarter, both shapes");
-		assertEquals(0, result.npcTextures());
 		assertEquals(0, warnings.total(), warnings.warnings().toString());
+		// item 8: the water's four animated quarters: their frames one below the other, the loop in ticks
+		assertEquals(4, result.animated());
+		int[] water = bundle.g3tiles("TEST_PAIR_A").quarters(2);
+		String strip = ArtKeys.textureFile("emerald", "g3q.0", QuarterPages.PALETTE, water[0]);
+		Png.Image frames = Png.decode(files.files().get(strip));
+		assertEquals(16, frames.width());
+		assertEquals(32, frames.height(), "two frames");
+		assertTrue(frames.get(0, 16) != frames.get(0, 0), "the second frame is lighter");
+		assertEquals("{\"animation\":{\"frames\":[{\"index\":0,\"time\":5},{\"index\":1,\"time\":6},{\"index\":0,\"time\":5},"
+				+ "{\"index\":1,\"time\":5},{\"index\":0,\"time\":6},{\"index\":1,\"time\":5}]}}",
+				new String(files.files().get(strip + ".mcmeta"), java.nio.charset.StandardCharsets.UTF_8),
+				"16 GBA frames a frame: 32 is no whole number of ticks, so three loops in 32 ticks");
+		int[] ground = bundle.g3tiles("TEST_PAIR_A").quarters(0);
+		assertFalse(files.files().containsKey(ArtKeys.textureFile("emerald", "g3q.0", QuarterPages.PALETTE, ground[0]) + ".mcmeta"));
+		// item 8: the sheets: a person, an object of one look and the surf blob, under the one palette
+		assertEquals(3, result.npcTextures());
+		Png.Image person = Png.decode(files.files().get(ArtKeys.file(ArtKeys.npcTexture("emerald", QuarterPages.PALETTE,
+				"OBJ_EVENT_GFX_TEST_PERSON"))));
+		assertEquals(128, person.width(), "four 32-pixel cells: a 16 x 32 person is one block wide, two tall");
+		assertEquals(64, person.height());
+		Png.Image surf = Png.decode(files.files().get(ArtKeys.file(ArtKeys.surfTexture("emerald", QuarterPages.PALETTE))));
+		assertEquals(128, surf.width());
+		assertTrue(files.files().containsKey(ArtKeys.file(ArtKeys.npcTexture("emerald", QuarterPages.PALETTE, "OBJ_EVENT_GFX_TEST_ITEM_BALL"))));
 		int[] tree = bundle.g3tiles("TEST_PAIR_A").quarters(5);
 		byte[] png = files.files().get(ArtKeys.textureFile("emerald", "g3q.0", QuarterPages.PALETTE, tree[0]));
 		assertNotNull(png);
@@ -249,6 +282,40 @@ class Gen3PlanTest {
 		assertEquals(0xFF0A280A, image.get(0, 0));
 		assertEquals(0xFF0A280A, image.get(1, 1));
 		assertTrue(files.files().containsKey("assets/kantobridge/textures/block/emerald/tile/g3q.0/baked/0000.png"));
+	}
+
+	@Test
+	void aCaveThatNeedsFlashIsPlacedDark(@org.junit.jupiter.api.io.TempDir java.nio.file.Path dir) throws Exception {
+		// item 8: the house as a cave that needs Flash: dark (no lights; Flash gives Night Vision, FlashService)
+		JsonObject house = ProtoJson.parseObject(java.nio.file.Files.readString(TestData.syntheticGen3Bundle().resolve("g3map/EM_TEST_HOUSE.json")));
+		house.addProperty("dark", true);
+		ExportBundle darkBundle = ExportBundle.open(TestData.copyWith(TestData.syntheticGen3Bundle(), dir, Map.of("g3map/EM_TEST_HOUSE", house)));
+		assertTrue(darkBundle.g3map("EM_TEST_HOUSE").dark());
+		WorldPlan dark = WorldPlanner.plan(darkBundle,
+				new WorldPlanner.Options(null, TestData.G3_ORIGIN_X, TestData.G3_ORIGIN_Z, TestData.MIN_BUILD_HEIGHT, false));
+		assertTrue(dark.index().map("EM_TEST_HOUSE").dark());
+		assertFalse(dark.index().map("EM_TEST_TOWN").dark());
+		assertFalse(plan.index().map("EM_TEST_HOUSE").dark());
+		assertTrue(lights(plan, "EM_TEST_HOUSE") > 0, "a lit house has lights");
+		assertEquals(0, lights(dark, "EM_TEST_HOUSE"));
+	}
+
+	private static int lights(WorldPlan plan, String id) {
+		ChunkCodesView view = new ChunkCodesView(plan);
+		MapPlacement map = plan.index().map(id);
+		int n = 0;
+		for (int x = map.x(); x < map.x() + dev.kantobridge.world.Scale.cellToBlock(map.w()); x++) {
+			for (int z = map.z(); z < map.z() + dev.kantobridge.world.Scale.cellToBlock(map.h()); z++) {
+				for (int y = map.y() - 1; y < map.y() + 8; y++) {
+					int code = view.code(x, y, z);
+					if (BlockCode.kind(code) == BlockCode.KIND_LIGHT
+							|| BlockCode.kind(code) == BlockCode.KIND_DECOR && (BlockCode.value(code) & 2) != 0) {
+						n++;
+					}
+				}
+			}
+		}
+		return n;
 	}
 
 	@Test

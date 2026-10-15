@@ -1,5 +1,6 @@
 package dev.kantobridge.builder.export;
 
+import com.google.gson.JsonArray;
 import dev.kantobridge.world.DataException;
 import dev.kantobridge.world.DataReader;
 import java.util.ArrayList;
@@ -152,11 +153,56 @@ public final class G3Data {
 		}
 	}
 
-	/** An object-event sheet ({@code g3sprite}): a vertical strip of {@code frames} frames of {@code w x h}. */
+	/**
+	 * An object-event sheet ({@code g3sprite}): a vertical strip of {@code frames} frames of {@code w x h}; {@code gid} -1 for
+	 * {@link #SURF_BLOB} (the follow-up's item 8: the field effect under a surfing player, frames facing down, up and left).
+	 */
 	public record Sprite(String id, int gid, int w, int h, int frames, byte[] png) {
+		/** The surf blob's sheet. */
+		public static final String SURF_BLOB = "SURF_BLOB";
+
 		static Sprite parse(DataReader r) throws DataException {
-			return new Sprite(r.string("id", SYM), r.integer("gid", 0, 1023), r.integer("w", 1, 256), r.integer("h", 1, 256),
-					r.integer("frames", 1, 512), decodePng(r));
+			return new Sprite(r.string("id", SYM), r.has("gid") ? r.integer("gid", 0, 1023) : -1, r.integer("w", 1, 256),
+					r.integer("h", 1, 256), r.integer("frames", 1, 512), decodePng(r));
+		}
+	}
+
+	/**
+	 * The animated quarters ({@code g3anims}, the follow-up's item 8): per animated quarter id its frames (quarter ids in the
+	 * {@code g3image} pages) and its loop, {@code [frame index, GBA frames]} in order.
+	 */
+	public record Anims(Map<Integer, Anim> byQuarter) {
+		/** One animated quarter's frames and loop. */
+		public record Anim(int[] frames, int[][] loop) {
+		}
+
+		static Anims parse(DataReader r) throws DataException {
+			if (!"all".equals(r.string("id"))) {
+				throw new DataException(r.path("id"), "not all");
+			}
+			Map<Integer, Anim> out = new TreeMap<>();
+			for (DataReader a : DataReader.objects(r.array("anims"), r.path("anims"))) {
+				int q = a.integer("q", 0, 1048575);
+				int[] frames = DataReader.intArray(a.array("f"), a.path("f"), 0, 1048575);
+				if (frames.length < 2) {
+					throw new DataException(a.path("f"), "fewer than two frames");
+				}
+				JsonArray steps = a.array("s");
+				int[][] loop = new int[steps.size()][];
+				for (int i = 0; i < steps.size(); i++) {
+					int[] step = DataReader.intArray(steps.get(i).isJsonArray() ? steps.get(i).getAsJsonArray() : new JsonArray(),
+							a.path("s") + "/" + i, 0, 4096);
+					if (step.length != 2 || step[0] >= frames.length || step[1] < 1) {
+						throw new DataException(a.path("s") + "/" + i, "not [frame, GBA frames]");
+					}
+					loop[i] = step;
+				}
+				if (loop.length < 2) {
+					throw new DataException(a.path("s"), "fewer than two steps");
+				}
+				out.put(q, new Anim(frames, loop));
+			}
+			return new Anims(Collections.unmodifiableMap(out));
 		}
 	}
 

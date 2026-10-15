@@ -141,7 +141,7 @@ public final class Gen3FrontEnd implements GameFrontEnd {
 			objects.add(new SceneMap.SceneObject(object.name(), object.gfx(), object.x(), object.y(), Boolean.TRUE.equals(object.stays()), false, kind));
 		}
 		boolean outdoor = G3Cells.outdoor(map);
-		Env env = new Env(outdoor, outdoor, G3Cells.cave(map), Env.DARK_NEVER, false);
+		Env env = new Env(outdoor, outdoor, G3Cells.cave(map), map.dark() ? Env.DARK_FLASH : Env.DARK_NEVER, false);
 		return new SceneMap(map.id(), index, map.pair(), QuarterPages.VIRTUAL, QuarterPages.PALETTE, w, h, PER_CELL, surface, env, tiles, null, kinds,
 				tags, dirs, border, border, objects, List.of());
 	}

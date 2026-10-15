@@ -2249,6 +2249,47 @@ map about 319,000), and the build's Gen 3 gate (32 parts) was full.
 - Checks: JUnit 1,241 (2 skipped, new `ShapeDocsTest`, `ShapeDocCacheTest`, an offer test in `ClientRegionsTest`),
   GameTests 122 (the multiplayer and region join tests now see offers and ask), tools 682 passed.
 
+**After MG8: the user's item 8, Hoenn's people, the surf blob, animated tiles and darkness** (2026-10-15): measured
+first on the real Emerald (counts only): 7 of the 519 maps are caves that need Flash (the header's cave flag: Granite
+Cave B1F and B2F, Victory Road B1F and B2F, and three unused Cave of Origin maps); 69 of the 75 pairs have tile
+animations (202 tile banks over 6,465 metatiles' under planes and 39 over planes, 1,711 partial quarter masks, 1,115
+metatiles in several banks; periods of 2 to 64 GBA frames, 2 to 16 frames, two counters of up to 256) and one pair a
+palette bank; the surf blob is a field effect (32 × 32, three frames), not an object event.
+- **People and objects:** every `g3sprite` sheet goes into the pack in the generated layout (four facings, standing
+  and walking) under the one palette `baked`, in square cells of 32 pixels (or the frame's larger side), so a 16 × 32
+  person draws one block wide and two tall, the height of Kanto's people. Walkers (9 frames or more) stand on frames
+  0-2 and walk on 3, 5 and 7; a sheet of three faces; any other count keeps frame 0, never mirrored (an item ball; a
+  tree or rock whose other frames are its cut or smash). The export names every graphics id as the observer names a
+  puppet's sprite. The client is unchanged (`SpriteFrames` takes any multiple of 64 × 32).
+- **The surf blob:** the export's `SURF_BLOB` sheet (no `gid`; each facing's first frame of the field effect) becomes
+  `player/<set>/baked/surf.png`, drawn as Kanto's Seel is.
+- **Animated tiles:** the export runs each pair's banks as the engine's `TilesetAnim.stepRse` does (each counter's
+  length, a bank's phase, `rseFrame`, a paste only when the frame changed, so a layer shows the bank that pasted last),
+  over the counters' least common multiple from 0, twice so what the wrap carries is in place; each look is flattened
+  as a still quarter is (the pieces through the pair's colour tables: under opaque, over with index 0 clear). A
+  quarter that changes is a quarter of its own (never shared with a static one; its page holds its first look), listed
+  in the new `g3anims/all` with its frames (ordinary quarters) and loop; quarters alike in both share one. The pack
+  writes it as a strip with an `.mcmeta` in ticks: a step ends on the tick nearest its GBA time (one too short for a
+  tick is left out), and a loop that isn't a whole number of ticks runs three times, so loops of different lengths keep
+  in step.
+- **Darkness:** `g3map.dark` (the cave flag), so the builder places those caves without lights; the adapter's
+  `darkMaps()` lists them and `saveView.flashLit` and the facts' `flashLit` follow `FLAG_SYS_USE_FLASH`, so Flash gives
+  Night Vision there as in Kanto (`story.lit`, FlashService).
+- **Measured** (kb-dev17, PassE2E's Hoenn rebuilt): the export 871 resources, 4.67 MB in 31 s; 15,231 animated quarters
+  in the pairs' metatiles are 935 animations (2 to 11 pictures, loops of 256 or 128 GBA frames). The build: 508 maps, 7
+  warnings (the seams, as before), 18,691 textures (18,451 tiles, 504 of them animated; 240 sheets with the surf
+  blob), slots 18,609 of the region's 20,480 (about 100 more than before), shape map 2,081,068 characters, index
+  1,269,104. `test_emerald_export.py` (the real export, its new checks) passed.
+- **Left out:** the palette bank (one pair: its colour cycle stays on the first colours); berry trees show their first
+  look; a walker uses one step frame a facing (the puppet layout has one); big sprites fit the same 2 × 2-block card;
+  the GBA's Flash circle (the light is all or nothing, as in Kanto).
+- Also: `gen1-bridge/lib/kb_catalog.lua` was stale since item 4 (the two `world.shapes.*` messages; the bridge never
+  sends them); regenerated.
+- Checks: lupa and tools 2,005 passed (new: the export's animated quarters with the engine's timing, the surf blob,
+  sprite names, dark caves; the adapter's dark maps and Flash; the synthetic export's animated water and sheets),
+  JUnit 1,248 (2 skipped; new `BakedTexturesTest`, the Gen 3 pack's strips, sheets and dark caves in `Gen3PlanTest`,
+  the readers), GameTests 122.
+
 ### Handoff (2026-10-14): after MG6, for whoever continues
 
 **State.** MG1–MG6 of [specs/MULTI_GAME_PLAN.md](specs/MULTI_GAME_PLAN.md) are done and committed locally (never

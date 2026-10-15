@@ -3,7 +3,8 @@
 alone through a recording sink: every g3* resource and its schema; the maps' own cells (layout bytes, the true
 width out of a wider stride), border, connections, warps (a dynamic one) and objects (kinds, flags, the camera left
 out); the pairs' flattened quarters (over, else middle, else under; alike art shared; the over flag; behaviours
-named); the pages' pixels; sprites; the layout from connections; encounters by national dex; names. Then main.lua
+named); the pages' pixels; sprites; the layout from connections; encounters by national dex; names. Item 8: dark
+caves, the surf blob's sheet, animated quarters (ids of their own, frames and loops as the engine runs them). Then main.lua
 with a builder peer: export.index lists the g3* kinds, export.get serves one, hashes are the canonical JSON's
 SHA-256. Everything is made up."""
 
@@ -14,7 +15,7 @@ import struct
 
 import pytest
 
-from adapter3 import Adapter3
+from adapter3 import Adapter3, plain
 from kb_protocol import load_protocol
 from kb_protocol.jsonfmt import canonical
 from rig import Rig
@@ -22,7 +23,7 @@ from rig import Rig
 pytestmark = pytest.mark.lua
 
 PROTOCOL = load_protocol()
-G3_KINDS = {"g3map", "g3tiles", "g3image", "g3sprite", "g3layout", "g3encounters", "g3names"}
+G3_KINDS = {"g3map", "g3tiles", "g3image", "g3sprite", "g3layout", "g3encounters", "g3names", "g3anims"}
 
 
 def exported(a, region="hoenn"):
@@ -105,6 +106,18 @@ def test_a_map_carries_its_layouts_own_cells_and_its_events():
     ]
 
 
+def page_quarter(res):
+    """A function from a quarter id to its 256 RGBA bytes in the export's pages."""
+    pages = {int(i.split(".")[1]): png_rgba(d["png"]) for (k, i), d in res.items() if k == "g3image"}
+
+    def at(qid):
+        _, _, rgba = pages[qid // 1024]
+        index = qid % 1024
+        px, py = (index % 32) * 8, (index // 32) * 8
+        return b"".join(rgba[((py + r) * 256 + px) * 4:((py + r) * 256 + px + 8) * 4] for r in range(8))
+    return at
+
+
 def quarter_bytes(rgba_of):
     """The 8x8 quarter q of a 16x16 metatile as RGBA bytes, from rgba_of(x, y) over the metatile."""
     def q(n):
@@ -161,8 +174,111 @@ def test_sprites_layout_encounters_and_names():
     w, h, rgba = png_rgba(hiker["png"])
     assert (w, h) == (16, 32 * 9) and rgba[:4] == bytes((1, 0, 0, 255))
     assert ("g3sprite", "OBJ_EVENT_GFX_TEST_GIRL") in res
+    # item 8: the surf blob, a field effect's sheet (no graphics id): each facing's first frame, down, up, left
+    blob = res[("g3sprite", "SURF_BLOB")]
+    assert "gid" not in blob and (blob["w"], blob["h"], blob["frames"]) == (32, 32, 3)
+    w, h, rgba = png_rgba(blob["png"])
+    assert (w, h) == (32, 96) and [rgba[f * 32 * 32 * 4] for f in range(3)] == [100, 101, 102]
     layout = res[("g3layout", "hoenn")]
     assert layout == {"root": "EM_LITTLEROOT_TOWN", "unit": "cells", "maps": {}}, "the made-up world has no Littleroot"
+
+
+def test_a_sprite_name_without_the_prefix_gets_it_as_the_observer_gives_it():
+    """Item 8: the map objects, the sheets and the puppets name a graphics id alike (observe.lua spriteOf)."""
+    a = world()
+    a.E.constTables.event_objects.OBJ_EVENT_GFX_[4] = b"TEST_GIRL"
+    res, _, _, _ = exported(a)
+    assert ("g3sprite", "OBJ_EVENT_GFX_TEST_GIRL") in res
+    assert res[("g3map", "EM_TEST_TOWN")]["objects"][2]["gfx"] == "OBJ_EVENT_GFX_TEST_GIRL"
+
+
+def test_a_cave_that_needs_flash_is_dark():
+    """Item 8: the map header's cave flag (FieldView's mapIsCave) marks the map dark; others leave it out."""
+    a = world()
+    a.E.game.data.maps.EM_TEST_HOUSE.cave = 1
+    a.E.game.data.maps.EM_TEST_SEA.cave = 0
+    res, _, _, _ = exported(a)
+    assert res[("g3map", "EM_TEST_HOUSE")]["dark"] is True
+    assert "dark" not in res[("g3map", "EM_TEST_SEA")] and "dark" not in res[("g3map", "EM_TEST_TOWN")]
+    assert not PROTOCOL.check_export("g3map", res[("g3map", "EM_TEST_HOUSE")])
+
+
+def colour(v):
+    """The fake's colour tables (fake_export3.lua E.Palette.load, a 40-byte blob) for a piece's pixel index."""
+    return bytes((v // 16 * 10, v % 16 * 10, 40, 255))
+
+
+def test_animated_quarters_get_ids_of_their_own_with_their_frames_and_loops():
+    """Item 8: a quarter a bank pastes into is a quarter of its own (never shared with a static one) whose page holds
+    its first frame; g3anims gives its frames (quarter ids) and its loop in GBA frames, as the engine's stepRse runs
+    the banks; quarters alike in frames and loop share one; the palette bank is left out."""
+    a = world()
+    a.E.animateWorld()
+    res, warns, ok, _ = exported(a)
+    assert ok is True and warns == ["g3_no_root", "g3_encounter_slot"]
+    for (kind, rid), data in res.items():
+        assert not PROTOCOL.check_export(kind, data), (kind, rid)
+    q = res[("g3tiles", "TEST_A")]["quarters"]
+    anims = {e["q"]: e for e in res[("g3anims", "all")]["anims"]}
+    at = page_quarter(res)
+    assert set(anims) == {q[3][0], q[6][0], q[2][3]}
+    # metatile 3 whole: every quarter alike (one animated quarter); two frames, a change every 8 of the 32
+    water = anims[q[3][0]]
+    assert q[3] == [q[3][0]] * 4
+    assert [at(f) for f in water["f"]] == [colour(17) * 64, colour(18) * 64]
+    assert water["s"] == [[0, 8], [1, 8], [0, 8], [1, 8]]
+    assert at(q[3][0]) == at(water["f"][0]), "the page holds the first frame"
+    # metatiles 0 and 6 looked alike: 0 stays static; 6's top-left quarter animates (its own piece), the rest shared
+    six = anims[q[6][0]]
+    assert [at(f) for f in six["f"]] == [colour(33) * 64, colour(34) * 64]
+    assert q[6][1:] == q[0][1:] and q[0][0] not in anims
+    # metatile 2's bottom-right quarter: the over plane's piece (index 0 clear: the under plane shows) instead of its
+    # still over pixel; the secondary counter (24), a frame on phase 1 of every 4, so the loop starts on the frame
+    # the wrap carries over
+    flower = anims[q[2][3]]
+
+    def flower_px(f):
+        return b"".join(bytes((40, f * 10, 40, 255)) if x >= 12 else bytes((10 + 2 % 3, 3, (x + y) % 2, 255))
+                        for y in range(8, 16) for x in range(8, 16))
+    assert [at(f) for f in flower["f"]] == [flower_px(2), flower_px(0), flower_px(1)]
+    assert flower["s"] == [[0, 1], [1, 4], [2, 4], [0, 4], [1, 4], [2, 4], [0, 3]]
+    # never shared with a static quarter; the frames are ordinary quarters
+    static = {x for row in q + res[("g3tiles", "TEST_B")]["quarters"] for x in row if x not in anims}
+    assert not static & set(anims)
+    fields = next(plain(l["fields"]) for l in plain(a.log.lines) if l["code"] == "export.g3_anims")
+    assert fields == {"pairs": 1, "animated": 3, "quarters": 6, "palette": 1}
+
+
+def test_without_the_engines_animations_nothing_animates():
+    a = world()
+    a.E.animateWorld()
+    a.b._env_opts[b"modules"][b"src.core.game3.tileset_anim"] = None
+    res, _, ok, _ = exported(a)
+    assert ok is True and res[("g3anims", "all")] == {"id": "all", "anims": []}
+
+
+def segments(a, rows, maxes, frames=None):
+    X = a.b.module("lib/engine/game3/export.lua")
+    frame_at = a.b.eval("function(row, timer) return math.floor(timer / row.period) % row.frames end")
+    entries = a.lua([{"row": r, "max": m, "over": False} for r, m in zip(rows, maxes)])
+    segs = plain(X.segments(entries, frame_at))
+    return segs and [(s.get("under"), s["len"]) for s in segs]
+
+
+def test_a_layer_shows_the_bank_that_pasted_last():
+    """The engine's stepRse: a bank works out its frame when its counter meets its phase and pastes only a changed
+    frame, so two banks on one layer take turns, and a bank whose frame never changes pastes once and stays covered."""
+    a = Adapter3()
+    turns = segments(a, [{"period": 4, "frames": 2}, {"period": 4, "frames": 2, "phase": 2}], [8, 8])
+    assert turns == [([1, 0], 2), ([2, 0], 2), ([1, 1], 2), ([2, 1], 2)]
+    covered = segments(a, [{"period": 4, "frames": 1}, {"period": 4, "frames": 2, "phase": 2}], [8, 8])
+    assert covered == [([2, 1], 2), ([2, 0], 4), ([2, 1], 2)]
+    # one frame, or a counter that never counts: nothing changes
+    assert segments(a, [{"period": 4, "frames": 1}], [8]) is None
+    assert segments(a, [{"period": 4, "frames": 2}], [0]) is None
+    # two counters: the loop is their least common multiple
+    both = segments(a, [{"period": 4, "frames": 2}, {"period": 3, "frames": 2}], [8, 12])
+    assert sum(n for _, n in both) == 24
 
 
 def test_the_layout_places_the_surface_by_its_connections():

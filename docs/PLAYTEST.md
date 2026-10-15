@@ -870,8 +870,13 @@ it has been seen in a real client yet.
       (or "Add a region" with the Emerald link). A Hoenn build places 319 maps in about 9 minutes and needs a 4 GB
       heap: give Minecraft 6 GB or more in your launcher if you build in game. Not placed yet: Sootopolis, the Battle
       Frontier and the ferry's islands (no warp reaches them in the engine's data).
-- [ ] **Following Emerald:** walking, doors, signs and text boxes, Birch's speech on a new game, saving. People and the
-      surf blob draw as placeholders for now.
+- [ ] **Following Emerald:** walking, doors, signs and text boxes, Birch's speech on a new game, saving.
+- [ ] **Hoenn's people, water and caves** (the follow-up's item 8): people and objects stand as the game draws them
+      (a person is a block wide and two tall, as tall as Kanto's), turn as they face and step as they walk; surfing,
+      the surf blob is under you. Water, flowers and the other animated tiles move as in the game. The caves that need
+      Flash (Granite Cave B1F and B2F, Victory Road B1F and B2F) are dark until Flash is used, then you see as in
+      Kanto's dark caves (Night Vision). Not done: palette animations (one tileset: a slow colour cycle stays on its first colours),
+      a berry tree always shows its first look.
 - [ ] **Battles in Hoenn:** a trainer is fought in Cobblemon; a win pays the prize in the hidden game and shows its two
       texts; a loss blacks you out to the last heal point; wild Pokémon in the grass come from Hoenn's habitats.
 - [ ] **Items and evolutions:** a stone, Rare Candy or TM used on a party Pokémon from the hidden Emerald bag answers

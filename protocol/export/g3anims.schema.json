@@ -1,0 +1,73 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kantobridge.invalid/protocol/export/g3anims.schema.json",
+  "title": "export Gen 3 animated quarters",
+  "description": "Item 8 (docs/SEVERAL_GAMES_FOLLOWUPS.md): the animated tiles of a Gen 3 export. Each animated quarter is a quarter id of its own (never shared with a static quarter; its page holds its first frame), with its frames (quarter ids of the flattened frames, in the g3image pages) and its loop: [frame index, GBA frames at 60 Hz] in order, as the engine's tileset animations run them over their counters.",
+  "x-export-kind": "g3anims",
+  "type": "object",
+  "required": [
+    "id",
+    "anims"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "id": {
+      "const": "all"
+    },
+    "anims": {
+      "type": "array",
+      "maxItems": 65536,
+      "items": {
+        "type": "object",
+        "required": [
+          "q",
+          "f",
+          "s"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "q": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 1048575,
+            "description": "The animated quarter's id."
+          },
+          "f": {
+            "type": "array",
+            "minItems": 2,
+            "maxItems": 256,
+            "items": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 1048575
+            },
+            "description": "Its frames as quarter ids."
+          },
+          "s": {
+            "type": "array",
+            "minItems": 2,
+            "maxItems": 4096,
+            "items": {
+              "type": "array",
+              "prefixItems": [
+                {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 255
+                },
+                {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 4096
+                }
+              ],
+              "minItems": 2,
+              "maxItems": 2
+            },
+            "description": "Its loop: [frame index into f, GBA frames], in order."
+          }
+        }
+      }
+    }
+  }
+}

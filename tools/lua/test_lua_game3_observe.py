@@ -52,7 +52,8 @@ def test_the_idle_field_is_the_overworld():
     assert f == {"inGame": True, "chainsHeld": True, "map": "EM_TEST_TOWN", "x": 5, "y": 6, "facing": "left",
                  "moving": False, "frames": 16, "ledge": False, "surf": False, "bike": False, "runner": False,
                  "hidden": False, "playerScripted": False, "transitioning": False, "battle": False,
-                 "scripted": False, "top": "overworld", "topName": "Overworld", "npcs": 1}
+                 "scripted": False, "top": "overworld", "topName": "Overworld", "npcs": 1,
+                 "darkMap": False, "flashLit": False}
     assert classify(a) == "idle" and a.eng.inGame() is True
 
 

@@ -153,6 +153,7 @@
       "description": "The engine's kind for it (town, city, route, cave, indoor, ...)."
     },
     "music": {"type": "integer", "minimum": 0, "maximum": 65535},
-    "weather": {"type": "integer", "minimum": 0, "maximum": 255}
+    "weather": {"type": "integer", "minimum": 0, "maximum": 255},
+    "dark": {"type": "boolean", "description": "Item 8: a cave that needs Flash (the map header's cave flag); absent: lit."}
   }
 }

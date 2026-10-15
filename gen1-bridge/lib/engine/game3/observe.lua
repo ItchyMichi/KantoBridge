@@ -111,6 +111,9 @@ function Observe.install(b)
     f.frames = tonumber(P.stepFrames) or 0
     f.ledge = P.jumping == true
     f.surf = P.surfing == true
+    -- item 8: a dark map (a cave that needs Flash) and Flash in use (boot.lua)
+    f.darkMap = type(b.darkMapSet) == "function" and b.darkMapSet()[f.map] == true or false
+    f.flashLit = type(b.flashLit) == "function" and b.flashLit() or false
     f.bike = P.biking == true
     f.runner = P.running == true
     f.hidden = P.visible == false

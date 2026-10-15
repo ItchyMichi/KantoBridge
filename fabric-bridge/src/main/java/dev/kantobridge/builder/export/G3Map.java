@@ -17,14 +17,22 @@ import org.jetbrains.annotations.Nullable;
  *
  * @param coll the engine's collision byte per cell (Gen 2's vocabulary: 0x00 walk, 0x07 blocked, 0x18 tall grass, 0x29
  *             water, 0x71/0x72 doors and warps, 0x82 sign, 0x90 counter, 0xA0-0xA3 ledges; GEN3_BRIDGE_PLAN §5)
+ * @param dark a cave that needs Flash (the follow-up's item 8: the map header's cave flag)
  */
 public record G3Map(String id, int w, int h, int trueW, int trueH, String pair, int[] mids, int[] coll, int[] elev, Border border,
-		List<Connection> connections, List<Warp> warps, List<MapObject> objects, int mapType, String kind, int music, int weather) {
+		List<Connection> connections, List<Warp> warps, List<MapObject> objects, int mapType, String kind, int music, int weather,
+		boolean dark) {
 	public static final Pattern PAIR = Pattern.compile("^[A-Za-z0-9_]{1,64}$");
 	private static final Set<String> DIRS = Set.of("north", "south", "east", "west", "dive", "emerge");
 	private static final Set<String> OBJECT_KINDS = Set.of("person", "item", "trainer", "boulder", "berry", "other");
 	private static final Pattern KIND = Pattern.compile("^[a-z_]{1,32}$");
 	private static final Pattern GFX = Pattern.compile("^[A-Z0-9_]{1,64}$");
+
+	/** A lit map (an export from before item 8, tests). */
+	public G3Map(String id, int w, int h, int trueW, int trueH, String pair, int[] mids, int[] coll, int[] elev, Border border,
+			List<Connection> connections, List<Warp> warps, List<MapObject> objects, int mapType, String kind, int music, int weather) {
+		this(id, w, h, trueW, trueH, pair, mids, coll, elev, border, connections, warps, objects, mapType, kind, music, weather, false);
+	}
 
 	/** The border's metatiles, row-major. */
 	public record Border(int w, int h, int[] mids) {
@@ -139,6 +147,6 @@ public record G3Map(String id, int w, int h, int trueW, int trueH, String pair, 
 		}
 		return new G3Map(id, w, h, trueW, trueH, r.string("pair", PAIR), mids, coll, elev, new Border(bw, bh, border),
 				List.copyOf(connections), List.copyOf(warps), List.copyOf(objects), r.integer("mapType", 0, 255), r.string("kind", KIND),
-				r.integer("music", 0, 65535), r.integer("weather", 0, 255));
+				r.integer("music", 0, 65535), r.integer("weather", 0, 255), r.has("dark") && r.bool("dark"));
 	}
 }

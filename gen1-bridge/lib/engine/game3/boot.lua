@@ -166,7 +166,34 @@ function Boot.install(b)
     for i, badge in ipairs(badgeList()) do out[i] = badge.item end
     return out
   end)
-  def("darkMaps", function() return {} end)
+  -- Item 8: the dark maps, caves that need Flash (the map header's cave flag, FieldView's mapIsCave,
+  -- src/core/game3/field_view.lua:1484-1487), worked out once per data table; and Flash in use
+  -- (FLAG_SYS_USE_FLASH, FieldView's flashActive, src/core/game3/field_view.lua:1467-1481).
+  local darkFor, darkSet, darkList = nil, {}, {}
+  function b.darkMapSet()
+    local g = b.game
+    local maps = type(g) == "table" and type(g.data) == "table" and g.data.maps or nil
+    if maps ~= darkFor then
+      darkFor, darkSet, darkList = maps, {}, {}
+      for id, mdef in pairs(type(maps) == "table" and maps or {}) do
+        if b.symbol(id) and type(mdef) == "table" and mdef.cave ~= nil and (tonumber(mdef.cave) or 0) ~= 0 then
+          darkSet[id] = true
+          darkList[#darkList + 1] = id
+        end
+      end
+      table.sort(darkList)
+    end
+    return darkSet, darkList
+  end
+  function b.flashLit()
+    return b.flag("FLAG_SYS_USE_FLASH")
+  end
+  def("darkMaps", function()
+    local _, list = b.darkMapSet()
+    local out = {}
+    for i, id in ipairs(list) do out[i] = id end
+    return out
+  end)
 
   -- Every set flag by its Emerald name: the store's keys are numbers, numeric
   -- strings, "0x..." strings or names (scripting/flags.lua:377-414).
@@ -258,7 +285,7 @@ function Boot.install(b)
       options = type(s.options) == "table" and s.options or nil,
       meta = type(s.meta) == "table" and s.meta or nil,
       version = type(s.version) == "string" and s.version or nil,
-      flashLit = false,
+      flashLit = b.flashLit(),          -- item 8
     }
     cachedTick, cachedSession, cachedView = b.tick, s, view
     return view
