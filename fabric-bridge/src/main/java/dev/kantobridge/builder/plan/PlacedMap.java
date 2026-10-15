@@ -42,7 +42,7 @@ public record PlacedMap(MapPlacement placement, MapModel model, PairEdges edges,
 	 * ({@link QuarterPages#VIRTUAL}, whose tiles are quarter ids).
 	 */
 	public String atlas() {
-		return this.model.gen3() ? QuarterPages.VIRTUAL : this.model.tileset().image();
+		return this.model.baked() ? QuarterPages.VIRTUAL : this.model.tileset().image();
 	}
 
 	/** The atlas a slot or texture key names for one of the map's art tiles: its page for Gen 3 art. */

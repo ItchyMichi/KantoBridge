@@ -1477,7 +1477,7 @@ the full suite at the ✔ checkpoints (MG2, MG3, MG5, MG6). Pods run inside your
 | MG6 | One trainer economy | **done** (notes 18, 21); check: `LedgerGameTests` (two regions: adoption, stamped read-back, the crossing's projection, `too_many`/`left`, re-projection on an unknown stamp; a legacy world untouched), `BagGameTests` marked stacks, `LedgerTest`/`LedgerCodecTest`/`ItemsTest`/`BagSetRelayTest`, `test_lua_ledger.py`/`test_lua_bag.py`; the real engine's `bag.set` round trip is your play-test (PLAYTEST.md "MG6") | 2026-10-13 | |
 | MG7 | The second family (Emerald): adapter and export | **done**: the spec [specs/GEN3_BRIDGE_PLAN.md](specs/GEN3_BRIDGE_PLAN.md) (2026-10-14), phases G3A–G3G; **G3A done** (Emerald followable), **G3B done** (Emerald's UI), **G3C done** (story), **G3D done** (export), **G3E done** (builder), **G3F done** (battles, party, bag; the route exit moved to MG8), **G3G done** (the real Hoenn built in Minecraft) ("Several games: MG7") | 2026-10-14 | |
 | MG8 | Hoenn and the pass to it | **done**: the spec [specs/HOENN_PASS_PLAN.md](specs/HOENN_PASS_PLAN.md) (2026-10-14), phases HP1–HP8; the test pass Viridian City ↔ Littleroot Town; Kanto and Hoenn in one world; 20 crossings each way between the real Blue and Emerald ("Several games: MG8") | 2026-10-14 | |
-| MG9 | Johto (Gold, Silver, Crystal): the Gen 2 bridge | **in progress**: [specs/GEN2_BRIDGE_PLAN.md](specs/GEN2_BRIDGE_PLAN.md) (2026-10-15), from a static inspection of the Gen 2 engine (research notes `refs/_research/g2_*.md`); phases G2S and G2A–G2H; decisions J1–J14 with defaults. **G2S done** ("Johto (MG9): the inspection G2S"); **G2A done** (Crystal followable: "Johto (MG9): G2A notes"); **G2B done** (Crystal's UI: "Johto (MG9): G2B notes"); **G2C done** (Crystal's story: "Johto (MG9): G2C notes"); **G2D done** (Crystal's export: "Johto (MG9): G2D notes"); next G2E | 2026-10-15 | |
+| MG9 | Johto (Gold, Silver, Crystal): the Gen 2 bridge | **in progress**: [specs/GEN2_BRIDGE_PLAN.md](specs/GEN2_BRIDGE_PLAN.md) (2026-10-15), from a static inspection of the Gen 2 engine (research notes `refs/_research/g2_*.md`); phases G2S and G2A–G2H; decisions J1–J14 with defaults. **G2S done** ("Johto (MG9): the inspection G2S"); **G2A done** (Crystal followable: "Johto (MG9): G2A notes"); **G2B done** (Crystal's UI: "Johto (MG9): G2B notes"); **G2C done** (Crystal's story: "Johto (MG9): G2C notes"); **G2D done** (Crystal's export: "Johto (MG9): G2D notes"); **G2E done** (the builder, 112 families: "Johto (MG9): G2E notes"); next G2F | 2026-10-15 | |
 
 ### Several games: notes
 
@@ -2382,6 +2382,45 @@ Crystal is followable (GEN2_BRIDGE_PLAN.md §3–§5, phase G2A), at your "Go" a
 - **Still the stub's** (later phases): the UI (G2B: until then a client gets no Gen 2 screens; the e2e driver answers
   Oak's speech), the story (G2C), the export (G2D: `export.live_copy_failed` is logged once at load), battles (G2F),
   routes (G2H).
+
+### Johto (MG9): G2E notes (2026-10-15)
+
+Crystal's world in Minecraft's terms: the Java builder for Gen 2 (GEN2_BRIDGE_PLAN.md §7, phase G2E), in sequence after
+G2D as you asked.
+
+- **The planner**: `Gen2Planner` (dispatched from `WorldPlanner.plan` for a `g2map` bundle) with the readers `G2Map`,
+  `G2Tiles` and `G2Data`, the cell model `G2Cells` (cells from the meanings the export gives each collision byte;
+  one-way walls from the side-wall bytes), `G2StoryCells`, `G2PoolWriter` (the three times of day in one pool, J6) and
+  the Gen 2 form of `MapModel` (baked tiles, Gen 1's swap sites per block). Gen 3's machinery serves the rest: the
+  baked pages (the bundle hands out `g2q.<n>` where Gen 3's code asks for a page), `InteriorPacker`, region builds,
+  the shape planner. Both of Crystal's areas lie on the surface, Kanto east of Johto past 32 cells of sea.
+- **People and scene**: Crystal's sheets go into the pack in Gen 1's layout and scale (16-pixel frames), and
+  `Gen2FrontEnd` gives the shape planner its scene (with the swap sites' both states, as Gen 1's). Baked art only
+  draws its own game's world (`Games.compatible`: Gold, Silver and Crystal bake different tiles).
+- **J7, measured and done**: Johto's art takes 3,560 full-shape slots (14 families of 256) and 61 half ones, so the
+  families per shape go **96 → 112** and a Gen 2 region takes 16 (Kanto 0..15, Hoenn 16..95, Johto 96..111). The
+  schemas, `build_world.py`'s range check and PROTOCOL.md follow. Cost: about **+15 MB a side** (12,288 more block
+  states at the 1.23 KB each the tile block test measured on the pod); I did not measure it in a running client.
+- **The synthetic Crystal**: `tools/fake_gen1/synth2.py` (a town with a house, sign, fence, Cut tree, whirlpool and
+  ledges; a route with a gate a script opens and a boulder; a dark cave with ice; a house; Crystal's Kanto's town)
+  and its copy `synthetic_bundle/crystal/`; goldens `synthetic_g2_scene.json`, `synthetic_g2_world_index.json`,
+  `synthetic_g2_shapes.json`.
+- **The real dry run** (`RealGen2DryRunTest`, `-Pkb.realGen2Bundle`, on the pod's Crystal export from the test
+  install): **all 388 maps placed** (66 on the surface, 322 interiors, deepest layer 14), 11 outdoor maps reached from
+  inside get the sky (Routes 23 and 28, the ports, the National Park, Tin Tower's roof and others), 1,535 one-way
+  edges, 179 tile story cells (Cut trees, whirlpools, scripted blocks), 555 habitats, 91 pools, a shape plan of about
+  1.0 M blocks, in 3.1 s. Warnings: Celadon City/Route 7's loop (counted both ways; G2D found it) and one object off
+  its map in Goldenrod's Pokémon Center (left out, as Gen 1's and 3's are). 20 duplicate sites are the bedroom's
+  decorations (one block a script can turn into several; the first wins for now).
+- **Checks**: local pytest (new: `test_synth2_export.py`, the Gen 2 goldens in `test_builder_golden.py`, the copy
+  check). On the pod (kb-dev23): JUnit 1,273 passed (new `G2ReadersTest`, `Gen2PlanTest`, `Gen2FrontEndTest`,
+  `G2PoolWriterTest`; tests for 112 families), GameTests 124 (new `Gen2BuildGameTests`: Johto alone at slot 2, and
+  Kanto, Hoenn and Johto in one world with three family ranges and three art sets).
+- **Left for later phases**: Johto's real build (G2G), the per-player textures of a palette override in the running
+  game, the bedroom decorations beyond the first per block.
+- **Pods**: every older pod's host had no free vCPU, so kb-dev23 (46bxqbsf1m6uzs, cpu5g ×4, 16 GB, $0.184/hr) was
+  created: about 28 minutes, stopped. The Java compiled cleanly the first time there; the full check took 2 minutes of
+  Gradle on it.
 
 ### Johto (MG9): G2D notes (2026-10-15)
 

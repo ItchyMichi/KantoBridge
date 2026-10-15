@@ -132,6 +132,41 @@ public final class BakedTextures {
 	}
 
 	/**
+	 * MG9: a Gen 2 object sheet (a strip of 16x16 frames in Gen 1's order: standing down, up and left, then walking down,
+	 * up and left; a three-frame sheet stands only; one or two frames, a still object or a Pokemon doll, face one way) in
+	 * the generated layout of {@link Textures#spriteSheet} at Gen 1's scale (16-px cells, so Gen 2's people stand as tall
+	 * as Kanto's), right mirrored from left. Null for a strip too small.
+	 */
+	public static Png.@Nullable Image sheetGen1Order(Png.Image strip, int frames) {
+		int w = 16;
+		int h = 16;
+		if (frames < 1 || strip.width() < w || strip.height() < h * frames) {
+			return null;
+		}
+		int cell = 16;
+		boolean faces = frames >= 3;
+		int[] standing = faces ? new int[] {0, 1, 2} : new int[] {0, 0, 0};
+		int[] walking = frames >= 6 ? new int[] {3, 4, 5} : standing;
+		Png.Image out = new Png.Image(cell * 4, cell * 2);
+		int ox = (cell - w) / 2;
+		int oy = cell - h;
+		for (int row = 0; row < 2; row++) {
+			int[] picks = row == 0 ? standing : walking;
+			for (int column = 0; column < 4; column++) {
+				int frame = picks[Math.min(column, 2)];
+				boolean mirror = faces && column == 3;
+				for (int y = 0; y < h; y++) {
+					for (int x = 0; x < w; x++) {
+						int sx = mirror ? w - 1 - x : x;
+						out.set(column * cell + ox + x, row * cell + oy + y, strip.get(sx, frame * h + y));
+					}
+				}
+			}
+		}
+		return out;
+	}
+
+	/**
 	 * The shades of a quarter by luminance (Gen 1's four greys' thresholds). A background tile is opaque, as Gen 1's are to
 	 * the geometry: a clear pixel takes shade 0.
 	 */

@@ -297,7 +297,7 @@ def region_checks(data, region, slot, world_dir=None, max_parts=MAX_SHAPE_DOC_PA
         "region_bounds": isinstance(rep.get("bounds"), dict)
         and {"minX", "minZ", "maxX", "maxZ", "minY", "maxY"} <= set(rep["bounds"]),
         "region_areas": isinstance(rep.get("areas"), dict) and {"surface", "zones", "dungeons", "caves"} <= set(rep["areas"]),
-        "region_families": len(families) == 2 and all(isinstance(f, int) and 0 <= f <= 95 for f in families)
+        "region_families": len(families) == 2 and all(isinstance(f, int) and 0 <= f <= 111 for f in families)
         and families[0] <= families[1],
         "region_shape_map_fits": 0 < (rep.get("shape_map_chars") or 0) <= max_parts * PART_CHARS,
         "region_shape_index_fits": 0 < (rep.get("shape_index_chars") or 0) <= max_parts * PART_CHARS,

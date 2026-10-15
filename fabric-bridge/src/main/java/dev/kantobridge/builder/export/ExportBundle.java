@@ -370,6 +370,74 @@ public final class ExportBundle {
 				: new G3Data.Anims(Map.of());
 	}
 
+	// ---- Gen 2 (MG9 G2D; protocol/export/g2*.schema.json)
+
+	/** The surface areas of a Gen 2 export, in placement order (Johto, then Crystal's Kanto). */
+	public static final List<String> G2_AREAS = List.of("johto", "kanto");
+
+	/** True for a Gen 2 export (it carries g2 maps). */
+	public boolean isGen2() {
+		return !this.ids("g2map").isEmpty();
+	}
+
+	public G2Map g2map(String id) throws BundleException {
+		return this.typed("g2map", id, G2Map::parse, G2Map.class);
+	}
+
+	/** An art variant ({@code g2tiles/<variant>}). */
+	public G2Tiles g2tiles(String variant) throws BundleException {
+		return this.typed("g2tiles", variant, G2Tiles::parse, G2Tiles.class);
+	}
+
+	/** The surface layouts the export has, in {@link #G2_AREAS} order. */
+	public List<G2Data.Layout> g2layouts() throws BundleException {
+		List<G2Data.Layout> out = new java.util.ArrayList<>();
+		for (String area : G2_AREAS) {
+			if (this.has("g2layout", area)) {
+				out.add(this.typed("g2layout", area, r -> G2Data.Layout.parse(r, area), G2Data.Layout.class));
+			}
+		}
+		return out;
+	}
+
+	/** The wild tables the builder reads, or null when the export has none. */
+	public G2Data.@Nullable Encounters g2encounters() throws BundleException {
+		return this.has("g2encounters", "all") ? this.typed("g2encounters", "all", G2Data.Encounters::parse, G2Data.Encounters.class) : null;
+	}
+
+	/** The constant names (Gen 3's shape), or null when the export has none. */
+	public G3Data.@Nullable Names g2names() throws BundleException {
+		return this.has("g2names", "all") ? this.typed("g2names", "all", G3Data.Names::parse, G3Data.Names.class) : null;
+	}
+
+	/** A page of baked tiles ({@code g2q.<n>}). */
+	public G3Data.Image g2image(String id) throws BundleException {
+		return this.typed("g2image", id, G3Data.Image::parse, G3Data.Image.class);
+	}
+
+	public G2Data.Sprite g2sprite(String id) throws BundleException {
+		return this.typed("g2sprite", id, G2Data.Sprite::parse, G2Data.Sprite.class);
+	}
+
+	/** The animated tiles (Gen 3's shape). */
+	public G3Data.Anims g2anims() throws BundleException {
+		return this.has("g2anims", "all") ? this.typed("g2anims", "all", G3Data.Anims::parse, G3Data.Anims.class)
+				: new G3Data.Anims(Map.of());
+	}
+
+	/**
+	 * A page of baked 8x8 art, whichever generation baked it: Gen 3's {@code g3q.<n>}, or (MG9) Gen 2's {@code g2q.<n>}, which
+	 * the builder addresses by the same page numbers (the art set keeps the two games apart).
+	 */
+	public G3Data.Image bakedPage(int page) throws BundleException {
+		return this.isGen2() ? this.g2image("g2q." + page) : this.g3image("g3q." + page);
+	}
+
+	/** True when the export has baked page {@code page} (see {@link #bakedPage}). */
+	public boolean hasBakedPage(int page) {
+		return this.isGen2() ? this.has("g2image", "g2q." + page) : this.has("g3image", "g3q." + page);
+	}
+
 	/** The field tables the habitat planner reads; empty when the export has no field resource. */
 	public ExportField field() throws BundleException {
 		return this.has("field", "all") ? this.typed("field", "all", ExportField::parse, ExportField.class) : ExportField.empty();

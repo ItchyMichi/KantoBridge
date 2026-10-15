@@ -56,11 +56,13 @@ public final class G3ArtSource implements ArtSource {
 
 	private @Nullable Png.Image page(String id) {
 		return this.pages.computeIfAbsent(id, key -> {
-			if (!this.bundle.has("g3image", key)) {
+			// MG9: page n of whichever generation baked it (Gen 2's g2q.<n> serves the same page numbers)
+			int n = QuarterPages.pageNumber(key);
+			if (n < 0 || !this.bundle.hasBakedPage(n)) {
 				return Optional.empty();
 			}
 			try {
-				return Optional.of(Png.decode(this.bundle.g3image(key).png()));
+				return Optional.of(Png.decode(this.bundle.bakedPage(n).png()));
 			} catch (IOException | BundleException e) {
 				return Optional.empty();
 			}

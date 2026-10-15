@@ -33,6 +33,11 @@ import org.jetbrains.annotations.Nullable;
  * art tiles are the flattened quarter ids ({@code page × 1024 + index}), its flags come from the engine's collision bytes,
  * its border repeats from the map's cell (0, 0), it has no swap sites, and each cell says whether wild Pokémon live on it
  * ({@link #wild}). It has no Gen 1 export map or tileset: {@link #map()} and {@link #tileset()} refuse.
+ *
+ * <p><b>Gen 2</b> (MG9, docs/specs/GEN2_BRIDGE_PLAN.md §7): {@link G2Cells} builds it from a {@code g2map} and its art
+ * variant: baked art as Gen 3's, flags from the meanings the export gives each collision byte, its border block's 4×4
+ * tiles, and Gen 1's swap sites by block (Cut trees, Whirlpools, the blocks scripts change), built open, with the closed
+ * state built beside it ({@link #closedModel()}).
  */
 public final class MapModel {
 	/** What a cell is built as. */
@@ -51,8 +56,13 @@ public final class MapModel {
 
 	private final @Nullable ExportMap map;
 	private final @Nullable ExportTileset tileset;
-	/** A Gen 3 map's id; null for a Gen 1 map, whose id is its export map's. */
+	/** A Gen 2 or Gen 3 map's id (its art is baked); null for a Gen 1 map, whose id is its export map's. */
 	private final @Nullable String gen3Id;
+	/** The game generation the model comes from: 1, 2 or 3. */
+	private final int generation;
+	/** A Gen 2 map's blocks as the map data holds them ({@code blocksWide} a row), for its story cells; null otherwise. */
+	private final int @Nullable [] dataBlocks;
+	private final int blocksWide;
 	/** A Gen 3 map's border in art tiles, {@code borderCols × borderRows}, repeated from the map's cell (0, 0). */
 	private final int @Nullable [] border;
 	private final int borderCols;
@@ -97,23 +107,31 @@ public final class MapModel {
 		this.closedBlock = closedBlock;
 		this.overwritten = overwritten;
 		this.gen3Id = null;
+		this.generation = 1;
+		this.dataBlocks = null;
+		this.blocksWide = map.width();
 		this.border = null;
 		this.borderCols = 0;
 		this.borderRows = 0;
 		this.wild = null;
 	}
 
-	/** A Gen 3 map's model (see {@link G3Cells}): its cells' art, flags and wild cells as given. */
-	private MapModel(String id, boolean interior, int cw, int ch, int[] tiles, int[] flags, boolean[] wild, int[] border, int borderCols,
-			int borderRows) {
+	/**
+	 * A Gen 3 map's model (see {@link G3Cells}), or (MG9) a Gen 2 map's ({@link G2Cells}): its cells' art, flags and wild
+	 * cells as given; a Gen 2 model also its swap sites (by block index), each cell's open and closed block and the map
+	 * data's blocks.
+	 */
+	private MapModel(int generation, String id, boolean interior, boolean closedState, int cw, int ch, int[] tiles, int[] flags, boolean[] wild,
+			int[] border, int borderCols, int borderRows, Map<Integer, ExportSwaps.Site> sites, int[] openBlock, int[] closedBlock,
+			int @Nullable [] dataBlocks, int blocksWide) {
 		if (tiles.length != cw * ch * 4 || flags.length != cw * ch || wild.length != cw * ch || borderCols < 1 || borderRows < 1
-				|| border.length != borderCols * borderRows) {
-			throw new IllegalArgumentException("a Gen 3 model's arrays don't fit its size");
+				|| border.length != borderCols * borderRows || openBlock.length != cw * ch || closedBlock.length != cw * ch) {
+			throw new IllegalArgumentException("a baked model's arrays don't fit its size");
 		}
 		this.map = null;
 		this.tileset = null;
 		this.interior = interior;
-		this.closedState = false;
+		this.closedState = closedState;
 		this.cw = cw;
 		this.ch = ch;
 		this.tw = cw * 2;
@@ -122,13 +140,14 @@ public final class MapModel {
 		this.flags = flags;
 		this.kinds = new Kind[cw * ch];
 		this.heights = new int[cw * ch];
-		this.sites = Map.of();
-		this.openBlock = new int[cw * ch];
-		this.closedBlock = new int[cw * ch];
-		Arrays.fill(this.openBlock, -1);
-		Arrays.fill(this.closedBlock, -1);
+		this.sites = sites;
+		this.openBlock = openBlock;
+		this.closedBlock = closedBlock;
 		this.overwritten = new boolean[cw * ch];
 		this.gen3Id = id;
+		this.generation = generation;
+		this.dataBlocks = dataBlocks;
+		this.blocksWide = blocksWide;
 		this.border = border;
 		this.borderCols = borderCols;
 		this.borderRows = borderRows;
@@ -142,7 +161,25 @@ public final class MapModel {
 	 */
 	static MapModel gen3(String id, boolean interior, int cw, int ch, int[] tiles, int[] flags, boolean[] wild, int[] border, int borderCols,
 			int borderRows) {
-		MapModel model = new MapModel(id, interior, cw, ch, tiles, flags, wild, border, borderCols, borderRows);
+		int[] none = new int[cw * ch];
+		Arrays.fill(none, -1);
+		MapModel model = new MapModel(3, id, interior, false, cw, ch, tiles, flags, wild, border, borderCols, borderRows, Map.of(), none,
+				none.clone(), null, 0);
+		model.classify();
+		return model;
+	}
+
+	/**
+	 * A Gen 2 map's model (MG9, see {@link G2Cells}): as {@link #gen3}, with its swap sites ({@code sites} by block index
+	 * {@code by * blocksWide + bx}), each cell's open and closed block (-1 where no site is), the map data's blocks, and the
+	 * same map in its closed state (null for the closed model itself).
+	 */
+	static MapModel gen2(String id, boolean interior, boolean closedState, int cw, int ch, int[] tiles, int[] flags, boolean[] wild, int[] border,
+			Map<Integer, ExportSwaps.Site> sites, int[] openBlock, int[] closedBlock, int[] dataBlocks, int blocksWide,
+			@Nullable MapModel closed) {
+		MapModel model = new MapModel(2, id, interior, closedState, cw, ch, tiles, flags, wild, border, 4, 4,
+				Collections.unmodifiableMap(sites), openBlock, closedBlock, dataBlocks, blocksWide);
+		model.closed = closed;
 		model.classify();
 		return model;
 	}
@@ -379,6 +416,16 @@ public final class MapModel {
 
 	/** True for a Gen 3 map's model (MG7). */
 	public boolean gen3() {
+		return this.generation == 3;
+	}
+
+	/** True for a Gen 2 map's model (MG9). */
+	public boolean gen2() {
+		return this.generation == 2;
+	}
+
+	/** True when the model's art is baked (Gen 2 and 3: tiles are page ids, one virtual atlas). */
+	public boolean baked() {
 		return this.gen3Id != null;
 	}
 
@@ -448,7 +495,7 @@ public final class MapModel {
 
 	/** The swap site covering cell (cx, cy), or null. */
 	public @Nullable ExportSwaps.Site site(int cx, int cy) {
-		return this.sites.isEmpty() ? null : this.sites.get((cy / 2) * this.map().width() + cx / 2);
+		return this.sites.isEmpty() ? null : this.sites.get((cy / 2) * this.blocksWide + cx / 2);
 	}
 
 	/** The swap sites applied to this map, by Gen 1 block index. */
@@ -467,8 +514,11 @@ public final class MapModel {
 		return this.changes(cx, cy) ? this.closedBlock[cy * this.cw + cx] : -1;
 	}
 
-	/** The block the map data has at the cell's Gen 1 block. */
+	/** The block the map data has at the cell's block (Gen 1 and 2). */
 	public int dataBlock(int cx, int cy) {
+		if (this.dataBlocks != null) {
+			return this.dataBlocks[(cy / 2) * this.blocksWide + cx / 2];
+		}
 		return this.map().block(cx / 2, cy / 2);
 	}
 
@@ -482,6 +532,10 @@ public final class MapModel {
 	 * first use; anomalies were already counted for this model, so none are counted again.
 	 */
 	public MapModel closedModel() {
+		if (this.generation == 2) {
+			// MG9: G2Cells built the closed state beside the open one (itself, when the map has no site)
+			return this.closedState || this.closed == null ? this : this.closed;
+		}
 		if (this.closedState || this.gen3Id != null) {
 			// A Gen 3 map has no swap sites: nothing closes.
 			return this;

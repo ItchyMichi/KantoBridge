@@ -43,7 +43,7 @@ class Gen1FrontEndTest {
 	void theSceneDescribesTheWholeExport() {
 		assertSame(Gen1FrontEnd.INSTANCE, FrontEnds.forGame("red"));
 		assertSame(Gen1FrontEnd.INSTANCE, FrontEnds.forGame("blue"));
-		assertNull(FrontEnds.forGame("gold"));
+		assertNull(FrontEnds.forGame("nope"), "a game no front end reads");
 		assertEquals("gen1", scene.family());
 		assertEquals("kb-frontend-gen1/1", scene.frontEnd());
 		assertEquals(bundle.exportHash(), scene.exportHash());

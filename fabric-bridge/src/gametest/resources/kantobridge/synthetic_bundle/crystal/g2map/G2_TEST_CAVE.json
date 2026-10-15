@@ -1,0 +1,1 @@
+{"area":"johto","blocks":"AQMCAQQB","border":7,"connections":[],"coords":[],"dark":true,"daytime":"NITE","env":"CAVE","group":3,"h":2,"id":"G2_TEST_CAVE","num":1,"objects":[],"palette":"PALETTE_DARK","signs":[],"tileset":"TILESET_TEST_CAVE","variant":"TILESET_TEST_CAVE_1","w":3,"warps":[{"to":"G2_TEST_ROUTE","warp":0,"x":2,"y":2}]}

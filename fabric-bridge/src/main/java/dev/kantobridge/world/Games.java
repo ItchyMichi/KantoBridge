@@ -254,12 +254,16 @@ public final class Games {
 		return out;
 	}
 
-	/** True when art of {@code art}'s export can draw a world built from {@code world}'s: the same game, or one family. */
+	/**
+	 * True when art of {@code art}'s export can draw a world built from {@code world}'s: the same game, or one Gen 1 family
+	 * (its games share tilesets). A family whose art is baked per game shares nothing across games (MG9,
+	 * GEN2_BRIDGE_PLAN §7 "Art": Gold, Silver and Crystal bake different tiles, as Gen 3's games do).
+	 */
 	public static boolean compatible(@Nullable String art, @Nullable String world) {
 		if (art == null || world == null) {
 			return false;
 		}
 		String family = family(art);
-		return art.equals(world) || (family != null && family.equals(family(world)));
+		return art.equals(world) || ("gen1".equals(family) && family.equals(family(world)));
 	}
 }

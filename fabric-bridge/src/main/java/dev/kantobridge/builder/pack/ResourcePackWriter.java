@@ -6,6 +6,7 @@ import dev.kantobridge.builder.export.ExportBundle;
 import dev.kantobridge.builder.export.ExportImage;
 import dev.kantobridge.builder.export.ExportPalettes;
 import dev.kantobridge.builder.export.ExportTileset;
+import dev.kantobridge.builder.export.G2Data;
 import dev.kantobridge.builder.export.G3Data;
 import dev.kantobridge.builder.plan.ArtCatalog;
 import dev.kantobridge.builder.plan.Warnings;
@@ -160,7 +161,8 @@ public final class ResourcePackWriter {
 		int animated = 0;
 		int blank = 0;
 		// item 8: a Gen 3 export's animated quarters (none before them)
-		Map<Integer, G3Data.Anims.Anim> quarterAnims = art.baked() ? bundle.g3anims().byQuarter() : Map.of();
+		Map<Integer, G3Data.Anims.Anim> quarterAnims = !art.baked() ? Map.of()
+				: bundle.isGen2() ? bundle.g2anims().byQuarter() : bundle.g3anims().byQuarter();
 		for (SlotMap.Key key : slotMap.slots().keySet()) {
 			String path = ArtKeys.textureFile(artSet, key.atlas(), key.palette(), key.tile());
 			String owner = key.atlas() + "|" + key.palette() + "|" + key.tile();
@@ -306,6 +308,24 @@ public final class ResourcePackWriter {
 	 */
 	private static int bakedSheets(ExportBundle bundle, String artSet, PackFiles files, Warnings warnings) throws BundleException {
 		int written = 0;
+		// MG9: a Gen 2 export's object sheets: 16x16 frames in Gen 1's order, each (sprite, OBJ palette) its own id
+		for (String id : bundle.ids("g2sprite")) {
+			G2Data.Sprite sprite = bundle.g2sprite(id);
+			Png.Image strip;
+			try {
+				strip = Png.decode(sprite.png());
+			} catch (IOException e) {
+				warnings.warn("sprite_unreadable");
+				continue;
+			}
+			Png.Image sheet = BakedTextures.sheetGen1Order(strip, sprite.frames());
+			if (sheet == null) {
+				warnings.warn("sprite_unreadable");
+				continue;
+			}
+			files.put(ArtKeys.file(ArtKeys.npcTexture(artSet, QuarterPages.PALETTE, id)), Png.encode(sheet));
+			written++;
+		}
 		for (String id : bundle.ids("g3sprite")) {
 			G3Data.Sprite sprite = bundle.g3sprite(id);
 			Png.Image strip;
@@ -338,13 +358,14 @@ public final class ResourcePackWriter {
 		return colours != null ? colours : Textures.GREY_PALETTE;
 	}
 
-	/** A Gen 3 quarter page ({@code g3image}), or null when the export lacks it or it can't be read. */
+	/** A baked page ({@code g3q.<n>}; MG9: Gen 2's {@code g2q.<n>}), or null when the export lacks it or it can't be read. */
 	private static @Nullable Png.Image decodePage(ExportBundle bundle, String id, Warnings warnings) {
-		if (!bundle.has("g3image", id)) {
+		int n = QuarterPages.pageNumber(id);
+		if (n < 0 || !bundle.hasBakedPage(n)) {
 			return null;
 		}
 		try {
-			return Png.decode(bundle.g3image(id).png());
+			return Png.decode(bundle.bakedPage(n).png());
 		} catch (IOException | BundleException e) {
 			warnings.warn("image_unreadable");
 			return null;

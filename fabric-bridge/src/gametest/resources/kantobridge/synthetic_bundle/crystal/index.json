@@ -1,0 +1,127 @@
+{
+  "game": "crystal",
+  "engine": "0.0.0-fake",
+  "bridge": "fake_gen1-0.1.0",
+  "resources": [
+    {
+      "kind": "g2anims",
+      "id": "all",
+      "hash": "8cc2fcde1a83a7aa050bba20cbe5a9765d7f8c810d18135a8535fd38bbcf5dcc",
+      "size": 678
+    },
+    {
+      "kind": "g2encounters",
+      "id": "all",
+      "hash": "ab5f735570deb4cc5cc2f3b2315fa4a84b893ac78275dc4277ee972866ea046e",
+      "size": 1454
+    },
+    {
+      "kind": "g2image",
+      "id": "g2q.0",
+      "hash": "f286699b293b1fa160fc3dede04c2a27817ad8e4cb33906ba2ce9fc171be5478",
+      "size": 13527
+    },
+    {
+      "kind": "g2layout",
+      "id": "johto",
+      "hash": "4523a32f57ebd01db645d21ed40c59001abfa48dcae9901c2ccc0ace61143aa6",
+      "size": 176
+    },
+    {
+      "kind": "g2layout",
+      "id": "kanto",
+      "hash": "5222d4ab547f654b4f74d88c7bb89b7c1a625dd521b06692b821573666d0d140",
+      "size": 101
+    },
+    {
+      "kind": "g2map",
+      "id": "G2_TEST_CAVE",
+      "hash": "27f58bc179b38c0732a4334ccc44670a6914c798e3a56db69ce157847d8d1894",
+      "size": 333
+    },
+    {
+      "kind": "g2map",
+      "id": "G2_TEST_HOUSE",
+      "hash": "6fe5aac6f0b9b359d964cbfb2b6724ef73ff6cb30b07a3ea009ba81f1e567191",
+      "size": 477
+    },
+    {
+      "kind": "g2map",
+      "id": "G2_TEST_KANTO_TOWN",
+      "hash": "cded2eec3d91c9dc8f88aef6cf54e06b5d5747541a85a6f854ceb01f80292684",
+      "size": 273
+    },
+    {
+      "kind": "g2map",
+      "id": "G2_TEST_ROUTE",
+      "hash": "b4babd12c027aab621ad619c58b30c3aa5caa077660d514c1abae51b449ceb7f",
+      "size": 459
+    },
+    {
+      "kind": "g2map",
+      "id": "G2_TEST_TOWN",
+      "hash": "d2b4a1bbb848da4c14e446a343e02948a6e843a4b1a1f80806832135d0fcf456",
+      "size": 938
+    },
+    {
+      "kind": "g2names",
+      "id": "all",
+      "hash": "23d6768ff5a49161439550f3452d731c270816bffd794f0a55da81bf878b211f",
+      "size": 262
+    },
+    {
+      "kind": "g2sprite",
+      "id": "SPRITE_TEST_BALL",
+      "hash": "26b71ac1ba78c8f8599a30d16d53ede53efd18b31b13ae8af86464a3d4e66ac4",
+      "size": 261
+    },
+    {
+      "kind": "g2sprite",
+      "id": "SPRITE_TEST_BALL.p0",
+      "hash": "b2ed23cd1c559395862c3dc0b63be91886b8a3eda209665617aeeafca99c99a1",
+      "size": 264
+    },
+    {
+      "kind": "g2sprite",
+      "id": "SPRITE_TEST_BOULDER",
+      "hash": "d7771efa89f1d962c3d98399d6c668a3ac7db42c130ff3920e821dbd935489d0",
+      "size": 267
+    },
+    {
+      "kind": "g2sprite",
+      "id": "SPRITE_TEST_LASS",
+      "hash": "b6d6c4e6220b2ee24028f2421bba7a2e04b2cf4105e2bf0d8ad09e4e1e91faaa",
+      "size": 337
+    },
+    {
+      "kind": "g2sprite",
+      "id": "SPRITE_TEST_ROCK",
+      "hash": "7e9de44b366ac8be703555d26099f04f9b361d32c204a8a5e9a6e90ff3d9af15",
+      "size": 261
+    },
+    {
+      "kind": "g2tiles",
+      "id": "TILESET_TEST_1",
+      "hash": "40dae66e199f9f32f2931dd82a9cd1d08b496eb7e8a659a90913c4d6af5039d1",
+      "size": 1445
+    },
+    {
+      "kind": "g2tiles",
+      "id": "TILESET_TEST_CAVE_1",
+      "hash": "22579a775ce8d040ee0967c5136f58143320953929b92903aa6c0aa0d5edcf92",
+      "size": 587
+    },
+    {
+      "kind": "g2tiles",
+      "id": "TILESET_TEST_HOUSE_1",
+      "hash": "c444f59b70d62314776dcf8915262e40a27d89e2c0945f9ad02b1e1014a3b9ee",
+      "size": 611
+    },
+    {
+      "kind": "swaps",
+      "id": "all",
+      "hash": "74d0ac139a718e918c907bafcf21d8ebf5edf717dbabdeffc74efc597003e762",
+      "size": 237
+    }
+  ]
+}

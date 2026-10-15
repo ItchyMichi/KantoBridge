@@ -375,7 +375,7 @@
                 "items": {
                   "type": "integer",
                   "minimum": 0,
-                  "maximum": 24575
+                  "maximum": 28671
                 },
                 "minItems": 4,
                 "maxItems": 4,

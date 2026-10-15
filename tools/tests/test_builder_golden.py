@@ -101,3 +101,35 @@ def test_golden_gen3_shape_index_matches_the_schema():
     assert not problems, [str(p) for p in problems]
     assert hashlib.sha256(canonical(golden["index"]).encode("utf-8")).hexdigest() == golden["indexHash"]
     assert golden["index"]["atlases"] == ["g3q"] and golden["index"]["palettes"] == ["BAKED"]
+
+
+# ---- MG9 (G2E): the synthetic Gen 2 build ----
+G2_GOLDEN = GAMETEST / "golden" / "synthetic_g2_world_index.json"
+G2_SHAPES = GAMETEST / "golden" / "synthetic_g2_shapes.json"
+G2_BUNDLE = GAMETEST / "synthetic_bundle" / "crystal"
+
+
+def test_golden_gen2_world_index_matches_the_schema_and_the_bundle():
+    index = json.loads(G2_GOLDEN.read_text(encoding="utf-8"))
+    problems = PROTOCOL.check_world_index(index)
+    assert not problems, [str(p) for p in problems]
+    bundle_index = json.loads((G2_BUNDLE / "index.json").read_text(encoding="utf-8"))
+    assert index["game"] == bundle_index["game"] == "crystal"
+    assert index["exportHash"] == hashlib.sha256(canonical(bundle_index).encode("utf-8")).hexdigest()
+    assert set(index["maps"]) == {e["id"] for e in bundle_index["resources"] if e["kind"] == "g2map"}
+    assert {m["palette"] for m in index["maps"].values()} == {"BAKED"}, "Gen 2's art is baked as Gen 3's: one palette"
+    surface = {k for k, m in index["maps"].items() if m["kind"] == "surface"}
+    assert surface == {"G2_TEST_TOWN", "G2_TEST_ROUTE", "G2_TEST_KANTO_TOWN"}, "both areas on the surface"
+    cave = index["maps"]["G2_TEST_CAVE"]
+    assert (cave["layer"], cave["parent"], cave["dark"]) == (1, "G2_TEST_ROUTE", True)
+    assert [h["pool"] for h in index["habitats"]] == ["kantobridge:g2_test_cave", "kantobridge:g2_test_route"]
+    swaps = {c["swap"]["kind"] for c in index["storyCells"] if c["type"] == "tile"}
+    assert swaps == {"cut", "whirlpool", "script"}
+
+
+def test_golden_gen2_shape_index_matches_the_schema():
+    golden = json.loads(G2_SHAPES.read_text(encoding="utf-8"))
+    problems = PROTOCOL.check_shape_index(golden["index"])
+    assert not problems, [str(p) for p in problems]
+    assert hashlib.sha256(canonical(golden["index"]).encode("utf-8")).hexdigest() == golden["indexHash"]
+    assert golden["index"]["atlases"] == ["g3q"] and golden["index"]["palettes"] == ["BAKED"]

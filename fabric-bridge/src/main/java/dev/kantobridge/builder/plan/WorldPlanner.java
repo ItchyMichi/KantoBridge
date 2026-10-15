@@ -95,6 +95,10 @@ public final class WorldPlanner {
 			// MG7 (GEN3_BRIDGE_PLAN §6): a Gen 3 export has its own maps, art and layout; Gen 1's path stays as it was.
 			return Gen3Planner.plan(bundle, options, region);
 		}
+		if (bundle.isGen2()) {
+			// MG9 (GEN2_BRIDGE_PLAN §7): a Gen 2 export too, built with Gen 3's machinery and Gen 1's block-level sites.
+			return Gen2Planner.plan(bundle, options, region);
+		}
 		Warnings warnings = new Warnings();
 		String poolPrefix = region == null ? "" : region.poolPrefix();
 

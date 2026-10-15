@@ -50,7 +50,7 @@ class RegionFilesTest {
 		RegionRecord kanto = record("kanto", 0, SlotMap.LEGACY_FAMILIES);
 		assertEquals(new SlotMap.Range(16, 31), BuildTask.nextFreeRange(List.of(kanto)));
 		RegionRecord other = record("johto", 1, new SlotMap.Range(16, 31));
-		assertEquals(new SlotMap.Range(32, 47), BuildTask.nextFreeRange(List.of(kanto, other)), "MG7: 96 families per shape");
+		assertEquals(new SlotMap.Range(32, 47), BuildTask.nextFreeRange(List.of(kanto, other)), "MG9: 112 families per shape");
 		assertEquals(SlotMap.LEGACY_FAMILIES, BuildTask.nextFreeRange(List.of(other)), "the first range is free again");
 	}
 
@@ -61,10 +61,23 @@ class RegionFilesTest {
 		assertEquals(16, SlotMap.familiesFor("gen1"));
 		assertEquals(16, SlotMap.familiesFor(null));
 		RegionRecord kanto = record("kanto", 0, SlotMap.LEGACY_FAMILIES);
-		assertEquals(new SlotMap.Range(16, 95), BuildTask.nextFreeRange(List.of(kanto), 80), "Kanto and Hoenn fill the 96");
+		assertEquals(new SlotMap.Range(16, 95), BuildTask.nextFreeRange(List.of(kanto), 80));
 		assertEquals(new SlotMap.Range(0, 79), BuildTask.nextFreeRange(List.of(), 80));
 		RegionRecord johto = record("johto", 1, new SlotMap.Range(16, 31));
-		assertNull(BuildTask.nextFreeRange(List.of(kanto, johto), 80), "80 contiguous families from 32 would pass 95");
+		assertEquals(new SlotMap.Range(32, 111), BuildTask.nextFreeRange(List.of(kanto, johto), 80), "MG9: Hoenn still fits after Johto");
+		RegionRecord third = record("test3", 2, new SlotMap.Range(96, 111));
+		assertNull(BuildTask.nextFreeRange(List.of(kanto, johto, third), 80), "80 contiguous families from 32 would meet 96");
+	}
+
+	@Test
+	void aGen2RegionTakesSixteenFamilies() {
+		// MG9 (GEN2_BRIDGE_PLAN §11 J7): Johto's baked art measured 14 families of 256; Kanto, Hoenn and Johto fill the 112
+		assertEquals(16, SlotMap.familiesFor("gen2"));
+		RegionRecord kanto = record("kanto", 0, SlotMap.LEGACY_FAMILIES);
+		RegionRecord hoenn = record("hoenn", 1, new SlotMap.Range(16, 95));
+		assertEquals(new SlotMap.Range(96, 111), BuildTask.nextFreeRange(List.of(kanto, hoenn), SlotMap.familiesFor("gen2")));
+		RegionRecord johto = record("johto", 2, new SlotMap.Range(96, 111));
+		assertNull(BuildTask.nextFreeRange(List.of(kanto, hoenn, johto), 16), "the 112 are full");
 	}
 
 	@Test

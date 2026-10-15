@@ -20,8 +20,8 @@ import net.minecraft.world.phys.shapes.Shapes;
 import net.minecraft.world.phys.shapes.VoxelShape;
 
 /**
- * Block registration. Tile families: {@code tile_full_00..95} (full cubes), {@code tile_half_00..95} (half height) and
- * {@code shape_full_00..95} (full collision around shaped art, never occluding; the voxel plan's V3). Plus
+ * Block registration. Tile families: {@code tile_full_00..111} (full cubes), {@code tile_half_00..111} (half height) and
+ * {@code shape_full_00..111} (full collision around shaped art, never occluding; the voxel plan's V3). Plus
  * {@code decor} and {@code decor_leaves} (visual only), and the invisible world blocks: {@code story_cell} and
  * {@code story_tile} (a swap site's cell, whose closed art the client draws per player), each with its block entity,
  * and {@code ledge_collider} (which carries the ledge lip since V3).
@@ -31,12 +31,13 @@ import net.minecraft.world.phys.shapes.VoxelShape;
  */
 public final class KbBlocks {
 	/**
-	 * Families per shape; 3 shapes × 96 families × 256 slots = 73,728 tile states. A world of several games shares one
+	 * Families per shape; 3 shapes × 112 families × 256 slots = 86,016 tile states. A world of several games shares one
 	 * slot map with a family range per region (docs/specs/MULTI_GAME_PLAN.md §4.6, MG3, D9): Kanto's 16 (it uses 3,926
-	 * of their 4,096 full slots), and since MG7 a Gen 3 region's 80 (Hoenn's flattened art uses about 18,400 full
-	 * slots: docs/specs/GEN3_BRIDGE_PLAN.md §5 "Measured", §10 E7). MG3 measured about 15 MB a side per 16 families.
+	 * of their 4,096 full slots), since MG7 a Gen 3 region's 80 (Hoenn's flattened art uses about 18,400 full slots:
+	 * docs/specs/GEN3_BRIDGE_PLAN.md §5 "Measured", §10 E7), and since MG9 a Gen 2 region's 16 (Johto's baked art uses
+	 * 3,560 full slots: GEN2_BRIDGE_PLAN §11 J7). MG3 measured about 15 MB a side per 16 families.
 	 */
-	public static final int FAMILIES_PER_SHAPE = 96;
+	public static final int FAMILIES_PER_SHAPE = 112;
 
 	private static final VoxelShape FULL = Shapes.block();
 	private static final VoxelShape HALF = Block.box(0, 0, 0, 16, 8, 16);

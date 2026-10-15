@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://kantobridge.invalid/protocol/world/slot_map.schema.json",
   "title": "slot map",
-  "description": "Written by the builder to <world>/kantobridge/slot_map.json. Gives every (atlas, palette, tile, shape) the export uses a tile block: family f of that shape (kantobridge:tile_<shape>_<ff>) and slot s (block state hi = s >> 4, lo = s & 15). Derived from the whole export, never from a build's map filter, and authoritative in multiplayer. Entries are sorted by atlas, palette, tile, shape (version 2: by region first). Version 2 (MULTI_GAME_PLAN §4.6, MG3): one map per world shared by every region; `regions` gives each region its art set and its family range, and every entry names its region; families run 0..95 (MG7: 96 per shape; a Gen 3 region takes 80, GEN3_BRIDGE_PLAN §10 E7). A region's WorldIndex `slotMapHash` is the SHA-256 of the canonical version-1 form of that region's entries alone (its slice), so a rebuild of one region never changes another's hash; the legacy region at families 0..15 keeps today's hash exactly.",
+  "description": "Written by the builder to <world>/kantobridge/slot_map.json. Gives every (atlas, palette, tile, shape) the export uses a tile block: family f of that shape (kantobridge:tile_<shape>_<ff>) and slot s (block state hi = s >> 4, lo = s & 15). Derived from the whole export, never from a build's map filter, and authoritative in multiplayer. Entries are sorted by atlas, palette, tile, shape (version 2: by region first). Version 2 (MULTI_GAME_PLAN §4.6, MG3): one map per world shared by every region; `regions` gives each region its art set and its family range, and every entry names its region; families run 0..111 (MG7: 96 per shape, a Gen 3 region takes 80, GEN3_BRIDGE_PLAN §10 E7; MG9: 112, a Gen 2 region takes 16, GEN2_BRIDGE_PLAN §11 J7). A region's WorldIndex `slotMapHash` is the SHA-256 of the canonical version-1 form of that region's entries alone (its slice), so a rebuild of one region never changes another's hash; the legacy region at families 0..15 keeps today's hash exactly.",
   "type": "object",
   "required": [
     "version",
@@ -52,7 +52,7 @@
           "family": {
             "type": "integer",
             "minimum": 0,
-            "maximum": 95
+            "maximum": 111
           },
           "slot": {
             "type": "integer",
@@ -90,7 +90,7 @@
             "items": {
               "type": "integer",
               "minimum": 0,
-              "maximum": 95
+              "maximum": 111
             },
             "description": "The region's family range [first, last]."
           }

@@ -96,6 +96,10 @@ class GamesTest {
 		assertTrue(Games.compatible("yellow", "red"), "one family");
 		assertFalse(Games.compatible("red", "emerald"), "another family");
 		assertFalse(Games.compatible("gold", "red"));
+		// MG9: Gen 2's art is baked per game, so Gold, Silver and Crystal share nothing; each its own
+		assertFalse(Games.compatible("gold", "crystal"));
+		assertFalse(Games.compatible("crystal", "silver"));
+		assertTrue(Games.compatible("crystal", "crystal"));
 		assertFalse(Games.compatible(null, "red"));
 		assertFalse(Games.compatible("red", null));
 		assertTrue(Games.compatible("nope", "nope"), "an unknown game still draws its own");

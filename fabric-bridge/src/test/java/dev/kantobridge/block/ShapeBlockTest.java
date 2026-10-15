@@ -102,7 +102,7 @@ class ShapeBlockTest {
 			assertEquals(net.minecraft.world.phys.shapes.Shapes.block(), solid.getCollisionShape(level, BlockPos.ZERO, CollisionContext.empty()));
 			assertTrue(solid.getShape(level, BlockPos.ZERO).isEmpty());
 		}
-		// the first carrier after the three tile/shape blocks of every family (96 families since MG7)
+		// the first carrier after the three tile/shape blocks of every family (112 families since MG9)
 		assertSame(KbBlocks.DECOR, KbBlocks.carriers().get(3 * KbBlocks.FAMILIES_PER_SHAPE).block());
 	}
 

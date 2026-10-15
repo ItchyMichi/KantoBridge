@@ -797,7 +797,8 @@ public final class BuildTask {
 		long now = System.nanoTime();
 		r.elapsedMs = (now - this.startNanos) / 1_000_000L;
 		if (this.prepared == null) {
-			r.mapsRequested = this.maps == null ? this.bundle.ids(this.bundle.isGen3() ? "g3map" : "map").size() : this.maps.size();
+			r.mapsRequested = this.maps == null
+					? this.bundle.ids(this.bundle.isGen3() ? "g3map" : this.bundle.isGen2() ? "g2map" : "map").size() : this.maps.size();
 			return;
 		}
 		WorldPlan plan = this.prepared.plan();

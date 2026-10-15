@@ -472,6 +472,39 @@ measured 3,526 for the blocks the maps use), so 16 families should hold Johto; G
 - **The real dry run**: `RealGen2DryRunTest` (`-Pkb.realGen2Bundle`) on the pod's Crystal export: maps placed, warnings,
   slots and families, story cells, habitats, shape-plan size.
 
+**As built (G2E, 2026-10-15).** As above, with:
+- **Readers** `G2Map` (blocks, block 0 drawn as the border and collided as a wall), `G2Tiles` (each byte's meaning; a
+  byte the export doesn't describe reads as a wall), `G2Data` (layouts, grass and water tables, the grass chances,
+  sheets); `ExportBundle.isGen2()` and `bakedPage(n)`, which serves `g2q.<n>` for Gen 2 and `g3q.<n>` for Gen 3, so
+  `QuarterPages`, `G3ArtSource`, `ArtCatalog.baked` and the pack's baked branch read both unchanged. Slot keys name the
+  virtual atlas's pages (`g3q.<n>`) for Gen 2 too; the texture paths carry the game.
+- **No tags of its own**: the meanings fit Gen 1's `CellFlags` after all. Ice is plain floor (never wild), whirlpools
+  water (their sites closed), long grass grass, ledges hop their first direction (not walkable, as Gen 1's and 3's),
+  doors, mats, ladders, pads and holes by the warp kind. The one-way bytes become `PairEdges.walls` from each byte's
+  `sides` and `neighbor` arms (1,535 edges on the real Crystal), between standable cells only.
+- **`MapModel.gen2`**: baked tiles and Gen 1's swap arrays per cell (open and closed block, the data's own block); a
+  closed model beside the open one when a site changes art or passability. The art catalogue keys every cell's tile
+  (half on water), the border block and, as Gen 1's, both blocks of every site and the data's own, full-shape.
+- **Placement** as planned; the areas' origins in cells, Kanto's top aligned with Johto's top. Interiors breadth-first
+  through warps and connections, then the maps only left by a warp, the start room, then any map a script reaches
+  (`UNUSED`/`TEST`/`DEBUG` ids left out). `POKECENTER_2F` goes under the first center (in id order) whose stairs reach
+  it; the other centers' stairs warp there. 11 outdoor maps entered from inside (Route 23 and 28, the ports, the
+  National Park, Mt. Silver's outside, Tin Tower's roof, Mt. Moon Square, the Ruins of Alph's outside, the Battle
+  Tower's outside) get the sky.
+- **People**: `g2sprite` strips → Gen 1's sheet layout at Gen 1's scale (`BakedTextures.sheetGen1Order`: four 16-px
+  columns, standing and walking rows, right mirrored); a palette override sheet (`<sprite>.p<n>`) is its own texture.
+- **`Gen2FrontEnd`** (`scene/gen2/`): the scene from `G2Cells` as Gen 3's from `G3Cells`, plus the swap sites' both
+  states as Gen 1's; a sprite a variable chooses is named `SPRITE_VAR_<n>`. `Games.compatible`: a baked family's art
+  draws only its own game's world.
+- **J7 measured** on the real Crystal: 3,560 full-shape keys and 61 half (14 families), so **112 families per shape,
+  Johto 16** (`familiesFor("gen2")` = 16; Kanto 0..15, Hoenn 16..95, Johto 96..111; built in another order, Hoenn still
+  fits after Johto). Cost: +12,288 block states, about **+15 MB a side** at the measured 1.23 KB a state (the tile
+  block test's harness on the pod: 10.1 MB for 8,192 states); not measured in a running client.
+- **The real dry run** (kb-dev23): 388 maps placed (66 surface, 322 interiors, deepest layer 14, 2 deep spills, 4 moved
+  sideways), 2 warnings (Celadon City/Route 7's loop, both ways, as G2D found) and 1 object off its map (Goldenrod's
+  Pokémon Center), 179 tile story cells, 1,176 object cells, 555 habitats, 91 pools, a shape plan of 1.0 M shaped
+  blocks; planned in 3.1 s.
+
 ## 8. Johto in the world (G2G, G2H)
 
 - **Region `johto` at slot 2**, beside Kanto at 0 and Hoenn at 1 (`RegionTable` pitch 8,192 blocks; Johto and its Kanto
@@ -532,7 +565,7 @@ Every change: schema, PROTOCOL.md, `python -m kb_protocol.catalog --write`, the 
 | **G2B** UI | text, yes/no, lists, START menu, naming, Oak's speech, phone calls, Elm's picture, mirrors | lupa UI; e2e (a sign, Oak's speech through the UI, a call) ✔ — **done 2026-10-15** (§5.5 "As built"; no call rang in the runs) |
 | **G2C** story | numeric flags, toggles, `story.blocks`, swap sites, markers | lupa; e2e (the starter flag, a block change) — **done 2026-10-15** (§5.6 "As built") |
 | **G2D** export | the `g2*` kinds, baked tiles, pristine blocks, layout, encounters, sprites, animations, swaps | lupa on the fake; the pod's export, counts and hashes ✔ — **done 2026-10-15** (§6 "As built") |
-| **G2E** builder | families raised; `Gen2Planner`, `G2Cells`, `Gen2FrontEnd`, the Gen 2 `MapModel` form, placement, interiors, story cells, art, people, animations, darkness, habitats | JUnit, golden scene, GameTest; the pod's dry run ✔ |
+| **G2E** builder | families raised; `Gen2Planner`, `G2Cells`, `Gen2FrontEnd`, the Gen 2 `MapModel` form, placement, interiors, story cells, art, people, animations, darkness, habitats | JUnit, golden scene, GameTest; the pod's dry run ✔ — **done 2026-10-15** (§7 "As built") |
 | **G2F** battles, party, bag | held battles, party sync, gifts, trades, Day-Care and eggs, bag and money, Bill's PC, field moves | lupa; e2e (a wild, a trainer and the first rival battle; the starter) ✔ |
 | **G2G** the real Johto | synthetic bundle, goldens, full suites; Johto built at slot 2 beside Kanto and Hoenn; index and slots by hash; budgets | full suite ✔; build gates |
 | **G2H** the pass | `kanto_johto_test`; the Gen 2 route end; the Johto half's content; crossings between the real Blue and Crystal (20 each way); PLAYTEST "Johto"; a video if you want one | e2e ✔ |

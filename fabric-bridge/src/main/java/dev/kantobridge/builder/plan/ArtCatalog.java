@@ -84,10 +84,18 @@ public final class ArtCatalog {
 	}
 
 	/**
-	 * The catalogue of a whole export of either family, as the pack needs it (no region: the pack holds keys, never slots):
-	 * Gen 1's ({@link #of(ExportBundle, Warnings)}), or a Gen 3 export's baked one (MG7).
+	 * The catalogue of a whole export of any family, as the pack needs it (no region: the pack holds keys, never slots):
+	 * Gen 1's ({@link #of(ExportBundle, Warnings)}), or a Gen 3 or (MG9) Gen 2 export's baked one.
 	 */
 	public static ArtCatalog ofExport(ExportBundle bundle, Warnings warnings) throws BundleException, PlanException {
+		if (bundle.isGen2()) {
+			// MG9: a Gen 2 export's catalogue is baked too, with its swap sites' closed art
+			Map<String, List<ExportSwaps.Site>> sitesByMap = new HashMap<>();
+			for (ExportSwaps.Site site : bundle.swaps().sites()) {
+				sitesByMap.computeIfAbsent(site.map(), k -> new ArrayList<>()).add(site);
+			}
+			return Gen2Planner.catalog(bundle, Gen2Planner.maps(bundle), sitesByMap, null, warnings);
+		}
 		return bundle.isGen3() ? Gen3Planner.catalog(bundle, Gen3Planner.maps(bundle), null, warnings) : of(bundle, warnings);
 	}
 

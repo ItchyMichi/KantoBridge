@@ -19,6 +19,7 @@
 			"dev.kantobridge.gametest.ShapeBuildGameTests",
 			"dev.kantobridge.gametest.RegionBuildGameTests",
 			"dev.kantobridge.gametest.Gen3BuildGameTests",
+			"dev.kantobridge.gametest.Gen2BuildGameTests",
 			"dev.kantobridge.gametest.PassGameTests",
 			"dev.kantobridge.gametest.LedgerGameTests",
 			"dev.kantobridge.gametest.BuildHoldGameTests",

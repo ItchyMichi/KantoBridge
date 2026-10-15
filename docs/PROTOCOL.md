@@ -1086,8 +1086,9 @@ SHA-256 of its canonical JSON. Capacity: 16 families × 256 slots per shape.
   its index at the root, every message without `region`, one link. Nothing is rewritten until a build with a region
   writes the new layout (then the root index and shape files go). Every golden and every existing world stays
   byte-identical.
-- **The slot map is one per world** (`slot_map.json` version 2): each region owns a family range of the 96 families
-  per shape (MG7, E7: a Gen 1 region takes 16, a Gen 3 region 80, starting on a multiple of 16) and its keys carry the
+- **The slot map is one per world** (`slot_map.json` version 2): each region owns a family range of the 112 families
+  per shape (MG7, E7: a Gen 1 region takes 16, a Gen 3 region 80; MG9, J7: a Gen 2 region 16; each starting on a
+  multiple of 16) and its keys carry the
   region and its art set, so a rebuild of one region never renumbers another's
   blocks. A region's `WorldIndex.slotMapHash` is the hash of the version-1 form of **that region's slice** of the map
   (the legacy region at 0..15 keeps today's hash exactly); `world.slots` carries the whole document's hash.

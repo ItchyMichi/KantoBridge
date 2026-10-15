@@ -42,15 +42,21 @@ public final class SlotMap {
 	public static final int VERSION = 1;
 	/** Several regions in one map (MG3): a family range and an art set per region, the region on every entry. */
 	public static final int VERSION_2 = 2;
-	/** Tile families per shape; equals {@code KbBlocks.FAMILIES_PER_SHAPE} (checked by a unit test). MG7: 96 (E7). */
-	public static final int FAMILIES_PER_SHAPE = 96;
+	/**
+	 * Tile families per shape; equals {@code KbBlocks.FAMILIES_PER_SHAPE} (checked by a unit test). MG7: 96 (E7); MG9:
+	 * 112, room for a Gen 2 region's 16 beside Kanto's and Hoenn's (GEN2_BRIDGE_PLAN §11 J7).
+	 */
+	public static final int FAMILIES_PER_SHAPE = 112;
 	public static final int SLOTS_PER_FAMILY = 256;
 	/** Slots available per shape. */
 	public static final int CAPACITY = FAMILIES_PER_SHAPE * SLOTS_PER_FAMILY;
 	/** The region every version-1 map belongs to (MULTI_GAME_PLAN §4.14), and the families it uses. */
 	public static final String LEGACY_REGION = "kanto";
 	public static final Range LEGACY_FAMILIES = new Range(0, 15);
-	/** The families a region of one game family takes: Gen 1's 16, Gen 3's 80 (MG7, GEN3_BRIDGE_PLAN §10 E7). */
+	/**
+	 * The families a region of one game family takes: Gen 1's 16, Gen 3's 80 (MG7, GEN3_BRIDGE_PLAN §10 E7), Gen 2's 16
+	 * (MG9, J7: Johto's baked art measured 14).
+	 */
 	public static int familiesFor(@Nullable String family) {
 		return "gen3".equals(family) ? 80 : LEGACY_FAMILIES.size();
 	}

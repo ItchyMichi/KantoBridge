@@ -3,8 +3,10 @@
 Regenerate it after changing tools/fake_gen1/synth.py or synth3.py (from tools/):
     .venv/Scripts/python.exe -m fake_gen1 --write-bundle ../fabric-bridge/src/gametest/resources/kantobridge/synthetic_bundle
     .venv/Scripts/python.exe -m fake_gen1 --write-bundle ../fabric-bridge/src/gametest/resources/kantobridge/synthetic_bundle --game emerald
+    .venv/Scripts/python.exe -m fake_gen1 --write-bundle ../fabric-bridge/src/gametest/resources/kantobridge/synthetic_bundle --game crystal
     .venv/Scripts/python.exe -m fake_gen1 --write-bundle ../fabric-bridge/src/gametest/resources/kantobridge/synthetic_pass --game emerald --variant pass
-(MG7: red is the Gen 1 world, emerald the synthetic Gen 3 export; MG8: synthetic_pass its town with a Wild Routes end.)
+(MG7: red is the Gen 1 world, emerald the synthetic Gen 3 export; MG8: synthetic_pass its town with a Wild Routes end;
+MG9: crystal the synthetic Gen 2 export.)
 """
 from fake_gen1.bundle import write_bundle
 from kb_protocol.paths import REPO_ROOT
@@ -21,6 +23,7 @@ PASS_COPY = REPO_ROOT / "fabric-bridge" / "src" / "gametest" / "resources" / "ka
 
 def test_gametest_bundle_is_current(tmp_path):
     write_bundle(tmp_path, game="red")
+    write_bundle(tmp_path, game="crystal")
     fresh = write_bundle(tmp_path, game="emerald").parent
     assert _files(COPY) == _files(fresh), "stale synthetic bundle: regenerate it (see this file's docstring)"
 

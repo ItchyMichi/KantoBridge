@@ -85,6 +85,40 @@ public final class PairEdges {
 		return edges == 0 ? NONE : new PairEdges(w, h, sides, edges);
 	}
 
+	/**
+	 * A Gen 2 map's one-way edges (MG9, docs/specs/GEN2_BRIDGE_PLAN.md §7): {@code walls} lists pairs of neighbouring cells
+	 * {@code {ax, ay, bx, by}} the engine refuses a step between (its side walls and buoys: the standing cell's own sides
+	 * and the neighbour arms, which in Crystal close the same edge from both cells). Only edges between two cells a
+	 * player stands on (ground, ledge or water) are walled. Duplicates count once.
+	 */
+	public static PairEdges walls(MapModel model, java.util.List<int[]> walls) {
+		int w = model.cellWidth();
+		int h = model.cellHeight();
+		byte[] sides = new byte[w * h];
+		int edges = 0;
+		for (int[] e : walls) {
+			int ax = Math.min(e[0], e[2]);
+			int ay = Math.min(e[1], e[3]);
+			int bx = Math.max(e[0], e[2]);
+			int by = Math.max(e[1], e[3]);
+			if (ax < 0 || ay < 0 || bx >= w || by >= h || (bx - ax) + (by - ay) != 1) {
+				continue;
+			}
+			if (!standable(model.kind(ax, ay)) || !standable(model.kind(bx, by))) {
+				continue;
+			}
+			int first = bx > ax ? EdgeWallBlock.SIDE_EAST : EdgeWallBlock.SIDE_SOUTH;
+			int second = bx > ax ? EdgeWallBlock.SIDE_WEST : EdgeWallBlock.SIDE_NORTH;
+			if ((sides[ay * w + ax] & first) != 0) {
+				continue;
+			}
+			sides[ay * w + ax] |= first;
+			sides[by * w + bx] |= second;
+			edges++;
+		}
+		return edges == 0 ? NONE : new PairEdges(w, h, sides, edges);
+	}
+
 	/** True when the engine refuses a step between cells (ax, ay) and (bx, by) for their elevations. */
 	static boolean elevationWall(MapModel model, G3Map map, int ax, int ay, int bx, int by) {
 		if (!walked(model.kind(ax, ay)) || !walked(model.kind(bx, by))) {

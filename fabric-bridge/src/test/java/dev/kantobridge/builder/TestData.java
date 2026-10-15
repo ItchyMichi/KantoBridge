@@ -50,6 +50,19 @@ public final class TestData {
 		return dir;
 	}
 
+	/** MG9: the synthetic Gen 2 build's origin; {@code Gen2BuildGameTests.ORIGIN_X/Z} must be the same. */
+	public static final int G2_ORIGIN_X = 6_400_000;
+	public static final int G2_ORIGIN_Z = 3_200_000;
+
+	/** MG9: the synthetic Gen 2 export (tools/fake_gen1/synth2.py, a tiny made-up Johto and Kanto). */
+	public static Path syntheticGen2Bundle() {
+		Path dir = gametestResources().resolve("kantobridge/synthetic_bundle/crystal");
+		if (!Files.isRegularFile(dir.resolve("index.json"))) {
+			throw new IllegalStateException("synthetic Gen 2 bundle missing");
+		}
+		return dir;
+	}
+
 	/** MG8: the synthetic Gen 3 export's town with a Wild Routes end (synth3.resources(variant="pass")). */
 	public static Path syntheticGen3PassBundle() {
 		Path dir = gametestResources().resolve("kantobridge/synthetic_pass/emerald");
@@ -57,6 +70,19 @@ public final class TestData {
 			throw new IllegalStateException("synthetic Gen 3 pass bundle missing");
 		}
 		return dir;
+	}
+
+	/** MG9: the synthetic Gen 2 export's scene (Gen2FrontEnd), build index and shapes. */
+	public static Path goldenG2Scene() {
+		return gametestResources().resolve("kantobridge/golden/synthetic_g2_scene.json");
+	}
+
+	public static Path goldenG2Index() {
+		return gametestResources().resolve("kantobridge/golden/synthetic_g2_world_index.json");
+	}
+
+	public static Path goldenG2Shapes() {
+		return gametestResources().resolve("kantobridge/golden/synthetic_g2_shapes.json");
 	}
 
 	/** MG7: the synthetic Gen 3 export's scene (Gen3FrontEnd), build index and shapes. */

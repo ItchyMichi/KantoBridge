@@ -102,7 +102,7 @@ class RegionRecordTest {
 		assertThrows(DataException.class, () -> RegionRecord.fromJson(json.replace("\"id\":\"hoenn\"", "\"id\":\"johto\"")),
 				"the documents belong to another region");
 		assertThrows(DataException.class, () -> RegionRecord.fromJson(json.replace("\"families\":[16,31]", "\"families\":[31,16]")), "lo > hi");
-		assertThrows(DataException.class, () -> RegionRecord.fromJson(json.replace("\"families\":[16,31]", "\"families\":[16,96]")), "family 96");
+		assertThrows(DataException.class, () -> RegionRecord.fromJson(json.replace("\"families\":[16,31]", "\"families\":[16,112]")), "family 112 (MG9: 112 per shape)");
 		assertThrows(DataException.class, () -> RegionRecord.fromJson(json.replace("\"onIncompatible\":\"leave_out\"", "\"onIncompatible\":\"drop\"")));
 		assertThrows(DataException.class, () -> RegionRecord.fromJson(json.replace("\"family\":\"gen3\"", "\"family\":\"gen9\"")));
 		assertThrows(DataException.class, () -> RegionRecord.fromJson(json.replace("\"game\":\"emerald\"", "\"game\":\"nope\"")));
