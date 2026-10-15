@@ -24,7 +24,11 @@
 --   fly       to `dest` (a map the Town Map's fly list offers), or, without
 --             one, open that native fly list (kind "fly_list": it arrives
 --             as a list UI, answered with ui.pick / ui.back)
--- Kinds on success: cut, surf, dismount, strength, flash, dig, rope,
+--   MG9 (G2F), Gen 2's: headbutt (the tree in front), rock_smash (the rock
+--             in front), whirlpool (the whirlpool in front), waterfall (up
+--             the waterfall in front), sweet_scent (a wild Pokemon here)
+-- Kinds on success: cut, surf, dismount, strength, flash, dig, rope, (MG9) headbutt,
+-- rock_smash, whirlpool, waterfall, sweet_scent,
 -- teleport, bike_on, bike_off, fish, fly, fly_list. Refusals: not_ingame,
 -- not_idle, not_adjacent, no_move (no party member knows it), no_badge,
 -- no_target (nothing to cut, no water, no such destination), not_here (the
@@ -39,9 +43,12 @@ local Field = {}
 
 Field.WAIT = 30 -- steps a request waits for the player to stand
 Field.ACTIONS = { cut = true, surf = true, strength = true, flash = true, dig = true, teleport = true,
-                  bicycle = true, fish = true, fly = true }
+                  bicycle = true, fish = true, fly = true,
+                  -- MG9 (G2F): Gen 2's field moves
+                  headbutt = true, rock_smash = true, whirlpool = true, waterfall = true, sweet_scent = true }
 -- the actions that use the cell in front; x/y name it
-Field.TARGETED = { cut = true, surf = true, fish = true }
+Field.TARGETED = { cut = true, surf = true, fish = true, headbutt = true, rock_smash = true, whirlpool = true,
+                   waterfall = true }
 
 local floor, abs = math.floor, math.abs
 

@@ -11,7 +11,9 @@
   "additionalProperties": false,
   "properties": {
     "action": {
-      "enum": ["cut", "surf", "strength", "flash", "dig", "teleport", "bicycle", "fish", "fly"]
+      "enum": ["cut", "surf", "strength", "flash", "dig", "teleport", "bicycle", "fish", "fly", "headbutt", "rock_smash",
+               "whirlpool", "waterfall", "sweet_scent"],
+      "description": "MG9 (G2F): headbutt, rock_smash, whirlpool, waterfall and sweet_scent are Gen 2's."
     },
     "x": {"$ref": "../defs.schema.json#/$defs/coord"},
     "y": {"$ref": "../defs.schema.json#/$defs/coord"},

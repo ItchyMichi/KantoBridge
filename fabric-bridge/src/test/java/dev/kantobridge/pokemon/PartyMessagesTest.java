@@ -3,6 +3,7 @@ package dev.kantobridge.pokemon;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
@@ -45,6 +46,24 @@ class PartyMessagesTest {
 				+ "\"ivs\":{\"hp\":1,\"atk\":2,\"def\":3,\"spa\":4,\"spd\":5,\"spe\":6},\"source\":\"starter\"}"));
 		assertEquals(new Gen1Mon(252, 5, List.of(1, 43, 71), null, new Ivs(1, 2, 3, 4, 5, 6)), give.mon());
 		assertEquals(PartyGive.Source.STARTER, give.source());
+	}
+
+	@Test
+	void aGen2GiftCarriesItsDetails() throws Exception {
+		// MG9 (G2F): DVs, the held item by its canonical id, gender, shininess, Unown's letter, friendship
+		PartyGive give = PartyGive.read(json("{\"give\":\"g-4\",\"dex\":201,\"level\":10,\"moves\":[237],"
+				+ "\"dvs\":{\"atk\":4,\"def\":4,\"spd\":4,\"spc\":4},\"item\":\"leftovers\",\"shiny\":false,"
+				+ "\"gender\":\"genderless\",\"form\":\"q\",\"friendship\":120,\"source\":\"egg\"}"));
+		assertEquals(new MonDetails("leftovers", false, "genderless", "q", 120), give.mon().details());
+		assertEquals(4, give.mon().dvs().atk());
+		JsonObject out = new JsonObject();
+		give.mon().details().write(out);
+		assertEquals("{\"form\":\"q\",\"friendship\":120,\"gender\":\"genderless\",\"item\":\"leftovers\",\"shiny\":false}",
+				ProtoJson.write(out));
+		assertThrows(DataException.class, () -> PartyGive.read(json("{\"give\":\"g-4\",\"dex\":7,\"level\":5,"
+				+ "\"friendship\":256,\"source\":\"gift\"}")));
+		assertThrows(IllegalArgumentException.class, () -> new MonDetails("Leftovers", null, null, null, null));
+		assertTrue(MonDetails.NONE.isEmpty());
 	}
 
 	@Test

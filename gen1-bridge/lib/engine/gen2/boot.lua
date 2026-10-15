@@ -23,7 +23,10 @@ Boot.REQUIRES = {
                                -- G2C: who stands where (story.lua)
                                "hour", "clockTimeMask", "objectTimeVisible", "objectMaskKey",
                                -- G2D: the export's areas and animated tiles (export.lua)
-                               "region", "landmarkIndex", "animLayers", "animRow", "flowerFrameFor" },
+                               "region", "landmarkIndex", "animLayers", "animRow", "flowerFrameFor",
+                               -- G2F: the held battle (battle.lua), the field moves (fieldmoves.lua)
+                               "startBattle", "pushBattleTransition", "scriptRunning", "useFieldMove",
+                               "useFieldItem", "fieldContext", "busy" },
   ["src.world.gen2.Permissions"] = { "isIce", "currentDirection", "doorForcedDirection",
                                      -- G2D: what a COLL byte means (export.lua)
                                      "of", "isGrass", "isSuperTallGrass", "isEncounterCollision", "isWhirlpool",
@@ -32,7 +35,9 @@ Boot.REQUIRES = {
                                      "carpetDirection", "warpFacesDown" },
   ["src.world.gen2.Player"] = { "scriptFace" },
   ["src.world.gen2.Map"] = { "cellCollision", "inBounds", "warpAt", "isCounterCell" },
-  ["src.world.gen2.FieldMoves"] = { "JOHTO_BADGES", "KANTO_BADGES", "CUT_BLOCKS", "WHIRLPOOL_BLOCKS" },
+  ["src.world.gen2.FieldMoves"] = { "JOHTO_BADGES", "KANTO_BADGES", "CUT_BLOCKS", "WHIRLPOOL_BLOCKS",
+                                    -- G2F: surf for a wild's kind (battle.lua), a move's user (fieldmoves.lua)
+                                    "isSurfing", "partyMoveUser" },
   ["src.world.gen2.Events"] = { "objectVisible" },
   ["src.core.gen2.Decorations"] = { "tiles", "ATTRIBUTES", "ACTIONS" },
   -- G2D: the export (export.lua)
@@ -50,6 +55,19 @@ Boot.REQUIRES = {
   ["src.ui.gen2.NamingScreen"] = { "TYPES", "rows", "bottomRow" },
   ["src.ui.gen2.GenderSelect"] = { "OPTIONS", "menuOpen" },
   ["src.ui.gen2.CallerBox"] = {},
+  -- G2F: battles, the party and the bag (battle.lua, party.lua, bag.lua)
+  ["src.ui.gen2.BattleState"] = { "new" },
+  ["src.battle.gen2.Mon"] = { "new", "stampOT", "stats", "growthFor", "experienceForLevel", "randomDVs",
+                              "vanillaShiny" },
+  ["src.battle.gen2.Prize"] = { "message" },
+  ["src.core.gen2.Gender"] = { "of" },
+  ["src.core.gen2.Unown"] = { "letterFromDVs" },
+  ["src.core.gen2.NpcTrade"] = { "perform" },
+  ["src.core.gen2.Breeding"] = { "hatch", "withdraw" },
+  ["src.core.gen2.Boxes"] = { "box" },
+  ["src.inventory.Bag"] = { "add", "remove", "capacity", "slots" },
+  ["src.core.Game2"] = { "usePartyItem", "useFieldItem", "say" },
+  ["src.ui.gen2.CenterPcMenu"] = { "choose" },
 }
 -- The Game2 object's methods (src/core/Game2.lua:292, :312, :374, :1022, :1044).
 Boot.GAME_METHODS = { "newGame", "continueGame", "returnToTitle", "writeSave", "quickSaveAllowed" }

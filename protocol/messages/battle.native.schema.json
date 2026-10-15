@@ -19,8 +19,11 @@
       "enum": [
         "safari",
         "old_man",
-        "ghost"
-      ]
+        "ghost",
+        "contest",
+        "tower"
+      ],
+      "description": "safari, old_man (Gen 1's demo; Gen 2's catch tutorial), ghost (Gen 1); MG9 (G2F): contest (the Bug-Catching Contest), tower (the Battle Tower)."
     },
     "phase": {
       "enum": [

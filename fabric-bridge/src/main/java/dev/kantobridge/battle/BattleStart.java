@@ -3,7 +3,9 @@ package dev.kantobridge.battle;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
+import dev.kantobridge.pokemon.Dvs;
 import dev.kantobridge.pokemon.Gen1Mon;
+import dev.kantobridge.pokemon.MonDetails;
 import dev.kantobridge.proto.Ids;
 import dev.kantobridge.world.DataException;
 import dev.kantobridge.world.DataReader;
@@ -33,7 +35,7 @@ public record BattleStart(String battle, Kind kind, @Nullable Trainer trainer, L
 
 	private static final Set<String> FIELDS = Set.of("battle", "kind", "trainer", "team", "wild", "rules", "region");
 	private static final Set<String> TRAINER_FIELDS = Set.of("cls", "party", "name", "npc", "map", "x", "y");
-	private static final Set<String> WILD_FIELDS = Set.of("dex", "level", "x", "y");
+	private static final Set<String> WILD_FIELDS = Set.of("dex", "level", "x", "y", "dvs", "item", "shiny", "gender", "form");
 	private static final Set<String> RULE_FIELDS = Set.of("catch", "flee");
 
 	/** The battle kinds of the protocol. */
@@ -66,8 +68,18 @@ public record BattleStart(String battle, Kind kind, @Nullable Trainer trainer, L
 		}
 	}
 
-	/** A wild encounter's Pokémon and, optionally, its cell on the player's map. */
-	public record Wild(int dex, int level, @Nullable Integer x, @Nullable Integer y) {
+	/**
+	 * A wild encounter's Pokémon and, optionally, its cell on the player's map; MG9 (G2F): its DVs and details where the
+	 * game gives them (Gen 2), so Cobblemon's matches its stats, gender and shininess.
+	 */
+	public record Wild(int dex, int level, @Nullable Integer x, @Nullable Integer y, @Nullable Dvs dvs, MonDetails details) {
+		public Wild {
+			details = details == null ? MonDetails.NONE : details;
+		}
+
+		public Wild(int dex, int level, @Nullable Integer x, @Nullable Integer y) {
+			this(dex, level, x, y, null, MonDetails.NONE);
+		}
 	}
 
 	public BattleStart {
@@ -158,6 +170,7 @@ public record BattleStart(String battle, Kind kind, @Nullable Trainer trainer, L
 		int level = reader.integer("level", 1, Gen1Mon.MAX_LEVEL);
 		Integer x = reader.has("x") ? reader.integer("x", -MAX_COORD, MAX_COORD) : null;
 		Integer y = reader.has("y") ? reader.integer("y", -MAX_COORD, MAX_COORD) : null;
-		return new Wild(dex, level, x, y);
+		Dvs dvs = reader.has("dvs") ? Dvs.read(reader.element("dvs"), reader.path("dvs")) : null;
+		return new Wild(dex, level, x, y, dvs, MonDetails.read(reader, false));
 	}
 }

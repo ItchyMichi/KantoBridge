@@ -18,7 +18,9 @@ public final class FieldFeedback {
 	public static final Set<String> REASONS = Set.of("not_ingame", "not_idle", "not_adjacent", "no_move", "no_badge", "no_target", "not_here",
 			"no_item", "already", "busy", "failed");
 	/** The {@code act.field} actions. */
-	public static final Set<String> ACTIONS = Set.of("cut", "surf", "strength", "flash", "dig", "teleport", "bicycle", "fish", "fly");
+	/** MG9 (G2F): Gen 2's headbutt, rock_smash, whirlpool, waterfall and sweet_scent too. */
+	public static final Set<String> ACTIONS = Set.of("cut", "surf", "strength", "flash", "dig", "teleport", "bicycle", "fish", "fly",
+			"headbutt", "rock_smash", "whirlpool", "waterfall", "sweet_scent");
 	public static final String OTHER = "other";
 	/** How long a request in flight holds back the next: gen1-bridge answers within about half a second. */
 	public static final long PENDING_MS = 3000;

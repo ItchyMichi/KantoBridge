@@ -52,6 +52,11 @@ public final class LedgerRules {
 		 * {@code act.result.left}.
 		 */
 		public static final Limits GEN3 = new Limits(128, 99);
+		/**
+		 * Gen 2 (MG9, G2F): the kinds Crystal's non-key pockets hold (items 20, balls 12, its 50 TMs), 99 a slot; what a full
+		 * pocket can't take comes back as {@code act.result.left}.
+		 */
+		public static final Limits GEN2 = new Limits(82, 99);
 		/** Other families until their adapters say. */
 		public static final Limits DEFAULT = new Limits(30, 99);
 
@@ -64,6 +69,9 @@ public final class LedgerRules {
 		public static Limits of(@Nullable String family) {
 			if ("gen1".equals(family)) {
 				return GEN1;
+			}
+			if ("gen2".equals(family)) {
+				return GEN2;
 			}
 			return "gen3".equals(family) ? GEN3 : DEFAULT;
 		}

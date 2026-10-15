@@ -369,6 +369,37 @@ the world is built with day colours (J6). Tests pin the clock.
   apricorns and Kurt's balls, which Cobblemon has, evolution items, Gen 2's TMs). Mom's savings stay Crystal's (J13).
   Bill's PC opens Cobblemon's PC (a wrapper on `CenterPcMenu:choose` for its row), as on Gen 1.
 
+**As built (G2F, 2026-10-15; `GB/lib/engine/gen2/{party,battle,bag,fieldmoves}.lua`).** As above, with:
+- **The hold** wraps `World.startBattle`, `World.pushBattleTransition` and `BattleState.new` once per process; the
+  placeholder acts in its own `update` (inside the engine's step), so the defeat and money lines are `Game2:say` boxes
+  over it and the engine's closure pops it afterwards. Facts: a wild's kind is `fish` for `battleType "fish"`, `surf`
+  while surfing, else `static` (headbutt, rock smash, roamers, statics); TRAP (9) can't be fled; a trainer's `party` is
+  its member number (the class row's `index`), its object the engaged one when its trainer struct matches. The
+  contest, the catch tutorial (`old_man`) and the Battle Tower stay native and are announced once their screen is up.
+- **Gifts by diffing the party** every step, the source from the seam: `givepoke` (the script.command wrapper; found on
+  the real engine: the op's nickname prompt yields the script inside the op, so the seam is marked from the op's start,
+  not only after it returns), `NpcTrade.perform` (a take for the member sent), `Breeding.hatch` (source `egg`),
+  `Breeding.withdraw` (the rebuilt record inherits the uid; `daycare.withdraw`'s steps are the experience the Day-Care
+  gave). The contest's catch and Game Corner prizes arrive as plain gifts through the diff. Eggs park in the current
+  hidden box when the party is full and come back when there is room.
+- **Details travel by canonical item id** (a change from the sketch in §9): one `party.sync` reaches every game, so a
+  held item can't be one game's symbol; each adapter maps the catalogue id to its own. New members' DVs are searched
+  (all 65,536) for the nearest to random that reproduce the entry's shininess, gender and Unown letter, giving way
+  letter first, then gender (a shiny female of a mostly male species can't exist).
+- **Items**: `protocol/items.json` gains Crystal's symbols on 63 shared items and its 50 TMs (28 shared by move, 22 new)
+  and 81 new items by their modern names (held items and berries with Cobblemon's items where one exists; balls,
+  medicine, valuables and apricorns ledger-only: Minecraft's mirror stays Gen 1's 29). `LedgerRules.Limits.GEN2` =
+  82 kinds (items 20, balls 12, TMs 50), 99 a stack.
+- **Item uses on members**: Gen 2 has no `item.use`, so `Game2:usePartyItem` and `Game2:useFieldItem` are guarded:
+  stones, Rare Candy, TMs and HMs are refused while a client follows (the hidden game's own "no effect" line).
+- **Field moves** (`act.field`) go through `World:useFieldMove` (the party menu's path: badge, the move's checks, the
+  queued script) with the first member that knows it, and the bicycle, rods and Escape Rope through
+  `World:useFieldItem`; Gen 2's Fly picks its destination on its own map (a named `dest` is refused, `fly_list`).
+- **Java**: `MonDetails` on team members, wild Pokémon and gifts; `Gen1Mons.applyDetails` (shininess, gender, held item
+  through the catalogue, friendship; Cobblemon 1.8's `swapHeldItem(stack, false, false)`); `PartySync` sends every
+  member's details; `ProxyClass.of(kind, cls, family)` reads Gen 2's leaders, Elite Four (Koga there) and Red;
+  `NativeBattle` and `FieldFeedback` take the new kinds.
+
 ### 5.11 Routes (G2H)
 
 The Gen 2 end of a connecting route follows **Gen 1's** (J9, changed by G2-S3: a registered map can be entered and
@@ -566,7 +597,7 @@ Every change: schema, PROTOCOL.md, `python -m kb_protocol.catalog --write`, the 
 | **G2C** story | numeric flags, toggles, `story.blocks`, swap sites, markers | lupa; e2e (the starter flag, a block change) — **done 2026-10-15** (§5.6 "As built") |
 | **G2D** export | the `g2*` kinds, baked tiles, pristine blocks, layout, encounters, sprites, animations, swaps | lupa on the fake; the pod's export, counts and hashes ✔ — **done 2026-10-15** (§6 "As built") |
 | **G2E** builder | families raised; `Gen2Planner`, `G2Cells`, `Gen2FrontEnd`, the Gen 2 `MapModel` form, placement, interiors, story cells, art, people, animations, darkness, habitats | JUnit, golden scene, GameTest; the pod's dry run ✔ — **done 2026-10-15** (§7 "As built") |
-| **G2F** battles, party, bag | held battles, party sync, gifts, trades, Day-Care and eggs, bag and money, Bill's PC, field moves | lupa; e2e (a wild, a trainer and the first rival battle; the starter) ✔ |
+| **G2F** battles, party, bag | held battles, party sync, gifts, trades, Day-Care and eggs, bag and money, Bill's PC, field moves | lupa; e2e (a wild, a trainer and the first rival battle; the starter) ✔ — **done 2026-10-15** (§5.10 "As built") |
 | **G2G** the real Johto | synthetic bundle, goldens, full suites; Johto built at slot 2 beside Kanto and Hoenn; index and slots by hash; budgets | full suite ✔; build gates |
 | **G2H** the pass | `kanto_johto_test`; the Gen 2 route end; the Johto half's content; crossings between the real Blue and Crystal (20 each way); PLAYTEST "Johto"; a video if you want one | e2e ✔ |
 

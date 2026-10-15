@@ -38,7 +38,7 @@ def toggles(a):
 def test_the_story_group_is_the_adapters_own():
     a = Adapter2()
     missing = sorted(g.decode() for g in a.Engine.missingGroups(a.eng).values())
-    assert "story" not in missing and missing == ["battles", "routes"]
+    assert "story" not in missing and missing == []
 
 
 def test_the_map_data_is_copied_at_mods_loaded_and_read_by_the_reported_id():

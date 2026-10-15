@@ -497,6 +497,32 @@ async def _story(port, facts, running):
     report = {"hello": (ok.get("game"), ok.get("family"))}
     assert (ok.get("game"), ok.get("family")) == (GAME, "gen2"), ok
     assert snap["ingame"] is False and status["playthrough"] == "title"
+    since, ball = await _to_starter(mc, running, report)
+    # the ball taken: its object off the lab's table, in the story and in the engine's own masks
+    obj = "O" + ball["index"]
+    await asyncio.sleep(1)  # the next toggle diff (every ten logic steps)
+    hidden = [m["data"] for m in mc.received[since:] if m["type"] == "story.toggles" and m["data"]["map"] == LAB]
+    report["toggles"] = hidden
+    assert {"map": LAB, "obj": obj, "visible": False} in hidden, hidden
+    assert await asyncio.to_thread(running.wait_marker, "KB_STARTER", 30) is not None, "the driver saw flag 26"
+    assert running.result.facts("KB_STARTER")["masked"] == "true"
+
+    # the story's counters: the map data copied at boot, the swap sites, no block change outside them
+    st = (await mc.request("debug.status", reply_type="debug.status", timeout=10))["data"]
+    report["story"] = {k: st.get(k) for k in ("storyPristine", "storySites", "storyUnknownBlocks", "storyMapLoads",
+                                              "storyBlockChanges", "storyFlagMsgs", "storyToggleMsgs")}
+    assert st["storyPristine"] is True and st["storySites"] > 0 and st["storyUnknownBlocks"] == 0, report["story"]
+    report["errors"] = errors(mc)
+    report["problems"] = len(mc.conn.problems)
+    assert report["errors"] == [] and report["problems"] == 0
+    await mc.send("debug.quit", {"code": 0})
+    await mc.close()
+    return report
+
+
+async def _to_starter(mc, running, report):
+    """A new game through the UI up to Elm's starter: Oak's speech, the house, the town, the lab, a ball, YES, until
+    flag 26 goes out. Returns where the ball's messages start and the driver's ball facts."""
     n = await _new_game_to_mom(mc, running, report)
 
     # the bedroom's decoration callback: the blocks it changed went out as story.blocks for the bedroom, against
@@ -546,20 +572,85 @@ async def _story(port, facts, running):
     report["starter"] = _counts(kinds)
     report["starter_mirrors"] = sorted(set(mirrors))
     assert "PicBox" in mirrors and kinds.count("choice") >= 1, (kinds, mirrors)
-    # the ball taken: its object off the lab's table, in the story and in the engine's own masks
-    obj = "O" + ball["index"]
-    await asyncio.sleep(1)  # the next toggle diff (every ten logic steps)
-    hidden = [m["data"] for m in mc.received[since:] if m["type"] == "story.toggles" and m["data"]["map"] == LAB]
-    report["toggles"] = hidden
-    assert {"map": LAB, "obj": obj, "visible": False} in hidden, hidden
-    assert await asyncio.to_thread(running.wait_marker, "KB_STARTER", 30) is not None, "the driver saw flag 26"
-    assert running.result.facts("KB_STARTER")["masked"] == "true"
+    return since, ball
 
-    # the story's counters: the map data copied at boot, the swap sites, no block change outside them
+
+CAUGHT_UID = "6b1c2d3e-4f50-4a61-8b72-9c8d0e1f2a3b"
+STARTER_UID = "1a2b3c4d-5e6f-4a7b-8c9d-0e1f2a3b4c5d"
+
+
+async def _battles(port, facts, running):
+    """G2F: the starter's party.give and its sync; three held battles the driver starts (a fished wild caught, a
+    Route 30 trainer beaten, the first rival lost), each answered as Minecraft would."""
+    mc, ok, snap, status = await connect(port)
+    report = {"hello": (ok.get("game"), ok.get("family"))}
+    assert (ok.get("game"), ok.get("family")) == (GAME, "gen2"), ok
+    await _to_starter(mc, running, report)
+
+    # the starter's gift, with Gen 2's details; a party.sync that names it confirms it
+    give = (await find_or_wait(mc, "party.give", 60, 0))["data"]
+    report["give"] = {k: give.get(k) for k in ("source", "dex", "level", "shiny", "gender", "friendship")}
+    assert give["source"] == "starter" and give["dex"] in (152, 155, 158) and give["level"] == 5, report["give"]
+    assert set(give["dvs"]) == {"atk", "def", "spd", "spc"} and give["gender"] in ("male", "female"), report["give"]
+    member = {"uid": STARTER_UID, "give": give["give"], "dex": give["dex"], "level": give["level"],
+              "moves": give.get("moves") or [33], "hp": 20, "maxhp": 20, "shiny": give["shiny"],
+              "gender": give["gender"], "friendship": give["friendship"]}
+    await mc.send("party.sync", {"party": [member], "box": {"count": 0}})
+
+    # a wild Magikarp on the rod, held for Cobblemon and caught there
+    since = len(mc.received)
+    assert await asyncio.to_thread(running.wait_marker, "KB_WILD", 120) is not None, "the driver's wild"
+    assert running.result.facts("KB_WILD")["started"] == "true"
+    start = (await find_or_wait(mc, "battle.start", 30, since, lambda m: m["data"]["kind"] == "fish"))["data"]
+    wild = start["wild"]
+    report["wild"] = (wild["dex"], wild["level"], sorted(wild.get("dvs", {})), start["rules"])
+    assert wild["dex"] == 129 and wild["level"] == 10 and "dvs" in wild and start["rules"]["catch"] is True
+    await mc.send("battle.result", {"battle": start["battle"], "outcome": "caught",
+                                    "caught": {"uid": CAUGHT_UID, "dex": 129, "level": 10}})
+    assert await asyncio.to_thread(running.wait_marker, "KB_WILD_DONE", 60) is not None, "the field back"
+    done = running.result.facts("KB_WILD_DONE")
+    report["wild_done"] = done
+    assert done["party"] == "1" and done["money"] == "0", "the catch is Cobblemon's"
+
+    # a Route 30 trainer, beaten: the defeat line and the money line, then its flag
+    since = len(mc.received)
+    assert await asyncio.to_thread(running.wait_marker, "KB_TRAINER", 120) is not None, "the driver's trainer"
+    tr = running.result.facts("KB_TRAINER")
+    report["trainer_at"] = tr
+    assert tr["x"] != "none", tr
+    # its challenge line first (a text box, advanced as a player would), then the battle
+    kinds, _, found = await _answer_ui(mc, since, 120, until=lambda m: m["type"] == "battle.start")
+    report["challenge"] = _counts(kinds)
+    start = found["data"]
+    assert start["kind"] in ("trainer", "scripted"), start["kind"]
+    team = start["team"]
+    report["trainer"] = (start["kind"], start["trainer"]["cls"], len(team), [sorted(m["dvs"]) for m in team])
+    assert all(m["dvs"] == {"atk": 9, "def": 8, "spd": 8, "spc": 8} for m in team), "a trainer's DVs"
+    since = len(mc.received)
+    await mc.send("battle.result", {"battle": start["battle"], "outcome": "win"})
+    kinds, _, _ = await _answer_ui(mc, since, 180, done=lambda: running.result.marker("KB_TRAINER_DONE") is not None)
+    done = running.result.facts("KB_TRAINER_DONE")
+    report["trainer_done"] = (done, _counts(kinds))
+    assert done["beaten"] == "true" and int(done["money"]) > 0 and kinds.count("text") >= 2, report["trainer_done"]
+
+    # the first rival: BATTLETYPE_CANLOSE, lost in Cobblemon, and the story goes on where it stands
+    since = len(mc.received)
+    assert await asyncio.to_thread(running.wait_marker, "KB_RIVAL", 120) is not None, "the driver's rival"
+    assert running.result.facts("KB_RIVAL")["started"] == "true"
+    _, _, found = await _answer_ui(mc, since, 120, until=lambda m: m["type"] == "battle.start")
+    start = found["data"]
+    assert start["kind"] == "rival", start["kind"]
+    report["rival"] = (start["trainer"]["cls"], len(start["team"]))
+    since = len(mc.received)
+    await mc.send("battle.result", {"battle": start["battle"], "outcome": "lose"})
+    kinds, _, _ = await _answer_ui(mc, since, 120, done=lambda: running.result.marker("KB_RIVAL_DONE") is not None)
+    done = running.result.facts("KB_RIVAL_DONE")
+    report["rival_done"] = done
+    assert done["outcome"] == "lose" and done["same_map"] == "true" and done["money"] == "0", "no whiteout"
+
     st = (await mc.request("debug.status", reply_type="debug.status", timeout=10))["data"]
-    report["story"] = {k: st.get(k) for k in ("storyPristine", "storySites", "storyUnknownBlocks", "storyMapLoads",
-                                              "storyBlockChanges", "storyFlagMsgs", "storyToggleMsgs")}
-    assert st["storyPristine"] is True and st["storySites"] > 0 and st["storyUnknownBlocks"] == 0, report["story"]
+    report["counts"] = {k: st.get(k) for k in sorted(st) if k.startswith(("battle", "party")) and
+                        isinstance(st.get(k), (int, bool))}
     report["errors"] = errors(mc)
     report["problems"] = len(mc.conn.problems)
     assert report["errors"] == [] and report["problems"] == 0
@@ -675,6 +766,21 @@ def test_crystal_story_the_starter_flag_its_ball_and_the_bedrooms_blocks():
         sites = [line for line in result.lines if "story.sites" in line]
         print("story sites:", sites)
         assert len(sites) == 1, sites
+        clean = True
+    finally:
+        if not clean:
+            _cleanup_run()
+    assert save_files() == before, "the test slot's files are gone and the rest untouched"
+
+
+@pytest.mark.e2e
+@pytest.mark.timeout(1800)
+def test_crystal_battles_the_starter_a_wild_a_trainer_and_the_rival():
+    _skip_without_crystal()
+    before = save_files()
+    clean = False
+    try:
+        result, report = _launch("battles", "KB_TITLE", _battles, 1500, extra=1200, cinema=True, with_run=True)
         clean = True
     finally:
         if not clean:

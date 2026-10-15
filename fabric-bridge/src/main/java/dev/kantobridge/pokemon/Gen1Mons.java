@@ -92,7 +92,12 @@ public final class Gen1Mons {
 	 * no held item, full HP and PP.
 	 */
 	public static Pokemon wild(int dex, int level) throws Missing {
-		Pokemon pokemon = base(new Gen1Mon(dex, level, List.of(), null));
+		return wild(dex, level, null, MonDetails.NONE);
+	}
+
+	/** MG9 (G2F): a wild Pokémon with the DVs and details its game gave it (Gen 2's: a shiny red Gyarados is shiny). */
+	public static Pokemon wild(int dex, int level, @Nullable Dvs dvs, MonDetails details) throws Missing {
+		Pokemon pokemon = base(new Gen1Mon(dex, level, List.of(), dvs, null, details));
 		pokemon.heal();
 		return pokemon;
 	}
@@ -124,7 +129,63 @@ public final class Gen1Mons {
 		if (!moves.isEmpty()) {
 			setMoves(pokemon, moves);
 		}
+		applyDetails(pokemon, mon.details());
 		return pokemon;
+	}
+
+	/**
+	 * MG9 (G2F): what the game says of a Pokémon beyond its numbers: shininess and gender as said, the held item through
+	 * the item catalogue (its Cobblemon item, when Cobblemon has one), friendship. A form (Unown's letter) is carried but
+	 * not applied: Cobblemon's Unown has no letters. Anything Cobblemon refuses is left as it was.
+	 */
+	public static void applyDetails(Pokemon pokemon, MonDetails details) {
+		if (details == null || details.isEmpty()) {
+			return;
+		}
+		if (details.shiny() != null) {
+			pokemon.setShiny(details.shiny());
+		}
+		if (details.gender() != null) {
+			try {
+				pokemon.setGender(switch (details.gender()) {
+					case "male" -> com.cobblemon.mod.common.pokemon.Gender.MALE;
+					case "female" -> com.cobblemon.mod.common.pokemon.Gender.FEMALE;
+					default -> com.cobblemon.mod.common.pokemon.Gender.GENDERLESS;
+				});
+			} catch (RuntimeException e) {
+				// a gender the species can't have: Cobblemon's own stays
+			}
+		}
+		net.minecraft.world.item.Item held = heldItem(details.item());
+		if (held != null) {
+			pokemon.swapHeldItem(new net.minecraft.world.item.ItemStack(held), false, false);
+		}
+		if (details.friendship() != null) {
+			pokemon.setFriendship(details.friendship(), true);
+		}
+	}
+
+	/** The Cobblemon item a catalogue id is mirrored as, or null (no id, none in the catalogue, none in Cobblemon). */
+	public static net.minecraft.world.item.@Nullable Item heldItem(@Nullable String id) {
+		String path = dev.kantobridge.world.Items.cobblemonPath(id);
+		if (path == null) {
+			return null;
+		}
+		return net.minecraft.core.registries.BuiltInRegistries.ITEM.getOptional(ResourceLocation.fromNamespaceAndPath(GenOneIds.NAMESPACE, path))
+				.orElse(null);
+	}
+
+	/** The catalogue id of the Cobblemon item a Pokémon holds, or null (none, or not one the catalogue maps). */
+	public static @Nullable String heldItemId(Pokemon pokemon) {
+		net.minecraft.world.item.ItemStack stack = pokemon.heldItem();
+		if (stack == null || stack.isEmpty()) {
+			return null;
+		}
+		ResourceLocation key = net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(stack.getItem());
+		if (!GenOneIds.NAMESPACE.equals(key.getNamespace())) {
+			return null;
+		}
+		return dev.kantobridge.world.Items.bundled().byCobblemon(key.getPath());
 	}
 
 	/** Replaces the whole moveset with {@code moves} in slot order (full PP); the other slots stay empty. */

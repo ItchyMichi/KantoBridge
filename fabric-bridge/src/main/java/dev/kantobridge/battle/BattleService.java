@@ -194,7 +194,10 @@ public final class BattleService {
 	}
 
 	private static void begin(ServerPlayer player, BattleStart start, @Nullable String region) {
-		ProxyClass proxyClass = ProxyClass.of(start.kind(), start.trainer() == null ? null : start.trainer().cls());
+		dev.kantobridge.server.Regions regions = dev.kantobridge.server.Regions.of(player.server);
+		dev.kantobridge.world.RegionRecord record = regions == null ? null : regions.regionOf(player, region);
+		ProxyClass proxyClass = ProxyClass.of(start.kind(), start.trainer() == null ? null : start.trainer().cls(),
+				record == null ? null : record.family());
 		NPCClass npcClass = NPCClasses.getByIdentifier(ResourceLocation.fromNamespaceAndPath(KantoBridge.MOD_ID, proxyClass.path()));
 		if (npcClass == null) {
 			refuse(player, start.battle(), "no_class", region);
@@ -205,6 +208,7 @@ public final class BattleService {
 			for (Gen1Mon mon : start.team()) {
 				team.add(Gen1Mons.trainerMon(mon));
 			}
+			// (MG9 G2F: a team member's held item, gender and shininess come with it, Gen1Mons.applyDetails)
 		} catch (Gen1Mons.Missing e) {
 			refuse(player, start.battle(), "missing_" + e.code(), region);
 			return;

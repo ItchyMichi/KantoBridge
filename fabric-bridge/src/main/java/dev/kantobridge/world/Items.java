@@ -198,6 +198,22 @@ public final class Items {
 		return symbols == null ? null : symbols.get(symbol);
 	}
 
+	/**
+	 * MG9 (G2F): the canonical id of the item Cobblemon's {@code cobblemon:<path>} is, or null; the first in id order when
+	 * several share it.
+	 */
+	public @Nullable String byCobblemon(@Nullable String path) {
+		if (path == null) {
+			return null;
+		}
+		for (Item item : this.items.values()) {
+			if (path.equals(item.cobblemon())) {
+				return item.id();
+			}
+		}
+		return null;
+	}
+
 	/** A family's symbol for a canonical id, or null when its games lack the item. */
 	public @Nullable String symbol(@Nullable String family, @Nullable String id) {
 		Item item = this.entry(id);

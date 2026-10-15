@@ -95,6 +95,22 @@
         },
         "y": {
           "$ref": "../defs.schema.json#/$defs/coord"
+        },
+        "dvs": {
+          "$ref": "../defs.schema.json#/$defs/dvs",
+          "description": "MG9 (G2F): the wild Pokémon's DVs (Gen 2), so Cobblemon's matches its stats, gender and shininess."
+        },
+        "item": {
+          "$ref": "../defs.schema.json#/$defs/heldItem"
+        },
+        "shiny": {
+          "type": "boolean"
+        },
+        "gender": {
+          "$ref": "../defs.schema.json#/$defs/gender"
+        },
+        "form": {
+          "$ref": "../defs.schema.json#/$defs/form"
         }
       },
       "x-rom-derived": true

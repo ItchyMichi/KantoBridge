@@ -31,6 +31,16 @@ public enum ProxyClass {
 	static final Set<String> GEN3_ELITE = Set.of("ELITE_FOUR", "CHAMPION");
 	/** Gen 3's rivals (Emerald's Brendan, May and Wally). */
 	static final Set<String> GEN3_RIVALS = Set.of("RIVAL");
+	/**
+	 * MG9 (G2F): Gen 2's gym leaders, Johto's and Kanto's three years later (pokecrystal's class constants; Koga is in
+	 * the Elite Four there, Janine leads Fuchsia's gym).
+	 */
+	static final Set<String> GEN2_GYM = Set.of("FALKNER", "BUGSY", "WHITNEY", "MORTY", "CHUCK", "JASMINE", "PRYCE", "CLAIR",
+			"BROCK", "MISTY", "LT_SURGE", "ERIKA", "JANINE", "SABRINA", "BLAINE", "BLUE");
+	/** Gen 2's Elite Four, the Champion and Red on Mt. Silver. */
+	static final Set<String> GEN2_ELITE = Set.of("WILL", "KOGA", "BRUNO", "KAREN", "CHAMPION", "RED");
+	/** The family whose class symbols mean Gen 2's. */
+	static final String GEN2 = "gen2";
 
 	private final String path;
 	private final int skill;
@@ -52,7 +62,24 @@ public enum ProxyClass {
 
 	/** The class for a battle: by trainer class first (the Champion is a rival kind), then by kind. */
 	public static ProxyClass of(BattleStart.Kind kind, @Nullable String trainerClass) {
+		return of(kind, trainerClass, null);
+	}
+
+	/**
+	 * The class for a battle in a region of {@code family}: Gen 2's class symbols are read by Gen 2's tables (MG9: KOGA is
+	 * Elite Four there); Gen 1's and Gen 3's as before.
+	 */
+	public static ProxyClass of(BattleStart.Kind kind, @Nullable String trainerClass, @Nullable String family) {
 		String cls = trainerClass == null ? "" : trainerClass.toUpperCase(Locale.ROOT);
+		if (GEN2.equals(family)) {
+			if (GEN2_ELITE.contains(cls)) {
+				return ELITE;
+			}
+			if (GEN2_GYM.contains(cls)) {
+				return GYM;
+			}
+			return RIVALS.contains(cls) || kind == BattleStart.Kind.RIVAL ? RIVAL : REGULAR;
+		}
 		if (cls.startsWith(GEN3_PREFIX)) {
 			String role = cls.substring(GEN3_PREFIX.length());
 			if (GEN3_ELITE.contains(role)) {

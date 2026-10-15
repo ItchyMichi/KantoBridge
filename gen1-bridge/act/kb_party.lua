@@ -2,10 +2,16 @@
 -- party member (docs/PLAN.md section 4.1 "Party and Pokedex", flows 10
 -- and 11; docs/PROTOCOL.md "Party, Pokedex, bag, PC").
 --
---   party.give{give, dex, level, moves?, dvs?, nick?, ot?, source}   G->M
+--   party.give{give, dex, level, moves?, dvs?, nick?, ot?, item?, shiny?,
+--              gender?, form?, friendship?, source}                   G->M
 --   party.heal{}                                                      G->M
 --   party.item{item, uid, slot?, move?}                               G->M
---   party.sync{party[{uid, give?, dex, level, nick?, moves, hp, maxhp, status?}], box}  M->G
+--   party.sync{party[{uid, give?, dex, level, nick?, moves, hp, maxhp, status?,
+--              item?, shiny?, gender?, form?, friendship?}], box}    M->G
+--
+-- MG9 (G2F): a game with held items, shininess, genders and forms (Gen 2 on)
+-- carries them both ways (Party.details): a gift's go out with it, a sync's
+-- reach the adapter in its entries, which keeps or builds its members to match.
 --   dex.sync{seen[dex], owned[dex]}                                   M->G
 --
 -- Gifts. give_pokemon runs as usual in the hidden game -- its nickname prompt
@@ -199,8 +205,37 @@ function Party.validSync(data)
                               and find(e.give, "^[A-Za-z0-9_.:-]+$")) then
       return false
     end
+    -- MG9 (G2F): the optional details, each checked as its schema has it
+    if e.item ~= nil and not (type(e.item) == "string" and #e.item <= 32 and find(e.item, "^[a-z][a-z0-9_]*$")) then
+      return false
+    end
+    if e.shiny ~= nil and type(e.shiny) ~= "boolean" then return false end
+    if e.gender ~= nil and not Party.GENDERS[e.gender] then return false end
+    if e.form ~= nil and not (type(e.form) == "string" and #e.form >= 1 and #e.form <= 24 and find(e.form, "^[a-z0-9_]+$")) then
+      return false
+    end
+    if e.friendship ~= nil and not whole(e.friendship, 0, 255) then return false end
   end
   return true
+end
+
+Party.GENDERS = { male = true, female = true, genderless = true }
+
+-- MG9 (G2F): a Pokemon's details (its held item as the catalogue's canonical
+-- id, shininess, gender, form, friendship) copied from `from` into `out` where
+-- well formed.
+function Party.details(from, out)
+  if type(from) ~= "table" then return out end
+  if type(from.item) == "string" and #from.item <= 32 and find(from.item, "^[a-z][a-z0-9_]*$") then
+    out.item = from.item
+  end
+  if type(from.shiny) == "boolean" then out.shiny = from.shiny end
+  if Party.GENDERS[from.gender] then out.gender = from.gender end
+  if type(from.form) == "string" and #from.form >= 1 and #from.form <= 24 and find(from.form, "^[a-z0-9_]+$") then
+    out.form = from.form
+  end
+  if whole(from.friendship, 0, 255) then out.friendship = from.friendship end
+  return out
 end
 
 -- dex.sync data checked against its schema's shape: two lists of distinct
@@ -339,7 +374,7 @@ function Party.new(opts)
       if ok then data.dvs = dvs end
     end
     data.nick, data.ot = text(g.nick), text(g.ot)
-    return data
+    return Party.details(g, data)
   end
 
   local function persist()
@@ -405,10 +440,10 @@ function Party.new(opts)
           local id = n <= maxMove and engine.moveIdOfNum(n) or nil
           if id then moves[#moves + 1] = id else counts.nonGen1Moves = counts.nonGen1Moves + 1 end
         end
-        local entry = {
+        local entry = Party.details(e, {
           uid = e.uid, species = species, level = e.level, moves = moves, hp = e.hp, maxhp = e.maxhp,
           status = STATUS[e.status], nick = Party.engineNick(e.nick),
-        }
+        })
         if e.give ~= nil then
           -- exact: the gift Cobblemon says this Pokemon came from (M6)
           for _, g in ipairs(gifts) do

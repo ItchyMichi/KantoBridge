@@ -27,6 +27,14 @@ class BattleRulesTest {
 		}
 		// The Champion is the rival's third class: Elite skill, even as a rival kind.
 		assertEquals(ProxyClass.ELITE, ProxyClass.of(BattleStart.Kind.RIVAL, "OPP_RIVAL3"));
+		// MG9 (G2F): Gen 2's classes in a Gen 2 region: Johto's and Kanto's leaders, the Elite Four with Koga, Red
+		assertEquals(ProxyClass.GYM, ProxyClass.of(BattleStart.Kind.TRAINER, "FALKNER", "gen2"));
+		assertEquals(ProxyClass.GYM, ProxyClass.of(BattleStart.Kind.TRAINER, "JANINE", "gen2"));
+		assertEquals(ProxyClass.ELITE, ProxyClass.of(BattleStart.Kind.TRAINER, "KOGA", "gen2"));
+		assertEquals(ProxyClass.GYM, ProxyClass.of(BattleStart.Kind.TRAINER, "KOGA", "gen1"), "Gen 1's Koga leads a gym");
+		assertEquals(ProxyClass.ELITE, ProxyClass.of(BattleStart.Kind.TRAINER, "RED", "gen2"));
+		assertEquals(ProxyClass.RIVAL, ProxyClass.of(BattleStart.Kind.RIVAL, "RIVAL1", "gen2"));
+		assertEquals(ProxyClass.REGULAR, ProxyClass.of(BattleStart.Kind.TRAINER, "YOUNGSTER", "gen2"));
 		// MG7: Gen 3's classes are roles (pokeemerald's TRAINER_CLASS_*), the team leaders as Giovanni.
 		assertEquals(ProxyClass.GYM, ProxyClass.of(BattleStart.Kind.TRAINER, "TRAINER_CLASS_LEADER"));
 		assertEquals(ProxyClass.GYM, ProxyClass.of(BattleStart.Kind.TRAINER, "TRAINER_CLASS_MAGMA_LEADER"));

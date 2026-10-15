@@ -466,7 +466,9 @@ def cleanGameTestWorld = tasks.register("cleanGameTestWorld", Delete) {
 tasks.matching { it.name == "runGameTest" }.configureEach {
 	dependsOn cleanGameTestWorld
 	// A server that never finishes starting (e.g. a broken Cobblemon dependency) must fail the build, not hang it.
-	timeout = java.time.Duration.ofMinutes(15)
+	// MG9: 25 minutes by default (the suite's region builds take 12-16 minutes on a 4-vCPU pod);
+	// -Pkb.gameTestMinutes=<n> sets another limit.
+	timeout = java.time.Duration.ofMinutes(providers.gradleProperty("kb.gameTestMinutes").getOrElse("25").toInteger())
 }
 
 dependencies {

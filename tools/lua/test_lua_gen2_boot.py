@@ -22,7 +22,8 @@ def test_the_loader_picks_the_gen2_adapter_for_both_engine_ids():
     assert (eng.engineId(), eng.family(), eng.gameVersion()) == (b"crystal", b"gen2", b"crystal")
     assert [p.decode() for p in a.b.module("lib/engine/gen2.lua").PARTS.values()] == [
         "gen2/boot", "gen2/observe", "gen2/move", "common/slots", "gen2/saves", "common/savequeue", "gen2/region",
-        "common/reliability", "gen2/ui", "gen2/story", "gen2/export"]
+        "common/reliability", "gen2/ui", "gen2/story", "gen2/export", "gen2/party", "gen2/battle", "gen2/bag",
+        "gen2/fieldmoves"]
     gold = Adapter2(game="gold")
     # engineId stays the stub's: the live id (Gold and Silver run the `gs` engine)
     assert (gold.eng.engineId(), gold.eng.family(), gold.eng.gameVersion()) == (b"gs", b"gen2", b"gold")
@@ -31,9 +32,10 @@ def test_the_loader_picks_the_gen2_adapter_for_both_engine_ids():
 def test_the_groups_left_to_the_later_phases():
     # A group counts once any of its functions is the adapter's own (kb_engine.missingGroups). G2A writes
     # identity, observing, movement, saves, sessions, the region acts and reliability, G2B the UI, G2C the
-    # story, G2D the export; battles (G2F) and routes (G2H) stay the stub's.
+    # story, G2D the export, G2F the party, battles and bag (whose inventoryCount the routes group shares; the
+    # route end itself is G2H's).
     a = Adapter2()
-    assert sorted(g.decode() for g in a.Engine.missingGroups(a.eng).values()) == ["battles", "routes"]
+    assert sorted(g.decode() for g in a.Engine.missingGroups(a.eng).values()) == []
 
 
 def test_every_required_member_is_read_from_the_engine():

@@ -20,7 +20,8 @@ import org.jetbrains.annotations.Nullable;
  */
 public record PartyGive(String give, Gen1Mon mon, @Nullable String nick, @Nullable String ot, Source source) {
 	public static final int MAX_NAME = 32;
-	private static final Set<String> FIELDS = Set.of("give", "dex", "level", "moves", "dvs", "ivs", "nick", "ot", "source", "region");
+	private static final Set<String> FIELDS = Set.of("give", "dex", "level", "moves", "dvs", "ivs", "nick", "ot", "source", "region", "item",
+			"shiny", "gender", "form", "friendship");
 
 	/** Where the Pokémon comes from ({@code EGG}: an egg that hatched in the hidden game, which keeps eggs itself). */
 	public enum Source {
@@ -54,7 +55,7 @@ public record PartyGive(String give, Gen1Mon mon, @Nullable String nick, @Nullab
 		if (source == null) {
 			throw new DataException(reader.path("source"), "unknown source");
 		}
-		return new PartyGive(give, new Gen1Mon(dex, level, moves, dvs, ivs), nick, ot, source);
+		return new PartyGive(give, new Gen1Mon(dex, level, moves, dvs, ivs, MonDetails.read(reader, true)), nick, ot, source);
 	}
 
 	/** A name field: a string of at most 32 characters (code points, as JSON Schema counts them). */

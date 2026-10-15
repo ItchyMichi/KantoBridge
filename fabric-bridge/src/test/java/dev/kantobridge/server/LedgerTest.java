@@ -56,10 +56,14 @@ class LedgerTest {
 		assertEquals(Map.of("POTION", 2), gen3.items(), "MG7: Emerald's symbols (protocol/items.json)");
 		assertEquals(Map.of("bicycle", 1), gen3.left());
 		LedgerRules.Projected gen2 = LedgerRules.project(ledger, CAT, "gen2", LedgerRules.Limits.of("gen2"));
-		assertTrue(gen2.items().isEmpty(), "a family without symbols holds nothing");
-		assertEquals(Map.of("bicycle", 1, "potion", 2), gen2.left());
+		assertEquals(Map.of("POTION", 2), gen2.items(), "MG9: Crystal's symbols (protocol/items.json)");
+		assertEquals(Map.of("bicycle", 1), gen2.left());
+		LedgerRules.Projected other = LedgerRules.project(ledger, CAT, "gen4", LedgerRules.Limits.of("gen4"));
+		assertTrue(other.items().isEmpty(), "a family without symbols holds nothing");
+		assertEquals(Map.of("bicycle", 1, "potion", 2), other.left());
 		assertEquals(LedgerRules.Limits.GEN3, LedgerRules.Limits.of("gen3"));
-		assertEquals(LedgerRules.Limits.DEFAULT, LedgerRules.Limits.of("gen2"));
+		assertEquals(LedgerRules.Limits.GEN2, LedgerRules.Limits.of("gen2"));
+		assertEquals(LedgerRules.Limits.DEFAULT, LedgerRules.Limits.of("gen4"));
 		assertEquals(GEN1, LedgerRules.Limits.of("gen1"));
 	}
 

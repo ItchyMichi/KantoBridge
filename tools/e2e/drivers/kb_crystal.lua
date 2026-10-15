@@ -63,13 +63,27 @@
 --                   engine draws their frames over the bake), then
 --                   KB_EXPORT_READY and serves: the test fetches the export as
 --                   a builder and compares its baked tiles with these.
+--   battles         (G2F) story's game up to the starter, then three held
+--                   battles the driver starts once the field stands idle and a
+--                   client watches (the test answers each as Minecraft would):
+--                   a wild Magikarp on the rod (World:startBattle with the
+--                   fishing battle type; KB_WILD, then KB_WILD_DONE party= money=
+--                   once the field is back); a Route 30 trainer: the player put
+--                   beside one facing it (World:warpToMapId) and A pressed
+--                   (KB_TRAINER map= x= y= flag=, then KB_TRAINER_DONE beaten=
+--                   money= once its beaten flag is set and the field stands); the
+--                   first rival's battle as Cherrygrove's script starts it
+--                   (startScriptedBattle with RIVAL1's first party and
+--                   BATTLETYPE_CANLOSE; KB_RIVAL, then KB_RIVAL_DONE outcome=
+--                   same_map= money= once it has ended).
 --   cleanup         only the clean-up (after a failed run), then quits.
 --
 -- Markers: KB_BOOTED scene= slot= home= precleaned= phase=, KB_SERVING map= x= y= facing= wall= bump=
 -- stairs= into=, KB_SAVED slot= ok=, KB_TITLE slot= hasSave=, KB_SPEECH texts= choices= gender= names=
 -- screens=, KB_FIELD map= x= y= clock= stairs= into=, KB_INITCLOCK, KB_DAYWHEEL seen= frames=, KB_NPC map= path=
 -- face= x= y= index=, KB_BEDROOM edits= differ=, KB_EXIT path= into=, KB_LAB path= into=, KB_BALL path= face= x=
--- y= index=, KB_STARTER flag= masked=, KB_BAKE map= daytime= n= skipped= ids=, KB_EXPORT_READY maps= blocks= skipped=
+-- y= index=, KB_STARTER flag= masked=, KB_WILD started=, KB_WILD_DONE party= money=, KB_TRAINER map= x= y= flag=,
+-- KB_TRAINER_DONE beaten= money=, KB_RIVAL started=, KB_RIVAL_DONE outcome= same_map= money=, KB_BAKE map= daytime= n= skipped= ids=, KB_EXPORT_READY maps= blocks= skipped=
 -- mode=, KB_CLEANED deleted= active=, KB_QUIT sessions= code=;
 -- KB_FAIL <reason> on a timeout. Slot numbers, map symbols, cell numbers, directions, booleans and counts only
 -- (the speech's text and the names are never printed).
@@ -461,6 +475,101 @@ local function watchStory(game)
       word(n and n.def.index or "none")))
   end
 end
+-- ---------------------------------------------------------------- battles (G2F)
+
+local battles = { step = "wait", idle = 0, money0 = 0 }
+local function money(game) return tonumber(game.save and game.save.player and game.save.player.money) or 0 end
+local function battleIdle(game)
+  local w = game.world
+  if not (w and not w.battleActive and fieldReady(game)) then
+    battles.idle = 0
+    return false
+  end
+  battles.idle = battles.idle + 1
+  return battles.idle >= 30
+end
+-- A walkable cell beside an object (the live map's), and the facing from it to the object.
+local function besideNpc(w, n)
+  for _, d in ipairs({ { "down", 0, -1 }, { "up", 0, 1 }, { "right", -1, 0 }, { "left", 1, 0 } }) do
+    local x, y = n.cellX + d[2], n.cellY + d[3]
+    local ok, walkable = pcall(w.map.isWalkable, w.map, x, y)
+    if ok and walkable and not (w.npcAt and w:npcAt(x, y)) then return x, y, d[1] end
+  end
+  return nil
+end
+local function watchBattles(game, status)
+  local w = game.world
+  if not (w and w.map) or (tonumber(status.sessions) or 0) < 1 then return end
+  if battles.step == "wait" then
+    if not battleIdle(game) then return end
+    local Mon = require("src.battle.gen2.Mon")
+    local mon = Mon.new(game.data, "MAGIKARP", 10, { wild = true })
+    battles.money0 = money(game)
+    local ok = mon ~= nil and pcall(w.startBattle, w, { wild = mon, battleType = "fish" })
+    print(("KB_WILD started=%s"):format(word(ok)))
+    battles.step, battles.idle = "wild", 0
+  elseif battles.step == "wild" then
+    if not battleIdle(game) then return end
+    print(("KB_WILD_DONE party=%d money=%d"):format(#(game.save.party or {}), money(game) - battles.money0))
+    battles.step = "trainer"
+  elseif battles.step == "trainer" then
+    if w.map.id ~= "ROUTE_30" then
+      if not battles.warped then
+        battles.warped = true
+        pcall(w.warpToMapId, w, "ROUTE_30", 6, 30, "up")
+      end
+      return
+    end
+    if not fieldReady(game) then return end
+    for _, n in ipairs(w.npcs or {}) do
+      local tr = n.def and n.def.trainer
+      if type(tr) == "table" and tr.event and not w.events:get(tr.event) then
+        local x, y, face = besideNpc(w, n)
+        if x then
+          battles.trainer, battles.money0 = n, money(game)
+          pcall(w.warpToMapId, w, "ROUTE_30", x, y, face)
+          battles.step = "face"
+          print(("KB_TRAINER map=ROUTE_30 x=%d y=%d flag=%d"):format(n.cellX, n.cellY, tr.event))
+          return
+        end
+      end
+    end
+    print("KB_TRAINER map=ROUTE_30 x=none y=none flag=none")
+    battles.step = "rival"
+  elseif battles.step == "face" then
+    if fieldReady(game) then
+      tap(game, "a")
+      battles.step, battles.idle = "trainer_wait", 0
+    elseif w.battleActive or topState(game) ~= nil then
+      battles.step, battles.idle = "trainer_wait", 0 -- its sight took the player first
+    end
+  elseif battles.step == "trainer_wait" then
+    local tr = battles.trainer and battles.trainer.def and battles.trainer.def.trainer
+    local beaten = tr and w.events:get(tr.event) or false
+    if not (beaten and battleIdle(game)) then return end
+    print(("KB_TRAINER_DONE beaten=%s money=%d"):format(word(beaten), money(game) - battles.money0))
+    battles.step, battles.idle = "rival", 0
+  elseif battles.step == "rival" then
+    if not battleIdle(game) then return end
+    local Trainers = require("src.world.gen2.Trainers")
+    local cls = game.data.trainers and game.data.trainers.classes and game.data.trainers.classes.RIVAL1
+    local rec = cls and Trainers.lookup(game.data.trainers, cls.index, 1)
+    battles.map0, battles.money0 = w.map.id, money(game)
+    local ok = false
+    if rec then
+      w.scriptVars = w.scriptVars or {}
+      w.scriptVars[3] = 1 -- VAR.BATTLETYPE (World.lua:112) = BATTLETYPE_CANLOSE (:154)
+      ok = pcall(w.startScriptedBattle, w, rec, nil, function(outcome) battles.rivalOutcome = outcome or "nil" end)
+    end
+    print(("KB_RIVAL started=%s"):format(word(ok)))
+    battles.step, battles.idle = "rival_wait", 0
+  elseif battles.step == "rival_wait" then
+    if battles.rivalOutcome == nil or not battleIdle(game) then return end
+    print(("KB_RIVAL_DONE outcome=%s same_map=%s money=%d"):format(word(battles.rivalOutcome),
+      word(game.world.map.id == battles.map0), money(game) - battles.money0))
+    battles.step = "done"
+  end
+end
 local function watchUi(game)
   local name = topName(game)
   -- Mom's scene: a coord event in front of the stairs (the test walks onto it); its text boxes are counted so the
@@ -494,7 +603,7 @@ local function watchUi(game)
   if not ui.field and w.map.id == HOUSE then
     ui.field = true
     printField(w, game.save and game.save.rtc)
-    if SCENE == "story" then printBedroom(w) end
+    if SCENE == "story" or SCENE == "battles" then printBedroom(w) end
   end
   if w.map.id == DOWNSTAIRS then
     ui.idle = ui.idle + 1
@@ -505,7 +614,7 @@ local function watchUi(game)
       print(("KB_NPC map=%s path=%s face=%s x=%s y=%s index=%s"):format(DOWNSTAIRS,
         word(path == "" and "-" or (path or "none")), word(face or "none"), word(n and n.cellX or "none"),
         word(n and n.cellY or "none"), word(n and n.def.index or "none")))
-      if SCENE == "story" then
+      if SCENE == "story" or SCENE == "battles" then
         local exit, into = warpWalk(w, TOWN)
         print(("KB_EXIT path=%s into=%s"):format(word(exit == "" and "-" or (exit or "none")), word(into or "none")))
       end
@@ -632,7 +741,7 @@ return function(game)
           num(homeRef), precleaned, word(game.phase)))
         if SCENE == "field" or SCENE == "title_continue" or SCENE == "export" then
           phase = "field"
-        elseif SCENE == "title_new" or SCENE == "title_ui" or SCENE == "story" then
+        elseif SCENE == "title_new" or SCENE == "title_ui" or SCENE == "story" or SCENE == "battles" then
           if game.phase == "play" then pcall(game.returnToTitle, game) end
           waitUntil = love.timer.getTime() + 1
           phase = "title"
@@ -683,8 +792,9 @@ return function(game)
       end
       -- title_ui (G2B): nothing answered here; the clock never in the speech, the walks once the field is up;
       -- story (G2C): the same, then the town, the lab and the starter
-      if SCENE == "title_ui" or SCENE == "story" then watchUi(game) end
-      if SCENE == "story" and ui.npcPrinted then watchStory(game) end
+      if SCENE == "title_ui" or SCENE == "story" or SCENE == "battles" then watchUi(game) end
+      if (SCENE == "story" or SCENE == "battles") and ui.npcPrinted then watchStory(game) end
+      if SCENE == "battles" and story.starter then watchBattles(game, status) end
       -- title_new: Oak's speech after region.start, answered until the new game stands in the field
       if SCENE == "title_new" and introRunning(game) then
         answerSpeech(game, frame)

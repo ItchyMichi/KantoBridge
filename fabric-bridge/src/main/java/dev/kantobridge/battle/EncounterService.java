@@ -164,7 +164,7 @@ public final class EncounterService {
 		}
 		Pokemon pokemon;
 		try {
-			pokemon = Gen1Mons.wild(wild.dex(), wild.level());
+			pokemon = Gen1Mons.wild(wild.dex(), wild.level(), wild.dvs(), wild.details());
 		} catch (Gen1Mons.Missing e) {
 			return "missing_" + e.code();
 		} catch (RuntimeException e) {

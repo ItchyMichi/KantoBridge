@@ -250,7 +250,7 @@ end. Every other cave link stays an ordinary warp with a fade.
 |---|---|---|---|
 | `act.interact` | M→G | `map, x, y` (face the cell and press A) | |
 | `act.button` | M→G | `button, how:"tap"\|"down"\|"up"` (mirror screen, start menu) | |
-| `act.field` | M→G | `action:"cut"\|"surf"\|"strength"\|"flash"\|"dig"\|"teleport"\|"bicycle"\|"fish"\|"fly", x?, y?, dest?, item?` | |
+| `act.field` | M→G | `action:"cut"\|"surf"\|"strength"\|"flash"\|"dig"\|"teleport"\|"bicycle"\|"fish"\|"fly"\|"headbutt"\|"rock_smash"\|"whirlpool"\|"waterfall"\|"sweet_scent", x?, y?, dest?, item?` (MG9: the last five are Gen 2's; Gen 2's Fly opens its own map, so `dest` is refused there) | |
 | `act.result` | G→M, S→C, C→S | `ok, kind?, reason?, detail?, moved?, left?`; `re` required. MG2: also answers `region.park`/`region.resume`/`region.start` (kinds `park`, `resume`, `start`; `detail` `new`\|`continue` for a start); MG5: the server's answer to `party.stash` (kind `stash`, `moved`) travels S→C; MG6: the answer to `bag.set` (kind `bag.set`, `left`) is forwarded C→S | |
 
 **`act.field` (M8):** each action runs through the hidden game's own entry points after its own
@@ -405,9 +405,9 @@ it for that player's collision.
 
 | Type | Dir | Data | ROM |
 |---|---|---|---|
-| `battle.start` | G→M, C→S | `battle` (id), `kind:"trainer"\|"rival"\|"scripted"\|"static"\|"surf"\|"fish"`, `trainer?{cls,party,name?,npc?,map?,x?,y?}`, `team?[{dex,level,moves[],dvs{atk,def,spd,spc} or ivs{hp,atk,def,spa,spd,spe}}]`, `wild?{dex,level,x?,y?}`, `rules{catch,flee}`. Trainer and rival battles need `trainer` and `team`; static, surf and fish need `wild`; scripted needs `team` or `wild`. `party` is the party index within the class (Gen 1) or the trainer's id (Gen 3, up to 1023) | yes |
+| `battle.start` | G→M, C→S | `battle` (id), `kind:"trainer"\|"rival"\|"scripted"\|"static"\|"surf"\|"fish"`, `trainer?{cls,party,name?,npc?,map?,x?,y?}`, `team?[{dex,level,moves[],dvs{atk,def,spd,spc} or ivs{hp,atk,def,spa,spd,spe}, item?, shiny?, gender?, form?}]`, `wild?{dex,level,x?,y?,dvs?,item?,shiny?,gender?,form?}`, `rules{catch,flee}`. Trainer and rival battles need `trainer` and `team`; static, surf and fish need `wild`; scripted needs `team` or `wild`. `party` is the party index within the class (Gen 1), the trainer's id (Gen 3, up to 1023) or the member number within the class (Gen 2) | yes |
 | `battle.result` | S→C, M→G | `battle, outcome:"win"\|"lose"\|"fled"\|"caught"\|"aborted"`, `caught?{uid,dex,level}` (required when caught) | |
-| `battle.native` | G→M | `kind:"safari"\|"old_man"\|"ghost", phase:"start"\|"end"` | |
+| `battle.native` | G→M | `kind:"safari"\|"old_man"\|"ghost"\|"contest"\|"tower", phase:"start"\|"end"` (MG9: Gen 2's Bug-Catching Contest and Battle Tower; its catch tutorial is `old_man`) | |
 
 #### Battle rules (M5)
 
@@ -568,8 +568,8 @@ it for that player's collision.
 
 | Type | Dir | Data | ROM |
 |---|---|---|---|
-| `party.sync` | S→C, M→G | `party[{uid, give?, dex, level, nick?, moves[], hp, maxhp, status?}], box{count}` (Cobblemon is authoritative) | yes |
-| `party.give` | G→M, C→S | `give` (id), `dex, level, moves[]?, dvs?, ivs?, nick?, ot?, source:"starter"\|"gift"\|"trade"\|"prize"\|"native_catch"\|"egg"` (`ivs` over `dvs` when both; `egg`: an egg that hatched in the hidden game) | yes |
+| `party.sync` | S→C, M→G | `party[{uid, give?, dex, level, nick?, moves[], hp, maxhp, status?, item?, shiny?, gender?, form?, friendship?}], box{count}` (Cobblemon is authoritative) | yes |
+| `party.give` | G→M, C→S | `give` (id), `dex, level, moves[]?, dvs?, ivs?, nick?, ot?, item?, shiny?, gender?, form?, friendship?, source:"starter"\|"gift"\|"trade"\|"prize"\|"native_catch"\|"egg"` (`ivs` over `dvs` when both; `egg`: an egg that hatched in the hidden game) | yes |
 | `party.take` | G→M, C→S | `uid, reason:"trade"\|"daycare"` | |
 | `party.heal` | G→M, C→S | `{}` | |
 | `party.rename` | G→M, C→S | `uid, nick` (empty clears) | yes |
@@ -582,6 +582,15 @@ it for that player's collision.
 | `pc.closed` | S→C, M→G | `pc` (the `pc.open`'s id) | |
 | `daycare.deposit` | G→M, C→S | `uid` | |
 | `daycare.withdraw` | G→M, C→S | `uid, steps` | |
+
+**A Pokémon's details (MG9, G2F):** a game with held items, shininess, genders and forms (Gen 2 on) carries them
+in `battle.start` (team members and the wild), `party.give` and `party.sync`: `item` is the held item as the item
+catalogue's **canonical id** (`protocol/items.json`, so one `party.sync` reads alike in every game; each adapter maps
+it to its own symbol), `shiny` a boolean, `gender` `male`/`female`/`genderless`, `form` a form id (Unown's letter,
+`a`..`z`), `friendship` 0–255 (gifts and party members). All optional: Gen 1 and Gen 3 send none and ignore them.
+Minecraft applies shininess, gender, the held item (when Cobblemon has that item) and friendship; a form is carried
+but not applied (Cobblemon's Unown has no letters). Gen 2's DVs are Gen 1's shape (`dvs`), and a Gen 2 game builds a
+new party member's DVs so that its gender, shininess and letter match what Cobblemon's member has.
 
 Species travel as national dex numbers (defs `nationalDex`), moves as Showdown numbers (defs
 `moveNum`; Gen 1's move ids are the same numbers), items as engine symbols, and Pokémon identities

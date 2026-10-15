@@ -80,7 +80,20 @@ public final class PartySync {
 		if (gen1Status != null) {
 			entry.addProperty("status", gen1Status);
 		}
+		// MG9 (G2F): what a game with held items, shininess, genders and friendship keeps (Gen 2); the others ignore it
+		details(pokemon).write(entry);
 		return entry;
+	}
+
+	/** A Cobblemon Pokémon's details as the protocol carries them: always its shininess, gender and friendship. */
+	public static MonDetails details(Pokemon pokemon) {
+		String gender = switch (pokemon.getGender()) {
+			case MALE -> "male";
+			case FEMALE -> "female";
+			default -> "genderless";
+		};
+		int friendship = Math.max(0, Math.min(MonDetails.MAX_FRIENDSHIP, pokemon.getFriendship()));
+		return new MonDetails(Gen1Mons.heldItemId(pokemon), pokemon.getShiny(), gender, null, friendship);
 	}
 
 	/** Cobblemon's persistent status (Showdown names) as Gen 1's: bad poison is plain poison outside battle. */

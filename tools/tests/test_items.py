@@ -47,6 +47,12 @@ def test_machines_cross_by_move_and_keys_never_cross():
     assert gen3["TM06"] == "tm_toxic" and gen3["TM01"] == "tm_focus_punch"
     assert len(set(gen1) & set(gen3.values())) == 14
     assert ITEMS.get("tm_mega_punch").move == 5 and ITEMS.get("tm_substitute").move == 164
+    # MG9 (G2F): Crystal's 50 TMs, TM_<MOVE>; 28 share an entry with a Gen 1 or Gen 3 TM, 22 are Gen 2's own
+    gen2 = {ITEMS.get(i).symbols["gen2"]: i for i in tms if "gen2" in ITEMS.get(i).symbols}
+    assert len(gen2) == 50 and all(s.startswith("TM_") for s in gen2)
+    assert all(1 <= ITEMS.get(i).move <= 251 for i in gen2.values())
+    assert gen2["TM_TOXIC"] == "tm_toxic" and gen2["TM_DYNAMICPUNCH"] == "tm_dynamic_punch"
+    assert len([i for i in gen2.values() if set(ITEMS.get(i).symbols) == {"gen2"}]) == 22
     hms = [i for i in ITEMS.ids if i.startswith("hm_")]
     assert len(hms) == 5 and all(ITEMS.get(i).clazz == "key" for i in hms)
     assert "bicycle" not in ITEMS.crossing() and "hm_cut" not in ITEMS.crossing() and "potion" in ITEMS.crossing()
@@ -64,3 +70,18 @@ def test_a_bad_catalogue_is_refused():
     assert [str(p) for p in PROTOCOL.check_items(bad)] == ["/items/potion/class: enum"]
     bad = json.loads(json.dumps(good)); bad["items"]["Potion"] = bad["items"]["potion"]
     assert [str(p) for p in PROTOCOL.check_items(bad)] == ["/items: pattern"]
+
+
+def test_gen2s_items():
+    """MG9 (G2F): Crystal's symbols on the items it shares (THUNDERSTONE, PARLYZ_HEAL, ELIXER), and its own items by
+    their modern names: held items and berries (Cobblemon's item where a held item crosses), balls, medicine and
+    valuables the ledger keeps; Minecraft's mirror stays Gen 1's 29."""
+    assert ITEMS.canonical("gen2", "THUNDERSTONE") == "thunder_stone"
+    assert ITEMS.canonical("gen2", "PARLYZ_HEAL") == "parlyz_heal"
+    assert ITEMS.canonical("gen2", "BERRY") == "oran_berry" and ITEMS.get("oran_berry").cobblemon == "oran_berry"
+    assert ITEMS.canonical("gen2", "BLACKBELT_I") == "black_belt" and ITEMS.get("black_belt").clazz == "held"
+    assert ITEMS.canonical("gen2", "LEVEL_BALL") == "level_ball" and ITEMS.get("level_ball").cobblemon is None
+    assert ITEMS.canonical("gen2", "HM_SURF") == "hm_surf" and ITEMS.get("hm_surf").clazz == "key"
+    held = [i for i in ITEMS.ids if ITEMS.get(i).clazz == "held"]
+    assert len(held) == 48 and all(set(ITEMS.get(i).symbols) == {"gen2"} for i in held)
+    assert all(ITEMS.get(i).cobblemon is None or "gen1" in ITEMS.get(i).symbols for i in ITEMS.mirrored())

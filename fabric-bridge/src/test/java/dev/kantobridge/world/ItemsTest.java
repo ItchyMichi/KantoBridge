@@ -55,7 +55,7 @@ class ItemsTest {
 		}
 		Items parsed = Items.parse(new String(file, StandardCharsets.UTF_8));
 		assertEquals(parsed.entries(), Items.bundled().entries());
-		assertEquals(165, Items.ids().size(), "MG6's 128, and MG7's Sun Stone and 36 Gen 3 TMs");
+		assertEquals(268, Items.ids().size(), "MG6's 128, MG7's Sun Stone and 36 Gen 3 TMs, MG9's 103 Gen 2 items");
 	}
 
 	@Test
@@ -82,7 +82,12 @@ class ItemsTest {
 		assertEquals("tm_toxic", Items.canonicalOf("gen3", "TM06"), "a TM both generations have is one entry");
 		assertEquals("sun_stone", Items.canonicalOf("gen3", "SUN_STONE"));
 		assertNull(Items.symbolOf("gen1", "sun_stone"), "Gen 1 has no Sun Stone");
-		assertNull(Items.canonicalOf("gen2", "POTION"), "no Gen 2 symbols");
+		assertEquals("potion", Items.canonicalOf("gen2", "POTION"), "MG9: Crystal's symbols");
+		assertEquals("thunder_stone", Items.canonicalOf("gen2", "THUNDERSTONE"));
+		assertEquals("oran_berry", Items.canonicalOf("gen2", "BERRY"), "Gen 2's berries by their Gen 3 names");
+		assertEquals("leftovers", Items.bundled().byCobblemon("leftovers"), "a held item back from Cobblemon's");
+		assertNull(Items.bundled().byCobblemon("no_such_item"));
+		assertNull(Items.canonicalOf("gen4", "POTION"), "no Gen 4 symbols");
 		assertNull(Items.symbolOf(null, "potion"));
 		assertFalse(Items.known("Potion"));
 		assertNull(Items.get(null));
@@ -122,7 +127,8 @@ class ItemsTest {
 			assertNull(Items.cobblemonPath(key), key);
 		}
 		long tms = Items.ids().stream().filter(id -> Items.TM.equals(Items.clazz(id))).count();
-		assertEquals(86, tms, "Gen 1's 50 and Gen 3's 50, 14 of them teaching the same move");
+		assertEquals(108, tms, "Gen 1's 50 and Gen 3's 50, 14 of them teaching the same move; MG9: 22 of Crystal's 50 new");
+		assertEquals(50, Items.ids().stream().filter(id -> Items.TM.equals(Items.clazz(id)) && Items.symbolOf("gen2", id) != null).count());
 		assertEquals(50, Items.ids().stream().filter(id -> Items.TM.equals(Items.clazz(id)) && Items.symbolOf("gen1", id) != null).count());
 		assertEquals(50, Items.ids().stream().filter(id -> Items.TM.equals(Items.clazz(id)) && Items.symbolOf("gen3", id) != null).count());
 		Set<Integer> moves = new HashSet<>();

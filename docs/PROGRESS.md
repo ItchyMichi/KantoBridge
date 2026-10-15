@@ -1477,7 +1477,7 @@ the full suite at the ✔ checkpoints (MG2, MG3, MG5, MG6). Pods run inside your
 | MG6 | One trainer economy | **done** (notes 18, 21); check: `LedgerGameTests` (two regions: adoption, stamped read-back, the crossing's projection, `too_many`/`left`, re-projection on an unknown stamp; a legacy world untouched), `BagGameTests` marked stacks, `LedgerTest`/`LedgerCodecTest`/`ItemsTest`/`BagSetRelayTest`, `test_lua_ledger.py`/`test_lua_bag.py`; the real engine's `bag.set` round trip is your play-test (PLAYTEST.md "MG6") | 2026-10-13 | |
 | MG7 | The second family (Emerald): adapter and export | **done**: the spec [specs/GEN3_BRIDGE_PLAN.md](specs/GEN3_BRIDGE_PLAN.md) (2026-10-14), phases G3A–G3G; **G3A done** (Emerald followable), **G3B done** (Emerald's UI), **G3C done** (story), **G3D done** (export), **G3E done** (builder), **G3F done** (battles, party, bag; the route exit moved to MG8), **G3G done** (the real Hoenn built in Minecraft) ("Several games: MG7") | 2026-10-14 | |
 | MG8 | Hoenn and the pass to it | **done**: the spec [specs/HOENN_PASS_PLAN.md](specs/HOENN_PASS_PLAN.md) (2026-10-14), phases HP1–HP8; the test pass Viridian City ↔ Littleroot Town; Kanto and Hoenn in one world; 20 crossings each way between the real Blue and Emerald ("Several games: MG8") | 2026-10-14 | |
-| MG9 | Johto (Gold, Silver, Crystal): the Gen 2 bridge | **in progress**: [specs/GEN2_BRIDGE_PLAN.md](specs/GEN2_BRIDGE_PLAN.md) (2026-10-15), from a static inspection of the Gen 2 engine (research notes `refs/_research/g2_*.md`); phases G2S and G2A–G2H; decisions J1–J14 with defaults. **G2S done** ("Johto (MG9): the inspection G2S"); **G2A done** (Crystal followable: "Johto (MG9): G2A notes"); **G2B done** (Crystal's UI: "Johto (MG9): G2B notes"); **G2C done** (Crystal's story: "Johto (MG9): G2C notes"); **G2D done** (Crystal's export: "Johto (MG9): G2D notes"); **G2E done** (the builder, 112 families: "Johto (MG9): G2E notes"); next G2F | 2026-10-15 | |
+| MG9 | Johto (Gold, Silver, Crystal): the Gen 2 bridge | **in progress**: [specs/GEN2_BRIDGE_PLAN.md](specs/GEN2_BRIDGE_PLAN.md) (2026-10-15), from a static inspection of the Gen 2 engine (research notes `refs/_research/g2_*.md`); phases G2S and G2A–G2H; decisions J1–J14 with defaults. **G2S done** ("Johto (MG9): the inspection G2S"); **G2A done** (Crystal followable: "Johto (MG9): G2A notes"); **G2B done** (Crystal's UI: "Johto (MG9): G2B notes"); **G2C done** (Crystal's story: "Johto (MG9): G2C notes"); **G2D done** (Crystal's export: "Johto (MG9): G2D notes"); **G2E done** (the builder, 112 families: "Johto (MG9): G2E notes"); **G2F done** (battles, party, bag: "Johto (MG9): G2F notes"); next G2G | 2026-10-15 | |
 
 ### Several games: notes
 
@@ -2382,6 +2382,47 @@ Crystal is followable (GEN2_BRIDGE_PLAN.md §3–§5, phase G2A), at your "Go" a
 - **Still the stub's** (later phases): the UI (G2B: until then a client gets no Gen 2 screens; the e2e driver answers
   Oak's speech), the story (G2C), the export (G2D: `export.live_copy_failed` is logged once at load), battles (G2F),
   routes (G2H).
+
+### Johto (MG9): G2F notes (2026-10-15)
+
+Crystal's battles, party and bag reach Cobblemon (GEN2_BRIDGE_PLAN.md §5.10, phase G2F), in sequence after G2E as you
+asked.
+
+- **Battles** (`gen1-bridge/lib/engine/gen2/battle.lua`): every Gen 2 battle reaches `World:startBattle`, so the hold
+  keeps the engine's own start and swaps only the screen (spike G2-S6): no wipe, a placeholder in place of the battle
+  screen, the field and the script frozen under it. The answer is applied inside the engine's step: a trainer win pays
+  the prize as the battle's own end does (the wallet and Mom's share) with the defeat and money lines; a loss whites out,
+  except the first rival's (CANLOSE: the story goes on where it stands); an abort stops the script, so the trainer
+  challenges again. Grass and cave rolls are the habitat pools'; fishing, surfing, headbutt, Rock Smash, statics and
+  roamers are held; the Bug-Catching Contest, the catch tutorial and the Battle Tower stay in the hidden game
+  (`battle.native` kinds `contest`, `old_man`, `tower`).
+- **Party** (`party.lua`): Cobblemon's party is the hidden one, as on Gen 1 and 3. Gen 2 has no single gift seam, so
+  the party is diffed every step and the seam that made a new member names its source (the starter, gifts, in-game
+  trades with the member sent taken, hatched eggs); eggs stay in the hidden game. The Day-Care's two keepers are
+  watched (deposit, withdrawal with the experience it gave). New members get DVs that reproduce Cobblemon's gender,
+  shininess and Unown letter.
+- **Details on the wire**: team members, wild Pokémon, gifts and party members carry the held item (as the item
+  catalogue's canonical id: one `party.sync` reaches every game), shininess, gender, form and friendship; Minecraft
+  applies all but the form (Cobblemon's Unown has no letters).
+- **Bag and PC** (`bag.lua`): the shared Gen 1 bag with Crystal's money and pockets; `protocol/items.json` gains
+  Crystal's symbols (63 shared items, its 50 TMs) and 81 new items; item uses on synced members are refused (Gen 2 has
+  no `item.use`: its own methods are guarded); Bill's PC opens Cobblemon's.
+- **Field moves** (`fieldmoves.lua`): `act.field` through the hidden game's party-menu path, with Gen 2's Headbutt,
+  Rock Smash, Whirlpool, Waterfall and Sweet Scent; the bicycle, rods and the Escape Rope through the PACK's.
+- **Java**: `MonDetails` read and applied (`Gen1Mons.applyDetails`), `PartySync` sends them, Gen 2's trainer classes
+  in `ProxyClass` (Johto's and Kanto's leaders, the Elite Four with Koga, Red), `LedgerRules.Limits.GEN2`, the new
+  native kinds and field actions.
+- **Found on the real engine**: Crystal's `givepoke` asks for the nickname inside the op, the script yielding there,
+  so the party diff saw the starter before the op returned: the seam is now marked from the op's start.
+- **Checks**: local pytest and Lua 2,190 passed (new `test_lua_gen2_battle.py` 11, `test_lua_gen2_party.py` 13,
+  `test_lua_gen2_bag.py` 6). On the pod (kb-dev22) the new e2e `test_crystal_battles_...` passed in 71 s: Elm's
+  starter (`party.give` source starter, dex 155, with its DVs, gender and friendship) confirmed by a `party.sync`; a
+  fished Magikarp held and caught in Cobblemon; a Route 30 Youngster (two Pokémon, DVs 9/8/8/8) held after its
+  challenge line, beaten, its flag set and 64 paid with the two lines; the first rival held and lost with no whiteout.
+  All six Crystal e2e tests, the Gen 1 battle e2e and Emerald's battles and trades e2e passed. The checkpoint's full
+  check: pytest 2,184, the Gradle build with JUnit, and all 124 GameTests (13 minutes on this host: Gradle's 15-minute
+  limit for them is now 25 by default, `-Pkb.gameTestMinutes` to change it).
+- **Pods**: kb-dev23's host was full; kb-dev22 (cpu3g ×4, $0.16/hr) ran it, about 80 minutes, stopped.
 
 ### Johto (MG9): G2E notes (2026-10-15)
 

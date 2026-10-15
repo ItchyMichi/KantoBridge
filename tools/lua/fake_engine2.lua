@@ -1414,6 +1414,396 @@ function FakeEngine2.new(opts)
     return true
   end
 
+  -- ---- G2F: Pokemon, moves, items and trainers (made up; the shapes of RomExtractorGen2.lua's records), and the
+  -- modules the battle, party and bag parts use. Records: E.battleStarts (startBattle's opts), E.battleEnds (the
+  -- outcome the engine's closure got: "nil" for an abort), E.blackouts, E.partyItemUses, E.fieldItemUses,
+  -- E.fieldMoveCalls, E.pcScreens.
+  E.battleStarts, E.battleEnds, E.blackouts, E.partyItemUses, E.fieldItemUses, E.fieldMoveCalls, E.pcScreens =
+    {}, {}, 0, {}, {}, {}, {}
+  local function stats(hp, atk, df, spd, spa, spdf)
+    return { hp = hp, attack = atk, defense = df, speed = spd, specialAttack = spa, specialDefense = spdf }
+  end
+  E.data.pokemon = {
+    TEST_CHIKORITA = { dex = 152, index = 152, name = "TEST CHIKORITA", baseStats = stats(45, 49, 65, 45, 49, 65),
+                       growthRate = "MEDIUM_SLOW", genderRatio = 0x1F, types = { "GRASS" } },
+    TEST_RATTATA = { dex = 19, index = 19, name = "TEST RATTATA", baseStats = stats(30, 56, 35, 72, 25, 35),
+                     growthRate = "MEDIUM_FAST", genderRatio = 0x7F, types = { "NORMAL" } },
+    TEST_MAGIKARP = { dex = 129, index = 129, name = "TEST MAGIKARP", baseStats = stats(20, 10, 55, 80, 15, 20),
+                      growthRate = "SLOW", genderRatio = 0x7F, types = { "WATER" } },
+    TEST_TOGEPI = { dex = 175, index = 175, name = "TEST TOGEPI", baseStats = stats(35, 20, 65, 20, 40, 65),
+                    growthRate = "FAST", genderRatio = 0x1F, types = { "NORMAL" } },
+    UNOWN = { dex = 201, index = 201, name = "TEST UNOWN", baseStats = stats(48, 72, 48, 48, 72, 48),
+              growthRate = "MEDIUM_FAST", genderRatio = 0xFF, types = { "PSYCHIC" } },
+  }
+  E.data.moves = {
+    TEST_TACKLE = { index = 33, pp = 35 }, TEST_GROWL = { index = 45, pp = 40 }, TEST_SPLASH = { index = 150, pp = 40 },
+    TEST_CUT = { index = 15, pp = 30 }, TEST_SURF = { index = 57, pp = 15 }, TEST_HIDDEN = { index = 237, pp = 15 },
+  }
+  E.data.items = {
+    POTION = { index = 18, pocket = "ITEM" }, POKE_BALL = { index = 5, pocket = "BALL" },
+    BERRY = { index = 173, pocket = "ITEM" }, RARE_CANDY = { index = 32, pocket = "ITEM" },
+    MOON_STONE = { index = 8, pocket = "ITEM" }, ESCAPE_ROPE = { index = 19, pocket = "ITEM" },
+    BICYCLE = { index = 7, pocket = "KEY_ITEM" }, OLD_ROD = { index = 58, pocket = "KEY_ITEM" },
+    TM_DYNAMICPUNCH = { index = 191, pocket = "TM_HM", teaches = "TEST_TACKLE" },
+    HM_CUT = { index = 243, pocket = "TM_HM", teaches = "TEST_CUT" },
+  }
+  E.data.trainers = { classes = {
+    YOUNGSTER = { index = 3, id = "YOUNGSTER", name = "TEST YOUNGSTER", baseMoney = 4, trainers = {
+      { id = "JOEY1", index = 1, name = "TEST JOEY", party = { { level = 4, species = "TEST_RATTATA" } } },
+      { id = "MIKEY", index = 2, name = "TEST MIKEY", party = { { level = 2, species = "TEST_RATTATA" },
+                                                                { level = 4, species = "TEST_CHIKORITA", item = "BERRY" } } } } },
+    RIVAL1 = { index = 9, id = "RIVAL1", name = "TEST RIVAL", baseMoney = 20, trainers = {
+      { id = "RIVAL1_1_CHIKORITA", index = 1, name = "?", party = { { level = 5, species = "TEST_CHIKORITA" } } } } },
+  } }
+
+  -- src/battle/gen2/Mon.lua: DVs (:150-178), stats (:180-200; a plain made-up formula), experience (level^3),
+  -- Gen 2's shininess pattern (:616-624), Mon.new (:513-570), stampOT (:572-585)
+  local Mon = {}
+  E.Mon = Mon
+  E.nextDVs = nil -- a test may set the DVs the next Mon.new rolls
+  function Mon.randomDVs()
+    local d = E.nextDVs or { attack = 7, defense = 7, speed = 7, special = 7 }
+    E.nextDVs = nil
+    return { attack = d.attack, defense = d.defense, speed = d.speed, special = d.special }
+  end
+  function Mon.hpDV(d)
+    return (d.attack % 2) * 8 + (d.defense % 2) * 4 + (d.speed % 2) * 2 + d.special % 2
+  end
+  function Mon.stats(base, dvs, level, _statExp)
+    local function v(b0, dv) return math.floor(((b0 or 1) * 2 + (dv or 0) * 2) * level / 100) + 5 end
+    return { hp = math.floor(((base.hp or 1) * 2 + Mon.hpDV(dvs) * 2) * level / 100) + level + 10,
+             attack = v(base.attack, dvs.attack), defense = v(base.defense, dvs.defense), speed = v(base.speed, dvs.speed),
+             specialAttack = v(base.specialAttack, dvs.special), specialDefense = v(base.specialDefense, dvs.special) }
+  end
+  function Mon.growthFor(_data, curve) return curve or "MEDIUM_FAST" end
+  function Mon.experienceForLevel(_growth, level) return level * level * level end
+  function Mon.vanillaShiny(dvs)
+    if not dvs or dvs.speed ~= 10 or dvs.defense ~= 10 or dvs.special ~= 10 then return false end
+    return (dvs.attack or 0) % 4 == 2 or (dvs.attack or 0) % 4 == 3
+  end
+  function Mon.new(data, species, level, opts)
+    opts = opts or {}
+    local def = data and data.pokemon and data.pokemon[species]
+    if not def then return nil end
+    local dvs = opts.dvs or Mon.randomDVs()
+    dvs.hp = Mon.hpDV(dvs)
+    local st = Mon.stats(def.baseStats, dvs, level)
+    local moves = opts.moves
+    if not moves then
+      moves = { { id = "TEST_TACKLE", pp = 35, maxPp = 35 } }
+    end
+    return { species = species, name = def.name, nickname = opts.nickname, level = level,
+             experience = Mon.experienceForLevel(nil, level), dvs = dvs, statExp = { hp = 0, attack = 0, defense = 0,
+             speed = 0, special = 0 }, stats = st, hp = opts.hp or st.hp, maxHp = st.hp, types = def.types, moves = moves,
+             item = opts.item, happiness = opts.happiness or 70, shiny = opts.shiny or Mon.vanillaShiny(dvs),
+             gender = E.Gender.of(def.genderRatio, dvs), unownLetter = species == "UNOWN" and E.Unown.letterFromDVs(dvs) or nil }
+  end
+  function Mon.stampOT(save, mon)
+    local player = save and save.player
+    if not (mon and player) then return mon end
+    mon.ot = mon.ot or player.name
+    mon.otName = mon.otName or mon.ot
+    if not mon.traded then mon.otId = mon.otId or player.id end
+    return mon
+  end
+  -- src/core/gen2/Gender.lua:5-12; src/core/gen2/Unown.lua:66-81
+  E.Gender = {}
+  function E.Gender.of(ratio, dvs)
+    if not ratio or ratio == 0xff then return "unknown" end
+    if ratio == 0 then return "male" end
+    if ratio == 0xfe then return "female" end
+    local value = (dvs and dvs.attack or 0) * 16 + (dvs and dvs.speed or 0)
+    return value <= ratio and "female" or "male"
+  end
+  E.Unown = { SPECIES = "UNOWN" }
+  local function middle(dv) return math.floor((dv or 0) / 2) % 4 end
+  function E.Unown.letterFromDVs(dvs)
+    if not dvs then return nil end
+    local packed = middle(dvs.attack) * 64 + middle(dvs.defense) * 16 + middle(dvs.speed) * 4 + middle(dvs.special)
+    return math.floor(packed / 10) + 1
+  end
+
+  -- src/battle/gen2/Prize.lua:184-228 (made up: the base times the last row's level, all to the wallet)
+  E.Prize = {}
+  function E.Prize.award(save, opts)
+    local total = (opts.baseMoney or 0) * (opts.level or 1)
+    save.player.money = (save.player.money or 0) + total
+    return { total = total, mode = 0, toMom = 0 }
+  end
+  function E.Prize.message(award, name) return ("TEST %s GOT %d"):format(name or "PLAYER", award and award.total or 0) end
+
+  -- the battle model (src/battle/gen2/Battle.lua:300-399 setup, :457-472 endBattle, :3792-3810 the prize)
+  function E.newBattleModel(opts)
+    local m = { wild = opts.wild ~= nil, enemy = opts.wild, trainer = opts.trainer, battleType = opts.battleType,
+                roaming = opts.roaming, save = E.game.save }
+    m.enemyParty = opts.wild and { opts.wild } or (opts.trainer and opts.trainer.party) or {}
+    function m.endBattle(self, outcome)
+      self.over, self.outcome = true, outcome
+      if self.endedEmitted then return end
+      self.endedEmitted = true
+      emit("battle.ended", { battle = self, result = outcome })
+    end
+    function m.awardPrizeMoney(self)
+      local last = self.enemyParty[#self.enemyParty]
+      self.prize = E.Prize.award(self.save, { baseMoney = self.trainer and self.trainer.baseMoney,
+                                              level = last and last.level or 1 })
+      return self.prize
+    end
+    return m
+  end
+
+  -- src/ui/Screens.lua:191-195 (a builtin by its module's `new`, the screenId stamped), the native battle screen
+  -- (src/ui/gen2/BattleState.lua: a test ends it with E.finishNative)
+  E.Screens = {}
+  E.BattleState = {}
+  function E.BattleState.new(_g, opts)
+    return { native = true, battle = opts.battle, onDone = opts.onDone, contest = opts.contest,
+             tutorial = opts.tutorial, update = function() end }
+  end
+  function E.Screens.push(g, id, opts)
+    local inst
+    if id == "Gen2BattleState" then
+      inst = E.BattleState.new(g, opts)
+    else
+      inst = { update = function() end, opts = opts }
+    end
+    inst.screenId = inst.screenId or id
+    g.stack:push(inst)
+    return inst
+  end
+  function E.finishNative(outcome)
+    local top = E.game.stack:top()
+    if type(top) == "table" and top.native and top.onDone then top.onDone(outcome, top.battle) end
+  end
+
+  -- World:pushBattleTransition (:6931-6943: the wipe takes the screen, then onDone) and World:startBattle
+  -- (:6957-7142: the model, the battle screen through Screens, the after-battle closure: pop, the whiteout on a
+  -- loss but CANLOSE's, then the caller's onDone)
+  function World:pushBattleTransition(_battle, _opts, onDone)
+    local g = E.game
+    if not (g and g.stack and self.map) then return false end
+    g.stack:push({ screenId = "Gen2BattleTransition", update = function()
+      g.stack:pop()
+      onDone()
+    end })
+    return true
+  end
+  function World:startBattle(opts, onDone)
+    local g = E.game
+    E.battleStarts[#E.battleStarts + 1] = opts
+    local battle = E.newBattleModel(opts)
+    local function pushBattle()
+      self.battleActive = true
+      E.Screens.push(g, "Gen2BattleState", { battle = battle, save = g.save, contest = opts.contest,
+                                             tutorial = opts.tutorial, onDone = function(outcome)
+        self.battleActive = nil
+        g.stack:pop()
+        E.battleEnds[#E.battleEnds + 1] = outcome == nil and "nil" or outcome
+        if outcome == "lose" and opts.battleType ~= 1 then
+          g.save.player.money = math.floor((g.save.player.money or 0) / 2)
+          E.blackouts = E.blackouts + 1
+          emit("world.blacked_out", { save = g.save })
+        end
+        if onDone then onDone(outcome) end
+      end })
+    end
+    if not self:pushBattleTransition(battle, opts, pushBattle) then pushBattle() end
+    return true
+  end
+  -- startScriptedBattle (:7165-7262): a trainer record by class and member, or a scripted wild
+  function World:startScriptedBattle(classId, member, onDone, battleType)
+    local cls = E.data.trainers.classes[classId]
+    local row = cls and cls.trainers[member]
+    if not row then
+      if onDone then onDone(nil) end
+      return false
+    end
+    local party = {}
+    for _, r in ipairs(row.party) do
+      party[#party + 1] = Mon.new(E.data, r.species, r.level, { item = r.item,
+                                                                dvs = { attack = 9, defense = 8, speed = 8, special = 8 } })
+    end
+    local name = cls.name .. " " .. row.name
+    if classId == "RIVAL1" then name = (E.game.save.rival or {}).name or "???" end
+    return self:startBattle({ trainer = { class = cls.index, classId = classId, memberId = row.id, name = name,
+                                          party = party, baseMoney = cls.baseMoney, winText = "TEST WIN TEXT",
+                                          lossText = "TEST LOSS TEXT" }, battleType = battleType }, onDone)
+  end
+  -- a step encounter (tryWildEncounter, :4498-4588): the encounter.roll hook, then the battle
+  function E.wildEncounter(species, level, terrain, opts)
+    opts = opts or {}
+    local w = E.game.world
+    local function vanilla(_tables, _ctx) return { species = species, level = level } end
+    local roll = callHook("encounter.roll", vanilla, {}, { terrain = terrain or "grass", kind = opts.kind or "wild",
+                                                           mapId = w.map.id, daytime = "DAY" })
+    if not roll then return false end
+    local mon = Mon.new(E.data, roll.species, roll.level, { dvs = opts.dvs })
+    w:startBattle({ wild = mon, battleType = opts.battleType, contest = opts.contest, tutorial = opts.tutorial,
+                    party = opts.party })
+    return true
+  end
+  function World:fieldContext() return { save = E.game.save, data = E.data } end
+  -- the party menu's field move (:6315-6331): E.fieldMoveResult or a success
+  function World:useFieldMove(moveId, mon)
+    E.fieldMoveCalls[#E.fieldMoveCalls + 1] = { move = moveId, mon = mon }
+    return E.fieldMoveResult or { ok = true, action = moveId }
+  end
+  -- the PACK's field items (:4908-4925): E.fieldItemResults[id]
+  function World:useFieldItem(itemId)
+    E.fieldItemUses[#E.fieldItemUses + 1] = itemId
+    return (E.fieldItemResults or {})[itemId]
+  end
+  E.FieldMoves.isSurfing = function(state) return state == "surf" end
+  E.FieldMoves.partyMoveUser = function(party, moveId)
+    for _, mon in ipairs(party or {}) do
+      for _, mv in ipairs(mon.moves or {}) do
+        if mv.id == moveId then return mon end
+      end
+    end
+    return nil
+  end
+
+  -- givepoke through the script.command hook (Vm.lua:616-637 inside Vm.lua:1829-1851): the op appends a new
+  -- member (Party.add, the OT stamped)
+  function E.givePoke(species, level, opts)
+    opts = opts or {}
+    local function vanilla(_ctx, _name, _args, _cmd)
+      local save = E.game.save
+      local mon = Mon.new(E.data, species, level, { item = opts.item, dvs = opts.dvs })
+      Mon.stampOT(save, mon)
+      if #save.party < 6 then save.party[#save.party + 1] = mon end
+      return nil
+    end
+    return callHook("script.command", vanilla, { vm = {} }, "givepoke", {}, { op = "givepoke" })
+  end
+  -- giveegg (World:giveEgg, :2883-2905)
+  function E.giveEgg(species, level)
+    local save = E.game.save
+    local mon = Mon.new(E.data, species, level or 5)
+    mon.isEgg, mon.nickname, mon.hp = true, "EGG", 0
+    save.party[#save.party + 1] = mon
+    return mon
+  end
+
+  -- src/core/gen2/NpcTrade.lua:140-174: the given member out, the received one on the end
+  E.NpcTrade = {}
+  function E.NpcTrade.perform(data, save, row, index)
+    local party = save and save.party
+    local given = party and party[index]
+    if not (data and given and row) then return nil end
+    local received = Mon.new(data, row.get, given.level, { nickname = row.nickname })
+    received.ot, received.otName, received.otId = "TEST OT", "TEST OT", 7
+    table.remove(party, index)
+    party[#party + 1] = received
+    return given, received
+  end
+
+  -- src/core/gen2/Breeding.lua: dayCare (:686-696), side (:698-702), deposit (:783-794), withdraw (:864-918:
+  -- the record rebuilt at the new level, the price paid), collectEgg (:1048-1064), hatch (:1087-1148)
+  E.Breeding = {}
+  function E.Breeding.dayCare(save)
+    save.dayCare = save.dayCare or {}
+    save.dayCare.man = save.dayCare.man or {}
+    save.dayCare.lady = save.dayCare.lady or {}
+    return save.dayCare
+  end
+  function E.Breeding.side(save, which) return E.Breeding.dayCare(save)[which == "lady" and "lady" or "man"] end
+  function E.Breeding.deposit(_data, save, which, partyIndex)
+    local slot = E.Breeding.side(save, which)
+    local mon = table.remove(save.party, partyIndex)
+    slot.mon = mon
+    return true, mon
+  end
+  function E.Breeding.withdraw(data, save, which)
+    local slot = E.Breeding.side(save, which)
+    local mon = slot.mon
+    if not mon then return false, "no_mon" end
+    local level = mon.level + 1
+    local rebuilt = Mon.new(data, mon.species, level, { dvs = mon.dvs, moves = mon.moves, nickname = mon.nickname })
+    rebuilt.ot, rebuilt.otId = mon.ot, mon.otId
+    save.player.money = math.max(0, save.player.money - 100)
+    save.party[#save.party + 1] = rebuilt
+    slot.mon = nil
+    return true, rebuilt, 100
+  end
+  function E.Breeding.hatch(data, save, index, nickname)
+    local egg = save.party[index]
+    if not (egg and egg.isEgg) then return nil end
+    local hatched = Mon.new(data, egg.species, egg.level, { dvs = egg.dvs, nickname = nickname, happiness = 120 })
+    hatched.ot, hatched.otId = save.player.name, save.player.id
+    save.party[index] = hatched
+    return hatched, { species = egg.species }
+  end
+  -- src/core/gen2/Boxes.lua:49-56
+  E.Boxes = { MONS_PER_BOX = 20 }
+  function E.Boxes.box(save, index)
+    index = index or save.currentBox or 1
+    save.boxes = save.boxes or {}
+    save.boxes[index] = save.boxes[index] or {}
+    return save.boxes[index]
+  end
+
+  -- src/inventory/Bag.lua (Gen 1's, shared): add (all or nothing: 99 a stack, 20 ITEM slots), remove, capacity,
+  -- slots (the ITEM pocket's stacks)
+  E.Bag = {}
+  local function pocketOf(id)
+    local rec = E.data.items[id]
+    return rec and rec.pocket or "ITEM"
+  end
+  function E.Bag.capacity(_data) return 20 end
+  function E.Bag.slots(save)
+    local n = 0
+    for id, qty in pairs(save.inventory or {}) do
+      if pocketOf(id) == "ITEM" and qty > 0 then n = n + math.ceil(qty / 99) end
+    end
+    return n
+  end
+  function E.Bag.add(save, id, qty)
+    save.inventory = save.inventory or {}
+    local have = save.inventory[id] or 0
+    if pocketOf(id) == "ITEM" and have == 0 and E.Bag.slots(save) >= 20 then return false end
+    save.inventory[id] = have + qty
+    return true
+  end
+  function E.Bag.remove(save, id, qty)
+    save.inventory = save.inventory or {}
+    local left = (save.inventory[id] or 0) - qty
+    save.inventory[id] = left > 0 and left or nil
+    return true
+  end
+
+  -- Game2's say (:940-943) and the item uses the bag part guards (:686-905)
+  function Game2:say(text, onDone)
+    self.stack:push(E.TextBox.new({ type(text) == "table" and (text[1] or "TEST") or text }, onDone))
+  end
+  function Game2:usePartyItem(itemId) E.partyItemUses[#E.partyItemUses + 1] = itemId end
+  function Game2:useFieldItem(itemId) E.fieldItemUses[#E.fieldItemUses + 1] = itemId end
+
+  -- src/ui/gen2/CenterPcMenu.lua:217-232: BILL's row says its line, then pushes the box screens
+  local CenterPcMenu = {}
+  CenterPcMenu.__index = CenterPcMenu
+  E.CenterPcMenu = CenterPcMenu
+  function CenterPcMenu:say(pages, onDone) E.game.stack:push(E.TextBox.new(pages, onDone)) end
+  function CenterPcMenu:choose()
+    local entry = self.entries[self.index]
+    if entry and entry.id == "bills" then
+      self:say({ "TEST BILLS PC" }, function()
+        E.pcScreens[#E.pcScreens + 1] = "Gen2PcMenu"
+        E.Screens.push(E.game, "Gen2PcMenu", {})
+      end)
+    end
+  end
+  function CenterPcMenu:update()
+    if E.game.input:wasPressed("a") then self:choose() end
+  end
+  function E.openCenterPc()
+    local s = setmetatable({ screenId = "Gen2CenterPcMenu", index = 1,
+                             entries = { { id = "bills" }, { id = "players" }, { id = "oaks" }, { id = "turnoff" } } },
+                           CenterPcMenu)
+    E.game.stack:push(s)
+    return s
+  end
+
   E.modules = {
     ["src.core.Version"] = E.Version,
     ["src.core.GameVersion"] = E.GameVersion,
@@ -1435,6 +1825,19 @@ function FakeEngine2.new(opts)
     ["src.ui.gen2.NamingScreen"] = E.NamingScreen,
     ["src.ui.gen2.GenderSelect"] = E.GenderSelect,
     ["src.ui.gen2.CallerBox"] = E.CallerBox,
+    -- G2F
+    ["src.ui.gen2.BattleState"] = E.BattleState,
+    ["src.ui.Screens"] = E.Screens,
+    ["src.battle.gen2.Mon"] = E.Mon,
+    ["src.battle.gen2.Prize"] = E.Prize,
+    ["src.core.gen2.Gender"] = E.Gender,
+    ["src.core.gen2.Unown"] = E.Unown,
+    ["src.core.gen2.NpcTrade"] = E.NpcTrade,
+    ["src.core.gen2.Breeding"] = E.Breeding,
+    ["src.core.gen2.Boxes"] = E.Boxes,
+    ["src.inventory.Bag"] = E.Bag,
+    ["src.core.Game2"] = E.Game2,
+    ["src.ui.gen2.CenterPcMenu"] = E.CenterPcMenu,
   }
   -- no ModUI or dataset tables on this fake
   E.ui, E.datasets = nil, nil

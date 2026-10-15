@@ -18,20 +18,22 @@ import org.jetbrains.annotations.Nullable;
  * only: what a game can hold is its compat ceiling (the bridge keeps to it), and whether Cobblemon knows a number is
  * {@link Gen1Mons}' lookup. The name dates from Gen 1, the first game it described. Plain Java.
  *
- * @param moves 0–4 distinct move numbers in slot order; empty means Cobblemon's default moveset
- * @param dvs   Gen 1's DVs; with {@code ivs} also null, Cobblemon's random IVs
- * @param ivs   Gen 3's IVs, used over {@code dvs} when a gift carries both
+ * @param moves   0–4 distinct move numbers in slot order; empty means Cobblemon's default moveset
+ * @param dvs     Gen 1's DVs (Gen 2's too); with {@code ivs} also null, Cobblemon's random IVs
+ * @param ivs     Gen 3's IVs, used over {@code dvs} when a gift carries both
+ * @param details MG9 (G2F): the held item, shininess, gender, form and friendship where the game has them
  */
-public record Gen1Mon(int dex, int level, List<Integer> moves, @Nullable Dvs dvs, @Nullable Ivs ivs) {
+public record Gen1Mon(int dex, int level, List<Integer> moves, @Nullable Dvs dvs, @Nullable Ivs ivs, MonDetails details) {
 	public static final int MAX_LEVEL = 100;
 	public static final int MAX_MOVES = 4;
 	/** The protocol's national dex numbers (defs {@code nationalDex}). */
 	public static final int MAX_NATIONAL = 2000;
 	/** The protocol's move numbers (defs {@code moveNum}, Showdown's). */
 	public static final int MAX_MOVE_NUM = 2000;
-	private static final Set<String> TEAM_FIELDS = Set.of("dex", "level", "moves", "dvs", "ivs");
+	private static final Set<String> TEAM_FIELDS = Set.of("dex", "level", "moves", "dvs", "ivs", "item", "shiny", "gender", "form");
 
 	public Gen1Mon {
+		details = details == null ? MonDetails.NONE : details;
 		if (!isNational(dex) || level < 1 || level > MAX_LEVEL || moves.size() > MAX_MOVES) {
 			throw new IllegalArgumentException("not a Pokémon the protocol describes");
 		}
@@ -45,7 +47,12 @@ public record Gen1Mon(int dex, int level, List<Integer> moves, @Nullable Dvs dvs
 
 	/** A Pokémon with DVs (Gen 1) or no individual values at all. */
 	public Gen1Mon(int dex, int level, List<Integer> moves, @Nullable Dvs dvs) {
-		this(dex, level, moves, dvs, null);
+		this(dex, level, moves, dvs, null, MonDetails.NONE);
+	}
+
+	/** A Pokémon with DVs or IVs and no details (Gen 1, Gen 3). */
+	public Gen1Mon(int dex, int level, List<Integer> moves, @Nullable Dvs dvs, @Nullable Ivs ivs) {
+		this(dex, level, moves, dvs, ivs, MonDetails.NONE);
 	}
 
 	/** A national dex number the protocol carries. */
@@ -70,7 +77,7 @@ public record Gen1Mon(int dex, int level, List<Integer> moves, @Nullable Dvs dvs
 		}
 		Dvs dvs = hasDvs ? Dvs.read(reader.element("dvs"), reader.path("dvs")) : null;
 		Ivs ivs = hasDvs ? null : Ivs.read(reader.element("ivs"), reader.path("ivs"));
-		return new Gen1Mon(dex, level, moves, dvs, ivs);
+		return new Gen1Mon(dex, level, moves, dvs, ivs, MonDetails.read(reader, false));
 	}
 
 	/**

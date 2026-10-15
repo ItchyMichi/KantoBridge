@@ -12,6 +12,7 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import dev.kantobridge.pokemon.Dvs;
 import dev.kantobridge.pokemon.Gen1Mon;
+import dev.kantobridge.pokemon.MonDetails;
 import dev.kantobridge.pokemon.Ivs;
 import dev.kantobridge.proto.ProtoJson;
 import dev.kantobridge.world.DataException;
@@ -78,6 +79,34 @@ class BattleStartTest {
 	}
 
 	@Test
+	void aGen2TrainerAndWildCarryTheirDetails() throws Exception {
+		// MG9 (G2F): Gen 2's DVs (Gen 1's shape), a held item by its canonical id, gender, shininess, Unown's letter
+		BattleStart start = BattleStart.read(json("{\"battle\":\"b-5\",\"kind\":\"trainer\","
+				+ "\"trainer\":{\"cls\":\"FALKNER\",\"party\":1},"
+				+ "\"team\":[{\"dex\":16,\"level\":7,\"moves\":[33],\"dvs\":{\"atk\":9,\"def\":8,\"spd\":8,\"spc\":8},"
+				+ "\"item\":\"oran_berry\",\"gender\":\"male\",\"shiny\":false}],"
+				+ "\"rules\":{\"catch\":false,\"flee\":false}}"));
+		Gen1Mon pidgey = start.team().get(0);
+		assertEquals(new MonDetails("oran_berry", false, "male", null, null), pidgey.details());
+		BattleStart wild = BattleStart.read(json("{\"battle\":\"b-6\",\"kind\":\"static\",\"wild\":{\"dex\":130,\"level\":30,"
+				+ "\"dvs\":{\"atk\":14,\"def\":10,\"spd\":10,\"spc\":10},\"shiny\":true,\"gender\":\"female\"},"
+				+ "\"rules\":{\"catch\":true,\"flee\":true}}"));
+		assertEquals(14, wild.wild().dvs().atk());
+		assertEquals(Boolean.TRUE, wild.wild().details().shiny());
+		BattleStart unown = BattleStart.read(json("{\"battle\":\"b-7\",\"kind\":\"static\",\"wild\":{\"dex\":201,\"level\":5,"
+				+ "\"form\":\"k\"},\"rules\":{\"catch\":true,\"flee\":true}}"));
+		assertEquals("k", unown.wild().details().form());
+		assertEquals(MonDetails.NONE, BattleStart.read(json("{\"battle\":\"a\",\"kind\":\"static\",\"wild\":{\"dex\":143,\"level\":30},"
+				+ "\"rules\":{\"catch\":true,\"flee\":true}}")).wild().details(), "a Gen 1 wild says nothing");
+		assertBad("{\"battle\":\"a\",\"kind\":\"static\",\"wild\":{\"dex\":143,\"level\":30,\"item\":\"ORAN_BERRY\"},"
+				+ "\"rules\":{\"catch\":true,\"flee\":true}}");
+		assertBad("{\"battle\":\"a\",\"kind\":\"static\",\"wild\":{\"dex\":143,\"level\":30,\"gender\":\"other\"},"
+				+ "\"rules\":{\"catch\":true,\"flee\":true}}");
+		assertBad("{\"battle\":\"a\",\"kind\":\"static\",\"wild\":{\"dex\":143,\"level\":30,\"friendship\":3},"
+				+ "\"rules\":{\"catch\":true,\"flee\":true}}");
+	}
+
+	@Test
 	void kindsNeedTheirParts() throws Exception {
 		String rules = "\"rules\":{\"catch\":true,\"flee\":true}";
 		String team = "\"team\":[{\"dex\":1,\"level\":5,\"moves\":[33],\"dvs\":{\"atk\":1,\"def\":1,\"spd\":1,\"spc\":1}}]";
@@ -118,7 +147,8 @@ class BattleStartTest {
 						+ "\"ivs\":{\"hp\":1,\"atk\":1,\"def\":1,\"spa\":1,\"spd\":1,\"spe\":1}}",
 				"{\"dex\":1,\"level\":5,\"moves\":[1],\"ivs\":{\"hp\":32,\"atk\":1,\"def\":1,\"spa\":1,\"spd\":1,\"spe\":1}}",
 				"{\"dex\":1,\"level\":5,\"moves\":[1],\"ivs\":{\"hp\":1,\"atk\":1,\"def\":1,\"spa\":1,\"spd\":1}}",
-				"{\"dex\":1,\"level\":5,\"moves\":[1],\"dvs\":{\"atk\":1,\"def\":1,\"spd\":1,\"spc\":1},\"shiny\":true}"}) {
+				"{\"dex\":1,\"level\":5,\"moves\":[1],\"dvs\":{\"atk\":1,\"def\":1,\"spd\":1,\"spc\":1},\"ability\":1}",
+				"{\"dex\":1,\"level\":5,\"moves\":[1],\"dvs\":{\"atk\":1,\"def\":1,\"spd\":1,\"spc\":1},\"friendship\":1}"}) {
 			assertBad(with(good, "team", "[" + mon + "]"));
 		}
 		assertBad(with(good, "trainer", "{\"cls\":\"OPP RIVAL\",\"party\":1}"));

@@ -174,6 +174,26 @@
       },
       "description": "Gen 3 (and later) IVs, one per stat (MG7 G3F)."
     },
+    "heldItem": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_]{0,31}$",
+      "description": "MG9 (G2F): the item a Pokémon holds, as the catalogue's canonical id (protocol/items.json), so every game and Cobblemon read it alike; each adapter maps it to its own symbol."
+    },
+    "gender": {
+      "enum": ["male", "female", "genderless"],
+      "description": "MG9 (G2F): a Pokémon's gender, in a game that has genders (Gen 2 and later)."
+    },
+    "form": {
+      "type": "string",
+      "pattern": "^[a-z0-9_]{1,24}$",
+      "description": "MG9 (G2F): a Pokémon's form where its species has several: Unown's letter (a..z)."
+    },
+    "friendship": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 255,
+      "description": "MG9 (G2F): friendship (Gen 2's happiness), 0-255."
+    },
     "cell": {
       "type": "object",
       "required": ["map", "x", "y"],
@@ -259,7 +279,11 @@
           "minItems": 1
         },
         "dvs": {"$ref": "#/$defs/dvs"},
-        "ivs": {"$ref": "#/$defs/ivs"}
+        "ivs": {"$ref": "#/$defs/ivs"},
+        "item": {"$ref": "#/$defs/heldItem"},
+        "shiny": {"type": "boolean"},
+        "gender": {"$ref": "#/$defs/gender"},
+        "form": {"$ref": "#/$defs/form"}
       },
       "oneOf": [{"required": ["dvs"]}, {"required": ["ivs"]}],
       "description": "A member of a team the hidden game hands over: Gen 1's with DVs, Gen 3's with IVs (MG7 G3F). Its numbers are within the game's compat (maxDex, maxMove), which the adapter keeps and the server checks."

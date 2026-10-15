@@ -61,7 +61,9 @@ local byte, gsub, sub = string.byte, string.gsub, string.sub
 local OUTCOMES = { win = "win", lose = "lose", fled = "run", caught = "caught", aborted = "abort" }
 local RIVALS = { OPP_RIVAL1 = true, OPP_RIVAL2 = true, OPP_RIVAL3 = true }
 local WILD_KINDS = { surf = "surf", fish = "fish" }
-local NATIVE_KINDS = { safari = true, old_man = true, ghost = true }
+-- (MG9 G2F: Gen 2's Bug-Catching Contest and Battle Tower; its catch tutorial is old_man)
+local NATIVE_KINDS = { safari = true, old_man = true, ghost = true, contest = true, tower = true }
+local GENDERS = { male = true, female = true, genderless = true }
 local DV_KEYS = { "atk", "def", "spd", "spc" }
 local IV_KEYS = { "hp", "atk", "def", "spa", "spd", "spe" }
 -- MG7 (G3F): the running game's ceilings (the catalogue's compat); Gen 1's
@@ -106,6 +108,19 @@ local function ceilings(compat)
   return maxDex, maxMove
 end
 
+-- MG9 (G2F): a Pokemon's details where its game has them (Gen 2 on): the held
+-- item (the catalogue's canonical id, protocol/items.json), shininess, gender
+-- and form copied into `out` when well formed; anything else is left out (the
+-- member still goes).
+function Battle.details(m, out)
+  if type(m) ~= "table" then return out end
+  if sym(m.item, "^[a-z][a-z0-9_]*$", 32) then out.item = m.item end
+  if type(m.shiny) == "boolean" then out.shiny = m.shiny end
+  if GENDERS[m.gender] then out.gender = m.gender end
+  if sym(m.form, "^[a-z0-9_]+$", 24) then out.form = m.form end
+  return out
+end
+
 -- One team member as the protocol's teamMon, or nil when the engine's data
 -- can't be expressed: dex and 1-4 moves within the game's ceilings (Gen 1:
 -- 151 and 165), level 1-100, and Gen 1's DVs (0-15) or, MG7 (G3F), Gen 3's
@@ -125,7 +140,7 @@ function Battle.teamMon(m, compat)
       if not whole(m.ivs[k], 0, 31) then return nil end
       ivs[k] = m.ivs[k]
     end
-    return { dex = m.dex, level = m.level, moves = moves, ivs = ivs }
+    return Battle.details(m, { dex = m.dex, level = m.level, moves = moves, ivs = ivs })
   end
   local d = type(m.dvs) == "table" and m.dvs or {}
   local dvs = {}
@@ -133,7 +148,7 @@ function Battle.teamMon(m, compat)
     if not whole(d[k], 0, 15) then return nil end
     dvs[k] = d[k]
   end
-  return { dex = m.dex, level = m.level, moves = moves, dvs = dvs }
+  return Battle.details(m, { dex = m.dex, level = m.level, moves = moves, dvs = dvs })
 end
 
 -- opts:
@@ -184,6 +199,12 @@ function Battle.new(opts)
       counts[kind] = counts[kind] + 1
       data.wild = { dex = facts.dex, level = facts.level }
       if coord(facts.x) and coord(facts.y) then data.wild.x, data.wild.y = facts.x, facts.y end
+      -- MG9 (G2F): a Gen 2 wild Pokemon's DVs and details, so Cobblemon's matches it
+      local d = type(facts.dvs) == "table" and facts.dvs or nil
+      if d and whole(d.atk, 0, 15) and whole(d.def, 0, 15) and whole(d.spd, 0, 15) and whole(d.spc, 0, 15) then
+        data.wild.dvs = { atk = d.atk, def = d.def, spd = d.spd, spc = d.spc }
+      end
+      Battle.details(facts, data.wild)
       data.rules = { catch = facts.catch ~= false, flee = facts.flee ~= false }
     else
       if not (sym(facts.cls, "^[A-Za-z0-9_]+$") and whole(facts.party, 0, Battle.MAX_PARTY)) then return decline("trainer") end

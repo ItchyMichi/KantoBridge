@@ -21,7 +21,8 @@ import org.jetbrains.annotations.Nullable;
 public final class NativeBattle {
 	/** The mirror UI kept up between the battle's own UIs; gen1-bridge's ids start at 1. */
 	public static final int UI_ID = -1;
-	public static final Set<String> KINDS = Set.of("safari", "old_man", "ghost");
+	/** MG9 (G2F): Gen 2's Bug-Catching Contest and Battle Tower too (its catch tutorial is old_man). */
+	public static final Set<String> KINDS = Set.of("safari", "old_man", "ghost", "contest", "tower");
 	/** No battle screen is up while the hidden player stands idle in its overworld this long. */
 	public static final long IDLE_GRACE_MS = 1000;
 

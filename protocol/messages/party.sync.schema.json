@@ -67,6 +67,21 @@
           },
           "status": {
             "$ref": "../defs.schema.json#/$defs/gen1Status"
+          },
+          "item": {
+            "$ref": "../defs.schema.json#/$defs/heldItem"
+          },
+          "shiny": {
+            "type": "boolean"
+          },
+          "gender": {
+            "$ref": "../defs.schema.json#/$defs/gender"
+          },
+          "form": {
+            "$ref": "../defs.schema.json#/$defs/form"
+          },
+          "friendship": {
+            "$ref": "../defs.schema.json#/$defs/friendship"
           }
         }
       },
