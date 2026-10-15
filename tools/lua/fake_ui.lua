@@ -482,9 +482,15 @@ function FakeUi.attach(E)
         E.uiPush(E.menuState(items, { cancelable = false, title = "NAME" }))
       end
     end
+    -- NamingScreen.lua:156-180 (v0.3.85): an empty name re-prompts where there are presets (the player's and rival's
+    -- names), else it is the default or "" (no nickname); self.reprompts counts the re-prompts
     function s.confirm(self)
       local name = table.concat(self.glyphs)
-      if name == "" then name = (self.presets and self.presets[1]) or self.default or "" end
+      if name == "" and self.presets and #self.presets > 0 then
+        self.reprompts = (self.reprompts or 0) + 1
+        return
+      end
+      if name == "" then name = self.default or "" end
       E.uiPop()
       if self.onDone then self.onDone(name, true) end
     end

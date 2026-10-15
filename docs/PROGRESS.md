@@ -2290,6 +2290,26 @@ palette bank; the surf blob is a field effect (32 × 32, three frames), not an o
   JUnit 1,248 (2 skipped; new `BakedTexturesTest`, the Gen 3 pack's strips, sheets and dark caves in `Gen3PlanTest`,
   the readers), GameTests 122.
 
+**After MG8: the user's item 9, an empty nickname** (2026-10-15): the client's naming screen falls back to the
+default (`ui.open.value`), then the first preset, and with neither (every nickname) it sent nothing, so a nickname
+couldn't be left empty. Both engines take an empty name as their own: Gen1Recomp's `NamingScreen:confirm` gives the
+screen's default, else `""` (no nickname: the species' name stays and an evolution renames it; the Name Rater keeps
+the old one through its default), and re-prompts where there are presets (the player's and rival's names); Emerald's
+naming OK gives the screen's seed (the species' name for a nickname, which the caller keeps as no nickname; the
+player's name keeps the one Birch's speech picked). So the fix lets the empty name through rather than sending the
+species' name as a typed nickname (which would freeze it through evolutions):
+- `ui.name.glyphs` may be empty (0-10); gen1-bridge sets no glyphs and runs the screen's own confirm (START on Gen 1,
+  OK on Gen 3) and refuses an empty name where the screen has presets (`bad_message`, as the engine would re-prompt).
+- The client sends it empty when nothing is typed and there is neither default nor preset.
+- Checks: lupa and tools 2,009 passed (an empty nickname confirmed as the engine's own, a screen's default winning,
+  refused with presets; Emerald's empty name finishing as the seed; the Gen 1 fake now re-prompts as v0.3.85 does;
+  the redaction vectors' new example), JUnit 1,249 (2 skipped; the model and the router send `glyphs: []`),
+  GameTests 122 (on a second run: on a cold pod with JUnit alongside, `twoRegionsShareOneWorld` once failed with
+  "build still running" five seconds into its batch, unrelated to this change, which touches no server code); the
+  real Blue (`test_battle.py`, both passed; the lose run: YES to the starter's nickname, the naming screen confirmed
+  empty, the gift arrives with no nickname). Emerald's empty name was checked against its code and the fake, not in
+  the real game.
+
 ### Handoff (2026-10-14): after MG6, for whoever continues
 
 **State.** MG1–MG6 of [specs/MULTI_GAME_PLAN.md](specs/MULTI_GAME_PLAN.md) are done and committed locally (never

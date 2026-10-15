@@ -675,6 +675,31 @@ def test_naming_without_presets_confirms_at_once():
     assert names == [(b"DCB", True)] and g.tapped() == ["start"]
 
 
+def test_naming_an_empty_name_is_the_screens_own_empty_confirm():
+    """Item 9: no glyphs on a screen without presets: START on the empty grid, so the engine's confirm decides: no
+    nickname (""), or the screen's default (the Name Rater's old nickname)."""
+    g = Game()
+    names = naming(g, mon={"species": "TESTMON"})
+    assert opened(g)[0]["value"] == ""
+    g.send("ui.name", {"ui": 1, "glyphs": []})
+    g.until(lambda m: m["type"] == "ui.close")
+    assert names == [(b"", True)] and g.tapped() == ["start"] and errors(g) == []
+    g = Game()
+    names = naming(g, default="OLDNICK")
+    g.send("ui.name", {"ui": 1, "glyphs": []})
+    g.until(lambda m: m["type"] == "ui.close")
+    assert names == [(b"OLDNICK", True)]
+
+
+def test_naming_refuses_an_empty_name_where_the_screen_has_presets():
+    # the player's and rival's names: the engine would re-prompt, so the empty answer is refused before it
+    g = Game()
+    names = naming(g, presets=["TESTER", "ALEX"])
+    seq = g.send("ui.name", {"ui": 1, "glyphs": []})
+    g.run(3)
+    assert errors(g) == [("bad_message", seq)] and names == [] and g.tapped() == []
+
+
 @pytest.mark.parametrize("glyphs", [list("TOOLONGX"), ["A", "1"], ["AB"], ["lower case"], ["ED"]])
 def test_naming_refuses_bad_glyphs(glyphs):
     g = Game()

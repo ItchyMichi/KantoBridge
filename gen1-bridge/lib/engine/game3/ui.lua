@@ -575,7 +575,10 @@ function Ui.install(b)
 
   -- The naming screen: the typed name, and the cursor on OK, so the A the
   -- core taps next finishes it through the screen's own OK (naming.lua:742-
-  -- 760: confirm, then Naming.close or the PC pages). Returns true, "a".
+  -- 760: confirm, then Naming.close or the PC pages). Returns true, "a". An
+  -- empty name (item 9) is confirmed as the screen's seed (naming.lua:287-
+  -- 293), the species' name for a nickname, which its caller keeps as no
+  -- nickname (battle/init.lua:3663-3665).
   def("uiSetGlyphs", function(key, glyphs)
     local e = entryOf(key)
     if not e or e.src ~= "naming" or type(glyphs) ~= "table" then return false end

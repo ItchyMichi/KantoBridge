@@ -19,7 +19,12 @@
 --                         tapped, which runs the screen's own confirm
 --                         (NamingScreen.lua:201-203, :153-174); MG7: the
 --                         adapter's uiSetGlyphs may name another button (Gen
---                         3: A, its cursor put on OK)
+--                         3: A, its cursor put on OK). No glyphs (item 9):
+--                         nothing typed, so the screen's own confirm of an
+--                         empty name decides (Gen 1: its default, else no
+--                         nickname, NamingScreen.lua:156-180; Gen 3: its seed,
+--                         naming.lua:287-293); refused where the screen has
+--                         presets (the player's and rival's names re-prompt)
 --   act.button{button, how}  answered by act.result: START tapped while idle
 --                         (the start menu then opens as a normal menu) or on
 --                         the start menu (which it closes); on a mirror
@@ -139,7 +144,11 @@ function UiAct.new(opts)
       a.qty = data.qty
     elseif msgType == "ui.name" then
       local glyphs = data.glyphs
-      if type(glyphs) ~= "table" or #glyphs < 1 or #glyphs > 10 then return false, "bad_message" end
+      if type(glyphs) ~= "table" or #glyphs > 10 then return false, "bad_message" end
+      if #glyphs == 0 and #(e.presets or {}) > 0 then
+        counts.rejected = counts.rejected + 1
+        return false, "bad_message"
+      end
       local copy = {}
       for i = 1, #glyphs do
         if type(glyphs[i]) ~= "string" then return false, "bad_message" end

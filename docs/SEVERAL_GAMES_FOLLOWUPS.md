@@ -46,8 +46,12 @@ The multi-game plan ([specs/MULTI_GAME_PLAN.md](specs/MULTI_GAME_PLAN.md)) is do
       B1F/B2F) are dark until Flash is used, then lit by Night Vision as Kanto's are. Left out: the one tileset whose
       colours cycle (they stay on the first), berry trees' growth stages, a walker's second step frame, the GBA's
       Flash circle. An Emerald export from before needs exporting and Hoenn rebuilding to show them.
-- [ ] **An empty nickname can't be confirmed** in the client (the hidden game would keep the species' name, but
-      `ui.open` sends no default): send the species' name as the default, or allow an empty name.
+- [x] **An empty nickname can't be confirmed** (2026-10-15): it can now. Confirming the naming screen with nothing
+      typed sends an empty name, and the hidden game takes it as its own screen takes an empty name: no nickname (the
+      Pokémon keeps its species' name, and in Gen 1 an evolution still renames it), or the screen's default where it
+      has one (the Name Rater keeps the old nickname; Emerald's player name keeps the one it picked). Not the species'
+      name as a typed nickname, which would freeze it. Gen 1's player and rival names still take a name or a preset,
+      as in the game (an empty one re-prompts there).
 - [ ] **Starting in Hoenn:** a fresh player always follows Kanto's game first (the legacy region); there is no way to
       choose where to start (the video's autopilot forced Hoenn).
 - [x] **Emerald's script warps** (2026-10-14): not the script warps themselves but every warp's tail. Emerald keeps

@@ -173,7 +173,7 @@ its title screen.
 - [ ] Walk out of the house and north towards the edge of Pallet Town: Oak stops you, walks you to
       his lab, and you can't move while he leads you (the camera follows the walk).
 - [ ] In the lab, choose a starter from the table (Z or right-click a ball). If it asks for a
-      nickname, Minecraft's naming screen opens.
+      nickname, Minecraft's naming screen opens; confirming it with nothing typed keeps no nickname.
 - [ ] The starter appears in Cobblemon's party (with its nickname, if you gave one).
 - [ ] The rival's battle opens Cobblemon's battle screen with the rival's name; no extra trainer
       model appears; you can't walk or press Z/Enter during the battle.

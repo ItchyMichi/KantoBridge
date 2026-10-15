@@ -7,9 +7,11 @@ into OAKS_LAB below a starter ball. The test fetches OAKS_LAB's cell flags from 
 `builder` (kept in memory only), then connects as `test` and plays it like a player:
 
   1. act.interact on the ball above: the Pokédex entry (a mirror screen, closed with B), "do you want
-     it?" answered YES (ui.pick 0), the texts read, the nickname prompt answered NO (ui.back): a
-     party.give arrives (source starter, dex one of 1/4/7, level 5); the test answers with a party.sync
-     holding a made-up uid for it, and gen1-bridge's shadow party takes the uid (no duplicate)
+     it?" answered YES (ui.pick 0), the texts read, the nickname prompt answered NO (ui.back; win), or
+     YES and the naming screen confirmed empty (ui.name with no glyphs, the follow-up's item 9; lose):
+     either way a party.give arrives with no nickname (source starter, dex one of 1/4/7, level 5); the
+     test answers with a party.sync holding a made-up uid for it, and gen1-bridge's shadow party takes
+     the uid (no duplicate)
   2. the rival takes his ball; the test walks down to the rival's trigger row: his challenge plays and
      a battle.start arrives (kind rival, class OPP_RIVAL1, 1-6 team members, levels in range), the
      hidden game holds (mode busy), no native battle screen appears
@@ -60,12 +62,18 @@ async def _lab(port, outcome):
     assert (x, y - 1) in balls, "no starter ball above the player"
     result = await w.act("act.interact", {"map": "OAKS_LAB", "x": x, "y": y - 1})
     assert result.get("ok") is True, result
-    # the Pokédex entry (mirror: B), "do you want it?" YES, the texts, the nickname prompt NO
-    await w.drive(lambda: bool(w.gives), timeout=90, choices=[0, 1], mirror_button="b")
+    # the Pokédex entry (mirror: B), "do you want it?" YES, the texts, the nickname prompt NO (win) or YES and an
+    # empty name (lose, item 9)
+    namings = sum(1 for ui in w.uis.values() if ui["kind"] == "naming")
+    if outcome == "lose":
+        await w.drive(lambda: bool(w.gives), timeout=90, choices=[0, 0], names=[""], mirror_button="b")
+    else:
+        await w.drive(lambda: bool(w.gives), timeout=90, choices=[0, 1], mirror_button="b")
     give = w.gives[0]
     report["give"] = {"source": give["source"], "dex_is_a_starter": give["dex"] in (1, 4, 7),
                       "level": give["level"], "moves": len(give.get("moves", [])), "dvs": "dvs" in give,
-                      "nick": "nick" in give}
+                      "nick": "nick" in give,
+                      "namings": sum(1 for ui in w.uis.values() if ui["kind"] == "naming") - namings}
     await mc.send("party.sync", {"party": [{"uid": STARTER_UID, "dex": give["dex"], "level": give["level"],
                                             "moves": give.get("moves", []), "hp": 20, "maxhp": 20}],
                                  "box": {"count": 0}})
@@ -150,7 +158,8 @@ def test_the_starter_and_the_rival_battle_in_oaks_lab(outcome):
     # 1. the gift, and the shadow party taking Cobblemon's uid without a duplicate
     assert report["give"]["source"] == "starter" and report["give"]["dex_is_a_starter"]
     assert report["give"]["level"] == 5 and 1 <= report["give"]["moves"] <= 4 and report["give"]["dvs"]
-    assert not report["give"]["nick"], "the nickname prompt was answered NO"
+    assert not report["give"]["nick"], "the nickname prompt was answered NO, or the name left empty"
+    assert report["give"]["namings"] == (1 if outcome == "lose" else 0), report["give"]
     assert report["party_after_sync"] == {"partySize": 1, "partyKnown": 1, "giftsPending": 0, "partyMatched": 1}
     assert len(w.gives) == 1
     # 2. the battle

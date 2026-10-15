@@ -366,6 +366,22 @@ def test_a_naming_screen_takes_the_name_and_finishes_through_ok():
     no_faults(rig)
 
 
+def test_an_empty_nickname_finishes_as_the_screens_seed():
+    """Item 9: no glyphs: the name emptied and OK pressed, so the screen confirms its seed (naming.lua:287-293: the
+    species' name for a nickname, which the caller keeps as no nickname)."""
+    rig = field_rig()
+    E = rig.E
+    peer = connected(rig)
+    E.Naming.open(rig.b.to_lua({"maxLen": 10, "seed": "TESTMON"}))
+    msgs = pump(rig, peer, lambda m: m["type"] == "ui.open")
+    naming = opened(msgs, "naming")
+    assert naming["value"] == ""
+    peer.send("ui.name", {"ui": naming["ui"], "glyphs": []})
+    pump(rig, peer, lambda m: m["type"] == "ui.close" and m["data"]["ui"] == naming["ui"])
+    assert list(E.namedResults.values()) == [b"TESTMON"]
+    no_faults(rig)
+
+
 def test_birchs_whole_speech_is_answered_through_the_ui_and_ends_in_the_field():
     rig = Rig(family="gen3")
     E = rig.E

@@ -323,7 +323,7 @@ public final class UiRouter {
 		}
 	}
 
-	/** Sends a name the naming model confirmed (checked again here: 1..max glyph tokens). */
+	/** Sends a name the naming model confirmed (checked again here: 0..max glyph tokens; none is an empty name). */
 	public void name(UiSession session, List<String> glyphs, long now) {
 		NamingModel naming = session.naming();
 		if (naming == null || !this.answerable(session, now) || !NamingModel.valid(glyphs, naming.max())) {

@@ -1315,7 +1315,9 @@ function Gen1.new(opts)
 
   -- NamingScreen: the typed glyphs, one grid cell per entry, as A would
   -- have inserted them (NamingScreen.lua:98, :242-245); confirm() joins them
-  -- (:153-174) when START is pressed on the next update (:201-203).
+  -- (:153-174) when START is pressed on the next update (:201-203). None
+  -- (item 9): confirm's own empty name, the screen's default or "" (no
+  -- nickname: the species' name stays, and evolution renames it, :156-180).
   function engine.uiSetGlyphs(key, glyphs)
     local s = stateFor(key, "NamingScreen")
     if not s or type(glyphs) ~= "table" then return false end

@@ -163,7 +163,8 @@ test drivers), guarded so the hook always calls `next`:
    the row and taps A (a YES/NO's NO is B, which always answers NO); `ui.back` taps B; `ui.qty` sets
    the number and taps A; `ui.name` checks the glyphs against the grid and the length, picks NEW
    NAME (or the preset itself) when the presets are up, then sets the glyphs and taps START, the
-   screen's own confirm. Answers wait for their UI to be on top; a closed UI takes its answers with
+   screen's own confirm; no glyphs is an empty name, which the screen confirms as its own (no
+   nickname, or its default), refused where it has presets. Answers wait for their UI to be on top; a closed UI takes its answers with
    it (`error ui.stale`), and one that never comes back on top times out (`error ui.timeout`).
    `act.button` taps START while idle (the start menu then opens as a normal menu) or on the start
    menu (closing it), and forwards any button, as a tap or a hold, to a mirror screen; holds end with

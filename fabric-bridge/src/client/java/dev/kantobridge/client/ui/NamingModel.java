@@ -17,8 +17,9 @@ import org.jetbrains.annotations.Nullable;
  * there are several pages. The cursor wraps round; A types (up to {@code max}, then the cursor jumps to ED), B
  * deletes, SELECT flips the case, START or ED confirms.</li>
  * <li><b>Confirming</b> sends {@code ui.name{glyphs}}: one token per glyph ({@code <PK>} and {@code <MN>} count as one),
- * 1 to {@code max} of them (at most 10). An empty name falls back to the default {@code value}, then the first preset,
- * as Gen 1's {@code confirm} does; with neither, nothing is sent.</li>
+ * up to {@code max} of them (at most 10). An empty name falls back to the default {@code value}, then the first preset;
+ * with neither (a nickname), it is sent empty (the follow-up's item 9): the hidden screen confirms it as its own empty
+ * name, so the Pokémon keeps no nickname.</li>
  * </ul>
  */
 public final class NamingModel {
@@ -199,7 +200,7 @@ public final class NamingModel {
 		}
 	}
 
-	/** START or ED: the glyphs to send, or null when there is nothing valid to send. */
+	/** START or ED: the glyphs to send (none: an empty name, see the class comment), or null when they can't be sent. */
 	public @Nullable List<String> confirm() {
 		if (this.phase != Phase.GRID) {
 			return null;
@@ -285,9 +286,9 @@ public final class NamingModel {
 
 	// ---- helpers ----
 
-	/** Checks a name before it goes out: 1..max tokens, each one glyph of at most 8 chars. */
+	/** Checks a name before it goes out: 0..max tokens (none: nothing typed), each one glyph of at most 8 chars. */
 	public static boolean valid(List<String> glyphs, int max) {
-		if (glyphs.isEmpty() || glyphs.size() > Math.min(max, MAX_LENGTH)) {
+		if (glyphs.size() > Math.min(max, MAX_LENGTH)) {
 			return false;
 		}
 		for (String glyph : glyphs) {

@@ -789,6 +789,7 @@
     {"type": "ui.back", "seq": 11, "redacted": {"ui": 3}},
     {"type": "ui.close", "seq": 11, "redacted": {"ui": 1}},
     {"type": "ui.name", "seq": 11, "redacted": {"ui": 6, "glyphs": "<rom:arr:4:dcda0d91>"}},
+    {"type": "ui.name", "seq": 12, "redacted": {"ui": 7, "glyphs": "<rom:arr:0:4f53cda1>"}},
     {
       "type": "ui.open",
       "seq": 11,

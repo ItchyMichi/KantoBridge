@@ -301,6 +301,17 @@ class UiRouterTest {
 	}
 
 	@Test
+	void aNicknameLeftEmptyIsSentEmpty() throws Exception {
+		// the follow-up's item 9: no default and no preset; the hidden screen confirms its own empty name (no nickname)
+		this.open("{\"ui\":8,\"kind\":\"naming\",\"title\":\"NICKNAME?\",\"max\":10,\"presets\":[],\"value\":\"\",\"mon\":25}");
+		UiSession naming = this.router.top();
+		List<String> glyphs = naming.naming().confirm();
+		assertEquals(List.of(), glyphs);
+		this.router.name(naming, glyphs, 0);
+		assertEquals(List.of("ui.name {\"glyphs\":[],\"ui\":8}"), this.port.take());
+	}
+
+	@Test
 	void aFailedSendLeavesTheUiAnswerable() throws Exception {
 		this.open(LIST_3);
 		UiSession list = this.router.top();

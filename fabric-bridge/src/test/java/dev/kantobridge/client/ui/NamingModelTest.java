@@ -133,9 +133,10 @@ class NamingModelTest {
 		assertNull(presetsOnly.pressPreset(), "NEW NAME opens the grid");
 		assertEquals(NamingModel.Phase.GRID, presetsOnly.phase());
 		assertEquals(List.of("R", "E", "D"), presetsOnly.confirm());
+		// item 9: no name, no default, no preset (a nickname): the empty name, which the hidden screen confirms as its own
 		NamingModel nothing = plain(7);
-		assertNull(nothing.confirm(), "no name, no default, no preset: nothing to send");
-		assertEquals(NamingModel.Phase.GRID, nothing.phase());
+		assertEquals(List.of(), nothing.confirm());
+		assertEquals(NamingModel.Phase.SENT, nothing.phase());
 		// A default longer than the limit is cut to it.
 		NamingModel longDefault = new NamingModel("?", 7, List.of(), "ABCDEFGHIJ", null, null);
 		assertEquals(7, longDefault.confirm().size());
@@ -159,7 +160,7 @@ class NamingModelTest {
 	void outgoingNamesAreChecked() {
 		assertTrue(NamingModel.valid(List.of("A"), 7));
 		assertTrue(NamingModel.valid(List.of("<PK>", "<MN>"), 7));
-		assertFalse(NamingModel.valid(List.of(), 7), "at least one glyph");
+		assertTrue(NamingModel.valid(List.of(), 7), "none: an empty name (item 9)");
 		assertFalse(NamingModel.valid(List.of("A", "B", "C", "D", "E", "F", "G", "H"), 7), "at most max");
 		assertFalse(NamingModel.valid(List.of("A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K"), 99), "never more than 10");
 		assertFalse(NamingModel.valid(List.of("AB"), 7), "one glyph per entry");
