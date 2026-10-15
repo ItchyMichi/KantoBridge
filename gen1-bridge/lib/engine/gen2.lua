@@ -25,9 +25,10 @@ local Gen2 = {}
 
 -- The parts, in install order, as paths under lib/engine/. G2A: identity,
 -- observing, movement and warps, save slots, saves and sessions, the queue of
--- announced saves, the region acts, reliability (GEN2_BRIDGE_PLAN.md §11).
+-- announced saves, the region acts, reliability; G2B: the UI stack
+-- (GEN2_BRIDGE_PLAN.md §11).
 Gen2.PARTS = { "gen2/boot", "gen2/observe", "gen2/move", "common/slots", "gen2/saves", "common/savequeue",
-               "gen2/region", "common/reliability" }
+               "gen2/region", "common/reliability", "gen2/ui" }
 
 function Gen2.new(opts)
   assert(type(opts) == "table" and opts.checked, "gen2: the loader's pin (opts.checked) is required")

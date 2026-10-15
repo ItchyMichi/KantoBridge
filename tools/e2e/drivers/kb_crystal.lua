@@ -30,11 +30,24 @@
 --                   name: the first preset; text boxes and yes/no: A) until the
 --                   new game is in the field. The clock screen must never come
 --                   up (the adapter answers it, J5): KB_INITCLOCK then fails.
+--   title_ui        (G2B) as title_new, but the driver answers nothing: the
+--                   test answers Oak's speech through the bridge's UI as a
+--                   player would. The clock screen must still never come up in
+--                   the speech (KB_INITCLOCK fails the run). Once the new game
+--                   stands in the field, KB_FIELD also gives the walk to the
+--                   stairs; downstairs, Mom's scene is answered by the test and
+--                   her weekday wheel (Gen2InitClock in the play phase) by the
+--                   adapter: the driver counts the frames it stays up (stuck
+--                   for 10 s fails the run) and, once the field has stood idle
+--                   for half a second in PLAYERS_HOUSE_1F, KB_NPC gives the walk
+--                   to a cell beside the nearest person and the step that faces
+--                   them, with that person's cell (for act.interact).
 --   cleanup         only the clean-up (after a failed run), then quits.
 --
 -- Markers: KB_BOOTED scene= slot= home= precleaned= phase=, KB_SERVING map= x= y= facing= wall= bump=
 -- stairs= into=, KB_SAVED slot= ok=, KB_TITLE slot= hasSave=, KB_SPEECH texts= choices= gender= names=
--- screens=, KB_FIELD map= x= y= clock=, KB_INITCLOCK, KB_CLEANED deleted= active=, KB_QUIT sessions= code=;
+-- screens=, KB_FIELD map= x= y= clock= stairs= into=, KB_INITCLOCK, KB_DAYWHEEL seen= frames=, KB_NPC map= path=
+-- face= x= y= index=, KB_CLEANED deleted= active=, KB_QUIT sessions= code=;
 -- KB_FAIL <reason> on a timeout. Slot numbers, map symbols, cell numbers, directions, booleans and counts only
 -- (the speech's text and the names are never printed).
 --
@@ -298,6 +311,93 @@ local function answerSpeech(game, frame)
   end
 end
 
+-- ---------------------------------------------------------------- the UI path (title_ui, G2B)
+
+-- KB_FIELD: where the new game stands, the clock's stored offset (the adapter's answer: 0), the walk to the
+-- stairs and the step onto them.
+local function printField(w, rtc)
+  local _, _, stairs, into = walks(w)
+  print(("KB_FIELD map=%s x=%d y=%d clock=%s stairs=%s into=%s"):format(word(w.map.id), w.player.cellX,
+    w.player.cellY, word(type(rtc) == "table" and rtc.startMinute or "none"),
+    word(stairs == "" and "-" or (stairs or "none")), word(into or "none")))
+end
+
+-- The walk to a free cell beside the nearest visible person of the map, the step that faces them, and their
+-- cell and object index (World.npcs, src/world/gen2/World.lua; the follower left out).
+local function npcWalk(w)
+  local m = mapFacts(w)
+  local people = {}
+  for _, n in ipairs(w.npcs or {}) do
+    if type(n) == "table" and n.cellX and n.cellY and not n.follower and not n.hidden and n.visible ~= false
+        and type(n.def) == "table" and tonumber(n.def.index) then
+      people[key(n.cellX, n.cellY)] = n
+    end
+  end
+  local face, target
+  local path = walkTo(m, w.player.cellX, w.player.cellY, function(cx, cy)
+    for _, d in ipairs(DIRS) do
+      local n = people[key(cx + d[2], cy + d[3])]
+      if n then
+        face, target = d[1], n
+        return true
+      end
+    end
+    return false
+  end)
+  return path, face, target
+end
+
+local ui = { field = false, idle = 0, downstairs = false, npcPrinted = false, wheelSeen = 0, wheelFrames = 0,
+             wheelRun = 0, wheelKey = nil, downTexts = 0, downKey = nil }
+local function watchUi(game)
+  local name = topName(game)
+  -- Mom's scene: a coord event in front of the stairs (the test walks onto it); its text boxes are counted so the
+  -- idle field after it (not the one on arrival) gives KB_NPC
+  local wd = game.world
+  if wd and wd.map and wd.map.id == DOWNSTAIRS and name == "TextBox" then
+    local t = topState(game)
+    if ui.downKey ~= t then ui.downKey, ui.downTexts = t, ui.downTexts + 1 end
+  end
+  -- Oak's speech: the clock step is the adapter's (J5), its screen must never come up
+  if introRunning(game) and name == "Gen2InitClock" then
+    print("KB_INITCLOCK")
+    fail("init_clock_shown")
+  end
+  -- Mom's weekday wheel (the SetDayOfWeek special pushes Gen2InitClock in the play phase): the adapter answers
+  -- it; counted, and stuck for 10 s fails the run
+  if game.phase == "play" and name == "Gen2InitClock" then
+    local t = topState(game)
+    if ui.wheelKey ~= t then
+      ui.wheelKey, ui.wheelRun = t, 0
+      ui.wheelSeen = ui.wheelSeen + 1
+    end
+    ui.wheelFrames, ui.wheelRun = ui.wheelFrames + 1, ui.wheelRun + 1
+    if ui.wheelRun > 600 then fail("daywheel_stuck") end
+  end
+  if not fieldReady(game) then
+    ui.idle = 0
+    return
+  end
+  local w = game.world
+  if not ui.field and w.map.id == HOUSE then
+    ui.field = true
+    printField(w, game.save and game.save.rtc)
+  end
+  if w.map.id == DOWNSTAIRS then
+    ui.idle = ui.idle + 1
+    if ui.idle >= 30 and ui.downTexts > 0 and not ui.npcPrinted then
+      ui.npcPrinted = true
+      print(("KB_DAYWHEEL seen=%d frames=%d texts=%d"):format(ui.wheelSeen, ui.wheelFrames, ui.downTexts))
+      local path, face, n = npcWalk(w)
+      print(("KB_NPC map=%s path=%s face=%s x=%s y=%s index=%s"):format(DOWNSTAIRS,
+        word(path == "" and "-" or (path or "none")), word(face or "none"), word(n and n.cellX or "none"),
+        word(n and n.cellY or "none"), word(n and n.def.index or "none")))
+    end
+  else
+    ui.idle = 0
+  end
+end
+
 -- ---------------------------------------------------------------- the scene
 
 return function(game)
@@ -336,7 +436,7 @@ return function(game)
           num(homeRef), precleaned, word(game.phase)))
         if SCENE == "field" or SCENE == "title_continue" then
           phase = "field"
-        elseif SCENE == "title_new" then
+        elseif SCENE == "title_new" or SCENE == "title_ui" then
           if game.phase == "play" then pcall(game.returnToTitle, game) end
           waitUntil = love.timer.getTime() + 1
           phase = "title"
@@ -381,6 +481,8 @@ return function(game)
           print(("KB_SAVED slot=%d ok=%s"):format(num(active()), word(ok and hasSave())))
         end
       end
+      -- title_ui (G2B): nothing answered here; the clock never in the speech, the walks once the field is up
+      if SCENE == "title_ui" then watchUi(game) end
       -- title_new: Oak's speech after region.start, answered until the new game stands in the field
       if SCENE == "title_new" and introRunning(game) then
         answerSpeech(game, frame)
@@ -390,8 +492,7 @@ return function(game)
         local rtc = game.save and game.save.rtc
         print(("KB_SPEECH texts=%d choices=%d gender=%d names=%d screens=%d"):format(speech.texts, speech.choices,
           speech.gender, speech.names, speech.screens))
-        print(("KB_FIELD map=%s x=%d y=%d clock=%s"):format(word(w.map.id), w.player.cellX, w.player.cellY,
-          word(type(rtc) == "table" and rtc.startMinute or "none")))
+        printField(w, rtc)
       end
       if status.quitRequested then
         local deleted, now = cleanup(homeRef)

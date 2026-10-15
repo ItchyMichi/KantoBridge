@@ -121,6 +121,7 @@ PINS = [
     ("gen1-bridge/lib/engine/gen2/move.lua", ALL),
     ("gen1-bridge/lib/engine/gen2/saves.lua", ALL),
     ("gen1-bridge/lib/engine/gen2/region.lua", ALL),
+    ("gen1-bridge/lib/engine/gen2/ui.lua", ALL),
     ("gen1-bridge/export/kb_swapsites.lua", ALL),
     ("gen1-bridge/manifest.json", JSON_RANGE),
     ("gen1-bridge/mod.card", ALL),

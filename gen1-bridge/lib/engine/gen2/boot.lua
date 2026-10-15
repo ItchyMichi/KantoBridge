@@ -27,6 +27,12 @@ Boot.REQUIRES = {
   ["src.world.gen2.UnionCenter2F"] = { "isApplied" },
   ["src.render.TextBox"] = {},
   ["src.ui.ChoiceBox"] = {},
+  -- G2B: the UI part (ui.lua)
+  ["src.core.Strings"] = {},
+  ["src.core.gen2.Clock"] = { "hostMinutes", "hostWeekday" },
+  ["src.ui.gen2.NamingScreen"] = { "TYPES", "rows", "bottomRow" },
+  ["src.ui.gen2.GenderSelect"] = { "OPTIONS", "menuOpen" },
+  ["src.ui.gen2.CallerBox"] = {},
 }
 -- The Game2 object's methods (src/core/Game2.lua:292, :312, :374, :1022, :1044).
 Boot.GAME_METHODS = { "newGame", "continueGame", "returnToTitle", "writeSave", "quickSaveAllowed" }

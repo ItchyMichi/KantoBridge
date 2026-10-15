@@ -290,6 +290,14 @@ Oak's speech: the build hook replaces `name_player` (and Mom's later weekday whe
 answer automatically (MULTI_GAME_PLAN D6; J5); Crystal's gender choice is asked through the UI, as Emerald's was. The
 main menu's EXIT GAME is never chosen. A generic reader for the self-typed conversation screens (Typer) is later work.
 
+**As built (G2B, 2026-10-15; `GB/lib/engine/gen2/ui.lua`).** As the table says, with: the name pick and the
+keyboard it opens are one naming UI keyed by the pick (its names the presets, a Menu on top while it is up; a typed
+name goes onto the keyboard, the cursor on END, then A), so the client's automatic name completes the step with no menu
+shown; `Gen2OakSpeech` is a mirror under its text boxes; `Gen2InitClock` is answered by the adapter wherever it comes
+up (Mom's wheel took 2 frames on the real engine); the caller box, fades and the park's hold open nothing. No core
+change. On the pod: a NEW GAME through the UI only, Mom's scene, an NPC's line and START without QUIT/MODS (PROGRESS.md
+"Johto (MG9): G2B notes").
+
 ### 5.6 Story (G2C)
 
 - **Flags**: `saveView().flags` from the live `world.events` by number (`E26`…); `progressMarkers` reads the catalogue's
@@ -499,7 +507,7 @@ Every change: schema, PROTOCOL.md, `python -m kb_protocol.catalog --write`, the 
 |---|---|---|
 | **G2S** inspection | spikes G2-S1–S9 and the measure (§2); PROGRESS "Johto (MG9): the inspection G2S"; this plan corrected (§2.1) | numbers on the pod — **done 2026-10-15** |
 | **G2A** followable | the core changes (§4); adapter base, boot, observe, NPCs, held input and verdicts, warps, interaction, saves and slots, region acts, reliability; `common/` parts; map-id prefix; the fake engine | lupa per part; e2e `test_crystal.py` (title, new game, walk, door, save, CONTINUE, park/resume) ✔ — **done 2026-10-15** (§3 "As built") |
-| **G2B** UI | text, yes/no, lists, START menu, naming, Oak's speech, phone calls, Elm's picture, mirrors | lupa UI; e2e (a sign, Oak's speech through the UI, a call) ✔ |
+| **G2B** UI | text, yes/no, lists, START menu, naming, Oak's speech, phone calls, Elm's picture, mirrors | lupa UI; e2e (a sign, Oak's speech through the UI, a call) ✔ — **done 2026-10-15** (§5.5 "As built"; no call rang in the runs) |
 | **G2C** story | numeric flags, toggles, `story.blocks`, swap sites, markers | lupa; e2e (the starter flag, a block change) |
 | **G2D** export | the `g2*` kinds, baked tiles, pristine blocks, layout, encounters, sprites, animations, swaps | lupa on the fake; the pod's export, counts and hashes ✔ |
 | **G2E** builder | families raised; `Gen2Planner`, `G2Cells`, `Gen2FrontEnd`, the Gen 2 `MapModel` form, placement, interiors, story cells, art, people, animations, darkness, habitats | JUnit, golden scene, GameTest; the pod's dry run ✔ |

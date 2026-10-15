@@ -1477,7 +1477,7 @@ the full suite at the ✔ checkpoints (MG2, MG3, MG5, MG6). Pods run inside your
 | MG6 | One trainer economy | **done** (notes 18, 21); check: `LedgerGameTests` (two regions: adoption, stamped read-back, the crossing's projection, `too_many`/`left`, re-projection on an unknown stamp; a legacy world untouched), `BagGameTests` marked stacks, `LedgerTest`/`LedgerCodecTest`/`ItemsTest`/`BagSetRelayTest`, `test_lua_ledger.py`/`test_lua_bag.py`; the real engine's `bag.set` round trip is your play-test (PLAYTEST.md "MG6") | 2026-10-13 | |
 | MG7 | The second family (Emerald): adapter and export | **done**: the spec [specs/GEN3_BRIDGE_PLAN.md](specs/GEN3_BRIDGE_PLAN.md) (2026-10-14), phases G3A–G3G; **G3A done** (Emerald followable), **G3B done** (Emerald's UI), **G3C done** (story), **G3D done** (export), **G3E done** (builder), **G3F done** (battles, party, bag; the route exit moved to MG8), **G3G done** (the real Hoenn built in Minecraft) ("Several games: MG7") | 2026-10-14 | |
 | MG8 | Hoenn and the pass to it | **done**: the spec [specs/HOENN_PASS_PLAN.md](specs/HOENN_PASS_PLAN.md) (2026-10-14), phases HP1–HP8; the test pass Viridian City ↔ Littleroot Town; Kanto and Hoenn in one world; 20 crossings each way between the real Blue and Emerald ("Several games: MG8") | 2026-10-14 | |
-| MG9 | Johto (Gold, Silver, Crystal): the Gen 2 bridge | **in progress**: [specs/GEN2_BRIDGE_PLAN.md](specs/GEN2_BRIDGE_PLAN.md) (2026-10-15), from a static inspection of the Gen 2 engine (research notes `refs/_research/g2_*.md`); phases G2S and G2A–G2H; decisions J1–J14 with defaults. **G2S done** ("Johto (MG9): the inspection G2S"); **G2A done** (Crystal followable: "Johto (MG9): G2A notes"); next G2B | 2026-10-15 | |
+| MG9 | Johto (Gold, Silver, Crystal): the Gen 2 bridge | **in progress**: [specs/GEN2_BRIDGE_PLAN.md](specs/GEN2_BRIDGE_PLAN.md) (2026-10-15), from a static inspection of the Gen 2 engine (research notes `refs/_research/g2_*.md`); phases G2S and G2A–G2H; decisions J1–J14 with defaults. **G2S done** ("Johto (MG9): the inspection G2S"); **G2A done** (Crystal followable: "Johto (MG9): G2A notes"); **G2B done** (Crystal's UI: "Johto (MG9): G2B notes"); next G2C | 2026-10-15 | |
 
 ### Several games: notes
 
@@ -2382,6 +2382,33 @@ Crystal is followable (GEN2_BRIDGE_PLAN.md §3–§5, phase G2A), at your "Go" a
 - **Still the stub's** (later phases): the UI (G2B: until then a client gets no Gen 2 screens; the e2e driver answers
   Oak's speech), the story (G2C), the export (G2D: `export.live_copy_failed` is logged once at load), battles (G2F),
   routes (G2H).
+
+### Johto (MG9): G2B notes (2026-10-15)
+
+Crystal's UI goes through the bridge (GEN2_BRIDGE_PLAN.md §5.5, phase G2B), at your "Go".
+
+- **The part**: `gen1-bridge/lib/engine/gen2/ui.lua` (the core's uiStack, uiClass, uiOpenFacts, uiCursor, uiItems,
+  uiMoneyFooter, uiSetIndex, uiSetQty, uiSetGlyphs; the mirror stays 160×144). The shared TextBox and ChoiceBox are
+  read as gen1.lua reads them (the v0.3.85 arrow rule); `Gen2GenderSelect` is a choice (NO by the cursor);
+  `Gen2ScriptMenu` a list (B answers 0); `Gen2StartMenu` a menu without QUIT and MODS; `Gen2NamePick` and the keyboard it
+  opens are one naming UI (the pick's names are the presets; a typed name is set on the keyboard, the cursor on END,
+  then A), so the client's automatic name (D6) completes Oak's `name_player`; `Gen2InitClock` (Mom's weekday wheel, any
+  clock step) is answered by the adapter with the host's time (J5) and opens nothing; Elm's picture wait is a PicBox
+  mirror; the boot screens one TitleState mirror; every other `Gen2<Name>` screen a mirror; fades, the caller box and
+  the park's hold open nothing. No core change.
+- **Found on the real engine**: nothing in the adapter. The e2e answer loop was wrong twice: Gen 2's text has
+  continued lines inside a page (a press each), and `ui.update` carries only the fields that changed, so the test now
+  presses each time a box's merged state turns `waiting`; and Mom's scene is a coord event in front of the stairs
+  (`maps/PlayersHouse1F.asm`'s MeetMom), so the test walks onto it.
+- **Checks**: local pytest and Lua 2,115 passed (16 new on the fake: `tools/lua/test_lua_gen2_ui.py` and the protocol
+  file's UI tests; `fake_engine2.lua` gained the UI states). On the pod (kb-dev20, cpu5c ×4, the real Crystal):
+  `test_crystal.py` 3 passed, the new one in 44 s: a NEW GAME through the UI only (the gender choice, Oak's lines, the
+  name KB), down the stairs into Mom's scene (8 text boxes, the yes/no, her weekday wheel answered by the adapter within 2
+  frames, no clock screen ever shown), Mom's line through the UI, START without QUIT or MODS closed with B; with
+  `test_emerald.py` 10 passed together. No Java or protocol change: Gradle not rerun (G2A's checkpoint stands).
+- **Housekeeping**: the first failed runs left six empty Crystal test slots in the pod's registry (no save files):
+  deleted, the registry back to no Crystal slots. Pod kb-dev20 about 44 minutes (about $0.10), stopped; every older pod's
+  host was full and two creates failed before it.
 
 ### Handoff (2026-10-14): after MG6, for whoever continues
 

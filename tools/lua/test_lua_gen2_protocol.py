@@ -1,8 +1,10 @@
-"""MG9 (docs/specs/GEN2_BRIDGE_PLAN.md G2A): gen1-bridge's main.lua on the fake Gen 2 engine
+"""MG9 (docs/specs/GEN2_BRIDGE_PLAN.md G2A, G2B): gen1-bridge's main.lua on the fake Gen 2 engine
 (Rig(family="gen2")), seen from a fake Minecraft peer: the handshake and snapshot on Crystal (map ids
 reported as G2_*, J4), steps (Gen 1's movement.collision verdicts; a held direction let go once its step is
-under way, chainsHeld), a walked warp, saves and the nurse, and the region acts (the park's hold, a resume
-through the world facade, a start from the title). Every message is schema-checked. Everything is made up."""
+under way, chainsHeld), a walked warp, saves and the nurse, the region acts (the park's hold, a resume
+through the world facade, a start from the title), and the UI (a question and its yes/no, a script menu,
+the start menu, Oak's whole speech answered through the UI with the client's own name or a preset). Every
+message is schema-checked. Everything is made up."""
 
 import pytest
 
@@ -43,6 +45,17 @@ def no_faults(rig):
     assert not faults, faults
 
 
+def connected(rig):
+    peer = rig.connect()
+    peer.hello()
+    peer.messages()
+    return peer
+
+
+def opened(msgs, kind):
+    return next(m["data"] for m in msgs if m["type"] == "ui.open" and m["data"]["kind"] == kind)
+
+
 def music(rig):
     calls = rig.E.musicCalls
     return [calls[i].op.decode() for i in range(1, len(calls) + 1)]
@@ -56,9 +69,8 @@ def test_main_boots_on_crystal_with_the_gen2_adapter():
     st = rig.status
     assert (st.ready, st.engineId, st.engineAdapter, st.game, st.engine) == (True, b"crystal", True, b"crystal",
                                                                              b"0.3.85")
-    # G2A: the UI, the story, the export, battles and routes come with G2B-G2H
-    assert sorted(g.decode() for g in st.engineGroupsMissing.values()) == ["battles", "export", "routes", "story",
-                                                                           "ui"]
+    # the story, the export, battles and routes come with G2C-G2H
+    assert sorted(g.decode() for g in st.engineGroupsMissing.values()) == ["battles", "export", "routes", "story"]
     assert list(st.engineMissing.values()) == []
     logs = rig.logs()
     assert not any("engine.no_adapter" in line or "engine.missing" in line for line in logs)
@@ -299,4 +311,107 @@ def test_region_park_holds_the_field_and_resume_warps_through_the_facade():
     p = E.game.world.player
     assert (E.game.world.map.id, p.cellX, p.cellY) == (b"TEST_TOWN", 3, 4)
     assert music(rig) == ["fadeOut", "restoreMapMusic"]
+    no_faults(rig)
+
+
+# ------------------------------------------------------------ the UI (G2B)
+
+
+def test_a_question_and_its_yes_no_are_answered_through_the_ui():
+    rig = field_rig()
+    E = rig.E
+    peer = connected(rig)
+    E.openYesNo(rig.b.to_lua([b"TAKE IT?"]), rig.b.eval("function(yes) E_answer = yes end"))
+    msgs = pump(rig, peer, lambda m: m["type"] == "ui.open" and m["data"]["kind"] == "choice")
+    text, choice = opened(msgs, "text"), opened(msgs, "choice")
+    assert (text["pages"], text["choice"]) == ([["TAKE IT?"]], True)
+    assert (choice["labels"], choice["index"], choice["question"]) == (["YES", "NO"], 0, "TAKE IT?")
+    peer.send("ui.pick", {"ui": choice["ui"], "index": 1})  # NO: B
+    msgs = pump(rig, peer, lambda m: m["type"] == "ui.close" and m["data"]["ui"] == text["ui"])
+    assert rig.b.eval("function() return E_answer end")() is False
+    assert [m["data"]["ui"] for m in msgs if m["type"] == "ui.close"] == [choice["ui"], text["ui"]]
+    no_faults(rig)
+
+
+def test_a_script_menu_is_a_list_and_the_start_menu_leaves_quit_out():
+    rig = field_rig()
+    E = rig.E
+    peer = connected(rig)
+    E.openScriptMenu(rig.b.to_lua([b"ONE", b"TWO", b"THREE"]))
+    lst = opened(pump(rig, peer, lambda m: m["type"] == "ui.open"), "list")
+    assert ([i["label"] for i in lst["items"]], lst["index"], lst["screen"]) == (["ONE", "TWO", "THREE"], 0,
+                                                                                  "ListMenu")
+    peer.send("ui.pick", {"ui": lst["ui"], "index": 2})
+    pump(rig, peer, lambda m: m["type"] == "ui.close" and m["data"]["ui"] == lst["ui"])
+    E.openScriptMenu(rig.b.to_lua([b"ONE", b"TWO"]))
+    lst = opened(pump(rig, peer, lambda m: m["type"] == "ui.open"), "list")
+    peer.send("ui.back", {"ui": lst["ui"]})
+    pump(rig, peer, lambda m: m["type"] == "ui.close" and m["data"]["ui"] == lst["ui"])
+    assert list(E.menuAnswers.values()) == [3, 0]  # 1-based, B is 0
+    E.openStartMenu()
+    menu = opened(pump(rig, peer, lambda m: m["type"] == "ui.open"), "menu")
+    assert [i["label"] for i in menu["items"]] == ["TEST POKEDEX", "TEST POKEMON", "TEST PACK", "TEST STATUS",
+                                                   "TEST SAVE", "TEST OPTION"]
+    assert menu["screen"] == "StartMenu"
+    peer.send("ui.pick", {"ui": menu["ui"], "index": 2})
+    msgs = pump(rig, peer, lambda m: m["type"] == "ui.open" and m["data"]["kind"] == "mirror")
+    assert opened(msgs, "mirror")["screen"] == "Gen2PackMenu" and list(E.startChoices.values()) == [b"pack"]
+    no_faults(rig)
+
+
+def speech_through_the_ui(rig, peer, name, girl=False):
+    """region.start, then every UI Oak's speech opens answered as the client would: text advanced, the
+    gender picked by its index, the naming screen given ``name``. Returns everything received."""
+    E = rig.E
+    seq = peer.send("region.start", {"region": "johto"})
+    seen, answered = [], set()
+    for _ in range(200):
+        rig.step()
+        new = peer.messages()
+        seen.extend(new)
+        for m in new:
+            if m["type"] != "ui.open" or m["data"]["ui"] in answered:
+                continue
+            data = m["data"]
+            answered.add(data["ui"])
+            if data["kind"] == "text":
+                peer.send("ui.advance", {"ui": data["ui"]})
+            elif data["kind"] == "choice":
+                peer.send("ui.pick", {"ui": data["ui"], "index": 1 if girl else 0})
+            elif data["kind"] == "naming":
+                peer.send("ui.name", {"ui": data["ui"], "glyphs": list(name)})
+        if E.game.phase == b"play":
+            break
+    assert E.game.phase == b"play" and reply(seen, seq)["data"]["detail"] == "new"
+    return seen
+
+
+def test_oaks_speech_is_answered_through_the_ui_with_the_clients_own_name():
+    # MULTI_GAME_PLAN D6: the client names the player itself; the name pick's NEW NAME, then the keyboard
+    # (text set, the cursor on END, A) -- one naming screen from the presets to END
+    rig = Rig(family="gen2")
+    E = rig.E
+    peer = connected(rig)
+    seen = speech_through_the_ui(rig, peer, "KAI", girl=True)
+    save = E.game.save
+    assert (save.player.name, save.player.gender, save.rtc.startMinute) == (b"KAI", b"female", 0)
+    assert E.keyboards == 1
+    opens = [m["data"] for m in seen if m["type"] == "ui.open"]
+    assert [d["kind"] for d in opens] == ["choice", "text", "text", "naming", "text"]
+    gender, naming = opens[0], opens[3]
+    assert (gender["labels"], gender["screen"]) == (["TEST BOY", "TEST GIRL"], "GenderSelect")
+    assert (naming["title"], naming["presets"], naming["max"], naming["value"]) == (
+        "TEST NAME?", ["TESTA", "TESTB", "TESTC"], 7, "")
+    assert naming["grid"][0][0][:3] == ["A", "B", "C"]
+    assert sum(1 for m in seen if m["type"] == "ui.close" and m["data"]["ui"] == naming["ui"]) == 1
+    assert [m for m in seen if m["type"] == "error"] == []
+    no_faults(rig)
+
+
+def test_a_preset_name_is_answered_by_picking_it():
+    rig = Rig(family="gen2")
+    E = rig.E
+    peer = connected(rig)
+    speech_through_the_ui(rig, peer, "TESTB")
+    assert (E.game.save.player.name, E.game.save.player.gender, E.keyboards) == (b"TESTB", b"male", 0)
     no_faults(rig)

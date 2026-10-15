@@ -12,15 +12,18 @@ pytestmark = pytest.mark.lua
 
 
 def new_game_in_field(a):
-    """NEW GAME answered through Oak's speech (every screen an A press) into the field."""
+    """NEW GAME answered through Oak's speech (every screen an A press; the name pick's first preset) into
+    the field."""
     g = a.E.game
     g.newGame(g)
     for _ in range(40):
-        if g.stack.top(g.stack) is None:
+        top = g.stack.top(g.stack)
+        if top is None:
             break
-        a.press("a")
+        button = "down" if top.screenId == b"Gen2NamePick" and top.cursor == 1 else "a"
+        a.press(button)
         a.tick()
-        a.release("a")
+        a.release(button)
         a.tick()
     assert g.phase == b"play"
 
