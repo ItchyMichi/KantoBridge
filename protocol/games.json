@@ -28,8 +28,8 @@
     },
     "crystal": {
       "family": "gen2", "engine": "crystal", "generation": 2, "label": "Crystal", "region": "johto",
-      "compat": {"maxDex": 251, "maxMove": 251, "nick": 10}, "artSet": "crystal", "adapter": false,
-      "markers": {}
+      "compat": {"maxDex": 251, "maxMove": 251, "nick": 10}, "artSet": "crystal", "adapter": true,
+      "markers": {"starter": "E26", "champion": "KB_HALL_OF_FAME"}
     },
     "firered": {
       "family": "gen3", "engine": "game3", "generation": 3, "label": "FireRed", "region": "kanto_frlg",

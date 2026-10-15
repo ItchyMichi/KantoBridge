@@ -1,8 +1,13 @@
--- game3 reliability (GEN3_BRIDGE_PLAN.md §4.9): save meta, our state that
--- outlives a hot reload, the per-process token behind save ids, and running
--- hidden. The hidden-window pacing is gen1.lua's (M10), unchanged: it wraps
--- love.window.isVisible, which the engine's shared main loop asks once a
--- frame for every engine (main.lua:1907-1924), so nothing in it is Gen 1's.
+-- Reliability, shared by the game3 and gen2 adapters (GEN3_BRIDGE_PLAN.md §4.9;
+-- MG9 moved it from lib/engine/game3/, GEN2_BRIDGE_PLAN.md §3, J1): save meta,
+-- our state that outlives a hot reload, the per-process token behind save ids,
+-- and running hidden. The hidden-window pacing is gen1.lua's (M10), unchanged:
+-- it wraps love.window.isVisible, which the engine's shared main loop asks once
+-- a frame for every engine (main.lua:1907-1924), so nothing in it belongs to one
+-- engine. The adapter's base supplies b.saveObject (the object the save events
+-- carry: Gen 3's session, Gen 2's game.save) and b.state.
+--
+-- Paths are refs/gen1recomp's (Gen1Recomp v0.3.85).
 
 local Reliability = {}
 
@@ -29,9 +34,9 @@ function Reliability.install(b)
 
   -- A save's meta as plain values: savedAt and sessionStart (Unix seconds)
   -- and the engine version that wrote it. Gen 3's session carries the meta
-  -- CONTINUE loaded (Game3.lua:540).
+  -- CONTINUE loaded (Game3.lua:540); a save without one answers {}.
   def("metaOf", function(save)
-    if save == nil then save = b.session() end
+    if save == nil then save = b.saveObject() end
     local meta = type(save) == "table" and type(save.meta) == "table" and save.meta or nil
     if not meta then return {} end
     local function int(v)

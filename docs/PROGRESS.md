@@ -1477,7 +1477,7 @@ the full suite at the ✔ checkpoints (MG2, MG3, MG5, MG6). Pods run inside your
 | MG6 | One trainer economy | **done** (notes 18, 21); check: `LedgerGameTests` (two regions: adoption, stamped read-back, the crossing's projection, `too_many`/`left`, re-projection on an unknown stamp; a legacy world untouched), `BagGameTests` marked stacks, `LedgerTest`/`LedgerCodecTest`/`ItemsTest`/`BagSetRelayTest`, `test_lua_ledger.py`/`test_lua_bag.py`; the real engine's `bag.set` round trip is your play-test (PLAYTEST.md "MG6") | 2026-10-13 | |
 | MG7 | The second family (Emerald): adapter and export | **done**: the spec [specs/GEN3_BRIDGE_PLAN.md](specs/GEN3_BRIDGE_PLAN.md) (2026-10-14), phases G3A–G3G; **G3A done** (Emerald followable), **G3B done** (Emerald's UI), **G3C done** (story), **G3D done** (export), **G3E done** (builder), **G3F done** (battles, party, bag; the route exit moved to MG8), **G3G done** (the real Hoenn built in Minecraft) ("Several games: MG7") | 2026-10-14 | |
 | MG8 | Hoenn and the pass to it | **done**: the spec [specs/HOENN_PASS_PLAN.md](specs/HOENN_PASS_PLAN.md) (2026-10-14), phases HP1–HP8; the test pass Viridian City ↔ Littleroot Town; Kanto and Hoenn in one world; 20 crossings each way between the real Blue and Emerald ("Several games: MG8") | 2026-10-14 | |
-| MG9 | Johto (Gold, Silver, Crystal): the Gen 2 bridge | **in progress**: [specs/GEN2_BRIDGE_PLAN.md](specs/GEN2_BRIDGE_PLAN.md) (2026-10-15), from a static inspection of the Gen 2 engine (research notes `refs/_research/g2_*.md`); phases G2S and G2A–G2H; decisions J1–J14 with defaults. **G2S done** ("Johto (MG9): the inspection G2S"); next G2A | 2026-10-15 | |
+| MG9 | Johto (Gold, Silver, Crystal): the Gen 2 bridge | **in progress**: [specs/GEN2_BRIDGE_PLAN.md](specs/GEN2_BRIDGE_PLAN.md) (2026-10-15), from a static inspection of the Gen 2 engine (research notes `refs/_research/g2_*.md`); phases G2S and G2A–G2H; decisions J1–J14 with defaults. **G2S done** ("Johto (MG9): the inspection G2S"); **G2A done** (Crystal followable: "Johto (MG9): G2A notes"); next G2B | 2026-10-15 | |
 
 ### Several games: notes
 
@@ -2344,6 +2344,44 @@ volume, 22/tcp), because kb-dev16/17/18 had no free memory, kb-dev9/10/12 no fre
 surf landing, Fly and Escape Rope, the catch tutorial, typed and empty names, Mom's scene downstairs (driver mode's
 skeleton game skips it), the caller box, a baked tile against the engine's own frame (G2D), the map ids equal to Gen 1's
 (76 by the upstream name tables; G2A counts them live).
+
+### Johto (MG9): G2A notes (2026-10-15)
+
+Crystal is followable (GEN2_BRIDGE_PLAN.md §3–§5, phase G2A), at your "Go" after the inspection.
+
+- **The adapter**: `gen1-bridge/lib/engine/gen2.lua` for both engine ids (`Engine.ADAPTERS.gs` and `.crystal`), grown
+  from the stub, with parts `gen2/base`, `boot`, `observe`, `move`, `saves`, `region`. The engine-neutral parts moved
+  out of `game3/` into `lib/engine/common/` (`slots`, `savequeue`, `reliability`) and serve both adapters (J1); game3's
+  parts are now listed by path (`Game3.PARTS`), its base gained `saveObject`. Emerald's tests were unchanged by the move
+  but for the parts list.
+- **Map ids (J4)**: every Gen 2 map id leaves the adapter as `G2_<id>` (`b.ext`; our own `KB_*` maps keep their names)
+  and comes back without it (`b.int`). The core takes engine payloads through `engine.mapOf` (the `map.entered` record,
+  the current map the routes' closed row reads) and hands its acts a **world facade** (`engine.worldFacade(mod.world)`:
+  `warpTo`, `queueScript` warp rows and `current` translated; Gen 1 and 3 keep `mod.world`).
+- **Core changes, inert on Gen 1 and 3**: `script.command`'s fifth argument (Gen 2's decoded op, which its own command
+  needs back) and `encounter.fishing`'s context are passed through, the stub included; the adapter gets `mod.hooks`
+  (Gen 2's clock answer goes through `intro.oak_speech.build`); the snapshot keeps up to 16 badges (schema too).
+- **Catalogue**: the manifest's games gain `crystal`; `protocol/games.json` switches Crystal's adapter on, markers
+  `starter: E26`, `champion: KB_HALL_OF_FAME` (Gold and Silver stay off, J2).
+- **Found by the real engine** (the e2e on the pod): the World starts `pendingSceneScript` as `false`, not nil, so
+  "not nil" made every field look scripted and the mover refused every step with `script`; the observer now counts
+  only set values. And a held direction keeps `turningDirection` set on ordinary steps (found by reading, before the
+  run): forced movement is the engine's own test (ice under a latched direction, a current or door push, the Cycling
+  Road's roll). The fake engine now starts the field the engine's way.
+- **Checks**: local pytest and Lua 2,099 passed (62 e2e skipped), 76 of them the gen2 tests on the new fake
+  (`tools/lua/fake_engine2.lua`, `adapter2.py`, `test_lua_gen2_{boot,observe,move,saves,region,protocol}.py`). On the pod
+  (kb-dev16, cpu3g ×4, the real Crystal): `tools/e2e/test_crystal.py` 2 passed (followed and driven: hello.ok family
+  gen2 with 251/251, the snapshot in `G2_PLAYERS_HOUSE_2F`, steps and a wall's `tile`, a save through the bridge, the
+  stairs warp into `G2_PLAYERS_HOUSE_1F`, park and resume; started from the title: CONTINUE, and NEW GAME through Oak's
+  speech with the clock answered by the adapter and the rest by the driver until G2B); the regression on Blue and
+  Emerald (`test_emerald.py`, `test_regions.py`, `test_handshake.py`, `test_s5_ready.py`) 12 passed. The checkpoint ✔
+  (`tools/check.sh` on the pod): pytest and Lua 2,099 passed, JUnit 1,249 (2 skipped, 0 failures), GameTests 122 passed
+  on the third run; the first two each lost one region build to "build still running" (Hoenn's half of the pass, then
+  two regions in one world: the known timing flake of the build GameTests on a slow 4-vCPU pod; nothing G2A changed is
+  in a build). Pod kb-dev16 about 24 minutes (about $0.06), stopped; kb-dev19 and the new cpu5g/cpu5c creates had no room.
+- **Still the stub's** (later phases): the UI (G2B: until then a client gets no Gen 2 screens; the e2e driver answers
+  Oak's speech), the story (G2C), the export (G2D: `export.live_copy_failed` is logged once at load), battles (G2F),
+  routes (G2H).
 
 ### Handoff (2026-10-14): after MG6, for whoever continues
 

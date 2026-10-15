@@ -27,7 +27,7 @@ return {
       region = "kanto",
     },
     crystal = {
-      adapter = false,
+      adapter = true,
       artSet = "crystal",
       compat = {
         maxDex = 251,
@@ -38,7 +38,10 @@ return {
       family = "gen2",
       generation = 2,
       label = "Crystal",
-      markers = {},
+      markers = {
+        champion = "KB_HALL_OF_FAME",
+        starter = "E26",
+      },
       region = "johto",
     },
     emerald = {

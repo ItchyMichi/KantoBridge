@@ -1,10 +1,8 @@
--- game3 saves, slots, pairing and the Pokémon Center (GEN3_BRIDGE_PLAN.md
--- §4.7). Gen 3 keeps its saves in the same slot registry as Gen 1
--- (src/core/SaveData.lua:1642-1900: listSlots, createSlot, setActiveSlot,
--- activeSlot, deleteSlot, keyed by version; files saves/<version>/slotN.lua),
--- so the slot functions are gen1.lua's with the game id. A save is
--- Game3:saveGame (src/core/Game3.lua:1028-1072), written only when
--- Game3:quickSaveAllowed (:1019-1026) says the field could save: saveGame
+-- game3 saves, the playthrough and the Pokémon Center (GEN3_BRIDGE_PLAN.md
+-- §4.7). The slot functions and the queue of saves announced to Minecraft are
+-- shared with the gen2 adapter (lib/engine/common/slots.lua, savequeue.lua;
+-- MG9). A save is Game3:saveGame (src/core/Game3.lua:1028-1072), written only
+-- when Game3:quickSaveAllowed (:1019-1026) says the field could save: saveGame
 -- itself has no state guards. The nurse heals through `special
 -- HealPlayerParty` (scripting/natives.lua:504-507, :1122-1132), seen in the
 -- script.command hook (scripting/ops_a.lua:2352-2357).
@@ -17,105 +15,6 @@ Saves.HEAL_SPECIAL = "HealPlayerParty"
 
 function Saves.install(b)
   local def = b.def
-
-  local function slotId(v) return type(v) == "string" and v:find("^slot%d+$") ~= nil and #v <= 16 end
-  local function version() return b.adapter.gameVersion() end
-  local function slotApi()
-    local SaveData = b.mod("src.core.SaveData")
-    if not SaveData then return nil end
-    for _, name in ipairs({ "activeSlot", "setActiveSlot", "createSlot" }) do
-      if type(SaveData[name]) ~= "function" then return nil end
-    end
-    return SaveData
-  end
-
-  -- ---- slots (gen1.lua's, the engine's shared registry)
-
-  def("slotState", function()
-    local v = version()
-    local out = { version = v, api = slotApi() ~= nil and v ~= nil, cart = false }
-    local SaveData = b.mod("src.core.SaveData")
-    if not (v and SaveData) then return out end
-    if type(SaveData.activeSlot) == "function" then
-      local ok, id = pcall(SaveData.activeSlot, v)
-      out.active = ok and slotId(id) and id or nil
-    end
-    return out
-  end)
-  def("resolveActiveSlot", function()
-    local SaveData, v = slotApi(), version()
-    if not (SaveData and v) then return nil end
-    if type(SaveData.refreshSlotResolution) == "function" then pcall(SaveData.refreshSlotResolution, v) end
-    local ok, id = pcall(SaveData.activeSlot, v)
-    return ok and slotId(id) and id or nil
-  end)
-  def("slotRegistered", function(id)
-    local SaveData, v = b.mod("src.core.SaveData"), version()
-    if not (slotId(id) and SaveData and v and type(SaveData.loadOptions) == "function") then return false end
-    local ok, opts = pcall(SaveData.loadOptions)
-    local roots = ok and type(opts) == "table" and opts.saveSlots or nil
-    local reg = type(roots) == "table" and roots[v] or nil
-    for _, s in ipairs(type(reg) == "table" and type(reg.list) == "table" and reg.list or {}) do
-      if s == id then return true end
-    end
-    return false
-  end)
-  def("slotHasSave", function(id)
-    local SaveData, v = b.mod("src.core.SaveData"), version()
-    if not (slotId(id) and b.symbol(v and v:upper()) and SaveData and type(SaveData.persistenceFs) == "function") then
-      return false
-    end
-    local ok, fs = pcall(SaveData.persistenceFs)
-    if not (ok and type(fs) == "table" and type(fs.getInfo) == "function") then return false end
-    local main = "saves/" .. v .. "/" .. id .. ".lua"
-    for _, path in ipairs({ main, main .. ".tmp", main .. ".bak" }) do
-      local okInfo, info = pcall(fs.getInfo, path)
-      if okInfo and info then return true end
-    end
-    return false
-  end)
-  def("labelSlot", function(id, label)
-    local SaveData, v = b.mod("src.core.SaveData"), version()
-    if not (slotId(id) and SaveData and v and type(SaveData.renameSlot) == "function") then return false end
-    local ok, done = pcall(SaveData.renameSlot, v, id, label)
-    return ok and done == true
-  end)
-  def("createSlot", function(label)
-    local SaveData, v = slotApi(), version()
-    if not (SaveData and v) then return nil end
-    local ok, id = pcall(SaveData.createSlot, v)
-    if not ok then
-      b.warnAt("engine.create_slot_failed", id)
-      return nil
-    end
-    if not slotId(id) then return nil end
-    if label then b.adapter.labelSlot(id, label) end
-    return id
-  end)
-  def("deleteSlot", function(id)
-    local SaveData, v = b.mod("src.core.SaveData"), version()
-    if not (slotId(id) and SaveData and v and type(SaveData.deleteSlot) == "function") then return false end
-    local ok, done = pcall(SaveData.deleteSlot, v, id)
-    return ok and done == true
-  end)
-  def("activateSlot", function(id)
-    local SaveData, v = slotApi(), version()
-    if not (SaveData and v and slotId(id)) then return false end
-    local ok, got = pcall(SaveData.setActiveSlot, v, id)
-    if not ok then
-      b.warnAt("engine.activate_slot_failed", got)
-      return false
-    end
-    return got == id
-  end)
-  def("saveSlot", function()
-    local SaveData = b.mod("src.core.SaveData")
-    if not (SaveData and type(SaveData.activeSlot) == "function") then return 0 end
-    local ok, id = pcall(SaveData.activeSlot, version())
-    local n = ok and type(id) == "string" and tonumber(id:match("^slot(%d+)$")) or nil
-    if not n or n < 0 or n > 255 then return 0 end
-    return n
-  end)
 
   -- ---- the playthrough and the title
 
@@ -257,41 +156,6 @@ function Saves.install(b)
     return write("center")
   end)
 
-  -- ---- saves announced to Minecraft (gen1.lua's queue)
-
-  def("savingReason", function()
-    local st = b.state()
-    return type(st) == "table" and st.saving or nil
-  end)
-  def("queueSave", function(reason, pair)
-    local st = b.state()
-    if not st then return nil, false end
-    st.serial = (st.serial or 0) + 1
-    local id = ("v-%s-%d"):format(st.token or "x", st.serial)
-    local replaced = st.saveQueued ~= nil
-    pair = type(pair) == "table" and pair or {}
-    local s = b.session()
-    st.saveQueued = { save = id, reason = reason, serial = st.serial, pair = pair.pair, at = pair.at, from = s }
-    -- the playthrough is a saved one from now on (playthrough)
-    if s then
-      st.savedSessions = type(st.savedSessions) == "table" and st.savedSessions or setmetatable({}, { __mode = "k" })
-      st.savedSessions[s] = true
-    end
-    return id, replaced
-  end)
-  def("takeSave", function()
-    local st = b.state()
-    local q = type(st) == "table" and st.saveQueued or nil
-    if type(q) ~= "table" then return nil end
-    st.saveQueued = nil
-    return { save = q.save, reason = q.reason, pair = q.pair, at = q.at,
-             current = q.from ~= nil and q.from == b.session() }
-  end)
-  def("queuedSaveSerial", function()
-    local st = b.state()
-    local q = type(st) == "table" and st.saveQueued or nil
-    return type(q) == "table" and q.serial or nil
-  end)
 end
 
 return Saves

@@ -25,6 +25,12 @@ Files under ``local/`` are never opened: pre-flight checks file names only
 (tools/kb_games.py: the game folders with their completion marker, any id of
 the game catalogue), and the crash log
 (%APPDATA%/pokemon-love2d/lua-error.log) is only stat-ed.
+
+MG9 (docs/specs/GEN2_BRIDGE_PLAN.md §4): a Gen 2 game (Gold, Silver, Crystal: catalogue family ``gen2``) runs on
+a real-time clock that decides the map colours, the wild tables and who stands where, so a launch pins its hour:
+``POKEPORT_GOLD_HOUR=12`` (refs/gen1recomp src/world/gen2/World.lua:903-911) unless the environment or the
+caller's ``extra_env`` names one; ``POKEPORT_GOLD_DAY`` (0-6) can be passed the same way. Gen 1 and Gen 3 launches
+are unchanged.
 """
 
 from __future__ import annotations
@@ -53,6 +59,8 @@ PINNED = "0.3.85"
 # own time limits (their KB_DRIVER_SECONDS defaults) stretch by the same allowance: launch() passes it as
 # KB_DRIVER_EXTRA, so a slow export never trips a driver before the test's own (stretched) wait does.
 INDEX_TIMEOUT = int(os.environ.get("KB_EXPORT_INDEX_TIMEOUT", "240"))
+# MG9: the hour a Gen 2 launch pins (noon: day colours and the day wild tables)
+GEN2_HOUR = "12"
 EXPORT_EXTRA = max(0, INDEX_TIMEOUT - 240)
 
 
@@ -339,6 +347,9 @@ def _start(driver: Path | None, game: str | None, extra_env: dict[str, str] | No
         command, cwd = [str(install / "gen1recomp.exe"), f"--game={game}"], install  # never --console: it takes stdout away
     if EXPORT_EXTRA > 0:
         env.setdefault("KB_DRIVER_EXTRA", str(EXPORT_EXTRA))
+    # MG9: a Gen 2 game's clock is pinned (the module docstring); extra_env may name another hour
+    if kb_games.load_games().family(game) == "gen2":
+        env.setdefault("POKEPORT_GOLD_HOUR", GEN2_HOUR)
     env.update(extra_env or {})
     proc = subprocess.Popen(
         command, cwd=str(cwd), env=env,

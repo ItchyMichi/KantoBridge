@@ -71,10 +71,12 @@ class GamesTest {
 		assertEquals(new Games.Compat(151, 165, 10), Games.compat("red"));
 		assertEquals(new Games.Compat(386, 354, 10), Games.compat("emerald"));
 		assertNull(Games.compat("nope"));
-		// MG7: Emerald has the game3 adapter (GEN3_BRIDGE_PLAN.md)
-		assertEquals(List.of("blue", "emerald", "red"), Games.withAdapter());
+		// MG7: Emerald has the game3 adapter (GEN3_BRIDGE_PLAN.md); MG9: Crystal the gen2 adapter (GEN2_BRIDGE_PLAN.md)
+		assertEquals(List.of("blue", "crystal", "emerald", "red"), Games.withAdapter());
 		assertTrue(Games.adapter("blue"));
 		assertTrue(Games.adapter("emerald"));
+		assertTrue(Games.adapter("crystal"));
+		assertFalse(Games.adapter("gold"));
 		assertFalse(Games.adapter("firered"));
 		assertFalse(Games.adapter("nope"));
 		assertEquals("Blue", Games.label("blue"));

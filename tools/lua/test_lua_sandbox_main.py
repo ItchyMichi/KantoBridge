@@ -295,14 +295,16 @@ def test_no_generated_paths_or_module_names():
 def test_lib_layout_and_no_self_require():
     # MG2: lib/engine/<engine>.lua are the engine adapters (one per Gen1Recomp engine id, D1); the
     # loader lib/kb_engine.lua names each in Engine.ADAPTERS. MG7: the game3 adapter keeps its parts,
-    # one group each, in lib/engine/game3/ (GEN3_BRIDGE_PLAN.md §2)
+    # one group each, in lib/engine/game3/ (GEN3_BRIDGE_PLAN.md §2). MG9: the gen2 adapter (Gold, Silver,
+    # Crystal) keeps its parts in lib/engine/gen2/, and the parts both share live in lib/engine/common/
     for path in (BRIDGE / "lib").iterdir():
         if path.name == "engine":
             assert path.is_dir()
             adapters = sorted(p.name for p in path.iterdir())
-            assert adapters == ["game3", "game3.lua", "gen1.lua"], adapters
-            parts = sorted(p.name for p in (path / "game3").iterdir())
-            assert parts and all(re.fullmatch(r"[a-z0-9_]+\.lua", n) for n in parts), parts
+            assert adapters == ["common", "game3", "game3.lua", "gen1.lua", "gen2", "gen2.lua"], adapters
+            for folder in ("game3", "gen2", "common"):
+                parts = sorted(p.name for p in (path / folder).iterdir())
+                assert parts and all(re.fullmatch(r"[a-z0-9_]+\.lua", n) for n in parts), parts
             continue
         assert path.name.startswith("kb_") and path.suffix == ".lua", path
     for path in BRIDGE.rglob("*.lua"):
@@ -330,8 +332,8 @@ def test_manifest():
     manifest = json.loads((BRIDGE / "manifest.json").read_text(encoding="utf-8"))
     assert manifest["api"] == 2 and manifest["entry"] == "main.lua"
     assert {"network", "engine_internals"} <= set(manifest["permissions"])
-    # MG7: Emerald has the game3 adapter (protocol/games.json adapter: true)
-    assert set(manifest["games"]) == {"red", "blue", "emerald"}
+    # MG7: Emerald has the game3 adapter (protocol/games.json adapter: true); MG9: Crystal the gen2 adapter
+    assert set(manifest["games"]) == {"red", "blue", "emerald", "crystal"}
 
 
 # ------------------------------------------------------------ MG2: the adapter loader
@@ -354,11 +356,11 @@ def test_the_loader_picks_the_gen1_adapter_for_the_gen1_engine():
 
 def test_an_engine_without_an_adapter_gets_the_stub_and_rejects_every_hello():
     from rig import Rig
-    # MG7: game3 has an adapter now; gs (Gold, Silver) is still the stub's
-    rig = Rig(engine_id="gs")
-    assert (rig.status.engineId, rig.status.engineAdapter, rig.status.ready) == (b"gs", False, True)
+    # MG7: game3 has an adapter; MG9: gs and crystal too, so a made-up engine id stands for one without
+    rig = Rig(engine_id="nds")
+    assert (rig.status.engineId, rig.status.engineAdapter, rig.status.ready) == (b"nds", False, True)
     assert len(rig.status.engineGroupsMissing) == 14
-    assert sum("engine.no_adapter engine=gs" in line for line in rig.logs()) == 1
+    assert sum("engine.no_adapter engine=nds" in line for line in rig.logs()) == 1
     assert sum("engine.groups adapter=false count=14" in line for line in rig.logs()) == 1
     rig.step(3)
     peer = rig.connect()
@@ -373,11 +375,13 @@ def test_an_engine_without_an_adapter_gets_the_stub_and_rejects_every_hello():
 
 def test_the_stubs_hook_wrappers_pass_through():
     from rig import Rig
-    rig = Rig(engine_id="gs")
+    rig = Rig(engine_id="nds")
     Engine, eng = engine_on(rig)
-    assert eng.hasAdapter() is False and eng.engineId() == b"gs"
+    assert eng.hasAdapter() is False and eng.engineId() == b"nds"
     nxt = rig.b.eval("function(...) return select('#', ...), ... end")
-    assert tuple(eng.scriptCommand(nxt, b"ctx", b"name", b"args")) == (3, b"ctx", b"name", b"args")
+    # MG9: Gen 2's fifth script.command argument (the decoded op) and its fishing context go on as they came
+    assert tuple(eng.scriptCommand(nxt, b"ctx", b"name", b"args", None, b"cmd")) == (4, b"ctx", b"name", b"args", b"cmd")
+    assert tuple(eng.encounterFishing(nxt, b"rod", b"MAP", b"pool", None, b"ctx")) == (4, b"rod", b"MAP", b"pool", b"ctx")
     assert tuple(eng.pcItems(nxt, b"g", b"items")) == (2, b"g", b"items")
     assert tuple(eng.encounterRoll(nxt, b"def", b"ctx")) == (2, b"def", b"ctx")
     assert eng.takeOver(nxt) is False and eng.version()[0] == b"0.3.85"

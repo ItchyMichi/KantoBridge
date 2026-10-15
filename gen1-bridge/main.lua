@@ -89,7 +89,29 @@ return function(mod)
     items = kb.items,
     -- MG7: the mod's world and input facades (Gen 3 warps, flags and taps go through them)
     world = mod.world, input = mod.input,
+    -- MG9: the mod's hooks, for an adapter's engine-only hooks (Gen 2's intro.oak_speech.build)
+    hooks = mod.hooks,
   })
+  -- MG9 (GEN2_BRIDGE_PLAN.md J4): an engine whose map ids collide with another region's (Gen 2's Kanto
+  -- uses Gen 1's names) reports them prefixed; mapOf turns an engine payload's id into the reported one
+  -- (rawget: the stub's catch-all answers nil for any name), and the acts' warps go through the
+  -- adapter's facade of mod.world, which takes reported ids back (Gen 1 and 3: mod.world itself).
+  local function mapOf(id)
+    local f = rawget(engine, "mapOf")
+    if type(f) == "function" then
+      local ok, m = pcall(f, id)
+      if ok then return m end
+    end
+    return id
+  end
+  local world = mod.world
+  do
+    local facade = rawget(engine, "worldFacade")
+    if type(facade) == "function" then
+      local ok, f = pcall(facade, mod.world)
+      if ok and f ~= nil then world = f end
+    end
+  end
 
   -- Wild Routes (WR2: lib/kb_routes.lua, docs/specs/WILD_ROUTES_PLAN.md
   -- §4.2): the zones' exits, route maps, step scripts and trainer classes
@@ -99,7 +121,7 @@ return function(mod)
   local routesText = mod:read("data/routes.json")
   local okRoutes, routes = pcall(kb.Routes.install, {
     json = kb.json, text = type(routesText) == "string" and routesText or nil,
-    content = mod.content, world = mod.world, game = engine.gameVersion(),
+    content = mod.content, world = world, game = engine.gameVersion(),
     mapQuery = engine.mapQuery, log = log,
     -- MG8: an adapter with its own route ends (Gen 3) installs them itself
     engine = engine,
@@ -274,12 +296,12 @@ return function(mod)
   local pcs = kb.Pc.new({ engine = engine, log = log })
   -- Caves in 3D (H5): a cave shaft's warp, taken when the player reaches its
   -- far end in Minecraft (act/kb_climb.lua)
-  local climb = kb.Climb.new({ world = mod.world, warps = warps, log = log })
+  local climb = kb.Climb.new({ world = world, warps = warps, log = log })
   -- Wild Routes (WR2): the zones' acts and progress (act/kb_route.lua); the
   -- progress is kept in mod.save "routes" (save.modData, so it loads and
   -- saves with the hidden game)
   local routeActs = kb.Route.new({
-    engine = engine, routes = routes, world = mod.world, json = kb.json, log = log,
+    engine = engine, routes = routes, world = world, json = kb.json, log = log,
     store = {
       get = function(key) return mod.save:get(key) end,
       set = function(key, value) mod.save:set(key, value) end,
@@ -292,7 +314,7 @@ return function(mod)
   -- region.start starts it from the title; the parked cell is kept in
   -- mod.save "region" (save.modData) and shown by snapshot.away
   local regionActs = kb.Region.new({
-    engine = engine, routes = routes, world = mod.world, log = log,
+    engine = engine, routes = routes, world = world, log = log,
     store = {
       get = function(key) return mod.save:get(key) end,
       set = function(key, value) mod.save:set(key, value) end,
@@ -713,8 +735,9 @@ return function(mod)
   }
   -- (M10: every hook and event handler is timed into kb_perf; perf.hook
   -- leaves the engine's own work in nextFn out)
-  mod.hooks:wrap("script.command", perf.hook(function(nextFn, ctx, name, args)
-    return engine.scriptCommand(nextFn, ctx, name, args, bridge)
+  -- (MG9: Gen 2 passes a fifth argument, the decoded op, which its own command needs back)
+  mod.hooks:wrap("script.command", perf.hook(function(nextFn, ctx, name, args, cmd)
+    return engine.scriptCommand(nextFn, ctx, name, args, bridge, cmd)
   end))
   mod.hooks:wrap("trainer.before_battle", perf.hook(function(nextFn, g, context, continueBattle)
     return engine.trainerBeforeBattle(nextFn, g, context, continueBattle, bridge)
@@ -728,8 +751,9 @@ return function(mod)
   mod.hooks:wrap("encounter.roll", perf.hook(function(nextFn, encDef, ctx)
     return engine.encounterRoll(nextFn, encDef, ctx, bridge)
   end))
-  mod.hooks:wrap("encounter.fishing", perf.hook(function(nextFn, rod, mapId, pool)
-    return engine.encounterFishing(nextFn, rod, mapId, pool, bridge)
+  -- (MG9: Gen 2's fishing hook has a context after the pool, src/world/gen2/World.lua:4836-4846)
+  mod.hooks:wrap("encounter.fishing", perf.hook(function(nextFn, rod, mapId, pool, ctx)
+    return engine.encounterFishing(nextFn, rod, mapId, pool, bridge, ctx)
   end))
   mod.hooks:wrap("item.use", perf.hook(function(nextFn, g, battle, id, target, list, moveIndex, picker)
     return engine.itemUse(nextFn, g, battle, id, target, list, moveIndex, picker, bridge)
@@ -1080,7 +1104,7 @@ return function(mod)
   mod.events:on("map.entered", perf.timed(function(payload)
     mapsEntered = mapsEntered + 1
     payload = type(payload) == "table" and payload or {}
-    capped(events.entered, { map = payload.mapId, via = payload.via })
+    capped(events.entered, { map = mapOf(payload.mapId), via = payload.via })
   end))
   -- a blackout heals the hidden party (OC:5354-5357); Cobblemon's heals too,
   -- once the blackout's warp has arrived (M7)
@@ -1145,7 +1169,7 @@ return function(mod)
   -- (kb_routes.closedMove): refused as a tile, like a wall.
   local function currentMapId()
     local ow = engine.overworld()
-    return type(ow) == "table" and type(ow.map) == "table" and ow.map.id or nil
+    return type(ow) == "table" and type(ow.map) == "table" and mapOf(ow.map.id) or nil
   end
   mod.hooks:wrap("movement.collision", function(nextFn, allowed, ctx)
     local result = nextFn(allowed, ctx)

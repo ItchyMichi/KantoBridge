@@ -164,7 +164,7 @@
       "items": {
         "$ref": "../defs.schema.json#/$defs/itemId"
       },
-      "maxItems": 8,
+      "maxItems": 16,
       "uniqueItems": true
     },
     "party": {

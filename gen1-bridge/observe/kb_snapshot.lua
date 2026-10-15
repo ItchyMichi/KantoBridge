@@ -128,7 +128,8 @@ function Snapshot.build(ctx)
   local inventory = type(save.inventory) == "table" and save.inventory or {}
   for _, item in ipairs(ctx.badgeItems or {}) do
     badgeSet[item] = true
-    if inventory[item] and #badges < 8 then badges[#badges + 1] = item end
+    -- MG9: Gen 2 has 16 (Johto's 8 and Kanto's 8)
+    if inventory[item] and #badges < 16 then badges[#badges + 1] = item end
   end
   local bag = json.object()
   for item, qty in pairs(inventory) do

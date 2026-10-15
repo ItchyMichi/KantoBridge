@@ -9,7 +9,8 @@
 -- and acts) its table. The core calls the adapter's functions, grouped as
 -- Engine.GROUPS lists them, and never requires an engine module itself.
 --
--- An engine without an adapter yet (`gs`, `crystal`) gets a **stub**:
+-- An engine without an adapter gets a **stub** (MG9: `gs` and `crystal` have
+-- lib/engine/gen2.lua now, docs/specs/GEN2_BRIDGE_PLAN.md):
 -- a table that answers everything the core calls without touching the
 -- engine (no game, no save, no steps; every hook wrapper passes through), so
 -- the mod loads, listens, and answers each hello with hello.reject "game"
@@ -40,6 +41,10 @@ Engine.ADAPTERS = {
   -- MG7: FireRed, LeafGreen, Ruby, Sapphire and Emerald's engine (Emerald first, GEN3_BRIDGE_PLAN.md);
   -- the entry loads its parts from lib/engine/game3/
   game3 = "lib/engine/game3.lua",
+  -- MG9: Gold, Silver and Crystal's engine, one adapter for both ids (Crystal first, GEN2_BRIDGE_PLAN.md);
+  -- the entry loads its parts from lib/engine/gen2/ and the shared ones from lib/engine/common/
+  gs = "lib/engine/gen2.lua",
+  crystal = "lib/engine/gen2.lua",
 }
 
 -- The adapter interface (MULTI_GAME_PLAN Appendix B), group by group: the
@@ -193,11 +198,12 @@ local function stub(opts, id, requireFn)
     pristineCaptured = function() return false end,
     capturePristine = function() return 0 end,
     runHidden = nothing,
-    -- hook wrappers: the engine's own behaviour, untouched
-    scriptCommand = function(nextFn, ctx, name, args) return nextFn(ctx, name, args) end,
+    -- hook wrappers: the engine's own behaviour, untouched (MG9: Gen 2 hands script.command a fifth
+    -- argument, the decoded op, and encounter.fishing a context after the pool; both go on as they came)
+    scriptCommand = function(nextFn, ctx, name, args, _bridge, cmd) return nextFn(ctx, name, args, cmd) end,
     trainerBeforeBattle = function(nextFn, g, context, continueBattle) return nextFn(g, context, continueBattle) end,
     encounterRoll = function(nextFn, encDef, ctx) return nextFn(encDef, ctx) end,
-    encounterFishing = function(nextFn, rod, mapId, pool) return nextFn(rod, mapId, pool) end,
+    encounterFishing = function(nextFn, rod, mapId, pool, _bridge, ctx) return nextFn(rod, mapId, pool, ctx) end,
     itemUse = function(nextFn, g, battle, itemId, target, list, moveIndex, picker)
       return nextFn(g, battle, itemId, target, list, moveIndex, picker)
     end,

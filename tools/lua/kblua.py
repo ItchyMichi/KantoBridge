@@ -64,6 +64,10 @@ class Bridge:
     ``engine=True``; ``game`` then defaults to "emerald", ``engine_id`` to "game3", and the mod's
     manifest to gen1-bridge's own ``games`` (the engine loads the mod on Emerald only for a manifest that
     names it). The Gen 1 fake's add-ons (``script``, ``save_files``, ``world_api``) are Gen 1's only.
+    MG9: ``family="gen2"`` loads ``fake_engine2.lua`` (Gen1Recomp's Gen 2 engine, ``gs`` or ``crystal``,
+    which ``lib/kb_engine.lua`` answers with ``lib/engine/gen2.lua``) the same way: ``game`` defaults to
+    "crystal", ``engine_id`` to the game's own ("crystal", else "gs"), ``mod.world`` is the fake's Gen 2
+    WorldAPI.
     """
 
     STEP = 1 / 60
@@ -73,18 +77,24 @@ class Bridge:
                  script=False, mod_cache=None, save_files=False, window=False, files=None,
                  registries=None, world_api=False, jit_os="Windows", manifest=None, engine_id=None,
                  family="gen1"):
-        assert family in ("gen1", "gen3"), family
+        assert family in ("gen1", "gen2", "gen3"), family
         gen3 = family == "gen3"
-        if gen3:
-            assert not (script or save_files or world_api), "the Gen 1 fake's add-ons have no Gen 3 counterpart"
+        gen2 = family == "gen2"
+        if gen3 or gen2:
+            assert not (script or save_files or world_api), "the Gen 1 fake's add-ons have no Gen 2/3 counterpart"
             engine = True
             if manifest is None:
                 games = json.loads((BRIDGE / "manifest.json").read_text(encoding="utf-8"))["games"]
                 manifest = {"id": "gen1-bridge", "games": games}
         if game is None:
-            game = "emerald" if gen3 else "blue"
+            game = "emerald" if gen3 else ("crystal" if gen2 else "blue")
         if engine_id is None:
-            engine_id = "game3" if gen3 else "gen1"
+            if gen3:
+                engine_id = "game3"
+            elif gen2:
+                engine_id = "crystal" if game == "crystal" else "gs"
+            else:
+                engine_id = "gen1"
         self.family = family
         self.rt = luajit.LuaRuntime(unpack_returned_tuples=True, encoding=None)
         # the platform main.lua sees (jit.os): Windows by default, whatever the host, so every test
@@ -101,7 +111,13 @@ class Bridge:
         self.net = self.fake.net
         self.read_calls: list[str] = []
         self.engine = None
-        if gen3:
+        if gen2:
+            # MG9 (GEN2_BRIDGE_PLAN.md §10): the Gen 2 engine's modules and the Game2 object
+            eopts = self.table()
+            eopts[b"game"] = _b(game)
+            eopts[b"engineId"] = _b(engine_id)
+            self.engine = self._load_harness("fake_engine2.lua").new(eopts)
+        elif gen3:
             # MG7 (GEN3_BRIDGE_PLAN.md §8.1): the game3 engine's modules and the Game3 object
             eopts = self.table()
             eopts[b"game"] = _b(game)
@@ -207,8 +223,9 @@ class Bridge:
             assert self.engine is not None, "world_api needs engine=True"
             self.world_api = self._load_harness("fake_worldapi.lua").new(self.engine)
             mod_opts[b"world"] = self.world_api
-        elif self.family == "gen3":
-            # MG8: mod.world's Gen 3 facade (warpTo, replaceBlock) on the fake (fake_engine3.lua)
+        elif self.family in ("gen2", "gen3"):
+            # MG8: mod.world's Gen 3 facade (warpTo, replaceBlock) on the fake (fake_engine3.lua);
+            # MG9: the Gen 2 WorldAPI on fake_engine2.lua
             self.world_api = self.engine.worldApi
             mod_opts[b"world"] = self.world_api
         # M9: mod.cache's files (rel -> bytes), e.g. another run's, for a simulated restart

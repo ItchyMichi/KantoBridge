@@ -209,6 +209,13 @@ About one to two hours on a cpu3g ×4 pod ($0.16/hr). **Done 2026-10-15** (about
   cache NPCs or the map across `map.entered`; take position and flags from the live world, not the save; remember that
   block edits mutate the shared map table.
 
+**As built (G2A, 2026-10-15).** As above, with: the engine-neutral parts in `lib/engine/common/` (`slots`,
+`savequeue`, `reliability`, moved from `game3/`; both adapters list their parts by path); the core takes engine payloads'
+map ids through `engine.mapOf` and hands its acts the adapter's `worldFacade` (warps take the prefix off); the adapter gets
+`mod.hooks` for Gen 2's own `intro.oak_speech.build` (the clock, J5). Two field readings the real engine corrected: the
+World starts `pendingSceneScript` as `false`, so only set values count as busy; and forced movement is the engine's own
+test, not `turningDirection` alone (every held step sets it). PROGRESS.md "Johto (MG9): G2A notes" has the checks.
+
 ## 4. The core changes (small, made first)
 
 | Change | Why | Where |
@@ -491,7 +498,7 @@ Every change: schema, PROTOCOL.md, `python -m kb_protocol.catalog --write`, the 
 | Phase | Delivers | Check |
 |---|---|---|
 | **G2S** inspection | spikes G2-S1–S9 and the measure (§2); PROGRESS "Johto (MG9): the inspection G2S"; this plan corrected (§2.1) | numbers on the pod — **done 2026-10-15** |
-| **G2A** followable | the core changes (§4); adapter base, boot, observe, NPCs, held input and verdicts, warps, interaction, saves and slots, region acts, reliability; `common/` parts; map-id prefix; the fake engine | lupa per part; e2e `test_crystal.py` (title, new game, walk, door, save, CONTINUE, park/resume) ✔ |
+| **G2A** followable | the core changes (§4); adapter base, boot, observe, NPCs, held input and verdicts, warps, interaction, saves and slots, region acts, reliability; `common/` parts; map-id prefix; the fake engine | lupa per part; e2e `test_crystal.py` (title, new game, walk, door, save, CONTINUE, park/resume) ✔ — **done 2026-10-15** (§3 "As built") |
 | **G2B** UI | text, yes/no, lists, START menu, naming, Oak's speech, phone calls, Elm's picture, mirrors | lupa UI; e2e (a sign, Oak's speech through the UI, a call) ✔ |
 | **G2C** story | numeric flags, toggles, `story.blocks`, swap sites, markers | lupa; e2e (the starter flag, a block change) |
 | **G2D** export | the `g2*` kinds, baked tiles, pristine blocks, layout, encounters, sprites, animations, swaps | lupa on the fake; the pod's export, counts and hashes ✔ |

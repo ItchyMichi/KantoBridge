@@ -10,7 +10,8 @@
 -- lib/engine/game3/<part>.lua, loaded with the mod's own `import` (never
 -- `require`); each part's install(base) defines its group's functions with
 -- base.def, which also strikes the name from the adapter's `_stubbed` set
--- (Engine.missingGroups reads it).
+-- (Engine.missingGroups reads it). MG9: the engine-neutral parts (slots, the
+-- save queue, reliability) live in lib/engine/common/, shared with gen2.
 --
 -- Like gen1.lua this is engine-internals code (the `engine_internals`
 -- permission): every engine module and member it relies on is in the boot
@@ -21,13 +22,16 @@
 local Game3 = {}
 
 -- The parts, in install order (later parts may use what earlier ones put on
--- the base). G3A: identity, observing, movement, saves and sessions, the
--- region acts, reliability; G3B: the UI; G3C: the story (toggles, cells);
--- G3D: the export (the g3* resources); G3F: the party (before the battles,
--- whose attachBridge installs its gift seam), battles, the bag (the items
--- group; "items" is a name Gen1Recomp keeps for its own modules), routes.
-Game3.PARTS = { "boot", "observe", "move", "saves", "region", "reliability", "ui", "story", "export", "party", "battle",
-                "bag", "routes" }
+-- the base), as paths under lib/engine/: this engine's own in game3/, the ones
+-- shared with gen2 in common/ (MG9). G3A: identity, observing, movement, save
+-- slots, saves and sessions, the queue of announced saves, the region acts,
+-- reliability; G3B: the UI; G3C: the story (toggles, cells); G3D: the export
+-- (the g3* resources); G3F: the party (before the battles, whose attachBridge
+-- installs its gift seam), battles, the bag (the items group; "items" is a
+-- name Gen1Recomp keeps for its own modules), routes.
+Game3.PARTS = { "game3/boot", "game3/observe", "game3/move", "common/slots", "game3/saves", "common/savequeue",
+                "game3/region", "common/reliability", "game3/ui", "game3/story", "game3/export", "game3/party",
+                "game3/battle", "game3/bag", "game3/routes" }
 
 function Game3.new(opts)
   assert(type(opts) == "table" and opts.checked, "game3: the loader's pin (opts.checked) is required")
@@ -42,7 +46,7 @@ function Game3.new(opts)
   local Base = opts.import("lib/engine/game3/base.lua")
   local base = Base.new(opts, adapter)
   for _, part in ipairs(Game3.PARTS) do
-    local module = opts.import("lib/engine/game3/" .. part .. ".lua")
+    local module = opts.import("lib/engine/" .. part .. ".lua")
     module.install(base)
   end
   return adapter

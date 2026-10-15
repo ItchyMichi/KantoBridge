@@ -1,0 +1,408 @@
+-- Kanto Bridge test driver (MG9 G2A, docs/specs/GEN2_BRIDGE_PLAN.md §10): the
+-- Gen 2 adapter on the real Crystal engine, driven over TCP by
+-- tools/e2e/test_crystal.py. Every scene first registers a fresh empty save
+-- slot labelled KB_CRYSTAL_TEST and makes it active (the engine's slot API,
+-- src/core/SaveData.lua:1642-1900, shared by every engine; Gen 2's saves go to
+-- the active slot, src/core/gen2/Save.lua:109-152), so nothing touches the
+-- install's own saves; at the end the test slots are deleted and the slot
+-- active at boot is active again. KB_SCENE picks the part:
+--
+--   field           driver mode's own start: Gen 2 skips the boot cinema
+--                   under a driver and starts the world on the boot skeleton
+--                   in PLAYERS_HOUSE_2F (src/core/Game2.lua:1263-1274); serves.
+--                   KB_SERVING gives the start cell and two walks the driver
+--                   found on the live map (breadth-first over walkable cells
+--                   with nobody on them): `wall`, the steps to the nearest cell
+--                   beside something solid and `bump`, the step into it; and
+--                   `stairs`, the steps to the cell beside the warp to
+--                   PLAYERS_HOUSE_1F and `into`, the step onto it (letters
+--                   U D L R; "-" for none). Once a client is connected and the
+--                   player stands off the start cell, the game saves itself
+--                   once (Game2:writeSave), so the test sees a save.begin.
+--   title_continue  the same start saved into the test slot, then back to the
+--                   title (Game2:returnToTitle); serves: region.start CONTINUEs.
+--   title_new       the empty test slot active at the title (run it with
+--                   POKEPORT_BOOT_CINEMA=1: the real boot chain, copyright ->
+--                   splash -> intro -> title; without it, driver mode's start
+--                   goes back to the title first); serves: region.start starts
+--                   NEW GAME, and the driver answers Oak's speech's screens the
+--                   bridge can't answer before G2B (the gender choice: BOY; the
+--                   name: the first preset; text boxes and yes/no: A) until the
+--                   new game is in the field. The clock screen must never come
+--                   up (the adapter answers it, J5): KB_INITCLOCK then fails.
+--   cleanup         only the clean-up (after a failed run), then quits.
+--
+-- Markers: KB_BOOTED scene= slot= home= precleaned= phase=, KB_SERVING map= x= y= facing= wall= bump=
+-- stairs= into=, KB_SAVED slot= ok=, KB_TITLE slot= hasSave=, KB_SPEECH texts= choices= gender= names=
+-- screens=, KB_FIELD map= x= y= clock=, KB_INITCLOCK, KB_CLEANED deleted= active=, KB_QUIT sessions= code=;
+-- KB_FAIL <reason> on a timeout. Slot numbers, map symbols, cell numbers, directions, booleans and counts only
+-- (the speech's text and the names are never printed).
+--
+-- Runs unsandboxed as a POKEPORT_DRIVER coroutine, resumed once per frame
+-- with the Game (refs/gen1recomp/main.lua:755-759, :1131-1150).
+
+io.stdout:setvbuf("no")
+
+local PORT = tonumber(os.getenv("KB_TEST_PORT") or "") or 27222
+local SCENE = os.getenv("KB_SCENE") or "field"
+local EXTRA_SECONDS = tonumber(os.getenv("KB_DRIVER_EXTRA") or "") or 0
+local SECONDS_LIMIT = tonumber(os.getenv("KB_DRIVER_SECONDS") or "") or (300 + EXTRA_SECONDS)
+-- KB_DATASET_MEMO=<seconds> (as every driver whose test may fetch an export): the engine re-checks a dataset
+-- view's readiness on every record read, which on the pod's network disk stretches an export to minutes;
+-- memoising the check for that many seconds brings it back to seconds. Test-only: patches
+-- DatasetViews._ready (src/mods/DatasetViews.lua) in place.
+local DATASET_MEMO = tonumber(os.getenv("KB_DATASET_MEMO") or "") or 0
+local LABEL = "KB_CRYSTAL_TEST"
+local HOUSE, DOWNSTAIRS = "PLAYERS_HOUSE_2F", "PLAYERS_HOUSE_1F"
+
+local SaveData = require("src.core.SaveData")
+local GameVersion = require("src.core.GameVersion")
+local okSave, Save = pcall(require, "src.core.gen2.Save")
+local okTB, TextBox = pcall(require, "src.render.TextBox")
+local okCB, ChoiceBox = pcall(require, "src.ui.ChoiceBox")
+
+local function word(v) return (tostring(v):gsub("[^%w_.:+%-]", "?")) end
+local function num(id) return tonumber(tostring(id):match("^slot(%d+)$")) or 0 end
+local function version() return GameVersion.get() end
+local function active() return SaveData.activeSlot(version()) end
+
+local function slots()
+  local ok, list = pcall(SaveData.listSlots, version())
+  return ok and type(list) == "table" and list or {}
+end
+local function hasSave()
+  if okSave and type(Save) == "table" and type(Save.exists) == "function" then
+    local ok, yes = pcall(Save.exists, version())
+    return ok and yes == true
+  end
+  return false
+end
+
+-- Deletes every test slot (never another), making `home` active first.
+local function cleanup(home)
+  local deleted, v = 0, version()
+  for _, s in ipairs(slots()) do
+    if type(s) == "table" and s.label == LABEL then
+      if active() == s.id then
+        local back = home
+        if not back then
+          for _, o in ipairs(slots()) do
+            if type(o) == "table" and o.label ~= LABEL then back = o.id break end
+          end
+        end
+        if back and back ~= s.id then SaveData.setActiveSlot(v, back) end
+      end
+      if SaveData.deleteSlot(v, s.id) then deleted = deleted + 1 end
+    end
+  end
+  if home and active() ~= home then SaveData.setActiveSlot(v, home) end
+  return deleted, active()
+end
+
+local homeRef
+local function fail(reason)
+  local ok, deleted = pcall(cleanup, homeRef)
+  print(("KB_FAIL %s cleaned=%s"):format(reason, word(ok and deleted or "error")))
+  love.event.quit(1)
+  while true do coroutine.yield() end
+end
+
+local function memoDatasetChecks(seconds)
+  local ok, DatasetViews = pcall(require, "src.mods.DatasetViews")
+  if not ok or type(DatasetViews) ~= "table" or type(DatasetViews._ready) ~= "function" then return false end
+  local ready = DatasetViews._ready
+  DatasetViews._ready = function(self, view)
+    local now = love.timer.getTime()
+    if type(view) == "table" and view.kbReadyAt and now - view.kbReadyAt < seconds and not view.invalid
+        and not view.unavailable then
+      return true
+    end
+    local passed = ready(self, view)
+    if passed and type(view) == "table" then view.kbReadyAt = now end
+    return passed
+  end
+  return true
+end
+
+-- What is on top of the state stack: a screen's id (Screens stamps "Gen2<Name>", src/ui/Screens.lua:174),
+-- the shared text box or yes/no, or nil.
+local function topState(game)
+  local stack = game and game.stack
+  return stack and stack.top and stack:top() or nil
+end
+local function topName(game)
+  local t = topState(game)
+  if t == nil then return nil end
+  local mt = getmetatable(t)
+  if okTB and mt == TextBox then return "TextBox" end
+  if okCB and mt == ChoiceBox then return "ChoiceBox" end
+  if t.isTextBox then return "TextBox" end
+  return type(t.screenId) == "string" and t.screenId or "?"
+end
+
+-- A press of one button for one step (a source pressed and released before Input:step: wasPressed true,
+-- src/core/Input.lua), the driver's own source names.
+local tapSeq = 0
+local function tap(game, btn)
+  tapSeq = tapSeq + 1
+  local s = "kb-crystal-driver:" .. tapSeq
+  game.input:sourcePress(btn, s)
+  game.input:sourceRelease(btn, s)
+end
+
+-- The field is up and settled: the play phase with a map and a player, nothing on the stack, the World's own
+-- START gate open (World:acceptsMenuInput, src/world/gen2/World.lua:1567-1578), no step, turn or setup.
+local function fieldReady(game)
+  local w = game and game.world
+  if not (game and game.phase == "play" and w and w.map and w.player) then return false end
+  if topState(game) ~= nil then return false end
+  local ok, accepts = pcall(w.acceptsMenuInput, w)
+  if not (ok and accepts) then return false end
+  local p = w.player
+  if p.moving or (tonumber(p.turnTimer) or 0) > 0 or p.jumping then return false end
+  return not (w.mapSetup or w.pendingSceneScript or w.pendingWarp or w.waitButton)
+end
+
+-- ---------------------------------------------------------------- walks on the live map
+
+local DIRS = { { "U", 0, -1 }, { "D", 0, 1 }, { "L", -1, 0 }, { "R", 1, 0 } }
+local function key(x, y) return x .. "," .. y end
+
+local function mapFacts(w)
+  local map = w.map
+  local npcs = {}
+  for _, n in ipairs(w.npcs or {}) do
+    if type(n) == "table" and n.cellX and n.cellY then npcs[key(n.cellX, n.cellY)] = true end
+  end
+  local function inside(x, y)
+    local ok, v = pcall(map.inBounds, map, x, y)
+    return ok and v == true
+  end
+  local function walkable(x, y)
+    if not inside(x, y) then return false end
+    local ok, v = pcall(map.isWalkable, map, x, y)
+    return ok and v == true
+  end
+  local function warpAt(x, y)
+    local ok, v = pcall(map.warpAt, map, x, y)
+    return ok and v ~= nil
+  end
+  local function free(x, y) return walkable(x, y) and not npcs[key(x, y)] and not warpAt(x, y) end
+  return { inside = inside, walkable = walkable, warpAt = warpAt, free = free, npcs = npcs }
+end
+
+-- Breadth-first from (x, y) over free cells to the first cell `goal(cx, cy)` accepts: the path as letters
+-- and the cell, or nil.
+local function walkTo(m, x, y, goal)
+  local seen, queue, head = { [key(x, y)] = "" }, { { x, y } }, 1
+  while head <= #queue do
+    local cx, cy = queue[head][1], queue[head][2]
+    head = head + 1
+    local path = seen[key(cx, cy)]
+    if goal(cx, cy) then return path, cx, cy end
+    if #path < 64 then
+      for _, d in ipairs(DIRS) do
+        local nx, ny = cx + d[2], cy + d[3]
+        if seen[key(nx, ny)] == nil and m.free(nx, ny) then
+          seen[key(nx, ny)] = path .. d[1]
+          queue[#queue + 1] = { nx, ny }
+        end
+      end
+    end
+  end
+  return nil
+end
+
+-- The nearest cell beside something solid on the map (an inside cell no one may walk onto, no NPC there) and
+-- the step into it; and the walk to the warp leading to PLAYERS_HOUSE_1F and the step onto it.
+local function walks(w)
+  local m = mapFacts(w)
+  local x, y = w.player.cellX, w.player.cellY
+  local bump
+  local wall = walkTo(m, x, y, function(cx, cy)
+    for _, d in ipairs(DIRS) do
+      local nx, ny = cx + d[2], cy + d[3]
+      if m.inside(nx, ny) and not m.walkable(nx, ny) and not m.npcs[key(nx, ny)] then
+        bump = d[1]
+        return true
+      end
+    end
+    return false
+  end)
+  local stairs, into
+  for _, wp in ipairs(type(w.map.def) == "table" and w.map.def.warps or {}) do
+    if not stairs and wp.destMap == DOWNSTAIRS and tonumber(wp.x) and tonumber(wp.y) then
+      local tx, ty = tonumber(wp.x), tonumber(wp.y)
+      local step
+      local path = walkTo(m, x, y, function(cx, cy)
+        for _, d in ipairs(DIRS) do
+          if cx + d[2] == tx and cy + d[3] == ty then
+            step = d[1]
+            return true
+          end
+        end
+        return false
+      end)
+      if path then stairs, into = path, step end
+    end
+  end
+  return wall, bump, stairs, into
+end
+
+-- ---------------------------------------------------------------- Oak's speech (title_new)
+
+-- NEW GAME's intro is under way: the boot phase with Oak's speech on the stack (Game2:showOakSpeech,
+-- src/core/Game2.lua:277-290); the title and the main menu are left alone (an A there would start a game
+-- the test didn't ask for).
+local function introRunning(game)
+  if not (game and game.phase == "boot") then return false end
+  local states = game.stack and game.stack.states
+  for _, state in ipairs(type(states) == "table" and states or {}) do
+    if type(state) == "table" and state.screenId == "Gen2OakSpeech" then return true end
+  end
+  return false
+end
+
+-- One step of answering the intro's screens as a player would, before the bridge can (G2B): counts only.
+local speech = { texts = 0, choices = 0, gender = 0, names = 0, screens = 0 }
+local answered = setmetatable({}, { __mode = "k" })
+local function answerSpeech(game, frame)
+  local t = topState(game)
+  if t == nil then return end
+  local name = topName(game)
+  if name == "Gen2InitClock" then
+    print("KB_INITCLOCK")
+    fail("init_clock_shown")
+  end
+  if not answered[t] then
+    answered[t] = true
+    if name == "TextBox" then speech.texts = speech.texts + 1
+    elseif name == "ChoiceBox" then speech.choices = speech.choices + 1
+    elseif name == "Gen2GenderSelect" then speech.gender = speech.gender + 1
+    elseif name == "Gen2NamePick" or name == "Gen2NamingScreen" then speech.names = speech.names + 1
+    else speech.screens = speech.screens + 1 end
+  end
+  if frame % 6 ~= 0 then return end
+  if name == "Gen2NamePick" then
+    -- the first preset name (NamePick's items: NEW NAME, then the presets; src/ui/gen2/NamePick.lua:25-30)
+    if type(t.items) == "table" and #t.items >= 2 then t.cursor = 2 end
+    tap(game, "a")
+  elseif name == "Gen2NamingScreen" then
+    -- an empty name takes the pick's first preset (NamePick.lua:69-76): START puts the cursor on END, A takes it
+    tap(game, (frame % 12 == 0) and "start" or "a")
+  elseif name == "ChoiceBox" then
+    t.index = 1 -- YES
+    tap(game, "a")
+  else
+    tap(game, "a") -- text boxes, the gender choice (its cursor opens on BOY), Oak's own beats
+  end
+end
+
+-- ---------------------------------------------------------------- the scene
+
+return function(game)
+  local started = love.timer.getTime()
+  local frame = 0
+  local phase = "ready"
+  local slot, start
+  local saved = false
+  local waitUntil = 0
+  while true do
+    frame = frame + 1
+    local status = game and game.mods and game.mods.exports and game.mods.exports["gen1-bridge"]
+    if phase == "ready" then
+      -- the bridge is up (game.ready ran, Game2.lua:1262) and the game has started: driver mode's world, or the
+      -- boot cinema (POKEPORT_BOOT_CINEMA=1)
+      local w = game and game.world
+      if status and status.ready and (game.phase == "boot" or (game.phase == "play" and w and w.map)) then
+        status.configure({ port = PORT })
+        if DATASET_MEMO > 0 then
+          print(("KB_DATASET_MEMO seconds=%d ok=%s"):format(DATASET_MEMO, tostring(memoDatasetChecks(DATASET_MEMO))))
+        end
+        homeRef = active()
+        if SCENE == "cleanup" then
+          local deleted, now = cleanup(homeRef)
+          print(("KB_CLEANED deleted=%d active=%d"):format(deleted, num(now)))
+          print("KB_QUIT sessions=0 code=0")
+          return
+        end
+        local precleaned = cleanup(homeRef)
+        local v = version()
+        slot = SaveData.createSlot(v)
+        if not slot then fail("no_slot") end
+        SaveData.renameSlot(v, slot, LABEL)
+        if SaveData.setActiveSlot(v, slot) ~= slot then fail("activate_failed") end
+        print(("KB_BOOTED scene=%s slot=%d home=%d precleaned=%d phase=%s"):format(word(SCENE), num(slot),
+          num(homeRef), precleaned, word(game.phase)))
+        if SCENE == "field" or SCENE == "title_continue" then
+          phase = "field"
+        elseif SCENE == "title_new" then
+          if game.phase == "play" then pcall(game.returnToTitle, game) end
+          waitUntil = love.timer.getTime() + 1
+          phase = "title"
+        else
+          fail("unknown_scene")
+        end
+      end
+    elseif phase == "field" then
+      if fieldReady(game) then
+        local w = game.world
+        if w.map.id ~= HOUSE then fail("not_in_house") end
+        if SCENE == "field" then
+          start = { x = w.player.cellX, y = w.player.cellY }
+          local wall, bump, stairs, into = walks(w)
+          print(("KB_SERVING map=%s x=%d y=%d facing=%s wall=%s bump=%s stairs=%s into=%s"):format(HOUSE, start.x,
+            start.y, word(w.player.facing), word(wall == "" and "-" or (wall or "none")), word(bump or "none"),
+            word(stairs == "" and "-" or (stairs or "none")), word(into or "none")))
+          phase = "serve"
+        else
+          local ok, err = pcall(game.writeSave, game)
+          print(("KB_SAVED slot=%d ok=%s"):format(num(active()), word(ok and hasSave())))
+          if not (ok and hasSave()) then fail("save_failed " .. word(err):sub(1, 40)) end
+          pcall(game.returnToTitle, game)
+          waitUntil = love.timer.getTime() + 1
+          phase = "title"
+        end
+      end
+    elseif phase == "title" then
+      local name = topName(game)
+      if game.phase == "boot" and love.timer.getTime() >= waitUntil
+          and (name == "Gen2TitleState" or name == "Gen2MainMenu") then
+        print(("KB_TITLE slot=%d hasSave=%s"):format(num(active()), word(hasSave())))
+        phase = "serve"
+      end
+    elseif phase == "serve" then
+      -- the field scene's one save, once a client watches and the player stands off the start cell
+      if SCENE == "field" and not saved and (tonumber(status.sessions) or 0) >= 1 and fieldReady(game) then
+        local p = game.world.player
+        if p.cellX ~= start.x or p.cellY ~= start.y then
+          saved = true
+          local ok = pcall(game.writeSave, game)
+          print(("KB_SAVED slot=%d ok=%s"):format(num(active()), word(ok and hasSave())))
+        end
+      end
+      -- title_new: Oak's speech after region.start, answered until the new game stands in the field
+      if SCENE == "title_new" and introRunning(game) then
+        answerSpeech(game, frame)
+      elseif SCENE == "title_new" and not saved and fieldReady(game) and speech.texts > 0 then
+        saved = true -- (reused: the field reached once)
+        local w = game.world
+        local rtc = game.save and game.save.rtc
+        print(("KB_SPEECH texts=%d choices=%d gender=%d names=%d screens=%d"):format(speech.texts, speech.choices,
+          speech.gender, speech.names, speech.screens))
+        print(("KB_FIELD map=%s x=%d y=%d clock=%s"):format(word(w.map.id), w.player.cellX, w.player.cellY,
+          word(type(rtc) == "table" and rtc.startMinute or "none")))
+      end
+      if status.quitRequested then
+        local deleted, now = cleanup(homeRef)
+        print(("KB_CLEANED deleted=%d active=%d"):format(deleted, num(now)))
+        print(("KB_QUIT sessions=%s code=%s"):format(word(status.sessions), word(status.quitCode)))
+        return
+      end
+    end
+    if love.timer.getTime() - started > SECONDS_LIMIT then
+      fail("timeout phase=" .. phase)
+    end
+    game = coroutine.yield() or game
+  end
+end

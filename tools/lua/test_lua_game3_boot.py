@@ -17,9 +17,11 @@ def test_the_loader_picks_the_game3_adapter_grown_from_the_stub():
     assert Engine.ADAPTERS.game3 == b"lib/engine/game3.lua"
     assert eng.hasAdapter() is True
     assert (eng.engineId(), eng.family(), eng.gameVersion()) == (b"game3", b"gen3", b"emerald")
+    # MG9: paths under lib/engine/, the engine-neutral parts shared with gen2 in common/
     assert [p.decode() for p in a.b.module("lib/engine/game3.lua").PARTS.values()] == [
-        "boot", "observe", "move", "saves", "region", "reliability", "ui", "story", "export", "party", "battle", "bag",
-        "routes"]
+        "game3/boot", "game3/observe", "game3/move", "common/slots", "game3/saves", "common/savequeue", "game3/region",
+        "common/reliability", "game3/ui", "game3/story", "game3/export", "game3/party", "game3/battle", "game3/bag",
+        "game3/routes"]
 
 
 def test_missing_groups_name_the_groups_no_part_has_written():

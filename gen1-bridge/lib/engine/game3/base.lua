@@ -78,6 +78,10 @@ function Base.new(opts, adapter)
     return type(g) == "table" and type(g.session) == "table" and g.session or nil
   end
 
+  -- The object the save events carry (save.created/save.loaded: the session,
+  -- Game3.lua:540, :557), for the parts shared with gen2 (lib/engine/common/).
+  function b.saveObject() return b.session() end
+
   -- In the field: the Game3 object's phase is "field" (Game3.lua:101; boot,
   -- quest_log and arena otherwise), Field runs (field.lua:67, :108) and a
   -- session exists.

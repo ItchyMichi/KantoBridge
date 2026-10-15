@@ -63,7 +63,8 @@ def test_main_boots_on_emerald_with_the_game3_adapter():
     no_faults(rig)
 
 
-@pytest.mark.parametrize("parts", [["boot"], ["boot", "observe"], ["boot", "observe", "move", "saves"]])
+@pytest.mark.parametrize("parts", [["game3/boot"], ["game3/boot", "game3/observe"],
+                                   ["game3/boot", "game3/observe", "game3/move", "common/slots", "game3/saves"]])
 def test_main_steps_with_parts_missing(parts):
     # GEN3_BRIDGE_PLAN §11: the core calls many optional functions unguarded every step; with only some
     # parts installed, the rest still the stub's, a live session's steps never fault
