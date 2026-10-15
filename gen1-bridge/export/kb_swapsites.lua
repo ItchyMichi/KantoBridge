@@ -118,7 +118,8 @@ SwapSites.SHIP = {
 
 local MAP_ID = "^[A-Z0-9_]+$"
 local SYMBOL = "^[A-Za-z0-9_]+$"
-local KINDS = { cut = true, card_key = true, script = true, boulder = true }
+-- MG9: Gen 2's Whirlpool (a site of its own kind; the export's schema gains it with G2D)
+local KINDS = { cut = true, card_key = true, script = true, boulder = true, whirlpool = true }
 local floor = math.floor
 
 local function byte(v)
@@ -281,6 +282,27 @@ function SwapSites.runtimeIndex(field, version, blockAt)
         local open = s.map == "SILPH_CO_11F" and eleventh.openBlock or ck.openBlock
         if byte(open) then allowed[open] = true end
       end
+      n = n + 1
+    end
+  end
+  return index, n
+end
+
+-- MG9 (G2C): an adapter's own sites (engine.swapSites: Gen 2's, the export's
+-- list of { map, bx, by, kind, before, after }) as the runtime index: each
+-- checked site lets its block take its before and its after. Returns the index
+-- and the number of sites in it.
+function SwapSites.indexSites(sites)
+  local index, n = {}, 0
+  for _, r in ipairs(type(sites) == "table" and sites or {}) do
+    local s = type(r) == "table" and SwapSites.site(r.map, r.bx, r.by, r.kind, r.before, r.after) or nil
+    if s then
+      local byMap = index[s.map] or {}
+      index[s.map] = byMap
+      local key = s.by * 256 + s.bx
+      local allowed = byMap[key] or {}
+      byMap[key] = allowed
+      allowed[s.before], allowed[s.after] = true, true
       n = n + 1
     end
   end

@@ -1,10 +1,11 @@
-"""MG9 (docs/specs/GEN2_BRIDGE_PLAN.md G2A, G2B): gen1-bridge's main.lua on the fake Gen 2 engine
+"""MG9 (docs/specs/GEN2_BRIDGE_PLAN.md G2A, G2B, G2C): gen1-bridge's main.lua on the fake Gen 2 engine
 (Rig(family="gen2")), seen from a fake Minecraft peer: the handshake and snapshot on Crystal (map ids
 reported as G2_*, J4), steps (Gen 1's movement.collision verdicts; a held direction let go once its step is
 under way, chainsHeld), a walked warp, saves and the nurse, the region acts (the park's hold, a resume
-through the world facade, a start from the title), and the UI (a question and its yes/no, a script menu,
-the start menu, Oak's whole speech answered through the UI with the client's own name or a preset). Every
-message is schema-checked. Everything is made up."""
+through the world facade, a start from the title), the UI (a question and its yes/no, a script menu,
+the start menu, Oak's whole speech answered through the UI with the client's own name or a preset), and the
+story (numbered flags, who stands where, a map's block changes against the swap sites). Every message is
+schema-checked. Everything is made up."""
 
 import pytest
 
@@ -69,8 +70,8 @@ def test_main_boots_on_crystal_with_the_gen2_adapter():
     st = rig.status
     assert (st.ready, st.engineId, st.engineAdapter, st.game, st.engine) == (True, b"crystal", True, b"crystal",
                                                                              b"0.3.85")
-    # the story, the export, battles and routes come with G2C-G2H
-    assert sorted(g.decode() for g in st.engineGroupsMissing.values()) == ["battles", "export", "routes", "story"]
+    # the export, battles and routes come with G2D-G2H
+    assert sorted(g.decode() for g in st.engineGroupsMissing.values()) == ["battles", "export", "routes"]
     assert list(st.engineMissing.values()) == []
     logs = rig.logs()
     assert not any("engine.no_adapter" in line or "engine.missing" in line for line in logs)
@@ -415,3 +416,99 @@ def test_a_preset_name_is_answered_by_picking_it():
     speech_through_the_ui(rig, peer, "TESTB")
     assert (E.game.save.player.name, E.game.save.player.gender, E.keyboards) == (b"TESTB", b"male", 0)
     no_faults(rig)
+
+
+# ------------------------------------------------------------ the story (G2C)
+
+
+def story_rig(**world):
+    """A rig whose map data is copied at mods.loaded after the test's own changes to the made-up maps: TEST_TOWN's
+    TILES callback (E.tileCallbacks) runs script 1:4000, which changes block (2, 1) to 0x22 while flag 30 is clear;
+    block (1, 0) is a Cut tree (0x40) and (2, 0) tall grass (0x50); a person behind flag 40."""
+    rig = Rig(family="gen2", ready=False)
+    E = rig.E
+    E.scripts[b"1:4000"] = rig.b.to_lua([{"op": "checkevent", "event": 30}, {"op": "iftrue", "script": "1:4010"},
+                                         {"op": "changeblock", "x": 4, "y": 2, "block": 0x22},
+                                         {"op": "endcallback"}])
+    E.scripts[b"1:4010"] = rig.b.to_lua([{"op": "endcallback"}])
+    town = E.maps[b"TEST_TOWN"]
+    town.callbacks = rig.b.to_lua([{"callback": "MAPCALLBACK_TILES", "scriptKey": "1:4000"}])
+    town.blocks[2] = 0x40
+    town.blocks[3] = 0x50
+    E.tileCallbacks[b"TEST_TOWN"] = rig.b.to_lua([rig.b.eval("""function(w)
+      if not w.events:get(30) then w:changeBlock(2, 1, 0x22) end
+    end""")])
+    E.addNpc(1, rig.b.to_lua({"map": "TEST_TOWN", "x": 1, "y": 1, "eventFlag": 40}))
+    rig.b.mods_loaded()
+    rig.b.ready()
+    rig.world("TEST_TOWN", world.get("x", 5), world.get("y", 6), world.get("facing", "down"))
+    return rig
+
+
+def counters(rig, peer):
+    seq = peer.send("debug.status")
+    msgs = pump(rig, peer, lambda m: m.get("re") == seq)
+    return reply(msgs, seq)["data"]
+
+
+def story(msgs, kind):
+    return [m["data"] for m in msgs if m["type"] == kind]
+
+
+def test_the_snapshot_carries_the_story_and_the_map_data_was_copied():
+    rig = story_rig()
+    assert any("story.pristine maps=5" in line for line in rig.logs())
+    peer = rig.connect()
+    peer.hello()
+    snap = next(m for m in peer.messages() if m["type"] == "snapshot")["data"]
+    # the callback's block, against the map data the world was built from; nobody hidden
+    assert snap["blocks"] == [{"map": "G2_TEST_TOWN", "bx": 2, "by": 1, "block": 0x22}]
+    assert snap["toggles"] == {} and snap["flags"] == []
+    st = counters(rig, peer)
+    assert (st["storyPristine"], st["storyUnknownBlocks"]) == (True, 0)
+    no_faults(rig)
+
+
+def test_flags_toggles_and_blocks_follow_the_story():
+    rig = story_rig()
+    E = rig.E
+    w = E.game.world
+    peer = rig.connect()
+    peer.hello()
+    peer.messages()
+    # a flag set by a script: story.flags with its E<number> name
+    w.events.set(w.events, 40, True)
+    w.events.set(w.events, 30, True)
+    msgs = pump(rig, peer, lambda m: m["type"] == "story.flags")
+    assert story(msgs, "story.flags") == [{"set": ["E30", "E40"], "clear": []}]
+    # nobody moves until the next load; the reload hides the person and the callback leaves the block alone
+    rig.step(10)
+    assert story(peer.messages(), "story.toggles") == []
+    w.loadMap(w, b"TEST_TOWN", 5, 6, b"down", b"warp")
+    msgs = pump(rig, peer, lambda m: m["type"] == "story.toggles")
+    assert story(msgs, "story.toggles") == [{"map": "G2_TEST_TOWN", "obj": "O1", "visible": False}]
+    assert story(msgs, "story.blocks") == [{"map": "G2_TEST_TOWN", "changes": [{"bx": 2, "by": 1, "block": 1}]}]
+    # a Cut tree and its tall grass during the visit: both known (the tree a site, the grass the World's record)
+    w.changeBlock(w, 1, 0, 0x41)
+    w.changeBlock(w, 2, 0, 0x51)
+    msgs = pump(rig, peer, lambda m: m["type"] == "story.blocks")
+    assert story(msgs, "story.blocks") == [{"map": "G2_TEST_TOWN", "changes": [{"bx": 1, "by": 0, "block": 0x41},
+                                                                                {"bx": 2, "by": 0, "block": 0x51}]}]
+    st = counters(rig, peer)
+    assert (st["storyUnknownBlocks"], st["storySites"]) == (0, 2)
+    no_faults(rig)
+
+
+def test_an_unknown_block_change_is_reported_and_logged():
+    rig = story_rig()
+    w = rig.E.game.world
+    peer = rig.connect()
+    peer.hello()
+    peer.messages()
+    w.changeBlock(w, 4, 4, 0x77)    # no site, no Cut
+    msgs = pump(rig, peer, lambda m: m["type"] == "story.blocks")
+    assert story(msgs, "story.blocks") == [{"map": "G2_TEST_TOWN", "changes": [{"bx": 4, "by": 4, "block": 0x77}]}]
+    assert counters(rig, peer)["storyUnknownBlocks"] == 1
+    errors = [line for line in rig.logs() if "story.unknown_block" in line]
+    assert errors == ["[error] [gen1-bridge] story.unknown_block count=1 map=G2_TEST_TOWN total=1"]
+

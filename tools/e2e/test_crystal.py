@@ -46,6 +46,9 @@ REGION = "johto"
 PREFIX = "G2_"
 HOUSE = PREFIX + "PLAYERS_HOUSE_2F"
 DOWNSTAIRS = PREFIX + "PLAYERS_HOUSE_1F"
+TOWN = PREFIX + "NEW_BARK_TOWN"
+LAB = PREFIX + "ELMS_LAB"
+STARTER_FLAG = "E26"  # EVENT_GOT_A_POKEMON_FROM_ELM, the same number on Gold and Crystal (PROGRESS.md G2-S4)
 DIRS = {"U": "up", "D": "down", "L": "left", "R": "right"}
 
 
@@ -133,6 +136,35 @@ async def _walk(mc, path, first_n):
         assert answer["type"] == "player.pos", (letter, n, answer, seen_summary(mc, max(0, len(mc.received) - 20)))
         n += 1
     return answer, n
+
+
+async def _walk_on(mc, path, n, tries=12):
+    """Walks a path of letters; a step refused because someone stands in the way or a script runs is tried again
+    after a moment (people wander), any other refusal fails. Returns the next free request number."""
+    for letter in path:
+        for attempt in range(tries):
+            answer = await _step(mc, letter, n)
+            n += 1
+            if answer["type"] == "player.pos":
+                break
+            reason = answer["data"].get("reason")
+            assert reason in ("entity", "script", "busy") and attempt < tries - 1, (
+                letter, answer, seen_summary(mc, max(0, len(mc.received) - 20)))
+            await asyncio.sleep(0.6)
+    return n
+
+
+async def _take_warp(mc, into, n, from_map):
+    """From the cell beside a warp: every press of `into` but the last a step (onto a mat), the last the warp; waits
+    for the warp to start and for the player on another map. Returns the next request number and that map."""
+    n = await _walk_on(mc, into[:-1], n)
+    since = len(mc.received)
+    await mc.send("move.step", {"dir": DIRS[into[-1]], "n": n})
+    n += 1
+    warp = await find_or_wait(mc, "warp", 30, since)
+    assert warp["data"]["phase"] == "start", warp
+    arrived = await find_or_wait(mc, "player.pos", 30, since, lambda m: m["data"]["map"] != from_map)
+    return n, arrived["data"]["map"]
 
 
 def _path(value):
@@ -276,13 +308,16 @@ INITCLOCK = "Gen2InitClock"
 HIDDEN_ROWS = ("QUIT", "MODS")
 
 
-async def _answer_ui(mc, since, timeout, until=None, done=None):
+async def _answer_ui(mc, since, timeout, until=None, done=None, press_mirrors=()):
     """Answers every UI the hidden game opens, as a player at the client would, until a message matches `until`
     or `done()` holds (asked about once a second): text boxes advanced, a choice index 0 (BOY, YES), a menu index
     0 (NEW NAME, should the name pick come as a menu), the naming screen KB. Mirrors are left alone (their screen
-    ids are kept). Returns the kinds in order, the mirrors' screens and the matching message (or None)."""
+    ids are kept), but for those whose screen is in `press_mirrors` (Elm's starter picture, PicBox): A, about once
+    a second while one is open. Returns the kinds in order, the mirrors' screens and the matching message (or
+    None)."""
     answered, kinds, mirrors = set(), [], []
     texts = {}  # a text UI's id -> its state as the updates have told it (they carry only what changed)
+    pressing = {}  # an open mirror to press -> when it was last pressed
     deadline = time.monotonic() + timeout
     seen = since
     while True:
@@ -303,6 +338,8 @@ async def _answer_ui(mc, since, timeout, until=None, done=None):
                 if st.get("waiting") is True and not was:
                     await mc.send("ui.advance", {"ui": m["data"]["ui"]})
                 continue
+            if m["type"] == "ui.close":
+                pressing.pop(m["data"].get("ui"), None)
             if m["type"] != "ui.open" or m["data"]["ui"] in answered:
                 continue
             d = m["data"]
@@ -316,6 +353,12 @@ async def _answer_ui(mc, since, timeout, until=None, done=None):
                 await mc.send("ui.name", {"ui": d["ui"], "glyphs": NAME})
             elif d["kind"] == "mirror":
                 mirrors.append(str(d.get("screen")))
+                if d.get("screen") in press_mirrors:
+                    pressing[d["ui"]] = 0.0
+        for ui_id, last in list(pressing.items()):
+            if time.monotonic() - last >= 1.0:
+                pressing[ui_id] = time.monotonic()
+                await mc.send("act.button", {"button": "a", "how": "tap"})
         if done is not None and done():
             return kinds, mirrors, None
         left = deadline - time.monotonic()
@@ -337,12 +380,9 @@ def _counts(kinds):
     return {k: kinds.count(k) for k in sorted(set(kinds))}
 
 
-async def _ui(port, facts, running):
-    mc, ok, snap, status = await connect(port)
-    report = {"hello": (ok.get("game"), ok.get("family"))}
-    assert (ok.get("game"), ok.get("family")) == (GAME, "gen2"), ok
-    assert snap["ingame"] is False and status["playthrough"] == "title"
-
+async def _new_game_to_mom(mc, running, report):
+    """NEW GAME from the title through the UI only: Oak's speech, the bedroom, the stairs and Mom's scene downstairs,
+    until the field stands idle after her (the driver's KB_NPC). Returns the next free move.step number."""
     # NEW GAME, Oak's speech answered through the UI
     sent = await mc.send("region.start", {"region": REGION})
     since = len(mc.received)
@@ -401,6 +441,16 @@ async def _ui(port, facts, running):
     report["daywheel"] = running.result.facts("KB_DAYWHEEL")
     assert kinds.count("text") >= 2 and kinds.count("choice") >= 1, kinds
     assert INITCLOCK not in mirrors, "Mom's weekday wheel is the adapter's to answer (J5)"
+    return n
+
+
+async def _ui(port, facts, running):
+    mc, ok, snap, status = await connect(port)
+    report = {"hello": (ok.get("game"), ok.get("family"))}
+    assert (ok.get("game"), ok.get("family")) == (GAME, "gen2"), ok
+    assert snap["ingame"] is False and status["playthrough"] == "title"
+
+    n = await _new_game_to_mom(mc, running, report)
 
     # a person's line, read through the UI
     npc = running.result.facts("KB_NPC")
@@ -434,6 +484,82 @@ async def _ui(port, facts, running):
     await mc.send("ui.back", {"ui": menu["ui"]})
     await find_or_wait(mc, "ui.close", 20, since, lambda m: m["data"]["ui"] == menu["ui"])
 
+    report["errors"] = errors(mc)
+    report["problems"] = len(mc.conn.problems)
+    assert report["errors"] == [] and report["problems"] == 0
+    await mc.send("debug.quit", {"code": 0})
+    await mc.close()
+    return report
+
+
+async def _story(port, facts, running):
+    mc, ok, snap, status = await connect(port)
+    report = {"hello": (ok.get("game"), ok.get("family"))}
+    assert (ok.get("game"), ok.get("family")) == (GAME, "gen2"), ok
+    assert snap["ingame"] is False and status["playthrough"] == "title"
+    n = await _new_game_to_mom(mc, running, report)
+
+    # the bedroom's decoration callback: the blocks it changed went out as story.blocks for the bedroom, against
+    # the map data the world was built from
+    bedroom = running.result.facts("KB_BEDROOM")
+    sent = [c for m in mc.received if m["type"] == "story.blocks" and m["data"]["map"] == HOUSE
+            for c in m["data"]["changes"]]
+    report["bedroom"] = (int(bedroom["edits"]), int(bedroom["differ"]), len(sent))
+    assert int(bedroom["edits"]) >= 1 and len(sent) == int(bedroom["differ"]), report["bedroom"]
+
+    # out of the house and over to Elm's lab (the driver's walks; people wander, so a blocked step is tried again)
+    door = running.result.facts("KB_EXIT")
+    path, into = _path(door["path"]), door["into"]
+    assert path is not None and into != "none" and all(c in DIRS for c in into), door
+    n = await _walk_on(mc, path, n)
+    n, arrived = await _take_warp(mc, into, n, DOWNSTAIRS)
+    report["town"] = arrived
+    assert arrived == TOWN, arrived
+    assert await asyncio.to_thread(running.wait_marker, "KB_LAB", 60) is not None, "the driver saw the town idle"
+    lab = running.result.facts("KB_LAB")
+    path, into = _path(lab["path"]), lab["into"]
+    assert path is not None and into != "none" and all(c in DIRS for c in into), lab
+    n = await _walk_on(mc, path, n)
+    since = len(mc.received)
+    n, arrived = await _take_warp(mc, into, n, TOWN)
+    report["lab"] = arrived
+    assert arrived == LAB, arrived
+
+    # Elm's scene through the UI, until the field stands idle after it (the driver's KB_BALL)
+    kinds, mirrors, _ = await _answer_ui(mc, since, 300, done=lambda: running.result.marker("KB_BALL") is not None)
+    report["elm"] = _counts(kinds)
+    assert kinds.count("text") >= 2, kinds
+    ball = running.result.facts("KB_BALL")
+    path, face = _path(ball["path"]), ball["face"]
+    assert path is not None and face in DIRS and ball["x"] != "none", ball
+    n = await _walk_on(mc, path, n)
+
+    # a ball: its picture (A on the mirror), YES, the nickname KB, Elm's directions, until flag 26 goes out
+    since = len(mc.received)
+    sent = await mc.send("act.interact", {"map": LAB, "x": int(ball["x"]), "y": int(ball["y"])})
+    result = (await mc.expect("act.result", timeout=20, re=sent["seq"]))["data"]
+    report["interact"] = (result.get("ok"), result.get("kind"), result.get("reason"))
+    assert result.get("ok") is True, result
+    kinds, mirrors, flags = await _answer_ui(
+        mc, since, 300, until=lambda m: m["type"] == "story.flags" and STARTER_FLAG in m["data"]["set"],
+        press_mirrors=("PicBox",))
+    report["starter"] = _counts(kinds)
+    report["starter_mirrors"] = sorted(set(mirrors))
+    assert "PicBox" in mirrors and kinds.count("choice") >= 1, (kinds, mirrors)
+    # the ball taken: its object off the lab's table, in the story and in the engine's own masks
+    obj = "O" + ball["index"]
+    await asyncio.sleep(1)  # the next toggle diff (every ten logic steps)
+    hidden = [m["data"] for m in mc.received[since:] if m["type"] == "story.toggles" and m["data"]["map"] == LAB]
+    report["toggles"] = hidden
+    assert {"map": LAB, "obj": obj, "visible": False} in hidden, hidden
+    assert await asyncio.to_thread(running.wait_marker, "KB_STARTER", 30) is not None, "the driver saw flag 26"
+    assert running.result.facts("KB_STARTER")["masked"] == "true"
+
+    # the story's counters: the map data copied at boot, the swap sites, no block change outside them
+    st = (await mc.request("debug.status", reply_type="debug.status", timeout=10))["data"]
+    report["story"] = {k: st.get(k) for k in ("storyPristine", "storySites", "storyUnknownBlocks", "storyMapLoads",
+                                              "storyBlockChanges", "storyFlagMsgs", "storyToggleMsgs")}
+    assert st["storyPristine"] is True and st["storySites"] > 0 and st["storyUnknownBlocks"] == 0, report["story"]
     report["errors"] = errors(mc)
     report["problems"] = len(mc.conn.problems)
     assert report["errors"] == [] and report["problems"] == 0
@@ -531,6 +657,24 @@ def test_crystal_new_game_mom_and_menus_through_the_ui():
         result, report = _launch("title_ui", "KB_TITLE", _ui, 900, extra=600, cinema=True, with_run=True)
         assert result.facts("KB_TITLE")["hasSave"] == "false"
         assert result.marker("KB_NPC") is not None and result.marker("KB_DAYWHEEL") is not None
+        clean = True
+    finally:
+        if not clean:
+            _cleanup_run()
+    assert save_files() == before, "the test slot's files are gone and the rest untouched"
+
+
+@pytest.mark.e2e
+@pytest.mark.timeout(1800)
+def test_crystal_story_the_starter_flag_its_ball_and_the_bedrooms_blocks():
+    _skip_without_crystal()
+    before = save_files()
+    clean = False
+    try:
+        result, report = _launch("story", "KB_TITLE", _story, 1200, extra=900, cinema=True, with_run=True)
+        sites = [line for line in result.lines if "story.sites" in line]
+        print("story sites:", sites)
+        assert len(sites) == 1, sites
         clean = True
     finally:
         if not clean:

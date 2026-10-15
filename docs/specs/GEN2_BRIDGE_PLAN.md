@@ -310,6 +310,17 @@ change. On the pod: a NEW GAME through the UI only, Mom's scene, an NPC's line a
   client draws closed and open art, as in Kanto. (Gen 3's `story.cells` is not used: the client keeps those cells but
   draws none of them.)
 
+**As built (G2C, 2026-10-15; `GB/lib/engine/gen2/story.lua`).** As above, with: the current map's toggles are the
+engine's live masks (a plain `setevent` moves nobody until the next load), every other map's the flag and the hour
+window through the engine's own `World:objectTimeVisible`; the map data is the copy taken at `mods.loaded` (a World
+Game2 drops keeps its block edits in the shared records), with the dataset view as the fallback; the swap sites are
+Cut trees and Whirlpools by the tileset's tables (cut grass is cosmetic, known from the World's own record of the
+visit), the `changeblock` rows the scripts a map runs can reach, Crystal's `changemapblocks` (none in its scripts) and
+the bedroom's decorations (`Decorations.tiles`); `kb_story` checks against `engine.swapSites()` when an adapter has it
+(`kb_swapsites.indexSites`). The real Crystal: 388 maps copied, 137 sites (40 Cut trees, 6 Whirlpools, 64 script
+changes, 27 decoration blocks); a new game to Elm's starter through the UI sets `E26`, hides the taken ball and sends
+the bedroom's decorations, with no unknown block (PROGRESS.md "Johto (MG9): G2C notes").
+
 ### 5.7 Saves, slots, pairing and the nurse (link)
 
 Slots, the save queue and pairing from the common parts (the version id is the game's). `switchSave`/`centerSaveStep`
@@ -508,7 +519,7 @@ Every change: schema, PROTOCOL.md, `python -m kb_protocol.catalog --write`, the 
 | **G2S** inspection | spikes G2-S1–S9 and the measure (§2); PROGRESS "Johto (MG9): the inspection G2S"; this plan corrected (§2.1) | numbers on the pod — **done 2026-10-15** |
 | **G2A** followable | the core changes (§4); adapter base, boot, observe, NPCs, held input and verdicts, warps, interaction, saves and slots, region acts, reliability; `common/` parts; map-id prefix; the fake engine | lupa per part; e2e `test_crystal.py` (title, new game, walk, door, save, CONTINUE, park/resume) ✔ — **done 2026-10-15** (§3 "As built") |
 | **G2B** UI | text, yes/no, lists, START menu, naming, Oak's speech, phone calls, Elm's picture, mirrors | lupa UI; e2e (a sign, Oak's speech through the UI, a call) ✔ — **done 2026-10-15** (§5.5 "As built"; no call rang in the runs) |
-| **G2C** story | numeric flags, toggles, `story.blocks`, swap sites, markers | lupa; e2e (the starter flag, a block change) |
+| **G2C** story | numeric flags, toggles, `story.blocks`, swap sites, markers | lupa; e2e (the starter flag, a block change) — **done 2026-10-15** (§5.6 "As built") |
 | **G2D** export | the `g2*` kinds, baked tiles, pristine blocks, layout, encounters, sprites, animations, swaps | lupa on the fake; the pod's export, counts and hashes ✔ |
 | **G2E** builder | families raised; `Gen2Planner`, `G2Cells`, `Gen2FrontEnd`, the Gen 2 `MapModel` form, placement, interiors, story cells, art, people, animations, darkness, habitats | JUnit, golden scene, GameTest; the pod's dry run ✔ |
 | **G2F** battles, party, bag | held battles, party sync, gifts, trades, Day-Care and eggs, bag and money, Bill's PC, field moves | lupa; e2e (a wild, a trainer and the first rival battle; the starter) ✔ |

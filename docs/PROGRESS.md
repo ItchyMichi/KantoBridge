@@ -1477,7 +1477,7 @@ the full suite at the ✔ checkpoints (MG2, MG3, MG5, MG6). Pods run inside your
 | MG6 | One trainer economy | **done** (notes 18, 21); check: `LedgerGameTests` (two regions: adoption, stamped read-back, the crossing's projection, `too_many`/`left`, re-projection on an unknown stamp; a legacy world untouched), `BagGameTests` marked stacks, `LedgerTest`/`LedgerCodecTest`/`ItemsTest`/`BagSetRelayTest`, `test_lua_ledger.py`/`test_lua_bag.py`; the real engine's `bag.set` round trip is your play-test (PLAYTEST.md "MG6") | 2026-10-13 | |
 | MG7 | The second family (Emerald): adapter and export | **done**: the spec [specs/GEN3_BRIDGE_PLAN.md](specs/GEN3_BRIDGE_PLAN.md) (2026-10-14), phases G3A–G3G; **G3A done** (Emerald followable), **G3B done** (Emerald's UI), **G3C done** (story), **G3D done** (export), **G3E done** (builder), **G3F done** (battles, party, bag; the route exit moved to MG8), **G3G done** (the real Hoenn built in Minecraft) ("Several games: MG7") | 2026-10-14 | |
 | MG8 | Hoenn and the pass to it | **done**: the spec [specs/HOENN_PASS_PLAN.md](specs/HOENN_PASS_PLAN.md) (2026-10-14), phases HP1–HP8; the test pass Viridian City ↔ Littleroot Town; Kanto and Hoenn in one world; 20 crossings each way between the real Blue and Emerald ("Several games: MG8") | 2026-10-14 | |
-| MG9 | Johto (Gold, Silver, Crystal): the Gen 2 bridge | **in progress**: [specs/GEN2_BRIDGE_PLAN.md](specs/GEN2_BRIDGE_PLAN.md) (2026-10-15), from a static inspection of the Gen 2 engine (research notes `refs/_research/g2_*.md`); phases G2S and G2A–G2H; decisions J1–J14 with defaults. **G2S done** ("Johto (MG9): the inspection G2S"); **G2A done** (Crystal followable: "Johto (MG9): G2A notes"); **G2B done** (Crystal's UI: "Johto (MG9): G2B notes"); next G2C | 2026-10-15 | |
+| MG9 | Johto (Gold, Silver, Crystal): the Gen 2 bridge | **in progress**: [specs/GEN2_BRIDGE_PLAN.md](specs/GEN2_BRIDGE_PLAN.md) (2026-10-15), from a static inspection of the Gen 2 engine (research notes `refs/_research/g2_*.md`); phases G2S and G2A–G2H; decisions J1–J14 with defaults. **G2S done** ("Johto (MG9): the inspection G2S"); **G2A done** (Crystal followable: "Johto (MG9): G2A notes"); **G2B done** (Crystal's UI: "Johto (MG9): G2B notes"); **G2C done** (Crystal's story: "Johto (MG9): G2C notes"); next G2D | 2026-10-15 | |
 
 ### Several games: notes
 
@@ -2382,6 +2382,42 @@ Crystal is followable (GEN2_BRIDGE_PLAN.md §3–§5, phase G2A), at your "Go" a
 - **Still the stub's** (later phases): the UI (G2B: until then a client gets no Gen 2 screens; the e2e driver answers
   Oak's speech), the story (G2C), the export (G2D: `export.live_copy_failed` is logged once at load), battles (G2F),
   routes (G2H).
+
+### Johto (MG9): G2C notes (2026-10-15)
+
+Crystal's story state reaches the bridge (GEN2_BRIDGE_PLAN.md §5.6, phase G2C), at your "Go".
+
+- **The part**: `gen1-bridge/lib/engine/gen2/story.lua`. **Flags** need nothing new: the save view already names every
+  set event flag `E<number>` (G2A), so `story.flags` and the markers work as they are. **Who stands where**
+  (`story.toggles`, ids `O<index>` as the NPC observer's): on the current map the engine's live masks
+  (`World.objectMasks`: a plain `setevent` moves nobody until the next load, `appear`/`disappear` do at once); on every
+  other map the object's flag and its hour window, as its next load will decide (the engine's own
+  `World:objectTimeVisible`, called with the clock read once per diff). The client's default is visible, so the
+  toggles are the objects hidden now. **Blocks**: Gen 1's `story.blocks` model; the map data is copied at
+  `mods.loaded` (388 maps), the live blocks are the current map's own array, a map load is a new `Map` object, this
+  visit's Cut and Whirlpool edits come from the World's own record (`blockEdits`). **Swap sites** (`swapSites`, the
+  export's list for G2D): Cut trees and Whirlpools by the tileset's tables (cut grass is cosmetic, no site), the
+  `changeblock` rows of the scripts each map's callbacks, scenes, events and objects reach, Crystal's whole-map
+  `changemapblocks` (none in Crystal's scripts: 0 of 5,084), and the bedroom's decorations; on the pod 137 sites (40
+  Cut trees, 6 Whirlpools, 64 script changes, 27 decoration blocks).
+- **Core changes, inert on Gen 1 and 3**: `kb_story` checks every block change against `engine.swapSites()` when the
+  adapter has sites of its own (`kb_swapsites.indexSites`), else Gen 1's tables as before; the swap kind `whirlpool`
+  (the export's schema gains it with G2D); `swapSites` joins the story group (the stub answers nil).
+- **Found in the engine**: a World that Game2 drops (CONTINUE, QUIT to the title) is never told to put its block
+  edits back, so the shared map records keep them (`Game2.lua:343-344`, `:376-377`). The story therefore compares
+  against the copy taken at boot, never the live records.
+- **Checks**: local pytest and Lua 2,134 passed (18 new: `tools/lua/test_lua_gen2_story.py` and the protocol file's
+  story tests; the fake gained masks, block edits, decorations and scripts). On the pod (kb-dev21, cpu5c ×4, the real
+  Crystal) the new `test_crystal.py` story test passed in 86 s: a NEW GAME through the UI, the bedroom's two
+  decoration blocks out as `story.blocks`, Mom's scene, out of the house (a mat: a step onto it and a press in its
+  direction) to New Bark Town and Elm's lab, Elm's scene through the UI, a ball taken (its picture a `PicBox` mirror
+  answered with A, YES, the nickname KB) until `story.flags` set `E26`; the ball's object went out hidden
+  (`story.toggles` `G2_ELMS_LAB` `O3`), the driver saw the flag and the mask, `debug.status` had the map data, 137
+  sites and no unknown block. With the rest of `test_crystal.py` and `test_emerald.py`: 11 passed; Gen 1's
+  `test_field.py` (Blue: Cut, Surf, the spinners, the elevator, Strength; the story's Gen 1 path) 5 passed. No Java
+  or protocol change: Gradle not rerun.
+- **Pods**: every existing pod's host was full (and the auto mode stopped further starts until you allowed them);
+  kb-dev21 (zyqsf4m2xtauom) was created like kb-dev20 (same volume, cpu5c ×4, $0.14/hr): about 12 minutes, stopped.
 
 ### Johto (MG9): G2B notes (2026-10-15)
 

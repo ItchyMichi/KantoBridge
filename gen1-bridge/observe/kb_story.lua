@@ -39,8 +39,9 @@
 -- one starts with a snapshot).
 --
 -- Every block change must be a known one: a swap site's state
--- (kb_swapsites.runtimeIndex) or a Cut the engine recorded (ow.cutBlocks,
--- tall grass included). Anything else is still reported, and counted and
+-- (kb_swapsites.runtimeIndex; MG9: an adapter's own sites, engine.swapSites,
+-- through kb_swapsites.indexSites) or a Cut the engine recorded (ow.cutBlocks,
+-- tall grass included; Gen 2: the World's record of this visit's edits). Anything else is still reported, and counted and
 -- logged as the error code story.unknown_block (map symbol and count only).
 -- Logs show codes, symbols and counts only.
 
@@ -88,7 +89,8 @@ end
 -- opts:
 --   engine     kb_engine instance (storyMap, pristineBlocks, liveBlocks,
 --              liveBlockChanges, cutRecords, cutSwaps, swapField,
---              pristineBlockAt, storyToggles, save, darkMaps, gameVersion)
+--              pristineBlockAt, storyToggles, save, darkMaps, gameVersion;
+--              MG9: swapSites, when the adapter has sites of its own)
 --   SwapSites  the kb_swapsites module
 --   json       kb_json
 --   log        kb_log logger (optional)
@@ -109,8 +111,17 @@ function Story.new(opts)
 
   local function siteIndex()
     if sites == nil then
-      local ok, index, n = pcall(SwapSites.runtimeIndex, engine.swapField(), engine.gameVersion(),
-        engine.pristineBlockAt)
+      -- MG9 (G2C): an adapter with sites of its own (Gen 2's, engine.swapSites) is checked against
+      -- those; else Gen 1's field tables and curated rows
+      local okOwn, own = false, nil
+      if type(engine.swapSites) == "function" then okOwn, own = pcall(engine.swapSites) end
+      local ok, index, n
+      if okOwn and type(own) == "table" then
+        ok, index, n = pcall(SwapSites.indexSites, own)
+      else
+        ok, index, n = pcall(SwapSites.runtimeIndex, engine.swapField(), engine.gameVersion(),
+          engine.pristineBlockAt)
+      end
       if ok then
         sites, counts.sites = index, n or 0
       else

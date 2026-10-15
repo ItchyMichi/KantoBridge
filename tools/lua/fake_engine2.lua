@@ -654,7 +654,54 @@ function FakeEngine2.new(opts)
   E.FieldMoves = {
     JOHTO_BADGES = { "ZEPHYR", "HIVE", "PLAIN", "FOG", "MINERAL", "STORM", "GLACIER", "RISING" },
     KANTO_BADGES = { "BOULDER", "CASCADE", "THUNDER", "RAINBOW", "SOUL", "MARSH", "VOLCANO", "EARTH" },
+    -- :301-333, made up for TILESET_TEST: { after, animation } (0 a tree, 1 the grass swirl)
+    CUT_BLOCKS = { TILESET_TEST = { [0x40] = { 0x41, 0 }, [0x50] = { 0x51, 1 } } },
+    WHIRLPOOL_BLOCKS = { TILESET_TEST = { [0x60] = { 0x61, 0 } } },
   }
+  -- src/core/gen2/Decorations.lua: the actions (:42-63), made-up attribute rows (:113-170: the
+  -- sprite byte is a block for the four maptile kinds), state (:247-256) and tiles (:504-527)
+  E.Decorations = {
+    ACTIONS = {
+      SET_UP_BED = { slot = "bed" }, PUT_AWAY_BED = { slot = "bed", put = true },
+      SET_UP_CARPET = { slot = "carpet" }, SET_UP_PLANT = { slot = "plant" },
+      SET_UP_POSTER = { slot = "poster" }, SET_UP_DOLL = { ornament = true },
+    },
+    ATTRIBUTES = {
+      [0] = { action = nil, sprite = 0 },
+      [1] = { action = "PUT_AWAY_BED", sprite = 0 },
+      [2] = { action = "SET_UP_BED", sprite = 0x1b },
+      [3] = { action = "SET_UP_BED", sprite = 0x1c },
+      [4] = { action = "SET_UP_CARPET", sprite = 0x08 },
+      [5] = { action = "SET_UP_PLANT", sprite = 0x20 },
+      [6] = { action = "SET_UP_POSTER", sprite = 0x1f },
+      [7] = { action = "SET_UP_DOLL", sprite = 0x8e },
+    },
+  }
+  function E.Decorations.state(save)
+    if type(save) ~= "table" then return {} end
+    if not save.decorations then save.decorations = { bed = 2, poster = 6 } end
+    return save.decorations
+  end
+  function E.Decorations.tiles(state)
+    local out = {}
+    local function put(slot, bx, by)
+      local attr = E.Decorations.ATTRIBUTES[state and state[slot]]
+      if attr and attr.sprite and attr.sprite ~= 0 then
+        out[#out + 1] = { x = bx, y = by, block = attr.sprite }
+        return attr.sprite
+      end
+    end
+    put("bed", 0, 2)
+    put("plant", 3, 2)
+    put("poster", 3, 0)
+    local carpet = put("carpet", 0, 0)
+    if carpet then
+      out[#out + 1] = { x = 0, y = 1, block = carpet + 1 }
+      out[#out + 1] = { x = 1, y = 1, block = carpet + 2 }
+      out[#out + 1] = { x = 2, y = 1, block = carpet + 1 }
+    end
+    return out
+  end
   -- src/world/gen2/UnionCenter2F.lua:222-224 (E.unionApplied: the option on)
   E.UnionCenter2F = {}
   function E.UnionCenter2F.isApplied(maps) return E.unionApplied == true and maps ~= nil end
@@ -673,6 +720,8 @@ function FakeEngine2.new(opts)
 
   E.maps = {}
   E.colls = {}
+  -- data.gen2Scripts (RomExtractorGen2.lua:3911-4128): key -> decoded rows, made up by the tests
+  E.scripts = {}
   function E.newMap(id, w, h, o)
     o = o or {}
     E.maps[id] = { id = id, width = w, height = h, blocks = {}, borderBlock = 1, tileset = "TILESET_TEST",
@@ -793,6 +842,11 @@ function FakeEngine2.new(opts)
     if not value and before then self.flags[byte] = row - mask end
     if before ~= (value and true or false) then emit("flag.changed", { name = id, value = value and true or false }) end
   end
+  -- Events:objectVisible (:75-79): an object with no flag (nil or 0xFFFF) always stands
+  function Events:objectVisible(eventFlag)
+    if eventFlag == nil or eventFlag == 0xFFFF then return true end
+    return not self:get(eventFlag)
+  end
   E.Events = Events
 
   -- ---- the World (src/world/gen2/World.lua): the overworld of one map, its
@@ -802,7 +856,8 @@ function FakeEngine2.new(opts)
   World.__index = World
   E.World = World
   function World.new(mapId, cx, cy, facing, save)
-    local w = setmetatable({ game = E.game, npcs = {}, blockEdits = {}, mapSetup = nil, pendingWarp = nil,
+    local w = setmetatable({ game = E.game, npcs = {}, blockEdits = {}, objectMasks = {}, maskScripted = {},
+                             mapSetup = nil, pendingWarp = nil,
                              battleActive = nil, moveState = nil, waitButton = nil, playerState = "normal",
                              flashUsed = false, pendingSceneScript = false, vmRunning = false, clockHour = 12,
                              heldDir = nil }, World)
@@ -811,18 +866,148 @@ function FakeEngine2.new(opts)
     w:setMap(mapId, cx, cy, facing)
     return w
   end
+  -- setMap (:10134-10354): the last visit's block edits put back (restoreBlocks, :10159), a new Map
+  -- object (:10236), the object masks (loadObjectMasks), the unmasked people, then the map's
+  -- MAPCALLBACK_TILES (E.tileCallbacks[map]: functions of the World, :10292)
   function World:setMap(mapId, cx, cy, facing)
+    self:restoreBlocks()
     self.map = Map.new(E.maps[mapId])
     self.player.cellX, self.player.cellY, self.player.targetX, self.player.targetY = cx, cy, cx, cy
     self.player.moving, self.player.progress = false, 0
     if facing then self.player.facing = facing end
+    self:loadObjectMasks()
+    self:rebuildPeople()
+    for _, cb in ipairs(E.tileCallbacks[mapId] or {}) do cb(self) end
+  end
+  -- the unmasked people of the map (rebuildPeople's result)
+  function World:rebuildPeople()
+    local mapId = self.map.id
     self.npcs = {}
     for _, n in ipairs(E.npcDefs[mapId] or {}) do
-      self.npcs[#self.npcs + 1] = { def = n.def, id = mapId .. "_obj_" .. n.def.index, mapId = mapId, cellX = n.x,
-                                   cellY = n.y, facing = n.facing or "down", moving = false, targetX = n.x,
-                                   targetY = n.y, progress = 0 }
+      if self.objectMasks[self:objectMaskKey(n.def, n.def.index)] ~= true then
+        self.npcs[#self.npcs + 1] = { def = n.def, id = mapId .. "_obj_" .. n.def.index, mapId = mapId, cellX = n.x,
+                                     cellY = n.y, facing = n.facing or "down", moving = false, targetX = n.x,
+                                     targetY = n.y, progress = 0, hidden = n.hidden }
+      end
     end
-    self.blockEdits = {}
+  end
+  -- who stands where (:8146-8215): the clock's time of day, an object's hour window, the masks
+  local MORN_MASK, DAY_MASK, NITE_MASK = 1, 2, 4
+  function World:clockTimeMask()
+    local hour = self:hour()
+    if hour >= 4 and hour < 10 then return MORN_MASK end
+    if hour >= 10 and hour < 18 then return DAY_MASK end
+    return NITE_MASK
+  end
+  function World:objectTimeVisible(obj)
+    local hours = obj and obj.hours
+    if not hours then return true end
+    local h1 = hours[1] or -1
+    local h2 = hours[2] or -1
+    if h1 == -1 then
+      if h2 == -1 then return true end
+      local mask = self:clockTimeMask()
+      return h2 % (mask * 2) >= mask
+    end
+    if h1 == h2 then return true end
+    local hour = self:hour()
+    if h1 < h2 then return hour >= h1 and hour <= h2 end
+    return hour >= h1 or hour <= h2
+  end
+  function World:objectMaskKey(obj, index)
+    return string.format("%s:%d", self.map.id, (obj and obj.index) or index or 0)
+  end
+  function World:setObjectMask(obj, index, masked)
+    local key = self:objectMaskKey(obj, index)
+    self.objectMasks[key] = masked and true or false
+    self.maskScripted[key] = true
+  end
+  function World:loadObjectMasks(opts)
+    opts = opts or {}
+    local scripted = (opts.keepScripted and self.maskScripted) or {}
+    local masks = opts.keepScripted and (self.objectMasks or {}) or {}
+    for index, obj in ipairs(self.map.def.objects or {}) do
+      local key = self:objectMaskKey(obj, index)
+      if not scripted[key] then
+        masks[key] = not (self.events:objectVisible(obj.eventFlag) and self:objectTimeVisible(obj))
+      end
+    end
+    self.objectMasks, self.maskScripted = masks, scripted
+  end
+  -- appear / disappear (:2003-2035, :4058-4090): objectId is the object's index + 1
+  function World:appearObject(objectId)
+    local obj = self.map.def.objects[objectId - 1]
+    if not obj then return end
+    if obj.eventFlag and obj.eventFlag ~= 0xFFFF then self.events:set(obj.eventFlag, false) end
+    self:setObjectMask(obj, objectId - 1, false)
+    self:rebuildPeople()
+  end
+  function World:disappearObject(objectId)
+    local obj = self.map.def.objects[objectId - 1]
+    if not obj then return end
+    self:setObjectMask(obj, objectId - 1, true)
+    if obj.eventFlag and obj.eventFlag ~= 0xFFFF then self.events:set(obj.eventFlag, true) end
+    self:rebuildPeople()
+  end
+  -- the block edits (:2259-2335, :5844-5875, :5943-5958): the original of each edited block kept
+  -- until the next load; world.block_replaced after each replaceBlock (changemapblocks raises none)
+  function World:replaceBlock(index, blockId)
+    local map = self.map
+    local blocks = map.def.blocks
+    if not blocks[index] then return false end
+    local edits = self.blockEdits[map.id]
+    if not edits then
+      edits = {}
+      self.blockEdits[map.id] = edits
+    end
+    if edits[index] == nil then edits[index] = blocks[index] end
+    blocks[index] = blockId
+    local zero = index - 1
+    emit("world.block_replaced", { mapId = map.id, bx = zero % map.width, by = math.floor(zero / map.width),
+                                   block = blockId, index = index })
+    return true
+  end
+  function World:changeBlock(bx, by, blockId)
+    local map = self.map
+    if bx < 0 or by < 0 or bx >= map.width or by >= map.height then return false end
+    return self:replaceBlock(by * map.width + bx + 1, blockId)
+  end
+  function World:changeMapBlocks(bank, address)
+    local map = self.map
+    local blocks = map.def.blocks
+    local src, offset
+    for _, d in pairs(E.maps) do
+      local bd = d.blockdata
+      if bd and bd.bank == bank and address >= bd.address and address < bd.address + #d.blocks then
+        src, offset = d.blocks, address - bd.address
+      end
+    end
+    local count = map.width * map.height
+    if not src or offset + count > #src then return false end
+    local run = {}
+    for i = 1, count do run[i] = src[offset + i] end
+    local edits = self.blockEdits[map.id] or {}
+    self.blockEdits[map.id] = edits
+    for i = 1, count do
+      if edits[i] == nil then edits[i] = blocks[i] end
+      blocks[i] = run[i]
+    end
+    return true
+  end
+  function World:restoreBlocks()
+    for mapId, edits in pairs(self.blockEdits) do
+      local blocks = E.maps[mapId] and E.maps[mapId].blocks
+      if blocks then
+        for index, original in pairs(edits) do blocks[index] = original end
+      end
+      self.blockEdits[mapId] = nil
+    end
+  end
+  -- the bedroom's TILES callback (:7621-7631)
+  function World:toggleMaptileDecorations()
+    for _, t in ipairs(E.Decorations.tiles(E.Decorations.state(self.game.save))) do
+      self:changeBlock(t.x, t.y, t.block)
+    end
   end
   function World:npcAt(cx, cy)
     for _, n in ipairs(self.npcs) do
@@ -937,19 +1122,26 @@ function FakeEngine2.new(opts)
   -- defs, RomExtractorGen2.lua:1321-1350: index, sprite, movement, type,
   -- trainer, itemball, eventFlag)
   E.npcDefs = {}
+  E.tileCallbacks = {}
   function E.addNpc(index, o)
     o = o or {}
     local map = o.map or (E.game.world and E.game.world.map.id) or "TEST_TOWN"
     E.npcDefs[map] = E.npcDefs[map] or {}
     local def = { index = index, sprite = o.sprite or "SPRITE_TEST_YOUNGSTER", spriteId = 1,
-                  movement = o.movement or 0x05, type = o.type or 0, trainer = o.trainer, itemball = o.itemball }
-    local rec = { def = def, x = o.x, y = o.y, facing = o.facing }
+                  movement = o.movement or 0x05, type = o.type or 0, trainer = o.trainer, itemball = o.itemball,
+                  eventFlag = o.eventFlag, hours = o.hours, scriptKey = o.scriptKey, x = o.x, y = o.y }
+    local rec = { def = def, x = o.x, y = o.y, facing = o.facing, hidden = o.hidden }
     table.insert(E.npcDefs[map], rec)
+    if E.maps[map] then E.maps[map].objects[index] = def end
     local w = E.game.world
     if w and w.map.id == map then
-      w.npcs[#w.npcs + 1] = { def = def, id = map .. "_obj_" .. index, mapId = map, cellX = o.x, cellY = o.y,
-                              facing = o.facing or "down", moving = false, targetX = o.x, targetY = o.y,
-                              progress = 0, hidden = o.hidden }
+      local key = w:objectMaskKey(def, index)
+      w.objectMasks[key] = not (w.events:objectVisible(def.eventFlag) and w:objectTimeVisible(def))
+      if not w.objectMasks[key] then
+        w.npcs[#w.npcs + 1] = { def = def, id = map .. "_obj_" .. index, mapId = map, cellX = o.x, cellY = o.y,
+                                facing = o.facing or "down", moving = false, targetX = o.x, targetY = o.y,
+                                progress = 0, hidden = o.hidden }
+      end
     end
     return def
   end
@@ -1006,7 +1198,7 @@ function FakeEngine2.new(opts)
   end
 
   E.game = setmetatable({ generation = 2, input = newInput(), stack = newStack(), phase = "boot", world = nil,
-                          save = nil, data = { gen2Maps = E.maps } }, Game2)
+                          save = nil, data = { gen2Maps = E.maps, gen2Scripts = E.scripts } }, Game2)
   E.game.save = E.newSave() -- the boot skeleton (Game2.lua:1254)
   E.data = E.game.data
 
@@ -1234,6 +1426,8 @@ function FakeEngine2.new(opts)
     ["src.world.gen2.Player"] = E.Player,
     ["src.world.gen2.Map"] = E.Map,
     ["src.world.gen2.FieldMoves"] = E.FieldMoves,
+    ["src.world.gen2.Events"] = E.Events,
+    ["src.core.gen2.Decorations"] = E.Decorations,
     ["src.world.gen2.UnionCenter2F"] = E.UnionCenter2F,
     ["src.world.gen2.Permissions"] = E.Permissions,
     ["src.core.Strings"] = E.Strings,

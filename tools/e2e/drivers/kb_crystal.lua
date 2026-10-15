@@ -42,12 +42,24 @@
 --                   for half a second in PLAYERS_HOUSE_1F, KB_NPC gives the walk
 --                   to a cell beside the nearest person and the step that faces
 --                   them, with that person's cell (for act.interact).
+--   story           (G2C) title_ui's game and walk, then on: in the bedroom
+--                   KB_BEDROOM gives how many blocks its decoration callback
+--                   changed (the World's own record); after Mom's scene KB_EXIT
+--                   the walk to the door to NEW_BARK_TOWN and the presses that
+--                   take it (a mat: one step onto it and one in its direction);
+--                   in NEW_BARK_TOWN, once the field stands idle, KB_LAB the
+--                   walk into ELMS_LAB; there, once Elm's scene is over and the
+--                   field stands idle, KB_BALL the walk to a cell beside a Poke
+--                   Ball on the table, the step that faces it, its cell and
+--                   index; KB_STARTER once flag 26 (EVENT_GOT_A_POKEMON_FROM_ELM)
+--                   is set, with whether that ball's object is masked now.
 --   cleanup         only the clean-up (after a failed run), then quits.
 --
 -- Markers: KB_BOOTED scene= slot= home= precleaned= phase=, KB_SERVING map= x= y= facing= wall= bump=
 -- stairs= into=, KB_SAVED slot= ok=, KB_TITLE slot= hasSave=, KB_SPEECH texts= choices= gender= names=
 -- screens=, KB_FIELD map= x= y= clock= stairs= into=, KB_INITCLOCK, KB_DAYWHEEL seen= frames=, KB_NPC map= path=
--- face= x= y= index=, KB_CLEANED deleted= active=, KB_QUIT sessions= code=;
+-- face= x= y= index=, KB_BEDROOM edits= differ=, KB_EXIT path= into=, KB_LAB path= into=, KB_BALL path= face= x=
+-- y= index=, KB_STARTER flag= masked=, KB_CLEANED deleted= active=, KB_QUIT sessions= code=;
 -- KB_FAIL <reason> on a timeout. Slot numbers, map symbols, cell numbers, directions, booleans and counts only
 -- (the speech's text and the names are never printed).
 --
@@ -67,12 +79,16 @@ local SECONDS_LIMIT = tonumber(os.getenv("KB_DRIVER_SECONDS") or "") or (300 + E
 local DATASET_MEMO = tonumber(os.getenv("KB_DATASET_MEMO") or "") or 0
 local LABEL = "KB_CRYSTAL_TEST"
 local HOUSE, DOWNSTAIRS = "PLAYERS_HOUSE_2F", "PLAYERS_HOUSE_1F"
+-- the story scene (G2C): the town, the lab, the starters' balls, the flag the starter's script sets (the same
+-- number on Gold and Crystal, PROGRESS.md G2-S4)
+local TOWN, LAB, BALL_SPRITE, STARTER_FLAG = "NEW_BARK_TOWN", "ELMS_LAB", "SPRITE_POKE_BALL", 26
 
 local SaveData = require("src.core.SaveData")
 local GameVersion = require("src.core.GameVersion")
 local okSave, Save = pcall(require, "src.core.gen2.Save")
 local okTB, TextBox = pcall(require, "src.render.TextBox")
 local okCB, ChoiceBox = pcall(require, "src.ui.ChoiceBox")
+local okPerm, Permissions = pcall(require, "src.world.gen2.Permissions")
 
 local function word(v) return (tostring(v):gsub("[^%w_.:+%-]", "?")) end
 local function num(id) return tonumber(tostring(id):match("^slot(%d+)$")) or 0 end
@@ -262,6 +278,40 @@ local function walks(w)
   return wall, bump, stairs, into
 end
 
+-- The walk to the nearest warp leading to `dest` and the presses that take it from the cell beside it: one step
+-- onto a door, stairs or a pad; onto a mat (COLL_WARP_CARPET_*) a step, then a press in the mat's direction
+-- (World:checkCarpetWhileStanding, src/world/gen2/World.lua:10842-10854; Permissions.carpetDirection,
+-- src/world/gen2/Permissions.lua:309-318).
+local LETTER = { up = "U", down = "D", left = "L", right = "R" }
+local function warpWalk(w, dest)
+  local m = mapFacts(w)
+  local x, y = w.player.cellX, w.player.cellY
+  local best
+  for _, wp in ipairs(type(w.map.def) == "table" and w.map.def.warps or {}) do
+    local tx, ty = tonumber(wp.x), tonumber(wp.y)
+    if wp.destMap == dest and tx and ty then
+      local step
+      local path = walkTo(m, x, y, function(cx, cy)
+        for _, d in ipairs(DIRS) do
+          if cx + d[2] == tx and cy + d[3] == ty then
+            step = d[1]
+            return true
+          end
+        end
+        return false
+      end)
+      if path and (best == nil or #path < #best.path) then
+        local okC, coll = pcall(w.map.cellCollision, w.map, tx, ty)
+        local mat = okC and okPerm and type(Permissions.carpetDirection) == "function"
+          and Permissions.carpetDirection(coll) or nil
+        best = { path = path, into = step .. (mat and LETTER[mat] or "") }
+      end
+    end
+  end
+  if best == nil then return nil end
+  return best.path, best.into
+end
+
 -- ---------------------------------------------------------------- Oak's speech (title_new)
 
 -- NEW GAME's intro is under way: the boot phase with Oak's speech on the stack (Game2:showOakSpeech,
@@ -324,12 +374,16 @@ end
 
 -- The walk to a free cell beside the nearest visible person of the map, the step that faces them, and their
 -- cell and object index (World.npcs, src/world/gen2/World.lua; the follower left out).
-local function npcWalk(w)
+local function spriteOf(n)
+  if type(n.spriteDef) == "table" and type(n.spriteDef.id) == "string" then return n.spriteDef.id end
+  return n.def.sprite
+end
+local function npcWalk(w, sprite)
   local m = mapFacts(w)
   local people = {}
   for _, n in ipairs(w.npcs or {}) do
     if type(n) == "table" and n.cellX and n.cellY and not n.follower and not n.hidden and n.visible ~= false
-        and type(n.def) == "table" and tonumber(n.def.index) then
+        and type(n.def) == "table" and tonumber(n.def.index) and (sprite == nil or spriteOf(n) == sprite) then
       people[key(n.cellX, n.cellY)] = n
     end
   end
@@ -349,6 +403,53 @@ end
 
 local ui = { field = false, idle = 0, downstairs = false, npcPrinted = false, wheelSeen = 0, wheelFrames = 0,
              wheelRun = 0, wheelKey = nil, downTexts = 0, downKey = nil }
+-- the story scene: idle frames per map, the lab's text boxes, what was printed, the ball taken
+local story = { idle = 0, idleMap = nil, labTexts = 0, labKey = nil, lab = false, ball = nil, starter = false }
+
+-- The bedroom's decoration callback, from the World's own record of the visit's edits (blockEdits: index -> the
+-- block before, World:replaceBlock, src/world/gen2/World.lua:5844-5875): edited blocks, and how many differ now.
+local function printBedroom(w)
+  local edits = type(w.blockEdits) == "table" and w.blockEdits[HOUSE] or {}
+  local n, differ = 0, 0
+  for i, original in pairs(edits) do
+    n = n + 1
+    if w.map.def.blocks[i] ~= original then differ = differ + 1 end
+  end
+  print(("KB_BEDROOM edits=%d differ=%d"):format(n, differ))
+end
+
+-- The story scene past Mom: the town, the lab, the ball, the flag (counts, cells and map symbols only).
+local function watchStory(game)
+  local w = game.world
+  if not (w and w.map) then return end
+  if w.map.id == LAB and topName(game) == "TextBox" then
+    local t = topState(game)
+    if story.labKey ~= t then story.labKey, story.labTexts = t, story.labTexts + 1 end
+  end
+  if story.ball and not story.starter and w.events and w.events:get(STARTER_FLAG) then
+    story.starter = true
+    local masked = type(w.objectMasks) == "table" and w.objectMasks[("%s:%d"):format(LAB, story.ball)] == true
+    print(("KB_STARTER flag=%d masked=%s"):format(STARTER_FLAG, tostring(masked)))
+  end
+  if not fieldReady(game) then
+    story.idle = 0
+    return
+  end
+  if story.idleMap ~= w.map.id then story.idleMap, story.idle = w.map.id, 0 end
+  story.idle = story.idle + 1
+  if story.idle < 30 then return end
+  if w.map.id == TOWN and not story.lab then
+    story.lab = true
+    local path, into = warpWalk(w, LAB)
+    print(("KB_LAB path=%s into=%s"):format(word(path == "" and "-" or (path or "none")), word(into or "none")))
+  elseif w.map.id == LAB and story.labTexts > 0 and not story.ball then
+    local path, face, n = npcWalk(w, BALL_SPRITE)
+    story.ball = n and tonumber(n.def.index) or -1
+    print(("KB_BALL path=%s face=%s x=%s y=%s index=%s"):format(word(path == "" and "-" or (path or "none")),
+      word(face or "none"), word(n and n.cellX or "none"), word(n and n.cellY or "none"),
+      word(n and n.def.index or "none")))
+  end
+end
 local function watchUi(game)
   local name = topName(game)
   -- Mom's scene: a coord event in front of the stairs (the test walks onto it); its text boxes are counted so the
@@ -382,6 +483,7 @@ local function watchUi(game)
   if not ui.field and w.map.id == HOUSE then
     ui.field = true
     printField(w, game.save and game.save.rtc)
+    if SCENE == "story" then printBedroom(w) end
   end
   if w.map.id == DOWNSTAIRS then
     ui.idle = ui.idle + 1
@@ -392,6 +494,10 @@ local function watchUi(game)
       print(("KB_NPC map=%s path=%s face=%s x=%s y=%s index=%s"):format(DOWNSTAIRS,
         word(path == "" and "-" or (path or "none")), word(face or "none"), word(n and n.cellX or "none"),
         word(n and n.cellY or "none"), word(n and n.def.index or "none")))
+      if SCENE == "story" then
+        local exit, into = warpWalk(w, TOWN)
+        print(("KB_EXIT path=%s into=%s"):format(word(exit == "" and "-" or (exit or "none")), word(into or "none")))
+      end
     end
   else
     ui.idle = 0
@@ -436,7 +542,7 @@ return function(game)
           num(homeRef), precleaned, word(game.phase)))
         if SCENE == "field" or SCENE == "title_continue" then
           phase = "field"
-        elseif SCENE == "title_new" or SCENE == "title_ui" then
+        elseif SCENE == "title_new" or SCENE == "title_ui" or SCENE == "story" then
           if game.phase == "play" then pcall(game.returnToTitle, game) end
           waitUntil = love.timer.getTime() + 1
           phase = "title"
@@ -481,8 +587,10 @@ return function(game)
           print(("KB_SAVED slot=%d ok=%s"):format(num(active()), word(ok and hasSave())))
         end
       end
-      -- title_ui (G2B): nothing answered here; the clock never in the speech, the walks once the field is up
-      if SCENE == "title_ui" then watchUi(game) end
+      -- title_ui (G2B): nothing answered here; the clock never in the speech, the walks once the field is up;
+      -- story (G2C): the same, then the town, the lab and the starter
+      if SCENE == "title_ui" or SCENE == "story" then watchUi(game) end
+      if SCENE == "story" and ui.npcPrinted then watchStory(game) end
       -- title_new: Oak's speech after region.start, answered until the new game stands in the field
       if SCENE == "title_new" and introRunning(game) then
         answerSpeech(game, frame)
