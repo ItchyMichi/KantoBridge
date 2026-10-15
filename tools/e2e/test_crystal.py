@@ -659,6 +659,94 @@ async def _battles(port, facts, running):
     return report
 
 
+ROUTE_UID = "3c4d5e6f-7081-4a92-8ba3-c4d5e6f70819"
+ROUTE_MAP = "KB_ROUTE_KANTO_JOHTO_TEST_TO"
+CHERRYGROVE = PREFIX + "CHERRYGROVE_CITY"
+
+
+async def _route(port, serving):
+    """G2H: the Johto end of the test pass on the real engine. The driver stands the hidden player on the exit cell
+    (Cherrygrove City's, gen1-bridge/data/routes.json's kanto_johto_test); the test walks the clearing into the route
+    map (a script warp onto x1), gives an item and fights a zone trainer there as the server would (route.give,
+    route.battle, answered as Minecraft would), finds the lower row closed, goes home through A, then parks the game
+    and resumes it onto the route map."""
+    x, y = int(serving["x"]), int(serving["y"])
+    mc, ok, snap, status = await connect(port)
+    report = {"hello": (ok.get("game"), ok.get("family"))}
+    assert (snap["player"]["map"], snap["player"]["x"], snap["player"]["y"]) == (CHERRYGROVE, x, y), snap["player"]
+    # the driver's Pokemon: confirmed with a party.sync when the bridge offers it as a gift
+    await asyncio.sleep(2)
+    give = next((m["data"] for m in mc.received if m["type"] == "party.give"), None)
+    report["give"] = None if give is None else give.get("source")
+    if give is not None:
+        member = {"uid": ROUTE_UID, "give": give["give"], "dex": give["dex"], "level": give["level"],
+                  "moves": give.get("moves") or [33], "hp": 30, "maxhp": 30}
+        await mc.send("party.sync", {"party": [member], "box": {"count": 0}})
+    # four steps left through the clearing; the last lands on the trigger
+    since = len(mc.received)
+    for n in range(1, 5):
+        await mc.send("move.step", {"dir": "left", "n": n})
+        step = await find_or_wait(mc, ("player.pos", "player.blocked"), 20, since, lambda m, n=n: m["data"].get("n") == n)
+        assert step["type"] == "player.pos", (n, step["data"])
+    arrive = (await find_or_wait(mc, "warp", 60, since, lambda m: m["data"]["phase"] == "arrive"))["data"]
+    report["in"] = (arrive["kind"], arrive["to"])
+    assert arrive["kind"] == "script" and arrive["to"] == {"map": ROUTE_MAP, "x": 1, "y": 0, "facing": "right"}, report
+    await asyncio.sleep(1)
+    # a ball's item, as the server gives it: the bag, then the found line (a text box, advanced)
+    since = len(mc.received)
+    await mc.send("route.give", {"route": "kanto_johto_test", "id": "test-ball-1", "item": "POTION"})
+    kinds, _, found = await _answer_ui(mc, since, 60, until=lambda m: m["type"] == "route.result"
+                                       and m["data"].get("id") == "test-ball-1")
+    report["give_result"] = (found["data"], _counts(kinds))
+    assert found["data"] == {"op": "give", "ok": True, "route": "kanto_johto_test", "id": "test-ball-1"}, report
+    # a zone trainer: Crystal's YOUNGSTER with the request's party, held for Cobblemon, won there
+    since = len(mc.received)
+    await mc.send("route.battle", {"route": "kanto_johto_test", "id": "test-trainer-1", "class": "YOUNGSTER",
+                                   "party": [{"species": "PIDGEY", "level": 4}, {"species": "SENTRET", "level": 5}]})
+    _, _, found = await _answer_ui(mc, since, 60, until=lambda m: m["type"] == "battle.start" or (
+        m["type"] == "route.result" and m["data"].get("id") == "test-trainer-1"))
+    assert found["type"] == "battle.start", found["data"]
+    start = found["data"]
+    report["battle"] = (start["kind"], start["trainer"]["cls"], [(m["dex"], m["level"]) for m in start["team"]])
+    assert start["trainer"]["cls"] == "YOUNGSTER" and [(m["dex"], m["level"]) for m in start["team"]] == [(16, 4), (161, 5)], report
+    since = len(mc.received)
+    await mc.send("battle.result", {"battle": start["battle"], "outcome": "win"})
+    kinds, _, found = await _answer_ui(mc, since, 120, until=lambda m: m["type"] == "route.result"
+                                       and m["data"].get("id") == "test-trainer-1")
+    report["battle_result"] = (found["data"], _counts(kinds))
+    assert found["data"] == {"op": "battle", "ok": True, "route": "kanto_johto_test", "id": "test-trainer-1",
+                             "outcome": "win"}, report
+    await asyncio.sleep(1)
+    # the lower row is closed; the step onto A is the way back, facing the town
+    since = len(mc.received)
+    await mc.send("move.step", {"dir": "down", "n": 10})
+    wall = await find_or_wait(mc, ("player.blocked", "player.pos"), 20, since, lambda m: m["data"].get("n") == 10)
+    report["down"] = (wall["type"], wall["data"].get("reason"))
+    assert wall["type"] == "player.blocked", report
+    await mc.send("move.step", {"dir": "left", "n": 11})
+    back = (await find_or_wait(mc, "warp", 60, since, lambda m: m["data"]["phase"] == "arrive"))["data"]
+    report["back"] = back["to"]
+    assert back["to"] == {"map": CHERRYGROVE, "x": x - 3, "y": y, "facing": "right"}, report
+    await asyncio.sleep(2)
+    parked = (await mc.request("region.park", {"region": "johto"}, reply_type="act.result", timeout=30))["data"]
+    report["park"] = parked
+    assert parked == {"ok": True, "kind": "park"}, parked
+    resumed = (await mc.request("region.resume", {"region": "johto", "to": {"map": ROUTE_MAP, "x": 1, "y": 0,
+                                                                           "facing": "right"}},
+                                reply_type="act.result", timeout=60))["data"]
+    report["resume"] = resumed
+    assert resumed == {"ok": True, "kind": "resume"}, resumed
+    here = (await mc.request("resync", reply_type="snapshot", timeout=10))["data"]["player"]
+    report["after_resume"] = (here["map"], here["x"], here["y"])
+    assert (here["map"], here["x"], here["y"]) == (ROUTE_MAP, 1, 0), report
+    report["errors"] = errors(mc)
+    report["problems"] = len(mc.conn.problems)
+    assert report["errors"] == [] and report["problems"] == 0, report
+    await mc.send("debug.quit", {"code": 0})
+    await mc.close()
+    return report
+
+
 def _cleanup_run():
     with launch("kb_crystal.lua", game=GAME, extra_env={"KB_TEST_PORT": str(TEST_PORT), "KB_SCENE": "cleanup"},
                 echo=False) as running:
@@ -781,6 +869,22 @@ def test_crystal_battles_the_starter_a_wild_a_trainer_and_the_rival():
     clean = False
     try:
         result, report = _launch("battles", "KB_TITLE", _battles, 1500, extra=1200, cinema=True, with_run=True)
+        clean = True
+    finally:
+        if not clean:
+            _cleanup_run()
+    assert save_files() == before, "the test slot's files are gone and the rest untouched"
+
+
+@pytest.mark.e2e
+@pytest.mark.timeout(1200)
+def test_crystal_route_the_johto_end_is_walked_in_and_out():
+    _skip_without_crystal()
+    before = save_files()
+    clean = False
+    try:
+        result, report = _launch("route", "KB_SERVING", _route, 600)
+        assert any("routes.installed" in line and "own=true" in line for line in result.lines), "the adapter's end"
         clean = True
     finally:
         if not clean:

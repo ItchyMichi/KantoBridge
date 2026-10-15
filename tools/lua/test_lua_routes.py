@@ -76,7 +76,7 @@ def test_the_shipped_list_has_viridians_zone_at_its_spot():
     b, Routes, js = routes_module()
     from kblua import BRIDGE
     out, problems = Routes.parse(js, (BRIDGE / "data" / "routes.json").read_bytes())
-    assert len(out) == 2 and len(problems) == 0
+    assert len(out) == 3 and len(problems) == 0
     e = out[1]
     assert e.id == b"viridian_forest_zone" and not e.unset and e.mapId == b"KB_ROUTE_VIRIDIAN_FOREST_ZONE"
     assert e[b"from"].map == b"VIRIDIAN_CITY" and e[b"from"].depth == 2
@@ -91,6 +91,15 @@ def test_the_shipped_list_has_viridians_zone_at_its_spot():
     assert (near.map, near.x, near.y, near.facing, near.depth, near.region) == (b"VIRIDIAN_CITY", 6, 4, b"up", 2, b"kanto")
     assert (far.map, far.x, far.y, far.facing, far.depth, far.region) == (b"EM_LITTLEROOT_TOWN", 18, 14, b"down", 2, b"hoenn")
     assert far.games[b"emerald"] and not far.games[b"blue"] and far.music is False, "null: no song"
+    # MG9 G2H: the temporary test pass to Johto, its ends chosen by K1's rules (Viridian City's north-east corner;
+    # Cherrygrove City, Johto's second town, as New Bark Town has no spot six cells clear of everything)
+    j = out[3]
+    assert j.id == b"kanto_johto_test" and j.kind == b"connecting" and not j.unset
+    near, far = j[b"from"], j[b"to"]
+    assert (near.map, near.x, near.y, near.facing, near.depth, near.region) == (b"VIRIDIAN_CITY", 35, 3, b"right", 2, b"kanto")
+    assert (far.map, far.x, far.y, far.facing, far.depth, far.region) == (b"G2_CHERRYGROVE_CITY", 12, 4, b"left", 2, b"johto")
+    assert far.games[b"crystal"] and not far.games[b"blue"] and far.music is False
+    assert [c.decode() for c in lua_list(far.classes)] == ["YOUNGSTER", "BUG_CATCHER", "LASS", "HIKER"]
 
 
 @pytest.mark.parametrize("change,code", [

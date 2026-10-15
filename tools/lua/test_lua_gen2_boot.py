@@ -23,7 +23,7 @@ def test_the_loader_picks_the_gen2_adapter_for_both_engine_ids():
     assert [p.decode() for p in a.b.module("lib/engine/gen2.lua").PARTS.values()] == [
         "gen2/boot", "gen2/observe", "gen2/move", "common/slots", "gen2/saves", "common/savequeue", "gen2/region",
         "common/reliability", "gen2/ui", "gen2/story", "gen2/export", "gen2/party", "gen2/battle", "gen2/bag",
-        "gen2/fieldmoves"]
+        "gen2/fieldmoves", "gen2/routes"]
     gold = Adapter2(game="gold")
     # engineId stays the stub's: the live id (Gold and Silver run the `gs` engine)
     assert (gold.eng.engineId(), gold.eng.family(), gold.eng.gameVersion()) == (b"gs", b"gen2", b"gold")

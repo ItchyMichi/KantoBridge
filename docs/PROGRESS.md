@@ -1477,7 +1477,7 @@ the full suite at the ✔ checkpoints (MG2, MG3, MG5, MG6). Pods run inside your
 | MG6 | One trainer economy | **done** (notes 18, 21); check: `LedgerGameTests` (two regions: adoption, stamped read-back, the crossing's projection, `too_many`/`left`, re-projection on an unknown stamp; a legacy world untouched), `BagGameTests` marked stacks, `LedgerTest`/`LedgerCodecTest`/`ItemsTest`/`BagSetRelayTest`, `test_lua_ledger.py`/`test_lua_bag.py`; the real engine's `bag.set` round trip is your play-test (PLAYTEST.md "MG6") | 2026-10-13 | |
 | MG7 | The second family (Emerald): adapter and export | **done**: the spec [specs/GEN3_BRIDGE_PLAN.md](specs/GEN3_BRIDGE_PLAN.md) (2026-10-14), phases G3A–G3G; **G3A done** (Emerald followable), **G3B done** (Emerald's UI), **G3C done** (story), **G3D done** (export), **G3E done** (builder), **G3F done** (battles, party, bag; the route exit moved to MG8), **G3G done** (the real Hoenn built in Minecraft) ("Several games: MG7") | 2026-10-14 | |
 | MG8 | Hoenn and the pass to it | **done**: the spec [specs/HOENN_PASS_PLAN.md](specs/HOENN_PASS_PLAN.md) (2026-10-14), phases HP1–HP8; the test pass Viridian City ↔ Littleroot Town; Kanto and Hoenn in one world; 20 crossings each way between the real Blue and Emerald ("Several games: MG8") | 2026-10-14 | |
-| MG9 | Johto (Gold, Silver, Crystal): the Gen 2 bridge | **in progress**: [specs/GEN2_BRIDGE_PLAN.md](specs/GEN2_BRIDGE_PLAN.md) (2026-10-15), from a static inspection of the Gen 2 engine (research notes `refs/_research/g2_*.md`); phases G2S and G2A–G2H; decisions J1–J14 with defaults. **G2S done** ("Johto (MG9): the inspection G2S"); **G2A done** (Crystal followable: "Johto (MG9): G2A notes"); **G2B done** (Crystal's UI: "Johto (MG9): G2B notes"); **G2C done** (Crystal's story: "Johto (MG9): G2C notes"); **G2D done** (Crystal's export: "Johto (MG9): G2D notes"); **G2E done** (the builder, 112 families: "Johto (MG9): G2E notes"); **G2F done** (battles, party, bag: "Johto (MG9): G2F notes"); **G2G done** (the real Johto at slot 2; indices and slots on demand: "Johto (MG9): G2G notes"); next G2H | 2026-10-15 | |
+| MG9 | Johto (Gold, Silver, Crystal): the Gen 2 bridge | **in progress**: [specs/GEN2_BRIDGE_PLAN.md](specs/GEN2_BRIDGE_PLAN.md) (2026-10-15), from a static inspection of the Gen 2 engine (research notes `refs/_research/g2_*.md`); phases G2S and G2A–G2H; decisions J1–J14 with defaults. **G2S done** ("Johto (MG9): the inspection G2S"); **G2A done** (Crystal followable: "Johto (MG9): G2A notes"); **G2B done** (Crystal's UI: "Johto (MG9): G2B notes"); **G2C done** (Crystal's story: "Johto (MG9): G2C notes"); **G2D done** (Crystal's export: "Johto (MG9): G2D notes"); **G2E done** (the builder, 112 families: "Johto (MG9): G2E notes"); **G2F done** (battles, party, bag: "Johto (MG9): G2F notes"); **G2G done** (the real Johto at slot 2; indices and slots on demand: "Johto (MG9): G2G notes"); **G2H done** (the Kanto ↔ Johto test pass, crossings between the real Blue and Crystal: "Johto (MG9): G2H notes"): **MG9 complete** | 2026-10-15 | |
 
 ### Several games: notes
 
@@ -2382,6 +2382,39 @@ Crystal is followable (GEN2_BRIDGE_PLAN.md §3–§5, phase G2A), at your "Go" a
 - **Still the stub's** (later phases): the UI (G2B: until then a client gets no Gen 2 screens; the e2e driver answers
   Oak's speech), the story (G2C), the export (G2D: `export.live_copy_failed` is logged once at load), battles (G2F),
   routes (G2H).
+
+### Johto (MG9): G2H notes (2026-10-15)
+
+The pass between Kanto and Johto (GEN2_BRIDGE_PLAN.md §5.11, §8, phase G2H), the plan's last phase, in sequence after
+G2G as you asked.
+
+- **Where the pass's ends are** (K1's rules: reachable on foot, at least six cells from any object, warp, sign or
+  door; a finder ran gen1-bridge's own planners over the real games, `tools/e2e/spot_finder.py`): New Bark Town has no
+  spot that fits (its best is 3 cells from its scripted events), so, as Pallet Town for Hoenn's pass, Johto's second
+  town takes it: **Cherrygrove City (12, 4), west through two blocks of trees**. **Kanto's end is Viridian City (35, 3),
+  east through two blocks to the edge** (its north-east corner; Hoenn's pass keeps the north-west, the Viridian zone
+  the south-east). `routes.json` holds them as `kanto_johto_test`, "TEST PASS"; F7 and an edit move them.
+- **Crystal's route end** (`gen1-bridge/lib/engine/gen2/routes.lua`): unlike Emerald, Crystal can take a route map of
+  our own (spike G2-S3), so its end is Gen 1's shape installed by the adapter in the entry chunk: the clearing planned
+  on Cherrygrove's blocks, the route map registered (the town's record with one block of floor) and the town's blocks
+  patched; the way out and back are the engine's own warps on `world.stepped`; a zone's item goes into the bag with a
+  found line; a zone trainer is the class's first trainer with the zone's party, fought in Cobblemon; a battle lost in
+  Cobblemon whites out as the game does (Crystal had no `route.blackout` until now).
+- **The Johto half** (Java): `ZoneContent.ofGen2` (the town's neighbour pool from the daytime grass slots by name,
+  sprites by class, the ball's, the game's items); built into the three-region world: 1 zone, 4 trainers, 5 balls, its
+  pass and gate house. The synthetic Crystal export gained a pass variant (`synthetic_pass/crystal`), with a JUnit test
+  and a GameTest of the half (its challenge carries Crystal's class and species names).
+- **Found on the real engines and fixed**: a zone act on a pass's far end answered `unknown_route` (the core keys that
+  end `<id>:to`; Hoenn's end had the same gap, never exercised before); an adapter's own act counted as stale while its
+  line waited for your press; Crystal's export listed our route map as one of its maps.
+- **Checks on the pod** (kb-dev25): the Crystal route e2e (into the route map through Cherrygrove's clearing, an item
+  given with its line, a Youngster with the zone's party held for Cobblemon and won, the lower row closed, home through
+  A, a park and a resume onto the route map) and the crossing between the real Blue and Crystal, **20 crossings each
+  way**, every ledger projection (money and POTIONs) landed and read back (40 of 40), the far side home through A and
+  back, both processes together 445 MB at most; no error, no schema problem. As regressions, the Gen 1 zone e2e (`test_wild_routes.py`), Emerald's pass end and the Blue ↔ Emerald crossing (20 each way) passed again. The checkpoint's full check: pytest 2,228 (new `test_lua_gen2_routes.py` 23), JUnit 1,286 (new `Gen2ZoneTest`), all 125 GameTests (new `johtosHalfOfThePassIsBuilt`; the two pass-half GameTests now allow 72,000 ticks: the test server's ticks run unthrottled while the builder plans a zone, 12,000 passed in 5 s on this pod). Both halves are built into `ThreeRegionsE2E`: Kanto (220 maps, no warnings, 3 zones: the Viridian zone and both passes' Kanto halves) and Johto (388 maps, its zone with 4 trainers, 5 balls and the pass), every build gate passing.
+- **Pods**: every older pod's host was full and 4-vCPU stock was gone in the volume's data centre, so kb-dev25
+  (90jwz6qj6f4xbp, cpu5m ×2, 16 GB, $0.13/hr) ran it: about 50 minutes, stopped.
+- **Not made**: a video of the pass (the plan's "if you want one"): say so and I'll film it.
 
 ### Johto (MG9): G2G notes (2026-10-15)
 

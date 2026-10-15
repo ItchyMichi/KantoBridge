@@ -94,13 +94,17 @@ class Rig:
     "ok", "missing" (open fails) or "broken" (it reads nothing). ``loader`` (fake_loader's
     keywords) puts a stand-in mod loader in mods.loaded's payload (the profile plan)."""
 
-    def __init__(self, ready=True, world=None, dataset_mode="ok", loader=None, **kw):
+    def __init__(self, ready=True, world=None, dataset_mode="ok", loader=None, prepare=None, **kw):
         kw.setdefault("content", CONTENT)
         self.b = Bridge(engine=True, **kw)
         self.E = self.b.engine
         if world is not None:
             self.E.setWorld(self.b.to_lua(world))
         self.E.datasetMode = dataset_mode.encode()
+        # MG9 (G2H): ``prepare(E, b)`` sets the fake up before main.lua's entry chunk runs (a Gen 2 route end is
+        # planned and registered there, on the town as the data holds it)
+        if prepare is not None:
+            prepare(self.E, self.b)
         self.b.run_main()
         if ready:
             self.b.mods_loaded(None if loader is None else self.b.fake_loader(**loader))

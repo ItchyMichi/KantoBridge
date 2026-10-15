@@ -5,8 +5,9 @@ Regenerate it after changing tools/fake_gen1/synth.py or synth3.py (from tools/)
     .venv/Scripts/python.exe -m fake_gen1 --write-bundle ../fabric-bridge/src/gametest/resources/kantobridge/synthetic_bundle --game emerald
     .venv/Scripts/python.exe -m fake_gen1 --write-bundle ../fabric-bridge/src/gametest/resources/kantobridge/synthetic_bundle --game crystal
     .venv/Scripts/python.exe -m fake_gen1 --write-bundle ../fabric-bridge/src/gametest/resources/kantobridge/synthetic_pass --game emerald --variant pass
+    .venv/Scripts/python.exe -m fake_gen1 --write-bundle ../fabric-bridge/src/gametest/resources/kantobridge/synthetic_pass --game crystal --variant pass
 (MG7: red is the Gen 1 world, emerald the synthetic Gen 3 export; MG8: synthetic_pass its town with a Wild Routes end;
-MG9: crystal the synthetic Gen 2 export.)
+MG9: crystal the synthetic Gen 2 export; G2H: its pass variant.)
 """
 from fake_gen1.bundle import write_bundle
 from kb_protocol.paths import REPO_ROOT
@@ -29,6 +30,8 @@ def test_gametest_bundle_is_current(tmp_path):
 
 
 def test_the_pass_variant_is_current(tmp_path):
-    # MG8: the Gen 3 town with a Wild Routes end (synth3.resources(variant="pass")), for the zone tests
+    # MG8: the Gen 3 town with a Wild Routes end (synth3.resources(variant="pass")), for the zone tests; MG9 G2H: the
+    # Gen 2 town's (synth2.resources(variant="pass"))
+    write_bundle(tmp_path, game="crystal", variant="pass")
     fresh = write_bundle(tmp_path, game="emerald", variant="pass").parent
     assert _files(PASS_COPY) == _files(fresh), "stale pass variant: regenerate it with --variant pass (see the docstring)"

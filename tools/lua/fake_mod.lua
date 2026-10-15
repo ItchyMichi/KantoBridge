@@ -200,6 +200,8 @@ function FakeMod.new(opts)
   -- Wild Routes (WR2): full registries (fake_registry.lua) and mod.world
   -- (fake_worldapi.lua) when a test provides them
   if opts.registries then mod.content = opts.registries end
+  -- MG9 (G2H): a Gen 2 fake engine's own registries (maps, tilesets) beside them
+  for name, reg in pairs(opts.content2 or {}) do mod.content[name] = reg end
   mod.world = opts.world
 
   -- Records button calls. When the game has an input with sources (the fake

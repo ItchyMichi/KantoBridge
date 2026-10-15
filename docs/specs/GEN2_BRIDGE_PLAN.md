@@ -411,7 +411,28 @@ by `mod.world:warpTo` into the route map, and the way back is a `warpTo` to the 
 virtual route map) is the fallback. The acts: give = `Bag.add` and a TextBox line; battle = a held
 battle built from the class's first trainer as a template with the request's party; blackout = the engine's whiteout.
 
-## 6. The Gen 2 export (G2D)
+**As built (G2H, 2026-10-15; `GB/lib/engine/gen2/routes.lua`).** As above, with:
+- **Installed in the entry chunk by the adapter** (`routeInstall(zone, content)`: kb_routes now hands the registries
+  over too). The plan is Gen 1's arithmetic on the town's own blocks: the exit block plain walkable ground (no grass,
+  warp, ledge, ice, current or counter), then `depth` blocks whose cells are all walls (no water, no Cut or Headbutt
+  tree), none under a warp, object, bg or coord event. The route map is the town's record with one block of the exit's
+  floor, nothing on it, its map group and number left off (`maps:register`; a slim record if the registry refuses the
+  whole one), then the town's blocks are patched (`maps:patch`; a refused patch removes the route map). A hot reload
+  finds its own route map (`kbRoute`) and plans on the town as it stands. The export bakes the clearing in
+  (`b.routeBlocks`) and leaves our own `KB_*` maps out of `g2map` (the builder places the route map from the `routes`
+  resource).
+- **The steps**: `world.stepped` on a trigger cell queues the engine's own warp to x1 facing right; on A, the warp to
+  the back cell facing the town. The lower row is closed by the core's `movement.collision` wrapper, as on Gen 1. A
+  resume onto the route map is the core's own queued warp (no `routeEnter`).
+- **The acts**: give = `Bag.add` and "<PLAYER> found <ITEM>!" (`Game2:say`); battle = `Trainers.lookup` of the class's
+  first trainer with the request's party as its roster, started with `World:startScriptedBattle` and held for
+  Cobblemon by battle.lua; blackout = the battle tail's whiteout (heal, `HalveMoney`, `GetWhiteoutSpawn` but in the
+  Bug-Catching Contest, `world.blacked_out`, the warp to the spawn point as a MAPSETUP_WARP load).
+- **Found on the real engines**: the core's route acts looked a pass's far end up by the route's id, but kb_routes
+  keys it `<id>:to`, so `route.give`/`route.battle` answered `unknown_route` on any far end (Hoenn's too, untested
+  until now); and an adapter's own act counted as stale (a dead script) while its line waited for the player's press.
+  Both fixed in `act/kb_route.lua`.
+
 
 From the adapter's `exportResources(sink)` (the core caches, hashes and indexes, as for Gen 3); measured first (G2-S8):
 
@@ -547,7 +568,11 @@ measured 3,526 for the blocks the maps use), so 16 families should hold Johto; G
 - **The pass** (J14): `routes.json` gains `kanto_johto_test`, a temporary test pass like Hoenn's: a Kanto corner other
   than the Hoenn test's and a New Bark Town corner, chosen on the pod by HOENN_PASS_PLAN K1's rules (reachable on foot, at
   least six cells from any object, warp, sign or door), depth 2, Gen 2 trainer classes on the Johto half. You move
-  either end later with F7.
+  either end later with F7. **As chosen (G2H)**: New Bark Town has no spot six cells clear of everything (its best is
+  3, beside the Route 29 exit's scripted events), so, as Pallet Town for Hoenn's pass, the second town takes it:
+  **Cherrygrove City (12, 4) facing left**, two blocks into its western trees; Kanto's end is **Viridian City (35, 3)
+  facing right**, its north-east corner, two blocks east to the map's edge (`tools/e2e/spot_finder.py`, drivers
+  `kb_g2spot.lua` and `kb_wildspot.lua`).
 - **The Johto half's content**: `ZoneContent.ofGen2` (pools from the town's connected maps, Gen 2 classes), route
   trainers on the server by Gen 2 class symbols (`ProxyClass`), items by Gen 2 symbols, `LedgerRules.Limits` for Gen 2's
   pockets.
@@ -624,7 +649,7 @@ Every change: schema, PROTOCOL.md, `python -m kb_protocol.catalog --write`, the 
 | **G2E** builder | families raised; `Gen2Planner`, `G2Cells`, `Gen2FrontEnd`, the Gen 2 `MapModel` form, placement, interiors, story cells, art, people, animations, darkness, habitats | JUnit, golden scene, GameTest; the pod's dry run ✔ — **done 2026-10-15** (§7 "As built") |
 | **G2F** battles, party, bag | held battles, party sync, gifts, trades, Day-Care and eggs, bag and money, Bill's PC, field moves | lupa; e2e (a wild, a trainer and the first rival battle; the starter) ✔ — **done 2026-10-15** (§5.10 "As built") |
 | **G2G** the real Johto | synthetic bundle, goldens, full suites; Johto built at slot 2 beside Kanto and Hoenn; index and slots by hash; budgets | full suite ✔; build gates ✔ — **done 2026-10-15** (§8 "As built") |
-| **G2H** the pass | `kanto_johto_test`; the Gen 2 route end; the Johto half's content; crossings between the real Blue and Crystal (20 each way); PLAYTEST "Johto"; a video if you want one | e2e ✔ |
+| **G2H** the pass | `kanto_johto_test`; the Gen 2 route end; the Johto half's content; crossings between the real Blue and Crystal (20 each way); PLAYTEST "Johto"; a video if you want one | e2e ✔ — **done 2026-10-15** (§5.11 "As built"; no video made: say if you want one) |
 
 For scale: Emerald's seven phases and its pass (MG7, MG8) took about a day of sessions. Gen 2's adapter is closer to
 Gen 1's where it reads the game, but its battles and gifts need more engine seams.

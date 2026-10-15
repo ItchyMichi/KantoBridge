@@ -6,7 +6,7 @@ src/world/gen2/Permissions.lua: 0x00 floor, 0x07 wall, 0x12 cut tree, 0x18 tall 
 water, 0x70 a mat pressed down, 0x71 door, 0x72 ladder, 0x90 counter, 0xA3 a ledge hopped down, 0xB2 a side wall that
 may not be left upward).
 
-    resources()            {(kind, id): data}
+    resources()            {(kind, id): data}; variant "pass" (MG9 G2H): the town with a Wild Routes end
     index(...)             synth.index's shape, game "crystal"
 
 The world: Johto's town (5x4 blocks: trees along the top, a house with its door, a sign, a fence that may not be
@@ -95,6 +95,12 @@ KANTO = [[1, 1],
          [1, 2]]
 
 GRASS_CHANCES = [30, 60, 80, 90, 95, 99, 100]
+
+# MG9 G2H: the pass variant's town, the same with two rows of trees below it and the clearing the adapter opens baked
+# in (lib/engine/gen2/routes.lua: its exit block (2, 3), facing down, two blocks deep: a copy of the exit's ground)
+PASS_TOWN = TOWN + [[7, 7, 1, 7, 7],
+                    [7, 7, 1, 7, 7]]
+PASS_ROUTE = "test_pass"
 
 
 def _tile(rgb, block, t, varied):
@@ -213,13 +219,15 @@ def _sheet(frames, colour, body):
     return _b64(_png_rgba(16, 16 * frames, bytes(out)))
 
 
-def resources(game=GAME):
+def resources(game=GAME, variant=None):
+    """The synthetic export; variant "pass" (MG9 G2H) gives the town a Wild Routes end (the Johto half of a connecting
+    route), its clearing baked in, a trainer of the zone's class, and the routes resource."""
     res = {}
     anims = []
     tiles, images = tiles_and_pages(anims)
     res[("g2anims", "all")] = {"id": "all", "anims": anims}
-    for variant, data in tiles.items():
-        res[("g2tiles", variant)] = data
+    for vid, data in tiles.items():
+        res[("g2tiles", vid)] = data
     for pid, data in images.items():
         res[("g2image", pid)] = data
     out1 = ("TILESET_TEST_1", "TILESET_TEST")
@@ -299,6 +307,29 @@ def resources(game=GAME):
                     "TEST_ONIX": 95, "TEST_MAGIKARP": 129, "TEST_SENTRET": 161, "TEST_HOOTHOOT": 163},
         "moves": {"TEST_TACKLE": 33, "TEST_POUND": 1},
         "items": {"TEST_POTION": 18, "TEST_POKE_BALL": 5}}
+    if variant == "pass":
+        town = res[("g2map", "G2_TEST_TOWN")]
+        town["h"] = len(PASS_TOWN)
+        town["blocks"] = _blocks(PASS_TOWN)
+        town["objects"] = town["objects"] + [{"lid": 6, "sprite": "SPRITE_TEST_YOUNGSTER", "x": 8, "y": 2, "movement": 6,
+                                              "kind": "trainer", "stays": True}]
+        res[("g2layout", "johto")]["maps"]["G2_TEST_TOWN"]["h"] = len(PASS_TOWN)
+        res[("g2sprite", "SPRITE_TEST_YOUNGSTER")] = {
+            "id": "SPRITE_TEST_YOUNGSTER", "sprite": "SPRITE_TEST_YOUNGSTER", "palette": 0, "w": 16, "h": 96,
+            "frames": 6, "walker": True, "type": "WALKING_SPRITE", "png": _sheet(6, (80, 120, 200), walker)}
+        res[("routes", "all")] = {"version": 2, "routes": [{
+            "id": PASS_ROUTE, "name": "TEST PASS", "kind": "connecting", "theme": "forest",
+            "town": {"map": "G2_TEST_TOWN", "cleared": [[2, 4], [2, 5]], "triggers": [[4, 11], [5, 11]],
+                     "back": {"x": 4, "y": 10, "facing": "up"}},
+            "routeMap": {"id": "KB_ROUTE_TEST_PASS_TO", "width": 1, "height": 1, "a": {"x": 0, "y": 0},
+                         "arrive": {"x": 1, "y": 0, "facing": "right"}},
+            "ends": {"from": {"region": "kanto", "games": ["red", "blue"]}, "to": {"region": "johto", "games": [game]}},
+            "end": "to",
+            "trainers": {"perArea": [1, 2], "rematch": "each_visit", "classes": ["TEST_YOUNGSTER"]},
+            "areas": {"main": [2, 3], "side": 50}, "levels": {"from": "neighbours", "perArea": 1, "maxRise": 3},
+            "dungeon": {"chance": 0, "floors": "by_level"}}]}
+        # the zone's balls draw on the item tiers by name (data/kantobridge/wild_routes/items.json)
+        res[("g2names", "all")]["items"].update({"POTION": 18, "POKE_BALL": 5})
     return res
 
 

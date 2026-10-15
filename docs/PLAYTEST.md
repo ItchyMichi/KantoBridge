@@ -906,3 +906,41 @@ it has been seen in a real client yet.
       (taken from your client's cache, `kantobridge/shapes/docs/` in the game folder; nothing is downloaded). Since
       MG9 G2G the regions' world indices and the slot map download once too (compressed: Hoenn's index is about
       0.25 MB on the wire instead of 2.9 MB) and come from the same cache on a rejoin.
+
+### MG9: Crystal, Johto and its pass (with you)
+
+Everything here ran on pods against your Crystal and Blue imports (PROGRESS.md "Johto (MG9)", phases G2S to G2H); none
+of it has been seen in a real client yet, except the joins' downloads (G2G).
+
+- [ ] **Setup:** gen1-bridge in a Crystal install as in your Blue one (one process per game); `launch.ps1 -DryRun`
+      should list Crystal with its port, then `launch.ps1` starts the games and the dev client with every link. Gold
+      and Silver stay off until one of them is imported and checked.
+- [ ] **Three regions in one world:** Kanto at slot 0, Hoenn at 1, Johto at 2 (`--region johto --slot 2`, or "Add a
+      region" with the Crystal link). Johto (with Crystal's Kanto) places 388 maps in about 4 minutes on a 4-core pod
+      and wants a 6 GB heap: give Minecraft 8 GB if you build in game. Its three warnings are known: Celadon City and
+      Route 7 can't both meet their edges (one seam), and one object in Goldenrod's Pokémon Center stands off its map
+      (left out).
+- [ ] **Following Crystal:** a new game through Oak's speech (the clock is answered with your computer's time), Mom
+      and the weekday wheel, doors, stairs, signs, saving and CONTINUE; a phone call (none rang in the test runs) should
+      show as the game's own text.
+- [ ] **Johto's world:** people as the game draws them, animated water and flowers, dark caves lit by Flash, the
+      bedroom's decorations, Cut trees and whirlpools as story blocks, gates scripts open.
+- [ ] **Battles in Johto:** wild Pokémon in the grass come from Johto's habitats (by the time of day the export was
+      made: daytime); fishing, surfing, Headbutt and Rock Smash encounters are fought in Cobblemon; a trainer's
+      challenge line, the battle in Cobblemon, then its defeat line and the money; the first rival in Cherrygrove can
+      be lost without a whiteout. The Bug-Catching Contest, the catch tutorial and the Battle Tower stay in the hidden
+      game.
+- [ ] **Gifts and your party:** Elm's starter arrives in your Minecraft party (with its gender, shininess and
+      friendship); in-game trades, the Day-Care (two keepers) and eggs work as in Emerald; a held item crosses both
+      ways (by its modern name; balls, apricorns and some medicine exist only in the hidden bag).
+- [ ] **Items:** stones, Rare Candy, TMs and HMs used on a party Pokémon from the hidden bag answer "It won't have any
+      effect" while you're connected (use them in Minecraft); Bill's PC opens Cobblemon's.
+- [ ] **The test pass to Johto** (temporary exits, as Hoenn's): in Viridian City's north-east corner a second clearing
+      opens east through the trees into the pass's Kanto half; its gate house's far doorway crosses to Johto's half,
+      which leads out through a clearing in **Cherrygrove City's west** (New Bark Town has no spot clear enough of its
+      people and scripted events, as Pallet Town had none for Hoenn's pass). Then the same the other way. Zone
+      trainers on the Johto half are Crystal's (Youngster, Bug Catcher, Lass, Hiker) with Pokémon from the routes
+      around Cherrygrove.
+- [ ] **Your exits:** when you want them elsewhere, stand where each clearing should start, face the trees, press F7
+      and send me the map, cell and facing.
+

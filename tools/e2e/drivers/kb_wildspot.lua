@@ -12,6 +12,11 @@
 -- then KB_SPOTS found=<count> w=<cells> h=<cells>, and the driver ends (exit 0).
 -- `edge`: the clearing's last block touches the map's border.
 --
+-- MG9 (G2H, the Kanto end of the Johto test pass; HOENN_PASS_PLAN.md K1's rules): KB_SPOT_FACINGS (a comma
+-- list, default "right,down"), KB_SPOT_CORNER (se, sw, ne or nw, default se: the corner the spots are ranked
+-- by) and KB_SPOT_CLEAR (cells, default 0: the least Manhattan distance from every cell of the spot and its
+-- clearing to any warp, sign, object or hidden item; printed as clear=).
+--
 -- Runs unsandboxed as a POKEPORT_DRIVER coroutine, resumed once per frame
 -- (refs/gen1recomp/main.lua:755-759, :1136-1157). Data safety: prints only
 -- markers, cells, counts and directions -- never a block, a tile or any text.
@@ -23,8 +28,11 @@ local EXTRA_SECONDS = tonumber(os.getenv("KB_DRIVER_EXTRA") or "") or 0 -- the r
 local SECONDS_LIMIT = tonumber(os.getenv("KB_DRIVER_SECONDS") or "") or (300 + EXTRA_SECONDS)
 local MAP = os.getenv("KB_SPOT_MAP") or "VIRIDIAN_CITY"
 local DEPTH = tonumber(os.getenv("KB_SPOT_DEPTH") or "") or 2
-local SHOW = 8
-local FACINGS = { "right", "down" }
+local SHOW = tonumber(os.getenv("KB_SPOT_SHOW") or "") or 8
+local FACINGS = {}
+for f in (os.getenv("KB_SPOT_FACINGS") or "right,down"):gmatch("[a-z]+") do FACINGS[#FACINGS + 1] = f end
+local CORNER = os.getenv("KB_SPOT_CORNER") or "se"
+local CLEAR = tonumber(os.getenv("KB_SPOT_CLEAR") or "") or 0
 local NEIGHBOURS = { { 0, -1 }, { 0, 1 }, { -1, 0 }, { 1, 0 } }
 
 local function word(v)
@@ -101,6 +109,35 @@ local function find(game, Routes)
   local field = game.data.field
   local hidden = field and type(field.hiddenItems) == "table" and field.hiddenItems[MAP] or nil
   local occupied = Routes.occupiedCells(def, hidden)
+  local events = {}
+  for _, list in ipairs({ def.warps, def.signs, def.objects, hidden }) do
+    for _, o in ipairs(type(list) == "table" and list or {}) do
+      if type(o) == "table" and type(o.x) == "number" and type(o.y) == "number" then events[#events + 1] = o end
+    end
+  end
+  -- the least distance from a spot's exit block and clearing to any event
+  local function clearance(bx, by, p)
+    local blocks = { { bx, by } }
+    for _, c in ipairs(p.cleared) do blocks[#blocks + 1] = c end
+    local best = math.huge
+    for _, blk in ipairs(blocks) do
+      for dy = 0, 1 do
+        for dx = 0, 1 do
+          local cx, cy = 2 * blk[1] + dx, 2 * blk[2] + dy
+          for _, o in ipairs(events) do
+            local d = math.abs(o.x - cx) + math.abs(o.y - cy)
+            if d < best then best = d end
+          end
+        end
+      end
+    end
+    return best == math.huge and 999 or best
+  end
+  local function cornerDistance(x, y)
+    local cx = CORNER:find("w") and 0 or (w - 1)
+    local cy = CORNER:find("n") and 0 or (h - 1)
+    return math.abs(cx - x) + math.abs(cy - y)
+  end
   local seen = reached(def, q, w, h)
   local found = {}
   for by = 0, def.height - 1 do
@@ -118,11 +155,12 @@ local function find(game, Routes)
             for k, v in pairs(def) do patched[k] = v end
             patched.blocks = p.blocks
             local q2 = query(Map, patched, ts)
-            if q2 and Routes.check(p, q2) then
+            local clear = q2 and Routes.check(p, q2) and clearance(bx, by, p) or -1
+            if clear >= CLEAR then
               local last = p.cleared[#p.cleared]
               found[#found + 1] = {
-                x = e.from.x, y = e.from.y, facing = facing, order = fi,
-                corner = (w - 1 - e.from.x) + (h - 1 - e.from.y),
+                x = e.from.x, y = e.from.y, facing = facing, order = fi, clear = clear,
+                corner = cornerDistance(e.from.x, e.from.y),
                 edge = last[1] == 0 or last[2] == 0 or last[1] == def.width - 1 or last[2] == def.height - 1,
               }
             end
@@ -139,8 +177,8 @@ local function find(game, Routes)
   end)
   for i = 1, math.min(SHOW, #found) do
     local s = found[i]
-    print(("KB_SPOT rank=%d x=%d y=%d facing=%s corner=%d edge=%s"):format(i, s.x, s.y, s.facing, s.corner,
-      tostring(s.edge)))
+    print(("KB_SPOT rank=%d x=%d y=%d facing=%s corner=%d edge=%s clear=%d"):format(i, s.x, s.y, s.facing, s.corner,
+      tostring(s.edge), s.clear))
   end
   print(("KB_SPOTS found=%d w=%d h=%d depth=%d"):format(#found, w, h, DEPTH))
 end

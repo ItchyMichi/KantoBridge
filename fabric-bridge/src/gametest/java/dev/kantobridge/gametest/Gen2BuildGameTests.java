@@ -1,5 +1,7 @@
 package dev.kantobridge.gametest;
 
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
 import dev.kantobridge.block.EdgeWallBlock;
 import dev.kantobridge.block.KbBlocks;
 import dev.kantobridge.block.LedgeColliderBlock;
@@ -12,11 +14,15 @@ import dev.kantobridge.builder.BuildTask;
 import dev.kantobridge.builder.KantoWorldBuilder;
 import dev.kantobridge.builder.export.BundleException;
 import dev.kantobridge.builder.export.ExportBundle;
+import dev.kantobridge.proto.Envelope;
+import dev.kantobridge.proto.MsgTypes;
 import dev.kantobridge.scene.gen3.QuarterPages;
+import dev.kantobridge.server.ZoneService;
 import dev.kantobridge.world.DataException;
 import dev.kantobridge.world.MapPlacement;
 import dev.kantobridge.world.RegionRecord;
 import dev.kantobridge.world.RegionTable;
+import dev.kantobridge.world.Scale;
 import dev.kantobridge.world.SlotMap;
 import dev.kantobridge.world.StoryCellType;
 import dev.kantobridge.world.WorldIndex;
@@ -48,6 +54,8 @@ public class Gen2BuildGameTests implements FabricGameTest {
 	static final int ORIGIN_X = 6_400_000;
 	static final int ORIGIN_Z = 3_200_000;
 	private static final String CRYSTAL = "kantobridge/synthetic_bundle/crystal/";
+	/** G2H: the town with a Wild Routes end (synth2.resources(variant="pass")). */
+	private static final String CRYSTAL_PASS = "kantobridge/synthetic_pass/crystal/";
 	private static final String EMERALD = "kantobridge/synthetic_bundle/emerald/";
 	private static final String RED = "kantobridge/synthetic_bundle/red/";
 	private static final String JOHTO = "johto";
@@ -135,6 +143,84 @@ public class Gen2BuildGameTests implements FabricGameTest {
 		} catch (IOException e) {
 			// A temp folder; the OS cleans it.
 		}
+	}
+
+	/**
+	 * G2H (docs/specs/GEN2_BRIDGE_PLAN.md §8): the synthetic Johto's town with the Johto half of a connecting route, built
+	 * as region johto: the half in the region's index with its pass to Kanto and its gate house, trainers of the zone's
+	 * class in its sprite with the town's neighbours in their parties, the route map placed at the trailhead, blocks in
+	 * the zone's box, and a trainer's challenge carrying Crystal's class and species names as the hidden game's route end
+	 * takes them (gen1-bridge's gen2 routes part).
+	 */
+	// (G2H: the test server's ticks run unthrottled while the builder plans the zone off its thread -- on a 2-core pod
+	// 12,000 ticks passed in 5 s, before the plan was done -- so the budget is in ticks enough for a minute of planning)
+	@GameTest(template = EMPTY_STRUCTURE, batch = BATCH + "_pass", timeoutTicks = 72000)
+	public void johtosHalfOfThePassIsBuilt(GameTestHelper helper) {
+		Path dir = temp("kantobridge-gen2-pass");
+		BuildTask[] task = {start(helper, dir, CRYSTAL_PASS, JOHTO, SLOT)};
+		helper.startSequence()
+				.thenWaitUntil(() -> waitFor(helper, task))
+				.thenExecute(() -> {
+					helper.assertTrue(task[0].succeeded(), "johto build failed: " + task[0].report().error);
+					WorldIndex index = index(dir, JOHTO);
+					helper.assertTrue(index.zones().size() == 1, "zones: " + index.zones().size());
+					WorldIndex.Zone zone = index.zones().get(0);
+					helper.assertTrue("test_pass".equals(zone.id()) && "KB_ROUTE_TEST_PASS_TO".equals(zone.routeMap()), "zone " + zone.id());
+					helper.assertTrue(zone.pass() != null && "kanto".equals(zone.pass().toRegion()) && "to".equals(zone.pass().end()),
+							"the pass to Kanto");
+					helper.assertTrue(zone.gateHouse() != null, "the gate house");
+					helper.assertTrue(!zone.trainers().isEmpty(), "trainers from the town's neighbours");
+					for (WorldIndex.ZoneTrainer trainer : zone.trainers()) {
+						helper.assertTrue("TEST_YOUNGSTER".equals(trainer.cls()), "class " + trainer.cls());
+						helper.assertTrue("SPRITE_TEST_YOUNGSTER".equals(trainer.sprite()), "sprite " + trainer.sprite());
+						for (WorldIndex.PartyMember member : trainer.party()) {
+							helper.assertTrue(member.species().startsWith("TEST_"), "species " + member.species());
+						}
+					}
+					helper.assertTrue(!zone.balls().isEmpty(), "no item balls");
+					for (WorldIndex.ZoneBall ball : zone.balls()) {
+						helper.assertTrue("POTION".equals(ball.item()) || "POKE_BALL".equals(ball.item()), "ball " + ball.item());
+					}
+					helper.assertTrue(index.map("KB_ROUTE_TEST_PASS_TO") != null, "the route map's placement");
+					challenge(helper, index, zone);
+					int solid = 0;
+					for (int x = zone.x(); x < zone.x() + zone.w(); x += 4) {
+						for (int z = zone.z(); z < zone.z() + zone.d(); z += 4) {
+							for (int y = zone.y() - 2; y <= zone.y() + 2; y++) {
+								if (!helper.getLevel().getBlockState(new BlockPos(x, y, z)).isAir()) {
+									solid++;
+								}
+							}
+						}
+					}
+					helper.assertTrue(solid > 0, "the zone's box is empty");
+				})
+				.thenExecute(() -> delete(dir))
+				.thenSucceed();
+	}
+
+	/** A Johto half's trainer challenges a player in front of it: {@code route.battle} carries Crystal's own names. */
+	private static void challenge(GameTestHelper helper, WorldIndex index, WorldIndex.Zone zone) {
+		WorldIndex.ZoneTrainer trainer = zone.trainers().get(0);
+		MapPlacement routeMap = index.map(zone.routeMap());
+		int cx = trainer.x() + trainer.facing().dx();
+		int cy = trainer.y() + trainer.facing().dy();
+		MockPlayers.with(helper, player -> RelayTap.capture(player, sent -> {
+			player.teleportTo(routeMap.x() + cx * Scale.CELL_BLOCKS + 1.0, zone.y(), routeMap.z() + cy * Scale.CELL_BLOCKS + 1.0);
+			Envelope battle = null;
+			for (long tick = 1_000; tick < 1_100 && battle == null; tick++) {
+				ZoneService.tickPlayer(player, JOHTO, index, tick);
+				battle = sent.stream().filter(m -> m.type().equals(MsgTypes.ROUTE_BATTLE)).findFirst().orElse(null);
+			}
+			helper.assertTrue(battle != null, "no route.battle from " + trainer.id());
+			JsonObject data = battle.data();
+			helper.assertTrue("TEST_YOUNGSTER".equals(data.get("class").getAsString()), "battle class " + data.get("class"));
+			helper.assertTrue(data.getAsJsonArray("party").size() == trainer.party().size(), "battle party");
+			for (JsonElement member : data.getAsJsonArray("party")) {
+				helper.assertTrue(member.getAsJsonObject().get("species").getAsString().startsWith("TEST_"), "battle species");
+			}
+			ZoneService.encounters().forget(player.getUUID());
+		}));
 	}
 
 	@GameTest(template = EMPTY_STRUCTURE, batch = BATCH, timeoutTicks = 9000)

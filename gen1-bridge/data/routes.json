@@ -35,6 +35,25 @@
       "levels": {"from": "neighbours", "perArea": 1, "maxRise": 3},
       "trainers": {"perArea": [1, 2], "rematch": "each_visit"},
       "dungeon": {"chance": 0}
+    },
+    {
+      "id": "kanto_johto_test",
+      "name": "TEST PASS",
+      "kind": "connecting",
+      "theme": "forest",
+      "from": {
+        "region": "kanto", "games": ["red", "blue"], "map": "VIRIDIAN_CITY", "x": 35, "y": 3, "facing": "right", "depth": 2,
+        "classes": ["OPP_YOUNGSTER", "OPP_BUG_CATCHER", "OPP_LASS", "OPP_HIKER"], "music": "Music_Routes1"
+      },
+      "to": {
+        "region": "johto", "games": ["crystal"], "map": "G2_CHERRYGROVE_CITY", "x": 12, "y": 4, "facing": "left", "depth": 2,
+        "classes": ["YOUNGSTER", "BUG_CATCHER", "LASS", "HIKER"],
+        "music": null
+      },
+      "areas": {"main": [2, 3], "side": 50},
+      "levels": {"from": "neighbours", "perArea": 1, "maxRise": 3},
+      "trainers": {"perArea": [1, 2], "rematch": "each_visit"},
+      "dungeon": {"chance": 0}
     }
   ]
 }

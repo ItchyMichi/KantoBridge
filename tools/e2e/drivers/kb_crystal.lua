@@ -76,6 +76,14 @@
 --                   (startScriptedBattle with RIVAL1's first party and
 --                   BATTLETYPE_CANLOSE; KB_RIVAL, then KB_RIVAL_DONE outcome=
 --                   same_map= money= once it has ended).
+--   route           (G2H) driver mode's start, as field, then a Pokemon
+--                   for the party (Mon.new, so a zone trainer can be fought)
+--                   and a warp (World:warpToMapId) onto the exit cell of the
+--                   Wild Routes test pass's Johto end (gen1-bridge/data/
+--                   routes.json's kanto_johto_test, or KB_SPOT_MAP / X / Y /
+--                   FACING); KB_SERVING map= x= y= facing= once the field
+--                   stands there; serves: the test walks the clearing into
+--                   the route map, runs the zone's acts and goes back.
 --   cleanup         only the clean-up (after a failed run), then quits.
 --
 -- Markers: KB_BOOTED scene= slot= home= precleaned= phase=, KB_SERVING map= x= y= facing= wall= bump=
@@ -107,6 +115,10 @@ local HOUSE, DOWNSTAIRS = "PLAYERS_HOUSE_2F", "PLAYERS_HOUSE_1F"
 -- the story scene (G2C): the town, the lab, the starters' balls, the flag the starter's script sets (the same
 -- number on Gold and Crystal, PROGRESS.md G2-S4)
 local TOWN, LAB, BALL_SPRITE, STARTER_FLAG = "NEW_BARK_TOWN", "ELMS_LAB", "SPRITE_POKE_BALL", 26
+-- the route scene (G2H): the test pass's Johto end (the engine's map id, no G2_ prefix), and the party's Pokemon
+local SPOT = { map = os.getenv("KB_SPOT_MAP") or "CHERRYGROVE_CITY", x = tonumber(os.getenv("KB_SPOT_X") or "") or 12,
+               y = tonumber(os.getenv("KB_SPOT_Y") or "") or 4, facing = os.getenv("KB_SPOT_FACING") or "left" }
+local ROUTE_MON, ROUTE_LEVEL = "CHIKORITA", 8
 
 local SaveData = require("src.core.SaveData")
 local GameVersion = require("src.core.GameVersion")
@@ -739,7 +751,7 @@ return function(game)
         if SaveData.setActiveSlot(v, slot) ~= slot then fail("activate_failed") end
         print(("KB_BOOTED scene=%s slot=%d home=%d precleaned=%d phase=%s"):format(word(SCENE), num(slot),
           num(homeRef), precleaned, word(game.phase)))
-        if SCENE == "field" or SCENE == "title_continue" or SCENE == "export" then
+        if SCENE == "field" or SCENE == "title_continue" or SCENE == "export" or SCENE == "route" then
           phase = "field"
         elseif SCENE == "title_new" or SCENE == "title_ui" or SCENE == "story" or SCENE == "battles" then
           if game.phase == "play" then pcall(game.returnToTitle, game) end
@@ -753,7 +765,17 @@ return function(game)
       if fieldReady(game) then
         local w = game.world
         if w.map.id ~= HOUSE then fail("not_in_house") end
-        if SCENE == "export" then
+        if SCENE == "route" then
+          -- G2H: a Pokemon to fight with (the field's boot save has none), then onto the pass's exit cell
+          local okM, Mon = pcall(require, "src.battle.gen2.Mon")
+          local okN, mon = pcall(function() return okM and Mon.new(game.data, ROUTE_MON, ROUTE_LEVEL) or nil end)
+          if not (okN and mon) then fail("no_mon") end
+          if type(Mon.stampOT) == "function" then pcall(Mon.stampOT, game.save, mon) end
+          game.save.party = game.save.party or {}
+          game.save.party[#game.save.party + 1] = mon
+          if not pcall(w.warpToMapId, w, SPOT.map, SPOT.x, SPOT.y, SPOT.facing) then fail("warp") end
+          phase = "spot"
+        elseif SCENE == "export" then
           local n, blocks, skipped, mode = bakeSample(game)
           print(("KB_EXPORT_READY maps=%d blocks=%d skipped=%d mode=%s"):format(n, blocks, skipped, word(mode)))
           phase = "serve"
@@ -772,6 +794,13 @@ return function(game)
           waitUntil = love.timer.getTime() + 1
           phase = "title"
         end
+      end
+    elseif phase == "spot" then
+      local w = game.world
+      if fieldReady(game) and w.map.id == SPOT.map and w.player.cellX == SPOT.x and w.player.cellY == SPOT.y then
+        print(("KB_SERVING map=%s x=%d y=%d facing=%s party=%d"):format(SPOT.map, SPOT.x, SPOT.y,
+          word(w.player.facing), #(game.save.party or {})))
+        phase = "serve"
       end
     elseif phase == "title" then
       local name = topName(game)

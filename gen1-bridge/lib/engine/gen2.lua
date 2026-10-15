@@ -28,11 +28,11 @@ local Gen2 = {}
 -- announced saves, the region acts, reliability; G2B: the UI stack; G2C: the
 -- story (toggles, blocks, swap sites); G2D: the export; G2F: the party (before
 -- the battles, whose attachBridge installs its gift seams; after saves, whose
--- scriptCommand it wraps), the battles, the bag and Bill's PC, the field moves
--- (GEN2_BRIDGE_PLAN.md §11).
+-- scriptCommand it wraps), the battles, the bag and Bill's PC, the field moves;
+-- G2H: the Wild Routes end and the blackout (GEN2_BRIDGE_PLAN.md §11).
 Gen2.PARTS = { "gen2/boot", "gen2/observe", "gen2/move", "common/slots", "gen2/saves", "common/savequeue",
                "gen2/region", "common/reliability", "gen2/ui", "gen2/story", "gen2/export", "gen2/party",
-               "gen2/battle", "gen2/bag", "gen2/fieldmoves" }
+               "gen2/battle", "gen2/bag", "gen2/fieldmoves", "gen2/routes" }
 
 function Gen2.new(opts)
   assert(type(opts) == "table" and opts.checked, "gen2: the loader's pin (opts.checked) is required")

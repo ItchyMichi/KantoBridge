@@ -4,6 +4,8 @@ import dev.kantobridge.builder.export.BundleException;
 import dev.kantobridge.builder.export.ExportBundle;
 import dev.kantobridge.builder.export.ExportEncounters;
 import dev.kantobridge.builder.export.ExportMap;
+import dev.kantobridge.builder.export.G2Data;
+import dev.kantobridge.builder.export.G2Map;
 import dev.kantobridge.builder.export.G3Data;
 import dev.kantobridge.builder.export.G3Map;
 import dev.kantobridge.world.DataReader;
@@ -177,6 +179,88 @@ public record ZoneContent(Map<String, List<Slot>> pools, Map<String, String> cla
 			}
 		}
 		return new ZoneContent(pools, classSprites, ballGfx.isEmpty() ? null : mostUsed(ballGfx), items);
+	}
+
+	/** Gen 2's overworld sprites start so; a class's own is {@code SPRITE_<CLASS>} (SPRITE_YOUNGSTER). */
+	static final String SPRITE_PREFIX = "SPRITE_";
+	/** Gen 2's empty item. */
+	static final String NO_ITEM = "NO_ITEM";
+
+	/**
+	 * The content for zones off Gen 2 towns (MG9 G2H, docs/specs/GEN2_BRIDGE_PLAN.md §8): each town's pool is the daytime
+	 * grass slots of the maps its connections reach, by the engine's slot chances, each named by the names resource's
+	 * species constant (the first name for a dex several share); a class's sprite is {@code SPRITE_<CLASS>} when a map
+	 * places one, else the one most trainers wear; the ball's sprite is the item balls' most used; the items are the names
+	 * resource's (Gen 2's constants carry no prefix).
+	 *
+	 * @param classes the zones' trainer classes
+	 */
+	public static ZoneContent ofGen2(ExportBundle bundle, Collection<String> towns, Collection<String> classes) throws BundleException {
+		G2Data.Encounters encounters = bundle.g2encounters();
+		G3Data.Names names = bundle.g2names();
+		Map<Integer, String> speciesOf = new TreeMap<>();
+		Set<String> items = new java.util.TreeSet<>();
+		if (names != null) {
+			names.species().forEach((name, dex) -> {
+				if (DataReader.SYMBOL.matcher(name).matches()) {
+					speciesOf.merge(dex, name, (a, b) -> a.compareTo(b) <= 0 ? a : b);
+				}
+			});
+			for (String name : names.items().keySet()) {
+				if (!name.equals(NO_ITEM) && DataReader.SYMBOL.matcher(name).matches()) {
+					items.add(name);
+				}
+			}
+		}
+		Map<String, List<Slot>> pools = new TreeMap<>();
+		for (String town : towns) {
+			List<Slot> pool = new ArrayList<>();
+			if (encounters != null && bundle.has("g2map", town)) {
+				// connections in the export's order, so the pool's order (and every pick from it) is stable
+				for (G2Map.Connection connection : bundle.g2map(town).connections()) {
+					G2Data.Grass grass = encounters.grass().get(connection.map());
+					List<G2Data.Slot> slots = grass == null ? null : grass.slots().get("DAY");
+					if (slots == null) {
+						continue;
+					}
+					for (int i = 0; i < slots.size(); i++) {
+						G2Data.Slot slot = slots.get(i);
+						String species = speciesOf.get(slot.dex());
+						if (species != null) {
+							Integer weight = encounters.grassChance(i);
+							pool.add(new Slot(species, slot.dex(), slot.level(), weight == null ? 1 : weight));
+						}
+					}
+				}
+			}
+			pools.put(town, pool);
+		}
+		Map<String, Integer> trainerSprites = new TreeMap<>();
+		Map<String, Integer> ballSprites = new TreeMap<>();
+		Set<String> worn = new java.util.TreeSet<>();
+		for (String id : bundle.ids("g2map")) {
+			for (G2Map.MapObject object : bundle.g2map(id).objects()) {
+				if (object.sprite() == null) {
+					continue;
+				}
+				worn.add(object.sprite());
+				if ("trainer".equals(object.kind())) {
+					trainerSprites.merge(object.sprite(), 1, Integer::sum);
+				} else if ("item".equals(object.kind())) {
+					ballSprites.merge(object.sprite(), 1, Integer::sum);
+				}
+			}
+		}
+		String common = mostUsed(trainerSprites);
+		Map<String, String> classSprites = new HashMap<>();
+		for (String cls : classes) {
+			String own = SPRITE_PREFIX + cls;
+			String sprite = worn.contains(own) ? own : common;
+			if (sprite != null) {
+				classSprites.put(cls, sprite);
+			}
+		}
+		return new ZoneContent(pools, classSprites, ballSprites.isEmpty() ? null : mostUsed(ballSprites), items);
 	}
 
 	/** The key counted most often; ties go to the first in order (the maps are sorted, so the choice is stable). */

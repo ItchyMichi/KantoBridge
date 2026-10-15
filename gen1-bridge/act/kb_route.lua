@@ -72,7 +72,16 @@ function Route.new(opts)
   local counts = { requests = 0, ok = 0, failed = 0, busy = 0, given = 0, full = 0, battles = 0, wins = 0,
                    losses = 0, blackouts = 0, progressSent = 0, stale = 0 }
 
-  local function zoneOf(id) return routes and routes.zones and routes.zones[id] or nil end
+  -- A route's zone in this game: its `from` end (a free-roam zone's only one) is keyed by the route's id, a
+  -- connecting route's `to` end by "<id>:to" (lib/kb_routes.lua); the server names the route only, so the end is
+  -- the one whose route map the hidden player stands on when this game holds both (a test world).
+  local function zoneOf(id, map)
+    local zones = routes and routes.zones
+    if type(zones) ~= "table" or type(id) ~= "string" then return nil end
+    local near, far = zones[id], zones[id .. ":to"]
+    if near and far and map ~= nil and far.mapId == map then return far end
+    return near or far
+  end
 
   -- ------------------------------------------------------------ progress
 
@@ -235,7 +244,7 @@ function Route.new(opts)
   local function start(f, mode, out)
     local r = current
     if r.op ~= "blackout" then
-      local zone = zoneOf(r.route)
+      local zone = zoneOf(r.route, f.map)
       if not (zone and zone.active) then return finish(out, false, "unknown_route") end
       if not f.inGame then return finish(out, false, "not_ingame") end
       if f.map ~= zone.mapId then return finish(out, false, "not_in_zone") end
@@ -373,7 +382,10 @@ function Route.new(opts)
       end
       -- a script that died on an error never calls onDone: once the runner
       -- has stood still for STALE steps, the request settles as it stands
-      if not current.done and not f.runner then
+      -- (MG9: an adapter's own run calls back itself, after its text boxes
+      -- and its battle: its steps count only while the world stands free, so
+      -- a line waiting for its press never ends it)
+      if not current.done and not f.runner and (not current.own or idle(f, mode)) then
         current.stale = (current.stale or 0) + 1
         if current.stale >= Route.STALE then
           current.done = true

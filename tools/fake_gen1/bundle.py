@@ -17,13 +17,13 @@ from .server import BRIDGE_VERSION, ENGINE_VERSION
 
 
 def write_bundle(directory, game="red", variant=None):
-    """variant (MG8, Gen 3 only): "pass", the town with a Wild Routes end (synth3.resources)."""
+    """variant (MG8 Gen 3, MG9 Gen 2): "pass", the town with a Wild Routes end (synth3.resources, synth2.resources)."""
     root = Path(directory) / game
     family = load_games().family(game)
     if family == "gen3":
         resources = synth3.resources(game, variant=variant)
     elif family == "gen2":
-        resources = synth2.resources(game)
+        resources = synth2.resources(game, variant=variant)
     else:
         resources = synth.resources(game)
     index = synth.index(game, ENGINE_VERSION, BRIDGE_VERSION, resources)

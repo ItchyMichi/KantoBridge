@@ -1,0 +1,1 @@
+{"maps":{"G2_TEST_ROUTE":{"h":3,"w":3,"x":1,"y":-3},"G2_TEST_TOWN":{"h":6,"w":5,"x":0,"y":0}},"root":"G2_TEST_TOWN","start":{"map":"G2_TEST_HOUSE","x":1,"y":4},"unit":"blocks"}

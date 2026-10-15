@@ -251,11 +251,11 @@ public final class BuildTask {
 			long zoneStarted = System.nanoTime();
 			ExportRoutes routes = this.bundle.routes();
 			List<String> towns = routes.zones().stream().map(ExportRoutes.Zone::townMap).toList();
-			// MG8: a Gen 3 export's zones take their pools, sprites and items from its g3 resources
+			// MG8: a Gen 3 export's zones take their pools, sprites and items from its g3 resources; MG9 G2H: a Gen 2's from its g2
+			List<String> classes = routes.zones().stream().flatMap(z -> z.classes().stream()).distinct().toList();
 			ZoneContent content = routes.zones().isEmpty() ? ZoneContent.EMPTY
-					: this.bundle.isGen3()
-							? ZoneContent.ofGen3(this.bundle, towns, routes.zones().stream().flatMap(z -> z.classes().stream()).distinct().toList())
-							: ZoneContent.of(this.bundle, towns);
+					: this.bundle.isGen3() ? ZoneContent.ofGen3(this.bundle, towns, classes)
+							: this.bundle.isGen2() ? ZoneContent.ofGen2(this.bundle, towns, classes) : ZoneContent.of(this.bundle, towns);
 			WorldPlan plan = withZones(planned, routes, this.level.getSeed(),
 					() -> VanillaTerrain.of(this.level.getServer().registryAccess(), this.level.getSeed()), originX, originZ, content);
 			long zoneMs = (System.nanoTime() - zoneStarted) / 1_000_000L;

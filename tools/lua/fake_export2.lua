@@ -193,6 +193,9 @@ function FakeExport2.attach(E)
     if WATER[coll] then return 1 end
     return 15
   end
+  -- G2H (CollPermissions.lua:37-47): water and the cells a step may land on, by the same rule
+  function P.isWater(c) return P.of(c) == 1 end
+  function P.isWalkable(c) return P.of(c) == 0 end
   function P.isGrass(c) return c == 0x18 or c == 0x14 end
   function P.isSuperTallGrass(c) return c == 0x14 end
   function P.isEncounterCollision(c) return c == 0x18 or c == 0x14 or c == 0x29 end

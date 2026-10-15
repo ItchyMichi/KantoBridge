@@ -351,9 +351,11 @@ function Export2.install(b)
     local proxy = setmetatable({ tilesets = tilesets, landmarks = data.gen2Landmarks }, { __index = World })
 
     -- ---- variants and maps
+    -- (G2H: our own maps -- a Wild Routes end's route map, registered in data.gen2Maps -- are the builder's to place
+    -- from the routes resource, not the game's maps)
     local ids = {}
     for id in pairs(maps) do
-      if type(id) == "string" and b.ext(id) then ids[#ids + 1] = id end
+      if type(id) == "string" and b.ext(id) and not id:find("^KB_") then ids[#ids + 1] = id end
     end
     sort(ids)
     local variants, variantOf, variantN = {}, {}, {}

@@ -26,13 +26,17 @@ Boot.REQUIRES = {
                                "region", "landmarkIndex", "animLayers", "animRow", "flowerFrameFor",
                                -- G2F: the held battle (battle.lua), the field moves (fieldmoves.lua)
                                "startBattle", "pushBattleTransition", "scriptRunning", "useFieldMove",
-                               "useFieldItem", "fieldContext", "busy" },
+                               "useFieldItem", "fieldContext", "busy",
+                               -- G2H: the zone's battles and the blackout (routes.lua)
+                               "startScriptedBattle", "healParty", "healPoint", "runMapSetup", "warpToSpawn" },
   ["src.world.gen2.Permissions"] = { "isIce", "currentDirection", "doorForcedDirection",
                                      -- G2D: what a COLL byte means (export.lua)
                                      "of", "isGrass", "isSuperTallGrass", "isEncounterCollision", "isWhirlpool",
                                      "isCutTree", "isCuttable", "isHeadbuttTree", "isWaterfall", "isCounter",
                                      "ledgeFacings", "sideBlocks", "neighborBlocks", "isWarpCollision",
-                                     "carpetDirection", "warpFacesDown" },
+                                     "carpetDirection", "warpFacesDown",
+                                     -- G2H: a route's clearing (routes.lua)
+                                     "isWater", "isWalkable" },
   ["src.world.gen2.Player"] = { "scriptFace" },
   ["src.world.gen2.Map"] = { "cellCollision", "inBounds", "warpAt", "isCounterCell" },
   ["src.world.gen2.FieldMoves"] = { "JOHTO_BADGES", "KANTO_BADGES", "CUT_BLOCKS", "WHIRLPOOL_BLOCKS",
@@ -68,6 +72,11 @@ Boot.REQUIRES = {
   ["src.inventory.Bag"] = { "add", "remove", "capacity", "slots" },
   ["src.core.Game2"] = { "usePartyItem", "useFieldItem", "say" },
   ["src.ui.gen2.CenterPcMenu"] = { "choose" },
+  -- G2H: the zone's battles and the blackout (routes.lua)
+  ["src.world.gen2.Trainers"] = { "lookup", "party" },
+  ["src.core.gen2.BugContest"] = { "isActive" },
+  ["src.script.gen2.CallAsm"] = { "run" },
+  ["src.mods.Runtime"] = { "emit" },
 }
 -- The Game2 object's methods (src/core/Game2.lua:292, :312, :374, :1022, :1044).
 Boot.GAME_METHODS = { "newGame", "continueGame", "returnToTitle", "writeSave", "quickSaveAllowed" }

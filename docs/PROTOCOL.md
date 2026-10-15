@@ -727,6 +727,11 @@ compat profile (`hello.ok.compat`: Gen 1 151 and 165, Emerald 386 and 354), appl
   scripted trainer). The answer comes when the script ends, with `outcome` `win`, `lose` or `abort`.
   Reasons: `unknown_route`, `not_ingame`, `not_in_zone`, `unknown_class` (the zone doesn't list the
   class), `bad_party` (a species the game doesn't have), `failed`, `busy`.
+- **An end the adapter runs** (Gen 3 since MG8, Gen 2 since MG9 G2H): `route.give` and `route.battle` name a route,
+  and the zone is that route's end in this game, its far (`to`) end too (when one game holds both, the one whose route
+  map the hidden player stands on). The adapter gives the item with its own found line and starts the battle with the
+  class's first trainer as the template and `party` as its team (by the game's own names), and answers once its
+  lines are over (a line waiting for its press never times out the request).
 - **`route.blackout`** runs the engine's own loss handling anywhere in the game (heal, half the
   money, the warp to the last heal point; its `party.heal` follows the warp's arrival as for any
   blackout). Reasons: `not_ingame`, `busy`, `failed`. (WR6) The server sends it when Cobblemon ends a

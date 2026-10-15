@@ -72,6 +72,15 @@ public final class TestData {
 		return dir;
 	}
 
+	/** MG9 G2H: the synthetic Gen 2 export's town with a Wild Routes end (synth2.resources(variant="pass")). */
+	public static Path syntheticGen2PassBundle() {
+		Path dir = gametestResources().resolve("kantobridge/synthetic_pass/crystal");
+		if (!Files.isRegularFile(dir.resolve("index.json"))) {
+			throw new IllegalStateException("synthetic Gen 2 pass bundle missing");
+		}
+		return dir;
+	}
+
 	/** MG9: the synthetic Gen 2 export's scene (Gen2FrontEnd), build index and shapes. */
 	public static Path goldenG2Scene() {
 		return gametestResources().resolve("kantobridge/golden/synthetic_g2_scene.json");

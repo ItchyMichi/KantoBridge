@@ -25,6 +25,7 @@
 --   E.newSave(), E.slotSave("slot1", save)    a Gen 2 save, one in a slot (what CONTINUE loads)
 --   E.bindMod(FakeMod, mod)                   events and hooks go to that mod object
 --   E.tick()                                  the engine's part of a logic step (after input.step)
+--   E.content                                 G2H: mod.content's maps and tilesets (writes land in the data)
 --
 -- Test switches: E.saveResult (nil: written, "refuse", "error"), E.quickSaveOk
 -- (false: the field can't save), E.unionApplied, E.newGameFails,
@@ -726,7 +727,7 @@ function FakeEngine2.new(opts)
     o = o or {}
     E.maps[id] = { id = id, width = w, height = h, blocks = {}, borderBlock = 1, tileset = "TILESET_TEST",
                    environment = o.environment or "TOWN", palette = o.palette or "PALETTE_AUTO", warps = {},
-                   objects = {}, connections = {} }
+                   objects = {}, connections = {}, blockColl = o.blockColl, group = o.group, map = o.map }
     E.colls[id] = {}
     for i = 1, w * h do E.maps[id].blocks[i] = 1 end
     return E.maps[id]
@@ -758,7 +759,16 @@ function FakeEngine2.new(opts)
   end
   function Map:cellCollision(cx, cy) -- :55-63 (0xff off the map)
     if not self:inBounds(cx, cy) then return 0xff end
-    return (E.colls[self.id] or {})[cellKey(cx, cy)] or 0x00
+    local set = (E.colls[self.id] or {})[cellKey(cx, cy)]
+    if set then return set end
+    -- G2H: a map made with { blockColl = true } reads its blocks' collision in its tileset, as the engine does
+    if self.def.blockColl then
+      local id = self:blockId(math.floor(cx / 2), math.floor(cy / 2))
+      local ts = E.data and E.data.gen2Tilesets and E.data.gen2Tilesets[self.def.tileset]
+      local quad = id ~= 0 and ts and ts.collision and ts.collision[id + 1] or nil
+      return quad and quad[(cy % 2) * 2 + cx % 2 + 1] or 0xff
+    end
+    return 0x00
   end
   function Map:isWalkable(cx, cy) -- :65-68
     return self:inBounds(cx, cy) and WALKABLE[self:cellCollision(cx, cy)] == true
@@ -1610,8 +1620,24 @@ function FakeEngine2.new(opts)
     if not self:pushBattleTransition(battle, opts, pushBattle) then pushBattle() end
     return true
   end
-  -- startScriptedBattle (:7165-7262): a trainer record by class and member, or a scripted wild
+  -- startScriptedBattle (:7165-7262): a trainer record by class and member, or a scripted wild. The engine's
+  -- form takes the record Trainers.lookup made (G2H: the zone battles; wBattleType from scriptVars[3]); the
+  -- tests' older form names the class and member.
   function World:startScriptedBattle(classId, member, onDone, battleType)
+    if type(classId) == "table" then
+      local rec, done = classId, onDone
+      local party = E.Trainers.party(E.data, rec)
+      if #party == 0 then
+        if done then done(nil) end
+        return false
+      end
+      local bt = self.scriptVars and self.scriptVars[3] or nil
+      if self.scriptVars then self.scriptVars[3] = nil end
+      return self:startBattle({ trainer = { class = rec.class, classId = rec.classId, memberId = rec.id,
+                                            name = rec.className .. " " .. tostring(rec.name), party = party,
+                                            baseMoney = rec.baseMoney, winText = "TEST WIN TEXT",
+                                            lossText = "TEST LOSS TEXT" }, battleType = bt }, done)
+    end
     local cls = E.data.trainers.classes[classId]
     local row = cls and cls.trainers[member]
     if not row then
@@ -1804,6 +1830,114 @@ function FakeEngine2.new(opts)
     return s
   end
 
+  -- ---- G2H: a Wild Routes end (lib/engine/gen2/routes.lua) and the blackout. mod.content's maps and tilesets
+  -- over data.gen2Maps and data.gen2Tilesets (src/mods/Schemas.lua:1928-1977: the registry writes into the live
+  -- tables; register refuses an id that exists, a patch replaces lists wholesale), the trainer record
+  -- (src/world/gen2/Trainers.lua:40-91), the whiteout's pieces (World.lua:7084-7105: healParty, HalveMoney,
+  -- GetWhiteoutSpawn, world.blacked_out, the warp to the spawn point as a MAPSETUP_WARP load).
+  -- Switches: E.refuseFullMaps (a map record carrying callbacks is refused: the slim one goes in), E.rejectMaps
+  -- (every maps write throws), E.rejectPatch, E.bugContest, E.spawn ({ map, x, y }). Records: E.contentWrites,
+  -- E.calledAsm, E.mapSetups, E.heals.
+  E.contentWrites, E.calledAsm, E.mapSetups, E.heals = {}, {}, {}, 0
+  local function registryOver(name, tableOf)
+    local r = {}
+    function r.get(_, id)
+      local t = tableOf()
+      return t and t[id] ~= nil and deepCopy(t[id]) or nil
+    end
+    function r.register(_, id, rec)
+      if name == "maps" and E.rejectMaps then error("maps: schema violation", 0) end
+      if name == "maps" and E.refuseFullMaps and type(rec) == "table" and rec.callbacks ~= nil then
+        error("maps: callbacks is not a field", 0)
+      end
+      local t = tableOf()
+      if t[id] ~= nil then error(name .. ": " .. tostring(id) .. " is taken", 0) end
+      t[id] = deepCopy(rec)
+      if name == "maps" then E.colls[id] = E.colls[id] or {} end
+      E.contentWrites[#E.contentWrites + 1] = { registry = name, op = "register", id = id }
+      return true
+    end
+    function r.patch(_, id, fields)
+      if name == "maps" and (E.rejectMaps or E.rejectPatch) then error("maps: schema violation", 0) end
+      local t = tableOf()
+      if t[id] == nil then error(name .. ": no " .. tostring(id), 0) end
+      for k, v in pairs(fields) do t[id][k] = deepCopy(v) end
+      E.contentWrites[#E.contentWrites + 1] = { registry = name, op = "patch", id = id }
+      return true
+    end
+    function r.remove(_, id)
+      local t = tableOf()
+      t[id] = nil
+      E.contentWrites[#E.contentWrites + 1] = { registry = name, op = "remove", id = id }
+      return true
+    end
+    return r
+  end
+  E.content = {
+    maps = registryOver("maps", function() return E.maps end),
+    tilesets = registryOver("tilesets", function() return E.data.gen2Tilesets end),
+  }
+
+  E.Trainers = {}
+  function E.Trainers.lookup(trainerData, class, member)
+    for id, cls in pairs(trainerData and trainerData.classes or {}) do
+      if cls.index == class then
+        local row = cls.trainers and cls.trainers[member]
+        if not row then return nil end
+        return { class = class, classId = id, className = cls.name, member = member, id = row.id, name = row.name,
+                 roster = row.party or {}, baseMoney = cls.baseMoney }
+      end
+    end
+    return nil
+  end
+  function E.Trainers.party(data, entry)
+    local party = {}
+    for _, r in ipairs(entry and entry.roster or {}) do
+      local moves
+      if r.moves and #r.moves > 0 then
+        moves = {}
+        for _, id in ipairs(r.moves) do
+          local def = data.moves and data.moves[id]
+          moves[#moves + 1] = { id = id, pp = def and def.pp or 0, maxPp = def and def.pp or 0 }
+        end
+      end
+      local mon = E.Mon.new(data, r.species, r.level, { moves = moves, item = r.item,
+                                                        dvs = { attack = 9, defense = 8, speed = 8, special = 8 } })
+      if mon then party[#party + 1] = mon end
+    end
+    return party
+  end
+
+  E.BugContest = {}
+  function E.BugContest.isActive(_save) return E.bugContest == true end
+  E.CallAsm = {}
+  function E.CallAsm.run(world, name)
+    E.calledAsm[#E.calledAsm + 1] = name
+    if name == "HalveMoney" then
+      local p = E.game.save.player
+      p.money = math.floor((p.money or 0) / 2)
+    end
+  end
+  E.Runtime = {}
+  function E.Runtime.emit(name, payload) emit(name, payload) end
+  function World:healParty()
+    E.heals = E.heals + 1
+    for _, mon in ipairs(E.game.save.party or {}) do mon.hp = mon.maxHp end
+  end
+  function World:healPoint()
+    local s = E.spawn or { map = "TEST_CENTER", x = 2, y = 3 }
+    return { map = s.map, x = s.x, y = s.y }
+  end
+  function World:warpToSpawn()
+    local t = self:healPoint()
+    self:loadMap(t.map, t.x, t.y, "down", "warp")
+  end
+  function World:runMapSetup(method, load)
+    E.mapSetups[#E.mapSetups + 1] = method
+    if load then load() end
+    return true
+  end
+
   E.modules = {
     ["src.core.Version"] = E.Version,
     ["src.core.GameVersion"] = E.GameVersion,
@@ -1838,6 +1972,11 @@ function FakeEngine2.new(opts)
     ["src.inventory.Bag"] = E.Bag,
     ["src.core.Game2"] = E.Game2,
     ["src.ui.gen2.CenterPcMenu"] = E.CenterPcMenu,
+    -- G2H
+    ["src.world.gen2.Trainers"] = E.Trainers,
+    ["src.core.gen2.BugContest"] = E.BugContest,
+    ["src.script.gen2.CallAsm"] = E.CallAsm,
+    ["src.mods.Runtime"] = E.Runtime,
   }
   -- no ModUI or dataset tables on this fake
   E.ui, E.datasets = nil, nil

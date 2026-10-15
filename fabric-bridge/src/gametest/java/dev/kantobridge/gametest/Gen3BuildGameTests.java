@@ -181,7 +181,9 @@ public class Gen3BuildGameTests implements FabricGameTest {
 	 * trainers' graphic with the town's neighbours in their parties, the route map placed at the trailhead, and blocks in
 	 * the zone's box.
 	 */
-	@GameTest(template = EMPTY_STRUCTURE, batch = BATCH + "_pass", timeoutTicks = 12000)
+	// (G2H: the test server's ticks run unthrottled while the builder plans the zone off its thread -- on a 2-core pod
+	// 12,000 ticks passed in 5 s, before the plan was done -- so the budget is in ticks enough for a minute of planning)
+	@GameTest(template = EMPTY_STRUCTURE, batch = BATCH + "_pass", timeoutTicks = 72000)
 	public void hoennsHalfOfThePassIsBuilt(GameTestHelper helper) {
 		Path dir = temp("kantobridge-gen3-pass");
 		BuildTask[] task = {start(helper, dir, EMERALD_PASS, HOENN, 1)};

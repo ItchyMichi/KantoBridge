@@ -212,6 +212,9 @@ class Bridge:
             mod_opts[b"options"] = self.to_lua(mod_options)
         if content:
             mod_opts[b"content"] = self.to_lua(content)
+        # MG9 (G2H): the Gen 2 fake's maps and tilesets registries (fake_engine2.lua's E.content)
+        if self.family == "gen2" and self.engine is not None:
+            mod_opts[b"content2"] = self.engine.content
         # Wild Routes (WR2): full content registries (fake_registry.lua; ``registries`` is
         # {"records": {registry: {id: record}}, "reject": {registry: True}}) and mod.world
         # (fake_worldapi.lua, on the fake engine)

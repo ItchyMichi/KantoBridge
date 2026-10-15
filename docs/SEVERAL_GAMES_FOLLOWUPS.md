@@ -65,8 +65,9 @@ The multi-game plan ([specs/MULTI_GAME_PLAN.md](specs/MULTI_GAME_PLAN.md)) is do
 
 ## Later: not in the plan (§8 of the plan)
 
-- [ ] Gold, Silver and Crystal (Johto): a Gen 2 adapter, its own research first (Crystal is imported). Planned
-      2026-10-15: [specs/GEN2_BRIDGE_PLAN.md](specs/GEN2_BRIDGE_PLAN.md) (MG9).
+- [x] Crystal (Johto): the Gen 2 adapter, Johto built beside Kanto and Hoenn, and a test pass between Kanto and Johto
+      (2026-10-15, [specs/GEN2_BRIDGE_PLAN.md](specs/GEN2_BRIDGE_PLAN.md), MG9). Gold and Silver stay off until one of
+      them is imported and checked.
 - [ ] FireRed and LeafGreen as a second Kanto; Yellow.
 - [ ] Several games in one process, if Gen1Recomp adds a way to switch games.
 - [ ] Foreign Pokémon allowed in every region; rules per region (running shoes, bike speeds).

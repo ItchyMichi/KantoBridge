@@ -45,8 +45,9 @@
 --
 -- MG8 (docs/specs/HOENN_PASS_PLAN.md K2-K4): an engine whose games can't
 -- take this end (Gen 3: no new maps, no map scripts, no patched exits, spike
--- S2) installs it itself: when the adapter has routeInstall(zone), the end's
--- zone record goes to it instead of the registries. The adapter plans the
+-- S2) installs it itself: when the adapter has routeInstall(zone, content),
+-- the end's zone record goes to it instead of the registries (MG9: with the
+-- registries, which Gen 2's end registers its route map and town in). The adapter plans the
 -- clearing on its own map data (filling zone.plan: cleared blocks, triggers,
 -- the way back; ready once planned, zone.active false when the spot doesn't
 -- check out), opens it at run time, triggers the way out and stands for the
@@ -597,7 +598,7 @@ function Routes.install(opts)
     local zone = { id = e.id, key = zoneKey, which = which, entry = e, finish = f, mapId = mapId, town = f.map,
                    plan = { cleared = {}, triggers = {}, triggerList = {}, ready = false }, active = true,
                    classes = {}, own = true }
-    local ok, accepted, code = pcall(own, zone)
+    local ok, accepted, code = pcall(own, zone, content)
     if not ok or accepted ~= true then
       problem(e.id, ok and (type(code) == "string" and code or "rejected") or "adapter_failed")
       return

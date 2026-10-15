@@ -25,6 +25,11 @@ scene. Then:
 No warp ends by the warp observer's timeout (warp.no_arrival) and no error or schema problem comes. The two hidden
 processes' memory (the sum of each process tree's resident set) is sampled throughout and printed (§6 check 5).
 
+MG9 G2H (docs/specs/GEN2_BRIDGE_PLAN.md §8): the same between Blue and Crystal over the Johto test pass
+(kanto_johto_test: Viridian City's north-east corner, Cherrygrove City's clearing), Crystal from its own second home
+on drivers/kb_crystal.lua's route scene; its end is a route map of its own (gen2/routes.lua), so the hidden player
+really stands on it.
+
 Every message passes its schema (strict). Output: types, map symbols, cells, numbers and booleans only. The second
 home and its links vanish with the pod's container disk; nothing under local/ is opened (links are made by name).
 """
@@ -42,12 +47,16 @@ from fake_minecraft import FakeMinecraft
 from run_gen1recomp import INSTALL, launch, preflight
 from test_emerald import find_or_wait, errors
 
-BLUE_PORT, EMERALD_PORT = 27232, 27233
+BLUE_PORT, EMERALD_PORT, CRYSTAL_PORT = 27232, 27233, 27234
 CROSSINGS = int(os.environ.get("KB_CROSSINGS", "20"))
 MONEY = 3000
 REPO = Path(__file__).resolve().parents[2]
-PASS = json.loads((REPO / "gen1-bridge" / "data" / "routes.json").read_text(encoding="utf-8"))["routes"][1]
+ROUTES = {r["id"]: r for r in json.loads((REPO / "gen1-bridge" / "data" / "routes.json").read_text(encoding="utf-8"))["routes"]}
+PASS = ROUTES["kanto_hoenn_test"]
 KANTO_MAP, HOENN_MAP = "KB_ROUTE_KANTO_HOENN_TEST", "KB_ROUTE_KANTO_HOENN_TEST_TO"
+# MG9 G2H: the Johto test pass
+JOHTO_PASS = ROUTES["kanto_johto_test"]
+JOHTO_KANTO_MAP, JOHTO_MAP = "KB_ROUTE_KANTO_JOHTO_TEST", "KB_ROUTE_KANTO_JOHTO_TEST_TO"
 X1 = {"x": 1, "y": 0, "facing": "right"}
 DELTA = {"up": (0, -1), "down": (0, 1), "left": (-1, 0), "right": (1, 0)}
 OPPOSITE = {"up": "down", "down": "up", "left": "right", "right": "left"}
@@ -68,11 +77,11 @@ def steps_to_trigger(f):
     return exit_in_block + 2 * f["depth"]
 
 
-def second_home(root: Path) -> Path:
-    """Emerald's own data home: its import folder and gen1-bridge linked by name (spike S1's make_home)."""
+def second_home(root: Path, game: str = "emerald") -> Path:
+    """The far game's own data home: its import folder and gen1-bridge linked by name (spike S1's make_home)."""
     ident = root / rg.IDENTITY
     (ident / "mods").mkdir(parents=True, exist_ok=True)
-    (ident / "emerald").symlink_to(INSTALL / "emerald")
+    (ident / game).symlink_to(INSTALL / game)
     (ident / "mods" / "gen1-bridge").symlink_to(REPO / "gen1-bridge")
     for name in ("portable.txt",):
         if (INSTALL / name).exists():
@@ -152,10 +161,20 @@ async def park(mc, region):
     assert done == {"ok": True, "kind": "park"}, (region, done)
 
 
-async def _crossing(pids, rss):
-    near, far = PASS["from"], PASS["to"]
-    blue, emerald = await connect(BLUE_PORT), await connect(EMERALD_PORT)
+async def _crossing(pids, rss, route=None, far_port=EMERALD_PORT, kanto_map=KANTO_MAP, far_map=HOENN_MAP, far_region="hoenn"):
+    """The crossings over `route` (default the Hoenn pass); the far game is Emerald or (G2H) Crystal."""
+    route = route or PASS
+    near, far = route["from"], route["to"]
+    blue, emerald = await connect(BLUE_PORT), await connect(far_port)
     report = {"crossings": 0, "projected": 0}
+    # (G2H: the Crystal driver's Pokemon is offered as a gift; a party.sync that names it confirms it)
+    await asyncio.sleep(2)
+    give = next((m["data"] for m in emerald.received if m["type"] == "party.give"), None)
+    if give is not None:
+        await emerald.send("party.sync", {"party": [{"uid": "5e6f7081-92a3-4bb4-8cd5-e6f708192a3b", "give": give["give"],
+                                                     "dex": give["dex"], "level": give["level"],
+                                                     "moves": give.get("moves") or [33], "hp": 30, "maxhp": 30}],
+                                          "box": {"count": 0}})
 
     def sample():
         rss.append(sum(tree_rss_kb(pid) for pid in pids))
@@ -164,32 +183,35 @@ async def _crossing(pids, rss):
     since = await walk(blue, near["facing"], steps_to_trigger(near), 1)
     into = await arrival(blue, since)
     report["blue_in"] = (into["kind"], into["to"])
-    assert into["kind"] == "script" and into["to"] == dict(X1, map=KANTO_MAP), report
-    await park(emerald, "hoenn")
+    assert into["kind"] == "script" and into["to"] == dict(X1, map=kanto_map), report
+    await park(emerald, far_region)
     # 2. the crossings, each way
     for k in range(CROSSINGS):
         money = MONEY - k
         potions = 3 + k % 2
         await park(blue, "kanto")
-        at = await resume(emerald, "hoenn", HOENN_MAP)
-        assert at == (HOENN_MAP, 1, 0), (k, "emerald", at)
+        at = await resume(emerald, far_region, far_map)
+        assert at == (far_map, 1, 0), (k, "far", at)
         report["projected"] += await project(emerald, money, potions, f"{2 * k:032x}")
         sample()
         if k == 0:
-            # 3. Hoenn's side: home through A, then back into the route map
+            # 3. the far side: home through A, then back into the route map
             since = len(emerald.received)
             await emerald.send("move.step", {"dir": "left", "n": 50})
             home = await arrival(emerald, since)
-            report["emerald_home"] = home["to"]
+            report["far_home"] = home["to"]
             assert home["to"] == dict(way_back(far), map=far["map"]), report
             await asyncio.sleep(1)
             since = await walk(emerald, OPPOSITE[home["to"]["facing"]], 1, 60)
             back = await arrival(emerald, since)
-            report["emerald_back_in"] = back["to"]
-            assert back["to"] == dict(X1, map=HOENN_MAP), report
-        await park(emerald, "hoenn")
-        at = await resume(blue, "kanto", KANTO_MAP)
-        assert at == (KANTO_MAP, 1, 0), (k, "blue", at)
+            report["far_back_in"] = back["to"]
+            assert back["to"] == dict(X1, map=far_map), report
+            # (G2H: Gen 2 reports the arrival as the map loads; its map setup's fade still runs a moment, and a
+            # player crossing in Minecraft walks the zone first)
+            await asyncio.sleep(2)
+        await park(emerald, far_region)
+        at = await resume(blue, "kanto", kanto_map)
+        assert at == (kanto_map, 1, 0), (k, "blue", at)
         report["projected"] += await project(blue, money, potions, f"{2 * k + 1:032x}")
         sample()
         report["crossings"] += 1
@@ -243,4 +265,47 @@ def test_a_crossing_between_two_real_engines():
     assert any("routes.installed" in line and "route=kanto_hoenn_test" in line for line in blue_result.lines)
     assert any("routes.installed" in line and "own=true" in line for line in emerald_result.lines)
     for name, result in (("blue", blue_result), ("emerald", emerald_result)):
+        assert not any("warp.no_arrival" in line for line in result.lines), (name, "a warp ended by the timeout")
+
+
+@pytest.mark.e2e
+@pytest.mark.timeout(2400)
+def test_a_crossing_between_blue_and_crystal():
+    """MG9 G2H: Blue and Crystal over the Johto test pass, KB_CROSSINGS times each way."""
+    pf = preflight()
+    if not pf.ok:
+        pytest.skip("pre-flight not done: " + "; ".join(pf.reasons))
+    games = rg.kb_games.detect(INSTALL)
+    if not {"blue", "crystal"} <= set(games):
+        pytest.skip("needs Blue and Crystal imports in the test install")
+    near, far = JOHTO_PASS["from"], JOHTO_PASS["to"]
+    with tempfile.TemporaryDirectory(prefix="kb-johto-home-") as tmp:
+        home = second_home(Path(tmp), "crystal")
+        with launch("kb_union_off.lua", game="crystal", install=home, echo=False) as off:
+            assert off.wait(timeout=180).marker("KB_UNION_OFF") is not None
+        blue_env = {"KB_TEST_PORT": str(BLUE_PORT), "KB_SPOT_MAP": near["map"], "KB_SPOT_X": str(near["x"]),
+                    "KB_SPOT_Y": str(near["y"]), "KB_SPOT_FACING": near["facing"]}
+        crystal_env = {"KB_TEST_PORT": str(CRYSTAL_PORT), "KB_SCENE": "route", "KB_DATASET_MEMO": "30",
+                       "KB_DRIVER_SECONDS": str(600 + 40 * CROSSINGS),
+                       "KB_SPOT_MAP": far["map"].removeprefix("G2_"), "KB_SPOT_X": str(far["x"]), "KB_SPOT_Y": str(far["y"]),
+                       "KB_SPOT_FACING": far["facing"]}
+        with launch("kb_wild.lua", game="blue", extra_env=blue_env) as blue_run, \
+                launch("kb_crystal.lua", game="crystal", extra_env=crystal_env, install=home) as crystal_run:
+            assert blue_run.wait_marker("KB_WILD_READY", timeout=300) is not None, blue_run.result.summary()
+            assert crystal_run.wait_marker("KB_SERVING", timeout=300) is not None, crystal_run.result.summary()
+            rss = []
+            report = asyncio.run(asyncio.wait_for(
+                _crossing([blue_run.proc.pid, crystal_run.proc.pid], rss, route=JOHTO_PASS, far_port=CRYSTAL_PORT,
+                          kanto_map=JOHTO_KANTO_MAP, far_map=JOHTO_MAP, far_region="johto"),
+                120 + 30 * CROSSINGS))
+            blue_result, crystal_result = blue_run.wait(timeout=120), crystal_run.wait(timeout=120)
+    if rss:
+        report["rss_mb"] = {"max": max(rss) // 1024, "last": rss[-1] // 1024}
+    print("crossing:", report)
+    for name, result in (("blue", blue_result), ("crystal", crystal_result)):
+        assert not result.timed_out and result.returncode == 0, (name, result.summary())
+        assert result.marker("KB_FAIL") is None, name
+    assert any("routes.installed" in line and "route=kanto_johto_test" in line for line in blue_result.lines)
+    assert any("routes.installed" in line and "own=true" in line for line in crystal_result.lines)
+    for name, result in (("blue", blue_result), ("crystal", crystal_result)):
         assert not any("warp.no_arrival" in line for line in result.lines), (name, "a warp ended by the timeout")
