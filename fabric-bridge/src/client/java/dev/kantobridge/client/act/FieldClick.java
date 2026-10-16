@@ -6,6 +6,7 @@ import dev.kantobridge.world.StoryCellTable;
 import dev.kantobridge.world.StoryCellType;
 import dev.kantobridge.world.WorldIndex;
 import java.util.function.Predicate;
+import java.util.function.ToIntFunction;
 import org.jetbrains.annotations.Nullable;
 
 /**
@@ -68,9 +69,19 @@ public final class FieldClick {
 	 */
 	public static Decision decide(WorldIndex index, String hiddenMap, int hx, int hy, CellPos target, boolean surfing, Predicate<String> drawn,
 			boolean land) {
+		return decide(index, hiddenMap, hx, hy, target, surfing, drawn, key -> -1, land);
+	}
+
+	/**
+	 * {@link #decide(WorldIndex, String, int, int, CellPos, boolean, Predicate, boolean)} where Gen 3's {@code cell} cells
+	 * (SE3) count too: {@code cellStates} gives the state a drawn cell shows (an index into its entry's states, -1 for the
+	 * built state), so a cell that is water now (a flooded one, or one built as water) is water to press.
+	 */
+	public static Decision decide(WorldIndex index, String hiddenMap, int hx, int hy, CellPos target, boolean surfing, Predicate<String> drawn,
+			ToIntFunction<String> cellStates, boolean land) {
 		CellPos own = InteractTarget.own(index, target);
 		StoryCellTable.Entry entry = own == null ? null : index.storyCells().get(own.key());
-		String action = action(entry, surfing, drawn, land);
+		String action = action(entry, surfing, drawn, cellStates, land);
 		if (action == null) {
 			return new Decision(Kind.INTERACT, target, null, null);
 		}
@@ -80,18 +91,35 @@ public final class FieldClick {
 
 	/** The field action a press on a cell with this story-cell entry means, or null for the ordinary A. */
 	static @Nullable String action(StoryCellTable.@Nullable Entry entry, boolean surfing, Predicate<String> drawn, boolean land) {
+		return action(entry, surfing, drawn, key -> -1, land);
+	}
+
+	static @Nullable String action(StoryCellTable.@Nullable Entry entry, boolean surfing, Predicate<String> drawn, ToIntFunction<String> cellStates,
+			boolean land) {
 		if (entry != null && entry.type() == StoryCellType.TILE && entry.swap() != null && CUT.equals(entry.swap().kind())
 				&& drawn.test(entry.key())) {
 			return CUT;
 		}
-		boolean water = water(entry, drawn);
+		StoryCellTable.Pass cell = cellPass(entry, drawn, cellStates);
+		boolean water = cell != null ? cell == StoryCellTable.Pass.WATER : water(entry, drawn);
 		if (water && !surfing) {
 			return SURF;
 		}
-		if (surfing && land && !water && !closedSolid(entry, drawn)) {
+		boolean solid = cell != null ? cell == StoryCellTable.Pass.SOLID : closedSolid(entry, drawn);
+		if (surfing && land && !water && !solid) {
 			return SURF;
 		}
 		return null;
+	}
+
+	/** SE3: how a Gen 3 {@code cell} cell lets players through now (its drawn state's pass, else its built one); null for any other entry. */
+	private static StoryCellTable.@Nullable Pass cellPass(StoryCellTable.@Nullable Entry entry, Predicate<String> drawn,
+			ToIntFunction<String> cellStates) {
+		if (entry == null || entry.type() != StoryCellType.CELL || entry.built() == null) {
+			return null;
+		}
+		int state = drawn.test(entry.key()) ? cellStates.applyAsInt(entry.key()) : -1;
+		return state >= 0 && state < entry.states().size() ? entry.states().get(state).pass() : entry.built().pass();
 	}
 
 	/** True when the cell is water for this player now: a water cell, or a tile cell whose present state is water. */

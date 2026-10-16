@@ -154,6 +154,64 @@ class StoryRulesTest {
 	}
 
 	@Test
+	void gen3CellCellsFollowTheLiveCellOrTheMapsOwn() throws Exception {
+		// SE3: a wall a script raises (built open), a tree a layout clears (built cleared, the map's own tree), a pond that
+		// turns to land (built land), a door whose metatile stays while its pass changes, all on EM_TOWN; one on EM_HOUSE
+		String wall = "EM_TOWN:6:2";
+		String tree = "EM_TOWN:7:2";
+		String pond = "EM_TOWN:4:0";
+		String door = "EM_TOWN:1:1";
+		String floor = "EM_HOUSE:2:1";
+		List<Integer> art = List.of(1, 2, 3, 4);
+		StoryCellTable.Built ground = new StoryCellTable.Built(0, StoryCellTable.Pass.GROUND);
+		StoryCellTable table = StoryCellTable.of(List.of(
+				new StoryCellTable.Entry(CellPos.parse(wall), 0, ground, List.of(new StoryCellTable.CellState(3, StoryCellTable.Pass.SOLID, 2, art))),
+				new StoryCellTable.Entry(CellPos.parse(tree), 5, ground, List.of(new StoryCellTable.CellState(5, StoryCellTable.Pass.SOLID, 2, art))),
+				new StoryCellTable.Entry(CellPos.parse(pond), 2, ground, List.of(new StoryCellTable.CellState(2, StoryCellTable.Pass.WATER, 0, art))),
+				new StoryCellTable.Entry(CellPos.parse(door), 9, new StoryCellTable.Built(9, StoryCellTable.Pass.GROUND),
+						List.of(new StoryCellTable.CellState(9, StoryCellTable.Pass.SOLID, 0, art))),
+				new StoryCellTable.Entry(CellPos.parse(floor), 512, new StoryCellTable.Built(512, StoryCellTable.Pass.GROUND),
+						List.of(new StoryCellTable.CellState(514, StoryCellTable.Pass.GROUND, 0, art)))));
+		List<MapPlacement> maps = List.of(
+				new MapPlacement("EM_TOWN", 0, 64, 0, 8, 6, 0, MapPlacement.Kind.SURFACE, "BAKED", "kantobridge:kanto_outdoor", false, null),
+				new MapPlacement("EM_HOUSE", 0, 42, 0, 4, 4, 1, MapPlacement.Kind.INTERIOR, "BAKED", "kantobridge:kanto_interior", false, "EM_TOWN"));
+		this.rules.setIndex(new WorldIndex("emerald", HASH, maps, HASH, table, List.of()));
+		// in the house: the town shows its own cells: the tree stands, the pond is water (closed for walkers), the rest open
+		this.rules.onSnapshot(json("{\"ingame\":true,\"player\":{\"map\":\"EM_HOUSE\",\"x\":1,\"y\":1,\"facing\":\"up\"}}"));
+		assertEquals(Set.of(tree, pond), active());
+		assertEquals(Set.of(tree, pond), drawn());
+		assertEquals(0, this.rules.cells().states().get(tree));
+		// a surfer crosses the pond
+		this.rules.onPlayerState(json("{\"mode\":\"idle\",\"bike\":false,\"surf\":true,\"slope\":false,\"hidden\":false,\"dark\":false,"
+				+ "\"lit\":false}"));
+		assertEquals(Set.of(tree), active());
+		this.rules.onPlayerState(json("{\"mode\":\"idle\",\"bike\":false,\"surf\":false,\"slope\":false,\"hidden\":false,\"dark\":false,"
+				+ "\"lit\":false}"));
+		// the house's floor changes its art: drawn, never active
+		this.rules.onCells(json("{\"map\":\"EM_HOUSE\",\"cells\":[{\"x\":2,\"y\":1,\"metatile\":514,\"pass\":\"ground\"}]}"));
+		assertTrue(drawn().contains(floor));
+		assertFalse(active().contains(floor));
+		// into the town: its cells as the hidden game tells them
+		this.rules.onPlayerMap("EM_TOWN");
+		assertFalse(drawn().contains(floor), "the house shows its own cells again");
+		this.rules.onCells(json("{\"map\":\"EM_TOWN\",\"cells\":[{\"x\":6,\"y\":2,\"metatile\":3,\"pass\":\"solid\"},"
+				+ "{\"x\":7,\"y\":2,\"metatile\":0,\"pass\":\"ground\"},{\"x\":4,\"y\":0,\"metatile\":0,\"pass\":\"ground\"},"
+				+ "{\"x\":1,\"y\":1,\"metatile\":9,\"pass\":\"solid\"}]}"));
+		assertEquals(Set.of(wall, door), active(), "the raised wall and the door made impassable; the tree cleared, the pond land");
+		assertEquals(Set.of(wall, door), drawn());
+		// a state the table doesn't list: no art, collision by the live pass
+		this.rules.onCells(json("{\"map\":\"EM_TOWN\",\"cells\":[{\"x\":6,\"y\":2,\"metatile\":77,\"pass\":\"solid\"}]}"));
+		assertTrue(active().contains(wall));
+		assertFalse(drawn().contains(wall));
+		// without a pass (an older bridge) the metatile decides: the tree's own metatile is its solid state
+		this.rules.onCells(json("{\"map\":\"EM_TOWN\",\"cells\":[{\"x\":7,\"y\":2,\"metatile\":5}]}"));
+		assertTrue(active().contains(tree) && drawn().contains(tree));
+		// back to the map's own on a reload that puts the wall back: the bridge sends the own metatile with its pass
+		this.rules.onCells(json("{\"map\":\"EM_TOWN\",\"cells\":[{\"x\":6,\"y\":2,\"metatile\":0,\"pass\":\"ground\"}]}"));
+		assertFalse(active().contains(wall) || drawn().contains(wall));
+	}
+
+	@Test
 	void mapDefaultsDecideBeforeAnyReport() {
 		assertEquals(Set.of(BALL, MOM, TREE, HULL), active(), "visible objects, the standing tree and the ship's hull; the stamped door "
 				+ "shows its map data");

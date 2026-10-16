@@ -98,6 +98,39 @@ class WorldIndexTest {
 	}
 
 	@Test
+	void cellCellsCarryTheirStates() throws Exception {
+		// SE3: a Gen 3 cell the story changes: the map's own metatile (past a Gen 1 block's 255), its built state, its others
+		StoryCellTable cells = StoryCellTable.of(List.of(
+				new StoryCellTable.Entry(new CellPos("TEST_TOWN", 7, 2), 517, new StoryCellTable.Built(0, StoryCellTable.Pass.GROUND),
+						List.of(new StoryCellTable.CellState(517, StoryCellTable.Pass.SOLID, 2, List.of(10, 11, 12, 28671)),
+								new StoryCellTable.CellState(2, StoryCellTable.Pass.WATER, 0, List.of(5, 5, 5, 5))))));
+		WorldIndex index = new WorldIndex("emerald", HASH_A, sample().maps().values(), HASH_B, cells, List.of());
+		WorldIndex read = WorldIndex.fromJson(index.toJson());
+		assertEquals(index.storyCells().entries(), read.storyCells().entries());
+		StoryCellTable.Entry entry = read.storyCells().get("TEST_TOWN:7:2");
+		assertEquals(StoryCellType.CELL, entry.type());
+		assertEquals(517, entry.start());
+		assertEquals(12, entry.states().get(0).art(0, 1));
+		JsonObject json = ProtoJson.parseObject(index.toJson()).getAsJsonArray("storyCells").get(0).getAsJsonObject();
+		assertEquals(List.of("built", "key", "start", "states", "type"), json.keySet().stream().sorted().toList());
+		assertEquals("cell", json.get("type").getAsString());
+		assertEquals(List.of("art", "height", "metatile", "pass"), json.getAsJsonArray("states").get(0).getAsJsonObject().keySet().stream().sorted()
+				.toList());
+
+		String good = index.toJson();
+		assertThrows(DataException.class, () -> WorldIndex.fromJson(good.replace("\"start\":517", "\"start\":1024")));
+		assertThrows(DataException.class, () -> WorldIndex.fromJson(good.replace("\"built\":{\"metatile\":0,\"pass\":\"ground\"},", "")),
+				"a cell needs its built state");
+		assertThrows(DataException.class, () -> WorldIndex.fromJson(good.replace("\"metatile\":2,", "\"metatile\":1024,")));
+		assertThrows(DataException.class, () -> WorldIndex.fromJson(good.replace("\"art\":[5,5,5,5]", "\"art\":[5,5,5]")));
+		assertThrows(DataException.class, () -> WorldIndex.fromJson(good.replace("\"pass\":\"water\"", "\"pass\":\"lava\"")));
+		assertThrows(DataException.class, () -> WorldIndex.fromJson(good.replace("\"type\":\"cell\"", "\"type\":\"tile\"")),
+				"cell states on a tile entry");
+		assertThrows(IllegalArgumentException.class, () -> new StoryCellTable.Entry(new CellPos("TEST_TOWN", 0, 0), 1,
+				new StoryCellTable.Built(0, StoryCellTable.Pass.GROUND), List.of()), "a cell with no other state");
+	}
+
+	@Test
 	void anyCatalogueGameIsAccepted() throws Exception {
 		// MG1: the game is an open catalogue id (protocol/games.json), no longer red or blue only
 		WorldIndex yellow = new WorldIndex("yellow", HASH_A, sample().maps().values(), HASH_B, sample().storyCells(), List.of());

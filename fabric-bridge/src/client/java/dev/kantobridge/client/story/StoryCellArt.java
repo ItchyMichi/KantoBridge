@@ -10,7 +10,9 @@ import org.jetbrains.annotations.Nullable;
 /**
  * What a tile story cell's block draws while its player sees the cell closed (docs/PLAN.md §4.3 {@code StoryCellRenderer}):
  * the closed art of its own quarter of the cell (one 8×8 tile per block, as the world's tile blocks show it) as a full
- * tile block repeated up the closed column, or flat on the floor when the closed state is walkable art. Plain Java.
+ * tile block repeated up the closed column, or flat on the floor when the closed state is walkable art. SE3: a Gen 3
+ * {@code cell} cell draws the same way the state its player's hidden game shows ({@link #piece(WorldIndex,
+ * StoryCellTable.Entry, int, int, int)}). Plain Java.
  */
 public final class StoryCellArt {
 	/**
@@ -48,5 +50,24 @@ public final class StoryCellArt {
 			return null;
 		}
 		return new Piece(closed.art(dx, dz), closed.height());
+	}
+
+	/**
+	 * SE3: the art of the story-cell block at block column ({@code x}, {@code z}) of a {@code cell} entry's cell in its
+	 * state {@code state} (an index into the entry's {@code states}), or null when the state is none of them (the built
+	 * state shows), the map isn't placed, or the column isn't in the cell.
+	 */
+	public static @Nullable Piece piece(WorldIndex index, StoryCellTable.Entry entry, int state, int x, int z) {
+		BlockPos origin = index.cellOrigin(entry.cell().map(), entry.cell().x(), entry.cell().y());
+		if (state < 0 || state >= entry.states().size() || origin == null) {
+			return null;
+		}
+		int dx = x - origin.getX();
+		int dz = z - origin.getZ();
+		if (dx < 0 || dz < 0 || dx >= Scale.CELL_BLOCKS || dz >= Scale.CELL_BLOCKS) {
+			return null;
+		}
+		StoryCellTable.CellState shown = entry.states().get(state);
+		return new Piece(shown.art(dx, dz), shown.height());
 	}
 }

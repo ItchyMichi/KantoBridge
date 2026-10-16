@@ -26,7 +26,13 @@ public enum StoryCellType {
 	 * for a player while the far region isn't built or they have no link to its game ({@code pass_closed}). Its cell is
 	 * in the zone's route map's grid; {@code obj} names the zone.
 	 */
-	PASS;
+	PASS,
+	/**
+	 * A Gen 3 cell the hidden game's story can change (docs/specs/STORY_EVENTS_PLAN.md SE3; the {@code g3sites} export),
+	 * built in its most walkable state; its other states are drawn and collide per player from the live cell
+	 * ({@code story.cells}), the map's own state ({@code start}) on every other map.
+	 */
+	CELL;
 
 	public String id() {
 		return this.name().toLowerCase(Locale.ROOT);

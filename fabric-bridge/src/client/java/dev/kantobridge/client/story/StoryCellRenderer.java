@@ -24,7 +24,9 @@ import net.minecraft.world.phys.Vec3;
  * player's hidden game still has the site closed (a Cut tree standing, a card-key door locked), each block of the cell
  * draws its closed art: the tile block of its slot (the player's own generated pack has the texture; the slot map listed
  * both states of every site), stacked up the closed column, or flat on the floor where the closed state is walkable art.
- * Object cells stay invisible: puppets draw people and items. Runs only for {@code story_tile} blocks.
+ * Object cells stay invisible: puppets draw people and items. Runs only for {@code story_tile} blocks. SE3: a Gen 3
+ * {@code cell} cell (also a {@code story_tile} block, never in the chunk mesh's overlays) draws the state its player's
+ * hidden game shows ({@link ClientStoryView#drawnState}) the same way.
  */
 public final class StoryCellRenderer implements BlockEntityRenderer<StoryCellBlockEntity> {
 	/** Closed art is scenery: draw it as far as a player might see a tree line. */
@@ -44,7 +46,8 @@ public final class StoryCellRenderer implements BlockEntityRenderer<StoryCellBlo
 			int packedOverlay) {
 		String key = cell.cellKey();
 		WorldIndex index = ClientWorldIndex.current();
-		if (key == null || index == null || cell.type() != StoryCellType.TILE || !ClientStoryView.drawn(key)
+		boolean gen3 = cell.type() == StoryCellType.CELL;
+		if (key == null || index == null || (cell.type() != StoryCellType.TILE && !gen3) || !ClientStoryView.drawn(key)
 				|| RenderSnapshot.current().drawsClosed(key)) {
 			return;
 		}
@@ -53,7 +56,8 @@ public final class StoryCellRenderer implements BlockEntityRenderer<StoryCellBlo
 			return;
 		}
 		BlockPos pos = cell.getBlockPos();
-		StoryCellArt.Piece piece = StoryCellArt.piece(index, entry, pos.getX(), pos.getZ());
+		StoryCellArt.Piece piece = gen3 ? StoryCellArt.piece(index, entry, ClientStoryView.drawnState(key), pos.getX(), pos.getZ())
+				: StoryCellArt.piece(index, entry, pos.getX(), pos.getZ());
 		if (piece == null || piece.family() >= KbBlocks.tileFull().size()) {
 			return;
 		}

@@ -65,6 +65,8 @@ public final class ClientStoryView {
 	private boolean sentBike;
 	private @Nullable LocalPlayer sentFor;
 	private Set<String> drawn = Set.of();
+	/** SE3: each drawn Gen 3 cell cell's state (an index into its entry's {@code states}). */
+	private Map<String, Integer> drawnStates = Map.of();
 	private @Nullable String npcMap;
 	private List<StoryRules.Npc> npcs = List.of();
 	private long relayed;
@@ -131,6 +133,16 @@ public final class ClientStoryView {
 		return view != null && view.drawn.contains(key);
 	}
 
+	/**
+	 * SE3: the state a drawn Gen 3 {@code cell} cell shows for the local player, an index into its entry's {@code states};
+	 * -1 when the cell isn't drawn (it shows its built state).
+	 */
+	public static int drawnState(String key) {
+		ClientStoryView view = instance;
+		Integer state = view == null ? null : view.drawnStates.get(key);
+		return state == null ? -1 : state;
+	}
+
 	/** Every tile cell the local player sees closed (for the crosshair on closed art). */
 	public static Set<String> drawnKeys() {
 		ClientStoryView view = instance;
@@ -178,6 +190,7 @@ public final class ClientStoryView {
 		StoryRules.Cells cells = rules.cells();
 		Set<String> before = this.drawn;
 		this.drawn = cells.drawn();
+		this.drawnStates = cells.states();
 		if (!this.drawn.equals(before)) {
 			// The chunk mesh draws closed art from the published set (V5): swap it, re-mesh the changed cells.
 			SnapshotPublisher.storyChanged(before, this.drawn);

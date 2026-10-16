@@ -226,7 +226,7 @@ public final class ActRuntime {
 			return;
 		}
 		FieldClick.Decision decision = FieldClick.decide(index, map, state.x(), state.y(), target, ClientStoryView.surfing(), ClientStoryView::drawn,
-				ground);
+				ClientStoryView::drawnState, ground);
 		long now = this.clock.millis();
 		switch (decision.kind()) {
 			case FIELD -> {

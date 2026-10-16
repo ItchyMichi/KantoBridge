@@ -1126,9 +1126,10 @@ public final class WorldPlan {
 		int storyLevel = -1;
 		int storyCode = 0;
 		if (story >= 0) {
-			// Tile cells get the block that carries the bottom of their closed art; the others render nothing.
+			// Tile cells get the block that carries the bottom of their closed art (SE3: Gen 3's cell cells too, whose states the
+			// block-entity renderer draws); the others render nothing.
 			StoryCellTable.Entry entry = this.storyCells.entries().get(story);
-			boolean swapCell = entry.type() == StoryCellType.TILE;
+			boolean swapCell = entry.type() == StoryCellType.TILE || entry.type() == StoryCellType.CELL;
 			// On a ramp the steps keep their places: any other story block (a boulder's, an object's) stands on them.
 			storyLevel = ramp == null || swapCell ? 0 : highRow(ramp.dir(), tx - cx * Scale.CELL_BLOCKS, ty - cy * Scale.CELL_BLOCKS) ? 2 : 1;
 			storyCode = swapCell ? BlockCode.storyTile(story) : BlockCode.story(story);

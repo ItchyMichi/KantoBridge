@@ -73,7 +73,9 @@ class Gen3FrontEndTest {
 		assertEquals("O1", town.objects().get(0).name());
 		SceneMap route = scene.map("EM_TEST_ROUTE");
 		assertTrue(route.hasTag(0, 0, CellTag.GRASS));
-		assertEquals(CellKind.WATER, route.kind(4, 0));
+		assertEquals(CellKind.WATER, route.kind(5, 0));
+		// SE3: the route's site (4, 0), water that a layout turns to land, is described as built: walkable
+		assertEquals(CellKind.WALK, route.kind(4, 0));
 		SceneMap house = scene.map("EM_TEST_HOUSE");
 		assertFalse(house.surface());
 		assertFalse(house.env().outdoor());

@@ -104,10 +104,17 @@ class Gen3PlanTest {
 		assertEquals(town.borderTile(5, 2), town.drawnBorderTile(5, 2));
 
 		MapModel route = plan.map("EM_TEST_ROUTE").model();
-		assertEquals(MapModel.Kind.WATER, route.kind(4, 0));
+		assertEquals(MapModel.Kind.WATER, route.kind(5, 0));
 		assertTrue(route.wild(0, 0), "tall grass rolls land encounters");
 		assertFalse(route.wild(0, 2), "a path doesn't");
-		assertFalse(route.wild(4, 0), "nor water");
+		assertFalse(route.wild(5, 0), "nor water");
+		// SE3: the sites are built in their most walkable states: the route's water a layout turns to land is land, the
+		// town's tree a layout clears is cleared; the town cell a script walls off keeps its ground
+		assertEquals(MapModel.Kind.GROUND, route.kind(4, 0));
+		assertEquals(MapModel.Kind.GROUND, town.kind(7, 2));
+		assertEquals(MapModel.Kind.GROUND, town.kind(6, 2));
+		int[] ground = bundle.g3tiles("TEST_PAIR_A").quarters(0);
+		assertEquals(ground[0], town.tile(14, 4), "the cleared tree shows the ground's art");
 
 		MapModel house = plan.map("EM_TEST_HOUSE").model();
 		assertEquals(MapModel.Kind.COUNTER, house.kind(1, 1));
@@ -150,10 +157,11 @@ class Gen3PlanTest {
 	@Test
 	void storyCells() {
 		List<StoryCellTable.Entry> entries = plan.storyCells().entries();
-		// the route's four water cells, then the town's standing person and its item ball; the walker gets none, and the
-		// house's person stands on a wall (noted)
-		assertEquals(6, entries.size());
-		assertEquals(4, entries.stream().filter(e -> e.type() == StoryCellType.WATER).count());
+		// the route's water cells but its site, then the town's standing person and its item ball; the walker gets none, and
+		// the house's person stands on a wall (noted); SE3: the four sites' cell cells
+		assertEquals(9, entries.size());
+		assertEquals(3, entries.stream().filter(e -> e.type() == StoryCellType.WATER).count());
+		assertEquals(4, entries.stream().filter(e -> e.type() == StoryCellType.CELL).count());
 		StoryCellTable.Entry person = entries.stream().filter(e -> "O1".equals(e.obj())).findFirst().orElseThrow();
 		assertEquals("EM_TEST_TOWN", person.cell().map());
 		assertEquals(5, person.cell().x());
@@ -164,12 +172,51 @@ class Gen3PlanTest {
 	}
 
 	@Test
+	void sitesGetCellCells() throws Exception {
+		SlotMap slots = plan.slotMap();
+		java.util.function.IntUnaryOperator full = q -> slots.slot(new SlotMap.Key(QuarterPages.page(q), QuarterPages.PALETTE, QuarterPages.index(q),
+				SlotMap.Shape.FULL)).index();
+		int[] wall = bundle.g3tiles("TEST_PAIR_A").quarters(3);
+		int[] tree = bundle.g3tiles("TEST_PAIR_A").quarters(5);
+		int[] water = bundle.g3tiles("TEST_PAIR_A").quarters(2);
+		int[] mat = bundle.g3tiles("TEST_PAIR_B").quarters(514);
+		// a script walls the town's ground off: built open, its wall a solid state two blocks tall
+		StoryCellTable.Entry walled = plan.storyCells().get("EM_TEST_TOWN:6:2");
+		assertEquals(StoryCellType.CELL, walled.type());
+		assertEquals(0, walled.start());
+		assertEquals(new StoryCellTable.Built(0, StoryCellTable.Pass.GROUND), walled.built());
+		assertEquals(List.of(new StoryCellTable.CellState(3, StoryCellTable.Pass.SOLID, HeightRules.WALL,
+				List.of(full.applyAsInt(wall[0]), full.applyAsInt(wall[1]), full.applyAsInt(wall[2]), full.applyAsInt(wall[3])))), walled.states());
+		// a layout clears the town's tree: built cleared, the map's own tree is the state other maps show
+		StoryCellTable.Entry tree72 = plan.storyCells().get("EM_TEST_TOWN:7:2");
+		assertEquals(5, tree72.start());
+		assertEquals(new StoryCellTable.Built(0, StoryCellTable.Pass.GROUND), tree72.built());
+		assertEquals(1, tree72.states().size());
+		assertEquals(5, tree72.states().get(0).metatile());
+		assertEquals(StoryCellTable.Pass.SOLID, tree72.states().get(0).pass());
+		assertEquals(full.applyAsInt(tree[3]), tree72.states().get(0).art(1, 1));
+		// the route's water a layout turns to land: built land, the water a flat state only surfers cross
+		StoryCellTable.Entry pond = plan.storyCells().get("EM_TEST_ROUTE:4:0");
+		assertEquals(2, pond.start());
+		assertEquals(new StoryCellTable.Built(0, StoryCellTable.Pass.GROUND), pond.built());
+		assertEquals(new StoryCellTable.CellState(2, StoryCellTable.Pass.WATER, 0,
+				List.of(full.applyAsInt(water[0]), full.applyAsInt(water[1]), full.applyAsInt(water[2]), full.applyAsInt(water[3]))), pond.states().get(0));
+		// the house floor's art alone changes: a flat ground state
+		StoryCellTable.Entry floor = plan.storyCells().get("EM_TEST_HOUSE:2:1");
+		assertEquals(new StoryCellTable.Built(512, StoryCellTable.Pass.GROUND), floor.built());
+		assertEquals(new StoryCellTable.CellState(514, StoryCellTable.Pass.GROUND, 0,
+				List.of(full.applyAsInt(mat[0]), full.applyAsInt(mat[1]), full.applyAsInt(mat[2]), full.applyAsInt(mat[3]))), floor.states().get(0));
+		assertEquals(0, plan.warnings().count("g3_site_art_missing"));
+	}
+
+	@Test
 	void theSlotMapKeysQuarterPages() {
 		SlotMap slots = plan.slotMap();
 		long half = slots.slots().keySet().stream().filter(k -> k.shape() == SlotMap.Shape.HALF).count();
 		// synth3's quarters: 32 shown on land and borders, 4 on water (half height; item 8: animated quarters, whose frames
-		// are quarters too but never shown as themselves, so no slot's)
-		assertEquals(32, slots.slots().size() - half);
+		// are quarters too but never shown as themselves, so no slot's); SE3: the water's four again full-shape, the art the
+		// route's site draws in its water state
+		assertEquals(36, slots.slots().size() - half);
 		assertEquals(4, half);
 		java.util.Set<Integer> frames = new java.util.HashSet<>();
 		for (G3Data.Anims.Anim anim : anims.byQuarter().values()) {
@@ -182,7 +229,9 @@ class Gen3PlanTest {
 			assertEquals(QuarterPages.PALETTE, key.palette());
 			assertTrue(key.tile() < 44);
 			assertFalse(frames.contains(key.tile()), "a frame is no slot's");
-			assertEquals(key.shape() == SlotMap.Shape.HALF, anims.byQuarter().containsKey(key.tile()), "the water animates");
+			if (key.shape() == SlotMap.Shape.HALF) {
+				assertTrue(anims.byQuarter().containsKey(key.tile()), "the water animates");
+			}
 		}
 		assertTrue(plan.art().baked());
 		assertEquals(32, plan.art().tilesPerRow("g3q.0"));
@@ -232,8 +281,14 @@ class Gen3PlanTest {
 		// the ledge row (y = 4) jumps south
 		assertEquals(BlockCode.ledge(0), view.code(ox(0), 64, oz(8)));
 		// water on the route: a half block, its story block at the feet
-		assertEquals(BlockCode.KIND_HALF, view.kind(ox(2 + 8), 63, oz(-10)));
-		assertEquals(BlockCode.KIND_STORY, view.kind(ox(2 + 8), 64, oz(-10)));
+		assertEquals(BlockCode.KIND_HALF, view.kind(ox(2 + 10), 63, oz(-10)));
+		assertEquals(BlockCode.KIND_STORY, view.kind(ox(2 + 10), 64, oz(-10)));
+		// SE3: the route's site (4, 0), built as land: a full floor block and the story tile block whose states the client
+		// draws; the town's cleared tree likewise
+		assertEquals(BlockCode.KIND_FULL, view.kind(ox(2 + 8), 63, oz(-10)));
+		assertEquals(BlockCode.KIND_STORY_TILE, view.kind(ox(2 + 8), 64, oz(-10)));
+		assertEquals(BlockCode.KIND_STORY_TILE, view.kind(ox(14), 64, oz(4)));
+		assertEquals(BlockCode.AIR, view.code(ox(14), 65, oz(4)), "nothing stands over a site's story block");
 		// the raised patch's north wall, at the feet of its north-west block
 		assertEquals(BlockCode.edge(EdgeWallBlock.SIDE_NORTH), view.code(ox(2), 64, oz(-10 + 6)));
 		assertEquals(BlockCode.edge(EdgeWallBlock.SIDE_SOUTH), view.code(ox(2), 64, oz(-10 + 5)));

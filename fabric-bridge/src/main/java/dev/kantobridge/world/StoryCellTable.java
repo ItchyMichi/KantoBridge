@@ -24,7 +24,9 @@ import org.jetbrains.annotations.Nullable;
  * {@code object} entries name their map object and whether it starts hidden; {@code tile} entries name their swap site,
  * the block the map data has there ({@code start}, what maps other than the hidden player's current one show), whether
  * their open (built) state is water ({@code water}: it then closes unless the player surfs, like a water cell) and their
- * closed state ({@link Closed}: the block that closes the cell, how it lets players through, and its art).
+ * closed state ({@link Closed}: the block that closes the cell, how it lets players through, and its art). SE3 (Gen 3,
+ * docs/specs/STORY_EVENTS_PLAN.md): {@code cell} entries carry the map's own metatile ({@code start}), the state the world
+ * is built in ({@link Built}) and every other state the cell can show ({@link CellState}: its metatile, pass and art).
  */
 public final class StoryCellTable {
 	/** Swap kinds, as in protocol/export/swaps.schema.json (MG9: Gen 2's whirlpool). */
@@ -34,7 +36,15 @@ public final class StoryCellTable {
 	/** The tallest closed art: a roof column (4) plus room for measured heights. */
 	public static final int MAX_CLOSED_HEIGHT = 8;
 
-	private static final Set<String> ENTRY_FIELDS = Set.of("key", "type", "obj", "swap", "hidden", "start", "closed", "water");
+	/** SE3: the most states a {@code cell} entry lists besides its built one. */
+	public static final int MAX_CELL_STATES = 16;
+	/** SE3: the highest metatile id ({@code cell} entries). */
+	public static final int MAX_METATILE = 1023;
+
+	private static final Set<String> ENTRY_FIELDS = Set.of("key", "type", "obj", "swap", "hidden", "start", "closed", "water", "built",
+			"states");
+	private static final Set<String> BUILT_FIELDS = Set.of("metatile", "pass");
+	private static final Set<String> STATE_FIELDS = Set.of("metatile", "pass", "height", "art");
 	private static final Set<String> SWAP_FIELDS = Set.of("bx", "by", "kind", "before", "after");
 	private static final Set<String> CLOSED_FIELDS = Set.of("block", "pass", "height", "art");
 	private static final Pattern CELL_KEY = Pattern.compile("^[A-Z0-9_]+:-?[0-9]+:-?[0-9]+$");
@@ -131,21 +141,106 @@ public final class StoryCellTable {
 	}
 
 	/**
+	 * SE3: the state a {@code cell} entry's cell is built in (the most walkable of its states).
+	 *
+	 * @param metatile the state's metatile
+	 * @param pass     how the built cell lets players through: {@code ground} everybody, {@code water} surfers only
+	 */
+	public record Built(int metatile, Pass pass) {
+		public Built {
+			Objects.requireNonNull(pass, "pass");
+			if (metatile < 0 || metatile > MAX_METATILE) {
+				throw new IllegalArgumentException("invalid built metatile");
+			}
+		}
+
+		JsonObject toJson() {
+			JsonObject out = new JsonObject();
+			out.addProperty("metatile", this.metatile);
+			out.addProperty("pass", this.pass.id());
+			return out;
+		}
+	}
+
+	/**
+	 * SE3: one of a {@code cell} entry's other states, drawn for a player while their hidden game (or, away from its map,
+	 * the map's own cell) shows it.
+	 *
+	 * @param metatile the state's metatile
+	 * @param pass     how the cell lets players through in this state
+	 * @param height   art drawn above the floor block, in blocks; 0 draws it flat on the floor
+	 * @param art      full-shape slot indices of the state's art, {@link #ART_BLOCKS} of them (north-west, north-east,
+	 *                 south-west, south-east)
+	 */
+	public record CellState(int metatile, Pass pass, int height, List<Integer> art) {
+		public CellState {
+			Objects.requireNonNull(pass, "pass");
+			art = List.copyOf(art);
+			if (metatile < 0 || metatile > MAX_METATILE || height < 0 || height > MAX_CLOSED_HEIGHT || art.size() != ART_BLOCKS) {
+				throw new IllegalArgumentException("invalid cell state");
+			}
+			for (int slot : art) {
+				if (slot < 0 || slot >= SlotMap.CAPACITY) {
+					throw new IllegalArgumentException("invalid art slot");
+				}
+			}
+		}
+
+		/** The art slot of the block at ({@code dx}, {@code dz}) within the cell (each 0 or 1). */
+		public int art(int dx, int dz) {
+			return this.art.get((dz & 1) * 2 + (dx & 1));
+		}
+
+		JsonObject toJson() {
+			JsonObject out = new JsonObject();
+			out.addProperty("metatile", this.metatile);
+			out.addProperty("pass", this.pass.id());
+			out.addProperty("height", this.height);
+			JsonArray slots = new JsonArray();
+			this.art.forEach(slots::add);
+			out.add("art", slots);
+			return out;
+		}
+	}
+
+	/**
 	 * @param obj    {@code object} cells: the map object (toggle name) standing here
 	 * @param swap   {@code tile} cells: the swap site behind them
 	 * @param hidden {@code object} cells: the object starts hidden (its map record's default)
-	 * @param start  {@code tile} cells: the map data's block at the site
+	 * @param start  {@code tile} cells: the map data's block at the site; {@code cell} cells (SE3): the map's own metatile
 	 * @param closed {@code tile} cells: the closed state
 	 * @param water  {@code tile} cells: the open (built) state is water, closed unless the player surfs
+	 * @param built  {@code cell} cells (SE3): the state the cell is built in
+	 * @param states {@code cell} cells (SE3): every other state the cell can show (empty for every other type)
 	 */
 	public record Entry(CellPos cell, StoryCellType type, @Nullable String obj, @Nullable Swap swap, boolean hidden, @Nullable Integer start,
-			@Nullable Closed closed, boolean water) {
+			@Nullable Closed closed, boolean water, @Nullable Built built, List<CellState> states) {
 		public Entry {
 			Objects.requireNonNull(cell, "cell");
 			Objects.requireNonNull(type, "type");
-			if (start != null && (start < 0 || start > 255)) {
+			states = states == null ? List.of() : List.copyOf(states);
+			int maxStart = type == StoryCellType.CELL ? MAX_METATILE : 255;
+			if (start != null && (start < 0 || start > maxStart)) {
 				throw new IllegalArgumentException("invalid start block");
 			}
+			if (type == StoryCellType.CELL) {
+				if (built == null || start == null || states.isEmpty() || states.size() > MAX_CELL_STATES) {
+					throw new IllegalArgumentException("a cell entry needs its start, built state and other states");
+				}
+			} else if (built != null || !states.isEmpty()) {
+				throw new IllegalArgumentException("cell states on a " + type.id() + " entry");
+			}
+		}
+
+		/** An entry of any type but {@code cell} (M8's state fields as given). */
+		public Entry(CellPos cell, StoryCellType type, @Nullable String obj, @Nullable Swap swap, boolean hidden, @Nullable Integer start,
+				@Nullable Closed closed, boolean water) {
+			this(cell, type, obj, swap, hidden, start, closed, water, null, List.of());
+		}
+
+		/** SE3: a {@code cell} entry. */
+		public Entry(CellPos cell, int start, Built built, List<CellState> states) {
+			this(cell, StoryCellType.CELL, null, null, false, start, null, false, built, states);
 		}
 
 		/** An entry without M8's state fields (an object that starts visible; a tile cell with no closed state known). */
@@ -184,6 +279,16 @@ public final class StoryCellTable {
 			}
 			if (this.water) {
 				out.addProperty("water", true);
+			}
+			if (this.built != null) {
+				out.add("built", this.built.toJson());
+			}
+			if (!this.states.isEmpty()) {
+				JsonArray states = new JsonArray();
+				for (CellState state : this.states) {
+					states.add(state.toJson());
+				}
+				out.add("states", states);
 			}
 			return out;
 		}
@@ -246,6 +351,14 @@ public final class StoryCellTable {
 		return out;
 	}
 
+	private static Pass pass(DataReader r) throws DataException {
+		Pass pass = Pass.byId(r.string("pass"));
+		if (pass == null) {
+			throw new DataException(r.path("pass"), "unknown pass");
+		}
+		return pass;
+	}
+
 	public static StoryCellTable fromJson(JsonArray array, String path) throws DataException {
 		List<Entry> entries = new ArrayList<>(array.size());
 		for (DataReader item : DataReader.objects(array, path)) {
@@ -269,7 +382,7 @@ public final class StoryCellTable {
 						s.integer("after", 0, 255));
 			}
 			boolean hidden = item.has("hidden") && item.bool("hidden");
-			Integer start = item.has("start") ? item.integer("start", 0, 255) : null;
+			Integer start = item.has("start") ? item.integer("start", 0, type == StoryCellType.CELL ? MAX_METATILE : 255) : null;
 			Closed closed = null;
 			if (item.has("closed")) {
 				DataReader c = item.object("closed").allowOnly(CLOSED_FIELDS);
@@ -288,13 +401,37 @@ public final class StoryCellTable {
 				closed = new Closed(c.integer("block", 0, 255), pass, c.integer("height", 0, MAX_CLOSED_HEIGHT), slots);
 			}
 			boolean water = item.has("water") && item.bool("water");
+			Built built = null;
+			if (item.has("built")) {
+				DataReader b = item.object("built").allowOnly(BUILT_FIELDS);
+				built = new Built(b.integer("metatile", 0, MAX_METATILE), pass(b));
+			}
+			List<CellState> states = new ArrayList<>();
+			if (item.has("states")) {
+				for (DataReader st : DataReader.objects(item.array("states"), item.path("states"))) {
+					st.allowOnly(STATE_FIELDS);
+					int[] art = DataReader.intArray(st.array("art"), st.path("art"), 0, SlotMap.CAPACITY - 1);
+					if (art.length != ART_BLOCKS) {
+						throw new DataException(st.path("art"), "a cell state's art needs " + ART_BLOCKS + " slots");
+					}
+					List<Integer> slots = new ArrayList<>(ART_BLOCKS);
+					for (int slot : art) {
+						slots.add(slot);
+					}
+					states.add(new CellState(st.integer("metatile", 0, MAX_METATILE), pass(st), st.integer("height", 0, MAX_CLOSED_HEIGHT), slots));
+				}
+			}
 			CellPos cell;
 			try {
 				cell = CellPos.parse(key);
 			} catch (IllegalArgumentException e) {
 				throw new DataException(item.path("key"), "bad cell key");
 			}
-			entries.add(new Entry(cell, type, obj, swap, hidden, start, closed, water));
+			try {
+				entries.add(new Entry(cell, type, obj, swap, hidden, start, closed, water, built, states));
+			} catch (IllegalArgumentException e) {
+				throw new DataException(item.path(), e.getMessage());
+			}
 		}
 		try {
 			return of(entries);

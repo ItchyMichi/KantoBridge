@@ -53,6 +53,32 @@ class FieldClickTest {
 	}
 
 	@Test
+	void aGen3CellIsWaterWhileItsStateIsWater() {
+		// SE3: a cell built as land whose other state is water (a tide floods it), and one built as water that a story
+		// turns to a wall
+		String flooded = "EM_CAVE:3:3";
+		String pool = "EM_CAVE:5:3";
+		List<Integer> art = List.of(1, 1, 1, 1);
+		WorldIndex world = new WorldIndex("emerald", "0".repeat(64), List.of(
+				new MapPlacement("EM_CAVE", 0, 64, 0, 10, 10, 0, MapPlacement.Kind.SURFACE, "BAKED", "kantobridge:kanto_outdoor", false, null)),
+				"0".repeat(64), StoryCellTable.of(List.of(
+						new StoryCellTable.Entry(CellPos.parse(flooded), 0, new StoryCellTable.Built(0, StoryCellTable.Pass.GROUND),
+								List.of(new StoryCellTable.CellState(2, StoryCellTable.Pass.WATER, 0, art))),
+						new StoryCellTable.Entry(CellPos.parse(pool), 2, new StoryCellTable.Built(2, StoryCellTable.Pass.WATER),
+								List.of(new StoryCellTable.CellState(3, StoryCellTable.Pass.SOLID, 2, art))))),
+				List.of());
+		java.util.function.ToIntFunction<String> states = key -> 0;
+		FieldClick.Decision dry = FieldClick.decide(world, "EM_CAVE", 3, 2, new CellPos("EM_CAVE", 3, 3), false, drawn(), states, false);
+		assertEquals(FieldClick.Kind.INTERACT, dry.kind(), "built land: the ordinary A");
+		FieldClick.Decision wet = FieldClick.decide(world, "EM_CAVE", 3, 2, new CellPos("EM_CAVE", 3, 3), false, drawn(flooded), states, false);
+		assertEquals("surf", wet.action(), "flooded: Surf");
+		FieldClick.Decision pond = FieldClick.decide(world, "EM_CAVE", 5, 2, new CellPos("EM_CAVE", 5, 3), false, drawn(), states, false);
+		assertEquals("surf", pond.action(), "built as water: Surf");
+		FieldClick.Decision walled = FieldClick.decide(world, "EM_CAVE", 5, 2, new CellPos("EM_CAVE", 5, 3), true, drawn(pool), states, true);
+		assertEquals(FieldClick.Kind.INTERACT, walled.kind(), "a surfer can't land on the wall the pool became");
+	}
+
+	@Test
 	void aStandingCutTreeIsCutFromNextToIt() {
 		FieldClick.Decision cut = press("TOWN", 10, 13, 10, 14, false, drawn(TREE), false);
 		assertEquals(FieldClick.Kind.FIELD, cut.kind());

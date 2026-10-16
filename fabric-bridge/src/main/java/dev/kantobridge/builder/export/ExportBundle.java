@@ -38,8 +38,8 @@ public final class ExportBundle {
 			"layout", "swaps", "profile", "routes",
 			// MG7 (G3D): Gen 3's own kinds (docs/specs/GEN3_BRIDGE_PLAN.md §5)
 			"g3map", "g3tiles", "g3image", "g3sprite", "g3layout", "g3encounters", "g3names",
-			// the follow-up's item 8: the animated quarters
-			"g3anims",
+			// the follow-up's item 8: the animated quarters; SE2 (docs/specs/STORY_EVENTS_PLAN.md): the cells the story changes
+			"g3anims", "g3sites",
 			// MG9 (G2D): Gen 2's own kinds (docs/specs/GEN2_BRIDGE_PLAN.md §6); the builder reads them from G2E
 			"g2map", "g2tiles", "g2image", "g2anims", "g2sprite", "g2layout", "g2encounters", "g2names");
 	/** Ids that are safe as file names everywhere (no separators, colons or leading dots). */
@@ -368,6 +368,11 @@ public final class ExportBundle {
 	public G3Data.Anims g3anims() throws BundleException {
 		return this.has("g3anims", "all") ? this.typed("g3anims", "all", G3Data.Anims::parse, G3Data.Anims.class)
 				: new G3Data.Anims(Map.of());
+	}
+
+	/** SE2: the cells the hidden game's story can change; none in an export from before them. */
+	public G3Sites g3sites() throws BundleException {
+		return this.has("g3sites", "all") ? this.typed("g3sites", "all", G3Sites::parse, G3Sites.class) : G3Sites.empty();
 	}
 
 	// ---- Gen 2 (MG9 G2D; protocol/export/g2*.schema.json)

@@ -42,6 +42,12 @@ import org.jetbrains.annotations.Nullable;
  * taken, in the zone whose route map keys the cell.</li>
  * <li><b>{@code pass}</b> cells (MG5: a connecting route's pass, the far doorway of its gate house) are closed unless
  * {@link #setOpenPasses} names their route: its far region is built and this player has a link for its game.</li>
+ * <li><b>{@code cell}</b> cells (SE3, Gen 3: a cell the hidden game's story can change) are in the live state
+ * {@code story.cells} reported on the hidden player's current map (the snapshot's {@code cells}), else in the map's own
+ * ({@code start}). In their built state they are open (water: closed unless the player surfs); in another they draw that
+ * state's art (by metatile, then pass where two states share a metatile; a state the table doesn't list draws nothing
+ * over the built art) and collide by the live pass (else the matched state's): solid always, water unless surfing,
+ * ground never.</li>
  * </ul>
  * Surf and bike come from {@code player.state}; lit maps from the snapshot's {@code lit}, {@code story.lit} and
  * {@code player.state}'s {@code dark}/{@code lit} for the current map. Malformed parts of a message are skipped; logs
@@ -56,13 +62,24 @@ public final class StoryRules {
 	 * What the rules decide.
 	 *
 	 * @param active cells closed for the player ({@code story.state}'s {@code active})
-	 * @param drawn  tile cells showing their closed art (client only)
+	 * @param drawn  tile cells showing their closed art, and (SE3) cell cells showing another state than their built one
+	 *               (client only)
+	 * @param states SE3: each drawn cell cell's state, an index into its entry's {@code states}
 	 */
-	public record Cells(Set<String> active, Set<String> drawn) {
+	public record Cells(Set<String> active, Set<String> drawn, Map<String, Integer> states) {
 		public Cells {
 			active = Collections.unmodifiableSet(new TreeSet<>(active));
 			drawn = Collections.unmodifiableSet(new TreeSet<>(drawn));
+			states = Collections.unmodifiableMap(new java.util.TreeMap<>(states));
 		}
+
+		public Cells(Set<String> active, Set<String> drawn) {
+			this(active, drawn, Map.of());
+		}
+	}
+
+	/** SE3: a live Gen 3 cell as {@code story.cells} reports it: its metatile and, when told, its pass. */
+	private record Live(int metatile, StoryCellTable.@Nullable Pass pass) {
 	}
 
 	private static final int MAX_COORD = 4096;
@@ -74,6 +91,8 @@ public final class StoryRules {
 	private final List<StoryCellTable.Entry> routeBalls = new ArrayList<>();
 	/** MG5: the pass cells of connecting routes ({@code obj} names the route's zone), closed unless the route is open. */
 	private final List<StoryCellTable.Entry> passes = new ArrayList<>();
+	/** SE3: Gen 3's cells the story changes. */
+	private final List<StoryCellTable.Entry> cellEntries = new ArrayList<>();
 	private Set<String> openPasses = Set.of();
 	/** The zone id of each zone's route map. */
 	private final Map<String, String> zoneByRouteMap = new HashMap<>();
@@ -84,12 +103,11 @@ public final class StoryRules {
 	private @Nullable String blocksMap;
 	private final Map<Integer, Integer> liveBlocks = new HashMap<>();
 	/**
-	 * MG7 (G3C): Gen 3's runtime terrain, the map whose changed cells are known and those cells' metatiles by
-	 * {@code y * 1024 + x} ({@code story.cells}, the snapshot's {@code cells}). Kept for the Gen 3 world (G3E); no story
-	 * cell reads it yet.
+	 * MG7 (G3C): Gen 3's runtime terrain, the map whose changed cells are known and those cells by {@code y * 1024 + x}
+	 * ({@code story.cells}, the snapshot's {@code cells}); SE3: the {@code cell} cells read them.
 	 */
 	private @Nullable String cellsMap;
-	private final Map<Integer, Integer> liveCells = new HashMap<>();
+	private final Map<Integer, Live> liveCells = new HashMap<>();
 	private @Nullable String currentMap;
 	/** The live NPC list's map, and the cells its NPCs (and its boulders) stand on, as {@code x * 65536 + y}. */
 	private @Nullable String npcMap;
@@ -114,6 +132,7 @@ public final class StoryRules {
 		this.boulders.clear();
 		this.routeBalls.clear();
 		this.passes.clear();
+		this.cellEntries.clear();
 		this.zoneByRouteMap.clear();
 		if (index != null) {
 			for (StoryCellTable.Entry entry : index.storyCells().entries()) {
@@ -123,6 +142,7 @@ public final class StoryRules {
 					case BOULDER_AREA -> this.boulders.add(entry);
 					case ROUTE -> this.routeBalls.add(entry);
 					case PASS -> this.passes.add(entry);
+					case CELL -> this.cellEntries.add(entry);
 					case WATER -> {
 					}
 				}
@@ -270,7 +290,10 @@ public final class StoryRules {
 		}
 		if (!map.equals(this.cellsMap)) {
 			this.cellsMap = map;
-			this.liveCells.clear();
+			if (!this.liveCells.isEmpty()) {
+				this.liveCells.clear();
+				this.dirty = true;
+			}
 		}
 	}
 
@@ -290,11 +313,17 @@ public final class StoryRules {
 				this.putCell(item.getAsJsonObject());
 			}
 		}
+		this.dirty = true;
 	}
 
 	/** MG7 (G3C): the metatiles of {@code map}'s changed cells by {@code y * 1024 + x}; empty unless it is the current map. */
 	public Map<Integer, Integer> liveCells(String map) {
-		return map.equals(this.cellsMap) ? Map.copyOf(this.liveCells) : Map.of();
+		if (!map.equals(this.cellsMap)) {
+			return Map.of();
+		}
+		Map<Integer, Integer> out = new HashMap<>();
+		this.liveCells.forEach((key, live) -> out.put(key, live.metatile()));
+		return Map.copyOf(out);
 	}
 
 	/** {@code story.toggles{map, obj, visible}}. */
@@ -440,7 +469,52 @@ public final class StoryRules {
 				active.add(entry.key());
 			}
 		}
-		return new Cells(active, drawn);
+		Map<String, Integer> states = new HashMap<>();
+		for (StoryCellTable.Entry entry : this.cellEntries) {
+			this.cellState(entry, active, drawn, states);
+		}
+		return new Cells(active, drawn, states);
+	}
+
+	/**
+	 * SE3: one {@code cell} cell: its state (the live one on the current map, else the map's own), open in the built state,
+	 * else drawn with the matching state's art and colliding by the live pass (or the matched state's).
+	 */
+	private void cellState(StoryCellTable.Entry entry, Set<String> active, Set<String> drawn, Map<String, Integer> states) {
+		StoryCellTable.Built built = entry.built();
+		Integer start = entry.start();
+		if (built == null || start == null) {
+			return;
+		}
+		Live live = entry.cell().map().equals(this.cellsMap) ? this.liveCells.get(entry.cell().y() * 1024 + entry.cell().x()) : null;
+		int metatile = live != null ? live.metatile() : start;
+		StoryCellTable.Pass told = live != null ? live.pass() : null;
+		if (metatile == built.metatile() && (told == null || told == built.pass())) {
+			if (built.pass() == StoryCellTable.Pass.WATER && !this.surf) {
+				active.add(entry.key());
+			}
+			return;
+		}
+		int match = -1;
+		List<StoryCellTable.CellState> list = entry.states();
+		for (int i = 0; i < list.size() && match < 0; i++) {
+			if (list.get(i).metatile() == metatile && (told == null || list.get(i).pass() == told)) {
+				match = i;
+			}
+		}
+		for (int i = 0; i < list.size() && match < 0; i++) {
+			if (list.get(i).metatile() == metatile) {
+				match = i;
+			}
+		}
+		StoryCellTable.Pass pass = told != null ? told : match >= 0 ? list.get(match).pass() : null;
+		if (match >= 0) {
+			drawn.add(entry.key());
+			states.put(entry.key(), match);
+		}
+		if (pass == StoryCellTable.Pass.SOLID || (pass == StoryCellTable.Pass.WATER && !this.surf)) {
+			active.add(entry.key());
+		}
 	}
 
 	private boolean objectClosed(StoryCellTable.Entry entry) {
@@ -468,8 +542,10 @@ public final class StoryRules {
 		long x = integer(cell, "x");
 		long y = integer(cell, "y");
 		long metatile = integer(cell, "metatile");
+		String pass = str(cell, "pass");
 		if (x >= 0 && x <= 1023 && y >= 0 && y <= 1023 && metatile >= 0 && metatile <= 1023) {
-			this.liveCells.put((int) (y * 1024 + x), (int) metatile);
+			// SE1: the live pass, when the bridge tells it (an unknown word counts as untold)
+			this.liveCells.put((int) (y * 1024 + x), new Live((int) metatile, pass == null ? null : StoryCellTable.Pass.byId(pass)));
 		}
 	}
 

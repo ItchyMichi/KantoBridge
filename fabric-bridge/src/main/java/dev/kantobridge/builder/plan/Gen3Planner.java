@@ -4,6 +4,7 @@ import dev.kantobridge.builder.export.BundleException;
 import dev.kantobridge.builder.export.ExportBundle;
 import dev.kantobridge.builder.export.G3Data;
 import dev.kantobridge.builder.export.G3Map;
+import dev.kantobridge.builder.export.G3Sites;
 import dev.kantobridge.builder.export.G3Tiles;
 import dev.kantobridge.builder.pack.G3PoolWriter;
 import dev.kantobridge.builder.shape.ArtUnitProbe;
@@ -54,6 +55,9 @@ import org.jetbrains.annotations.Nullable;
  * baked, so one palette ({@link #catalog}).</li>
  * <li><b>Story cells</b> by {@link G3StoryCells}; <b>habitats</b> on the cells the engine rolls land encounters on, pools
  * from the land tables ({@link G3PoolWriter}); the spawn on the root as Gen 1's.</li>
+ * <li><b>Changeable cells</b> (SE3, docs/specs/STORY_EVENTS_PLAN.md §4): every site of the {@code g3sites} export is
+ * built in its most walkable state ({@link G3Built}: the maps are read with it applied) and gets a story cell of type
+ * {@code cell}; the art catalogue lists every state's quarters.</li>
  * </ul>
  */
 final class Gen3Planner {
@@ -206,8 +210,15 @@ final class Gen3Planner {
 		// ---- slot map: from the whole export ----
 		ArtCatalog art = catalog(bundle, all, region, warnings);
 
-		// ---- story cells, habitats, pools ----
-		StoryCellTable storyCells = G3StoryCells.plan(placed, all, warnings);
+		// ---- story cells (SE3: a site's states name slots of the slot map), habitats, pools ----
+		SlotMap slotMap = art.slotMap();
+		StoryCellTable storyCells = G3StoryCells.plan(placed, all, bundle.g3sites(), (pair, mid) -> {
+			G3Tiles tiles = pairs.get(pair);
+			return tiles == null ? null : tiles.quarters(mid);
+		}, quarter -> {
+			SlotMap.Slot slot = slotMap.slot(key(quarter, SlotMap.Shape.FULL, new HashMap<>()));
+			return slot == null ? -1 : slot.index();
+		}, warnings);
 		Map<String, int[]> storyIndex = WorldPlanner.storyIndex(placed, storyCells);
 		List<WorldIndex.Habitat> habitats = HabitatPlanner.planGen3(placed, wildMaps, warnings, poolPrefix);
 		Map<String, String> pools = encounters == null ? Map.of() : G3PoolWriter.pools(encounters, wildMaps, poolPrefix, warnings);
@@ -239,13 +250,9 @@ final class Gen3Planner {
 				null, region);
 	}
 
-	/** Every map of the export, by id. */
+	/** Every map of the export, by id, its changeable cells in their built states (SE3, {@link G3Built}). */
 	static Map<String, G3Map> maps(ExportBundle bundle) throws BundleException {
-		Map<String, G3Map> all = new TreeMap<>();
-		for (String id : bundle.ids("g3map")) {
-			all.put(id, bundle.g3map(id));
-		}
-		return all;
+		return G3Built.maps(bundle);
 	}
 
 	/** Maps no player ever enters (the decomp's leftovers): never placed by a script's rule. */
@@ -481,7 +488,8 @@ final class Gen3Planner {
 	/**
 	 * The art catalogue of the whole export (whatever the build's filter, as Gen 1's): every quarter every map's cells show
 	 * (half-height where the cell is water) and its border's, keyed by quarter page and index, palette
-	 * {@link QuarterPages#PALETTE}; every page {@link QuarterPages#PER_ROW} quarters wide.
+	 * {@link QuarterPages#PALETTE}; every page {@link QuarterPages#PER_ROW} quarters wide. SE3: and every state of every
+	 * changeable cell ({@code g3sites}), full-shape, the art its story cell draws.
 	 */
 	static ArtCatalog catalog(ExportBundle bundle, Map<String, G3Map> all, @Nullable RegionBuild region, Warnings warnings)
 			throws BundleException, PlanException {
@@ -505,6 +513,17 @@ final class Gen3Planner {
 			for (int ty = 0; ty < map.border().h() * 2; ty++) {
 				for (int tx = 0; tx < map.border().w() * 2; tx++) {
 					keys.add(key(model.borderTile(tx, ty), SlotMap.Shape.FULL, perRow));
+				}
+			}
+			G3Tiles tiles = tiles(bundle, pairs, map.pair());
+			for (G3Sites.Site site : bundle.g3sites().of(map.id())) {
+				List<G3Sites.State> states = new ArrayList<>(site.states());
+				states.add(site.own());
+				for (G3Sites.State state : states) {
+					int[] quarters = tiles.quarters(state.metatile());
+					for (int q = 0; quarters != null && q < quarters.length; q++) {
+						keys.add(key(quarters[q], SlotMap.Shape.FULL, perRow));
+					}
 				}
 			}
 		}

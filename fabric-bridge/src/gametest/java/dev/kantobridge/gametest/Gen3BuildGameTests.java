@@ -306,11 +306,23 @@ public class Gen3BuildGameTests implements FabricGameTest {
 		BlockState collider = level.getBlockState(index.cellOrigin("EM_TEST_TOWN", 0, 4));
 		helper.assertTrue(collider.is(KbBlocks.LEDGE_COLLIDER) && collider.getValue(LedgeColliderBlock.FACING) == Direction.SOUTH, "the ledge's collider");
 		// Water on the route: a half block and its story cell.
-		BlockPos water = index.cellOrigin("EM_TEST_ROUTE", 4, 0);
+		BlockPos water = index.cellOrigin("EM_TEST_ROUTE", 5, 0);
 		helper.assertTrue(level.getBlockState(water.below()).getBlock() instanceof TileBlock tile && KbBlocks.tileHalf().contains(tile),
 				"water is not a half tile");
 		helper.assertTrue(level.getBlockState(water).is(KbBlocks.STORY_CELL) && level.getBlockEntity(water) instanceof StoryCellBlockEntity cell
-				&& cell.type() == StoryCellType.WATER && "EM_TEST_ROUTE:4:0".equals(cell.cellKey()), "the water's story cell");
+				&& cell.type() == StoryCellType.WATER && "EM_TEST_ROUTE:5:0".equals(cell.cellKey()), "the water's story cell");
+		// SE3: the route's site (4, 0), water a layout turns to land, is built as land (a full tile) under a story tile block
+		// whose cell entry draws the water per player; the town's tree a layout clears, likewise cleared
+		BlockPos pond = index.cellOrigin("EM_TEST_ROUTE", 4, 0);
+		helper.assertTrue(level.getBlockState(pond.below()).getBlock() instanceof TileBlock tile && KbBlocks.tileFull().contains(tile),
+				"the site isn't built as land");
+		helper.assertTrue(level.getBlockState(pond).is(KbBlocks.STORY_TILE) && level.getBlockEntity(pond) instanceof StoryCellBlockEntity cell
+				&& cell.type() == StoryCellType.CELL && "EM_TEST_ROUTE:4:0".equals(cell.cellKey()), "the site's story tile");
+		helper.assertTrue(index.storyCells().get("EM_TEST_ROUTE:4:0") != null && index.storyCells().get("EM_TEST_ROUTE:4:0").states().size() == 1,
+				"the site's entry");
+		BlockPos tree = index.cellOrigin("EM_TEST_TOWN", 7, 2);
+		helper.assertTrue(level.getBlockEntity(tree) instanceof StoryCellBlockEntity cell && cell.type() == StoryCellType.CELL,
+				"the cleared tree's story tile");
 		// The standing person's story cell; none for the walker.
 		BlockPos person = index.cellOrigin("EM_TEST_TOWN", 5, 5);
 		helper.assertTrue(level.getBlockEntity(person) instanceof StoryCellBlockEntity cell && cell.type() == StoryCellType.OBJECT,

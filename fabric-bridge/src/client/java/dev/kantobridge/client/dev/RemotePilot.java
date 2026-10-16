@@ -69,6 +69,7 @@ import net.minecraft.client.tutorial.TutorialSteps;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.util.Mth;
+import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.shapes.VoxelShape;
@@ -98,7 +99,8 @@ import org.lwjgl.glfw.GLFW;
  * <li><b>State</b>: {@code <pilotDir>/state.json}, rewritten every few ticks: the last command done and its result, the
  * open screen's class, the top hidden UI (kind, screen id, page, menu or choice index and size, the naming phase), the
  * followed link (game, region, map, cell, facing, mode, in game), every link's game and connection, the input lock, a
- * battle, the player's block position and the frame rate. Ids, cells and counts only, never the game's text.</li>
+ * battle, the player's block position and the frame rate; (SE5) the hidden game's dark and lit, the world's darkness of that map
+ * and whether the player has Night Vision. Ids, cells and counts only, never the game's text.</li>
  * </ul>
  * Every command and its result is also a line in {@code kantobridge.autopilot.log}. Nothing runs without the property.
  * Client thread only.
@@ -927,6 +929,11 @@ final class RemotePilot {
 				at.addProperty("z", cell.getZ());
 				out.add("hidden_block", at);
 			}
+			// SE5 (docs/specs/STORY_EVENTS_PLAN.md): the darkness the hidden game reports for its map and the world's own
+			out.addProperty("dark", state.dark());
+			out.addProperty("lit", state.lit());
+			MapPlacement placement = index == null || state.map() == null ? null : index.map(state.map());
+			out.addProperty("map_dark", placement != null && placement.dark());
 		}
 		MovementSync.Stats move = MoveRuntime.stats();
 		if (move != null) {
@@ -998,6 +1005,7 @@ final class RemotePilot {
 			at.addProperty("z", Math.round(player.getZ() * 100) / 100.0);
 			at.addProperty("yaw", Math.round(player.getYRot()));
 			out.add("player", at);
+			out.addProperty("night_vision", player.hasEffect(MobEffects.NIGHT_VISION));
 		}
 		out.addProperty("fps", this.minecraft.getFps());
 		out.addProperty("recording", this.recordStartNanos != 0);

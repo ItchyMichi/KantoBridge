@@ -43,6 +43,20 @@ class StoryCellArtTest {
 	}
 
 	@Test
+	void aCellCellDrawsTheStateItShows() {
+		// SE3: cell (10, 14): blocks x 120..121, z 228..229; its states are a wall two blocks tall and a flat pond
+		StoryCellTable.Entry cell = new StoryCellTable.Entry(new CellPos("TOWN", 10, 14), 5, new StoryCellTable.Built(0, StoryCellTable.Pass.GROUND),
+				List.of(new StoryCellTable.CellState(5, StoryCellTable.Pass.SOLID, 2, List.of(300, 301, 302, 303)),
+						new StoryCellTable.CellState(2, StoryCellTable.Pass.WATER, 0, List.of(7, 8, 9, 10))));
+		WorldIndex index = world(cell);
+		assertEquals(new StoryCellArt.Piece(301, 2), StoryCellArt.piece(index, cell, 0, 121, 228), "the wall's north-east quarter");
+		assertEquals(new StoryCellArt.Piece(9, 0), StoryCellArt.piece(index, cell, 1, 120, 229), "the pond, flat");
+		assertNull(StoryCellArt.piece(index, cell, -1, 120, 228), "the built state draws nothing");
+		assertNull(StoryCellArt.piece(index, cell, 2, 120, 228), "no such state");
+		assertNull(StoryCellArt.piece(index, cell, 0, 122, 228), "outside the cell");
+	}
+
+	@Test
 	void flatArtAndMissingArt() {
 		StoryCellTable.Entry carpet = new StoryCellTable.Entry(new CellPos("TOWN", 0, 0), StoryCellType.TILE, null,
 				new StoryCellTable.Swap(0, 0, "script", 0, 4), false, 0, new StoryCellTable.Closed(0, false, 0, List.of(1, 2, 3, 4)));

@@ -33,7 +33,8 @@ import net.minecraft.world.phys.shapes.CollisionContext;
  * and the story blocks laid over the test's own floor close per player. A cut tree grows back once its player's map
  * changes (live-block overrides belong to one map visit); objects absent from {@code toggles} are at their default; a
  * sailed ship's water bars walkers but not surfers; a seal whose script writes its block on every entry (Agatha's exit)
- * is open away from its room and follows the live block inside it.
+ * is open away from its room and follows the live block inside it. SE3: a Gen 3 cell the story changes closes for the
+ * player whose hidden game shows its wall, and only for them.
  */
 public class StoryRulesGameTests implements FabricGameTest {
 	private static final String BATCH = "kantobridge_story_rules";
@@ -93,7 +94,7 @@ public class StoryRulesGameTests implements FabricGameTest {
 		int i = 0;
 		for (StoryCellTable.Entry entry : index.storyCells().entries()) {
 			BlockPos pos = helper.absolutePos(new BlockPos(1 + (i % 3) * 2, 2, 1 + (i / 3) * 2));
-			boolean tile = entry.type() == StoryCellType.TILE;
+			boolean tile = entry.type() == StoryCellType.TILE || entry.type() == StoryCellType.CELL;
 			level.setBlock(pos, (tile ? KbBlocks.STORY_TILE : KbBlocks.STORY_CELL).defaultBlockState(), Block.UPDATE_ALL);
 			if (!(level.getBlockEntity(pos) instanceof StoryCellBlockEntity cell)) {
 				throw new GameTestAssertException("no story-cell block entity for " + entry.key());
@@ -173,6 +174,69 @@ public class StoryRulesGameTests implements FabricGameTest {
 		} finally {
 			MockPlayers.leave(helper, walker);
 			MockPlayers.leave(helper, surfer);
+			at.values().forEach(pos -> level.setBlock(pos, Blocks.AIR.defaultBlockState(), Block.UPDATE_ALL));
+		}
+		helper.succeed();
+	}
+
+	private static final String WALL = "EM_TOWN:6:2";
+	private static final String POND = "EM_TOWN:4:0";
+
+	/** SE3: a made-up Gen 3 town with a wall a script raises (built open) and a pond a layout turns to land (built land). */
+	static WorldIndex gen3World() {
+		List<Integer> art = List.of(1, 1, 1, 1);
+		StoryCellTable.Built ground = new StoryCellTable.Built(0, StoryCellTable.Pass.GROUND);
+		return new WorldIndex("emerald", HASH, List.of(
+				new MapPlacement("EM_TOWN", 0, 64, 0, 8, 6, 0, MapPlacement.Kind.SURFACE, "BAKED", "kantobridge:kanto_outdoor", false, null),
+				new MapPlacement("EM_HOUSE", 0, 42, 0, 4, 4, 1, MapPlacement.Kind.INTERIOR, "BAKED", "kantobridge:kanto_interior", false, "EM_TOWN")),
+				HASH, StoryCellTable.of(List.of(
+						new StoryCellTable.Entry(CellPos.parse(WALL), 0, ground, List.of(new StoryCellTable.CellState(3, StoryCellTable.Pass.SOLID, 2, art))),
+						new StoryCellTable.Entry(CellPos.parse(POND), 2, ground, List.of(new StoryCellTable.CellState(2, StoryCellTable.Pass.WATER, 0, art))))),
+				List.of());
+	}
+
+	private static JsonObject gen3Snapshot(String map, boolean surf) {
+		return json("{\"ingame\":true,\"player\":{\"map\":\"" + map + "\",\"x\":1,\"y\":1,\"facing\":\"down\"},\"state\":" + state(surf)
+				+ ",\"toggles\":{},\"blocks\":[],\"cells\":[],\"lit\":[]}");
+	}
+
+	@GameTest(template = EMPTY_STRUCTURE, batch = BATCH + "_cells")
+	public void gen3CellsCloseForThePlayerWhoseGameShowsThem(GameTestHelper helper) {
+		ServerLevel level = helper.getLevel();
+		WorldIndex index = gen3World();
+		Map<String, BlockPos> at = lay(helper, index);
+		ServerPlayer raised = MockPlayers.join(helper);
+		ServerPlayer away = MockPlayers.join(helper);
+		try {
+			helper.assertTrue(level.getBlockEntity(at.get(WALL)) instanceof StoryCellBlockEntity cell && cell.type() == StoryCellType.CELL
+					&& level.getBlockState(at.get(WALL)).is(KbBlocks.STORY_TILE), "a cell cell is a story tile block");
+			// One player's hidden game is in the town and has raised the wall; the other's is in the house (the town shows its
+			// own cells for them: the wall down, the pond water).
+			StoryRules a = new StoryRules();
+			a.setIndex(index);
+			a.onSnapshot(gen3Snapshot("EM_TOWN", false));
+			a.onCells(json("{\"map\":\"EM_TOWN\",\"cells\":[{\"x\":6,\"y\":2,\"metatile\":3,\"pass\":\"solid\"},"
+					+ "{\"x\":4,\"y\":0,\"metatile\":0,\"pass\":\"ground\"}]}"));
+			StoryRules b = new StoryRules();
+			b.setIndex(index);
+			b.onSnapshot(gen3Snapshot("EM_HOUSE", false));
+			relay(raised, 1, a);
+			relay(away, 1, b);
+			helper.assertTrue(closedFor(level, at.get(WALL), raised), "the wall stands for the player whose game raised it");
+			helper.assertFalse(closedFor(level, at.get(WALL), away), "and not for the other");
+			helper.assertFalse(closedFor(level, at.get(POND), raised), "the pond is land in the town the first player is in");
+			helper.assertTrue(closedFor(level, at.get(POND), away), "away from the town the pond is the map's own water: walkers stop");
+			// The second player surfs: the water lets them through.
+			b.onPlayerState(json(state(true)));
+			relay(away, 2, b);
+			helper.assertFalse(closedFor(level, at.get(POND), away), "a surfer crosses the pond");
+			// The first player's game takes the wall down again (a reload puts the map's own metatile back).
+			a.onCells(json("{\"map\":\"EM_TOWN\",\"cells\":[{\"x\":6,\"y\":2,\"metatile\":0,\"pass\":\"ground\"}]}"));
+			relay(raised, 2, a);
+			helper.assertFalse(closedFor(level, at.get(WALL), raised), "the wall came down");
+		} finally {
+			MockPlayers.leave(helper, raised);
+			MockPlayers.leave(helper, away);
 			at.values().forEach(pos -> level.setBlock(pos, Blocks.AIR.defaultBlockState(), Block.UPDATE_ALL));
 		}
 		helper.succeed();

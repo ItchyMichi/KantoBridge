@@ -5,6 +5,7 @@ import dev.kantobridge.builder.export.CellFlags;
 import dev.kantobridge.builder.export.ExportBundle;
 import dev.kantobridge.builder.export.G3Map;
 import dev.kantobridge.builder.export.G3Tiles;
+import dev.kantobridge.builder.plan.G3Built;
 import dev.kantobridge.builder.plan.G3Cells;
 import dev.kantobridge.builder.plan.MapModel;
 import dev.kantobridge.builder.plan.PlanException;
@@ -29,8 +30,8 @@ import java.util.TreeSet;
  * export bundle, reusing the builder's Gen 3 cell model ({@link G3Cells}), so the scene shows exactly what the builder
  * builds. 16-px cells of 2×2 8-px quarters, as Gen 1's; the whole art one virtual atlas ({@link QuarterPages#VIRTUAL},
  * tiles are quarter ids) in one baked palette; kinds and tags from the collision bytes; outdoors, the open air and caves
- * from the map types; no swap sites (Gen 3's terrain changes come at run time) and no animated tiles (still frames,
- * §5). Everything Gen-3-specific stays in here. Pure: the server and every client get the same scene from the same
+ * from the map types; no swap sites (Gen 3's terrain changes come at run time; SE3: the cells they can change are
+ * described in their built states, {@link G3Built}) and no animated tiles (still frames, §5). Everything Gen-3-specific stays in here. Pure: the server and every client get the same scene from the same
  * export.
  */
 public final class Gen3FrontEnd implements GameFrontEnd {
@@ -68,7 +69,8 @@ public final class Gen3FrontEnd implements GameFrontEnd {
 		Warnings scratch = new Warnings();
 		int index = 0;
 		for (String id : bundle.ids("g3map")) {
-			G3Map map = bundle.g3map(id);
+			// SE3: the cells the story changes in their built states, as the builder builds them
+			G3Map map = G3Built.map(bundle, id);
 			if (!bundle.has("g3tiles", map.pair())) {
 				continue;
 			}
