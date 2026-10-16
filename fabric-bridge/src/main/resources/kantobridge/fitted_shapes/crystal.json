@@ -1,0 +1,163 @@
+{
+  "kb_fitted_shapes": 1,
+  "game": "crystal",
+  "planner": "kb-shapes/11",
+  "cells": {
+    "g3q/1130-1131-1132-1133": {
+      "class": "columns",
+      "iou": 0.853
+    },
+    "g3q/1252-1253-1254-1255": {
+      "class": "cylinder",
+      "iou": 0.889
+    },
+    "g3q/1256-1256-1257-1257": {
+      "class": "cylinder",
+      "iou": 0.538
+    },
+    "g3q/2102-2103-2104-2105": {
+      "class": "can",
+      "k": [
+        9,
+        3,
+        8,
+        0,
+        0
+      ],
+      "iou": 0.426
+    },
+    "g3q/2270-2271-2272-2273": {
+      "class": "signpost",
+      "iou": 0.408
+    },
+    "g3q/2769-2770-2771-2772": {
+      "class": "can",
+      "k": [
+        9,
+        6,
+        8,
+        4,
+        0
+      ],
+      "iou": 0.409
+    },
+    "g3q/360-3843-3843-3843": {
+      "class": "columns",
+      "iou": 0.573
+    },
+    "g3q/3843-3843-360-3843": {
+      "class": "columns",
+      "iou": 0.885
+    },
+    "g3q/3872-3873-3874-3875": {
+      "class": "columns",
+      "iou": 0.724
+    },
+    "g3q/393-393-449-394": {
+      "class": "columns",
+      "iou": 0.913
+    },
+    "g3q/406-406-396-396": {
+      "class": "columns",
+      "iou": 1.0
+    },
+    "g3q/4322-4323-4286-4286": {
+      "class": "columns",
+      "iou": 0.625
+    },
+    "g3q/4968-4969-4970-4971": {
+      "class": "cylinder",
+      "iou": 0.733
+    },
+    "g3q/549-549-0-0": {
+      "class": "cylinder",
+      "iou": 0.781
+    }
+  },
+  "structs_proposed": {
+    "g3q/06da7a8c71b4bb60": {
+      "roofRows": 0,
+      "iou": 0.751
+    },
+    "g3q/3cdc65da0b6ea575": {
+      "roofRows": 0,
+      "iou": 0.688
+    },
+    "g3q/51407265e07fde71": {
+      "roofRows": 0,
+      "iou": 0.584
+    },
+    "g3q/658d2ad89f9ee2b0": {
+      "roofRows": 0,
+      "iou": 0.584
+    },
+    "g3q/688da133b21566e1": {
+      "roofRows": 0,
+      "iou": 0.702
+    },
+    "g3q/78c637a7ad571144": {
+      "roofRows": 0,
+      "iou": 0.76
+    },
+    "g3q/7d7da5960d2e11f7": {
+      "roofRows": 0,
+      "iou": 0.688
+    },
+    "g3q/836624195d3444ed": {
+      "roofRows": 0,
+      "iou": 0.587
+    },
+    "g3q/84d774b9aa2c6871": {
+      "roofRows": 0,
+      "iou": 0.702
+    },
+    "g3q/91368dcf9057932a": {
+      "roofRows": 0,
+      "iou": 0.702
+    },
+    "g3q/bae3f707c610797d": {
+      "roofRows": 0,
+      "iou": 0.771
+    },
+    "g3q/c539db55d20c507c": {
+      "roofRows": 0,
+      "iou": 0.679
+    },
+    "g3q/c88e4d80ad1ac394": {
+      "roofRows": 6,
+      "iou": 0.702
+    },
+    "g3q/ca0215f0f40d51b2": {
+      "roofRows": 0,
+      "iou": 0.688
+    },
+    "g3q/db2df76781b55758": {
+      "roofRows": 0,
+      "iou": 0.688
+    },
+    "g3q/e5cfde73245bb32d": {
+      "roofRows": 0,
+      "iou": 0.813
+    },
+    "g3q/e6f435d5f56eca3e": {
+      "roofRows": 1,
+      "iou": 0.768
+    },
+    "g3q/ece2a7d194b8fe53": {
+      "roofRows": 0,
+      "iou": 0.688
+    },
+    "g3q/fc232347b9ad94b1": {
+      "roofRows": 0,
+      "iou": 0.688
+    }
+  },
+  "summary": {
+    "cells": 85,
+    "fitted": 37,
+    "kept": 14,
+    "buildings": 69,
+    "buildings_fitted": 64,
+    "buildings_kept": 19
+  }
+}

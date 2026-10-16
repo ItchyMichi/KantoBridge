@@ -37,6 +37,8 @@ import org.jetbrains.annotations.Nullable;
  * <pre>
  * dump &lt;bundle&gt; &lt;out.json&gt;              every planned unit once per cell (atlas and four tiles): its drawing's shades,
  *                                        its foreground, and the voxels today's pick builds (ROM-derived: local/ only)
+ * applied &lt;bundle&gt;                      the planner's unit tally with the jar's table on ({@code fit}: units it re-picked,
+ *                                        {@code fit_columns}: cells it left to Tier A)
  * fit &lt;bundle&gt; &lt;targets.json&gt; &lt;out.json&gt; per cell, every builder and setting of {@link Candidates} against the
  *                                        cell's target voxels (made from its drawing); the best by voxel IoU, today's
  *                                        pick's IoU beside it (the table and its report: no pixels)
@@ -56,8 +58,10 @@ public final class FitTool {
 			dump(Path.of(args[1]), Path.of(args[2]));
 		} else if (args.length == 4 && args[0].equals("fit")) {
 			fit(Path.of(args[1]), Path.of(args[2]), Path.of(args[3]));
+		} else if (args.length == 2 && args[0].equals("applied")) {
+			applied(Path.of(args[1]));
 		} else {
-			System.err.println("usage: FitTool dump <bundle> <out.json> | fit <bundle> <targets.json> <out.json>");
+			System.err.println("usage: FitTool dump <bundle> <out.json> | fit <bundle> <targets.json> <out.json> | applied <bundle>");
 			System.exit(2);
 		}
 	}
@@ -138,6 +142,18 @@ public final class FitTool {
 			}
 		}
 		return out;
+	}
+
+	static void applied(Path bundleDir) throws Exception {
+		ExportBundle bundle = ExportBundle.open(bundleDir);
+		GameFrontEnd front = FrontEnds.forGame(bundle.game());
+		if (front == null) {
+			throw new IllegalArgumentException("no front end for " + bundle.game());
+		}
+		FittedShapes.setEnabled(true);
+		ShapePlan plan = ShapePlanner.plan(front.describe(bundle), List.of(), ShapeParams.current(), Occupancy.NONE,
+				new ArtUnitProbe(FrontEnds.artSource(bundle)));
+		System.out.println("applied: " + bundle.game() + " " + plan.unitTally());
 	}
 
 	static void dump(Path bundleDir, Path out) throws Exception {

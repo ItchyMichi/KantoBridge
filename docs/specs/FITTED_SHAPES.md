@@ -13,14 +13,18 @@ it. Each player's own art still supplies the textures.
 | 3. Model to voxels | same script | The sparse structure's surface voxels are filled solid. TRELLIS's frame is z up with the camera along y, and the side facing the viewer is the one whose south view best matches the drawing. That view is stretched onto the drawing's box, and the depth is scaled like the width and centred in the cell. The runs vote (§4), giving a 16 × 16 × 16 target in the unit's frame |
 | 4. Voxels to table | CPU pod | `./gradlew shapeFit -Pkb.fitArgs="fit <bundle> <targets.json> <out.json>"` builds every candidate (§3) with the game's own code and gates, in each of the cell's planned contexts, and scores it by voxel IoU against the target, the target moved along the depth so that both have the same mean depth. It keeps the best only where it beats today's pick by `MARGIN` (0.05) and reaches `MIN_IOU` (0.4) |
 
-The table goes to `fabric-bridge/src/main/resources/kantobridge/fitted_shapes/<game>.json` and is committed. It holds
-cell keys (atlas and tile numbers), a class and its parameters, and the IoU. It holds no pixels. `<out>.report.json`
+A cell gets a target only when at least 3 of its 4 runs survive (§4). The table goes to
+`fabric-bridge/src/main/resources/kantobridge/fitted_shapes/<game>.json` and is committed. It holds
+cell keys (atlas and tile numbers), a class and its parameters, and the IoU. It holds no pixels. `<out>.report.json` (copies in `tools/shape_fit/reports/`)
 lists every fitted cell with today's pick, the best fit and both IoUs. That report is the test set's score against
 today's pick.
 
 ## 2. Use
 
-`Units.plan` looks up a cell that would become a unit and that the profile doesn't pin (`FittedShapes`):
+`Units.plan` looks up a cell that would become a unit and that the profile doesn't pin (`FittedShapes`). Each game has
+its own table: Crystal and Emerald share the atlas name `g3q` with other art behind the same numbers. `ShapePlanner.plan`
+says which game it plans, and Red reads Blue's table. `./gradlew shapeFit -Pkb.fitArgs="applied <bundle>"` prints the
+planner's unit tally with the table on.
 
 - **A class and its parameters** go into the unit's key variant, as a profile pin's would (`g2_can_k0300080402`). Each
   client therefore builds the fitted shape from its own art without the table. The planner tallies these as `fit`.
@@ -69,3 +73,23 @@ still wins.
 fits nearly always chose 1 roof row over the pane heuristic's 3. A model seen from the front can't tell a roof row
 from a wall row: a boxier volume matches it better, but it would draw roof tiles on upright walls. A proposal goes
 live only when someone moves it to `structs` after looking at it.
+
+## 6. First run (2026-10-16)
+
+Run on an A40 pod (about 8 h at $0.59/hr, including setup and one restart after the fixes in §4) and small CPU pods.
+TRELLIS.2 at commit 75fbf01, weights `microsoft/TRELLIS.2-4B`, seed 42.
+
+| Game | Cells | With a target (3+ runs) | In the table | Unit placements re-picked | Left to Tier A | Buildings proposed |
+|---|---|---|---|---|---|---|
+| Blue | 54 | 25 | 16 | 5,735 | 2 | 5 of 29 |
+| Crystal | 85 | 37 | 14 | 1,675 | 94 | 19 of 69 |
+| Emerald | 379 | 145 | 75 | 391 | 327 | 10 of 58 |
+
+**No model** (fewer than 3 runs kept): Blue 29 cells and 2 buildings, Crystal 48 and 5, Emerald 234 and 5. They are
+listed in `tools/shape_fit/failed/<game>.json` (per item its key, today's pick, and each run's style and why it was
+dropped), to rerun through another method later.
+
+Mean voxel IoU against the targets: today's pick 0.27–0.37, the best fit 0.48–0.62. Trees mostly move from the round hull
+to the can (a fuller lathe). Statues and machines become thin standees (`cutout`, `signpost`). Many of Emerald's
+standees become plain blocks: TRELLIS sees them as boxes. Most cells keep today's pick. Either too few runs agreed
+(TRELLIS's shell, or a full cube), or no builder beat today's pick by the margin.

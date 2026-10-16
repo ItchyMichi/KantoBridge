@@ -1,0 +1,816 @@
+{
+ "kb_fitted_shapes_failed": 1,
+ "game": "blue",
+ "note": "Cells and buildings TRELLIS.2 gave no usable model for: fewer than 3 of its 4 prompt runs survived (docs/specs/FITTED_SHAPES.md). They keep the planner's own pick; rerun them through another method.",
+ "cells": [
+  {
+   "cell": "tilesets.cavern/2-3-18-19",
+   "today": [
+    "columns"
+   ],
+   "kept_runs": 1,
+   "runs": [
+    {
+     "style": "grey",
+     "result": "shell"
+    },
+    {
+     "style": "grey-x2",
+     "result": "shell"
+    },
+    {
+     "style": "tint",
+     "result": "shell"
+    },
+    {
+     "style": "tint-x2",
+     "result": "kept",
+     "depth": 1.0
+    }
+   ]
+  },
+  {
+   "cell": "tilesets.cemetery/1-1-39-47",
+   "today": [
+    "object"
+   ],
+   "kept_runs": 0,
+   "runs": [
+    {
+     "style": "grey",
+     "result": "shell"
+    },
+    {
+     "style": "grey-x2",
+     "result": "shell"
+    },
+    {
+     "style": "tint",
+     "result": "shell"
+    },
+    {
+     "style": "tint-x2",
+     "result": "shell"
+    }
+   ]
+  },
+  {
+   "cell": "tilesets.club/29-13-21-22",
+   "today": [
+    "object"
+   ],
+   "kept_runs": 2,
+   "runs": [
+    {
+     "style": "grey",
+     "result": "shell"
+    },
+    {
+     "style": "grey-x2",
+     "result": "shell"
+    },
+    {
+     "style": "tint",
+     "result": "kept",
+     "depth": 1.0
+    },
+    {
+     "style": "tint-x2",
+     "result": "kept",
+     "depth": 1.0
+    }
+   ]
+  },
+  {
+   "cell": "tilesets.club/52-52-52-52",
+   "today": [
+    "object"
+   ],
+   "kept_runs": 0,
+   "runs": [
+    {
+     "style": "grey",
+     "result": "shell"
+    },
+    {
+     "style": "grey-x2",
+     "result": "shell"
+    },
+    {
+     "style": "tint",
+     "result": "shell"
+    },
+    {
+     "style": "tint-x2",
+     "result": "shell"
+    }
+   ]
+  },
+  {
+   "cell": "tilesets.facility/87-87-89-89",
+   "today": [
+    "columns"
+   ],
+   "kept_runs": 2,
+   "runs": [
+    {
+     "style": "grey",
+     "result": "shell"
+    },
+    {
+     "style": "grey-x2",
+     "result": "shell"
+    },
+    {
+     "style": "tint",
+     "result": "kept",
+     "depth": 1.0
+    },
+    {
+     "style": "tint-x2",
+     "result": "kept",
+     "depth": 1.0
+    }
+   ]
+  },
+  {
+   "cell": "tilesets.forest/36-37-0-53",
+   "today": [
+    "object"
+   ],
+   "kept_runs": 0,
+   "runs": [
+    {
+     "style": "grey",
+     "result": "shell"
+    },
+    {
+     "style": "grey-x2",
+     "result": "shell"
+    },
+    {
+     "style": "tint",
+     "result": "shell"
+    },
+    {
+     "style": "tint-x2",
+     "result": "shell"
+    }
+   ]
+  },
+  {
+   "cell": "tilesets.forest/38-39-54-48",
+   "today": [
+    "object"
+   ],
+   "kept_runs": 1,
+   "runs": [
+    {
+     "style": "grey",
+     "result": "shell"
+    },
+    {
+     "style": "grey-x2",
+     "result": "kept",
+     "depth": 1.03
+    },
+    {
+     "style": "tint",
+     "result": "shell"
+    },
+    {
+     "style": "tint-x2",
+     "result": "shell"
+    }
+   ]
+  },
+  {
+   "cell": "tilesets.forest/4-5-35-21",
+   "today": [
+    "object"
+   ],
+   "kept_runs": 1,
+   "runs": [
+    {
+     "style": "grey",
+     "result": "shell"
+    },
+    {
+     "style": "grey-x2",
+     "result": "kept",
+     "depth": 1.0
+    },
+    {
+     "style": "tint",
+     "result": "shell"
+    },
+    {
+     "style": "tint-x2",
+     "result": "shell"
+    }
+   ]
+  },
+  {
+   "cell": "tilesets.forest/48-48-10-11",
+   "today": [
+    "object"
+   ],
+   "kept_runs": 0,
+   "runs": [
+    {
+     "style": "grey",
+     "result": "shell"
+    },
+    {
+     "style": "grey-x2",
+     "result": "shell"
+    },
+    {
+     "style": "tint",
+     "result": "shell"
+    },
+    {
+     "style": "tint-x2",
+     "result": "shell"
+    }
+   ]
+  },
+  {
+   "cell": "tilesets.forest/6-7-22-23",
+   "today": [
+    "object"
+   ],
+   "kept_runs": 2,
+   "runs": [
+    {
+     "style": "grey",
+     "result": "shell"
+    },
+    {
+     "style": "grey-x2",
+     "result": "kept",
+     "depth": 1.0
+    },
+    {
+     "style": "tint",
+     "result": "shell"
+    },
+    {
+     "style": "tint-x2",
+     "result": "kept",
+     "depth": 1.0
+    }
+   ]
+  },
+  {
+   "cell": "tilesets.forest/84-85-86-87",
+   "today": [
+    "hull"
+   ],
+   "kept_runs": 1,
+   "runs": [
+    {
+     "style": "grey",
+     "result": "shell"
+    },
+    {
+     "style": "grey-x2",
+     "result": "shell"
+    },
+    {
+     "style": "tint",
+     "result": "shell"
+    },
+    {
+     "style": "tint-x2",
+     "result": "kept",
+     "depth": 1.0
+    }
+   ]
+  },
+  {
+   "cell": "tilesets.gate/17-1-14-15",
+   "today": [
+    "object"
+   ],
+   "kept_runs": 0,
+   "runs": [
+    {
+     "style": "grey",
+     "result": "shell"
+    },
+    {
+     "style": "grey-x2",
+     "result": "shell"
+    },
+    {
+     "style": "tint",
+     "result": "shell"
+    },
+    {
+     "style": "tint-x2",
+     "result": "shell"
+    }
+   ]
+  },
+  {
+   "cell": "tilesets.gate/5-6-21-22",
+   "today": [
+    "object"
+   ],
+   "kept_runs": 0,
+   "runs": [
+    {
+     "style": "grey",
+     "result": "shell"
+    },
+    {
+     "style": "grey-x2",
+     "result": "shell"
+    },
+    {
+     "style": "tint",
+     "result": "shell"
+    },
+    {
+     "style": "tint-x2",
+     "result": "shell"
+    }
+   ]
+  },
+  {
+   "cell": "tilesets.gate/72-72-74-74",
+   "today": [
+    "object"
+   ],
+   "kept_runs": 0,
+   "runs": [
+    {
+     "style": "grey",
+     "result": "shell"
+    },
+    {
+     "style": "grey-x2",
+     "result": "shell"
+    },
+    {
+     "style": "tint",
+     "result": "shell"
+    },
+    {
+     "style": "tint-x2",
+     "result": "shell"
+    }
+   ]
+  },
+  {
+   "cell": "tilesets.gym/5-5-16-16",
+   "today": [
+    "object"
+   ],
+   "kept_runs": 0,
+   "runs": [
+    {
+     "style": "grey",
+     "result": "shell"
+    },
+    {
+     "style": "grey-x2",
+     "result": "shell"
+    },
+    {
+     "style": "tint",
+     "result": "shell"
+    },
+    {
+     "style": "tint-x2",
+     "result": "shell"
+    }
+   ]
+  },
+  {
+   "cell": "tilesets.gym/69-70-86-86",
+   "today": [
+    "hull"
+   ],
+   "kept_runs": 2,
+   "runs": [
+    {
+     "style": "grey",
+     "result": "kept",
+     "depth": 1.17
+    },
+    {
+     "style": "grey-x2",
+     "result": "kept",
+     "depth": 0.45
+    },
+    {
+     "style": "tint",
+     "result": "shell"
+    },
+    {
+     "style": "tint-x2",
+     "result": "shell"
+    }
+   ]
+  },
+  {
+   "cell": "tilesets.gym/7-8-23-24",
+   "today": [
+    "hull"
+   ],
+   "kept_runs": 1,
+   "runs": [
+    {
+     "style": "grey",
+     "result": "shell"
+    },
+    {
+     "style": "grey-x2",
+     "result": "kept",
+     "depth": 0.81
+    },
+    {
+     "style": "tint",
+     "result": "shell"
+    },
+    {
+     "style": "tint-x2",
+     "result": "shell"
+    }
+   ]
+  },
+  {
+   "cell": "tilesets.lobby/1-1-1-1",
+   "today": [
+    "object"
+   ],
+   "kept_runs": 2,
+   "runs": [
+    {
+     "style": "grey",
+     "result": "shell"
+    },
+    {
+     "style": "grey-x2",
+     "result": "kept",
+     "depth": 1.23
+    },
+    {
+     "style": "tint",
+     "result": "shell"
+    },
+    {
+     "style": "tint-x2",
+     "result": "kept",
+     "depth": 1.0
+    }
+   ]
+  },
+  {
+   "cell": "tilesets.lobby/1-1-33-33",
+   "today": [
+    "object"
+   ],
+   "kept_runs": 0,
+   "runs": [
+    {
+     "style": "grey",
+     "result": "shell"
+    },
+    {
+     "style": "grey-x2",
+     "result": "shell"
+    },
+    {
+     "style": "tint",
+     "result": "shell"
+    },
+    {
+     "style": "tint-x2",
+     "result": "shell"
+    }
+   ]
+  },
+  {
+   "cell": "tilesets.lobby/38-39-48-21",
+   "today": [
+    "columns"
+   ],
+   "kept_runs": 2,
+   "runs": [
+    {
+     "style": "grey",
+     "result": "shell"
+    },
+    {
+     "style": "grey-x2",
+     "result": "shell"
+    },
+    {
+     "style": "tint",
+     "result": "kept",
+     "depth": 1.0
+    },
+    {
+     "style": "tint-x2",
+     "result": "kept",
+     "depth": 1.0
+    }
+   ]
+  },
+  {
+   "cell": "tilesets.overworld/13-36-55-52",
+   "today": [
+    "columns"
+   ],
+   "kept_runs": 1,
+   "runs": [
+    {
+     "style": "grey",
+     "result": "shell"
+    },
+    {
+     "style": "grey-x2",
+     "result": "kept",
+     "depth": 0.5
+    },
+    {
+     "style": "tint",
+     "result": "shell"
+    },
+    {
+     "style": "tint-x2",
+     "result": "shell"
+    }
+   ]
+  },
+  {
+   "cell": "tilesets.overworld/29-36-55-52",
+   "today": [
+    "columns"
+   ],
+   "kept_runs": 1,
+   "runs": [
+    {
+     "style": "grey",
+     "result": "shell"
+    },
+    {
+     "style": "grey-x2",
+     "result": "kept",
+     "depth": 0.5
+    },
+    {
+     "style": "tint",
+     "result": "shell"
+    },
+    {
+     "style": "tint-x2",
+     "result": "shell"
+    }
+   ]
+  },
+  {
+   "cell": "tilesets.overworld/39-44-54-55",
+   "today": [
+    "columns"
+   ],
+   "kept_runs": 2,
+   "runs": [
+    {
+     "style": "grey",
+     "result": "shell"
+    },
+    {
+     "style": "grey-x2",
+     "result": "kept",
+     "depth": 0.53
+    },
+    {
+     "style": "tint",
+     "result": "shell"
+    },
+    {
+     "style": "tint-x2",
+     "result": "kept",
+     "depth": 1.0
+    }
+   ]
+  },
+  {
+   "cell": "tilesets.plateau/45-45-45-45",
+   "today": [
+    "columns"
+   ],
+   "kept_runs": 0,
+   "runs": [
+    {
+     "style": "grey",
+     "result": "shell"
+    },
+    {
+     "style": "grey-x2",
+     "result": "shell"
+    },
+    {
+     "style": "tint",
+     "result": "shell"
+    },
+    {
+     "style": "tint-x2",
+     "result": "shell"
+    }
+   ]
+  },
+  {
+   "cell": "tilesets.pokecenter/40-40-40-40",
+   "today": [
+    "columns"
+   ],
+   "kept_runs": 2,
+   "runs": [
+    {
+     "style": "grey",
+     "result": "shell"
+    },
+    {
+     "style": "grey-x2",
+     "result": "shell"
+    },
+    {
+     "style": "tint",
+     "result": "kept",
+     "depth": 1.0
+    },
+    {
+     "style": "tint-x2",
+     "result": "kept",
+     "depth": 1.0
+    }
+   ]
+  },
+  {
+   "cell": "tilesets.pokecenter/66-70-82-86",
+   "today": [
+    "hull"
+   ],
+   "kept_runs": 2,
+   "runs": [
+    {
+     "style": "grey",
+     "result": "shell"
+    },
+    {
+     "style": "grey-x2",
+     "result": "shell"
+    },
+    {
+     "style": "tint",
+     "result": "kept",
+     "depth": 0.56
+    },
+    {
+     "style": "tint-x2",
+     "result": "kept",
+     "depth": 0.56
+    }
+   ]
+  },
+  {
+   "cell": "tilesets.ship/2-3-18-19",
+   "today": [
+    "hull"
+   ],
+   "kept_runs": 2,
+   "runs": [
+    {
+     "style": "grey",
+     "result": "kept",
+     "depth": 1.0
+    },
+    {
+     "style": "grey-x2",
+     "result": "kept",
+     "depth": 2.67
+    },
+    {
+     "style": "tint",
+     "result": "shell"
+    },
+    {
+     "style": "tint-x2",
+     "result": "shell"
+    }
+   ]
+  },
+  {
+   "cell": "tilesets.ship/86-87-59-60",
+   "today": [
+    "hull"
+   ],
+   "kept_runs": 0,
+   "runs": [
+    {
+     "style": "grey",
+     "result": "shell"
+    },
+    {
+     "style": "grey-x2",
+     "result": "shell"
+    },
+    {
+     "style": "tint",
+     "result": "shell"
+    },
+    {
+     "style": "tint-x2",
+     "result": "shell"
+    }
+   ]
+  },
+  {
+   "cell": "tilesets.ship_port/49-49-49-49",
+   "today": [
+    "columns"
+   ],
+   "kept_runs": 1,
+   "runs": [
+    {
+     "style": "grey",
+     "result": "shell"
+    },
+    {
+     "style": "grey-x2",
+     "result": "shell"
+    },
+    {
+     "style": "tint",
+     "result": "shell"
+    },
+    {
+     "style": "tint-x2",
+     "result": "kept",
+     "depth": 1.0
+    }
+   ]
+  }
+ ],
+ "structs": [
+  {
+   "struct": "tilesets.overworld/4d2c40ccb9d175cd",
+   "today": "building:2",
+   "kept_runs": 0,
+   "runs": [
+    {
+     "style": "grey",
+     "result": "shell"
+    },
+    {
+     "style": "grey-x2",
+     "result": "shell"
+    },
+    {
+     "style": "tint",
+     "result": "shell"
+    },
+    {
+     "style": "tint-x2",
+     "result": "shell"
+    }
+   ]
+  },
+  {
+   "struct": "tilesets.overworld/f0742ccb2c40164f",
+   "today": "building:3",
+   "kept_runs": 2,
+   "runs": [
+    {
+     "style": "grey",
+     "result": "kept",
+     "depth": 1.0
+    },
+    {
+     "style": "grey-x2",
+     "result": "shell"
+    },
+    {
+     "style": "tint",
+     "result": "kept",
+     "depth": 1.0
+    },
+    {
+     "style": "tint-x2",
+     "result": "shell"
+    }
+   ]
+  }
+ ],
+ "summary": {
+  "cells": 54,
+  "cells_failed": 29,
+  "structs": 29,
+  "structs_failed": 2
+ }
+}

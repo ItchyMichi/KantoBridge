@@ -183,6 +183,17 @@ public final class ShapePlanner {
 	 */
 	public static ShapePlan plan(Scene scene, Collection<MapPlacement> placements, ShapeParams params, Occupancy taken,
 			@Nullable UnitProbe probe, Map<String, MapLayout> layouts, List<WorldIndex.Shaft> shafts) {
+		// The fitted shapes table is per game (docs/specs/FITTED_SHAPES.md): this scene's.
+		String before = FittedShapes.enter(scene.game());
+		try {
+			return planScene(scene, placements, params, taken, probe, layouts, shafts);
+		} finally {
+			FittedShapes.leave(before);
+		}
+	}
+
+	private static ShapePlan planScene(Scene scene, Collection<MapPlacement> placements, ShapeParams params, Occupancy taken,
+			@Nullable UnitProbe probe, Map<String, MapLayout> layouts, List<WorldIndex.Shaft> shafts) {
 		long started = System.nanoTime();
 		List<String> atlases = new ArrayList<>(new TreeSet<>(scene.atlases().keySet()));
 		TreeSet<String> paletteSet = new TreeSet<>();

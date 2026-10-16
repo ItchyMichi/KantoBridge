@@ -15,7 +15,7 @@ import org.junit.jupiter.api.Test;
 
 /**
  * The fitted shapes table (docs/specs/FITTED_SHAPES.md): its file's entries (unknown classes left out, parameters
- * clamped, the first game's entry kept), and the planner's use of it: a fit re-picks a unit's class and parameters in its
+ * clamped), one table per game, and the planner's use of it: a fit re-picks a unit's class and parameters in its
  * key, {@code columns} keeps no unit, a building's fitted roof rows travel in its template entry, and a turned-off table
  * leaves the planner's own pick. Pixel-free.
  */
@@ -25,6 +25,7 @@ class FittedShapesTest {
 	@AfterEach
 	void reset() {
 		FittedShapes.useForTest(null);
+		FittedShapes.useTablesForTest(null);
 		FittedShapes.setEnabled(true);
 	}
 
@@ -46,9 +47,27 @@ class FittedShapesTest {
 				  "a/9-9-9-9": {"class": "columns"},
 				  "a/0-0-0-0": {"k": [1]}
 				}}""", table);
-		FittedShapes.parse("{\"cells\": {\"a/1-2-3-4\": {\"class\": \"cylinder\"}}}", table);
 		assertEquals(Map.of("a/1-2-3-4", new FittedShapes.Entry("can", List.of(3, 0, 99, 0, 2)), "a/9-9-9-9",
 				new FittedShapes.Entry("columns", List.of())), table);
+	}
+
+	@Test
+	void eachGameReadsItsOwnTable() {
+		FittedShapes.Entry can = new FittedShapes.Entry("can", List.of(1, 2, 3, 4, 5));
+		FittedShapes.useTablesForTest(Map.of("emerald", new FittedShapes.Table(Map.of("g3q/1-2-3-4", can), Map.of()),
+				"blue", new FittedShapes.Table(Map.of("tilesets.x/1-2-3-4", can), Map.of())));
+		int[] tiles = {1, 2, 3, 4};
+		assertEquals(null, FittedShapes.get("g3q", tiles), "outside a scene: no table");
+		String before = FittedShapes.enter("crystal");
+		try {
+			assertEquals(null, FittedShapes.get("g3q", tiles), "the same atlas name in another game: not its entry");
+			FittedShapes.enter("emerald");
+			assertEquals(can, FittedShapes.get("g3q", tiles));
+			FittedShapes.enter("red");
+			assertEquals(can, FittedShapes.get("tilesets.x", tiles), "Red reads Blue's");
+		} finally {
+			FittedShapes.leave(before);
+		}
 	}
 
 	@Test

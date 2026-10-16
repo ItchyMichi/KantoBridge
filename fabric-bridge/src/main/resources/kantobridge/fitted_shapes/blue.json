@@ -1,0 +1,150 @@
+{
+  "kb_fitted_shapes": 1,
+  "game": "blue",
+  "planner": "kb-shapes/11",
+  "cells": {
+    "tilesets.cemetery/32-32-48-48": {
+      "class": "columns",
+      "iou": 1.0
+    },
+    "tilesets.cemetery/5-6-21-22": {
+      "class": "prop",
+      "iou": 0.712
+    },
+    "tilesets.forest/2-3-18-19": {
+      "class": "can",
+      "k": [
+        0,
+        0,
+        4,
+        0,
+        8
+      ],
+      "iou": 0.499
+    },
+    "tilesets.forest/33-34-49-50": {
+      "class": "can",
+      "k": [
+        3,
+        0,
+        16,
+        4,
+        0
+      ],
+      "iou": 0.406
+    },
+    "tilesets.gate/36-36-52-52": {
+      "class": "prop",
+      "iou": 0.606
+    },
+    "tilesets.gate/37-38-53-54": {
+      "class": "signpost",
+      "iou": 0.812
+    },
+    "tilesets.gym/11-12-27-28": {
+      "class": "cutout",
+      "iou": 0.482
+    },
+    "tilesets.gym/2-56-18-19": {
+      "class": "cutout",
+      "iou": 0.541
+    },
+    "tilesets.gym/44-45-46-47": {
+      "class": "can",
+      "k": [
+        9,
+        6,
+        16,
+        0,
+        0
+      ],
+      "iou": 0.91
+    },
+    "tilesets.gym/64-65-80-81": {
+      "class": "signpost",
+      "iou": 0.459
+    },
+    "tilesets.lab/50-51-67-68": {
+      "class": "can",
+      "k": [
+        9,
+        6,
+        16,
+        0,
+        0
+      ],
+      "iou": 0.91
+    },
+    "tilesets.overworld/42-43-58-59": {
+      "class": "can",
+      "k": [
+        3,
+        3,
+        16,
+        0,
+        0
+      ],
+      "iou": 0.742
+    },
+    "tilesets.overworld/45-46-61-62": {
+      "class": "signpost",
+      "iou": 0.426
+    },
+    "tilesets.overworld/64-65-80-81": {
+      "class": "can",
+      "k": [
+        9,
+        6,
+        16,
+        0,
+        0
+      ],
+      "iou": 0.748
+    },
+    "tilesets.plateau/7-8-23-24": {
+      "class": "can",
+      "k": [
+        9,
+        6,
+        16,
+        0,
+        0
+      ],
+      "iou": 0.855
+    },
+    "tilesets.ship/72-73-88-89": {
+      "class": "cutout",
+      "iou": 0.479
+    }
+  },
+  "structs_proposed": {
+    "tilesets.overworld/4e09b8bf05aabc7b": {
+      "roofRows": 1,
+      "iou": 0.879
+    },
+    "tilesets.overworld/77131c592337fe34": {
+      "roofRows": 1,
+      "iou": 0.884
+    },
+    "tilesets.overworld/d66310cbdbeacfcc": {
+      "roofRows": 1,
+      "iou": 0.956
+    },
+    "tilesets.overworld/da685162ccaa2237": {
+      "roofRows": 1,
+      "iou": 0.877
+    },
+    "tilesets.overworld/fd8300f15c852454": {
+      "roofRows": 1,
+      "iou": 0.884
+    }
+  },
+  "summary": {
+    "cells": 54,
+    "fitted": 25,
+    "kept": 16,
+    "buildings": 29,
+    "buildings_fitted": 27,
+    "buildings_kept": 5
+  }
+}

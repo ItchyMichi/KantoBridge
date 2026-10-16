@@ -22,14 +22,16 @@ import org.jetbrains.annotations.Nullable;
  * 2]}}), or {@code columns} (no unit: the cell stays what Tier A makes it). No pixels: the class and parameters travel in
  * the unit's key, and each client builds them from its own art.
  *
- * <p>Read from the jar's {@code /kantobridge/fitted_shapes/<game>.json} files (FitTool writes them), every game's into one
- * map: a key names its atlas, and games that share atlases (Red and Blue) share their entries. The profile's own pins
- * win over a fit.
+ * <p>Read from the jar's {@code /kantobridge/fitted_shapes/<game>.json} files (FitTool writes them), one table per game:
+ * games of one engine may share an atlas name ({@code g3q} is Crystal's and Emerald's) with other art behind the same
+ * tile numbers. Red reads Blue's table (one art). The planner looks a cell up in the table of the scene it is planning
+ * ({@link #enter}); outside a scene there is none. The profile's own pins win over a fit.
  */
 public final class FittedShapes {
 	static final String DIR = "/kantobridge/fitted_shapes/";
-	/** The games whose tables the jar may carry. */
+	/** The games whose tables the jar may carry, and the games that read another's. */
 	static final List<String> GAMES = List.of("blue", "crystal", "emerald");
+	static final Map<String, String> SHARED = Map.of("red", "blue");
 	/** The class of a fit that keeps no unit. */
 	public static final String COLUMNS = "columns";
 
@@ -40,8 +42,13 @@ public final class FittedShapes {
 		}
 	}
 
-	private static volatile @Nullable Map<String, Entry> bundled;
-	private static volatile @Nullable Map<String, Integer> bundledRoofs;
+	/** One game's table: its cells' fits and its buildings' roof rows. */
+	record Table(Map<String, Entry> cells, Map<String, Integer> roofs) {
+	}
+
+	private static volatile @Nullable Map<String, Table> bundled;
+	private static volatile @Nullable Table forTest;
+	private static final ThreadLocal<String> GAME = new ThreadLocal<>();
 	/** Off for FitTool's dump, which must see the planner's own pick. */
 	private static volatile boolean enabled = true;
 
@@ -52,33 +59,59 @@ public final class FittedShapes {
 		enabled = on;
 	}
 
-	/** Tests: a table in place of the jar's (null reads the jar's again). */
+	/** Planning {@code game} on this thread from now on; returns the game planned before, for {@link #leave}. */
+	static @Nullable String enter(String game) {
+		String before = GAME.get();
+		GAME.set(game);
+		return before;
+	}
+
+	static void leave(@Nullable String before) {
+		if (before == null) {
+			GAME.remove();
+		} else {
+			GAME.set(before);
+		}
+	}
+
+	/** Tests: a table in place of the jar's, for every game and outside a scene too (null reads the jar's again). */
 	static void useForTest(@Nullable Map<String, Entry> table) {
 		useForTest(table, Map.of());
 	}
 
 	/** Tests: cells and buildings' roof rows in place of the jar's (a null table reads the jar's again). */
 	static void useForTest(@Nullable Map<String, Entry> table, Map<String, Integer> roofs) {
-		bundledRoofs = table == null ? null : Map.copyOf(roofs);
-		bundled = table == null ? null : Collections.unmodifiableMap(new TreeMap<>(table));
+		forTest = table == null ? null : new Table(Map.copyOf(table), Map.copyOf(roofs));
+	}
+
+	/** Tests: the jar's tables replaced, per game (null reads the jar's again). */
+	static void useTablesForTest(@Nullable Map<String, Table> tables) {
+		bundled = tables == null ? null : Map.copyOf(tables);
+	}
+
+	/** The table of the game this thread plans, or null. */
+	private static @Nullable Table current() {
+		if (!enabled) {
+			return null;
+		}
+		Table test = forTest;
+		if (test != null) {
+			return test;
+		}
+		String game = GAME.get();
+		return game == null ? null : tables().get(SHARED.getOrDefault(game, game));
 	}
 
 	/** The fit of a cell, or null (no table, no entry, or turned off). */
 	static @Nullable Entry get(String atlas, int[] tiles) {
-		if (!enabled) {
-			return null;
-		}
-		return table().get(key(atlas, tiles));
+		Table table = current();
+		return table == null ? null : table.cells().get(key(atlas, tiles));
 	}
 
 	/** A building template's fitted roof rows (0 the column version), by its atlas and signature; -1 for none. */
 	public static int roofRows(String atlas, String sig) {
-		if (!enabled) {
-			return -1;
-		}
-		table();
-		Map<String, Integer> roofs = bundledRoofs;
-		Integer rows = roofs == null ? null : roofs.get(atlas + "/" + sig);
+		Table table = current();
+		Integer rows = table == null ? null : table.roofs().get(atlas + "/" + sig);
 		return rows == null ? -1 : rows;
 	}
 
@@ -91,35 +124,36 @@ public final class FittedShapes {
 		return out.toString();
 	}
 
-	static Map<String, Entry> table() {
-		Map<String, Entry> table = bundled;
-		if (table == null) {
+	static Map<String, Table> tables() {
+		Map<String, Table> tables = bundled;
+		if (tables == null) {
 			synchronized (FittedShapes.class) {
-				table = bundled;
-				if (table == null) {
-					table = new TreeMap<>();
-					Map<String, Integer> roofs = new TreeMap<>();
+				tables = bundled;
+				if (tables == null) {
+					tables = new TreeMap<>();
 					for (String game : GAMES) {
 						try (InputStream in = FittedShapes.class.getResourceAsStream(DIR + game + ".json")) {
 							if (in != null) {
 								String text = new String(in.readAllBytes(), StandardCharsets.UTF_8);
-								parse(text, table);
+								Map<String, Entry> cells = new TreeMap<>();
+								Map<String, Integer> roofs = new TreeMap<>();
+								parse(text, cells);
 								parseRoofs(text, roofs);
+								tables.put(game, new Table(Collections.unmodifiableMap(cells), Collections.unmodifiableMap(roofs)));
 							}
 						} catch (IOException e) {
 							throw new UncheckedIOException(e);
 						}
 					}
-					bundledRoofs = Collections.unmodifiableMap(roofs);
-					table = Collections.unmodifiableMap(table);
-					bundled = table;
+					tables = Collections.unmodifiableMap(tables);
+					bundled = tables;
 				}
 			}
 		}
-		return table;
+		return tables;
 	}
 
-	/** Adds a table file's buildings ({@code structs}: key → {@code roofRows} 0..6) to {@code into}; the first one stays. */
+	/** Adds a table file's buildings ({@code structs}: key → {@code roofRows} 0..6) to {@code into}. */
 	static void parseRoofs(String text, Map<String, Integer> into) {
 		JsonObject root = JsonParser.parseString(text).getAsJsonObject();
 		if (!root.has("structs")) {
@@ -129,7 +163,7 @@ public final class FittedShapes {
 			try {
 				int rows = e.getValue().getAsJsonObject().get("roofRows").getAsInt();
 				if (rows >= 0 && rows <= 6) {
-					into.putIfAbsent(e.getKey(), rows);
+					into.put(e.getKey(), rows);
 				}
 			} catch (RuntimeException ignored) {
 				// A malformed entry: the planner's own roof stands.
@@ -137,7 +171,7 @@ public final class FittedShapes {
 		}
 	}
 
-	/** Adds a table file's entries to {@code into} (a key already there keeps its entry); an unreadable entry is left out. */
+	/** Adds a table file's entries to {@code into}; an unreadable entry is left out. */
 	static void parse(String text, Map<String, Entry> into) {
 		JsonObject root = JsonParser.parseString(text).getAsJsonObject();
 		if (!root.has("cells")) {
@@ -156,7 +190,7 @@ public final class FittedShapes {
 						params.add(Math.max(0, Math.min(99, k.getAsInt())));
 					}
 				}
-				into.putIfAbsent(e.getKey(), new Entry(cls, params));
+				into.put(e.getKey(), new Entry(cls, params));
 			} catch (RuntimeException ignored) {
 				// A malformed entry: the planner's own pick stands.
 			}

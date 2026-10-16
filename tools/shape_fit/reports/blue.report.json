@@ -1,0 +1,391 @@
+[
+  {
+    "cell": "tilesets.cavern/14-15-30-31",
+    "today": "columns",
+    "today_iou": 0.705,
+    "fit": "columns",
+    "fit_iou": 0.705,
+    "candidates": 1153
+  },
+  {
+    "cell": "tilesets.cemetery/32-32-48-48",
+    "today": "object",
+    "today_iou": 0.07,
+    "fit": "columns",
+    "fit_iou": 1.0,
+    "candidates": 1810
+  },
+  {
+    "cell": "tilesets.cemetery/5-6-21-22",
+    "today": "hull",
+    "today_iou": 0.458,
+    "fit": "prop",
+    "fit_iou": 0.712,
+    "candidates": 25982
+  },
+  {
+    "cell": "tilesets.facility/7-15-23-31",
+    "today": "hull",
+    "today_iou": 0.114,
+    "fit": "cutout",
+    "fit_iou": 0.382,
+    "candidates": 6294
+  },
+  {
+    "cell": "tilesets.facility/9-10-25-26",
+    "today": "columns",
+    "today_iou": 1.0,
+    "fit": "columns",
+    "fit_iou": 1.0,
+    "candidates": 1258
+  },
+  {
+    "cell": "tilesets.forest/2-3-18-19",
+    "today": "hull",
+    "today_iou": 0.41,
+    "fit": "can:0,0,4,0,8",
+    "fit_iou": 0.499,
+    "candidates": 15872
+  },
+  {
+    "cell": "tilesets.forest/33-34-49-50",
+    "today": "columns",
+    "today_iou": 0.309,
+    "fit": "can:3,0,16,4,0",
+    "fit_iou": 0.406,
+    "candidates": 1212
+  },
+  {
+    "cell": "tilesets.gate/36-36-52-52",
+    "today": "object",
+    "today_iou": 0.4,
+    "fit": "prop",
+    "fit_iou": 0.606,
+    "candidates": 2272
+  },
+  {
+    "cell": "tilesets.gate/37-38-53-54",
+    "today": "hull",
+    "today_iou": 0.252,
+    "fit": "signpost",
+    "fit_iou": 0.812,
+    "candidates": 2661
+  },
+  {
+    "cell": "tilesets.gym/11-12-27-28",
+    "today": "hull",
+    "today_iou": 0.123,
+    "fit": "cutout",
+    "fit_iou": 0.482,
+    "candidates": 1654
+  },
+  {
+    "cell": "tilesets.gym/2-56-18-19",
+    "today": "hull",
+    "today_iou": 0.092,
+    "fit": "cutout",
+    "fit_iou": 0.541,
+    "candidates": 7014
+  },
+  {
+    "cell": "tilesets.gym/44-45-46-47",
+    "today": "hull",
+    "today_iou": 0.562,
+    "fit": "can:9,6,16,0,0",
+    "fit_iou": 0.91,
+    "candidates": 14807
+  },
+  {
+    "cell": "tilesets.gym/64-65-80-81",
+    "today": "columns",
+    "today_iou": 0.036,
+    "fit": "signpost",
+    "fit_iou": 0.459,
+    "candidates": 622
+  },
+  {
+    "cell": "tilesets.lab/46-47-62-63",
+    "today": "hull",
+    "today_iou": 0.21,
+    "fit": "can:9,0,16,0,4",
+    "fit_iou": 0.251,
+    "candidates": 1978
+  },
+  {
+    "cell": "tilesets.lab/50-51-67-68",
+    "today": "hull",
+    "today_iou": 0.562,
+    "fit": "can:9,6,16,0,0",
+    "fit_iou": 0.91,
+    "candidates": 5695
+  },
+  {
+    "cell": "tilesets.mansion/70-71-24-25",
+    "today": "hull",
+    "today_iou": 0.247,
+    "fit": "can:0,3,4,0,6",
+    "fit_iou": 0.298,
+    "candidates": 4915
+  },
+  {
+    "cell": "tilesets.overworld/14-14-85-85",
+    "today": "object",
+    "today_iou": 0.134,
+    "fit": "cylinder",
+    "fit_iou": 0.389,
+    "candidates": 1025
+  },
+  {
+    "cell": "tilesets.overworld/42-43-58-59",
+    "today": "hull",
+    "today_iou": 0.609,
+    "fit": "can:3,3,16,0,0",
+    "fit_iou": 0.742,
+    "candidates": 4844
+  },
+  {
+    "cell": "tilesets.overworld/45-46-61-62",
+    "today": "columns",
+    "today_iou": 0.029,
+    "fit": "signpost",
+    "fit_iou": 0.426,
+    "candidates": 622
+  },
+  {
+    "cell": "tilesets.overworld/64-65-80-81",
+    "today": "hull",
+    "today_iou": 0.436,
+    "fit": "can:9,6,16,0,0",
+    "fit_iou": 0.748,
+    "candidates": 4772
+  },
+  {
+    "cell": "tilesets.overworld/70-71-86-87",
+    "today": "columns",
+    "today_iou": 0.998,
+    "fit": "columns",
+    "fit_iou": 0.998,
+    "candidates": 2460
+  },
+  {
+    "cell": "tilesets.plateau/7-8-23-24",
+    "today": "hull",
+    "today_iou": 0.527,
+    "fit": "can:9,6,16,0,0",
+    "fit_iou": 0.855,
+    "candidates": 2278
+  },
+  {
+    "cell": "tilesets.plateau/9-10-25-26",
+    "today": "columns",
+    "today_iou": 0.706,
+    "fit": "columns",
+    "fit_iou": 0.706,
+    "candidates": 1215
+  },
+  {
+    "cell": "tilesets.pokecenter/34-35-50-51",
+    "today": "hull",
+    "today_iou": 0.212,
+    "fit": "can:9,0,14,0,4",
+    "fit_iou": 0.253,
+    "candidates": 2967
+  },
+  {
+    "cell": "tilesets.ship/72-73-88-89",
+    "today": "hull",
+    "today_iou": 0.122,
+    "fit": "cutout",
+    "fit_iou": 0.479,
+    "candidates": 1654
+  },
+  {
+    "struct": "tilesets.overworld/1c8fdc3e14b80710",
+    "today": "columns",
+    "today_iou": 0.688,
+    "fit": "roofRows:0",
+    "fit_iou": 0.688
+  },
+  {
+    "struct": "tilesets.overworld/1e28b3b0c7bbf63c",
+    "today": "building:3",
+    "today_iou": 0.812,
+    "fit": "roofRows:1",
+    "fit_iou": 0.812
+  },
+  {
+    "struct": "tilesets.overworld/268734084f853558",
+    "today": "columns",
+    "today_iou": 0.65,
+    "fit": "roofRows:0",
+    "fit_iou": 0.65
+  },
+  {
+    "struct": "tilesets.overworld/35c5da1e2f8745c7",
+    "today": "columns",
+    "today_iou": 0.35,
+    "fit": "roofRows:0",
+    "fit_iou": 0.35
+  },
+  {
+    "struct": "tilesets.overworld/4b13613a9834aa83",
+    "today": "columns",
+    "today_iou": 0.883,
+    "fit": "roofRows:0",
+    "fit_iou": 0.883
+  },
+  {
+    "struct": "tilesets.overworld/4e09b8bf05aabc7b",
+    "today": "building:3",
+    "today_iou": 0.813,
+    "fit": "roofRows:1",
+    "fit_iou": 0.879
+  },
+  {
+    "struct": "tilesets.overworld/4e445e98cbd56533",
+    "today": "columns",
+    "today_iou": 0.708,
+    "fit": "roofRows:0",
+    "fit_iou": 0.708
+  },
+  {
+    "struct": "tilesets.overworld/6207be66e0990e0d",
+    "today": "building:6",
+    "today_iou": 0.345,
+    "fit": "roofRows:1",
+    "fit_iou": 0.348
+  },
+  {
+    "struct": "tilesets.overworld/77131c592337fe34",
+    "today": "building:3",
+    "today_iou": 0.819,
+    "fit": "roofRows:1",
+    "fit_iou": 0.884
+  },
+  {
+    "struct": "tilesets.overworld/7ec2a09768b4d806",
+    "today": "building:2",
+    "today_iou": 0.077,
+    "fit": "roofRows:3",
+    "fit_iou": 0.077
+  },
+  {
+    "struct": "tilesets.overworld/a397ebe4910d7a8b",
+    "today": "columns",
+    "today_iou": 0.885,
+    "fit": "roofRows:0",
+    "fit_iou": 0.885
+  },
+  {
+    "struct": "tilesets.overworld/abef52a03de2801a",
+    "today": "columns",
+    "today_iou": 0.688,
+    "fit": "roofRows:0",
+    "fit_iou": 0.688
+  },
+  {
+    "struct": "tilesets.overworld/ae35e38a9e1e5b07",
+    "today": "columns",
+    "today_iou": 0.733,
+    "fit": "roofRows:0",
+    "fit_iou": 0.733
+  },
+  {
+    "struct": "tilesets.overworld/b7c80018a672da7b",
+    "today": "columns",
+    "today_iou": 0.885,
+    "fit": "roofRows:0",
+    "fit_iou": 0.885
+  },
+  {
+    "struct": "tilesets.overworld/be9cf6d84c306b3e",
+    "today": "columns",
+    "today_iou": 0.856,
+    "fit": "roofRows:0",
+    "fit_iou": 0.856
+  },
+  {
+    "struct": "tilesets.overworld/c5201e66f0012c8c",
+    "today": "columns",
+    "today_iou": 0.958,
+    "fit": "roofRows:0",
+    "fit_iou": 0.958
+  },
+  {
+    "struct": "tilesets.overworld/c843ace2cb84387d",
+    "today": "building:3",
+    "today_iou": 0.911,
+    "fit": "roofRows:0",
+    "fit_iou": 0.958
+  },
+  {
+    "struct": "tilesets.overworld/c9321d706cc099f2",
+    "today": "columns",
+    "today_iou": 0.661,
+    "fit": "roofRows:0",
+    "fit_iou": 0.661
+  },
+  {
+    "struct": "tilesets.overworld/cb95cb18f7a7fa29",
+    "today": "building:3",
+    "today_iou": 0.546,
+    "fit": "roofRows:0",
+    "fit_iou": 0.589
+  },
+  {
+    "struct": "tilesets.overworld/d66310cbdbeacfcc",
+    "today": "building:6",
+    "today_iou": 0.901,
+    "fit": "roofRows:1",
+    "fit_iou": 0.956
+  },
+  {
+    "struct": "tilesets.overworld/d80f978ac5e4b172",
+    "today": "building:3",
+    "today_iou": 0.911,
+    "fit": "roofRows:0",
+    "fit_iou": 0.958
+  },
+  {
+    "struct": "tilesets.overworld/da685162ccaa2237",
+    "today": "building:3",
+    "today_iou": 0.812,
+    "fit": "roofRows:1",
+    "fit_iou": 0.877
+  },
+  {
+    "struct": "tilesets.overworld/dfbeefc6bb5ef1a0",
+    "today": "building:6",
+    "today_iou": 0.267,
+    "fit": "roofRows:0",
+    "fit_iou": 0.272
+  },
+  {
+    "struct": "tilesets.overworld/e32d40d2b117d525",
+    "today": "columns",
+    "today_iou": 0.339,
+    "fit": "roofRows:6",
+    "fit_iou": 0.345
+  },
+  {
+    "struct": "tilesets.overworld/f010333e15c733a5",
+    "today": "columns",
+    "today_iou": 0.688,
+    "fit": "roofRows:0",
+    "fit_iou": 0.688
+  },
+  {
+    "struct": "tilesets.overworld/fd8300f15c852454",
+    "today": "building:3",
+    "today_iou": 0.819,
+    "fit": "roofRows:1",
+    "fit_iou": 0.884
+  },
+  {
+    "struct": "tilesets.overworld/ff8546767391215d",
+    "today": "columns",
+    "today_iou": 0.889,
+    "fit": "roofRows:0",
+    "fit_iou": 0.889
+  }
+]
