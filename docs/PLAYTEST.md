@@ -977,3 +977,23 @@ rebuilding (the export now lists the cells: `g3sites`).
       Jagged Pass and the Aqua Hideout cave in Lilycove open with the story, the Abandoned Ship's key doors, New
       Mauville's generator room, the Trick House's puzzles, the Lilycove museum's paintings.
 - [ ] **Other players:** two players in different story states see their own: one's open door is the other's shut one.
+
+### Crystal (with you)
+
+Crystal's story changes were already built and drawn per player (MG9); the story check (plan §5) found them all
+working on the pod, so this list is what to look at when you play. Nothing needs exporting or rebuilding.
+
+- [ ] **The Elite Four:** the door shuts behind you as you enter each room, and the exit opens once you beat its
+      trainer, through Lance's room to the Hall of Fame.
+- [ ] **The Ruins of Alph:** each puzzle chamber's back wall stays shut until the Unown message opens it; finishing a
+      puzzle opens the floor and drops you into the inner chamber.
+- [ ] **Mahogany Town:** the stairs behind the shelf in the Mahogany Mart appear once Lance uncovers them; the
+      Rocket hideout's doors open with the passwords and the generator room's.
+- [ ] **Goldenrod:** the Radio Tower 3F shutter opens with the Card Key; the underground switch room's shutters open
+      and close with its switches; the Dept Store basement's boxes move between visits.
+- [ ] **Burned Tower:** the floor gives way where the rival waits, and the ladder appears once the beasts have fled.
+- [ ] **Route 19:** the rocks block the way to Seafoam until they are cleared.
+- [ ] **Dark Cave, Rock Tunnel, the Whirl Islands:** black until you use Flash, then lit.
+- [ ] **Your room:** the bed, carpet, plant and poster are drawn right for **one decoration** of each kind only; any
+      other decoration you put up shows the wrong art (a known gap: cosmetic, fixable).
+- [ ] **Other players:** two players in different story states see their own doors, shutters and stairs.

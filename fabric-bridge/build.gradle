@@ -614,6 +614,9 @@ test {
 	systemProperty "kb.storySweep", providers.gradleProperty("kb.storySweep").getOrElse("")
 	// -Pkb.realGen2Bundle=<export bundle> runs MG9's Gen 2 dry run on the pod's Crystal export (counts and codes only).
 	systemProperty "kb.realGen2Bundle", providers.gradleProperty("kb.realGen2Bundle").getOrElse("")
+	// The story check for Crystal: -Pkb.realGen2Index=<the real Johto's world_index.json> with kb.realGen2Bundle and
+	// -Pkb.storySweep=<sweep truth files> replays the sweep's cases through the client's story rules (pod only)
+	systemProperty "kb.realGen2Index", providers.gradleProperty("kb.realGen2Index").getOrElse("")
 	// -Pkb.caves3d=pilot: the dry run with only the pilot's caves in 3D (H6's world) instead of all (the build's default)
 	systemProperty "kb.caves3d", providers.gradleProperty("kb.caves3d").getOrElse("all")
 	// -Pkb.testHeap=4g: a larger heap for the dry runs on a real export (MG7: Hoenn is three times Kanto)

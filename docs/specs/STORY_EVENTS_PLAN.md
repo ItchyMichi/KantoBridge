@@ -191,8 +191,92 @@ cells'); crosshair picking on drawn cell art; the game's weather clouds; lightni
 | Big swaps (Mirage Island 955 cells, Sootopolis 646) cost many block-entity draws on that map | only the current map's changed cells draw; measured in SE5 |
 | The hidden game halts in a cutscene the client can't see | unchanged by this plan; the sweep halts them only as a test device |
 
-## 5. The next games
+## 5. Crystal's results (2026-10-16, Gen1Recomp v0.3.85, the pod's Crystal import)
 
-The same three runs for Crystal (Gen 2: `story.blocks` and swap sites already exist, MG9 G2C) and for Blue (Gen 1's
-curated swap sites, M8): the scan needs each engine's script walk (Gen 2's `gen2Scripts`, Gen 1's script tables), the
-sweep and the objects run reuse the client side as they are.
+The same three runs (§2) with Crystal's own tools: `tools/e2e/g2_story_check.py` (`scan`, `summary`, `cases`, `sweep`,
+`objects`, `report`, `sites`) and its driver `tools/e2e/drivers/kb_g2story.lua`; the Minecraft side by
+`RealGen2StoryReplayTest` (the sweep's cases through `StoryRules` on the real Johto) and `tools/e2e/story_spots_g2.py`
+with `drivers/kb_g2spots.lua` (the real dev client). Truth files stay on the volume (`local/reports/g2_story_*.json`).
+Crystal already had what Emerald lacked (MG9 G2C): `story.blocks`, swap sites from a walk of every map's scripts, tile
+story cells built open and closed per player. So this was a check, and it found one gap and one test-tool fault.
+
+### 5.1 Inventory (the scan)
+
+- 389 maps (Johto and Crystal's Kanto), 2,713 entry points (callbacks by type, scene scripts, coord and bg events,
+  objects, trainers), every reachable row walked with its conditions: what the script result register holds
+  (checkevent, checkflag, checkscene, checkmapscene, checktime, readvar, readmem, setval). The walk is capped at 48
+  condition paths per script and entry point. 17 maps' walks reach the cap: the Battle Tower, the Dragon Shrine's quiz,
+  the Bug-Catching Contest gates, the Goldenrod underground switch room's 11 switches and others. The sites check
+  (§5.3) shows nothing was lost.
+- **Terrain: `changeblock` only** (no `changemapblocks`; no special edits blocks except the bedroom's decorations).
+  On map load, on 25 maps:
+  - the Elite Four's five rooms (the entrance shut behind the player, the exit opened);
+  - the four Ruins of Alph puzzle chambers (the wall, the floor);
+  - Burned Tower 1F and B1F;
+  - the Goldenrod Dept Store B1F (box layouts) and roof (the sale);
+  - the Goldenrod underground (a door) and its switch room (16 shutters);
+  - the Mahogany Mart's stairs, the Radio Tower 3F's card-key shutter, the Rocket hideout's B2F and B3F doors;
+  - Route 19's rocks, Blackthorn Gym 1F's boulder holes, Tin Tower 1F, the Celadon Dept Store 6F.
+  The same maps' events (talking, signs, steps) write blocks too.
+- **People:** appear, disappear, moveobject and variablesprite on load on 46 maps (Ilex Forest's Farfetch'd, Tin
+  Tower's beasts, Kurt, the Lake of Rage, the ports, weekday people and others).
+- **No weather in Gen 2.** Light: 13 dark maps (PALETTE_DARK: Dark Cave, Rock Tunnel, the Whirl Islands, Silver Cave's
+  first room), black until Flash.
+
+### 5.2 The hidden game (the sweep)
+
+- 230 cases on 59 maps, covering every distinct load-time command at least once.
+- 229 cases stayed on their map; one entered the Bug-Catching Contest. Three long scenes were halted (the Dragon
+  Shrine, Elm's lab, Mr. Pokémon's house).
+- Every change the cases ask for happens: 329 changed blocks.
+- The first run crashed the game in Elm's lab. The cause was the test's own hook, which answered a yes/no inside the
+  VM's resume; the sweep now answers a frame later, as a player would, and counts a script error against its case. No
+  case hit one.
+
+### 5.3 The bridge
+
+- **`story.blocks` is exact in all 229 cases:** the client holds the engine's changed blocks, nothing missing, wrong or
+  extra. No `story.unknown_block` was logged.
+- **The export's swap sites:** 137 on 50 maps (40 Cut trees, 6 Whirlpools, 64 script sites, 27 decoration sites).
+  - Every one of the scan's 2,077 block writes that changes a block is a site, and so are all 66 distinct changes seen
+    live.
+  - The other way round, every one of the 64 exported script sites is a write the scan found, so the cap on the
+    scan's walk lost nothing.
+- **People:** in all 229 cases the client's NPC list matched the engine's live people and the toggles matched the
+  engine's masks. The objects run covered every event-flagged person on 160 maps, all flags set and then all clear
+  (320 visits). In all 318 visits that stayed on their map the NPC list matched the engine's people and the toggles
+  matched its masks; the other 2 left the map (Ecruteak Gym's scene).
+
+### 5.4 Minecraft
+
+- **The replay** (`RealGen2StoryReplayTest`) ran the 229 cases through `StoryRules` on the real Johto (ThreeRegionsE2E,
+  built 2026-10-15). Of 609 changed cells:
+  - 104 were drawn in their closed state, 352 were open tile cells built as the game shows them, and 153 were built as
+    the live block already;
+  - 0 were missing, 0 collided unlike the game, and 0 had the wrong art.
+  The 1,371 other tile cells of those maps sat in their own state, all colliding as the game does.
+- **The real client:** 14 of 14 spots passed:
+  - through the five Elite Four exits (each into the next room, Lance's into the Hall of Fame);
+  - onto the Mahogany Mart's stairs, and through the Radio Tower's shutter, both Rocket hideout doors and a Goldenrod
+    underground shutter;
+  - walled off by the Ruins of Alph's closed wall and Route 19's rocks;
+  - Dark Cave dark, then lit by Flash.
+  The first run passed 9: halting a scene script left the World's text box marker set, so the hidden player stopped
+  taking steps. The halt now clears every marker `World:busy` reads, and the next run passed 14 of 14. Video on the
+  volume: `/workspace/videos/kanto-bridge-crystal-story-spots-20261016.mp4` (5.5 MB, sent to the user).
+
+### 5.5 Gaps
+
+- **The bedroom's decorations.** 7 blocks of PLAYERS_HOUSE_2F take several decorations (each slot's choices). The
+  builder keeps two states per block (G2Cells: the first site wins), so any other decoration is drawn wrong (the
+  tile cell stays in its built state). This is cosmetic; the fix would be Emerald's multi-state `cell` story cells
+  (§4) for those 7 blocks.
+- Not covered by the check:
+  - the Battle Tower's rooms and the link rooms (left out, as S7 left Emerald's out);
+  - changes made during a visit that the next load doesn't redo (the bridge relays them live, and every write is a
+    site).
+
+## 6. Blue
+
+The same three runs for Blue (Gen 1's curated swap sites, M8): the scan needs Gen 1's script tables; the sweep, the
+objects run, the replay and the spots reuse the client side as they are.
