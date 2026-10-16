@@ -944,3 +944,36 @@ of it has been seen in a real client yet, except the joins' downloads (G2G).
 - [ ] **Your exits:** when you want them elsewhere, stand where each clearing should start, face the trees, press F7
       and send me the map, cell and facing.
 
+## Story events (specs/STORY_EVENTS_PLAN.md)
+
+### Emerald (with you)
+
+What changed in the world as Emerald's story moves on is now built and drawn per player: each cell the story can
+change is built in its most walkable state, and the state your hidden game shows is drawn and collides for you only.
+The weather is drawn per player too (client only; `"weather": "off"` in `kantobridge-client.json` turns it off), and
+Dewford Gym is dark until its lights are fully up. An Emerald export from before needs exporting again and Hoenn
+rebuilding (the export now lists the cells: `g3sites`).
+
+- [ ] **The Elite Four:** each member's exit opens once you beat them and the entrance closes behind you, in Minecraft
+      as in the game (before, the exits stayed shut in Minecraft).
+- [ ] **Gyms:** Mauville's barriers switch with its switches; Mossdeep's spinner switches change the floor; Petalburg's
+      doors slide open as you beat each room; Sootopolis's ice cracks where you stepped and its holes drop you a floor.
+- [ ] **Shoal Cave:** at high tide (by your computer's clock) the cave floods; the water blocks you unless you surf;
+      at low tide the floor is dry again. The Shoal Salt and Shell spots show taken once taken.
+- [ ] **Sky Pillar:** before Rayquaza wakes, its floors are whole; after, they are cracked as the game draws them.
+- [ ] **Mirage Island** rises on Route 130 on the days your game shows it, and you can walk on it.
+- [ ] **Route 131** looks as the game draws it every visit (built in).
+- [ ] **The crisis:** Sootopolis's crisis layout; and the weather: drought and downpour in turn over Sootopolis,
+      Routes 124 to 131, Lilycove, Mossdeep, Ever Grande and outside Sky Pillar until Rayquaza calms them.
+- [ ] **After the game:** the Terra Cave entrance on Routes 114, 115, 116 or 118 with drought, the Marine Cave on
+      Routes 105, 125, 127 or 129 with downpour (the Weather Institute tells you where). The game's own weather there
+      never ends by steps (an engine bug upstream, not ours).
+- [ ] **Weather elsewhere:** rain and sunshine on Route 120, the Route 119 and 123 cycles, ash on Route 113 and the
+      Jagged Pass, sand in Route 111's desert, fog on Mt. Pyre, bubbles under water. It fades in and out over about
+      2 s, and stops at a map's edge, in a building, in a Wild Routes zone or in another region.
+- [ ] **Dewford Gym** is dark; each trainer you beat brightens the game's light, and Minecraft lights it once all are
+      beaten (the game's light level reaches 0).
+- [ ] **Puzzles and doors:** the Regi chambers open after their braille puzzles, the Magma Hideout entrance in the
+      Jagged Pass and the Aqua Hideout cave in Lilycove open with the story, the Abandoned Ship's key doors, New
+      Mauville's generator room, the Trick House's puzzles, the Lilycove museum's paintings.
+- [ ] **Other players:** two players in different story states see their own: one's open door is the other's shut one.

@@ -26,6 +26,16 @@ PROTOCOL = load_protocol()
 TOWN, ROUTE, SEA, HOUSE, GYM = "EM_TEST_TOWN", "EM_TEST_ROUTE", "EM_TEST_SEA", "EM_TEST_HOUSE", "EM_TEST_GYM"
 
 
+def pair_has(a, pair, mids):
+    """The made-up pair's art holds these metatiles too (the export lists a site's state only when the map's pair has
+    its metatile)."""
+    art = a.E.pairArt[pair.encode()]
+    have = set(art.mids.values())
+    for mid in mids:
+        if mid not in have:
+            art.mids[len(art.mids) + 1] = mid
+
+
 def rows(a, key, lst):
     a.E.script(key.encode(), a.lua(lst))
 
@@ -75,6 +85,8 @@ def scripted_world():
       if x == 0 and y == 0 then return 5, 0, 3 end
       return 3, (x + y) % 2 == 0 and 0 or 1, 3 end"""))
     E.InteractionScripts.behaviors.TEST_B[513] = 0x34  # MB_TELEVISION (fake_sites3.lua)
+    pair_has(a, "TEST_A", [300])
+    pair_has(a, "TEST_B", [48, 49])
     return a
 
 
@@ -136,6 +148,7 @@ def gym_world():
     a = Adapter3()
     E = a.E
     E.exportWorld()
+    pair_has(a, "TEST_A", list(range(40, 80)))
     L = {"on": 54, "off": 55, "raised": 53}
     behaviors = E.InteractionScripts.behaviors.TEST_A
     for mid, beh in ((40, 0x30), (8, 0x30), (9, 0x31), (11, 0x32), (45, 0x33), (10, 0x33)):
@@ -179,6 +192,18 @@ def test_g3sites_takes_the_engine_writers_states():
     assert states(sites[(GYM, 2, 4)]) == [(43, 0x00, "native"), (44, 0x00, "native")]
     assert states(sites[(GYM, 0, 4)]) == [(46, 0x00, "native")]
     assert states(sites[(GYM, 1, 4)]) == [(47, 0x00, "native")]
+
+
+def test_a_state_the_maps_pair_lacks_is_left_out():
+    # a script other maps share sets a metatile this map's pair doesn't have (Mossdeep's Game Corner reaching the
+    # Pokemon Centers' cable club doors): no such state, and a cell left with none is no site
+    a = scripted_world()
+    rows(a, "g3:00000102", [{"op": "setmetatile", 1: 3, 2: 3, 3: 900, 4: 0}, {"op": "end"}])
+    res, _, ok, lines = exported(a)
+    assert ok is True
+    sites, _ = sites_of(res)
+    assert (TOWN, 3, 3) not in sites
+    assert states(sites[(TOWN, 2, 2)]) == [(5, 0x07, "script")]
 
 
 def test_left_out_places_have_no_sites():

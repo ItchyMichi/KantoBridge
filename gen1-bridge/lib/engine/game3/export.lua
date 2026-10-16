@@ -21,7 +21,10 @@
 --   g3encounters/all, g3names/all
 --   g3sites/all      SE2 (docs/specs/STORY_EVENTS_PLAN.md): every cell the
 --                    story can change, its own state and the others
---                    (sites.lua); g3map has the every-visit ones baked in
+--                    (sites.lua); g3map has the every-visit ones baked in;
+--                    a state whose metatile the map's pair lacks is left out
+--                    (a script other maps share, e.g. Mossdeep's Game Corner
+--                    reaching the Pokemon Centers' cable club doors)
 --
 -- Art: the engine prepares each pair's metatile atlases as RGBA on the CPU
 -- (AssetDecode.pair, src/core/game3/asset_decode.lua:24-87: one 16x16 slot per
@@ -336,6 +339,9 @@ function Export3.install(b)
 
     -- ---- maps
     local byPair, ids = {}, {}
+    -- SE2: each exported map's tileset pair, and each pair's exported metatiles (a site state the pair lacks is left
+    -- out: it can't be drawn, and only a script shared with other maps would set it, never this map's own play)
+    local mapPair, pairMids = {}, {}
     for _, map in ipairs(sortedKeys(maps)) do
       local mdef = maps[map]
       if b.symbol(map) and type(mdef) == "table" then
@@ -399,6 +405,7 @@ function Export3.install(b)
             end
             local kind = type(mdef.kind) == "string" and mdef.kind:find("^[a-z_]+$") and #mdef.kind <= 32
               and mdef.kind or "town"
+            mapPair[map] = pair
             put("g3map", map, {
               id = map, w = w, h = h, trueW = tw, trueH = th, pair = pair, cells = base64(concat(parts)),
               border = { w = bw, h = bh, mids = json.array(border) },
@@ -667,6 +674,9 @@ function Export3.install(b)
             end
           end
           sort(landList)
+          local known = {}
+          for _, mid in ipairs(midList) do known[mid] = true end
+          pairMids[pair] = known
           put("g3tiles", pair, { id = pair, mids = json.array(midList), quarters = json.array(quarters),
                                  beh = json.array(behList), over = json.array(overList), behaviors = names,
                                  land = Rules and json.array(landList) or nil })
@@ -871,22 +881,32 @@ function Export3.install(b)
     -- ---- SE2: the cells the story can change (sites.lua), every state with its source
     local okSites, found = pcall(b.adapter.cellSites, checkpoint)
     if okSites and type(found) == "table" then
-      local list = {}
-      for i, site in ipairs(found.sites) do
+      local list, foreign = {}, 0
+      for _, site in ipairs(found.sites) do
+        local known = pairMids[mapPair[site.map] or ""]
         local states = {}
-        for j, st in ipairs(site.states) do
-          states[j] = { metatile = st.metatile % 1024, coll = st.coll % 256, elev = st.elev % 16, source = st.source }
+        for _, st in ipairs(site.states) do
+          if known and not known[st.metatile % 1024] then
+            foreign = foreign + 1
+          else
+            states[#states + 1] = { metatile = st.metatile % 1024, coll = st.coll % 256, elev = st.elev % 16,
+                                    source = st.source }
+          end
         end
-        list[i] = { map = site.map, x = site.x, y = site.y,
-                    own = { metatile = site.own.metatile % 1024, coll = site.own.coll % 256, elev = site.own.elev % 16 },
-                    states = json.array(states) }
+        if #states > 0 then
+          list[#list + 1] = { map = site.map, x = site.x, y = site.y,
+                              own = { metatile = site.own.metatile % 1024, coll = site.own.coll % 256,
+                                      elev = site.own.elev % 16 },
+                              states = json.array(states) }
+        end
       end
       put("g3sites", "all", { sites = json.array(list), baked = found.baked })
       if b.log then
         local c = found.counts or {}
         b.log.info("export.g3sites", { sites = #list, states = c.states, baked = c.baked, maps = c.maps,
                                        dropped = c.dropped, offMap = c.offMap, layoutsMissing = c.layoutsMissing,
-                                       layoutsMismatched = c.layoutsMismatched, truncated = c.truncated })
+                                       layoutsMismatched = c.layoutsMismatched, truncated = c.truncated,
+                                       foreign = foreign })
       end
       if (found.counts and found.counts.dropped or 0) > 0 then warn("g3_site_states_dropped", "all") end
       if (found.counts and found.counts.truncated or 0) > 0 then warn("g3_site_walk_truncated", "all") end
