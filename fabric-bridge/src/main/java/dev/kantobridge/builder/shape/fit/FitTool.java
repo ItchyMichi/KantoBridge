@@ -251,6 +251,9 @@ public final class FitTool {
 			row.addProperty("fit", best.label());
 			row.addProperty("fit_iou", round(best.iou()));
 			row.addProperty("candidates", best.tried());
+			if (best.voxels() != null) {
+				row.addProperty("fit_voxels", best.voxels());
+			}
 			report.add(row);
 			// The table keeps a fit only where it beats today's pick by a clear margin; elsewhere today's pick stands.
 			if (best.iou() >= today + Candidates.MARGIN && best.iou() >= Candidates.MIN_IOU) {

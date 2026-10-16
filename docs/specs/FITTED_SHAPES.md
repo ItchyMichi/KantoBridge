@@ -93,3 +93,16 @@ Mean voxel IoU against the targets: today's pick 0.27–0.37, the best fit 0.48�
 to the can (a fuller lathe). Statues and machines become thin standees (`cutout`, `signpost`). Many of Emerald's
 standees become plain blocks: TRELLIS sees them as boxes. Most cells keep today's pick. Either too few runs agreed
 (TRELLIS's shell, or a full cube), or no builder beat today's pick by the margin.
+
+## 7. Upscaler test (2026-10-16)
+
+On 24 cells from the failure lists (8 per game; 4 had 2 kept runs, 2 had 1, 2 had none), each drawing went through
+Real-ESRGAN twice at x4 (16 → 64 → 256 px, alpha too) before TRELLIS.2's first stage (`tools/shape_fit/upscale_test.py`;
+spandrel; weights `RealESRGAN_x4plus_anime_6B.pth` and `RealESRGAN_x4plus.pth` from the official releases, BSD-3). There
+were four runs per cell: the anime and the general model, each grey and tinted.
+
+- **23 of 24 cells got a model** (3 or 4 runs kept, depths varied, one full block). In the first run none of them had
+  3. The upscaler turns dithered pixel art into smooth painted shapes, which TRELLIS reads as objects.
+- **Only 3 of the 23 beat today's pick by the margin.** The models now exist, but the builders seldom match them better.
+  The models are in the user's viewer (kb-hub) to inspect before deciding whether to rerun all failures this way.
+- FitTool's report rows gain `fit_voxels` (the best candidate's occupancy) for the viewer.

@@ -43,7 +43,8 @@ final class Candidates {
 		}
 	}
 
-	record Best(Candidate candidate, double iou, int tried) {
+	/** The best candidate, its IoU, how many builds were tried, and its voxels (FitTool's bits; null for none). */
+	record Best(Candidate candidate, double iou, int tried, @Nullable String voxels) {
 		String label() {
 			return this.candidate.label();
 		}
@@ -87,6 +88,7 @@ final class Candidates {
 		Candidate best = null;
 		double bestIou = -1;
 		int tried = 0;
+		VoxelGrid bestGrid = null;
 		for (Candidate c : all()) {
 			for (String variant : variants) {
 				CellUnits.Unit unit = build(tiles, variant, c, artPx);
@@ -98,10 +100,11 @@ final class Candidates {
 				if (iou > bestIou) {
 					bestIou = iou;
 					best = c;
+					bestGrid = FitTool.occupancy(unit);
 				}
 			}
 		}
-		return new Best(best, bestIou, tried);
+		return new Best(best, bestIou, tried, bestGrid == null ? null : FitTool.bits(bestGrid));
 	}
 
 	/** A candidate built in a variant's context, or null when it fails its gates. */
