@@ -189,8 +189,17 @@ public final class Templates {
 		entry.addProperty("ground", ground);
 		entry.addProperty("outdoor", true);
 		entry.add("columns", columns);
+		// The fitted shapes table's roof rows for this building (docs/specs/FITTED_SHAPES.md §5), looked up by the signature
+		// the planner gives it, travel in the entry: a client builds them without the table.
+		int fitted = FittedShapes.roofRows(map.atlas(), signature(entry));
+		if (fitted >= 0) {
+			entry.addProperty("roofRows", fitted);
+		}
 		return new Placed(signature(entry), x0, y0, entry);
 	}
+
+	/** The most roof rows a fitted entry may carry (a pack's {@code struct:} rule allows as many). */
+	static final int MAX_FIT_ROOF_ROWS = 6;
 
 	/** A template entry's signature: the first 16 hex digits of the SHA-256 of its canonical JSON (without {@code sig}). */
 	public static String signature(JsonObject entry) {
@@ -224,7 +233,13 @@ public final class Templates {
 
 	/** A template entry, read: what the geometry needs. */
 	public record Entry(String sig, int atlas, int w, int d, int perCell, int[] tiles, int[][] doors, int ground, boolean outdoor,
-			ShapeKey[][] columns, @Nullable JsonObject band, @Nullable JsonObject hull) {
+			ShapeKey[][] columns, @Nullable JsonObject band, @Nullable JsonObject hull, int roofRows) {
+		/** A V7 template, a band-table building (P2) or a two-cell hull (P3), without a fitted roof. */
+		public Entry(String sig, int atlas, int w, int d, int perCell, int[] tiles, int[][] doors, int ground, boolean outdoor,
+				ShapeKey[][] columns, @Nullable JsonObject band, @Nullable JsonObject hull) {
+			this(sig, atlas, w, d, perCell, tiles, doors, ground, outdoor, columns, band, hull, -1);
+		}
+
 		/** A V7 template (no band table). */
 		public Entry(String sig, int atlas, int w, int d, int perCell, int[] tiles, int[][] doors, int ground, boolean outdoor,
 				ShapeKey[][] columns) {
@@ -323,7 +338,8 @@ public final class Templates {
 			}
 			return new Entry(sig, json.get("atlas").getAsInt(), w, d, json.get("perCell").getAsInt(), tiles, doors.toArray(new int[0][]),
 					json.get("ground").getAsInt(), json.get("outdoor").getAsBoolean(), columns,
-					json.has("band") ? json.getAsJsonObject("band").deepCopy() : null, json.has("hull") ? json.getAsJsonObject("hull").deepCopy() : null);
+					json.has("band") ? json.getAsJsonObject("band").deepCopy() : null, json.has("hull") ? json.getAsJsonObject("hull").deepCopy() : null,
+					json.has("roofRows") ? Math.max(0, Math.min(MAX_FIT_ROOF_ROWS, json.get("roofRows").getAsInt())) : -1);
 		}
 	}
 }

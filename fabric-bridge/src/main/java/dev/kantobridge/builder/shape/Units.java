@@ -162,6 +162,17 @@ final class Units {
 				if (source == null) {
 					continue;
 				}
+				// The fitted shapes table (docs/specs/FITTED_SHAPES.md) re-picks a unit the profile doesn't pin.
+				FittedShapes.Entry fit = unitPin ? null : FittedShapes.get(map.atlas(), tiles);
+				if (fit != null && FittedShapes.COLUMNS.equals(fit.cls())) {
+					tally.merge("fit_columns", 1, Integer::sum);
+					continue;
+				}
+				if (fit != null) {
+					context = new CellUnits.Context(context.flatSides(), context.indoor(), context.repeatsVertically(), context.sign(), context.tree(),
+							fit.cls(), 0, fit.params());
+					source = "fit";
+				}
 				tally.merge(source, 1, Integer::sum);
 				int propGround = unitPin ? classes.propGround(tiles) : -1;
 				int g = propGround >= 0 ? propGround : ground(map, cx, cy, grass, frames, mapGround);

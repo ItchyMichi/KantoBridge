@@ -154,6 +154,10 @@ public final class TemplateRule {
 		}
 		int roofRows = overrides.roofRows(atlas, entry.sig());
 		if (roofRows < 0) {
+			// The fitted shapes table's, carried in the entry (docs/specs/FITTED_SHAPES.md §5).
+			roofRows = entry.roofRows();
+		}
+		if (roofRows < 0) {
 			int paneTop = drawing.paneTopRow();
 			if (paneTop < 0) {
 				return columns;

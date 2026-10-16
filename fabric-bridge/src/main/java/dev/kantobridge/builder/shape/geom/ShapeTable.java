@@ -221,7 +221,7 @@ public final class ShapeTable {
 	}
 
 	/** The shape index's templates by signature; one that doesn't read draws plain cubes (its keys get no mesh). */
-	static Map<String, Templates.Entry> entries(ShapeIndex index) {
+	public static Map<String, Templates.Entry> entries(ShapeIndex index) {
 		Map<String, Templates.Entry> out = new HashMap<>();
 		for (com.google.gson.JsonElement element : index.templates()) {
 			try {

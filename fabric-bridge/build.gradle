@@ -249,6 +249,19 @@ tasks.register("exportCli", JavaExec) {
 	}
 }
 
+// Fitted shapes (docs/specs/FITTED_SHAPES.md): `./gradlew shapeFit -Pkb.fitArgs="dump <bundle> <out.json>"` or
+// `"fit <bundle> <targets.json> <out.json>"` runs FitTool (plain Java, no Minecraft) on an export bundle.
+def kbFitArgs = providers.gradleProperty("kb.fitArgs").getOrElse("")
+tasks.register("shapeFit", JavaExec) {
+	group = "kantobridge"
+	description = "Dumps an export's units, or fits the shape builders to target voxels."
+	classpath = sourceSets.main.runtimeClasspath
+	mainClass = "dev.kantobridge.builder.shape.fit.FitTool"
+	args kbFitArgs.isBlank() ? [] : kbFitArgs.trim().split(/\s+/).toList()
+	maxHeapSize = "4g"
+	workingDir = project.projectDir
+}
+
 // Dev runtimes only. Minecraft lists ICU4J as a client library, so Loom strips it from server-side runs, but
 // Cobblemon's Showdown engine (GraalJS) needs it on the server: without it the server waits for Showdown forever.
 // Real servers get the copy bundled in Cobblemon's jar; this adds that same version (Cobblemon 1.8.1's POM).
