@@ -16,6 +16,8 @@ import dev.kantobridge.builder.plan.PlacedMap;
 import dev.kantobridge.builder.plan.HabitatPlanner;
 import dev.kantobridge.builder.plan.PlanException;
 import dev.kantobridge.builder.plan.RegionBuild;
+import dev.kantobridge.builder.plan.ArtCatalog;
+import dev.kantobridge.builder.plan.Warnings;
 import dev.kantobridge.builder.plan.WorldPlan;
 import dev.kantobridge.builder.plan.WorldPlanner;
 import dev.kantobridge.builder.shape.QuadCounter;
@@ -50,6 +52,7 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -205,6 +208,45 @@ public final class BuildTask {
 		return this.worldDir;
 	}
 
+	/**
+	 * The pack's art sets: this build's export first; into the default pack folder also every other export stored beside
+	 * it (MG7: another game's region keeps its art when this one is rebuilt; Red's and Blue's art is one set's). An
+	 * unreadable other export is left out (logged).
+	 */
+	private List<ResourcePackWriter.SetSource> packSets(WorldPlan plan) throws IOException {
+		List<ResourcePackWriter.SetSource> sets = new ArrayList<>();
+		sets.add(new ResourcePackWriter.SetSource(plan.art(), this.bundle));
+		if (this.options.packDir() != null) {
+			return sets;
+		}
+		Path root = KantoWorldBuilder.defaultExportDir(this.bundle.game()).getParent();
+		if (root == null || !Files.isDirectory(root)) {
+			return sets;
+		}
+		List<Path> others;
+		try (java.util.stream.Stream<Path> list = Files.list(root)) {
+			others = list.filter(dir -> Files.isRegularFile(dir.resolve("index.json"))).sorted().toList();
+		}
+		Warnings warnings = new Warnings();
+		for (Path dir : others) {
+			try {
+				ExportBundle more = ExportBundle.open(dir);
+				if (sets.stream().anyMatch(set -> Games.compatible(set.bundle().game(), more.game()))) {
+					continue;
+				}
+				sets.add(new ResourcePackWriter.SetSource(ArtCatalog.ofExport(more, warnings), more));
+			} catch (BundleException e) {
+				KantoBridge.LOGGER.warn("builder: another export can't be read ({}); its art set is left out of the pack", e.code());
+			} catch (PlanException e) {
+				KantoBridge.LOGGER.warn("builder: another export's art can't be catalogued ({}); its art set is left out of the pack", e.code());
+			}
+		}
+		if (sets.size() > 1) {
+			KantoBridge.LOGGER.info("builder: the pack keeps {} other games' art sets", sets.size() - 1);
+		}
+		return sets;
+	}
+
 	public Path packDir() {
 		return this.packDir;
 	}
@@ -270,7 +312,7 @@ public final class BuildTask {
 				}
 			}
 			long packStarted = System.nanoTime();
-			ResourcePackWriter.Result pack = this.options.writePack() ? ResourcePackWriter.write(plan, this.bundle, this.packDir, plan.warnings())
+			ResourcePackWriter.Result pack = this.options.writePack() ? ResourcePackWriter.write(this.packSets(plan), this.packDir, plan.warnings())
 					: null;
 			long packMs = (System.nanoTime() - packStarted) / 1_000_000L;
 			WorldIndex previous = region != null ? region.previousIndex() : previousIndex(this.worldDir);

@@ -11,11 +11,14 @@ import dev.kantobridge.client.packs.PackOverrides;
 import dev.kantobridge.client.shape.ClientShapes;
 import dev.kantobridge.client.story.ClientStoryView;
 import dev.kantobridge.client.story.StoryDirty;
+import dev.kantobridge.client.world.ClientRegions;
 import dev.kantobridge.client.world.ClientWorldIndex;
 import dev.kantobridge.world.Hashes;
+import dev.kantobridge.world.RegionRecord;
 import dev.kantobridge.world.ShapeMap;
 import dev.kantobridge.world.SlotMap;
 import dev.kantobridge.world.WorldIndex;
+import java.util.ArrayList;
 import java.util.BitSet;
 import java.util.List;
 import java.util.Map;
@@ -50,7 +53,8 @@ import org.jetbrains.annotations.Nullable;
  * ({@code kantobridge:block/<art set>/tile/...}) and bakes each slot's cube once; a key the atlas lacks is counted
  * ({@link #missing()}) and drawn as the placeholder. MG7: the loaded pack may hold several art sets (one per game
  * family); a region's key is drawn with the loaded set of its own game (or a compatible one), a legacy key with the
- * pack's own set, and the shapes (the followed region's) with the set of the followed region's game. After a swap that changes drawing it calls
+ * pack's own set, and each region's shapes with the set of its own game: the followed region's first, then every other
+ * region whose shape table is built ({@link RenderSnapshot.Layer}). After a swap that changes drawing it calls
  * {@code levelRenderer.allChanged()}. Logs carry counts and short hashes only.
  */
 public final class SnapshotPublisher {
@@ -68,6 +72,7 @@ public final class SnapshotPublisher {
 	private static @Nullable ShapeMap builtOverlays;
 	private static @Nullable WorldIndex builtIndex;
 	private static @Nullable PackOverrides builtPacks;
+	private static List<Other> builtOthers = List.of();
 	/** A pack model's colours are tints over this sprite (V6). */
 	static final ResourceLocation WHITE = ResourceLocation.fromNamespaceAndPath(KantoBridge.MOD_ID, "block/white");
 	private static long publishes;
@@ -108,6 +113,42 @@ public final class SnapshotPublisher {
 		for (int[] box : StoryDirty.boxes(before, after, art)) {
 			minecraft.levelRenderer.setBlocksDirty(box[0], box[1], box[2], box[3], box[4], box[5]);
 		}
+	}
+
+	/** Another region's shapes as one snapshot draws them: compared by identity to see whether drawing changed. */
+	record Other(String region, ShapeMap.Lookup lookup, ShapeTable table, @Nullable String artSet) {
+		boolean same(Other o) {
+			return this.region.equals(o.region) && this.lookup == o.lookup && this.table == o.table && Objects.equals(this.artSet, o.artSet);
+		}
+	}
+
+	/** Every region but the followed one whose shapes are ready, with the art set of its game (MG3). */
+	static List<Other> others(@Nullable String followed) {
+		List<Other> out = new ArrayList<>();
+		for (String region : ClientShapes.regions()) {
+			if (region.equals(followed)) {
+				continue;
+			}
+			ShapeMap.Lookup lookup = ClientShapes.lookup(region);
+			ShapeTable table = lookup == null ? null : ClientShapes.table(region);
+			RegionRecord record = ClientRegions.byId(region);
+			if (lookup != null && table != null && record != null) {
+				out.add(new Other(region, lookup, table, LoadedPack.artSetFor(record.game())));
+			}
+		}
+		return out;
+	}
+
+	private static boolean sameOthers(List<Other> a, List<Other> b) {
+		if (a.size() != b.size()) {
+			return false;
+		}
+		for (int i = 0; i < a.size(); i++) {
+			if (!a.get(i).same(b.get(i))) {
+				return false;
+			}
+		}
+		return true;
 	}
 
 	/** Something the snapshot is built from changed: build again on the next client tick. */
@@ -164,7 +205,9 @@ public final class SnapshotPublisher {
 		// The closed story art comes with the verified shape map even when shapes are off: its fallback is the tile cube.
 		ShapeMap overlays = kanto ? ClientShapes.map() : null;
 		PackOverrides packs = KbPackReload.current();
-		boolean drawingChanges = generation != builtGeneration || slots != builtSlots || !Objects.equals(artSet, builtArtSet) || shapes != builtShapes
+		RegionRecord followed = kanto ? ClientRegions.followed() : null;
+		List<Other> others = kanto ? others(followed == null ? null : followed.id()) : List.of();
+		boolean drawingChanges = !sameOthers(others, builtOthers) || generation != builtGeneration || slots != builtSlots || !Objects.equals(artSet, builtArtSet) || shapes != builtShapes
 				|| table != builtTable || overlays != builtOverlays || index != builtIndex || packs != builtPacks || !artSets.equals(builtArtSets)
 				|| !Objects.equals(shapeSet, builtShapeSet);
 		if (!drawingChanges && kanto == builtKanto) {
@@ -181,7 +224,8 @@ public final class SnapshotPublisher {
 		long started = System.nanoTime();
 		ClosedArt closedArt = ClosedArt.of(overlays, index);
 		RenderSnapshot snapshot = build(atlas, RendererAccess.INSTANCE.hasRenderer() ? RendererAccess.INSTANCE.getRenderer() : null, publishes,
-				kanto, slots, artSet, artSets, shapeSet, shapes, table, closedArt, closedArt == null ? new BitSet() : closedArt.bits(ClientStoryView.drawnKeys()));
+				kanto, slots, artSet, artSets, shapeSet, shapes, table, closedArt, closedArt == null ? new BitSet() : closedArt.bits(ClientStoryView.drawnKeys()),
+				others);
 		RenderSnapshot.publish(snapshot);
 		publishes++;
 		builtGeneration = generation;
@@ -195,10 +239,11 @@ public final class SnapshotPublisher {
 		builtIndex = index;
 		builtPacks = packs;
 		builtTable = table;
+		builtOthers = others;
 		if (kanto && drawingChanges) {
-			KantoBridge.LOGGER.info("render: snapshot {} for slot map {}: {} keys, {} without art (art set {}), shapes {}, {} ms", publishes,
-					slots == null ? "-" : Hashes.shortHash(slots.hash()), snapshot.keys(), snapshot.missing(), artSet == null ? "-" : artSet,
-					table == null ? "off" : table.built(), (System.nanoTime() - started) / 1_000_000L);
+			KantoBridge.LOGGER.info("render: snapshot {} for slot map {}: {} keys, {} without art (art set {}), shapes {}, other regions' shapes {}, {} ms",
+					publishes, slots == null ? "-" : Hashes.shortHash(slots.hash()), snapshot.keys(), snapshot.missing(), artSet == null ? "-" : artSet,
+					table == null ? "off" : table.built(), others.size(), (System.nanoTime() - started) / 1_000_000L);
 		}
 		// Entering or leaving a Kanto world without a slot map draws the same placeholders: no re-mesh for that alone.
 		return drawingChanges;
@@ -214,6 +259,13 @@ public final class SnapshotPublisher {
 	static RenderSnapshot build(TextureAtlas atlas, @Nullable Renderer renderer, long generation, boolean kanto, @Nullable SlotMap slots,
 			@Nullable String artSet, List<String> artSets, @Nullable String shapeSet, ShapeMap.@Nullable Lookup shapes, @Nullable ShapeTable table,
 			@Nullable ClosedArt closedArt, BitSet closed) {
+		return build(atlas, renderer, generation, kanto, slots, artSet, artSets, shapeSet, shapes, table, closedArt, closed, List.of());
+	}
+
+	/** {@link #build} with the other regions' shapes, each drawn with its own game's art set (MG3). */
+	static RenderSnapshot build(TextureAtlas atlas, @Nullable Renderer renderer, long generation, boolean kanto, @Nullable SlotMap slots,
+			@Nullable String artSet, List<String> artSets, @Nullable String shapeSet, ShapeMap.@Nullable Lookup shapes, @Nullable ShapeTable table,
+			@Nullable ClosedArt closedArt, BitSet closed, List<Other> others) {
 		TextureAtlasSprite placeholder = atlas.getSprite(TileUnbakedModel.PLACEHOLDER);
 		RenderMaterial solid = renderer == null ? null : renderer.materialFinder().blendMode(BlendMode.SOLID).find();
 		RenderMaterial cutout = renderer == null ? null : renderer.materialFinder().blendMode(BlendMode.CUTOUT).find();
@@ -224,19 +276,13 @@ public final class SnapshotPublisher {
 		PackOverrides packs = KbPackReload.current();
 		TextureAtlasSprite[] shapeSprites = new TextureAtlasSprite[table == null ? 0 : table.textureKeys().size()];
 		int[] shapeTints = new int[shapeSprites.length];
-		java.util.Arrays.fill(shapeTints, -1);
-		for (int i = 0; i < shapeSprites.length; i++) {
-			String text = table.textureKeys().get(i);
-			if (text.startsWith(ShapeTable.COLOUR)) {
-				shapeSprites[i] = found(atlas, WHITE);
-				shapeTints[i] = 0xFF000000 | Integer.parseInt(text.substring(ShapeTable.COLOUR.length()), 16);
-				continue;
-			}
-			TextureKey key = TextureKey.parse(text);
-			if (key == null || shapeSet == null) {
-				continue;
-			}
-			shapeSprites[i] = tileSprite(atlas, packs, shapeSet, key.atlas(), key.palette(), key.tile());
+		resolve(atlas, packs, table, shapeSet, shapeSprites, shapeTints);
+		List<RenderSnapshot.Layer> layers = new ArrayList<>();
+		for (Other other : others) {
+			TextureAtlasSprite[] otherSprites = new TextureAtlasSprite[other.table().textureKeys().size()];
+			int[] otherTints = new int[otherSprites.length];
+			resolve(atlas, packs, other.table(), other.artSet(), otherSprites, otherTints);
+			layers.add(new RenderSnapshot.Layer(other.lookup(), other.table(), otherSprites, otherTints));
 		}
 		MeshBuilder builder = renderer == null ? null : renderer.meshBuilder();
 		Mesh[] placeholderCubes = new Mesh[2];
@@ -283,7 +329,29 @@ public final class SnapshotPublisher {
 			KantoBridge.LOGGER.info("render: {} keys of other regions' art sets drawn as placeholders (art set {})", foreign, artSet == null ? "-" : artSet);
 		}
 		return new RenderSnapshot(generation, placeholder, slots == null ? null : slots.hash(), sprites, cubes, placeholderCubes, solid, kanto,
-				artSet, keys, missing, table == null ? null : shapes, table, shapeSprites, shapeTints, cutout, flat, closedArt, closed);
+				artSet, keys, missing, table == null ? null : shapes, table, shapeSprites, shapeTints, cutout, flat, closedArt, closed, layers, foreign);
+	}
+
+	/**
+	 * A shape table's texture keys, each to this client's own sprite in an art set (a key it can't draw: null, the
+	 * placeholder); a pack's texture first (V6); a pack model's colour: the white sprite, tinted (else -1).
+	 */
+	static void resolve(TextureAtlas atlas, PackOverrides packs, @Nullable ShapeTable table, @Nullable String set, TextureAtlasSprite[] sprites,
+			int[] tints) {
+		java.util.Arrays.fill(tints, -1);
+		for (int i = 0; i < sprites.length; i++) {
+			String text = table.textureKeys().get(i);
+			if (text.startsWith(ShapeTable.COLOUR)) {
+				sprites[i] = found(atlas, WHITE);
+				tints[i] = 0xFF000000 | Integer.parseInt(text.substring(ShapeTable.COLOUR.length()), 16);
+				continue;
+			}
+			TextureKey key = TextureKey.parse(text);
+			if (key == null || set == null) {
+				continue;
+			}
+			sprites[i] = tileSprite(atlas, packs, set, key.atlas(), key.palette(), key.tile());
+		}
 	}
 
 	/**

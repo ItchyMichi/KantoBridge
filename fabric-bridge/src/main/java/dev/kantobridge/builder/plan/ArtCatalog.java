@@ -5,6 +5,7 @@ import dev.kantobridge.builder.export.ExportBundle;
 import dev.kantobridge.builder.export.ExportMap;
 import dev.kantobridge.builder.export.ExportSwaps;
 import dev.kantobridge.builder.export.ExportTileset;
+import dev.kantobridge.world.Games;
 import dev.kantobridge.world.SlotMap;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -88,15 +89,23 @@ public final class ArtCatalog {
 	 * Gen 1's ({@link #of(ExportBundle, Warnings)}), or a Gen 3 or (MG9) Gen 2 export's baked one.
 	 */
 	public static ArtCatalog ofExport(ExportBundle bundle, Warnings warnings) throws BundleException, PlanException {
+		// A Gen 2 or Gen 3 game's keys need a region's room (Gen 3's 80 families, E7), never the legacy 16: the pack's own
+		// catalogue enumerates them as a region would (its slots are thrown away; the pack holds keys only)
+		RegionBuild room = bundle.isGen2() || bundle.isGen3() ? packRoom(bundle.game()) : null;
 		if (bundle.isGen2()) {
 			// MG9: a Gen 2 export's catalogue is baked too, with its swap sites' closed art
 			Map<String, List<ExportSwaps.Site>> sitesByMap = new HashMap<>();
 			for (ExportSwaps.Site site : bundle.swaps().sites()) {
 				sitesByMap.computeIfAbsent(site.map(), k -> new ArrayList<>()).add(site);
 			}
-			return Gen2Planner.catalog(bundle, Gen2Planner.maps(bundle), sitesByMap, null, warnings);
+			return Gen2Planner.catalog(bundle, Gen2Planner.maps(bundle), sitesByMap, room, warnings);
 		}
-		return bundle.isGen3() ? Gen3Planner.catalog(bundle, Gen3Planner.maps(bundle), null, warnings) : of(bundle, warnings);
+		return bundle.isGen3() ? Gen3Planner.catalog(bundle, Gen3Planner.maps(bundle), room, warnings) : of(bundle, warnings);
+	}
+
+	/** The room a pack's catalogue of {@code game} enumerates its keys in: a lone region with its family's families. */
+	static RegionBuild packRoom(String game) {
+		return new RegionBuild("pack", 1, game, new SlotMap.Range(0, SlotMap.familiesFor(Games.family(game)) - 1), null, "");
 	}
 
 	/**

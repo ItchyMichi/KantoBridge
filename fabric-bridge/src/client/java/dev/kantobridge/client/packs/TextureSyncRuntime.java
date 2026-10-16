@@ -6,10 +6,12 @@ import dev.kantobridge.builder.plan.PlanException;
 import dev.kantobridge.client.bridge.BridgeClient;
 import dev.kantobridge.client.bridge.BridgeClock;
 import dev.kantobridge.client.bridge.BridgeConfig;
+import dev.kantobridge.client.bridge.BridgeLink;
 import dev.kantobridge.client.bridge.BridgeRuntime;
 import dev.kantobridge.client.bridge.ConnectionState;
 import dev.kantobridge.client.bridge.ExportClient;
 import dev.kantobridge.client.bridge.HelloOk;
+import dev.kantobridge.client.bridge.Links;
 import dev.kantobridge.client.bridge.Transport;
 import dev.kantobridge.client.model.RenderSnapshot;
 import dev.kantobridge.client.shape.ClientShapes;
@@ -145,8 +147,10 @@ public final class TextureSyncRuntime {
 		boolean packLoaded = this.local != null && loaded != null && PackReload.selected(minecraft) && this.local.equals(loaded);
 		// The snapshot's count is only about this world once it was resolved against this slot map and the loaded art set.
 		RenderSnapshot snapshot = RenderSnapshot.current();
+		// MG7: another region's keys that no loaded art set draws count too, so the pack is rebuilt (once per world) with
+		// every game's art this player can export
 		int missing = slots != null && slots.hash().equals(snapshot.slotMapHash()) && Objects.equals(snapshot.artSet(), LoadedPack.artSet())
-				? snapshot.missing()
+				? snapshot.missing() + snapshot.foreign()
 				: -1;
 		HelloOk hello = this.bridge.state().handshake();
 		boolean compatible = this.bridge.client().state() == ConnectionState.CONNECTED && hello != null && index != null
@@ -193,6 +197,8 @@ public final class TextureSyncRuntime {
 			try (BridgeClient.Pause pause = link.pauseReconnects("textures", PAUSE_WAIT_MS)) {
 				result = client.run(exportDir, ExportClient.Listener.NONE);
 			}
+			// MG7: every other linked game whose art this player has no export of yet, so each region draws its own art
+			this.exportOthers(exportDir, link);
 			this.sync.work(TextureSync.Work.PACK);
 			PackGenerator.Result pack = PackGenerator.generateWithOthers(result.bundleDir(), GeneratedPack.directory(this.gameDir));
 			LOGGER.info("textures: rebuilt this player's pack (art set {}, export {}, {} textures)", pack.game(), Hashes.shortHash(pack.exportHash()),
@@ -217,6 +223,43 @@ public final class TextureSyncRuntime {
 			if (this.exporter == client) {
 				this.exporter = null;
 			}
+		}
+	}
+
+	/**
+	 * Exports each other connected link's game that has no export beside the main link's yet (a game compatible with one
+	 * already exported, Red with Blue, needs none). A failure is logged and leaves that game's region on placeholders.
+	 */
+	private void exportOthers(Path exportDir, BridgeClient main) throws InterruptedException {
+		Links links = Links.get();
+		if (links == null) {
+			return;
+		}
+		Catalog catalog = Catalog.bundled();
+		for (BridgeLink other : links.all()) {
+			String game = other.game();
+			if (other.client() == main || game == null || !other.connected() || hasExport(exportDir, game)) {
+				continue;
+			}
+			ExportClient client = new ExportClient(BridgeConfig.fromCatalog(catalog, other.port()), catalog, CreateKantoWorldFlow.builderHello(),
+					Transport.socket(), BridgeClock.system(), ExportClient.Options.DEFAULTS);
+			this.exporter = client;
+			try (BridgeClient.Pause pause = other.client().pauseReconnects("textures", PAUSE_WAIT_MS)) {
+				ExportClient.Result result = client.run(exportDir, ExportClient.Listener.NONE);
+				LOGGER.info("textures: exported {}'s art too (export {})", result.game(), Hashes.shortHash(result.indexHash()));
+			} catch (ExportClient.ExportException e) {
+				LOGGER.warn("textures: {}'s art could not be exported ({}); its region draws placeholders", game, e.code());
+			}
+		}
+	}
+
+	/** True when an export of {@code game} (or a game whose art is the same set) is stored under {@code exportDir}. */
+	static boolean hasExport(Path exportDir, String game) {
+		try (java.util.stream.Stream<Path> list = java.nio.file.Files.list(exportDir)) {
+			return list.anyMatch(dir -> java.nio.file.Files.isRegularFile(dir.resolve("index.json"))
+					&& Games.compatible(dir.getFileName().toString(), game));
+		} catch (IOException e) {
+			return false;
 		}
 	}
 

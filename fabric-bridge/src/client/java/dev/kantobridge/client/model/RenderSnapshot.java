@@ -28,6 +28,12 @@ import org.jetbrains.annotations.Nullable;
  * through one {@code volatile} reference: a mesh thread does one read ({@link #current()}) and sees a whole snapshot or
  * the previous whole one, never half of each (I5). Built and swapped on the client thread by {@link SnapshotPublisher}.
  *
+ * <p>Several regions (MG3): the followed region's shapes are layer 0, and every other region whose shape table is built
+ * is a layer of its own ({@link Layer}: its lookup, its table and its own game's sprites), so each region draws its own
+ * shapes at once. A layer's lookup answers only inside its own region's grids (world coordinates), and a shape id
+ * carries its layer above {@link #LAYER_SHIFT}, so neighbours cull across layers too. Layer 0's ids are plain (the
+ * closed story art, which is the followed region's, uses them as they are).
+ *
  * <p>A slot the world's slot map doesn't name, a key whose sprite the atlas lacks, or no snapshot yet at all draws the
  * jar's placeholder tile: never a hole (I3).
  */
@@ -37,6 +43,17 @@ public final class RenderSnapshot {
 			null, false, null, 0, -1, null, null, new TextureAtlasSprite[0], new int[0], null, null, null, new BitSet());
 
 	private static volatile RenderSnapshot current = BOOT;
+
+	/** A shape id's layer sits above these bits (layer 0's ids are plain). */
+	static final int LAYER_SHIFT = 24;
+	private static final int ID_MASK = (1 << LAYER_SHIFT) - 1;
+
+	/**
+	 * One more region's shapes (MG3): its verified lookup, its built table and, by the table's texture index, its own
+	 * game's sprites (null: the placeholder) and tints (-1 for none).
+	 */
+	public record Layer(ShapeMap.Lookup lookup, ShapeTable table, TextureAtlasSprite[] sprites, int[] tints) {
+	}
 
 	private final long generation;
 	private final @Nullable TextureAtlasSprite placeholder;
@@ -67,12 +84,26 @@ public final class RenderSnapshot {
 	private final @Nullable ClosedArt closedArt;
 	/** The overlays the local player sees closed. Never changed once published. */
 	private final BitSet closed;
+	/** The other regions' shapes, layers 1.. (MG3). */
+	private final Layer[] others;
+	/** Keys of other regions' art sets that no loaded set draws (placeholders; MG7). */
+	private final int foreign;
 
 	@SuppressWarnings("unchecked")
 	RenderSnapshot(long generation, @Nullable TextureAtlasSprite placeholder, @Nullable String slotMapHash, TextureAtlasSprite[][] sprites,
 			Mesh[][] cubes, Mesh[] placeholderCubes, @Nullable RenderMaterial solid, boolean kanto, @Nullable String artSet, int keys,
 			int missing, ShapeMap.@Nullable Lookup shapes, @Nullable ShapeTable table, TextureAtlasSprite[] shapeSprites, int[] shapeTints,
 			@Nullable RenderMaterial cutout, @Nullable RenderMaterial flat, @Nullable ClosedArt closedArt, BitSet closed) {
+		this(generation, placeholder, slotMapHash, sprites, cubes, placeholderCubes, solid, kanto, artSet, keys, missing, shapes, table,
+				shapeSprites, shapeTints, cutout, flat, closedArt, closed, List.of(), 0);
+	}
+
+	@SuppressWarnings("unchecked")
+	RenderSnapshot(long generation, @Nullable TextureAtlasSprite placeholder, @Nullable String slotMapHash, TextureAtlasSprite[][] sprites,
+			Mesh[][] cubes, Mesh[] placeholderCubes, @Nullable RenderMaterial solid, boolean kanto, @Nullable String artSet, int keys,
+			int missing, ShapeMap.@Nullable Lookup shapes, @Nullable ShapeTable table, TextureAtlasSprite[] shapeSprites, int[] shapeTints,
+			@Nullable RenderMaterial cutout, @Nullable RenderMaterial flat, @Nullable ClosedArt closedArt, BitSet closed, List<Layer> others,
+			int foreign) {
 		this.generation = generation;
 		this.placeholder = placeholder;
 		this.slotMapHash = slotMapHash;
@@ -94,6 +125,11 @@ public final class RenderSnapshot {
 		this.flat = flat;
 		this.closedArt = closedArt;
 		this.closed = (BitSet) closed.clone();
+		if (others.size() >= (1 << (31 - LAYER_SHIFT)) - 1) {
+			throw new IllegalArgumentException("too many shape layers");
+		}
+		this.others = others.toArray(new Layer[0]);
+		this.foreign = foreign;
 	}
 
 	/** A copy sharing everything with {@code base} but the closed set. */
@@ -118,11 +154,22 @@ public final class RenderSnapshot {
 		this.flat = base.flat;
 		this.closedArt = base.closedArt;
 		this.closed = (BitSet) closed.clone();
+		this.others = base.others;
+		this.foreign = base.foreign;
 	}
 
-	/** A texture's tint (a pack model's colour), -1 for none. */
-	private int tint(int texture) {
-		return texture < this.shapeTints.length ? this.shapeTints[texture] : -1;
+	/** A layer's sprites by texture index (layer 0: the followed region's). */
+	private TextureAtlasSprite[] spritesOf(int layer) {
+		return layer == 0 ? this.shapeSprites : this.others[layer - 1].sprites();
+	}
+
+	/** A layer's tints by texture index. */
+	private int[] tintsOf(int layer) {
+		return layer == 0 ? this.shapeTints : this.others[layer - 1].tints();
+	}
+
+	private static int tint(int[] tints, int texture) {
+		return texture < tints.length ? tints[texture] : -1;
 	}
 
 	/** This snapshot with another closed set (the local player's story changed; V5). */
@@ -179,7 +226,7 @@ public final class RenderSnapshot {
 				TextureAtlasSprite sprite = texture < this.shapeSprites.length && this.shapeSprites[texture] != null ? this.shapeSprites[texture]
 						: placeholder;
 				ShapeEmitter.emit(quad, sprite, quad.has(ShapeQuad.CUTOUT) ? this.cutout : quad.has(ShapeQuad.NO_AO) ? this.flat : this.solid,
-						this.tint(texture), out);
+						tint(this.shapeTints, texture), out);
 			}
 			return quads.size();
 		}
@@ -200,16 +247,34 @@ public final class RenderSnapshot {
 	/** Flat closed art without a shape table lies this far above the floor (the overlay's slab is as high). */
 	static final float FLAT_LIFT = 1.0F / 16.0F;
 
-	/** The shape id at a position: 0 without one, without a shape map, or while the table builds. */
+	/**
+	 * The shape id at a position: 0 without one, without a shape map, or while the table builds. The followed region's
+	 * first, then each other region's (its layer above {@link #LAYER_SHIFT}).
+	 */
 	public int shapeAt(int x, int y, int z) {
 		ShapeMap.Lookup lookup = this.shapes;
-		return lookup == null ? 0 : lookup.shapeAt(x, y, z);
+		int id = lookup == null || this.table == null ? 0 : lookup.shapeAt(x, y, z);
+		if (id != 0) {
+			return id;
+		}
+		Layer[] layers = this.others;
+		for (int i = 0; i < layers.length; i++) {
+			int other = layers[i].lookup().shapeAt(x, y, z);
+			if (other != 0) {
+				return other | ((i + 1) << LAYER_SHIFT);
+			}
+		}
+		return 0;
 	}
 
-	/** The mesh of a shape id, or null (the plain cube is drawn). */
+	/** The mesh of a shape id (its layer's table), or null (the plain cube is drawn). */
 	public @Nullable ShapeMesh mesh(int id) {
-		ShapeTable built = this.table;
-		return built == null ? null : built.mesh(id);
+		int layer = id >>> LAYER_SHIFT;
+		if (layer == 0) {
+			ShapeTable built = this.table;
+			return built == null ? null : built.mesh(id);
+		}
+		return layer <= this.others.length ? this.others[layer - 1].table().mesh(id & ID_MASK) : null;
 	}
 
 	/**
@@ -218,6 +283,14 @@ public final class RenderSnapshot {
 	 * the quads emitted.
 	 */
 	public int emitShape(ShapeMesh mesh, int x, int y, int z, TextureAtlasSprite fallback, QuadEmitter out) {
+		return this.emitShape(0, mesh, x, y, z, fallback, out);
+	}
+
+	/** {@link #emitShape(ShapeMesh, int, int, int, TextureAtlasSprite, QuadEmitter)} for the shape of id {@code id}: its layer's sprites. */
+	public int emitShape(int id, ShapeMesh mesh, int x, int y, int z, TextureAtlasSprite fallback, QuadEmitter out) {
+		int layer = id >>> LAYER_SHIFT;
+		TextureAtlasSprite[] layerSprites = this.spritesOf(layer);
+		int[] layerTints = this.tintsOf(layer);
 		TextureAtlasSprite placeholder = this.placeholder != null ? this.placeholder : fallback;
 		List<ShapeQuad> quads = mesh.quads();
 		int emitted = 0;
@@ -225,24 +298,28 @@ public final class RenderSnapshot {
 			ShapeQuad quad = quads.get(q);
 			int cull = quad.cull();
 			if (cull >= 0 && mesh.footprint(q) != 0) {
-				int id = this.shapeAt(x + FaceMasks.DX[cull], y + FaceMasks.DY[cull], z + FaceMasks.DZ[cull]);
-				if (id != 0 && FaceMasks.culled(mesh, q, this.mesh(id))) {
+				int neighbour = this.shapeAt(x + FaceMasks.DX[cull], y + FaceMasks.DY[cull], z + FaceMasks.DZ[cull]);
+				if (neighbour != 0 && FaceMasks.culled(mesh, q, this.mesh(neighbour))) {
 					continue;
 				}
 			}
 			int texture = quad.texture();
-			TextureAtlasSprite sprite = texture < this.shapeSprites.length && this.shapeSprites[texture] != null ? this.shapeSprites[texture]
-					: placeholder;
+			TextureAtlasSprite sprite = texture < layerSprites.length && layerSprites[texture] != null ? layerSprites[texture] : placeholder;
 			ShapeEmitter.emit(quad, sprite, quad.has(ShapeQuad.CUTOUT) ? this.cutout : quad.has(ShapeQuad.NO_AO) ? this.flat : this.solid,
-					this.tint(texture), out);
+					tint(layerTints, texture), out);
 			emitted++;
 		}
 		return emitted;
 	}
 
-	/** True when the world's shapes are drawn (a verified shape map and a built table). */
+	/** True when the followed region's shapes are drawn (a verified shape map and a built table). */
 	public boolean shaped() {
 		return this.shapes != null && this.table != null;
+	}
+
+	/** The other regions drawn with their own shapes (MG3). */
+	public int otherLayers() {
+		return this.others.length;
 	}
 
 	/** The snapshot to draw with: one volatile read. */
@@ -349,5 +426,10 @@ public final class RenderSnapshot {
 	/** Keys whose sprite this client lacks (drawn as placeholders); -1 without a slot map. */
 	public int missing() {
 		return this.missing;
+	}
+
+	/** Keys of other regions' games that no loaded art set draws (placeholders until the pack holds their art). */
+	public int foreign() {
+		return this.foreign;
 	}
 }

@@ -59,7 +59,7 @@ final class TileBakedModel implements BakedModel {
 		// A swap site's cell carries its closed art for the local player only (V5).
 		int quads = this.kind.carriesStoryArt() ? snapshot.emitClosed(x, y, z, this.placeholder, context.getEmitter()) : 0;
 		if (mesh != null) {
-			quads += snapshot.emitShape(mesh, x, y, z, this.placeholder, context.getEmitter());
+			quads += snapshot.emitShape(id, mesh, x, y, z, this.placeholder, context.getEmitter());
 		} else if (this.kind.drawsCube()) {
 			quads += snapshot.emitCube(this.kind, this.slot, this.placeholder, context.getEmitter());
 		}

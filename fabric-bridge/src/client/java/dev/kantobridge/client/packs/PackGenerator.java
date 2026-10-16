@@ -59,7 +59,7 @@ public final class PackGenerator {
 
 	/**
 	 * Writes the pack of the bundle in {@code bundleDir} and, as further art sets, each of {@code others} whose game no
-	 * set already drawn can draw (Red's and Blue's art is one set's). An unreadable other export is left out (logged).
+	 * set already drawn can draw (Red's and Blue's art is one set's). An unreadable other export, or one whose art can't be catalogued, is left out (logged).
 	 */
 	public static Result generate(Path bundleDir, List<Path> others, Path packDir) throws BundleException, PlanException, IOException {
 		long started = System.nanoTime();
@@ -79,7 +79,11 @@ public final class PackGenerator {
 			if (sets.stream().anyMatch(set -> Games.compatible(set.bundle().game(), more.game()))) {
 				continue;
 			}
-			sets.add(new ResourcePackWriter.SetSource(ArtCatalog.ofExport(more, warnings), more));
+			try {
+				sets.add(new ResourcePackWriter.SetSource(ArtCatalog.ofExport(more, warnings), more));
+			} catch (PlanException e) {
+				LOGGER.warn("pack: another export's art can't be catalogued ({}); its art set is left out", e.code());
+			}
 		}
 		ResourcePackWriter.Result pack = ResourcePackWriter.write(sets, packDir, warnings);
 		List<String> artSets = sets.stream().map(set -> set.bundle().game()).toList();
