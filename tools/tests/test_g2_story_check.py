@@ -93,6 +93,18 @@ def test_cases_cover_every_command_once_then_fill():
     assert lua.startswith("return {") and '[100] = true' in lua and '["TEST_ROOM"] = 1' in lua
 
 
+def test_the_bedrooms_decorations_get_a_case_each():
+    scan = {"maps": {"PLAYERS_HOUSE_2F": {"world": []}},
+            "decorations": [{"id": 2, "slot": "bed"}, {"id": 3, "slot": "bed"}, {"id": 7, "slot": "carpet"}]}
+    cases, _ = g.make_cases(scan)
+    assert [c["label"] for c in cases] == ["decorations bare", "decoration bed 2", "decoration bed 3", "decoration carpet 7"]
+    assert cases[0]["decorations"] == {"bed": 0, "carpet": 0, "plant": 0, "poster": 0}
+    assert cases[2]["decorations"] == {"bed": 3, "carpet": 0, "plant": 0, "poster": 0}
+    assert "decorations = { bed = 3, carpet = 0, plant = 0, poster = 0 }" in g.lua_cases(cases)
+    # no bedroom in the scan, or no decorations: no such case
+    assert g.make_cases({"maps": {}, "decorations": scan["decorations"]})[0] == []
+
+
 def test_sites_check():
     scan = {"maps": {"TEST_ROOM": {"world": [block(2, 2, 5), block(4, 0, 1), block(6, 6, 8)]}}}
     sites = [

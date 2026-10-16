@@ -212,6 +212,50 @@ class StoryRulesTest {
 	}
 
 	@Test
+	void gen2CellCellsFollowTheirBlockInStoryBlocks() throws Exception {
+		// §5.5: the bedroom's decorations: two cells of a block (0, 1) the data has as the floor (1), built as the floor;
+		// a bed (3, solid), a carpet (4, ground art) and a plant (2, solid) are its other states, in block ids
+		String nw = "G2_ROOM:0:2";
+		String se = "G2_ROOM:1:3";
+		List<Integer> art = List.of(1, 2, 3, 4);
+		List<StoryCellTable.CellState> states = List.of(new StoryCellTable.CellState(3, StoryCellTable.Pass.SOLID, 2, art),
+				new StoryCellTable.CellState(4, StoryCellTable.Pass.GROUND, 0, art), new StoryCellTable.CellState(2, StoryCellTable.Pass.SOLID, 2, art));
+		StoryCellTable.Built floor = new StoryCellTable.Built(1, StoryCellTable.Pass.GROUND);
+		StoryCellTable table = StoryCellTable.of(List.of(new StoryCellTable.Entry(CellPos.parse(nw), 1, floor, states),
+				new StoryCellTable.Entry(CellPos.parse(se), 1, floor, states)));
+		List<MapPlacement> maps = List.of(
+				new MapPlacement("G2_TOWN", 0, 64, 0, 8, 6, 0, MapPlacement.Kind.SURFACE, "BAKED", "kantobridge:kanto_outdoor", false, null),
+				new MapPlacement("G2_ROOM", 0, 42, 0, 4, 4, 1, MapPlacement.Kind.INTERIOR, "BAKED", "kantobridge:kanto_interior", false, "G2_TOWN"));
+		this.rules.setIndex(new WorldIndex("crystal", HASH, maps, HASH, table, List.of()));
+		// in the town: the room shows the map data's block, the built floor
+		this.rules.onSnapshot(json("{\"ingame\":true,\"player\":{\"map\":\"G2_TOWN\",\"x\":1,\"y\":1,\"facing\":\"up\"}}"));
+		assertTrue(active().isEmpty() && drawn().isEmpty());
+		// into the room: its block as story.blocks tells it, both cells together
+		this.rules.onPlayerMap("G2_ROOM");
+		this.rules.onBlocks(json("{\"map\":\"G2_ROOM\",\"changes\":[{\"bx\":0,\"by\":1,\"block\":3}]}"));
+		assertEquals(Set.of(nw, se), active(), "the bed collides");
+		assertEquals(Set.of(nw, se), drawn());
+		assertEquals(0, this.rules.cells().states().get(nw));
+		this.rules.onBlocks(json("{\"map\":\"G2_ROOM\",\"changes\":[{\"bx\":0,\"by\":1,\"block\":4}]}"));
+		assertEquals(Set.of(), active(), "a carpet is walked on");
+		assertEquals(Set.of(nw, se), drawn());
+		assertEquals(1, this.rules.cells().states().get(se));
+		// another block of the room changes nothing here; a block the table doesn't list: no art, no collision
+		this.rules.onBlocks(json("{\"map\":\"G2_ROOM\",\"changes\":[{\"bx\":1,\"by\":1,\"block\":3}]}"));
+		assertEquals(1, this.rules.cells().states().get(se));
+		this.rules.onBlocks(json("{\"map\":\"G2_ROOM\",\"changes\":[{\"bx\":0,\"by\":1,\"block\":9}]}"));
+		assertTrue(active().isEmpty() && drawn().isEmpty());
+		// the bare floor again (the bridge sends the data's block back): the built state
+		this.rules.onBlocks(json("{\"map\":\"G2_ROOM\",\"changes\":[{\"bx\":0,\"by\":1,\"block\":1}]}"));
+		assertTrue(active().isEmpty() && drawn().isEmpty());
+		// a plant, then out: the room shows the map data's block again
+		this.rules.onBlocks(json("{\"map\":\"G2_ROOM\",\"changes\":[{\"bx\":0,\"by\":1,\"block\":2}]}"));
+		assertEquals(2, this.rules.cells().states().get(nw));
+		this.rules.onPlayerMap("G2_TOWN");
+		assertTrue(active().isEmpty() && drawn().isEmpty());
+	}
+
+	@Test
 	void mapDefaultsDecideBeforeAnyReport() {
 		assertEquals(Set.of(BALL, MOM, TREE, HULL), active(), "visible objects, the standing tree and the ship's hull; the stamped door "
 				+ "shows its map data");

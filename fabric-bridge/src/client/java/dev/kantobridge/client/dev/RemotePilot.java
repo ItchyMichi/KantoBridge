@@ -42,6 +42,7 @@ import dev.kantobridge.story.StoryStates;
 import dev.kantobridge.world.MapPlacement;
 import dev.kantobridge.world.Scale;
 import dev.kantobridge.world.StoryCellTable;
+import dev.kantobridge.world.StoryCellType;
 import dev.kantobridge.world.WorldIndex;
 import java.io.IOException;
 import java.io.OutputStream;
@@ -396,7 +397,9 @@ final class RemotePilot {
 
 	/**
 	 * SE5: the story cell at a map's cell as this player has it: its type, whether it collides for the local player
-	 * (the local StoryState), whether its closed art or another state is drawn (and which), and whether the player surfs.
+	 * (the local StoryState), whether its closed art or another state is drawn (and which; for a {@code cell} cell also
+	 * the number the drawn state has, {@code shows}: its built one's while open), whether the player surfs, and how many
+	 * of the cell's four blocks are story blocks closed for this player.
 	 */
 	private JsonObject storyCell(@Nullable String map, int x, int y) {
 		JsonObject out = this.result(true, null);
@@ -408,7 +411,12 @@ final class RemotePilot {
 		LocalPlayer player = this.minecraft.player;
 		out.addProperty("active", player != null && StoryStates.of(player).active().contains(key));
 		out.addProperty("drawn", ClientStoryView.drawn(key));
-		out.addProperty("state", ClientStoryView.drawnState(key));
+		int state = ClientStoryView.drawnState(key);
+		out.addProperty("state", state);
+		// a cell cell's drawn state by its number (a Gen 3 metatile, a Gen 2 block), or its built one's while open
+		if (entry != null && entry.type() == StoryCellType.CELL && entry.built() != null) {
+			out.addProperty("shows", state >= 0 && state < entry.states().size() ? entry.states().get(state).metatile() : entry.built().metatile());
+		}
 		out.addProperty("surf", ClientStoryView.surfing());
 		// the cell's four blocks at feet level: how many are story blocks, and how many collide for this player
 		BlockPos origin = index == null || map == null ? null : index.cellOrigin(map, x, y);

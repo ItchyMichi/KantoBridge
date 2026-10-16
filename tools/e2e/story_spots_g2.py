@@ -2,7 +2,8 @@
 story state the live sweep found (tools/e2e/g2_story_check.py), the real dev client follows it there, and the client
 walks into the cell the story changed: through the Elite Four's opened exits, down the Mahogany Mart's stairs, through
 the Radio Tower's and the Rocket hideout's opened doors and the Goldenrod underground's opened shutters; against the
-Ruins of Alph's closed walls and Route 19's rocks; and Dark Cave's darkness, unlit and lit by Flash, is read back.
+Ruins of Alph's closed walls and Route 19's rocks; Dark Cave's darkness, unlit and lit by Flash, is read back; and the
+bedroom's decorations (§5.5): bare, then a carpet, a bed and a plant, each cell drawn and colliding as the game has it.
 
     xvfb-run -a -s "-screen 0 1280x720x24" python tools/e2e/story_spots_g2.py --world ThreeRegionsE2E \\
         [--record /workspace/videos/kanto-bridge-crystal-story-spots.mp4] [--only e4_will_exit,route19_rocks]
@@ -17,7 +18,8 @@ Ruins of Alph's closed walls and Route 19's rocks; and Dark Cave's darkness, unl
    on the export's blocks and collision: local/minecraft/kantobridge/export/crystal/), then the pilot's steps into
    it: `enter` passes when the hidden player stands on it (or the map changed: a door or stairs), `refuse` when the
    step is refused and every block of the cell collides for the player in Minecraft (the pilot's `story` answer);
-   `dark` and `lit` compare the client's light with the game's.
+   `dark` and `lit` compare the client's light with the game's; `decor` asks the pilot about every cell any decoration
+   changes: each `cell` story cell must show the live block (`shows`) and collide as the live block's cell does.
 
 The changed blocks come from the sweep's truth files in local/reports/ (ROM-derived; they stay on the pod). Output:
 spot names, map symbols, cells, counts and booleans only, never the game's text. A video, when asked for, shows the
@@ -59,11 +61,12 @@ TOWN = "NEW_BARK_TOWN"
 class Spot:
     name: str
     map: str                        # the engine's map id (the wire's has the G2_ prefix)
-    check: str                      # enter, refuse, dark, lit
+    check: str                      # enter, refuse, dark, lit, decor
     label: str = "new game"         # the sweep case's label (its first world command), "new game" for the baseline
     cls: str = ""                   # enter/refuse: the walkability change of the cell to step into, e.g. "solid>walk"
     scenes: dict = field(default_factory=dict)  # extra map scenes on top of the case's (past a map's cutscene)
     flash: bool = False             # lit: Flash used on the map once the field stands
+    last: bool = False              # the last case whose label starts with `label` (a slot's last decoration)
 
 
 # The Elite Four's rooms: scene 1 is past the door that locks behind the player (the scene script that walks them in).
@@ -84,6 +87,11 @@ SPOTS = [
     Spot("route19_rocks", "ROUTE_19", "refuse", "new game", "walk>solid"),
     Spot("dark_cave_dark", "DARK_CAVE_VIOLET_ENTRANCE", "dark"),
     Spot("dark_cave_lit", "DARK_CAVE_VIOLET_ENTRANCE", "lit", flash=True),
+    # §5.5: the bedroom's decorations (a poster hangs on a wall: no story cell stands there, so none is asked about)
+    Spot("bedroom_bare", gsc.BEDROOM, "decor", "decorations bare"),
+    Spot("bedroom_carpet", gsc.BEDROOM, "decor", "decoration carpet", last=True),
+    Spot("bedroom_bed", gsc.BEDROOM, "decor", "decoration bed", last=True),
+    Spot("bedroom_plant", gsc.BEDROOM, "decor", "decoration plant", last=True),
 ]
 
 
@@ -99,6 +107,25 @@ def load_truth():
             if case and rec.get("ok") and rec.get("map") == case["map"]:
                 truth.setdefault((case["map"], case["label"]), []).append((case, rec))
     return scan, truth
+
+
+def entries_for(truth: dict, spot: Spot) -> list:
+    """The sweep cases of a spot: its label's, or with `last` the last case whose label starts with it."""
+    if not spot.last:
+        return truth.get((spot.map, spot.label)) or []
+    found = sorted((pair for (m, label), pairs in truth.items() if m == spot.map and label.startswith(spot.label + " ")
+                    for pair in pairs), key=lambda pair: pair[0]["n"])
+    return found[-1:]
+
+
+def decoration_cells(truth: dict) -> set:
+    """Every cell any of the bedroom's decoration cases changes."""
+    cells = set()
+    for (m, label), pairs in truth.items():
+        if m == gsc.BEDROOM and label.startswith("decoration"):
+            for _, rec in pairs:
+                cells |= set(LiveMap(gsc.BEDROOM, rec).changed)
+    return cells
 
 
 def export_page(kind: str, page_id: str) -> dict:
@@ -117,6 +144,7 @@ class LiveMap:
         self.bw, self.bh = d["w"], d["h"]
         self.w, self.h = self.bw * 2, self.bh * 2
         data = list(base64.b64decode(d["blocks"]))
+        self.data = data
         self.coll, self.meanings, self.art = t["coll"], t["meanings"], t["blocks"]
         live = list(data)
         for b in ((rec or {}).get("settled") or {}).get("blocks") or []:
@@ -174,6 +202,8 @@ def lua_literal(spot_id: int, map_id: str, x, y, facing: str, case: dict, scenes
             parts.append(f"{k} = {int(case[k])}")
     if flash:
         parts.append("flash = true")
+    if case.get("decorations"):
+        parts.append("decorations = { " + ", ".join(f"{slot} = {int(v)}" for slot, v in sorted(case["decorations"].items())) + " }")
     return "{ " + ", ".join(parts) + " }"
 
 
@@ -186,10 +216,10 @@ def client_command(world: str) -> list[str]:
 def run_spot(spot: Spot, n: int, truth: dict, commands: Path, run, pilot: Pilot) -> dict:
     out = {"spot": spot.name, "map": spot.map, "check": spot.check}
     wire = PREFIX + spot.map
-    entries = truth.get((spot.map, spot.label))
+    entries = entries_for(truth, spot)
     new_game = {"events": {}, "flags": {}, "scenes": {}, "mapscenes": [], "mem": {}, "n": 0}
     case, rec = entries[0] if entries else (new_game, None)
-    if spot.check in ("enter", "refuse") and not entries:
+    if spot.check in ("enter", "refuse", "decor") and not entries:
         out["result"] = "no sweep case"
         return out
     found = None
@@ -243,6 +273,27 @@ def run_spot(spot: Spot, n: int, truth: dict, commands: Path, run, pilot: Pilot)
             # refused by the hidden game, and by Minecraft too: every block of the cell collides for this player
             walled = (cell_state.get("story_blocks") or 0) > 0 and cell_state.get("closed_blocks") == cell_state.get("story_blocks")
             out["result"] = "PASS" if not moved and walled else "FAIL (Minecraft lets the player in)" if not moved else "FAIL"
+    elif spot.check == "decor":
+        # every cell a decoration changes: a cell story cell shows the live block and collides as its cell does
+        m = LiveMap(spot.map, rec)
+        live = {(b["bx"], b["by"]): b["block"] for b in (rec.get("settled") or {}).get("blocks") or []}
+        tally = {"cells": 0, "right": 0, "other_type": 0}
+        wrong = []
+        for x, y in sorted(decoration_cells(truth)):
+            cell_state = pilot.do("story", map=wire, x=x, y=y, timeout=10)
+            if cell_state.get("type") != "cell":
+                tally["other_type"] += 1
+                continue
+            tally["cells"] += 1
+            block = live.get((x // 2, y // 2), m.data[(y // 2) * m.bw + x // 2])
+            collides = m.cells[(x, y)] in ("solid", "water")
+            if cell_state.get("shows") == block and bool(cell_state.get("active")) == collides:
+                tally["right"] += 1
+            else:
+                wrong.append({"x": x, "y": y, "shows_live": cell_state.get("shows") == block, "active": cell_state.get("active"),
+                              "collides": collides})
+        out["decor"] = dict(tally, wrong=wrong[:6])
+        out["result"] = "PASS" if tally["cells"] > 0 and tally["right"] == tally["cells"] else "FAIL"
     else:
         time.sleep(2.0)
         st = pilot.state()
@@ -271,7 +322,7 @@ def main(argv=None) -> int:
     spots = [s for s in SPOTS if not args.only or s.name in args.only.split(",")]
     if args.plan:
         for s in spots:
-            entries = truth.get((s.map, s.label)) or []
+            entries = entries_for(truth, s)
             plan = None
             classes = set()
             for c, r in entries:

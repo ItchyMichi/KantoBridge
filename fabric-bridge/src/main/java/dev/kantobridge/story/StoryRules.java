@@ -91,7 +91,7 @@ public final class StoryRules {
 	private final List<StoryCellTable.Entry> routeBalls = new ArrayList<>();
 	/** MG5: the pass cells of connecting routes ({@code obj} names the route's zone), closed unless the route is open. */
 	private final List<StoryCellTable.Entry> passes = new ArrayList<>();
-	/** SE3: Gen 3's cells the story changes. */
+	/** SE3: Gen 3's cells the story changes; §5.5: Gen 2's cells of blocks with several states. */
 	private final List<StoryCellTable.Entry> cellEntries = new ArrayList<>();
 	private Set<String> openPasses = Set.of();
 	/** The zone id of each zone's route map. */
@@ -478,7 +478,9 @@ public final class StoryRules {
 
 	/**
 	 * SE3: one {@code cell} cell: its state (the live one on the current map, else the map's own), open in the built state,
-	 * else drawn with the matching state's art and colliding by the live pass (or the matched state's).
+	 * else drawn with the matching state's art and colliding by the live pass (or the matched state's). A Gen 3 cell's live
+	 * state is its {@code story.cells} metatile; a Gen 2 cell's (§5.5: its numbers are blocks) its block's in
+	 * {@code story.blocks}, a block the client wasn't told being the map data's.
 	 */
 	private void cellState(StoryCellTable.Entry entry, Set<String> active, Set<String> drawn, Map<String, Integer> states) {
 		StoryCellTable.Built built = entry.built();
@@ -486,8 +488,11 @@ public final class StoryRules {
 		if (built == null || start == null) {
 			return;
 		}
-		Live live = entry.cell().map().equals(this.cellsMap) ? this.liveCells.get(entry.cell().y() * 1024 + entry.cell().x()) : null;
-		int metatile = live != null ? live.metatile() : start;
+		int x = entry.cell().x();
+		int y = entry.cell().y();
+		Live live = entry.cell().map().equals(this.cellsMap) ? this.liveCells.get(y * 1024 + x) : null;
+		Integer block = live == null && entry.cell().map().equals(this.blocksMap) ? this.liveBlocks.get((y / 2) * 256 + x / 2) : null;
+		int metatile = live != null ? live.metatile() : block != null ? block : start;
 		StoryCellTable.Pass told = live != null ? live.pass() : null;
 		if (metatile == built.metatile() && (told == null || told == built.pass())) {
 			if (built.pass() == StoryCellTable.Pass.WATER && !this.surf) {

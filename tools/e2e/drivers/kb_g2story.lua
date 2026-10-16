@@ -25,7 +25,9 @@
 --            moveobject, variablesprite, setevent/clearevent,
 --            setflag/clearflag, setscene/setmapscene, warps, specials by
 --            name, writecmdqueue), the map's group and number, its palette,
---            its objects' flags and hours. Written to
+--            its objects' flags and hours; and the bedroom's decorations
+--            that are blocks (src/core/gen2/Decorations.lua: each one's id
+--            and slot, bed, carpet, plant or poster). Written to
 --            KB_REPORT_DIR/g2_story_scan.json (ROM-derived: it stays in
 --            local/); stdout gets counts only.
 --
@@ -36,9 +38,11 @@
 --            comma-separated list, keeps only those maps). Once a client
 --            watches (the bridge diffs only then), for each case: the World's
 --            story state back to the new game's (event flags, engine flags,
---            badges, map scenes, variable sprites, the script memory), the
---            case's state set and the clock (hour 12 and Monday unless the
---            case says), then a warp into the map (World:warpToMapId: the
+--            badges, map scenes, variable sprites, the script memory, the
+--            bedroom's decorations), the case's state set (its decorations
+--            too: the four slots the bedroom's callback draws as blocks) and
+--            the clock (hour 12 and Monday unless the case says), then a warp
+--            into the map (World:warpToMapId: the
 --            load runs NEWMAP, TILES and OBJECTS at once, World.lua:10134-
 --            10366; onto its first warp's cell, else its middle; a case on
 --            the map the player stands on hops to another map first). Text,
@@ -91,6 +95,8 @@ local GameVersion = require("src.core.GameVersion")
 local okOp, Opcodes = pcall(require, "src.script.gen2.Opcodes")
 
 local floor = math.floor
+-- the decoration slots the bedroom's callback draws as blocks (src/core/gen2/Decorations.lua:504-527)
+local TILE_SLOTS = { bed = true, carpet = true, plant = true, poster = true }
 local function word(v) return (tostring(v):gsub("[^%w_.:+%-]", "?")) end
 local function num(id) return tonumber(tostring(id):match("^slot(%d+)$")) or 0 end
 local function version() return GameVersion.get() end
@@ -477,7 +483,20 @@ local function scan(game)
     end
   end
   local names = { engineFlags = type(constants.engineFlagOrder) == "table" and constants.engineFlagOrder or nil }
-  local report = { totals = totals, maps = out, names = names }
+  -- the decorations the bedroom's callback draws as blocks: each one's id and slot (Decorations.tiles)
+  local decorations = array()
+  local okD, D = pcall(require, "src.core.gen2.Decorations")
+  if okD and type(D) == "table" and type(D.ATTRIBUTES) == "table" and type(D.ACTIONS) == "table" then
+    for id, attr in pairs(D.ATTRIBUTES) do
+      local act = type(attr) == "table" and D.ACTIONS[attr.action] or nil
+      local slot = type(act) == "table" and not act.put and act.slot or nil
+      if type(id) == "number" and TILE_SLOTS[slot] and (tonumber(attr.sprite) or 0) ~= 0 then
+        decorations[#decorations + 1] = { id = id, slot = slot }
+      end
+    end
+    table.sort(decorations, function(a, b) return a.id < b.id end)
+  end
+  local report = { totals = totals, maps = out, names = names, decorations = decorations }
   local path = writeJson("g2_story_scan.json", report)
   print(("KB_SCAN maps=%d roots=%d rows=%d world=%d changeblock=%d mapblocks=%d truncated=%d file=%s"):format(
     totals.maps, totals.roots, totals.rows, totals.world, totals.changeblock, totals.mapblocks, totals.truncated,
@@ -503,7 +522,8 @@ local function snapshot(game)
   local player = save.player or {}
   return { events = w.events:serialize(), scenes = copy(w.mapScenes), engine = copy(save.engineFlags),
            badges = copy(player.badges), kanto = copy(player.kantoBadges), sprites = copy(w.variableSprites),
-           mem = w.vm and w.vm.serializeMem and w.vm:serializeMem() or copy(w.vm and w.vm.mem) }
+           mem = w.vm and w.vm.serializeMem and w.vm:serializeMem() or copy(w.vm and w.vm.mem),
+           decorations = copy(save.decorations) }
 end
 local function restore(game, base)
   local w, save = game.world, game.save or {}
@@ -515,6 +535,7 @@ local function restore(game, base)
   if type(player.kantoBadges) == "table" then refill(player.kantoBadges, base.kanto) end
   if type(w.variableSprites) == "table" then refill(w.variableSprites, base.sprites) end
   if w.vm and w.vm.restoreMem then w.vm:restoreMem(copy(base.mem)) end
+  if type(save.decorations) == "table" then refill(save.decorations, base.decorations) end
 end
 
 -- What holds a script on the field: none of it during the sweep (the VM's own hooks, Vm.lua:2729-2767). A yes/no is
@@ -660,6 +681,14 @@ local function applyCase(game, case)
     if ok and id then w.mapScenes[id] = ms.value end
   end
   for addr, v in pairs(case.mem or {}) do if w.vm then w.vm.mem[addr] = v end end
+  if type(case.decorations) == "table" then
+    -- the slots as the PC's decoration menu leaves them (Decorations.state: the save's wDeco* bytes; 0 is empty)
+    local okD, D = pcall(require, "src.core.gen2.Decorations")
+    local state = okD and type(D) == "table" and type(D.state) == "function" and D.state(game.save) or nil
+    if type(state) == "table" then
+      for slot in pairs(TILE_SLOTS) do state[slot] = tonumber(case.decorations[slot]) or 0 end
+    end
+  end
   w.clockHour = case.hour or DEFAULT_HOUR
   w.clockDay = case.day or DEFAULT_DAY
 end

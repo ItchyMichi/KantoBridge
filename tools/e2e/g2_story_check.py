@@ -9,6 +9,9 @@ the world, and whether each change reaches Minecraft.
     python tools/e2e/g2_story_check.py report      # print the last sweep's analysis again
     python tools/e2e/g2_story_check.py sites       # the export's swap sites against the scan and the sweep
 
+The cases are the scan's (every distinct load-time command once) and the bedroom's decorations (§5.5: the bare room,
+then each decoration alone in its slot).
+
 The driver is drivers/kb_g2story.lua. Its files in local/reports/ (g2_story_scan.json, g2_story_sweep.json,
 g2_story_objects.json) are ROM-derived (map blocks and block numbers stay in local/); this script prints only map
 symbols, flag numbers, special names and counts, and writes its analyses (the same) beside them. The sweep and the
@@ -51,6 +54,9 @@ WORLD_SPECIALS = {"ToggleMaptileDecorations", "ToggleDecorationsVisibility"}
 SKIP_PREFIX = ("BATTLE_TOWER_BATTLE_ROOM", "BATTLE_TOWER_ELEVATOR", "BATTLE_TOWER_HALLWAY", "TRADE_CENTER", "COLOSSEUM",
                "TIME_CAPSULE", "MOBILE_TRADE_ROOM", "MOBILE_BATTLE_ROOM")
 STATES_PER_MAP = 40
+# the bedroom whose decorations are blocks (§5.5), and the four slots its callback draws
+BEDROOM = "PLAYERS_HOUSE_2F"
+DECORATION_SLOTS = ("bed", "carpet", "plant", "poster")
 # readvar's variables (World.lua:109-138) the solver can set: the time of day, the hour and the weekday
 VAR_TIMEOFDAY, VAR_HOUR, VAR_WEEKDAY = 0x04, 0x0A, 0x0B
 # checktime's bits (MORN 1, DAY 2, NITE 4) and an hour inside each (morning 4-9, day 10-17, night 18-3)
@@ -319,6 +325,16 @@ def make_cases(scan: dict) -> tuple[list[dict], Counter]:
             states.setdefault(state_key(st), st)
         for st in list(states.values())[:STATES_PER_MAP]:
             cases.append(dict(st, map=mid, n=len(cases) + 1))
+    # the bedroom's decorations (§5.5): the bare room, then each decoration alone in its slot
+    decorations = scan.get("decorations") or []
+    if BEDROOM in scan["maps"] and decorations:
+        bare = {slot: 0 for slot in DECORATION_SLOTS}
+        rooms = [("decorations bare", bare)]
+        for d in decorations:
+            rooms.append((f"decoration {d['slot']} {d['id']}", dict(bare, **{d["slot"]: d["id"]})))
+        for label, decor in rooms:
+            cases.append({"events": {}, "flags": {}, "scenes": {}, "mapscenes": [], "mem": {}, "label": label,
+                          "decorations": decor, "map": BEDROOM, "n": len(cases) + 1})
     return cases, unsolved
 
 
@@ -341,6 +357,8 @@ def lua_cases(cases: list[dict]) -> str:
             parts.append(f"hour = {c['hour']}")
         if c.get("day") is not None:
             parts.append(f"day = {c['day']}")
+        if c.get("decorations"):
+            parts.append("decorations = { " + ", ".join(f"{slot} = {int(v)}" for slot, v in sorted(c["decorations"].items())) + " }")
         out.append("  { " + ", ".join(parts) + " },")
     out.append("}")
     return "\n".join(out) + "\n"

@@ -212,7 +212,7 @@ final class Gen2Planner {
 			SlotMap.Slot slot = slotMap.slot(new SlotMap.Key(QuarterPages.atlasOf(atlas, tile), palette, QuarterPages.tileOf(atlas, tile),
 					SlotMap.Shape.FULL));
 			return slot == null ? -1 : slot.index();
-		});
+		}, id -> variants.get(all.get(id).variant()));
 		Map<String, int[]> storyIndex = WorldPlanner.storyIndex(placed, storyCells);
 		List<WorldIndex.Habitat> habitats = HabitatPlanner.planGen3(placed, wildMaps, warnings, poolPrefix);
 		Map<String, String> pools = encounters == null ? Map.of() : G2PoolWriter.pools(encounters, wildMaps, poolPrefix, warnings);

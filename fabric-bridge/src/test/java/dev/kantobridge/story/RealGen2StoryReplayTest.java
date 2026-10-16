@@ -37,8 +37,10 @@ import org.junit.jupiter.api.condition.EnabledIfSystemProperty;
  * the blocks the bridge sends (each live block that differs from the map data the client was built from) are fed as
  * {@code story.blocks}; then every cell those blocks change (its art or its passability) must collide in Minecraft as the
  * hidden game's cell does (a tile story cell's, else the built terrain's) and show the live block's art (the closed art
- * while the cell is shut, else what was built); every other tile cell of the map must be in the map data's state.
- * Writes {@code reports/gen2_story_replay.json}: counts and map ids only. Skipped everywhere else.
+ * while the cell is shut, else what was built); a cell of a block with several states (§5.5, the bedroom's decorations)
+ * has a {@code cell} story cell drawing the live block's state (or open in the built one); every other tile or cell
+ * story cell of the map must be in the map data's state. Writes {@code reports/gen2_story_replay.json}: counts and map
+ * ids only. Skipped everywhere else.
  */
 @EnabledIfSystemProperty(named = "kb.realGen2Index", matches = ".+")
 class RealGen2StoryReplayTest {
@@ -77,16 +79,10 @@ class RealGen2StoryReplayTest {
 		return true;
 	}
 
-	/** The block cell (cx, cy) is built with: its site's open state, else the map data's block. */
+	/** The block cell (cx, cy) is built with: its site's open state (a block with several states: its most walkable), else the map data's block. */
 	private static int built(MapModel model, G2Map map, int cx, int cy) {
-		ExportSwaps.Site site = model.site(cx, cy);
-		if (site == null) {
-			return map.dataBlock(cx / 2, cy / 2);
-		}
-		if (!model.changes(cx, cy)) {
-			return site.after();
-		}
-		return model.closedBlock(cx, cy) == site.after() ? site.before() : site.after();
+		int built = model.builtBlock(cx, cy);
+		return built >= 0 ? built : map.dataBlock(cx / 2, cy / 2);
 	}
 
 	@Test
@@ -101,7 +97,7 @@ class RealGen2StoryReplayTest {
 		Map<String, List<StoryCellTable.Entry>> tilesByMap = new HashMap<>();
 		Set<String> otherKeys = new HashSet<>();
 		for (StoryCellTable.Entry entry : index.storyCells().entries()) {
-			if (entry.type() == StoryCellType.TILE) {
+			if (entry.type() == StoryCellType.TILE || entry.type() == StoryCellType.CELL) {
 				tileEntries.put(entry.key(), entry);
 				tilesByMap.computeIfAbsent(entry.cell().map(), k -> new ArrayList<>()).add(entry);
 			} else {
@@ -222,6 +218,19 @@ class RealGen2StoryReplayTest {
 								counts.merge("cells_wrong_collision", 1, Integer::sum);
 								wrongByMap.merge(map, 1, Integer::sum);
 							}
+							if (entry.type() == StoryCellType.CELL) {
+								// several states: open in the built block, else drawn in the live block's state
+								Integer state = result.states().get(key);
+								if (now == entry.built().metatile() && state == null) {
+									counts.merge("cells_several_built_ok", 1, Integer::sum);
+								} else if (state != null && entry.states().get(state).metatile() == now) {
+									counts.merge("cells_several_drawn_ok", 1, Integer::sum);
+								} else {
+									counts.merge("cells_wrong_art", 1, Integer::sum);
+									artByMap.merge(map, 1, Integer::sum);
+								}
+								continue;
+							}
 							boolean shut = result.drawn().contains(key);
 							int shown = shut && entry.closed() != null ? entry.closed().block() : builtBlock;
 							if (sameArt(tiles, shown, now, qx, qy)) {
@@ -233,7 +242,8 @@ class RealGen2StoryReplayTest {
 						}
 					}
 				}
-				// every other tile cell of the map: in the map data's state
+				// every other tile or cell story cell of the map: in the map data's state (a cell cell's block may have changed
+				// where another of its cells did not)
 				for (StoryCellTable.Entry entry : tilesByMap.getOrDefault(map, List.of())) {
 					if (changedKeys.contains(entry.key())) {
 						continue;
@@ -247,6 +257,15 @@ class RealGen2StoryReplayTest {
 					if (game != Pass.LEDGE && result.active().contains(entry.key()) != collides(game)) {
 						counts.merge("cells_own_wrong_collision", 1, Integer::sum);
 						wrongByMap.merge(map, 1, Integer::sum);
+					}
+					if (entry.type() == StoryCellType.CELL) {
+						Integer state = result.states().get(entry.key());
+						boolean right = block == entry.built().metatile() ? state == null
+								: state != null && entry.states().get(state).metatile() == block;
+						if (!right) {
+							counts.merge("cells_own_wrong_art", 1, Integer::sum);
+							artByMap.merge(map, 1, Integer::sum);
+						}
 					}
 				}
 			}
@@ -269,5 +288,7 @@ class RealGen2StoryReplayTest {
 		assertEquals(0, counts.getOrDefault("cells_missing", 0), "changed cells colliding unlike the game without a story cell: " + missingByMap);
 		assertEquals(0, counts.getOrDefault("cells_wrong_collision", 0) + counts.getOrDefault("cells_own_wrong_collision", 0),
 				"cells colliding unlike the hidden game: " + wrongByMap);
+		assertEquals(0, counts.getOrDefault("cells_wrong_art", 0) + counts.getOrDefault("cells_own_wrong_art", 0),
+				"cells drawn unlike the hidden game: " + artByMap);
 	}
 }

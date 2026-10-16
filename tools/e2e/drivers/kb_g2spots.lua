@@ -10,12 +10,14 @@
 --
 --   { id = 1, op = "go", map = "WILLS_ROOM", x = 5, y = 3, facing = "up",
 --     events = { [778] = true }, flags = {}, scenes = { WILLS_ROOM = 1 },
---     mapscenes = {}, mem = {}, hour = 12, day = 1, flash = false }
+--     mapscenes = {}, mem = {}, hour = 12, day = 1, flash = false,
+--     decorations = { bed = 2, carpet = 0, plant = 0, poster = 16 } }
 --
 -- go: the World's story state back to the new game's (event flags, engine
--- flags, badges, map scenes, variable sprites, the script memory, as
--- kb_g2story.lua keeps them), the command's state and clock set (hour 12 and
--- Monday unless it says), then a warp onto the map's cell
+-- flags, badges, map scenes, variable sprites, the script memory, the
+-- bedroom's decorations, as kb_g2story.lua keeps them), the command's state
+-- and clock set (hour 12 and Monday unless it says), then a warp onto the
+-- map's cell
 -- (World:warpToMapId: the load runs NEWMAP, TILES and OBJECTS at once;
 -- without x and y the map's first warp's cell). Once the field has stood idle
 -- for a second (a script still holding it after 10 s is halted) Flash is lit
@@ -138,7 +140,8 @@ local function snapshot(game)
   local player = save.player or {}
   return { events = w.events:serialize(), scenes = copy(w.mapScenes), engine = copy(save.engineFlags),
            badges = copy(player.badges), kanto = copy(player.kantoBadges), sprites = copy(w.variableSprites),
-           mem = w.vm and w.vm.serializeMem and w.vm:serializeMem() or copy(w.vm and w.vm.mem) }
+           mem = w.vm and w.vm.serializeMem and w.vm:serializeMem() or copy(w.vm and w.vm.mem),
+           decorations = copy(save.decorations) }
 end
 local function restore(game, base)
   local w, save = game.world, game.save or {}
@@ -150,6 +153,7 @@ local function restore(game, base)
   if type(player.kantoBadges) == "table" then refill(player.kantoBadges, base.kanto) end
   if type(w.variableSprites) == "table" then refill(w.variableSprites, base.sprites) end
   if w.vm and w.vm.restoreMem then w.vm:restoreMem(copy(base.mem)) end
+  if type(save.decorations) == "table" then refill(save.decorations, base.decorations) end
 end
 
 local function applyState(game, cmd)
@@ -162,6 +166,14 @@ local function applyState(game, cmd)
     if ok and id then w.mapScenes[id] = ms.value end
   end
   for addr, v in pairs(cmd.mem or {}) do if w.vm then w.vm.mem[tonumber(addr)] = v end end
+  if type(cmd.decorations) == "table" then
+    -- the bedroom's four block slots as the PC's decoration menu leaves them (Decorations.state; 0 is empty)
+    local okD, D = pcall(require, "src.core.gen2.Decorations")
+    local state = okD and type(D) == "table" and type(D.state) == "function" and D.state(game.save) or nil
+    if type(state) == "table" then
+      for _, slot in ipairs({ "bed", "carpet", "plant", "poster" }) do state[slot] = tonumber(cmd.decorations[slot]) or 0 end
+    end
+  end
   w.clockHour = cmd.hour or DEFAULT_HOUR
   w.clockDay = cmd.day or DEFAULT_DAY
 end

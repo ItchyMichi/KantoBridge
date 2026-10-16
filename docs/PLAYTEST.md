@@ -981,7 +981,8 @@ rebuilding (the export now lists the cells: `g3sites`).
 ### Crystal (with you)
 
 Crystal's story changes were already built and drawn per player (MG9); the story check (plan §5) found them all
-working on the pod, so this list is what to look at when you play. Nothing needs exporting or rebuilding.
+working on the pod, so this list is what to look at when you play. Rebuild Johto once for the bedroom (below); nothing
+needs exporting again.
 
 - [ ] **The Elite Four:** the door shuts behind you as you enter each room, and the exit opens once you beat its
       trainer, through Lance's room to the Hall of Fame.
@@ -994,6 +995,8 @@ working on the pod, so this list is what to look at when you play. Nothing needs
 - [ ] **Burned Tower:** the floor gives way where the rival waits, and the ladder appears once the beasts have fled.
 - [ ] **Route 19:** the rocks block the way to Seafoam until they are cleared.
 - [ ] **Dark Cave, Rock Tunnel, the Whirl Islands:** black until you use Flash, then lit.
-- [ ] **Your room:** the bed, carpet, plant and poster are drawn right for **one decoration** of each kind only; any
-      other decoration you put up shows the wrong art (a known gap: cosmetic, fixable).
+- [ ] **Your room:** the bed, carpet and plant you set up on your PC show as you chose them (and an empty slot shows
+      the bare room); the bed and the plant block you, the carpet doesn't. The poster always shows the Town Map, the
+      one a new game starts with: it hangs on a wall, where no story cell can stand (a known gap). Needs Johto
+      rebuilding (the bedroom's story cells are new).
 - [ ] **Other players:** two players in different story states see their own doors, shutters and stairs.

@@ -4,12 +4,15 @@ import dev.kantobridge.builder.export.CellFlags;
 import dev.kantobridge.builder.export.ExportSwaps;
 import dev.kantobridge.builder.export.G2Map;
 import dev.kantobridge.builder.export.G2Tiles;
+import dev.kantobridge.world.StoryCellTable;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.TreeMap;
 
 /**
  * A Gen 2 map's cell model (MG9, docs/specs/GEN2_BRIDGE_PLAN.md §7): from a {@code g2map}, its art variant's
@@ -28,6 +31,10 @@ import java.util.Set;
  * <li><b>Swap sites</b> (Gen 1's rule, {@link MapModel#build}): a site is accepted when the map data holds either of its
  * blocks, or any block for a script's; each cell of its block is built in the state that is walkable there, and the
  * closed model shows the other state where the art or the passability differs.</li>
+ * <li><b>Blocks with several states</b> (several sites on one block: the bedroom's decorations, docs/specs/
+ * STORY_EVENTS_PLAN.md §5.5): every block the sites write is kept ({@link MapModel#blockStates}); each cell is built in
+ * its most walkable state (ground, then water, then the rest; on a tie the first site's state, as above) and never
+ * closes: its {@code cell} story cell draws the other states per player ({@link G2StoryCells}).</li>
  * </ul>
  */
 public final class G2Cells {
@@ -45,6 +52,9 @@ public final class G2Cells {
 	 */
 	public static MapModel model(G2Map map, G2Tiles tiles, List<ExportSwaps.Site> sites, boolean interior, Warnings warnings) {
 		Map<Integer, ExportSwaps.Site> valid = new HashMap<>();
+		// a block a script can turn into several others (the bedroom's decorations): the map data's block, then every block
+		// its sites write, in the sites' order
+		Map<Integer, List<Integer>> several = new TreeMap<>();
 		for (ExportSwaps.Site site : sites) {
 			Map<String, String> detail = Warnings.symbols("map", map.id(), "kind", site.kind());
 			if (!map.inBlocks(site.bx(), site.by())) {
@@ -58,13 +68,19 @@ public final class G2Cells {
 			int index = site.by() * map.w() + site.bx();
 			int data = map.dataBlock(site.bx(), site.by());
 			boolean neither = data != site.before() && data != site.after();
-			if (valid.containsKey(index)) {
-				// A block a script can turn into several others (the bedroom's decorations): the first site wins.
-				warnings.note("swap_site_duplicate", detail);
-				continue;
-			}
 			if (neither && !MapModel.overwritable(site)) {
 				warnings.warn("swap_block_mismatch", detail);
+				continue;
+			}
+			ExportSwaps.Site first = valid.get(index);
+			if (first != null) {
+				List<Integer> states = several.computeIfAbsent(index, k -> new ArrayList<>(List.of(data)));
+				for (int block : new int[] {first.before(), first.after(), site.before(), site.after()}) {
+					if (!states.contains(block)) {
+						states.add(block);
+					}
+				}
+				warnings.note("g2_block_several_states", detail);
 				continue;
 			}
 			valid.put(index, site);
@@ -77,10 +93,18 @@ public final class G2Cells {
 		Arrays.fill(closedBlock, -1);
 		boolean anyChange = false;
 		for (ExportSwaps.Site site : valid.values()) {
+			List<Integer> states = several.get(site.by() * map.w() + site.bx());
 			for (int qy = 0; qy < 2; qy++) {
 				for (int qx = 0; qx < 2; qx++) {
 					int i = (site.by() * 2 + qy) * cw + site.bx() * 2 + qx;
 					int open = openState(tiles, site, qx, qy);
+					if (states != null) {
+						// several states: the most walkable here, no closed state (its story cell draws the others)
+						int built = mostWalkable(tiles, states, open, qx, qy);
+						openBlock[i] = built;
+						closedBlock[i] = built;
+						continue;
+					}
 					openBlock[i] = open;
 					boolean changes = changes(tiles, site, qx, qy);
 					closedBlock[i] = changes ? (open == site.after() ? site.before() : site.after()) : open;
@@ -89,8 +113,41 @@ public final class G2Cells {
 			}
 		}
 		Warnings scratch = new Warnings();
-		MapModel closed = anyChange ? build(map, tiles, valid, openBlock, closedBlock, interior, true, null, scratch) : null;
-		return build(map, tiles, valid, openBlock, closedBlock, interior, false, closed, warnings);
+		MapModel closed = anyChange ? build(map, tiles, valid, openBlock, closedBlock, several, interior, true, null, scratch) : null;
+		return build(map, tiles, valid, openBlock, closedBlock, several, interior, false, closed, warnings);
+	}
+
+	/**
+	 * How a block's cell (qx, qy) lets players through, as the story cells say it: {@code ground} on land (a ledge too:
+	 * the hidden game makes the hop), {@code water} where only surfers cross, {@code solid} everywhere else.
+	 */
+	public static StoryCellTable.Pass pass(G2Tiles tiles, int block, int qx, int qy) {
+		G2Tiles.Meaning m = tiles.meaning(tiles.coll(block, qx, qy));
+		return switch (m.perm()) {
+			case "land" -> StoryCellTable.Pass.GROUND;
+			case "water" -> StoryCellTable.Pass.WATER;
+			default -> StoryCellTable.Pass.SOLID;
+		};
+	}
+
+	/** Walkable before water before the rest, as a rank (lower is more walkable). */
+	private static int rank(G2Tiles tiles, int block, int qx, int qy) {
+		G2Tiles.Meaning m = tiles.meaning(tiles.coll(block, qx, qy));
+		if (walkable(m)) {
+			return 0;
+		}
+		return "water".equals(m.perm()) ? 1 : 2;
+	}
+
+	/** Of a block's states, the one cell (qx, qy) is built in: the most walkable there, {@code first} on a tie. */
+	static int mostWalkable(G2Tiles tiles, List<Integer> states, int first, int qx, int qy) {
+		int best = first;
+		for (int block : states) {
+			if (rank(tiles, block, qx, qy) < rank(tiles, best, qx, qy)) {
+				best = block;
+			}
+		}
+		return best;
 	}
 
 	private static final Map<String, int[]> DELTA = Map.of("up", new int[] {0, -1}, "down", new int[] {0, 1}, "left", new int[] {-1, 0},
@@ -189,7 +246,7 @@ public final class G2Cells {
 	}
 
 	private static MapModel build(G2Map map, G2Tiles tiles, Map<Integer, ExportSwaps.Site> sites, int[] openBlock, int[] closedBlock,
-			boolean interior, boolean closedState, MapModel closed, Warnings warnings) {
+			Map<Integer, List<Integer>> several, boolean interior, boolean closedState, MapModel closed, Warnings warnings) {
 		int cw = map.cellWidth();
 		int ch = map.cellHeight();
 		int cols = cw * 2;
@@ -255,6 +312,6 @@ public final class G2Cells {
 			border[t] = Math.max(tiles.tile(map.border(), t % 4, t / 4), 0);
 		}
 		return MapModel.gen2(map.id(), interior, closedState, cw, ch, art, flags, wild, border, sites, openBlock, closedBlock, map.blocks(),
-				map.w(), closed);
+				map.w(), several, closed);
 	}
 }

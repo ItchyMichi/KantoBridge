@@ -86,6 +86,8 @@ public final class MapModel {
 	private final int[] closedBlock;
 	/** Cells of a site whose map data holds neither of its blocks: the data's flags don't describe what is built there. */
 	private final boolean[] overwritten;
+	/** A Gen 2 map's blocks with several states (by block index): every block each can show, the map data's first. */
+	private Map<Integer, List<Integer>> blockStates = Map.of();
 	private @Nullable MapModel closed;
 
 	private MapModel(ExportMap map, ExportTileset tileset, boolean interior, boolean closedState, Map<Integer, ExportSwaps.Site> sites,
@@ -171,14 +173,16 @@ public final class MapModel {
 
 	/**
 	 * A Gen 2 map's model (MG9, see {@link G2Cells}): as {@link #gen3}, with its swap sites ({@code sites} by block index
-	 * {@code by * blocksWide + bx}), each cell's open and closed block (-1 where no site is), the map data's blocks, and the
-	 * same map in its closed state (null for the closed model itself).
+	 * {@code by * blocksWide + bx}), each cell's open and closed block (-1 where no site is), the map data's blocks, the
+	 * blocks with several states ({@code blockStates} by block index, see {@link #blockStates(int, int)}) and the same map
+	 * in its closed state (null for the closed model itself).
 	 */
 	static MapModel gen2(String id, boolean interior, boolean closedState, int cw, int ch, int[] tiles, int[] flags, boolean[] wild, int[] border,
 			Map<Integer, ExportSwaps.Site> sites, int[] openBlock, int[] closedBlock, int[] dataBlocks, int blocksWide,
-			@Nullable MapModel closed) {
+			Map<Integer, List<Integer>> blockStates, @Nullable MapModel closed) {
 		MapModel model = new MapModel(2, id, interior, closedState, cw, ch, tiles, flags, wild, border, 4, 4,
 				Collections.unmodifiableMap(sites), openBlock, closedBlock, dataBlocks, blocksWide);
+		model.blockStates = Collections.unmodifiableMap(blockStates);
 		model.closed = closed;
 		model.classify();
 		return model;
@@ -507,6 +511,24 @@ public final class MapModel {
 	public boolean changes(int cx, int cy) {
 		int i = cy * this.cw + cx;
 		return this.openBlock[i] >= 0 && this.openBlock[i] != this.closedBlock[i];
+	}
+
+	/** The block cell (cx, cy) is built with where a swap site covers it (its open state); -1 elsewhere. */
+	public int builtBlock(int cx, int cy) {
+		return this.openBlock[cy * this.cw + cx];
+	}
+
+	/**
+	 * The blocks a Gen 2 block that scripts turn into several others can show (the bedroom's decorations, docs/specs/
+	 * STORY_EVENTS_PLAN.md §5.5), for each of its cells: the map data's block first, then every block its sites write;
+	 * empty for any other cell. Such a cell is built in its most walkable state ({@link #builtBlock}) and never closes
+	 * ({@link #changes} is false): its {@code cell} story cell draws the other states ({@link G2StoryCells}).
+	 */
+	public List<Integer> blockStates(int cx, int cy) {
+		if (this.blockStates.isEmpty()) {
+			return List.of();
+		}
+		return this.blockStates.getOrDefault((cy / 2) * this.blocksWide + cx / 2, List.of());
 	}
 
 	/** The block whose presence at the cell's site closes the cell; -1 for cells no site changes. */

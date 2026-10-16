@@ -270,7 +270,7 @@
               "pass",
               "cell"
             ],
-            "description": "pass (MG5): a pass cell, closed per player while the far region is not built or the player has no link to its game (pass_closed). cell (SE3, Gen 3): a cell the hidden game's story can change (the g3sites export), built in its most walkable state; its other states are drawn and collide per player from the live cell (story.cells)."
+            "description": "pass (MG5): a pass cell, closed per player while the far region is not built or the player has no link to its game (pass_closed). cell (SE3, Gen 3): a cell the hidden game's story can change (the g3sites export), built in its most walkable state; its other states are drawn and collide per player from the live cell (story.cells). On a Gen 2 map (STORY_EVENTS_PLAN.md §5.5) a cell of a block that scripts turn into several others (the bedroom's decorations), its numbers block ids: its state is its block's in story.blocks."
           },
           "obj": {
             "anyOf": [
@@ -334,7 +334,7 @@
             "type": "integer",
             "minimum": 0,
             "maximum": 1023,
-            "description": "tile: the map data's block at the swap site (before, or after where the engine stamps the site closed on map load); maps other than the hidden player's current one are taken to show it. cell: the map's own metatile at the cell (0-1023), what maps other than the hidden player's current one show."
+            "description": "tile: the map data's block at the swap site (before, or after where the engine stamps the site closed on map load); maps other than the hidden player's current one are taken to show it. cell: the map's own metatile at the cell (0-1023; on a Gen 2 map the map data's block), what maps other than the hidden player's current one show."
           },
           "water": {
             "type": "boolean",
@@ -391,7 +391,7 @@
               "pass"
             ],
             "additionalProperties": false,
-            "description": "cell: the state the world is built in (the most walkable of the cell's states).",
+            "description": "cell: the state the world is built in (the most walkable of the cell's states; Gen 2: a tie keeps the first swap site's).",
             "properties": {
               "metatile": {
                 "type": "integer",

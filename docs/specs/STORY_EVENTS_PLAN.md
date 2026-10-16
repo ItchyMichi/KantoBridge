@@ -267,10 +267,18 @@ story cells built open and closed per player. So this was a check, and it found 
 
 ### 5.5 Gaps
 
-- **The bedroom's decorations.** 7 blocks of PLAYERS_HOUSE_2F take several decorations (each slot's choices). The
-  builder keeps two states per block (G2Cells: the first site wins), so any other decoration is drawn wrong (the
-  tile cell stays in its built state). This is cosmetic; the fix would be Emerald's multi-state `cell` story cells
-  (§4) for those 7 blocks.
+- **The bedroom's decorations (fixed, your go of 2026-10-16).** 7 blocks of PLAYERS_HOUSE_2F take several decorations
+  (each slot's choices: 4 beds, 4 carpets over four blocks, 3 plants, 4 posters; each slot can also be empty). The
+  builder kept two states per block (G2Cells: the first site won), so any other decoration was drawn wrong. Now:
+  - G2Cells keeps every state of such a block (`MapModel.blockStates`) and builds each cell in its most walkable state
+    (on a tie the first site's, as a single site builds it); such a cell never closes.
+  - G2StoryCells gives each such cell built as ground or water a `cell` story cell, Emerald's multi-state story cell,
+    in block ids: `start` the map data's block, `built`, and every other block with its pass, height and art there.
+  - StoryRules reads a Gen 2 `cell` cell's live state from `story.blocks` (its block), so each player's bed, carpet and
+    plant are drawn and collide as their own game has them. The bridge and the export needed nothing: the bridge
+    already sends the decoration blocks, and the export already lists every decoration as a swap site.
+  - Still left: the poster. It hangs on a wall, where no story block can stand, so the wall keeps its built art (the
+    first poster, the Town Map a new game starts with) whatever the player hangs.
 - Not covered by the check:
   - the Battle Tower's rooms and the link rooms (left out, as S7 left Emerald's out);
   - changes made during a visit that the next load doesn't redo (the bridge relays them live, and every write is a

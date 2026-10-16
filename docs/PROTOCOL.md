@@ -411,6 +411,14 @@ The client keeps each story cell of the WorldIndex open or closed for its own pl
   in `start`. In its built state it is open; in another it draws that state's art (by metatile, and by pass where two
   states share a metatile; a live state the table doesn't list draws nothing over the built art) and collides by the
   live `pass`: `solid` always, `water` unless the player surfs, `ground` never.
+- **Gen 2 blocks with several states ([specs/STORY_EVENTS_PLAN.md](specs/STORY_EVENTS_PLAN.md) §5.5):** a block that
+  scripts turn into several others (the bedroom's decorations: the bed, carpet, plant and poster slots) has no swap
+  site's closed state; each of its cells is built in its most walkable state (on a tie the first site's, as a single
+  site's) and, where that is ground or water, carries a `cell` story cell whose numbers are **block ids**: `start` the
+  map data's block, `built` and `states` the blocks the cell can show. Its live state is its block's in `story.blocks`
+  (a block the client wasn't told is the map data's); it is drawn and collides as a Gen 3 cell does, by the matched
+  state's `pass` (`story.blocks` carries none). A cell built solid (the poster on the wall) carries none: its built
+  art stays.
 
 The client draws closed `tile` cells with the site's `before` art (per player, never in the world's
 blocks) and relays its active set with `story.state` (full on join, deltas after); the server uses
@@ -1071,7 +1079,7 @@ is what the builder writes to `<world>/kantobridge/world_index.json`:
   objects carry their `hidden` default; tile cells their `start` block, `water`, and `closed{block,
   pass, height, art}` with the closed art's four slot indices, so each client draws and collides
   its own player's closed cells; SE3, Gen 3's `cell` cells their `start` metatile, `built{metatile, pass}` and
-  `states[{metatile, pass, height, art}]`, every state's art as four slot indices);
+  `states[{metatile, pass, height, art}]`, every state's art as four slot indices; Gen 2's the same in block ids);
 - the habitat block positions and pools (WR6: a zone's too, `map` its route map, one pool per area
   with tall grass, `kantobridge:zone_<zone>_a<n>`), with `range`, the block's `RangeOfInfluence`, where it isn't 14
   (the cave area's are 6: [specs/CAVES_3D_PLAN.md](specs/CAVES_3D_PLAN.md) §3.3);
