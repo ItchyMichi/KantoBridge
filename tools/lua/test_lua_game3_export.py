@@ -23,7 +23,7 @@ from rig import Rig
 pytestmark = pytest.mark.lua
 
 PROTOCOL = load_protocol()
-G3_KINDS = {"g3map", "g3tiles", "g3image", "g3sprite", "g3layout", "g3encounters", "g3names", "g3anims"}
+G3_KINDS = {"g3map", "g3tiles", "g3image", "g3sprite", "g3layout", "g3encounters", "g3names", "g3anims", "g3sites"}
 
 
 def exported(a, region="hoenn"):

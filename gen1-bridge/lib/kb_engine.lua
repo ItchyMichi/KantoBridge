@@ -93,6 +93,8 @@ Engine.GROUPS = {
   export = { "openDataset", "datasetSource", "liveSource", "worldShowing", "liveSourceFromGame", "mapQuery",
              -- MG7 (G3D): an adapter that builds its family's own resources (Gen 3's g3* kinds)
              "exportResources",
+             -- SE2 (STORY_EVENTS_PLAN.md): Gen 3's changeable cells, the g3sites resource
+             "cellSites",
              "isOutside", "tileProbe", "shoreTiles", "cutTreeTiles", "spinnerTiles", "animatedTiles",
              "borderBlockFor", "voidFill", "modDataFile", "animationImages", "computeNeighbors", "paletteLookup",
              "imagePng" },
@@ -184,7 +186,7 @@ local function stub(opts, id, requireFn)
     pcPending = nothing,
     uiStack = empty, uiOpenFacts = nothing,
     screenSize = function() return 160, 144 end,
-    storyCells = nothing, cellBase = nothing, swapSites = nothing,
+    storyCells = nothing, cellBase = nothing, swapSites = nothing, cellSites = nothing,
     encounterCounts = empty, itemCounts = empty, bridgeCounts = empty, contentCounts = empty, hiddenStats = empty,
     pcCounts = empty, bagCounts = empty, dexCounts = empty,
     -- lists and counts the acts read every step

@@ -19,6 +19,9 @@
 --   g3layout/<region> the surface maps' cell origins (connections, BFS from
 --                    the root)
 --   g3encounters/all, g3names/all
+--   g3sites/all      SE2 (docs/specs/STORY_EVENTS_PLAN.md): every cell the
+--                    story can change, its own state and the others
+--                    (sites.lua); g3map has the every-visit ones baked in
 --
 -- Art: the engine prepares each pair's metatile atlases as RGBA on the CPU
 -- (AssetDecode.pair, src/core/game3/asset_decode.lua:24-87: one 16x16 slot per
@@ -354,8 +357,10 @@ function Export3.install(b)
             warn("g3_map_size", map)
           else
             local parts = {}
-            -- MG8: a Wild Routes clearing's cells (routes.lua) are baked in, open, as the hidden game runs them
+            -- MG8: a Wild Routes clearing's cells (routes.lua) are baked in, open, as the hidden game runs them;
+            -- SE2: so are the changes every visit's entry scripts make under no condition (sites.lua)
             local opened = type(b.routeCells) == "function" and b.routeCells(map) or {}
+            local baked = type(b.bakedCells) == "function" and b.bakedCells(map) or {}
             for cy = 0, h - 1 do
               for cx = 0, w - 1 do
                 local c = lay.cells[cy * w + cx + 1]
@@ -363,7 +368,12 @@ function Export3.install(b)
                 local coll = type(c) == "table" and floor(tonumber(c.coll) or 0xff) or 0xff
                 local elev = type(c) == "table" and floor(tonumber(c.elev) or 0) or 0
                 local o = opened[cy * 1024 + cx]
-                if o then mid, coll, elev = floor(o.mid), 0x00, floor(o.elev) end
+                local k = baked[cy * 1024 + cx]
+                if o then
+                  mid, coll, elev = floor(o.mid), 0x00, floor(o.elev)
+                elseif k then
+                  mid, coll, elev = k.mid, k.coll, k.elev
+                end
                 parts[#parts + 1] = u16(mid % 1024) .. char(coll % 256, elev % 16)
               end
               if cy % 16 == 15 then checkpoint() end
@@ -396,8 +406,9 @@ function Export3.install(b)
               mapType = floor(tonumber(mdef.mapType) or 0) % 256, kind = kind,
               music = floor(tonumber(mdef.music) or 0) % 65536, weather = floor(tonumber(mdef.weather) or 0) % 256,
               -- item 8: a cave that needs Flash (the map header's cave flag, FieldView.defaultFlashLevel's
-              -- mapIsCave, src/core/game3/field_view.lua:1484-1487)
-              dark = Export3.dark(mdef) or nil,
+              -- mapIsCave, src/core/game3/field_view.lua:1484-1487); SE7: a map its entry scripts darken
+              dark = (Export3.dark(mdef) or (type(b.scriptDarkMaps) == "function" and b.scriptDarkMaps()[map]))
+                or nil,
             })
           end
         else
@@ -856,6 +867,33 @@ function Export3.install(b)
       moves = names("moves", "MOVE_", function(id) return id end),
       items = names("items", "ITEM_", function(id) return id end),
     })
+
+    -- ---- SE2: the cells the story can change (sites.lua), every state with its source
+    local okSites, found = pcall(b.adapter.cellSites, checkpoint)
+    if okSites and type(found) == "table" then
+      local list = {}
+      for i, site in ipairs(found.sites) do
+        local states = {}
+        for j, st in ipairs(site.states) do
+          states[j] = { metatile = st.metatile % 1024, coll = st.coll % 256, elev = st.elev % 16, source = st.source }
+        end
+        list[i] = { map = site.map, x = site.x, y = site.y,
+                    own = { metatile = site.own.metatile % 1024, coll = site.own.coll % 256, elev = site.own.elev % 16 },
+                    states = json.array(states) }
+      end
+      put("g3sites", "all", { sites = json.array(list), baked = found.baked })
+      if b.log then
+        local c = found.counts or {}
+        b.log.info("export.g3sites", { sites = #list, states = c.states, baked = c.baked, maps = c.maps,
+                                       dropped = c.dropped, offMap = c.offMap, layoutsMissing = c.layoutsMissing,
+                                       layoutsMismatched = c.layoutsMismatched, truncated = c.truncated })
+      end
+      if (found.counts and found.counts.dropped or 0) > 0 then warn("g3_site_states_dropped", "all") end
+      if (found.counts and found.counts.truncated or 0) > 0 then warn("g3_site_walk_truncated", "all") end
+    else
+      warn("g3_sites_failed", "all")
+      put("g3sites", "all", { sites = json.array({}), baked = 0 })
+    end
     return true
   end)
 end

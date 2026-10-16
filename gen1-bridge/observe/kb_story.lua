@@ -19,17 +19,21 @@
 --                                      go out too), then every change during
 --                                      the visit, checked every step
 --   story.cells{map, cells}            (MG7, G3C) Gen 3's runtime terrain: the
---                                      current map's cells whose metatile
---                                      differs from what the client holds
---                                      (kb_engine.storyCells: the layout's
---                                      overrides; a cell that went back is
---                                      sent with its own metatile, cellBase),
---                                      on a map load and every step after
+--                                      current map's cells whose metatile or
+--                                      (SE1) collision class differs from
+--                                      what the client holds (kb_engine.
+--                                      storyCells: the layout's overrides
+--                                      against the exported cells; a cell
+--                                      that went back is sent with its own
+--                                      metatile and pass, cellBase), each
+--                                      with its pass, on a map load and
+--                                      every step after
 --   story.lit{map, lit}                a dark map lit by Flash, or reset: the
 --                                      lit set is every dark map while
 --                                      save.flashLit holds (the engine keeps
 --                                      the light across dark floors and drops
---                                      it on any other map, OC:514-522)
+--                                      it on any other map, OC:514-522); SE7:
+--                                      a map in save.litMaps as that says
 --
 -- The snapshot carries the same state in full (rebase): every effective
 -- visibility that differs from its default (`toggles`), the current map's
@@ -75,12 +79,18 @@ function Story.flagSet(save)
   return out
 end
 
--- The lit dark maps: all of them while save.flashLit holds.
+-- The lit dark maps: all of them while save.flashLit holds; SE7: a map the
+-- save view's litMaps names is lit as it says instead (Gen 3: a map its
+-- scripts darken, lit once the game's flash level there is 0).
 function Story.litSet(save, darkMaps)
   local out = {}
-  if type(save) == "table" and save.flashLit then
-    for _, id in ipairs(darkMaps or {}) do
-      if sym(id, MAP_ID) then out[id] = true end
+  if type(save) ~= "table" then return out end
+  local per = type(save.litMaps) == "table" and save.litMaps or nil
+  for _, id in ipairs(darkMaps or {}) do
+    if sym(id, MAP_ID) then
+      local lit
+      if per and per[id] ~= nil then lit = per[id] == true else lit = save.flashLit == true end
+      if lit then out[id] = true end
     end
   end
   return out
@@ -100,7 +110,7 @@ function Story.new(opts)
   local steps = 0
   local base                      -- { flags, toggles, lit }: what the client has been told
   local view = {}                 -- the current map's blocks: { map, load, width, known }
-  local cellView = {}             -- MG7: the current map's cells the client holds: { map, known = { key -> metatile } }
+  local cellView = {}             -- MG7: the current map's cells the client holds: { map, known = { key -> { mid, pass } } }
   local sites                     -- SwapSites.runtimeIndex, built on first need
   local lastRunner = false
   local counts = {
@@ -230,15 +240,28 @@ function Story.new(opts)
   -- is the map's own cells plus the ones told during this visit: a new map starts from nothing told, a
   -- same-map reload from what was told before it, so a cell its scripts no longer change goes back.
   local function cellKey(k) return k % 1024, floor(k / 1024) end
+  local PASSES = { ground = true, water = true, solid = true }
+  -- An engine's cell value: { mid, pass } (SE1), or a bare metatile (an adapter from before SE1).
+  local function cellValue(v)
+    local mid, pass
+    if type(v) == "table" then mid, pass = tonumber(v.mid), v.pass else mid = tonumber(v) end
+    if not (mid and mid >= 0 and mid <= 1023 and mid == floor(mid)) then return nil end
+    return { mid = mid, pass = PASSES[pass] and pass or nil }
+  end
+  local function sameCell(a, b) return a ~= nil and b ~= nil and a.mid == b.mid and a.pass == b.pass end
+  local function cellEntry(x, y, v, map)
+    local e = { x = x, y = y, metatile = v.mid, pass = v.pass }
+    if map then e.map = map end
+    return e
+  end
   local function readCells()
     local sc = engine.storyCells and engine.storyCells() or nil
     if type(sc) ~= "table" or not sym(sc.map, MAP_ID) or type(sc.cells) ~= "table" then return nil end
     local now = {}
-    for k, mid in pairs(sc.cells) do
-      k, mid = tonumber(k), tonumber(mid)
-      if k and mid and k >= 0 and k == floor(k) and mid >= 0 and mid <= 1023 and mid == floor(mid) then
-        now[k] = mid
-      end
+    for k, v in pairs(sc.cells) do
+      k = tonumber(k)
+      local c = cellValue(v)
+      if k and c and k >= 0 and k == floor(k) then now[k] = c end
     end
     return sc.map, now
   end
@@ -251,8 +274,8 @@ function Story.new(opts)
     end
     local prev = cellView.map == map and cellView.known or {}
     local keys = {}
-    for k, mid in pairs(now) do
-      if prev[k] ~= mid then keys[#keys + 1] = k end
+    for k, c in pairs(now) do
+      if not sameCell(prev[k], c) then keys[#keys + 1] = k end
     end
     for k in pairs(prev) do
       if now[k] == nil then keys[#keys + 1] = k end
@@ -263,9 +286,13 @@ function Story.new(opts)
     local cells = {}
     for _, k in ipairs(keys) do
       local x, y = cellKey(k)
-      local mid = now[k]
-      if mid == nil then mid = tonumber(engine.cellBase(x, y)) end
-      if mid and mid >= 0 and mid <= 1023 then cells[#cells + 1] = { x = x, y = y, metatile = mid } end
+      local c = now[k]
+      if c == nil then
+        -- back to the map's own: its metatile and pass (an adapter from before SE1 gives the metatile alone)
+        local mid, pass = engine.cellBase(x, y)
+        c = cellValue(type(pass) == "string" and { mid = mid, pass = pass } or mid)
+      end
+      if c then cells[#cells + 1] = cellEntry(x, y, c) end
     end
     for i = 1, #cells, Story.MAX_CELLS do
       local part = {}
@@ -393,7 +420,7 @@ function Story.new(opts)
       table.sort(keys)
       for _, k in ipairs(keys) do
         local x, y = cellKey(k)
-        cells[#cells + 1] = { map = map, x = x, y = y, metatile = now[k] }
+        cells[#cells + 1] = cellEntry(x, y, now[k], map)
       end
       cellView = { map = map, known = now }
       result.cells = json.array(cells)

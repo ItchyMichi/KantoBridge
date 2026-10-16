@@ -31,8 +31,8 @@ Export.KINDS = { map = true, tileset = true, image = true, sprite = true, palett
                  -- MG7 (G3D): Gen 3's own kinds, built by its adapter (exportResources)
                  g3map = true, g3tiles = true, g3image = true, g3sprite = true, g3layout = true,
                  g3encounters = true, g3names = true,
-                 -- item 8: the animated quarters
-                 g3anims = true,
+                 -- item 8: the animated quarters; SE2 (STORY_EVENTS_PLAN.md): the cells the story can change
+                 g3anims = true, g3sites = true,
                  -- MG9 (G2D): Gen 2's own kinds, built by its adapter (exportResources)
                  g2map = true, g2tiles = true, g2image = true, g2anims = true, g2sprite = true, g2layout = true,
                  g2encounters = true, g2names = true }

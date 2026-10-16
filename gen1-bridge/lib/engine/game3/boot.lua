@@ -168,15 +168,23 @@ function Boot.install(b)
   end)
   -- Item 8: the dark maps, caves that need Flash (the map header's cave flag, FieldView's mapIsCave,
   -- src/core/game3/field_view.lua:1484-1487), worked out once per data table; and Flash in use
-  -- (FLAG_SYS_USE_FLASH, FieldView's flashActive, src/core/game3/field_view.lua:1467-1481).
-  local darkFor, darkSet, darkList = nil, {}, {}
+  -- (FLAG_SYS_USE_FLASH, FieldView's flashActive, src/core/game3/field_view.lua:1467-1481). SE7
+  -- (docs/specs/STORY_EVENTS_PLAN.md): also the maps their entry scripts darken (sites.lua's scriptDarkMaps:
+  -- Dewford Gym), each lit only while the hidden player is there and the game's flash level is 0
+  -- (FieldView.flashLevel, field_view.lua:46, :1424-1433; level 0 draws no darkness, :1455-1459).
+  local darkFor, darkScripts, darkSet, darkList = nil, nil, {}, {}
+  local function scripted()
+    return type(b.scriptDarkMaps) == "function" and b.scriptDarkMaps() or {}
+  end
   function b.darkMapSet()
     local g = b.game
     local maps = type(g) == "table" and type(g.data) == "table" and g.data.maps or nil
-    if maps ~= darkFor then
-      darkFor, darkSet, darkList = maps, {}, {}
+    local byScript = scripted()
+    if maps ~= darkFor or byScript ~= darkScripts then
+      darkFor, darkScripts, darkSet, darkList = maps, byScript, {}, {}
       for id, mdef in pairs(type(maps) == "table" and maps or {}) do
-        if b.symbol(id) and type(mdef) == "table" and mdef.cave ~= nil and (tonumber(mdef.cave) or 0) ~= 0 then
+        if b.symbol(id) and type(mdef) == "table"
+            and ((mdef.cave ~= nil and (tonumber(mdef.cave) or 0) ~= 0) or byScript[id]) then
           darkSet[id] = true
           darkList[#darkList + 1] = id
         end
@@ -187,6 +195,25 @@ function Boot.install(b)
   end
   function b.flashLit()
     return b.flag("FLAG_SYS_USE_FLASH")
+  end
+  -- Whether a dark map is lit: a map its scripts darken by the game's flash level there, any other by Flash.
+  function b.mapLit(map)
+    if scripted()[map] then
+      local Map = b.g3("map")
+      if not (type(Map) == "table" and Map.current == map) then return false end
+      local FV = b.g3("field_view")
+      return type(FV) == "table" and (tonumber(FV.flashLevel) or 0) == 0
+    end
+    return b.flashLit()
+  end
+  -- The save view's per-map lit set (observe/kb_story.lua's litSet): the maps their scripts darken, or nil.
+  function b.litMaps()
+    local out
+    for map in pairs(scripted()) do
+      out = out or {}
+      out[map] = b.mapLit(map)
+    end
+    return out
   end
   def("darkMaps", function()
     local _, list = b.darkMapSet()
@@ -286,6 +313,7 @@ function Boot.install(b)
       meta = type(s.meta) == "table" and s.meta or nil,
       version = type(s.version) == "string" and s.version or nil,
       flashLit = b.flashLit(),          -- item 8
+      litMaps = b.litMaps(),            -- SE7
     }
     cachedTick, cachedSession, cachedView = b.tick, s, view
     return view

@@ -7,6 +7,7 @@ the world, and whether each change reaches Minecraft.
     python tools/e2e/g3_story_check.py sweep [--maps A,B]    # the live check, a stand-in client connected
     python tools/e2e/g3_story_check.py objects [--maps A,B]  # hide flags set and cleared, map by map
     python tools/e2e/g3_story_check.py report      # print the last sweep's analysis again
+    python tools/e2e/g3_story_check.py sites       # SE2: the export's g3sites against the sweep's live cells
 
 The driver is drivers/kb_g3story.lua. Its files in local/reports/ (g3_story_scan.json, g3_story_sweep.json,
 g3_story_objects.json) are ROM-derived (map cells and metatile numbers stay in local/); this script prints only map
@@ -449,7 +450,7 @@ def visits_of(received: list[dict]) -> list[dict]:
             visit = visits[-1]
             visit["messages"] += 1
             for cell in data.get("cells") or []:
-                visit["cells"][(cell["x"], cell["y"])] = cell["metatile"]
+                visit["cells"][(cell["x"], cell["y"])] = (cell["metatile"], cell.get("pass"))
         elif kind == "story.toggles":
             toggles[data.get("map")][data.get("obj")] = data.get("visible")
         elif kind == "npc.set":
@@ -498,15 +499,33 @@ def analyse(received: list[dict], sweep: dict) -> dict:
             if visit is None:
                 entry["bridge"] = "no visit seen"
             else:
-                base = {(c["x"], c["y"]): c["b"][0] for c in cells + (e.get("cells") or [])}
-                truth = {(c["x"], c["y"]): c["l"][0] for c in changed if c["b"][0] != c["l"][0]}
-                held = {k: v for k, v in visit["cells"].items() if base.get(k) != v}
+                # SE1: the client holds each cell's metatile and pass; a change is a cell whose metatile or pass class
+                # differs from the engine's own cell. A cell the export bakes in (an every-visit change) is the map's
+                # own to the bridge, so it may be missing here: the sites check (g3map) accounts for those.
+                base = {(c["x"], c["y"]): (c["b"][0], pass_of(c["b"][1])) for c in cells + (e.get("cells") or [])}
+                truth = {(c["x"], c["y"]): (c["l"][0], pass_of(c["l"][1])) for c in changed}
+                truth = {k: v for k, v in truth.items() if v != base.get(k)}
+                held = {}
+                for k, (mid, pas) in visit["cells"].items():
+                    b = base.get(k)
+                    if pas is None:  # a bridge from before SE1 sends the metatile alone
+                        if b is None or mid != b[0]:
+                            held[k] = (mid, pas)
+                    elif (mid, pas) != b:
+                        held[k] = (mid, pas)
+
+                def differs(k):
+                    h, t = held[k], truth[k]
+                    return h[0] != t[0] if h[1] is None else h != t
                 missing = [k for k in truth if k not in held]
-                wrong = [k for k in truth if k in held and held[k] != truth[k]]
+                wrong = [k for k in truth if k in held and differs(k)]
                 extra = [k for k in held if k not in truth]
-                entry["bridge"] = "ok" if not (missing or wrong or extra) else "mismatch"
+                coll_only = [k for k in truth if truth[k][0] == base[k][0]]
+                entry["bridge"] = "ok" if not (missing or wrong or extra) else ("missing" if not (wrong or extra) else "mismatch")
                 entry["bridgeCounts"] = {"held": len(held), "missing": len(missing), "wrong": len(wrong),
-                                         "extra": len(extra), "messages": visit["messages"]}
+                                         "extra": len(extra), "collisionOnly": len(coll_only),
+                                         "collisionOnlyHeld": sum(1 for k in coll_only if k in held),
+                                         "messages": visit["messages"]}
                 obj = rec.get("objects")
                 if obj:
                     live = {f"O{lid}" for lid in obj.get("live") or []}
@@ -555,6 +574,147 @@ def report(analysis: dict) -> None:
               f"flash {w['flash']}; bridge {bridge}{'; ' + ', '.join(flags) if flags else ''}")
 
 
+# ---- SE2: the export's g3sites against the sweep -----------------------------------------------------------------
+
+SITES_PORT = 27225
+SITES_REPORT = REPORTS / "g3_story_sites_check.json"
+GROUND_COLLS = {0x00, 0x18, 0x2B, 0x71, 0x72, 0xA0, 0xA1, 0xA2, 0xA3}
+
+
+def pass_of(coll):
+    """PROTOCOL.md "Story rules" (SE1): a collision byte's class."""
+    if coll in GROUND_COLLS:
+        return "ground"
+    return "water" if coll == 0x29 else "solid"
+
+
+async def _fetch_export(port, want, timeout):
+    """export.index, then export.get for every entry want(entry) accepts: {(kind, id): data}."""
+    import asyncio
+    from fake_minecraft import FakeMinecraft
+
+    builder = FakeMinecraft(port=port, role="builder", ping_ms=1000)
+    await builder.connect(attempts=60)
+    ok = (await builder.hello())["data"]
+    assert (ok["game"], ok["family"]) == (GAME, "gen3"), ok
+    await builder.expect("snapshot", timeout=15)
+    reply = await builder.request("export.index", {}, reply_type="export.index", timeout=timeout)
+    entries = [e for e in reply["data"]["resources"] if want(e)]
+    asked = {}
+    for e in entries:
+        message = await builder.send("export.get", {"kind": e["kind"], "id": e["id"]})
+        asked[message["seq"]] = e
+    pages = {}
+    while len(pages) < len(asked):
+        message = await builder.next(timeout=180)
+        if message is None:
+            raise RuntimeError("the connection ended during the fetch")
+        if message.get("re") in asked and message["type"] == "export.data":
+            e = asked[message["re"]]
+            pages[(e["kind"], e["id"])] = message["data"]["data"]
+    await builder.close()
+    tester = FakeMinecraft(port=port, role="test", ping_ms=1000)
+    await tester.connect(attempts=20)
+    await tester.hello()
+    await tester.expect("snapshot", timeout=15)
+    await tester.send("debug.quit", {"code": 0})
+    await asyncio.sleep(0.5)
+    await tester.close()
+    return pages
+
+
+def sweep_cases():
+    """The sweep's cases: the full run's (g3_story_sweep_full1.json, else g3_story_sweep.json), with any case a later
+    run (g3_story_sweep.json, e.g. --maps) recorded where the full run could not land."""
+    full = REPORTS / "g3_story_sweep_full1.json"
+    base = json.loads((full if full.is_file() else SWEEP).read_text(encoding="utf-8"))["cases"]
+    by_n = {c["n"]: c for c in base}
+    if full.is_file() and SWEEP.is_file():
+        for c in json.loads(SWEEP.read_text(encoding="utf-8"))["cases"]:
+            if c.get("ok") and not (by_n.get(c["n"]) or {}).get("ok"):
+                by_n[c["n"]] = c
+    return [by_n[n] for n in sorted(by_n)]
+
+
+def check_sites(cases, pages):
+    """Every changed cell (metatile or pass class) of every case is the exported map's own cell (an every-visit change
+    g3map bakes in) or a g3sites state. Counts only."""
+    import base64
+    import struct
+
+    sites = {(s["map"], s["x"], s["y"]): s for s in pages[("g3sites", "all")]["sites"]}
+    maps = {i: d for (k, i), d in pages.items() if k == "g3map"}
+    counts = Counter()
+    missing = Counter()
+    missing_pass = Counter()
+    reached = set()
+    for case in cases:
+        s = case.get("settled") or {}
+        if not case.get("ok") or s.get("map") != case.get("map") or case["map"] not in maps:
+            counts["cases_skipped"] += 1
+            continue
+        counts["cases"] += 1
+        m = maps[case["map"]]
+        raw = base64.b64decode(m["cells"])
+        warps = {(w["x"], w["y"]) for w in m["warps"]}
+        for c in s.get("cells") or []:
+            live = (c["l"][0], pass_of(c["l"][1]))
+            base = (c["b"][0], pass_of(c["b"][1]))
+            if live == base:
+                continue  # an override equal to the engine's own cell, or a byte of the same class
+            counts["cells"] += 1
+            x, y = c["x"], c["y"]
+            mid, coll, _ = struct.unpack_from("<HBB", raw, (y * m["w"] + x) * 4)
+            owns = {(mid, pass_of(coll))}
+            if (x, y) in warps and coll in (0x07, 0xFF):
+                owns.add((mid, "ground"))  # the door repair every bind makes
+            site = sites.get((case["map"], x, y))
+            if live in owns:
+                counts["own"] += 1
+            elif site and any((st["metatile"], pass_of(st["coll"])) == live for st in site["states"]):
+                counts["state"] += 1
+                reached.add((case["map"], x, y))
+            elif site and any(st["metatile"] == live[0] for st in site["states"]):
+                counts["state_metatile_only"] += 1
+                missing_pass[case["map"]] += 1
+                reached.add((case["map"], x, y))
+            else:
+                counts["missing"] += 1
+                missing[case["map"]] += 1
+    counts["sites"] = len(sites)
+    counts["sites_reached"] = len(reached)
+    return {"counts": dict(counts), "missing_by_map": dict(missing.most_common()),
+            "metatile_only_by_map": dict(missing_pass.most_common())}
+
+
+def run_sites(timeout: float) -> int:
+    import asyncio
+
+    cases = sweep_cases()
+    wanted = {c["map"] for c in cases}
+    env = {"KB_TEST_PORT": str(SITES_PORT), "KB_SCENE": "title_new", "KB_DRIVER_EXTRA": str(int(timeout) + 300),
+           "KB_DATASET_MEMO": "30"}
+    with launch("kb_emerald.lua", game=GAME, extra_env=env, echo=False) as run:
+        if run.wait_marker("KB_TITLE", timeout=300) is None:
+            print("RUN", json.dumps(run.result.summary(), sort_keys=True))
+            return 1
+        pages = asyncio.run(asyncio.wait_for(_fetch_export(
+            SITES_PORT, lambda e: e["kind"] == "g3sites" or (e["kind"] == "g3map" and e["id"] in wanted), timeout),
+            timeout + 600))
+        result = run.wait(180)
+    print("RUN", json.dumps(result.summary(), sort_keys=True))
+    report = check_sites(cases, pages)
+    data = pages.get(("g3sites", "all")) or {"sites": [], "baked": 0}
+    report["export"] = {"sites": len(data["sites"]), "baked": data["baked"],
+                        "states": sum(len(x["states"]) for x in data["sites"]),
+                        "sources": dict(Counter(st["source"] for x in data["sites"] for st in x["states"])),
+                        "maps": len({x["map"] for x in data["sites"]})}
+    report["bridge_lines"] = [line.split("] ", 2)[-1] for line in result.lines if "g3sites" in line or "g3_site" in line]
+    SITES_REPORT.write_text(json.dumps(report, indent=1, sort_keys=True), encoding="utf-8")
+    print("SITES", json.dumps(report, sort_keys=True))
+    return 0 if result.returncode == 0 and report["counts"].get("missing", 0) == 0 else 1
+
+
 def main(argv=None) -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     sub = parser.add_subparsers(dest="cmd", required=True)
@@ -569,6 +729,8 @@ def main(argv=None) -> int:
     p_obj.add_argument("--maps", default="", help="only these maps (comma-separated)")
     sub.add_parser("cases")
     sub.add_parser("report")
+    p_sites = sub.add_parser("sites", help="SE2: the export's g3sites against the sweep's live cells")
+    p_sites.add_argument("--timeout", type=float, default=900.0)
     args = parser.parse_args(argv)
     if args.cmd == "scan":
         code = run_scan(args.timeout)
@@ -590,6 +752,8 @@ def main(argv=None) -> int:
     if args.cmd == "report":
         report(json.loads(ANALYSIS.read_text(encoding="utf-8")))
         return 0
+    if args.cmd == "sites":
+        return run_sites(args.timeout)
     return summary(SCAN)
 
 

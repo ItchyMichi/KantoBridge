@@ -17,6 +17,9 @@
 --             NPCs walking, a trainer engaging, the Pokemon Center machine
 --   idle      waiting for the player's input
 --
+-- SE6 (Gen 3): player.state also carries the weather the game draws
+-- (facts.weather), so a weather change is a state change.
+--
 -- Positions: at each step start the TARGET cell is sent, with the step's
 -- length in frames. A continuous walk lands and starts the next step within
 -- one logic step, so a new step is recognised by its target changing, not
@@ -43,7 +46,11 @@ local function same(a, b, keys)
   return true
 end
 
-local STATE_KEYS = { "mode", "bike", "surf", "slope", "hidden", "dark", "lit" }
+local STATE_KEYS = { "mode", "bike", "surf", "slope", "hidden", "dark", "lit", "weather" }
+-- SE6 (docs/specs/STORY_EVENTS_PLAN.md): the weather names player.state may carry (defs.schema.json playerState)
+local WEATHERS = { none = true, clouds = true, sunny = true, rain = true, snow = true, thunder = true, fog = true,
+                   ash = true, sand = true, fog_diagonal = true, underwater = true, shade = true, drought = true,
+                   downpour = true, bubbles = true }
 local POS_KEYS = { "map", "x", "y", "facing" }
 local DIRS = { up = true, down = true, left = true, right = true }
 local DELTA = { up = { 0, -1 }, down = { 0, 1 }, left = { -1, 0 }, right = { 1, 0 } }
@@ -111,6 +118,8 @@ function Player.state(f)
     hidden = f.hidden == true,
     dark = dark,
     lit = dark and f.flashLit == true,
+    -- SE6: the weather the game draws (Gen 3); absent where the game has none
+    weather = WEATHERS[f.weather] and f.weather or nil,
   }
 end
 

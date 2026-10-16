@@ -108,7 +108,9 @@ def test_the_clearing_opens_on_every_load_and_is_the_maps_own():
     # the story part counts them as the map's own (the export bakes them in)
     cells = a.eng.storyCells()
     assert plain(cells.cells) == {} or not any((k % 1024, k // 1024) in [(10, 16)] for k in plain(cells.cells))
-    assert a.eng.cellBase(10, 16) == exit_mid and a.eng.cellBase(5, 5) == layout(5, 5)[0]
+    # SE1: the own cell's metatile and collision class (the clearing is open ground)
+    assert tuple(a.eng.cellBase(10, 16)) == (exit_mid, b"ground")
+    assert a.eng.cellBase(5, 5)[0] == layout(5, 5)[0]
     # a reload clears every override; the next map.entered opens the clearing again
     a.E.reloadCells()
     assert override(a, 10, 16) is None

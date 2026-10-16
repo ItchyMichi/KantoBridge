@@ -142,8 +142,14 @@ function Snapshot.build(ctx)
   local lit = {}
   if story then
     lit = story.lit
-  elseif save.flashLit then
-    for _, id in ipairs(ctx.darkMaps or {}) do lit[#lit + 1] = id end
+  else
+    -- every dark map while flashLit, a map the save's litMaps names as that says (SE7, kb_story's litSet)
+    local per = type(save.litMaps) == "table" and save.litMaps or nil
+    for _, id in ipairs(ctx.darkMaps or {}) do
+      local on = save.flashLit == true
+      if per and per[id] ~= nil then on = per[id] == true end
+      if on then lit[#lit + 1] = id end
+    end
   end
 
   local party = {}

@@ -7,8 +7,9 @@ every message passes its schema (strict), every resource passes protocol/export/
 and size equals Python's canonical JSON + SHA-256 of the data received. It then checks the counts against the
 measurement (tools/e2e/test_g3_measure.py: 519 maps, 75 pairs, 239 sprite sheets; item 8 adds the surf blob's), that
 the surface layout agrees with every connection between placed maps, and that every quarter id a pair names is on a
-page; item 8: the 7 caves that need Flash are dark, animated quarters are named by tiles and their frames are on
-pages. A counts-only report goes to local/reports/emerald_export_report.json.
+page; item 8: the 7 caves that need Flash are dark (SE7: and Dewford Gym), animated quarters are named by tiles and
+their frames are on pages; SE2: g3sites lists the changeable cells (counts by source). A counts-only report goes to
+local/reports/emerald_export_report.json.
 
 Data safety: only kinds, ids (engine symbols), counts, sizes, times and hashes are printed or reported. Resources stay
 in memory; assertion messages name keys, never values from the game.
@@ -33,7 +34,7 @@ from run_gen1recomp import INSTALL, REPORTS, launch, preflight
 TEST_PORT = 27221
 GAME = "emerald"
 INDEX_TIMEOUT = int(os.environ.get("KB_EXPORT_INDEX_TIMEOUT", "900"))
-KINDS = {"g3map", "g3tiles", "g3image", "g3sprite", "g3layout", "g3encounters", "g3names", "g3anims"}
+KINDS = {"g3map", "g3tiles", "g3image", "g3sprite", "g3layout", "g3encounters", "g3names", "g3anims", "g3sites"}
 OPPOSITE = {"north": "south", "south": "north", "east": "west", "west": "east"}
 
 
@@ -193,7 +194,18 @@ def _report(got):
         "anim_loop_lengths": dict(Counter(sum(step[1] for step in a["s"]) for a in anims)),
         "anim_frame_counts": dict(Counter(len(a["f"]) for a in anims)),
         "sheets_without_gid": sorted(i for (k, i), d in pages.items() if k == "g3sprite" and "gid" not in d),
+        # SE2: the changeable cells (counts only)
+        "g3sites": _sites_counts(next((d for (k, _), d in pages.items() if k == "g3sites"), None)),
     }
+
+
+def _sites_counts(data):
+    if not data:
+        return {"sites": 0, "states": 0, "baked": 0, "maps": 0, "sources": {}}
+    sites = data["sites"]
+    return {"sites": len(sites), "states": sum(len(s["states"]) for s in sites), "baked": data["baked"],
+            "maps": len({s["map"] for s in sites}),
+            "sources": dict(Counter(st["source"] for s in sites for st in s["states"]))}
 
 
 def _colls(m, cells):
@@ -246,8 +258,13 @@ def test_the_emerald_export_end_to_end():
                             "back": {"x": 18, "y": 18, "facing": "up"}}, item["town"]
     assert item["routeMap"]["id"] == "KB_ROUTE_KANTO_HOENN_TEST_TO"
     assert report["clearing_colls"] == [0] * 8, report["clearing_colls"]
-    # item 8: the caves that need Flash (the headers' cave flag, measured: 7), the animated tiles, the surf blob
-    assert len(report["dark_maps"]) == 7, report["dark_maps"]
+    # item 8: the caves that need Flash (the headers' cave flag, measured: 7) and (SE7) Dewford Gym, which its entry
+    # scripts darken; the animated tiles, the surf blob
+    assert len(report["dark_maps"]) == 8 and "EM_DEWFORD_TOWN_GYM" in report["dark_maps"], report["dark_maps"]
+    # SE2: the cells the story can change (docs/specs/STORY_EVENTS_PLAN.md: about 5,000 from the scripts and the
+    # alternate layouts alone, measured 2026-10-16), Route 131's every-visit layout baked in
+    assert report["g3sites"]["sites"] >= 4000 and report["g3sites"]["baked"] > 0, report["g3sites"]
+    assert report["g3sites"]["sources"].get("layout", 0) > 0 and report["g3sites"]["sources"].get("native", 0) > 0
     assert report["animated_quarters"] > 0 and report["animated_in_tiles"] == report["animated_quarters"]
     assert report["anim_on_pages"]
     assert report["sheets_without_gid"] == ["SURF_BLOB"]

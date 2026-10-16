@@ -284,6 +284,20 @@ def test_flash_lights_the_dark_maps_and_leaving_resets_them():
     assert take(g, "player.state")[-1]["dark"] is False
 
 
+def test_a_save_views_lit_maps_decide_their_own_light():
+    # SE7 (docs/specs/STORY_EVENTS_PLAN.md): a map the save view's litMaps names is lit as that says, whatever
+    # Flash's flag; every other dark map follows the flag
+    b = Bridge()
+    Story = b.module("observe/kb_story.lua")
+    dark = b.to_lua(["CAVE_A", "GYM_B"])
+    lit = lambda save: sorted(k.decode() for k in Story.litSet(b.to_lua(save), dark).keys())
+    assert lit({"flashLit": False}) == []
+    assert lit({"flashLit": True}) == ["CAVE_A", "GYM_B"]
+    assert lit({"flashLit": True, "litMaps": {"GYM_B": False}}) == ["CAVE_A"]
+    assert lit({"flashLit": False, "litMaps": {"GYM_B": True}}) == ["GYM_B"]
+    assert lit({"flashLit": False, "litMaps": {"ELSEWHERE": True}}) == [], "only dark maps are lit"
+
+
 # ------------------------------------------------------------ kb_swapsites
 
 

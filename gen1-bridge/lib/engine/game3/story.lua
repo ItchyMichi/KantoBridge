@@ -17,9 +17,14 @@
 -- (layout_native.lua:124-140, written by Field.setMetatile, field.lua:2194-
 -- 2241, door repairs and layout swaps), cleared and rebuilt by the map's
 -- scripts on every load and never saved (world note §5). storyCells() gives
--- the current map's cells whose metatile differs from the layout's own
--- (layout.cells), keyed y*1024+x as the engine keys them; cellBase(x, y)
--- the layout's own metatile, for a cell that went back. Gen 1's block story
+-- the current map's cells whose metatile or (SE1, docs/specs/
+-- STORY_EVENTS_PLAN.md) collision class differs from the map's own cell as
+-- the export has it (sites.lua's b.ownPass: a Wild Routes clearing's, else
+-- an every-visit change SE2 bakes in, else the layout's own; the door repair
+-- every bind makes counted as the map's own), keyed y*1024+x as the engine
+-- keys them, each { mid, pass }; a baked cell the visit left as the layout
+-- has it is a changed cell too. cellBase(x, y) gives the own cell's
+-- metatile and pass, for a cell that went back. Gen 1's block story
 -- (storyMap, liveBlocks, ...) stays the stub's: nil.
 --
 -- Paths are refs/gen1recomp's (Gen1Recomp v0.3.85).
@@ -108,40 +113,51 @@ function Story.install(b)
     return id, lay
   end
 
-  local function baseMid(lay, x, y)
+  -- The layout's live cell at (x, y) as the engine reads it (layout_native.lua:53-66: the override, else the base
+  -- cell): (mid, pass), or nil off the map's true size.
+  local function liveCell(lay, x, y)
+    local ov = type(lay.overrides) == "table" and lay.overrides[y * 1024 + x] or nil
+    if type(ov) == "table" and tonumber(ov.mid) then return math.floor(tonumber(ov.mid)), b.passOf(ov.coll) end
     local w = math.floor(tonumber(lay.width) or 0)
     local tw = math.floor(tonumber(lay.trueWidth) or w)
     local th = math.floor(tonumber(lay.trueHeight) or tonumber(lay.height) or 0)
     if x < 0 or y < 0 or x >= tw or y >= th or w < 1 then return nil end
     local cell = type(lay.cells) == "table" and lay.cells[y * w + x + 1] or nil
-    return type(cell) == "table" and tonumber(cell.mid) or nil
+    if type(cell) ~= "table" or not tonumber(cell.mid) then return nil end
+    return math.floor(tonumber(cell.mid)), b.passOf(cell.coll)
   end
 
-  -- { map, cells = { [y*1024+x] = metatile } } in the field, else nil.
+  -- { map, cells = { [y*1024+x] = { mid, pass } } } in the field, else nil.
   def("storyCells", function()
     if not b.inField() then return nil end
     local id, lay = layout()
     if not id then return nil end
     local cells = {}
-    for k, ov in pairs(type(lay.overrides) == "table" and lay.overrides or {}) do
-      k = tonumber(k)
-      local mid = type(ov) == "table" and tonumber(ov.mid) or nil
-      if k and mid then
-        local x, y = k % 1024, math.floor(k / 1024)
-        -- (MG8: a Wild Routes clearing's cells are the map's own: the export bakes them in, routes.lua)
-        local base = (type(b.routeBase) == "function" and b.routeBase(id, x, y)) or baseMid(lay, x, y)
-        if base ~= nil and base ~= mid then cells[k] = mid end
+    local overrides = type(lay.overrides) == "table" and lay.overrides or {}
+    local function check(k)
+      local x, y = k % 1024, math.floor(k / 1024)
+      local mid, pass = liveCell(lay, x, y)
+      local ownMid, ownPass = b.ownPass(id, x, y)
+      if mid ~= nil and ownMid ~= nil and (mid ~= ownMid or pass ~= ownPass) then
+        cells[k] = { mid = mid, pass = pass }
       end
+    end
+    for k in pairs(overrides) do
+      k = tonumber(k)
+      if k then check(k) end
+    end
+    -- SE2: a cell the export bakes in that this visit left as the layout has it
+    for k in pairs(b.bakedCells(id)) do
+      if cells[k] == nil and overrides[k] == nil then check(k) end
     end
     return { map = id, cells = cells }
   end)
 
-  -- The current map's own metatile at (x, y), or nil.
+  -- The current map's own cell at (x, y): (metatile, pass), or nil.
   def("cellBase", function(x, y)
     local id, lay = layout()
     if not lay or type(x) ~= "number" or type(y) ~= "number" then return nil end
-    x, y = math.floor(x), math.floor(y)
-    return (type(b.routeBase) == "function" and b.routeBase(id, x, y)) or baseMid(lay, x, y)
+    return b.ownPass(id, math.floor(x), math.floor(y))
   end)
 end
 

@@ -23,6 +23,12 @@ Observe.LAYER_NAMES = {
   naming = "NamingScreen", script_list_menu = "ListMenu", rse_pokedex = "PokedexMenu", rse_region_map = "TownMap",
 }
 
+-- SE6: pokeemerald's weather ids (src/core/game3/weather.lua:13-31) by the protocol's names (defs.schema.json
+-- playerState.weather)
+Observe.WEATHER = { [0] = "none", [1] = "clouds", [2] = "sunny", [3] = "rain", [4] = "snow", [5] = "thunder", [6] = "fog",
+                    [7] = "ash", [8] = "sand", [9] = "fog_diagonal", [10] = "underwater", [11] = "shade",
+                    [12] = "drought", [13] = "downpour", [14] = "bubbles" }
+
 local CAMERA_LID = 127   -- camera_object.lua:6
 local SEAM_LID = 0xC0    -- objects carried across a seam mid-script (objects.lua:677-729)
 
@@ -84,6 +90,21 @@ function Observe.install(b)
     return false
   end
 
+  -- SE6 (docs/specs/STORY_EVENTS_PLAN.md): the weather the field draws now, by the protocol's names, or nil
+  -- without Emerald's weather engine: its state (field_weather_rse.lua:48-49, R.state; fields :406-456) once it
+  -- started and was set up and while the weather isn't suspended (weather.lua's _suspended, the battle's freeze),
+  -- currWeather by pokeemerald's ids (weather.lua:13-31; the renderer knows 0-14, field_weather_rse.lua:17-32;
+  -- the abnormal weather draws drought and downpour in turn, :1742-1786).
+  local function weatherName()
+    local R = b.g3("field_weather_rse")
+    local S = type(R) == "table" and R.state or nil
+    if type(S) ~= "table" then return nil end
+    if not (S.started and S.initialized) then return "none" end
+    local W = b.g3("weather")
+    if type(W) == "table" and W._suspended then return "none" end
+    return Observe.WEATHER[tonumber(S.currWeather)] or "none"
+  end
+
   def("inGame", function() return b.inField() end)
 
   def("observe", function()
@@ -111,9 +132,12 @@ function Observe.install(b)
     f.frames = tonumber(P.stepFrames) or 0
     f.ledge = P.jumping == true
     f.surf = P.surfing == true
-    -- item 8: a dark map (a cave that needs Flash) and Flash in use (boot.lua)
+    -- item 8: a dark map (a cave that needs Flash) and Flash in use (boot.lua); SE7: a map its scripts darken,
+    -- lit by the game's flash level there (b.mapLit)
     f.darkMap = type(b.darkMapSet) == "function" and b.darkMapSet()[f.map] == true or false
-    f.flashLit = type(b.flashLit) == "function" and b.flashLit() or false
+    f.flashLit = type(b.mapLit) == "function" and b.mapLit(f.map) or false
+    -- SE6: the weather the game draws (field_weather_rse.lua)
+    f.weather = weatherName()
     f.bike = P.biking == true
     f.runner = P.running == true
     f.hidden = P.visible == false

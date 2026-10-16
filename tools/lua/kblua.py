@@ -129,6 +129,9 @@ class Bridge:
             self._load_harness("fake_export3.lua").attach(self.engine)
             # G3F: battles, the party, the bag (fake_battle3.lua)
             self._load_harness("fake_battle3.lua").attach(self.engine)
+            # SE1/SE2/SE6/SE7 (STORY_EVENTS_PLAN.md): the sites part's script bundle, layouts, writers, weather and
+            # flash level (fake_sites3.lua)
+            self._load_harness("fake_sites3.lua").attach(self.engine)
         elif engine:
             FakeEngine = self._load_harness("fake_engine.lua")
             eopts = self.table()

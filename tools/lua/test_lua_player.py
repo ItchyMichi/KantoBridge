@@ -176,6 +176,20 @@ def test_dark_and_lit():
     assert (state["dark"], state["lit"]) == (False, False)  # lit only means something on a dark map
 
 
+def test_the_weather_is_part_of_the_state():
+    # SE6 (docs/specs/STORY_EVENTS_PLAN.md): Gen 3's facts carry the weather the game draws; a change is a state
+    # change; a name the protocol lacks is left out, as is the weather of a game without one
+    o = Obs()
+    o.update()
+    (state,) = [d for t, d in o.update(weather="rain") if t == "player.state"]
+    assert state["weather"] == "rain"
+    assert o.update(weather="rain") == []
+    (state,) = [d for t, d in o.update(weather="drought") if t == "player.state"]
+    assert state["weather"] == "drought"
+    (state,) = [d for t, d in o.update(weather="hail") if t == "player.state"]
+    assert "weather" not in state
+
+
 def test_rebase_suppresses_what_the_snapshot_said():
     o = Obs()
     o.o.rebase(o.facts(moving=True, tx=5, ty=5, facing="up", frames=16))

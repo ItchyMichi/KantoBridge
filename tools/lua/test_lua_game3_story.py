@@ -4,8 +4,10 @@ from every map's object templates and their hide flags (the flag store's number,
 templates without a flag, the camera and seam objects left out; the game data's maps where the bundle has
 none), and the current map's changed cells with their own metatiles. Then main.lua with a peer
 (Rig(family="gen3")): the snapshot's toggles and cells, story.toggles and story.flags when a flag changes,
-and story.cells for a cell changed, changed again, gone back, a same-map reload and another map. Every
-message is schema-checked. Everything is made up."""
+and story.cells for a cell changed, changed again, gone back, a same-map reload and another map. SE1
+(docs/specs/STORY_EVENTS_PLAN.md): each cell's pass, a cell whose collision class alone changes, the door repair on a
+warp cell and an every-visit change (baked into the export) as the map's own. Every message is schema-checked.
+Everything is made up."""
 
 import pytest
 
@@ -62,8 +64,70 @@ def test_cells_are_the_current_maps_overrides_that_differ_from_its_own():
     a.E.setMetatile(3, 4, 99)
     a.E.setMetatile(5, 6, base(5, 6))  # an override that changes nothing
     a.E.setMetatile(40, 4, 99)         # off the map
-    assert plain(a.eng.storyCells()) == {"map": TOWN, "cells": {4 * 1024 + 3: 99}}
-    assert a.eng.cellBase(3, 4) == base(3, 4) and a.eng.cellBase(-1, 0) is None and a.eng.cellBase(20, 0) is None
+    assert plain(a.eng.storyCells()) == {"map": TOWN, "cells": {4 * 1024 + 3: {"mid": 99, "pass": "ground"}}}
+    # SE1: the own cell's metatile and collision class
+    assert tuple(a.eng.cellBase(3, 4)) == (base(3, 4), b"ground")
+    assert a.eng.cellBase(-1, 0) is None and a.eng.cellBase(20, 0) is None
+
+
+def override(a, x, y, mid, coll, elev=3):
+    """A raw override, as Field.setMetatile, a layout swap or a door repair leaves one (layout_native.lua:124-140)."""
+    a.E.Map._def.midLayout.overrides[y * 1024 + x] = a.lua({"mid": mid, "coll": coll, "elev": elev})
+
+
+def test_a_cell_whose_collision_class_alone_changes_is_a_changed_cell():
+    # SE1: the metatile stays, the collision byte turns the cell solid or water: reported with the cell's pass; a
+    # byte of the same class (tall grass is ground too) changes nothing for the client
+    a = Adapter3()
+    a.field()
+    override(a, 2, 2, base(2, 2), 0x07)
+    override(a, 3, 2, base(3, 2), 0x29)
+    override(a, 4, 2, base(4, 2), 0x18)
+    override(a, 5, 2, base(5, 2), 0xA3)  # a ledge: ground
+    assert plain(a.eng.storyCells().cells) == {2 * 1024 + 2: {"mid": base(2, 2), "pass": "solid"},
+                                                  2 * 1024 + 3: {"mid": base(3, 2), "pass": "water"}}
+
+
+def test_the_door_repair_on_a_warp_cell_is_the_maps_own():
+    # collision.lua:167-205: every bind gives a warp cell under a solid (or void) byte and an unknown or warp
+    # behaviour a door's 0x71; that is how every visit sees the cell, so it is not a change
+    a = Adapter3()
+    a.E.layouts[TOWN.encode()] = a.b.eval("function(x, y) if x == 2 and y == 2 then return 9, 0x07, 3 end return 1, 0, 3 end")
+    a.field()
+    a.E.Map._def.warps = a.lua([{"x": 2, "y": 2}])
+    override(a, 2, 2, 9, 0x71)
+    assert plain(a.eng.storyCells().cells) == {}
+    assert tuple(a.eng.cellBase(2, 2)) == (9, b"ground")
+    # the same byte on a cell without a warp is a change
+    override(a, 3, 3, 1, 0x07)
+    assert plain(a.eng.storyCells().cells) == {3 * 1024 + 3: {"mid": 1, "pass": "solid"}}
+
+
+def every_visit_town(a):
+    """TOWN's onLoad sets (3, 3) to 77 on every visit and, under FLAG_TEST_ONE, (4, 4) to 78; the game data's
+    TOWN is the current map's definition (as on the engine)."""
+    a.E.script(b"g3:00000010", a.lua([
+        {"op": "setmetatile", 1: 3, 2: 3, 3: 77, 4: 0},
+        {"op": "checkflag", "flag": 0x101, 1: 0x101},
+        {"op": "goto_if", "cond": 1, "target": "g3:00000011", 1: 1, 2: 0x11},
+        {"op": "end"},
+    ]))
+    a.E.script(b"g3:00000011", a.lua([{"op": "setmetatile", 1: 4, 2: 4, 3: 78, 4: 1}, {"op": "end"}]))
+    a.E.mapEvents(TOWN.encode(), a.lua({"mapScripts": {"onLoad": "g3:00000010"}}))
+    a.E.game.data.maps[TOWN.encode()] = a.E.Map._def
+
+
+def test_an_every_visit_change_is_the_maps_own_and_its_absence_a_change():
+    a = Adapter3()
+    a.field()
+    every_visit_town(a)
+    baked = plain(a.eng.storyCells and a.eng.storyCells())
+    # the visit ran nothing yet: (3, 3) shows the layout's own, which differs from the exported (baked) 77
+    assert baked["cells"] == {3 * 1024 + 3: {"mid": base(3, 3), "pass": "ground"}}
+    a.E.setMetatile(3, 3, 77)          # the onLoad's change: the map's own now
+    a.E.setMetatile(4, 4, 78)          # the flag's: a change
+    assert plain(a.eng.storyCells().cells) == {4 * 1024 + 4: {"mid": 78, "pass": "ground"}}
+    assert tuple(a.eng.cellBase(3, 3)) == (77, b"ground")
 
 
 # ------------------------------------------------------------ main.lua and a peer
@@ -110,7 +174,7 @@ def test_the_snapshot_holds_the_toggles_and_the_current_maps_cells():
     peer = connected(rig)
     snap = next(m["data"] for m in peer.messages() if m["type"] == "snapshot")
     assert snap["toggles"] == {TOWN: {"O1": False}}
-    assert snap["cells"] == [{"map": TOWN, "x": 2, "y": 3, "metatile": 50}]
+    assert snap["cells"] == [{"map": TOWN, "x": 2, "y": 3, "metatile": 50, "pass": "ground"}]
     assert "FLAG_TEST_ONE" in snap["flags"]
     rig.step(12)
     assert not [m for m in peer.messages() if m["type"].startswith("story.")], "nothing new since the snapshot"
@@ -157,6 +221,28 @@ def test_cells_are_reported_as_they_change_go_back_and_reload():
     assert cells_of(pump(rig, peer, lambda m: m["type"] == "story.cells")) == [(2, 2, base(2, 2))]
     rig.step(5)
     assert cells_of(peer.messages()) == []
+    no_faults(rig)
+
+
+def test_story_cells_carry_the_cells_pass_and_a_collision_change():
+    # SE1 through main.lua: each cell with its pass; the metatile kept but the cell made solid is sent; back to the
+    # map's own (its metatile and pass)
+    rig = field_rig()
+    E = rig.E
+    peer = connected(rig)
+    peer.messages()
+    E.setMetatile(5, 5, 77)
+    msgs = pump(rig, peer, lambda m: m["type"] == "story.cells")
+    assert [c for m in msgs if m["type"] == "story.cells" for c in m["data"]["cells"]] == [
+        {"x": 5, "y": 5, "metatile": 77, "pass": "ground"}]
+    E.Map._def.midLayout.overrides[5 * 1024 + 5] = rig.b.to_lua({"mid": 77, "coll": 0x07, "elev": 3})
+    msgs = pump(rig, peer, lambda m: m["type"] == "story.cells")
+    assert [c for m in msgs if m["type"] == "story.cells" for c in m["data"]["cells"]] == [
+        {"x": 5, "y": 5, "metatile": 77, "pass": "solid"}]
+    E.setMetatile(5, 5, None)
+    msgs = pump(rig, peer, lambda m: m["type"] == "story.cells")
+    assert [c for m in msgs if m["type"] == "story.cells" for c in m["data"]["cells"]] == [
+        {"x": 5, "y": 5, "metatile": base(5, 5), "pass": "ground"}]
     no_faults(rig)
 
 
