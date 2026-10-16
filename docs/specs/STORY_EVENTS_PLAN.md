@@ -281,6 +281,15 @@ story cells built open and closed per player. So this was a check, and it found 
     already sends the decoration blocks, and the export already lists every decoration as a swap site.
   - Still left: the poster. It hangs on a wall, where no story block can stand, so the wall keeps its built art (the
     first poster, the Town Map a new game starts with) whatever the player hangs.
+  - Checked on the pod with Johto rebuilt in ThreeRegionsE2E (backup ThreeRegionsE2E_preBedroom on the volume):
+    - the build: 18 bedroom `cell` cells (3 or 4 other states each; 2 of them where the big doll and the console stand);
+    - the sweep with the 16 bedroom cases (the bare room, then each decoration alone): `story.blocks` exact in all 245
+      cases that stayed on their map;
+    - the replay over all 245 cases: 683 changed cells, 0 missing, 0 colliding unlike the game, 0 drawn wrong; only the
+      poster's 3 wall cells keep their built art;
+    - the real client: 18 of 18 spots (the 14 above, plus the bedroom bare, with the last carpet, the last bed and the
+      last plant, each time all 18 decoration cells drawn and colliding as the game has them). Video:
+      `/workspace/videos/kanto-bridge-crystal-story-spots-bedroom-20261016.mp4` (7.9 MB, sent).
 - Not covered by the check:
   - the Battle Tower's rooms and the link rooms (left out, as S7 left Emerald's out);
   - changes made during a visit that the next load doesn't redo (the bridge relays them live, and every write is a
