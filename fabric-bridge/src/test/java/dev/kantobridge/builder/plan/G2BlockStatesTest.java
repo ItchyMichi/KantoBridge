@@ -75,10 +75,10 @@ class G2BlockStatesTest {
 				QuarterPages.PALETTE, WorldPlan.BIOME_INTERIOR, false, null), model);
 		StoryCellTable table = G2StoryCells.plan(List.of(placed), Map.of(HOUSE, house), warnings,
 				(atlas, palette, tile) -> tile < 0 ? -1 : tile + 1000, id -> tiles);
-		// the house's lass stands on (1, 2): her object cell comes first
-		assertEquals(StoryCellType.OBJECT, table.get(HOUSE + ":1:2").type());
-		assertEquals(1, warnings.noteCount("g2_states_under_object"));
-		for (String key : List.of(HOUSE + ":0:2", HOUSE + ":0:3", HOUSE + ":1:3")) {
+		// the house's lass stands on (1, 2): the cell cell takes her object cell's place (the client closes it while she
+		// stands there, as it closes an object cell)
+		assertEquals(1, warnings.noteCount("g2_states_over_object"));
+		for (String key : List.of(HOUSE + ":0:2", HOUSE + ":1:2", HOUSE + ":0:3", HOUSE + ":1:3")) {
 			StoryCellTable.Entry entry = table.get(key);
 			assertEquals(StoryCellType.CELL, entry.type(), key);
 			assertEquals(1, entry.start(), "the map data's block");

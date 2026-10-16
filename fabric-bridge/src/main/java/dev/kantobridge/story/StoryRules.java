@@ -480,7 +480,8 @@ public final class StoryRules {
 	 * SE3: one {@code cell} cell: its state (the live one on the current map, else the map's own), open in the built state,
 	 * else drawn with the matching state's art and colliding by the live pass (or the matched state's). A Gen 3 cell's live
 	 * state is its {@code story.cells} metatile; a Gen 2 cell's (§5.5: its numbers are blocks) its block's in
-	 * {@code story.blocks}, a block the client wasn't told being the map data's.
+	 * {@code story.blocks}, a block the client wasn't told being the map data's. On the live NPC list's map a cell an NPC
+	 * stands on collides whatever its state (§5.5: the bedroom's big doll and console stand on the carpet's cells).
 	 */
 	private void cellState(StoryCellTable.Entry entry, Set<String> active, Set<String> drawn, Map<String, Integer> states) {
 		StoryCellTable.Built built = entry.built();
@@ -490,6 +491,9 @@ public final class StoryRules {
 		}
 		int x = entry.cell().x();
 		int y = entry.cell().y();
+		if (entry.cell().map().equals(this.npcMap) && this.npcCells.contains(pack(x, y))) {
+			active.add(entry.key());
+		}
 		Live live = entry.cell().map().equals(this.cellsMap) ? this.liveCells.get(y * 1024 + x) : null;
 		Integer block = live == null && entry.cell().map().equals(this.blocksMap) ? this.liveBlocks.get((y / 2) * 256 + x / 2) : null;
 		int metatile = live != null ? live.metatile() : block != null ? block : start;

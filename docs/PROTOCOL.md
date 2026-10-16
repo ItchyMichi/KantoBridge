@@ -418,7 +418,8 @@ The client keeps each story cell of the WorldIndex open or closed for its own pl
   map data's block, `built` and `states` the blocks the cell can show. Its live state is its block's in `story.blocks`
   (a block the client wasn't told is the map data's); it is drawn and collides as a Gen 3 cell does, by the matched
   state's `pass` (`story.blocks` carries none). A cell built solid (the poster on the wall) carries none: its built
-  art stays.
+  art stays. Such a cell takes the place of an object's story cell (the big doll and the console stand on the
+  carpet), so on the live NPC list's map any `cell` cell an NPC stands on collides whatever its state.
 
 The client draws closed `tile` cells with the site's `before` art (per player, never in the world's
 blocks) and relays its active set with `story.state` (full on join, deltas after); the server uses

@@ -102,9 +102,11 @@ public final class G2StoryCells {
 	 * One cell of a block with several states: a {@code cell} entry as Gen 3's sites get ({@link G3StoryCells}), in block
 	 * ids where Gen 3 has metatiles: the map data's block as {@code start}, the built block ({@link MapModel#builtBlock})
 	 * and every other block with its pass, height ({@link #height}) and art at the cell (its four tiles as full-shape
-	 * slots); the client reads the live state from {@code story.blocks}, the cell's block. Left out, counted: a cell built
-	 * solid or a ledge (no story block stands there, so its built art stays: a poster on the wall), one under an object's
-	 * story cell, and one whose other blocks draw and pass as the built one there.
+	 * slots); the client reads the live state from {@code story.blocks}, the cell's block. It takes the cell from an
+	 * object's story cell (the bedroom's big doll and console stand on the carpet): the client closes a {@code cell} cell
+	 * while a live object stands on it, as it closes an object cell. Left out, counted: a cell built solid or a ledge (no
+	 * story block stands there, so its built art stays: a poster on the wall), and one whose other blocks draw and pass
+	 * as the built one there.
 	 */
 	static void addBlockStates(Map<String, StoryCellTable.Entry> out, PlacedMap map, G2Tiles tiles, int cx, int cy, List<Integer> blocks,
 			StoryCellPlanner.ArtSlots slots, Warnings warnings) {
@@ -115,8 +117,9 @@ public final class G2StoryCells {
 			return;
 		}
 		CellPos cell = new CellPos(map.id(), cx, cy);
-		if (out.containsKey(cell.key())) {
-			warnings.note("g2_states_under_object");
+		StoryCellTable.Entry before = out.get(cell.key());
+		if (before != null && before.type() != StoryCellType.OBJECT) {
+			warnings.note("g2_states_taken");
 			return;
 		}
 		int qx = cx % 2;
@@ -141,6 +144,9 @@ public final class G2StoryCells {
 		if (!differs) {
 			warnings.note("g2_states_no_other_state");
 			return;
+		}
+		if (before != null) {
+			warnings.note("g2_states_over_object");
 		}
 		out.put(cell.key(), new StoryCellTable.Entry(cell, model.dataBlock(cx, cy), new StoryCellTable.Built(built, builtPass), states));
 	}

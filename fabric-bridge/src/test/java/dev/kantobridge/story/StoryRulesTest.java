@@ -248,6 +248,13 @@ class StoryRulesTest {
 		// the bare floor again (the bridge sends the data's block back): the built state
 		this.rules.onBlocks(json("{\"map\":\"G2_ROOM\",\"changes\":[{\"bx\":0,\"by\":1,\"block\":1}]}"));
 		assertTrue(active().isEmpty() && drawn().isEmpty());
+		// a carpet with the big doll standing on one of its cells: that cell collides while the doll stands there
+		this.rules.onBlocks(json("{\"map\":\"G2_ROOM\",\"changes\":[{\"bx\":0,\"by\":1,\"block\":4}]}"));
+		this.rules.setNpcs("G2_ROOM", List.of(new StoryRules.Npc(1, 3, "person")));
+		assertEquals(Set.of(se), active());
+		assertEquals(1, this.rules.cells().states().get(se), "still drawn as the carpet");
+		this.rules.setNpcs("G2_ROOM", List.of());
+		assertTrue(active().isEmpty());
 		// a plant, then out: the room shows the map data's block again
 		this.rules.onBlocks(json("{\"map\":\"G2_ROOM\",\"changes\":[{\"bx\":0,\"by\":1,\"block\":2}]}"));
 		assertEquals(2, this.rules.cells().states().get(nw));

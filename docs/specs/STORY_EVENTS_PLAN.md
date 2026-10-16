@@ -275,7 +275,9 @@ story cells built open and closed per player. So this was a check, and it found 
   - G2StoryCells gives each such cell built as ground or water a `cell` story cell, Emerald's multi-state story cell,
     in block ids: `start` the map data's block, `built`, and every other block with its pass, height and art there.
   - StoryRules reads a Gen 2 `cell` cell's live state from `story.blocks` (its block), so each player's bed, carpet and
-    plant are drawn and collide as their own game has them. The bridge and the export needed nothing: the bridge
+    plant are drawn and collide as their own game has them. Two carpet cells hold the big doll and the console; their
+    `cell` cells take the place of those objects' story cells, and a `cell` cell a live object stands on collides.
+    (Before this change those two cells kept the built red carpet, even in a new game's bare room.) The bridge and the export needed nothing: the bridge
     already sends the decoration blocks, and the export already lists every decoration as a swap site.
   - Still left: the poster. It hangs on a wall, where no story block can stand, so the wall keeps its built art (the
     first poster, the Town Map a new game starts with) whatever the player hangs.
