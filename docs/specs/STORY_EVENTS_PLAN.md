@@ -138,7 +138,10 @@ too, as the engine does). This part needs no fix.
 
 ## 4. The fix plan (Emerald)
 
-### 4.1 Decisions (defaults; the user's to change)
+### 4.1 Decisions
+
+Answered by the user on 2026-10-16: **S1–S7 with their defaults** ("Go with defaults"), **S8: mirror the weather per
+player**, **S9: dark until fully lit**.
 
 | # | Question | Default |
 |---|---|---|
@@ -149,8 +152,8 @@ too, as the engine does). This part needs no fix.
 | S5 | How a changed cell's art is drawn | **Per player, the cell's live metatile**, by the story cell renderer (a block-entity renderer, as Gen 1's closed art before V5), from slots the build adds for every state of every site. Any number of states per cell |
 | S6 | Maps other than the hidden player's current one | **The map's own cells**, as Gen 1 and the engine itself (it shows neighbours' own layouts too) |
 | S7 | Left out | The Battle Frontier's generated floors (Pyramid, Trainer Hill), secret bases' decorations, link rooms; the Fortree bridges' and Pacifidlog logs' step bounce |
-| S8 | Weather | **The user's decision** (DESIGN.md keeps Minecraft's weather off). Proposed: the hidden game's weather drawn per player on the client only (rain, thunder and downpour as rain/thunder with the game's lightning; fog; falling ash; sand; snow; drought as a bright warm tint; shade darker; underwater bubbles; ABNORMAL alternating as the game does), the server's weather untouched |
-| S9 | Dewford Gym's flash levels | **The user's decision**. Proposed: the gym counts as dark while its flash level is above 0 (no light, as an unlit cave), lit at 0 |
+| S8 | Weather | **Mirrored per player** (the user, 2026-10-16; DESIGN.md's "weather off" stays true of Minecraft's own weather): the hidden game's weather drawn per player on the client only (rain, thunder and downpour as rain/thunder with the game's lightning; fog; falling ash; sand; snow; drought as a bright warm tint; shade darker; underwater bubbles; ABNORMAL alternating as the game does), the server's weather untouched |
+| S9 | Dewford Gym's flash levels | **Dark until fully lit** (the user, 2026-10-16): the gym counts as dark while its flash level is above 0 (no light, as an unlit cave), lit at 0 |
 
 ### 4.2 Phases
 

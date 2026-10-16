@@ -438,7 +438,8 @@
         "slope": false,
         "hidden": false,
         "dark": false,
-        "lit": false
+        "lit": false,
+        "weather": "rain"
       }
     },
     {"type": "pong", "seq": 11, "redacted": {"t": 123456}},
@@ -739,7 +740,7 @@
     {
       "type": "story.cells",
       "seq": 12,
-      "redacted": {"map": "EM_TEST_TOWN", "cells": "<rom:arr:2:e87c6a3c>"}
+      "redacted": {"map": "EM_TEST_TOWN", "cells": "<rom:arr:2:4b694fdd>"}
     },
     {"type": "story.flags", "seq": 11, "redacted": {"set": ["EVENT_TEST_STARTED"], "clear": []}},
     {"type": "story.lit", "seq": 11, "redacted": {"map": "TEST_CAVE", "lit": true}},

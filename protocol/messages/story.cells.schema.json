@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://kantobridge.invalid/protocol/messages/story.cells.schema.json",
   "title": "story.cells",
-  "description": "Gen 3's runtime terrain (MG7 G3C): cells of the current map whose metatile changed, or went back to the map's own.",
+  "description": "Gen 3's runtime terrain (MG7 G3C): cells of the current map whose metatile or collision class changed, or went back to the map's own (SE1: each with its collision class).",
   "x-type": "story.cells",
   "x-legs": ["g2m"],
   "x-re": "never",
@@ -22,7 +22,8 @@
         "properties": {
           "x": {"type": "integer", "minimum": 0, "maximum": 1023},
           "y": {"type": "integer", "minimum": 0, "maximum": 1023},
-          "metatile": {"type": "integer", "minimum": 0, "maximum": 1023}
+          "metatile": {"type": "integer", "minimum": 0, "maximum": 1023},
+          "pass": {"enum": ["ground", "water", "solid"], "description": "SE1: the live cell's collision class, from its collision byte (PROTOCOL.md \"Story rules\": ground walkable, water surfers only, solid nobody)."}
         }
       },
       "x-rom-derived": true

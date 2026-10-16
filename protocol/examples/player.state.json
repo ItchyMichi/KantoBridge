@@ -9,7 +9,8 @@
       "slope": false,
       "hidden": false,
       "dark": false,
-      "lit": false
+      "lit": false,
+      "weather": "rain"
     }
   }
 ]

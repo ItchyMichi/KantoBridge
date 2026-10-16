@@ -1,0 +1,55 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kantobridge.invalid/protocol/export/g3sites.schema.json",
+  "title": "export g3sites",
+  "description": "SE2 (Gen 3): every cell the hidden game's story can change at run time, with the map's own state (as g3map exports it, unconditional changes baked in) and every other state it can show. The builder builds each in its most walkable state and gives it a story cell of type cell.",
+  "x-export-kind": "g3sites",
+  "type": "object",
+  "required": ["sites", "baked"],
+  "additionalProperties": false,
+  "properties": {
+    "sites": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["map", "x", "y", "own", "states"],
+        "additionalProperties": false,
+        "properties": {
+          "map": {"$ref": "../defs.schema.json#/$defs/mapId"},
+          "x": {"type": "integer", "minimum": 0, "maximum": 1023},
+          "y": {"type": "integer", "minimum": 0, "maximum": 1023},
+          "own": {
+            "type": "object",
+            "required": ["metatile", "coll", "elev"],
+            "additionalProperties": false,
+            "description": "The map's own cell, as g3map exports it.",
+            "properties": {
+              "metatile": {"type": "integer", "minimum": 0, "maximum": 1023},
+              "coll": {"type": "integer", "minimum": 0, "maximum": 255},
+              "elev": {"type": "integer", "minimum": 0, "maximum": 15}
+            }
+          },
+          "states": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 16,
+            "description": "Every other state the cell can show, sorted by metatile, then collision byte.",
+            "items": {
+              "type": "object",
+              "required": ["metatile", "coll", "elev", "source"],
+              "additionalProperties": false,
+              "properties": {
+                "metatile": {"type": "integer", "minimum": 0, "maximum": 1023},
+                "coll": {"type": "integer", "minimum": 0, "maximum": 255, "description": "The engine's collision byte in this state (g3map's vocabulary)."},
+                "elev": {"type": "integer", "minimum": 0, "maximum": 15},
+                "source": {"enum": ["script", "layout", "native"], "description": "What puts the cell in this state: a script's setmetatile, an alternate layout (setmaplayoutindex), or an engine writer (a gym puzzle, ash, ice, cracked floors, TVs and PCs)."}
+              }
+            }
+          }
+        }
+      },
+      "maxItems": 32768
+    },
+    "baked": {"type": "integer", "minimum": 0, "description": "Cells whose unconditional change (an entry script's, under no condition) is baked into g3map."}
+  }
+}

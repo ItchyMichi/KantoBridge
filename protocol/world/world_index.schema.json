@@ -267,9 +267,10 @@
               "water",
               "boulder_area",
               "route",
-              "pass"
+              "pass",
+              "cell"
             ],
-            "description": "pass (MG5): a pass cell, closed per player while the far region is not built or the player has no link to its game (pass_closed)."
+            "description": "pass (MG5): a pass cell, closed per player while the far region is not built or the player has no link to its game (pass_closed). cell (SE3, Gen 3): a cell the hidden game's story can change (the g3sites export), built in its most walkable state; its other states are drawn and collide per player from the live cell (story.cells)."
           },
           "obj": {
             "anyOf": [
@@ -332,8 +333,8 @@
           "start": {
             "type": "integer",
             "minimum": 0,
-            "maximum": 255,
-            "description": "tile: the map data's block at the swap site (before, or after where the engine stamps the site closed on map load); maps other than the hidden player's current one are taken to show it."
+            "maximum": 1023,
+            "description": "tile: the map data's block at the swap site (before, or after where the engine stamps the site closed on map load); maps other than the hidden player's current one are taken to show it. cell: the map's own metatile at the cell (0-1023), what maps other than the hidden player's current one show."
           },
           "water": {
             "type": "boolean",
@@ -380,6 +381,78 @@
                 "minItems": 4,
                 "maxItems": 4,
                 "description": "Full-shape slot indices of the closed art: north-west, north-east, south-west, south-east."
+              }
+            }
+          },
+          "built": {
+            "type": "object",
+            "required": [
+              "metatile",
+              "pass"
+            ],
+            "additionalProperties": false,
+            "description": "cell: the state the world is built in (the most walkable of the cell's states).",
+            "properties": {
+              "metatile": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 1023
+              },
+              "pass": {
+                "enum": [
+                  "solid",
+                  "water",
+                  "ground"
+                ],
+                "description": "Who crosses the cell in this state: nobody, surfers, everybody."
+              }
+            }
+          },
+          "states": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 16,
+            "description": "cell: every other state the cell can show, drawn per player while the live cell (or, on another map, the map's own cell) is in it.",
+            "items": {
+              "type": "object",
+              "required": [
+                "metatile",
+                "pass",
+                "height",
+                "art"
+              ],
+              "additionalProperties": false,
+              "properties": {
+                "metatile": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 1023
+                },
+                "pass": {
+                  "enum": [
+                    "solid",
+                    "water",
+                    "ground"
+                  ],
+                  "description": "Who crosses the cell in this state: nobody, surfers, everybody."
+                },
+                "height": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 8,
+                  "description": "Blocks of art above the floor block; 0 draws it flat on the floor."
+                },
+                "art": {
+                  "type": "array",
+                  "items": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 28671
+                  },
+                  "minItems": 4,
+                  "maxItems": 4,
+                  "description": "Full-shape slot indices: north-west, north-east, south-west, south-east."
+                }
               }
             }
           }

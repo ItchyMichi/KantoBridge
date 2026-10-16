@@ -11,6 +11,10 @@ warp keeping the facing, 0x82 sign, 0x90 counter, 0xA0-0xA3 ledges east, west, n
 Item 8 (docs/SEVERAL_GAMES_FOLLOWUPS.md): the water metatile animates (g3anims: its quarters are animated quarters,
 ids of their own whose page holds the first frame, two frames a loop), and the sprites include the surf blob (no
 graphics id, three frames facing down, up and left) and an item ball of one frame.
+
+SE2 (docs/specs/STORY_EVENTS_PLAN.md): g3sites lists four changeable cells (SITES): a town cell built walkable that a
+script can wall off, a tree a layout swap clears (so it is built cleared and the tree is a state), a route water cell a
+layout swap turns to land, and a house floor cell whose art alone changes.
 """
 import base64
 import struct
@@ -83,6 +87,14 @@ HOUSE = ["####",   # 3 wide, padded to 4 (the fourth column shows the border)
          "#c.#",
          "#..#",
          "#M.#"]
+# SE2: the changeable cells: (map, x, y, own (metatile, collision), other states ((metatile, collision, source), ...)),
+# every one at the ground's elevation 3; the own state is the map's cell above.
+SITES = [
+    ("EM_TEST_HOUSE", 2, 1, (512, WALK), ((514, WALK, "native"),)),
+    ("EM_TEST_ROUTE", 4, 0, (2, WATER), ((0, WALK, "layout"),)),
+    ("EM_TEST_TOWN", 6, 2, (0, WALK), ((3, BLOCKED, "script"),)),
+    ("EM_TEST_TOWN", 7, 2, (5, BLOCKED), ((0, WALK, "layout"),)),
+]
 
 
 def _quarter(rgb, mid, q, varied):
@@ -291,6 +303,10 @@ def resources(game=GAME, variant=None):
             "trainers": {"perArea": [1, 2], "rematch": "each_visit", "classes": ["TRAINER_CLASS_TEST"]},
             "areas": {"main": [2, 3], "side": 50}, "levels": {"from": "neighbours", "perArea": 1, "maxRise": 3},
             "dungeon": {"chance": 0, "floors": "by_level"}}]}
+    res[("g3sites", "all")] = {"baked": 0, "sites": [
+        {"map": m, "x": x, "y": y, "own": {"metatile": own[0], "coll": own[1], "elev": 3},
+         "states": [{"metatile": mid, "coll": coll, "elev": 3, "source": src} for mid, coll, src in states]}
+        for m, x, y, own, states in SITES]}
     res[("g3names", "all")] = {
         "species": {"SPECIES_TEST_TREECKO": 252, "SPECIES_TEST_TORCHIC": 255, "SPECIES_TEST_MUDKIP": 258,
                     "SPECIES_TEST_POOCHYENA": 261, "SPECIES_TEST_ZIGZAGOON": 263, "SPECIES_TEST_WURMPLE": 265,

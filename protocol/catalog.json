@@ -759,6 +759,7 @@
     "g3layout": {"schema": "export/g3layout.schema.json"},
     "g3map": {"schema": "export/g3map.schema.json"},
     "g3names": {"schema": "export/g3names.schema.json"},
+    "g3sites": {"schema": "export/g3sites.schema.json"},
     "g3sprite": {"schema": "export/g3sprite.schema.json"},
     "g3tiles": {"schema": "export/g3tiles.schema.json"},
     "image": {"schema": "export/image.schema.json"},

@@ -52,6 +52,12 @@
       "size": 311
     },
     {
+      "kind": "g3sites",
+      "id": "all",
+      "hash": "553e1148391e8f636f07c974442d02e8b176c9333bce97b072ed227592fd0a2a",
+      "size": 572
+    },
+    {
       "kind": "g3sprite",
       "id": "OBJ_EVENT_GFX_TEST_ITEM_BALL",
       "hash": "db0027dc65fbdf42bfd04047788047a2428f46d1bec1f4e8e99e250320906f43",

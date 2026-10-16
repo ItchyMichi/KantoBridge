@@ -117,4 +117,4 @@ def test_the_sprites_include_the_surf_blob_and_an_object_of_one_look():
 def test_a_gen3_bundle_is_written_with_the_gen3_export(tmp_path):
     root = write_bundle(tmp_path, "emerald")
     kinds = {p.parent.name for p in root.rglob("*.json") if p.name != "index.json"}
-    assert kinds == {"g3map", "g3tiles", "g3image", "g3sprite", "g3layout", "g3encounters", "g3names", "g3anims"}
+    assert kinds == {"g3map", "g3tiles", "g3image", "g3sprite", "g3layout", "g3encounters", "g3names", "g3anims", "g3sites"}

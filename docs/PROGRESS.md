@@ -2695,7 +2695,7 @@ method, Emerald's results and the fix plan are [specs/STORY_EVENTS_PLAN.md](spec
 | # | Part | Status | Date | Commit |
 |---|---|---|---|---|
 | SC-E | Emerald's check: `scan`, `sweep`, `objects` (`tools/e2e/g3_story_check.py`, driver `kb_g3story.lua`) on the pod's real Emerald | **done** (kb-dev24): 519 maps scanned; 323 live cases on 87 maps; 380 object visits on 190 maps. The hidden game does every story change; the bridge relays every metatile change and every object change exactly; **Minecraft shows no terrain change** (Gen 3 builds have no tile story cells and nothing reads `story.cells`), collision-only changes (267 cells) are never sent, weather and Dewford Gym's light are not mirrored. Story blockers in Minecraft: the Elite Four's exit doors, Sky Pillar's floors, the Mauville and Mossdeep Gym puzzles, Shoal Cave's tide, Route 131, Mirage Island, Sootopolis's crisis layout (plan §1) | 2026-10-16 | |
-| SE1–SE8 | Emerald's fixes | **waiting for your go** (plan §4.1 S1–S9 with defaults; S8 weather and S9 Dewford Gym's light are your decisions) | | |
+| SE1–SE8 | Emerald's fixes | **in progress** (your answers of 2026-10-16: S1–S7 defaults, S8 weather mirrored per player, S9 Dewford Gym dark until fully lit) | | |
 | SC-C | Crystal's check | later (plan §5) | | |
 | SC-B | Blue's check | later (plan §5) | | |
 

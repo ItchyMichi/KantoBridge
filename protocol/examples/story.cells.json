@@ -2,6 +2,6 @@
   {
     "type": "story.cells",
     "seq": 12,
-    "data": {"map": "EM_TEST_TOWN", "cells": [{"x": 4, "y": 2, "metatile": 513}, {"x": 5, "y": 2, "metatile": 7}]}
+    "data": {"map": "EM_TEST_TOWN", "cells": [{"x": 4, "y": 2, "metatile": 513, "pass": "solid"}, {"x": 5, "y": 2, "metatile": 7, "pass": "ground"}]}
   }
 ]
