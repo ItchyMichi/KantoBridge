@@ -608,6 +608,10 @@ test {
 	systemProperty "kb.realBundle", providers.gradleProperty("kb.realBundle").getOrElse("")
 	// -Pkb.realGen3Bundle=<export bundle> runs MG7's Gen 3 dry run on the pod's Emerald export (counts and codes only).
 	systemProperty "kb.realGen3Bundle", providers.gradleProperty("kb.realGen3Bundle").getOrElse("")
+	// SE5: -Pkb.realGen3Index=<the real Hoenn's world_index.json> with -Pkb.storySweep=<sweep truth files> replays the
+	// story check's cases through the client's story rules (pod only; docs/specs/STORY_EVENTS_PLAN.md)
+	systemProperty "kb.realGen3Index", providers.gradleProperty("kb.realGen3Index").getOrElse("")
+	systemProperty "kb.storySweep", providers.gradleProperty("kb.storySweep").getOrElse("")
 	// -Pkb.realGen2Bundle=<export bundle> runs MG9's Gen 2 dry run on the pod's Crystal export (counts and codes only).
 	systemProperty "kb.realGen2Bundle", providers.gradleProperty("kb.realGen2Bundle").getOrElse("")
 	// -Pkb.caves3d=pilot: the dry run with only the pilot's caves in 3D (H6's world) instead of all (the build's default)

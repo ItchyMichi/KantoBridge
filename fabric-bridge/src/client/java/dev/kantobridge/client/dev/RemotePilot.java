@@ -32,6 +32,7 @@ import dev.kantobridge.client.ui.NamingModel;
 import dev.kantobridge.client.ui.TextBoxModel;
 import dev.kantobridge.client.ui.UiRuntime;
 import dev.kantobridge.client.ui.UiSession;
+import dev.kantobridge.client.weather.WeatherView;
 import dev.kantobridge.client.world.ClientWorldIndex;
 import dev.kantobridge.client.zone.PassRuntime;
 import dev.kantobridge.client.zone.ZoneView;
@@ -100,7 +101,7 @@ import org.lwjgl.glfw.GLFW;
  * open screen's class, the top hidden UI (kind, screen id, page, menu or choice index and size, the naming phase), the
  * followed link (game, region, map, cell, facing, mode, in game), every link's game and connection, the input lock, a
  * battle, the player's block position and the frame rate; (SE5) the hidden game's dark and lit, the world's darkness of that map
- * and whether the player has Night Vision. Ids, cells and counts only, never the game's text.</li>
+ * whether the player has Night Vision and the weather drawn (SE6). Ids, cells and counts only, never the game's text.</li>
  * </ul>
  * Every command and its result is also a line in {@code kantobridge.autopilot.log}. Nothing runs without the property.
  * Client thread only.
@@ -1006,6 +1007,7 @@ final class RemotePilot {
 			at.addProperty("yaw", Math.round(player.getYRot()));
 			out.add("player", at);
 			out.addProperty("night_vision", player.hasEffect(MobEffects.NIGHT_VISION));
+			out.addProperty("weather", WeatherView.shown());
 		}
 		out.addProperty("fps", this.minecraft.getFps());
 		out.addProperty("recording", this.recordStartNanos != 0);

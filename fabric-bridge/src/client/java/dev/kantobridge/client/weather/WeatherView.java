@@ -36,7 +36,7 @@ import org.jetbrains.annotations.Nullable;
  * <ul>
  * <li><b>precipitation</b>: the client level's rain and thunder levels (Minecraft's own rain and snow renderer, its rain
  * sounds and splashes, the darker sky), with the biome's "no precipitation" overridden for the renderer only
- * ({@code LevelRendererWeatherMixin}: Kanto's and Hoenn's biomes have none);</li>
+ * ({@code LevelRendererMixin}: Kanto's and Hoenn's biomes have none);</li>
  * <li><b>lightning</b>: the sky flash Minecraft's own lightning gives ({@code ClientLevel.setSkyFlashTime}, which also
  * brightens the lightmap), a white screen flash and distant thunder, timed as the game times them ({@link LightningClock});
  * no lightning entity;</li>
@@ -221,6 +221,12 @@ public final class WeatherView {
 			int alpha = Math.round(flash * FLASH_ALPHA * 255);
 			graphics.fill(0, 0, graphics.guiWidth(), graphics.guiHeight(), alpha << 24 | 0xFFFFFF);
 		}
+	}
+
+	/** SE5: the weather this view shows now (the followed game's, where it applies), or null; the remote pilot reports it. */
+	public static @Nullable String shown() {
+		Weather target = FADE.target();
+		return applies && target != null ? target.id() : null;
 	}
 
 	/** F3's line: the game's weather, whether it applies here, how strongly it shows, the bolts so far. */

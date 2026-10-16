@@ -380,7 +380,10 @@ The client keeps each story cell of the WorldIndex open or closed for its own pl
   zone. Closed until the player's route progress (the snapshot's `routes`, then `route.progress`) lists the ball as
   taken; the client decides, as for `object` cells.
 - **`story.flags`** reports the diff of `save.flags` every 10 logic steps, when a script ends and on
-  a map load; **`story.lit`** reports every dark map while Flash's light holds (or its reset).
+  a map load; **`story.lit`** reports every dark map while Flash's light holds (or its reset). SE7 (Gen 3): a map
+  whose entry scripts set a flash level above 0 (Dewford Gym) is dark (`g3map.dark`); it is lit (`story.lit`,
+  `player.state.lit`) only while the hidden player is on it and the game's flash level there is 0; Flash's flag never
+  lights it.
 - **Details:** `story.toggles.obj` is the map object's name; `visible` back at the default is reported
   too; objects absent from `toggles` are at their default. `story.blocks` is sent on map entry only
   when something differs, and a reload of the same map re-sends blocks that went back to the map data
