@@ -295,7 +295,53 @@ story cells built open and closed per player. So this was a check, and it found 
   - changes made during a visit that the next load doesn't redo (the bridge relays them live, and every write is a
     site).
 
-## 6. Blue
+## 6. Blue's results (2026-10-16, Gen1Recomp v0.3.85, the pod's Blue import)
 
-The same three runs for Blue (Gen 1's curated swap sites, M8): the scan needs Gen 1's script tables; the sweep, the
-objects run, the replay and the spots reuse the client side as they are.
+Blue's own tools: `tools/e2e/g1_story_check.py` (`inventory`, `cases`, `sweep`, `objects`, `report`) and its driver
+`tools/e2e/drivers/kb_g1story.lua`; the Minecraft side by `RealGen1StoryReplayTest` (-Pkb.realGen1Index=<ThreeRegionsE2E>/
+kantobridge/regions/kanto/world_index.json -Pkb.realGen1Bundle=local/minecraft/kantobridge/export/blue
+-Pkb.storySweep=<local/reports/g1_story_sweep.json,g1_story_objects.json>) and `tools/e2e/story_spots_g1.py` with
+`drivers/kb_g1spots.lua` (the real dev client; `--plan` dry-run). Truth files stay on the volume
+(`local/reports/g1_story_*.json`). Gen 1's story scripts are the engine's own Lua (data/scripts/**), not data rows, so
+there is no script walk: the inventory takes gen1-bridge's own swap sites (M8's audit, `export/kb_swapsites.lua`) and the
+event flags the scripts name, and the sweep proves them on the real game. This was a check: it found no gap.
+
+### 6.1 Inventory
+
+- 225 maps, 230 event flags (the literal EVENT_* names in data/scripts/** and the field tables' door events), 2 dark
+  maps (Rock Tunnel, field.darkMaps).
+- 60 swap sites: 20 card-key doors (Silph Co), 36 script sites (the Rocket Hideout lift gates, the Game Corner poster,
+  the Vermilion Gym door, the Elite Four exits, Lance's doorway, the Mansion switch gates, the Cinnabar Gym gates, the
+  S.S. Anne), 4 Victory Road boulder barriers. One has no single gating flag: the Rocket Hideout B4F lift gate opens
+  only on both guards' flags (field.cardKeyDoors `events`), so its cases are the new game and every flag set.
+
+### 6.2 The hidden game and the bridge (the sweep)
+
+- 530 cases on 223 maps (the link rooms left out): each map in the new game's state and with every story flag set,
+  and each site's flag set and cleared on its map. Each case hops off the last map before the state goes back, so the
+  client never sees a reset inside a visit.
+- **Every block the game changed is a swap site's state** (61 distinct live changes), and every one of the 60 sites was
+  reached. No `story.unknown_block` was logged.
+- **`story.blocks` is exact in all 528 cases that stayed on their map**, and the client's NPC list and toggles matched
+  the engine's people and spawn filter in every one.
+- Two cases were sent on by the game itself: Vermilion Dock once the S.S. Anne has sailed (story3.lua:956-1000 erases
+  her and sends the player back to Vermilion City; the check counts that visit as used).
+- Lance's room: a warp in lands on the stairs and his walk-in crosses the doorway and locks it, so both its cases end in
+  the map data's state (story4.lua:1004-1015).
+- **The objects run**: every named object hidden, then shown, on 205 maps (410 visits): the client's toggles and NPC
+  list matched the engine in all 410.
+
+### 6.3 Minecraft
+
+- **The replay** (`RealGen1StoryReplayTest`) ran 932 cases (sweep and objects) through `StoryRules` on the real Kanto
+  (ThreeRegionsE2E, built 2026-10-15). Of 590 changed cells, 574 were drawn in their closed state and 16 were open tile
+  cells built as the game shows them; 0 were missing, 0 collided unlike the game, 0 had the wrong art. The 444 other
+  tile cells of those maps sat in their own state, all colliding as the game does. (6 cases were on KantoBridge's own
+  test-route maps, which this world doesn't build.)
+- **The real client: 13 of 13 spots passed**: through Lorelei's opened exit and both Victory Road barriers a boulder
+  opened; walled off by Bruno's and Agatha's sealed exits, a Cinnabar Gym gate, a Mansion gate in each switch state, a
+  Silph Co card-key door, a Rocket Hideout lift gate and the Vermilion Gym's locked door; Rock Tunnel dark, then lit by
+  Flash. Video on the volume: `/workspace/videos/kanto-bridge-blue-story-spots-20261016.mp4` (4.4 MB, sent).
+- Not covered by a spot: the open sides of gates the map data already ships open (Bruno's and Agatha's exits, Lance's
+  doorway, every Mansion gate, the Cinnabar gates other than closed): they are built open and the replay checks them.
+- Full check on the pod afterwards: pytest 2,251 passed, JUnit 1,319 (0 failed), GameTests 126 passed.
