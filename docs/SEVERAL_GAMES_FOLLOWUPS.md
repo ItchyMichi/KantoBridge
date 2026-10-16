@@ -54,6 +54,14 @@ The multi-game plan ([specs/MULTI_GAME_PLAN.md](specs/MULTI_GAME_PLAN.md)) is do
       has one (the Name Rater keeps the old nickname; Emerald's player name keeps the one it picked). Not the species'
       name as a typed nickname, which would freeze it. Gen 1's player and rival names still take a name or a preset,
       as in the game (an empty one re-prompts there).
+- [x] **Other regions drew plain cubes** (2026-10-16): the client drew only the followed region's shapes, and its pack
+      could lose the other games' art (a world build wrote its own game's art only; a pack built on the client couldn't
+      take a Gen 2 or Gen 3 export's art, and another region's unpainted blocks never counted as missing). Now every
+      region draws its own shapes and art at once: one shape layer per region in the render snapshot, a world build
+      keeps the other exports' art sets, the client rebuilds its pack once when another region lacks art (exporting a
+      linked game it has no export of). Checked in the real client with all three games linked
+      (`tools/e2e/region_shots.py`: Pallet Town, New Bark Town, Littleroot Town; 0 keys without art, every region's
+      shape table built with its art). A client's first such rebuild takes about 10 minutes (Hoenn's art).
 - [ ] **Starting in Hoenn:** a fresh player always follows Kanto's game first (the legacy region); there is no way to
       choose where to start (the video's autopilot forced Hoenn).
 - [x] **Emerald's script warps** (2026-10-14): not the script warps themselves but every warp's tail. Emerald keeps
