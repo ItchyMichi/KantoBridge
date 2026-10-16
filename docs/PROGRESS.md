@@ -2687,6 +2687,18 @@ RouteGenerator`. Economy: `server/{Ledger, LedgerRules, LedgerService}`, `bag/Ba
 `Scene`. Tools: `tools/kb_games.py`, `setup_games.ps1|.sh`, `launch.ps1`, `fake_minecraft --links`, `fake_gen1
 --game/--state`. Notes 1–21 above record each milestone's decisions; PROTOCOL.md has the wire format.
 
+## Story events (STORY_EVENTS_PLAN, 2026-10-16)
+
+Your ask of 2026-10-15: make sure every story event works in every game, Emerald first, with real tests on RunPod. The
+method, Emerald's results and the fix plan are [specs/STORY_EVENTS_PLAN.md](specs/STORY_EVENTS_PLAN.md).
+
+| # | Part | Status | Date | Commit |
+|---|---|---|---|---|
+| SC-E | Emerald's check: `scan`, `sweep`, `objects` (`tools/e2e/g3_story_check.py`, driver `kb_g3story.lua`) on the pod's real Emerald | **done** (kb-dev24): 519 maps scanned; 323 live cases on 87 maps; 380 object visits on 190 maps. The hidden game does every story change; the bridge relays every metatile change and every object change exactly; **Minecraft shows no terrain change** (Gen 3 builds have no tile story cells and nothing reads `story.cells`), collision-only changes (267 cells) are never sent, weather and Dewford Gym's light are not mirrored. Story blockers in Minecraft: the Elite Four's exit doors, Sky Pillar's floors, the Mauville and Mossdeep Gym puzzles, Shoal Cave's tide, Route 131, Mirage Island, Sootopolis's crisis layout (plan §1) | 2026-10-16 | |
+| SE1–SE8 | Emerald's fixes | **waiting for your go** (plan §4.1 S1–S9 with defaults; S8 weather and S9 Dewford Gym's light are your decisions) | | |
+| SC-C | Crystal's check | later (plan §5) | | |
+| SC-B | Blue's check | later (plan §5) | | |
+
 ## Pre-flight (PLAN §0.6)
 
 | Step | State |
