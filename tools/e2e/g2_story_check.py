@@ -366,14 +366,14 @@ def lua_cases(cases: list[dict]) -> str:
 
 # ---- the live sweep ------------------------------------------------------------------------------------------------
 
-async def _sweep_client(run, timeout: float):
+async def _sweep_client(run, timeout: float, port: int = SWEEP_PORT):
     from fake_minecraft import FakeMinecraft
     import asyncio
     import time as _time
 
     if run.wait_marker("KB_SWEEP_READY", 600) is None:
         raise RuntimeError("the driver never reached the field")
-    mc = FakeMinecraft(port=SWEEP_PORT, role="test", ping_ms=300)
+    mc = FakeMinecraft(port=port, role="test", ping_ms=300)
     await mc.connect(attempts=60)
     await mc.hello()
     deadline = _time.monotonic() + timeout
@@ -519,6 +519,9 @@ def analyse(received: list[dict], sweep: dict) -> dict:
         entry["blocks"] = len(s.get("blocks") or [])
         entry["blocksOnLoad"] = len(a.get("blocks") or [])
         if not (rec.get("ok") and s.get("map") == rec.get("map")):
+            if a.get("map") == rec.get("map"):
+                # the case arrived and then left (the game sent the player on): its visit is used up all the same
+                used = next((vi for vi in range(used + 1, len(visits)) if visits[vi]["map"] == rec["map"]), used)
             out.append(entry)
             continue
         visit = None
