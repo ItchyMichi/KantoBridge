@@ -25,6 +25,7 @@ import dev.kantobridge.client.story.ClientStoryView;
 import dev.kantobridge.client.story.StoryCellRenderer;
 import dev.kantobridge.client.ui.Notices;
 import dev.kantobridge.client.ui.UiRuntime;
+import dev.kantobridge.client.weather.WeatherView;
 import dev.kantobridge.client.world.AddRegionFlow;
 import dev.kantobridge.client.world.ClientRegions;
 import dev.kantobridge.client.world.ClientWorldIndex;
@@ -65,6 +66,8 @@ public class KantoBridgeClient implements ClientModInitializer {
 		ClientStoryView.init(bridge);
 		BlockEntityRenderers.register(KbBlocks.STORY_TILE_ENTITY, StoryCellRenderer::new);
 		SurfSprite.init();
+		// SE6: the followed hidden game's weather (rain, fog, ash, sandstorm, drought, ...), drawn for this player only.
+		WeatherView.init(bridge);
 		// The hidden game's text boxes, menus, naming and mirror as our screens, and the Game Boy keys (§4.3 ui/).
 		UiRuntime.init(bridge);
 		// The hidden game's NPCs as client-only puppets (§4.3 puppet/).

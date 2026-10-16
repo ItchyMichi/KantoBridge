@@ -5,8 +5,12 @@
 	"compatibilityLevel": "JAVA_21",
 	"client": [
 		"BuiltInPackSourceMixin",
+		"ClientLevelMixin",
+		"FogRendererMixin",
 		"GameRendererMixin",
+		"GuiMixin",
 		"KeyboardInputMixin",
+		"LevelRendererMixin",
 		"LivingEntityRendererMixin",
 		"LocalPlayerMixin"
 	],

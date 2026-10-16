@@ -35,6 +35,9 @@ import org.jetbrains.annotations.Nullable;
  * <li>{@code characters}: {@code {"style": "flat" | "thick" | "carved" | "rigged", "packs": true | false}} (V8, §5.11):
  * how NPCs are drawn (unset: a pack's suggestion, else thick cards), and whether texture packs may give sprites models and
  * styles.</li>
+ * <li>{@code weather}: {@code "on"} (default) or {@code "off"} (SE6, docs/specs/STORY_EVENTS_PLAN.md §4.1 S8): whether
+ * the followed hidden game's weather (Emerald's rain, fog, ash, sandstorm, drought, ...) is drawn for this player
+ * ({@code client.weather.WeatherView}).</li>
  * </ul>
  *
  * <p>A missing file is created with the defaults (one link on port 27151, written as {@code port} so INSTALL.md stays
@@ -46,8 +49,10 @@ import org.jetbrains.annotations.Nullable;
  * @param shapes          draw the world's shapes
  * @param characterStyle  {@code characters.style}, or null when unset
  * @param characterPacks  {@code characters.packs}
+ * @param weather         {@code weather}: draw the hidden game's weather
  */
-public record ClientConfig(List<Link> links, boolean shapes, StyleFallback.@Nullable Style characterStyle, boolean characterPacks) {
+public record ClientConfig(List<Link> links, boolean shapes, StyleFallback.@Nullable Style characterStyle, boolean characterPacks,
+		boolean weather) {
 	public static final String FILE_NAME = "kantobridge-client.json";
 	public static final String PORT_PROPERTY = "kantobridge.port";
 	/** MG4: {@code -Dkantobridge.links=blue:27151,emerald:27152}. */
@@ -92,6 +97,11 @@ public record ClientConfig(List<Link> links, boolean shapes, StyleFallback.@Null
 		links = List.copyOf(links);
 	}
 
+	/** Every setting before SE6, the weather drawn. */
+	public ClientConfig(List<Link> links, boolean shapes, StyleFallback.@Nullable Style characterStyle, boolean characterPacks) {
+		this(links, shapes, characterStyle, characterPacks, true);
+	}
+
 	public ClientConfig(int port) {
 		this(port, true);
 	}
@@ -117,11 +127,13 @@ public record ClientConfig(List<Link> links, boolean shapes, StyleFallback.@Null
 		boolean shapes = true;
 		StyleFallback.Style style = null;
 		boolean packs = true;
+		boolean weather = true;
 		if (Files.isRegularFile(file)) {
 			JsonObject root = readRoot(file, warn);
 			if (root != null) {
 				links = readLinks(root, warn);
 				shapes = readSwitch(root, "shapes", true, warn);
+				weather = readSwitch(root, "weather", true, warn);
 				JsonElement characters = root.get("characters");
 				if (characters != null && characters.isJsonObject()) {
 					style = readStyle(characters.getAsJsonObject(), warn);
@@ -157,7 +169,7 @@ public record ClientConfig(List<Link> links, boolean shapes, StyleFallback.@Null
 				}
 			}
 		}
-		return new ClientConfig(links, shapes, style, packs);
+		return new ClientConfig(links, shapes, style, packs, weather);
 	}
 
 	/**

@@ -8,11 +8,14 @@ import org.jetbrains.annotations.Nullable;
 /**
  * What the client knows about the hidden game: the handshake, whether its player is live ({@link #ingame}), and the
  * player's map, cell, facing and mode from {@code snapshot}, {@code player.pos}, {@code player.state} and {@code warp}.
- * Client thread only (fed by {@link Dispatcher}); the movement sync ({@code client.move}) reads it.
+ * Client thread only (fed by {@link Dispatcher}); the movement sync ({@code client.move}) reads it, and (SE6) the weather
+ * view the game's weather ({@code player.state.weather}, Gen 3).
  */
 public final class ClientBridgeState {
 	/** {@code hello.ok.tested}'s format (a version only). */
 	private static final java.util.regex.Pattern VERSION = java.util.regex.Pattern.compile("^[0-9A-Za-z.+_-]{1,32}$");
+	/** {@code player.state.weather}'s format (one of the protocol's names; the weather view knows which). */
+	private static final java.util.regex.Pattern WEATHER = java.util.regex.Pattern.compile("^[a-z_]{1,24}$");
 
 	private @Nullable HelloOk handshake;
 	private @Nullable String map;
@@ -27,6 +30,8 @@ public final class ClientBridgeState {
 	private boolean hidden;
 	private boolean dark;
 	private boolean lit;
+	/** SE6: the weather the hidden game draws ({@code player.state.weather}), null where the game sends none. */
+	private @Nullable String weather;
 	private @Nullable String warpPhase;
 	private @Nullable String warpKind;
 	private long snapshots;
@@ -45,6 +50,7 @@ public final class ClientBridgeState {
 			if (state != ConnectionState.CONNECTED) {
 				this.handshake = null;
 				this.ingame = false;
+				this.weather = null;
 			}
 		});
 	}
@@ -123,6 +129,9 @@ public final class ClientBridgeState {
 		this.hidden = JsonFields.bool(state, "hidden", this.hidden);
 		this.dark = JsonFields.bool(state, "dark", this.dark);
 		this.lit = JsonFields.bool(state, "lit", this.lit);
+		// a player.state is always whole: no weather in it means the game draws none
+		String nextWeather = JsonFields.str(state, "weather");
+		this.weather = nextWeather != null && WEATHER.matcher(nextWeather).matches() ? nextWeather : null;
 	}
 
 	public @Nullable HelloOk handshake() {
@@ -181,6 +190,11 @@ public final class ClientBridgeState {
 
 	public boolean lit() {
 		return this.lit;
+	}
+
+	/** SE6: the weather the hidden game draws now ({@code player.state.weather}), or null (no weather, or a Gen 1/2 game). */
+	public @Nullable String weather() {
+		return this.weather;
 	}
 
 	public @Nullable String warpPhase() {
