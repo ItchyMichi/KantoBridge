@@ -8,6 +8,7 @@ import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import dev.kantobridge.builder.export.ExportBundle;
 import dev.kantobridge.builder.export.G3Map;
+import dev.kantobridge.builder.export.G3Tiles;
 import dev.kantobridge.world.StoryCellTable;
 import dev.kantobridge.world.StoryCellType;
 import dev.kantobridge.world.WorldIndex;
@@ -89,6 +90,7 @@ class RealGen3StoryReplayTest {
 				}
 				counts.merge("cases", 1, Integer::sum);
 				G3Map own = bundle.g3map(map);
+				G3Tiles tiles = bundle.g3tiles(own.pair());
 				Set<Long> warps = new HashSet<>();
 				for (G3Map.Warp warp : own.warps()) {
 					warps.add((long) warp.x() << 32 | warp.y());
@@ -109,6 +111,12 @@ class RealGen3StoryReplayTest {
 					int coll = l.get(1).getAsInt();
 					boolean doorRepair = mid == own.mid(x, y) && coll == DOOR && warps.contains((long) x << 32 | y);
 					if (doorRepair || mid == own.mid(x, y) && pass(coll) == pass(own.coll(x, y))) {
+						continue;
+					}
+					if (tiles.quarters(mid) == null) {
+						// a metatile the map's pair lacks: the export leaves such a state out (only a script other maps
+						// share sets it here, as the cable club's on Mossdeep's Game Corner under a forced link state)
+						counts.merge("cells_foreign_metatile", 1, Integer::sum);
 						continue;
 					}
 					live.put(map + ":" + x + ":" + y, new int[] {mid, coll, own.mid(x, y), own.coll(x, y)});
