@@ -67,10 +67,14 @@ import net.minecraft.client.CloudStatus;
 import net.minecraft.client.GraphicsStatus;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.screens.ConnectScreen;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.screens.TitleScreen;
 import net.minecraft.client.multiplayer.ClientLevel;
+import net.minecraft.client.multiplayer.ServerData;
+import net.minecraft.client.multiplayer.resolver.ServerAddress;
 import net.minecraft.client.player.LocalPlayer;
+import net.minecraft.client.server.IntegratedServer;
 import net.minecraft.client.tutorial.TutorialSteps;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -92,7 +96,8 @@ import org.lwjgl.glfw.GLFW;
  *
  * <ul>
  * <li>From the title screen, once the link of {@code kantobridge.autopilot.follow}'s game (any link when unset) is
- * connected, it opens the world {@code kantobridge.autopilot.world}.</li>
+ * connected, it opens the world {@code kantobridge.autopilot.world}; with {@code kantobridge.autopilot.server}
+ * ({@code host:port}) it joins that server instead (a second player in a multiplayer check).</li>
  * <li><b>Commands</b>: JSON lines appended to {@code <pilotDir>/commands.jsonl}, each {@code {id, op, ...}}, run in
  * order. {@code key} (a, b, start, select, up, down, left, right: into the open screen, else in the world; {@code hold}
  * ticks; esc only into a screen that isn't ours, such as Cobblemon's PC); (SE5) {@code story} ({@code map, x, y}: the story
@@ -102,7 +107,9 @@ import org.lwjgl.glfw.GLFW;
  * START); {@code battle} ({@code on}: whenever Cobblemon asks for an action, the battle screen shows the moves and the
  * first one with PP left is chosen); {@code zone_walk} (in a Wild Routes half: the walk to its pass, out of the trainers'
  * sight, the balls and the way home, until the crossing starts); {@code follow} ({@code game}: that link is followed, as
- * a player choosing where to play first, instead of the legacy region's); {@code camera} ({@code third} or {@code first}, {@code hud}); {@code record}
+ * a player choosing where to play first, instead of the legacy region's); {@code camera} ({@code third} or {@code first}, {@code hud});
+ * {@code lan} ({@code port}: the open world is published to LAN on that port, without authentication, for a second dev
+ * client); {@code record}
  * ({@code file}: ffmpeg grabs the window) and {@code stop}; {@code wait} ({@code ticks}); {@code quit}.</li>
  * <li><b>State</b>: {@code <pilotDir>/state.json}, rewritten every few ticks: the last command done and its result, the
  * open screen's class, the top hidden UI (kind, screen id, page, menu or choice index and size, the naming phase), the
@@ -139,6 +146,8 @@ final class RemotePilot {
 	private final @Nullable Path log;
 	private final boolean quit;
 	private final @Nullable String follow;
+	/** The server to join instead of opening the world ({@code kantobridge.autopilot.server}), or null. */
+	private final @Nullable String server = System.getProperty("kantobridge.autopilot.server");
 
 	private Phase phase = Phase.TITLE;
 	private int ticks;
@@ -245,6 +254,14 @@ final class RemotePilot {
 		if (this.stableTicks < 2 * TICKS) {
 			return;
 		}
+		if (this.server != null && !this.server.isBlank()) {
+			this.mark("join_server");
+			ServerAddress address = ServerAddress.parseString(this.server.trim());
+			ConnectScreen.startConnecting(new TitleScreen(), this.minecraft, address, new ServerData("kantobridge", this.server.trim(),
+					ServerData.Type.OTHER), false, null);
+			this.next(Phase.WORLD);
+			return;
+		}
 		if (!this.minecraft.getLevelSource().levelExists(this.world)) {
 			this.mark("failed no_world");
 			this.phase = Phase.DONE;
@@ -349,6 +366,15 @@ final class RemotePilot {
 			case "camera" -> {
 				this.minecraft.options.setCameraType("first".equals(text(command, "mode")) ? CameraType.FIRST_PERSON : CameraType.THIRD_PERSON_BACK);
 				this.minecraft.options.hideGui = command.has("hud") && !command.get("hud").getAsBoolean();
+			}
+			case "lan" -> {
+				IntegratedServer host = this.minecraft.getSingleplayerServer();
+				if (host != null && !host.isPublished()) {
+					// dev clients have no Mojang session: the second one could never pass an authenticated login
+					host.setUsesAuthentication(false);
+				}
+				boolean ok = host != null && (host.isPublished() || host.publishServer(null, false, number(command, "port", 25565)));
+				this.mark("lan ok=" + ok);
 			}
 			case "record" -> {
 				String file = text(command, "file");
