@@ -4,11 +4,13 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.particle.ParticleRenderType;
 import net.minecraft.client.particle.TextureSheetParticle;
+import net.minecraft.client.renderer.texture.AbstractTexture;
 import net.minecraft.client.renderer.texture.TextureAtlas;
 import net.minecraft.client.renderer.texture.TextureAtlasSprite;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.Mth;
 import net.minecraft.util.RandomSource;
+import org.jetbrains.annotations.Nullable;
 
 /**
  * The weather's own particles (SE6) where Minecraft has none that fit: blowing sand (a tan grain from the vanilla
@@ -43,22 +45,35 @@ final class WeatherParticle extends TextureSheetParticle {
 		this.phase = random.nextFloat() * Mth.TWO_PI;
 	}
 
-	/** A grain of sand blown along +x (the wind) at the given place. */
-	static WeatherParticle sand(ClientLevel level, double x, double y, double z, RandomSource random) {
+	/** A grain of sand blown along +x (the wind) at the given place, or null while the particle atlas is missing. */
+	static @Nullable WeatherParticle sand(ClientLevel level, double x, double y, double z, RandomSource random) {
+		TextureAtlasSprite grain = sprite(GRAIN);
+		if (grain == null) {
+			return null;
+		}
 		int rgb = random.nextBoolean() ? 0xD2B478 : 0xC09A60;
 		return new WeatherParticle(level, x, y, z, 0.35 + random.nextDouble() * 0.25, (random.nextDouble() - 0.5) * 0.04,
-				(random.nextDouble() - 0.5) * 0.08, sprite(GRAIN), 30 + random.nextInt(20), 0.04F + random.nextFloat() * 0.05F, rgb, 0.85F, 0.0F,
+				(random.nextDouble() - 0.5) * 0.08, grain, 30 + random.nextInt(20), 0.04F + random.nextFloat() * 0.05F, rgb, 0.85F, 0.0F,
 				random);
 	}
 
-	/** A bubble rising, swaying a little, at the given place. */
-	static WeatherParticle bubble(ClientLevel level, double x, double y, double z, RandomSource random) {
-		return new WeatherParticle(level, x, y, z, 0, 0.06 + random.nextDouble() * 0.05, 0, sprite(BUBBLE), 40 + random.nextInt(40),
+	/** A bubble rising, swaying a little, at the given place, or null while the particle atlas is missing. */
+	static @Nullable WeatherParticle bubble(ClientLevel level, double x, double y, double z, RandomSource random) {
+		TextureAtlasSprite bubble = sprite(BUBBLE);
+		if (bubble == null) {
+			return null;
+		}
+		return new WeatherParticle(level, x, y, z, 0, 0.06 + random.nextDouble() * 0.05, 0, bubble, 40 + random.nextInt(40),
 				0.06F + random.nextFloat() * 0.06F, 0xFFFFFF, 0.8F, 0.02F, random);
 	}
 
-	private static TextureAtlasSprite sprite(ResourceLocation id) {
-		return Minecraft.getInstance().getTextureAtlas(TextureAtlas.LOCATION_PARTICLES).apply(id);
+	/**
+	 * A sprite of the particle atlas, or null before it exists. The particle engine registers that atlas with the texture
+	 * manager; the model manager's atlas set ({@code Minecraft.getTextureAtlas}) holds only the block and item atlases.
+	 */
+	static @Nullable TextureAtlasSprite sprite(ResourceLocation id) {
+		AbstractTexture texture = Minecraft.getInstance().getTextureManager().getTexture(TextureAtlas.LOCATION_PARTICLES);
+		return texture instanceof TextureAtlas atlas ? atlas.getSprite(id) : null;
 	}
 
 	@Override

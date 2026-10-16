@@ -16,7 +16,8 @@ the client then shows are read back.
 4. Each spot: the story state (flags and vars of a sweep case, the tide or Mirage Island forced) and a warp onto the
    cell beside the changed one (planned on the export's cells: local/minecraft/kantobridge/export/emerald/), then the
    pilot's step into it: `enter` passes when the hidden player stands on it (or the map changed: a door), `refuse` when
-   the step is refused; `weather` and `dark` compare the client's state with the game's.
+   the step is refused and every block of the cell collides for the player in Minecraft (the pilot's `story` answer);
+   `weather` and `dark` compare the client's state with the game's.
 
 The changed cells come from the sweep's truth files in local/reports/ (ROM-derived; they stay on the pod). Output:
 spot names, map symbols, cells, counts, booleans and weather names only, never the game's text. A video, when asked
@@ -25,9 +26,11 @@ for, shows the user's own game: it stays on the pod's volume and the agent never
 from __future__ import annotations
 
 import argparse
+import base64
 import json
 import os
 import shutil
+import struct
 import subprocess
 import sys
 import threading
@@ -43,7 +46,7 @@ sys.path.insert(0, str(HERE.parent))
 import g3_story_check as gsc  # noqa: E402
 import run_gen1recomp as rg  # noqa: E402
 from run_gen1recomp import launch  # noqa: E402
-from story_video import Gen3Map, Pilot, Stuck, make_home, say  # noqa: E402
+from story_video import EXPORT, Pilot, Stuck, make_home, say  # noqa: E402
 
 GRADLE_DIR = REPO / "fabric-bridge"
 SAVES = REPO / "local" / "minecraft" / "saves"
@@ -68,7 +71,9 @@ class Spot:
 
 
 SPOTS = [
-    Spot("e4_sidney_exit", "EM_EVER_GRANDE_CITY_SIDNEYS_ROOM", "enter", "setmetatile (onLoad)", "solid>walk"),
+    # Sidney beaten: the Elite Four's state is past his room (else its walk-in cutscene takes the player up the room)
+    Spot("e4_sidney_exit", "EM_EVER_GRANDE_CITY_SIDNEYS_ROOM", "enter", "setmetatile (onLoad)", "solid>walk",
+         vars={"VAR_ELITE_4_STATE": 1}),
     Spot("e4_drake_exit", "EM_EVER_GRANDE_CITY_DRAKES_ROOM", "enter", "setmetatile (onLoad)", "solid>walk"),
     Spot("mauville_gym_barrier", "EM_MAUVILLE_CITY_GYM", "enter", "special MauvilleGymDeactivatePuzzle (onLoad)", "solid>walk"),
     Spot("sky_pillar_clean_floor", "EM_SKY_PILLAR_1F", "enter", "new game", "solid>walk"),
@@ -89,10 +94,11 @@ SPOTS = [
 
 
 def load_truth():
-    """Every sweep case by (map, label): its state (flags, vars, tide, mirage) and the cells it changed."""
+    """The sweep's cases by (map, label), in case order (several cases can share a label): their state (flags, vars,
+    tide, mirage) and the cells they changed. The latest sweep file wins for a case it recorded."""
     scan = json.loads(gsc.SCAN.read_text(encoding="utf-8"))
     cases = {c["n"]: c for c in gsc.make_cases(scan)}
-    truth = {}
+    recs = {}
     for name in ("g3_story_sweep_full1.json", "g3_story_sweep.json"):
         path = gsc.REPORTS / name
         if not path.is_file():
@@ -100,7 +106,11 @@ def load_truth():
         for rec in json.loads(path.read_text(encoding="utf-8"))["cases"]:
             case = cases.get(rec.get("n"))
             if case and rec.get("ok") and rec.get("map") == case["map"]:
-                truth[(case["map"], case["label"])] = (case, rec)
+                recs[rec["n"]] = (case, rec)
+    truth = {}
+    for n in sorted(recs):
+        case, rec = recs[n]
+        truth.setdefault((case["map"], case["label"]), []).append((case, rec))
     return scan, truth
 
 
@@ -118,18 +128,57 @@ def lua_literal(spot_id: int, map_id: str, x: int | None, y: int | None, facing:
     return "{ " + ", ".join(parts) + " }"
 
 
-def approach(m: Gen3Map, rec: dict, cls: str):
-    """A changed cell of the case with that walkability change, and a cell beside it the export lets the player stand
-    on (not itself changed), with the direction from there into it; None when the case has none."""
-    cells = [c for c in (rec.get("settled") or {}).get("cells") or [] if not c.get("same")]
-    changed = {(c["x"], c["y"]) for c in cells}
-    for c in cells:
+GROUND = {0x00, 0x18, 0x2B, 0x71, 0x72}  # PROTOCOL.md "Story rules" (SE1), ledges left out: a walk never jumps one
+
+
+class LiveMap:
+    """A map's cells as the hidden game has them in a sweep case: the export's (local/minecraft/kantobridge/export/
+    emerald/g3map/<map>.json, the every-visit changes baked in) with the case's changed cells over them."""
+
+    def __init__(self, map_id: str, rec: dict):
+        d = json.loads((EXPORT / "emerald" / "g3map" / f"{map_id}.json").read_text(encoding="utf-8"))
+        d = d.get("data", d)
+        self.w, self.h, self.stride = d["trueW"], d["trueH"], d["w"]
+        raw = base64.b64decode(d["cells"])
+        self.cells = {}
+        for y in range(self.h):
+            for x in range(self.w):
+                _, coll, elev = struct.unpack_from("<HBB", raw, (y * self.stride + x) * 4)
+                self.cells[(x, y)] = (coll, elev)
+        self.warps = {(w["x"], w["y"]) for w in d.get("warps") or []}
+        self.objects = {(o["x"], o["y"]) for o in d.get("objects") or []}
+        self.changed = {}
+        for c in (rec.get("settled") or {}).get("cells") or []:
+            if not c.get("same"):
+                self.changed[(c["x"], c["y"])] = c
+                self.cells[(c["x"], c["y"])] = (c["l"][1], c["l"][2])
+
+    def walkable(self, x, y):
+        cell = self.cells.get((x, y))
+        return cell is not None and cell[0] in GROUND and (x, y) not in self.warps and (x, y) not in self.objects
+
+    def can_step(self, a, b):
+        ea, eb = self.cells[a][1], self.cells[b][1]
+        return ea == eb or ea in (0, 15) or eb in (0, 15)
+
+
+def approach(m: LiveMap, cls: str, into: bool = True):
+    """A changed cell with that walkability change, and a cell up to four steps away in a straight line from which the
+    player walks to it over walkable cells of the same height: (start, target, direction, steps); None when there is
+    none. With `into` the last step (into the cell) must take the heights too; without it (a step the game refuses)
+    only the way up to it must."""
+    for (tx, ty), c in sorted(m.changed.items()):
         if f"{c.get('bc')}>{c.get('lc')}" != cls:
             continue
         for d, (dx, dy) in DELTA.items():
-            ax, ay = c["x"] - dx, c["y"] - dy
-            if (ax, ay) not in changed and m.inside(ax, ay) and m.passable(ax, ay):
-                return (ax, ay), (c["x"], c["y"]), d
+            for steps in range(1, 5):
+                start = (tx - dx * steps, ty - dy * steps)
+                path = [start] + [(tx - dx * k, ty - dy * k) for k in range(steps - 1, 0, -1)]
+                if not all(m.walkable(*p) for p in path):
+                    break
+                route = path + ([(tx, ty)] if into else [])
+                if all(m.can_step(route[i], route[i + 1]) for i in range(len(route) - 1)):
+                    return start, (tx, ty), d, steps
     return None
 
 
@@ -168,11 +217,20 @@ def wait_followed(pilot: Pilot, map_id: str, cell=None, timeout: float = 60.0) -
 
 def run_spot(spot: Spot, n: int, scan: dict, truth: dict, commands: Path, run, pilot: Pilot) -> dict:
     out = {"spot": spot.name, "map": spot.map, "check": spot.check}
-    entry = truth.get((spot.map, spot.label))
-    if entry is None:
+    entries = truth.get((spot.map, spot.label))
+    if not entries:
         out["result"] = "no sweep case"
         return out
-    case, rec = entry
+    case, rec = entries[0]
+    found = None
+    if spot.check in ("enter", "refuse"):
+        # the first of the label's cases with a way into a cell of that change
+        for c, r in entries:
+            found = approach(LiveMap(spot.map, r), spot.cls, into=spot.check == "enter")
+            if found is not None:
+                case, rec = c, r
+                break
+    out["case"] = case["n"]
     flags = {int(k): v for k, v in case["flags"].items()}
     vars_ = {int(k): v for k, v in case["vars"].items()}
     names = scan.get("names") or {}
@@ -188,14 +246,13 @@ def run_spot(spot: Spot, n: int, scan: dict, truth: dict, commands: Path, run, p
     x = y = None
     facing = "down"
     target = None
+    steps = 1
     if spot.check in ("enter", "refuse"):
-        m = Gen3Map(spot.map)
-        found = approach(m, rec, spot.cls)
         if found is None:
-            out["result"] = f"no {spot.cls} cell with a cell to stand on beside it"
+            out["result"] = f"no {spot.cls} cell with a walkable way to it"
             return out
-        (x, y), target, facing = found
-        out["from"], out["into"], out["dir"] = [x, y], list(target), facing
+        (x, y), target, facing, steps = found
+        out["from"], out["into"], out["dir"], out["steps"] = [x, y], list(target), facing, steps
     with open(commands, "a", encoding="utf-8") as f:
         f.write(lua_literal(n, spot.map, x, y, facing, flags, vars_, case.get("tide"), case.get("mirage")) + "\n")
     game = wait_spot(run, n)
@@ -206,6 +263,12 @@ def run_spot(spot: Spot, n: int, scan: dict, truth: dict, commands: Path, run, p
     st = wait_followed(pilot, spot.map, (x, y) if x is not None else None)
     time.sleep(3.0)  # the client settles: the story cells and the weather fade
     if spot.check in ("enter", "refuse"):
+        for _ in range(steps - 1):
+            pilot.do("step", dir=facing, timeout=30)
+        cell_state = pilot.do("story", map=spot.map, x=target[0], y=target[1], timeout=10)
+        out["story_cell"] = {k: cell_state.get(k) for k in ("type", "active", "drawn", "state", "surf", "story_blocks",
+                                                             "closed_blocks")}
+        st = pilot.state()
         before = (st.get("move") or {}).copy()
         res = pilot.do("step", dir=facing, timeout=30)
         time.sleep(1.5)  # a refused step's snap-back lands
@@ -217,8 +280,10 @@ def run_spot(spot: Spot, n: int, scan: dict, truth: dict, commands: Path, run, p
         if spot.check == "enter":
             out["result"] = "PASS" if moved else "FAIL"
         else:
-            # refused by the hidden game, and by Minecraft too: no walk in and back (a snap or a blocked answer)
-            out["result"] = "PASS" if not moved and snaps == 0 else "FAIL (rubber band)" if not moved else "FAIL"
+            # refused by the hidden game, and by Minecraft too: every block of the cell collides for this player (the
+            # client still books the refused step's answer as blocked and a snap onto the cell it never left)
+            walled = cell_state.get("story_blocks", 0) > 0 and cell_state.get("closed_blocks") == cell_state.get("story_blocks")
+            out["result"] = "PASS" if not moved and walled else "FAIL (Minecraft lets the player in)" if not moved else "FAIL"
     elif spot.check == "weather":
         drawn = WEATHER_NAMES.get(int(game["drawn"])) if str(game.get("drawn", "")).isdigit() else game.get("drawn")
         client = st.get("weather")
@@ -285,6 +350,7 @@ def main(argv=None) -> int:
             time.sleep(1.0)
         say("client in the world; follow emerald:", pilot.do("follow", game="emerald").get("ok"))
         wait_followed(pilot, "EM_LITTLEROOT_TOWN", timeout=120)
+        time.sleep(15)  # the region's documents and the pack settle before the first warp
         if args.record:
             pilot.do("record", file=args.record, timeout=30)
         for i, spot in enumerate(spots, 1):

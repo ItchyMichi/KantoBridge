@@ -17,6 +17,7 @@ import com.mojang.blaze3d.platform.InputConstants;
 import dev.kantobridge.KantoBridge;
 import dev.kantobridge.block.EdgeWallBlock;
 import dev.kantobridge.block.LedgeColliderBlock;
+import dev.kantobridge.block.StoryCellBlock;
 import dev.kantobridge.client.bridge.BridgeLink;
 import dev.kantobridge.client.bridge.BridgeRuntime;
 import dev.kantobridge.client.bridge.ClientBridgeState;
@@ -25,6 +26,7 @@ import dev.kantobridge.client.move.InputLock;
 import dev.kantobridge.client.move.MoveRuntime;
 import dev.kantobridge.client.move.MovementSync;
 import dev.kantobridge.client.puppet.PuppetRuntime;
+import dev.kantobridge.client.story.ClientStoryView;
 import dev.kantobridge.client.ui.ChoiceModel;
 import dev.kantobridge.client.ui.Keybinds;
 import dev.kantobridge.client.ui.MenuModel;
@@ -36,8 +38,10 @@ import dev.kantobridge.client.weather.WeatherView;
 import dev.kantobridge.client.world.ClientWorldIndex;
 import dev.kantobridge.client.zone.PassRuntime;
 import dev.kantobridge.client.zone.ZoneView;
+import dev.kantobridge.story.StoryStates;
 import dev.kantobridge.world.MapPlacement;
 import dev.kantobridge.world.Scale;
+import dev.kantobridge.world.StoryCellTable;
 import dev.kantobridge.world.WorldIndex;
 import java.io.IOException;
 import java.io.OutputStream;
@@ -73,6 +77,7 @@ import net.minecraft.util.Mth;
 import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.phys.shapes.CollisionContext;
 import net.minecraft.world.phys.shapes.VoxelShape;
 import org.jetbrains.annotations.Nullable;
 import org.lwjgl.glfw.GLFW;
@@ -89,7 +94,8 @@ import org.lwjgl.glfw.GLFW;
  * connected, it opens the world {@code kantobridge.autopilot.world}.</li>
  * <li><b>Commands</b>: JSON lines appended to {@code <pilotDir>/commands.jsonl}, each {@code {id, op, ...}}, run in
  * order. {@code key} (a, b, start, select, up, down, left, right: into the open screen, else in the world; {@code hold}
- * ticks; esc only into a screen that isn't ours, such as Cobblemon's PC); {@code step} (one cell: the player walks to the middle of the next cell in {@code dir}; done when the hidden
+ * ticks; esc only into a screen that isn't ours, such as Cobblemon's PC); (SE5) {@code story} ({@code map, x, y}: the story
+ * cell there as this player has it, in the result); {@code step} (one cell: the player walks to the middle of the next cell in {@code dir}; done when the hidden
  * player stands there, when the hidden map changes, or refused when nothing moves for a while); {@code face} (turns the
  * player to {@code dir}); {@code type} (letters on the naming screen's grid: the cursor moved by the arrows, A, then
  * START); {@code battle} ({@code on}: whenever Cobblemon asks for an action, the battle screen shows the moves and the
@@ -378,6 +384,7 @@ final class RemotePilot {
 				this.finish(this.result(ok, ok ? null : "no_link"));
 			}
 			case "type" -> this.typeTick();
+			case "story" -> this.finish(this.storyCell(text(command, "map"), number(command, "x", -1), number(command, "y", -1)));
 			case "wait" -> {
 				if (this.currentTicks >= number(command, "ticks", TICKS)) {
 					this.finish(this.result(true, null));
@@ -385,6 +392,45 @@ final class RemotePilot {
 			}
 			default -> this.finish(this.result(true, null));
 		}
+	}
+
+	/**
+	 * SE5: the story cell at a map's cell as this player has it: its type, whether it collides for the local player
+	 * (the local StoryState), whether its closed art or another state is drawn (and which), and whether the player surfs.
+	 */
+	private JsonObject storyCell(@Nullable String map, int x, int y) {
+		JsonObject out = this.result(true, null);
+		WorldIndex index = ClientWorldIndex.current();
+		String key = map + ":" + x + ":" + y;
+		StoryCellTable.Entry entry = index == null || map == null ? null : index.storyCells().get(key);
+		out.addProperty("key", key);
+		out.addProperty("type", entry == null ? null : entry.type().id());
+		LocalPlayer player = this.minecraft.player;
+		out.addProperty("active", player != null && StoryStates.of(player).active().contains(key));
+		out.addProperty("drawn", ClientStoryView.drawn(key));
+		out.addProperty("state", ClientStoryView.drawnState(key));
+		out.addProperty("surf", ClientStoryView.surfing());
+		// the cell's four blocks at feet level: how many are story blocks, and how many collide for this player
+		BlockPos origin = index == null || map == null ? null : index.cellOrigin(map, x, y);
+		ClientLevel level = this.minecraft.level;
+		if (origin != null && level != null && player != null) {
+			int story = 0;
+			int closed = 0;
+			for (int dz = 0; dz < Scale.CELL_BLOCKS; dz++) {
+				for (int dx = 0; dx < Scale.CELL_BLOCKS; dx++) {
+					BlockPos pos = origin.offset(dx, 0, dz);
+					if (level.getBlockState(pos).getBlock() instanceof StoryCellBlock) {
+						story++;
+						if (StoryCellBlock.closedFor(level, pos, CollisionContext.of(player))) {
+							closed++;
+						}
+					}
+				}
+			}
+			out.addProperty("story_blocks", story);
+			out.addProperty("closed_blocks", closed);
+		}
+		return out;
 	}
 
 	private void finish(JsonObject result) {

@@ -146,12 +146,18 @@ public final class WeatherView {
 		}
 		for (int i = count(look.sand() * share); i > 0; i--) {
 			// upwind of the player (the wind blows along +x), low over the ground
-			minecraft.particleEngine.add(WeatherParticle.sand(level, px - 14 + RANDOM.nextDouble() * 20, py + RANDOM.nextDouble() * 3,
-					pz + spread(10), RANDOM));
+			WeatherParticle grain = WeatherParticle.sand(level, px - 14 + RANDOM.nextDouble() * 20, py + RANDOM.nextDouble() * 3,
+					pz + spread(10), RANDOM);
+			if (grain != null) {
+				minecraft.particleEngine.add(grain);
+			}
 		}
 		for (int i = count(look.bubbles() * share); i > 0; i--) {
-			minecraft.particleEngine.add(WeatherParticle.bubble(level, px + spread(BUBBLE_RADIUS), py - 0.5 + RANDOM.nextDouble() * 2,
-					pz + spread(BUBBLE_RADIUS), RANDOM));
+			WeatherParticle bubble = WeatherParticle.bubble(level, px + spread(BUBBLE_RADIUS), py - 0.5 + RANDOM.nextDouble() * 2,
+					pz + spread(BUBBLE_RADIUS), RANDOM);
+			if (bubble != null) {
+				minecraft.particleEngine.add(bubble);
+			}
 		}
 	}
 
