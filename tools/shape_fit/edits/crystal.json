@@ -293,123 +293,90 @@
   ]
  },
  "g3q/367-368-751-752": {
-  "note": "auto: main shape only, depth holes filled",
+  "note": "#51 slice of a big tree: no model, today's pick",
   "ops": [
    [
-    "keep_largest"
-   ],
-   [
-    "fill_holes"
+    "drop"
    ]
   ]
  },
  "g3q/369-370-371-372": {
-  "note": "auto: main shape only, depth holes filled",
+  "note": "#52 plain dark slice of a big shape: no model, today's pick",
   "ops": [
    [
-    "keep_largest"
-   ],
-   [
-    "fill_holes"
+    "drop"
    ]
   ]
  },
  "g3q/3832-3833-3836-3837": {
-  "note": "auto: main shape only, depth holes filled",
+  "note": "#53 tree slice with ground dither: no model, today's pick",
   "ops": [
    [
-    "keep_largest"
-   ],
-   [
-    "fill_holes"
+    "drop"
    ]
   ]
  },
  "g3q/3834-3835-3838-3839": {
-  "note": "auto: main shape only, depth holes filled",
+  "note": "#54 tree slice with ground dither: no model, today's pick",
   "ops": [
    [
-    "keep_largest"
-   ],
-   [
-    "fill_holes"
+    "drop"
    ]
   ]
  },
  "g3q/3843-360-3843-3843": {
-  "note": "auto: main shape only, depth holes filled",
+  "note": "#55 window/wall piece: no model, today's pick",
   "ops": [
    [
-    "keep_largest"
-   ],
-   [
-    "fill_holes"
+    "drop"
    ]
   ]
  },
  "g3q/3843-3843-3843-360": {
-  "note": "auto: main shape only, depth holes filled",
+  "note": "#56 window/wall piece: no model, today's pick",
   "ops": [
    [
-    "keep_largest"
-   ],
-   [
-    "fill_holes"
+    "drop"
    ]
   ]
  },
  "g3q/3859-3860-3859-3863": {
-  "note": "auto: main shape only, depth holes filled",
+  "note": "#57 building wall piece: no model, today's pick",
   "ops": [
    [
-    "keep_largest"
-   ],
-   [
-    "fill_holes"
+    "drop"
    ]
   ]
  },
  "g3q/3859-3863-3859-3866": {
-  "note": "auto: main shape only, depth holes filled",
+  "note": "#58 building wall piece: no model, today's pick",
   "ops": [
    [
-    "keep_largest"
-   ],
-   [
-    "fill_holes"
+    "drop"
    ]
   ]
  },
  "g3q/3859-3866-3859-3867": {
-  "note": "auto: main shape only, depth holes filled",
+  "note": "#59 building wall piece: no model, today's pick",
   "ops": [
    [
-    "keep_largest"
-   ],
-   [
-    "fill_holes"
+    "drop"
    ]
   ]
  },
  "g3q/3863-3859-3866-3859": {
-  "note": "auto: main shape only, depth holes filled",
+  "note": "#60 building wall piece: no model, today's pick",
   "ops": [
    [
-    "keep_largest"
-   ],
-   [
-    "fill_holes"
+    "drop"
    ]
   ]
  },
  "g3q/3866-3859-3867-3859": {
-  "note": "auto: main shape only, depth holes filled",
+  "note": "#61 building wall piece: no model, today's pick",
   "ops": [
    [
-    "keep_largest"
-   ],
-   [
-    "fill_holes"
+    "drop"
    ]
   ]
  },
@@ -447,46 +414,34 @@
   ]
  },
  "g3q/438-438-438-438": {
-  "note": "auto: main shape only, depth holes filled",
+  "note": "#65 floor pattern: no model, today's pick",
   "ops": [
    [
-    "keep_largest"
-   ],
-   [
-    "fill_holes"
+    "drop"
    ]
   ]
  },
  "g3q/4932-4976-5010-4997": {
-  "note": "auto: main shape only, depth holes filled",
+  "note": "#66 counter/table corner: no model, today's pick",
   "ops": [
    [
-    "keep_largest"
-   ],
-   [
-    "fill_holes"
+    "drop"
    ]
   ]
  },
  "g3q/536-537-484-485": {
-  "note": "auto: main shape only, depth holes filled",
+  "note": "#67 wall piece: no model, today's pick",
   "ops": [
    [
-    "keep_largest"
-   ],
-   [
-    "fill_holes"
+    "drop"
    ]
   ]
  },
  "g3q/830-831-832-833": {
-  "note": "auto: main shape only, depth holes filled",
+  "note": "#68 bush/tree pattern: no model, today's pick",
   "ops": [
    [
-    "keep_largest"
-   ],
-   [
-    "fill_holes"
+    "drop"
    ]
   ]
  }
