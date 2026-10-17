@@ -101,4 +101,42 @@ public final class UnitLocations {
 		}
 		return dx > 0 ? "left" : "right";
 	}
+
+	/**
+	 * Every cell of one map as the planner saw it (a diagnostic for the review): its key, its kind (walk, solid, ...),
+	 * why the planner made it a unit or not (building, walk, not_low, pinned_other, no_rule, unit:<source>), and, for a unit,
+	 * its source (lone, hint, probe, fit, ...) and its key's variant.
+	 */
+	public static java.util.List<JsonObject> describe(Scene scene, ShapePlan plan, String mapId, Map<String, String> why) {
+		java.util.List<JsonObject> out = new java.util.ArrayList<>();
+		SceneMap map = scene.maps().get(mapId);
+		ShapePlanner.MapShapes shapes = plan.shapes(mapId);
+		if (map == null || shapes == null) {
+			return out;
+		}
+		Map<Long, Units.Cell> units = new TreeMap<>();
+		for (Units.Cell cell : shapes.units()) {
+			units.put((long) cell.cy() << 32 | cell.cx(), cell);
+		}
+		for (int cy = 0; cy < map.h(); cy++) {
+			for (int cx = 0; cx < map.w(); cx++) {
+				JsonObject o = new JsonObject();
+				o.addProperty("x", cx);
+				o.addProperty("y", cy);
+				o.addProperty("key", FittedShapes.key(map.atlas(), Units.tiles(map, cx, cy)));
+				o.addProperty("kind", map.kind(cx, cy).name());
+				String reason = why.get(mapId + ":" + cx + ":" + cy);
+				if (reason != null) {
+					o.addProperty("why", reason);
+				}
+				Units.Cell unit = units.get((long) cy << 32 | cx);
+				if (unit != null) {
+					o.addProperty("unit", unit.source());
+					o.addProperty("variant", unit.key().variant());
+				}
+				out.add(o);
+			}
+		}
+		return out;
+	}
 }

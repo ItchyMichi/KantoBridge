@@ -47,6 +47,9 @@ def foreground(cell: dict) -> list[list[bool]]:
     for v in cell["variants"]:
         if v["kind"] in ("hull", "object"):
             fg = [a or b for a, b in zip(fg, unbits(v["foreground"], W * W))]
+    if not any(fg) and cell.get("groundMask"):
+        # FitTool candidates: the pixels that differ from the floor tile drawn under the cell
+        fg = unbits(cell["groundMask"], W * W)
     if not any(fg) and cell.get("hullMask"):
         fg = unbits(cell["hullMask"], W * W)
     if not any(fg):

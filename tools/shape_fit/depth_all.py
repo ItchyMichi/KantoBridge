@@ -5,7 +5,7 @@ section 9). Runs on a CPU.
 Per cell of tools/shape_fit/failed/<game>.json: the drawing as the sprite (nearest x32) and through Real-ESRGAN twice at
 x4 (anime and general model, grey and tinted: upscale_test.py's four prompts); Depth Anything V2 Small on all five;
 each map averaged per drawn pixel, normalised over the foreground and the maps averaged (0 the farthest drawn pixel, 1
-the nearest). The target is a relief behind the drawing, each drawn pixel a column centred in the cell, by the rules:
+the nearest), on a GPU when there is one. The target is a relief behind the drawing, each drawn pixel a column centred in the cell, by the rules:
 
     a free-standing thing     TMIN + depth * (span - TMIN) voxels thick, span = the foreground's widest row (as deep
                               as it is wide, like the game's hulls)
@@ -90,10 +90,13 @@ def main() -> int:
     import upscale_test as up
 
     torch.set_num_threads(os.cpu_count() or 4)
+    cuda = torch.cuda.is_available()
     cells = {c["cell"]: c for c in json.load(open(args.dump, encoding="utf-8"))["cells"]}
     failed = [c["cell"] for c in json.load(open(args.failed, encoding="utf-8"))["cells"] if c["cell"] in cells]
     upscalers = {k: ModelLoader().load_from_file(os.path.join(args.weights, f)).eval() for k, f in up.MODELS.items()}
-    depth = pipeline("depth-estimation", model=MODEL, device=-1)
+    if cuda:
+        upscalers = {k: m.cuda() for k, m in upscalers.items()}
+    depth = pipeline("depth-estimation", model=MODEL, device=0 if cuda else -1)
     targets, t0 = {}, time.time()
     os.makedirs(args.out, exist_ok=True)
     for n, key in enumerate(failed, 1):

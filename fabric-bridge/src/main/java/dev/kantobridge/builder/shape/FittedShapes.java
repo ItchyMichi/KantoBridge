@@ -78,6 +78,22 @@ public final class FittedShapes {
 	private FittedShapes() {
 	}
 
+	/** Whether the tables hold a voxel shape for the cell (the reviewed models, docs/specs/FITTED_SHAPES.md section 10). */
+	static boolean voxels(String atlas, int[] tiles) {
+		Entry e = get(atlas, tiles);
+		return e != null && VOXELS.equals(e.cls());
+	}
+
+	/** FitTool's candidates: count the solid low cells no rule makes a unit into {@code into}, as {count, ground tile, raised} (null stops). */
+	public static void collectSkipped(@Nullable Map<String, int[]> into) {
+		Units.collectSkipped(into);
+	}
+
+	/** FitTool cells: record why each cell is or isn't a unit into {@code into}, by "map:cx:cy" (null stops). */
+	public static void collectWhy(@Nullable Map<String, String> into) {
+		Units.WHY = into;
+	}
+
 	public static void setEnabled(boolean on) {
 		enabled = on;
 	}

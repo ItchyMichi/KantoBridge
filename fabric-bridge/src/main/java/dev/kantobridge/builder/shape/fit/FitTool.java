@@ -60,6 +60,10 @@ public final class FitTool {
 			dump(Path.of(args[1]), Path.of(args[2]));
 		} else if (args.length == 4 && args[0].equals("fit")) {
 			fit(Path.of(args[1]), Path.of(args[2]), Path.of(args[3]));
+		} else if (args.length == 3 && args[0].equals("candidates")) {
+			candidates(Path.of(args[1]), Path.of(args[2]));
+		} else if (args.length == 4 && args[0].equals("cells")) {
+			cells(Path.of(args[1]), args[2], Path.of(args[3]));
 		} else if (args.length == 3 && args[0].equals("locate")) {
 			locate(Path.of(args[1]), Path.of(args[2]));
 		} else if (args.length == 2 && args[0].equals("applied")) {
@@ -146,6 +150,93 @@ public final class FitTool {
 			}
 		}
 		return out;
+	}
+
+	/**
+	 * Cells no rule makes a unit (solid, low, not lone, not a tree, not probed): a dump in dump's format (no variants, so the
+	 * depth run takes groundMask, the pixels that differ from the floor tile the planner puts under the cell, as foreground),
+	 * with how often each stands, for the depth run and the review (section 13).
+	 */
+	static void candidates(Path bundleDir, Path out) throws Exception {
+		FittedShapes.setEnabled(false);
+		ExportBundle bundle = ExportBundle.open(bundleDir);
+		GameFrontEnd front = FrontEnds.forGame(bundle.game());
+		ArtSource art = FrontEnds.artSource(bundle);
+		Map<String, int[]> skipped = new java.util.concurrent.ConcurrentHashMap<>();
+		FittedShapes.collectSkipped(skipped);
+		try {
+			ShapePlanner.plan(front.describe(bundle), List.of(), ShapeParams.current(), Occupancy.NONE, new ArtUnitProbe(art));
+		} finally {
+			FittedShapes.collectSkipped(null);
+		}
+		JsonArray list = new JsonArray();
+		for (Map.Entry<String, int[]> e : new TreeMap<>(skipped).entrySet()) {
+			String key = e.getKey();
+			int slash = key.lastIndexOf('/');
+			String atlas = key.substring(0, slash);
+			int[] ids = java.util.Arrays.stream(key.substring(slash + 1).split("-")).mapToInt(Integer::parseInt).toArray();
+			int[][] tiles = tiles(art, atlas, ids);
+			boolean complete = true;
+			for (int[] t : tiles) {
+				complete &= t != null;
+			}
+			if (!complete) {
+				continue;
+			}
+			int[] shades = drawing(tiles, art.artPx());
+			byte[] bytes = new byte[shades.length];
+			for (int i = 0; i < shades.length; i++) {
+				bytes[i] = (byte) shades[i];
+			}
+			JsonObject cell = new JsonObject();
+			cell.addProperty("cell", key);
+			cell.addProperty("atlas", atlas);
+			cell.addProperty("uses", e.getValue()[0]);
+			int ground = e.getValue()[1];
+			if (e.getValue()[2] != 0) {
+				cell.addProperty("raised", true);
+			}
+			int[][] floor = ground >= 0 ? tiles(art, atlas, new int[] {ground, ground, ground, ground}) : null;
+			if (floor != null && floor[0] != null) {
+				// the object: what differs from the floor drawn under it (a balloon over a market's paving)
+				int[] under = drawing(floor, art.artPx());
+				boolean[] drawn = new boolean[shades.length];
+				for (int i = 0; i < shades.length; i++) {
+					drawn[i] = shades[i] >= 0 && shades[i] != under[i];
+				}
+				cell.addProperty("ground", ground);
+				cell.addProperty("groundMask", bits(drawn));
+			}
+			cell.addProperty("shades", Base64.getEncoder().encodeToString(bytes));
+			cell.addProperty("hullMask", bits(Hulls.mask(shades, new boolean[shades.length], W, W)));
+			cell.add("variants", new JsonArray());
+			list.add(cell);
+		}
+		JsonObject root = new JsonObject();
+		root.addProperty("game", bundle.game());
+		root.addProperty("artPx", art.artPx());
+		root.add("cells", list);
+		Files.writeString(out, new GsonBuilder().create().toJson(root) + "\n", StandardCharsets.UTF_8);
+		System.out.println("candidates: " + bundle.game() + " " + list.size() + " cells, " + skipped.values().stream().mapToInt(v -> v[0]).sum() + " placements");
+	}
+
+	/** Every cell of one map as the planner sees it with the jar's table on (UnitLocations.describe). */
+	static void cells(Path bundleDir, String mapId, Path out) throws Exception {
+		ExportBundle bundle = ExportBundle.open(bundleDir);
+		GameFrontEnd front = FrontEnds.forGame(bundle.game());
+		dev.kantobridge.scene.Scene scene = front.describe(bundle);
+		Map<String, String> why = new java.util.concurrent.ConcurrentHashMap<>();
+		FittedShapes.collectWhy(why);
+		ShapePlan plan;
+		try {
+			plan = ShapePlanner.plan(scene, List.of(), ShapeParams.current(), Occupancy.NONE, new ArtUnitProbe(FrontEnds.artSource(bundle)));
+		} finally {
+			FittedShapes.collectWhy(null);
+		}
+		JsonArray rows = new JsonArray();
+		dev.kantobridge.builder.shape.UnitLocations.describe(scene, plan, mapId, why).forEach(rows::add);
+		Files.writeString(out, new GsonBuilder().create().toJson(rows) + "\n", StandardCharsets.UTF_8);
+		System.out.println("cells: " + mapId + " " + rows.size());
 	}
 
 	static void locate(Path bundleDir, Path out) throws Exception {

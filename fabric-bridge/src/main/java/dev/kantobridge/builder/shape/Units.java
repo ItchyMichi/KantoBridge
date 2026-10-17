@@ -105,12 +105,14 @@ final class Units {
 			for (int cx = 0; cx < map.w(); cx++) {
 				if (held != null && heldCell(map, held, cx, cy)) {
 					// A building's claim holds a tile of this cell (P2).
+					why(map, cx, cy, "building");
 					continue;
 				}
 				MapLayout.Ramp ramp = layout == null ? null : layout.ramp(cx, cy);
 				if (ramp != null && map.kind(cx, cy) == CellKind.WALK) {
 					standUnit(map, atlas, atlasIndex, cx, cy, stairClass(ramp.dir()), List.of(clamp(8 * ramp.rise())), keys, decor, floor, units,
 							mapGround, indoor, tally, "ramp");
+					why(map, cx, cy, "ramp");
 					continue;
 				}
 				String pinned = classes == null ? null : classes.unitClass(cx, cy);
@@ -124,16 +126,27 @@ final class Units {
 					} else if (unitPin) {
 						tally.merge("pin_not_solid", 1, Integer::sum);
 					}
+					why(map, cx, cy, map.kind(cx, cy).name().toLowerCase(java.util.Locale.ROOT));
 					continue;
 				}
-				if (!low(map, blocks, mask, cx, cy)) {
+				// A cell Tier A raised (taller than one cell, but no roof or building shape) still takes a reviewed voxel shape from
+				// the fitted shapes table: a market stall's jars and balloons in one solid block of stalls (FITTED_SHAPES.md section 13).
+				boolean raisedFit = !unitPin && unshaped(map, mask, cx, cy) && FittedShapes.voxels(map.atlas(), tiles(map, cx, cy));
+				if (!low(map, blocks, mask, cx, cy) && !raisedFit) {
 					if (unitPin) {
 						tally.merge("pin_not_low", 1, Integer::sum);
+					}
+					why(map, cx, cy, "not_low");
+					Map<String, int[]> seen = SKIPPED;
+					if (seen != null && !unitPin && unshaped(map, mask, cx, cy)) {
+						int g = ground(map, cx, cy, grass, frames, mapGround);
+						seen.merge(FittedShapes.key(map.atlas(), tiles(map, cx, cy)), new int[] {1, g, 1}, Units::mergeSkipped);
 					}
 					continue;
 				}
 				if (pinned != null && !unitPin) {
 					// The profile pins this cell to classes that are not units: it stays what Tier A made it.
+					why(map, cx, cy, "pinned_other");
 					continue;
 				}
 				int[] tiles = tiles(map, cx, cy);
@@ -159,11 +172,21 @@ final class Units {
 						&& probe.shaped(map.atlas(), tiles, context)) {
 					source = "probe";
 				}
+				// The fitted shapes table (docs/specs/FITTED_SHAPES.md) re-picks a unit the profile doesn't pin, and makes one
+				// of a cell it holds a shape for even where none of the rules above would (a jar in a row of jars).
+				FittedShapes.Entry fit = unitPin ? null : FittedShapes.get(map.atlas(), tiles);
+				if (source == null && fit != null && !FittedShapes.COLUMNS.equals(fit.cls())) {
+					source = "fit";
+				}
 				if (source == null) {
+					why(map, cx, cy, "no_rule");
+					Map<String, int[]> seen = SKIPPED;
+					if (seen != null) {
+						int g = ground(map, cx, cy, grass, frames, mapGround);
+						seen.merge(FittedShapes.key(map.atlas(), tiles), new int[] {1, g, 0}, Units::mergeSkipped);
+					}
 					continue;
 				}
-				// The fitted shapes table (docs/specs/FITTED_SHAPES.md) re-picks a unit the profile doesn't pin.
-				FittedShapes.Entry fit = unitPin ? null : FittedShapes.get(map.atlas(), tiles);
 				if (fit != null && FittedShapes.COLUMNS.equals(fit.cls())) {
 					tally.merge("fit_columns", 1, Integer::sum);
 					continue;
@@ -173,6 +196,7 @@ final class Units {
 							fit.cls(), 0, fit.params());
 					source = "fit";
 				}
+				why(map, cx, cy, "unit:" + source);
 				tally.merge(source, 1, Integer::sum);
 				int propGround = unitPin ? classes.propGround(tiles) : -1;
 				int g = propGround >= 0 ? propGround : ground(map, cx, cy, grass, frames, mapGround);
@@ -194,6 +218,29 @@ final class Units {
 				units.add(new Cell(cx, cy, first, foliage, source));
 			}
 		}
+	}
+
+	/**
+	 * FitTool's candidates (docs/specs/FITTED_SHAPES.md section 13): when set, every solid low cell no rule made a unit is
+	 * counted here by its key, with the ground tile the planner would put under it (the first seen) and whether Tier A raised
+	 * it (taller than one cell, no roof or building shape): {count, ground, raised}.
+	 * Null (off) in the game.
+	 */
+	static volatile @Nullable Map<String, int[]> SKIPPED;
+
+	/** FitTool cells: why each cell is or isn't a unit, by "map:cx:cy". Null (off) in the game. */
+	static volatile @Nullable Map<String, String> WHY;
+
+	private static void why(SceneMap map, int cx, int cy, String reason) {
+		Map<String, String> into = WHY;
+		if (into != null) {
+			into.put(map.id() + ":" + cx + ":" + cy, reason);
+		}
+	}
+
+	/** Collect skipped cells into {@code into} (null stops). */
+	static void collectSkipped(@Nullable Map<String, int[]> into) {
+		SKIPPED = into;
 	}
 
 	/** The walkable cells P3 stands a unit on (a rising stair, a relief), by their top-left tile's class. */
@@ -364,6 +411,25 @@ final class Units {
 	}
 
 	/** A cell's columns all stand at most perCell blocks high, without a roof. */
+	/** No column of the cell is part of a roof or building shape (Tier A's shape mask). */
+	private static boolean unshaped(SceneMap map, int[] mask, int cx, int cy) {
+		int per = map.perCell();
+		int cols = map.artCols();
+		for (int dy = 0; dy < per; dy++) {
+			for (int dx = 0; dx < per; dx++) {
+				if (mask[(cy * per + dy) * cols + cx * per + dx] != 0) {
+					return false;
+				}
+			}
+		}
+		return true;
+	}
+
+	/** {count, ground (the first seen), raised (any placement taller than one cell)}. */
+	private static int[] mergeSkipped(int[] a, int[] b) {
+		return new int[] {a[0] + b[0], a[1] >= 0 ? a[1] : b[1], a[2] | b[2]};
+	}
+
 	private static boolean low(SceneMap map, int[] blocks, int[] mask, int cx, int cy) {
 		int per = map.perCell();
 		int cols = map.artCols();

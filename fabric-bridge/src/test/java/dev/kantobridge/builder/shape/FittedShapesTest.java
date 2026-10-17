@@ -97,6 +97,31 @@ class FittedShapesTest {
 	}
 
 	@Test
+	void aShapeInTheTableMakesAUnitWhereNoRuleWould() {
+		SceneMap walls = surface("WALLS", "AAAA..", "AAAA..", "......", "......");
+		assertTrue(plan(walls).units().isEmpty(), "a repeating wall: no unit by the rules");
+		int a = tile('A');
+		FittedShapes.useForTest(Map.of(FittedShapes.key(ShapeFixtures.ATLAS, new int[] {a, a, a, a}), new FittedShapes.Entry("can", List.of(3, 0, 8, 0, 0))));
+		ShapePlanner.MapShapes shapes = plan(walls);
+		assertEquals(2, shapes.units().size(), "a row of jars: every cell the table holds a shape for is a unit");
+		assertEquals("fit", shapes.units().get(0).source());
+	}
+
+	@Test
+	void aVoxelShapeInTheTableTakesARaisedCell() {
+		String row = "AAAAAAAAAAAA";
+		SceneMap block = surface("BLOCK", row, row, row, row, row, row, row, row, "............", "............");
+		int before = plan(block).units().size();
+		int a = tile('A');
+		byte[] bits = new byte[FittedShapes.VOXEL_BYTES];
+		bits[0] = 1;
+		FittedShapes.useForTest(Map.of(FittedShapes.key(ShapeFixtures.ATLAS, new int[] {a, a, a, a}), new FittedShapes.Entry("voxels", List.of(), bits)));
+		ShapePlanner.MapShapes shapes = plan(block);
+		assertTrue(before < 24, "the rules leave part of a 6 x 4 cell block as Tier A columns (" + before + " units)");
+		assertEquals(24, shapes.units().size(), "a reviewed voxel shape takes every cell of the block, raised ones too");
+	}
+
+	@Test
 	void aColumnsFitKeepsNoUnit() {
 		SceneMap map = surface("LONE", LONE.split("\n"));
 		FittedShapes.useForTest(Map.of(lone(), new FittedShapes.Entry("columns", List.of())));
