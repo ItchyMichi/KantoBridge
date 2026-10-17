@@ -106,3 +106,25 @@ were four runs per cell: the anime and the general model, each grey and tinted.
 - **Only 3 of the 23 beat today's pick by the margin.** The models now exist, but the builders seldom match them better.
   The models are in the user's viewer (kb-hub) to inspect before deciding whether to rerun all failures this way.
 - FitTool's report rows gain `fit_voxels` (the best candidate's occupancy) for the viewer.
+
+## 8. Carving and depth (2026-10-17)
+
+The upscaler test's models of the fence (and other tiled pieces) were unusable: misaligned runs voted into noise, and a
+repeating tile isn't an object. Two alternatives were tried on the same 24 cells:
+
+- **Carved** (`tools/shape_fit/carve.py`, plain Python): only runs whose south view matches the drawing (view IoU ≥ 0.75,
+  at least the best two), each trimmed to the drawing's silhouette. They vote, and drawn pixels left empty get their
+  row's median depth. The front then always matches the sprite. It also flags `tiled_x` / `tiled_y` cells, whose
+  drawing continues across opposite edges (fences, walls, ledges: 7 of the 24).
+- **Depth** (`tools/shape_fit/depth_test.py`): Depth Anything V2 Small (Apache-2.0; the larger versions are
+  non-commercial) on the sprite and its four upscaled prompts, averaged per drawn pixel. Each pixel becomes a column
+  centred in the cell, from 2 voxels thick (farthest) to the foreground's widest row (nearest). It runs on a CPU.
+
+| Version | Mean IoU, best fit | Mean IoU, today's pick | Cells kept (of 24) |
+|---|---|---|---|
+| Vote (section 7) | 0.27 | 0.13 | 3 |
+| Carved | 0.41 | 0.28 | 6 |
+| Depth | 0.53 | 0.36 | 11 |
+
+The depth relief is clean and aligned, but its thickness rule makes a tiled piece such as a fence a thick block. Tiled
+cells should get a thin cap (or be left to rules) before a full run.
