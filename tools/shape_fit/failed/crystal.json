@@ -1,7 +1,7 @@
 {
  "kb_fitted_shapes_failed": 1,
  "game": "crystal",
- "note": "Cells and buildings TRELLIS.2 gave no usable model for: fewer than 3 of its 4 prompt runs survived (docs/specs/FITTED_SHAPES.md). They keep the planner's own pick; rerun them through another method.",
+ "note": "Cells and buildings TRELLIS.2 gave no usable model for: fewer than 3 of its 4 prompt runs survived (docs/specs/FITTED_SHAPES.md). They keep the planner's own pick; rerun them through another method. The depth run (section 9) added a 'depth' entry per cell; 'in_table' ones now have a shape.",
  "cells": [
   {
    "cell": "g3q/0-0-0-0",
@@ -10,7 +10,10 @@
    ],
    "kept_runs": 0,
    "runs": [],
-   "error": "ValueError('zero-size array to reduction operation minimum which has no identity')"
+   "error": "ValueError('zero-size array to reduction operation minimum which has no identity')",
+   "depth": {
+    "rule": "pattern: today's pick stands"
+   }
   },
   {
    "cell": "g3q/1042-1043-2074-2074",
@@ -36,7 +39,14 @@
      "result": "kept",
      "depth": 1.0
     }
-   ]
+   ],
+   "depth": {
+    "rule": "tiled: thin",
+    "fit": "can:0,0,4,0,2",
+    "fit_iou": 0.321,
+    "today_iou": 0.117,
+    "in_table": false
+   }
   },
   {
    "cell": "g3q/1044-1045-969-970",
@@ -62,7 +72,14 @@
      "style": "tint-x2",
      "result": "shell"
     }
-   ]
+   ],
+   "depth": {
+    "rule": "tiled: thin",
+    "fit": "cylinder",
+    "fit_iou": 0.315,
+    "today_iou": 0.074,
+    "in_table": false
+   }
   },
   {
    "cell": "g3q/111-112-115-116",
@@ -87,7 +104,14 @@
      "style": "tint-x2",
      "result": "shell"
     }
-   ]
+   ],
+   "depth": {
+    "rule": "free-standing",
+    "fit": "cylinder",
+    "fit_iou": 0.507,
+    "today_iou": 0.318,
+    "in_table": true
+   }
   },
   {
    "cell": "g3q/1166-1167-1168-1169",
@@ -112,7 +136,14 @@
      "style": "tint-x2",
      "result": "shell"
     }
-   ]
+   ],
+   "depth": {
+    "rule": "free-standing",
+    "fit": "billboard",
+    "fit_iou": 0.71,
+    "today_iou": 0.385,
+    "in_table": true
+   }
   },
   {
    "cell": "g3q/1233-1233-1232-1274",
@@ -139,7 +170,14 @@
      "result": "kept",
      "depth": 1.0
     }
-   ]
+   ],
+   "depth": {
+    "rule": "free-standing",
+    "fit": "can:9,0,4,0,0",
+    "fit_iou": 0.513,
+    "today_iou": 0.349,
+    "in_table": true
+   }
   },
   {
    "cell": "g3q/1243-1244-1245-1246",
@@ -166,7 +204,14 @@
      "result": "kept",
      "depth": 1.0
     }
-   ]
+   ],
+   "depth": {
+    "rule": "free-standing",
+    "fit": "can:0,6,4,0,4",
+    "fit_iou": 0.508,
+    "today_iou": 0.392,
+    "in_table": true
+   }
   },
   {
    "cell": "g3q/1487-1488-1491-1491",
@@ -193,7 +238,14 @@
      "result": "kept",
      "depth": 1.0
     }
-   ]
+   ],
+   "depth": {
+    "rule": "free-standing",
+    "fit": "can:0,0,4,0,2",
+    "fit_iou": 0.601,
+    "today_iou": 0.576,
+    "in_table": false
+   }
   },
   {
    "cell": "g3q/1495-1487-1491-1491",
@@ -220,7 +272,14 @@
      "result": "kept",
      "depth": 1.0
     }
-   ]
+   ],
+   "depth": {
+    "rule": "free-standing",
+    "fit": "can:0,0,4,0,2",
+    "fit_iou": 0.635,
+    "today_iou": 0.617,
+    "in_table": false
+   }
   },
   {
    "cell": "g3q/1987-1987-2062-2062",
@@ -246,7 +305,10 @@
      "style": "tint-x2",
      "result": "shell"
     }
-   ]
+   ],
+   "depth": {
+    "rule": "pattern: today's pick stands"
+   }
   },
   {
    "cell": "g3q/2185-2185-2186-2186",
@@ -272,7 +334,14 @@
      "result": "kept",
      "depth": 1.0
     }
-   ]
+   ],
+   "depth": {
+    "rule": "tiled: thin",
+    "fit": "can:0,0,4,0,6",
+    "fit_iou": 0.313,
+    "today_iou": 0.278,
+    "in_table": false
+   }
   },
   {
    "cell": "g3q/2479-2480-2482-2483",
@@ -297,7 +366,10 @@
      "style": "tint-x2",
      "result": "shell"
     }
-   ]
+   ],
+   "depth": {
+    "rule": "pattern: today's pick stands"
+   }
   },
   {
    "cell": "g3q/2655-2656-2658-2659",
@@ -322,7 +394,14 @@
      "style": "tint-x2",
      "result": "shell"
     }
-   ]
+   ],
+   "depth": {
+    "rule": "free-standing",
+    "fit": "cylinder",
+    "fit_iou": 0.52,
+    "today_iou": 0.52,
+    "in_table": false
+   }
   },
   {
    "cell": "g3q/2708-2709-2711-2712",
@@ -347,7 +426,14 @@
      "style": "tint-x2",
      "result": "shell"
     }
-   ]
+   ],
+   "depth": {
+    "rule": "free-standing",
+    "fit": "can:0,3,4,0,2",
+    "fit_iou": 0.581,
+    "today_iou": 0.562,
+    "in_table": false
+   }
   },
   {
    "cell": "g3q/2709-2710-2713-2711",
@@ -372,7 +458,14 @@
      "style": "tint-x2",
      "result": "shell"
     }
-   ]
+   ],
+   "depth": {
+    "rule": "free-standing",
+    "fit": "can:0,3,4,0,2",
+    "fit_iou": 0.581,
+    "today_iou": 0.558,
+    "in_table": false
+   }
   },
   {
    "cell": "g3q/2709-2710-2722-2723",
@@ -398,7 +491,14 @@
      "style": "tint-x2",
      "result": "shell"
     }
-   ]
+   ],
+   "depth": {
+    "rule": "free-standing",
+    "fit": "can:0,0,4,0,2",
+    "fit_iou": 0.518,
+    "today_iou": 0.476,
+    "in_table": false
+   }
   },
   {
    "cell": "g3q/2718-2719-2720-2721",
@@ -425,7 +525,14 @@
      "result": "kept",
      "depth": 0.06
     }
-   ]
+   ],
+   "depth": {
+    "rule": "free-standing",
+    "fit": "can:3,3,14,0,0",
+    "fit_iou": 0.607,
+    "today_iou": 0.201,
+    "in_table": true
+   }
   },
   {
    "cell": "g3q/2989-2990-2946-2946",
@@ -450,7 +557,14 @@
      "style": "tint-x2",
      "result": "shell"
     }
-   ]
+   ],
+   "depth": {
+    "rule": "free-standing",
+    "fit": "columns",
+    "fit_iou": 0.508,
+    "today_iou": 0.216,
+    "in_table": true
+   }
   },
   {
    "cell": "g3q/3305-3306-2848-2848",
@@ -477,7 +591,14 @@
      "result": "kept",
      "depth": 0.88
     }
-   ]
+   ],
+   "depth": {
+    "rule": "free-standing",
+    "fit": "cylinder",
+    "fit_iou": 0.734,
+    "today_iou": 0.241,
+    "in_table": true
+   }
   },
   {
    "cell": "g3q/3426-3427-3428-3429",
@@ -502,7 +623,14 @@
      "style": "tint-x2",
      "result": "shell"
     }
-   ]
+   ],
+   "depth": {
+    "rule": "free-standing",
+    "fit": "columns",
+    "fit_iou": 0.517,
+    "today_iou": 0.212,
+    "in_table": true
+   }
   },
   {
    "cell": "g3q/3470-3471-3472-3473",
@@ -528,7 +656,14 @@
      "style": "tint-x2",
      "result": "shell"
     }
-   ]
+   ],
+   "depth": {
+    "rule": "free-standing",
+    "fit": "billboard",
+    "fit_iou": 0.755,
+    "today_iou": 0.217,
+    "in_table": true
+   }
   },
   {
    "cell": "g3q/3606-3606-3650-3651",
@@ -553,7 +688,14 @@
      "style": "tint-x2",
      "result": "shell"
     }
-   ]
+   ],
+   "depth": {
+    "rule": "free-standing",
+    "fit": "columns",
+    "fit_iou": 0.33,
+    "today_iou": 0.254,
+    "in_table": false
+   }
   },
   {
    "cell": "g3q/366-362-3882-3882",
@@ -579,7 +721,14 @@
      "result": "kept",
      "depth": 1.0
     }
-   ]
+   ],
+   "depth": {
+    "rule": "free-standing",
+    "fit": "cylinder",
+    "fit_iou": 0.64,
+    "today_iou": 0.64,
+    "in_table": false
+   }
   },
   {
    "cell": "g3q/366-366-3882-3882",
@@ -605,7 +754,14 @@
      "result": "kept",
      "depth": 1.0
     }
-   ]
+   ],
+   "depth": {
+    "rule": "free-standing",
+    "fit": "cylinder",
+    "fit_iou": 0.647,
+    "today_iou": 0.647,
+    "in_table": false
+   }
   },
   {
    "cell": "g3q/367-368-369-370",
@@ -632,7 +788,14 @@
      "result": "kept",
      "depth": 1.0
     }
-   ]
+   ],
+   "depth": {
+    "rule": "free-standing",
+    "fit": "can:0,0,4,0,2",
+    "fit_iou": 0.554,
+    "today_iou": 0.404,
+    "in_table": true
+   }
   },
   {
    "cell": "g3q/367-368-371-372",
@@ -659,7 +822,14 @@
      "result": "kept",
      "depth": 1.0
     }
-   ]
+   ],
+   "depth": {
+    "rule": "free-standing",
+    "fit": "cylinder",
+    "fit_iou": 0.591,
+    "today_iou": 0.397,
+    "in_table": true
+   }
   },
   {
    "cell": "g3q/367-368-751-752",
@@ -686,7 +856,14 @@
      "result": "kept",
      "depth": 1.0
     }
-   ]
+   ],
+   "depth": {
+    "rule": "free-standing",
+    "fit": "can:0,3,4,0,2",
+    "fit_iou": 0.523,
+    "today_iou": 0.368,
+    "in_table": true
+   }
   },
   {
    "cell": "g3q/369-370-371-372",
@@ -713,7 +890,14 @@
      "result": "kept",
      "depth": 1.0
     }
-   ]
+   ],
+   "depth": {
+    "rule": "free-standing",
+    "fit": "can:9,3,16,0,4",
+    "fit_iou": 0.349,
+    "today_iou": 0.248,
+    "in_table": false
+   }
   },
   {
    "cell": "g3q/3832-3833-3836-3837",
@@ -738,7 +922,14 @@
      "style": "tint-x2",
      "result": "shell"
     }
-   ]
+   ],
+   "depth": {
+    "rule": "free-standing",
+    "fit": "cylinder",
+    "fit_iou": 0.513,
+    "today_iou": 0.36,
+    "in_table": true
+   }
   },
   {
    "cell": "g3q/3834-3835-3838-3839",
@@ -765,7 +956,14 @@
      "result": "kept",
      "depth": 1.07
     }
-   ]
+   ],
+   "depth": {
+    "rule": "free-standing",
+    "fit": "cylinder",
+    "fit_iou": 0.545,
+    "today_iou": 0.399,
+    "in_table": true
+   }
   },
   {
    "cell": "g3q/3843-360-3843-3843",
@@ -791,7 +989,14 @@
      "style": "tint-x2",
      "result": "shell"
     }
-   ]
+   ],
+   "depth": {
+    "rule": "free-standing",
+    "fit": "billboard",
+    "fit_iou": 0.439,
+    "today_iou": 0.217,
+    "in_table": true
+   }
   },
   {
    "cell": "g3q/3843-3843-3843-360",
@@ -816,7 +1021,14 @@
      "style": "tint-x2",
      "result": "shell"
     }
-   ]
+   ],
+   "depth": {
+    "rule": "free-standing",
+    "fit": "columns",
+    "fit_iou": 0.432,
+    "today_iou": 0.217,
+    "in_table": true
+   }
   },
   {
    "cell": "g3q/3859-3860-3859-3863",
@@ -841,7 +1053,14 @@
      "style": "tint-x2",
      "result": "shell"
     }
-   ]
+   ],
+   "depth": {
+    "rule": "free-standing",
+    "fit": "can:9,6,16,0,0",
+    "fit_iou": 0.578,
+    "today_iou": 0.146,
+    "in_table": true
+   }
   },
   {
    "cell": "g3q/3859-3863-3859-3866",
@@ -866,7 +1085,14 @@
      "style": "tint-x2",
      "result": "shell"
     }
-   ]
+   ],
+   "depth": {
+    "rule": "free-standing",
+    "fit": "can:3,3,16,0,0",
+    "fit_iou": 0.621,
+    "today_iou": 0.228,
+    "in_table": true
+   }
   },
   {
    "cell": "g3q/3859-3866-3859-3867",
@@ -891,7 +1117,14 @@
      "style": "tint-x2",
      "result": "shell"
     }
-   ]
+   ],
+   "depth": {
+    "rule": "free-standing",
+    "fit": "can:0,3,4,0,0",
+    "fit_iou": 0.642,
+    "today_iou": 0.205,
+    "in_table": true
+   }
   },
   {
    "cell": "g3q/3863-3859-3866-3859",
@@ -916,7 +1149,14 @@
      "style": "tint-x2",
      "result": "shell"
     }
-   ]
+   ],
+   "depth": {
+    "rule": "free-standing",
+    "fit": "can:3,6,16,0,0",
+    "fit_iou": 0.615,
+    "today_iou": 0.22,
+    "in_table": true
+   }
   },
   {
    "cell": "g3q/3866-3859-3867-3859",
@@ -941,7 +1181,14 @@
      "style": "tint-x2",
      "result": "shell"
     }
-   ]
+   ],
+   "depth": {
+    "rule": "free-standing",
+    "fit": "can:0,3,4,0,0",
+    "fit_iou": 0.569,
+    "today_iou": 0.241,
+    "in_table": true
+   }
   },
   {
    "cell": "g3q/3894-3895-3897-3898",
@@ -968,7 +1215,14 @@
      "result": "kept",
      "depth": 1.6
     }
-   ]
+   ],
+   "depth": {
+    "rule": "free-standing",
+    "fit": "can:0,6,4,0,0",
+    "fit_iou": 0.616,
+    "today_iou": 0.238,
+    "in_table": true
+   }
   },
   {
    "cell": "g3q/393-393-394-394",
@@ -993,7 +1247,14 @@
      "style": "tint-x2",
      "result": "shell"
     }
-   ]
+   ],
+   "depth": {
+    "rule": "tiled: thin",
+    "fit": "can:0,0,4,0,6",
+    "fit_iou": 0.321,
+    "today_iou": 0.281,
+    "in_table": false
+   }
   },
   {
    "cell": "g3q/397-406-399-396",
@@ -1018,7 +1279,14 @@
      "style": "tint-x2",
      "result": "shell"
     }
-   ]
+   ],
+   "depth": {
+    "rule": "free-standing",
+    "fit": "columns",
+    "fit_iou": 0.366,
+    "today_iou": 0.191,
+    "in_table": false
+   }
   },
   {
    "cell": "g3q/438-438-438-438",
@@ -1045,7 +1313,14 @@
      "result": "kept",
      "depth": 1.0
     }
-   ]
+   ],
+   "depth": {
+    "rule": "free-standing",
+    "fit": "cylinder",
+    "fit_iou": 0.661,
+    "today_iou": 0.661,
+    "in_table": false
+   }
   },
   {
    "cell": "g3q/442-442-442-442",
@@ -1054,7 +1329,10 @@
    ],
    "kept_runs": 0,
    "runs": [],
-   "error": "ValueError('zero-size array to reduction operation minimum which has no identity')"
+   "error": "ValueError('zero-size array to reduction operation minimum which has no identity')",
+   "depth": {
+    "rule": "pattern: today's pick stands"
+   }
   },
   {
    "cell": "g3q/4574-4575-4576-4577",
@@ -1081,7 +1359,10 @@
      "result": "kept",
      "depth": 0.06
     }
-   ]
+   ],
+   "depth": {
+    "rule": "pattern: today's pick stands"
+   }
   },
   {
    "cell": "g3q/4932-4976-5010-4997",
@@ -1106,7 +1387,14 @@
      "style": "tint-x2",
      "result": "shell"
     }
-   ]
+   ],
+   "depth": {
+    "rule": "tiled: thin",
+    "fit": "can:0,0,4,0,4",
+    "fit_iou": 0.291,
+    "today_iou": 0.114,
+    "in_table": false
+   }
   },
   {
    "cell": "g3q/536-537-484-485",
@@ -1133,7 +1421,14 @@
      "result": "kept",
      "depth": 1.0
     }
-   ]
+   ],
+   "depth": {
+    "rule": "free-standing",
+    "fit": "can:0,0,4,0,2",
+    "fit_iou": 0.484,
+    "today_iou": 0.469,
+    "in_table": false
+   }
   },
   {
    "cell": "g3q/773-773-773-773",
@@ -1142,7 +1437,10 @@
    ],
    "kept_runs": 0,
    "runs": [],
-   "error": "ValueError('zero-size array to reduction operation minimum which has no identity')"
+   "error": "ValueError('zero-size array to reduction operation minimum which has no identity')",
+   "depth": {
+    "rule": "pattern: today's pick stands"
+   }
   },
   {
    "cell": "g3q/830-831-832-833",
@@ -1168,7 +1466,14 @@
      "style": "tint-x2",
      "result": "shell"
     }
-   ]
+   ],
+   "depth": {
+    "rule": "free-standing",
+    "fit": "can:3,3,14,0,0",
+    "fit_iou": 0.481,
+    "today_iou": 0.372,
+    "in_table": true
+   }
   },
   {
    "cell": "g3q/9-10-11-12",
@@ -1193,7 +1498,10 @@
      "style": "tint-x2",
      "result": "shell"
     }
-   ]
+   ],
+   "depth": {
+    "rule": "pattern: today's pick stands"
+   }
   }
  ],
  "structs": [
@@ -1319,6 +1627,11 @@
   "cells": 85,
   "cells_failed": 48,
   "structs": 69,
-  "structs_failed": 5
+  "structs_failed": 5,
+  "depth": {
+   "pattern: today's pick stands": 7,
+   "no better fit": 18,
+   "in table": 23
+  }
  }
 }

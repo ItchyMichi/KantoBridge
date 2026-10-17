@@ -128,3 +128,30 @@ repeating tile isn't an object. Two alternatives were tried on the same 24 cells
 
 The depth relief is clean and aligned, but its thickness rule makes a tiled piece such as a fence a thick block. Tiled
 cells should get a thin cap (or be left to rules) before a full run.
+
+## 9. The depth run over every failure (2026-10-17)
+
+`tools/shape_fit/depth_all.py` ran section 8's depth version on all 311 cells without a model, on an 8-vCPU CPU pod
+(Real-ESRGAN and Depth Anything V2 Small on CPU, about 15–20 s per cell). Repeating tiles get rules instead of the
+free-standing thickness:
+
+| Cell | Rule |
+|---|---|
+| Free-standing | 2 voxels (farthest) up to the foreground's widest row (nearest), as deep as it is wide |
+| Tiled across one axis (fence, rail, ledge, post run) | 2–4 voxels: thin as a standee |
+| Tiled across both axes (wall or cliff pattern) | no model; today's pick stands |
+
+Then FitTool fitted the builders and `tools/shape_fit/merge_depth.py` added the kept fits to the tables, marked
+`"from": "depth"`. A kept fit beat today's pick by `MARGIN` and reached `MIN_IOU`; no key the first run kept is
+replaced. The failure lists gained a `depth` entry per cell.
+
+| Game | Failed cells | Free-standing | Tiled, thin | Pattern (no model) | Added to the table | No better fit |
+|---|---|---|---|---|---|---|
+| Blue | 29 | 17 | 10 | 2 | 18 | 9 |
+| Crystal | 48 | 36 | 5 | 7 | 23 | 18 |
+| Emerald | 234 | 153 | 67 | 14 | 103 | 117 |
+
+144 of the 311 now have a fitted shape. With both runs' entries, the planner re-picks 6,166 unit placements in Blue
+(5,735 before this run), 8,652 in Crystal (1,675) and 5,052 in Emerald (391), and leaves 2, 102 and 486 cells to Tier
+A (`FitTool applied`). The full check passed. 144 keep today's pick because no builder beat it, and 23 are patterns left to
+rules. The models, fits and both sprites (masked and whole) are in the user's viewer (kb-hub, set `depth-all`).

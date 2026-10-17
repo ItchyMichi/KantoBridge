@@ -3,9 +3,43 @@
   "game": "crystal",
   "planner": "kb-shapes/11",
   "cells": {
+    "g3q/111-112-115-116": {
+      "class": "cylinder",
+      "iou": 0.507,
+      "from": "depth"
+    },
     "g3q/1130-1131-1132-1133": {
       "class": "columns",
       "iou": 0.853
+    },
+    "g3q/1166-1167-1168-1169": {
+      "class": "billboard",
+      "iou": 0.71,
+      "from": "depth"
+    },
+    "g3q/1233-1233-1232-1274": {
+      "class": "can",
+      "k": [
+        9,
+        0,
+        4,
+        0,
+        0
+      ],
+      "iou": 0.513,
+      "from": "depth"
+    },
+    "g3q/1243-1244-1245-1246": {
+      "class": "can",
+      "k": [
+        0,
+        6,
+        4,
+        0,
+        4
+      ],
+      "iou": 0.508,
+      "from": "depth"
     },
     "g3q/1252-1253-1254-1255": {
       "class": "cylinder",
@@ -30,6 +64,18 @@
       "class": "signpost",
       "iou": 0.408
     },
+    "g3q/2718-2719-2720-2721": {
+      "class": "can",
+      "k": [
+        3,
+        3,
+        14,
+        0,
+        0
+      ],
+      "iou": 0.607,
+      "from": "depth"
+    },
     "g3q/2769-2770-2771-2772": {
       "class": "can",
       "k": [
@@ -41,17 +87,158 @@
       ],
       "iou": 0.409
     },
+    "g3q/2989-2990-2946-2946": {
+      "class": "columns",
+      "iou": 0.508,
+      "from": "depth"
+    },
+    "g3q/3305-3306-2848-2848": {
+      "class": "cylinder",
+      "iou": 0.734,
+      "from": "depth"
+    },
+    "g3q/3426-3427-3428-3429": {
+      "class": "columns",
+      "iou": 0.517,
+      "from": "depth"
+    },
+    "g3q/3470-3471-3472-3473": {
+      "class": "billboard",
+      "iou": 0.755,
+      "from": "depth"
+    },
     "g3q/360-3843-3843-3843": {
       "class": "columns",
       "iou": 0.573
+    },
+    "g3q/367-368-369-370": {
+      "class": "can",
+      "k": [
+        0,
+        0,
+        4,
+        0,
+        2
+      ],
+      "iou": 0.554,
+      "from": "depth"
+    },
+    "g3q/367-368-371-372": {
+      "class": "cylinder",
+      "iou": 0.591,
+      "from": "depth"
+    },
+    "g3q/367-368-751-752": {
+      "class": "can",
+      "k": [
+        0,
+        3,
+        4,
+        0,
+        2
+      ],
+      "iou": 0.523,
+      "from": "depth"
+    },
+    "g3q/3832-3833-3836-3837": {
+      "class": "cylinder",
+      "iou": 0.513,
+      "from": "depth"
+    },
+    "g3q/3834-3835-3838-3839": {
+      "class": "cylinder",
+      "iou": 0.545,
+      "from": "depth"
+    },
+    "g3q/3843-360-3843-3843": {
+      "class": "billboard",
+      "iou": 0.439,
+      "from": "depth"
     },
     "g3q/3843-3843-360-3843": {
       "class": "columns",
       "iou": 0.885
     },
+    "g3q/3843-3843-3843-360": {
+      "class": "columns",
+      "iou": 0.432,
+      "from": "depth"
+    },
+    "g3q/3859-3860-3859-3863": {
+      "class": "can",
+      "k": [
+        9,
+        6,
+        16,
+        0,
+        0
+      ],
+      "iou": 0.578,
+      "from": "depth"
+    },
+    "g3q/3859-3863-3859-3866": {
+      "class": "can",
+      "k": [
+        3,
+        3,
+        16,
+        0,
+        0
+      ],
+      "iou": 0.621,
+      "from": "depth"
+    },
+    "g3q/3859-3866-3859-3867": {
+      "class": "can",
+      "k": [
+        0,
+        3,
+        4,
+        0,
+        0
+      ],
+      "iou": 0.642,
+      "from": "depth"
+    },
+    "g3q/3863-3859-3866-3859": {
+      "class": "can",
+      "k": [
+        3,
+        6,
+        16,
+        0,
+        0
+      ],
+      "iou": 0.615,
+      "from": "depth"
+    },
+    "g3q/3866-3859-3867-3859": {
+      "class": "can",
+      "k": [
+        0,
+        3,
+        4,
+        0,
+        0
+      ],
+      "iou": 0.569,
+      "from": "depth"
+    },
     "g3q/3872-3873-3874-3875": {
       "class": "columns",
       "iou": 0.724
+    },
+    "g3q/3894-3895-3897-3898": {
+      "class": "can",
+      "k": [
+        0,
+        6,
+        4,
+        0,
+        0
+      ],
+      "iou": 0.616,
+      "from": "depth"
     },
     "g3q/393-393-449-394": {
       "class": "columns",
@@ -72,6 +259,18 @@
     "g3q/549-549-0-0": {
       "class": "cylinder",
       "iou": 0.781
+    },
+    "g3q/830-831-832-833": {
+      "class": "can",
+      "k": [
+        3,
+        3,
+        14,
+        0,
+        0
+      ],
+      "iou": 0.481,
+      "from": "depth"
     }
   },
   "structs_proposed": {
@@ -158,6 +357,7 @@
     "kept": 14,
     "buildings": 69,
     "buildings_fitted": 64,
-    "buildings_kept": 19
+    "buildings_kept": 19,
+    "kept_depth": 23
   }
 }

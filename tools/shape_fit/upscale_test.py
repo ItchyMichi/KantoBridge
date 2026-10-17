@@ -48,7 +48,8 @@ def upscale(model, rgba: np.ndarray, passes: int = 2) -> np.ndarray:
     alpha = np.repeat(a, 3, axis=2)
     out = []
     for img in (rgb, alpha):
-        t = torch.from_numpy(np.ascontiguousarray(img, dtype=np.float32)).permute(2, 0, 1)[None].cuda()
+        device = getattr(model, "device", None) or ("cuda" if torch.cuda.is_available() else "cpu")
+        t = torch.from_numpy(np.ascontiguousarray(img, dtype=np.float32)).permute(2, 0, 1)[None].to(device)
         with torch.no_grad():
             for _ in range(passes):
                 t = model(t).clamp(0, 1)

@@ -1,7 +1,7 @@
 {
  "kb_fitted_shapes_failed": 1,
  "game": "blue",
- "note": "Cells and buildings TRELLIS.2 gave no usable model for: fewer than 3 of its 4 prompt runs survived (docs/specs/FITTED_SHAPES.md). They keep the planner's own pick; rerun them through another method.",
+ "note": "Cells and buildings TRELLIS.2 gave no usable model for: fewer than 3 of its 4 prompt runs survived (docs/specs/FITTED_SHAPES.md). They keep the planner's own pick; rerun them through another method. The depth run (section 9) added a 'depth' entry per cell; 'in_table' ones now have a shape.",
  "cells": [
   {
    "cell": "tilesets.cavern/2-3-18-19",
@@ -27,7 +27,14 @@
      "result": "kept",
      "depth": 1.0
     }
-   ]
+   ],
+   "depth": {
+    "rule": "tiled: thin",
+    "fit": "signpost",
+    "fit_iou": 0.649,
+    "today_iou": 0.17,
+    "in_table": true
+   }
   },
   {
    "cell": "tilesets.cemetery/1-1-39-47",
@@ -52,7 +59,14 @@
      "style": "tint-x2",
      "result": "shell"
     }
-   ]
+   ],
+   "depth": {
+    "rule": "tiled: thin",
+    "fit": "can:3,6,16,0,0",
+    "fit_iou": 0.265,
+    "today_iou": 0.627,
+    "in_table": false
+   }
   },
   {
    "cell": "tilesets.club/29-13-21-22",
@@ -79,7 +93,14 @@
      "result": "kept",
      "depth": 1.0
     }
-   ]
+   ],
+   "depth": {
+    "rule": "free-standing",
+    "fit": "billboard",
+    "fit_iou": 0.65,
+    "today_iou": 0.287,
+    "in_table": true
+   }
   },
   {
    "cell": "tilesets.club/52-52-52-52",
@@ -104,7 +125,10 @@
      "style": "tint-x2",
      "result": "shell"
     }
-   ]
+   ],
+   "depth": {
+    "rule": "pattern: today's pick stands"
+   }
   },
   {
    "cell": "tilesets.facility/87-87-89-89",
@@ -131,7 +155,10 @@
      "result": "kept",
      "depth": 1.0
     }
-   ]
+   ],
+   "depth": {
+    "rule": "pattern: today's pick stands"
+   }
   },
   {
    "cell": "tilesets.forest/36-37-0-53",
@@ -156,7 +183,14 @@
      "style": "tint-x2",
      "result": "shell"
     }
-   ]
+   ],
+   "depth": {
+    "rule": "free-standing",
+    "fit": "cylinder",
+    "fit_iou": 0.549,
+    "today_iou": 0.283,
+    "in_table": true
+   }
   },
   {
    "cell": "tilesets.forest/38-39-54-48",
@@ -182,7 +216,14 @@
      "style": "tint-x2",
      "result": "shell"
     }
-   ]
+   ],
+   "depth": {
+    "rule": "free-standing",
+    "fit": "cylinder",
+    "fit_iou": 0.372,
+    "today_iou": 0.327,
+    "in_table": false
+   }
   },
   {
    "cell": "tilesets.forest/4-5-35-21",
@@ -208,7 +249,14 @@
      "style": "tint-x2",
      "result": "shell"
     }
-   ]
+   ],
+   "depth": {
+    "rule": "free-standing",
+    "fit": "cylinder",
+    "fit_iou": 0.685,
+    "today_iou": 0.181,
+    "in_table": true
+   }
   },
   {
    "cell": "tilesets.forest/48-48-10-11",
@@ -233,7 +281,14 @@
      "style": "tint-x2",
      "result": "shell"
     }
-   ]
+   ],
+   "depth": {
+    "rule": "free-standing",
+    "fit": "cylinder",
+    "fit_iou": 0.584,
+    "today_iou": 0.21,
+    "in_table": true
+   }
   },
   {
    "cell": "tilesets.forest/6-7-22-23",
@@ -260,7 +315,14 @@
      "result": "kept",
      "depth": 1.0
     }
-   ]
+   ],
+   "depth": {
+    "rule": "free-standing",
+    "fit": "can:0,6,4,0,0",
+    "fit_iou": 0.605,
+    "today_iou": 0.228,
+    "in_table": true
+   }
   },
   {
    "cell": "tilesets.forest/84-85-86-87",
@@ -286,7 +348,14 @@
      "result": "kept",
      "depth": 1.0
     }
-   ]
+   ],
+   "depth": {
+    "rule": "free-standing",
+    "fit": "cylinder",
+    "fit_iou": 0.778,
+    "today_iou": 0.778,
+    "in_table": false
+   }
   },
   {
    "cell": "tilesets.gate/17-1-14-15",
@@ -311,7 +380,14 @@
      "style": "tint-x2",
      "result": "shell"
     }
-   ]
+   ],
+   "depth": {
+    "rule": "free-standing",
+    "fit": "can:6,3,8,0,0",
+    "fit_iou": 0.479,
+    "today_iou": 0.23,
+    "in_table": true
+   }
   },
   {
    "cell": "tilesets.gate/5-6-21-22",
@@ -336,7 +412,14 @@
      "style": "tint-x2",
      "result": "shell"
     }
-   ]
+   ],
+   "depth": {
+    "rule": "free-standing",
+    "fit": "billboard",
+    "fit_iou": 0.732,
+    "today_iou": 0.215,
+    "in_table": true
+   }
   },
   {
    "cell": "tilesets.gate/72-72-74-74",
@@ -361,7 +444,14 @@
      "style": "tint-x2",
      "result": "shell"
     }
-   ]
+   ],
+   "depth": {
+    "rule": "free-standing",
+    "fit": "can:0,3,4,0,0",
+    "fit_iou": 0.612,
+    "today_iou": 0.162,
+    "in_table": true
+   }
   },
   {
    "cell": "tilesets.gym/5-5-16-16",
@@ -386,7 +476,14 @@
      "style": "tint-x2",
      "result": "shell"
     }
-   ]
+   ],
+   "depth": {
+    "rule": "free-standing",
+    "fit": "can:3,0,8,0,0",
+    "fit_iou": 0.627,
+    "today_iou": 0.153,
+    "in_table": true
+   }
   },
   {
    "cell": "tilesets.gym/69-70-86-86",
@@ -413,7 +510,14 @@
      "style": "tint-x2",
      "result": "shell"
     }
-   ]
+   ],
+   "depth": {
+    "rule": "tiled: thin",
+    "fit": "can:0,0,4,0,8",
+    "fit_iou": 0.399,
+    "today_iou": 0.314,
+    "in_table": false
+   }
   },
   {
    "cell": "tilesets.gym/7-8-23-24",
@@ -439,7 +543,14 @@
      "style": "tint-x2",
      "result": "shell"
     }
-   ]
+   ],
+   "depth": {
+    "rule": "tiled: thin",
+    "fit": "signpost",
+    "fit_iou": 0.66,
+    "today_iou": 0.266,
+    "in_table": true
+   }
   },
   {
    "cell": "tilesets.lobby/1-1-1-1",
@@ -466,7 +577,14 @@
      "result": "kept",
      "depth": 1.0
     }
-   ]
+   ],
+   "depth": {
+    "rule": "free-standing",
+    "fit": "columns",
+    "fit_iou": 0.202,
+    "today_iou": 0.154,
+    "in_table": false
+   }
   },
   {
    "cell": "tilesets.lobby/1-1-33-33",
@@ -491,7 +609,14 @@
      "style": "tint-x2",
      "result": "shell"
     }
-   ]
+   ],
+   "depth": {
+    "rule": "free-standing",
+    "fit": "can:0,0,16,0,0",
+    "fit_iou": 0.545,
+    "today_iou": 0.199,
+    "in_table": true
+   }
   },
   {
    "cell": "tilesets.lobby/38-39-48-21",
@@ -518,7 +643,14 @@
      "result": "kept",
      "depth": 1.0
     }
-   ]
+   ],
+   "depth": {
+    "rule": "tiled: thin",
+    "fit": "prop",
+    "fit_iou": 0.475,
+    "today_iou": 0.114,
+    "in_table": true
+   }
   },
   {
    "cell": "tilesets.overworld/13-36-55-52",
@@ -544,7 +676,14 @@
      "style": "tint-x2",
      "result": "shell"
     }
-   ]
+   ],
+   "depth": {
+    "rule": "free-standing",
+    "fit": "prop",
+    "fit_iou": 0.851,
+    "today_iou": 0.158,
+    "in_table": true
+   }
   },
   {
    "cell": "tilesets.overworld/29-36-55-52",
@@ -570,7 +709,14 @@
      "style": "tint-x2",
      "result": "shell"
     }
-   ]
+   ],
+   "depth": {
+    "rule": "free-standing",
+    "fit": "prop",
+    "fit_iou": 0.851,
+    "today_iou": 0.158,
+    "in_table": true
+   }
   },
   {
    "cell": "tilesets.overworld/39-44-54-55",
@@ -597,7 +743,14 @@
      "result": "kept",
      "depth": 1.0
     }
-   ]
+   ],
+   "depth": {
+    "rule": "free-standing",
+    "fit": "cylinder",
+    "fit_iou": 0.69,
+    "today_iou": 0.285,
+    "in_table": true
+   }
   },
   {
    "cell": "tilesets.plateau/45-45-45-45",
@@ -622,7 +775,14 @@
      "style": "tint-x2",
      "result": "shell"
     }
-   ]
+   ],
+   "depth": {
+    "rule": "tiled: thin",
+    "fit": "columns",
+    "fit_iou": 0.168,
+    "today_iou": 0.168,
+    "in_table": false
+   }
   },
   {
    "cell": "tilesets.pokecenter/40-40-40-40",
@@ -649,7 +809,14 @@
      "result": "kept",
      "depth": 1.0
     }
-   ]
+   ],
+   "depth": {
+    "rule": "tiled: thin",
+    "fit": "can:0,0,4,0,8",
+    "fit_iou": 0.282,
+    "today_iou": 0.139,
+    "in_table": false
+   }
   },
   {
    "cell": "tilesets.pokecenter/66-70-82-86",
@@ -676,7 +843,14 @@
      "result": "kept",
      "depth": 0.56
     }
-   ]
+   ],
+   "depth": {
+    "rule": "tiled: thin",
+    "fit": "signpost",
+    "fit_iou": 0.661,
+    "today_iou": 0.254,
+    "in_table": true
+   }
   },
   {
    "cell": "tilesets.ship/2-3-18-19",
@@ -703,7 +877,14 @@
      "style": "tint-x2",
      "result": "shell"
     }
-   ]
+   ],
+   "depth": {
+    "rule": "tiled: thin",
+    "fit": "can:0,0,4,0,8",
+    "fit_iou": 0.406,
+    "today_iou": 0.327,
+    "in_table": true
+   }
   },
   {
    "cell": "tilesets.ship/86-87-59-60",
@@ -728,7 +909,14 @@
      "style": "tint-x2",
      "result": "shell"
     }
-   ]
+   ],
+   "depth": {
+    "rule": "free-standing",
+    "fit": "billboard",
+    "fit_iou": 0.645,
+    "today_iou": 0.607,
+    "in_table": false
+   }
   },
   {
    "cell": "tilesets.ship_port/49-49-49-49",
@@ -754,7 +942,14 @@
      "result": "kept",
      "depth": 1.0
     }
-   ]
+   ],
+   "depth": {
+    "rule": "tiled: thin",
+    "fit": "can:0,0,4,0,8",
+    "fit_iou": 0.304,
+    "today_iou": 0.172,
+    "in_table": false
+   }
   }
  ],
  "structs": [
@@ -811,6 +1006,11 @@
   "cells": 54,
   "cells_failed": 29,
   "structs": 29,
-  "structs_failed": 2
+  "structs_failed": 2,
+  "depth": {
+   "in table": 18,
+   "no better fit": 9,
+   "pattern: today's pick stands": 2
+  }
  }
 }
