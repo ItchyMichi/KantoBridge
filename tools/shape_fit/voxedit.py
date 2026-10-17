@@ -14,6 +14,10 @@ drawing's: column c (0 west .. 15 east), row r (0 top .. 15 bottom); depth z (0 
     ["round", r0, r1]                   rows r0..r1 as a lathe: each column as deep as the row is wide at it
     ["shift", dz]                       move the whole shape along the depth (south positive)
     ["fill_holes"]                      fill voxels enclosed on both sides along the depth
+    ["well", wall, depth]               an opening going in: the top `depth` voxel layers hollowed, keeping a wall `wall`
+                                        voxels thick around their outline (a bin's or a pot's drawn dark top)
+    ["flatten", c0, r0, c1, r1]         those columns take the depth span of the columns just below them (rows r1+1..r1+3):
+                                        drawn light or shine on a surface, not a bump
     ["drop"]                            no shape for this cell
 """
 from __future__ import annotations
@@ -122,6 +126,29 @@ def apply(v: list[bool], ops: list) -> list[bool] | None:
                         if v[idx(c, r, z)] and 0 <= z + dz < W:
                             nv[idx(c, r, z + dz)] = True
             v = nv
+        elif name == "well":
+            wall, depth = args
+            ys = [y for y in range(W) if any(v[(y * W + z) * W + x] for z in range(W) for x in range(W))]
+            if ys:
+                top = max(ys)
+                for y in range(top, max(-1, top - depth), -1):
+                    layer = {(x, z) for z in range(W) for x in range(W) if v[(y * W + z) * W + x]}
+                    for x, z in layer:
+                        if all((x + dx, z + dz) in layer for dx in range(-wall, wall + 1) for dz in range(-wall, wall + 1)):
+                            v[(y * W + z) * W + x] = False
+        elif name == "flatten":
+            c0, r0, c1, r1 = args
+            for c in range(max(0, c0), min(W - 1, c1) + 1):
+                spans = [column(v, c, r) for r in range(r1 + 1, min(W, r1 + 4))]
+                spans = [s_ for s_ in spans if s_]
+                if not spans:
+                    continue
+                z0 = sorted(min(s_) for s_ in spans)[len(spans) // 2]
+                z1 = sorted(max(s_) for s_ in spans)[len(spans) // 2]
+                for r in range(max(0, r0), min(W - 1, r1) + 1):
+                    if column(v, c, r):
+                        for z in range(W):
+                            v[idx(c, r, z)] = z0 <= z <= z1
         elif name == "fill_holes":
             for c in range(W):
                 for r in range(W):

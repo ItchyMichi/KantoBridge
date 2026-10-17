@@ -26,6 +26,7 @@ def main() -> int:
     ap.add_argument("shapes")
     ap.add_argument("--source", default="depth")
     ap.add_argument("--replace-first", action="store_true")
+    ap.add_argument("--edits", default="", help="voxedit's edits: cells whose ops end with drop lose their voxel entry")
     args = ap.parse_args()
     table_file = REPO / "fabric-bridge/src/main/resources/kantobridge/fitted_shapes" / f"{args.game}.json"
     table = json.loads(table_file.read_text(encoding="utf-8"))
@@ -40,11 +41,19 @@ def main() -> int:
             continue
         table["cells"][key] = {"class": "voxels", "v": bits, "from": args.source}
         put += 1
+    removed = 0
+    if args.edits:
+        for key, e in json.loads(Path(args.edits).read_text(encoding="utf-8")).items():
+            ops = e.get("ops", [])
+            old = table["cells"].get(key)
+            if ops and ops[-1] == ["drop"] and old is not None and old.get("class") == "voxels":
+                del table["cells"][key]
+                removed += 1
     table["cells"] = dict(sorted(table["cells"].items()))
     summary = table.setdefault("summary", {})
     summary["voxels"] = sum(1 for e in table["cells"].values() if e.get("class") == "voxels")
     table_file.write_text(json.dumps(table, indent=2) + "\n", encoding="utf-8")
-    print(f"{args.game}: {put} voxel shapes put ({args.source}), {kept_first} first-run entries kept; "
+    print(f"{args.game}: {put} voxel shapes put ({args.source}), {removed} dropped, {kept_first} first-run entries kept; "
           f"{summary['voxels']} voxel entries in the table")
     return 0
 
