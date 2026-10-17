@@ -1,7 +1,26 @@
 {
  "g3q/1042-1043-2074-2074": {
-  "note": "auto: main shape only, depth holes filled",
+  "note": "#28 basin: pale top is the opening (well), body round; auto: main shape only, depth holes filled",
   "ops": [
+   [
+    "add",
+    1,
+    0,
+    14,
+    7,
+    4,
+    11
+   ],
+   [
+    "round",
+    0,
+    15
+   ],
+   [
+    "well",
+    2,
+    4
+   ],
    [
     "keep_largest"
    ],
@@ -11,13 +30,10 @@
   ]
  },
  "g3q/1044-1045-969-970": {
-  "note": "auto: main shape only, depth holes filled",
+  "note": "#29 boulder wrecked by the mask: no model, today's pick",
   "ops": [
    [
-    "keep_largest"
-   ],
-   [
-    "fill_holes"
+    "drop"
    ]
   ]
  },
@@ -44,13 +60,10 @@
   ]
  },
  "g3q/1233-1233-1232-1274": {
-  "note": "auto: main shape only, depth holes filled",
+  "note": "#32 checker pattern: no model, today's pick",
   "ops": [
    [
-    "keep_largest"
-   ],
-   [
-    "fill_holes"
+    "drop"
    ]
   ]
  },
@@ -66,24 +79,18 @@
   ]
  },
  "g3q/1487-1488-1491-1491": {
-  "note": "auto: main shape only, depth holes filled",
+  "note": "#34 wall fragment: no model, today's pick",
   "ops": [
    [
-    "keep_largest"
-   ],
-   [
-    "fill_holes"
+    "drop"
    ]
   ]
  },
  "g3q/1495-1487-1491-1491": {
-  "note": "auto: main shape only, depth holes filled",
+  "note": "#35 wall fragment: no model, today's pick",
   "ops": [
    [
-    "keep_largest"
-   ],
-   [
-    "fill_holes"
+    "drop"
    ]
   ]
  },
@@ -110,35 +117,26 @@
   ]
  },
  "g3q/2708-2709-2711-2712": {
-  "note": "auto: main shape only, depth holes filled",
+  "note": "#38 table/counter corner: no model, today's pick",
   "ops": [
    [
-    "keep_largest"
-   ],
-   [
-    "fill_holes"
+    "drop"
    ]
   ]
  },
  "g3q/2709-2710-2713-2711": {
-  "note": "auto: main shape only, depth holes filled",
+  "note": "#39 table/counter corner: no model, today's pick",
   "ops": [
    [
-    "keep_largest"
-   ],
-   [
-    "fill_holes"
+    "drop"
    ]
   ]
  },
  "g3q/2709-2710-2722-2723": {
-  "note": "auto: main shape only, depth holes filled",
+  "note": "#40 table/counter corner: no model, today's pick",
   "ops": [
    [
-    "keep_largest"
-   ],
-   [
-    "fill_holes"
+    "drop"
    ]
   ]
  },
@@ -183,13 +181,10 @@
   ]
  },
  "g3q/2989-2990-2946-2946": {
-  "note": "auto: main shape only, depth holes filled",
+  "note": "#42 bush on a flat patterned floor: front projection can't show it standing; no model, today's pick",
   "ops": [
    [
-    "keep_largest"
-   ],
-   [
-    "fill_holes"
+    "drop"
    ]
   ]
  },
@@ -205,24 +200,18 @@
   ]
  },
  "g3q/3426-3427-3428-3429": {
-  "note": "auto: main shape only, depth holes filled",
+  "note": "#44 rock-noise pattern: no model, today's pick",
   "ops": [
    [
-    "keep_largest"
-   ],
-   [
-    "fill_holes"
+    "drop"
    ]
   ]
  },
  "g3q/3470-3471-3472-3473": {
-  "note": "auto: main shape only, depth holes filled",
+  "note": "#45 boulder wrecked by the mask: no model, today's pick",
   "ops": [
    [
-    "keep_largest"
-   ],
-   [
-    "fill_holes"
+    "drop"
    ]
   ]
  },
@@ -238,8 +227,22 @@
   ]
  },
  "g3q/366-362-3882-3882": {
-  "note": "auto: main shape only, depth holes filled",
+  "note": "#47 bushes on a ledge: the ledge is part of the model (a step), bushes round on top, nothing floats; auto: main shape only, depth holes filled",
   "ops": [
+   [
+    "add",
+    0,
+    8,
+    15,
+    15,
+    3,
+    12
+   ],
+   [
+    "round",
+    0,
+    7
+   ],
    [
     "keep_largest"
    ],
@@ -249,8 +252,22 @@
   ]
  },
  "g3q/366-366-3882-3882": {
-  "note": "auto: main shape only, depth holes filled",
+  "note": "#48 bushes on a ledge: the ledge is part of the model (a step), bushes round on top, nothing floats; auto: main shape only, depth holes filled",
   "ops": [
+   [
+    "add",
+    0,
+    8,
+    15,
+    15,
+    3,
+    12
+   ],
+   [
+    "round",
+    0,
+    7
+   ],
    [
     "keep_largest"
    ],
@@ -260,24 +277,18 @@
   ]
  },
  "g3q/367-368-369-370": {
-  "note": "auto: main shape only, depth holes filled",
+  "note": "#49 slice of a big tree: no model, today's pick",
   "ops": [
    [
-    "keep_largest"
-   ],
-   [
-    "fill_holes"
+    "drop"
    ]
   ]
  },
  "g3q/367-368-371-372": {
-  "note": "auto: main shape only, depth holes filled",
+  "note": "#50 slice of a big tree: no model, today's pick",
   "ops": [
    [
-    "keep_largest"
-   ],
-   [
-    "fill_holes"
+    "drop"
    ]
   ]
  },

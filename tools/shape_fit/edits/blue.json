@@ -276,13 +276,10 @@
   ]
  },
  "tilesets.ship_port/49-49-49-49": {
-  "note": "auto: main shape only, depth holes filled",
+  "note": "#27 grate pattern: no model, today's pick",
   "ops": [
    [
-    "keep_largest"
-   ],
-   [
-    "fill_holes"
+    "drop"
    ]
   ]
  }
