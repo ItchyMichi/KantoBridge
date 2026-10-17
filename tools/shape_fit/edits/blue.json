@@ -598,5 +598,3374 @@
     "fill_holes"
    ]
   ]
+ },
+ "tilesets.cavern/12-13-28-29": {
+  "note": "candidate not reviewed or not kept: today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "tilesets.cavern/16-16-16-16": {
+  "note": "candidate not reviewed or not kept: today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "tilesets.cavern/16-38-38-49": {
+  "note": "candidate not reviewed or not kept: today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "tilesets.cavern/17-23-16-17": {
+  "note": "#1155 small tree: round; auto: main shape only, depth holes filled",
+  "ops": [
+   [
+    "round",
+    0,
+    15
+   ],
+   [
+    "keep_largest"
+   ],
+   [
+    "fill_holes"
+   ]
+  ]
+ },
+ "tilesets.cavern/23-23-23-23": {
+  "note": "candidate not reviewed or not kept: today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "tilesets.cavern/32-4-4-49": {
+  "note": "candidate not reviewed or not kept: today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "tilesets.cavern/37-16-23-37": {
+  "note": "candidate not reviewed or not kept: today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "tilesets.cavern/4-41-49-5": {
+  "note": "candidate not reviewed or not kept: today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "tilesets.cavern/49-40-40-16": {
+  "note": "candidate not reviewed or not kept: today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "tilesets.cavern/49-49-49-49": {
+  "note": "candidate not reviewed or not kept: today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "tilesets.cavern/49-5-40-16": {
+  "note": "candidate not reviewed or not kept: today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "tilesets.cavern/49-5-49-5": {
+  "note": "candidate not reviewed or not kept: today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "tilesets.cavern/5-23-16-17": {
+  "note": "candidate not reviewed or not kept: today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "tilesets.cavern/5-5-16-16": {
+  "note": "#602 two bushes on a ledge: both kept; no automatic clean-up",
+  "ops": [
+   [
+    "fill_holes"
+   ]
+  ]
+ },
+ "tilesets.cavern/6-39-36-1": {
+  "note": "candidate not reviewed or not kept: today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "tilesets.cavern/7-32-23-7": {
+  "note": "candidate not reviewed or not kept: today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "tilesets.cemetery/55-63-61-62": {
+  "note": "#1733 machine: relief kept; auto: main shape only, depth holes filled",
+  "ops": [
+   [
+    "keep_largest"
+   ],
+   [
+    "fill_holes"
+   ]
+  ]
+ },
+ "tilesets.club/1-2-17-18": {
+  "note": "candidate not reviewed or not kept: today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "tilesets.club/11-12-27-28": {
+  "note": "candidate not reviewed or not kept: today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "tilesets.club/12-14-28-9": {
+  "note": "candidate not reviewed or not kept: today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "tilesets.club/14-31-9-15": {
+  "note": "#677 round object: round; auto: main shape only, depth holes filled",
+  "ops": [
+   [
+    "round",
+    0,
+    15
+   ],
+   [
+    "keep_largest"
+   ],
+   [
+    "fill_holes"
+   ]
+  ]
+ },
+ "tilesets.club/15-11-30-27": {
+  "note": "candidate not reviewed or not kept: today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "tilesets.club/2-3-18-19": {
+  "note": "candidate not reviewed or not kept: today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "tilesets.club/49-6-51-6": {
+  "note": "candidate not reviewed or not kept: today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "tilesets.club/59-60-55-56": {
+  "note": "#1211 PC: relief kept; auto: main shape only, depth holes filled",
+  "ops": [
+   [
+    "keep_largest"
+   ],
+   [
+    "fill_holes"
+   ]
+  ]
+ },
+ "tilesets.club/6-1-6-17": {
+  "note": "#1329 tall cabinet: relief kept; auto: main shape only, depth holes filled",
+  "ops": [
+   [
+    "keep_largest"
+   ],
+   [
+    "fill_holes"
+   ]
+  ]
+ },
+ "tilesets.club/6-48-6-50": {
+  "note": "candidate not reviewed or not kept: today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "tilesets.club/61-62-57-58": {
+  "note": "#1216 PC: relief kept; auto: main shape only, depth holes filled",
+  "ops": [
+   [
+    "keep_largest"
+   ],
+   [
+    "fill_holes"
+   ]
+  ]
+ },
+ "tilesets.club/63-68-66-67": {
+  "note": "candidate not reviewed or not kept: today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "tilesets.club/68-69-67-70": {
+  "note": "#948 computer screen: relief kept; auto: main shape only, depth holes filled",
+  "ops": [
+   [
+    "keep_largest"
+   ],
+   [
+    "fill_holes"
+   ]
+  ]
+ },
+ "tilesets.facility/1-1-39-47": {
+  "note": "#612 bush: round; auto: main shape only, depth holes filled",
+  "ops": [
+   [
+    "round",
+    0,
+    15
+   ],
+   [
+    "keep_largest"
+   ],
+   [
+    "fill_holes"
+   ]
+  ]
+ },
+ "tilesets.facility/13-14-29-30": {
+  "note": "candidate not reviewed or not kept: today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "tilesets.facility/13-2-29-53": {
+  "note": "candidate not reviewed or not kept: today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "tilesets.facility/2-14-53-30": {
+  "note": "candidate not reviewed or not kept: today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "tilesets.facility/29-53-29-53": {
+  "note": "candidate not reviewed or not kept: today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "tilesets.facility/29-53-68-69": {
+  "note": "candidate not reviewed or not kept: today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "tilesets.facility/36-37-36-37": {
+  "note": "candidate not reviewed or not kept: today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "tilesets.facility/40-41-56-57": {
+  "note": "candidate not reviewed or not kept: today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "tilesets.facility/42-42-13-14": {
+  "note": "candidate not reviewed or not kept: today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "tilesets.facility/42-46-58-60": {
+  "note": "candidate not reviewed or not kept: today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "tilesets.facility/45-42-59-58": {
+  "note": "candidate not reviewed or not kept: today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "tilesets.facility/5-6-21-22": {
+  "note": "candidate not reviewed or not kept: today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "tilesets.facility/53-30-53-30": {
+  "note": "candidate not reviewed or not kept: today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "tilesets.facility/53-30-69-68": {
+  "note": "candidate not reviewed or not kept: today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "tilesets.facility/55-63-61-62": {
+  "note": "#1779 machine: relief kept; auto: main shape only, depth holes filled",
+  "ops": [
+   [
+    "keep_largest"
+   ],
+   [
+    "fill_holes"
+   ]
+  ]
+ },
+ "tilesets.facility/56-57-25-26": {
+  "note": "candidate not reviewed or not kept: today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "tilesets.facility/64-64-80-80": {
+  "note": "candidate not reviewed or not kept: today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "tilesets.facility/65-17-65-17": {
+  "note": "candidate not reviewed or not kept: today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "tilesets.facility/65-17-81-17": {
+  "note": "candidate not reviewed or not kept: today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "tilesets.facility/83-84-54-38": {
+  "note": "candidate not reviewed or not kept: today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "tilesets.facility/87-87-13-14": {
+  "note": "candidate not reviewed or not kept: today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "tilesets.forest/1-1-41-41": {
+  "note": "candidate not reviewed or not kept: today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "tilesets.forest/15-62-47-15": {
+  "note": "candidate not reviewed or not kept: today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "tilesets.forest/26-27-75-76": {
+  "note": "#1754 machine: relief kept; auto: main shape only, depth holes filled",
+  "ops": [
+   [
+    "keep_largest"
+   ],
+   [
+    "fill_holes"
+   ]
+  ]
+ },
+ "tilesets.forest/31-48-47-31": {
+  "note": "candidate not reviewed or not kept: today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "tilesets.forest/40-41-56-41": {
+  "note": "candidate not reviewed or not kept: today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "tilesets.forest/41-44-41-60": {
+  "note": "candidate not reviewed or not kept: today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "tilesets.forest/45-45-45-45": {
+  "note": "candidate not reviewed or not kept: today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "tilesets.forest/45-61-61-62": {
+  "note": "candidate not reviewed or not kept: today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "tilesets.forest/47-47-47-47": {
+  "note": "candidate not reviewed or not kept: today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "tilesets.forest/48-29-29-45": {
+  "note": "candidate not reviewed or not kept: today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "tilesets.forest/62-14-14-45": {
+  "note": "candidate not reviewed or not kept: today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "tilesets.forest/62-62-62-62": {
+  "note": "candidate not reviewed or not kept: today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "tilesets.forest/63-47-62-63": {
+  "note": "candidate not reviewed or not kept: today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "tilesets.forest/8-9-24-25": {
+  "note": "#969 shelf: relief kept; auto: main shape only, depth holes filled",
+  "ops": [
+   [
+    "keep_largest"
+   ],
+   [
+    "fill_holes"
+   ]
+  ]
+ },
+ "tilesets.forest/9-12-25-28": {
+  "note": "candidate not reviewed or not kept: today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "tilesets.forest/9-9-25-25": {
+  "note": "candidate not reviewed or not kept: today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "tilesets.gate/0-0-0-0": {
+  "note": "candidate not reviewed or not kept: today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "tilesets.gate/0-0-14-15": {
+  "note": "candidate not reviewed or not kept: today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "tilesets.gate/39-40-48-46": {
+  "note": "candidate not reviewed or not kept: today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "tilesets.gate/39-40-48-70": {
+  "note": "candidate not reviewed or not kept: today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "tilesets.gate/40-25-46-44": {
+  "note": "candidate not reviewed or not kept: today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "tilesets.gate/40-25-71-44": {
+  "note": "candidate not reviewed or not kept: today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "tilesets.gate/40-40-46-58": {
+  "note": "candidate not reviewed or not kept: today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "tilesets.gate/40-40-58-46": {
+  "note": "candidate not reviewed or not kept: today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "tilesets.gate/40-40-58-70": {
+  "note": "candidate not reviewed or not kept: today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "tilesets.gate/40-40-71-58": {
+  "note": "candidate not reviewed or not kept: today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "tilesets.gate/45-61-61-58": {
+  "note": "candidate not reviewed or not kept: today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "tilesets.gate/45-62-61-62": {
+  "note": "candidate not reviewed or not kept: today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "tilesets.gate/58-58-58-45": {
+  "note": "candidate not reviewed or not kept: today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "tilesets.gate/58-62-58-62": {
+  "note": "candidate not reviewed or not kept: today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "tilesets.gate/62-58-62-45": {
+  "note": "candidate not reviewed or not kept: today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "tilesets.gate/62-61-62-58": {
+  "note": "candidate not reviewed or not kept: today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "tilesets.gate/64-65-80-81": {
+  "note": "candidate not reviewed or not kept: today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "tilesets.gate/66-67-82-82": {
+  "note": "candidate not reviewed or not kept: today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "tilesets.gate/68-69-84-85": {
+  "note": "candidate not reviewed or not kept: today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "tilesets.gate/7-8-34-35": {
+  "note": "#1652 counter/display: relief kept; auto: main shape only, depth holes filled",
+  "ops": [
+   [
+    "keep_largest"
+   ],
+   [
+    "fill_holes"
+   ]
+  ]
+ },
+ "tilesets.gate/72-72-7-8": {
+  "note": "candidate not reviewed or not kept: today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "tilesets.gate/78-79-74-74": {
+  "note": "candidate not reviewed or not kept: today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "tilesets.gym/13-14-29-30": {
+  "note": "candidate not reviewed or not kept: today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "tilesets.gym/15-53-16-62": {
+  "note": "candidate not reviewed or not kept: today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "tilesets.gym/32-33-48-49": {
+  "note": "#1740 machine: relief kept; auto: main shape only, depth holes filled",
+  "ops": [
+   [
+    "keep_largest"
+   ],
+   [
+    "fill_holes"
+   ]
+  ]
+ },
+ "tilesets.gym/36-38-66-16": {
+  "note": "candidate not reviewed or not kept: today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "tilesets.gym/37-15-66-16": {
+  "note": "candidate not reviewed or not kept: today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "tilesets.gym/38-39-16-62": {
+  "note": "candidate not reviewed or not kept: today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "tilesets.gym/41-42-13-14": {
+  "note": "#1635 counter/display: relief kept; auto: main shape only, depth holes filled",
+  "ops": [
+   [
+    "keep_largest"
+   ],
+   [
+    "fill_holes"
+   ]
+  ]
+ },
+ "tilesets.gym/41-59-78-57": {
+  "note": "candidate not reviewed or not kept: today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "tilesets.gym/5-5-86-86": {
+  "note": "candidate not reviewed or not kept: today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "tilesets.gym/5-71-86-87": {
+  "note": "#1346 bed: relief kept; auto: main shape only, depth holes filled",
+  "ops": [
+   [
+    "keep_largest"
+   ],
+   [
+    "fill_holes"
+   ]
+  ]
+ },
+ "tilesets.gym/52-67-82-83": {
+  "note": "#1805 scroll/notice: relief kept; auto: main shape only, depth holes filled",
+  "ops": [
+   [
+    "keep_largest"
+   ],
+   [
+    "fill_holes"
+   ]
+  ]
+ },
+ "tilesets.gym/59-42-57-79": {
+  "note": "candidate not reviewed or not kept: today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "tilesets.gym/59-59-57-57": {
+  "note": "candidate not reviewed or not kept: today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "tilesets.gym/68-5-84-86": {
+  "note": "#1347 bed: relief kept; auto: main shape only, depth holes filled",
+  "ops": [
+   [
+    "keep_largest"
+   ],
+   [
+    "fill_holes"
+   ]
+  ]
+ },
+ "tilesets.gym/91-92-54-55": {
+  "note": "#1144 computer: relief kept; auto: main shape only, depth holes filled",
+  "ops": [
+   [
+    "keep_largest"
+   ],
+   [
+    "fill_holes"
+   ]
+  ]
+ },
+ "tilesets.gym/93-94-85-95": {
+  "note": "#1062 machine: relief kept; auto: main shape only, depth holes filled",
+  "ops": [
+   [
+    "keep_largest"
+   ],
+   [
+    "fill_holes"
+   ]
+  ]
+ },
+ "tilesets.house/10-11-8-9": {
+  "note": "candidate not reviewed or not kept: today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "tilesets.house/14-15-30-31": {
+  "note": "#1778 machine: relief kept; auto: main shape only, depth holes filled",
+  "ops": [
+   [
+    "keep_largest"
+   ],
+   [
+    "fill_holes"
+   ]
+  ]
+ },
+ "tilesets.house/26-27-24-25": {
+  "note": "#1453 stove/pot: relief kept; auto: main shape only, depth holes filled",
+  "ops": [
+   [
+    "keep_largest"
+   ],
+   [
+    "fill_holes"
+   ]
+  ]
+ },
+ "tilesets.house/36-36-52-52": {
+  "note": "candidate not reviewed or not kept: today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "tilesets.house/38-39-54-47": {
+  "note": "candidate not reviewed or not kept: today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "tilesets.house/38-39-70-71": {
+  "note": "candidate not reviewed or not kept: today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "tilesets.house/38-41-14-15": {
+  "note": "#1700 machine: relief kept; auto: main shape only, depth holes filled",
+  "ops": [
+   [
+    "keep_largest"
+   ],
+   [
+    "fill_holes"
+   ]
+  ]
+ },
+ "tilesets.house/38-41-48-49": {
+  "note": "#1793 machine: relief kept; auto: main shape only, depth holes filled",
+  "ops": [
+   [
+    "keep_largest"
+   ],
+   [
+    "fill_holes"
+   ]
+  ]
+ },
+ "tilesets.house/39-41-47-57": {
+  "note": "candidate not reviewed or not kept: today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "tilesets.house/42-43-12-13": {
+  "note": "candidate not reviewed or not kept: today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "tilesets.house/44-37-53-56": {
+  "note": "#1470 machine/fan: relief kept; auto: main shape only, depth holes filled",
+  "ops": [
+   [
+    "keep_largest"
+   ],
+   [
+    "fill_holes"
+   ]
+  ]
+ },
+ "tilesets.house/45-46-61-62": {
+  "note": "candidate not reviewed or not kept: today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "tilesets.house/47-57-58-59": {
+  "note": "candidate not reviewed or not kept: today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "tilesets.house/48-49-30-31": {
+  "note": "#1879 machine: relief kept; auto: main shape only, depth holes filled",
+  "ops": [
+   [
+    "keep_largest"
+   ],
+   [
+    "fill_holes"
+   ]
+  ]
+ },
+ "tilesets.house/54-47-60-58": {
+  "note": "candidate not reviewed or not kept: today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "tilesets.house/72-73-88-89": {
+  "note": "#1229 TV/console: relief kept; auto: main shape only, depth holes filled",
+  "ops": [
+   [
+    "keep_largest"
+   ],
+   [
+    "fill_holes"
+   ]
+  ]
+ },
+ "tilesets.house/73-75-90-91": {
+  "note": "candidate not reviewed or not kept: today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "tilesets.house/80-81-82-83": {
+  "note": "candidate not reviewed or not kept: today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "tilesets.house/86-87-60-58": {
+  "note": "candidate not reviewed or not kept: today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "tilesets.interior/11-12-27-28": {
+  "note": "#1650 machine: relief kept; auto: main shape only, depth holes filled",
+  "ops": [
+   [
+    "keep_largest"
+   ],
+   [
+    "fill_holes"
+   ]
+  ]
+ },
+ "tilesets.interior/13-14-29-30": {
+  "note": "candidate not reviewed or not kept: today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "tilesets.interior/16-16-10-16": {
+  "note": "candidate not reviewed or not kept: today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "tilesets.interior/16-16-16-7": {
+  "note": "candidate not reviewed or not kept: today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "tilesets.interior/16-16-8-9": {
+  "note": "candidate not reviewed or not kept: today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "tilesets.interior/19-20-35-36": {
+  "note": "candidate not reviewed or not kept: today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "tilesets.interior/24-25-40-41": {
+  "note": "#1654 pedestal/statue: relief kept; auto: main shape only, depth holes filled",
+  "ops": [
+   [
+    "keep_largest"
+   ],
+   [
+    "fill_holes"
+   ]
+  ]
+ },
+ "tilesets.interior/31-72-72-64": {
+  "note": "candidate not reviewed or not kept: today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "tilesets.interior/34-64-92-64": {
+  "note": "candidate not reviewed or not kept: today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "tilesets.interior/45-87-45-87": {
+  "note": "candidate not reviewed or not kept: today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "tilesets.interior/45-87-91-88": {
+  "note": "candidate not reviewed or not kept: today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "tilesets.interior/52-52-50-50": {
+  "note": "candidate not reviewed or not kept: today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "tilesets.interior/52-52-51-68": {
+  "note": "candidate not reviewed or not kept: today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "tilesets.interior/52-52-68-49": {
+  "note": "candidate not reviewed or not kept: today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "tilesets.interior/52-52-68-68": {
+  "note": "candidate not reviewed or not kept: today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "tilesets.interior/56-57-1-2": {
+  "note": "#1342 machine: relief kept; auto: main shape only, depth holes filled",
+  "ops": [
+   [
+    "keep_largest"
+   ],
+   [
+    "fill_holes"
+   ]
+  ]
+ },
+ "tilesets.interior/63-64-79-63": {
+  "note": "candidate not reviewed or not kept: today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "tilesets.interior/64-33-64-91": {
+  "note": "candidate not reviewed or not kept: today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "tilesets.interior/64-78-64-78": {
+  "note": "candidate not reviewed or not kept: today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "tilesets.interior/64-81-81-82": {
+  "note": "candidate not reviewed or not kept: today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "tilesets.interior/73-31-64-73": {
+  "note": "candidate not reviewed or not kept: today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "tilesets.interior/74-74-18-64": {
+  "note": "candidate not reviewed or not kept: today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "tilesets.interior/74-74-64-17": {
+  "note": "candidate not reviewed or not kept: today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "tilesets.interior/77-64-77-64": {
+  "note": "candidate not reviewed or not kept: today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "tilesets.interior/87-46-87-46": {
+  "note": "candidate not reviewed or not kept: today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "tilesets.interior/87-46-88-92": {
+  "note": "candidate not reviewed or not kept: today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "tilesets.interior/87-87-87-87": {
+  "note": "candidate not reviewed or not kept: today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "tilesets.lab/10-11-26-27": {
+  "note": "candidate not reviewed or not kept: today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "tilesets.lab/11-75-27-91": {
+  "note": "#1210 machine: relief kept; auto: main shape only, depth holes filled",
+  "ops": [
+   [
+    "keep_largest"
+   ],
+   [
+    "fill_holes"
+   ]
+  ]
+ },
+ "tilesets.lab/16-17-32-33": {
+  "note": "candidate not reviewed or not kept: today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "tilesets.lab/2-3-18-19": {
+  "note": "#1737 machine: relief kept; auto: main shape only, depth holes filled",
+  "ops": [
+   [
+    "keep_largest"
+   ],
+   [
+    "fill_holes"
+   ]
+  ]
+ },
+ "tilesets.lab/25-37-34-43": {
+  "note": "candidate not reviewed or not kept: today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "tilesets.lab/36-24-42-34": {
+  "note": "candidate not reviewed or not kept: today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "tilesets.lab/4-5-20-21": {
+  "note": "candidate not reviewed or not kept: today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "tilesets.lab/44-45-60-61": {
+  "note": "candidate not reviewed or not kept: today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "tilesets.lab/48-49-34-34": {
+  "note": "#1736 machine: relief kept; auto: main shape only, depth holes filled",
+  "ops": [
+   [
+    "keep_largest"
+   ],
+   [
+    "fill_holes"
+   ]
+  ]
+ },
+ "tilesets.lab/64-65-42-34": {
+  "note": "candidate not reviewed or not kept: today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "tilesets.lab/64-65-80-72": {
+  "note": "candidate not reviewed or not kept: today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "tilesets.lab/64-65-80-81": {
+  "note": "candidate not reviewed or not kept: today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "tilesets.lab/64-66-10-11": {
+  "note": "#1780 machine: relief kept; auto: main shape only, depth holes filled",
+  "ops": [
+   [
+    "keep_largest"
+   ],
+   [
+    "fill_holes"
+   ]
+  ]
+ },
+ "tilesets.lab/64-66-40-41": {
+  "note": "#1653 counter/display: relief kept; auto: main shape only, depth holes filled",
+  "ops": [
+   [
+    "keep_largest"
+   ],
+   [
+    "fill_holes"
+   ]
+  ]
+ },
+ "tilesets.lab/65-65-81-81": {
+  "note": "candidate not reviewed or not kept: today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "tilesets.lab/65-66-34-43": {
+  "note": "candidate not reviewed or not kept: today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "tilesets.lab/65-66-73-82": {
+  "note": "candidate not reviewed or not kept: today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "tilesets.lab/65-66-81-82": {
+  "note": "candidate not reviewed or not kept: today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "tilesets.lab/69-59-85-59": {
+  "note": "candidate not reviewed or not kept: today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "tilesets.lab/69-69-85-85": {
+  "note": "candidate not reviewed or not kept: today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "tilesets.lab/69-70-85-86": {
+  "note": "candidate not reviewed or not kept: today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "tilesets.lab/70-69-86-85": {
+  "note": "candidate not reviewed or not kept: today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "tilesets.lab/73-82-58-84": {
+  "note": "candidate not reviewed or not kept: today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "tilesets.lab/74-59-90-59": {
+  "note": "candidate not reviewed or not kept: today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "tilesets.lab/74-75-90-91": {
+  "note": "candidate not reviewed or not kept: today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "tilesets.lab/75-10-91-26": {
+  "note": "#1183 machine: relief kept; auto: main shape only, depth holes filled",
+  "ops": [
+   [
+    "keep_largest"
+   ],
+   [
+    "fill_holes"
+   ]
+  ]
+ },
+ "tilesets.lab/80-72-83-58": {
+  "note": "candidate not reviewed or not kept: today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "tilesets.lab/80-81-83-58": {
+  "note": "candidate not reviewed or not kept: today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "tilesets.lab/81-81-58-58": {
+  "note": "candidate not reviewed or not kept: today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "tilesets.lab/81-82-58-84": {
+  "note": "candidate not reviewed or not kept: today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "tilesets.lab/87-88-28-71": {
+  "note": "#1042 round pot: round; auto: main shape only, depth holes filled",
+  "ops": [
+   [
+    "round",
+    0,
+    15
+   ],
+   [
+    "keep_largest"
+   ],
+   [
+    "fill_holes"
+   ]
+  ]
+ },
+ "tilesets.lab/88-89-71-29": {
+  "note": "#1152 round pot: round; auto: main shape only, depth holes filled",
+  "ops": [
+   [
+    "round",
+    0,
+    15
+   ],
+   [
+    "keep_largest"
+   ],
+   [
+    "fill_holes"
+   ]
+  ]
+ },
+ "tilesets.lobby/1-1-38-41": {
+  "note": "candidate not reviewed or not kept: today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "tilesets.lobby/1-62-33-63": {
+  "note": "#1097 door/cabinet: relief kept; auto: main shape only, depth holes filled",
+  "ops": [
+   [
+    "keep_largest"
+   ],
+   [
+    "fill_holes"
+   ]
+  ]
+ },
+ "tilesets.lobby/34-35-50-51": {
+  "note": "#1766 machine: relief kept; auto: main shape only, depth holes filled",
+  "ops": [
+   [
+    "keep_largest"
+   ],
+   [
+    "fill_holes"
+   ]
+  ]
+ },
+ "tilesets.lobby/36-37-52-53": {
+  "note": "candidate not reviewed or not kept: today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "tilesets.lobby/38-41-34-35": {
+  "note": "#1504 counter/display: relief kept; auto: main shape only, depth holes filled",
+  "ops": [
+   [
+    "keep_largest"
+   ],
+   [
+    "fill_holes"
+   ]
+  ]
+ },
+ "tilesets.lobby/39-25-55-57": {
+  "note": "candidate not reviewed or not kept: today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "tilesets.lobby/39-39-55-55": {
+  "note": "candidate not reviewed or not kept: today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "tilesets.lobby/42-43-58-59": {
+  "note": "candidate not reviewed or not kept: today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "tilesets.lobby/44-45-60-61": {
+  "note": "candidate not reviewed or not kept: today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "tilesets.lobby/46-47-33-33": {
+  "note": "#1649 sign: relief kept; auto: main shape only, depth holes filled",
+  "ops": [
+   [
+    "keep_largest"
+   ],
+   [
+    "fill_holes"
+   ]
+  ]
+ },
+ "tilesets.lobby/55-55-10-11": {
+  "note": "candidate not reviewed or not kept: today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "tilesets.lobby/55-55-91-91": {
+  "note": "candidate not reviewed or not kept: today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "tilesets.lobby/55-71-87-55": {
+  "note": "candidate not reviewed or not kept: today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "tilesets.lobby/6-1-22-33": {
+  "note": "candidate not reviewed or not kept: today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "tilesets.lobby/62-1-63-33": {
+  "note": "#1192 door/cabinet: relief kept; auto: main shape only, depth holes filled",
+  "ops": [
+   [
+    "keep_largest"
+   ],
+   [
+    "fill_holes"
+   ]
+  ]
+ },
+ "tilesets.lobby/64-65-80-81": {
+  "note": "#1269 bookshelf: relief kept; auto: main shape only, depth holes filled",
+  "ops": [
+   [
+    "keep_largest"
+   ],
+   [
+    "fill_holes"
+   ]
+  ]
+ },
+ "tilesets.lobby/66-67-82-83": {
+  "note": "#1281 bookshelf: relief kept; auto: main shape only, depth holes filled",
+  "ops": [
+   [
+    "keep_largest"
+   ],
+   [
+    "fill_holes"
+   ]
+  ]
+ },
+ "tilesets.lobby/70-55-85-86": {
+  "note": "candidate not reviewed or not kept: today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "tilesets.lobby/72-73-88-89": {
+  "note": "candidate not reviewed or not kept: today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "tilesets.lobby/75-76-77-78": {
+  "note": "candidate not reviewed or not kept: today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "tilesets.lobby/75-79-75-79": {
+  "note": "candidate not reviewed or not kept: today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "tilesets.lobby/79-76-79-76": {
+  "note": "candidate not reviewed or not kept: today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "tilesets.mansion/15-33-31-49": {
+  "note": "candidate not reviewed or not kept: today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "tilesets.mansion/30-93-6-7": {
+  "note": "#1253 sign/plaque: relief kept; auto: main shape only, depth holes filled",
+  "ops": [
+   [
+    "keep_largest"
+   ],
+   [
+    "fill_holes"
+   ]
+  ]
+ },
+ "tilesets.mansion/34-35-50-51": {
+  "note": "#1767 machine: relief kept; auto: main shape only, depth holes filled",
+  "ops": [
+   [
+    "keep_largest"
+   ],
+   [
+    "fill_holes"
+   ]
+  ]
+ },
+ "tilesets.mansion/36-37-64-65": {
+  "note": "#1727 machine: relief kept; auto: main shape only, depth holes filled",
+  "ops": [
+   [
+    "keep_largest"
+   ],
+   [
+    "fill_holes"
+   ]
+  ]
+ },
+ "tilesets.mansion/38-39-54-55": {
+  "note": "candidate not reviewed or not kept: today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "tilesets.mansion/38-41-34-35": {
+  "note": "#1817 machine: relief kept; auto: main shape only, depth holes filled",
+  "ops": [
+   [
+    "keep_largest"
+   ],
+   [
+    "fill_holes"
+   ]
+  ]
+ },
+ "tilesets.mansion/38-41-40-21": {
+  "note": "#1725 machine: relief kept; auto: main shape only, depth holes filled",
+  "ops": [
+   [
+    "keep_largest"
+   ],
+   [
+    "fill_holes"
+   ]
+  ]
+ },
+ "tilesets.mansion/39-39-55-55": {
+  "note": "candidate not reviewed or not kept: today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "tilesets.mansion/39-41-55-57": {
+  "note": "candidate not reviewed or not kept: today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "tilesets.mansion/42-15-43-31": {
+  "note": "candidate not reviewed or not kept: today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "tilesets.mansion/44-79-74-75": {
+  "note": "candidate not reviewed or not kept: today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "tilesets.mansion/44-92-74-75": {
+  "note": "candidate not reviewed or not kept: today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "tilesets.mansion/45-46-61-62": {
+  "note": "candidate not reviewed or not kept: today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "tilesets.mansion/52-53-66-67": {
+  "note": "candidate not reviewed or not kept: today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "tilesets.mansion/54-55-54-55": {
+  "note": "candidate not reviewed or not kept: today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "tilesets.mansion/54-55-60-58": {
+  "note": "candidate not reviewed or not kept: today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "tilesets.mansion/55-55-58-58": {
+  "note": "candidate not reviewed or not kept: today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "tilesets.mansion/55-57-55-57": {
+  "note": "candidate not reviewed or not kept: today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "tilesets.mansion/55-57-58-59": {
+  "note": "candidate not reviewed or not kept: today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "tilesets.mansion/56-87-50-51": {
+  "note": "#1784 machine: relief kept; auto: main shape only, depth holes filled",
+  "ops": [
+   [
+    "keep_largest"
+   ],
+   [
+    "fill_holes"
+   ]
+  ]
+ },
+ "tilesets.mansion/61-62-63-47": {
+  "note": "candidate not reviewed or not kept: today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "tilesets.mansion/68-69-8-9": {
+  "note": "candidate not reviewed or not kept: today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "tilesets.mansion/72-73-88-89": {
+  "note": "candidate not reviewed or not kept: today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "tilesets.mansion/74-75-90-91": {
+  "note": "candidate not reviewed or not kept: today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "tilesets.mansion/76-76-38-41": {
+  "note": "candidate not reviewed or not kept: today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "tilesets.mansion/76-77-30-93": {
+  "note": "candidate not reviewed or not kept: today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "tilesets.mansion/78-79-74-75": {
+  "note": "candidate not reviewed or not kept: today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "tilesets.mansion/80-80-38-41": {
+  "note": "candidate not reviewed or not kept: today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "tilesets.mansion/80-80-80-80": {
+  "note": "candidate not reviewed or not kept: today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "tilesets.overworld/1-1-17-17": {
+  "note": "candidate not reviewed or not kept: today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "tilesets.overworld/10-10-23-23": {
+  "note": "candidate not reviewed or not kept: today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "tilesets.overworld/10-10-26-26": {
+  "note": "candidate not reviewed or not kept: today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "tilesets.overworld/10-10-75-75": {
+  "note": "candidate not reviewed or not kept: today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "tilesets.overworld/10-31-75-31": {
+  "note": "candidate not reviewed or not kept: today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "tilesets.overworld/10-34-26-26": {
+  "note": "candidate not reviewed or not kept: today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "tilesets.overworld/10-75-75-75": {
+  "note": "#1208 window/cabinet: relief kept; auto: main shape only, depth holes filled",
+  "ops": [
+   [
+    "keep_largest"
+   ],
+   [
+    "fill_holes"
+   ]
+  ]
+ },
+ "tilesets.overworld/15-10-15-75": {
+  "note": "candidate not reviewed or not kept: today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "tilesets.overworld/15-75-78-26": {
+  "note": "candidate not reviewed or not kept: today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "tilesets.overworld/17-17-17-17": {
+  "note": "candidate not reviewed or not kept: today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "tilesets.overworld/18-18-23-23": {
+  "note": "candidate not reviewed or not kept: today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "tilesets.overworld/18-90-23-93": {
+  "note": "candidate not reviewed or not kept: today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "tilesets.overworld/2-57-36-2": {
+  "note": "candidate not reviewed or not kept: today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "tilesets.overworld/21-22-37-38": {
+  "note": "candidate not reviewed or not kept: today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "tilesets.overworld/21-56-21-22": {
+  "note": "candidate not reviewed or not kept: today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "tilesets.overworld/21-56-21-56": {
+  "note": "candidate not reviewed or not kept: today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "tilesets.overworld/23-23-34-34": {
+  "note": "candidate not reviewed or not kept: today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "tilesets.overworld/24-25-40-41": {
+  "note": "candidate not reviewed or not kept: today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "tilesets.overworld/35-30-30-39": {
+  "note": "candidate not reviewed or not kept: today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "tilesets.overworld/36-36-36-36": {
+  "note": "candidate not reviewed or not kept: today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "tilesets.overworld/37-38-78-26": {
+  "note": "candidate not reviewed or not kept: today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "tilesets.overworld/39-39-39-39": {
+  "note": "candidate not reviewed or not kept: today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "tilesets.overworld/39-54-54-55": {
+  "note": "candidate not reviewed or not kept: today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "tilesets.overworld/40-41-26-79": {
+  "note": "candidate not reviewed or not kept: today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "tilesets.overworld/5-6-21-22": {
+  "note": "candidate not reviewed or not kept: today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "tilesets.overworld/5-6-21-56": {
+  "note": "candidate not reviewed or not kept: today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "tilesets.overworld/52-36-55-52": {
+  "note": "candidate not reviewed or not kept: today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "tilesets.overworld/53-55-36-53": {
+  "note": "candidate not reviewed or not kept: today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "tilesets.overworld/55-19-19-39": {
+  "note": "candidate not reviewed or not kept: today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "tilesets.overworld/55-55-55-55": {
+  "note": "candidate not reviewed or not kept: today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "tilesets.overworld/56-25-24-25": {
+  "note": "candidate not reviewed or not kept: today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "tilesets.overworld/56-25-56-25": {
+  "note": "candidate not reviewed or not kept: today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "tilesets.overworld/60-60-4-60": {
+  "note": "candidate not reviewed or not kept: today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "tilesets.overworld/66-67-74-74": {
+  "note": "candidate not reviewed or not kept: today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "tilesets.overworld/68-69-74-74": {
+  "note": "candidate not reviewed or not kept: today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "tilesets.overworld/75-10-75-75": {
+  "note": "candidate not reviewed or not kept: today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "tilesets.overworld/75-31-26-79": {
+  "note": "candidate not reviewed or not kept: today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "tilesets.overworld/75-75-26-26": {
+  "note": "candidate not reviewed or not kept: today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "tilesets.overworld/76-83-90-18": {
+  "note": "candidate not reviewed or not kept: today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "tilesets.overworld/8-9-24-25": {
+  "note": "candidate not reviewed or not kept: today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "tilesets.overworld/8-9-56-25": {
+  "note": "candidate not reviewed or not kept: today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "tilesets.overworld/83-77-18-90": {
+  "note": "candidate not reviewed or not kept: today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "tilesets.overworld/83-83-18-18": {
+  "note": "candidate not reviewed or not kept: today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "tilesets.overworld/90-18-92-23": {
+  "note": "candidate not reviewed or not kept: today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "tilesets.plateau/13-13-15-15": {
+  "note": "candidate not reviewed or not kept: today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "tilesets.plateau/21-22-5-6": {
+  "note": "#1873 machine: relief kept; auto: main shape only, depth holes filled",
+  "ops": [
+   [
+    "keep_largest"
+   ],
+   [
+    "fill_holes"
+   ]
+  ]
+ },
+ "tilesets.plateau/3-3-13-13": {
+  "note": "candidate not reviewed or not kept: today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "tilesets.plateau/3-3-3-3": {
+  "note": "candidate not reviewed or not kept: today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "tilesets.plateau/3-3-32-33": {
+  "note": "candidate not reviewed or not kept: today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "tilesets.plateau/32-33-46-47": {
+  "note": "candidate not reviewed or not kept: today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "tilesets.plateau/37-38-40-41": {
+  "note": "#1822 statue: relief kept; auto: main shape only, depth holes filled",
+  "ops": [
+   [
+    "keep_largest"
+   ],
+   [
+    "fill_holes"
+   ]
+  ]
+ },
+ "tilesets.plateau/42-43-34-29": {
+  "note": "#959 boulder: round; auto: main shape only, depth holes filled",
+  "ops": [
+   [
+    "round",
+    0,
+    15
+   ],
+   [
+    "keep_largest"
+   ],
+   [
+    "fill_holes"
+   ]
+  ]
+ },
+ "tilesets.plateau/5-6-21-22": {
+  "note": "#1874 machine: relief kept; auto: main shape only, depth holes filled",
+  "ops": [
+   [
+    "keep_largest"
+   ],
+   [
+    "fill_holes"
+   ]
+  ]
+ },
+ "tilesets.plateau/5-6-48-49": {
+  "note": "candidate not reviewed or not kept: today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "tilesets.plateau/61-68-61-68": {
+  "note": "candidate not reviewed or not kept: today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "tilesets.plateau/62-62-61-61": {
+  "note": "candidate not reviewed or not kept: today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "tilesets.plateau/62-65-61-68": {
+  "note": "candidate not reviewed or not kept: today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "tilesets.plateau/64-62-68-61": {
+  "note": "candidate not reviewed or not kept: today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "tilesets.plateau/68-61-68-61": {
+  "note": "candidate not reviewed or not kept: today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "tilesets.pokecenter/3-40-19-40": {
+  "note": "candidate not reviewed or not kept: today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "tilesets.pokecenter/32-33-48-49": {
+  "note": "candidate not reviewed or not kept: today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "tilesets.pokecenter/36-37-52-53": {
+  "note": "candidate not reviewed or not kept: today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "tilesets.pokecenter/38-39-42-43": {
+  "note": "candidate not reviewed or not kept: today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "tilesets.pokecenter/40-2-40-18": {
+  "note": "candidate not reviewed or not kept: today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "tilesets.pokecenter/40-40-78-79": {
+  "note": "#1859 SALE sign: relief kept; auto: main shape only, depth holes filled",
+  "ops": [
+   [
+    "keep_largest"
+   ],
+   [
+    "fill_holes"
+   ]
+  ]
+ },
+ "tilesets.pokecenter/40-58-40-74": {
+  "note": "candidate not reviewed or not kept: today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "tilesets.pokecenter/40-89-16-41": {
+  "note": "#1256 table: relief kept; auto: main shape only, depth holes filled",
+  "ops": [
+   [
+    "keep_largest"
+   ],
+   [
+    "fill_holes"
+   ]
+  ]
+ },
+ "tilesets.pokecenter/46-47-62-63": {
+  "note": "#1701 machine: relief kept; auto: main shape only, depth holes filled",
+  "ops": [
+   [
+    "keep_largest"
+   ],
+   [
+    "fill_holes"
+   ]
+  ]
+ },
+ "tilesets.pokecenter/59-40-75-40": {
+  "note": "candidate not reviewed or not kept: today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "tilesets.pokecenter/64-65-80-81": {
+  "note": "#1010 computer/machine: relief kept; auto: main shape only, depth holes filled",
+  "ops": [
+   [
+    "keep_largest"
+   ],
+   [
+    "fill_holes"
+   ]
+  ]
+ },
+ "tilesets.pokecenter/65-67-81-83": {
+  "note": "#1015 computer/machine: relief kept; auto: main shape only, depth holes filled",
+  "ops": [
+   [
+    "keep_largest"
+   ],
+   [
+    "fill_holes"
+   ]
+  ]
+ },
+ "tilesets.pokecenter/68-69-84-85": {
+  "note": "#1143 bookshelf: relief kept; auto: main shape only, depth holes filled",
+  "ops": [
+   [
+    "keep_largest"
+   ],
+   [
+    "fill_holes"
+   ]
+  ]
+ },
+ "tilesets.pokecenter/69-71-85-87": {
+  "note": "#1092 bookshelf: relief kept; auto: main shape only, depth holes filled",
+  "ops": [
+   [
+    "keep_largest"
+   ],
+   [
+    "fill_holes"
+   ]
+  ]
+ },
+ "tilesets.pokecenter/72-76-72-6": {
+  "note": "candidate not reviewed or not kept: today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "tilesets.pokecenter/76-77-23-29": {
+  "note": "#1803 machine: relief kept; auto: main shape only, depth holes filled",
+  "ops": [
+   [
+    "keep_largest"
+   ],
+   [
+    "fill_holes"
+   ]
+  ]
+ },
+ "tilesets.pokecenter/77-7-22-13": {
+  "note": "candidate not reviewed or not kept: today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "tilesets.pokecenter/77-73-22-73": {
+  "note": "candidate not reviewed or not kept: today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "tilesets.pokecenter/90-91-20-40": {
+  "note": "#1844 desk: relief kept; auto: main shape only, depth holes filled",
+  "ops": [
+   [
+    "keep_largest"
+   ],
+   [
+    "fill_holes"
+   ]
+  ]
+ },
+ "tilesets.pokecenter/90-91-44-45": {
+  "note": "#1702 desk: relief kept; auto: main shape only, depth holes filled",
+  "ops": [
+   [
+    "keep_largest"
+   ],
+   [
+    "fill_holes"
+   ]
+  ]
+ },
+ "tilesets.reds_house/0-0-38-39": {
+  "note": "candidate not reviewed or not kept: today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "tilesets.reds_house/0-0-39-41": {
+  "note": "candidate not reviewed or not kept: today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "tilesets.reds_house/14-15-30-31": {
+  "note": "#487 sign on a post: thin; auto: main shape only, depth holes filled",
+  "ops": [
+   [
+    "thickness",
+    0,
+    0,
+    15,
+    15,
+    3
+   ],
+   [
+    "keep_largest"
+   ],
+   [
+    "fill_holes"
+   ]
+  ]
+ },
+ "tilesets.reds_house/34-35-50-51": {
+  "note": "#1875 machine: relief kept; auto: main shape only, depth holes filled",
+  "ops": [
+   [
+    "keep_largest"
+   ],
+   [
+    "fill_holes"
+   ]
+  ]
+ },
+ "tilesets.reds_house/36-37-52-53": {
+  "note": "#1804 bookshelf: relief kept; auto: main shape only, depth holes filled",
+  "ops": [
+   [
+    "keep_largest"
+   ],
+   [
+    "fill_holes"
+   ]
+  ]
+ },
+ "tilesets.reds_house/38-39-54-55": {
+  "note": "candidate not reviewed or not kept: today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "tilesets.reds_house/38-41-48-49": {
+  "note": "#1787 counter/display: relief kept; auto: main shape only, depth holes filled",
+  "ops": [
+   [
+    "keep_largest"
+   ],
+   [
+    "fill_holes"
+   ]
+  ]
+ },
+ "tilesets.reds_house/40-41-56-57": {
+  "note": "candidate not reviewed or not kept: today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "tilesets.reds_house/42-43-58-59": {
+  "note": "candidate not reviewed or not kept: today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "tilesets.reds_house/44-42-60-58": {
+  "note": "candidate not reviewed or not kept: today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "tilesets.reds_house/45-46-61-62": {
+  "note": "candidate not reviewed or not kept: today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "tilesets.reds_house/6-7-22-23": {
+  "note": "#1892 machine: relief kept; auto: main shape only, depth holes filled",
+  "ops": [
+   [
+    "keep_largest"
+   ],
+   [
+    "fill_holes"
+   ]
+  ]
+ },
+ "tilesets.reds_house/61-62-63-47": {
+  "note": "candidate not reviewed or not kept: today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "tilesets.reds_house/64-65-32-33": {
+  "note": "#1741 machine: relief kept; auto: main shape only, depth holes filled",
+  "ops": [
+   [
+    "keep_largest"
+   ],
+   [
+    "fill_holes"
+   ]
+  ]
+ },
+ "tilesets.reds_house/66-67-50-51": {
+  "note": "#1850 machine: relief kept; auto: main shape only, depth holes filled",
+  "ops": [
+   [
+    "keep_largest"
+   ],
+   [
+    "fill_holes"
+   ]
+  ]
+ },
+ "tilesets.reds_house/68-69-8-9": {
+  "note": "candidate not reviewed or not kept: today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "tilesets.reds_house/70-71-24-25": {
+  "note": "#1454 stove/pot: relief kept; auto: main shape only, depth holes filled",
+  "ops": [
+   [
+    "keep_largest"
+   ],
+   [
+    "fill_holes"
+   ]
+  ]
+ },
+ "tilesets.ship/1-1-17-17": {
+  "note": "candidate not reviewed or not kept: today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "tilesets.ship/1-22-17-34": {
+  "note": "candidate not reviewed or not kept: today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "tilesets.ship/10-10-44-53": {
+  "note": "#1283 round cushion/decor: round; auto: main shape only, depth holes filled",
+  "ops": [
+   [
+    "round",
+    0,
+    15
+   ],
+   [
+    "keep_largest"
+   ],
+   [
+    "fill_holes"
+   ]
+  ]
+ },
+ "tilesets.ship/10-10-44-64": {
+  "note": "candidate not reviewed or not kept: today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "tilesets.ship/10-10-53-44": {
+  "note": "#1284 round cushion/decor: round; auto: main shape only, depth holes filled",
+  "ops": [
+   [
+    "round",
+    0,
+    15
+   ],
+   [
+    "keep_largest"
+   ],
+   [
+    "fill_holes"
+   ]
+  ]
+ },
+ "tilesets.ship/10-10-65-44": {
+  "note": "candidate not reviewed or not kept: today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "tilesets.ship/10-10-68-69": {
+  "note": "#1743 pair of books: relief kept; auto: main shape only, depth holes filled",
+  "ops": [
+   [
+    "keep_largest"
+   ],
+   [
+    "fill_holes"
+   ]
+  ]
+ },
+ "tilesets.ship/10-12-44-28": {
+  "note": "candidate not reviewed or not kept: today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "tilesets.ship/16-16-10-12": {
+  "note": "candidate not reviewed or not kept: today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "tilesets.ship/16-16-18-19": {
+  "note": "candidate not reviewed or not kept: today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "tilesets.ship/16-16-84-85": {
+  "note": "candidate not reviewed or not kept: today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "tilesets.ship/2-3-9-10": {
+  "note": "#658 round sign on a post: thin; auto: main shape only, depth holes filled",
+  "ops": [
+   [
+    "thickness",
+    0,
+    0,
+    15,
+    15,
+    3
+   ],
+   [
+    "keep_largest"
+   ],
+   [
+    "fill_holes"
+   ]
+  ]
+ },
+ "tilesets.ship/25-26-11-11": {
+  "note": "candidate not reviewed or not kept: today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "tilesets.ship/25-44-25-44": {
+  "note": "candidate not reviewed or not kept: today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "tilesets.ship/25-64-25-80": {
+  "note": "candidate not reviewed or not kept: today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "tilesets.ship/26-28-44-28": {
+  "note": "#1290 round pot: round; auto: main shape only, depth holes filled",
+  "ops": [
+   [
+    "round",
+    0,
+    15
+   ],
+   [
+    "keep_largest"
+   ],
+   [
+    "fill_holes"
+   ]
+  ]
+ },
+ "tilesets.ship/45-35-61-35": {
+  "note": "#866 tall pillar/lamp: relief kept; auto: main shape only, depth holes filled",
+  "ops": [
+   [
+    "keep_largest"
+   ],
+   [
+    "fill_holes"
+   ]
+  ]
+ },
+ "tilesets.ship/54-43-54-43": {
+  "note": "#1909 notice board on legs: relief kept; auto: main shape only, depth holes filled",
+  "ops": [
+   [
+    "keep_largest"
+   ],
+   [
+    "fill_holes"
+   ]
+  ]
+ },
+ "tilesets.ship/65-28-81-28": {
+  "note": "candidate not reviewed or not kept: today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "tilesets.ship/70-71-86-87": {
+  "note": "candidate not reviewed or not kept: today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "tilesets.ship/81-44-26-44": {
+  "note": "#1328 round pot: round; auto: main shape only, depth holes filled",
+  "ops": [
+   [
+    "round",
+    0,
+    15
+   ],
+   [
+    "keep_largest"
+   ],
+   [
+    "fill_holes"
+   ]
+  ]
+ },
+ "tilesets.ship/86-87-86-87": {
+  "note": "candidate not reviewed or not kept: today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "tilesets.ship/9-10-25-26": {
+  "note": "#1203 round pot/bin: round, opening; auto: main shape only, depth holes filled",
+  "ops": [
+   [
+    "round",
+    0,
+    15
+   ],
+   [
+    "well",
+    2,
+    3
+   ],
+   [
+    "keep_largest"
+   ],
+   [
+    "fill_holes"
+   ]
+  ]
+ },
+ "tilesets.ship/9-10-25-44": {
+  "note": "candidate not reviewed or not kept: today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "tilesets.ship/9-12-54-43": {
+  "note": "#1833 desk/machine: relief kept; auto: main shape only, depth holes filled",
+  "ops": [
+   [
+    "keep_largest"
+   ],
+   [
+    "fill_holes"
+   ]
+  ]
+ },
+ "tilesets.ship_port/11-11-24-25": {
+  "note": "candidate not reviewed or not kept: today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "tilesets.ship_port/12-13-28-29": {
+  "note": "candidate not reviewed or not kept: today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "tilesets.ship_port/14-15-30-31": {
+  "note": "candidate not reviewed or not kept: today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "tilesets.ship_port/2-3-18-19": {
+  "note": "candidate not reviewed or not kept: today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "tilesets.ship_port/20-20-16-17": {
+  "note": "candidate not reviewed or not kept: today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "tilesets.ship_port/32-33-48-33": {
+  "note": "candidate not reviewed or not kept: today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "tilesets.ship_port/34-35-34-51": {
+  "note": "#970 bookshelf: relief kept; auto: main shape only, depth holes filled",
+  "ops": [
+   [
+    "keep_largest"
+   ],
+   [
+    "fill_holes"
+   ]
+  ]
+ },
+ "tilesets.ship_port/36-37-52-53": {
+  "note": "candidate not reviewed or not kept: today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "tilesets.ship_port/38-39-54-55": {
+  "note": "candidate not reviewed or not kept: today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "tilesets.ship_port/4-5-0-21": {
+  "note": "candidate not reviewed or not kept: today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "tilesets.ship_port/40-41-56-57": {
+  "note": "#1003 table: relief kept; auto: main shape only, depth holes filled",
+  "ops": [
+   [
+    "keep_largest"
+   ],
+   [
+    "fill_holes"
+   ]
+  ]
+ },
+ "tilesets.ship_port/44-45-62-61": {
+  "note": "candidate not reviewed or not kept: today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "tilesets.ship_port/46-47-62-47": {
+  "note": "candidate not reviewed or not kept: today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "tilesets.ship_port/58-58-49-49": {
+  "note": "candidate not reviewed or not kept: today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "tilesets.ship_port/6-7-22-23": {
+  "note": "candidate not reviewed or not kept: today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "tilesets.ship_port/66-67-82-83": {
+  "note": "candidate not reviewed or not kept: today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "tilesets.ship_port/68-69-85-85": {
+  "note": "candidate not reviewed or not kept: today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "tilesets.ship_port/69-69-85-85": {
+  "note": "candidate not reviewed or not kept: today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "tilesets.ship_port/69-77-85-93": {
+  "note": "candidate not reviewed or not kept: today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "tilesets.ship_port/72-73-88-89": {
+  "note": "#1312 machine: relief kept; auto: main shape only, depth holes filled",
+  "ops": [
+   [
+    "keep_largest"
+   ],
+   [
+    "fill_holes"
+   ]
+  ]
+ },
+ "tilesets.ship_port/74-75-60-76": {
+  "note": "#1318 counter/bed: relief kept; auto: main shape only, depth holes filled",
+  "ops": [
+   [
+    "keep_largest"
+   ],
+   [
+    "fill_holes"
+   ]
+  ]
+ },
+ "tilesets.ship_port/78-79-90-91": {
+  "note": "candidate not reviewed or not kept: today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "tilesets.ship_port/9-9-24-25": {
+  "note": "candidate not reviewed or not kept: today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "tilesets.underground/6-6-9-9": {
+  "note": "candidate not reviewed or not kept: today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
  }
 }
