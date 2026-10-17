@@ -38,8 +38,20 @@
   ]
  },
  "g3q/111-112-115-116": {
-  "note": "auto: main shape only, depth holes filled",
+  "note": "#30 wall poster (in context): 2 deep, flush against the wall behind; auto: main shape only, depth holes filled",
   "ops": [
+   [
+    "thickness",
+    0,
+    0,
+    15,
+    15,
+    2
+   ],
+   [
+    "shift",
+    -7
+   ],
    [
     "keep_largest"
    ],
@@ -481,17 +493,12 @@
   ]
  },
  "g3q/1252-1253-1254-1255": {
-  "note": "#314 pot: round, its pale top an opening; auto: main shape only, depth holes filled",
+  "note": "#314 stone bollard (in context): round, its pale top is a lit surface, not an opening; auto: main shape only, depth holes filled",
   "ops": [
    [
     "round",
     0,
     15
-   ],
-   [
-    "well",
-    2,
-    3
    ],
    [
     "keep_largest"
@@ -502,13 +509,15 @@
   ]
  },
  "g3q/1256-1256-1257-1257": {
-  "note": "auto: main shape only, depth holes filled",
+  "note": "#315 wooden fence posts, two per cell (in context): both kept, 4 deep; no automatic clean-up; no automatic clean-up",
   "ops": [
    [
-    "keep_largest"
-   ],
-   [
-    "fill_holes"
+    "thickness",
+    0,
+    0,
+    15,
+    15,
+    4
    ]
   ]
  },

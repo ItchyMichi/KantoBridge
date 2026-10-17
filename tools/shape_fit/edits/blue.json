@@ -16,8 +16,15 @@
   ]
  },
  "tilesets.cemetery/1-1-39-47": {
-  "note": "auto: main shape only, depth holes filled",
+  "note": "#2 gravestone (in context): the floor pattern above it removed; auto: main shape only, depth holes filled",
   "ops": [
+   [
+    "remove",
+    0,
+    0,
+    15,
+    7
+   ],
    [
     "keep_largest"
    ],
@@ -62,13 +69,10 @@
   ]
  },
  "tilesets.forest/48-48-10-11": {
-  "note": "auto: main shape only, depth holes filled",
+  "note": "#7 fragment of a hedge row (in context): no model, today's pick",
   "ops": [
    [
-    "keep_largest"
-   ],
-   [
-    "fill_holes"
+    "drop"
    ]
   ]
  },
@@ -114,13 +118,10 @@
   ]
  },
  "tilesets.gate/72-72-74-74": {
-  "note": "auto: main shape only, depth holes filled",
+  "note": "#12 two flat pads that match nothing in the scene (in context): no model, today's pick",
   "ops": [
    [
-    "keep_largest"
-   ],
-   [
-    "fill_holes"
+    "drop"
    ]
   ]
  },
@@ -136,8 +137,20 @@
   ]
  },
  "tilesets.gym/69-70-86-86": {
-  "note": "auto: main shape only, depth holes filled",
+  "note": "#14 wall emblem (in context): 2 deep, flush against the wall; auto: main shape only, depth holes filled",
   "ops": [
+   [
+    "thickness",
+    0,
+    0,
+    15,
+    15,
+    2
+   ],
+   [
+    "shift",
+    -7
+   ],
    [
     "keep_largest"
    ],
@@ -174,13 +187,10 @@
   ]
  },
  "tilesets.lobby/38-39-48-21": {
-  "note": "auto: main shape only, depth holes filled",
+  "note": "#18 bent counter piece (in context): no model, today's pick",
   "ops": [
    [
-    "keep_largest"
-   ],
-   [
-    "fill_holes"
+    "drop"
    ]
   ]
  },
@@ -254,8 +264,20 @@
   ]
  },
  "tilesets.ship/2-3-18-19": {
-  "note": "auto: main shape only, depth holes filled",
+  "note": "#25 wall emblem (in context): 2 deep, flush against the wall; auto: main shape only, depth holes filled",
   "ops": [
+   [
+    "thickness",
+    0,
+    0,
+    15,
+    15,
+    2
+   ],
+   [
+    "shift",
+    -7
+   ],
    [
     "keep_largest"
    ],
@@ -464,19 +486,26 @@
   ]
  },
  "tilesets.overworld/14-14-85-85": {
-  "note": "auto: main shape only, depth holes filled",
+  "note": "#302 fence posts, two per cell (in context): both kept, 4 deep; no automatic clean-up; no automatic clean-up",
   "ops": [
    [
-    "keep_largest"
-   ],
-   [
-    "fill_holes"
+    "thickness",
+    0,
+    0,
+    15,
+    15,
+    4
    ]
   ]
  },
  "tilesets.overworld/42-43-58-59": {
-  "note": "auto: main shape only, depth holes filled",
+  "note": "#303 stone bollard (in context): round, its pale top lit, not an opening; auto: main shape only, depth holes filled",
   "ops": [
+   [
+    "round",
+    0,
+    15
+   ],
    [
     "keep_largest"
    ],

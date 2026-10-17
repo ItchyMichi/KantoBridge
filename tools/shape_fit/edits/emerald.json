@@ -16,46 +16,34 @@
   ]
  },
  "g3q/10125-10126-10108-10109": {
-  "note": "auto: main shape only, depth holes filled",
+  "note": "#71 diagonal stair-rail slice of a large staircase (in context): no model, today's pick",
   "ops": [
    [
-    "keep_largest"
-   ],
-   [
-    "fill_holes"
+    "drop"
    ]
   ]
  },
  "g3q/10127-10128-10125-10126": {
-  "note": "auto: main shape only, depth holes filled",
+  "note": "#72 diagonal stair-rail slice (in context): no model, today's pick",
   "ops": [
    [
-    "keep_largest"
-   ],
-   [
-    "fill_holes"
+    "drop"
    ]
   ]
  },
  "g3q/10147-10148-10149-10150": {
-  "note": "auto: main shape only, depth holes filled",
+  "note": "#73 diagonal stair-rail slice (in context): no model, today's pick",
   "ops": [
    [
-    "keep_largest"
-   ],
-   [
-    "fill_holes"
+    "drop"
    ]
   ]
  },
  "g3q/10149-10150-10143-10144": {
-  "note": "auto: main shape only, depth holes filled",
+  "note": "#74 diagonal stair-rail slice (in context): no model, today's pick",
   "ops": [
    [
-    "keep_largest"
-   ],
-   [
-    "fill_holes"
+    "drop"
    ]
   ]
  },
@@ -422,13 +410,10 @@
   ]
  },
  "g3q/12145-12154-12160-12169": {
-  "note": "auto: main shape only, depth holes filled",
+  "note": "#109 tiny lump in the water (in context): no model, today's pick",
   "ops": [
    [
-    "keep_largest"
-   ],
-   [
-    "fill_holes"
+    "drop"
    ]
   ]
  },
@@ -545,17 +530,12 @@
   ]
  },
  "g3q/12738-12739-12740-12741": {
-  "note": "#124 pot: round, its pale top an opening (well); auto: main shape only, depth holes filled",
+  "note": "#124 hedge bush (in context): round, no opening; auto: main shape only, depth holes filled",
   "ops": [
    [
     "round",
     0,
     15
-   ],
-   [
-    "well",
-    2,
-    3
    ],
    [
     "keep_largest"
@@ -2144,98 +2124,50 @@
   ]
  },
  "g3q/10681-10659-10682-10683": {
-  "note": "#352 small rock/bush on the ground: round; auto: main shape only, depth holes filled",
+  "note": "#352 cliff-edge fragment, stands out as a stub (in context): no model, today's pick",
   "ops": [
    [
-    "round",
-    0,
-    15
-   ],
-   [
-    "keep_largest"
-   ],
-   [
-    "fill_holes"
+    "drop"
    ]
   ]
  },
  "g3q/10684-10685-10686-10676": {
-  "note": "#353 small rock/bush on the ground: round; auto: main shape only, depth holes filled",
+  "note": "#353 cliff-edge fragment (in context): no model, today's pick",
   "ops": [
    [
-    "round",
-    0,
-    15
-   ],
-   [
-    "keep_largest"
-   ],
-   [
-    "fill_holes"
+    "drop"
    ]
   ]
  },
  "g3q/10689-10690-10682-10691": {
-  "note": "#354 small rock/bush on the ground: round; auto: main shape only, depth holes filled",
+  "note": "#354 cliff-edge fragment (in context): no model, today's pick",
   "ops": [
    [
-    "round",
-    0,
-    15
-   ],
-   [
-    "keep_largest"
-   ],
-   [
-    "fill_holes"
+    "drop"
    ]
   ]
  },
  "g3q/10706-10707-10682-10708": {
-  "note": "#355 small rock/bush on the ground: round; auto: main shape only, depth holes filled",
+  "note": "#355 cliff-edge fragment (in context): no model, today's pick",
   "ops": [
    [
-    "round",
-    0,
-    15
-   ],
-   [
-    "keep_largest"
-   ],
-   [
-    "fill_holes"
+    "drop"
    ]
   ]
  },
  "g3q/10728-10732-10733-10676": {
-  "note": "#356 small rock/bush on the ground: round; auto: main shape only, depth holes filled",
+  "note": "#356 cliff-edge fragment (in context): no model, today's pick",
   "ops": [
    [
-    "round",
-    0,
-    15
-   ],
-   [
-    "keep_largest"
-   ],
-   [
-    "fill_holes"
+    "drop"
    ]
   ]
  },
  "g3q/10740-10729-10682-10741": {
-  "note": "#357 small rock/bush on the ground: round; auto: main shape only, depth holes filled",
+  "note": "#357 cliff-edge fragment (in context): no model, today's pick",
   "ops": [
    [
-    "round",
-    0,
-    15
-   ],
-   [
-    "keep_largest"
-   ],
-   [
-    "fill_holes"
+    "drop"
    ]
   ]
  },
@@ -2326,50 +2258,26 @@
   ]
  },
  "g3q/11399-11718-11727-10676": {
-  "note": "#364 small rock/bush on the ground: round; auto: main shape only, depth holes filled",
+  "note": "#364 cliff-edge fragment (in context): no model, today's pick",
   "ops": [
    [
-    "round",
-    0,
-    15
-   ],
-   [
-    "keep_largest"
-   ],
-   [
-    "fill_holes"
+    "drop"
    ]
   ]
  },
  "g3q/11858-11859-11860-10676": {
-  "note": "#365 small rock/bush on the ground: round; auto: main shape only, depth holes filled",
+  "note": "#365 cliff-edge fragment (in context): no model, today's pick",
   "ops": [
    [
-    "round",
-    0,
-    15
-   ],
-   [
-    "keep_largest"
-   ],
-   [
-    "fill_holes"
+    "drop"
    ]
   ]
  },
  "g3q/11877-11878-10682-11879": {
-  "note": "#366 small rock/bush on the ground: round; auto: main shape only, depth holes filled",
+  "note": "#366 cliff-edge fragment (in context): no model, today's pick",
   "ops": [
    [
-    "round",
-    0,
-    15
-   ],
-   [
-    "keep_largest"
-   ],
-   [
-    "fill_holes"
+    "drop"
    ]
   ]
  },
@@ -2606,7 +2514,7 @@
   ]
  },
  "g3q/16503-16504-16505-16506": {
-  "note": "#387 machine/console: box 6 deep; auto: main shape only, depth holes filled",
+  "note": "#387 stone seat (in context): box; auto: main shape only, depth holes filled",
   "ops": [
    [
     "thickness",
@@ -2625,7 +2533,7 @@
   ]
  },
  "g3q/16507-16508-16509-16510": {
-  "note": "#388 machine/console: box 6 deep; auto: main shape only, depth holes filled",
+  "note": "#388 stone seat (in context): box; auto: main shape only, depth holes filled",
   "ops": [
    [
     "thickness",
@@ -2695,18 +2603,10 @@
   ]
  },
  "g3q/16706-10659-16655-16707": {
-  "note": "#393 small rock on the ground: round; auto: main shape only, depth holes filled",
+  "note": "#393 cliff-edge fragment (in context): no model, today's pick",
   "ops": [
    [
-    "round",
-    0,
-    15
-   ],
-   [
-    "keep_largest"
-   ],
-   [
-    "fill_holes"
+    "drop"
    ]
   ]
  },
@@ -2812,30 +2712,10 @@
   ]
  },
  "g3q/18369-18370-18371-18372": {
-  "note": "#402 bin: stray edge removed, round, open top; auto: main shape only, depth holes filled",
+  "note": "#402 pole/pylon slice of a larger structure (in context): no model, today's pick",
   "ops": [
    [
-    "remove",
-    11,
-    6,
-    15,
-    15
-   ],
-   [
-    "round",
-    0,
-    15
-   ],
-   [
-    "well",
-    2,
-    3
-   ],
-   [
-    "keep_largest"
-   ],
-   [
-    "fill_holes"
+    "drop"
    ]
   ]
  },
@@ -2848,23 +2728,15 @@
   ]
  },
  "g3q/1910-1911-1905-1903": {
-  "note": "#404 sign/lamp post: thin; auto: main shape only, depth holes filled",
+  "note": "#404 sign on a post (in context): thin; auto: main shape only, depth holes filled",
   "ops": [
    [
     "thickness",
     0,
     0,
     15,
-    2,
-    4
-   ],
-   [
-    "thickness",
-    0,
-    3,
     15,
-    15,
-    2
+    3
    ],
    [
     "keep_largest"
@@ -2992,18 +2864,10 @@
   ]
  },
  "g3q/24138-24139-24140-24141": {
-  "note": "#416 bush: round; auto: main shape only, depth holes filled",
+  "note": "#416 slice of a rock cluster (in context): no model, today's pick",
   "ops": [
    [
-    "round",
-    0,
-    15
-   ],
-   [
-    "keep_largest"
-   ],
-   [
-    "fill_holes"
+    "drop"
    ]
   ]
  },
@@ -3289,18 +3153,10 @@
   ]
  },
  "g3q/4323-4334-4304-4325": {
-  "note": "#439 vase: round; auto: main shape only, depth holes filled",
+  "note": "#439 fragment of a wall piece (in context): no model, today's pick",
   "ops": [
    [
-    "round",
-    0,
-    15
-   ],
-   [
-    "keep_largest"
-   ],
-   [
-    "fill_holes"
+    "drop"
    ]
   ]
  },
@@ -3321,18 +3177,10 @@
   ]
  },
  "g3q/4684-4685-4686-4687": {
-  "note": "#442 statue/post: round; auto: main shape only, depth holes filled",
+  "note": "#442 wall-mounted hook, reads as a wall decal (in context): no model, today's pick",
   "ops": [
    [
-    "round",
-    0,
-    15
-   ],
-   [
-    "keep_largest"
-   ],
-   [
-    "fill_holes"
+    "drop"
    ]
   ]
  },
@@ -3353,7 +3201,7 @@
   ]
  },
  "g3q/4987-4988-4989-4990": {
-  "note": "#445 machine/console: box 6 deep; auto: main shape only, depth holes filled",
+  "note": "#445 auditorium chair (in context): box, not a lumpy hull; auto: main shape only, depth holes filled",
   "ops": [
    [
     "thickness",
@@ -3372,7 +3220,7 @@
   ]
  },
  "g3q/5072-5073-4989-4990": {
-  "note": "#446 machine/console: box 6 deep; auto: main shape only, depth holes filled",
+  "note": "#446 auditorium chair (in context): box, not a lumpy hull; auto: main shape only, depth holes filled",
   "ops": [
    [
     "thickness",
@@ -3434,17 +3282,12 @@
   ]
  },
  "g3q/5784-5546-5786-5548": {
-  "note": "#451 pot: round, its opening at the top; auto: main shape only, depth holes filled",
+  "note": "#451 potted plant (in context): the dark top is its leaves, not an opening; round, no well; auto: main shape only, depth holes filled",
   "ops": [
    [
     "round",
     0,
     15
-   ],
-   [
-    "well",
-    2,
-    3
    ],
    [
     "keep_largest"
@@ -3455,17 +3298,12 @@
   ]
  },
  "g3q/5784-5785-5786-5787": {
-  "note": "#452 pot: round, its opening at the top; auto: main shape only, depth holes filled",
+  "note": "#452 potted plant (in context): the dark top is its leaves, not an opening; round, no well; auto: main shape only, depth holes filled",
   "ops": [
    [
     "round",
     0,
     15
-   ],
-   [
-    "well",
-    2,
-    3
    ],
    [
     "keep_largest"
@@ -3500,17 +3338,12 @@
   ]
  },
  "g3q/6105-6106-6107-6108": {
-  "note": "#456 pot: round, its opening at the top; auto: main shape only, depth holes filled",
+  "note": "#456 potted plant (in context): the dark top is its leaves, not an opening; round, no well; auto: main shape only, depth holes filled",
   "ops": [
    [
     "round",
     0,
     15
-   ],
-   [
-    "well",
-    2,
-    3
    ],
    [
     "keep_largest"
@@ -3521,17 +3354,12 @@
   ]
  },
  "g3q/6109-6110-6111-6112": {
-  "note": "#457 pot: round, its opening at the top; auto: main shape only, depth holes filled",
+  "note": "#457 potted plant (in context): the dark top is its leaves, not an opening; round, no well; auto: main shape only, depth holes filled",
   "ops": [
    [
     "round",
     0,
     15
-   ],
-   [
-    "well",
-    2,
-    3
    ],
    [
     "keep_largest"
@@ -3740,18 +3568,10 @@
   ]
  },
  "g3q/8717-8718-8719-8720": {
-  "note": "#475 statue/plant: round; auto: main shape only, depth holes filled",
+  "note": "#475 slice of a flower shelf (in context): no model, today's pick",
   "ops": [
    [
-    "round",
-    0,
-    15
-   ],
-   [
-    "keep_largest"
-   ],
-   [
-    "fill_holes"
+    "drop"
    ]
   ]
  },
@@ -3780,17 +3600,12 @@
   ]
  },
  "g3q/9030-9031-9174-9175": {
-  "note": "#479 pot: round with its opening; auto: main shape only, depth holes filled",
+  "note": "#479 potted plant (in context): the dark top is its leaves, not an opening; round, no well; auto: main shape only, depth holes filled",
   "ops": [
    [
     "round",
     0,
     15
-   ],
-   [
-    "well",
-    2,
-    3
    ],
    [
     "keep_largest"
@@ -3801,24 +3616,12 @@
   ]
  },
  "g3q/9145-9146-9147-9148": {
-  "note": "#480 pot: stray strip cut, round with its opening; auto: main shape only, depth holes filled",
+  "note": "#480 potted plant (in context): the dark top is its leaves, not an opening; round, no well; auto: main shape only, depth holes filled",
   "ops": [
-   [
-    "remove",
-    0,
-    0,
-    2,
-    15
-   ],
    [
     "round",
     0,
     15
-   ],
-   [
-    "well",
-    2,
-    3
    ],
    [
     "keep_largest"
@@ -3829,17 +3632,12 @@
   ]
  },
  "g3q/9172-9146-9173-9148": {
-  "note": "#481 pot: round with its opening; auto: main shape only, depth holes filled",
+  "note": "#481 potted plant (in context): the dark top is its leaves, not an opening; round, no well; auto: main shape only, depth holes filled",
   "ops": [
    [
     "round",
     0,
     15
-   ],
-   [
-    "well",
-    2,
-    3
    ],
    [
     "keep_largest"

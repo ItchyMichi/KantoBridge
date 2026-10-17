@@ -193,3 +193,32 @@ itself:
   - hand edits from the render sheets, starting with the Pokémon Center computer (a box, not a thin tile) and a Crystal
     rock (the dithered ground removed, rounded).
   The edited shapes replaced the depth models in the tables (`"from": "edited"`).
+
+## 12. Review in the game (2026-10-17)
+
+The user found isolated sprites and models hard to judge, so every kept voxel shape (165: the 63 left from the failure
+list first, then the 102 left from the first-run cells) was also seen in its scene:
+
+- `FitTool locate` (`UnitLocations`) gives each planned cell one map that plans it (a surface map first, then the most
+  uses), its cell, and a walkable cell beside it facing it.
+- `tools/e2e/context_shots.py` runs the game with its story-spot driver on its own Xvfb display and the dev client
+  following it on another. Per cell it sends the hidden player onto the stand cell, steps the client one cell back,
+  turns it to the unit (first person, HUD hidden) and grabs both displays. 161 of 165 cells were captured; two had no
+  walkable cell nearby and two timed out.
+- Review sheets per cell, labelled with the review number: the hidden game around it, the client's view at the same
+  spot, then the sprite and the model's three-quarter view.
+
+What the scenes changed (`tools/shape_fit/edits/<game>.json` keeps each note, marked "in context"):
+
+- **Potted plants** (Emerald #451–481): the dark top is the leaves, not an opening. The well op came off and they
+  stay round.
+- **Stone bollards** (#303, #314): a lit top, not an opening. Round, no well.
+- **Fence posts** (#302, #315): two posts per cell, so the automatic clean-up (keep the largest shape) had dropped
+  one. Both are kept, 4 deep, with the clean-up off for these cells (`no_auto`).
+- **Wall posters and emblems** (#14, #25, #30): 2 deep, flush against the wall behind them.
+- **Auditorium chairs and stone seats** (#387, #388, #445, #446): boxes, not lumpy hulls.
+- **Left to today's pick**: cliff-edge fragments that stood out as stubs (Emerald #352–366, #393), diagonal stair-rail
+  slices (#71–74), a rock cluster slice, a wall hook, a pylon slice, a flower shelf slice, a hedge fragment, two pads
+  that match nothing in the scene, a bent counter piece and a lump in the water.
+
+After this pass the tables hold 142 voxel shapes: Blue 35, Crystal 30, Emerald 77.
