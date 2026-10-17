@@ -245,7 +245,8 @@ public final class FitTool {
 		if (front == null) {
 			throw new IllegalArgumentException("no front end for " + bundle.game());
 		}
-		FittedShapes.setEnabled(false);
+		// the tables on: cells only the table makes units (packed, raised) are located too
+		
 		dev.kantobridge.scene.Scene scene = front.describe(bundle);
 		ShapePlan plan = ShapePlanner.plan(scene, List.of(), ShapeParams.current(), Occupancy.NONE, new ArtUnitProbe(FrontEnds.artSource(bundle)));
 		JsonObject root = new JsonObject();

@@ -21438,13 +21438,10 @@
   ]
  },
  "g3q/26350-26351-26352-26353": {
-  "note": "#2013 market rack of goods: relief kept; auto: main shape only, depth holes filled",
+  "note": "#2013 market rack: a tall dark slab in game (in context): no model, today's pick",
   "ops": [
    [
-    "keep_largest"
-   ],
-   [
-    "fill_holes"
+    "drop"
    ]
   ]
  },
@@ -21460,13 +21457,10 @@
   ]
  },
  "g3q/26354-26355-26356-26357": {
-  "note": "#2015 market sign board: relief kept; auto: main shape only, depth holes filled",
+  "note": "#2015 market sign board: a tall dark slab in game (in context): no model, today's pick",
   "ops": [
    [
-    "keep_largest"
-   ],
-   [
-    "fill_holes"
+    "drop"
    ]
   ]
  },
