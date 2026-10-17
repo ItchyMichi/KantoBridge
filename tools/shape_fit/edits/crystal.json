@@ -1,0 +1,482 @@
+{
+ "g3q/1042-1043-2074-2074": {
+  "note": "auto: main shape only, depth holes filled",
+  "ops": [
+   [
+    "keep_largest"
+   ],
+   [
+    "fill_holes"
+   ]
+  ]
+ },
+ "g3q/1044-1045-969-970": {
+  "note": "auto: main shape only, depth holes filled",
+  "ops": [
+   [
+    "keep_largest"
+   ],
+   [
+    "fill_holes"
+   ]
+  ]
+ },
+ "g3q/111-112-115-116": {
+  "note": "auto: main shape only, depth holes filled",
+  "ops": [
+   [
+    "keep_largest"
+   ],
+   [
+    "fill_holes"
+   ]
+  ]
+ },
+ "g3q/1166-1167-1168-1169": {
+  "note": "auto: main shape only, depth holes filled",
+  "ops": [
+   [
+    "keep_largest"
+   ],
+   [
+    "fill_holes"
+   ]
+  ]
+ },
+ "g3q/1233-1233-1232-1274": {
+  "note": "auto: main shape only, depth holes filled",
+  "ops": [
+   [
+    "keep_largest"
+   ],
+   [
+    "fill_holes"
+   ]
+  ]
+ },
+ "g3q/1243-1244-1245-1246": {
+  "note": "auto: main shape only, depth holes filled",
+  "ops": [
+   [
+    "keep_largest"
+   ],
+   [
+    "fill_holes"
+   ]
+  ]
+ },
+ "g3q/1487-1488-1491-1491": {
+  "note": "auto: main shape only, depth holes filled",
+  "ops": [
+   [
+    "keep_largest"
+   ],
+   [
+    "fill_holes"
+   ]
+  ]
+ },
+ "g3q/1495-1487-1491-1491": {
+  "note": "auto: main shape only, depth holes filled",
+  "ops": [
+   [
+    "keep_largest"
+   ],
+   [
+    "fill_holes"
+   ]
+  ]
+ },
+ "g3q/2185-2185-2186-2186": {
+  "note": "auto: main shape only, depth holes filled",
+  "ops": [
+   [
+    "keep_largest"
+   ],
+   [
+    "fill_holes"
+   ]
+  ]
+ },
+ "g3q/2655-2656-2658-2659": {
+  "note": "auto: main shape only, depth holes filled",
+  "ops": [
+   [
+    "keep_largest"
+   ],
+   [
+    "fill_holes"
+   ]
+  ]
+ },
+ "g3q/2708-2709-2711-2712": {
+  "note": "auto: main shape only, depth holes filled",
+  "ops": [
+   [
+    "keep_largest"
+   ],
+   [
+    "fill_holes"
+   ]
+  ]
+ },
+ "g3q/2709-2710-2713-2711": {
+  "note": "auto: main shape only, depth holes filled",
+  "ops": [
+   [
+    "keep_largest"
+   ],
+   [
+    "fill_holes"
+   ]
+  ]
+ },
+ "g3q/2709-2710-2722-2723": {
+  "note": "auto: main shape only, depth holes filled",
+  "ops": [
+   [
+    "keep_largest"
+   ],
+   [
+    "fill_holes"
+   ]
+  ]
+ },
+ "g3q/2718-2719-2720-2721": {
+  "note": "round rock: the dithered ground at the top right and lower left is not part of it; rock rounded like a lathe; auto: main shape only, depth holes filled",
+  "ops": [
+   [
+    "remove",
+    12,
+    0,
+    15,
+    15
+   ],
+   [
+    "remove",
+    0,
+    9,
+    1,
+    15
+   ],
+   [
+    "remove",
+    11,
+    0,
+    11,
+    3
+   ],
+   [
+    "keep_largest"
+   ],
+   [
+    "round",
+    0,
+    15
+   ],
+   [
+    "keep_largest"
+   ],
+   [
+    "fill_holes"
+   ]
+  ]
+ },
+ "g3q/2989-2990-2946-2946": {
+  "note": "auto: main shape only, depth holes filled",
+  "ops": [
+   [
+    "keep_largest"
+   ],
+   [
+    "fill_holes"
+   ]
+  ]
+ },
+ "g3q/3305-3306-2848-2848": {
+  "note": "auto: main shape only, depth holes filled",
+  "ops": [
+   [
+    "keep_largest"
+   ],
+   [
+    "fill_holes"
+   ]
+  ]
+ },
+ "g3q/3426-3427-3428-3429": {
+  "note": "auto: main shape only, depth holes filled",
+  "ops": [
+   [
+    "keep_largest"
+   ],
+   [
+    "fill_holes"
+   ]
+  ]
+ },
+ "g3q/3470-3471-3472-3473": {
+  "note": "auto: main shape only, depth holes filled",
+  "ops": [
+   [
+    "keep_largest"
+   ],
+   [
+    "fill_holes"
+   ]
+  ]
+ },
+ "g3q/3606-3606-3650-3651": {
+  "note": "auto: main shape only, depth holes filled",
+  "ops": [
+   [
+    "keep_largest"
+   ],
+   [
+    "fill_holes"
+   ]
+  ]
+ },
+ "g3q/366-362-3882-3882": {
+  "note": "auto: main shape only, depth holes filled",
+  "ops": [
+   [
+    "keep_largest"
+   ],
+   [
+    "fill_holes"
+   ]
+  ]
+ },
+ "g3q/366-366-3882-3882": {
+  "note": "auto: main shape only, depth holes filled",
+  "ops": [
+   [
+    "keep_largest"
+   ],
+   [
+    "fill_holes"
+   ]
+  ]
+ },
+ "g3q/367-368-369-370": {
+  "note": "auto: main shape only, depth holes filled",
+  "ops": [
+   [
+    "keep_largest"
+   ],
+   [
+    "fill_holes"
+   ]
+  ]
+ },
+ "g3q/367-368-371-372": {
+  "note": "auto: main shape only, depth holes filled",
+  "ops": [
+   [
+    "keep_largest"
+   ],
+   [
+    "fill_holes"
+   ]
+  ]
+ },
+ "g3q/367-368-751-752": {
+  "note": "auto: main shape only, depth holes filled",
+  "ops": [
+   [
+    "keep_largest"
+   ],
+   [
+    "fill_holes"
+   ]
+  ]
+ },
+ "g3q/369-370-371-372": {
+  "note": "auto: main shape only, depth holes filled",
+  "ops": [
+   [
+    "keep_largest"
+   ],
+   [
+    "fill_holes"
+   ]
+  ]
+ },
+ "g3q/3832-3833-3836-3837": {
+  "note": "auto: main shape only, depth holes filled",
+  "ops": [
+   [
+    "keep_largest"
+   ],
+   [
+    "fill_holes"
+   ]
+  ]
+ },
+ "g3q/3834-3835-3838-3839": {
+  "note": "auto: main shape only, depth holes filled",
+  "ops": [
+   [
+    "keep_largest"
+   ],
+   [
+    "fill_holes"
+   ]
+  ]
+ },
+ "g3q/3843-360-3843-3843": {
+  "note": "auto: main shape only, depth holes filled",
+  "ops": [
+   [
+    "keep_largest"
+   ],
+   [
+    "fill_holes"
+   ]
+  ]
+ },
+ "g3q/3843-3843-3843-360": {
+  "note": "auto: main shape only, depth holes filled",
+  "ops": [
+   [
+    "keep_largest"
+   ],
+   [
+    "fill_holes"
+   ]
+  ]
+ },
+ "g3q/3859-3860-3859-3863": {
+  "note": "auto: main shape only, depth holes filled",
+  "ops": [
+   [
+    "keep_largest"
+   ],
+   [
+    "fill_holes"
+   ]
+  ]
+ },
+ "g3q/3859-3863-3859-3866": {
+  "note": "auto: main shape only, depth holes filled",
+  "ops": [
+   [
+    "keep_largest"
+   ],
+   [
+    "fill_holes"
+   ]
+  ]
+ },
+ "g3q/3859-3866-3859-3867": {
+  "note": "auto: main shape only, depth holes filled",
+  "ops": [
+   [
+    "keep_largest"
+   ],
+   [
+    "fill_holes"
+   ]
+  ]
+ },
+ "g3q/3863-3859-3866-3859": {
+  "note": "auto: main shape only, depth holes filled",
+  "ops": [
+   [
+    "keep_largest"
+   ],
+   [
+    "fill_holes"
+   ]
+  ]
+ },
+ "g3q/3866-3859-3867-3859": {
+  "note": "auto: main shape only, depth holes filled",
+  "ops": [
+   [
+    "keep_largest"
+   ],
+   [
+    "fill_holes"
+   ]
+  ]
+ },
+ "g3q/3894-3895-3897-3898": {
+  "note": "auto: main shape only, depth holes filled",
+  "ops": [
+   [
+    "keep_largest"
+   ],
+   [
+    "fill_holes"
+   ]
+  ]
+ },
+ "g3q/393-393-394-394": {
+  "note": "auto: main shape only, depth holes filled",
+  "ops": [
+   [
+    "keep_largest"
+   ],
+   [
+    "fill_holes"
+   ]
+  ]
+ },
+ "g3q/397-406-399-396": {
+  "note": "auto: main shape only, depth holes filled",
+  "ops": [
+   [
+    "keep_largest"
+   ],
+   [
+    "fill_holes"
+   ]
+  ]
+ },
+ "g3q/438-438-438-438": {
+  "note": "auto: main shape only, depth holes filled",
+  "ops": [
+   [
+    "keep_largest"
+   ],
+   [
+    "fill_holes"
+   ]
+  ]
+ },
+ "g3q/4932-4976-5010-4997": {
+  "note": "auto: main shape only, depth holes filled",
+  "ops": [
+   [
+    "keep_largest"
+   ],
+   [
+    "fill_holes"
+   ]
+  ]
+ },
+ "g3q/536-537-484-485": {
+  "note": "auto: main shape only, depth holes filled",
+  "ops": [
+   [
+    "keep_largest"
+   ],
+   [
+    "fill_holes"
+   ]
+  ]
+ },
+ "g3q/830-831-832-833": {
+  "note": "auto: main shape only, depth holes filled",
+  "ops": [
+   [
+    "keep_largest"
+   ],
+   [
+    "fill_holes"
+   ]
+  ]
+ }
+}

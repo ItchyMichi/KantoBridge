@@ -155,3 +155,41 @@ replaced. The failure lists gained a `depth` entry per cell.
 (5,735 before this run), 8,652 in Crystal (1,675) and 5,052 in Emerald (391), and leaves 2, 102 and 486 cells to Tier
 A (`FitTool applied`). The full check passed. 144 keep today's pick because no builder beat it, and 23 are patterns left to
 rules. The models, fits and both sprites (masked and whole) are in the user's viewer (kb-hub, set `depth-all`).
+
+## 10. Voxel shapes in the table (2026-10-17)
+
+The builders seldom matched the depth models, though the models looked right, so the table can now hold a cell's shape
+itself:
+
+- **The entry** `{"class": "voxels", "v": <base64, 16³ bits, index (y * 16 + z) * 16 + x>, "from": ...}`: shape only, no
+  pixels. `FittedShapes` reads it and gives it the first 6 bytes of the shape's SHA-256 (each mod 100) as its
+  parameters.
+- **The key** carries class `voxels` and that hash (`g2_voxels_k…`). Any client finds the shape in the jar's tables by
+  cell and hash (`FittedShapes.voxels`), whichever game the key came from. The hash also tells Crystal's and Emerald's
+  `g3q` cells apart.
+- **The builder** `CellUnits.voxels` paints each voxel with the drawing's pixel in front of it (column x, row 15 − y),
+  or the nearest drawn pixel in that row, else in that column. A shape whose block passes 96 quads, or whose cell
+  lacks a tile, falls back to the other builders (`Kind.VOXELS` otherwise). The self-check's reference treats it like
+  a hull.
+- `tools/shape_fit/merge_voxels.py` writes shapes into the tables. The depth run's 288 models went in this way,
+  replacing its builder fits; first-run entries are kept. `FitTool applied` also prints what the units became.
+
+## 11. Blockbench (2026-10-17)
+
+- `tools/shape_fit/bbmodel.py` exports a shape to a Blockbench generic model: voxels merged into boxes, 2 units per
+  voxel, the south side drawn, the whole sprite as texture by front projection. It imports models back, honouring
+  rotations. The round trip is exact.
+- Blockbench 5.2.2 desktop ran on a CPU pod under Xvfb, with remote debugging on localhost. Scripts load models and
+  render sheets (sprite, front, side, three-quarter and top views) for inspection, and noVNC lets a person watch or
+  edit.
+- **The MCP plugin** (jasonjgardner/blockbench-mcp-plugin) was tried and uninstalled. It needs access to Blockbench's
+  process, and its server includes `risky_eval` (arbitrary code). The agent's safety check refused that, so models are
+  driven through the remote-debugging connection by the project's own scripts.
+- **Edits** are recorded, not drawn: `tools/shape_fit/voxedit.py` applies ops (`keep_largest`, `remove`, `add`,
+  `thickness`, `round`, `shift`, `fill_holes`, `drop`), and `tools/shape_fit/edits/<game>.json` keeps each cell's ops
+  and why. The first pass:
+  - an automatic clean-up of all 288 shapes: the main front-view shape only (no stray strands from the mask), depth
+    holes filled;
+  - hand edits from the render sheets, starting with the Pokémon Center computer (a box, not a thin tile) and a Crystal
+    rock (the dithered ground removed, rounded).
+  The edited shapes replaced the depth models in the tables (`"from": "edited"`).

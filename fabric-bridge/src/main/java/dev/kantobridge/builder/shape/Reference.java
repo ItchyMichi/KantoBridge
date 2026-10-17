@@ -53,7 +53,7 @@ public final class Reference {
 		int cellPx = per * artPx;
 		for (Units.Cell cell : shapes.units()) {
 			CellUnits.Unit unit = table.unit(map.atlas(), cell.key());
-			if (unit == null || (unit.kind() != CellUnits.Kind.HULL && unit.kind() != CellUnits.Kind.OBJECT)) {
+			if (unit == null || (unit.kind() != CellUnits.Kind.HULL && unit.kind() != CellUnits.Kind.OBJECT && unit.kind() != CellUnits.Kind.VOXELS)) {
 				continue;
 			}
 			if (ground == null) {

@@ -154,6 +154,12 @@ public final class FitTool {
 		ShapePlan plan = ShapePlanner.plan(front.describe(bundle), List.of(), ShapeParams.current(), Occupancy.NONE,
 				new ArtUnitProbe(FrontEnds.artSource(bundle)));
 		System.out.println("applied: " + bundle.game() + " " + plan.unitTally());
+		// What the units became with this art: a voxel shape over the quad budget falls back to the other builders.
+		Map<String, Integer> kinds = new TreeMap<>();
+		for (CellUnits.Unit unit : ShapeTable.build(plan.index(), FrontEnds.artSource(bundle)).units().values()) {
+			kinds.merge(unit.kind().id(), 1, Integer::sum);
+		}
+		System.out.println("built: " + bundle.game() + " " + kinds);
 	}
 
 	static void dump(Path bundleDir, Path out) throws Exception {

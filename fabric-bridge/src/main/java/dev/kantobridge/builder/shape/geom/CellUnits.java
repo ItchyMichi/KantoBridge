@@ -60,7 +60,9 @@ public final class CellUnits {
 		/** A pinned stair's steps (P3). */
 		STAIR("stair"),
 		/** A pinned relief's raised pixels (P3). */
-		RELIEF("relief");
+		RELIEF("relief"),
+		/** A fitted voxel shape (docs/specs/FITTED_SHAPES.md section 10), painted from the drawing in front of it. */
+		VOXELS("voxels");
 
 		private final String id;
 
@@ -130,7 +132,7 @@ public final class CellUnits {
 				String part = parts[k];
 				if (part.length() == 3 && part.startsWith("bg") && Character.digit(part.charAt(2), 16) >= 0) {
 					background = Character.digit(part.charAt(2), 16);
-				} else if (Profile.CLASSES.containsKey(part)) {
+				} else if (Profile.CLASSES.containsKey(part) || dev.kantobridge.builder.shape.FittedShapes.VOXELS.equals(part)) {
 					pinned = part;
 				} else if (part.length() >= 3 && part.length() % 2 == 1 && part.charAt(0) == 'k' && part.substring(1).chars().allMatch(Character::isDigit)) {
 					for (int d = 1; d < part.length(); d += 2) {
@@ -382,6 +384,83 @@ public final class CellUnits {
 
 	private static int param(List<Integer> params, int k) {
 		return k < params.size() ? params.get(k) : 0;
+	}
+
+	/**
+	 * A fitted voxel shape (docs/specs/FITTED_SHAPES.md section 10): {@code occupancy} (x east, y up, z south, index
+	 * {@code (y * w + z) * w + x}) as voxels, each painted with the drawing's pixel in front of it (column x, row
+	 * w - 1 - y), or the nearest drawn pixel in that row, else in that column. No pixel decides the shape, only its
+	 * colours, as with the hulls. Null when a tile is missing, nothing stands, or a block holds more than
+	 * {@code maxQuads} quads (the planner's other builders then decide).
+	 */
+	public static @Nullable Unit voxels(int @Nullable [][] tiles, boolean[] occupancy, int perCell, int artPx, int maxQuads) {
+		int w = perCell * artPx;
+		if (occupancy.length != w * w * w) {
+			return null;
+		}
+		for (int[] tile : tiles) {
+			if (tile == null) {
+				return null;
+			}
+		}
+		int[] texels = new int[w * w];
+		boolean[] drawn = new boolean[w * w];
+		for (int y = 0; y < w; y++) {
+			for (int x = 0; x < w; x++) {
+				int t = (y / artPx) * perCell + x / artPx;
+				int shade = tiles[t][(y % artPx) * artPx + x % artPx];
+				texels[y * w + x] = VoxelGrid.texel(t, x % artPx, y % artPx);
+				drawn[y * w + x] = shade >= 0;
+			}
+		}
+		VoxelGrid grid = new VoxelGrid(w, w, w, artPx);
+		boolean[] foreground = new boolean[w * w];
+		int solid = 0;
+		for (int y = 0; y < w; y++) {
+			int row = w - 1 - y;
+			for (int x = 0; x < w; x++) {
+				int source = nearestDrawn(drawn, w, row, x);
+				for (int z = 0; z < w; z++) {
+					if (occupancy[(y * w + z) * w + x] && source >= 0) {
+						grid.set(x, y, z, texels[source]);
+						foreground[row * w + x] = true;
+						solid++;
+					}
+				}
+			}
+		}
+		if (solid == 0) {
+			return null;
+		}
+		List<List<ShapeQuad>> blocks = slice(grid, perCell);
+		int quads = maxQuads(blocks);
+		if (quads > maxQuads) {
+			return null;
+		}
+		double[] score = check(blocks, foreground, texels, perCell, artPx);
+		return new Unit(Kind.VOXELS, null, score[0], score[1], quads, blocks, foreground, null, grid);
+	}
+
+	/** The pixel (row * w + col) a voxel column at (row, col) is painted with: itself if drawn, else the nearest drawn. */
+	private static int nearestDrawn(boolean[] drawn, int w, int row, int col) {
+		if (drawn[row * w + col]) {
+			return row * w + col;
+		}
+		for (int d = 1; d < w; d++) {
+			for (int c : new int[] {col - d, col + d}) {
+				if (c >= 0 && c < w && drawn[row * w + c]) {
+					return row * w + c;
+				}
+			}
+		}
+		for (int d = 1; d < w; d++) {
+			for (int r : new int[] {row - d, row + d}) {
+				if (r >= 0 && r < w && drawn[r * w + col]) {
+					return r * w + col;
+				}
+			}
+		}
+		return -1;
 	}
 
 	/** The column version: every block a full cube folded from the unit's tiles. */

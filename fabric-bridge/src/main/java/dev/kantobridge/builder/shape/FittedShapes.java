@@ -34,11 +34,34 @@ public final class FittedShapes {
 	static final Map<String, String> SHARED = Map.of("red", "blue");
 	/** The class of a fit that keeps no unit. */
 	public static final String COLUMNS = "columns";
+	/** The class of a fitted voxel shape (section 10): the entry's {@code v} holds it, its key's parameters hash it. */
+	public static final String VOXELS = "voxels";
+	/** A unit's voxels: 16 x 16 x 16, one bit each. */
+	static final int VOXEL_BYTES = 16 * 16 * 16 / 8;
+	/** How many two-digit parameters a voxel shape's hash takes in its key. */
+	static final int HASH_PARAMS = 6;
 
-	/** A cell's fit: a profile class ({@link Profile#CLASSES}) or {@link #COLUMNS}, and its parameters (0..99). */
-	public record Entry(String cls, List<Integer> params) {
+	/**
+	 * A cell's fit: a profile class ({@link Profile#CLASSES}), {@link #COLUMNS} or {@link #VOXELS}, its parameters
+	 * (0..99; a voxel shape's are its hash), and a voxel shape's bits (else null).
+	 */
+	public record Entry(String cls, List<Integer> params, byte @Nullable [] voxels) {
 		public Entry {
 			params = List.copyOf(params);
+		}
+
+		public Entry(String cls, List<Integer> params) {
+			this(cls, params, null);
+		}
+
+		@Override
+		public boolean equals(Object o) {
+			return o instanceof Entry e && e.cls.equals(this.cls) && e.params.equals(this.params) && java.util.Arrays.equals(e.voxels, this.voxels);
+		}
+
+		@Override
+		public int hashCode() {
+			return java.util.Objects.hash(this.cls, this.params) * 31 + java.util.Arrays.hashCode(this.voxels);
 		}
 	}
 
@@ -115,6 +138,45 @@ public final class FittedShapes {
 		return rows == null ? -1 : rows;
 	}
 
+	/**
+	 * A fitted voxel shape by its cell and the hash its key carries, from any game's table (a client builds it without
+	 * knowing which game the key came from; the hash tells same-named atlases apart), or null.
+	 */
+	public static boolean @Nullable [] voxels(String atlas, int[] tiles, List<Integer> params) {
+		String key = key(atlas, tiles);
+		List<Table> all = new ArrayList<>(tables().values());
+		Table test = forTest;
+		if (test != null) {
+			all.add(0, test);
+		}
+		for (Table table : all) {
+			Entry e = table.cells().get(key);
+			if (e != null && e.voxels() != null && VOXELS.equals(e.cls()) && e.params().equals(params)) {
+				boolean[] out = new boolean[VOXEL_BYTES * 8];
+				for (int i = 0; i < out.length; i++) {
+					out[i] = (e.voxels()[i >> 3] >> (i & 7) & 1) != 0;
+				}
+				return out;
+			}
+		}
+		return null;
+	}
+
+	/** A voxel shape's hash as its key's parameters: the first HASH_PARAMS bytes of its SHA-256, each mod 100. */
+	public static List<Integer> hashParams(byte[] voxels) {
+		byte[] digest;
+		try {
+			digest = java.security.MessageDigest.getInstance("SHA-256").digest(voxels);
+		} catch (java.security.NoSuchAlgorithmException e) {
+			throw new IllegalStateException(e);
+		}
+		List<Integer> out = new ArrayList<>();
+		for (int i = 0; i < HASH_PARAMS; i++) {
+			out.add((digest[i] & 0xFF) % 100);
+		}
+		return out;
+	}
+
 	/** A cell's key: {@code <atlas>/<t0>-<t1>-<t2>-<t3>}. */
 	public static String key(String atlas, int[] tiles) {
 		StringBuilder out = new StringBuilder(atlas).append('/');
@@ -181,6 +243,13 @@ public final class FittedShapes {
 			try {
 				JsonObject o = e.getValue().getAsJsonObject();
 				String cls = o.get("class").getAsString();
+				if (VOXELS.equals(cls)) {
+					byte[] v = java.util.Base64.getDecoder().decode(o.get("v").getAsString());
+					if (v.length == VOXEL_BYTES) {
+						into.put(e.getKey(), new Entry(cls, hashParams(v), v));
+					}
+					continue;
+				}
 				if (!COLUMNS.equals(cls) && !Profile.CLASSES.containsKey(cls)) {
 					continue;
 				}
