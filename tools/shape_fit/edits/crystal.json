@@ -444,5 +444,402 @@
     "drop"
    ]
   ]
+ },
+ "g3q/1042-1043-1014-1014": {
+  "note": "#311 table over a floor pattern: no model, today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "g3q/1130-1131-1132-1133": {
+  "note": "#312 bush: round; auto: main shape only, depth holes filled",
+  "ops": [
+   [
+    "round",
+    0,
+    15
+   ],
+   [
+    "keep_largest"
+   ],
+   [
+    "fill_holes"
+   ]
+  ]
+ },
+ "g3q/1234-1235-1236-1237": {
+  "note": "auto: main shape only, depth holes filled",
+  "ops": [
+   [
+    "keep_largest"
+   ],
+   [
+    "fill_holes"
+   ]
+  ]
+ },
+ "g3q/1252-1253-1254-1255": {
+  "note": "#314 pot: round, its pale top an opening; auto: main shape only, depth holes filled",
+  "ops": [
+   [
+    "round",
+    0,
+    15
+   ],
+   [
+    "well",
+    2,
+    3
+   ],
+   [
+    "keep_largest"
+   ],
+   [
+    "fill_holes"
+   ]
+  ]
+ },
+ "g3q/1256-1256-1257-1257": {
+  "note": "auto: main shape only, depth holes filled",
+  "ops": [
+   [
+    "keep_largest"
+   ],
+   [
+    "fill_holes"
+   ]
+  ]
+ },
+ "g3q/2102-2103-2104-2105": {
+  "note": "#316 rock: round; auto: main shape only, depth holes filled",
+  "ops": [
+   [
+    "round",
+    0,
+    15
+   ],
+   [
+    "keep_largest"
+   ],
+   [
+    "fill_holes"
+   ]
+  ]
+ },
+ "g3q/2138-2139-2142-2143": {
+  "note": "auto: main shape only, depth holes filled",
+  "ops": [
+   [
+    "keep_largest"
+   ],
+   [
+    "fill_holes"
+   ]
+  ]
+ },
+ "g3q/2155-2155-2155-2155": {
+  "note": "#318 pattern: no model, today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "g3q/2264-2265-2266-2267": {
+  "note": "auto: main shape only, depth holes filled",
+  "ops": [
+   [
+    "keep_largest"
+   ],
+   [
+    "fill_holes"
+   ]
+  ]
+ },
+ "g3q/2270-2271-2272-2273": {
+  "note": "auto: main shape only, depth holes filled",
+  "ops": [
+   [
+    "keep_largest"
+   ],
+   [
+    "fill_holes"
+   ]
+  ]
+ },
+ "g3q/2769-2770-2771-2772": {
+  "note": "auto: main shape only, depth holes filled",
+  "ops": [
+   [
+    "keep_largest"
+   ],
+   [
+    "fill_holes"
+   ]
+  ]
+ },
+ "g3q/2899-2900-2901-2902": {
+  "note": "#322 boulder: round; auto: main shape only, depth holes filled",
+  "ops": [
+   [
+    "round",
+    0,
+    15
+   ],
+   [
+    "keep_largest"
+   ],
+   [
+    "fill_holes"
+   ]
+  ]
+ },
+ "g3q/2991-3616-2995-3617": {
+  "note": "#323 door frame: no model, today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "g3q/3391-3391-3391-3391": {
+  "note": "#324 snow floor: no model, today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "g3q/3438-3439-3442-3443": {
+  "note": "#325 mask-cut fragment: no model, today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "g3q/3466-3467-3468-3469": {
+  "note": "#326 egg/rock: round; auto: main shape only, depth holes filled",
+  "ops": [
+   [
+    "round",
+    0,
+    15
+   ],
+   [
+    "keep_largest"
+   ],
+   [
+    "fill_holes"
+   ]
+  ]
+ },
+ "g3q/360-3843-3843-3843": {
+  "note": "#327 window/wall pattern: no model, today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "g3q/3636-3637-3638-3639": {
+  "note": "#328 rock texture: no model, today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "g3q/3824-3825-3828-3829": {
+  "note": "#329 rock texture: no model, today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "g3q/3826-3827-3830-3831": {
+  "note": "#330 rock texture: no model, today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "g3q/3843-3843-360-3843": {
+  "note": "#331 window/wall pattern: no model, today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "g3q/3861-3862-3864-3865": {
+  "note": "#332 decorated panel: slab; auto: main shape only, depth holes filled",
+  "ops": [
+   [
+    "thickness",
+    0,
+    0,
+    15,
+    15,
+    4
+   ],
+   [
+    "keep_largest"
+   ],
+   [
+    "fill_holes"
+   ]
+  ]
+ },
+ "g3q/387-387-387-387": {
+  "note": "#333 floor pattern: no model, today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "g3q/3872-3873-3874-3875": {
+  "note": "#334 statue: head round on its base; auto: main shape only, depth holes filled",
+  "ops": [
+   [
+    "round",
+    0,
+    9
+   ],
+   [
+    "keep_largest"
+   ],
+   [
+    "fill_holes"
+   ]
+  ]
+ },
+ "g3q/393-393-394-449": {
+  "note": "#335 building piece: no model, today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "g3q/393-393-449-394": {
+  "note": "#336 building piece: no model, today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "g3q/406-406-396-396": {
+  "note": "#337 floor/wall strip: no model, today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "g3q/4322-4323-4286-4286": {
+  "note": "#338 TV/screen: slab; auto: main shape only, depth holes filled",
+  "ops": [
+   [
+    "thickness",
+    0,
+    0,
+    15,
+    15,
+    4
+   ],
+   [
+    "keep_largest"
+   ],
+   [
+    "fill_holes"
+   ]
+  ]
+ },
+ "g3q/445-446-447-448": {
+  "note": "#339 sign: slab; auto: main shape only, depth holes filled",
+  "ops": [
+   [
+    "thickness",
+    0,
+    0,
+    15,
+    15,
+    4
+   ],
+   [
+    "keep_largest"
+   ],
+   [
+    "fill_holes"
+   ]
+  ]
+ },
+ "g3q/4765-4766-3906-3906": {
+  "note": "#340 counter over a floor pattern: no model, today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "g3q/4815-4894-4815-4895": {
+  "note": "#341 building piece: no model, today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "g3q/4896-4814-4897-4814": {
+  "note": "#342 building piece: no model, today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "g3q/4968-4969-4970-4971": {
+  "note": "#343 pot: round with its opening; auto: main shape only, depth holes filled",
+  "ops": [
+   [
+    "round",
+    0,
+    15
+   ],
+   [
+    "well",
+    2,
+    3
+   ],
+   [
+    "keep_largest"
+   ],
+   [
+    "fill_holes"
+   ]
+  ]
+ },
+ "g3q/549-549-0-0": {
+  "note": "#344 plain wall: no model, today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "g3q/751-752-371-372": {
+  "note": "#345 rock texture: no model, today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
  }
 }

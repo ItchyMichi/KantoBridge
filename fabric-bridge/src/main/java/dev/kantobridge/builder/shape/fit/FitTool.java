@@ -37,6 +37,8 @@ import org.jetbrains.annotations.Nullable;
  * <pre>
  * dump &lt;bundle&gt; &lt;out.json&gt;              every planned unit once per cell (atlas and four tiles): its drawing's shades,
  *                                        its foreground, and the voxels today's pick builds (ROM-derived: local/ only)
+ * locate &lt;bundle&gt; &lt;out.json&gt;          per planned cell, one map and cell where it stands and a walkable cell to look at it
+ *                                        from (UnitLocations), for the in-scene review sheets
  * applied &lt;bundle&gt;                      the planner's unit tally with the jar's table on ({@code fit}: units it re-picked,
  *                                        {@code fit_columns}: cells it left to Tier A)
  * fit &lt;bundle&gt; &lt;targets.json&gt; &lt;out.json&gt; per cell, every builder and setting of {@link Candidates} against the
@@ -58,6 +60,8 @@ public final class FitTool {
 			dump(Path.of(args[1]), Path.of(args[2]));
 		} else if (args.length == 4 && args[0].equals("fit")) {
 			fit(Path.of(args[1]), Path.of(args[2]), Path.of(args[3]));
+		} else if (args.length == 3 && args[0].equals("locate")) {
+			locate(Path.of(args[1]), Path.of(args[2]));
 		} else if (args.length == 2 && args[0].equals("applied")) {
 			applied(Path.of(args[1]));
 		} else {
@@ -142,6 +146,22 @@ public final class FitTool {
 			}
 		}
 		return out;
+	}
+
+	static void locate(Path bundleDir, Path out) throws Exception {
+		ExportBundle bundle = ExportBundle.open(bundleDir);
+		GameFrontEnd front = FrontEnds.forGame(bundle.game());
+		if (front == null) {
+			throw new IllegalArgumentException("no front end for " + bundle.game());
+		}
+		FittedShapes.setEnabled(false);
+		dev.kantobridge.scene.Scene scene = front.describe(bundle);
+		ShapePlan plan = ShapePlanner.plan(scene, List.of(), ShapeParams.current(), Occupancy.NONE, new ArtUnitProbe(FrontEnds.artSource(bundle)));
+		JsonObject root = new JsonObject();
+		dev.kantobridge.builder.shape.UnitLocations.locate(scene, plan, null).forEach(root::add);
+		Files.createDirectories(out.toAbsolutePath().getParent());
+		Files.writeString(out, new GsonBuilder().setPrettyPrinting().create().toJson(root) + "\n", StandardCharsets.UTF_8);
+		System.out.println("locate: " + bundle.game() + " " + root.size() + " cells");
 	}
 
 	static void applied(Path bundleDir) throws Exception {

@@ -2073,5 +2073,1815 @@
     "drop"
    ]
   ]
+ },
+ "g3q/10161-10162-10176-10177": {
+  "note": "#346 lamp/post: round; auto: main shape only, depth holes filled",
+  "ops": [
+   [
+    "round",
+    0,
+    15
+   ],
+   [
+    "keep_largest"
+   ],
+   [
+    "fill_holes"
+   ]
+  ]
+ },
+ "g3q/10242-10242-10249-10249": {
+  "note": "#347 building piece or pattern: no model, today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "g3q/10243-10245-10253-10252": {
+  "note": "#348 building piece or pattern: no model, today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "g3q/10402-10403-10404-10405": {
+  "note": "#349 pot: round with its dark opening; auto: main shape only, depth holes filled",
+  "ops": [
+   [
+    "round",
+    0,
+    15
+   ],
+   [
+    "well",
+    2,
+    3
+   ],
+   [
+    "keep_largest"
+   ],
+   [
+    "fill_holes"
+   ]
+  ]
+ },
+ "g3q/10672-10669-10670-10671": {
+  "note": "#350 building piece or pattern: no model, today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "g3q/10673-13305-10668-13306": {
+  "note": "#351 building piece or pattern: no model, today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "g3q/10681-10659-10682-10683": {
+  "note": "#352 small rock/bush on the ground: round; auto: main shape only, depth holes filled",
+  "ops": [
+   [
+    "round",
+    0,
+    15
+   ],
+   [
+    "keep_largest"
+   ],
+   [
+    "fill_holes"
+   ]
+  ]
+ },
+ "g3q/10684-10685-10686-10676": {
+  "note": "#353 small rock/bush on the ground: round; auto: main shape only, depth holes filled",
+  "ops": [
+   [
+    "round",
+    0,
+    15
+   ],
+   [
+    "keep_largest"
+   ],
+   [
+    "fill_holes"
+   ]
+  ]
+ },
+ "g3q/10689-10690-10682-10691": {
+  "note": "#354 small rock/bush on the ground: round; auto: main shape only, depth holes filled",
+  "ops": [
+   [
+    "round",
+    0,
+    15
+   ],
+   [
+    "keep_largest"
+   ],
+   [
+    "fill_holes"
+   ]
+  ]
+ },
+ "g3q/10706-10707-10682-10708": {
+  "note": "#355 small rock/bush on the ground: round; auto: main shape only, depth holes filled",
+  "ops": [
+   [
+    "round",
+    0,
+    15
+   ],
+   [
+    "keep_largest"
+   ],
+   [
+    "fill_holes"
+   ]
+  ]
+ },
+ "g3q/10728-10732-10733-10676": {
+  "note": "#356 small rock/bush on the ground: round; auto: main shape only, depth holes filled",
+  "ops": [
+   [
+    "round",
+    0,
+    15
+   ],
+   [
+    "keep_largest"
+   ],
+   [
+    "fill_holes"
+   ]
+  ]
+ },
+ "g3q/10740-10729-10682-10741": {
+  "note": "#357 small rock/bush on the ground: round; auto: main shape only, depth holes filled",
+  "ops": [
+   [
+    "round",
+    0,
+    15
+   ],
+   [
+    "keep_largest"
+   ],
+   [
+    "fill_holes"
+   ]
+  ]
+ },
+ "g3q/10743-10659-10759-10746": {
+  "note": "#358 building piece or pattern: no model, today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "g3q/10743-10659-10801-10746": {
+  "note": "#359 building piece or pattern: no model, today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "g3q/10913-10914-10915-10916": {
+  "note": "#360 potted plant: round; auto: main shape only, depth holes filled",
+  "ops": [
+   [
+    "round",
+    0,
+    15
+   ],
+   [
+    "keep_largest"
+   ],
+   [
+    "fill_holes"
+   ]
+  ]
+ },
+ "g3q/10957-10966-11097-11106": {
+  "note": "#361 building piece or pattern: no model, today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "g3q/11208-11209-11210-11211": {
+  "note": "#362 signpost: thin board on a thin post; auto: main shape only, depth holes filled",
+  "ops": [
+   [
+    "thickness",
+    0,
+    0,
+    15,
+    10,
+    3
+   ],
+   [
+    "thickness",
+    0,
+    11,
+    15,
+    15,
+    2
+   ],
+   [
+    "keep_largest"
+   ],
+   [
+    "fill_holes"
+   ]
+  ]
+ },
+ "g3q/11315-11316-11317-11318": {
+  "note": "#363 sign board: slab; auto: main shape only, depth holes filled",
+  "ops": [
+   [
+    "thickness",
+    0,
+    0,
+    15,
+    15,
+    4
+   ],
+   [
+    "keep_largest"
+   ],
+   [
+    "fill_holes"
+   ]
+  ]
+ },
+ "g3q/11399-11718-11727-10676": {
+  "note": "#364 small rock/bush on the ground: round; auto: main shape only, depth holes filled",
+  "ops": [
+   [
+    "round",
+    0,
+    15
+   ],
+   [
+    "keep_largest"
+   ],
+   [
+    "fill_holes"
+   ]
+  ]
+ },
+ "g3q/11858-11859-11860-10676": {
+  "note": "#365 small rock/bush on the ground: round; auto: main shape only, depth holes filled",
+  "ops": [
+   [
+    "round",
+    0,
+    15
+   ],
+   [
+    "keep_largest"
+   ],
+   [
+    "fill_holes"
+   ]
+  ]
+ },
+ "g3q/11877-11878-10682-11879": {
+  "note": "#366 small rock/bush on the ground: round; auto: main shape only, depth holes filled",
+  "ops": [
+   [
+    "round",
+    0,
+    15
+   ],
+   [
+    "keep_largest"
+   ],
+   [
+    "fill_holes"
+   ]
+  ]
+ },
+ "g3q/12112-12121-12129-12136": {
+  "note": "#367 building piece or pattern: no model, today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "g3q/12460-12461-10757-10758": {
+  "note": "#368 building piece or pattern: no model, today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "g3q/12536-12537-12538-12539": {
+  "note": "#369 pot: round with its opening; auto: main shape only, depth holes filled",
+  "ops": [
+   [
+    "round",
+    0,
+    15
+   ],
+   [
+    "well",
+    2,
+    3
+   ],
+   [
+    "keep_largest"
+   ],
+   [
+    "fill_holes"
+   ]
+  ]
+ },
+ "g3q/12542-12543-12544-12545": {
+  "note": "#370 bin/pot: round, dark top an opening; auto: main shape only, depth holes filled",
+  "ops": [
+   [
+    "round",
+    0,
+    15
+   ],
+   [
+    "well",
+    2,
+    3
+   ],
+   [
+    "keep_largest"
+   ],
+   [
+    "fill_holes"
+   ]
+  ]
+ },
+ "g3q/12942-12943-12944-12945": {
+  "note": "#371 building piece, rock slice or pattern: no model, today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "g3q/13071-13068-13072-13070": {
+  "note": "#372 building piece, rock slice or pattern: no model, today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "g3q/13301-13300-13303-13305": {
+  "note": "#373 building piece, rock slice or pattern: no model, today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "g3q/13301-13301-13303-13303": {
+  "note": "#374 building piece, rock slice or pattern: no model, today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "g3q/13865-13866-13867-13868": {
+  "note": "#375 rock/plant: round; auto: main shape only, depth holes filled",
+  "ops": [
+   [
+    "round",
+    0,
+    15
+   ],
+   [
+    "keep_largest"
+   ],
+   [
+    "fill_holes"
+   ]
+  ]
+ },
+ "g3q/13877-0-13847-0": {
+  "note": "#376 building piece, rock slice or pattern: no model, today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "g3q/13921-13915-13922-13917": {
+  "note": "#377 notice board on legs: thin; auto: main shape only, depth holes filled",
+  "ops": [
+   [
+    "thickness",
+    0,
+    0,
+    15,
+    15,
+    3
+   ],
+   [
+    "keep_largest"
+   ],
+   [
+    "fill_holes"
+   ]
+  ]
+ },
+ "g3q/13933-13932-13843-13844": {
+  "note": "#378 building piece, rock slice or pattern: no model, today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "g3q/14216-14102-14230-14159": {
+  "note": "#379 building piece, rock slice or pattern: no model, today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "g3q/14447-14456-14155-14462": {
+  "note": "#380 building piece, rock slice or pattern: no model, today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "g3q/15625-15626-15627-15628": {
+  "note": "#381 building piece, rock slice or pattern: no model, today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "g3q/15645-15646-15647-15648": {
+  "note": "#382 building piece, rock slice or pattern: no model, today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "g3q/15866-15867-15868-15869": {
+  "note": "#383 signpost: thin board on a thin post; auto: main shape only, depth holes filled",
+  "ops": [
+   [
+    "thickness",
+    0,
+    0,
+    15,
+    10,
+    3
+   ],
+   [
+    "thickness",
+    0,
+    11,
+    15,
+    15,
+    2
+   ],
+   [
+    "keep_largest"
+   ],
+   [
+    "fill_holes"
+   ]
+  ]
+ },
+ "g3q/15880-15881-15882-15883": {
+  "note": "#384 potted plant: round; auto: main shape only, depth holes filled",
+  "ops": [
+   [
+    "round",
+    0,
+    15
+   ],
+   [
+    "keep_largest"
+   ],
+   [
+    "fill_holes"
+   ]
+  ]
+ },
+ "g3q/16310-16311-16312-16313": {
+  "note": "#385 building piece, rock slice or pattern: no model, today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "g3q/16314-16311-16315-16313": {
+  "note": "#386 building piece, rock slice or pattern: no model, today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "g3q/16503-16504-16505-16506": {
+  "note": "#387 machine/console: box 6 deep; auto: main shape only, depth holes filled",
+  "ops": [
+   [
+    "thickness",
+    0,
+    0,
+    15,
+    15,
+    6
+   ],
+   [
+    "keep_largest"
+   ],
+   [
+    "fill_holes"
+   ]
+  ]
+ },
+ "g3q/16507-16508-16509-16510": {
+  "note": "#388 machine/console: box 6 deep; auto: main shape only, depth holes filled",
+  "ops": [
+   [
+    "thickness",
+    0,
+    0,
+    15,
+    15,
+    6
+   ],
+   [
+    "keep_largest"
+   ],
+   [
+    "fill_holes"
+   ]
+  ]
+ },
+ "g3q/16563-16563-16563-16661": {
+  "note": "#389 building piece, rock slice or pattern: no model, today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "g3q/16623-16624-16625-16626": {
+  "note": "#390 signpost: thin board on a thin post; auto: main shape only, depth holes filled",
+  "ops": [
+   [
+    "thickness",
+    0,
+    0,
+    15,
+    10,
+    3
+   ],
+   [
+    "thickness",
+    0,
+    11,
+    15,
+    15,
+    2
+   ],
+   [
+    "keep_largest"
+   ],
+   [
+    "fill_holes"
+   ]
+  ]
+ },
+ "g3q/16635-16636-16637-16638": {
+  "note": "#391 building piece, rock slice or pattern: no model, today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "g3q/16643-16563-16663-16640": {
+  "note": "#392 building piece, rock slice or pattern: no model, today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "g3q/16706-10659-16655-16707": {
+  "note": "#393 small rock on the ground: round; auto: main shape only, depth holes filled",
+  "ops": [
+   [
+    "round",
+    0,
+    15
+   ],
+   [
+    "keep_largest"
+   ],
+   [
+    "fill_holes"
+   ]
+  ]
+ },
+ "g3q/1708-1709-1689-1690": {
+  "note": "#394 pot: round, its dark top an opening; auto: main shape only, depth holes filled",
+  "ops": [
+   [
+    "round",
+    0,
+    15
+   ],
+   [
+    "well",
+    2,
+    3
+   ],
+   [
+    "keep_largest"
+   ],
+   [
+    "fill_holes"
+   ]
+  ]
+ },
+ "g3q/1746-1747-1748-1749": {
+  "note": "#395 machine: box 5 deep; auto: main shape only, depth holes filled",
+  "ops": [
+   [
+    "thickness",
+    0,
+    0,
+    15,
+    15,
+    5
+   ],
+   [
+    "keep_largest"
+   ],
+   [
+    "fill_holes"
+   ]
+  ]
+ },
+ "g3q/17747-17748-17749-17781": {
+  "note": "#396 building piece, statue slice or pattern: no model, today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "g3q/17747-17898-17749-17899": {
+  "note": "#397 building piece, statue slice or pattern: no model, today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "g3q/17837-17838-17773-17774": {
+  "note": "#398 barrel/pot: round, dark centre an opening; auto: main shape only, depth holes filled",
+  "ops": [
+   [
+    "round",
+    0,
+    15
+   ],
+   [
+    "well",
+    2,
+    3
+   ],
+   [
+    "keep_largest"
+   ],
+   [
+    "fill_holes"
+   ]
+  ]
+ },
+ "g3q/17900-17748-17901-17750": {
+  "note": "#399 building piece, statue slice or pattern: no model, today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "g3q/17948-17942-17949-17944": {
+  "note": "#400 building piece, statue slice or pattern: no model, today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "g3q/18181-18182-18183-18184": {
+  "note": "#401 building piece, statue slice or pattern: no model, today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "g3q/18369-18370-18371-18372": {
+  "note": "#402 bin: stray edge removed, round, open top; auto: main shape only, depth holes filled",
+  "ops": [
+   [
+    "remove",
+    11,
+    6,
+    15,
+    15
+   ],
+   [
+    "round",
+    0,
+    15
+   ],
+   [
+    "well",
+    2,
+    3
+   ],
+   [
+    "keep_largest"
+   ],
+   [
+    "fill_holes"
+   ]
+  ]
+ },
+ "g3q/18736-18737-15519-18738": {
+  "note": "#403 building piece, statue slice or pattern: no model, today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "g3q/1910-1911-1905-1903": {
+  "note": "#404 sign/lamp post: thin; auto: main shape only, depth holes filled",
+  "ops": [
+   [
+    "thickness",
+    0,
+    0,
+    15,
+    2,
+    4
+   ],
+   [
+    "thickness",
+    0,
+    3,
+    15,
+    15,
+    2
+   ],
+   [
+    "keep_largest"
+   ],
+   [
+    "fill_holes"
+   ]
+  ]
+ },
+ "g3q/19277-19278-19279-19280": {
+  "note": "#405 basin: round with its opening; auto: main shape only, depth holes filled",
+  "ops": [
+   [
+    "round",
+    0,
+    15
+   ],
+   [
+    "well",
+    2,
+    3
+   ],
+   [
+    "keep_largest"
+   ],
+   [
+    "fill_holes"
+   ]
+  ]
+ },
+ "g3q/19417-19418-19419-19420": {
+  "note": "#406 building piece, statue slice or pattern: no model, today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "g3q/20272-20273-20274-20275": {
+  "note": "#407 flower bush: round; auto: main shape only, depth holes filled",
+  "ops": [
+   [
+    "round",
+    0,
+    15
+   ],
+   [
+    "keep_largest"
+   ],
+   [
+    "fill_holes"
+   ]
+  ]
+ },
+ "g3q/20630-20631-20632-20633": {
+  "note": "#408 bush: round; auto: main shape only, depth holes filled",
+  "ops": [
+   [
+    "round",
+    0,
+    15
+   ],
+   [
+    "keep_largest"
+   ],
+   [
+    "fill_holes"
+   ]
+  ]
+ },
+ "g3q/2088-2089-2090-2091": {
+  "note": "#409 building piece, statue slice or pattern: no model, today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "g3q/2092-2089-2090-2091": {
+  "note": "#410 building piece, statue slice or pattern: no model, today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "g3q/2152-2153-2150-2151": {
+  "note": "#411 building piece, statue slice or pattern: no model, today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "g3q/21886-21887-21888-21889": {
+  "note": "#412 building piece, statue slice or pattern: no model, today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "g3q/21890-21899-21896-21897": {
+  "note": "#413 building piece, statue slice or pattern: no model, today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "g3q/21890-27040-21896-27041": {
+  "note": "#414 building piece, statue slice or pattern: no model, today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "g3q/21910-21921-21922-21923": {
+  "note": "#415 building piece, statue slice or pattern: no model, today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "g3q/24138-24139-24140-24141": {
+  "note": "#416 bush: round; auto: main shape only, depth holes filled",
+  "ops": [
+   [
+    "round",
+    0,
+    15
+   ],
+   [
+    "keep_largest"
+   ],
+   [
+    "fill_holes"
+   ]
+  ]
+ },
+ "g3q/25243-25244-25245-25246": {
+  "note": "#417 small plant: round; auto: main shape only, depth holes filled",
+  "ops": [
+   [
+    "round",
+    0,
+    15
+   ],
+   [
+    "keep_largest"
+   ],
+   [
+    "fill_holes"
+   ]
+  ]
+ },
+ "g3q/25568-25569-25570-25571": {
+  "note": "#418 boulder: round; auto: main shape only, depth holes filled",
+  "ops": [
+   [
+    "round",
+    0,
+    15
+   ],
+   [
+    "keep_largest"
+   ],
+   [
+    "fill_holes"
+   ]
+  ]
+ },
+ "g3q/25904-25905-25906-25907": {
+  "note": "#419 rock pile: round; auto: main shape only, depth holes filled",
+  "ops": [
+   [
+    "round",
+    0,
+    15
+   ],
+   [
+    "keep_largest"
+   ],
+   [
+    "fill_holes"
+   ]
+  ]
+ },
+ "g3q/25908-25909-25910-25911": {
+  "note": "#420 pot: round with its opening; auto: main shape only, depth holes filled",
+  "ops": [
+   [
+    "round",
+    0,
+    15
+   ],
+   [
+    "well",
+    2,
+    3
+   ],
+   [
+    "keep_largest"
+   ],
+   [
+    "fill_holes"
+   ]
+  ]
+ },
+ "g3q/25935-25936-25937-25938": {
+  "note": "#421 pot: round, dark top an opening; auto: main shape only, depth holes filled",
+  "ops": [
+   [
+    "round",
+    0,
+    15
+   ],
+   [
+    "well",
+    2,
+    3
+   ],
+   [
+    "keep_largest"
+   ],
+   [
+    "fill_holes"
+   ]
+  ]
+ },
+ "g3q/25939-25940-25941-25942": {
+  "note": "#422 pot: round, dark top an opening; auto: main shape only, depth holes filled",
+  "ops": [
+   [
+    "round",
+    0,
+    15
+   ],
+   [
+    "well",
+    2,
+    3
+   ],
+   [
+    "keep_largest"
+   ],
+   [
+    "fill_holes"
+   ]
+  ]
+ },
+ "g3q/25978-25979-25980-25981": {
+  "note": "#423 pot: round with its opening; auto: main shape only, depth holes filled",
+  "ops": [
+   [
+    "round",
+    0,
+    15
+   ],
+   [
+    "well",
+    2,
+    3
+   ],
+   [
+    "keep_largest"
+   ],
+   [
+    "fill_holes"
+   ]
+  ]
+ },
+ "g3q/26150-26151-25906-25907": {
+  "note": "#424 rock pile: round; auto: main shape only, depth holes filled",
+  "ops": [
+   [
+    "round",
+    0,
+    15
+   ],
+   [
+    "keep_largest"
+   ],
+   [
+    "fill_holes"
+   ]
+  ]
+ },
+ "g3q/26152-26153-26154-26155": {
+  "note": "#425 pot: round with its opening; auto: main shape only, depth holes filled",
+  "ops": [
+   [
+    "round",
+    0,
+    15
+   ],
+   [
+    "well",
+    2,
+    3
+   ],
+   [
+    "keep_largest"
+   ],
+   [
+    "fill_holes"
+   ]
+  ]
+ },
+ "g3q/26346-26347-26348-26349": {
+  "note": "#426 building piece, slice or pattern: no model, today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "g3q/26470-26474-26477-26480": {
+  "note": "#427 flower bush: round; auto: main shape only, depth holes filled",
+  "ops": [
+   [
+    "round",
+    0,
+    15
+   ],
+   [
+    "keep_largest"
+   ],
+   [
+    "fill_holes"
+   ]
+  ]
+ },
+ "g3q/26911-26911-26933-26933": {
+  "note": "#428 building piece, slice or pattern: no model, today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "g3q/27000-27013-27008-27014": {
+  "note": "#429 building piece, slice or pattern: no model, today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "g3q/27015-27001-27016-27008": {
+  "note": "#430 building piece, slice or pattern: no model, today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "g3q/27519-27520-21896-21897": {
+  "note": "#431 building piece, slice or pattern: no model, today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "g3q/27574-27575-27564-27576": {
+  "note": "#432 building piece, slice or pattern: no model, today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "g3q/3145-3146-3147-3148": {
+  "note": "#433 building piece, slice or pattern: no model, today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "g3q/341-341-1268-1267": {
+  "note": "#434 building piece, slice or pattern: no model, today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "g3q/3527-3528-3529-3530": {
+  "note": "#435 building piece, slice or pattern: no model, today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "g3q/3680-3680-3682-3682": {
+  "note": "#436 building piece, slice or pattern: no model, today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "g3q/3786-3787-3788-3789": {
+  "note": "#437 building piece, slice or pattern: no model, today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "g3q/3900-3892-3901-3893": {
+  "note": "#438 building piece, slice or pattern: no model, today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "g3q/4323-4334-4304-4325": {
+  "note": "#439 vase: round; auto: main shape only, depth holes filled",
+  "ops": [
+   [
+    "round",
+    0,
+    15
+   ],
+   [
+    "keep_largest"
+   ],
+   [
+    "fill_holes"
+   ]
+  ]
+ },
+ "g3q/4355-4355-4357-4357": {
+  "note": "#440 building piece, slice or pattern: no model, today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "g3q/4596-4596-840-840": {
+  "note": "#441 building piece, slice or pattern: no model, today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "g3q/4684-4685-4686-4687": {
+  "note": "#442 statue/post: round; auto: main shape only, depth holes filled",
+  "ops": [
+   [
+    "round",
+    0,
+    15
+   ],
+   [
+    "keep_largest"
+   ],
+   [
+    "fill_holes"
+   ]
+  ]
+ },
+ "g3q/4717-4717-4683-4683": {
+  "note": "#443 building piece, slice or pattern: no model, today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "g3q/4717-4717-4690-4691": {
+  "note": "#444 building piece, slice or pattern: no model, today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "g3q/4987-4988-4989-4990": {
+  "note": "#445 machine/console: box 6 deep; auto: main shape only, depth holes filled",
+  "ops": [
+   [
+    "thickness",
+    0,
+    0,
+    15,
+    15,
+    6
+   ],
+   [
+    "keep_largest"
+   ],
+   [
+    "fill_holes"
+   ]
+  ]
+ },
+ "g3q/5072-5073-4989-4990": {
+  "note": "#446 machine/console: box 6 deep; auto: main shape only, depth holes filled",
+  "ops": [
+   [
+    "thickness",
+    0,
+    0,
+    15,
+    15,
+    6
+   ],
+   [
+    "keep_largest"
+   ],
+   [
+    "fill_holes"
+   ]
+  ]
+ },
+ "g3q/5120-5121-5209-5209": {
+  "note": "#447 building piece, wall or pattern: no model, today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "g3q/5183-4966-5184-4968": {
+  "note": "#448 building piece, wall or pattern: no model, today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "g3q/5397-5398-5390-5390": {
+  "note": "#449 panel with four lamps: slab; auto: main shape only, depth holes filled",
+  "ops": [
+   [
+    "thickness",
+    0,
+    0,
+    15,
+    15,
+    4
+   ],
+   [
+    "keep_largest"
+   ],
+   [
+    "fill_holes"
+   ]
+  ]
+ },
+ "g3q/5418-6317-6317-0": {
+  "note": "#450 building piece, wall or pattern: no model, today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "g3q/5784-5546-5786-5548": {
+  "note": "#451 pot: round, its opening at the top; auto: main shape only, depth holes filled",
+  "ops": [
+   [
+    "round",
+    0,
+    15
+   ],
+   [
+    "well",
+    2,
+    3
+   ],
+   [
+    "keep_largest"
+   ],
+   [
+    "fill_holes"
+   ]
+  ]
+ },
+ "g3q/5784-5785-5786-5787": {
+  "note": "#452 pot: round, its opening at the top; auto: main shape only, depth holes filled",
+  "ops": [
+   [
+    "round",
+    0,
+    15
+   ],
+   [
+    "well",
+    2,
+    3
+   ],
+   [
+    "keep_largest"
+   ],
+   [
+    "fill_holes"
+   ]
+  ]
+ },
+ "g3q/5800-5800-5802-5802": {
+  "note": "#453 building piece, wall or pattern: no model, today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "g3q/5903-5904-5905-5906": {
+  "note": "#454 building piece, wall or pattern: no model, today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "g3q/5978-5978-2923-2923": {
+  "note": "#455 building piece, wall or pattern: no model, today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "g3q/6105-6106-6107-6108": {
+  "note": "#456 pot: round, its opening at the top; auto: main shape only, depth holes filled",
+  "ops": [
+   [
+    "round",
+    0,
+    15
+   ],
+   [
+    "well",
+    2,
+    3
+   ],
+   [
+    "keep_largest"
+   ],
+   [
+    "fill_holes"
+   ]
+  ]
+ },
+ "g3q/6109-6110-6111-6112": {
+  "note": "#457 pot: round, its opening at the top; auto: main shape only, depth holes filled",
+  "ops": [
+   [
+    "round",
+    0,
+    15
+   ],
+   [
+    "well",
+    2,
+    3
+   ],
+   [
+    "keep_largest"
+   ],
+   [
+    "fill_holes"
+   ]
+  ]
+ },
+ "g3q/6316-5418-0-6316": {
+  "note": "#458 building piece, wall or pattern: no model, today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "g3q/6557-6557-6558-6558": {
+  "note": "#459 building piece, wall or pattern: no model, today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "g3q/6820-6821-6822-6823": {
+  "note": "#460 statue/fountain: round; auto: main shape only, depth holes filled",
+  "ops": [
+   [
+    "round",
+    0,
+    15
+   ],
+   [
+    "keep_largest"
+   ],
+   [
+    "fill_holes"
+   ]
+  ]
+ },
+ "g3q/6836-6859-6745-6746": {
+  "note": "#461 building piece, wall or pattern: no model, today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "g3q/6838-6839-6840-6841": {
+  "note": "#462 building piece, wall or pattern: no model, today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "g3q/6932-6932-6933-6933": {
+  "note": "#463 building piece, wall or pattern: no model, today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "g3q/7172-7173-7174-7175": {
+  "note": "#464 round object: round; auto: main shape only, depth holes filled",
+  "ops": [
+   [
+    "round",
+    0,
+    15
+   ],
+   [
+    "keep_largest"
+   ],
+   [
+    "fill_holes"
+   ]
+  ]
+ },
+ "g3q/7281-7173-7174-7175": {
+  "note": "#465 round object: round; auto: main shape only, depth holes filled",
+  "ops": [
+   [
+    "round",
+    0,
+    15
+   ],
+   [
+    "keep_largest"
+   ],
+   [
+    "fill_holes"
+   ]
+  ]
+ },
+ "g3q/7438-7439-7440-7441": {
+  "note": "#466 TV/monitor: box 5 deep; auto: main shape only, depth holes filled",
+  "ops": [
+   [
+    "thickness",
+    0,
+    0,
+    15,
+    15,
+    5
+   ],
+   [
+    "keep_largest"
+   ],
+   [
+    "fill_holes"
+   ]
+  ]
+ },
+ "g3q/7740-7742-7800-7743": {
+  "note": "#467 building piece, wall or pattern: no model, today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "g3q/792-793-890-890": {
+  "note": "#468 building piece, wall or pattern: no model, today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "g3q/8045-8045-7991-7992": {
+  "note": "#469 building piece, wall or pattern: no model, today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "g3q/8161-8162-8163-8164": {
+  "note": "#470 building piece, wall or pattern: no model, today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "g3q/8240-8241-8242-8243": {
+  "note": "#471 building piece or pattern: no model, today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "g3q/8399-8400-8401-8402": {
+  "note": "#472 statue: round; auto: main shape only, depth holes filled",
+  "ops": [
+   [
+    "round",
+    0,
+    15
+   ],
+   [
+    "keep_largest"
+   ],
+   [
+    "fill_holes"
+   ]
+  ]
+ },
+ "g3q/8450-8451-8452-8453": {
+  "note": "#473 twin statues on a plinth: rounded above the base; auto: main shape only, depth holes filled",
+  "ops": [
+   [
+    "round",
+    0,
+    12
+   ],
+   [
+    "keep_largest"
+   ],
+   [
+    "fill_holes"
+   ]
+  ]
+ },
+ "g3q/8616-8617-8614-8615": {
+  "note": "#474 machine: box 6 deep; auto: main shape only, depth holes filled",
+  "ops": [
+   [
+    "thickness",
+    0,
+    0,
+    15,
+    15,
+    6
+   ],
+   [
+    "keep_largest"
+   ],
+   [
+    "fill_holes"
+   ]
+  ]
+ },
+ "g3q/8717-8718-8719-8720": {
+  "note": "#475 statue/plant: round; auto: main shape only, depth holes filled",
+  "ops": [
+   [
+    "round",
+    0,
+    15
+   ],
+   [
+    "keep_largest"
+   ],
+   [
+    "fill_holes"
+   ]
+  ]
+ },
+ "g3q/878-878-887-840": {
+  "note": "#476 building piece or pattern: no model, today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "g3q/8995-8995-9010-9011": {
+  "note": "#477 building piece or pattern: no model, today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "g3q/8995-8995-9182-9182": {
+  "note": "#478 building piece or pattern: no model, today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "g3q/9030-9031-9174-9175": {
+  "note": "#479 pot: round with its opening; auto: main shape only, depth holes filled",
+  "ops": [
+   [
+    "round",
+    0,
+    15
+   ],
+   [
+    "well",
+    2,
+    3
+   ],
+   [
+    "keep_largest"
+   ],
+   [
+    "fill_holes"
+   ]
+  ]
+ },
+ "g3q/9145-9146-9147-9148": {
+  "note": "#480 pot: stray strip cut, round with its opening; auto: main shape only, depth holes filled",
+  "ops": [
+   [
+    "remove",
+    0,
+    0,
+    2,
+    15
+   ],
+   [
+    "round",
+    0,
+    15
+   ],
+   [
+    "well",
+    2,
+    3
+   ],
+   [
+    "keep_largest"
+   ],
+   [
+    "fill_holes"
+   ]
+  ]
+ },
+ "g3q/9172-9146-9173-9148": {
+  "note": "#481 pot: round with its opening; auto: main shape only, depth holes filled",
+  "ops": [
+   [
+    "round",
+    0,
+    15
+   ],
+   [
+    "well",
+    2,
+    3
+   ],
+   [
+    "keep_largest"
+   ],
+   [
+    "fill_holes"
+   ]
+  ]
+ },
+ "g3q/9283-9284-9285-9286": {
+  "note": "#482 sofa/chair: box 8 deep; auto: main shape only, depth holes filled",
+  "ops": [
+   [
+    "thickness",
+    0,
+    0,
+    15,
+    15,
+    8
+   ],
+   [
+    "keep_largest"
+   ],
+   [
+    "fill_holes"
+   ]
+  ]
+ },
+ "g3q/9458-9459-9460-9461": {
+  "note": "#483 building piece or pattern: no model, today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
+ },
+ "g3q/9458-9459-9466-9467": {
+  "note": "#484 building piece or pattern: no model, today's pick",
+  "ops": [
+   [
+    "drop"
+   ]
+  ]
  }
 }
