@@ -79,7 +79,7 @@ object. Keep it short; don't copy text from the sources.
 - Doorways inside a building's footprint: include the door cell in the building entity so the model keeps its door.
 - A table or desk with things on it (a book, a vase, a computer on the desk itself) is "make by hand" as one entity;
   a bare table is an object. Something standing on the floor next to it (a stool, a separate monitor stand) is its own.
-- Leave black wall tops and void unmarked: they are the room's edge, not an object.
+- Black wall tops and void are "keep as blocks" (one entity of one copy; no background needed when no floor touches it).
 - Repeated tiles: an object's copies elsewhere share its keys, so one entity covers them; a 2x2 object whose left and
   right columns share tiles is still one 2x2 entity.
 
