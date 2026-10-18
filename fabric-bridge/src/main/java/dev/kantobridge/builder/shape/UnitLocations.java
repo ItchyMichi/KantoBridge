@@ -139,4 +139,106 @@ public final class UnitLocations {
 		}
 		return out;
 	}
+
+	/**
+	 * One map for the survey (docs/specs/FITTED_SHAPES.md section 14): every cell's key (an index into {@code keys}), kind,
+	 * why the planner made it a unit or not, the fitted table's class for it, and the structure region of its solid tiles
+	 * ({@link Structures#regions}, -1 for none); the map's templates (buildings), its objects, and the blocks per art tile column
+	 * Tier A builds. Pixel-free.
+	 */
+	public static JsonObject survey(SceneMap map, ShapePlanner.@Nullable MapShapes shapes, Map<String, String> why, Map<String, Integer> keyIndex,
+			com.google.gson.JsonArray keys) {
+		JsonObject o = new JsonObject();
+		o.addProperty("map", map.id());
+		o.addProperty("w", map.w());
+		o.addProperty("h", map.h());
+		o.addProperty("perCell", map.perCell());
+		o.addProperty("atlas", map.atlas());
+		o.addProperty("surface", map.surface());
+		o.addProperty("outdoor", map.env().outdoor());
+		int per = map.perCell();
+		int[] region = Structures.regions(Structures.solidTiles(map), map.artCols(), map.artRows());
+		com.google.gson.JsonArray cell = new com.google.gson.JsonArray();
+		StringBuilder kind = new StringBuilder();
+		com.google.gson.JsonArray reason = new com.google.gson.JsonArray();
+		com.google.gson.JsonArray fit = new com.google.gson.JsonArray();
+		com.google.gson.JsonArray reg = new com.google.gson.JsonArray();
+		for (int cy = 0; cy < map.h(); cy++) {
+			for (int cx = 0; cx < map.w(); cx++) {
+				int[] tiles = Units.tiles(map, cx, cy);
+				String key = FittedShapes.key(map.atlas(), tiles);
+				Integer k = keyIndex.get(key);
+				if (k == null) {
+					k = keys.size();
+					keyIndex.put(key, k);
+					keys.add(key);
+				}
+				cell.add(k);
+				kind.append(map.kind(cx, cy).name().charAt(0));
+				String r = why.get(map.id() + ":" + cx + ":" + cy);
+				reason.add(r == null ? "" : r);
+				FittedShapes.Entry e = FittedShapes.get(map.atlas(), tiles);
+				fit.add(e == null ? "" : e.cls());
+				int rg = -1;
+				for (int dy = 0; dy < per && rg < 0; dy++) {
+					for (int dx = 0; dx < per && rg < 0; dx++) {
+						rg = region[(cy * per + dy) * map.artCols() + cx * per + dx];
+					}
+				}
+				reg.add(rg);
+			}
+		}
+		o.add("cell", cell);
+		o.addProperty("kind", kind.toString());
+		o.add("why", reason);
+		o.add("fit", fit);
+		o.add("region", reg);
+		com.google.gson.JsonArray tmpl = new com.google.gson.JsonArray();
+		if (shapes != null) {
+			for (Templates.Placed t : shapes.templates()) {
+				JsonObject j = new JsonObject();
+				j.addProperty("sig", t.sig());
+				j.addProperty("x0", t.x0());
+				j.addProperty("y0", t.y0());
+				j.add("entry", t.entry());
+				tmpl.add(j);
+			}
+		}
+		o.add("templates", tmpl);
+		if (shapes != null) {
+			// blocks per art tile column as Tier A builds it (its height), row-major over the art tiles
+			com.google.gson.JsonArray blocks = new com.google.gson.JsonArray();
+			for (int b : shapes.blocks()) {
+				blocks.add(b);
+			}
+			o.add("blocks", blocks);
+		}
+		com.google.gson.JsonArray objs = new com.google.gson.JsonArray();
+		for (SceneMap.SceneObject so : map.objects()) {
+			JsonObject j = new JsonObject();
+			j.addProperty("name", so.name());
+			j.addProperty("sprite", so.sprite());
+			j.addProperty("x", so.x());
+			j.addProperty("y", so.y());
+			j.addProperty("kind", so.kind());
+			objs.add(j);
+		}
+		o.add("objects", objs);
+		return o;
+	}
+
+	/** {@link #survey} for every map of {@code scene}, with {@code game}'s fitted table read. */
+	public static java.util.List<JsonObject> surveyAll(String game, Scene scene, ShapePlan plan, Map<String, String> why, Map<String, Integer> keyIndex,
+			com.google.gson.JsonArray keys) {
+		java.util.List<JsonObject> out = new java.util.ArrayList<>();
+		String before = FittedShapes.enter(game);
+		try {
+			for (SceneMap map : scene.maps().values()) {
+				out.add(survey(map, plan.shapes(map.id()), why, keyIndex, keys));
+			}
+		} finally {
+			FittedShapes.leave(before);
+		}
+		return out;
+	}
 }

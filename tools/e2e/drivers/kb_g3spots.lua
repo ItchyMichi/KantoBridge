@@ -21,7 +21,8 @@
 -- the field is idle (onFrame scripts given 10 s, then halted) it prints
 -- KB_SPOT id= map= x= y= cells= weather= flash= halted=. The client sees the
 -- warp and follows. When the map the player is on is the command's map, a
--- hop to another map comes first, so the entry scripts run again.
+-- hop to another map comes first, so the entry scripts run again (not with
+-- nohop = true: the survey's screenshots, tools/e2e/map_shots.py).
 --
 -- Markers: KB_BOOTED slot= home= precleaned=, KB_SERVING map= x= y=,
 -- KB_SPOT ..., KB_SPOT_FAIL id= reason=, KB_CLEANED deleted= active=, KB_QUIT
@@ -282,7 +283,7 @@ return function(game)
           cmd = nil
         else
           local Map = mod3("map")
-          cmd.state = (Map and Map.current == cmd.map) and "hop" or "go"
+          cmd.state = (Map and Map.current == cmd.map and not cmd.nohop) and "hop" or "go"
           if cmd.state == "hop" then
             local hop = cmd.map == TOWN and "EM_ROUTE101" or TOWN
             local hx, hy = arrivalCell(game, hop)

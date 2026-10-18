@@ -60,6 +60,8 @@ public final class FitTool {
 			dump(Path.of(args[1]), Path.of(args[2]));
 		} else if (args.length == 4 && args[0].equals("fit")) {
 			fit(Path.of(args[1]), Path.of(args[2]), Path.of(args[3]));
+		} else if (args.length == 3 && args[0].equals("survey")) {
+			survey(Path.of(args[1]), Path.of(args[2]));
 		} else if (args.length == 3 && args[0].equals("candidates")) {
 			candidates(Path.of(args[1]), Path.of(args[2]));
 		} else if (args.length == 4 && args[0].equals("cells")) {
@@ -150,6 +152,31 @@ public final class FitTool {
 			}
 		}
 		return out;
+	}
+
+	/** Every map's cells for the survey (UnitLocations.survey), the tables on: docs/specs/FITTED_SHAPES.md section 14. */
+	static void survey(Path bundleDir, Path out) throws Exception {
+		ExportBundle bundle = ExportBundle.open(bundleDir);
+		GameFrontEnd front = FrontEnds.forGame(bundle.game());
+		dev.kantobridge.scene.Scene scene = front.describe(bundle);
+		Map<String, String> why = new java.util.concurrent.ConcurrentHashMap<>();
+		FittedShapes.collectWhy(why);
+		ShapePlan plan;
+		try {
+			plan = ShapePlanner.plan(scene, List.of(), ShapeParams.current(), Occupancy.NONE, new ArtUnitProbe(FrontEnds.artSource(bundle)));
+		} finally {
+			FittedShapes.collectWhy(null);
+		}
+		JsonArray keys = new JsonArray();
+		Map<String, Integer> index = new java.util.HashMap<>();
+		JsonArray maps = new JsonArray();
+		dev.kantobridge.builder.shape.UnitLocations.surveyAll(bundle.game(), scene, plan, why, index, keys).forEach(maps::add);
+		JsonObject root = new JsonObject();
+		root.addProperty("game", bundle.game());
+		root.add("keys", keys);
+		root.add("maps", maps);
+		Files.writeString(out, new GsonBuilder().create().toJson(root) + "\n", StandardCharsets.UTF_8);
+		System.out.println("survey: " + bundle.game() + " " + maps.size() + " maps, " + keys.size() + " keys");
 	}
 
 	/**

@@ -307,11 +307,18 @@ return function(game)
           cmd = nil
         else
           local hop
-          for _, id in ipairs(HOPS) do
+          if cmd.nohop then
+            -- the survey's screenshots (tools/e2e/map_shots.py): straight to the cell, no hop
+            cmd.state, frames, idle = "go", 0, 0
+          end
+          for _, id in ipairs(cmd.nohop and {} or HOPS) do
             if not hop and id ~= cmd.map and not (ow and ow.map.id == id) then hop = id end
           end
-          local hx, hy = arrivalCell(game, hop)
-          if hx and warp(hop, hx, hy, "down") then
+          local hx, hy
+          if hop then hx, hy = arrivalCell(game, hop) end
+          if cmd.nohop then
+            -- set above
+          elseif hx and warp(hop, hx, hy, "down") then
             cmd.state = "hop"
           else
             print(("KB_SPOT_FAIL id=%s reason=hop"):format(word(cmd.id)))

@@ -25,7 +25,8 @@
 -- prints KB_SPOT id= map= x= y= blocks= dark= flash= halted= held= busy= (what
 -- held the field when it was halted, and what holds it now). The client sees
 -- the warp and follows. When the map the player is on is the command's map, a
--- hop to another map comes first, so the callbacks run again.
+-- hop to another map comes first, so the callbacks run again (not with
+-- nohop = true: the survey's screenshots, tools/e2e/map_shots.py).
 --
 -- Markers: KB_BOOTED slot= home= precleaned=, KB_SERVING map= x= y=,
 -- KB_SPOT ..., KB_SPOT_FAIL id= reason=, KB_CLEANED deleted= active=, KB_QUIT
@@ -312,7 +313,7 @@ return function(game)
         if cmd.op ~= "go" or type(cmd.map) ~= "string" then
           print(("KB_SPOT_FAIL id=%s reason=bad_command"):format(word(cmd.id)))
           cmd = nil
-        elseif w.map.id == cmd.map then
+        elseif w.map.id == cmd.map and not cmd.nohop then
           local hop = cmd.map == TOWN and HOP_ALT or TOWN
           local hx, hy = arrivalCell(game, hop)
           restore(game, baseline)
