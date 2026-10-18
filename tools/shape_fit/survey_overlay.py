@@ -4,7 +4,7 @@ picture of each map, and the lists of what still needs a model.
 
     python survey_overlay.py <game> <survey.json> <groups.json> <mosaic maps dir> <out dir>
 
-<out>/<game>/overlays/<map>.png: the map 3x, each cell outlined by what it gets: green a voxel shape (the fitted table),
+<out>/<game>/overlays/<map>.png: the map 3x (and <map>_art.png without the marks), each cell outlined by what it gets: green a voxel shape (the fitted table),
 cyan another table shape (a builder fit), red a solid block of an object (a cell that should get a model), orange a solid
 block of a structure (a building, a canopy, terrain: the structure packages), nothing for walkable floor; yellow dots
 mark walkable cells drawn differently from the map's plain floor (decoration: a ledge, a step, a rug, flowers).
@@ -46,6 +46,7 @@ def main() -> int:
     (out / "info").mkdir(exist_ok=True)
     for m in survey["maps"]:
         counts = collections.Counter()
+        tint = []
         w, h = m["w"], m["h"]
         # each region's kind, from its top-left placement
         region_kind = {}
@@ -62,12 +63,15 @@ def main() -> int:
         path = Path(maps_dir) / f"{m['map']}.png"
         img = Image.open(path).convert("RGBA") if path.is_file() else Image.new("RGBA", (w * W, h * W), (40, 40, 40, 255))
         img = img.resize((w * W * Z, h * W * Z), Image.NEAREST)
+        base = img
+        img = Image.new("RGBA", base.size, (0, 0, 0, 0))  # the tints on their own layer, blended over the art at the end
         d = ImageDraw.Draw(img, "RGBA")
         for i in range(w * h):
             x, y = i % w, i // w
             k, kind, fit = m["cell"][i], m["kind"][i], m["fit"][i]
             box = [x * W * Z, y * W * Z, (x + 1) * W * Z - 1, (y + 1) * W * Z - 1]
             if kind == "W":
+                tint.append("d" if k != plain else "")
                 totals["floor"] += 1
                 if k != plain:
                     d.ellipse([box[0] + 20, box[1] + 20, box[0] + 27, box[1] + 27], fill=(255, 230, 0, 230))
@@ -76,28 +80,32 @@ def main() -> int:
                     e["example"] = e["example"] or [m["map"], x, y]
                 continue
             if fit == "voxels":
+                tint.append("v")
                 d.rectangle(box, outline=(40, 220, 60, 255), width=3)
                 totals["voxels"] += 1
                 continue
             if fit:
+                tint.append("b")
                 d.rectangle(box, outline=(0, 200, 230, 255), width=3)
                 totals["builder"] += 1
                 continue
             rk = region_kind.get(m["region"][i], "single")
-            colour = (255, 140, 0, 90) if rk == "structure" else (230, 30, 30, 110)
-            d.rectangle(box, fill=colour)
+            tint.append("s" if rk == "structure" else "o")
+            colour = (255, 140, 0, 70) if rk == "structure" else (230, 30, 30, 80)
+            d.rectangle(box, fill=colour, outline=colour[:3] + (230,), width=2)
             totals["blocks_" + ("structure" if rk == "structure" else "object")] += 1
             counts["orange" if rk == "structure" else "red"] += 1
             c = coverage[keys[k]]
             c["uses"] += 1
             c["parts"][rk] += 1
             c["example"] = c["example"] or [m["map"], x, y]
-        img.convert("RGB").save(out / "overlays" / f"{m['map']}.png", optimize=True)
+        Image.alpha_composite(base, img).convert("RGB").save(out / "overlays" / f"{m['map']}.png", optimize=True)
+        base.convert("RGB").save(out / "overlays" / f"{m['map']}_art.png", optimize=True)
         local = sorted(set(m["cell"]))
         where = {k: i for i, k in enumerate(local)}
         (out / "info" / f"{m['map']}.json").write_text(json.dumps(
             {"map": m["map"], "w": w, "h": h, "keys": [keys[k] for k in local], "cell": [where[k] for k in m["cell"]],
-             "kind": m["kind"], "why": m["why"], "fit": m["fit"]}), encoding="utf-8")
+             "kind": m["kind"], "why": m["why"], "fit": m["fit"], "tint": "".join(t or "-" for t in tint)}), encoding="utf-8")
         index.append({"map": m["map"], "w": w, "h": h, "red": counts["red"], "orange": counts["orange"]})
     index.sort(key=lambda e: e["map"])
     (out / "index.json").write_text(json.dumps(index), encoding="utf-8")
