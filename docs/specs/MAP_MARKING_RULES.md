@@ -67,12 +67,15 @@ room is and what its objects are: Bill's house holds his Cell Separation System,
 on plinths, a Poké Mart's counter holds the cash register. Use what you learn in the notes and to decide what is one
 object. Keep it short; don't copy text from the sources.
 
-## Lessons from the first agent pass (Blue, 2026-10-18)
+## Lessons from the first agent pass and the blind test (Blue, 2026-10-18)
 
 - Use the kinds' full names exactly as in the table above (agent_merge.py also accepts object, stack, pair, hand,
   blocks, floor).
 - An object can stand on walkable cells (stools are walkable in Blue): mark it anyway.
-- A desk or table's walkable front edge row belongs to the table entity, not to the floor.
+- Separate objects stay separate even when they touch: a monitor on a desk, a stool beside it, a plant next to a
+  shelf are each their own entity. One entity is one piece of furniture or one machine.
+- A table's walkable front edge row belongs to the table only when the art shows it is the same piece (its front
+  and legs); a stool or chair in that row is its own object.
 - Doorways inside a building's footprint: include the door cell in the building entity so the model keeps its door.
 - Repeated tiles: an object's copies elsewhere share its keys, so one entity covers them; a 2x2 object whose left and
   right columns share tiles is still one 2x2 entity.
