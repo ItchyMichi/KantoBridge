@@ -15,24 +15,6 @@
    ]
   ]
  },
- "tilesets.cemetery/1-1-39-47": {
-  "note": "#2 gravestone (in context): the floor pattern above it removed; auto: main shape only, depth holes filled",
-  "ops": [
-   [
-    "remove",
-    0,
-    0,
-    15,
-    7
-   ],
-   [
-    "keep_largest"
-   ],
-   [
-    "fill_holes"
-   ]
-  ]
- },
  "tilesets.club/29-13-21-22": {
   "note": "auto: main shape only, depth holes filled",
   "ops": [
@@ -414,22 +396,6 @@
    ]
   ]
  },
- "tilesets.gym/2-56-18-19": {
-  "note": "#296 statue: round, not a thin slab; auto: main shape only, depth holes filled",
-  "ops": [
-   [
-    "round",
-    0,
-    15
-   ],
-   [
-    "keep_largest"
-   ],
-   [
-    "fill_holes"
-   ]
-  ]
- },
  "tilesets.gym/44-45-46-47": {
   "note": "auto: main shape only, depth holes filled",
   "ops": [
@@ -732,17 +698,6 @@
   "ops": [
    [
     "drop"
-   ]
-  ]
- },
- "tilesets.cemetery/55-63-61-62": {
-  "note": "#1733 machine: relief kept; auto: main shape only, depth holes filled",
-  "ops": [
-   [
-    "keep_largest"
-   ],
-   [
-    "fill_holes"
    ]
   ]
  },
@@ -1471,27 +1426,8 @@
    ]
   ]
  },
- "tilesets.house/10-11-8-9": {
-  "note": "candidate not reviewed or not kept: today's pick",
-  "ops": [
-   [
-    "drop"
-   ]
-  ]
- },
  "tilesets.house/14-15-30-31": {
   "note": "#1778 machine: relief kept; auto: main shape only, depth holes filled",
-  "ops": [
-   [
-    "keep_largest"
-   ],
-   [
-    "fill_holes"
-   ]
-  ]
- },
- "tilesets.house/26-27-24-25": {
-  "note": "#1453 stove/pot: relief kept; auto: main shape only, depth holes filled",
   "ops": [
    [
     "keep_largest"
@@ -1652,14 +1588,6 @@
    ],
    [
     "fill_holes"
-   ]
-  ]
- },
- "tilesets.interior/13-14-29-30": {
-  "note": "candidate not reviewed or not kept: today's pick",
-  "ops": [
-   [
-    "drop"
    ]
   ]
  },

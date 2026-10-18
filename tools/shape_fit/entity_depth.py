@@ -4,12 +4,13 @@
     python entity_depth.py <game> <map> <flags_<game>.json> <map art.png> <out dir> [--weights /root/esrgan]
 
 An entity is a set of cells the user selected on kb-hub's maps page (one object drawn over several cells: a sideways
-pair, a tall object, a group), with optional background cells (the floor it is drawn on). Entities with the same keys
+pair, a tall object, a group), with optional background cells (the floor it is drawn on). Its largest 4-connected group
+of cells is the object (taps elsewhere are strays); background cells that belong to an entity are not floor. Entities with the same keys
 in the same layout are one model. Per model:
 
     drawing   the cells cut from the map's picture (the hidden game's colours), 16 px a cell
     mask      a pixel is the object's when it differs from the background at the same place in a cell and its colour
-              is none of the background's (holes the floor shows through): the background cells the user picked, else
+              is none of the background's main colours (holes the floor shows through): the background cells the user picked, else
               the walkable cells around the entity; small specks dropped
     depth     Depth Anything V2 Small on the drawing as it is (nearest, padded to a square) and through Real-ESRGAN twice
               at x4 (anime and general models, its own colours); each map averaged per drawn pixel, normalised over the
@@ -61,7 +62,13 @@ def mask_of(draw: np.ndarray, cells: list, box, backs: list[np.ndarray]) -> np.n
             # floor where it matches a background cell at the same place, or where its colour is one of the floor's
             # colours (holes the floor shows through: a wheel's middle on a checkered floor)
             dist = np.min([np.abs(px - b.astype(np.int16)).sum(axis=2) for b in backs], axis=0)
-            colours = np.unique(np.concatenate([b.reshape(-1, 3) for b in backs]).astype(np.int16), axis=0)
+            # only the floor's main colours (a quarter of its pixels or more): in a four-colour game the floor's outline
+            # colour is the objects' too
+            allpx = np.concatenate([b.reshape(-1, 3) for b in backs]).astype(np.int16)
+            uniq, counts = np.unique(allpx, axis=0, return_counts=True)
+            colours = uniq[counts >= 0.25 * len(allpx)]
+            if len(colours) == 0:
+                colours = uniq[[int(np.argmax(counts))]]
             near = np.min(np.abs(px.reshape(-1, 1, 3) - colours[None]).sum(axis=2), axis=1).reshape(W, W)
             on = (dist > 40) & (near > 24)
         else:
@@ -84,7 +91,58 @@ def mask_of(draw: np.ndarray, cells: list, box, backs: list[np.ndarray]) -> np.n
                 if len(comp) < 4:
                     for y, x in comp:
                         fg[y, x] = False
+    # fill pinholes: background pieces under 4 pixels not touching the box's edge (an object pixel that matched the
+    # floor at its place); bigger holes (a wheel's middle) stay open
+    seen = np.zeros_like(fg)
+    H_, W_ = fg.shape
+    for sy in range(H_):
+        for sx in range(W_):
+            if not fg[sy, sx] and not seen[sy, sx]:
+                comp, todo, edge = [], [(sy, sx)], False
+                seen[sy, sx] = True
+                while todo:
+                    y, x = todo.pop()
+                    comp.append((y, x))
+                    edge |= y in (0, H_ - 1) or x in (0, W_ - 1)
+                    for ny, nx in ((y + 1, x), (y - 1, x), (y, x + 1), (y, x - 1)):
+                        if 0 <= ny < H_ and 0 <= nx < W_ and not fg[ny, nx] and not seen[ny, nx]:
+                            seen[ny, nx] = True
+                            todo.append((ny, nx))
+                if not edge and len(comp) < 4:
+                    for y, x in comp:
+                        fg[y, x] = True
     return fg
+
+
+def tidy(e: dict, taken: set) -> dict:
+    """The entity's largest 4-connected group of cells (taps elsewhere are strays), its box refitted; background cells
+    that are some entity's cells dropped (they are objects, not floor)."""
+    cells = [tuple(c) for c in e["cells"]]
+    keys = dict(zip(cells, e["keys"]))
+    best, seen = [], set()
+    for c in cells:
+        if c in seen:
+            continue
+        comp, todo = [], [c]
+        seen.add(c)
+        while todo:
+            x, y = todo.pop()
+            comp.append((x, y))
+            for n in ((x + 1, y), (x - 1, y), (x, y + 1), (x, y - 1)):
+                if n in keys and n not in seen:
+                    seen.add(n)
+                    todo.append(n)
+        if len(comp) > len(best):
+            best = comp
+    best.sort(key=lambda p: (p[1], p[0]))
+    xs, ys = [p[0] for p in best], [p[1] for p in best]
+    out = dict(e)
+    out["cells"] = [list(p) for p in best]
+    out["keys"] = [keys[p] for p in best]
+    out["box"] = [min(xs), min(ys), max(xs) - min(xs) + 1, max(ys) - min(ys) + 1]
+    out["background"] = [b for b in e.get("background", []) if tuple(b["cell"]) not in taken]
+    out["strays"] = [list(c) for c in cells if c not in set(best)]
+    return out
 
 
 def square(img_rgba: np.ndarray):
@@ -135,9 +193,11 @@ def main() -> int:
     out = Path(args.out)
     out.mkdir(parents=True, exist_ok=True)
     models: dict[str, dict] = {}
+    taken = {tuple(c) for e in ents for c in e["cells"]}
     for e in ents:
         if e["kind"] in ("keep as blocks", "make by hand"):
             continue
+        e = tidy(e, taken)
         x0, y0, w, h = e["box"]
         layout = [[None] * w for _ in range(h)]
         for (cx, cy), k in zip(e["cells"], e["keys"]):
@@ -176,6 +236,13 @@ def main() -> int:
                     if 0 <= cx < info["w"] and 0 <= cy < info["h"] and info["kind"][cy * info["w"] + cx] == "W" \
                             and [cx, cy] not in e["cells"]:
                         backs.append([cx, cy])
+        if not backs and info:
+            # last: a few cells of the map's most common walkable tile
+            walk = [i for i in range(info["w"] * info["h"]) if info["kind"][i] == "W"]
+            if walk:
+                from collections import Counter
+                common = Counter(info["cell"][i] for i in walk).most_common(1)[0][0]
+                backs = [[i % info["w"], i // info["w"]] for i in walk if info["cell"][i] == common][:3]
         back_px = [native(art, bx, by, 1, 1) for bx, by in backs]
         fg = mask_of(draw, e["cells"], e["box"], back_px)
         rgba = np.dstack([draw, np.where(fg, 255, 0).astype(np.uint8)])

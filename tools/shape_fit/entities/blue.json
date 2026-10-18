@@ -94,5 +94,289 @@
   ],
   "span": 6,
   "maps": 3
+ },
+ {
+  "id": "blue_CELADON_CHIEF_HOUSE_00",
+  "kind": "stack (tall object)",
+  "note": "Plant pot",
+  "size": [
+   1,
+   2
+  ],
+  "layout": [
+   [
+    "tilesets.mansion/68-69-8-9"
+   ],
+   [
+    "tilesets.mansion/70-71-24-25"
+   ]
+  ],
+  "placements": [
+   [
+    "CELADON_CHIEF_HOUSE",
+    0,
+    6
+   ]
+  ],
+  "background": [
+   [
+    4,
+    7
+   ],
+   [
+    4,
+    6
+   ]
+  ],
+  "span": 15,
+  "maps": 3
+ },
+ {
+  "id": "blue_BILLS_HOUSE_00",
+  "kind": "object (model as one)",
+  "note": "It\u2019s a pipe",
+  "size": [
+   1,
+   1
+  ],
+  "layout": [
+   [
+    "tilesets.interior/38-38-54-54"
+   ]
+  ],
+  "placements": [
+   [
+    "BILLS_HOUSE",
+    3,
+    1
+   ]
+  ],
+  "background": [
+   [
+    2,
+    5
+   ]
+  ],
+  "span": 16,
+  "maps": 3
+ },
+ {
+  "id": "blue_BILLS_HOUSE_01",
+  "kind": "object (model as one)",
+  "note": "Stool",
+  "size": [
+   1,
+   1
+  ],
+  "layout": [
+   [
+    "tilesets.interior/43-44-59-60"
+   ]
+  ],
+  "placements": [
+   [
+    "BILLS_HOUSE",
+    1,
+    5
+   ]
+  ],
+  "background": [
+   [
+    2,
+    5
+   ]
+  ],
+  "span": 15,
+  "maps": 3
+ },
+ {
+  "id": "blue_BILLS_HOUSE_02",
+  "kind": "object (model as one)",
+  "note": "Computer monitor",
+  "size": [
+   1,
+   1
+  ],
+  "layout": [
+   [
+    "tilesets.interior/13-14-29-30"
+   ]
+  ],
+  "placements": [
+   [
+    "BILLS_HOUSE",
+    2,
+    4
+   ]
+  ],
+  "background": [
+   [
+    2,
+    5
+   ]
+  ],
+  "span": 16,
+  "maps": 3
+ },
+ {
+  "id": "blue_AGATHAS_ROOM_00",
+  "kind": "stack (tall object)",
+  "note": "Pok\u00e9mon statue",
+  "size": [
+   1,
+   2
+  ],
+  "layout": [
+   [
+    "tilesets.cemetery/1-1-39-47"
+   ],
+   [
+    "tilesets.cemetery/55-63-61-62"
+   ]
+  ],
+  "placements": [
+   [
+    "AGATHAS_ROOM",
+    3,
+    8
+   ]
+  ],
+  "background": [
+   [
+    5,
+    8
+   ],
+   [
+    5,
+    9
+   ]
+  ],
+  "span": 16,
+  "maps": 3
+ },
+ {
+  "id": "blue_BRUNOS_ROOM_00",
+  "kind": "stack (tall object)",
+  "note": "Pok\u00e9mon statue",
+  "size": [
+   1,
+   2
+  ],
+  "layout": [
+   [
+    "tilesets.gym/2-56-18-19"
+   ],
+   [
+    "tilesets.gym/34-35-50-51"
+   ]
+  ],
+  "placements": [
+   [
+    "BRUNOS_ROOM",
+    3,
+    9
+   ]
+  ],
+  "background": [
+   [
+    2,
+    8
+   ],
+   [
+    2,
+    10
+   ],
+   [
+    2,
+    11
+   ],
+   [
+    3,
+    8
+   ],
+   [
+    3,
+    11
+   ],
+   [
+    4,
+    8
+   ],
+   [
+    4,
+    9
+   ],
+   [
+    4,
+    10
+   ],
+   [
+    4,
+    11
+   ]
+  ],
+  "span": 16,
+  "maps": 3
+ },
+ {
+  "id": "blue_BLUES_HOUSE_00",
+  "kind": "object (model as one)",
+  "note": "Stool",
+  "size": [
+   1,
+   1
+  ],
+  "layout": [
+   [
+    "tilesets.house/2-3-18-19"
+   ]
+  ],
+  "placements": [
+   [
+    "BLUES_HOUSE",
+    2,
+    3
+   ]
+  ],
+  "background": [
+   [
+    5,
+    6
+   ]
+  ],
+  "span": 12,
+  "maps": 3
+ },
+ {
+  "id": "blue_BLUES_HOUSE_01",
+  "kind": "stack (tall object)",
+  "note": "Plant in pot",
+  "size": [
+   1,
+   2
+  ],
+  "layout": [
+   [
+    "tilesets.house/10-11-8-9"
+   ],
+   [
+    "tilesets.house/26-27-24-25"
+   ]
+  ],
+  "placements": [
+   [
+    "BLUES_HOUSE",
+    0,
+    6
+   ]
+  ],
+  "background": [
+   [
+    2,
+    6
+   ]
+  ],
+  "span": 16,
+  "maps": 3
  }
 ]
