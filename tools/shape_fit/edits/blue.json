@@ -754,46 +754,6 @@
    ]
   ]
  },
- "tilesets.club/11-12-27-28": {
-  "note": "candidate not reviewed or not kept: today's pick",
-  "ops": [
-   [
-    "drop"
-   ]
-  ]
- },
- "tilesets.club/12-14-28-9": {
-  "note": "candidate not reviewed or not kept: today's pick",
-  "ops": [
-   [
-    "drop"
-   ]
-  ]
- },
- "tilesets.club/14-31-9-15": {
-  "note": "#677 round object: round; auto: main shape only, depth holes filled",
-  "ops": [
-   [
-    "round",
-    0,
-    15
-   ],
-   [
-    "keep_largest"
-   ],
-   [
-    "fill_holes"
-   ]
-  ]
- },
- "tilesets.club/15-11-30-27": {
-  "note": "candidate not reviewed or not kept: today's pick",
-  "ops": [
-   [
-    "drop"
-   ]
-  ]
- },
  "tilesets.club/2-3-18-19": {
   "note": "candidate not reviewed or not kept: today's pick",
   "ops": [

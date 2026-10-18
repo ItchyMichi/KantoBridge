@@ -1,0 +1,98 @@
+[
+ {
+  "id": "blue_BIKE_SHOP_00",
+  "kind": "sideways pair",
+  "note": "",
+  "size": [
+   2,
+   1
+  ],
+  "layout": [
+   [
+    "tilesets.club/11-12-27-28",
+    "tilesets.club/14-31-9-15"
+   ]
+  ],
+  "placements": [
+   [
+    "BIKE_SHOP",
+    0,
+    1
+   ]
+  ],
+  "background": [
+   [
+    3,
+    4
+   ],
+   [
+    4,
+    4
+   ]
+  ],
+  "span": 6,
+  "maps": 3
+ },
+ {
+  "id": "blue_BIKE_SHOP_01",
+  "kind": "sideways pair",
+  "note": "",
+  "size": [
+   2,
+   1
+  ],
+  "layout": [
+   [
+    "tilesets.club/15-11-30-27",
+    "tilesets.club/12-14-28-9"
+   ]
+  ],
+  "placements": [
+   [
+    "BIKE_SHOP",
+    2,
+    1
+   ],
+   [
+    "BIKE_SHOP",
+    0,
+    2
+   ],
+   [
+    "BIKE_SHOP",
+    2,
+    2
+   ],
+   [
+    "BIKE_SHOP",
+    0,
+    4
+   ],
+   [
+    "BIKE_SHOP",
+    0,
+    5
+   ]
+  ],
+  "background": [
+   [
+    3,
+    4
+   ],
+   [
+    4,
+    4
+   ],
+   [
+    3,
+    4
+   ],
+   [
+    4,
+    4
+   ]
+  ],
+  "span": 6,
+  "maps": 3
+ }
+]
