@@ -29,7 +29,11 @@ FLAGS = {"needs a model", "keep as a block", "stack (2x1)", "group (2x2+)", "flo
 
 
 def main() -> int:
+    import fcntl
+
     data = Path(sys.argv[1])
+    lock = open(data / "files" / ".agent_merge.lock", "w")
+    fcntl.flock(lock, fcntl.LOCK_EX)  # agents merge as they finish: one at a time
     now = datetime.datetime.now(datetime.timezone.utc).isoformat()
     for f in sys.argv[2:]:
         a = json.loads(Path(f).read_text(encoding="utf-8"))

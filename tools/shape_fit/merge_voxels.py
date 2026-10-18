@@ -7,7 +7,8 @@
 run's models (depth_all.py's targets_depth.json) or Blockbench edits (bbmodel.py import). Each becomes the cell's table
 entry {"class": "voxels", "v": bits, "from": <source>}, replacing a builder fit the depth run had added for that cell
 ("from": "depth"), and an earlier voxel entry; entries from the first run (TRELLIS, no "from") are kept unless the cell
-is in <shapes.json> and --replace-first is given.
+is in <shapes.json> and --replace-first is given. --stacks marks the user's tall objects' top cells to stand on the cell
+below (the planner moves them there).
 """
 from __future__ import annotations
 
@@ -26,6 +27,8 @@ def main() -> int:
     ap.add_argument("shapes")
     ap.add_argument("--source", default="depth")
     ap.add_argument("--replace-first", action="store_true")
+    ap.add_argument("--stacks", default="", help="kb-hub's flags_<game>.json: each upright 1x2 \"stack (tall object)\" entity's top "
+                    "cell entry gets \"on\": the bottom cell's key (section 15), when both are voxel entries")
     ap.add_argument("--edits", default="", help="voxedit's edits: cells whose ops end with drop lose their voxel entry")
     args = ap.parse_args()
     table_file = REPO / "fabric-bridge/src/main/resources/kantobridge/fitted_shapes" / f"{args.game}.json"
@@ -49,12 +52,23 @@ def main() -> int:
             if ops and ops[-1] == ["drop"] and old is not None and old.get("class") == "voxels":
                 del table["cells"][key]
                 removed += 1
+    stacked = 0
+    if args.stacks:
+        for ents in json.loads(Path(args.stacks).read_text(encoding="utf-8")).get("_entities", {}).values():
+            for e in ents:
+                if e.get("kind") != "stack (tall object)" or e.get("box", [0, 0, 0, 0])[2:] != [1, 2] or len(e["keys"]) != 2:
+                    continue
+                top, bottom = e["keys"]  # cells are sorted by row: the top first
+                t, b = table["cells"].get(top), table["cells"].get(bottom)
+                if top != bottom and t and b and t.get("class") == "voxels" and b.get("class") == "voxels":
+                    t["on"] = bottom
+                    stacked += 1
     table["cells"] = dict(sorted(table["cells"].items()))
     summary = table.setdefault("summary", {})
     summary["voxels"] = sum(1 for e in table["cells"].values() if e.get("class") == "voxels")
     table_file.write_text(json.dumps(table, indent=2) + "\n", encoding="utf-8")
     print(f"{args.game}: {put} voxel shapes put ({args.source}), {removed} dropped, {kept_first} first-run entries kept; "
-          f"{summary['voxels']} voxel entries in the table")
+          f"{summary['voxels']} voxel entries in the table; {stacked} stack tops")
     return 0
 
 

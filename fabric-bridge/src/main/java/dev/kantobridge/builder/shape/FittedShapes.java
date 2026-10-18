@@ -66,7 +66,11 @@ public final class FittedShapes {
 	}
 
 	/** One game's table: its cells' fits and its buildings' roof rows. */
-	record Table(Map<String, Entry> cells, Map<String, Integer> roofs) {
+	record Table(Map<String, Entry> cells, Map<String, Integer> roofs, Map<String, String> stacks) {
+		Table(Map<String, Entry> cells, Map<String, Integer> roofs) {
+			this(cells, roofs, Map.of());
+		}
+
 	}
 
 	private static volatile @Nullable Map<String, Table> bundled;
@@ -147,6 +151,20 @@ public final class FittedShapes {
 		return table == null ? null : table.cells().get(key(atlas, tiles));
 	}
 
+	/**
+	 * The cell a stack's top stands on (docs/specs/FITTED_SHAPES.md section 15): the key of the cell below whose unit this
+	 * cell's unit stands on top of, or null.
+	 */
+	static @Nullable String stackedOn(String atlas, int[] tiles) {
+		Table table = current();
+		return table == null ? null : table.stacks().get(key(atlas, tiles));
+	}
+
+	/** Tests: stacks (top key to the key below) with the given table. */
+	static void useStacksForTest(Map<String, Entry> table, Map<String, String> stacks) {
+		forTest = new Table(Map.copyOf(table), Map.of(), Map.copyOf(stacks));
+	}
+
 	/** A building template's fitted roof rows (0 the column version), by its atlas and signature; -1 for none. */
 	public static int roofRows(String atlas, String sig) {
 		Table table = current();
@@ -215,9 +233,11 @@ public final class FittedShapes {
 								String text = new String(in.readAllBytes(), StandardCharsets.UTF_8);
 								Map<String, Entry> cells = new TreeMap<>();
 								Map<String, Integer> roofs = new TreeMap<>();
+								Map<String, String> stacks = new TreeMap<>();
 								parse(text, cells);
 								parseRoofs(text, roofs);
-								tables.put(game, new Table(Collections.unmodifiableMap(cells), Collections.unmodifiableMap(roofs)));
+								parseStacks(text, stacks);
+								tables.put(game, new Table(Collections.unmodifiableMap(cells), Collections.unmodifiableMap(roofs), Collections.unmodifiableMap(stacks)));
 							}
 						} catch (IOException e) {
 							throw new UncheckedIOException(e);
@@ -232,6 +252,20 @@ public final class FittedShapes {
 	}
 
 	/** Adds a table file's buildings ({@code structs}: key → {@code roofRows} 0..6) to {@code into}. */
+	/** Each voxel entry's "on" (the key of the cell it stands on: a stack's top). */
+	static void parseStacks(String text, Map<String, String> into) {
+		JsonObject root = JsonParser.parseString(text).getAsJsonObject();
+		if (!root.has("cells")) {
+			return;
+		}
+		for (Map.Entry<String, JsonElement> e : root.getAsJsonObject("cells").entrySet()) {
+			JsonObject o = e.getValue().getAsJsonObject();
+			if (o.has("on") && o.get("on").isJsonPrimitive()) {
+				into.put(e.getKey(), o.get("on").getAsString());
+			}
+		}
+	}
+
 	static void parseRoofs(String text, Map<String, Integer> into) {
 		JsonObject root = JsonParser.parseString(text).getAsJsonObject();
 		if (!root.has("structs")) {

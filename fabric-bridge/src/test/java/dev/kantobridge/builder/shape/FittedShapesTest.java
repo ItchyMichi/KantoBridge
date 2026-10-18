@@ -122,6 +122,26 @@ class FittedShapesTest {
 	}
 
 	@Test
+	void aStackStandsOnTheCellBelow() {
+		// a tall object: tile A over tile B, both with voxel shapes, A standing on B
+		SceneMap map = surface("STACK", "......", "......", "..AA..", "..AA..", "..BB..", "..BB..", "......", "......");
+		int a = tile('A');
+		int b = tile('B');
+		byte[] bits = new byte[FittedShapes.VOXEL_BYTES];
+		bits[0] = 1;
+		String top = FittedShapes.key(ShapeFixtures.ATLAS, new int[] {a, a, a, a});
+		String bottom = FittedShapes.key(ShapeFixtures.ATLAS, new int[] {b, b, b, b});
+		FittedShapes.useStacksForTest(Map.of(top, new FittedShapes.Entry("voxels", List.of(), bits), bottom,
+				new FittedShapes.Entry("voxels", List.of(), bits)), Map.of(top, bottom));
+		ShapePlanner.MapShapes shapes = plan(map);
+		assertEquals(1, shapes.units().size(), "the top unit moved onto the bottom one");
+		Units.Cell cell = shapes.units().get(0);
+		int per = map.perCell();
+		int i = (cell.cy() * per) * map.artCols() + cell.cx() * per;
+		assertEquals(2 * per, shapes.blocks()[i], "the bottom cell is two cells tall");
+	}
+
+	@Test
 	void aColumnsFitKeepsNoUnit() {
 		SceneMap map = surface("LONE", LONE.split("\n"));
 		FittedShapes.useForTest(Map.of(lone(), new FittedShapes.Entry("columns", List.of())));

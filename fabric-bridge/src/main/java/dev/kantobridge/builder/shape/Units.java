@@ -218,6 +218,48 @@ final class Units {
 				units.add(new Cell(cx, cy, first, foliage, source));
 			}
 		}
+		stack(map, keys, blocks, mask, units, per, cols, tally);
+	}
+
+	/**
+	 * Stacks (docs/specs/FITTED_SHAPES.md section 15): a unit whose table entry stands on the cell below it (one object drawn
+	 * over a tile and the tile under it: a potted plant, a statue on its plinth) moves on top of that cell's unit, which
+	 * becomes two cells tall; its own cell keeps only its floor.
+	 */
+	private static void stack(SceneMap map, ShapeKey[][] keys, int[] blocks, int[] mask, List<Cell> units, int per, int cols,
+			Map<String, Integer> tally) {
+		Map<Long, Cell> at = new java.util.HashMap<>();
+		for (Cell c : units) {
+			at.put((long) c.cy() << 32 | c.cx(), c);
+		}
+		List<Cell> moved = new java.util.ArrayList<>();
+		for (Cell top : units) {
+			String on = FittedShapes.stackedOn(map.atlas(), tiles(map, top.cx(), top.cy()));
+			Cell below = on == null ? null : at.get((long) (top.cy() + 1) << 32 | top.cx());
+			if (below == null || !on.equals(FittedShapes.key(map.atlas(), tiles(map, below.cx(), below.cy())))) {
+				continue;
+			}
+			for (int bz = 0; bz < per; bz++) {
+				for (int bx = 0; bx < per; bx++) {
+					int it = (top.cy() * per + bz) * cols + top.cx() * per + bx;
+					int ib = (below.cy() * per + bz) * cols + below.cx() * per + bx;
+					ShapeKey[] column = new ShapeKey[2 * per];
+					for (int by = 0; by < per; by++) {
+						column[by] = keys[ib] == null ? null : keys[ib][by];
+						column[per + by] = keys[it] == null ? null : keys[it][by];
+					}
+					keys[ib] = column;
+					blocks[ib] = 2 * per;
+					mask[ib] = (1 << (2 * per)) - 1;
+					keys[it] = null;
+					blocks[it] = 0;
+					mask[it] = 0;
+				}
+			}
+			moved.add(top);
+			tally.merge("stacked", 1, Integer::sum);
+		}
+		units.removeAll(moved);
 	}
 
 	/**

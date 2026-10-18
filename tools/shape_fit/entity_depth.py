@@ -17,6 +17,7 @@ in the same layout are one model. Per model:
               mask, the maps averaged (0 the farthest drawn pixel, 1 the nearest)
     relief    each drawn pixel a column centred in the cell's depth, TMIN + depth * (span - TMIN) voxels, span the
               mask's widest row (as deep as it is wide) capped at 16; a sideways pair (seen side-on) at most SIDE_SPAN
+    slabs     a "floor decoration" is a slab instead: SLAB voxels high under every drawn column, the whole depth
     cells     the relief cut into each cell's 16 x 16 x 16 voxels, the cell's own drawing rows in front (the planner's
               front projection), so each cell's table entry holds its part of the object
 
@@ -39,6 +40,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 W = 16
 TMIN = 2
 SIDE_SPAN = 6  # a sideways pair is seen side-on: at most this deep
+SLAB = 4  # a floor decoration's slab height (a quarter cell)
 ART = 48  # map art pixels per cell (kb-hub's maps pictures are 3x)
 
 
@@ -290,13 +292,19 @@ def main() -> int:
         whole = np.zeros((h * W, W, w * W), bool)  # [y][z][x], rows stacked as drawn
         for (cx, cy), k in zip(e["cells"], e["keys"]):
             cell = np.zeros((W, W, W), bool)
-            for r in range(W):
+            if m["kind"] == "floor decoration":
+                # a slab: SLAB voxels high over the whole depth, under every drawn column (a ledge, a step, a rim)
                 for c in range(W):
-                    gy, gx = (cy - y0) * W + r, (cx - x0) * W + c
-                    if fg[gy, gx]:
-                        t = int(round(TMIN + dn[gy, gx] * (span - TMIN)))
-                        z0 = (W - t) // 2
-                        cell[W - 1 - r, z0:z0 + t, c] = True
+                    if fg[(cy - y0) * W:(cy - y0 + 1) * W, (cx - x0) * W + c].any():
+                        cell[:SLAB, :, c] = True
+            else:
+                for r in range(W):
+                    for c in range(W):
+                        gy, gx = (cy - y0) * W + r, (cx - x0) * W + c
+                        if fg[gy, gx]:
+                            t = int(round(TMIN + dn[gy, gx] * (span - TMIN)))
+                            z0 = (W - t) // 2
+                            cell[W - 1 - r, z0:z0 + t, c] = True
             shapes[k] = bits(cell)
             whole[(h - 1 - (cy - y0)) * W:(h - (cy - y0)) * W, :, (cx - x0) * W:(cx - x0 + 1) * W] = cell
         # the viewer: the whole object as drawn (rows stacked), its own colours
