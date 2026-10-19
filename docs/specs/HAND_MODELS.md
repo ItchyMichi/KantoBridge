@@ -113,11 +113,23 @@ Other walkable objects (doors, ladders, stairs, floor clutter, grass) are not se
    `{"PALLET_TOWN:4,3": {"roof_rows": 16, "roof": "hip", "bands": "7-15"}}`; rerun steps 2-3. A building the
    generator can't do (a partial drawing, an odd shape) goes to Blockbench as a hand model (sections 1-4), starting
    from its generated model.
-5. **In game**: buildings are taller than one cell, so they need the planner's layers (to do).
+5. **In game**: `python3 tools/shape_fit/buildings_table.py <game> <kb-hub data> <out>` writes the table's
+   `"buildings"` list (each design's atlas, art-tile grid and the numbers its model used). The planner claims each
+   grid wherever a map has it (`FittedBuildings`, after the profile's band buildings) and places a template; every
+   client builds its model from its own drawing (`geom/BoxBuilding`, the same geometry as `building_model.py`; the
+   model stays inside the grid, the eave reaching its south edge). Solid cells stand the model's height on
+   shape_full, doorways as high on decor. Rebuild the region to see them.
 
 Blue's first pass (2026-10-19): 34 designs; detection fixed for a roof off the map (the Pokémon Tower: all wall),
 missing-art black in the crop (Route 22's gate) and a single roof line (Indigo Plateau). To check: the Route 23 gate
 (only its top is on the map) and the Route 16 gatehouse (two parts).
+
+## 8. Layers (tall one-off models)
+
+A hand model taller than one cell (a statue, a machine) whose cells have keys of their own can carry layers: its
+voxel entry's `"up"` lists more cells of height over its own (`{"v": bits, "t": paint}` each, at most 14). The planner
+makes such a cell a unit however high Tier A raised it, its keys naming their layer. Buildings don't use layers: their
+cells repeat (a brick-and-window cell all over a facade), so they are templates (section 7).
 
 ## 5. Quality check
 

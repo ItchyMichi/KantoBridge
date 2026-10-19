@@ -190,6 +190,27 @@ class FittedShapesTest {
 	}
 
 	@Test
+	void aGeneratedBuildingIsClaimedAndPlacedAsATemplate() {
+		// a one-cell-wide, two-cell-deep building: two tile rows of roof (A), two of wall (B)
+		SceneMap map = surface("BOX", "......", "......", "..AA..", "..AA..", "..BB..", "..BB..", "......", "......");
+		int a = tile('A');
+		int b = tile('B');
+		com.google.gson.JsonObject box = new com.google.gson.JsonObject();
+		box.addProperty("roofRows", 16);
+		box.addProperty("roof", "flat");
+		box.add("bands", new com.google.gson.JsonArray());
+		FittedShapes.useBuildingsForTest(List.of(new FittedShapes.Building(ShapeFixtures.ATLAS,
+				List.of(new int[] {a, a}, new int[] {a, a}, new int[] {b, b}, new int[] {b, b}), box)));
+		ShapePlanner.MapShapes shapes = plan(map);
+		assertEquals(1, shapes.templates().size(), "one building template");
+		assertTrue(shapes.templates().get(0).entry().getAsJsonObject("hull").has("box"));
+		int high = (dev.kantobridge.builder.shape.geom.BoxBuilding.height(32, 16, false) + 7) / 8;
+		int i = 2 * map.artCols() + 2;
+		assertEquals(high, shapes.blocks()[i], "the model's height in blocks");
+		assertTrue(shapes.units().isEmpty(), "its cells are the building's, not units");
+	}
+
+	@Test
 	void aColumnsFitKeepsNoUnit() {
 		SceneMap map = surface("LONE", LONE.split("\n"));
 		FittedShapes.useForTest(Map.of(lone(), new FittedShapes.Entry("columns", List.of())));

@@ -70,6 +70,11 @@ def main() -> int:
                            capture_output=True, text=True)
         found = next((ln for ln in r.stdout.splitlines() if ln.startswith("detected:")), "")
         b["detected"] = found[len("detected: "):]
+        # what the model used (detected, or the reviewer's override): the numbers the game's BoxBuilding takes
+        m = re.search(r"using roof rows (\d+) roof (\w+) bands (\S+)", found)
+        if m:
+            b["roofRows"], b["roof"] = int(m.group(1)), m.group(2)
+            b["bands"] = [[int(v) for v in pair.split("-")] for pair in m.group(3).split(",") if pair != "-"]
         b["ok"] = r.returncode == 0
         if not b["ok"]:
             b["error"] = (r.stderr.strip().splitlines() or ["?"])[-1]

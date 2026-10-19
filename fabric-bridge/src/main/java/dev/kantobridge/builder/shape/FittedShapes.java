@@ -1,5 +1,6 @@
 package dev.kantobridge.builder.shape;
 
+import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
@@ -79,22 +80,34 @@ public final class FittedShapes {
 	public record Layer(byte[] voxels, byte @Nullable [] paint) {
 	}
 
+	/**
+	 * A generated building (docs/specs/HAND_MODELS.md section 7): its atlas, its tile grid (north row first, art tiles)
+	 * and the numbers its model takes ({@code roofRows}, {@code roof} hip or flat, {@code bands}).
+	 */
+	public record Building(String atlas, List<int[]> tiles, JsonObject box) {
+	}
+
 	/** The most layers a cell takes over its own (its column stays within a block mask: 2 x 15 blocks). */
 	static final int MAX_LAYERS = 14;
 
 	/** One game's table: its cells' fits and its buildings' roof rows. */
 	record Table(Map<String, Entry> cells, Map<String, Integer> roofs, Map<String, String> stacks, java.util.Set<String> seats,
-			Map<String, List<Layer>> layers) {
+			Map<String, List<Layer>> layers, List<Building> buildings) {
 		Table(Map<String, Entry> cells, Map<String, Integer> roofs) {
-			this(cells, roofs, Map.of(), java.util.Set.of(), Map.of());
+			this(cells, roofs, Map.of(), java.util.Set.of(), Map.of(), List.of());
 		}
 
 		Table(Map<String, Entry> cells, Map<String, Integer> roofs, Map<String, String> stacks) {
-			this(cells, roofs, stacks, java.util.Set.of(), Map.of());
+			this(cells, roofs, stacks, java.util.Set.of(), Map.of(), List.of());
 		}
 
 		Table(Map<String, Entry> cells, Map<String, Integer> roofs, Map<String, String> stacks, java.util.Set<String> seats) {
-			this(cells, roofs, stacks, seats, Map.of());
+			this(cells, roofs, stacks, seats, Map.of(), List.of());
+		}
+
+		Table(Map<String, Entry> cells, Map<String, Integer> roofs, Map<String, String> stacks, java.util.Set<String> seats,
+				Map<String, List<Layer>> layers) {
+			this(cells, roofs, stacks, seats, layers, List.of());
 		}
 
 	}
@@ -315,13 +328,15 @@ public final class FittedShapes {
 								Map<String, String> stacks = new TreeMap<>();
 								java.util.Set<String> seats = new java.util.TreeSet<>();
 								Map<String, List<Layer>> layers = new TreeMap<>();
+								List<Building> buildings = new ArrayList<>();
 								parse(text, cells);
 								parseRoofs(text, roofs);
 								parseStacks(text, stacks);
 								parseSeats(text, seats);
 								parseLayers(text, layers);
+								parseBuildings(text, buildings);
 								tables.put(game, new Table(Collections.unmodifiableMap(cells), Collections.unmodifiableMap(roofs), Collections.unmodifiableMap(stacks),
-										Collections.unmodifiableSet(seats), Collections.unmodifiableMap(layers)));
+										Collections.unmodifiableSet(seats), Collections.unmodifiableMap(layers), List.copyOf(buildings)));
 							}
 						} catch (IOException e) {
 							throw new UncheckedIOException(e);
@@ -373,6 +388,57 @@ public final class FittedShapes {
 				// A malformed entry: no layers.
 			}
 		}
+	}
+
+	/** The generated buildings ("buildings": [{"atlas", "tiles": [[ids], ...], "roofRows", "roof", "bands"}]). */
+	static void parseBuildings(String text, List<Building> into) {
+		JsonObject root = JsonParser.parseString(text).getAsJsonObject();
+		if (!root.has("buildings")) {
+			return;
+		}
+		for (JsonElement el : root.getAsJsonArray("buildings")) {
+			try {
+				JsonObject o = el.getAsJsonObject();
+				List<int[]> rows = new ArrayList<>();
+				for (JsonElement row : o.getAsJsonArray("tiles")) {
+					JsonArray r = row.getAsJsonArray();
+					int[] ids = new int[r.size()];
+					for (int i = 0; i < ids.length; i++) {
+						ids[i] = r.get(i).getAsInt();
+					}
+					rows.add(ids);
+				}
+				JsonObject box = new JsonObject();
+				box.addProperty("roofRows", o.get("roofRows").getAsInt());
+				box.addProperty("roof", o.get("roof").getAsString());
+				box.add("bands", o.has("bands") ? o.getAsJsonArray("bands").deepCopy() : new JsonArray());
+				if (!rows.isEmpty() && rows.get(0).length > 0) {
+					into.add(new Building(o.get("atlas").getAsString(), List.copyOf(rows), box));
+				}
+			} catch (RuntimeException ignored) {
+				// A malformed building: left out.
+			}
+		}
+	}
+
+	/** The generated buildings of the game this thread plans, for an atlas (none without a table). */
+	static List<Building> buildings(String atlas) {
+		Table table = current();
+		if (table == null) {
+			return List.of();
+		}
+		List<Building> out = new ArrayList<>();
+		for (Building b : table.buildings()) {
+			if (b.atlas().equals(atlas)) {
+				out.add(b);
+			}
+		}
+		return out;
+	}
+
+	/** Tests: generated buildings with the given table. */
+	static void useBuildingsForTest(List<Building> buildings) {
+		forTest = new Table(Map.of(), Map.of(), Map.of(), java.util.Set.of(), Map.of(), List.copyOf(buildings));
 	}
 
 	/** Each voxel entry marked "seat" (a stool or chair on a walkable cell). */

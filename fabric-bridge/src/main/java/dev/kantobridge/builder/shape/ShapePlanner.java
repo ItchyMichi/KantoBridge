@@ -637,6 +637,10 @@ public final class ShapePlanner {
 		boolean[] held = new boolean[map.artCols() * map.artRows()];
 		List<Buildings.Claim> claims = params.profileBuildings() && tileset != null && sceneAtlas != null && map.perCell() == ShapeTable.UNIT_CELL
 				? Buildings.claims(map, tileset.buildings(), held, tally) : List.of();
+		// The fitted table's generated buildings (HAND_MODELS.md section 7) claim their grids next, as band buildings do.
+		Map<Profile.Building, FittedShapes.Building> fittedOf = FittedBuildings.index();
+		List<Buildings.Claim> fitted = sceneAtlas != null && map.perCell() == ShapeTable.UNIT_CELL && map.surface()
+				? FittedBuildings.claims(map, held, tally, fittedOf) : List.of();
 		// P3: the two-cell hulls (a canopy, a planter) take their cells as a claim does.
 		List<BigHulls.Group> hulls = params.profileBoxes() && classes != null && sceneAtlas != null && map.perCell() == ShapeTable.UNIT_CELL
 				? BigHulls.find(map, classes, held, tally) : List.of();
@@ -659,7 +663,7 @@ public final class ShapePlanner {
 		if (params.tierB() && cells) {
 			// Tier B (kb-shapes/3): tufts and cell units over the measured columns.
 			Units.plan(map, sceneAtlas, atlas, columns.keys(), columns.blocks(), columns.shapeMask(), floor, decor, units, classes,
-					params.profileUnits() ? probe : null, tally, claims.isEmpty() && hulls.isEmpty() ? null : held, layout);
+					params.profileUnits() ? probe : null, tally, claims.isEmpty() && hulls.isEmpty() && fitted.isEmpty() ? null : held, layout);
 		}
 		List<Templates.Placed> templates = List.of();
 		if (params.tierC() && cells) {
@@ -673,6 +677,16 @@ public final class ShapePlanner {
 			int ground = Units.mapGround(map, sceneAtlas.grassTiles(), sceneAtlas.frameTiles());
 			for (Buildings.Claim claim : claims) {
 				all.add(Buildings.place(map, atlas, claim, ground, columns.keys(), columns.blocks(), columns.shapeMask(), decor, floor, tally));
+			}
+			templates = all;
+		}
+		if (!fitted.isEmpty()) {
+			// The generated buildings' templates: decorated cubes with roof toppers, built on every client.
+			List<Templates.Placed> all = new ArrayList<>(templates);
+			int ground = Units.mapGround(map, sceneAtlas.grassTiles(), sceneAtlas.frameTiles());
+			for (Buildings.Claim claim : fitted) {
+				all.add(FittedBuildings.place(map, atlas, claim, fittedOf.get(claim.building()), ground, columns.keys(), columns.blocks(),
+						columns.shapeMask(), decor, floor, tally));
 			}
 			templates = all;
 		}

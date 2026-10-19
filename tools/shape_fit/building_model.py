@@ -150,9 +150,11 @@ def main() -> int:
     occ = np.zeros((GY, GZ, GX), bool)
     col = np.zeros((GY, GZ, GX, 3), np.uint8)
 
-    # features that stand out: groups of 10+ touching pixels unlike the wall (windows, doors, signs), not brick mortar
+    # features that stand out: groups of 10+ touching pixels unlike the wall with some outline in them, under 60%
+    # of the wall's width (windows, doors, signs), not bricks or mortar
     unlike = (np.abs(facade.astype(int) - main.astype(int)).sum(axis=-1) > 30) & ~ground(facade)
     feature = np.zeros_like(unlike)
+    fdark = outline(facade)
     seen = np.zeros_like(unlike)
     FH, FW = unlike.shape
     for sy in range(FH):
@@ -167,7 +169,10 @@ def main() -> int:
                         if 0 <= ny < FH and 0 <= nx < FW and unlike[ny, nx] and not seen[ny, nx]:
                             seen[ny, nx] = True
                             todo.append((ny, nx))
-                if len(comp) >= 10:
+                # a window, a door, a sign: outlined in black, not a pattern spanning the wall (bricks, mortar)
+                outlined = any(fdark[cy_, cx_] for cy_, cx_ in comp)
+                span = max(c for _, c in comp) - min(c for _, c in comp) + 1
+                if len(comp) >= 10 and outlined and span * 10 < (right - left + 1) * 6:
                     for cy_, cx_ in comp:
                         feature[cy_, cx_] = True
     # the sides: the wall's colour, but a row one colour fills (70% or more: a trim band, the base) keeps it

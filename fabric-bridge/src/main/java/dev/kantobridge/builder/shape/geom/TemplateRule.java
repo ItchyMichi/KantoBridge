@@ -110,6 +110,10 @@ public final class TemplateRule {
 			// The profile's band-table building (docs/specs/PROFILE_PLAN.md §5.5, P2).
 			return BandBuilding.build(entry, atlas, art);
 		}
+		if (entry.hull() != null && entry.hull().has("box")) {
+			// A generated building: a decorated cube with a roof topper (docs/specs/HAND_MODELS.md section 7).
+			return BoxBuilding.build(entry, atlas, art);
+		}
 		if (entry.hull() != null) {
 			// The profile's two-cell hull, a canopy or a planter (docs/specs/PROFILE_PLAN.md §5.6, P3).
 			return BigHull.build(entry, atlas, art);

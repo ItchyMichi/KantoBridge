@@ -35,7 +35,7 @@ import org.jetbrains.annotations.Nullable;
  */
 public final class ShapeTable {
 	/** The geometry version: what this code builds from a key. Not part of any world hash; it keys the client's cache. */
-	public static final int GEOMETRY = 5;
+	public static final int GEOMETRY = 6;
 	public static final String NO_OVERRIDES = "0".repeat(64);
 	private static final byte[] MAGIC = "KBST".getBytes(StandardCharsets.US_ASCII);
 	private static final int FORMAT = 1;
