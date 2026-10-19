@@ -72,14 +72,29 @@ public final class FittedShapes {
 		}
 	}
 
+	/**
+	 * One more cell of height over a voxel entry (docs/specs/HAND_MODELS.md section 8): its voxels (16 x 16 x 16, as the
+	 * entry's) and its paint, or null.
+	 */
+	public record Layer(byte[] voxels, byte @Nullable [] paint) {
+	}
+
+	/** The most layers a cell takes over its own (its column stays within a block mask: 2 x 15 blocks). */
+	static final int MAX_LAYERS = 14;
+
 	/** One game's table: its cells' fits and its buildings' roof rows. */
-	record Table(Map<String, Entry> cells, Map<String, Integer> roofs, Map<String, String> stacks, java.util.Set<String> seats) {
+	record Table(Map<String, Entry> cells, Map<String, Integer> roofs, Map<String, String> stacks, java.util.Set<String> seats,
+			Map<String, List<Layer>> layers) {
 		Table(Map<String, Entry> cells, Map<String, Integer> roofs) {
-			this(cells, roofs, Map.of(), java.util.Set.of());
+			this(cells, roofs, Map.of(), java.util.Set.of(), Map.of());
 		}
 
 		Table(Map<String, Entry> cells, Map<String, Integer> roofs, Map<String, String> stacks) {
-			this(cells, roofs, stacks, java.util.Set.of());
+			this(cells, roofs, stacks, java.util.Set.of(), Map.of());
+		}
+
+		Table(Map<String, Entry> cells, Map<String, Integer> roofs, Map<String, String> stacks, java.util.Set<String> seats) {
+			this(cells, roofs, stacks, seats, Map.of());
 		}
 
 	}
@@ -181,6 +196,18 @@ public final class FittedShapes {
 		return table == null || !table.seats().contains(key) ? null : table.cells().get(key);
 	}
 
+	/** How many layers a cell's voxel entry has over its own (a building's storeys), 0 for none. */
+	static int layers(String atlas, int[] tiles) {
+		Table table = current();
+		List<Layer> layers = table == null ? null : table.layers().get(key(atlas, tiles));
+		return layers == null ? 0 : layers.size();
+	}
+
+	/** Tests: layers (by key) with the given table. */
+	static void useLayersForTest(Map<String, Entry> table, Map<String, List<Layer>> layers) {
+		forTest = new Table(Map.copyOf(table), Map.of(), Map.of(), java.util.Set.of(), Map.copyOf(layers));
+	}
+
 	/** Tests: seats (their keys) with the given table. */
 	static void useSeatsForTest(Map<String, Entry> table, java.util.Set<String> seats) {
 		forTest = new Table(Map.copyOf(table), Map.of(), Map.of(), java.util.Set.copyOf(seats));
@@ -203,7 +230,25 @@ public final class FittedShapes {
 	 * knowing which game the key came from; the hash tells same-named atlases apart), or null.
 	 */
 	public static boolean @Nullable [] voxels(String atlas, int[] tiles, List<Integer> params) {
+		byte[] bits = layered(atlas, tiles, params, false);
+		if (bits == null) {
+			return null;
+		}
+		boolean[] out = new boolean[VOXEL_BYTES * 8];
+		for (int i = 0; i < out.length; i++) {
+			out[i] = (bits[i >> 3] >> (i & 7) & 1) != 0;
+		}
+		return out;
+	}
+
+	/**
+	 * A voxel entry's bits or paint by its cell and its key's parameters: the hash (HASH_PARAMS numbers), and for a layer
+	 * one more, the layer (1 the first over the cell's own); null when nothing matches.
+	 */
+	private static byte @Nullable [] layered(String atlas, int[] tiles, List<Integer> params, boolean paint) {
 		String key = key(atlas, tiles);
+		int layer = params.size() == HASH_PARAMS + 1 ? params.get(HASH_PARAMS) : 0;
+		List<Integer> hash = layer > 0 ? params.subList(0, HASH_PARAMS) : params;
 		List<Table> all = new ArrayList<>(tables().values());
 		Table test = forTest;
 		if (test != null) {
@@ -211,12 +256,15 @@ public final class FittedShapes {
 		}
 		for (Table table : all) {
 			Entry e = table.cells().get(key);
-			if (e != null && e.voxels() != null && VOXELS.equals(e.cls()) && e.params().equals(params)) {
-				boolean[] out = new boolean[VOXEL_BYTES * 8];
-				for (int i = 0; i < out.length; i++) {
-					out[i] = (e.voxels()[i >> 3] >> (i & 7) & 1) != 0;
+			if (e != null && e.voxels() != null && VOXELS.equals(e.cls()) && e.params().equals(hash)) {
+				if (layer == 0) {
+					return paint ? e.paint() : e.voxels();
 				}
-				return out;
+				List<Layer> layers = table.layers().get(key);
+				if (layers == null || layer > layers.size()) {
+					return null;
+				}
+				return paint ? layers.get(layer - 1).paint() : layers.get(layer - 1).voxels();
 			}
 		}
 		return null;
@@ -224,19 +272,7 @@ public final class FittedShapes {
 
 	/** A fitted voxel shape's paint (see {@link Entry}) by its cell and the hash its key carries, or null (front projection). */
 	public static byte @Nullable [] paint(String atlas, int[] tiles, List<Integer> params) {
-		String key = key(atlas, tiles);
-		List<Table> all = new ArrayList<>(tables().values());
-		Table test = forTest;
-		if (test != null) {
-			all.add(0, test);
-		}
-		for (Table table : all) {
-			Entry e = table.cells().get(key);
-			if (e != null && e.voxels() != null && VOXELS.equals(e.cls()) && e.params().equals(params)) {
-				return e.paint();
-			}
-		}
-		return null;
+		return layered(atlas, tiles, params, true);
 	}
 
 	/** A voxel shape's hash as its key's parameters: the first HASH_PARAMS bytes of its SHA-256, each mod 100. */
@@ -278,12 +314,14 @@ public final class FittedShapes {
 								Map<String, Integer> roofs = new TreeMap<>();
 								Map<String, String> stacks = new TreeMap<>();
 								java.util.Set<String> seats = new java.util.TreeSet<>();
+								Map<String, List<Layer>> layers = new TreeMap<>();
 								parse(text, cells);
 								parseRoofs(text, roofs);
 								parseStacks(text, stacks);
 								parseSeats(text, seats);
+								parseLayers(text, layers);
 								tables.put(game, new Table(Collections.unmodifiableMap(cells), Collections.unmodifiableMap(roofs), Collections.unmodifiableMap(stacks),
-										Collections.unmodifiableSet(seats)));
+										Collections.unmodifiableSet(seats), Collections.unmodifiableMap(layers)));
 							}
 						} catch (IOException e) {
 							throw new UncheckedIOException(e);
@@ -298,6 +336,45 @@ public final class FittedShapes {
 	}
 
 	/** Adds a table file's buildings ({@code structs}: key → {@code roofRows} 0..6) to {@code into}. */
+	/** A voxel entry's layers ("up": [{"v": bits, "t": paint}, ...]), at most MAX_LAYERS; malformed ones end the list. */
+	static List<Layer> layers(JsonObject o) {
+		List<Layer> out = new ArrayList<>();
+		if (!o.has("up") || !o.get("up").isJsonArray()) {
+			return out;
+		}
+		for (JsonElement el : o.getAsJsonArray("up")) {
+			if (out.size() >= MAX_LAYERS || !el.isJsonObject() || !el.getAsJsonObject().has("v")) {
+				break;
+			}
+			byte[] v = java.util.Base64.getDecoder().decode(el.getAsJsonObject().get("v").getAsString());
+			byte[] t = el.getAsJsonObject().has("t") ? java.util.Base64.getDecoder().decode(el.getAsJsonObject().get("t").getAsString()) : null;
+			if (v.length != VOXEL_BYTES) {
+				break;
+			}
+			out.add(new Layer(v, t != null && t.length == VOXEL_BYTES * 8 ? t : null));
+		}
+		return out;
+	}
+
+	/** Each voxel entry's layers, by key (none listed for an entry without). */
+	static void parseLayers(String text, Map<String, List<Layer>> into) {
+		JsonObject root = JsonParser.parseString(text).getAsJsonObject();
+		if (!root.has("cells")) {
+			return;
+		}
+		for (Map.Entry<String, JsonElement> e : root.getAsJsonObject("cells").entrySet()) {
+			try {
+				JsonObject o = e.getValue().getAsJsonObject();
+				List<Layer> layers = VOXELS.equals(o.get("class").getAsString()) ? layers(o) : List.of();
+				if (!layers.isEmpty()) {
+					into.put(e.getKey(), List.copyOf(layers));
+				}
+			} catch (RuntimeException ignored) {
+				// A malformed entry: no layers.
+			}
+		}
+	}
+
 	/** Each voxel entry marked "seat" (a stool or chair on a walkable cell). */
 	static void parseSeats(String text, java.util.Set<String> into) {
 		JsonObject root = JsonParser.parseString(text).getAsJsonObject();
@@ -360,12 +437,19 @@ public final class FittedShapes {
 						t = null;
 					}
 					if (v.length == VOXEL_BYTES) {
-						// the hash covers the paint too: a repainted shape is a new key, rebuilt
-						byte[] hashed = t == null ? v : java.util.Arrays.copyOf(v, v.length + t.length);
+						// the hash covers the paint and the layers too: a changed shape is a new key, rebuilt
+						java.io.ByteArrayOutputStream hashed = new java.io.ByteArrayOutputStream();
+						hashed.writeBytes(v);
 						if (t != null) {
-							System.arraycopy(t, 0, hashed, v.length, t.length);
+							hashed.writeBytes(t);
 						}
-						into.put(e.getKey(), new Entry(cls, hashParams(hashed), v, t));
+						for (Layer layer : layers(o)) {
+							hashed.writeBytes(layer.voxels());
+							if (layer.paint() != null) {
+								hashed.writeBytes(layer.paint());
+							}
+						}
+						into.put(e.getKey(), new Entry(cls, hashParams(hashed.toByteArray()), v, t));
 					}
 					continue;
 				}

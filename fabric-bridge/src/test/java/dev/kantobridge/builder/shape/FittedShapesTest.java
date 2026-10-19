@@ -3,6 +3,7 @@ package dev.kantobridge.builder.shape;
 import static dev.kantobridge.builder.shape.ShapeFixtures.surface;
 import static dev.kantobridge.builder.shape.ShapeFixtures.tile;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.google.gson.JsonObject;
@@ -158,6 +159,34 @@ class FittedShapesTest {
 		int i = (cell.cy() * per) * map.artCols() + cell.cx() * per;
 		assertEquals(ShapePlanner.SEAT | 1, shapes.decor()[i], "a seat collider at feet level, no other decor");
 		assertEquals(0, shapes.blocks()[i], "no solid blocks");
+	}
+
+	@Test
+	void aLayeredEntryStandsSeveralCellsTall() {
+		// a building's cell: its own voxels and two layers over them (HAND_MODELS.md section 8)
+		SceneMap map = surface("TALL", "......", "......", "..AA..", "..AA..", "......", "......");
+		int a = tile('A');
+		byte[] base = new byte[FittedShapes.VOXEL_BYTES];
+		base[0] = 1;
+		byte[] first = new byte[FittedShapes.VOXEL_BYTES];
+		first[1] = 1;
+		byte[] second = new byte[FittedShapes.VOXEL_BYTES];
+		second[2] = 1;
+		String key = FittedShapes.key(ShapeFixtures.ATLAS, new int[] {a, a, a, a});
+		FittedShapes.Entry entry = new FittedShapes.Entry("voxels", List.of(1, 2, 3, 4, 5, 6), base);
+		FittedShapes.useLayersForTest(Map.of(key, entry),
+				Map.of(key, List.of(new FittedShapes.Layer(first, null), new FittedShapes.Layer(second, null))));
+		ShapePlanner.MapShapes shapes = plan(map);
+		assertEquals(1, shapes.units().size());
+		int per = map.perCell();
+		Units.Cell cell = shapes.units().get(0);
+		int i = (cell.cy() * per) * map.artCols() + cell.cx() * per;
+		assertEquals(3 * per, shapes.blocks()[i], "three cells tall");
+		int[] ids = {a, a, a, a};
+		assertTrue(FittedShapes.voxels(ShapeFixtures.ATLAS, ids, List.of(1, 2, 3, 4, 5, 6))[0], "the cell's own voxels");
+		assertTrue(FittedShapes.voxels(ShapeFixtures.ATLAS, ids, List.of(1, 2, 3, 4, 5, 6, 1))[8], "layer 1");
+		assertTrue(FittedShapes.voxels(ShapeFixtures.ATLAS, ids, List.of(1, 2, 3, 4, 5, 6, 2))[16], "layer 2");
+		assertNull(FittedShapes.voxels(ShapeFixtures.ATLAS, ids, List.of(1, 2, 3, 4, 5, 6, 3)), "no third layer");
 	}
 
 	@Test

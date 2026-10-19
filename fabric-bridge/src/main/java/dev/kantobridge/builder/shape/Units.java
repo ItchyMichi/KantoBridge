@@ -140,7 +140,9 @@ final class Units {
 				// A cell Tier A raised (taller than one cell, but no roof or building shape) still takes a reviewed voxel shape from
 				// the fitted shapes table: a market stall's jars and balloons in one solid block of stalls (FITTED_SHAPES.md section 13).
 				boolean raisedFit = !unitPin && unshaped(map, mask, cx, cy) && FittedShapes.voxels(map.atlas(), tiles(map, cx, cy));
-				if (!low(map, blocks, mask, cx, cy) && !raisedFit) {
+				// A layered entry (a building's storeys, HAND_MODELS.md section 8) makes a unit however Tier A raised the cell.
+				int ups = unitPin ? 0 : Math.min(FittedShapes.MAX_LAYERS, FittedShapes.layers(map.atlas(), tiles(map, cx, cy)));
+				if (!low(map, blocks, mask, cx, cy) && !raisedFit && ups == 0) {
 					if (unitPin) {
 						tally.merge("pin_not_low", 1, Integer::sum);
 					}
@@ -208,18 +210,31 @@ final class Units {
 				tally.merge(source, 1, Integer::sum);
 				int propGround = unitPin ? classes.propGround(tiles) : -1;
 				int g = propGround >= 0 ? propGround : ground(map, cx, cy, grass, frames, mapGround);
+				int high = per * (1 + (fit != null ? ups : 0));
+				// each layer's keys name it: the hash and the layer (FittedShapes.voxels takes it)
+				String[] variants = new String[high / per];
+				variants[0] = context.variant();
+				for (int layer = 1; layer < variants.length; layer++) {
+					List<Integer> params = new java.util.ArrayList<>(context.params());
+					params.add(layer);
+					variants[layer] = new CellUnits.Context(context.flatSides(), context.indoor(), context.repeatsVertically(), context.sign(),
+							context.tree(), context.pinned(), 0, params).variant();
+				}
+				if (high > per) {
+					tally.merge("layered", 1, Integer::sum);
+				}
 				ShapeKey first = null;
 				for (int bz = 0; bz < per; bz++) {
 					for (int bx = 0; bx < per; bx++) {
 						int i = (cy * per + bz) * cols + cx * per + bx;
-						ShapeKey[] column = new ShapeKey[per];
-						for (int by = 0; by < per; by++) {
-							column[by] = ShapeKey.cell(atlasIndex, tiles, g, bx, by, bz).withVariant(context.variant());
+						ShapeKey[] column = new ShapeKey[high];
+						for (int k = 0; k < high; k++) {
+							column[k] = ShapeKey.cell(atlasIndex, tiles, g, bx, k % per, bz).withVariant(variants[k / per]);
 						}
 						first = first == null ? column[0] : first;
 						keys[i] = column;
-						blocks[i] = per;
-						mask[i] = (1 << per) - 1;
+						blocks[i] = high;
+						mask[i] = (1 << high) - 1;
 						floor[i] = g;
 					}
 				}
