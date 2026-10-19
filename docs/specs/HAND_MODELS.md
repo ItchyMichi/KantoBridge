@@ -82,6 +82,21 @@ A stool or a chair the hidden game draws on a **walkable** cell (characters stan
 
 Other walkable objects (doors, ladders, stairs, floor clutter, grass) are not seats; they stay as they are for now.
 
+## 7. Buildings
+
+`tools/shape_fit/building_model.py` makes a building from its drawing: a **decorated cube** with a **roof topper**.
+
+- The cube is as wide as the walls' dark outline, as high as the facade's rows times 1.5 voxels (a door about two
+  blocks; Celadon's Department Store about 20 blocks, the user's choice, 2026-10-19). The facade is on its front; only
+  features (10+ touching pixels unlike the wall: windows, doors, signs) stand out a voxel; the door is recessed; porch
+  bands stand out 3 voxels. The sides wear the wall colour and its full-width bands.
+- The roof is a separate topper as wide as the drawn roof, so it overhangs: a stepped hip, or a flat slab with a
+  parapet (a roof garden's lattice repeated at its own scale).
+- Detected from the dark outline (Gen 1's white is also the ground's, so colour can't find the edges): the roof ends at
+  its first double line; a later double line closes a porch band; the roof is a hip when its outline moves sideways
+  down its rows. `--roof-rows`, `--roof` and `--bands` override.
+- Checked on Red's house and eleven Celadon buildings (kb-hub viewer, "hand models / blue").
+
 ## 5. Quality check
 
 Viewer (shape, proportions, footprint) and in game (next to the hidden game's screen): see the review notes below.

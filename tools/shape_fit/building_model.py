@@ -4,8 +4,8 @@
     python building_model.py <map art.png> <map info.json> <x0> <y0> <w> <h> <out dir> [--roof-rows N] [--wall V]
 
 The building is cells (x0, y0)..(x0 + w - 1, y0 + h - 1) of the map, drawn top-down in three-quarter view: the upper
-rows are the roof seen from above, the lower `--roof-rows`-less rows the facade (default: all but the last cell row are
-roof). Voxels are 16 a cell (8 a block); x east, y up, z south.
+rows are the roof seen from above, the lower rows the facade. The roof's end, its style and any porch bands are
+detected from the drawing's dark outline (detect()); --roof-rows, --roof and --bands override them. Voxels are 16 a cell (8 a block); x east, y up, z south.
 
     cube      a decorated box as wide as the facade's drawn walls, the facade's rows times --wall voxels high; facade
               rows named in --bands (a porch roof) stand out BAND voxels
@@ -37,6 +37,37 @@ RH, STEP = 16, 2  # the roof topper's height and its steps (voxels)
 FLAT, PARAPET = 4, 2  # a flat roof's slab and its parapet (voxels)
 
 
+def detect(draw: np.ndarray) -> dict:
+    """The building's parts from its drawing, by its dark outline (Gen 1's four colours share the ground's white, so the
+    outline is the one reliable signal):
+
+        roof_rows  the roof ends at its first double line (two rows mostly dark, one row apart) below row 4
+        bands      a later double line closes a porch roof: from the dark row above it (a third dark or more) to it,
+                   in facade rows
+        roof       hip when the roof's outline moves sideways down its rows (a sloped side), else flat
+    """
+    lum = draw.astype(int).sum(-1)
+    dark = lum <= lum.min() + 30
+    frac = dark.mean(1)
+    n = len(frac)
+    doubles = [r for r in range(4, n - 2) if frac[r] >= 0.5 and frac[r + 2] >= 0.5 and frac[r + 1] < 0.3]
+    roof_end = doubles[0] + 3 if doubles and doubles[0] + 3 <= int(0.6 * n) else n - W
+    bands = []
+    for r in doubles:
+        if r <= roof_end + 2 or r + 2 >= n - 6:
+            continue
+        top = r
+        for q in range(r - 1, roof_end + 1, -1):
+            if frac[q] >= 0.3:
+                top = q
+                break
+        bands.append((top - roof_end, r + 2 - roof_end))
+    # hip or flat: where the first dark pixel of each roof row sits (from the left); a sloped side moves it
+    starts = [int(np.argmax(dark[r])) for r in range(2, max(3, roof_end - 4)) if dark[r].any()]
+    spread = (max(starts) - min(starts)) if starts else 0
+    return {"roof_rows": roof_end, "bands": bands, "roof": "hip" if spread >= 6 else "flat", "spread": spread}
+
+
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("art")
@@ -46,17 +77,23 @@ def main() -> int:
     ap.add_argument("w", type=int)
     ap.add_argument("h", type=int)
     ap.add_argument("out")
-    ap.add_argument("--roof-rows", type=int, default=-1, help="drawing rows of roof (default: all but the last cell)")
+    ap.add_argument("--roof-rows", type=int, default=-1, help="drawing rows of roof (default: detected)")
     ap.add_argument("--wall", type=float, default=1.5, help="wall voxels a facade pixel (1.5: a door about two blocks)")
     ap.add_argument("--bands", default="", help="facade rows (from the facade's top) that stand out as an overhang: a-b,c-d")
     ap.add_argument("--name", default="")
-    ap.add_argument("--roof", choices=("hip", "flat"), default="hip", help="the topper: a stepped hip, or a flat roof with a parapet")
+    ap.add_argument("--roof", choices=("auto", "hip", "flat"), default="auto", help="the topper: a stepped hip, or a flat roof with a parapet")
     args = ap.parse_args()
     x0, y0, w, h = args.x0, args.y0, args.w, args.h
     info = json.loads(Path(args.info).read_text(encoding="utf-8"))
     art = Image.open(args.art).convert("RGB")
     draw = np.asarray(art.crop((x0 * ART, y0 * ART, (x0 + w) * ART, (y0 + h) * ART)).resize((w * W, h * W), Image.NEAREST))
-    roof_rows = args.roof_rows if args.roof_rows >= 0 else (h - 1) * W
+    found = detect(draw)
+    roof_rows = args.roof_rows if args.roof_rows >= 0 else found["roof_rows"]
+    if args.roof == "auto":
+        args.roof = found["roof"]
+    if not args.bands and args.roof_rows < 0:
+        args.bands = ",".join(f"{a}-{b}" for a, b in found["bands"])
+    print("detected:", found, "using roof rows", roof_rows, "roof", args.roof, "bands", args.bands or "-")
     facade = draw[roof_rows:]  # rows of the front wall
     roof = draw[:roof_rows]
     wall = int(round(args.wall * facade.shape[0]))
