@@ -117,4 +117,13 @@ Ecruteak Gym, the Goldenrod Game Corner, the Dance Theater, Kurt's House, Tin To
   Crystal's colours. Ecruteak's tile roofs needed the change above. Hand models: the Burned Tower (a ruin), the
   Radio Tower (drawn from above), the tall Ecruteak building. Crystal's pitched roofs are drawn as rectangles, so
   they come out flat with stripes (a hip needs a sloped outline).
-- Depth models, game pictures: to come.
+- Depth models (Crystal's copy of the scripts, no changes): 65 models over the ten maps, 74 cells, 10 stack tops,
+  2 seats; no errors.
+- In game (Johto rebuilt): 84 buildings placed, 0 templates or units failed, 2,990 stacked units (the forest
+  half-trees the agents marked as stacks: every forest edge stands two cells tall), 380 seat colliders; 3 warnings,
+  layout ones (edge mismatch, an object out of bounds), not shapes'. Pictures: houses, Marts, Centers, the Olivine
+  lighthouse, the Game Corner's machines and Kurt's furniture right; the Ecruteak Gym and Tin Tower 1F pictures
+  failed (the client didn't follow onto those maps).
+- Game code (shared): Crystal's roof rows can have no black pixel, so the generated roof showed the wall's colour;
+  `geom/BoxBuilding` now takes such a row's own pixel (a Blue roof row always has its outline, so Blue's are
+  unchanged); geometry version 7.

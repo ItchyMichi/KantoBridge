@@ -317,7 +317,11 @@ public final class BoxBuilding {
 				last = c;
 			}
 		}
-		if (first < 0 || x < first || x > last) {
+		if (first < 0) {
+			// a row with no outline (Crystal's colour roofs draw rows without black): its own pixel
+			return texel[r * w + x];
+		}
+		if (x < first || x > last) {
 			// outside the row's outline: the nearest outlined row's pixel at this column, else the wall
 			for (int q = 0; q < roofRows; q++) {
 				int f = -1;
