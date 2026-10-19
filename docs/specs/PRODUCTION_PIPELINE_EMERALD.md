@@ -166,3 +166,9 @@ the Rustboro Pokémon School.
   most come out right: Lilycove's houses, Pokémon Centers and Marts with their signs, the Mauville and Fortree Gyms,
   Sootopolis's domed houses. Wrong from the pictures: Littleroot's house (black missing tiles), Birch's Lab (the
   truck), Pacifidlog's huts (rafts over water). Littleroot's two-tier roof splits at its upper tier (an override).
+- Depth models (Emerald's copy of the scripts, no changes): 84 models over the ten maps, 134 cells, 13 stack tops,
+  9 seats; no errors.
+- In game (Hoenn rebuilt): 40 buildings placed, 0 templates or units failed, 5 stacked units, 108 seat colliders;
+  7 layout warnings (edge mismatch, an overlap), not shapes'. Pictures (11 of 11): the Mauville Gym with its sign,
+  Lilycove's houses, the Fortree Pokémon Center read right; interiors (the Game Corner, Birch's Lab, the school,
+  the Decoration Shop) have their objects; Sootopolis's crater walls stand as columns.
