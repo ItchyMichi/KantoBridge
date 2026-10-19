@@ -94,7 +94,7 @@ Submit each map when it is marked (`Submit map`). Agents write their marks to
 
 ## Crystal additions (from the trial, 2026-10-19)
 
-Proposed from what the trial's agents met; the user confirms them before Crystal's full run.
+Agreed by the user (2026-10-19).
 
 - Forest borders: trees drawn as overlapping half-trees over two cells (a top over the trunk of the tree behind)
   are one "stack (tall object)" per drawing pair; a lone tree in one cell is an object.
