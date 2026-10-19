@@ -47,6 +47,9 @@ an agent describes a building as **parts** (boxes, cylinders, gable and hip roof
  ]}
 ```
 
+- Walls don't have to be boxes: if the building's lower part is round or oval (a round tower, a rounded front, a
+  rotunda), use a `cylinder` for it; `"radius"` is a number or `[rx, rz]` for an oval, and its front art wraps round
+  the curve. Mix freely: a box with a cylinder at one end, a cylinder under a dome or a cone.
 - Shapes: `box`, `cylinder` (center, radius), `gable` (a ridge along "x" or "z"), `hip`, `dome` (a half sphere),
   `cone`, `barrel` (a half-round vault running "along" x or z), `profile` (a roof cross-section extruded "along" x or
   z: `"profile": [heights above y[0], evenly spaced, north to south for along x]`, optional `"cross"` the same along

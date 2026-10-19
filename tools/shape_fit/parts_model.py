@@ -9,7 +9,7 @@
     {"height": 64,                        voxels tall at most (8 a block)
      "parts": [                           in order: later parts add to (or carve from) earlier ones
        {"shape": "box", "x": [x0, x1], "z": [z0, z1], "y": [y0, y1], "paint": {...}},
-       {"shape": "cylinder", "center": [cx, cz], "radius": r, "y": [y0, y1], "paint": {...}},
+       {"shape": "cylinder", "center": [cx, cz], "radius": r, "y": [y0, y1], "paint": {...}},   r or [rx, rz] (oval)
        {"shape": "gable", "x": [..], "z": [..], "y": [y0, y1], "ridge": "x" | "z", "paint": {...}},
        {"shape": "hip", "x": [..], "z": [..], "y": [y0, y1], "paint": {...}},
        {"shape": "dome", "center": [cx, cz], "radius": r, "y": [y0, y1], "paint": {...}},
@@ -27,6 +27,8 @@ height); a cone narrows to a point. A barrel is a half-round vault running along
 axis). A profile roof is a cross-section extruded along "along": "profile" lists heights above y[0] (voxels, evenly
 spaced) across the other axis, north to south (along x) or west to east (along z): a rounded roof, eaves that sweep up,
 steps; "cross" (optional) does the same along the run and the roof is the lower of the two (a curved hip). On a
+cylinder, dome or cone takes "radius" r or [rx, rz] (an oval), and its "front" art wraps round its visible half by angle
+(set "wrap": false to project it flat): a round or oval lower wall, a rounded front, a tower. On a
 barrel or profile roof the "top" rectangle follows the curve's surface (its rows laid along the curve, the last row at
 the front), so a band drawn across the front of a rounded roof wraps round it instead of stretching.
 
@@ -119,27 +121,33 @@ def inside(part: dict, x: np.ndarray, y: np.ndarray, z: np.ndarray) -> np.ndarra
             h = np.minimum(h, sample(cross, tx if along == "x" else tz))
         return m & (Y - y0 <= h)
     cx, cz = part["center"]
-    r = part["radius"]
+    rx, rz = radii(part)
     y0, y1 = part["y"]
-    d = np.sqrt((X - cx) ** 2 + (Z - cz) ** 2)
+    d = np.sqrt(((X - cx) / rx) ** 2 + ((Z - cz) / rz) ** 2)  # 1 on the rim (round, or oval with two radii)
     m = (Y >= y0) & (Y <= y1)
     if s == "cylinder":
-        return m & (d <= r)
+        return m & (d <= 1)
     if s == "dome":
         h = max(1e-6, y1 - y0)
-        return m & ((d / r) ** 2 + ((Y - y0) / h) ** 2 <= 1)
+        return m & (d ** 2 + ((Y - y0) / h) ** 2 <= 1)
     if s == "cone":
         t = (Y - y0) / max(1e-6, y1 - y0)
-        return m & (d <= r * (1 - t))
+        return m & (d <= (1 - t))
     raise ValueError(f"unknown shape {s}")
+
+
+def radii(part: dict) -> tuple[float, float]:
+    """A round part's radius east-west and north-south: "radius" a number (round) or [rx, rz] (oval)."""
+    r = part["radius"]
+    return (float(r[0]), float(r[1])) if isinstance(r, (list, tuple)) else (float(r), float(r))
 
 
 def bounds(part: dict) -> tuple[float, float, float, float]:
     if "x" in part:
         return part["x"][0], part["x"][1], part["z"][0], part["z"][1]
     cx, cz = part["center"]
-    r = part["radius"]
-    return cx - r, cx + r, cz - r, cz + r
+    rx, rz = radii(part)
+    return cx - rx, cx + rx, cz - rz, cz + rz
 
 
 def pick(rect, a: float, b: float, draw: np.ndarray) -> tuple[int, int]:
@@ -178,6 +186,13 @@ def build(spec: dict, draw: np.ndarray):
                 break
         front = paint.get("front") or paint.get("top") or [0, 0, W, D]
         across = (xx + 0.5 - bx0) / max(1e-6, bx1 - bx0)
+        if part["shape"] in ("cylinder", "cone", "dome") and face in ("south", "east", "west") and paint.get("wrap", True):
+            # a round wall's front art wraps round its visible half (by angle), not squeezed flat at the sides
+            cx, cz = part["center"]
+            rx, rz = radii(part)
+            ang = math.atan2((xx + 0.5 - cx) / rx, (zz + 0.5 - cz) / rz)  # 0 facing south, +-pi/2 east/west
+            across = 0.5 + max(-math.pi / 2, min(math.pi / 2, ang)) / math.pi
+            face = "south"
         down = 1 - (yy + 0.5 - py0) / max(1e-6, py1 - py0)
         if face == "up" and paint.get("top") and part["shape"] in ("profile", "barrel"):
             # a curved roof's art follows its surface: the top rectangle laid along the curve, not seen from above
