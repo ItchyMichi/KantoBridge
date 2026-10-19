@@ -109,7 +109,7 @@ Agreed by the user (2026-10-19).
 - Half-cell log-post walls: "keep as blocks", note "half-cell post wall".
 - Tints may be all "-": judge from the picture.
 
-## Emerald additions (proposed from the trial, 2026-10-19; the user confirms them)
+## Emerald additions (from the trial; agreed by the user, 2026-10-19)
 
 - Trees are whole 2 x 2 squares: one object per tree design; a canopy tip in the cell above belongs to the tree.
 - A building's top roof row drawn over walkable cells belongs to the building.
