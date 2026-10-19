@@ -9,9 +9,11 @@ of cells is the object (taps elsewhere are strays); background cells that belong
 in the same layout are one model. Per model:
 
     drawing   the cells cut from the map's picture (the hidden game's colours), 16 px a cell
-    mask      a pixel is the object's when it differs from the background at the same place in a cell and its colour
-              is none of the background's main colours (holes the floor shows through): the background cells the user picked, else
-              the walkable cells around the entity; small specks dropped
+    mask      a pixel looks like floor when it matches the background at the same place in a cell or is one of the
+              background's main colours: the background cells the user picked, else the walkable cells around the
+              entity. Floor is what looks like floor and is reached from outside the object; what the object encloses
+              is the object's (light panels in the floor's colour) unless it matches the background at its place (the
+              floor showing through a wheel). Small specks dropped
     depth     Depth Anything V2 Small on the drawing as it is (nearest, padded to a square) and through Real-ESRGAN twice
               at x4 (anime and general models, its own colours); each map averaged per drawn pixel, normalised over the
               mask, the maps averaged (0 the farthest drawn pixel, 1 the nearest)
@@ -57,12 +59,14 @@ def native(art, x0: int, y0: int, w: int, h: int) -> np.ndarray:
 
 def mask_of(draw: np.ndarray, cells: list, box, backs: list[np.ndarray]) -> np.ndarray:
     x0, y0, w, h = box
-    fg = np.zeros(draw.shape[:2], bool)
+    floorish = np.zeros(draw.shape[:2], bool)  # looks like floor: matches a background cell at its place or a floor colour
+    same = np.zeros(draw.shape[:2], bool)  # matches a background cell at its place (the floor really shows through)
+    inside = np.zeros(draw.shape[:2], bool)  # the entity's own cells
     for cx, cy in cells:
-        px = draw[(cy - y0) * W:(cy - y0 + 1) * W, (cx - x0) * W:(cx - x0 + 1) * W].astype(np.int16)
+        sl = np.s_[(cy - y0) * W:(cy - y0 + 1) * W, (cx - x0) * W:(cx - x0 + 1) * W]
+        inside[sl] = True
+        px = draw[sl].astype(np.int16)
         if backs:
-            # floor where it matches a background cell at the same place, or where its colour is one of the floor's
-            # colours (holes the floor shows through: a wheel's middle on a checkered floor)
             dist = np.min([np.abs(px - b.astype(np.int16)).sum(axis=2) for b in backs], axis=0)
             # only the floor's main colours (a quarter of its pixels or more): in a four-colour game the floor's outline
             # colour is the objects' too
@@ -72,47 +76,43 @@ def mask_of(draw: np.ndarray, cells: list, box, backs: list[np.ndarray]) -> np.n
             if len(colours) == 0:
                 colours = uniq[[int(np.argmax(counts))]]
             near = np.min(np.abs(px.reshape(-1, 1, 3) - colours[None]).sum(axis=2), axis=1).reshape(W, W)
-            on = (dist > 40) & (near > 24)
-        else:
-            on = np.ones((W, W), bool)
-        fg[(cy - y0) * W:(cy - y0 + 1) * W, (cx - x0) * W:(cx - x0 + 1) * W] = on
+            same[sl] = dist <= 40
+            floorish[sl] = (dist <= 40) | (near <= 24)
+    H_, W_ = floorish.shape
+
+    def pieces(sel):
+        seen = np.zeros_like(sel)
+        for sy in range(H_):
+            for sx in range(W_):
+                if sel[sy, sx] and not seen[sy, sx]:
+                    comp, todo = [], [(sy, sx)]
+                    seen[sy, sx] = True
+                    while todo:
+                        y, x = todo.pop()
+                        comp.append((y, x))
+                        for ny, nx in ((y + 1, x), (y - 1, x), (y, x + 1), (y, x - 1)):
+                            if 0 <= ny < H_ and 0 <= nx < W_ and sel[ny, nx] and not seen[ny, nx]:
+                                seen[ny, nx] = True
+                                todo.append((ny, nx))
+                    yield comp
+
+    # floor is the floor-looking pixels reached from outside the object (the box's edge or a cell not the entity's);
+    # floor-looking pixels the object encloses are the object's (a vending machine's light panels in the floor's
+    # colour), unless the floor really shows through there (4+ pixels, 80% matching a background cell at their place:
+    # a wheel's middle)
+    fg = inside & ~floorish
+    for comp in pieces(inside & floorish):
+        outside = any(y in (0, H_ - 1) or x in (0, W_ - 1) or any(0 <= ny < H_ and 0 <= nx < W_ and not inside[ny, nx]
+                      for ny, nx in ((y + 1, x), (y - 1, x), (y, x + 1), (y, x - 1))) for y, x in comp)
+        through = len(comp) >= 4 and sum(same[y, x] for y, x in comp) >= 0.8 * len(comp)
+        if not outside and not through:
+            for y, x in comp:
+                fg[y, x] = True
     # drop specks: 4-connected pieces under 4 pixels
-    seen = np.zeros_like(fg)
-    for sy in range(fg.shape[0]):
-        for sx in range(fg.shape[1]):
-            if fg[sy, sx] and not seen[sy, sx]:
-                comp, todo = [], [(sy, sx)]
-                seen[sy, sx] = True
-                while todo:
-                    y, x = todo.pop()
-                    comp.append((y, x))
-                    for ny, nx in ((y + 1, x), (y - 1, x), (y, x + 1), (y, x - 1)):
-                        if 0 <= ny < fg.shape[0] and 0 <= nx < fg.shape[1] and fg[ny, nx] and not seen[ny, nx]:
-                            seen[ny, nx] = True
-                            todo.append((ny, nx))
-                if len(comp) < 4:
-                    for y, x in comp:
-                        fg[y, x] = False
-    # fill pinholes: background pieces under 4 pixels not touching the box's edge (an object pixel that matched the
-    # floor at its place); bigger holes (a wheel's middle) stay open
-    seen = np.zeros_like(fg)
-    H_, W_ = fg.shape
-    for sy in range(H_):
-        for sx in range(W_):
-            if not fg[sy, sx] and not seen[sy, sx]:
-                comp, todo, edge = [], [(sy, sx)], False
-                seen[sy, sx] = True
-                while todo:
-                    y, x = todo.pop()
-                    comp.append((y, x))
-                    edge |= y in (0, H_ - 1) or x in (0, W_ - 1)
-                    for ny, nx in ((y + 1, x), (y - 1, x), (y, x + 1), (y, x - 1)):
-                        if 0 <= ny < H_ and 0 <= nx < W_ and not fg[ny, nx] and not seen[ny, nx]:
-                            seen[ny, nx] = True
-                            todo.append((ny, nx))
-                if not edge and len(comp) < 4:
-                    for y, x in comp:
-                        fg[y, x] = True
+    for comp in pieces(fg):
+        if len(comp) < 4:
+            for y, x in comp:
+                fg[y, x] = False
     return fg
 
 
