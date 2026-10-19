@@ -95,7 +95,29 @@ Other walkable objects (doors, ladders, stairs, floor clutter, grass) are not se
 - Detected from the dark outline (Gen 1's white is also the ground's, so colour can't find the edges): the roof ends at
   its first double line; a later double line closes a porch band; the roof is a hip when its outline moves sideways
   down its rows. `--roof-rows`, `--roof` and `--bands` override.
-- Checked on Red's house and eleven Celadon buildings (kb-hub viewer, "hand models / blue").
+- Checked on Red's house and eleven Celadon buildings, then all of Blue (34 designs).
+
+### The buildings step of the workflow
+
+1. **Mark** (MAP_MARKING_RULES.md): each building is one "make by hand" entity covering its whole drawing, door
+   cell included; its note says what it is ("Pokémon Center", "two-storey house with a hip roof").
+2. **Generate**: `python3 tools/shape_fit/building_batch.py <game> <kb-hub data> <out>` picks the buildings (outdoor
+   maps, 3 x 2 cells or more, not a cave, rock or counter), one per design (a Poké Center drawn in every town is
+   made once), runs `building_model.py` on each and writes the viewer files, 3D pictures, a sheet per map and
+   `buildings.json` (what was detected for each). Run it in a capped container (numpy, pillow); Blue's 34 take a
+   few minutes.
+3. **Publish**: `kb-hub/work/publish_buildings.py <game> <out>` puts them in the viewer under "buildings / <game> /
+   <map>" (each shows its override key and what was detected).
+4. **Review**: the user (or an agent) checks each in the viewer. A wrong roof line, roof style or band is corrected
+   in `kb-hub/data/files/building_overrides_<game>.json` by the building's override key:
+   `{"PALLET_TOWN:4,3": {"roof_rows": 16, "roof": "hip", "bands": "7-15"}}`; rerun steps 2-3. A building the
+   generator can't do (a partial drawing, an odd shape) goes to Blockbench as a hand model (sections 1-4), starting
+   from its generated model.
+5. **In game**: buildings are taller than one cell, so they need the planner's layers (to do).
+
+Blue's first pass (2026-10-19): 34 designs; detection fixed for a roof off the map (the Pokémon Tower: all wall),
+missing-art black in the crop (Route 22's gate) and a single roof line (Indigo Plateau). To check: the Route 23 gate
+(only its top is on the map) and the Route 16 gatehouse (two parts).
 
 ## 5. Quality check
 

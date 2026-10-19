@@ -78,6 +78,8 @@ object. Keep it short; don't copy text from the sources.
 - A table's walkable front edge row belongs to the table only when the art shows it is the same piece (its front
   and legs); a stool or chair in that row is its own object.
 - Doorways inside a building's footprint: include the door cell in the building entity so the model keeps its door.
+- A building is one "make by hand" entity covering its whole drawing (roof and front); say what it is in the note
+  ("Pokémon Center", "two-storey house with a hip roof"). Buildings are generated (HAND_MODELS.md section 7).
 - A table or desk with things on it (a book, a vase, a computer on the desk itself) is "make by hand" as one entity;
   a bare table is an object. Something standing on the floor next to it (a stool, a separate monitor stand) is its own.
 - Black wall tops and void are "keep as blocks" (one entity of one copy; no background needed when no floor touches it).

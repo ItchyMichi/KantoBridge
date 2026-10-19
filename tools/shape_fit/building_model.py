@@ -37,21 +37,34 @@ RH, STEP = 16, 2  # the roof topper's height and its steps (voxels)
 FLAT, PARAPET = 4, 2  # a flat roof's slab and its parapet (voxels)
 
 
+def outline(draw: np.ndarray) -> np.ndarray:
+    """The pixels in the outline's colour: the darkest colour within 30, pure black (missing art in the mosaic) left out."""
+    lum = draw.astype(int).sum(-1)
+    real = lum[lum > 0]
+    return (lum <= (real.min() if len(real) else 0) + 30) & (lum > 0)
+
+
 def detect(draw: np.ndarray) -> dict:
     """The building's parts from its drawing, by its dark outline (Gen 1's four colours share the ground's white, so the
     outline is the one reliable signal):
 
-        roof_rows  the roof ends at its first double line (two rows mostly dark, one row apart) below row 4
+        roof_rows  the roof ends at its first double line (two rows mostly dark, one row apart) below row 4, else at
+                   its first single line (75% dark) below row 8, else 0 (no roof drawn: all wall); within 60% of the rows
         bands      a later double line closes a porch roof: from the dark row above it (a third dark or more) to it,
-                   in facade rows
+                   at most 12 rows, in facade rows
         roof       hip when the roof's outline moves sideways down its rows (a sloped side), else flat
     """
-    lum = draw.astype(int).sum(-1)
-    dark = lum <= lum.min() + 30
+    dark = outline(draw)
     frac = dark.mean(1)
     n = len(frac)
     doubles = [r for r in range(4, n - 2) if frac[r] >= 0.5 and frac[r + 2] >= 0.5 and frac[r + 1] < 0.3]
-    roof_end = doubles[0] + 3 if doubles and doubles[0] + 3 <= int(0.6 * n) else n - W
+    singles = [r for r in range(8, n) if frac[r] >= 0.75]  # fuller than a row of window frames
+    if doubles and doubles[0] + 3 <= int(0.6 * n):
+        roof_end = doubles[0] + 3
+    elif singles and singles[0] + 1 <= int(0.6 * n):
+        roof_end = singles[0] + 1  # a single line closes the roof (a wide hall's)
+    else:
+        roof_end = 0  # no roof line: the roof is off the map (a tower's lower floors), all wall
     bands = []
     for r in doubles:
         if r <= roof_end + 2 or r + 2 >= n - 6:
@@ -61,7 +74,8 @@ def detect(draw: np.ndarray) -> dict:
             if frac[q] >= 0.3:
                 top = q
                 break
-        bands.append((top - roof_end, r + 2 - roof_end))
+        if r + 2 - top <= 12:  # a porch roof is short; taller spans are storeys
+            bands.append((top - roof_end, r + 2 - roof_end))
     # hip or flat: where the first dark pixel of each roof row sits (from the left); a sloped side moves it
     starts = [int(np.argmax(dark[r])) for r in range(2, max(3, roof_end - 4)) if dark[r].any()]
     spread = (max(starts) - min(starts)) if starts else 0
@@ -105,8 +119,7 @@ def main() -> int:
     # the cube: as wide as the facade's drawn walls (its columns that are not ground), so its pixels reach its edges
     # the walls end at their outline: the outermost columns drawn in the darkest colour down most of the facade (a pale
     # shadow strip on the ground beside the outline is not wall)
-    lum = facade.astype(int).sum(axis=-1)
-    dark = lum <= lum.min() + 30
+    dark = outline(facade)
     fcols = np.nonzero(dark.mean(axis=0) >= 0.5)[0]
     if not len(fcols):
         fcols = np.nonzero(~ground(facade).all(axis=0))[0]
@@ -124,6 +137,10 @@ def main() -> int:
     fpx = facade[~ground(facade)]
     uniq, counts = np.unique(fpx if len(fpx) else facade.reshape(-1, 3), axis=0, return_counts=True)
     main = uniq[int(np.argmax(counts))]
+    if not len(roof):
+        # no roof drawn (it is off the map): a plain roof in the wall's colour
+        roof = np.tile(main.astype(np.uint8), (FLAT, X, 1))
+        rmain = main
     door = [cx for cx in range(w) if info["kind"][(y0 + h - 1) * info["w"] + x0 + cx] == "W"]
 
     # the grid: the footprint, the roof's overhang past it on the sides and the front, the roof's height above the walls
