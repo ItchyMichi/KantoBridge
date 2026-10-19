@@ -15,7 +15,8 @@ an agent describes a building as **parts** (boxes, cylinders, gable and hip roof
   building; leave it out of the parts. The building's footprint is only the building, and a dome or roof on top is as
   wide as the building under it.
 - Shapes the agents asked for: roofs curving up at the eaves (Ecruteak), hip-and-gable roofs, gable ends with their
-  own paint, open balconies (a lighthouse's gallery), a trunk's own colour.
+  own paint, open balconies (a lighthouse's gallery), a trunk's own colour. Added (2026-10-19): `barrel` and
+  `profile` roofs (rounded and curved roofs, upswept eaves), their paint following the curve.
 
 ## Reading the drawing
 
@@ -47,7 +48,13 @@ an agent describes a building as **parts** (boxes, cylinders, gable and hip roof
 ```
 
 - Shapes: `box`, `cylinder` (center, radius), `gable` (a ridge along "x" or "z"), `hip`, `dome` (a half sphere),
-  `cone`; `"carve": true` cuts (a recessed door, an alcove). Later parts add to or cut from earlier ones.
+  `cone`, `barrel` (a half-round vault running "along" x or z), `profile` (a roof cross-section extruded "along" x or
+  z: `"profile": [heights above y[0], evenly spaced, north to south for along x]`, optional `"cross"` the same along
+  the run, the roof the lower of the two: rounded roofs, curved hips, eaves sweeping up, steps); `"carve": true` cuts
+  (a recessed door, an alcove). Later parts add to or cut from earlier ones.
+- On a barrel or profile roof the `top` rectangle follows the curve (its rows laid along the surface, the last row at
+  the front edge): give it all the roof's rows, from the top of the drawing down to the eave, so a band drawn across a
+  rounded roof's front (a Pokémon Center's Poké Ball band) wraps round it.
 - Ranges are in pixels (x, z) and voxels (y), the first included, the last excluded.
 - Paint: rectangles of the drawing `[px0, py0, px1, py1]` (pixels, last excluded): `front` over the part's south face
   (stretched to fit), `top` over its upward faces seen from above, `side` over east and west (default: the front's

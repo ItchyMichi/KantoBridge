@@ -14,13 +14,21 @@
        {"shape": "hip", "x": [..], "z": [..], "y": [y0, y1], "paint": {...}},
        {"shape": "dome", "center": [cx, cz], "radius": r, "y": [y0, y1], "paint": {...}},
        {"shape": "cone", "center": [cx, cz], "radius": r, "y": [y0, y1], "paint": {...}},
+       {"shape": "barrel", "x": [..], "z": [..], "y": [y0, y1], "along": "x" | "z", "paint": {...}},
+       {"shape": "profile", "x": [..], "z": [..], "y": [y0, y1], "along": "x" | "z",
+        "profile": [h0, h1, ...], "cross": [h0, ...], "paint": {...}},
        {"shape": "box", ..., "carve": true}            cuts (a door's recess, an alcove)
      ]}
 
 Coordinates: x 0..W west to east and z 0..D north to south in drawing pixels (one voxel each), y up from the ground
 in voxels (8 a block); ranges include their first value and exclude their last. A gable's ridge runs along the axis
 it names (its slopes face the other way); a hip slopes on all four sides; a dome is a half sphere (y[1] - y[0] its
-height); a cone narrows to a point.
+height); a cone narrows to a point. A barrel is a half-round vault running along "along" (its curve across the other
+axis). A profile roof is a cross-section extruded along "along": "profile" lists heights above y[0] (voxels, evenly
+spaced) across the other axis, north to south (along x) or west to east (along z): a rounded roof, eaves that sweep up,
+steps; "cross" (optional) does the same along the run and the roof is the lower of the two (a curved hip). On a
+barrel or profile roof the "top" rectangle follows the curve's surface (its rows laid along the curve, the last row at
+the front), so a band drawn across the front of a rounded roof wraps round it instead of stretching.
 
 Paint: "front": [px0, py0, px1, py1], a rectangle of the drawing (pixels, last excluded) stretched over the part's
 south face (its width over the face's width, its height over the face's height, top row at the top); "top": a
@@ -46,6 +54,38 @@ FACES = (("up", (1, 0, 0)), ("south", (0, 1, 0)), ("east", (0, 0, 1)), ("west", 
          ("down", (-1, 0, 0)))
 
 
+def profile_of(part: dict) -> tuple[list[float], list[float] | None, str]:
+    """A profile roof's heights across its curve (and across the other axis, or None), and the axis it runs along."""
+    if part["shape"] == "barrel":
+        h = part["y"][1] - part["y"][0]
+        n = 33
+        prof = [h * math.sqrt(max(0.0, 1 - (2 * i / (n - 1) - 1) ** 2)) for i in range(n)]
+        return prof, None, part.get("along", "x")
+    return [float(v) for v in part["profile"]], ([float(v) for v in part["cross"]] if part.get("cross") else None), part.get("along", "x")
+
+
+def sample(prof: list[float], t: np.ndarray) -> np.ndarray:
+    """A profile's height at fractions t (0..1) across it, linearly between its points."""
+    t = np.clip(t, 0, 1) * (len(prof) - 1)
+    i = np.minimum(np.floor(t).astype(int), len(prof) - 2) if len(prof) > 1 else np.zeros_like(t, dtype=int)
+    if len(prof) == 1:
+        return np.full_like(t, prof[0], dtype=float)
+    f = t - i
+    a = np.asarray(prof)
+    return a[i] * (1 - f) + a[i + 1] * f
+
+
+def arc(prof: list[float], span: float) -> np.ndarray:
+    """Cumulative surface length along a profile (normalised 0..1) at its points: paint follows the curve."""
+    a = np.asarray(prof, float)
+    if len(a) < 2:
+        return np.array([0.0, 1.0])
+    step = span / (len(a) - 1)
+    seg = np.sqrt(step ** 2 + np.diff(a) ** 2)
+    c = np.concatenate([[0.0], np.cumsum(seg)])
+    return c / max(1e-6, c[-1])
+
+
 def inside(part: dict, x: np.ndarray, y: np.ndarray, z: np.ndarray) -> np.ndarray:
     """Which voxel centres (x + 0.5 ...) lie in a part."""
     X, Y, Z = x + 0.5, y + 0.5, z + 0.5
@@ -67,6 +107,17 @@ def inside(part: dict, x: np.ndarray, y: np.ndarray, z: np.ndarray) -> np.ndarra
         hx, hz = (x1 - x0) / 2, (z1 - z0) / 2
         inset = min(hx, hz) * t
         return m & (np.abs(X - (x0 + x1) / 2) <= hx - inset + 1e-6) & (np.abs(Z - (z0 + z1) / 2) <= hz - inset + 1e-6)
+    if s in ("profile", "barrel"):
+        x0, x1 = part["x"]
+        z0, z1 = part["z"]
+        y0 = part["y"][0]
+        m = (X >= x0) & (X <= x1) & (Z >= z0) & (Z <= z1) & (Y >= y0)
+        prof, cross, along = profile_of(part)
+        tz, tx = (Z - z0) / max(1e-6, z1 - z0), (X - x0) / max(1e-6, x1 - x0)
+        h = sample(prof, tz if along == "x" else tx)
+        if cross:
+            h = np.minimum(h, sample(cross, tx if along == "x" else tz))
+        return m & (Y - y0 <= h)
     cx, cz = part["center"]
     r = part["radius"]
     y0, y1 = part["y"]
@@ -128,7 +179,18 @@ def build(spec: dict, draw: np.ndarray):
         front = paint.get("front") or paint.get("top") or [0, 0, W, D]
         across = (xx + 0.5 - bx0) / max(1e-6, bx1 - bx0)
         down = 1 - (yy + 0.5 - py0) / max(1e-6, py1 - py0)
-        if face == "up" and paint.get("top"):
+        if face == "up" and paint.get("top") and part["shape"] in ("profile", "barrel"):
+            # a curved roof's art follows its surface: the top rectangle laid along the curve, not seen from above
+            prof, _, along = profile_of(part)
+            if along == "x":
+                t, span = (zz + 0.5 - bz0) / max(1e-6, bz1 - bz0), bz1 - bz0
+            else:
+                t, span = (xx + 0.5 - bx0) / max(1e-6, bx1 - bx0), bx1 - bx0
+            a = arc(prof, span)
+            f = float(np.interp(t, np.linspace(0, 1, len(a)), a))
+            r, c = pick(paint["top"], across if along == "x" else (zz + 0.5 - bz0) / max(1e-6, bz1 - bz0), f, draw) if along == "x" \
+                else pick(paint["top"], f, (zz + 0.5 - bz0) / max(1e-6, bz1 - bz0), draw)
+        elif face == "up" and paint.get("top"):
             r, c = pick(paint["top"], across, (zz + 0.5 - bz0) / max(1e-6, bz1 - bz0), draw)
         elif face in ("east", "west"):
             side = paint.get("side")
