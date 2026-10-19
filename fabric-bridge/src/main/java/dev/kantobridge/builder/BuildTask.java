@@ -918,6 +918,7 @@ public final class BuildTask {
 			r.blocksByKind.put("ledge", counts.byKind[BlockCode.KIND_LEDGE]);
 			r.blocksByKind.put("edge_wall", counts.byKind[BlockCode.KIND_EDGE]);
 			r.blocksByKind.put("step_collider", counts.byKind[BlockCode.KIND_STEP]);
+			r.blocksByKind.put("seat_collider", counts.byKind[BlockCode.KIND_SEAT]);
 			r.blocksByKind.put("shaft_ladder", counts.byKind[BlockCode.KIND_LADDER]);
 			r.blocksByKind.put("light", counts.byKind[BlockCode.KIND_LIGHT]);
 			r.blocksByKind.put("habitat", counts.habitatBlocks);

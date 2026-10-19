@@ -122,6 +122,22 @@ class VoxelShapeTest {
 	}
 
 	@Test
+	void aPaintedShapeShowsThePixelItsPaintNames() {
+		// a hand model's own colouring (docs/specs/HAND_MODELS.md section 3): voxel (5, 0, 8) shows the drawing's pixel at
+		// row 2, column 9 (the top right tile), not the one in front of it
+		int[][] tiles = tiles(1);
+		boolean[] occupancy = unbits(cube(4, 0, 6, 4));
+		byte[] paint = new byte[W * W * W];
+		paint[(0 * W + 8) * W + 5] = (byte) (2 * W + 9);
+		CellUnits.Unit unit = CellUnits.voxels(tiles, occupancy, paint, 2, 8, CellUnits.MAX_QUADS);
+		assertNotNull(unit);
+		int texel = unit.voxels().at(5, 0, 8);
+		assertEquals(1, VoxelGrid.slot(texel), "the top right tile");
+		assertEquals(1, VoxelGrid.u(texel));
+		assertEquals(2, VoxelGrid.v(texel));
+	}
+
+	@Test
 	void aMissingTileOrABusyBlockFallsBackToTheOtherBuilders() {
 		boolean[] occupancy = unbits(cube(0, 0, 0, 16));
 		int[][] missing = tiles(1);

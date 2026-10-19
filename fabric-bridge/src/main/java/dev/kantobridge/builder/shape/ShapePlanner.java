@@ -58,6 +58,12 @@ import org.jetbrains.annotations.Nullable;
  * </pre>
  */
 public final class ShapePlanner {
+	/**
+	 * A bit of {@link MapShapes#decor()}: the column's feet level is a seat (docs/specs/HAND_MODELS.md section 6), a seat
+	 * collider carrying the seat unit's art instead of a decor carrier.
+	 */
+	public static final int SEAT = 1 << 30;
+
 	private ShapePlanner() {
 	}
 

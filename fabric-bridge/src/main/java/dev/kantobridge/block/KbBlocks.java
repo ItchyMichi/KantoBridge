@@ -56,6 +56,7 @@ public final class KbBlocks {
 	public static EdgeWallBlock EDGE_WALL;
 	/** The half steps of a cave's stairs (docs/specs/CAVES_3D_PLAN.md §3.4). */
 	public static StepColliderBlock STEP_COLLIDER;
+	public static SeatColliderBlock SEAT_COLLIDER;
 	/** A cave shaft's ladder (docs/specs/CAVES_3D_PLAN.md §3.5). */
 	public static ShaftLadderBlock SHAFT_LADDER;
 	public static DecorBlock DECOR;
@@ -107,6 +108,7 @@ public final class KbBlocks {
 		LEDGE_COLLIDER = register("ledge_collider", new LedgeColliderBlock(invisibleProperties()));
 		EDGE_WALL = register("edge_wall", new EdgeWallBlock(invisibleProperties()));
 		STEP_COLLIDER = register("step_collider", new StepColliderBlock(invisibleProperties()));
+		SEAT_COLLIDER = register("seat_collider", new SeatColliderBlock(invisibleProperties()));
 		SHAFT_LADDER = register("shaft_ladder", new ShaftLadderBlock(BlockBehaviour.Properties.of().mapColor(MapColor.WOOD).strength(-1.0F, 3_600_000.0F)
 				.noLootTable().noOcclusion().sound(net.minecraft.world.level.block.SoundType.LADDER).pushReaction(PushReaction.BLOCK)));
 		DECOR = register("decor", new DecorBlock(decorProperties()));
@@ -119,6 +121,7 @@ public final class KbBlocks {
 		CARRIERS.add(new Carrier(LEDGE_COLLIDER, CarrierKind.LEDGE, 0));
 		CARRIERS.add(new Carrier(STEP_COLLIDER, CarrierKind.STEP, 0));
 		CARRIERS.add(new Carrier(STORY_TILE, CarrierKind.STORY_TILE, 0));
+		CARRIERS.add(new Carrier(SEAT_COLLIDER, CarrierKind.SEAT, 0));
 		// No data fixer: the block entities hold only our own two strings.
 		STORY_CELL_ENTITY = Registry.register(BuiltInRegistries.BLOCK_ENTITY_TYPE, id("story_cell"),
 				BlockEntityType.Builder.of(StoryCellBlockEntity::new, STORY_CELL).build(null));

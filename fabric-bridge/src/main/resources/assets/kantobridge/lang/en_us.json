@@ -56,6 +56,7 @@
   "block.kantobridge.ledge_collider": "Ledge",
   "block.kantobridge.edge_wall": "Edge Wall",
   "block.kantobridge.step_collider": "Steps",
+  "block.kantobridge.seat_collider": "Seat",
   "block.kantobridge.shaft_ladder": "Ladder",
   "entity.kantobridge.puppet": "Kanto NPC",
   "key.categories.kantobridge": "Kanto Bridge",

@@ -189,7 +189,8 @@ public final class ShapeTable {
 			// A fitted voxel shape (docs/specs/FITTED_SHAPES.md section 10), found in the jar's table by its cell and the hash
 			// its key carries; without it (or over the budget) the unit falls through to the other builders.
 			boolean[] occupancy = dev.kantobridge.builder.shape.FittedShapes.voxels(atlas, ids, context.params());
-			CellUnits.Unit unit = occupancy == null ? null : CellUnits.voxels(tiles, occupancy, UNIT_CELL, art.artPx(), CellUnits.MAX_QUADS);
+			byte[] paint = occupancy == null ? null : dev.kantobridge.builder.shape.FittedShapes.paint(atlas, ids, context.params());
+			CellUnits.Unit unit = occupancy == null ? null : CellUnits.voxels(tiles, occupancy, paint, UNIT_CELL, art.artPx(), CellUnits.MAX_QUADS);
 			if (unit != null) {
 				return unit;
 			}

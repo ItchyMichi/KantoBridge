@@ -36,8 +36,8 @@ class TileBlockTest {
 	@Test
 	void everyTileFamilyIsACarrierWithItsSlots() {
 		List<KbBlocks.Carrier> carriers = KbBlocks.carriers();
-		assertEquals(3 * KbBlocks.FAMILIES_PER_SHAPE + 5, carriers.size(),
-				"the tile, half and shape families, decor, decor_leaves, the ledge and step colliders and the story tile");
+		assertEquals(3 * KbBlocks.FAMILIES_PER_SHAPE + 6, carriers.size(),
+				"the tile, half and shape families, decor, decor_leaves, the ledge and step colliders, the story tile and the seat collider");
 		for (int family = 0; family < KbBlocks.FAMILIES_PER_SHAPE; family++) {
 			KbBlocks.Carrier full = carriers.get(family);
 			KbBlocks.Carrier half = carriers.get(KbBlocks.FAMILIES_PER_SHAPE + family);
@@ -66,7 +66,8 @@ class TileBlockTest {
 		assertTrue(CarrierKind.TILE_FULL.drawsCube() && CarrierKind.TILE_FULL.hasSlot());
 		assertTrue(CarrierKind.SHAPE_FULL.drawsCube() && CarrierKind.SHAPE_FULL.hasSlot() && !CarrierKind.SHAPE_FULL.half(),
 				"a shape tile's fallback is its slot's full cube");
-		for (CarrierKind kind : List.of(CarrierKind.DECOR, CarrierKind.DECOR_LEAVES, CarrierKind.LEDGE, CarrierKind.STEP)) {
+		assertSame(KbBlocks.SEAT_COLLIDER, carriers.get(carriers.size() - 1).block(), "the seat collider is the last carrier");
+		for (CarrierKind kind : List.of(CarrierKind.DECOR, CarrierKind.DECOR_LEAVES, CarrierKind.LEDGE, CarrierKind.STEP, CarrierKind.SEAT)) {
 			assertTrue(!kind.drawsCube() && !kind.hasSlot(), kind + " draws only its shape");
 		}
 	}

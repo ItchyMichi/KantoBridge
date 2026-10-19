@@ -394,6 +394,15 @@ public final class CellUnits {
 	 * {@code maxQuads} quads (the planner's other builders then decide).
 	 */
 	public static @Nullable Unit voxels(int @Nullable [][] tiles, boolean[] occupancy, int perCell, int artPx, int maxQuads) {
+		return voxels(tiles, occupancy, null, perCell, artPx, maxQuads);
+	}
+
+	/**
+	 * A voxel shape painted from its cell's drawing: by {@code paint} when given (per voxel the drawing's pixel, row * w +
+	 * column: a hand model's own colouring), else by front projection (a voxel shows the drawing at its column and height).
+	 */
+	public static @Nullable Unit voxels(int @Nullable [][] tiles, boolean[] occupancy, byte @Nullable [] paint, int perCell, int artPx,
+			int maxQuads) {
 		int w = perCell * artPx;
 		if (occupancy.length != w * w * w) {
 			return null;
@@ -421,8 +430,14 @@ public final class CellUnits {
 			for (int x = 0; x < w; x++) {
 				int source = nearestDrawn(drawn, w, row, x);
 				for (int z = 0; z < w; z++) {
-					if (occupancy[(y * w + z) * w + x] && source >= 0) {
-						grid.set(x, y, z, texels[source]);
+					int i = (y * w + z) * w + x;
+					int from = source;
+					if (paint != null && paint.length == occupancy.length) {
+						int p = paint[i] & 0xFF;
+						from = p < w * w ? nearestDrawn(drawn, w, p / w, p % w) : source;
+					}
+					if (occupancy[i] && from >= 0) {
+						grid.set(x, y, z, texels[from]);
 						foreground[row * w + x] = true;
 						solid++;
 					}

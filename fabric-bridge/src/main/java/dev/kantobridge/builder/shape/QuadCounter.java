@@ -127,13 +127,14 @@ public final class QuadCounter {
 			return closed;
 		}
 		if (kind != BlockCode.KIND_FULL && kind != BlockCode.KIND_HALF && kind != BlockCode.KIND_SHAPE && kind != BlockCode.KIND_DECOR
-				&& kind != BlockCode.KIND_LEDGE && kind != BlockCode.KIND_STEP) {
+				&& kind != BlockCode.KIND_LEDGE && kind != BlockCode.KIND_STEP && kind != BlockCode.KIND_SEAT) {
 			return 0;
 		}
 		int id = world.shapeId(x, y, z);
 		ShapeMesh mesh = id == 0 || table == null ? null : table.mesh(id);
 		if (mesh == null) {
-			return closed + (kind == BlockCode.KIND_DECOR || kind == BlockCode.KIND_LEDGE || kind == BlockCode.KIND_STEP ? 0 : 6);
+			return closed + (kind == BlockCode.KIND_DECOR || kind == BlockCode.KIND_LEDGE || kind == BlockCode.KIND_STEP
+					|| kind == BlockCode.KIND_SEAT ? 0 : 6);
 		}
 		int n = closed;
 		for (int q = 0; q < mesh.size(); q++) {

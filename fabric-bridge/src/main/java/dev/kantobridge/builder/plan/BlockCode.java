@@ -46,8 +46,10 @@ public final class BlockCode {
 	 * Gen 1's direction numbers as {@link #ledge}'s.
 	 */
 	public static final int KIND_LADDER = 13;
+	/** A seat on a walkable cell, half a block (docs/specs/HAND_MODELS.md section 6): no value. */
+	public static final int KIND_SEAT = 14;
 	/** One past the highest kind. */
-	public static final int KINDS = 14;
+	public static final int KINDS = 15;
 
 	private static final int SHIFT = 24;
 	private static final int VALUE_MASK = (1 << SHIFT) - 1;
@@ -112,6 +114,11 @@ public final class BlockCode {
 	/** A step collider climbing {@code climb}. */
 	public static int step(dev.kantobridge.world.Dir climb) {
 		return (KIND_STEP << SHIFT) | gen1Dir(climb);
+	}
+
+	/** A seat collider. */
+	public static int seat() {
+		return KIND_SEAT << SHIFT;
 	}
 
 	/** A shaft's ladder facing {@code facing} (away from its wall). */

@@ -405,10 +405,11 @@ public final class ClientShapes {
 	/**
 	 * How many blocks a puppet standing on cell (cx, cy) of a map stands on (docs/specs/VOXEL_BLOCKS_PLAN.md §5.7): the
 	 * colliding carriers from feet level up in the cell's north-west column of this client's level, so an item on a
-	 * table sits on the table. 0 for a walkable cell; cached per index and cell once its chunk is loaded (two regions may
-	 * both have a ROUTE_1, so the cache is per index).
+	 * table sits on the table, and a seat collider on top as half a block (a character on a stool, HAND_MODELS.md section
+	 * 6). 0 for a walkable cell; cached per index and cell once its chunk is loaded (two regions may both have a ROUTE_1,
+	 * so the cache is per index).
 	 */
-	public static int topHeight(WorldIndex worldIndex, String mapId, int cx, int cy) {
+	public static double topHeight(WorldIndex worldIndex, String mapId, int cx, int cy) {
 		MapPlacement placement = worldIndex.map(mapId);
 		ClientLevel level = Minecraft.getInstance().level;
 		if (placement == null || level == null) {
@@ -426,7 +427,7 @@ public final class ClientShapes {
 		}
 		int i = cy * placement.w() + cx;
 		if (cells[i] >= 0) {
-			return cells[i];
+			return cells[i] / 2.0;
 		}
 		BlockPos feet = worldIndex.cellOrigin(mapId, cx, cy);
 		if (feet == null || !level.hasChunkAt(feet)) {
@@ -436,8 +437,10 @@ public final class ClientShapes {
 		while (top < MAX_TOP && colliding(level, feet.above(top))) {
 			top++;
 		}
-		cells[i] = top;
-		return top;
+		// in half blocks: a seat collider on the column is half a block more
+		int halves = 2 * top + (level.getBlockState(feet.above(top)).is(KbBlocks.SEAT_COLLIDER) ? 1 : 0);
+		cells[i] = halves;
+		return halves / 2.0;
 	}
 
 	/** A full-cube collider: {@code tile_full} or {@code shape_full}. */

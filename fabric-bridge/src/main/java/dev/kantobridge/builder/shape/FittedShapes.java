@@ -43,32 +43,43 @@ public final class FittedShapes {
 
 	/**
 	 * A cell's fit: a profile class ({@link Profile#CLASSES}), {@link #COLUMNS} or {@link #VOXELS}, its parameters
-	 * (0..99; a voxel shape's are its hash), and a voxel shape's bits (else null).
+	 * (0..99; a voxel shape's are its hash), a voxel shape's bits (else null) and its paint (else null: a hand model's
+	 * own colouring, docs/specs/HAND_MODELS.md section 3: per voxel, the pixel of the cell's drawing it shows, row * 16 + column).
 	 */
-	public record Entry(String cls, List<Integer> params, byte @Nullable [] voxels) {
+	public record Entry(String cls, List<Integer> params, byte @Nullable [] voxels, byte @Nullable [] paint) {
 		public Entry {
 			params = List.copyOf(params);
 		}
 
+		public Entry(String cls, List<Integer> params, byte @Nullable [] voxels) {
+			this(cls, params, voxels, null);
+		}
+
 		public Entry(String cls, List<Integer> params) {
-			this(cls, params, null);
+			this(cls, params, null, null);
 		}
 
 		@Override
 		public boolean equals(Object o) {
-			return o instanceof Entry e && e.cls.equals(this.cls) && e.params.equals(this.params) && java.util.Arrays.equals(e.voxels, this.voxels);
+			return o instanceof Entry e && e.cls.equals(this.cls) && e.params.equals(this.params) && java.util.Arrays.equals(e.voxels, this.voxels)
+					&& java.util.Arrays.equals(e.paint, this.paint);
 		}
 
 		@Override
 		public int hashCode() {
-			return java.util.Objects.hash(this.cls, this.params) * 31 + java.util.Arrays.hashCode(this.voxels);
+			return (java.util.Objects.hash(this.cls, this.params) * 31 + java.util.Arrays.hashCode(this.voxels)) * 31
+					+ java.util.Arrays.hashCode(this.paint);
 		}
 	}
 
 	/** One game's table: its cells' fits and its buildings' roof rows. */
-	record Table(Map<String, Entry> cells, Map<String, Integer> roofs, Map<String, String> stacks) {
+	record Table(Map<String, Entry> cells, Map<String, Integer> roofs, Map<String, String> stacks, java.util.Set<String> seats) {
 		Table(Map<String, Entry> cells, Map<String, Integer> roofs) {
-			this(cells, roofs, Map.of());
+			this(cells, roofs, Map.of(), java.util.Set.of());
+		}
+
+		Table(Map<String, Entry> cells, Map<String, Integer> roofs, Map<String, String> stacks) {
+			this(cells, roofs, stacks, java.util.Set.of());
 		}
 
 	}
@@ -160,6 +171,21 @@ public final class FittedShapes {
 		return table == null ? null : table.stacks().get(key(atlas, tiles));
 	}
 
+	/**
+	 * The seat on a walkable cell (docs/specs/HAND_MODELS.md section 6): the cell's voxel entry when the table marks it a
+	 * seat, else null.
+	 */
+	static @Nullable Entry seat(String atlas, int[] tiles) {
+		Table table = current();
+		String key = key(atlas, tiles);
+		return table == null || !table.seats().contains(key) ? null : table.cells().get(key);
+	}
+
+	/** Tests: seats (their keys) with the given table. */
+	static void useSeatsForTest(Map<String, Entry> table, java.util.Set<String> seats) {
+		forTest = new Table(Map.copyOf(table), Map.of(), Map.of(), java.util.Set.copyOf(seats));
+	}
+
 	/** Tests: stacks (top key to the key below) with the given table. */
 	static void useStacksForTest(Map<String, Entry> table, Map<String, String> stacks) {
 		forTest = new Table(Map.copyOf(table), Map.of(), Map.copyOf(stacks));
@@ -191,6 +217,23 @@ public final class FittedShapes {
 					out[i] = (e.voxels()[i >> 3] >> (i & 7) & 1) != 0;
 				}
 				return out;
+			}
+		}
+		return null;
+	}
+
+	/** A fitted voxel shape's paint (see {@link Entry}) by its cell and the hash its key carries, or null (front projection). */
+	public static byte @Nullable [] paint(String atlas, int[] tiles, List<Integer> params) {
+		String key = key(atlas, tiles);
+		List<Table> all = new ArrayList<>(tables().values());
+		Table test = forTest;
+		if (test != null) {
+			all.add(0, test);
+		}
+		for (Table table : all) {
+			Entry e = table.cells().get(key);
+			if (e != null && e.voxels() != null && VOXELS.equals(e.cls()) && e.params().equals(params)) {
+				return e.paint();
 			}
 		}
 		return null;
@@ -234,10 +277,13 @@ public final class FittedShapes {
 								Map<String, Entry> cells = new TreeMap<>();
 								Map<String, Integer> roofs = new TreeMap<>();
 								Map<String, String> stacks = new TreeMap<>();
+								java.util.Set<String> seats = new java.util.TreeSet<>();
 								parse(text, cells);
 								parseRoofs(text, roofs);
 								parseStacks(text, stacks);
-								tables.put(game, new Table(Collections.unmodifiableMap(cells), Collections.unmodifiableMap(roofs), Collections.unmodifiableMap(stacks)));
+								parseSeats(text, seats);
+								tables.put(game, new Table(Collections.unmodifiableMap(cells), Collections.unmodifiableMap(roofs), Collections.unmodifiableMap(stacks),
+										Collections.unmodifiableSet(seats)));
 							}
 						} catch (IOException e) {
 							throw new UncheckedIOException(e);
@@ -252,6 +298,20 @@ public final class FittedShapes {
 	}
 
 	/** Adds a table file's buildings ({@code structs}: key → {@code roofRows} 0..6) to {@code into}. */
+	/** Each voxel entry marked "seat" (a stool or chair on a walkable cell). */
+	static void parseSeats(String text, java.util.Set<String> into) {
+		JsonObject root = JsonParser.parseString(text).getAsJsonObject();
+		if (!root.has("cells")) {
+			return;
+		}
+		for (Map.Entry<String, JsonElement> e : root.getAsJsonObject("cells").entrySet()) {
+			JsonObject o = e.getValue().getAsJsonObject();
+			if (o.has("seat") && o.get("seat").isJsonPrimitive() && o.get("seat").getAsBoolean() && VOXELS.equals(o.get("class").getAsString())) {
+				into.add(e.getKey());
+			}
+		}
+	}
+
 	/** Each voxel entry's "on" (the key of the cell it stands on: a stack's top). */
 	static void parseStacks(String text, Map<String, String> into) {
 		JsonObject root = JsonParser.parseString(text).getAsJsonObject();
@@ -295,8 +355,17 @@ public final class FittedShapes {
 				String cls = o.get("class").getAsString();
 				if (VOXELS.equals(cls)) {
 					byte[] v = java.util.Base64.getDecoder().decode(o.get("v").getAsString());
+					byte[] t = o.has("t") ? java.util.Base64.getDecoder().decode(o.get("t").getAsString()) : null;
+					if (t != null && t.length != VOXEL_BYTES * 8) {
+						t = null;
+					}
 					if (v.length == VOXEL_BYTES) {
-						into.put(e.getKey(), new Entry(cls, hashParams(v), v));
+						// the hash covers the paint too: a repainted shape is a new key, rebuilt
+						byte[] hashed = t == null ? v : java.util.Arrays.copyOf(v, v.length + t.length);
+						if (t != null) {
+							System.arraycopy(t, 0, hashed, v.length, t.length);
+						}
+						into.put(e.getKey(), new Entry(cls, hashParams(hashed), v, t));
 					}
 					continue;
 				}

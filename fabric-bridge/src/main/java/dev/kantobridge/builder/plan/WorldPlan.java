@@ -1092,6 +1092,14 @@ public final class WorldPlan {
 				// A tuft (V4) stands on a decor carrier at feet level, unless a story block takes the position; a building's
 				// doorway or overhang (P2) on decor carriers up its column; over a ramp's steps, the rest of its stair.
 				int decor = planned == null ? 0 : planned.decor()[planIndex];
+				if ((decor & dev.kantobridge.builder.shape.ShapePlanner.SEAT) != 0 && from == 0 && story < 0) {
+					// A seat (HAND_MODELS.md section 6): half a block characters stand on, carrying the seat's art.
+					sink.set(x, feet, z, BlockCode.seat());
+					column = Math.max(column, 1);
+					taken |= 1L;
+					from = 1;
+				}
+				decor &= ~dev.kantobridge.builder.shape.ShapePlanner.SEAT;
 				for (int k = from; k < 31 && decor >> k != 0; k++) {
 					if ((decor >> k & 1) != 0 && (k > 0 || story < 0)) {
 						sink.set(x, feet + k, z, BlockCode.decor(false));

@@ -46,6 +46,12 @@ and height (row 15 - y in voxels), the whole depth through. So:
 - the front row of cells comes out best (its drawing is the object's front);
 - shapes in back-row cells take the back cell's drawing at their height (the table's back legs show the top's colour).
 
+Hand models paint themselves: `hand_import.py` gives each voxel the drawing pixel its cube's face shows (the model's
+UVs on the reference): the top face when it is open (a table top shows the drawing's top), else the front, sides,
+back, bottom. The table entry carries it as `"t"` (one byte per voxel: row * 16 + column of the cell's own drawing);
+a pixel from another cell's drawing becomes the nearest pixel of the same colour in the cell's own drawing (the same
+place when it is missing art). Depth models keep front projection.
+
 ## 4. Import and check
 
 ```
@@ -63,6 +69,19 @@ python3 tools/shape_fit/merge_voxels.py <game> hand.json --source hand --replace
 puts the cells into the game's table (`"from": "hand"`). Rebuild the region (`tools/e2e/build_world.py`) and take
 in-game pictures (`tools/e2e/context_shots.py` with a locations file: the unit cell and a walkable cell to stand on).
 
+## 6. Seats
+
+A stool or a chair the hidden game draws on a **walkable** cell (characters stand on it: Mom on her stool) is a seat:
+
+- the table entry is marked `"seat": true` (`merge_voxels.py --seats <kb-hub maps dir>`: a modelled entity whose cells
+  are all walkable and whose note names a stool, chair, seat or bench), its voxels squashed to half a block (4 voxels)
+  and painted with its whole drawing;
+- the planner puts a seat unit on the walkable cell over a **seat collider** at feet level: half a block high, so the
+  player steps onto it (Minecraft's 0.6-block step, no jump);
+- NPC figures on the cell stand half a block up, on the seat (the client's top height counts the seat collider).
+
+Other walkable objects (doors, ladders, stairs, floor clutter, grass) are not seats; they stay as they are for now.
+
 ## 5. Quality check
 
 Viewer (shape, proportions, footprint) and in game (next to the hidden game's screen): see the review notes below.
@@ -76,3 +95,5 @@ Viewer (shape, proportions, footprint) and in game (next to the hidden game's sc
   - The top comes out dark. Front projection paints the top surface with the drawing's front-edge rows (the dark
     edge at that height), not the light table top seen from above.
   - The first picture spot failed (the game went to another map first); the second worked.
+  - After the paint (section 3) and seats (section 6): the top is light with the plant on it; the stools are low seats
+    beside it. The front spot (3,6) still frames badly: use the side spot (5,6) for this room.

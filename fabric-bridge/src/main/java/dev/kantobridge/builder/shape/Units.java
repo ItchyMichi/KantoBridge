@@ -117,6 +117,14 @@ final class Units {
 				}
 				String pinned = classes == null ? null : classes.unitClass(cx, cy);
 				boolean unitPin = pinned != null && !ProfileClasses.OTHER.equals(pinned);
+				if (map.kind(cx, cy) == CellKind.WALK && !unitPin) {
+					FittedShapes.Entry seat = FittedShapes.seat(map.atlas(), tiles(map, cx, cy));
+					if (seat != null) {
+						seatUnit(map, atlas, atlasIndex, cx, cy, seat, keys, decor, floor, units, mapGround, indoor, tally);
+						why(map, cx, cy, "seat");
+						continue;
+					}
+				}
 				if (map.kind(cx, cy) != CellKind.SOLID) {
 					String corner = classes == null ? null : classes.at(cx * per, cy * per);
 					if (unitPin && map.kind(cx, cy) == CellKind.WALK && WALKABLE_UNITS.contains(corner) && pinned.equals(corner)) {
@@ -322,6 +330,32 @@ final class Units {
 	private static void decorUnit(SceneMap map, SceneAtlas atlas, int atlasIndex, ProfileClasses classes, int cx, int cy, String cls,
 			ShapeKey[][] keys, int[] decor, int[] floor, List<Cell> units, int mapGround, boolean indoor, Map<String, Integer> tally) {
 		standUnit(map, atlas, atlasIndex, cx, cy, cls, params(map, classes, cls), keys, decor, floor, units, mapGround, indoor, tally, "pin");
+	}
+
+	/**
+	 * A seat (docs/specs/HAND_MODELS.md section 6): a stool or a chair on a walkable cell, its voxel shape (squashed to
+	 * the seat's height by the table) one block high on seat colliders, which characters stand on; its floor the ground.
+	 */
+	private static void seatUnit(SceneMap map, SceneAtlas atlas, int atlasIndex, int cx, int cy, FittedShapes.Entry seat, ShapeKey[][] keys,
+			int[] decor, int[] floor, List<Cell> units, int mapGround, boolean indoor, Map<String, Integer> tally) {
+		int per = map.perCell();
+		int cols = map.artCols();
+		int[] tiles = tiles(map, cx, cy);
+		CellUnits.Context context = new CellUnits.Context(0, indoor, false, false, false, FittedShapes.VOXELS, 0, seat.params());
+		int g = ground(map, cx, cy, atlas.grassTiles(), atlas.frameTiles(), mapGround);
+		ShapeKey first = null;
+		for (int bz = 0; bz < per; bz++) {
+			for (int bx = 0; bx < per; bx++) {
+				int i = (cy * per + bz) * cols + cx * per + bx;
+				ShapeKey column = ShapeKey.cell(atlasIndex, tiles, g, bx, 0, bz).withVariant(context.variant());
+				first = first == null ? column : first;
+				keys[i] = new ShapeKey[] {column};
+				decor[i] = 1 | ShapePlanner.SEAT;
+				floor[i] = g;
+			}
+		}
+		tally.merge("seat", 1, Integer::sum);
+		units.add(new Cell(cx, cy, first, false, "seat"));
 	}
 
 	/**

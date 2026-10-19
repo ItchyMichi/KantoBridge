@@ -25,7 +25,9 @@ public enum CarrierKind {
 	 * {@code story_tile}: a swap site's cell at feet level, colliding per player; carries the bottom of the cell's closed
 	 * art, drawn for players who see the cell closed (V5).
 	 */
-	STORY_TILE(false, false);
+	STORY_TILE(false, false),
+	/** {@code seat_collider}: a seat on a walkable cell, half a block (docs/specs/HAND_MODELS.md section 6); carries the seat's art. */
+	SEAT(false, false);
 
 	private final boolean slot;
 	private final boolean half;

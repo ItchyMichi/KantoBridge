@@ -142,6 +142,25 @@ class FittedShapesTest {
 	}
 
 	@Test
+	void aSeatStandsOnAWalkableCell() {
+		// a stool the hidden game draws on a walkable cell (lower case: walkable), its voxel entry marked a seat
+		SceneMap map = surface("SEAT", "......", "......", "..ss..", "..ss..", "......", "......");
+		int s = tile('s');
+		byte[] bits = new byte[FittedShapes.VOXEL_BYTES];
+		bits[0] = 1;
+		String seat = FittedShapes.key(ShapeFixtures.ATLAS, new int[] {s, s, s, s});
+		FittedShapes.useSeatsForTest(Map.of(seat, new FittedShapes.Entry("voxels", List.of(), bits)), java.util.Set.of(seat));
+		ShapePlanner.MapShapes shapes = plan(map);
+		assertEquals(1, shapes.units().size(), "a unit on the walkable cell");
+		Units.Cell cell = shapes.units().get(0);
+		assertEquals("seat", cell.source());
+		int per = map.perCell();
+		int i = (cell.cy() * per) * map.artCols() + cell.cx() * per;
+		assertEquals(ShapePlanner.SEAT | 1, shapes.decor()[i], "a seat collider at feet level, no other decor");
+		assertEquals(0, shapes.blocks()[i], "no solid blocks");
+	}
+
+	@Test
 	void aColumnsFitKeepsNoUnit() {
 		SceneMap map = surface("LONE", LONE.split("\n"));
 		FittedShapes.useForTest(Map.of(lone(), new FittedShapes.Entry("columns", List.of())));

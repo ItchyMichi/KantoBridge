@@ -71,7 +71,8 @@ object. Keep it short; don't copy text from the sources.
 
 - Use the kinds' full names exactly as in the table above (agent_merge.py also accepts object, stack, pair, hand,
   blocks, floor).
-- An object can stand on walkable cells (stools are walkable in Blue): mark it anyway.
+- An object can stand on walkable cells (stools are walkable in Blue): mark it anyway. A stool or chair on a walkable
+  cell becomes a seat that characters stand on (HAND_MODELS.md section 6): say "stool" or "chair" in its note.
 - Separate objects stay separate even when they touch: a monitor on a desk, a stool beside it, a plant next to a
   shelf are each their own entity. One entity is one piece of furniture or one machine.
 - A table's walkable front edge row belongs to the table only when the art shows it is the same piece (its front

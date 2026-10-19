@@ -291,6 +291,7 @@ public final class MeshStatsRuntime {
 				case LEDGE -> BlockCode.ledge(0);
 				case STEP -> BlockCode.step(dev.kantobridge.world.Dir.RIGHT);
 				case STORY_TILE -> BlockCode.storyTile(0);
+				case SEAT -> BlockCode.seat();
 			});
 		}
 		BlockPos.MutableBlockPos cursor = new BlockPos.MutableBlockPos();
