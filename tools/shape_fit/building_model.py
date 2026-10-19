@@ -7,13 +7,14 @@ The building is cells (x0, y0)..(x0 + w - 1, y0 + h - 1) of the map, drawn top-d
 rows are the roof seen from above, the lower `--roof-rows`-less rows the facade (default: all but the last cell row are
 roof). Voxels are 16 a cell (8 a block); x east, y up, z south.
 
-    box       a solid box over the footprint, the facade's rows times --wall voxels high, a ROOF-voxel slab on top; facade
+    cube      a decorated box as wide as the facade's drawn walls, the facade's rows times --wall voxels high; facade
               rows named in --bands (a porch roof) stand out BAND voxels
     front     the facade drawing stretched over the wall's height on the south face; the door (a walkable cell of the
               footprint's last row) recessed DOOR voxels; the facade's other details (pixels not its main colour)
               standing out 1 voxel
-    roof      the top shows the roof drawing from above (its rows across the depth); its last rows, the eave, stand out
-              EAVE voxels past the south face and SIDE voxels past the east and west faces, a slab under the roof line
+    roof      a separate topper on the cube: a stepped hip RH voxels high (STEP-voxel steps, each STEP in from every side),
+              as wide as the drawn roof (the eaves overhang the walls) and reaching EAVE past the front; its top shows
+              the roof drawing from above (its rows across the depth)
     sides     the facade's edge columns; the back the roof's top row
 
 Writes <out>/<name>.json (kb-hub's viewer: dims, voxels, shades, palette) and <out>/<name>_view.png (a 3D picture).
@@ -30,7 +31,8 @@ from PIL import Image, ImageDraw
 
 W = 16  # voxels (and drawing pixels) a cell
 ART = 48  # the map picture's pixels a cell
-EAVE, SIDE, ROOF, DOOR, BAND = 4, 2, 4, 3, 3
+EAVE, SIDE, DOOR, BAND = 4, 2, 3, 3
+RH, STEP = 16, 2  # the roof topper's height and its steps (voxels)
 
 
 def main() -> int:
@@ -57,69 +59,72 @@ def main() -> int:
     wall = int(round(args.wall * facade.shape[0]))
     bands = [tuple(int(v) for v in b.split("-")) for b in args.bands.split(",") if b]
     X, Z = w * W, h * W  # the footprint in voxels
-    # the model's grid: the footprint plus the eaves around it
-    GX, GZ, GY = X + 2 * SIDE, Z + EAVE, wall + ROOF
-    occ = np.zeros((GY, GZ, GX), bool)
-    col = np.zeros((GY, GZ, GX, 3), np.uint8)
-    ox = SIDE  # the footprint's x offset in the grid
-
-    # the ground around the building (the drawing's corner) is not the building: the roof's corners take the roof's main
-    # colour, the sides the facade's outermost column that is not ground
+    # the ground around the building (the drawing's corner) is not the building
     bg = draw[0, 0].copy()
-    is_bg = lambda c: np.abs(c.astype(int) - bg.astype(int)).sum() < 12  # noqa: E731
+    ground = lambda img: np.abs(img.astype(int) - bg.astype(int)).sum(axis=-1) < 12  # noqa: E731
+    # the cube: as wide as the facade's drawn walls (its columns that are not ground), so its pixels reach its edges
+    fcols = np.nonzero(~ground(facade).all(axis=0))[0]
+    left, right = (int(fcols[0]), int(fcols[-1])) if len(fcols) else (0, X - 1)
+    # the roof topper: as wide as the drawn roof (wider than the walls: the eaves overhang)
+    rcols = np.nonzero(~ground(roof).all(axis=0))[0] if len(roof) else np.array([], int)
+    rl, rr_ = (int(rcols[0]), int(rcols[-1])) if len(rcols) else (left - SIDE, right + SIDE)
+    rmain = None
     if len(roof):
-        rflat = roof.reshape(-1, 3)
-        rflat = rflat[np.abs(rflat.astype(int) - bg.astype(int)).sum(axis=1) >= 12]
-        if len(rflat):
-            ru, rc = np.unique(rflat, axis=0, return_counts=True)
+        rpx = roof[~ground(roof)]
+        if len(rpx):
+            ru, rc = np.unique(rpx, axis=0, return_counts=True)
             rmain = ru[int(np.argmax(rc))]
-            roof = np.where((np.abs(roof.astype(int) - bg.astype(int)).sum(axis=2) < 12)[..., None], rmain, roof).astype(np.uint8)
-    cols = [x for x in range(X) if not all(is_bg(facade[r, x]) for r in range(facade.shape[0]))]
-    left, right = (cols[0], cols[-1]) if cols else (0, X - 1)
-    # the facade's main colour (its wall) and its door columns
-    flat = facade.reshape(-1, 3)
-    uniq, counts = np.unique(flat, axis=0, return_counts=True)
+            roof = np.where(ground(roof)[..., None], rmain, roof).astype(np.uint8)
+    fpx = facade[~ground(facade)]
+    uniq, counts = np.unique(fpx if len(fpx) else facade.reshape(-1, 3), axis=0, return_counts=True)
     main = uniq[int(np.argmax(counts))]
     door = [cx for cx in range(w) if info["kind"][(y0 + h - 1) * info["w"] + x0 + cx] == "W"]
 
-    def facade_px(x, y):
-        """The facade drawing's pixel for wall column x (0..X-1) at height y (0..wall-1), stretched over the wall."""
-        r = facade.shape[0] - 1 - int(y * facade.shape[0] / wall)
-        return facade[r, x]
+    # the grid: the footprint, the roof's overhang past it on the sides and the front, the roof's height above the walls
+    pad = max(0, 1 - rl, rr_ + 1 - (X - 1))
+    GX, GZ, GY = X + 2 * pad, Z + EAVE + max(BAND, 1), wall + RH
+    ox = pad
+    occ = np.zeros((GY, GZ, GX), bool)
+    col = np.zeros((GY, GZ, GX, 3), np.uint8)
 
-    # the box: walls up to `wall`, the roof slab above; the front face's relief
+    def facade_row(y):
+        return facade.shape[0] - 1 - int(y * facade.shape[0] / wall)
+
+    # the decorated cube: the facade on its front, its edge columns on the sides, the roof's back row on the back
     for y in range(wall):
-        for x in range(X):
-            px = facade_px(x, y)
-            r = facade.shape[0] - 1 - int(y * facade.shape[0] / wall)
+        r = facade_row(y)
+        for x in range(left, right + 1):
+            px = facade[r, x]
             is_door = (x // W) in door and 3 <= x % W <= 12 and r >= facade.shape[0] - 11
             band = any(a <= r <= b for a, b in bands)
-            detail = not is_door and np.abs(px.astype(int) - main.astype(int)).sum() > 30
+            detail = not is_door and not ground(px) and np.abs(px.astype(int) - main.astype(int)).sum() > 30
             front = Z - 1 - (DOOR if is_door else 0) + (BAND if band else 1 if detail else 0)
-            for z in range(0, min(front + 1, GZ)):
+            for z in range(front + 1):
                 occ[y, z, ox + x] = True
-                col[y, z, ox + x] = px if z >= front - 1 else facade[0, x] if z > Z - 3 else facade[facade.shape[0] // 2, 0 if x < X // 2 else -1]
-    # the sides show the facade's edge columns, the back the roof's top row
-    for y in range(wall):
+                col[y, z, ox + x] = px if z >= front - 1 else facade[r, left] if x < (left + right) // 2 else facade[r, right]
+            if ground(px):
+                col[y, front, ox + x] = main
         for z in range(Z):
-            col[y, z, ox] = facade_px(left, y)
-            col[y, z, ox + X - 1] = facade_px(right, y)
-        for x in range(X):
-            col[y, 0, ox + x] = roof[0, x] if len(roof) else facade_px(x, y)
-    # the roof slab: the roof drawing from above, rows across the depth; the eave past the front and sides
-    rr = max(1, len(roof))
-    for y in range(wall, wall + ROOF):
-        for z in range(GZ):
-            r = min(rr - 1, int(z * rr / Z)) if z < Z else rr - 1
-            for gx in range(GX):
-                x = min(X - 1, max(0, gx - ox))
-                occ[y, z, gx] = True
-                col[y, z, gx] = roof[r, x] if len(roof) else main
-    # under the eave: one voxel thick at the roof line (the overhang's underside), so it reads as protruding
-    for z in range(Z, GZ):
-        for gx in range(GX):
-            occ[wall - 1, z, gx] = True
-            col[wall - 1, z, gx] = roof[rr - 1, min(X - 1, max(0, gx - ox))] if len(roof) else main
+            col[y, z, ox + left] = facade[r, left]
+            col[y, z, ox + right] = facade[r, right]
+        for x in range(left, right + 1):
+            col[y, 0, ox + x] = rmain if rmain is not None else main
+    # the roof topper: a stepped hip on the cube, as wide as the drawn roof and reaching EAVE past the front; each step
+    # STEP voxels high and STEP in from every side; its top shows the roof drawing from above (rows across the depth)
+    depth = Z + EAVE
+    rows = max(1, len(roof))
+    for k in range(RH // STEP):
+        inset = k * STEP
+        x_lo, x_hi = rl - 1 + inset, rr_ + 1 - inset
+        z_lo, z_hi = inset, depth - 1 - inset
+        if x_lo >= x_hi or z_lo >= z_hi:
+            break
+        for y in range(wall + k * STEP, wall + (k + 1) * STEP):
+            for z in range(z_lo, z_hi + 1):
+                r = min(rows - 1, int(z * rows / depth))
+                for x in range(x_lo, x_hi + 1):
+                    occ[y, z, ox + x] = True
+                    col[y, z, ox + x] = roof[r, min(X - 1, max(0, x))] if len(roof) else main
 
     name = args.name or f"building_{x0}_{y0}"
     out = Path(args.out)
