@@ -11,3 +11,4 @@ Emerald's own changes (docs/specs/PRODUCTION_PIPELINE_EMERALD.md has the reasons
   "outline": 2.
 - parts_model.py: buildings as parts (copied from tools/shape_fit/parts_model.py at 5aeaf0f): Emerald's building
   method (PRODUCTION_PIPELINE_EMERALD.md, "Buildings as parts").
+- render_maps.py: the map pictures and cell sprites drawn from the export's quarter pages, not screenshots.

@@ -227,3 +227,17 @@ a square house under a stepped pointed roof), a Fortree treehouse (hut on a deck
 Fortree Pokémon Center (rounded roof with the Poké Ball band), the Mauville Gym (a forward entrance block), the
 Lilycove Museum (two levels, a raised central section, a recessed porch, the staircase with finials; 20 parts). All
 in `kb-hub/work/parts/emerald_*`, on the viewer.
+
+## The map pictures, redrawn from the game's tiles (2026-10-19)
+
+kb-hub's Emerald pictures were a mosaic of hidden-game screenshots, with the faults listed above. They are now drawn
+from the export's own art: `tools/shape_fit/emerald/render_maps.py <export bundle> <kb-hub images/maps/emerald>
+<kb-hub images/sprites/emerald>` (a cell's key `g3q/a-b-c-d` names its four 8 x 8 quarters, a b over c d, already
+flattened from both metatile layers; quarter q is tile q % 1024 of page `g3image/g3q.<q // 1024>`). It writes each
+map's `_art.png` (48 px a cell) and `_grid.png` and every key's 16 px sprite; the old pictures stay beside them as
+`.mosaic.png`. All 519 maps and 9,542 cell sprites in 4 minutes on this server (the bundle's 32 pages copied from
+the volume, `local/minecraft/kantobridge/export/emerald/g3image`, to `kb-hub/work/export_emerald`).
+
+Checked: Littleroot (no truck, no black tiles), Birch's Lab (objects on their cells, no half-cell offset, no
+see-through boxes), Pacifidlog (no popup text). The trial's marks, depth models and buildings were made from the old
+pictures: redo them on these before the full run.
