@@ -14,7 +14,8 @@ roof). Voxels are 16 a cell (8 a block); x east, y up, z south.
               standing out 1 voxel
     roof      a separate topper on the cube: a stepped hip RH voxels high (STEP-voxel steps, each STEP in from every side),
               as wide as the drawn roof (the eaves overhang the walls) and reaching EAVE past the front; its top shows
-              the roof drawing from above (its rows across the depth)
+              the roof drawing from above (its rows across the depth); --roof flat: a slab FLAT voxels thick with a
+              PARAPET-voxel rim, its front the roof's edge rows (a department store's roof garden)
     sides     the facade's edge columns; the back the roof's top row
 
 Writes <out>/<name>.json (kb-hub's viewer: dims, voxels, shades, palette) and <out>/<name>_view.png (a 3D picture).
@@ -33,6 +34,7 @@ W = 16  # voxels (and drawing pixels) a cell
 ART = 48  # the map picture's pixels a cell
 EAVE, SIDE, DOOR, BAND = 4, 2, 3, 3
 RH, STEP = 16, 2  # the roof topper's height and its steps (voxels)
+FLAT, PARAPET = 4, 2  # a flat roof's slab and its parapet (voxels)
 
 
 def main() -> int:
@@ -48,6 +50,7 @@ def main() -> int:
     ap.add_argument("--wall", type=float, default=1.5, help="wall voxels a facade pixel (1.5: a door about two blocks)")
     ap.add_argument("--bands", default="", help="facade rows (from the facade's top) that stand out as an overhang: a-b,c-d")
     ap.add_argument("--name", default="")
+    ap.add_argument("--roof", choices=("hip", "flat"), default="hip", help="the topper: a stepped hip, or a flat roof with a parapet")
     args = ap.parse_args()
     x0, y0, w, h = args.x0, args.y0, args.w, args.h
     info = json.loads(Path(args.info).read_text(encoding="utf-8"))
@@ -93,6 +96,38 @@ def main() -> int:
     occ = np.zeros((GY, GZ, GX), bool)
     col = np.zeros((GY, GZ, GX, 3), np.uint8)
 
+    # features that stand out: groups of 10+ touching pixels unlike the wall (windows, doors, signs), not brick mortar
+    unlike = (np.abs(facade.astype(int) - main.astype(int)).sum(axis=-1) > 30) & ~ground(facade)
+    feature = np.zeros_like(unlike)
+    seen = np.zeros_like(unlike)
+    FH, FW = unlike.shape
+    for sy in range(FH):
+        for sx in range(FW):
+            if unlike[sy, sx] and not seen[sy, sx]:
+                comp, todo = [], [(sy, sx)]
+                seen[sy, sx] = True
+                while todo:
+                    cy_, cx_ = todo.pop()
+                    comp.append((cy_, cx_))
+                    for ny, nx in ((cy_ + 1, cx_), (cy_ - 1, cx_), (cy_, cx_ + 1), (cy_, cx_ - 1)):
+                        if 0 <= ny < FH and 0 <= nx < FW and unlike[ny, nx] and not seen[ny, nx]:
+                            seen[ny, nx] = True
+                            todo.append((ny, nx))
+                if len(comp) >= 10:
+                    for cy_, cx_ in comp:
+                        feature[cy_, cx_] = True
+    # the sides: the wall's colour, but a row one colour fills (70% or more: a trim band, the base) keeps it
+    row_main = []
+    for r in range(FH):
+        px = facade[r, left + 2:right - 1]
+        px = px[~ground(px)]
+        band_colour = main
+        if len(px):
+            u, c = np.unique(px, axis=0, return_counts=True)
+            if c.max() >= 0.7 * len(px):
+                band_colour = u[int(np.argmax(c))]
+        row_main.append(band_colour)
+
     def facade_row(y):
         return facade.shape[0] - 1 - int(y * facade.shape[0] / wall)
 
@@ -103,7 +138,7 @@ def main() -> int:
             px = facade[r, x]
             is_door = (x // W) in door and 3 <= x % W <= 12 and r >= facade.shape[0] - 11
             band = any(a <= r <= b for a, b in bands)
-            detail = not is_door and not ground(px) and np.abs(px.astype(int) - main.astype(int)).sum() > 30
+            detail = not is_door and bool(feature[r, x])
             front = Z - 1 - (DOOR if is_door else 0) + (BAND if band else 1 if detail else 0)
             for z in range(front + 1):
                 occ[y, z, ox + x] = True
@@ -112,15 +147,45 @@ def main() -> int:
                 col[y, front, ox + x] = main
         for z in range(Z - 1):
             # the sides wear the wall just inside the outline (the outline itself stays on the front edge)
-            col[y, z, ox + left] = facade[r, min(right, left + 2)]
-            col[y, z, ox + right] = facade[r, max(left, right - 2)]
+            col[y, z, ox + left] = row_main[r]
+            col[y, z, ox + right] = row_main[r]
         for x in range(left, right + 1):
             col[y, 0, ox + x] = rmain if rmain is not None else main
     # the roof topper: a stepped hip on the cube, as wide as the drawn roof and reaching EAVE past the front; each step
     # STEP voxels high and STEP in from every side; its top shows the roof drawing from above (rows across the depth)
     depth = Z + EAVE
     rows = max(1, len(roof))
-    for k in range(RH // STEP):
+    if args.roof == "flat":
+        # a flat roof: a slab FLAT voxels thick as wide as the drawn roof (overhanging), its front face the roof
+        # drawing's last rows (the roof's edge), its top the roof drawing from above; a parapet PARAPET high round it
+        x_lo, x_hi = rl - 1, rr_ + 1
+        edge = roof[-FLAT:] if len(roof) >= FLAT else roof
+        # the top: the roof's back rows at the back, its front rows at the front, its middle repeated at its own scale
+        # (a roof garden's lattice stays square)
+        top_rows, front_rows = min(2, rows), min(FLAT, rows)
+        mid = max(1, rows - top_rows - front_rows)
+
+        def top_row(z):
+            if z < top_rows:
+                return z
+            if z >= depth - front_rows:
+                return rows - (depth - z)
+            return top_rows + (z - top_rows) % mid
+
+        for y in range(wall, wall + FLAT + PARAPET):
+            for z in range(depth):
+                r = top_row(z)
+                for x in range(x_lo, x_hi + 1):
+                    rim = x in (x_lo, x_hi) or z in (0, depth - 1)
+                    if y >= wall + FLAT and not rim:
+                        continue
+                    occ[y, z, ox + x] = True
+                    xx = min(X - 1, max(0, x))
+                    if z == depth - 1 and y < wall + FLAT:
+                        col[y, z, ox + xx] = edge[len(edge) - 1 - (y - wall), xx]
+                    else:
+                        col[y, z, ox + x] = roof[r, xx]
+    for k in range(RH // STEP if args.roof == "hip" else 0):
         inset = k * STEP
         x_lo, x_hi = rl - 1 + inset, rr_ + 1 - inset
         z_lo, z_hi = inset, depth - 1 - inset
