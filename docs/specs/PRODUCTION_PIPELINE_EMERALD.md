@@ -172,3 +172,58 @@ the Rustboro Pokémon School.
   7 layout warnings (edge mismatch, an overlap), not shapes'. Pictures (11 of 11): the Mauville Gym with its sign,
   Lilycove's houses, the Fortree Pokémon Center read right; interiors (the Game Corner, Birch's Lab, the school,
   the Decoration Shop) have their objects; Sootopolis's crater walls stand as columns.
+
+## Buildings as parts (Emerald's building method, 2026-10-19)
+
+The generated box (section 4: one cube and a roof topper) doesn't fit Emerald's buildings: rounded Pokémon Center
+roofs, domes, treehouses, entrances that stand forward, staircases. For Emerald an agent describes each building as
+**parts** and `tools/shape_fit/emerald/parts_model.py` builds and paints it. The format, the reading of the drawing
+and the lessons are in docs/specs/BUILDING_PARTS.md (shared with the other games' trials); Emerald's renderer is its
+own copy. The box generator stays as the fallback (a building with no parts spec).
+
+### Shapes
+
+box, cylinder (round or oval, `radius` r or [rx, rz]; its front art wraps round it: round lower walls, rotundas,
+towers), gable, hip, dome, cone, barrel (a half-round vault), profile (a roof cross-section extruded along the
+building, optionally a second one along the run for a curved hip: rounded roofs, upswept eaves, steps), and carves
+(recessed doors, porches). Each part names the drawing's rectangles that paint its front, top, sides and back; on a
+barrel or profile roof the top art follows the curve, so a band across a rounded roof's front (the Poké Ball band)
+wraps round it.
+
+### Steps
+
+1. **Package** per building design (after step 4's `building_batch.py` has picked the designs): `drawing.png` (the
+   entity's cells at 16 px a cell), `reference_grid.png` (10x, a line every 4 px, pixel numbers every 8),
+   `info.json` (game, map, box, size) and `old_box_model.png`; in `kb-hub/work/parts/<name>/`.
+2. **Agent** per package (a workflow, general-purpose agents): read BUILDING_PARTS.md and the renderer's docstring,
+   look the building up online (1-2 searches), write `spec.json`, build with
+   `docker run --rm -m 800m -u $(id -u):$(id -g) -v <repo>/tools/shape_fit/emerald:/sf:ro -v <package>:/pkg kb-pyimg:1
+   python /sf/parts_model.py /pkg/spec.json /pkg/drawing.png /pkg/out --name model`
+   (the image `kb-pyimg:1` is python:3.12-slim with numpy and Pillow), compare `out/model_view.png` (3D) and
+   `out/model_front.png` (straight on) with the drawing, refine: three rounds at most. A few minutes and ~50k tokens
+   a building.
+3. **Review**: publish to kb-hub's viewer ("buildings as parts / emerald / <name>", the drawing, 3D and front pictures,
+   the spec) and a sheet: drawing | old box | parts. The user flags a building; an agent redoes it with the note
+   (saving the old spec as `spec_v1.json`).
+4. **In game**: to come. A game-side builder for parts specs (pixel-free numbers: part sizes and the drawing
+   rectangles that paint them, every client painting from its own tiles), as `geom/BoxBuilding` does for boxes.
+
+### Lessons (the trial)
+
+- Leave out background the marked area includes (rock, cliff, grass, trees, the map-name popup, black missing art):
+  model only the building; a dome or roof is as wide as the building under it (Sootopolis's dome house, first
+  modelled on a rock slab).
+- Split a part to keep faulty art off it (the Museum's lower block is three boxes around a black patch).
+- Rounded roofs need barrel/profile parts, not hips (the Fortree Pokémon Center's pointed pyramid stretched the
+  Poké Ball; two profile parts fixed it).
+- A building on a cliff: the cliff is terrain, not the building; its stairs climb to the door landing.
+- Remaining rough spots: sides and backs reuse front art (the drawing shows neither); stray background pixels at a
+  roof edge (tighten that part's paint rectangle).
+
+### The trial's buildings
+
+Littleroot's house (two storeys, set-back upper floor, gable roof), Sootopolis's dome house (redone without the rock:
+a square house under a stepped pointed roof), a Fortree treehouse (hut on a deck, leafy dome, trunk, ladder), the
+Fortree Pokémon Center (rounded roof with the Poké Ball band), the Mauville Gym (a forward entrance block), the
+Lilycove Museum (two levels, a raised central section, a recessed porch, the staircase with finials; 20 parts). All
+in `kb-hub/work/parts/emerald_*`, on the viewer.

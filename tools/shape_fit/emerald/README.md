@@ -5,4 +5,9 @@ A copy of Crystal's pipeline scripts (tools/shape_fit/crystal/, itself Blue's wi
 Emerald. The game code (FittedBuildings, geom/BoxBuilding, the planner) is shared.
 
 Inherited from Crystal (crystal/README.md): striped tile roofs as one line, storey eaves, low gates half roof.
-Emerald's own changes: see docs/specs/PRODUCTION_PIPELINE_EMERALD.md (none yet).
+Emerald's own changes (docs/specs/PRODUCTION_PIPELINE_EMERALD.md has the reasons):
+
+- building_model.py detect(): roof from wall by colour (Emerald has no black outline); buildings_table.py gives
+  "outline": 2.
+- parts_model.py: buildings as parts (copied from tools/shape_fit/parts_model.py at 5aeaf0f): Emerald's building
+  method (PRODUCTION_PIPELINE_EMERALD.md, "Buildings as parts").
