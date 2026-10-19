@@ -109,6 +109,13 @@ Agreed by the user (2026-10-19).
 - Half-cell log-post walls: "keep as blocks", note "half-cell post wall".
 - Tints may be all "-": judge from the picture.
 
-## Emerald additions
+## Emerald additions (proposed from the trial, 2026-10-19; the user confirms them)
 
-- None yet (the Emerald trial will say).
+- Trees are whole 2 x 2 squares: one object per tree design; a canopy tip in the cell above belongs to the tree.
+- A building's top roof row drawn over walkable cells belongs to the building.
+- Treehouses: one "make by hand" per design (deck, hut and ladder together); rope bridges: floor decoration.
+- Log rafts and walkways over water: floor decoration (a raised slab); a hut on a raft: the hut only.
+- Trust the cells file over the picture where they disagree: kb-hub's Emerald pictures have faults (black missing
+  tiles, see-through two-layer tiles, sprites and the map-name popup baked in, some interiors half a cell off).
+  Leave a cell whose art is garbled out, with a note.
+- Solid cells drawn with the ground's tile (plateaus): leave them (the planner keeps them as columns).

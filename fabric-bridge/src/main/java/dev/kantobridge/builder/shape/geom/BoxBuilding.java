@@ -17,7 +17,8 @@ import java.util.TreeMap;
  * the grid (the eaves reach its south edge).
  *
  * <pre>
- * drawing   the grid's tiles; the roof its first roofRows rows, the facade the rest; shade 3 the outline
+ * drawing   the grid's tiles; the roof its first roofRows rows, the facade the rest; shade 3 the outline (the
+ *           table's "outline" can make it 2 and darker: Emerald's lighter outlines)
  * cube      as wide as the facade's outline columns (black down half its rows or more), 1.5 voxels a facade row
  *           high, its front EAVE voxels north of the grid's south edge: the facade on its front, a door cell's middle
  *           recessed DOOR voxels for its lowest 11 rows, features (10+ touching pixels of another shade than the
@@ -110,6 +111,8 @@ public final class BoxBuilding {
 
 	/** The voxels of a drawing w x d pixels (shades and texels per pixel), door cells by their grid cell (cx, cy). */
 	static VoxelGrid voxels(int[] shade, int[] texel, int w, int d, int px, JsonObject box, List<int[]> doors) {
+		// the outline's shade and darker (3, Game Boy black; a table may say 2, Emerald's lighter outlines)
+		int outline = box.has("outline") ? Math.max(1, Math.min(3, box.get("outline").getAsInt())) : BLACK;
 		int roofRows = Math.max(0, Math.min(d - 1, box.get("roofRows").getAsInt()));
 		boolean hip = "hip".equals(box.get("roof").getAsString()) && roofRows > 0;
 		List<int[]> bands = new ArrayList<>();
@@ -130,7 +133,7 @@ public final class BoxBuilding {
 		for (int x = 0; x < w; x++) {
 			int dark = 0;
 			for (int r = roofRows; r < d; r++) {
-				dark += shade[r * w + x] == BLACK ? 1 : 0;
+				dark += shade[r * w + x] >= outline ? 1 : 0;
 			}
 			if (dark * 2 >= fr) {
 				left = left < 0 ? x : left;
@@ -192,7 +195,7 @@ public final class BoxBuilding {
 				int cx0 = w;
 				int cx1 = -1;
 				for (int c : comp) {
-					outlined |= shade[c] == BLACK;
+					outlined |= shade[c] >= outline;
 					cx0 = Math.min(cx0, c % w);
 					cx1 = Math.max(cx1, c % w);
 				}
@@ -251,7 +254,7 @@ public final class BoxBuilding {
 		int rr = -1;
 		for (int r = 0; r < roofRows; r++) {
 			for (int x = 0; x < w; x++) {
-				if (shade[r * w + x] == BLACK) {
+				if (shade[r * w + x] >= outline) {
 					rl = Math.min(rl, x);
 					rr = Math.max(rr, x);
 				}
@@ -279,7 +282,7 @@ public final class BoxBuilding {
 					for (int z = zl; z <= zh; z++) {
 						int r = Math.min(rows - 1, z * rows / depth);
 						for (int x = xl; x <= xh; x++) {
-							grid.set(x, y, z, roofTexel(shade, texel, w, r, x, mainTexel, roofRows));
+							grid.set(x, y, z, roofTexel(shade, texel, w, r, x, mainTexel, roofRows, outline));
 						}
 					}
 				}
@@ -296,7 +299,7 @@ public final class BoxBuilding {
 						if (y >= wall + FLAT && !rim) {
 							continue;
 						}
-						grid.set(x, y, z, roofTexel(shade, texel, w, Math.max(0, r), x, mainTexel, roofRows));
+						grid.set(x, y, z, roofTexel(shade, texel, w, Math.max(0, r), x, mainTexel, roofRows, outline));
 					}
 				}
 			}
@@ -305,14 +308,14 @@ public final class BoxBuilding {
 	}
 
 	/** The roof drawing's texel at (row, x); a pixel outside the row's outline (the ground around it) the wall's texel. */
-	private static int roofTexel(int[] shade, int[] texel, int w, int r, int x, int mainTexel, int roofRows) {
+	private static int roofTexel(int[] shade, int[] texel, int w, int r, int x, int mainTexel, int roofRows, int outline) {
 		if (roofRows <= 0) {
 			return mainTexel;
 		}
 		int first = -1;
 		int last = -1;
 		for (int c = 0; c < w; c++) {
-			if (shade[r * w + c] == BLACK) {
+			if (shade[r * w + c] >= outline) {
 				first = first < 0 ? c : first;
 				last = c;
 			}
@@ -327,12 +330,12 @@ public final class BoxBuilding {
 				int f = -1;
 				int l = -1;
 				for (int c = 0; c < w; c++) {
-					if (shade[q * w + c] == BLACK) {
+					if (shade[q * w + c] >= outline) {
 						f = f < 0 ? c : f;
 						l = c;
 					}
 				}
-				if (f >= 0 && x > f && x < l && shade[q * w + x] != BLACK) {
+				if (f >= 0 && x > f && x < l && shade[q * w + x] < outline) {
 					return texel[q * w + x];
 				}
 			}

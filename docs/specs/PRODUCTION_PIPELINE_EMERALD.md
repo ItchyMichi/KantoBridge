@@ -131,15 +131,38 @@ Ecruteak Gym, the Goldenrod Game Corner, the Dance Theater, Kurt's House, Tin To
 ## Emerald's artwork: how it differs
 
 - Game Boy Advance: 16-colour palettes per tile, 8 px tiles, 16 px metatiles (cells), map pictures at 48 px a cell;
-  keys `g3q/<a>-<b>-<c>-<d>` (four metatile layers' tiles).
-- To be filled in from the Emerald trial.
+  keys `g3q/<a>-<b>-<c>-<d>`.
+- No black outline: edges are coloured and shaded. In the game's shades (Textures.shade: mean of R, G, B; 3 under
+  43, 2 under 128) Emerald's outlines are mostly shade 2, not 3; in the pictures they only show as "dark" at 85+.
+- Roofs are drawn in perspective with eaves, in colours of their own (orange, red, olive, blue) over pale walls;
+  walls are 1-3 cells tall; in Gen 3 a building's top roof row is drawn over walkable cells (the player walks behind).
+- kb-hub's Emerald pictures (the hidden-game mosaic) have faults the game's own tiles don't: missing tiles as black,
+  two-layer tiles drawn wrong (see-through boxes, chairs in pieces), some interiors half a cell off, the map-name
+  popup and moving sprites baked in (Littleroot's truck, Birch's aide), garbled text-like tiles. They mislead
+  marking and depth models; the game builds from its real tiles.
 
 ## Emerald's changes (from Crystal's)
 
-- None yet.
+- Buildings, `tools/shape_fit/emerald/building_model.py`: outline() is the game's shade 2 and darker (mean under
+  128); detect() splits roof from wall at the sharpest colour change (8 rows above against 8 below, over the middle
+  60% of the columns) within 1-3 cells of the drawing's bottom (a drawing up to two cells deep is half roof); no
+  bands; roofs flat.
+- `buildings_table.py` gives each building `"outline": 2`; the game's `geom/BoxBuilding` (shared) takes a table's
+  "outline" shade (absent: 3, so Blue's and Crystal's are unchanged).
 
 ## The Emerald trial (2026-10-19)
 
 Ten maps: Littleroot Town, Fortree City (treehouses), Sootopolis City (a crater), Pacifidlog Town (floating houses),
 Mauville City, Lilycove City (huge), the Mauville Game Corner, Professor Birch's Lab, the Fortree Decoration Shop,
 the Rustboro Pokémon School.
+
+- Marking: 196 entities over the ten maps, no agent errors, ~0.8M tokens. Not covered by the rules (from the
+  agents): treehouses on raised decks with rope bridges and ladders; rope bridges; log rafts and floating huts over
+  water; roofs drawn over walkable cells; trees as whole 2 x 2 squares (not Crystal's half-trees) with canopy tips
+  in the cell above; trees on walkable cells; solid plateau cells drawn with the ground's tile; doorless decorative
+  houses; a bank of identical stools; tree-hollow rooms (angled walls, a trunk inside); a desk tile with no sprite
+  (black). Most other complaints were the pictures' faults above.
+- Buildings: 34 designs. With Crystal's (Blue's) outline detection 30 found no roof; with Emerald's colour split
+  most come out right: Lilycove's houses, Pokémon Centers and Marts with their signs, the Mauville and Fortree Gyms,
+  Sootopolis's domed houses. Wrong from the pictures: Littleroot's house (black missing tiles), Birch's Lab (the
+  truck), Pacifidlog's huts (rafts over water). Littleroot's two-tier roof splits at its upper tier (an override).

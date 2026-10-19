@@ -38,61 +38,28 @@ FLAT, PARAPET = 4, 2  # a flat roof's slab and its parapet (voxels)
 
 
 def outline(draw: np.ndarray) -> np.ndarray:
-    """The pixels in the outline's colour: the darkest colour within 30, pure black (missing art in the mosaic) left out."""
+    """Emerald: the outline is the game's shade 2 and darker (mean of R, G, B under 128, Textures.shade): Emerald's
+    outlines are coloured, lighter than the Game Boy's black. Pure black (missing art) left out."""
     lum = draw.astype(int).sum(-1)
-    real = lum[lum > 0]
-    return (lum <= (real.min() if len(real) else 0) + 30) & (lum > 0)
+    return (draw.astype(float).mean(-1) < 128) & (lum > 0)
 
 
 def detect(draw: np.ndarray) -> dict:
-    """The building's parts from its drawing, by its dark outline (Gen 1's four colours share the ground's white, so the
-    outline is the one reliable signal):
-
-        roof_rows  the roof ends at its first double line (two rows mostly dark, one row apart) below row 4 (a run
-                   of near-full ones two rows apart, a striped tile roof, counting as one: the roof ends after it,
-                   within 70% of the rows), else at its
-                   first single line (75% dark) below row 8, else half way for a building up to two cells deep, else
-                   0 (no roof drawn: all wall); within 60% of the rows
-        bands      a later double line (or run: a storey's eave) closes a porch roof: from the dark row above it (a
-                   third dark or more) to it, at most 12 rows, in facade rows
-        roof       hip when the roof's outline moves sideways down its rows (a sloped side), else flat
-    """
-    dark = outline(draw)
-    frac = dark.mean(1)
-    n = len(frac)
-    doubles = [r for r in range(4, n - 2) if frac[r] >= 0.5 and frac[r + 2] >= 0.5 and frac[r + 1] < 0.3]
-    # a run of double lines two rows apart is one line (a striped tile roof, a storey's eave): (first, last) per run
-    runs = []
-    full = lambda r: frac[r] >= 0.8 and frac[r + 2] >= 0.8  # noqa: E731  (a tile stripe is near-full; a window row isn't)
-    for r in doubles:
-        if runs and r - runs[-1][1] <= 2 and full(r) and full(runs[-1][1]):
-            runs[-1][1] = r
-        else:
-            runs.append([r, r])
-    singles = [r for r in range(8, n) if frac[r] >= 0.75]  # fuller than a row of window frames
-    if runs and runs[0][1] + 3 <= int((0.7 if runs[0][1] > runs[0][0] else 0.6) * n):
-        roof_end = runs[0][1] + 3
-    elif singles and singles[0] + 1 <= int(0.6 * n):
-        roof_end = singles[0] + 1  # a single line closes the roof (a wide hall's)
-    elif n <= 2 * W:
-        roof_end = n // 2  # a low building (a gate) with no line: half roof
-    else:
-        roof_end = 0  # no roof line: the roof is off the map (a tower's lower floors), all wall
-    bands = []
-    for first, last in runs:
-        if first <= roof_end + 2 or last + 2 >= n - 6:
-            continue
-        top = first
-        for q in range(first - 1, roof_end + 1, -1):
-            if frac[q] >= 0.3:
-                top = q
-                break
-        if last + 2 - top <= 12:  # a porch roof or a storey's eave is short; taller spans are storeys
-            bands.append((top - roof_end, last + 2 - roof_end))
-    # hip or flat: where the first dark pixel of each roof row sits (from the left); a sloped side moves it
-    starts = [int(np.argmax(dark[r])) for r in range(2, max(3, roof_end - 4)) if dark[r].any()]
-    spread = (max(starts) - min(starts)) if starts else 0
-    return {"roof_rows": roof_end, "bands": bands, "roof": "hip" if spread >= 6 else "flat", "spread": spread}
+    """Emerald: the roof ends at the sharpest colour change between the roof and the wall (the 8 rows above against the
+    8 below, over the middle 60% of the columns, the ground at the sides left out), looked for where Emerald's walls
+    are: 1 to 3 cells above the drawing's bottom; a drawing up to two cells deep is half roof. No porch bands; the
+    roof is flat (Emerald's pitched roofs are drawn in perspective, not as a hip's outline). Overrides fix the rest."""
+    n, w = draw.shape[0], draw.shape[1]
+    if n <= 2 * W:
+        return {"roof_rows": n // 2, "bands": [], "roof": "flat", "spread": 0}
+    rows = draw[:, int(w * 0.2):max(int(w * 0.2) + 1, int(w * 0.8))].astype(float).mean(1)
+    best, roof_end = -1.0, n - W
+    for r in range(max(int(0.2 * n), n - 3 * W), n - W + 1):
+        a1, a2 = rows[max(0, r - 8):r].mean(0), rows[r:r + 8].mean(0)
+        score = float(((a1 - a2) ** 2).sum())
+        if score > best:
+            best, roof_end = score, r
+    return {"roof_rows": roof_end, "bands": [], "roof": "flat", "spread": 0}
 
 
 def main() -> int:

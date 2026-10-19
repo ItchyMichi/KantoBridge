@@ -36,7 +36,9 @@ def main() -> int:
                 t = [int(v) for v in ids.split("-")]
                 rows[2 * cy][2 * cx], rows[2 * cy][2 * cx + 1] = t[0], t[1]
                 rows[2 * cy + 1][2 * cx], rows[2 * cy + 1][2 * cx + 1] = t[2], t[3]
-        entries.append({"id": b["id"], "atlas": atlas, "tiles": rows, "roofRows": b["roofRows"], "roof": b["roof"], "bands": b["bands"]})
+        # Emerald: the outline is shade 2 and darker in the game too (BoxBuilding's "outline")
+        entries.append({"id": b["id"], "atlas": atlas, "tiles": rows, "roofRows": b["roofRows"], "roof": b["roof"], "bands": b["bands"],
+                        "outline": 2})
     table_file = REPO / "fabric-bridge/src/main/resources/kantobridge/fitted_shapes" / f"{game}.json"
     table = json.loads(table_file.read_text(encoding="utf-8"))
     table["buildings"] = entries

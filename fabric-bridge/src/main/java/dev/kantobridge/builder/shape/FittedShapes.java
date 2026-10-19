@@ -412,6 +412,9 @@ public final class FittedShapes {
 				box.addProperty("roofRows", o.get("roofRows").getAsInt());
 				box.addProperty("roof", o.get("roof").getAsString());
 				box.add("bands", o.has("bands") ? o.getAsJsonArray("bands").deepCopy() : new JsonArray());
+				if (o.has("outline")) {
+					box.addProperty("outline", o.get("outline").getAsInt()); // Emerald's lighter outlines: shade 2
+				}
 				if (!rows.isEmpty() && rows.get(0).length > 0) {
 					into.add(new Building(o.get("atlas").getAsString(), List.copyOf(rows), box));
 				}
