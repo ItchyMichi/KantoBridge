@@ -5,6 +5,18 @@ shape: a domed house, a lighthouse, a treehouse or a tower comes out as a box wi
 an agent describes a building as **parts** (boxes, cylinders, gable and hip roofs, domes, cones, and cuts), and
 `tools/shape_fit/parts_model.py` builds and paints it.
 
+## Status (the user, 2026-10-19)
+
+- A trial only: **not run game-wide**. The user picks more tricky buildings to try first.
+- **Blue keeps the box system** (HAND_MODELS.md section 7): its simple sprites suit it. Parts are for Crystal and
+  Emerald, where the trial was an improvement (the Olivine lighthouse, an Ecruteak house, Littleroot's house, a
+  Fortree treehouse, Sootopolis's dome house, the Radio Tower).
+- Lesson (Sootopolis's dome house): the marked area can include background (rock, ground, trees) behind or beside the
+  building; leave it out of the parts. The building's footprint is only the building, and a dome or roof on top is as
+  wide as the building under it.
+- Shapes the agents asked for: roofs curving up at the eaves (Ecruteak), hip-and-gable roofs, gable ends with their
+  own paint, open balconies (a lighthouse's gallery), a trunk's own colour.
+
 ## Reading the drawing
 
 - The drawing is the building as the game draws it, top-down in three-quarter view, **16 px a cell**; `drawing.png`
@@ -12,6 +24,8 @@ an agent describes a building as **parts** (boxes, cylinders, gable and hip roof
   every 8 along the top (x) and left (y).
 - The lower rows are the **front (south) face**; the upper rows show the **roof or top seen from above and behind**.
   The sides and back aren't drawn: make them plausible.
+- Leave out background the marked area includes (rock, ground, trees behind or beside the building): model only the
+  building, and make a dome or roof on top as wide as the building under it.
 - A part's ground footprint lies under its drawing: x is the drawing's x; z (north to south) runs over the drawing's
   rows, z = 0 its top row, z = D its bottom row. A building's front wall normally stands a few pixels north of the
   bottom (z about D - 4) so its roof's eaves can reach the edge.
