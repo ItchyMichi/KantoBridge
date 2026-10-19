@@ -63,7 +63,13 @@ def main() -> int:
     bg = draw[0, 0].copy()
     ground = lambda img: np.abs(img.astype(int) - bg.astype(int)).sum(axis=-1) < 12  # noqa: E731
     # the cube: as wide as the facade's drawn walls (its columns that are not ground), so its pixels reach its edges
-    fcols = np.nonzero(~ground(facade).all(axis=0))[0]
+    # the walls end at their outline: the outermost columns drawn in the darkest colour down most of the facade (a pale
+    # shadow strip on the ground beside the outline is not wall)
+    lum = facade.astype(int).sum(axis=-1)
+    dark = lum <= lum.min() + 30
+    fcols = np.nonzero(dark.mean(axis=0) >= 0.5)[0]
+    if not len(fcols):
+        fcols = np.nonzero(~ground(facade).all(axis=0))[0]
     left, right = (int(fcols[0]), int(fcols[-1])) if len(fcols) else (0, X - 1)
     # the roof topper: as wide as the drawn roof (wider than the walls: the eaves overhang)
     rcols = np.nonzero(~ground(roof).all(axis=0))[0] if len(roof) else np.array([], int)
@@ -104,9 +110,10 @@ def main() -> int:
                 col[y, z, ox + x] = px if z >= front - 1 else facade[r, left] if x < (left + right) // 2 else facade[r, right]
             if ground(px):
                 col[y, front, ox + x] = main
-        for z in range(Z):
-            col[y, z, ox + left] = facade[r, left]
-            col[y, z, ox + right] = facade[r, right]
+        for z in range(Z - 1):
+            # the sides wear the wall just inside the outline (the outline itself stays on the front edge)
+            col[y, z, ox + left] = facade[r, min(right, left + 2)]
+            col[y, z, ox + right] = facade[r, max(left, right - 2)]
         for x in range(left, right + 1):
             col[y, 0, ox + x] = rmain if rmain is not None else main
     # the roof topper: a stepped hip on the cube, as wide as the drawn roof and reaching EAVE past the front; each step
