@@ -124,6 +124,12 @@ final class Units {
 						why(map, cx, cy, "seat");
 						continue;
 					}
+					FittedShapes.Entry walk = FittedShapes.walk(map.atlas(), tiles(map, cx, cy));
+					if (walk != null && FittedShapes.VOXELS.equals(walk.cls()) && walk.voxels() != null
+							&& walkUnit(map, atlas, atlasIndex, cx, cy, walk, keys, decor, floor, units, mapGround, indoor, tally)) {
+						why(map, cx, cy, "walk_voxels");
+						continue;
+					}
 				}
 				if (map.kind(cx, cy) != CellKind.SOLID) {
 					String corner = classes == null ? null : classes.at(cx * per, cy * per);
@@ -371,6 +377,49 @@ final class Units {
 		}
 		tally.merge("seat", 1, Integer::sum);
 		units.add(new Cell(cx, cy, first, false, "seat"));
+	}
+
+	/**
+	 * A walkable cell's voxel shape the table marks "walk" (a stair, a ladder or a doorway on a warp cell,
+	 * docs/specs/WARP_MODELS.md): as many blocks as its voxels reach on decor carriers, which have no collision, so the
+	 * cell stays walked through at floor level (a warp still triggers by position); its floor the ground. False (nothing
+	 * placed) for an empty shape.
+	 */
+	private static boolean walkUnit(SceneMap map, SceneAtlas atlas, int atlasIndex, int cx, int cy, FittedShapes.Entry entry, ShapeKey[][] keys,
+			int[] decor, int[] floor, List<Cell> units, int mapGround, boolean indoor, Map<String, Integer> tally) {
+		byte[] v = entry.voxels();
+		int top = -1;
+		for (int b = 0; b < v.length * 8 && b < 4096; b++) {
+			if ((v[b >> 3] >> (b & 7) & 1) != 0) {
+				top = Math.max(top, b / 256); // index (y * 16 + z) * 16 + x
+			}
+		}
+		int per = map.perCell();
+		int high = Math.min(per, (top + 8) / 8);
+		if (top < 0 || high <= 0) {
+			return false;
+		}
+		int cols = map.artCols();
+		int[] tiles = tiles(map, cx, cy);
+		CellUnits.Context context = new CellUnits.Context(0, indoor, false, false, false, FittedShapes.VOXELS, 0, entry.params());
+		int g = ground(map, cx, cy, atlas.grassTiles(), atlas.frameTiles(), mapGround);
+		ShapeKey first = null;
+		for (int bz = 0; bz < per; bz++) {
+			for (int bx = 0; bx < per; bx++) {
+				int i = (cy * per + bz) * cols + cx * per + bx;
+				ShapeKey[] column = new ShapeKey[high];
+				for (int by = 0; by < high; by++) {
+					column[by] = ShapeKey.cell(atlasIndex, tiles, g, bx, by, bz).withVariant(context.variant());
+				}
+				first = first == null ? column[0] : first;
+				keys[i] = column;
+				decor[i] = (1 << high) - 1;
+				floor[i] = g;
+			}
+		}
+		tally.merge("walk_voxels", 1, Integer::sum);
+		units.add(new Cell(cx, cy, first, false, "walk_voxels"));
+		return true;
 	}
 
 	/**

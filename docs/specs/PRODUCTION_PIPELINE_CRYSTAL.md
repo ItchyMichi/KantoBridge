@@ -69,6 +69,10 @@ Crystal's own differences are in "Crystal's changes" and "The Crystal trial" at 
   a 4-voxel slab with a 2-voxel parapet, its middle rows repeated at their own scale.
 - Review: viewer ("buildings / <game> / <map>", `kb-hub/work/publish_buildings.py`); corrections in
   `kb-hub/data/files/building_overrides_<game>.json` by `<map>:<x0>,<y0>` (roof_rows, roof, bands).
+- Footprints (Crystal, 2026-10-20, the user's Sprout Tower note): an agent per design looks at the box with its
+  surroundings (`kb-hub/work/footprint_crystal/<id>.png`) and lists the cells that are terrain (a ledge or rock base,
+  ground, void); they go in the overrides as `"terrain"` and `building_batch.py` shrinks the box to the rest, so those
+  cells stay the map's floor. 96 designs: 9 with terrain (Sprout Tower's base row, void rows over three roofs).
 - In game: `buildings_table.py <game> <kb-hub data> <out>` writes the table's `"buildings"`; the planner claims each
   grid wherever it appears (`FittedBuildings`) and every client builds it (`geom/BoxBuilding`). Blue: 140 in Kanto.
 

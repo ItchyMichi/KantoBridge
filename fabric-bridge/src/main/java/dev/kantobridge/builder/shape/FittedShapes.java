@@ -92,7 +92,12 @@ public final class FittedShapes {
 
 	/** One game's table: its cells' fits and its buildings' roof rows. */
 	record Table(Map<String, Entry> cells, Map<String, Integer> roofs, Map<String, String> stacks, java.util.Set<String> seats,
-			Map<String, List<Layer>> layers, List<Building> buildings) {
+			Map<String, List<Layer>> layers, List<Building> buildings, java.util.Set<String> walks) {
+		Table(Map<String, Entry> cells, Map<String, Integer> roofs, Map<String, String> stacks, java.util.Set<String> seats,
+				Map<String, List<Layer>> layers, List<Building> buildings) {
+			this(cells, roofs, stacks, seats, layers, buildings, java.util.Set.of());
+		}
+
 		Table(Map<String, Entry> cells, Map<String, Integer> roofs) {
 			this(cells, roofs, Map.of(), java.util.Set.of(), Map.of(), List.of());
 		}
@@ -207,6 +212,21 @@ public final class FittedShapes {
 		Table table = current();
 		String key = key(atlas, tiles);
 		return table == null || !table.seats().contains(key) ? null : table.cells().get(key);
+	}
+
+	/**
+	 * A walkable cell's shape that stands on decor, without collision (docs/specs/WARP_MODELS.md: stairs, ladders and
+	 * doorways on warp cells): the cell's voxel entry when the table marks it "walk", else null.
+	 */
+	static @Nullable Entry walk(String atlas, int[] tiles) {
+		Table table = current();
+		String key = key(atlas, tiles);
+		return table == null || !table.walks().contains(key) ? null : table.cells().get(key);
+	}
+
+	/** Tests: walkable shapes (their keys) with the given table. */
+	static void useWalksForTest(Map<String, Entry> table, java.util.Set<String> walks) {
+		forTest = new Table(Map.copyOf(table), Map.of(), Map.of(), java.util.Set.of(), Map.of(), List.of(), java.util.Set.copyOf(walks));
 	}
 
 	/** How many layers a cell's voxel entry has over its own (a building's storeys), 0 for none. */
@@ -333,10 +353,13 @@ public final class FittedShapes {
 								parseRoofs(text, roofs);
 								parseStacks(text, stacks);
 								parseSeats(text, seats);
+								java.util.Set<String> walks = new java.util.TreeSet<>();
+								parseFlagged(text, "walk", walks);
 								parseLayers(text, layers);
 								parseBuildings(text, buildings);
 								tables.put(game, new Table(Collections.unmodifiableMap(cells), Collections.unmodifiableMap(roofs), Collections.unmodifiableMap(stacks),
-										Collections.unmodifiableSet(seats), Collections.unmodifiableMap(layers), List.copyOf(buildings)));
+										Collections.unmodifiableSet(seats), Collections.unmodifiableMap(layers), List.copyOf(buildings),
+										Collections.unmodifiableSet(walks)));
 							}
 						} catch (IOException e) {
 							throw new UncheckedIOException(e);
@@ -459,13 +482,18 @@ public final class FittedShapes {
 
 	/** Each voxel entry marked "seat" (a stool or chair on a walkable cell). */
 	static void parseSeats(String text, java.util.Set<String> into) {
+		parseFlagged(text, "seat", into);
+	}
+
+	/** Each voxel entry with {@code flag} true ("seat"; "walk": a walkable cell's shape on decor, docs/specs/WARP_MODELS.md). */
+	static void parseFlagged(String text, String flag, java.util.Set<String> into) {
 		JsonObject root = JsonParser.parseString(text).getAsJsonObject();
 		if (!root.has("cells")) {
 			return;
 		}
 		for (Map.Entry<String, JsonElement> e : root.getAsJsonObject("cells").entrySet()) {
 			JsonObject o = e.getValue().getAsJsonObject();
-			if (o.has("seat") && o.get("seat").isJsonPrimitive() && o.get("seat").getAsBoolean() && VOXELS.equals(o.get("class").getAsString())) {
+			if (o.has(flag) && o.get(flag).isJsonPrimitive() && o.get(flag).getAsBoolean() && VOXELS.equals(o.get("class").getAsString())) {
 				into.add(e.getKey());
 			}
 		}

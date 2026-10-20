@@ -162,6 +162,25 @@ class FittedShapesTest {
 	}
 
 	@Test
+	void aWalkableCellsVoxelShapeStandsOnDecorWithoutCollision() {
+		// stairs drawn on a walkable (warp) cell: a voxel entry, not a seat, reaching voxel row 12
+		SceneMap map = surface("WALKV", "......", "......", "..ss..", "..ss..", "......", "......");
+		int s = tile('s');
+		byte[] bits = new byte[FittedShapes.VOXEL_BYTES];
+		bits[(12 * 16 * 16) / 8] = 1;
+		String key = FittedShapes.key(ShapeFixtures.ATLAS, new int[] {s, s, s, s});
+		FittedShapes.useWalksForTest(Map.of(key, new FittedShapes.Entry("voxels", List.of(), bits)), java.util.Set.of(key));
+		ShapePlanner.MapShapes shapes = plan(map);
+		assertEquals(1, shapes.units().size(), "a unit on the walkable cell");
+		Units.Cell cell = shapes.units().get(0);
+		assertEquals("walk_voxels", cell.source());
+		int per = map.perCell();
+		int i = (cell.cy() * per) * map.artCols() + cell.cx() * per;
+		assertEquals((1 << Math.min(per, 2)) - 1, shapes.decor()[i], "decor carriers as high as the voxels reach, no seat bit");
+		assertEquals(0, shapes.blocks()[i], "no solid blocks");
+	}
+
+	@Test
 	void aLayeredEntryStandsSeveralCellsTall() {
 		// a building's cell: its own voxels and two layers over them (HAND_MODELS.md section 8)
 		SceneMap map = surface("TALL", "......", "......", "..AA..", "..AA..", "......", "......");
