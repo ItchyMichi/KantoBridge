@@ -88,6 +88,15 @@ arrival warp); none carries a facing (only the run-time arrival has one).
   with what each source found.
 - **Blue:** the tile pairs as today, extended past caves (D4).
 
+### D3b. Calculated, not estimated (recommended to the user, 2026-10-20)
+- The levels and heights are **calculated** from the game data (Emerald's elevation, Blue's tile pairs, ledge
+  directions, Crystal's one-way edges) and from the drawings (a cliff or rock face as tall as its drawn face rows, at
+  the buildings' 1.5 voxels a row), never estimated map by map: the same answer every build, matching edges between
+  neighbouring maps, and checkable (the builder check reports any map Minecraft can't step like the game).
+- Agents only **label tile drawings**, once per drawing, not per map (as the 541 warp drawings were): cliff face,
+  cliff top, ground, stairs, ledge, water edge, a few hundred per game; the user reviews the labels on kb-hub. And
+  they settle the leftovers: Crystal areas the edges and ledges can't order, a few maps marked as before.
+
 ### D4. Outdoors
 - Open sky, so room is not the limit. Levels on routes and in towns: Emerald from the elevation (Route 111's
   ledges, Fortree's treetops, Mt. Chimney, Jagged Pass, Route 119/120's raised paths, Sootopolis's rim), Crystal and
@@ -146,7 +155,8 @@ Each phase ends with its tests green, a dry-run report and pictures where it sho
 
 ## 6. Questions for the user (before W2)
 
-1. **Crystal's heights:** infer from the edges and ledges and mark the rest by agents (proposed), or mark everything?
+1. **Method (D3b):** calculate from the data and the labelled drawings, agents only labelling drawings and settling
+   leftovers (recommended), or agents estimating heights per map?
 2. **Layer layout:** keep one raised level per interior and cave map (today's layout), or deepen the world for more
    (ask before changing it, VOXEL_BLOCKS_PLAN.md:1053)?
 3. **Bridges:** decor over the ground first (proposed), or two-floor cells to walk under them?
