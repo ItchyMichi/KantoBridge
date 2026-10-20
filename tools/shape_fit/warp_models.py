@@ -8,17 +8,19 @@ into a game's fitted table as a "walk" entry (stands on decor, no collision: the
 key (kb-hub work/warps), <sprites dir> holds each key's 16 x 16 drawing (kb-hub images/sprites/<game>, "/" as "_").
 Writes <out.json> ({key: {"v", "t"}}, base64: bits by (y * 16 + z) * 16 + x, least significant bit first; paint one byte a
 voxel, the drawing's pixel row * 16 + column). With --table the entries also go into the game's table, marked "walk",
-from "warp", replacing earlier warp entries but never another source's. --view writes kb-hub viewer files.
+from "warp", replacing earlier warp entries and depth/entity shapes of the same drawing (on a walkable cell they
+never showed), never a hand model or a seat; a drawing the game also draws on solid cells (kb-hub's map info beside the
+sprites dir) is left out. --view writes kb-hub viewer files.
 
 Shapes, built facing south (the player comes from the south; the back is north) and turned to the review's facing:
   stairs_up     four steps rising to the back, 4 voxels deep and 4 more high each (to 16, two blocks); painted from above
   stairs_down,  a doorway at the back edge, 3 deep: jambs 2 wide, a lintel 3 high, a dark panel at the back (the
   wall_exit     drawing's darkest pixel); painted as seen from the front
-  cave_mouth    an arch at the back edge, 3 deep, its opening a panel in the drawing's brightest pixel (the glow)
+  cave_mouth    an arch at the back edge, 3 deep, its opening a panel in the colour drawn in it (a glow, or dark)
   ladder_up     rails and rungs against the back edge, two blocks high, painted from the front
-  ladder_down,  a rim 2 voxels high round the drawing's dark middle (the hole), painted from above
+  ladder_down,  a rim 2 voxels high round the drawing's biggest dark patch (the hole), painted from above
   hole
-Other kinds (building doors, mats, pads, plain floor) get no shape.
+Other kinds (building doors, mats, pads, plain floor) get no shape, nor do stairs drawn only outdoors (ground steps).
 """
 from __future__ import annotations
 
@@ -52,7 +54,10 @@ def shape(kind: str, draw: np.ndarray) -> tuple[np.ndarray, np.ndarray] | None:
         return occ, paint
     if kind in ("stairs_down", "wall_exit", "cave_mouth", "ladder_up"):
         dark = int(np.argmin(lum.ravel()))
-        bright = int(np.argmax(lum.ravel()))
+        # a cave mouth's opening: the colour drawn in it (a cave exit's white glow, a cave entrance's dark), the
+        # middle's median pixel
+        mid = lum[5:11, 5:11].ravel()
+        glow = int(np.add.outer(np.arange(5, 11) * N, np.arange(5, 11)).ravel()[np.argsort(mid)[len(mid) // 2]])
         for y in range(N):
             for x in range(N):
                 if kind == "ladder_up":
@@ -68,13 +73,35 @@ def shape(kind: str, draw: np.ndarray) -> tuple[np.ndarray, np.ndarray] | None:
                     opening = 2 <= x <= 13 and y <= 12
                 if opening:
                     occ[y, 0, x] = True  # the panel at the back: dark, or the cave's glow
-                    paint[y, 0, x] = bright if kind == "cave_mouth" else dark
+                    paint[y, 0, x] = glow if kind == "cave_mouth" else dark
                 else:
                     occ[y, 0:3, x] = True
                     paint[y, 0:3, x] = front(y, x)
         return occ, paint
     if kind in ("ladder_down", "hole"):
-        hole = lum < np.percentile(lum, 25) + 1
+        # the hole: the biggest patch of pixels much darker than the drawing's middle value
+        dark = lum < 0.6 * np.median(lum)
+        hole = np.zeros_like(dark)
+        seen = np.zeros_like(dark)
+        for sz in range(N):
+            for sx in range(N):
+                if not dark[sz, sx] or seen[sz, sx]:
+                    continue
+                todo, comp = [(sz, sx)], []
+                seen[sz, sx] = True
+                while todo:
+                    z, x = todo.pop()
+                    comp.append((z, x))
+                    for nz, nx in ((z + 1, x), (z - 1, x), (z, x + 1), (z, x - 1)):
+                        if 0 <= nz < N and 0 <= nx < N and dark[nz, nx] and not seen[nz, nx]:
+                            seen[nz, nx] = True
+                            todo.append((nz, nx))
+                if len(comp) > hole.sum():
+                    hole[:] = False
+                    for z, x in comp:
+                        hole[z, x] = True
+        if hole.sum() < 12:
+            return None
         grown = hole.copy()
         grown[1:, :] |= hole[:-1, :]
         grown[:-1, :] |= hole[1:, :]
@@ -111,6 +138,8 @@ def main() -> int:
         if not sprite.is_file():
             continue
         draw = np.asarray(Image.open(sprite).convert("RGB"))
+        if k["kind"].startswith("stairs") and all(e.get("surface") for e in d.get("examples", [])):
+            continue  # outdoor steps are ground: they wait for the 3D world's heights (HEIGHTS_ALL_GAMES_PLAN.md)
         s = shape(k["kind"], draw)
         if s is None:
             continue
@@ -128,15 +157,25 @@ def main() -> int:
         cells = table.setdefault("cells", {})
         for key in [key for key, e in cells.items() if e.get("from") == "warp"]:
             del cells[key]
-        put = kept = 0
+        # a drawing the game also uses on solid cells (a black void, a wall) would put its warp shape there: left out
+        solid: set[str] = set()
+        maps = sprites.parent.parent / "maps" / game
+        for f in maps.glob("*.json"):
+            info = json.loads(f.read_text(encoding="utf-8"))
+            if "keys" in info:
+                solid.update(info["keys"][c] for c, k in zip(info["cell"], info["kind"]) if k != "W")
+        put = kept = shared = 0
         for key, e in made.items():
-            if key in cells:
-                kept += 1  # another source's shape (an object marked there) stays
+            if key in solid:
+                shared += 1
+                continue
+            if key in cells and cells[key].get("from") not in ("entity", "edited", "depth"):
+                kept += 1  # a hand model or a seat stays
                 continue
             cells[key] = {"class": "voxels", "v": e["v"], "t": e["t"], "walk": True, "from": "warp"}
             put += 1
         table_file.write_text(json.dumps(table, indent=2) + "\n", encoding="utf-8")
-        print(f"{game}: {put} warp shapes in the table, {kept} keys left to their own entries")
+        print(f"{game}: {put} warp shapes in the table; {shared} drawings also on solid cells and {kept} with their own entries left out")
     if "--view" in sys.argv:
         view = Path(sys.argv[sys.argv.index("--view") + 1])
         view.mkdir(parents=True, exist_ok=True)
