@@ -10,7 +10,7 @@ Writes <out.json> ({key: {"v", "t"}}, base64: bits by (y * 16 + z) * 16 + x, lea
 voxel, the drawing's pixel row * 16 + column). With --table the entries also go into the game's table, marked "walk",
 from "warp", replacing earlier warp entries and depth/entity shapes of the same drawing (on a walkable cell they
 never showed), never a hand model or a seat; a drawing the game also draws on solid cells (kb-hub's map info beside the
-sprites dir) is left out. --view writes kb-hub viewer files.
+sprites dir), or whose walkable cells are mostly not warps (plain floor), is left out. --view writes kb-hub viewer files.
 
 Shapes, built facing south (the player comes from the south; the back is north) and turned to the review's facing:
   stairs_up     four steps rising to the back, 4 voxels deep and 4 more high each (to 16, two blocks); painted from above
@@ -158,15 +158,24 @@ def main() -> int:
         for key in [key for key, e in cells.items() if e.get("from") == "warp"]:
             del cells[key]
         # a drawing the game also uses on solid cells (a black void, a wall) would put its warp shape there: left out
+        # and a drawing mostly drawn on ordinary floor (an invisible warp on plain cave floor) would raise that floor:
+        # only drawings whose walkable cells are at least half warp cells
         solid: set[str] = set()
+        walk: dict[str, int] = {}
         maps = sprites.parent.parent / "maps" / game
         for f in maps.glob("*.json"):
             info = json.loads(f.read_text(encoding="utf-8"))
             if "keys" in info:
-                solid.update(info["keys"][c] for c, k in zip(info["cell"], info["kind"]) if k != "W")
+                for c, k in zip(info["cell"], info["kind"]):
+                    key = info["keys"][c]
+                    if k == "W":
+                        walk[key] = walk.get(key, 0) + 1
+                    else:
+                        solid.add(key)
+        warps = {d["key"]: d["count"] for d in designs.values() if d["game"] == game}
         put = kept = shared = 0
         for key, e in made.items():
-            if key in solid:
+            if key in solid or warps.get(key, 0) * 2 < walk.get(key, 0):
                 shared += 1
                 continue
             if key in cells and cells[key].get("from") not in ("entity", "edited", "depth"):
@@ -175,7 +184,7 @@ def main() -> int:
             cells[key] = {"class": "voxels", "v": e["v"], "t": e["t"], "walk": True, "from": "warp"}
             put += 1
         table_file.write_text(json.dumps(table, indent=2) + "\n", encoding="utf-8")
-        print(f"{game}: {put} warp shapes in the table; {shared} drawings also on solid cells and {kept} with their own entries left out")
+        print(f"{game}: {put} warp shapes in the table; {shared} drawings also on solid cells or mostly on plain floor and {kept} with their own entries left out")
     if "--view" in sys.argv:
         view = Path(sys.argv[sys.argv.index("--view") + 1])
         view.mkdir(parents=True, exist_ok=True)

@@ -268,6 +268,11 @@ final class Units {
 			if (below == null || !on.equals(FittedShapes.key(map.atlas(), tiles(map, below.cx(), below.cy())))) {
 				continue;
 			}
+			// only solid units a cell tall stack (a seat or a walkable cell's shape stands on decor, one block or two)
+			if (!solidCellTall(keys, blocks, top, per, cols) || !solidCellTall(keys, blocks, below, per, cols)) {
+				tally.merge("stack_skipped", 1, Integer::sum);
+				continue;
+			}
 			for (int bz = 0; bz < per; bz++) {
 				for (int bx = 0; bx < per; bx++) {
 					int it = (top.cy() * per + bz) * cols + top.cx() * per + bx;
@@ -289,6 +294,19 @@ final class Units {
 			tally.merge("stacked", 1, Integer::sum);
 		}
 		units.removeAll(moved);
+	}
+
+	/** True when every column of a unit's cell is solid and at least a cell ({@code per} blocks) of keys tall. */
+	private static boolean solidCellTall(ShapeKey[][] keys, int[] blocks, Cell c, int per, int cols) {
+		for (int bz = 0; bz < per; bz++) {
+			for (int bx = 0; bx < per; bx++) {
+				int i = (c.cy() * per + bz) * cols + c.cx() * per + bx;
+				if (keys[i] == null || keys[i].length < per || blocks[i] <= 0) {
+					return false;
+				}
+			}
+		}
+		return true;
 	}
 
 	/**
