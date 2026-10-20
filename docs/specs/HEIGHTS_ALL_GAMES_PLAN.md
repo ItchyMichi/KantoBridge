@@ -92,6 +92,10 @@ arrival warp); none carries a facing (only the run-time arrival has one).
 - Open sky, so room is not the limit. Levels on routes and in towns: Emerald from the elevation (Route 111's
   ledges, Fortree's treetops, Mt. Chimney, Jagged Pass, Route 119/120's raised paths, Sootopolis's rim), Crystal and
   Blue from ledges and cliff edges (HEIGHTS_RESEARCH.md §3.6: islands behind one-way ledges, places the user names).
+- Rock faces and cliffs as tall as the game draws them (the user, 2026-10-20: Battle Frontier's cave mouth, where the
+  rock should go on two blocks above the entrance; today the face stops at the arch's top): a cliff's height from
+  the rows of face the drawing shows (as buildings take 1.5 voxels a row), its top the level above; a cave mouth's
+  or wall exit's model then sits in a face that rises past it.
 - Ledges become real drops: the low side one level down, a one-way step collider (the game's hop), the high side's
   edge a wall from below (`CollisionGameTests.ledgesBlockOnlyFromBelow` exists).
 - Outdoor stairs (the warp review left them flat) become ramps or steps between the levels they join.
