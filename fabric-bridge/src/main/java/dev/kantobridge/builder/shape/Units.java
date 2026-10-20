@@ -130,6 +130,12 @@ final class Units {
 						why(map, cx, cy, "walk_voxels");
 						continue;
 					}
+					// a stack's top drawn on a walkable cell (a street lamp's head over the paving): its shape goes up onto the cell
+					// below's unit (stack()); the cell itself stays walkable floor
+					if (stackTop(map, atlasIndex, cx, cy, keys, units, indoor)) {
+						why(map, cx, cy, "stack_top");
+						continue;
+					}
 				}
 				if (map.kind(cx, cy) != CellKind.SOLID) {
 					String corner = classes == null ? null : classes.at(cx * per, cy * per);
@@ -268,8 +274,10 @@ final class Units {
 			if (below == null || !on.equals(FittedShapes.key(map.atlas(), tiles(map, below.cx(), below.cy())))) {
 				continue;
 			}
-			// only solid units a cell tall stack (a seat or a walkable cell's shape stands on decor, one block or two)
-			if (!solidCellTall(keys, blocks, top, per, cols) || !solidCellTall(keys, blocks, below, per, cols)) {
+			// only solid units a cell tall stack (a seat or a walkable cell's shape stands on decor, one block or two); a top
+			// on a walkable cell brings only its keys
+			boolean walkTop = STACK_TOP.equals(top.source());
+			if (!(walkTop || solidCellTall(keys, blocks, top, per, cols)) || !solidCellTall(keys, blocks, below, per, cols)) {
 				tally.merge("stack_skipped", 1, Integer::sum);
 				continue;
 			}
@@ -294,6 +302,61 @@ final class Units {
 			tally.merge("stacked", 1, Integer::sum);
 		}
 		units.removeAll(moved);
+		// a walkable top with nothing to stand on keeps no keys (its cell is floor)
+		List<Cell> lone = new java.util.ArrayList<>();
+		for (Cell top : units) {
+			if (STACK_TOP.equals(top.source())) {
+				for (int bz = 0; bz < per; bz++) {
+					for (int bx = 0; bx < per; bx++) {
+						keys[(top.cy() * per + bz) * cols + top.cx() * per + bx] = null;
+					}
+				}
+				lone.add(top);
+			}
+		}
+		units.removeAll(lone);
+	}
+
+	private static final String STACK_TOP = "stack_top";
+
+	/**
+	 * A stack's top on a walkable cell: its voxel shape's keys, a cell tall, in the cell's columns (no blocks, no decor:
+	 * stack() moves them onto the unit below, or drops them). False when the cell is no stack top with a voxel shape.
+	 */
+	private static boolean stackTop(SceneMap map, int atlasIndex, int cx, int cy, ShapeKey[][] keys, List<Cell> units, boolean indoor) {
+		int[] tiles = tiles(map, cx, cy);
+		if (FittedShapes.stackedOn(map.atlas(), tiles) == null) {
+			return false;
+		}
+		int per0 = map.perCell();
+		int cols0 = map.artCols();
+		for (int bz = 0; bz < per0; bz++) {
+			for (int bx = 0; bx < per0; bx++) {
+				if (keys[(cy * per0 + bz) * cols0 + cx * per0 + bx] != null) {
+					return false; // the cell already has its own keys (grass tufts): left alone
+				}
+			}
+		}
+		FittedShapes.Entry entry = FittedShapes.get(map.atlas(), tiles);
+		if (entry == null || !FittedShapes.VOXELS.equals(entry.cls()) || entry.voxels() == null) {
+			return false;
+		}
+		int per = map.perCell();
+		int cols = map.artCols();
+		CellUnits.Context context = new CellUnits.Context(0, indoor, false, false, false, FittedShapes.VOXELS, 0, entry.params());
+		ShapeKey first = null;
+		for (int bz = 0; bz < per; bz++) {
+			for (int bx = 0; bx < per; bx++) {
+				ShapeKey[] column = new ShapeKey[per];
+				for (int by = 0; by < per; by++) {
+					column[by] = ShapeKey.cell(atlasIndex, tiles, 0, bx, by, bz).withVariant(context.variant());
+				}
+				first = first == null ? column[0] : first;
+				keys[(cy * per + bz) * cols + cx * per + bx] = column;
+			}
+		}
+		units.add(new Cell(cx, cy, first, false, STACK_TOP));
+		return true;
 	}
 
 	/** True when every column of a unit's cell is solid and at least a cell ({@code per} blocks) of keys tall. */

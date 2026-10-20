@@ -143,6 +143,29 @@ class FittedShapesTest {
 	}
 
 	@Test
+	void aStackTopOnAWalkableCellStandsOnTheCellBelow() {
+		// a street lamp: its head drawn on a walkable cell (lower case) over its post (upper case, solid)
+		SceneMap map = surface("LAMP", "......", "......", "..aa..", "..aa..", "..BB..", "..BB..", "......", "......");
+		int a = tile('a');
+		int b = tile('B');
+		byte[] bits = new byte[FittedShapes.VOXEL_BYTES];
+		bits[0] = 1;
+		String top = FittedShapes.key(ShapeFixtures.ATLAS, new int[] {a, a, a, a});
+		String bottom = FittedShapes.key(ShapeFixtures.ATLAS, new int[] {b, b, b, b});
+		FittedShapes.useStacksForTest(Map.of(top, new FittedShapes.Entry("voxels", List.of(), bits), bottom,
+				new FittedShapes.Entry("voxels", List.of(), bits)), Map.of(top, bottom));
+		ShapePlanner.MapShapes shapes = plan(map);
+		assertEquals(1, shapes.units().size(), "the head moved onto the post");
+		Units.Cell cell = shapes.units().get(0);
+		int per = map.perCell();
+		int cols = map.artCols();
+		assertEquals(2 * per, shapes.blocks()[(cell.cy() * per) * cols + cell.cx() * per], "the post's cell is two cells tall");
+		int head = ((cell.cy() - 1) * per) * cols + cell.cx() * per;
+		assertEquals(0, shapes.blocks()[head], "the head's own cell stays walkable floor");
+		assertNull(shapes.open()[head], "and keeps no keys");
+	}
+
+	@Test
 	void aSeatStandsOnAWalkableCell() {
 		// a stool the hidden game draws on a walkable cell (lower case: walkable), its voxel entry marked a seat
 		SceneMap map = surface("SEAT", "......", "......", "..ss..", "..ss..", "......", "......");

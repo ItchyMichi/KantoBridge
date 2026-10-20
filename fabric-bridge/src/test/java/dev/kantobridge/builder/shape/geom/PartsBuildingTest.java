@@ -59,8 +59,9 @@ class PartsBuildingTest {
 			{3, 2, 2, 14, 18}, // the hip
 			{15, 3, 4, 17, 0}, // the profile roof
 			{22, 20, 18, 23, 19}, // the barrel's top, laid along its curve
-			{29, 8, 20, 31, 23}, // the box's east side: the front's outer column
+			{29, 8, 20, 12, 23}, // the box's east side: the front repeated along it
 			{8, 15, 9, 7, 16}, // the box's top under the gable's eave
+			{25, 5, 8, 4, 26}, // the box's north side: the front repeated along it
 		};
 		for (int[] c : cases) {
 			int t = grid.at(c[0], c[1], c[2]);

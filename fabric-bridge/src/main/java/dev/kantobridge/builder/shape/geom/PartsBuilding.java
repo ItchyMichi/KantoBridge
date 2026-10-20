@@ -301,14 +301,23 @@ public final class PartsBuilding {
 		}
 		if ("east".equals(face) || "west".equals(face)) {
 			double[] side = nums(paint, "side");
-			return side != null ? pick(side, south, down, w, d) : pick(front, "west".equals(face) ? 0.02 : 0.98, down, w, d);
+			if (side != null) {
+				return pick(side, south, down, w, d);
+			}
+			// no side drawn: the front's art repeated along the side at its own scale, not its edge column stretched
+			int fw = Math.max(1, (int) (front[2] - front[0]));
+			return pick(front, (Math.floorMod(z - (int) b[2], fw) + 0.5) / fw, down, w, d);
 		}
 		if ("north".equals(face)) {
 			double[] back = nums(paint, "back");
 			if (back == null) {
 				back = nums(paint, "side");
 			}
-			return back != null ? pick(back, 1 - across, down, w, d) : pick(front, 0.5, down, w, d);
+			if (back != null) {
+				return pick(back, 1 - across, down, w, d);
+			}
+			int fw = Math.max(1, (int) (front[2] - front[0]));
+			return pick(front, (Math.floorMod((int) b[1] - 1 - x, fw) + 0.5) / fw, down, w, d);
 		}
 		return pick(front, across, down, w, d);
 	}
