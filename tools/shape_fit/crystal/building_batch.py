@@ -8,7 +8,8 @@ x 2 cells whose note names no cave, rock, mound, tree or counter. One per design
 the same layout are one building (a Poké Center drawn in every town), made from its first map. Per building:
 <out>/<game>/<id>.json (kb-hub's viewer), <id>_view.png and a line in <out>/<game>/buildings.json (id, map, box,
 note, the placements of its design, what detect() found). A sheet per map, <out>/<game>/sheet_<map>.png.
-Corrections: <data>/files/building_overrides_<game>.json, {"<map>:<x0>,<y0>": {"roof_rows": 16, "roof": "hip",
+Corrections: <data>/files/building_overrides_<game>.json, {"<map>:<x0>,<y0>": {"terrain": [[col, row], ...] (cells of the
+box that are terrain: the box shrinks to the rest), "roof_rows": 16, "roof": "hip",
 "bands": "7-15"}}, applied over detect().
 """
 from __future__ import annotations
@@ -64,6 +65,17 @@ def main() -> int:
             extra += ["--roof", o["roof"]]
         if "bands" in o:
             extra += ["--bands", o["bands"]]
+        if o.get("terrain"):
+            # cells drawn with the building that are terrain (ledges, rock bases, ground): the model and the game's
+            # claim take only the box round the rest, so those cells stay the map's own floor
+            ts = {(c[0], c[1]) for c in o["terrain"]}
+            keep = [(cx, cy) for cy in range(h) for cx in range(w) if (cx, cy) not in ts]
+            if keep:
+                kx0, kx1 = min(c[0] for c in keep), max(c[0] for c in keep)
+                ky0, ky1 = min(c[1] for c in keep), max(c[1] for c in keep)
+                x0, y0, w, h = x0 + kx0, y0 + ky0, kx1 - kx0 + 1, ky1 - ky0 + 1
+                b["box"] = [x0, y0, w, h]
+                b["placements"] = [[p[0], p[1] + kx0, p[2] + ky0] for p in b.get("placements", [])]
         b["override"] = o or None
         r = subprocess.run([sys.executable, str(HERE / "building_model.py"), str(maps / f"{b['map']}_art.png"),
                             str(maps / f"{b['map']}.json"), str(x0), str(y0), str(w), str(h), str(dest), "--name", b["id"], *extra],

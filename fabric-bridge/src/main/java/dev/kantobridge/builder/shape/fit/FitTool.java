@@ -39,6 +39,8 @@ import org.jetbrains.annotations.Nullable;
  *                                        its foreground, and the voxels today's pick builds (ROM-derived: local/ only)
  * locate &lt;bundle&gt; &lt;out.json&gt;          per planned cell, one map and cell where it stands and a walkable cell to look at it
  *                                        from (UnitLocations), for the in-scene review sheets
+ * warps &lt;bundle&gt; &lt;out.json&gt;           every warp cell (warp entry, door, warp tile, hole, pad): key, tags, neighbours'
+ *                                        kinds (docs/specs/WARP_MODELS.md)
  * applied &lt;bundle&gt;                      the planner's unit tally with the jar's table on ({@code fit}: units it re-picked,
  *                                        {@code fit_columns}: cells it left to Tier A)
  * fit &lt;bundle&gt; &lt;targets.json&gt; &lt;out.json&gt; per cell, every builder and setting of {@link Candidates} against the
@@ -70,6 +72,8 @@ public final class FitTool {
 			locate(Path.of(args[1]), Path.of(args[2]));
 		} else if (args.length == 2 && args[0].equals("applied")) {
 			applied(Path.of(args[1]));
+		} else if (args.length == 3 && args[0].equals("warps")) {
+			warps(Path.of(args[1]), Path.of(args[2]));
 		} else {
 			System.err.println("usage: FitTool dump <bundle> <out.json> | fit <bundle> <targets.json> <out.json> | applied <bundle>");
 			System.exit(2);
@@ -281,6 +285,61 @@ public final class FitTool {
 		Files.createDirectories(out.toAbsolutePath().getParent());
 		Files.writeString(out, new GsonBuilder().setPrettyPrinting().create().toJson(root) + "\n", StandardCharsets.UTF_8);
 		System.out.println("locate: " + bundle.game() + " " + root.size() + " cells");
+	}
+
+	/**
+	 * Every warp cell of every map (docs/specs/WARP_MODELS.md, step 1): a walkable cell tagged as a warp entry, door,
+	 * warp tile, hole or pad, with its key, its tags, its four neighbours' kinds (north, east, south, west) and its map's
+	 * cave and surface flags, for the warp kinds' review. No pixels.
+	 */
+	static void warps(Path bundleDir, Path out) throws Exception {
+		ExportBundle bundle = ExportBundle.open(bundleDir);
+		GameFrontEnd front = FrontEnds.forGame(bundle.game());
+		if (front == null) {
+			throw new IllegalArgumentException("no front end for " + bundle.game());
+		}
+		dev.kantobridge.scene.Scene scene = front.describe(bundle);
+		int warpish = dev.kantobridge.scene.CellTag.WARP.bit() | dev.kantobridge.scene.CellTag.DOOR.bit()
+				| dev.kantobridge.scene.CellTag.WARP_TILE.bit() | dev.kantobridge.scene.CellTag.HOLE.bit() | dev.kantobridge.scene.CellTag.PAD.bit();
+		JsonArray rows = new JsonArray();
+		for (dev.kantobridge.scene.SceneMap map : new TreeMap<>(scene.maps()).values()) {
+			int per = map.perCell();
+			for (int cy = 0; cy < map.h(); cy++) {
+				for (int cx = 0; cx < map.w(); cx++) {
+					int tags = map.tags(cx, cy);
+					if ((tags & warpish) == 0) {
+						continue;
+					}
+					int[] tiles = new int[per * per];
+					for (int k = 0; k < tiles.length; k++) {
+						tiles[k] = map.tile(cx * per + k % per, cy * per + k / per);
+					}
+					JsonObject row = new JsonObject();
+					row.addProperty("map", map.id());
+					row.addProperty("x", cx);
+					row.addProperty("y", cy);
+					row.addProperty("key", cellKey(map.atlas(), tiles));
+					row.addProperty("kind", map.kind(cx, cy).name());
+					JsonArray t = new JsonArray();
+					dev.kantobridge.scene.CellTag.ids(tags).forEach(t::add);
+					row.add("tags", t);
+					JsonArray around = new JsonArray();
+					int[][] steps = {{0, -1}, {1, 0}, {0, 1}, {-1, 0}};
+					for (int[] s : steps) {
+						int nx = cx + s[0];
+						int ny = cy + s[1];
+						around.add(nx < 0 || ny < 0 || nx >= map.w() || ny >= map.h() ? "EDGE" : map.kind(nx, ny).name());
+					}
+					row.add("around", around);
+					row.addProperty("cave", map.env().cave());
+					row.addProperty("surface", map.surface());
+					rows.add(row);
+				}
+			}
+		}
+		Files.createDirectories(out.toAbsolutePath().getParent());
+		Files.writeString(out, new GsonBuilder().create().toJson(rows) + "\n", StandardCharsets.UTF_8);
+		System.out.println("warps: " + bundle.game() + " " + rows.size() + " cells");
 	}
 
 	static void applied(Path bundleDir) throws Exception {
