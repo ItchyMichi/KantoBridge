@@ -74,6 +74,8 @@ public final class FitTool {
 			applied(Path.of(args[1]));
 		} else if (args.length == 3 && args[0].equals("warps")) {
 			warps(Path.of(args[1]), Path.of(args[2]));
+		} else if (args.length == 3 && args[0].equals("templates")) {
+			templates(Path.of(args[1]), Path.of(args[2]));
 		} else {
 			System.err.println("usage: FitTool dump <bundle> <out.json> | fit <bundle> <targets.json> <out.json> | applied <bundle>");
 			System.exit(2);
@@ -340,6 +342,53 @@ public final class FitTool {
 		Files.createDirectories(out.toAbsolutePath().getParent());
 		Files.writeString(out, new GsonBuilder().create().toJson(rows) + "\n", StandardCharsets.UTF_8);
 		System.out.println("warps: " + bundle.game() + " " + rows.size() + " cells");
+	}
+
+	/**
+	 * Every building template the planner placed, with the tables on (the fitted buildings among them): its grid, what the
+	 * client builds for it (kind, a failed kind, quads in its fullest block, the voxel grid's size) and its columns'
+	 * planned heights, to compare the game's buildings with their previews. No pixels.
+	 */
+	static void templates(Path bundleDir, Path out) throws Exception {
+		ExportBundle bundle = ExportBundle.open(bundleDir);
+		GameFrontEnd front = FrontEnds.forGame(bundle.game());
+		if (front == null) {
+			throw new IllegalArgumentException("no front end for " + bundle.game());
+		}
+		ArtSource art = FrontEnds.artSource(bundle);
+		ShapePlan plan = ShapePlanner.plan(front.describe(bundle), List.of(), ShapeParams.current(), Occupancy.NONE, new ArtUnitProbe(art));
+		ShapeTable table = ShapeTable.build(plan.index(), art);
+		Map<String, Templates.Entry> entries = ShapeTable.entries(plan.index());
+		JsonArray rows = new JsonArray();
+		for (Map.Entry<String, TemplateRule.Template> e : new TreeMap<>(table.templates()).entrySet()) {
+			String[] parts = e.getKey().split("\\|", -1);
+			Templates.Entry entry = entries.get(parts[1]);
+			TemplateRule.Template t = e.getValue();
+			JsonObject row = new JsonObject();
+			row.addProperty("sig", parts[1]);
+			row.addProperty("kind", t.kind().id());
+			row.addProperty("failed", t.failed() == null ? null : t.failed().id());
+			row.addProperty("maxQuads", t.maxQuads());
+			if (t.voxels() != null) {
+				row.addProperty("grid", t.voxels().width() + "x" + t.voxels().height() + "x" + t.voxels().depth());
+				row.addProperty("solidVoxels", t.voxels().count());
+			}
+			if (entry != null) {
+				row.addProperty("w", entry.w());
+				row.addProperty("d", entry.d());
+				JsonObject hull = entry.hull();
+				if (hull != null) {
+					row.addProperty("hullKind", hull.has("kind") ? hull.get("kind").getAsString() : null);
+					row.addProperty("height", hull.has("height") ? hull.get("height").getAsInt() : -1);
+					row.addProperty("parts", hull.has("box") && hull.getAsJsonObject("box").has("parts"));
+					row.add("solid", hull.has("solid") ? hull.get("solid") : null);
+				}
+			}
+			rows.add(row);
+		}
+		Files.createDirectories(out.toAbsolutePath().getParent());
+		Files.writeString(out, new GsonBuilder().create().toJson(rows) + "\n", StandardCharsets.UTF_8);
+		System.out.println("templates: " + bundle.game() + " " + rows.size());
 	}
 
 	static void applied(Path bundleDir) throws Exception {
