@@ -3,6 +3,7 @@ package dev.kantobridge.builder.shape;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import dev.kantobridge.builder.shape.geom.BoxBuilding;
+import dev.kantobridge.builder.shape.geom.PartsBuilding;
 import dev.kantobridge.scene.CellKind;
 import dev.kantobridge.scene.SceneMap;
 import dev.kantobridge.scene.profile.Profile;
@@ -22,7 +23,8 @@ import java.util.Set;
  *           capped by the map's headroom) on shape_full; a walkable cell of the grid (a doorway) as many on decor, its
  *           floor the building's ground
  * entry     the template's grid, doors and columns as a band building's; its "hull" section the solid and air heights
- *           and the "box" numbers (pixel-free)
+ *           and the "box" numbers (pixel-free), or a parts spec ({@link PartsBuilding}: its "height"; its "terrain"
+ *           cells left unclaimed, for the map's own floor)
  * </pre>
  */
 final class FittedBuildings {
@@ -43,6 +45,31 @@ final class FittedBuildings {
 		}
 		Map<String, Integer> own = new java.util.TreeMap<>();
 		List<Buildings.Claim> claims = Buildings.claims(map, entries, held, own);
+		// a parts building's terrain cells (ledges, rock, ground drawn with it) go back to the map's own planning
+		int cols = map.artCols();
+		int per = map.perCell();
+		for (Buildings.Claim claim : claims) {
+			JsonObject box = of.get(claim.building()).box();
+			if (!box.has("terrain")) {
+				continue;
+			}
+			int bw = claim.width();
+			int bh = claim.rows();
+			for (var cell : box.getAsJsonArray("terrain")) {
+				int cx = cell.getAsJsonArray().get(0).getAsInt();
+				int cy = cell.getAsJsonArray().get(1).getAsInt();
+				for (int dy = 0; dy < per; dy++) {
+					for (int dx = 0; dx < per; dx++) {
+						int x = cx * per + dx;
+						int y = cy * per + dy;
+						if (x >= 0 && y >= 0 && x < bw && y < bh && claim.claimed()[y * bw + x]) {
+							claim.claimed()[y * bw + x] = false;
+							held[(claim.ty() + y) * cols + claim.tx() + x] = false;
+						}
+					}
+				}
+			}
+		}
 		tally.merge("fitted_building", own.getOrDefault("building", 0), Integer::sum);
 		return claims;
 	}
@@ -61,7 +88,9 @@ final class FittedBuildings {
 		int bh = claim.rows();
 		int px = 8; // drawing pixels a tile (an art tile is one block, eight voxels)
 		JsonObject box = building.box();
-		int voxels = BoxBuilding.height(bh * px, box.get("roofRows").getAsInt(), "hip".equals(box.get("roof").getAsString()));
+		boolean parts = box.has("parts");
+		int voxels = parts ? PartsBuilding.height(box)
+				: BoxBuilding.height(bh * px, box.get("roofRows").getAsInt(), "hip".equals(box.get("roof").getAsString()));
 		int high = Math.min(Math.max(2, (voxels + px - 1) / px), Math.min(ShapeHeights.headroom(map), 30));
 		int ground = Buildings.ground(map, claim, mapGround);
 		JsonArray tiles = new JsonArray();
@@ -86,7 +115,8 @@ final class FittedBuildings {
 				}
 				solid.add(s);
 				air.add(a);
-				tiles.add(claimed ? map.tile(tx, ty) : -1);
+				// a parts building paints from its whole drawing, its terrain cells too
+				tiles.add(claimed || parts ? map.tile(tx, ty) : -1);
 				columns.add(new JsonArray());
 			}
 		}

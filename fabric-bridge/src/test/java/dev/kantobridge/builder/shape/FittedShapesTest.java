@@ -211,6 +211,26 @@ class FittedShapesTest {
 	}
 
 	@Test
+	void aPartsBuildingTakesItsSpecsHeightAndLeavesItsTerrainCellsToTheMap() {
+		// the same grid; its parts spec says the north-west cell is terrain, not building
+		SceneMap map = surface("BOX", "......", "......", "..AA..", "..AA..", "..BB..", "..BB..", "......", "......");
+		int a = tile('A');
+		int b = tile('B');
+		com.google.gson.JsonObject box = com.google.gson.JsonParser.parseString("""
+				{"roofRows": 0, "roof": "flat", "bands": [], "height": 24, "terrain": [[0, 0]],
+				 "parts": [{"shape": "box", "x": [0, 16], "z": [16, 32], "y": [0, 24]}]}""").getAsJsonObject();
+		FittedShapes.useBuildingsForTest(List.of(new FittedShapes.Building(ShapeFixtures.ATLAS,
+				List.of(new int[] {a, a}, new int[] {a, a}, new int[] {b, b}, new int[] {b, b}), box)));
+		ShapePlanner.MapShapes shapes = plan(map);
+		assertEquals(1, shapes.templates().size(), "one building template");
+		int cols = map.artCols();
+		assertEquals(3, shapes.blocks()[4 * cols + 2], "the spec's 24 voxels: three blocks");
+		assertTrue(shapes.blocks()[2 * cols + 2] != 3, "the terrain cell is not the building's");
+		com.google.gson.JsonArray tiles = shapes.templates().get(0).entry().getAsJsonArray("tiles");
+		assertEquals(a, tiles.get(0).getAsInt(), "its drawing keeps the terrain cell's art to paint from");
+	}
+
+	@Test
 	void aColumnsFitKeepsNoUnit() {
 		SceneMap map = surface("LONE", LONE.split("\n"));
 		FittedShapes.useForTest(Map.of(lone(), new FittedShapes.Entry("columns", List.of())));

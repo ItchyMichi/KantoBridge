@@ -53,7 +53,7 @@ public final class BoxBuilding {
 		return (int) Math.round(1.5 * Math.max(1, facadeRows));
 	}
 
-	/** The model of a box entry with this client's art. */
+	/** The model of a box entry with this client's art (a parts entry's too: {@link PartsBuilding}). */
 	public static TemplateRule.Template build(Templates.Entry entry, String atlas, ArtSource art) {
 		TemplateRule.Template columns = TemplateRule.columns(entry, null, 1.0);
 		JsonObject hull = entry.hull();
@@ -89,7 +89,11 @@ public final class BoxBuilding {
 		for (int[] door : entry.doors()) {
 			doors.add(door);
 		}
-		VoxelGrid grid = voxels(shade, texel, w, d, px, box, doors);
+		// a building described as parts (docs/specs/BUILDING_PARTS.md) instead of the detected cube and roof
+		VoxelGrid grid = box.has("parts") ? PartsBuilding.voxels(box, texel, w, d, px) : voxels(shade, texel, w, d, px, box, doors);
+		if (grid == null) {
+			return columns;
+		}
 		Map<Integer, List<ShapeQuad>> blocks = new TreeMap<>();
 		for (Map.Entry<Integer, List<ShapeQuad>> e : QuadMerger.merge(grid, QuadMerger.ALL_FACES, 0).entrySet()) {
 			List<ShapeQuad> quads = new ArrayList<>(e.getValue().size());

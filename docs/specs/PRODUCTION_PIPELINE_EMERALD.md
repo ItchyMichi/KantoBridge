@@ -205,8 +205,11 @@ wraps round it.
 3. **Review**: publish to kb-hub's viewer ("buildings as parts / emerald / <name>", the drawing, 3D and front pictures,
    the spec) and a sheet: drawing | old box | parts. The user flags a building; an agent redoes it with the note
    (saving the old spec as `spec_v1.json`).
-4. **In game**: to come. A game-side builder for parts specs (pixel-free numbers: part sizes and the drawing
-   rectangles that paint them, every client painting from its own tiles), as `geom/BoxBuilding` does for boxes.
+4. **In game** (2026-10-20): `buildings_table.py emerald <kb-hub data> <building_batch out> --parts <packages>` puts each
+   design with a `spec.json` into the table as parts ("parts", "height", "terrain"); the rest stay boxes. In the game
+   `geom/PartsBuilding` builds and paints it on every client from its own tiles (the same voxels and paint as
+   `parts_model.py`, held to it by `PartsBuildingTest`), and `FittedBuildings` gives its "terrain" cells (ledges, rock,
+   ground drawn with the building; the agent lists them) back to the map's own floor.
 
 ### Lessons (the trial)
 

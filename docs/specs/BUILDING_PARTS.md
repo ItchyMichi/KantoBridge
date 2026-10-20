@@ -7,7 +7,8 @@ an agent describes a building as **parts** (boxes, cylinders, gable and hip roof
 
 ## Status (the user, 2026-10-19)
 
-- A trial only: **not run game-wide**. The user picks more tricky buildings to try first.
+- Emerald uses parts for all its buildings (2026-10-20, PRODUCTION_PIPELINE_EMERALD.md); Crystal keeps boxes for now,
+  specific buildings to go through parts after Emerald (the user's call).
 - **Blue keeps the box system** (HAND_MODELS.md section 7): its simple sprites suit it. Parts are for Crystal and
   Emerald, where the trial was an improvement (the Olivine lighthouse, an Ecruteak house, Littleroot's house, a
   Fortree treehouse, Sootopolis's dome house, the Radio Tower).
@@ -64,6 +65,11 @@ an agent describes a building as **parts** (boxes, cylinders, gable and hip roof
   outer columns), `back` over the north face. Pick rectangles so each face shows the right art: a facade's rows on its
   front, the roof's rows on the roof.
 - Keep it simple: a building is usually 2 to 8 parts. Details (windows, signs) stay painted, not modelled.
+
+## Terrain cells
+
+List every cell of the drawing that holds no part of the building as `"terrain": [[col, row], ...]` (cells of the
+drawing, 0,0 its top-left): ledges, rock bases, ground. The game leaves them to the map's own floor.
 
 ## Building and checking
 

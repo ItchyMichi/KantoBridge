@@ -390,7 +390,10 @@ public final class FittedShapes {
 		}
 	}
 
-	/** The generated buildings ("buildings": [{"atlas", "tiles": [[ids], ...], "roofRows", "roof", "bands"}]). */
+	/**
+	 * The generated buildings ("buildings": [{"atlas", "tiles": [[ids], ...], "roofRows", "roof", "bands"}], or in place of
+	 * the roof numbers a parts spec: "parts", "height", "terrain").
+	 */
 	static void parseBuildings(String text, List<Building> into) {
 		JsonObject root = JsonParser.parseString(text).getAsJsonObject();
 		if (!root.has("buildings")) {
@@ -409,8 +412,18 @@ public final class FittedShapes {
 					rows.add(ids);
 				}
 				JsonObject box = new JsonObject();
-				box.addProperty("roofRows", o.get("roofRows").getAsInt());
-				box.addProperty("roof", o.get("roof").getAsString());
+				if (o.has("parts")) {
+					// a building described as parts (docs/specs/BUILDING_PARTS.md): its spec, and the grid's cells that
+					// hold no part of it ("terrain": [[col, row], ...], left to the map's own floor)
+					box.addProperty("roofRows", 0);
+					box.addProperty("roof", "flat");
+					box.add("parts", o.getAsJsonArray("parts").deepCopy());
+					box.addProperty("height", o.has("height") ? o.get("height").getAsInt() : 64);
+					box.add("terrain", o.has("terrain") ? o.getAsJsonArray("terrain").deepCopy() : new JsonArray());
+				} else {
+					box.addProperty("roofRows", o.get("roofRows").getAsInt());
+					box.addProperty("roof", o.get("roof").getAsString());
+				}
 				box.add("bands", o.has("bands") ? o.getAsJsonArray("bands").deepCopy() : new JsonArray());
 				if (o.has("outline")) {
 					box.addProperty("outline", o.get("outline").getAsInt()); // Emerald's lighter outlines: shade 2
