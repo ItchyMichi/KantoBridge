@@ -639,6 +639,8 @@ test {
 	systemProperty "kb.storySweep", providers.gradleProperty("kb.storySweep").getOrElse("")
 	// -Pkb.realGen2Bundle=<export bundle> runs MG9's Gen 2 dry run on the pod's Crystal export (counts and codes only).
 	systemProperty "kb.realGen2Bundle", providers.gradleProperty("kb.realGen2Bundle").getOrElse("")
+	// -Pkb.heightsSurvey=true with any of the three real bundles: the 3D heights plan's survey (W0; layout data on the pod)
+	systemProperty "kb.heightsSurvey", providers.gradleProperty("kb.heightsSurvey").getOrElse("")
 	// The story check for Crystal: -Pkb.realGen2Index=<the real Johto's world_index.json> with kb.realGen2Bundle and
 	// -Pkb.storySweep=<sweep truth files> replays the sweep's cases through the client's story rules (pod only)
 	systemProperty "kb.realGen2Index", providers.gradleProperty("kb.realGen2Index").getOrElse("")
