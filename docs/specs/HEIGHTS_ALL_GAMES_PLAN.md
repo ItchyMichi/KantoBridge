@@ -88,7 +88,7 @@ arrival warp); none carries a facing (only the run-time arrival has one).
   with what each source found.
 - **Blue:** the tile pairs as today, extended past caves (D4).
 
-### D3b. Calculated, not estimated (recommended to the user, 2026-10-20)
+### D3b. Calculated, not estimated (the user's choice, 2026-10-20)
 - The levels and heights are **calculated** from the game data (Emerald's elevation, Blue's tile pairs, ledge
   directions, Crystal's one-way edges) and from the drawings (a cliff or rock face as tall as its drawn face rows, at
   the buildings' 1.5 voxels a row), never estimated map by map: the same answer every build, matching edges between
@@ -111,7 +111,13 @@ arrival warp); none carries a facing (only the run-time arrival has one).
 - Emerald's bridges (elevation 15: Route 119, 120, Fortree's walkways): a cell is both the bridge and the ground
   under it. One floor per cell today, so either (a) the bridge is decor over the lower floor (walked on at the upper
   level only where the game is on the bridge) or (b) the later two-floor cell (HEIGHTS_RESEARCH.md: no bridges).
-  Proposed: (a) first; (b) only if the user wants walking under bridges.
+  **The user chose (b), 2026-10-20:** two-floor cells, so the player walks on the bridge and under it. Which cells
+  are bridges comes from the data (Emerald's elevation 15) and, where the data can't tell (Crystal, Blue, Emerald
+  bridges over water or ground at elevation 0), from an agent review of every map with a bridge (the user's
+  suggestion): per map, the bridge cells, the floor under them and where the bridge meets the ground, reviewed by the
+  user on kb-hub. A cell holds two floors (the ground and the deck a level above, with the deck's underside clear),
+  and the position sync takes the floor from the game's own state (Emerald's elevation; for the others the side the
+  player stepped on from).
 - Viridian Forest, Ilex Forest, Petalburg Woods, the Safari Zones: raised ground where the data has it; the canopy
   and apron dressing (first-person dressing work) must follow the levels.
 
@@ -120,11 +126,13 @@ arrival warp); none carries a facing (only the run-time arrival has one).
   roof, Goldenrod's Radio Tower): Emerald from the elevation, Crystal/Blue from marks. One raised level fits the gap
   above an interior today (HEIGHTS_RESEARCH.md §5.2: layer step 22 = a 5-block room plus a 17-block gap; raised
   ground only goes up).
-- Two-storey rooms and stairs between floors of one building (a house's 1F and 2F): real stairs need the floors
-  stacked in line (as caves); proposed as a later phase, with the fade and the stair model until then.
-- More than one raised level in an interior needs a deeper layer step or a lower world bottom (step 24 → bottom
-  -288, 26 → -304). **The voxel plan says to ask before changing the layer layout** (VOXEL_BLOCKS_PLAN.md:1053):
-  question Q2.
+- **Stairs (the user, 2026-10-20):** inside one map with floors at two heights, the stairs the map draws are
+  physical stairs between them (steps the player walks up, no warp). Going to another map (a house's 1F to 2F, a
+  floor of a tower to the next) stays a fade and warp, with the stair model at the door.
+- **Deeper world (the user, 2026-10-20: "deeper world if possible"):** interiors and caves get more than one raised
+  level: a deeper layer step or a lower world bottom (step 24 → bottom -288, 26 → -304, or more), sized in W0 from
+  the tallest map each game needs (the levels D3 counts plus the drawn cliff heights), within the world's height
+  limits and the position sync's reach. The layer layout change is the user's go (VOXEL_BLOCKS_PLAN.md:1053).
 
 ### D6. Shape budget and slots first
 - The shape map is about 97% of its budget with the profile; raised ground adds shape keys. Send grids on demand
@@ -143,26 +151,24 @@ Each phase ends with its tests green, a dry-run report and pictures where it sho
 
 | Phase | Work | Check |
 |---|---|---|
-| W0 | Baseline: the full check (`tools/check.sh`), push the model session's commits; confirm the shape grids go on demand per region; the climb (`kb_climb.lua`) against the Gen 2 and Gen 3 adapters | full check green; a note on the climb |
+| W0 | Baseline: the full check (`tools/check.sh`), push the model session's commits; confirm the shape grids go on demand per region; the climb (`kb_climb.lua`) against the Gen 2 and Gen 3 adapters; size the deeper layer layout (D5) | full check green; a note on the climb; the layer sizes |
 | W1 | **Blue audit**: every Blue map the game draws raised but built flat (outdoors, forests, Safari, interiors with platforms), from the tile pairs, ledges and the profile pins; a report for the user | report on kb-hub |
 | W2 | One cave planner (D1): the neutral input, Gen 2/Gen 3 cave selection and floor ranks, the cave area per region; links still fade | dry runs per game (rooms, complexes, slots, floors per cave), existing cave tests unchanged |
 | W3 | Links by kind (D2): ladders as shafts, holes, tunnels; pilot caves Union Cave (Crystal) and Granite Cave (Emerald) | dry-run counts (real / fade and why), a pilot video each, GameTests: climbing a Gen 2/3 shaft warps |
 | W4 | Raised ground in caves: Emerald from the elevation, Crystal inferred plus marks | per-map report (raised, flat and why), RaisedCave-style tests per family, pictures |
 | W5 | Interiors (D5): one raised level from the same sources | report, pictures of Lavaridge Gym, the League rooms, a Crystal gym |
-| W6 | Outdoors (D4): levels, ledges as drops, outdoor stairs as steps, bridges as decor | report per region, CollisionGameTests for drops, pictures of Route 111, Fortree, Route 119, Ilex Forest, a Kanto route |
+| W6 | Outdoors (D4): levels, ledges as drops, outdoor stairs as steps, bridges as two-floor cells (after the bridge review) | report per region, CollisionGameTests for drops, pictures of Route 111, Fortree, Route 119, Ilex Forest, a Kanto route |
 | W7 | Blue's audit list built (W1) | the audit report re-run: nothing left flat that the game raises, or a reason per map |
 | W8 | Every region rebuilt; the play-test list (PLAYTEST.md "Caves in 3D" extended); docs: this plan's status, DESIGN.md (the user's file: a proposed text) | full check, videos per region |
 
-## 6. Questions for the user (before W2)
+## 6. The user's answers (2026-10-20)
 
-1. **Method (D3b):** calculate from the data and the labelled drawings, agents only labelling drawings and settling
-   leftovers (recommended), or agents estimating heights per map?
-2. **Layer layout:** keep one raised level per interior and cave map (today's layout), or deepen the world for more
-   (ask before changing it, VOXEL_BLOCKS_PLAN.md:1053)?
-3. **Bridges:** decor over the ground first (proposed), or two-floor cells to walk under them?
-4. **Stairs between a building's floors:** keep the fade with the stair model (proposed for now), or stack the floors
-   in line for real stairs (a larger change: interiors move like the caves did)?
-5. **Pilots:** Union Cave and Granite Cave (proposed), or others?
+1. **Method:** calculate (D3b); agents label drawings and settle leftovers only.
+2. **Layer layout:** a deeper world, if possible (D5, sized in W0).
+3. **Bridges:** two-floor cells, with an agent review of the maps with bridges (D4).
+4. **Stairs:** within one map with floors at two heights, physical stairs where the map shows them; moving to
+   another map stays a fade and warp (D5).
+5. **Pilots:** Union Cave and Granite Cave.
 
 ## 7. Risks
 
