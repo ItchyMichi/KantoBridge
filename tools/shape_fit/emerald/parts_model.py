@@ -35,8 +35,8 @@ the front), so a band drawn across the front of a rounded roof wraps round it in
 Paint: "front": [px0, py0, px1, py1], a rectangle of the drawing (pixels, last excluded) stretched over the part's
 south face (its width over the face's width, its height over the face's height, top row at the top); "top": a
 rectangle over the part's upward faces seen from above (its width over x, its height over z); "side": over the east
-and west faces (default: the front rectangle repeated along them at its own scale); "back": over the north face
-(default: "side", else the front repeated). A voxel
+and west faces, "back" over the north face (default: "side", else the front): repeated along the face at their own
+scale, never stretched across it (the height stretches as the front's). A voxel
 shows the rectangle of its most open face: up, then south, east/west, north, down.
 
 Writes <out>/<name>.json (kb-hub's viewer), <name>_view.png (3D from the south-east, above) and <name>_front.png (straight
@@ -211,7 +211,9 @@ def build(spec: dict, draw: np.ndarray):
         elif face in ("east", "west"):
             side = paint.get("side")
             if side:
-                r, c = pick(side, (zz + 0.5 - bz0) / max(1e-6, bz1 - bz0), down, draw)
+                # the side's rectangle repeated along it at its own scale (an agent's few-pixel wall swatch, not smeared)
+                sw = max(1, int(side[2] - side[0]))
+                r, c = pick(side, ((zz - int(bz0)) % sw + 0.5) / sw, down, draw)
             else:
                 # no side drawn: the front's art repeated along the side at its own scale, not its edge column stretched
                 fw = max(1, int(front[2] - front[0]))
@@ -219,7 +221,8 @@ def build(spec: dict, draw: np.ndarray):
         elif face == "north":
             back = paint.get("back") or paint.get("side")
             if back:
-                r, c = pick(back, 1 - across, down, draw)
+                bw = max(1, int(back[2] - back[0]))
+                r, c = pick(back, ((int(bx1) - 1 - xx) % bw + 0.5) / bw, down, draw)
             else:
                 fw = max(1, int(front[2] - front[0]))
                 r, c = pick(front, ((int(bx1) - 1 - xx) % fw + 0.5) / fw, down, draw)

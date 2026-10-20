@@ -74,6 +74,23 @@ class PartsBuildingTest {
 	}
 
 	@Test
+	void aSidesNarrowRectangleRepeatsAlongItInsteadOfStretching() {
+		int[] texel = new int[W * D];
+		for (int z = 0; z < D; z++) {
+			for (int x = 0; x < W; x++) {
+				texel[z * W + x] = VoxelGrid.texel(0, x, z);
+			}
+		}
+		// a box whose sides show a 2-pixel swatch (columns 5-6) of the drawing
+		VoxelGrid grid = PartsBuilding.voxels(JsonParser.parseString("""
+				{"height": 16, "parts": [{"shape": "box", "x": [4, 20], "z": [8, 28], "y": [0, 16],
+				 "paint": {"front": [0, 0, 32, 16], "side": [5, 0, 7, 16]}}]}""").getAsJsonObject(), texel, W, D, 8);
+		for (int z = 8; z < 27; z++) {
+			assertEquals(5 + (z - 8) % 2, VoxelGrid.u(grid.at(19, 4, z)), "east side column at z " + z);
+		}
+	}
+
+	@Test
 	void aSpecWithoutPartsBuildsNothing() {
 		assertNull(PartsBuilding.voxels(new JsonObject(), new int[W * D], W, D, 8));
 	}

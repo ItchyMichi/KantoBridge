@@ -16,8 +16,9 @@ import java.util.List;
  * <pre>
  * parts     in order; later parts add to the earlier ones, or cut ("carve": true)
  * paint     a voxel shows the rectangle of its most open face: up ("top"; on a barrel or profile roof the rectangle laid
- *           along the curve), south ("front"), east/west ("side", default the front's outer columns), north ("back",
- *           default "side"); a round part's front wraps round its visible half by angle
+ *           along the curve), south ("front"), east/west ("side", default the front), north ("back", default "side",
+ *           else the front); sides and backs repeat their rectangle at its own scale; a round part's front wraps round
+ *           its visible half by angle
  * </pre>
  */
 public final class PartsBuilding {
@@ -302,7 +303,9 @@ public final class PartsBuilding {
 		if ("east".equals(face) || "west".equals(face)) {
 			double[] side = nums(paint, "side");
 			if (side != null) {
-				return pick(side, south, down, w, d);
+				// the side's rectangle repeated along it at its own scale (a few-pixel wall swatch, not smeared)
+				int sw = Math.max(1, (int) (side[2] - side[0]));
+				return pick(side, (Math.floorMod(z - (int) b[2], sw) + 0.5) / sw, down, w, d);
 			}
 			// no side drawn: the front's art repeated along the side at its own scale, not its edge column stretched
 			int fw = Math.max(1, (int) (front[2] - front[0]));
@@ -314,7 +317,8 @@ public final class PartsBuilding {
 				back = nums(paint, "side");
 			}
 			if (back != null) {
-				return pick(back, 1 - across, down, w, d);
+				int bw = Math.max(1, (int) (back[2] - back[0]));
+				return pick(back, (Math.floorMod((int) b[1] - 1 - x, bw) + 0.5) / bw, down, w, d);
 			}
 			int fw = Math.max(1, (int) (front[2] - front[0]));
 			return pick(front, (Math.floorMod((int) b[1] - 1 - x, fw) + 0.5) / fw, down, w, d);
