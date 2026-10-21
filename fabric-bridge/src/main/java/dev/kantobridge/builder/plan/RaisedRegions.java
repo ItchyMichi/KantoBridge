@@ -60,6 +60,10 @@ public final class RaisedRegions {
 	static final int G3_BRIDGE = 15;
 	/** Emerald's only elevation surfing stops onto. */
 	static final int G3_SHORE = 3;
+	/** Emerald's elevation of the water's surface: a floor cell on it is one nobody walks to (a launch tower drawn over the sea). */
+	static final int G3_SURFACE = 1;
+	/** Outdoors floor cells fewer than this, nothing walkable round them (a cell under a tree), stand as the ground nearest them. */
+	static final int POCKET = 4;
 
 	/**
 	 * What became of a map.
@@ -243,7 +247,7 @@ public final class RaisedRegions {
 	 * ({@link #gen3Falls}, or null) part a river's water.
 	 */
 	public static Result gen3Outdoor(MapModel model, G3Map map, Dir @Nullable [] slopes, boolean @Nullable [] falls) {
-		Input in = emerald(model, map, false);
+		Input in = surfaceAside(emerald(model, map, false), map);
 		if (slopes != null) {
 			int n = in.key().length;
 			if (slopes.length != n) {
@@ -271,6 +275,23 @@ public final class RaisedRegions {
 		// face, an island's walkable pits, stands at the face's top)
 		return solve(new Input(model, in.key(), in.joins(), in.bridge(), G3_SHORE, null, null, false, MAX_FACE, false, false, OUTDOOR_RISE, true,
 				falls));
+	}
+
+	/**
+	 * {@code in} with the floor cells on the water's surface (elevation {@link #G3_SURFACE}: Mossdeep's launch tower drawn over
+	 * the sea, cells nobody walks to) taken out of the regions: they stand as the ground or water nearest them, so no raised
+	 * ground is filled under a tall thing's drawing.
+	 */
+	static Input surfaceAside(Input in, G3Map map) {
+		int w = in.model().cellWidth();
+		int[] key = in.key().clone();
+		for (int i = 0; i < key.length; i++) {
+			if (key[i] >= 0 && map.elev(i % w, i / w) == G3_SURFACE) {
+				key[i] = -1;
+			}
+		}
+		return new Input(in.model(), key, in.joins(), in.bridge(), in.shore(), in.climb(), in.walls(), in.wallsRise(), in.maxFace(), in.faceKeys(),
+				in.room(), in.rise(), in.outdoor(), in.falls());
 	}
 
 	/**
@@ -476,12 +497,16 @@ public final class RaisedRegions {
 			}
 		}
 		// ---- water: level with the regions of the shore key it touches; outdoors the bank it touches most first, and a bank
-		// that disagrees stands over it (a break) ----
+		// that disagrees stands over it (a break); outdoors, where a shore key says which banks a surfer lands on (Emerald), the
+		// sea (every body reaching the map's edge that no waterfall feeds) is one body, one level, whichever side of an island
+		// or a cape it lies ----
 		int[] waterOf = new int[n];
 		Arrays.fill(waterOf, -1);
 		// each body's shore region (-1 for none) and every region it touches
 		List<Integer> waterShore = new ArrayList<>();
 		List<List<Integer>> waterBanks = new ArrayList<>();
+		List<List<Integer>> bodies = new ArrayList<>();
+		List<Integer> sea = null;
 		boolean[] wet = new boolean[n];
 		for (int s = 0; s < n; s++) {
 			if (model.kind(s % w, s / w) != MapModel.Kind.WATER || wet[s] || in.falls() != null && in.falls()[s]) {
@@ -489,13 +514,39 @@ public final class RaisedRegions {
 			}
 			List<Integer> part = flood(w, h, s, (a, b) -> under[b] || model.kind(b % w, b / w) == MapModel.Kind.WATER && !wet[b]
 					&& !(in.falls() != null && in.falls()[b]));
-			Map<Integer, Integer> shores = new LinkedHashMap<>();
-			List<Integer> banks = new ArrayList<>();
+			List<Integer> cells = new ArrayList<>();
+			boolean edge = false;
+			boolean fed = false;
 			for (int c : part) {
 				if (under[c]) {
 					continue;
 				}
 				wet[c] = true;
+				cells.add(c);
+				edge |= c % w == 0 || c / w == 0 || c % w == w - 1 || c / w == h - 1;
+				for (Dir dir : Dir.values()) {
+					int nx = c % w + dir.dx();
+					int ny = c / w + dir.dy();
+					fed |= nx >= 0 && ny >= 0 && nx < w && ny < h && in.falls() != null && in.falls()[ny * w + nx];
+				}
+			}
+			if (in.outdoor() && in.shore() >= 0 && edge && !fed) {
+				if (sea == null) {
+					sea = new ArrayList<>();
+					bodies.add(sea);
+				}
+				sea.addAll(cells);
+			} else {
+				bodies.add(cells);
+			}
+		}
+		if (in.outdoor() && in.shore() >= 0) {
+			bodies = reefs(w, h, model, bodies);
+		}
+		for (List<Integer> cells : bodies) {
+			Map<Integer, Integer> shores = new LinkedHashMap<>();
+			List<Integer> banks = new ArrayList<>();
+			for (int c : cells) {
 				waterOf[c] = waterShore.size();
 				for (Dir dir : Dir.values()) {
 					int nx = c % w + dir.dx();
@@ -681,6 +732,7 @@ public final class RaisedRegions {
 		for (int r = 0; r < regions; r++) {
 			height[r] = base.get(heights.find(r)) + heights.offset(r);
 		}
+
 		// ---- each cell's level ----
 		int[] levels = new int[n];
 		boolean[] standable = new boolean[n];
@@ -771,7 +823,28 @@ public final class RaisedRegions {
 		}
 		String raisedOutcome = sunken > 0 ? "raised_sunken" : "raised";
 		if (in.outdoor()) {
+			// a pocket nothing walkable touches (a cell under a tree, behind a rock) is no ground of its own: a face's vote may have
+			// lifted it over everything round it (Mossdeep's cell under the big tree, 33 blocks up)
+			boolean[] floorCell = new boolean[n];
+			for (int i = 0; i < n; i++) {
+				floorCell[i] = standable[i] && waterOf[i] < 0;
+			}
+			List<int[]> pockets = pockets(w, h, standable, rampAt);
+			for (int[] pocket : pockets) {
+				for (int c : pocket) {
+					standable[c] = false;
+					floorCell[c] = false;
+				}
+			}
+			// a pocket stands as the walkable ground nearest it (not the sea beyond its rock)
+			int[] onFloor = levels.clone();
+			nearestLevels(w, h, floorCell, onFloor);
 			nearestLevels(w, h, standable, levels);
+			for (int[] pocket : pockets) {
+				for (int c : pocket) {
+					levels[c] = onFloor[c];
+				}
+			}
 		} else {
 			rockLevels(model, standable, levels);
 		}
@@ -782,6 +855,101 @@ public final class RaisedRegions {
 		}
 		return new Result(MapLayout.flat(w, h, levels, new ArrayList<>(rampAt.values())), raisedOutcome, regions, raised, stairs.size(), top,
 				skipped, breaks == null ? List.of() : List.copyOf(new java.util.TreeSet<>(breaks)));
+	}
+
+	/**
+	 * {@code bodies} of water with those that face each other across a rock or two in a row (a reef, rocks in a channel)
+	 * made one: the same water, one level. Bodies parted by more rock, by land or by a waterfall stay apart.
+	 */
+	static List<List<Integer>> reefs(int w, int h, MapModel model, List<List<Integer>> bodies) {
+		int n = w * h;
+		int[] body = new int[n];
+		Arrays.fill(body, -1);
+		for (int b = 0; b < bodies.size(); b++) {
+			for (int c : bodies.get(b)) {
+				body[c] = b;
+			}
+		}
+		int[] parent = new int[bodies.size()];
+		for (int b = 0; b < parent.length; b++) {
+			parent[b] = b;
+		}
+		for (int c = 0; c < n; c++) {
+			if (body[c] < 0) {
+				continue;
+			}
+			for (Dir dir : Dir.values()) {
+				int x = c % w;
+				int y = c / w;
+				for (int step = 1; step <= 3; step++) {
+					x += dir.dx();
+					y += dir.dy();
+					if (x < 0 || y < 0 || x >= w || y >= h) {
+						break;
+					}
+					int j = y * w + x;
+					if (body[j] >= 0) {
+						if (step > 1) {
+							int a = root(parent, body[c]);
+							int b = root(parent, body[j]);
+							parent[Math.max(a, b)] = Math.min(a, b);
+						}
+						break;
+					}
+					if (!solid(model.kind(x, y))) {
+						break;
+					}
+				}
+			}
+		}
+		Map<Integer, List<Integer>> merged = new TreeMap<>();
+		for (int b = 0; b < bodies.size(); b++) {
+			merged.computeIfAbsent(root(parent, b), k -> new ArrayList<>()).addAll(bodies.get(b));
+		}
+		return new ArrayList<>(merged.values());
+	}
+
+	private static int root(int[] parent, int b) {
+		while (parent[b] != b) {
+			parent[b] = parent[parent[b]];
+			b = parent[b];
+		}
+		return b;
+	}
+
+	/**
+	 * The groups of fewer than {@link #POCKET} standable cells (4-connected, no ramp among them) whose every neighbour outside
+	 * the group is no standable cell.
+	 */
+	static List<int[]> pockets(int w, int h, boolean[] standable, Map<Integer, MapLayout.Ramp> rampAt) {
+		List<int[]> out = new ArrayList<>();
+		boolean[] seen = new boolean[w * h];
+		for (int s = 0; s < w * h; s++) {
+			if (!standable[s] || seen[s] || rampAt.containsKey(s)) {
+				continue;
+			}
+			List<Integer> part = flood(w, h, s, (a, b) -> standable[b] && !seen[b] && !rampAt.containsKey(b));
+			for (int c : part) {
+				seen[c] = true;
+			}
+			if (part.size() >= POCKET) {
+				continue;
+			}
+			boolean enclosed = true;
+			for (int c : part) {
+				for (Dir dir : Dir.values()) {
+					int nx = c % w + dir.dx();
+					int ny = c / w + dir.dy();
+					if (nx >= 0 && ny >= 0 && nx < w && ny < h && standable[ny * w + nx] && !part.contains(ny * w + nx)) {
+						enclosed = false;
+					}
+				}
+			}
+			if (enclosed) {
+				out.add(part.stream().mapToInt(Integer::intValue).toArray());
+			}
+		}
+		return out;
 	}
 
 	/** A ground or ledge cell: where a level key lives. */

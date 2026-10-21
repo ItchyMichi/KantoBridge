@@ -7,6 +7,7 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import dev.kantobridge.builder.export.CellFlags;
 import dev.kantobridge.builder.export.ExportMap;
 import dev.kantobridge.builder.export.ExportTileset;
+import dev.kantobridge.builder.export.G3Map;
 import dev.kantobridge.world.Dir;
 import dev.kantobridge.world.MapLayout;
 import java.util.Arrays;
@@ -582,6 +583,120 @@ class RaisedRegionsTest {
 		assertEquals(6, layout.level(3, 2), "rock by the plateau stands on it");
 		assertEquals(0, layout.level(4, 4), "rock by the floor stands on the floor");
 		assertEquals(0, layout.level(3, 3), "between the two, equally near: the lower (a face on the floor in front of it)");
+	}
+
+	@Test
+	void outdoorsTheSeaByACliffStandsAtTheSea() {
+		// two bodies of sea reach the map's edge: one with a beach (the floor), one washing only against a plateau a slope
+		// climbs to (Mossdeep's north-east): it stands at the sea, not on the plateau
+		String[] rows = {
+				"~~#~~~~~",
+				"~~#.....",
+				"~.##.###",
+				"~....###",
+				"~....###",
+				"########"};
+		String[] keys = {
+				"########",
+				"###44444",
+				"#3##^###",
+				"#3333###",
+				"#3333###",
+				"########"};
+		RaisedRegions.Result result = outdoor(rows, keys, true, true, null);
+		MapLayout layout = result.layout();
+		assertNotNull(layout, result.outcome());
+		assertEquals(3, layout.level(5, 1), "the plateau, a slope's cell up");
+		assertEquals(0, layout.level(5, 0), "the sea under its cliff");
+		assertEquals(0, layout.level(0, 2), "the sea by the beach");
+		assertEquals(0, layout.level(1, 3), "the beach");
+		assertEquals(0, result.skipped());
+	}
+
+	@Test
+	void outdoorsWaterBehindAReefIsTheSea() {
+		// a lagoon behind a row of rock, a plateau its only bank (Route 118's inlet behind its reef): the same water as the
+		// sea, level with the sea's beach, not with the plateau
+		String[] rows = {
+				"~~~~~#",
+				"####.#",
+				"#~~#.#",
+				"#..#.#",
+				"#.##.#",
+				"#....#",
+				"######",
+				"######"};
+		String[] keys = {
+				"######",
+				"####3#",
+				"####3#",
+				"#44#3#",
+				"#^##3#",
+				"#3333#",
+				"######",
+				"######"};
+		RaisedRegions.Result result = outdoor(rows, keys, true, true, null);
+		MapLayout layout = result.layout();
+		assertNotNull(layout, result.outcome());
+		assertEquals(3, layout.level(1, 3), "the plateau, a slope's cell up");
+		assertEquals(0, layout.level(2, 0), "the sea, level with its beach");
+		assertEquals(0, layout.level(1, 2), "the lagoon: the sea's level");
+	}
+
+	@Test
+	void outdoorsAPocketStandsWithTheGroundNearestIt() {
+		// a cell nothing walkable touches, behind a cell of rock north of a plateau (Mossdeep's cell under the big tree): the
+		// face's vote would lift it a cell over the plateau; it stands as the ground nearest it (on a tie the lower)
+		String[] rows = {
+				"########",
+				"#.#.####",
+				"#.######",
+				"#.#....#",
+				"#.#....#",
+				"#.##.###",
+				"#......#",
+				"########"};
+		String[] keys = {
+				"########",
+				"#3#5####",
+				"#3######",
+				"#3#5555#",
+				"#3#5555#",
+				"#3##^###",
+				"#333333#",
+				"########"};
+		RaisedRegions.Result result = outdoor(rows, keys, true, true, null);
+		MapLayout layout = result.layout();
+		assertNotNull(layout, result.outcome());
+		assertEquals(3, layout.level(4, 3), "the plateau, a slope's cell up");
+		assertEquals(0, layout.level(3, 1), "the pocket: the floor and the plateau equally near, the lower");
+	}
+
+	@Test
+	void outdoorsAFloorOnTheWatersSurfaceIsNoGround() {
+		// Mossdeep's launch tower: cells drawn over the sea that the engine calls floor, on the water's elevation
+		String[] rows = {
+				"~~~~",
+				"~..~",
+				"....",
+				"####"};
+		MapModel model = model(rows);
+		int[] elev = {
+				0, 0, 0, 0,
+				0, 1, 1, 0,
+				3, 3, 3, 3,
+				0, 0, 0, 0};
+		int[] key = {
+				-1, -1, -1, -1,
+				-1, 1, 1, -1,
+				3, 3, 3, 3,
+				-1, -1, -1, -1};
+		G3Map map = new G3Map("SEA", 4, 4, 4, 4, "P", new int[16], new int[16], elev, new G3Map.Border(1, 1, new int[] {0}), List.of(),
+				List.of(), List.of(), 3, "route", 0, 0);
+		RaisedRegions.Input in = RaisedRegions.surfaceAside(new RaisedRegions.Input(model, key, new boolean[16], new boolean[16], 3), map);
+		assertEquals(-1, in.key()[5], "no region: it stands as the ground or water nearest it");
+		assertEquals(-1, in.key()[6]);
+		assertEquals(3, in.key()[8], "the shore keeps its elevation");
 	}
 
 	@Test

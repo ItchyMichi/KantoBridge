@@ -3,7 +3,9 @@ package dev.kantobridge.builder.plan;
 import dev.kantobridge.builder.shape.LandscapeModels;
 import dev.kantobridge.world.Dir;
 import dev.kantobridge.world.MapLayout;
+import java.util.ArrayDeque;
 import java.util.Arrays;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.TreeSet;
@@ -55,7 +57,58 @@ public final class OutdoorLevels {
 				warnings.note("outdoor_levels_breaks", levels.breaks().size());
 			}
 		}
-		return rigid(levels.layout(), model, id);
+		List<LandscapeModels.Pin> pins = LandscapeModels.pins(id);
+		if (levels.layout() != null && !pins.isEmpty()) {
+			warnings.note("outdoor_levels_pinned", pins.size());
+		}
+		return rigid(pinned(levels.layout(), model, pins), model, id);
+	}
+
+	/**
+	 * {@code layout} with a review's pins (LEVELS_PIPELINE.md, the review): for each, the ground and water round its cell that
+	 * stand level with it (four-neighbours, no ramp) at its level, then the rock round them on its nearest ground again.
+	 */
+	static @Nullable MapLayout pinned(@Nullable MapLayout layout, MapModel model, List<LandscapeModels.Pin> pins) {
+		if (layout == null || pins.isEmpty()) {
+			return layout;
+		}
+		int w = layout.w();
+		int h = layout.h();
+		int[] levels = new int[w * h];
+		boolean[] standable = new boolean[w * h];
+		Set<Integer> ramps = new HashSet<>();
+		for (MapLayout.Ramp r : layout.ramps()) {
+			ramps.add(r.y() * w + r.x());
+		}
+		for (int i = 0; i < w * h; i++) {
+			levels[i] = layout.level(i % w, i / w);
+			standable[i] = !rock(model.kind(i % w, i / w));
+		}
+		for (LandscapeModels.Pin pin : pins) {
+			if (pin.x() < 0 || pin.y() < 0 || pin.x() >= w || pin.y() >= h || !standable[pin.y() * w + pin.x()]) {
+				continue;
+			}
+			int start = pin.y() * w + pin.x();
+			int was = levels[start];
+			ArrayDeque<Integer> queue = new ArrayDeque<>(List.of(start));
+			boolean[] seen = new boolean[w * h];
+			seen[start] = true;
+			while (!queue.isEmpty()) {
+				int c = queue.poll();
+				levels[c] = pin.level();
+				for (Dir dir : Dir.values()) {
+					int nx = c % w + dir.dx();
+					int ny = c / w + dir.dy();
+					int j = ny * w + nx;
+					if (nx >= 0 && ny >= 0 && nx < w && ny < h && !seen[j] && standable[j] && levels[j] == was && !ramps.contains(j)) {
+						seen[j] = true;
+						queue.add(j);
+					}
+				}
+			}
+		}
+		RaisedRegions.nearestLevels(w, h, standable, levels);
+		return MapLayout.flat(w, h, levels, List.copyOf(layout.ramps()));
 	}
 
 	/**

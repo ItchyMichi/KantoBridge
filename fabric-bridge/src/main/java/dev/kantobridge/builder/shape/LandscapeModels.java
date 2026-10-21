@@ -31,8 +31,10 @@ import org.jetbrains.annotations.Nullable;
  *           (the grid's tiles it takes: its cells', a door's), "spec": a parts spec in the grid's pixels with its
  *           footprint ("keep", "doors", "doorClear"), "height", "quadCap" and "roofRows", "trees" (optional: a model of
  *           trees, each standing on its own ground)}]},
- *  "slopes": {"&lt;map&gt;": [[x, y, "up"|"down"|"left"|"right"], ...]}} (optional: the slopes and stairs its marks name, map
+ *  "slopes": {"&lt;map&gt;": [[x, y, "up"|"down"|"left"|"right"], ...]}, (optional: the slopes and stairs its marks name, map
  *           cells and their way up; a map listed with none had its drawing checked and has none)
+ *  "pins":   {"&lt;map&gt;": [[x, y, level], ...]}} (optional: a review's corrections, docs/specs/LEVELS_PIPELINE.md: the ground
+ *           round each cell, as far as it stands level with it, at that level, blocks over the map's floor)
  * </pre>
  */
 public final class LandscapeModels {
@@ -47,11 +49,16 @@ public final class LandscapeModels {
 	}
 
 	/** A cell of a slope or stairs the marks name, and its way up. */
+	/** A review's correction: the ground round cell (x, y), as far as it stands level with it, at {@code level} blocks. */
+	public record Pin(int x, int y, int level) {
+	}
+
 	record Slope(int x, int y, Dir climb) {
 	}
 
 	private static @Nullable Map<String, List<Model>> table;
 	private static @Nullable Map<String, List<Slope>> slopeTable;
+	private static @Nullable Map<String, List<Pin>> pinTable;
 	private static boolean loaded;
 
 	private LandscapeModels() {
@@ -112,12 +119,50 @@ public final class LandscapeModels {
 					String json = Files.readString(Path.of(path), StandardCharsets.UTF_8);
 					table = parse(json);
 					slopeTable = parseSlopes(json);
+					pinTable = parsePins(json);
 				} catch (IOException e) {
 					throw new IllegalStateException("landscape models: can't read " + path, e);
 				}
 			}
 		}
 		return table;
+	}
+
+	/** The pins a review set on map {@code id} (none without a table or a review). */
+	public static List<Pin> pins(String id) {
+		current();
+		Map<String, List<Pin>> t = pinTable;
+		return t == null ? List.of() : t.getOrDefault(id, List.of());
+	}
+
+	/** Sets the pins (tests), returning the ones before. */
+	static synchronized @Nullable Map<String, List<Pin>> usePins(@Nullable Map<String, List<Pin>> next) {
+		current();
+		Map<String, List<Pin>> before = pinTable;
+		pinTable = next;
+		return before;
+	}
+
+	/** A table's pins from its JSON (see the class comment); none when it has no "pins". */
+	static Map<String, List<Pin>> parsePins(String json) {
+		JsonObject root = JsonParser.parseString(json).getAsJsonObject();
+		if (!root.has("pins")) {
+			return Map.of();
+		}
+		Map<String, List<Pin>> out = new TreeMap<>();
+		for (Map.Entry<String, JsonElement> e : root.getAsJsonObject("pins").entrySet()) {
+			List<Pin> pins = new ArrayList<>();
+			for (JsonElement el : e.getValue().getAsJsonArray()) {
+				JsonArray a = el.getAsJsonArray();
+				int level = a.get(2).getAsInt();
+				if (level < 0 || level > dev.kantobridge.world.MapLayout.MAX_LEVEL) {
+					throw new IllegalArgumentException("landscape models: pin " + a + " on " + e.getKey() + " is out of range");
+				}
+				pins.add(new Pin(a.get(0).getAsInt(), a.get(1).getAsInt(), level));
+			}
+			out.put(e.getKey(), List.copyOf(pins));
+		}
+		return Map.copyOf(out);
 	}
 
 	/** Sets the slopes (tests), returning the ones before. */

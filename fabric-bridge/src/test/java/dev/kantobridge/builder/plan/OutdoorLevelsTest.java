@@ -68,4 +68,25 @@ class OutdoorLevelsTest {
 		assertEquals(Dir.UP, FloorKinds.table("emerald").get("general/175"));
 		assertEquals(Dir.UP, FloorKinds.table("emerald").get("general/207"));
 	}
+
+	@Test
+	void aPinMovesTheGroundLevelWithItsCell() {
+		// two strips of ground at 0 and 3 a row of rock apart; a review pins the upper strip at 6
+		MapModel model = RaisedRegionsTest.model(
+				"....",
+				"####",
+				"....",
+				"####");
+		MapLayout solved = MapLayout.flat(4, 4, new int[] {
+				3, 3, 3, 3,
+				0, 0, 0, 0,
+				0, 0, 0, 0,
+				0, 0, 0, 0}, List.of());
+		MapLayout pinned = OutdoorLevels.pinned(solved, model, List.of(new dev.kantobridge.builder.shape.LandscapeModels.Pin(2, 0, 6)));
+		assertEquals(6, pinned.level(0, 0), "the whole strip level with the pinned cell");
+		assertEquals(6, pinned.level(3, 0));
+		assertEquals(0, pinned.level(1, 2), "the other strip stays");
+		assertEquals(0, pinned.level(1, 1), "the rock between them on the nearer, lower ground");
+		assertSame(solved, OutdoorLevels.pinned(solved, model, List.of()), "no pins: the solve as it was");
+	}
 }

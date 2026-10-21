@@ -18,7 +18,9 @@ import org.junit.jupiter.api.condition.EnabledIfSystemProperty;
  * The levels pilot's levels (HEIGHTS_ALL_GAMES_PLAN.md D4, LANDSCAPE_SECTIONS_PLAN.md), pod only: a game's world planned
  * with {@code kantobridge.outdoorLevels} naming outdoor maps (-Pkb.outdoorLevels), and for each named map its level per
  * cell (blocks over the map's floor) and its ramps, with the planner's outdoor notes. Map ids, cells and numbers only.
- * -Pkb.outdoorDump="&lt;game&gt;;&lt;bundle&gt;;&lt;out dir&gt;".
+ * -Pkb.outdoorDump="&lt;game&gt;;&lt;bundle&gt;;&lt;out dir&gt;[;all]": with "all", every outdoor map (on the surface or under
+ * the open sky) is dumped, those not named with the levels the solver gives them, and placements_&lt;game&gt;.json says where
+ * each stands in the world (the seams between maps, LEVELS_PIPELINE.md).
  */
 @EnabledIfSystemProperty(named = "kb.outdoorDump", matches = ".+")
 class OutdoorLevelsDumpTest {
@@ -28,6 +30,7 @@ class OutdoorLevelsDumpTest {
 		String game = p[0];
 		ExportBundle bundle = ExportBundle.open(Path.of(p[1]));
 		Path out = Path.of(p[2]);
+		boolean all = p.length > 3 && "all".equals(p[3]);
 		Files.createDirectories(out);
 		WorldPlanner.Options options = new WorldPlanner.Options(null, 0, 0, dev.kantobridge.builder.TestData.MIN_BUILD_HEIGHT, true);
 		WorldPlan plan = switch (game) {
@@ -92,18 +95,19 @@ class OutdoorLevelsDumpTest {
 				}
 			}
 		}
+		JsonArray placements = new JsonArray();
 		for (PlacedMap map : plan.maps()) {
-			if (!named.contains(map.id())) {
+			var pl = map.placement();
+			boolean outdoor = pl.kind() == dev.kantobridge.world.MapPlacement.Kind.SURFACE || WorldPlan.openSky(pl);
+			if (!named.contains(map.id()) && !(all && outdoor)) {
 				continue;
 			}
 			JsonObject o = new JsonObject();
 			o.addProperty("map", map.id());
-			MapLayout layout = map.layout();
 			int w = map.model().cellWidth();
 			int h = map.model().cellHeight();
 			o.addProperty("w", w);
 			o.addProperty("h", h);
-			o.addProperty("raised", layout != null);
 			// the solver's own account (as the planner ran it): its outcome, the rules it skipped and the cells at the edges they
 			// leave unwalkable
 			dev.kantobridge.builder.export.G3Map g3 = g3maps.get(map.id());
@@ -113,6 +117,20 @@ class OutdoorLevelsDumpTest {
 			RaisedRegions.Result result = g3 != null
 					? RaisedRegions.gen3Outdoor(map.model(), g3, slopes, RaisedRegions.gen3Falls(map.model(), g3, g3tiles))
 					: RaisedRegions.outdoor(map.model(), map.edges(), slopes);
+			// a named map's levels as the planner placed them; another's as the solver gives them
+			MapLayout layout = named.contains(map.id()) ? map.layout() : result.layout();
+			o.addProperty("raised", layout != null);
+			JsonObject at = new JsonObject();
+			at.addProperty("map", map.id());
+			at.addProperty("x", pl.x());
+			at.addProperty("y", pl.y());
+			at.addProperty("z", pl.z());
+			at.addProperty("bw", pl.blockWidth());
+			at.addProperty("bd", pl.blockDepth());
+			at.addProperty("w", w);
+			at.addProperty("h", h);
+			at.addProperty("sky", pl.kind() != dev.kantobridge.world.MapPlacement.Kind.SURFACE);
+			placements.add(at);
 			o.addProperty("outcome", result.outcome());
 			o.addProperty("marked", slopes != null);
 			o.addProperty("skipped", result.skipped());
@@ -161,6 +179,9 @@ class OutdoorLevelsDumpTest {
 			}
 			o.add("ramps", ramps);
 			Files.writeString(out.resolve(map.id() + ".json"), ProtoJson.write(o), StandardCharsets.UTF_8);
+		}
+		if (all) {
+			Files.writeString(out.resolve("placements_" + game + ".json"), ProtoJson.write(placements), StandardCharsets.UTF_8);
 		}
 	}
 }
