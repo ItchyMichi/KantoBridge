@@ -1205,10 +1205,16 @@ for the rest" (plan §8). Feature tests per phase, the full suite at the checkpo
      original game beside Minecraft at seven spots, `context_shots.py --pitch`, sent to you): the first build read a
      cliff body under its rim, a facade under its roof and a tree line under its crowns as faces as tall as drawn, and
      then (your first choice) stacked every face of fitted cell models, each model lifted to its own rows. The pictures
-     showed tree lines whose tiles Crystal and Emerald don't mark as foliage as tall flat walls of tree art (Route 26,
-     Route 119), lines of boulders and rocks as towers and pillars (Route 23, Blackthorn) and rock fields as terraces
-     (Rock Tunnel). You chose to narrow it: a run read as a repeat stays one, and a run with a cell holding a fitted model
-     in use stands as it stood, so every fitted model and tree line stands as before.
+     showed lines of boulders and rocks as towers and pillars (Route 23, Blackthorn), rock fields as terraces (Rock
+     Tunnel) and tall flat walls of tree art (Route 26, Route 119). You chose to narrow it: a run read as a repeat stays
+     one, and a run with a cell holding a fitted model in use stands as it stood, so every fitted model and repeat-read
+     tree line stands as before.
+   - **The narrowed build's pictures** (same seven spots, sent to you beside the first build): the boulders and the rock
+     line stand on the ground again; the Battle Frontier's rock now rises over the arch, but only in the mouth's own
+     cell column (a block over the arch), and Rock Tunnel's mouth column rises as a narrow tower; Route 127's rock
+     islands are low again (their fitted models at 2 blocks). The tree walls stay: they are tree columns read as plain
+     faces (their tiles don't repeat exactly), which stood 6 blocks before D9 and now 8 or 9. Not satisfactory yet: your
+     suggestion of 2026-10-21 is to mark landscape sections with agents and model them as wholes, as the buildings were.
    - **Cave mouths and wall exits** (a fitted model in use on the cell over a door, the whole cell unroofed before): the
      model is the doorway, the face over it folds no door and rises as drawn, roofless so its models stay in use, and
      `ShapePlanner.stackFaces` lifts each of its models onto the face's own blocks to its own rows. That holds on the
