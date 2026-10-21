@@ -91,3 +91,31 @@ def test_the_tiles_under_the_arrows_name_the_stairs():
     assert found == [{"tile": 9, "arrows": {"up": 2, "left": 1}, "cells": 3, "slopes": 3, "ground": 0},
                      {"tile": 7, "arrows": {"up": 1}, "cells": 3, "slopes": 1, "ground": 2}]
     assert emerald_key("general__fortree", 175) == "general/175" and emerald_key("general__fortree", 600) == "fortree/600"
+
+
+def test_the_maps_chain_at_their_seams_and_a_loop_left_open_shows(tmp_path):
+    import json
+
+    from landscape_sections.seams import chain, load, report, seams
+
+    # four maps of 3 x 3 cells (2 blocks a cell) in a square: A climbs 3 blocks to its east edge's two upper cells, so going
+    # A -> B -> D lifts D by 3 while A -> C -> D doesn't: the loop can't close; B's rock cell on its south edge pairs with
+    # nothing, so B | D has the fewest pairs and is the seam left over
+    levels = {"A": [0, 0, 3, 0, 0, 3, 0, 0, 0], "B": [0] * 9, "C": [0] * 9, "D": [0] * 9}
+    kinds = {"A": "." * 9, "B": ".......#.", "C": "." * 9, "D": "." * 9}
+    at = {"A": (0, 0), "B": (6, 0), "C": (0, 6), "D": (6, 6)}
+    placements = []
+    for m, (x, z) in at.items():
+        placements.append({"map": m, "x": x, "y": 64, "z": z, "bw": 6, "bd": 6, "w": 3, "h": 3, "sky": False})
+        (tmp_path / f"{m}.json").write_text(json.dumps({"w": 3, "h": 3, "kinds": kinds[m], "levels": levels[m]}))
+    (tmp_path / "placements_test.json").write_text(json.dumps(placements))
+    maps = load(str(tmp_path), "test")
+    found = seams(maps)
+    assert sorted(found) == [("A", "B"), ("A", "C"), ("B", "D"), ("C", "D")]
+    assert sorted(d for d, _, _, _ in found[("A", "B")]) == [-3, -3, 0] and len(found[("B", "D")]) == 2, "rock meets nothing"
+    bases, tree = chain(maps, found)
+    assert tree == [("A", "B"), ("A", "C"), ("C", "D")], "the seams with the most pairs first"
+    assert bases == {"A": 0, "B": 3, "C": 0, "D": 0}
+    rows = {(r["a"], r["b"]): r for r in report(maps, found, bases, tree)}
+    assert rows[("B", "D")]["loop"] and rows[("B", "D")]["chained"] == {-3: 2}, "the loop is 3 blocks open at B | D"
+    assert rows[("A", "B")]["chained"] == {0: 2, 3: 1}, "A's lower east cell still steps"

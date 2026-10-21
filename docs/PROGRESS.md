@@ -1239,6 +1239,12 @@ for the rest" (plan §8). Feature tests per phase, the full suite at the checkpo
      the table's cells. A modelling agent raised Route 119's two cliff models to meet the grass above them (6 blocks).
      Commits e546590, 82ca766, ffd32e0, d110368 (local). JUnit (plan, shape, block) 435; the pod-only
      `OutdoorLevelsDumpTest` renders every chunk of the named maps.
+   - **The levels pipeline** (your ask, 2026-10-21: "make sure the process is documented in the pipeline"): the steps,
+     units and each game's inputs in [specs/LEVELS_PIPELINE.md](specs/LEVELS_PIPELINE.md), linked from the three games'
+     production pipelines; the pilot's helpers in `tools/landscape_sections` (`compare_marks.py`, `stair_tiles.py`,
+     `levels_sheets.py`, `pod/`). Open: the seams between maps (the check `tools/landscape_sections/seams.py` is ready:
+     every outdoor map's levels and place in the world, each seam's step today, the bases a chain from map to map would
+     give and the loops it can't close; it waits for a pod run) and Crystal's and Blue's stairs.
    - (The note's JUnit count, 1,379, counted two temporary probes since moved out: the suite holds 1,377.)
    - **Cave mouths and wall exits** (a fitted model in use on the cell over a door, the whole cell unroofed before): the
      model is the doorway, the face over it folds no door and rises as drawn, roofless so its models stay in use, and
