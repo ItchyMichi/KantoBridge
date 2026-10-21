@@ -260,6 +260,7 @@ def scene(models, draw, path_json, path_view, path_game, title):
     block."""
     D, W = draw.shape[0], draw.shape[1]
     H = max([m[0].shape[0] for m in models] + [8])
+    H += H % 2  # an even height, so the half resolution pairs every layer
     occ = np.zeros((H + 2, D, W), bool)
     col = np.zeros((H + 2, D, W, 3), np.uint8)
     occ[:2] = True
