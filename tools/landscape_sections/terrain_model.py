@@ -33,7 +33,8 @@ from pathlib import Path
 import numpy as np
 from PIL import Image, ImageDraw
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "shape_fit"))
+# Emerald's copy: the one the game's PartsBuilding matches (sides and backs repeat their art at its own scale)
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "shape_fit" / "emerald"))
 from parts_model import FACES, arc, bounds, inside, pick, profile_of, radii  # noqa: E402
 
 # A door's cell keeps this many voxels of headroom (3 blocks): a cave mouth's arch may reach over it above that.
@@ -150,14 +151,14 @@ def build(parts: list[dict], draw: np.ndarray, H: int, allowed: np.ndarray, door
         elif face == "up" and paint.get("top"):
             r, c = pick(paint["top"], across, (zz + 0.5 - bz0) / max(1e-6, bz1 - bz0), draw)
         elif face in ("east", "west"):
-            side = paint.get("side")
-            if side:
-                r, c = pick(side, (zz + 0.5 - bz0) / max(1e-6, bz1 - bz0), down, draw)
-            else:
-                r, c = pick(front, 0.02 if face == "west" else 0.98, down, draw)
+            # as the game's PartsBuilding: the side's rectangle (else the front's) repeated along it at its own scale
+            side = paint.get("side") or front
+            sw = max(1, int(side[2] - side[0]))
+            r, c = pick(side, ((zz - int(bz0)) % sw + 0.5) / sw, down, draw)
         elif face == "north":
-            back = paint.get("back") or paint.get("side")
-            r, c = pick(back, 1 - across, down, draw) if back else pick(front, 0.5, down, draw)
+            back = paint.get("back") or paint.get("side") or front
+            bw = max(1, int(back[2] - back[0]))
+            r, c = pick(back, ((int(bx1) - 1 - xx) % bw + 0.5) / bw, down, draw)
         else:
             r, c = pick(front, across, down, draw)
         col[yy, zz, xx] = draw[r, c]
