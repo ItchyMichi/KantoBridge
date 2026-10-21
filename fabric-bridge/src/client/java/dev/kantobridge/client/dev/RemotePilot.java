@@ -97,8 +97,9 @@ import org.lwjgl.glfw.GLFW;
  * that script.
  *
  * <ul>
- * <li>From the title screen, once the link of {@code kantobridge.autopilot.follow}'s game (any link when unset) is
- * connected, it opens the world {@code kantobridge.autopilot.world}; with {@code kantobridge.autopilot.server}
+ * <li>From the title screen, once the link of {@code kantobridge.autopilot.follow}'s game (any link when unset; none
+ * with {@code none}, a frame-rate test's) is connected, it opens the world {@code kantobridge.autopilot.world}; with
+ * {@code kantobridge.autopilot.server}
  * ({@code host:port}) it joins that server instead (a second player in a multiplayer check).</li>
  * <li><b>Commands</b>: JSON lines appended to {@code <pilotDir>/commands.jsonl}, each {@code {id, op, ...}}, run in
  * order. {@code key} (a, b, start, select, up, down, left, right: into the open screen, else in the world; {@code hold}
@@ -252,9 +253,11 @@ final class RemotePilot {
 		if (this.phaseTicks == 1) {
 			this.options();
 		}
+		// "none" (a frame-rate test, no game): the world opens without a link
+		boolean free = "none".equals(this.follow);
 		Links links = Links.get();
-		BridgeLink link = links == null ? null : this.follow == null ? links.followed() : links.byGame(this.follow);
-		this.stableTicks = link != null && link.connected() ? this.stableTicks + 1 : 0;
+		BridgeLink link = free || links == null ? null : this.follow == null ? links.followed() : links.byGame(this.follow);
+		this.stableTicks = free || link != null && link.connected() ? this.stableTicks + 1 : 0;
 		if (this.stableTicks < 2 * TICKS) {
 			return;
 		}

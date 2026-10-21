@@ -4,8 +4,9 @@
 
 <spots.json>: {"<name>": {"region": "kanto", "map": "ROUTE_23", "x": 9, "y": 51, "yaw": 180, "pitch": -20}, ...}: a
 map cell (the camera stands on it) in a region of the world; yaw 180 looks north. Per render distance, per spot, the
-dev client (RemotePilot: "render", "tp", "wait", "measure") stands there, lets the view settle, then meshstats times a
-full re-mesh and 30 s of frames (mean and 1% low frame rate, heap). The runs go to --out: numbers only.
+dev client (RemotePilot, following no game: "render", "tp", "wait", "measure") stands there and lets the view settle,
+then meshstats times a full re-mesh and 30 s of frames (mean and 1% low frame rate, heap). The runs go to --out:
+numbers only.
 
 The client runs on DISPLAY, which must render on the GPU for the numbers to mean anything (a pod's Xvfb renders in
 software: run the whole script under VirtualGL, `vglrun -d egl`, on a GPU pod). No game is linked: the client only
@@ -50,7 +51,8 @@ def main(argv=None) -> int:
     ap.add_argument("--world", required=True)
     ap.add_argument("--spots", required=True)
     ap.add_argument("--distances", default="16,32")
-    ap.add_argument("--settle", type=float, default=10.0, help="seconds the view settles before a measurement")
+    ap.add_argument("--settle", type=float, default=30.0,
+                    help="seconds the view settles before a measurement (a region's shape table builds on its first visit)")
     ap.add_argument("--out", default=str(REPO / "local" / "reports" / "frame_rate.json"))
     args = ap.parse_args(argv)
     spots = json.loads(Path(args.spots).read_text(encoding="utf-8"))
@@ -65,7 +67,7 @@ def main(argv=None) -> int:
     java_home = os.environ.get("KB_JAVA_HOME") or os.environ.get("JAVA_HOME") or "/opt/java/openjdk"
     client = subprocess.Popen(["./gradlew", "--no-daemon", "--console=plain", "runClient", "-Pkb.autopilot=remote",
                                f"-Pkb.autopilotWorld={world}", f"-Pkb.autopilotPilotDir={PILOT_DIR}", "-Pkb.autopilotQuit=true",
-                               "-Pkb.meshstats=true"],
+                               "-Pkb.autopilotFollow=none", "-Pkb.meshstats=true"],
                               cwd=GRADLE_DIR, env=dict(os.environ, JAVA_HOME=java_home), stdin=subprocess.DEVNULL,
                               stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
     threading.Thread(target=stream, args=(client, PILOT_DIR / "client.log"), daemon=True).start()
