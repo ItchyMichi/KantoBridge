@@ -1058,7 +1058,7 @@ for the rest" (plan §8). Feature tests per phase, the full suite at the checkpo
 | W2 | One 3D planner for every game | **done** (note 3) | 2026-10-20 | `W2: one 3D planner` |
 | W3 | Links by kind, pilots | **core done** (note 4); videos with W4's pilots | 2026-10-21 | `W3: real ladders and holes in Johto and Hoenn` |
 | W4 | Raised ground in caves | **done** (notes 5, 7): Emerald from its elevations, Crystal from its walls and drawn stairs; pictures with W8 | 2026-10-21 | `W4: raised ground in Emerald's caves`, `W4: raised ground in Crystal's caves` |
-| W5 | Interiors: depth, headroom, the deeper world | **ceilings and the deeper world done** (note 6); levels in rooms on layers next | 2026-10-21 | `W5: rooms as tall as their drawing, a deeper world` |
+| W5 | Interiors: depth, headroom, the deeper world | **done** (notes 6, 8); pictures with W8 | 2026-10-21 | `W5: rooms as tall as their drawing, a deeper world`, `W5: raised floors in rooms on layers` |
 | W6 | Outdoors | | | |
 | W7 | Blue's audit built | | | |
 | W8 | Every region rebuilt | | | |
@@ -1185,6 +1185,15 @@ for the rest" (plan §8). Feature tests per phase, the full suite at the checkpo
    - **Real dry runs (all three, after W5):** Emerald 7 caves raised as estimated (Altering Cave, Meteor Falls B1F 1R,
      Mirage Tower 4F, Shoal Cave's high-tide rooms and low-tide ice room, Cave of Origin B1F), 5 waiting for bridges;
      Kanto's 12 raised caves unchanged; 17, 36 and 61 shafts; no new warning.
+
+8. **W5, raised floors in rooms on layers** (D5's "levels from the same sources"). Emerald's rooms use `RaisedRegions`
+   with a room's rules: a stair is cut through a wall (solid on both its sides); cells joining two elevations that are no
+   such stair are the engine's drawing order, not a step (Brendan's and May's bedroom seats, Wanda's and Devon's chairs,
+   the Contest Hall's), and join one height; no faces; a warp cell joins any level (a Pokémon Centre's escalator cell is
+   elevation 4 and leads up nothing). Real dry run: the Aqua Hideout 1F and the Battle Pyramid's top raised 2 blocks (11
+   blocks of room each, the most a layer holds), 9 rooms of one height, 318 of one elevation. Crystal's and Kanto's rooms
+   have no data for it (their raised rooms are W7's list and the drawing labels). Emerald's Safari Zone and Sootopolis are
+   outdoor maps under the sky: W6.
 
 ## Wild Routes
 

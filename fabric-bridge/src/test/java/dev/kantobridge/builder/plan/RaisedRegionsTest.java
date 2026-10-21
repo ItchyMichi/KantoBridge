@@ -255,7 +255,7 @@ class RaisedRegionsTest {
 			walls.add(new int[] {x, 4, x, 5});
 		}
 		RaisedRegions.Result result = RaisedRegions.solve(new RaisedRegions.Input(model, key, new boolean[n], new boolean[n], -1, climb,
-				PairEdges.walls(model, walls), true, 1, false));
+				PairEdges.walls(model, walls), true, 1, false, false));
 		assertEquals("raised", result.outcome());
 		MapLayout layout = result.layout();
 		assertEquals(List.of(2, 0, 2), List.of(layout.level(1, 1), layout.level(1, 3), layout.level(1, 5)));
@@ -263,8 +263,49 @@ class RaisedRegionsTest {
 		assertEquals(0, layout.level(3, 2));
 		// the same walls without the rise (a building's): they keep the areas apart, nothing stands on them
 		RaisedRegions.Result building = RaisedRegions.solve(new RaisedRegions.Input(model, key, new boolean[n], new boolean[n], -1, climb,
-				PairEdges.walls(model, walls), false, 1, false));
+				PairEdges.walls(model, walls), false, 1, false, false));
 		assertEquals(0, building.layout().level(1, 5));
+	}
+
+	/** The same as {@link #solve} with a room's rules (D5: a room on a layer). */
+	private static RaisedRegions.Result room(String[] rows, String[] keys) {
+		RaisedRegions.Result asCave = solve(rows, keys);
+		MapModel model = model(rows);
+		int w = rows[0].length();
+		int n = w * rows.length;
+		int[] key = new int[n];
+		boolean[] joins = new boolean[n];
+		java.util.Arrays.fill(key, -1);
+		for (int i = 0; i < n; i++) {
+			char c = keys[i / w].charAt(i % w);
+			if (c == '0') {
+				joins[i] = true;
+			} else if (Character.isDigit(c)) {
+				key[i] = c - '0';
+			}
+		}
+		assertNotNull(asCave);
+		return RaisedRegions.solve(new RaisedRegions.Input(model, key, joins, new boolean[n], 3, null, null, false, 0, true, true));
+	}
+
+	@Test
+	void aRoomsSeatIsNoPlatformButAStageIs() {
+		// A seat (elevation 4) a cell joining any level leads to across open floor: the engine's drawing order, not a step
+		String[] floor = {
+				"######",
+				"#....#",
+				"#....#",
+				"######"};
+		assertEquals("flat_one_height", room(floor, new String[] {"######", "#3043#", "#3333#", "######"}).outcome());
+		// a stage up a stair cut through its front: raised
+		String[] stage = {
+				"######",
+				"#....#",
+				"##.###",
+				"#....#"};
+		RaisedRegions.Result raised = room(stage, new String[] {"######", "#4444#", "##0###", "#3333#"});
+		assertEquals("raised", raised.outcome());
+		assertEquals(2, raised.layout().level(1, 1));
 	}
 
 	@Test

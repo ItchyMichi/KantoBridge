@@ -256,6 +256,12 @@ final class Gen3Planner {
 			// under its ceilings (D5), its drawing stopping at the true map's edge
 			List<MapLayout.Piece> pieces = caveArea.pieces().get(map.id());
 			MapLayout rooms = pieces == null ? raised.get(map.id()) : WorldPlanner.withPieces(model, pieces, raised.get(map.id()));
+			if (interior && !area3d.contains(map.id()) && !WorldPlan.openSky(placement)) {
+				// A room on a layer stands on its raised floors too (D5): its elevations, its stairs cut through walls
+				RaisedRegions.Result levels = RaisedRegions.gen3(model, map, true);
+				warnings.note("room_levels_" + levels.outcome(), Warnings.symbols("map", map.id()));
+				rooms = levels.layout();
+			}
 			rooms = WorldPlanner.withCeilings(placement, model, rooms, Headroom.blackFiller(model, artSource, (cx, cy) -> !map.inMap(cx, cy)),
 					Headroom.screenRows(true), !area3d.contains(map.id()), warnings);
 			if (rooms != null) {

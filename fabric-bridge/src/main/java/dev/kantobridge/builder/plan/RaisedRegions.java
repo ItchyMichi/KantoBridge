@@ -84,20 +84,32 @@ public final class RaisedRegions {
 	 * @param maxFace   the longest run of solid cells read as a face
 	 * @param faceKeys  faces count only between regions of different keys (Emerald: a wall between two corridors of one
 	 *                  elevation is no step)
+	 * @param room      a room's rules (D5: a house, a gym on a layer): a stair is cut through a wall (solid on both its sides);
+	 *                  cells joining two keys that are no such stair (a seat a room draws the player over) join them at
+	 *                  one height
 	 */
 	public record Input(MapModel model, int[] key, boolean[] joins, boolean[] bridge, int shore, Dir @Nullable [] climb, @Nullable PairEdges walls,
-			boolean wallsRise, int maxFace, boolean faceKeys) {
+			boolean wallsRise, int maxFace, boolean faceKeys, boolean room) {
 		/** Emerald's: elevations as keys, no walls of their own. */
 		public Input(MapModel model, int[] key, boolean[] joins, boolean[] bridge, int shore) {
-			this(model, key, joins, bridge, shore, null, null, false, MAX_FACE, true);
+			this(model, key, joins, bridge, shore, null, null, false, MAX_FACE, true, false);
 		}
 	}
 
 	private RaisedRegions() {
 	}
 
-	/** Emerald's raised ground: each walkable cell's elevation is its key (0 joins any level, 15 is a bridge). */
+	/** Emerald's raised ground in the 3D area: each walkable cell's elevation is its key (0 joins any level, 15 is a bridge). */
 	public static Result gen3(MapModel model, G3Map map) {
+		return gen3(model, map, false);
+	}
+
+	/**
+	 * The same for any map: {@code room} for a room on a layer (D5), whose stairs are cut through walls and whose other
+	 * changes of elevation are the engine's drawing order, not heights (a seat, a counter's back). A warp cell joins any
+	 * level (an escalator's cell keeps the elevation of the floor it leads to).
+	 */
+	public static Result gen3(MapModel model, G3Map map, boolean room) {
 		int w = model.cellWidth();
 		int h = model.cellHeight();
 		if (w != map.w() || h != map.h()) {
@@ -123,7 +135,14 @@ public final class RaisedRegions {
 				}
 			}
 		}
-		return solve(new Input(model, key, joins, bridge, G3_SHORE));
+		for (G3Map.Warp warp : map.warps()) {
+			int i = warp.y() * w + warp.x();
+			if (warp.x() >= 0 && warp.y() >= 0 && warp.x() < w && warp.y() < h && key[i] >= 0) {
+				key[i] = -1;
+				joins[i] = true;
+			}
+		}
+		return solve(new Input(model, key, joins, bridge, G3_SHORE, null, null, false, room ? 0 : MAX_FACE, true, room));
 	}
 
 	/**
@@ -152,7 +171,7 @@ public final class RaisedRegions {
 			}
 		}
 		// No faces: a wall one cell thick between two corridors of one level (Tin Tower's railings) looks like a cliff's face
-		return solve(new Input(model, key, new boolean[w * h], new boolean[w * h], -1, climb, walls, cave, 0, false));
+		return solve(new Input(model, key, new boolean[w * h], new boolean[w * h], -1, climb, walls, cave, 0, false, false));
 	}
 
 	/** True when the input's walls close the edge between neighbouring cells {@code a} and {@code b}. */
@@ -292,10 +311,25 @@ public final class RaisedRegions {
 				}
 				continue;
 			}
+			Stair stair = keys.size() > 2 ? null : stair(w, part, touches, regionKey, keys.first(), keys.last());
+			if (stair != null && in.room() && !flanked(model, w, h, stair)) {
+				stair = null;
+			}
+			if (stair == null && in.room()) {
+				// no stair: one height (the engine's drawing order, not a step)
+				for (int r : touched.subList(1, touched.size())) {
+					if (!heights.join(touched.get(0), r, 0)) {
+						return Result.flat("flat_levels_disagree", regions);
+					}
+				}
+				for (int c : part) {
+					joinLevelOf[c] = touched.get(0);
+				}
+				continue;
+			}
 			if (keys.size() > 2) {
 				return Result.flat("flat_stairs_three_levels", regions);
 			}
-			Stair stair = stair(w, part, touches, regionKey, keys.first(), keys.last());
 			if (stair == null) {
 				return Result.flat("flat_stairs_shape", regions);
 			}
@@ -491,7 +525,7 @@ public final class RaisedRegions {
 				levels[i] -= low;
 				MapLayout.Ramp ramp = rampAt.get(i);
 				top = Math.max(top, levels[i] + (ramp == null ? 0 : ramp.rise()));
-				raised += region[i] >= 0 && levels[i] > 0 ? 1 : 0;
+				raised += (region[i] >= 0 || joinLevelOf[i] >= 0) && levels[i] > 0 ? 1 : 0;
 			}
 		}
 		if (top > MapLayout.MAX_LEVEL) {
@@ -523,6 +557,28 @@ public final class RaisedRegions {
 		/** A drawn stair's regions at its foot and at its top. */
 		List<Integer> lows = new ArrayList<>();
 		List<Integer> highs = new ArrayList<>();
+	}
+
+	/** True when every cell of a stair has solid cells (or the stair's own) on both sides across its climb: cut through a wall. */
+	private static boolean flanked(MapModel model, int w, int h, Stair stair) {
+		java.util.Set<Integer> own = new java.util.HashSet<>();
+		for (int c : stair.cells) {
+			own.add(c);
+		}
+		Dir[] sides = stair.climb == Dir.UP || stair.climb == Dir.DOWN ? new Dir[] {Dir.LEFT, Dir.RIGHT} : new Dir[] {Dir.UP, Dir.DOWN};
+		for (int c : stair.cells) {
+			for (Dir side : sides) {
+				int nx = c % w + side.dx();
+				int ny = c / w + side.dy();
+				if (nx < 0 || ny < 0 || nx >= w || ny >= h || own.contains(ny * w + nx)) {
+					continue;
+				}
+				if (!solid(model.kind(nx, ny))) {
+					return false;
+				}
+			}
+		}
+		return true;
 	}
 
 	/**
