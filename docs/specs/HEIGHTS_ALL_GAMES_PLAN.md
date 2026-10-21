@@ -177,6 +177,12 @@ floor south of its run of solid cells (a face rises from its lower floor) and th
 stairs of different lengths between one pair of regions, a bridge until the two-floor cells of W6). Of Emerald's 102
 caves, 15 have more than one walkable elevation; Pokémon Centres' single elevation-4 cell is the escalator's.
 
+**Found in W4 for Crystal (2026-10-21):** its two cave floor textures (a light speckle, a dark floor) are not heights
+either (light ground lies on both sides of some stairs). The engine's one-way walls close every edge between levels (the
+higher side south, as Kanto's tile pairs), and its stairs are drawings: three in all of Crystal's caves, named in the
+jar's `floor_kinds/crystal.json` after a review of the 196 walkable drawings. Faces are not used for Crystal (a building's
+railings look like a cliff's face).
+
 ### D3b. Calculated, not estimated (the user's choice, 2026-10-20)
 - The levels and heights are **calculated** from the game data (Emerald's elevation, Blue's tile pairs, ledge
   directions, Crystal's one-way edges) and from the drawings (D3's faces, D8's depth), never estimated map by map: the

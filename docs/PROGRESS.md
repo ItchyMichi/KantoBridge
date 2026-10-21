@@ -1057,7 +1057,7 @@ for the rest" (plan §8). Feature tests per phase, the full suite at the checkpo
 | W1 | Blue audit | **done**: report on kb-hub (note 2) | 2026-10-20 | this commit |
 | W2 | One 3D planner for every game | **done** (note 3) | 2026-10-20 | `W2: one 3D planner` |
 | W3 | Links by kind, pilots | **core done** (note 4); videos with W4's pilots | 2026-10-21 | `W3: real ladders and holes in Johto and Hoenn` |
-| W4 | Raised ground in caves | **Emerald done** (note 5); Crystal next (labels), real dry run when a pod in EU-RO-1 is free | 2026-10-21 | `W4: raised ground in Emerald's caves` |
+| W4 | Raised ground in caves | **done** (notes 5, 7): Emerald from its elevations, Crystal from its walls and drawn stairs; pictures with W8 | 2026-10-21 | `W4: raised ground in Emerald's caves`, `W4: raised ground in Crystal's caves` |
 | W5 | Interiors: depth, headroom, the deeper world | **ceilings and the deeper world done** (note 6); levels in rooms on layers next | 2026-10-21 | `W5: rooms as tall as their drawing, a deeper world` |
 | W6 | Outdoors | | | |
 | W7 | Blue's audit built | | | |
@@ -1167,6 +1167,24 @@ for the rest" (plan §8). Feature tests per phase, the full suite at the checkpo
    - Synthetic worlds: rooms of 4 to 8 blocks, layers at Y 35 and 6, Emerald's cave B1F 14 under 1F; goldens regenerated;
      `HeadroomTest`, `MapLayoutTest.ceilingsRoundTripAndBoundTheMap`, the raised-cave, cave-rock and rendered-column tests
      follow the room; the GameTests' deep overworld is -352.
+
+7. **W4, raised ground in Crystal's caves.** Crystal's data has no heights, and its two floor textures (a light speckle,
+   a dark floor) don't give them either: light ground lies on both sides of some stairs. What does: the engine's one-way
+   walls close every edge between two levels (as Kanto's tile pairs; the higher side south), and the stairs are drawn
+   (steps cut through a boulder face, climbing north). A review of all 196 walkable drawings in Crystal's 78 cave-like
+   maps (contact sheets in kb-hub's work folder) found three stairs drawings, now the jar's `floor_kinds/crystal.json`
+   (tile ids only), read by `FloorKinds`. `RaisedRegions.gen2`: one key for every floor cell, regions closed by the walls,
+   the drawn stairs 2 blocks a cell, in a cave a wall's south side 2 over its north; no faces (Tin Tower's railings look
+   like cliffs: the first run read them so and stacked its floors to 18 blocks).
+   - **Real dry run (Crystal):** 29 cave maps raised, 2 or 4 blocks (Union Cave's three floors, Mt. Mortar's four, Dark
+     Cave, Rock Tunnel, Whirl Islands' eight, Victory Road, Ice Path 1F, Dragon's Den, Mt. Moon, Diglett's Cave, Silver
+     Cave, Tohjo Falls, Burned Tower B1F); buildings flat (20 one height, 28 one level); Silver Cave room 2 and Slowpoke
+     Well B1F and B2F flat for their stairs' shape, Silver Cave room 1 for a ledge. Levels drawn over the renders of
+     Union Cave B1F and Mt. Mortar 1F: the upper ground at 2, the troughs and water at 0, a platform at 4, every stairs
+     climbing into the higher ground.
+   - **Real dry runs (all three, after W5):** Emerald 7 caves raised as estimated (Altering Cave, Meteor Falls B1F 1R,
+     Mirage Tower 4F, Shoal Cave's high-tide rooms and low-tide ice room, Cave of Origin B1F), 5 waiting for bridges;
+     Kanto's 12 raised caves unchanged; 17, 36 and 61 shafts; no new warning.
 
 ## Wild Routes
 

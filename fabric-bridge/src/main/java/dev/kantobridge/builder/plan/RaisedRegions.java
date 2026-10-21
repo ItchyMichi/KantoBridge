@@ -1,5 +1,6 @@
 package dev.kantobridge.builder.plan;
 
+import dev.kantobridge.block.EdgeWallBlock;
 import dev.kantobridge.builder.export.CellFlags;
 import dev.kantobridge.builder.export.G3Map;
 import dev.kantobridge.world.Dir;
@@ -17,18 +18,21 @@ import org.jetbrains.annotations.Nullable;
 
 /**
  * Raised ground from the regions a game's data draws (docs/specs/HEIGHTS_ALL_GAMES_PLAN.md D3, W4), for the maps of the
- * 3D area. A region is the floor cells of one level key that touch (Emerald: one elevation). The heights come from the
- * stairs between regions, never from the keys themselves: Emerald's Victory Road climbs five tiers with two elevations.
+ * 3D area. A region is the floor cells of one level key that touch, where the engine lets a player walk (Emerald: one
+ * elevation; Crystal: any floor, its one-way walls closing the edges between levels). The heights come from the stairs
+ * between regions, never from the keys themselves: Emerald's Victory Road climbs five tiers with two elevations.
  *
  * <ol>
  * <li>Cells that join any level (Emerald's elevation 0) and touch regions of one key are that level. Touching two keys,
  * a straight strip whose ends meet them is a stair: each of its cells a ramp climbing {@link #STAIR_RISE} blocks (a
- * stair cuts through the face, a cell of face per cell of stairs), the higher key's side at its top.</li>
+ * stair cuts through the face, a cell of face per cell of stairs), the higher key's side at its top. Stairs a drawing
+ * names ({@link FloorKinds}: Crystal's) climb the way it says.</li>
  * <li>Water stands as high as the regions of the shore key it touches (Emerald: elevation 3, the only one surfing stops
  * onto).</li>
  * <li>Regions no stairs join to the rest: a short face (up to {@link #MAX_FACE} solid cells straight between two regions
- * of different keys) sets the northern one two blocks a cell over the southern one; else a region takes the height its
- * key has most elsewhere in the map; else the map's floor level.</li>
+ * of different keys) sets the northern one two blocks a cell over the southern one, and where walls are a step (Crystal's
+ * caves, as Kanto's tile pairs) the region south of a wall stands two over the one north of it; else a region takes the
+ * height its key has most elsewhere in the map; else the map's floor level.</li>
  * <li>Rock stands on the floor it is seen from, the one south of its run of solid cells (a face rises from its lower
  * floor); under a raised cell the builder fills rock down to the map's floor level, as for {@link CaveLevels}.</li>
  * <li>The check (as {@link CaveLevels}'): Minecraft must allow exactly the steps the engine allows between neighbouring
@@ -70,12 +74,23 @@ public final class RaisedRegions {
 	/**
 	 * A map's cells as the solver reads them.
 	 *
-	 * @param key    per cell, row by row: a floor cell's level key (ground or ledge), -1 for any other cell
-	 * @param joins  per cell: a floor cell that joins any level (Emerald's elevation 0); its key is -1
-	 * @param bridge per cell: a floor cell that is two floors at once (Emerald's elevation 15); its key is -1
-	 * @param shore  the key water stands level with (the only one the engine lets a surfer step onto), -1 for any
+	 * @param key       per cell, row by row: a floor cell's level key (ground or ledge), -1 for any other cell
+	 * @param joins     per cell: a floor cell that joins any level (Emerald's elevation 0); its key is -1
+	 * @param bridge    per cell: a floor cell that is two floors at once (Emerald's elevation 15); its key is -1
+	 * @param shore     the key water stands level with (the only one the engine lets a surfer step onto), -1 for any
+	 * @param climb     per cell, a stairs cell's way up as its drawing says (Crystal's), else null; its key is -1; or null
+	 * @param walls     edges the engine closes between neighbouring cells (Crystal's one-way walls), or null
+	 * @param wallsRise a wall's south side stands {@link #STAIR_RISE} over its north side (a cave's plateau edges)
+	 * @param maxFace   the longest run of solid cells read as a face
+	 * @param faceKeys  faces count only between regions of different keys (Emerald: a wall between two corridors of one
+	 *                  elevation is no step)
 	 */
-	public record Input(MapModel model, int[] key, boolean[] joins, boolean[] bridge, int shore) {
+	public record Input(MapModel model, int[] key, boolean[] joins, boolean[] bridge, int shore, Dir @Nullable [] climb, @Nullable PairEdges walls,
+			boolean wallsRise, int maxFace, boolean faceKeys) {
+		/** Emerald's: elevations as keys, no walls of their own. */
+		public Input(MapModel model, int[] key, boolean[] joins, boolean[] bridge, int shore) {
+			this(model, key, joins, bridge, shore, null, null, false, MAX_FACE, true);
+		}
 	}
 
 	private RaisedRegions() {
@@ -111,6 +126,49 @@ public final class RaisedRegions {
 		return solve(new Input(model, key, joins, bridge, G3_SHORE));
 	}
 
+	/**
+	 * Crystal's raised ground: no heights in its data, so every floor cell has one key and the levels are the areas its
+	 * one-way walls close off; its stairs are the drawings {@link FloorKinds} names. In a cave the walls are its plateaus'
+	 * edges (the higher side south, as Kanto's tile pairs); elsewhere they only keep areas apart. Faces don't count.
+	 *
+	 * @param walls the map's one-way edges ({@code G2Cells.oneWay})
+	 * @param cave  a cave, whose walls are steps
+	 */
+	public static Result gen2(MapModel model, PairEdges walls, String game, boolean cave) {
+		int w = model.cellWidth();
+		int h = model.cellHeight();
+		int[] key = new int[w * h];
+		Dir[] climb = new Dir[w * h];
+		Arrays.fill(key, -1);
+		String atlas = CaveMap.atlas(model);
+		for (int cy = 0; cy < h; cy++) {
+			for (int cx = 0; cx < w; cx++) {
+				if (!floor(model.kind(cx, cy))) {
+					continue;
+				}
+				int i = cy * w + cx;
+				climb[i] = FloorKinds.climb(game, atlas, CaveMap.cellTiles(model, cx, cy));
+				key[i] = climb[i] == null ? 0 : -1;
+			}
+		}
+		// No faces: a wall one cell thick between two corridors of one level (Tin Tower's railings) looks like a cliff's face
+		return solve(new Input(model, key, new boolean[w * h], new boolean[w * h], -1, climb, walls, cave, 0, false));
+	}
+
+	/** True when the input's walls close the edge between neighbouring cells {@code a} and {@code b}. */
+	private static boolean walled(Input in, int w, int a, int b) {
+		PairEdges walls = in.walls();
+		if (walls == null) {
+			return false;
+		}
+		int ax = a % w;
+		int ay = a / w;
+		int bx = b % w;
+		int by = b / w;
+		int side = bx > ax ? EdgeWallBlock.SIDE_EAST : bx < ax ? EdgeWallBlock.SIDE_WEST : by > ay ? EdgeWallBlock.SIDE_SOUTH : EdgeWallBlock.SIDE_NORTH;
+		return (walls.sides(ax, ay) & side) != 0;
+	}
+
 	/** The raised ground of one map. */
 	public static Result solve(Input in) {
 		MapModel model = in.model();
@@ -128,7 +186,7 @@ public final class RaisedRegions {
 				continue;
 			}
 			int id = regionKey.size();
-			List<Integer> cells = flood(w, h, s, (a, b) -> key[b] == key[a] && region[b] < 0);
+			List<Integer> cells = flood(w, h, s, (a, b) -> key[b] == key[a] && region[b] < 0 && !walled(in, w, a, b));
 			for (int c : cells) {
 				region[c] = id;
 			}
@@ -136,7 +194,8 @@ public final class RaisedRegions {
 			regionCells.add(cells.size());
 		}
 		int regions = regionKey.size();
-		if (regionKey.stream().distinct().count() < 2) {
+		boolean drawnStairs = in.climb() != null && Arrays.stream(in.climb()).anyMatch(java.util.Objects::nonNull);
+		if (regions < 2 || in.walls() == null && !drawnStairs && regionKey.stream().distinct().count() < 2) {
 			return Result.flat("flat_one_level", regions);
 		}
 		for (boolean b : in.bridge()) {
@@ -146,10 +205,53 @@ public final class RaisedRegions {
 			}
 		}
 		Offsets heights = new Offsets(regions);
+		List<Stair> stairs = new ArrayList<>();
+		// ---- stairs a drawing names: they climb the way it says ----
+		if (drawnStairs) {
+			boolean[] taken = new boolean[n];
+			for (int s = 0; s < n; s++) {
+				Dir climb = in.climb()[s];
+				if (climb == null || taken[s]) {
+					continue;
+				}
+				List<Integer> part = flood(w, h, s, (a, b) -> in.climb()[b] == climb && !taken[b]);
+				for (int c : part) {
+					taken[c] = true;
+				}
+				Map<Integer, List<int[]>> touches = new TreeMap<>();
+				for (int c : part) {
+					for (Dir dir : Dir.values()) {
+						int nx = c % w + dir.dx();
+						int ny = c / w + dir.dy();
+						if (nx >= 0 && ny >= 0 && nx < w && ny < h && region[ny * w + nx] >= 0 && !walled(in, w, c, ny * w + nx)) {
+							touches.computeIfAbsent(region[ny * w + nx], k -> new ArrayList<>()).add(new int[] {c, dir.ordinal()});
+						}
+					}
+				}
+				Stair stair = drawnStair(w, part, touches, climb);
+				if (stair == null) {
+					return Result.flat("flat_stairs_shape", regions);
+				}
+				for (int r : stair.lows.subList(1, stair.lows.size())) {
+					if (!heights.join(stair.lows.get(0), r, 0)) {
+						return Result.flat("flat_levels_disagree", regions);
+					}
+				}
+				for (int r : stair.highs.subList(1, stair.highs.size())) {
+					if (!heights.join(stair.highs.get(0), r, 0)) {
+						return Result.flat("flat_levels_disagree", regions);
+					}
+				}
+				if (!heights.join(stair.lows.get(0), stair.highs.get(0), STAIR_RISE * stair.length)) {
+					return Result.flat("flat_stairs_disagree", regions);
+				}
+				stair.low = stair.lows.get(0);
+				stairs.add(stair);
+			}
+		}
 		// ---- cells that join any level: one level's, or stairs ----
 		int[] joinLevelOf = new int[n];
 		Arrays.fill(joinLevelOf, -1);
-		List<Stair> stairs = new ArrayList<>();
 		boolean[] seen = new boolean[n];
 		List<int[]> loose = new ArrayList<>();
 		for (int s = 0; s < n; s++) {
@@ -240,7 +342,7 @@ public final class RaisedRegions {
 					int nx = c % w + dir.dx();
 					int ny = c / w + dir.dy();
 					int r = nx >= 0 && ny >= 0 && nx < w && ny < h ? region[ny * w + nx] : -1;
-					if (r < 0) {
+					if (r < 0 || walled(in, w, c, ny * w + nx)) {
 						continue;
 					}
 					if (in.shore() < 0 || regionKey.get(r) == in.shore()) {
@@ -264,7 +366,20 @@ public final class RaisedRegions {
 		groups.sort((a, b) -> groupCells.get(b) - groupCells.get(a) != 0 ? groupCells.get(b) - groupCells.get(a) : a - b);
 		Map<Integer, Integer> base = new HashMap<>();
 		base.put(groups.get(0), 0);
-		List<int[]> faces = faces(model, region, regionKey, heights);
+		List<int[]> faces = faces(model, region, regionKey, heights, in.maxFace(), in.faceKeys());
+		if (in.wallsRise()) {
+			// a wall's south side over its north side: a vote like a face, the north side two blocks under the south
+			for (int cy = 0; cy + 1 < h; cy++) {
+				for (int cx = 0; cx < w; cx++) {
+					int north = cy * w + cx;
+					int south = north + w;
+					if (region[north] >= 0 && region[south] >= 0 && walled(in, w, north, south)
+							&& heights.find(region[north]) != heights.find(region[south])) {
+						faces.add(new int[] {region[south], region[north], -STAIR_RISE});
+					}
+				}
+			}
+		}
 		while (base.size() < groups.size()) {
 			// By faces from a placed group: the most votes first.
 			Map<Integer, Map<Integer, Integer>> votes = new TreeMap<>();
@@ -405,6 +520,59 @@ public final class RaisedRegions {
 		Dir climb;
 		int length;
 		int low;
+		/** A drawn stair's regions at its foot and at its top. */
+		List<Integer> lows = new ArrayList<>();
+		List<Integer> highs = new ArrayList<>();
+	}
+
+	/**
+	 * A strip of stairs a drawing names, climbing {@code climb}: the regions at its top end (met from any side but below)
+	 * are its highs, at its foot (from any side but above) its lows; at least one each, nothing meeting its middle. Null
+	 * when it is no such strip.
+	 */
+	private static @Nullable Stair drawnStair(int w, List<Integer> part, Map<Integer, List<int[]>> touches, Dir climb) {
+		boolean vertical = climb == Dir.UP || climb == Dir.DOWN;
+		int first = Integer.MAX_VALUE;
+		int last = Integer.MIN_VALUE;
+		for (int c : part) {
+			int p = vertical ? c / w : c % w;
+			first = Math.min(first, p);
+			last = Math.max(last, p);
+		}
+		int highEnd = climb == Dir.UP || climb == Dir.LEFT ? first : last;
+		int lowEnd = highEnd == first ? last : first;
+		Stair stair = new Stair();
+		for (Map.Entry<Integer, List<int[]>> e : touches.entrySet()) {
+			boolean high = false;
+			boolean low = false;
+			for (int[] t : e.getValue()) {
+				int p = vertical ? t[0] / w : t[0] % w;
+				Dir side = Dir.values()[t[1]];
+				if (p == highEnd && side != climb.opposite() && (side == climb || first != last)) {
+					high = true;
+				} else if (p == lowEnd && side != climb) {
+					low = true;
+				} else {
+					return null;
+				}
+			}
+			if (high && low) {
+				return null;
+			}
+			(high ? stair.highs : stair.lows).add(e.getKey());
+		}
+		if (stair.highs.isEmpty() || stair.lows.isEmpty()) {
+			return null;
+		}
+		stair.cells = part.stream().mapToInt(Integer::intValue).toArray();
+		stair.steps = new int[stair.cells.length];
+		for (int k = 0; k < stair.cells.length; k++) {
+			int p = vertical ? stair.cells[k] / w : stair.cells[k] % w;
+			stair.steps[k] = Math.abs(p - lowEnd);
+		}
+		stair.climb = climb;
+		stair.length = last - first + 1;
+		return stair;
 	}
 
 	/**
@@ -459,10 +627,11 @@ public final class RaisedRegions {
 	}
 
 	/**
-	 * The short faces between regions of different keys: from each floor cell north through up to {@link #MAX_FACE} solid
-	 * cells to a floor cell of another group, as {south region, north region, blocks}.
+	 * The short faces between regions (of different keys, with {@code faceKeys}): from each floor cell north through up to
+	 * {@code maxFace} solid cells to a floor cell of another group, as {south region, north region, blocks the north one
+	 * stands over the south one}.
 	 */
-	private static List<int[]> faces(MapModel model, int[] region, List<Integer> regionKey, Offsets heights) {
+	private static List<int[]> faces(MapModel model, int[] region, List<Integer> regionKey, Offsets heights, int maxFace, boolean faceKeys) {
 		int w = model.cellWidth();
 		int h = model.cellHeight();
 		List<int[]> out = new ArrayList<>();
@@ -474,15 +643,15 @@ public final class RaisedRegions {
 				}
 				int y = cy - 1;
 				int run = 0;
-				while (y >= 0 && solid(model.kind(cx, y)) && run <= MAX_FACE) {
+				while (y >= 0 && solid(model.kind(cx, y)) && run <= maxFace) {
 					run++;
 					y--;
 				}
-				if (run == 0 || run > MAX_FACE || y < 0) {
+				if (run == 0 || run > maxFace || y < 0) {
 					continue;
 				}
 				int north = region[y * w + cx];
-				if (north >= 0 && !regionKey.get(north).equals(regionKey.get(south)) && heights.find(north) != heights.find(south)) {
+				if (north >= 0 && (!faceKeys || !regionKey.get(north).equals(regionKey.get(south))) && heights.find(north) != heights.find(south)) {
 					out.add(new int[] {south, north, STAIR_RISE * run});
 				}
 			}
@@ -621,6 +790,9 @@ public final class RaisedRegions {
 	/** True when the engine lets a player step between neighbouring cells {@code a} and {@code b} (both stood on). */
 	private static boolean joined(MapModel model, Input in, int[] key, int a, int b) {
 		int w = model.cellWidth();
+		if (walled(in, w, a, b)) {
+			return false;
+		}
 		boolean waterA = model.kind(a % w, a / w) == MapModel.Kind.WATER;
 		boolean waterB = model.kind(b % w, b / w) == MapModel.Kind.WATER;
 		if (waterA && waterB) {

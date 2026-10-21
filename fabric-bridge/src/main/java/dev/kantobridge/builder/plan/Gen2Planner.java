@@ -164,13 +164,25 @@ final class Gen2Planner {
 			}
 		}
 		Set<String> area3d = Area3d.select(caveMaps, caveIds, outdoorIds);
-		// Their ceilings (D5) before the area is placed, so its floors stack as far apart as their tallest rooms need
+		// Their raised ground (D3, W4: the areas their one-way walls close off, the drawn stairs between them) and their
+		// ceilings (D5), before the area is placed, so its floors stack as far apart as their tallest rooms need
 		java.util.function.Predicate<String> caveBiome = id -> all.get(id).caveLike() || wildMaps.contains(id);
 		dev.kantobridge.scene.ArtSource artSource = FrontEnds.artSource(bundle);
+		Map<String, MapLayout> raised = new HashMap<>();
 		Map<String, Integer> heights = new HashMap<>();
 		for (String id : area3d) {
 			MapModel model = interiorModels.get(id);
-			int[] ceilings = Headroom.ceilings(model, null, Headroom.blackFiller(model, artSource, null), Headroom.screenRows(false), caveBiome.test(id));
+			G2Map map = all.get(id);
+			PairEdges walls = G2Cells.oneWay(model, map, tiles(bundle, variants, map.variant()));
+			RaisedRegions.Result levels = RaisedRegions.gen2(model, walls, bundle.game(), map.caveLike());
+			warnings.note("cave_levels_" + levels.outcome(), Warnings.symbols("map", id));
+			if (levels.layout() != null) {
+				raised.put(id, levels.layout());
+				warnings.note("cave_raised_cells", levels.raisedCells());
+				warnings.note("cave_ramps", levels.layout().ramps().size());
+			}
+			int[] ceilings = Headroom.ceilings(model, levels.layout(), Headroom.blackFiller(model, artSource, null), Headroom.screenRows(false),
+					caveBiome.test(id));
 			heights.put(id, java.util.Arrays.stream(ceilings).max().orElse(Headroom.MIN));
 		}
 		CavePlanner.Result caveArea = placeArea3d(caveMaps, area3d, caveBiome, heights, options, surfaceVolume, warnings);
@@ -233,9 +245,10 @@ final class Gen2Planner {
 					: G2Cells.model(map, tiles, sitesByMap.getOrDefault(map.id(), List.of()), interior, warnings);
 			PairEdges edges = G2Cells.oneWay(model, map, tiles);
 			oneWayEdges += edges.edges();
-			// The 3D area's maps are drawn as their rooms (D1, CAVES_3D_PLAN §3.5); an interior under its ceilings (D5)
+			// The 3D area's maps are drawn as their rooms (D1, CAVES_3D_PLAN §3.5), on their raised ground (D3); an interior
+			// under its ceilings (D5)
 			List<MapLayout.Piece> pieces = caveArea.pieces().get(map.id());
-			MapLayout rooms = pieces == null ? null : WorldPlanner.withPieces(model, pieces, null);
+			MapLayout rooms = pieces == null ? raised.get(map.id()) : WorldPlanner.withPieces(model, pieces, raised.get(map.id()));
 			rooms = WorldPlanner.withCeilings(placement, model, rooms, Headroom.blackFiller(model, artSource, null), Headroom.screenRows(false),
 					!area3d.contains(map.id()), warnings);
 			if (rooms != null) {

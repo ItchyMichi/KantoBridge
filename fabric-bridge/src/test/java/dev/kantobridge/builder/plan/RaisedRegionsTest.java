@@ -231,6 +231,43 @@ class RaisedRegionsTest {
 	}
 
 	@Test
+	void crystalsCavesStandByTheirWallsAndDrawnStairs() {
+		// One key for every floor cell; drawn stairs (3, 2) climbing north through the face up to the north plateau; a
+		// one-way wall along the trough's south edge, the plateau beyond it two blocks up (Kanto's rule for tile pairs)
+		String[] rows = {
+				"########",
+				"#......#",
+				"###.####",
+				"#......#",
+				"#......#",
+				"#......#"};
+		MapModel model = model(rows);
+		int n = 48;
+		int[] key = new int[n];
+		Dir[] climb = new Dir[n];
+		for (int i = 0; i < n; i++) {
+			key[i] = rows[i / 8].charAt(i % 8) == '.' ? 0 : -1;
+		}
+		key[2 * 8 + 3] = -1;
+		climb[2 * 8 + 3] = Dir.UP;
+		List<int[]> walls = new java.util.ArrayList<>();
+		for (int x = 1; x <= 6; x++) {
+			walls.add(new int[] {x, 4, x, 5});
+		}
+		RaisedRegions.Result result = RaisedRegions.solve(new RaisedRegions.Input(model, key, new boolean[n], new boolean[n], -1, climb,
+				PairEdges.walls(model, walls), true, 1, false));
+		assertEquals("raised", result.outcome());
+		MapLayout layout = result.layout();
+		assertEquals(List.of(2, 0, 2), List.of(layout.level(1, 1), layout.level(1, 3), layout.level(1, 5)));
+		assertEquals(new MapLayout.Ramp(3, 2, Dir.UP, 2), layout.ramp(3, 2));
+		assertEquals(0, layout.level(3, 2));
+		// the same walls without the rise (a building's): they keep the areas apart, nothing stands on them
+		RaisedRegions.Result building = RaisedRegions.solve(new RaisedRegions.Input(model, key, new boolean[n], new boolean[n], -1, climb,
+				PairEdges.walls(model, walls), false, 1, false));
+		assertEquals(0, building.layout().level(1, 5));
+	}
+
+	@Test
 	void whatTheSolverLeavesFlat() {
 		String[] rows = {
 				"######",

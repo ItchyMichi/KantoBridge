@@ -208,6 +208,8 @@ class RealWorldDryRunTest {
 			cave.addProperty("ms", (System.nanoTime() - t0) / 1_000_000L);
 			out.add("cave_quads", cave);
 		}
+		// the heights it built (HEIGHTS_ALL_GAMES_PLAN W4, W5): counts only
+		out.add("heights", HeightsReport.of(plan));
 		Path report = Path.of("reports", pilot ? "caves3d_dry_run_pilot.json" : "caves3d_dry_run.json");
 		Files.createDirectories(report.getParent());
 		Files.writeString(report, ProtoJson.write(out), StandardCharsets.UTF_8);

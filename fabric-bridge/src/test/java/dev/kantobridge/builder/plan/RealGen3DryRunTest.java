@@ -94,6 +94,11 @@ class RealGen3DryRunTest {
 			shaped.addProperty("plan_ms", plan.shapes().planMs());
 			out.add("shapes", shaped);
 		}
+		// the heights it built (HEIGHTS_ALL_GAMES_PLAN W4, W5): counts only; and the world index beside it (layout data,
+		// as a build writes it), for the pod's checks of single maps
+		out.add("heights", HeightsReport.of(plan));
+		Files.createDirectories(Path.of("reports"));
+		Files.writeString(Path.of("reports", "gen3_world_index.json"), plan.index().toJson(), StandardCharsets.UTF_8);
 		Path report = Path.of("reports", "gen3_dry_run.json");
 		Files.createDirectories(report.getParent());
 		Files.writeString(report, ProtoJson.write(out), StandardCharsets.UTF_8);

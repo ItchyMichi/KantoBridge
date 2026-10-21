@@ -1,0 +1,9 @@
+{
+ "game": "crystal",
+ "source": "a review of every walkable cell drawing in Crystal's cave-like maps (196 drawings, docs/specs/HEIGHTS_ALL_GAMES_PLAN.md W4, 2026-10-21): the stairs a cave cuts through a boulder face, each climbing to the ground above it; every other drawing is floor",
+ "kinds": {
+  "g3q/1036-1037-1036-1037": "stairs_up",
+  "g3q/2096-2097-2096-2097": "stairs_up",
+  "g3q/4764-451-4764-451": "stairs_up"
+ }
+}
