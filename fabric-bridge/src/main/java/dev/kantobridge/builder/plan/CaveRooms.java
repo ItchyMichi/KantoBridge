@@ -1,6 +1,5 @@
 package dev.kantobridge.builder.plan;
 
-import dev.kantobridge.builder.export.CellFlags;
 import dev.kantobridge.builder.export.ExportMap;
 import dev.kantobridge.world.Scale;
 import java.util.ArrayDeque;
@@ -49,9 +48,11 @@ final class CaveRooms {
 	 *               that room is drawn
 	 * @param shafts the links lined up, top cell over bottom cell
 	 * @param fades  the links that keep their fade, by reason
+	 * @param roomRanks each map's rooms' floors (0 the highest; a room of a map holding several floors may differ from its
+	 *                  map's, HEIGHTS_ALL_GAMES_PLAN D1)
 	 */
 	record Plan(Map<String, List<CavePieces.Room>> rooms, Map<String, int[][]> frames, List<Link> shafts, Map<String, Integer> fades, int minX,
-			int minZ, int maxX, int maxZ) {
+			int minZ, int maxX, int maxZ, Map<String, int[]> roomRanks) {
 	}
 
 	/** An edge of the walk between rooms: a warp from one room's cell to another's. */
@@ -72,50 +73,55 @@ final class CaveRooms {
 	 */
 	static Plan layOut(Map<String, ExportMap> all, List<String> complex, Map<String, Integer> ranks, String entrance,
 			Map<String, ? extends Collection<int[]>> sites) {
-		Map<String, List<CavePieces.Room>> rooms = new LinkedHashMap<>();
+		Map<String, CaveMap> maps = new LinkedHashMap<>();
 		for (String id : complex) {
 			Collection<int[]> own = sites.get(id);
-			rooms.put(id, CavePieces.of(all.get(id), own == null ? List.of() : own));
+			maps.put(id, CaveMap.gen1(all.get(id), all, own == null ? List.of() : own));
 		}
+		return layOut(maps, complex, ranks, entrance);
+	}
+
+	/** The same for maps of any game (HEIGHTS_ALL_GAMES_PLAN D1): each map's swap sites are in its walk cells already. */
+	static Plan layOut(Map<String, CaveMap> all, List<String> complex, Map<String, Integer> ranks, String entrance) {
+		Map<String, List<CavePieces.Room>> rooms = new LinkedHashMap<>();
+		for (String id : complex) {
+			rooms.put(id, CavePieces.of(all.get(id)));
+		}
+		Map<Unit, Integer> rank = roomRanks(all, complex, ranks, rooms);
 		Map<String, Integer> fades = new TreeMap<>();
 		// ---- the edges: every warp between two rooms of the complex, a shaft's marked ----
 		Map<Unit, List<Edge>> edges = new LinkedHashMap<>();
 		List<Link> links = new ArrayList<>();
 		for (String id : complex) {
-			ExportMap a = all.get(id);
-			for (ExportMap.Warp warp : a.warps()) {
-				ExportMap b = all.get(warp.to());
-				ExportMap.Warp arrival = b == null || !complex.contains(b.id()) ? null : b.warp(warp.warp());
-				if (arrival == null) {
+			CaveMap a = all.get(id);
+			for (CaveMap.Warp warp : a.warps()) {
+				CaveMap b = warp.to() == null ? null : all.get(warp.to());
+				if (b == null || !complex.contains(b.id()) || !warp.arrives()) {
 					continue;
 				}
 				Unit from = unit(rooms, a, warp.x(), warp.y());
-				Unit to = unit(rooms, b, arrival.x(), arrival.y());
+				Unit to = unit(rooms, b, warp.arrivalX(), warp.arrivalY());
 				if (from == null || to == null) {
 					// A warp from or to a cell in no room (not walked on): it keeps its fade, counted by what its cell is
-					int flags = a.flags(warp.x(), warp.y());
-					fades.merge(CellFlags.has(flags, CellFlags.HOLE) ? "hole_off_floor" : "off_floor", 1, Integer::sum);
+					fades.merge(warp.kind() == CaveMap.Kind.HOLE ? "hole_off_floor" : "off_floor", 1, Integer::sum);
 					continue;
 				}
-				Link shaft = shaftLink(all, ranks, a, warp, b, arrival, fades);
+				Link shaft = shaftLink(rank.get(from), rank.get(to), a, warp, b, fades);
 				if (shaft != null) {
 					links.add(shaft);
 				}
-				edge(edges, new Edge(from, warp.x(), warp.y(), to, arrival.x(), arrival.y(), shaft));
-				edge(edges, new Edge(to, arrival.x(), arrival.y(), from, warp.x(), warp.y(), shaft));
+				edge(edges, new Edge(from, warp.x(), warp.y(), to, warp.arrivalX(), warp.arrivalY(), shaft));
+				edge(edges, new Edge(to, warp.arrivalX(), warp.arrivalY(), from, warp.x(), warp.y(), shaft));
 			}
 			// A door from a cave into a room of the complex (a child map) joins them as a warp does.
-			if (a.parent() != null && complex.contains(a.parent().map())) {
-				ExportMap parent = all.get(a.parent().map());
-				ExportMap.Warp door = parent.warp(a.parent().warp());
-				ExportMap.Warp arrival = door != null && door.to().equals(id) ? a.warp(door.warp()) : null;
-				int ax = arrival == null ? 0 : arrival.x();
-				int ay = arrival == null ? 0 : arrival.y();
-				Unit from = unit(rooms, parent, a.parent().x(), a.parent().y());
-				Unit to = unit(rooms, a, ax, ay);
+			CaveMap.Door door = a.door();
+			if (door != null && complex.contains(door.map())) {
+				CaveMap parent = all.get(door.map());
+				Unit from = unit(rooms, parent, door.x(), door.y());
+				Unit to = unit(rooms, a, door.arrivalX(), door.arrivalY());
 				if (from != null && to != null) {
-					edge(edges, new Edge(from, a.parent().x(), a.parent().y(), to, ax, ay, null));
-					edge(edges, new Edge(to, ax, ay, from, a.parent().x(), a.parent().y(), null));
+					edge(edges, new Edge(from, door.x(), door.y(), to, door.arrivalX(), door.arrivalY(), null));
+					edge(edges, new Edge(to, door.arrivalX(), door.arrivalY(), from, door.x(), door.y(), null));
 				}
 			}
 		}
@@ -138,7 +144,7 @@ final class CaveRooms {
 						continue;
 					}
 					int[] want = {at[0] + Scale.cellToBlock(e.fx() - e.tx()), at[1] + Scale.cellToBlock(e.fy() - e.ty())};
-					int[] got = aside(all, rooms, ranks, frames, e.to(), want);
+					int[] got = aside(all, rooms, rank, frames, e.to(), want);
 					if (got[0] != want[0] && e.shaft() != null) {
 						moved.put(e.shaft(), true);
 					}
@@ -178,7 +184,7 @@ final class CaveRooms {
 				want = new int[] {maxX + CavePlanner.FLOOR_GAP + InteriorPacker.RING - Scale.cellToBlock(room.x()),
 						minZ + InteriorPacker.RING - Scale.cellToBlock(room.y())};
 			}
-			frames.put(loose, aside(all, rooms, ranks, frames, loose, want));
+			frames.put(loose, aside(all, rooms, rank, frames, loose, want));
 			queue.add(loose);
 		}
 		// ---- the shafts: links whose ends share a column, and no room between their floors in the way ----
@@ -199,7 +205,7 @@ final class CaveRooms {
 				fades.merge(moved.containsKey(link) ? "moved_aside" : "loop", 1, Integer::sum);
 				continue;
 			}
-			if (crossesARoom(all, rooms, ranks, frames, ranks.get(link.topMap()), ranks.get(link.bottomMap()), tx, tz)) {
+			if (crossesARoom(all, rooms, rank, frames, rank.get(top), rank.get(bottom), tx, tz)) {
 				fades.merge("crosses_floor", 1, Integer::sum);
 				continue;
 			}
@@ -228,15 +234,90 @@ final class CaveRooms {
 			minX = minZ = 0;
 			maxX = maxZ = 1;
 		}
-		return new Plan(rooms, byMap, shafts, fades, minX, minZ, maxX, maxZ);
+		Map<String, int[]> roomRanks = new LinkedHashMap<>();
+		for (Map.Entry<String, List<CavePieces.Room>> entry : rooms.entrySet()) {
+			int[] out = new int[entry.getValue().size()];
+			for (CavePieces.Room room : entry.getValue()) {
+				out[room.index()] = rank.get(new Unit(entry.getKey(), room.index()));
+			}
+			roomRanks.put(entry.getKey(), out);
+		}
+		return new Plan(rooms, byMap, shafts, fades, minX, minZ, maxX, maxZ, roomRanks);
+	}
+
+	/**
+	 * Each room's floor (D1): its map's, except in a map holding several floors (Crystal's Victory Road joins its own
+	 * rooms by ladders): from the rooms that lead out of the map or are led into from another (they keep the map's floor),
+	 * each ladder, hole or staircase between two rooms of the map whose way is known puts the room it leads to a floor
+	 * up or down.
+	 */
+	private static Map<Unit, Integer> roomRanks(Map<String, CaveMap> all, List<String> complex, Map<String, Integer> ranks,
+			Map<String, List<CavePieces.Room>> rooms) {
+		Map<Unit, Integer> rank = new HashMap<>();
+		java.util.Set<Unit> pinned = new java.util.HashSet<>();
+		for (String id : complex) {
+			for (CavePieces.Room room : rooms.get(id)) {
+				rank.put(new Unit(id, room.index()), ranks.get(id));
+			}
+		}
+		// The rooms joined to another map keep their map's floor
+		for (String id : complex) {
+			CaveMap a = all.get(id);
+			for (CaveMap.Warp warp : a.warps()) {
+				if (warp.to() != null && !warp.to().equals(id)) {
+					pin(pinned, unit(rooms, a, warp.x(), warp.y()));
+					CaveMap b = all.get(warp.to());
+					if (b != null && complex.contains(b.id()) && warp.arrives()) {
+						pin(pinned, unit(rooms, b, warp.arrivalX(), warp.arrivalY()));
+					}
+				}
+			}
+			if (a.door() != null) {
+				pin(pinned, unit(rooms, a, a.door().arrivalX(), a.door().arrivalY()));
+			}
+		}
+		boolean changed = true;
+		while (changed) {
+			changed = false;
+			for (String id : complex) {
+				CaveMap a = all.get(id);
+				for (CaveMap.Warp warp : a.warps()) {
+					if (!id.equals(warp.to()) || !warp.arrives() || warp.way() == 0) {
+						continue;
+					}
+					Unit from = unit(rooms, a, warp.x(), warp.y());
+					Unit to = unit(rooms, a, warp.arrivalX(), warp.arrivalY());
+					if (from == null || to == null || from.equals(to)) {
+						continue;
+					}
+					// rank counts down from the top: a way up (+1) is one rank less
+					if (pinned.contains(from) && !pinned.contains(to)) {
+						rank.put(to, rank.get(from) - warp.way());
+						pinned.add(to);
+						changed = true;
+					} else if (pinned.contains(to) && !pinned.contains(from)) {
+						rank.put(from, rank.get(to) + warp.way());
+						pinned.add(from);
+						changed = true;
+					}
+				}
+			}
+		}
+		return rank;
+	}
+
+	private static void pin(java.util.Set<Unit> pinned, @Nullable Unit u) {
+		if (u != null) {
+			pinned.add(u);
+		}
 	}
 
 	private static void edge(Map<Unit, List<Edge>> edges, Edge e) {
 		edges.computeIfAbsent(e.from(), k -> new ArrayList<>()).add(e);
 	}
 
-	private static @Nullable Unit unit(Map<String, List<CavePieces.Room>> rooms, ExportMap map, int cx, int cy) {
-		CavePieces.Room room = CavePieces.roomAt(rooms.get(map.id()), map.cellWidth(), cx, cy);
+	private static @Nullable Unit unit(Map<String, List<CavePieces.Room>> rooms, CaveMap map, int cx, int cy) {
+		CavePieces.Room room = CavePieces.roomAt(rooms.get(map.id()), map.w(), cx, cy);
 		return room == null ? null : new Unit(map.id(), room.index());
 	}
 
@@ -244,47 +325,42 @@ final class CaveRooms {
 	 * A shaft's link, from the warp at (x, y) of {@code a} down to {@code arrival} on {@code b}, or null when the warp
 	 * isn't one going down (a door, a warp within a floor, the upward warp of a ladder: its top's warp makes the link).
 	 */
-	private static @Nullable Link shaftLink(Map<String, ExportMap> all, Map<String, Integer> ranks, ExportMap a, ExportMap.Warp warp, ExportMap b,
-			ExportMap.Warp arrival, Map<String, Integer> fades) {
-		int flags = a.flags(warp.x(), warp.y());
-		// A hole is a pad of its own (the engine's warpPadOrHoleAt), a ladder a warp tile that isn't a door
-		boolean hole = CellFlags.has(flags, CellFlags.HOLE);
-		if (!hole && (!CellFlags.has(flags, CellFlags.WARP_TILE) || CellFlags.has(flags, CellFlags.DOOR))) {
+	private static @Nullable Link shaftLink(int ra, int rb, CaveMap a, CaveMap.Warp warp, CaveMap b, Map<String, Integer> fades) {
+		// A hole or a ladder (CaveMap's kinds: Gen 1's hole flag and its warp tiles that aren't doors, the others' data)
+		boolean hole = warp.kind() == CaveMap.Kind.HOLE;
+		if (!hole && warp.kind() != CaveMap.Kind.LADDER) {
 			return null;
 		}
-		int ra = ranks.get(a.id());
-		int rb = ranks.get(b.id());
 		if (ra == rb) {
 			fades.merge("same_floor", 1, Integer::sum);
 			return null;
 		}
 		if (ra > rb) {
 			// Going up: the shaft is its top's; a ladder whose top leads elsewhere keeps its fade.
-			if (hole || !leadsTo(b, arrival, a, warp)) {
+			if (hole || !leadsTo(b, warp, a)) {
 				fades.merge(hole ? "hole_up" : "one_way_up", 1, Integer::sum);
 			}
 			return null;
 		}
-		boolean up = !hole && leadsTo(b, arrival, a, warp);
-		return new Link(hole ? "hole" : "ladder", a.id(), warp.x(), warp.y(), b.id(), arrival.x(), arrival.y(), up);
+		boolean up = !hole && leadsTo(b, warp, a);
+		return new Link(hole ? "hole" : "ladder", a.id(), warp.x(), warp.y(), b.id(), warp.arrivalX(), warp.arrivalY(), up);
 	}
 
-	/** True when the warp of {@code b} on {@code at}'s cell leads to {@code target}'s cell of {@code a}. */
-	private static boolean leadsTo(ExportMap b, ExportMap.Warp at, ExportMap a, ExportMap.Warp target) {
-		for (ExportMap.Warp back : b.warps()) {
-			if (back.x() == at.x() && back.y() == at.y() && back.to().equals(a.id())) {
-				ExportMap.Warp there = a.warp(back.warp());
-				return there != null && there.x() == target.x() && there.y() == target.y();
+	/** True when the warp of {@code b} on {@code warp}'s arrival cell leads back to {@code warp}'s own cell of {@code a}. */
+	private static boolean leadsTo(CaveMap b, CaveMap.Warp warp, CaveMap a) {
+		for (CaveMap.Warp back : b.warps()) {
+			if (back.x() == warp.arrivalX() && back.y() == warp.arrivalY() && a.id().equals(back.to())) {
+				return back.arrives() && back.arrivalX() == warp.x() && back.arrivalY() == warp.y();
 			}
 		}
 		return false;
 	}
 
 	/** The entrance map's room the way in reaches: the one with a warp out of the complex, else its first. */
-	private static Unit entranceRoom(Map<String, ExportMap> all, List<String> complex, Map<String, List<CavePieces.Room>> rooms, String entrance) {
-		ExportMap map = all.get(entrance);
-		for (ExportMap.Warp warp : map.warps()) {
-			if (!complex.contains(warp.to())) {
+	private static Unit entranceRoom(Map<String, CaveMap> all, List<String> complex, Map<String, List<CavePieces.Room>> rooms, String entrance) {
+		CaveMap map = all.get(entrance);
+		for (CaveMap.Warp warp : map.warps()) {
+			if (warp.to() == null || !complex.contains(warp.to())) {
 				Unit u = unit(rooms, map, warp.x(), warp.y());
 				if (u != null) {
 					return u;
@@ -295,7 +371,7 @@ final class CaveRooms {
 	}
 
 	/** A room's footprint at {@code frame}, its enclosure ring included: {minX, minZ, maxX, maxZ}. */
-	private static int[] box(Map<String, ExportMap> all, Map<String, List<CavePieces.Room>> rooms, Unit u, int[] frame) {
+	private static int[] box(Map<String, CaveMap> all, Map<String, List<CavePieces.Room>> rooms, Unit u, int[] frame) {
 		CavePieces.Room room = rooms.get(u.map()).get(u.room());
 		int x = frame[0] + Scale.cellToBlock(room.x());
 		int z = frame[1] + Scale.cellToBlock(room.y());
@@ -308,7 +384,7 @@ final class CaveRooms {
 	 * another map's room keeps H3's gap from it; its own map's at another frame may share a wall of rock, but neither's
 	 * floor may run into the other's footprint.
 	 */
-	private static int[] aside(Map<String, ExportMap> all, Map<String, List<CavePieces.Room>> rooms, Map<String, Integer> ranks,
+	private static int[] aside(Map<String, CaveMap> all, Map<String, List<CavePieces.Room>> rooms, Map<Unit, Integer> ranks,
 			Map<Unit, int[]> frames, Unit u, int[] want) {
 		int x = want[0];
 		while (overlaps(all, rooms, ranks, frames, u, new int[] {x, want[1]})) {
@@ -317,14 +393,14 @@ final class CaveRooms {
 		return new int[] {x, want[1]};
 	}
 
-	private static boolean overlaps(Map<String, ExportMap> all, Map<String, List<CavePieces.Room>> rooms, Map<String, Integer> ranks,
+	private static boolean overlaps(Map<String, CaveMap> all, Map<String, List<CavePieces.Room>> rooms, Map<Unit, Integer> ranks,
 			Map<Unit, int[]> frames, Unit u, int[] frame) {
-		int rank = ranks.get(u.map());
+		int rank = ranks.get(u);
 		int[] a = box(all, rooms, u, frame);
 		int[] aFloor = floorBox(all, rooms, u, frame);
 		for (Map.Entry<Unit, int[]> placed : frames.entrySet()) {
 			Unit o = placed.getKey();
-			if (ranks.get(o.map()) != rank || o.map().equals(u.map()) && java.util.Arrays.equals(placed.getValue(), frame)) {
+			if (ranks.get(o) != rank || o.map().equals(u.map()) && java.util.Arrays.equals(placed.getValue(), frame)) {
 				continue;
 			}
 			int[] b = box(all, rooms, o, placed.getValue());
@@ -344,9 +420,9 @@ final class CaveRooms {
 	}
 
 	/** The box of a room's walkable and water cells at {@code frame}, in blocks: {minX, minZ, maxX, maxZ}. */
-	private static int[] floorBox(Map<String, ExportMap> all, Map<String, List<CavePieces.Room>> rooms, Unit u, int[] frame) {
+	private static int[] floorBox(Map<String, CaveMap> all, Map<String, List<CavePieces.Room>> rooms, Unit u, int[] frame) {
 		CavePieces.Room room = rooms.get(u.map()).get(u.room());
-		int w = all.get(u.map()).cellWidth();
+		int w = all.get(u.map()).w();
 		int minX = Integer.MAX_VALUE;
 		int minZ = Integer.MAX_VALUE;
 		int maxX = Integer.MIN_VALUE;
@@ -362,10 +438,10 @@ final class CaveRooms {
 	}
 
 	/** True when a room of a floor strictly between {@code fromRank} and {@code toRank} covers column (x, z). */
-	private static boolean crossesARoom(Map<String, ExportMap> all, Map<String, List<CavePieces.Room>> rooms, Map<String, Integer> ranks,
+	private static boolean crossesARoom(Map<String, CaveMap> all, Map<String, List<CavePieces.Room>> rooms, Map<Unit, Integer> ranks,
 			Map<Unit, int[]> frames, int fromRank, int toRank, int x, int z) {
 		for (Map.Entry<Unit, int[]> placed : frames.entrySet()) {
-			int rank = ranks.get(placed.getKey().map());
+			int rank = ranks.get(placed.getKey());
 			if (rank <= fromRank || rank >= toRank) {
 				continue;
 			}

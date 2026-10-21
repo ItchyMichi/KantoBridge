@@ -16,6 +16,7 @@ import dev.kantobridge.scene.GameFrontEnd;
 import dev.kantobridge.scene.Scene;
 import dev.kantobridge.scene.gen3.QuarterPages;
 import dev.kantobridge.world.DataReader;
+import dev.kantobridge.world.MapLayout;
 import dev.kantobridge.world.MapPlacement;
 import dev.kantobridge.world.Scale;
 import dev.kantobridge.world.SlotMap;
@@ -145,9 +146,40 @@ final class Gen3Planner {
 		Box3 surfaceVolume = WorldPlan.surfaceVolume(placements.values());
 		InteriorPacker.Box sky = !options.shapes() || surfaceVolume == null ? null
 				: new InteriorPacker.Box(surfaceVolume.minX(), surfaceVolume.minZ(), surfaceVolume.maxX(), surfaceVolume.maxZ());
+		// The 3D area (docs/specs/HEIGHTS_ALL_GAMES_PLAN.md D1): the caves and every complex a ladder or hole joins leave the
+		// layers for an area of their own north of the region's dungeons, as Kanto's caves did (CAVES_3D_PLAN §3.3).
+		Map<String, G3Tiles> pairs = new HashMap<>();
+		Map<String, MapModel> interiorModels = new HashMap<>();
+		Map<String, CaveMap> caveMaps = new LinkedHashMap<>();
+		Set<String> caveIds = new LinkedHashSet<>();
+		Set<String> outdoorIds = new HashSet<>();
+		for (String id : requested) {
+			Door door = doors.get(id);
+			if (surface.contains(id) || door == null || !requestedSet.contains(door.parent())) {
+				continue;
+			}
+			G3Map map = all.get(id);
+			G3Tiles tiles = tiles(bundle, pairs, map.pair());
+			MapModel model = G3Cells.model(map, tiles, true, warnings);
+			interiorModels.put(id, model);
+			caveMaps.put(id, CaveMap.gen3(map, tiles, model, all, new CaveMap.Door(door.parent(), door.x(), door.y(), door.arrivalX(), door.arrivalY()),
+					QuarterPages.PALETTE, caveMaps.size(), bundle.game()));
+			if (G3Cells.cave(map)) {
+				caveIds.add(id);
+			}
+			if (G3Cells.outdoor(map)) {
+				outdoorIds.add(id);
+			}
+		}
+		Set<String> area3d = Area3d.select(caveMaps, caveIds, outdoorIds);
+		CavePlanner.Result caveArea = Gen2Planner.placeArea3d(caveMaps, area3d, id -> G3Cells.cave(all.get(id)) || wildMaps.contains(id), options,
+				surfaceVolume, warnings);
+		for (MapPlacement p : caveArea.placements()) {
+			placements.put(p.id(), p);
+		}
 		List<String> pending = new ArrayList<>();
 		for (String id : requested) {
-			if (surface.contains(id)) {
+			if (surface.contains(id) || area3d.contains(id)) {
 				continue;
 			}
 			Door door = doors.get(id);
@@ -191,15 +223,23 @@ final class Gen3Planner {
 		}
 
 		// ---- cell models and their elevation walls ----
-		Map<String, G3Tiles> pairs = new HashMap<>();
 		List<PlacedMap> placed = new ArrayList<>();
+		Map<String, MapLayout> mapLayouts = new TreeMap<>();
 		int elevationEdges = 0;
 		for (MapPlacement placement : placements.values()) {
 			G3Map map = all.get(placement.id());
-			MapModel model = G3Cells.model(map, tiles(bundle, pairs, map.pair()), placement.kind() == MapPlacement.Kind.INTERIOR, warnings);
+			boolean interior = placement.kind() == MapPlacement.Kind.INTERIOR;
+			MapModel model = interior && interiorModels.containsKey(map.id()) ? interiorModels.get(map.id())
+					: G3Cells.model(map, tiles(bundle, pairs, map.pair()), interior, warnings);
 			PairEdges edges = PairEdges.elevation(model, map);
 			elevationEdges += edges.edges();
-			placed.add(new PlacedMap(placement, model, edges, null));
+			// The 3D area's maps are drawn as their rooms (D1, CAVES_3D_PLAN §3.5)
+			List<MapLayout.Piece> pieces = caveArea.pieces().get(map.id());
+			MapLayout rooms = pieces == null ? null : WorldPlanner.withPieces(model, pieces, null);
+			if (rooms != null) {
+				mapLayouts.put(map.id(), rooms);
+			}
+			placed.add(new PlacedMap(placement, model, edges, rooms));
 		}
 		warnings.note("elevation_edges", elevationEdges);
 
@@ -228,7 +268,10 @@ final class Gen3Planner {
 		if (spawn == null) {
 			warnings.warn("spawn_missing");
 		}
-		WorldIndex index = new WorldIndex(bundle.game(), bundle.exportHash(), placements.values(), art.slotMap().hash(), storyCells, habitats);
+		// W2: the area's links keep their fades until the climb is checked on this engine (W3): no shafts yet
+		List<WorldIndex.Shaft> shafts = List.of();
+		WorldIndex index = new WorldIndex(bundle.game(), bundle.exportHash(), placements.values(), mapLayouts, art.slotMap().hash(), storyCells, habitats,
+				List.of(), null, shafts);
 
 		// ---- shapes (the voxel plan's §5.4): the Gen 3 front end's scene of the whole export, the placed maps' positions ----
 		Scene scene = null;
@@ -241,13 +284,13 @@ final class Gen3Planner {
 				scene = frontEnd.describe(bundle);
 				shapes = ShapePlanner.plan(scene, placements.values(), ShapeParams.current(),
 						WorldPlanner.occupancy(placed, storyIndex, storyCells, surfaceBox, fill.owner(), fill.voidCells()),
-						new ArtUnitProbe(FrontEnds.artSource(bundle)), new TreeMap<>(), List.of())
+						new ArtUnitProbe(FrontEnds.artSource(bundle)), mapLayouts, shafts)
 						.withIndexHash(index.hash());
 			}
 		}
 		return new WorldPlan(bundle.game(), bundle.exportHash(), options.originX(), options.originZ(), placed, surfaceBox, fill.owner(),
 				fill.voidCells(), storyCells, storyIndex, art, spawn, index, pools, warnings, mapsRequested, unplaced, seams[0], seams[1], scene, shapes,
-				null, region);
+				caveArea.area(), region);
 	}
 
 	/** Every map of the export, by id, its changeable cells in their built states (SE3, {@link G3Built}). */

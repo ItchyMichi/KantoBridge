@@ -122,7 +122,10 @@ def test_golden_gen2_world_index_matches_the_schema_and_the_bundle():
     assert surface == {"G2_TEST_TOWN", "G2_TEST_ROUTE", "G2_TEST_KANTO_TOWN"}, "both areas on the surface"
     cave = index["maps"]["G2_TEST_CAVE"]
     assert (cave["layer"], cave["parent"], cave["dark"]) == (1, "G2_TEST_ROUTE", True)
-    assert [h["pool"] for h in index["habitats"]] == ["kantobridge:g2_test_cave", "kantobridge:g2_test_route"]
+    # the cave is in the 3D area (HEIGHTS_ALL_GAMES_PLAN D1): the area's biome, drawn as its room, its habitats reaching 6
+    assert (cave["biome"], cave["y"]) == ("kantobridge:cave_3d", 64) and len(cave["pieces"]) == 1
+    assert [h["pool"] for h in index["habitats"]] == ["kantobridge:g2_test_cave"] * 2 + ["kantobridge:g2_test_route"]
+    assert [h.get("range") for h in index["habitats"]] == [6, 6, None]
     swaps = {c["swap"]["kind"] for c in index["storyCells"] if c["type"] == "tile"}
     assert swaps == {"cut", "whirlpool", "script"}
 

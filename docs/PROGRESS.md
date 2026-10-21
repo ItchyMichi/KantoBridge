@@ -1043,6 +1043,66 @@ the full suite at H1, H5 and H7. **All seven are done** (2026-10-13): every cave
       of one cave may share a rock wall (HD3, under 16 blocks apart); and 15 cave ladders are climbed, not faded. It's
       your file to update.
 
+## 3D heights (HEIGHTS_ALL_GAMES_PLAN, 2026-10-20)
+
+Execution of [specs/HEIGHTS_ALL_GAMES_PLAN.md](specs/HEIGHTS_ALL_GAMES_PLAN.md) (W0–W8): heights across every world
+space of all three games, as the user's vision of 2026-10-20 asks (plan §0): raised areas everywhere, stairs stay warps,
+real ladders and holes in every map, a depth per world space up to the screen's edge, 4 blocks over the highest floor
+indoors, every visible layer built outdoors. The user's answers to the vision check: "Q6 was a typo, go with your picks
+for the rest" (plan §8). Feature tests per phase, the full suite at the checkpoints.
+
+| # | Phase | Status | Date | Commit |
+|---|---|---|---|---|
+| W0 | Baseline, survey, layer sizes | **done** (note 1) | 2026-10-20 | `010af67`, this commit |
+| W1 | Blue audit | **done**: report on kb-hub (note 2) | 2026-10-20 | this commit |
+| W2 | One 3D planner for every game | **done** (note 3) | 2026-10-20 | `W2: one 3D planner` |
+| W3 | Links by kind, pilots | | | |
+| W4 | Raised ground in caves | | | |
+| W5 | Interiors: depth, headroom, the deeper world | | | |
+| W6 | Outdoors | | | |
+| W7 | Blue's audit built | | | |
+| W8 | Every region rebuilt | | | |
+
+### 3D heights: notes
+
+1. **W0.** The survey (`HeightsSurveyTest`, `-Pkb.heightsSurvey=true` with the three real bundles; layout data only,
+   analysed in the user's kb-hub work folder, never in the repo) measured the plan's viability (plan §5): rooms 4–11
+   blocks with the depth and headroom rules, the world's bottom at −352 with each layer as deep as its tallest room,
+   real ladders and holes Blue 17, Crystal 15 + 18, Emerald 37 + 26, Emerald's cracked floors lined up over their
+   landings. **Correction:** the survey planned without shapes, which skips the open-sky spots, so the 29 outdoor maps
+   off the surface looked roofed; a real build gives them the sky (the dry runs' `open_air_sky`: Johto 11, Hoenn 18).
+   The baseline full check on kb-dev44 (a new pod, cpu5g ×4, $0.184/hr): pytest 2,251 passed (68 skipped), GameTests
+   126 passed, JUnit no failure; **the whole JUnit suite in one run hangs at its end on these pods** (the test worker
+   waits forever in `MessageHub.stop` after the last test), each package alone finishes: JUnit now runs per package
+   (`kb-runpod/kb-junit` on this server). The Gen 3 climb (`kb_climb.lua`) read against the adapter: its take's `re` is
+   likely lost (`Warp.request` announces `player.warped` itself); W3 fixes and tests it.
+2. **W1, the Blue audit** (kb-hub files `heights_W1_blue_audit.html`): the Safari Zone's east, north and west areas have
+   tile pairs (40–50 walled cells each) but are built flat; outdoors one area is high ground by the ledges alone (25 cells
+   on Route 2), the other 758 ledge cells have a walk-around; cliffs drawn as raised ground need the drawing labels
+   (W4, W6), as Crystal's do; Blue's 9 holes (Seafoam Islands 1F–B3F, Victory Road 3F) are warp tiles with no warp,
+   dropped by a script: their landings come from the export (W3); rooms need 4–10 blocks (64 rooms 4, 30 rooms 6, 78
+   rooms 8, the 12 raised caves 10); outdoor faces short of rows on 35 of 36 maps (998 cells, Tier A only); every cave
+   link is drawn as a ladder (no stairs warp is built as a shaft), 15 real today, 17 with floors from the ladders.
+3. **W2: one 3D planner** (plan D1). `CaveMap` is the planner's game-neutral input (walk cells, warps with their arrival
+   cells and kinds, the door), filled by each family: Gen 1 from the export as before (its rule kept: in a cave any warp
+   tile that isn't a door is a ladder), Gen 2 from the collision byte's warp kind, Gen 3 from the cell's behaviour
+   (`LADDER`, the fall warps, stairs and escalators). Where the data merges kinds, `WarpKinds` reads the jar's table
+   `kantobridge/warp_kinds/<game>.json`, the agents' review of the 541 warp drawings keyed by cell (tile ids and a kind,
+   made by `tools/heights/warp_kinds_table.py`): Gen 2's ladder from its staircase, and which way a ladder or staircase
+   leads. `Area3d` picks a Gen 2 or Gen 3 build's maps for the area: the caves, every interior a ladder or hole joins to
+   another (a hole back into its own map, Ecruteak Gym's traps, doesn't count; an outdoor map's ladder stays an
+   entrance) and the rooms whose door is in one. `CavePlanner`, `CaveRooms` and `CavePieces` work on `CaveMap`; floors
+   come from the ids (now also `_1F_1R`, `_B2F_MAHOGANY_SIDE`, `_2F_INSIDE`), then from the ladders' ways where the ids
+   name none (Navel Rock, Diglett's Cave), and **per room** where one map holds several floors (Crystal's Victory Road,
+   Mt. Moon): such a room is a piece placed a floor up or down. `Gen2Planner` and `Gen3Planner` place the area north of
+   their region's dungeons and draw its maps as their rooms; their links keep the fade until W3 (no shafts in their
+   index). The real dry runs: Kanto 6 complexes, 19 maps, 87 rooms, **17 shafts** (Diglett's Cave's two entrance
+   ladders now line up), the same raised ground; Johto 23 complexes, 81 maps, 266 rooms, 36 links lined up (fades: 23
+   loop, 12 moved aside, 16 same floor, 7 off the floor); Hoenn 31 complexes, 114 maps, 293 rooms, 61 lined up (7 loop, 5
+   moved aside, 14 holes up, 8 same floor, 2 one-way up, 2 off the floor). Tests: `Area3dTest`; Gen 2's plan test, its
+   golden index and shapes, the Python golden test and the Johto GameTests follow its cave into the area (top floor
+   64, two habitat blocks of reach 6, the house on layer 1). Checks: JUnit 1,354, GameTests 126, pytest 2,251.
+
 ## Wild Routes
 
 Execution of [specs/WILD_ROUTES_PLAN.md](specs/WILD_ROUTES_PLAN.md) (WR1–WR8), from your choices R1–R9 (2026-10-10)

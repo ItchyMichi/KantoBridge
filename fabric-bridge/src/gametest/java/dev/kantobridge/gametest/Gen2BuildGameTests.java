@@ -14,6 +14,7 @@ import dev.kantobridge.builder.BuildTask;
 import dev.kantobridge.builder.KantoWorldBuilder;
 import dev.kantobridge.builder.export.BundleException;
 import dev.kantobridge.builder.export.ExportBundle;
+import dev.kantobridge.builder.plan.WorldPlan;
 import dev.kantobridge.proto.Envelope;
 import dev.kantobridge.proto.MsgTypes;
 import dev.kantobridge.scene.gen3.QuarterPages;
@@ -308,7 +309,10 @@ public class Gen2BuildGameTests implements FabricGameTest {
 		helper.assertTrue(index.map("G2_TEST_CAVE").dark(), "the cave is dark");
 		helper.assertTrue(Files.isRegularFile(worldDir.resolve(POOLS + "johto_g2_test_route.json")), "the route's pool isn't in the datapack");
 		helper.assertTrue(Files.isRegularFile(worldDir.resolve(POOLS + "johto_g2_test_cave.json")), "the cave's pool isn't in the datapack");
-		helper.assertTrue(index.habitats().size() == 2, "johto's habitats " + index.habitats().size());
+		// the cave in the 3D area (HEIGHTS_ALL_GAMES_PLAN D1): its top floor at 64, its habitat blocks reaching 6, so two
+		MapPlacement cave = index.map("G2_TEST_CAVE");
+		helper.assertTrue(WorldPlan.BIOME_CAVE_3D.equals(cave.biome()) && cave.y() == 64, "the cave in the 3D area " + cave);
+		helper.assertTrue(index.habitats().size() == 3, "johto's habitats " + index.habitats().size());
 
 		ServerLevel level = helper.getLevel();
 		// Ground: a full tile block showing its tile's slot in johto's range, open above.
@@ -340,9 +344,9 @@ public class Gen2BuildGameTests implements FabricGameTest {
 		BlockPos feet = index.cellOrigin("G2_TEST_TOWN", 0, 4);
 		BlockState wall = level.getBlockState(feet).is(KbBlocks.EDGE_WALL) ? level.getBlockState(feet) : level.getBlockState(feet.above());
 		helper.assertTrue(wall.is(KbBlocks.EDGE_WALL) && wall.getValue(EdgeWallBlock.NORTH) && !wall.getValue(EdgeWallBlock.EAST), "the fence's wall " + wall);
-		// The house under its door, two layers down (the cave holds the first under the route): a floor, open above.
+		// The house under its door, a layer down (the cave left the layers for the 3D area): a floor, open above.
 		MapPlacement house = index.map("G2_TEST_HOUSE");
-		helper.assertTrue(house.layer() == 2 && "G2_TEST_TOWN".equals(house.parent()), "the house's layer and parent");
+		helper.assertTrue(house.layer() == 1 && "G2_TEST_TOWN".equals(house.parent()), "the house's layer and parent");
 		BlockPos floor = index.cellOrigin("G2_TEST_HOUSE", 0, 3);
 		helper.assertTrue(level.getBlockState(floor.below()).getBlock() instanceof TileBlock && level.getBlockState(floor).isAir(), "the house's floor");
 	}

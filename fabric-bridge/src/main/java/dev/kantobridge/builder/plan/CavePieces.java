@@ -1,6 +1,5 @@
 package dev.kantobridge.builder.plan;
 
-import dev.kantobridge.builder.export.CellFlags;
 import dev.kantobridge.builder.export.ExportMap;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
@@ -8,6 +7,7 @@ import java.util.BitSet;
 import java.util.Collection;
 import java.util.Deque;
 import java.util.List;
+import java.util.Map;
 import org.jetbrains.annotations.Nullable;
 
 /**
@@ -64,25 +64,16 @@ public final class CavePieces {
 	 * @param sites the blocks ({bx, by}) of the map's swap sites: their cells may be walked on in some story state
 	 */
 	public static List<Room> of(ExportMap map, Collection<int[]> sites) {
-		int w = map.cellWidth();
-		int h = map.cellHeight();
+		return of(CaveMap.gen1(map, Map.of(map.id(), map), sites));
+	}
+
+	/** The rooms of a map of any game (HEIGHTS_ALL_GAMES_PLAN D1), in scan order of their first cell. */
+	public static List<Room> of(CaveMap map) {
+		int w = map.w();
+		int h = map.h();
 		boolean[] walks = new boolean[w * h];
-		for (int cy = 0; cy < h; cy++) {
-			for (int cx = 0; cx < w; cx++) {
-				int flags = map.flags(cx, cy);
-				walks[cy * w + cx] = CellFlags.has(flags, CellFlags.WALKABLE) || CellFlags.has(flags, CellFlags.WATER);
-			}
-		}
-		for (int[] site : sites) {
-			for (int dy = 0; dy < 2; dy++) {
-				for (int dx = 0; dx < 2; dx++) {
-					int cx = site[0] * 2 + dx;
-					int cy = site[1] * 2 + dy;
-					if (cx >= 0 && cy >= 0 && cx < w && cy < h) {
-						walks[cy * w + cx] = true;
-					}
-				}
-			}
+		for (int i = 0; i < w * h; i++) {
+			walks[i] = map.walks().get(i);
 		}
 		int[] room = new int[w * h];
 		java.util.Arrays.fill(room, -1);

@@ -176,19 +176,43 @@ public final class WorldPlanner {
 		// The cave area (docs/specs/CAVES_3D_PLAN.md §3.3): caves leave the interior layers for an area of their own north of
 		// Kanto, past the dungeon slots; their entrances fade over the distance, as Fly does.
 		Set<String> caves = CavePlanner.caves(all, requested, CAVE_TILESET);
-		// The caves built in 3D: every map of a complex the pilot switch names (CAVES_3D_PLAN §0)
-		Set<String> caves3d = new HashSet<>();
-		for (List<String> complex : CavePlanner.complexes(all, caves)) {
-			if (Caves3d.in3d(options.caves3d(), complex)) {
-				caves3d.addAll(complex);
-			}
-		}
 		// Their rooms never depend on the story: a swap site's cells count as walked on (§3.5)
 		Map<String, List<int[]>> siteBlocks = new HashMap<>();
 		for (ExportSwaps.Site site : bundle.swaps().sites()) {
 			siteBlocks.computeIfAbsent(site.map(), k -> new ArrayList<>()).add(new int[] {site.bx(), site.by()});
 		}
-		CavePlanner.Result caveArea = CavePlanner.place(all, caves, caves3d, siteBlocks, surfaceVolume, options.originX(), options.originZ(),
+		Map<String, List<ExportSwaps.Site>> swapsByMap = new HashMap<>();
+		// Each site's position in the export's list names it in the diagnostics (no coordinates, no block ids).
+		Map<ExportSwaps.Site, Integer> siteNumbers = new IdentityHashMap<>();
+		List<ExportSwaps.Site> allSites = bundle.swaps().sites();
+		for (int i = 0; i < allSites.size(); i++) {
+			ExportSwaps.Site site = allSites.get(i);
+			swapsByMap.computeIfAbsent(site.map(), k -> new ArrayList<>()).add(site);
+			siteNumbers.put(site, i);
+		}
+		// The caves' models, built once here: the warp review knows a warp cell by its drawing (HEIGHTS_ALL_GAMES_PLAN D2)
+		Map<String, MapModel> caveModels = new HashMap<>();
+		Map<String, CaveMap> caveMaps = new LinkedHashMap<>();
+		Map<String, ExportTileset> caveTilesets = new HashMap<>();
+		for (String id : caves) {
+			ExportMap map = all.get(id);
+			ExportTileset tileset = caveTilesets.get(map.tileset());
+			if (tileset == null) {
+				tileset = bundle.tileset(map.tileset());
+				caveTilesets.put(map.tileset(), tileset);
+			}
+			MapModel model = MapModel.build(map, tileset, swapsByMap.getOrDefault(id, List.of()), true, warnings, site -> siteNumbers.getOrDefault(site, -1));
+			caveModels.put(id, model);
+			caveMaps.put(id, CaveMap.gen1(map, model, all, siteBlocks.getOrDefault(id, List.of()), bundle.game(), true));
+		}
+		// The caves built in 3D: every map of a complex the pilot switch names (CAVES_3D_PLAN §0)
+		Set<String> caves3d = new HashSet<>();
+		for (List<String> complex : CavePlanner.complexesOf(caveMaps, caves)) {
+			if (Caves3d.in3d(options.caves3d(), complex)) {
+				caves3d.addAll(complex);
+			}
+		}
+		CavePlanner.Result caveArea = CavePlanner.placeArea(caveMaps, caves, caves3d, Map.of(), surfaceVolume, options.originX(), options.originZ(),
 				warnings);
 		for (MapPlacement cave : caveArea.placements()) {
 			placements.put(cave.id(), cave);
@@ -243,15 +267,6 @@ public final class WorldPlanner {
 		}
 
 		// ---- cell models ----
-		Map<String, List<ExportSwaps.Site>> swapsByMap = new HashMap<>();
-		// Each site's position in the export's list names it in the diagnostics (no coordinates, no block ids).
-		Map<ExportSwaps.Site, Integer> siteNumbers = new IdentityHashMap<>();
-		List<ExportSwaps.Site> allSites = bundle.swaps().sites();
-		for (int i = 0; i < allSites.size(); i++) {
-			ExportSwaps.Site site = allSites.get(i);
-			swapsByMap.computeIfAbsent(site.map(), k -> new ArrayList<>()).add(site);
-			siteNumbers.put(site, i);
-		}
 		for (ExportSwaps.Site site : allSites) {
 			if (!all.containsKey(site.map())) {
 				warnings.warn("swap_unknown_map", Warnings.symbols("map", site.map(), "kind", site.kind(), "source", site.source(), "site",
@@ -278,8 +293,9 @@ public final class WorldPlanner {
 				warnings.warn("palette_missing");
 			}
 			boolean interior = placement.kind() == MapPlacement.Kind.INTERIOR;
-			MapModel model = MapModel.build(map, tileset, swapsByMap.getOrDefault(map.id(), List.of()), interior, warnings,
-					site -> siteNumbers.getOrDefault(site, -1));
+			MapModel model = interior && caveModels.containsKey(map.id()) ? caveModels.get(map.id())
+					: MapModel.build(map, tileset, swapsByMap.getOrDefault(map.id(), List.of()), interior, warnings,
+							site -> siteNumbers.getOrDefault(site, -1));
 			// The edges the engine's tile pairs close (CAVES_3D_PLAN §3.2): invisible walls in the map's cells along them
 			PairEdges edges = PairEdges.of(model, field.tilePairs());
 			if (edges.edges() > 0) {

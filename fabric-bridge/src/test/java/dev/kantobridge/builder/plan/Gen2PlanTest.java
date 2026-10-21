@@ -24,6 +24,7 @@ import dev.kantobridge.builder.pack.ResourcePackWriter;
 import dev.kantobridge.proto.ProtoJson;
 import dev.kantobridge.scene.gen3.QuarterPages;
 import dev.kantobridge.world.MapPlacement;
+import dev.kantobridge.world.RegionRecord;
 import dev.kantobridge.world.SlotMap;
 import dev.kantobridge.world.StoryCellTable;
 import dev.kantobridge.world.StoryCellType;
@@ -75,11 +76,18 @@ class Gen2PlanTest {
 		// J3: Crystal's Kanto east of Johto, past Johto's 10 cells and 32 of sea, its top at Johto's top (the route's, -6 cells)
 		assertEquals(new MapPlacement("G2_TEST_KANTO_TOWN", ox(84), 64, oz(-12), 4, 4, 0, MapPlacement.Kind.SURFACE, QuarterPages.PALETTE,
 				WorldPlan.BIOME_OUTDOOR, false, null), plan.index().map("G2_TEST_KANTO_TOWN"));
-		// the cave under the route's warp (2, 5), its arrival (2, 2): dark, a cave's biome
-		assertEquals(new MapPlacement("G2_TEST_CAVE", ox(4), 42, oz(-6), 6, 4, 1, MapPlacement.Kind.INTERIOR, QuarterPages.PALETTE,
-				WorldPlan.BIOME_CAVE, true, "G2_TEST_ROUTE"), plan.index().map("G2_TEST_CAVE"));
-		// the house under the town's door (4, 3), its mat (2, 5) the arrival; a layer below the cave, which holds layer 1 there
-		assertEquals(new MapPlacement("G2_TEST_HOUSE", ox(4), 20, oz(-4), 6, 6, 2, MapPlacement.Kind.INTERIOR, QuarterPages.PALETTE,
+		// the cave (its door the route's warp (2, 5)) in the 3D area north of the dungeons (HEIGHTS_ALL_GAMES_PLAN D1): its top
+		// floor at feet 64, dark, the area's cave biome, inside the area's box
+		MapPlacement cave = plan.index().map("G2_TEST_CAVE");
+		assertEquals(new MapPlacement("G2_TEST_CAVE", cave.x(), CavePlanner.TOP_FEET, cave.z(), 6, 4, 1, MapPlacement.Kind.INTERIOR,
+				QuarterPages.PALETTE, WorldPlan.BIOME_CAVE_3D, true, "G2_TEST_ROUTE"), cave);
+		RegionRecord.Area area = plan.caveArea();
+		assertTrue(area != null && cave.x() >= area.x() && cave.z() >= area.z() && cave.x() + cave.blockWidth() <= area.x() + area.w()
+				&& cave.z() + cave.blockDepth() <= area.z() + area.d(), "in the 3D area");
+		assertTrue(cave.z() + cave.blockDepth() <= dev.kantobridge.dungeon.DungeonSlots.region(plan.surfaceBox(), TestData.G2_ORIGIN_X,
+				TestData.G2_ORIGIN_Z).z() - CavePlanner.GAP, "north of the region's dungeons");
+		// the house under the town's door (4, 3), its mat (2, 5) the arrival, on layer 1 now that the cave left the layers
+		assertEquals(new MapPlacement("G2_TEST_HOUSE", ox(4), 42, oz(-4), 6, 6, 1, MapPlacement.Kind.INTERIOR, QuarterPages.PALETTE,
 				WorldPlan.BIOME_INTERIOR, false, "G2_TEST_TOWN"), plan.index().map("G2_TEST_HOUSE"));
 		assertEquals(0, plan.edgeMismatches());
 		assertEquals(0, plan.overlaps());
@@ -263,9 +271,11 @@ class Gen2PlanTest {
 	@Test
 	void habitatsAndPools() throws Exception {
 		List<WorldIndex.Habitat> habitats = plan.habitats();
-		assertEquals(List.of("G2_TEST_CAVE", "G2_TEST_ROUTE"), habitats.stream().map(WorldIndex.Habitat::map).toList());
-		assertEquals(42 - HabitatPlanner.BELOW_FEET, habitats.get(0).y());
-		assertEquals(64 - HabitatPlanner.BELOW_FEET, habitats.get(1).y());
+		// the cave's blocks reach 6 in the 3D area (HD8), so it takes two; the route's one
+		assertEquals(List.of("G2_TEST_CAVE", "G2_TEST_CAVE", "G2_TEST_ROUTE"), habitats.stream().map(WorldIndex.Habitat::map).toList());
+		assertEquals(CavePlanner.TOP_FEET - HabitatPlanner.BELOW_FEET, habitats.get(0).y());
+		assertEquals(HabitatPlanner.CAVE_RANGE, habitats.get(0).range());
+		assertEquals(64 - HabitatPlanner.BELOW_FEET, habitats.get(2).y());
 		assertEquals(Set.of("kantobridge:g2_test_cave", "kantobridge:g2_test_route"), plan.pools().keySet());
 		// J6: the route's morning, day and night tables in one pool, an entry per species and level
 		JsonArray route = ProtoJson.parseObject(plan.pools().get("kantobridge:g2_test_route")).getAsJsonArray("spawns");

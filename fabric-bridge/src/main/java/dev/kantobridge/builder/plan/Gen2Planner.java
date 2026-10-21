@@ -17,6 +17,7 @@ import dev.kantobridge.scene.GameFrontEnd;
 import dev.kantobridge.scene.Scene;
 import dev.kantobridge.scene.gen3.QuarterPages;
 import dev.kantobridge.world.DataReader;
+import dev.kantobridge.world.MapLayout;
 import dev.kantobridge.world.MapPlacement;
 import dev.kantobridge.world.Scale;
 import dev.kantobridge.world.SlotMap;
@@ -137,9 +138,40 @@ final class Gen2Planner {
 		Box3 surfaceVolume = WorldPlan.surfaceVolume(placements.values());
 		InteriorPacker.Box sky = !options.shapes() || surfaceVolume == null ? null
 				: new InteriorPacker.Box(surfaceVolume.minX(), surfaceVolume.minZ(), surfaceVolume.maxX(), surfaceVolume.maxZ());
+		// The 3D area (docs/specs/HEIGHTS_ALL_GAMES_PLAN.md D1): the caves and every complex a ladder or hole joins leave the
+		// layers for an area of their own north of the region's dungeons, as Kanto's caves did (CAVES_3D_PLAN §3.3).
+		Map<String, G2Tiles> variants = new HashMap<>();
+		Map<String, MapModel> interiorModels = new HashMap<>();
+		Map<String, CaveMap> caveMaps = new LinkedHashMap<>();
+		Set<String> caveIds = new LinkedHashSet<>();
+		Set<String> outdoorIds = new HashSet<>();
+		for (String id : requested) {
+			Door door = doors.get(id);
+			if (surface.contains(id) || door == null || !requestedSet.contains(door.parent())) {
+				continue;
+			}
+			G2Map map = all.get(id);
+			G2Tiles tiles = tiles(bundle, variants, map.variant());
+			MapModel model = G2Cells.model(map, tiles, sitesByMap.getOrDefault(id, List.of()), true, warnings);
+			interiorModels.put(id, model);
+			caveMaps.put(id, CaveMap.gen2(map, tiles, model, all, new CaveMap.Door(door.parent(), door.x(), door.y(), door.arrivalX(), door.arrivalY()),
+					QuarterPages.PALETTE, caveMaps.size(), bundle.game()));
+			if (map.caveLike()) {
+				caveIds.add(id);
+			}
+			if (G2Map.OUTDOOR.contains(map.env())) {
+				outdoorIds.add(id);
+			}
+		}
+		Set<String> area3d = Area3d.select(caveMaps, caveIds, outdoorIds);
+		CavePlanner.Result caveArea = placeArea3d(caveMaps, area3d, id -> all.get(id).caveLike() || wildMaps.contains(id), options, surfaceVolume,
+				warnings);
+		for (MapPlacement p : caveArea.placements()) {
+			placements.put(p.id(), p);
+		}
 		List<String> pending = new ArrayList<>();
 		for (String id : requested) {
-			if (surface.contains(id)) {
+			if (surface.contains(id) || area3d.contains(id)) {
 				continue;
 			}
 			Door door = doors.get(id);
@@ -182,17 +214,24 @@ final class Gen2Planner {
 		}
 
 		// ---- cell models ----
-		Map<String, G2Tiles> variants = new HashMap<>();
 		List<PlacedMap> placed = new ArrayList<>();
+		Map<String, MapLayout> mapLayouts = new TreeMap<>();
 		int oneWayEdges = 0;
 		for (MapPlacement placement : placements.values()) {
 			G2Map map = all.get(placement.id());
 			G2Tiles tiles = tiles(bundle, variants, map.variant());
-			MapModel model = G2Cells.model(map, tiles, sitesByMap.getOrDefault(map.id(), List.of()),
-					placement.kind() == MapPlacement.Kind.INTERIOR, warnings);
+			boolean interior = placement.kind() == MapPlacement.Kind.INTERIOR;
+			MapModel model = interior && interiorModels.containsKey(map.id()) ? interiorModels.get(map.id())
+					: G2Cells.model(map, tiles, sitesByMap.getOrDefault(map.id(), List.of()), interior, warnings);
 			PairEdges edges = G2Cells.oneWay(model, map, tiles);
 			oneWayEdges += edges.edges();
-			placed.add(new PlacedMap(placement, model, edges));
+			// The 3D area's maps are drawn as their rooms (D1, CAVES_3D_PLAN §3.5)
+			List<MapLayout.Piece> pieces = caveArea.pieces().get(map.id());
+			MapLayout rooms = pieces == null ? null : WorldPlanner.withPieces(model, pieces, null);
+			if (rooms != null) {
+				mapLayouts.put(map.id(), rooms);
+			}
+			placed.add(new PlacedMap(placement, model, edges, rooms));
 		}
 		warnings.note("one_way_edges", oneWayEdges);
 
@@ -222,7 +261,10 @@ final class Gen2Planner {
 		if (spawn == null) {
 			warnings.warn("spawn_missing");
 		}
-		WorldIndex index = new WorldIndex(bundle.game(), bundle.exportHash(), placements.values(), slotMap.hash(), storyCells, habitats);
+		// W2: the area's links keep their fades until the climb is checked on this engine (W3): no shafts yet
+		List<WorldIndex.Shaft> shafts = List.of();
+		WorldIndex index = new WorldIndex(bundle.game(), bundle.exportHash(), placements.values(), mapLayouts, slotMap.hash(), storyCells, habitats,
+				List.of(), null, shafts);
 
 		// ---- shapes: the Gen 2 front end's scene of the whole export, the placed maps' positions ----
 		Scene scene = null;
@@ -235,13 +277,37 @@ final class Gen2Planner {
 				scene = frontEnd.describe(bundle);
 				shapes = ShapePlanner.plan(scene, placements.values(), ShapeParams.current(),
 						WorldPlanner.occupancy(placed, storyIndex, storyCells, surfaceBox, fill.owner(), fill.voidCells()),
-						new ArtUnitProbe(FrontEnds.artSource(bundle)), new TreeMap<>(), List.of())
+						new ArtUnitProbe(FrontEnds.artSource(bundle)), mapLayouts, shafts)
 						.withIndexHash(index.hash());
 			}
 		}
 		return new WorldPlan(bundle.game(), bundle.exportHash(), options.originX(), options.originZ(), placed, surfaceBox, fill.owner(),
 				fill.voidCells(), storyCells, storyIndex, art, spawn, index, pools, warnings, mapsRequested, unplaced, seams[0], seams[1], scene, shapes,
-				null, region);
+				caveArea.area(), region);
+	}
+
+	/**
+	 * Places a Gen 2 or Gen 3 build's 3D area (HEIGHTS_ALL_GAMES_PLAN D1) with {@link CavePlanner}: complexes the pilot
+	 * switch names ({@link Caves3d}, every one by default) room by room, the rest whole floor by whole floor. A cave or a
+	 * map of wild Pokémon takes the 3D area's cave biome, any other map (a gym, a tower) the interior biome.
+	 */
+	static CavePlanner.Result placeArea3d(Map<String, CaveMap> maps, Set<String> area3d, java.util.function.Predicate<String> caveBiome,
+			WorldPlanner.Options options, @Nullable Box3 surfaceVolume, Warnings warnings) {
+		Map<String, CaveMap> inArea = new LinkedHashMap<>();
+		Map<String, String> biomes = new HashMap<>();
+		for (String id : area3d) {
+			inArea.put(id, maps.get(id));
+			if (!caveBiome.test(id)) {
+				biomes.put(id, WorldPlan.BIOME_INTERIOR);
+			}
+		}
+		Set<String> in3d = new HashSet<>();
+		for (List<String> complex : CavePlanner.complexesOf(inArea, area3d)) {
+			if (Caves3d.in3d(options.caves3d(), complex)) {
+				in3d.addAll(complex);
+			}
+		}
+		return CavePlanner.placeArea(inArea, area3d, in3d, biomes, surfaceVolume, options.originX(), options.originZ(), warnings);
 	}
 
 	/** Every map of the export, by id. */
