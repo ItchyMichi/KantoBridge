@@ -259,6 +259,20 @@ def crop(occ, exposed, col):
     return occ[box], exposed[box], col[box]
 
 
+def cell_tops(package: dict, D: int, W: int) -> np.ndarray:
+    """Per drawing pixel its cell's level in voxels over the window's floor (a ramp's foot): where a tree of a model of
+    trees stands in the game."""
+    top = np.zeros((D, W), np.int32)
+    levels = package.get("levels")
+    if not levels:
+        return top
+    px, ww = package["px"], package["window"][2]
+    for i, level in enumerate(levels):
+        cx, cy = i % ww, i // ww
+        top[cy * px:(cy + 1) * px, cx * px:(cx + 1) * px] = max(0, level - package.get("floor", 0)) * 8
+    return top
+
+
 def ground_tops(package: dict, D: int, W: int) -> np.ndarray:
     """Per drawing pixel the ground's height in voxels over the window's floor (package "floor"): each cell's level (8
     voxels a block), a ramp climbing its rise across its cell the way it climbs. Zero without levels."""
@@ -288,12 +302,14 @@ def ground_tops(package: dict, D: int, W: int) -> np.ndarray:
     return top
 
 
-def scene(models, draw, path_json, path_view, path_game, title, ground=None):
+def scene(models, draw, path_json, path_view, path_game, title, ground=None, cells=None):
     """Every model on the window's ground (2 voxels of the drawing seen from above), at half the resolution: 4 voxels a
-    block. ground: per drawing pixel the ground's height in voxels (ground_tops); each model then (occ, col, base voxels)."""
+    block. ground: per drawing pixel the ground's height in voxels (ground_tops); each model then (occ, col, base voxels)
+    or (occ, col, None) for a model of trees, each column on its own cell's level (cells: cell_tops)."""
     D, W = draw.shape[0], draw.shape[1]
     ground = np.zeros((D, W), np.int32) if ground is None else ground
-    H = max([m[0].shape[0] + (m[2] if len(m) > 2 else 0) for m in models] + [8, int(ground.max())])
+    cells = np.zeros((D, W), np.int32) if cells is None else cells
+    H = max([m[0].shape[0] + (m[2] if len(m) > 2 and m[2] is not None else int(cells.max())) for m in models] + [8, int(ground.max())])
     H += H % 2  # an even height, so the half resolution pairs every layer
     occ = np.zeros((H + 2, D, W), bool)
     col = np.zeros((H + 2, D, W, 3), np.uint8)
@@ -308,6 +324,13 @@ def scene(models, draw, path_json, path_view, path_game, title, ground=None):
         m_occ, m_col = m[0], m[1]
         base = m[2] if len(m) > 2 else 0
         h = m_occ.shape[0]
+        if base is None:
+            # trees: each column on its own cell
+            for lift in np.unique(cells):
+                where = (cells == lift)[None, :, :] & m_occ
+                occ[2 + lift:2 + lift + h] |= where
+                col[2 + lift:2 + lift + h][where] = m_col[where]
+            continue
         occ[2 + base:2 + base + h] |= m_occ
         col[2 + base:2 + base + h][m_occ] = m_col[m_occ]
     # half resolution: a voxel where any of its 8 is; its colour the highest, southmost one's
@@ -373,13 +396,18 @@ def main() -> int:
                 _, (occ, _, col, _) = made(name)
                 built[name] = (occ, col)
         bases = {s["id"]: max(0, s.get("base", 0) - package.get("floor", 0)) for s in package["sections"]}
+        kinds = {s["id"]: s["kind"] for s in package["sections"]}
 
         def base_of(name):
             spec = json.loads((pkg_dir / "specs" / f"{name}.json").read_text(encoding="utf-8"))
-            return min([bases.get(i, 0) for i in spec.get("sections", [])] or [0]) * 8
+            ids = spec.get("sections", [])
+            if ids and all(kinds.get(i) == "trees" for i in ids):
+                return None  # a model of trees: each tree on its own cell, as the game builds it
+            return min([bases.get(i, 0) for i in ids] or [0]) * 8
 
         scene([built[n] + (base_of(n),) for n in every], draw, out / "scene.json", out / "scene_view.png", out / "scene_game.png",
-              f"{package['map']}: scene" + (" (on the levels)" if package.get("levels") else ""), ground_tops(package, D, W))
+              f"{package['map']}: scene" + (" (on the levels)" if package.get("levels") else ""), ground_tops(package, D, W),
+              cell_tops(package, D, W))
         print("scene", len(every), "models", "on the levels" if package.get("levels") else "")
     return 0
 

@@ -60,3 +60,34 @@ def test_a_slope_without_a_way_up_is_refused(tmp_path):
     (tmp_path / "ROUTE.json").write_text('{"slopes": [[6, 55, "north"]]}')
     with pytest.raises(ValueError):
         add_slopes({"maps": {}}, str(tmp_path))
+
+
+# A made-up map 4 x 2 cells for the levels pipeline's tools: a rock at (3, 0), a ledge of ground 6 blocks up along the top
+# row, the floor below; the computer climbs it on a ramp at (1, 1).
+DUMP = {"w": 4, "kinds": "...#....", "levels": [6, 6, 6, 0, 0, 0, 0, 0], "ramps": [[1, 1, "up", 3]]}
+
+
+def test_the_marks_meet_the_computer_where_most_cells_agree():
+    from landscape_sections.compare_marks import compare
+
+    # the user counts from the floor's half cell above it: the floor 1, the ledge 5; a slope on the ramp; the rock marked too
+    marks = {"view": [0, 0, 4, 2], "levels": [[0, 0, 5], [1, 0, 5], [2, 0, 3], [3, 0, 9], [0, 1, 1], [2, 1, 1], [3, 1, 1]],
+             "slopes": [[1, 1, "up"]]}
+    r = compare(marks, DUMP)
+    assert r["offset"] == -1, "the computer's level of the user's 0, in half cells"
+    assert (r["agree"], r["total"]) == (5, 6), "rock and slopes aren't compared"
+    assert r["differ"] == [(2, 0, 2, 4, ".")]
+    assert r["rows"][0] == (0, "4428", "444#") and r["rows"][1] == (1, "0^00", "0^00")
+    assert compare(marks, DUMP, offset=0)["agree"] == 0
+
+
+def test_the_tiles_under_the_arrows_name_the_stairs():
+    from landscape_sections.stair_tiles import emerald_key, under_arrows
+
+    keys = [7, 7, 9, 1,
+            7, 9, 9, 1]
+    marks = {"view": [0, 0, 4, 2], "levels": [[1, 0, 2], [0, 1, 0]], "slopes": [[0, 0, "up"], [2, 0, "up"], [1, 1, "left"], [2, 1, "up"]]}
+    found = under_arrows(marks, 4, keys)
+    assert found == [{"tile": 9, "arrows": {"up": 2, "left": 1}, "cells": 3, "slopes": 3, "ground": 0},
+                     {"tile": 7, "arrows": {"up": 1}, "cells": 3, "slopes": 1, "ground": 2}]
+    assert emerald_key("general__fortree", 175) == "general/175" and emerald_key("general__fortree", 600) == "fortree/600"

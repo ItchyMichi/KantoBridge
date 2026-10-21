@@ -82,6 +82,13 @@ HAND_MODELS.md and FITTED_SHAPES.md; this file is the order and the settings.
   ffmpeg, Xvfb :99 and :97 on the pod. A change to client geometry needs `ShapeTable.GEOMETRY` raised, or clients
   reuse their cached meshes.
 
+## 6. Outdoor levels (every game)
+
+Raised ground on the outdoor maps, the landscape models on it: the steps (the computer's levels, the user's marks
+on kb-hub's `/levels.html`, comparing them, teaching the computer the drawing's stairs, the packages, remodels, build
+and pictures) are in [LEVELS_PIPELINE.md](LEVELS_PIPELINE.md), shared by the three games. Blue: no stair table yet: its outdoor levels come from the tile pairs and the faces between its areas alone (Route 23
+and Route 10 tried in the levels pilot, not yet checked against marks).
+
 ## Blue's open items
 
 - Hand models: only one made; the Blue batch (200 packages, 34 of them buildings now generated) is next.

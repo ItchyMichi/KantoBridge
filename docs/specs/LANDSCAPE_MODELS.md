@@ -116,6 +116,8 @@ comparison is like for like.
 
 ## Levels (the levels pilot, 2026-10-21)
 
+The steps, to repeat this on other maps and games: [LEVELS_PIPELINE.md](LEVELS_PIPELINE.md).
+
 The user's Route 119: "the model is perfect but there should be a sand slope up to a higher level"; both the slope and
 the ground after it stood on the floor. Their choices: both halves (the levels given to the modelling agents, and the
 walkable ground raised in the build, slopes as ramps), at the models' scale (3 blocks a cell of cliff, 1.5 a tile row;

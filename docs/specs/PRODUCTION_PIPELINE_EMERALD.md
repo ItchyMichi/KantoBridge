@@ -82,6 +82,14 @@ Crystal's own differences are in "Crystal's changes" and "The Crystal trial" at 
   ffmpeg, Xvfb :99 and :97 on the pod. A change to client geometry needs `ShapeTable.GEOMETRY` raised, or clients
   reuse their cached meshes.
 
+## 6. Outdoor levels (every game)
+
+Raised ground on the outdoor maps, the landscape models on it: the steps (the computer's levels, the user's marks
+on kb-hub's `/levels.html`, comparing them, teaching the computer the drawing's stairs, the packages, remodels, build
+and pictures) are in [LEVELS_PIPELINE.md](LEVELS_PIPELINE.md), shared by the three games. Emerald: the tile table `floor_kinds/emerald.json` (the general tileset's grey stairs) and the Mach Bike slope's
+behaviour find the drawn stairs; its elevations are layers, not heights. Route 119 checked against the user's marks
+(535 of 535).
+
 ## Blue's open items (for reference)
 
 - Hand models: only one made; the Blue batch (200 packages, 34 of them buildings now generated) is next.

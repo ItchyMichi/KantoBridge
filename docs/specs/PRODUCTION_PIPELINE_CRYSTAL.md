@@ -86,6 +86,14 @@ Crystal's own differences are in "Crystal's changes" and "The Crystal trial" at 
   ffmpeg, Xvfb :99 and :97 on the pod. A change to client geometry needs `ShapeTable.GEOMETRY` raised, or clients
   reuse their cached meshes.
 
+## 6. Outdoor levels (every game)
+
+Raised ground on the outdoor maps, the landscape models on it: the steps (the computer's levels, the user's marks
+on kb-hub's `/levels.html`, comparing them, teaching the computer the drawing's stairs, the packages, remodels, build
+and pictures) are in [LEVELS_PIPELINE.md](LEVELS_PIPELINE.md), shared by the three games. Crystal: no outdoor stair table yet (`floor_kinds/crystal.json` holds W4's cave stairs): its outdoor levels come from
+the one-way walls and the faces between its areas alone (Route 26 and Blackthorn City tried in the levels pilot, not yet
+checked against marks).
+
 ## Blue's open items (for reference)
 
 - Hand models: only one made; the Blue batch (200 packages, 34 of them buildings now generated) is next.
