@@ -1,0 +1,8 @@
+{
+ "game": "emerald",
+ "source": "the user's height marks on Route 119 (kb-hub's height-marking page, 2026-10-21): the grey stairs of the general tileset, both halves, each climbing north a cell, as every stair the marks name there uses them (33 Hoenn maps draw them); keyed by tileset and metatile. The slopes the engine pulls a walker down (MB_CYCLING_ROAD_PULL_DOWN, Route 119's sand slope) climb north by their behaviour, outside the table",
+ "kinds": {
+  "general/175": "stairs_up",
+  "general/207": "stairs_up"
+ }
+}

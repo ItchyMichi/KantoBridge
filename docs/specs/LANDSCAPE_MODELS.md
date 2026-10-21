@@ -113,3 +113,45 @@ more. The heaviest is Route 119's 91 trees: a section of 45,239 quads (11,340 wi
 section (VOXEL_BLOCKS_PLAN.md section 3.8), Route 26's trees 25,944. Absolute numbers include VirtualGL's frame copy; the
 comparison is like for like.
 
+
+## Levels (the levels pilot, 2026-10-21)
+
+The user's Route 119: "the model is perfect but there should be a sand slope up to a higher level"; both the slope and
+the ground after it stood on the floor. Their choices: both halves (the levels given to the modelling agents, and the
+walkable ground raised in the build, slopes as ramps), at the models' scale (3 blocks a cell of cliff, 1.5 a tile row;
+a cell of stairs or slope climbs 3). `-Pkb.outdoorLevels=<map,...>` (`build_world.py --outdoor-levels`) puts the named
+outdoor maps on raised ground (`OutdoorLevels`, `RaisedRegions` outdoors):
+
+- **The drawing decides.** Emerald's elevations are the engine's layers, not heights: Route 119's floor, the top of its
+  sand slope and its plateau are all elevation 3, the grass above them 4, and the step the data shows (a strip of
+  elevation 0) is plain ground in the drawing. So a map whose slopes and stairs are marked (the models table's
+  `slopes`, `tools/landscape_sections/slopes_table.py`: map cells and their way up) climbs where they are, 3 blocks a
+  cell; a strip of elevation 0 that no mark names keeps one height where it can, else climbs as a stair. A map not
+  marked reads its data as before (Crystal and Blue: the faces between their areas).
+- **Soft rules.** Outdoors a rule that disagrees with those before it is skipped and counted
+  (`outdoor_levels_skipped`), and the edges it leaves unwalkable are counted (`outdoor_levels_breaks`), instead of
+  leaving the whole map flat. Water stands with the bank it touches most; Emerald's waterfalls (`MB_WATERFALL`) part a
+  river, so the water above one has its own banks' height. A bridge is a deck at its ends' height (until the two-floor
+  cells of W6).
+- **In the build:** a raised cell's ground is filled down to the map's floor; a ramp climbs 3 blocks on the step
+  colliders' new stages (`LOW3` to a block and a half, then two full blocks under `HIGH3`), its stair art 24 voxels
+  tall; each landscape model's rock stands on one level, its lowest cell's (`OutdoorLevels.rigid`).
+- **For the agents:** `package.py --levels` (from `OutdoorLevelsDumpTest`, pod only: per map its levels, ramps, cell
+  kinds, outcome, skips and breaks) gives each window cell's level, the ramps and each section's `base`; the reference
+  shows the levels, and `terrain_model.py --scene` stands the ground at its levels and each model on its base.
+
+My reading of Route 119 (the sand slope, the plateau's two stairs, the east terraces' two stairs): floor 0, plateau
+one step (3 blocks), the grass above the slope two (6 blocks), nothing skipped. The cliff models there are 3.5 blocks
+tall, so they stop short of the 6-block ground behind them: the agents' remodel.
+
+**The user's marks** (kb-hub's `/levels.html`: each tile's level, slopes as uphill arrows; `kb-hub/data/levels/marks/
+<MAP>.json`) are the answer key. On Route 119 the user counts half cells (a tile row, 1.5 blocks: the plateau 2, the
+grass above the slope 4), the same scale as the solver's: of the 531 walkable tiles marked, 522 agreed with my reading,
+the other 9 a staircase I had missed and the terrace over it. The user's 11 stair arrows are exactly the cells of three
+metatiles: the general tileset's grey stairs (175 and 207, plain `NORMAL` behaviour) and the sand slope (232,
+`MB_CYCLING_ROAD_PULL_DOWN`: Emerald's Mach Bike slope). So Emerald's drawn stairs come from the jar's table
+`floor_kinds/emerald.json` (keyed `<tileset>/<metatile>`) and from that behaviour (`RaisedRegions.gen3Stairs`), marks
+on top; 33 Hoenn maps draw those three (Mt. Pyre's outside 39 cells, Route 119 27, Mossdeep 26, the Battle Frontier's
+outsides 25 and 23). A drawing can climb more than its stairs are long (the user's "jump from 2 to 4" at the sand
+slope's top, marked 1 and 2): the solver gives each stair or slope cell the cell of cliff it climbs, so the two-cell
+slope climbs 0 to 3 to 6 blocks.

@@ -548,6 +548,8 @@ class RaisedRegionsTest {
 		assertEquals(3, layout.level(3, 2), "the deck, level with its ends");
 		assertEquals(3, layout.level(6, 1), "the far bank, over the deck");
 		assertEquals(0, layout.level(3, 6), "the floor");
+		assertEquals(3, layout.level(3, 1), "the river over the bridge, level with its banks");
+		assertEquals(3, layout.level(3, 3), "and under it: one body of water");
 		assertEquals("flat_bridge", outdoor(rows, keys, true, false, null).outcome(), "underground a bridge waits for the two-floor cells");
 	}
 }

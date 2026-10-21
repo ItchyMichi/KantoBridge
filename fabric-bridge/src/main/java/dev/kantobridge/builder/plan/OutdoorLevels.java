@@ -37,7 +37,13 @@ public final class OutdoorLevels {
 	 * one level ({@link #rigid}).
 	 */
 	public static @Nullable MapLayout plan(String id, MapModel model, Function<Dir[], RaisedRegions.Result> solve, Warnings warnings) {
-		Dir[] slopes = LandscapeModels.slopes(id, model.cellWidth(), model.cellHeight());
+		return plan(id, model, null, solve, warnings);
+	}
+
+	/** The same, with {@code drawn} (the stairs the jar's tables know in the map's drawing, per cell its way up, or null). */
+	public static @Nullable MapLayout plan(String id, MapModel model, Dir @Nullable [] drawn, Function<Dir[], RaisedRegions.Result> solve,
+			Warnings warnings) {
+		Dir[] slopes = slopes(LandscapeModels.slopes(id, model.cellWidth(), model.cellHeight()), drawn);
 		RaisedRegions.Result levels = solve.apply(slopes);
 		warnings.note("outdoor_levels_" + levels.outcome() + (slopes == null ? "" : "_marked"), Warnings.symbols("map", id));
 		if (levels.layout() != null) {
@@ -50,6 +56,26 @@ public final class OutdoorLevels {
 			}
 		}
 		return rigid(levels.layout(), model, id);
+	}
+
+	/**
+	 * The slopes a map climbs on: the stairs the tables find in its drawing ({@code drawn}), the marked ones over them
+	 * ({@code marked}: a mark wins); null when neither knows any (and the marks weren't checked): its data decides.
+	 */
+	static Dir @Nullable [] slopes(Dir @Nullable [] marked, Dir @Nullable [] drawn) {
+		boolean found = drawn != null && Arrays.stream(drawn).anyMatch(java.util.Objects::nonNull);
+		if (!found) {
+			return marked;
+		}
+		Dir[] out = drawn.clone();
+		if (marked != null) {
+			for (int i = 0; i < out.length && i < marked.length; i++) {
+				if (marked[i] != null) {
+					out[i] = marked[i];
+				}
+			}
+		}
+		return out;
 	}
 
 	/**

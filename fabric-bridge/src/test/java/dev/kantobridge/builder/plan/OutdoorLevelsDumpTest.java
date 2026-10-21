@@ -57,6 +57,17 @@ class OutdoorLevelsDumpTest {
 					text.append('\n');
 				}
 				Files.writeString(out.resolve(map.id() + "_elev.txt"), text.toString(), StandardCharsets.UTF_8);
+				// each cell's metatile id (and its tileset pair): what a table of drawn stairs is keyed by
+				JsonObject mids = new JsonObject();
+				mids.addProperty("pair", g3.pair());
+				JsonArray ids = new JsonArray();
+				for (int cy = 0; cy < g3.h(); cy++) {
+					for (int cx = 0; cx < g3.w(); cx++) {
+						ids.add(g3.inGrid(cx, cy) ? g3.mid(cx, cy) : -1);
+					}
+				}
+				mids.add("mids", ids);
+				Files.writeString(out.resolve(map.id() + "_mids.json"), ProtoJson.write(mids), StandardCharsets.UTF_8);
 			}
 		}
 		JsonObject notes = new JsonObject();
@@ -80,10 +91,12 @@ class OutdoorLevelsDumpTest {
 			o.addProperty("raised", layout != null);
 			// the solver's own account (as the planner ran it): its outcome, the rules it skipped and the cells at the edges they
 			// leave unwalkable
-			dev.kantobridge.world.Dir[] slopes = dev.kantobridge.builder.shape.LandscapeModels.slopes(map.id(), w, h);
 			dev.kantobridge.builder.export.G3Map g3 = g3maps.get(map.id());
+			dev.kantobridge.builder.export.G3Tiles g3tiles = g3 == null ? null : bundle.g3tiles(g3.pair());
+			dev.kantobridge.world.Dir[] slopes = OutdoorLevels.slopes(dev.kantobridge.builder.shape.LandscapeModels.slopes(map.id(), w, h),
+					g3 == null ? null : RaisedRegions.gen3Stairs(map.model(), g3, g3tiles));
 			RaisedRegions.Result result = g3 != null
-					? RaisedRegions.gen3Outdoor(map.model(), g3, slopes, RaisedRegions.gen3Falls(map.model(), g3, bundle.g3tiles(g3.pair())))
+					? RaisedRegions.gen3Outdoor(map.model(), g3, slopes, RaisedRegions.gen3Falls(map.model(), g3, g3tiles))
 					: RaisedRegions.outdoor(map.model(), map.edges(), slopes);
 			o.addProperty("outcome", result.outcome());
 			o.addProperty("marked", slopes != null);

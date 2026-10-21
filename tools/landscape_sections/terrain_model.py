@@ -20,6 +20,10 @@ Writes <package>/out/<name>.json (kb-hub's viewer, cropped to the model), <name>
 <name>_front.png (straight from the south) and <name>_game.png (the game's own three-quarter view: set it beside the
 drawing, they should read alike); with --scene, scene.json (every model on the window's ground, 4 voxels a block) and
 scene_view.png, scene_game.png. Prints per model its size, voxels, highest voxel and the voxels the footprint cleared.
+
+With levels in the package (package.py --levels: the levels pilot), the scene's ground stands at each cell's level (a
+ramp climbing across its cell) and each model on its base, the lowest of its sections' (its voxels count from there, as
+the game places it); a model's own pictures stay on the ground.
 """
 from __future__ import annotations
 
@@ -255,20 +259,56 @@ def crop(occ, exposed, col):
     return occ[box], exposed[box], col[box]
 
 
-def scene(models, draw, path_json, path_view, path_game, title):
+def ground_tops(package: dict, D: int, W: int) -> np.ndarray:
+    """Per drawing pixel the ground's height in voxels over the map's floor: each cell's level (8 voxels a block), a ramp
+    climbing its rise across its cell the way it climbs. Zero without levels."""
+    top = np.zeros((D, W), np.int32)
+    levels = package.get("levels")
+    if not levels:
+        return top
+    px = package["px"]
+    ww = package["window"][2]
+    for i, level in enumerate(levels):
+        cx, cy = i % ww, i // ww
+        top[cy * px:(cy + 1) * px, cx * px:(cx + 1) * px] = level * 8
+    for cx, cy, climb, rise in package.get("ramps", []):
+        level = levels[cy * ww + cx]
+        t = (np.arange(px) + 0.5) / px
+        up = np.round((level + rise * t) * 8).astype(np.int32)
+        cell = top[cy * px:(cy + 1) * px, cx * px:(cx + 1) * px]
+        if climb == "up":
+            cell[:] = up[::-1, None]
+        elif climb == "down":
+            cell[:] = up[:, None]
+        elif climb == "left":
+            cell[:] = up[None, ::-1]
+        else:
+            cell[:] = up[None, :]
+    return top
+
+
+def scene(models, draw, path_json, path_view, path_game, title, ground=None):
     """Every model on the window's ground (2 voxels of the drawing seen from above), at half the resolution: 4 voxels a
-    block."""
+    block. ground: per drawing pixel the ground's height in voxels (ground_tops); each model then (occ, col, base voxels)."""
     D, W = draw.shape[0], draw.shape[1]
-    H = max([m[0].shape[0] for m in models] + [8])
+    ground = np.zeros((D, W), np.int32) if ground is None else ground
+    H = max([m[0].shape[0] + (m[2] if len(m) > 2 else 0) for m in models] + [8, int(ground.max())])
     H += H % 2  # an even height, so the half resolution pairs every layer
     occ = np.zeros((H + 2, D, W), bool)
     col = np.zeros((H + 2, D, W, 3), np.uint8)
-    occ[:2] = True
-    col[:2] = draw[None]
-    for m_occ, m_col in models:
+    ys = np.arange(H + 2)[:, None, None]
+    solid = ys < 2 + ground[None]
+    occ |= solid
+    # the ground's top in the drawing's colours, its raised sides darker
+    col[solid] = (np.broadcast_to(draw[None], (H + 2, D, W, 3))[solid] * 0.62).astype(np.uint8)
+    top = ys == 1 + ground[None]
+    col[top] = np.broadcast_to(draw[None], (H + 2, D, W, 3))[top]
+    for m in models:
+        m_occ, m_col = m[0], m[1]
+        base = m[2] if len(m) > 2 else 0
         h = m_occ.shape[0]
-        occ[2:2 + h] |= m_occ
-        col[2:2 + h][m_occ] = m_col[m_occ]
+        occ[2 + base:2 + base + h] |= m_occ
+        col[2 + base:2 + base + h][m_occ] = m_col[m_occ]
     # half resolution: a voxel where any of its 8 is; its colour the highest, southmost one's
     H2, D2, W2 = (occ.shape[0] + 1) // 2, D // 2, W // 2
     o = occ[:H2 * 2, :D2 * 2, :W2 * 2].reshape(H2, 2, D2, 2, W2, 2)
@@ -331,9 +371,15 @@ def main() -> int:
             if name not in built:
                 _, (occ, _, col, _) = made(name)
                 built[name] = (occ, col)
-        scene([built[n] for n in every], draw, out / "scene.json", out / "scene_view.png", out / "scene_game.png",
-              f"{package['map']}: scene")
-        print("scene", len(every), "models")
+        bases = {s["id"]: s.get("base", 0) for s in package["sections"]}
+
+        def base_of(name):
+            spec = json.loads((pkg_dir / "specs" / f"{name}.json").read_text(encoding="utf-8"))
+            return min([bases.get(i, 0) for i in spec.get("sections", [])] or [0]) * 8
+
+        scene([built[n] + (base_of(n),) for n in every], draw, out / "scene.json", out / "scene_view.png", out / "scene_game.png",
+              f"{package['map']}: scene" + (" (on the levels)" if package.get("levels") else ""), ground_tops(package, D, W))
+        print("scene", len(every), "models", "on the levels" if package.get("levels") else "")
     return 0
 
 

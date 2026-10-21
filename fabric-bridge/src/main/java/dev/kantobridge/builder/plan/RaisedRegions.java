@@ -187,6 +187,38 @@ public final class RaisedRegions {
 		return gen3Outdoor(model, map, null, null);
 	}
 
+	/** Emerald's primary tilesets hold metatiles 0 to 511; a map's secondary one the rest. */
+	static final int G3_PRIMARY_METATILES = 512;
+
+	/**
+	 * Emerald's drawn stairs and slopes: per floor cell its way up, else null. A slope the engine pulls a walker down
+	 * (MB_CYCLING_ROAD_PULL_DOWN: Route 119's sand slope, climbed by Mach Bike) climbs north; a metatile the jar's table
+	 * names ({@link FloorKinds}, {@code floor_kinds/emerald.json}, keyed {@code <tileset>/<metatile>}) climbs as it says.
+	 */
+	public static Dir[] gen3Stairs(MapModel model, G3Map map, G3Tiles tiles) {
+		int w = model.cellWidth();
+		int h = model.cellHeight();
+		Dir[] out = new Dir[w * h];
+		String[] pair = map.pair().split("__", 2);
+		Map<String, Dir> table = FloorKinds.table("emerald");
+		for (int cy = 0; cy < h; cy++) {
+			for (int cx = 0; cx < w; cx++) {
+				if (!floor(model.kind(cx, cy)) || !map.inGrid(cx, cy)) {
+					continue;
+				}
+				int mid = map.mid(cx, cy);
+				String behavior = tiles.behaviorName(mid);
+				if (behavior != null && behavior.endsWith("CYCLING_ROAD_PULL_DOWN")) {
+					out[cy * w + cx] = Dir.UP;
+					continue;
+				}
+				String tileset = mid < G3_PRIMARY_METATILES || pair.length < 2 ? pair[0] : pair[1];
+				out[cy * w + cx] = table.get(tileset + "/" + mid);
+			}
+		}
+		return out;
+	}
+
 	/** Emerald's waterfalls: the water cells whose metatile behaviour is a waterfall's. */
 	public static boolean[] gen3Falls(MapModel model, G3Map map, G3Tiles tiles) {
 		int w = model.cellWidth();
@@ -372,6 +404,8 @@ public final class RaisedRegions {
 		int n = w * h;
 		// (decked keeps its deck flag: the bridges are joins now, and the rules outdoors are known by it)
 		Input in = given.outdoor() ? decked(given, n) : given;
+		// outdoors a river flows on under a bridge's deck: one body of water either side of it
+		boolean[] under = given.outdoor() ? given.bridge() : new boolean[n];
 		int[] key = in.key();
 		// ---- regions ----
 		int[] region = new int[n];
@@ -453,11 +487,14 @@ public final class RaisedRegions {
 			if (model.kind(s % w, s / w) != MapModel.Kind.WATER || wet[s] || in.falls() != null && in.falls()[s]) {
 				continue;
 			}
-			List<Integer> part = flood(w, h, s, (a, b) -> model.kind(b % w, b / w) == MapModel.Kind.WATER && !wet[b]
+			List<Integer> part = flood(w, h, s, (a, b) -> under[b] || model.kind(b % w, b / w) == MapModel.Kind.WATER && !wet[b]
 					&& !(in.falls() != null && in.falls()[b]));
 			Map<Integer, Integer> shores = new LinkedHashMap<>();
 			List<Integer> banks = new ArrayList<>();
 			for (int c : part) {
+				if (under[c]) {
+					continue;
+				}
 				wet[c] = true;
 				waterOf[c] = waterShore.size();
 				for (Dir dir : Dir.values()) {

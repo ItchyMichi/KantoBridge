@@ -51,4 +51,21 @@ class OutdoorLevelsTest {
 		assertEquals(2, BlockCode.value(high) >> 2 & 3, "the high block's two half steps over a flat third");
 		assertEquals(BlockCode.step(Dir.UP), BlockCode.step(Dir.UP, 0), "a cave's two half steps unchanged");
 	}
+
+	@Test
+	void theDrawnStairsAndTheMarksMeet() {
+		Dir[] drawn = {null, Dir.UP, null, null};
+		Dir[] marked = {Dir.LEFT, Dir.DOWN, null, null};
+		assertEquals(List.of(Dir.LEFT, Dir.DOWN), java.util.Arrays.asList(OutdoorLevels.slopes(marked, drawn)).subList(0, 2), "a mark wins");
+		assertEquals(Dir.UP, OutdoorLevels.slopes(null, drawn)[1], "the drawn stairs alone");
+		assertSame(marked, OutdoorLevels.slopes(marked, new Dir[4]), "no drawn stairs: the marks as they are");
+		assertNull(OutdoorLevels.slopes(null, new Dir[4]), "neither: the data decides");
+		assertNull(OutdoorLevels.slopes(null, null));
+	}
+
+	@Test
+	void emeraldsTableNamesTheGreyStairs() {
+		assertEquals(Dir.UP, FloorKinds.table("emerald").get("general/175"));
+		assertEquals(Dir.UP, FloorKinds.table("emerald").get("general/207"));
+	}
 }
