@@ -15,7 +15,7 @@ import org.junit.jupiter.api.Test;
 /**
  * Every visible layer built (docs/specs/HEIGHTS_ALL_GAMES_PLAN.md D9), on made-up faces: the visible-layers check finds
  * today's lost rows (a face over a door folded to its building's 2 blocks, a face cut at 6 rows) and none under H9's
- * rules; a cliff body under its rim stands as tall as drawn, a tree line stays rows of 2-row trees.
+ * rules; a run read as a repeat and a run of fitted models stand as before and are named; a cave mouth's face rises.
  */
 class VisibleRowsTest {
 	private static final int SCREEN = 8;
@@ -133,9 +133,10 @@ class VisibleRowsTest {
 	}
 
 	@Test
-	void aCliffUnderItsRimStandsAsTallAsDrawnATreeLineStaysLow() {
-		// A rim over a repeating body: today read as a repeat, 2 blocks; with H9 a face, all 8 rows. The same drawing in
-		// foliage is a tree line under its crowns: rows of separate trees, 2 blocks each.
+	void aRunReadAsARepeatStaysOneAndIsNamed() {
+		// A rim over a repeating body: read as a repeat, 2 blocks, as before (the user's choice, 2026-10-21: no taller rimmed
+		// cliffs or tree lines); the check names its lost rows. The same drawing in foliage is a tree line: two rows of it
+		// are enough.
 		String[] art = {
 				"RRRR",
 				"QQQQ",
@@ -150,59 +151,72 @@ class VisibleRowsTest {
 		SceneMap cliff = surface("CLIFF", art);
 		assertEquals(2, shown(columns(cliff, ShapeParams.cw3()), cliff, 0, 7));
 		ShapePlanner.Columns h9 = columns(cliff, ShapeParams.h9(SCREEN));
-		assertEquals(8, shown(h9, cliff, 0, 7));
-		assertEquals(0, VisibleRows.check(cliff, h9, SCREEN).columns());
+		assertEquals(2, shown(h9, cliff, 0, 7));
+		VisibleRows.Missing rim = VisibleRows.check(cliff, h9, SCREEN);
+		assertEquals(Map.of("rim", 4), rim.kinds());
+		assertEquals(4 * 6, rim.rows());
 		ShapePlanner.Columns trees = columns(cliff, ShapeParams.h9(SCREEN), 'R', 'Q', 'S', 'T');
 		assertEquals(2, shown(trees, cliff, 0, 7));
 		assertTrue(trees.runs().get(0).separate());
 		assertEquals(0, VisibleRows.check(cliff, trees, SCREEN).columns(), "two rows of a tree line are enough");
-		// A fitted model in use at the cliff's foot: the run stands as it stood (the model stays in use), and the check names
-		// the rows the face lacks.
+		// A fitted model in use at its foot: the run stands as it stood, the model in use; the check names it.
 		ShapePlanner.Columns foot = withModels(cliff, ShapePlanner.measured(cliff, 0, ShapeParams.h9(SCREEN), Structures.solidTiles(cliff), null,
 				fitted(cliff, 3)), 3);
 		Structures.MeasuredRun run = foot.runs().get(0);
 		assertTrue(run.models());
 		assertEquals(2, run.h(), "as it stood");
-		assertEquals(0, run.r());
-		VisibleRows.Missing model = VisibleRows.check(cliff, foot, SCREEN);
-		assertEquals(Map.of("model", 2), model.kinds());
-		assertEquals(2 * 6, model.rows());
+		assertEquals(Map.of("model", 2, "rim", 2), VisibleRows.check(cliff, foot, SCREEN).kinds());
+		ShapePlanner.stackFaces(cliff, 0, SCREEN, foot.runs(), foot.keys(), foot.blocks(), foot.shapeMask(), foot.units());
+		assertEquals(2, foot.blocks()[0], "no mouth: nothing stacks");
 	}
 
 	@Test
-	void aFaceOfFittedModelsRisesModelByModel() {
-		// The user's choice (2026-10-21): every cell of the cliff holds a fitted model; each is lifted onto the face below its
-		// own rows, so the cliff shows all 8 rows and keeps all four models.
-		SceneMap cliff = surface("STACK",
-				"RRRR",
-				"QQQQ",
-				"SSSS",
-				"TTTT",
-				"SSSS",
-				"TTTT",
-				"SSSS",
-				"TTTT",
-				"....",
-				"....");
-		ShapePlanner.Columns all = withModels(cliff, ShapePlanner.measured(cliff, 0, ShapeParams.h9(SCREEN), Structures.solidTiles(cliff), null,
-				fitted(cliff, 0, 1, 2, 3)), 0, 1, 2, 3);
-		ShapeKey model = all.keys()[0][0];
-		ShapePlanner.stackFaces(cliff, 0, SCREEN, all.runs(), all.keys(), all.blocks(), all.shapeMask(), all.units());
-		int[] lift = {6, 6, 4, 4, 2, 2, 0, 0};
-		for (int ty = 0; ty < 8; ty++) {
-			assertEquals(lift[ty] + 2, all.blocks()[ty * 4], "row " + ty);
-			assertEquals(3 << lift[ty], all.shapeMask()[ty * 4], "the model's blocks over the face's own");
+	void aMouthDrawnAsTwoFittedCellsStacks() {
+		// A cave mouth whose arch and the rock over it both hold fitted models: the rock's model is lifted onto the face's
+		// blocks to its own rows, over the arch's; the same on an outdoor map under the open sky (a Battle Frontier outside).
+		String[] art = {
+				"....RR......",
+				"....RR......",
+				"CCCCAACCCCCC",
+				"DDDDBBDDDDDD",
+				"....++......",
+				"....++......",
+				"............",
+				"............"};
+		for (SceneMap map : new SceneMap[] {surface("MOUTH2", art), ShapeFixtures.openAir("FRONTIER", art)}) {
+			boolean[] fitted = new boolean[map.artCols() * map.artRows()];
+			for (int ty = 0; ty < 4; ty++) {
+				fitted[ty * 12 + 4] = true;
+				fitted[ty * 12 + 5] = true;
+			}
+			ShapePlanner.Columns h9 = ShapePlanner.measured(map, 0, ShapeParams.h9(SCREEN), Structures.solidTiles(map), null, fitted);
+			Structures.MeasuredRun run = h9.runs().stream().filter(x -> x.tx() == 4).findFirst().orElseThrow();
+			assertTrue(run.mouth(), map.id());
+			assertEquals(4, run.h(), map.id() + ": the arch's rows and the rock's");
+			int[] blocks = h9.blocks().clone();
+			int[] mask = h9.shapeMask().clone();
+			List<Units.Cell> units = new java.util.ArrayList<>();
+			for (int cy = 0; cy < 2; cy++) {
+				for (int ty = 2 * cy; ty < 2 * cy + 2; ty++) {
+					blocks[ty * 12 + 4] = 2;
+					blocks[ty * 12 + 5] = 2;
+					mask[ty * 12 + 4] = 3;
+					mask[ty * 12 + 5] = 3;
+				}
+				units.add(new Units.Cell(2, cy, ShapeKey.cube(0, 1, 1, 1, 1, 1, 1), false));
+			}
+			ShapePlanner.Columns mouth = new ShapePlanner.Columns(h9.keys(), blocks, mask, h9.floor(), h9.decor(), units, h9.runs(), h9.templates(),
+					h9.wallTile(), h9.ceiling(), h9.hung(), h9.hungMask(), h9.hungLeaves(), h9.curtain(), h9.modelled());
+			ShapePlanner.stackFaces(map, 0, SCREEN, mouth.runs(), mouth.keys(), mouth.blocks(), mouth.shapeMask(), units);
+			assertEquals(4, mouth.blocks()[4], map.id() + ": the rock's model on the face's 2 blocks");
+			assertEquals(3 << 2, mouth.shapeMask()[4]);
+			assertEquals(2, mouth.blocks()[3 * 12 + 4], map.id() + ": the arch stays on the ground");
+			if (map.surface()) {
+				assertEquals(0, VisibleRows.check(map, mouth, SCREEN).columns());
+			} else {
+				assertEquals(2, shown(h9, map, 0, 3), "the open sky's other walls keep their interior height");
+			}
 		}
-		assertEquals(model, all.keys()[0][6], "the back cell's model on top");
-		assertEquals(0, VisibleRows.check(cliff, all, SCREEN).columns());
-		// A model at the foot alone: it stays, and the face's other cells stand to its 8 rows.
-		ShapePlanner.Columns foot = withModels(cliff, ShapePlanner.measured(cliff, 0, ShapeParams.h9(SCREEN), Structures.solidTiles(cliff), null,
-				fitted(cliff, 3)), 3);
-		ShapePlanner.stackFaces(cliff, 0, SCREEN, foot.runs(), foot.keys(), foot.blocks(), foot.shapeMask(), foot.units());
-		assertEquals(2, foot.blocks()[7 * 4]);
-		assertEquals(8, foot.blocks()[0]);
-		assertEquals(0, foot.shapeMask()[0], "roofless: the model stays in use");
-		assertEquals(0, VisibleRows.check(cliff, foot, SCREEN).columns());
 	}
 
 	/** The tiles of cells (0, cy) of {@code map}, for each {@code cy}: cells holding fitted models. */

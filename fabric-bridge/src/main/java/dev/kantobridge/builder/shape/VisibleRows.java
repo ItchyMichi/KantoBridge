@@ -34,8 +34,9 @@ public final class VisibleRows {
 	 * @param rows    the rows they lack in all
 	 * @param worst   the most rows one lacks
 	 * @param kinds   the columns short by what lacks first: {@code model} (a run whose fitted models stand at their own
-	 *                height), {@code door} (the face over a door), {@code face}, {@code repeat} (rows of separate things),
-	 *                each with {@code /behind} when it stands behind another
+	 *                height), {@code door} (the face over a door), {@code rim} (a run read as a repeat, kept one: a cliff
+	 *                under its rim, a facade under its roof, a tree line), {@code repeat} (rows of separate things short of
+	 *                2), {@code face}, each with {@code /behind} when it stands behind another
 	 * @param first   per kind, the floor cell ({@code "cx,cy"}) of its first column short, row-major
 	 */
 	public record Missing(int columns, int rows, int worst, Map<String, Integer> kinds, Map<String, String> first) {
@@ -127,7 +128,7 @@ public final class VisibleRows {
 			int visible = Math.min(run.length(), left);
 			int need = run.separate() ? Math.min(2, visible) : visible;
 			boolean front = chain.isEmpty() && ty == bottom;
-			needs.add(new int[] {ty - need + 1, front ? lowest : ty, run.models() ? 3 : front && door ? 0 : run.separate() ? 2 : 1, front ? 0 : 1});
+			needs.add(new int[] {ty - need + 1, front ? lowest : ty, run.models() && !run.mouth() ? 3 : front && door ? 0 : run.separate() ? 2 : run.repeatRead() ? 4 : 1, front ? 0 : 1});
 			chain.add(run);
 			left -= visible;
 			ty = run.n() - 1;
@@ -165,7 +166,7 @@ public final class VisibleRows {
 		return lack;
 	}
 
-	private static final String[] KINDS = {"door", "face", "repeat", "model"};
+	private static final String[] KINDS = {"door", "face", "repeat", "model", "rim"};
 
 	private static void cover(boolean[] covered, int from, int to) {
 		for (int y = Math.max(0, from); y <= Math.min(to, covered.length - 1); y++) {

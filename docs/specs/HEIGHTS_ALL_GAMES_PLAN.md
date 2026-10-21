@@ -299,14 +299,14 @@ floors still stack by their own tallest rooms (`CavePlanner.rankFeet`).
     hand model) among rows of separate things its own cell's rows, in a face its height from the face's origin; a model
     of its own (a fitted building, a hull) its rows at its own scale; a fitted model over a door is the doorway. A door's
     own cell is no viewpoint (stepping on it takes you in).
-  - A cliff body under its rim and a facade under its roof are faces; a tree line under its crowns (its repeating body
-    all foliage) stays rows of separate trees. The region vote counts as before (units at most 6), so the runs D9 leaves
-    alone stand as they stood.
-  - Fitted models stay in use: a run with a cell holding a fitted model it uses (no roof before) keeps that model;
-    under a cave mouth or wall exit (the model on the cell over a door) the face folds no door and rises past the model.
-  - Faces of fitted models (the user's choice, 2026-10-21: stack them): such a run rises to its visible rows, roofless,
-    each model lifted onto the face's own blocks to its own rows (`ShapePlanner.stackFaces`). Left short: 4 columns of
-    one row on Johto's Route 32 (PROGRESS W6 note 9).
+  - Plain faces stand to their visible rows (the screen's), a door's column holds its rows and the face over it; the
+    region vote counts as before (units at most 6), so the runs D9 leaves alone stand as they stood.
+  - The user's choices from the pictures (2026-10-21): a run read as a repeat stays one (reading rimmed cliffs and tree
+    lines as faces made tall flat walls of tree art), and a run holding a fitted model in use stands as it stood
+    (stacking every face of fitted models made towers of boulder lines and terraces of rock fields). Only a cave mouth's
+    or wall exit's face (a fitted model on the cell over a door) rises past it, its models lifted to their rows
+    (`ShapePlanner.stackFaces`), on the surface and under the open sky (the Battle Frontier). Left short and named:
+    `model` and `rim` runs (PROGRESS W6 note 9).
 
 ## 5. Viability (the survey, 2026-10-20)
 

@@ -337,9 +337,10 @@ final class RemotePilot {
 			case "key" -> this.press(text(command, "key"), Math.max(1, number(command, "hold", 2)));
 			case "step" -> this.startStep(text(command, "dir"));
 			case "face" -> {
+				// a direction, and optionally a pitch (degrees, negative looks up) so a tall face fits the frame
 				LocalPlayer player = this.minecraft.player;
 				if (player != null) {
-					look(player, Autopilot.yawOf(text(command, "dir")), player.getXRot());
+					look(player, Autopilot.yawOf(text(command, "dir")), command.has("pitch") ? command.get("pitch").getAsFloat() : player.getXRot());
 				}
 			}
 			case "type" -> {

@@ -700,8 +700,8 @@ public final class ShapePlanner {
 			// Tier B (kb-shapes/3): tufts and cell units over the measured columns.
 			Units.plan(map, sceneAtlas, atlas, columns.keys(), columns.blocks(), columns.shapeMask(), floor, decor, units, classes,
 					params.profileUnits() ? probe : null, tally, claims.isEmpty() && hulls.isEmpty() && fitted.isEmpty() ? null : held, layout);
-			if (params.visibleRows() && map.surface() && map.env().outdoor()) {
-				// D9: a face of fitted models rises with each model lifted to its own rows
+			if (params.visibleRows() && map.env().outdoor()) {
+				// D9: the face over a cave mouth's model rises with each of its models lifted to its own rows
 				stackFaces(map, atlas, params.maxUnit(), columns.runs(), columns.keys(), columns.blocks(), columns.shapeMask(), units);
 			}
 		}
@@ -918,11 +918,12 @@ public final class ShapePlanner {
 	}
 
 	/**
-	 * A face of fitted models (docs/specs/HEIGHTS_ALL_GAMES_PLAN.md D9, the user's choice of 2026-10-21): every run holding a
-	 * fitted model in use that isn't rows of separate things rises to its visible rows (from its fold origin, at most
-	 * {@code screen}), roofless so its models stay in use. Each unit on it is lifted onto the face's columns below its own
-	 * rows (its cell's south row that many rows over the origin), on blocks of the face's own art; each of its other columns
-	 * stands to the face's height. A cell a stack emptied (blocks 0) stays empty.
+	 * The face over a cave mouth's or wall exit's model (docs/specs/HEIGHTS_ALL_GAMES_PLAN.md D9; the user's Battle Frontier
+	 * mouth): each run {@link Structures.MeasuredRun#mouth} rises to its visible rows (at most {@code screen}), roofless so its
+	 * models stay in use. Each unit on it is lifted onto the face's columns below its own rows (its cell's south row that many
+	 * rows over the origin), on blocks of the face's own art; each of its other columns stands to the face's height. A cell
+	 * a stack emptied (blocks 0) stays empty. (Stacking every face of fitted models made towers of boulder lines and
+	 * terraces of rock fields: the user chose mouths only, 2026-10-21.)
 	 */
 	static void stackFaces(SceneMap map, int atlas, int screen, List<Structures.MeasuredRun> runs, ShapeKey[][] keys, int[] blocks, int[] mask,
 			List<Units.Cell> units) {
@@ -933,7 +934,7 @@ public final class ShapePlanner {
 			unitCells.add(cell.cy() * map.w() + cell.cx());
 		}
 		for (Structures.MeasuredRun run : runs) {
-			if (!run.models() || run.separate()) {
+			if (!run.mouth()) {
 				continue;
 			}
 			int target = Math.max(run.h(), Math.min(screen, run.origin() - run.n() + 1));

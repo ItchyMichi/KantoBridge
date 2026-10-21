@@ -85,6 +85,7 @@ def main(argv=None) -> int:
     parser.add_argument("--out", default="/workspace/videos/context")
     parser.add_argument("--game-display", default=":97")
     parser.add_argument("--settle", type=float, default=6.0, help="seconds the view settles at each spot")
+    parser.add_argument("--pitch", type=float, default=None, help="the camera's pitch at each spot (negative looks up)")
     args = parser.parse_args(argv)
     driver, port, wire, drop = GAMES[args.game]
     display = os.environ.get("DISPLAY", ":99")
@@ -152,7 +153,10 @@ def main(argv=None) -> int:
                 except Stuck:
                     out["stepped_back"] = False
                 time.sleep(args.settle)
-                pilot.do("face", dir=place["facing"], timeout=10)
+                if args.pitch is None:
+                    pilot.do("face", dir=place["facing"], timeout=10)
+                else:
+                    pilot.do("face", dir=place["facing"], pitch=args.pitch, timeout=10)
                 pilot.do("camera", mode="first", hud=False, timeout=30)
                 time.sleep(2.5)
                 stem = cell.replace("/", "_")

@@ -80,6 +80,15 @@ public final class ShapeFixtures {
 	}
 
 	public static SceneMap map(String id, boolean surface, String... rows) {
+		return map(id, surface, new Env(surface, surface, false, Env.DARK_NEVER), rows);
+	}
+
+	/** An outdoor map off the surface, under the open sky (a Battle Frontier outside): interior rules, drawn outdoors. */
+	public static SceneMap openAir(String id, String... rows) {
+		return map(id, false, new Env(true, true, false, Env.DARK_NEVER), rows);
+	}
+
+	static SceneMap map(String id, boolean surface, Env env, String... rows) {
 		int cols = rows[0].length();
 		if (cols % PER_CELL != 0 || rows.length % PER_CELL != 0) {
 			throw new IllegalArgumentException("art must be whole cells");
@@ -108,7 +117,6 @@ public final class ShapeFixtures {
 		}
 		int[] border = new int[16];
 		Arrays.fill(border, tile('#'));
-		Env env = new Env(surface, surface, false, Env.DARK_NEVER);
 		return new SceneMap(id, 0, "FIX", ATLAS, PALETTE, w, h, PER_CELL, surface, env, tiles, null, kinds, tags, dirs, surface ? border : null,
 				border, List.of(), List.of());
 	}

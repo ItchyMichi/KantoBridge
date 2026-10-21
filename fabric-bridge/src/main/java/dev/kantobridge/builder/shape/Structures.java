@@ -25,23 +25,23 @@ import org.jetbrains.annotations.Nullable;
  *
  * <pre>
  * read as a repeat   a pure repeat; a head over a repeating body (its front is a repeat: a cliff under its rim, a
- *                    plain facade under its roof); or the trim rule: L &gt; 2, tile(f-1) == tile(f-2) != tile(f).
- *                    With visible rows (H9, D9) a cliff under its rim, a facade under its roof are faces
- * separate           rows of separate things, two rows of them enough (D9): a pure repeat; with visible rows also a
- *                    repeat read whose body is foliage (a tree line under its crowns); without, every repeat read
+ *                    plain facade under its roof); or the trim rule: L &gt; 2, tile(f-1) == tile(f-2) != tile(f)
+ * separate           rows of separate things, two rows of them enough (D9's check): a pure repeat; with visible rows
+ *                    also a repeat read whose body is foliage (a tree line under its crowns); without, every repeat read
  * unit               read as a repeat: 2; else min(L, 6; the screen's rows with H9)
  * region             4-connected tiles of the runs that aren't pure repeats, in row-major scan order
  * modeH              the most frequent unit (as before D9: at most 6) among the region's runs not read as repeats (ties:
  *                    the taller; none: 0)
  * h                  a door fold: modeH; read as a repeat (not pure) with modeH &gt; unit: modeH; else unit    (1..6)
- *                    With visible rows (H9, D9): unit up to the screen's rows; a door fold max(modeH, L + 2), rows of
- *                    separate things max(modeH, min(L, 2) + 2); no fold under a fitted model in use (the doorway's own)
+ *                    With visible rows (H9, D9): unit up to the screen's rows; a door fold max(modeH, L + 2), a repeat
+ *                    read's max(modeH, min(L, 2) + 2)
  * origin             f, or with a door cell directly south of the run its southern tile row (the door fold)
  * r                  outdoors, h &gt;= 2, L &gt;= 4, not a plain repeat (read as one and not raised),
  *                    tile(n) != tile(n+1) ? min(2, h - 1) : 0;   wallH = h - r
  * models             a cell holds a fitted model in use (r = 0 before). With visible rows such a run stands as before,
- *                    unless the model is on the cell over a door (a cave mouth, a wall exit): then no fold, the run
- *                    rises past the model, roofless (the model stays in use)
+ *                    unless the model is on the cell over a door (a cave mouth, a wall exit, "mouth"): then no fold,
+ *                    the run rises as drawn (min(L, the screen's rows)) past the model, roofless, outdoors or under the
+ *                    open sky
  * interiors          every run: h = the interior wall height, r = 0
  * </pre>
  */
@@ -64,11 +64,12 @@ public final class Structures {
 	 * @param h          the planned height in blocks (1..6)
 	 * @param r          roof rows (0..2): the column ends in one roof block at {@code feet + h - r}
 	 * @param separate   rows of separate things (a tree line, a fence): two rows of them are enough (D9)
-	 * @param models     a cell of it holds a fitted model in use, which D9 keeps in use: the run stands as before, or over
-	 *                   a door with the model on the cell over it (a cave mouth) rises past the model, roofless
+	 * @param models     a cell of it holds a fitted model in use, which D9 keeps in use: the run stands as before, unless
+	 * @param mouth      the model is on the cell over a door (a cave mouth, a wall exit): no fold, the run rises as drawn
+	 *                   past the model, roofless, its models lifted to their rows ({@link ShapePlanner#stackFaces})
 	 */
 	public record MeasuredRun(int tx, int n, int f, boolean pureRepeat, boolean repeatRead, int unit, int region, boolean doorFold,
-			int origin, int h, int r, boolean separate, boolean models) {
+			int origin, int h, int r, boolean separate, boolean models, boolean mouth) {
 		public int length() {
 			return this.f - this.n + 1;
 		}
@@ -341,11 +342,11 @@ public final class Structures {
 
 	/**
 	 * The same, {@code foliage} marking the art tiles that draw foliage and {@code fitted} the tiles of cells that hold a
-	 * fitted model (null: none). With {@code visibleRows} (D9) a run read as a repeat for its repeating front only (a cliff
-	 * body under its rim, a facade under its roof) or by the trim rule is a face, as tall as drawn, unless its body (the
-	 * repeating rows, or the rows over the trimmed foot) is foliage (rows of separate trees); a run with a cell holding a
-	 * fitted model in use stands as before, so the model stays in use, unless the model is the doorway of the door under
-	 * it (a cave mouth): that face rises past it, roofless.
+	 * fitted model (null: none). With {@code visibleRows} (D9) a plain face stands as tall as drawn up to {@code maxUnit} (the
+	 * screen's rows) and a door's column holds the door's rows and the face over it; a run read as a repeat stays one (a
+	 * repeat read whose body is foliage is rows of separate things, for the check); a run with a cell holding a fitted model
+	 * in use stands as before, so the model stays in use, unless the model is the doorway of the door under it (a cave
+	 * mouth): that face rises past it, roofless.
 	 */
 	public static List<MeasuredRun> measured(SceneMap map, boolean[] solid, int maxUnit, int minRepeat, int interiorWall, boolean visibleRows,
 			boolean @Nullable [] foliage, boolean @Nullable [] fitted) {
@@ -425,10 +426,9 @@ public final class Structures {
 			}
 			modeH[r] = best;
 		}
-		// 4. Heights, door folds and roofs: as before D9; with visible rows (D9) a run is a face unless it is rows of separate
-		// things, as tall as drawn up to the screen's rows, a door's column holding the door's rows and the face over it,
-		// unless the run has a cell holding a fitted model that is in use (no roof before): it stands as it stood, or under a
-		// cave mouth's model rises past it.
+		// 4. Heights, door folds and roofs: as before D9; with visible rows (D9) a plain face as tall as drawn up to the
+		// screen's rows, a door's column holding the door's rows and the face over it, unless the run has a cell holding a
+		// fitted model that is in use (no roof before): it stands as it stood, or over a cave mouth's model rises past it.
 		boolean outdoors = map.surface() && map.env().outdoor();
 		int per = map.perCell();
 		// the tiles of runs roofed before D9: a cell with one holds no fitted model in use
@@ -460,26 +460,34 @@ public final class Structures {
 			int h = height(map.surface(), interiorWall, door, vote, repeat, cut.pureRepeat(), unit, cap0);
 			int r = roof(map, outdoors, tx, n, length, h, repeat && h == unit);
 			boolean models = false;
+			boolean mouth = false;
 			if (visibleRows) {
 				// a cell of it holds a fitted model in use (no roof before)
 				models = r == 0 && any(fitted, cols, tx, n, f);
-				// such a model over the door (a cave mouth's, a wall exit's) is the doorway: the face folds no door and rises past
-				// it, roofless so the model stays in use; any other such run stands as it stood
-				boolean mouth = models && door && fitted[f * cols + tx] && !anyIn(roofed0, cols, (tx / per) * per, (f / per) * per, per);
-				if (mouth || !models) {
-					door &= !mouth;
-					repeat = separate[c];
+				// such a model over the door (a cave mouth's, a wall exit's: its whole cell unroofed before) is the doorway
+				mouth = models && door && fitted[f * cols + tx] && !anyIn(roofed0, cols, (tx / per) * per, (f / per) * per, per);
+				if (mouth) {
+					// the face over it folds no door and rises as drawn, outdoors or under the open sky, roofless so its models stay
+					// in use (ShapePlanner.stackFaces lifts them to their rows)
+					door = false;
+					repeat = false;
+					unit = Math.min(length, maxUnit);
+					h = unit;
+					r = 0;
+				} else if (!models) {
+					// a plain face as tall as drawn up to the screen's rows, a door's column its rows and the face over it; a run
+					// read as a repeat stays one (the user's choice, 2026-10-21: no taller rimmed cliffs or tree lines)
 					unit = repeat ? HeightRules.WALL : Math.min(length, maxUnit);
 					if (map.surface() && door) {
 						h = Math.min(maxUnit, Math.max(vote, (repeat ? Math.min(length, HeightRules.WALL) : length) + per));
 					} else {
 						h = height(map.surface(), interiorWall, false, vote, repeat, cut.pureRepeat(), unit, maxUnit);
 					}
-					r = mouth ? 0 : roof(map, outdoors, tx, n, length, h, repeat && h == unit);
+					r = roof(map, outdoors, tx, n, length, h, repeat && h == unit);
 				}
 			}
 			int origin = door ? ((f + 1) / per) * per + per - 1 : f;
-			out.add(new MeasuredRun(tx, n, f, cut.pureRepeat(), repeat, unit, reg, door, origin, h, r, separate[c], models));
+			out.add(new MeasuredRun(tx, n, f, cut.pureRepeat(), repeat, unit, reg, door, origin, h, r, separate[c], models, mouth));
 		}
 		return out;
 	}
