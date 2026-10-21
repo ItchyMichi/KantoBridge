@@ -15,8 +15,9 @@ map's art at 48 px a cell. Per spot, <out dir>/<spot>/:
   each marked section with a cell in the window: id, kind, note, rows, landmark, its cells and top cells (window
   cells), and "model": the sections to model (masses, mouths, faces of 3 cells or more; with trees, the trees). With
   --levels (OutdoorLevelsDumpTest's per-map levels: the levels pilot), "levels": each window cell's level in blocks
-  over the map's floor, "ramps": [x, y, climb, rise] in window cells, and each section's "base": the level its rock
-  stands on (the lowest of its cells': a model counts its voxels from there); the reference shows the levels.
+  over the map's floor, "floor": the window's lowest walkable level, "ramps": [x, y, climb, rise] in window cells, and
+  each section's "base": the level its rock stands on (the lowest of its cells': a model counts its voxels from
+  there); the reference shows the levels over the window's floor.
 
 The window: 12 cells either side of the spot and 24 north of it, inside the map. Private output: the art is the user's
 game.
@@ -87,6 +88,10 @@ def package(regions, marks, art, spot, trees, levels=None):
         lv = levels["levels"]
         pkg["levels"] = [lv[(y0 + y) * mw + x0 + x] for y in range(wh) for x in range(ww)]
         pkg["ramps"] = [[r[0] - x0, r[1] - y0, r[2], r[3]] for r in levels["ramps"] if inside(r[0], r[1])]
+        kinds = levels.get("kinds")
+        walk = [pkg["levels"][y * ww + x] for y in range(wh) for x in range(ww)
+                if kinds is None or kinds[(y0 + y) * mw + x0 + x] != "#"]
+        pkg["floor"] = min(walk, default=0)
         for sec in sections:
             sec["base"] = min((pkg["levels"][y * ww + x] for x, y in sec["cells"]), default=0)
     return pkg, crop
@@ -130,7 +135,7 @@ def reference(drawing, pkg, scale=3):
         # each cell over the map's floor: its level in blocks, a ramp's arrow
         for y in range(wh):
             for x in range(ww):
-                level = pkg["levels"][y * ww + x]
+                level = pkg["levels"][y * ww + x] - pkg.get("floor", 0)
                 if level > 0:
                     X, Y = x * c, y * c
                     d.rectangle([X + c - 22, Y + c - 16, X + c - 2, Y + c - 3], fill=(255, 255, 255, 215))
@@ -169,7 +174,7 @@ def main(argv):
         if os.path.exists(os.path.join(d, "package.json")) and "levels" in pkg:
             # an existing package keeps its sections and models; it gains the levels
             old = json.load(open(os.path.join(d, "package.json")))
-            old.update({k: pkg[k] for k in ("levels", "ramps")})
+            old.update({k: pkg[k] for k in ("levels", "ramps", "floor")})
             bases = {s["id"]: s["base"] for s in pkg["sections"]}
             for s in old["sections"]:
                 s["base"] = bases.get(s["id"], 0)

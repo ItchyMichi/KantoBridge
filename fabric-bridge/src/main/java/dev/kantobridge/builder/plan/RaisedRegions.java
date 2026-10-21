@@ -650,7 +650,12 @@ public final class RaisedRegions {
 					}
 				}
 			}
-			if (pick < 0) {
+			if (pick < 0 && in.outdoor()) {
+				// Outdoors the biggest group left stands as high as the nearest placed region (a pocket in a tree line, a
+				// ledge nothing reaches: level with the ground round it, not with its key elsewhere in the map)
+				pick = groups.stream().filter(g -> !base.containsKey(g)).findFirst().orElseThrow();
+				pickAt = nearestPlaced(w, h, region, heights, base, pick);
+			} else if (pick < 0) {
 				// Else the biggest group left takes the heights its keys have most among the placed regions.
 				pick = groups.stream().filter(g -> !base.containsKey(g)).findFirst().orElseThrow();
 				Map<Integer, Map<Integer, Integer>> keyHeights = new HashMap<>();
@@ -765,7 +770,11 @@ public final class RaisedRegions {
 			return Result.flat("flat_one_height", regions);
 		}
 		String raisedOutcome = sunken > 0 ? "raised_sunken" : "raised";
-		rockLevels(model, standable, levels);
+		if (in.outdoor()) {
+			nearestLevels(w, h, standable, levels);
+		} else {
+			rockLevels(model, standable, levels);
+		}
 		List<Integer> breaks = soft ? new ArrayList<>() : null;
 		String failed = check(in, standable, levels, rampAt, breaks);
 		if (failed != null) {
@@ -1009,6 +1018,85 @@ public final class RaisedRegions {
 	/** Rock and counters: what a column of the map stands up. */
 	private static boolean solid(MapModel.Kind kind) {
 		return kind == MapModel.Kind.SOLID || kind == MapModel.Kind.COUNTER;
+	}
+
+	/**
+	 * The base a group {@code pick} takes for its regions to stand as high as the nearest region of a placed group: a search
+	 * outward from the group's cells over every cell, the first placed region it meets (on a tie the lower).
+	 */
+	private static int nearestPlaced(int w, int h, int[] region, Offsets heights, Map<Integer, Integer> base, int pick) {
+		int n = w * h;
+		int[] from = new int[n];
+		Arrays.fill(from, -1);
+		List<Integer> ring = new ArrayList<>();
+		for (int c = 0; c < n; c++) {
+			if (region[c] >= 0 && heights.find(region[c]) == pick) {
+				from[c] = region[c];
+				ring.add(c);
+			}
+		}
+		while (!ring.isEmpty()) {
+			Integer best = null;
+			List<Integer> next = new ArrayList<>();
+			for (int c : ring) {
+				for (Dir dir : Dir.values()) {
+					int nx = c % w + dir.dx();
+					int ny = c / w + dir.dy();
+					if (nx < 0 || ny < 0 || nx >= w || ny >= h || from[ny * w + nx] >= 0) {
+						continue;
+					}
+					int j = ny * w + nx;
+					int r = region[j];
+					Integer placed = r >= 0 ? base.get(heights.find(r)) : null;
+					if (placed != null) {
+						int at = placed + heights.offset(r) - heights.offset(from[c]);
+						best = best == null ? at : Math.min(best, at);
+						continue;
+					}
+					from[j] = from[c];
+					next.add(j);
+				}
+			}
+			if (best != null) {
+				return best;
+			}
+			ring = next;
+		}
+		return 0;
+	}
+
+	/**
+	 * Outdoors each cell that isn't stood on stands as high as the nearest that is (on a tie the lower: a face stands on the
+	 * floor in front of it, not on the ground over it): a forest's trees on the ground round them, a mountain on the
+	 * plateau it rises from, however far its rock runs.
+	 */
+	static void nearestLevels(int w, int h, boolean[] standable, int[] levels) {
+		int n = w * h;
+		boolean[] done = standable.clone();
+		List<Integer> ring = new ArrayList<>();
+		for (int c = 0; c < n; c++) {
+			if (standable[c]) {
+				ring.add(c);
+			}
+		}
+		while (!ring.isEmpty()) {
+			Map<Integer, Integer> next = new TreeMap<>();
+			for (int c : ring) {
+				for (Dir dir : Dir.values()) {
+					int nx = c % w + dir.dx();
+					int ny = c / w + dir.dy();
+					if (nx < 0 || ny < 0 || nx >= w || ny >= h || done[ny * w + nx]) {
+						continue;
+					}
+					next.merge(ny * w + nx, levels[c], Math::min);
+				}
+			}
+			for (Map.Entry<Integer, Integer> e : next.entrySet()) {
+				done[e.getKey()] = true;
+				levels[e.getKey()] = e.getValue();
+			}
+			ring = new ArrayList<>(next.keySet());
+		}
 	}
 
 	/**

@@ -29,7 +29,8 @@ import org.jetbrains.annotations.Nullable;
  * <pre>
  * table     {"maps": {"&lt;map&gt;": [{"name", "tx", "ty", "w", "h" (its grid in the map's tiles), "claim": [[x, y], ...]
  *           (the grid's tiles it takes: its cells', a door's), "spec": a parts spec in the grid's pixels with its
- *           footprint ("keep", "doors", "doorClear"), "height", "quadCap" and "roofRows"}]},
+ *           footprint ("keep", "doors", "doorClear"), "height", "quadCap" and "roofRows", "trees" (optional: a model of
+ *           trees, each standing on its own ground)}]},
  *  "slopes": {"&lt;map&gt;": [[x, y, "up"|"down"|"left"|"right"], ...]}} (optional: the slopes and stairs its marks name, map
  *           cells and their way up; a map listed with none had its drawing checked and has none)
  * </pre>
@@ -38,8 +39,11 @@ public final class LandscapeModels {
 	/** The system property naming the models table, a JSON file. */
 	static final String PROPERTY = "kantobridge.landscape.models";
 
-	/** One model on its map. */
-	record Model(String name, int tx, int ty, int w, int h, List<int[]> claim, JsonObject spec) {
+	/** One model on its map ({@code trees}: a model of trees, each on its own ground where the ground has levels). */
+	record Model(String name, int tx, int ty, int w, int h, List<int[]> claim, JsonObject spec, boolean trees) {
+		Model(String name, int tx, int ty, int w, int h, List<int[]> claim, JsonObject spec) {
+			this(name, tx, ty, w, h, claim, spec, false);
+		}
 	}
 
 	/** A cell of a slope or stairs the marks name, and its way up. */
@@ -54,12 +58,16 @@ public final class LandscapeModels {
 	}
 
 	/**
-	 * Per model of map {@code id}, the cells it claims (cell indexes {@code cy * mapWidth + cx}, its tiles' cells): the levels
-	 * pilot stands each model's rock on one level (OutdoorLevels.rigid).
+	 * Per model of map {@code id} that is one shape (not trees), the cells it claims (cell indexes {@code cy * mapWidth + cx},
+	 * its tiles' cells): the levels pilot stands each one's rock on one level (OutdoorLevels.rigid); a model of trees is
+	 * built column by column on its cells' own ground, each tree where it stands.
 	 */
 	public static List<java.util.Set<Integer>> cells(String id, int mapWidth, int perCell) {
 		List<java.util.Set<Integer>> out = new ArrayList<>();
 		for (Model m : of(id)) {
+			if (m.trees()) {
+				continue;
+			}
 			java.util.Set<Integer> cells = new java.util.TreeSet<>();
 			for (int[] t : m.claim()) {
 				cells.add(((m.ty() + t[1]) / perCell) * mapWidth + (m.tx() + t[0]) / perCell);
@@ -163,7 +171,7 @@ public final class LandscapeModels {
 					claim.add(new int[] {a.get(0).getAsInt(), a.get(1).getAsInt()});
 				}
 				models.add(new Model(o.get("name").getAsString(), o.get("tx").getAsInt(), o.get("ty").getAsInt(), o.get("w").getAsInt(),
-						o.get("h").getAsInt(), List.copyOf(claim), o.getAsJsonObject("spec")));
+						o.get("h").getAsInt(), List.copyOf(claim), o.getAsJsonObject("spec"), o.has("trees") && o.get("trees").getAsBoolean()));
 			}
 			out.put(e.getKey(), List.copyOf(models));
 		}

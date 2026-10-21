@@ -104,12 +104,21 @@ class LandscapeModelsTest {
 	void aTableReads() {
 		Map<String, List<LandscapeModels.Model>> table = LandscapeModels.parse("""
 				{"maps": {"ROCK": [{"name": "rock", "tx": 2, "ty": 4, "w": 6, "h": 6, "claim": [[0, 0], [1, 2]],
-				 "spec": {"height": 40, "parts": []}}]}}""");
+				 "spec": {"height": 40, "parts": []}},
+				 {"name": "trees", "tx": 0, "ty": 0, "w": 2, "h": 2, "claim": [[0, 0]], "spec": {"height": 30, "parts": []}, "trees": true}]}}""");
 		LandscapeModels.Model m = table.get("ROCK").get(0);
 		assertEquals("rock", m.name());
 		assertEquals(4, m.ty());
 		assertEquals(2, m.claim().size());
 		assertEquals(40, m.spec().get("height").getAsInt());
+		assertFalse(m.trees());
+		assertTrue(table.get("ROCK").get(1).trees());
+		Map<String, List<LandscapeModels.Model>> before = LandscapeModels.use(table);
+		try {
+			assertEquals(1, LandscapeModels.cells("ROCK", 8, 2).size(), "a model of trees stands on its cells' own ground: not one shape");
+		} finally {
+			LandscapeModels.use(before);
+		}
 	}
 
 	@Test

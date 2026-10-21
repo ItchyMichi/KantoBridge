@@ -7,7 +7,8 @@ them (LandscapeModels.java, -Pkb.landscapeModels).
 Per model: its grid (the tiles its cells, the door cells its arch reaches over, its parts and its paint cover, inside
 the spot's window), its claim (those cells' tiles), and its spec in the grid's pixels: the parts (the trees helper
 expanded into trunks and crowns, as terrain_model.py builds them), the footprint ("keep": its cells' tiles; "doors";
-"doorClear"), "height", "quadCap" and "roofRows". Part sizes, paint rectangles and tiles only: no pixel. With --slopes, the table's
+"doorClear"), "height", "quadCap" and "roofRows", and "trees" (a model of marked trees). Part sizes, paint rectangles and tiles
+only: no pixel. With --slopes, the table's
 "slopes" are the marked slopes there (slopes_table.py). Runs where terrain_model.py does (numpy, Pillow).
 """
 import json
@@ -60,6 +61,14 @@ def extent(part):
     return min(xs), max(xs), min(zs), max(zs)
 
 
+def trees_only(package, spec):
+    """True for a model of trees: every section it stands on marked trees, or it uses the trees helper."""
+    kinds = {sec["id"]: sec["kind"] for sec in package["sections"]}
+    sections = spec.get("sections", [])
+    return (bool(sections) and all(kinds.get(i) == "trees" for i in sections)) or any(
+        p.get("shape") == "trees" for p in spec.get("parts", []))
+
+
 def model(package, spec, draw, name):
     px = package["px"]
     wx0, wy0, ww, wh = package["window"]
@@ -98,7 +107,9 @@ def model(package, spec, draw, name):
     out_spec = {"height": H, "parts": [shifted(p, dx, dz) for p in parts], "keep": [list(t) for t in keep],
                 "doors": [list(t) for t in door_tiles], "doorClear": DOOR_CLEAR, "quadCap": QUAD_CAP, "roofRows": 0}
     return {"name": name, "tx": wx0 * per + gx0, "ty": wy0 * per + gz0, "w": gx1 - gx0, "h": gz1 - gz0,
-            "claim": [list(t) for t in keep + door_tiles], "spec": out_spec}
+            "claim": [list(t) for t in keep + door_tiles], "spec": out_spec,
+            # a model of marked trees stands each tree on its own ground when the ground has levels; rock is one shape
+            "trees": trees_only(package, spec)}
 
 
 def main(argv):

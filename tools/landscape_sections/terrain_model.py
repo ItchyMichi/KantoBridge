@@ -260,12 +260,13 @@ def crop(occ, exposed, col):
 
 
 def ground_tops(package: dict, D: int, W: int) -> np.ndarray:
-    """Per drawing pixel the ground's height in voxels over the map's floor: each cell's level (8 voxels a block), a ramp
-    climbing its rise across its cell the way it climbs. Zero without levels."""
+    """Per drawing pixel the ground's height in voxels over the window's floor (package "floor"): each cell's level (8
+    voxels a block), a ramp climbing its rise across its cell the way it climbs. Zero without levels."""
     top = np.zeros((D, W), np.int32)
     levels = package.get("levels")
     if not levels:
         return top
+    levels = [max(0, v - package.get("floor", 0)) for v in levels]
     px = package["px"]
     ww = package["window"][2]
     for i, level in enumerate(levels):
@@ -371,7 +372,7 @@ def main() -> int:
             if name not in built:
                 _, (occ, _, col, _) = made(name)
                 built[name] = (occ, col)
-        bases = {s["id"]: s.get("base", 0) for s in package["sections"]}
+        bases = {s["id"]: max(0, s.get("base", 0) - package.get("floor", 0)) for s in package["sections"]}
 
         def base_of(name):
             spec = json.loads((pkg_dir / "specs" / f"{name}.json").read_text(encoding="utf-8"))

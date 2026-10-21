@@ -552,4 +552,56 @@ class RaisedRegionsTest {
 		assertEquals(3, layout.level(3, 3), "and under it: one body of water");
 		assertEquals("flat_bridge", outdoor(rows, keys, true, false, null).outcome(), "underground a bridge waits for the two-floor cells");
 	}
+
+	@Test
+	void outdoorsRockAndPocketsStandOnTheGroundRoundThem() {
+		// a plateau two cells up a slope, rock between it and the floor, a pocket in the rock by the plateau
+		String[] rows = {
+				"########",
+				"#......#",
+				"#.##.###",
+				"#.######",
+				"#.######",
+				"#......#",
+				"########",
+				"########"};
+		String[] keys = {
+				"########",
+				"#333333#",
+				"#^##3###",
+				"#^######",
+				"#3######",
+				"#333333#",
+				"########",
+				"########"};
+		RaisedRegions.Result result = outdoor(rows, keys, true, true, null);
+		MapLayout layout = result.layout();
+		assertNotNull(layout, result.outcome());
+		assertEquals(6, layout.level(3, 1), "the plateau, two cells up");
+		assertEquals(6, layout.level(4, 2), "the pocket under it: level with the plateau, its nearest ground");
+		assertEquals(6, layout.level(3, 2), "rock by the plateau stands on it");
+		assertEquals(0, layout.level(4, 4), "rock by the floor stands on the floor");
+		assertEquals(0, layout.level(3, 3), "between the two, equally near: the lower (a face on the floor in front of it)");
+	}
+
+	@Test
+	void outdoorsRockStandsOnItsNearestGround() {
+		int[] levels = {
+				6, 6, 6,
+				0, 0, 0,
+				0, 0, 0,
+				0, 0, 0,
+				3, 3, 3};
+		boolean[] standable = {
+				true, true, true,
+				false, false, false,
+				false, false, false,
+				false, false, false,
+				true, false, true};
+		RaisedRegions.nearestLevels(3, 5, standable, levels);
+		assertEquals(6, levels[3], "next to the ground at 6");
+		assertEquals(3, levels[6], "equally near 6 and 3: the lower");
+		assertEquals(3, levels[9]);
+		assertEquals(3, levels[13], "a cell no floor is under: its neighbours'");
+	}
 }
