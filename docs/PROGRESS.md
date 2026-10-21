@@ -1226,6 +1226,19 @@ for the rest" (plan §8). Feature tests per phase, the full suite at the checkpo
      The models went into the game the buildings' way (parts templates; `LandscapeModels`, world LandModels on the
      volume, the seven pictures sent beside the stacked and narrowed builds); the quad gate is lifted for now (your
      call). A frame-rate test on a GPU pod (an L4, about an RTX 3060) found no cost (LANDSCAPE_MODELS.md).
+   - **The levels pilot** (your Route 119: "there should be a sand slope up to a higher level"; your choices: both
+     halves, at the models' scale, 3 blocks a cell): `-Pkb.outdoorLevels` puts the seven picture maps on raised ground
+     (LANDSCAPE_MODELS.md "Levels"). Emerald's elevations turned out to be the engine's layers, not heights (Route 119's
+     floor, the top of its sand slope and its plateau are all elevation 3), so the drawing decides: its stairs and
+     slopes climb 3 blocks a cell, found by a tile table (`floor_kinds/emerald.json`: the general tileset's grey
+     stairs) and by behaviour (the Mach Bike slope), and a strip of elevation 0 nothing names keeps one height where it
+     can. Outdoors a rule that disagrees is skipped and counted rather than leaving the map flat; rivers keep one level
+     under bridges and part at waterfalls; rock stands on its nearest ground, models of trees per tree, rock models as
+     one shape. You marked Route 119's heights on kb-hub's `/levels.html` (a page made for it: levels, uphill arrows,
+     the computer's levels beside yours): all 535 walkable tiles you marked agree, and your 11 stair arrows are exactly
+     the table's cells. A modelling agent raised Route 119's two cliff models to meet the grass above them (6 blocks).
+     Commits e546590, 82ca766, ffd32e0, d110368 (local). JUnit (plan, shape, block) 435; the pod-only
+     `OutdoorLevelsDumpTest` renders every chunk of the named maps.
    - (The note's JUnit count, 1,379, counted two temporary probes since moved out: the suite holds 1,377.)
    - **Cave mouths and wall exits** (a fitted model in use on the cell over a door, the whole cell unroofed before): the
      model is the doorway, the face over it folds no door and rises as drawn, roofless so its models stay in use, and
