@@ -144,10 +144,41 @@ The map's result in LANDSCAPE_MODELS.md "Levels" and a PROGRESS note: marks agai
 
 ## Open (to expand as they are solved)
 
-1. **Seams between maps.** Each map's levels count from its own floor, and every map's floor is at the surface, so
-   where two maps meet their grounds can differ: Route 119's north end stands about 27 blocks over the surface where it
-   meets Fortree City.
+1. **Seams between maps** (below: the check, the user's choice, the results). Each map's levels count from its own
+   floor, and every map's floor is at the surface, so where two maps meet their grounds can differ: Route 119's east exit
+   stands 27 blocks over the surface where it meets Fortree City.
 2. **Crystal's and Blue's stairs.** Steps 2 to 4 on a Crystal and a Blue map: the user marks them, the tiles under the
    arrows become those games' tables (the dump to write each cell's tile key for them first).
 3. Smaller: bare ground sides under trees where a level steps down; the Battle Frontier's skipped stair at (39, 33);
    bridges are decks at their ends' height until W6's two-floor cells.
+
+## Seams between maps (the check, 2026-10-21)
+
+**The check:** `OutdoorLevelsDumpTest` with `all` (`-Pkb.outdoorDump="<game>;<bundle>;<dir>;all"`, a minute or so a game)
+dumps every outdoor map's levels and its place in the world; `python3 tools/landscape_sections/seams.py <dir> <game>`
+finds every pair of touching cells between two maps (both walkable, or both water), each seam's step today, and the
+chain: each map's floor at the height where its neighbour's ground leaves off (the user's wish), the seams with the
+most pairs first; a seam left over closes a loop, and what it doesn't close is the loop's leftover. It reports the
+seams whose cells don't all meet, and the highest ground over the surface after the chain.
+
+**The user's choice:** chain the maps; where a seam can't meet, a generated route between them (sparingly); the final
+heights must stay feasible.
+
+**Results** (the rules of 0cb1a5e):
+
+| Region | Outdoor maps | Seams | Step today | Loops (closed) | Open loops | Ragged seams | Highest ground |
+|---|---|---|---|---|---|---|---|
+| Hoenn | 67 | 53 | 5 | 5 (3) | Route 118/119 18 blocks; Petalburg/104 3 | 6 | 42 (Mossdeep, its floor 18 up) |
+| Johto | 77 | 60 | 9 | 0 | none | 19 | 21 (Route 5) |
+| Kanto | 41 | 38 | 11 | 4 (1) | Routes 10/9 9; Celadon/16 6; Lavender/8 6 | 9 | 21 (Cerulean) |
+
+- Route 119 climbs 27 blocks to Fortree; the way back (Routes 120, 121, the sea, 123, 118) comes down 9: Routes 118 and
+  123 descend by ledges (84 and 80 ledge cells) that stand flat today. Ledges as drops (W6) should take most of the 18.
+- Johto's and Kanto's ragged seams follow from their levels having no stair tables yet (open item 2).
+- **Feasible heights:** Minecraft builds to Y 319, 255 blocks over the surface (Y 64); the highest chained ground is 42,
+  under 70 with the tallest models on it. The build's surface box (32 blocks over the ground today) grows to fit.
+- **Next:** ledges as drops, then the check again; per loop left, a stair or slope at its seam where the drawing allows,
+  else a generated route (the region crossings' machinery: the hidden player parked while the player walks it). Then
+  the chain in the planner: each map's placement at its base, the ground filled down to the surface under a raised
+  map, the void ring round it at its height.
+
