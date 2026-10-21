@@ -77,6 +77,21 @@ class OutdoorLevelsDumpTest {
 			}
 		}
 		Files.writeString(out.resolve("notes_" + game + ".json"), ProtoJson.write(notes), StandardCharsets.UTF_8);
+		// every chunk of the named maps rendered as the build renders it (a gap in the raised ground's art fails here)
+		ChunkCodesView view = new ChunkCodesView(plan);
+		for (PlacedMap map : plan.maps()) {
+			if (!named.contains(map.id())) {
+				continue;
+			}
+			var pl = map.placement();
+			int bw = map.model().cellWidth() * dev.kantobridge.world.Scale.CELL_BLOCKS;
+			int bh = map.model().cellHeight() * dev.kantobridge.world.Scale.CELL_BLOCKS;
+			for (int bz = 0; bz < bh; bz += 16) {
+				for (int bx = 0; bx < bw; bx += 16) {
+					view.code(pl.x() + bx, pl.y(), pl.z() + bz);
+				}
+			}
+		}
 		for (PlacedMap map : plan.maps()) {
 			if (!named.contains(map.id())) {
 				continue;

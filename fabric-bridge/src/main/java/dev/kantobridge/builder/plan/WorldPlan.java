@@ -1230,8 +1230,13 @@ public final class WorldPlan {
 			}
 		}
 		if (!map.interior() && feet > base) {
-			// Outdoors on raised ground (the levels pilot, D4): under a raised cell its own art, down to the map's floor level.
-			int under = BlockCode.full(this.slot(map, tile, false));
+			// Outdoors on raised ground (the levels pilot, D4): under a raised cell its own art (a shape's cell: the floor under
+			// it), down to the map's floor level; a tile drawn only as a shape takes the map's border ground.
+			int underTile = planned == null ? tile : planned.floorTile(planIndex, tile);
+			if (!this.hasSlot(map, underTile)) {
+				underTile = this.hasSlot(map, tile) ? tile : this.ringTile(map, tx, ty);
+			}
+			int under = BlockCode.full(this.slot(map, underTile, false));
 			for (int y = base - 1; y < feet - 1; y++) {
 				sink.set(x, y, z, under);
 			}
