@@ -74,7 +74,7 @@ class BigHullTest {
 		assertEquals(TemplateRule.Kind.HULL, t.kind());
 		assertFalse(t.block(1, 3, 1).isEmpty(), "its top in the fourth block");
 		assertFalse(t.block(1, 0, 1).isEmpty(), "down to the floor");
-		assertTrue(t.maxQuads() <= CellUnits.MAX_QUADS);
+		assertTrue(t.maxQuads() <= CellUnits.BUDGET_QUADS);
 	}
 
 	@Test

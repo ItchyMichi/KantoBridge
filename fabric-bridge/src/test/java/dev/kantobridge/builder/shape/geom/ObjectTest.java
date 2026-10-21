@@ -22,7 +22,7 @@ class ObjectTest {
 		assertEquals(CellUnits.Kind.OBJECT, unit.kind());
 		assertEquals(1.0, unit.match(), "the slabs show exactly the drawing in the game's view");
 		assertEquals(1.0, unit.cover());
-		assertTrue(unit.maxQuads() <= CellUnits.MAX_QUADS);
+		assertTrue(unit.maxQuads() <= CellUnits.BUDGET_QUADS);
 		// The background isn't drawn: it shows the floor (the unit's ground tile).
 		assertFalse(unit.foreground()[0]);
 		assertTrue(unit.foreground()[16 + 1], "the board's rim");

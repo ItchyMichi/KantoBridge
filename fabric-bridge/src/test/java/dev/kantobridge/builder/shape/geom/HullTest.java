@@ -21,7 +21,7 @@ class HullTest {
 		CellUnits.Unit unit = CellUnits.build(ArtFixtures.tiles(ArtFixtures.crown(7.0)), TREE, 2, ArtFixtures.ART_PX);
 		assertEquals(CellUnits.Kind.HULL, unit.kind());
 		assertTrue(unit.cover() >= CellUnits.HULL_COVER, "cover " + unit.cover());
-		assertTrue(unit.maxQuads() <= CellUnits.MAX_QUADS, unit.maxQuads() + " quads in a block");
+		assertTrue(unit.maxQuads() <= CellUnits.BUDGET_QUADS, unit.maxQuads() + " quads in a block");
 		for (int b = 0; b < 8; b++) {
 			assertFalse(unit.blocks().get(b).isEmpty(), "every block of the unit holds part of the crown");
 		}

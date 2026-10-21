@@ -95,7 +95,7 @@ class BandsTest {
 		assertEquals(TemplateRule.Kind.BUILDING, t.kind(), "match " + t.match() + ", quads " + t.maxQuads());
 		assertEquals(2, t.roofRows(), "the pane lies in row 2: rows 0 and 1 are roof");
 		assertTrue(t.match() >= TemplateRule.MATCH);
-		assertTrue(t.maxQuads() <= CellUnits.MAX_QUADS);
+		assertTrue(t.maxQuads() <= CellUnits.BUDGET_QUADS);
 		VoxelGrid v = t.voxels();
 		assertNotNull(v);
 		// The west run (no door): the facade up to 2 blocks (rows 2..3 folded), the roof layer on top at 16/8 px.

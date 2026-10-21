@@ -86,7 +86,7 @@ the table (`build_world.py --landscape-models`, `-Pkb.landscapeModels`) claims e
 own tiles. An outdoor map, on the surface or under the open sky, sets no height limit but a column's block mask (30
 blocks; the user's rule, 2026-10-21: only interiors are limited); a door's cell stays walkable, the arch over it decor.
 
-Quads per block, built as the client builds them (`LandscapeModelsQuadsTest`, pod only): 24 of the 28 pilot models
+Quads per block, built as the client builds them (`LandscapeModelsQuadsTest`, pod only): 25 of the 29 pilot models
 within the budget's 96 in every block; four over it in a few blocks (Route 23's Victory Road front and west band, at
 most 100; Route 127's islet, 143, and one block of its islands, 102); none over 256. Means: rock 6 to 30, trees about 71.
 

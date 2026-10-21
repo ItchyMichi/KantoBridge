@@ -59,7 +59,7 @@ class BudgetTest {
 		for (double r : new double[] {6.5, 7.0, 7.5}) {
 			CellUnits.Unit unit = CellUnits.build(ArtFixtures.tiles(ArtFixtures.crown(r)), TREE, 2, ArtFixtures.ART_PX);
 			assertEquals(CellUnits.Kind.HULL, unit.kind(), "radius " + r);
-			assertTrue(unit.maxQuads() <= CellUnits.MAX_QUADS);
+			assertTrue(unit.maxQuads() <= CellUnits.BUDGET_QUADS);
 			heaviest = Math.max(heaviest, sectionQuads(unit, 8));
 		}
 		assertTrue(heaviest <= SECTION_MAX, heaviest + " quads in a section of canopy");

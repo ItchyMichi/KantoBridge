@@ -283,7 +283,7 @@ Proposed in [B2.3](../research/VOXEL_WORLD_REPORT.md#b23-performance-measure); t
 
 | Budget | Threshold | Checked by | From |
 |---|---|---|---|
-| Quads per shaped block | max ≤ 96, mean ≤ 24 | build report | V3 |
+| Quads per shaped block | max ≤ 96, mean ≤ 24 (the gate lifted for now, the user's call of 2026-10-21: nothing falls back to its columns while the frame rate is measured; `CellUnits.BUDGET_QUADS` stays 96) | build report | V3 |
 | Quads per section, after face-mask culling | P95 ≤ 12,000; max ≤ 30,000 | build report | V3 |
 | Runtime model with the same cubes against today | full re-mesh time ≤ 1.25×; frame rate ≥ 97% | user, [§10](#10-measurements-the-user-runs) | V1 |
 | Our share of mesh time per section | median ≤ 1.0 ms; P95 ≤ 4 ms | user | V4 |

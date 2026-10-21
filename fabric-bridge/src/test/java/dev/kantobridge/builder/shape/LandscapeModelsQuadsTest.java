@@ -71,7 +71,7 @@ class LandscapeModelsQuadsTest {
 					blocks++;
 					quads += block.size();
 					max = Math.max(max, block.size());
-					over += block.size() > CellUnits.MAX_QUADS ? 1 : 0;
+					over += block.size() > CellUnits.BUDGET_QUADS ? 1 : 0;
 					over256 += block.size() > 256 ? 1 : 0;
 				}
 				o.addProperty("voxels", grid.count());

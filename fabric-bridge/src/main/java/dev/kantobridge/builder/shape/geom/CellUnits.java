@@ -25,7 +25,7 @@ import org.jetbrains.annotations.Nullable;
  * an object          its {@link ObjectRule slabs}, kept when its self-check passes: its drawing shows exactly (OBJECT_MATCH)
  * otherwise          the column version: each block a cube folded from the unit's tiles as Tier A folds a run of perCell
  *                    rows (south and sides: the row k up from the front; top and bottom: the north row; back: row 1)
- * a block over MAX_QUADS quads fails its candidate, too
+ * a block over MAX_QUADS quads fails its candidate, too (for now no limit: BUDGET_QUADS is the budget)
  * </pre>
  *
  * The self-check projects the unit and its floor as {@link SelfCheck} does, in isolation, and compares the pixels of the
@@ -33,8 +33,13 @@ import org.jetbrains.annotations.Nullable;
  * gives the unit's ground tile.
  */
 public final class CellUnits {
-	/** Quads one block of a unit may hold (§3.8); more fails the candidate. */
-	public static final int MAX_QUADS = 96;
+	/** Quads one block may hold by the budget (§3.8): what the reports and the budget tests count against. */
+	public static final int BUDGET_QUADS = 96;
+	/**
+	 * Quads one block of a unit or template may hold before it falls back to its columns: for now no limit (the user's
+	 * call, 2026-10-21: nothing falls back to cubes while the frame rate is measured); the budget stays {@link #BUDGET_QUADS}.
+	 */
+	public static final int MAX_QUADS = Integer.MAX_VALUE;
 	/** An object's slabs stand exactly on their drawing: this share of its pixels must show the same texel. */
 	public static final double OBJECT_MATCH = 0.95;
 	/**

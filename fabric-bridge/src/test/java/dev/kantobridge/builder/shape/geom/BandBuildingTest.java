@@ -217,7 +217,7 @@ class BandBuildingTest {
 		Templates.Entry entry = entry(false, false);
 		TemplateRule.Template template = BandBuilding.build(entry, ATLAS, art());
 		assertEquals(TemplateRule.Kind.BAND, template.kind());
-		assertTrue(template.maxQuads() <= CellUnits.MAX_QUADS);
+		assertTrue(template.maxQuads() <= CellUnits.BUDGET_QUADS);
 		assertFalse(template.block(1, 2, 1).isEmpty(), "the roof's block");
 		assertFalse(template.block(0, 0, 2).isEmpty(), "the facade's corner");
 		assertTrue(template.block(3, 3, 0).isEmpty(), "nothing above three blocks");
