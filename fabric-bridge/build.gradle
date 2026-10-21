@@ -171,6 +171,7 @@ loom {
 // Headless world builds (docs/PLAN.md §4.5): `./gradlew runServer -Pkb.build=<bundle dir> [-Pkb.buildMaps=A,B]
 // [-Pkb.buildReport=<path>] [-Pkb.buildExit=true] [-Pkb.buildRegion=<id> -Pkb.buildSlot=<n>]` hands these to the server as
 // -Dkantobridge.build* (HeadlessBuild). The last two make a region build (docs/specs/MULTI_GAME_PLAN.md §4.6, MG3).
+// -Pkb.landscapeModels=<table> builds the landscape sections' models (docs/specs/LANDSCAPE_MODELS.md; LandscapeModels).
 // Relative paths resolve against this project directory. Added after the GameTest run is configured, so the GameTest
 // server (which inherits the server run) never gets them.
 def kbBuildProperties = [
@@ -180,6 +181,7 @@ def kbBuildProperties = [
 	"kb.buildExit"  : ["kantobridge.build.exit", false],
 	"kb.buildRegion": ["kantobridge.build.region", false],
 	"kb.buildSlot"  : ["kantobridge.build.slot", false],
+	"kb.landscapeModels": ["kantobridge.landscape.models", true],
 ]
 def kbBuildVmArgs = []
 kbBuildProperties.each { gradleName, spec ->
@@ -642,6 +644,8 @@ test {
 	// -Pkb.landscape="<bundle>;<out dir>;MAP,..." writes the landscape sections' first pass (LANDSCAPE_SECTIONS_PLAN.md
 	// section 2.1; pod only).
 	systemProperty "kb.landscape", providers.gradleProperty("kb.landscape").getOrElse("")
+	// -Pkb.landscapeQuads="<bundle>;<table>;<out json>": the landscape models' quads per block (pod only)
+	systemProperty "kb.landscapeQuads", providers.gradleProperty("kb.landscapeQuads").getOrElse("")
 	// -Pkb.heightsSurvey=true with any of the three real bundles: the 3D heights plan's survey (W0; layout data on the pod)
 	systemProperty "kb.heightsSurvey", providers.gradleProperty("kb.heightsSurvey").getOrElse("")
 	// The story check for Crystal: -Pkb.realGen2Index=<the real Johto's world_index.json> with kb.realGen2Bundle and

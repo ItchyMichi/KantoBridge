@@ -74,3 +74,19 @@ Look at all three; fix and rebuild, three rounds a model at most. Last, `--scene
 ground: `out/scene_view.png`, `out/scene_game.png`, `out/scene.json` (kb-hub's viewer).
 
 Write `specs/*.json` and `notes.md`: a line per model (what it is, its height, what you weren't sure of).
+
+## In the game (`LandscapeModels`, the pilot)
+
+`tools/landscape_sections/models_table.py` writes every spot's specs as the planner places them: per model its grid
+(the tiles its cells, its doors, its parts and its paint cover), its claim (its cells' tiles and the doors its arch
+reaches over) and its spec in the grid's pixels: the trees helper expanded, the footprint (`keep`, `doors`,
+`doorClear`, which `PartsBuilding` applies as terrain_model.py does), `height`, `quadCap` and `roofRows`. A build given
+the table (`build_world.py --landscape-models`, `-Pkb.landscapeModels`) claims each model's tiles after the buildings
+(a building keeps its own) and places it as a parts template (`FittedBuildings.place`): every client builds it from its
+own tiles. An outdoor map, on the surface or under the open sky, sets no height limit but a column's block mask (30
+blocks; the user's rule, 2026-10-21: only interiors are limited); a door's cell stays walkable, the arch over it decor.
+
+Quads per block, built as the client builds them (`LandscapeModelsQuadsTest`, pod only): 24 of the 28 pilot models
+within the budget's 96 in every block; four over it in a few blocks (Route 23's Victory Road front and west band, at
+most 100; Route 127's islet, 143, and one block of its islands, 102); none over 256. Means: rock 6 to 30, trees about 71.
+

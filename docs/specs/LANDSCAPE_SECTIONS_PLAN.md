@@ -81,7 +81,10 @@ before their pictures (the branch `pilot/landscape-bc` keeps them).
 3. The packages and the modelling guide; one agent per spot models its big sections; the previews in kb-hub.
 4. The user reviews the models; fixes.
 5. The builder, with tests on made-up maps; the seven maps built; the pictures beside the stacked build's. The user
-   picks; rolling out follows from that.
+   picks; rolling out follows from that. (The user approved the models, 2026-10-21: "very happy with the results and
+   want to see them in game". The builder reuses the buildings' parts templates: LANDSCAPE_MODELS.md, "In the game".)
+6. A frame-rate test on a pod with a mid-range GPU (about an average PC; the CPU pods render in software), the world
+   with the models against the world without (the user's idea, 2026-10-21).
 
 ## 5. Checks
 

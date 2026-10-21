@@ -28,7 +28,8 @@ import java.util.TreeMap;
  * roof      a hip: RH voxels in STEP-voxel steps, each STEP in from every side, as wide as the roof's outline; or flat:
  *           a FLAT-voxel slab with a PARAPET rim; its top the roof's rows from above (a flat roof's middle rows
  *           repeated at their own scale); a grid with no roof rows (its roof off the map) a flat roof in the wall's shade
- * gate      CellUnits.MAX_QUADS per block; else the template's columns (plain cubes)
+ * gate      CellUnits.MAX_QUADS per block (a parts spec's "quadCap" may allow more: a landscape model, whose painted
+ *           rock merges into fewer quads than a building's walls); else the template's columns (plain cubes)
  * </pre>
  */
 public final class BoxBuilding {
@@ -106,7 +107,8 @@ public final class BoxBuilding {
 		for (List<ShapeQuad> block : blocks.values()) {
 			quads = Math.max(quads, block.size());
 		}
-		if (quads > CellUnits.MAX_QUADS) {
+		int cap = box.has("quadCap") ? Math.max(CellUnits.MAX_QUADS, box.get("quadCap").getAsInt()) : CellUnits.MAX_QUADS;
+		if (quads > cap) {
 			return TemplateRule.columns(entry, TemplateRule.Kind.HULL, 0.0);
 		}
 		int[] tileIds = tiles.stream().mapToInt(Integer::intValue).toArray();

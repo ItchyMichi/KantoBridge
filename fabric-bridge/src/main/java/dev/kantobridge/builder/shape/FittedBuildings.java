@@ -82,6 +82,12 @@ final class FittedBuildings {
 	/** Places one claim into a map's columns and returns its template. */
 	static Templates.Placed place(SceneMap map, int atlas, Buildings.Claim claim, FittedShapes.Building building, int mapGround, ShapeKey[][] keys,
 			int[] blocks, int[] mask, int[] decor, int[] floor, Map<String, Integer> tally) {
+		return place(map, atlas, claim, building, mapGround, keys, blocks, mask, decor, floor, tally, Math.min(ShapeHeights.headroom(map), 30));
+	}
+
+	/** The same, the model at most {@code room} blocks tall (a landscape model's: LandscapeModels.ROOM). */
+	static Templates.Placed place(SceneMap map, int atlas, Buildings.Claim claim, FittedShapes.Building building, int mapGround, ShapeKey[][] keys,
+			int[] blocks, int[] mask, int[] decor, int[] floor, Map<String, Integer> tally, int room) {
 		int cols = map.artCols();
 		boolean indoor = !(map.surface() && map.env().outdoor());
 		int bw = claim.width();
@@ -91,7 +97,7 @@ final class FittedBuildings {
 		boolean parts = box.has("parts");
 		int voxels = parts ? PartsBuilding.height(box)
 				: BoxBuilding.height(bh * px, box.get("roofRows").getAsInt(), "hip".equals(box.get("roof").getAsString()));
-		int high = Math.min(Math.max(2, (voxels + px - 1) / px), Math.min(ShapeHeights.headroom(map), 30));
+		int high = Math.min(Math.max(2, (voxels + px - 1) / px), room);
 		int ground = Buildings.ground(map, claim, mapGround);
 		JsonArray tiles = new JsonArray();
 		JsonArray columns = new JsonArray();

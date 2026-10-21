@@ -40,6 +40,28 @@ class PartsBuildingTest {
 	}
 
 	@Test
+	void aLandscapeModelKeepsToItsTilesAndADoorsHeadroom() {
+		// A box over the whole drawing, kept to the west half's tiles and, over a door's tiles (the south-east cell), from 24
+		// voxels up: as tools/landscape_sections/terrain_model.py keeps it.
+		String spec = """
+				{"height": 40, "keep": [[0, 0], [1, 0], [0, 1], [1, 1], [0, 2], [1, 2], [0, 3], [1, 3]],
+				 "doors": [[2, 2], [3, 2], [2, 3], [3, 3]], "doorClear": 24,
+				 "parts": [{"shape": "box", "x": [0, 32], "z": [0, 32], "y": [0, 40], "paint": {"front": [0, 0, 32, 32]}}]}""";
+		int[] texel = new int[W * D];
+		for (int z = 0; z < D; z++) {
+			for (int x = 0; x < W; x++) {
+				texel[z * W + x] = VoxelGrid.texel(0, x, z);
+			}
+		}
+		VoxelGrid grid = PartsBuilding.voxels(JsonParser.parseString(spec).getAsJsonObject(), texel, W, D, 8);
+		assertEquals(16 * 32 * 40 + 16 * 16 * 16, grid.count());
+		assertTrue(grid.solid(5, 39, 5), "its own tiles");
+		assertFalse(grid.solid(20, 30, 5), "another tile");
+		assertFalse(grid.solid(20, 10, 20), "a door's headroom");
+		assertTrue(grid.solid(20, 30, 20), "the arch over the door");
+	}
+
+	@Test
 	void theSameVoxelsAsTheRendererTheAgentsCheckWith() {
 		VoxelGrid grid = model();
 		assertEquals(48, grid.height());

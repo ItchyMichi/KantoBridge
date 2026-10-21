@@ -19,6 +19,9 @@ import java.util.List;
  *           along the curve), south ("front"), east/west ("side", default the front), north ("back", default "side",
  *           else the front); sides and backs repeat their rectangle at its own scale; a round part's front wraps round
  *           its visible half by angle
+ * keep      optional (a landscape model, docs/specs/LANDSCAPE_MODELS.md): the tiles [tx, ty] the model stands on; every
+ *           voxel over another tile goes, over a tile of "doors" only those under "doorClear" voxels (default 24: a
+ *           cave mouth's headroom), as tools/landscape_sections/terrain_model.py keeps them
  * </pre>
  */
 public final class PartsBuilding {
@@ -243,6 +246,7 @@ public final class PartsBuilding {
 				}
 			}
 		}
+		footprint(spec, owner, w, h, d, px);
 		int gh = Math.max(px, ((h + px - 1) / px) * px);
 		VoxelGrid grid = new VoxelGrid(w, gh, d, px);
 		for (int y = 0; y < h; y++) {
@@ -257,6 +261,45 @@ public final class PartsBuilding {
 			}
 		}
 		return grid;
+	}
+
+	/** A landscape model's footprint ("keep", "doors", "doorClear"; see the class comment): the voxels it leaves out. */
+	private static void footprint(JsonObject spec, int[] owner, int w, int h, int d, int px) {
+		if (!spec.has("keep")) {
+			return;
+		}
+		int tw = (w + px - 1) / px;
+		int td = (d + px - 1) / px;
+		boolean[] keep = tiles(spec, "keep", tw, td);
+		boolean[] doors = tiles(spec, "doors", tw, td);
+		int clear = spec.has("doorClear") ? spec.get("doorClear").getAsInt() : 24;
+		for (int z = 0; z < d; z++) {
+			for (int x = 0; x < w; x++) {
+				int t = (z / px) * tw + x / px;
+				if (keep[t]) {
+					continue;
+				}
+				int from = doors[t] ? clear : h;
+				for (int y = 0; y < Math.min(from, h); y++) {
+					owner[(y * d + z) * w + x] = -1;
+				}
+			}
+		}
+	}
+
+	/** The tiles a spec's list names ([tx, ty] each), per tile of a grid tw x td. */
+	private static boolean[] tiles(JsonObject spec, String key, int tw, int td) {
+		boolean[] out = new boolean[tw * td];
+		if (spec.has(key)) {
+			for (JsonElement el : spec.getAsJsonArray(key)) {
+				int tx = el.getAsJsonArray().get(0).getAsInt();
+				int ty = el.getAsJsonArray().get(1).getAsInt();
+				if (tx >= 0 && ty >= 0 && tx < tw && ty < td) {
+					out[ty * tw + tx] = true;
+				}
+			}
+		}
+		return out;
 	}
 
 	/** The drawing pixel a voxel shows (parts_model.build's painting). */

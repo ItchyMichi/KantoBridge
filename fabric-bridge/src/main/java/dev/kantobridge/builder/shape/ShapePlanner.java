@@ -676,6 +676,10 @@ public final class ShapePlanner {
 		Map<Profile.Building, FittedShapes.Building> fittedOf = FittedBuildings.index();
 		List<Buildings.Claim> fitted = sceneAtlas != null && map.perCell() == ShapeTable.UNIT_CELL && map.surface()
 				? FittedBuildings.claims(map, held, tally, fittedOf) : List.of();
+		// The landscape sections' models (LANDSCAPE_MODELS.md; none unless the build names a table) claim their marked cells
+		// next, outdoors (on the surface or under the open sky), as parts templates.
+		List<Buildings.Claim> landscape = sceneAtlas != null && map.perCell() == ShapeTable.UNIT_CELL && map.env().outdoor()
+				? LandscapeModels.claims(map, held, tally, fittedOf) : List.of();
 		// P3: the two-cell hulls (a canopy, a planter) take their cells as a claim does.
 		List<BigHulls.Group> hulls = params.profileBoxes() && classes != null && sceneAtlas != null && map.perCell() == ShapeTable.UNIT_CELL
 				? BigHulls.find(map, classes, held, tally) : List.of();
@@ -699,7 +703,8 @@ public final class ShapePlanner {
 		if (params.tierB() && cells) {
 			// Tier B (kb-shapes/3): tufts and cell units over the measured columns.
 			Units.plan(map, sceneAtlas, atlas, columns.keys(), columns.blocks(), columns.shapeMask(), floor, decor, units, classes,
-					params.profileUnits() ? probe : null, tally, claims.isEmpty() && hulls.isEmpty() && fitted.isEmpty() ? null : held, layout);
+					params.profileUnits() ? probe : null, tally, claims.isEmpty() && hulls.isEmpty() && fitted.isEmpty() && landscape.isEmpty() ? null : held,
+					layout);
 			if (params.visibleRows() && map.env().outdoor()) {
 				// D9: the face over a cave mouth's model rises with each of its models lifted to its own rows
 				stackFaces(map, atlas, params.maxUnit(), columns.runs(), columns.keys(), columns.blocks(), columns.shapeMask(), units);
@@ -727,6 +732,16 @@ public final class ShapePlanner {
 			for (Buildings.Claim claim : fitted) {
 				all.add(FittedBuildings.place(map, atlas, claim, fittedOf.get(claim.building()), ground, columns.keys(), columns.blocks(),
 						columns.shapeMask(), decor, floor, tally));
+			}
+			templates = all;
+		}
+		if (!landscape.isEmpty()) {
+			// The landscape models' templates: parts built on every client, as tall as drawn (no limit outdoors but the block mask).
+			List<Templates.Placed> all = new ArrayList<>(templates);
+			int ground = Units.mapGround(map, sceneAtlas.grassTiles(), sceneAtlas.frameTiles());
+			for (Buildings.Claim claim : landscape) {
+				all.add(FittedBuildings.place(map, atlas, claim, fittedOf.get(claim.building()), ground, columns.keys(), columns.blocks(),
+						columns.shapeMask(), decor, floor, tally, LandscapeModels.ROOM));
 			}
 			templates = all;
 		}
