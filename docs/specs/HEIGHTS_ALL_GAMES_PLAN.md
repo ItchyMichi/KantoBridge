@@ -7,7 +7,9 @@ what exists, the data each game gives, the design, the phases with their checks,
 
 **Status (2026-10-20, later):** the user restated the vision before implementation (§0). The plan was checked against
 it and changed where it fell short (§0.2); the survey W0 asked for, like the caves' dry runs, measured on the real
-exports of all three games that the height changes are viable (§5). Waiting for the user's answers on §8 before W1.
+exports of all three games that the height changes are viable (§5). The user answered §8 the same day ("Q6 was a
+typo, go with your picks for the rest"): the classic screen, thick walls in full, the bottom at −352, outdoor maps off
+the surface under the sky, no tunnels. Execution started with W0's remaining checks.
 
 ## 0. The user's vision (2026-10-20)
 
@@ -42,8 +44,8 @@ exports of all three games that the height changes are viable (§5). Waiting for
 | | Caves | Other interiors | Outdoors, forests, Safari |
 |---|---|---|---|
 | Blue | 3D since 2026-10-13 (CAVES_3D_PLAN.md H1-H7): a cave area of its own, floors stacked 11 blocks apart, 15 of 37 ladders real shafts (22 fade: 10 loops, 10 moved aside, 2 same floor), 12 of 19 cave maps raised (3,462 cells, 29 stairs), 642 pair edges; 3 blocks of air | flat, 3 blocks of air | flat (CAVES_3D_PLAN.md §8 "later") |
-| Crystal | flat interiors under their doors, every ladder and hole a fade; one-way edges as walls (1,535) | flat | flat ("Flat, as Hoenn: no heights or caves in 3D for Johto yet", GEN2_BRIDGE_PLAN.md:523); 11 outdoor maps off the surface built under a ceiling (§5.5) |
-| Emerald | flat, fades; walls where the elevation differs (`PairEdges.elevation`) | flat | flat ("flat with invisible walls on mismatches", GEN3_BRIDGE_PLAN.md:438); 18 outdoor maps off the surface built under a ceiling (§5.5) |
+| Crystal | flat interiors under their doors, every ladder and hole a fade; one-way edges as walls (1,535) | flat | flat ("Flat, as Hoenn: no heights or caves in 3D for Johto yet", GEN2_BRIDGE_PLAN.md:523); 11 outdoor maps off the surface, under the open sky (§5.5) |
+| Emerald | flat, fades; walls where the elevation differs (`PairEdges.elevation`) | flat | flat ("flat with invisible walls on mismatches", GEN3_BRIDGE_PLAN.md:438); 18 outdoor maps off the surface, under the open sky (§5.5) |
 
 **Heights today** (the code read for this check, 2026-10-20):
 - Interiors: floor block at feet − 1, ceiling at feet + 3 (`WorldPlan.CEILING_ABOVE_FEET`): 3 blocks of air; interior
@@ -188,12 +190,14 @@ arrival warp); none carries a facing (only the run-time arrival has one).
   cells, the floor under them and where the bridge meets the ground, reviewed by the user on kb-hub. A cell holds two
   floors (the ground and the deck a level above, with at least 2 blocks clear under the deck), and the position sync
   takes the floor from the game's own state (Emerald's elevation; for the others the side the player stepped on from).
-- **Outdoor maps off the surface get the sky:** 11 Crystal maps (Tin Tower's roof, Routes 23 and 28, the National
+- **Outdoor maps off the surface keep the sky:** 11 Crystal maps (Tin Tower's roof, Routes 23 and 28, the National
   Park, the ports, Mt. Moon Square, the Battle Tower's outside, Silver Cave's outside, the Ruins of Alph's outside) and
   18 Emerald maps (Sootopolis, both Battle Frontier outsides, the Safari Zone's six, Mt. Chimney, Jagged Pass, Mt. Pyre's
-  exterior and summit, Petalburg Woods, Sky Pillar's outside and top, Southern Island) are drawn outdoors but sit under
-  a ceiling today (the packer found no open-sky spot: note `open_air_kept_ceiling`). They move to an open-sky area of
-  their own, placed like the 3D area, so they are exteriors for D9 and keep their layers' depth out of the stack.
+  exterior and summit, Petalburg Woods, Sky Pillar's outside and top, Southern Island) are drawn outdoors and placed
+  under the open sky by the packer (`placeOpenSky`, note `open_air_sky`) when the build plans shapes, as every real build
+  does. They are exteriors for D9 (no ceiling, out of the layer stack's depth); W5 keeps them under the sky with the new
+  layer steps, and the build report counts any that fall back to a ceiling (`open_air_kept_ceiling`): the goal is none.
+  *Corrected 2026-10-20: the first survey planned without shapes, which skips the sky, and read them as roofed.*
 - Viridian Forest, Ilex Forest, Petalburg Woods, the Safari Zones: raised ground where the data has it; the canopy
   and apron dressing (first-person dressing work) must follow the levels.
 
@@ -313,13 +317,15 @@ Proposed world bottom: **−352**. Today: −256, every room 3 blocks.
 - Non-cave maps that join the 3D area: Crystal's Blackthorn Gym (2 maps), Ecruteak Gym, the Indigo Plateau room and
   Will's room (a hole drawing to check in W2); Emerald's Lavaridge Gym, Mt. Pyre 1F-6F and Sootopolis Gym.
 
-### 5.5 Outdoor maps under a ceiling today
-11 in Johto and 18 in Hoenn (D4's list). As interiors they would need 11-19 blocks; under the sky they need none.
+### 5.5 Outdoor maps off the surface
+11 in Johto and 18 in Hoenn (D4's list), under the open sky in a real build; under a ceiling they would need 11-19
+blocks. (The survey planned without shapes, which skips the sky: §5.2's figures leave them out of the stack, as a real
+build does.)
 
 ### 5.6 Verdict
 Viable in all three games with the changes above: the deeper world (−352), the 3D area for every ladder or hole
-complex, an open-sky area for outdoor maps off the surface, the export's landings for scripted holes, and per-room
-floors for maps holding several. Not settled by data: Crystal's raised ground (no heights in the game; W4's dry run
+complex, outdoor maps off the surface kept under the sky, the export's landings for scripted holes, and per-room floors
+for maps holding several. Not settled by data: Crystal's raised ground (no heights in the game; W4's dry run
 measures how much the edges and labels decide) and Blue's outdoor islands (W1).
 
 ## 6. Phases
@@ -333,7 +339,7 @@ Each phase ends with its tests green, a dry-run report and pictures where it sho
 | W2 | One 3D planner (D1): the neutral input, every ladder or hole complex of each game, floor ranks per room, the area per region; floors apart by their height; links still fade | dry runs per game (rooms, complexes, slots, floors), Blue's caves unchanged (87 rooms, 15+ shafts) |
 | W3 | Links by kind (D2): ladders as shafts, holes, the export's landings for scripted holes and cracked floors; pilots Union Cave (Crystal) and Granite Cave (Emerald) | dry-run counts (real / fade and why, as §5.4), a pilot video each, GameTests: climbing a Gen 2/3 shaft warps; Lua tests for the take on both adapters |
 | W4 | Raised ground in caves: Emerald from the elevation, Crystal inferred plus labels; D3's step heights | per-map report (raised, flat and why), RaisedCave-style tests per family, pictures |
-| W5 | Interiors: the depth (D8), the headroom (D5), walls standing to the ceiling, levels from the same sources; the deeper world (variable layer steps, the bottom at −352, the spawn rule); outdoor maps off the surface to the open-sky area | report (ceilings by room, layer steps), pictures of Lavaridge Gym, the League rooms, a Crystal gym, a house per game |
+| W5 | Interiors: the depth (D8), the headroom (D5), walls standing to the ceiling, levels from the same sources; the deeper world (variable layer steps, the bottom at −352, the spawn rule); outdoor maps off the surface kept under the sky | report (ceilings by room, layer steps), pictures of Lavaridge Gym, the League rooms, a Crystal gym, a house per game |
 | W6 | Outdoors: levels, ledges as drops, outdoor stairs as steps, bridges as two-floor cells (after the bridge review), faces to their visible rows and the visible-layers check (D9) | report per region (cells short: none or a reason), CollisionGameTests for drops, pictures of Route 111, Fortree, Route 119, Ilex Forest, a Kanto route, the Battle Frontier mouth |
 | W7 | Blue's audit list built (W1) | the audit report re-run: nothing left flat that the game raises, or a reason per map |
 | W8 | Every region rebuilt; the play-test list (PLAYTEST.md "Caves in 3D" extended); docs: this plan's status, DESIGN.md (the user's file: a proposed text for :36-42) | full check, videos per region |
@@ -347,19 +353,22 @@ Each phase ends with its tests green, a dry-run report and pictures where it sho
 | Q3 | **Bridges:** two-floor cells, with an agent review of the maps with bridges (D4) | yes: Emerald's 381 bridge cells; the deck keeps 2 blocks clear under it |
 | Q4 | **Stairs:** within one map with floors at two heights, physical stairs where the map shows them; moving to another map stays a fade and warp (D5) | yes: V2 ("stairs still function as warp points") is the second half; the first half is stairs inside one map, which are no warp in the game |
 | Q5 | **Pilots:** Union Cave and Granite Cave | yes: both have ladders that line up (§5.4), Granite Cave also holes (its cracked floors) |
-| Q6 | not found: the plan asked five questions | asked again (§8) |
+| Q6 | a typo (the user, 2026-10-20): there are five | — |
 
-## 8. For the user to confirm (2026-10-20)
+## 8. The user's answers to the vision check (2026-10-20: "Q6 was a typo, go with your picks for the rest")
+
+Each point below was decided as proposed.
 
 1. **The depth's screen:** the classic screen (Gen 3 rooms up to 9 blocks) or Gen1Recomp's default window (up to 11)?
    Proposed: classic.
 2. **Thick walls count in full:** a room is as tall as its tallest drawn chain up to the screen's edge, so gyms, Silph
    Co.'s floors and most caves become 8 blocks (Gen 1/2) or 9 (Gen 3) tall, houses 4-6 (§5.1). Proposed: yes, as asked.
 3. **The world's bottom to −352** (from −256), each layer as deep as its tallest room. Proposed: yes.
-4. **Outdoor maps off the surface move under the sky** (29 maps, D4). Proposed: yes.
+4. **Outdoor maps off the surface under the sky** (29 maps, D4). Proposed: yes. *They already are in a real build (the
+   survey's reading was wrong, corrected the same day): the decision keeps it so.*
 5. **Tunnels dropped**: cave mouths and wall exits keep their fade; links that can't line up keep theirs, as in Blue.
    Proposed: yes.
-6. **Q6:** the plan has five questions; which sixth answer did you mean?
+6. **Q6:** a typo; there are five questions.
 
 ## 9. Risks
 
