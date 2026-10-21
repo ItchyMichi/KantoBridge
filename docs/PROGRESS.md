@@ -1213,8 +1213,11 @@ for the rest" (plan §8). Feature tests per phase, the full suite at the checkpo
      line stand on the ground again; the Battle Frontier's rock now rises over the arch, but only in the mouth's own
      cell column (a block over the arch), and Rock Tunnel's mouth column rises as a narrow tower; Route 127's rock
      islands are low again (their fitted models at 2 blocks). The tree walls stay: they are tree columns read as plain
-     faces (their tiles don't repeat exactly), which stood 6 blocks before D9 and now 8 or 9. Not satisfactory yet: your
-     suggestion of 2026-10-21 is to mark landscape sections with agents and model them as wholes, as the buildings were.
+     faces (their tiles don't repeat exactly), which stood 6 blocks before D9 and now 8 or 9. Not satisfactory yet. Of
+     the two builds the stacked one looked best to you; your suggestion is to mark landscape sections with agents and
+     model them as wholes, as the buildings were: piloted on the seven picture maps, compared with the stacked build,
+     then picked ([specs/LANDSCAPE_SECTIONS_PLAN.md](specs/LANDSCAPE_SECTIONS_PLAN.md)).
+   - (The note's JUnit count, 1,379, counted two temporary probes since moved out: the suite holds 1,377.)
    - **Cave mouths and wall exits** (a fitted model in use on the cell over a door, the whole cell unroofed before): the
      model is the doorway, the face over it folds no door and rises as drawn, roofless so its models stay in use, and
      `ShapePlanner.stackFaces` lifts each of its models onto the face's own blocks to its own rows. That holds on the

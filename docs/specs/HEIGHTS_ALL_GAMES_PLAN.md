@@ -301,12 +301,14 @@ floors still stack by their own tallest rooms (`CavePlanner.rankFeet`).
     own cell is no viewpoint (stepping on it takes you in).
   - Plain faces stand to their visible rows (the screen's), a door's column holds its rows and the face over it; the
     region vote counts as before (units at most 6), so the runs D9 leaves alone stand as they stood.
-  - The user's choices from the pictures (2026-10-21): a run read as a repeat stays one (reading rimmed cliffs and tree
-    lines as faces made tall flat walls of tree art), and a run holding a fitted model in use stands as it stood
-    (stacking every face of fitted models made towers of boulder lines and terraces of rock fields). Only a cave mouth's
-    or wall exit's face (a fitted model on the cell over a door) rises past it, its models lifted to their rows
-    (`ShapePlanner.stackFaces`), on the surface and under the open sky (the Battle Frontier). Left short and named:
-    `model` and `rim` runs (PROGRESS W6 note 9).
+  - The user's choices from the pictures (2026-10-21): a run read as a repeat stays one, and a run holding a fitted
+    model in use stands as it stood (stacking every face of fitted models made towers of boulder lines and terraces of
+    rock fields). Only a cave mouth's or wall exit's face (a fitted model on the cell over a door) rises past it, its
+    models lifted to their rows (`ShapePlanner.stackFaces`), on the surface and under the open sky (the Battle
+    Frontier). Left short and named: `model` and `rim` runs. Tree columns read as plain faces stand as tall walls of tree
+    art (6 blocks before D9, 8 or 9 now). PROGRESS W6 note 9.
+  - Next (the user's suggestion, 2026-10-21): agents mark the landscape's sections and they are modelled as wholes,
+    piloted on the seven picture maps first: [LANDSCAPE_SECTIONS_PLAN.md](LANDSCAPE_SECTIONS_PLAN.md).
 
 ## 5. Viability (the survey, 2026-10-20)
 
