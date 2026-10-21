@@ -22,6 +22,7 @@ import dev.kantobridge.client.bridge.BridgeLink;
 import dev.kantobridge.client.bridge.BridgeRuntime;
 import dev.kantobridge.client.bridge.ClientBridgeState;
 import dev.kantobridge.client.bridge.Links;
+import dev.kantobridge.client.model.MeshStatsRuntime;
 import dev.kantobridge.client.move.InputLock;
 import dev.kantobridge.client.move.MoveRuntime;
 import dev.kantobridge.client.move.MovementSync;
@@ -78,6 +79,7 @@ import net.minecraft.client.server.IntegratedServer;
 import net.minecraft.client.tutorial.TutorialSteps;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.util.Mth;
 import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.level.block.Blocks;
@@ -185,6 +187,8 @@ final class RemotePilot {
 
 	private final ArrayDeque<String> typing = new ArrayDeque<>();
 	private boolean typingConfirmed;
+	/** The frame-rate test's "measure" started one (meshstats on, a world loaded). */
+	private boolean measureStarted;
 
 	private @Nullable Process ffmpeg;
 	private @Nullable Path recording;
@@ -382,6 +386,38 @@ final class RemotePilot {
 				this.startRecording(file == null ? null : Path.of(file));
 			}
 			case "stop" -> this.stopRecording();
+			case "measure" -> {
+				// a frame-rate test (LANDSCAPE_MODELS.md): meshstats' re-mesh and 30 s of frames, as its key does
+				this.measureStarted = MeshStatsRuntime.measure(this.minecraft);
+				this.mark("measure started=" + this.measureStarted);
+			}
+			case "render" -> {
+				// the view a frame-rate test takes: a render distance, vsync off, no frame cap
+				this.minecraft.options.renderDistance().set(Math.max(2, Math.min(32, number(command, "distance", 16))));
+				this.minecraft.options.enableVsync().set(false);
+				this.minecraft.options.framerateLimit().set(260);
+				this.minecraft.options.save();
+			}
+			case "tp" -> {
+				// stand at a block position facing a way, on the integrated server (a frame-rate test's viewpoints)
+				IntegratedServer host = this.minecraft.getSingleplayerServer();
+				LocalPlayer player = this.minecraft.player;
+				if (host != null && player != null) {
+					double x = command.get("x").getAsDouble();
+					double y = command.get("y").getAsDouble();
+					double z = command.get("z").getAsDouble();
+					float yaw = command.has("yaw") ? command.get("yaw").getAsFloat() : player.getYRot();
+					float pitch = command.has("pitch") ? command.get("pitch").getAsFloat() : player.getXRot();
+					java.util.UUID id = player.getUUID();
+					host.execute(() -> {
+						ServerPlayer at = host.getPlayerList().getPlayer(id);
+						if (at != null) {
+							at.teleportTo(at.serverLevel(), x, y, z, yaw, pitch);
+						}
+					});
+				}
+				this.mark("tp ok=" + (host != null && player != null));
+			}
 			case "quit" -> {
 				this.stopRecording();
 				this.mark("quit");
@@ -416,6 +452,15 @@ final class RemotePilot {
 			case "wait" -> {
 				if (this.currentTicks >= number(command, "ticks", TICKS)) {
 					this.finish(this.result(true, null));
+				}
+			}
+			case "measure" -> {
+				if (!this.measureStarted) {
+					this.finish(this.result(false, "meshstats_off"));
+				} else if (this.currentTicks > 2 && !MeshStatsRuntime.busy()) {
+					this.finish(this.result(true, null));
+				} else if (this.currentTicks > number(command, "ticks", 6000)) {
+					this.finish(this.result(false, "measure_timeout"));
 				}
 			}
 			default -> this.finish(this.result(true, null));

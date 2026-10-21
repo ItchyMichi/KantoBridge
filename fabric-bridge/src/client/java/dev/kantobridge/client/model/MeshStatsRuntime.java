@@ -136,6 +136,29 @@ public final class MeshStatsRuntime {
 		KantoBridge.LOGGER.info("meshstats: on; F8 measures the current view into {}", reportPath());
 	}
 
+	/**
+	 * Measures the current view now, as the key does (the dev pilot's "measure": a frame-rate test without a keyboard);
+	 * false when meshstats is off, no world is loaded or a measurement runs.
+	 */
+	public static boolean measure(Minecraft minecraft) {
+		MeshStatsRuntime runtime = instance;
+		if (runtime == null || minecraft.level == null || runtime.measuring()) {
+			return false;
+		}
+		runtime.start(minecraft);
+		return true;
+	}
+
+	/** True while a measurement (its re-mesh or its frames) runs. */
+	public static boolean busy() {
+		MeshStatsRuntime runtime = instance;
+		return runtime != null && runtime.measuring();
+	}
+
+	private boolean measuring() {
+		return this.phase == Phase.REMESH || this.phase == Phase.FRAMES;
+	}
+
 	static Path reportPath() {
 		String configured = System.getProperty(MeshStats.REPORT_PROPERTY);
 		if (configured != null && !configured.isBlank()) {
