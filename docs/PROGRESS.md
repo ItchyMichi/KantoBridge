@@ -1217,6 +1217,12 @@ for the rest" (plan §8). Feature tests per phase, the full suite at the checkpo
      the two builds the stacked one looked best to you; your suggestion is to mark landscape sections with agents and
      model them as wholes, as the buildings were: piloted on the seven picture maps, compared with the stacked build,
      then picked ([specs/LANDSCAPE_SECTIONS_PLAN.md](specs/LANDSCAPE_SECTIONS_PLAN.md)).
+   - **The landscape sections pilot** ([specs/LANDSCAPE_SECTIONS_PLAN.md](specs/LANDSCAPE_SECTIONS_PLAN.md)): the
+     first pass (each map's regions of solid cells, pod only) and one marking agent per map marked the seven maps, 388
+     sections (faces, masses, objects, trees, mouths, buildings), every solid cell in a section or left to the default.
+     The planner's rule variants over the marks (B, C) were built and dropped before their pictures: you chose a model
+     per big section, previewed first, as the buildings were ([specs/LANDSCAPE_MODELS.md](specs/LANDSCAPE_MODELS.md);
+     `tools/landscape_sections/`: the packages, `terrain_model.py`). B and C stay on the branch `pilot/landscape-bc`.
    - (The note's JUnit count, 1,379, counted two temporary probes since moved out: the suite holds 1,377.)
    - **Cave mouths and wall exits** (a fitted model in use on the cell over a door, the whole cell unroofed before): the
      model is the doorway, the face over it folds no door and rises as drawn, roofless so its models stay in use, and

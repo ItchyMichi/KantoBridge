@@ -24,70 +24,72 @@ two ways of modelling the marked sections, the same pictures, and the user picks
   sky).
 - **Out of the pilot:** raised ground (the floors stay flat; levels are W6's next step, and section 6 says how the same
   marking gives them), other maps, committing a default.
-- **Result:** the seven pictures in four versions side by side, the game, A (the stacked build, pictures on the volume),
-  B and C (below); the user picks, or asks for a mix.
+- **Result:** the big sections at each spot as models, previewed in kb-hub's viewer for the user before anything is
+  built; then a builder for them and the seven pictures beside the stacked build's.
 
-## 2. Stage 1: the sections
+## 2. Stage 1: the sections (done, 2026-10-21)
 
-**2.1 A calculated first pass** (pixel-free, a pod test as the dry runs are). Per map, the 4-connected regions of solid
-cells, and per region: its cells, bounding box, the floor along each side, the drawn rows of its south face per column,
-how much of it repeats (the repeat rule), is foliage (the hint), holds fitted models, and the doors and cave mouths in
-it; for Emerald, the elevations around it. Written as the regions' ids and cells (counts and positions only) and a
-render: the map's art with each region outlined and numbered, private in kb-hub's work folder.
+**2.1 A calculated first pass** (`LandscapeRegionsTest`, pod only, `-Pkb.landscape`): per map the 4-connected regions
+of solid cells and per region its cells, bounding box, the floor along each side, its south face's drawn rows per
+column, its shares of repeats, foliage and fitted models, and the doors under it (map ids, positions and counts). The
+renders (the map's art with each region outlined and numbered, in 32 x 32-cell chunks) are private, in kb-hub's work
+folder.
 
-**2.2 Marking by agents.** One agent per map, given the render, a zoomed sheet per large region, the region list and a
-short marking guide (`docs/specs/LANDSCAPE_MARKING_RULES.md`, written with the pilot). For each region, or for parts of
-one it splits, it writes:
+**2.2 Marking by agents** ([LANDSCAPE_MARKING_RULES.md](LANDSCAPE_MARKING_RULES.md)): one agent per map wrote its
+sections (kind, region, cell boxes, top cells, the face's rows where the drawing misleads, a landmark flag, a note):
 
-| Kind | What it is | Examples |
-|---|---|---|
-| `face` | a cliff band or a wall: a vertical face, its top behind it | Route 23's cliffs, a ledge's wall, a town's rock wall |
-| `mass` | a mountain, a rock island, a hill: a front face and a top over its other cells | Rock Tunnel's mountain, Route 127's islands |
-| `objects` | separate things on the ground, each its own cell | boulders, rocks in a line, posts, signs, statues |
-| `trees` | a tree line or a tree mass | Route 26's and Route 119's tree columns |
-| `mouth` | a face holding a cave mouth or a wall exit | Rock Tunnel's mouth, the Battle Frontier's Artisan Cave |
-| `building` | part of a building (left to the buildings) | a house's wall drawn into a cliff |
+| Map | Sections | Face | Mass | Objects | Trees | Mouth | Building | Left to the default |
+|---|---|---|---|---|---|---|---|---|
+| ROUTE_23 | 56 | 23 | 0 | 27 | 3 | 2 | 1 | 0 cells |
+| ROUTE_10 | 22 | 2 | 4 | 6 | 5 | 2 | 3 | 0 |
+| G2_BLACKTHORN_CITY | 50 | 20 | 0 | 20 | 0 | 4 | 6 | 0 |
+| G2_ROUTE_26 | 42 | 23 | 0 | 9 | 7 | 0 | 3 | 0 |
+| EM_ROUTE119 | 73 | 26 | 4 | 13 | 28 | 0 | 2 | 365 (water, banks) |
+| EM_ROUTE127 | 52 | 0 | 20 | 29 | 3 | 0 | 0 | 149 (solid water) |
+| EM_BATTLE_FRONTIER_OUTSIDE_EAST | 93 | 16 | 1 | 34 | 27 | 1 | 14 | 243 (fences) |
 
-with its front (the side the drawing shows as the face, nearly always south) and, for a `mass`, the cells of its top.
-A section it thinks deserves a model of its own (a landmark: the Battle Frontier rock, Mt. Chimney, Sootopolis's rim)
-it flags; the pilot models at most one (the Battle Frontier rock, as parts, BUILDING_PARTS.md).
+The agents found where the drawing misleads: a long strip of high ground running north and south counts every cell of
+its columns as face (Blackthorn's side walls, Route 10's edges), so they marked its real height (`rows`); Gen 1 and 2
+draw plateaus and mountains as tops behind a one-cell rim. Open: Route 23's green dither (a tall cliff face, or a
+terrace's top behind a 4-row face). The table (`tools/landscape_sections/table.py`) checks the marks and gives each
+section's cells; review sheets (kinds coloured over the art) are in kb-hub's work folder.
 
-**2.3 Review and data.** Sheets with the kinds coloured over the art go to kb-hub for the user. The result is a
-pixel-free table per game (map id, section id, kind, front, cells as runs, top cells), read by the planner; in the pilot
-it is passed to the build by a property, not put in the jar.
+## 3. Stage 2: a model per big section (the user's choice, 2026-10-21)
 
-## 3. Stage 2: two ways to model them (for the comparison)
+The plan first modelled the marked sections with the planner's rules (B: stacking by section, mountains tall; C: each
+section one height). The user chose instead the buildings' way ([BUILDING_PARTS.md](BUILDING_PARTS.md)): a model per
+big section, previewed before it is built ([LANDSCAPE_MODELS.md](LANDSCAPE_MODELS.md)). B and C were built and dropped
+before their pictures (the branch `pilot/landscape-bc` keeps them).
 
-Both keep the game's walkable cells walkable and its solid cells solid, every fitted model in use, and the floors flat.
-
-- **B, stacking by section.** The first build's stacking (each fitted model lifted onto the face's own blocks to its
-  own rows), but only in `face`, `mass` and `mouth` sections; `objects` and `trees` stay on the ground as they stand
-  today (the narrowed build). The stacked look the user liked, without the towers and pillars.
-- **C, whole sections.** A `face`, `mass` or `mouth` section stands as one shape: every column of it as tall as its
-  face (the drawn rows of its front, at most the screen's), its front showing the drawn rows, its top flat and showing
-  the top tiles, its fitted models standing in the front at their rows (as in B). Unlike B its height is the same
-  across its width and its top is flat, so a cliff reads as one cliff and a mountain as one mass; a `mouth` is the
-  face with its mouth model at the foot. The flagged landmark gets its parts model.
+- **The packages** (`tools/landscape_sections/package.py`): per picture spot the window its camera looks over (12
+  cells either side, 24 north), its drawing at 16 px a cell, a reference with the grid and the sections, and the
+  sections to model: masses, mouths, faces of 3 cells or more, and at the two tree spots the trees.
+- **The models:** an agent per spot describes each big section as parts (boxes, sloped profiles, domes, cones,
+  cylinders, carves, and a trees helper), painted from the drawing; heights at the buildings' scale (1.5 voxels a drawn
+  row, 8 a block). `tools/landscape_sections/terrain_model.py` builds them, keeps each to its own cells (a door keeps
+  3 blocks of headroom), and draws it in 3D, from the south and in the game's own view over the drawing.
+- **The review:** every spot's models and their scene (all models on the ground) in kb-hub's viewer, group
+  "landscape models / <spot>"; the user's notes go back to the agents.
+- **The builder** (after the user's review): each model's voxels into the world, block by block (8 voxels a block,
+  like the fitted cell models' voxels), over its section's cells, in place of what the planner stands there today;
+  walkable cells untouched. Then the seven pictures beside the stacked build's.
 
 ## 4. Steps
 
-1. The first pass and the renders for the seven maps (pod, pixel-free output; renders private).
-2. The marking guide, then one agent per map; I check the marks against the renders; sheets on kb-hub for the user.
-3. The planner reads the table behind a build property and models it as B or as C (`stackFaces` by kind; C's section
-   template), with tests on made-up maps for each kind; nothing becomes the default.
-4. The seven maps built into two pilot worlds (B and C, `build_world.py --maps`), the seven spots photographed in each
-   (`context_shots.py`, the same spots and pitch as before).
-5. The sheets sent to the user: the game, A, B, C per spot. The user picks (or a mix per kind); the plan for rolling
-   it out follows from that.
-
-Cost: the pod about 3-4 hours at $0.184 an hour; seven marking agents.
+1. The first pass and the renders for the seven maps. Done.
+2. The marking guide, one agent per map, the marks checked against the renders. Done.
+3. The packages and the modelling guide; one agent per spot models its big sections; the previews in kb-hub.
+4. The user reviews the models; fixes.
+5. The builder, with tests on made-up maps; the seven maps built; the pictures beside the stacked build's. The user
+   picks; rolling out follows from that.
 
 ## 5. Checks
 
 - The marks: every solid cell of the seven maps in exactly one section or left to its default (counts per kind).
-- The models: the visible-layers check (D9) per variant; walkable and solid cells unchanged; the quad budgets
-  (Kanto's densest section stands at 29,648 of 30,000 quads today).
-- The pictures, against the game.
+- The models: each within its own cells (the tool's cleared count), its game view reading like the drawing, the
+  user's review.
+- In the game: walkable and solid cells unchanged, the visible-layers check (D9), the quad budgets (Kanto's densest
+  section stands at 29,648 of 30,000 quads today).
 
 ## 6. What it gives W6 later
 
