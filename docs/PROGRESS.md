@@ -1059,7 +1059,7 @@ for the rest" (plan §8). Feature tests per phase, the full suite at the checkpo
 | W3 | Links by kind, pilots | **core done** (note 4); videos with W4's pilots | 2026-10-21 | `W3: real ladders and holes in Johto and Hoenn` |
 | W4 | Raised ground in caves | **done** (notes 5, 7): Emerald from its elevations, Crystal from its walls and drawn stairs; pictures with W8 | 2026-10-21 | `W4: raised ground in Emerald's caves`, `W4: raised ground in Crystal's caves` |
 | W5 | Interiors: depth, headroom, the deeper world | **done** (notes 6, 8); pictures with W8 | 2026-10-21 | `W5: rooms as tall as their drawing, a deeper world`, `W5: raised floors in rooms on layers` |
-| W6 | Outdoors | D9 done (note 9): faces to their visible rows, the visible-layers check; fitted-model faces wait for your call; levels, ledges, stairs, bridges next | 2026-10-21 | `W6: faces to their visible rows (D9)` |
+| W6 | Outdoors | D9 done (note 9): faces to their visible rows, the visible-layers check, faces of fitted models stacked (your choice); pictures next; levels, ledges, stairs, bridges to come | 2026-10-21 | `W6: faces to their visible rows (D9)`, `W6: faces of fitted models stacked` |
 | W7 | Blue's audit built | | | |
 | W8 | Every region rebuilt | | | |
 
@@ -1224,9 +1224,15 @@ for the rest" (plan §8). Feature tests per phase, the full suite at the checkpo
      fitted model at a cliff's foot, a cave mouth's model with rock over it, a tree line behind a house and a fitted
      building over it); the three synthetic shape goldens regenerated (`kb-shapes/12`, the town's door block 4 high);
      JUnit 1,376, GameTests 126, pytest 2,256, all green.
-   - **Open (yours):** faces drawn as fitted cells. Each cell's model stands 2 blocks on the ground, so a 3-cell cliff of
-     fitted rock shows 2 blocks where the game draws 6. Choices: stack the models up the face (every model kept, every row
-     built; new work), flat Tier A faces (as tall as drawn, those cells lose their models), or as they are.
+   - **Faces of fitted models (your choice, 2026-10-21: stack them).** Each cell's model stood 2 blocks on the ground, so a
+     3-cell cliff of fitted rock showed 2 blocks where the game draws 6. Now (`ShapePlanner.stackFaces`, right after the
+     units) a run holding a fitted model in use that isn't rows of separate things rises to its visible rows, roofless;
+     each unit on it is lifted onto blocks of the face's own art to its own rows (its cell's south row that many rows over
+     the face's origin), and its other columns stand to the face's height. A cave mouth drawn as two fitted cells gets
+     its top cell's model on the arch's. Real dry runs: Kanto and Hoenn none short, Johto 4 columns of one row on Route 32
+     (a tree's crown behind a face); units as at W5 (Hoenn's 16 at its doors); shaped blocks +6% in Johto, +9% in
+     Hoenn. Pictures of Route 23, Blackthorn, Route 119 and the Battle Frontier mouth before every region is rebuilt.
+     `VisibleRowsTest.aFaceOfFittedModelsRisesModelByModel`; JUnit 1,377, GameTests 126, pytest 2,256.
 
 ## Wild Routes
 

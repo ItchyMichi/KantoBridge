@@ -23,8 +23,10 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.EnumMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.TreeSet;
@@ -698,6 +700,10 @@ public final class ShapePlanner {
 			// Tier B (kb-shapes/3): tufts and cell units over the measured columns.
 			Units.plan(map, sceneAtlas, atlas, columns.keys(), columns.blocks(), columns.shapeMask(), floor, decor, units, classes,
 					params.profileUnits() ? probe : null, tally, claims.isEmpty() && hulls.isEmpty() && fitted.isEmpty() ? null : held, layout);
+			if (params.visibleRows() && map.surface() && map.env().outdoor()) {
+				// D9: a face of fitted models rises with each model lifted to its own rows
+				stackFaces(map, atlas, params.maxUnit(), columns.runs(), columns.keys(), columns.blocks(), columns.shapeMask(), units);
+			}
 		}
 		List<Templates.Placed> templates = List.of();
 		if (params.tierC() && cells) {
@@ -909,6 +915,72 @@ public final class ShapePlanner {
 			}
 		}
 		return new Columns(keys, blocks, mask, runs);
+	}
+
+	/**
+	 * A face of fitted models (docs/specs/HEIGHTS_ALL_GAMES_PLAN.md D9, the user's choice of 2026-10-21): every run holding a
+	 * fitted model in use that isn't rows of separate things rises to its visible rows (from its fold origin, at most
+	 * {@code screen}), roofless so its models stay in use. Each unit on it is lifted onto the face's columns below its own
+	 * rows (its cell's south row that many rows over the origin), on blocks of the face's own art; each of its other columns
+	 * stands to the face's height. A cell a stack emptied (blocks 0) stays empty.
+	 */
+	static void stackFaces(SceneMap map, int atlas, int screen, List<Structures.MeasuredRun> runs, ShapeKey[][] keys, int[] blocks, int[] mask,
+			List<Units.Cell> units) {
+		int cols = map.artCols();
+		int per = map.perCell();
+		Set<Integer> unitCells = new HashSet<>();
+		for (Units.Cell cell : units) {
+			unitCells.add(cell.cy() * map.w() + cell.cx());
+		}
+		for (Structures.MeasuredRun run : runs) {
+			if (!run.models() || run.separate()) {
+				continue;
+			}
+			int target = Math.max(run.h(), Math.min(screen, run.origin() - run.n() + 1));
+			for (int ty = run.n(); ty <= run.f(); ty++) {
+				int i = ty * cols + run.tx();
+				if (unitCells.contains((ty / per) * map.w() + run.tx() / per)) {
+					int high = blocks[i];
+					int lift = Math.min(run.origin() - ((ty / per) * per + per - 1), Math.max(0, target - high));
+					if (lift <= 0) {
+						continue;
+					}
+					ShapeKey[] column = new ShapeKey[lift + high];
+					System.arraycopy(faceColumn(map, atlas, run, ty, lift), 0, column, 0, lift);
+					for (int k = 0; keys[i] != null && k < Math.min(high, keys[i].length); k++) {
+						column[lift + k] = keys[i][k];
+					}
+					keys[i] = column;
+					blocks[i] = lift + high;
+					mask[i] <<= lift;
+				} else if (blocks[i] > 0 && blocks[i] < target) {
+					ShapeKey[] column = faceColumn(map, atlas, run, ty, target);
+					keys[i] = Arrays.stream(column).anyMatch(Objects::nonNull) ? column : null;
+					blocks[i] = target;
+				}
+			}
+		}
+	}
+
+	/**
+	 * The blocks of a roofless face at tile row {@code ty} of {@code run}, {@code h} high, as {@link #measured} folds them:
+	 * each block's front the drawing's row that far over the fold origin, its top the row {@code h} up (null: the tile's
+	 * own cube).
+	 */
+	static ShapeKey[] faceColumn(SceneMap map, int atlas, Structures.MeasuredRun run, int ty, int h) {
+		int tx = run.tx();
+		int top = run.n();
+		int own = map.tile(tx, ty);
+		int up = ty - h >= top ? map.tile(tx, ty - h) : map.tile(tx, top);
+		int north = map.tile(tx, Math.min(run.f(), top + 1));
+		ShapeKey[] column = new ShapeKey[h];
+		for (int k = 0; k < h; k++) {
+			int front = map.tile(tx, Math.max(top, run.origin() - k));
+			if (up != own || north != own || front != own) {
+				column[k] = ShapeKey.cube(atlas, up, up, north, front, front, front);
+			}
+		}
+		return column;
 	}
 
 	/**

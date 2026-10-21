@@ -169,6 +169,42 @@ class VisibleRowsTest {
 		assertEquals(2 * 6, model.rows());
 	}
 
+	@Test
+	void aFaceOfFittedModelsRisesModelByModel() {
+		// The user's choice (2026-10-21): every cell of the cliff holds a fitted model; each is lifted onto the face below its
+		// own rows, so the cliff shows all 8 rows and keeps all four models.
+		SceneMap cliff = surface("STACK",
+				"RRRR",
+				"QQQQ",
+				"SSSS",
+				"TTTT",
+				"SSSS",
+				"TTTT",
+				"SSSS",
+				"TTTT",
+				"....",
+				"....");
+		ShapePlanner.Columns all = withModels(cliff, ShapePlanner.measured(cliff, 0, ShapeParams.h9(SCREEN), Structures.solidTiles(cliff), null,
+				fitted(cliff, 0, 1, 2, 3)), 0, 1, 2, 3);
+		ShapeKey model = all.keys()[0][0];
+		ShapePlanner.stackFaces(cliff, 0, SCREEN, all.runs(), all.keys(), all.blocks(), all.shapeMask(), all.units());
+		int[] lift = {6, 6, 4, 4, 2, 2, 0, 0};
+		for (int ty = 0; ty < 8; ty++) {
+			assertEquals(lift[ty] + 2, all.blocks()[ty * 4], "row " + ty);
+			assertEquals(3 << lift[ty], all.shapeMask()[ty * 4], "the model's blocks over the face's own");
+		}
+		assertEquals(model, all.keys()[0][6], "the back cell's model on top");
+		assertEquals(0, VisibleRows.check(cliff, all, SCREEN).columns());
+		// A model at the foot alone: it stays, and the face's other cells stand to its 8 rows.
+		ShapePlanner.Columns foot = withModels(cliff, ShapePlanner.measured(cliff, 0, ShapeParams.h9(SCREEN), Structures.solidTiles(cliff), null,
+				fitted(cliff, 3)), 3);
+		ShapePlanner.stackFaces(cliff, 0, SCREEN, foot.runs(), foot.keys(), foot.blocks(), foot.shapeMask(), foot.units());
+		assertEquals(2, foot.blocks()[7 * 4]);
+		assertEquals(8, foot.blocks()[0]);
+		assertEquals(0, foot.shapeMask()[0], "roofless: the model stays in use");
+		assertEquals(0, VisibleRows.check(cliff, foot, SCREEN).columns());
+	}
+
 	/** The tiles of cells (0, cy) of {@code map}, for each {@code cy}: cells holding fitted models. */
 	private static boolean[] fitted(SceneMap map, int... cys) {
 		boolean[] out = new boolean[map.artCols() * map.artRows()];
@@ -184,15 +220,18 @@ class VisibleRowsTest {
 	/** {@code columns} with a fitted model's unit, a cell (2 blocks) tall, on cells (0, cy) for each {@code cy}. */
 	private static ShapePlanner.Columns withModels(SceneMap map, ShapePlanner.Columns columns, int... cys) {
 		int[] blocks = columns.blocks().clone();
+		int[] mask = columns.shapeMask().clone();
 		List<Units.Cell> units = new java.util.ArrayList<>();
 		for (int cy : cys) {
 			for (int ty = 2 * cy; ty < 2 * cy + 2; ty++) {
-				blocks[ty * map.artCols()] = 2;
-				blocks[ty * map.artCols() + 1] = 2;
+				for (int tx = 0; tx < 2; tx++) {
+					blocks[ty * map.artCols() + tx] = 2;
+					mask[ty * map.artCols() + tx] = 3;
+				}
 			}
 			units.add(new Units.Cell(0, cy, ShapeKey.cube(0, 1, 1, 1, 1, 1, 1), false));
 		}
-		return new ShapePlanner.Columns(columns.keys(), blocks, columns.shapeMask(), columns.floor(), columns.decor(), units, columns.runs(),
+		return new ShapePlanner.Columns(columns.keys(), blocks, mask, columns.floor(), columns.decor(), units, columns.runs(),
 				columns.templates(), columns.wallTile(), columns.ceiling(), columns.hung(), columns.hungMask(), columns.hungLeaves(),
 				columns.curtain(), columns.modelled());
 	}
