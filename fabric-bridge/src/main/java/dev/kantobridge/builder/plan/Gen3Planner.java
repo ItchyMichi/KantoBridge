@@ -172,8 +172,22 @@ final class Gen3Planner {
 			}
 		}
 		Set<String> area3d = Area3d.select(caveMaps, caveIds, outdoorIds);
-		CavePlanner.Result caveArea = Gen2Planner.placeArea3d(caveMaps, area3d, id -> G3Cells.cave(all.get(id)) || wildMaps.contains(id), options,
-				surfaceVolume, warnings);
+		// Their raised ground (D3, W4): Emerald's elevations as regions, each region as high as the stairs between them say;
+		// its floors then stack as far apart as their tallest rooms need.
+		Map<String, MapLayout> raised = new HashMap<>();
+		Map<String, Integer> heights = new HashMap<>();
+		for (String id : area3d) {
+			RaisedRegions.Result levels = RaisedRegions.gen3(interiorModels.get(id), all.get(id));
+			warnings.note("cave_levels_" + levels.outcome(), Warnings.symbols("map", id));
+			if (levels.layout() != null) {
+				raised.put(id, levels.layout());
+				heights.put(id, WorldPlan.maxCeiling(levels.layout()));
+				warnings.note("cave_raised_cells", levels.raisedCells());
+				warnings.note("cave_ramps", levels.layout().ramps().size());
+			}
+		}
+		CavePlanner.Result caveArea = Gen2Planner.placeArea3d(caveMaps, area3d, id -> G3Cells.cave(all.get(id)) || wildMaps.contains(id), heights,
+				options, surfaceVolume, warnings);
 		for (MapPlacement p : caveArea.placements()) {
 			placements.put(p.id(), p);
 		}
@@ -233,9 +247,9 @@ final class Gen3Planner {
 					: G3Cells.model(map, tiles(bundle, pairs, map.pair()), interior, warnings);
 			PairEdges edges = PairEdges.elevation(model, map);
 			elevationEdges += edges.edges();
-			// The 3D area's maps are drawn as their rooms (D1, CAVES_3D_PLAN §3.5)
+			// The 3D area's maps are drawn as their rooms (D1, CAVES_3D_PLAN §3.5), on their raised ground (D3)
 			List<MapLayout.Piece> pieces = caveArea.pieces().get(map.id());
-			MapLayout rooms = pieces == null ? null : WorldPlanner.withPieces(model, pieces, null);
+			MapLayout rooms = pieces == null ? raised.get(map.id()) : WorldPlanner.withPieces(model, pieces, raised.get(map.id()));
 			if (rooms != null) {
 				mapLayouts.put(map.id(), rooms);
 			}

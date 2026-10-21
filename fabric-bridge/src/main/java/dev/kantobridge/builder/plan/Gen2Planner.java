@@ -164,8 +164,8 @@ final class Gen2Planner {
 			}
 		}
 		Set<String> area3d = Area3d.select(caveMaps, caveIds, outdoorIds);
-		CavePlanner.Result caveArea = placeArea3d(caveMaps, area3d, id -> all.get(id).caveLike() || wildMaps.contains(id), options, surfaceVolume,
-				warnings);
+		CavePlanner.Result caveArea = placeArea3d(caveMaps, area3d, id -> all.get(id).caveLike() || wildMaps.contains(id), Map.of(), options,
+				surfaceVolume, warnings);
 		for (MapPlacement p : caveArea.placements()) {
 			placements.put(p.id(), p);
 		}
@@ -297,7 +297,7 @@ final class Gen2Planner {
 	 * map of wild Pokémon takes the 3D area's cave biome, any other map (a gym, a tower) the interior biome.
 	 */
 	static CavePlanner.Result placeArea3d(Map<String, CaveMap> maps, Set<String> area3d, java.util.function.Predicate<String> caveBiome,
-			WorldPlanner.Options options, @Nullable Box3 surfaceVolume, Warnings warnings) {
+			Map<String, Integer> heights, WorldPlanner.Options options, @Nullable Box3 surfaceVolume, Warnings warnings) {
 		Map<String, CaveMap> inArea = new LinkedHashMap<>();
 		Map<String, String> biomes = new HashMap<>();
 		for (String id : area3d) {
@@ -312,7 +312,7 @@ final class Gen2Planner {
 				in3d.addAll(complex);
 			}
 		}
-		return CavePlanner.placeArea(inArea, area3d, in3d, biomes, surfaceVolume, options.originX(), options.originZ(), warnings);
+		return CavePlanner.placeArea(inArea, area3d, in3d, biomes, heights, surfaceVolume, options.originX(), options.originZ(), warnings);
 	}
 
 	/** Every map of the export, by id. */

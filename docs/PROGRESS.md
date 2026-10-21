@@ -1057,7 +1057,7 @@ for the rest" (plan §8). Feature tests per phase, the full suite at the checkpo
 | W1 | Blue audit | **done**: report on kb-hub (note 2) | 2026-10-20 | this commit |
 | W2 | One 3D planner for every game | **done** (note 3) | 2026-10-20 | `W2: one 3D planner` |
 | W3 | Links by kind, pilots | **core done** (note 4); videos with W4's pilots | 2026-10-21 | `W3: real ladders and holes in Johto and Hoenn` |
-| W4 | Raised ground in caves | | | |
+| W4 | Raised ground in caves | **Emerald done** (note 5); Crystal next (labels), real dry run when a pod in EU-RO-1 is free | 2026-10-21 | `W4: raised ground in Emerald's caves` |
 | W5 | Interiors: depth, headroom, the deeper world | | | |
 | W6 | Outdoors | | | |
 | W7 | Blue's audit built | | | |
@@ -1124,6 +1124,28 @@ for the rest" (plan §8). Feature tests per phase, the full suite at the checkpo
      both ends, so most stay fades; a few of Victory Road's rooms take their own floor. The pilot videos follow W4, so
      they show the ladders and the raised ground together.
    - Checks: JUnit 1,354 + the new cases, GameTests 126, pytest 2,256.
+
+5. **W4, raised ground in Emerald's caves** (plan D3, amended). Emerald's elevation is a layer, not a height (plan D3's
+   finding: Victory Road climbs five tiers with elevations 3 and 4, its stairs two cells long in some places and three in
+   others), so the heights are per region from the stairs between regions: `RaisedRegions` (game-neutral, with a Gen 3
+   adapter). Each stair cell is a ramp climbing 2 blocks (one cell of the face it cuts through); regions no stairs join
+   take a short face's height, else their elevation's height elsewhere in the map; water stands with its elevation-3
+   shore; rock stands on the floor south of it (a face rises from its lower floor). Any map whose steps Minecraft
+   couldn't match stays flat with its reason (build notes `cave_levels_<outcome>`).
+   - **Floors of the 3D area stack by their tallest room:** a rank sits `max(11, tallest ceiling + 6)` under the one above
+     (`CavePlanner.rankFeet`); Kanto's caves (tallest 5) keep their 11.
+   - **Estimate from the survey with the same rules** (a Python copy; the real dry run waits for a pod: EU-RO-1 had no CPU
+     machines this session): of Emerald's 102 caves, 7 raised (Altering Cave, Meteor Falls B1F 1R, Mirage Tower 4F, Shoal
+     Cave's high-tide entrance and inner rooms and low-tide ice room, Cave of Origin B1F), 5 wait for W6's two-floor
+     bridges (Meteor Falls 1F 1R, Victory Road 1F, B1F and B2F, Shoal Cave's low-tide inner room), Artisan Cave B1F stays
+     flat (two stairs of different lengths between one pair of regions), 2 have one height, 87 one elevation.
+   - **Synthetic world:** Emerald's cave B1F has a platform round the ladder's foot, two stair cells over its floor: 4
+     blocks up, B1F 13 blocks under 1F (was 11), the ladder landing on the platform (goldens; `RaisedRegionsTest`,
+     `Gen3PlanTest.raisedGroundInTheCaveArea`, the Python golden test).
+   - **Until W5** each cell's ceiling still follows its own floor (3 blocks), so a tall face shows its lowest 3 rows of
+     art and two tiers read as two spaces; W5's headroom and depth open them up. Kanto's caves are unchanged.
+   - Checks (a pod in EU-SE-1, through RunPod's ssh proxy: `kb-pty`): JUnit 1,363 (builder and scene 531 with the goldens
+     regenerated, the other packages 832), GameTests 126, pytest 2,256.
 
 ## Wild Routes
 

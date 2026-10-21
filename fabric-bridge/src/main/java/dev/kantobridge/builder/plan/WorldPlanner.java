@@ -212,8 +212,8 @@ public final class WorldPlanner {
 				caves3d.addAll(complex);
 			}
 		}
-		CavePlanner.Result caveArea = CavePlanner.placeArea(caveMaps, caves, caves3d, Map.of(), surfaceVolume, options.originX(), options.originZ(),
-				warnings);
+		CavePlanner.Result caveArea = CavePlanner.placeArea(caveMaps, caves, caves3d, Map.of(), Map.of(), surfaceVolume, options.originX(),
+				options.originZ(), warnings);
 		for (MapPlacement cave : caveArea.placements()) {
 			placements.put(cave.id(), cave);
 		}

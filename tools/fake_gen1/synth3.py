@@ -87,10 +87,16 @@ CAVE_1F = ["####",
            "#.L#",
            "#..#",
            "#X.#"]
-CAVE_B1F = ["####",
-            "#.L#",
-            "#..#",
-            "####"]
+# W4: B1F's north part a platform (elevation 4) round the ladder's foot, its south part the floor (3), two cells of
+# stairs (elevation 0) between them: the platform stands two stair cells, 4 blocks, over the floor.
+CAVE_B1F = ["######",
+            "#.L..#",
+            "#....#",
+            "##.###",
+            "##.###",
+            "#....#",
+            "######"]
+CAVE_B1F_ELEV = {**{(x, y): 4 for x in range(1, 5) for y in (1, 2)}, (2, 3): 0, (2, 4): 0}
 # A raised grass patch: elevation 4 at the west end of row 3, reached through a cell of elevation 0 (stairs: any
 # elevation steps on it); the rest of the route is the ground's 3, so the patch's other sides are walls.
 ROUTE_ELEV = {(0, 3): 4, (1, 3): 4, (2, 3): 0}
@@ -264,12 +270,13 @@ def resources(game=GAME, variant=None):
         "warps": [{"x": 5, "y": 4, "warp": 0, "to": "EM_TEST_CAVE_1F"}], "objects": [], "mapType": 3, "kind": "route",
         "music": 301, "weather": 0,
     }
-    for cid, rows, warps in (("EM_TEST_CAVE_1F", CAVE_1F, [{"x": 1, "y": 3, "warp": 0, "to": "EM_TEST_ROUTE"},
-                                                           {"x": 2, "y": 1, "warp": 0, "to": "EM_TEST_CAVE_B1F"}]),
-                             ("EM_TEST_CAVE_B1F", CAVE_B1F, [{"x": 2, "y": 1, "warp": 1, "to": "EM_TEST_CAVE_1F"}])):
+    for cid, rows, elev, warps in (("EM_TEST_CAVE_1F", CAVE_1F, None, [{"x": 1, "y": 3, "warp": 0, "to": "EM_TEST_ROUTE"},
+                                                                     {"x": 2, "y": 1, "warp": 0, "to": "EM_TEST_CAVE_B1F"}]),
+                                   ("EM_TEST_CAVE_B1F", CAVE_B1F, CAVE_B1F_ELEV, [{"x": 2, "y": 1, "warp": 1, "to": "EM_TEST_CAVE_1F"}])):
+        w, h = len(rows[0]), len(rows)
         res[("g3map", cid)] = {
-            "id": cid, "w": 4, "h": 4, "trueW": 4, "trueH": 4, "pair": "TEST_PAIR_C",
-            "cells": _cells(rows, _C, 4, 4), "border": {"w": 1, "h": 1, "mids": [769]},
+            "id": cid, "w": w, "h": h, "trueW": w, "trueH": h, "pair": "TEST_PAIR_C",
+            "cells": _cells(rows, _C, w, h, elev), "border": {"w": 1, "h": 1, "mids": [769]},
             "connections": [], "warps": warps, "objects": [], "mapType": 4, "kind": "cave", "music": 303, "weather": 0,
         }
     res[("g3map", "EM_TEST_HOUSE")] = {

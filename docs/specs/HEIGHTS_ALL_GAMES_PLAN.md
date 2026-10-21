@@ -165,6 +165,18 @@ arrival warp); none carries a facing (only the run-time arrival has one).
   cells are solid, so nothing walks on it); a shorter one is filled down to the lower floor. Blue's caves (faces of one
   cell) keep their 2 blocks.
 
+**Found in W4 (2026-10-21): an elevation is a layer, not a height.** Emerald gives two walkable cells different
+elevations to keep them apart, not to say how high they are: Victory Road climbs five tiers with elevations 3 and 4
+only, and its stairs from 4 down to 3 are two cells long in some places and three in others; Meteor Falls B1F's 5s are
+one stair cell over its 3s and its 4s. So the heights are per **region** (the floor cells of one elevation that touch),
+from the stairs between regions: each stair cell climbs 2 blocks (it cuts through a cell of the face, two tile rows),
+the higher elevation at the top. Regions no stairs join take their height from a short face (up to 3 solid cells
+straight between them, 2 blocks a cell), else the height their elevation has elsewhere in the map. Rock stands on the
+floor south of its run of solid cells (a face rises from its lower floor) and the builder fills under it. The rule is
+`RaisedRegions`; any map where Minecraft's steps wouldn't match the game's stays flat with its reason (bent stairs, two
+stairs of different lengths between one pair of regions, a bridge until the two-floor cells of W6). Of Emerald's 102
+caves, 15 have more than one walkable elevation; Pokémon Centres' single elevation-4 cell is the escalator's.
+
 ### D3b. Calculated, not estimated (the user's choice, 2026-10-20)
 - The levels and heights are **calculated** from the game data (Emerald's elevation, Blue's tile pairs, ledge
   directions, Crystal's one-way edges) and from the drawings (D3's faces, D8's depth), never estimated map by map: the

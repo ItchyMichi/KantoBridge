@@ -26,7 +26,8 @@ import org.jetbrains.annotations.Nullable;
  * door is in a cave) leave the interior layers for an area of their own north of Kanto, past the dungeon slots, so they
  * have all the height they need. Caves joined by warps form a complex, and each complex gets a slot.
  *
- * <p>In a slot, a cave's floors stack {@link #FLOOR_STEP} blocks apart (HD3), the top floor at feet {@link #TOP_FEET}.
+ * <p>In a slot, a cave's floors stack {@link #FLOOR_STEP} blocks apart (HD3), the top floor at feet {@link #TOP_FEET};
+ * a floor whose rooms stand taller (raised ground, docs/specs/HEIGHTS_ALL_GAMES_PLAN.md D3) sits that much lower.
  * A floor's order comes from its id ({@code …2F} above {@code …1F} above {@code …B1F}). Each floor sits so that a
  * ladder between it and a floor already placed lines up, as a door and its interior do today; a floor that would
  * overlap another on its own level moves aside. Until real ladders arrive (H5) every warp between floors still fades.
@@ -37,6 +38,12 @@ public final class CavePlanner {
 	public static final int TOP_FEET = Scale.SURFACE_Y;
 	/** Blocks between the feet levels of a cave's floors (HD3). */
 	public static final int FLOOR_STEP = 11;
+	/**
+	 * Blocks from a room's highest ceiling up to the feet of the floor above: a raised Kanto cave's (its plateau's ceiling
+	 * {@link CaveLevels#RISE} + {@link WorldPlan#CEILING_ABOVE_FEET} over its feet) under {@link #FLOOR_STEP}; a taller room
+	 * keeps as much (D3).
+	 */
+	static final int ROCK_ABOVE = FLOOR_STEP - CaveLevels.RISE - WorldPlan.CEILING_ABOVE_FEET;
 	/** Blocks between the dungeon region and the cave area: farther than any render distance. */
 	public static final int GAP = 3000;
 	/** Blocks between two complexes' slots. */
@@ -147,21 +154,24 @@ public final class CavePlanner {
 			Collection<int[]> own = sites.get(id);
 			maps.put(id, CaveMap.gen1(all.get(id), all, own == null ? List.of() : own));
 		}
-		return placeArea(maps, caves, in3d, Map.of(), kanto, originX, originZ, warnings);
+		return placeArea(maps, caves, in3d, Map.of(), Map.of(), kanto, originX, originZ, warnings);
 	}
 
 	/**
 	 * Places the maps of the 3D area, any game's (docs/specs/HEIGHTS_ALL_GAMES_PLAN.md D1): complexes of maps joined by
-	 * warps or doors, each in a slot north of its region's dungeon slots, its floors {@link #FLOOR_STEP} apart.
+	 * warps or doors, each in a slot north of its region's dungeon slots, its floors {@link #FLOOR_STEP} apart (more under
+	 * a taller one, {@link #rankFeet}).
 	 *
-	 * @param maps   every map of the area, by id
-	 * @param caves  the area's maps, in the order complexes take
-	 * @param in3d   the maps whose complexes are laid out room by room (ladders and holes lined up)
-	 * @param biomes a map's biome where it isn't {@link WorldPlan#BIOME_CAVE_3D} (a gym or a tower in the area)
-	 * @param region the region's surface box, or null; then the build's origin stands in for it
+	 * @param maps    every map of the area, by id
+	 * @param caves   the area's maps, in the order complexes take
+	 * @param in3d    the maps whose complexes are laid out room by room (ladders and holes lined up)
+	 * @param biomes  a map's biome where it isn't {@link WorldPlan#BIOME_CAVE_3D} (a gym or a tower in the area)
+	 * @param heights a map's highest ceiling over its feet where it has raised ground ({@link WorldPlan#maxCeiling}); any
+	 *                other map's is {@link WorldPlan#CEILING_ABOVE_FEET}
+	 * @param region  the region's surface box, or null; then the build's origin stands in for it
 	 */
-	public static Result placeArea(Map<String, CaveMap> maps, Set<String> caves, Set<String> in3d, Map<String, String> biomes, @Nullable Box3 region,
-			int originX, int originZ, Warnings warnings) {
+	public static Result placeArea(Map<String, CaveMap> maps, Set<String> caves, Set<String> in3d, Map<String, String> biomes,
+			Map<String, Integer> heights, @Nullable Box3 region, int originX, int originZ, Warnings warnings) {
 		if (caves.isEmpty()) {
 			return new Result(List.of(), null, List.of());
 		}
@@ -173,11 +183,11 @@ public final class CavePlanner {
 		Map<String, Integer> fades = new TreeMap<>();
 		for (List<String> complex : complexes) {
 			if (complex.stream().anyMatch(in3d::contains)) {
-				Local local = layOutRooms(maps, complex, pieces, fades);
+				Local local = layOutRooms(maps, complex, heights, pieces, fades);
 				shafts.addAll(local.shafts);
 				locals.add(local);
 			} else {
-				locals.add(layOut(maps, complex, warnings));
+				locals.add(layOut(maps, complex, heights, warnings));
 			}
 		}
 		int rowX = 0;
@@ -211,7 +221,7 @@ public final class CavePlanner {
 				CaveMap map = maps.get(entry.getKey());
 				int[] at = entry.getValue();
 				int rank = local.ranks.get(map.id());
-				out.add(new MapPlacement(map.id(), areaX + slot[0] + at[0], TOP_FEET - FLOOR_STEP * rank, areaZ + slot[1] + at[1], map.w(), map.h(), 1 + rank,
+				out.add(new MapPlacement(map.id(), areaX + slot[0] + at[0], local.feet.get(rank), areaZ + slot[1] + at[1], map.w(), map.h(), 1 + rank,
 						MapPlacement.Kind.INTERIOR, map.palette(), biomes.getOrDefault(map.id(), WorldPlan.BIOME_CAVE_3D), map.dark(), map.parent()));
 			}
 		}
@@ -278,11 +288,37 @@ public final class CavePlanner {
 	private static final class Local {
 		final Map<String, int[]> positions = new LinkedHashMap<>();
 		final Map<String, Integer> ranks = new HashMap<>();
+		/** Each rank's feet level (a room's rank may lie above or below its maps', D1). */
+		Map<Integer, Integer> feet = Map.of(0, TOP_FEET);
 		final List<CaveRooms.Link> shafts = new ArrayList<>();
 		int minX = Integer.MAX_VALUE;
 		int minZ = Integer.MAX_VALUE;
 		int maxX = Integer.MIN_VALUE;
 		int maxZ = Integer.MIN_VALUE;
+	}
+
+	/**
+	 * Each rank's feet level (D1, D3): rank 0 at {@link #TOP_FEET}, each rank under it {@link #FLOOR_STEP} lower than the
+	 * one above, or as much lower again as its tallest room (its highest ceiling over its feet, by rank) needs to keep
+	 * {@link #ROCK_ABOVE} blocks under the floor above; a rank over 0 (a room above its maps, D1) likewise up.
+	 */
+	static Map<Integer, Integer> rankFeet(Map<Integer, Integer> tallest) {
+		int min = Math.min(0, tallest.keySet().stream().mapToInt(Integer::intValue).min().orElse(0));
+		int max = Math.max(0, tallest.keySet().stream().mapToInt(Integer::intValue).max().orElse(0));
+		Map<Integer, Integer> feet = new TreeMap<>();
+		feet.put(0, TOP_FEET);
+		for (int r = 1; r <= max; r++) {
+			feet.put(r, feet.get(r - 1) - step(tallest, r));
+		}
+		for (int r = -1; r >= min; r--) {
+			feet.put(r, feet.get(r + 1) + step(tallest, r + 1));
+		}
+		return feet;
+	}
+
+	/** Blocks from rank {@code r - 1}'s feet down to rank {@code r}'s. */
+	private static int step(Map<Integer, Integer> tallest, int r) {
+		return Math.max(FLOOR_STEP, tallest.getOrDefault(r, WorldPlan.CEILING_ABOVE_FEET) + ROCK_ABOVE);
 	}
 
 	/**
@@ -370,12 +406,23 @@ public final class CavePlanner {
 	 * A complex built in 3D, room by room ({@link CaveRooms}): each map placed where its first room's frame says, each
 	 * room a piece (so a map draws its rooms and the rock round them, and nothing the layout didn't count).
 	 */
-	private static Local layOutRooms(Map<String, CaveMap> maps, List<String> complex, Map<String, List<MapLayout.Piece>> pieces,
-			Map<String, Integer> fades) {
+	private static Local layOutRooms(Map<String, CaveMap> maps, List<String> complex, Map<String, Integer> heights,
+			Map<String, List<MapLayout.Piece>> pieces, Map<String, Integer> fades) {
 		Local local = new Local();
 		String entrance = entrance(maps, complex);
 		local.ranks.putAll(ranks(maps, complex, entrance));
 		CaveRooms.Plan plan = CaveRooms.layOut(maps, complex, local.ranks, entrance);
+		// Each rank as tall as its tallest room: a map's rooms on other floors than its own (D1) count there.
+		Map<Integer, Integer> tallest = new HashMap<>();
+		for (String id : complex) {
+			int tall = heights.getOrDefault(id, WorldPlan.CEILING_ABOVE_FEET);
+			tallest.merge(local.ranks.get(id), tall, Math::max);
+			int[] roomRanks = plan.roomRanks().get(id);
+			for (int i = 0; roomRanks != null && i < roomRanks.length; i++) {
+				tallest.merge(roomRanks[i], tall, Math::max);
+			}
+		}
+		local.feet = rankFeet(tallest);
 		for (String id : complex) {
 			CaveMap map = maps.get(id);
 			List<CavePieces.Room> rooms = plan.rooms().get(id);
@@ -394,7 +441,7 @@ public final class CavePlanner {
 				boolean whole = mask.cardinality() == room.w() * room.h();
 				int[] frame = frames[room.index()];
 				// a room on another floor than its map's (a map holding several floors, D1) sits that many floors up or down
-				int dy = -(roomRanks[room.index()] - local.ranks.get(id)) * FLOOR_STEP;
+				int dy = local.feet.get(roomRanks[room.index()]) - local.feet.get(local.ranks.get(id));
 				list.add(new MapLayout.Piece(room.x(), room.y(), room.w(), room.h(), whole ? null : mask, frame[0] - base[0], dy, frame[1] - base[1]));
 			}
 			pieces.put(id, list);
@@ -419,10 +466,15 @@ public final class CavePlanner {
 		return local;
 	}
 
-	private static Local layOut(Map<String, CaveMap> maps, List<String> complex, Warnings warnings) {
+	private static Local layOut(Map<String, CaveMap> maps, List<String> complex, Map<String, Integer> heights, Warnings warnings) {
 		Local local = new Local();
 		String entrance = entrance(maps, complex);
 		local.ranks.putAll(ranks(maps, complex, entrance));
+		Map<Integer, Integer> tallest = new HashMap<>();
+		for (String id : complex) {
+			tallest.merge(local.ranks.get(id), heights.getOrDefault(id, WorldPlan.CEILING_ABOVE_FEET), Math::max);
+		}
+		local.feet = rankFeet(tallest);
 		// The layout grows from the entrance, breadth first.
 		put(local, maps.get(entrance), 0, 0);
 		Deque<String> queue = new ArrayDeque<>();

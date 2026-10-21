@@ -22,6 +22,7 @@ import dev.kantobridge.builder.pack.Png;
 import dev.kantobridge.builder.pack.ResourcePackWriter;
 import dev.kantobridge.proto.ProtoJson;
 import dev.kantobridge.scene.gen3.QuarterPages;
+import dev.kantobridge.world.MapLayout;
 import dev.kantobridge.world.MapPlacement;
 import dev.kantobridge.world.SlotMap;
 import dev.kantobridge.world.StoryCellTable;
@@ -152,6 +153,32 @@ class Gen3PlanTest {
 		assertEquals(0, edges.sides(2, 3));
 		assertEquals(0, plan.map("EM_TEST_TOWN").edges().edges());
 		assertEquals(4, plan.warnings().notes().get("elevation_edges"));
+	}
+
+	@Test
+	void raisedGroundInTheCaveArea() {
+		// W4 (HEIGHTS_ALL_GAMES_PLAN D3): B1F's platform (elevation 4) two stair cells (elevation 0) over its floor (3): 4
+		// blocks up, each stair cell a ramp of 2. Its floor so stands 13 blocks under 1F's (the platform's ceiling 4 + 3 over
+		// its feet, 6 of rock up to 1F's feet), and 1F's ladder comes down onto the platform.
+		MapLayout b1f = plan.index().layout("EM_TEST_CAVE_B1F");
+		assertNotNull(b1f);
+		assertEquals(4, b1f.level(2, 1));
+		assertEquals(0, b1f.level(2, 5));
+		assertEquals(new MapLayout.Ramp(2, 3, dev.kantobridge.world.Dir.UP, 2), b1f.ramp(2, 3));
+		assertEquals(new MapLayout.Ramp(2, 4, dev.kantobridge.world.Dir.UP, 2), b1f.ramp(2, 4));
+		assertEquals(List.of(2, 0), List.of(b1f.level(2, 3), b1f.level(2, 4)));
+		assertEquals(0, b1f.level(1, 3), "the face beside the stairs rises from the floor it faces");
+		MapPlacement top = plan.index().map("EM_TEST_CAVE_1F");
+		MapPlacement bottom = plan.index().map("EM_TEST_CAVE_B1F");
+		assertEquals(CavePlanner.TOP_FEET, top.y());
+		assertEquals(CavePlanner.TOP_FEET - 13, bottom.y());
+		WorldIndex.Shaft shaft = plan.index().shafts().get(0);
+		assertEquals(List.of(bottom.y() + 4, top.y() - 1), List.of(shaft.y0(), shaft.y1()));
+		assertEquals(1, plan.warnings().notes().get("cave_levels_raised"));
+		assertEquals(1, plan.warnings().notes().get("cave_levels_flat_one_level"), "1F: one elevation");
+		assertEquals(8, plan.warnings().notes().get("cave_raised_cells"));
+		assertEquals(2, plan.warnings().notes().get("cave_ramps"));
+		assertNull(plan.index().layout("EM_TEST_HOUSE"), "the layers' rooms stay flat until W5");
 	}
 
 	@Test
