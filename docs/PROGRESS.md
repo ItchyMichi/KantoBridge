@@ -1223,6 +1223,9 @@ for the rest" (plan §8). Feature tests per phase, the full suite at the checkpo
      The planner's rule variants over the marks (B, C) were built and dropped before their pictures: you chose a model
      per big section, previewed first, as the buildings were ([specs/LANDSCAPE_MODELS.md](specs/LANDSCAPE_MODELS.md);
      `tools/landscape_sections/`: the packages, `terrain_model.py`). B and C stay on the branch `pilot/landscape-bc`.
+     The models went into the game the buildings' way (parts templates; `LandscapeModels`, world LandModels on the
+     volume, the seven pictures sent beside the stacked and narrowed builds); the quad gate is lifted for now (your
+     call). A frame-rate test on a GPU pod (an L4, about an RTX 3060) found no cost (LANDSCAPE_MODELS.md).
    - (The note's JUnit count, 1,379, counted two temporary probes since moved out: the suite holds 1,377.)
    - **Cave mouths and wall exits** (a fitted model in use on the cell over a door, the whole cell unroofed before): the
      model is the doorway, the face over it folds no door and rises as drawn, roofless so its models stay in use, and

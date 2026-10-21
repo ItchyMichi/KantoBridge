@@ -90,3 +90,26 @@ Quads per block, built as the client builds them (`LandscapeModelsQuadsTest`, po
 within the budget's 96 in every block; four over it in a few blocks (Route 23's Victory Road front and west band, at
 most 100; Route 127's islet, 143, and one block of its islands, 102); none over 256. Means: rock 6 to 30, trees about 71.
 
+## The frame-rate test (the user's idea, 2026-10-21)
+
+A GPU pod near an average PC (an NVIDIA L4, about an RTX 3060's rendering, on 6 server vCPUs), the dev client at
+1920 x 1080 full screen under Xvfb and VirtualGL (`vglrun -d egl`), vsync and the frame cap off; `tools/e2e/frame_rate.py`
+at the seven picture viewpoints of world LandModels (the 29 models) and of HeightsW6 (the narrowed build, no models),
+render distance 16 and 32, meshstats' 30 s of frames once per viewpoint. Mean frame rate, with the models | without:
+
+| Viewpoint | 16 chunks | 32 chunks |
+|---|---|---|
+| Route 23 | 332 \| 307 | 216 \| 200 |
+| Route 10 | 301 \| 331 | 200 \| 193 |
+| Blackthorn City | 346 \| 357 | 179 \| 214 |
+| Route 26 | 279 \| 253 | 174 \| 133 |
+| Route 119 | 337 \| 337 | 179 \| 209 |
+| Route 127 | 269 \| 281 | 162 \| 130 |
+| Battle Frontier | 341 \| 333 | 111 \| 108 |
+
+No cost the test can see: the differences go both ways and lie within one run's spread (the 1% lows, 26 to 59 fps,
+vary as much in either world); a full re-mesh took the same (0.7 to 1.0 s at 16 chunks, 2 to 5 s at 32), the heap 70 MB
+more. The heaviest is Route 119's 91 trees: a section of 45,239 quads (11,340 without), over the budget's 30,000 per
+section (VOXEL_BLOCKS_PLAN.md section 3.8), Route 26's trees 25,944. Absolute numbers include VirtualGL's frame copy; the
+comparison is like for like.
+
