@@ -261,8 +261,13 @@ final class Gen2Planner {
 		if (spawn == null) {
 			warnings.warn("spawn_missing");
 		}
-		// W2: the area's links keep their fades until the climb is checked on this engine (W3): no shafts yet
-		List<WorldIndex.Shaft> shafts = List.of();
+		// The 3D area's lined-up ladders and holes, real shafts (HEIGHTS_ALL_GAMES_PLAN D2, W3)
+		Map<String, MapModel> models = new HashMap<>();
+		for (PlacedMap map : placed) {
+			models.put(map.id(), map.model());
+		}
+		List<WorldIndex.Shaft> shafts = WorldPlanner.shafts(caveArea.shafts(), placements, mapLayouts, models);
+		warnings.note("cave_shafts_built", shafts.size());
 		WorldIndex index = new WorldIndex(bundle.game(), bundle.exportHash(), placements.values(), mapLayouts, slotMap.hash(), storyCells, habitats,
 				List.of(), null, shafts);
 

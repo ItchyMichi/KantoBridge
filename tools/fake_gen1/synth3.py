@@ -15,6 +15,9 @@ graphics id, three frames facing down, up and left) and an item ball of one fram
 SE2 (docs/specs/STORY_EVENTS_PLAN.md): g3sites lists four changeable cells (SITES): a town cell built walkable that a
 script can wall off, a tree a layout swap clears (so it is built cleared and the tree is a state), a route water cell a
 layout swap turns to land, and a house floor cell whose art alone changes.
+
+W3 of the 3D heights plan (docs/specs/HEIGHTS_ALL_GAMES_PLAN.md): a cave of two floors off the route's door, joined by a
+ladder (the behaviour MB_LADDER on a warp cell), so the 3D area makes it a real shaft.
 """
 import base64
 import struct
@@ -28,7 +31,7 @@ WALK, BLOCKED, GRASS, WATER, DOOR, WARP_FACE, SIGN, COUNTER, LEDGE_S = 0x00, 0x0
 
 # Behaviour numbers: made up, with the engine's MB_* names.
 BEHAVIORS = {0: "MB_NORMAL", 2: "MB_TALL_GRASS", 0x11: "MB_POND_WATER", 0x3B: "MB_JUMP_SOUTH", 0x69: "MB_ANIMATED_DOOR",
-             0x80: "MB_COUNTER", 0x65: "MB_SOUTH_ARROW_WARP"}
+             0x80: "MB_COUNTER", 0x65: "MB_SOUTH_ARROW_WARP", 0x61: "MB_LADDER"}
 
 # Item 8: animated metatiles by pair: metatile -> GBA frames each of its two frames shows (its own look, then a lighter
 # one).
@@ -55,12 +58,19 @@ PAIRS = {
         514: (0x65, (180, 60, 60), True, False),    # the exit mat
         515: (0x80, (160, 120, 60), True, False),   # a counter
     },
+    "TEST_PAIR_C": {
+        768: (0, (110, 95, 80), False, False),      # cave floor
+        769: (0, (70, 60, 55), True, False),        # rock
+        770: (0x61, (150, 110, 60), True, False),   # a ladder
+        771: (0x65, (230, 230, 210), True, False),  # the way out (an arrow warp)
+    },
 }
 
 # The maps: (pair, w, h, trueW, trueH, rows of (metatile, collision)) plus their events
 _T = {".": (0, WALK), "g": (1, GRASS), "~": (2, WATER), "#": (3, BLOCKED), "D": (4, DOOR), "T": (5, BLOCKED),
       "v": (6, LEDGE_S), "s": (7, SIGN)}
 _H = {".": (512, WALK), "#": (513, BLOCKED), "M": (514, WARP_FACE), "c": (515, COUNTER)}
+_C = {".": (768, WALK), "#": (769, BLOCKED), "L": (770, WARP_FACE), "X": (771, WARP_FACE)}
 TOWN = ["TTTTTTTT",
         "T......T",
         "T.##s..T",
@@ -71,7 +81,16 @@ ROUTE = ["gggg~~",
          "gggg~~",
          "......",
          "gg....",
-         "......"]
+         ".....D"]
+# W3: the cave off the route's door (5, 4): 1F's way out (1, 3) and its ladder down (2, 1), B1F's ladder up (2, 1)
+CAVE_1F = ["####",
+           "#.L#",
+           "#..#",
+           "#X.#"]
+CAVE_B1F = ["####",
+            "#.L#",
+            "#..#",
+            "####"]
 # A raised grass patch: elevation 4 at the west end of row 3, reached through a cell of elevation 0 (stairs: any
 # elevation steps on it); the rest of the route is the ground's 3, so the patch's other sides are walls.
 ROUTE_ELEV = {(0, 3): 4, (1, 3): 4, (2, 3): 0}
@@ -242,8 +261,17 @@ def resources(game=GAME, variant=None):
         "id": "EM_TEST_ROUTE", "w": 6, "h": 5, "trueW": 6, "trueH": 5, "pair": "TEST_PAIR_A",
         "cells": _cells(ROUTE, _T, 6, 5, ROUTE_ELEV), "border": {"w": 2, "h": 2, "mids": [5, 5, 5, 5]},
         "connections": [{"dir": "south", "map": "EM_TEST_TOWN", "offset": -1}],
-        "warps": [], "objects": [], "mapType": 3, "kind": "route", "music": 301, "weather": 0,
+        "warps": [{"x": 5, "y": 4, "warp": 0, "to": "EM_TEST_CAVE_1F"}], "objects": [], "mapType": 3, "kind": "route",
+        "music": 301, "weather": 0,
     }
+    for cid, rows, warps in (("EM_TEST_CAVE_1F", CAVE_1F, [{"x": 1, "y": 3, "warp": 0, "to": "EM_TEST_ROUTE"},
+                                                           {"x": 2, "y": 1, "warp": 0, "to": "EM_TEST_CAVE_B1F"}]),
+                             ("EM_TEST_CAVE_B1F", CAVE_B1F, [{"x": 2, "y": 1, "warp": 1, "to": "EM_TEST_CAVE_1F"}])):
+        res[("g3map", cid)] = {
+            "id": cid, "w": 4, "h": 4, "trueW": 4, "trueH": 4, "pair": "TEST_PAIR_C",
+            "cells": _cells(rows, _C, 4, 4), "border": {"w": 1, "h": 1, "mids": [769]},
+            "connections": [], "warps": warps, "objects": [], "mapType": 4, "kind": "cave", "music": 303, "weather": 0,
+        }
     res[("g3map", "EM_TEST_HOUSE")] = {
         "id": "EM_TEST_HOUSE", "w": 4, "h": 4, "trueW": 3, "trueH": 4, "pair": "TEST_PAIR_B",
         "cells": _cells(HOUSE, _H, 4, 4), "border": {"w": 1, "h": 1, "mids": [513]},

@@ -104,7 +104,7 @@ function Move.install(b)
   -- the player and in front: player.warped fires as the warp starts
   -- (warp.lua:66-69), the player still on the departure cell (a door is the
   -- cell in front, walked into after the hook).
-  def("warpDeparture", function()
+  def("warpDeparture", function(payload)
     if not b.inField() then return nil end
     local P, Map, C = b.g3("player"), b.g3("map"), b.g3("collision")
     if type(P) ~= "table" or type(C) ~= "table" then return nil end
@@ -126,6 +126,10 @@ function Move.install(b)
     if not kind and d and type(x) == "number" then kind = kindAt(x + d[1], y + d[2]) end
     -- MG8: a Wild Routes end's own warps (the way back, a resume onto the route map) are script warps, as Gen 1's
     if type(b.routeOwnWarp) == "function" and b.routeOwnWarp() then kind = "script" end
+    -- A warp a script or a mod asked for (Warp.request announces kind "warp", src/core/game3/warp.lua:1401; the
+    -- warp table's own say door, stairs, fall, ...): a cave shaft's take (act/kb_climb.lua) arrives as one
+    -- (docs/specs/HEIGHTS_ALL_GAMES_PLAN.md W3)
+    if type(payload) == "table" and type(payload.warp) == "table" and payload.warp.kind == "warp" then kind = "script" end
     out.kind = kind or "door"
     return out
   end)

@@ -65,8 +65,8 @@ class Gen2PlanTest {
 	@Test
 	void placements() {
 		assertEquals(0, plan.warnings().total(), plan.warnings().warnings().toString());
-		assertEquals(5, plan.maps().size());
-		assertEquals(5, plan.mapsRequested());
+		assertEquals(6, plan.maps().size());
+		assertEquals(6, plan.mapsRequested());
 		assertEquals(0, plan.mapsUnplaced());
 		assertEquals(new MapPlacement("G2_TEST_TOWN", ox(0), 64, oz(0), 10, 8, 0, MapPlacement.Kind.SURFACE, QuarterPages.PALETTE,
 				WorldPlan.BIOME_OUTDOOR, false, null), plan.index().map("G2_TEST_TOWN"));
@@ -79,13 +79,19 @@ class Gen2PlanTest {
 		// the cave (its door the route's warp (2, 5)) in the 3D area north of the dungeons (HEIGHTS_ALL_GAMES_PLAN D1): its top
 		// floor at feet 64, dark, the area's cave biome, inside the area's box
 		MapPlacement cave = plan.index().map("G2_TEST_CAVE");
-		assertEquals(new MapPlacement("G2_TEST_CAVE", cave.x(), CavePlanner.TOP_FEET, cave.z(), 6, 4, 1, MapPlacement.Kind.INTERIOR,
+		assertEquals(new MapPlacement("G2_TEST_CAVE", cave.x(), CavePlanner.TOP_FEET, cave.z(), 8, 4, 1, MapPlacement.Kind.INTERIOR,
 				QuarterPages.PALETTE, WorldPlan.BIOME_CAVE_3D, true, "G2_TEST_ROUTE"), cave);
 		RegionRecord.Area area = plan.caveArea();
 		assertTrue(area != null && cave.x() >= area.x() && cave.z() >= area.z() && cave.x() + cave.blockWidth() <= area.x() + area.w()
 				&& cave.z() + cave.blockDepth() <= area.z() + area.d(), "in the 3D area");
 		assertTrue(cave.z() + cave.blockDepth() <= dev.kantobridge.dungeon.DungeonSlots.region(plan.surfaceBox(), TestData.G2_ORIGIN_X,
 				TestData.G2_ORIGIN_Z).z() - CavePlanner.GAP, "north of the region's dungeons");
+		// its B1F a floor below (W3: the ladder between them lines up, a real shaft from 1F's (7, 0) down to B1F's (3, 0))
+		MapPlacement b1f = plan.index().map("G2_TEST_CAVE_B1F");
+		assertEquals(CavePlanner.TOP_FEET - CavePlanner.FLOOR_STEP, b1f.y());
+		assertEquals(List.of(new WorldIndex.Shaft(WorldIndex.Shaft.LADDER, new dev.kantobridge.world.CellPos("G2_TEST_CAVE", 7, 0),
+				new dev.kantobridge.world.CellPos("G2_TEST_CAVE_B1F", 3, 0), true, plan.index().shafts().get(0).x(), plan.index().shafts().get(0).z(),
+				b1f.y(), cave.y() - 1, plan.index().shafts().get(0).wall())), plan.index().shafts());
 		// the house under the town's door (4, 3), its mat (2, 5) the arrival, on layer 1 now that the cave left the layers
 		assertEquals(new MapPlacement("G2_TEST_HOUSE", ox(4), 42, oz(-4), 6, 6, 1, MapPlacement.Kind.INTERIOR, QuarterPages.PALETTE,
 				WorldPlan.BIOME_INTERIOR, false, "G2_TEST_TOWN"), plan.index().map("G2_TEST_HOUSE"));

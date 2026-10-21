@@ -24,7 +24,7 @@ public final class G2Tiles {
 	private static final Pattern SYM = Pattern.compile("^[A-Z0-9_]{1,64}$");
 	private static final Set<String> PERMS = Set.of("land", "water", "wall");
 	private static final Set<String> DIRS = Set.of("up", "down", "left", "right");
-	private static final Set<String> WARPS = Set.of("door", "stairs", "pad", "hole", "edge");
+	private static final Set<String> WARPS = Set.of("door", "stairs", "ladder", "pad", "hole", "edge");
 
 	/**
 	 * What one COLL byte means, as the export's predicates say: its permission ({@code land}, {@code water}, {@code wall}),

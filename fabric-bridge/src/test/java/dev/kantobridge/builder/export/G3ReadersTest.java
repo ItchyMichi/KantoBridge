@@ -22,7 +22,7 @@ class G3ReadersTest {
 		ExportBundle bundle = ExportBundle.open(TestData.syntheticGen3Bundle());
 		assertEquals("emerald", bundle.game());
 		assertTrue(bundle.isGen3());
-		assertEquals(List.of("EM_TEST_HOUSE", "EM_TEST_ROUTE", "EM_TEST_TOWN"), bundle.ids("g3map"));
+		assertEquals(List.of("EM_TEST_CAVE_1F", "EM_TEST_CAVE_B1F", "EM_TEST_HOUSE", "EM_TEST_ROUTE", "EM_TEST_TOWN"), bundle.ids("g3map"));
 		G3Map town = bundle.g3map("EM_TEST_TOWN");
 		assertEquals(8, town.w());
 		assertEquals(6, town.h());

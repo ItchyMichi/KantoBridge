@@ -1098,8 +1098,9 @@ return function(mod)
   -- before anything moves (OverworldController.lua:5456-5459), so the
   -- departure is read right there; map.entered carries `via` (:685-690);
   -- world.blacked_out precedes the heal-point warp (:5362-5364).
-  mod.events:on("player.warped", perf.timed(function()
-    events.warped = engine.warpDeparture() or {}
+  mod.events:on("player.warped", perf.timed(function(payload)
+    -- the payload lets an adapter tell an engine's script warp from a warp-table one (Gen 3's Warp.request)
+    events.warped = engine.warpDeparture(type(payload) == "table" and payload or nil) or {}
   end))
   mod.events:on("map.entered", perf.timed(function(payload)
     mapsEntered = mapsEntered + 1

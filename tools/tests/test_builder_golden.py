@@ -93,6 +93,12 @@ def test_golden_gen3_world_index_matches_the_schema_and_the_bundle():
     house = index["maps"]["EM_TEST_HOUSE"]
     assert (house["layer"], house["kind"], house["parent"]) == (1, "interior", "EM_TEST_TOWN")
     assert [h["pool"] for h in index["habitats"]] == ["kantobridge:em_test_route"]
+    # W3 of the 3D heights plan: the cave off the route, its floors stacked in the 3D area, its ladder a real shaft
+    caves = {k: m for k, m in index["maps"].items() if k.startswith("EM_TEST_CAVE")}
+    assert {k: (m["y"], m["biome"]) for k, m in caves.items()} == {
+        "EM_TEST_CAVE_1F": (64, "kantobridge:cave_3d"), "EM_TEST_CAVE_B1F": (53, "kantobridge:cave_3d")}
+    assert [(s["kind"], s["top"]["map"], s["bottom"]["map"], s["up"]) for s in index["shafts"]] == [
+        ("ladder", "EM_TEST_CAVE_1F", "EM_TEST_CAVE_B1F", True)]
 
 
 def test_golden_gen3_shape_index_matches_the_schema():
@@ -122,8 +128,12 @@ def test_golden_gen2_world_index_matches_the_schema_and_the_bundle():
     assert surface == {"G2_TEST_TOWN", "G2_TEST_ROUTE", "G2_TEST_KANTO_TOWN"}, "both areas on the surface"
     cave = index["maps"]["G2_TEST_CAVE"]
     assert (cave["layer"], cave["parent"], cave["dark"]) == (1, "G2_TEST_ROUTE", True)
-    # the cave is in the 3D area (HEIGHTS_ALL_GAMES_PLAN D1): the area's biome, drawn as its room, its habitats reaching 6
-    assert (cave["biome"], cave["y"]) == ("kantobridge:cave_3d", 64) and len(cave["pieces"]) == 1
+    # the cave is in the 3D area (HEIGHTS_ALL_GAMES_PLAN D1): the area's biome, one room (its whole map: no pieces key), its
+    # habitats reaching 6; W3: its ladder down to B1F a real shaft
+    assert (cave["biome"], cave["y"]) == ("kantobridge:cave_3d", 64) and len(cave.get("pieces", [])) <= 1
+    assert index["maps"]["G2_TEST_CAVE_B1F"]["y"] == 64 - 11
+    assert [(s["kind"], s["top"]["map"], s["bottom"]["map"], s["up"]) for s in index["shafts"]] == [
+        ("ladder", "G2_TEST_CAVE", "G2_TEST_CAVE_B1F", True)]
     assert [h["pool"] for h in index["habitats"]] == ["kantobridge:g2_test_cave"] * 2 + ["kantobridge:g2_test_route"]
     assert [h.get("range") for h in index["habitats"]] == [6, 6, None]
     swaps = {c["swap"]["kind"] for c in index["storyCells"] if c["type"] == "tile"}

@@ -24,7 +24,7 @@ class G2ReadersTest {
 		assertEquals("crystal", bundle.game());
 		assertTrue(bundle.isGen2());
 		assertFalse(bundle.isGen3());
-		assertEquals(List.of("G2_TEST_CAVE", "G2_TEST_HOUSE", "G2_TEST_KANTO_TOWN", "G2_TEST_ROUTE", "G2_TEST_TOWN"), bundle.ids("g2map"));
+		assertEquals(List.of("G2_TEST_CAVE", "G2_TEST_CAVE_B1F", "G2_TEST_HOUSE", "G2_TEST_KANTO_TOWN", "G2_TEST_ROUTE", "G2_TEST_TOWN"), bundle.ids("g2map"));
 		G2Map town = bundle.g2map("G2_TEST_TOWN");
 		assertEquals(5, town.w());
 		assertEquals(4, town.h());

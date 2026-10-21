@@ -4,15 +4,15 @@ maps G2_TEST_*, art variants TILESET_TEST_*_1, blocks, colours, sprites and spec
 the real export (gen1-bridge/lib/engine/gen2/export.lua) and the engine's collision bytes and their meanings (Gen1Recomp
 src/world/gen2/Permissions.lua: 0x00 floor, 0x07 wall, 0x12 cut tree, 0x18 tall grass, 0x23 ice, 0x24 whirlpool, 0x29
 water, 0x70 a mat pressed down, 0x71 door, 0x72 ladder, 0x90 counter, 0xA3 a ledge hopped down, 0xB2 a side wall that
-may not be left upward).
+may not be left upward). The export calls 0x72 a ladder, apart from a staircase (HEIGHTS_ALL_GAMES_PLAN D2).
 
     resources()            {(kind, id): data}; variant "pass" (MG9 G2H): the town with a Wild Routes end
     index(...)             synth.index's shape, game "crystal"
 
 The world: Johto's town (5x4 blocks: trees along the top, a house with its door, a sign, a fence that may not be
 crossed from the north, a Cut tree, water with a whirlpool, ledges) with a route north of it (grass, a gate a script opens, a cave's mouth); the house (a
-counter, the mat out), the dark cave (floor, ice, rock, the ladder out); and Kanto's town, joined to Johto by no
-connection. The water animates (two frames); the sites are the Cut tree, the whirlpool and the gate.
+counter, the mat out), the dark cave (floor, ice, rock, the ladder out, a ladder down to its B1F: the 3D area's shaft,
+HEIGHTS_ALL_GAMES_PLAN W3); and Kanto's town, joined to Johto by no connection. The water animates (two frames); the sites are the Cut tree, the whirlpool and the gate.
 """
 import base64
 import struct
@@ -34,7 +34,7 @@ MEANINGS = {
     0x29: {"perm": "water", "encounter": True},
     0x70: {"perm": "land", "warp": "edge", "mat": "down"},
     0x71: {"perm": "land", "warp": "door", "facesDown": True},
-    0x72: {"perm": "land", "warp": "stairs"},
+    0x72: {"perm": "land", "warp": "ladder"},
     0x90: {"perm": "wall", "counter": True},
     0xA3: {"perm": "land", "ledge": ["down"]},
     0xB2: {"perm": "land", "sides": ["up"], "neighbor": {"down": "down"}},
@@ -72,6 +72,7 @@ VARIANTS = {
         2: ((60, 50, 45), True, (0x07,) * 4),           # rock
         3: ((180, 220, 240), True, (0x23,) * 4),        # ice
         4: ((120, 90, 60), True, (0x72, 0x00, 0x00, 0x00)),  # the ladder out (top left)
+        5: ((100, 80, 55), True, (0x00, 0x72, 0x00, 0x00)),  # a ladder between the floors (top right)
     }),
 }
 
@@ -89,8 +90,10 @@ ROUTE = [[2, 2, 2],
 HOUSE = [[2, 2, 2],
          [1, 3, 1],
          [1, 4, 1]]
-CAVE = [[1, 3, 2],
-        [1, 4, 1]]
+CAVE = [[1, 3, 2, 5],
+        [1, 4, 1, 1]]
+CAVE_B1F = [[1, 5],
+            [1, 1]]
 KANTO = [[1, 1],
          [1, 2]]
 
@@ -256,7 +259,11 @@ def resources(game=GAME, variant=None):
                   "hours": [-1, 2]}])
     res[("g2map", "G2_TEST_CAVE")] = _map(
         "G2_TEST_CAVE", CAVE, "TILESET_TEST_CAVE_1", "TILESET_TEST_CAVE", "CAVE", "johto", palette="PALETTE_DARK",
-        daytime="NITE", dark=True, warps=[{"x": 2, "y": 2, "warp": 0, "to": "G2_TEST_ROUTE"}])
+        daytime="NITE", dark=True, warps=[{"x": 2, "y": 2, "warp": 0, "to": "G2_TEST_ROUTE"},
+                                          {"x": 7, "y": 0, "warp": 0, "to": "G2_TEST_CAVE_B1F"}])
+    res[("g2map", "G2_TEST_CAVE_B1F")] = _map(
+        "G2_TEST_CAVE_B1F", CAVE_B1F, "TILESET_TEST_CAVE_1", "TILESET_TEST_CAVE", "CAVE", "johto", palette="PALETTE_DARK",
+        daytime="NITE", dark=True, warps=[{"x": 3, "y": 0, "warp": 1, "to": "G2_TEST_CAVE"}])
     res[("g2map", "G2_TEST_KANTO_TOWN")] = _map("G2_TEST_KANTO_TOWN", KANTO, *out1, "TOWN", "kanto", group=1)
     res[("g2layout", "johto")] = {"root": "G2_TEST_TOWN", "unit": "blocks", "maps": {
         "G2_TEST_TOWN": {"x": 0, "y": 0, "w": 5, "h": 4}, "G2_TEST_ROUTE": {"x": 1, "y": -3, "w": 3, "h": 3}},

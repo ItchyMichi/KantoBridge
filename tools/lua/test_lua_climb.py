@@ -171,6 +171,18 @@ def test_a_warp_table_warp_keeps_its_own_kind():
     assert t.step({"warped": {"kind": "door", "map": "TEST_CAVE_1F"}}, transitioning=True) == [("start", "door", None)]
 
 
+def test_a_script_warp_the_engine_announces_is_the_takes():
+    # Gen 3's engine announces a requested warp as it starts (player.warped; the adapter's departure says "script"):
+    # it takes the expectation, as a fade-started script warp does (HEIGHTS_ALL_GAMES_PLAN W3)
+    t = Tracker()
+    t.t.expect(b"hole", 9, 2)
+    assert t.step({"warped": {"kind": "script", "map": "EM_TEST_CAVE"}}, transitioning=True) == [("start", "hole", 9)]
+    assert t.step({"entered": [{"map": "EM_TEST_CAVE_B1F", "via": "warp"}]}, map="EM_TEST_CAVE_B1F", x=3, y=4) == [
+        ("arrive", "hole", 9)]
+    assert t.step({"warped": {"kind": "script", "map": "EM_TEST_CAVE_B1F"}}, transitioning=True) == [
+        ("start", "script", None)], "with no take waiting, a script warp is just that"
+
+
 def test_the_main_loop_sends_the_takes_warp_as_its_answer():
     # Through gen1-bridge's main.lua (the simulated route game: mod.world's queueScript on the fake script runner):
     # the take's warp.taken and both its warp messages go out with the take's re (the H6 pilot found them dropped)

@@ -18,8 +18,8 @@
     {
       "kind": "g2image",
       "id": "g2q.0",
-      "hash": "f286699b293b1fa160fc3dede04c2a27817ad8e4cb33906ba2ce9fc171be5478",
-      "size": 13527
+      "hash": "ec22b3b59b1d804d2663af29ceeaa08ce7c3864ea4649dc3dca8d8203654dc90",
+      "size": 14255
     },
     {
       "kind": "g2layout",
@@ -36,8 +36,14 @@
     {
       "kind": "g2map",
       "id": "G2_TEST_CAVE",
-      "hash": "27f58bc179b38c0732a4334ccc44670a6914c798e3a56db69ce157847d8d1894",
-      "size": 333
+      "hash": "27df5e1830832a279e38468b55389954c41164651cac7e2785890541fadac8be",
+      "size": 384
+    },
+    {
+      "kind": "g2map",
+      "id": "G2_TEST_CAVE_B1F",
+      "hash": "cc9a5d813dbe87dda6361a1090150ef7dd803bc1b31e323caa92b8acf64aac46",
+      "size": 336
     },
     {
       "kind": "g2map",
@@ -114,8 +120,8 @@
     {
       "kind": "g2tiles",
       "id": "TILESET_TEST_CAVE_1",
-      "hash": "22579a775ce8d040ee0967c5136f58143320953929b92903aa6c0aa0d5edcf92",
-      "size": 587
+      "hash": "7e579320b3b1e57e36ad51d470a4adcd77c72b0ba0d252ced40f1b8257b5d02d",
+      "size": 665
     },
     {
       "kind": "g2tiles",

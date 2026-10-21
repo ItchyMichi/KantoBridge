@@ -56,7 +56,7 @@ class Gen2FrontEndTest {
 		G2Tiles tiles = bundle.g2tiles("TILESET_TEST_1");
 		assertTrue(atlas.tiles() > tiles.tile(13, 3, 3), "every baked tile the variants name");
 		assertEquals(32, atlas.tilesPerRow());
-		assertEquals(5, scene.maps().size());
+		assertEquals(6, scene.maps().size());
 		SceneMap town = scene.map("G2_TEST_TOWN");
 		assertEquals(QuarterPages.VIRTUAL, town.atlas());
 		assertEquals(QuarterPages.PALETTE, town.palette());

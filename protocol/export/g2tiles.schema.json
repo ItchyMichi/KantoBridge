@@ -193,6 +193,7 @@
             "enum": [
               "door",
               "stairs",
+              "ladder",
               "pad",
               "hole",
               "edge"

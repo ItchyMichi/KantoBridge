@@ -299,8 +299,8 @@ public class Gen2BuildGameTests implements FabricGameTest {
 		helper.assertTrue(range != null && range.lo() == familyLo && range.hi() == familyHi, "johto's slot-map range " + range);
 		WorldIndex index = index(worldDir, JOHTO);
 		helper.assertTrue(index.slotMapHash().equals(slots.regionHash(JOHTO)), "johto's index doesn't name its own slice");
-		helper.assertTrue(index.maps().keySet().equals(Set.of("G2_TEST_TOWN", "G2_TEST_ROUTE", "G2_TEST_HOUSE", "G2_TEST_CAVE", "G2_TEST_KANTO_TOWN")),
-				"maps " + index.maps().keySet());
+		helper.assertTrue(index.maps().keySet().equals(Set.of("G2_TEST_TOWN", "G2_TEST_ROUTE", "G2_TEST_HOUSE", "G2_TEST_CAVE", "G2_TEST_CAVE_B1F",
+				"G2_TEST_KANTO_TOWN")), "maps " + index.maps().keySet());
 		MapPlacement town = index.map("G2_TEST_TOWN");
 		helper.assertTrue(town.x() == ORIGIN_X + SLOT * RegionTable.PITCH && town.z() == ORIGIN_Z && town.y() == 64, "the town's origin");
 		helper.assertTrue(QuarterPages.PALETTE.equals(town.palette()), "the town's palette " + town.palette());
@@ -313,6 +313,16 @@ public class Gen2BuildGameTests implements FabricGameTest {
 		MapPlacement cave = index.map("G2_TEST_CAVE");
 		helper.assertTrue(WorldPlan.BIOME_CAVE_3D.equals(cave.biome()) && cave.y() == 64, "the cave in the 3D area " + cave);
 		helper.assertTrue(index.habitats().size() == 3, "johto's habitats " + index.habitats().size());
+		// its ladder down to B1F, a real shaft (HEIGHTS_ALL_GAMES_PLAN W3): Minecraft's ladder, climbable
+		helper.assertTrue(index.shafts().size() == 1, "johto's shafts " + index.shafts().size());
+		WorldIndex.Shaft shaft = index.shafts().get(0);
+		helper.assertTrue(WorldIndex.Shaft.LADDER.equals(shaft.kind()) && "G2_TEST_CAVE".equals(shaft.top().map())
+				&& "G2_TEST_CAVE_B1F".equals(shaft.bottom().map()) && shaft.up(), "the shaft " + shaft);
+		ServerLevel caveLevel = helper.getLevel();
+		caveLevel.getChunk(new BlockPos(shaft.x(), shaft.y0(), shaft.z()));
+		BlockState rung = caveLevel.getBlockState(new BlockPos(shaft.x(), shaft.y0() + 3, shaft.z()));
+		BlockState rungBeside = caveLevel.getBlockState(new BlockPos(shaft.x() + 1, shaft.y0() + 3, shaft.z() + 1));
+		helper.assertTrue(rung.is(KbBlocks.SHAFT_LADDER) || rungBeside.is(KbBlocks.SHAFT_LADDER), "no ladder up johto's shaft: " + rung);
 
 		ServerLevel level = helper.getLevel();
 		// Ground: a full tile block showing its tile's slot in johto's range, open above.

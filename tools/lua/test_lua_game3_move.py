@@ -198,6 +198,18 @@ def test_no_departure_outside_the_field():
     assert departure(a) is None
 
 
+def test_a_requested_warp_is_a_script_warp():
+    # Warp.request (a script's or a mod's warp: a cave shaft's take, HEIGHTS_ALL_GAMES_PLAN W3) announces kind "warp";
+    # the warp table's own warps say door, stairs, fall, ...: only the first is a script warp, whatever the cells say
+    a = Adapter3()
+    a.field("EM_TEST_HOUSE", 4, 5, "up")
+    a.E.behavior(4, 4, b"MB_TEST_STAIRS")
+    requested = plain(a.eng.warpDeparture(a.lua({"warp": {"kind": "warp", "map": "EM_TEST_TOWN", "x": 1, "y": 1}})))
+    assert requested["kind"] == "script"
+    stairs = plain(a.eng.warpDeparture(a.lua({"warp": {"kind": "stairs", "map": "EM_TEST_TOWN", "x": 1, "y": 1}})))
+    assert stairs["kind"] == "stairs"
+
+
 # ------------------------------------------------------------ interaction (§4.4)
 
 

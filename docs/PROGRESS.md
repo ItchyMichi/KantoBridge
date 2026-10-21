@@ -1056,7 +1056,7 @@ for the rest" (plan §8). Feature tests per phase, the full suite at the checkpo
 | W0 | Baseline, survey, layer sizes | **done** (note 1) | 2026-10-20 | `010af67`, this commit |
 | W1 | Blue audit | **done**: report on kb-hub (note 2) | 2026-10-20 | this commit |
 | W2 | One 3D planner for every game | **done** (note 3) | 2026-10-20 | `W2: one 3D planner` |
-| W3 | Links by kind, pilots | | | |
+| W3 | Links by kind, pilots | **core done** (note 4); videos with W4's pilots | 2026-10-21 | `W3: real ladders and holes in Johto and Hoenn` |
 | W4 | Raised ground in caves | | | |
 | W5 | Interiors: depth, headroom, the deeper world | | | |
 | W6 | Outdoors | | | |
@@ -1102,6 +1102,28 @@ for the rest" (plan §8). Feature tests per phase, the full suite at the checkpo
    moved aside, 14 holes up, 8 same floor, 2 one-way up, 2 off the floor). Tests: `Area3dTest`; Gen 2's plan test, its
    golden index and shapes, the Python golden test and the Johto GameTests follow its cave into the area (top floor
    64, two habitat blocks of reach 6, the house on layer 1). Checks: JUnit 1,354, GameTests 126, pytest 2,251.
+
+4. **W3, real ladders and holes in Johto and Hoenn** (plan D2). Their lined-up links are built as shafts (W2 only laid
+   them out): the real dry runs build **36 in Johto and 61 in Hoenn** (Olivine Lighthouse's 12 holes, Navel Rock's 19
+   ladders, Lavaridge Gym's 20 sand pits, Mt. Pyre's holes, Granite Cave's and Union Cave's ladders), no new warning.
+   - **The climb on Gen 3:** Emerald's engine announces a requested warp as it starts (`player.warped`, kind `warp`),
+     so the take's warp went out as an ordinary warp without the take's `re` (the client would have waited 3 s and
+     pulled the player back). main.lua hands the event's payload to the adapter, the Gen 3 adapter calls such a warp a
+     script warp, and the warp observer gives a script warp the waiting take's kind and `re` (a warp-table warp still
+     keeps its own: Lua tests for both). Gen 2's queued warp starts with its fade, as Gen 1's: unchanged.
+   - **Gen 2's ladders apart from its staircases:** the export calls collision byte 0x72 `ladder` (was `stairs`, with
+     the staircase 0x7a); schema, `G2Tiles`, PROTOCOL.md. The real export says so after its next export; until then the
+     review's table tells them apart. Gen 3 behaviour names are read with or without `MB_`.
+   - **Synthetic worlds:** Crystal's cave has a B1F under it, Emerald's route a cave of two floors, each joined by a
+     ladder that is a real shaft (goldens, `Gen2PlanTest`, the Python golden tests, the Johto and Hoenn GameTests:
+     Minecraft's ladder, climbable).
+   - **Left for later:** Emerald's cracked floors (Granite Cave B1F, Sky Pillar, Mirage Tower) line up over their landings,
+     but a real drop needs a floor that opens per player when that player's game breaks it (a new story block): they keep
+     the fade for now. Blue's 9 scripted holes need their landings from the engine's map scripts: W7. Crystal's ladders
+     inside one map mostly lead within one room (Mt. Moon, Diglett's Cave, Dragon's Den) or carry the review's "up" at
+     both ends, so most stay fades; a few of Victory Road's rooms take their own floor. The pilot videos follow W4, so
+     they show the ladders and the raised ground together.
+   - Checks: JUnit 1,354 + the new cases, GameTests 126, pytest 2,256.
 
 ## Wild Routes
 

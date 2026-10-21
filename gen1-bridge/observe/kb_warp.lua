@@ -42,11 +42,12 @@
 --
 -- A cave shaft's warp (act/kb_climb.lua, docs/PROTOCOL.md "Ladders and
 -- holes"): the act queues the engine's warp command and calls expect(kind,
--- re, gen); the next warp that isn't a warp-table one (a queued script's)
--- takes that kind (stairs or hole) and both its messages carry the take's re
--- and its connection's generation (main.lua sends a message with a re as a
--- reply, and only to the connection that asked). An expectation no warp
--- follows within EXPECT steps lapses.
+-- re, gen); the next warp that isn't a warp-table one (a queued script's:
+-- started by its fade, or announced as a script warp, which Gen 3's engine
+-- does) takes that kind (stairs or hole) and both its messages carry the
+-- take's re and its connection's generation (main.lua sends a message with a
+-- re as a reply, and only to the connection that asked). An expectation no
+-- warp follows within EXPECT steps lapses.
 -- Logs show codes, kinds and counts only.
 
 local Warp = {}
@@ -145,7 +146,11 @@ function Warp.new(opts)
       counts.lapsed = counts.lapsed + 1
       if log then log.warn("warp.take_lapsed", { steps = Warp.EXPECT }) end
     end
-    if ev.warped and not current then start(Warp.departureKind(ev.warped)) end
+    if ev.warped and not current then
+      -- a script warp the engine announces as it starts (Gen 3) may be a warp.take's; a warp-table warp never is
+      local kind = Warp.departureKind(ev.warped)
+      start(kind, kind == "script")
+    end
     if ev.blackout and not current then start("blackout") end
     if not f.transitioning then tail = false end
     if not current then

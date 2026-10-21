@@ -23,7 +23,7 @@ import java.util.TreeMap;
  * as the map's border block and collides as a wall, as the engine reads it.</li>
  * <li><b>Kind and flags</b> from the meaning the export gives the cell's collision byte (the engine's own predicates):
  * land is walkable (ice and the one-way side walls too), water is water (currents, waterfalls, whirlpools), counters
- * are counters, ledges hop their first facing, warps by kind (door, stairs and mats, pads, holes), Cut trees; any byte
+ * are counters, ledges hop their first facing, warps by kind (door, stairs, ladders and mats, pads, holes), Cut trees; any byte
  * the export doesn't describe is built solid ({@code g2_collision_unknown}). The cells the map's warps stand on are
  * warps and its bg events signs.</li>
  * <li><b>Wild cells</b> (the engine's encounter gate, FieldMoves.canEncounterWildMon): walkable cells of a cave or
@@ -239,7 +239,7 @@ public final class G2Cells {
 				case "door" -> CellFlags.DOOR;
 				case "pad" -> CellFlags.PAD;
 				case "hole" -> CellFlags.HOLE;
-				default -> CellFlags.WARP_TILE; // stairs, mats
+				default -> CellFlags.WARP_TILE; // stairs, ladders, mats
 			};
 		}
 		return f;

@@ -18,14 +18,26 @@
     {
       "kind": "g3image",
       "id": "g3q.0",
-      "hash": "03b30b12f64b3945ba4439eb01f39189d917bf286f4ac4895e5d9ec2a3c74804",
-      "size": 2731
+      "hash": "cb62c1de253239cc4741885ab927f50b53a8d0478915baf7614c6e76bf35294c",
+      "size": 3391
     },
     {
       "kind": "g3layout",
       "id": "hoenn",
       "hash": "81603945c540d79b6bf9d509b695c091e945b2e43f85a68426838dbbe1e8a0ab",
       "size": 131
+    },
+    {
+      "kind": "g3map",
+      "id": "EM_TEST_CAVE_1F",
+      "hash": "14362cca3bc9c6d13e42629bb6869dacf43a3c0d08b4dabea381770b0614c42a",
+      "size": 393
+    },
+    {
+      "kind": "g3map",
+      "id": "EM_TEST_CAVE_B1F",
+      "hash": "2924f932e95b0b86b66f8082bd469775ebd6cfb3d549f68631478412011e67f9",
+      "size": 349
     },
     {
       "kind": "g3map",
@@ -36,8 +48,8 @@
     {
       "kind": "g3map",
       "id": "EM_TEST_ROUTE",
-      "hash": "e95b25a2721249ebcfbd9ee50a19b6398310b38712d19aae6c91a984d7cceaf2",
-      "size": 426
+      "hash": "2a60c9a48477a788769885a666fac9464446d9e30a7668ff65138e423a663342",
+      "size": 471
     },
     {
       "kind": "g3map",
@@ -86,6 +98,12 @@
       "id": "TEST_PAIR_B",
       "hash": "f4379071c0eaf12e74f03f95d7feab95066fb6093ff38ea91d3d19e47897eb38",
       "size": 254
+    },
+    {
+      "kind": "g3tiles",
+      "id": "TEST_PAIR_C",
+      "hash": "e28af222660484e42ec760b3ba7ad460bab215083397c44c8de4aa3be4397e48",
+      "size": 251
     }
   ]
 }

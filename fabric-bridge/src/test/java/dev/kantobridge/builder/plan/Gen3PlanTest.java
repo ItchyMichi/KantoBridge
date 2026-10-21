@@ -62,8 +62,8 @@ class Gen3PlanTest {
 	@Test
 	void placements() {
 		assertEquals(0, plan.warnings().total(), plan.warnings().warnings().toString());
-		assertEquals(3, plan.maps().size());
-		assertEquals(3, plan.mapsRequested());
+		assertEquals(5, plan.maps().size());
+		assertEquals(5, plan.mapsRequested());
 		assertEquals(0, plan.mapsUnplaced());
 		assertEquals(new MapPlacement("EM_TEST_TOWN", ox(0), 64, oz(0), 8, 6, 0, MapPlacement.Kind.SURFACE, QuarterPages.PALETTE,
 				WorldPlan.BIOME_OUTDOOR, false, null), plan.index().map("EM_TEST_TOWN"));
@@ -215,8 +215,8 @@ class Gen3PlanTest {
 		long half = slots.slots().keySet().stream().filter(k -> k.shape() == SlotMap.Shape.HALF).count();
 		// synth3's quarters: 32 shown on land and borders, 4 on water (half height; item 8: animated quarters, whose frames
 		// are quarters too but never shown as themselves, so no slot's); SE3: the water's four again full-shape, the art the
-		// route's site draws in its water state
-		assertEquals(36, slots.slots().size() - half);
+		// route's site draws in its water state; W3: the cave's 13 (its four metatiles, one quarter shared)
+		assertEquals(49, slots.slots().size() - half);
 		assertEquals(4, half);
 		java.util.Set<Integer> frames = new java.util.HashSet<>();
 		for (G3Data.Anims.Anim anim : anims.byQuarter().values()) {
@@ -227,7 +227,7 @@ class Gen3PlanTest {
 		for (SlotMap.Key key : slots.slots().keySet()) {
 			assertEquals("g3q.0", key.atlas());
 			assertEquals(QuarterPages.PALETTE, key.palette());
-			assertTrue(key.tile() < 44);
+			assertTrue(key.tile() < 57);
 			assertFalse(frames.contains(key.tile()), "a frame is no slot's");
 			if (key.shape() == SlotMap.Shape.HALF) {
 				assertTrue(anims.byQuarter().containsKey(key.tile()), "the water animates");
@@ -303,7 +303,7 @@ class Gen3PlanTest {
 		PackFiles files = new PackFiles();
 		Warnings warnings = new Warnings();
 		ResourcePackWriter.Result result = ResourcePackWriter.generate(plan.art(), bundle, files, warnings);
-		assertEquals(36, result.tileTextures(), "one texture per quarter, both shapes");
+		assertEquals(49, result.tileTextures(), "one texture per quarter, both shapes");
 		assertEquals(0, warnings.total(), warnings.warnings().toString());
 		// item 8: the water's four animated quarters: their frames one below the other, the loop in ticks
 		assertEquals(4, result.animated());

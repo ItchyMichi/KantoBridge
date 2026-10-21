@@ -219,6 +219,9 @@ public record CaveMap(String id, int index, int w, int h, BitSet walks, List<War
 			G3Map.Warp arrival = to == null || warp.warp() < 0 || warp.warp() >= to.warps().size() ? null : to.warps().get(warp.warp());
 			boolean in = map.inGrid(warp.x(), warp.y());
 			String behavior = in ? tiles.behaviorName(map.mid(warp.x(), warp.y())) : null;
+			if (behavior != null && behavior.startsWith("MB_")) {
+				behavior = behavior.substring(3);
+			}
 			int flags = in ? model.flags(warp.x(), warp.y()) : 0;
 			WarpKinds.Drawn drawn = in && inModel(model, warp.x(), warp.y()) ? WarpKinds.drawn(game, atlas(model), cellTiles(model, warp.x(), warp.y()))
 					: null;

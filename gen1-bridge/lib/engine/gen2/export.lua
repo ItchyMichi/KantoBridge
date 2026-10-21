@@ -62,9 +62,11 @@ Export2.SCROLL_H = { [0] = 0, 1, 2, 3, 2, 1, 0, -1 }
 Export2.WALKS = { [0x02] = "xy", [0x04] = "y", [0x05] = "x", [0x24] = "xy" }
 -- The big objects, two cells by two (Npc.lua:47-53).
 Export2.BIG = { [0x15] = true, [0x20] = true, [0x21] = true }
--- The bridge's warp kinds by COLL byte (move.lua's WARP_KINDS).
+-- The bridge's warp kinds by COLL byte (move.lua's WARP_KINDS), but a ladder (0x72) apart from a staircase (0x7a):
+-- the builder's 3D area makes a ladder a real shaft and keeps a staircase's fade (docs/specs/HEIGHTS_ALL_GAMES_PLAN.md
+-- D2); the warp messages still call both stairs.
 Export2.WARP_KINDS = {
-  [0x71] = "door", [0x7b] = "door", [0x7a] = "stairs", [0x72] = "stairs", [0x7c] = "pad",
+  [0x71] = "door", [0x7b] = "door", [0x7a] = "stairs", [0x72] = "ladder", [0x7c] = "pad",
   [0x60] = "hole", [0x68] = "hole", [0x70] = "edge", [0x76] = "edge", [0x78] = "edge", [0x7e] = "edge",
 }
 Export2.SIDES = { "up", "down", "left", "right" }

@@ -57,7 +57,7 @@ class TwoArtSetsTest {
 		assertEquals("red", info.setFor("blue").artSet(), "Blue draws with Red's art");
 		assertNull(info.setFor("gold"), "no Johto art");
 		assertEquals(info.sets().get(0).tiles() + info.sets().get(1).tiles(), info.tiles(), "the counts are the sets' sum");
-		assertEquals(36, info.sets().get(1).tiles(), "Hoenn's synthetic quarters");
+		assertEquals(49, info.sets().get(1).tiles(), "Hoenn's synthetic quarters (W3 of the 3D heights plan: its cave's too)");
 		assertTrue(Files.isRegularFile(pack.resolve("assets/kantobridge/textures/block/emerald/tile/g3q.0/baked/0000.png")));
 		try (Stream<Path> red = Files.walk(pack.resolve("assets/kantobridge/textures/block/red"))) {
 			assertEquals(info.sets().get(0).tiles(), red.filter(p -> p.toString().endsWith(".png")).count());

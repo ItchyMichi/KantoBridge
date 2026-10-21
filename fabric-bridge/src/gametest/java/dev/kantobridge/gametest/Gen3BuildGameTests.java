@@ -284,7 +284,11 @@ public class Gen3BuildGameTests implements FabricGameTest {
 		helper.assertTrue(range != null && range.lo() == familyLo && range.hi() == familyHi, "hoenn's slot-map range " + range);
 		WorldIndex index = index(worldDir, HOENN);
 		helper.assertTrue(index.slotMapHash().equals(slots.regionHash(HOENN)), "hoenn's index doesn't name its own slice");
-		helper.assertTrue(index.maps().keySet().equals(java.util.Set.of("EM_TEST_TOWN", "EM_TEST_ROUTE", "EM_TEST_HOUSE")), "maps " + index.maps().keySet());
+		helper.assertTrue(index.maps().keySet().equals(java.util.Set.of("EM_TEST_TOWN", "EM_TEST_ROUTE", "EM_TEST_HOUSE", "EM_TEST_CAVE_1F",
+				"EM_TEST_CAVE_B1F")), "maps " + index.maps().keySet());
+		// W3 of the 3D heights plan: the cave's ladder between its floors, a real shaft (MB_LADDER on a warp cell)
+		helper.assertTrue(index.shafts().size() == 1 && "ladder".equals(index.shafts().get(0).kind())
+				&& "EM_TEST_CAVE_1F".equals(index.shafts().get(0).top().map()), "hoenn's shafts " + index.shafts());
 		MapPlacement town = index.map("EM_TEST_TOWN");
 		helper.assertTrue(town.x() == ORIGIN_X + RegionTable.PITCH && town.z() == ORIGIN_Z && town.y() == 64, "the town's origin");
 		helper.assertTrue(QuarterPages.PALETTE.equals(town.palette()), "the town's palette " + town.palette());
