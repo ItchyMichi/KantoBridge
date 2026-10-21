@@ -190,6 +190,8 @@ final class RemotePilot {
 	private boolean typingConfirmed;
 	/** The frame-rate test's "measure" started one (meshstats on, a world loaded). */
 	private boolean measureStarted;
+	/** Following no game ("none"), the pause for a game is kept away. */
+	private boolean pauseFreed;
 
 	private @Nullable Process ffmpeg;
 	private @Nullable Path recording;
@@ -224,6 +226,14 @@ final class RemotePilot {
 	}
 
 	private void tick() {
+		if (!this.pauseFreed && "none".equals(this.follow)) {
+			// a frame-rate test follows no game: the wait for one never pauses the world (or the frames it measures)
+			BridgeRuntime bridge = BridgeRuntime.get();
+			if (bridge != null) {
+				bridge.pauseExcludedWhile(() -> true);
+				this.pauseFreed = true;
+			}
+		}
 		this.ticks++;
 		this.phaseTicks++;
 		this.releaseKeys();
