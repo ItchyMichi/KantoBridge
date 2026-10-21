@@ -217,6 +217,7 @@ public final class WorldPlanner {
 		Profile profile = carried == null ? null : ProfileSource.read(carried.text(), carried.version(), carried.enabled()).profile();
 		// The art, for the filler a room's drawing stops at (its ceilings, HEIGHTS_ALL_GAMES_PLAN D8)
 		dev.kantobridge.scene.ArtSource artSource = FrontEnds.artSource(bundle);
+		ArtUnitProbe probe = new ArtUnitProbe(artSource);
 		// A cave built in 3D gets its raised ground (CAVES_3D_PLAN §3.4), and every cave its ceilings (HEIGHTS_ALL_GAMES_PLAN
 		// D5) before the area is placed, so its floors stack as far apart as their tallest rooms need
 		Map<String, MapLayout> caveLayouts = new HashMap<>();
@@ -236,7 +237,7 @@ public final class WorldPlanner {
 					caveLayouts.put(id, raised);
 				}
 			}
-			int[] ceilings = Headroom.ceilings(model, raised, Headroom.blackFiller(model, artSource, null), Headroom.screenRows(false), true);
+			int[] ceilings = Headroom.ceilings(model, raised, Headroom.blackFiller(model, probe, null), Headroom.screenRows(false), true);
 			caveHeights.put(id, java.util.Arrays.stream(ceilings).max().orElse(Headroom.MIN));
 		}
 		CavePlanner.Result caveArea = CavePlanner.placeArea(caveMaps, caves, caves3d, Map.of(), caveHeights, surfaceVolume, options.originX(),
@@ -333,7 +334,7 @@ public final class WorldPlanner {
 				raised = withPieces(model, pieces, raised);
 			}
 			// An interior's ceilings (HEIGHTS_ALL_GAMES_PLAN D5): as tall as its drawing, at least 4 over its highest floor
-			raised = withCeilings(placement, model, raised, Headroom.blackFiller(model, artSource, null), Headroom.screenRows(false),
+			raised = withCeilings(placement, model, raised, Headroom.blackFiller(model, probe, null), Headroom.screenRows(false),
 					!caves.contains(map.id()), warnings);
 			placed.add(new PlacedMap(placement, model, edges, raised));
 		}
@@ -403,12 +404,12 @@ public final class WorldPlanner {
 			} else {
 				scene = frontEnd.describe(bundle);
 				// The probe of the profile plan's PD3 asks this export's own art whether a repeating cell stands as a unit.
-				shapes = ShapePlanner.plan(scene, placements.values(), ShapeParams.current(),
-						occupancy(placed, storyIndex, storyCells, surfaceBox, owner, voidCells), new ArtUnitProbe(artSource), layouts, shafts,
-						Headroom.rooms(scene, artSource, Headroom.screenRows(false)))
+				shapes = ShapePlanner.plan(scene, placements.values(), ShapeParams.forScene(scene),
+						occupancy(placed, storyIndex, storyCells, surfaceBox, owner, voidCells), probe, layouts, shafts)
 						.withIndexHash(index.hash());
 			}
 		}
+		noteVisibleRows(shapes, warnings);
 		ExportField.Display display = field.display();
 		if (display != null && !display.voidFillDefault()) {
 			// VD4: the drawn border follows the player's void-fill option; exported, never pinned.
@@ -510,7 +511,21 @@ public final class WorldPlanner {
 		return storyIndex;
 	}
 
-	/** A map's layout with its rooms' pieces (CAVES_3D_PLAN §3.5) and, if it has any, its levels and ramps (§3.4). */
+	/**
+	 * The visible-layers check's findings in the build's notes (docs/specs/HEIGHTS_ALL_GAMES_PLAN.md D9): each outdoor map
+	 * whose faces stand shorter than the hidden game draws them, and the columns and rows they lack in all.
+	 */
+	static void noteVisibleRows(@Nullable ShapePlan shapes, Warnings warnings) {
+		if (shapes == null) {
+			return;
+		}
+		shapes.visibleRowsMissing().forEach((id, lacks) -> {
+			warnings.note("visible_rows_missing", Warnings.symbols("map", id));
+			warnings.note("visible_rows_missing_columns", lacks.columns());
+			warnings.note("visible_rows_missing_rows", lacks.rows());
+		});
+	}
+
 	/**
 	 * An interior's layout with its ceilings (docs/specs/HEIGHTS_ALL_GAMES_PLAN.md D5, {@link Headroom}): its rooms and raised
 	 * ground, or a flat one. A room on a layer stops at {@link Scale#LAYER_ROOM} (counted); the 3D area's floors stack by
@@ -541,6 +556,7 @@ public final class WorldPlanner {
 		return base.withCeilings(ceilings);
 	}
 
+	/** A map's layout with its rooms' pieces (CAVES_3D_PLAN §3.5) and, if it has any, its levels and ramps (§3.4). */
 	static MapLayout withPieces(MapModel model, List<MapLayout.Piece> pieces, @Nullable MapLayout levels) {
 		int w = model.cellWidth();
 		int h = model.cellHeight();

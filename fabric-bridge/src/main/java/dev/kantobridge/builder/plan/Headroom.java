@@ -1,6 +1,6 @@
 package dev.kantobridge.builder.plan;
 
-import dev.kantobridge.scene.ArtSource;
+import dev.kantobridge.builder.shape.UnitProbe;
 import dev.kantobridge.scene.CellKind;
 import dev.kantobridge.scene.SceneMap;
 import dev.kantobridge.world.MapLayout;
@@ -24,8 +24,6 @@ public final class Headroom {
 	/** Tile rows the classic screen shows above the player: Gen 1 and 2 four cells, Gen 3 four and a half. */
 	public static final int SCREEN_ROWS = 8;
 	public static final int SCREEN_ROWS_GEN3 = 9;
-	/** The shade of black in a tile's shades. */
-	static final int BLACK = 3;
 
 	private Headroom() {
 	}
@@ -100,7 +98,7 @@ public final class Headroom {
 	 * read off the scene map as {@link #ceilings} reads a model, so the shapes' keys come from the export alone, whichever
 	 * maps a build places. Maps under the sky (the surface, an open-air interior) are left out.
 	 */
-	public static Map<String, Integer> rooms(dev.kantobridge.scene.Scene scene, ArtSource art, int screenRows) {
+	public static Map<String, Integer> rooms(dev.kantobridge.scene.Scene scene, @Nullable UnitProbe probe, int screenRows) {
 		Map<String, Integer> out = new TreeMap<>();
 		for (SceneMap map : scene.maps().values()) {
 			if (map.surface() || map.env().openAir()) {
@@ -114,7 +112,7 @@ public final class Headroom {
 					}
 					int rows = 0;
 					for (int y = cy - 1; y >= 0 && rows < screenRows; y--) {
-						if (stood(map.kind(cx, y)) || allBlack(map, art, cx, y)) {
+						if (stood(map.kind(cx, y)) || allBlack(map, probe, cx, y)) {
 							break;
 						}
 						rows += 2;
@@ -131,53 +129,38 @@ public final class Headroom {
 		return kind == CellKind.WALK || kind == CellKind.LEDGE || kind == CellKind.WATER;
 	}
 
-	private static boolean allBlack(SceneMap map, ArtSource art, int cx, int cy) {
+	private static boolean allBlack(SceneMap map, @Nullable UnitProbe probe, int cx, int cy) {
+		if (probe == null) {
+			return false;
+		}
 		int per = map.perCell();
 		for (int k = 0; k < per * per; k++) {
-			int tile = map.tile(cx * per + k % per, cy * per + k / per);
-			int[] shades = tile < 0 ? null : art.tileShades(map.atlas(), tile);
-			if (shades == null) {
+			if (!probe.blank(map.atlas(), map.tile(cx * per + k % per, cy * per + k / per))) {
 				return false;
-			}
-			for (int shade : shades) {
-				if (shade != BLACK) {
-					return false;
-				}
 			}
 		}
 		return true;
 	}
 
 	/**
-	 * The filler of a map as its art draws it: a cell whose every tile is one flat black (the void round a room), plus what
+	 * The filler of a map as the probe sees its art (its one pixel question here, as the shape planner's: no pixel reaches
+	 * the plan but through a probe): a cell whose every tile is one flat black (the void round a room), plus what
 	 * {@code outside} adds (Gen 3's padding past the true size).
 	 */
-	public static Filler blackFiller(MapModel model, ArtSource art, @Nullable Filler outside) {
+	public static Filler blackFiller(MapModel model, UnitProbe probe, @Nullable Filler outside) {
 		String atlas = CaveMap.atlas(model);
 		int w = model.cellWidth();
 		int h = model.cellHeight();
 		boolean[] black = new boolean[w * h];
 		for (int cy = 0; cy < h; cy++) {
 			for (int cx = 0; cx < w; cx++) {
-				black[cy * w + cx] = allBlack(model, art, atlas, cx, cy);
+				boolean all = true;
+				for (int k = 0; k < 4 && all; k++) {
+					all = probe.blank(atlas, model.tile(cx * 2 + k % 2, cy * 2 + k / 2));
+				}
+				black[cy * w + cx] = all;
 			}
 		}
 		return (cx, cy) -> (outside != null && outside.stops(cx, cy)) || black[cy * w + cx];
-	}
-
-	private static boolean allBlack(MapModel model, ArtSource art, String atlas, int cx, int cy) {
-		for (int k = 0; k < 4; k++) {
-			int tile = model.tile(cx * 2 + k % 2, cy * 2 + k / 2);
-			int[] shades = tile < 0 ? null : art.tileShades(atlas, tile);
-			if (shades == null) {
-				return false;
-			}
-			for (int shade : shades) {
-				if (shade != BLACK) {
-					return false;
-				}
-			}
-		}
-		return true;
 	}
 }

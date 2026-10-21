@@ -90,11 +90,12 @@ public final class ShapePlanner {
 	 */
 	public record MapShapes(String map, ShapeKey[][] open, ShapeKey[][] closed, int[] blocks, int[] shapeMask, int[] floor, int[] decor,
 			List<Units.Cell> units, ShapeKey[][] overlay, List<Templates.Placed> templates, int wallTile, @Nullable ShapeKey ceiling,
-			ShapeKey[][] hung, int[] hungMask, int[] hungLeaves, @Nullable ShapeKey curtain, Apron.@Nullable Plan apron) {
+			ShapeKey[][] hung, int[] hungMask, int[] hungLeaves, @Nullable ShapeKey curtain, Apron.@Nullable Plan apron,
+			VisibleRows.@Nullable Missing visible) {
 		/** The plan of a map without Tier B (no floor change, no decor, no unit, no overlay). */
 		public MapShapes(String map, ShapeKey[][] open, ShapeKey[][] closed, int[] blocks, int[] shapeMask) {
 			this(map, open, closed, blocks, shapeMask, filled(blocks.length, -1), new int[blocks.length], List.of(), new ShapeKey[blocks.length][],
-					List.of(), -1, null, new ShapeKey[blocks.length][], new int[blocks.length], new int[blocks.length], null, null);
+					List.of(), -1, null, new ShapeKey[blocks.length][], new int[blocks.length], new int[blocks.length], null, null, null);
 		}
 
 		/** The tile the floor block of art tile {@code i} wears, given its own. */
@@ -103,17 +104,20 @@ public final class ShapePlanner {
 		}
 	}
 
-	/** One state's plan of a map. */
+	/**
+	 * One state's plan of a map; {@code modelled} marks the art tiles a model of their own stands on (a band or fitted
+	 * building, a two-cell hull, a class box), whose drawing it shows at its own scale.
+	 */
 	record Columns(ShapeKey[][] keys, int[] blocks, int[] shapeMask, int[] floor, int[] decor, List<Units.Cell> units,
 			List<Structures.MeasuredRun> runs, List<Templates.Placed> templates, int wallTile, @Nullable ShapeKey ceiling, ShapeKey[][] hung,
-			int[] hungMask, int[] hungLeaves, @Nullable ShapeKey curtain) {
+			int[] hungMask, int[] hungLeaves, @Nullable ShapeKey curtain, boolean[] modelled) {
 		Columns(ShapeKey[][] keys, int[] blocks, int[] shapeMask) {
 			this(keys, blocks, shapeMask, List.of());
 		}
 
 		Columns(ShapeKey[][] keys, int[] blocks, int[] shapeMask, List<Structures.MeasuredRun> runs) {
 			this(keys, blocks, shapeMask, filled(blocks.length, -1), new int[blocks.length], List.of(), runs, List.of(), -1, null,
-					new ShapeKey[blocks.length][], new int[blocks.length], new int[blocks.length], null);
+					new ShapeKey[blocks.length][], new int[blocks.length], new int[blocks.length], null, new boolean[blocks.length]);
 		}
 	}
 
@@ -199,14 +203,17 @@ public final class ShapePlanner {
 
 	/**
 	 * The same with each interior's room (docs/specs/HEIGHTS_ALL_GAMES_PLAN.md D5, {@code Headroom.rooms}): blocks its shapes
-	 * may stand over its floor under its ceiling, by map id; a map left out keeps the default.
+	 * may stand over its floor under its ceiling, by map id; a map left out keeps the default. Empty: from H9 the planner
+	 * reads them off the scene itself (its probe answering which tiles are blank), so every caller plans the same keys.
 	 */
 	public static ShapePlan plan(Scene scene, Collection<MapPlacement> placements, ShapeParams params, Occupancy taken,
 			@Nullable UnitProbe probe, Map<String, MapLayout> layouts, List<WorldIndex.Shaft> shafts, Map<String, Integer> rooms) {
 		// The fitted shapes table is per game (docs/specs/FITTED_SHAPES.md): this scene's.
 		String before = FittedShapes.enter(scene.game());
+		Map<String, Integer> own = rooms.isEmpty() && params.visibleRows()
+				? dev.kantobridge.builder.plan.Headroom.rooms(scene, probe, params.maxUnit()) : rooms;
 		try {
-			return planScene(scene, placements, params, taken, probe, layouts, shafts, rooms);
+			return planScene(scene, placements, params, taken, probe, layouts, shafts, own);
 		} finally {
 			FittedShapes.leave(before);
 		}
@@ -446,8 +453,15 @@ public final class ShapePlanner {
 		for (ShapeKey key : index.geoms()) {
 			byKind.merge(key.kind(), 1, Integer::sum);
 		}
+		// The visible-layers check (D9, from H9): the outdoor maps whose faces lack rows the hidden game draws
+		Map<String, VisibleRows.Missing> missing = new TreeMap<>();
+		shapes.forEach((id, planned) -> {
+			if (planned.visible() != null && planned.visible().columns() > 0) {
+				missing.put(id, planned.visible());
+			}
+		});
 		return new ShapePlan(params, index, map, shapes, byKind, shaped, (System.nanoTime() - started) / 1_000_000L, decorSkipped, fill,
-				voidUnits, closedColumns, unitSources);
+				voidUnits, closedColumns, unitSources, missing);
 	}
 
 	/** The context of the border's units: outdoors, no walkable side, repeating, foliage (the void tells no more). */
@@ -609,8 +623,11 @@ public final class ShapePlanner {
 			apron = Apron.plan(map, Apron.floorTile(map, grass, ground), tally);
 			curtain = null;
 		}
+		// The visible-layers check (D9, from H9): an outdoor map's faces against the rows the hidden game draws
+		VisibleRows.Missing visible = params.visibleRows() && params.measured() && map.surface() && map.env().outdoor()
+				? VisibleRows.check(map, open, params.maxUnit()) : null;
 		return new MapShapes(map.id(), open.keys(), closed, open.blocks(), open.shapeMask(), open.floor(), open.decor(), open.units(), overlay,
-				open.templates(), open.wallTile(), open.ceiling(), open.hung(), open.hungMask(), open.hungLeaves(), curtain, apron);
+				open.templates(), open.wallTile(), open.ceiling(), open.hung(), open.hungMask(), open.hungLeaves(), curtain, apron, visible);
 	}
 
 	/**
@@ -671,8 +688,9 @@ public final class ShapePlanner {
 				solid[i] &= box[i] == null;
 			}
 		}
-		Columns columns = measured(map, atlas, params, solid);
 		boolean cells = sceneAtlas != null && map.perCell() == ShapeTable.UNIT_CELL;
+		Columns columns = measured(map, atlas, params, solid, sceneAtlas == null ? null : Structures.foliage(map, sceneAtlas),
+				params.tierB() && cells ? FittedShapes.fittedTiles(map) : null);
 		int[] floor = filled(columns.blocks().length, -1);
 		int[] decor = new int[columns.blocks().length];
 		List<Units.Cell> units = new ArrayList<>();
@@ -735,9 +753,13 @@ public final class ShapePlanner {
 			Dressing.hang(map, dress, params);
 		}
 		int n = columns.blocks().length;
+		boolean[] modelled = held.clone();
+		for (int i = 0; box != null && i < n; i++) {
+			modelled[i] |= box[i] != null;
+		}
 		return new Columns(columns.keys(), columns.blocks(), columns.shapeMask(), floor, decor, List.copyOf(units), columns.runs(), templates,
 				wallTile, ceiling, dress == null ? new ShapeKey[n][] : dress.hung(), dress == null ? new int[n] : dress.hungMask(),
-				dress == null ? new int[n] : dress.hungLeaves(), dress == null ? null : dress.curtain());
+				dress == null ? new int[n] : dress.hungLeaves(), dress == null ? null : dress.curtain(), modelled);
 	}
 
 	// ---- kb-shapes/1: today's classified heights, folded ----
@@ -803,10 +825,20 @@ public final class ShapePlanner {
 
 	/** {@link #measured} over the solid tiles {@code solid} (the profile's pinned units left out, P1). */
 	static Columns measured(SceneMap map, int atlas, ShapeParams params, boolean[] solid) {
+		return measured(map, atlas, params, solid, null, null);
+	}
+
+	/**
+	 * The same, {@code foliage} marking the tiles that draw foliage and {@code fitted} the tiles of cells holding a fitted
+	 * model (null: none), for the runs' reading (D9).
+	 */
+	static Columns measured(SceneMap map, int atlas, ShapeParams params, boolean[] solid, boolean @Nullable [] foliage,
+			boolean @Nullable [] fitted) {
 		int cols = map.artCols();
 		int rows = map.artRows();
 		int n = cols * rows;
-		List<Structures.MeasuredRun> runs = Structures.measured(map, solid, params.maxUnit(), params.minRepeatRows(), params.interiorWall());
+		List<Structures.MeasuredRun> runs = Structures.measured(map, solid, params.maxUnit(), params.minRepeatRows(), params.interiorWall(),
+				params.visibleRows(), foliage, fitted);
 		int[] blocks = new int[n];
 		int[] mask = new int[n];
 		// The block index of each column's roof, -1 for none: what the hips compare.

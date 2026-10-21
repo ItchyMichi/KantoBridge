@@ -10,9 +10,12 @@ import java.util.Map;
 /**
  * The probe of PD3 on an art source, the builder's own export (docs/specs/PROFILE_PLAN.md §5.4): a repeating cell is a
  * unit when {@link CellUnits#build} makes a hull or an object of it, exactly as each client will. Remembered per atlas,
- * tiles and context, so a tree wall asks once. Not thread-safe (the planner runs on one thread).
+ * tiles and context, so a tree wall asks once. And whether a tile is one flat black (D8's filler, {@link #blank}). Not
+ * thread-safe (the planner runs on one thread).
  */
 public final class ArtUnitProbe implements UnitProbe {
+	/** The shade of black in a tile's shades. */
+	private static final int BLACK = 3;
 	private final ArtSource art;
 	private final Map<String, Boolean> answers = new HashMap<>();
 
@@ -40,4 +43,19 @@ public final class ArtUnitProbe implements UnitProbe {
 		this.answers.put(key, answer);
 		return answer;
 	}
+
+	@Override
+	public boolean blank(String atlas, int tile) {
+		int[] shades = tile < 0 ? null : this.art.tileShades(atlas, tile);
+		if (shades == null) {
+			return false;
+		}
+		for (int shade : shades) {
+			if (shade != BLACK) {
+				return false;
+			}
+		}
+		return true;
+	}
+
 }

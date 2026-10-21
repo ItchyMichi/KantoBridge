@@ -323,6 +323,27 @@ public final class FittedShapes {
 		return out;
 	}
 
+	/** The art tiles of {@code map}'s cells that the table holds a model for (a unit's: not a columns entry). */
+	static boolean[] fittedTiles(dev.kantobridge.scene.SceneMap map) {
+		int cols = map.artCols();
+		int per = map.perCell();
+		boolean[] out = new boolean[cols * map.artRows()];
+		for (int cy = 0; cy < map.h(); cy++) {
+			for (int cx = 0; cx < map.w(); cx++) {
+				Entry entry = get(map.atlas(), Units.tiles(map, cx, cy));
+				if (entry == null || COLUMNS.equals(entry.cls())) {
+					continue;
+				}
+				for (int dy = 0; dy < per; dy++) {
+					for (int dx = 0; dx < per; dx++) {
+						out[(cy * per + dy) * cols + cx * per + dx] = true;
+					}
+				}
+			}
+		}
+		return out;
+	}
+
 	/** A cell's key: {@code <atlas>/<t0>-<t1>-<t2>-<t3>}. */
 	public static String key(String atlas, int[] tiles) {
 		StringBuilder out = new StringBuilder(atlas).append('/');

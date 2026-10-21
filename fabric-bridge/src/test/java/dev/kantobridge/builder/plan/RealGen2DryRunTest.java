@@ -31,7 +31,8 @@ class RealGen2DryRunTest {
 		long started = System.nanoTime();
 		// Johto is a region build at slot 2 with Gen 2's families (J7)
 		RegionBuild region = new RegionBuild("johto", 2, bundle.game(), new SlotMap.Range(0, SlotMap.familiesFor("gen2") - 1), null, "johto_");
-		WorldPlan plan = WorldPlanner.plan(bundle, new WorldPlanner.Options(null, 0, 0, -256, true), region);
+		WorldPlan plan = WorldPlanner.plan(bundle, new WorldPlanner.Options(null, 0, 0, dev.kantobridge.builder.TestData.MIN_BUILD_HEIGHT, true),
+				region);
 		JsonObject out = new JsonObject();
 		out.addProperty("game", bundle.game());
 		out.addProperty("plan_ms", (System.nanoTime() - started) / 1_000_000L);

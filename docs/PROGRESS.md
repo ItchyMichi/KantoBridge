@@ -1059,7 +1059,7 @@ for the rest" (plan §8). Feature tests per phase, the full suite at the checkpo
 | W3 | Links by kind, pilots | **core done** (note 4); videos with W4's pilots | 2026-10-21 | `W3: real ladders and holes in Johto and Hoenn` |
 | W4 | Raised ground in caves | **done** (notes 5, 7): Emerald from its elevations, Crystal from its walls and drawn stairs; pictures with W8 | 2026-10-21 | `W4: raised ground in Emerald's caves`, `W4: raised ground in Crystal's caves` |
 | W5 | Interiors: depth, headroom, the deeper world | **done** (notes 6, 8); pictures with W8 | 2026-10-21 | `W5: rooms as tall as their drawing, a deeper world`, `W5: raised floors in rooms on layers` |
-| W6 | Outdoors | | | |
+| W6 | Outdoors | D9 done (note 9): faces to their visible rows, the visible-layers check; fitted-model faces wait for your call; levels, ledges, stairs, bridges next | 2026-10-21 | `W6: faces to their visible rows (D9)` |
 | W7 | Blue's audit built | | | |
 | W8 | Every region rebuilt | | | |
 
@@ -1194,6 +1194,39 @@ for the rest" (plan §8). Feature tests per phase, the full suite at the checkpo
    blocks of room each, the most a layer holds), 9 rooms of one height, 318 of one elevation. Crystal's and Kanto's rooms
    have no data for it (their raised rooms are W7's list and the drawing labels). Emerald's Safari Zone and Sootopolis are
    outdoor maps under the sky: W6.
+
+9. **W6, every visible layer built (D9).** Shape planner `kb-shapes/12` (`ShapeParams.h9`, `visibleRows`; the screen's
+   rows from the scene: 8 for Gen 1 and 2, 9 for Gen 3):
+   - A face stands as tall as drawn up to the screen's rows (the cap was 6); a door's column holds the door's 2 rows and
+     the face over it (before, the region's vote: often 2 blocks, the door and nothing above it).
+   - A cliff body under its rim and a facade under its roof (read as repeats before: 2 blocks or the region's vote) are
+     faces; a tree line under its crowns stays rows of 2-row trees when its repeating body is all foliage (Emerald and
+     Crystal hint only their border tiles as foliage, so the body, not the whole run, decides: 1,806 rimmed tree lines
+     kept in Emerald). The region vote counts units at most 6, as before, so the runs D9 leaves alone stand as they stood
+     (lifting the cap had changed some regions' votes and handed 2,253 Hoenn cells fitted models by accident).
+   - Fitted models stay in use. A run with a cell holding a fitted model it uses (no roof before) stands as it stood:
+     raising it would roof it and drop the model (about 11% of the fitted cells, 2,071 / 3,268 / 5,757). The exception
+     is a cave mouth or wall exit, the model on the cell over a door: the face folds no door and rises past the model,
+     roofless (your Battle Frontier mouth: the rock goes on above the arch).
+   - **The check** (`VisibleRows`, in the shape planner; the build's `visible_rows_missing` note per map; the dry runs'
+     `heights.visible_rows`): every floor cell of an outdoor map (a door's own cell is no viewpoint: stepping on it takes
+     you in), its chain run by run up to the screen's rows after a door's 2, each run needing its visible rows (rows of
+     separate things 2) and something built showing them: a run's column from its origin up (a roof block its roof
+     rows), a unit among separate things its own cell's rows and in a face from the face's origin, a model of its own (a
+     fitted building, a hull) its rows, a fitted model over a door the doorway.
+   - **Real dry runs:** today's rules (Tier A alone) leave 328 columns short on 23 Kanto maps, 822 on 44 Johto maps and
+     3,081 on all 49 Hoenn maps. With D9 every face is built except those drawn as several fitted cells, each its own
+     2-block model on the ground (`model`): 800 columns on 19 Kanto maps (Routes 9, 10, 4, 25, 8, 23 most), 1,059 on 51
+     Johto maps (Route 41, Route 26, Blackthorn), 621 on 27 Hoenn maps (Route 127, Ever Grande, Route 119), cave mouths
+     drawn as two fitted cells among them (the top cell's model stands behind the arch's). Units against W5: Kanto and
+     Johto unchanged, Hoenn 6 hint and 10 probe units fewer at Route 112's and Lavaridge's raised doors.
+   - Tests: `VisibleRowsTest` (a door under rock, a ten-row face, a rimmed cliff and the same drawing as a tree line, a
+     fitted model at a cliff's foot, a cave mouth's model with rock over it, a tree line behind a house and a fitted
+     building over it); the three synthetic shape goldens regenerated (`kb-shapes/12`, the town's door block 4 high);
+     JUnit 1,376, GameTests 126, pytest 2,256, all green.
+   - **Open (yours):** faces drawn as fitted cells. Each cell's model stands 2 blocks on the ground, so a 3-cell cliff of
+     fitted rock shows 2 blocks where the game draws 6. Choices: stack the models up the face (every model kept, every row
+     built; new work), flat Tier A faces (as tall as drawn, those cells lose their models), or as they are.
 
 ## Wild Routes
 

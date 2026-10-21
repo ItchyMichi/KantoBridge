@@ -40,7 +40,8 @@ class RealWorldDryRunTest {
 		// every cave in 3D (the build's default since H7), or with -Pkb.caves3d=pilot the pilot's only (H6's world)
 		boolean pilot = "pilot".equals(System.getProperty("kb.caves3d"));
 		long started = System.nanoTime();
-		WorldPlan plan = WorldPlanner.plan(bundle, new WorldPlanner.Options(null, 0, 0, -256, true, pilot ? Caves3d.PILOT : Caves3d.EVERY));
+		WorldPlan plan = WorldPlanner.plan(bundle, new WorldPlanner.Options(null, 0, 0, dev.kantobridge.builder.TestData.MIN_BUILD_HEIGHT, true,
+				pilot ? Caves3d.PILOT : Caves3d.EVERY));
 		JsonObject out = new JsonObject();
 		out.addProperty("caves3d", pilot ? "pilot" : Caves3d.ALL);
 		out.addProperty("plan_ms", (System.nanoTime() - started) / 1_000_000L);

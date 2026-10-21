@@ -291,6 +291,21 @@ floors still stack by their own tallest rooms (`CavePlanner.rankFeet`).
 - Survey of today's build (Tier A only, fitted buildings not counted): outdoor faces short of rows on 35 of 36 Kanto
   maps (998 of 2,877 face cells), 63 of 66 Johto maps (1,980 of 5,424) and all 49 Hoenn maps (3,385 of 9,221); doors
   with rows lost above them: 43, 47 and 83.
+- **As built (W6, 2026-10-21; `kb-shapes/12`, `Structures`, `VisibleRows`):**
+  - The rows belong to the things standing one behind the other (a house, the trees behind it): the check walks each
+    floor column's chain run by run, each showing the rows the screen leaves it, rather than the whole chain against
+    the front column (the survey's measure, which counts a house in front of trees as short).
+  - What shows a row: a run's column its rows from its fold origin up (a roof block its roof rows); a unit (a tree, a
+    hand model) among rows of separate things its own cell's rows, in a face its height from the face's origin; a model
+    of its own (a fitted building, a hull) its rows at its own scale; a fitted model over a door is the doorway. A door's
+    own cell is no viewpoint (stepping on it takes you in).
+  - A cliff body under its rim and a facade under its roof are faces; a tree line under its crowns (its repeating body
+    all foliage) stays rows of separate trees. The region vote counts as before (units at most 6), so the runs D9 leaves
+    alone stand as they stood.
+  - Fitted models stay in use: a run with a cell holding a fitted model it uses (no roof before) stands as it stood,
+    except under a cave mouth or wall exit (the model on the cell over a door): no fold, the face rises past the model,
+    roofless. What is left short is faces drawn as several fitted cells, each its own 2-block model at ground level
+    (`model` in the report): the user's call (PROGRESS W6 note 9).
 
 ## 5. Viability (the survey, 2026-10-20)
 

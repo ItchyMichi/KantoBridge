@@ -123,7 +123,7 @@ public final class KeyIndex {
 			sprites.put(id, bundle.sprite(id).frames());
 		}
 		ArtSource art = FrontEnds.artSource(bundle);
-		ShapePlan plan = ShapePlanner.plan(scene, List.of(), ShapeParams.current(), Occupancy.NONE, new ArtUnitProbe(art));
+		ShapePlan plan = ShapePlanner.plan(scene, List.of(), ShapeParams.forScene(scene), Occupancy.NONE, new ArtUnitProbe(art));
 		ShapeTable table = ShapeTable.build(plan.index(), art);
 		Map<String, ShapePlan.CellUse> cellUses = plan.cellUses();
 		Map<String, Cell> cells = new TreeMap<>();

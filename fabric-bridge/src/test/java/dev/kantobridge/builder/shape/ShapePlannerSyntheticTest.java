@@ -45,7 +45,7 @@ class ShapePlannerSyntheticTest {
 		golden.addProperty("mapHash", shapes.map().hash());
 		golden.addProperty("shapedBlocks", shapes.shapedBlocks());
 		TestData.assertGolden(TestData.goldenShapes(), ProtoJson.write(golden), "shapes");
-		assertEquals("kb-shapes/11", shapes.index().planner());
+		assertEquals("kb-shapes/12", shapes.index().planner());
 		assertEquals(2, shapes.keysByKind().get(ShapeKey.Kind.TUFT), "the grass and the flower");
 		assertEquals(9 * 8, shapes.keysByKind().get(ShapeKey.Kind.CELL), "nine units of eight blocks: the tree wall (with and without walkable "
 				+ "ground south), the town's post, the cut tree, the hill's sign, the hill's round tree (the synthetic profile pins it), "
@@ -54,9 +54,9 @@ class ShapePlannerSyntheticTest {
 		// P2: the hill's house is the synthetic profile's band building; the town's door block stays a V7 template; P3: the
 		// house's counter row is its desk.
 		assertEquals(3, shapes.index().templates().size());
-		assertEquals(60 * 7 + 4 * 7 + 8 * 7 + 4 * 2 + 8 * 3, shapes.keysByKind().get(ShapeKey.Kind.TMPL), "a key per block: the band house's "
-				+ "60 solid columns, its 4 doorway columns and 8 eave columns, all 7 high (P2); the town's door block's 4 of 2; the desk's 8, "
-				+ "3 high under the ceiling (P3)");
+		assertEquals(60 * 7 + 4 * 7 + 8 * 7 + 4 * 4 + 8 * 3, shapes.keysByKind().get(ShapeKey.Kind.TMPL), "a key per block: the band house's "
+				+ "60 solid columns, its 4 doorway columns and 8 eave columns, all 7 high (P2); the town's door block's 4 of 4 (D9: the door's 2 "
+				+ "rows and the block's 2 over it); the desk's 8, 3 high under the ceiling (P3)");
 		assertTrue(shapes.keysByKind().get(ShapeKey.Kind.BOX) > 0, "P3's class boxes: the hill's cliff mound and fence line");
 		assertEquals(null, shapes.keysByKind().get(ShapeKey.Kind.ROOF));
 		assertTrue(shapes.index().geoms().stream().anyMatch(k -> k.tint() == 2), "the house's ceiling, darkened (V7)");

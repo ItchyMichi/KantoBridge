@@ -105,8 +105,8 @@ public final class PackTemplateWriter {
 		if (front != null) {
 			Scene scene = front.describe(bundle);
 			ArtSource art = FrontEnds.artSource(bundle);
-			ShapeTable table = ShapeTable.build(ShapePlanner.plan(scene, List.of(), ShapeParams.current(), Occupancy.NONE, new ArtUnitProbe(art))
-					.index(), art);
+			ShapeTable table = ShapeTable.build(
+					ShapePlanner.plan(scene, List.of(), ShapeParams.forScene(scene), Occupancy.NONE, new ArtUnitProbe(art)).index(), art);
 			for (Map.Entry<String, CellUnits.Unit> e : table.units().entrySet()) {
 				VoxelGrid voxels = e.getValue().voxels();
 				if (voxels == null) {

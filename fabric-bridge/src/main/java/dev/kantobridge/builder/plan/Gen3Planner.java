@@ -176,6 +176,7 @@ final class Gen3Planner {
 		// and their ceilings (D5), so their floors stack as far apart as their tallest rooms need.
 		java.util.function.Predicate<String> caveBiome = id -> G3Cells.cave(all.get(id)) || wildMaps.contains(id);
 		dev.kantobridge.scene.ArtSource artSource = FrontEnds.artSource(bundle);
+		ArtUnitProbe probe = new ArtUnitProbe(artSource);
 		Map<String, MapLayout> raised = new HashMap<>();
 		Map<String, Integer> heights = new HashMap<>();
 		for (String id : area3d) {
@@ -188,7 +189,7 @@ final class Gen3Planner {
 				warnings.note("cave_raised_cells", levels.raisedCells());
 				warnings.note("cave_ramps", levels.layout().ramps().size());
 			}
-			int[] ceilings = Headroom.ceilings(model, levels.layout(), Headroom.blackFiller(model, artSource, (cx, cy) -> !map.inMap(cx, cy)),
+			int[] ceilings = Headroom.ceilings(model, levels.layout(), Headroom.blackFiller(model, probe, (cx, cy) -> !map.inMap(cx, cy)),
 					Headroom.screenRows(true), caveBiome.test(id));
 			heights.put(id, java.util.Arrays.stream(ceilings).max().orElse(Headroom.MIN));
 		}
@@ -262,7 +263,7 @@ final class Gen3Planner {
 				warnings.note("room_levels_" + levels.outcome(), Warnings.symbols("map", map.id()));
 				rooms = levels.layout();
 			}
-			rooms = WorldPlanner.withCeilings(placement, model, rooms, Headroom.blackFiller(model, artSource, (cx, cy) -> !map.inMap(cx, cy)),
+			rooms = WorldPlanner.withCeilings(placement, model, rooms, Headroom.blackFiller(model, probe, (cx, cy) -> !map.inMap(cx, cy)),
 					Headroom.screenRows(true), !area3d.contains(map.id()), warnings);
 			if (rooms != null) {
 				mapLayouts.put(map.id(), rooms);
@@ -315,12 +316,13 @@ final class Gen3Planner {
 				warnings.note("shapes_no_front_end");
 			} else {
 				scene = frontEnd.describe(bundle);
-				shapes = ShapePlanner.plan(scene, placements.values(), ShapeParams.current(),
-						WorldPlanner.occupancy(placed, storyIndex, storyCells, surfaceBox, fill.owner(), fill.voidCells()), new ArtUnitProbe(artSource),
-						mapLayouts, shafts, Headroom.rooms(scene, artSource, Headroom.screenRows(true)))
+				shapes = ShapePlanner.plan(scene, placements.values(), ShapeParams.forScene(scene),
+						WorldPlanner.occupancy(placed, storyIndex, storyCells, surfaceBox, fill.owner(), fill.voidCells()), probe,
+						mapLayouts, shafts)
 						.withIndexHash(index.hash());
 			}
 		}
+		WorldPlanner.noteVisibleRows(shapes, warnings);
 		return new WorldPlan(bundle.game(), bundle.exportHash(), options.originX(), options.originZ(), placed, surfaceBox, fill.owner(),
 				fill.voidCells(), storyCells, storyIndex, art, spawn, index, pools, warnings, mapsRequested, unplaced, seams[0], seams[1], scene, shapes,
 				caveArea.area(), region);

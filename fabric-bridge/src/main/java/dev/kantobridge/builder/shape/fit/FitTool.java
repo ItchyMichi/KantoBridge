@@ -6,9 +6,7 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import dev.kantobridge.builder.export.ExportBundle;
-import dev.kantobridge.builder.shape.ArtUnitProbe;
 import dev.kantobridge.builder.shape.FittedShapes;
-import dev.kantobridge.builder.shape.Occupancy;
 import dev.kantobridge.builder.shape.ShapeParams;
 import dev.kantobridge.builder.shape.ShapePlan;
 import dev.kantobridge.builder.shape.ShapePlanner;
@@ -117,7 +115,7 @@ public final class FitTool {
 			throw new IllegalArgumentException("no front end for " + bundle.game());
 		}
 		ArtSource art = FrontEnds.artSource(bundle);
-		ShapePlan plan = ShapePlanner.plan(front.describe(bundle), List.of(), ShapeParams.current(), Occupancy.NONE, new ArtUnitProbe(art));
+		ShapePlan plan = whole(front.describe(bundle), art);
 		ShapeTable table = ShapeTable.build(plan.index(), art);
 		Map<String, Templates.Entry> entries = ShapeTable.entries(plan.index());
 		List<Planned> units = new ArrayList<>();
@@ -169,7 +167,7 @@ public final class FitTool {
 		FittedShapes.collectWhy(why);
 		ShapePlan plan;
 		try {
-			plan = ShapePlanner.plan(scene, List.of(), ShapeParams.current(), Occupancy.NONE, new ArtUnitProbe(FrontEnds.artSource(bundle)));
+			plan = whole(scene, FrontEnds.artSource(bundle));
 		} finally {
 			FittedShapes.collectWhy(null);
 		}
@@ -198,7 +196,7 @@ public final class FitTool {
 		Map<String, int[]> skipped = new java.util.concurrent.ConcurrentHashMap<>();
 		FittedShapes.collectSkipped(skipped);
 		try {
-			ShapePlanner.plan(front.describe(bundle), List.of(), ShapeParams.current(), Occupancy.NONE, new ArtUnitProbe(art));
+			whole(front.describe(bundle), art);
 		} finally {
 			FittedShapes.collectSkipped(null);
 		}
@@ -262,7 +260,7 @@ public final class FitTool {
 		FittedShapes.collectWhy(why);
 		ShapePlan plan;
 		try {
-			plan = ShapePlanner.plan(scene, List.of(), ShapeParams.current(), Occupancy.NONE, new ArtUnitProbe(FrontEnds.artSource(bundle)));
+			plan = whole(scene, FrontEnds.artSource(bundle));
 		} finally {
 			FittedShapes.collectWhy(null);
 		}
@@ -281,7 +279,7 @@ public final class FitTool {
 		// the tables on: cells only the table makes units (packed, raised) are located too
 		
 		dev.kantobridge.scene.Scene scene = front.describe(bundle);
-		ShapePlan plan = ShapePlanner.plan(scene, List.of(), ShapeParams.current(), Occupancy.NONE, new ArtUnitProbe(FrontEnds.artSource(bundle)));
+		ShapePlan plan = whole(scene, FrontEnds.artSource(bundle));
 		JsonObject root = new JsonObject();
 		dev.kantobridge.builder.shape.UnitLocations.locate(scene, plan, null).forEach(root::add);
 		Files.createDirectories(out.toAbsolutePath().getParent());
@@ -356,7 +354,7 @@ public final class FitTool {
 			throw new IllegalArgumentException("no front end for " + bundle.game());
 		}
 		ArtSource art = FrontEnds.artSource(bundle);
-		ShapePlan plan = ShapePlanner.plan(front.describe(bundle), List.of(), ShapeParams.current(), Occupancy.NONE, new ArtUnitProbe(art));
+		ShapePlan plan = whole(front.describe(bundle), art);
 		ShapeTable table = ShapeTable.build(plan.index(), art);
 		Map<String, Templates.Entry> entries = ShapeTable.entries(plan.index());
 		JsonArray rows = new JsonArray();
@@ -398,8 +396,7 @@ public final class FitTool {
 			throw new IllegalArgumentException("no front end for " + bundle.game());
 		}
 		FittedShapes.setEnabled(true);
-		ShapePlan plan = ShapePlanner.plan(front.describe(bundle), List.of(), ShapeParams.current(), Occupancy.NONE,
-				new ArtUnitProbe(FrontEnds.artSource(bundle)));
+		ShapePlan plan = whole(front.describe(bundle), FrontEnds.artSource(bundle));
 		System.out.println("applied: " + bundle.game() + " " + plan.unitTally());
 		// What the units became with this art: a voxel shape over the quad budget falls back to the other builders.
 		Map<String, Integer> kinds = new TreeMap<>();
@@ -666,5 +663,11 @@ public final class FitTool {
 
 	static double round(double value) {
 		return Math.round(value * 1000) / 1000.0;
+	}
+
+	/** The whole export's shapes as a build plans them: its family's parameters, no map placed. */
+	private static ShapePlan whole(dev.kantobridge.scene.Scene scene, dev.kantobridge.scene.ArtSource art) {
+		return ShapePlanner.plan(scene, List.of(), ShapeParams.forScene(scene), dev.kantobridge.builder.shape.Occupancy.NONE,
+				new dev.kantobridge.builder.shape.ArtUnitProbe(art));
 	}
 }

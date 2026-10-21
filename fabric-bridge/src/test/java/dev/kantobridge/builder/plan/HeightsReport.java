@@ -7,9 +7,9 @@ import java.util.Map;
 import java.util.TreeMap;
 
 /**
- * The heights a plan built (docs/specs/HEIGHTS_ALL_GAMES_PLAN.md W4, W5), for the real dry runs' reports: counts only.
+ * The heights a plan built (docs/specs/HEIGHTS_ALL_GAMES_PLAN.md W4, W5, W6), for the real dry runs' reports: counts only.
  * Rooms on the interior layers by their ceiling, the 3D area's maps by their room over the floor, the deepest layer and
- * floors, and the maps raised.
+ * floors, the maps raised, and the visible-layers check's findings (D9) with the shape planner's units.
  */
 final class HeightsReport {
 	private HeightsReport() {
@@ -83,6 +83,36 @@ final class HeightsReport {
 		JsonObject high = new JsonObject();
 		tallest.entrySet().stream().sorted((x, y) -> y.getValue() - x.getValue()).limit(12).forEach(e -> high.addProperty(e.getKey(), e.getValue()));
 		out.add("raised_highest", high);
+		// the visible-layers check (D9): outdoor maps whose faces are short, the columns and rows they lack, every such map
+		if (plan.shapes() != null) {
+			int maps = 0;
+			int columns = 0;
+			int rows = 0;
+			JsonObject shortMaps = new JsonObject();
+			Map<String, Integer> kinds = new TreeMap<>();
+			for (var e : plan.shapes().visibleRowsMissing().entrySet()) {
+				maps++;
+				columns += e.getValue().columns();
+				rows += e.getValue().rows();
+				e.getValue().kinds().forEach((k, v) -> kinds.merge(k, v, Integer::sum));
+			}
+			plan.shapes().visibleRowsMissing().entrySet().stream().sorted((x, y) -> y.getValue().columns() - x.getValue().columns())
+					.forEach(e -> shortMaps.addProperty(e.getKey(), e.getValue().columns() + " columns, " + e.getValue().rows() + " rows, worst "
+							+ e.getValue().worst() + ", " + e.getValue().kinds() + ", first at " + e.getValue().first()));
+			JsonObject visible = new JsonObject();
+			visible.addProperty("maps_short", maps);
+			visible.addProperty("columns_short", columns);
+			visible.addProperty("rows_short", rows);
+			JsonObject byKind = new JsonObject();
+			kinds.forEach(byKind::addProperty);
+			visible.add("columns_short_by_kind", byKind);
+			visible.add("short_maps", shortMaps);
+			out.add("visible_rows", visible);
+			// the shape planner's units by why each is one (a fitted model, a hint, a probe...): what D9 must leave in use
+			JsonObject units = new JsonObject();
+			new TreeMap<>(plan.shapes().unitTally()).forEach(units::addProperty);
+			out.add("unit_tally", units);
+		}
 		return out;
 	}
 

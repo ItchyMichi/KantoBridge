@@ -26,6 +26,7 @@ public final class ShapePlan {
 	private final Map<Integer, VoidUnit> voidUnits;
 	private final Map<String, Closed> closedColumns;
 	private final Map<String, Integer> unitTally;
+	private final Map<String, VisibleRows.Missing> visibleRowsMissing;
 
 	/**
 	 * A tile story cell's closed columns (V5): per column of the cell (north-west, north-east, south-west, south-east)
@@ -57,6 +58,13 @@ public final class ShapePlan {
 	ShapePlan(ShapeParams params, ShapeIndex index, ShapeMap map, Map<String, ShapePlanner.MapShapes> maps, Map<ShapeKey.Kind, Integer> keysByKind,
 			long shapedBlocks, long planMs, long decorSkipped, Occupancy.@Nullable VoidFill voidFill, Map<Integer, VoidUnit> voidUnits,
 			Map<String, Closed> closedColumns, Map<String, Integer> unitTally) {
+		this(params, index, map, maps, keysByKind, shapedBlocks, planMs, decorSkipped, voidFill, voidUnits, closedColumns, unitTally, Map.of());
+	}
+
+	ShapePlan(ShapeParams params, ShapeIndex index, ShapeMap map, Map<String, ShapePlanner.MapShapes> maps, Map<ShapeKey.Kind, Integer> keysByKind,
+			long shapedBlocks, long planMs, long decorSkipped, Occupancy.@Nullable VoidFill voidFill, Map<Integer, VoidUnit> voidUnits,
+			Map<String, Closed> closedColumns, Map<String, Integer> unitTally, Map<String, VisibleRows.Missing> visibleRowsMissing) {
+		this.visibleRowsMissing = Collections.unmodifiableMap(new TreeMap<>(visibleRowsMissing));
 		this.closedColumns = Collections.unmodifiableMap(new TreeMap<>(closedColumns));
 		this.unitTally = Collections.unmodifiableMap(new TreeMap<>(unitTally));
 		this.decorSkipped = decorSkipped;
@@ -96,7 +104,16 @@ public final class ShapePlan {
 	/** The same plan with its shape map bound to the WorldIndex whose text hashes to {@code indexHash}. */
 	public ShapePlan withIndexHash(String indexHash) {
 		return new ShapePlan(this.params, this.index, this.map.withHeader(indexHash, this.index.hash()), this.maps, this.keysByKind,
-				this.shapedBlocks, this.planMs, this.decorSkipped, this.voidFill, this.voidUnits, this.closedColumns, this.unitTally);
+				this.shapedBlocks, this.planMs, this.decorSkipped, this.voidFill, this.voidUnits, this.closedColumns, this.unitTally,
+				this.visibleRowsMissing);
+	}
+
+	/**
+	 * The visible-layers check (docs/specs/HEIGHTS_ALL_GAMES_PLAN.md D9): per outdoor map whose faces the plan built shorter
+	 * than the hidden game draws them, what it lacks (from H9; empty before).
+	 */
+	public Map<String, VisibleRows.Missing> visibleRowsMissing() {
+		return this.visibleRowsMissing;
 	}
 
 	/**

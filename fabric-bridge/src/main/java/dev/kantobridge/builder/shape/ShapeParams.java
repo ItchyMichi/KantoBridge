@@ -32,10 +32,13 @@ import java.util.Objects;
  * @param canopy        Viridian Forest's canopy and vines (docs/specs/CAVES_AND_WOODS_PLAN.md §5.2-§5.3; from CW2)
  * @param apron         the forest's apron past its edge, in vanilla logs and leaves (docs/specs/CAVES_AND_WOODS_PLAN.md
  *                      §5.4; from CW3)
+ * @param visibleRows   faces as tall as the classic screen shows them (docs/specs/HEIGHTS_ALL_GAMES_PLAN.md D9; from H9):
+ *                      {@code maxUnit} is its rows, a door's column holds the door's own rows and every row over it, a
+ *                      cliff under its rim is a face, fitted models in use stay in use ({@link Structures})
  */
 public record ShapeParams(String planner, String heights, int maxUnit, int minRepeatRows, int hullRing, int interiorWall, boolean tierB,
 		boolean tierC, int roofRise, int ledgeLip, boolean storyArt, boolean dressing, int templateMax, boolean profileUnits,
-		boolean profileBuildings, boolean profileBoxes, boolean caveRock, boolean canopy, boolean apron) {
+		boolean profileBuildings, boolean profileBoxes, boolean caveRock, boolean canopy, boolean apron, boolean visibleRows) {
 	public static final String CLASSIFIED = "classified";
 	public static final String MEASURED = "measured";
 
@@ -56,6 +59,14 @@ public record ShapeParams(String planner, String heights, int maxUnit, int minRe
 		if (apron && !canopy) {
 			throw new IllegalArgumentException("an apron needs the canopy");
 		}
+	}
+
+	/** Parameters before H9 (faces capped at {@code maxUnit}, a door's column the building's height). */
+	public ShapeParams(String planner, String heights, int maxUnit, int minRepeatRows, int hullRing, int interiorWall, boolean tierB,
+			boolean tierC, int roofRise, int ledgeLip, boolean storyArt, boolean dressing, int templateMax, boolean profileUnits,
+			boolean profileBuildings, boolean profileBoxes, boolean caveRock, boolean canopy, boolean apron) {
+		this(planner, heights, maxUnit, minRepeatRows, hullRing, interiorWall, tierB, tierC, roofRise, ledgeLip, storyArt, dressing, templateMax,
+				profileUnits, profileBuildings, profileBoxes, caveRock, canopy, apron, false);
 	}
 
 	/** Parameters before CW3 (no apron). */
@@ -191,9 +202,28 @@ public record ShapeParams(String planner, String heights, int maxUnit, int minRe
 				true, true, 16, 4, true, true, TEMPLATE_MAX, true, true, true, true, true, true);
 	}
 
-	/** The parameters a build plans with. */
+	/**
+	 * H9: CW3's planner plus faces as tall as the classic screen shows them (docs/specs/HEIGHTS_ALL_GAMES_PLAN.md D9): runs up
+	 * to {@code screenRows} (Gen 1 and 2 eight, Gen 3 nine), a door's column its two rows and every row over it.
+	 */
+	public static ShapeParams h9(int screenRows) {
+		return new ShapeParams("kb-shapes/12", MEASURED, screenRows, HeightRules.MIN_REPEAT_ROWS, 2, HeightRules.INTERIOR_WALL,
+				true, true, 16, 4, true, true, TEMPLATE_MAX, true, true, true, true, true, true, true);
+	}
+
+	/** The parameters a build plans with: Gen 1's and 2's screen. */
 	public static ShapeParams current() {
-		return cw3();
+		return h9(8);
+	}
+
+	/** The parameters a build of a family plans with: its screen's rows (Gen 3 shows one more). */
+	public static ShapeParams current(boolean gen3) {
+		return h9(gen3 ? 9 : 8);
+	}
+
+	/** The parameters a scene's builds plan with (its family's screen). */
+	public static ShapeParams forScene(dev.kantobridge.scene.Scene scene) {
+		return current("gen3".equals(scene.family()));
 	}
 
 	/** The parameters as they appear in the shape index. */
@@ -235,6 +265,9 @@ public record ShapeParams(String planner, String heights, int maxUnit, int minRe
 		}
 		if (this.canopy) {
 			out.addProperty("canopy", true);
+		}
+		if (this.visibleRows) {
+			out.addProperty("visibleRows", true);
 		}
 		if (this.apron) {
 			out.addProperty("apron", true);

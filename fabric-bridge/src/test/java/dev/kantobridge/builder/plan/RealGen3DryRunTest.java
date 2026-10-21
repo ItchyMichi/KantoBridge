@@ -31,7 +31,8 @@ class RealGen3DryRunTest {
 		long started = System.nanoTime();
 		// A Gen 3 world is a region build: Hoenn's art takes 80 families (E7), more than a legacy world's 16.
 		RegionBuild region = new RegionBuild("hoenn", 1, bundle.game(), new SlotMap.Range(0, SlotMap.familiesFor("gen3") - 1), null, "hoenn_");
-		WorldPlan plan = WorldPlanner.plan(bundle, new WorldPlanner.Options(null, 0, 0, -256, true), region);
+		WorldPlan plan = WorldPlanner.plan(bundle, new WorldPlanner.Options(null, 0, 0, dev.kantobridge.builder.TestData.MIN_BUILD_HEIGHT, true),
+				region);
 		JsonObject out = new JsonObject();
 		out.addProperty("game", bundle.game());
 		out.addProperty("plan_ms", (System.nanoTime() - started) / 1_000_000L);
