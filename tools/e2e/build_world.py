@@ -236,12 +236,15 @@ def region_args(region, slot):
     return [f"-Pkb.buildRegion={region}", f"-Pkb.buildSlot={slot}"]
 
 
-def build(bundle, maps, world, timeout=3600, region=None, slot=None, heap=None, landscape_models=None):
+def build(bundle, maps, world, timeout=3600, region=None, slot=None, heap=None, landscape_models=None, outdoor_levels=None):
     """Steps 4-5. With region and slot (MG3) the build is a region build; heap (MG7 G3G: "8g") sizes the server's;
-    landscape_models (a table, docs/specs/LANDSCAPE_MODELS.md) builds the landscape sections' models."""
+    landscape_models (a table, docs/specs/LANDSCAPE_MODELS.md) builds the landscape sections' models; outdoor_levels (map ids,
+    comma-separated) stands those outdoor maps on raised ground (HEIGHTS_ALL_GAMES_PLAN.md D4, the levels pilot)."""
     extra = region_args(region, slot)
     if landscape_models is not None:
         extra.append(f"-Pkb.landscapeModels={Path(landscape_models).resolve()}")
+    if outdoor_levels:
+        extra.append(f"-Pkb.outdoorLevels={outdoor_levels}")
     if heap is not None:
         if not re.fullmatch(r"[0-9]+[mMgG]", heap):
             raise ValueError("--heap must look like 8g or 6144m")
@@ -441,6 +444,7 @@ def main(argv=None):
     parser.add_argument("--slot", type=int, default=None, help=f"MG3: the region table slot, 0..{MAX_SLOT} (with --region)")
     parser.add_argument("--heap", default=None, help="MG7: the server's heap, e.g. 8g (a full Hoenn needs more than the default)")
     parser.add_argument("--landscape-models", default=None, help="the landscape sections' models: a table (models_table.py)")
+    parser.add_argument("--outdoor-levels", default=None, help="outdoor maps on raised ground (the levels pilot): map ids")
     args = parser.parse_args(argv)
 
     maps = [] if args.maps == "all" else MAP_SETS.get(args.maps) or args.maps.split(",")
@@ -462,7 +466,8 @@ def main(argv=None):
         bundle = export_bundle(game=args.game)
     where = f"saves/{args.world}" + (f" as region {args.region} (slot {args.slot})" if args.region is not None else "")
     print(f"== build ({len(maps) or 'all'} maps) into {where}")
-    code = build(bundle, maps, args.world, region=args.region, slot=args.slot, heap=args.heap, landscape_models=args.landscape_models)
+    code = build(bundle, maps, args.world, region=args.region, slot=args.slot, heap=args.heap, landscape_models=args.landscape_models,
+                 outdoor_levels=args.outdoor_levels)
     if not REPORT.exists():
         print(f"no build report (server exit {code})")
         return 1

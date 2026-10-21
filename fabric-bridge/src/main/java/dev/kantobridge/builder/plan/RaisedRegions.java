@@ -3,6 +3,7 @@ package dev.kantobridge.builder.plan;
 import dev.kantobridge.block.EdgeWallBlock;
 import dev.kantobridge.builder.export.CellFlags;
 import dev.kantobridge.builder.export.G3Map;
+import dev.kantobridge.builder.export.G3Tiles;
 import dev.kantobridge.world.Dir;
 import dev.kantobridge.world.MapLayout;
 import java.util.ArrayDeque;
@@ -46,6 +47,11 @@ import org.jetbrains.annotations.Nullable;
 public final class RaisedRegions {
 	/** Blocks a stair cell climbs: the two tile rows of the face cell it cuts through. */
 	public static final int STAIR_RISE = 2;
+	/**
+	 * The blocks a cell of stairs or of face climbs outdoors (HEIGHTS_ALL_GAMES_PLAN.md D4): the landscape models' scale, 1.5
+	 * blocks a tile row (LANDSCAPE_MODELS.md; the user's choice of 2026-10-21), so the ground behind a cliff meets its top.
+	 */
+	public static final int OUTDOOR_RISE = 3;
 	/** The longest run of solid cells, in cells, read as a face between two regions (a longer one is rock, not a face). */
 	static final int MAX_FACE = 3;
 	/** Emerald's elevation that joins any other. */
@@ -64,10 +70,14 @@ public final class RaisedRegions {
 	 * @param raisedCells floor cells above the map's floor level
 	 * @param stairs      its stairs (strips of ramps)
 	 * @param maxLevel    the highest floor or ramp top, in blocks over the map's floor level
+	 * @param skipped     outdoors: the rules skipped because they disagreed with those before them (a stair, a strip of
+	 *                    joining cells, a bank of water)
+	 * @param breaks      outdoors: a cell of each edge Minecraft can't walk as the engine does (where a rule was skipped)
 	 */
-	public record Result(@Nullable MapLayout layout, String outcome, int regions, int raisedCells, int stairs, int maxLevel) {
+	public record Result(@Nullable MapLayout layout, String outcome, int regions, int raisedCells, int stairs, int maxLevel, int skipped,
+			List<Integer> breaks) {
 		static Result flat(String reason, int regions) {
-			return new Result(null, reason, regions, 0, 0, 0);
+			return new Result(null, reason, regions, 0, 0, 0, 0, List.of());
 		}
 	}
 
@@ -78,7 +88,8 @@ public final class RaisedRegions {
 	 * @param joins     per cell: a floor cell that joins any level (Emerald's elevation 0); its key is -1
 	 * @param bridge    per cell: a floor cell that is two floors at once (Emerald's elevation 15); its key is -1
 	 * @param shore     the key water stands level with (the only one the engine lets a surfer step onto), -1 for any
-	 * @param climb     per cell, a stairs cell's way up as its drawing says (Crystal's), else null; its key is -1; or null
+	 * @param climb     per cell, a stairs cell's way up as its drawing says (Crystal's; outdoors the landscape marks' slopes),
+	 *                  else null; its key is -1; or null
 	 * @param walls     edges the engine closes between neighbouring cells (Crystal's one-way walls), or null
 	 * @param wallsRise a wall's south side stands {@link #STAIR_RISE} over its north side (a cave's plateau edges)
 	 * @param maxFace   the longest run of solid cells read as a face
@@ -87,12 +98,28 @@ public final class RaisedRegions {
 	 * @param room      a room's rules (D5: a house, a gym on a layer): a stair is cut through a wall (solid on both its sides);
 	 *                  cells joining two keys that are no such stair (a seat a room draws the player over) join them at
 	 *                  one height
+	 * @param rise      the blocks a cell of stairs or of face climbs: {@link #STAIR_RISE} underground, {@link #OUTDOOR_RISE}
+	 *                  outdoors (the landscape models' scale, the user's choice of 2026-10-21)
+	 * @param outdoor   outdoors (the levels pilot, HEIGHTS_ALL_GAMES_PLAN.md D4): a bridge's cells are its deck, at the level
+	 *                  of the floors its ends meet (until the two-floor cells of W6; else a bridge leaves the map flat); a
+	 *                  rule that disagrees with those before it is skipped and the edges it leaves are counted as breaks,
+	 *                  rather than leaving the map flat; the floor along the map's edge is the floor level. With
+	 *                  {@code climb} (the drawing's stairs marked) a strip of joining cells that is no marked stair keeps
+	 *                  one height where it can: the drawing decides, the data's elevations keep areas apart and join them
+	 * @param falls     per cell, a waterfall (Emerald's metatile behaviour), or null: water no body flows across, so the
+	 *                  river over it and the one under it stand at their own banks' heights; it stands at the one under it
 	 */
 	public record Input(MapModel model, int[] key, boolean[] joins, boolean[] bridge, int shore, Dir @Nullable [] climb, @Nullable PairEdges walls,
-			boolean wallsRise, int maxFace, boolean faceKeys, boolean room) {
+			boolean wallsRise, int maxFace, boolean faceKeys, boolean room, int rise, boolean outdoor, boolean @Nullable [] falls) {
 		/** Emerald's: elevations as keys, no walls of their own. */
 		public Input(MapModel model, int[] key, boolean[] joins, boolean[] bridge, int shore) {
 			this(model, key, joins, bridge, shore, null, null, false, MAX_FACE, true, false);
+		}
+
+		/** Underground: stairs and faces climb {@link #STAIR_RISE} a cell, a bridge leaves the map flat. */
+		public Input(MapModel model, int[] key, boolean[] joins, boolean[] bridge, int shore, Dir @Nullable [] climb, @Nullable PairEdges walls,
+				boolean wallsRise, int maxFace, boolean faceKeys, boolean room) {
+			this(model, key, joins, bridge, shore, climb, walls, wallsRise, maxFace, faceKeys, room, STAIR_RISE, false, null);
 		}
 	}
 
@@ -110,6 +137,12 @@ public final class RaisedRegions {
 	 * level (an escalator's cell keeps the elevation of the floor it leads to).
 	 */
 	public static Result gen3(MapModel model, G3Map map, boolean room) {
+		Input in = emerald(model, map, room);
+		return solve(in);
+	}
+
+	/** Emerald's cells as the solver reads them (see {@link #gen3(MapModel, G3Map, boolean)}). */
+	private static Input emerald(MapModel model, G3Map map, boolean room) {
 		int w = model.cellWidth();
 		int h = model.cellHeight();
 		if (w != map.w() || h != map.h()) {
@@ -142,7 +175,102 @@ public final class RaisedRegions {
 				joins[i] = true;
 			}
 		}
-		return solve(new Input(model, key, joins, bridge, G3_SHORE, null, null, false, room ? 0 : MAX_FACE, true, room));
+		return new Input(model, key, joins, bridge, G3_SHORE, null, null, false, room ? 0 : MAX_FACE, true, room);
+	}
+
+	/**
+	 * Emerald's raised ground outdoors (the levels pilot, HEIGHTS_ALL_GAMES_PLAN.md D3, D4): its elevations as for the 3D
+	 * area, a cell of stairs or of face climbing {@link #OUTDOOR_RISE} blocks, a bridge its deck; a map of one walkable
+	 * elevation takes its faces as steps instead.
+	 */
+	public static Result gen3Outdoor(MapModel model, G3Map map) {
+		return gen3Outdoor(model, map, null, null);
+	}
+
+	/** Emerald's waterfalls: the water cells whose metatile behaviour is a waterfall's. */
+	public static boolean[] gen3Falls(MapModel model, G3Map map, G3Tiles tiles) {
+		int w = model.cellWidth();
+		int h = model.cellHeight();
+		boolean[] out = new boolean[w * h];
+		for (int cy = 0; cy < h; cy++) {
+			for (int cx = 0; cx < w; cx++) {
+				if (model.kind(cx, cy) == MapModel.Kind.WATER && map.inGrid(cx, cy)) {
+					String behavior = tiles.behaviorName(map.mid(cx, cy));
+					out[cy * w + cx] = behavior != null && behavior.contains("WATERFALL");
+				}
+			}
+		}
+		return out;
+	}
+
+	/**
+	 * The same, and with {@code slopes} (per cell the way up of a slope or stairs the landscape marks name: the map's drawing
+	 * checked for them) the drawing decides, as the elevations are the engine's layers and not heights (Route 119's floor,
+	 * its sand slope's top and its plateau share one): the marked cells climb {@link #OUTDOOR_RISE} a cell, a strip of
+	 * elevation 0 no mark names keeps one height where it can, and the faces count between any two areas. {@code falls}
+	 * ({@link #gen3Falls}, or null) part a river's water.
+	 */
+	public static Result gen3Outdoor(MapModel model, G3Map map, Dir @Nullable [] slopes, boolean @Nullable [] falls) {
+		Input in = emerald(model, map, false);
+		if (slopes != null) {
+			int n = in.key().length;
+			if (slopes.length != n) {
+				throw new IllegalArgumentException("the slopes are not the map's");
+			}
+			int[] key = in.key().clone();
+			boolean[] joins = in.joins().clone();
+			Dir[] climb = new Dir[n];
+			for (int i = 0; i < n; i++) {
+				if (slopes[i] != null && (key[i] >= 0 || joins[i])) {
+					climb[i] = slopes[i];
+					key[i] = -1;
+					joins[i] = false;
+				}
+			}
+			return solve(new Input(model, key, joins, in.bridge(), G3_SHORE, climb, null, false, MAX_FACE, false, false, OUTDOOR_RISE, true,
+					falls));
+		}
+		Result data = solve(new Input(model, in.key(), in.joins(), in.bridge(), G3_SHORE, null, null, false, MAX_FACE, true, false, OUTDOOR_RISE,
+				true, falls));
+		if (!data.outcome().startsWith("flat_one")) {
+			return data;
+		}
+		// One walkable elevation: the drawing's faces are the steps, as for Crystal and Blue (ground enclosed behind a short
+		// face, an island's walkable pits, stands at the face's top)
+		return solve(new Input(model, in.key(), in.joins(), in.bridge(), G3_SHORE, null, null, false, MAX_FACE, false, false, OUTDOOR_RISE, true,
+				falls));
+	}
+
+	/**
+	 * Raised ground outdoors where the data has no heights (Crystal, Blue; the levels pilot): every floor cell one key,
+	 * {@code walls} (the engine's one-way edges, or null) keeping areas apart, and the faces between areas their steps, a
+	 * cell of face climbing {@link #OUTDOOR_RISE} blocks, so the ground behind a cliff stands at its top.
+	 */
+	public static Result outdoor(MapModel model, @Nullable PairEdges walls) {
+		return outdoor(model, walls, null);
+	}
+
+	/** The same, the cells {@code slopes} names (the landscape marks' slopes and stairs, per cell its way up) climbing. */
+	public static Result outdoor(MapModel model, @Nullable PairEdges walls, Dir @Nullable [] slopes) {
+		int w = model.cellWidth();
+		int h = model.cellHeight();
+		if (slopes != null && slopes.length != w * h) {
+			throw new IllegalArgumentException("the slopes are not the map's");
+		}
+		int[] key = new int[w * h];
+		Dir[] climb = slopes == null ? null : new Dir[w * h];
+		Arrays.fill(key, -1);
+		for (int i = 0; i < w * h; i++) {
+			if (floor(model.kind(i % w, i / w))) {
+				if (climb != null && slopes[i] != null) {
+					climb[i] = slopes[i];
+				} else {
+					key[i] = 0;
+				}
+			}
+		}
+		return solve(new Input(model, key, new boolean[w * h], new boolean[w * h], -1, climb, walls, false, MAX_FACE, false, false, OUTDOOR_RISE,
+				true, null));
 	}
 
 	/**
@@ -174,6 +302,54 @@ public final class RaisedRegions {
 		return solve(new Input(model, key, new boolean[w * h], new boolean[w * h], -1, climb, walls, cave, 0, false, false));
 	}
 
+	/**
+	 * {@code in} with a bridge's cells as its deck: each takes the level key most of its floor neighbours have (along the
+	 * bridge: its ends' floor; ties the higher), a cell among bridge cells only its neighbours' once they have one. A path
+	 * under the bridge meets the deck as a wall (walking under it waits for the two-floor cells of W6).
+	 */
+	private static Input decked(Input in, int n) {
+		int w = in.model().cellWidth();
+		int h = in.model().cellHeight();
+		int[] key = in.key().clone();
+		boolean[] left = in.bridge().clone();
+		boolean changed = true;
+		while (changed) {
+			changed = false;
+			int[] next = key.clone();
+			for (int i = 0; i < n; i++) {
+				if (!left[i]) {
+					continue;
+				}
+				Map<Integer, Integer> votes = new TreeMap<>();
+				for (Dir d : Dir.values()) {
+					int nx = i % w + d.dx();
+					int ny = i / w + d.dy();
+					if (nx >= 0 && ny >= 0 && nx < w && ny < h && !left[ny * w + nx] && key[ny * w + nx] >= 0) {
+						votes.merge(key[ny * w + nx], 1, Integer::sum);
+					}
+				}
+				int best = -1;
+				for (Map.Entry<Integer, Integer> v : votes.entrySet()) {
+					if (best < 0 || v.getValue() >= votes.get(best)) {
+						best = v.getKey();
+					}
+				}
+				if (best >= 0) {
+					next[i] = best;
+					changed = true;
+				}
+			}
+			for (int i = 0; i < n; i++) {
+				if (left[i] && next[i] >= 0) {
+					left[i] = false;
+				}
+			}
+			key = next;
+		}
+		return new Input(in.model(), key, in.joins(), new boolean[n], in.shore(), in.climb(), in.walls(), in.wallsRise(), in.maxFace(),
+				in.faceKeys(), in.room(), in.rise(), true, in.falls());
+	}
+
 	/** True when the input's walls close the edge between neighbouring cells {@code a} and {@code b}. */
 	private static boolean walled(Input in, int w, int a, int b) {
 		PairEdges walls = in.walls();
@@ -189,11 +365,13 @@ public final class RaisedRegions {
 	}
 
 	/** The raised ground of one map. */
-	public static Result solve(Input in) {
-		MapModel model = in.model();
+	public static Result solve(Input given) {
+		MapModel model = given.model();
 		int w = model.cellWidth();
 		int h = model.cellHeight();
 		int n = w * h;
+		// (decked keeps its deck flag: the bridges are joins now, and the rules outdoors are known by it)
+		Input in = given.outdoor() ? decked(given, n) : given;
 		int[] key = in.key();
 		// ---- regions ----
 		int[] region = new int[n];
@@ -214,7 +392,7 @@ public final class RaisedRegions {
 		}
 		int regions = regionKey.size();
 		boolean drawnStairs = in.climb() != null && Arrays.stream(in.climb()).anyMatch(java.util.Objects::nonNull);
-		if (regions < 2 || in.walls() == null && !drawnStairs && regionKey.stream().distinct().count() < 2) {
+		if (regions < 2 || in.faceKeys() && in.walls() == null && !drawnStairs && regionKey.stream().distinct().count() < 2) {
 			return Result.flat("flat_one_level", regions);
 		}
 		for (boolean b : in.bridge()) {
@@ -225,6 +403,14 @@ public final class RaisedRegions {
 		}
 		Offsets heights = new Offsets(regions);
 		List<Stair> stairs = new ArrayList<>();
+		// Outdoors a rule that disagrees with those before it is skipped (counted), so one odd corner leaves the rest standing;
+		// with the drawing's stairs marked, a strip of joining cells that is no marked stair keeps one height where it can
+		boolean soft = in.outdoor();
+		boolean marked = in.outdoor() && in.climb() != null;
+		int skipped = 0;
+		int[] joinLevelOf = new int[n];
+		Arrays.fill(joinLevelOf, -1);
+		List<int[]> loose = new ArrayList<>();
 		// ---- stairs a drawing names: they climb the way it says ----
 		if (drawnStairs) {
 			boolean[] taken = new boolean[n];
@@ -237,125 +423,26 @@ public final class RaisedRegions {
 				for (int c : part) {
 					taken[c] = true;
 				}
-				Map<Integer, List<int[]>> touches = new TreeMap<>();
-				for (int c : part) {
-					for (Dir dir : Dir.values()) {
-						int nx = c % w + dir.dx();
-						int ny = c / w + dir.dy();
-						if (nx >= 0 && ny >= 0 && nx < w && ny < h && region[ny * w + nx] >= 0 && !walled(in, w, c, ny * w + nx)) {
-							touches.computeIfAbsent(region[ny * w + nx], k -> new ArrayList<>()).add(new int[] {c, dir.ordinal()});
-						}
-					}
-				}
+				Map<Integer, List<int[]>> touches = touches(in, part, region, true);
 				Stair stair = drawnStair(w, part, touches, climb);
-				if (stair == null) {
-					return Result.flat("flat_stairs_shape", regions);
-				}
-				for (int r : stair.lows.subList(1, stair.lows.size())) {
-					if (!heights.join(stair.lows.get(0), r, 0)) {
-						return Result.flat("flat_levels_disagree", regions);
+				Offsets before = heights.copy();
+				String failed = stair == null ? "flat_stairs_shape" : joinStair(heights, stair, in.rise() * stair.length);
+				if (failed != null) {
+					if (!soft) {
+						return Result.flat(failed, regions);
 					}
-				}
-				for (int r : stair.highs.subList(1, stair.highs.size())) {
-					if (!heights.join(stair.highs.get(0), r, 0)) {
-						return Result.flat("flat_levels_disagree", regions);
-					}
-				}
-				if (!heights.join(stair.lows.get(0), stair.highs.get(0), STAIR_RISE * stair.length)) {
-					return Result.flat("flat_stairs_disagree", regions);
+					// outdoors: its cells stand at one height with a floor they touch, its other end a break
+					heights.restore(before);
+					skipped++;
+					standWith(part, touches, joinLevelOf, loose);
+					continue;
 				}
 				stair.low = stair.lows.get(0);
 				stairs.add(stair);
 			}
 		}
-		// ---- cells that join any level: one level's, or stairs ----
-		int[] joinLevelOf = new int[n];
-		Arrays.fill(joinLevelOf, -1);
-		boolean[] seen = new boolean[n];
-		List<int[]> loose = new ArrayList<>();
-		for (int s = 0; s < n; s++) {
-			if (!in.joins()[s] || seen[s]) {
-				continue;
-			}
-			List<Integer> part = flood(w, h, s, (a, b) -> in.joins()[b] && !seen[b]);
-			for (int c : part) {
-				seen[c] = true;
-			}
-			Map<Integer, List<int[]>> touches = new TreeMap<>();
-			for (int c : part) {
-				for (Dir dir : Dir.values()) {
-					int nx = c % w + dir.dx();
-					int ny = c / w + dir.dy();
-					if (nx >= 0 && ny >= 0 && nx < w && ny < h && region[ny * w + nx] >= 0) {
-						touches.computeIfAbsent(region[ny * w + nx], k -> new ArrayList<>()).add(new int[] {c, dir.ordinal()});
-					}
-				}
-			}
-			java.util.TreeSet<Integer> keys = new java.util.TreeSet<>();
-			for (int r : touches.keySet()) {
-				keys.add(regionKey.get(r));
-			}
-			if (keys.isEmpty()) {
-				loose.add(part.stream().mapToInt(Integer::intValue).toArray());
-				continue;
-			}
-			List<Integer> touched = new ArrayList<>(touches.keySet());
-			if (keys.size() == 1) {
-				for (int r : touched.subList(1, touched.size())) {
-					if (!heights.join(touched.get(0), r, 0)) {
-						return Result.flat("flat_levels_disagree", regions);
-					}
-				}
-				for (int c : part) {
-					joinLevelOf[c] = touched.get(0);
-				}
-				continue;
-			}
-			Stair stair = keys.size() > 2 ? null : stair(w, part, touches, regionKey, keys.first(), keys.last());
-			if (stair != null && in.room() && !flanked(model, w, h, stair)) {
-				stair = null;
-			}
-			if (stair == null && in.room()) {
-				// no stair: one height (the engine's drawing order, not a step)
-				for (int r : touched.subList(1, touched.size())) {
-					if (!heights.join(touched.get(0), r, 0)) {
-						return Result.flat("flat_levels_disagree", regions);
-					}
-				}
-				for (int c : part) {
-					joinLevelOf[c] = touched.get(0);
-				}
-				continue;
-			}
-			if (keys.size() > 2) {
-				return Result.flat("flat_stairs_three_levels", regions);
-			}
-			if (stair == null) {
-				return Result.flat("flat_stairs_shape", regions);
-			}
-			List<Integer> low = new ArrayList<>();
-			List<Integer> high = new ArrayList<>();
-			for (int r : touched) {
-				(regionKey.get(r).intValue() == keys.first() ? low : high).add(r);
-			}
-			for (int r : low.subList(1, low.size())) {
-				if (!heights.join(low.get(0), r, 0)) {
-					return Result.flat("flat_levels_disagree", regions);
-				}
-			}
-			for (int r : high.subList(1, high.size())) {
-				if (!heights.join(high.get(0), r, 0)) {
-					return Result.flat("flat_levels_disagree", regions);
-				}
-			}
-			if (!heights.join(low.get(0), high.get(0), STAIR_RISE * stair.length)) {
-				// Two stairs of different lengths between the same two regions.
-				return Result.flat("flat_stairs_disagree", regions);
-			}
-			stair.low = low.get(0);
-			stairs.add(stair);
-		}
-		// ---- water: level with the shore key's regions it touches ----
+		// ---- water: level with the regions of the shore key it touches; outdoors the bank it touches most first, and a bank
+		// that disagrees stands over it (a break) ----
 		int[] waterOf = new int[n];
 		Arrays.fill(waterOf, -1);
 		// each body's shore region (-1 for none) and every region it touches
@@ -363,11 +450,12 @@ public final class RaisedRegions {
 		List<List<Integer>> waterBanks = new ArrayList<>();
 		boolean[] wet = new boolean[n];
 		for (int s = 0; s < n; s++) {
-			if (model.kind(s % w, s / w) != MapModel.Kind.WATER || wet[s]) {
+			if (model.kind(s % w, s / w) != MapModel.Kind.WATER || wet[s] || in.falls() != null && in.falls()[s]) {
 				continue;
 			}
-			List<Integer> part = flood(w, h, s, (a, b) -> model.kind(b % w, b / w) == MapModel.Kind.WATER && !wet[b]);
-			int shore = -1;
+			List<Integer> part = flood(w, h, s, (a, b) -> model.kind(b % w, b / w) == MapModel.Kind.WATER && !wet[b]
+					&& !(in.falls() != null && in.falls()[b]));
+			Map<Integer, Integer> shores = new LinkedHashMap<>();
 			List<Integer> banks = new ArrayList<>();
 			for (int c : part) {
 				wet[c] = true;
@@ -380,16 +468,100 @@ public final class RaisedRegions {
 						continue;
 					}
 					if (in.shore() < 0 || regionKey.get(r) == in.shore()) {
-						if (shore >= 0 && !heights.join(shore, r, 0)) {
-							return Result.flat("flat_water_shores", regions);
-						}
-						shore = shore < 0 ? r : shore;
+						shores.merge(r, 1, Integer::sum);
 					}
 					banks.add(r);
 				}
 			}
+			List<Integer> order = new ArrayList<>(shores.keySet());
+			if (soft) {
+				order.sort((a, b) -> shores.get(b) - shores.get(a));
+			}
+			int shore = -1;
+			for (int r : order) {
+				if (shore >= 0 && !heights.join(shore, r, 0)) {
+					if (!soft) {
+						return Result.flat("flat_water_shores", regions);
+					}
+					skipped++;
+					continue;
+				}
+				shore = shore < 0 ? r : shore;
+			}
 			waterShore.add(shore);
 			waterBanks.add(banks);
+		}
+		// ---- cells that join any level: one level's, or stairs ----
+		boolean[] seen = new boolean[n];
+		for (int s = 0; s < n; s++) {
+			if (!in.joins()[s] || seen[s]) {
+				continue;
+			}
+			List<Integer> part = flood(w, h, s, (a, b) -> in.joins()[b] && !seen[b]);
+			for (int c : part) {
+				seen[c] = true;
+			}
+			Map<Integer, List<int[]>> touches = touches(in, part, region, false);
+			java.util.TreeSet<Integer> keys = new java.util.TreeSet<>();
+			for (int r : touches.keySet()) {
+				keys.add(regionKey.get(r));
+			}
+			if (keys.isEmpty()) {
+				loose.add(part.stream().mapToInt(Integer::intValue).toArray());
+				continue;
+			}
+			List<Integer> touched = new ArrayList<>(touches.keySet());
+			Stair stair = keys.size() != 2 ? null : stair(w, part, touches, regionKey, keys.first(), keys.last());
+			if (stair != null && in.room() && !flanked(model, w, h, stair)) {
+				stair = null;
+			}
+			if (stair != null) {
+				for (int r : touched) {
+					(regionKey.get(r).intValue() == keys.first() ? stair.lows : stair.highs).add(r);
+				}
+			}
+			// The ways the strip may stand, in order: one height (one key; a room's cells that are no stair, the engine's
+			// drawing order; outdoors with the stairs marked, a strip no mark names: the drawing shows no step), a stair;
+			// outdoors the first that agrees with the rules before it, else the strip is a break
+			List<Boolean> ways = new ArrayList<>();
+			boolean oneFirst = keys.size() == 1 || marked || in.room() && stair == null;
+			if (oneFirst) {
+				ways.add(true);
+			}
+			if (stair != null) {
+				ways.add(false);
+			}
+			if (soft && !oneFirst) {
+				ways.add(true);
+			}
+			String failed = keys.size() > 2 ? "flat_stairs_three_levels" : "flat_stairs_shape";
+			boolean stood = false;
+			for (boolean one : ways) {
+				Offsets before = heights.copy();
+				failed = one ? joinFlat(heights, touched) : joinStair(heights, stair, in.rise() * stair.length);
+				if (failed == null) {
+					if (one) {
+						for (int c : part) {
+							joinLevelOf[c] = touched.get(0);
+						}
+					} else {
+						stair.low = stair.lows.get(0);
+						stairs.add(stair);
+					}
+					stood = true;
+					break;
+				}
+				heights.restore(before);
+			}
+			if (!stood) {
+				if (!soft) {
+					return Result.flat(failed, regions);
+				}
+				skipped++;
+				for (int c : part) {
+					joinLevelOf[c] = touched.get(0);
+				}
+			}
 		}
 		// ---- each group of regions joined so far, placed: the biggest at the floor level, then by faces, then by key ----
 		Map<Integer, Integer> groupCells = new LinkedHashMap<>();
@@ -400,7 +572,7 @@ public final class RaisedRegions {
 		groups.sort((a, b) -> groupCells.get(b) - groupCells.get(a) != 0 ? groupCells.get(b) - groupCells.get(a) : a - b);
 		Map<Integer, Integer> base = new HashMap<>();
 		base.put(groups.get(0), 0);
-		List<int[]> faces = faces(model, region, regionKey, heights, in.maxFace(), in.faceKeys());
+		List<int[]> faces = faces(model, region, regionKey, heights, in.maxFace(), in.faceKeys(), in.rise());
 		if (in.wallsRise()) {
 			// a wall's south side over its north side: a vote like a face, the north side two blocks under the south
 			for (int cy = 0; cy + 1 < h; cy++) {
@@ -409,7 +581,7 @@ public final class RaisedRegions {
 					int south = north + w;
 					if (region[north] >= 0 && region[south] >= 0 && walled(in, w, north, south)
 							&& heights.find(region[north]) != heights.find(region[south])) {
-						faces.add(new int[] {region[south], region[north], -STAIR_RISE});
+						faces.add(new int[] {region[south], region[north], -in.rise()});
 					}
 				}
 			}
@@ -489,9 +661,9 @@ public final class RaisedRegions {
 		for (Stair stair : stairs) {
 			for (int k = 0; k < stair.cells.length; k++) {
 				int c = stair.cells[k];
-				levels[c] = height[stair.low] + STAIR_RISE * stair.steps[k];
+				levels[c] = height[stair.low] + in.rise() * stair.steps[k];
 				standable[c] = true;
-				rampAt.put(c, new MapLayout.Ramp(c % w, c / w, stair.climb, STAIR_RISE));
+				rampAt.put(c, new MapLayout.Ramp(c % w, c / w, stair.climb, in.rise()));
 			}
 		}
 		for (int[] part : loose) {
@@ -511,11 +683,32 @@ public final class RaisedRegions {
 				standable[c] = true;
 			}
 		}
-		// The lowest floor is the map's floor level.
+		// The lowest floor is the map's floor level; outdoors (the levels pilot) the floor along the map's edge is, where its
+		// neighbours meet it (its commonest level there), and a floor lower than that stands at it (counted: "sunken").
 		int low = Integer.MAX_VALUE;
 		for (int i = 0; i < n; i++) {
 			if (standable[i]) {
 				low = Math.min(low, levels[i]);
+			}
+		}
+		int sunken = 0;
+		if (in.outdoor()) {
+			Map<Integer, Integer> edge = new TreeMap<>();
+			for (int i = 0; i < n; i++) {
+				int x = i % w;
+				int y = i / w;
+				if (standable[i] && (x == 0 || y == 0 || x == w - 1 || y == h - 1)) {
+					edge.merge(levels[i], 1, Integer::sum);
+				}
+			}
+			if (!edge.isEmpty()) {
+				low = mostCommon(edge);
+			}
+			for (int i = 0; i < n; i++) {
+				if (standable[i] && levels[i] < low) {
+					levels[i] = low;
+					sunken++;
+				}
 			}
 		}
 		int top = 0;
@@ -534,12 +727,15 @@ public final class RaisedRegions {
 		if (raised == 0 && rampAt.isEmpty()) {
 			return Result.flat("flat_one_height", regions);
 		}
+		String raisedOutcome = sunken > 0 ? "raised_sunken" : "raised";
 		rockLevels(model, standable, levels);
-		String failed = check(in, standable, levels, rampAt);
+		List<Integer> breaks = soft ? new ArrayList<>() : null;
+		String failed = check(in, standable, levels, rampAt, breaks);
 		if (failed != null) {
 			return Result.flat(failed, regions);
 		}
-		return new Result(MapLayout.flat(w, h, levels, new ArrayList<>(rampAt.values())), "raised", regions, raised, stairs.size(), top);
+		return new Result(MapLayout.flat(w, h, levels, new ArrayList<>(rampAt.values())), raisedOutcome, regions, raised, stairs.size(), top,
+				skipped, breaks == null ? List.of() : List.copyOf(new java.util.TreeSet<>(breaks)));
 	}
 
 	/** A ground or ledge cell: where a level key lives. */
@@ -586,6 +782,63 @@ public final class RaisedRegions {
 	 * are its highs, at its foot (from any side but above) its lows; at least one each, nothing meeting its middle. Null
 	 * when it is no such strip.
 	 */
+	/**
+	 * The regions a part's cells touch, each with its touches ({cell, side}); with {@code walls} an edge the engine closes
+	 * doesn't count.
+	 */
+	private static Map<Integer, List<int[]>> touches(Input in, List<Integer> part, int[] region, boolean walls) {
+		int w = in.model().cellWidth();
+		int h = in.model().cellHeight();
+		Map<Integer, List<int[]>> touches = new TreeMap<>();
+		for (int c : part) {
+			for (Dir dir : Dir.values()) {
+				int nx = c % w + dir.dx();
+				int ny = c / w + dir.dy();
+				if (nx >= 0 && ny >= 0 && nx < w && ny < h && region[ny * w + nx] >= 0 && !(walls && walled(in, w, c, ny * w + nx))) {
+					touches.computeIfAbsent(region[ny * w + nx], k -> new ArrayList<>()).add(new int[] {c, dir.ordinal()});
+				}
+			}
+		}
+		return touches;
+	}
+
+	/** The regions {@code touched} at one height: null, or the reason they can't be. */
+	private static @Nullable String joinFlat(Offsets heights, List<Integer> touched) {
+		for (int r : touched.subList(1, touched.size())) {
+			if (!heights.join(touched.get(0), r, 0)) {
+				return "flat_levels_disagree";
+			}
+		}
+		return null;
+	}
+
+	/** A stair's regions: its foot's at one height, its top's at one height, the top {@code rise} over the foot. */
+	private static @Nullable String joinStair(Offsets heights, Stair stair, int rise) {
+		for (int r : stair.lows.subList(1, stair.lows.size())) {
+			if (!heights.join(stair.lows.get(0), r, 0)) {
+				return "flat_levels_disagree";
+			}
+		}
+		for (int r : stair.highs.subList(1, stair.highs.size())) {
+			if (!heights.join(stair.highs.get(0), r, 0)) {
+				return "flat_levels_disagree";
+			}
+		}
+		return heights.join(stair.lows.get(0), stair.highs.get(0), rise) ? null : "flat_stairs_disagree";
+	}
+
+	/** A part's cells at one height with the first region they touch (none: loose, as joining cells touching none). */
+	private static void standWith(List<Integer> part, Map<Integer, List<int[]>> touches, int[] joinLevelOf, List<int[]> loose) {
+		if (touches.isEmpty()) {
+			loose.add(part.stream().mapToInt(Integer::intValue).toArray());
+			return;
+		}
+		int r = touches.keySet().iterator().next();
+		for (int c : part) {
+			joinLevelOf[c] = r;
+		}
+	}
+
 	private static @Nullable Stair drawnStair(int w, List<Integer> part, Map<Integer, List<int[]>> touches, Dir climb) {
 		boolean vertical = climb == Dir.UP || climb == Dir.DOWN;
 		int first = Integer.MAX_VALUE;
@@ -687,7 +940,8 @@ public final class RaisedRegions {
 	 * {@code maxFace} solid cells to a floor cell of another group, as {south region, north region, blocks the north one
 	 * stands over the south one}.
 	 */
-	private static List<int[]> faces(MapModel model, int[] region, List<Integer> regionKey, Offsets heights, int maxFace, boolean faceKeys) {
+	private static List<int[]> faces(MapModel model, int[] region, List<Integer> regionKey, Offsets heights, int maxFace, boolean faceKeys,
+			int rise) {
 		int w = model.cellWidth();
 		int h = model.cellHeight();
 		List<int[]> out = new ArrayList<>();
@@ -708,7 +962,7 @@ public final class RaisedRegions {
 				}
 				int north = region[y * w + cx];
 				if (north >= 0 && (!faceKeys || !regionKey.get(north).equals(regionKey.get(south))) && heights.find(north) != heights.find(south)) {
-					out.add(new int[] {south, north, STAIR_RISE * run});
+					out.add(new int[] {south, north, rise * run});
 				}
 			}
 		}
@@ -767,9 +1021,11 @@ public final class RaisedRegions {
 	 * the engine does. The engine joins two floor cells unless both have keys and they differ (those edges get the
 	 * elevation walls), water and water, and water and a floor cell of the shore key. Joined cells stand at one height, or
 	 * meet as a stair's ends (two stairs side by side climb the same way at one height; one climbs onto the next end to
-	 * end); a ledge's three cells stand at one height. Returns the failure's reason, or null.
+	 * end); a ledge's three cells stand at one height. Returns the failure's reason, or null; with {@code breaks} (outdoors)
+	 * each failing edge's first cell goes there instead and the check goes on.
 	 */
-	private static @Nullable String check(Input in, boolean[] standable, int[] levels, Map<Integer, MapLayout.Ramp> rampAt) {
+	private static @Nullable String check(Input in, boolean[] standable, int[] levels, Map<Integer, MapLayout.Ramp> rampAt,
+			@Nullable List<Integer> breaks) {
 		MapModel model = in.model();
 		int w = model.cellWidth();
 		int h = model.cellHeight();
@@ -792,7 +1048,10 @@ public final class RaisedRegions {
 						int ny = cy + side.dy();
 						if (nx >= 0 && ny >= 0 && nx < w && ny < h && standable[ny * w + nx]
 								&& (levels[ny * w + nx] != levels[a] || rampAt.containsKey(ny * w + nx))) {
-							return "flat_check_ledge";
+							if (breaks == null) {
+								return "flat_check_ledge";
+							}
+							breaks.add(a);
 						}
 					}
 				}
@@ -810,14 +1069,21 @@ public final class RaisedRegions {
 					MapLayout.Ramp rampB = rampAt.get(b);
 					if (rampA != null && rampB != null) {
 						if (rampA.dir() != rampB.dir()) {
-							return "flat_check_ramps_meet";
+							if (breaks == null) {
+								return "flat_check_ramps_meet";
+							}
+							breaks.add(a);
+							continue;
 						}
 						boolean along = dir == rampA.dir() || dir == rampA.dir().opposite();
 						// side by side: one level; end to end: the lower one's top is the upper one's foot
 						int lower = dir == rampA.dir() ? a : b;
 						int upper = lower == a ? b : a;
 						if (along ? levels[lower] + rampAt.get(lower).rise() != levels[upper] : levels[a] != levels[b]) {
-							return "flat_check_ramps_meet";
+							if (breaks == null) {
+								return "flat_check_ramps_meet";
+							}
+							breaks.add(a);
 						}
 						continue;
 					}
@@ -826,16 +1092,20 @@ public final class RaisedRegions {
 						int r = rampA != null ? a : b;
 						int other = rampA != null ? b : a;
 						Dir toward = rampA != null ? dir : dir.opposite();
-						if (toward == ramp.dir() && levels[other] != levels[r] + ramp.rise()) {
-							return "flat_check_ramp_end";
-						}
-						if (toward == ramp.dir().opposite() && levels[other] != levels[r]) {
-							return "flat_check_ramp_end";
+						if (toward == ramp.dir() && levels[other] != levels[r] + ramp.rise()
+								|| toward == ramp.dir().opposite() && levels[other] != levels[r]) {
+							if (breaks == null) {
+								return "flat_check_ramp_end";
+							}
+							breaks.add(a);
 						}
 						continue;
 					}
 					if (levels[a] != levels[b]) {
-						return "flat_check_open_rise";
+						if (breaks == null) {
+							return "flat_check_open_rise";
+						}
+						breaks.add(a);
 					}
 				}
 			}
@@ -936,6 +1206,20 @@ public final class RaisedRegions {
 		int offset(int x) {
 			this.find(x);
 			return this.offset[x];
+		}
+
+		/** A copy, to {@link #restore} when a rule tried on this one fails. */
+		Offsets copy() {
+			Offsets out = new Offsets(this.parent.length);
+			System.arraycopy(this.parent, 0, out.parent, 0, this.parent.length);
+			System.arraycopy(this.offset, 0, out.offset, 0, this.offset.length);
+			return out;
+		}
+
+		/** Back to {@code saved} (a {@link #copy} of this). */
+		void restore(Offsets saved) {
+			System.arraycopy(saved.parent, 0, this.parent, 0, this.parent.length);
+			System.arraycopy(saved.offset, 0, this.offset, 0, this.offset.length);
 		}
 
 		/** Records h(b) - h(a) = d; false when it contradicts what is known. */

@@ -1,0 +1,138 @@
+package dev.kantobridge.builder.plan;
+
+import com.google.gson.JsonArray;
+import com.google.gson.JsonObject;
+import dev.kantobridge.builder.export.ExportBundle;
+import dev.kantobridge.proto.ProtoJson;
+import dev.kantobridge.world.MapLayout;
+import dev.kantobridge.world.SlotMap;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.Map;
+import java.util.Set;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.EnabledIfSystemProperty;
+
+/**
+ * The levels pilot's levels (HEIGHTS_ALL_GAMES_PLAN.md D4, LANDSCAPE_SECTIONS_PLAN.md), pod only: a game's world planned
+ * with {@code kantobridge.outdoorLevels} naming outdoor maps (-Pkb.outdoorLevels), and for each named map its level per
+ * cell (blocks over the map's floor) and its ramps, with the planner's outdoor notes. Map ids, cells and numbers only.
+ * -Pkb.outdoorDump="&lt;game&gt;;&lt;bundle&gt;;&lt;out dir&gt;".
+ */
+@EnabledIfSystemProperty(named = "kb.outdoorDump", matches = ".+")
+class OutdoorLevelsDumpTest {
+	@Test
+	void dump() throws Exception {
+		String[] p = System.getProperty("kb.outdoorDump").split(";");
+		String game = p[0];
+		ExportBundle bundle = ExportBundle.open(Path.of(p[1]));
+		Path out = Path.of(p[2]);
+		Files.createDirectories(out);
+		WorldPlanner.Options options = new WorldPlanner.Options(null, 0, 0, dev.kantobridge.builder.TestData.MIN_BUILD_HEIGHT, true);
+		WorldPlan plan = switch (game) {
+			case "crystal" -> WorldPlanner.plan(bundle, options,
+					new RegionBuild("johto", 2, bundle.game(), new SlotMap.Range(0, SlotMap.familiesFor("gen2") - 1), null, "johto_"));
+			case "emerald" -> WorldPlanner.plan(bundle, options,
+					new RegionBuild("hoenn", 1, bundle.game(), new SlotMap.Range(0, SlotMap.familiesFor("gen3") - 1), null, "hoenn_"));
+			default -> WorldPlanner.plan(bundle, options);
+		};
+		Set<String> named = OutdoorLevels.fromProperty();
+		Map<String, dev.kantobridge.builder.export.G3Map> g3maps = "emerald".equals(game) ? G3Built.maps(bundle) : Map.of();
+		if ("emerald".equals(game)) {
+			// the elevations of the named maps (hex digits; '#' solid, '~' water): what the solver reads
+			Map<String, dev.kantobridge.builder.export.G3Map> maps = G3Built.maps(bundle);
+			for (PlacedMap map : plan.maps()) {
+				dev.kantobridge.builder.export.G3Map g3 = maps.get(map.id());
+				if (!named.contains(map.id()) || g3 == null) {
+					continue;
+				}
+				StringBuilder text = new StringBuilder();
+				for (int cy = 0; cy < g3.h(); cy++) {
+					for (int cx = 0; cx < g3.w(); cx++) {
+						MapModel.Kind kind = map.model().kind(cx, cy);
+						text.append(kind == MapModel.Kind.SOLID || kind == MapModel.Kind.COUNTER ? '#'
+								: kind == MapModel.Kind.WATER ? '~' : Character.forDigit(g3.elev(cx, cy), 16));
+					}
+					text.append('\n');
+				}
+				Files.writeString(out.resolve(map.id() + "_elev.txt"), text.toString(), StandardCharsets.UTF_8);
+			}
+		}
+		JsonObject notes = new JsonObject();
+		for (Map.Entry<String, Integer> e : plan.warnings().notes().entrySet()) {
+			if (e.getKey().startsWith("outdoor_")) {
+				notes.addProperty(e.getKey(), e.getValue());
+			}
+		}
+		Files.writeString(out.resolve("notes_" + game + ".json"), ProtoJson.write(notes), StandardCharsets.UTF_8);
+		for (PlacedMap map : plan.maps()) {
+			if (!named.contains(map.id())) {
+				continue;
+			}
+			JsonObject o = new JsonObject();
+			o.addProperty("map", map.id());
+			MapLayout layout = map.layout();
+			int w = map.model().cellWidth();
+			int h = map.model().cellHeight();
+			o.addProperty("w", w);
+			o.addProperty("h", h);
+			o.addProperty("raised", layout != null);
+			// the solver's own account (as the planner ran it): its outcome, the rules it skipped and the cells at the edges they
+			// leave unwalkable
+			dev.kantobridge.world.Dir[] slopes = dev.kantobridge.builder.shape.LandscapeModels.slopes(map.id(), w, h);
+			dev.kantobridge.builder.export.G3Map g3 = g3maps.get(map.id());
+			RaisedRegions.Result result = g3 != null
+					? RaisedRegions.gen3Outdoor(map.model(), g3, slopes, RaisedRegions.gen3Falls(map.model(), g3, bundle.g3tiles(g3.pair())))
+					: RaisedRegions.outdoor(map.model(), map.edges(), slopes);
+			o.addProperty("outcome", result.outcome());
+			o.addProperty("marked", slopes != null);
+			o.addProperty("skipped", result.skipped());
+			JsonArray breaks = new JsonArray();
+			for (int c : result.breaks()) {
+				JsonArray a = new JsonArray();
+				a.add(c % w);
+				a.add(c / w);
+				breaks.add(a);
+			}
+			o.add("breaks", breaks);
+			// each cell's kind ('.' ground, '~' water, 'L' ledge, '#' rock or counter): what a marking page's fill stops at
+			StringBuilder kinds = new StringBuilder();
+			for (int cy = 0; cy < h; cy++) {
+				for (int cx = 0; cx < w; cx++) {
+					kinds.append(switch (map.model().kind(cx, cy)) {
+						case GROUND -> '.';
+						case WATER -> '~';
+						case LEDGE -> 'L';
+						default -> '#';
+					});
+				}
+			}
+			o.addProperty("kinds", kinds.toString());
+			JsonArray levels = new JsonArray();
+			int max = 0;
+			for (int cy = 0; cy < h; cy++) {
+				for (int cx = 0; cx < w; cx++) {
+					int level = layout == null ? 0 : layout.level(cx, cy);
+					levels.add(level);
+					max = Math.max(max, level);
+				}
+			}
+			o.addProperty("max_level", max);
+			o.add("levels", levels);
+			JsonArray ramps = new JsonArray();
+			if (layout != null) {
+				for (MapLayout.Ramp r : layout.ramps()) {
+					JsonArray a = new JsonArray();
+					a.add(r.x());
+					a.add(r.y());
+					a.add(r.dir().id());
+					a.add(r.rise());
+					ramps.add(a);
+				}
+			}
+			o.add("ramps", ramps);
+			Files.writeString(out.resolve(map.id() + ".json"), ProtoJson.write(o), StandardCharsets.UTF_8);
+		}
+	}
+}

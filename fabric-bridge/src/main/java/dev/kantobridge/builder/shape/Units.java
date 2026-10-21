@@ -111,7 +111,7 @@ final class Units {
 				MapLayout.Ramp ramp = layout == null ? null : layout.ramp(cx, cy);
 				if (ramp != null && map.kind(cx, cy) == CellKind.WALK) {
 					standUnit(map, atlas, atlasIndex, cx, cy, stairClass(ramp.dir()), List.of(clamp(8 * ramp.rise())), keys, decor, floor, units,
-							mapGround, indoor, tally, "ramp");
+							mapGround, indoor, tally, "ramp", ramp.rise());
 					why(map, cx, cy, "ramp");
 					continue;
 				}
@@ -431,7 +431,8 @@ final class Units {
 	 */
 	private static void decorUnit(SceneMap map, SceneAtlas atlas, int atlasIndex, ProfileClasses classes, int cx, int cy, String cls,
 			ShapeKey[][] keys, int[] decor, int[] floor, List<Cell> units, int mapGround, boolean indoor, Map<String, Integer> tally) {
-		standUnit(map, atlas, atlasIndex, cx, cy, cls, params(map, classes, cls), keys, decor, floor, units, mapGround, indoor, tally, "pin");
+		standUnit(map, atlas, atlasIndex, cx, cy, cls, params(map, classes, cls), keys, decor, floor, units, mapGround, indoor, tally, "pin",
+				map.perCell());
 	}
 
 	/**
@@ -505,15 +506,16 @@ final class Units {
 
 	/**
 	 * A unit standing on a walkable cell, of class {@code cls} with {@code params} (its height first): its tiles' columns
-	 * as high as that on decor carriers, its floor the ground; tallied and listed as {@code source}.
+	 * as high as that on decor carriers, at most {@code most} blocks (a ramp's rise: an outdoor ramp climbs 3), its floor
+	 * the ground; tallied and listed as {@code source}.
 	 */
 	private static void standUnit(SceneMap map, SceneAtlas atlas, int atlasIndex, int cx, int cy, String cls, List<Integer> params,
 			ShapeKey[][] keys, int[] decor, int[] floor, List<Cell> units, int mapGround, boolean indoor, Map<String, Integer> tally,
-			String source) {
+			String source, int most) {
 		int per = map.perCell();
 		int cols = map.artCols();
 		int h = params.isEmpty() ? 0 : params.get(0);
-		int high = Math.min(per, (h + 7) / 8);
+		int high = Math.min(most, (h + 7) / 8);
 		if (high <= 0) {
 			tally.merge(source + "_flat", 1, Integer::sum);
 			return;

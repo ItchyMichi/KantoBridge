@@ -238,6 +238,7 @@ final class Gen2Planner {
 		List<PlacedMap> placed = new ArrayList<>();
 		Map<String, MapLayout> mapLayouts = new TreeMap<>();
 		int oneWayEdges = 0;
+		Set<String> outdoorLevels = OutdoorLevels.fromProperty();
 		for (MapPlacement placement : placements.values()) {
 			G2Map map = all.get(placement.id());
 			G2Tiles tiles = tiles(bundle, variants, map.variant());
@@ -250,6 +251,10 @@ final class Gen2Planner {
 			// under its ceilings (D5)
 			List<MapLayout.Piece> pieces = caveArea.pieces().get(map.id());
 			MapLayout rooms = pieces == null ? raised.get(map.id()) : WorldPlanner.withPieces(model, pieces, raised.get(map.id()));
+			if (outdoorLevels.contains(map.id()) && (placement.kind() == MapPlacement.Kind.SURFACE || WorldPlan.openSky(placement))) {
+				// The levels pilot (D3, D4): its areas (one-way walls keep them apart) at the faces between them, 3 blocks a cell
+				rooms = OutdoorLevels.plan(map.id(), model, slopes -> RaisedRegions.outdoor(model, edges, slopes), warnings);
+			}
 			rooms = WorldPlanner.withCeilings(placement, model, rooms, Headroom.blackFiller(model, probe, null), Headroom.screenRows(false),
 					!area3d.contains(map.id()), warnings);
 			if (rooms != null) {

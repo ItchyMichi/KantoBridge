@@ -182,6 +182,7 @@ def kbBuildProperties = [
 	"kb.buildRegion": ["kantobridge.build.region", false],
 	"kb.buildSlot"  : ["kantobridge.build.slot", false],
 	"kb.landscapeModels": ["kantobridge.landscape.models", true],
+	"kb.outdoorLevels"  : ["kantobridge.outdoorLevels", false],
 ]
 def kbBuildVmArgs = []
 kbBuildProperties.each { gradleName, spec ->
@@ -646,6 +647,11 @@ test {
 	systemProperty "kb.landscape", providers.gradleProperty("kb.landscape").getOrElse("")
 	// -Pkb.landscapeQuads="<bundle>;<table>;<out json>": the landscape models' quads per block (pod only)
 	systemProperty "kb.landscapeQuads", providers.gradleProperty("kb.landscapeQuads").getOrElse("")
+	// -Pkb.outdoorDump="<game>;<bundle>;<out dir>": the levels pilot's levels per named map (pod only)
+	systemProperty "kb.outdoorDump", providers.gradleProperty("kb.outdoorDump").getOrElse("")
+	// -Pkb.outdoorLevels=MAP,... and -Pkb.landscapeModels=<table>: the levels pilot and the landscape models in a dry run
+	systemProperty "kantobridge.outdoorLevels", providers.gradleProperty("kb.outdoorLevels").getOrElse("")
+	systemProperty "kantobridge.landscape.models", providers.gradleProperty("kb.landscapeModels").map { file(it).absolutePath }.getOrElse("")
 	// -Pkb.heightsSurvey=true with any of the three real bundles: the 3D heights plan's survey (W0; layout data on the pod)
 	systemProperty "kb.heightsSurvey", providers.gradleProperty("kb.heightsSurvey").getOrElse("")
 	// The story check for Crystal: -Pkb.realGen2Index=<the real Johto's world_index.json> with kb.realGen2Bundle and

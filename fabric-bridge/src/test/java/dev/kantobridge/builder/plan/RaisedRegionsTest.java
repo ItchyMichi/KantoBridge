@@ -25,7 +25,7 @@ class RaisedRegionsTest {
 	private static final ExportTileset ROCKS = new ExportTileset("CAVERN", "tilesets.cavern", 16, 96, new int[][] {new int[16]}, "TILEANIM_NONE",
 			Set.of(0), Set.of(), null, Set.of(), Set.of(), Set.of(), Set.of(), Set.of());
 
-	private static MapModel model(String... rows) {
+	static MapModel model(String... rows) {
 		int w = rows[0].length();
 		int h = rows.length;
 		int[][] cells = new int[h][w];
@@ -348,5 +348,206 @@ class RaisedRegionsTest {
 				"##0##0##",
 				"#333333#",
 				"########"}).outcome());
+	}
+
+	/**
+	 * The levels pilot's solve (outdoors: 3 blocks a cell, a rule that disagrees skipped): the keys as {@link #solve}'s, and
+	 * {@code ^ v < >} a marked slope's cell and its way up (with {@code marked}; else a floor cell of key 3), {@code B} a
+	 * bridge's cell; {@code falls} per cell or null.
+	 */
+	private static RaisedRegions.Result outdoor(String[] rows, String[] keys, boolean marked, boolean outdoor, boolean[] falls) {
+		MapModel model = model(rows);
+		int w = rows[0].length();
+		int n = w * rows.length;
+		int[] key = new int[n];
+		boolean[] joins = new boolean[n];
+		boolean[] bridge = new boolean[n];
+		Dir[] climb = new Dir[n];
+		Arrays.fill(key, -1);
+		for (int i = 0; i < n; i++) {
+			char c = keys[i / w].charAt(i % w);
+			Dir way = switch (c) {
+				case '^' -> Dir.UP;
+				case 'v' -> Dir.DOWN;
+				case '<' -> Dir.LEFT;
+				case '>' -> Dir.RIGHT;
+				default -> null;
+			};
+			if (way != null) {
+				if (marked) {
+					climb[i] = way;
+				} else {
+					key[i] = 3;
+				}
+			} else if (c == '0') {
+				joins[i] = true;
+			} else if (c == 'B') {
+				bridge[i] = true;
+			} else if (Character.isDigit(c)) {
+				key[i] = c - '0';
+			}
+		}
+		return RaisedRegions.solve(new RaisedRegions.Input(model, key, joins, bridge, 3, marked ? climb : null, null, false,
+				RaisedRegions.MAX_FACE, !marked, false, RaisedRegions.OUTDOOR_RISE, outdoor, falls));
+	}
+
+	@Test
+	void outdoorsAMarkedSlopeClimbsAndTheDrawingDecides() {
+		// Route 119 in small: the floor's sand slope (two cells) up to ground on the floor's elevation, a strip of elevation 0
+		// (plain ground) on to the upper elevation
+		String[] rows = {
+				"########",
+				"#......#",
+				"#......#",
+				"#..#####",
+				"#.######",
+				"#.######",
+				"#......#",
+				"########"};
+		String[] keys = {
+				"########",
+				"#444444#",
+				"#000000#",
+				"#33#####",
+				"#^######",
+				"#^######",
+				"#333333#",
+				"########"};
+		RaisedRegions.Result marked = outdoor(rows, keys, true, true, null);
+		MapLayout layout = marked.layout();
+		assertNotNull(layout, marked.outcome());
+		assertEquals(0, layout.level(3, 6), "the floor");
+		assertEquals(0, layout.level(1, 5), "the slope's foot");
+		assertEquals(3, layout.level(1, 4));
+		assertEquals(new MapLayout.Ramp(1, 4, Dir.UP, 3), layout.ramp(1, 4), "3 blocks a cell");
+		assertEquals(6, layout.level(2, 3), "the slope's top: two cells up");
+		assertEquals(6, layout.level(4, 2), "the strip no mark names: one height");
+		assertEquals(6, layout.level(4, 1), "the upper elevation as high as the slope's top");
+		assertEquals(0, marked.skipped());
+		assertEquals(List.of(), marked.breaks());
+		// the data alone: the slope is floor of the floor's elevation, the strip a stair
+		MapLayout data = outdoor(rows, keys, false, true, null).layout();
+		assertNotNull(data);
+		assertEquals(0, data.level(2, 3), "the slope's top on the floor");
+		assertEquals(3, data.level(4, 1), "the upper elevation a stair's 3 blocks up");
+	}
+
+	@Test
+	void outdoorsAStripNoMarkNamesClimbsWhereOneHeightCannotHold() {
+		// a two-cell slope up to the upper elevation, a one-cell slope up to a plateau: the strip between them must climb
+		String[] rows = {
+				"##########",
+				"#........#",
+				"#.###.####",
+				"#.##...###",
+				"#.###.####",
+				"#........#",
+				"#........#",
+				"##########"};
+		String[] keys = {
+				"##########",
+				"#44444444#",
+				"#4###0####",
+				"#^##333###",
+				"#^###^####",
+				"#33333333#",
+				"#33333333#",
+				"##########"};
+		RaisedRegions.Result result = outdoor(rows, keys, true, true, null);
+		MapLayout layout = result.layout();
+		assertNotNull(layout, result.outcome());
+		assertEquals(3, layout.level(5, 3), "the plateau, one cell up");
+		assertEquals(6, layout.level(3, 1), "the upper elevation, two cells up");
+		assertEquals(new MapLayout.Ramp(5, 2, Dir.UP, 3), layout.ramp(5, 2), "the strip climbs from the plateau");
+		assertEquals(0, result.skipped());
+	}
+
+	@Test
+	void outdoorsABankTheWaterCannotMeetIsABreakNotAFlatMap() {
+		// a slope lifts one bank: the water stands with the bank it touches most, the other stands over it
+		String[] rows = {
+				"######",
+				"#..~~#",
+				"#.#~~#",
+				"#...~#",
+				"#...~#",
+				"######"};
+		String[] keys = {
+				"######",
+				"#33###",
+				"#^####",
+				"#333##",
+				"#333##",
+				"######"};
+		RaisedRegions.Result result = outdoor(rows, keys, true, true, null);
+		MapLayout layout = result.layout();
+		assertNotNull(layout, result.outcome());
+		assertEquals(0, layout.level(4, 3), "level with the floor");
+		assertEquals(3, layout.level(2, 1), "the lifted bank");
+		assertEquals(1, result.skipped());
+		assertEquals(List.of(1 * 6 + 2), result.breaks(), "the lifted bank's edge with the water");
+		// underground (no outdoor rules) the same map stays flat
+		assertEquals("flat_water_shores", outdoor(rows, keys, true, false, null).outcome());
+	}
+
+	@Test
+	void outdoorsAWaterfallPartsTheRiver() {
+		// a pool between two raised banks, a waterfall, a pool on the floor
+		String[] rows = {
+				"######",
+				"#.~~.#",
+				"#.~~.#",
+				"#.~~.#",
+				"#....#",
+				"######"};
+		String[] keys = {
+				"######",
+				"#3##3#",
+				"#^##^#",
+				"#3##3#",
+				"#3333#",
+				"######"};
+		boolean[] falls = new boolean[36];
+		falls[2 * 6 + 2] = true;
+		falls[2 * 6 + 3] = true;
+		RaisedRegions.Result result = outdoor(rows, keys, true, true, falls);
+		MapLayout layout = result.layout();
+		assertNotNull(layout, result.outcome());
+		assertEquals(3, layout.level(2, 1), "the upper pool, with its banks");
+		assertEquals(0, layout.level(2, 3), "the lower pool, with the floor");
+		assertEquals(0, layout.level(2, 2), "the waterfall stands on the pool under it");
+		assertEquals(0, result.skipped());
+		assertEquals(List.of(), result.breaks());
+		assertEquals(2, outdoor(rows, keys, true, true, null).skipped(), "one body of water can't meet the raised banks too");
+	}
+
+	@Test
+	void outdoorsABridgeIsADeckLevelWithItsEnds() {
+		// Route 119's bridge in small: a slope up to one bank, the bridge over the river to the other
+		String[] rows = {
+				"########",
+				"#..~~..#",
+				"#......#",
+				"#..~~..#",
+				"#.######",
+				"#......#",
+				"#......#",
+				"########"};
+		String[] keys = {
+				"########",
+				"#33##33#",
+				"#33BB33#",
+				"#33##33#",
+				"#^######",
+				"#333333#",
+				"#333333#",
+				"########"};
+		RaisedRegions.Result result = outdoor(rows, keys, true, true, null);
+		MapLayout layout = result.layout();
+		assertNotNull(layout, result.outcome());
+		assertEquals(3, layout.level(3, 2), "the deck, level with its ends");
+		assertEquals(3, layout.level(6, 1), "the far bank, over the deck");
+		assertEquals(0, layout.level(3, 6), "the floor");
+		assertEquals("flat_bridge", outdoor(rows, keys, true, false, null).outcome(), "underground a bridge waits for the two-floor cells");
 	}
 }

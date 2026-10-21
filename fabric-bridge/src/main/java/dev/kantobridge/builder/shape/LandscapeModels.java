@@ -6,6 +6,7 @@ import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import dev.kantobridge.scene.SceneMap;
 import dev.kantobridge.scene.profile.Profile;
+import dev.kantobridge.world.Dir;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -28,10 +29,12 @@ import org.jetbrains.annotations.Nullable;
  * <pre>
  * table     {"maps": {"&lt;map&gt;": [{"name", "tx", "ty", "w", "h" (its grid in the map's tiles), "claim": [[x, y], ...]
  *           (the grid's tiles it takes: its cells', a door's), "spec": a parts spec in the grid's pixels with its
- *           footprint ("keep", "doors", "doorClear"), "height", "quadCap" and "roofRows"}]}}
+ *           footprint ("keep", "doors", "doorClear"), "height", "quadCap" and "roofRows"}]},
+ *  "slopes": {"&lt;map&gt;": [[x, y, "up"|"down"|"left"|"right"], ...]}} (optional: the slopes and stairs its marks name, map
+ *           cells and their way up; a map listed with none had its drawing checked and has none)
  * </pre>
  */
-final class LandscapeModels {
+public final class LandscapeModels {
 	/** The system property naming the models table, a JSON file. */
 	static final String PROPERTY = "kantobridge.landscape.models";
 
@@ -39,10 +42,51 @@ final class LandscapeModels {
 	record Model(String name, int tx, int ty, int w, int h, List<int[]> claim, JsonObject spec) {
 	}
 
+	/** A cell of a slope or stairs the marks name, and its way up. */
+	record Slope(int x, int y, Dir climb) {
+	}
+
 	private static @Nullable Map<String, List<Model>> table;
+	private static @Nullable Map<String, List<Slope>> slopeTable;
 	private static boolean loaded;
 
 	private LandscapeModels() {
+	}
+
+	/**
+	 * Per model of map {@code id}, the cells it claims (cell indexes {@code cy * mapWidth + cx}, its tiles' cells): the levels
+	 * pilot stands each model's rock on one level (OutdoorLevels.rigid).
+	 */
+	public static List<java.util.Set<Integer>> cells(String id, int mapWidth, int perCell) {
+		List<java.util.Set<Integer>> out = new ArrayList<>();
+		for (Model m : of(id)) {
+			java.util.Set<Integer> cells = new java.util.TreeSet<>();
+			for (int[] t : m.claim()) {
+				cells.add(((m.ty() + t[1]) / perCell) * mapWidth + (m.tx() + t[0]) / perCell);
+			}
+			out.add(cells);
+		}
+		return out;
+	}
+
+	/**
+	 * The slopes and stairs the marks name on map {@code id}, per cell (index {@code y * w + x}) its way up, else null; null
+	 * when the table doesn't list the map: its drawing wasn't checked for them (the levels pilot then reads the data).
+	 */
+	public static Dir @Nullable [] slopes(String id, int w, int h) {
+		current();
+		Map<String, List<Slope>> t = slopeTable;
+		List<Slope> cells = t == null ? null : t.get(id);
+		if (cells == null) {
+			return null;
+		}
+		Dir[] out = new Dir[w * h];
+		for (Slope c : cells) {
+			if (c.x() >= 0 && c.y() >= 0 && c.x() < w && c.y() < h) {
+				out[c.y() * w + c.x()] = c.climb();
+			}
+		}
+		return out;
 	}
 
 	/** The models of map {@code id} (none without a table). */
@@ -57,13 +101,45 @@ final class LandscapeModels {
 			String path = System.getProperty(PROPERTY);
 			if (path != null && !path.isBlank()) {
 				try {
-					table = parse(Files.readString(Path.of(path), StandardCharsets.UTF_8));
+					String json = Files.readString(Path.of(path), StandardCharsets.UTF_8);
+					table = parse(json);
+					slopeTable = parseSlopes(json);
 				} catch (IOException e) {
 					throw new IllegalStateException("landscape models: can't read " + path, e);
 				}
 			}
 		}
 		return table;
+	}
+
+	/** Sets the slopes (tests), returning the ones before. */
+	static synchronized @Nullable Map<String, List<Slope>> useSlopes(@Nullable Map<String, List<Slope>> next) {
+		current();
+		Map<String, List<Slope>> before = slopeTable;
+		slopeTable = next;
+		return before;
+	}
+
+	/** A table's slopes from its JSON (see the class comment); none when it has no "slopes". */
+	static Map<String, List<Slope>> parseSlopes(String json) {
+		Map<String, List<Slope>> out = new TreeMap<>();
+		JsonObject root = JsonParser.parseString(json).getAsJsonObject();
+		if (!root.has("slopes")) {
+			return Map.of();
+		}
+		for (Map.Entry<String, JsonElement> e : root.getAsJsonObject("slopes").entrySet()) {
+			List<Slope> cells = new ArrayList<>();
+			for (JsonElement el : e.getValue().getAsJsonArray()) {
+				JsonArray a = el.getAsJsonArray();
+				Dir climb = Dir.byId(a.get(2).getAsString());
+				if (climb == null) {
+					throw new IllegalArgumentException("landscape models: slope " + a + " on " + e.getKey() + " has no way up");
+				}
+				cells.add(new Slope(a.get(0).getAsInt(), a.get(1).getAsInt(), climb));
+			}
+			out.put(e.getKey(), List.copyOf(cells));
+		}
+		return Map.copyOf(out);
 	}
 
 	/** Sets the table (tests), returning the one before. */

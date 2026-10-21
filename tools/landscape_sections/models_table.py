@@ -2,13 +2,13 @@
 """The landscape models' table for the game (docs/specs/LANDSCAPE_MODELS.md): every spot's specs as the planner places
 them (LandscapeModels.java, -Pkb.landscapeModels).
 
-    python models_table.py <models dir> <table.json> [SPOT ...]
+    python models_table.py <models dir> <table.json> [--slopes <dir>] [SPOT ...]
 
 Per model: its grid (the tiles its cells, the door cells its arch reaches over, its parts and its paint cover, inside
 the spot's window), its claim (those cells' tiles), and its spec in the grid's pixels: the parts (the trees helper
 expanded into trunks and crowns, as terrain_model.py builds them), the footprint ("keep": its cells' tiles; "doors";
-"doorClear"), "height", "quadCap" and "roofRows". Part sizes, paint rectangles and tiles only: no pixel. Runs where
-terrain_model.py does (numpy, Pillow).
+"doorClear"), "height", "quadCap" and "roofRows". Part sizes, paint rectangles and tiles only: no pixel. With --slopes, the table's
+"slopes" are the marked slopes there (slopes_table.py). Runs where terrain_model.py does (numpy, Pillow).
 """
 import json
 import math
@@ -19,6 +19,7 @@ import numpy as np
 from PIL import Image
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from slopes_table import add_slopes  # noqa: E402
 from terrain_model import DOOR_CLEAR, MAX_HEIGHT, build, cells_of, expand  # noqa: E402
 
 TILE = 8
@@ -102,7 +103,11 @@ def model(package, spec, draw, name):
 
 def main(argv):
     models_dir, out = argv[1], argv[2]
-    spots = argv[3:] or sorted(d for d in os.listdir(models_dir) if os.path.isdir(os.path.join(models_dir, d, "specs")))
+    rest = argv[3:]
+    slopes_dir = None
+    if rest[:1] == ["--slopes"]:
+        slopes_dir, rest = rest[1], rest[2:]
+    spots = rest or sorted(d for d in os.listdir(models_dir) if os.path.isdir(os.path.join(models_dir, d, "specs")))
     maps = {}
     for spot in spots:
         d = os.path.join(models_dir, spot)
@@ -116,8 +121,11 @@ def main(argv):
             maps.setdefault(package["map"], []).append(m)
             print(package["map"], m["name"], f"grid {m['w']}x{m['h']} tiles at {m['tx']},{m['ty']}", f"claim {len(m['claim'])}",
                   f"parts {len(m['spec']['parts'])}", f"doors {len(m['spec']['doors']) // 4}")
+    table = {"maps": maps}
+    if slopes_dir is not None:
+        add_slopes(table, slopes_dir)
     with open(out, "w") as fh:
-        json.dump({"maps": maps}, fh, separators=(",", ":"))
+        json.dump(table, fh, separators=(",", ":"))
     return 0
 
 

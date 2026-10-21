@@ -243,6 +243,7 @@ final class Gen3Planner {
 		}
 
 		// ---- cell models and their elevation walls ----
+		Set<String> outdoorLevels = OutdoorLevels.fromProperty();
 		List<PlacedMap> placed = new ArrayList<>();
 		Map<String, MapLayout> mapLayouts = new TreeMap<>();
 		int elevationEdges = 0;
@@ -262,6 +263,12 @@ final class Gen3Planner {
 				RaisedRegions.Result levels = RaisedRegions.gen3(model, map, true);
 				warnings.note("room_levels_" + levels.outcome(), Warnings.symbols("map", map.id()));
 				rooms = levels.layout();
+			}
+			if (outdoorLevels.contains(map.id()) && (placement.kind() == MapPlacement.Kind.SURFACE || WorldPlan.openSky(placement))) {
+				// The levels pilot (D3, D4): an outdoor map on its elevations' raised ground, 3 blocks a cell of stairs or face; with
+				// its slopes marked, on its drawing's
+				boolean[] falls = RaisedRegions.gen3Falls(model, map, tiles(bundle, pairs, map.pair()));
+				rooms = OutdoorLevels.plan(map.id(), model, slopes -> RaisedRegions.gen3Outdoor(model, map, slopes, falls), warnings);
 			}
 			rooms = WorldPlanner.withCeilings(placement, model, rooms, Headroom.blackFiller(model, probe, (cx, cy) -> !map.inMap(cx, cy)),
 					Headroom.screenRows(true), !area3d.contains(map.id()), warnings);

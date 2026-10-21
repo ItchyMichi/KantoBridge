@@ -116,6 +116,14 @@ public final class BlockCode {
 		return (KIND_STEP << SHIFT) | gen1Dir(climb);
 	}
 
+	/**
+	 * A step collider climbing {@code climb} at {@code stage} (0 a cave's two half steps; outdoors 1 the lower and 2 the
+	 * upper block of a 3-block cell): the stage over the direction's two bits.
+	 */
+	public static int step(dev.kantobridge.world.Dir climb, int stage) {
+		return (KIND_STEP << SHIFT) | stage << 2 | gen1Dir(climb);
+	}
+
 	/** A seat collider. */
 	public static int seat() {
 		return KIND_SEAT << SHIFT;

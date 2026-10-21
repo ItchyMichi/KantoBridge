@@ -43,3 +43,20 @@ def test_a_cell_left_out_keeps_the_default():
 def test_a_malformed_mark_is_refused(section):
     with pytest.raises(MarkError):
         table_of(REGIONS, {"sections": [section]})
+
+
+def test_marked_slopes_go_in_the_table(tmp_path):
+    from landscape_sections.slopes_table import add_slopes
+
+    (tmp_path / "ROUTE.json").write_text('{"slopes": [[6, 55, "up"], [6, 54, "up"]], "levels": [[1, 1, 2]]}')
+    (tmp_path / "CHECKED.json").write_text('{"slopes": []}')
+    table = add_slopes({"maps": {}}, str(tmp_path))
+    assert table["slopes"] == {"CHECKED": [], "ROUTE": [[6, 54, "up"], [6, 55, "up"]]}
+
+
+def test_a_slope_without_a_way_up_is_refused(tmp_path):
+    from landscape_sections.slopes_table import add_slopes
+
+    (tmp_path / "ROUTE.json").write_text('{"slopes": [[6, 55, "north"]]}')
+    with pytest.raises(ValueError):
+        add_slopes({"maps": {}}, str(tmp_path))

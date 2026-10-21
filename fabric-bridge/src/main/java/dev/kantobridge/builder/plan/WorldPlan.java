@@ -1087,7 +1087,21 @@ public final class WorldPlan {
 				int floorTile = planned == null ? tile : planned.floorTile(planIndex, tile);
 				sink.set(x, feet - 1, z, BlockCode.full(this.slot(map, floorTile, false)));
 				int from = 0;
-				if (ramp != null) {
+				if (ramp != null && ramp.rise() >= RaisedRegions.OUTDOOR_RISE) {
+					// Outdoors a cell climbs 3 blocks (D4): three half steps a block, on the floor in its low row (reaching 1.5
+					// blocks), on two full blocks in its high row.
+					if (highRow(ramp.dir(), tx - cx * Scale.CELL_BLOCKS, ty - cy * Scale.CELL_BLOCKS)) {
+						sink.set(x, feet, z, BlockCode.full(this.slot(map, tile, false)));
+						sink.set(x, feet + 1, z, BlockCode.full(this.slot(map, tile, false)));
+						sink.set(x, feet + 2, z, BlockCode.step(ramp.dir(), 2));
+						from = 3;
+					} else {
+						sink.set(x, feet, z, BlockCode.step(ramp.dir(), 1));
+						from = 1;
+					}
+					column = from;
+					taken |= (1L << from) - 1;
+				} else if (ramp != null) {
 					// A ramp's two half steps: on the floor in its low row, on a block in its high row (whose carrier draws the
 					// stair's art there).
 					if (highRow(ramp.dir(), tx - cx * Scale.CELL_BLOCKS, ty - cy * Scale.CELL_BLOCKS)) {
@@ -1213,6 +1227,13 @@ public final class WorldPlan {
 				sink.set(x, feet + k, z, lit ? BlockCode.decor(false, true, true) : BlockCode.vanilla(dev.kantobridge.builder.zone.ZoneBlock.BARRIER));
 				light &= !lit;
 				taken |= 1L << k;
+			}
+		}
+		if (!map.interior() && feet > base) {
+			// Outdoors on raised ground (the levels pilot, D4): under a raised cell its own art, down to the map's floor level.
+			int under = BlockCode.full(this.slot(map, tile, false));
+			for (int y = base - 1; y < feet - 1; y++) {
+				sink.set(x, y, z, under);
 			}
 		}
 		if (map.interior()) {

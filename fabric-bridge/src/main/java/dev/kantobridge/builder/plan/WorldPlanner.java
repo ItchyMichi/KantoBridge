@@ -304,6 +304,7 @@ public final class WorldPlanner {
 		Map<String, ExportTileset> tilesets = new HashMap<>();
 		ExportPalettes palettes = bundle.hasPalettes() ? bundle.palettes() : null;
 		List<PlacedMap> placed = new ArrayList<>();
+		Set<String> outdoorLevels = OutdoorLevels.fromProperty();
 		for (MapPlacement placement : placements.values()) {
 			ExportMap map = all.get(placement.id());
 			ExportTileset tileset = tilesets.get(map.tileset());
@@ -332,6 +333,10 @@ public final class WorldPlanner {
 			List<MapLayout.Piece> pieces = caveArea.pieces().get(map.id());
 			if (pieces != null) {
 				raised = withPieces(model, pieces, raised);
+			}
+			if (outdoorLevels.contains(map.id()) && (placement.kind() == MapPlacement.Kind.SURFACE || WorldPlan.openSky(placement))) {
+				// The levels pilot (D3, D4): its areas (tile pairs keep them apart) at the faces between them, 3 blocks a cell
+				raised = OutdoorLevels.plan(map.id(), model, slopes -> RaisedRegions.outdoor(model, edges, slopes), warnings);
 			}
 			// An interior's ceilings (HEIGHTS_ALL_GAMES_PLAN D5): as tall as its drawing, at least 4 over its highest floor
 			raised = withCeilings(placement, model, raised, Headroom.blackFiller(model, probe, null), Headroom.screenRows(false),

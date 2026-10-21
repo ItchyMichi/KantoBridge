@@ -2,7 +2,7 @@
 """The landscape models' packages (docs/specs/LANDSCAPE_MODELS.md): per picture spot, the window of the map the camera
 looks over, for the modelling agent and terrain_model.py.
 
-    python package.py <regions dir> <marks dir> <art dir> <out dir> <spots.json> [SPOT ...]
+    python package.py <regions dir> <marks dir> <art dir> <out dir> <spots.json> [--levels <levels dir>] [SPOT ...]
 
 <spots.json>: {"<spot>": {"map": "<MAP>", "x": cx, "y": cy}, ...} (the cell the camera stands on, looking north);
 <regions dir>/<MAP>.json the first pass, <marks dir>/<MAP>_sections.json the agents' marks, <art dir>/<MAP>_art.png the
@@ -13,7 +13,10 @@ map's art at 48 px a cell. Per spot, <out dir>/<spot>/:
   left, each marked section outlined in its kind's colour with its id;
 - package.json: the map, the spot, the window ([x0, y0, w, h] in map cells), px (16), the doors (window cells), and
   each marked section with a cell in the window: id, kind, note, rows, landmark, its cells and top cells (window
-  cells), and "model": the sections to model (masses, mouths, faces of 3 cells or more; with trees, the trees).
+  cells), and "model": the sections to model (masses, mouths, faces of 3 cells or more; with trees, the trees). With
+  --levels (OutdoorLevelsDumpTest's per-map levels: the levels pilot), "levels": each window cell's level in blocks
+  over the map's floor, "ramps": [x, y, climb, rise] in window cells, and each section's "base": the level its rock
+  stands on (the lowest of its cells': a model counts its voxels from there); the reference shows the levels.
 
 The window: 12 cells either side of the spot and 24 north of it, inside the map. Private output: the art is the user's
 game.
@@ -61,7 +64,7 @@ def window_of(regions, spot):
     return x0, y0, x1 - x0, y1 - y0
 
 
-def package(regions, marks, art, spot, trees):
+def package(regions, marks, art, spot, trees, levels=None):
     x0, y0, ww, wh = window_of(regions, spot)
     inside = lambda x, y: x0 <= x < x0 + ww and y0 <= y < y0 + wh  # noqa: E731
     sections = []
@@ -77,8 +80,16 @@ def package(regions, marks, art, spot, trees):
              or (trees and s["kind"] == "trees")]
     doors = sorted({(d[0] - x0, d[1] - y0) for r in regions["regions"] for d in r.get("doors_below", []) if inside(d[0], d[1])})
     crop = art.crop((x0 * ART, y0 * ART, (x0 + ww) * ART, (y0 + wh) * ART)).resize((ww * PX, wh * PX), Image.NEAREST)
-    return {"map": regions["map"], "spot": [spot["x"] - x0, spot["y"] - y0], "window": [x0, y0, ww, wh], "px": PX,
-            "doors": [list(d) for d in doors], "sections": sections, "model": model}, crop
+    pkg = {"map": regions["map"], "spot": [spot["x"] - x0, spot["y"] - y0], "window": [x0, y0, ww, wh], "px": PX,
+           "doors": [list(d) for d in doors], "sections": sections, "model": model}
+    if levels is not None:
+        mw = levels["w"]
+        lv = levels["levels"]
+        pkg["levels"] = [lv[(y0 + y) * mw + x0 + x] for y in range(wh) for x in range(ww)]
+        pkg["ramps"] = [[r[0] - x0, r[1] - y0, r[2], r[3]] for r in levels["ramps"] if inside(r[0], r[1])]
+        for sec in sections:
+            sec["base"] = min((pkg["levels"][y * ww + x] for x, y in sec["cells"]), default=0)
+    return pkg, crop
 
 
 def reference(drawing, pkg, scale=3):
@@ -115,6 +126,20 @@ def reference(drawing, pkg, scale=3):
     for y in range(0, wh, 2):
         d.rectangle([2, y * c + 2, 34, y * c + 15], fill=(255, 255, 255, 220))
         d.text((4, y * c + 3), str(y * PX), fill=(0, 0, 0, 255))
+    if "levels" in pkg:
+        # each cell over the map's floor: its level in blocks, a ramp's arrow
+        for y in range(wh):
+            for x in range(ww):
+                level = pkg["levels"][y * ww + x]
+                if level > 0:
+                    X, Y = x * c, y * c
+                    d.rectangle([X + c - 22, Y + c - 16, X + c - 2, Y + c - 3], fill=(255, 255, 255, 215))
+                    d.text((X + c - 20, Y + c - 15), str(level), fill=(200, 0, 160, 255))
+        arrows = {"up": "^", "down": "v", "left": "<", "right": ">"}
+        for rx, ry, climb, rise in pkg.get("ramps", []):
+            X, Y = rx * c, ry * c
+            d.rectangle([X + 2, Y + c - 16, X + 22, Y + c - 3], fill=(255, 230, 0, 230))
+            d.text((X + 6, Y + c - 15), arrows.get(climb, "?") + str(rise), fill=(0, 0, 0, 255))
     sx, sy = pkg["spot"]
     d.rectangle([sx * c + 6, sy * c + 6, sx * c + c - 6, sy * c + c - 6], outline=(255, 0, 255, 255), width=3)
     return Image.alpha_composite(img, over).convert("RGB")
@@ -122,18 +147,33 @@ def reference(drawing, pkg, scale=3):
 
 def main(argv):
     regions_dir, marks_dir, art_dir, out_dir, spots_path = argv[1:6]
+    rest = argv[6:]
+    levels_dir = None
+    if rest[:1] == ["--levels"]:
+        levels_dir, rest = rest[1], rest[2:]
     spots = json.load(open(spots_path))
-    for name in argv[6:] or sorted(spots):
+    for name in rest or sorted(spots):
         spot = spots[name]
         mid = spot["map"]
         regions = json.load(open(os.path.join(regions_dir, mid + ".json")))
         marks = json.load(open(os.path.join(marks_dir, mid + "_sections.json")))
         art = Image.open(os.path.join(art_dir, mid + "_art.png")).convert("RGB")
-        pkg, drawing = package(regions, marks, art, spot, spot.get("trees", False))
+        levels = None
+        if levels_dir is not None and os.path.exists(os.path.join(levels_dir, mid + ".json")):
+            levels = json.load(open(os.path.join(levels_dir, mid + ".json")))
+        pkg, drawing = package(regions, marks, art, spot, spot.get("trees", False), levels)
         d = os.path.join(out_dir, name)
         os.makedirs(os.path.join(d, "specs"), exist_ok=True)
         drawing.save(os.path.join(d, "drawing.png"))
         reference(drawing, pkg).save(os.path.join(d, "reference.png"))
+        if os.path.exists(os.path.join(d, "package.json")) and "levels" in pkg:
+            # an existing package keeps its sections and models; it gains the levels
+            old = json.load(open(os.path.join(d, "package.json")))
+            old.update({k: pkg[k] for k in ("levels", "ramps")})
+            bases = {s["id"]: s["base"] for s in pkg["sections"]}
+            for s in old["sections"]:
+                s["base"] = bases.get(s["id"], 0)
+            pkg = old
         with open(os.path.join(d, "package.json"), "w") as fh:
             json.dump(pkg, fh, indent=1)
         print(name, "window", pkg["window"], "sections", len(pkg["sections"]), "to model", pkg["model"])

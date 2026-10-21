@@ -111,4 +111,22 @@ class LandscapeModelsTest {
 		assertEquals(2, m.claim().size());
 		assertEquals(40, m.spec().get("height").getAsInt());
 	}
+
+	@Test
+	void theMarkedSlopesRead() {
+		Map<String, List<LandscapeModels.Slope>> slopes = LandscapeModels.parseSlopes("""
+				{"maps": {}, "slopes": {"ROUTE": [[1, 2, "up"], [3, 0, "left"]], "CHECKED": []}}""");
+		Map<String, List<LandscapeModels.Slope>> before = LandscapeModels.useSlopes(slopes);
+		try {
+			dev.kantobridge.world.Dir[] route = LandscapeModels.slopes("ROUTE", 4, 3);
+			assertEquals(dev.kantobridge.world.Dir.UP, route[2 * 4 + 1]);
+			assertEquals(dev.kantobridge.world.Dir.LEFT, route[3]);
+			assertNull(route[0]);
+			assertEquals(12, LandscapeModels.slopes("CHECKED", 4, 3).length, "checked, none marked: the drawing still decides");
+			assertNull(LandscapeModels.slopes("UNCHECKED", 4, 3), "not checked: the data decides");
+		} finally {
+			LandscapeModels.useSlopes(before);
+		}
+		assertEquals(Map.of(), LandscapeModels.parseSlopes("{\"maps\": {}}"));
+	}
 }
