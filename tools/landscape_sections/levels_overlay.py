@@ -4,11 +4,12 @@ page's 🖥 overlay draws them: each walkable or water cell's level in half cell
 window's lowest, a colour per level, the ramps' arrows, the cells the solver left at an unwalkable edge (breaks) boxed
 in red.
 
-    python levels_overlay.py <levels.json> <art.png> <out dir> [--window X0,Y0,X1,Y1] [--chunk N]
+    python levels_overlay.py <levels.json> <art.png> <out dir> [--window X0,Y0,X1,Y1] [--chunk N] [--plain]
 
 <levels.json>: OutdoorLevelsDumpTest's dump of the map; <art.png>: its art at 48 px a cell. Writes <MAP>_levels_r<row>_c<col>.png,
 chunks of at most N x N cells (default 24) with the cell numbers every 4 cells, and <MAP>_levels.json (each chunk's
-cells). Private output: the art is the user's game. Needs Pillow (kb-pyimg:1).
+cells). --plain: the same chunks with the cell numbers only (<MAP>_plain_r<row>_c<col>.png), the drawing to read the
+levels against. Private output: the art is the user's game. Needs Pillow (kb-pyimg:1).
 """
 import json
 import os
@@ -30,6 +31,7 @@ def main(argv):
     w, h, kinds, levels = dump["w"], dump["h"], dump["kinds"], dump["levels"]
     x0, y0, x1, y1 = (int(v) for v in argv[argv.index("--window") + 1].split(",")) if "--window" in argv else (0, 0, w, h)
     chunk = int(argv[argv.index("--chunk") + 1]) if "--chunk" in argv else 24
+    plain = "--plain" in argv
     ramps = {(r[0], r[1]): r for r in dump.get("ramps", [])}
     breaks = {tuple(b) for b in dump.get("breaks", [])}
     floor = min((levels[y * w + x] for y in range(y0, y1) for x in range(x0, x1) if kinds[y * w + x] != "#"), default=0)
@@ -45,7 +47,7 @@ def main(argv):
                 for x in range(c0, c1):
                     X, Y = (x - c0) * CELL, (y - r0) * CELL
                     k = kinds[y * w + x]
-                    if k == "#":
+                    if k == "#" or plain:
                         continue
                     n = (levels[y * w + x] - floor) * 2 // 3
                     col = COLOURS[n % len(COLOURS)]
@@ -63,7 +65,7 @@ def main(argv):
                 if y % 4 == 0:
                     d.rectangle([2, (y - r0) * CELL + 2, 30, (y - r0) * CELL + 15], fill=(255, 255, 255, 220))
                     d.text((4, (y - r0) * CELL + 3), str(y), fill=(0, 0, 0, 255))
-            name = f"{mid}_levels_r{(r0 - y0) // chunk}_c{(c0 - x0) // chunk}.png"
+            name = f"{mid}_{'plain' if plain else 'levels'}_r{(r0 - y0) // chunk}_c{(c0 - x0) // chunk}.png"
             Image.alpha_composite(img, over).convert("RGB").save(os.path.join(out_dir, name))
             index.append({"file": name, "cells": [c0, r0, c1 - 1, r1 - 1]})
     with open(os.path.join(out_dir, f"{mid}_levels.json"), "w") as fh:

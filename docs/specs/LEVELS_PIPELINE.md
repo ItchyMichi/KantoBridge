@@ -44,26 +44,45 @@ Emerald also `<MAP>_elev.txt` (the elevations) and `<MAP>_mids.json` (each cell'
 planner's outdoor notes. It also renders every chunk of the named maps as the build does (a gap in the raised ground's
 art fails here, not in a two-hour build). Map ids, cells and numbers only: they may leave the pod.
 
-### 2. The marking page (kb-hub `/levels.html`, the user)
+### 2. The review (an agent; the user's marks only as an answer key)
 
-`python3 kb-hub/publish_levels.py --solver <dump dir> --source "<what built it>"` (in kb-pyimg:1) crops each map's view
-from its art (`kb-hub/work/landscape/art/<MAP>_art.png`, 48 px a cell) and lists it on the page: the window round each
-picture spot in `kb-hub/work/landscape/spots.json`, or a view set by hand in the script's `VIEWS`. The user picks a
-level (half cells) or an uphill arrow and paints tiles; the page saves to `kb-hub/data/levels/marks/<MAP>.json` (a copy
-in `history/` at most every 2 minutes, 60 kept). The 🖥 button lays the computer's levels over the marks, in the same
-half cells, a red box where they differ.
+The user's wish (2026-10-21): the process runs without their input. An agent reviews the computer's levels against the
+drawing, as the user did on Route 119:
 
-What the user found on Route 119: the stairs and the sand slope as arrows, and that the drawing can climb more than its
-stairs are long (the "jump from 2 to 4" at the slope's top: each stair or slope cell climbs the cell of cliff beside it).
+- `python3 tools/landscape_sections/levels_overlay.py <dump>/<MAP>.json <art> <review>/<MAP> --chunk 20` draws the
+  computer's levels over the art in chunks (half cells over the view's lowest level, `floor` in `<MAP>_levels.json`;
+  `^ v < >` a ramp at its foot's level; a red box a break). The plain art beside it: the same chunks without the numbers.
+- The review agent (prompt: the map, these files, this section) reads every chunk beside the plain art and writes
+  `<review>/<MAP>.json`: `{"map", "floor", "pins": [[x, y, n], ...], "slopes": [[x, y, way up], ...], "notes"}`: per area
+  the computer has wrong, one of its cells and its right level `n` (half cells over `floor`, even: whole blocks); the
+  stairs and slopes it missed; what it wasn't sure of. Only what is clearly wrong; doubts go in the notes.
+- The rules it reads the drawing by (Gen 3's three-quarter view; the same for the others):
+  - a cliff face (a band of rock, a cell or two tall) is drawn below the ground it holds up: that ground stands over the
+    ground in front of the face by the face's height (a cell of face: 2 half cells, 3 blocks); a side cliff (a strip of
+    rock on a raised area's west or east edge) drops toward the side it faces;
+  - ground next to ground with no face drawn between them is one level; a house, a tree, a fence or a rock is no face:
+    the ground behind it stands with the ground in front;
+  - stairs and slopes climb to the higher ground; ledges hop down (one way) and stay on one level for now;
+  - the sea is one level, the lowest, behind reefs and round islands too; a pond stands on its terrace; a river above a
+    waterfall stands over the water under it;
+  - ledges and terraces nobody reaches (a hill's flanks) climb toward the hill's top, each over the one in front of it.
+- `python3 tools/landscape_sections/pins_table.py <models table> <review> <MAP>` and `slopes_table.py` (its slopes) put
+  them in the models table: the planner sets the ground round each pinned cell, as far as it stands level with it, to
+  that level (`OutdoorLevels.pinned`), and climbs the slopes. Then step 1 again and a second look.
 
-### 3. Compare
+The user's own marks (kb-hub `/levels.html`, `publish_levels.py --solver`) stay the answer key for testing the rules
+(Route 119's); the user marks only when asked.
+
+### 3. Compare (where the user marked a map)
 
 `python3 tools/landscape_sections/compare_marks.py <marks.json> <dump>/<MAP>.json` prints both grids in half cells,
-lined up at the offset most cells agree on, and every marked cell (not rock, not an arrow) where they differ.
+lined up at the offset most cells agree on, and every marked cell (not rock, not an arrow) where they differ. After any
+change to the rules, Route 119 must still agree (524 of 524 level cells).
 
 ### 4. Teach the computer what it got wrong
 
-In this order, each with a test where it is code:
+From the review's notes and pins (or the user's marks), in this order, each with a test where it is code; a rule that
+changes a map nobody reviewed is checked over every map (dump all, compare before and after: what moved, and why):
 
 1. **A tile the arrows always sit on** is a stair the game's table can name:
    `python3 tools/landscape_sections/stair_tiles.py <marks.json> <dump>/<MAP>.json <dump>/<MAP>_mids.json` lists the

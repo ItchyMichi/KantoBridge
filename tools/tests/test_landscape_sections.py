@@ -119,3 +119,14 @@ def test_the_maps_chain_at_their_seams_and_a_loop_left_open_shows(tmp_path):
     rows = {(r["a"], r["b"]): r for r in report(maps, found, bases, tree)}
     assert rows[("B", "D")]["loop"] and rows[("B", "D")]["chained"] == {-3: 2}, "the loop is 3 blocks open at B | D"
     assert rows[("A", "B")]["chained"] == {0: 2, 3: 1}, "A's lower east cell still steps"
+
+
+def test_a_reviews_pins_go_in_the_table_in_blocks(tmp_path):
+    from landscape_sections.pins_table import add_pins
+
+    (tmp_path / "TOWN.json").write_text('{"floor": 12, "pins": [[5, 4, 0], [3, 9, 6]], "slopes": []}')
+    table = add_pins({"maps": {}}, str(tmp_path))
+    assert table["pins"] == {"TOWN": [[3, 9, 21], [5, 4, 12]]}, "half cells over the view's floor, 1.5 blocks each"
+    (tmp_path / "TOWN.json").write_text('{"floor": 0, "pins": [[1, 1, 3]]}')
+    with pytest.raises(ValueError):
+        add_pins({"maps": {}}, str(tmp_path))
