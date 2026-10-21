@@ -54,7 +54,7 @@ class WorldIndexTest {
 		JsonObject scale = root.getAsJsonObject("scale");
 		assertEquals(2, scale.get("cellBlocks").getAsInt());
 		assertEquals(64, scale.get("surfaceY").getAsInt());
-		assertEquals(22, scale.get("layerStep").getAsInt());
+		assertEquals(Scale.LAYER_STEP, scale.get("layerStep").getAsInt());
 		JsonObject town = root.getAsJsonObject("maps").getAsJsonObject("TEST_TOWN");
 		assertEquals(List.of("biome", "dark", "h", "kind", "layer", "palette", "parent", "w", "x", "y", "z"),
 				town.keySet().stream().sorted().toList());

@@ -25,6 +25,7 @@ import dev.kantobridge.proto.ProtoJson;
 import dev.kantobridge.scene.gen3.QuarterPages;
 import dev.kantobridge.world.MapPlacement;
 import dev.kantobridge.world.RegionRecord;
+import dev.kantobridge.world.Scale;
 import dev.kantobridge.world.SlotMap;
 import dev.kantobridge.world.StoryCellTable;
 import dev.kantobridge.world.StoryCellType;
@@ -93,7 +94,7 @@ class Gen2PlanTest {
 				new dev.kantobridge.world.CellPos("G2_TEST_CAVE_B1F", 3, 0), true, plan.index().shafts().get(0).x(), plan.index().shafts().get(0).z(),
 				b1f.y(), cave.y() - 1, plan.index().shafts().get(0).wall())), plan.index().shafts());
 		// the house under the town's door (4, 3), its mat (2, 5) the arrival, on layer 1 now that the cave left the layers
-		assertEquals(new MapPlacement("G2_TEST_HOUSE", ox(4), 42, oz(-4), 6, 6, 1, MapPlacement.Kind.INTERIOR, QuarterPages.PALETTE,
+		assertEquals(new MapPlacement("G2_TEST_HOUSE", ox(4), Scale.feetY(1), oz(-4), 6, 6, 1, MapPlacement.Kind.INTERIOR, QuarterPages.PALETTE,
 				WorldPlan.BIOME_INTERIOR, false, "G2_TEST_TOWN"), plan.index().map("G2_TEST_HOUSE"));
 		assertEquals(0, plan.edgeMismatches());
 		assertEquals(0, plan.overlaps());

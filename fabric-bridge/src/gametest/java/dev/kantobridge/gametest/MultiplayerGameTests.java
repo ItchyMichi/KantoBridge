@@ -367,7 +367,7 @@ public class MultiplayerGameTests implements FabricGameTest {
 		try {
 			// The JUnit tests' TestData.MIN_BUILD_HEIGHT, which the golden index was planned with.
 			WorldPlan plan = WorldPlanner.plan(syntheticBundle(), new WorldPlanner.Options(null, SyntheticBuildGameTests.ORIGIN_X,
-					SyntheticBuildGameTests.ORIGIN_Z, -256));
+					SyntheticBuildGameTests.ORIGIN_Z, -352));
 			helper.assertTrue(plan.index().toJson().equals(golden.toJson()), "the plan's index isn't the golden one");
 			helper.assertTrue(plan.shapes() != null, "no shapes planned");
 			return plan.shapes();

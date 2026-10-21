@@ -16,7 +16,7 @@ public final class TestData {
 	public static final int ORIGIN_X = 3_200_000;
 	public static final int ORIGIN_Z = 3_200_000;
 	/** The deep overworld's lowest block (P4). */
-	public static final int MIN_BUILD_HEIGHT = -256;
+	public static final int MIN_BUILD_HEIGHT = -352;
 
 	private TestData() {
 	}

@@ -1058,7 +1058,7 @@ for the rest" (plan §8). Feature tests per phase, the full suite at the checkpo
 | W2 | One 3D planner for every game | **done** (note 3) | 2026-10-20 | `W2: one 3D planner` |
 | W3 | Links by kind, pilots | **core done** (note 4); videos with W4's pilots | 2026-10-21 | `W3: real ladders and holes in Johto and Hoenn` |
 | W4 | Raised ground in caves | **Emerald done** (note 5); Crystal next (labels), real dry run when a pod in EU-RO-1 is free | 2026-10-21 | `W4: raised ground in Emerald's caves` |
-| W5 | Interiors: depth, headroom, the deeper world | | | |
+| W5 | Interiors: depth, headroom, the deeper world | **ceilings and the deeper world done** (note 6); levels in rooms on layers next | 2026-10-21 | `W5: rooms as tall as their drawing, a deeper world` |
 | W6 | Outdoors | | | |
 | W7 | Blue's audit built | | | |
 | W8 | Every region rebuilt | | | |
@@ -1146,6 +1146,27 @@ for the rest" (plan §8). Feature tests per phase, the full suite at the checkpo
      art and two tiers read as two spaces; W5's headroom and depth open them up. Kanto's caves are unchanged.
    - Checks (a pod in EU-SE-1, through RunPod's ssh proxy: `kb-pty`): JUnit 1,363 (builder and scene 531 with the goldens
      regenerated, the other packages 832), GameTests 126, pytest 2,256.
+
+6. **W5, rooms as tall as their drawing, and a deeper world** (plan D5, D8). Every interior under a ceiling gets its
+   ceilings in its layout (`MapLayout` key `ceilings`, as `(ceiling, count)` runs; the schema and PROTOCOL.md say so):
+   `Headroom` reads each floor cell's chain (the solid cells straight up the screen, two blocks a cell, up to the classic
+   screen's rows, 8 for Gen 1 and 2 and 9 for Gen 3, the map's edge or a cell drawn as flat black) and gives a room one
+   flat ceiling at `max(depth, highest floor + 4)`, a cave a ceiling that follows its floor, `max(4, tallest chain)` over
+   each cell. The builder, the shape map's column caps, the hangings and the cave fill go up to each cell's ceiling; the
+   interior walls stand to it (the dressing's fold, plain wall above the drawing); the cave rock hangs under it at the
+   mod's own sizes. The shape planner takes each map's room from the scene (`Headroom.rooms`), so a filtered build plans
+   the same keys as a full one.
+   - **The deeper world:** layers 29 blocks apart (`Scale.LAYER_STEP`: 11 of room, `Scale.LAYER_ROOM`, its floor and
+     ceiling blocks and 16 of rock), the overworld's bottom at Y -352 (height 672), the spawn rule `walking_level_only`
+     at `(y - 63) mod 29`. One step for every layer rather than one per layer, so the rule still finds a floor (plan D5's
+     note); a room taller than 11 would stop there and be counted (`room_ceiling_capped`; none in the survey). Fourteen
+     layers put the deepest floor at Y -343.
+   - **The 3D area** plans its maps' ceilings before it stacks their floors (each rank under the one above by its tallest
+     room + 6), Kanto's caves included: their thick rock now stands to 8 blocks (the user's choice: thick walls count in
+     full), so their floors stack further apart than 11.
+   - Synthetic worlds: rooms of 4 to 8 blocks, layers at Y 35 and 6, Emerald's cave B1F 14 under 1F; goldens regenerated;
+     `HeadroomTest`, `MapLayoutTest.ceilingsRoundTripAndBoundTheMap`, the raised-cave, cave-rock and rendered-column tests
+     follow the room; the GameTests' deep overworld is -352.
 
 ## Wild Routes
 

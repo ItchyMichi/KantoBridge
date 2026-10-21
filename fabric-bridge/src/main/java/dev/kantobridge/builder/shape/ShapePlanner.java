@@ -119,7 +119,12 @@ public final class ShapePlanner {
 
 	/** The levels a placement's hangings may take: under its ceiling, or (open sky, the surface) any. */
 	public static int hangTop(MapPlacement placement) {
-		return placement.kind() == MapPlacement.Kind.INTERIOR && !WorldPlan.openSky(placement) ? WorldPlan.CEILING_ABOVE_FEET : 31;
+		return hangTop(placement, null, 0, 0);
+	}
+
+	/** The same for one cell, under its own ceiling (docs/specs/HEIGHTS_ALL_GAMES_PLAN.md D5). */
+	public static int hangTop(MapPlacement placement, @Nullable MapLayout layout, int cx, int cy) {
+		return placement.kind() == MapPlacement.Kind.INTERIOR && !WorldPlan.openSky(placement) ? Math.min(31, WorldPlan.room(layout, cx, cy)) : 31;
 	}
 
 	/** A column's hanging mask as built: all of it when every level lies below {@code top}, else none. */
@@ -189,17 +194,26 @@ public final class ShapePlanner {
 	 */
 	public static ShapePlan plan(Scene scene, Collection<MapPlacement> placements, ShapeParams params, Occupancy taken,
 			@Nullable UnitProbe probe, Map<String, MapLayout> layouts, List<WorldIndex.Shaft> shafts) {
+		return plan(scene, placements, params, taken, probe, layouts, shafts, Map.of());
+	}
+
+	/**
+	 * The same with each interior's room (docs/specs/HEIGHTS_ALL_GAMES_PLAN.md D5, {@code Headroom.rooms}): blocks its shapes
+	 * may stand over its floor under its ceiling, by map id; a map left out keeps the default.
+	 */
+	public static ShapePlan plan(Scene scene, Collection<MapPlacement> placements, ShapeParams params, Occupancy taken,
+			@Nullable UnitProbe probe, Map<String, MapLayout> layouts, List<WorldIndex.Shaft> shafts, Map<String, Integer> rooms) {
 		// The fitted shapes table is per game (docs/specs/FITTED_SHAPES.md): this scene's.
 		String before = FittedShapes.enter(scene.game());
 		try {
-			return planScene(scene, placements, params, taken, probe, layouts, shafts);
+			return planScene(scene, placements, params, taken, probe, layouts, shafts, rooms);
 		} finally {
 			FittedShapes.leave(before);
 		}
 	}
 
 	private static ShapePlan planScene(Scene scene, Collection<MapPlacement> placements, ShapeParams params, Occupancy taken,
-			@Nullable UnitProbe probe, Map<String, MapLayout> layouts, List<WorldIndex.Shaft> shafts) {
+			@Nullable UnitProbe probe, Map<String, MapLayout> layouts, List<WorldIndex.Shaft> shafts, Map<String, Integer> rooms) {
 		long started = System.nanoTime();
 		List<String> atlases = new ArrayList<>(new TreeSet<>(scene.atlases().keySet()));
 		TreeSet<String> paletteSet = new TreeSet<>();
@@ -217,9 +231,12 @@ public final class ShapePlanner {
 				continue;
 			}
 			MapLayout layout = layouts.get(map.id());
+			// Shapes stand under the map's ceiling (D5): its room, from the export alone, so a filter changes no key
+			Integer room = rooms.get(map.id());
+			SceneMap sized = room != null && !map.surface() ? map.withHeadroom(room) : map;
 			MapShapes planned = params.profileUnits()
-					? planMap(map, scene.atlas(map.atlas()), atlas, params, scene.profileTileset(map.tileset()), probe, unitSources, layout)
-					: planMap(map, scene.atlas(map.atlas()), atlas, params, null, null, new TreeMap<>(), layout);
+					? planMap(sized, scene.atlas(map.atlas()), atlas, params, scene.profileTileset(map.tileset()), probe, unitSources, layout)
+					: planMap(sized, scene.atlas(map.atlas()), atlas, params, null, null, new TreeMap<>(), layout);
 			shapes.put(map.id(), planned);
 			for (Templates.Placed template : planned.templates()) {
 				templates.putIfAbsent(template.sig(), template.entry());
@@ -323,8 +340,8 @@ public final class ShapePlanner {
 							continue;
 						}
 						// Under a ceiling a column stops below it (an open-air interior has the ceiling's level too, P3).
-						int top = placement.kind() == MapPlacement.Kind.INTERIOR && !WorldPlan.openSky(placement) ? WorldPlan.CEILING_ABOVE_FEET
-								: column.length;
+						int top = placement.kind() == MapPlacement.Kind.INTERIOR && !WorldPlan.openSky(placement)
+								? WorldPlan.ceilingLevel(layout, tx / per, ty / per) - WorldPlan.level(layout, tx / per, ty / per) : column.length;
 						for (int k = 0; k < column.length && k < top; k++) {
 							if (column[k] == null) {
 								continue;
@@ -341,13 +358,12 @@ public final class ShapePlanner {
 				}
 				// The hangings (CW1, CW2): each on the decor carrier the builder adds at its level; under a ceiling, a column's
 				// hangings stand only if all of them fit below it (a wood that kept its ceiling hangs no canopy and no vines).
-				int hangTop = hangTop(placement);
 				for (int ty = 0; ty < map.artRows(); ty++) {
 					for (int tx = 0; tx < cols; tx++) {
 						if (!piece.contains(tx / per, ty / per)) {
 							continue;
 						}
-						int mask = hungFits(planned.hungMask()[ty * cols + tx], hangTop);
+						int mask = hungFits(planned.hungMask()[ty * cols + tx], hangTop(placement, layout, tx / per, ty / per));
 						ShapeKey[] column = planned.hung()[ty * cols + tx];
 						int base = WorldPlan.hangBase(layout, tx / per, ty / per);
 						for (int k = 0; column != null && k < column.length; k++) {

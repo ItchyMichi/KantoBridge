@@ -245,11 +245,15 @@ public class SyntheticBuildGameTests implements FabricGameTest {
 
 		// The house, one layer down: floor, walls, counter, ceiling and lights; enclosed by its ring.
 		MapPlacement house = index.map("TEST_HOUSE");
-		helper.assertTrue(house.layer() == 1 && house.y() == 42, "house layer");
+		helper.assertTrue(house.layer() == 1 && house.y() == dev.kantobridge.world.Scale.feetY(1), "house layer");
 		int feet = house.y();
+		// Its room (HEIGHTS_ALL_GAMES_PLAN D5): as tall as its drawing, at least 4 blocks of air
+		int room = dev.kantobridge.builder.plan.WorldPlan.room(index.layout("TEST_HOUSE"), 2, 3);
+		helper.assertTrue(room >= dev.kantobridge.builder.plan.Headroom.MIN, "house room " + room);
 		BlockPos floor = new BlockPos(house.x() + 4, feet, house.z() + 6);
 		helper.assertTrue(isTile(level, floor.below()) && level.getBlockState(floor).isAir(), "house floor");
-		helper.assertTrue(isTile(level, new BlockPos(floor.getX(), feet + 3, floor.getZ())), "house ceiling");
+		helper.assertTrue(level.getBlockState(new BlockPos(floor.getX(), feet + room - 1, floor.getZ())).isAir(), "house air under the ceiling");
+		helper.assertTrue(isTile(level, new BlockPos(floor.getX(), feet + room, floor.getZ())), "house ceiling");
 		BlockState light = level.getBlockState(new BlockPos(house.x() + 5, feet + 2, house.z() + 5));
 		helper.assertTrue(light.is(Blocks.LIGHT) && light.getValue(LightBlock.LEVEL) == 15, "house light");
 		BlockPos counter = new BlockPos(house.x() + 8, feet, house.z() + 6);
@@ -258,7 +262,7 @@ public class SyntheticBuildGameTests implements FabricGameTest {
 		// A wall along the north edge rises to the ceiling (the voxel plan's V7 dressing).
 		BlockPos wall = new BlockPos(house.x(), feet + 1, house.z());
 		helper.assertTrue(isTile(level, wall) && isTile(level, wall.above()) && isTile(level, wall.above(2)), "interior wall doesn't reach the ceiling");
-		for (int y = feet - 1; y <= feet + 3; y++) {
+		for (int y = feet - 1; y <= feet + room; y++) {
 			helper.assertTrue(isTile(level, new BlockPos(house.x() - 1, y, house.z() + 3)), "enclosure ring open at y offset " + (y - feet));
 		}
 		assertStoryCell(helper, level, new BlockPos(house.x() + 12, feet, house.z() + 8), "TEST_HOUSE:6:4", StoryCellType.OBJECT);

@@ -41,7 +41,10 @@ public final class WorldPlan {
 	 */
 	public static final int SURFACE_MIN_Y = Scale.GROUND_Y;
 	public static final int SURFACE_MAX_Y = Scale.GROUND_Y + 32;
-	/** Interiors: the ceiling is 4 blocks above the floor block, i.e. at feet + 3. */
+	/**
+	 * Interiors without ceilings of their own (a layout's, docs/specs/HEIGHTS_ALL_GAMES_PLAN.md D5, which every interior
+	 * under a ceiling gets since; and worlds built before): the ceiling 4 blocks above the floor block, at feet + 3.
+	 */
 	public static final int CEILING_ABOVE_FEET = 3;
 	/** Interior lights: {@code minecraft:light} level 15 at feet + 2 on a 4-block grid. */
 	public static final int LIGHT_LEVEL = 15;
@@ -570,9 +573,18 @@ public final class WorldPlan {
 		return layout.level(cx, cy) + (ramp == null ? 0 : ramp.rise());
 	}
 
-	/** A cell's ceiling: 3 blocks of air over its floor (U5), over a ramp's top. */
+	/**
+	 * A cell's ceiling: its layout's (docs/specs/HEIGHTS_ALL_GAMES_PLAN.md D5, {@link Headroom}), else 3 blocks of air over
+	 * its floor (U5), over a ramp's top.
+	 */
 	public static int ceilingLevel(@Nullable MapLayout layout, int cx, int cy) {
-		return hangBase(layout, cx, cy) + CEILING_ABOVE_FEET;
+		int set = layout == null ? -1 : layout.ceiling(cx, cy);
+		return set >= 0 ? set : hangBase(layout, cx, cy) + CEILING_ABOVE_FEET;
+	}
+
+	/** The blocks of air over a cell's floor (its ramp's top) up to its ceiling. */
+	public static int room(@Nullable MapLayout layout, int cx, int cy) {
+		return ceilingLevel(layout, cx, cy) - hangBase(layout, cx, cy);
 	}
 
 	/**
@@ -1174,7 +1186,7 @@ public final class WorldPlan {
 		// A carrier wins: the light goes only where the position is still air, or a hanging's carrier there gives it.
 		boolean light = map.interior() && !p.dark() && Math.floorMod(tx, LIGHT_SPACING) == 1 && Math.floorMod(ty, LIGHT_SPACING) == 1
 				&& column <= LIGHT_ABOVE_FEET + lift;
-		int hung = planned == null ? 0 : ShapePlanner.hungFits(planned.hungMask()[planIndex], ShapePlanner.hangTop(p));
+		int hung = planned == null ? 0 : ShapePlanner.hungFits(planned.hungMask()[planIndex], ShapePlanner.hangTop(p, layout, cx, cy));
 		int leaves = planned == null ? 0 : planned.hungLeaves()[planIndex];
 		// The cave area's rock fill (CAVES_3D_PLAN §3.3, HD9): over rock, the air up to the ceiling is solid, so a floor is
 		// the only place a wild Pokémon can stand there.
@@ -1187,12 +1199,12 @@ public final class WorldPlan {
 			// A hanging (CW1, CW2): a decor carrier for its piece, foliage for a wood's; the one on a light's position gives
 			// the light (CD15).
 			boolean lit = light && k == LIGHT_ABOVE_FEET;
-			sink.set(x, feet + lift + k, z, BlockCode.decor((leaves >> k & 1) != 0, lit, fill && k < CEILING_ABOVE_FEET));
+			sink.set(x, feet + lift + k, z, BlockCode.decor((leaves >> k & 1) != 0, lit, fill && k + lift < ceilingLevel(layout, cx, cy) - level(layout, cx, cy)));
 			light &= !lit;
 			taken |= 1L << (k + lift);
 		}
 		if (fill) {
-			for (int k = column; k < CEILING_ABOVE_FEET; k++) {
+			for (int k = column; k < ceilingLevel(layout, cx, cy) - level(layout, cx, cy); k++) {
 				if ((taken >> k & 1) != 0) {
 					continue;
 				}

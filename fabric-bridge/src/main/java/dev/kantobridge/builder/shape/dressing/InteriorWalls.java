@@ -1,13 +1,15 @@
 package dev.kantobridge.builder.shape.dressing;
 
 import dev.kantobridge.builder.plan.WorldPlan;
+import dev.kantobridge.builder.shape.ShapeHeights;
 import dev.kantobridge.builder.shape.ShapeKey;
 import dev.kantobridge.builder.shape.Structures;
 import dev.kantobridge.scene.SceneMap;
 
 /**
  * Interior walls rise to the ceiling (§5.12, V7): every wall column of an interior under a ceiling (a run along the map's
- * north, west or east edge) is {@link WorldPlan#CEILING_ABOVE_FEET} blocks high instead of the interior wall height,
+ * north, west or east edge) is as high as the map's headroom ({@link ShapeHeights#headroom}: its ceiling as built, D5 of
+ * docs/specs/HEIGHTS_ALL_GAMES_PLAN.md; {@link WorldPlan#CEILING_ABOVE_FEET} by default) instead of the interior wall height,
  * folded as Tier A folds a run of that height: band k shows the row {@code origin - k} (the run's top row once the
  * drawing runs out, so a two-row back wall repeats its top band), the top what the 2D map shows there. Seen from the
  * game's view it stays the drawing. Furniture standing free keeps its height, and so does a cell unit on a wall run (a
@@ -22,7 +24,7 @@ public final class InteriorWalls implements DressingRule {
 	@Override
 	public void dress(SceneMap map, Dress dress) {
 		int cols = map.artCols();
-		int height = WorldPlan.CEILING_ABOVE_FEET;
+		int height = ShapeHeights.headroom(map);
 		for (Structures.MeasuredRun run : dress.runs) {
 			if (!dress.wall(map, run)) {
 				continue;

@@ -55,11 +55,11 @@ class SyntheticPlanTest {
 				"kantobridge:kanto_outdoor", false, null), plan.index().map("TEST_HILL"));
 		// The house's arrival cell (4, 8) sits right under the town door (5, 5), one layer down.
 		MapPlacement house = plan.index().map("TEST_HOUSE");
-		assertEquals(new MapPlacement("TEST_HOUSE", ox(10 - 8), 42, oz(10 - 16), 10, 10, 1, MapPlacement.Kind.INTERIOR, "TEST_PALETTE",
+		assertEquals(new MapPlacement("TEST_HOUSE", ox(10 - 8), Scale.feetY(1), oz(10 - 16), 10, 10, 1, MapPlacement.Kind.INTERIOR, "TEST_PALETTE",
 				"kantobridge:kanto_interior", false, "TEST_TOWN"), house);
 		// The upper floor's arrival (5, 2) under the stairs (7, 2), stacked below.
 		MapPlacement upstairs = plan.index().map("TEST_HOUSE_2F");
-		assertEquals(new MapPlacement("TEST_HOUSE_2F", house.x() + 14 - 10, 20, house.z() + 4 - 4, 8, 8, 2, MapPlacement.Kind.INTERIOR,
+		assertEquals(new MapPlacement("TEST_HOUSE_2F", house.x() + 14 - 10, Scale.feetY(2), house.z() + 4 - 4, 8, 8, 2, MapPlacement.Kind.INTERIOR,
 				"TEST_PALETTE", "kantobridge:kanto_interior", false, "TEST_HOUSE"), upstairs);
 		assertEquals(2, plan.maxLayer());
 		assertEquals(0, plan.overlaps());
@@ -177,19 +177,23 @@ class SyntheticPlanTest {
 
 		MapPlacement house = plan.index().map("TEST_HOUSE");
 		int feet = house.y();
-		// Floor, the walls up to the ceiling (V7's dressing), the ceiling 4 blocks above the floor, a light on the 4-block grid.
+		// Its room (HEIGHTS_ALL_GAMES_PLAN D5): as tall as its drawing, at least 4 blocks of air
+		int room = WorldPlan.room(plan.index().layout("TEST_HOUSE"), 2, 3);
+		assertTrue(room >= Headroom.MIN, "at least 4 blocks of air");
+		// Floor, the walls up to the ceiling (V7's dressing), the ceiling over the room, a light on the 4-block grid.
 		assertEquals(full, view.kind(house.x() + 4, feet - 1, house.z() + 6));
 		assertEquals(BlockCode.AIR, view.code(house.x() + 4, feet, house.z() + 6));
-		assertEquals(full, view.kind(house.x() + 4, feet + 3, house.z() + 6));
+		assertEquals(BlockCode.AIR, view.code(house.x() + 4, feet + room - 1, house.z() + 6));
+		assertEquals(full, view.kind(house.x() + 4, feet + room, house.z() + 6));
 		assertEquals(BlockCode.light(15), view.code(house.x() + 5, feet + 2, house.z() + 5));
 		assertEquals(full, view.kind(house.x(), feet + 1, house.z()));
-		assertEquals(full, view.kind(house.x(), feet + 2, house.z()), "a wall along the north edge rises to the ceiling");
+		assertEquals(full, view.kind(house.x(), feet + room - 1, house.z()), "a wall along the north edge rises to the ceiling");
 		// The counter row is the synthetic profile's desk (P3's furniture): three blocks of it up to the ceiling.
 		for (int y = feet; y < feet + 3; y++) {
 			assertEquals(BlockCode.KIND_SHAPE, view.kind(house.x() + 8, y, house.z() + 6));
 		}
 		// The enclosure ring runs from the floor block to the ceiling.
-		for (int y = feet - 1; y <= feet + 3; y++) {
+		for (int y = feet - 1; y <= feet + room; y++) {
 			assertEquals(full, view.kind(house.x() - 1, y, house.z() + 3));
 		}
 		// Mom's cell carries a story cell; the cut tree's cell the tile kind, whose block draws its closed art.

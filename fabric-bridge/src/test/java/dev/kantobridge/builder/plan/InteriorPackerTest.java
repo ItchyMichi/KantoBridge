@@ -66,8 +66,8 @@ class InteriorPackerTest {
 
 	@Test
 	void layerZeroIsTheSurface() {
-		InteriorPacker packer = new InteriorPacker(Scale.maxLayer(-256));
-		assertEquals(14, packer.maxLayer());
+		InteriorPacker packer = new InteriorPacker(Scale.maxLayer(-352));
+		assertEquals(14, packer.maxLayer(), "the deep overworld (HEIGHTS_ALL_GAMES_PLAN D5: bottom -352, layers 29 apart)");
 		assertNull(packer.place(0, 0, 4, 4, 0), "layer 0 is the surface");
 		assertNull(new InteriorPacker(0).place(0, 0, 4, 4, 1), "a world with no room below the surface has no layers");
 	}
@@ -118,10 +118,10 @@ class InteriorPackerTest {
 	@Test
 	void layerMath() {
 		assertEquals(64, Scale.feetY(0));
-		assertEquals(42, Scale.feetY(1));
-		assertEquals(20, Scale.feetY(2));
-		assertEquals(-244, Scale.feetY(14));
-		assertEquals(5, Scale.maxLayer(-64), "a vanilla-depth overworld fits five layers below Y 64");
+		assertEquals(35, Scale.feetY(1));
+		assertEquals(6, Scale.feetY(2));
+		assertEquals(-342, Scale.feetY(14));
+		assertEquals(4, Scale.maxLayer(-64), "a vanilla-depth overworld fits four layers below Y 64");
 		assertEquals(2, Scale.maxLayer(0));
 	}
 

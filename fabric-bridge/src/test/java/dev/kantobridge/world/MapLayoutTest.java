@@ -111,6 +111,30 @@ class MapLayoutTest {
 	}
 
 	@Test
+	void ceilingsRoundTripAndBoundTheMap() throws Exception {
+		// HEIGHTS_ALL_GAMES_PLAN D5: a room's ceilings, as (ceiling, count) runs; the least room over any cell
+		int[] ceilings = new int[24];
+		java.util.Arrays.fill(ceilings, 6);
+		ceilings[2 * 6 + 1] = 8;
+		MapLayout layout = twoRooms().withCeilings(ceilings);
+		WorldIndex index = index(layout);
+		WorldIndex read = WorldIndex.fromJson(index.toJson());
+		assertEquals(index.toJson(), read.toJson());
+		assertEquals(8, read.layout("TEST_CAVE").ceiling(1, 2));
+		assertEquals(6, read.layout("TEST_CAVE").ceiling(0, 0));
+		JsonObject cave = ProtoJson.parseObject(index.toJson()).getAsJsonObject("maps").getAsJsonObject("TEST_CAVE");
+		assertEquals("[6,13,8,1,6,10]", cave.get("ceilings").toString());
+		assertEquals(4, layout.headroom(), "the ramp's top (2) under a ceiling of 6");
+		assertEquals(-1, twoRooms().ceiling(0, 0), "no ceilings: the default");
+		// A layout with only ceilings is kept, and it bounds the map up to its highest ceiling block
+		WorldIndex flat = index(MapLayout.flat(6, 4, null, List.of()).withCeilings(ceilings));
+		assertNotNull(flat.layout("TEST_CAVE"));
+		assertEquals(64 + 8, flat.boundsOfPlacements().maxY(), "the ceiling's own block over its feet");
+		assertThrows(IllegalArgumentException.class, () -> twoRooms().withCeilings(new int[3]));
+		assertThrows(IllegalArgumentException.class, () -> twoRooms().withCeilings(new int[24]), "a ceiling of 0");
+	}
+
+	@Test
 	void onlyWhatDiffersIsWritten() throws Exception {
 		// Levels alone: no pieces key.
 		int[] levels = new int[24];

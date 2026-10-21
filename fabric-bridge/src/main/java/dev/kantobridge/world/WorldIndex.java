@@ -60,7 +60,7 @@ public final class WorldIndex {
 	private static final Set<String> THEMES = Set.of("forest");
 	private static final Set<String> SCALE_FIELDS = Set.of("cellBlocks", "surfaceY", "layerStep");
 	private static final Set<String> MAP_FIELDS = Set.of("x", "y", "z", "w", "h", "layer", "kind", "palette", "biome", "dark",
-			"parent", "pieces", "levels", "ramps");
+			"parent", "pieces", "levels", "ramps", "ceilings");
 	private static final Set<String> HABITAT_FIELDS = Set.of("map", "x", "y", "z", "pool", "range");
 	/** A habitat block's {@code RangeOfInfluence} unless it says otherwise (PLAN §4.5). */
 	public static final int HABITAT_RANGE = 14;
@@ -774,10 +774,13 @@ public final class WorldIndex {
 			}
 			for (MapLayout.Piece piece : layout.pieces()) {
 				int maxLevel = 0;
+				// its ceilings' blocks (HEIGHTS_ALL_GAMES_PLAN D5) count too
+				int top = 0;
 				for (int cy = piece.y(); cy < piece.y() + piece.h(); cy++) {
 					for (int cx = piece.x(); cx < piece.x() + piece.w(); cx++) {
 						if (piece.contains(cx, cy)) {
 							maxLevel = Math.max(maxLevel, layout.level(cx, cy));
+							top = Math.max(top, layout.ceiling(cx, cy));
 						}
 					}
 				}
@@ -785,7 +788,7 @@ public final class WorldIndex {
 				int z0 = map.z() + piece.dz() + Scale.cellToBlock(piece.y());
 				int feet = map.y() + piece.dy();
 				box = extend(box, x0, z0, x0 + Scale.cellToBlock(piece.w()) - 1, z0 + Scale.cellToBlock(piece.h()) - 1, feet - PIECE_REACH_DOWN,
-						feet + maxLevel + PIECE_REACH_UP - 1);
+						feet + Math.max(maxLevel + PIECE_REACH_UP - 1, top));
 			}
 		}
 		for (Zone zone : this.zones) {

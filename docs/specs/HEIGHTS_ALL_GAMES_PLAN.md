@@ -234,6 +234,13 @@ caves, 15 have more than one walkable elevation; Pokémon Centres' single elevat
   tests that assume 22 or −256 (§9), and PLAN P4. The layer layout change is the user's go (VOXEL_BLOCKS_PLAN.md §5.12):
   given in principle by Q2; the size above is for the user to confirm (§8).
 
+**Built in W5 (2026-10-21):** one step for every layer, **29 blocks** (`Scale.LAYER_STEP`: the tallest room a layer
+holds, `Scale.LAYER_ROOM` 11 blocks of air, its ceiling and floor blocks, 16 of rock), rather than a step per layer: the
+wild spawn rule `walking_level_only` finds a map's floor by `(y − 63) mod step`, which needs one step. The survey's tallest
+room on a layer is 11 (Emerald, classic screen), so nothing is cut today; a taller one would stop at 11 and be counted
+(`room_ceiling_capped`). Fourteen layers of 29 put the deepest floor at Y −343, inside the bottom of −352. The 3D area's
+floors still stack by their own tallest rooms (`CavePlanner.rankFeet`).
+
 ### D6. Shape budget and slots first
 - The shape documents are offered per region and per document with a budget of 64 parts each since the followups'
   item 4 (SEVERAL_GAMES_FOLLOWUPS.md); the old 97% figure was the single-world budget. Taller faces and levels add

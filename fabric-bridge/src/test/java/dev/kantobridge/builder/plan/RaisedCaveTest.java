@@ -63,32 +63,42 @@ class RaisedCaveTest {
 		}
 	}
 
+	/** The cave's room over every floor (HEIGHTS_ALL_GAMES_PLAN D5: a cave's ceiling follows its floor, at least 4 over it). */
+	private static int room() {
+		int room = WorldPlan.room(cave.layout(), 2, 4);
+		assertTrue(room >= Headroom.MIN, "at least 4 blocks of air");
+		return room;
+	}
+
 	@Test
-	void aRaisedCellStandsOnRockWithItsCeilingThreeAbove() {
+	void aRaisedCellStandsOnRockWithItsCeilingOverIt() {
+		int room = room();
 		int rock = code(7, 3, 0, 0, -1);
 		assertEquals(BlockCode.KIND_FULL, BlockCode.kind(rock));
 		assertEquals(rock, code(7, 3, 0, 0, 0), "rock up to the raised floor");
 		assertEquals(BlockCode.KIND_FULL, BlockCode.kind(code(7, 3, 0, 0, 1)), "the floor, 2 up");
 		assertNotEquals(rock, code(7, 3, 0, 0, 1), "in the floor's own tile");
-		for (int k = 2; k < 5; k++) {
-			assertTrue(BlockCode.kind(code(7, 3, 0, 0, k)) != BlockCode.KIND_FULL, "3 blocks of air over it (U5), " + k);
+		for (int k = 2; k < 2 + room; k++) {
+			assertTrue(BlockCode.kind(code(7, 3, 0, 0, k)) != BlockCode.KIND_FULL, "the cave's room over it, " + k);
 		}
-		assertEquals(BlockCode.KIND_FULL, BlockCode.kind(code(7, 3, 0, 0, 5)), "its ceiling");
+		assertEquals(BlockCode.KIND_FULL, BlockCode.kind(code(7, 3, 0, 0, 2 + room)), "its ceiling");
 		assertEquals(p.y() - 1, WorldPlan.interiorVolume(p, WorldPlan.maxCeiling(cave.layout())).minY());
-		assertEquals(p.y() + 6, WorldPlan.interiorVolume(p, WorldPlan.maxCeiling(cave.layout())).maxY(), "the volume reaches the raised ceilings");
+		assertEquals(p.y() + 2 + room + 1, WorldPlan.interiorVolume(p, WorldPlan.maxCeiling(cave.layout())).maxY(),
+				"the volume reaches the raised ceilings");
 	}
 
 	@Test
 	void aLowCeilingClosesUpToARaisedNeighbours() {
 		// (4,4) is low, next to the stairs; (2,4) has only low ground and rock around it.
-		for (int k = 0; k < 3; k++) {
+		int room = room();
+		for (int k = 0; k < room; k++) {
 			assertTrue(BlockCode.kind(code(4, 4, 0, 0, k)) != BlockCode.KIND_FULL, "air on the low floor, " + k);
 		}
-		for (int k = 3; k <= 5; k++) {
+		for (int k = room; k <= room + 2; k++) {
 			assertEquals(BlockCode.KIND_FULL, BlockCode.kind(code(4, 4, 0, 0, k)), "its ceiling and the rock up to the stairs' ceiling, " + k);
 		}
-		assertEquals(BlockCode.KIND_FULL, BlockCode.kind(code(2, 4, 0, 0, 3)));
-		assertEquals(BlockCode.AIR, code(2, 4, 0, 0, 4), "nothing to close over a ceiling as high as its neighbours'");
+		assertEquals(BlockCode.KIND_FULL, BlockCode.kind(code(2, 4, 0, 0, room)));
+		assertEquals(BlockCode.AIR, code(2, 4, 0, 0, room + 1), "nothing to close over a ceiling as high as its neighbours'");
 	}
 
 	@Test
@@ -99,7 +109,7 @@ class RaisedCaveTest {
 			assertEquals(BlockCode.KIND_DECOR, BlockCode.kind(code(5, 2, 0, bz, 1)), "the rest of the stair's art over them");
 			assertEquals(BlockCode.KIND_FULL, BlockCode.kind(code(5, 2, 1, bz, 0)), "the high row: a block");
 			assertEquals(step, code(5, 2, 1, bz, 1), "and two half steps on it");
-			assertEquals(BlockCode.KIND_FULL, BlockCode.kind(code(5, 2, 1, bz, 5)), "the ramp's ceiling, 3 over its top");
+			assertEquals(BlockCode.KIND_FULL, BlockCode.kind(code(5, 2, 1, bz, 2 + room())), "the ramp's ceiling, the room over its top");
 		}
 		// The stair units' art stands on the steps.
 		int lowRow = plan.shapes().map().shapeAt(p.x() + 10, p.y(), p.z() + 4);

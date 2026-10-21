@@ -24,6 +24,7 @@ import dev.kantobridge.proto.ProtoJson;
 import dev.kantobridge.scene.gen3.QuarterPages;
 import dev.kantobridge.world.MapLayout;
 import dev.kantobridge.world.MapPlacement;
+import dev.kantobridge.world.Scale;
 import dev.kantobridge.world.SlotMap;
 import dev.kantobridge.world.StoryCellTable;
 import dev.kantobridge.world.StoryCellType;
@@ -73,7 +74,7 @@ class Gen3PlanTest {
 				WorldPlan.BIOME_OUTDOOR, false, null), plan.index().map("EM_TEST_ROUTE"));
 		// The house's arrival (1, 3), its warp 0 (0-based), right under the town's door (3, 3), a layer down; its whole
 		// padded grid (4 x 4, true width 3).
-		assertEquals(new MapPlacement("EM_TEST_HOUSE", ox(6 - 2), 42, oz(6 - 6), 4, 4, 1, MapPlacement.Kind.INTERIOR, QuarterPages.PALETTE,
+		assertEquals(new MapPlacement("EM_TEST_HOUSE", ox(6 - 2), Scale.feetY(1), oz(6 - 6), 4, 4, 1, MapPlacement.Kind.INTERIOR, QuarterPages.PALETTE,
 				WorldPlan.BIOME_INTERIOR, false, "EM_TEST_TOWN"), plan.index().map("EM_TEST_HOUSE"));
 		assertEquals(0, plan.edgeMismatches());
 		assertEquals(0, plan.overlaps());
@@ -158,8 +159,9 @@ class Gen3PlanTest {
 	@Test
 	void raisedGroundInTheCaveArea() {
 		// W4 (HEIGHTS_ALL_GAMES_PLAN D3): B1F's platform (elevation 4) two stair cells (elevation 0) over its floor (3): 4
-		// blocks up, each stair cell a ramp of 2. Its floor so stands 13 blocks under 1F's (the platform's ceiling 4 + 3 over
-		// its feet, 6 of rock up to 1F's feet), and 1F's ladder comes down onto the platform.
+		// blocks up, each stair cell a ramp of 2. Its ceiling follows its floor 4 over it (W5, D5: its walls are one cell deep),
+		// so its floor stands 14 blocks under 1F's (the platform's ceiling 4 + 4 over its feet, 6 of rock up to 1F's feet), and
+		// 1F's ladder comes down onto the platform.
 		MapLayout b1f = plan.index().layout("EM_TEST_CAVE_B1F");
 		assertNotNull(b1f);
 		assertEquals(4, b1f.level(2, 1));
@@ -171,14 +173,17 @@ class Gen3PlanTest {
 		MapPlacement top = plan.index().map("EM_TEST_CAVE_1F");
 		MapPlacement bottom = plan.index().map("EM_TEST_CAVE_B1F");
 		assertEquals(CavePlanner.TOP_FEET, top.y());
-		assertEquals(CavePlanner.TOP_FEET - 13, bottom.y());
+		assertEquals(4 + Headroom.MIN, WorldPlan.maxCeiling(b1f));
+		assertEquals(CavePlanner.TOP_FEET - 14, bottom.y());
 		WorldIndex.Shaft shaft = plan.index().shafts().get(0);
 		assertEquals(List.of(bottom.y() + 4, top.y() - 1), List.of(shaft.y0(), shaft.y1()));
 		assertEquals(1, plan.warnings().notes().get("cave_levels_raised"));
 		assertEquals(1, plan.warnings().notes().get("cave_levels_flat_one_level"), "1F: one elevation");
 		assertEquals(8, plan.warnings().notes().get("cave_raised_cells"));
 		assertEquals(2, plan.warnings().notes().get("cave_ramps"));
-		assertNull(plan.index().layout("EM_TEST_HOUSE"), "the layers' rooms stay flat until W5");
+		MapLayout house = plan.index().layout("EM_TEST_HOUSE");
+		assertEquals(0, house.level(1, 1), "a room on a layer stays flat");
+		assertEquals(Headroom.MIN, WorldPlan.room(house, 1, 1), "W5: its ceiling, at least 4 over its floor");
 	}
 
 	@Test

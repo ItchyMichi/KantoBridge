@@ -121,6 +121,13 @@ public record SceneMap(String id, int index, String tileset, String atlas, Strin
 		return this.ownBorder[Math.floorMod(ty, side) * side + Math.floorMod(tx, side)];
 	}
 
+	/** The same map under a ceiling {@code blocks} over its floor (D5: the shape planner's, from the map's layout). */
+	public SceneMap withHeadroom(int blocks) {
+		return new SceneMap(this.id, this.index, this.tileset, this.atlas, this.palette, this.w, this.h, this.perCell, this.surface,
+				this.env.withHeadroom(blocks), this.tiles, this.closedTiles, this.kinds, this.tags, this.dirs, this.border, this.ownBorder,
+				this.objects, this.swapSites);
+	}
+
 	/**
 	 * The same map with every swap site closed: the closed art everywhere, and the closed kind and tags on every cell a
 	 * site changes. This map itself when no site changes it.

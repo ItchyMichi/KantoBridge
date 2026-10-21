@@ -15,10 +15,11 @@ import org.jetbrains.annotations.Nullable;
 
 /**
  * Where the cells of one map sit when they don't all share its placement's rectangle and feet level
- * (docs/specs/CAVES_3D_PLAN.md §3.1): its pieces (parts of the map placed apart) and each cell's level (a raised floor)
- * and ramp (a stairs cell that climbs between levels). A map without a layout is one piece at its placement, every
- * cell at level 0. WorldIndex keys {@code pieces}, {@code levels} and {@code ramps} of a map; each is written only when
- * it says more than that default, so a world without layouts keeps its bytes. Pure Java.
+ * (docs/specs/CAVES_3D_PLAN.md §3.1): its pieces (parts of the map placed apart), each cell's level (a raised floor)
+ * and ramp (a stairs cell that climbs between levels), and its ceiling (docs/specs/HEIGHTS_ALL_GAMES_PLAN.md D5). A map
+ * without a layout is one piece at its placement, every cell at level 0, its ceilings the builder's default. WorldIndex
+ * keys {@code pieces}, {@code levels}, {@code ramps} and {@code ceilings} of a map; each is written only when it says
+ * more than that default, so a world without layouts keeps its bytes. Pure Java.
  *
  * <p>A walkable cell belongs to exactly one piece. A wall cell may be drawn by several pieces, which all list it; lookups
  * by cell take the first piece that does.
@@ -34,8 +35,10 @@ public final class MapLayout {
 	public static final int MAX_OFFSET_Y = 1024;
 	/** The highest a ramp climbs, in blocks. */
 	public static final int MAX_RISE = 8;
+	/** The highest a ceiling may stand, in blocks above its piece's feet level. */
+	public static final int MAX_CEILING = MAX_LEVEL + 64;
 
-	static final Set<String> KEYS = Set.of("pieces", "levels", "ramps");
+	static final Set<String> KEYS = Set.of("pieces", "levels", "ramps", "ceilings");
 	private static final Set<String> PIECE_FIELDS = Set.of("x", "y", "w", "h", "mask", "dx", "dy", "dz");
 	private static final Set<String> RAMP_FIELDS = Set.of("x", "y", "dir", "rise");
 
@@ -100,12 +103,15 @@ public final class MapLayout {
 	private final short[] pieceOf;
 	private final int[] levels;
 	private final Map<Integer, Ramp> ramps;
+	/** Per cell, row by row: its ceiling's level (the first solid block over the room), or null for the builder's default. */
+	private final int @Nullable [] ceilings;
 
-	private MapLayout(int w, int h, List<Piece> pieces, int[] levels, List<Ramp> ramps) {
+	private MapLayout(int w, int h, List<Piece> pieces, int[] levels, List<Ramp> ramps, int @Nullable [] ceilings) {
 		this.w = w;
 		this.h = h;
 		this.pieces = List.copyOf(pieces);
 		this.levels = levels.clone();
+		this.ceilings = ceilings == null ? null : ceilings.clone();
 		this.pieceOf = new short[w * h];
 		Arrays.fill(this.pieceOf, (short) -1);
 		for (int p = this.pieces.size() - 1; p >= 0; p--) {
@@ -160,7 +166,25 @@ public final class MapLayout {
 				throw new IllegalArgumentException("ramp outside its map");
 			}
 		}
-		return new MapLayout(w, h, pieces, lv, ramps);
+		return new MapLayout(w, h, pieces, lv, ramps, null);
+	}
+
+	/**
+	 * The same layout with each cell's ceiling (D5): the level of the first solid block over its room, in blocks above its
+	 * piece's feet level, row by row ({@code w × h} values, each 1 to {@link #MAX_CEILING}); null for the builder's default.
+	 */
+	public MapLayout withCeilings(int @Nullable [] ceilings) {
+		if (ceilings != null) {
+			if (ceilings.length != this.w * this.h) {
+				throw new IllegalArgumentException("one ceiling per cell");
+			}
+			for (int c : ceilings) {
+				if (c < 1 || c > MAX_CEILING) {
+					throw new IllegalArgumentException("ceiling out of range");
+				}
+			}
+		}
+		return new MapLayout(this.w, this.h, this.pieces, this.levels, new ArrayList<>(this.ramps.values()), ceilings);
 	}
 
 	/** One piece covering the whole map at its placement, with levels and ramps. */
@@ -197,6 +221,35 @@ public final class MapLayout {
 		return this.levels[cy * this.w + cx];
 	}
 
+	/** A cell's ceiling level (the first solid block over it, above its piece's feet level), or -1 for the default. */
+	public int ceiling(int cx, int cy) {
+		if (this.ceilings == null || cx < 0 || cy < 0 || cx >= this.w || cy >= this.h) {
+			return -1;
+		}
+		return this.ceilings[cy * this.w + cx];
+	}
+
+	/** True when the layout sets the ceilings. */
+	public boolean hasCeilings() {
+		return this.ceilings != null;
+	}
+
+	/**
+	 * The least room over any cell: its ceiling less its floor (a ramp's top), the most a column may stand anywhere in the
+	 * map; -1 without ceilings.
+	 */
+	public int headroom() {
+		if (this.ceilings == null) {
+			return -1;
+		}
+		int least = Integer.MAX_VALUE;
+		for (int i = 0; i < this.ceilings.length; i++) {
+			Ramp ramp = this.ramps.get(i);
+			least = Math.min(least, this.ceilings[i] - this.levels[i] - (ramp == null ? 0 : ramp.rise()));
+		}
+		return least;
+	}
+
 	/** The ramp on a cell, or null. */
 	public @Nullable Ramp ramp(int cx, int cy) {
 		if (cx < 0 || cy < 0 || cx >= this.w || cy >= this.h) {
@@ -211,7 +264,7 @@ public final class MapLayout {
 
 	/** True when the layout says nothing a map without one doesn't: one whole piece at 0, all levels 0, no ramps. */
 	public boolean trivial() {
-		return this.wholeAtZero() && this.flatLevels() && this.ramps.isEmpty();
+		return this.wholeAtZero() && this.flatLevels() && this.ramps.isEmpty() && this.ceilings == null;
 	}
 
 	private boolean wholeAtZero() {
@@ -280,6 +333,25 @@ public final class MapLayout {
 			}
 			item.add("ramps", ramps);
 		}
+		if (this.ceilings != null) {
+			item.add("ceilings", valueRuns(this.ceilings));
+		}
+	}
+
+	/** Values as (value, count) pairs, row by row. */
+	private static JsonArray valueRuns(int[] values) {
+		JsonArray out = new JsonArray();
+		int i = 0;
+		while (i < values.length) {
+			int j = i;
+			while (j < values.length && values[j] == values[i]) {
+				j++;
+			}
+			out.add(values[i]);
+			out.add(j - i);
+			i = j;
+		}
+		return out;
 	}
 
 	/** A mask as alternating runs of cells, out of the piece first (the first run may be 0). */
@@ -301,7 +373,7 @@ public final class MapLayout {
 
 	/** The layout a map's WorldIndex entry describes, or null when it has none of the keys (or only defaults). */
 	static @Nullable MapLayout read(DataReader map, int w, int h) throws DataException {
-		if (!map.has("pieces") && !map.has("levels") && !map.has("ramps")) {
+		if (!map.has("pieces") && !map.has("levels") && !map.has("ramps") && !map.has("ceilings")) {
 			return null;
 		}
 		List<Piece> pieces = new ArrayList<>();
@@ -360,8 +432,27 @@ public final class MapLayout {
 				ramps.add(new Ramp(r.integer("x", 0, w - 1), r.integer("y", 0, h - 1), dir, r.integer("rise", 1, MAX_RISE)));
 			}
 		}
+		int[] ceilings = null;
+		if (map.has("ceilings")) {
+			int[] runs = DataReader.intArray(map.array("ceilings"), map.path("ceilings"), 0, Math.max(w * h, MAX_CEILING));
+			if (runs.length % 2 != 0) {
+				throw new DataException(map.path("ceilings"), "ceilings come in (ceiling, count) pairs");
+			}
+			ceilings = new int[w * h];
+			int i = 0;
+			for (int r = 0; r < runs.length; r += 2) {
+				if (runs[r] < 1 || runs[r] > MAX_CEILING || runs[r + 1] < 1 || i + runs[r + 1] > ceilings.length) {
+					throw new DataException(map.path("ceilings"), "bad ceiling run");
+				}
+				Arrays.fill(ceilings, i, i + runs[r + 1], runs[r]);
+				i += runs[r + 1];
+			}
+			if (i != ceilings.length) {
+				throw new DataException(map.path("ceilings"), "one ceiling per cell");
+			}
+		}
 		try {
-			MapLayout layout = of(w, h, pieces, levels, ramps);
+			MapLayout layout = of(w, h, pieces, levels, ramps).withCeilings(ceilings);
 			return layout.trivial() ? null : layout;
 		} catch (IllegalArgumentException e) {
 			throw new DataException(map.path(), e.getMessage());

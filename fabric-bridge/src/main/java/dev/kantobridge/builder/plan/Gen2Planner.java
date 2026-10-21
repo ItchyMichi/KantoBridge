@@ -164,8 +164,16 @@ final class Gen2Planner {
 			}
 		}
 		Set<String> area3d = Area3d.select(caveMaps, caveIds, outdoorIds);
-		CavePlanner.Result caveArea = placeArea3d(caveMaps, area3d, id -> all.get(id).caveLike() || wildMaps.contains(id), Map.of(), options,
-				surfaceVolume, warnings);
+		// Their ceilings (D5) before the area is placed, so its floors stack as far apart as their tallest rooms need
+		java.util.function.Predicate<String> caveBiome = id -> all.get(id).caveLike() || wildMaps.contains(id);
+		dev.kantobridge.scene.ArtSource artSource = FrontEnds.artSource(bundle);
+		Map<String, Integer> heights = new HashMap<>();
+		for (String id : area3d) {
+			MapModel model = interiorModels.get(id);
+			int[] ceilings = Headroom.ceilings(model, null, Headroom.blackFiller(model, artSource, null), Headroom.screenRows(false), caveBiome.test(id));
+			heights.put(id, java.util.Arrays.stream(ceilings).max().orElse(Headroom.MIN));
+		}
+		CavePlanner.Result caveArea = placeArea3d(caveMaps, area3d, caveBiome, heights, options, surfaceVolume, warnings);
 		for (MapPlacement p : caveArea.placements()) {
 			placements.put(p.id(), p);
 		}
@@ -225,9 +233,11 @@ final class Gen2Planner {
 					: G2Cells.model(map, tiles, sitesByMap.getOrDefault(map.id(), List.of()), interior, warnings);
 			PairEdges edges = G2Cells.oneWay(model, map, tiles);
 			oneWayEdges += edges.edges();
-			// The 3D area's maps are drawn as their rooms (D1, CAVES_3D_PLAN §3.5)
+			// The 3D area's maps are drawn as their rooms (D1, CAVES_3D_PLAN §3.5); an interior under its ceilings (D5)
 			List<MapLayout.Piece> pieces = caveArea.pieces().get(map.id());
 			MapLayout rooms = pieces == null ? null : WorldPlanner.withPieces(model, pieces, null);
+			rooms = WorldPlanner.withCeilings(placement, model, rooms, Headroom.blackFiller(model, artSource, null), Headroom.screenRows(false),
+					!area3d.contains(map.id()), warnings);
 			if (rooms != null) {
 				mapLayouts.put(map.id(), rooms);
 			}
@@ -281,8 +291,8 @@ final class Gen2Planner {
 			} else {
 				scene = frontEnd.describe(bundle);
 				shapes = ShapePlanner.plan(scene, placements.values(), ShapeParams.current(),
-						WorldPlanner.occupancy(placed, storyIndex, storyCells, surfaceBox, fill.owner(), fill.voidCells()),
-						new ArtUnitProbe(FrontEnds.artSource(bundle)), mapLayouts, shafts)
+						WorldPlanner.occupancy(placed, storyIndex, storyCells, surfaceBox, fill.owner(), fill.voidCells()), new ArtUnitProbe(artSource),
+						mapLayouts, shafts, Headroom.rooms(scene, artSource, Headroom.screenRows(false)))
 						.withIndexHash(index.hash());
 			}
 		}

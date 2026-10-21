@@ -36,12 +36,13 @@ public class StaticDataTests implements FabricGameTest {
 
 	@GameTest(template = EMPTY_STRUCTURE)
 	public void overworldDepth(GameTestHelper helper) {
-		// P4: interiors go in layers below Y 64, so the overworld reaches down to Y -256 (same key, still "stable").
+		// P4: interiors go in layers below Y 64, so the overworld reaches down to Y -352 (HEIGHTS_ALL_GAMES_PLAN D5: layers 29
+		// apart; same key, still "stable").
 		DimensionType overworld = helper.getLevel().getServer().registryAccess().registryOrThrow(Registries.DIMENSION_TYPE)
 				.getOrThrow(BuiltinDimensionTypes.OVERWORLD);
-		helper.assertTrue(overworld.minY() == -256, "overworld min_y is " + overworld.minY());
-		helper.assertTrue(overworld.height() == 576, "overworld height is " + overworld.height());
-		helper.assertTrue(helper.getLevel().getMinBuildHeight() == -256, "the test level doesn't use the deep overworld");
+		helper.assertTrue(overworld.minY() == -352, "overworld min_y is " + overworld.minY());
+		helper.assertTrue(overworld.height() == 672, "overworld height is " + overworld.height());
+		helper.assertTrue(helper.getLevel().getMinBuildHeight() == -352, "the test level doesn't use the deep overworld");
 		helper.succeed();
 	}
 

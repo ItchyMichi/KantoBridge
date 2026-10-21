@@ -1099,6 +1099,10 @@ is what the builder writes to `<world>/kantobridge/world_index.json`:
   an optional `mask` of alternating runs, and a block offset `dx, dy, dz`), `levels` (each cell's floor above its
   piece's feet, as `(level, count)` pairs) and `ramps` (stairs cells: `x, y`, the `dir` they climb and their `rise`).
   `cellOrigin` and `toBlock` go through them; a cell's lookup window is then its own floor's, 3 below to 4 above.
+  Since the 3D heights plan (D5) every interior under a ceiling has a layout with `ceilings`: each cell's ceiling (the
+  first solid block over its room) above its piece's feet, as `(ceiling, count)` pairs; a world built before it has none
+  (3 blocks of air over each floor). Interior layers stand 29 blocks apart (`scale.layerStep`; 22 before), the world's
+  bottom at Y -352.
 - `shafts` (optional, H5, [specs/CAVES_3D_PLAN.md](specs/CAVES_3D_PLAN.md) §3.5): each real ladder or hole of a cave
   built in 3D, `kind` (`ladder`, `hole`), its `top{map,x,y}` cell straight over its `bottom{map,x,y}`, `up` (climbed up
   too), and its column: `x, z` and the blocks `y0` (the bottom cell's feet) to `y1` (the top cell's floor); a ladder's

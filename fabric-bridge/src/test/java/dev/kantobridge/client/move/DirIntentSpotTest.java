@@ -67,7 +67,7 @@ class DirIntentSpotTest {
 		assertEquals(3, town.cellsTo(town.offset(1, -2)));
 		assertNull(Spot.of(world, "NOWHERE", 1, 1));
 		assertNull(Spot.at(world, 0.0, 64.0, 0.0), "off every map");
-		Spot house = Spot.at(world, world.toBlock("TEST_HOUSE", 4, 8).x, 42.0, world.toBlock("TEST_HOUSE", 4, 8).z);
+		Spot house = Spot.at(world, world.toBlock("TEST_HOUSE", 4, 8).x, world.toBlock("TEST_HOUSE", 4, 8).y, world.toBlock("TEST_HOUSE", 4, 8).z);
 		assertEquals(Spot.of(world, "TEST_HOUSE", 4, 8), house);
 		assertEquals(false, house.sameLevel(town));
 		// A cell just outside a map (y = -1) is still a place on the grid.

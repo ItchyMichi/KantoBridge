@@ -95,9 +95,10 @@ def test_golden_gen3_world_index_matches_the_schema_and_the_bundle():
     assert [h["pool"] for h in index["habitats"]] == ["kantobridge:em_test_route"]
     # W3 of the 3D heights plan: the cave off the route, its floors stacked in the 3D area, its ladder a real shaft
     caves = {k: m for k, m in index["maps"].items() if k.startswith("EM_TEST_CAVE")}
-    # W4: B1F's platform stands 4 blocks over its floor, so B1F sits 13 under 1F (not 11), its levels and ramps written
+    # W4: B1F's platform stands 4 blocks over its floor, its ceiling 4 over that (W5), so B1F sits 14 under 1F (not 11),
+    # its levels, ramps and ceilings written
     assert {k: (m["y"], m["biome"]) for k, m in caves.items()} == {
-        "EM_TEST_CAVE_1F": (64, "kantobridge:cave_3d"), "EM_TEST_CAVE_B1F": (51, "kantobridge:cave_3d")}
+        "EM_TEST_CAVE_1F": (64, "kantobridge:cave_3d"), "EM_TEST_CAVE_B1F": (50, "kantobridge:cave_3d")}
     assert len(caves["EM_TEST_CAVE_B1F"]["ramps"]) == 2 and max(caves["EM_TEST_CAVE_B1F"]["levels"][0::2]) == 4  # (level, count) runs
     assert [(s["kind"], s["top"]["map"], s["bottom"]["map"], s["up"]) for s in index["shafts"]] == [
         ("ladder", "EM_TEST_CAVE_1F", "EM_TEST_CAVE_B1F", True)]

@@ -17,10 +17,16 @@ public final class ShapeHeights {
 	private ShapeHeights() {
 	}
 
-	/** Blocks a column of {@code map} may hold from feet level. */
+	/**
+	 * Blocks a column of {@code map} may hold from feet level: under its ceiling as built where the shape planner knows it
+	 * (docs/specs/HEIGHTS_ALL_GAMES_PLAN.md D5, {@link SceneMap#withHeadroom}).
+	 */
 	public static int headroom(SceneMap map) {
 		if (map.surface()) {
 			return SURFACE;
+		}
+		if (map.env().headroom() > 0 && !map.env().openAir()) {
+			return map.env().headroom();
 		}
 		return map.env().openAir() ? WorldPlan.CEILING_ABOVE_FEET + 1 : WorldPlan.CEILING_ABOVE_FEET;
 	}

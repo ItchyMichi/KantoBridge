@@ -5,7 +5,7 @@
     {
       "type": "filter",
       "spawnablePositionSelector": "v.spawnable_position.biome.is_of('kantobridge:kanto_outdoor') || v.spawnable_position.biome.is_of('kantobridge:kanto_cave') || v.spawnable_position.biome.is_of('kantobridge:wild_forest')",
-      "allow": "math.mod(v.spawnable_position.y - 63, 22) == 0"
+      "allow": "math.mod(v.spawnable_position.y - 63, 29) == 0"
     }
   ]
 }

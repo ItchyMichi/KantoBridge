@@ -201,6 +201,14 @@
             },
             "description": "Each cell's floor above its piece's feet level, in blocks, row by row, as (level, count) pairs covering every cell. Absent: all 0."
           },
+          "ceilings": {
+            "type": "array",
+            "items": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "description": "Each cell's ceiling: the level of the first solid block over its room, in blocks above its piece's feet level, row by row, as (ceiling, count) pairs covering every cell (docs/specs/HEIGHTS_ALL_GAMES_PLAN.md D5). Absent: 3 blocks of air over each cell's floor (worlds built before the plan)."
+          },
           "ramps": {
             "type": "array",
             "description": "Stairs cells that climb between levels.",

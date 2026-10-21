@@ -1,6 +1,7 @@
 package dev.kantobridge.builder.shape.dressing;
 
 import dev.kantobridge.builder.plan.WorldPlan;
+import dev.kantobridge.builder.shape.ShapeHeights;
 import dev.kantobridge.builder.shape.ShapeKey;
 import dev.kantobridge.scene.CellKind;
 import dev.kantobridge.scene.SceneMap;
@@ -12,11 +13,13 @@ import java.util.Set;
  * Cave rock (docs/specs/CAVES_AND_WOODS_PLAN.md §5.1, CW1): Kanto in First Person's sagging roof, stalactites and
  * stalagmites, re-implemented from its rules (nothing copied; REFERENCES.md). Every roofed cell of a cave under a
  * ceiling gets a box hanging under the ceiling at a hashed depth, one cell in five a spike, all in the room's wall tile.
- * Heights are the mod's at its default four-block room scaled to our three (CD8), rounded to whole pixels; over a path
- * nothing comes below head height and no stalagmite stands (CD6, CD9); a stalagmite rises from a rock cell's top (CD10).
+ * Heights are the mod's at its default four-block room, scaled to a room as low as our old three (CD8), rounded to whole
+ * pixels; over a path nothing comes below head height and no stalagmite stands (CD6, CD9); a stalagmite rises from a
+ * rock cell's top (CD10).
  *
- * <p>Pixels here are Game Boy pixels, 8 to a block, from the floor: the lid (the ceiling's underside) is at 24, the
- * pieces live in the block under it (level 2, pixels 16..24).
+ * <p>Pixels here are Game Boy pixels, 8 to a block, from the floor: the lid (the ceiling's underside) is at 8 × the map's
+ * headroom ({@link ShapeHeights#headroom}: its ceiling as built, docs/specs/HEIGHTS_ALL_GAMES_PLAN.md D5), the pieces
+ * live in the block under it. The constants are a three-block room's (a map whose ceiling the planner doesn't set).
  */
 public final class CaveRock implements HangingRule {
 	/** The lid, in pixels above the floor. */
@@ -50,6 +53,16 @@ public final class CaveRock implements HangingRule {
 	static final int SALT_LENGTH = 271;
 	static final int SALT_GROUND = 277;
 
+	/** The level the pieces take in {@code map}: the block under its ceiling. */
+	public static int level(SceneMap map) {
+		return ShapeHeights.headroom(map) - 1;
+	}
+
+	/** The mod's sizes for a room of its own four blocks or more; scaled down under a lower one. */
+	static double scale(SceneMap map) {
+		return Math.min(1.0, 8 * ShapeHeights.headroom(map) / 32.0);
+	}
+
 	@Override
 	public boolean applies(SceneMap map) {
 		return !map.surface() && !map.env().openAir() && map.env().cave();
@@ -67,28 +80,30 @@ public final class CaveRock implements HangingRule {
 			border.add(tile);
 		}
 		boolean[] swap = swapCells(map);
+		int level = level(map);
+		int levelFloor = 8 * level;
 		for (int cy = 0; cy < map.h(); cy++) {
 			for (int cx = 0; cx < map.w(); cx++) {
 				if (swap[cy * map.w() + cx] || voidCell(map, border, cx, cy)) {
 					continue;
 				}
-				int rock = rockAt(cx, cy);
+				int rock = rockAt(map, cx, cy);
 				int tint = CellHash.hash01(cx, cy, SALT_SHADE) >= 0.5 ? 0 : 1;
-				int y0 = 2 * (rock - LEVEL_FLOOR);
+				int y0 = 2 * (rock - levelFloor);
 				Spike spike = CellHash.oneIn(cx, cy, SALT_SPIKE, SPIKE_EVERY) ? this.spike(map, dress, cx, cy, rock) : null;
 				boolean any = false;
 				boolean spiked = false;
 				for (int dy = 0; dy < per; dy++) {
 					for (int dx = 0; dx < per; dx++) {
 						int i = (cy * per + dy) * cols + cx * per + dx;
-						if (!dress.free(i, LEVEL)) {
+						if (!dress.free(i, level)) {
 							// A wall up to the ceiling, or something already there: not roofed.
 							continue;
 						}
 						Spike own = spike != null && spike.dx == dx && spike.dy == dy ? spike : null;
 						ShapeKey key = own == null ? ShapeKey.hang(dress.atlas, dress.wallTile, y0, ShapeKey.SPIKE_NONE, 0, 0, 0, 0, 0)
 								: ShapeKey.hang(dress.atlas, dress.wallTile, y0, own.dir, own.base, own.apex, own.half, own.x, own.z);
-						dress.hang(i, LEVEL, tint == 0 ? key : key.withTint(tint));
+						dress.hang(i, level, tint == 0 ? key : key.withTint(tint));
 						if (own != null) {
 							dress.count(own.dir == ShapeKey.SPIKE_UP ? "rock_stalagmite" : "rock_stalactite");
 							spiked = true;
@@ -107,10 +122,16 @@ public final class CaveRock implements HangingRule {
 		}
 	}
 
-	/** The rock's underside in a cell, in pixels from the floor: 16..22. */
+	/** The rock's underside in a cell of a three-block room, in pixels from the floor: 16..22. */
 	public static int rockAt(int cx, int cy) {
 		long drop = Math.round(SCALE * (DROP_MIN + DROP_SPAN * CellHash.hash01(cx, cy, SALT_DROP)));
 		return (int) Math.max(LEVEL_FLOOR, LID - drop);
+	}
+
+	/** The rock's underside in a cell of {@code map}, in pixels from the floor: in the block under its ceiling. */
+	public static int rockAt(SceneMap map, int cx, int cy) {
+		long drop = Math.round(scale(map) * (DROP_MIN + DROP_SPAN * CellHash.hash01(cx, cy, SALT_DROP)));
+		return (int) Math.max(8 * level(map), 8 * ShapeHeights.headroom(map) - drop);
 	}
 
 	/** A cell's spike, in its block: direction, base, apex, half-width and centre in 1/16 block. */
@@ -119,7 +140,9 @@ public final class CaveRock implements HangingRule {
 
 	/** The cell's spike after its clamps, or null when it is dropped (counted). */
 	private Spike spike(SceneMap map, Dress dress, int cx, int cy, int rock) {
-		int length = (int) Math.round(SCALE * (LENGTH_MIN + LENGTH_SPAN * CellHash.hash01(cx, cy, SALT_LENGTH)));
+		double scale = scale(map);
+		int levelFloor = 8 * level(map);
+		int length = (int) Math.round(scale * (LENGTH_MIN + LENGTH_SPAN * CellHash.hash01(cx, cy, SALT_LENGTH)));
 		double px = 4 + 8 * CellHash.hash01(cx, cy, SALT_X);
 		double pz = 4 + 8 * CellHash.hash01(cy, cx, SALT_Z);
 		int per = map.perCell();
@@ -132,22 +155,22 @@ public final class CaveRock implements HangingRule {
 		CellKind kind = map.kindAtTile(tx, ty);
 		boolean path = kind == CellKind.WALK || kind == CellKind.LEDGE || kind == CellKind.WATER;
 		int top = 8 * dress.blocks[ty * map.artCols() + tx];
-		if (CellHash.hash01(cx, cy, SALT_GROUND) < GROUND_ODDS && !path && top == LEVEL_FLOOR) {
+		if (CellHash.hash01(cx, cy, SALT_GROUND) < GROUND_ODDS && !path && top == levelFloor) {
 			// A stalagmite on a rock cell's top, short of the rock by the mod's two pixels (scaled).
-			int tip = Math.min(top + length, rock - (int) Math.round(2 * SCALE));
+			int tip = Math.min(top + length, rock - (int) Math.round(2 * scale));
 			if (tip - top < MIN_SPIKE) {
 				dress.count("rock_spike_dropped");
 				return null;
 			}
-			return new Spike(dx, dy, ShapeKey.SPIKE_UP, 0, 2 * (tip - LEVEL_FLOOR), HALF_UP, x, z);
+			return new Spike(dx, dy, ShapeKey.SPIKE_UP, 0, 2 * (tip - levelFloor), HALF_UP, x, z);
 		}
 		int clear = path ? CLEAR : top + 1;
-		int tip = Math.max(rock - length, Math.max(clear, LEVEL_FLOOR));
+		int tip = Math.max(rock - length, Math.max(clear, levelFloor));
 		if (rock - tip < MIN_SPIKE) {
 			dress.count("rock_spike_dropped");
 			return null;
 		}
-		return new Spike(dx, dy, ShapeKey.SPIKE_DOWN, 2 * (rock - LEVEL_FLOOR), 2 * (tip - LEVEL_FLOOR), HALF_DOWN, x, z);
+		return new Spike(dx, dy, ShapeKey.SPIKE_DOWN, 2 * (rock - levelFloor), 2 * (tip - levelFloor), HALF_DOWN, x, z);
 	}
 
 	/** The mod's void: a cell whose tiles are all the map's border-block tiles. */

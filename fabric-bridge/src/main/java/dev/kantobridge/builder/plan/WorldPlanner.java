@@ -212,7 +212,34 @@ public final class WorldPlanner {
 				caves3d.addAll(complex);
 			}
 		}
-		CavePlanner.Result caveArea = CavePlanner.placeArea(caveMaps, caves, caves3d, Map.of(), Map.of(), surfaceVolume, options.originX(),
+		// The shape profile, where the export carried one: its raised pins say which side of a cave's pairs is high (§3.4)
+		ExportProfile carried = caves3d.isEmpty() ? null : bundle.profile();
+		Profile profile = carried == null ? null : ProfileSource.read(carried.text(), carried.version(), carried.enabled()).profile();
+		// The art, for the filler a room's drawing stops at (its ceilings, HEIGHTS_ALL_GAMES_PLAN D8)
+		dev.kantobridge.scene.ArtSource artSource = FrontEnds.artSource(bundle);
+		// A cave built in 3D gets its raised ground (CAVES_3D_PLAN §3.4), and every cave its ceilings (HEIGHTS_ALL_GAMES_PLAN
+		// D5) before the area is placed, so its floors stack as far apart as their tallest rooms need
+		Map<String, MapLayout> caveLayouts = new HashMap<>();
+		Map<String, Integer> caveHeights = new HashMap<>();
+		for (String id : caves) {
+			MapModel model = caveModels.get(id);
+			MapLayout raised = null;
+			if (caves3d.contains(id)) {
+				CaveLevels.Result levels = CaveLevels.plan(model, field.tilePairs(), profile == null ? null : profile.tileset(all.get(id).tileset()));
+				warnings.note("cave_levels_" + levels.outcome(), Warnings.symbols("map", id, "high", levels.high().isEmpty() ? null : levels.high()));
+				warnings.note("cave_raised_cells", levels.raisedCells());
+				warnings.note("cave_ramps", levels.stairs());
+				warnings.note("cave_stairs_profile_confirmed", levels.stairsConfirmed());
+				warnings.note("cave_stairs_profile_other", levels.stairsOther());
+				raised = levels.layout();
+				if (raised != null) {
+					caveLayouts.put(id, raised);
+				}
+			}
+			int[] ceilings = Headroom.ceilings(model, raised, Headroom.blackFiller(model, artSource, null), Headroom.screenRows(false), true);
+			caveHeights.put(id, java.util.Arrays.stream(ceilings).max().orElse(Headroom.MIN));
+		}
+		CavePlanner.Result caveArea = CavePlanner.placeArea(caveMaps, caves, caves3d, Map.of(), caveHeights, surfaceVolume, options.originX(),
 				options.originZ(), warnings);
 		for (MapPlacement cave : caveArea.placements()) {
 			placements.put(cave.id(), cave);
@@ -276,9 +303,6 @@ public final class WorldPlanner {
 		Map<String, ExportTileset> tilesets = new HashMap<>();
 		ExportPalettes palettes = bundle.hasPalettes() ? bundle.palettes() : null;
 		List<PlacedMap> placed = new ArrayList<>();
-		// The shape profile, where the export carried one: its raised pins say which side of a cave's pairs is high (§3.4)
-		ExportProfile carried = caves3d.isEmpty() ? null : bundle.profile();
-		Profile profile = carried == null ? null : ProfileSource.read(carried.text(), carried.version(), carried.enabled()).profile();
 		for (MapPlacement placement : placements.values()) {
 			ExportMap map = all.get(placement.id());
 			ExportTileset tileset = tilesets.get(map.tileset());
@@ -301,22 +325,16 @@ public final class WorldPlanner {
 			if (edges.edges() > 0) {
 				warnings.note("tile_pair_edges", edges.edges());
 			}
-			// A cave built in 3D gets its raised ground (CAVES_3D_PLAN §3.4); the rest stays flat
-			MapLayout raised = null;
-			if (caves3d.contains(map.id())) {
-				CaveLevels.Result levels = CaveLevels.plan(model, field.tilePairs(), profile == null ? null : profile.tileset(map.tileset()));
-				warnings.note("cave_levels_" + levels.outcome(), Warnings.symbols("map", map.id(), "high", levels.high().isEmpty() ? null : levels.high()));
-				warnings.note("cave_raised_cells", levels.raisedCells());
-				warnings.note("cave_ramps", levels.stairs());
-				warnings.note("cave_stairs_profile_confirmed", levels.stairsConfirmed());
-				warnings.note("cave_stairs_profile_other", levels.stairsOther());
-				raised = levels.layout();
-			}
+			// A cave built in 3D stands on its raised ground (planned with the cave area above); the rest stays flat
+			MapLayout raised = caveLayouts.get(map.id());
 			// Its rooms, laid out apart so its ladders and holes line up (§3.5): its pieces, with the levels
 			List<MapLayout.Piece> pieces = caveArea.pieces().get(map.id());
 			if (pieces != null) {
 				raised = withPieces(model, pieces, raised);
 			}
+			// An interior's ceilings (HEIGHTS_ALL_GAMES_PLAN D5): as tall as its drawing, at least 4 over its highest floor
+			raised = withCeilings(placement, model, raised, Headroom.blackFiller(model, artSource, null), Headroom.screenRows(false),
+					!caves.contains(map.id()), warnings);
 			placed.add(new PlacedMap(placement, model, edges, raised));
 		}
 
@@ -386,8 +404,8 @@ public final class WorldPlanner {
 				scene = frontEnd.describe(bundle);
 				// The probe of the profile plan's PD3 asks this export's own art whether a repeating cell stands as a unit.
 				shapes = ShapePlanner.plan(scene, placements.values(), ShapeParams.current(),
-						occupancy(placed, storyIndex, storyCells, surfaceBox, owner, voidCells), new ArtUnitProbe(FrontEnds.artSource(bundle)), layouts,
-						shafts)
+						occupancy(placed, storyIndex, storyCells, surfaceBox, owner, voidCells), new ArtUnitProbe(artSource), layouts, shafts,
+						Headroom.rooms(scene, artSource, Headroom.screenRows(false)))
 						.withIndexHash(index.hash());
 			}
 		}
@@ -493,6 +511,36 @@ public final class WorldPlanner {
 	}
 
 	/** A map's layout with its rooms' pieces (CAVES_3D_PLAN §3.5) and, if it has any, its levels and ramps (§3.4). */
+	/**
+	 * An interior's layout with its ceilings (docs/specs/HEIGHTS_ALL_GAMES_PLAN.md D5, {@link Headroom}): its rooms and raised
+	 * ground, or a flat one. A room on a layer stops at {@link Scale#LAYER_ROOM} (counted); the 3D area's floors stack by
+	 * their own heights. A map under the sky (the surface, an open-air interior) keeps {@code layout}.
+	 *
+	 * @param layered placed on an interior layer (not in the 3D area)
+	 */
+	static @Nullable MapLayout withCeilings(MapPlacement placement, MapModel model, @Nullable MapLayout layout, Headroom.Filler filler,
+			int screenRows, boolean layered, Warnings warnings) {
+		if (placement.kind() != MapPlacement.Kind.INTERIOR || WorldPlan.openSky(placement)) {
+			return layout;
+		}
+		MapLayout base = layout != null ? layout : MapLayout.flat(model.cellWidth(), model.cellHeight(), null, List.of());
+		boolean cave = WorldPlan.BIOME_CAVE_3D.equals(placement.biome());
+		int[] ceilings = Headroom.ceilings(model, layout, filler, screenRows, cave);
+		if (layered) {
+			boolean capped = false;
+			for (int i = 0; i < ceilings.length; i++) {
+				if (ceilings[i] > Scale.LAYER_ROOM) {
+					ceilings[i] = Scale.LAYER_ROOM;
+					capped = true;
+				}
+			}
+			if (capped) {
+				warnings.note("room_ceiling_capped", Warnings.symbols("map", placement.id()));
+			}
+		}
+		return base.withCeilings(ceilings);
+	}
+
 	static MapLayout withPieces(MapModel model, List<MapLayout.Piece> pieces, @Nullable MapLayout levels) {
 		int w = model.cellWidth();
 		int h = model.cellHeight();
