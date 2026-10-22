@@ -1107,13 +1107,14 @@ public final class WorldPlan {
 					column = from;
 					taken |= (1L << from) - 1;
 				} else if (ramp != null && ramp.rise() == RaisedRegions.LEDGE_DROP) {
-					// A ledge step (LEVELS_PIPELINE.md, Crystal's and Blue's): its two half steps in its low row, where the treads
-					// are drawn, a block in its high row level with its top.
-					boolean high = highRow(ramp.dir(), tx - cx * Scale.CELL_BLOCKS, ty - cy * Scale.CELL_BLOCKS);
-					sink.set(x, feet, z, high ? BlockCode.full(this.slot(map, tile, false)) : BlockCode.step(ramp.dir()));
-					from = 1;
+					// A ledge step (LEVELS_PIPELINE.md, Crystal's and Blue's): its low row on the floor, a block's two half steps in
+					// its high row, so the cell's centre (stood on at three quarters of a rise, WorldIndex) clears both.
+					if (highRow(ramp.dir(), tx - cx * Scale.CELL_BLOCKS, ty - cy * Scale.CELL_BLOCKS)) {
+						sink.set(x, feet, z, BlockCode.step(ramp.dir()));
+						from = 1;
+					}
 					column = from;
-					taken |= 1L;
+					taken |= (1L << from) - 1;
 				} else if (ramp != null) {
 					// A ramp's two half steps: on the floor in its low row, on a block in its high row (whose carrier draws the
 					// stair's art there).

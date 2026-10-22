@@ -215,8 +215,8 @@ blocks over the beach); 52 with pins (623), 39 with slopes (184 cells). With 2f4
   Ceruleans, Mt. Moon's square, Silver Cave, Routes 1 to 4, 6, 7, 9, 10, 17, 22, 24, 25, 28, 43, Blue's Route 7): on
   Crystal's and Blue's maps a stair one cell long set in a row of ledges (beside it, Blue's; beside its top, where
   Crystal's hop cells stand before the lip it cuts) climbs `LEDGE_DROP`, the yard behind it a ledge's height over the
-  ground in front (`RaisedRegions.ledgeStep`); the world builds it as one block's two half steps where its treads are
-  drawn. Climbing a cell, the ledges beside it couldn't drop (Route 7's 14 breaks). Emerald's ramps beside a ledge
+  ground in front (`RaisedRegions.ledgeStep`); the world builds it as one block's two half steps in the cell's upper
+  half. Climbing a cell, the ledges beside it couldn't drop (Route 7's 14 breaks). Emerald's ramps beside a ledge
   climb a cell (Safari Zone North's).
 - **A stair goes with the ground at its ends** (Route 109's beach chairs, Mt. Pyre's summit, Route 110): a pin can't
   move a stair, so pins that moved both its ends alike left it hanging, and pins that left its ends level left a ring
