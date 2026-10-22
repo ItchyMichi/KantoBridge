@@ -673,6 +673,62 @@ class RaisedRegionsTest {
 	}
 
 	@Test
+	void outdoorsAStepInALedgeRowClimbsALedgesDrop() {
+		// Blue's ledge step (Cerulean City, Route 7): the step drawn in the ledges' row, climbing north
+		String[] blue = {
+				"########",
+				"#......#",
+				"#vv.vvv#",
+				"#......#",
+				"#......#",
+				"########"};
+		RaisedRegions.Result result = RaisedRegions.outdoor(model(blue), null, climbing(blue, 3, 2), null);
+		MapLayout layout = result.layout();
+		assertNotNull(layout, result.outcome());
+		assertEquals(RaisedRegions.LEDGE_DROP, layout.level(3, 1), "the yard a ledge's height over the ground in front");
+		assertEquals(0, layout.level(3, 3));
+		assertEquals(RaisedRegions.LEDGE_DROP, layout.ramp(3, 2).rise());
+		assertEquals(List.of(), result.breaks(), "the ledges beside it drop as much");
+		assertEquals(0, result.skipped());
+		// Crystal's (Celadon's Gym yard): the hop cells before the lip, the step cut through the lip
+		String[] crystal = {
+				"########",
+				"#......#",
+				"#vv.vvv#",
+				"###.####",
+				"#......#",
+				"########"};
+		result = RaisedRegions.outdoor(model(crystal), null, climbing(crystal, 3, 3), null);
+		layout = result.layout();
+		assertNotNull(layout, result.outcome());
+		assertEquals(RaisedRegions.LEDGE_DROP, layout.level(3, 1));
+		assertEquals(RaisedRegions.LEDGE_DROP, layout.level(1, 2), "the hop cells with the yard");
+		assertEquals(0, layout.level(3, 4));
+		assertEquals(RaisedRegions.LEDGE_DROP, layout.ramp(3, 3).rise());
+		assertEquals(List.of(), result.breaks());
+		// no ledges beside it: a stair cut through a face climbs a cell
+		String[] face = {
+				"########",
+				"#......#",
+				"#......#",
+				"###.####",
+				"#......#",
+				"########"};
+		layout = RaisedRegions.outdoor(model(face), null, climbing(face, 3, 3), null).layout();
+		assertNotNull(layout);
+		assertEquals(RaisedRegions.OUTDOOR_RISE, layout.level(3, 1));
+		assertEquals(RaisedRegions.OUTDOOR_RISE, layout.ramp(3, 3).rise());
+	}
+
+	/** The slopes of a map {@code rows} with one cell, (x, y), climbing north. */
+	private static Dir[] climbing(String[] rows, int x, int y) {
+		int w = rows[0].length();
+		Dir[] slopes = new Dir[w * rows.length];
+		slopes[y * w + x] = Dir.UP;
+		return slopes;
+	}
+
+	@Test
 	void outdoorsOnlyTheGamesFaceDrawingsAreFaces() {
 		// a strip of ground behind two rows of solid cells: a row of trees (no face) and a cliff's rim (a face)
 		String[] rows = {

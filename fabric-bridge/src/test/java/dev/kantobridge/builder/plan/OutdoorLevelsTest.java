@@ -106,6 +106,34 @@ class OutdoorLevelsTest {
 	}
 
 	@Test
+	void aStairGoesWithTheGroundAtItsEnds() {
+		// a stair at (1, 1) climbing north from the strip at 0 to the strip at 3
+		MapModel model = RaisedRegionsTest.model(
+				"....",
+				"#.##",
+				"....",
+				"####");
+		MapLayout solved = MapLayout.flat(4, 4, new int[] {
+				3, 3, 3, 3,
+				0, 0, 0, 0,
+				0, 0, 0, 0,
+				0, 0, 0, 0}, List.of(new MapLayout.Ramp(1, 1, Dir.UP, 3)));
+		MapLayout both = OutdoorLevels.pinned(solved, model, List.of(pin(0, 0, 9), pin(0, 2, 6)));
+		assertEquals(6, both.level(1, 1), "both ends 6 up: the stair with them (Mt. Pyre's summit)");
+		assertEquals(Dir.UP, both.ramp(1, 1).dir());
+		MapLayout level = OutdoorLevels.pinned(solved, model, List.of(pin(0, 0, 0)));
+		assertNull(level.ramp(1, 1), "its ends level: no stair (Route 109's beach chairs)");
+		assertEquals(0, level.level(1, 1));
+		MapLayout one = OutdoorLevels.pinned(solved, model, List.of(pin(0, 0, 6)));
+		assertEquals(0, one.level(1, 1), "one end moved: the stair stays, its top a break");
+		assertEquals(Dir.UP, one.ramp(1, 1).dir());
+	}
+
+	private static dev.kantobridge.builder.shape.LandscapeModels.Pin pin(int x, int y, int level) {
+		return new dev.kantobridge.builder.shape.LandscapeModels.Pin(x, y, level);
+	}
+
+	@Test
 	void aPinStopsAtTheGamesWalls() {
 		// two strips the game walls apart along their whole edge (Crystal's one-way walls): a pin moves only its own
 		MapModel model = RaisedRegionsTest.model(

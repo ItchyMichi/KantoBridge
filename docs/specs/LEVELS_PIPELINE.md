@@ -198,9 +198,37 @@ with pins (1,185), 37 with slopes (197 cells). What their notes asked the comput
 alone (their pins dropped: Vermilion, Saffron, Routes 14 to 16 and more, where fences had stood as cliffs), 7 right
 with their pins, 65 for a second look (the descents the floor rule shows, Crystal's mountains the doors free).
 
-Not learned yet (the second look pins round them where it can): a ledge step (a stair in a ledge row climbing a ledge's
+Not learned then (the second look pins round them where it can): a ledge step (a stair in a ledge row climbing a ledge's
 block, Blue and Crystal); Crystal's ledges (its hop cell is the one before the lip, so its drops never apply); water under
 a log bridge with its own banks; a cascade parting the sea from a pool (the Battle Frontier, Ever Grande); a raised pier.
+
+## The second look (2026-10-22)
+
+70 maps, one agent each (five workflows): the 68 `look` maps and the two the first round never reached, against the dump
+of c9b9d8b's rules with the first round's pins (`levels_r4pin`), each writing complete lists (`reviews_r2/`,
+`apply_reviews.py --replace`): 21 fit as they stood, 48 fixed, 1 unsure (Route 130, whose sea stands with its upland 3
+blocks over the beach); 52 with pins (623), 39 with slopes (184 cells). With 2f4fd54's rules and those lists: Route 119
+524 of 524; of the 25 Hoenn and Blue maps looked at, 22 stand exactly as their pins meant, the other three gained stairs
+(Route 110's cycling road climbs its 9 blocks, Cerulean's and Route 7's ledge steps below). What the second look taught:
+
+- **A ledge step climbs a ledge's drop** (25 reviews: Celadon, Pewter, Fuchsia, Viridian, Azalea, Cinnabar, both
+  Ceruleans, Mt. Moon's square, Silver Cave, Routes 1 to 4, 6, 7, 9, 10, 17, 22, 24, 25, 28, 43, Blue's Route 7): on
+  Crystal's and Blue's maps a stair one cell long set in a row of ledges (beside it, Blue's; beside its top, where
+  Crystal's hop cells stand before the lip it cuts) climbs `LEDGE_DROP`, the yard behind it a ledge's height over the
+  ground in front (`RaisedRegions.ledgeStep`); the world builds it as one block's two half steps where its treads are
+  drawn. Climbing a cell, the ledges beside it couldn't drop (Route 7's 14 breaks). Emerald's ramps beside a ledge
+  climb a cell (Safari Zone North's).
+- **A stair goes with the ground at its ends** (Route 109's beach chairs, Mt. Pyre's summit, Route 110): a pin can't
+  move a stair, so pins that moved both its ends alike left it hanging, and pins that left its ends level left a ring
+  of steps round a chair. After the pins each flight follows its ends, or is flat ground where they meet
+  (`OutdoorLevels.stairsWithTheirEnds`, `rules_check.pinned` the same); any other is a loose end, which
+  `rules_check.py` counts and sends back for a look.
+
+Not learned yet: Crystal's ledges (above); water standing with its lowest bank (Route 130, Slateport); water under a log
+bridge with its own banks; a cascade parting the sea from a pool (Ever Grande, the Safari Zone's south-east lake); a
+raised pier; a door at the top of a one-row stair (Sootopolis, the door joins any level so the stair finds no top); a
+ledge in a one-way loop (Route 120); a pit's exit ledges dropping two blocks (the Safari Zone's north-east); a cliff
+face drawn as two half-cell ledge rims (Lilycove).
 
 ## Open (to expand as they are solved)
 

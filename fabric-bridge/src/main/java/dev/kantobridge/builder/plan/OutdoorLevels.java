@@ -4,10 +4,13 @@ import dev.kantobridge.builder.shape.LandscapeModels;
 import dev.kantobridge.world.Dir;
 import dev.kantobridge.world.MapLayout;
 import java.util.ArrayDeque;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.function.Function;
@@ -73,9 +76,9 @@ public final class OutdoorLevels {
 
 	/**
 	 * {@code layout} with a review's pins (LEVELS_PIPELINE.md, the review): for each, the ground and water round its cell that
-	 * stand level with it (four-neighbours, no ramp) at its level, then the rock round them on its nearest ground again. A map
-	 * the solver left flat (null) stands on 0 for them, as its review saw it (Route 132's rock tops), and stays flat if they
-	 * lift nothing.
+	 * stand level with it (four-neighbours, no ramp) at its level, then each stair with the ground at its ends
+	 * ({@link #stairsWithTheirEnds}) and the rock round them on its nearest ground again. A map the solver left flat (null)
+	 * stands on 0 for them, as its review saw it (Route 132's rock tops), and stays flat if they lift nothing.
 	 */
 	static @Nullable MapLayout pinned(@Nullable MapLayout layout, MapModel model, List<LandscapeModels.Pin> pins) {
 		return pinned(layout, model, pins, null);
@@ -126,11 +129,68 @@ public final class OutdoorLevels {
 				}
 			}
 		}
+		List<MapLayout.Ramp> kept = stairsWithTheirEnds(w, h, levels, standable, rampList);
 		RaisedRegions.nearestLevels(w, h, standable, levels);
 		if (layout == null && Arrays.stream(levels).allMatch(v -> v == 0)) {
 			return null;
 		}
-		return MapLayout.flat(w, h, levels, List.copyOf(rampList));
+		return MapLayout.flat(w, h, levels, kept);
+	}
+
+	/**
+	 * After the pins, each flight of {@code ramps} (its steps climbing one way in a row) with the ground at its two ends: pins
+	 * that moved both ends alike move its steps with them (Mt. Pyre's summit); pins that left its ends level make its steps
+	 * that ground, no stair (the ring round a beach chair the data's elevations read as steps: Route 109's review); any other
+	 * keeps its steps where they were. {@code levels} takes the steps' levels; returns the ramps kept.
+	 */
+	static List<MapLayout.Ramp> stairsWithTheirEnds(int w, int h, int[] levels, boolean[] standable, Collection<MapLayout.Ramp> ramps) {
+		Map<Integer, MapLayout.Ramp> at = new HashMap<>();
+		for (MapLayout.Ramp r : ramps) {
+			at.put(r.y() * w + r.x(), r);
+		}
+		Set<Integer> done = new HashSet<>();
+		Set<Integer> flat = new HashSet<>();
+		for (MapLayout.Ramp r : ramps) {
+			int bottom = r.y() * w + r.x();
+			if (done.contains(bottom)) {
+				continue;
+			}
+			for (int b = along(w, h, bottom, r.dir(), -1); b >= 0 && at.containsKey(b) && at.get(b).dir() == r.dir(); b = along(w, h, b, r.dir(), -1)) {
+				bottom = b;
+			}
+			List<Integer> flight = new ArrayList<>();
+			int top = bottom;
+			while (top >= 0 && at.containsKey(top) && at.get(top).dir() == r.dir()) {
+				flight.add(top);
+				done.add(top);
+				top = along(w, h, top, r.dir(), 1);
+			}
+			int foot = along(w, h, bottom, r.dir(), -1);
+			if (foot < 0 || top < 0 || !standable[foot] || !standable[top] || at.containsKey(foot) || at.containsKey(top)) {
+				continue;
+			}
+			int climb = flight.stream().mapToInt(s -> at.get(s).rise()).sum();
+			int step = levels[foot];
+			if (levels[top] - levels[foot] == climb) {
+				for (int s : flight) {
+					levels[s] = step;
+					step += at.get(s).rise();
+				}
+			} else if (levels[top] == levels[foot]) {
+				for (int s : flight) {
+					levels[s] = step;
+					flat.add(s);
+				}
+			}
+		}
+		return ramps.stream().filter(r -> !flat.contains(r.y() * w + r.x())).toList();
+	}
+
+	/** The cell {@code by} cells from cell {@code c} the way {@code dir} goes, or -1 off the map. */
+	private static int along(int w, int h, int c, Dir dir, int by) {
+		int x = c % w + dir.dx() * by;
+		int y = c / w + dir.dy() * by;
+		return x >= 0 && y >= 0 && x < w && y < h ? y * w + x : -1;
 	}
 
 	/**

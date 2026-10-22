@@ -193,6 +193,21 @@ def test_the_rules_check_sends_back_only_the_maps_whose_review_no_longer_holds(t
     assert verdicts == {"A": "same", "B": "fixed", "C": "look"}
 
 
+def test_a_stair_goes_with_the_ground_at_its_ends():
+    from landscape_sections.rules_check import loose_ends, pinned_ramps
+
+    # a step at (1, 1) climbing north from the strip at 0 to the strip at 3, rock either side of it
+    dump = {"w": 3, "h": 3, "kinds": "..." "#.#" "...", "levels": [3, 3, 3, 0, 0, 0, 0, 0, 0], "ramps": [[1, 1, "up", 3]]}
+    levels, ramps = pinned_ramps(dump, [[0, 0, 9], [0, 2, 6]])
+    assert levels[4] == 6 and ramps == [[1, 1, "up", 3]], "both ends 6 up: the step with them"
+    levels, ramps = pinned_ramps(dump, [[0, 0, 0]])
+    assert levels[4] == 0 and ramps == [], "its ends level: no step"
+    levels, ramps = pinned_ramps(dump, [[0, 0, 6]])
+    assert levels[4] == 0 and ramps == [[1, 1, "up", 3]], "one end moved: the step stays"
+    assert loose_ends(dict(dump, levels=levels)) == [[1, 1, "top"]], "its top off the ground"
+    assert loose_ends(dump) == []
+
+
 def test_the_face_drawings_are_the_solid_runs_between_ground():
     from landscape_sections.face_drawings import face_drawings
 

@@ -590,7 +590,8 @@ public final class RaisedRegions {
 				Map<Integer, List<int[]>> touches = touches(in, part, region, true);
 				Stair stair = drawnStair(w, part, touches, climb);
 				Offsets before = heights.copy();
-				String failed = stair == null ? "flat_stairs_shape" : joinStair(heights, stair, in.rise() * stair.length);
+				int rise = stair != null && ledgeStep(in, hop, stair) ? LEDGE_DROP : in.rise();
+				String failed = stair == null ? "flat_stairs_shape" : joinStair(heights, stair, rise * stair.length);
 				if (failed != null) {
 					if (!soft) {
 						return Result.flat(failed, regions);
@@ -601,6 +602,7 @@ public final class RaisedRegions {
 					standWith(part, touches, joinLevelOf, loose);
 					continue;
 				}
+				stair.rise = rise;
 				stair.low = stair.lows.get(0);
 				stairs.add(stair);
 			}
@@ -742,6 +744,7 @@ public final class RaisedRegions {
 							joinLevelOf[c] = touched.get(0);
 						}
 					} else {
+						stair.rise = in.rise();
 						stair.low = stair.lows.get(0);
 						stairs.add(stair);
 					}
@@ -910,9 +913,9 @@ public final class RaisedRegions {
 		for (Stair stair : stairs) {
 			for (int k = 0; k < stair.cells.length; k++) {
 				int c = stair.cells[k];
-				levels[c] = height[stair.low] + in.rise() * stair.steps[k];
+				levels[c] = height[stair.low] + stair.rise * stair.steps[k];
 				standable[c] = true;
-				rampAt.put(c, new MapLayout.Ramp(c % w, c / w, stair.climb, in.rise()));
+				rampAt.put(c, new MapLayout.Ramp(c % w, c / w, stair.climb, stair.rise));
 			}
 		}
 		for (int[] part : loose) {
@@ -1196,10 +1199,47 @@ public final class RaisedRegions {
 		int[] steps;
 		Dir climb;
 		int length;
+		/** The blocks a step of it climbs. */
+		int rise;
 		int low;
 		/** A drawn stair's regions at its foot and at its top. */
 		List<Integer> lows = new ArrayList<>();
 		List<Integer> highs = new ArrayList<>();
+	}
+
+	/**
+	 * True for a ledge step (LEVELS_PIPELINE.md, the second look): outdoors on Crystal's and Blue's maps (no shore key), a
+	 * stair one cell long set in a row of ledges hopping down the way it climbs down, beside it (Blue's: the step drawn in the
+	 * ledges' row) or beside its top (Crystal's: the hop cells stand before the lip the step cuts through). It climbs a ledge's
+	 * drop, {@link #LEDGE_DROP}: the yard behind it a ledge's height over the ground in front, not a cell's. Emerald's ramps
+	 * beside a ledge climb a cell (Safari Zone North's).
+	 */
+	private static boolean ledgeStep(Input in, Dir @Nullable [] hop, Stair stair) {
+		if (hop == null || !in.outdoor() || in.shore() >= 0 || stair.length != 1) {
+			return false;
+		}
+		MapModel model = in.model();
+		int w = model.cellWidth();
+		int h = model.cellHeight();
+		java.util.Set<Integer> own = new java.util.HashSet<>();
+		for (int c : stair.cells) {
+			own.add(c);
+		}
+		Dir[] sides = stair.climb == Dir.UP || stair.climb == Dir.DOWN ? new Dir[] {Dir.LEFT, Dir.RIGHT} : new Dir[] {Dir.UP, Dir.DOWN};
+		for (int c : stair.cells) {
+			for (int by = 0; by <= 1; by++) {
+				int x = c % w + stair.climb.dx() * by;
+				int y = c / w + stair.climb.dy() * by;
+				for (Dir side : sides) {
+					int nx = x + side.dx();
+					int ny = y + side.dy();
+					if (nx >= 0 && ny >= 0 && nx < w && ny < h && !own.contains(ny * w + nx) && hop[ny * w + nx] == stair.climb.opposite()) {
+						return true;
+					}
+				}
+			}
+		}
+		return false;
 	}
 
 	/** True when every cell of a stair has solid cells (or the stair's own) on both sides across its climb: cut through a wall. */

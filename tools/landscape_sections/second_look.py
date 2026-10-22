@@ -14,7 +14,8 @@ blocks over the floor, null for rock; none for a map with no first review in <re
 ground or water cell where the pinned dump and that intent differ).
 
 try: the levels a review's pins give (its "pins" in blocks over its "floor", applied in the pipeline's order, sorted, to
-the raw levels: each floods the ground and water level with its cell, no ramp, as OutdoorLevels.pinned does), printed
+the raw levels: each floods the ground and water level with its cell, no ramp, then each stair goes with the ground at its
+ends, as OutdoorLevels.pinned does), printed
 as a grid in blocks over the floor: a number for ground, "~" after it for water, "L" for a ledge, "^ v < >" before it
 for a ramp (its way up, at its foot's level), "#" for rock, and "*" after a cell where it differs from what the first
 review meant (the <MAP>_second.json beside <MAP>_raw.json, if it has an intent); then the cells the pins changed. Slopes
@@ -26,7 +27,7 @@ import sys
 from collections import Counter
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from rules_check import load, pinned  # noqa: E402
+from rules_check import load, pinned, pinned_ramps  # noqa: E402
 
 ARROWS = {"up": "^", "down": "v", "left": "<", "right": ">"}
 
@@ -73,9 +74,9 @@ def inputs(argv):
     return 0
 
 
-def grid(dump, levels, floor, window, meant=None):
+def grid(dump, levels, floor, window, meant=None, ramps=None):
     w, kinds = dump["w"], dump["kinds"]
-    ramps = {(r[0], r[1]): r[2] for r in dump.get("ramps", [])}
+    ramps = {(r[0], r[1]): r[2] for r in (dump.get("ramps", []) if ramps is None else ramps)}
     x0, y0, x1, y1 = window
     cw = 5 if meant else 4
     lines = ["     " + "".join(f"{x:>{cw}}" if x % 4 == 0 else " " * cw for x in range(x0, x1))]
@@ -98,7 +99,7 @@ def try_pins(argv):
     review = json.load(open(argv[1]))
     floor = review.get("floor", 0)
     pins = sorted([x, y, floor + n] for x, y, n in review.get("pins", []))
-    levels = pinned(raw, pins)
+    levels, ramps = pinned_ramps(raw, pins)
     w, h = raw["w"], raw["h"]
     window = tuple(int(v) for v in argv[2].split(",")) if len(argv) > 2 else (0, 0, w, h)
     beside = argv[0][:-len("_raw.json")] + "_second.json" if argv[0].endswith("_raw.json") else None
@@ -107,7 +108,7 @@ def try_pins(argv):
     if meant:
         base = json.load(open(beside))["floor"]
         meant = [None if v is None else v + base - floor for v in meant]
-    print(grid(raw, levels, floor, window, meant))
+    print(grid(raw, levels, floor, window, meant, ramps))
     if meant:
         off = sum(1 for i in range(w * h) if raw["kinds"][i] != "#" and meant[i] is not None and meant[i] != levels[i] - floor)
         print(f"{off} cells (*) differ from what the first review meant")
