@@ -52,6 +52,11 @@ public final class RaisedRegions {
 	 * blocks a tile row (LANDSCAPE_MODELS.md; the user's choice of 2026-10-21), so the ground behind a cliff meets its top.
 	 */
 	public static final int OUTDOOR_RISE = 3;
+	/**
+	 * Outdoors the blocks a ledge drops (HEIGHTS_ALL_GAMES_PLAN.md D4, the user's "small drops", 2026-10-22): the lip the
+	 * game draws, about a third of a cell.
+	 */
+	public static final int LEDGE_DROP = 1;
 	/** The longest run of solid cells, in cells, read as a face between two regions (a longer one is rock, not a face). */
 	static final int MAX_FACE = 3;
 	/** Emerald's elevation that joins any other. */
@@ -424,7 +429,9 @@ public final class RaisedRegions {
 		int h = model.cellHeight();
 		int n = w * h;
 		// (decked keeps its deck flag: the bridges are joins now, and the rules outdoors are known by it)
-		Input in = given.outdoor() ? decked(given, n) : given;
+		Input in = given.outdoor() ? ledgesAside(decked(given, n)) : given;
+		// outdoors each ledge cell's hop (its way down), its cells kept out of the regions: a ledge drops
+		Dir[] hop = given.outdoor() ? ledgeHops(in.model()) : null;
 		// outdoors a river flows on under a bridge's deck: one body of water either side of it
 		boolean[] under = given.outdoor() ? given.bridge() : new boolean[n];
 		int[] key = in.key();
@@ -447,7 +454,8 @@ public final class RaisedRegions {
 		}
 		int regions = regionKey.size();
 		boolean drawnStairs = in.climb() != null && Arrays.stream(in.climb()).anyMatch(java.util.Objects::nonNull);
-		if (regions < 2 || in.faceKeys() && in.walls() == null && !drawnStairs && regionKey.stream().distinct().count() < 2) {
+		boolean ledged = hop != null && Arrays.stream(hop).anyMatch(java.util.Objects::nonNull);
+		if (regions < 2 || in.faceKeys() && in.walls() == null && !drawnStairs && !ledged && regionKey.stream().distinct().count() < 2) {
 			return Result.flat("flat_one_level", regions);
 		}
 		for (boolean b : in.bridge()) {
@@ -651,6 +659,45 @@ public final class RaisedRegions {
 				}
 			}
 		}
+		// ---- ledges (outdoors), after every other rule (the weakest: a small drop): a strip of ledge cells hopping one way
+		// drops LEDGE_DROP blocks, its cells on the side it is hopped from; a ledge the walker can go round (the same ground on
+		// both sides), whose sides another rule keeps level, or that doesn't fit stands at one height with the ground it
+		// touches, as before ----
+		List<Stair> drops = new ArrayList<>();
+		if (hop != null) {
+			boolean[] took = new boolean[n];
+			for (int s = 0; s < n; s++) {
+				Dir way = hop[s];
+				if (way == null || took[s]) {
+					continue;
+				}
+				List<Integer> part = flood(w, h, s, (a, b) -> hop[b] == way && !took[b]);
+				for (int c : part) {
+					took[c] = true;
+				}
+				Map<Integer, List<int[]>> touches = touches(in, part, region, true);
+				Stair stair = drawnStair(w, part, touches, way.opposite());
+				Offsets before = heights.copy();
+				if (stair != null && joinStair(heights, stair, LEDGE_DROP) == null) {
+					stair.low = stair.lows.get(0);
+					drops.add(stair);
+					continue;
+				}
+				heights.restore(before);
+				List<Integer> touched = new ArrayList<>(touches.keySet());
+				if (touched.isEmpty()) {
+					loose.add(part.stream().mapToInt(Integer::intValue).toArray());
+					continue;
+				}
+				if (joinFlat(heights, touched) != null) {
+					heights.restore(before);
+					skipped++;
+				}
+				for (int c : part) {
+					joinLevelOf[c] = touched.get(0);
+				}
+			}
+		}
 		// ---- each group of regions joined so far, placed: the biggest at the floor level, then by faces, then by key ----
 		Map<Integer, Integer> groupCells = new LinkedHashMap<>();
 		for (int r = 0; r < regions; r++) {
@@ -750,6 +797,13 @@ public final class RaisedRegions {
 				int at = shore >= 0 ? height[shore] : waterBanks.get(waterOf[i]).stream().mapToInt(r -> height[r]).min().orElse(0);
 				levels[i] = at;
 				standable[i] = true;
+			}
+		}
+		for (Stair drop : drops) {
+			// a ledge's own cells stand on the side it is hopped from
+			for (int c : drop.cells) {
+				levels[c] = height[drop.highs.get(0)];
+				standable[c] = true;
 			}
 		}
 		for (Stair stair : stairs) {
@@ -855,6 +909,49 @@ public final class RaisedRegions {
 		}
 		return new Result(MapLayout.flat(w, h, levels, new ArrayList<>(rampAt.values())), raisedOutcome, regions, raised, stairs.size(), top,
 				skipped, breaks == null ? List.of() : List.copyOf(new java.util.TreeSet<>(breaks)));
+	}
+
+	/** {@code in} with its ledge cells in no region and joining nothing: outdoors a ledge is its own rule (a drop). */
+	private static Input ledgesAside(Input in) {
+		MapModel model = in.model();
+		int w = model.cellWidth();
+		int[] key = in.key().clone();
+		boolean[] joins = in.joins().clone();
+		boolean any = false;
+		for (int i = 0; i < key.length; i++) {
+			if (model.kind(i % w, i / w) == MapModel.Kind.LEDGE) {
+				key[i] = -1;
+				joins[i] = false;
+				any = true;
+			}
+		}
+		return !any ? in : new Input(model, key, joins, in.bridge(), in.shore(), in.climb(), in.walls(), in.wallsRise(), in.maxFace(), in.faceKeys(),
+				in.room(), in.rise(), in.outdoor(), in.falls());
+	}
+
+	/** Per cell a ledge's hop, its way down; null for any other cell. */
+	private static Dir[] ledgeHops(MapModel model) {
+		int w = model.cellWidth();
+		int h = model.cellHeight();
+		Dir[] out = new Dir[w * h];
+		for (int cy = 0; cy < h; cy++) {
+			for (int cx = 0; cx < w; cx++) {
+				if (model.kind(cx, cy) == MapModel.Kind.LEDGE) {
+					out[cy * w + cx] = ledgeHop(model, cx, cy);
+				}
+			}
+		}
+		return out;
+	}
+
+	/** A ledge cell's hop (CellFlags' 0 down, 1 up, 2 left, 3 right). */
+	private static Dir ledgeHop(MapModel model, int cx, int cy) {
+		return switch (CellFlags.ledgeDir(model.flags(cx, cy))) {
+			case 0 -> Dir.DOWN;
+			case 1 -> Dir.UP;
+			case 2 -> Dir.LEFT;
+			default -> Dir.RIGHT;
+		};
 	}
 
 	/**
@@ -1330,17 +1427,14 @@ public final class RaisedRegions {
 					continue;
 				}
 				if (model.kind(cx, cy) == MapModel.Kind.LEDGE) {
-					Dir hop = switch (CellFlags.ledgeDir(model.flags(cx, cy))) {
-						case 0 -> Dir.DOWN;
-						case 1 -> Dir.UP;
-						case 2 -> Dir.LEFT;
-						default -> Dir.RIGHT;
-					};
+					Dir hop = ledgeHop(model, cx, cy);
 					for (Dir side : new Dir[] {hop, hop.opposite()}) {
 						int nx = cx + side.dx();
 						int ny = cy + side.dy();
+						// outdoors the ground it is hopped onto may stand LEDGE_DROP lower (a ledge's drop)
+						int drop = in.outdoor() && side == hop ? LEDGE_DROP : 0;
 						if (nx >= 0 && ny >= 0 && nx < w && ny < h && standable[ny * w + nx]
-								&& (levels[ny * w + nx] != levels[a] || rampAt.containsKey(ny * w + nx))) {
+								&& (levels[ny * w + nx] != levels[a] && levels[ny * w + nx] != levels[a] - drop || rampAt.containsKey(ny * w + nx))) {
 							if (breaks == null) {
 								return "flat_check_ledge";
 							}
@@ -1355,7 +1449,9 @@ public final class RaisedRegions {
 						continue;
 					}
 					int b = ny * w + nx;
-					if (!standable[b] || !joined(model, in, key, a, b)) {
+					// outdoors a ledge's own rule (above) checks the edges it touches
+					if (!standable[b] || !joined(model, in, key, a, b)
+							|| in.outdoor() && (model.kind(cx, cy) == MapModel.Kind.LEDGE || model.kind(nx, ny) == MapModel.Kind.LEDGE)) {
 						continue;
 					}
 					MapLayout.Ramp rampA = rampAt.get(a);

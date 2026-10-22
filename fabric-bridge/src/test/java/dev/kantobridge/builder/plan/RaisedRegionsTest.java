@@ -644,6 +644,54 @@ class RaisedRegionsTest {
 	}
 
 	@Test
+	void outdoorsALedgeDropsABlock() {
+		// a ledge hopping south across the whole way: the ground it is hopped from a block over the ground below it
+		String[] rows = {
+				"######",
+				"#....#",
+				"#vvvv#",
+				"#....#",
+				"#....#",
+				"######"};
+		String[] keys = {
+				"######",
+				"#3333#",
+				"#3333#",
+				"#3333#",
+				"#3333#",
+				"######"};
+		RaisedRegions.Result result = outdoor(rows, keys, false, true, null);
+		MapLayout layout = result.layout();
+		assertNotNull(layout, result.outcome());
+		assertEquals(RaisedRegions.LEDGE_DROP, layout.level(2, 1), "the ground the ledge is hopped from");
+		assertEquals(RaisedRegions.LEDGE_DROP, layout.level(2, 2), "the ledge itself, on that side");
+		assertEquals(0, layout.level(2, 3), "the ground it is hopped onto");
+		assertNull(layout.ramp(2, 2), "a drop, not a ramp: nobody climbs it");
+		assertEquals(List.of(), result.breaks());
+		assertEquals(0, result.skipped());
+	}
+
+	@Test
+	void outdoorsALedgeTheWalkerCanGoRoundStaysLevel() {
+		String[] rows = {
+				"######",
+				"#....#",
+				"#vvv.#",
+				"#....#",
+				"#....#",
+				"######"};
+		String[] keys = {
+				"######",
+				"#3333#",
+				"#3333#",
+				"#3333#",
+				"#3333#",
+				"######"};
+		RaisedRegions.Result result = outdoor(rows, keys, false, true, null);
+		assertNull(result.layout(), "one height: the ground on both sides is one: " + result.outcome());
+	}
+
+	@Test
 	void outdoorsAPocketStandsWithTheGroundNearestIt() {
 		// a cell nothing walkable touches, behind a cell of rock north of a plateau (Mossdeep's cell under the big tree): the
 		// face's vote would lift it a cell over the plateau; it stands as the ground nearest it (on a tie the lower)
