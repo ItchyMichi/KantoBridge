@@ -2,7 +2,8 @@
 # A test world with the landscape models and outdoor levels (docs/specs/LEVELS_PIPELINE.md, step 8), on the pod: every
 # region in $REGIONS (default "kanto hoenn johto"), the models table $TABLE (models_table.py, with its marked slopes),
 # the outdoor maps $OUTDOOR (map ids, comma-separated) on raised ground, in world $WORLD (default LandLevels; Kanto,
-# slot 0, starts it fresh); CHAIN=1 chains the maps (each floor where its neighbour's ground leaves off). Logs and build
+# slot 0, starts it fresh, unless KEEP=1: Kanto rebuilt in the world as it is, the other regions kept, its last build's
+# volumes cleared); CHAIN=1 chains the maps (each floor where its neighbour's ground leaves off). Logs and build
 # reports in $LOGS (default /workspace/videos/landscape/logs). Ends "ALL DONE".
 #   TABLE=... OUTDOOR=EM_ROUTE119,... REGIONS="hoenn" setsid nohup tools/landscape_sections/pod/levels_build.sh >> build.log 2>&1 &
 export KB_JAVA_HOME=/opt/java/openjdk JAVA_HOME=/opt/java/openjdk PATH=/opt/java/openjdk/bin:$PATH
@@ -17,7 +18,7 @@ for r in ${REGIONS:-kanto hoenn johto}; do
     johto) g=crystal; s=2;;
   esac
   fresh=""
-  [ "$r" = "kanto" ] && fresh="--fresh"
+  [ "$r" = "kanto" ] && [ -z "$KEEP" ] && fresh="--fresh"
   echo "== $r start $(date +%T)"
   tools/.venv/bin/python tools/e2e/build_world.py --skip-export --game $g --maps all --world "$WORLD" $fresh --region $r --slot $s \
     --heap 8g --landscape-models "$TABLE" --outdoor-levels "$OUTDOOR" ${CHAIN:+--chain-levels} > "$L/levels_$r.log" 2>&1
