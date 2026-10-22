@@ -130,3 +130,10 @@ def test_a_reviews_pins_go_in_the_table_in_blocks(tmp_path):
     (tmp_path / "TOWN.json").write_text('{"floor": 0, "pins": [[1, 1, 3]]}')
     with pytest.raises(ValueError):
         add_pins({"maps": {}}, str(tmp_path))
+
+
+def test_a_review_in_blocks_pins_its_own_numbers(tmp_path):
+    from landscape_sections.pins_table import add_pins
+
+    (tmp_path / "ROUTE.json").write_text('{"unit": "blocks", "floor": 3, "pins": [[2, 2, 1], [4, 4, 7]]}')
+    assert add_pins({"maps": {}}, str(tmp_path))["pins"] == {"ROUTE": [[2, 2, 4], [4, 4, 10]]}, "a ledge's block shows"

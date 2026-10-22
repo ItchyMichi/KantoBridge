@@ -4,9 +4,10 @@ ground round each pinned cell, as far as it stands level with it, to the pin's l
 
     python pins_table.py <table.json> <review dir> [MAP ...]
 
-<review dir>/<MAP>.json: {"floor": blocks, "pins": [[x, y, n], ...], ...}, map cells and n in half cells (a tile row of
-cliff, 1.5 blocks) over "floor", the computer's lowest level in the reviewed view (levels_overlay.py's <MAP>_levels.json
-"floor"); n even, so a pin stands on whole blocks. The table's "pins" gets each map's list in blocks over the map's floor
+<review dir>/<MAP>.json: {"floor": blocks, "pins": [[x, y, n], ...], ...}, map cells and n over "floor", the computer's
+lowest level in the reviewed view (levels_overlay.py's <MAP>_levels.json "floor"): with "unit": "blocks" n is in blocks
+(the review agents', levels_overlay.py --blocks), else in half cells (a tile row of cliff, 1.5 blocks; the user's marks'
+unit) and even, so a pin stands on whole blocks. The table's "pins" gets each map's list in blocks over the map's floor
 (every map with a file, or the maps named). Plain Python.
 """
 import json
@@ -18,13 +19,14 @@ def read_pins(path):
     """A review's pins in blocks over the map's floor: [[x, y, blocks], ...] sorted."""
     review = json.load(open(path))
     floor = review.get("floor", 0)
+    in_blocks = review.get("unit") == "blocks"
     out = []
     for p in review.get("pins", []):
         if not (isinstance(p, list) and len(p) == 3 and all(isinstance(v, int) and not isinstance(v, bool) for v in p)):
             raise ValueError(f"{path}: bad pin {p!r}")
-        if p[2] < 0 or p[2] % 2:
-            raise ValueError(f"{path}: pin {p!r}: the level must be an even number of half cells, 0 or more")
-        out.append([p[0], p[1], floor + p[2] * 3 // 2])
+        if p[2] < 0 or not in_blocks and p[2] % 2:
+            raise ValueError(f"{path}: pin {p!r}: the level must be 0 or more (in half cells, an even number)")
+        out.append([p[0], p[1], floor + (p[2] if in_blocks else p[2] * 3 // 2)])
     return sorted(out)
 
 

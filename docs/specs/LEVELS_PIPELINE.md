@@ -49,13 +49,19 @@ art fails here, not in a two-hour build). Map ids, cells and numbers only: they 
 The user's wish (2026-10-21): the process runs without their input. An agent reviews the computer's levels against the
 drawing, as the user did on Route 119:
 
-- `python3 tools/landscape_sections/levels_overlay.py <dump>/<MAP>.json <art> <review>/<MAP> --chunk 20` draws the
-  computer's levels over the art in chunks (half cells over the view's lowest level, `floor` in `<MAP>_levels.json`;
-  `^ v < >` a ramp at its foot's level; a red box a break). The plain art beside it: the same chunks without the numbers.
+- `python3 tools/landscape_sections/levels_overlay.py <dump>/<MAP>.json <art> <review>/<MAP> --chunk 20 --blocks` draws
+  the computer's levels over the art in chunks (blocks over the view's lowest level, `floor` in `<MAP>_levels.json`:
+  3 a cell of cliff, 1 a ledge's drop; `^ v < >` a ramp at its foot's level; a red box a break); with `--plain` the same
+  chunks without the numbers. Every outdoor map at once: kb-hub's `work/landscape/pick/render_reviews.py` (a manifest).
 - The review agent (prompt: the map, these files, this section) reads every chunk beside the plain art and writes
-  `<review>/<MAP>.json`: `{"map", "floor", "pins": [[x, y, n], ...], "slopes": [[x, y, way up], ...], "notes"}`: per area
-  the computer has wrong, one of its cells and its right level `n` (half cells over `floor`, even: whole blocks); the
-  stairs and slopes it missed; what it wasn't sure of. Only what is clearly wrong; doubts go in the notes.
+  `<review>/<MAP>.json`: `{"map", "unit": "blocks", "floor", "pins": [[x, y, n], ...], "slopes": [[x, y, way up], ...],
+  "notes"}`: per area the computer has wrong, one of its cells and its right level `n` (blocks over `floor`); the stairs
+  and slopes it missed; what it wasn't sure of. Only what is clearly wrong; doubts go in the notes. A pin moves only
+  ground the computer already keeps apart (cut off by rock, cliffs or water): on ground that joins the rest of the map it
+  would move the whole map, so on a map the computer left flat the stairs and slopes come first (marked, they let the
+  computer raise the ground behind them). On Crystal and Blue, which have no stair tables yet, it marks every stair and
+  slope it sees: they become those games' tables (step 4). The first run (2026-10-22): every outdoor map of the three
+  games, one agent each, five workflows side by side (the user's choice).
 - The rules it reads the drawing by (Gen 3's three-quarter view; the same for the others):
   - a cliff face (a band of rock, a cell or two tall) is drawn below the ground it holds up: that ground stands over the
     ground in front of the face by the face's height (a cell of face: 2 half cells, 3 blocks); a side cliff (a strip of
