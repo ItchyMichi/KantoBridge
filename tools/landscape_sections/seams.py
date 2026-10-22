@@ -12,7 +12,7 @@ water ('~'); a seam is every such pair of cells between two maps. Its step is th
 
 The chain: the seams with the most cell pairs first (the most seen), each joining two groups of maps not yet joined
 fixes the second map's base so their commonest cells meet (a spanning forest); a seam left over closes a loop, and its
-step after the chain is what the loop doesn't close. The bases are then lifted so the lowest ground stands on the surface.
+step after the chain is what the loop doesn't close. The bases are then lifted so the lowest floor stands on the surface.
 Prints a report; --json writes the seams and bases (map ids and numbers only). Plain Python.
 """
 import json
@@ -91,7 +91,7 @@ def step(pairs):
 
 def chain(maps, found):
     """(bases {map: blocks}, tree [(a, b)]): each group of joined maps chained from its seams with the most pairs; the bases
-    lifted so each group's lowest ground stands at 0."""
+    lifted so each group's lowest floor stands at 0 (a map's levels count from its floor: no ground of it under 0)."""
     parent = {m: m for m in maps}
 
     def root(m):
@@ -124,15 +124,10 @@ def chain(maps, found):
                     bases[n] = bases[m] + d
                     group.append(n)
                     todo.append(n)
-        low = min(bases[m] + lowest(maps[m]) for m in group)
+        low = min(bases[m] for m in group)
         for m in group:
             bases[m] -= low
     return bases, tree
-
-
-def lowest(m):
-    """A map's lowest walkable or water level (0 when it has none)."""
-    return min((v for v, k in zip(m["levels"], m["kinds"]) if k != "#"), default=0)
 
 
 def highest(m):

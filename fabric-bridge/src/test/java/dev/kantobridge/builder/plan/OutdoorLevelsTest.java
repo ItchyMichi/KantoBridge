@@ -104,4 +104,21 @@ class OutdoorLevelsTest {
 		assertNull(OutdoorLevels.pinned(null, model, List.of(new dev.kantobridge.builder.shape.LandscapeModels.Pin(2, 0, 0))),
 				"pins that lift nothing: still flat");
 	}
+
+	@Test
+	void aPinStopsAtTheGamesWalls() {
+		// two strips the game walls apart along their whole edge (Crystal's one-way walls): a pin moves only its own
+		MapModel model = RaisedRegionsTest.model(
+				"....",
+				"....");
+		PairEdges walls = PairEdges.walls(model, List.of(new int[] {0, 0, 0, 1}, new int[] {1, 0, 1, 1}, new int[] {2, 0, 2, 1},
+				new int[] {3, 0, 3, 1}));
+		MapLayout pinned = OutdoorLevels.pinned(MapLayout.flat(4, 2, new int[8], List.of()), model,
+				List.of(new dev.kantobridge.builder.shape.LandscapeModels.Pin(1, 0, 3)), walls);
+		assertEquals(3, pinned.level(3, 0), "the pinned strip");
+		assertEquals(0, pinned.level(1, 1), "the strip beyond the wall stays");
+		MapLayout open = OutdoorLevels.pinned(MapLayout.flat(4, 2, new int[8], List.of()), model,
+				List.of(new dev.kantobridge.builder.shape.LandscapeModels.Pin(1, 0, 3)), null);
+		assertEquals(3, open.level(1, 1), "no walls: one ground");
+	}
 }

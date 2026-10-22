@@ -36,6 +36,7 @@ class RaisedRegionsTest {
 					case '#' -> 0;
 					case '~' -> CellFlags.WATER;
 					case 'v' -> CellFlags.WALKABLE | CellFlags.LEDGE;
+					case 'D' -> CellFlags.WALKABLE | CellFlags.WARP;
 					default -> CellFlags.WALKABLE;
 				};
 			}
@@ -669,6 +670,75 @@ class RaisedRegionsTest {
 		assertNull(layout.ramp(2, 2), "a drop, not a ramp: nobody climbs it");
 		assertEquals(List.of(), result.breaks());
 		assertEquals(0, result.skipped());
+	}
+
+	@Test
+	void outdoorsOnlyTheGamesFaceDrawingsAreFaces() {
+		// a strip of ground behind two rows of solid cells: a row of trees (no face) and a cliff's rim (a face)
+		String[] rows = {
+				"########",
+				"#......#",
+				"########",
+				"########",
+				"#......#",
+				"#......#",
+				"########",
+				"########"};
+		MapModel model = model(rows);
+		int w = 8;
+		MapLayout every = RaisedRegions.outdoor(model, null, null, null).layout();
+		assertNotNull(every);
+		assertEquals(6, every.level(3, 1), "every solid cell a face's: two cells, 6 blocks");
+		boolean[] rim = new boolean[w * rows.length];
+		for (int cx = 1; cx < 7; cx++) {
+			rim[3 * w + cx] = true;
+		}
+		MapLayout rimOnly = RaisedRegions.outdoor(model, null, null, rim).layout();
+		assertNotNull(rimOnly);
+		assertEquals(RaisedRegions.OUTDOOR_RISE, rimOnly.level(3, 1), "only the rim climbs: a cell, 3 blocks");
+		assertEquals(0, rimOnly.level(3, 4));
+		assertNull(RaisedRegions.outdoor(model, null, null, new boolean[w * rows.length]).layout(),
+				"trees and fences only: the ground behind them stands with the ground in front");
+	}
+
+	@Test
+	void outdoorsADoorInAFaceJoinsOnlyTheGroundInFrontOfIt() {
+		// a cave's mouth cut into a one-cell face (Route 32, Silver Cave): the top behind it stands a cell over the ground in front
+		String[] rows = {
+				"########",
+				"#......#",
+				"###D####",
+				"#......#",
+				"#......#",
+				"########"};
+		RaisedRegions.Result result = RaisedRegions.outdoor(model(rows), null, null, null);
+		MapLayout layout = result.layout();
+		assertNotNull(layout, result.outcome());
+		assertEquals(RaisedRegions.OUTDOOR_RISE, layout.level(1, 1), "the top behind the face");
+		assertEquals(0, layout.level(3, 2), "the mouth stands with the ground in front of it");
+		assertEquals(0, layout.level(3, 3));
+		assertEquals(List.of(), result.breaks());
+	}
+
+	@Test
+	void outdoorsAPitStandsAtTheEdgesFloorAndABasinKeepsItsDepth() {
+		// the floor along the edge at 3; a two-cell pit at 0 (a gap a face's vote put low) and a basin of 24 cells at 0
+		int w = 12;
+		int h = 8;
+		boolean[] standable = new boolean[w * h];
+		java.util.Arrays.fill(standable, true);
+		int[] levels = new int[w * h];
+		java.util.Arrays.fill(levels, 3);
+		levels[1 * w + 2] = 0;
+		levels[1 * w + 3] = 0;
+		for (int y = 3; y <= 5; y++) {
+			for (int x = 2; x <= 9; x++) {
+				levels[y * w + x] = 0;
+			}
+		}
+		assertEquals(2, RaisedRegions.liftPits(w, h, standable, new boolean[w * h], levels), "the pit's cells lifted");
+		assertEquals(3, levels[1 * w + 2], "the pit, at the edge's floor");
+		assertEquals(0, levels[4 * w + 5], "the basin keeps its depth");
 	}
 
 	@Test

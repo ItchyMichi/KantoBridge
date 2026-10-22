@@ -4,6 +4,7 @@ import dev.kantobridge.block.EdgeWallBlock;
 import dev.kantobridge.builder.export.CellFlags;
 import dev.kantobridge.builder.export.G3Map;
 import dev.kantobridge.builder.export.G3Tiles;
+import dev.kantobridge.builder.shape.FittedShapes;
 import dev.kantobridge.world.Dir;
 import dev.kantobridge.world.MapLayout;
 import java.util.ArrayDeque;
@@ -57,6 +58,8 @@ public final class RaisedRegions {
 	 * game draws, about a third of a cell.
 	 */
 	public static final int LEDGE_DROP = 1;
+	/** Outdoors the fewest cells an area under the floor along the map's edge keeps its depth with (a smaller one is a pit). */
+	static final int PIT = 24;
 	/** The longest run of solid cells, in cells, read as a face between two regions (a longer one is rock, not a face). */
 	static final int MAX_FACE = 3;
 	/** Emerald's elevation that joins any other. */
@@ -112,14 +115,24 @@ public final class RaisedRegions {
 	 * @param outdoor   outdoors (the levels pilot, HEIGHTS_ALL_GAMES_PLAN.md D4): a bridge's cells are its deck, at the level
 	 *                  of the floors its ends meet (until the two-floor cells of W6; else a bridge leaves the map flat); a
 	 *                  rule that disagrees with those before it is skipped and the edges it leaves are counted as breaks,
-	 *                  rather than leaving the map flat; the floor along the map's edge is the floor level. With
+	 *                  rather than leaving the map flat. With
 	 *                  {@code climb} (the drawing's stairs marked) a strip of joining cells that is no marked stair keeps
 	 *                  one height where it can: the drawing decides, the data's elevations keep areas apart and join them
 	 * @param falls     per cell, a waterfall (Emerald's metatile behaviour), or null: water no body flows across, so the
 	 *                  river over it and the one under it stand at their own banks' heights; it stands at the one under it
+	 * @param faced     per cell, a solid cell whose drawing can be a face (a cliff's rim, a band of rock: the game's table,
+	 *                  {@link #tableFaces}), or null for every solid cell: a face climbs a step for each such cell in it, and
+	 *                  a run with none (a fence, a row of posts, a tree, a house: LEVELS_PIPELINE.md, the reviews) is no face
 	 */
 	public record Input(MapModel model, int[] key, boolean[] joins, boolean[] bridge, int shore, Dir @Nullable [] climb, @Nullable PairEdges walls,
-			boolean wallsRise, int maxFace, boolean faceKeys, boolean room, int rise, boolean outdoor, boolean @Nullable [] falls) {
+			boolean wallsRise, int maxFace, boolean faceKeys, boolean room, int rise, boolean outdoor, boolean @Nullable [] falls,
+			boolean @Nullable [] faced) {
+		/** Every solid cell a face's. */
+		public Input(MapModel model, int[] key, boolean[] joins, boolean[] bridge, int shore, Dir @Nullable [] climb, @Nullable PairEdges walls,
+				boolean wallsRise, int maxFace, boolean faceKeys, boolean room, int rise, boolean outdoor, boolean @Nullable [] falls) {
+			this(model, key, joins, bridge, shore, climb, walls, wallsRise, maxFace, faceKeys, room, rise, outdoor, falls, null);
+		}
+
 		/** Emerald's: elevations as keys, no walls of their own. */
 		public Input(MapModel model, int[] key, boolean[] joins, boolean[] bridge, int shore) {
 			this(model, key, joins, bridge, shore, null, null, false, MAX_FACE, true, false);
@@ -250,6 +263,28 @@ public final class RaisedRegions {
 		return out;
 	}
 
+	/**
+	 * Crystal's and Blue's faces outdoors: per cell, a solid cell whose drawing the game's table names a face (a cliff's rim,
+	 * a band of rock: {@code floor_kinds/<game>.json} "faces", keyed as the fitted shapes are); null when the game's table
+	 * names none (every solid cell can be one, as before).
+	 */
+	public static boolean @Nullable [] tableFaces(MapModel model, String game) {
+		java.util.Set<String> faces = FloorKinds.faces(game);
+		if (faces == null) {
+			return null;
+		}
+		int w = model.cellWidth();
+		int h = model.cellHeight();
+		boolean[] out = new boolean[w * h];
+		String atlas = CaveMap.atlas(model);
+		for (int cy = 0; cy < h; cy++) {
+			for (int cx = 0; cx < w; cx++) {
+				out[cy * w + cx] = solid(model.kind(cx, cy)) && faces.contains(FittedShapes.key(atlas, CaveMap.cellTiles(model, cx, cy)));
+			}
+		}
+		return out;
+	}
+
 	/** Emerald's waterfalls: the water cells whose metatile behaviour is a waterfall's. */
 	public static boolean[] gen3Falls(MapModel model, G3Map map, G3Tiles tiles) {
 		int w = model.cellWidth();
@@ -318,7 +353,7 @@ public final class RaisedRegions {
 			}
 		}
 		return new Input(in.model(), key, in.joins(), in.bridge(), in.shore(), in.climb(), in.walls(), in.wallsRise(), in.maxFace(), in.faceKeys(),
-				in.room(), in.rise(), in.outdoor(), in.falls());
+				in.room(), in.rise(), in.outdoor(), in.falls(), in.faced());
 	}
 
 	/**
@@ -332,6 +367,15 @@ public final class RaisedRegions {
 
 	/** The same, the cells {@code slopes} names (the landscape marks' slopes and stairs, per cell its way up) climbing. */
 	public static Result outdoor(MapModel model, @Nullable PairEdges walls, Dir @Nullable [] slopes) {
+		return outdoor(model, walls, slopes, null);
+	}
+
+	/**
+	 * The same, only the solid cells {@code faced} names (the game's table, {@link #tableFaces}; null: every one) faces, and a
+	 * door cut into a face joining only the ground in front of it ({@link #doorsInFaces}).
+	 */
+	public static Result outdoor(MapModel model, @Nullable PairEdges walls, Dir @Nullable [] slopes, boolean @Nullable [] faced) {
+		walls = doorsInFaces(model, walls);
 		int w = model.cellWidth();
 		int h = model.cellHeight();
 		if (slopes != null && slopes.length != w * h) {
@@ -350,7 +394,42 @@ public final class RaisedRegions {
 			}
 		}
 		return solve(new Input(model, key, new boolean[w * h], new boolean[w * h], -1, climb, walls, false, MAX_FACE, false, false, OUTDOOR_RISE,
-				true, null));
+				true, null, faced));
+	}
+
+	/**
+	 * {@code walls} with each door cut into a face closed on its north side (the reviews, LEVELS_PIPELINE.md step 4: Routes 31,
+	 * 32, 41, Silver Cave): a warp cell with rock on both its sides and ground behind it is a cave's mouth in a cliff, joined
+	 * only to the ground in front of it, not to the top behind; null stays null when there is no such door.
+	 */
+	public static @Nullable PairEdges doorsInFaces(MapModel model, @Nullable PairEdges walls) {
+		int w = model.cellWidth();
+		int h = model.cellHeight();
+		List<int[]> edges = new ArrayList<>();
+		for (int cy = 1; cy < h; cy++) {
+			for (int cx = 1; cx + 1 < w; cx++) {
+				if ((model.flags(cx, cy) & CellFlags.WARP) != 0 && floor(model.kind(cx, cy)) && floor(model.kind(cx, cy - 1))
+						&& solid(model.kind(cx - 1, cy)) && solid(model.kind(cx + 1, cy))) {
+					edges.add(new int[] {cx, cy - 1, cx, cy});
+				}
+			}
+		}
+		if (edges.isEmpty()) {
+			return walls;
+		}
+		if (walls != null) {
+			for (int cy = 0; cy < h; cy++) {
+				for (int cx = 0; cx < w; cx++) {
+					if (walls.closed(cx, cy, cx + 1, cy)) {
+						edges.add(new int[] {cx, cy, cx + 1, cy});
+					}
+					if (walls.closed(cx, cy, cx, cy + 1)) {
+						edges.add(new int[] {cx, cy, cx, cy + 1});
+					}
+				}
+			}
+		}
+		return PairEdges.walls(model, edges);
 	}
 
 	/**
@@ -427,7 +506,7 @@ public final class RaisedRegions {
 			key = next;
 		}
 		return new Input(in.model(), key, in.joins(), new boolean[n], in.shore(), in.climb(), in.walls(), in.wallsRise(), in.maxFace(),
-				in.faceKeys(), in.room(), in.rise(), true, in.falls());
+				in.faceKeys(), in.room(), in.rise(), true, in.falls(), in.faced());
 	}
 
 	/** True when the input's walls close the edge between neighbouring cells {@code a} and {@code b}. */
@@ -729,7 +808,7 @@ public final class RaisedRegions {
 		groups.sort((a, b) -> groupCells.get(b) - groupCells.get(a) != 0 ? groupCells.get(b) - groupCells.get(a) : a - b);
 		Map<Integer, Integer> base = new HashMap<>();
 		base.put(groups.get(0), 0);
-		List<int[]> faces = faces(model, region, regionKey, heights, in.maxFace(), in.faceKeys(), in.rise());
+		List<int[]> faces = faces(model, region, regionKey, heights, in.maxFace(), in.faceKeys(), in.rise(), in.faced());
 		if (in.wallsRise()) {
 			// a wall's south side over its north side: a vote like a face, the north side two blocks under the south
 			for (int cy = 0; cy + 1 < h; cy++) {
@@ -853,39 +932,36 @@ public final class RaisedRegions {
 				standable[c] = true;
 			}
 		}
-		// The lowest floor is the map's floor level; outdoors (the levels pilot) the floor along the map's edge is, where its
-		// neighbours meet it (its commonest level there), and a floor lower than that stands at it (counted: "sunken").
+		// The lowest floor is the map's floor level. Outdoors a pit (an area under the floor along the map's edge, where its
+		// neighbours meet it, of fewer than PIT cells: a gap in a tree line a face's vote put low) stands at that floor
+		// (counted: "sunken"); a larger one keeps its depth (a town under its mountain, Cianwood; a route's descent, Route 123:
+		// the reviews; the chain meets the neighbours, LEVELS_PIPELINE.md, the seams). A pocket nothing walkable touches stands
+		// as the ground nearest it (below), so it sets no floor.
+		List<int[]> pockets = in.outdoor() ? pockets(w, h, standable, rampAt) : List.of();
+		boolean[] pocket = new boolean[n];
+		for (int[] part : pockets) {
+			for (int c : part) {
+				pocket[c] = true;
+			}
+		}
+		int sunken = in.outdoor() ? liftPits(w, h, standable, pocket, levels) : 0;
 		int low = Integer.MAX_VALUE;
 		for (int i = 0; i < n; i++) {
-			if (standable[i]) {
+			if (standable[i] && !pocket[i]) {
 				low = Math.min(low, levels[i]);
 			}
 		}
-		int sunken = 0;
-		if (in.outdoor()) {
-			Map<Integer, Integer> edge = new TreeMap<>();
-			for (int i = 0; i < n; i++) {
-				int x = i % w;
-				int y = i / w;
-				if (standable[i] && (x == 0 || y == 0 || x == w - 1 || y == h - 1)) {
-					edge.merge(levels[i], 1, Integer::sum);
-				}
-			}
-			if (!edge.isEmpty()) {
-				low = mostCommon(edge);
-			}
-			for (int i = 0; i < n; i++) {
-				if (standable[i] && levels[i] < low) {
-					levels[i] = low;
-					sunken++;
-				}
-			}
+		if (low == Integer.MAX_VALUE) {
+			low = 0;
 		}
 		int top = 0;
 		int raised = 0;
 		for (int i = 0; i < n; i++) {
 			if (standable[i]) {
 				levels[i] -= low;
+				if (pocket[i]) {
+					continue;
+				}
 				MapLayout.Ramp ramp = rampAt.get(i);
 				top = Math.max(top, levels[i] + (ramp == null ? 0 : ramp.rise()));
 				raised += (region[i] >= 0 || joinLevelOf[i] >= 0) && levels[i] > 0 ? 1 : 0;
@@ -905,9 +981,8 @@ public final class RaisedRegions {
 			for (int i = 0; i < n; i++) {
 				floorCell[i] = standable[i] && waterOf[i] < 0;
 			}
-			List<int[]> pockets = pockets(w, h, standable, rampAt);
-			for (int[] pocket : pockets) {
-				for (int c : pocket) {
+			for (int[] part : pockets) {
+				for (int c : part) {
 					standable[c] = false;
 					floorCell[c] = false;
 				}
@@ -916,8 +991,8 @@ public final class RaisedRegions {
 			int[] onFloor = levels.clone();
 			nearestLevels(w, h, floorCell, onFloor);
 			nearestLevels(w, h, standable, levels);
-			for (int[] pocket : pockets) {
-				for (int c : pocket) {
+			for (int[] part : pockets) {
+				for (int c : part) {
 					levels[c] = onFloor[c];
 				}
 			}
@@ -948,7 +1023,46 @@ public final class RaisedRegions {
 			}
 		}
 		return !any ? in : new Input(model, key, joins, in.bridge(), in.shore(), in.climb(), in.walls(), in.wallsRise(), in.maxFace(), in.faceKeys(),
-				in.room(), in.rise(), in.outdoor(), in.falls());
+				in.room(), in.rise(), in.outdoor(), in.falls(), in.faced());
+	}
+
+	/**
+	 * Outdoors, each pit lifted to the floor along the map's edge (the commonest level of its standable edge cells, pockets
+	 * aside): an area of standable cells under that floor, joined four-neighbour, of fewer than {@link #PIT} cells; the
+	 * cells lifted.
+	 */
+	static int liftPits(int w, int h, boolean[] standable, boolean[] pocket, int[] levels) {
+		int n = w * h;
+		Map<Integer, Integer> edge = new TreeMap<>();
+		for (int i = 0; i < n; i++) {
+			int x = i % w;
+			int y = i / w;
+			if (standable[i] && !pocket[i] && (x == 0 || y == 0 || x == w - 1 || y == h - 1)) {
+				edge.merge(levels[i], 1, Integer::sum);
+			}
+		}
+		if (edge.isEmpty()) {
+			return 0;
+		}
+		int floor = mostCommon(edge);
+		boolean[] seen = new boolean[n];
+		int lifted = 0;
+		for (int s = 0; s < n; s++) {
+			if (!standable[s] || pocket[s] || seen[s] || levels[s] >= floor) {
+				continue;
+			}
+			List<Integer> pit = flood(w, h, s, (a, b) -> standable[b] && !pocket[b] && !seen[b] && levels[b] < floor);
+			for (int c : pit) {
+				seen[c] = true;
+			}
+			if (pit.size() < PIT) {
+				for (int c : pit) {
+					levels[c] = floor;
+				}
+				lifted += pit.size();
+			}
+		}
+		return lifted;
 	}
 
 	/** Per cell a ledge's hop, its way down; null for any other cell. */
@@ -1274,7 +1388,7 @@ public final class RaisedRegions {
 	 * stands over the south one}.
 	 */
 	private static List<int[]> faces(MapModel model, int[] region, List<Integer> regionKey, Offsets heights, int maxFace, boolean faceKeys,
-			int rise) {
+			int rise, boolean @Nullable [] faced) {
 		int w = model.cellWidth();
 		int h = model.cellHeight();
 		List<int[]> out = new ArrayList<>();
@@ -1286,16 +1400,18 @@ public final class RaisedRegions {
 				}
 				int y = cy - 1;
 				int run = 0;
+				int steps = 0;
 				while (y >= 0 && solid(model.kind(cx, y)) && run <= maxFace) {
 					run++;
+					steps += faced == null || faced[y * w + cx] ? 1 : 0;
 					y--;
 				}
-				if (run == 0 || run > maxFace || y < 0) {
+				if (run == 0 || run > maxFace || y < 0 || steps == 0) {
 					continue;
 				}
 				int north = region[y * w + cx];
 				if (north >= 0 && (!faceKeys || !regionKey.get(north).equals(regionKey.get(south))) && heights.find(north) != heights.find(south)) {
-					out.add(new int[] {south, north, rise * run});
+					out.add(new int[] {south, north, rise * steps});
 				}
 			}
 		}

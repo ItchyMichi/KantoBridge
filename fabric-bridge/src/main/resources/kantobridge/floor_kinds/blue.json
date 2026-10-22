@@ -1,0 +1,9 @@
+{
+ "game": "blue",
+ "source": "the drawings the levels reviews marked as stairs outdoors (every outdoor map, 2026-10-22: tools/landscape_sections/apply_reviews.py --stairs, a drawing marked at least twice, nine cells in ten or more, one way)",
+ "kinds": {
+  "tilesets.forest/64-65-64-65": "stairs_up"
+ },
+ "faces_source": "every solid drawing outdoors in a run of 1 to 3 solid cells between two ground cells (RaisedRegions faces; 43 drawings on Blue's outdoor maps, 2026-10-22), looked at in its map: none is a cliff's face (houses and the League's walls, posts, fences, statues, trees, signs); Kanto's raised ground is its tile pairs and ledges",
+ "faces": []
+}

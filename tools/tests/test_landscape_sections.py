@@ -161,3 +161,47 @@ def test_the_reviews_go_in_the_table_and_name_the_stairs(tmp_path):
     rows = {r["key"]: r for r in stairs(str(reviews), str(dumps))}
     assert rows["s"]["candidate"] and rows["s"]["way"] == "up" and rows["s"]["cells"] == 2
     assert not rows["g"]["candidate"], "marked once of three: plain ground"
+
+
+def test_the_rules_check_sends_back_only_the_maps_whose_review_no_longer_holds(tmp_path):
+    import json
+
+    from landscape_sections.rules_check import check, pinned
+
+    old, raw, pin = tmp_path / "old", tmp_path / "raw", tmp_path / "pin"
+    for d in (old, raw, pin):
+        d.mkdir()
+
+    def dump(d, name, levels):
+        (d / f"{name}.json").write_text(json.dumps({"w": 4, "h": 2, "kinds": "..#...#.", "levels": levels, "ramps": [],
+                                                    "outcome": "raised", "breaks": []}))
+
+    # A: the rules leave it; its pin lifts the right strip.  B: the rules alone do what the pin did.  C: neither.
+    dump(old, "A", [0, 0, 0, 0, 0, 0, 0, 0])
+    dump(raw, "A", [0, 0, 0, 0, 0, 0, 0, 0])
+    dump(pin, "A", [0, 0, 0, 3, 0, 0, 0, 3])
+    dump(old, "B", [0, 0, 0, 0, 0, 0, 0, 0])
+    dump(raw, "B", [3, 3, 3, 6, 3, 3, 3, 6])
+    dump(pin, "B", [3, 3, 3, 6, 3, 3, 3, 6])
+    dump(old, "C", [0, 0, 0, 0, 0, 0, 0, 0])
+    dump(raw, "C", [0, 0, 0, 0, 3, 3, 0, 0])
+    dump(pin, "C", [0, 0, 0, 3, 3, 3, 0, 3])
+    # the rock column x 2 parts the right strip: the pin moves only it
+    assert pinned({"w": 4, "h": 2, "kinds": "..#...#.", "levels": [0] * 8}, [[3, 0, 3]]) == [0, 0, 0, 3, 0, 0, 0, 3]
+    table = {"pins": {"A": [[3, 0, 3]], "B": [[3, 0, 3]], "C": [[3, 0, 3]]}}
+    verdicts = {r["map"]: r["verdict"] for r in check(str(old), table, str(raw), str(pin))}
+    assert verdicts == {"A": "same", "B": "fixed", "C": "look"}
+
+
+def test_the_face_drawings_are_the_solid_runs_between_ground():
+    from landscape_sections.face_drawings import face_drawings
+
+    # a fence row (key 1) between two strips of ground, a run of four (key 2) that is too tall, water beyond rock (key 3)
+    survey = {"game": "g", "keys": ["ground", "fence", "wall", "rock"], "maps": [{
+        "map": "M", "w": 2, "h": 9, "outdoor": True,
+        "kind": "WW" "SS" "WW" "SS" "SS" "SS" "SS" "WW" "WW",
+        "why": ["walk"] * 18,
+        "cell": [0, 0, 1, 1, 0, 0, 2, 2, 2, 2, 2, 2, 2, 2, 0, 0, 0, 0]}]}
+    rows = face_drawings(survey)
+    assert [(r["key"], r["n"]) for r in rows] == [("fence", 2)]
+    assert rows[0]["ex"] == ["M", 0, 1]

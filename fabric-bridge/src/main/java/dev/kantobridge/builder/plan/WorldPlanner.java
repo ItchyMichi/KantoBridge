@@ -337,7 +337,8 @@ public final class WorldPlanner {
 			if (OutdoorLevels.covers(outdoorLevels, map.id()) && (placement.kind() == MapPlacement.Kind.SURFACE || WorldPlan.openSky(placement))) {
 				// The levels pilot (D3, D4): its areas (tile pairs keep them apart) at the faces between them, 3 blocks a cell
 				raised = OutdoorLevels.plan(map.id(), model, RaisedRegions.tableStairs(model, bundle.game()),
-						slopes -> RaisedRegions.outdoor(model, edges, slopes), warnings);
+						slopes -> RaisedRegions.outdoor(model, edges, slopes, RaisedRegions.tableFaces(model, bundle.game())),
+						RaisedRegions.doorsInFaces(model, edges), warnings);
 			}
 			// An interior's ceilings (HEIGHTS_ALL_GAMES_PLAN D5): as tall as its drawing, at least 4 over its highest floor
 			raised = withCeilings(placement, model, raised, Headroom.blackFiller(model, probe, null), Headroom.screenRows(false),

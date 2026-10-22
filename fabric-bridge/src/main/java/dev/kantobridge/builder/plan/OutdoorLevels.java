@@ -46,6 +46,12 @@ public final class OutdoorLevels {
 	/** The same, with {@code drawn} (the stairs the jar's tables know in the map's drawing, per cell its way up, or null). */
 	public static @Nullable MapLayout plan(String id, MapModel model, Dir @Nullable [] drawn, Function<Dir[], RaisedRegions.Result> solve,
 			Warnings warnings) {
+		return plan(id, model, drawn, solve, null, warnings);
+	}
+
+	/** The same, a pin's ground stopping at {@code walls} (the edges the solver's areas stop at, or null). */
+	public static @Nullable MapLayout plan(String id, MapModel model, Dir @Nullable [] drawn, Function<Dir[], RaisedRegions.Result> solve,
+			@Nullable PairEdges walls, Warnings warnings) {
 		Dir[] slopes = slopes(LandscapeModels.slopes(id, model.cellWidth(), model.cellHeight()), drawn);
 		RaisedRegions.Result levels = solve.apply(slopes);
 		warnings.note("outdoor_levels_" + levels.outcome() + (slopes == null ? "" : "_marked"), Warnings.symbols("map", id));
@@ -62,7 +68,7 @@ public final class OutdoorLevels {
 		if (!pins.isEmpty()) {
 			warnings.note("outdoor_levels_pinned", pins.size());
 		}
-		return rigid(pinned(levels.layout(), model, pins), model, id);
+		return rigid(pinned(levels.layout(), model, pins, walls), model, id);
 	}
 
 	/**
@@ -72,6 +78,14 @@ public final class OutdoorLevels {
 	 * lift nothing.
 	 */
 	static @Nullable MapLayout pinned(@Nullable MapLayout layout, MapModel model, List<LandscapeModels.Pin> pins) {
+		return pinned(layout, model, pins, null);
+	}
+
+	/**
+	 * The same, the ground round a pin stopping at {@code walls} (Crystal's one-way walls, a door cut into a face: where the
+	 * solver's areas stop; the reviews of Route 25 and Pewter City), or null.
+	 */
+	static @Nullable MapLayout pinned(@Nullable MapLayout layout, MapModel model, List<LandscapeModels.Pin> pins, @Nullable PairEdges walls) {
 		if (pins.isEmpty()) {
 			return layout;
 		}
@@ -104,7 +118,8 @@ public final class OutdoorLevels {
 					int nx = c % w + dir.dx();
 					int ny = c / w + dir.dy();
 					int j = ny * w + nx;
-					if (nx >= 0 && ny >= 0 && nx < w && ny < h && !seen[j] && standable[j] && levels[j] == was && !ramps.contains(j)) {
+					if (nx >= 0 && ny >= 0 && nx < w && ny < h && !seen[j] && standable[j] && levels[j] == was && !ramps.contains(j)
+							&& (walls == null || !walls.closed(c % w, c / w, nx, ny))) {
 						seen[j] = true;
 						queue.add(j);
 					}

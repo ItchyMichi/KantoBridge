@@ -254,7 +254,8 @@ final class Gen2Planner {
 			if (OutdoorLevels.covers(outdoorLevels, map.id()) && (placement.kind() == MapPlacement.Kind.SURFACE || WorldPlan.openSky(placement))) {
 				// The levels pilot (D3, D4): its areas (one-way walls keep them apart) at the faces between them, 3 blocks a cell
 				rooms = OutdoorLevels.plan(map.id(), model, RaisedRegions.tableStairs(model, bundle.game()),
-						slopes -> RaisedRegions.outdoor(model, edges, slopes), warnings);
+						slopes -> RaisedRegions.outdoor(model, edges, slopes, RaisedRegions.tableFaces(model, bundle.game())),
+						RaisedRegions.doorsInFaces(model, edges), warnings);
 			}
 			rooms = WorldPlanner.withCeilings(placement, model, rooms, Headroom.blackFiller(model, probe, null), Headroom.screenRows(false),
 					!area3d.contains(map.id()), warnings);

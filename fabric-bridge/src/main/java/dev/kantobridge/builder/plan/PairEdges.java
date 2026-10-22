@@ -170,6 +170,12 @@ public final class PairEdges {
 		return this.sides[cy * this.w + cx];
 	}
 
+	/** True when the edge between neighbouring cells (ax, ay) and (bx, by) is walled. */
+	public boolean closed(int ax, int ay, int bx, int by) {
+		int side = bx > ax ? EdgeWallBlock.SIDE_EAST : bx < ax ? EdgeWallBlock.SIDE_WEST : by > ay ? EdgeWallBlock.SIDE_SOUTH : EdgeWallBlock.SIDE_NORTH;
+		return (this.sides(ax, ay) & side) != 0;
+	}
+
 	/**
 	 * The walled sides of one of a cell's four blocks ({@code bx, by} 0 or 1 within the cell): the cell's sides that this
 	 * block lies along.

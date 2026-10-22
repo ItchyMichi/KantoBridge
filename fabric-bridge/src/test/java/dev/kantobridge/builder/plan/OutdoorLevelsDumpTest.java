@@ -116,7 +116,7 @@ class OutdoorLevelsDumpTest {
 					g3 == null ? RaisedRegions.tableStairs(map.model(), bundle.game()) : RaisedRegions.gen3Stairs(map.model(), g3, g3tiles));
 			RaisedRegions.Result result = g3 != null
 					? RaisedRegions.gen3Outdoor(map.model(), g3, slopes, RaisedRegions.gen3Falls(map.model(), g3, g3tiles))
-					: RaisedRegions.outdoor(map.model(), map.edges(), slopes);
+					: RaisedRegions.outdoor(map.model(), map.edges(), slopes, RaisedRegions.tableFaces(map.model(), bundle.game()));
 			// a named map's levels as the planner placed them; another's as the solver gives them
 			MapLayout layout = OutdoorLevels.covers(named, map.id()) ? map.layout() : result.layout();
 			o.addProperty("raised", layout != null);

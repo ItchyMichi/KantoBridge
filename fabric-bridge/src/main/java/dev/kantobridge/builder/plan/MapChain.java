@@ -20,7 +20,8 @@ import java.util.TreeMap;
  * water; a seam's step is the commonest difference of their levels. The seams with the most pairs of cells first (the
  * most seen), each joining two groups of maps not joined yet sets the second map's base so their commonest cells meet; a
  * seam left over closes a loop, and what it doesn't close is the loop's leftover (a slope at the join, later). Each group
- * of joined maps is lifted so its lowest ground stands on the surface. tools/landscape_sections/seams.py is the same
+ * of joined maps is lifted so its lowest floor stands on the surface (a map's levels count from its floor, so no ground or
+ * floor of it stands under the surface: a review's pins may lift a whole map). tools/landscape_sections/seams.py is the same
  * check over a dump. Pure Java.
  */
 public final class MapChain {
@@ -103,7 +104,7 @@ public final class MapChain {
 			}
 			int low = Integer.MAX_VALUE;
 			for (String m : group) {
-				low = Math.min(low, bases.get(m) + lowest(byId.get(m)));
+				low = Math.min(low, bases.get(m));
 			}
 			for (String m : group) {
 				bases.put(m, bases.get(m) - low);
@@ -259,19 +260,6 @@ public final class MapChain {
 	private static int level(PlacedMap m, int cell) {
 		MapLayout layout = m.layout();
 		return layout == null ? 0 : layout.level(cell % m.placement().w(), cell / m.placement().w());
-	}
-
-	/** A map's lowest walkable or water level (0 when it has none). */
-	private static int lowest(PlacedMap m) {
-		int w = m.placement().w();
-		int low = Integer.MAX_VALUE;
-		for (int cell = 0; cell < w * m.placement().h(); cell++) {
-			MapModel.Kind kind = m.model().kind(cell % w, cell / w);
-			if (walkable(kind) || kind == MapModel.Kind.WATER) {
-				low = Math.min(low, level(m, cell));
-			}
-		}
-		return low == Integer.MAX_VALUE ? 0 : low;
 	}
 
 	private static long square(int qx, int qz) {

@@ -103,6 +103,24 @@ changes a map nobody reviewed is checked over every map (dump all, compare befor
 3. **A one-off drawing** no tile or rule covers: the map's marked slopes go in the models table,
    `python3 tools/landscape_sections/slopes_table.py <models table> kb-hub/data/levels/marks <MAP>` (a mark wins over
    the tile table).
+4. **A game's faces** (where the reviews find fences, posts, trees or houses read as cliffs): `python3
+   tools/landscape_sections/face_drawings.py <survey.json> <art dir> <out>` lists every solid drawing in a run the solver
+   reads as a face (1 to 3 solid cells between two ground cells) and draws each in its map; the ones that are a cliff's
+   face (a rim, a band of rock) go in `floor_kinds/<game>.json` `"faces"`, and only they climb (`RaisedRegions.tableFaces`;
+   a game whose table has no `"faces"` keeps every solid cell a face).
+
+With every map reviewed: `python3 tools/landscape_sections/apply_reviews.py <reviews> <dump> <table> <table out>
+--stairs <out.json>` puts every review's pins and slopes in the table and lists, for Crystal and Blue, the drawings the
+reviews marked as stairs nine cells in ten (at least twice, one way): the candidates for the game's stair table.
+
+**After a change to the rules: which reviews still hold.** Dump every map twice with the new rules (step 1): with the
+table less its pins, then `python3 tools/landscape_sections/rules_check.py translate <old dump> <table> <new dump> <table
+out>` (a pin is a level in its map's frame: where the new rules move a map's floor, each pin moves with it) and with that
+table. `python3 tools/landscape_sections/rules_check.py <old dump> <table> <new dump, no pins> <new dump, pins> --json
+<out> --final <table out>` compares, per map, the old levels with their pins (what the review meant) to the new ones:
+`same` (the rules didn't move it), `fixed` (the rules alone give what the review meant: its pins are dropped), `pins`
+(with its pins it is what the review meant), `look` (neither: a second look, an agent with the new pictures and the first
+review's notes). Route 119 must still agree with the user's marks.
 
 Then steps 1 and 3 again, until the marks and the computer agree.
 
@@ -150,6 +168,31 @@ The map's result in LANDSCAPE_MODELS.md "Levels" and a PROGRESS note: marks agai
   not yet checked by marks.
 - **Blue:** levels from the tile pairs and faces only: Route 23's and Route 10's raised parts are out of the pictures'
   view; Kanto's test world was built with older rules.
+
+## The first review of every map (2026-10-22)
+
+184 outdoor maps, one agent each (five workflows, the user's choice), against the dump of 0cb1a5e's rules: 112 reviews
+with pins (1,185), 37 with slopes (197 cells). What their notes asked the computer to learn, and what it learned (step 4):
+
+- **Fences, posts, trees and houses are no faces** (90 reviews, most of Crystal's and Blue's): the faces tables. Crystal:
+  of the 247 solid drawings in a face run, 38 are a cliff's (its rocky rims, dark bands of rock, a mountain's corners);
+  Blue: none of 43 (Kanto's raised ground is its tile pairs and ledges).
+- **A door cut into a face joins only the ground in front of it** (21: Routes 31, 32, 41, Silver Cave, Blackthorn):
+  `RaisedRegions.doorsInFaces`, a warp cell with rock on both sides and ground behind it closed on its north side.
+- **A pin stops at the game's walls** (23: Crystal's one-way walls, the doors above), as the solver's areas do.
+- **A pin applies on a map the solver left flat** (Routes 126, 129, 132's rock tops).
+- **The floor** (31: Cianwood flattened under its mountain, Route 123's descent): the lowest ground is the floor; only a
+  pit (an area under the floor along the map's edge, fewer than 24 cells) stands at that edge floor. The chain keeps
+  every map's floor at or over the surface (a review's pins may lift a whole map).
+- **Crystal's and Blue's stairs:** the drawings the reviews marked (four of Crystal's, the Safari Zone's in Blue).
+
+`rules_check.py` after them (Route 119 still 524 of 524): 90 maps as their reviews left them, 23 right from the rules
+alone (their pins dropped: Vermilion, Saffron, Routes 14 to 16 and more, where fences had stood as cliffs), 7 right
+with their pins, 65 for a second look (the descents the floor rule shows, Crystal's mountains the doors free).
+
+Not learned yet (the second look pins round them where it can): a ledge step (a stair in a ledge row climbing a ledge's
+block, Blue and Crystal); Crystal's ledges (its hop cell is the one before the lip, so its drops never apply); water under
+a log bridge with its own banks; a cascade parting the sea from a pool (the Battle Frontier, Ever Grande); a raised pier.
 
 ## Open (to expand as they are solved)
 

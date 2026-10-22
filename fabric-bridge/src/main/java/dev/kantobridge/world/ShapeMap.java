@@ -373,7 +373,8 @@ public final class ShapeMap {
 		/** Sets the id at (x, y, z); y at or above {@code baseY}. */
 		public void set(int x, int y, int z, int id) {
 			if (!this.contains(x, z) || y < this.baseY || y - this.baseY >= MAX_STACK) {
-				throw new IllegalArgumentException("outside the grid");
+				throw new IllegalArgumentException("outside the grid: (" + x + ", " + y + ", " + z + ") in x " + this.x0 + ".." + (this.x0 + this.w)
+						+ ", z " + this.z0 + ".." + (this.z0 + this.d) + ", y " + this.baseY + ".." + (this.baseY + MAX_STACK));
 			}
 			int i = (z - this.z0) * this.w + (x - this.x0);
 			int dy = y - this.baseY;
