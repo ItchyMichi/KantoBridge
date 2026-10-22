@@ -37,7 +37,8 @@ cd /root/kantobridge/fabric-bridge && ./gradlew test --tests dev.kantobridge.bui
   -Pkb.landscapeModels=<models table> -Pkb.testHeap=10g
 ```
 
-Once per game (blue, crystal, emerald; the bundle `/workspace/local/minecraft/kantobridge/export/<game>`). Per named map
+Once per game (blue, crystal, emerald; the bundle `/workspace/local/minecraft/kantobridge/export/<game>`); every outdoor
+map at once: `tools/landscape_sections/pod/levels_dump.sh` (`OUT`, `OUTDOOR=all`, `CHAIN=1`, `TABLE`). Per named map
 `<MAP>.json`: w, h, outcome, marked (slopes known), skipped (rules that disagreed), breaks (cells left at an unwalkable
 edge), kinds (`.` ground, `~` water, `L` ledge, `#` rock), levels (blocks), max_level, ramps `[x, y, way up, rise]`; for
 Emerald also `<MAP>_elev.txt` (the elevations) and `<MAP>_mids.json` (each cell's metatile); `notes_<game>.json`, the
