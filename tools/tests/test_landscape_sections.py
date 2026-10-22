@@ -217,6 +217,38 @@ def test_a_pin_stops_at_the_dumps_walls():
     assert pinned(dict(dump, walls=None), [[1, 0, 3]]) == [3] * 6, "no walls: one ground"
 
 
+def test_the_rollout_units_group_touching_rock_sections_in_windows():
+    from landscape_sections.units import units
+
+    # a 60 x 10 map: a mass (region 0, x 2-5) with a mouth (region 0, x 6) touching it; a 2-cell face (too small); a tree
+    # line; a face at x 20-22; a long face (region 3, x 1-58, row 9) touching nothing, wider than 48 cells
+    w, h = 60, 10
+    grid = [-1] * (w * h)
+    for y in range(0, 4):
+        for x in range(2, 7):
+            grid[y * w + x] = 0
+    for x in (10, 11):
+        grid[5 * w + x] = 1
+    for x in range(20, 23):
+        grid[2 * w + x] = 2
+        grid[3 * w + x] = 4
+    for x in range(1, 59):
+        grid[9 * w + x] = 3
+    regions = {"w": w, "h": h, "grid": grid}
+    marks = {"sections": [
+        {"kind": "mass", "region": 0, "boxes": [[2, 0, 5, 3]]},
+        {"kind": "mouth", "region": 0, "boxes": [[6, 0, 6, 3]]},
+        {"kind": "face", "region": 1, "boxes": [[10, 5, 11, 5]]},
+        {"kind": "face", "region": 2, "boxes": [[20, 2, 22, 2]]},
+        {"kind": "trees", "region": 4, "boxes": [[20, 3, 22, 3]]},
+        {"kind": "face", "region": 3, "boxes": [[1, 9, 58, 9]]}]}
+    found = units(regions, marks)
+    assert [m for _, m in found] == [[0, 1], [3], [5]], "the mass and its mouth one unit; the small face and the trees none"
+    assert found[0][0] == [0, 0, 9, 6], "the cells' box and 2 cells round it, inside the map"
+    assert found[2][0] == [0, 7, 60, 3], "one section keeps its own window however long"
+    assert [m for _, m in units(regions, marks, skip={0})] == [[1], [3], [5]], "a section the pilot modelled is left out"
+
+
 def test_the_face_drawings_are_the_solid_runs_between_ground():
     from landscape_sections.face_drawings import face_drawings
 

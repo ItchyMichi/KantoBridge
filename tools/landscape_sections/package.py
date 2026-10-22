@@ -4,7 +4,8 @@ looks over, for the modelling agent and terrain_model.py.
 
     python package.py <regions dir> <marks dir> <art dir> <out dir> <spots.json> [--levels <levels dir>] [SPOT ...]
 
-<spots.json>: {"<spot>": {"map": "<MAP>", "x": cx, "y": cy}, ...} (the cell the camera stands on, looking north);
+<spots.json>: {"<spot>": {"map": "<MAP>", "x": cx, "y": cy}, ...} (the cell the camera stands on, looking north; a
+rollout unit's (units.py) also "window" [x0, y0, w, h] and "model", the section ids to model);
 <regions dir>/<MAP>.json the first pass, <marks dir>/<MAP>_sections.json the agents' marks, <art dir>/<MAP>_art.png the
 map's art at 48 px a cell. Per spot, <out dir>/<spot>/:
 
@@ -59,6 +60,9 @@ def section_cells(regions, marks):
 
 
 def window_of(regions, spot):
+    if "window" in spot:
+        # a rollout unit's own window (units.py)
+        return tuple(spot["window"])
     w, h = regions["w"], regions["h"]
     x0, x1 = max(0, spot["x"] - 12), min(w, spot["x"] + 13)
     y0, y1 = max(0, spot["y"] - 24), min(h, spot["y"] + 2)
@@ -77,8 +81,12 @@ def package(regions, marks, art, spot, trees, levels=None):
         sections.append({"id": s, "kind": sec["kind"], "note": sec.get("note", ""), "rows": sec.get("rows"),
                          "landmark": bool(sec.get("landmark")), "cells": mine,
                          "top": [[x - x0, y - y0] for x, y in top if inside(x, y)], "all_cells": len(cells)})
-    model = [s["id"] for s in sections if s["kind"] in ("mass", "mouth") or (s["kind"] == "face" and len(s["cells"]) >= 3)
-             or (trees and s["kind"] == "trees")]
+    if "model" in spot:
+        # a rollout unit models its own sections (units.py); the others in its window are its surroundings
+        model = [s["id"] for s in sections if s["id"] in spot["model"]]
+    else:
+        model = [s["id"] for s in sections if s["kind"] in ("mass", "mouth") or (s["kind"] == "face" and len(s["cells"]) >= 3)
+                 or (trees and s["kind"] == "trees")]
     doors = sorted({(d[0] - x0, d[1] - y0) for r in regions["regions"] for d in r.get("doors_below", []) if inside(d[0], d[1])})
     crop = art.crop((x0 * ART, y0 * ART, (x0 + ww) * ART, (y0 + wh) * ART)).resize((ww * PX, wh * PX), Image.NEAREST)
     pkg = {"map": regions["map"], "spot": [spot["x"] - x0, spot["y"] - y0], "window": [x0, y0, ww, wh], "px": PX,
