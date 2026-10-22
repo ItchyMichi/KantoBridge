@@ -1,5 +1,6 @@
 package dev.kantobridge.builder.plan;
 
+import dev.kantobridge.world.Dir;
 import dev.kantobridge.world.MapLayout;
 import dev.kantobridge.world.MapPlacement;
 import dev.kantobridge.world.Scale;
@@ -12,6 +13,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
+import org.jetbrains.annotations.Nullable;
 
 /**
  * The seams between a region's surface maps and the height each map's floor stands at (docs/specs/LEVELS_PIPELINE.md,
@@ -160,6 +162,261 @@ public final class MapChain {
 		return moved;
 	}
 
+	/** The placements and layouts the joins' stairs changed, by map. */
+	public record Joins(Map<String, MapPlacement> placements, Map<String, MapLayout> layouts) {
+	}
+
+	/**
+	 * A short stair at each open loop's join (the user's choice, 2026-10-22: a short slope where the loop is left open, not a
+	 * tilted map; LEVELS_PIPELINE.md, the seams): the straight corridor each of the seam's two maps runs up to it (level
+	 * ground, rock or the map's edge beside it all the way) climbs from the lower map's ground to the higher's,
+	 * {@link RaisedRegions#OUTDOOR_RISE} blocks a cell (the last step the rest), in the lower map's corridor first, out to
+	 * the seam; the higher map's takes what is left, climbing in from the seam (that map on a lower floor for them where its
+	 * own would stand over them: its placement that much lower, its levels that much higher, as far as its base allows). A
+	 * loop whose corridors are too short, or with no corridor, stays open (noted). {@code placed} takes the new placements
+	 * and layouts, in place.
+	 */
+	public static Joins joins(List<PlacedMap> placed, Result chain, Warnings warnings) {
+		Map<String, MapPlacement> moved = new TreeMap<>();
+		Map<String, MapLayout> layouts = new TreeMap<>();
+		Map<String, Integer> at = new HashMap<>();
+		for (int i = 0; i < placed.size(); i++) {
+			at.put(placed.get(i).id(), i);
+		}
+		// each map's floor over the surface as the joins leave it (a join may set a map on a lower floor)
+		Map<String, Integer> floors = new HashMap<>(chain.bases());
+		for (Map.Entry<Seam, Integer> loop : chain.open().entrySet()) {
+			Seam s = loop.getKey();
+			Join join = join(placed.get(at.get(s.a())), placed.get(at.get(s.b())), floors);
+			warnings.note("chain_join_" + join.outcome());
+			warnings.detail("chain_join", Warnings.symbols("a", s.a(), "b", s.b(), "step", Integer.toString(loop.getValue()), "result",
+					join.outcome()));
+			for (PlacedMap now : join.changed()) {
+				PlacedMap was = placed.set(at.get(now.id()), now);
+				layouts.put(now.id(), now.layout());
+				if (now.placement().y() != was.placement().y()) {
+					moved.put(now.id(), now.placement());
+					floors.merge(now.id(), now.placement().y() - was.placement().y(), Integer::sum);
+				}
+			}
+		}
+		return new Joins(moved, layouts);
+	}
+
+	/**
+	 * A join's outcome ("stair", else why not: "no_corridor", "level", "too_short", "under_the_surface", "too_high") and the
+	 * maps it changed.
+	 */
+	record Join(String outcome, List<PlacedMap> changed) {
+		static Join not(String why) {
+			return new Join(why, List.of());
+		}
+	}
+
+	/** The stair at the join of open seam a | b, {@code floors} each map's floor over the surface. */
+	static Join join(PlacedMap a, PlacedMap b, Map<String, Integer> floors) {
+		List<int[]> pairs = touching(a, b);
+		if (pairs.isEmpty()) {
+			return Join.not("no_corridor");
+		}
+		int[] first = pairs.get(0);
+		Set<Integer> seamA = new HashSet<>();
+		Set<Integer> seamB = new HashSet<>();
+		for (int[] p : pairs) {
+			if (p[2] != first[2] || p[3] != first[3]) {
+				return Join.not("no_corridor");
+			}
+			seamA.add(p[0]);
+			seamB.add(p[1]);
+		}
+		// a's way out to b
+		Dir out = first[2] > 0 ? Dir.RIGHT : first[2] < 0 ? Dir.LEFT : first[3] > 0 ? Dir.DOWN : Dir.UP;
+		Corridor ca = corridor(a, seamA, out.opposite());
+		Corridor cb = corridor(b, seamB, out);
+		if (ca == null || cb == null) {
+			return Join.not("no_corridor");
+		}
+		int wa = a.placement().y() + ca.level();
+		int wb = b.placement().y() + cb.level();
+		boolean aLow = wa < wb;
+		PlacedMap low = aLow ? a : b;
+		PlacedMap high = aLow ? b : a;
+		Corridor cl = aLow ? ca : cb;
+		Corridor ch = aLow ? cb : ca;
+		int climb = Math.abs(wb - wa);
+		if (climb == 0) {
+			return Join.not("level");
+		}
+		List<Integer> rises = new ArrayList<>();
+		for (int left = climb; left > 0; left -= RaisedRegions.OUTDOOR_RISE) {
+			rises.add(Math.min(RaisedRegions.OUTDOOR_RISE, left));
+		}
+		if (rises.size() > cl.rows().size() + ch.rows().size()) {
+			return Join.not("too_short");
+		}
+		// the lower map's corridor climbs out to the seam, its deepest step's foot on its own ground
+		int onLow = Math.min(cl.rows().size(), rises.size());
+		int[] lowLevels = levels(low);
+		List<MapLayout.Ramp> lowRamps = new ArrayList<>(low.layout() == null ? List.of() : low.layout().ramps());
+		int foot = cl.level();
+		if (foot + rises.subList(0, onLow).stream().mapToInt(Integer::intValue).sum() > MapLayout.MAX_LEVEL) {
+			return Join.not("too_high");
+		}
+		for (int k = onLow - 1; k >= 0; k--) {
+			int rise = rises.get(k);
+			for (int c : cl.rows().get(k)) {
+				lowLevels[c] = foot;
+				lowRamps.add(new MapLayout.Ramp(c % low.placement().w(), c / low.placement().w(), cl.out(), rise));
+			}
+			foot += rise;
+		}
+		PlacedMap lowNow = new PlacedMap(low.placement(), low.model(), low.edges(),
+				MapLayout.flat(low.placement().w(), low.placement().h(), lowLevels, lowRamps));
+		int rest = climb - (foot - cl.level());
+		if (rest == 0) {
+			return new Join("stair", List.of(lowNow));
+		}
+		// the higher map's corridor climbs in from the seam, from the lower map's top; under its own floor, a lower floor
+		int under = Math.max(0, rest - ch.level());
+		if (under > floors.getOrDefault(high.id(), 0)) {
+			return Join.not("under_the_surface");
+		}
+		int[] highLevels = levels(high);
+		for (int i = 0; i < highLevels.length; i++) {
+			highLevels[i] += under;
+			if (highLevels[i] > MapLayout.MAX_LEVEL) {
+				return Join.not("too_high");
+			}
+		}
+		List<MapLayout.Ramp> highRamps = new ArrayList<>(high.layout() == null ? List.of() : high.layout().ramps());
+		int step = ch.level() + under - rest;
+		for (int k = 0; k < rises.size() - onLow; k++) {
+			int rise = rises.get(onLow + k);
+			for (int c : ch.rows().get(k)) {
+				highLevels[c] = step;
+				highRamps.add(new MapLayout.Ramp(c % high.placement().w(), c / high.placement().w(), ch.out().opposite(), rise));
+			}
+			step += rise;
+		}
+		PlacedMap highNow = new PlacedMap(high.placement().withY(high.placement().y() - under), high.model(), high.edges(),
+				MapLayout.flat(high.placement().w(), high.placement().h(), highLevels, highRamps));
+		return new Join("stair", List.of(lowNow, highNow));
+	}
+
+	/**
+	 * A map's straight corridor up to its seam cells: {@code rows} its cross-sections from the seam inward (each the run of
+	 * ground cells along the edge holding the seam cells, as wide as the first), all at one {@code level}, no ramp, rock or
+	 * the map's edge beside each; {@code out} the way out to the seam.
+	 */
+	record Corridor(List<List<Integer>> rows, int level, Dir out) {
+	}
+
+	static @Nullable Corridor corridor(PlacedMap m, Set<Integer> seam, Dir in) {
+		int w = m.placement().w();
+		MapLayout layout = m.layout();
+		if (layout != null && layout.pieces().size() > 1) {
+			return null;
+		}
+		Dir side = in == Dir.UP || in == Dir.DOWN ? Dir.RIGHT : Dir.DOWN;
+		// the seam's run along the edge: from its first cell back, then on while ground
+		int start = seam.stream().min(Integer::compare).orElseThrow();
+		int x0 = start % w;
+		int y0 = start / w;
+		while (ground(m, x0 - side.dx(), y0 - side.dy())) {
+			x0 -= side.dx();
+			y0 -= side.dy();
+		}
+		int width = 0;
+		while (ground(m, x0 + side.dx() * width, y0 + side.dy() * width)) {
+			width++;
+		}
+		for (int c : seam) {
+			int along = side == Dir.RIGHT ? c % w - x0 : c / w - y0;
+			if (along < 0 || along >= width) {
+				return null;
+			}
+		}
+		int level = m.level(x0, y0);
+		List<List<Integer>> rows = new ArrayList<>();
+		for (int k = 0; ; k++) {
+			int rx = x0 + in.dx() * k;
+			int ry = y0 + in.dy() * k;
+			boolean ok = walled(m, rx - side.dx(), ry - side.dy()) && walled(m, rx + side.dx() * width, ry + side.dy() * width);
+			List<Integer> row = new ArrayList<>();
+			for (int j = 0; ok && j < width; j++) {
+				int x = rx + side.dx() * j;
+				int y = ry + side.dy() * j;
+				ok = ground(m, x, y) && m.level(x, y) == level && (layout == null || layout.ramp(x, y) == null);
+				row.add(y * w + x);
+			}
+			if (!ok) {
+				break;
+			}
+			rows.add(row);
+		}
+		return rows.isEmpty() ? null : new Corridor(rows, level, in.opposite());
+	}
+
+	/** Ground (no ledge, no water) inside the map. */
+	private static boolean ground(PlacedMap m, int x, int y) {
+		return x >= 0 && y >= 0 && x < m.placement().w() && y < m.placement().h() && m.model().kind(x, y) == MapModel.Kind.GROUND;
+	}
+
+	/** Beside a corridor: rock, or off the map. */
+	private static boolean walled(PlacedMap m, int x, int y) {
+		if (x < 0 || y < 0 || x >= m.placement().w() || y >= m.placement().h()) {
+			return true;
+		}
+		MapModel.Kind kind = m.model().kind(x, y);
+		return !walkable(kind) && kind != MapModel.Kind.WATER;
+	}
+
+	private static int[] levels(PlacedMap m) {
+		int w = m.placement().w();
+		int[] out = new int[w * m.placement().h()];
+		for (int i = 0; i < out.length; i++) {
+			out[i] = m.level(i % w, i / w);
+		}
+		return out;
+	}
+
+	/** The pairs of touching walkable cells between {@code a} and {@code b}: {a's cell, b's cell, dx, dy} (a's to b's). */
+	static List<int[]> touching(PlacedMap a, PlacedMap b) {
+		MapPlacement p = a.placement();
+		MapPlacement q = b.placement();
+		int c = Scale.CELL_BLOCKS;
+		Set<Long> seen = new HashSet<>();
+		List<int[]> out = new ArrayList<>();
+		for (int cy = 0; cy < p.h(); cy++) {
+			for (int cx = 0; cx < p.w(); cx++) {
+				if (!walkable(a.model().kind(cx, cy))) {
+					continue;
+				}
+				for (Dir d : Dir.values()) {
+					int nx = cx + d.dx();
+					int ny = cy + d.dy();
+					if (nx >= 0 && ny >= 0 && nx < p.w() && ny < p.h()) {
+						continue;
+					}
+					// the block columns just past this cell's edge, the way d goes
+					for (int k = 0; k < c; k++) {
+						int bx = p.x() + cx * c + (d.dx() > 0 ? c : d.dx() < 0 ? -1 : k);
+						int bz = p.z() + cy * c + (d.dy() > 0 ? c : d.dy() < 0 ? -1 : k);
+						if (!q.containsColumn(bx, bz)) {
+							continue;
+						}
+						int qx = (bx - q.x()) / c;
+						int qy = (bz - q.z()) / c;
+						if (walkable(b.model().kind(qx, qy)) && seen.add(((long) (cy * p.w() + cx) << 32) | (qy * (long) q.w() + qx))) {
+							out.add(new int[] {cy * p.w() + cx, qy * q.w() + qx, d.dx(), d.dy()});
+						}
+					}
+				}
+			}
+		}
+		return out;
+	}
+
 	/** Every seam between two of {@code surface}'s maps, by "a|b". */
 	static Map<String, Seam> seams(List<PlacedMap> surface) {
 		// 64-block squares -> the maps over them
@@ -232,7 +489,10 @@ public final class MapChain {
 				if (!walk && !water) {
 					continue;
 				}
-				int diff = level(b, cb) - level(a, ca);
+				// the way from a's cell to b's: a step climbing it counts at its top (a join's stair)
+				int dx = Integer.signum((b.placement().x() + cb % b.placement().w() * c) - (a.placement().x() + ca % a.placement().w() * c));
+				int dz = Integer.signum((b.placement().z() + cb / b.placement().w() * c) - (a.placement().z() + ca / a.placement().w() * c));
+				int diff = edgeLevel(b, cb, -dx, -dz) - edgeLevel(a, ca, dx, dz);
 				diffs.merge(diff, 1, Integer::sum);
 				n++;
 			}
@@ -257,9 +517,16 @@ public final class MapChain {
 		return kind == MapModel.Kind.GROUND || kind == MapModel.Kind.LEDGE;
 	}
 
-	private static int level(PlacedMap m, int cell) {
+	/** A cell's level at its edge the way (dx, dz) goes: a step's top where it climbs that way. */
+	private static int edgeLevel(PlacedMap m, int cell, int dx, int dz) {
 		MapLayout layout = m.layout();
-		return layout == null ? 0 : layout.level(cell % m.placement().w(), cell / m.placement().w());
+		if (layout == null) {
+			return 0;
+		}
+		int x = cell % m.placement().w();
+		int y = cell / m.placement().w();
+		MapLayout.Ramp ramp = layout.ramp(x, y);
+		return layout.level(x, y) + (ramp != null && ramp.dir().dx() == dx && ramp.dir().dy() == dz ? ramp.rise() : 0);
 	}
 
 	private static long square(int qx, int qz) {

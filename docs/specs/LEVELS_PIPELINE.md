@@ -280,4 +280,14 @@ heights must stay feasible.
   world's (`WorldPlan`), the void ring round it stands at its floor, and the surface volume grows by the highest base.
   The build's notes: `chain_maps_lifted`, `chain_highest_base`, `chain_seams`, `chain_loops_open` (a detail per open loop:
   its seam and step, where a slope at the join goes). Wild Routes zones keep their own areas; a zone's gate is its town's.
+- **A stair at each open join** (`MapChain.joins`, right after the chain, 2026-10-22): the straight corridor each of the
+  seam's two maps runs up to it (level ground, rock or the map's edge beside it all the way) climbs from the lower map's
+  ground to the higher's, 3 blocks a cell (the last step what is left: a ledge step's 1 or a cave's 2), in the lower
+  map's corridor first, out to the seam; the higher map's takes the rest, climbing in from the seam, on a floor lowered
+  for it where its own would stand over them (its placement lower, its levels higher by as much, as far as its base
+  allows). A loop whose corridors are too short, or with no corridor, stays open. Notes `chain_join_<outcome>` (`stair`,
+  `no_corridor`, `level`, `too_short`, `under_the_surface`, `too_high`) and a `chain_join` detail per loop. Both checks
+  count a step climbing to a seam at its top. Hoenn's two (the rules of 4362ce0 and the second look's pins): Route 118 |
+  119, 21 blocks, seven steps (five in Route 119's corridor, two in Route 118's on a floor 6 lower); Route 118 | 123, 7
+  blocks, three (3 in Route 123's corridor, 3 and 1 in Route 118's): all five of Hoenn's loops meet.
 

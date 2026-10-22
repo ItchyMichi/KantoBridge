@@ -32,7 +32,8 @@ def load(dump_dir, game):
         if cs * p["w"] != p["bw"] or cs * p["h"] != p["bd"]:
             raise ValueError(f"{p['map']}: {p['bw']} x {p['bd']} blocks for {p['w']} x {p['h']} cells")
         maps[p["map"]] = {**p, "cs": cs, "kinds": d["kinds"], "levels": d["levels"], "outcome": d.get("outcome"),
-                          "skipped": d.get("skipped", 0), "breaks": len(d.get("breaks", []))}
+                          "skipped": d.get("skipped", 0), "breaks": len(d.get("breaks", [])),
+                          "ramps": {(r[0], r[1]): r for r in d.get("ramps", [])}}
     return maps
 
 
@@ -70,16 +71,26 @@ def seams(maps):
                 if other is None or other[0] == name:
                     continue
                 key = tuple(sorted([(name, cx, cy), other]))
-                found[key] = True
+                # the way from the key's first cell to its second
+                found[key] = (dx, dz) if key[0] == (name, cx, cy) else (-dx, -dz)
     out = defaultdict(list)
-    for (a, ax, ay), (b, bx, by) in found:
+    for ((a, ax, ay), (b, bx, by)), (dx, dz) in found.items():
         ma, mb = maps[a], maps[b]
         ka, kb = ma["kinds"][ay * ma["w"] + ax], mb["kinds"][by * mb["w"] + bx]
         kind = "walk" if ka in WALK and kb in WALK else "water" if ka == "~" and kb == "~" else None
         if kind:
-            diff = mb["levels"][by * mb["w"] + bx] - ma["levels"][ay * ma["w"] + ax]
+            diff = edge_level(mb, bx, by, (-dx, -dz)) - edge_level(ma, ax, ay, (dx, dz))
             out[(a, b)].append((diff, kind, (ax, ay), (bx, by)))
     return dict(out)
+
+
+WAYS = {"up": (0, -1), "down": (0, 1), "left": (-1, 0), "right": (1, 0)}
+
+
+def edge_level(m, x, y, toward):
+    """A cell's level at its edge the way toward goes: a step's top where it climbs that way (a join's stair, MapChain)."""
+    r = m.get("ramps", {}).get((x, y))
+    return m["levels"][y * m["w"] + x] + (r[3] if r and WAYS[r[2]] == toward else 0)
 
 
 def step(pairs):

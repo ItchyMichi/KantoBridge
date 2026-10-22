@@ -2,6 +2,7 @@ package dev.kantobridge.builder.plan;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
+import dev.kantobridge.world.Dir;
 import dev.kantobridge.world.MapLayout;
 import dev.kantobridge.world.MapPlacement;
 import dev.kantobridge.world.Scale;
@@ -63,5 +64,36 @@ class MapChainTest {
 		MapChain.Result chain = MapChain.chain(placed);
 		assertEquals(Map.of("BIG", 6, "WEST", 0), chain.bases(), "WEST's low ground on the surface, BIG's floor where WEST's edge leaves off");
 		assertEquals(Map.of(), chain.open());
+	}
+
+	@Test
+	void aLoopLeftOpenGetsAStairAtItsJoin() {
+		// U (its base 9) north of L (on the surface), a corridor two cells wide between rock running up to their seam: three
+		// cells deep in U, two in L; the loop leaves U's ground 9 blocks over L's at the seam
+		MapPlacement up = new MapPlacement("U", 0, Scale.SURFACE_Y + 9, 0, 4, 4, 0, MapPlacement.Kind.SURFACE, "PAL", "kantobridge:kanto_outdoor", false,
+				null);
+		MapPlacement down = new MapPlacement("L", 0, Scale.SURFACE_Y, 8, 4, 4, 0, MapPlacement.Kind.SURFACE, "PAL", "kantobridge:kanto_outdoor", false,
+				null);
+		List<PlacedMap> placed = new ArrayList<>(List.of(
+				new PlacedMap(up, RaisedRegionsTest.model("....", "#..#", "#..#", "#..#"), PairEdges.NONE, null),
+				new PlacedMap(down, RaisedRegionsTest.model("#..#", "#..#", "....", "...."), PairEdges.NONE, null)));
+		MapChain.Seam seam = new MapChain.Seam("L", "U", 2, 0, 2);
+		Warnings warnings = new Warnings();
+		MapChain.Joins joins = MapChain.joins(placed, new MapChain.Result(Map.of("L", 0, "U", 9), List.of(seam), Map.of(seam, 9)), warnings);
+		assertEquals(1, warnings.noteCount("chain_join_stair"));
+		MapLayout low = joins.layouts().get("L");
+		assertEquals(0, low.level(1, 1), "L's corridor climbs out to the seam: its deepest step on its own ground");
+		assertEquals(3, low.level(2, 0));
+		assertEquals(Dir.UP, low.ramp(2, 0).dir());
+		assertEquals(RaisedRegions.OUTDOOR_RISE, low.ramp(2, 0).rise());
+		assertEquals(0, low.level(1, 2), "past its corridor, its own ground");
+		MapLayout high = joins.layouts().get("U");
+		assertEquals(Scale.SURFACE_Y + 6, joins.placements().get("U").y(), "U on a floor 3 lower for its last step");
+		assertEquals(0, high.level(1, 3), "U's last step climbs in from L's top");
+		assertEquals(Dir.UP, high.ramp(1, 3).dir());
+		assertEquals(3, high.level(1, 2), "U's own ground where it was");
+		assertEquals(3, high.level(0, 0));
+		assertEquals(Scale.SURFACE_Y + 6, placed.get(0).placement().y(), "placed takes them");
+		assertEquals(low, placed.get(1).layout());
 	}
 }

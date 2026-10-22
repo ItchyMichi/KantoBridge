@@ -283,7 +283,12 @@ final class Gen3Planner {
 
 		// ---- the chain (docs/specs/LEVELS_PIPELINE.md, the seams): each surface map's floor where its neighbour's ground leaves off ----
 		if (MapChain.enabled()) {
-			placements.putAll(MapChain.apply(placed, MapChain.note(MapChain.chain(placed), warnings).bases()));
+			MapChain.Result chain = MapChain.note(MapChain.chain(placed), warnings);
+			placements.putAll(MapChain.apply(placed, chain.bases()));
+			// a short stair at each join a loop leaves open
+			MapChain.Joins joins = MapChain.joins(placed, chain, warnings);
+			placements.putAll(joins.placements());
+			mapLayouts.putAll(joins.layouts());
 		}
 
 		// ---- surface void fill: a map's own cells claim before its padding ----

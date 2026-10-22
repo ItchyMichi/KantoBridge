@@ -348,7 +348,11 @@ public final class WorldPlanner {
 
 		// ---- the chain (docs/specs/LEVELS_PIPELINE.md, the seams): each surface map's floor where its neighbour's ground leaves off ----
 		if (MapChain.enabled()) {
-			placements.putAll(MapChain.apply(placed, MapChain.note(MapChain.chain(placed), warnings).bases()));
+			MapChain.Result chain = MapChain.note(MapChain.chain(placed), warnings);
+			placements.putAll(MapChain.apply(placed, chain.bases()));
+			// a short stair at each join a loop leaves open
+			MapChain.Joins joins = MapChain.joins(placed, chain, warnings);
+			placements.putAll(joins.placements());
 		}
 
 		// ---- surface void fill: each gap cell takes the border art of its nearest surface map ----
