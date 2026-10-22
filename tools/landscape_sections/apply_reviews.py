@@ -2,14 +2,16 @@
 """The levels reviews applied (docs/specs/LEVELS_PIPELINE.md, steps 2 and 4): every review's pins and marked slopes into the
 landscape models' table, and for the games without a stair table (Crystal, Blue) the drawings the reviews mark as stairs.
 
-    python apply_reviews.py <reviews dir> <dumps dir> <table in> <table out> [--stairs <out.json>] [--skip MAP,...]
+    python apply_reviews.py <reviews dir> <dumps dir> <table in> <table out> [--stairs <out.json>] [--skip MAP,...] [--replace]
 
 <reviews dir>/<MAP>.json: a review ({"unit": "blocks", "floor", "pins", "slopes", "notes"}); <dumps dir>: the levels dump the
 reviews read (its <MAP>_keys.json: each Gen 1/2 cell's drawing key). The table out: the table in with "pins" (pins_table.py)
 and "slopes" for every map whose review marks some (a map's empty list would switch an Emerald map to its marked mode,
 so maps with none are left out). With --stairs: per drawing marked as stairs on Crystal's and Blue's maps, its game, its
 way up, how many of its cells on the reviewed maps were marked and how many weren't; "stairs" lists those marked nine
-times in ten or more and at least twice, the same way up: the candidates for floor_kinds/<game>.json. Plain Python.
+times in ten or more and at least twice, the same way up: the candidates for floor_kinds/<game>.json. --replace (a second
+look's reviews, whose lists are complete): each reviewed map keeps only its review's pins and slopes, none if it has none.
+Plain Python.
 """
 import json
 import os
@@ -27,8 +29,9 @@ def game_of(mid):
     return next((g for p, g in GAMES.items() if mid.startswith(p)), "blue")
 
 
-def apply(reviews_dir, table, skip=()):
-    """table with every review's pins and (where it marks some) slopes; {map: (pins, slopes)} applied."""
+def apply(reviews_dir, table, skip=(), replace=False):
+    """table with every review's pins and (where it marks some) slopes; {map: (pins, slopes)} applied. replace: a reviewed
+    map's pins and slopes are its review's alone (the table's earlier ones go)."""
     table.setdefault("pins", {})
     table.setdefault("slopes", {})
     done = {}
@@ -44,6 +47,9 @@ def apply(reviews_dir, table, skip=()):
             # a review that doesn't read is left out, said
             print("skipped", mid, e)
             continue
+        if replace:
+            table["pins"].pop(mid, None)
+            table["slopes"].pop(mid, None)
         if pins:
             table["pins"][mid] = pins
         if slopes:
@@ -89,7 +95,7 @@ def stairs(reviews_dir, dumps_dir, skip=()):
 def main(argv):
     reviews_dir, dumps_dir, table_in, table_out = argv[1:5]
     skip = set(argv[argv.index("--skip") + 1].split(",")) if "--skip" in argv else set()
-    table, done = apply(reviews_dir, json.load(open(table_in)), skip)
+    table, done = apply(reviews_dir, json.load(open(table_in)), skip, "--replace" in argv)
     with open(table_out, "w") as fh:
         json.dump(table, fh, separators=(",", ":"))
     print(len(done), "reviews:", sum(1 for p, s in done.values() if p), "with pins,", sum(1 for p, s in done.values() if s), "with slopes;",

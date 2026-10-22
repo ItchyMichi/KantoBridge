@@ -18,8 +18,6 @@ import os
 import sys
 from collections import Counter
 
-from PIL import Image, ImageDraw
-
 CELL = 48
 
 
@@ -54,6 +52,8 @@ def face_drawings(survey):
 
 def sheets(rows, art_dir, out_prefix, per_sheet=24, cols=6, size=160, window=5):
     """Contact sheets of the drawings, each in its example map's window; the paths written."""
+    from PIL import Image, ImageDraw  # only the sheets need Pillow (kb-pyimg), not the list
+
     arts, paths = {}, []
     for s in range(0, len(rows), per_sheet):
         chunk = rows[s:s + per_sheet]

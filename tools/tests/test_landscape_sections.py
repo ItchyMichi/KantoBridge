@@ -205,3 +205,49 @@ def test_the_face_drawings_are_the_solid_runs_between_ground():
     rows = face_drawings(survey)
     assert [(r["key"], r["n"]) for r in rows] == [("fence", 2)]
     assert rows[0]["ex"] == ["M", 0, 1]
+
+
+def test_the_second_look_shows_what_the_first_review_meant_and_tries_new_pins(tmp_path, capsys):
+    import json
+
+    from landscape_sections.second_look import second, try_pins
+
+    # the old levels with the first review's pin lifting the right strip (over the rock column x 2) to 3; the new rules
+    # move the map's floor up by 3 and lift only the strip's top cell, the moved pin the strip again
+    old = {"map": "M", "w": 4, "h": 2, "kinds": "..#...#.", "levels": [0] * 8, "ramps": []}
+    raw = {"map": "M", "w": 4, "h": 2, "kinds": "..#...#.", "levels": [3, 3, 3, 6, 3, 3, 3, 3], "ramps": []}
+    pin = {"map": "M", "w": 4, "h": 2, "kinds": "..#...#.", "levels": [3, 3, 3, 6, 3, 3, 3, 3], "ramps": []}
+    facts = second(old, [[3, 0, 3]], raw, pin, [[3, 1, 9]])
+    assert facts["floor"] == 3 and facts["pins_now"] == [[3, 1, 6]], "the new table's pin in blocks over the pictures' floor"
+    assert facts["intent"] == [0, 0, None, 3, 0, 0, None, 3]
+    assert facts["differ"] == [[3, 1, 0, 3]], "the strip's lower cell stands under what the review meant"
+    assert "intent" not in second(None, None, raw, pin, []), "a map nobody reviewed has no intent"
+    (tmp_path / "raw.json").write_text(json.dumps(raw))
+    (tmp_path / "review.json").write_text(json.dumps({"floor": 3, "pins": [[3, 1, 3]], "slopes": []}))
+    try_pins([str(tmp_path / "raw.json"), str(tmp_path / "review.json")])
+    out = capsys.readouterr().out
+    assert "   1    0   0   #   3" in out and "1 pins changed 1 cells" in out, out
+    # beside the second look's facts, a cell off what the first review meant is starred
+    (tmp_path / "M_raw.json").write_text(json.dumps(raw))
+    (tmp_path / "M_second.json").write_text(json.dumps(facts))
+    (tmp_path / "none.json").write_text(json.dumps({"floor": 3, "pins": [], "slopes": []}))
+    try_pins([str(tmp_path / "M_raw.json"), str(tmp_path / "none.json")])
+    out = capsys.readouterr().out
+    assert "   1     0    0    #   0*" in out and "1 cells (*) differ" in out, out
+
+
+def test_a_second_looks_lists_replace_the_first(tmp_path):
+    import json
+
+    from landscape_sections.apply_reviews import apply
+
+    reviews = tmp_path / "r2"
+    reviews.mkdir()
+    (reviews / "EM_A.json").write_text(json.dumps({"map": "EM_A", "unit": "blocks", "floor": 3, "pins": [], "slopes": [], "notes": ""}))
+    (reviews / "EM_B.json").write_text(json.dumps({"map": "EM_B", "unit": "blocks", "floor": 0, "pins": [[1, 1, 6]],
+                                                   "slopes": [[2, 2, "up"]], "notes": ""}))
+    table = {"pins": {"EM_A": [[0, 0, 9]], "EM_B": [[5, 5, 3]], "EM_C": [[1, 1, 3]]}, "slopes": {"EM_A": [[0, 1, "up"]]}}
+    out, done = apply(str(reviews), table, replace=True)
+    assert "EM_A" not in out["pins"] and "EM_A" not in out["slopes"], "a second look with no pins and no slopes clears them"
+    assert out["pins"]["EM_B"] == [[1, 1, 6]] and out["slopes"]["EM_B"] == [[2, 2, "up"]]
+    assert out["pins"]["EM_C"] == [[1, 1, 3]], "a map with no second look keeps its pins"

@@ -122,6 +122,14 @@ table. `python3 tools/landscape_sections/rules_check.py <old dump> <table> <new 
 (with its pins it is what the review meant), `look` (neither: a second look, an agent with the new pictures and the first
 review's notes). Route 119 must still agree with the user's marks.
 
+**The second look.** The `look` maps' pictures from the new dump with pins (kb-hub's `work/landscape/pick/render_round.py
+<dump> r2 <maps.json>`), and beside them `python3 tools/landscape_sections/second_look.py inputs <old dump> <old table>
+<new dump, no pins> <new dump, pins> <new table> <maps.json> <review>/{map}/r2 <reviews>`: the pins applied now (in the
+pictures' blocks), the levels the first review meant and every cell where the two differ, and the levels with no pins.
+The agent's pins and slopes are complete lists (they replace the first review's); `second_look.py try <MAP>_raw.json
+<review.json>` shows the levels its pins give before it writes them. `apply_reviews.py <second reviews> <dump> <table>
+<table out> --replace` puts them in the table (a map with none loses its old ones).
+
 Then steps 1 and 3 again, until the marks and the computer agree.
 
 ### 5. The packages get the levels
