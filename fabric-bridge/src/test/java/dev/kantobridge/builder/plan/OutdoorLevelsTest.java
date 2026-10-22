@@ -98,5 +98,10 @@ class OutdoorLevelsTest {
 		assertEquals(0, pinned.level(1, 2), "the other strip stays");
 		assertEquals(0, pinned.level(1, 1), "the rock between them on the nearer, lower ground");
 		assertSame(solved, OutdoorLevels.pinned(solved, model, List.of()), "no pins: the solve as it was");
+		MapLayout fromFlat = OutdoorLevels.pinned(null, model, List.of(new dev.kantobridge.builder.shape.LandscapeModels.Pin(2, 0, 6)));
+		assertEquals(6, fromFlat.level(3, 0), "a map the solver left flat stands on 0 for its pins");
+		assertEquals(0, fromFlat.level(1, 2));
+		assertNull(OutdoorLevels.pinned(null, model, List.of(new dev.kantobridge.builder.shape.LandscapeModels.Pin(2, 0, 0))),
+				"pins that lift nothing: still flat");
 	}
 }

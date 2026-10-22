@@ -5,6 +5,7 @@ import dev.kantobridge.world.Dir;
 import dev.kantobridge.world.MapLayout;
 import java.util.ArrayDeque;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -58,7 +59,7 @@ public final class OutdoorLevels {
 			}
 		}
 		List<LandscapeModels.Pin> pins = LandscapeModels.pins(id);
-		if (levels.layout() != null && !pins.isEmpty()) {
+		if (!pins.isEmpty()) {
 			warnings.note("outdoor_levels_pinned", pins.size());
 		}
 		return rigid(pinned(levels.layout(), model, pins), model, id);
@@ -66,22 +67,25 @@ public final class OutdoorLevels {
 
 	/**
 	 * {@code layout} with a review's pins (LEVELS_PIPELINE.md, the review): for each, the ground and water round its cell that
-	 * stand level with it (four-neighbours, no ramp) at its level, then the rock round them on its nearest ground again.
+	 * stand level with it (four-neighbours, no ramp) at its level, then the rock round them on its nearest ground again. A map
+	 * the solver left flat (null) stands on 0 for them, as its review saw it (Route 132's rock tops), and stays flat if they
+	 * lift nothing.
 	 */
 	static @Nullable MapLayout pinned(@Nullable MapLayout layout, MapModel model, List<LandscapeModels.Pin> pins) {
-		if (layout == null || pins.isEmpty()) {
+		if (pins.isEmpty()) {
 			return layout;
 		}
-		int w = layout.w();
-		int h = layout.h();
+		int w = layout == null ? model.cellWidth() : layout.w();
+		int h = layout == null ? model.cellHeight() : layout.h();
+		Collection<MapLayout.Ramp> rampList = layout == null ? List.of() : layout.ramps();
 		int[] levels = new int[w * h];
 		boolean[] standable = new boolean[w * h];
 		Set<Integer> ramps = new HashSet<>();
-		for (MapLayout.Ramp r : layout.ramps()) {
+		for (MapLayout.Ramp r : rampList) {
 			ramps.add(r.y() * w + r.x());
 		}
 		for (int i = 0; i < w * h; i++) {
-			levels[i] = layout.level(i % w, i / w);
+			levels[i] = layout == null ? 0 : layout.level(i % w, i / w);
 			standable[i] = !rock(model.kind(i % w, i / w));
 		}
 		for (LandscapeModels.Pin pin : pins) {
@@ -108,7 +112,10 @@ public final class OutdoorLevels {
 			}
 		}
 		RaisedRegions.nearestLevels(w, h, standable, levels);
-		return MapLayout.flat(w, h, levels, List.copyOf(layout.ramps()));
+		if (layout == null && Arrays.stream(levels).allMatch(v -> v == 0)) {
+			return null;
+		}
+		return MapLayout.flat(w, h, levels, List.copyOf(rampList));
 	}
 
 	/**
