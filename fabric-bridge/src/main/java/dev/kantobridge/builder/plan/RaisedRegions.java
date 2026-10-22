@@ -228,6 +228,28 @@ public final class RaisedRegions {
 		return out;
 	}
 
+	/**
+	 * Crystal's and Blue's drawn stairs outdoors: per floor cell the way up its drawing climbs in the game's table
+	 * ({@link FloorKinds}, {@code floor_kinds/<game>.json}, keyed by the cell's drawing as the fitted shapes are), else null.
+	 */
+	public static Dir[] tableStairs(MapModel model, String game) {
+		int w = model.cellWidth();
+		int h = model.cellHeight();
+		Dir[] out = new Dir[w * h];
+		if (FloorKinds.table(game).isEmpty()) {
+			return out;
+		}
+		String atlas = CaveMap.atlas(model);
+		for (int cy = 0; cy < h; cy++) {
+			for (int cx = 0; cx < w; cx++) {
+				if (floor(model.kind(cx, cy))) {
+					out[cy * w + cx] = FloorKinds.climb(game, atlas, CaveMap.cellTiles(model, cx, cy));
+				}
+			}
+		}
+		return out;
+	}
+
 	/** Emerald's waterfalls: the water cells whose metatile behaviour is a waterfall's. */
 	public static boolean[] gen3Falls(MapModel model, G3Map map, G3Tiles tiles) {
 		int w = model.cellWidth();

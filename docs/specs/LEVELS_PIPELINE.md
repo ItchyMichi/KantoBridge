@@ -193,6 +193,11 @@ heights must stay feasible.
   stairs use), the maps, their models and the hidden game untouched. Not a tilt across whole maps (water, buildings and
   the rigid landscape models need level ground, and the game draws everything flat, so a tilt reads as stray steps), and
   a generated route only as a last resort (it moves maps apart and needs the region crossings' machinery).
-- **Then:** the chain in the planner: each map's placement at its base, the ground filled down to the surface under a
-  raised map, the void ring round it at its height, the surface's build room raised to fit.
+- **The chain in the planner** (`MapChain`, `-Pkb.chainLevels=true`, `build_world.py --chain-levels`): after every
+  map's levels, the same seams and chain as `seams.py`; each surface map's placement at the surface plus its base (its
+  floor where its neighbour's ground leaves off), so everything after it (the void fill, the story cells, the spawn, the
+  index the hidden game's moves follow, the shapes) takes the new height; under a lifted map its ground goes down to the
+  world's (`WorldPlan`), the void ring round it stands at its floor, and the surface volume grows by the highest base.
+  The build's notes: `chain_maps_lifted`, `chain_highest_base`, `chain_seams`, `chain_loops_open` (a detail per open loop:
+  its seam and step, where a slope at the join goes). Wild Routes zones keep their own areas; a zone's gate is its town's.
 

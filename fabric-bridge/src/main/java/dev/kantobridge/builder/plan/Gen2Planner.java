@@ -251,9 +251,10 @@ final class Gen2Planner {
 			// under its ceilings (D5)
 			List<MapLayout.Piece> pieces = caveArea.pieces().get(map.id());
 			MapLayout rooms = pieces == null ? raised.get(map.id()) : WorldPlanner.withPieces(model, pieces, raised.get(map.id()));
-			if (outdoorLevels.contains(map.id()) && (placement.kind() == MapPlacement.Kind.SURFACE || WorldPlan.openSky(placement))) {
+			if (OutdoorLevels.covers(outdoorLevels, map.id()) && (placement.kind() == MapPlacement.Kind.SURFACE || WorldPlan.openSky(placement))) {
 				// The levels pilot (D3, D4): its areas (one-way walls keep them apart) at the faces between them, 3 blocks a cell
-				rooms = OutdoorLevels.plan(map.id(), model, slopes -> RaisedRegions.outdoor(model, edges, slopes), warnings);
+				rooms = OutdoorLevels.plan(map.id(), model, RaisedRegions.tableStairs(model, bundle.game()),
+						slopes -> RaisedRegions.outdoor(model, edges, slopes), warnings);
 			}
 			rooms = WorldPlanner.withCeilings(placement, model, rooms, Headroom.blackFiller(model, probe, null), Headroom.screenRows(false),
 					!area3d.contains(map.id()), warnings);
@@ -263,6 +264,11 @@ final class Gen2Planner {
 			placed.add(new PlacedMap(placement, model, edges, rooms));
 		}
 		warnings.note("one_way_edges", oneWayEdges);
+
+		// ---- the chain (docs/specs/LEVELS_PIPELINE.md, the seams): each surface map's floor where its neighbour's ground leaves off ----
+		if (MapChain.enabled()) {
+			placements.putAll(MapChain.apply(placed, MapChain.note(MapChain.chain(placed), warnings).bases()));
+		}
 
 		// ---- surface void fill ----
 		Box3 surfaceBox = WorldPlan.surfaceVolume(placements.values());

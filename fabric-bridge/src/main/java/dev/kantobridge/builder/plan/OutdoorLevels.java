@@ -14,8 +14,8 @@ import org.jetbrains.annotations.Nullable;
 
 /**
  * Which outdoor maps stand on raised ground (docs/specs/HEIGHTS_ALL_GAMES_PLAN.md D3, D4; the levels pilot of
- * LANDSCAPE_SECTIONS_PLAN.md): the maps the system property {@value #PROPERTY} names (map ids, comma-separated), on the
- * surface or under the open sky. Unset, every outdoor map stays flat, as before. Each named map takes the levels its
+ * LANDSCAPE_SECTIONS_PLAN.md): the maps the system property {@value #PROPERTY} names (map ids, comma-separated, or
+ * {@value #ALL} for every one), on the surface or under the open sky. Unset, every outdoor map stays flat, as before. Each named map takes the levels its
  * game gives ({@link RaisedRegions#gen3Outdoor}: Emerald's elevations; {@link RaisedRegions#outdoor}: Crystal's and
  * Blue's areas and the faces between them), a cell of stairs or of face climbing {@link RaisedRegions#OUTDOOR_RISE}. A
  * map whose landscape marks name its slopes and stairs ({@link LandscapeModels#slopes}) stands on its drawing's levels
@@ -174,7 +174,15 @@ public final class OutdoorLevels {
 		return kind == MapModel.Kind.SOLID || kind == MapModel.Kind.COUNTER;
 	}
 
-	/** The maps {@code value} names (map ids, comma-separated). */
+	/** The property's value naming every outdoor map. */
+	public static final String ALL = "all";
+
+	/** Whether {@code named} (the property's maps) covers map {@code id}: it names it, or it is {@value #ALL}. */
+	public static boolean covers(Set<String> named, String id) {
+		return named.contains(ALL) || named.contains(id);
+	}
+
+	/** The maps {@code value} names (map ids, comma-separated; {@value #ALL} for every outdoor map). */
 	static Set<String> parse(@Nullable String value) {
 		Set<String> out = new TreeSet<>();
 		if (value != null) {

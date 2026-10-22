@@ -264,7 +264,7 @@ final class Gen3Planner {
 				warnings.note("room_levels_" + levels.outcome(), Warnings.symbols("map", map.id()));
 				rooms = levels.layout();
 			}
-			if (outdoorLevels.contains(map.id()) && (placement.kind() == MapPlacement.Kind.SURFACE || WorldPlan.openSky(placement))) {
+			if (OutdoorLevels.covers(outdoorLevels, map.id()) && (placement.kind() == MapPlacement.Kind.SURFACE || WorldPlan.openSky(placement))) {
 				// The levels pilot (D3, D4): an outdoor map on its elevations' raised ground, 3 blocks a cell of stairs or face; with
 				// its slopes marked, on its drawing's
 				G3Tiles mapTiles = tiles(bundle, pairs, map.pair());
@@ -280,6 +280,11 @@ final class Gen3Planner {
 			placed.add(new PlacedMap(placement, model, edges, rooms));
 		}
 		warnings.note("elevation_edges", elevationEdges);
+
+		// ---- the chain (docs/specs/LEVELS_PIPELINE.md, the seams): each surface map's floor where its neighbour's ground leaves off ----
+		if (MapChain.enabled()) {
+			placements.putAll(MapChain.apply(placed, MapChain.note(MapChain.chain(placed), warnings).bases()));
+		}
 
 		// ---- surface void fill: a map's own cells claim before its padding ----
 		Box3 surfaceBox = WorldPlan.surfaceVolume(placements.values());

@@ -183,6 +183,7 @@ def kbBuildProperties = [
 	"kb.buildSlot"  : ["kantobridge.build.slot", false],
 	"kb.landscapeModels": ["kantobridge.landscape.models", true],
 	"kb.outdoorLevels"  : ["kantobridge.outdoorLevels", false],
+	"kb.chainLevels"    : ["kantobridge.chainLevels", false],
 ]
 def kbBuildVmArgs = []
 kbBuildProperties.each { gradleName, spec ->
@@ -651,6 +652,8 @@ test {
 	systemProperty "kb.outdoorDump", providers.gradleProperty("kb.outdoorDump").getOrElse("")
 	// -Pkb.outdoorLevels=MAP,... and -Pkb.landscapeModels=<table>: the levels pilot and the landscape models in a dry run
 	systemProperty "kantobridge.outdoorLevels", providers.gradleProperty("kb.outdoorLevels").getOrElse("")
+	// -Pkb.chainLevels=true: each surface map's floor where its neighbour's ground leaves off (LEVELS_PIPELINE.md, the seams)
+	systemProperty "kantobridge.chainLevels", providers.gradleProperty("kb.chainLevels").getOrElse("")
 	systemProperty "kantobridge.landscape.models", providers.gradleProperty("kb.landscapeModels").map { file(it).absolutePath }.getOrElse("")
 	// -Pkb.heightsSurvey=true with any of the three real bundles: the 3D heights plan's survey (W0; layout data on the pod)
 	systemProperty "kb.heightsSurvey", providers.gradleProperty("kb.heightsSurvey").getOrElse("")

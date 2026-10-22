@@ -75,7 +75,7 @@ class OutdoorLevelsDumpTest {
 		}
 		JsonObject notes = new JsonObject();
 		for (Map.Entry<String, Integer> e : plan.warnings().notes().entrySet()) {
-			if (e.getKey().startsWith("outdoor_")) {
+			if (e.getKey().startsWith("outdoor_") || e.getKey().startsWith("chain_")) {
 				notes.addProperty(e.getKey(), e.getValue());
 			}
 		}
@@ -99,7 +99,7 @@ class OutdoorLevelsDumpTest {
 		for (PlacedMap map : plan.maps()) {
 			var pl = map.placement();
 			boolean outdoor = pl.kind() == dev.kantobridge.world.MapPlacement.Kind.SURFACE || WorldPlan.openSky(pl);
-			if (!named.contains(map.id()) && !(all && outdoor)) {
+			if (!OutdoorLevels.covers(named, map.id()) && !(all && outdoor)) {
 				continue;
 			}
 			JsonObject o = new JsonObject();
@@ -113,12 +113,12 @@ class OutdoorLevelsDumpTest {
 			dev.kantobridge.builder.export.G3Map g3 = g3maps.get(map.id());
 			dev.kantobridge.builder.export.G3Tiles g3tiles = g3 == null ? null : bundle.g3tiles(g3.pair());
 			dev.kantobridge.world.Dir[] slopes = OutdoorLevels.slopes(dev.kantobridge.builder.shape.LandscapeModels.slopes(map.id(), w, h),
-					g3 == null ? null : RaisedRegions.gen3Stairs(map.model(), g3, g3tiles));
+					g3 == null ? RaisedRegions.tableStairs(map.model(), bundle.game()) : RaisedRegions.gen3Stairs(map.model(), g3, g3tiles));
 			RaisedRegions.Result result = g3 != null
 					? RaisedRegions.gen3Outdoor(map.model(), g3, slopes, RaisedRegions.gen3Falls(map.model(), g3, g3tiles))
 					: RaisedRegions.outdoor(map.model(), map.edges(), slopes);
 			// a named map's levels as the planner placed them; another's as the solver gives them
-			MapLayout layout = named.contains(map.id()) ? map.layout() : result.layout();
+			MapLayout layout = OutdoorLevels.covers(named, map.id()) ? map.layout() : result.layout();
 			o.addProperty("raised", layout != null);
 			JsonObject at = new JsonObject();
 			at.addProperty("map", map.id());
@@ -155,6 +155,19 @@ class OutdoorLevelsDumpTest {
 				}
 			}
 			o.addProperty("kinds", kinds.toString());
+			if (g3 == null) {
+				// each cell's drawing, as a table of drawn stairs keys it (Crystal's and Blue's: tools/landscape_sections/stair_tiles.py)
+				JsonArray keys = new JsonArray();
+				String atlas = CaveMap.atlas(map.model());
+				for (int cy = 0; cy < h; cy++) {
+					for (int cx = 0; cx < w; cx++) {
+						keys.add(dev.kantobridge.builder.shape.FittedShapes.key(atlas, CaveMap.cellTiles(map.model(), cx, cy)));
+					}
+				}
+				JsonObject keyed = new JsonObject();
+				keyed.add("keys", keys);
+				Files.writeString(out.resolve(map.id() + "_keys.json"), ProtoJson.write(keyed), StandardCharsets.UTF_8);
+			}
 			JsonArray levels = new JsonArray();
 			int max = 0;
 			for (int cy = 0; cy < h; cy++) {

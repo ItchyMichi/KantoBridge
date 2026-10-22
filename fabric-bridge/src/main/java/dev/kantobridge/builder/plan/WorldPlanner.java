@@ -334,14 +334,20 @@ public final class WorldPlanner {
 			if (pieces != null) {
 				raised = withPieces(model, pieces, raised);
 			}
-			if (outdoorLevels.contains(map.id()) && (placement.kind() == MapPlacement.Kind.SURFACE || WorldPlan.openSky(placement))) {
+			if (OutdoorLevels.covers(outdoorLevels, map.id()) && (placement.kind() == MapPlacement.Kind.SURFACE || WorldPlan.openSky(placement))) {
 				// The levels pilot (D3, D4): its areas (tile pairs keep them apart) at the faces between them, 3 blocks a cell
-				raised = OutdoorLevels.plan(map.id(), model, slopes -> RaisedRegions.outdoor(model, edges, slopes), warnings);
+				raised = OutdoorLevels.plan(map.id(), model, RaisedRegions.tableStairs(model, bundle.game()),
+						slopes -> RaisedRegions.outdoor(model, edges, slopes), warnings);
 			}
 			// An interior's ceilings (HEIGHTS_ALL_GAMES_PLAN D5): as tall as its drawing, at least 4 over its highest floor
 			raised = withCeilings(placement, model, raised, Headroom.blackFiller(model, probe, null), Headroom.screenRows(false),
 					!caves.contains(map.id()), warnings);
 			placed.add(new PlacedMap(placement, model, edges, raised));
+		}
+
+		// ---- the chain (docs/specs/LEVELS_PIPELINE.md, the seams): each surface map's floor where its neighbour's ground leaves off ----
+		if (MapChain.enabled()) {
+			placements.putAll(MapChain.apply(placed, MapChain.note(MapChain.chain(placed), warnings).bases()));
 		}
 
 		// ---- surface void fill: each gap cell takes the border art of its nearest surface map ----

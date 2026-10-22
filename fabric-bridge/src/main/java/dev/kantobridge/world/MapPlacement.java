@@ -56,6 +56,11 @@ public record MapPlacement(String id, int x, int y, int z, int w, int h, int lay
 		}
 	}
 
+	/** The same placement with its feet level at {@code y} (a chained surface map, docs/specs/LEVELS_PIPELINE.md). */
+	public MapPlacement withY(int y) {
+		return new MapPlacement(this.id, this.x, y, this.z, this.w, this.h, this.layer, this.kind, this.palette, this.biome, this.dark, this.parent);
+	}
+
 	/** Width in blocks. */
 	public int blockWidth() {
 		return this.w * Scale.CELL_BLOCKS;

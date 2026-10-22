@@ -1,8 +1,10 @@
 package dev.kantobridge.builder.plan;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import dev.kantobridge.world.Dir;
 import dev.kantobridge.world.MapLayout;
@@ -12,6 +14,14 @@ import org.junit.jupiter.api.Test;
 
 /** The levels pilot's switch and its landscape models on raised ground (HEIGHTS_ALL_GAMES_PLAN.md D4). */
 class OutdoorLevelsTest {
+	@Test
+	void allCoversEveryMap() {
+		assertTrue(OutdoorLevels.covers(OutdoorLevels.parse("all"), "EM_ROUTE119"));
+		assertTrue(OutdoorLevels.covers(OutdoorLevels.parse("ROUTE_23"), "ROUTE_23"));
+		assertFalse(OutdoorLevels.covers(OutdoorLevels.parse("ROUTE_23"), "ROUTE_1"));
+		assertFalse(OutdoorLevels.covers(OutdoorLevels.parse(null), "ROUTE_1"));
+	}
+
 	@Test
 	void thePropertyNamesTheMaps() {
 		assertEquals(Set.of("EM_ROUTE119", "ROUTE_23"), OutdoorLevels.parse(" EM_ROUTE119,,ROUTE_23 "));

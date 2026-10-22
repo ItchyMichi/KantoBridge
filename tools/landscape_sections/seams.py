@@ -39,14 +39,19 @@ def load(dump_dir, game):
 def seams(maps):
     """{(a, b): [(diff, kind, a cell, b cell), ...]}, a before b by name: every pair of touching cells, both walkable or
     both water, diff b's level minus a's (blocks), kind 'walk' or 'water'."""
-    index = defaultdict(list)  # 64-block squares -> the maps over them
+    index = defaultdict(list)  # 64-block squares -> the maps over them; the surface's maps one space, whatever their
+    # chained heights; each open-sky layer its own
+
+    def space(m):
+        return ("sky", m["y"]) if m.get("sky") else "surface"
+
     for name, m in maps.items():
         for qx in range(m["x"] // 64, (m["x"] + m["bw"] - 1) // 64 + 1):
             for qz in range(m["z"] // 64, (m["z"] + m["bd"] - 1) // 64 + 1):
-                index[(m["y"], qx, qz)].append(name)
+                index[(space(m), qx, qz)].append(name)
 
-    def at(y, bx, bz):
-        for name in index.get((y, bx // 64, bz // 64), ()):
+    def at(where, bx, bz):
+        for name in index.get((where, bx // 64, bz // 64), ()):
             m = maps[name]
             if m["x"] <= bx < m["x"] + m["bw"] and m["z"] <= bz < m["z"] + m["bd"]:
                 return name, (bx - m["x"]) // m["cs"], (bz - m["z"]) // m["cs"]
@@ -61,7 +66,7 @@ def seams(maps):
             for i in range(cs):
                 bx = m["x"] + cx * cs + (cs if dx > 0 else -1 if dx < 0 else i)
                 bz = m["z"] + cy * cs + (cs if dz > 0 else -1 if dz < 0 else i)
-                other = at(m["y"], bx, bz)
+                other = at(space(m), bx, bz)
                 if other is None or other[0] == name:
                     continue
                 key = tuple(sorted([(name, cx, cy), other]))

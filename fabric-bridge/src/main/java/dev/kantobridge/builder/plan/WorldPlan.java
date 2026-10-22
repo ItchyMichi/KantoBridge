@@ -646,16 +646,17 @@ public final class WorldPlan {
 		return out;
 	}
 
-	/** The surface volume around surface maps placed at {@code placements}. */
+	/** The surface volume around surface maps placed at {@code placements} (a chained map's height over the surface added). */
 	public static @Nullable Box3 surfaceVolume(Collection<MapPlacement> placements) {
 		Box3 box = null;
 		for (MapPlacement p : placements) {
 			if (p.kind() != MapPlacement.Kind.SURFACE) {
 				continue;
 			}
-			Box3 own = new Box3(p.x(), SURFACE_MIN_Y, p.z(), p.x() + p.blockWidth(), SURFACE_MAX_Y, p.z() + p.blockDepth());
+			int top = SURFACE_MAX_Y + Math.max(0, p.y() - Scale.SURFACE_Y);
+			Box3 own = new Box3(p.x(), SURFACE_MIN_Y, p.z(), p.x() + p.blockWidth(), top, p.z() + p.blockDepth());
 			box = box == null ? own : new Box3(Math.min(box.minX(), own.minX()), SURFACE_MIN_Y, Math.min(box.minZ(), own.minZ()),
-					Math.max(box.maxX(), own.maxX()), SURFACE_MAX_Y, Math.max(box.maxZ(), own.maxZ()));
+					Math.max(box.maxX(), own.maxX()), Math.max(box.maxY(), own.maxY()), Math.max(box.maxZ(), own.maxZ()));
 		}
 		return box == null ? null : box.inflateXZ(SURFACE_RING);
 	}
@@ -838,16 +839,20 @@ public final class WorldPlan {
 		MapPlacement p = owner.placement();
 		int slot = this.slot(owner, this.ringTile(owner, x - p.x(), z - p.z()), false);
 		ShapePlan.VoidUnit unit = this.shapes == null ? null : this.shapes.voidUnit(i);
+		// A chained owner's ring stands at its floor, its border ground under it down to the world's.
+		for (int y = Scale.GROUND_Y; y < p.y() - 1; y++) {
+			sink.set(x, y, z, BlockCode.full(slot));
+		}
 		if (unit != null) {
 			// The ring's border tree (V4): its floor wears the owner's ground, the unit's blocks collide as the void did.
-			sink.set(x, Scale.GROUND_Y, z, BlockCode.full(unit.ground() >= 0 ? this.slot(owner, unit.ground(), false) : slot));
+			sink.set(x, p.y() - 1, z, BlockCode.full(unit.ground() >= 0 ? this.slot(owner, unit.ground(), false) : slot));
 			for (int k = 0; k < Scale.CELL_BLOCKS; k++) {
 				sink.set(x, p.y() + k, z, BlockCode.shape(slot));
 			}
 			return;
 		}
 		int code = BlockCode.full(slot);
-		for (int y = Scale.GROUND_Y; y <= Scale.GROUND_Y + HeightRules.VOID; y++) {
+		for (int y = p.y() - 1; y <= p.y() - 1 + HeightRules.VOID; y++) {
 			sink.set(x, y, z, code);
 		}
 	}
@@ -1229,15 +1234,18 @@ public final class WorldPlan {
 				taken |= 1L << k;
 			}
 		}
-		if (!map.interior() && feet > base) {
+		// a chained surface map stands over the surface (LEVELS_PIPELINE.md, the seams): its ground goes down to the world's
+		boolean lifted = p.kind() == MapPlacement.Kind.SURFACE && p.y() > Scale.SURFACE_Y;
+		if (!map.interior() && (feet > base || lifted)) {
 			// Outdoors on raised ground (the levels pilot, D4): under a raised cell its own art (a shape's cell: the floor under
-			// it), down to the map's floor level; a tile drawn only as a shape takes the map's border ground.
+			// it), down to the map's floor level (a chained map's, the world's ground); a tile drawn only as a shape takes the
+			// map's border ground.
 			int underTile = planned == null ? tile : planned.floorTile(planIndex, tile);
 			if (!this.hasSlot(map, underTile)) {
 				underTile = this.hasSlot(map, tile) ? tile : this.ringTile(map, tx, ty);
 			}
 			int under = BlockCode.full(this.slot(map, underTile, false));
-			for (int y = base - 1; y < feet - 1; y++) {
+			for (int y = lifted ? Scale.GROUND_Y : base - 1; y < feet - 1; y++) {
 				sink.set(x, y, z, under);
 			}
 		}
