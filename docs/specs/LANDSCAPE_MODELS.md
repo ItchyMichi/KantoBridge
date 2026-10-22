@@ -114,6 +114,11 @@ section (VOXEL_BLOCKS_PLAN.md section 3.8), Route 26's trees 25,944. Absolute nu
 comparison is like for like.
 
 
+## The rollout
+
+Every outdoor map's rock (faces of 3 cells or more, masses, mouths), in units of touching sections with a
+window each (`tools/landscape_sections/units.py`): [LANDSCAPE_ROLLOUT_PLAN.md](LANDSCAPE_ROLLOUT_PLAN.md).
+
 ## Levels (the levels pilot, 2026-10-21)
 
 The steps, to repeat this on other maps and games: [LEVELS_PIPELINE.md](LEVELS_PIPELINE.md).

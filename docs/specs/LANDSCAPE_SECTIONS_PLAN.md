@@ -100,3 +100,4 @@ before their pictures (the branch `pilot/landscape-bc` keeps them).
 The same marks answer what the data can't for Crystal and Blue: a `mass` or a `face` with floor on top of it says
 that floor is a level up, by the face's drawn rows; Emerald's elevations cross-check it. Rolling out means marking
 about 185 outdoor maps (the surface and the open-sky maps), the user's review, and the variant the pilot picks.
+The user's choice for it (2026-10-22): rock only, all regions; the steps: [LANDSCAPE_ROLLOUT_PLAN.md](LANDSCAPE_ROLLOUT_PLAN.md).
