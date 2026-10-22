@@ -135,7 +135,9 @@ The map's result in LANDSCAPE_MODELS.md "Levels" and a PROGRESS note: marks agai
 ## Where each game stands (2026-10-21)
 
 - **Emerald:** the tile table (the general tileset's grey stairs 175 and 207) and the Mach Bike slope (Route 119's
-  sand slope), waterfalls; Route 119 checked against the user's marks, 535 of 535. The Battle Frontier outside east
+  sand slope), waterfalls, one sea per map; Route 119 checked against the user's marks, 535 of 535. Mossdeep City run
+  through every step with no input from the user (2026-10-22): a review agent's 22 pins, a marking agent's 70 sections,
+  7 models on the levels, in game from the foot of its stairs (the stairs climb the hill to the Space Center). The Battle Frontier outside east
   has one skipped rule and a break at (39, 32); Route 127's islands stand on the sea.
 - **Crystal:** levels from the one-way walls and faces only: Route 26's plateau and a raised area of Blackthorn City,
   not yet checked by marks.

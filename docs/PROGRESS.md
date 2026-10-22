@@ -1245,6 +1245,24 @@ for the rest" (plan §8). Feature tests per phase, the full suite at the checkpo
      `levels_sheets.py`, `pod/`). Open: the seams between maps (the check `tools/landscape_sections/seams.py` is ready:
      every outdoor map's levels and place in the world, each seam's step today, the bases a chain from map to map would
      give and the loops it can't close; it waits for a pod run) and Crystal's and Blue's stairs.
+   - **The seams check and the process without your marks** (your asks, 2026-10-21: no input from you in the steps, a
+     test on another tricky map, a seam-to-seam check of every map, generated routes where a seam can't meet, used
+     sparingly, and feasible heights). Step 2 is now a review agent reading the computer's levels against the drawing
+     by written rules and pinning what is wrong (the models table's `pins`; `OutdoorLevels.pinned`); your Route 119 marks
+     stay the answer key (524 of 524 after every rule change). The seams check over every outdoor map of the three games
+     (LEVELS_PIPELINE.md "Seams between maps"): chained, Hoenn leaves two loops open (Route 118/119 18 blocks, where
+     Routes 118 and 123 come down by ledges that stand flat today; Petalburg/104 3), Johto none, Kanto three small
+     ones; the highest chained ground is 42 blocks over the surface (Mossdeep), far inside Minecraft's 255. The check
+     and Mossdeep City (the test map) showed rules missing, now in (0cb1a5e): the sea one level per map (Mossdeep's
+     north-east sea had stood 12 blocks up, Slateport's and Route 128's at two levels), water behind a reef the sea's,
+     cells on Emerald's water-surface elevation no ground (your catch: the launch tower drawn over the sea), pockets
+     nothing walkable touches on the ground nearest them (a cell under a tree had stood 33 blocks up). A rule ordering
+     faces by elevation was tried and dropped: it put Route 119's north river area below the Fortree field. Mossdeep's
+     review agent pinned 22 areas (the strip behind the Gym down to the town, the hill's unreachable terraces climbing to
+     the Space Center); a marking agent marked its 70 sections and a modelling agent made 7 models on the levels.
+     Hoenn rebuilt (world LandLevels; build OK, no template or unit failed, 22 pins applied): from the foot of the white
+     stairs the picture now climbs the hill between its cliffs to the Space Center on its plateau (it was all flat);
+     Route 119, Route 127 and the Battle Frontier pictures are as before. The sheet (game, before, now) sent to you.
    - (The note's JUnit count, 1,379, counted two temporary probes since moved out: the suite holds 1,377.)
    - **Cave mouths and wall exits** (a fitted model in use on the cell over a door, the whole cell unroofed before): the
      model is the doorway, the face over it folds no door and rises as drawn, roofless so its models stay in use, and
