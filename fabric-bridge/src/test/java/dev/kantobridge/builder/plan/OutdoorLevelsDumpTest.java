@@ -156,6 +156,22 @@ class OutdoorLevelsDumpTest {
 			}
 			o.addProperty("kinds", kinds.toString());
 			if (g3 == null) {
+				// each cell's walled sides a pin's ground stops at (1 north, 2 east, 4 south, 8 west: Crystal's one-way walls, a
+				// door cut into a face), when the map has any: tools/landscape_sections/rules_check.py's pins stop there too
+				PairEdges walls = RaisedRegions.doorsInFaces(map.model(), map.edges());
+				if (walls != null) {
+					JsonArray sides = new JsonArray();
+					boolean any = false;
+					for (int cy = 0; cy < h; cy++) {
+						for (int cx = 0; cx < w; cx++) {
+							sides.add(walls.sides(cx, cy));
+							any |= walls.sides(cx, cy) != 0;
+						}
+					}
+					if (any) {
+						o.add("walls", sides);
+					}
+				}
 				// each cell's drawing, as a table of drawn stairs keys it (Crystal's and Blue's: tools/landscape_sections/stair_tiles.py)
 				JsonArray keys = new JsonArray();
 				String atlas = CaveMap.atlas(map.model());

@@ -24,6 +24,7 @@ from collections import Counter
 
 STEPS = ((1, 0), (-1, 0), (0, 1), (0, -1))
 WAYS = {"up": (0, -1), "down": (0, 1), "left": (-1, 0), "right": (1, 0)}
+SIDE = {(0, -1): 1, (1, 0): 2, (0, 1): 4, (-1, 0): 8}  # a dump's "walls": each cell's walled sides (EdgeWallBlock's)
 MAX_LEVEL = 64  # MapLayout.MAX_LEVEL: a pin over it stops the planner
 
 
@@ -39,12 +40,14 @@ def pinned(dump, pins):
 
 
 def pinned_ramps(dump, pins):
-    """pinned()'s levels and the ramps they keep, as OutdoorLevels.pinned."""
+    """pinned()'s levels and the ramps they keep, as OutdoorLevels.pinned: a pin's ground stops at the dump's "walls" (each
+    cell's walled sides, Crystal's and Blue's: one-way walls, a door cut into a face) where it has them."""
     w, h, kinds = dump["w"], dump["h"], dump["kinds"]
     levels = list(dump["levels"])
     if not pins:
         return levels, list(dump.get("ramps", []))
     ramps = {(r[0], r[1]) for r in dump.get("ramps", [])}
+    walls = dump.get("walls")
     for x, y, n in pins:
         if not (0 <= x < w and 0 <= y < h) or kinds[y * w + x] == "#":
             continue
@@ -57,7 +60,8 @@ def pinned_ramps(dump, pins):
             for dx, dy in STEPS:
                 nx, ny = c % w + dx, c // w + dy
                 j = ny * w + nx
-                if 0 <= nx < w and 0 <= ny < h and j not in seen and kinds[j] != "#" and levels[j] == was and (nx, ny) not in ramps:
+                if 0 <= nx < w and 0 <= ny < h and j not in seen and kinds[j] != "#" and levels[j] == was and (nx, ny) not in ramps \
+                        and not (walls and walls[c] & SIDE[(dx, dy)]):
                     seen.add(j)
                     todo.append(j)
     return levels, stairs_with_their_ends(dump, levels)

@@ -208,6 +208,15 @@ def test_a_stair_goes_with_the_ground_at_its_ends():
     assert loose_ends(dump) == []
 
 
+def test_a_pin_stops_at_the_dumps_walls():
+    from landscape_sections.rules_check import pinned
+
+    # two strips walled apart along their whole edge (south sides of row 0, north sides of row 1)
+    dump = {"w": 3, "h": 2, "kinds": "......", "levels": [0] * 6, "ramps": [], "walls": [4, 4, 4, 1, 1, 1]}
+    assert pinned(dump, [[1, 0, 3]]) == [3, 3, 3, 0, 0, 0]
+    assert pinned(dict(dump, walls=None), [[1, 0, 3]]) == [3] * 6, "no walls: one ground"
+
+
 def test_the_face_drawings_are_the_solid_runs_between_ground():
     from landscape_sections.face_drawings import face_drawings
 

@@ -18,8 +18,9 @@ the raw levels: each floods the ground and water level with its cell, no ramp, t
 ends, as OutdoorLevels.pinned does), printed
 as a grid in blocks over the floor: a number for ground, "~" after it for water, "L" for a ledge, "^ v < >" before it
 for a ramp (its way up, at its foot's level), "#" for rock, and "*" after a cell where it differs from what the first
-review meant (the <MAP>_second.json beside <MAP>_raw.json, if it has an intent); then the cells the pins changed. Slopes
-are not simulated (the solver takes them on the next dump). Plain Python.
+review meant (the <MAP>_second.json beside <MAP>_raw.json, if it has an intent); then the cells the pins changed. A pin
+stops at the game's walls where the dump has them ("walls": Crystal's one-way walls, a door cut into a face). Slopes are
+not simulated (the solver takes them on the next dump). Plain Python.
 """
 import json
 import os
