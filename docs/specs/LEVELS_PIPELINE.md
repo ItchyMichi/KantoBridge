@@ -229,6 +229,13 @@ guide): 11 fit as they were, 15 had their pins set to the 1-block steps (Pewter'
 terraces, Route 9's fields) or re-pinned a stair's end (Route 110's yards, Route 28's terraces). With them: no stair
 is left off the ground.
 
+**Blue's plank ledge steps** (436ba8e): the drawing the second look marked on Cerulean City and Route 7 (tilesets.overworld
+44-44-60-60 and 57-57-60-60, the plank band where a ledge's lip would be) stands in a row of ledges on all 54 of its
+walkable cells on Blue's outdoor maps, so Blue's stair table takes it: 16 maps' yards and terraces 1 block over the
+ground in front, as in Crystal's Kanto. A fourth look at the 13 maps it moved (`reviews_r4/`): 2 fit, 10 fixed (their
+steps marked, a few pins set to the new levels), 1 unsure (Route 22: its pond joins the corridor, 24 red boxes, for the
+water rule below).
+
 Not learned yet: Crystal's ledges (above); water standing with its lowest bank (Route 130, Slateport); water under a log
 bridge with its own banks; a cascade parting the sea from a pool (Ever Grande, the Safari Zone's south-east lake); a
 raised pier; a door at the top of a one-row stair (Sootopolis, the door joins any level so the stair finds no top); a
