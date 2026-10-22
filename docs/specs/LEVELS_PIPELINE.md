@@ -179,8 +179,14 @@ heights must stay feasible.
 - Johto's and Kanto's ragged seams follow from their levels having no stair tables yet (open item 2).
 - **Feasible heights:** Minecraft builds to Y 319, 255 blocks over the surface (Y 64); the highest chained ground is 42,
   under 70 with the tallest models on it. The build's surface box (32 blocks over the ground today) grows to fit.
-- **Next:** ledges as drops, then the check again; per loop left, a stair or slope at its seam where the drawing allows,
-  else a generated route (the region crossings' machinery: the hidden player parked while the player walks it). Then
-  the chain in the planner: each map's placement at its base, the ground filled down to the surface under a raised
-  map, the void ring round it at its height.
+- **Ledges as drops (579036e, the user's "small drops"):** 1 block, applied after every other rule. Kanto's open loops
+  9/6/6 -> 5/4/2/2 blocks; Hoenn's ring unchanged: Route 123's ledges can be walked round, so their sides stay level, and
+  the 18 blocks more likely lie in Routes 120 and 121's levels (stairs or cliffs the computer misses), for their reviews.
+- **What closes a loop left open (the user's question, 2026-10-22: a gradient across the maps, or a generated route):**
+  a short gentle slope where the two maps meet: a few open path cells by the join climbing a block a cell (the ramps the
+  stairs use), the maps, their models and the hidden game untouched. Not a tilt across whole maps (water, buildings and
+  the rigid landscape models need level ground, and the game draws everything flat, so a tilt reads as stray steps), and
+  a generated route only as a last resort (it moves maps apart and needs the region crossings' machinery).
+- **Then:** the chain in the planner: each map's placement at its base, the ground filled down to the surface under a
+  raised map, the void ring round it at its height, the surface's build room raised to fit.
 
