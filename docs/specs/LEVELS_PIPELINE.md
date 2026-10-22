@@ -224,6 +224,11 @@ blocks over the beach); 52 with pins (623), 39 with slopes (184 cells). With 2f4
   (`OutdoorLevels.stairsWithTheirEnds`, `rules_check.pinned` the same); any other is a loose end, which
   `rules_check.py` counts and sends back for a look.
 
+**The third look** (the same day, the 26 maps those two rules moved, `reviews_r3/`, the latest review of each as its
+guide): 11 fit as they were, 15 had their pins set to the 1-block steps (Pewter's strip, Route 1's pocket, Route 4's
+terraces, Route 9's fields) or re-pinned a stair's end (Route 110's yards, Route 28's terraces). With them: no stair
+is left off the ground.
+
 Not learned yet: Crystal's ledges (above); water standing with its lowest bank (Route 130, Slateport); water under a log
 bridge with its own banks; a cascade parting the sea from a pool (Ever Grande, the Safari Zone's south-east lake); a
 raised pier; a door at the top of a one-row stair (Sootopolis, the door joins any level so the stair finds no top); a

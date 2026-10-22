@@ -1271,6 +1271,17 @@ for the rest" (plan §8). Feature tests per phase, the full suite at the checkpo
      Fortree City now continues at the same height (it stood 27 blocks below; sheet sent), the picture spots as before.
      Every outdoor map's levels are under review by agents (five workflows, 184 maps, your choice), their pins and marked
      stairs next.
+   - **The reviews, what they taught, the loops closed (2026-10-22)**: the first round (184 maps, one agent each) taught
+     the solver that fences, posts, trees and houses are no cliffs, that a door cut into a face joins only the ground in
+     front of it, and where a map's floor is (c9b9d8b). A second look at the 70 maps those rules moved (21 fit, 48 fixed,
+     1 unsure) taught two more (4362ce0): a stair cut into a row of ledges climbs a ledge's 1 block, not a cell's 3 (25
+     reviews; Celadon's and Pewter's yards, Cerulean's plank steps, Routes 1 to 3), and a review's pins carry the stairs
+     at their ends (Route 109's beach chairs and Mt. Pyre's summit had stairs left hanging). The dump now holds Crystal's
+     one-way walls, so a reviewer's tryout stops where the game does (0bab4d5). A third look at the 26 maps the new
+     rules moved: 11 fit as they were, 15 had pins set to the 1-block steps. The loops a chain leaves open get a short stair at their join (6fcdc2a): Hoenn's two (Route 118 to 119,
+     21 blocks in seven steps through the corridor between them; Route 118 to 123, 7 blocks) and Kanto's three of a block
+     close; Johto has none. Route 119 still agrees with your marks (524 of 524); no stair is left off the ground.
+     JUnit 1,414 tests, one failing since f315f46 (the pack quads budget test, as the gate was lifted); GameTests 126/126.
    - (The note's JUnit count, 1,379, counted two temporary probes since moved out: the suite holds 1,377.)
    - **Cave mouths and wall exits** (a fitted model in use on the cell over a door, the whole cell unroofed before): the
      model is the doorway, the face over it folds no door and rises as drawn, roofless so its models stay in use, and
