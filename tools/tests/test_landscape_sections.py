@@ -137,3 +137,27 @@ def test_a_review_in_blocks_pins_its_own_numbers(tmp_path):
 
     (tmp_path / "ROUTE.json").write_text('{"unit": "blocks", "floor": 3, "pins": [[2, 2, 1], [4, 4, 7]]}')
     assert add_pins({"maps": {}}, str(tmp_path))["pins"] == {"ROUTE": [[2, 2, 4], [4, 4, 10]]}, "a ledge's block shows"
+
+
+def test_the_reviews_go_in_the_table_and_name_the_stairs(tmp_path):
+    import json
+
+    from landscape_sections.apply_reviews import apply, stairs
+
+    reviews, dumps = tmp_path / "reviews", tmp_path / "dumps"
+    reviews.mkdir()
+    dumps.mkdir()
+    # a Crystal map 3 x 2: a stair drawing "s" twice, both marked; a ground drawing "g" marked once of three times
+    (dumps / "G2_TOWN.json").write_text(json.dumps({"w": 3, "h": 2, "kinds": "......"}))
+    (dumps / "G2_TOWN_keys.json").write_text(json.dumps({"keys": ["s", "g", "g", "s", "g", "x"]}))
+    (reviews / "G2_TOWN.json").write_text(json.dumps({"unit": "blocks", "floor": 0, "pins": [],
+                                                      "slopes": [[0, 0, "up"], [0, 1, "up"], [1, 0, "up"]]}))
+    (reviews / "EM_ROUTE.json").write_text(json.dumps({"unit": "blocks", "floor": 3, "pins": [[1, 1, 3]], "slopes": []}))
+    (reviews / "EM_BAD.json").write_text('{"unit": "blocks", "pins": [[1, 1]]}')
+    table, done = apply(str(reviews), {"maps": {}})
+    assert table["pins"] == {"EM_ROUTE": [[1, 1, 6]]}
+    assert table["slopes"] == {"G2_TOWN": [[0, 0, "up"], [0, 1, "up"], [1, 0, "up"]]}, "a map with no slopes left out"
+    assert "EM_BAD" not in done
+    rows = {r["key"]: r for r in stairs(str(reviews), str(dumps))}
+    assert rows["s"]["candidate"] and rows["s"]["way"] == "up" and rows["s"]["cells"] == 2
+    assert not rows["g"]["candidate"], "marked once of three: plain ground"
