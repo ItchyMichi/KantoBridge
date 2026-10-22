@@ -1263,6 +1263,14 @@ for the rest" (plan §8). Feature tests per phase, the full suite at the checkpo
      Hoenn rebuilt (world LandLevels; build OK, no template or unit failed, 22 pins applied): from the foot of the white
      stairs the picture now climbs the hill between its cliffs to the Space Center on its plateau (it was all flat);
      Route 119, Route 127 and the Battle Frontier pictures are as before. The sheet (game, before, now) sent to you.
+   - **The rollout across the three regions (your go, 2026-10-22)**: ledges drop a block (579036e; Kanto's open loops
+     9/6/6 -> 5/4/2/2 blocks, Hoenn's ring unchanged as Route 123's ledges can be walked round); a loop left open gets a
+     short slope at its join (my pick over tilting whole maps or a generated route). The chain is in the build
+     (7b89233, `-Pkb.chainLevels`): its bases equal the seams check's on all 151 surface maps; Hoenn built with levels on
+     every map and the chain (world ChainTest, build OK, 48 maps lifted, the highest 27 blocks): from Route 119's east end
+     Fortree City now continues at the same height (it stood 27 blocks below; sheet sent), the picture spots as before.
+     Every outdoor map's levels are under review by agents (five workflows, 184 maps, your choice), their pins and marked
+     stairs next.
    - (The note's JUnit count, 1,379, counted two temporary probes since moved out: the suite holds 1,377.)
    - **Cave mouths and wall exits** (a fitted model in use on the cell over a door, the whole cell unroofed before): the
      model is the doorway, the face over it folds no door and rises as drawn, roofless so its models stay in use, and
