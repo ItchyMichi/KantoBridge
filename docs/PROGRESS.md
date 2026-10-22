@@ -1284,6 +1284,9 @@ for the rest" (plan §8). Feature tests per phase, the full suite at the checkpo
      JUnit 1,414 tests, one failing since f315f46 (the pack quads budget test, as the gate was lifted); GameTests 126/126.
      Blue's plank ledge steps joined its stair table (436ba8e: the drawing stands in a ledge row on all 54 of its cells),
      and a fourth look checked the 13 Blue maps they moved (2 fit, 10 fixed, Route 22's pond left for a water rule).
+     What is left for you to look at by hand, map by map (red boxes, seams that don't meet, the reviewers' doubts, the
+     rules that would fix most of them): docs/specs/LEVELS_PROBLEM_AREAS.md, with each map's pictures on kb-hub at
+     /images/levels_problems/index.html.
    - (The note's JUnit count, 1,379, counted two temporary probes since moved out: the suite holds 1,377.)
    - **Cave mouths and wall exits** (a fitted model in use on the cell over a door, the whole cell unroofed before): the
      model is the doorway, the face over it folds no door and rises as drawn, roofless so its models stay in use, and

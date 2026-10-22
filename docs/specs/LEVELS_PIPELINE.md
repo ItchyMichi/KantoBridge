@@ -236,6 +236,8 @@ ground in front, as in Crystal's Kanto. A fourth look at the 13 maps it moved (`
 steps marked, a few pins set to the new levels), 1 unsure (Route 22: its pond joins the corridor, 24 red boxes, for the
 water rule below).
 
+Where the levels are still wrong or doubtful, map by map, for a person to check: LEVELS_PROBLEM_AREAS.md.
+
 Not learned yet: Crystal's ledges (above); water standing with its lowest bank (Route 130, Slateport); water under a log
 bridge with its own banks; a cascade parting the sea from a pool (Ever Grande, the Safari Zone's south-east lake); a
 raised pier; a door at the top of a one-row stair (Sootopolis, the door joins any level so the stair finds no top); a
