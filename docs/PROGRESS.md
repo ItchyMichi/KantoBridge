@@ -1287,6 +1287,12 @@ for the rest" (plan §8). Feature tests per phase, the full suite at the checkpo
      What is left for you to look at by hand, map by map (red boxes, seams that don't meet, the reviewers' doubts, the
      rules that would fix most of them): docs/specs/LEVELS_PROBLEM_AREAS.md, with each map's pictures on kb-hub at
      /images/levels_problems/index.html.
+   - **The landscape models rollout, rock only, all regions (your choice, 2026-10-22)**: every outdoor map marked (177
+     new, 185 in all), 920 rock units modelled (1,098 models on 138 maps), the models table v14, and Kanto, Hoenn and
+     Johto built with them in world LandRollout, warnings as before. Hoenn needed a 20 GB build heap and a bigger
+     first-download budget for its shape documents (you chose 256 parts over slimmer models). Big Hoenn masses stop at
+     the tool's 20-block cap and stay partly buried (Ever Grande, Mt. Pyre, Mt. Chimney, Sootopolis, Routes 112 and
+     115). Open: the before/after pictures. Details: specs/LANDSCAPE_MODELS.md, "The rollout".
    - (The note's JUnit count, 1,379, counted two temporary probes since moved out: the suite holds 1,377.)
    - **Cave mouths and wall exits** (a fitted model in use on the cell over a door, the whole cell unroofed before): the
      model is the doorway, the face over it folds no door and rises as drawn, roofless so its models stay in use, and

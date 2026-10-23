@@ -83,6 +83,8 @@ before their pictures (the branch `pilot/landscape-bc` keeps them).
 5. The builder, with tests on made-up maps; the seven maps built; the pictures beside the stacked build's. The user
    picks; rolling out follows from that. (The user approved the models, 2026-10-21: "very happy with the results and
    want to see them in game". The builder reuses the buildings' parts templates: LANDSCAPE_MODELS.md, "In the game".)
+   Rolled out 2026-10-22/23, rock only, all regions: 920 units, 1,098 models, all three regions built (world
+   LandRollout); LANDSCAPE_MODELS.md, "The rollout".
 6. A frame-rate test on a pod with a mid-range GPU (about an average PC; the CPU pods render in software), the world
    with the models against the world without (the user's idea, 2026-10-21). Done: no measurable cost; Route 119's trees
    make the heaviest section, over the quad budget (LANDSCAPE_MODELS.md, "The frame-rate test").

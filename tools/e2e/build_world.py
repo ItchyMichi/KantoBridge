@@ -70,9 +70,11 @@ SELFCHECK = REPORTS / "shape_selfcheck.json"
 # (world.shapes.offer / world.shapes.get; the client keeps them by hash), not on every join, and the index is deflated
 # too: the budget is a region's first download, per document (the map, and the index), the same for every game. It
 # replaces the join-time budgets of 8 parts (Kanto's map) and 32 (a Gen 3 region's map; the real Hoenn's is 31.75 and
-# its index, raw on every join until then, 135).
+# its index, raw on every join until then, 135). The landscape models rollout (2026-10-22, rock on every outdoor map)
+# took Hoenn's first download to 7.5M (map) and 12.5M (index) characters, Kanto and Johto staying under 1.6M: the user
+# chose to raise the budget from 64 parts to 256 (16.8M characters a document) rather than slim the models.
 PART_CHARS = 64 * 1024
-MAX_SHAPE_DOC_PARTS = 64
+MAX_SHAPE_DOC_PARTS = 256
 # MG7 G3G: the warnings a Gen 3 build may give until MG8 joins Hoenn's seams (GEN3_BRIDGE_PLAN.md §6 "Measured"): map
 # edges that disagree with the engine's own placement, overlaps of true sizes, interiors reached by a special warp
 # (no arrival cell). Any other warning fails the build.

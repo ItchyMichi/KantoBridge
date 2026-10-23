@@ -119,6 +119,26 @@ comparison is like for like.
 Every outdoor map's rock (faces of 3 cells or more, masses, mouths), in units of touching sections with a
 window each (`tools/landscape_sections/units.py`): [LANDSCAPE_ROLLOUT_PLAN.md](LANDSCAPE_ROLLOUT_PLAN.md).
 
+Run 2026-10-22/23 (rock only, all regions):
+- **Marked:** all 177 maps left (18 workflows, one agent a map, every `table.py` check clean), 185 with the pilot's.
+- **Units and models:** 920 units (Hoenn 504, Johto 317, Kanto 99), every one with a model (26 workflows, the 171 units
+  a full server disk cut off rerun); the table (`models_table.py`) holds 1,098 models on 138 maps, no name or section
+  twice; the game's table v14 is v13's pins and slopes with these models.
+- **The 160-voxel cap (20 blocks):** big Hoenn masses standing at base 0 with ground far above them stop short and stay
+  partly buried: Ever Grande's west range and south cliffs (up to 28 blocks short), Mt. Pyre's two flanks, Mt.
+  Chimney's east flank, Sootopolis's north crater and grey terraces, Route 112's south-west mountain, Route 115's
+  mountain (4 blocks). Needs a higher cap or the masses split into bands with their own bases.
+- **Scenes not checked** (the scene runs out of memory at 1.5 GB): Ever Grande u6 and u7, Mt. Chimney u0; the models
+  are built.
+- **Quads:** 110 models have blocks over the 96-quad budget (819 blocks; Hoenn 730, Kanto 88, Johto 1), the most 153,
+  none over 256; the gate is lifted, so they build.
+- **Build** (world LandRollout): Kanto, Hoenn and Johto build with their known warnings (0, 7, 3). Hoenn's 597 models
+  need a 20 GB heap (`levels_build.sh` `HEAP`; 8 GB runs out) and take its first shape download to 7.5M characters
+  (map) and 12.5M (index), over the 64-part budget: the user chose to raise it to 256 parts
+  (`build_world.MAX_SHAPE_DOC_PARTS`) over slimming the models.
+- **Open:** the before/after pictures (the first set was framed wrong and a trainer's dialogue spoiled Hoenn's; EU-RO-1
+  had no free hosts for the retake).
+
 ## Levels (the levels pilot, 2026-10-21)
 
 The steps, to repeat this on other maps and games: [LEVELS_PIPELINE.md](LEVELS_PIPELINE.md).
