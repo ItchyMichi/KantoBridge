@@ -1316,6 +1316,20 @@ for the rest" (plan §8). Feature tests per phase, the full suite at the checkpo
      6.2M quads, about 3 minutes to build the first time (then cached), peak 2.2 GB outside the game. The game needs
      **6 GB** with all three regions (4 GB ran out). `context_shots.py` takes `KB_CLIENT_HEAP` and waits for the
      region's shape table before shooting. Open: a slimmer quad store would bring Hoenn under 4 GB.
+   - **Shape tables packed (2026-10-23)**: the client's shapes held as few arrays instead of millions of objects, the
+     same quads. `QuadStore` keeps each quad as three `long`s (corners, face, cull face, flags, texture, uvs); a
+     `ShapeMesh` is a view over it, its per-quad accessors allocate nothing (`ShapeEmitter.emit(mesh, q, ...)`), its
+     footprints and outlines are worked out when asked and the face masks are a pool of distinct sets. The cache file is
+     format 2 (the store's words), written and read as a stream. `ShapeIndex` keeps its keys, sorted (geom, palette)
+     pairs and an open-addressing key table, hashes its canonical text as it writes it (the same text and hash,
+     `ShapeIndexTest`) and holds its templates as text; key signatures are interned. The client keeps a received index
+     text deflated, drops the parsed index once its table is built (a rebuild for new art parses it again) and the
+     lean table keeps no cell units. Tests: `PackedMeshTest` (every quad, accessor, uv, footprint, outline and mask as
+     the objects give them). Measured on Hoenn (1,610,988 shapes, 6.2M quads), old | new: index held 738 | 269 MB,
+     table 1,270 | 242 MB, cache file 241 | 148 MB (written in 2.5 | 0.4 s); the build now completes in a 1.5 GB heap.
+     In the game with all three regions (the seven Hoenn picture spots): **4 GB works** (Hoenn's table built in 5.4
+     minutes on 4 vCPUs, about 2.3 GB live after collections), and **3 GB works** from the cache (Hoenn's table read in
+     22 s; four full collections while loading). The pictures match the 6 GB ones of the rollout fixes.
    - (The note's JUnit count, 1,379, counted two temporary probes since moved out: the suite holds 1,377.)
    - **Cave mouths and wall exits** (a fitted model in use on the cell over a door, the whole cell unroofed before): the
      model is the doorway, the face over it folds no door and rises as drawn, roofless so its models stay in use, and

@@ -31,7 +31,7 @@ public final class FaceMasks {
 
 	/** True when quad {@code quad} of {@code mesh} is hidden by its neighbour's shape {@code neighbour} (or none). */
 	public static boolean culled(ShapeMesh mesh, int quad, @Nullable ShapeMesh neighbour) {
-		int cull = mesh.quads().get(quad).cull();
+		int cull = mesh.cull(quad);
 		if (cull < 0 || neighbour == null) {
 			return false;
 		}
@@ -71,6 +71,85 @@ public final class FaceMasks {
 			out = out << 12 | points[i];
 		}
 		return out;
+	}
+
+	/** {@link #outline(ShapeQuad)} of a mesh's quad, read in place (the mesh threads' path: allocates nothing). */
+	static long outline(ShapeMesh mesh, int q) {
+		int cull = mesh.cull(q);
+		if (cull < 0) {
+			return 0;
+		}
+		// The four corners' points, sorted and deduplicated without an array: at most four, so a small insertion.
+		long points = 0;
+		int n = 0;
+		for (int i = 0; i < 4; i++) {
+			int p = ((planeA(mesh, q, cull, i) + 8) & 0x3F) << 6 | ((planeB(mesh, q, cull, i) + 8) & 0x3F);
+			boolean seen = false;
+			for (int j = 0; j < n; j++) {
+				seen |= (int) (points >>> (12 * j) & 0xFFF) == p;
+			}
+			if (!seen) {
+				points |= (long) p << (12 * n++);
+			}
+		}
+		for (int i = 1; i < n; i++) {
+			for (int j = i; j > 0; j--) {
+				long a = points >>> (12 * (j - 1)) & 0xFFF;
+				long b = points >>> (12 * j) & 0xFFF;
+				if (a <= b) {
+					break;
+				}
+				points = points & ~(0xFFFL << (12 * (j - 1))) & ~(0xFFFL << (12 * j)) | b << (12 * (j - 1)) | a << (12 * j);
+			}
+		}
+		long out = n;
+		for (int i = 0; i < n; i++) {
+			out = out << 12 | (points >>> (12 * i) & 0xFFF);
+		}
+		return out;
+	}
+
+	/** {@link #footprint(ShapeQuad)} of a mesh's quad, read in place. */
+	static long footprint(ShapeMesh mesh, int q) {
+		int cull = mesh.cull(q);
+		if (cull < 0) {
+			return 0;
+		}
+		int minA = Integer.MAX_VALUE;
+		int maxA = Integer.MIN_VALUE;
+		int minB = Integer.MAX_VALUE;
+		int maxB = Integer.MIN_VALUE;
+		for (int i = 0; i < 4; i++) {
+			int a = planeA(mesh, q, cull, i);
+			int b = planeB(mesh, q, cull, i);
+			minA = Math.min(minA, a);
+			maxA = Math.max(maxA, a);
+			minB = Math.min(minB, b);
+			maxB = Math.max(maxB, b);
+		}
+		return box(minA, maxA, minB, maxB);
+	}
+
+	/** Every cell the box {@code minA..maxA × minB..maxB} touches; 0 for an empty box. */
+	private static long box(int minA, int maxA, int minB, int maxB) {
+		if (maxA <= minA || maxB <= minB) {
+			return 0;
+		}
+		long mask = 0;
+		for (int cb = Math.max(0, minB / 2); cb < Math.min(8, (maxB + 1) / 2); cb++) {
+			for (int ca = Math.max(0, minA / 2); ca < Math.min(8, (maxA + 1) / 2); ca++) {
+				mask |= 1L << (cb * 8 + ca);
+			}
+		}
+		return mask;
+	}
+
+	private static int planeA(ShapeMesh mesh, int q, int cull, int i) {
+		return cull <= ShapeQuad.SOUTH ? mesh.x(q, i) : mesh.z(q, i);
+	}
+
+	private static int planeB(ShapeMesh mesh, int q, int cull, int i) {
+		return cull <= ShapeQuad.UP ? mesh.z(q, i) : mesh.y(q, i);
 	}
 
 	/** Per face, the cells the quads lying on it cover completely. */

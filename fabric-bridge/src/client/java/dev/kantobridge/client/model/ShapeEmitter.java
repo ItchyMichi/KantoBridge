@@ -1,5 +1,6 @@
 package dev.kantobridge.client.model;
 
+import dev.kantobridge.builder.shape.geom.ShapeMesh;
 import dev.kantobridge.builder.shape.geom.ShapeQuad;
 import net.fabricmc.fabric.api.renderer.v1.material.RenderMaterial;
 import net.fabricmc.fabric.api.renderer.v1.mesh.QuadEmitter;
@@ -73,6 +74,49 @@ public final class ShapeEmitter {
 		out.cullFace(quad.cull() >= 0 ? DIRECTIONS[quad.cull()] : null);
 		if (quad.face() < ShapeQuad.SLOPED) {
 			out.nominalFace(DIRECTIONS[quad.face()]);
+		}
+		if (material != null) {
+			out.material(material);
+		}
+		out.emit();
+	}
+
+	/**
+	 * {@link #emit(ShapeQuad, TextureAtlasSprite, RenderMaterial, int, QuadEmitter)} for quad {@code q} of a table's mesh,
+	 * read in place from its packed store (the mesh threads' path: no quad object).
+	 */
+	static void emit(ShapeMesh mesh, int q, TextureAtlasSprite sprite, @Nullable RenderMaterial material, int tint, QuadEmitter out) {
+		float minU = Float.MAX_VALUE;
+		float maxU = -Float.MAX_VALUE;
+		float minV = Float.MAX_VALUE;
+		float maxV = -Float.MAX_VALUE;
+		for (int i = 0; i < 4; i++) {
+			float u = mesh.cornerU(q, i);
+			float v = mesh.cornerV(q, i);
+			minU = Math.min(minU, u);
+			maxU = Math.max(maxU, u);
+			minV = Math.min(minV, v);
+			maxV = Math.max(maxV, v);
+		}
+		float centreU = (minU + maxU) / 2;
+		float centreV = (minV + maxV) / 2;
+		float ratio = sprite.uvShrinkRatio();
+		int colour = mesh.has(q, ShapeQuad.DARKEN) ? multiply(tint, DARKEN) : tint;
+		if (mesh.tint(q) > 0) {
+			colour = multiply(colour, TINTS[mesh.tint(q)]);
+		}
+		for (int i = 0; i < 4; i++) {
+			float u = mesh.cornerU(q, i);
+			float v = mesh.cornerV(q, i);
+			out.pos(i, mesh.x(q, i) / 16.0F, mesh.y(q, i) / 16.0F, mesh.z(q, i) / 16.0F);
+			out.uv(i, sprite.getU((u + (centreU - u) * ratio) / 16.0F), sprite.getV((v + (centreV - v) * ratio) / 16.0F));
+			out.color(i, colour);
+		}
+		int cull = mesh.cull(q);
+		out.cullFace(cull >= 0 ? DIRECTIONS[cull] : null);
+		int face = mesh.face(q);
+		if (face < ShapeQuad.SLOPED) {
+			out.nominalFace(DIRECTIONS[face]);
 		}
 		if (material != null) {
 			out.material(material);

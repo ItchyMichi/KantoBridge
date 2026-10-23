@@ -75,7 +75,7 @@ public final class QuadCounter {
 		if (mesh != null) {
 			int n = 0;
 			for (int q = 0; q < mesh.size(); q++) {
-				int cull = mesh.quads().get(q).cull();
+				int cull = mesh.cull(q);
 				if (cull >= 0) {
 					int nx = x + FaceMasks.DX[cull];
 					int ny = y + FaceMasks.DY[cull];
@@ -138,7 +138,7 @@ public final class QuadCounter {
 		}
 		int n = closed;
 		for (int q = 0; q < mesh.size(); q++) {
-			int cull = mesh.quads().get(q).cull();
+			int cull = mesh.cull(q);
 			if (cull >= 0) {
 				int neighbour = world.shapeId(x + FaceMasks.DX[cull], y + FaceMasks.DY[cull], z + FaceMasks.DZ[cull]);
 				if (neighbour != 0 && FaceMasks.culled(mesh, q, table.mesh(neighbour))) {

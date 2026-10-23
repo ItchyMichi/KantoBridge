@@ -305,7 +305,7 @@ public final class ClientRegions {
 		try {
 			boolean complete = DOCS.onShapesPart(region, isIndex, enc != null, (int) index, (int) count, hash, part);
 			String key = regionKey(region);
-			if (index == count - 1 && (isIndex ? DOCS.shapeIndexText(key) : DOCS.shapeMapWire(key)) != null) {
+			if (index == count - 1 && (isIndex ? DOCS.holdsShapeIndex(key) : DOCS.shapeMapWire(key) != null)) {
 				KantoBridge.LOGGER.info("world.shapes: {} received ({} parts, hash {}, region {}{})", doc, count, Hashes.shortHash(hash),
 						region == null ? "legacy" : region, complete ? ", both in" : "");
 			}

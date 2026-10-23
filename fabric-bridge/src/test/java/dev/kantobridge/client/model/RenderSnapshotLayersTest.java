@@ -1,9 +1,9 @@
 package dev.kantobridge.client.model;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertSame;
 
 import com.google.gson.JsonArray;
 import dev.kantobridge.builder.shape.ShapeKey;
@@ -59,9 +59,10 @@ class RenderSnapshotLayersTest {
 		assertEquals(1 | (2 << RenderSnapshot.LAYER_SHIFT), third);
 		assertEquals(0, snapshot.shapeAt(PITCH + 1, 64, 0), "outside every region's grids: no shape");
 		assertNotNull(snapshot.mesh(1));
-		assertSame(kanto.mesh(1), snapshot.mesh(1));
-		assertSame(johto.mesh(1), snapshot.mesh(second), "drawn from its own region's table");
-		assertSame(hoenn.mesh(1), snapshot.mesh(third));
+		assertEquals(kanto.mesh(1), snapshot.mesh(1));
+		assertEquals(johto.mesh(1), snapshot.mesh(second), "drawn from its own region's table");
+		assertEquals(hoenn.mesh(1), snapshot.mesh(third));
+		assertNotEquals(kanto.mesh(1), snapshot.mesh(second), "a view of another table's store");
 		assertNull(snapshot.mesh(1 | (3 << RenderSnapshot.LAYER_SHIFT)), "a layer that isn't there draws the cube");
 	}
 

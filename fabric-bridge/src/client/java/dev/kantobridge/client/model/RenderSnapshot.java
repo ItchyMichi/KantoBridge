@@ -219,16 +219,13 @@ public final class RenderSnapshot {
 		ShapeMesh mesh = this.mesh(ids[level]);
 		if (mesh != null) {
 			TextureAtlasSprite placeholder = this.placeholder != null ? this.placeholder : fallback;
-			List<ShapeQuad> quads = mesh.quads();
-			for (int q = 0; q < quads.size(); q++) {
-				ShapeQuad quad = quads.get(q);
-				int texture = quad.texture();
+			for (int q = 0; q < mesh.size(); q++) {
+				int texture = mesh.texture(q);
 				TextureAtlasSprite sprite = texture < this.shapeSprites.length && this.shapeSprites[texture] != null ? this.shapeSprites[texture]
 						: placeholder;
-				ShapeEmitter.emit(quad, sprite, quad.has(ShapeQuad.CUTOUT) ? this.cutout : quad.has(ShapeQuad.NO_AO) ? this.flat : this.solid,
-						tint(this.shapeTints, texture), out);
+				ShapeEmitter.emit(mesh, q, sprite, this.material(mesh, q), tint(this.shapeTints, texture), out);
 			}
-			return quads.size();
+			return mesh.size();
 		}
 		int slot = art.slot(at[0], at[1]);
 		if (art.flat(at[0])) {
@@ -292,24 +289,26 @@ public final class RenderSnapshot {
 		TextureAtlasSprite[] layerSprites = this.spritesOf(layer);
 		int[] layerTints = this.tintsOf(layer);
 		TextureAtlasSprite placeholder = this.placeholder != null ? this.placeholder : fallback;
-		List<ShapeQuad> quads = mesh.quads();
 		int emitted = 0;
-		for (int q = 0; q < quads.size(); q++) {
-			ShapeQuad quad = quads.get(q);
-			int cull = quad.cull();
+		for (int q = 0; q < mesh.size(); q++) {
+			int cull = mesh.cull(q);
 			if (cull >= 0 && mesh.footprint(q) != 0) {
 				int neighbour = this.shapeAt(x + FaceMasks.DX[cull], y + FaceMasks.DY[cull], z + FaceMasks.DZ[cull]);
 				if (neighbour != 0 && FaceMasks.culled(mesh, q, this.mesh(neighbour))) {
 					continue;
 				}
 			}
-			int texture = quad.texture();
+			int texture = mesh.texture(q);
 			TextureAtlasSprite sprite = texture < layerSprites.length && layerSprites[texture] != null ? layerSprites[texture] : placeholder;
-			ShapeEmitter.emit(quad, sprite, quad.has(ShapeQuad.CUTOUT) ? this.cutout : quad.has(ShapeQuad.NO_AO) ? this.flat : this.solid,
-					tint(layerTints, texture), out);
+			ShapeEmitter.emit(mesh, q, sprite, this.material(mesh, q), tint(layerTints, texture), out);
 			emitted++;
 		}
 		return emitted;
+	}
+
+	/** A quad's material by its flags: cut out, without ambient occlusion, or solid. */
+	private @Nullable RenderMaterial material(ShapeMesh mesh, int q) {
+		return mesh.has(q, ShapeQuad.CUTOUT) ? this.cutout : mesh.has(q, ShapeQuad.NO_AO) ? this.flat : this.solid;
 	}
 
 	/** True when the followed region's shapes are drawn (a verified shape map and a built table). */

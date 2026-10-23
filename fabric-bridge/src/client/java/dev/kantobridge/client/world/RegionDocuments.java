@@ -97,7 +97,11 @@ public final class RegionDocuments {
 		@Nullable WorldIndex index;
 		/** The parts' hash of the index text: what the region's shape map must name. */
 		@Nullable String indexHash;
-		@Nullable String shapeIndexText;
+		/**
+		 * The shape index's text, deflated: Hoenn's is 80 MB of text, a few MB deflated (2026-10-23); it is read again
+		 * only when the region's table is rebuilt.
+		 */
+		byte @Nullable [] shapeIndexDeflated;
 		@Nullable String shapeMapWire;
 		/** The content hashes of the held documents (the map's only when it was offered), and of the last offer. */
 		@Nullable String shapeIndexHash;
@@ -260,7 +264,7 @@ public final class RegionDocuments {
 		slot.offeredIndex = indexHash;
 		slot.offeredMap = mapHash;
 		if (!indexHash.equals(slot.shapeIndexHash)) {
-			slot.shapeIndexText = null;
+			slot.shapeIndexDeflated = null;
 			slot.shapeIndexHash = null;
 			slot.shapeIndexParts.reset();
 		}
@@ -269,7 +273,7 @@ public final class RegionDocuments {
 			slot.shapeMapHash = null;
 			slot.shapeMapParts.reset();
 		}
-		return new Wants(slot.shapeIndexText == null ? indexHash : null, slot.shapeMapWire == null ? mapHash : null);
+		return new Wants(slot.shapeIndexDeflated == null ? indexHash : null, slot.shapeMapWire == null ? mapHash : null);
 	}
 
 	/** The content hash the region's last offer gave a document (the index, else the map), or null. */
@@ -300,7 +304,7 @@ public final class RegionDocuments {
 			return false;
 		}
 		if (isIndex) {
-			slot.shapeIndexText = content;
+			slot.shapeIndexDeflated = pack(content);
 			slot.shapeIndexHash = hash;
 			slot.shapeIndexParts.reset();
 		} else {
@@ -337,7 +341,7 @@ public final class RegionDocuments {
 			throw new DataException("/", "not the offered document");
 		}
 		if (isIndex) {
-			slot.shapeIndexText = content;
+			slot.shapeIndexDeflated = pack(content);
 			slot.shapeIndexHash = contentHash;
 			if (offered == null) {
 				// pushed (a server from before item 4): a new shape index makes a map received for the old one stale
@@ -359,11 +363,11 @@ public final class RegionDocuments {
 	 * shapes may come from the cache while the index comes from the server): the set's listeners see both once it is.
 	 */
 	private boolean tell(String key, Held slot) {
-		if (slot.shapeIndexText == null || slot.shapeMapWire == null || slot.index == null) {
+		if (slot.shapeIndexDeflated == null || slot.shapeMapWire == null || slot.index == null) {
 			return false;
 		}
 		if (this.shapesListener != null && !UNNAMED.equals(key)) {
-			this.shapesListener.shapes(key, slot.shapeIndexText, slot.shapeMapWire);
+			this.shapesListener.shapes(key, unpack(slot.shapeIndexDeflated), slot.shapeMapWire);
 		}
 		return true;
 	}
@@ -476,7 +480,35 @@ public final class RegionDocuments {
 	/** A region's shape index text, or null. */
 	public @Nullable String shapeIndexText(@Nullable String region) {
 		Held slot = region == null ? null : this.held.get(region);
-		return slot == null ? null : slot.shapeIndexText;
+		return slot == null || slot.shapeIndexDeflated == null ? null : unpack(slot.shapeIndexDeflated);
+	}
+
+	/** True when a region's shape index text is held ({@link #shapeIndexText} without inflating it). */
+	public boolean holdsShapeIndex(@Nullable String region) {
+		Held slot = region == null ? null : this.held.get(region);
+		return slot != null && slot.shapeIndexDeflated != null;
+	}
+
+	/** Text deflated fast (held, not sent). */
+	private static byte[] pack(String text) {
+		java.util.zip.Deflater deflater = new java.util.zip.Deflater(java.util.zip.Deflater.BEST_SPEED, true);
+		deflater.setInput(text.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+		deflater.finish();
+		java.io.ByteArrayOutputStream out = new java.io.ByteArrayOutputStream();
+		byte[] buffer = new byte[65536];
+		while (!deflater.finished()) {
+			out.write(buffer, 0, deflater.deflate(buffer));
+		}
+		deflater.end();
+		return out.toByteArray();
+	}
+
+	private static String unpack(byte[] deflated) {
+		try {
+			return ShapeDocs.text(ShapeDocs.inflate(deflated, MAX_DOC_BYTES));
+		} catch (DataException e) {
+			throw new IllegalStateException("a held shape index that doesn't inflate", e);
+		}
 	}
 
 	/** A region's shape map wire form, or null. */

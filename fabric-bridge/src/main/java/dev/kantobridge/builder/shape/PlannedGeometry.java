@@ -90,7 +90,7 @@ public final class PlannedGeometry implements SelfCheck.Geometry {
 						continue;
 					}
 					for (int q = 0; q < mesh.size(); q++) {
-						ShapeQuad quad = mesh.quads().get(q);
+						ShapeQuad quad = mesh.quad(q);
 						TextureKey texture = this.textures.get(quad.texture());
 						if (texture != null) {
 							this.emit(visitor, tx, k, ty, quad, texture, mesh, q);

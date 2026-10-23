@@ -363,7 +363,7 @@ public final class ShapeKey implements Comparable<ShapeKey> {
 			if (parts.length <= p) {
 				throw new IllegalArgumentException("missing signature");
 			}
-			sig = parts[p++];
+			sig = parts[p++].intern();
 		}
 		List<Integer> numbers = new ArrayList<>();
 		for (int group : kind.groups()) {
@@ -385,7 +385,7 @@ public final class ShapeKey implements Comparable<ShapeKey> {
 			if (modifier.startsWith("tint=") && tint == 0 && variant == null) {
 				tint = integer(modifier.substring(5));
 			} else if (modifier.startsWith("v=") && variant == null) {
-				variant = modifier.substring(2);
+				variant = modifier.substring(2).intern();
 			} else {
 				throw new IllegalArgumentException("unknown modifier");
 			}

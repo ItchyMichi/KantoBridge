@@ -129,4 +129,32 @@ class ShapeIndexTest {
 			assertThrows(DataException.class, () -> ShapeIndex.fromJson(text), "breakage " + i);
 		}
 	}
+
+	@Test
+	void theStreamedTextIsTheCanonicalJsonAndEveryShapeIsFound() throws Exception {
+		Random random = new Random(5);
+		List<ShapeIndex.Use> uses = new ArrayList<>();
+		for (int i = 0; i < 40_000; i++) {
+			ShapeKey key = random.nextBoolean() ? ShapeKey.cube(random.nextInt(2), random.nextInt(900), random.nextInt(900), random.nextInt(900),
+					random.nextInt(900), random.nextInt(900), random.nextInt(900)) : ShapeKey.slab(random.nextInt(2), random.nextInt(900), 1 + random.nextInt(16));
+			uses.add(new ShapeIndex.Use(key, PALETTES.get(random.nextInt(2))));
+		}
+		JsonArray templates = new JsonArray();
+		JsonObject template = new JsonObject();
+		template.addProperty("zeta", "\u00e9t\u00e9 \"quoted\"\n");
+		template.addProperty("alpha", 3);
+		templates.add(template);
+		ShapeParams params = ShapeParams.v2();
+		ShapeIndex index = ShapeIndex.of(params.planner(), params.toJson(), ATLASES, PALETTES, uses, templates);
+		String text = index.toJson();
+		assertTrue(text.length() > 1 << 17, "long enough to be written in several pieces");
+		assertEquals(ProtoJson.write(index.toJsonObject()), text);
+		assertEquals(Hashes.sha256(text), index.hash());
+		ShapeIndex read = ShapeIndex.fromJson(text);
+		assertEquals(index.hash(), read.hash());
+		for (int id = 1; id <= read.size(); id++) {
+			assertEquals(id, read.shapeId(read.key(id), read.palette(id)));
+		}
+		assertEquals(0, read.shapeId(ShapeKey.slab(0, 999, 3), "PAL_A"));
+	}
 }

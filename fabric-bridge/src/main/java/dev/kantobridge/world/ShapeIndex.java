@@ -49,11 +49,12 @@ public final class ShapeIndex {
 	private final List<String> atlases;
 	private final List<String> palettes;
 	private final List<ShapeKey> geoms;
-	private final JsonArray templates;
-	private final List<Instance> instances;
-	private final Map<ShapeKey, Integer> geomIds = new HashMap<>();
-	private final Map<Long, Integer> shapeIds = new HashMap<>();
-	private final String json;
+	/** The templates as canonical JSON text (Hoenn's parts specs held as a JSON tree came to about 70 MB). */
+	private final String templates;
+	/** The instances as sorted (geom, palette) pairs ({@link #pair}): shape id = index + 1. */
+	private final long[] pairs;
+	/** Open addressing over the keys' hash codes: geom id + 1, 0 for an empty slot. */
+	private final int[] geomTable;
 	private final String hash;
 
 	private ShapeIndex(String planner, JsonObject params, List<String> atlases, List<String> palettes, List<ShapeKey> geoms,
@@ -63,17 +64,32 @@ public final class ShapeIndex {
 		this.atlases = List.copyOf(atlases);
 		this.palettes = List.copyOf(palettes);
 		this.geoms = List.copyOf(geoms);
-		this.templates = templates.deepCopy();
-		this.instances = List.copyOf(instances);
+		this.templates = ProtoJson.write(templates);
+		this.pairs = new long[instances.size()];
+		for (int i = 0; i < this.pairs.length; i++) {
+			Instance instance = instances.get(i);
+			this.pairs[i] = pair(instance.geom(), instance.palette());
+		}
+		this.geomTable = new int[Integer.highestOneBit(Math.max(4, this.geoms.size() * 2 - 1)) << 1];
 		for (int i = 0; i < this.geoms.size(); i++) {
-			this.geomIds.put(this.geoms.get(i), i);
+			int slot = this.slot(this.geoms.get(i));
+			this.geomTable[slot] = i + 1;
 		}
-		for (int i = 0; i < this.instances.size(); i++) {
-			Instance instance = this.instances.get(i);
-			this.shapeIds.put(pair(instance.geom(), instance.palette()), i + 1);
+		// The canonical text is hashed as it is written and not kept (Hoenn's runs to 80 MB); toJson() writes it again.
+		java.security.MessageDigest digest = Hashes.sha256();
+		this.write(chunk -> digest.update(chunk.toString().getBytes(java.nio.charset.StandardCharsets.UTF_8)));
+		this.hash = java.util.HexFormat.of().formatHex(digest.digest());
+	}
+
+	/** The geom table's slot for {@code key}: its own, or the empty one where it would go. */
+	private int slot(ShapeKey key) {
+		int mask = this.geomTable.length - 1;
+		int h = key.hashCode();
+		int slot = (h ^ (h >>> 16)) * 0x9E3779B1 & mask;
+		while (this.geomTable[slot] != 0 && !this.geoms.get(this.geomTable[slot] - 1).equals(key)) {
+			slot = (slot + 1) & mask;
 		}
-		this.json = ProtoJson.write(this.toJsonObject());
-		this.hash = Hashes.sha256(this.json);
+		return slot;
 	}
 
 	/**
@@ -115,29 +131,32 @@ public final class ShapeIndex {
 
 	/** The shape id of a key in a palette (index + 1), or 0 when the index has no such shape. */
 	public int shapeId(ShapeKey key, String palette) {
-		Integer geom = this.geomIds.get(key);
+		int geom = this.geomTable[this.slot(key)] - 1;
 		int paletteIndex = Collections.binarySearch(this.palettes, palette);
-		if (geom == null || paletteIndex < 0) {
+		if (geom < 0 || paletteIndex < 0) {
 			return 0;
 		}
-		return this.shapeIds.getOrDefault(pair(geom, paletteIndex), 0);
+		int at = java.util.Arrays.binarySearch(this.pairs, pair(geom, paletteIndex));
+		return at < 0 ? 0 : at + 1;
 	}
 
 	/** The instance of shape id {@code id} (1-based), or null. */
 	public @Nullable Instance instance(int id) {
-		return id >= 1 && id <= this.instances.size() ? this.instances.get(id - 1) : null;
+		if (id < 1 || id > this.pairs.length) {
+			return null;
+		}
+		long pair = this.pairs[id - 1];
+		return new Instance((int) (pair >>> 32), (int) pair);
 	}
 
 	/** The key of shape id {@code id}, or null. */
 	public @Nullable ShapeKey key(int id) {
-		Instance instance = this.instance(id);
-		return instance == null ? null : this.geoms.get(instance.geom());
+		return id >= 1 && id <= this.pairs.length ? this.geoms.get((int) (this.pairs[id - 1] >>> 32)) : null;
 	}
 
 	/** The palette of shape id {@code id}, or null. */
 	public @Nullable String palette(int id) {
-		Instance instance = this.instance(id);
-		return instance == null ? null : this.palettes.get(instance.palette());
+		return id >= 1 && id <= this.pairs.length ? this.palettes.get((int) this.pairs[id - 1]) : null;
 	}
 
 	/** The atlas id a key's atlas index names. */
@@ -165,22 +184,39 @@ public final class ShapeIndex {
 		return this.geoms;
 	}
 
+	/** The instances in shape id order (a view: each is made when read). */
 	public List<Instance> instances() {
-		return this.instances;
+		return new java.util.AbstractList<>() {
+			@Override
+			public Instance get(int i) {
+				return ShapeIndex.this.instance(i + 1);
+			}
+
+			@Override
+			public int size() {
+				return ShapeIndex.this.pairs.length;
+			}
+		};
 	}
 
 	public JsonArray templates() {
-		return this.templates.deepCopy();
+		try {
+			return ProtoJson.parse(this.templates).getAsJsonArray();
+		} catch (ProtocolException e) {
+			throw new IllegalStateException("the index's own templates text", e);
+		}
 	}
 
 	/** Shapes in the index (the highest shape id). */
 	public int size() {
-		return this.instances.size();
+		return this.pairs.length;
 	}
 
-	/** Canonical JSON text (the contents of {@code shape_index.json}). */
+	/** Canonical JSON text (the contents of {@code shape_index.json}), written anew on each call. */
 	public String toJson() {
-		return this.json;
+		StringBuilder out = new StringBuilder();
+		this.write(chunk -> out.append(chunk));
+		return out.toString();
 	}
 
 	/** SHA-256 of {@link #toJson()}. */
@@ -188,7 +224,65 @@ public final class ShapeIndex {
 		return this.hash;
 	}
 
-	private JsonObject toJsonObject() {
+	/**
+	 * Writes the canonical JSON in pieces of about 64K characters to {@code sink}: what {@code ProtoJson.write} gives for
+	 * the index as a JSON object (its keys in code point order), without building that object.
+	 */
+	private void write(java.util.function.Consumer<StringBuilder> sink) {
+		StringBuilder out = new StringBuilder(1 << 17);
+		out.append("{\"atlases\":");
+		strings(this.atlases, out);
+		out.append(",\"geoms\":[");
+		for (int i = 0; i < this.geoms.size(); i++) {
+			if (i > 0) {
+				out.append(',');
+			}
+			ProtoJson.appendString(this.geoms.get(i).text(), out);
+			flush(out, sink);
+		}
+		out.append("],\"instances\":[");
+		for (int i = 0; i < this.pairs.length; i++) {
+			if (i > 0) {
+				out.append(',');
+			}
+			out.append('[').append(this.pairs[i] >>> 32).append(',').append((int) this.pairs[i]).append(']');
+			flush(out, sink);
+		}
+		out.append("],\"palettes\":");
+		strings(this.palettes, out);
+		out.append(",\"params\":");
+		ProtoJson.append(this.params, out);
+		out.append(",\"planner\":");
+		ProtoJson.appendString(this.planner, out);
+		out.append(",\"templates\":");
+		// Everything before the templates goes first, then their text as one piece.
+		sink.accept(out);
+		out.setLength(0);
+		sink.accept(new StringBuilder(this.templates));
+		out.append(",\"version\":").append(VERSION).append('}');
+		sink.accept(out);
+	}
+
+	private static void strings(List<String> values, StringBuilder out) {
+		out.append('[');
+		for (int i = 0; i < values.size(); i++) {
+			if (i > 0) {
+				out.append(',');
+			}
+			ProtoJson.appendString(values.get(i), out);
+		}
+		out.append(']');
+	}
+
+	private static void flush(StringBuilder out, java.util.function.Consumer<StringBuilder> sink) {
+		if (out.length() >= 1 << 16) {
+			sink.accept(out);
+			out.setLength(0);
+		}
+	}
+
+	/** The index as a JSON object, as {@link #toJson()} writes it (tests compare the two). */
+	JsonObject toJsonObject() {
 		JsonObject root = new JsonObject();
 		root.addProperty("version", VERSION);
 		root.addProperty("planner", this.planner);
@@ -202,9 +296,9 @@ public final class ShapeIndex {
 		JsonArray geoms = new JsonArray();
 		this.geoms.forEach(key -> geoms.add(key.text()));
 		root.add("geoms", geoms);
-		root.add("templates", this.templates.deepCopy());
+		root.add("templates", this.templates());
 		JsonArray instances = new JsonArray();
-		for (Instance instance : this.instances) {
+		for (Instance instance : this.instances()) {
 			JsonArray pair = new JsonArray();
 			pair.add(instance.geom());
 			pair.add(instance.palette());
@@ -267,7 +361,7 @@ public final class ShapeIndex {
 			throw new DataException("/geoms", "duplicate keys");
 		}
 		ShapeIndex index = of(planner, params, atlases, palettes, uses, root.array("templates"));
-		if (index.instances.size() != uses.size()) {
+		if (index.pairs.length != uses.size()) {
 			throw new DataException("/instances", "duplicate instances");
 		}
 		if (index.geoms.size() != stored.size()) {

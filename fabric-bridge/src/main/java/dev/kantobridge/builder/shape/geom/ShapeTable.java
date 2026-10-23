@@ -4,7 +4,6 @@ import dev.kantobridge.builder.shape.ShapeKey;
 import dev.kantobridge.builder.shape.Templates;
 import dev.kantobridge.scene.ArtSource;
 import dev.kantobridge.world.DataException;
-import dev.kantobridge.world.Hashes;
 import dev.kantobridge.world.ShapeIndex;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -38,18 +37,18 @@ public final class ShapeTable {
 	public static final int GEOMETRY = 9;
 	public static final String NO_OVERRIDES = "0".repeat(64);
 	private static final byte[] MAGIC = "KBST".getBytes(StandardCharsets.US_ASCII);
-	private static final int FORMAT = 1;
+	/** 2: quads as {@link QuadStore}'s words (2026-10-23). */
+	private static final int FORMAT = 2;
 
 	private final String shapeIndexHash;
 	private final int geometry;
 	private final String overridesHash;
 	private final List<String> textureKeys;
-	private final ShapeMesh[] meshes;
-	private final int quads;
+	private final Meshes meshes;
 	private final Map<String, CellUnits.Unit> units;
 	private final Map<String, TemplateRule.Template> templates;
 
-	private ShapeTable(String shapeIndexHash, int geometry, String overridesHash, List<String> textureKeys, ShapeMesh[] meshes,
+	private ShapeTable(String shapeIndexHash, int geometry, String overridesHash, List<String> textureKeys, Meshes meshes,
 			Map<String, CellUnits.Unit> units, Map<String, TemplateRule.Template> templates) {
 		this.units = Map.copyOf(units);
 		this.templates = Map.copyOf(templates);
@@ -58,11 +57,90 @@ public final class ShapeTable {
 		this.overridesHash = overridesHash;
 		this.textureKeys = List.copyOf(textureKeys);
 		this.meshes = meshes;
-		int n = 0;
-		for (ShapeMesh mesh : meshes) {
-			n += mesh == null ? 0 : mesh.size();
+	}
+
+	/**
+	 * Every shape's quads in one {@link QuadStore}: per shape id its first quad and count (-1: no mesh), and its six face
+	 * masks as an index into a pool of distinct sets (most shapes share a few: none, a whole face, a slab's side).
+	 */
+	private static final class Meshes {
+		private static final long[] NO_MASKS = new long[6];
+		final QuadStore store = new QuadStore();
+		final int[] first;
+		final int[] count;
+		final int[] maskRef;
+		long[] maskPool = new long[6 * 64];
+		int maskSets = 1;
+		private Map<MaskSet, Integer> pooled = new HashMap<>();
+		int built;
+
+		Meshes(int size) {
+			this.first = new int[size];
+			this.count = new int[size];
+			this.maskRef = new int[size];
+			Arrays.fill(this.count, -1);
 		}
-		this.quads = n;
+
+		/** Shape {@code id} gets {@code quads} and their face masks {@code masks}. */
+		void put(int id, List<ShapeQuad> quads, long[] masks) {
+			this.first[id] = this.store.size();
+			this.count[id] = quads.size();
+			for (ShapeQuad quad : quads) {
+				this.store.add(quad);
+			}
+			this.maskRef[id] = this.pool(masks);
+			this.built++;
+		}
+
+		private int pool(long[] masks) {
+			if (Arrays.equals(masks, NO_MASKS)) {
+				return 0;
+			}
+			return this.pooled.computeIfAbsent(new MaskSet(masks.clone()), k -> {
+				if ((this.maskSets + 1) * 6 > this.maskPool.length) {
+					this.maskPool = Arrays.copyOf(this.maskPool, this.maskPool.length * 2);
+				}
+				System.arraycopy(masks, 0, this.maskPool, this.maskSets * 6, 6);
+				return this.maskSets++;
+			});
+		}
+
+		/** Shape {@code id} is the {@code count} quads already stored from {@code first}; its masks are worked out from them. */
+		void stored(int id, int first, int count) {
+			this.first[id] = first;
+			this.count[id] = count;
+			ShapeMesh view = new ShapeMesh(this.store, first, count, NO_MASKS, 0);
+			this.maskRef[id] = this.pool(FaceMasks.coverage(view.quads()));
+			this.built++;
+		}
+
+		/** Done adding: drops the pool's lookup and the store's unused end. */
+		Meshes seal() {
+			this.pooled = null;
+			this.maskPool = Arrays.copyOf(this.maskPool, this.maskSets * 6);
+			this.store.trim();
+			return this;
+		}
+
+		@Nullable ShapeMesh mesh(int id) {
+			if (id <= 0 || id >= this.count.length || this.count[id] < 0) {
+				return null;
+			}
+			return new ShapeMesh(this.store, this.first[id], this.count[id], this.maskPool, this.maskRef[id] * 6);
+		}
+	}
+
+	/** Six face masks as a map key. */
+	private record MaskSet(long[] masks) {
+		@Override
+		public boolean equals(Object other) {
+			return other instanceof MaskSet set && Arrays.equals(this.masks, set.masks);
+		}
+
+		@Override
+		public int hashCode() {
+			return Arrays.hashCode(this.masks);
+		}
 	}
 
 	/** Builds every shape of {@code index} with {@code art}, for no particular art ({@link #NO_OVERRIDES} in the cache). */
@@ -90,11 +168,12 @@ public final class ShapeTable {
 	 * {@link #build(ShapeIndex, ArtSource, String, ShapeOverrides)}; without {@code keepBuilt} (a client: only the meshes
 	 * matter) each template is built, gives its blocks and goes before the next, and the table keeps no templates: a
 	 * template's voxels and quads ran to gigabytes for Hoenn's buildings and rock masses kept all at once (2026-10-23).
+	 * Nor does it keep the cell units (their blocks' quads are in the meshes already): pack tools build their own table.
 	 */
 	public static ShapeTable build(ShapeIndex index, ArtSource art, String artHash, ShapeOverrides overrides, boolean keepBuilt) {
 		Map<String, Integer> textures = new HashMap<>();
 		List<String> keys = new ArrayList<>();
-		ShapeMesh[] meshes = new ShapeMesh[index.size() + 1];
+		Meshes meshes = new Meshes(index.size() + 1);
 		Map<String, CellUnits.Unit> units = new HashMap<>();
 		Map<String, List<ShapeQuad>> tufts = new HashMap<>();
 		Map<String, TemplateRule.Template> templates = new HashMap<>();
@@ -174,9 +253,11 @@ public final class ShapeTable {
 				}
 				quads = tinted;
 			}
-			meshes[id] = quads == null ? null : new ShapeMesh(quads);
+			if (quads != null) {
+				meshes.put(id, quads, FaceMasks.coverage(quads));
+			}
 		}
-		return new ShapeTable(index.hash(), GEOMETRY, artHash, keys, meshes, units, keepBuilt ? templates : Map.of());
+		return new ShapeTable(index.hash(), GEOMETRY, artHash, keys, meshes.seal(), keepBuilt ? units : Map.of(), keepBuilt ? templates : Map.of());
 	}
 
 	/**
@@ -299,7 +380,7 @@ public final class ShapeTable {
 
 	/** The mesh of shape id {@code id}, or null when there is none (the plain cube is drawn). */
 	public @Nullable ShapeMesh mesh(int id) {
-		return id > 0 && id < this.meshes.length ? this.meshes[id] : null;
+		return this.meshes.mesh(id);
 	}
 
 	/** The texture keys quads refer to by index. */
@@ -309,20 +390,21 @@ public final class ShapeTable {
 
 	/** The highest shape id. */
 	public int size() {
-		return this.meshes.length - 1;
+		return this.meshes.count.length - 1;
 	}
 
 	/** Shape ids with geometry. */
 	public int built() {
-		int n = 0;
-		for (ShapeMesh mesh : this.meshes) {
-			n += mesh == null ? 0 : 1;
-		}
-		return n;
+		return this.meshes.built;
 	}
 
 	public int quads() {
-		return this.quads;
+		return this.meshes.store.size();
+	}
+
+	/** Bytes the table's quads, offsets and masks hold (for logs and tests). */
+	public long meshBytes() {
+		return this.meshes.store.bytes() + 12L * this.meshes.count.length + 8L * this.meshes.maskPool.length;
 	}
 
 	public String shapeIndexHash() {
@@ -346,44 +428,54 @@ public final class ShapeTable {
 
 	public byte[] encode() {
 		ByteArrayOutputStream raw = new ByteArrayOutputStream();
-		try (DataOutputStream out = new DataOutputStream(raw)) {
-			out.write(MAGIC);
-			out.writeByte(FORMAT);
-			out.write(HexFormat.of().parseHex(this.shapeIndexHash));
-			out.writeShort(this.geometry);
-			out.write(HexFormat.of().parseHex(this.overridesHash));
-			out.writeInt(this.textureKeys.size());
-			for (String key : this.textureKeys) {
-				out.writeUTF(key);
-			}
-			out.writeInt(this.meshes.length);
-			for (ShapeMesh mesh : this.meshes) {
-				if (mesh == null) {
-					out.writeInt(-1);
-					continue;
-				}
-				out.writeInt(mesh.size());
-				for (ShapeQuad quad : mesh.quads()) {
-					out.writeByte(quad.face());
-					for (short v : quad.xyz()) {
-						out.writeShort(v);
-					}
-					out.writeInt(quad.texture());
-					out.writeByte(quad.uv().length);
-					out.write(quad.uv());
-					out.writeByte(quad.cull());
-					out.writeByte(quad.flags());
-				}
-			}
+		try {
+			this.encode(raw);
 		} catch (IOException e) {
 			throw new UncheckedIOException(e);
 		}
 		return raw.toByteArray();
 	}
 
+	/**
+	 * Writes the cache file to {@code sink} as it goes (Hoenn's runs to a few hundred MB; it is never held whole): the
+	 * header and texture keys, the shape count, then per shape id its quad count (-1: no mesh) and each quad as the
+	 * store's three words.
+	 */
+	public void encode(java.io.OutputStream sink) throws IOException {
+		DataOutputStream out = new DataOutputStream(new java.io.BufferedOutputStream(sink, 1 << 16));
+		out.write(MAGIC);
+		out.writeByte(FORMAT);
+		out.write(HexFormat.of().parseHex(this.shapeIndexHash));
+		out.writeShort(this.geometry);
+		out.write(HexFormat.of().parseHex(this.overridesHash));
+		out.writeInt(this.textureKeys.size());
+		for (String key : this.textureKeys) {
+			out.writeUTF(key);
+		}
+		Meshes meshes = this.meshes;
+		out.writeInt(meshes.count.length);
+		for (int id = 0; id < meshes.count.length; id++) {
+			int count = meshes.count[id];
+			out.writeInt(count);
+			for (int q = meshes.first[id]; q < meshes.first[id] + count; q++) {
+				out.writeLong(meshes.store.word(q, 0));
+				out.writeLong(meshes.store.word(q, 1));
+				out.writeLong(meshes.store.word(q, 2));
+			}
+		}
+		out.flush();
+	}
+
 	/** Reads a cache file; it must be for this index hash, geometry version and overrides hash. */
 	public static ShapeTable decode(byte[] bytes, String shapeIndexHash, int geometry, String overridesHash) throws DataException {
-		try (DataInputStream in = new DataInputStream(new ByteArrayInputStream(bytes))) {
+		return decode(new ByteArrayInputStream(bytes), shapeIndexHash, geometry, overridesHash);
+	}
+
+	/** {@link #decode(byte[], String, int, String)} from a stream, read as it goes. */
+	public static ShapeTable decode(java.io.InputStream source, String shapeIndexHash, int geometry, String overridesHash)
+			throws DataException {
+		try {
+			DataInputStream in = new DataInputStream(new java.io.BufferedInputStream(source, 1 << 16));
 			byte[] magic = new byte[4];
 			in.readFully(magic);
 			if (!Arrays.equals(magic, MAGIC) || in.readUnsignedByte() != FORMAT) {
@@ -399,50 +491,42 @@ public final class ShapeTable {
 				throw new DataException("/", "a table for another index, geometry or pack set");
 			}
 			int keyCount = in.readInt();
-			if (keyCount < 0 || keyCount > bytes.length) {
+			if (keyCount < 0 || keyCount > MAX_COUNT) {
 				throw new DataException("/textures", "bad count");
 			}
-			List<String> keys = new ArrayList<>(keyCount);
+			List<String> keys = new ArrayList<>(Math.min(keyCount, 1 << 16));
 			for (int i = 0; i < keyCount; i++) {
 				keys.add(in.readUTF());
 			}
 			int meshCount = in.readInt();
-			if (meshCount < 1 || meshCount > bytes.length) {
+			if (meshCount < 1 || meshCount > MAX_COUNT) {
 				throw new DataException("/meshes", "bad count");
 			}
-			ShapeMesh[] meshes = new ShapeMesh[meshCount];
+			Meshes meshes = new Meshes(meshCount);
 			for (int id = 0; id < meshCount; id++) {
 				int quadCount = in.readInt();
 				if (quadCount < 0) {
 					continue;
 				}
-				List<ShapeQuad> quads = new ArrayList<>(quadCount);
+				if (quadCount > MAX_COUNT) {
+					throw new DataException("/meshes/" + id, "bad count");
+				}
+				int first = meshes.store.size();
 				for (int q = 0; q < quadCount; q++) {
-					byte face = in.readByte();
-					short[] xyz = new short[12];
-					for (int i = 0; i < 12; i++) {
-						xyz[i] = in.readShort();
-					}
-					int texture = in.readInt();
-					byte[] uv = new byte[in.readUnsignedByte()];
-					in.readFully(uv);
-					byte cull = in.readByte();
-					byte flags = in.readByte();
-					if (texture < 0 || texture >= keys.size()) {
-						throw new DataException("/meshes/" + id, "texture out of range");
-					}
-					try {
-						quads.add(new ShapeQuad(face, xyz, texture, uv, cull, flags));
-					} catch (IllegalArgumentException e) {
+					long w0 = in.readLong();
+					long w1 = in.readLong();
+					long w2 = in.readLong();
+					if (!QuadStore.valid(w0, w1, w2, keys.size())) {
 						throw new DataException("/meshes/" + id, "malformed quad");
 					}
+					meshes.store.add(w0, w1, w2);
 				}
-				meshes[id] = new ShapeMesh(quads);
+				meshes.stored(id, first, quadCount);
 			}
 			if (in.read() != -1) {
 				throw new DataException("/", "trailing bytes");
 			}
-			return new ShapeTable(indexHash, version, overrides, keys, meshes, Map.of(), Map.of());
+			return new ShapeTable(indexHash, version, overrides, keys, meshes.seal(), Map.of(), Map.of());
 		} catch (EOFException e) {
 			throw new DataException("/", "truncated");
 		} catch (IOException e) {
@@ -450,8 +534,19 @@ public final class ShapeTable {
 		}
 	}
 
-	/** A short fingerprint of the table's content, for logs and tests. */
+	/** The largest count a cache file may give (texture keys, shape ids, quads of one shape). */
+	private static final int MAX_COUNT = 1 << 28;
+
+	/** A short fingerprint of the table's content, for logs and tests (its cache file's SHA-256, never held whole). */
 	public String hash() {
-		return Hashes.sha256(this.encode());
+		try {
+			java.security.MessageDigest digest = java.security.MessageDigest.getInstance("SHA-256");
+			try (java.io.OutputStream sink = new java.security.DigestOutputStream(java.io.OutputStream.nullOutputStream(), digest)) {
+				this.encode(sink);
+			}
+			return HexFormat.of().formatHex(digest.digest());
+		} catch (IOException | java.security.NoSuchAlgorithmException e) {
+			throw new IllegalStateException(e);
+		}
 	}
 }

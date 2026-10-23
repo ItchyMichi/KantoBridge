@@ -23,7 +23,6 @@ import dev.kantobridge.proto.Catalog;
 import dev.kantobridge.proto.MsgTypes;
 import dev.kantobridge.world.Games;
 import dev.kantobridge.world.Hashes;
-import dev.kantobridge.world.ShapeIndex;
 import dev.kantobridge.world.SlotMap;
 import dev.kantobridge.world.WorldIndex;
 import java.io.IOException;
@@ -155,11 +154,11 @@ public final class TextureSyncRuntime {
 		HelloOk hello = this.bridge.state().handshake();
 		boolean compatible = this.bridge.client().state() == ConnectionState.CONNECTED && hello != null && index != null
 				&& Games.compatible(hello.game(), index.game());
-		ShapeIndex shapes = ClientShapes.table() == null ? null : ClientShapes.index();
+		String shapesHash = ClientShapes.table() == null ? null : ClientShapes.indexHash();
 		// MG3: the followed region's game and its index's slotMapHash (the hash of that region's slice of the one slot map);
 		// the report names the region in a region world, nothing in a legacy one.
 		TextureSync.Inputs inputs = new TextureSync.Inputs(index == null ? null : index.game(), index == null ? null : index.slotMapHash(),
-				this.local, packLoaded, missing, compatible, ClientShapes.shapes(), shapes == null ? null : shapes.hash(), ClientShapes.reason(),
+				this.local, packLoaded, missing, compatible, ClientShapes.shapes(), shapesHash, ClientShapes.reason(),
 				KbPackReload.current().packs().size(), ClientRegions.tagFor());
 		this.sync.tick(this.clock.millis(), inputs, busy);
 	}

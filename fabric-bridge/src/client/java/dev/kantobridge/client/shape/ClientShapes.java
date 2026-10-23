@@ -60,7 +60,13 @@ public final class ClientShapes {
 
 	/** One region's shapes. */
 	private static final class Held {
+		/**
+		 * The parsed index, held only until its table is built (Hoenn's is a few hundred MB, 2026-10-23); a rebuild for new
+		 * art parses it again from the held documents. Its hash and size stay.
+		 */
 		@Nullable ShapeIndex index;
+		@Nullable String indexHash;
+		int indexSize;
 		@Nullable ShapeMap map;
 		ShapeMap.@Nullable Lookup lookup;
 		@Nullable ShapeTable table;
@@ -180,6 +186,12 @@ public final class ClientShapes {
 		return held == null ? null : held.index;
 	}
 
+	/** The hash of the followed region's verified shape index (kept after its table is built), or null. */
+	public static @Nullable String indexHash() {
+		Held held = held(followedId());
+		return held == null ? null : held.indexHash;
+	}
+
 	/** Shape ids this client has geometry for in the followed region; 0 while it draws cubes. */
 	public static int shapes() {
 		ShapeTable built = table();
@@ -221,6 +233,7 @@ public final class ClientShapes {
 		}
 		held.generation++;
 		held.index = null;
+		held.indexHash = null;
 		held.map = null;
 		held.lookup = null;
 		held.table = null;
@@ -244,6 +257,8 @@ public final class ClientShapes {
 			return;
 		}
 		held.index = accepted.index();
+		held.indexHash = held.index.hash();
+		held.indexSize = held.index.size();
 		held.map = accepted.map();
 		held.reason = "building";
 		changed();
@@ -257,7 +272,7 @@ public final class ClientShapes {
 	public static void artChanged() {
 		for (Map.Entry<String, Held> entry : HELD.entrySet()) {
 			Held held = entry.getValue();
-			if (held.index == null || held.map == null) {
+			if (held.indexHash == null || held.map == null) {
 				continue;
 			}
 			Art art = Art.local(entry.getKey());
@@ -271,15 +286,21 @@ public final class ClientShapes {
 
 	/** Builds (or reads from the cache) a region's table for its held index and map, off the client thread. */
 	private static void startBuild(String region, Held held) {
-		ShapeIndex parsed = held.index;
+		ShapeIndex kept = held.index;
+		String indexHash = held.indexHash;
 		ShapeMap received = held.map;
-		if (parsed == null || received == null) {
+		if (indexHash == null || received == null) {
+			return;
+		}
+		// The index was dropped after an earlier build: parse it again from the held text, off the client thread.
+		ClientRegions.ShapeDocs docs = kept == null ? ClientRegions.shapesOf(region) : null;
+		if (kept == null && docs == null) {
 			return;
 		}
 		long mine = held.generation;
 		Art art = Art.local(region);
 		Path cache = FabricLoader.getInstance().getGameDir().resolve("kantobridge").resolve("shapes")
-				.resolve(ShapeTable.cacheName(parsed.hash(), ShapeTable.GEOMETRY, art.hash()));
+				.resolve(ShapeTable.cacheName(indexHash, ShapeTable.GEOMETRY, art.hash()));
 		Minecraft minecraft = Minecraft.getInstance();
 		Util.backgroundExecutor().execute(() -> {
 			long started = System.nanoTime();
@@ -287,17 +308,36 @@ public final class ClientShapes {
 			ShapeTable built = null;
 			try {
 				if (Files.isRegularFile(cache)) {
-					built = ShapeTable.decode(Files.readAllBytes(cache), parsed.hash(), ShapeTable.GEOMETRY, art.hash());
+					try (java.io.InputStream in = Files.newInputStream(cache)) {
+						built = ShapeTable.decode(in, indexHash, ShapeTable.GEOMETRY, art.hash());
+					}
 					cached = true;
 				}
 			} catch (IOException | DataException e) {
 				built = null;
 			}
 			if (built == null) {
+				ShapeIndex parsed = kept;
+				if (parsed == null) {
+					try {
+						parsed = ShapeIndex.fromJson(docs.indexText());
+					} catch (DataException e) {
+						parsed = null;
+					}
+					if (parsed == null || !parsed.hash().equals(indexHash)) {
+						KantoBridge.LOGGER.warn("shapes: region {}'s held index no longer reads; its table is not rebuilt", region);
+						return;
+					}
+				}
 				built = ShapeTable.build(parsed, art.source(), art.hash(), art.packs(), false);
 				try {
+					// Streamed to a side file, then moved in: Hoenn's runs to a few hundred MB, never held whole.
 					Files.createDirectories(cache.getParent());
-					Files.write(cache, built.encode());
+					Path part = cache.resolveSibling(cache.getFileName() + ".part");
+					try (java.io.OutputStream out = Files.newOutputStream(part)) {
+						built.encode(out);
+					}
+					Files.move(part, cache, java.nio.file.StandardCopyOption.REPLACE_EXISTING);
 				} catch (IOException e) {
 					KantoBridge.LOGGER.warn("shapes: could not write the shape table cache ({})", e.getClass().getSimpleName());
 				}
@@ -312,12 +352,13 @@ public final class ClientShapes {
 				}
 				held.table = done;
 				held.lookup = fast;
+				held.index = null;
 				held.tableMs = ms;
 				held.fromCache = wasCached;
 				held.builtArt = art.hash();
 				held.reason = null;
-				KantoBridge.LOGGER.info("shapes: table for region {} index {} ready: {} shapes, {} quads, {} textures, art {}, {} ms{}", region,
-						Hashes.shortHash(parsed.hash()), done.built(), done.quads(), done.textureKeys().size(),
+				KantoBridge.LOGGER.info("shapes: table for region {} index {} ready: {} shapes, {} quads ({} MiB), {} textures, art {}, {} ms{}",
+						region, Hashes.shortHash(indexHash), done.built(), done.quads(), done.meshBytes() >> 20, done.textureKeys().size(),
 						art.source() == ArtSource.NONE ? "none" : Hashes.shortHash(art.hash()), ms, wasCached ? " (cache)" : "");
 				changed();
 			});
@@ -451,6 +492,7 @@ public final class ClientShapes {
 
 	private static void fail(Held held, String code, String log) {
 		held.index = null;
+		held.indexHash = null;
 		held.map = null;
 		held.reason = code;
 		KantoBridge.LOGGER.warn(log);
@@ -467,9 +509,9 @@ public final class ClientShapes {
 	public static String debugLine() {
 		Held held = held(followedId());
 		ShapeTable built = held == null ? null : held.table;
-		ShapeIndex known = held == null ? null : held.index;
+		String known = held == null ? null : held.indexHash;
 		return I18n.get("kantobridge.debug.shapes", enabled() ? I18n.get("kantobridge.debug.yes") : I18n.get("kantobridge.debug.no"),
-				known == null ? "-" : Hashes.shortHash(known.hash()), known == null ? 0 : known.size(), built == null ? 0 : built.built(),
+				known == null ? "-" : Hashes.shortHash(known), known == null ? 0 : held.indexSize, built == null ? 0 : built.built(),
 				built == null ? 0 : built.quads(), held == null ? -1 : held.tableMs,
 				held != null && held.fromCache ? I18n.get("kantobridge.debug.yes") : I18n.get("kantobridge.debug.no"),
 				reason() == null ? "-" : reason());

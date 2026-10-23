@@ -125,6 +125,16 @@ public final class ProtoJson {
 		}
 	}
 
+	/** Appends a string as {@link #write} writes it (for writers that stream a large document in pieces). */
+	public static void appendString(String text, StringBuilder out) {
+		writeString(text, out);
+	}
+
+	/** Appends a value as {@link #write} writes it. */
+	public static void append(JsonElement value, StringBuilder out) {
+		writeValue(value, out);
+	}
+
 	private static void writeString(String text, StringBuilder out) {
 		out.append('"');
 		for (int i = 0; i < text.length(); i++) {
