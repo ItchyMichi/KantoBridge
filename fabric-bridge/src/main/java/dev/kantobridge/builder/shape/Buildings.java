@@ -167,7 +167,7 @@ final class Buildings {
 		Profile.Band band = building.band();
 		int cols = map.artCols();
 		int rows = map.artRows();
-		boolean indoor = !(map.surface() && map.env().outdoor());
+		boolean indoor = !(map.outdoors() && map.env().outdoor());
 		int bound = Math.min(bound(building), ShapeHeights.headroom(map));
 		int bw = claim.width();
 		int bh = claim.rows();

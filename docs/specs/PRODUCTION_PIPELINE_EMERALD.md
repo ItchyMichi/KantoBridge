@@ -252,3 +252,27 @@ the volume, `local/minecraft/kantobridge/export/emerald/g3image`, to `kb-hub/wor
 Checked: Littleroot (no truck, no black tiles), Birch's Lab (objects on their cells, no half-cell offset, no
 see-through boxes), Pacifidlog (no popup text). The trial's marks, depth models and buildings were made from the old
 pictures: redo them on these before the full run.
+
+## The open-sky maps' buildings (2026-10-23)
+
+`building_batch.py` took only maps named like towns, cities and islands, so the buildings of outdoor maps placed
+off the surface under the open sky (the Battle Frontier, Mt. Chimney, the Safari Zone, Sky Pillar) had no models.
+Now (all three games' copies):
+
+- `--outdoor <dir>`: the outdoor maps are those of an OutdoorLevelsDumpTest "all" dump (every map on the surface or
+  under the open sky, the game's own choice; kb-hub `work/landscape/levels_all11`); without it, by name (now also
+  routes with a game prefix, ports, `_OUTSIDE`, `_EXTERIOR`, the Safari Zone's areas, the National Park).
+- `NOT_BUILDING` also leaves out fences, flower beds and planters. Overrides by `<map>:<x0>,<y0>` take
+  `"building": true` (an entity the note's words would leave out: the Battle Dome and the Battle Pyramid, whose notes
+  name fence posts) or `false` (Safari Zone South's Acro Bike rail, Mt. Chimney's cable car pylon).
+- `--add` keeps an earlier run's `buildings.json`: its designs keep their ids, new designs are numbered after them,
+  an entity drawn like an earlier design becomes one more placement (Frontier's Pokémon Center is Fortree's design).
+
+Run: `building_batch.py emerald <data> <kb-hub work/buildings_run> --only <maps> --outdoor <dump> --add` (23 new
+designs, b089-b111: 19 on the Battle Frontier, Mt. Chimney's cable car station, Safari Zone South's building, Sky
+Pillar's base and its top doorway), `parts_package.py` into `kb-hub/work/parts_emerald`, a spec per design (the
+Battle Arena's front gate: posts, side panels, a crossbeam, a two-tier dark tiled roof), then
+`buildings_table.py emerald ... --parts kb-hub/work/parts_emerald`. Viewer: "buildings as parts / emerald / <map>".
+Left out: the Frontier's flower beds and fenced pen, the 1 x 2 doorways (Mt. Pyre, Jagged Pass), Sootopolis's
+designs (b008-b018, unchanged). The surface routes (Route 104's flower shop, Route 110's gatehouses...) match the
+widened filter but were not run yet.

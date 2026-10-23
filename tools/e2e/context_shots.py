@@ -76,6 +76,30 @@ def go_literal(n: int, map_id: str, x: int, y: int, facing: str) -> str:
     return f'{{ id = {n}, op = "go", map = "{map_id}", x = {x}, y = {y}, facing = "{facing}" }}'
 
 
+REGIONS = {"blue": "kanto", "crystal": "johto", "emerald": "hoenn"}
+
+
+def wait_for_shapes(log: Path, region: str, timeout: float = 900.0) -> None:
+    """Until the client's shape table for the game's region is ready: built fresh, Hoenn's takes minutes, and a picture
+    taken before it shows every model as tile cubes."""
+    deadline = time.monotonic() + timeout
+    while time.monotonic() < deadline:
+        text = log.read_text(encoding="utf-8", errors="replace") if log.is_file() else ""
+        if f"shapes: table for region {region} " in text:
+            say(f"the {region} shape table is ready")
+            return
+        time.sleep(3.0)
+    say(f"the {region} shape table was not ready within {timeout:.0f} s; shooting anyway")
+
+
+def client_env(java_home):
+    """The client's environment: KB_CLIENT_HEAP (e.g. 4g) caps its heap, as a player's launcher would."""
+    env = dict(os.environ, JAVA_HOME=java_home)
+    if os.environ.get("KB_CLIENT_HEAP"):
+        env["JAVA_TOOL_OPTIONS"] = (env.get("JAVA_TOOL_OPTIONS", "") + " -Xmx" + os.environ["KB_CLIENT_HEAP"]).strip()
+    return env
+
+
 def main(argv=None) -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--game", required=True, choices=sorted(GAMES))
@@ -115,7 +139,7 @@ def main(argv=None) -> int:
                                    f"-Pkb.autopilotWorld={world}", f"-Pkb.autopilotPilotDir={PILOT_DIR}",
                                    f"-Pkb.autopilotFollow={args.game}", "-Pkb.autopilotQuit=true",
                                    f"-Pkb.links={args.game}:{port}"],
-                                  cwd=GRADLE_DIR, env=dict(os.environ, JAVA_HOME=java_home),
+                                  cwd=GRADLE_DIR, env=client_env(java_home),
                                   stdin=subprocess.DEVNULL, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
         threading.Thread(target=stream, args=(client, PILOT_DIR / "client.log"), daemon=True).start()
         deadline = time.monotonic() + 900
@@ -125,6 +149,7 @@ def main(argv=None) -> int:
             time.sleep(1.0)
         wait_for_art(PILOT_DIR / "client.log")
         pilot.do("follow", game=args.game, timeout=60)
+        wait_for_shapes(PILOT_DIR / "client.log", REGIONS[args.game])
         for n, cell in enumerate(cells, 1):
             place = places.get(cell)
             out = {"cell": cell}

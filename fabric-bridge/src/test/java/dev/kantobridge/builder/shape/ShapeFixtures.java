@@ -83,7 +83,7 @@ public final class ShapeFixtures {
 		return map(id, surface, new Env(surface, surface, false, Env.DARK_NEVER), rows);
 	}
 
-	/** An outdoor map off the surface, under the open sky (a Battle Frontier outside): interior rules, drawn outdoors. */
+	/** An outdoor map off the surface, under the open sky (a Battle Frontier outside): the outdoor rules since 2026-10-23. */
 	public static SceneMap openAir(String id, String... rows) {
 		return map(id, false, new Env(true, true, false, Env.DARK_NEVER), rows);
 	}

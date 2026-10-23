@@ -147,7 +147,7 @@ final class BigHulls {
 		entry.add("tiles", tiles);
 		entry.add("doors", new JsonArray());
 		entry.addProperty("ground", ground);
-		entry.addProperty("outdoor", map.surface() && map.env().outdoor());
+		entry.addProperty("outdoor", map.outdoors() && map.env().outdoor());
 		entry.add("columns", columns);
 		entry.add("hull", hull);
 		String sig = Templates.signature(entry);

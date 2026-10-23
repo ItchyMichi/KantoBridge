@@ -90,18 +90,22 @@ public final class BoxBuilding {
 		for (int[] door : entry.doors()) {
 			doors.add(door);
 		}
-		// a building described as parts (docs/specs/BUILDING_PARTS.md) instead of the detected cube and roof
-		VoxelGrid grid = box.has("parts") ? PartsBuilding.voxels(box, texel, w, d, px) : voxels(shade, texel, w, d, px, box, doors);
-		if (grid == null) {
-			return columns;
-		}
 		Map<Integer, List<ShapeQuad>> blocks = new TreeMap<>();
-		for (Map.Entry<Integer, List<ShapeQuad>> e : QuadMerger.merge(grid, QuadMerger.ALL_FACES, 0).entrySet()) {
-			List<ShapeQuad> quads = new ArrayList<>(e.getValue().size());
-			for (ShapeQuad quad : e.getValue()) {
-				quads.add(quad.withTexture(tiles.get(quad.texture())));
+		VoxelGrid grid;
+		if (box.has("parts") && (long) w * PartsBuilding.height(box) * d > WHOLE_VOXELS) {
+			// a big landscape model, a window at a time: Hoenn's rock masses reach 800 x 160 x 1,600 voxels, gigabytes
+			// as one grid (2026-10-23); no grid is kept, so the pack's reference model leaves it out
+			if (!windows(box, texel, w, d, px, tiles, blocks)) {
+				return columns;
 			}
-			blocks.put(e.getKey(), quads);
+			grid = null;
+		} else {
+			// a building described as parts (docs/specs/BUILDING_PARTS.md) instead of the detected cube and roof
+			grid = box.has("parts") ? PartsBuilding.voxels(box, texel, w, d, px) : voxels(shade, texel, w, d, px, box, doors);
+			if (grid == null) {
+				return columns;
+			}
+			add(grid, 0, 0, 0, 0, Integer.MAX_VALUE, Integer.MAX_VALUE, tiles, blocks);
 		}
 		int quads = 0;
 		for (List<ShapeQuad> block : blocks.values()) {
@@ -112,7 +116,58 @@ public final class BoxBuilding {
 			return TemplateRule.columns(entry, TemplateRule.Kind.HULL, 0.0);
 		}
 		int[] tileIds = tiles.stream().mapToInt(Integer::intValue).toArray();
-		return new TemplateRule.Template(TemplateRule.Kind.HULL, null, 1.0, quads, blocks, null, grid, tileIds, box.get("roofRows").getAsInt());
+		return new TemplateRule.Template(TemplateRule.Kind.HULL, null, 1.0, quads, blocks, null, grid, grid == null ? null : tileIds,
+				box.get("roofRows").getAsInt());
+	}
+
+	/** Voxels a parts model may have as one grid (about 130 MB of texels and owners); a bigger one is built in windows. */
+	static final long WHOLE_VOXELS = 1L << 24;
+
+	/** Blocks a window of a big parts model spans along x and z, its margin aside. */
+	static final int WINDOW_BLOCKS = 8;
+
+	/**
+	 * A big parts model's blocks, built a window of {@link #WINDOW_BLOCKS} blocks at a time with a block of margin
+	 * round it (a voxel's paint and faces look at its neighbours only; quads never cross a block), into {@code blocks}.
+	 * False when the spec has no parts.
+	 */
+	static boolean windows(JsonObject box, int[] texel, int w, int d, int px, List<Integer> tiles, Map<Integer, List<ShapeQuad>> blocks) {
+		int bw = w / px;
+		int bd = d / px;
+		for (int bz = 0; bz < bd; bz += WINDOW_BLOCKS) {
+			for (int bx = 0; bx < bw; bx += WINDOW_BLOCKS) {
+				int mx0 = Math.max(0, bx - 1);
+				int mz0 = Math.max(0, bz - 1);
+				int mx1 = Math.min(bw, bx + WINDOW_BLOCKS + 1);
+				int mz1 = Math.min(bd, bz + WINDOW_BLOCKS + 1);
+				VoxelGrid grid = PartsBuilding.voxels(box, texel, w, d, px, mx0 * px, mz0 * px, (mx1 - mx0) * px, (mz1 - mz0) * px);
+				if (grid == null) {
+					return false;
+				}
+				add(grid, mx0, mz0, bx, bz, Math.min(bw, bx + WINDOW_BLOCKS), Math.min(bd, bz + WINDOW_BLOCKS), tiles, blocks);
+			}
+		}
+		return true;
+	}
+
+	/**
+	 * The merged faces of a grid whose corner is block (ox, oz) of the model, into {@code blocks} by the model's block,
+	 * the blocks from (x0, z0) to before (x1, z1) only, each quad's texture its tile id.
+	 */
+	private static void add(VoxelGrid grid, int ox, int oz, int x0, int z0, int x1, int z1, List<Integer> tiles,
+			Map<Integer, List<ShapeQuad>> blocks) {
+		for (Map.Entry<Integer, List<ShapeQuad>> e : QuadMerger.merge(grid, QuadMerger.ALL_FACES, 0).entrySet()) {
+			int bx = QuadMerger.blockX(e.getKey()) + ox;
+			int bz = QuadMerger.blockZ(e.getKey()) + oz;
+			if (bx < x0 || bx >= x1 || bz < z0 || bz >= z1) {
+				continue;
+			}
+			List<ShapeQuad> quads = new ArrayList<>(e.getValue().size());
+			for (ShapeQuad quad : e.getValue()) {
+				quads.add(quad.withTexture(tiles.get(quad.texture())));
+			}
+			blocks.put(QuadMerger.blockKey(bx, QuadMerger.blockY(e.getKey()), bz), quads);
+		}
 	}
 
 	/** The voxels of a drawing w x d pixels (shades and texels per pixel), door cells by their grid cell (cx, cy). */

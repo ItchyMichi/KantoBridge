@@ -6,9 +6,9 @@ import dev.kantobridge.world.Scale;
 
 /**
  * How high a map's shapes may stand, in blocks from feet level (docs/specs/PROFILE_PLAN.md §5.6): the surface's volume
- * outdoors; an interior's ceiling, which a column stops under; an open-air interior (a forest under the sky, V7) one
- * block more, up to the ceiling's own level, which nothing fills there. Dramaless Shape draws its rooms without a
- * ceiling; the clamp is ours.
+ * outdoors (on the surface, or an outdoor map under the open sky: {@link SceneMap#outdoors}); an interior's ceiling,
+ * which a column stops under; an open-air interior (a forest under the sky, V7) one block more, up to the ceiling's own
+ * level, which nothing fills there. Dramaless Shape draws its rooms without a ceiling; the clamp is ours.
  */
 public final class ShapeHeights {
 	/** Blocks above feet level the surface volume holds (feet is one above the ground level). */
@@ -22,7 +22,7 @@ public final class ShapeHeights {
 	 * (docs/specs/HEIGHTS_ALL_GAMES_PLAN.md D5, {@link SceneMap#withHeadroom}).
 	 */
 	public static int headroom(SceneMap map) {
-		if (map.surface()) {
+		if (map.outdoors()) {
 			return SURFACE;
 		}
 		if (map.env().headroom() > 0 && !map.env().openAir()) {

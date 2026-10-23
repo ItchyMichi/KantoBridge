@@ -222,6 +222,36 @@ class ShapeTableTest {
 		ShapeIndex wrong = ShapeIndex.of(p.planner(), p.toJson(), List.of(BandsTest.ATLAS), List.of("PAL_A"),
 				List.of(new ShapeIndex.Use(block, "PAL_A")), broken);
 		assertNull(ShapeTable.build(wrong, BandsTest.art(true)).mesh(wrong.shapeId(block, "PAL_A")));
+		// A client's table (templates one at a time, none kept): the same quads on the same tiles for every key.
+		List<ShapeIndex.Use> uses = new java.util.ArrayList<>(List.of(new ShapeIndex.Use(ceiling, "PAL_A")));
+		for (int bx = 0; bx < 4; bx++) {
+			for (int by = 0; by < 4; by++) {
+				uses.add(new ShapeIndex.Use(ShapeKey.tmpl(0, sig, bx, by, 3), "PAL_A"));
+			}
+		}
+		ShapeIndex many = ShapeIndex.of(p.planner(), p.toJson(), List.of(BandsTest.ATLAS), List.of("PAL_A"), uses, templates);
+		ShapeTable full = ShapeTable.build(many, BandsTest.art(true), ShapeTable.NO_OVERRIDES, ShapeOverrides.NONE, true);
+		ShapeTable lean = ShapeTable.build(many, BandsTest.art(true), ShapeTable.NO_OVERRIDES, ShapeOverrides.NONE, false);
+		assertNotNull(full.template(BandsTest.ATLAS, sig));
+		assertNull(lean.template(BandsTest.ATLAS, sig), "a client keeps no template");
+		int quads = 0;
+		for (int id = 1; id <= many.size(); id++) {
+			ShapeMesh a = full.mesh(id);
+			ShapeMesh b = lean.mesh(id);
+			assertEquals(a == null, b == null);
+			if (a == null) {
+				continue;
+			}
+			assertEquals(a.size(), b.size());
+			for (int q = 0; q < a.size(); q++) {
+				ShapeQuad qa = a.quads().get(q);
+				ShapeQuad qb = b.quads().get(q);
+				assertEquals(java.util.Arrays.toString(qa.xyz()) + java.util.Arrays.toString(qa.uv()) + full.textureKeys().get(qa.texture()),
+						java.util.Arrays.toString(qb.xyz()) + java.util.Arrays.toString(qb.uv()) + lean.textureKeys().get(qb.texture()));
+				quads++;
+			}
+		}
+		assertTrue(quads > 10, "the house's blocks were compared");
 	}
 
 	@Test

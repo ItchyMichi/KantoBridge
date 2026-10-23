@@ -131,6 +131,10 @@ public final class SceneJson {
 			// The caves and woods plan's CW2; absent (false) in older scenes.
 			env.addProperty("canopy", true);
 		}
+		if (map.env().wood()) {
+			// Absent (false) in older scenes.
+			env.addProperty("wood", true);
+		}
 		out.add("env", env);
 		out.addProperty("tileset", map.tileset());
 		out.addProperty("atlas", map.atlas());

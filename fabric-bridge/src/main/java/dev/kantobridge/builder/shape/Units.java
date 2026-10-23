@@ -98,7 +98,7 @@ final class Units {
 			}
 		}
 		int mapGround = mapGround(map, grass, frames);
-		boolean indoor = !(map.surface() && map.env().outdoor());
+		boolean indoor = !(map.outdoors() && map.env().outdoor());
 		int[] region = probe == null ? null : regions(map);
 		Map<String, Integer> repeats = probe == null ? null : repeats(map, region);
 		for (int cy = 0; cy < map.h(); cy++) {

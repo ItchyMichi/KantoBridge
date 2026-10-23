@@ -89,7 +89,7 @@ final class FittedBuildings {
 	static Templates.Placed place(SceneMap map, int atlas, Buildings.Claim claim, FittedShapes.Building building, int mapGround, ShapeKey[][] keys,
 			int[] blocks, int[] mask, int[] decor, int[] floor, Map<String, Integer> tally, int room) {
 		int cols = map.artCols();
-		boolean indoor = !(map.surface() && map.env().outdoor());
+		boolean indoor = !(map.outdoors() && map.env().outdoor());
 		int bw = claim.width();
 		int bh = claim.rows();
 		int px = 8; // drawing pixels a tile (an art tile is one block, eight voxels)

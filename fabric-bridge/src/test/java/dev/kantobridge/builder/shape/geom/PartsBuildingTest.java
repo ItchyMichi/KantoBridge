@@ -113,6 +113,55 @@ class PartsBuildingTest {
 	}
 
 	@Test
+	void aBigModelBuiltInWindowsHasTheWholeModelsQuads() {
+		// Every shape, a carve and a footprint with a door, at 2 voxels a block: 16 x 16 blocks, so windows of 8 blocks
+		// meet in the middle both ways and their margins cross every part.
+		JsonObject spec = JsonParser.parseString(SPEC).getAsJsonObject();
+		com.google.gson.JsonArray keep = new com.google.gson.JsonArray();
+		com.google.gson.JsonArray doors = new com.google.gson.JsonArray();
+		for (int ty = 0; ty < 16; ty++) {
+			for (int tx = 0; tx < 16; tx++) {
+				com.google.gson.JsonArray t = new com.google.gson.JsonArray();
+				t.add(tx);
+				t.add(ty);
+				if ((tx * 7 + ty * 3) % 5 != 0) {
+					keep.add(t);
+				} else if (tx > 8) {
+					doors.add(t);
+				}
+			}
+		}
+		spec.add("keep", keep);
+		spec.add("doors", doors);
+		spec.addProperty("doorClear", 6);
+		int[] texel = new int[W * D];
+		for (int z = 0; z < D; z++) {
+			for (int x = 0; x < W; x++) {
+				texel[z * W + x] = VoxelGrid.texel(0, x, z);
+			}
+		}
+		java.util.Map<Integer, java.util.List<ShapeQuad>> whole = QuadMerger.merge(PartsBuilding.voxels(spec, texel, W, D, 2),
+				QuadMerger.ALL_FACES, 0);
+		java.util.Map<Integer, java.util.List<ShapeQuad>> windows = new java.util.TreeMap<>();
+		assertTrue(BoxBuilding.windows(spec, texel, W, D, 2, java.util.List.of(0), windows));
+		assertTrue(whole.size() > 100, "a model with faces in many blocks");
+		assertEquals(text(whole), text(windows));
+	}
+
+	private static String text(java.util.Map<Integer, java.util.List<ShapeQuad>> blocks) {
+		StringBuilder out = new StringBuilder();
+		blocks.forEach((key, quads) -> {
+			out.append(key).append(':');
+			for (ShapeQuad q : quads) {
+				out.append(q.face()).append(java.util.Arrays.toString(q.xyz())).append(q.texture()).append(java.util.Arrays.toString(q.uv()))
+						.append(q.cull()).append(q.flags()).append(';');
+			}
+			out.append('\n');
+		});
+		return out.toString();
+	}
+
+	@Test
 	void aSpecWithoutPartsBuildsNothing() {
 		assertNull(PartsBuilding.voxels(new JsonObject(), new int[W * D], W, D, 8));
 	}

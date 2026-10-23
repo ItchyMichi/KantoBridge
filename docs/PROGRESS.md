@@ -377,6 +377,9 @@ question 5 below (the fallback for worlds built before V5).
     their placement takes the outdoor biome (sky colour, the outdoor spawn rule), which is how the builder and every
     client know there is no ceiling. A kept ceiling is not raised (the plan said "raised for headroom"): an interior's
     volume follows from its placement alone; `open_air_kept_ceiling` shows whether it ever happens.
+    *Since 2026-10-23* they keep `InteriorPacker.SKY_CLEARANCE` (34 chunks, past the farthest view distance) from the surface's
+    volume, the cave area, the dungeon area and each other, and their volume reaches the surface's height
+    (`WorldPlan.SKY_TOP`): see "Open-sky maps by the outdoor rules".
 67. **A pack's `dressing` is read and checked but not applied**, and `place:` models are read but never drawn: a world's
     dressing is part of its build, and every placement of a structure shares its shapes; a client-local pack can change
     neither.
@@ -1293,6 +1296,26 @@ for the rest" (plan §8). Feature tests per phase, the full suite at the checkpo
      first-download budget for its shape documents (you chose 256 parts over slimmer models). Big Hoenn masses stop at
      the tool's 20-block cap and stay partly buried (Ever Grande, Mt. Pyre, Mt. Chimney, Sootopolis, Routes 112 and
      115). The before/after sheets (14 spots) went to you on 2026-10-23. Details: specs/LANDSCAPE_MODELS.md, "The rollout".
+     *Correction (2026-10-23): those sheets' Hoenn pictures showed tile cubes, not the models: the client's 64 MB limit
+     refused Hoenn's 79 MB shape index, and once raised (256 MiB) the client ran out of memory building it; see below.*
+   - **Open-sky maps by the outdoor rules (your report and go, 2026-10-23)**: the Battle Frontier cropped at two blocks,
+     Silver Cave's Pokémon Center a pile of blocks and a tree-textured cloud on Route 28 came from the open-sky outdoor maps
+     (placed as interiors) taking the interior rules. Now `SceneMap.outdoors()` (the surface, or an outdoor open-air map
+     not marked `Env#wood`) takes the outdoor rules in the shape planner, structures, heights, buildings and units;
+     Petalburg Woods (`Gen3FrontEnd.WOODS`) keeps its old look; open-sky maps sit `InteriorPacker.SKY_CLEARANCE` apart
+     (`WorldPlanner.keepSkiesClear`). 34 new building designs (the Battle Frontier gates and towers, the Sootopolis gym
+     face, the National Park's gatehouse and bed, the Battle Towers, the S.S. Aqua, Indigo Plateau; emerald.json 112,
+     crystal.json 107 buildings), and a fitted run under the open sky keeps its models (the park's fences low).
+     World LandSky3: open_air_sky 5 / 18 / 11, fitted buildings placed 232 / 751 / 642.
+   - **Hoenn's client memory**: the client limits for shape documents went from 64 MB to 256 MiB (RegionDocuments,
+     ClientShapes, ShapeDocCache). Building Hoenn's table then ran out of memory at 8 GB: its 49 big rock masses were each
+     one voxel grid (up to 800 x 160 x 1,632 voxels, 1.7 GB) and every template kept its grid. Now `BoxBuilding` builds a
+     parts model over 2^24 voxels in windows of 8 x 8 blocks with a block of margin (the same quads,
+     `PartsBuildingTest.aBigModelBuiltInWindowsHasTheWholeModelsQuads`), and the client's `ShapeTable.build(..., false)`
+     builds each template, takes its blocks and drops it (`ShapeTableTest`). Measured: Hoenn's table 1,610,988 shapes,
+     6.2M quads, about 3 minutes to build the first time (then cached), peak 2.2 GB outside the game. The game needs
+     **6 GB** with all three regions (4 GB ran out). `context_shots.py` takes `KB_CLIENT_HEAP` and waits for the
+     region's shape table before shooting. Open: a slimmer quad store would bring Hoenn under 4 GB.
    - (The note's JUnit count, 1,379, counted two temporary probes since moved out: the suite holds 1,377.)
    - **Cave mouths and wall exits** (a fitted model in use on the cell over a door, the whole cell unroofed before): the
      model is the doorway, the face over it folds no door and rises as drawn, roofless so its models stay in use, and
@@ -1316,7 +1339,8 @@ for the rest" (plan §8). Feature tests per phase, the full suite at the checkpo
      over it); the three synthetic shape goldens regenerated (`kb-shapes/12`, the town's door block 4 high); the dev
      pilot's `face` takes a pitch (`context_shots.py --pitch`). JUnit 1,379, GameTests 126, pytest 2,256.
    - Open outdoor maps under the open sky (Sootopolis, the Safari Zones, the Battle Frontier) keep their interior-rule
-     heights apart from their cave mouths; outside the check for now.
+     heights apart from their cave mouths; outside the check for now. *Fixed 2026-10-23: they take the outdoor rules,
+     "Open-sky maps by the outdoor rules" below.*
 
 ## Wild Routes
 

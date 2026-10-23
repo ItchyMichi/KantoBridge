@@ -71,7 +71,7 @@ class LandscapeModelsTest {
 			int[] floor = new int[n];
 			FittedBuildings.place(map, 0, claims.get(0), of.get(claims.get(0).building()), 1, keys, blocks, mask, decor, floor, tally,
 					LandscapeModels.ROOM);
-			assertEquals(13, blocks[0], "12.5 blocks: no cap under the open sky (the buildings' would be 4)");
+			assertEquals(13, blocks[0], "12.5 blocks: no cap under the open sky");
 			assertEquals(ShapeKey.Kind.TMPL, keys[0][12].kind());
 			assertEquals(0, blocks[4 * cols + 2], "the door stays walkable");
 			assertEquals((1 << 13) - 1, decor[4 * cols + 2], "the arch over it is decor");

@@ -28,8 +28,8 @@ import org.jetbrains.annotations.Nullable;
  * time per file (the glue writes off the client thread).
  */
 public final class ShapeDocCache {
-	/** The cache's size on disk before the oldest files go (the real Hoenn's two documents take about 2.5 MB). */
-	public static final long MAX_TOTAL_BYTES = 64L * 1024 * 1024;
+	/** The cache's size on disk before the oldest files go (Hoenn's two documents with the landscape models take about 15 MB). */
+	public static final long MAX_TOTAL_BYTES = 256L * 1024 * 1024;
 	private static final Pattern HASH = Pattern.compile("^[0-9a-f]{64}$");
 	private static final String SUFFIX = ".z";
 	/** The kinds of document kept: a shape index, a shape map, a region's WorldIndex (G2G), the world's slot map (G2G). */

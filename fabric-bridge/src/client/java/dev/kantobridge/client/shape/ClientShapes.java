@@ -53,8 +53,8 @@ import org.jetbrains.annotations.Nullable;
  * only, except the table builds.
  */
 public final class ClientShapes {
-	/** A shape map larger than this, inflated, is refused (the real build's is a few MB). */
-	static final int MAX_MAP_BYTES = 64 * 1024 * 1024;
+	/** A shape map larger than this, inflated, is refused (Hoenn's with the landscape models is about 25 MB). */
+	static final int MAX_MAP_BYTES = 256 * 1024 * 1024;
 	/** {@link #topHeight} counts at most this many blocks. */
 	static final int MAX_TOP = 8;
 
@@ -294,7 +294,7 @@ public final class ClientShapes {
 				built = null;
 			}
 			if (built == null) {
-				built = ShapeTable.build(parsed, art.source(), art.hash(), art.packs());
+				built = ShapeTable.build(parsed, art.source(), art.hash(), art.packs(), false);
 				try {
 					Files.createDirectories(cache.getParent());
 					Files.write(cache, built.encode());

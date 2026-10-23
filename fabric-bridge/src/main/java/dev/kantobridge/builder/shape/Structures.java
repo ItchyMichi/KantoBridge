@@ -280,7 +280,7 @@ public final class Structures {
 				if (kind == CellKind.COUNTER) {
 					height = HeightRules.COUNTER;
 				} else if (kind == CellKind.SOLID) {
-					if (!map.surface()) {
+					if (!map.outdoors()) {
 						height = interiorWall;
 					} else {
 						int unit = 0;
@@ -429,7 +429,7 @@ public final class Structures {
 		// 4. Heights, door folds and roofs: as before D9; with visible rows (D9) a plain face as tall as drawn up to the
 		// screen's rows, a door's column holding the door's rows and the face over it, unless the run has a cell holding a
 		// fitted model that is in use (no roof before): it stands as it stood, or over a cave mouth's model rises past it.
-		boolean outdoors = map.surface() && map.env().outdoor();
+		boolean outdoors = map.outdoors() && map.env().outdoor();
 		int per = map.perCell();
 		// the tiles of runs roofed before D9: a cell with one holds no fitted model in use
 		boolean[] roofed0 = new boolean[cols * rows];
@@ -438,7 +438,7 @@ public final class Structures {
 			int reg = cut.pureRepeat() ? -1 : region[cut.n() * cols + cut.tx()];
 			boolean door = cut.f() + 1 < rows && map.kindAtTile(cut.tx(), cut.f() + 1) == CellKind.WALK
 					&& map.hasTag(cut.tx() / per, (cut.f() + 1) / per, CellTag.DOOR);
-			int h0 = height(map.surface(), interiorWall, door, reg < 0 ? 0 : modeH[reg], repeat0[c], cut.pureRepeat(), unit0[c], cap0);
+			int h0 = height(map.outdoors(), interiorWall, door, reg < 0 ? 0 : modeH[reg], repeat0[c], cut.pureRepeat(), unit0[c], cap0);
 			if (roof(map, outdoors, cut.tx(), cut.n(), cut.f() - cut.n() + 1, h0, repeat0[c] && h0 == unit0[c]) > 0) {
 				for (int ty = cut.n(); ty <= cut.f(); ty++) {
 					roofed0[ty * cols + cut.tx()] = true;
@@ -457,13 +457,17 @@ public final class Structures {
 			boolean door = f + 1 < rows && map.kindAtTile(tx, f + 1) == CellKind.WALK && map.hasTag(tx / per, (f + 1) / per, CellTag.DOOR);
 			boolean repeat = repeat0[c];
 			int unit = unit0[c];
-			int h = height(map.surface(), interiorWall, door, vote, repeat, cut.pureRepeat(), unit, cap0);
+			int h = height(map.outdoors(), interiorWall, door, vote, repeat, cut.pureRepeat(), unit, cap0);
 			int r = roof(map, outdoors, tx, n, length, h, repeat && h == unit);
 			boolean models = false;
 			boolean mouth = false;
 			if (visibleRows) {
-				// a cell of it holds a fitted model in use (no roof before)
-				models = r == 0 && any(fitted, cols, tx, n, f);
+				// a cell of it holds a fitted model in use (no roof before; under the open sky, roofed or not, as under the interior
+				// rule these maps had until 2026-10-23: the National Park's fences stood 3 blocks tall as faces otherwise)
+				models = (r == 0 || !map.surface()) && any(fitted, cols, tx, n, f);
+				if (models) {
+					r = 0;
+				}
 				// such a model over the door (a cave mouth's, a wall exit's: its whole cell unroofed before) is the doorway
 				mouth = models && door && fitted[f * cols + tx] && !anyIn(roofed0, cols, (tx / per) * per, (f / per) * per, per);
 				if (mouth) {
@@ -478,10 +482,10 @@ public final class Structures {
 					// a plain face as tall as drawn up to the screen's rows, a door's column its rows and the face over it; a run
 					// read as a repeat stays one (the user's choice, 2026-10-21: no taller rimmed cliffs or tree lines)
 					unit = repeat ? HeightRules.WALL : Math.min(length, maxUnit);
-					if (map.surface() && door) {
+					if (map.outdoors() && door) {
 						h = Math.min(maxUnit, Math.max(vote, (repeat ? Math.min(length, HeightRules.WALL) : length) + per));
 					} else {
-						h = height(map.surface(), interiorWall, false, vote, repeat, cut.pureRepeat(), unit, maxUnit);
+						h = height(map.outdoors(), interiorWall, false, vote, repeat, cut.pureRepeat(), unit, maxUnit);
 					}
 					r = roof(map, outdoors, tx, n, length, h, repeat && h == unit);
 				}

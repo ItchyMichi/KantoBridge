@@ -197,6 +197,7 @@ final class Gen3Planner {
 		for (MapPlacement p : caveArea.placements()) {
 			placements.put(p.id(), p);
 		}
+		WorldPlanner.keepSkiesClear(packer, caveArea, surfaceVolume, options.originX(), options.originZ());
 		List<String> pending = new ArrayList<>();
 		for (String id : requested) {
 			if (surface.contains(id) || area3d.contains(id)) {
@@ -564,7 +565,7 @@ final class Gen3Planner {
 				return new MapPlacement(map.id(), spot.x(), Scale.feetY(spot.layer()), spot.z(), map.w(), map.h(), spot.layer(),
 						MapPlacement.Kind.INTERIOR, QuarterPages.PALETTE, WorldPlan.BIOME_OUTDOOR, map.dark(), parent.id());
 			}
-			warnings.note("open_air_kept_ceiling", detail);
+			warnings.warn("open_air_kept_ceiling", detail);
 		}
 		InteriorPacker.Spot spot = packer.place(wantX, wantZ, blockW, blockD, parent.layer() + 1);
 		if (spot == null) {

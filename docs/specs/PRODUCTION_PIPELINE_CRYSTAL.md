@@ -139,3 +139,16 @@ Ecruteak Gym, the Goldenrod Game Corner, the Dance Theater, Kurt's House, Tin To
 - Game code (shared): Crystal's roof rows can have no black pixel, so the generated roof showed the wall's colour;
   `geom/BoxBuilding` now takes such a row's own pixel (a Blue roof row always has its outline, so Blue's are
   unchanged); geometry version 7.
+
+## The open-sky maps' buildings (2026-10-23)
+
+The same change as Emerald's (PRODUCTION_PIPELINE_EMERALD.md, "The open-sky maps' buildings"): `--outdoor`, `--add`,
+the `"building"` override. Crystal's open-sky maps (the National Park and its contest version, the Battle Tower's
+outside, the Olivine and Vermilion ports, the Ruins of Alph's outside, Mt. Moon Square, Routes 23 and 28, outside
+Silver Cave): 11 new designs (b096-b106), made **as parts** (Crystal's copies of `parts_package.py` and
+`parts_model.py`, Emerald's unchanged; `buildings_table.py crystal ... --parts kb-hub/work/parts_crystal`); the towns'
+designs stay boxes. The National Park's gatehouses are one design (both gates, both versions of the park); its
+flower bed is a low planter (`"building": true` overrides: its note names a flower bed); the contest's fountain is
+left out (`"building": false`). Outside Silver Cave's Pokémon Center and Route 28's Victory Road gate are earlier
+designs (b045, b047). Tin Tower's roof has no building marked. The surface routes and the Lake of Rage match the
+widened filter but were not run yet.

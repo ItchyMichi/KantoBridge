@@ -75,7 +75,9 @@ class CanopyPlanTest {
 		MapPlacement p = plan.index().map("VIRIDIAN_FOREST");
 		assertNotNull(p);
 		assertTrue(WorldPlan.openSky(p), "the packer found it the sky");
-		assertEquals(p.y() + Canopy.TOP_LEVEL + 1, WorldPlan.interiorVolume(p).maxY(), "the volume reaches the canopy's top");
+		assertEquals(p.y() + WorldPlan.SKY_TOP + 1, WorldPlan.interiorVolume(p).maxY(),
+				"the volume reaches past the canopy's top, as high as the surface's");
+		assertTrue(WorldPlan.SKY_TOP >= Canopy.TOP_LEVEL);
 		ShapePlanner.MapShapes planned = plan.shapes().shapes("VIRIDIAN_FOREST");
 		ChunkCodesView view = new ChunkCodesView(plan);
 		int cols = p.blockWidth();

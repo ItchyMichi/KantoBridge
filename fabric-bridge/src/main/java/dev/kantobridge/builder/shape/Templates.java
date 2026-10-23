@@ -57,7 +57,7 @@ public final class Templates {
 			int[] mask, List<Units.Cell> units, int ground) {
 		List<Placed> out = new ArrayList<>();
 		int per = map.perCell();
-		if (!params.tierC() || !map.surface() || !map.env().outdoor() || per < 1) {
+		if (!params.tierC() || !map.outdoors() || !map.env().outdoor() || per < 1) {
 			return out;
 		}
 		int cols = map.artCols();

@@ -207,6 +207,16 @@ public final class PartsBuilding {
 	 * Null when the spec has no parts.
 	 */
 	public static VoxelGrid voxels(JsonObject spec, int[] texel, int w, int d, int px) {
+		return voxels(spec, texel, w, d, px, 0, 0, w, d);
+	}
+
+	/**
+	 * The voxels of the window {@code ww x wd} voxels at ({@code x0}, {@code z0}) of a parts spec over a drawing w x d
+	 * pixels, as a grid of the window's size (whole blocks). A voxel's paint looks at its six neighbours, so a window
+	 * holds the whole model's voxels except along its own edges where the drawing goes on: whoever builds a big model a
+	 * window at a time keeps a block of margin round each one and drops it. Null when the spec has no parts.
+	 */
+	public static VoxelGrid voxels(JsonObject spec, int[] texel, int w, int d, int px, int x0, int z0, int ww, int wd) {
 		List<Part> parts = new ArrayList<>();
 		if (spec.has("parts")) {
 			for (JsonElement el : spec.getAsJsonArray("parts")) {
@@ -217,8 +227,7 @@ public final class PartsBuilding {
 			return null;
 		}
 		int h = height(spec);
-		int[] owner = new int[w * h * d];
-		java.util.Arrays.fill(owner, -1);
+		Owners owners = new Owners(x0, z0, ww, wd, h);
 		for (int i = 0; i < parts.size(); i++) {
 			Part p = parts.get(i);
 			double[] b = p.bounds();
@@ -230,41 +239,66 @@ public final class PartsBuilding {
 				}
 				top = p.y[0] + m;
 			}
-			int x0 = Math.max(0, (int) Math.floor(b[0]) - 1);
-			int x1 = Math.min(w - 1, (int) Math.ceil(b[1]));
-			int z0 = Math.max(0, (int) Math.floor(b[2]) - 1);
-			int z1 = Math.min(d - 1, (int) Math.ceil(b[3]));
+			int px0 = Math.max(x0, (int) Math.floor(b[0]) - 1);
+			int px1 = Math.min(Math.min(w, x0 + ww) - 1, (int) Math.ceil(b[1]));
+			int pz0 = Math.max(z0, (int) Math.floor(b[2]) - 1);
+			int pz1 = Math.min(Math.min(d, z0 + wd) - 1, (int) Math.ceil(b[3]));
 			int y0 = Math.max(0, (int) Math.floor(p.y[0]) - 1);
 			int y1 = Math.min(h - 1, (int) Math.ceil(top));
 			for (int y = y0; y <= y1; y++) {
-				for (int z = z0; z <= z1; z++) {
-					for (int x = x0; x <= x1; x++) {
+				for (int z = pz0; z <= pz1; z++) {
+					for (int x = px0; x <= px1; x++) {
 						if (p.inside(x, y, z)) {
-							owner[(y * d + z) * w + x] = p.carve ? -1 : i;
+							owners.set(x, y, z, p.carve ? -1 : i);
 						}
 					}
 				}
 			}
 		}
-		footprint(spec, owner, w, h, d, px);
+		footprint(spec, owners, w, d, px);
 		int gh = Math.max(px, ((h + px - 1) / px) * px);
-		VoxelGrid grid = new VoxelGrid(w, gh, d, px);
+		VoxelGrid grid = new VoxelGrid(ww, gh, wd, px);
 		for (int y = 0; y < h; y++) {
-			for (int z = 0; z < d; z++) {
-				for (int x = 0; x < w; x++) {
-					int o = owner[(y * d + z) * w + x];
+			for (int z = z0; z < z0 + wd; z++) {
+				for (int x = x0; x < x0 + ww; x++) {
+					int o = owners.get(x, y, z);
 					if (o < 0) {
 						continue;
 					}
-					grid.set(x, y, z, texel[paint(parts.get(o), owner, x, y, z, w, h, d)]);
+					grid.set(x - x0, y, z - z0, texel[paint(parts.get(o), owners, x, y, z, w, h, d)]);
 				}
 			}
 		}
 		return grid;
 	}
 
+	/** Which part holds each voxel of a window (-1 none), by the drawing's own voxel coordinates. */
+	private record Owners(int x0, int z0, int ww, int wd, int h, int[] owner) {
+		Owners(int x0, int z0, int ww, int wd, int h) {
+			this(x0, z0, ww, wd, h, filled(ww * h * wd));
+		}
+
+		private static int[] filled(int n) {
+			int[] a = new int[n];
+			java.util.Arrays.fill(a, -1);
+			return a;
+		}
+
+		/** The voxel's part; -1 outside the window (only a window's margin, which its builder drops, looks out of it). */
+		int get(int x, int y, int z) {
+			if (x < this.x0 || x >= this.x0 + this.ww || z < this.z0 || z >= this.z0 + this.wd || y < 0 || y >= this.h) {
+				return -1;
+			}
+			return this.owner[(y * this.wd + z - this.z0) * this.ww + x - this.x0];
+		}
+
+		void set(int x, int y, int z, int part) {
+			this.owner[(y * this.wd + z - this.z0) * this.ww + x - this.x0] = part;
+		}
+	}
+
 	/** A landscape model's footprint ("keep", "doors", "doorClear"; see the class comment): the voxels it leaves out. */
-	private static void footprint(JsonObject spec, int[] owner, int w, int h, int d, int px) {
+	private static void footprint(JsonObject spec, Owners owners, int w, int d, int px) {
 		if (!spec.has("keep")) {
 			return;
 		}
@@ -273,15 +307,16 @@ public final class PartsBuilding {
 		boolean[] keep = tiles(spec, "keep", tw, td);
 		boolean[] doors = tiles(spec, "doors", tw, td);
 		int clear = spec.has("doorClear") ? spec.get("doorClear").getAsInt() : 24;
-		for (int z = 0; z < d; z++) {
-			for (int x = 0; x < w; x++) {
+		int h = owners.h();
+		for (int z = owners.z0(); z < owners.z0() + owners.wd(); z++) {
+			for (int x = owners.x0(); x < owners.x0() + owners.ww(); x++) {
 				int t = (z / px) * tw + x / px;
 				if (keep[t]) {
 					continue;
 				}
 				int from = doors[t] ? clear : h;
 				for (int y = 0; y < Math.min(from, h); y++) {
-					owner[(y * d + z) * w + x] = -1;
+					owners.set(x, y, z, -1);
 				}
 			}
 		}
@@ -303,7 +338,7 @@ public final class PartsBuilding {
 	}
 
 	/** The drawing pixel a voxel shows (parts_model.build's painting). */
-	private static int paint(Part part, int[] owner, int x, int y, int z, int w, int h, int d) {
+	private static int paint(Part part, Owners owners, int x, int y, int z, int w, int h, int d) {
 		JsonObject paint = part.paint;
 		double[] b = part.bounds();
 		String face = "south";
@@ -311,7 +346,7 @@ public final class PartsBuilding {
 			int ny = y + FACES[f][0];
 			int nz = z + FACES[f][1];
 			int nx = x + FACES[f][2];
-			if (ny < 0 || ny >= h || nz < 0 || nz >= d || nx < 0 || nx >= w || owner[(ny * d + nz) * w + nx] < 0) {
+			if (ny < 0 || ny >= h || nz < 0 || nz >= d || nx < 0 || nx >= w || owners.get(nx, ny, nz) < 0) {
 				face = FACE[f];
 				break;
 			}

@@ -137,7 +137,7 @@ class InteriorPackerTest {
 		assertEquals(2, forest.layer());
 		assertTrue(forest.moved());
 		InteriorPacker.Box box = InteriorPacker.footprint(forest.x(), forest.z(), 40, 40);
-		assertTrue(box.separated(surface, InteriorPacker.GAP), "outside the surface's volume");
+		assertTrue(box.separated(surface, InteriorPacker.SKY_CLEARANCE), "out of sight of the surface's volume");
 		// An interior that wants the spot above it, on layer 1, can't have it: the column stays free up to the sky. It
 		// spills down under the forest instead, as any interior spills under a taken spot.
 		InteriorPacker.Spot wants = packer.place(forest.x(), forest.z(), 40, 40, 1);
@@ -145,5 +145,34 @@ class InteriorPackerTest {
 		assertEquals(forest.x(), wants.x());
 		assertEquals(3, wants.layer(), "below the forest, never above it");
 		assertNull(new InteriorPacker(1).placeOpenSky(0, 0, 40, 40, 2, surface), "no layer for it: it keeps its ceiling");
+	}
+
+	@Test
+	void openAirInteriorsKeepOutOfSightOfEachOtherAndOfTheKeptAreas() {
+		// 2026-10-23: Sootopolis saw the Battle Frontier's ground hanging over it, and Route 28 Johto's underside. However
+		// deep their layers, two open-air interiors (and one and the cave area) stay past the farthest view distance apart.
+		InteriorPacker packer = new InteriorPacker(8);
+		InteriorPacker.Box surface = new InteriorPacker.Box(-200, -200, 200, 200);
+		InteriorPacker.Box caves = new InteriorPacker.Box(-200, -3000, 200, -2800);
+		packer.keepSkyClear(caves);
+		InteriorPacker.Spot high = packer.placeOpenSky(0, 0, 40, 40, 1, surface);
+		InteriorPacker.Spot deep = packer.placeOpenSky(0, 0, 40, 40, 6, surface);
+		InteriorPacker.Spot nearCaves = packer.placeOpenSky(0, -2900, 40, 40, 2, surface);
+		assertNotNull(high);
+		assertNotNull(deep);
+		assertNotNull(nearCaves);
+		List<InteriorPacker.Box> boxes = List.of(InteriorPacker.footprint(high.x(), high.z(), 40, 40),
+				InteriorPacker.footprint(deep.x(), deep.z(), 40, 40), InteriorPacker.footprint(nearCaves.x(), nearCaves.z(), 40, 40));
+		for (int i = 0; i < boxes.size(); i++) {
+			assertTrue(boxes.get(i).separated(surface, InteriorPacker.SKY_CLEARANCE));
+			assertTrue(boxes.get(i).separated(caves, InteriorPacker.SKY_CLEARANCE), "out of sight of the cave area");
+			for (int j = i + 1; j < boxes.size(); j++) {
+				assertTrue(boxes.get(i).separated(boxes.get(j), InteriorPacker.SKY_CLEARANCE), i + " and " + j);
+			}
+		}
+		// An ordinary interior is no open-air one: it may still stand a gap from one.
+		InteriorPacker.Spot room = packer.place(high.x() + 40 + 2 * InteriorPacker.GAP, high.z(), 40, 40, 1);
+		assertNotNull(room);
+		assertFalse(room.moved());
 	}
 }

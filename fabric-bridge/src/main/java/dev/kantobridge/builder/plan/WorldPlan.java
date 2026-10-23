@@ -56,6 +56,11 @@ public final class WorldPlan {
 	 * an apron.
 	 */
 	public static final int SKY_MARGIN = Apron.CELLS * Scale.CELL_BLOCKS + 1;
+	/**
+	 * How high an interior under the open sky reaches over its feet: a wood's canopy, or an outdoor map's tallest building,
+	 * as tall as on the surface (2026-10-23).
+	 */
+	public static final int SKY_TOP = Math.max(Canopy.TOP_LEVEL, SURFACE_MAX_Y - Scale.GROUND_Y - 1);
 
 	public static final String BIOME_OUTDOOR = "kantobridge:kanto_outdoor";
 	public static final String BIOME_INTERIOR = "kantobridge:kanto_interior";
@@ -509,7 +514,7 @@ public final class WorldPlan {
 
 	/**
 	 * The volume of an interior: its footprint and enclosure ring, from the floor block up to the ceiling; under the open
-	 * sky up to a wood's canopy (the caves and woods plan's CW2), which the packer keeps free above it anyway, and out to
+	 * sky up to {@link #SKY_TOP} (a wood's canopy, CW2; an outdoor map's buildings), which the packer keeps free above it anyway, and out to
 	 * {@link #SKY_MARGIN} past the map for a wood's apron (CW3).
 	 */
 	public static Box3 interiorVolume(MapPlacement p) {
@@ -527,7 +532,7 @@ public final class WorldPlan {
 	/** The volume of one part of an interior: its rectangle and enclosure ring at its offset ({@link #interiorVolume}). */
 	public static Box3 partVolume(MapPlacement p, MapLayout.Piece piece, int ceiling) {
 		boolean sky = openSky(p);
-		int top = sky ? Canopy.TOP_LEVEL : ceiling;
+		int top = sky ? SKY_TOP : ceiling;
 		int grow = sky ? SKY_MARGIN - InteriorPacker.RING : 0;
 		InteriorPacker.Box box = InteriorPacker.footprint(p.x() + piece.dx() + Scale.cellToBlock(piece.x()), p.z() + piece.dz() + Scale.cellToBlock(piece.y()),
 				Scale.cellToBlock(piece.w()), Scale.cellToBlock(piece.h()));
@@ -552,7 +557,7 @@ public final class WorldPlan {
 	public static Box3 interiorVolume(MapPlacement p, int ceiling) {
 		InteriorPacker.Box box = InteriorPacker.footprint(p.x(), p.z(), p.blockWidth(), p.blockDepth());
 		boolean sky = openSky(p);
-		int top = sky ? Canopy.TOP_LEVEL : ceiling;
+		int top = sky ? SKY_TOP : ceiling;
 		int grow = sky ? SKY_MARGIN - InteriorPacker.RING : 0;
 		return new Box3(box.minX() - grow, p.y() - 1, box.minZ() - grow, box.maxX() + grow, p.y() + top + 1, box.maxZ() + grow);
 	}
@@ -716,7 +721,7 @@ public final class WorldPlan {
 				continue;
 			}
 			int ceiling = maxCeiling(map.layout());
-			int top = openSky(map.placement()) ? Canopy.TOP_LEVEL + 2 : 8 + ceiling - CEILING_ABOVE_FEET;
+			int top = openSky(map.placement()) ? SKY_TOP + 2 : 8 + ceiling - CEILING_ABOVE_FEET;
 			for (MapLayout.Piece piece : parts(map.placement(), map.layout())) {
 				Box3 v = partVolume(map.placement(), piece, ceiling).inflateXZ(4);
 				int feet = map.placement().y() + piece.dy();

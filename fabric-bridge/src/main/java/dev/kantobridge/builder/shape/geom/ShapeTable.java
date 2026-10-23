@@ -83,6 +83,15 @@ public final class ShapeTable {
 	 * @param artHash what the geometry was built from (the art and the pack overrides), the cache file's third value
 	 */
 	public static ShapeTable build(ShapeIndex index, ArtSource art, String artHash, ShapeOverrides overrides) {
+		return build(index, art, artHash, overrides, true);
+	}
+
+	/**
+	 * {@link #build(ShapeIndex, ArtSource, String, ShapeOverrides)}; without {@code keepBuilt} (a client: only the meshes
+	 * matter) each template is built, gives its blocks and goes before the next, and the table keeps no templates: a
+	 * template's voxels and quads ran to gigabytes for Hoenn's buildings and rock masses kept all at once (2026-10-23).
+	 */
+	public static ShapeTable build(ShapeIndex index, ArtSource art, String artHash, ShapeOverrides overrides, boolean keepBuilt) {
 		Map<String, Integer> textures = new HashMap<>();
 		List<String> keys = new ArrayList<>();
 		ShapeMesh[] meshes = new ShapeMesh[index.size() + 1];
@@ -91,7 +100,8 @@ public final class ShapeTable {
 		Map<String, TemplateRule.Template> templates = new HashMap<>();
 		Map<String, Templates.Entry> entries = entries(index);
 		int artPx = art.artPx();
-		for (int id = 1; id <= index.size(); id++) {
+		Map<String, Integer> left = new HashMap<>();
+		for (int id : order(index, keepBuilt, left)) {
 			ShapeKey key = index.key(id);
 			String palette = index.palette(id);
 			if (key == null || palette == null) {
@@ -134,6 +144,9 @@ public final class ShapeTable {
 					TemplateRule.Template template = templates.computeIfAbsent(atlas + "|" + key.sig(), k -> TemplateRule.build(entry, atlas, art,
 							overrides));
 					List<ShapeQuad> block = template.block(key.number(0), key.number(1), key.number(2));
+					if (!keepBuilt && left.merge(key.sig(), -1, Integer::sum) == 0) {
+						templates.remove(atlas + "|" + key.sig());
+					}
 					int[] colours = template.colours();
 					yield colours != null ? retexture(block, colour -> texture(colourKey(colours[colour]), textures, keys)) : retexture(block, texture);
 				}
@@ -163,7 +176,32 @@ public final class ShapeTable {
 			}
 			meshes[id] = quads == null ? null : new ShapeMesh(quads);
 		}
-		return new ShapeTable(index.hash(), GEOMETRY, artHash, keys, meshes, units, templates);
+		return new ShapeTable(index.hash(), GEOMETRY, artHash, keys, meshes, units, keepBuilt ? templates : Map.of());
+	}
+
+	/**
+	 * The ids to build, in order: all of them, else the template keys last, a template's keys together (in {@code left},
+	 * each template's count of keys).
+	 */
+	private static int[] order(ShapeIndex index, boolean keepBuilt, Map<String, Integer> left) {
+		int[] out = new int[index.size()];
+		int n = 0;
+		Map<String, List<Integer>> bySig = new java.util.LinkedHashMap<>();
+		for (int id = 1; id <= index.size(); id++) {
+			ShapeKey key = index.key(id);
+			if (!keepBuilt && key != null && key.kind() == ShapeKey.Kind.TMPL) {
+				bySig.computeIfAbsent(key.sig(), k -> new ArrayList<>()).add(id);
+			} else {
+				out[n++] = id;
+			}
+		}
+		for (Map.Entry<String, List<Integer>> e : bySig.entrySet()) {
+			left.put(e.getKey(), e.getValue().size());
+			for (int id : e.getValue()) {
+				out[n++] = id;
+			}
+		}
+		return out;
 	}
 
 	/** Tiles along a cell unit's edge: a {@code cell} key names four tiles. */

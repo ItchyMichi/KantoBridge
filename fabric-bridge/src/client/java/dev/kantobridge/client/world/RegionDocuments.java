@@ -83,8 +83,11 @@ public final class RegionDocuments {
 		}
 	}
 
-	/** The largest shape document accepted, inflated (the real Hoenn's index is about 9 MB, its map 11). */
-	public static final int MAX_DOC_BYTES = 64 * 1024 * 1024;
+	/**
+	 * The largest shape document accepted, inflated. Hoenn's index with the landscape models is about 79 MB (2026-10-23;
+	 * 64 MB refused it, and the region drew cubes), its map 25.
+	 */
+	public static final int MAX_DOC_BYTES = 256 * 1024 * 1024;
 
 	/** One region's documents, as far as they have arrived. */
 	private static final class Held {

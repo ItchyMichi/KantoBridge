@@ -4,8 +4,11 @@ import static dev.kantobridge.builder.shape.ShapeFixtures.interior;
 import static dev.kantobridge.builder.shape.ShapeFixtures.surface;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import dev.kantobridge.builder.plan.HeightRules;
+import dev.kantobridge.scene.Env;
 import dev.kantobridge.scene.SceneMap;
 import java.util.List;
 import org.junit.jupiter.api.Test;
@@ -97,6 +100,32 @@ class StructuresTest {
 	}
 
 	@Test
+	void anOutdoorMapUnderTheOpenSkyStandsAsOnTheSurface() {
+		// 2026-10-23: the Battle Frontier's buildings stood 2 blocks tall, by the interior rule; an outdoor map placed apart
+		// under the open sky now takes the surface's heights and room, a wood (drawn indoors) keeps the interior's.
+		SceneMap sky = ShapeFixtures.openAir("SKY",
+				"AAAA....",
+				"BBBB..CC",
+				"CCDD..EE",
+				"CCDD....",
+				"==..~~..",
+				"==..~~..");
+		assertTrue(sky.outdoors());
+		int[] units = Structures.units(sky, Structures.solidTiles(sky));
+		assertArrayEquals(Structures.classifiedHeights(TWO, Structures.units(TWO, Structures.solidTiles(TWO)), HeightRules.INTERIOR_WALL),
+				Structures.classifiedHeights(sky, units, HeightRules.INTERIOR_WALL));
+		assertEquals(ShapeHeights.SURFACE, ShapeHeights.headroom(sky));
+		SceneMap wood = ShapeFixtures.map("WOOD", false, new Env(false, true, false, Env.DARK_NEVER), "AAAA", "AAAA", "....", "....");
+		assertFalse(wood.outdoors());
+		assertTrue(ShapeHeights.headroom(wood) < ShapeHeights.SURFACE);
+		// Emerald's Petalburg Woods: a route by its map type (outdoor and open), marked a wood by the front end
+		SceneMap route = ShapeFixtures.map("WOODS", false, new Env(true, true, false, Env.DARK_NEVER, false, true, -1), "AAAA", "AAAA", "....",
+				"....");
+		assertFalse(route.outdoors());
+		assertTrue(ShapeHeights.headroom(route) < ShapeHeights.SURFACE);
+	}
+
+	@Test
 	void aRepeatingTreeLineStaysLow() {
 		// Two cells of alternating rows repeat with period 2 over 4 rows: a unit of 2 (HeightRules' repeat rule).
 		SceneMap trees = surface("TREES",
@@ -147,6 +176,29 @@ class StructuresTest {
 		assertEquals(2, house.wallH());
 		assertEquals(3, house.blocks(), "two bands and the roof block");
 		assertEquals(2, run(runs, 5, 0).h(), "beside the house the tree line is just as low");
+	}
+
+	@Test
+	void underTheOpenSkyAFittedRunKeepsItsModelsWhereTheSurfaceRoofsIt() {
+		// 2026-10-23: the National Park's fences (fitted cells, four drawn rows) rose 3 blocks as a roofed face under the
+		// open sky; there they keep their models as under the interior rule, on the surface the face takes them over.
+		String[] rows = {"RRRR....", "SSSS....", "FFFF....", "GGGG....", "........", "........"};
+		boolean[] fitted = new boolean[8 * 6];
+		for (int ty = 0; ty < 4; ty++) {
+			for (int tx = 0; tx < 4; tx++) {
+				fitted[ty * 8 + tx] = true;
+			}
+		}
+		SceneMap surface = surface("FENCE", rows);
+		Structures.MeasuredRun onSurface = run(Structures.measured(surface, Structures.solidTiles(surface), HeightRules.MAX_UNIT,
+				HeightRules.MIN_REPEAT_ROWS, HeightRules.INTERIOR_WALL, true, null, fitted), 0, 0);
+		assertFalse(onSurface.models());
+		assertEquals(2, onSurface.r());
+		SceneMap sky = ShapeFixtures.openAir("FENCE", rows);
+		Structures.MeasuredRun underSky = run(Structures.measured(sky, Structures.solidTiles(sky), HeightRules.MAX_UNIT,
+				HeightRules.MIN_REPEAT_ROWS, HeightRules.INTERIOR_WALL, true, null, fitted), 0, 0);
+		assertTrue(underSky.models());
+		assertEquals(0, underSky.r());
 	}
 
 	@Test

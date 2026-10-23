@@ -121,6 +121,16 @@ public record SceneMap(String id, int index, String tileset, String atlas, Strin
 		return this.ownBorder[Math.floorMod(ty, side) * side + Math.floorMod(tx, side)];
 	}
 
+	/**
+	 * Built by the outdoor rules: a surface map, or an outdoor map placed apart under the open sky (Route 28, Silver Cave's
+	 * outside, the Battle Frontier, Sootopolis, the Safari Zones), whose buildings and faces stand as tall as on the surface
+	 * (2026-10-23; they kept the interior rule's 2-block walls before). A wood under the sky is not one: it is drawn indoors
+	 * (Gen 1 and 2 describe their forests as not outdoor; Emerald's Petalburg Woods, a route, is marked {@link Env#wood()}).
+	 */
+	public boolean outdoors() {
+		return this.surface || (this.env.outdoor() && this.env.openAir() && !this.env.wood());
+	}
+
 	/** The same map under a ceiling {@code blocks} over its floor (D5: the shape planner's, from the map's layout). */
 	public SceneMap withHeadroom(int blocks) {
 		return new SceneMap(this.id, this.index, this.tileset, this.atlas, this.palette, this.w, this.h, this.perCell, this.surface,

@@ -242,7 +242,7 @@ public final class ShapePlanner {
 			MapLayout layout = layouts.get(map.id());
 			// Shapes stand under the map's ceiling (D5): its room, from the export alone, so a filter changes no key
 			Integer room = rooms.get(map.id());
-			SceneMap sized = room != null && !map.surface() ? map.withHeadroom(room) : map;
+			SceneMap sized = room != null && !map.outdoors() ? map.withHeadroom(room) : map;
 			MapShapes planned = params.profileUnits()
 					? planMap(sized, scene.atlas(map.atlas()), atlas, params, scene.profileTileset(map.tileset()), probe, unitSources, layout)
 					: planMap(sized, scene.atlas(map.atlas()), atlas, params, null, null, new TreeMap<>(), layout);
@@ -626,7 +626,7 @@ public final class ShapePlanner {
 			curtain = null;
 		}
 		// The visible-layers check (D9, from H9): an outdoor map's faces against the rows the hidden game draws
-		VisibleRows.Missing visible = params.visibleRows() && params.measured() && map.surface() && map.env().outdoor()
+		VisibleRows.Missing visible = params.visibleRows() && params.measured() && map.outdoors() && map.env().outdoor()
 				? VisibleRows.check(map, open, params.maxUnit()) : null;
 		return new MapShapes(map.id(), open.keys(), closed, open.blocks(), open.shapeMask(), open.floor(), open.decor(), open.units(), overlay,
 				open.templates(), open.wallTile(), open.ceiling(), open.hung(), open.hungMask(), open.hungLeaves(), curtain, apron, visible);
@@ -672,9 +672,10 @@ public final class ShapePlanner {
 		boolean[] held = new boolean[map.artCols() * map.artRows()];
 		List<Buildings.Claim> claims = params.profileBuildings() && tileset != null && sceneAtlas != null && map.perCell() == ShapeTable.UNIT_CELL
 				? Buildings.claims(map, tileset.buildings(), held, tally) : List.of();
-		// The fitted table's generated buildings (HAND_MODELS.md section 7) claim their grids next, as band buildings do.
+		// The fitted table's generated buildings (HAND_MODELS.md section 7) claim their grids next, as band buildings do,
+		// outdoors (on the surface or under the open sky: a Pokémon Center outside Silver Cave, 2026-10-23).
 		Map<Profile.Building, FittedShapes.Building> fittedOf = FittedBuildings.index();
-		List<Buildings.Claim> fitted = sceneAtlas != null && map.perCell() == ShapeTable.UNIT_CELL && map.surface()
+		List<Buildings.Claim> fitted = sceneAtlas != null && map.perCell() == ShapeTable.UNIT_CELL && map.outdoors()
 				? FittedBuildings.claims(map, held, tally, fittedOf) : List.of();
 		// The landscape sections' models (LANDSCAPE_MODELS.md; none unless the build names a table) claim their marked cells
 		// next, outdoors (on the surface or under the open sky), as parts templates.

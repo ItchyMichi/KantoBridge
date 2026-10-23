@@ -21,7 +21,7 @@ import org.jetbrains.annotations.Nullable;
  *
  * <p>An open-air interior (a forest; the voxel plan's V7, §5.12) needs the sky: {@link #placeOpenSky} puts it outside the
  * surface's box, at a spot free on its layer and on every layer above, and keeps that column free up to the sky for the
- * interiors placed after it.
+ * interiors placed after it, {@link #SKY_CLEARANCE} away from the surface and from every other open-air interior.
  */
 public final class InteriorPacker {
 	/** Minimum horizontal distance between two interiors' outer walls on one layer. */
@@ -34,6 +34,13 @@ public final class InteriorPacker {
 	public static final int MAX_RINGS = 64;
 	/** Rings tried for a spot under the void fill: enough to leave any surface map (Kanto is about 700 blocks wide). */
 	public static final int MAX_DEEP_RINGS = 128;
+	/**
+	 * How far an open-air interior keeps from the surface's volume and from every other open-air interior: 34 chunks, past
+	 * Minecraft's farthest view distance (32 chunks), so none sees the surface's underside or another one's ground hanging
+	 * over it (2026-10-23: Route 28 under Johto's border trees, Sootopolis under the Battle Frontier). Warps join them, so
+	 * the distance costs nothing.
+	 */
+	public static final int SKY_CLEARANCE = 34 * 16;
 
 	/** A horizontal box in blocks, max exclusive. */
 	public record Box(int minX, int minZ, int maxX, int maxZ) {
@@ -61,6 +68,7 @@ public final class InteriorPacker {
 	private final int maxLayer;
 	private final List<Box> surface;
 	private final Map<Integer, List<Box>> occupied = new HashMap<>();
+	private final List<Box> skies = new ArrayList<>();
 
 	public InteriorPacker(int maxLayer) {
 		this(maxLayer, List.of());
@@ -131,8 +139,8 @@ public final class InteriorPacker {
 
 	/**
 	 * Finds and reserves a spot under the open sky for an open-air interior: on layer {@code minLayer}, its footprint
-	 * outside {@code surfaceBox} (the surface's volume: maps, void fill and ring) by at least {@link #GAP} and free on its
-	 * layer and on every layer above it; nearest its door first (rings of {@link #SIDEWAYS_STEP} blocks). The footprint is
+	 * outside {@code surfaceBox} (the surface's volume: maps, void fill and ring) and every open-air interior placed before
+	 * by at least {@link #SKY_CLEARANCE} and free on its layer and on every layer above it; nearest its door first (rings of {@link #SIDEWAYS_STEP} blocks). The footprint is
 	 * reserved on every layer from the top down to its own, so nothing is placed above it later.
 	 * Null when nothing fits (the interior then takes an ordinary spot and keeps its ceiling).
 	 */
@@ -145,7 +153,7 @@ public final class InteriorPacker {
 				int sx = x + offset.dx() * SIDEWAYS_STEP;
 				int sz = z + offset.dz() * SIDEWAYS_STEP;
 				Box box = footprint(sx, sz, blockWidth, blockDepth);
-				if (!box.separated(surfaceBox, GAP)) {
+				if (!box.separated(surfaceBox, SKY_CLEARANCE) || !this.clearOfSkies(box)) {
 					continue;
 				}
 				// The shallowest layer it may take is the only one worth trying: a deeper one needs this one free as well.
@@ -159,10 +167,25 @@ public final class InteriorPacker {
 				for (int layer = 1; layer <= minLayer; layer++) {
 					this.occupied.computeIfAbsent(layer, k -> new ArrayList<>()).add(box);
 				}
+				this.skies.add(box);
 				return new Spot(sx, sz, minLayer, sx != x || sz != z);
 			}
 		}
 		return null;
+	}
+
+	/** A box open-air interiors keep {@link #SKY_CLEARANCE} from, as from each other (WorldPlanner.keepSkiesClear). */
+	public void keepSkyClear(Box box) {
+		this.skies.add(box);
+	}
+
+	private boolean clearOfSkies(Box box) {
+		for (Box sky : this.skies) {
+			if (!box.separated(sky, SKY_CLEARANCE)) {
+				return false;
+			}
+		}
+		return true;
 	}
 
 	private boolean underSurface(Box box) {

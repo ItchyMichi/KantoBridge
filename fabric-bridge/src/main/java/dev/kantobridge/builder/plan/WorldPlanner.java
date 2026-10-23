@@ -245,6 +245,7 @@ public final class WorldPlanner {
 		for (MapPlacement cave : caveArea.placements()) {
 			placements.put(cave.id(), cave);
 		}
+		WorldPlanner.keepSkiesClear(packer, caveArea, surfaceVolume, options.originX(), options.originZ());
 		String forest = field.indoor() == null ? null : field.indoor().excludedTileset();
 		List<ExportMap> pending = new ArrayList<>();
 		for (String id : requested) {
@@ -660,6 +661,20 @@ public final class WorldPlanner {
 		return new Occupancy(story, fill, tiles);
 	}
 
+
+	/**
+	 * The areas open-air maps keep {@link InteriorPacker#SKY_CLEARANCE} from, as from the surface (2026-10-23): the cave
+	 * area, whose rooms float in the air (a cave's outside, Mt. Moon Square or the Sky Pillar, wants a spot near its door
+	 * there), and the dungeon area south of it.
+	 */
+	static void keepSkiesClear(InteriorPacker packer, CavePlanner.Result caves, @Nullable Box3 surface, int originX, int originZ) {
+		int[] a = caves.area();
+		if (a != null) {
+			packer.keepSkyClear(new InteriorPacker.Box(a[0], a[1], a[2], a[3]));
+		}
+		dev.kantobridge.world.WorldIndex.Dungeons d = dev.kantobridge.dungeon.DungeonSlots.region(surface, originX, originZ);
+		packer.keepSkyClear(new InteriorPacker.Box(d.x(), d.z(), d.x() + d.w(), d.z() + d.d()));
+	}
 	/**
 	 * @param wild the map's wild Pokémon come from a habitat pool: it gets the cave biome, which the interior spawn guard
 	 *             (spawn rule {@code no_interior_spawns}) leaves alone; the two biomes look and sound the same
@@ -699,7 +714,7 @@ public final class WorldPlanner {
 				return new MapPlacement(map.id(), spot.x(), Scale.feetY(spot.layer()), spot.z(), map.cellWidth(), map.cellHeight(), spot.layer(),
 						MapPlacement.Kind.INTERIOR, map.palette(), WorldPlan.BIOME_OUTDOOR, map.dark(), parent.id());
 			}
-			warnings.note("open_air_kept_ceiling", detail);
+			warnings.warn("open_air_kept_ceiling", detail);
 		}
 		spot = packer.place(wantX, wantZ, Scale.cellToBlock(map.cellWidth()), Scale.cellToBlock(map.cellHeight()), parent.layer() + 1);
 		if (spot == null) {

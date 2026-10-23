@@ -12,3 +12,6 @@ Changes from Blue's (docs/specs/PRODUCTION_PIPELINE_CRYSTAL.md has the reasons):
   eave); a building up to two cells deep with no roof line is half roof (a gate), not all wall.
 - batch_entities.sh runs from its own folder.
 - merge_voxels.py, buildings_table.py: the repository is three folders up.
+- parts_package.py, parts_model.py: Emerald's, unchanged (2026-10-23), for Crystal's buildings as parts
+  (docs/specs/BUILDING_PARTS.md); buildings_table.py takes `--parts <packages dir>` as Emerald's does. Used for the
+  open-sky maps' buildings (the National Park, the Battle Tower, the ports, the Ruins of Alph...); the towns' stay boxes.
