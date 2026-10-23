@@ -136,8 +136,9 @@ Run 2026-10-22/23 (rock only, all regions):
   need a 20 GB heap (`levels_build.sh` `HEAP`; 8 GB runs out) and take its first shape download to 7.5M characters
   (map) and 12.5M (index), over the 64-part budget: the user chose to raise it to 256 parts
   (`build_world.MAX_SHAPE_DOC_PARTS`) over slimming the models.
-- **Open:** the before/after pictures (the first set was framed wrong and a trainer's dialogue spoiled Hoenn's; EU-RO-1
-  had no free hosts for the retake).
+- **Pictures** (2026-10-23): 14 before/after sheets (Route 115's spot dropped: a trainer's dialogue covered the shots
+  after it), each with a fourth panel at the user's ask: the map's art north of the player (what the camera faces),
+  the player and the spot's unit boxed. `levels_shoot.sh` starts its own 1280x720 Xvfb: don't start one at another size.
 
 ## Levels (the levels pilot, 2026-10-21)
 

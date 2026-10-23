@@ -1292,7 +1292,7 @@ for the rest" (plan §8). Feature tests per phase, the full suite at the checkpo
      Johto built with them in world LandRollout, warnings as before. Hoenn needed a 20 GB build heap and a bigger
      first-download budget for its shape documents (you chose 256 parts over slimmer models). Big Hoenn masses stop at
      the tool's 20-block cap and stay partly buried (Ever Grande, Mt. Pyre, Mt. Chimney, Sootopolis, Routes 112 and
-     115). Open: the before/after pictures. Details: specs/LANDSCAPE_MODELS.md, "The rollout".
+     115). The before/after sheets (14 spots) went to you on 2026-10-23. Details: specs/LANDSCAPE_MODELS.md, "The rollout".
    - (The note's JUnit count, 1,379, counted two temporary probes since moved out: the suite holds 1,377.)
    - **Cave mouths and wall exits** (a fitted model in use on the cell over a door, the whole cell unroofed before): the
      model is the doorway, the face over it folds no door and rises as drawn, roofless so its models stay in use, and
