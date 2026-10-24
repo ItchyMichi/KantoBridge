@@ -620,6 +620,8 @@ function Party.new(opts)
           status = STATUS[e.status], nick = nick,
           -- FP2: Cobblemon's stats (pinned, Q20) and its stones (§4.4), for every record
           stats = e.stats, stones = e.stones, visitor = visitor or nil,
+          -- FP3: what gs puts back on a visitor's record (name, types) and Cobblemon's machine list (§4.4)
+          name = visitor and e.name or nil, types = visitor and e.types or nil, canLearn = e.canLearn,
         })
         if visitor then
           ids[e.uid] = { dex = e.dex, form = e.form, name = e.name }

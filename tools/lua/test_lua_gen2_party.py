@@ -17,6 +17,8 @@ pytestmark = pytest.mark.lua
 UID1 = "11111111-1111-4111-8111-111111111111"
 UID2 = "22222222-2222-4222-8222-222222222222"
 UID3 = "33333333-3333-4333-8333-333333333333"
+UID4 = "44444444-4444-4444-8444-444444444444"
+UID5 = "55555555-5555-4555-8555-555555555555"
 
 
 def setup(live=True):
@@ -259,3 +261,117 @@ def test_main_gives_the_starter_with_its_details():
     assert give_["source"] == "starter" and give_["dex"] == 152 and give_["level"] == 5 and give_["moves"] == [33]
     assert set(give_["dvs"]) == {"atk", "def", "spd", "spc"} and give_["gender"] in ("male", "female")
     assert give_["shiny"] is False and give_["friendship"] == 70
+
+
+# ------------------------------------------------------------ FP3: visitors in Crystal (FOREIGN_POKEMON_PLAN section 3)
+
+STATS = {"hp": 61, "atk": 30, "def": 31, "spa": 32, "spd": 33, "spe": 34}
+
+
+def registered(a):
+    """The adapter's registration through a content registry that keeps what it is given, merged into the data as
+    the engine's loader would (the stand-in's record, its icon sheet and the species -> sheet mapping)."""
+    content = a.b.eval("""function(E)
+      local kept = { pokemon = {}, icons = {} }
+      local function reg(name) return { register = function(_, id, rec) kept[name][id] = rec
+        if name == "pokemon" then E.data.pokemon[id] = rec end return rec end } end
+      return { pokemon = reg("pokemon"), icons = reg("icons") }, kept
+    end""")
+    c, kept = content(a.E)
+    assert a.eng.registerVisitor(c, b"/mods/gen1-bridge/assets/visitor") is True
+    return kept
+
+
+def test_the_stand_in_registers_in_gs_shape_with_its_icon_sheet():
+    a, _ = setup()
+    kept = registered(a)
+    rec = kept.pokemon.KB_VISITOR
+    assert rec.dex == 999 and rec.index is None and rec.catchRate == 0 and len(rec.evolutions) == 0
+    assert list(rec.eggGroups.values()) == [b"EGG_NONE", b"EGG_NONE"], "the No Eggs group: never bred (Q10)"
+    sheet = kept.icons.ICON_KB_VISITOR
+    assert (sheet.width, sheet.height, sheet.frames) == (16, 32, 2)
+    assert kept.icons.KB_VISITOR == b"ICON_KB_VISITOR"
+    assert a.eng.visitorSpecies() == b"KB_VISITOR"
+    assert a.eng.formKnown(b"UNOWN", b"q") and not a.eng.formKnown(b"TEST_CHIKORITA", b"alola")
+
+
+def test_a_visitor_keeps_cobblemons_name_types_and_stats_through_the_engines_recompute():
+    a, _ = setup()
+    registered(a)
+    a.eng.applyParty(a.lua([entry(UID1, "KB_VISITOR", 20, hp=50, maxhp=61, visitor=True, name="Skitty",
+                                  types=["normal", "fairy"], stats=STATS, gender="female", stones=["moon_stone"])]))
+    m = party(a)[0]
+    assert (m.species, m.name, list(m.types.values())) == (b"KB_VISITOR", b"SKITTY", [b"NORMAL", b"CURSE_TYPE"])
+    assert (m.stats.hp, m.stats.attack, m.stats.specialAttack, m.stats.specialDefense, m.maxHp, m.hp) == (61, 30, 32, 33, 61, 50)
+    # the party menu, the summary and a battle start rebuild the record from the species: the pin puts it back
+    a.E.Mon.refreshStats(m, a.E.data)
+    assert (m.name, m.stats.hp, m.stats.speed, m.maxHp, m.gender) == (b"SKITTY", 61, 34, 61, b"female")
+    assert m.kbStones.MOON_STONE is True
+    # a native with stats is pinned too (Q20); no visitor fields on it
+    a.eng.applyParty(a.lua([entry(UID2, "TEST_CHIKORITA", 9, hp=20, maxhp=40, stats=dict(STATS, hp=40))]))
+    n = party(a)[0]
+    a.E.Mon.refreshStats(n, a.E.data)
+    assert n.stats.hp == 40 and n.kbName is None and n.name != b"SKITTY"
+
+
+def test_crystals_snapshot_has_the_shadow_party():
+    a, _ = setup()
+    seed(a, [("TEST_CHIKORITA", 5, UID1)])
+    view = a.eng.saveView()
+    assert len(view.party) == 1 and view.party[1].species == b"TEST_CHIKORITA"
+
+
+def test_main_makes_visitors_of_what_crystal_lacks_and_drops_moves_past_its_ceiling():
+    # R2 through main.lua: past Crystal's 251, dex 0 and a form it lacks are visitors in their places (name, types,
+    # stats on the record); an Unown letter is native; a native drops a move past 251
+    def prepare(E, b):
+        orig = E.data.pokemon
+        b.eval("""function(content, data)
+          local reg = content.pokemon
+          local register = reg.register
+          reg.register = function(self, id, rec) data[id] = rec return register(self, id, rec) end
+        end""")(b.mod.content, orig)
+    rig = Rig(family="gen2", prepare=prepare)
+    rig.world("TEST_TOWN", 5, 6, "down")
+    peer = rig.connect()
+    peer.hello()
+    got = []
+    for _ in range(4):
+        rig.step()
+        got.extend(peer.messages())
+    assert next(m for m in got if m["type"] == "hello.ok")["data"]["compat"]["visitor"] is True
+    peer.send("party.sync", {"party": [
+        {"uid": UID1, "dex": 152, "level": 6, "moves": [33, 300], "hp": 15, "maxhp": 25},
+        {"uid": UID2, "dex": 300, "level": 20, "moves": [33, 57], "hp": 50, "maxhp": 61, "name": "Skitty",
+         "stats": STATS, "types": ["normal", "fairy"], "gender": "female"},
+        {"uid": UID3, "dex": 0, "level": 5, "moves": [15], "hp": 20, "maxhp": 20, "nick": "CUSTOM"},
+        {"uid": UID4, "dex": 19, "level": 9, "moves": [33], "hp": 20, "maxhp": 20, "form": "alola", "name": "Rattata"},
+        {"uid": UID5, "dex": 201, "level": 9, "moves": [33], "hp": 20, "maxhp": 20, "form": "q"},
+    ], "box": {"count": 0}})
+    for _ in range(4):
+        rig.step()
+        peer.messages()
+    p = rig.E.game.save.party
+    members = [p[i] for i in range(1, len(p) + 1)]
+    assert [m.species for m in members] == [b"TEST_CHIKORITA", b"KB_VISITOR", b"KB_VISITOR", b"KB_VISITOR", b"UNOWN"]
+    assert len(members[0].moves) == 1, "a move past Crystal's 251 is dropped"
+    v = members[1]
+    assert (v.name, list(v.types.values()), v.gender, v.stats.speed, v.maxHp, v.hp) == (
+        b"SKITTY", [b"NORMAL", b"CURSE_TYPE"], b"female", 34, 61, 50)
+    # Tackle and Surf by number are TEST_ moves here, neither a field move Crystal names: none applied (the new
+    # record keeps what the engine gave it)
+    assert b"TEST_SURF" not in [mv.id for mv in v.moves.values()]
+    assert members[3].name == b"RATTATA" and members[4].unownLetter == 17
+    seq = peer.send("debug.status")
+    rig.step()
+    st = [m for m in peer.messages() if m["type"] == "debug.status" and m.get("re") == seq][0]["data"]
+    assert st["partyVisitorsNow"] == 3 and st["partyForeignMoves"] == 1
+    peer.send("resync", {})
+    snap = None
+    for _ in range(6):
+        rig.step()
+        for m in peer.messages():
+            if m["type"] == "snapshot":
+                snap = m["data"]
+    assert [(q["dex"], q.get("visitor", False)) for q in snap["party"]] == [
+        (152, False), (300, True), (0, True), (19, True), (201, False)]

@@ -47,7 +47,8 @@ class Adapter3:
     def new_instance(self):
         """Another adapter instance on the same fake (a hot reload: the engine's modules and the
         Game3 object carry over), with the game set."""
-        eng = self.Engine.new(self.b.engine_opts(log=self.log, love=self.b.env.love, world=self.E.worldApi))
+        eng = self.Engine.new(self.b.engine_opts(log=self.log, love=self.b.env.love, world=self.E.worldApi,
+                                                 items=self.b.module("lib/kb_items.lua")))
         eng.setGame(self.E.game)
         return eng
 

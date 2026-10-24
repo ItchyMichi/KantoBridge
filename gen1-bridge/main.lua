@@ -96,7 +96,7 @@ return function(mod)
   -- stand-in, registered here in the entry chunk before the registries
   -- freeze; an adapter without one (or a refusal) leaves foreign members out
   if type(rawget(engine, "registerVisitor")) == "function" then
-    pcall(engine.registerVisitor, mod.content, (type(mod.path) == "string" and mod.path or "") .. "/assets/visitor")
+    pcall(engine.registerVisitor, mod.content, (type(mod.path) == "string" and mod.path or "") .. "/assets/visitor", mod.hooks)
   end
   local function visitorReady()
     local f = rawget(engine, "visitorSpecies")

@@ -3182,6 +3182,41 @@ blanked them), and the export sweep (`GenSave.encode` wrapped once per process: 
 without visitors in the party, boxes, daycare and Hall of Fame). Lupa: SWITCH, box sweep and Hall of Fame copy; the
 export sweep and the mod-off round trip are FP8's real-engine checks.
 
+## Foreign Pokémon: FP3, Crystal and Emerald (2026-10-24)
+
+The visitor path of FP2 (`act/kb_party.lua`) now runs on the other two engines; each adapter supplies the stand-in
+and its fixes (`registerVisitor`, `visitorSpecies`, `formKnown`, `visitorMoves`).
+
+- **Crystal** (`lib/engine/gen2/party.lua`): `KB_VISITOR` in gs's shape (dex 999, no `index`, no evolutions, egg groups
+  `EGG_NONE` twice so the Day-Care never breeds it, Q10), its icon sheet registered as `ICON_KB_VISITOR` (16x32, two
+  frames) with the species mapped to it (FP0's open item). A record keeps `kbStats`, and a visitor's `kbName`,
+  `kbTypes` (Showdown types as Gen 2 ids; one Gen 2 lacks, such as fairy, is `CURSE_TYPE`, "???") and `kbGender`;
+  `Mon.syncIdentity` and `Mon.refreshStats` are wrapped once per process to put them back. Forms: only Unown's
+  letters. The snapshot now carries the shadow party (eggs left out) instead of an empty list.
+- **Emerald** (`lib/engine/game3/party.lua`): `KB_VISITOR` at internal index 440 ("???" type where the registry
+  takes it, else Normal), art through the `pokemon.sprite`/`pokemon.icon` hooks (main.lua now passes `mod.hooks`),
+  `Pokemon.applyStats` wrapped to keep `kbStats`. Forms: only Unown's letters. Field moves from `FieldMoves.MOVES`.
+- **Both:** Cobblemon's stats pinned on every record that carries them (Q20); the sync's `stones` and `canLearn` kept
+  on the record (`kbStones`, `kbCanLearn`) for FP4; the cartridge export gets a copy of the save without visitors
+  (gs `Gen2Save.encode`, game3 `Gen3Save.forVersion().exportPort`), party, boxes, Day-Care and Hall of Fame.
+- **Shared:** `kb_party` passes a visitor's `name` and `types`, and every member's `canLearn`, to the adapter.
+- **Not needed:** Blue's box sweep, Hall of Fame copy and Q24's no-mod marker file. FP0 found that Crystal and
+  Emerald keep a visitor's record when the save is opened without the mod (plan §4.14).
+
+**Tests.** Lupa: the stand-in in each engine's shape, the pin through the engine's recompute, Crystal's snapshot party,
+and per engine through main.lua and a peer: dex past the ceiling, dex 0 and a form the game lacks become visitors in
+place, an Unown letter stays native, a native drops a move past the ceiling (`partyForeignMoves`), the visitor keeps
+the field moves only, `partyVisitorsNow`, the snapshot's real dex with `visitor`.
+**Real engines** (`tools/e2e/fp_visitors.py` + `drivers/kb_fpvisit.lua`, pod kb-dev50, ~1 min per game): a dex 445
+visitor in Blue, Crystal and Emerald: record, pin through the recompute, the party/summary/Hall of Fame screens, Cut
+by the visitor, save, the slot's cartridge export, CONTINUE, snapshot, status counts: **PASS on all three, 12/12
+checks in Crystal, 11/11 in Blue and Emerald.** The first run called the converters directly (no prepared data) and
+failed the export in Crystal and Emerald; the driver now exports as the game does (`SaveData.load` then
+`SaveConvert.exportSav`, `src/import/SaveFileIO.lua:299-312`) after the save, with a control (visitors taken out by
+hand): both encode. Crystal's encoder refuses a species with no index, so its pass shows the wrapper took the visitor
+out; Emerald's writes an index raw, so its pass alone doesn't prove that (lupa covers the copy).
+Full suite: pytest 2,348 passed (68 e2e skipped); GameTests 126/126; JUnit 1,431 of 1,432 (in package chunks): the one failure is the old `KbPackReloadTest.modelsReadFitAndStayWithinTheBudget`, failing since before FP0 (5979dd6). The whole Gradle check hung after the GameTest server shut down (the known worker hang), so JUnit ran through `kb-junit`.
+
 ## Pre-flight (PLAN §0.6)
 
 | Step | State |

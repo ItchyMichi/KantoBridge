@@ -122,6 +122,163 @@ function Party2.install(b)
     return tables(d).moveByNum[floor(n)]
   end)
 
+  -- ---- the visitor stand-in (docs/specs/FOREIGN_POKEMON_PLAN.md §3, FP3)
+  --
+  -- KB_VISITOR, registered from the mod's entry chunk through the public
+  -- registry in gs's shape (src/mods/Schemas.lua:1782-1824): dex 999 and no
+  -- index, so the Pokedex never lists it and `checkpoke` never matches it
+  -- (src/script/gen2/Vm.lua:632-638); no evolutions; egg groups EGG_NONE
+  -- twice, the "No Eggs" group (src/core/gen2/Breeding.lua:101-105), so the
+  -- Day-Care never makes an egg with it (Q10). Its party icon is a sheet of
+  -- our own under an ICON_ name, the species mapped to it (:2902-2953). FP0
+  -- ran it on Crystal (PROGRESS.md "Foreign Pokemon: spike FP0").
+  --
+  -- A record carries what the hidden game would otherwise rebuild from the
+  -- species: kbStats (Cobblemon's six stats), kbName (a visitor's species
+  -- name, upper case), kbTypes and kbGender (a visitor's). Mon.refreshStats
+  -- (src/battle/gen2/Mon.lua:347-363: every party menu, summary and battle
+  -- start) and Mon.syncIdentity (:219-241: name, types, gender, also on load)
+  -- are wrapped once per process to put them back. Extra fields survive the
+  -- save (FP0).
+  local VISITOR = "KB_VISITOR"
+  local visitorAccepted = false
+  -- PartyMenu.FIELD_MOVES (src/ui/gen2/PartyMenu.lua:66-73), when the module isn't there
+  local FIELD_MOVES = { "CUT", "FLY", "SURF", "STRENGTH", "FLASH", "WATERFALL", "WHIRLPOOL", "DIG", "TELEPORT",
+                        "SOFTBOILED", "HEADBUTT", "ROCK_SMASH", "MILK_DRINK", "SWEET_SCENT" }
+  -- Showdown's types as Gen 2's type ids; one Gen 2 lacks is CURSE_TYPE, which shows "???" (src/battle/TypeChart.lua:7)
+  Party2.TYPES = { normal = "NORMAL", fire = "FIRE", water = "WATER", electric = "ELECTRIC", grass = "GRASS",
+                   ice = "ICE", fighting = "FIGHTING", poison = "POISON", ground = "GROUND", flying = "FLYING",
+                   psychic = "PSYCHIC_TYPE", bug = "BUG", rock = "ROCK", ghost = "GHOST", dragon = "DRAGON",
+                   dark = "DARK", steel = "STEEL" }
+
+  local function pinWrappers()
+    local M = Mon()
+    if type(M) ~= "table" or rawget(M, "kbPinned") then return end
+    M.kbPinned = true
+    local function repin(mon)
+      if type(mon) ~= "table" then return end
+      if type(mon.kbName) == "string" then mon.name = mon.kbName end
+      if type(mon.kbTypes) == "table" then mon.types = mon.kbTypes end
+      if type(mon.kbGender) == "string" then mon.gender = mon.kbGender end
+      local p = mon.kbStats
+      if type(p) == "table" then
+        mon.stats = { hp = p.hp, attack = p.attack, defense = p.defense, speed = p.speed,
+                      specialAttack = p.specialAttack, specialDefense = p.specialDefense }
+        mon.maxHp = p.hp
+        if type(mon.hp) == "number" and mon.hp > p.hp then mon.hp = p.hp end
+      end
+    end
+    for _, name in ipairs({ "syncIdentity", "refreshStats" }) do
+      local orig = M[name]
+      if type(orig) == "function" then
+        M[name] = function(mon, ...)
+          local r = orig(mon, ...)
+          repin(mon)
+          return r
+        end
+      end
+    end
+  end
+
+  -- §4.14: a cartridge export never carries a visitor (Gen2Save.encode,
+  -- src/save_convert/Gen2Save.lua:2271, refuses a species with no index,
+  -- :1080-1087): the export gets a copy without them (party, boxes, the
+  -- Day-Care, the Hall of Fame's teams). One wrapper per process.
+  local function isVisitor(mon) return type(mon) == "table" and mon.species == VISITOR end
+  local function withoutVisitors(save)
+    if type(save) ~= "table" then return save end
+    local copy = {}
+    for k, v in pairs(save) do copy[k] = v end
+    local function list(mons)
+      local out = {}
+      for k, mon in pairs(type(mons) == "table" and mons or {}) do
+        if type(k) ~= "number" then out[k] = mon elseif not isVisitor(mon) then out[#out + 1] = mon end
+      end
+      return out
+    end
+    copy.party = list(save.party)
+    if type(save.boxes) == "table" then
+      copy.boxes = {}
+      for k, box in pairs(save.boxes) do copy.boxes[k] = type(box) == "table" and list(box) or box end
+    end
+    if type(save.dayCare) == "table" then
+      copy.dayCare = {}
+      for k, side in pairs(save.dayCare) do
+        if type(side) == "table" and isVisitor(side.mon) then
+          local c = {}
+          for kk, vv in pairs(side) do c[kk] = vv end
+          c.mon = nil
+          copy.dayCare[k] = c
+        else
+          copy.dayCare[k] = side
+        end
+      end
+    end
+    local hof = save.hallOfFame
+    if type(hof) == "table" and type(hof.teams) == "table" then
+      copy.hallOfFame = {}
+      for k, v in pairs(hof) do copy.hallOfFame[k] = v end
+      copy.hallOfFame.teams = {}
+      for i, team in ipairs(hof.teams) do
+        local t = list(team)
+        if type(team) == "table" and type(team.mons) == "table" then t.mons = list(team.mons) end
+        copy.hallOfFame.teams[i] = t
+      end
+    end
+    return copy
+  end
+  local function wrapExport()
+    local G = b.mod("src.save_convert.Gen2Save")
+    if type(G) ~= "table" or type(G.encode) ~= "function" or rawget(G, "kbVisitorEncode") then return end
+    local encode = G.encode
+    G.kbVisitorEncode = encode
+    G.encode = function(save, ...) return encode(withoutVisitors(save), ...) end
+  end
+
+  def("registerVisitor", function(content, dir)
+    local reg = type(content) == "table" and content.pokemon or nil
+    if type(reg) ~= "table" or type(reg.register) ~= "function" then return false end
+    local art = type(dir) == "string" and dir or ""
+    local ok, res = pcall(reg.register, reg, VISITOR, {
+      id = VISITOR, name = "VISITOR", dex = 999, types = { "NORMAL" },
+      baseStats = { hp = 50, attack = 50, defense = 50, speed = 50, specialAttack = 50, specialDefense = 50 },
+      catchRate = 0, baseExp = 0, growthRate = "MEDIUM_FAST", levelMoves = {}, evolutions = {},
+      eggGroups = { "EGG_NONE", "EGG_NONE" }, eggGroupsRaw = 0xFF,
+      spriteFront = art .. "/gs_front.png", spriteBack = art .. "/gs_back.png", picSize = 5,
+    })
+    visitorAccepted = ok and res ~= nil and res ~= false
+    local icons = content.icons
+    if visitorAccepted and type(icons) == "table" and type(icons.register) == "function" then
+      -- a sheet of our own (16x32, two frames, as every vanilla sheet) and the species mapped onto it
+      pcall(icons.register, icons, "ICON_KB_VISITOR", { image = art .. "/gs_icon.png", width = 16, height = 32, frames = 2 })
+      pcall(icons.register, icons, VISITOR, "ICON_KB_VISITOR")
+    end
+    if visitorAccepted then
+      pcall(pinWrappers)
+      pcall(wrapExport)
+    elseif b.log then
+      b.log.warn("party.visitor_refused", { at = ok and "nil" or "threw" })
+    end
+    return visitorAccepted
+  end)
+  def("visitorSpecies", function()
+    local d = data()
+    if not (visitorAccepted and d and type(d.pokemon) == "table" and type(d.pokemon[VISITOR]) == "table") then return nil end
+    pcall(pinWrappers) -- the Mon module once it is there (a no-op after the first time)
+    return VISITOR
+  end)
+  -- R2/Q15: Gen 2's only forms are Unown's letters (a..z)
+  def("formKnown", function(species, form)
+    return form == nil or (species == Party2.UNOWN and type(form) == "string" and form:find("^%l$") ~= nil)
+  end)
+  def("visitorMoves", function()
+    local menu = b.mod("src.ui.gen2.PartyMenu")
+    local list = type(menu) == "table" and type(menu.FIELD_MOVES) == "table" and menu.FIELD_MOVES or FIELD_MOVES
+    local set = {}
+    for _, id in ipairs(list) do set[id] = true end
+    return set
+  end)
+
   -- ---- the party, its uids and what the diff has seen
 
   local monUid = setmetatable({}, { __mode = "k" })
@@ -654,6 +811,50 @@ function Party2.install(b)
     -- always says whether it is shiny) sets the item, none when it names none or one this game lacks
     if e.item ~= nil or e.shiny ~= nil then mon.item = b.itemSymbol(e.item) end
     if tonumber(e.friendship) then mon.happiness = floor(e.friendship) end
+    -- FP3 (§3.1, Q20): Cobblemon's stats on every record that has them; a visitor's name, types and gender
+    if type(e.stats) == "table" then
+      local p = e.stats
+      mon.kbStats = { hp = p.hp, attack = p.atk, defense = p.def, speed = p.spe, specialAttack = p.spa, specialDefense = p.spd }
+      mon.stats = { hp = p.hp, attack = p.atk, defense = p.def, speed = p.spe, specialAttack = p.spa, specialDefense = p.spd }
+      mon.maxHp = p.hp
+      mon.hp = e.hp <= 0 and 0 or math.max(1, math.min(p.hp, e.hp))
+    else
+      mon.kbStats = nil
+    end
+    if e.visitor then
+      mon.kbName = type(e.name) == "string" and e.name ~= "" and e.name:upper() or nil
+      if mon.kbName then mon.name = mon.kbName end
+      local types = {}
+      for _, t in ipairs(type(e.types) == "table" and e.types or {}) do types[#types + 1] = Party2.TYPES[t] or "CURSE_TYPE" end
+      mon.kbTypes = #types > 0 and types or nil
+      if mon.kbTypes then mon.types = mon.kbTypes end
+      mon.kbGender = e.gender == "genderless" and "unknown" or e.gender
+      if mon.kbGender then mon.gender = mon.kbGender end
+    else
+      mon.kbName, mon.kbTypes, mon.kbGender = nil, nil, nil
+    end
+    -- FP4 (§4.4): the stones Cobblemon would take, as Gen 2 item symbols
+    if type(e.stones) == "table" then
+      local set = {}
+      for _, id in ipairs(e.stones) do
+        local sym = b.itemSymbol(id)
+        if sym then set[sym] = true end
+      end
+      mon.kbStones = set
+    else
+      mon.kbStones = nil
+    end
+    -- FP4: the machine moves Cobblemon's learnset allows (by Gen 2 move id)
+    if type(e.canLearn) == "table" then
+      local set = {}
+      for _, n in ipairs(e.canLearn) do
+        local id = n >= 1 and n <= Party2.MAX_MOVE and tables(d).moveByNum[n] or nil
+        if id then set[id] = true end
+      end
+      mon.kbCanLearn = set
+    else
+      mon.kbCanLearn = nil
+    end
   end
 
   -- A new record: Mon.new with DVs that reproduce the entry's gender, shininess and letter, stamped as the player's.

@@ -1508,6 +1508,25 @@ function FakeEngine2.new(opts)
              item = opts.item, happiness = opts.happiness or 70, shiny = opts.shiny or Mon.vanillaShiny(dvs),
              gender = E.Gender.of(def.genderRatio, dvs), unownLetter = species == "UNOWN" and E.Unown.letterFromDVs(dvs) or nil }
   end
+  -- Mon.syncIdentity (:219-241: name and types from the species) and Mon.refreshStats (:347-363: the stats rebuilt
+  -- from the species' base stats, then syncIdentity), as the engine runs them on every party menu and summary
+  function Mon.syncIdentity(mon, data)
+    local def = data and data.pokemon and data.pokemon[mon.species]
+    if not def then return mon end
+    mon.name = def.name or mon.species
+    if def.types then mon.types = def.types end
+    mon.gender = E.Gender.of(def.genderRatio, mon.dvs)
+    return mon
+  end
+  function Mon.refreshStats(mon, data)
+    local def = data and data.pokemon and data.pokemon[mon.species]
+    if not (def and def.baseStats) then return mon end
+    Mon.syncIdentity(mon, data)
+    local st = Mon.stats(def.baseStats, mon.dvs or {}, mon.level or 1)
+    mon.stats, mon.maxHp = st, st.hp
+    if mon.hp == nil or mon.hp > st.hp then mon.hp = st.hp end
+    return mon
+  end
   function Mon.stampOT(save, mon)
     local player = save and save.player
     if not (mon and player) then return mon end

@@ -19,6 +19,7 @@ TOWN = "EM_TEST_TOWN"
 UID1 = "11111111-1111-1111-1111-111111111111"
 UID2 = "22222222-2222-2222-2222-222222222222"
 UID3 = "33333333-3333-3333-3333-333333333333"
+UID4 = "44444444-4444-4444-8444-444444444444"
 
 
 def adapter(live=True):
@@ -399,3 +400,83 @@ def pump_for(rig, peer, steps):
         rig.step()
         got.extend(peer.messages())
     return got
+
+
+# ------------------------------------------------------------ FP3: visitors in Emerald (FOREIGN_POKEMON_PLAN section 3)
+
+STATS = {"hp": 61, "atk": 30, "def": 31, "spa": 32, "spd": 33, "spe": 34}
+
+
+def registered(a):
+    content = a.b.eval("""function(E)
+      local kept = { pokemon = {}, hooks = {} }
+      E.Pokemon.name = function(sp) return tonumber(sp) == 440 and "VISITOR" or nil end
+      local content = { pokemon = { register = function(_, id, rec) kept.pokemon[id] = rec return rec end } }
+      local hooks = { wrap = function(_, name, fn) kept.hooks[name] = fn end }
+      return content, hooks, kept
+    end""")
+    c, hooks, kept = content(a.E)
+    assert a.eng.registerVisitor(c, b"/v", hooks) is True
+    return kept
+
+
+def test_the_stand_in_registers_at_440_with_its_art_through_the_hooks():
+    a, _ = adapter()
+    kept = registered(a)
+    rec = kept.pokemon.KB_VISITOR
+    assert rec.index == 440 and rec.catchRate == 0 and list(rec.types.values()) == [b"MYSTERY"]
+    sprite = kept.hooks[b"pokemon.sprite"]
+    nxt = a.b.eval("function(path) return 'native' end")
+    assert sprite(nxt, b"x", a.lua({"gen3Species": 440, "side": "back"})) == b"/v/game3_back.png"
+    assert sprite(nxt, b"x", a.lua({"gen3Species": 4, "side": "front"})) == b"native"
+    assert kept.hooks[b"pokemon.icon"](nxt, b"x", a.lua({"gen3Species": 440})) == b"/v/game3_icon.png"
+    assert a.eng.visitorSpecies() == 440
+    moves = a.eng.visitorMoves()
+    assert moves[57] is True and moves[291] is True and moves[33] is None, "Surf and Dive, not Tackle"
+
+
+def test_a_visitors_stats_stand_through_apply_stats():
+    a, s = adapter()
+    registered(a)
+    a.eng.applyParty(a.lua([dict(entry(UID1, 440, 20, hp=50, maxhp=61, nick="SKITTY"), stats=STATS, stones=["moon_stone"])]))
+    m = s.party[1]
+    assert (m.species, m.nickname, m.maxHp, m.attack, m.spAtk, m.hp) == (440, b"SKITTY", 61, 30, 32, 50)
+    a.E.Pokemon.applyStats(m)       # a load, a summary: the engine's recompute
+    assert (m.maxHp, m.speed, m.spDef) == (61, 34, 33)
+    assert m.kbStones.MOON_STONE is True
+
+
+def test_main_makes_visitors_of_what_emerald_lacks_and_drops_moves_past_its_ceiling():
+    # R2 through main.lua: dex 0, a species past 386 and a form Emerald lacks are visitors
+    # in their places; §4.2 a visitor keeps Emerald's field moves only; a native drops a move past 354
+    def prepare(E, b):
+        E.Pokemon.name = b.eval("function(sp) return tonumber(sp) == 440 and 'VISITOR' or nil end")
+    rig = Rig(family="gen3", prepare=prepare)
+    rig.world(TOWN, 5, 6, "down")
+    peer = rig.connect()
+    peer.hello()
+    got = pump(rig, peer, lambda m: m["type"] == "snapshot")
+    assert next(m for m in got if m["type"] == "hello.ok")["data"]["compat"]["visitor"] is True
+    peer.send("party.sync", {"party": [
+        {"uid": UID1, "dex": 254, "level": 6, "moves": [33, 400], "hp": 15, "maxhp": 25},
+        {"uid": UID2, "dex": 427, "level": 20, "moves": [33, 57, 291], "hp": 50, "maxhp": 61, "name": "Buneary",
+         "stats": STATS, "types": ["normal"]},
+        {"uid": UID3, "dex": 0, "level": 5, "moves": [15], "hp": 20, "maxhp": 20, "nick": "CUSTOM"},
+        {"uid": UID4, "dex": 351, "level": 9, "moves": [33], "hp": 20, "maxhp": 20, "form": "sunny", "name": "Castform"},
+    ], "box": {"count": 0}})
+    rig.step(3)
+    s = rig.E.Runtime.getSession()
+    assert [s.party[i].species for i in range(1, 5)] == [4, 440, 440, 440]
+    assert list(s.party[1].moves.values()) == [33], "a move past Emerald's 354 is dropped"
+    v = s.party[2]
+    assert list(v.moves.values()) == [57, 291] and v.nickname == b"BUNEARY" and (v.maxHp, v.hp, v.speed) == (61, 50, 34)
+    assert s.party[3].nickname == b"CUSTOM" and list(s.party[3].moves.values()) == [15]
+    assert s.party[4].nickname == b"CASTFORM"
+    seq = peer.send("debug.status")
+    rig.step()
+    st = [m for m in peer.messages() if m["type"] == "debug.status" and m.get("re") == seq][0]["data"]
+    assert st["partyVisitorsNow"] == 3 and st["partyForeignMoves"] == 1
+    peer.send("resync", {})
+    got = pump(rig, peer, lambda m: m["type"] == "snapshot")
+    snap = next(m for m in got if m["type"] == "snapshot")["data"]
+    assert [(p["dex"], p.get("visitor", False)) for p in snap["party"]] == [(254, False), (427, True), (0, True), (351, True)]

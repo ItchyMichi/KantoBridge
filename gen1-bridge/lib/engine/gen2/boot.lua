@@ -333,6 +333,17 @@ function Boot.install(b)
     return false
   end
 
+  -- FP3 (FOREIGN_POKEMON_PLAN §4.1): the snapshot's party is the live
+  -- shadow party (save.party, Mon records) without its eggs, so partySize
+  -- and the snapshot read alike in all three games.
+  local function shadowParty(s)
+    local out = {}
+    for _, mon in ipairs(type(s.party) == "table" and s.party or {}) do
+      if type(mon) == "table" and mon.isEgg ~= true then out[#out + 1] = mon end
+    end
+    return out
+  end
+
   -- Built at most once per logic step (setGame counts the steps).
   local cachedTick, cachedSave, cachedView = -1, nil, nil
   function b.dropView() cachedView = nil end
@@ -367,7 +378,7 @@ function Boot.install(b)
       inventory = inventory,
       money = tonumber(sp.money) or 0,
       coins = tonumber(sp.coins) or 0,
-      party = {},                       -- Cobblemon's party; the shadow party comes with G2F
+      party = shadowParty(s),            -- FP3 (§4.1): the shadow party, its eggs left out
       pokedex = { seen = {}, owned = {} },
       options = type(s.options) == "table" and s.options or nil,
       meta = type(s.meta) == "table" and s.meta or nil,

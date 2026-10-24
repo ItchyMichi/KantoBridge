@@ -118,6 +118,163 @@ function Party3.install(b)
     return n and n >= 1 and n <= Party3.MAX_MOVE and floor(n) or nil
   end)
 
+  -- ---- the visitor stand-in (docs/specs/FOREIGN_POKEMON_PLAN.md §3, FP3)
+  --
+  -- KB_VISITOR at internal index 440 (412 is EGG and 413+ the Unown
+  -- letters, src/core/game3/pokemon.lua:537,1432-1439), registered from the
+  -- mod's entry chunk in game3's shape (src/mods/Schemas.lua:1829-1857). It
+  -- has no national number (writeMon never writes one, pokemon.lua:293-301),
+  -- so no Pokedex lists it; no evolutions, catch rate 0. Its art comes
+  -- through the pokemon.sprite and pokemon.icon hooks, which pass the numeric
+  -- species (src/mods/Gen3Compat.lua:2095-2109, 2168-2182): a registered name
+  -- doesn't resolve by itself. Pokemon.applyStats (pokemon.lua:472; at every
+  -- save load too, save_mon.lua:44-60) is wrapped once per process to put a
+  -- record's kbStats (Cobblemon's numbers) back. FP0 ran all of it on Emerald.
+  local VISITOR = 440
+  local visitorAccepted = false
+  -- FieldMoves.MOVES (src/core/game3/field_moves.lua:20-36), when the module isn't there
+  local FIELD_MOVES = { 15, 19, 57, 70, 148, 249, 127, 291, 91, 100, 135, 208, 230, 29, 290 }
+
+  local function isVisitor(mon) return type(mon) == "table" and tonumber(mon.species) == VISITOR end
+
+  local function pinWrapper()
+    local P = Pokemon()
+    if type(P) ~= "table" or type(P.applyStats) ~= "function" or rawget(P, "kbPinned") then return end
+    P.kbPinned = true
+    local orig = P.applyStats
+    P.applyStats = function(mon, ...)
+      local r = orig(mon, ...)
+      local p = type(mon) == "table" and mon.kbStats or nil
+      if type(p) == "table" then
+        mon.maxHp, mon.attack, mon.defense, mon.speed, mon.spAtk, mon.spDef = p.hp, p.atk, p.def, p.spe, p.spa, p.spd
+        mon.atk, mon.def, mon.spe, mon.spa, mon.spd = p.atk, p.def, p.spe, p.spa, p.spd
+        if type(mon.hp) == "number" and mon.hp > p.hp then mon.hp = p.hp end
+      end
+      return r
+    end
+  end
+
+  -- §4.14: a cartridge export never carries a visitor (rse's exportPort
+  -- writes an internal index raw, src/save_convert/Gen3Save.lua:1602-1606):
+  -- the export (SaveConvert.lua:680, Gen3Save.forVersion(v).exportPort)
+  -- gets a copy of the session without them. One wrapper per process.
+  local function withoutVisitors(save)
+    if type(save) ~= "table" then return save end
+    local copy = {}
+    for k, v in pairs(save) do copy[k] = v end
+    local function list(mons)
+      local out = {}
+      for _, mon in ipairs(type(mons) == "table" and mons or {}) do
+        if not isVisitor(mon) then out[#out + 1] = mon end
+      end
+      return out
+    end
+    copy.party = list(save.party)
+    local storage = save.storage
+    if type(storage) == "table" and type(storage.boxes) == "table" then
+      local cs = {}
+      for k, v in pairs(storage) do cs[k] = v end
+      cs.boxes = {}
+      for i, box in ipairs(storage.boxes) do
+        local cb = {}
+        for k, v in pairs(type(box) == "table" and box or {}) do cb[k] = v end
+        if type(box) == "table" and type(box.mons) == "table" then
+          cb.mons = {}
+          for k = 1, Party3.BOX_SLOTS do
+            local mon = box.mons[k]
+            if not isVisitor(mon) then cb.mons[k] = mon end
+          end
+        end
+        cs.boxes[i] = cb
+      end
+      copy.storage = cs
+    end
+    if type(save.hallOfFameTeams) == "table" then
+      copy.hallOfFameTeams = {}
+      for i, team in ipairs(save.hallOfFameTeams) do
+        local ct = {}
+        for k, v in pairs(type(team) == "table" and team or {}) do ct[k] = v end
+        if type(team) == "table" and type(team.mons) == "table" then ct.mons = list(team.mons) end
+        copy.hallOfFameTeams[i] = ct
+      end
+    end
+    return copy
+  end
+  local function wrapExport()
+    local G = b.mod("src.save_convert.Gen3Save")
+    if type(G) ~= "table" or type(G.forVersion) ~= "function" or rawget(G, "kbVisitorForVersion") then return end
+    local forVersion = G.forVersion
+    G.kbVisitorForVersion = forVersion
+    G.forVersion = function(...)
+      local codec = forVersion(...)
+      if type(codec) == "table" and type(codec.exportPort) == "function" and not rawget(codec, "kbVisitorExport") then
+        local exportPort = codec.exportPort
+        codec.kbVisitorExport = exportPort
+        codec.exportPort = function(save, ...) return exportPort(withoutVisitors(save), ...) end
+      end
+      return codec
+    end
+  end
+
+  def("registerVisitor", function(content, dir, hooks)
+    local reg = type(content) == "table" and content.pokemon or nil
+    if type(reg) ~= "table" or type(reg.register) ~= "function" then return false end
+    local art = type(dir) == "string" and dir or ""
+    local front, back, icon = art .. "/game3_front.png", art .. "/game3_back.png", art .. "/game3_icon.png"
+    local function record(types)
+      return {
+        id = "KB_VISITOR", name = "VISITOR", index = VISITOR, types = types,
+        baseStats = { hp = 50, attack = 50, defense = 50, speed = 50, specialAttack = 50, specialDefense = 50 },
+        catchRate = 0, baseExp = 0, growthRate = "MEDIUM_FAST", learnset = {}, evolutions = {},
+        spriteFront = front, spriteBack = back,
+      }
+    end
+    -- Q3: the "???" type where the registry takes it, else Normal
+    local ok, res = pcall(reg.register, reg, "KB_VISITOR", record({ "MYSTERY" }))
+    if not (ok and res ~= nil and res ~= false) then ok, res = pcall(reg.register, reg, "KB_VISITOR", record({ "NORMAL" })) end
+    visitorAccepted = ok and res ~= nil and res ~= false
+    hooks = hooks or (type(b.opts) == "table" and b.opts.hooks) or nil
+    if visitorAccepted and type(hooks) == "table" and type(hooks.wrap) == "function" then
+      pcall(hooks.wrap, hooks, "pokemon.sprite", function(nextFn, path, ctx)
+        if type(ctx) == "table" and tonumber(ctx.gen3Species) == VISITOR then return ctx.side == "back" and back or front end
+        return nextFn(path, ctx)
+      end)
+      pcall(hooks.wrap, hooks, "pokemon.icon", function(nextFn, path, ctx)
+        if type(ctx) == "table" and tonumber(ctx.gen3Species) == VISITOR then return icon end
+        return nextFn(path, ctx)
+      end)
+    end
+    if visitorAccepted then
+      pcall(pinWrapper)
+      pcall(wrapExport)
+    elseif b.log then
+      b.log.warn("party.visitor_refused", { at = ok and "nil" or "threw" })
+    end
+    return visitorAccepted
+  end)
+  def("visitorSpecies", function()
+    if not visitorAccepted then return nil end
+    local name = b.ask(Pokemon(), "name", nil, VISITOR)
+    if name == nil then return nil end
+    pcall(pinWrapper)
+    return VISITOR
+  end)
+  -- R2/Q15: Emerald's only forms Cobblemon could name are Unown's letters (a..z)
+  def("formKnown", function(species, form)
+    return form == nil or (b.ask(Pokemon(), "national", nil, tonumber(species)) == 201 and type(form) == "string"
+                           and form:find("^%l$") ~= nil)
+  end)
+  def("visitorMoves", function()
+    local FM = b.g3("field_moves")
+    local set = {}
+    if type(FM) == "table" and type(FM.MOVES) == "table" then
+      for _, n in pairs(FM.MOVES) do set[n] = true end
+    else
+      for _, n in ipairs(FIELD_MOVES) do set[n] = true end
+    end
+    return set
+  end)
+
   -- ---- uids (weak keys: a record that leaves the party drops out)
 
   local monUid = setmetatable({}, { __mode = "k" })
@@ -563,6 +720,38 @@ function Party3.install(b)
     end
     mon.status = e.status
     mon.nickname = type(e.nick) == "string" and e.nick or ""
+    -- FP3 (§3.1, Q20): Cobblemon's stats on every record that has them (the wrapper keeps them)
+    if type(e.stats) == "table" then
+      local p = e.stats
+      mon.kbStats = { hp = p.hp, atk = p.atk, def = p.def, spa = p.spa, spd = p.spd, spe = p.spe }
+      mon.maxHp, mon.attack, mon.defense, mon.speed, mon.spAtk, mon.spDef = p.hp, p.atk, p.def, p.spe, p.spa, p.spd
+      mon.atk, mon.def, mon.spe, mon.spa, mon.spd = p.atk, p.def, p.spe, p.spa, p.spd
+      mon.hp = e.hp <= 0 and 0 or math.max(1, math.min(p.hp, e.hp))
+    else
+      mon.kbStats = nil
+    end
+    -- FP4 (§4.4): the stones and machine moves Cobblemon would take
+    if type(e.stones) == "table" then
+      local set = {}
+      for _, id in ipairs(e.stones) do
+        local cat = type(b.opts) == "table" and type(b.opts.items) == "table" and b.opts.items.items or nil
+        local item = type(cat) == "table" and cat[id] or nil
+        local sym = type(item) == "table" and type(item.symbols) == "table" and item.symbols.gen3 or nil
+        if sym then set[sym] = true end
+      end
+      mon.kbStones = set
+    else
+      mon.kbStones = nil
+    end
+    if type(e.canLearn) == "table" then
+      local set = {}
+      for _, n in ipairs(e.canLearn) do
+        if n >= 1 and n <= Party3.MAX_MOVE then set[n] = true end
+      end
+      mon.kbCanLearn = set
+    else
+      mon.kbCanLearn = nil
+    end
   end
 
   -- A new record from the engine's own giveMon, on a scratch session (the live party and Pokedex untouched).
