@@ -75,6 +75,31 @@
       "minimum": 0,
       "maximum": 6,
       "description": "FOREIGN_POKEMON_PLAN §4.1: how many party members this game shows as visitors (the HUD's line)."
+    },
+    "refused": {
+      "type": "object",
+      "required": [
+        "feature",
+        "n"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "feature": {
+          "enum": [
+            "battle_tower",
+            "battle_frontier",
+            "battle_tent"
+          ],
+          "description": "The facility whose desk was refused."
+        },
+        "n": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 65535,
+          "description": "How many refusals so far this start (a new one shows the HUD's note again)."
+        }
+      },
+      "description": "FOREIGN_POKEMON_PLAN §4.12, Q1 (FP5): the last facility desk the adapter refused while a client follows (its rules and rentals are FP9's), for the HUD's note."
     }
   }
 }

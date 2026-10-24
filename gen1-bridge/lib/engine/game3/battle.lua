@@ -49,10 +49,13 @@
 local Battle3 = {}
 
 -- opts that mark a battle the hidden game fights itself (battle_bridge.lua:332-338, battle/kinds.lua:5-15)
+-- (FP5: Trainer Hill's battles are held for Cobblemon like any trainer's: the Hill has no rules or rentals)
 Battle3.NATIVE_OPTS = { "link", "spectate", "unionRoom", "pokedude", "oldManTutorial", "tutorialKind", "frontier",
-                        "frontierFoeHalf", "battleTower", "eReader", "secretBase", "trainerTower", "trainerHill",
+                        "frontierFoeHalf", "battleTower", "eReader", "secretBase", "trainerTower",
                         "pyramid", "pike", "dome", "palace", "arena", "factory", "recordedLink", "towerLinkMulti",
                         "safari", "partner" }
+-- FP5 (FOREIGN_POKEMON_PLAN §4.12): what battle.native says for each native battle (anything else: facility)
+Battle3.TUTORIAL_OPTS = { "pokedude", "oldManTutorial", "tutorialKind" }
 -- the core's outcome words -> the engine's (scripting/natives.lua:198-212)
 Battle3.WORDS = { win = "win", lose = "lose", run = "run", caught = "caught", abort = "run" }
 Battle3.RIVAL_CLASS = "TRAINER_CLASS_RIVAL"
@@ -74,13 +77,17 @@ function Battle3.install(b)
     return type(rec) == "table" and rec or nil, st
   end
 
+  -- The battle.native kind of a battle the hidden game fights itself, or nil.
   local function native(opts)
-    for _, k in ipairs(Battle3.NATIVE_OPTS) do
-      if opts[k] then return true end
-    end
-    -- the Safari Zone (battle_bridge.lua:27-38)
     local Safari = b.g3("safari")
-    return b.ask(Safari, "isActive", false, b.session()) == true
+    if opts.safari or b.ask(Safari, "isActive", false, b.session()) == true then return "safari" end
+    for _, k in ipairs(Battle3.TUTORIAL_OPTS) do
+      if opts[k] then return "old_man" end
+    end
+    for _, k in ipairs(Battle3.NATIVE_OPTS) do
+      if opts[k] then return "facility" end
+    end
+    return nil
   end
 
   -- The cell in front of the player.
@@ -250,8 +257,11 @@ function Battle3.install(b)
     local st = b.state()
     local bridge = st and st.bridge
     local live = type(bridge) == "table" and type(bridge.live) == "function" and bridge.live() == true
+    local kind = native(opts)
     if not live or type(bridge.battle) ~= "function" or (st.battle and st.battle.state ~= "done") or active()
-        or native(opts) then
+        or kind then
+      -- FP5: a native battle is announced (battle.native) while it runs
+      if kind and st then st.native = { kind = kind, session = b.session() } end
       return original(mod, game, foe, opts)
     end
     if opts.twoOpponents and opts.trainerIdB and not opts.wild then
@@ -407,11 +417,18 @@ function Battle3.install(b)
     return true
   end)
 
-  -- A special battle the hidden game fights itself, for battle.native: the Safari Zone's.
+  -- A special battle the hidden game fights itself, for battle.native: the Safari Zone's, a tutorial's
+  -- (old_man), a facility's (FP5: the Frontier's rentals, anything the adapter leaves native).
   def("nativeBattle", function()
-    if not active() then return nil end
+    local st = b.state()
+    if not active() then
+      if st then st.native = nil end
+      return nil
+    end
     local rec = held()
     if rec and rec.state ~= "done" then return nil end
+    local nat = st and st.native or nil
+    if type(nat) == "table" and nat.session == b.session() then return nat.kind end
     local state = b.ask(Bt(), "getState", nil)
     if type(state) == "table" and state.safari then return "safari" end
     return nil

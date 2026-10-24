@@ -356,7 +356,8 @@ function FakeEngine3.new(opts)
     event_objects = { OBJ_EVENT_GFX_ = { [1] = "OBJ_EVENT_GFX_TEST_HIKER", [2] = "OBJ_EVENT_GFX_TEST_BOULDER",
                                          [3] = "OBJ_EVENT_GFX_TEST_ITEM_BALL", [4] = "OBJ_EVENT_GFX_TEST_GIRL" } },
     -- the nurse's special by its engine name, at a made-up id
-    specials = { [7] = "HealPlayerParty", [8] = "TestOtherSpecial" },
+    specials = { [7] = "HealPlayerParty", [8] = "TestOtherSpecial", [42] = "ChooseHalfPartyForBattle",
+                 [248] = "ChoosePartyForBattleFrontier" },
   }
   local Methods = {}
   -- :39-41 (raw: the generated table; here only byName)
@@ -392,6 +393,8 @@ function FakeEngine3.new(opts)
   end
 
   -- scripting/natives.lua:1074-1076
+  E.Rse, E.specialVars = {}, {}
+  function E.Rse.setSpecialVar(ctx, id, value) E.specialVars[#E.specialVars + 1] = { ctx = ctx, id = id, value = value } end
   E.Natives = {}
   function E.Natives.specialName(id) return E.constTables.specials[tonumber(id)] end
 
@@ -976,6 +979,8 @@ function FakeEngine3.new(opts)
     ["src.core.game3.scripting.space"] = E.Space,
     ["src.core.game3.scripting.flags"] = E.Flags,
     ["src.core.game3.scripting.natives"] = E.Natives,
+    -- FP5: Rse.setSpecialVar (rse/init.lua:166-169), recorded as { ctx, id, value }
+    ["src.core.game3.rse.init"] = E.Rse,
     ["src.core.game3.constants"] = E.Constants,
     ["src.core.game3.bag"] = E.Bag,
     ["src.core.game3.battle.init"] = E.Battle,

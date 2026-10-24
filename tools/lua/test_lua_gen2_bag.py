@@ -221,3 +221,15 @@ def test_field_items_go_through_the_packs_path():
     a.E.fieldItemResults = a.lua({"OLD_ROD": "nowhere"})
     assert tuple(a.eng.fieldAction(b"fish", a.lua({"item": "OLD_ROD"}))) == (False, b"no_target")
     assert [x.decode() for x in a.E.fieldItemUses.values()] == ["BICYCLE", "OLD_ROD", "ESCAPE_ROPE", "OLD_ROD"]
+
+
+def test_the_battle_tower_desk_refuses_in_its_own_words_while_a_client_follows():
+    # FP5 (FOREIGN_POKEMON_PLAN §4.12): the desk's rules check fails with our line between its own header and tail
+    a, _ = adapter()
+    lines, failed = a.E.BattleTower.checkRules(a.E.game.save.party)
+    assert failed is True and list(lines.values())[0] == b"_ExcuseMeYoureNotReadyText"
+    assert b"TOWER" in list(lines.values())[1] and list(lines.values())[2] == b"_BattleTowerReturnWhenReadyText"
+    assert plain(a.eng.refusedFeature()) == {"feature": "battle_tower", "n": 1}
+    off, _ = adapter(live=False)
+    lines, failed = off.E.BattleTower.checkRules(off.E.game.save.party)
+    assert failed is False

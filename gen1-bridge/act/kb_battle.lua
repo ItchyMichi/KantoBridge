@@ -62,7 +62,7 @@ local OUTCOMES = { win = "win", lose = "lose", fled = "run", caught = "caught", 
 local RIVALS = { OPP_RIVAL1 = true, OPP_RIVAL2 = true, OPP_RIVAL3 = true }
 local WILD_KINDS = { surf = "surf", fish = "fish" }
 -- (MG9 G2F: Gen 2's Bug-Catching Contest and Battle Tower; its catch tutorial is old_man)
-local NATIVE_KINDS = { safari = true, old_man = true, ghost = true, contest = true, tower = true }
+local NATIVE_KINDS = { safari = true, old_man = true, ghost = true, contest = true, tower = true, facility = true }
 local GENDERS = { male = true, female = true, genderless = true }
 local DV_KEYS = { "atk", "def", "spd", "spc" }
 local IV_KEYS = { "hp", "atk", "def", "spa", "spd", "spe" }

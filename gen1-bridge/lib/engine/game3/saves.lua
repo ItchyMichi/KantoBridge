@@ -11,6 +11,10 @@
 
 local Saves = {}
 
+-- FP5: the party choices of the Frontier's and the Tents' desks, and VAR_RESULT (pokeemerald include/constants/vars.h)
+Saves.DESK_SPECIALS = { ChooseHalfPartyForBattle = true, ChoosePartyForBattleFrontier = true }
+Saves.VAR_RESULT = 0x800D
+
 Saves.HEAL_SPECIAL = "HealPlayerParty"
 
 function Saves.install(b)
@@ -114,6 +118,24 @@ function Saves.install(b)
   def("scriptCommand", function(nextFn, ctx, op, row)
     if op == "special" then
       local name = specialName(row)
+      -- FP5 (FOREIGN_POKEMON_PLAN §4.12): the Battle Frontier's and the Battle Tents' desks choose a party here
+      -- (script_pokemon_util.c's ChooseHalfPartyForBattle / ChoosePartyForBattleFrontier); while a client follows
+      -- the choice is a cancel (VAR_RESULT 0), so the desk takes its own way out, and the HUD says why (FP9)
+      if name and Saves.DESK_SPECIALS[name] then
+        local st = b.state()
+        local bridge = st and st.bridge
+        if type(bridge) == "table" and type(bridge.live) == "function" and bridge.live() == true then
+          local vm = type(ctx) == "table" and (ctx.vm or ctx.runner) or nil
+          local Rse = b.g3("rse.init")
+          if type(vm) == "table" and type(Rse) == "table" and type(Rse.setSpecialVar) == "function" then
+            pcall(Rse.setSpecialVar, vm.ctx, Saves.VAR_RESULT, 0)
+            local Map = b.g3("map")
+            local map = type(Map) == "table" and type(Map.current) == "string" and Map.current or ""
+            b.refuse(map:find("TENT", 1, true) and "battle_tent" or "battle_frontier")
+            return nil
+          end
+        end
+      end
       if name and name:find(Saves.HEAL_SPECIAL, 1, true) then
         local st = b.state()
         if st then st.healPending = { map = b.symbol(b.g3("map") and b.g3("map").current) and b.g3("map").current or nil } end

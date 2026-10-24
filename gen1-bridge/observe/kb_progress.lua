@@ -22,6 +22,9 @@
 
 local Progress = {}
 
+-- FP5: the features a desk may refuse (game.status.refused.feature)
+Progress.REFUSED = { battle_tower = true, battle_frontier = true, battle_tent = true }
+
 Progress.EVERY = 10
 Progress.MAX_NAME = 16
 Progress.MAX_BADGES = 16
@@ -86,6 +89,12 @@ function Progress.new(opts)
     if started and type(opts.visitors) == "function" then
       local n = opts.visitors()
       if type(n) == "number" and n >= 0 and n <= 6 and n == math.floor(n) then data.visitors = n end
+    end
+    -- FP5 (§4.12, Q1): the last facility desk refused, and how many times (the HUD's note)
+    local okR, refused = pcall(engine.refusedFeature)
+    if okR and type(refused) == "table" and Progress.REFUSED[refused.feature] and type(refused.n) == "number"
+        and refused.n >= 1 and refused.n == math.floor(refused.n) then
+      data.refused = { feature = refused.feature, n = math.min(refused.n, 65535) }
     end
     local slot = engine.saveSlot()
     if type(slot) == "number" and slot >= 0 and slot <= 255 and slot == math.floor(slot) then data.slot = slot end

@@ -1826,6 +1826,8 @@ function FakeEngine2.new(opts)
   -- (heal: 20 HP on a hurt member), HP_UP (vitamin), ETHER (pp: 10 on the slot), ELIXER (pp: every move),
   -- RARE_CANDY (candy: one level), MOON_STONE (stone: TEST_TOGEPI evolves); { used, text } as the
   -- engine returns them
+  E.BattleTower = { RULE_HEADER_TEXT = "_ExcuseMeYoureNotReadyText", RULE_TAIL_TEXT = "_BattleTowerReturnWhenReadyText" }
+  function E.BattleTower.checkRules(_party) return {}, false end
   E.ItemEffects = {}
   local ACTIONS = { POTION = "heal", HP_UP = "vitamin", ETHER = "pp", ELIXER = "pp", RARE_CANDY = "candy",
                     MOON_STONE = "stone" }
@@ -2078,6 +2080,8 @@ function FakeEngine2.new(opts)
     ["src.ui.gen2.BattleState"] = E.BattleState,
     ["src.ui.Screens"] = E.Screens,
     ["src.core.gen2.ItemEffects"] = E.ItemEffects,
+    -- FP5: src/core/gen2/BattleTower.lua's rules check (its labels; the party passes)
+    ["src.core.gen2.BattleTower"] = E.BattleTower,
     ["src.battle.gen2.Mon"] = E.Mon,
     ["src.battle.gen2.Prize"] = E.Prize,
     ["src.core.gen2.Gender"] = E.Gender,

@@ -155,6 +155,21 @@ function Base.new(opts, adapter)
     return st
   end
 
+  -- FP5 (FOREIGN_POKEMON_PLAN §4.12, Q1): a feature the adapter refused at its desk while a client follows
+  -- (battle_tower, battle_frontier, battle_tent), counted, for game.status.refused and the HUD's note
+  function b.refuse(feature)
+    local st = b.state()
+    if not st then return end
+    st.refused = { feature = feature, n = ((type(st.refused) == "table" and st.refused.n) or 0) + 1 }
+    if b.log then b.log.info("engine.refused", { feature = feature, count = st.refused.n }) end
+  end
+  b.def("refusedFeature", function()
+    local st = b.state()
+    local r = st and st.refused
+    if type(r) ~= "table" then return nil end
+    return { feature = r.feature, n = r.n }
+  end)
+
   return b
 end
 

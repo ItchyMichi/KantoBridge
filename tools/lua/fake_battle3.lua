@@ -346,15 +346,19 @@ function FakeBattle3.attach(E)
     opts = opts or {}
     E.Space.vm.running = true
     local foe = E.Trainers.foeFromId(id)
-    return E.BattleBridge.start(nil, E.game, foe, {
+    local o = {
       wild = false, trainerId = id, defeatText = opts.defeatText, double = opts.double, twoOpponents = opts.twoOpponents,
       trainerIdB = opts.trainerIdB, done = recorder("trainer"),
-    })
+    }
+    -- (FP5: any other kind flag a test gives, as the engine's callers set them)
+    for k, v in pairs(opts) do if o[k] == nil then o[k] = v end end
+    return E.BattleBridge.start(nil, E.game, foe, o)
   end
   function E.startWild(species, level, opts)
     opts = opts or {}
     local o = { done = opts.withDone and recorder("wild") or nil, firstBattleKind = opts.firstBattleKind,
                 safari = opts.safari, link = opts.link }
+    for k, v in pairs(opts) do if o[k] == nil and k ~= "withDone" then o[k] = v end end
     if opts.withDone then E.Space.vm.running = true end
     return E.BattleBridge.startWild(nil, E.game, { species = species, level = level }, o)
   end

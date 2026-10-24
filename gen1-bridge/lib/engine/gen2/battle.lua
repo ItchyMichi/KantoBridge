@@ -41,6 +41,9 @@ local Battle2 = {}
 Battle2.WORDS = { win = "win", lose = "lose", run = "run", caught = "caught" }
 Battle2.RIVALS = { RIVAL1 = true, RIVAL2 = true }
 -- wBattleType values a script arms (World.lua:153-159; Battle.lua:168-184)
+-- FP5 (FOREIGN_POKEMON_PLAN §4.12): the line the Battle Tower's desk shows between its own "not ready" header and its
+-- "return when ready" tail while a client follows (the Tower's rules, rentals and level groups are FP9's)
+Battle2.TOWER_LINE = "The TOWER can't take\nCobblemon's #MON yet."
 Battle2.CANLOSE = 1
 Battle2.TRAP = 9
 local DELTA = { up = { 0, -1 }, down = { 0, 1 }, left = { -1, 0 }, right = { 1, 0 } }
@@ -287,6 +290,20 @@ function Battle2.install(b)
     return ph
   end
 
+  -- BattleTower.checkRules(party) (src/core/gen2/BattleTower.lua:210; the desk's CheckForBattleTowerRules prints the
+  -- labels it returns, an unknown one as its own text, specials/battle_tower.lua:239-247): while a client follows, a
+  -- failure with our line, so the desk refuses in its own words
+  local function towerRules(original, party, ...)
+    local st = b.state()
+    local bridge = st and st.bridge
+    if not (type(bridge) == "table" and type(bridge.live) == "function" and bridge.live() == true) then
+      return original(party, ...)
+    end
+    local BT = b.c2("BattleTower")
+    b.refuse("battle_tower")
+    return { BT.RULE_HEADER_TEXT, Battle2.TOWER_LINE, BT.RULE_TAIL_TEXT }, true
+  end
+
   def("attachBridge", function(bridge)
     local st = b.state()
     if not st then return end
@@ -296,6 +313,7 @@ function Battle2.install(b)
     wrap(b.w2("World"), "startBattle", startBattle)
     wrap(b.w2("World"), "pushBattleTransition", pushTransition)
     wrap(b.ui2("BattleState"), "new", newBattleState)
+    wrap(b.c2("BattleTower"), "checkRules", towerRules)
     -- the gift seams (party.lua) and the item-use guards (bag.lua)
     if type(b.installGifts) == "function" then b.installGifts() end
     if type(b.installItemGuards) == "function" then b.installItemGuards() end

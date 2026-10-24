@@ -3316,6 +3316,33 @@ old `KbPackReloadTest`; GameTests 129/129. Not yet run on the real engines (FP8'
 an item" line) is not done: the server returns the invisible item to the player's inventory instead, so nothing is lost.
 Emerald's other gift and sync details (shininess, gender, friendship, nature) stay FP7's.
 
+## Foreign Pokémon: FP5a, facility desks and native battles (2026-10-24)
+
+FP5 is done in three commits: **FP5a** the desks and the native announcements (this), FP5b Crystal's Bug-Catching
+Contest in Cobblemon, FP5c Steven's partner battle as a Cobblemon multi battle.
+
+- **Crystal's Battle Tower desk**: `BattleTower.checkRules` (`src/core/gen2/BattleTower.lua:210`) is wrapped; while a
+  client follows it fails with our line between the desk's own "not ready" header and its "return when ready" tail
+  (`specials/battle_tower.lua:239-247` prints whatever labels it gets), so the desk refuses in its own words.
+- **Emerald's Frontier and Tent desks**: the `script.command` hook answers `ChooseHalfPartyForBattle` and
+  `ChoosePartyForBattleFrontier` (the party choice of the Tower, Dome, Palace, Arena, Pike, Pyramid and the two Tents
+  that choose) with a cancel (`VAR_RESULT` 0, `rse/init.lua`'s `setSpecialVar`), so each desk takes its own way out.
+- **Trainer Hill** is held for Cobblemon like any trainer (it has no rules or rentals); `trainerHill` left
+  `NATIVE_OPTS`. A Hill foe the trainer path can't read still falls back to native.
+- **The HUD's note**: each refusal counts (`b.refuse`, `refusedFeature`) and goes out as `game.status.refused{feature,
+  n}`; the client shows "<game>: the Battle Tower / Frontier / Tents isn't open to KantoBridge yet" for 15 s after a
+  new one (`BridgeLink.refusedLine`).
+- **Every native battle announced**: Emerald's wrapper records the kind of each battle it leaves native, and
+  `battle.native` says `safari`, `old_man` (Wally's, the Pokédude's, the old man's tutorials) or the new `facility`
+  (the Factory's and Slateport Tent's rentals, anything else left native).
+
+**Tests.** Lupa: the Tower desk's lines and the count, native without a client; the Frontier and Tent desks refused
+(VAR_RESULT 0, the engine's special never run), other specials untouched, native without a client; `facility` and
+`old_man` announced, Trainer Hill held. Lua 1,570, pytest 2,370, JUnit client 537/538 (the old `KbPackReloadTest`).
+
+**Deviation.** Trainer Hill is held for Cobblemon instead of refused (§4.12 listed it with the desks): it needs no
+rules, so the player keeps it.
+
 ## Pre-flight (PLAN §0.6)
 
 | Step | State |

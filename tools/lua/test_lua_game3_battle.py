@@ -232,3 +232,38 @@ def test_main_sends_battle_start_and_takes_battle_result():
     rig.step(2)
     assert rig.E.Battle.isActive() is False and rig.E.aborts == 1
     assert rig.E.Message.isOpen(), "the prize text"
+
+
+# ------------------------------------------------------------ FP5: native kinds, Trainer Hill, the facility desks
+
+def test_every_native_battle_is_announced_and_trainer_hill_is_held():
+    a, _ = setup()
+    a.E.startWild(4, 3, a.lua({"factory": True}))
+    assert a.E.starts[len(a.E.starts)].headless is False and a.eng.nativeBattle() == b"facility"
+    a.E.endNative(b"win")
+    assert a.eng.nativeBattle() is None
+    a.E.startWild(4, 3, a.lua({"pokedude": True}))
+    assert a.eng.nativeBattle() == b"old_man", "a tutorial"
+    a.E.endNative(b"win")
+    a.E.startTrainer(7, a.lua({"trainerHill": True}))
+    assert a.E.starts[len(a.E.starts)].headless is True, "Trainer Hill's battles are Cobblemon's (FP5)"
+
+
+def test_the_frontier_and_tent_desks_are_refused_while_a_client_follows():
+    a, _ = setup()
+    vm = a.b.eval("function() return { ctx = { name = 'vmctx' } } end")()
+    ran = a.b.eval("function() local t = { n = 0 } return t, function() t.n = t.n + 1 return 'ran' end end")
+    count, nxt = ran()
+    a.E.Map.current = b"MAP_BATTLE_FRONTIER_BATTLE_TOWER_LOBBY"
+    assert a.eng.scriptCommand(nxt, a.lua({"vm": vm}), b"special", a.lua({"id": 42})) is None
+    assert count.n == 0 and a.E.specialVars[1].id == 0x800D and a.E.specialVars[1].value == 0
+    assert plain(a.eng.refusedFeature()) == {"feature": "battle_frontier", "n": 1}
+    a.E.Map.current = b"MAP_VERDANTURF_TOWN_BATTLE_TENT_LOBBY"
+    a.eng.scriptCommand(nxt, a.lua({"vm": vm}), b"special", a.lua({"id": 248}))
+    assert plain(a.eng.refusedFeature()) == {"feature": "battle_tent", "n": 2}
+    assert a.eng.scriptCommand(nxt, a.lua({"vm": vm}), b"special", a.lua({"id": 8})) == b"ran", "other specials run"
+    off, _ = setup(live=False)
+    vm2 = off.b.eval("function() return { ctx = {} } end")()
+    c2, n2 = off.b.eval("function() local t = { n = 0 } return t, function() t.n = t.n + 1 end end")()
+    off.eng.scriptCommand(n2, off.lua({"vm": vm2}), b"special", off.lua({"id": 42}))
+    assert c2.n == 1 and off.eng.refusedFeature() is None, "no client: the desk as usual"

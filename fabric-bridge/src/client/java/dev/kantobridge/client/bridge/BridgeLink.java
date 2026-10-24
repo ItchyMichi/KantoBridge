@@ -42,6 +42,12 @@ public final class BridgeLink {
 	private volatile @Nullable Status lastStatus;
 	/** FP2 (FOREIGN_POKEMON_PLAN §4.1): the visitors the last game.status counted (-1: not said). */
 	private volatile int visitors = -1;
+	/** FP5 (FOREIGN_POKEMON_PLAN §4.12, Q1): the last facility desk refused, its count, and when a new one came (ms). */
+	private volatile @Nullable String refused;
+	private volatile long refusedCount;
+	private volatile long refusedAt = -1;
+	/** FP5: how long the HUD's note stays after a refusal. */
+	public static final long REFUSED_NOTE_MS = 15_000;
 	private long wrongGameCount;
 
 	BridgeLink(ClientConfig.Link configured, Dispatcher dispatcher, BridgeClient client, BridgeClock clock, Links.RegionView regions,
@@ -178,6 +184,16 @@ public final class BridgeLink {
 		long slot = JsonFields.integer(data, "slot", -1);
 		long seen = JsonFields.integer(data, "visitors", -1);
 		this.visitors = seen < 0 || seen > 6 ? -1 : (int) seen;
+		com.google.gson.JsonElement refusal = data.get("refused");
+		if (refusal != null && refusal.isJsonObject()) {
+			String feature = JsonFields.str(refusal.getAsJsonObject(), "feature");
+			long n = JsonFields.integer(refusal.getAsJsonObject(), "n", 0);
+			if (feature != null && REFUSED_FEATURES.contains(feature) && n > this.refusedCount) {
+				this.refused = feature;
+				this.refusedCount = n;
+				this.refusedAt = System.currentTimeMillis();
+			}
+		}
 		this.lastStatus = new Status(playthrough, JsonFields.bool(data, "ingame", false), JsonFields.bool(data, "started", false),
 				(int) Math.max(0, Math.min(16, JsonFields.integer(data, "badges", 0))), JsonFields.str(data, "name"),
 				slot < 0 ? null : (int) slot);
@@ -191,6 +207,23 @@ public final class BridgeLink {
 	/** FP2: how many party members this game shows as visitors (-1 when it didn't say). */
 	public int visitors() {
 		return this.visitors;
+	}
+
+	/** FP5: the features a desk may refuse (game.status.refused.feature). */
+	public static final java.util.Set<String> REFUSED_FEATURES = java.util.Set.of("battle_tower", "battle_frontier", "battle_tent");
+
+	/** FP5 (§4.12, Q1): the HUD's note for a facility desk the followed game just refused, for a while, or null. */
+	public ConnectionStatus.@Nullable Line refusedLine() {
+		return this.refusedLine(System.currentTimeMillis());
+	}
+
+	ConnectionStatus.@Nullable Line refusedLine(long now) {
+		String feature = this.refused;
+		long at = this.refusedAt;
+		if (feature == null || at < 0 || now - at > REFUSED_NOTE_MS || !this.connected()) {
+			return null;
+		}
+		return new ConnectionStatus.Line("kantobridge.hud.refused." + feature, java.util.List.of(label(this.game())), false);
 	}
 
 	/** FP2 (§4.1): the HUD's visitor line for the followed link: how many members its game shows as visitors, or null. */

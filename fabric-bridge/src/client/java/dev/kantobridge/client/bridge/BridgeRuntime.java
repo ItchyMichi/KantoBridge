@@ -149,6 +149,11 @@ public final class BridgeRuntime {
 			BridgeLink followed = runtime.links.followed();
 			return followed == null ? null : followed.visitorLine();
 		});
+		// FP5 (§4.12, Q1): a facility desk the followed game refused just now
+		runtime.hudLines.add(() -> {
+			BridgeLink followed = runtime.links.followed();
+			return followed == null ? null : followed.refusedLine();
+		});
 		// MG4: every link but the followed one has a HUD line when something is wrong with it (never followed: wrong game;
 		// parked and down), and F7 lists them all.
 		if (runtime.links.all().size() > 1) {

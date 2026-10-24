@@ -21,9 +21,10 @@
         "old_man",
         "ghost",
         "contest",
-        "tower"
+        "tower",
+        "facility"
       ],
-      "description": "safari, old_man (Gen 1's demo; Gen 2's catch tutorial), ghost (Gen 1); MG9 (G2F): contest (the Bug-Catching Contest), tower (the Battle Tower)."
+      "description": "safari, old_man (Gen 1's demo; Gen 2's catch tutorial), ghost (Gen 1); MG9 (G2F): contest (the Bug-Catching Contest), tower (the Battle Tower). FP5: facility (a battle a facility runs with its own rules or rentals: Emerald's Battle Factory, the Slateport Tent, anything else the adapter leaves native)."
     },
     "phase": {
       "enum": [
