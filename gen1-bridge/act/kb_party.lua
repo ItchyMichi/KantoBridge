@@ -392,6 +392,7 @@ function Party.new(opts)
     syncs = 0, applied = 0, deferred = 0, created = 0, matched = 0, kept = 0, failed = 0,
     foreignSpecies = 0, foreignMoves = 0, heals = 0, -- FP1: was nonGen1Species / nonGen1Moves
     visitorsNow = 0, -- FP2: members the last applied sync made visitors
+    orders = 0, ordersConfirmed = 0, -- FP2: party.order
     dexSyncs = 0, dexApplied = 0, dexAddedSeen = 0, dexAddedOwned = 0, dexUnknown = 0, dexBeyond = 0,
     items = 0, itemsBad = 0,
     -- M8 (wave 2)
@@ -418,6 +419,67 @@ function Party.new(opts)
   if store then
     local ok, saved = pcall(store.get, "visitorIds")
     if ok and type(saved) == "table" then identity = saved end
+  end
+
+  -- FP2 (§4.1, Q16): a SWITCH in the hidden party menu goes out as
+  -- party.order; until a sync shows that order (or GIVE_UP_AFTER syncs pass)
+  -- the syncs are applied in it, so the hidden choice stands meanwhile.
+  local appliedOrder -- the uids in the order the last applied sync left them
+  local orderPending, orderSyncs = nil, 0
+  local function knownUids()
+    local list = engine.partyUids()
+    local out = {}
+    for _, uid in ipairs(list) do
+      if uid then out[#out + 1] = uid end
+    end
+    return out
+  end
+  local function sameSet(a, b)
+    if #a ~= #b then return false end
+    local set = {}
+    for _, v in ipairs(a) do set[v] = true end
+    for _, v in ipairs(b) do
+      if not set[v] then return false end
+    end
+    return true
+  end
+  local function watchOrder(out)
+    if not appliedOrder or orderPending or not engine.partySafe() then return end
+    local now = knownUids()
+    if #now < 2 or not sameSet(now, appliedOrder) or table.concat(now, ",") == table.concat(appliedOrder, ",") then return end
+    out[#out + 1] = { "party.order", { uids = now }, "party" }
+    orderPending, orderSyncs = now, 0
+    -- the uids by position again, so a save before the next sync keeps them right
+    if store then pcall(store.set, "partyUids", (engine.partyUids())) end
+    counts.orders = counts.orders + 1
+    if log then log.info("party.order", { size = #now, count = counts.orders }) end
+  end
+  -- The entries of a sync in the pending order (members it doesn't name keep
+  -- their places after them); the order is confirmed or given up here.
+  local function inPendingOrder(entries)
+    if not orderPending then return entries end
+    local ids = {}
+    for _, e in ipairs(entries) do ids[#ids + 1] = e.uid end
+    if table.concat(ids, ","):find(table.concat(orderPending, ","), 1, true) == 1 then
+      orderPending = nil
+      counts.ordersConfirmed = counts.ordersConfirmed + 1
+      return entries
+    end
+    orderSyncs = orderSyncs + 1
+    if orderSyncs >= Party.GIVE_UP_AFTER then
+      orderPending = nil
+      if log then log.warn("party.order_unconfirmed", { count = counts.orders }) end
+      return entries
+    end
+    local rank = {}
+    for i, uid in ipairs(orderPending) do rank[uid] = i end
+    local named, rest = {}, {}
+    for _, e in ipairs(entries) do
+      if rank[e.uid] then named[#named + 1] = e else rest[#rest + 1] = e end
+    end
+    table.sort(named, function(a, b) return rank[a.uid] < rank[b.uid] end)
+    for _, e in ipairs(rest) do named[#named + 1] = e end
+    return named
   end
 
   -- The visitor a uid is (its real dex, form, name), or nil for a native.
@@ -608,8 +670,10 @@ function Party.new(opts)
     end
     counts.visitorsNow = 0
     for _ in pairs(ids) do counts.visitorsNow = counts.visitorsNow + 1 end
+    entries = inPendingOrder(entries)
     local res = engine.applyParty(entries)
     if not res then return false end
+    appliedOrder = knownUids()
     -- §3.1 / Q23: the identity map (uid -> the visitor's real dex, form, name)
     identity = ids
     if store then pcall(store.set, "visitorIds", ids) end
@@ -802,6 +866,7 @@ function Party.new(opts)
     end
     watchDaycare()
     watchNicks()
+    if live then watchOrder(out) end
     -- a trade changed the party's order: the uids by position again
     for _, op in ipairs(engine.ops()) do
       if op.state == "new" and not persistedOps[op.id] then

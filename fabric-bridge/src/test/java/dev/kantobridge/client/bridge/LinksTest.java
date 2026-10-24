@@ -258,6 +258,32 @@ class LinksTest {
 	}
 
 	@Test
+	void theFollowedGamesVisitorsAreAHudLine() throws Exception {
+		// FP2 (FOREIGN_POKEMON_PLAN §4.1): game.status.visitors, shown while there are any
+		this.twoLinks();
+		PipeTransport.Pipe bluePipe = this.handshake(BLUE_PORT, "blue", "s-blue");
+		BridgeLink blue = this.linkOn(BLUE_PORT);
+		assertNull(blue.visitorLine());
+		bluePipe.serverSend("{\"type\":\"game.status\",\"seq\":9,\"data\":{\"game\":\"blue\",\"playthrough\":\"saved\","
+				+ "\"ingame\":true,\"started\":true,\"badges\":0,\"markers\":{},\"visitors\":2}}");
+		BridgeClientTest.await("status", () -> {
+			this.links.drain(64);
+			return blue.visitors() == 2;
+		});
+		ConnectionStatus.Line line = blue.visitorLine();
+		assertTrue(line != null && !line.warning());
+		assertEquals("kantobridge.hud.visitors", line.key());
+		assertEquals("2", line.args().get(1));
+		bluePipe.serverSend("{\"type\":\"game.status\",\"seq\":10,\"data\":{\"game\":\"blue\",\"playthrough\":\"saved\","
+				+ "\"ingame\":true,\"started\":true,\"badges\":0,\"markers\":{},\"visitors\":0}}");
+		BridgeClientTest.await("status 0", () -> {
+			this.links.drain(64);
+			return blue.visitors() == 0;
+		});
+		assertNull(blue.visitorLine(), "no visitors: no line");
+	}
+
+	@Test
 	void aLinkRunningAnotherGameIsNeverFollowed() throws Exception {
 		this.regions.byGame.put("blue", "kanto");
 		this.regions.byGame.put("red", "kanto_red");

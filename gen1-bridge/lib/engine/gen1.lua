@@ -2625,6 +2625,7 @@ function Gen1.new(opts)
       pcall(content.icons.register, content.icons, VISITOR, icon)
     end
     if not visitorAccepted then warnAt("party.visitor_refused", ok and "nil" or res) end
+    if visitorAccepted then pcall(engine.wrapExport) end
     return visitorAccepted
   end
 
@@ -2641,6 +2642,101 @@ function Gen1.new(opts)
 
   -- §4.2: the move ids a visitor keeps (the field moves Blue offers).
   function engine.visitorMoves() return FIELD_MOVES end
+
+  local function isVisitor(mon) return type(mon) == "table" and mon.species == VISITOR end
+
+  -- §4.14 (FP2): a box never keeps a visitor (Cobblemon holds the real
+  -- Pokemon; SaveData.validate's reclaim, src/core/SaveData.lua:3072-3076,
+  -- may put one in a box when the party was full). Returns how many went.
+  function engine.visitorSweep()
+    local save = engine.save()
+    local n = 0
+    for _, box in ipairs(save and type(save.boxes) == "table" and save.boxes or {}) do
+      if type(box) == "table" then
+        for i = #box, 1, -1 do
+          if isVisitor(box[i]) then table.remove(box, i) n = n + 1 end
+        end
+      end
+    end
+    return n
+  end
+
+  -- §4.14 (FP2): the Hall of Fame's visitor members (Commands.record_hall_of_fame,
+  -- src/script/Commands.lua:920-927: species, level, nickname per member),
+  -- as { entry, slot, level, nickname } rows for mod.save. A save opened
+  -- without the mod blanks them for good (SaveData.validate, :3112-3123).
+  function engine.hofCopy()
+    local save = engine.save()
+    local out = {}
+    for e, entry in ipairs(save and type(save.hallOfFame) == "table" and save.hallOfFame or {}) do
+      for s, mon in ipairs(type(entry) == "table" and entry or {}) do
+        if isVisitor(mon) then
+          out[#out + 1] = { entry = e, slot = s, level = mon.level, nickname = mon.nickname }
+        end
+      end
+    end
+    return out
+  end
+
+  -- Puts the copy's visitors back where the entry still holds a blanked
+  -- member (species nil) at that place. Returns how many came back.
+  function engine.hofRestore(copy)
+    local save = engine.save()
+    local fame = save and type(save.hallOfFame) == "table" and save.hallOfFame or nil
+    if not (fame and type(copy) == "table" and engine.visitorSpecies()) then return 0 end
+    local n = 0
+    for _, row in ipairs(copy) do
+      local entry = type(row) == "table" and fame[row.entry] or nil
+      local mon = type(entry) == "table" and entry[row.slot] or nil
+      if type(mon) == "table" and mon.species == nil then
+        mon.species = VISITOR
+        if mon.nickname == nil then mon.nickname = row.nickname end
+        n = n + 1
+      end
+    end
+    return n
+  end
+
+  -- §4.14 (FP2): a cartridge export never carries a visitor: GenSave.encode
+  -- (src/save_convert/GenSave.lua:1410, called by SaveConvert.lua:699)
+  -- refuses a species with no Gen 1 index (:664-669), so the export gets a
+  -- copy of the save without them (party, boxes, daycare, Hall of Fame). One
+  -- wrapper per process (a hot reload keeps the first).
+  local function withoutVisitors(save)
+    if type(save) ~= "table" then return save end
+    local copy = {}
+    for k, v in pairs(save) do copy[k] = v end
+    local function list(mons)
+      local out = {}
+      for _, mon in ipairs(type(mons) == "table" and mons or {}) do
+        if not isVisitor(mon) then out[#out + 1] = mon end
+      end
+      return out
+    end
+    copy.party = list(save.party)
+    if type(save.boxes) == "table" then
+      copy.boxes = {}
+      for i, box in ipairs(save.boxes) do copy.boxes[i] = list(box) end
+    end
+    if type(save.daycare) == "table" and isVisitor(save.daycare.mon) then
+      copy.daycare = {}
+      for k, v in pairs(save.daycare) do copy.daycare[k] = v end
+      copy.daycare.mon = nil
+    end
+    if type(save.hallOfFame) == "table" then
+      copy.hallOfFame = {}
+      for i, entry in ipairs(save.hallOfFame) do copy.hallOfFame[i] = list(entry) end
+    end
+    return copy
+  end
+  function engine.wrapExport()
+    local GenSave = try("src.save_convert.GenSave")
+    if not (GenSave and type(GenSave.encode) == "function") or rawget(GenSave, "kbVisitorEncode") then return false end
+    local encode = GenSave.encode
+    GenSave.kbVisitorEncode = encode
+    GenSave.encode = function(save, ...) return encode(withoutVisitors(save), ...) end
+    return true
+  end
 
   -- ---- the shadow party (party.sync, Cobblemon authoritative)
 

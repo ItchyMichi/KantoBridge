@@ -90,6 +90,7 @@
   "kantobridge.hud.session.unpaired": "Gen1Recomp: playing without a save of this world's own (%s)",
   "kantobridge.hud.link.wrong_game": "Gen1Recomp on port %s runs %s, expected %s: that link is never followed",
   "kantobridge.hud.link.parked_down": "%s (port %s): not connected",
+  "kantobridge.hud.visitors": "%s: %s of your Pokémon are visitors here",
   "kantobridge.pass.crossing": "Crossing…",
   "kantobridge.pass.starting": "Starting %s…",
   "kantobridge.pass.no_link": "%s isn't running",

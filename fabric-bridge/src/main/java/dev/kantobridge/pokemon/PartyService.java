@@ -143,6 +143,8 @@ public final class PartyService {
 		relay.register(MsgTypes.PARTY_RENAME, PartyService::onRename);
 		relay.register(MsgTypes.PARTY_TAKE, PartyService::onTake);
 		relay.register(MsgTypes.PARTY_ITEM, PartyService::onItem);
+		// FOREIGN_POKEMON_PLAN §4.1, Q16 (FP2): a SWITCH in the hidden party menu
+		relay.register(MsgTypes.PARTY_ORDER, PartyService::onOrder);
 		// P16: nicknames change only through the Name Rater (and the catch or gift prompt), never Cobblemon's screens.
 		CobblemonEvents.POKEMON_NICKNAMED.subscribe(Priority.HIGHEST, event -> {
 			event.cancel();
@@ -352,6 +354,87 @@ public final class PartyService {
 		}
 		markDirty(player);
 		KantoBridge.LOGGER.info("party: a Pokémon was {}", reason.equals("quest") ? "taken by a quest" : "traded away");
+	}
+
+	// ---- party.order (FP2) ----
+
+	/**
+	 * A SWITCH in the hidden party menu (R1: the lead is the same Pokémon in both): the named members move to the front in
+	 * that order, the others keep theirs after them. Applying it twice changes nothing, so a repeat is harmless.
+	 */
+	static void onOrder(ServerPlayer player, Envelope message) {
+		List<UUID> wanted = new java.util.ArrayList<>();
+		try {
+			DataReader reader = DataReader.of(message.data(), "").allowOnly(Set.of("uids", "region"));
+			com.google.gson.JsonArray uids = reader.array("uids");
+			if (uids.isEmpty() || uids.size() > PartySync.MAX_PARTY) {
+				throw new DataException(reader.path("uids"), "needs 1-6 uids");
+			}
+			for (int i = 0; i < uids.size(); i++) {
+				com.google.gson.JsonElement e = uids.get(i);
+				if (!e.isJsonPrimitive() || !e.getAsJsonPrimitive().isString() || !Ids.UID.matcher(e.getAsString()).matches()) {
+					throw new DataException(reader.path("uids") + "/" + i, "not a uid");
+				}
+				UUID uid = UUID.fromString(e.getAsString());
+				if (wanted.contains(uid)) {
+					throw new DataException(reader.path("uids") + "/" + i, "repeated");
+				}
+				wanted.add(uid);
+			}
+		} catch (DataException e) {
+			reject(player, message, "order", e);
+			return;
+		}
+		PlayerPartyStore party = PlayerExtensionsKt.party(player);
+		List<UUID> slots = new java.util.ArrayList<>();
+		for (int i = 0; i < party.size(); i++) {
+			Pokemon pokemon = party.get(i);
+			slots.add(pokemon == null ? null : pokemon.getUuid());
+		}
+		List<int[]> swaps = orderSwaps(slots, wanted);
+		for (int[] swap : swaps) {
+			party.swap(swap[0], swap[1]);
+		}
+		if (!swaps.isEmpty()) {
+			markDirty(player);
+			KantoBridge.LOGGER.info("party: reordered by the hidden game ({} swaps)", swaps.size());
+		}
+	}
+
+	/**
+	 * The swaps that put {@code wanted}'s members (those in the party) into the party's occupied slots first, in that
+	 * order, the other members after them in their order. {@code slots} has a uid or null per slot. Plain Java.
+	 */
+	public static List<int[]> orderSwaps(List<UUID> slots, List<UUID> wanted) {
+		List<Integer> occupied = new java.util.ArrayList<>();
+		for (int i = 0; i < slots.size(); i++) {
+			if (slots.get(i) != null) {
+				occupied.add(i);
+			}
+		}
+		List<UUID> desired = new java.util.ArrayList<>();
+		for (UUID uid : wanted) {
+			if (slots.contains(uid)) {
+				desired.add(uid);
+			}
+		}
+		for (int i : occupied) {
+			if (!desired.contains(slots.get(i))) {
+				desired.add(slots.get(i));
+			}
+		}
+		List<UUID> now = new java.util.ArrayList<>(slots);
+		List<int[]> swaps = new java.util.ArrayList<>();
+		for (int k = 0; k < occupied.size(); k++) {
+			int target = occupied.get(k);
+			UUID want = desired.get(k);
+			if (!want.equals(now.get(target))) {
+				int from = now.indexOf(want);
+				swaps.add(new int[] {target, from});
+				java.util.Collections.swap(now, target, from);
+			}
+		}
+		return swaps;
 	}
 
 	// ---- party.item ----

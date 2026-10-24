@@ -807,7 +807,15 @@ return function(mod)
   -- Every hidden-game save (Game:writeSave emits save.writing before the
   -- file is written, src/core/Game.lua:1376-1378): Minecraft saves too
   -- (except the one before an M9 slot switch).
-  mod.events:on("save.writing", perf.timed(function() saves.writing() end))
+  mod.events:on("save.writing", perf.timed(function()
+    saves.writing()
+    -- FP2 (§4.14): the Hall of Fame's visitors, kept where a save opened without the mod can't blank them
+    local copy = rawget(engine, "hofCopy")
+    if type(copy) == "function" then
+      local ok, rows = pcall(copy)
+      if ok and type(rows) == "table" then mod.save:set("hofCopy", rows) end
+    end
+  end))
 
   status.session = sessionId
   status.configure = function(opts)
@@ -1235,6 +1243,14 @@ return function(mod)
     -- M9: a loaded game belongs to its slot (never "a New Game never saved")
     pairing.loaded(type(payload) == "table" and payload.save or nil)
     pinOptions(true)
+    -- FP2 (§4.14): no visitor stays in a box, and the Hall of Fame gets back what a mod-less load blanked
+    for _, name in ipairs({ "visitorSweep", "hofRestore" }) do
+      local f = rawget(engine, name)
+      if type(f) == "function" then
+        local ok, n = pcall(f, name == "hofRestore" and mod.save:get("hofCopy") or nil)
+        if ok and type(n) == "number" and n > 0 then log.info("party." .. name, { count = n }) end
+      end
+    end
     party.adopt()
     party.reapply()
     saves.restore()

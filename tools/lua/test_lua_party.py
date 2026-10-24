@@ -587,3 +587,50 @@ def test_a_region_that_leaves_foreign_members_out_gets_no_visitors():
     sync(g, [entry(U1, 300, 20, [N["CUT"]], **SKITTY), entry(U2, 16, 9, [N["GUST_T"]])])
     g.run(2)
     assert species(g) == ["BIRDMON"] and g.status()["partyForeignSpecies"] == 1
+
+
+# ------------------------------------------------------------ FP2: SWITCH, the box sweep, the Hall of Fame copy
+
+
+def orders(g):
+    return [m["data"]["uids"] for m in g.received("party.order")]
+
+
+def test_a_switch_in_the_hidden_menu_goes_to_cobblemon_and_stands_until_confirmed():
+    g = visitor_game()
+    sync(g, [entry(U1, 16, 9, [N["GUST_T"]]), entry(U2, 300, 20, [N["CUT"]], **SKITTY)])
+    g.run(2)
+    a, b = g.party()
+    g.E.save.party[1], g.E.save.party[2] = b, a          # the party menu's SWITCH swaps the two records
+    g.run(2)
+    assert orders(g) == [[U2, U1]]
+    assert [g.b.mod._save.partyUids[i] for i in (1, 2)] == [U2.encode(), U1.encode()], "the uids by position at once"
+    # a sync from before Cobblemon moved them keeps the hidden order
+    sync(g, [entry(U1, 16, 9, [N["GUST_T"]]), entry(U2, 300, 20, [N["CUT"]], **SKITTY)])
+    g.run(2)
+    assert same(g, g.party()[0], b) and same(g, g.party()[1], a)
+    # Cobblemon's own sync in the new order confirms it; nothing more goes out
+    sync(g, [entry(U2, 300, 20, [N["CUT"]], **SKITTY), entry(U1, 16, 9, [N["GUST_T"]])])
+    g.run(3)
+    assert orders(g) == [[U2, U1]] and g.status()["partyOrdersConfirmed"] == 1
+
+
+def test_a_visitor_never_stays_in_a_box_and_the_hall_of_fame_gets_its_visitors_back():
+    g = visitor_game()
+    sync(g, [entry(U1, 300, 20, [N["CUT"]], **SKITTY)])
+    g.run(2)
+    lua = g.b.eval
+    # the Hall of Fame as Commands.record_hall_of_fame writes it, then a save (the copy goes to mod.save)
+    g.E.save.hallOfFame = g.b.to_lua([[{"species": "KB_VISITOR", "level": 20, "nickname": "SKITTY"},
+                                       {"species": "BIRDMON", "level": 9}]])
+    g.b.emit("save.writing", g.b.table())
+    g.run()
+    copy = g.b.mod._save.hofCopy
+    assert copy[1].entry == 1 and copy[1].slot == 1 and copy[1].nickname == b"SKITTY"
+    # a load after a mod-less session: the member blanked, a visitor reclaimed into a box
+    g.E.save.hallOfFame[1][1].species = None
+    g.E.save.boxes = g.b.to_lua([[{"species": "KB_VISITOR", "level": 20}, {"species": "BIRDMON", "level": 3}]])
+    g.b.emit("save.loaded", lua("function(s) return { save = s } end")(g.E.save))
+    g.run(2)
+    assert g.E.save.hallOfFame[1][1].species == b"KB_VISITOR"
+    assert len(g.E.save.boxes[1]) == 1 and g.E.save.boxes[1][1].species == b"BIRDMON"

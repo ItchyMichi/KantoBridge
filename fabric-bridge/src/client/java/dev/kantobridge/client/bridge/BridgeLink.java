@@ -40,6 +40,8 @@ public final class BridgeLink {
 	private volatile boolean wrongGame;
 	private volatile @Nullable String wrongGameSeen;
 	private volatile @Nullable Status lastStatus;
+	/** FP2 (FOREIGN_POKEMON_PLAN §4.1): the visitors the last game.status counted (-1: not said). */
+	private volatile int visitors = -1;
 	private long wrongGameCount;
 
 	BridgeLink(ClientConfig.Link configured, Dispatcher dispatcher, BridgeClient client, BridgeClock clock, Links.RegionView regions,
@@ -57,6 +59,7 @@ public final class BridgeLink {
 			this.status.update(next, detail, clock.millis());
 			if (next != ConnectionState.CONNECTED) {
 				this.lastStatus = null;
+				this.visitors = -1;
 			}
 		});
 	}
@@ -173,6 +176,8 @@ public final class BridgeLink {
 			return;
 		}
 		long slot = JsonFields.integer(data, "slot", -1);
+		long seen = JsonFields.integer(data, "visitors", -1);
+		this.visitors = seen < 0 || seen > 6 ? -1 : (int) seen;
 		this.lastStatus = new Status(playthrough, JsonFields.bool(data, "ingame", false), JsonFields.bool(data, "started", false),
 				(int) Math.max(0, Math.min(16, JsonFields.integer(data, "badges", 0))), JsonFields.str(data, "name"),
 				slot < 0 ? null : (int) slot);
@@ -181,6 +186,20 @@ public final class BridgeLink {
 	/** How many times a {@code hello.ok} named another game than configured. */
 	public long wrongGameCount() {
 		return this.wrongGameCount;
+	}
+
+	/** FP2: how many party members this game shows as visitors (-1 when it didn't say). */
+	public int visitors() {
+		return this.visitors;
+	}
+
+	/** FP2 (§4.1): the HUD's visitor line for the followed link: how many members its game shows as visitors, or null. */
+	public ConnectionStatus.@Nullable Line visitorLine() {
+		int n = this.visitors;
+		if (n <= 0 || !this.connected()) {
+			return null;
+		}
+		return new ConnectionStatus.Line("kantobridge.hud.visitors", java.util.List.of(label(this.game()), Integer.toString(n)), false);
 	}
 
 	/** The HUD's line for this link while it isn't the followed one, or null when there is nothing to say. */

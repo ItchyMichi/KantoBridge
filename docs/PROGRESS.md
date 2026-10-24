@@ -3170,8 +3170,17 @@ Tests: pytest 2,339 passed (68 e2e skipped); JUnit (pokemon, world, battle, serv
    test's second run continued through the engine's own CONTINUE in the driver (as `kb_crash.lua` does). To fix next.
 2. A dev client logs in as a new random PlayerNNN each launch, so a second launch is a new Cobblemon player:
    `fp_stone.py` passes `-Pkb.clientUser=FPTester`.
-3. FP2's rest: `party.order`, the HUD line, the LOST-box and export sweeps, the Hall of Fame copy; Crystal and Emerald
-   (FP3).
+3. ~~FP2's rest~~ done the same day (below); Crystal and Emerald are FP3.
+
+**FP2's rest (2026-10-24).** `party.order`: gen1-bridge sees a SWITCH (the uids by position changed, same members) and
+sends it once, writes the new `partyUids` at once, and applies later syncs in that order until one shows it (or
+`GIVE_UP_AFTER` syncs pass); the server's `PartyService.onOrder` moves the named members to the front by swaps
+(`orderSwaps`, JUnit). The HUD: the followed link's `game.status.visitors` as one line ("Blue: 2 of your Pokémon are
+visitors here"). Blue's adapter: `visitorSweep` (no stand-in record stays in a box after a load), `hofCopy` /
+`hofRestore` (the Hall of Fame's visitor members kept in mod.save at every save and put back where a mod-less load
+blanked them), and the export sweep (`GenSave.encode` wrapped once per process: the cartridge export gets the save
+without visitors in the party, boxes, daycare and Hall of Fame). Lupa: SWITCH, box sweep and Hall of Fame copy; the
+export sweep and the mod-off round trip are FP8's real-engine checks.
 
 ## Pre-flight (PLAN §0.6)
 

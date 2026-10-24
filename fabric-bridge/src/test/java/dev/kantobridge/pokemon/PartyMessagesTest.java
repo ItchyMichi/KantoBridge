@@ -127,6 +127,20 @@ class PartyMessagesTest {
 	}
 
 	@Test
+	void aHiddenSwitchReordersTheParty() {
+		// FP2 (§4.1, Q16): the named members first, in that order; the rest after, in theirs; empty slots stay empty
+		java.util.UUID a = new java.util.UUID(0, 1), b = new java.util.UUID(0, 2), c = new java.util.UUID(0, 3);
+		java.util.List<java.util.UUID> slots = new java.util.ArrayList<>(java.util.Arrays.asList(a, b, null, c));
+		java.util.List<int[]> swaps = PartyService.orderSwaps(slots, List.of(c, a));
+		for (int[] s : swaps) {
+			java.util.Collections.swap(slots, s[0], s[1]);
+		}
+		assertEquals(java.util.Arrays.asList(c, a, null, b), slots);
+		assertEquals(List.of(), PartyService.orderSwaps(slots, List.of(c, a, b)), "already in order: nothing");
+		assertEquals(List.of(), PartyService.orderSwaps(slots, List.of(new java.util.UUID(9, 9))), "unknown uids: nothing");
+	}
+
+	@Test
 	void theOriginalTrainerGoesOutOnlyWhenItIsntTheOwner() {
 		java.util.UUID owner = java.util.UUID.fromString("0f8b6a2e-1c2d-4e5f-8a9b-0c1d2e3f4a5b");
 		java.util.UUID other = java.util.UUID.fromString("6a1d3c4e-5f60-4a7b-8c9d-0e1f2a3b4c5d");

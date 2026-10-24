@@ -144,6 +144,11 @@ public final class BridgeRuntime {
 		ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> runtime.links.serverChanged());
 		ClientLifecycleEvents.CLIENT_STOPPING.register(minecraft -> runtime.links.closeAll());
 		runtime.overlay.addLine(runtime::debugPause);
+		// FP2 (FOREIGN_POKEMON_PLAN §4.1): the followed game's visitors, when it shows any
+		runtime.hudLines.add(() -> {
+			BridgeLink followed = runtime.links.followed();
+			return followed == null ? null : followed.visitorLine();
+		});
 		// MG4: every link but the followed one has a HUD line when something is wrong with it (never followed: wrong game;
 		// parked and down), and F7 lists them all.
 		if (runtime.links.all().size() > 1) {
