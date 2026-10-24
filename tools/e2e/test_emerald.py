@@ -483,6 +483,36 @@ def _launch(scene, ready_marker, scenario, timeout, extra=0):
     return result, report
 
 
+async def _fp7(port, serving):
+    """FP7: Surf from Minecraft onto the water in front and back onto the land; then Lanette's PC is Cobblemon's."""
+    x, y, wx, wy = int(serving["x"]), int(serving["y"]), int(serving["wx"]), int(serving["wy"])
+    mc, ok, snap, status = await connect(port)
+    report = {"start": (snap["player"]["x"], snap["player"]["y"]), "badge": serving["badge"]}
+    uid = "0f8b6a2e-1c2d-4e5f-8a9b-0c1d2e3f4a5b"
+    await mc.send("party.sync", {"party": [{"uid": uid, "dex": 260, "level": 30, "moves": [57, 33], "hp": 90, "maxhp": 90}],
+                                 "box": {"count": 0}})
+    await asyncio.sleep(2)
+    seq = (await mc.send("act.field", {"action": "surf", "x": wx, "y": wy}))["seq"]
+    res = await find_or_wait(mc, "act.result", 30, 0, lambda m: m.get("re") == seq)
+    report["surf"] = (res["data"]["ok"], res["data"].get("kind"), res["data"].get("reason"))
+    assert report["surf"][:2] == (True, "surf"), report
+    await asyncio.sleep(4)
+    seq = (await mc.send("act.field", {"action": "surf", "x": x, "y": y}))["seq"]
+    res = await find_or_wait(mc, "act.result", 30, 0, lambda m: m.get("re") == seq)
+    report["dismount"] = (res["data"]["ok"], res["data"].get("kind"), res["data"].get("reason"))
+    assert report["dismount"][:2] == (True, "dismount"), report
+    opened = await find_or_wait(mc, "pc.open", 60)
+    report["pc"] = opened["data"]["pc"]
+    await asyncio.sleep(1)
+    await mc.send("pc.closed", {"pc": opened["data"]["pc"]})
+    await asyncio.sleep(3)
+    assert not errors(mc), errors(mc)
+    await mc.send("debug.quit", {"code": 0})
+    await asyncio.sleep(2)
+    await mc.close()
+    return report
+
+
 def _skip_without_emerald():
     pf = preflight()
     if not pf.ok:
@@ -779,3 +809,21 @@ def test_emerald_starts_from_its_title():
         if not clean:
             _cleanup_run()
     assert save_files() == before, "the test slots' files are gone and the rest untouched"
+
+
+@pytest.mark.e2e
+@pytest.mark.timeout(900)
+def test_emerald_surf_from_minecraft_and_lanettes_pc_is_cobblemons():
+    # FOREIGN_POKEMON_PLAN FP7 (§4.2, §4.8): act.field on the real Emerald, and the storage PC held for Cobblemon's
+    _skip_without_emerald()
+    before = save_files()
+    clean = False
+    try:
+        result, report = _launch("fp7", "KB_SERVING", _fp7, 400)
+        assert result.facts("KB_PC")["yielded"] == "true", result.facts("KB_PC")
+        assert any(line.startswith("KB_PC_DONE") for line in result.lines), "the script went on after pc.closed"
+        clean = True
+    finally:
+        if not clean:
+            _cleanup_run()
+    assert save_files() == before, "the test slot's files are gone and the rest untouched"

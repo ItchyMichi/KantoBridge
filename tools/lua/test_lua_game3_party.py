@@ -527,3 +527,12 @@ def test_visitors_cant_enter_contests_and_emeralds_state_comes_back():
     fresh = s.party[1]
     a.eng.restoreStates(states)
     assert (fresh.evs.hp, fresh.sheen, fresh.contest.cool) == (40, 9, 20)
+
+
+def test_a_gift_carries_its_shininess_gender_friendship_and_nature():
+    # FP7 (§5): Emerald's gifts with details, as Crystal's
+    a, s = adapter()
+    ok, _, mon = a.E.giveMon(4, 5, b"", False)[0:3]
+    mon.personality, mon.friendship, mon.isShiny = 15 + 25 * 4, 90, True    # natureId 15 (modest), low byte 115: F
+    g = plain(a.eng.gifts())[0]
+    assert (g["shiny"], g["gender"], g["friendship"], g["nature"]) == (True, "female", 90, "modest")

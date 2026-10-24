@@ -48,6 +48,16 @@ function FakeBattle3.attach(E)
     for i = 1, #moves do pp[i] = 35 end
     return moves, pp, pp
   end
+  -- FP7: pokemon.lua:392-407, :1442-1451 (species 4 is half female: ratio 127)
+  function E.Pokemon.natureId(p) return (tonumber(p) or 0) % 25 end
+  function E.Pokemon.gender(species, p)
+    if tonumber(species) == 5 then return "U" end
+    return 127 > ((tonumber(p) or 0) % 256) and "F" or "M"
+  end
+  function E.Pokemon.isShiny(mon)
+    if mon.isShiny ~= nil then return mon.isShiny == true end
+    return false
+  end
   function E.Pokemon.movePp(id) return tonumber(id) and 20 + tonumber(id) % 20 or 0 end
   function E.Pokemon.applyStats(mon)
     mon.maxHp = 10 + 3 * (tonumber(mon.level) or 1)
@@ -450,7 +460,8 @@ function FakeBattle3.attach(E)
     ITEM_ = { [1] = "ITEM_TEST_BALL", [2] = "ITEM_TEST_POTION", [3] = "ITEM_TEST_KEY", [4] = "ITEM_none",
               [5] = "ITEM_POKE_BALL", [13] = "ITEM_POTION", [17] = "ITEM_PARALYZE_HEAL", [94] = "ITEM_FIRE_STONE",
               [68] = "ITEM_RARE_CANDY", [289] = "ITEM_TM01", [294] = "ITEM_TM06", [339] = "ITEM_HM01",
-              [259] = "ITEM_MACH_BIKE", [110] = "ITEM_NUGGET", [93] = "ITEM_SUN_STONE", [34] = "ITEM_ETHER", [200] = "ITEM_LEFTOVERS", [121] = "ITEM_ORANGE_MAIL" },
+              [259] = "ITEM_MACH_BIKE", [110] = "ITEM_NUGGET", [93] = "ITEM_SUN_STONE", [34] = "ITEM_ETHER", [200] = "ITEM_LEFTOVERS", [121] = "ITEM_ORANGE_MAIL",
+              [85] = "ITEM_ESCAPE_ROPE", [262] = "ITEM_OLD_ROD" },
   }
   E.itemPockets[259], E.itemPockets[339] = "KEY_ITEMS", "TM_CASE"
   E.itemPockets[289], E.itemPockets[294] = "TM_CASE", "TM_CASE"
@@ -509,6 +520,31 @@ function FakeBattle3.attach(E)
   E.ContestUtil = { ELIGIBILITY = { CANT_ENTER = 0, CAN_ENTER = 1 } }
   function E.ContestUtil.eligibility(_mon) return 1 end
   mods["src.core.game3.rse.contest_util"] = E.ContestUtil
+  -- FP7: the field moves' menu path (field_moves.lua:313, :804-813) and Field.executeFieldMove (field.lua:1169), as
+  -- small as the tests need: a member knows a move by its number; fromMenu answers E.fieldAnswer[move] (default
+  -- { ok = true, action = <move> }) and records the context; executeFieldMove records the payload
+  E.FieldMoves = { MOVES = { CUT = 15, SURF = 57, STRENGTH = 70, FLASH = 148, ROCK_SMASH = 249, WATERFALL = 127,
+                             DIVE = 291, DIG = 91, TELEPORT = 100, FLY = 19, SWEET_SCENT = 230 } }
+  E.fieldAnswer, E.fieldContexts, E.fieldRuns = {}, {}, {}
+  function E.FieldMoves.partyMoveUser(party, name)
+    local id = E.FieldMoves.MOVES[name]
+    for _, mon in ipairs(party or {}) do
+      for _, m in ipairs(mon.moves or {}) do if m == id then return mon end end
+    end
+    return nil
+  end
+  function E.FieldMoves.isWaterfallBehavior() return false end
+  function E.FieldMoves.fromMenu(name, ctx)
+    E.fieldContexts[#E.fieldContexts + 1] = ctx
+    return E.fieldAnswer[name] or { ok = true, action = name:lower(), mon = ctx.mon }
+  end
+  function E.Field.executeFieldMove(payload) E.fieldRuns[#E.fieldRuns + 1] = payload end
+  function E.ItemUse.useBike(_session, _id)
+    E.Player.biking = not E.Player.biking
+    return true, "bike"
+  end
+  function E.ItemUse.useEscapeRope(_session, _bag, _id) return E.ropeOk ~= false, "escape" end
+  mods["src.core.game3.field_moves"] = E.FieldMoves
   mods["src.core.game3.evolution"] = E.Evolution
   mods["src.ui.game3.evolution_scene"] = E.EvolutionScene
   mods["src.core.game3.item_use"] = E.ItemUse

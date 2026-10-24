@@ -276,6 +276,13 @@ public final class PartyService {
 		if (give.nick() != null && !give.nick().isEmpty()) {
 			pokemon.setNickname(Component.literal(give.nick()));
 		}
+		// FP7: the hidden game's nature (Emerald's records carry one); an unknown name leaves Cobblemon's
+		if (give.nature() != null) {
+			com.cobblemon.mod.common.pokemon.Nature nature = com.cobblemon.mod.common.api.pokemon.Natures.getNature(give.nature());
+			if (nature != null) {
+				pokemon.setNature(nature);
+			}
+		}
 		if (give.source() == PartyGive.Source.TRADE && give.ot() != null && !give.ot().isBlank()) {
 			// A traded Pokémon keeps its NPC trainer (and Cobblemon gives it the traded-Pokémon XP bonus, as Gen 1 does).
 			pokemon.setOriginalTrainer(give.ot());

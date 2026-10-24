@@ -3426,6 +3426,35 @@ story blocker since SC-E; the earlier full sweep had 302 right and 21 unchecked)
 **Deviation.** The 30 days count from when a uid was last in the hidden party (the hidden game can't see Cobblemon's
 PC), not from when it left Cobblemon for good.
 
+## Foreign Pokémon: FP7, Emerald parity (2026-10-24)
+
+- **Field actions** (`game3/fieldmoves.lua`, new; `act.field` had nothing for Emerald): a move goes the party menu's way
+  (the menu's context, `party_menu.lua:1871-1913`; `FieldMoves.fromMenu`'s badge and checks; `Field.executeFieldMove`):
+  cut, surf, strength, flash, rock_smash, waterfall, dive (new in `act.field`, kb_field and the client), dig, teleport,
+  sweet_scent; fly opens the game's own region map (`fly_list`; a named destination is refused). Off the water is a
+  step onto the land in front (`Player.tryMove` answers `step` as the hop starts: `dismount`). The bike (Mach or Acro),
+  a rod and the Escape Rope go through the bag's field paths.
+- **Lanette's PC is Cobblemon's** (§4.8): the `script.command` hook answers the Center PC's `ShowPokemonStorageSystemPC`
+  while a client follows with the engine's own wait (`Natives.yieldHost`) until Cobblemon's PC closes (`pc.open` /
+  `pc.closed`, kb_pc's contract, as Crystal's Bill's PC); the item PC and the mailbox stay the game's.
+- **Gifts and syncs with details** (§5): an Emerald gift carries shininess, gender, friendship and nature (new in
+  `party.give`; the server sets Cobblemon's nature, `Natures.getNature`); a sync sets the record's `isShiny`, its
+  friendship, and a personality whose nature and gender are Cobblemon's when the old one disagrees (never for Unown,
+  whose letter it is). kb_party passes the sync's `nature`.
+- Native battle announcements were FP5a's.
+
+**Tests.** Lupa (`test_lua_game3_fieldmoves.py`): the menu path and its refusals (no_move, no_badge, no_target), dive,
+fly's own map and a refused destination, the dismount, the bike on and off, the rope; the PC held until `pc.closed`
+(native without a client); the details on the record and on a gift. GameTest `aGiftKeepsTheHiddenGamesNature`.
+**Real Emerald** (`test_emerald.py::test_emerald_surf_from_minecraft_and_lanettes_pc_is_cobblemons`, new driver scene
+`fp7`: Route 103, a land cell found beside the water, the Surf badge set): `act.field surf` onto the water (ok, surf),
+then onto the land (ok, dismount), then the storage special through the hook waits for Cobblemon's PC (`pc.open`) and
+goes on after `pc.closed`: PASS. All 8 Emerald e2e scenes pass (the old ones untouched by the new scene); Lua 1,585; pytest
+2,385 (69 e2e skipped); GameTests 132/132; JUnit client + pokemon 563 of 564 (the old `KbPackReloadTest`).
+
+**Deviation.** Only Cut and Surf reach `act.field` from a click in Minecraft (FieldClick, as in Crystal); the other
+moves are done the same way when asked, and from the hidden party menu on the mirror as before.
+
 ## Pre-flight (PLAN §0.6)
 
 | Step | State |

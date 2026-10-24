@@ -459,6 +459,64 @@ function Items3.install(b)
     local st = b.state()
     return { refused = st and st.itemRefused or 0, forwarded = st and st.itemForwarded or 0 }
   end)
+
+  -- ---- the Pokemon storage PC is Cobblemon's (FOREIGN_POKEMON_PLAN §4.8, FP7)
+  --
+  -- A Center's PC runs ShowPokemonStorageSystemPC for "SOMEONE'S PC" / "LANETTE'S PC" (natives.lua:509-514: the
+  -- script waits on the engine's own storage screens). While a client follows, saves.lua's script.command hook calls
+  -- b.holdPc instead: the script waits the same way (Natives.yieldHost) until Cobblemon's PC closes (kb_pc's pc.open /
+  -- pc.closed), as Crystal's Bill's PC does (gen2/bag.lua). The item PC and the mailbox stay the game's.
+
+  local pcCounts = { taken = 0, native = 0 }
+  local function pcRecord()
+    local st = b.state()
+    local rec = type(st) == "table" and st.pc or nil
+    return type(rec) == "table" and rec or nil, st
+  end
+  function b.holdPc(vmctx)
+    local st = b.state()
+    local N = b.g3("scripting.natives")
+    if not (st and type(vmctx) == "table" and type(N) == "table" and type(N.yieldHost) == "function") then return nil end
+    local rec = { state = "waiting", session = b.session() }
+    st.pc = rec
+    pcCounts.taken = pcCounts.taken + 1
+    return N.yieldHost(vmctx, nil, function(done) rec.done = done end)
+  end
+  local function release(rec)
+    if type(rec.done) == "function" then
+      local done = rec.done
+      rec.done = nil
+      pcall(done)
+    end
+  end
+  -- The PC hold as plain values ({ state, sentGen, id }) or nil; a hold whose session went away is dropped.
+  def("pcPending", function()
+    local rec, st = pcRecord()
+    if not rec then return nil end
+    if rec.state ~= "waiting" or rec.session ~= b.session() then
+      if rec.state == "waiting" then rec.state = "dropped" end
+      st.pc = nil
+      release(rec)
+      return nil, "dropped"
+    end
+    return { state = rec.state, sentGen = rec.sentGen, id = rec.id }
+  end)
+  def("pcSent", function(generation, id)
+    local rec = pcRecord()
+    if rec then rec.sentGen, rec.id = generation, id end
+  end)
+  def("pcClose", function(why, id)
+    local rec, st = pcRecord()
+    if not rec or rec.state ~= "waiting" then return false end
+    if id ~= nil and rec.id ~= id then return false, "stale" end
+    rec.state = why or "closed"
+    st.pc = nil
+    release(rec)
+    return true
+  end)
+  def("pcHeld", function() return pcRecord() ~= nil end)
+  def("pcCounts", function() return { taken = pcCounts.taken, native = pcCounts.native } end)
+  function b.pcNative() pcCounts.native = pcCounts.native + 1 end
 end
 
 return Items3

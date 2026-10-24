@@ -67,6 +67,10 @@
     "friendship": {
       "$ref": "../defs.schema.json#/$defs/friendship"
     },
+    "nature": {
+      "$ref": "../defs.schema.json#/$defs/nature",
+      "description": "FP7: the gift's nature, by Cobblemon's (Showdown's) name (Emerald's records carry one)."
+    },
     "source": {
       "enum": [
         "starter",

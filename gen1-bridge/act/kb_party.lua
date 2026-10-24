@@ -554,6 +554,8 @@ function Party.new(opts)
       if ok then data.dvs = dvs end
     end
     data.nick, data.ot = text(g.nick), text(g.ot)
+    -- FP7: a gift's nature (Emerald's), by Cobblemon's name
+    if type(g.nature) == "string" and #g.nature <= NAME_LEN and find(g.nature, NAME) then data.nature = g.nature end
     return Party.details(g, data)
   end
 
@@ -688,6 +690,8 @@ function Party.new(opts)
           stats = e.stats, stones = e.stones, visitor = visitor or nil,
           -- FP3: what gs puts back on a visitor's record (name, types) and Cobblemon's machine list (§4.4)
           name = visitor and e.name or nil, types = visitor and e.types or nil, canLearn = e.canLearn,
+          -- FP7: Cobblemon's nature (Emerald's records read it from their personality)
+          nature = e.nature,
         })
         if visitor then
           ids[e.uid] = { dex = e.dex, form = e.form, name = e.name }

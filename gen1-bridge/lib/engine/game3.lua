@@ -30,10 +30,10 @@ local Game3 = {}
 -- the export, which read them); G3C: the story (toggles, cells); G3D: the
 -- export (the g3* resources); G3F: the party (before the battles, whose
 -- attachBridge installs its gift seam), battles, the bag (the items group;
--- "items" is a name Gen1Recomp keeps for its own modules), routes.
+-- "items" is a name Gen1Recomp keeps for its own modules); FP7: the field moves (act.field); routes.
 Game3.PARTS = { "game3/boot", "game3/observe", "game3/move", "common/slots", "game3/saves", "common/savequeue",
                 "game3/region", "common/reliability", "game3/ui", "game3/sites", "game3/story", "game3/export",
-                "game3/party", "game3/battle", "game3/bag", "game3/routes" }
+                "game3/party", "game3/battle", "game3/bag", "game3/fieldmoves", "game3/routes" }
 
 function Game3.new(opts)
   assert(type(opts) == "table" and opts.checked, "game3: the loader's pin (opts.checked) is required")

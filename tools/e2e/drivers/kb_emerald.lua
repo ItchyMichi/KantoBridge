@@ -87,6 +87,9 @@ local LABEL = "KB_EMERALD_TEST"
 local TOWN = "EM_LITTLEROOT_TOWN"
 -- scene spot: another map and cell to serve from
 if SCENE == "spot" then TOWN = os.getenv("KB_SPOT_MAP") or TOWN end
+-- scene fp7 (FOREIGN_POKEMON_PLAN FP7): a map with water, a land cell found beside it, Surf and Lanette's PC
+if SCENE == "fp7" then TOWN = os.getenv("KB_FP7_MAP") or "EM_ROUTE103" end
+local fp7 = { step = 0 }
 local SPOT_X, SPOT_Y = tonumber(os.getenv("KB_SPOT_X") or ""), tonumber(os.getenv("KB_SPOT_Y") or "")
 local SPOT_FACING = os.getenv("KB_SPOT_FACING") or "down"
 
@@ -199,7 +202,7 @@ return function(game)
           print(("KB_TITLE slot=%d hasSave=%s"):format(num(active()), word(slotHasSave(active()))))
           phase = "serve"
         elseif SCENE == "field" or SCENE == "title_continue" or SCENE == "sign" or SCENE == "story"
-            or SCENE == "battle" or SCENE == "route" or SCENE == "spot" or SCENE == "party" then
+            or SCENE == "battle" or SCENE == "route" or SCENE == "spot" or SCENE == "party" or SCENE == "fp7" then
           local ok, err = pcall(game._handleBootAction, game, { action = "new_game", name = "TEST", gender = 0 })
           if not ok then fail("new_game " .. word(err):sub(1, 40)) end
           phase = "newgame"
@@ -212,8 +215,8 @@ return function(game)
         -- onto the cell below Littleroot's first warp (a door), facing down
         local def = game.data and game.data.maps and game.data.maps[TOWN]
         local w = def and def.warps and def.warps[1]
-        if not w then fail("no_town_warp") end
-        start = { x = tonumber(w.x), y = tonumber(w.y) + 1 }
+        if not w and SCENE ~= "fp7" then fail("no_town_warp") end
+        start = w and { x = tonumber(w.x), y = tonumber(w.y) + 1 } or { x = 8, y = 8 }
         -- MG8: the test pass's exit cell (gen1-bridge/data/routes.json's `to` end)
         if SCENE == "route" then start = { x = 18, y = 14 } end
         if SCENE == "spot" then
@@ -228,7 +231,36 @@ return function(game)
       end
     elseif phase == "town" then
       local Map, P = mod3("map"), mod3("player")
-      if fieldReady(game) and Map and Map.current == TOWN and P.cellX == start.x and P.cellY == start.y then
+      if SCENE == "fp7" and fieldReady(game) and Map and Map.current == TOWN and fp7.step == 0 then
+        -- a walkable cell with water beside it (the engine's own collision), then onto it facing the water
+        local C = mod3("collision")
+        local DIRS = { { "up", 0, -1 }, { "down", 0, 1 }, { "left", -1, 0 }, { "right", 1, 0 } }
+        for y = 1, 80 do
+          for x = 1, 80 do
+            if not fp7.cell and C.isWalkable(x, y) and not C.isWater(x, y) and not (C.warpAt and C.warpAt(x, y)) then
+              for _, d in ipairs(DIRS) do
+                if not fp7.cell and C.isWater(x + d[2], y + d[3]) then
+                  fp7.cell, fp7.water, fp7.facing = { x = x, y = y }, { x = x + d[2], y = y + d[3] }, d[1]
+                end
+              end
+            end
+          end
+        end
+        if not fp7.cell then fail("fp7_no_water") end
+        local Warp = mod3("warp")
+        if not pcall(Warp.request, nil, game, TOWN, fp7.cell.x, fp7.cell.y, fp7.facing, { fade = false }) then fail("fp7_warp") end
+        start = fp7.cell
+        fp7.step = 1
+      elseif SCENE == "fp7" and fp7.step == 1 and fieldReady(game) and P.cellX == start.x and P.cellY == start.y then
+        -- the Surf badge (FieldMoves.badgeFlag, field_moves.lua:131), so the game's own check passes
+        local FM, Flags, Space = mod3("field_moves"), mod3("scripting.flags"), mod3("scripting.space")
+        local flag = FM and FM.badgeFlag("SURF")
+        if flag and Flags and Space then pcall(Flags.setFlag, Space.store, nil, flag, true) end
+        print(("KB_SERVING map=%s x=%d y=%d wall=none wx=%d wy=%d facing=%s badge=%s"):format(TOWN, start.x, start.y,
+          fp7.water.x, fp7.water.y, fp7.facing, word(flag ~= nil)))
+        fp7.step = 2
+        phase = "serve"
+      elseif fieldReady(game) and Map and Map.current == TOWN and P.cellX == start.x and P.cellY == start.y then
         -- a blocked step to test: a step left or right onto open ground, then up into something solid
         -- (a house wall beside the door); "none" when neither side has one
         local C = mod3("collision")
@@ -446,6 +478,34 @@ return function(game)
           if partyHatching and not open and fieldReady(game) then
             print("KB_HATCHED")
             partyStep = 6
+          end
+        end
+      end
+      -- scene fp7: once the test has surfed out and back (the player on land again after surfing), Lanette's PC's
+      -- storage special through the script.command hook; it waits until Cobblemon's PC closes
+      if SCENE == "fp7" and (tonumber(status.sessions) or 0) >= 1 then
+        local P = mod3("player")
+        if fp7.step == 2 and P.surfing then fp7.step = 3 end
+        if fp7.step == 3 and not P.surfing and fieldReady(game) then
+          local Space = mod3("scripting.space")
+          local vm = Space and Space.vm
+          local Ops = mod3("scripting.ops_a")
+          if not (vm and vm.ctx and Ops and Ops.dispatch) then
+            print("KB_PC yielded=none")
+            fp7.step = 5
+          else
+            local ok, yielded = pcall(Ops.dispatch, vm, { op = "special", id = 63 })
+            fp7.ctx = vm.ctx
+            print(("KB_PC yielded=%s"):format(word(ok and yielded)))
+            fp7.step = 4
+          end
+        elseif fp7.step == 4 then
+          -- the wait is over once its poll says done (or the script's own loop has already taken it down)
+          local poll = fp7.ctx.nativePoll
+          if poll == nil or fp7.ctx.mode ~= "native" or (type(poll) == "function" and poll()) then
+            print("KB_PC_DONE")
+            if fp7.ctx.mode == "native" then fp7.ctx.mode, fp7.ctx.status, fp7.ctx.nativePoll = nil, nil, nil end
+            fp7.step = 5
           end
         end
       end

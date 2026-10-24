@@ -14,6 +14,8 @@ local Saves = {}
 -- FP5: the party choices of the Frontier's and the Tents' desks, and VAR_RESULT (pokeemerald include/constants/vars.h)
 Saves.DESK_SPECIALS = { ChooseHalfPartyForBattle = true, ChoosePartyForBattleFrontier = true }
 Saves.VAR_RESULT = 0x800D
+-- FP7: the Center PC's Pokemon storage (natives.lua:509)
+Saves.STORAGE_SPECIAL = "ShowPokemonStorageSystemPC"
 
 Saves.HEAL_SPECIAL = "HealPlayerParty"
 
@@ -125,6 +127,19 @@ function Saves.install(b)
       local here = type(Map0) == "table" and type(Map0.current) == "string" and Map0.current or ""
       -- (only at the facilities: Steven's partner battle at the Space Center chooses its half the same way)
       local desk = here:find("BATTLE_FRONTIER", 1, true) or here:find("BATTLE_TENT", 1, true)
+      -- FP7 (§4.8): the storage PC is Cobblemon's while a client follows (bag.lua's b.holdPc)
+      if name == Saves.STORAGE_SPECIAL and type(b.holdPc) == "function" then
+        local st0 = b.state()
+        local bridge0 = st0 and st0.bridge
+        local vm0 = type(ctx) == "table" and (ctx.vm or ctx.runner) or nil
+        if type(bridge0) == "table" and type(bridge0.live) == "function" and bridge0.live() == true
+            and type(vm0) == "table" and type(vm0.ctx) == "table" then
+          local yielded = b.holdPc(vm0.ctx)
+          if yielded ~= nil then return yielded end
+        elseif type(b.pcNative) == "function" then
+          b.pcNative()
+        end
+      end
       if name and Saves.DESK_SPECIALS[name] and desk then
         local st = b.state()
         local bridge = st and st.bridge

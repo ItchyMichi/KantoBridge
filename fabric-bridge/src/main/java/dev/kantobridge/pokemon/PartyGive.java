@@ -18,9 +18,11 @@ import org.jetbrains.annotations.Nullable;
  * @param nick a nickname, or null for none
  * @param ot   the original trainer's name; only a trade's is kept (an NPC trainer), others belong to the player
  */
-public record PartyGive(String give, Gen1Mon mon, @Nullable String nick, @Nullable String ot, Source source) {
+public record PartyGive(String give, Gen1Mon mon, @Nullable String nick, @Nullable String ot, Source source, @Nullable String nature) {
 	public static final int MAX_NAME = 32;
-	private static final Set<String> FIELDS = Set.of("give", "dex", "level", "moves", "dvs", "ivs", "nick", "ot", "source", "region", "item",
+	/** FP7: a nature's name (Cobblemon's, Showdown's), as the protocol's defs nature. */
+	static final java.util.regex.Pattern NATURE = java.util.regex.Pattern.compile("^[a-z][a-z0-9_]{0,23}$");
+	private static final Set<String> FIELDS = Set.of("give", "dex", "level", "moves", "dvs", "ivs", "nick", "ot", "source", "region", "nature", "item",
 			"shiny", "gender", "form", "friendship");
 
 	/** Where the Pokémon comes from ({@code EGG}: an egg that hatched in the hidden game, which keeps eggs itself). */
@@ -55,7 +57,13 @@ public record PartyGive(String give, Gen1Mon mon, @Nullable String nick, @Nullab
 		if (source == null) {
 			throw new DataException(reader.path("source"), "unknown source");
 		}
-		return new PartyGive(give, new Gen1Mon(dex, level, moves, dvs, ivs, MonDetails.read(reader, true)), nick, ot, source);
+		String nature = reader.has("nature") ? reader.string("nature", NATURE) : null;
+		return new PartyGive(give, new Gen1Mon(dex, level, moves, dvs, ivs, MonDetails.read(reader, true)), nick, ot, source, nature);
+	}
+
+	/** A gift as before FP7 (no nature). */
+	public PartyGive(String give, Gen1Mon mon, @Nullable String nick, @Nullable String ot, Source source) {
+		this(give, mon, nick, ot, source, null);
 	}
 
 	/** A name field: a string of at most 32 characters (code points, as JSON Schema counts them). */

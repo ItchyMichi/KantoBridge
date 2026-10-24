@@ -265,6 +265,7 @@
   "kantobridge.field.action.whirlpool": "Whirlpool",
   "kantobridge.field.action.waterfall": "Waterfall",
   "kantobridge.field.action.sweet_scent": "Sweet Scent",
+  "kantobridge.field.action.dive": "Dive",
   "kantobridge.field.action.other": "Field move",
   "kantobridge.field.reason.not_ingame": "the game isn't running",
   "kantobridge.field.reason.not_idle": "not right now",

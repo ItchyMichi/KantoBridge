@@ -70,6 +70,16 @@ Party3.PARTY_SIZE = 6
 Party3.DAYCARE_SLOTS = 2        -- src/core/game3/daycare.lua:9 DAYCARE_MON_COUNT
 Party3.BOX_SLOTS = 30           -- src/core/game3/storage.lua:13 IN_BOX_COUNT
 
+-- FP7: Gen 3's natures in their id order (Pokemon.natureId: personality % 25), as Cobblemon's (Showdown's) names
+Party3.NATURES = { "hardy", "lonely", "brave", "adamant", "naughty", "bold", "docile", "relaxed", "impish", "lax",
+                   "timid", "hasty", "serious", "jolly", "naive", "modest", "mild", "quiet", "bashful", "rash", "calm",
+                   "gentle", "sassy", "careful", "quirky" }
+Party3.NATURE_ID = {}
+for i, n in ipairs(Party3.NATURES) do Party3.NATURE_ID[n] = i - 1 end
+-- Pokemon.gender's letters <-> the protocol's genders
+Party3.GENDER_OUT = { M = "male", F = "female", U = "genderless" }
+Party3.GENDER_IN = { male = "M", female = "F" }
+
 function Party3.install(b)
   local def = b.def
   local floor = math.floor
@@ -406,10 +416,17 @@ function Party3.install(b)
     end
     local nick = type(mon.nickname) == "string" and mon.nickname ~= "" and mon.nickname or nil
     local ot = type(mon.otName) == "string" and mon.otName or (type(mon.ot) == "string" and mon.ot or nil)
-    -- FP4 (§5): the held item, when Cobblemon has one for it
+    -- FP4 (§5): the held item, when Cobblemon has one for it; FP7: shininess, gender, friendship, nature
     local held = type(b.heldCanonical) == "function" and b.heldCanonical(mon.item or mon.heldItem) or false
+    local P = Pokemon()
+    local shiny = b.ask(P, "isShiny", nil, mon)
+    local personality = tonumber(mon.personality) or 0
+    local gender = Party3.GENDER_OUT[b.ask(P, "gender", nil, species, personality)]
+    local nature = Party3.NATURES[(tonumber(b.ask(P, "natureId", nil, personality)) or -1) + 1]
+    local f = tonumber(mon.friendship or mon.happiness)
     return { species = species, dex = floor(dex), level = tonumber(mon.level), moves = moves, ivs = ivs, nick = nick, ot = ot,
-             item = held ~= "hidden" and held or nil }
+             item = held ~= "hidden" and held or nil, shiny = type(shiny) == "boolean" and shiny or nil, gender = gender,
+             friendship = f and math.max(0, math.min(255, floor(f))) or nil, nature = nature }
   end
 
   -- Where a gift's record sits in the hidden boxes (session.storage.boxes[n].mons, storage.lua:57-72): the
@@ -612,7 +629,7 @@ function Party3.install(b)
           out[#out + 1] = {
             give = g.give, serial = g.serial, state = g.state, sentGen = g.sentGen, syncs = g.syncs, box = g.box,
             source = g.source, dex = f.dex, level = f.level, moves = f.moves, ivs = f.ivs, nick = f.nick, ot = f.ot,
-            item = f.item or nil,
+            item = f.item or nil, shiny = f.shiny, gender = f.gender, friendship = f.friendship, nature = f.nature,
           }
         end
       end
@@ -756,6 +773,34 @@ function Party3.install(b)
     end
     mon.status = e.status
     mon.nickname = type(e.nick) == "string" and e.nick or ""
+    -- FP7 (FOREIGN_POKEMON_PLAN §5): Cobblemon's shininess (the record's isShiny, pokemon.lua:1442-1451), nature and
+    -- gender (both read from the personality, :392-407: a new one is drawn only when the record's disagrees; never
+    -- for Unown, whose letter it is), and friendship
+    if type(e.shiny) == "boolean" then mon.isShiny = e.shiny end
+    local wantNature = type(e.nature) == "string" and Party3.NATURE_ID[e.nature] or nil
+    local wantGender = Party3.GENDER_IN[e.gender]
+    local P = Pokemon()
+    local sp = tonumber(mon.species)
+    if (wantNature or wantGender) and type(P) == "table" and b.ask(P, "national", nil, sp) ~= 201 then
+      local function fits(p)
+        if wantNature and b.ask(P, "natureId", nil, p) ~= wantNature then return false end
+        if wantGender then
+          local g = b.ask(P, "gender", nil, sp, p)
+          if g ~= "U" and g ~= wantGender then return false end
+        end
+        return true
+      end
+      if not fits(tonumber(mon.personality) or 0) then
+        for _ = 1, 4096 do
+          local p = math.random(0, 65535) * 65536 + math.random(0, 65535)
+          if fits(p) then
+            mon.personality = p
+            break
+          end
+        end
+      end
+    end
+    if tonumber(e.friendship) then mon.friendship = math.max(0, math.min(255, floor(e.friendship))) end
     -- FP4 (§5): Cobblemon's held item (an entry with details always says whether it is shiny); a hidden-only
     -- item (Mail, ...) stays while Cobblemon's member holds nothing
     if (e.item ~= nil or e.shiny ~= nil) and type(b.heldNumber) == "function" then

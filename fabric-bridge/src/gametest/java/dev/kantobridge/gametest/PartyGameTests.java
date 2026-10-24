@@ -501,6 +501,24 @@ public class PartyGameTests implements FabricGameTest {
 		helper.succeed();
 	}
 
+	/** FP7 (§5): an Emerald gift's nature (by Cobblemon's name) is the Cobblemon Pokémon's; an unknown one leaves Cobblemon's. */
+	@GameTest(template = EMPTY_STRUCTURE, batch = BATCH)
+	public void aGiftKeepsTheHiddenGamesNature(GameTestHelper helper) {
+		RelayService relay = RelayService.get();
+		MockPlayers.with(helper, player -> RelayTap.capture(player, sent -> {
+			PlayerPartyStore party = PlayerExtensionsKt.party(player);
+			relay.receive(player, envelope(1, MsgTypes.PARTY_GIVE,
+					"{\"give\":\"pn-1\",\"dex\":252,\"level\":5,\"source\":\"starter\",\"nature\":\"modest\",\"shiny\":false}"));
+			Pokemon given = party.get(0);
+			helper.assertTrue(given != null, "no gift");
+			helper.assertTrue(given.getNature().getName().getPath().equals("modest"), "nature " + given.getNature().getName());
+			relay.receive(player, envelope(2, MsgTypes.PARTY_GIVE, "{\"give\":\"pn-2\",\"dex\":255,\"level\":5,\"source\":\"gift\",\"nature\":\"zzz\"}"));
+			helper.assertTrue(party.get(1) != null, "an unknown nature refused the gift");
+			helper.assertTrue(sent.stream().noneMatch(message -> message.type().equals(MsgTypes.ERROR)), "a valid gift was refused");
+		}));
+		helper.succeed();
+	}
+
 	/**
 	 * M8 wave 2: a Safari Zone catch crosses over as a {@code native_catch} gift that belongs to the player, with the
 	 * nickname, moves and DVs it was caught with; an in-game trade sends one member away ({@code party.take}) and brings
