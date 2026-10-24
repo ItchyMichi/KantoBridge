@@ -362,6 +362,15 @@ function Party2.install(b)
     return op.id
   end
 
+  -- FP5 (FOREIGN_POKEMON_PLAN §4.12): a contest catch Cobblemon holds is that uid's record (so it is never a gift),
+  -- and the one the player let go at the contest's question leaves Cobblemon (party.take{reason:"contest"})
+  def("tagUid", function(mon, uid)
+    if type(mon) == "table" and type(uid) == "string" then monUid[mon] = uid end
+  end)
+  def("queueContestTake", function(uid)
+    if type(uid) == "string" then return queueOp({ kind = "take", uid = uid, reason = "contest" }) end
+  end)
+
   def("ops", function()
     local out = {}
     for _, op in ipairs(opsOf(b.state())) do
@@ -700,6 +709,9 @@ function Party2.install(b)
 
   def("partySafe", function()
     if not b.inField() then return false end
+    -- FP5: the Bug-Catching Contest keeps only the lead in the party (BugContest.dropOffMons, the rest stashed until
+    -- returnMons): a sync waits for its end
+    if b.ask(b.c2("BugContest"), "isActive", false, b.saveObject()) == true then return false end
     local w = b.ow()
     if w and w.battleActive then return false end
     if type(b.heldBattle) == "function" and b.heldBattle() then return false end

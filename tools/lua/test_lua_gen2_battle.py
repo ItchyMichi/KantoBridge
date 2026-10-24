@@ -244,3 +244,51 @@ def test_main_sends_battle_start_and_takes_the_result():
             inp.sourceRelease(inp, b"a", b"test")
     peer.messages()
     assert [e.decode() for e in E.battleEnds.values()] == ["win"]
+
+
+# ------------------------------------------------------------ FP5: the Bug-Catching Contest in Cobblemon
+
+UID_LEAD = "11111111-1111-4111-8111-111111111111"
+UID_A = "22222222-2222-4222-8222-222222222222"
+UID_B = "33333333-3333-4333-8333-333333333333"
+
+
+def contest(a):
+    """A contest encounter while the lead has a uid: held, the lead only."""
+    a.E.bugContest = True
+    a.eng.adoptUids(a.lua([UID_LEAD]))
+    a.E.wildEncounter(b"TEST_RATTATA", 5, b"water", a.lua({"contest": True}))
+    a.tick()
+    return last_facts(a)
+
+
+def test_a_contest_battle_is_cobblemons_with_the_lead_only():
+    a, _ = setup()
+    f = contest(a)
+    assert f["kind"] == "contest" and f["use"] == [UID_LEAD] and f["catch"] is True
+    assert a.eng.nativeBattle() is None and a.eng.battlePending() is not None
+    assert a.eng.partySafe() is False, "the contest keeps only the lead: syncs wait for its end"
+
+
+def test_the_first_contest_catch_is_kept_with_cobblemons_uid_and_a_second_asks():
+    a, _ = setup()
+    contest(a)
+    assert a.eng.battleFinish(b"b-test-1", b"caught", a.lua({"uid": UID_A, "dex": 19, "level": 5})) is True
+    a.tick()
+    first = a.E.contestCaught
+    assert first is not None and a.eng.uidOf(first) == UID_A.encode(), "the stock carries Cobblemon's uid: never a gift"
+    assert b"Caught" in a.E.game.stack.top(a.E.game.stack).pages[1][1]
+    tap(a)
+    tap(a)
+    # a second catch: the engine's question; the player keeps the new one, so the first leaves Cobblemon
+    a.E.wildEncounter(b"TEST_RATTATA", 6, b"water", a.lua({"contest": True}))
+    a.tick()
+    a.eng.battleFinish(b"b-test-2", b"caught", a.lua({"uid": UID_B, "dex": 19, "level": 6}))
+    a.tick()
+    tap(a)
+    menu = a.E.game.stack.top(a.E.game.stack)
+    assert menu.screenId == b"Gen2ContestMenu"
+    a.E.contestCaught = menu.opts.caught
+    menu.opts.onClose()
+    takes = [o for o in plain(a.eng.ops()) if o["kind"] == "take"]
+    assert [(o["uid"], o["reason"]) for o in takes] == [(UID_A, "contest")]

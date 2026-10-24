@@ -2027,6 +2027,18 @@ function FakeEngine2.new(opts)
 
   E.BugContest = {}
   function E.BugContest.isActive(_save) return E.bugContest == true end
+  -- FP5: the caught mon (BugContest.lua:760-786): the first is kept, a second asks (a test answers by setting
+  -- E.contestCaught before the menu's onClose)
+  E.BugContest.KEEP_FIRST, E.BugContest.ASK_SWITCH = "first", "switch"
+  function E.BugContest.catch(_save, mon)
+    E.contestBalls = (E.contestBalls or 20) - 1
+    if not E.contestCaught then
+      E.contestCaught = mon
+      return "first"
+    end
+    return "switch", E.contestCaught, mon
+  end
+  function E.BugContest.caughtMon(_save) return E.contestCaught end
   E.CallAsm = {}
   function E.CallAsm.run(world, name)
     E.calledAsm[#E.calledAsm + 1] = name

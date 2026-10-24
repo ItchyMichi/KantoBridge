@@ -23,8 +23,10 @@
       "enum": [
         "trade",
         "daycare",
-        "quest"
-      ]
+        "quest",
+        "contest"
+      ],
+      "description": "FP5: contest (the catch the player let go at the Bug-Catching Contest's question leaves Cobblemon)."
     },
     "region": {
       "$ref": "../defs.schema.json#/$defs/regionId",

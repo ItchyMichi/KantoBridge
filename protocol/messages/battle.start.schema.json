@@ -27,8 +27,10 @@
         "scripted",
         "static",
         "surf",
-        "fish"
-      ]
+        "fish",
+        "contest"
+      ],
+      "description": "FP5: contest (Crystal's Bug-Catching Contest: a wild battle with use, the lead only)."
     },
     "trainer": {
       "type": "object",

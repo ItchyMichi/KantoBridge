@@ -60,7 +60,7 @@ local byte, gsub, sub = string.byte, string.gsub, string.sub
 
 local OUTCOMES = { win = "win", lose = "lose", fled = "run", caught = "caught", aborted = "abort" }
 local RIVALS = { OPP_RIVAL1 = true, OPP_RIVAL2 = true, OPP_RIVAL3 = true }
-local WILD_KINDS = { surf = "surf", fish = "fish" }
+local WILD_KINDS = { surf = "surf", fish = "fish", contest = "contest" } -- (FP5: Crystal's Bug-Catching Contest)
 -- (MG9 G2F: Gen 2's Bug-Catching Contest and Battle Tower; its catch tutorial is old_man)
 local NATIVE_KINDS = { safari = true, old_man = true, ghost = true, contest = true, tower = true, facility = true }
 local GENDERS = { male = true, female = true, genderless = true }
@@ -169,7 +169,7 @@ function Battle.new(opts)
   local counts = {
     started = 0, declined = 0, sent = 0, resent = 0, results = 0, win = 0, lose = 0, run = 0,
     caught = 0, abort = 0, refused = 0, unknown = 0, dropped = 0,
-    static = 0, surf = 0, fish = 0, native = 0, nativeEnded = 0, direct = 0,
+    static = 0, surf = 0, fish = 0, contest = 0, native = 0, nativeEnded = 0, direct = 0,
   }
 
   local function decline(why, fields)
@@ -206,6 +206,17 @@ function Battle.new(opts)
       end
       Battle.details(facts, data.wild)
       data.rules = { catch = facts.catch ~= false, flee = facts.flee ~= false }
+      -- FP5 (§4.12): the player's Pokemon Cobblemon may use (the contest's lead), by uid
+      if type(facts.use) == "table" then
+        local use, seen = {}, {}
+        for _, uid in ipairs(facts.use) do
+          if type(uid) == "string" and uid:find(UID) and uid == uid:lower() and not seen[uid] and #use < 6 then
+            use[#use + 1], seen[uid] = uid, true
+          end
+        end
+        if #use == 0 then return decline("use") end
+        data.use = use
+      end
     else
       if not (sym(facts.cls, "^[A-Za-z0-9_]+$") and whole(facts.party, 0, Battle.MAX_PARTY)) then return decline("trainer") end
       local team, name = engine.trainerTeam(facts.cls, facts.party)
@@ -305,7 +316,9 @@ function Battle.new(opts)
       if log then log.warn("battle.trainer_outcome", { outcome = data.outcome, count = counts.refused }) end
       outcome = "abort"
     end
-    if not engine.battleFinish(rec.id, outcome) then return false, "battle.unknown" end
+    if not engine.battleFinish(rec.id, outcome, data.outcome == "caught" and data.caught or nil) then
+      return false, "battle.unknown"
+    end
     counts.results = counts.results + 1
     counts[outcome] = counts[outcome] + 1
     if log then log.info("battle.result", { battle = rec.id, outcome = data.outcome, applied = outcome }) end

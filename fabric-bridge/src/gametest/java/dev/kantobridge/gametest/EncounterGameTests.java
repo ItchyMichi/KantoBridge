@@ -205,6 +205,36 @@ public class EncounterGameTests implements FabricGameTest {
 		MockPlayers.leaveAfterBattle(helper, end, relay::close, player);
 	}
 
+	/**
+	 * FP5 (FOREIGN_POKEMON_PLAN §4.12): a Bug-Catching Contest battle ({@code kind:"contest"}, {@code use}: the lead) is a
+	 * wild battle in which Cobblemon fights with only the {@code use} Pokémon, the real one (never a copy), while the rest of
+	 * the party stays where it is.
+	 */
+	@GameTest(template = EMPTY_STRUCTURE, batch = BATCH, timeoutTicks = 200)
+	public void aContestBattleUsesOnlyTheLead(GameTestHelper helper) {
+		ServerPlayer player = MockPlayers.join(helper);
+		RelayTap.Recorder relay = RelayTap.open(player);
+		try {
+			Pokemon lead = BattleGameTests.partner(player);
+			Pokemon second = BattleGameTests.partner(player);
+			String start = "{\"battle\":\"en-c1\",\"kind\":\"contest\",\"wild\":{\"dex\":10,\"level\":7},\"use\":[\"" + lead.getUuid()
+					+ "\"],\"rules\":{\"catch\":true,\"flee\":true}}";
+			RelayService.get().receive(player, BattleGameTests.envelope(1, MsgTypes.BATTLE_START, start));
+			PokemonBattle battle = EncounterService.battleOf(player);
+			helper.assertTrue(battle != null, "no contest battle (warnings: " + EncounterService.warnings() + ")");
+			PlayerBattleActor actor = (PlayerBattleActor) battle.getActor(player);
+			helper.assertTrue(actor.getPokemonList().size() == 1, "the contest battle has " + actor.getPokemonList().size() + " Pokémon");
+			helper.assertTrue(actor.getPokemonList().get(0).getOriginalPokemon() == lead, "not the lead itself");
+			helper.assertTrue(PlayerExtensionsKt.party(player).get(second.getUuid()) == second, "the rest of the party moved");
+			battle.stop();
+		} catch (RuntimeException e) {
+			cleanUp(helper, player, relay);
+			throw e;
+		}
+		GameTestSequence end = helper.startSequence().thenExecuteAfter(2, () -> assertOneResult(helper, relay, "en-c1", "aborted"));
+		MockPlayers.leaveAfterBattle(helper, end, relay::close, player);
+	}
+
 	@GameTest(template = EMPTY_STRUCTURE, batch = BATCH, timeoutTicks = 200)
 	public void aFleeAttemptEndsTheEncounterAsFled(GameTestHelper helper) {
 		ServerPlayer player = MockPlayers.join(helper);

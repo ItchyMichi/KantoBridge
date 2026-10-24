@@ -330,7 +330,8 @@ public final class PartyService {
 			uid = UUID.fromString(reader.string("uid", Ids.UID));
 			reason = reader.string("reason");
 			// FP1: "quest" (Kenya's delivery, Shuckie going home) takes it away like a trade
-			if (!reason.equals("trade") && !reason.equals("daycare") && !reason.equals("quest")) {
+			// FP5: "contest" (the catch the player let go at the Bug-Catching Contest's question) leaves the same way
+			if (!reason.equals("trade") && !reason.equals("daycare") && !reason.equals("quest") && !reason.equals("contest")) {
 				throw new DataException(reader.path("reason"), "unknown reason");
 			}
 		} catch (DataException e) {
@@ -359,7 +360,8 @@ public final class PartyService {
 			return;
 		}
 		markDirty(player);
-		KantoBridge.LOGGER.info("party: a Pokémon was {}", reason.equals("quest") ? "taken by a quest" : "traded away");
+		KantoBridge.LOGGER.info("party: a Pokémon was {}", reason.equals("quest") ? "taken by a quest"
+				: reason.equals("contest") ? "let go after the contest" : "traded away");
 	}
 
 	// ---- party.order (FP2) ----

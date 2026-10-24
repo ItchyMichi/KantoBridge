@@ -44,6 +44,9 @@ Battle2.RIVALS = { RIVAL1 = true, RIVAL2 = true }
 -- FP5 (FOREIGN_POKEMON_PLAN §4.12): the line the Battle Tower's desk shows between its own "not ready" header and its
 -- "return when ready" tail while a client follows (the Tower's rules, rentals and level groups are FP9's)
 Battle2.TOWER_LINE = "The TOWER can't take\nCobblemon's #MON yet."
+-- FP5: the contest's catch lines (BattleState:contestCatch's, as our text)
+Battle2.TEXT_CAUGHT = "Caught %s!"
+Battle2.TEXT_ALREADY = "You already caught\na %s."
 Battle2.CANLOSE = 1
 Battle2.TRAP = 9
 local DELTA = { up = { 0, -1 }, down = { 0, 1 }, left = { -1, 0 }, right = { 1, 0 } }
@@ -72,9 +75,15 @@ function Battle2.install(b)
     return false
   end
 
-  -- The battle kind the hidden game keeps (battle.native), or nil for one the client may fight.
-  local function nativeKind(opts)
-    if opts.contest then return "contest" end
+  -- The battle kind the hidden game keeps (battle.native), or nil for one the client may fight. (FP5: a contest
+  -- battle is Cobblemon's while a client follows and the lead has a uid; native otherwise)
+  local function nativeKind(opts, live)
+    if opts.contest then
+      local s = b.saveObject()
+      local lead = type(s) == "table" and type(s.party) == "table" and s.party[1] or nil
+      if live and lead and b.adapter.uidOf(lead) then return nil end
+      return "contest"
+    end
     if opts.tutorial then return "old_man" end
     if opts.battleTower then return "tower" end
     return nil
@@ -168,6 +177,12 @@ function Battle2.install(b)
       local x, y = front(w)
       local facts = { path = "wild", wild = true, kind = kind, dex = dex, level = floor(level), x = x, y = y,
                       catch = true, flee = opts.battleType ~= Battle2.TRAP, dvs = dvsOut(mon) }
+      if opts.contest then
+        -- FP5 (§4.12): the contest's battle in Cobblemon with the lead only (battle.start.use)
+        local s = b.saveObject()
+        local lead = type(s) == "table" and type(s.party) == "table" and s.party[1] or nil
+        facts.kind, facts.use = "contest", { b.adapter.uidOf(lead) }
+      end
       return details(mon, facts)
     end
     local tr = opts.trainer
@@ -226,8 +241,46 @@ function Battle2.install(b)
         if type(tr.lossText) == "string" and tr.lossText ~= "" then texts[#texts + 1] = tr.lossText end
       end
     end
+    -- FP5 (§4.12): a contest catch in Cobblemon is the contest's (BugContest.catch: the first is kept, a second asks,
+    -- BattleState:contestCatch, src/ui/gen2/BattleState.lua:3909-3921); the record carries Cobblemon's uid, so it is
+    -- never a gift, and the one the player lets go at the question leaves Cobblemon
+    local ask
+    if rec.contest and word == "caught" and rec.caught and type(rec.wildMon) == "table" then
+      local BC = b.c2("BugContest")
+      local save = b.saveObject()
+      b.adapter.tagUid(rec.wildMon, rec.caught)
+      local okC, how, stock, fresh = pcall(BC.catch, save, rec.wildMon)
+      local M = b.mod("src.battle.gen2.Mon")
+      local function name(m)
+        local okN, n = pcall(function() return M.displayName(m) end)
+        return okN and type(n) == "string" and n or ""
+      end
+      if okC and how == BC.ASK_SWITCH then
+        texts[#texts + 1] = (Battle2.TEXT_ALREADY):format(name(stock))
+        ask = { stock = stock, fresh = fresh, save = save }
+      elseif okC then
+        texts[#texts + 1] = (Battle2.TEXT_CAUGHT):format(name(rec.wildMon))
+      end
+    end
     if word then b.method(model, "endBattle", word) end
-    showThen(texts, 1, function()
+    local function question(after)
+      if not ask then return after() end
+      local Screens = b.mod("src.ui.Screens")
+      local g = b.game
+      local ok = pcall(Screens.push, g, "Gen2ContestMenu", {
+        save = ask.save, stock = ask.stock, caught = ask.fresh,
+        onClose = function()
+          if type(g) == "table" and g.stack then g.stack:pop() end
+          local kept = b.ask(b.c2("BugContest"), "caughtMon", nil, ask.save)
+          local gone = kept == ask.fresh and ask.stock or ask.fresh
+          local uid = b.adapter.uidOf(gone)
+          if uid then b.adapter.queueContestTake(uid) end
+          after()
+        end,
+      })
+      if not ok then after() end
+    end
+    showThen(texts, 1, function() question(function()
       local _, st = held()
       if st and st.battle == rec then st.battle = nil end
       rec.state = "done"
@@ -235,7 +288,7 @@ function Battle2.install(b)
         local ok, err = pcall(ph.onDone, word, model)
         if not ok then b.warnAt("engine.battle_tail", err) end
       end
-    end)
+    end) end)
   end
 
   -- The wrapper's bodies, installed once per process (b.wrap, party.lua).
@@ -244,7 +297,7 @@ function Battle2.install(b)
     local st = b.state()
     local bridge = st and st.bridge
     local live = type(bridge) == "table" and type(bridge.live) == "function" and bridge.live() == true
-    local kind = nativeKind(opts)
+    local kind = nativeKind(opts, live)
     local rec0 = held()
     if not live or type(bridge.battle) ~= "function" or (rec0 and rec0.state ~= "done") or kind
         or w ~= b.ow() or opts.party ~= nil then
@@ -260,6 +313,7 @@ function Battle2.install(b)
     local rec = {
       id = plan.id, kind = plan.kind, data = plan.data, path = facts.path, state = "waiting", cls = facts.cls,
       wild = facts.wild == true, session = b.saveObject(), trainer = opts.trainer,
+      contest = opts.contest == true, wildMon = opts.wild,
     }
     st.battle, st.armed = rec, rec
     local out = { original(w, opts, onDone) }
@@ -356,13 +410,14 @@ function Battle2.install(b)
   end)
 
   -- The answer to a held battle: true when it was this one. The placeholder acts on it at the engine's next step.
-  def("battleFinish", function(id, result)
+  def("battleFinish", function(id, result, caught)
     local rec = held()
     if not rec or rec.id ~= id or rec.state ~= "waiting" or not rec.placeholder then return false end
     if result ~= "abort" and not Battle2.WORDS[result] then return false end
     rec.state = "result"
     rec.aborted = result == "abort"
     rec.word = Battle2.WORDS[result]
+    if result == "caught" and type(caught) == "table" and type(caught.uid) == "string" then rec.caught = caught.uid end
     if result == "lose" then b.dropView() end
     return true
   end)

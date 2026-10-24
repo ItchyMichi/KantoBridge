@@ -186,8 +186,11 @@ public final class EncounterService {
 		try {
 			// Modern rules (U3), the player's real party, no healing first; no running when the rules forbid it (-1). The
 			// hidden game plays the battle music (P22).
+			// FP5 (FOREIGN_POKEMON_PLAN §4.12): with use (the contest's lead), Cobblemon sees only those of the real party
+			com.cobblemon.mod.common.api.storage.party.PartyStore party = start.use().isEmpty() ? PlayerExtensionsKt.party(player)
+					: new OnlyUsed(player, start.use());
 			result = BattleMusic.starting(player, () -> BattleBuilder.INSTANCE.pve(player, entity, null, BattleFormat.Companion.getGEN_9_SINGLES(),
-					false, false, start.canFlee() ? FLEE_DISTANCE : -1.0F));
+					false, false, start.canFlee() ? FLEE_DISTANCE : -1.0F, party));
 		} catch (RuntimeException e) {
 			KantoBridge.LOGGER.warn("encounter: Cobblemon failed to start the battle ({})", e.getClass().getName());
 			result = null;
@@ -207,6 +210,33 @@ public final class EncounterService {
 		KantoBridge.LOGGER.info("encounter: started a {} encounter (catch {}, flee {}); {} so far", start.kind().id(), start.canCatch(),
 				start.canFlee(), count);
 		return null;
+	}
+
+	/**
+	 * FP5: the player's real party, seen through a store that lists only the {@code use} Pokémon. Cobblemon's
+	 * {@code toBattleTeam} reads a store by iterating it, so the battle gets those Pokémon themselves (not copies, so
+	 * their HP and experience are Cobblemon's as in any battle) and nothing else; the Pokémon never leave the real party.
+	 */
+	static final class OnlyUsed extends com.cobblemon.mod.common.api.storage.party.PartyStore {
+		private final ServerPlayer player;
+		private final java.util.List<java.util.UUID> use;
+
+		OnlyUsed(ServerPlayer player, java.util.List<java.util.UUID> use) {
+			super(player.getUUID());
+			this.player = player;
+			this.use = use;
+		}
+
+		@Override
+		public java.util.Iterator<Pokemon> iterator() {
+			java.util.List<Pokemon> out = new java.util.ArrayList<>();
+			for (Pokemon pokemon : PlayerExtensionsKt.party(this.player)) {
+				if (pokemon != null && this.use.contains(pokemon.getUuid())) {
+					out.add(pokemon);
+				}
+			}
+			return out.iterator();
+		}
 	}
 
 	/** The encounter Pokémon: still, persistent, unbattleable for others, outside the spawn cap, facing the player. */

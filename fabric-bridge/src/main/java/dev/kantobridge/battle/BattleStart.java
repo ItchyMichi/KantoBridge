@@ -45,7 +45,8 @@ public record BattleStart(String battle, Kind kind, @Nullable Trainer trainer, L
 
 	/** The battle kinds of the protocol. */
 	public enum Kind {
-		TRAINER, RIVAL, SCRIPTED, STATIC, SURF, FISH;
+		/** FP5: CONTEST is Crystal's Bug-Catching Contest, a wild battle with only the {@code use} Pokémon (the lead). */
+		TRAINER, RIVAL, SCRIPTED, STATIC, SURF, FISH, CONTEST;
 
 		public String id() {
 			return this.name().toLowerCase(Locale.ROOT);
@@ -174,6 +175,11 @@ public record BattleStart(String battle, Kind kind, @Nullable Trainer trainer, L
 			case STATIC, SURF, FISH -> {
 				if (wild == null) {
 					throw new DataException(reader.path("wild"), "an encounter needs wild");
+				}
+			}
+			case CONTEST -> {
+				if (wild == null || use.isEmpty()) {
+					throw new DataException(reader.path("use"), "a contest battle needs wild and use");
 				}
 			}
 			case SCRIPTED -> {

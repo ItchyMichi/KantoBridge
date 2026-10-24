@@ -3343,6 +3343,31 @@ Contest in Cobblemon, FP5c Steven's partner battle as a Cobblemon multi battle.
 **Deviation.** Trainer Hill is held for Cobblemon instead of refused (§4.12 listed it with the desks): it needs no
 rules, so the player keeps it.
 
+## Foreign Pokémon: FP5b, the Bug-Catching Contest in Cobblemon (2026-10-24)
+
+- **Crystal** (`gen2/battle.lua`): while a client follows and the lead has a uid, a contest encounter
+  (`World:tryContestEncounter`, its own roll; the habitat pools never take it) is held: `battle.start{kind:"contest",
+  use:[lead uid]}`. Without a client or a uid it stays native (`battle.native` contest). A catch in Cobblemon is the
+  contest's: the foe's record is tagged with Cobblemon's uid (so it is never a gift at the contest's end) and given to
+  `BugContest.catch`; the first is kept ("Caught X!"), a second shows the engine's own question (`Gen2ContestMenu`), and
+  the one let go leaves Cobblemon as `party.take{reason:"contest"}`. The 20 minutes, the judging and the prizes stay
+  the hidden game's.
+- **The contest party**: the engine keeps only the lead while the contest runs (`BugContest.dropOffMons`); a sync then
+  would put the stash back and the contest's end would add it again, so `partySafe` is false while it is active and a
+  sync waits for its end (when the catch, already with its uid, has joined the party).
+- **Server**: kind `CONTEST` (needs `wild` and `use`); `EncounterService` gives Cobblemon's `pve` a party store that lists
+  only the `use` Pokémon of the real party (`OnlyUsed`: `toBattleTeam` iterates the store), so the battle fights with
+  the real lead and nothing else; `party.take` takes reason `contest`.
+- `battle.result.caught` reaches the adapter (`battleFinish(id, outcome, caught)`).
+
+**Tests.** Lupa: the held contest battle (kind, use, the waiting sync), the first catch tagged and kept, the second
+asking and the dropped one taken. GameTest `aContestBattleUsesOnlyTheLead`: one Pokémon in the player's actor, the lead
+itself, the rest of the party untouched. Lua 1,572; pytest 2,372; GameTests 130/130.
+
+**Deviations.** 1. Cobblemon's battle uses the player's own balls, not 20 Park Balls; the contest's counter only goes
+down by the catches (`BugContest.catch`), so it ends on its clock. 2. The catch lines are ours (the engine's are pushed
+inside its own battle screen, which a held battle never shows).
+
 ## Pre-flight (PLAN §0.6)
 
 | Step | State |
