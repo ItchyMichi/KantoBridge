@@ -83,5 +83,20 @@ def test_gen2s_items():
     assert ITEMS.canonical("gen2", "LEVEL_BALL") == "level_ball" and ITEMS.get("level_ball").cobblemon is None
     assert ITEMS.canonical("gen2", "HM_SURF") == "hm_surf" and ITEMS.get("hm_surf").clazz == "key"
     held = [i for i in ITEMS.ids if ITEMS.get(i).clazz == "held"]
-    assert len(held) == 48 and all(set(ITEMS.get(i).symbols) == {"gen2"} for i in held)
+    assert len([i for i in held if "gen2" in ITEMS.get(i).symbols]) == 58, "48, and FP4's ten Mail (hidden-only)"
+
+
+def test_held_items_cross_into_emerald():
+    """FP4 (FOREIGN_POKEMON_PLAN §5): Emerald's symbols on the held items it shares (Leek is its STICK, Up-Grade its
+    UP_GRADE), Emerald's own held items and Gen 3 berries with Cobblemon's item, and the hidden-only items (Mail, the
+    incenses, the Macho Brace, Soul Dew) with none."""
+    assert ITEMS.canonical("gen3", "LEFTOVERS") == "leftovers" and ITEMS.canonical("gen3", "STICK") == "leek"
+    assert ITEMS.canonical("gen3", "UP_GRADE") == "upgrade" and ITEMS.canonical("gen3", "SHELL_BELL") == "shell_bell"
+    assert ITEMS.get("shell_bell").cobblemon == "shell_bell" and ITEMS.get("liechi_berry").cobblemon == "liechi_berry"
+    held = [i for i in ITEMS.ids if ITEMS.get(i).clazz == "held"]
+    no_gen3 = {i for i in held if "gen3" not in ITEMS.get(i).symbols}
+    assert {"berserk_gene", "pink_bow", "polkadot_bow"} <= no_gen3
+    hidden = [i for i in held if ITEMS.get(i).hidden_only]
+    assert "orange_mail" in hidden and "flower_mail" in hidden and "macho_brace" in hidden and len(hidden) == 26
+    assert all(ITEMS.get(i).cobblemon is None for i in hidden)
     assert all(ITEMS.get(i).cobblemon is None or "gen1" in ITEMS.get(i).symbols for i in ITEMS.mirrored())

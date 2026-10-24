@@ -661,6 +661,11 @@ sync, a heal or a new save; not while no client follows, and not on a member an 
 status or friendship goes out as `party.change`, a move added as `party.learn` (with `forget`, the move it replaced), a
 move gone as `party.forget`, each with an `id` and re-sent like an item. The server sets the value (HP within Cobblemon's
 maximum, `status:"none"` clears), teaches as a machine does, or benches the move (never the last one); an id applies once.
+**FP4 (held items):** the watcher also sends GIVE/TAKE in the hidden party menu as `party.hold{uid, item | null, id}`
+(canonical ids); items the catalogue marks `hiddenOnly` (Mail, ...) or maps to no Cobblemon item stay in the hidden game
+and are never sent, and a sync whose member holds nothing leaves them on the record. Emerald's syncs and gifts carry the
+held item through `symbols.gen3`. The server holds a new stack of the Cobblemon item (or removes it); an item the region's
+game couldn't show goes back to the player's inventory.
 
 Species travel as national dex numbers (defs `nationalDex`), moves as Showdown numbers (defs
 `moveNum`; Gen 1's move ids are the same numbers), items as engine symbols, and Pokémon identities

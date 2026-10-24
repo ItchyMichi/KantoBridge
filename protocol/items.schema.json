@@ -47,6 +47,10 @@
             "maxLength": 64,
             "description": "The Cobblemon item path (namespace cobblemon) the Minecraft mirror creates for it; absent = never mirrored (ledger only)."
           },
+          "hiddenOnly": {
+            "const": true,
+            "description": "FOREIGN_POKEMON_PLAN §5 (FP4): no Cobblemon item exists for it (Mail, Gen 3's incenses, the Macho Brace, Soul Dew): a member holding it keeps it in the hidden game across syncs (hidden-only state, §3.5); nothing goes to Cobblemon."
+          },
           "move": {
             "type": "integer",
             "minimum": 1,

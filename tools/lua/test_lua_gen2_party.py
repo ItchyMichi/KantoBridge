@@ -385,3 +385,42 @@ def test_party_facts_carry_protocol_statuses_friendship_and_move_numbers():
     facts, _save = a.eng.partyFacts()
     f = plain(facts)[0]
     assert (f["uid"], f["status"], f["friendship"]) == (UID1, "psn", 90) and all(isinstance(n, int) for n in f["moves"])
+
+
+def test_give_and_take_go_out_as_party_hold_and_mail_stays_in_the_hidden_game():
+    # FP4 (FOREIGN_POKEMON_PLAN §5, Q5) through main.lua: Cobblemon's held item on the record, GIVE and TAKE in the
+    # hidden menu as party.hold (canonical ids), Mail hidden-only: never sent, and a sync without an item keeps it
+    rig = Rig(family="gen2")
+    rig.world("TEST_TOWN", 5, 6, "down")
+    peer = rig.connect()
+    peer.hello()
+    for _ in range(4):
+        rig.step()
+        peer.messages()
+    member = {"uid": UID1, "dex": 152, "level": 6, "moves": [33], "hp": 15, "maxhp": 25, "item": "leftovers", "shiny": False}
+    peer.send("party.sync", {"party": [member], "box": {"count": 0}})
+    got = []
+    for _ in range(4):
+        rig.step()
+        got.extend(peer.messages())
+    mon = rig.E.game.save.party[1]
+    assert mon.item == b"LEFTOVERS"
+    mon.item = None                                  # TAKE
+    for _ in range(2):
+        rig.step()
+        got.extend(peer.messages())
+    mon.item = b"MYSTIC_WATER"                       # GIVE
+    for _ in range(2):
+        rig.step()
+        got.extend(peer.messages())
+    mon.item = b"FLOWER_MAIL"                        # Mail: hidden-only
+    for _ in range(2):
+        rig.step()
+        got.extend(peer.messages())
+    holds = [{k: v for k, v in m["data"].items() if k != "id"} for m in got if m["type"] == "party.hold"]
+    assert holds == [{"uid": UID1, "item": None}, {"uid": UID1, "item": "mystic_water"}]
+    peer.send("party.sync", {"party": [{k: v for k, v in member.items() if k != "item"}], "box": {"count": 0}})
+    for _ in range(4):
+        rig.step()
+        peer.messages()
+    assert rig.E.game.save.party[1].item == b"FLOWER_MAIL", "the Mail stays while Cobblemon's member holds nothing"

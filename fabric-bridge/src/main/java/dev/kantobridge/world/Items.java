@@ -50,7 +50,7 @@ public final class Items {
 	public static final Set<String> MIRRORED_CLASSES = Set.of("ball", "medicine", "battle");
 	public static final int MAX_MOVE = 2000;
 	private static final Set<String> ROOT_FIELDS = Set.of("version", "items");
-	private static final Set<String> ITEM_FIELDS = Set.of("class", "cobblemon", "move", "symbols");
+	private static final Set<String> ITEM_FIELDS = Set.of("class", "cobblemon", "move", "symbols", "hiddenOnly");
 
 	private static volatile @Nullable Items bundled;
 
@@ -61,10 +61,16 @@ public final class Items {
 	 * @param cobblemon the Cobblemon item path the mirror creates for it, or null (ledger only)
 	 * @param move      tm/hm: the move taught, as its national (Showdown) move number; else null
 	 * @param symbols   family → the game's item symbol (sorted)
+	 * @param hiddenOnly FP4: no Cobblemon item exists for it; a member holding it keeps it in the hidden game
 	 */
-	public record Item(String id, String clazz, @Nullable String cobblemon, @Nullable Integer move, Map<String, String> symbols) {
+	public record Item(String id, String clazz, @Nullable String cobblemon, @Nullable Integer move, Map<String, String> symbols,
+			boolean hiddenOnly) {
 		public Item {
 			symbols = Collections.unmodifiableMap(new TreeMap<>(symbols));
+		}
+
+		public Item(String id, String clazz, @Nullable String cobblemon, @Nullable Integer move, Map<String, String> symbols) {
+			this(id, clazz, cobblemon, move, symbols, false);
 		}
 
 		/** The item's symbol in a family's games, or null when they lack it. */
@@ -129,6 +135,17 @@ public final class Items {
 			}
 			String cobblemon = e.optionalString("cobblemon", COBBLEMON_PATH);
 			Integer move = e.has("move") ? e.integer("move", 1, MAX_MOVE) : null;
+			boolean hiddenOnly = false;
+			if (e.has("hiddenOnly")) {
+				if (!e.json().get("hiddenOnly").isJsonPrimitive() || !e.json().get("hiddenOnly").getAsJsonPrimitive().isBoolean()
+						|| !e.json().get("hiddenOnly").getAsBoolean()) {
+					throw new DataException(e.path("hiddenOnly"), "only true");
+				}
+				if (cobblemon != null) {
+					throw new DataException(e.path("hiddenOnly"), "a hidden-only item has no Cobblemon item");
+				}
+				hiddenOnly = true;
+			}
 			DataReader s = e.object("symbols");
 			Map<String, String> symbols = new TreeMap<>();
 			for (String family : s.json().keySet()) {
@@ -141,7 +158,7 @@ public final class Items {
 				}
 				symbols.put(family, symbol);
 			}
-			out.put(id, new Item(id, clazz, cobblemon, move, symbols));
+			out.put(id, new Item(id, clazz, cobblemon, move, symbols, hiddenOnly));
 		}
 		if (out.isEmpty()) {
 			throw new DataException(r.path("items"), "no items");

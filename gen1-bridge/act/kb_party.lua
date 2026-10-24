@@ -386,6 +386,7 @@ end
 --            withdraw) as it first goes out (optional)
 --   idPrefix FP4: the start's token in party.item ids (main.lua's session id;
 --            optional), so ids never repeat across starts
+--   null     FP4: kb_json.null (party.hold's item for a TAKE)
 -- FP4: seconds after a party.item went out from which a party.sync settles it
 Party.ITEM_SETTLE = 1
 function Party.new(opts)
@@ -396,6 +397,7 @@ function Party.new(opts)
   local markup = opts.markup or function(s) return s, 0 end
   local onOp = opts.onOp or function() end
   local idPrefix = type(opts.idPrefix) == "string" and opts.idPrefix:gsub("[^%w]", "") or "x"
+  local NULL = opts.null or {} -- FP4: kb_json's null (party.hold's TAKE)
   local itemsOut, itemSerial = {}, 0 -- FP4: party.items (and party.change/learn/forget) sent and not settled yet
   local effectSerial = 0
   local facts, factSave = {}, nil   -- FP4: the last look at the members (engine.partyFacts)
@@ -413,7 +415,7 @@ function Party.new(opts)
     visitorsNow = 0, -- FP2: members the last applied sync made visitors
     orders = 0, ordersConfirmed = 0, -- FP2: party.order
     dexSyncs = 0, dexApplied = 0, dexAddedSeen = 0, dexAddedOwned = 0, dexUnknown = 0, dexBeyond = 0,
-    items = 0, itemsBad = 0, itemsResent = 0, itemsRefused = 0, changes = 0, learns = 0, forgets = 0,
+    items = 0, itemsBad = 0, itemsResent = 0, itemsRefused = 0, changes = 0, learns = 0, forgets = 0, holds = 0,
     -- M8 (wave 2)
     takes = 0, deposits = 0, withdraws = 0, opsResent = 0, opsConfirmed = 0, opsGivenUp = 0,
     excluded = 0, renames = 0, catches = 0,
@@ -787,7 +789,7 @@ function Party.new(opts)
   local function factsSeen(list)
     local out = {}
     for _, e in ipairs(list) do
-      out[e.uid] = { hp = e.hp, status = e.status, friendship = e.friendship, moves = e.moves or {} }
+      out[e.uid] = { hp = e.hp, status = e.status, friendship = e.friendship, moves = e.moves or {}, item = e.item }
     end
     return out
   end
@@ -819,6 +821,11 @@ function Party.new(opts)
           change.friendship = math.max(0, math.min(255, f.friendship))
         end
         if change.hp or change.status or change.friendship then queueEffect("party.change", change, "changes") end
+        -- §5 (Q5): GIVE or TAKE in the hidden party menu (an adapter with held items says the canonical id, false
+        -- for none, "hidden" for one Cobblemon can't hold: never forwarded either way)
+        if f.item ~= nil and was.item ~= nil and f.item ~= was.item and f.item ~= "hidden" and was.item ~= "hidden" then
+          queueEffect("party.hold", { uid = uid, item = f.item or NULL }, "holds")
+        end
         local had, has = {}, {}
         for _, n in ipairs(was.moves) do had[n] = true end
         for _, n in ipairs(f.moves) do has[n] = true end

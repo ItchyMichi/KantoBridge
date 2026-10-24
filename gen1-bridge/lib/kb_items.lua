@@ -7,11 +7,19 @@
 
 return {
   items = {
+    aguav_berry = {
+      class = "held",
+      cobblemon = "aguav_berry",
+      symbols = {
+        gen3 = "AGUAV_BERRY",
+      },
+    },
     amulet_coin = {
       class = "held",
       cobblemon = "amulet_coin",
       symbols = {
         gen2 = "AMULET_COIN",
+        gen3 = "AMULET_COIN",
       },
     },
     antidote = {
@@ -23,11 +31,19 @@ return {
         gen3 = "ANTIDOTE",
       },
     },
+    apicot_berry = {
+      class = "held",
+      cobblemon = "apicot_berry",
+      symbols = {
+        gen3 = "APICOT_BERRY",
+      },
+    },
     aspear_berry = {
       class = "held",
       cobblemon = "aspear_berry",
       symbols = {
         gen2 = "BURNT_BERRY",
+        gen3 = "ASPEAR_BERRY",
       },
     },
     awakening = {
@@ -37,6 +53,20 @@ return {
         gen1 = "AWAKENING",
         gen2 = "AWAKENING",
         gen3 = "AWAKENING",
+      },
+    },
+    bead_mail = {
+      class = "held",
+      hiddenOnly = true,
+      symbols = {
+        gen3 = "BEAD_MAIL",
+      },
+    },
+    belue_berry = {
+      class = "held",
+      cobblemon = "belue_berry",
+      symbols = {
+        gen3 = "BELUE_BERRY",
       },
     },
     berry_juice = {
@@ -87,6 +117,7 @@ return {
       cobblemon = "black_belt",
       symbols = {
         gen2 = "BLACKBELT_I",
+        gen3 = "BLACK_BELT",
       },
     },
     black_glasses = {
@@ -94,12 +125,27 @@ return {
       cobblemon = "black_glasses",
       symbols = {
         gen2 = "BLACKGLASSES",
+        gen3 = "BLACK_GLASSES",
       },
     },
     blue_apricorn = {
       class = "valuable",
       symbols = {
         gen2 = "BLU_APRICORN",
+      },
+    },
+    bluesky_mail = {
+      class = "held",
+      hiddenOnly = true,
+      symbols = {
+        gen2 = "BLUESKY_MAIL",
+      },
+    },
+    bluk_berry = {
+      class = "held",
+      cobblemon = "bluk_berry",
+      symbols = {
+        gen3 = "BLUK_BERRY",
       },
     },
     brick_piece = {
@@ -113,6 +159,7 @@ return {
       cobblemon = "bright_powder",
       symbols = {
         gen2 = "BRIGHTPOWDER",
+        gen3 = "BRIGHT_POWDER",
       },
     },
     burn_heal = {
@@ -151,6 +198,7 @@ return {
       class = "held",
       symbols = {
         gen2 = "CHARCOAL",
+        gen3 = "CHARCOAL",
       },
     },
     cheri_berry = {
@@ -158,6 +206,7 @@ return {
       cobblemon = "cheri_berry",
       symbols = {
         gen2 = "PRZCUREBERRY",
+        gen3 = "CHERI_BERRY",
       },
     },
     chesto_berry = {
@@ -165,6 +214,14 @@ return {
       cobblemon = "chesto_berry",
       symbols = {
         gen2 = "MINT_BERRY",
+        gen3 = "CHESTO_BERRY",
+      },
+    },
+    choice_band = {
+      class = "held",
+      cobblemon = "choice_band",
+      symbols = {
+        gen3 = "CHOICE_BAND",
       },
     },
     cleanse_tag = {
@@ -172,6 +229,7 @@ return {
       cobblemon = "cleanse_tag",
       symbols = {
         gen2 = "CLEANSE_TAG",
+        gen3 = "CLEANSE_TAG",
       },
     },
     coin = {
@@ -185,6 +243,27 @@ return {
       symbols = {
         gen1 = "COIN_CASE",
         gen2 = "COIN_CASE",
+      },
+    },
+    cornn_berry = {
+      class = "held",
+      cobblemon = "cornn_berry",
+      symbols = {
+        gen3 = "CORNN_BERRY",
+      },
+    },
+    deep_sea_scale = {
+      class = "held",
+      cobblemon = "deep_sea_scale",
+      symbols = {
+        gen3 = "DEEP_SEA_SCALE",
+      },
+    },
+    deep_sea_tooth = {
+      class = "held",
+      cobblemon = "deep_sea_tooth",
+      symbols = {
+        gen3 = "DEEP_SEA_TOOTH",
       },
     },
     dire_hit = {
@@ -207,6 +286,7 @@ return {
       cobblemon = "dragon_fang",
       symbols = {
         gen2 = "DRAGON_FANG",
+        gen3 = "DRAGON_FANG",
       },
     },
     dragon_scale = {
@@ -214,6 +294,21 @@ return {
       cobblemon = "dragon_scale",
       symbols = {
         gen2 = "DRAGON_SCALE",
+        gen3 = "DRAGON_SCALE",
+      },
+    },
+    dream_mail = {
+      class = "held",
+      hiddenOnly = true,
+      symbols = {
+        gen3 = "DREAM_MAIL",
+      },
+    },
+    durin_berry = {
+      class = "held",
+      cobblemon = "durin_berry",
+      symbols = {
+        gen3 = "DURIN_BERRY",
       },
     },
     elixer = {
@@ -235,6 +330,20 @@ return {
       class = "medicine",
       symbols = {
         gen2 = "ENERGY_ROOT",
+      },
+    },
+    enigma_berry = {
+      class = "held",
+      cobblemon = "enigma_berry",
+      symbols = {
+        gen3 = "ENIGMA_BERRY",
+      },
+    },
+    eon_mail = {
+      class = "held",
+      hiddenOnly = true,
+      symbols = {
+        gen2 = "EON_MAIL",
       },
     },
     escape_rope = {
@@ -259,6 +368,7 @@ return {
       cobblemon = "everstone",
       symbols = {
         gen2 = "EVERSTONE",
+        gen3 = "EVERSTONE",
       },
     },
     exp_all = {
@@ -272,12 +382,27 @@ return {
       cobblemon = "exp_share",
       symbols = {
         gen2 = "EXP_SHARE",
+        gen3 = "EXP_SHARE",
+      },
+    },
+    fab_mail = {
+      class = "held",
+      hiddenOnly = true,
+      symbols = {
+        gen3 = "FAB_MAIL",
       },
     },
     fast_ball = {
       class = "ball",
       symbols = {
         gen2 = "FAST_BALL",
+      },
+    },
+    figy_berry = {
+      class = "held",
+      cobblemon = "figy_berry",
+      symbols = {
+        gen3 = "FIGY_BERRY",
       },
     },
     fire_stone = {
@@ -289,11 +414,19 @@ return {
         gen3 = "FIRE_STONE",
       },
     },
+    flower_mail = {
+      class = "held",
+      hiddenOnly = true,
+      symbols = {
+        gen2 = "FLOWER_MAIL",
+      },
+    },
     focus_band = {
       class = "held",
       cobblemon = "focus_band",
       symbols = {
         gen2 = "FOCUS_BAND",
+        gen3 = "FOCUS_BAND",
       },
     },
     fresh_water = {
@@ -326,6 +459,20 @@ return {
         gen1 = "FULL_RESTORE",
         gen2 = "FULL_RESTORE",
         gen3 = "FULL_RESTORE",
+      },
+    },
+    ganlon_berry = {
+      class = "held",
+      cobblemon = "ganlon_berry",
+      symbols = {
+        gen3 = "GANLON_BERRY",
+      },
+    },
+    glitter_mail = {
+      class = "held",
+      hiddenOnly = true,
+      symbols = {
+        gen3 = "GLITTER_MAIL",
       },
     },
     gold_leaf = {
@@ -362,6 +509,13 @@ return {
         gen2 = "GRN_APRICORN",
       },
     },
+    grepa_berry = {
+      class = "held",
+      cobblemon = "grepa_berry",
+      symbols = {
+        gen3 = "GREPA_BERRY",
+      },
+    },
     guard_spec = {
       class = "battle",
       cobblemon = "guard_spec",
@@ -371,11 +525,19 @@ return {
         gen3 = "GUARD_SPEC",
       },
     },
+    harbor_mail = {
+      class = "held",
+      hiddenOnly = true,
+      symbols = {
+        gen3 = "HARBOR_MAIL",
+      },
+    },
     hard_stone = {
       class = "held",
       cobblemon = "hard_stone",
       symbols = {
         gen2 = "HARD_STONE",
+        gen3 = "HARD_STONE",
       },
     },
     heal_powder = {
@@ -436,6 +598,13 @@ return {
         gen2 = "HM_SURF",
       },
     },
+    hondew_berry = {
+      class = "held",
+      cobblemon = "hondew_berry",
+      symbols = {
+        gen3 = "HONDEW_BERRY",
+      },
+    },
     hp_up = {
       class = "medicine",
       symbols = {
@@ -451,6 +620,13 @@ return {
         gen1 = "HYPER_POTION",
         gen2 = "HYPER_POTION",
         gen3 = "HYPER_POTION",
+      },
+    },
+    iapapa_berry = {
+      class = "held",
+      cobblemon = "iapapa_berry",
+      symbols = {
+        gen3 = "IAPAPA_BERRY",
       },
     },
     ice_heal = {
@@ -477,11 +653,33 @@ return {
         gen2 = "ITEMFINDER",
       },
     },
+    kelpsy_berry = {
+      class = "held",
+      cobblemon = "kelpsy_berry",
+      symbols = {
+        gen3 = "KELPSY_BERRY",
+      },
+    },
     kings_rock = {
       class = "held",
       cobblemon = "kings_rock",
       symbols = {
         gen2 = "KINGS_ROCK",
+        gen3 = "KINGS_ROCK",
+      },
+    },
+    lansat_berry = {
+      class = "held",
+      cobblemon = "lansat_berry",
+      symbols = {
+        gen3 = "LANSAT_BERRY",
+      },
+    },
+    lax_incense = {
+      class = "held",
+      hiddenOnly = true,
+      symbols = {
+        gen3 = "LAX_INCENSE",
       },
     },
     leaf_stone = {
@@ -498,6 +696,7 @@ return {
       cobblemon = "leek",
       symbols = {
         gen2 = "STICK",
+        gen3 = "STICK",
       },
     },
     leftovers = {
@@ -505,6 +704,7 @@ return {
       cobblemon = "leftovers",
       symbols = {
         gen2 = "LEFTOVERS",
+        gen3 = "LEFTOVERS",
       },
     },
     lemonade = {
@@ -520,12 +720,20 @@ return {
       cobblemon = "leppa_berry",
       symbols = {
         gen2 = "MYSTERYBERRY",
+        gen3 = "LEPPA_BERRY",
       },
     },
     level_ball = {
       class = "ball",
       symbols = {
         gen2 = "LEVEL_BALL",
+      },
+    },
+    liechi_berry = {
+      class = "held",
+      cobblemon = "liechi_berry",
+      symbols = {
+        gen3 = "LIECHI_BERRY",
       },
     },
     lift_key = {
@@ -539,6 +747,14 @@ return {
       cobblemon = "light_ball",
       symbols = {
         gen2 = "LIGHT_BALL",
+        gen3 = "LIGHT_BALL",
+      },
+    },
+    light_blue_mail = {
+      class = "held",
+      hiddenOnly = true,
+      symbols = {
+        gen2 = "LITEBLUEMAIL",
       },
     },
     love_ball = {
@@ -547,17 +763,26 @@ return {
         gen2 = "LOVE_BALL",
       },
     },
+    lovely_mail = {
+      class = "held",
+      hiddenOnly = true,
+      symbols = {
+        gen2 = "LOVELY_MAIL",
+      },
+    },
     lucky_egg = {
       class = "held",
       cobblemon = "lucky_egg",
       symbols = {
         gen2 = "LUCKY_EGG",
+        gen3 = "LUCKY_EGG",
       },
     },
     lucky_punch = {
       class = "held",
       symbols = {
         gen2 = "LUCKY_PUNCH",
+        gen3 = "LUCKY_PUNCH",
       },
     },
     lum_berry = {
@@ -565,6 +790,7 @@ return {
       cobblemon = "lum_berry",
       symbols = {
         gen2 = "MIRACLEBERRY",
+        gen3 = "LUM_BERRY",
       },
     },
     lure_ball = {
@@ -573,11 +799,33 @@ return {
         gen2 = "LURE_BALL",
       },
     },
+    macho_brace = {
+      class = "held",
+      hiddenOnly = true,
+      symbols = {
+        gen3 = "MACHO_BRACE",
+      },
+    },
     magnet = {
       class = "held",
       cobblemon = "magnet",
       symbols = {
         gen2 = "MAGNET",
+        gen3 = "MAGNET",
+      },
+    },
+    mago_berry = {
+      class = "held",
+      cobblemon = "mago_berry",
+      symbols = {
+        gen3 = "MAGO_BERRY",
+      },
+    },
+    magost_berry = {
+      class = "held",
+      cobblemon = "magost_berry",
+      symbols = {
+        gen3 = "MAGOST_BERRY",
       },
     },
     master_ball = {
@@ -633,17 +881,33 @@ return {
         gen3 = "MAX_REVIVE",
       },
     },
+    mech_mail = {
+      class = "held",
+      hiddenOnly = true,
+      symbols = {
+        gen3 = "MECH_MAIL",
+      },
+    },
+    mental_herb = {
+      class = "held",
+      cobblemon = "mental_herb",
+      symbols = {
+        gen3 = "MENTAL_HERB",
+      },
+    },
     metal_coat = {
       class = "held",
       cobblemon = "metal_coat",
       symbols = {
         gen2 = "METAL_COAT",
+        gen3 = "METAL_COAT",
       },
     },
     metal_powder = {
       class = "held",
       symbols = {
         gen2 = "METAL_POWDER",
+        gen3 = "METAL_POWDER",
       },
     },
     miracle_seed = {
@@ -651,6 +915,14 @@ return {
       cobblemon = "miracle_seed",
       symbols = {
         gen2 = "MIRACLE_SEED",
+        gen3 = "MIRACLE_SEED",
+      },
+    },
+    mirage_mail = {
+      class = "held",
+      hiddenOnly = true,
+      symbols = {
+        gen2 = "MIRAGE_MAIL",
       },
     },
     moomoo_milk = {
@@ -674,11 +946,33 @@ return {
         gen3 = "MOON_STONE",
       },
     },
+    morph_mail = {
+      class = "held",
+      hiddenOnly = true,
+      symbols = {
+        gen2 = "MORPH_MAIL",
+      },
+    },
+    music_mail = {
+      class = "held",
+      hiddenOnly = true,
+      symbols = {
+        gen2 = "MUSIC_MAIL",
+      },
+    },
     mystic_water = {
       class = "held",
       cobblemon = "mystic_water",
       symbols = {
         gen2 = "MYSTIC_WATER",
+        gen3 = "MYSTIC_WATER",
+      },
+    },
+    nanab_berry = {
+      class = "held",
+      cobblemon = "nanab_berry",
+      symbols = {
+        gen3 = "NANAB_BERRY",
       },
     },
     never_melt_ice = {
@@ -686,6 +980,14 @@ return {
       cobblemon = "never_melt_ice",
       symbols = {
         gen2 = "NEVERMELTICE",
+        gen3 = "NEVER_MELT_ICE",
+      },
+    },
+    nomel_berry = {
+      class = "held",
+      cobblemon = "nomel_berry",
+      symbols = {
+        gen3 = "NOMEL_BERRY",
       },
     },
     nugget = {
@@ -720,6 +1022,21 @@ return {
       cobblemon = "oran_berry",
       symbols = {
         gen2 = "BERRY",
+        gen3 = "ORAN_BERRY",
+      },
+    },
+    orange_mail = {
+      class = "held",
+      hiddenOnly = true,
+      symbols = {
+        gen3 = "ORANGE_MAIL",
+      },
+    },
+    pamtre_berry = {
+      class = "held",
+      cobblemon = "pamtre_berry",
+      symbols = {
+        gen3 = "PAMTRE_BERRY",
       },
     },
     park_ball = {
@@ -748,6 +1065,7 @@ return {
       cobblemon = "pecha_berry",
       symbols = {
         gen2 = "PSNCUREBERRY",
+        gen3 = "PECHA_BERRY",
       },
     },
     persim_berry = {
@@ -755,6 +1073,21 @@ return {
       cobblemon = "persim_berry",
       symbols = {
         gen2 = "BITTER_BERRY",
+        gen3 = "PERSIM_BERRY",
+      },
+    },
+    petaya_berry = {
+      class = "held",
+      cobblemon = "petaya_berry",
+      symbols = {
+        gen3 = "PETAYA_BERRY",
+      },
+    },
+    pinap_berry = {
+      class = "held",
+      cobblemon = "pinap_berry",
+      symbols = {
+        gen3 = "PINAP_BERRY",
       },
     },
     pink_apricorn = {
@@ -774,6 +1107,7 @@ return {
       cobblemon = "poison_barb",
       symbols = {
         gen2 = "POISON_BARB",
+        gen3 = "POISON_BARB",
       },
     },
     poke_ball = {
@@ -811,6 +1145,20 @@ return {
         gen2 = "POLKADOT_BOW",
       },
     },
+    pomeg_berry = {
+      class = "held",
+      cobblemon = "pomeg_berry",
+      symbols = {
+        gen3 = "POMEG_BERRY",
+      },
+    },
+    portrait_mail = {
+      class = "held",
+      hiddenOnly = true,
+      symbols = {
+        gen2 = "PORTRAITMAIL",
+      },
+    },
     potion = {
       class = "medicine",
       cobblemon = "potion",
@@ -836,11 +1184,26 @@ return {
         gen3 = "PROTEIN",
       },
     },
+    qualot_berry = {
+      class = "held",
+      cobblemon = "qualot_berry",
+      symbols = {
+        gen3 = "QUALOT_BERRY",
+      },
+    },
     quick_claw = {
       class = "held",
       cobblemon = "quick_claw",
       symbols = {
         gen2 = "QUICK_CLAW",
+        gen3 = "QUICK_CLAW",
+      },
+    },
+    rabuta_berry = {
+      class = "held",
+      cobblemon = "rabuta_berry",
+      symbols = {
+        gen3 = "RABUTA_BERRY",
       },
     },
     rage_candy_bar = {
@@ -862,6 +1225,14 @@ return {
       cobblemon = "rawst_berry",
       symbols = {
         gen2 = "ICE_BERRY",
+        gen3 = "RAWST_BERRY",
+      },
+    },
+    razz_berry = {
+      class = "held",
+      cobblemon = "razz_berry",
+      symbols = {
+        gen3 = "RAZZ_BERRY",
       },
     },
     red_apricorn = {
@@ -876,6 +1247,13 @@ return {
         gen1 = "REPEL",
         gen2 = "REPEL",
         gen3 = "REPEL",
+      },
+    },
+    retro_mail = {
+      class = "held",
+      hiddenOnly = true,
+      symbols = {
+        gen3 = "RETRO_MAIL",
       },
     },
     revival_herb = {
@@ -914,11 +1292,26 @@ return {
         gen3 = "SAFARI_BALL",
       },
     },
+    salac_berry = {
+      class = "held",
+      cobblemon = "salac_berry",
+      symbols = {
+        gen3 = "SALAC_BERRY",
+      },
+    },
     scope_lens = {
       class = "held",
       cobblemon = "scope_lens",
       symbols = {
         gen2 = "SCOPE_LENS",
+        gen3 = "SCOPE_LENS",
+      },
+    },
+    sea_incense = {
+      class = "held",
+      hiddenOnly = true,
+      symbols = {
+        gen3 = "SEA_INCENSE",
       },
     },
     secret_key = {
@@ -927,11 +1320,33 @@ return {
         gen1 = "SECRET_KEY",
       },
     },
+    shadow_mail = {
+      class = "held",
+      hiddenOnly = true,
+      symbols = {
+        gen3 = "SHADOW_MAIL",
+      },
+    },
     sharp_beak = {
       class = "held",
       cobblemon = "sharp_beak",
       symbols = {
         gen2 = "SHARP_BEAK",
+        gen3 = "SHARP_BEAK",
+      },
+    },
+    shell_bell = {
+      class = "held",
+      cobblemon = "shell_bell",
+      symbols = {
+        gen3 = "SHELL_BELL",
+      },
+    },
+    silk_scarf = {
+      class = "held",
+      cobblemon = "silk_scarf",
+      symbols = {
+        gen3 = "SILK_SCARF",
       },
     },
     silph_scope = {
@@ -951,6 +1366,7 @@ return {
       cobblemon = "silver_powder",
       symbols = {
         gen2 = "SILVERPOWDER",
+        gen3 = "SILVER_POWDER",
       },
     },
     sitrus_berry = {
@@ -958,6 +1374,7 @@ return {
       cobblemon = "sitrus_berry",
       symbols = {
         gen2 = "GOLD_BERRY",
+        gen3 = "SITRUS_BERRY",
       },
     },
     slowpoke_tail = {
@@ -971,6 +1388,7 @@ return {
       cobblemon = "smoke_ball",
       symbols = {
         gen2 = "SMOKE_BALL",
+        gen3 = "SMOKE_BALL",
       },
     },
     soda_pop = {
@@ -986,6 +1404,21 @@ return {
       cobblemon = "soft_sand",
       symbols = {
         gen2 = "SOFT_SAND",
+        gen3 = "SOFT_SAND",
+      },
+    },
+    soothe_bell = {
+      class = "held",
+      cobblemon = "soothe_bell",
+      symbols = {
+        gen3 = "SOOTHE_BELL",
+      },
+    },
+    soul_dew = {
+      class = "held",
+      hiddenOnly = true,
+      symbols = {
+        gen3 = "SOUL_DEW",
       },
     },
     spell_tag = {
@@ -993,6 +1426,14 @@ return {
       cobblemon = "spell_tag",
       symbols = {
         gen2 = "SPELL_TAG",
+        gen3 = "SPELL_TAG",
+      },
+    },
+    spelon_berry = {
+      class = "held",
+      cobblemon = "spelon_berry",
+      symbols = {
+        gen3 = "SPELON_BERRY",
       },
     },
     star_piece = {
@@ -1005,6 +1446,13 @@ return {
       class = "valuable",
       symbols = {
         gen2 = "STARDUST",
+      },
+    },
+    starf_berry = {
+      class = "held",
+      cobblemon = "starf_berry",
+      symbols = {
+        gen3 = "STARF_BERRY",
       },
     },
     sun_stone = {
@@ -1039,16 +1487,31 @@ return {
         gen2 = "SUPER_ROD",
       },
     },
+    surf_mail = {
+      class = "held",
+      hiddenOnly = true,
+      symbols = {
+        gen2 = "SURF_MAIL",
+      },
+    },
     surfboard = {
       class = "key",
       symbols = {
         gen1 = "SURFBOARD",
       },
     },
+    tamato_berry = {
+      class = "held",
+      cobblemon = "tamato_berry",
+      symbols = {
+        gen3 = "TAMATO_BERRY",
+      },
+    },
     thick_club = {
       class = "held",
       symbols = {
         gen2 = "THICK_CLUB",
+        gen3 = "THICK_CLUB",
       },
     },
     thunder_stone = {
@@ -1870,11 +2333,19 @@ return {
         gen1 = "TOWN_MAP",
       },
     },
+    tropic_mail = {
+      class = "held",
+      hiddenOnly = true,
+      symbols = {
+        gen3 = "TROPIC_MAIL",
+      },
+    },
     twisted_spoon = {
       class = "held",
       cobblemon = "twisted_spoon",
       symbols = {
         gen2 = "TWISTEDSPOON",
+        gen3 = "TWISTED_SPOON",
       },
     },
     ultra_ball = {
@@ -1891,6 +2362,7 @@ return {
       cobblemon = "upgrade",
       symbols = {
         gen2 = "UP_GRADE",
+        gen3 = "UP_GRADE",
       },
     },
     water_stone = {
@@ -1902,10 +2374,52 @@ return {
         gen3 = "WATER_STONE",
       },
     },
+    watmel_berry = {
+      class = "held",
+      cobblemon = "watmel_berry",
+      symbols = {
+        gen3 = "WATMEL_BERRY",
+      },
+    },
+    wave_mail = {
+      class = "held",
+      hiddenOnly = true,
+      symbols = {
+        gen3 = "WAVE_MAIL",
+      },
+    },
+    wepear_berry = {
+      class = "held",
+      cobblemon = "wepear_berry",
+      symbols = {
+        gen3 = "WEPEAR_BERRY",
+      },
+    },
     white_apricorn = {
       class = "valuable",
       symbols = {
         gen2 = "WHT_APRICORN",
+      },
+    },
+    white_herb = {
+      class = "held",
+      cobblemon = "white_herb",
+      symbols = {
+        gen3 = "WHITE_HERB",
+      },
+    },
+    wiki_berry = {
+      class = "held",
+      cobblemon = "wiki_berry",
+      symbols = {
+        gen3 = "WIKI_BERRY",
+      },
+    },
+    wood_mail = {
+      class = "held",
+      hiddenOnly = true,
+      symbols = {
+        gen3 = "WOOD_MAIL",
       },
     },
     x_accuracy = {

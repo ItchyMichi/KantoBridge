@@ -404,7 +404,10 @@ function Party3.install(b)
     end
     local nick = type(mon.nickname) == "string" and mon.nickname ~= "" and mon.nickname or nil
     local ot = type(mon.otName) == "string" and mon.otName or (type(mon.ot) == "string" and mon.ot or nil)
-    return { species = species, dex = floor(dex), level = tonumber(mon.level), moves = moves, ivs = ivs, nick = nick, ot = ot }
+    -- FP4 (§5): the held item, when Cobblemon has one for it
+    local held = type(b.heldCanonical) == "function" and b.heldCanonical(mon.item or mon.heldItem) or false
+    return { species = species, dex = floor(dex), level = tonumber(mon.level), moves = moves, ivs = ivs, nick = nick, ot = ot,
+             item = held ~= "hidden" and held or nil }
   end
 
   -- Where a gift's record sits in the hidden boxes (session.storage.boxes[n].mons, storage.lua:57-72): the
@@ -577,6 +580,7 @@ function Party3.install(b)
           out[#out + 1] = {
             give = g.give, serial = g.serial, state = g.state, sentGen = g.sentGen, syncs = g.syncs, box = g.box,
             source = g.source, dex = f.dex, level = f.level, moves = f.moves, ivs = f.ivs, nick = f.nick, ot = f.ot,
+            item = f.item or nil,
           }
         end
       end
@@ -720,6 +724,14 @@ function Party3.install(b)
     end
     mon.status = e.status
     mon.nickname = type(e.nick) == "string" and e.nick or ""
+    -- FP4 (§5): Cobblemon's held item (an entry with details always says whether it is shiny); a hidden-only
+    -- item (Mail, ...) stays while Cobblemon's member holds nothing
+    if (e.item ~= nil or e.shiny ~= nil) and type(b.heldNumber) == "function" then
+      if not (e.item == nil and b.heldCanonical(mon.item or mon.heldItem) == "hidden") then
+        local n = e.item ~= nil and b.heldNumber(e.item) or nil
+        mon.item, mon.heldItem = n, n
+      end
+    end
     -- FP3 (§3.1, Q20): Cobblemon's stats on every record that has them (the wrapper keeps them)
     if type(e.stats) == "table" then
       local p = e.stats
@@ -1088,8 +1100,9 @@ function Party3.install(b)
           if n and n >= 1 then moves[#moves + 1] = floor(n) end
         end
         local f = tonumber(mon.friendship or mon.happiness)
+        local item = type(b.heldCanonical) == "function" and b.heldCanonical(mon.item or mon.heldItem) or false
         out[#out + 1] = { uid = uid, hp = tonumber(mon.hp), status = factStatus(mon),
-                          friendship = f and floor(f) or nil, moves = moves }
+                          friendship = f and floor(f) or nil, moves = moves, item = item }
       end
     end
     return out, s

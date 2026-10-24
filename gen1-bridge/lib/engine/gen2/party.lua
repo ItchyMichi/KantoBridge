@@ -809,7 +809,10 @@ function Party2.install(b)
     mon.nickname = type(e.nick) == "string" and e.nick ~= "" and e.nick or nil
     -- (MG9 G2F) the held item and friendship Cobblemon's member has: an entry with details (a client that sends them
     -- always says whether it is shiny) sets the item, none when it names none or one this game lacks
-    if e.item ~= nil or e.shiny ~= nil then mon.item = b.itemSymbol(e.item) end
+    if e.item ~= nil or e.shiny ~= nil then
+      -- FP4 (§5): a hidden-only item (Mail, ...) stays while Cobblemon's member holds nothing
+      if not (e.item == nil and mon.item ~= nil and b.heldHiddenOnly(mon.item)) then mon.item = b.itemSymbol(e.item) end
+    end
     if tonumber(e.friendship) then mon.happiness = floor(e.friendship) end
     -- FP3 (§3.1, Q20): Cobblemon's stats on every record that has them; a visitor's name, types and gender
     if type(e.stats) == "table" then
@@ -1146,8 +1149,14 @@ function Party2.install(b)
           local n = type(mv) == "table" and b.adapter.moveNumOf(mv.id) or nil
           if n then moves[#moves + 1] = n end
         end
+        -- the held item as its canonical id (false: none; hidden: a hidden-only one, never forwarded)
+        local item = false
+        if type(mon.item) == "string" and mon.item ~= "" and mon.item ~= "NO_ITEM" then
+          item = b.heldHiddenOnly(mon.item) and "hidden" or (b.canonicalItem(mon.item) or "hidden")
+        end
         out[#out + 1] = { uid = uid, hp = tonumber(mon.hp), status = FACT_STATUS[mon.status] or "none",
-                          friendship = tonumber(mon.happiness) and floor(mon.happiness) or nil, moves = moves }
+                          friendship = tonumber(mon.happiness) and floor(mon.happiness) or nil, moves = moves,
+                          item = item }
       end
     end
     return out, s

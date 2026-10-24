@@ -80,6 +80,15 @@ function Items2.install(b)
 
   -- MG9 (G2F): a held item between the game's symbol and the catalogue's canonical id (the protocol's), or nil for
   -- one the catalogue doesn't know
+  -- FP4 (§5): an item a member keeps in the hidden game whatever Cobblemon's member holds (Mail, anything the
+  -- catalogue maps to no Cobblemon item, anything it doesn't know)
+  function b.heldHiddenOnly(sym)
+    if type(sym) ~= "string" then return false end
+    local cid = b.adapter.itemTable()[sym]
+    local entry = type(cid) == "string" and catalogue()[cid] or nil
+    return not (type(entry) == "table" and entry.hiddenOnly ~= true and type(entry.cobblemon) == "string")
+  end
+
   function b.canonicalItem(sym)
     if type(sym) ~= "string" then return nil end
     local cid = b.adapter.itemTable()[sym]

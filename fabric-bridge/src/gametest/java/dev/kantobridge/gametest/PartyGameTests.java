@@ -468,6 +468,40 @@ public class PartyGameTests implements FabricGameTest {
 	}
 
 	/**
+	 * FP4 (§5, Q5): GIVE and TAKE in the hidden party menu set Cobblemon's held item (a new stack of the catalogue's item, or
+	 * none); an item the region's game can't show goes back to the player's inventory instead of being lost; an id once.
+	 */
+	@GameTest(template = EMPTY_STRUCTURE, batch = BATCH)
+	public void giveAndTakeSetCobblemonsHeldItem(GameTestHelper helper) {
+		RelayService relay = RelayService.get();
+		MockPlayers.with(helper, player -> RelayTap.capture(player, sent -> {
+			PlayerPartyStore party = PlayerExtensionsKt.party(player);
+			Pokemon rattata;
+			try {
+				rattata = Gen1Mons.gift(new Gen1Mon(19, 20, List.of(33, 39), null));
+			} catch (Gen1Mons.Missing e) {
+				throw new GameTestAssertException("Cobblemon lacks " + e.code());
+			}
+			party.add(rattata);
+			String uid = rattata.getUuid().toString();
+			relay.receive(player, envelope(1, MsgTypes.PARTY_HOLD, "{\"uid\":\"" + uid + "\",\"id\":\"e-h-1\",\"item\":\"leftovers\"}"));
+			net.minecraft.resources.ResourceLocation held = net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(rattata.heldItem().getItem());
+			helper.assertTrue(held.getPath().equals("leftovers"), "held " + held);
+			// TAKE (untagged: Blue's family, which shows no held item: the Leftovers come back to the inventory)
+			int before = player.getInventory().countItem(rattata.heldItem().getItem());
+			net.minecraft.world.item.Item leftovers = rattata.heldItem().getItem();
+			relay.receive(player, envelope(2, MsgTypes.PARTY_HOLD, "{\"uid\":\"" + uid + "\",\"id\":\"e-h-2\",\"item\":null}"));
+			helper.assertTrue(rattata.heldItem().isEmpty(), "TAKE left " + rattata.heldItem());
+			helper.assertTrue(player.getInventory().countItem(leftovers) == before + 1, "the invisible item was lost");
+			relay.receive(player, envelope(3, MsgTypes.PARTY_HOLD, "{\"uid\":\"" + uid + "\",\"id\":\"e-h-1\",\"item\":\"leftovers\"}"));
+			helper.assertTrue(rattata.heldItem().isEmpty(), "a repeated id applied again");
+			helper.assertTrue(PartyService.holdsApplied() >= 2, "holds weren't counted");
+			helper.assertTrue(sent.stream().noneMatch(message -> message.type().equals(MsgTypes.ERROR)), "a valid party.hold was refused");
+		}));
+		helper.succeed();
+	}
+
+	/**
 	 * M8 wave 2: a Safari Zone catch crosses over as a {@code native_catch} gift that belongs to the player, with the
 	 * nickname, moves and DVs it was caught with; an in-game trade sends one member away ({@code party.take}) and brings
 	 * one that keeps its NPC trainer and nickname. Neither doubles up when gen1-bridge repeats it, and the sync names them.

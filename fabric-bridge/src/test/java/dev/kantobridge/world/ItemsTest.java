@@ -55,7 +55,7 @@ class ItemsTest {
 		}
 		Items parsed = Items.parse(new String(file, StandardCharsets.UTF_8));
 		assertEquals(parsed.entries(), Items.bundled().entries());
-		assertEquals(268, Items.ids().size(), "MG6's 128, MG7's Sun Stone and 36 Gen 3 TMs, MG9's 103 Gen 2 items");
+		assertEquals(335, Items.ids().size(), "MG6's 128, MG7's Sun Stone and 36 Gen 3 TMs, MG9's 103 Gen 2 items, FP4's 67 held items");
 	}
 
 	@Test
@@ -165,6 +165,13 @@ class ItemsTest {
 		assertThrows(DataException.class, () -> Items.parse("{\"version\":1,\"items\":{\"potion\":{\"class\":\"medicine\",\"symbols\":{\"gen9\":\"POTION\"}}}}"));
 		assertThrows(DataException.class, () -> Items.parse("{\"version\":1,\"items\":{\"potion\":{\"class\":\"medicine\",\"symbols\":{},\"extra\":1}}}"));
 		assertThrows(DataException.class, () -> Items.parse("{\"version\":2,\"items\":{}}"));
+		// FP4: hiddenOnly is true or absent, and a hidden-only item has no Cobblemon item
+		Items mail = Items.parse("{\"version\":1,\"items\":{\"orange_mail\":{\"class\":\"held\",\"hiddenOnly\":true,\"symbols\":{\"gen3\":\"ORANGE_MAIL\"}}}}");
+		assertTrue(mail.entry("orange_mail").hiddenOnly());
+		assertThrows(DataException.class, () -> Items.parse("{\"version\":1,\"items\":{\"orange_mail\":{\"class\":\"held\",\"hiddenOnly\":false,\"symbols\":{\"gen3\":\"ORANGE_MAIL\"}}}}"));
+		assertThrows(DataException.class, () -> Items.parse("{\"version\":1,\"items\":{\"orange_mail\":{\"class\":\"held\",\"cobblemon\":\"x\",\"hiddenOnly\":true,\"symbols\":{\"gen3\":\"ORANGE_MAIL\"}}}}"));
+		assertTrue(Items.bundled().entry("flower_mail").hiddenOnly() && !Items.bundled().entry("leftovers").hiddenOnly());
+		assertEquals("leek", Items.bundled().canonical("gen3", "STICK"));
 		assertThrows(DataException.class, () -> Items.parse("{\"version\":1,\"items\":{}}"));
 		assertThrows(DataException.class, () -> Items.parse("not json"));
 	}

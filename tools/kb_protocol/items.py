@@ -33,12 +33,14 @@ class Item:
     cobblemon: str | None
     move: int | None
     symbols: dict
+    hidden_only: bool = False  # FP4: no Cobblemon item exists for it; a member keeps it in the hidden game
 
 
 class Items:
     def __init__(self, data):
         self.version = data["version"]
-        self.items = {i: Item(i, e["class"], e.get("cobblemon"), e.get("move"), dict(e["symbols"]))
+        self.items = {i: Item(i, e["class"], e.get("cobblemon"), e.get("move"), dict(e["symbols"]),
+                              e.get("hiddenOnly") is True)
                       for i, e in data["items"].items()}
 
     @property

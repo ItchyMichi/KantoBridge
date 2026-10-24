@@ -280,7 +280,7 @@ return function(mod)
       set = function(key, value) mod.save:set(key, value) end,
     },
     onOp = function() saves.opSent() end,
-    idPrefix = sessionId:sub(3, 10),
+    idPrefix = sessionId:sub(3, 10), null = kb.json.null,
   })
   -- M6: the bag's battle items mirrored into Minecraft (P17); MG6: every
   -- non-key catalogue item synced for the server's ledger, with the money

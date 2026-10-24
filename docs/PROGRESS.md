@@ -3285,6 +3285,37 @@ and the Deleter; an item never also a change; offline changes never sent; Crysta
 by what changed rather than by hooking each one, so any script that changes a member outside items is forwarded the
 same way.
 
+## Foreign Pokémon: FP4c, held items (2026-10-24)
+
+- **Catalogue** (`protocol/items.json`, 268 → 335 items): `symbols.gen3` on 45 of the 48 held items (Leek is Emerald's
+  `STICK`, Up-Grade its `UP_GRADE`; Berserk Gene and the two bows have no Gen 3 item); Emerald's own held items with
+  Cobblemon's item (Shell Bell, Silk Scarf, Choice Band, the White and Mental Herbs, the Deep Sea Tooth and Scale,
+  Soothe Bell, 31 Gen 3 berries); a new `hiddenOnly` flag (schema, Java `Items.Item.hiddenOnly`, Python `hidden_only`,
+  the generated `kb_items.lua`) on the items no Cobblemon item exists for: Crystal's ten and Emerald's twelve Mail,
+  the Macho Brace, Sea and Lax Incense, Soul Dew. Emerald's names come from the engine's constants
+  (`src/core/game3/constants/emerald/items.lua`, pokeemerald's public headers), as MG7's did; Cobblemon's items were
+  checked against its 1.8.1 jar.
+- **gen1-bridge**: the watcher (FP4b) also compares the held item (`partyFacts.item`: canonical id, false, or
+  `"hidden"`): GIVE/TAKE is `party.hold{uid, item | null, id}`; a hidden-only item (or one the catalogue maps to no
+  Cobblemon item, or doesn't know) is never sent either way, and a sync whose member holds nothing leaves it on the
+  record (Crystal and Emerald; §3.5's hidden-only state). Emerald's syncs now set the held item (`mon.item` and
+  `mon.heldItem`, by `symbols.gen3`) and its gifts carry it (`item`).
+- **Server** (`PartyService.onHold`): a GIVE holds a new stack of the catalogue's Cobblemon item (the hidden bag gave
+  the item up and the ledger reads that from the bag); a TAKE removes it; what Cobblemon's member held before goes
+  away (the hidden game put it in its bag) unless the region's game has no symbol for it (it was invisible there):
+  then it goes back to the player's inventory (`hold_returned_invisible`); an id applies once.
+
+**Tests.** pytest: Emerald's symbols, Cobblemon's items and the hidden-only list (`test_held_items_cross_into_emerald`).
+Lupa: Crystal's GIVE and TAKE through main.lua, Mail never sent and kept across a sync; Emerald's sync setting and
+clearing the held item, the Mail kept. JUnit: `hiddenOnly` true or absent, never beside a Cobblemon item. GameTest
+`giveAndTakeSetCobblemonsHeldItem` (GIVE, TAKE returning an invisible item, a repeated id). FP4's checks at the end:
+pytest 2,365 passed (68 e2e skipped); Lua 1,567; JUnit (every package, in chunks) 1,432 of 1,433, the one failure the
+old `KbPackReloadTest`; GameTests 129/129. Not yet run on the real engines (FP8's e2e covers items in each game).
+
+**Deviation.** §5.1's refusal of a hidden GIVE on a member that holds something invisible (the game's "already holding
+an item" line) is not done: the server returns the invisible item to the player's inventory instead, so nothing is lost.
+Emerald's other gift and sync details (shininess, gender, friendship, nature) stay FP7's.
+
 ## Pre-flight (PLAN §0.6)
 
 | Step | State |

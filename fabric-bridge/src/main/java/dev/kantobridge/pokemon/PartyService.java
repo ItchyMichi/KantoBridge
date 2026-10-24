@@ -149,6 +149,8 @@ public final class PartyService {
 		relay.register(MsgTypes.PARTY_CHANGE, PartyService::onChange);
 		relay.register(MsgTypes.PARTY_LEARN, PartyService::onLearn);
 		relay.register(MsgTypes.PARTY_FORGET, PartyService::onForget);
+		// §5, Q5 (FP4): GIVE and TAKE in the hidden party menu
+		relay.register(MsgTypes.PARTY_HOLD, PartyService::onHold);
 		// P16: nicknames change only through the Name Rater (and the catch or gift prompt), never Cobblemon's screens.
 		CobblemonEvents.POKEMON_NICKNAMED.subscribe(Priority.HIGHEST, event -> {
 			event.cancel();
@@ -651,6 +653,72 @@ public final class PartyService {
 		}
 		FORGOTTEN.incrementAndGet();
 		markDirty(player);
+	}
+
+	private static final AtomicLong HOLDS = new AtomicLong();
+
+	/**
+	 * §5 (Q5): GIVE or TAKE in the hidden party menu. The hidden bag already gave the item up (GIVE) or took it (TAKE),
+	 * and the ledger reads that from the bag, so Cobblemon's member holds a new stack of the catalogue's Cobblemon item, or
+	 * nothing. What it held before goes away (the hidden game put it in its bag), unless the region's game has no symbol
+	 * for it (it was invisible there): then it goes back to the player's inventory, never lost.
+	 */
+	static void onHold(ServerPlayer player, Envelope message) {
+		UUID uid;
+		String id;
+		String item;
+		try {
+			DataReader reader = DataReader.of(message.data(), "").allowOnly(Set.of("uid", "id", "item", "region"));
+			uid = UUID.fromString(reader.string("uid", Ids.UID));
+			id = reader.string("id", Ids.ID);
+			com.google.gson.JsonElement value = message.data().get("item");
+			if (value == null) {
+				throw new DataException(reader.path("item"), "required");
+			}
+			item = value.isJsonNull() ? null : reader.string("item", dev.kantobridge.world.Items.ITEM_ID);
+		} catch (DataException e) {
+			reject(player, message, "hold", e);
+			return;
+		}
+		Pokemon pokemon = effectTarget(player, uid, id, "hold");
+		if (pokemon == null) {
+			return;
+		}
+		ItemStack next = ItemStack.EMPTY;
+		if (item != null) {
+			String path = dev.kantobridge.world.Items.cobblemonPath(item);
+			Item cobblemon = path == null ? Items.AIR
+					: BuiltInRegistries.ITEM.get(ResourceLocation.fromNamespaceAndPath(GenOneIds.NAMESPACE, path));
+			if (cobblemon == Items.AIR) {
+				warn("hold_unsupported");
+				markDirty(player);
+				return;
+			}
+			next = new ItemStack(cobblemon);
+		}
+		ItemStack before = pokemon.heldItem();
+		if (!before.isEmpty()) {
+			String region = dev.kantobridge.server.Regions.tagOf(message.data());
+			String family = itemFamily(player, region);
+			ResourceLocation key = BuiltInRegistries.ITEM.getKey(before.getItem());
+			String canonical = key != null && GenOneIds.NAMESPACE.equals(key.getNamespace())
+					? dev.kantobridge.world.Items.bundled().byCobblemon(key.getPath()) : null;
+			if (canonical == null || dev.kantobridge.world.Items.symbolOf(family, canonical) == null) {
+				player.getInventory().placeItemBackInInventory(before.copy());
+				warn("hold_returned_invisible");
+			}
+		}
+		if (next.isEmpty()) {
+			pokemon.removeHeldItem();
+		} else {
+			pokemon.swapHeldItem(next, false, true);
+		}
+		HOLDS.incrementAndGet();
+		markDirty(player);
+	}
+
+	public static long holdsApplied() {
+		return HOLDS.get();
 	}
 
 	/** FP4: party.change, party.learn and party.forget applied. */

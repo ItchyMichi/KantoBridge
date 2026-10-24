@@ -446,7 +446,7 @@ function FakeBattle3.attach(E)
     ITEM_ = { [1] = "ITEM_TEST_BALL", [2] = "ITEM_TEST_POTION", [3] = "ITEM_TEST_KEY", [4] = "ITEM_none",
               [5] = "ITEM_POKE_BALL", [13] = "ITEM_POTION", [17] = "ITEM_PARALYZE_HEAL", [94] = "ITEM_FIRE_STONE",
               [68] = "ITEM_RARE_CANDY", [289] = "ITEM_TM01", [294] = "ITEM_TM06", [339] = "ITEM_HM01",
-              [259] = "ITEM_MACH_BIKE", [110] = "ITEM_NUGGET", [93] = "ITEM_SUN_STONE", [34] = "ITEM_ETHER" },
+              [259] = "ITEM_MACH_BIKE", [110] = "ITEM_NUGGET", [93] = "ITEM_SUN_STONE", [34] = "ITEM_ETHER", [200] = "ITEM_LEFTOVERS", [121] = "ITEM_ORANGE_MAIL" },
   }
   E.itemPockets[259], E.itemPockets[339] = "KEY_ITEMS", "TM_CASE"
   E.itemPockets[289], E.itemPockets[294] = "TM_CASE", "TM_CASE"

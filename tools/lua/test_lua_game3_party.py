@@ -492,3 +492,20 @@ def test_party_facts_read_the_status_as_a_symbol_or_the_gba_bitfield():
         f = plain(facts)[0]
         assert f["status"] == want, value
     assert f["moves"] == [33, 45]
+
+
+def test_emeralds_records_hold_cobblemons_item_and_hidden_only_ones_stay():
+    # FP4 (§5): Emerald's syncs carry the held item both ways through symbols.gen3; a hidden-only item stays
+    a, s = adapter()
+    a.eng.applyParty(a.lua([dict(entry(UID1, 4, 9), item="leftovers", shiny=False)]))
+    m = s.party[1]
+    facts, _ = a.eng.partyFacts()
+    assert plain(facts)[0]["item"] == "leftovers"
+    assert m.item == m.heldItem == 200
+    a.eng.applyParty(a.lua([dict(entry(UID1, 4, 9), shiny=False)]))
+    assert m.item is None, "Cobblemon's member holds nothing now"
+    m.item = 121                                     # Orange Mail: hidden-only
+    facts, _ = a.eng.partyFacts()
+    assert plain(facts)[0]["item"] == "hidden"
+    a.eng.applyParty(a.lua([dict(entry(UID1, 4, 9), shiny=False)]))
+    assert m.item == 121, "the Mail stays while Cobblemon's member holds nothing"

@@ -47,6 +47,34 @@ function Items3.install(b)
     return id
   end
 
+  -- FP4 (§5): held items both ways through the catalogue (symbols.gen3). A record's item (a number, or a symbol)
+  -- as its canonical id ("hidden" for one a member keeps in the hidden game: Mail, anything the catalogue maps
+  -- to no Cobblemon item, anything it doesn't know; false for none), and a canonical id as the engine's number
+  local function heldSym(v)
+    if type(v) == "string" then return v ~= "" and v ~= "NONE" and (v:gsub("^ITEM_", "")) or nil end
+    local n = tonumber(v)
+    if not n or n == 0 then return nil end
+    local C = b.constants()
+    local name = C and b.ask(C, "name", nil, C, "items", n, "ITEM_") or nil
+    return type(name) == "string" and (name:gsub("^ITEM_", "")) or nil
+  end
+  function b.heldCanonical(v)
+    local sym = heldSym(v)
+    if not sym then return false end
+    local cid
+    for id, entry in pairs(catalogue()) do
+      if type(entry) == "table" and type(entry.symbols) == "table" and entry.symbols[Items3.FAMILY] == sym then cid = id break end
+    end
+    local entry = cid and catalogue()[cid] or nil
+    if not (type(entry) == "table" and entry.hiddenOnly ~= true and type(entry.cobblemon) == "string") then return "hidden" end
+    return cid
+  end
+  function b.heldNumber(cid)
+    local entry = type(cid) == "string" and catalogue()[cid] or nil
+    local sym = type(entry) == "table" and type(entry.symbols) == "table" and entry.symbols[Items3.FAMILY] or nil
+    return sym and itemId(sym) or nil
+  end
+
   local function bag()
     local s = b.session()
     return type(s) == "table" and type(s.bag) == "table" and s.bag or nil, s
