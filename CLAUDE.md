@@ -43,6 +43,10 @@ Pokémon Red/Blue's story runs in a **hidden Gen1Recomp**. It is displayed and p
   v2 2026-10-24): a visitor record in every hidden game for each Cobblemon Pokémon that game lacks; combat stays
   Cobblemon's; its §2 rules R1–R6 and §10 decisions Q1–Q24 govern (each a default the user may change). It is the only guidance on foreign Pokémon: the user's earlier upload
   FOREIGN_POKEMON_AND_ITEMS.md (2026-10-13, Gen 1 only) is superseded; don't take guidance from it.
+- [`docs/specs/FIELD_MECHANICS_AUDIT_PLAN.md`](docs/specs/FIELD_MECHANICS_AUDIT_PLAN.md) is the audit of every tile
+  mechanic, in-visit script and field feature in all three games against Minecraft (FA0–FA8; rules A–F, decisions D1–D10;
+  proposed 2026-10-24): inventory from the engine's own data, a live sweep on the pod, collision parity on the real index,
+  then fixes per game. STORY_EVENTS_PLAN.md covers what entry scripts change; this covers what happens while moving.
 - `refs/_research/` (git-ignored) holds the research notes, with verified `file:line` references,
   that the plan cites.
 
