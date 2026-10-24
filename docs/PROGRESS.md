@@ -3947,6 +3947,43 @@ say how each was resolved:
 - daycare stranding (99);
 - other players' surfing (102).
 
+### Known bugs (2026-10-24)
+
+**B1. Crossing into a saved game that sits at its title empties the party** (reported by the user from play: "continuing
+one of the games before the other can cause a blank/empty"; the cause below is read in the code, not reproduced yet).
+
+- *What happens.* Both games run; the player continues and plays game A; game B was launched too but is still at its
+  title (it has a save, nobody has continued it yet). At the pass the client decides how to enter B from B's last
+  `game.status`, and at a title that says `playthrough: "title"` whether or not the slot holds a save
+  (`observe/kb_progress.lua`: `started` is `playthrough ≠ title`; at the title the save says nothing). The choreography
+  reads `title` as "never started" (`fabric-bridge/src/client/java/dev/kantobridge/client/zone/PassChoreography.java:252-262`)
+  and sends `party.stash`: the server moves **every party member into Cobblemon's PC** (`pokemon/StashService.java`,
+  D5, meant for a new story's starter). Then `region.start` finds the slot's save and **CONTINUEs** it
+  (`act/kb_region.lua:215`, `detail:"continue"`). B's saved game comes up with an empty party.
+- *Knock-on.* The emptied Cobblemon party goes out in `party.sync` to every link, parked A included, so A's hidden
+  party is emptied too (R1); a save made in either game afterwards keeps it empty. Nothing is lost: the Pokémon are in
+  Cobblemon's PC and the next withdrawal brings them back.
+- *Order matters.* Continuing B first and then crossing into A goes the same way the other round; only a far game that
+  was continued (or started) in this launch is resumed without the stash.
+- *Fix (not done).* Stash only before a **new** game: let `game.status` say whether the active slot holds a save (a new
+  optional field), or start first and stash only when `region.start` answers `detail:"new"` (before the starter's gift);
+  a GameTest/client test for a saved far game at its title, and the crossing e2e (`test_crossing_real.py`) with the far
+  game launched but not continued.
+
+**B2. CONTINUE picked on Blue's title from Minecraft never completes** (found by `tools/e2e/fp_stone.py`, run 2).
+
+- In a single-region world, Blue at its title with a saved slot: the client's pick of the title menu's first row goes
+  to gen1-bridge as `ui.pick`, and each one ends in `uiact.timeout type=ui.pick` (164 in one run); the game stays on the
+  title (mode busy). Gen 1's CONTINUE first shows the save summary box over the menu and waits for A there; the pick
+  presumably waits for the menu to close, which never happens (unconfirmed).
+- The test loaded the save through the engine's own CONTINUE in its driver (`kb_fpstone.lua`, as `kb_crash.lua` does)
+  to finish the user's check; a player has no such way round it. Crossings are not affected (`region.start` drives the
+  title itself).
+- *Fix (not done).* gen1-bridge's title pick: accept the summary box as the pick's result and answer it (or press A
+  for it), then an e2e of CONTINUE from the title through the client.
+
+B1 and B2 are different bugs; both are about entering a saved game from its title.
+
 ### Questions for you
 
 1. **Display options (from M7).** Gen1Recomp writes its live options on every save, so gen1-bridge's

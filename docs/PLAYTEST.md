@@ -1020,3 +1020,9 @@ FP1 only adds messages and fields; nothing in the game should look different yet
 - [ ] With gen1-bridge switched off, a Blue save with a visitor shows the LOST box report, and it comes back with the
       mod on (FP0's result, worth seeing once yourself).
 
+### Known bugs to watch (2026-10-24, PROGRESS.md "Known bugs")
+
+- [ ] **B1:** with both games launched, play one, then cross into the other while it still sits at its title: the
+      party arrives empty (it is in Cobblemon's PC). Tell me if this matches what you saw, or what was blank.
+- [ ] **B2:** CONTINUE on Blue's title from Minecraft hangs in a single-region world.
+
