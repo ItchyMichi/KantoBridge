@@ -4492,6 +4492,28 @@ function Gen1.new(opts)
     return out, save
   end
 
+  -- FP4 (§4.3, §4.5): what kb_party watches for party.change, party.learn
+  -- and party.forget on the members with a uid: { { uid, hp, status
+  -- (protocol: slp psn brn frz par, or "none"), moves (numbers) } } (Gen 1
+  -- has no friendship), and the save they belong to.
+  local FACT_STATUS = { SLP = "slp", PSN = "psn", BRN = "brn", FRZ = "frz", PAR = "par", TOX = "psn" }
+  function engine.partyFacts()
+    local save = engine.save()
+    local out = {}
+    for _, mon in ipairs(save and type(save.party) == "table" and save.party or {}) do
+      local uid = monUid[mon]
+      if uid then
+        local moves = {}
+        for _, mv in ipairs(type(mon.moves) == "table" and mon.moves or {}) do
+          local n = type(mv) == "table" and engine.moveNumOf(mv.id) or nil
+          if n then moves[#moves + 1] = n end
+        end
+        out[#out + 1] = { uid = uid, hp = tonumber(mon.hp), status = FACT_STATUS[mon.status] or "none", moves = moves }
+      end
+    end
+    return out, save
+  end
+
   -- Renames waiting for Minecraft (party.rename), in the process-lifetime
   -- slot so a hot reload keeps them; taken once each.
   function engine.queueRename(uid, nick)

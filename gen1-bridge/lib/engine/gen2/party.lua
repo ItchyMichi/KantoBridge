@@ -1132,6 +1132,27 @@ function Party2.install(b)
     return res
   end)
 
+  -- ---- what kb_party watches (FP4: party.change, party.learn, party.forget)
+
+  local FACT_STATUS = { sleep = "slp", poison = "psn", toxic = "psn", burn = "brn", freeze = "frz", paralyze = "par" }
+  def("partyFacts", function()
+    local p, s = party()
+    local out = {}
+    for _, mon in ipairs(p or {}) do
+      local uid = monUid[mon]
+      if uid and mon.isEgg ~= true then
+        local moves = {}
+        for _, mv in ipairs(type(mon.moves) == "table" and mon.moves or {}) do
+          local n = type(mv) == "table" and b.adapter.moveNumOf(mv.id) or nil
+          if n then moves[#moves + 1] = n end
+        end
+        out[#out + 1] = { uid = uid, hp = tonumber(mon.hp), status = FACT_STATUS[mon.status] or "none",
+                          friendship = tonumber(mon.happiness) and floor(mon.happiness) or nil, moves = moves }
+      end
+    end
+    return out, s
+  end)
+
   -- ---- nicknames (party.rename)
 
   def("partyNicks", function()

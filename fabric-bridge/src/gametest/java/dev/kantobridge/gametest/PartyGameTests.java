@@ -422,6 +422,52 @@ public class PartyGameTests implements FabricGameTest {
 	}
 
 	/**
+	 * FP4 (§4.3, §4.5): an effect outside items sets Cobblemon's HP, status and friendship; a tutor's move goes in the
+	 * replaced move's place, the Deleter's goes to the bench (never the last move); each id applies once.
+	 */
+	@GameTest(template = EMPTY_STRUCTURE, batch = BATCH)
+	public void changesLearnsAndForgetsReachCobblemon(GameTestHelper helper) {
+		RelayService relay = RelayService.get();
+		MockPlayers.with(helper, player -> RelayTap.capture(player, sent -> {
+			PlayerPartyStore party = PlayerExtensionsKt.party(player);
+			Pokemon rattata;
+			try {
+				rattata = Gen1Mons.gift(new Gen1Mon(19, 20, List.of(33, 39), null));
+			} catch (Gen1Mons.Missing e) {
+				throw new GameTestAssertException("Cobblemon lacks " + e.code());
+			}
+			party.add(rattata);
+			String uid = rattata.getUuid().toString();
+			relay.receive(player, envelope(1, MsgTypes.PARTY_CHANGE, "{\"uid\":\"" + uid + "\",\"id\":\"e-t-1\",\"hp\":7,\"status\":\"psn\",\"friendship\":120}"));
+			helper.assertTrue(rattata.getCurrentHealth() == 7, "HP " + rattata.getCurrentHealth());
+			helper.assertTrue(rattata.getStatus() != null && rattata.getStatus().getStatus() == com.cobblemon.mod.common.api.pokemon.status.Statuses.POISON,
+					"not poisoned");
+			helper.assertTrue(rattata.getFriendship() == 120, "friendship " + rattata.getFriendship());
+			rattata.setCurrentHealth(20);
+			relay.receive(player, envelope(2, MsgTypes.PARTY_CHANGE, "{\"uid\":\"" + uid + "\",\"id\":\"e-t-1\",\"hp\":7}"));
+			helper.assertTrue(rattata.getCurrentHealth() == 20, "a repeated id applied again");
+			relay.receive(player, envelope(3, MsgTypes.PARTY_CHANGE, "{\"uid\":\"" + uid + "\",\"id\":\"e-t-2\",\"status\":\"none\"}"));
+			helper.assertTrue(rattata.getStatus() == null, "the status wasn't cleared");
+			// a tutor in place of Tail Whip, then the Deleter takes Tackle
+			relay.receive(player, envelope(4, MsgTypes.PARTY_LEARN, "{\"uid\":\"" + uid + "\",\"id\":\"e-t-3\",\"move\":34,\"forget\":39}"));
+			helper.assertTrue(Gen1Mons.moveNumbers(rattata).equals(List.of(33, 34)), "the tutor's move: " + Gen1Mons.moveNumbers(rattata));
+			relay.receive(player, envelope(5, MsgTypes.PARTY_FORGET, "{\"uid\":\"" + uid + "\",\"id\":\"e-t-4\",\"move\":33}"));
+			helper.assertTrue(Gen1Mons.moveNumbers(rattata).equals(List.of(34)), "the Deleter: " + Gen1Mons.moveNumbers(rattata));
+			boolean benched = false;
+			for (BenchedMove move : rattata.getBenchedMoves()) {
+				benched |= move.getMoveTemplate().getNum() == 33;
+			}
+			helper.assertTrue(benched, "the forgotten move isn't re-learnable");
+			long last = PartyService.warnings("forget_last_move");
+			relay.receive(player, envelope(6, MsgTypes.PARTY_FORGET, "{\"uid\":\"" + uid + "\",\"id\":\"e-t-5\",\"move\":34}"));
+			helper.assertTrue(Gen1Mons.moveNumbers(rattata).equals(List.of(34)) && PartyService.warnings("forget_last_move") == last + 1,
+					"the last move was forgotten");
+			helper.assertTrue(sent.stream().noneMatch(message -> message.type().equals(MsgTypes.ERROR)), "a valid message was refused");
+		}));
+		helper.succeed();
+	}
+
+	/**
 	 * M8 wave 2: a Safari Zone catch crosses over as a {@code native_catch} gift that belongs to the player, with the
 	 * nickname, moves and DVs it was caught with; an in-game trade sends one member away ({@code party.take}) and brings
 	 * one that keeps its NPC trainer and nickname. Neither doubles up when gen1-bridge repeats it, and the sync names them.

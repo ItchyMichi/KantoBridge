@@ -656,6 +656,11 @@ a machine names the move it replaced (`forget`). The server applies Cobblemon's 
 mirror's item, else Cobblemon's item of the same canonical id; a revive brings back half the HP, a Max Revive all of
 it), ignores an id it already applied, and answers a refusal with `act.result{kind:"item", ok:false, reason, id}` (re:
 the item's seq), which the client relays to the link that sent the item as the reply to that `party.item`.
+**FP4 (effects and moves, all three games):** gen1-bridge compares each member with a uid against its last look (after a
+sync, a heal or a new save; not while no client follows, and not on a member an item was just used on): changed HP,
+status or friendship goes out as `party.change`, a move added as `party.learn` (with `forget`, the move it replaced), a
+move gone as `party.forget`, each with an `id` and re-sent like an item. The server sets the value (HP within Cobblemon's
+maximum, `status:"none"` clears), teaches as a machine does, or benches the move (never the last one); an id applies once.
 
 Species travel as national dex numbers (defs `nationalDex`), moves as Showdown numbers (defs
 `moveNum`; Gen 1's move ids are the same numbers), items as engine symbols, and Pokémon identities

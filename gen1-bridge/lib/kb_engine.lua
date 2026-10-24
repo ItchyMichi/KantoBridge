@@ -79,7 +79,9 @@ Engine.GROUPS = {
              "takeSave", "queuedSaveSerial", "saveSlot", "pcItems", "pcPending", "pcSent", "pcClose", "pcHeld",
              "pcCounts" },
   battles = { "worldTalk", "directStepped", "directPushed", "nativeCaught", "releaseCatches", "daycareStep",
-              "daycareUid", "partyNicks", "queueRename", "takeRenames", "contentCounts" },
+              "daycareUid", "partyNicks", "queueRename", "takeRenames", "contentCounts",
+              -- FP4: what kb_party watches for party.change, party.learn, party.forget
+              "partyFacts" },
   story = { "capturePristine", "pristineBlocks", "pristineCaptured", "pristineBlockAt", "storyMap", "liveBlocks",
             "liveBlockChanges", "cutRecords", "cutSwaps", "swapField", "storyToggles", "fieldAction",
             -- MG7 (G3C): Gen 3's runtime terrain, the current map's changed cells (gen1: none)
@@ -192,7 +194,7 @@ local function stub(opts, id, requireFn)
     -- lists and counts the acts read every step
     gifts = empty, ops = empty, takeItemUses = empty, takeRenames = empty, partyUids = empty, excludedUids = empty,
     daycareUids = empty,
-    partyNicks = empty, animatedTiles = empty, animationImages = empty, liveBlocks = empty, liveBlockChanges = empty,
+    partyNicks = empty, partyFacts = empty, animatedTiles = empty, animationImages = empty, liveBlocks = empty, liveBlockChanges = empty,
     storyToggles = empty, cutRecords = empty, cutSwaps = empty, pristineBlocks = empty,
     releaseCatches = function() return 0 end,
     takeHeals = function() return 0 end,

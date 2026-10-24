@@ -384,3 +384,65 @@ def test_a_refusal_from_cobblemon_ends_the_item():
     g.send("resync")
     g.run(2)
     assert len(items_raw(g)) == 1, "a refused item never goes again"
+
+
+# ------------------------------------------------------------ FP4b: effects and moves outside items (§4.3, §4.5)
+
+def effects(g, kind):
+    return [{k: v for k, v in m["data"].items() if k != "id"} for m in g.received(kind)]
+
+
+def test_an_effect_outside_items_goes_out_as_party_change():
+    # overworld poison: the hidden step's damage and the status (R6: Cobblemon sets the value)
+    g = items_game()
+    fox = mon(g, 0)
+    fox.hp = 7
+    fox.status = b"PSN"
+    g.run(2)
+    assert effects(g, "party.change") == [{"uid": U1, "hp": 7, "status": "psn"}]
+    ids = [m["data"]["id"] for m in g.received("party.change")]
+    assert ids[0].startswith("e-")
+    g.run(2)
+    assert len(g.received("party.change")) == 1, "once"
+    # a heal (party.heal) and a sync start the look again: nothing more
+    g.send("party.sync", {"party": [entry(U1, 37, 10, [N["EMBER_T"], N["TAIL_T"]]), entry(U2, 7, 12, [N["TACKLE_T"], N["TAIL_T"]])],
+                          "box": {"count": 0}})
+    g.run(3)
+    assert len(g.received("party.change")) == 1
+
+
+def test_tutors_the_deleter_and_the_reminder_go_out_as_learn_and_forget():
+    g = items_game()
+    bird = mon(g, 1)
+    tail = bird.moves[2]
+    bird.moves[2] = g.opts(id="SAND_T", pp=10)       # the Reminder: a move in another's place
+    g.run(2)
+    bird.moves[3] = g.opts(id="GROWL_T", pp=10)      # a tutor: a free slot
+    g.run(2)
+    del tail
+    bird.moves[3] = None                              # the Deleter
+    g.run(2)
+    assert effects(g, "party.learn") == [{"uid": U2, "move": N["SAND_T"], "forget": N["TAIL_T"]},
+                                         {"uid": U2, "move": N["GROWL_T"]}]
+    assert effects(g, "party.forget") == [{"uid": U2, "move": N["GROWL_T"]}]
+    st = g.status()
+    assert st["partyLearns"] == 2 and st["partyForgets"] == 1
+
+
+def test_an_item_on_a_member_is_never_also_a_change():
+    g = items_game(party=[entry(U1, 37, 10, [N["EMBER_T"], N["TAIL_T"]], hp=5, maxhp=40)])
+    stock(g, POTION=1)
+    g.E.useItem(b"POTION", mon(g, 0))
+    g.run(3)
+    assert len(items_sent(g)) == 1 and effects(g, "party.change") == []
+
+
+def test_without_a_client_nothing_is_watched():
+    g = items_game()
+    g.peer.close()
+    g.rig.step(2)
+    mon(g, 0).hp = 3
+    g.rig.step(3)
+    g.connect()
+    g.run(3)
+    assert effects(g, "party.change") == [], "what happened offline isn't sent later"

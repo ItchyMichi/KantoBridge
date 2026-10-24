@@ -145,6 +145,10 @@ public final class PartyService {
 		relay.register(MsgTypes.PARTY_ITEM, PartyService::onItem);
 		// FOREIGN_POKEMON_PLAN §4.1, Q16 (FP2): a SWITCH in the hidden party menu
 		relay.register(MsgTypes.PARTY_ORDER, PartyService::onOrder);
+		// §4.3, §4.5 (FP4): effects outside items, tutors, the Deleter and the Reminder
+		relay.register(MsgTypes.PARTY_CHANGE, PartyService::onChange);
+		relay.register(MsgTypes.PARTY_LEARN, PartyService::onLearn);
+		relay.register(MsgTypes.PARTY_FORGET, PartyService::onForget);
 		// P16: nicknames change only through the Name Rater (and the catch or gift prompt), never Cobblemon's screens.
 		CobblemonEvents.POKEMON_NICKNAMED.subscribe(Priority.HIGHEST, event -> {
 			event.cancel();
@@ -498,6 +502,168 @@ public final class PartyService {
 			dev.kantobridge.server.Regions.tag(data, player.server, region);
 			RelayService.get().send(player, MsgTypes.ACT_RESULT, data, message.seq());
 		}
+	}
+
+	// ---- party.change, party.learn, party.forget (FP4) ----
+
+	private static final AtomicLong CHANGES = new AtomicLong();
+	private static final AtomicLong LEARNED = new AtomicLong();
+	private static final AtomicLong FORGOTTEN = new AtomicLong();
+	/** The protocol's statuses (party.change.schema.json) and Cobblemon's; {@code none} clears. */
+	static final Map<String, com.cobblemon.mod.common.pokemon.status.PersistentStatus> STATUSES = Map.of(
+			"slp", com.cobblemon.mod.common.api.pokemon.status.Statuses.SLEEP,
+			"psn", com.cobblemon.mod.common.api.pokemon.status.Statuses.POISON,
+			"brn", com.cobblemon.mod.common.api.pokemon.status.Statuses.BURN,
+			"frz", com.cobblemon.mod.common.api.pokemon.status.Statuses.FROZEN,
+			"par", com.cobblemon.mod.common.api.pokemon.status.Statuses.PARALYSIS);
+
+	/** The Pokémon a party.change/learn/forget names once its id is new, or null (counted, a sync forced when unknown). */
+	private static @Nullable Pokemon effectTarget(ServerPlayer player, UUID uid, String id, String what) {
+		if (!firstItemId(player.getUUID(), id)) {
+			ITEMS_REPEATED.incrementAndGet();
+			return null;
+		}
+		Pokemon pokemon = find(player, uid);
+		if (pokemon == null) {
+			warn(what + "_unknown_uid");
+			markDirty(player);
+		}
+		return pokemon;
+	}
+
+	/**
+	 * §4.3 (Q17): an effect the hidden game had on a Pokémon outside items (overworld poison, the haircut brothers, a
+	 * massage): Cobblemon takes the value (HP clamped to its own maximum, the status, the friendship) and the next sync
+	 * shows it. An id applies once.
+	 */
+	static void onChange(ServerPlayer player, Envelope message) {
+		UUID uid;
+		String id;
+		Integer hp;
+		String status;
+		Integer friendship;
+		try {
+			DataReader reader = DataReader.of(message.data(), "").allowOnly(Set.of("uid", "id", "hp", "status", "friendship", "region"));
+			uid = UUID.fromString(reader.string("uid", Ids.UID));
+			id = reader.string("id", Ids.ID);
+			hp = reader.has("hp") ? reader.integer("hp", 0, 9999) : null;
+			status = reader.has("status") ? reader.string("status") : null;
+			if (status != null && !status.equals("none") && !STATUSES.containsKey(status)) {
+				throw new DataException(reader.path("status"), "unknown status");
+			}
+			friendship = reader.has("friendship") ? reader.integer("friendship", 0, 255) : null;
+		} catch (DataException e) {
+			reject(player, message, "change", e);
+			return;
+		}
+		Pokemon pokemon = effectTarget(player, uid, id, "change");
+		if (pokemon == null) {
+			return;
+		}
+		if (hp != null) {
+			pokemon.setCurrentHealth(Math.max(0, Math.min(hp, pokemon.getMaxHealth())));
+		}
+		if (status != null) {
+			if (status.equals("none")) {
+				pokemon.setStatus(null);
+			} else {
+				pokemon.applyStatus(STATUSES.get(status));
+			}
+		}
+		if (friendship != null) {
+			pokemon.setFriendship(friendship, true);
+		}
+		CHANGES.incrementAndGet();
+		markDirty(player);
+	}
+
+	/**
+	 * §4.5 (Q18): a Move Tutor or the Move Reminder taught a move in the hidden game: as a machine, into the slot of the
+	 * move it replaced ({@code forget}) or a free one, the replaced move benched.
+	 */
+	static void onLearn(ServerPlayer player, Envelope message) {
+		UUID uid;
+		String id;
+		int move;
+		Integer forget;
+		try {
+			DataReader reader = DataReader.of(message.data(), "").allowOnly(Set.of("uid", "id", "move", "forget", "region"));
+			uid = UUID.fromString(reader.string("uid", Ids.UID));
+			id = reader.string("id", Ids.ID);
+			move = reader.integer("move", 1, Gen1Mon.MAX_MOVE_NUM);
+			forget = reader.has("forget") ? reader.integer("forget", 1, Gen1Mon.MAX_MOVE_NUM) : null;
+		} catch (DataException e) {
+			reject(player, message, "learn", e);
+			return;
+		}
+		Pokemon pokemon = effectTarget(player, uid, id, "learn");
+		if (pokemon == null) {
+			return;
+		}
+		String refusal = teachOrWhy(pokemon, move, null, forget);
+		if (refusal != null) {
+			warn("learn_" + refusal);
+		} else {
+			LEARNED.incrementAndGet();
+		}
+		markDirty(player);
+	}
+
+	/** §4.5 (Q18): the Move Deleter: the move goes to the bench (re-learnable from Cobblemon's summary); never the last one. */
+	static void onForget(ServerPlayer player, Envelope message) {
+		UUID uid;
+		String id;
+		int move;
+		try {
+			DataReader reader = DataReader.of(message.data(), "").allowOnly(Set.of("uid", "id", "move", "region"));
+			uid = UUID.fromString(reader.string("uid", Ids.UID));
+			id = reader.string("id", Ids.ID);
+			move = reader.integer("move", 1, Gen1Mon.MAX_MOVE_NUM);
+		} catch (DataException e) {
+			reject(player, message, "forget", e);
+			return;
+		}
+		Pokemon pokemon = effectTarget(player, uid, id, "forget");
+		if (pokemon == null) {
+			return;
+		}
+		MoveSet moves = pokemon.getMoveSet();
+		int slot = -1;
+		for (int i = 0; i < MoveSet.MOVE_COUNT && slot < 0; i++) {
+			Move known = moves.get(i);
+			if (known != null && known.getTemplate().getNum() == move) {
+				slot = i;
+			}
+		}
+		if (slot < 0 || moves.getMoves().size() <= 1) {
+			warn(slot < 0 ? "forget_not_known" : "forget_last_move");
+			markDirty(player);
+			return;
+		}
+		Move gone = moves.get(slot);
+		pokemon.getBenchedMoves().add(new BenchedMove(gone.getTemplate(), gone.getRaisedPpStages()));
+		moves.setMove(slot, null);
+		// the hidden game shifts the rest up; Cobblemon's slots follow
+		for (int i = slot; i < MoveSet.MOVE_COUNT - 1; i++) {
+			if (moves.get(i) == null && moves.get(i + 1) != null) {
+				moves.swapMove(i, i + 1);
+			}
+		}
+		FORGOTTEN.incrementAndGet();
+		markDirty(player);
+	}
+
+	/** FP4: party.change, party.learn and party.forget applied. */
+	public static long changesApplied() {
+		return CHANGES.get();
+	}
+
+	public static long movesLearned() {
+		return LEARNED.get();
+	}
+
+	public static long movesForgotten() {
+		return FORGOTTEN.get();
 	}
 
 	/** True the first time a player's item id comes (FP4: an id is applied once); the newest {@link #ITEM_IDS_KEPT} are kept. */

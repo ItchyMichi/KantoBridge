@@ -480,3 +480,15 @@ def test_main_makes_visitors_of_what_emerald_lacks_and_drops_moves_past_its_ceil
     got = pump(rig, peer, lambda m: m["type"] == "snapshot")
     snap = next(m for m in got if m["type"] == "snapshot")["data"]
     assert [(p["dex"], p.get("visitor", False)) for p in snap["party"]] == [(254, False), (427, True), (0, True), (351, True)]
+
+
+def test_party_facts_read_the_status_as_a_symbol_or_the_gba_bitfield():
+    a, s = adapter()
+    a.eng.applyParty(a.lua([entry(UID1, 4, 9, moves=(33, 45))]))
+    m = s.party[1]
+    for value, want in ((b"PSN", "psn"), (8, "psn"), (128, "psn"), (16, "brn"), (64, "par"), (3, "slp"), (0, "none")):
+        m.status = value
+        facts, _ = a.eng.partyFacts()
+        f = plain(facts)[0]
+        assert f["status"] == want, value
+    assert f["moves"] == [33, 45]

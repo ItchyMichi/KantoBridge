@@ -396,8 +396,10 @@ function Party.new(opts)
   local markup = opts.markup or function(s) return s, 0 end
   local onOp = opts.onOp or function() end
   local idPrefix = type(opts.idPrefix) == "string" and opts.idPrefix:gsub("[^%w]", "") or "x"
-  local itemsOut, itemSerial = {}, 0 -- FP4: party.items sent and not settled yet
-  local itemsSynced -- FP4: defined with sendItems, called by apply
+  local itemsOut, itemSerial = {}, 0 -- FP4: party.items (and party.change/learn/forget) sent and not settled yet
+  local effectSerial = 0
+  local facts, factSave = {}, nil   -- FP4: the last look at the members (engine.partyFacts)
+  local itemsSynced, reseedFacts -- FP4: defined with sendItems, called by apply
   local party = {}
   local pending   -- the newest party.sync waiting for a safe moment
   local lastSync  -- the last one applied (applied again after New Game / CONTINUE)
@@ -411,7 +413,7 @@ function Party.new(opts)
     visitorsNow = 0, -- FP2: members the last applied sync made visitors
     orders = 0, ordersConfirmed = 0, -- FP2: party.order
     dexSyncs = 0, dexApplied = 0, dexAddedSeen = 0, dexAddedOwned = 0, dexUnknown = 0, dexBeyond = 0,
-    items = 0, itemsBad = 0, itemsResent = 0, itemsRefused = 0,
+    items = 0, itemsBad = 0, itemsResent = 0, itemsRefused = 0, changes = 0, learns = 0, forgets = 0,
     -- M8 (wave 2)
     takes = 0, deposits = 0, withdraws = 0, opsResent = 0, opsConfirmed = 0, opsGivenUp = 0,
     excluded = 0, renames = 0, catches = 0,
@@ -706,6 +708,7 @@ function Party.new(opts)
     reseedNicks()
     lastSync = data
     itemsSynced()
+    reseedFacts()
     if log then
       log.info("party.synced", { size = res.size, created = res.created, matched = res.matched,
                                  kept = res.kept, count = counts.applied })
@@ -753,8 +756,10 @@ function Party.new(opts)
   -- after a snapshot or on a new connection until a party.sync follows it
   -- (Party.ITEM_SETTLE seconds after it went, or the second sync without a
   -- clock); a refusal (act.result{kind:"item"}) ends it too.
-  local function sendItems(out, link)
+  local function collectItems()
+    local touched = {}
     for _, use in ipairs(engine.takeItemUses()) do
+      if type(use) == "table" and type(use.uid) == "string" then touched[use.uid] = true end
       local data = Party.itemData(use, compat)
       if data and data.kind == "medicine" and type(engine.itemTable) == "function" then
         local okT, table_ = pcall(engine.itemTable)
@@ -764,20 +769,84 @@ function Party.new(opts)
       if data then
         itemSerial = itemSerial + 1
         data.id = ("i-%s-%d"):format(idPrefix, itemSerial)
-        itemsOut[#itemsOut + 1] = { data = data, state = "new", syncs = 0 }
+        itemsOut[#itemsOut + 1] = { msg = "party.item", data = data, state = "new", syncs = 0 }
       else
         counts.itemsBad = counts.itemsBad + 1
         if log then log.warn("party.item_unsendable", { count = counts.itemsBad }) end
       end
     end
+    return touched
+  end
+
+  -- FP4 (§4.3, §4.5): what the hidden game did to a member outside items, a
+  -- sync and a heal (engine.partyFacts against the last look): HP, status
+  -- or friendship changed is party.change; a move added is party.learn (with
+  -- the one it replaced), a move gone party.forget. Each has an id and goes
+  -- like an item. The look starts again after a sync, a heal, a new save and
+  -- while no client follows; a member an item was used on starts again too.
+  local function factsSeen(list)
+    local out = {}
+    for _, e in ipairs(list) do
+      out[e.uid] = { hp = e.hp, status = e.status, friendship = e.friendship, moves = e.moves or {} }
+    end
+    return out
+  end
+  function reseedFacts()
+    local list, save = engine.partyFacts()
+    facts, factSave = factsSeen(type(list) == "table" and list or {}), save
+  end
+  local function queueEffect(msg, data, field)
+    effectSerial = effectSerial + 1
+    data.id = ("e-%s-%d"):format(idPrefix, effectSerial)
+    itemsOut[#itemsOut + 1] = { msg = msg, data = data, state = "new", syncs = 0 }
+    counts[field] = counts[field] + 1
+  end
+  local function watchFacts(touched)
+    if not engine.partySafe() then return end
+    local list, save = engine.partyFacts()
+    if save ~= factSave or type(list) ~= "table" then
+      reseedFacts()
+      return
+    end
+    local now = factsSeen(list)
+    for uid, f in pairs(now) do
+      local was = facts[uid]
+      if was and not touched[uid] then
+        local change = { uid = uid }
+        if f.hp ~= nil and f.hp ~= was.hp then change.hp = math.max(0, math.floor(f.hp)) end
+        if f.status ~= was.status and f.status ~= nil then change.status = f.status end
+        if f.friendship ~= nil and was.friendship ~= nil and f.friendship ~= was.friendship then
+          change.friendship = math.max(0, math.min(255, f.friendship))
+        end
+        if change.hp or change.status or change.friendship then queueEffect("party.change", change, "changes") end
+        local had, has = {}, {}
+        for _, n in ipairs(was.moves) do had[n] = true end
+        for _, n in ipairs(f.moves) do has[n] = true end
+        local added, removed = {}, {}
+        for _, n in ipairs(f.moves) do if not had[n] and whole(n, 1, maxMove) then added[#added + 1] = n end end
+        for _, n in ipairs(was.moves) do if not has[n] and whole(n, 1, maxMove) then removed[#removed + 1] = n end end
+        for i, n in ipairs(added) do
+          queueEffect("party.learn", { uid = uid, move = n, forget = removed[i] }, "learns")
+        end
+        for i = #added + 1, #removed do queueEffect("party.forget", { uid = uid, move = removed[i] }, "forgets") end
+      end
+    end
+    facts = now
+  end
+
+  local function sendItems(out, link)
     for _, it in ipairs(itemsOut) do
       if it.state == "new" or resend or it.gen ~= link.generation then
-        out[#out + 1] = { "party.item", it.data, "party" }
+        out[#out + 1] = { it.msg, it.data, "party" }
         if it.state == "new" then
-          counts.items = counts.items + 1
-          if log then
-            log.info("party.item", { kind = it.data.kind or (it.data.move and "machine" or "item"), slot = it.data.slot,
-                                     count = counts.items })
+          if it.msg == "party.item" then
+            counts.items = counts.items + 1
+            if log then
+              log.info("party.item", { kind = it.data.kind or (it.data.move and "machine" or "item"), slot = it.data.slot,
+                                       count = counts.items })
+            end
+          elseif log then
+            log.info(it.msg, { count = counts.changes + counts.learns + counts.forgets })
           end
         else
           counts.itemsResent = counts.itemsResent + 1
@@ -994,9 +1063,13 @@ function Party.new(opts)
         out[#out + 1] = { "party.heal", {}, "party" }
         counts.heals = counts.heals + 1
       end
+      local touched = collectItems()
+      if heals > 0 then reseedFacts() else watchFacts(touched) end
       sendItems(out, link)
       sendRenames(out)
       resend = false
+    else
+      reseedFacts()
     end
     -- M9: while a save-slot switch waits (link.blocked), the new world's
     -- syncs wait for the game they belong to

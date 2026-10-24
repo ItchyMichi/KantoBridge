@@ -3261,6 +3261,30 @@ Revive, then three refusals with reason, id and re. pytest 2,358 passed (68 e2e 
 will rise!"); Blue and Emerald close the menu without one. 2. Emerald's Rare Candy still levels the record natively
 (its party menu does that inline); the sync rewrites it.
 
+## Foreign Pokémon: FP4b, effects and moves outside items (2026-10-24)
+
+- **gen1-bridge** (`act/kb_party.lua`): one watcher for every game. Each adapter's new `partyFacts` gives the members
+  with a uid as `{ uid, hp, status, friendship, moves }` (status in the protocol's names: Blue's symbols, Crystal's
+  words, Emerald's symbol or GBA bitfield; Blue has no friendship). Against the last look: HP, status or friendship
+  changed is `party.change` (overworld poison, the haircut brothers, the massage, anything else a script does), a move
+  added `party.learn` (a tutor; with `forget` when it took a move's place: the Move Reminder), a move gone
+  `party.forget` (the Deleter). Ids `e-<start token>-<n>`, sent and settled with the items. The look starts again after
+  a sync, a heal and a new save, every step while no client follows (nothing done offline goes later), and for a member
+  an item was used on that step (the item already says it).
+- **Server** (`PartyService.onChange/onLearn/onForget`): HP clamped to Cobblemon's maximum, the status
+  (`Statuses`; `none` clears), the friendship; a learn is taught as a machine (`teachOrWhy`); a forget benches the move
+  and closes the gap, never the last move (`forget_last_move`); an id applies once (the same per-player set as items);
+  each forces a sync.
+
+**Tests.** Lupa: poison HP and status as one change, once; a sync and a heal start the look again; the Reminder, a tutor
+and the Deleter; an item never also a change; offline changes never sent; Crystal's and Emerald's `partyFacts`
+(statuses, friendship, move numbers; Emerald's bitfield). GameTest `changesLearnsAndForgetsReachCobblemon`. Lua
+1,562 passed; GameTests 128/128.
+
+**Deviation.** The plan names the sources (poison, haircut, massage, tutors, Deleter, Reminder); the watcher catches them
+by what changed rather than by hooking each one, so any script that changes a member outside items is forwarded the
+same way.
+
 ## Pre-flight (PLAN §0.6)
 
 | Step | State |

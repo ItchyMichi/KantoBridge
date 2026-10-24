@@ -375,3 +375,13 @@ def test_main_makes_visitors_of_what_crystal_lacks_and_drops_moves_past_its_ceil
                 snap = m["data"]
     assert [(q["dex"], q.get("visitor", False)) for q in snap["party"]] == [
         (152, False), (300, True), (0, True), (19, True), (201, False)]
+
+
+def test_party_facts_carry_protocol_statuses_friendship_and_move_numbers():
+    # FP4: what kb_party watches for party.change, party.learn and party.forget
+    a, _ = setup()
+    (mon,) = seed(a, [("TEST_CHIKORITA", 5, UID1)])
+    mon.status, mon.happiness = b"poison", 90
+    facts, _save = a.eng.partyFacts()
+    f = plain(facts)[0]
+    assert (f["uid"], f["status"], f["friendship"]) == (UID1, "psn", 90) and all(isinstance(n, int) for n in f["moves"])

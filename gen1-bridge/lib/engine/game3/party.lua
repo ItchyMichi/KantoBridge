@@ -1060,6 +1060,41 @@ function Party3.install(b)
     return res
   end)
 
+  -- ---- what kb_party watches (FP4: party.change, party.learn, party.forget)
+
+  -- a record's status: the symbol, or the GBA bitfield (sleep turns in bits 0-2, then PSN BRN FRZ PAR TOX;
+  -- item_use.lua:102-111 reads both)
+  local FACT_STATUS = { SLP = "slp", PSN = "psn", BRN = "brn", FRZ = "frz", PAR = "par", TOX = "psn" }
+  local function factStatus(mon)
+    local st = mon.status
+    if type(st) == "string" then return FACT_STATUS[st:upper()] or "none" end
+    local n = floor(tonumber(st) or 0)
+    if n % 8 > 0 or (tonumber(mon.sleep) or 0) > 0 then return "slp" end
+    if floor(n / 8) % 2 == 1 or floor(n / 128) % 2 == 1 then return "psn" end
+    if floor(n / 16) % 2 == 1 then return "brn" end
+    if floor(n / 32) % 2 == 1 then return "frz" end
+    if floor(n / 64) % 2 == 1 then return "par" end
+    return "none"
+  end
+  def("partyFacts", function()
+    local p, s = party()
+    local out = {}
+    for _, mon in ipairs(p or {}) do
+      local uid = monUid[mon]
+      if uid and mon.isEgg ~= true then
+        local moves = {}
+        for _, id in ipairs(type(mon.moves) == "table" and mon.moves or {}) do
+          local n = tonumber(type(id) == "table" and id.id or id)
+          if n and n >= 1 then moves[#moves + 1] = floor(n) end
+        end
+        local f = tonumber(mon.friendship or mon.happiness)
+        out[#out + 1] = { uid = uid, hp = tonumber(mon.hp), status = factStatus(mon),
+                          friendship = f and floor(f) or nil, moves = moves }
+      end
+    end
+    return out, s
+  end)
+
   -- ---- nicknames (party.rename)
 
   def("partyNicks", function()
