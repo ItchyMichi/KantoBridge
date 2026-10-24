@@ -951,6 +951,8 @@ local function liveVerdicts(game, ow)
   end
   local carpets = data.field.warpCarpets
   local walk, surf, stand = {}, {}, {}
+  -- surfing is possible only on the tilesets the field table names (OC:tilesetHasWater, :3318)
+  local surfable = inList(data.field.waterTilesets, def.tileset)
   local edgeWarps = array()
   local landing = {} -- per off-map step: OC.connectionLanding with a stand-in self (the real function, read-only)
 
@@ -1012,7 +1014,7 @@ local function liveVerdicts(game, ow)
       for x = 0, w - 1 do
         counts.cells = counts.cells + 1
         -- where a player can stand: . walkable, ~ water (surfable), # neither
-        stand[#stand + 1] = (m:isWalkableCell(x, y) and ".") or (m:isWaterCell(x, y) and "~") or "#"
+        stand[#stand + 1] = (m:isWalkableCell(x, y) and ".") or (surfable and m:isWaterCell(x, y) and "~") or "#"
         local onWarp = m:warpAtCell(x, y) ~= nil and standingOnWarp(x, y)
         for _, dir in ipairs(DIRS) do
           local a, s = verdict(x, y, dir, false), verdict(x, y, dir, true)
