@@ -3950,7 +3950,8 @@ say how each was resolved:
 ### Known bugs (2026-10-24)
 
 **B1. Crossing into a saved game that sits at its title empties the party** (reported by the user from play: "continuing
-one of the games before the other can cause a blank/empty"; the cause below is read in the code, not reproduced yet).
+one of the games before the other can cause a blank/empty"; the user confirmed it was the party, 2026-10-24; the cause
+below is read in the code, not reproduced yet). Discussion: question 8 below.
 
 - *What happens.* Both games run; the player continues and plays game A; game B was launched too but is still at its
   title (it has a save, nobody has continued it yet). At the pass the client decides how to enter B from B's last
@@ -3982,7 +3983,8 @@ one of the games before the other can cause a blank/empty"; the cause below is r
 - *Fix (not done).* gen1-bridge's title pick: accept the summary box as the pick's result and answer it (or press A
   for it), then an e2e of CONTINUE from the title through the client.
 
-B1 and B2 are different bugs; both are about entering a saved game from its title.
+B1 and B2 are different bugs; both are about entering a saved game from its title. The user flagged both for a
+discussion of another way to continue and load the games (question 8) before either is fixed on its own.
 
 ### Questions for you
 
@@ -4019,6 +4021,23 @@ B1 and B2 are different bugs; both are about entering a saved game from its titl
 7. **DESIGN.md:39-41 (from the caves in 3D plan's H7).** It says caves sit under their mountains, 16 blocks apart, and
    every ladder fades. Since H7 caves stand in an area of their own, rooms of one cave may share a rock wall, and 15
    ladders are climbed. Your file: update it when you like.
+
+8. **Another way to continue and load the games (the user's discussion point, 2026-10-24; bugs B1 and B2).** Today
+   each hidden game boots to its title and waits: the followed one is continued from its title menu through Minecraft
+   (B2: that pick hangs on Blue), and a far one is entered at the pass by `region.start` after a `party.stash` that
+   assumes a title means "never started" (B1: a saved game loses its party to the PC). Options to talk over:
+   - **a. Each game continues itself.** Once a link is bound to the world and its paired slot holds a save, gen1-bridge
+     runs the engine's own CONTINUE (as the e2e drivers do) and parks the game if it isn't followed. No game with a
+     save ever sits at its title in a world, no title menu is needed in Minecraft, and the pass only ever resumes or
+     starts a truly new game. Costs: every game loads at join (time, memory on small PCs); a player who wants the title
+     (another slot, options) needs a way to reach it.
+   - **b. The client loads all games at join.** The same, driven by the client: `region.start` to each bound link whose
+     slot has a save, one after another, before play. Keeps the decision on the Minecraft side; needs `game.status` to
+     say a save exists.
+   - **c. Keep the titles, fix the two bugs.** `game.status` says whether the slot holds a save, so the pass stashes
+     only before a new game (B1); gen1-bridge answers Gen 1's save summary after a title pick (B2). Smallest change;
+     the titles stay part of play.
+   Either a or b also removes B1's knock-on (an empty sync reaching a parked game), since no stash runs for a saved game.
 
 ### Known gaps
 
