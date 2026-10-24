@@ -1,6 +1,7 @@
 # Foreign Pokémon: visitors in every hidden game
 
-**Status: proposed with decisions, nothing built (v2, 2026-10-24).** This plan replaces the user's note "Pokémon and
+**Status: proposed with decisions; FP0 done on the pod (2026-10-24, PROGRESS.md "Foreign Pokémon: spike FP0"), nothing
+else built (v2.1).** FP0's answers are folded into §3.1, §3.3, §4.12, §4.14, §10 and §14 below. This plan replaces the user's note "Pokémon and
 items from outside Gen 1" (FOREIGN_POKEMON_AND_ITEMS.md, 2026-10-13, Gen 1 only, pinned to `2db4b8b` and Gen1Recomp
 v0.3.49) and the plan's own first draft (94360f2). It covers every game that can be imported today (Blue, Crystal,
 Emerald) at Gen1Recomp v0.3.85 and Cobblemon 1.8.1, and it is written so that a party moves between Kanto, Johto and
@@ -118,7 +119,10 @@ Six rules decide every case below. When a case isn't listed, apply them.
   is missing (`E3/battle/damage.lua:66-75`); gen1 only fills missing stats (`R/src/pokemon/Stats.lua:58-74`) and
   recomputes at level-up, Rare Candy, vitamins, evolution and daycare withdraw. So each adapter wraps its engine's
   recompute (`Mon.refreshStats`, `Pokemon.applyStats`, `Stats.calc`) to return the synced stats for any record with a
-  uid: the summary shows Cobblemon's numbers for natives and visitors alike (Q20).
+  uid: the summary shows Cobblemon's numbers for natives and visitors alike (Q20). **FP0 confirmed it:** without the
+  wrapper gs and game3 overwrote the pinned numbers at once; with it the numbers held through the party menu, the
+  summary, a save and a CONTINUE (game3 calls `applyStats` on load, so the wrapper covers it; gen1's `Stats.ensure`
+  keeps a complete block and needs no wrapper).
 
 ### 3.2 What it carries
 
@@ -156,6 +160,18 @@ The call is the same everywhere, `mod.content.pokemon:register(id, record)` (the
 | gen1 (Blue) | `id, name, dex, types, baseStats{hp,attack,defense,speed,special}, catchRate, baseExp, level1Moves, growthRate, learnset, evolutions, spriteFront, spriteBack, frontSize` (`:1732-1768`); `index` optional | sprites through `Sprites.path` (`R/src/pokemon/Sprites.lua:24-60`), icon through `icons` or the `pokemon.icon` hook (`:114-140`); the Hall of Fame draws `def.name` with kind `hof` (`R/src/ui/HallOfFame.lua:157-164`) | `dex` above `constants.dexSize` is never listed (`R/src/ui/PokedexMenu.lua:55-99`); the summary prints it `%03d` (`SummaryMenu.lua:175`): use 999 | no `index` → a cartridge export refuses the whole save (`R/src/save_convert/GenSave.lua:664-669`): the export sweep (§4.14) |
 | gs (Crystal) | `id, name, dex, types, baseStats` (six), `catchRate, baseExp, growthRate, levelMoves, evolutions, spriteFront, spriteBack, picSize` (`:1782-1824`); `eggGroups, genderRatio, cry` optional | the party icon is `icons.species[species]` (`R/src/ui/gen2/PartyMenu.lua:788-792`), the summary pic `def.spriteFront` (`SummaryMenu.lua:1039-1050`); the name is the record's own `mon.name` | the Pokédex walks `gen2Pokedex.entries`, which no registry writes: never listed; summary and Hall of Fame print `def.dex` (`SummaryMenu.lua:474`, `HallOfFame.lua:158`): 999 | only a schema test exists upstream (`R/tests/engine/gate_gen2_mod_api.lua:276-291`); whether a registered species loads, draws and survives a save is **unverified**; no `index` means `checkpoke` never matches it (`R/src/script/gen2/Vm.lua:632-638`), which is what we want |
 | game3 (Emerald) | `id, name, types, baseStats` (six), `catchRate, baseExp, growthRate, learnset, evolutions, spriteFront, spriteBack` (`:1829-1857`); **`index` (1..1023) is required in practice**: without a number `monWrite` leaves the record in `modRecords` and nothing reads it (`:1366-1385`); 412 is EGG and 413+ the Unown letters (`E3/pokemon.lua:537,1432-1439`), so 440 upward *(inference)* | the name comes from the names table `writeMon` fills; front/back overrides resolve through `Pokemon._byName`, built only in `Pokemon.install` (`:177`), so a new name probably never resolves *(inference)*: draw through the `pokemon.sprite` and `pokemon.icon` hooks, which pass the numeric species (`R/src/mods/Gen3Compat.lua:2095-2109,2168-2182`); a missing pic falls back to nil without crashing (`E3/pokemon.lua:1545-1565,1627-1650`) | no national number (`writeMon` never writes the national table, `E3/pokemon.lua:293-301`): not in any dex list; the summary prints "000" (`R/src/ui/game3/summary_menu.lua:660-675`), the Hall of Fame the index or "???" (`hall_of_fame.lua:526-532`) | the merge is re-applied on every species-pack reload (`Gen3Compat.lua:300-357`); spike S2's registered map never loaded (PROGRESS.md "Several games: spikes"), so a registered species is the single biggest unknown |
+
+**FP0 (2026-10-24, all three engines on the pod's imports):** the public registration was accepted in every engine and
+the stand-in loaded, drew on the party screen, the summary and the Hall of Fame screen, used Cut, saved and came back
+from CONTINUE, with the engine's own record builders (`Pokemon.new`, `Mon.new`, `Party.giveMon`). No fallback route
+is needed. Details: gen1's `dex` 999 stays off the list (`dexSize` 151) and its sprite path and icon resolve; gs's
+record gets no `index` (so `checkpoke` never matches) and its Pokédex ignores it; game3's `index` 440 resolves by
+`Pokemon.name` (not by `speciesFromName`, as inferred), has no national number, prints "000" on the summary, and its
+art comes only through the `pokemon.sprite`/`pokemon.icon` hooks (hit on every draw). Icons: gen1 takes the
+`{image, frames}` record; **gs wants a sheet registered under an `ICON_*` id with `image, width, height, frames`
+(`Schemas.lua:2892-2960`) and the species mapped to that name** (the mapping was accepted; the sheet record is still to
+be registered in that shape); game3 through the hook. Extra fields on a record (the pin marker) survived every
+engine's save and load, so hidden-only state (§3.5) can live on the record itself in all three.
 
 Every engine: the stand-in's `evolutions` empty, `learnset` empty, `tmhm` empty (the sync's `canLearn` list replaces
 it, §4.4), `eggGroups` undiscovered (Q10), `genderRatio` "either", catch rate 0, a neutral growth rate, a silent or
@@ -367,7 +383,7 @@ visitors in the party it must not run on them. Per battle:
 | Crystal | the catch tutorial (`World.lua:7271-7300`, an empty party) | no | native (`old_man`) |
 | Crystal | Battle Tower (`World.lua:3950`; rules `BattleTower.lua:160-275`) | yes, three chosen at a level cap | **refused at the desk** for now, with a HUD line; FP9 sketches it in Cobblemon |
 | Emerald | Safari Zone (`E3/battle_bridge.lua:27-38`) | no fighting | native, as today |
-| Emerald | Steven's partner battle at the Space Center (Steven's mons appended to `session.party`, `natives_frontier_story.lua:258-287`) | yes, a multi battle, on the story's path *(that it is mandatory is unchecked)* | **Cobblemon**, as a held multi battle: `battle.start{format:"multi", ally{team}}` (new fields); if Cobblemon 1.8.1's multi format can't take an NPC ally *(unchecked)*, a double battle with your first two Pokémon against the two foes |
+| Emerald | Steven's partner battle at the Space Center (Steven's mons appended to `session.party`, `natives_frontier_story.lua:258-287`) | yes, a multi battle, on the story's path *(that it is mandatory is unchecked)* | **Cobblemon**, as a held multi battle: `battle.start{format:"multi", ally{team}}` (new fields). Cobblemon 1.8.1 has `BattleTypes.MULTI` (two actors a side, one slot each; `common/.../battles/BattleTypes.kt`); whether the server can seat an NPC actor beside the player is FP5's first check; if not, a double battle with your first two Pokémon against the two foes |
 | Emerald | Battle Frontier, Battle Tent, Trainer Hill (`NATIVE_OPTS`, `game3/battle.lua:52-55`; bans from an imported pack, `E3/rse/frontier/util.lua:423-528`, so a visitor would count as eligible) | yes, with rules and rentals | **refused at each desk** for now (the Frontier is most of Emerald's post-game: FP9) |
 | Emerald | secret-base battles, link, Union Room, e-Reader, spectate | recorded or linked teams | refused / never reachable |
 | Emerald | Wally's tutorial, the Pokédude | their Pokémon | native |
@@ -384,18 +400,22 @@ ceilings to a native battle (`GB/act/kb_battle.lua:128-152`), which can't happen
 ### 4.14 Saves opened without the bridge, and cartridge export
 - **Blue:** Gen 1's `SaveData.validate` (`R/src/core/SaveData.lua:3067-3135`, run at `Game.lua:1556`) moves unknown
   species in the party, boxes and daycare to the LOST box (`save.orphaned.mons`), deletes unknown dex ids, sets an
-  unknown Hall of Fame species to nil for good, and shows a `QuarantineReport`. When the mod returns, `reclaim`
-  (`:2920-2953`) puts them into a **PC box**, not the party. The adapter sweeps stand-ins out of the boxes on load and
-  the identity map rebuilds the party at the next sync. A Hall of Fame entry lost this way is lost; the adapter writes
-  a copy of each Hall of Fame team into `mod.save` so it can be restored *(FP6)*.
-- **Crystal and Emerald have no such pass** (`R/src/core/gen2/Save.lua:842-868`; `E3/save_mon.lua:48`): an unknown
-  species stays in the party and a screen that names it is likely to error (`E3/pokemon.lua:250-257` raises for an
-  unnamed index) *(inference)*. So a Crystal or Emerald save that holds visitors must not be opened with the bridge
-  mod switched off. The launcher's mod list is per version (`options.modsByVersion`); PLAYTEST.md gets the line, and
-  the adapter writes a marker file beside the save (`<slot>.kb_visitors`) that the launcher can't read but a person
-  can.
+  unknown Hall of Fame species to nil for good, and shows a `QuarantineReport`. **FP0:** with the mod off the
+  visitor went to the LOST box (party 0, orphaned 1, the report on screen, no crash); with the mod back it was
+  **in the party again** at its old slot with its stats and marker, nothing in a box (`reclaim` fills the party
+  first). So nothing to sweep in the common case; the adapter still checks the boxes on load for a full-party
+  reclaim. A Hall of Fame entry lost this way is lost; the adapter writes a copy of each Hall of Fame team into
+  `mod.save` so it can be restored *(FP6)*.
+- **Crystal and Emerald have no such pass** (`R/src/core/gen2/Save.lua:842-868`; `E3/save_mon.lua:48`). **FP0:** with
+  the mod off, both kept the record in the party and **drew the party screen, the summary and the Hall of Fame
+  screen without an error** (gs shows the stored `mon.name`; game3's screens tolerate the missing name, though
+  `Pokemon.name(440)` itself raises "no ROM species name"); with the mod back, everything was as saved. So opening
+  such a save alone is safe; the earlier inference of a crash is withdrawn, and Q24's marker file is not needed.
 - **Cartridge export** (gen1 `GenSave.lua:664-669`, gs `Gen2Save.lua:1080-1087`) refuses the whole save when a species has
-  no index; game3 writes an internal index raw (`Gen3Save.lua:1602-1606`). The adapter wraps each converter: visitors
+  no index; game3 writes an internal index raw (`Gen3Save.lua:1602-1606`). **FP0:** gen1's converter refused with
+  "no Gen 1 species index" as read; gs's returned without raising (its refusals come back as a value through
+  `guarded`, `Gen2Save.lua:48-54`, which the spike didn't capture); game3's `exportPort` returned a buffer with the
+  raw index. The adapter wraps each converter: visitors
   are left out of the party, boxes and daycare for the export only, and Hall of Fame entries with the stand-in are
   skipped (gen1 skips them itself, `:1841-1849`; gs *(unchecked)*; game3 would write index 440+ raw: skipped too). A
   save exported for a real cartridge has no visitors. That is acceptable: Cobblemon holds the real Pokémon.
@@ -535,7 +555,7 @@ at ✔. Pods per the standing rules (stop after each job).
 
 | Phase | What | Tests |
 |---|---|---|
-| **FP0** spike (pod, ~1 h) | per engine: register the stand-in in the entry chunk (public route; the internals route if refused), put one in the party, open the party screen and summary, the Hall of Fame screen, save, CONTINUE, open without the mod and back; check the stats wrapper pins numbers through party menu/summary/battle start (gs) and load (game3); Emerald's index 440+ and art through the hooks; whether Cobblemon 1.8.1 has a multi format with an NPC ally | spike notes in PROGRESS.md; decides the per-engine route or `leave_out` |
+| **FP0** spike (pod) | **done 2026-10-24** (PROGRESS.md "Foreign Pokémon: spike FP0", ~20 min of pod time): every engine registers and runs the stand-in through the public route; the stats pin works; the mod-off saves are safe; no fallback needed. Left for FP3: gs's icon sheet record; for FP5: Cobblemon's multi battle with an NPC ally | nine runs, all three engines, exit 0 |
 | **FP1** protocol | §8 (schemas, examples, `catalog.json`, both stand-ins `tools/fake_gen1`/`fake_minecraft`); `PartySync` sends form, stats, types, nature, ot, canLearn, stones, dex 0; `compat.nick` read by `engineNick` | schema tests; JUnit `PartySync`/`PartyItem`; lupa `validSync` |
 | **FP2** core + Blue | `kb_party.apply` visitor path (R1, R2, the display name, the field-move filter); identity map and `uidState` in `mod.save`; the gen1 stand-in (art, types on the record, exp from its growth table, stats pinned); `party.order`; `game.status.visitors` and the HUD line; the LOST-box sweep and the export sweep; the Hall of Fame copy | lupa: all-foreign team, mixed team, swap on evolution both ways, form → visitor, dex 0, CONTINUE, reorder; Java HUD |
 | **FP3** Crystal, Emerald | the same in gen2 and game3 (or `leave_out` per FP0); Crystal's snapshot party; the no-mod marker file | lupa per engine, incl. species, forms and moves past the ceiling ✔ |
@@ -568,7 +588,7 @@ line and the plan follows.
 | Q10 | The daycare and eggs | refuse visitors; all breeding in Cobblemon; let visitors board | **visitors board, never breed** (undiscovered egg group) | zero hooks: the engine's compatibility check does it; steps still train the Pokémon |
 | Q11 | Species checks and the Pokédex | natives only; visitors of the right species count | **natives only** | `checkpoke` and friends match on an index the stand-in doesn't have; counting would hook every script |
 | Q12 | Same rule in every region? | all `visitor`; per region | **`visitor` by default everywhere**, `leave_out` per region record if a world wants it | the record already has the field |
-| Q13 | The fallback where an engine can't register | a borrowed native species; `leave_out` | **`leave_out`**, reported in `hello.ok` | a borrowed species passes species checks and the Pokédex as real |
+| Q13 | The fallback where an engine can't register | a borrowed native species; `leave_out` | **`leave_out`**, reported in `hello.ok`; **FP0: not needed by any of the three engines** | a borrowed species passes species checks and the Pokédex as real |
 | Q14 | Where in the roadmap | before/after SEVERAL_GAMES_FOLLOWUPS' leftovers | **after FP0, as its own stage**; FP7's Emerald items may go first | FP0 decides the shape; Hoenn's field actions are owed anyway |
 | Q15 | Forms the game lacks (regional forms, Deoxys/Castform in Blue) | write the base species; visitor | **visitor** | the game's art, types and moves would be wrong; Unown/Castform/Deoxys stay native where the game has them |
 | Q16 | SWITCH in the hidden party menu | undone by the next sync (today); refused; forwarded | **forwarded** (`party.order`) | R1: the lead must be the same Pokémon; one small message |
@@ -579,7 +599,7 @@ line and the plan follows.
 | Q21 | A Cobblemon species with no national number | dropped (today); visitor | **visitor** (`dex: 0`) | R1 |
 | Q22 | PP in the hidden game | synced; hidden-only | **hidden-only** (today), Ether/Elixir forwarded as `pp` | Cobblemon's PP are battle state; the hidden copy's only matter to its own screens |
 | Q23 | Where the identity map lives | Java per player; `mod.save` per game | **`mod.save`**, beside `partyUids` | the hidden game is the one that needs it before the first sync |
-| Q24 | Opening a Crystal/Emerald save with visitors and the mod off | guard it in the engine (impossible from a mod that isn't loaded); warn and mark | **warn in PLAYTEST.md and write a marker file** | nothing else can run when the mod is off |
+| Q24 | Opening a Crystal/Emerald save with visitors and the mod off | guard it in the engine (impossible from a mod that isn't loaded); warn and mark; nothing | **nothing: FP0 showed both engines keep the record and draw every screen with the mod off** (the inference of a crash was wrong); a PLAYTEST.md line says a visitor then shows as "VISITOR" with no art | no risk left to guard |
 
 ## 11. Consequences and risks
 
@@ -588,7 +608,8 @@ line and the plan follows.
   quests, PC, field actions).
 - **gs and game3 recompute stats aggressively**; the pin is a wrapper on an engine internal and must be re-checked at
   every pin change (CLAUDE.md's rule for adapters).
-- **A Crystal/Emerald save with visitors must not be opened with the mod off** (§4.14). Blue's LOST box is safe.
+- **Saves opened with the mod off are safe in all three engines** (§4.14, FP0): Blue quarantines and restores,
+  Crystal and Emerald just show the stand-in without art.
 - **Fewer features, by choice:** the Battle Tower, the Frontier, the Tent, Trainer Hill, secret-base battles and
   contests for visitors are off (Q1, Q7).
 - **Every story gate keyed to species stays native-only** (Q11): a fully foreign team can finish each story but not
@@ -629,6 +650,7 @@ These don't need visitors; each is a small commit before or inside the phase nam
 From game knowledge, to confirm in the engines' scripts before the phase that needs them: the overworld poison rules
 per engine (damage interval, whether Emerald faints or stops at 1 HP) and Slateport's massage (§4.3, FP4); Emerald's
 Move Tutors and the contest entry menu's seam (§4.5, §4.11, FP4/FP6); that Steven's Space Center battle is on the
-mandatory path and whether Cobblemon 1.8.1's multi format takes an NPC ally (§4.12, FP0/FP5); gs's Hall of Fame export
-with an unknown species (§4.14, FP2); the gs runtime for a registered species at all (§3.3, FP0); whether the stand-in's
-`index` 440+ is free on Emerald (FP0).
+mandatory path and whether Cobblemon's server can seat an NPC ally in its `MULTI` format (§4.12, FP5); gs's Hall of
+Fame export with an unknown species and the value `Gen2Save.encode` returns for the stand-in (§4.14, FP2); the gs icon
+sheet record (§3.3, FP3). Settled by FP0: the gs runtime for a registered species, Emerald's `index` 440, the stats
+pin, the mod-off behaviour of every engine.
