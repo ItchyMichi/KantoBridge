@@ -68,7 +68,7 @@ public final class WarpService {
 	private static final Set<String> FIELDS = Set.of("to", "kind", "region");
 	/** protocol/defs.schema.json {@code warpKind}. */
 	private static final Set<String> KINDS = Set.of("door", "stairs", "edge", "hole", "pad", "fly", "teleport", "dig", "rope",
-			"blackout", "script", "elevator");
+			"blackout", "script", "elevator", "ladder", "escalator", "dive");
 	private static final Map<Refusal, AtomicLong> REFUSED = new ConcurrentHashMap<>();
 	private static final AtomicLong TELEPORTS = new AtomicLong();
 

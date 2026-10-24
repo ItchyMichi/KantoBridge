@@ -185,10 +185,10 @@ optional ones. The schemas give the exact types and limits.
 | `move.step` | M→G | `dir:"up"\|"down"\|"left"\|"right", n` (counter), `push?`. Sent on a cell crossing, or (`push:true`) after pushing against an edge for 8 or more ticks (exit mats, gates) | |
 | `move.face` | M→G | `dir` (turn in place while idle) | |
 | `move.hold` | M→G | `button:"b", on` (Cycling Road brake) | |
-| `player.pos` | G→M | `map, x, y, facing, kind:"walk"\|"bike"\|"surf"\|"ledge"\|"script"\|"spin"\|"current"\|"slope"\|"push"\|"sync", frames, n?`. Sent at step start (target cell) and on non-step changes | |
+| `player.pos` | G→M | `map, x, y, facing, kind:"walk"\|"bike"\|"surf"\|"ledge"\|"script"\|"spin"\|"current"\|"slope"\|"push"\|"sync"\|"ice", frames, n?`. Sent at step start (target cell) and on non-step changes. `ice` (FA0): optional, sent by no adapter before FA8 | |
 | `player.blocked` | G→M | `dir, reason:"tile"\|"entity"\|"bounds"\|"script", map, x, y, n?` | |
-| `player.state` | G→M | `mode:"idle"\|"screen"\|"forced"\|"cutscene"\|"busy", bike, surf, slope, hidden, dark, lit` (all required); SE6 (Gen 3) `weather`: the weather the hidden game draws now (`none`, `clouds`, `sunny`, `rain`, `snow`, `thunder`, `fog`, `ash`, `sand`, `fog_diagonal`, `underwater`, `shade`, `drought`, `downpour`, `bubbles`; Emerald's abnormal weather is drought and downpour in turn, as the game draws it), absent where the game has no weather | |
-| `warp` | G→M | `phase:"start"\|"arrive", kind:"door"\|"stairs"\|"edge"\|"hole"\|"pad"\|"fly"\|"teleport"\|"dig"\|"rope"\|"blackout"\|"script"\|"elevator", to?{map,x,y,facing}` (required on arrive); `re` optional: the `warp.take` it answers | |
+| `player.state` | G→M | `mode:"idle"\|"screen"\|"forced"\|"cutscene"\|"busy", bike, surf, slope, hidden, dark, lit` (all required); SE6 (Gen 3) `weather`: the weather the hidden game draws now (`none`, `clouds`, `sunny`, `rain`, `snow`, `thunder`, `fog`, `ash`, `sand`, `fog_diagonal`, `underwater`, `shade`, `drought`, `downpour`, `bubbles`; Emerald's abnormal weather is drought and downpour in turn, as the game draws it), absent where the game has no weather; FA0 `run?`: the hidden player is running (Emerald's running shoes; optional, sent by no adapter before FA8) | |
+| `warp` | G→M | `phase:"start"\|"arrive", kind:"door"\|"stairs"\|"edge"\|"hole"\|"pad"\|"fly"\|"teleport"\|"dig"\|"rope"\|"blackout"\|"script"\|"elevator"\|"ladder"\|"escalator"\|"dive", to?{map,x,y,facing}` (required on arrive; `ladder`, `escalator`, `dive` are FA0's optional values, sent by no adapter before FA8); `re` optional: the `warp.take` it answers | |
 | `warp.take` | M→G | `from{map,x,y}, to{map,x,y,facing}, kind:"ladder"\|"hole"`: the player climbed or fell through a cave's shaft to its far end | |
 | `warp.taken` | G→M | `ok, reason?:"busy"\|"mode"\|"map"\|"far"`; `re` required | |
 | `emote` | G→M | `target:"player"\|<npc id>, bubble:"!"\|"?"\|"happy"\|null, frames` | |
@@ -217,6 +217,12 @@ optional ones. The schemas give the exact types and limits.
   `edge` (an exit mat or map edge), `pad`, `hole`, `elevator` (a warp out of an `*_ELEVATOR` map),
   `fly`, `teleport`, `dig`, `rope` (Escape Rope), `blackout`, `script`. `arrive.to` is the
   entry cell; a door walk-out follows as its own `player.pos` kind `script`.
+- **Field mechanics audit additions (FA0, [specs/FIELD_MECHANICS_AUDIT_PLAN.md](specs/FIELD_MECHANICS_AUDIT_PLAN.md)
+  D2, D4):** optional values that no adapter sends before the plan's fixes (FA8): warp kinds `ladder` (a ladder warp),
+  `escalator` and `dive` (Dive down or emerge); `player.pos` kind `ice` (one ice-slide cell, a forced move like `spin`;
+  the Crystal and Emerald adapters are to send `spin`, `current`, `slope`, `push` and `ice` where Blue already does);
+  `player.state.run` (the running shoes). A client that doesn't know a warp kind treats it as `script`, and an unknown
+  `player.pos` kind as a forced move.
 - **Connection crossings** (walking off a map edge into the connected map) are not warps: the step's
   `player.pos` simply names the new map and cell.
 - **A fade is not always a warp** (Gen 3, 2026-10-14): a `script` warp that only a screen transition started, and whose

@@ -25,8 +25,10 @@
         "current",
         "slope",
         "push",
-        "sync"
-      ]
+        "sync",
+        "ice"
+      ],
+      "description": "FA0 (FIELD_MECHANICS_AUDIT_PLAN): ice (a slide on an ice tile, one message per cell) is optional and sent by no adapter before FA8; a client that doesn't know a kind follows it as a forced move."
     },
     "frames": {
       "$ref": "../defs.schema.json#/$defs/frames",
