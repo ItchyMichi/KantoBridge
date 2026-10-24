@@ -505,6 +505,10 @@ function FakeBattle3.attach(E)
     opts.mon.moves[E.forgetSlot] = opts.moveId
     if opts.onDone then opts.onDone(true) end
   end
+  -- FP6: the contest entry's check (rse/contest_util.lua:100-103)
+  E.ContestUtil = { ELIGIBILITY = { CANT_ENTER = 0, CAN_ENTER = 1 } }
+  function E.ContestUtil.eligibility(_mon) return 1 end
+  mods["src.core.game3.rse.contest_util"] = E.ContestUtil
   mods["src.core.game3.evolution"] = E.Evolution
   mods["src.ui.game3.evolution_scene"] = E.EvolutionScene
   mods["src.core.game3.item_use"] = E.ItemUse

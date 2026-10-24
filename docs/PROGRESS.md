@@ -3395,6 +3395,37 @@ of 643 (the old `KbPackReloadTest`); GameTests 131/131.
 **Not done in FP5.** The plan's real-engine e2e for the contest and the Space Center needs a save at each; the client's
 rendering of a multi battle with an entity-less ally is unchecked. Both wait for FP8's e2e (PLAYTEST.md gets them).
 
+## Foreign Pokémon: FP6, story guards and hidden-only state (2026-10-24)
+
+- **Quests that take a Pokémon** (Crystal, `gen2/party.lua`): Kenya's delivery (`Mail.checkPokeMail`) and Mania taking
+  Shuckie back (`Specials.ALL.ReturnShuckie`) are wrapped; a member with a uid they remove goes out as
+  `party.take{reason:"quest"}`, so the next sync never puts it back.
+- **Hidden-only state** (§3.5, R3): each adapter's `partyStates` / `restoreStates` (Blue: stat exp; Crystal: stat exp,
+  Pokérus, caught data, a hidden-only held item; Emerald: EVs, contest condition, sheen, ribbons, Pokérus, a hidden-only
+  held item). kb_party takes them just before every sync apply, keeps them in `mod.save` (`uidState`, with when each
+  uid was last in the party; dropped after 30 days unseen, `Party.STATE_DAYS`) and puts them back after it, so a
+  rebuilt record (a member back from Cobblemon's PC or daycare) gets them again and a kept one keeps its own. PP stays
+  as before (kept on kept records). Emerald's personality isn't kept: gender and shininess are Cobblemon's.
+- **Cobblemon's item over a hidden-only one** (Crystal, Emerald): the hidden-only item goes back to the hidden bag
+  (`b.bagReturn`) instead of being lost.
+- **Contests** (Emerald, §4.11, Q7): `Util.eligibility` says CANT_ENTER for a visitor while a client follows, so the
+  desk shows its own ineligible line; natives enter as before (their condition, sheen and ribbons now survive syncs).
+- **Daycare** (§4.7, Q10): visitors board as any member (the uid-based deposit and withdraw); Emerald's stand-in now
+  declares the Undiscovered egg group twice (Crystal's has had No Eggs since FP3), so it never breeds.
+- **Pokédex** (§4.9): `dexSweep` in every adapter removes the stand-in from seen/owned after every sync apply and
+  before every hidden-game save.
+
+**Tests.** Lupa: the two quest takes; Crystal's and Emerald's state back on a rebuilt record; through main.lua the state
+round trip in `mod.save`; Mail back to the bag when Cobblemon's item replaces it; the dex sweep; a visitor refused at the
+contest entry, a native not. Lua 1,579; pytest 2,379.
+**Story checks on the real engines** (✔, pod kb-dev50, `g{1,2,3}_story_check.py sweep`): Blue 528 of 530 cases right
+(the 2 others leave the map on purpose, the S.S. Anne dock), sites 60 of 60 reached; Crystal 245 of 246 (the other
+leaves for the contest), NPCs and toggles right in all; Emerald 320 of 323 bridged (the 3 are Route 131, a known
+story blocker since SC-E; the earlier full sweep had 302 right and 21 unchecked). No regression.
+
+**Deviation.** The 30 days count from when a uid was last in the hidden party (the hidden game can't see Cobblemon's
+PC), not from when it left Cobblemon for good.
+
 ## Pre-flight (PLAN §0.6)
 
 | Step | State |

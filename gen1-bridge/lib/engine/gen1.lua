@@ -2645,6 +2645,22 @@ function Gen1.new(opts)
 
   local function isVisitor(mon) return type(mon) == "table" and mon.species == VISITOR end
 
+  -- FP6 (§4.9): the Pokedex never counts the stand-in (save.pokedex.seen/owned by species id; Oak's aides count the
+  -- keys, src/script/Commands.lua:213-220)
+  function engine.dexSweep()
+    local save = engine.save()
+    local dex = save and type(save.pokedex) == "table" and save.pokedex or nil
+    if not dex then return 0 end
+    local n = 0
+    for _, k in ipairs({ "seen", "owned" }) do
+      if type(dex[k]) == "table" and dex[k][VISITOR] then
+        dex[k][VISITOR] = nil
+        n = n + 1
+      end
+    end
+    return n
+  end
+
   -- §4.14 (FP2): a box never keeps a visitor (Cobblemon holds the real
   -- Pokemon; SaveData.validate's reclaim, src/core/SaveData.lua:3072-3076,
   -- may put one in a box when the party was full). Returns how many went.
@@ -4490,6 +4506,53 @@ function Gen1.new(opts)
       end
     end
     return out, save
+  end
+
+
+  -- ---- hidden-only state (FOREIGN_POKEMON_PLAN §3.5, R3; FP6)
+  --
+  -- The fields the hidden game writes on a record that Cobblemon has no home for, per uid: kb_party takes them
+  -- before every sync apply (partyStates), keeps them in mod.save ("uidState") and puts them back after it
+  -- (restoreStates), so a rebuilt record (a member back from Cobblemon's PC or daycare, a swap between visitor and
+  -- native) gets them again. A kept record gets its own values back.
+  local function stateCopy(v, depth)
+    if type(v) ~= "table" then return v end
+    if (depth or 0) > 4 then return nil end
+    local out = {}
+    for k, x in pairs(v) do
+      if type(k) == "string" or type(k) == "number" then out[k] = stateCopy(x, (depth or 0) + 1) end
+    end
+    return out
+  end
+  -- Blue's: stat exp (src/pokemon/Pokemon.lua:75).
+  local STATE_KEYS = { "statExp" }
+  function engine.partyStates()
+    local save = engine.save()
+    local out = {}
+    for _, mon in ipairs(save and type(save.party) == "table" and save.party or {}) do
+      local uid = monUid[mon]
+      if uid then
+        local st = {}
+        for _, k in ipairs(STATE_KEYS) do st[k] = stateCopy(mon[k]) end
+        out[uid] = st
+      end
+    end
+    return out
+  end
+  function engine.restoreStates(states)
+    local save = engine.save()
+    if type(states) ~= "table" then return 0 end
+    local n = 0
+    for _, mon in ipairs(save and type(save.party) == "table" and save.party or {}) do
+      local st = monUid[mon] and states[monUid[mon]] or nil
+      if type(st) == "table" then
+        for _, k in ipairs(STATE_KEYS) do
+          if st[k] ~= nil then mon[k] = stateCopy(st[k]) end
+        end
+        n = n + 1
+      end
+    end
+    return n
   end
 
   -- FP4 (§4.3, §4.5): what kb_party watches for party.change, party.learn

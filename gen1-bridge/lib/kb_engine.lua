@@ -83,7 +83,9 @@ Engine.GROUPS = {
               -- FP4: what kb_party watches for party.change, party.learn, party.forget
               "partyFacts",
               -- FP5: a facility desk refused (game.status.refused)
-              "refusedFeature" },
+              "refusedFeature",
+              -- FP6: the hidden-only state per uid
+              "partyStates", "restoreStates", "dexSweep" },
   story = { "capturePristine", "pristineBlocks", "pristineCaptured", "pristineBlockAt", "storyMap", "liveBlocks",
             "liveBlockChanges", "cutRecords", "cutSwaps", "swapField", "storyToggles", "fieldAction",
             -- MG7 (G3C): Gen 3's runtime terrain, the current map's changed cells (gen1: none)
@@ -196,7 +198,8 @@ local function stub(opts, id, requireFn)
     -- lists and counts the acts read every step
     gifts = empty, ops = empty, takeItemUses = empty, takeRenames = empty, partyUids = empty, excludedUids = empty,
     daycareUids = empty,
-    partyNicks = empty, partyFacts = empty, refusedFeature = nothing, animatedTiles = empty, animationImages = empty, liveBlocks = empty, liveBlockChanges = empty,
+    partyNicks = empty, partyFacts = empty, refusedFeature = nothing, partyStates = empty,
+    restoreStates = function() return 0 end, dexSweep = function() return 0 end, animatedTiles = empty, animationImages = empty, liveBlocks = empty, liveBlockChanges = empty,
     storyToggles = empty, cutRecords = empty, cutSwaps = empty, pristineBlocks = empty,
     releaseCatches = function() return 0 end,
     takeHeals = function() return 0 end,

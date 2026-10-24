@@ -424,3 +424,71 @@ def test_give_and_take_go_out_as_party_hold_and_mail_stays_in_the_hidden_game():
         rig.step()
         peer.messages()
     assert rig.E.game.save.party[1].item == b"FLOWER_MAIL", "the Mail stays while Cobblemon's member holds nothing"
+
+
+# ------------------------------------------------------------ FP6: quests, hidden-only state, the Pokedex
+
+def test_kenya_and_shuckie_leave_cobblemon_as_quest_takes():
+    a, _ = setup()
+    seed(a, [("TEST_RATTATA", 9, UID1), ("TEST_TOGEPI", 9, UID2)])
+    s = a.E.game.save
+    assert a.E.Mail.checkPokeMail(s, 1, b"WRONG") == 2 and len(s.party) == 2, "a wrong letter keeps the member"
+    assert a.E.Mail.checkPokeMail(s, 1, b"RIGHT") == 3
+    a.E.Specials.ALL.ReturnShuckie(None)
+    takes = [(o["uid"], o["reason"]) for o in plain(a.eng.ops()) if o["kind"] == "take"]
+    assert takes == [(UID1, "quest"), (UID2, "quest")]
+
+
+def test_hidden_only_state_comes_back_on_a_rebuilt_record():
+    a, _ = setup()
+    a.eng.applyParty(a.lua([entry(UID1, "TEST_CHIKORITA", 9)]))
+    mon = party(a)[0]
+    mon.pokerus, mon.caughtLevel = 3, 4
+    mon.statExp = a.lua({"hp": 120, "attack": 7})
+    states = a.eng.partyStates()
+    assert states[UID1.encode()].pokerus == 3 and states[UID1.encode()].statExp.hp == 120
+    a.eng.applyParty(a.lua([entry(UID2, "TEST_TOGEPI", 5)]))   # it left (Cobblemon's PC)...
+    a.eng.applyParty(a.lua([entry(UID1, "TEST_CHIKORITA", 9)]))  # ...and came back: a new record
+    fresh = party(a)[0]
+    assert fresh.pokerus is None
+    assert a.eng.restoreStates(states) == 1
+    assert (fresh.pokerus, fresh.caughtLevel, fresh.statExp.hp) == (3, 4, 120)
+
+
+def test_cobblemons_item_sends_a_hidden_only_one_back_to_the_bag_and_the_dex_never_counts_the_stand_in():
+    a, _ = setup()
+    a.eng.applyParty(a.lua([entry(UID1, "TEST_CHIKORITA", 9, shiny=False)]))
+    mon = party(a)[0]
+    mon.item = b"FLOWER_MAIL"
+    a.eng.applyParty(a.lua([entry(UID1, "TEST_CHIKORITA", 9, shiny=False, item="leftovers")]))
+    assert mon.item == b"LEFTOVERS" and a.E.game.save.inventory.FLOWER_MAIL == 1
+    s = a.E.game.save
+    s.pokedex = a.lua({"seen": {"KB_VISITOR": True, "TEST_CHIKORITA": True}, "caught": {"KB_VISITOR": True}})
+    assert a.eng.dexSweep() == 2
+    assert s.pokedex.seen.KB_VISITOR is None and s.pokedex.seen.TEST_CHIKORITA is True
+
+
+def test_main_keeps_hidden_only_state_in_mod_save_across_a_rebuild():
+    rig = Rig(family="gen2")
+    rig.world("TEST_TOWN", 5, 6, "down")
+    peer = rig.connect()
+    peer.hello()
+    for _ in range(4):
+        rig.step()
+        peer.messages()
+    a = {"uid": UID1, "dex": 152, "level": 6, "moves": [33], "hp": 15, "maxhp": 25}
+    b_ = {"uid": UID2, "dex": 19, "level": 6, "moves": [33], "hp": 15, "maxhp": 25}
+
+    def sync(*members):
+        peer.send("party.sync", {"party": list(members), "box": {"count": 0}})
+        for _ in range(4):
+            rig.step()
+            peer.messages()
+
+    sync(a)
+    rig.E.game.save.party[1].pokerus = 5
+    sync(b_)                                         # it went to Cobblemon's PC
+    sync(a)                                          # and came back: a new record
+    mon = rig.E.game.save.party[1]
+    assert mon.pokerus == 5, "the hidden-only state came back from mod.save"
+    assert rig.b.mod._save.uidState[UID1.encode()].state.pokerus == 5

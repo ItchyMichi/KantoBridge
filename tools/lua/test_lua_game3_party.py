@@ -509,3 +509,21 @@ def test_emeralds_records_hold_cobblemons_item_and_hidden_only_ones_stay():
     assert plain(facts)[0]["item"] == "hidden"
     a.eng.applyParty(a.lua([dict(entry(UID1, 4, 9), shiny=False)]))
     assert m.item == 121, "the Mail stays while Cobblemon's member holds nothing"
+
+
+def test_visitors_cant_enter_contests_and_emeralds_state_comes_back():
+    # FP6 (§4.11, Q7): the contest entry's own "can't enter" for a visitor while a client follows; natives as usual
+    a, s = adapter()
+    registered(a)
+    a.eng.applyParty(a.lua([entry(UID1, 4, 9), entry(UID2, 440, 9)]))
+    native, visitor = s.party[1], s.party[2]
+    assert a.E.ContestUtil.eligibility(native) == 1 and a.E.ContestUtil.eligibility(visitor) == 0
+    # §3.5: EVs, condition, sheen and ribbons back on a rebuilt record
+    native.evs, native.sheen = a.lua({"hp": 40}), 9
+    native.contest = a.lua({"cool": 20})
+    states = a.eng.partyStates()
+    a.eng.applyParty(a.lua([entry(UID2, 440, 9)]))
+    a.eng.applyParty(a.lua([entry(UID1, 4, 9)]))
+    fresh = s.party[1]
+    a.eng.restoreStates(states)
+    assert (fresh.evs.hp, fresh.sheen, fresh.contest.cool) == (40, 9, 20)

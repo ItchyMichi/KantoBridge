@@ -89,6 +89,20 @@ function Items2.install(b)
     return not (type(entry) == "table" and entry.hiddenOnly ~= true and type(entry.cobblemon) == "string")
   end
 
+  -- FP6 (§3.5): one of an item back in the hidden bag (Bag.add, src/inventory/Bag.lua; a full pocket keeps it out)
+  function b.bagReturn(sym)
+    local s = save()
+    local Bag = b.mod("src.inventory.Bag")
+    if not (type(s) == "table" and type(sym) == "string") then return false end
+    if type(Bag) == "table" and type(Bag.add) == "function" then
+      local ok, added = pcall(Bag.add, s, sym, 1, b.game and b.game.data)
+      if ok and added ~= false then return true end
+    end
+    s.inventory = type(s.inventory) == "table" and s.inventory or {}
+    s.inventory[sym] = (s.inventory[sym] or 0) + 1
+    return true
+  end
+
   function b.canonicalItem(sym)
     if type(sym) ~= "string" then return nil end
     local cid = b.adapter.itemTable()[sym]

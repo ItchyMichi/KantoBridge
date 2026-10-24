@@ -674,10 +674,64 @@ function Party2.install(b)
   end
 
   -- Installed with the bridge (battle.lua's attachBridge): the trade, hatch and withdrawal seams, once per process.
+  -- FP6 (FOREIGN_POKEMON_PLAN §4.9): quests that take a Pokemon away. Kenya's delivery (Mail.checkPokeMail removes
+  -- the member on CORRECT, src/core/gen2/Mail.lua:394-420) and Mania taking Shuckie back (the ReturnShuckie special,
+  -- src/script/gen2/Specials.lua:1419-1440) leave Cobblemon too: party.take{reason:"quest"}, so the next sync never
+  -- puts them back. Both see a member by its record, so only natives reach them (a visitor isn't that species).
+  local function questTakes(before)
+    local now = {}
+    for _, mon in ipairs(party() or {}) do now[mon] = true end
+    for mon, uid in pairs(before) do
+      if not now[mon] then
+        queueOp({ kind = "take", uid = uid, reason = "quest" })
+        counts.questTakes = (counts.questTakes or 0) + 1
+      end
+    end
+  end
+  local function uidsNow()
+    local out = {}
+    for _, mon in ipairs(party() or {}) do
+      if monUid[mon] then out[mon] = monUid[mon] end
+    end
+    return out
+  end
+  local function checkPokeMail(original, save, slot, expected, ...)
+    local before = uidsNow()
+    local out = { pcall(original, save, slot, expected, ...) }
+    if not out[1] then error(out[2], 0) end
+    questTakes(before)
+    return unpack(out, 2, table.maxn(out))
+  end
+  local function returnShuckie(original, vm, ...)
+    local before = uidsNow()
+    local out = { pcall(original, vm, ...) }
+    if not out[1] then error(out[2], 0) end
+    questTakes(before)
+    return unpack(out, 2, table.maxn(out))
+  end
+
+  -- FP6 (§4.9): the Pokedex never counts the stand-in (save.pokedex.seen/caught by species id, Save.lua:1007)
+  def("dexSweep", function()
+    local s = b.saveObject()
+    local dex = type(s) == "table" and type(s.pokedex) == "table" and s.pokedex or nil
+    if not dex then return 0 end
+    local n = 0
+    for _, k in ipairs({ "seen", "caught", "owned" }) do
+      if type(dex[k]) == "table" and dex[k][VISITOR] then
+        dex[k][VISITOR] = nil
+        n = n + 1
+      end
+    end
+    return n
+  end)
+
   function b.installGifts()
     wrap(b.c2("NpcTrade"), "perform", trade)
     wrap(b.c2("Breeding"), "hatch", hatch)
     wrap(b.c2("Breeding"), "withdraw", withdraw)
+    wrap(b.c2("Mail"), "checkPokeMail", checkPokeMail)
+    local Specials = b.mod("src.script.gen2.Specials")
+    wrap(type(Specials) == "table" and Specials.ALL or nil, "ReturnShuckie", returnShuckie)
   end
 
   -- ---- heals (party.heal)
@@ -822,8 +876,14 @@ function Party2.install(b)
     -- (MG9 G2F) the held item and friendship Cobblemon's member has: an entry with details (a client that sends them
     -- always says whether it is shiny) sets the item, none when it names none or one this game lacks
     if e.item ~= nil or e.shiny ~= nil then
-      -- FP4 (§5): a hidden-only item (Mail, ...) stays while Cobblemon's member holds nothing
-      if not (e.item == nil and mon.item ~= nil and b.heldHiddenOnly(mon.item)) then mon.item = b.itemSymbol(e.item) end
+      -- FP4 (§5): a hidden-only item (Mail, ...) stays while Cobblemon's member holds nothing; FP6 (§3.5): one that
+      -- Cobblemon's item replaces goes back to the hidden bag
+      local hidden = mon.item ~= nil and mon.item ~= "" and b.heldHiddenOnly(mon.item)
+      if not (e.item == nil and hidden) then
+        local next = b.itemSymbol(e.item)
+        if hidden and next ~= mon.item and type(b.bagReturn) == "function" then b.bagReturn(mon.item) end
+        mon.item = next
+      end
     end
     if tonumber(e.friendship) then mon.happiness = floor(e.friendship) end
     -- FP3 (§3.1, Q20): Cobblemon's stats on every record that has them; a visitor's name, types and gender
@@ -1145,6 +1205,55 @@ function Party2.install(b)
     each(owned, "caught", "owned")
     b.dropView()
     return res
+  end)
+
+
+  -- ---- hidden-only state (FOREIGN_POKEMON_PLAN §3.5, R3; FP6)
+  --
+  -- The fields the hidden game writes on a record that Cobblemon has no home for, per uid: kb_party takes them
+  -- before every sync apply (partyStates), keeps them in mod.save ("uidState") and puts them back after it
+  -- (restoreStates), so a rebuilt record (a member back from Cobblemon's PC or daycare, a swap between visitor and
+  -- native) gets them again. A kept record gets its own values back.
+  local function stateCopy(v, depth)
+    if type(v) ~= "table" then return v end
+    if (depth or 0) > 4 then return nil end
+    local out = {}
+    for k, x in pairs(v) do
+      if type(k) == "string" or type(k) == "number" then out[k] = stateCopy(x, (depth or 0) + 1) end
+    end
+    return out
+  end
+  -- Crystal's: stat exp, Pokerus, the caught data (src/battle/gen2/Mon.lua), and a held item Cobblemon can't hold
+  -- (Mail, ...; put back only on a record holding nothing)
+  local STATE_KEYS = { "statExp", "pokerus", "caughtTime", "caughtLevel", "caughtLocation", "caughtByGender" }
+  def("partyStates", function()
+    local p = party()
+    local out = {}
+    for _, mon in ipairs(p or {}) do
+      local uid = monUid[mon]
+      if uid and mon.isEgg ~= true then
+        local st = {}
+        for _, k in ipairs(STATE_KEYS) do st[k] = stateCopy(mon[k]) end
+        if type(mon.item) == "string" and b.heldHiddenOnly(mon.item) then st.item = mon.item end
+        out[uid] = st
+      end
+    end
+    return out
+  end)
+  def("restoreStates", function(states)
+    if type(states) ~= "table" then return 0 end
+    local n = 0
+    for _, mon in ipairs(party() or {}) do
+      local st = monUid[mon] and states[monUid[mon]] or nil
+      if type(st) == "table" then
+        for _, k in ipairs(STATE_KEYS) do
+          if st[k] ~= nil then mon[k] = stateCopy(st[k]) end
+        end
+        if type(st.item) == "string" and (mon.item == nil or mon.item == "") then mon.item = st.item end
+        n = n + 1
+      end
+    end
+    return n
   end)
 
   -- ---- what kb_party watches (FP4: party.change, party.learn, party.forget)

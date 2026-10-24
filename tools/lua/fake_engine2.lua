@@ -1826,6 +1826,19 @@ function FakeEngine2.new(opts)
   -- (heal: 20 HP on a hurt member), HP_UP (vitamin), ETHER (pp: 10 on the slot), ELIXER (pp: every move),
   -- RARE_CANDY (candy: one level), MOON_STONE (stone: TEST_TOGEPI evolves); { used, text } as the
   -- engine returns them
+  -- FP6: Kenya's delivery (Mail.checkPokeMail, Mail.lua:394-420: the member in `slot` goes on CORRECT) and Mania's
+  -- ReturnShuckie special (Specials.lua:1419-1440: the chosen member goes), as small as the tests need
+  E.Mail = { POKEMAIL_CORRECT = 3, POKEMAIL_WRONG_MAIL = 2 }
+  function E.Mail.checkPokeMail(save, slot, expected)
+    if expected ~= "RIGHT" then return E.Mail.POKEMAIL_WRONG_MAIL end
+    table.remove(save.party, slot)
+    return E.Mail.POKEMAIL_CORRECT
+  end
+  E.Specials = { ALL = {} }
+  function E.Specials.ALL.ReturnShuckie(_vm)
+    table.remove(E.game.save.party, E.shuckieSlot or 1)
+    return 2
+  end
   E.BattleTower = { RULE_HEADER_TEXT = "_ExcuseMeYoureNotReadyText", RULE_TAIL_TEXT = "_BattleTowerReturnWhenReadyText" }
   function E.BattleTower.checkRules(_party) return {}, false end
   E.ItemEffects = {}
@@ -2094,6 +2107,8 @@ function FakeEngine2.new(opts)
     ["src.core.gen2.ItemEffects"] = E.ItemEffects,
     -- FP5: src/core/gen2/BattleTower.lua's rules check (its labels; the party passes)
     ["src.core.gen2.BattleTower"] = E.BattleTower,
+    ["src.core.gen2.Mail"] = E.Mail,
+    ["src.script.gen2.Specials"] = E.Specials,
     ["src.battle.gen2.Mon"] = E.Mon,
     ["src.battle.gen2.Prize"] = E.Prize,
     ["src.core.gen2.Gender"] = E.Gender,

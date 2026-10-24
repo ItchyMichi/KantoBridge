@@ -226,6 +226,8 @@ function Party3.install(b)
         id = "KB_VISITOR", name = "VISITOR", index = VISITOR, types = types,
         baseStats = { hp = 50, attack = 50, defense = 50, speed = 50, specialAttack = 50, specialDefense = 50 },
         catchRate = 0, baseExp = 0, growthRate = "MEDIUM_FAST", learnset = {}, evolutions = {},
+        -- FP6 (Q10): Undiscovered twice (breeding.lua:34): a visitor in the daycare never makes an egg
+        eggGroups = { 15, 15 },
         spriteFront = front, spriteBack = back,
       }
     end
@@ -537,12 +539,42 @@ function Party3.install(b)
 
   -- Called by the battle part's attachBridge too: install the gift seams once per process (the giveMon gift, the
   -- in-game trade's swap, the daycare's withdrawal, the egg hatching).
+  -- FP6 (FOREIGN_POKEMON_PLAN §4.11, Q7): contests are for natives; a visitor at the entry is the game's own
+  -- "can't enter" (Util.eligibility, src/core/game3/rse/contest_util.lua:100-103: the desk's ineligible line)
+  local function eligibility(original, mon, ...)
+    local st = b.state()
+    local bridge = st and st.bridge
+    local live = type(bridge) == "table" and type(bridge.live) == "function" and bridge.live() == true
+    local U = b.g3("rse.contest_util")
+    if live and isVisitor(mon) and type(U) == "table" and type(U.ELIGIBILITY) == "table" then
+      counts.contestRefused = (counts.contestRefused or 0) + 1
+      return U.ELIGIBILITY.CANT_ENTER
+    end
+    return original(mon, ...)
+  end
+
   function b.installGifts()
     wrap(b.g3("party"), "giveMon", give)
     wrap(b.g3("scripting.natives_trade"), "tradeMons", tradeMons)
     wrap(b.g3("daycare"), "withdraw", withdraw)
     wrap(b.g3("breeding"), "hatchMon", hatchMon)
+    wrap(b.g3("rse.contest_util"), "eligibility", eligibility)
   end
+
+  -- FP6 (§4.9): the Pokedex never counts the stand-in (session.dex.seen/owned by internal species, dex.lua:184-204)
+  def("dexSweep", function()
+    local s = b.session()
+    local dex = type(s) == "table" and type(s.dex) == "table" and s.dex or nil
+    if not dex then return 0 end
+    local n = 0
+    for _, k in ipairs({ "seen", "owned" }) do
+      if type(dex[k]) == "table" and dex[k][VISITOR] then
+        dex[k][VISITOR] = nil
+        n = n + 1
+      end
+    end
+    return n
+  end)
 
   local function giftsOf(st)
     local s = b.session()
@@ -727,8 +759,13 @@ function Party3.install(b)
     -- FP4 (§5): Cobblemon's held item (an entry with details always says whether it is shiny); a hidden-only
     -- item (Mail, ...) stays while Cobblemon's member holds nothing
     if (e.item ~= nil or e.shiny ~= nil) and type(b.heldNumber) == "function" then
-      if not (e.item == nil and b.heldCanonical(mon.item or mon.heldItem) == "hidden") then
+      local hidden = b.heldCanonical(mon.item or mon.heldItem) == "hidden"
+      if not (e.item == nil and hidden) then
         local n = e.item ~= nil and b.heldNumber(e.item) or nil
+        -- FP6 (§3.5): a hidden-only item Cobblemon's replaces goes back to the hidden bag
+        if hidden and n ~= (mon.item or mon.heldItem) and type(b.bagReturn) == "function" then
+          b.bagReturn(mon.item or mon.heldItem)
+        end
         mon.item, mon.heldItem = n, n
       end
     end
@@ -1070,6 +1107,58 @@ function Party3.install(b)
     each(owned, "setCaught", "owned")
     b.dropView()
     return res
+  end)
+
+
+  -- ---- hidden-only state (FOREIGN_POKEMON_PLAN §3.5, R3; FP6)
+  --
+  -- The fields the hidden game writes on a record that Cobblemon has no home for, per uid: kb_party takes them
+  -- before every sync apply (partyStates), keeps them in mod.save ("uidState") and puts them back after it
+  -- (restoreStates), so a rebuilt record (a member back from Cobblemon's PC or daycare, a swap between visitor and
+  -- native) gets them again. A kept record gets its own values back.
+  local function stateCopy(v, depth)
+    if type(v) ~= "table" then return v end
+    if (depth or 0) > 4 then return nil end
+    local out = {}
+    for k, x in pairs(v) do
+      if type(k) == "string" or type(k) == "number" then out[k] = stateCopy(x, (depth or 0) + 1) end
+    end
+    return out
+  end
+  -- Emerald's: EVs, the contest condition and sheen, ribbons, Pokerus, and a held item Cobblemon can't hold
+  -- (Mail, ...; put back only on a record holding nothing). Personality isn't kept: gender and shininess are
+  -- Cobblemon's.
+  local STATE_KEYS = { "evs", "contest", "sheen", "ribbons", "pokerus" }
+  def("partyStates", function()
+    local p = party()
+    local out = {}
+    for _, mon in ipairs(p or {}) do
+      local uid = monUid[mon]
+      if uid and mon.isEgg ~= true then
+        local st = {}
+        for _, k in ipairs(STATE_KEYS) do st[k] = stateCopy(mon[k]) end
+        local held = mon.item or mon.heldItem
+        if type(b.heldCanonical) == "function" and b.heldCanonical(held) == "hidden" then st.item = held end
+        out[uid] = st
+      end
+    end
+    return out
+  end)
+  def("restoreStates", function(states)
+    if type(states) ~= "table" then return 0 end
+    local n = 0
+    for _, mon in ipairs(party() or {}) do
+      local st = monUid[mon] and states[monUid[mon]] or nil
+      if type(st) == "table" then
+        for _, k in ipairs(STATE_KEYS) do
+          if st[k] ~= nil then mon[k] = stateCopy(st[k]) end
+        end
+        local held = mon.item or mon.heldItem
+        if st.item ~= nil and (held == nil or held == 0) then mon.item, mon.heldItem = st.item, st.item end
+        n = n + 1
+      end
+    end
+    return n
   end)
 
   -- ---- what kb_party watches (FP4: party.change, party.learn, party.forget)

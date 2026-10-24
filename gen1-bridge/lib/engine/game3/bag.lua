@@ -80,6 +80,14 @@ function Items3.install(b)
     return type(s) == "table" and type(s.bag) == "table" and s.bag or nil, s
   end
 
+  -- FP6 (§3.5): one of an item (a number or a symbol) back in the hidden bag (Bag.add, all or nothing)
+  function b.bagReturn(v)
+    local bg = bag()
+    local id = tonumber(v) or itemId(heldSym(v))
+    if not (bg and id) then return false end
+    return b.ask(b.g3("bag"), "add", false, bg, id, 1) == true
+  end
+
   def("itemTable", function()
     local out = {}
     for cid, entry in pairs(catalogue()) do

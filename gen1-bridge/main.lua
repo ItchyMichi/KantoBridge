@@ -281,6 +281,7 @@ return function(mod)
     },
     onOp = function() saves.opSent() end,
     idPrefix = sessionId:sub(3, 10), null = kb.json.null,
+    wallClock = type(os) == "table" and type(os.time) == "function" and function() return os.time() end or nil,
   })
   -- M6: the bag's battle items mirrored into Minecraft (P17); MG6: every
   -- non-key catalogue item synced for the server's ledger, with the money
@@ -812,6 +813,9 @@ return function(mod)
   -- (except the one before an M9 slot switch).
   mod.events:on("save.writing", perf.timed(function()
     saves.writing()
+    -- FP6 (§4.9): never a stand-in in the saved Pokedex
+    local sweep = rawget(engine, "dexSweep")
+    if type(sweep) == "function" then pcall(sweep) end
     -- FP2 (§4.14): the Hall of Fame's visitors, kept where a save opened without the mod can't blank them
     local copy = rawget(engine, "hofCopy")
     if type(copy) == "function" then

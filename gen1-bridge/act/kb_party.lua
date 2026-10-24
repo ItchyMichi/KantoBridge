@@ -387,8 +387,12 @@ end
 --   idPrefix FP4: the start's token in party.item ids (main.lua's session id;
 --            optional), so ids never repeat across starts
 --   null     FP4: kb_json.null (party.hold's item for a TAKE)
+--   wallClock FP6: seconds of the wall clock (os.time), for the hidden-only
+--            state's 30 days (optional; else the clock)
 -- FP4: seconds after a party.item went out from which a party.sync settles it
 Party.ITEM_SETTLE = 1
+-- FP6 (§3.5): days a uid's hidden-only state is kept after it was last in the party
+Party.STATE_DAYS = 30
 function Party.new(opts)
   local engine, log, store, clock = opts.engine, opts.log, opts.store, opts.clock
   -- MG7 (G3F): the running game's compat (maxDex, maxMove); Gen 1's without one
@@ -415,7 +419,7 @@ function Party.new(opts)
     visitorsNow = 0, -- FP2: members the last applied sync made visitors
     orders = 0, ordersConfirmed = 0, -- FP2: party.order
     dexSyncs = 0, dexApplied = 0, dexAddedSeen = 0, dexAddedOwned = 0, dexUnknown = 0, dexBeyond = 0,
-    items = 0, itemsBad = 0, itemsResent = 0, itemsRefused = 0, changes = 0, learns = 0, forgets = 0, holds = 0,
+    items = 0, itemsBad = 0, itemsResent = 0, itemsRefused = 0, changes = 0, learns = 0, forgets = 0, holds = 0, statesRestored = 0,
     -- M8 (wave 2)
     takes = 0, deposits = 0, withdraws = 0, opsResent = 0, opsConfirmed = 0, opsGivenUp = 0,
     excluded = 0, renames = 0, catches = 0,
@@ -595,6 +599,47 @@ function Party.new(opts)
     end
   end
 
+  -- FP6 (§3.5): uid -> { state = the adapter's hidden-only fields, seen = the clock when last in the party }, kept in
+  -- mod.save ("uidState"); a uid not seen for Party.STATE_DAYS days is dropped
+  local uidState
+  local function loadStates()
+    if uidState then return uidState end
+    uidState = {}
+    if store then
+      local ok, saved = pcall(store.get, "uidState")
+      if ok and type(saved) == "table" then
+        for uid, rec in pairs(saved) do
+          if type(uid) == "string" and type(rec) == "table" and type(rec.state) == "table" then uidState[uid] = rec end
+        end
+      end
+    end
+    return uidState
+  end
+  local function nowSeconds()
+    return (opts.wallClock and opts.wallClock()) or (clock and clock()) or 0
+  end
+  local function takeStates()
+    if type(engine.partyStates) ~= "function" then return end
+    local ok, states = pcall(engine.partyStates)
+    if not (ok and type(states) == "table") then return end
+    local all, now = loadStates(), nowSeconds()
+    for uid, st in pairs(states) do
+      if type(uid) == "string" and type(st) == "table" then all[uid] = { state = st, seen = now } end
+    end
+    for uid, rec in pairs(all) do
+      if type(rec.seen) == "number" and now - rec.seen > Party.STATE_DAYS * 86400 then all[uid] = nil end
+    end
+  end
+  local function putStates()
+    if type(engine.restoreStates) ~= "function" then return end
+    local all = loadStates()
+    local states = {}
+    for uid, rec in pairs(all) do states[uid] = rec.state end
+    local ok, n = pcall(engine.restoreStates, states)
+    if ok and type(n) == "number" then counts.statesRestored = counts.statesRestored + n end
+    if store then pcall(store.set, "uidState", all) end
+  end
+
   local function apply(data)
     local _, known = engine.partyUids()
     local gifts = engine.gifts()
@@ -694,8 +739,13 @@ function Party.new(opts)
     counts.visitorsNow = 0
     for _ in pairs(ids) do counts.visitorsNow = counts.visitorsNow + 1 end
     entries = inPendingOrder(entries)
+    -- FP6 (§3.5, R3): the hidden-only state of every member, taken just before the sync rewrites the party
+    takeStates()
     local res = engine.applyParty(entries)
     if not res then return false end
+    putStates()
+    -- FP6 (§4.9): the Pokedex never counts the stand-in
+    if type(engine.dexSweep) == "function" then pcall(engine.dexSweep) end
     appliedOrder = knownUids()
     -- §3.1 / Q23: the identity map (uid -> the visitor's real dex, form, name)
     identity = ids
