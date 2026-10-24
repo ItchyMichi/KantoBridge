@@ -1330,6 +1330,12 @@ for the rest" (plan §8). Feature tests per phase, the full suite at the checkpo
      In the game with all three regions (the seven Hoenn picture spots): **4 GB works** (Hoenn's table built in 5.4
      minutes on 4 vCPUs, about 2.3 GB live after collections), and **3 GB works** from the cache (Hoenn's table read in
      22 s; four full collections while loading). The pictures match the 6 GB ones of the rollout fixes.
+     Chunk meshing (2026-10-24, `tools/e2e/frame_rate.py`, the same seven spots of LandSky3, render distance 16, both
+     builds at 6 GB on one CPU pod under Xvfb, one run each), old | new: the same sections and quads; our time per
+     section mean 3.1 | 3.4 ms, median about 2.2 | 2.2 ms, p95 about 9.6 | 10.0 ms (the new build faster at two spots,
+     slower at five); full re-mesh, the seven added, 17.5 | 20.5 s (software GL, the noisier number); heap while
+     meshing 4.75 | 2.2 GB. At most about 10% slower per section, within one run's spread; frame rate not measured
+     (needs a GPU pod).
    - (The note's JUnit count, 1,379, counted two temporary probes since moved out: the suite holds 1,377.)
    - **Cave mouths and wall exits** (a fitted model in use on the cell over a door, the whole cell unroofed before): the
      model is the doorway, the face over it folds no door and rises as drawn, roofless so its models stay in use, and
