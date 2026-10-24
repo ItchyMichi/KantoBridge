@@ -67,6 +67,8 @@ end
 --   dexOf(species)          national dex number of a species id, or nil
 --   moveNum(moveId)         Gen 1 move number of a move id, or nil
 --   uidOf(mon)              a party member's Cobblemon uid, or nil
+--   visitorOf(mon)          FP2: { dex, form, name } when the member is a
+--                           visitor (its real species), or nil (optional)
 --   story                   kb_story's rebase() parts { toggles, blocks, lit },
 --                           or nil (then the raw save.objectToggles, no
 --                           blocks, and every dark map while flashLit)
@@ -155,7 +157,9 @@ function Snapshot.build(ctx)
   local party = {}
   for _, mon in ipairs(type(save.party) == "table" and save.party or {}) do
     if #party >= 6 then break end
-    local dex = exact(type(mon) == "table" and dexOf(mon.species) or nil, 1, 2000)
+    local who = type(ctx.visitorOf) == "function" and type(mon) == "table" and ctx.visitorOf(mon) or nil
+    -- FP2: a visitor reports its real species' number (0: none), not the stand-in's
+    local dex = who and exact(who.dex, 0, 2000) or exact(type(mon) == "table" and dexOf(mon.species) or nil, 1, 2000)
     local level = type(mon) == "table" and exact(mon.level, 1, 100) or nil
     if dex and level then
       local moves = {}
@@ -166,6 +170,7 @@ function Snapshot.build(ctx)
         if num and #moves < 4 then moves[#moves + 1] = num end
       end
       local entry = { dex = dex, level = level, moves = json.array(moves) }
+      if who then entry.visitor = true end
       local uid = uidOf(mon)
       if type(uid) == "string" and uid:find(UID) and uid == uid:lower() then entry.uid = uid end
       local hp = int(mon.hp, 0, 9999)

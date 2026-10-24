@@ -8,7 +8,16 @@
 --   party.item{item, uid, slot?, move?}                               G->M
 --   party.sync{party[{uid, give?, dex, level, nick?, moves, hp, maxhp, status?,
 --              item?, shiny?, gender?, form?, friendship?, stats?, types?,
---              nature?, ot?, canLearn?, stones?}], box}              M->G
+--              nature?, ot?, canLearn?, stones?, name?}], box}       M->G
+--
+-- FP2 (FOREIGN_POKEMON_PLAN section 3): a member the game can't show as
+-- itself (R2: dex 0, past compat.maxDex, a form the adapter lacks) becomes a
+-- record of the adapter's stand-in species (engine.visitorSpecies) when one
+-- registered and the bind didn't say leave_out: same place, same uid, the
+-- member's level, HP, Cobblemon's stats and stones, only the field moves its
+-- game offers (engine.visitorMoves), and its real species' name (`name`,
+-- upper case) when Cobblemon has no nickname. The visitors' real dex, form
+-- and name are kept per uid in mod.save ("visitorIds").
 --
 -- FP1 (docs/specs/FOREIGN_POKEMON_PLAN.md section 8): a member may carry dex 0
 -- (a Cobblemon species with no national number) and what a visitor record
@@ -259,6 +268,7 @@ function Party.validSync(data)
     if e.types ~= nil and not (Party.names(e.types, 1, 2, NAME_LEN) and noDuplicates(e.types)) then return false end
     if e.nature ~= nil and not (type(e.nature) == "string" and #e.nature <= NAME_LEN and find(e.nature, NAME)) then return false end
     if e.ot ~= nil and type(e.ot) ~= "string" then return false end
+    if e.name ~= nil and not (type(e.name) == "string" and #e.name >= 1 and #e.name <= 96) then return false end
     if e.canLearn ~= nil then
       if type(e.canLearn) ~= "table" or #e.canLearn > 512 or not noDuplicates(e.canLearn) then return false end
       for _, n in ipairs(e.canLearn) do
@@ -326,6 +336,9 @@ function Party.withinDex(data, compat)
   return out, beyond
 end
 
+local ITEM_KINDS = { stone = true, machine = true, candy = true, medicine = true, pp = true, vitamin = true,
+                     other = true }
+
 -- A queued item use as party.item's payload, or nil when it can't be one.
 function Party.itemData(use, compat)
   if type(use) ~= "table" or type(use.item) ~= "string" or not find(use.item, "^[A-Z0-9_]+$")
@@ -333,6 +346,8 @@ function Party.itemData(use, compat)
     return nil
   end
   local data = { item = use.item, uid = use.uid }
+  -- FP1/FP2: what the item does, when the adapter said (party.item.kind)
+  if ITEM_KINDS[use.kind] then data.kind = use.kind end
   if use.move ~= nil or use.slot ~= nil then
     -- a TM/HM: the move it taught, and the slot it took when it replaced one
     local _, maxMove = ceilings(compat)
@@ -376,6 +391,7 @@ function Party.new(opts)
     givesExact = 0,
     syncs = 0, applied = 0, deferred = 0, created = 0, matched = 0, kept = 0, failed = 0,
     foreignSpecies = 0, foreignMoves = 0, heals = 0, -- FP1: was nonGen1Species / nonGen1Moves
+    visitorsNow = 0, -- FP2: members the last applied sync made visitors
     dexSyncs = 0, dexApplied = 0, dexAddedSeen = 0, dexAddedOwned = 0, dexUnknown = 0, dexBeyond = 0,
     items = 0, itemsBad = 0,
     -- M8 (wave 2)
@@ -390,6 +406,32 @@ function Party.new(opts)
   local opSentAt = {} -- op id -> clock when first sent
   local persistedOps = {} -- op ids whose party change the uid list was saved after
   local nicks, nickSave = {}, nil -- uid -> the nickname last seen (false: none), and its save
+  -- FP2 (§4.15, Q12): visitors unless the region leaves foreign members out
+  local incompatible = opts.incompatible or function() return "visitor" end
+  local function visitorsOn()
+    return type(engine.visitorSpecies) == "function" and incompatible() ~= "leave_out"
+  end
+  -- FP2 (§3.1, Q23): uid -> { dex, form, name } of the visitors the last
+  -- applied sync made, kept in mod.save ("visitorIds") for a CONTINUE or a
+  -- hot reload before the next sync
+  local identity = {}
+  if store then
+    local ok, saved = pcall(store.get, "visitorIds")
+    if ok and type(saved) == "table" then identity = saved end
+  end
+
+  -- The visitor a uid is (its real dex, form, name), or nil for a native.
+  function party.identity(uid)
+    local v = type(uid) == "string" and identity[uid] or nil
+    return type(v) == "table" and v or nil
+  end
+
+  -- How many party members are visitors now (game.status.visitors).
+  function party.visitors()
+    local n = 0
+    for _ in pairs(identity) do n = n + 1 end
+    return n
+  end
 
   local function text(s)
     if type(s) ~= "string" then return nil end
@@ -478,8 +520,17 @@ function Party.new(opts)
     local taken = {}
     local entries = {}
     local species0, moves0 = counts.foreignSpecies, counts.foreignMoves
+    local visitorSpecies = visitorsOn() and engine.visitorSpecies() or nil
+    local ids = {}
     for _, e in ipairs(data.party) do
-      local species = e.dex <= maxDex and engine.speciesOfDex(e.dex) or nil
+      -- R2: what this game can't show as itself (no national number, past
+      -- its ceiling, a form it lacks) is a visitor, or left out without one
+      local species = e.dex >= 1 and e.dex <= maxDex and engine.speciesOfDex(e.dex) or nil
+      if species and e.form ~= nil and type(engine.formKnown) == "function" and not engine.formKnown(species, e.form) then
+        species = nil
+      end
+      local visitor = species == nil and visitorSpecies ~= nil
+      if visitor then species = visitorSpecies end
       if excluded[e.uid] then
         -- traded away, or boarded at the daycare: not the hidden party's
         counts.excluded = counts.excluded + 1
@@ -487,14 +538,30 @@ function Party.new(opts)
         counts.foreignSpecies = counts.foreignSpecies + 1
       else
         local moves = {}
+        -- §4.2: a visitor keeps only the field moves its game offers
+        local fieldMoves = visitor and engine.visitorMoves() or nil
         for _, n in ipairs(e.moves) do
           local id = n <= maxMove and engine.moveIdOfNum(n) or nil
-          if id then moves[#moves + 1] = id else counts.foreignMoves = counts.foreignMoves + 1 end
+          if visitor then
+            if id and fieldMoves[id] then moves[#moves + 1] = id end
+          elseif id then
+            moves[#moves + 1] = id
+          else
+            counts.foreignMoves = counts.foreignMoves + 1
+          end
         end
+        -- §3.4: a visitor with no nickname shows its real species' name
+        local nick = Party.engineNick(e.nick, compat.nick)
+        if nick == nil and visitor and type(e.name) == "string" then nick = Party.engineNick(e.name:upper(), compat.nick) end
         local entry = Party.details(e, {
           uid = e.uid, species = species, level = e.level, moves = moves, hp = e.hp, maxhp = e.maxhp,
-          status = STATUS[e.status], nick = Party.engineNick(e.nick, compat.nick),
+          status = STATUS[e.status], nick = nick,
+          -- FP2: Cobblemon's stats (pinned, Q20) and its stones (§4.4), for every record
+          stats = e.stats, stones = e.stones, visitor = visitor or nil,
         })
+        if visitor then
+          ids[e.uid] = { dex = e.dex, form = e.form, name = e.name }
+        end
         if e.give ~= nil then
           -- exact: the gift Cobblemon says this Pokemon came from (M6)
           for _, g in ipairs(gifts) do
@@ -539,8 +606,13 @@ function Party.new(opts)
         end
       end
     end
+    counts.visitorsNow = 0
+    for _ in pairs(ids) do counts.visitorsNow = counts.visitorsNow + 1 end
     local res = engine.applyParty(entries)
     if not res then return false end
+    -- §3.1 / Q23: the identity map (uid -> the visitor's real dex, form, name)
+    identity = ids
+    if store then pcall(store.set, "visitorIds", ids) end
     counts.applied = counts.applied + 1
     counts.created = counts.created + res.created
     counts.matched = counts.matched + res.matched

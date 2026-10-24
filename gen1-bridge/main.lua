@@ -92,6 +92,19 @@ return function(mod)
     -- MG9: the mod's hooks, for an adapter's engine-only hooks (Gen 2's intro.oak_speech.build)
     hooks = mod.hooks,
   })
+  -- FP2 (docs/specs/FOREIGN_POKEMON_PLAN.md §3.3): the adapter's visitor
+  -- stand-in, registered here in the entry chunk before the registries
+  -- freeze; an adapter without one (or a refusal) leaves foreign members out
+  if type(rawget(engine, "registerVisitor")) == "function" then
+    pcall(engine.registerVisitor, mod.content, (type(mod.path) == "string" and mod.path or "") .. "/assets/visitor")
+  end
+  local function visitorReady()
+    local f = rawget(engine, "visitorSpecies")
+    if type(f) ~= "function" then return false end
+    local ok, species = pcall(f)
+    return ok and species ~= nil
+  end
+
   -- MG9 (GEN2_BRIDGE_PLAN.md J4): an engine whose map ids collide with another region's (Gen 2's Kanto
   -- uses Gen 1's names) reports them prefixed; mapOf turns an engine payload's id into the reported one
   -- (rawget: the stub's catch-all answers nil for any name), and the acts' warps go through the
@@ -258,8 +271,10 @@ return function(mod)
   -- party uids persist through mod.save (save.modData, src/core/Game.lua:1348-1358).
   local battles = kb.Battle.new({ engine = engine, log = log, markup = kb.Ui.markup, compat = compat })
   local saves -- act/kb_save.lua, below (M10: it counts the Pokemon operations party sends)
+  local pairing -- act/kb_pairing.lua, below (FP2: its bind says visitor or leave_out)
   local party = kb.Party.new({
     engine = engine, log = log, markup = kb.Ui.markup, clock = clock, compat = compat,
+    incompatible = function() return pairing and pairing.incompatible() or "visitor" end,
     store = {
       get = function(key) return mod.save:get(key) end,
       set = function(key, value) mod.save:set(key, value) end,
@@ -328,7 +343,7 @@ return function(mod)
   -- mod.cache (installation-wide, src/mods/Loader.lua:1641-1643), never in
   -- a slot's own save, as session/pairings.json.
   local cache = mod.cache
-  local pairing = kb.Pairing.new({
+  pairing = kb.Pairing.new({
     engine = engine, json = kb.json, log = log, clock = clock, hash = kb.sha256.short,
     store = type(cache) == "table" and {
       read = function(rel) return cache:read(rel) end,
@@ -354,6 +369,8 @@ return function(mod)
     engine = engine, games = kb.games, json = kb.json, log = log,
     -- the playthrough as the pairing judges it (the save tables CONTINUE brought)
     playthrough = pairing.playthrough,
+    -- FP2: how many party members are visitors (game.status.visitors)
+    visitors = function() return party.visitors() end,
   })
   -- M8: the story diffs (story.flags, story.toggles, story.blocks,
   -- story.lit) and field moves from Minecraft (act.field)
@@ -410,6 +427,8 @@ return function(mod)
       moveNum = moveNumOf,
       compat = compat,
       uidOf = engine.uidOf,
+      -- FP2: a visitor's real dex (the stand-in's is the game's own)
+      visitorOf = function(mon) return party.identity(engine.uidOf(mon)) end,
       story = storyParts,
       -- Wild Routes (WR2): every zone's progress; its diffs start from here
       routes = routeActs.progress(),
@@ -601,6 +620,8 @@ return function(mod)
     tested = kb.Engine.TESTED,
     -- U3: hello.ok.union_room, so the client can say what to switch off
     unionRoom = function() return status.unionRoom end,
+    -- FP2: hello.ok.compat.visitor, whether the stand-in registered
+    visitor = visitorReady,
     game = engine.gameVersion,
     sessionId = sessionId,
     snapshot = snapshot,

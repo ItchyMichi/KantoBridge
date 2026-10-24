@@ -339,7 +339,7 @@ def test_sync_leaves_out_species_and_moves_beyond_gen1_with_a_counted_warning():
 
 # FP1 (FOREIGN_POKEMON_PLAN section 8): what a visitor record needs, all made up
 VISITOR_FIELDS = {"stats": {"hp": 20, "atk": 11, "def": 12, "spa": 13, "spd": 14, "spe": 15},
-                  "types": ["dragon", "ground"], "nature": "jolly", "ot": "TRADER", "form": "alola",
+                  "types": ["dragon", "ground"], "nature": "jolly", "ot": "TRADER",
                   "canLearn": [15, 57, 89], "stones": ["ice_stone"]}
 
 
@@ -484,3 +484,106 @@ def test_logs_never_carry_nicknames():
     text = "\n".join(g.rig.logs())
     assert "ABBA" not in text and "DCBA" not in text and "TESTER" not in text
     assert "party.give" in text and "party.synced" in text
+
+
+# ------------------------------------------------------------ FP2: visitors in Blue (FOREIGN_POKEMON_PLAN section 3)
+
+from battlesim import VISITOR_DATA  # noqa: E402
+
+SKITTY = {"name": "Skitty", "stats": {"hp": 50, "atk": 22, "def": 23, "spa": 21, "spd": 22, "spe": 26},
+          "types": ["normal"], "nature": "timid", "canLearn": [15, 57], "stones": ["moon_stone"]}
+
+
+def visitor_game(**kw):
+    return BattleGame(data=VISITOR_DATA, **kw)
+
+
+def hello_ok(g):
+    return [m["data"] for m in g.log if m["type"] == "hello.ok"][-1]
+
+
+def snapshot_party(g):
+    seq = g.send("resync")
+    g.run()
+    return [m for m in g.received("snapshot") if m.get("re") == seq][0]["data"]["party"]
+
+
+def test_the_stand_in_registers_and_hello_says_so():
+    g = visitor_game()
+    assert hello_ok(g)["compat"]["visitor"] is True
+    rec = g.b.mod._registered.pokemon.KB_VISITOR
+    assert rec.dex == 999 and rec.name == b"VISITOR" and rec.catchRate == 0 and len(rec.evolutions) == 0
+    plain = BattleGame()
+    assert hello_ok(plain)["compat"]["visitor"] is False, "registered but not in the live data: left out (Q13)"
+
+
+def test_a_foreign_member_is_a_visitor_in_its_place():
+    # R1: same place, same count; R2: past Blue's 151; §3.4: its species' name; §4.2: field moves only
+    g = visitor_game()
+    sync(g, [entry(U2, 16, 9, [N["GUST_T"]]),
+             entry(U1, 300, 20, [N["TACKLE_T"], N["CUT"], 300], hp=31, maxhp=50, **SKITTY)])
+    g.run(2)
+    assert not errors(g)
+    assert species(g) == ["BIRDMON", "KB_VISITOR"]
+    v = g.party()[1]
+    assert v.nickname == b"SKITTY" and v.level == 20
+    assert [mv.id for mv in v.moves.values()] == [b"CUT"], "only the field moves Blue offers"
+    assert (v.stats.hp, v.stats.attack, v.stats.defense, v.stats.speed, v.stats.special) == (50, 22, 23, 26, 21)
+    assert v.hp == 31, "HP exact: the stats are Cobblemon's"
+    st = g.status()
+    assert st["partyVisitorsNow"] == 1 and st["partyForeignSpecies"] == 0
+    assert g.b.mod._save.visitorIds[U1.encode()].dex == 300 and g.b.mod._save.visitorIds[U1.encode()].name == b"Skitty"
+    party = snapshot_party(g)
+    assert [(p["dex"], p.get("visitor", False)) for p in party] == [(16, False), (300, True)]
+    statuses = [m["data"] for m in g.received("game.status")]
+    assert statuses[-1]["visitors"] == 1
+
+
+def test_a_nickname_wins_over_the_species_name_and_dex_0_and_forms_are_visitors():
+    g = visitor_game()
+    sync(g, [entry(U1, 0, 5, [N["SURF"]], nick="CUSTOM", stats=SKITTY["stats"]),
+             entry(U2, 37, 10, [N["EMBER_T"]], form="alola", name="Vulpix", stats=SKITTY["stats"]),
+             entry(U3, 37, 10, [N["EMBER_T"]])])
+    g.run(2)
+    assert species(g) == ["KB_VISITOR", "KB_VISITOR", "FOXMON"]
+    assert [m.nickname for m in g.party()] == [b"CUSTOM", b"VULPIX", None]
+    assert [p["dex"] for p in snapshot_party(g)] == [0, 37, 37]
+
+
+def test_a_member_swaps_between_native_and_visitor_in_place():
+    # §3.1: never evolved in the hidden game; Cobblemon's evolution rewrites the record, same member, same uid
+    g = visitor_game()
+    sync(g, [entry(U1, 37, 10, [N["EMBER_T"], N["TAIL_T"]])])
+    g.run(2)
+    fox = g.party()[0]
+    sync(g, [entry(U1, 300, 22, [N["CUT"]], **SKITTY)])
+    g.run(2)
+    assert same(g, g.party()[0], fox) and fox.species == b"KB_VISITOR" and fox.nickname == b"SKITTY"
+    sync(g, [entry(U1, 38, 23, [N["EMBER_T"]])])
+    g.run(2)
+    assert same(g, g.party()[0], fox) and fox.species == b"FOXMON_2" and fox.nickname is None
+    assert g.status()["partyVisitorsNow"] == 0 and len(list(g.b.mod._save.visitorIds.keys())) == 0
+
+
+def test_visitors_are_known_again_after_a_reload():
+    # §7.6: the identity map comes back from mod.save before any sync
+    g = visitor_game()
+    sync(g, [entry(U1, 300, 20, [N["CUT"]], **SKITTY)])
+    g.run(2)
+    saved = g.b.mod._save
+    g.b._mod_opts[b"save"] = saved
+    g.b.reload()
+    g.rig.step(2)
+    g.connect()
+    party = snapshot_party(g)
+    assert [(p["uid"], p["dex"], p.get("visitor")) for p in party] == [(U1, 300, True)]
+
+
+def test_a_region_that_leaves_foreign_members_out_gets_no_visitors():
+    # Q12: session.bind.incompatible leave_out (the region record's choice)
+    g = visitor_game()
+    g.send("session.bind", {"world": "w-fp2", "multiplayer": False, "incompatible": "leave_out"})
+    g.run(3)
+    sync(g, [entry(U1, 300, 20, [N["CUT"]], **SKITTY), entry(U2, 16, 9, [N["GUST_T"]])])
+    g.run(2)
+    assert species(g) == ["BIRDMON"] and g.status()["partyForeignSpecies"] == 1

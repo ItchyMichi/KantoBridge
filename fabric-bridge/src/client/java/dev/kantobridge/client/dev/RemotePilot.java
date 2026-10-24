@@ -112,7 +112,11 @@ import org.lwjgl.glfw.GLFW;
  * sight, the balls and the way home, until the crossing starts); {@code follow} ({@code game}: that link is followed, as
  * a player choosing where to play first, instead of the legacy region's); {@code camera} ({@code third} or {@code first}, {@code hud});
  * {@code lan} ({@code port}: the open world is published to LAN on that port, without authentication, for a second dev
- * client); {@code record}
+ * client); (FOREIGN_POKEMON_PLAN FP2's stone check) {@code give} ({@code properties}: Cobblemon's Pokémon properties,
+ * e.g. {@code "skitty level=20"}, created on the integrated server and added to the player's party; the result names its
+ * uid and species), {@code party} (the player's Cobblemon party as the server has it: uid, species, national dex, level,
+ * form, nickname, in the result) and {@code screenshot} ({@code file}: Minecraft's own screenshot into
+ * {@code screenshots/}); {@code record}
  * ({@code file}: ffmpeg grabs the window) and {@code stop}; {@code wait} ({@code ticks}); {@code quit}.</li>
  * <li><b>State</b>: {@code <pilotDir>/state.json}, rewritten every few ticks: the last command done and its result, the
  * open screen's class, the top hidden UI (kind, screen id, page, menu or choice index and size, the naming phase), the
@@ -192,6 +196,9 @@ final class RemotePilot {
 	private boolean measureStarted;
 	/** Following no game ("none"), the pause for a game is kept away. */
 	private boolean pauseFreed;
+
+	/** FP2: a give or a party read on the integrated server, until it answers. */
+	private java.util.concurrent.@Nullable CompletableFuture<JsonObject> serverAnswer;
 
 	private @Nullable Process ffmpeg;
 	private @Nullable Path recording;
@@ -399,6 +406,31 @@ final class RemotePilot {
 				this.startRecording(file == null ? null : Path.of(file));
 			}
 			case "stop" -> this.stopRecording();
+			case "give" -> this.serverAnswer = this.onServer(at -> {
+				// FP2: a Pokémon from Cobblemon's own properties, into the party (the PC when it is full)
+				com.cobblemon.mod.common.pokemon.Pokemon mon = com.cobblemon.mod.common.api.pokemon.PokemonProperties.Companion
+						.parse(String.valueOf(text(command, "properties"))).create(at);
+				boolean added = com.cobblemon.mod.common.util.PlayerExtensionsKt.party(at).add(mon);
+				JsonObject out = answer(added, added ? null : "not_added");
+				out.add("pokemon", describe(mon));
+				return out;
+			});
+			case "party" -> this.serverAnswer = this.onServer(at -> {
+				JsonObject out = answer(true, null);
+				JsonArray list = new JsonArray();
+				for (com.cobblemon.mod.common.pokemon.Pokemon mon : com.cobblemon.mod.common.util.PlayerExtensionsKt.party(at)) {
+					list.add(describe(mon));
+				}
+				out.add("party", list);
+				return out;
+			});
+			case "screenshot" -> {
+				String file = text(command, "file");
+				net.minecraft.client.Screenshot.grab(this.minecraft.gameDirectory, file == null ? null : file,
+						this.minecraft.getMainRenderTarget(), message -> {
+						});
+				this.mark("screenshot");
+			}
 			case "measure" -> {
 				// a frame-rate test (LANDSCAPE_MODELS.md): meshstats' re-mesh and 30 s of frames, as its key does
 				this.measureStarted = MeshStatsRuntime.measure(this.minecraft);
@@ -461,6 +493,24 @@ final class RemotePilot {
 				this.finish(this.result(ok, ok ? null : "no_link"));
 			}
 			case "type" -> this.typeTick();
+			case "give", "party" -> {
+				java.util.concurrent.CompletableFuture<JsonObject> answer = this.serverAnswer;
+				if (answer == null) {
+					this.finish(this.result(false, "no_server"));
+				} else if (answer.isDone()) {
+					this.serverAnswer = null;
+					JsonObject out;
+					try {
+						out = answer.join();
+					} catch (RuntimeException e) {
+						out = this.result(false, "failed " + e.getClass().getSimpleName());
+					}
+					this.finish(out);
+				} else if (this.currentTicks > 10 * TICKS) {
+					this.serverAnswer = null;
+					this.finish(this.result(false, "timeout"));
+				}
+			}
 			case "story" -> this.finish(this.storyCell(text(command, "map"), number(command, "x", -1), number(command, "y", -1)));
 			case "wait" -> {
 				if (this.currentTicks >= number(command, "ticks", TICKS)) {
@@ -535,6 +585,47 @@ final class RemotePilot {
 		this.lastDone = command.has("id") ? command.get("id").getAsInt() : this.lastDone;
 		this.lastResult = result;
 		this.mark("done id=" + this.lastDone + " " + result);
+	}
+
+	/** FP2: work on the integrated server's own thread for this player; null without one (a joined server). */
+	private java.util.concurrent.@Nullable CompletableFuture<JsonObject> onServer(java.util.function.Function<ServerPlayer, JsonObject> work) {
+		IntegratedServer host = this.minecraft.getSingleplayerServer();
+		LocalPlayer player = this.minecraft.player;
+		if (host == null || player == null) {
+			return null;
+		}
+		java.util.UUID id = player.getUUID();
+		return host.submit(() -> {
+			ServerPlayer at = host.getPlayerList().getPlayer(id);
+			if (at == null) {
+				return answer(false, "no_player");
+			}
+			return work.apply(at);
+		});
+	}
+
+	/** FP2: a plain answer built on the server thread (no client state). */
+	private static JsonObject answer(boolean ok, @Nullable String reason) {
+		JsonObject out = new JsonObject();
+		out.addProperty("ok", ok);
+		if (reason != null) {
+			out.addProperty("reason", reason);
+		}
+		return out;
+	}
+
+	/** FP2: a Cobblemon Pokémon as the pilot reports it (Cobblemon's own names, never the hidden game's). */
+	private static JsonObject describe(com.cobblemon.mod.common.pokemon.Pokemon mon) {
+		JsonObject out = new JsonObject();
+		out.addProperty("uid", mon.getUuid().toString());
+		out.addProperty("species", mon.getSpecies().getName());
+		out.addProperty("dex", mon.getSpecies().getNationalPokedexNumber());
+		out.addProperty("level", mon.getLevel());
+		out.addProperty("form", mon.getForm().getName());
+		if (mon.getNickname() != null) {
+			out.addProperty("nick", mon.getNickname().getString());
+		}
+		return out;
 	}
 
 	private JsonObject result(boolean ok, @Nullable String reason) {

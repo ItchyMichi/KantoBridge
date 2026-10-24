@@ -35,6 +35,7 @@ local GAME_ID = "^[a-z][a-z0-9_]*$"
 --   games         lib/kb_games.lua (the catalogue: games[id].markers)
 --   playthrough() the pairing's view (kb_pairing.playthrough), or nil for the
 --                 adapter's
+--   visitors()    FP2: how many party members are visitors (optional)
 --   json          kb_json
 --   log           kb_log logger (optional)
 function Progress.new(opts)
@@ -80,6 +81,11 @@ function Progress.new(opts)
       local p = type(save) == "table" and type(save.player) == "table" and save.player or nil
       local name = p and p.name
       if type(name) == "string" and #name >= 1 and #name <= Progress.MAX_NAME then data.name = name end
+    end
+    -- FP2 (FOREIGN_POKEMON_PLAN §4.1): the visitors in the party
+    if started and type(opts.visitors) == "function" then
+      local n = opts.visitors()
+      if type(n) == "number" and n >= 0 and n <= 6 and n == math.floor(n) then data.visitors = n end
     end
     local slot = engine.saveSlot()
     if type(slot) == "number" and slot >= 0 and slot <= 255 and slot == math.floor(slot) then data.slot = slot end

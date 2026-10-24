@@ -170,6 +170,7 @@ public class PartyGameTests implements FabricGameTest {
 				helper.assertTrue(entry.getAsJsonArray("canLearn").size() > 0, "Cobblemon's machine moves for slot " + i);
 			}
 			helper.assertTrue(first.getAsJsonArray("types").toString().equals("[\"electric\"]"), "Pikachu's type: " + first.get("types"));
+			helper.assertTrue("Pikachu".equals(first.get("name").getAsString()), "FP2: the species' name: " + first.get("name"));
 			helper.assertTrue(first.getAsJsonArray("stones").toString().equals("[\"thunder_stone\"]"),
 					"the Thunder Stone evolves Pikachu: " + first.get("stones"));
 			JsonObject second = list.get(1).getAsJsonObject();
@@ -228,7 +229,7 @@ public class PartyGameTests implements FabricGameTest {
 	}
 
 	@GameTest(template = EMPTY_STRUCTURE, batch = BATCH)
-	public void evolutionsBeyond151AreBlocked(GameTestHelper helper) {
+	public void evolutionsPastTheCeilingFollowTheRule(GameTestHelper helper) {
 		Pokemon eevee;
 		try {
 			eevee = Gen1Mons.gift(new Gen1Mon(133, 30, List.of(33), null));
@@ -251,9 +252,15 @@ public class PartyGameTests implements FabricGameTest {
 		long blocked = PartyService.evolutionsBlocked();
 		CobblemonEvents.EVOLUTION_TESTED.post(espeon);
 		CobblemonEvents.EVOLUTION_TESTED.post(vaporeon);
-		helper.assertFalse(espeon.getResult(), "Espeon (196) must be blocked");
+		// FOREIGN_POKEMON_PLAN Q9 (FP2): evolving past the ceiling is on by default (Espeon is a visitor in Blue then)
+		helper.assertTrue(espeon.getResult(), "Espeon (196) is allowed by default (evolveBeyond)");
 		helper.assertTrue(vaporeon.getResult(), "Vaporeon (134) must stay possible");
-		helper.assertTrue(PartyService.evolutionsBlocked() == blocked + 1, "the block wasn't counted");
+		helper.assertTrue(PartyService.evolutionsBlocked() == blocked, "nothing was blocked");
+		// a region that switches it off keeps today's ceiling
+		RegionRecord.Compat pure = new RegionRecord.Compat(151, 165, 10, RegionRecord.VISITOR, false);
+		helper.assertFalse(PartyService.evolutionAllowed(196, pure), "evolveBeyond off: Espeon is blocked");
+		helper.assertTrue(PartyService.evolutionAllowed(134, pure), "evolveBeyond off: Vaporeon stays possible");
+		helper.assertTrue(PartyService.evolutionAllowed(196, new RegionRecord.Compat(151, 165, 10, RegionRecord.VISITOR)), "absent: on");
 		helper.succeed();
 	}
 	/** MG7: a Gen 3 gift (a national number past 151, IVs as they are), and the evolution ceiling by region. */

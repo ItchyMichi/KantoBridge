@@ -124,6 +124,12 @@
             "uniqueItems": true,
             "maxItems": 16,
             "description": "The canonical ids (protocol/items.json) of the stones that would evolve it in Cobblemon now, with the evolution rules applied (§4.5)."
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 32,
+            "description": "FP2 (FOREIGN_POKEMON_PLAN §3.4): the species' display name as Cobblemon has it, which a visitor without a nickname shows (upper case)."
           }
         }
       },

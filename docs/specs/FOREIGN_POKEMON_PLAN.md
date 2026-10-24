@@ -1,7 +1,8 @@
 # Foreign Pokémon: visitors in every hidden game
 
 **Status: proposed with decisions; FP0 done on the pod (2026-10-24, PROGRESS.md "Foreign Pokémon: spike FP0"); FP1
-(protocol) done 2026-10-24 (PROGRESS.md "Foreign Pokémon: FP1"); FP2 next (v2.1).** FP0's answers are folded into §3.1, §3.3, §4.12, §4.14, §10 and §14 below. This plan replaces the user's note "Pokémon and
+(protocol) done 2026-10-24 (PROGRESS.md "Foreign Pokémon: FP1"); FP2's Blue visitors and FP4's stone path built and run
+end to end on the real Blue the same day (PROGRESS.md "Foreign Pokémon: FP2, Blue"); FP2's rest next (v2.1).** FP0's answers are folded into §3.1, §3.3, §4.12, §4.14, §10 and §14 below. This plan replaces the user's note "Pokémon and
 items from outside Gen 1" (FOREIGN_POKEMON_AND_ITEMS.md, 2026-10-13, Gen 1 only, pinned to `2db4b8b` and Gen1Recomp
 v0.3.49) and the plan's own first draft (94360f2). It covers every game that can be imported today (Blue, Crystal,
 Emerald) at Gen1Recomp v0.3.85 and Cobblemon 1.8.1, and it is written so that a party moves between Kanto, Johto and

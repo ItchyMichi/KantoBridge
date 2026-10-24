@@ -38,7 +38,8 @@ def test_in_game_the_status_names_the_save_and_follows_the_snapshots_followers()
     types = [m["type"] for m in g.log]
     assert types[:5] == ["hello.ok", "snapshot", "npc.set", "bag.sync", "game.status"]
     assert statuses(g) == [{"game": "blue", "playthrough": "fresh", "ingame": True, "started": True, "badges": 1,
-                            "markers": {"starter": False, "champion": False}, "name": "TESTER", "slot": 0}]
+                            "markers": {"starter": False, "champion": False}, "name": "TESTER", "slot": 0,
+                            "visitors": 0}]
     g.run(30)
     assert len(statuses(g)) == 1, "nothing changed: nothing sent"
     seq = g.send("resync")

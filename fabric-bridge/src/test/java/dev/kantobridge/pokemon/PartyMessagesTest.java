@@ -117,6 +117,9 @@ class PartyMessagesTest {
 		assertEquals("jolly", PartySync.nameId("jolly"));
 		assertNull(PartySync.nameId("???"));
 		assertNull(PartySync.nameId("9lives"));
+		assertEquals("Skitty", PartySync.speciesName("Skitty"));
+		assertNull(PartySync.speciesName(" "));
+		assertEquals(32, PartySync.speciesName("S".repeat(40)).length());
 		assertEquals(1, PartySync.stat(0));
 		assertEquals(9999, PartySync.stat(12000));
 		assertEquals(List.of(), PartySync.canLearn(null), "no learnset: nothing (the GameTests read a real one)");

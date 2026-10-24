@@ -71,7 +71,7 @@ def test_an_evolution_stone_goes_to_cobblemon():
     assert row(g.E.lastBagList, "FIRE_STONE") is None, "its bag row is gone"
     assert g.E.flashes == 1 and g.top().isFlash is True, "the party menu closed behind the bag's flash"
     g.run()
-    assert items_sent(g) == [{"item": "FIRE_STONE", "uid": U1}]
+    assert items_sent(g) == [{"item": "FIRE_STONE", "uid": U1, "kind": "stone"}]
     # Cobblemon evolves it; the next sync brings the new species back to the same member
     g.send("party.sync", {"party": [entry(U1, 38, 10, [N["EMBER_T"], N["TAIL_T"]]),
                                     entry(U2, 7, 12, [N["TACKLE_T"], N["TAIL_T"]])], "box": {"count": 0}})
@@ -95,7 +95,7 @@ def test_rare_candy_goes_to_cobblemon():
     g.E.useItem(b"RARE_CANDY", fox)
     g.run()
     assert fox.level == 10 and not native_items(g), "no Gen 1 level-up"
-    assert items_sent(g) == [{"item": "RARE_CANDY", "uid": U1}]
+    assert items_sent(g) == [{"item": "RARE_CANDY", "uid": U1, "kind": "candy"}]
     assert g.E.save.inventory.RARE_CANDY == 2 and row(g.E.lastBagList, "RARE_CANDY").count == 2
     assert g.status()["itemCandy"] == 1
 
@@ -117,7 +117,7 @@ def test_a_tm_with_a_free_slot_sends_its_move():
     g.run()
     assert native_items(g) == [("learned", "TM_SAND_T")]
     assert [mv.id for mv in bird.moves.values()] == [b"TACKLE_T", b"TAIL_T", b"SAND_T"]
-    assert items_sent(g) == [{"item": "TM_SAND_T", "uid": U2, "move": N["SAND_T"]}], "no slot: it was added"
+    assert items_sent(g) == [{"item": "TM_SAND_T", "uid": U2, "kind": "machine", "move": N["SAND_T"]}], "no slot: it was added"
     assert g.E.save.inventory.TM_SAND_T is None, "a TM is used up"
     st = g.status()
     assert st["itemMachine"] == 1 and st["itemTaught"] == 1 and st["tmWatching"] is False
@@ -137,7 +137,7 @@ def test_an_hm_over_a_forgotten_move_sends_the_slot():
     assert len(bird.moves) == 4
     g.send("act.button", {"button": "a", "how": "tap"})   # the mirror: forget the third move
     g.run(3)
-    assert items_sent(g) == [{"item": "HM_WHIRL_T", "uid": U2, "move": N["WHIRL_T"], "slot": 2}]
+    assert items_sent(g) == [{"item": "HM_WHIRL_T", "uid": U2, "kind": "machine", "move": N["WHIRL_T"], "slot": 2}]
     assert g.E.save.inventory.HM_WHIRL_T == 1, "an HM stays in the bag"
     g.run(3)
     assert [mv.id for mv in g.party()[0].moves.values()] == [b"TACKLE_T"], "then the waiting sync applied"
@@ -202,7 +202,7 @@ def test_an_item_cobblemon_applies_is_consumed_with_the_live_data():
     lst, opts = bag_list_on(g, "RARE_CANDY")
     g.E.useItem(b"RARE_CANDY", mon(g, 0), opts)
     g.run()
-    assert not native_items(g) and items_sent(g) == [{"item": "RARE_CANDY", "uid": U1}]
+    assert not native_items(g) and items_sent(g) == [{"item": "RARE_CANDY", "uid": U1, "kind": "candy"}]
     assert last_remove(g) == (b"RARE_CANDY", 1, None, True)
     assert g.E.save.inventory.RARE_CANDY == 2
 
@@ -247,7 +247,7 @@ def test_a_use_whose_client_dropped_goes_to_the_next_one_once():
     g.rig.step(3)
     g.connect()
     g.run(2)
-    assert items_sent(g) == [{"item": "RARE_CANDY", "uid": U1}]
+    assert items_sent(g) == [{"item": "RARE_CANDY", "uid": U1, "kind": "candy"}]
     g.send("resync")
     g.run(2)
     assert len(items_sent(g)) == 1, "never sent twice"
@@ -261,3 +261,46 @@ def test_logs_never_carry_species_or_moves():
     text = "\n".join(g.rig.logs())
     assert "FOXMON" not in text and "SAND_T" not in text and "STARTMON" not in text
     assert "party.item" in text
+
+
+# ------------------------------------------------------------ FP2/FP4: a stone on a visitor (FOREIGN_POKEMON_PLAN §4.4)
+
+from battlesim import VISITOR_DATA  # noqa: E402
+
+SKITTY = {"uid": U1, "dex": 300, "level": 20, "moves": [N["TACKLE_T"]], "hp": 50, "maxhp": 50, "name": "Skitty",
+          "stats": {"hp": 50, "atk": 22, "def": 23, "spa": 21, "spd": 22, "spe": 26}, "stones": ["moon_stone"]}
+
+
+def visitor_items_game():
+    g = BattleGame(start=("WILD_ROUTE", 2, 3, "down"), data=VISITOR_DATA)
+    g.send("party.sync", {"party": [SKITTY, entry(U2, 7, 12, [N["TACKLE_T"]])], "box": {"count": 0}})
+    g.run(2)
+    stock(g, FIRE_STONE=1, MOON_STONE=1)
+    return g
+
+
+def test_a_stone_cobblemon_would_take_goes_out_for_a_visitor():
+    g = visitor_items_game()
+    skitty = mon(g, 0)
+    assert skitty.species == b"KB_VISITOR"
+    g.E.useItem(b"MOON_STONE", skitty)
+    g.run()
+    assert not native_items(g) and g.E.save.inventory.MOON_STONE is None
+    assert items_sent(g) == [{"item": "MOON_STONE", "uid": U1, "kind": "stone"}]
+    # Cobblemon evolves it (Delcatty, 301: a visitor in Blue too); the next sync rewrites the same record
+    g.send("party.sync", {"party": [dict(SKITTY, dex=301, name="Delcatty", stones=[]), entry(U2, 7, 12, [N["TACKLE_T"]])],
+                          "box": {"count": 0}})
+    g.run(2)
+    assert same_member(g, mon(g, 0), skitty) and skitty.nickname == b"DELCATTY"
+
+
+def test_a_stone_cobblemon_would_refuse_stays_the_games_refusal():
+    g = visitor_items_game()
+    g.E.useItem(b"FIRE_STONE", mon(g, 0))
+    g.run()
+    assert native_items(g) == [("failed", "FIRE_STONE")] and not items_sent(g)
+    assert g.E.save.inventory.FIRE_STONE == 1
+
+
+def same_member(g, a, b):
+    return bool(g.b.eval("function(a, b) return rawequal(a, b) end")(a, b))

@@ -528,13 +528,20 @@ public final class PartyService {
 	}
 
 	/**
-	 * The evolution rule (P14): false when the result is a species past the owner's followed region's ceiling. FP1: the
-	 * sync's {@code stones} apply the same rule, so the hidden stone check and Cobblemon agree.
+	 * The evolution rule (P14; FOREIGN_POKEMON_PLAN Q9, FP2): a Pokémon may evolve into a species past the owner's followed
+	 * region's ceiling unless that region's {@code evolveBeyond} is off (it is a visitor there afterwards). The sync's
+	 * {@code stones} apply the same rule, so the hidden stone check and Cobblemon agree.
 	 */
 	static boolean evolutionAllowed(Evolution evolution, @Nullable ServerPlayer owner) {
 		String target = evolution.getResult().getSpecies();
 		Species species = target == null ? null : speciesById(target);
-		return species == null || species.getNationalPokedexNumber() <= evolutionCeilingOf(owner);
+		RegionRecord followed = owner == null ? null : RegionPresenceService.followed(owner);
+		return species == null || evolutionAllowed(species.getNationalPokedexNumber(), followed == null ? null : followed.rules().compat());
+	}
+
+	/** The rule for a result's dex under a compat profile: allowed when within the ceiling or when evolveBeyond is on (Q9). */
+	public static boolean evolutionAllowed(int dex, @Nullable RegionRecord.Compat compat) {
+		return compat == null || compat.evolvesBeyond() || dex <= compat.maxDex();
 	}
 
 	/** The highest dex a player's Pokémon may evolve into (MG7, MULTI_GAME_PLAN §4.9): their followed region's ceiling. */

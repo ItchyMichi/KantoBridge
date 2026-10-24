@@ -1007,5 +1007,16 @@ FP1 only adds messages and fields; nothing in the game should look different yet
 
 - [ ] Play a few minutes in an existing world (any region) with a normal party: syncs, heals, a trainer battle and a
       Center work as before, and F7 shows no new errors.
-- [ ] A world built before 2026-10-24 has `"onIncompatible": "leave_out"` in its region records; tell me whether to
-      rebuild, edit or migrate them before FP2 makes foreign members visitors.
+- [x] A world built before 2026-10-24 has `"onIncompatible": "leave_out"` in its region records: rebuilt, not migrated
+      (your answer, 2026-10-24).
+
+### Foreign Pokémon: FP2 in Blue (with you)
+
+- [ ] In a rebuilt Kanto world, give yourself a Pokémon Blue lacks (e.g. `/pokegive skitty`): Blue's party screen shows
+      it as VISITOR art named after its species, in Cobblemon's order.
+- [ ] Use a Moon Stone (Mt. Moon) from Blue's bag on it: Cobblemon evolves it to Delcatty; Blue's screen shows DELCATTY.
+- [ ] Save, quit both, start again: both parties match. (CONTINUE from Blue's title in Minecraft may hang today: a known
+      issue, being fixed.)
+- [ ] With gen1-bridge switched off, a Blue save with a visitor shows the LOST box report, and it comes back with the
+      mod on (FP0's result, worth seeing once yourself).
+

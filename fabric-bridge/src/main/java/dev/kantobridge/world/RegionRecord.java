@@ -55,7 +55,7 @@ public final class RegionRecord {
 	private static final Set<String> GENERATOR_FIELDS = Set.of("shapes");
 	private static final Set<String> RULES_FIELDS = Set.of("profile", "movement", "compat");
 	private static final Set<String> MOVEMENT_FIELDS = Set.of("walk", "bike");
-	private static final Set<String> COMPAT_FIELDS = Set.of("maxDex", "maxMove", "nick", "onIncompatible");
+	private static final Set<String> COMPAT_FIELDS = Set.of("maxDex", "maxMove", "nick", "onIncompatible", "evolveBeyond");
 	private static final Set<String> NAMESPACE_FIELDS = Set.of("artSet", "pools");
 	private static final Set<String> ON_INCOMPATIBLE = Set.of(LEAVE_OUT, VISITOR);
 	/** The hash of nothing: a document the world doesn't have yet. */
@@ -191,8 +191,19 @@ public final class RegionRecord {
 	 * @param nick           the longest nickname, or null when the record doesn't say
 	 * @param onIncompatible {@link #VISITOR} (FOREIGN_POKEMON_PLAN Q12, the default since FP1: a member the game lacks
 	 *                       is a visitor) or {@link #LEAVE_OUT} (it is left out); sent to the link at bind
+	 * @param evolveBeyond   FOREIGN_POKEMON_PLAN Q9 (FP2): may a Pokémon evolve into a species past {@code maxDex} (it is a
+	 *                       visitor here then); null when the record doesn't say, which means yes
 	 */
-	public record Compat(int maxDex, int maxMove, @Nullable Integer nick, String onIncompatible) {
+	public record Compat(int maxDex, int maxMove, @Nullable Integer nick, String onIncompatible, @Nullable Boolean evolveBeyond) {
+		public Compat(int maxDex, int maxMove, @Nullable Integer nick, String onIncompatible) {
+			this(maxDex, maxMove, nick, onIncompatible, null);
+		}
+
+		/** Q9: evolutions past the ceiling are allowed unless the record switches them off. */
+		public boolean evolvesBeyond() {
+			return this.evolveBeyond == null || this.evolveBeyond;
+		}
+
 		public Compat {
 			if (maxDex < 1 || maxDex > Games.Compat.MAX_NUMBER || maxMove < 1 || maxMove > Games.Compat.MAX_NUMBER
 					|| nick != null && (nick < 1 || nick > Games.Compat.MAX_NICK)) {
@@ -551,6 +562,9 @@ public final class RegionRecord {
 			compat.addProperty("nick", this.rules.compat().nick());
 		}
 		compat.addProperty("onIncompatible", this.rules.compat().onIncompatible());
+		if (this.rules.compat().evolveBeyond() != null) {
+			compat.addProperty("evolveBeyond", this.rules.compat().evolveBeyond());
+		}
 		rules.add("compat", compat);
 		root.add("rules", rules);
 		JsonObject namespaces = new JsonObject();
@@ -631,8 +645,9 @@ public final class RegionRecord {
 		if (!ON_INCOMPATIBLE.contains(onIncompatible)) {
 			throw new DataException(c.path("onIncompatible"), "unknown value");
 		}
+		Boolean evolveBeyond = c.has("evolveBeyond") ? c.bool("evolveBeyond") : null;
 		Compat compat = new Compat(c.integer("maxDex", 1, Games.Compat.MAX_NUMBER), c.integer("maxMove", 1, Games.Compat.MAX_NUMBER), nick,
-				onIncompatible);
+				onIncompatible, evolveBeyond);
 		DataReader n = root.object("namespaces").allowOnly(NAMESPACE_FIELDS);
 		Namespaces namespaces = new Namespaces(n.string("artSet", Games.GAME_ID), n.string("pools", POOLS));
 		try {

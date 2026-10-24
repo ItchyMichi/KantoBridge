@@ -52,6 +52,8 @@ MOVE_NUMBERS = {
     "LEER_T": 43, "TAIL_T": 39, "BUBBLE_T": 145, "WATER_T": 55, "GUST_T": 16, "SAND_T": 28,
     "QUICK_T": 98, "WHIRL_T": 18, "WING_T": 17, "AGILITY_T": 97, "HEADBUTT_T": 29, "AMNESIA_T": 133,
     "REST_T": 156, "SPLASH_T": 150,
+    # FP2: two of Blue's field moves (a visitor keeps only those)
+    "CUT": 15, "SURF": 57,
     # the boss moves the special-move table names (engine symbols, made-up numbers)
     "BIDE": 117, "SKY_ATTACK": 143, "MEGA_DRAIN": 72, "BLIZZARD": 59,
 }
@@ -151,6 +153,14 @@ POKEMON_TOWER_TEST = {"rows": ["######", "#....#", "#....#", "######"], "indoor"
 
 MAPS = {"OAKS_LAB": LAB, "TEST_ROUTE": ROUTE, "WILD_ROUTE": WILD_ROUTE, "WILD_CAVE": WILD_CAVE,
         "SAFARI_TEST": SAFARI_TEST, "POKEMON_TOWER_TEST": POKEMON_TOWER_TEST}
+
+
+# FP2 (FOREIGN_POKEMON_PLAN section 3): the visitor stand-in as the engine holds it once gen1-bridge's
+# registration is merged (the adapter registers KB_VISITOR from the entry chunk; the fake mod keeps the record)
+VISITOR = {"dex": 999, "name": "VISITOR", "level1Moves": [], "learnset": [], "evolutions": [],
+           "baseStats": {"hp": 50, "attack": 50, "defense": 50, "speed": 50, "special": 50},
+           "growthRate": "TEST_RATE", "catchRate": 0}
+VISITOR_DATA = dict(DATA, pokemon=dict(SPECIES, KB_VISITOR=VISITOR))
 
 
 def content():

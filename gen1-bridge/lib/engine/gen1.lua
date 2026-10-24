@@ -2588,11 +2588,69 @@ function Gen1.new(opts)
     return n
   end
 
+  -- ---- the visitor stand-in (docs/specs/FOREIGN_POKEMON_PLAN.md §3, FP2)
+  --
+  -- One original species, KB_VISITOR ("VISITOR"), registered from the mod's
+  -- entry chunk through the public registry, before the registries freeze
+  -- (src/mods/Loader.lua:2223-2227; the record's schema, src/mods/Schemas.lua
+  -- :1732-1768). Its dex 999 is above constants.dexSize, so the Pokedex never
+  -- lists it (src/ui/PokedexMenu.lua:55-99); no index, no evolutions, no
+  -- learnset, catch rate 0 (FP0 ran it on Blue: PROGRESS.md "Foreign
+  -- Pokemon: spike FP0"). A party member Blue can't show as itself is a
+  -- record of this species carrying the member's name, level, HP, stats and
+  -- field moves; nothing ever sets a Pokedex flag for it.
+
+  local VISITOR = "KB_VISITOR"
+  local visitorAsked, visitorAccepted = false, false
+  -- The field moves Blue's party menu offers (GetMonFieldMoves, src/ui/PartyMenu.lua:867-886)
+  local FIELD_MOVES = { FLY = true, FLASH = true, CUT = true, SURF = true, STRENGTH = true, SOFTBOILED = true,
+                        TELEPORT = true, DIG = true }
+
+  -- Registers the stand-in with its art under `dir` (the mod's assets/visitor);
+  -- true when the registry took it. Called once from the entry chunk.
+  function engine.registerVisitor(content, dir)
+    visitorAsked = true
+    local reg = type(content) == "table" and content.pokemon or nil
+    if type(reg) ~= "table" or type(reg.register) ~= "function" then return false end
+    local art = type(dir) == "string" and dir or ""
+    local icon = { image = art .. "/gen1_icon.png", frames = 2 }
+    local ok, res = pcall(reg.register, reg, VISITOR, {
+      id = VISITOR, name = "VISITOR", dex = 999, types = { "NORMAL" },
+      baseStats = { hp = 50, attack = 50, defense = 50, speed = 50, special = 50 },
+      catchRate = 0, baseExp = 0, level1Moves = {}, growthRate = "MEDIUM_FAST", learnset = {}, evolutions = {},
+      spriteFront = art .. "/gen1_front.png", spriteBack = art .. "/gen1_back.png", frontSize = 5, icon = icon,
+    })
+    visitorAccepted = ok and res ~= nil and res ~= false
+    if visitorAccepted and type(content.icons) == "table" and type(content.icons.register) == "function" then
+      pcall(content.icons.register, content.icons, VISITOR, icon)
+    end
+    if not visitorAccepted then warnAt("party.visitor_refused", ok and "nil" or res) end
+    return visitorAccepted
+  end
+
+  -- The stand-in's species id once the live data holds it, else nil (then a
+  -- member Blue lacks is left out, Q13).
+  function engine.visitorSpecies()
+    local data = gameData()
+    if not visitorAccepted or not (data and type(data.pokemon) == "table") then return nil end
+    return type(data.pokemon[VISITOR]) == "table" and VISITOR or nil
+  end
+
+  -- R2: Gen 1 has no forms, so any form Cobblemon names is one Blue lacks.
+  function engine.formKnown(species, form) return form == nil end
+
+  -- §4.2: the move ids a visitor keeps (the field moves Blue offers).
+  function engine.visitorMoves() return FIELD_MOVES end
+
   -- ---- the shadow party (party.sync, Cobblemon authoritative)
 
   -- Cobblemon uids of party members, by member (weak keys); rebuilt from
   -- mod.save after a reload (engine.adoptUids).
   local monUid = setmetatable({}, { __mode = "k" })
+  -- FP2: the stones each synced member evolves with in Cobblemon, as Gen 1
+  -- item symbols (party.sync `stones`, §4.4), by member; nil when the sync
+  -- didn't say (then the species' own evolutions answer)
+  local monStones = setmetatable({}, { __mode = "k" })
 
   function engine.uidOf(mon) return type(mon) == "table" and monUid[mon] or nil end
 
@@ -2691,6 +2749,26 @@ function Gen1.new(opts)
     mon.status = e.status
     if mon.status ~= "SLP" then mon.sleepTurns = nil end
     mon.nickname = e.nick
+    -- FP2 (Q20): Cobblemon's six stats pinned on every record that has them;
+    -- Gen 1's special is Cobblemon's special attack. Stats.ensure keeps a
+    -- complete block (src/pokemon/Stats.lua:58-74) and nothing recomputes a
+    -- synced member (no hidden battle, level-up or candy runs on it)
+    if type(e.stats) == "table" then
+      local p = e.stats
+      mon.stats = { hp = p.hp, attack = p.atk, defense = p.def, speed = p.spe, special = p.spa }
+      mon.hp = e.hp <= 0 and 0 or math.max(1, math.min(p.hp, e.hp))
+    end
+    if type(e.stones) == "table" then
+      local set = {}
+      for _, id in ipairs(e.stones) do
+        local item = itemsCatalogue and type(itemsCatalogue.items) == "table" and itemsCatalogue.items[id] or nil
+        local sym = type(item) == "table" and type(item.symbols) == "table" and item.symbols.gen1 or nil
+        if type(sym) == "string" then set[sym] = true end
+      end
+      monStones[mon] = set
+    else
+      monStones[mon] = nil
+    end
   end
 
   -- Rebuilds save.party from a party.sync (Cobblemon is authoritative):
@@ -3460,14 +3538,21 @@ function Gen1.new(opts)
     local kind
     if isStone(id) then
       if isYellow() then return native() end
-      for _, evo in ipairs(type(sdef.evolutions) == "table" and sdef.evolutions or {}) do
-        if type(evo) == "table" and evo.method == "ITEM" and evo.item == id then kind = "stone" break end
+      local synced = monStones[target]
+      if synced then
+        -- FP2/FP4 (§4.4): Cobblemon's own answer, from the sync's stones,
+        -- for natives and visitors alike (a visitor's species has none)
+        if synced[id] then kind = "stone" end
+      else
+        for _, evo in ipairs(type(sdef.evolutions) == "table" and sdef.evolutions or {}) do
+          if type(evo) == "table" and evo.method == "ITEM" and evo.item == id then kind = "stone" break end
+        end
       end
     elseif id == "RARE_CANDY" and tonumber(target.level) and target.level < 100 then
       kind = "candy"
     end
     if not kind or not consumeAndClose(g, id, list, picker) then return native() end
-    queueItemUse({ item = id, uid = uid, save = save })
+    queueItemUse({ item = id, uid = uid, save = save, kind = kind })
     itemCounts[kind] = itemCounts[kind] + 1
     return nil
   end
@@ -3481,7 +3566,9 @@ function Gen1.new(opts)
     if type(list) ~= "table" then return out end
     local save = engine.save()
     for _, u in ipairs(list) do
-      if u.save == save then out[#out + 1] = { item = u.item, uid = u.uid, slot = u.slot, move = u.move } end
+      if u.save == save then
+        out[#out + 1] = { item = u.item, uid = u.uid, slot = u.slot, move = u.move, kind = u.kind or (u.move and "machine") }
+      end
     end
     st.itemUses = {}
     return out

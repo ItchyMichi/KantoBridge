@@ -593,7 +593,7 @@ it for that player's collision.
 
 | Type | Dir | Data | ROM |
 |---|---|---|---|
-| `party.sync` | S→C, M→G | `party[{uid, give?, dex, level, nick?, moves[], hp, maxhp, status?, item?, shiny?, gender?, form?, friendship?, stats?{hp,atk,def,spa,spd,spe}, types?[], nature?, ot?, canLearn?[], stones?[]}], box{count}` (Cobblemon is authoritative; `dex` 0: a species with no national number) | yes |
+| `party.sync` | S→C, M→G | `party[{uid, give?, dex, level, nick?, moves[], hp, maxhp, status?, item?, shiny?, gender?, form?, friendship?, stats?{hp,atk,def,spa,spd,spe}, types?[], nature?, ot?, canLearn?[], stones?[], name?}], box{count}` (Cobblemon is authoritative; `dex` 0: a species with no national number) | yes |
 | `party.give` | G→M, C→S | `give` (id), `dex, level, moves[]?, dvs?, ivs?, nick?, ot?, item?, shiny?, gender?, form?, friendship?, source:"starter"\|"gift"\|"trade"\|"prize"\|"native_catch"\|"egg"` (`ivs` over `dvs` when both; `egg`: an egg that hatched in the hidden game) | yes |
 | `party.take` | G→M, C→S | `uid, reason:"trade"\|"daycare"\|"quest"` (`quest`: a quest took it, Kenya, Shuckie) | |
 | `party.heal` | G→M, C→S | `{}` | |
@@ -641,7 +641,11 @@ before); `session.bind.incompatible` carries the region's choice (`visitor`, the
 battles handed to Cobblemon (§4.12). The warnings for members and moves a game can't hold are `party.foreign_species`
 and `party.foreign_moves` (they were `party.non_gen1_*`), and a nickname is cut to the game's `compat.nick`. The
 messages and fields are defined now; each phase of the plan starts sending or applying its own (PROGRESS.md "Foreign
-Pokémon").
+Pokémon"). **FP2 (Blue):** gen1-bridge registers the stand-in and says `compat.visitor: true`; a member Blue lacks is a
+visitor record in its place, named from the sync's `name` (Cobblemon's species name) when it has no nickname; the
+snapshot's party reports a visitor's real `dex` (0 allowed) with `visitor: true`; `game.status.visitors` is sent; a
+stone used from Blue's bag is answered from the sync's `stones` and goes out as `party.item{kind:"stone"}`; Cobblemon
+lets a Pokémon evolve past its region's ceiling unless the region record's `rules.compat.evolveBeyond` is false (Q9).
 
 Species travel as national dex numbers (defs `nationalDex`), moves as Showdown numbers (defs
 `moveNum`; Gen 1's move ids are the same numbers), items as engine symbols, and Pokémon identities

@@ -287,8 +287,9 @@
       "additionalProperties": false,
       "properties": {
         "uid": {"$ref": "#/$defs/uid"},
-        "dex": {"$ref": "#/$defs/nationalDex"},
+        "dex": {"$ref": "#/$defs/partyDex", "description": "FP2: a visitor's real species (0: one with no national number)."},
         "level": {"$ref": "#/$defs/level"},
+        "visitor": {"type": "boolean", "description": "FOREIGN_POKEMON_PLAN FP2: the member is a visitor record (the game shows it as its stand-in species)."},
         "nick": {"type": "string", "maxLength": 32, "x-rom-derived": true},
         "moves": {"type": "array", "items": {"$ref": "#/$defs/moveNum"}, "maxItems": 4},
         "hp": {"type": "integer", "minimum": 0, "maximum": 9999},

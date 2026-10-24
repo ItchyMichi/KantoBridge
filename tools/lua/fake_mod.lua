@@ -194,8 +194,20 @@ function FakeMod.new(opts)
   -- mod.content.<registry>:get(id) (Loader.lua:1336-1339), over plain tables
   -- of records the test provides: opts.content = { pokemon = { ID = rec } }.
   mod.content = {}
+  -- FP2: register(id, rec) (Loader.lua's registries) records the write and
+  -- keeps the record (mod._registered[name][id]); the engine's data merge is
+  -- the test's (it installs the merged species itself)
+  mod._registered = {}
   for name, records in pairs(opts.content or {}) do
-    mod.content[name] = { get = function(_, id) return records[id] end }
+    mod._registered[name] = {}
+    local done = mod._registered[name]
+    mod.content[name] = {
+      get = function(_, id) return records[id] end,
+      register = function(_, id, rec)
+        records[id], done[id] = rec, rec
+        return rec
+      end,
+    }
   end
   -- Wild Routes (WR2): full registries (fake_registry.lua) and mod.world
   -- (fake_worldapi.lua) when a test provides them

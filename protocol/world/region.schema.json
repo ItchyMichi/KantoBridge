@@ -349,6 +349,10 @@
                 "visitor"
               ],
               "description": "What the region's link does with a party member its game can't show as itself (FOREIGN_POKEMON_PLAN §4.15, Q12): visitor (the default the builder writes since FP1) or leave_out; sent to the link in session.bind."
+            },
+            "evolveBeyond": {
+              "type": "boolean",
+              "description": "FOREIGN_POKEMON_PLAN Q9 (FP2): may a Pokémon evolve into a species past maxDex (it is a visitor here then); absent: yes."
             }
           }
         }

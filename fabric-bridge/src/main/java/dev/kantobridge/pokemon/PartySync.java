@@ -133,6 +133,11 @@ public final class PartySync {
 
 	/** FP1: form, stats, types, nature, original trainer, machine moves and stones (each only when there is one). */
 	static void visitorFields(Pokemon pokemon, @Nullable ServerPlayer owner, JsonObject entry) {
+		// FP2 (§3.4): the species' name, which a visitor without a nickname shows
+		String name = speciesName(pokemon.getSpecies().getName());
+		if (name != null) {
+			entry.addProperty("name", name);
+		}
 		FormData form = pokemon.getForm();
 		String formId = form == pokemon.getSpecies().getStandardForm() ? null : formId(form.formOnlyShowdownId());
 		if (formId != null) {
@@ -148,9 +153,9 @@ public final class PartySync {
 		entry.add("stats", stats);
 		List<String> typeNames = new ArrayList<>();
 		for (ElementalType type : pokemon.getTypes()) {
-			String name = nameId(type.getName());
-			if (name != null && !typeNames.contains(name) && typeNames.size() < 2) {
-				typeNames.add(name);
+			String typeName = nameId(type.getName());
+			if (typeName != null && !typeNames.contains(typeName) && typeNames.size() < 2) {
+				typeNames.add(typeName);
 			}
 		}
 		if (!typeNames.isEmpty()) {
@@ -175,6 +180,14 @@ public final class PartySync {
 			stones(pokemon, owner).forEach(stones::add);
 			entry.add("stones", stones);
 		}
+	}
+
+	/** A species' name as the protocol carries it: 1–32 characters, or null. */
+	static @Nullable String speciesName(@Nullable String name) {
+		if (name == null || name.isBlank()) {
+			return null;
+		}
+		return name.codePointCount(0, name.length()) <= PartyGive.MAX_NAME ? name : name.substring(0, name.offsetByCodePoints(0, PartyGive.MAX_NAME));
 	}
 
 	/** A stat clamped to the schema's 1–9999. */
