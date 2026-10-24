@@ -2,7 +2,8 @@
 (gen1-bridge/lib/engine/game3/bag.lua) on the fake game3 engine (fake_battle3.lua) with the real catalogue
 (protocol/items.json's gen3 symbols): the item table, key items (the key pocket, HMs, badges), the bag's counts and
 removals, bag.set's projection (by class, all or nothing per 99, money clamped, key items untouched, what didn't
-fit), item uses on party members refused while a client follows, and the whiteout routes asks for. Then main.lua
+fit), item uses on party members forwarded to Cobblemon (FP4: medicine, stones, Rare Candy, TMs), and the whiteout
+routes asks for. Then main.lua
 with a peer: bag.sync with Emerald's items and bag.set into them. Everything is made up (the fake's item ids)."""
 
 import pytest
@@ -70,16 +71,86 @@ def test_bag_set_projects_the_ledger_into_the_bag():
     assert s.money == 999999, "clamped"
 
 
-def test_item_uses_on_members_are_refused_while_a_client_follows():
+UID1 = "11111111-1111-4111-8111-111111111111"
+ETHER = 34
+
+
+def synced(a, s, species=4, moves=(33, 45), **extra):
+    """One member as a sync builds it (its uid, and FP4's stones and canLearn on the record)."""
+    e = {"uid": UID1, "species": species, "level": 9, "moves": list(moves), "hp": 10, "maxhp": 40}
+    e.update(extra)
+    a.eng.applyParty(a.lua([e]))
+    return s.party[1]
+
+
+def uses(a):
+    return [{k: v for k, v in u.items() if v is not None} for u in plain(a.eng.takeItemUses())]
+
+
+def test_medicine_runs_natively_and_goes_to_cobblemon():
+    # FP4 (FOREIGN_POKEMON_PLAN §4.4): item.use's general case on a member: the engine's result, then party.item
     a, s = adapter()
-    nxt = a.b.eval("function(g, battle, id, slot, bag) return true, 'used', 'ok' end")
-    for item in (FIRE_STONE, RARE_CANDY, TM01, HM01):
-        assert tuple(a.eng.itemUse(nxt, a.E.game, None, item, 1, s.bag)) == (False, b"noeffect", b"It won't have any effect."), item
-    assert tuple(a.eng.itemUse(nxt, a.E.game, None, POTION, 1, s.bag)) == (True, b"used", b"ok")
-    assert tuple(a.eng.itemUse(nxt, a.E.game, None, FIRE_STONE, None, s.bag)) == (True, b"used", b"ok"), "not on a member"
+    mon = synced(a, s)
+    heal = a.b.eval("function(g, battle, id, slot, bag) return true, 'heal', 'HEALED' end")
+    assert tuple(a.eng.itemUse(heal, a.E.game, None, POTION, 1, s.bag)) == (True, b"heal", b"HEALED")
+    pp = a.b.eval("function(mon) return function(g, battle, id, slot, bag) mon.pp[2] = (mon.pp[2] or 0) + 10 "
+                  "return true, 'pp', 'PP' end end")(mon)
+    a.eng.itemUse(pp, a.E.game, None, ETHER, 1, s.bag)
+    no = a.b.eval("function() return false, 'noeffect', 'NO' end")
+    a.eng.itemUse(no, a.E.game, None, POTION, 1, s.bag)
+    assert uses(a) == [{"item": "POTION", "uid": UID1, "kind": "medicine"},
+                       {"item": "ETHER", "uid": UID1, "kind": "medicine", "move": 45}], "the engine's refusal sends nothing"
     off, s2 = adapter(live=False)
-    nxt2 = off.b.eval("function(g, battle, id, slot, bag) return true, 'used', 'ok' end")
-    assert tuple(off.eng.itemUse(nxt2, off.E.game, None, FIRE_STONE, 1, s2.bag)) == (True, b"used", b"ok"), "no client"
+    synced(off, s2)
+    off.eng.itemUse(off.b.eval("function() return true, 'heal', 'ok' end"), off.E.game, None, POTION, 1, s2.bag)
+    assert uses(off) == [], "no client"
+
+
+def test_a_stone_is_cobblemons_and_the_engines_scene_is_skipped():
+    a, s = adapter()
+    mon = synced(a, s, stones=["fire_stone"])
+    target = a.E.Evolution.itemTarget(mon, FIRE_STONE, s)
+    assert target == 4, "the member's own species: a yes the scene's wrapper knows"
+    done = []
+    a.E.EvolutionScene.start(mon, target, a.lua({}))
+    assert mon.species == 4 and len(a.E.evolutions) == 0
+    assert uses(a) == [{"item": "FIRE_STONE", "uid": UID1, "kind": "stone"}]
+    mon = synced(a, s, stones=[])
+    assert a.E.Evolution.itemTarget(mon, FIRE_STONE, s) is None, "Cobblemon's stones say no"
+    # without the sync's stones the engine's own check answers
+    mon = synced(a, s)
+    assert a.E.Evolution.itemTarget(mon, FIRE_STONE, s) == 4
+    a.E.Evolution.apply(mon, 4)
+    assert len(a.E.evolutions) == 0 and uses(a) == [{"item": "FIRE_STONE", "uid": UID1, "kind": "stone"}]
+
+
+def test_rare_candy_levels_the_record_and_leaves_moves_and_evolution_to_cobblemon():
+    a, s = adapter()
+    mon = synced(a, s)
+    a.E.ItemUse.levelUpEvent(mon, 10)
+    assert list(a.E.levelUps.values()) == [10], "the engine's event still runs"
+    assert len(a.E.Pokemon.movesLearnedAt(4, 10)) == 0
+    assert a.E.Evolution.levelTarget(mon) is None and a.E.Evolution.targetSpecies(mon) is None
+    assert uses(a) == [{"item": "RARE_CANDY", "uid": UID1, "kind": "candy"}]
+    assert len(a.E.Pokemon.movesLearnedAt(4, 11)) > 0, "only that level-up's"
+
+
+def test_a_tm_is_answered_by_cobblemons_learnset_and_names_the_move_it_replaced():
+    a, s = adapter()
+    a.E.tmMoves = a.lua({TM01: 264})
+    mon = synced(a, s, canLearn=[264])
+    status = a.E.ItemUse.checkTmPreflight(mon, TM01)[0]
+    assert status == b"ok", "the species can't (no row), Cobblemon's learnset can"
+    assert a.E.Pokemon.teachMove(mon, 264) is True
+    assert uses(a) == [{"item": "TM01", "uid": UID1, "kind": "machine", "move": 264}]
+    mon = synced(a, s, moves=(33, 45, 10, 98), canLearn=[264])
+    a.E.forgetSlot = 3
+    assert a.E.ItemUse.checkTmPreflight(mon, TM01)[0] == b"ok"
+    a.E.LearnMove.begin(a.lua({"mon": mon, "moveId": 264, "onDone": a.b.eval("function() end")}))
+    assert uses(a) == [{"item": "TM01", "uid": UID1, "kind": "machine", "move": 264, "slot": 2, "forget": 10}]
+    mon = synced(a, s, canLearn=[])
+    assert a.E.ItemUse.checkTmPreflight(mon, TM01)[0] == b"incompatible"
+    assert a.E.Pokemon.canLearnTmItem(4, TM01) is False, "the engine's own check is back"
 
 
 def test_the_blackout_routes_asks_for():

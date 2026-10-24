@@ -7,6 +7,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import dev.kantobridge.proto.ProtoJson;
 import dev.kantobridge.world.DataException;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
@@ -69,11 +70,18 @@ class DexAndItemMessagesTest {
 		assertNull(old.id());
 		assertNull(old.sentKind());
 		assertEquals(new PartyItem("RARE_CANDY", UUID.fromString(uid), null, null), old);
-		// the kinds Cobblemon has no rule for yet are OTHER (FP4 applies them), whatever the item
-		for (String kind : List.of("medicine", "pp", "vitamin", "other")) {
-			assertEquals(PartyItem.Kind.OTHER, PartyItem.read(ProtoJson.parseObject("{\"item\":\"RARE_CANDY\",\"uid\":\"" + uid
-					+ "\",\"kind\":\"" + kind + "\",\"id\":\"it-2\"}")).kind(), kind);
+		// FP4: the sent kind decides, whatever the item (medicine, pp and vitamin through Cobblemon's own item)
+		Map<String, PartyItem.Kind> kinds = Map.of("medicine", PartyItem.Kind.MEDICINE, "pp", PartyItem.Kind.PP, "vitamin",
+				PartyItem.Kind.VITAMIN, "other", PartyItem.Kind.OTHER);
+		for (Map.Entry<String, PartyItem.Kind> k : kinds.entrySet()) {
+			assertEquals(k.getValue(), PartyItem.read(ProtoJson.parseObject("{\"item\":\"RARE_CANDY\",\"uid\":\"" + uid
+					+ "\",\"kind\":\"" + k.getKey() + "\",\"id\":\"it-2\"}")).kind(), k.getKey());
 		}
+		// a PP item names the move it was used on; that doesn't make it a machine
+		PartyItem ether = PartyItem.read(ProtoJson.parseObject("{\"item\":\"ETHER\",\"uid\":\"" + uid
+				+ "\",\"kind\":\"pp\",\"move\":33,\"id\":\"it-3\"}"));
+		assertEquals(PartyItem.Kind.PP, ether.kind());
+		assertEquals(33, ether.move());
 		assertEquals(PartyItem.Kind.STONE, PartyItem.read(ProtoJson.parseObject("{\"item\":\"MOON_STONE\",\"uid\":\"" + uid
 				+ "\",\"kind\":\"stone\"}")).kind());
 		assertEquals(PartyItem.Kind.RARE_CANDY, PartyItem.read(ProtoJson.parseObject("{\"item\":\"RARE_CANDY\",\"uid\":\"" + uid

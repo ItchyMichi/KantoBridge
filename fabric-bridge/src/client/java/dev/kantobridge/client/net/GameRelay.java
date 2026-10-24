@@ -57,6 +57,11 @@ public final class GameRelay {
 		/** To gen1-bridge; false when not connected (then the message is dropped). */
 		boolean toBridge(String type, JsonObject data);
 
+		/** FP4: a reply to gen1-bridge's message {@code re}; false when not connected. */
+		default boolean toBridge(String type, long re, JsonObject data) {
+			return this.toBridge(type, data);
+		}
+
 		/** To the server relay; false when there is no server link (then the message is dropped). */
 		boolean toServer(String type, JsonObject data);
 
@@ -94,6 +99,8 @@ public final class GameRelay {
 		public long bagUsesQueued;
 		/** MG3: {@code game.status} messages relayed to the server. */
 		public long statusRelayed;
+		/** FP4: the server's item refusals forwarded to gen1-bridge. */
+		public long itemResultsForwarded;
 	}
 
 	private enum State {
@@ -128,6 +135,8 @@ public final class GameRelay {
 	/** bag.use messages gen1-bridge couldn't get yet. */
 	private final Deque<JsonObject> pendingUses = new ArrayDeque<>();
 	private final boolean dexUp;
+	/** FP4: party.item id -> the seq gen1-bridge sent it with (the newest {@link #RECORDS_MAX}). */
+	private final Map<String, Long> itemSeqs = new LinkedHashMap<>();
 
 	public GameRelay(Port port) {
 		this(port, false);
@@ -151,6 +160,9 @@ public final class GameRelay {
 		if (message.type().equals(MsgTypes.BATTLE_START)) {
 			this.battleStart(message.data(), now);
 		} else if (PARTY_REQUESTS.contains(message.type())) {
+			if (message.type().equals(MsgTypes.PARTY_ITEM)) {
+				this.rememberItem(message.data(), message.seq());
+			}
 			this.partyRequest(message.type(), message.data());
 		} else if (message.type().equals(MsgTypes.BAG_SYNC)) {
 			this.bagSync(message.data().deepCopy());
@@ -213,6 +225,40 @@ public final class GameRelay {
 			this.warn("battle.no_server");
 			this.abortHere(record, now);
 		}
+	}
+
+	/** FP4: a {@code party.item}'s id and the seq gen1-bridge sent it with, so the server's refusal answers that message. */
+	private void rememberItem(JsonObject data, long seq) {
+		String id = str(data, "id");
+		if (id == null) {
+			return;
+		}
+		this.itemSeqs.remove(id);
+		this.itemSeqs.put(id, seq);
+		if (this.itemSeqs.size() > RECORDS_MAX) {
+			this.itemSeqs.remove(this.itemSeqs.keySet().iterator().next());
+		}
+	}
+
+	/**
+	 * FP4 (§4.4): the server refused a {@code party.item} ({@code act.result{kind:"item"}}): it goes to gen1-bridge as the
+	 * answer to the message that carried that id (without the region tag, which is the relay's). Returns whether it went.
+	 */
+	public boolean itemResult(JsonObject data) {
+		String id = str(data, "id");
+		Long seq = id == null ? null : this.itemSeqs.get(id);
+		if (seq == null) {
+			this.warn("item.result_unknown");
+			return false;
+		}
+		JsonObject answer = data.deepCopy();
+		answer.remove("region");
+		boolean sent = this.port.toBridge(MsgTypes.ACT_RESULT, seq, answer);
+		if (sent) {
+			this.itemSeqs.remove(id);
+			this.stats.itemResultsForwarded++;
+		}
+		return sent;
 	}
 
 	private void partyRequest(String type, JsonObject data) {

@@ -317,6 +317,8 @@ function Battle3.install(b)
     end
   end
 
+  b.wrap = wrap
+
   def("attachBridge", function(bridge)
     local st = b.state()
     if not st then return end
@@ -325,6 +327,8 @@ function Battle3.install(b)
     wrap(b.g3("field"), "tryFishingEncounter", fishing)
     -- the gift seam (party.lua)
     if type(b.installGifts) == "function" then b.installGifts() end
+    -- FP4: item uses on party members (bag.lua)
+    if type(b.installItems) == "function" then b.installItems() end
   end)
 
   -- The field's land rolls are the habitat pools' while a client follows; water goes on (held as surf).

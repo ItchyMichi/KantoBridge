@@ -89,6 +89,7 @@ ITEMS = {
     "ANTIDOTE": {"name": "CURE"}, "X_ATTACK": {"name": "XA"}, "REPEL": {"name": "SPRAY"},
     "TOWN_MAP": {"name": "MAP", "keyItem": True}, "SILPH_SCOPE": {"name": "SCOPE", "keyItem": True},
     "FIRE_STONE": {"name": "RED STONE"}, "MOON_STONE": {"name": "MOON"}, "RARE_CANDY": {"name": "CANDY"},
+    "ETHER": {"name": "PP"}, "HP_UP": {"name": "VIT"},
     "TM_SAND_T": {"name": "TM99", "machine": {"kind": "TM", "number": 99, "move": "SAND_T"}},
     "HM_WHIRL_T": {"name": "HM09", "machine": {"kind": "HM", "number": 9, "move": "WHIRL_T"}},
 }

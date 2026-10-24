@@ -12,12 +12,9 @@
 --   leaves the shared wallet like spending.
 -- * Key items never cross (MG6): the KEY_ITEM pocket and HMs (TM_HM items
 --   named HM_*). Gen 2's badges are not items.
--- * Item uses on party members (stones, Rare Candy, TMs and HMs) would be
---   lost on the shadow party (the next party.sync overwrites the member while
---   the item is spent). Gen 2 has no item.use hook, so Game2:usePartyItem and
---   Game2:useFieldItem (Game2.lua:686-905) are wrapped: while a client
---   follows they are refused with the hidden game's own "no effect" line, as
---   Gen 3's are (Cobblemon's own items do the same on the Minecraft side).
+-- * Item uses on party members go to Cobblemon (FOREIGN_POKEMON_PLAN §4.4,
+--   FP4): Gen 2 has no item.use hook, so ItemEffects.useOnMon / usePpItem and
+--   Game2:useFieldItem (Game2.lua:686-905) are wrapped (below, "item uses").
 -- * Bill's PC is Cobblemon's PC (gen1.lua's hold): CenterPcMenu:choose
 --   (src/ui/gen2/CenterPcMenu.lua:217-232) is wrapped, so the BILL's row says
 --   its line as usual and then, instead of Gen 2's box screens, a hold state
@@ -34,11 +31,12 @@ Items2.MAX_STACK = 99
 Items2.MAX_MONEY = 999999
 Items2.KEY_POCKET = "KEY_ITEM"
 Items2.ITEM_POCKET_SLOTS = 20
--- classes whose use on a party member Cobblemon owns (stones evolve, Rare Candy levels, TMs and HMs teach)
-Items2.MEMBER_CLASSES = { stone = true, tm = true }
 Items2.RARE_CANDY = "RARE_CANDY"
 -- the hidden game's own refusal (ItemEffects' NoEffect line)
 Items2.NO_EFFECT = "It won't have any effect."
+-- FP4: the party menu's line for a stone or Rare Candy Cobblemon applies (the engine's own scene is Cobblemon's now)
+Items2.TEXT_STONE = "%s is reacting\nto the stone!"
+Items2.TEXT_CANDY = "%s's level\nwill rise!"
 Items2.BILLS = "bills"
 local unpack = table.unpack or unpack -- luacheck: ignore (LuaJIT's global)
 local function pack(...) return { n = select("#", ...), ... } end
@@ -214,48 +212,172 @@ function Items2.install(b)
     return inv and type(inv[sym]) == "number" and floor(inv[sym]) or 0
   end)
 
-  -- Gen 2 raises no item.use (the hook main.lua wraps never fires); the guards below do its work.
+  -- Gen 2 raises no item.use (the hook main.lua wraps never fires); the wrappers below do its work.
   def("itemUse", function(nextFn, ...) return nextFn(...) end)
-  def("takeItemUses", function() return {} end)
   def("tmWatchStep", function() end)
+
+  -- ---- item uses on party members (FOREIGN_POKEMON_PLAN §4.4, FP4)
+  --
+  -- While a client follows, on a member with a Cobblemon uid:
+  -- * medicine, vitamins and the PP family run natively on the record
+  --   (ItemEffects.useOnMon / usePpItem, src/core/gen2/ItemEffects.lua:410,
+  --   :441; the next sync rewrites it) and, when the engine used the item,
+  --   go to Cobblemon as party.item (kind medicine; kb_party names pp and
+  --   vitamin; a PP item names its move);
+  -- * a stone is answered from the sync's stones (else the engine's own
+  --   check) and Rare Candy from the level: Cobblemon evolves or levels it,
+  --   so the engine's effect (the evolution scene, the level-up and its moves)
+  --   is skipped: the item is spent here and the party menu says one line;
+  -- * a TM or HM (Game2:useFieldItem, Game2.lua:686-725) is answered from the
+  --   sync's canLearn (the species' list swapped for the member's while the
+  --   pick runs) and taught natively; once learned, the move and the one it
+  --   replaced go out (party.item kind machine, forget).
+
+  local function itemQueue()
+    local st = b.state()
+    if st and type(st.itemUses) ~= "table" then st.itemUses = {} end
+    return st and st.itemUses or nil
+  end
+  local function queueUse(use)
+    local q = itemQueue()
+    if not q then return end
+    use.save = b.saveObject()
+    q[#q + 1] = use
+    local st = b.state()
+    st.itemForwarded = (st.itemForwarded or 0) + 1
+  end
+  def("takeItemUses", function()
+    local q = itemQueue()
+    local out = {}
+    if not q then return out end
+    local s = b.saveObject()
+    for _, u in ipairs(q) do
+      if u.save == s then
+        out[#out + 1] = { item = u.item, uid = u.uid, kind = u.kind, move = u.move, slot = u.slot, forget = u.forget }
+      end
+    end
+    b.state().itemUses = {}
+    return out
+  end)
   def("itemCounts", function()
     local st = b.state()
-    return { refused = st and st.itemRefused or 0 }
+    return { refused = st and st.itemRefused or 0, forwarded = st and st.itemForwarded or 0 }
   end)
 
-  -- ---- item uses on party members (refused while a client follows)
-
-  local function refuse(g)
-    local st = b.state()
-    if st then st.itemRefused = (st.itemRefused or 0) + 1 end
+  local function noEffect()
     local Strings = b.mod("src.core.Strings")
-    local text = Items2.NO_EFFECT
-    if type(Strings) == "table" or type(Strings) == "function" then
-      local ok, t = pcall(Strings, Items2.NO_EFFECT)
-      if ok and type(t) == "string" then text = t end
+    local ok, t = pcall(Strings, Items2.NO_EFFECT)
+    return ok and type(t) == "string" and t or Items2.NO_EFFECT
+  end
+
+  local function memberUid(mon)
+    if not (live() and type(mon) == "table" and mon.isEgg ~= true) then return nil end
+    local uid = b.adapter.uidOf(mon)
+    return type(uid) == "string" and uid or nil
+  end
+  local function displayName(mon)
+    local M = b.mod("src.battle.gen2.Mon")
+    local ok, name = pcall(function() return M.displayName(mon) end)
+    return ok and type(name) == "string" and name or (type(mon.name) == "string" and mon.name or "")
+  end
+
+  -- ItemEffects.useOnMon(itemId, mon, data) -> { used, text, ... }
+  local function useOnMon(original, itemId, mon, data, ...)
+    local uid = memberUid(mon)
+    if not uid then return original(itemId, mon, data, ...) end
+    local IE = b.mod("src.core.gen2.ItemEffects")
+    local action = type(IE) == "table" and type(IE.partyAction) == "function" and IE.partyAction(itemId, data) or nil
+    local g = b.game
+    if action == "stone" then
+      local yes
+      if type(mon.kbStones) == "table" then
+        yes = mon.kbStones[itemId] == true
+      else
+        local r = original(itemId, mon, data, ...)
+        yes = type(r) == "table" and r.used == true
+      end
+      if not yes then return { used = false, text = noEffect() } end
+      queueUse({ item = itemId, uid = uid, kind = "stone" })
+      if type(g) == "table" and type(g.consumeItem) == "function" then g:consumeItem(itemId) end
+      return { used = false, text = (Items2.TEXT_STONE):format(displayName(mon)) }
+    elseif action == "candy" then
+      if (tonumber(mon.level) or 1) >= 100 then return original(itemId, mon, data, ...) end
+      queueUse({ item = itemId, uid = uid, kind = "candy" })
+      if type(g) == "table" and type(g.consumeItem) == "function" then g:consumeItem(itemId) end
+      return { used = false, text = (Items2.TEXT_CANDY):format(displayName(mon)) }
     end
-    if type(g) == "table" and type(g.say) == "function" then pcall(g.say, g, text) end
+    local r = original(itemId, mon, data, ...)
+    if type(r) == "table" and r.used == true then queueUse({ item = itemId, uid = uid, kind = "medicine" }) end
+    return r
   end
 
-  local function memberItem(sym)
-    if type(sym) ~= "string" then return false end
-    if sym == Items2.RARE_CANDY or sym:find("^TM_") or sym:find("^HM_") then return true end
-    local cls = b.adapter.itemClass(sym)
-    if cls and Items2.MEMBER_CLASSES[cls] then return true end
-    local rec = itemDef(sym)
-    return rec ~= nil and rec.teaches ~= nil
+  -- ItemEffects.usePpItem(itemId, mon, slot, data): the PP family, on a picked move (none for the Elixers)
+  local function usePpItem(original, itemId, mon, slot, data, ...)
+    local r = original(itemId, mon, slot, data, ...)
+    local uid = memberUid(mon)
+    if uid and type(r) == "table" and r.used == true then
+      local use = { item = itemId, uid = uid, kind = "medicine" }
+      local mv = slot and type(mon.moves) == "table" and mon.moves[slot] or nil
+      if type(mv) == "table" and mv.id then use.move = b.adapter.moveNumOf(mv.id) end
+      queueUse(use)
+    end
+    return r
   end
 
-  -- Game2:usePartyItem(itemId) (stones, Rare Candy and the rest used on a member) and Game2:useFieldItem(itemId)
-  -- (a TM or HM taught from the PACK; Game2.lua:686-751), refused for the member items while a client follows.
-  local function usePartyItem(original, g, itemId, ...)
-    if live() and memberItem(itemId) then return refuse(g) end
-    return original(g, itemId, ...)
-  end
+  -- Game2:useFieldItem(itemId): a TM or HM's party menu, its check answered from the sync's canLearn, the
+  -- move taught watched through learnMoveOn's callback.
   local function useFieldItem(original, g, itemId, ...)
     local rec = itemDef(itemId)
-    if live() and rec and rec.teaches ~= nil then return refuse(g) end
-    return original(g, itemId, ...)
+    local moveId = rec and rec.teaches
+    local Screens = b.mod("src.ui.Screens")
+    if not (live() and moveId and type(Screens) == "table" and type(Screens.push) == "function") then
+      return original(g, itemId, ...)
+    end
+    local push = Screens.push
+    Screens.push = function(game, name, opts, ...)
+      if name == "Gen2PartyMenu" and type(opts) == "table" and type(opts.onChoose) == "function" then
+        local onChoose = opts.onChoose
+        opts.onChoose = function(index, mon, ...)
+          local uid = memberUid(mon)
+          local d = type(game) == "table" and game.data or nil
+          local species = uid and d and type(d.pokemon) == "table" and d.pokemon[mon.species] or nil
+          if not (species and type(mon.kbCanLearn) == "table") then return onChoose(index, mon, ...) end
+          local tmhm0 = species.tmhm
+          species.tmhm = mon.kbCanLearn[moveId] and { moveId } or {}
+          local before = {}
+          for i, mv in ipairs(type(mon.moves) == "table" and mon.moves or {}) do before[i] = type(mv) == "table" and mv.id or nil end
+          local learn0 = rawget(game, "learnMoveOn")
+          game.learnMoveOn = function(gg, m, mid, cb, ...)
+            game.learnMoveOn = learn0
+            local Game2 = b.mod("src.core.Game2")
+            local inner = learn0 or (type(Game2) == "table" and Game2.learnMoveOn)
+            return inner(gg, m, mid, function(learned, ...)
+              if learned then
+                local use = { item = itemId, uid = uid, kind = "machine", move = b.adapter.moveNumOf(mid) }
+                for i, old in ipairs(before) do
+                  local now = type(m.moves) == "table" and m.moves[i] or nil
+                  if type(now) == "table" and now.id == mid and old ~= mid then
+                    use.slot, use.forget = i - 1, b.adapter.moveNumOf(old)
+                  end
+                end
+                if use.move then queueUse(use) end
+              end
+              if cb then return cb(learned, ...) end
+            end, ...)
+          end
+          local out = { pcall(onChoose, index, mon, ...) }
+          species.tmhm = tmhm0
+          if rawget(game, "learnMoveOn") ~= learn0 then game.learnMoveOn = learn0 end
+          if not out[1] then error(out[2], 0) end
+          return unpack(out, 2, table.maxn(out))
+        end
+      end
+      return push(game, name, opts, ...)
+    end
+    local out = { pcall(original, g, itemId, ...) }
+    Screens.push = push
+    if not out[1] then error(out[2], 0) end
+    return unpack(out, 2, table.maxn(out))
   end
 
   -- ---- Bill's PC
@@ -312,8 +434,10 @@ function Items2.install(b)
     local wrap = b.wrap
     if type(wrap) ~= "function" then return end
     local Game2 = b.mod("src.core.Game2")
-    wrap(Game2, "usePartyItem", usePartyItem)
     wrap(Game2, "useFieldItem", useFieldItem)
+    local IE = b.mod("src.core.gen2.ItemEffects")
+    wrap(IE, "useOnMon", useOnMon)
+    wrap(IE, "usePpItem", usePpItem)
     wrap(b.ui2("CenterPcMenu"), "choose", choose)
   end
 

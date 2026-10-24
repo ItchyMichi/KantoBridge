@@ -1456,6 +1456,7 @@ function FakeEngine2.new(opts)
     BICYCLE = { index = 7, pocket = "KEY_ITEM" }, OLD_ROD = { index = 58, pocket = "KEY_ITEM" },
     TM_DYNAMICPUNCH = { index = 191, pocket = "TM_HM", teaches = "TEST_TACKLE" },
     HM_CUT = { index = 243, pocket = "TM_HM", teaches = "TEST_CUT" },
+    ETHER = { index = 60, pocket = "ITEM" }, ELIXER = { index = 62, pocket = "ITEM" }, HP_UP = { index = 26, pocket = "ITEM" },
   }
   E.data.trainers = { classes = {
     YOUNGSTER = { index = 3, id = "YOUNGSTER", name = "TEST YOUNGSTER", baseMoney = 4, trainers = {
@@ -1821,8 +1822,103 @@ function FakeEngine2.new(opts)
   function Game2:say(text, onDone)
     self.stack:push(E.TextBox.new({ type(text) == "table" and (text[1] or "TEST") or text }, onDone))
   end
-  function Game2:usePartyItem(itemId) E.partyItemUses[#E.partyItemUses + 1] = itemId end
-  function Game2:useFieldItem(itemId) E.fieldItemUses[#E.fieldItemUses + 1] = itemId end
+  -- FP4: src/core/gen2/ItemEffects.lua's two entry points (:410, :441) for the items the tests use: POTION
+  -- (heal: 20 HP on a hurt member), HP_UP (vitamin), ETHER (pp: 10 on the slot), ELIXER (pp: every move),
+  -- RARE_CANDY (candy: one level), MOON_STONE (stone: TEST_TOGEPI evolves); { used, text } as the
+  -- engine returns them
+  E.ItemEffects = {}
+  local ACTIONS = { POTION = "heal", HP_UP = "vitamin", ETHER = "pp", ELIXER = "pp", RARE_CANDY = "candy",
+                    MOON_STONE = "stone" }
+  function E.ItemEffects.partyAction(itemId) return ACTIONS[itemId] end
+  function E.ItemEffects.useOnMon(itemId, mon, _data)
+    local action = ACTIONS[itemId]
+    if not mon or mon.isEgg or action == nil or action == "pp" then return { used = false, text = "NO EFFECT" } end
+    if action == "heal" then
+      if (mon.hp or 0) <= 0 or mon.hp >= (mon.maxHp or mon.hp) then return { used = false, text = "NO EFFECT" } end
+      mon.hp = math.min(mon.maxHp, mon.hp + 20)
+      return { used = true, text = "HEALED" }
+    elseif action == "vitamin" then
+      return { used = true, text = "STAT UP" }
+    elseif action == "candy" then
+      if (mon.level or 1) >= 100 then return { used = false, text = "NO EFFECT" } end
+      mon.level = mon.level + 1
+      return { used = true, text = "LEVEL UP", learned = {} }
+    elseif action == "stone" then
+      if mon.species ~= "TEST_TOGEPI" then return { used = false, text = "NO EFFECT" } end
+      return { used = true, evolution = { species = "TEST_CHIKORITA" } }
+    end
+    return { used = false, text = "NO EFFECT" }
+  end
+  function E.ItemEffects.usePpItem(itemId, mon, slot, _data)
+    if not mon or ACTIONS[itemId] ~= "pp" then return { used = false, text = "NO EFFECT" } end
+    if itemId == "ELIXER" then return { used = true, text = "PP RESTORED" } end
+    local mv = mon.moves and mon.moves[slot]
+    if not mv then return { used = false, text = "NO EFFECT" } end
+    mv.pp = (mv.pp or 0) + 10
+    return { used = true, text = "PP RESTORED" }
+  end
+  E.forgetSlot = 1
+  -- Game2:usePartyItem (:802-905) on the member E.itemSlot (default 1), its move E.itemMoveSlot for the ETHER
+  -- family: the effect, the item spent on a success (consumeItem, :730-734), the text said; the evolution scene
+  -- of a used stone and the level-up's moves are recorded, not drawn (E.partyItemUses: { item, used, scene })
+  function Game2:consumeItem(itemId)
+    if not (self.save and self.save.inventory) then return end
+    local left = (self.save.inventory[itemId] or 1) - 1
+    self.save.inventory[itemId] = left > 0 and left or nil
+  end
+  function Game2:usePartyItem(itemId)
+    local IE = E.modules["src.core.gen2.ItemEffects"]
+    local action = IE.partyAction(itemId, self.data)
+    local mon = self.save.party[E.itemSlot or 1]
+    local r
+    if action == "pp" then
+      local slot = E.itemMoveSlot or 1
+      if itemId == "ELIXER" then slot = nil end
+      r = IE.usePpItem(itemId, mon, slot, self.data)
+    else
+      r = IE.useOnMon(itemId, mon, self.data)
+    end
+    local use = { item = itemId, used = r.used == true }
+    if r.used then
+      if action == "stone" then
+        use.scene = "evolution"
+        mon.species = r.evolution.species
+      end
+      self:consumeItem(itemId)
+    end
+    E.partyItemUses[#E.partyItemUses + 1] = use
+    self:say(r.text or "")
+  end
+  -- Game2:useFieldItem (:686-725): a TM/HM's party menu; the pick (a test calls the pushed screen's
+  -- opts.onChoose) checks the species' tmhm and the known moves, then learnMoveOn
+  function Game2:useFieldItem(itemId)
+    local def = self.data.items and self.data.items[itemId]
+    local moveId = def and def.teaches
+    if not moveId then return self:usePartyItem(itemId) end
+    E.fieldItemUses[#E.fieldItemUses + 1] = itemId
+    E.modules["src.ui.Screens"].push(self, "Gen2PartyMenu", {
+      prompt = "choose",
+      onChoose = function(_index, mon)
+        self.stack:pop()
+        local species = self.data.pokemon[mon.species]
+        local allowed = false
+        for _, id in ipairs(species and species.tmhm or {}) do if id == moveId then allowed = true end end
+        if not allowed then return self:say("CAN'T LEARN") end
+        for _, mv in ipairs(mon.moves or {}) do if mv.id == moveId then return self:say("KNOWS IT") end end
+        self:learnMoveOn(mon, moveId, function(learned)
+          if not learned then return end
+          if tostring(itemId):sub(1, 3) ~= "HM_" then self:consumeItem(itemId) end
+        end)
+      end,
+    })
+  end
+  -- Game2:learnMoveOn: a free slot takes it; with four, the move in E.forgetSlot goes (E.declineLearn: no)
+  function Game2:learnMoveOn(mon, moveId, onDone)
+    if E.declineLearn then return onDone(false) end
+    local row = { id = moveId, pp = 10, maxPp = 10 }
+    if #mon.moves < 4 then mon.moves[#mon.moves + 1] = row else mon.moves[E.forgetSlot] = row end
+    onDone(true)
+  end
 
   -- src/ui/gen2/CenterPcMenu.lua:217-232: BILL's row says its line, then pushes the box screens
   local CenterPcMenu = {}
@@ -1981,6 +2077,7 @@ function FakeEngine2.new(opts)
     -- G2F
     ["src.ui.gen2.BattleState"] = E.BattleState,
     ["src.ui.Screens"] = E.Screens,
+    ["src.core.gen2.ItemEffects"] = E.ItemEffects,
     ["src.battle.gen2.Mon"] = E.Mon,
     ["src.battle.gen2.Prize"] = E.Prize,
     ["src.core.gen2.Gender"] = E.Gender,

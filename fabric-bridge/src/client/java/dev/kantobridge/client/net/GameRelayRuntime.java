@@ -56,6 +56,12 @@ public final class GameRelayRuntime {
 				}
 
 				@Override
+				public boolean toBridge(String type, long re, JsonObject data) {
+					SessionGate gate = gate(link);
+					return (gate == null || gate.bridgeOpen()) && link.client().send(type, re, data);
+				}
+
+				@Override
 				public boolean toServer(String type, JsonObject data) {
 					SessionGate gate = gate(link);
 					return (gate == null || gate.serverOpen()) && link.toServer(type, data, null);

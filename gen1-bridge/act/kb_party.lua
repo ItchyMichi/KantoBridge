@@ -338,6 +338,11 @@ end
 
 local ITEM_KINDS = { stone = true, machine = true, candy = true, medicine = true, pp = true, vitamin = true,
                      other = true }
+-- FP4 (§4.4): the catalogue's medicine that isn't HP, status or a revive, by
+-- canonical id (an adapter says "medicine"; kb_party names the rest)
+Party.MEDICINE_KINDS = { ether = "pp", max_ether = "pp", elixer = "pp", max_elixer = "pp", pp_up = "pp", pp_max = "pp",
+                         hp_up = "vitamin", protein = "vitamin", iron = "vitamin", carbos = "vitamin",
+                         calcium = "vitamin", zinc = "vitamin", rare_candy = "candy" }
 
 -- A queued item use as party.item's payload, or nil when it can't be one.
 function Party.itemData(use, compat)
@@ -348,14 +353,19 @@ function Party.itemData(use, compat)
   local data = { item = use.item, uid = use.uid }
   -- FP1/FP2: what the item does, when the adapter said (party.item.kind)
   if ITEM_KINDS[use.kind] then data.kind = use.kind end
-  if use.move ~= nil or use.slot ~= nil then
-    -- a TM/HM: the move it taught, and the slot it took when it replaced one
-    local _, maxMove = ceilings(compat)
+  local _, maxMove = ceilings(compat)
+  if use.move ~= nil or use.slot ~= nil or use.forget ~= nil then
+    -- a TM/HM: the move it taught, and the slot it took (or, FP4, the move
+    -- it replaced) when it replaced one; FP4, kind pp: the move it restored
     if not whole(use.move, 1, maxMove) then return nil end
     data.move = use.move
     if use.slot ~= nil then
       if not whole(use.slot, 0, 3) then return nil end
       data.slot = use.slot
+    end
+    if use.forget ~= nil then
+      if not whole(use.forget, 1, maxMove) then return nil end
+      data.forget = use.forget
     end
   end
   return data
@@ -374,6 +384,10 @@ end
 --   log      kb_log logger (optional)
 --   onOp     M10: called once per Pokemon operation (give, take, deposit,
 --            withdraw) as it first goes out (optional)
+--   idPrefix FP4: the start's token in party.item ids (main.lua's session id;
+--            optional), so ids never repeat across starts
+-- FP4: seconds after a party.item went out from which a party.sync settles it
+Party.ITEM_SETTLE = 1
 function Party.new(opts)
   local engine, log, store, clock = opts.engine, opts.log, opts.store, opts.clock
   -- MG7 (G3F): the running game's compat (maxDex, maxMove); Gen 1's without one
@@ -381,6 +395,9 @@ function Party.new(opts)
   local maxDex, maxMove = ceilings(compat)
   local markup = opts.markup or function(s) return s, 0 end
   local onOp = opts.onOp or function() end
+  local idPrefix = type(opts.idPrefix) == "string" and opts.idPrefix:gsub("[^%w]", "") or "x"
+  local itemsOut, itemSerial = {}, 0 -- FP4: party.items sent and not settled yet
+  local itemsSynced -- FP4: defined with sendItems, called by apply
   local party = {}
   local pending   -- the newest party.sync waiting for a safe moment
   local lastSync  -- the last one applied (applied again after New Game / CONTINUE)
@@ -394,7 +411,7 @@ function Party.new(opts)
     visitorsNow = 0, -- FP2: members the last applied sync made visitors
     orders = 0, ordersConfirmed = 0, -- FP2: party.order
     dexSyncs = 0, dexApplied = 0, dexAddedSeen = 0, dexAddedOwned = 0, dexUnknown = 0, dexBeyond = 0,
-    items = 0, itemsBad = 0,
+    items = 0, itemsBad = 0, itemsResent = 0, itemsRefused = 0,
     -- M8 (wave 2)
     takes = 0, deposits = 0, withdraws = 0, opsResent = 0, opsConfirmed = 0, opsGivenUp = 0,
     excluded = 0, renames = 0, catches = 0,
@@ -688,6 +705,7 @@ function Party.new(opts)
     persist()
     reseedNicks()
     lastSync = data
+    itemsSynced()
     if log then
       log.info("party.synced", { size = res.size, created = res.created, matched = res.matched,
                                  kept = res.kept, count = counts.applied })
@@ -730,21 +748,81 @@ function Party.new(opts)
     return true
   end
 
-  -- Items used on a party member (kb_engine's queue), once each, while live.
-  local function sendItems(out)
+  -- Items used on a party member (kb_engine's queue), while live. FP4
+  -- (§4.4): each has an id (Cobblemon applies an id once) and is sent again
+  -- after a snapshot or on a new connection until a party.sync follows it
+  -- (Party.ITEM_SETTLE seconds after it went, or the second sync without a
+  -- clock); a refusal (act.result{kind:"item"}) ends it too.
+  local function sendItems(out, link)
     for _, use in ipairs(engine.takeItemUses()) do
       local data = Party.itemData(use, compat)
+      if data and data.kind == "medicine" and type(engine.itemTable) == "function" then
+        local okT, table_ = pcall(engine.itemTable)
+        local cid = okT and type(table_) == "table" and table_[data.item] or nil
+        data.kind = Party.MEDICINE_KINDS[cid] or "medicine"
+      end
       if data then
-        out[#out + 1] = { "party.item", data, "party" }
-        counts.items = counts.items + 1
-        if log then
-          log.info("party.item", { kind = data.move and "machine" or "item", slot = data.slot, count = counts.items })
-        end
+        itemSerial = itemSerial + 1
+        data.id = ("i-%s-%d"):format(idPrefix, itemSerial)
+        itemsOut[#itemsOut + 1] = { data = data, state = "new", syncs = 0 }
       else
         counts.itemsBad = counts.itemsBad + 1
         if log then log.warn("party.item_unsendable", { count = counts.itemsBad }) end
       end
     end
+    for _, it in ipairs(itemsOut) do
+      if it.state == "new" or resend or it.gen ~= link.generation then
+        out[#out + 1] = { "party.item", it.data, "party" }
+        if it.state == "new" then
+          counts.items = counts.items + 1
+          if log then
+            log.info("party.item", { kind = it.data.kind or (it.data.move and "machine" or "item"), slot = it.data.slot,
+                                     count = counts.items })
+          end
+        else
+          counts.itemsResent = counts.itemsResent + 1
+        end
+        it.state, it.gen, it.at = "sent", link.generation, clock and clock() or nil
+      end
+    end
+  end
+
+  -- A party.sync was applied: the items it follows are done.
+  function itemsSynced()
+    local keep = {}
+    for _, it in ipairs(itemsOut) do
+      if it.state == "sent" then
+        it.syncs = it.syncs + 1
+        local settled = (it.at and clock and clock() - it.at >= Party.ITEM_SETTLE) or it.syncs >= 2
+        if not settled then keep[#keep + 1] = it end
+      else
+        keep[#keep + 1] = it
+      end
+    end
+    itemsOut = keep
+  end
+
+  -- FP4: act.result from Minecraft. kind "item": Cobblemon refused the
+  -- party.item with that id (logged and counted; the server sends a sync).
+  -- Other kinds aren't the party's. Returns true, or false plus bad_message.
+  function party.result(data)
+    if type(data) ~= "table" or type(data.ok) ~= "boolean" then return false, "bad_message" end
+    if data.kind ~= "item" then return true end
+    if type(data.id) ~= "string" then return false, "bad_message" end
+    for i, it in ipairs(itemsOut) do
+      if it.data.id == data.id then
+        table.remove(itemsOut, i)
+        break
+      end
+    end
+    if data.ok == false then
+      counts.itemsRefused = counts.itemsRefused + 1
+      if log then
+        log.warn("party.item_refused", { reason = type(data.reason) == "string" and data.reason or "none",
+                                         count = counts.itemsRefused })
+      end
+    end
+    return true
   end
 
   -- M8: the boarded member's record in mod.save, { uid, exp0 } or nil
@@ -916,7 +994,7 @@ function Party.new(opts)
         out[#out + 1] = { "party.heal", {}, "party" }
         counts.heals = counts.heals + 1
       end
-      sendItems(out)
+      sendItems(out, link)
       sendRenames(out)
       resend = false
     end

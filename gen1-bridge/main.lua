@@ -280,6 +280,7 @@ return function(mod)
       set = function(key, value) mod.save:set(key, value) end,
     },
     onOp = function() saves.opSent() end,
+    idPrefix = sessionId:sub(3, 10),
   })
   -- M6: the bag's battle items mirrored into Minecraft (P17); MG6: every
   -- non-key catalogue item synced for the server's ledger, with the money
@@ -724,6 +725,8 @@ return function(mod)
   end
   session.on("battle.result", answered(battles.result))
   session.on("party.sync", answered(party.sync))
+  -- FP4: Cobblemon's refusal of a party.item (act.result{kind:"item"})
+  session.on("act.result", answered(party.result))
   -- M6: Cobblemon's Pokedex, and items it used up
   session.on("dex.sync", answered(party.dex))
   -- (M9: not while a save-slot switch waits: the bag isn't the new world's yet)

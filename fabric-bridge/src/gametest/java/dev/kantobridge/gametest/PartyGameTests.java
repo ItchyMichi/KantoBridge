@@ -361,6 +361,67 @@ public class PartyGameTests implements FabricGameTest {
 	}
 
 	/**
+	 * FP4 (FOREIGN_POKEMON_PLAN §4.4): medicine, PP items, vitamins and revives from the hidden bag are Cobblemon's own items
+	 * on the Pokémon (its amounts); an id applies once; a refusal answers {@code act.result{kind:"item"}} with its reason
+	 * and id.
+	 */
+	@GameTest(template = EMPTY_STRUCTURE, batch = BATCH)
+	public void medicineAndPpItemsAreCobblemonsOwnAndRefusalsAnswer(GameTestHelper helper) {
+		RelayService relay = RelayService.get();
+		MockPlayers.with(helper, player -> RelayTap.capture(player, sent -> {
+			PlayerPartyStore party = PlayerExtensionsKt.party(player);
+			Pokemon rattata;
+			try {
+				rattata = Gen1Mons.gift(new Gen1Mon(19, 20, List.of(33, 39), null));
+			} catch (Gen1Mons.Missing e) {
+				throw new GameTestAssertException("Cobblemon lacks " + e.code());
+			}
+			party.add(rattata);
+			String uid = rattata.getUuid().toString();
+			long used = PartyService.itemsUsed();
+			// a Potion: Cobblemon's 20 HP
+			rattata.setCurrentHealth(5);
+			relay.receive(player, envelope(1, MsgTypes.PARTY_ITEM, "{\"item\":\"POTION\",\"uid\":\"" + uid + "\",\"kind\":\"medicine\",\"id\":\"i-t-1\"}"));
+			helper.assertTrue(rattata.getCurrentHealth() == Math.min(rattata.getMaxHealth(), 25), "the Potion healed " + rattata.getCurrentHealth());
+			// the same id again: applied once
+			rattata.setCurrentHealth(5);
+			long repeated = PartyService.itemsRepeated();
+			relay.receive(player, envelope(2, MsgTypes.PARTY_ITEM, "{\"item\":\"POTION\",\"uid\":\"" + uid + "\",\"kind\":\"medicine\",\"id\":\"i-t-1\"}"));
+			helper.assertTrue(rattata.getCurrentHealth() == 5 && PartyService.itemsRepeated() == repeated + 1, "a repeated id applied again");
+			// an Ether on the move it names
+			rattata.getMoveSet().get(0).setCurrentPp(0);
+			relay.receive(player, envelope(3, MsgTypes.PARTY_ITEM, "{\"item\":\"ETHER\",\"uid\":\"" + uid + "\",\"kind\":\"pp\",\"move\":33,\"id\":\"i-t-2\"}"));
+			helper.assertTrue(rattata.getMoveSet().get(0).getCurrentPp() > 0, "the Ether restored nothing");
+			// a vitamin: Cobblemon's EV rule
+			int ev = rattata.getEvs().getOrDefault(com.cobblemon.mod.common.api.pokemon.stats.Stats.HP);
+			relay.receive(player, envelope(4, MsgTypes.PARTY_ITEM, "{\"item\":\"HP_UP\",\"uid\":\"" + uid + "\",\"kind\":\"vitamin\",\"id\":\"i-t-3\"}"));
+			helper.assertTrue(rattata.getEvs().getOrDefault(com.cobblemon.mod.common.api.pokemon.stats.Stats.HP) > ev, "the HP Up added no EVs");
+			// a Revive on a fainted Pokémon: half its HP
+			rattata.setCurrentHealth(0);
+			relay.receive(player, envelope(5, MsgTypes.PARTY_ITEM, "{\"item\":\"REVIVE\",\"uid\":\"" + uid + "\",\"kind\":\"medicine\",\"id\":\"i-t-4\"}"));
+			helper.assertTrue(rattata.getCurrentHealth() == Math.max(1, rattata.getMaxHealth() / 2), "the Revive gave " + rattata.getCurrentHealth());
+			helper.assertTrue(PartyService.itemsUsed() == used + 4, "applied items weren't counted");
+			// a Potion at full HP: refused, with the reason and the id
+			rattata.heal();
+			relay.receive(player, envelope(6, MsgTypes.PARTY_ITEM, "{\"item\":\"POTION\",\"uid\":\"" + uid + "\",\"kind\":\"medicine\",\"id\":\"i-t-5\"}"));
+			// an unknown member and an item kind with no rule
+			relay.receive(player, envelope(7, MsgTypes.PARTY_ITEM, "{\"item\":\"POTION\",\"uid\":\"" + UUID.randomUUID() + "\",\"kind\":\"medicine\",\"id\":\"i-t-6\"}"));
+			relay.receive(player, envelope(8, MsgTypes.PARTY_ITEM, "{\"item\":\"NUGGET\",\"uid\":\"" + uid + "\",\"kind\":\"other\",\"id\":\"i-t-7\"}"));
+			List<String> answers = new ArrayList<>();
+			for (Envelope m : sent) {
+				if (m.type().equals(MsgTypes.ACT_RESULT) && "item".equals(m.data().get("kind").getAsString())) {
+					helper.assertTrue(!m.data().get("ok").getAsBoolean(), "an item answer is a refusal");
+					answers.add(m.data().get("id").getAsString() + "=" + m.data().get("reason").getAsString() + "@" + m.re());
+				}
+			}
+			helper.assertTrue(answers.equals(List.of("i-t-5=no_effect@6", "i-t-6=unknown_uid@7", "i-t-7=unsupported@8")),
+					"the refusals: " + answers);
+			helper.assertTrue(sent.stream().noneMatch(message -> message.type().equals(MsgTypes.ERROR)), "a valid party.item was refused");
+		}));
+		helper.succeed();
+	}
+
+	/**
 	 * M8 wave 2: a Safari Zone catch crosses over as a {@code native_catch} gift that belongs to the player, with the
 	 * nickname, moves and DVs it was caught with; an in-game trade sends one member away ({@code party.take}) and brings
 	 * one that keeps its NPC trainer and nickname. Neither doubles up when gen1-bridge repeats it, and the sync names them.

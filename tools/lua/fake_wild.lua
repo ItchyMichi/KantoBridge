@@ -332,7 +332,30 @@ function FakeWild.attach(E)
   E.modules["src.inventory.Bag"] = Bag
   E.Bag = Bag
 
-  E.modules["src.inventory.ItemEffects"] = { isStone = function(id) return STONES[id] or false end }
+  -- FP4: ItemEffects.use for the medicine the tests use (POTION: 20 HP on a
+  -- hurt member; ETHER: 10 PP on the picked move; HP_UP: always), the
+  -- result word vanillaUseOn reads ("consumed" or "failed")
+  local MEDICINE = { POTION = true, ETHER = true, HP_UP = true }
+  E.modules["src.inventory.ItemEffects"] = {
+    isStone = function(id) return STONES[id] or false end,
+    use = function(_data, _save, id, mon, battle, moveIndex)
+      if battle or not mon then return "failed" end
+      if id == "POTION" then
+        local max = mon.stats and mon.stats.hp or mon.maxHp or mon.hp
+        if (mon.hp or 0) <= 0 or mon.hp >= max then return "failed" end
+        mon.hp = math.min(max, mon.hp + 20)
+        return "consumed"
+      elseif id == "ETHER" then
+        local mv = moveIndex and mon.moves[moveIndex]
+        if not mv then return "failed" end
+        mv.pp = (mv.pp or 0) + 10
+        return "consumed"
+      elseif id == "HP_UP" then
+        return "consumed"
+      end
+      return "failed"
+    end,
+  }
 
   -- Transition.whiteFlash (src/render/Transition.lua:226-238): a state that
   -- pops itself after `frames` steps
@@ -541,7 +564,7 @@ function FakeWild.attach(E)
   -- over ItemEffects.use): a stone evolves the member, RARE_CANDY levels it
   -- up, a TM/HM teaches its move (the forget menu with four moves; TMs are
   -- used up, HMs stay), anything else has no effect.
-  local function vanillaUseOn(game, battle, id, mon, list, _, picker)
+  local function vanillaUseOn(game, battle, id, mon, list, moveIndex, picker)
     local def = E.data.items[id] or {}
     local sdef = E.data.pokemon[mon.species] or {}
     local function closePicker()
@@ -554,6 +577,15 @@ function FakeWild.attach(E)
       E.uiPush(E.textBox("NO EFFECT.", { onDone = closePicker }))
     end
     if battle then return failed() end
+    if MEDICINE[id] then
+      if E.modules["src.inventory.ItemEffects"].use(game.data, game.save, id, mon, battle, moveIndex) ~= "consumed" then
+        return failed()
+      end
+      consume(id, list)
+      E.nativeItems[#E.nativeItems + 1] = { kind = "healed", item = id }
+      closePicker()
+      return
+    end
     if STONES[id] then
       for _, evo in ipairs(sdef.evolutions or {}) do
         if evo.method == "ITEM" and evo.item == id then
@@ -603,7 +635,7 @@ function FakeWild.attach(E)
 
   -- useOn (BagMenu.lua:525-528) from the item-use party menu: the picker is
   -- on top while the use runs (keepOpen), unless opts.picker says otherwise.
-  -- opts: battle, list, picker (false: none)
+  -- opts: battle, list, picker (false: none), moveIndex (FP4: a PP item's move)
   function E.useItem(id, mon, opts)
     opts = opts or {}
     local list = opts.list or E.bagList()
@@ -615,7 +647,7 @@ function FakeWild.attach(E)
       picker = nil
     end
     E.lastBagList = list
-    return E.runtime.call("item.use", vanillaUseOn, E.game, opts.battle, id, mon, list, nil, picker)
+    return E.runtime.call("item.use", vanillaUseOn, E.game, opts.battle, id, mon, list, opts.moveIndex, picker)
   end
 end
 

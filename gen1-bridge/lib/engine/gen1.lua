@@ -2747,6 +2747,7 @@ function Gen1.new(opts)
   -- item symbols (party.sync `stones`, §4.4), by member; nil when the sync
   -- didn't say (then the species' own evolutions answer)
   local monStones = setmetatable({}, { __mode = "k" })
+  local monCanLearn = setmetatable({}, { __mode = "k" }) -- FP4: the sync's canLearn as a set of move ids
 
   function engine.uidOf(mon) return type(mon) == "table" and monUid[mon] or nil end
 
@@ -2864,6 +2865,17 @@ function Gen1.new(opts)
       monStones[mon] = set
     else
       monStones[mon] = nil
+    end
+    -- FP4 (§4.4): the machine moves Cobblemon's learnset allows, by Gen 1 move id
+    if type(e.canLearn) == "table" then
+      local set = {}
+      for _, n in ipairs(e.canLearn) do
+        local id = engine.moveIdOfNum(n)
+        if id then set[id] = true end
+      end
+      monCanLearn[mon] = set
+    else
+      monCanLearn[mon] = nil
     end
   end
 
@@ -3497,7 +3509,7 @@ function Gen1.new(opts)
 
   local STONES = { FIRE_STONE = true, WATER_STONE = true, THUNDER_STONE = true, LEAF_STONE = true,
                    MOON_STONE = true } -- ItemEffects.lua:57-60, when isStone isn't there
-  local itemCounts = { stone = 0, candy = 0, machine = 0, taught = 0, declined = 0, native = 0 }
+  local itemCounts = { stone = 0, candy = 0, machine = 0, taught = 0, declined = 0, native = 0, medicine = 0 }
 
   local function itemState()
     local st = bridgeState()
@@ -3567,7 +3579,12 @@ function Gen1.new(opts)
       if type(mv) == "table" and mv.id == w.move then
         st.tmWatch = nil
         local use = { item = w.item, uid = w.uid, move = engine.moveNumOf(w.move), save = w.save }
-        if i <= w.known then use.slot = i - 1 end
+        if i <= w.known then
+          use.slot = i - 1
+          -- FP4: the move it replaced, by number (the hidden and Cobblemon slots need not match)
+          local old = type(w.before) == "table" and w.before[i] or nil
+          if old then use.forget = engine.moveNumOf(old) end
+        end
         queueItemUse(use)
         itemCounts.taught = itemCounts.taught + 1
         return "taught"
@@ -3612,24 +3629,86 @@ function Gen1.new(opts)
       -- it and the member doesn't know it yet; otherwise the engine refuses
       local move = def.machine.move
       local learns = false
-      for _, m in ipairs(type(sdef.tmhm) == "table" and sdef.tmhm or {}) do
-        if m == move then learns = true break end
+      local synced = monCanLearn[target]
+      if synced then
+        -- FP4 (§4.4): Cobblemon's learnset answers, natives and visitors alike
+        learns = synced[move] == true
+      else
+        for _, m in ipairs(type(sdef.tmhm) == "table" and sdef.tmhm or {}) do
+          if m == move then learns = true break end
+        end
       end
-      local known = 0
+      local known, before = 0, {}
       for _, mv in ipairs(type(target.moves) == "table" and target.moves or {}) do
         known = known + 1
+        before[known] = type(mv) == "table" and mv.id or nil
         if type(mv) == "table" and mv.id == move then learns = false end
       end
-      if not learns then return native() end
+      if not learns then
+        -- the engine's own check would let it through on the species' list:
+        -- its refusal line is ItemEffects' (the species list, swapped for
+        -- the member's while it runs)
+        if not synced then return native() end
+        local tmhm0 = sdef.tmhm
+        sdef.tmhm = {}
+        local results = { pcall(native) }
+        sdef.tmhm = tmhm0
+        if not results[1] then error(results[2], 0) end
+        return unpack(results, 2, table.maxn(results))
+      end
       local st = itemState()
       if st then
-        st.tmWatch = { mon = target, uid = uid, item = id, move = move, known = known, picker = picker,
+        st.tmWatch = { mon = target, uid = uid, item = id, move = move, known = known, before = before, picker = picker,
                        save = save, ow = ow }
+      end
+      if synced then
+        -- the engine's own check reads the species' list: it gets the move
+        -- while the flow starts (a visitor's list is empty)
+        local tmhm0 = sdef.tmhm
+        local list = {}
+        for _, m in ipairs(type(tmhm0) == "table" and tmhm0 or {}) do list[#list + 1] = m end
+        list[#list + 1] = move
+        sdef.tmhm = list
+        itemCounts.machine = itemCounts.machine + 1
+        local results = { pcall(native) }
+        sdef.tmhm = tmhm0
+        if not results[1] then error(results[2], 0) end
+        engine.tmWatchStep()
+        return unpack(results, 2, table.maxn(results))
       end
       itemCounts.machine = itemCounts.machine + 1
       local results = { native() }
       engine.tmWatchStep() -- fewer than four moves: taught already
       return unpack(results, 1, table.maxn(results))
+    end
+    -- FP4 (§4.4): medicine, PP items and vitamins run natively on the
+    -- record (the next sync rewrites it) and go to Cobblemon when the
+    -- engine spent the item (ItemEffects.use's "consumed",
+    -- src/inventory/ItemEffects.lua:212): Cobblemon applies its own item
+    -- (party.item kind medicine; kb_party names pp and vitamin); a PP item
+    -- names the move it was used on
+    if id ~= "RARE_CANDY" and engine.itemClass(id) == "medicine" then
+      local IE = try("src.inventory.ItemEffects")
+      local use0 = IE and rawget(IE, "use")
+      local outcome
+      if type(use0) == "function" then
+        IE.use = function(...)
+          local r = { use0(...) }
+          outcome = r[1]
+          return unpack(r, 1, table.maxn(r))
+        end
+      end
+      local results = { pcall(native) }
+      if type(use0) == "function" then IE.use = use0 end
+      if not results[1] then error(results[2], 0) end
+      if outcome == "consumed" then
+        local use = { item = id, uid = uid, save = save, kind = "medicine" }
+        local mv = moveIndex and type(target.moves) == "table" and target.moves[moveIndex] or nil
+        if type(mv) == "table" then use.move = engine.moveNumOf(mv.id) end
+        queueItemUse(use)
+        itemCounts.medicine = itemCounts.medicine + 1
+      end
+      return unpack(results, 2, table.maxn(results))
     end
     local kind
     if isStone(id) then
@@ -3663,7 +3742,8 @@ function Gen1.new(opts)
     local save = engine.save()
     for _, u in ipairs(list) do
       if u.save == save then
-        out[#out + 1] = { item = u.item, uid = u.uid, slot = u.slot, move = u.move, kind = u.kind or (u.move and "machine") }
+        out[#out + 1] = { item = u.item, uid = u.uid, slot = u.slot, move = u.move, forget = u.forget,
+                          kind = u.kind or (u.move and "machine") }
       end
     end
     st.itemUses = {}

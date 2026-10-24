@@ -30,7 +30,7 @@
     },
     "move": {
       "$ref": "../defs.schema.json#/$defs/moveNum",
-      "description": "TM/HM: the move taught."
+      "description": "TM/HM: the move taught. Kind pp: the move the item restored or raised (Ether, PP Up, PP Max; absent for the Elixirs)."
     },
     "id": {
       "$ref": "../defs.schema.json#/$defs/id",

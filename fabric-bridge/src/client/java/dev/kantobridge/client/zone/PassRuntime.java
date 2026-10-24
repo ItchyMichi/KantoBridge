@@ -177,9 +177,19 @@ public final class PassRuntime {
 		// The body's screens closing (the far game's intro, after a start).
 		bridge.dispatcher().on(MsgTypes.UI_CLOSE, message -> runtime.choreography.uiClosed(runtime.now()));
 		// The server's answers: act.result{kind:"stash"} to party.stash, error{pass.*, stash.pc_full}. No other client
-		// runtime takes these server-to-client types; the relay keeps one handler per type.
-		runtime.links.onServer(MsgTypes.ACT_RESULT, false, (link, message) -> runtime.choreography.serverResult(message.re(),
-				JsonFields.bool(message.data(), "ok", false), JsonFields.str(message.data(), "kind"), runtime.now()));
+		// runtime takes these server-to-client types; the relay keeps one handler per type. FP4: act.result{kind:"item"}
+		// (a refused party.item) belongs to the link's game relay, which answers the hidden game's message.
+		runtime.links.onServer(MsgTypes.ACT_RESULT, false, (link, message) -> {
+			if ("item".equals(JsonFields.str(message.data(), "kind"))) {
+				dev.kantobridge.client.net.GameRelayRuntime relays = dev.kantobridge.client.net.GameRelayRuntime.get();
+				if (relays != null) {
+					relays.relay(link).itemResult(message.data());
+				}
+				return;
+			}
+			runtime.choreography.serverResult(message.re(), JsonFields.bool(message.data(), "ok", false),
+					JsonFields.str(message.data(), "kind"), runtime.now());
+		});
 		runtime.links.onServer(MsgTypes.ERROR, false,
 				(link, message) -> runtime.choreography.serverError(JsonFields.str(message.data(), "code"), message.re(), runtime.now()));
 		// After BridgeRuntime's tick (the links' messages) and ZoneRuntime's (the fade).

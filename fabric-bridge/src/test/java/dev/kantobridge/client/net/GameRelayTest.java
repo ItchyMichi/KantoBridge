@@ -50,6 +50,18 @@ class GameRelayTest {
 		public void warn(String code, long count) {
 			this.warnings.add(code);
 		}
+
+		/** FP4: replies (the server's item refusals), with the seq they answer. */
+		final List<Long> replyTo = new ArrayList<>();
+
+		@Override
+		public boolean toBridge(String type, long re, JsonObject data) {
+			if (!this.toBridge(type, data)) {
+				return false;
+			}
+			this.replyTo.add(re);
+			return true;
+		}
 	}
 
 	private final Links links = new Links();
@@ -374,5 +386,27 @@ class GameRelayTest {
 		assertEquals(1, this.relay.dropUses());
 		assertEquals(0, this.relay.queuedUses());
 		assertTrue(this.links.warnings.contains("party.queue_dropped") && this.links.warnings.contains("bag.uses_dropped"));
+	}
+
+	@Test
+	void anItemRefusalAnswersTheMessageThatCarriedItsId() throws Exception {
+		// FP4 (FOREIGN_POKEMON_PLAN §4.4): the server's act.result{kind:"item"} goes to gen1-bridge as the reply to its
+		// party.item, without the relay's region tag; an id the relay never carried is a warning
+		Envelope item = this.message(MsgTypes.PARTY_ITEM, "{\"item\":\"POTION\",\"uid\":\"0f8b6a2e-1c2d-4e5f-8a9b-0c1d2e3f4a5b\","
+				+ "\"kind\":\"medicine\",\"id\":\"i-ab-1\"}");
+		this.relay.fromBridge(item, 0);
+		assertEquals(MsgTypes.PARTY_ITEM, this.links.server.get(0).type());
+		boolean sent = this.relay.itemResult(ProtoJson.parseObject(
+				"{\"ok\":false,\"kind\":\"item\",\"reason\":\"no_effect\",\"id\":\"i-ab-1\",\"region\":\"hoenn\"}"));
+		assertTrue(sent);
+		Sent reply = this.links.bridge.get(this.links.bridge.size() - 1);
+		assertEquals(MsgTypes.ACT_RESULT, reply.type());
+		assertEquals(item.seq(), this.links.replyTo.get(this.links.replyTo.size() - 1));
+		assertFalse(reply.data().has("region"));
+		assertEquals("no_effect", reply.data().get("reason").getAsString());
+		assertEquals(1, this.relay.stats().itemResultsForwarded);
+		assertFalse(this.relay.itemResult(ProtoJson.parseObject("{\"ok\":false,\"kind\":\"item\",\"id\":\"i-ab-1\"}")),
+				"answered once");
+		assertTrue(this.links.warnings.contains("item.result_unknown"));
 	}
 }

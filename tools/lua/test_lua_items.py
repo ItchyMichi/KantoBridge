@@ -21,8 +21,13 @@ def entry(uid, dex, level, moves, hp=20, maxhp=20):
     return {"uid": uid, "dex": dex, "level": level, "moves": moves, "hp": hp, "maxhp": maxhp}
 
 
-def items_sent(g):
+def items_raw(g):
     return [m["data"] for m in g.received("party.item")]
+
+
+def items_sent(g):
+    """What went out, without FP4's id (tested on its own)."""
+    return [{k: v for k, v in d.items() if k != "id"} for d in items_raw(g)]
 
 
 def native_items(g):
@@ -137,7 +142,8 @@ def test_an_hm_over_a_forgotten_move_sends_the_slot():
     assert len(bird.moves) == 4
     g.send("act.button", {"button": "a", "how": "tap"})   # the mirror: forget the third move
     g.run(3)
-    assert items_sent(g) == [{"item": "HM_WHIRL_T", "uid": U2, "kind": "machine", "move": N["WHIRL_T"], "slot": 2}]
+    assert items_sent(g) == [{"item": "HM_WHIRL_T", "uid": U2, "kind": "machine", "move": N["WHIRL_T"], "slot": 2,
+                              "forget": N["GROWL_T"]}], "FP4: the move replaced, by number"
     assert g.E.save.inventory.HM_WHIRL_T == 1, "an HM stays in the bag"
     g.run(3)
     assert [mv.id for mv in g.party()[0].moves.values()] == [b"TACKLE_T"], "then the waiting sync applied"
@@ -248,9 +254,17 @@ def test_a_use_whose_client_dropped_goes_to_the_next_one_once():
     g.connect()
     g.run(2)
     assert items_sent(g) == [{"item": "RARE_CANDY", "uid": U1, "kind": "candy"}]
+    # FP4: until a sync follows it, a snapshot sends it again with the same id (Cobblemon applies an id once)
     g.send("resync")
     g.run(2)
-    assert len(items_sent(g)) == 1, "never sent twice"
+    raw = items_raw(g)
+    assert len(raw) == 2 and raw[0]["id"] == raw[1]["id"]
+    g.rig.advance(2)
+    g.send("party.sync", {"party": [entry(U1, 37, 11, [N["EMBER_T"]])], "box": {"count": 0}})
+    g.run(2)
+    g.send("resync")
+    g.run(2)
+    assert len(items_raw(g)) == 2, "a sync after it settled it"
 
 
 def test_logs_never_carry_species_or_moves():
@@ -304,3 +318,69 @@ def test_a_stone_cobblemon_would_refuse_stays_the_games_refusal():
 
 def same_member(g, a, b):
     return bool(g.b.eval("function(a, b) return rawequal(a, b) end")(a, b))
+
+
+# ------------------------------------------------------------ FP4: items, moves, effects (FOREIGN_POKEMON_PLAN §4.4)
+
+def test_medicine_pp_items_and_vitamins_go_to_cobblemon_after_the_native_effect():
+    g = items_game(party=[entry(U1, 37, 10, [N["EMBER_T"], N["TAIL_T"]], hp=5, maxhp=40)])
+    stock(g, POTION=2, ETHER=1, HP_UP=1)
+    potions = g.E.save.inventory.POTION
+    fox = mon(g, 0)
+    g.E.useItem(b"POTION", fox)
+    g.run()
+    g.E.useItem(b"ETHER", fox, g.opts(moveIndex=2))
+    g.run()
+    g.E.useItem(b"HP_UP", fox)
+    g.run()
+    assert native_items(g) == [("healed", "POTION"), ("healed", "ETHER"), ("healed", "HP_UP")], "the native effects ran"
+    assert fox.hp > 5, "on the record too (the next sync rewrites it)"
+    assert items_sent(g) == [{"item": "POTION", "uid": U1, "kind": "medicine"},
+                             {"item": "ETHER", "uid": U1, "kind": "pp", "move": N["TAIL_T"]},
+                             {"item": "HP_UP", "uid": U1, "kind": "vitamin"}]
+    ids = [d["id"] for d in items_raw(g)]
+    assert len(set(ids)) == 3 and all(i.startswith("i-") for i in ids)
+    assert g.E.save.inventory.POTION == potions - 1 and g.E.save.inventory.ETHER is None
+
+
+def test_medicine_the_game_refuses_sends_nothing():
+    g = items_game(party=[entry(U1, 37, 10, [N["EMBER_T"]], hp=40, maxhp=40)])
+    stock(g, POTION=1)
+    had = g.E.save.inventory.POTION
+    g.E.useItem(b"POTION", mon(g, 0))
+    g.run()
+    assert native_items(g) == [("failed", "POTION")] and not items_sent(g)
+    assert g.E.save.inventory.POTION == had
+
+
+def test_cobblemons_learnset_answers_the_tm_check():
+    # the species' list says no (BIRDMON lacks SAND_T in no list here: FOXMON has no tmhm), Cobblemon's canLearn says yes
+    learns = dict(entry(U1, 37, 10, [N["EMBER_T"], N["TAIL_T"]]), canLearn=[N["SAND_T"]])
+    g = items_game(party=[learns])
+    fox = mon(g, 0)
+    before = g.E.data.pokemon[fox.species].tmhm
+    g.E.useItem(b"TM_SAND_T", fox)
+    g.run()
+    assert native_items(g) == [("learned", "TM_SAND_T")]
+    assert items_sent(g) == [{"item": "TM_SAND_T", "uid": U1, "kind": "machine", "move": N["SAND_T"]}]
+    assert g.E.data.pokemon[b"FOXMON"].tmhm == before, "the species' list is back as it was"
+    # and the other way: the species' list says yes, Cobblemon's says no
+    g2 = items_game(party=[dict(entry(U2, 7, 12, [N["TACKLE_T"], N["TAIL_T"]]), canLearn=[])])
+    g2.E.useItem(b"TM_SAND_T", mon(g2, 0))
+    g2.run()
+    assert native_items(g2) == [("failed", "TM_SAND_T")] and not items_sent(g2)
+    assert g2.E.save.inventory.TM_SAND_T == 1
+
+
+def test_a_refusal_from_cobblemon_ends_the_item():
+    g = items_game()
+    g.E.useItem(b"RARE_CANDY", mon(g, 0))
+    g.run()
+    sent = [m for m in g.received("party.item")][-1]
+    g.peer.send("act.result", {"ok": False, "kind": "item", "reason": "max_level", "id": sent["data"]["id"]}, re=sent["seq"])
+    g.run(2)
+    st = g.status()
+    assert st["partyItemsRefused"] == 1
+    g.send("resync")
+    g.run(2)
+    assert len(items_raw(g)) == 1, "a refused item never goes again"

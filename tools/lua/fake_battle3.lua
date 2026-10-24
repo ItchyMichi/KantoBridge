@@ -446,7 +446,7 @@ function FakeBattle3.attach(E)
     ITEM_ = { [1] = "ITEM_TEST_BALL", [2] = "ITEM_TEST_POTION", [3] = "ITEM_TEST_KEY", [4] = "ITEM_none",
               [5] = "ITEM_POKE_BALL", [13] = "ITEM_POTION", [17] = "ITEM_PARALYZE_HEAL", [94] = "ITEM_FIRE_STONE",
               [68] = "ITEM_RARE_CANDY", [289] = "ITEM_TM01", [294] = "ITEM_TM06", [339] = "ITEM_HM01",
-              [259] = "ITEM_MACH_BIKE", [110] = "ITEM_NUGGET", [93] = "ITEM_SUN_STONE" },
+              [259] = "ITEM_MACH_BIKE", [110] = "ITEM_NUGGET", [93] = "ITEM_SUN_STONE", [34] = "ITEM_ETHER" },
   }
   E.itemPockets[259], E.itemPockets[339] = "KEY_ITEMS", "TM_CASE"
   E.itemPockets[289], E.itemPockets[294] = "TM_CASE", "TM_CASE"
@@ -459,6 +459,52 @@ function FakeBattle3.attach(E)
   }
 
   local mods = E.modules
+  -- FP4: the item seams the adapter wraps (src/core/game3/evolution.lua, item_use.lua, battle/learn_move.lua,
+  -- src/ui/game3/evolution_scene.lua), as small as the tests need: FIRE_STONE (94) evolves internal species 4 into 5;
+  -- a scene or an apply is recorded (E.evolutions); levelUpEvent is recorded (E.levelUps); the TM check reads
+  -- Pokemon.canLearnTmItem (E.tmLearners[species][tm]); teachMove fills a free slot; LearnMove.begin replaces
+  -- E.forgetSlot (default 1) and says yes
+  E.evolutions, E.levelUps, E.tmLearners, E.forgetSlot = {}, {}, {}, 1
+  E.Evolution = {}
+  function E.Evolution.itemTarget(mon, item) return tonumber(item) == 94 and tonumber(mon.species) == 4 and 5 or nil end
+  function E.Evolution.levelTarget() return nil end
+  function E.Evolution.targetSpecies() return nil end
+  function E.Evolution.apply(mon, target) E.evolutions[#E.evolutions + 1] = { via = "apply", target = target } mon.species = target end
+  E.EvolutionScene = {}
+  function E.EvolutionScene.start(mon, target, opts)
+    E.evolutions[#E.evolutions + 1] = { via = "scene", target = target }
+    mon.species = target
+    if opts and opts.onDone then opts.onDone({ evolved = true }) end
+  end
+  E.ItemUse = {}
+  function E.ItemUse.levelUpEvent(mon, level) E.levelUps[#E.levelUps + 1] = level end
+  function E.Pokemon.movesLearnedAt(_species, _level) return { 33 } end
+  function E.ItemUse.ppItemNeedsMove(id) return tonumber(id) == 34 end -- the fake's ETHER
+  function E.Pokemon.canLearnTmItem(species, tm)
+    local row = E.tmLearners[tonumber(species)]
+    return row ~= nil and row[tonumber(tm)] == true
+  end
+  function E.Pokemon.teachMove(mon, moveId)
+    if #mon.moves >= 4 then return false end
+    mon.moves[#mon.moves + 1] = moveId
+    return true
+  end
+  function E.ItemUse.checkTmPreflight(mon, tmId)
+    local moveId = E.Pokemon.moveFromTmItem(tmId)
+    if not moveId then return "invalid", "NO EFFECT" end
+    if not E.Pokemon.canLearnTmItem(mon.species, tmId) then return "incompatible", "CAN'T LEARN", moveId end
+    for _, m in ipairs(mon.moves) do if m == moveId then return "knows", "KNOWS IT", moveId end end
+    return "ok", nil, moveId
+  end
+  E.LearnMove = {}
+  function E.LearnMove.begin(opts)
+    opts.mon.moves[E.forgetSlot] = opts.moveId
+    if opts.onDone then opts.onDone(true) end
+  end
+  mods["src.core.game3.evolution"] = E.Evolution
+  mods["src.ui.game3.evolution_scene"] = E.EvolutionScene
+  mods["src.core.game3.item_use"] = E.ItemUse
+  mods["src.core.game3.battle.learn_move"] = E.LearnMove
   mods["src.core.game3.battle"] = E.Battle
   mods["src.core.game3.battle_bridge"] = E.BattleBridge
   mods["src.core.game3.battle.prize"] = E.Prize

@@ -20,7 +20,7 @@ import org.jetbrains.annotations.Nullable;
  * @param item     the game's item symbol
  * @param uid      the Pokémon's Cobblemon uuid
  * @param slot     TM/HM: the move slot replaced (0–3); absent when a slot was free
- * @param move     TM/HM: the move number taught (Showdown's)
+ * @param move     TM/HM: the move number taught (Showdown's); FP4, kind pp: the move the item restored or raised
  * @param id       the sender's id, or null (older senders)
  * @param sentKind the {@code kind} the sender said, or null
  * @param forget   TM/HM: the move number replaced, or null
@@ -48,6 +48,12 @@ public record PartyItem(String item, UUID uid, @Nullable Integer slot, @Nullable
 		MACHINE,
 		/** One level up. */
 		RARE_CANDY,
+		/** FP4: HP, status or a revive, with Cobblemon's own item and amounts. */
+		MEDICINE,
+		/** FP4: Ether, Elixir, PP Up, PP Max (on {@code move} when the item picks one). */
+		PP,
+		/** FP4: a vitamin (EVs), with Cobblemon's own EV rules. */
+		VITAMIN,
 		/** Nothing Cobblemon needs to do. */
 		OTHER
 	}
@@ -57,12 +63,24 @@ public record PartyItem(String item, UUID uid, @Nullable Integer slot, @Nullable
 	}
 
 	/**
-	 * What Cobblemon does with it: a machine with a move teaches, a stone in the table evolves, Rare Candy levels; a
-	 * sent kind Cobblemon has no rule for yet (medicine, pp, vitamin, other; FP4) is {@link Kind#OTHER}.
+	 * What Cobblemon does with it: the sent kind when there is one (FP4: medicine, pp and vitamin through Cobblemon's own
+	 * item, other nothing); without one, as before: a machine with a move teaches, a stone in the table evolves, Rare
+	 * Candy levels.
 	 */
 	public Kind kind() {
-		if (this.sentKind != null && !this.sentKind.equals("stone") && !this.sentKind.equals("machine") && !this.sentKind.equals("candy")) {
-			return Kind.OTHER;
+		if (this.sentKind != null) {
+			switch (this.sentKind) {
+				case "medicine":
+					return Kind.MEDICINE;
+				case "pp":
+					return Kind.PP;
+				case "vitamin":
+					return Kind.VITAMIN;
+				case "other":
+					return Kind.OTHER;
+				default:
+					break;
+			}
 		}
 		if (this.move != null) {
 			return Kind.MACHINE;

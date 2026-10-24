@@ -439,6 +439,20 @@ public final class PartyService {
 
 	// ---- party.item ----
 
+	/** FP4: the refusal reasons (protocol/messages/act.result.schema.json, kind item). */
+	static final String UNKNOWN_UID = "unknown_uid";
+	static final String NO_SLOT = "no_slot";
+	static final String MOVE_KNOWN = "move_known";
+	static final String NO_EVOLUTION = "no_evolution";
+	static final String MAX_LEVEL = "max_level";
+	static final String NO_EFFECT = "no_effect";
+	static final String UNSUPPORTED = "unsupported";
+	/** FP4: the item ids applied per player, newest last (an id is applied once; gen1-bridge re-sends until a sync). */
+	static final int ITEM_IDS_KEPT = 64;
+	private static final Map<UUID, java.util.LinkedHashSet<String>> ITEM_IDS = new ConcurrentHashMap<>();
+	private static final AtomicLong ITEMS_REPEATED = new AtomicLong();
+	private static final AtomicLong ITEMS_REFUSED = new AtomicLong();
+
 	static void onItem(ServerPlayer player, Envelope message) {
 		PartyItem item;
 		try {
@@ -447,25 +461,116 @@ public final class PartyService {
 			reject(player, message, "item", e);
 			return;
 		}
-		Pokemon pokemon = find(player, item.uid());
-		if (pokemon == null) {
-			warn("item_unknown_uid");
+		if (item.id() != null && !firstItemId(player.getUUID(), item.id())) {
+			ITEMS_REPEATED.incrementAndGet();
 			return;
 		}
-		boolean applied = switch (item.kind()) {
-			case STONE -> evolveWithStone(player, pokemon, PartyItem.STONES.get(item.item()));
-			case MACHINE -> teach(pokemon, item.move(), item.slot(), item.forget());
-			case RARE_CANDY -> rareCandy(player, pokemon);
-			case OTHER -> {
-				warn("item_unsupported");
-				yield false;
-			}
-		};
-		if (applied) {
+		String region = dev.kantobridge.server.Regions.tagOf(message.data());
+		Pokemon pokemon = find(player, item.uid());
+		String refusal;
+		if (pokemon == null) {
+			refusal = UNKNOWN_UID;
+		} else {
+			refusal = switch (item.kind()) {
+				case STONE -> evolveWithStone(player, pokemon, PartyItem.STONES.get(item.item())) ? null : NO_EVOLUTION;
+				case MACHINE -> teachOrWhy(pokemon, item.move(), item.slot(), item.forget());
+				case RARE_CANDY -> rareCandy(player, pokemon) ? null : MAX_LEVEL;
+				case MEDICINE, PP, VITAMIN -> cobblemonItem(player, pokemon, item, itemFamily(player, region));
+				case OTHER -> UNSUPPORTED;
+			};
+		}
+		if (refusal == null) {
 			ITEMS_USED.incrementAndGet();
 			markDirty(player);
 			KantoBridge.LOGGER.info("party: applied a {} from the bag", item.kind().name().toLowerCase(java.util.Locale.ROOT));
+			return;
 		}
+		warn("item_" + refusal);
+		ITEMS_REFUSED.incrementAndGet();
+		// §4.4: the next sync shows the hidden record what Cobblemon kept; an id'd item hears why
+		markDirty(player);
+		if (item.id() != null) {
+			JsonObject data = new JsonObject();
+			data.addProperty("ok", false);
+			data.addProperty("kind", "item");
+			data.addProperty("reason", refusal);
+			data.addProperty("id", item.id());
+			dev.kantobridge.server.Regions.tag(data, player.server, region);
+			RelayService.get().send(player, MsgTypes.ACT_RESULT, data, message.seq());
+		}
+	}
+
+	/** True the first time a player's item id comes (FP4: an id is applied once); the newest {@link #ITEM_IDS_KEPT} are kept. */
+	static boolean firstItemId(UUID player, String id) {
+		java.util.LinkedHashSet<String> ids = ITEM_IDS.computeIfAbsent(player, key -> new java.util.LinkedHashSet<>());
+		synchronized (ids) {
+			if (!ids.add(id)) {
+				return false;
+			}
+			if (ids.size() > ITEM_IDS_KEPT) {
+				java.util.Iterator<String> it = ids.iterator();
+				it.next();
+				it.remove();
+			}
+			return true;
+		}
+	}
+
+	/** The item symbols' family for a message from {@code region} (its record's; untagged: the player's region's), else Gen 1's. */
+	static String itemFamily(ServerPlayer player, @Nullable String region) {
+		dev.kantobridge.server.Regions regions = dev.kantobridge.server.Regions.of(player.server);
+		RegionRecord record = regions == null ? null : regions.regionOf(player, region);
+		return record == null ? "gen1" : record.family();
+	}
+
+	/**
+	 * FP4 (§4.4): medicine, PP items and vitamins through Cobblemon's own item for the catalogue entry (its amounts, its
+	 * EV and PP-stage rules; the mirror's item, else Cobblemon's item of the canonical id): an item that picks a move gets the member's move numbered {@code move}; a revive (not a
+	 * Pokémon-selecting item in Cobblemon) brings a fainted Pokémon back to half its HP, a Max Revive to all of it.
+	 * Returns null when it was applied, else the refusal's reason.
+	 */
+	static @Nullable String cobblemonItem(ServerPlayer player, Pokemon pokemon, PartyItem item, String family) {
+		String canonical = dev.kantobridge.world.Items.canonicalOf(family, item.item());
+		// the mirror's item; else (vitamins, PP Up, the drinks: never mirrored) Cobblemon's item of the same id
+		String path = dev.kantobridge.world.Items.cobblemonPath(canonical);
+		if (path == null && canonical != null) {
+			path = canonical;
+		}
+		Item cobblemon = path == null ? Items.AIR
+				: BuiltInRegistries.ITEM.get(ResourceLocation.fromNamespaceAndPath(GenOneIds.NAMESPACE, path));
+		if (cobblemon == Items.AIR) {
+			return UNSUPPORTED;
+		}
+		ItemStack stack = new ItemStack(cobblemon);
+		if (cobblemon instanceof com.cobblemon.mod.common.item.interactive.ReviveItem revive) {
+			if (!pokemon.isFainted()) {
+				return NO_EFFECT;
+			}
+			pokemon.setCurrentHealth(revive.getMax() ? pokemon.getMaxHealth() : Math.max(1, pokemon.getMaxHealth() / 2));
+			return null;
+		}
+		if (cobblemon instanceof com.cobblemon.mod.common.api.item.PokemonAndMoveSelectingItem picking) {
+			Move move = null;
+			for (int i = 0; i < MoveSet.MOVE_COUNT && item.move() != null && move == null; i++) {
+				Move known = pokemon.getMoveSet().get(i);
+				if (known != null && known.getTemplate().getNum() == item.move()) {
+					move = known;
+				}
+			}
+			if (move == null || !picking.canUseOnPokemon(stack, pokemon) || !picking.canUseOnMove(stack, pokemon, move)) {
+				return NO_EFFECT;
+			}
+			picking.applyToPokemon(player, stack, pokemon, move);
+			return null;
+		}
+		if (cobblemon instanceof com.cobblemon.mod.common.api.item.PokemonSelectingItem selecting) {
+			if (!selecting.canUseOnPokemon(stack, pokemon)) {
+				return NO_EFFECT;
+			}
+			var result = selecting.applyToPokemon(player, stack, pokemon);
+			return result != null && result.getResult().consumesAction() ? null : NO_EFFECT;
+		}
+		return UNSUPPORTED;
 	}
 
 	/** P14: the evolution that takes this stone happens at once ({@code forceEvolve}; Cobblemon's own path only queues). */
@@ -484,27 +589,31 @@ public final class PartyService {
 				return true;
 			}
 		}
-		warn("item_no_evolution");
 		return false;
+	}
+
+	/** {@link #teachOrWhy}, as a yes or no. */
+	static boolean teach(Pokemon pokemon, int number, @Nullable Integer slot, @Nullable Integer forget) {
+		return teachOrWhy(pokemon, number, slot, forget) == null;
 	}
 
 	/**
 	 * A TM or HM: the move goes into the slot holding {@code forget} (FP1: the move replaced, by number, since the hidden
 	 * slot and Cobblemon's need not match), else {@code slot}, else the first free slot, with full PP; the move it
-	 * replaces is benched, so it stays re-learnable from Cobblemon's summary (P13: nobody softlocks over an HM).
+	 * replaces is benched, so it stays re-learnable from Cobblemon's summary (P13: nobody softlocks over an HM). Returns
+	 * null when taught, else the refusal's reason.
 	 */
-	static boolean teach(Pokemon pokemon, int number, @Nullable Integer slot, @Nullable Integer forget) {
+	static @Nullable String teachOrWhy(Pokemon pokemon, int number, @Nullable Integer slot, @Nullable Integer forget) {
 		MoveTemplate template = Gen1Mons.move(number);
 		if (template == null) {
 			warn("item_move_missing");
-			return false;
+			return UNSUPPORTED;
 		}
 		MoveSet moves = pokemon.getMoveSet();
 		for (Move known : moves.getMoves()) {
 			if (known.getTemplate() == template) {
-				// Gen 1 refuses a move the Pokémon knows; the hidden game shouldn't send one.
-				warn("item_move_known");
-				return false;
+				// The hidden game refuses a move the Pokémon knows; it shouldn't send one.
+				return MOVE_KNOWN;
 			}
 		}
 		int target = slot == null ? -1 : slot;
@@ -526,8 +635,7 @@ public final class PartyService {
 			}
 		}
 		if (target < 0) {
-			warn("item_no_slot");
-			return false;
+			return NO_SLOT;
 		}
 		Move replaced = moves.get(target);
 		if (replaced != null) {
@@ -535,13 +643,12 @@ public final class PartyService {
 		}
 		pokemon.getBenchedMoves().remove(template);
 		moves.setMove(target, template.create());
-		return true;
+		return null;
 	}
 
 	/** Rare Candy: the experience to the next level, as Cobblemon's own candy gives it (with the player's level-up UI). */
 	static boolean rareCandy(ServerPlayer player, Pokemon pokemon) {
 		if (pokemon.getLevel() >= com.cobblemon.mod.common.Cobblemon.INSTANCE.getConfig().getMaxPokemonLevel()) {
-			warn("item_max_level");
 			return false;
 		}
 		pokemon.addExperienceWithPlayer(player, new SidemodExperienceSource(EXPERIENCE_SOURCE), pokemon.getExperienceToNextLevel());
@@ -668,6 +775,16 @@ public final class PartyService {
 	/** {@code party.item}s applied. */
 	public static long itemsUsed() {
 		return ITEMS_USED.get();
+	}
+
+	/** FP4: {@code party.item}s ignored because their id was applied already. */
+	public static long itemsRepeated() {
+		return ITEMS_REPEATED.get();
+	}
+
+	/** FP4: {@code party.item}s Cobblemon refused (each counted under {@code item_<reason>} too). */
+	public static long itemsRefused() {
+		return ITEMS_REFUSED.get();
 	}
 
 	/** Cobblemon trades between players seen. */

@@ -3217,6 +3217,50 @@ hand): both encode. Crystal's encoder refuses a species with no index, so its pa
 out; Emerald's writes an index raw, so its pass alone doesn't prove that (lupa covers the copy).
 Full suite: pytest 2,348 passed (68 e2e skipped); GameTests 126/126; JUnit 1,431 of 1,432 (in package chunks): the one failure is the old `KbPackReloadTest.modelsReadFitAndStayWithinTheBudget`, failing since before FP0 (5979dd6). The whole Gradle check hung after the GameTest server shut down (the known worker hang), so JUnit ran through `kb-junit`.
 
+## Foreign Pokémon: FP4a, items from the hidden bag (2026-10-24)
+
+FP4 is done in three commits: **FP4a** items (this), FP4b effects and moves (`party.change`, `party.learn`/`forget`),
+FP4c held items (`party.hold`, `symbols.gen3`, items only the hidden game has).
+
+- **gen1-bridge, every game** (`act/kb_party.lua`): each `party.item` gets an `id` (`i-<start token>-<n>`), goes again
+  after a snapshot or on a new connection until a `party.sync` follows it (`Party.ITEM_SETTLE` s after it went, or the
+  second sync), and ends on a refusal (`act.result{kind:"item"}` M→G: logged `party.item_refused`, counted
+  `partyItemsRefused`). An adapter says `kind:"medicine"`; kb_party names `pp`, `vitamin` and `candy` by canonical id
+  (`Party.MEDICINE_KINDS`). `forget` (the move a machine replaced, by number) goes with `slot`.
+- **Blue** (`lib/engine/gen1.lua`): medicine, PP items and vitamins run natively and go out when `ItemEffects.use`
+  said `consumed` (a PP item names the picked move); the TM check uses the sync's `canLearn` when it has one (the
+  species' list swapped for the pick); a machine names `forget`.
+- **Crystal** (`gen2/bag.lua`; the old "refused while a client follows" guard is gone): `ItemEffects.useOnMon` /
+  `usePpItem` wrapped (medicine forwarded after the engine used it; a stone from `kbStones`, else the engine's check;
+  stones and Rare Candy spent here with one line of ours, the engine's scene and level-up skipped);
+  `Game2:useFieldItem`'s party pick answered from `kbCanLearn`, the taught move and the one it replaced watched through
+  `learnMoveOn`.
+- **Emerald** (`game3/bag.lua`; its guard is gone too): medicine through `item.use` (a PP item's move found by the PP
+  that changed); `Evolution.itemTarget` answered from `kbStones`, the evolution scene or `apply` skipped for that
+  member; Rare Candy seen at `ItemUse.levelUpEvent` (the record levels natively; that level-up's moves and evolution
+  are Cobblemon's); `ItemUse.checkTmPreflight` answered from `kbCanLearn`, the move watched at `Pokemon.teachMove` and
+  `LearnMove.begin`.
+- **Server** (`PartyService.onItem`): kinds `medicine`, `pp`, `vitamin` (`PartyItem.Kind`) through Cobblemon's own item
+  (`PokemonSelectingItem` / `PokemonAndMoveSelectingItem`; the mirror's item, else Cobblemon's item of the canonical
+  id, so vitamins and PP Up work without being mirrored); a revive: half HP, Max Revive all; an id applies once (the
+  newest 64 per player); a refusal is counted `item_<reason>`, forces a sync and, with an id, answers
+  `act.result{kind:"item", ok:false, reason, id}` (re: the item's seq). The item's family is its region record's.
+- **Client**: `PassRuntime`'s `act.result` handler hands `kind:"item"` to the link's `GameRelay`, which keeps each
+  `party.item`'s seq by id and relays the refusal to gen1-bridge as the reply to it (without the region tag).
+
+**Tests.** Lupa: Blue's medicine kinds, the engine's refusal, the learnset answer both ways, `forget`, ids re-sent and
+settled, a refusal ending an item; Crystal's medicine and PP family, stones and Rare Candy without the engine's effect,
+the stone without the sync's list, the TM answer both ways with `slot` and `forget`; Emerald's medicine and Ether, the
+stone and the skipped scene or apply, Rare Candy's moves and evolution left to Cobblemon, the TM answer with
+`teachMove` and the forget flow. JUnit: the kinds, the relay's refusal routing. GameTest
+`medicineAndPpItemsAreCobblemonsOwnAndRefusalsAnswer`: Potion, the repeated id, Ether on its move, HP Up's EVs,
+Revive, then three refusals with reason, id and re. pytest 2,358 passed (68 e2e skipped); JUnit pokemon + client 564,
+1 failure (the old `KbPackReloadTest`); GameTests 127/127. Not yet on the real engines (FP8's e2e).
+
+**Deviations.** 1. A stone or Rare Candy in Crystal shows a line of ours ("… is reacting to the stone!", "…'s level
+will rise!"); Blue and Emerald close the menu without one. 2. Emerald's Rare Candy still levels the record natively
+(its party menu does that inline); the sync rewrites it.
+
 ## Pre-flight (PLAN §0.6)
 
 | Step | State |

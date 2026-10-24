@@ -495,7 +495,9 @@ it for that player's collision.
   their Gen 1 effect and are applied by Cobblemon at once; TMs/HMs are taught natively (the Gen 1
   forget prompt picks the slot) and Cobblemon force-teaches the same move (`slot` 0-based, present
   only when a move was replaced). Each `party.item` is sent exactly once (it has no id), so the client
-  queues it while offline.
+  queues it while offline. **FP4:** in all three games, with an `id` (Cobblemon applies an id once) that
+  gen1-bridge sends again after a snapshot or on a new connection until a `party.sync` follows it; see
+  "Foreign Pokémon" below.
 - **`party.sync.give`** is matched exactly when present (box gifts included); the dex-and-level
   fallback applies only when `give` is absent.
 - **Order within one logic step:** `party.*`, then `bag.sync`, then `battle.native`/`battle.start`.
@@ -646,6 +648,14 @@ visitor record in its place, named from the sync's `name` (Cobblemon's species n
 snapshot's party reports a visitor's real `dex` (0 allowed) with `visitor: true`; `game.status.visitors` is sent; a
 stone used from Blue's bag is answered from the sync's `stones` and goes out as `party.item{kind:"stone"}`; Cobblemon
 lets a Pokémon evolve past its region's ceiling unless the region record's `rules.compat.evolveBeyond` is false (Q9).
+**FP4 (items, all three games):** a stone, Rare Candy, TM/HM, medicine, PP item or vitamin used from the hidden bag on a
+member with a uid goes out as `party.item` with an `id` and its `kind`: the hidden game's own check decides (a stone from
+the sync's `stones`, a machine from its `canLearn`), medicine and the PP family run natively on the record first (the
+next sync rewrites it), stones and Rare Candy leave the evolution and level-up to Cobblemon, a PP item names its `move`,
+a machine names the move it replaced (`forget`). The server applies Cobblemon's own item for the catalogue entry (the
+mirror's item, else Cobblemon's item of the same canonical id; a revive brings back half the HP, a Max Revive all of
+it), ignores an id it already applied, and answers a refusal with `act.result{kind:"item", ok:false, reason, id}` (re:
+the item's seq), which the client relays to the link that sent the item as the reply to that `party.item`.
 
 Species travel as national dex numbers (defs `nationalDex`), moves as Showdown numbers (defs
 `moveNum`; Gen 1's move ids are the same numbers), items as engine symbols, and Pokémon identities
