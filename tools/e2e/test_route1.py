@@ -36,6 +36,7 @@ from fake_minecraft import FakeMinecraft
 from run_gen1recomp import EXPORT_EXTRA, launch, preflight
 from story import StoryWalker, export_grids
 from test_walk import DELTA, WARP
+import foreign  # noqa: E402  (FP8: KB_E2E_FOREIGN=1, an all-foreign team)
 
 TEST_PORT = 27191
 MAP = "ROUTE_1"
@@ -222,7 +223,7 @@ async def _route1(port):
                                            "partyDexAddedOwned", "partyDexUnknown")}
 
     # 4. party.sync
-    await mc.send("party.sync", {"party": PARTY, "box": {"count": 0}})
+    await mc.send("party.sync", {"party": foreign.party(PARTY), "box": {"count": 0}})
     await asyncio.sleep(0.5)
     synced = await w.status()
     report["party"] = {k: synced[k] for k in ("partySize", "partyKnown", "partyApplied", "partyCreated")}

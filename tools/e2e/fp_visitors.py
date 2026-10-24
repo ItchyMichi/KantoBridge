@@ -57,6 +57,54 @@ async def wait_marker(run, tag, timeout):
     return None
 
 
+CAUGHT = "c0ffee00-0000-4000-8000-00000000c0de"
+
+
+async def journey_checks(game, run, mc, check):
+    """FP8: the driver's journey (KB_FPV_JOURNEY=1): the client answers its battles as Cobblemon would, then checks what
+    reached Minecraft: the rename, the daycare's deposit and withdrawal of the visitor, Crystal's contest battle with the
+    lead only and its catch, Emerald's Steven battle as a multi battle."""
+    seen = 0
+    answered = set()
+    deadline = time.monotonic() + 600
+    while time.monotonic() < deadline and marker(run, "JOURNEY_DONE") is None and run.proc.poll() is None:
+        while seen < len(mc.received):
+            m = mc.received[seen]
+            seen += 1
+            if m.get("type") == "battle.start" and m["data"]["battle"] not in answered:
+                d = m["data"]
+                answered.add(d["battle"])
+                await asyncio.sleep(1)
+                if d.get("kind") == "contest":
+                    await mc.send("battle.result", {"battle": d["battle"], "outcome": "caught",
+                                                    "caught": {"uid": CAUGHT, "dex": d["wild"]["dex"], "level": d["wild"]["level"]}})
+                else:
+                    await mc.send("battle.result", {"battle": d["battle"], "outcome": "win"})
+        try:
+            await mc.next(1.0)
+        except asyncio.TimeoutError:
+            pass
+    for tag in ("RENAME", "DAYCARE_IN", "DAYCARE_OUT", "CONTEST_START", "CONTEST", "STEVEN_START", "STEVEN", "JOURNEY_DONE"):
+        say(game, tag, marker(run, tag))
+    renames = [m["data"] for m in mc.received if m.get("type") == "party.rename"]
+    check("name_rater", any(r.get("uid") == U2 and r.get("nick") for r in renames), renames)
+    deposits = [m["data"].get("uid") for m in mc.received if m.get("type") == "daycare.deposit"]
+    withdraws = [m["data"].get("uid") for m in mc.received if m.get("type") == "daycare.withdraw"]
+    check("daycare_visitor", U2 in deposits and U2 in withdraws, {"deposits": deposits, "withdraws": withdraws})
+    starts = [m["data"] for m in mc.received if m.get("type") == "battle.start"]
+    if game == "crystal":
+        c = [d for d in starts if d.get("kind") == "contest"]
+        check("contest_lead_only", len(c) == 1 and c[0].get("use") == [U1], [d.get("use") for d in c])
+        ct = marker(run, "CONTEST") or {}
+        check("contest_catch", ct.get("caught") == "true" and ct.get("same") == "true", ct)
+    if game == "emerald":
+        mm = [d for d in starts if d.get("format") == "multi"]
+        check("steven_multi", len(mm) == 1 and mm[0].get("use") and len(mm[0].get("ally", {}).get("team", [])) == 1,
+              [{k: d.get(k) for k in ("use", "split")} | {"ally": len(d.get("ally", {}).get("team", []))} for d in mm])
+        check("steven_won", (marker(run, "STEVEN") or {}).get("outcome") == "win", marker(run, "STEVEN"))
+    check("journey_done", marker(run, "JOURNEY_DONE") is not None, None)
+
+
 async def one(game: str, env: dict) -> dict:
     if game == "crystal":
         # a Gen 2 driver boot is a skeleton game unless the boot cinema is asked for (the G2S and FP0 harnesses did so)
@@ -67,6 +115,7 @@ async def one(game: str, env: dict) -> dict:
         checks[name] = {"ok": bool(ok), "detail": detail}
         say(game, "CHECK", name, "PASS" if ok else "FAIL", "" if detail is None else json.dumps(detail))
 
+    journey = env.get("KB_FPV_JOURNEY") == "1"
     run = launch("kb_fpvisit.lua", game=game, echo=False, extra_env=dict(env, KB_FPV_VERSION=game, KB_TEST_PORT=str(PORT)))
     try:
         field = await wait_marker(run, "FIELD", 900)
@@ -107,6 +156,8 @@ async def one(game: str, env: dict) -> dict:
                   {k: st.get(k) for k in ("partyVisitorsNow", "partyForeignSpecies", "partySize")})
             statuses = [m["data"] for m in mc.received if m.get("type") == "game.status"]
             check("game_status_visitors", any(s.get("visitors") == 1 for s in statuses), [s.get("visitors") for s in statuses])
+            if journey:
+                await journey_checks(game, run, mc, check)
             check("schema_clean", not mc.conn.problems, [str(p) for p in mc.conn.problems][:3])
             await mc.send("debug.quit", {"code": 0})
             await asyncio.sleep(2)
@@ -132,8 +183,11 @@ async def main_async(games, env):
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--games", default="blue,crystal,emerald")
+    ap.add_argument("--journey", action="store_true", help="FP8: the rename, the daycare, the contest and Steven's battle")
     args = ap.parse_args(argv)
     env = {"KB_DATASET_MEMO": "30", "KB_DRIVER_SECONDS": "1500"}
+    if args.journey:
+        env["KB_FPV_JOURNEY"] = "1"
     games = [g for g in args.games.split(",") if g]
     results = asyncio.run(main_async(games, env))
     path = REPO / "local" / "reports" / "fpvisit.json"

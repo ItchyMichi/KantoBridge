@@ -52,6 +52,7 @@ import pytest
 from fake_minecraft import FakeMinecraft
 from run_gen1recomp import launch, preflight
 from story import StoryWalker
+import foreign  # noqa: E402  (FP8: KB_E2E_FOREIGN=1, an all-foreign team)
 
 PORTS = {"static": 27182, "gift": 27181, "trade": 27180, "namerater": 27179, "gym": 27178, "daycare": 27177,
          "ghost": 27176, "boss": 27175, "safari": 27174}
@@ -123,7 +124,7 @@ def entry(uid, dex, level, moves=(TACKLE,), **kw):
 
 
 async def party_sync(w, party):
-    await w.mc.send("party.sync", {"party": party, "box": {"count": 0}})
+    await w.mc.send("party.sync", {"party": foreign.party(party), "box": {"count": 0}})
 
 
 def scene_facts(marker):
@@ -379,6 +380,8 @@ def test_content_scene(scene_name):
     pf = preflight()
     if not pf.ok:
         pytest.skip("pre-flight not done: " + "; ".join(pf.reasons))
+    if foreign.FOREIGN and scene_name == "trade":
+        pytest.skip("FP8: an in-game trade asks for its own species, which an all-foreign party never has")
     port = PORTS[scene_name]
     with launch("kb_content.lua", extra_env={"KB_TEST_PORT": str(port), "KB_SCENE": scene_name}) as running:
         marker = running.wait_marker("KB_SCENE", timeout=180)

@@ -56,6 +56,7 @@ import uuid
 
 from fake_minecraft import FakeMinecraft
 from run_gen1recomp import INSTALL, launch, preflight
+import foreign  # noqa: E402  (FP8: KB_E2E_FOREIGN=1, an all-foreign team)
 
 TEST_PORT = 27220
 GAME = "emerald"
@@ -323,8 +324,8 @@ async def _battle(port, serving):
     mc, ok, snap, status = await connect(port)
     report = {}
     since = len(mc.received)
-    await mc.send("party.sync", {"party": [{"uid": UID, "dex": 263, "level": 10, "moves": [33, 39], "hp": 30,
-                                            "maxhp": 30}], "box": {"count": 0}})
+    await mc.send("party.sync", {"party": foreign.party([{"uid": UID, "dex": 263, "level": 10, "moves": [33, 39], "hp": 30,
+                                                          "maxhp": 30}]), "box": {"count": 0}})
     # 1: a trainer battle, won
     first = (await find_or_wait(mc, "battle.start", 90, since))["data"]
     report["first"] = (first["kind"], first["trainer"]["cls"].startswith("TRAINER_CLASS_"), first["trainer"]["party"],
@@ -489,7 +490,8 @@ async def _fp7(port, serving):
     mc, ok, snap, status = await connect(port)
     report = {"start": (snap["player"]["x"], snap["player"]["y"]), "badge": serving["badge"]}
     uid = "0f8b6a2e-1c2d-4e5f-8a9b-0c1d2e3f4a5b"
-    await mc.send("party.sync", {"party": [{"uid": uid, "dex": 260, "level": 30, "moves": [57, 33], "hp": 90, "maxhp": 90}],
+    await mc.send("party.sync", {"party": foreign.party([{"uid": uid, "dex": 260, "level": 30, "moves": [57, 33], "hp": 90,
+                                                          "maxhp": 90}]),
                                  "box": {"count": 0}})
     await asyncio.sleep(2)
     seq = (await mc.send("act.field", {"action": "surf", "x": wx, "y": wy}))["seq"]

@@ -35,6 +35,7 @@ from fake_minecraft import FakeMinecraft
 from run_gen1recomp import EXPORT_EXTRA, launch, preflight
 from story import StoryWalker, export_grids
 from test_walk import route
+import foreign  # noqa: E402  (FP8: KB_E2E_FOREIGN=1, an all-foreign team)
 
 PORTS = {"win": 27194, "lose": 27193}
 STARTER_UID = "5b0c7e2a-3d4f-4a1b-9c2d-7e8f9a0b1c2d"  # made up
@@ -74,8 +75,9 @@ async def _lab(port, outcome):
                       "level": give["level"], "moves": len(give.get("moves", [])), "dvs": "dvs" in give,
                       "nick": "nick" in give,
                       "namings": sum(1 for ui in w.uis.values() if ui["kind"] == "naming") - namings}
-    await mc.send("party.sync", {"party": [{"uid": STARTER_UID, "dex": give["dex"], "level": give["level"],
-                                            "moves": give.get("moves", []), "hp": 20, "maxhp": 20}],
+    await mc.send("party.sync", {"party": foreign.party([{"uid": STARTER_UID, "dex": give["dex"], "level": give["level"],
+                                                          "moves": give.get("moves", []), "hp": 20, "maxhp": 20,
+                                                          "give": give["give"]}]),
                                  "box": {"count": 0}})
     # the rival takes his ball, then the world is the player's again
     await w.drive(lambda: w.mode == "idle" and not w.open_uis(), timeout=90)

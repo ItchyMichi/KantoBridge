@@ -284,6 +284,142 @@ local function report(tag, extra)
   return mon, at
 end
 
+-- ---------------------------------------------------------------- FP8's journey (KB_FPV_JOURNEY=1)
+--
+-- After the checks above, on the same playthrough: the Name Rater's rename of the visitor (a new nickname on the
+-- record, as the rater's script writes it), the daycare (the visitor boarded through each engine's own deposit and
+-- taken back), then Crystal's Bug-Catching Contest battle (BugContest.start and dropOffMons, then a contest encounter
+-- through World:startBattle{contest}: held for Cobblemon with the lead only) and Emerald's Steven battle (a partner
+-- appended after the player's half as Story.doStevenBattle does, then BattleBridge.start{partner, twoOpponents}:
+-- held as a multi battle). The test answers as Cobblemon (the contest: caught; Steven's: win).
+
+local JOURNEY = os.getenv("KB_FPV_JOURNEY") == "1"
+
+function E.daycareIn(at)
+  local party, s = E.party()
+  if FAM == "gen1" then
+    local mon = table.remove(party, at)
+    s.daycare = { mon = mon, steps = 0, depositLevel = mon.level }
+    return true
+  elseif FAM == "gs" then
+    return pcall(require("src.core.gen2.Breeding").deposit, game.data, s, "man", at)
+  end
+  return pcall(require("src.core.game3.daycare").deposit, s, at)
+end
+
+function E.daycareOut()
+  local party, s = E.party()
+  if FAM == "gen1" then
+    local dc = s.daycare
+    if type(dc) ~= "table" or not dc.mon then return false, "none" end
+    party[#party + 1] = dc.mon
+    s.daycare = nil
+    return true
+  elseif FAM == "gs" then
+    if type(s.player) == "table" then s.player.money = 999999 end
+    return pcall(require("src.core.gen2.Breeding").withdraw, game.data, s, "man")
+  end
+  return pcall(require("src.core.game3.daycare").take, s, 1)
+end
+
+-- (frames run as fast as the headless game goes: a wait for the test's answer counts seconds)
+-- (after a held battle the game shows its lines, the trainer's defeat and prize or the catch, in text boxes the
+-- player reads: A, now and then, as a player at the mirror would)
+local function waitSeconds(pred, seconds, read)
+  local deadline = love.timer.getTime() + seconds
+  while love.timer.getTime() < deadline do
+    if pred() then return true end
+    if read and frame % 30 == 0 then tap("a") end
+    yield()
+  end
+  return pred()
+end
+
+local function settle(frames)
+  waitUntil(function() return E.fieldReady() end, 60 * 60)
+  for _ = 1, frames or 60 do yield() end
+end
+
+local function contest()
+  local BC = require("src.core.gen2.BugContest")
+  local s = game.save
+  BC.start(s)
+  local dropped = BC.dropOffMons(s)
+  settle(30)
+  local Mon = require("src.battle.gen2.Mon")
+  local okW, wild = pcall(Mon.new, game.data, "CATERPIE", 7, { wild = true })
+  if not (okW and wild) then
+    out("CONTEST", { "wild", "none" })
+    return
+  end
+  local done
+  local okS, errS = pcall(game.world.startBattle, game.world, { wild = wild, contest = true },
+    function(o) done = o == nil and "nil" or o end)
+  out("CONTEST_START", { "call", res(okS, errS), "dropped", dropped })
+  waitSeconds(function() return done ~= nil end, 90, true)
+  for _ = 1, 60 do yield() end
+  local caught = BC.caughtMon(s)
+  out("CONTEST", { "outcome", done or "-", "caught", caught ~= nil, "same", caught == wild, "party", #(s.party or {}) })
+  BC.stop(s)
+  BC.returnMons(s)
+  settle(60)
+end
+
+local function steven()
+  local R = package.loaded["src.core.game3.runtime"]
+  local s = R and R.getSession and R.getSession()
+  local Trainers = require("src.core.game3.scripting.trainers")
+  local ids = {}
+  for id = 1, 1023 do
+    local ok, foe = pcall(Trainers.foeFromId, id)
+    if ok and type(foe) == "table" and type(foe.party) == "table" and #foe.party >= 1 and not foe.doubleBattle then
+      ids[#ids + 1] = id
+      if #ids >= 3 then break end
+    end
+  end
+  if #ids < 3 then
+    out("STEVEN", { "trainers", #ids })
+    return
+  end
+  local half = #s.party
+  local Party, Pokemon = require("src.core.game3.party"), require("src.core.game3.pokemon")
+  local tmp = { party = {}, name = s.name, trainerId = s.trainerId, secretId = s.secretId, gender = s.gender }
+  local _, _, partner = Party.giveMon(tmp, Pokemon.speciesFromNational(376), 42)
+  s.party[#s.party + 1] = partner
+  local done
+  local okS, errS = pcall(require("src.core.game3.battle_bridge").start, R._mod, game, Trainers.foeFromId(ids[1]), {
+    wild = false, trainerId = ids[1], twoOpponents = true, trainerIdB = ids[2], partner = true, playerHalf = half,
+    partnerTrainerId = ids[3], done = function(r) done = r == nil and "nil" or r end,
+  })
+  out("STEVEN_START", { "call", res(okS, errS), "half", half })
+  waitSeconds(function() return done ~= nil end, 90, true)
+  for i = #s.party, half + 1, -1 do table.remove(s.party, i) end
+  out("STEVEN", { "outcome", done or "-", "party", #s.party })
+  settle(60)
+end
+
+local function journey()
+  settle(60)
+  local mon, at = visitor()
+  if not mon then
+    out("JOURNEY", { "visitor", "none" })
+    return
+  end
+  -- the Name Rater: the new nickname on the record (the rater's script writes mon.nickname)
+  mon.nickname = "KBRENAMED"
+  for _ = 1, 120 do yield() end
+  out("RENAME", { "at", at })
+  local okI, errI = E.daycareIn(at)
+  for _ = 1, 180 do yield() end
+  out("DAYCARE_IN", { "call", res(okI, errI), "party", #(E.party() or {}) })
+  local okO, errO = E.daycareOut()
+  for _ = 1, 180 do yield() end
+  out("DAYCARE_OUT", { "call", res(okO, errO), "party", #(E.party() or {}) })
+  if FAM == "gs" then contest() end
+  if FAM == "game3" then steven() end
+  out("JOURNEY_DONE", {})
+end
+
 -- ---------------------------------------------------------------- the run
 
 return function(g)
@@ -334,6 +470,7 @@ return function(g)
   local after = report("AFTER_CONTINUE", { "call", res(okC, errC), "field", back })
   local hp3, atk3 = stats(after)
   out("DONE", { "kept", after ~= nil and hp3 == hp0 and atk3 == atk0, "seconds", math.floor(love.timer.getTime() - started) })
+  if JOURNEY then journey() end
 
   waitUntil(function() return status.quitRequested end, 60 * 300)
   local okD = SaveData.deleteSlot(VERSION, slot)

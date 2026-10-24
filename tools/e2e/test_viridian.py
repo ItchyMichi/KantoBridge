@@ -48,6 +48,7 @@ from fake_minecraft import FakeMinecraft
 from run_gen1recomp import launch, preflight
 from story import StoryWalker
 from test_route1 import BATTLE_ITEMS
+import foreign  # noqa: E402  (FP8: KB_E2E_FOREIGN=1, an all-foreign team)
 
 PORTS = {"story": 27190, "pc": 27189, "mart": 27188}
 CENTER, MART = "VIRIDIAN_POKECENTER", "VIRIDIAN_MART"
@@ -146,6 +147,11 @@ async def connect(port):
     w = ViridianWalker(mc)
     await w.until(lambda: w.pos is not None and w.npc_sets, 15, "the snapshot and npc.set")
     await w.idle()
+    if foreign.FOREIGN:
+        # FP8: Cobblemon's party is all foreign (the driver's starter goes, three visitors come)
+        await mc.send("party.sync", {"party": foreign.team(), "box": {"count": 0}})
+        await asyncio.sleep(1)
+        await w.idle()
     return w
 
 

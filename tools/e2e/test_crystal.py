@@ -39,6 +39,7 @@ import pytest
 
 from fake_minecraft import FakeMinecraft
 from run_gen1recomp import INSTALL, launch, preflight
+import foreign  # noqa: E402  (FP8: KB_E2E_FOREIGN=1, an all-foreign team)
 
 TEST_PORT = 27222
 GAME = "crystal"
@@ -595,7 +596,7 @@ async def _battles(port, facts, running):
     member = {"uid": STARTER_UID, "give": give["give"], "dex": give["dex"], "level": give["level"],
               "moves": give.get("moves") or [33], "hp": 20, "maxhp": 20, "shiny": give["shiny"],
               "gender": give["gender"], "friendship": give["friendship"]}
-    await mc.send("party.sync", {"party": [member], "box": {"count": 0}})
+    await mc.send("party.sync", {"party": foreign.party([member]), "box": {"count": 0}})
 
     # a wild Magikarp on the rod, held for Cobblemon and caught there
     since = len(mc.received)
@@ -633,12 +634,16 @@ async def _battles(port, facts, running):
     report["trainer_done"] = (done, _counts(kinds))
     assert done["beaten"] == "true" and int(done["money"]) > 0 and kinds.count("text") >= 2, report["trainer_done"]
 
-    # the first rival: BATTLETYPE_CANLOSE, lost in Cobblemon, and the story goes on where it stands
-    since = len(mc.received)
+    # the first rival: BATTLETYPE_CANLOSE, lost in Cobblemon, and the story goes on where it stands (the driver starts
+    # it on the frame the trainer's battle ends, so its battle.start may already be here when KB_TRAINER_DONE is seen)
     assert await asyncio.to_thread(running.wait_marker, "KB_RIVAL", 120) is not None, "the driver's rival"
     assert running.result.facts("KB_RIVAL")["started"] == "true"
-    _, _, found = await _answer_ui(mc, since, 120, until=lambda m: m["type"] == "battle.start")
-    start = found["data"]
+    early = [m for m in mc.received[since:] if m["type"] == "battle.start" and m["data"].get("kind") == "rival"]
+    if early:
+        start = early[0]["data"]
+    else:
+        _, _, found = await _answer_ui(mc, len(mc.received), 120, until=lambda m: m["type"] == "battle.start")
+        start = found["data"]
     assert start["kind"] == "rival", start["kind"]
     report["rival"] = (start["trainer"]["cls"], len(start["team"]))
     since = len(mc.received)
@@ -681,7 +686,7 @@ async def _route(port, serving):
     if give is not None:
         member = {"uid": ROUTE_UID, "give": give["give"], "dex": give["dex"], "level": give["level"],
                   "moves": give.get("moves") or [33], "hp": 30, "maxhp": 30}
-        await mc.send("party.sync", {"party": [member], "box": {"count": 0}})
+        await mc.send("party.sync", {"party": foreign.party([member]), "box": {"count": 0}})
     # four steps left through the clearing; the last lands on the trigger
     since = len(mc.received)
     for n in range(1, 5):

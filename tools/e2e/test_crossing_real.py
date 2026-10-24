@@ -46,6 +46,7 @@ import run_gen1recomp as rg
 from fake_minecraft import FakeMinecraft
 from run_gen1recomp import INSTALL, launch, preflight
 from test_emerald import find_or_wait, errors
+import foreign  # noqa: E402  (FP8: KB_E2E_FOREIGN=1, an all-foreign team)
 
 BLUE_PORT, EMERALD_PORT, CRYSTAL_PORT = 27232, 27233, 27234
 CROSSINGS = int(os.environ.get("KB_CROSSINGS", "20"))
@@ -171,10 +172,14 @@ async def _crossing(pids, rss, route=None, far_port=EMERALD_PORT, kanto_map=KANT
     await asyncio.sleep(2)
     give = next((m["data"] for m in emerald.received if m["type"] == "party.give"), None)
     if give is not None:
-        await emerald.send("party.sync", {"party": [{"uid": "5e6f7081-92a3-4bb4-8cd5-e6f708192a3b", "give": give["give"],
-                                                     "dex": give["dex"], "level": give["level"],
-                                                     "moves": give.get("moves") or [33], "hp": 30, "maxhp": 30}],
+        await emerald.send("party.sync", {"party": foreign.party([{"uid": "5e6f7081-92a3-4bb4-8cd5-e6f708192a3b",
+                                                                   "give": give["give"], "dex": give["dex"],
+                                                                   "level": give["level"], "moves": give.get("moves") or [33],
+                                                                   "hp": 30, "maxhp": 30}]),
                                           "box": {"count": 0}})
+    if foreign.FOREIGN:
+        # FP8: Blue's side has an all-foreign team too
+        await blue.send("party.sync", {"party": foreign.team(), "box": {"count": 0}})
 
     def sample():
         rss.append(sum(tree_rss_kb(pid) for pid in pids))

@@ -3455,6 +3455,34 @@ goes on after `pc.closed`: PASS. All 8 Emerald e2e scenes pass (the old ones unt
 **Deviation.** Only Cut and Surf reach `act.field` from a click in Minecraft (FieldClick, as in Crystal); the other
 moves are done the same way when asked, and from the hidden party menu on the mirror as before.
 
+## Foreign Pokémon: FP8, an all-foreign team end to end (2026-10-24)
+
+- **The suites with visitors** (`tools/e2e/foreign.py`, new): with `KB_E2E_FOREIGN=1` every `party.sync` an e2e test
+  sends names visitors (dex 445, 448, 700, … past every game's ceiling, Cut/Surf/Strength plus the member's own moves;
+  uids, gifts, levels and HP kept), and the tests with no sync of their own (Viridian; Blue's side of the crossing) send
+  a team of three. Off by default; nothing changes then. Wired into `test_battle`, `test_route1`, `test_viridian`,
+  `test_content`, `test_crystal`, `test_emerald` and `test_crossing_real`.
+- **The journey** (`fp_visitors.py --journey`, the FP3 driver `kb_fpvisit.lua` with `KB_FPV_JOURNEY=1`): after FP3's
+  checks (screens, Cut by the visitor, save and CONTINUE, the export) on the same playthrough, the Name Rater's new
+  nickname reaches Minecraft (`party.rename`), the visitor goes into each game's daycare by the engine's own deposit and
+  comes back (`daycare.deposit`/`withdraw`), Crystal's Bug-Catching Contest battle is held with the lead only
+  (`use` = the native) and the catch is the game's, and Emerald's Steven battle is held as a multi battle (the player's
+  half, one ally) and won (FP5's real-engine e2e).
+
+**Results (kb-dev50, the real engines).** Journey: Blue, Crystal, Emerald all PASS. With `KB_E2E_FOREIGN=1`:
+`test_battle` (the opening, win and lose), `test_route1`, `test_viridian` (Center, saves, trainers,
+Bill's PC, blackout), `test_content` (rename, daycare and the rest), `test_crystal`, `test_emerald` (Surf,
+Lanette's PC), `test_crossing_real` (both ways): 30 passed, 1 skipped (Blue's in-game trade: the trader asks for his
+own species, which an all-foreign party never has). pytest 2,385 (69 e2e skipped).
+
+**Fixes on the way (not FP8's).** `test_crystal.py`'s rival: the driver starts it on the frame the trainer battle
+ends, so its `battle.start` could come before the test looked (a race, failing with and without visitors): it is
+taken from what already arrived. `test_battle` and `test_route1` fail on cpu3g pods with the default 240 s export wait
+(also without visitors): they pass with `KB_EXPORT_INDEX_TIMEOUT=900`.
+
+**Deviation.** A real gym leader was not walked to (the drivers start trainer battles by script, as before); the Name
+Rater is its write to the record, not the walk to his house.
+
 ## Pre-flight (PLAN §0.6)
 
 | Step | State |

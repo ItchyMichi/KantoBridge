@@ -1020,6 +1020,23 @@ FP1 only adds messages and fields; nothing in the game should look different yet
 - [ ] With gen1-bridge switched off, a Blue save with a visitor shows the LOST box report, and it comes back with the
       mod on (FP0's result, worth seeing once yourself).
 
+### Foreign Pokémon: FP3 to FP8, a team from outside the games (with you)
+
+In a rebuilt world, give yourself a team with no Pokémon the game knows (e.g. `/pokegive garchomp`, `lucario`,
+`sylveon`, levels 20-40) and keep your own starter out of the party:
+
+- [ ] **Blue:** the opening: the starter goes to Cobblemon; Oak's lab rival battle is fought in Cobblemon with the
+      visitors. A Center heals them; Cut a tree with one that knows Cut.
+- [ ] **Crystal:** a visitor shows its species name on the party screen; the Bug-Catching Contest lets only your lead in
+      (the rest wait), and the Pokémon you catch is in Cobblemon after it.
+- [ ] **Emerald:** Surf from Minecraft on Route 103 and back; Lanette's PC opens Cobblemon's PC; Steven's battle at the
+      Space Center is a two-on-two with Steven beside you.
+- [ ] **Each game:** the Name Rater's new name shows in Cobblemon; the daycare takes a visitor and gives it back; save,
+      quit both, CONTINUE: the visitors are still there with their stats.
+- [ ] Cross from one region to another and back with the team: it stays whole.
+- [ ] Expected: the Battle Tower/Frontier desks say no while you play from Minecraft, and an in-game trade can't take a
+      visitor. Tell me if either surprises you.
+
 ### Known bugs to watch (2026-10-24, PROGRESS.md "Known bugs")
 
 - [ ] **B1:** with both games launched, play one, then cross into the other while it still sits at its title: the
