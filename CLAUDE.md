@@ -39,6 +39,9 @@ Pokémon Red/Blue's story runs in a **hidden Gen1Recomp**. It is displayed and p
   changed (text boxes, the bag, battle music). In progress since 2026-10-13 with its defaults (the user's answer to
   U1–U6: v0.3.85, the user re-imports, the Union Room OFF, fresh folders, the v0.3.49 folders kept until the last
   gate, the JUnit literals updated); PROGRESS.md's "Engine upgrade" section records the gates.
+- [`docs/specs/FOREIGN_POKEMON_PLAN.md`](docs/specs/FOREIGN_POKEMON_PLAN.md) is the foreign Pokémon plan (FP0–FP8,
+  proposed 2026-10-24): a visitor record in every hidden game for each Cobblemon Pokémon that game lacks; combat stays
+  Cobblemon's; questions Q1–Q14 are the user's.
 - `refs/_research/` (git-ignored) holds the research notes, with verified `file:line` references,
   that the plan cites.
 

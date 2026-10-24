@@ -14,9 +14,9 @@ research report's vanilla-overworld track (`docs/research/VOXEL_WORLD_REPORT.md`
 footprints, aprons, gate blocks on Kanto's edge) is **not** the direction; its *regions-as-data* ideas (A8.x, B6.x,
 M14) are reused here and adapted to the flat world.
 
-The user's note "Pokémon and items from outside Gen 1" (2026-10-13) is the companion for the Pokémon side. Its spec,
-`docs/specs/FOREIGN_POKEMON_PLAN.md`, is **not in this checkout** (the note pins `2db4b8b`, which is here, but the
-file was never committed here). §4.9 names where it plugs in.
+The user's note "Pokémon and items from outside Gen 1" (2026-10-13) was the companion for the Pokémon side; since
+2026-10-24 [`FOREIGN_POKEMON_PLAN.md`](FOREIGN_POKEMON_PLAN.md) replaces it for all three games (visitors in every
+region). §4.9 names where it plugs in.
 
 ## 0. How to execute this plan
 
