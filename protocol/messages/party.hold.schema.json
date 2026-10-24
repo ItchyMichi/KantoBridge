@@ -1,0 +1,43 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kantobridge.invalid/protocol/messages/party.hold.schema.json",
+  "title": "party.hold",
+  "description": "FOREIGN_POKEMON_PLAN §5, Q5: GIVE or TAKE in the hidden party menu; Cobblemon holds the item from the ledger's mirror, or puts the one taken back in the hidden bag.",
+  "x-type": "party.hold",
+  "x-legs": [
+    "g2m",
+    "c2s"
+  ],
+  "x-re": "never",
+  "type": "object",
+  "required": [
+    "uid",
+    "item",
+    "id"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "uid": {
+      "$ref": "../defs.schema.json#/$defs/uid"
+    },
+    "item": {
+      "anyOf": [
+        {
+          "$ref": "../defs.schema.json#/$defs/heldItem"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "description": "The canonical id now held, or null for TAKE."
+    },
+    "id": {
+      "$ref": "../defs.schema.json#/$defs/id",
+      "description": "Idempotent: Cobblemon applies an id once."
+    },
+    "region": {
+      "$ref": "../defs.schema.json#/$defs/regionId",
+      "description": "MG3 (several games): the region this message belongs to; absent = the legacy region. The client tags what it relays with its link's region; the server routes a tagged message to that region's link."
+    }
+  }
+}

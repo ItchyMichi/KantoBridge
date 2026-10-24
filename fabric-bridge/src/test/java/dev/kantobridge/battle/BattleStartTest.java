@@ -182,6 +182,33 @@ class BattleStartTest {
 		assertFalse(e.getMessage().contains("SECRETNAME"), "the message must not quote the value");
 	}
 
+	@Test
+	void theForeignPokemonFieldsRead() throws Exception {
+		// FP1 (FOREIGN_POKEMON_PLAN §4.12): use, format, ally; absent they are the whole party, singles, no ally
+		BattleStart plain = BattleStart.read(json(RIVAL));
+		assertEquals(List.of(), plain.use());
+		assertEquals(BattleStart.Format.SINGLES, plain.format());
+		assertNull(plain.ally());
+		String uid = "0f8b6a2e-1c2d-4e5f-8a9b-0c1d2e3f4a5b";
+		BattleStart lead = BattleStart.read(with(json(RIVAL), "use", "[\"" + uid + "\"]"));
+		assertEquals(List.of(java.util.UUID.fromString(uid)), lead.use());
+		String allyTeam = "{\"name\":\"PARTNER\",\"team\":[{\"dex\":376,\"level\":42,\"moves\":[232],"
+				+ "\"ivs\":{\"hp\":31,\"atk\":31,\"def\":31,\"spa\":31,\"spd\":31,\"spe\":31}}]}";
+		BattleStart multi = BattleStart.read(with(with(json(RIVAL), "format", "\"multi\""), "ally", allyTeam));
+		assertEquals(BattleStart.Format.MULTI, multi.format());
+		assertEquals("PARTNER", multi.ally().name());
+		assertEquals(376, multi.ally().team().get(0).dex());
+		assertEquals(BattleStart.Format.DOUBLE, BattleStart.read(with(json(RIVAL), "format", "\"double\"")).format());
+		assertBad(with(json(RIVAL), "use", "[]"));
+		assertBad(with(json(RIVAL), "use", "[\"" + uid + "\",\"" + uid + "\"]"));
+		assertBad(with(json(RIVAL), "use", "[\"nope\"]"));
+		assertBad(with(json(RIVAL), "format", "\"triple\""));
+		assertBad(with(json(RIVAL), "ally", allyTeam));
+		assertBad(with(with(json(RIVAL), "format", "\"multi\""), "ally", "{\"team\":[]}"));
+		assertBad(with(with(json(RIVAL), "format", "\"multi\""), "ally", "{\"team\":[{\"dex\":1,\"level\":5,\"moves\":[33],"
+				+ "\"dvs\":{\"atk\":1,\"def\":1,\"spd\":1,\"spc\":1}}],\"x\":1}"));
+	}
+
 	private static void assertBad(JsonObject data) {
 		assertThrows(DataException.class, () -> BattleStart.read(data));
 	}

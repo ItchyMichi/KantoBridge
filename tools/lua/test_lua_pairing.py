@@ -673,3 +673,19 @@ def test_a_newer_bind_answers_with_its_own_seq():
     assert waitings(g) == [({"slot": 2, "reason": "busy"}, first)]
     assert [(m["data"], m.get("re")) for m in g.received("session.bound")] == \
         [({"slot": 1, "switched": "none"}, second)]
+
+
+# ------------------------------------------------------------ FP1: what to do with foreign members
+
+
+def test_a_bind_carries_the_regions_choice_for_foreign_members():
+    g = game()
+    assert g.status()["pairingLeaveOut"] is False, "visitor before any bind"
+    seq = g.send("session.bind", {"world": A, "multiplayer": True, "incompatible": "leave_out"})
+    g.run(2)
+    assert bounds(g) == [(2, seq)] and g.status()["pairingLeaveOut"] is True
+    bind(g, A)
+    assert g.status()["pairingLeaveOut"] is False, "absent means visitor"
+    bad = g.send("session.bind", {"world": A, "multiplayer": True, "incompatible": "drop"})
+    g.run(2)
+    assert ("bad_message", bad) in errors(g)

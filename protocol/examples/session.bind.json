@@ -1,1 +1,1 @@
-[{"type": "session.bind", "seq": 11, "data": {"world": "kanto-test", "multiplayer": true}}]
+[{"type": "session.bind", "seq": 11, "data": {"world": "kanto-test", "multiplayer": true}}, {"type": "session.bind", "seq": 12, "data": {"world": "kanto-test", "multiplayer": false, "incompatible": "leave_out", "region": "johto"}}]

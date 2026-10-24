@@ -29,5 +29,96 @@
       "wild": {"dex": 129, "level": 15, "x": 4, "y": 10},
       "rules": {"catch": true, "flee": true}
     }
+  },
+  {
+    "type": "battle.start",
+    "seq": 13,
+    "data": {
+      "battle": "b-3",
+      "kind": "static",
+      "wild": {
+        "dex": 123,
+        "level": 14
+      },
+      "use": [
+        "0f8b6a2e-1c2d-4e5f-8a9b-0c1d2e3f4a5b"
+      ],
+      "rules": {
+        "catch": true,
+        "flee": true
+      },
+      "region": "johto"
+    }
+  },
+  {
+    "type": "battle.start",
+    "seq": 14,
+    "data": {
+      "battle": "b-4",
+      "kind": "scripted",
+      "format": "multi",
+      "trainer": {
+        "cls": "TRAINER_CLASS_TEST",
+        "party": 3,
+        "name": "TEST ADMIN"
+      },
+      "team": [
+        {
+          "dex": 262,
+          "level": 30,
+          "moves": [
+            44
+          ],
+          "ivs": {
+            "hp": 10,
+            "atk": 10,
+            "def": 10,
+            "spa": 10,
+            "spd": 10,
+            "spe": 10
+          }
+        },
+        {
+          "dex": 302,
+          "level": 30,
+          "moves": [
+            10
+          ],
+          "ivs": {
+            "hp": 10,
+            "atk": 10,
+            "def": 10,
+            "spa": 10,
+            "spd": 10,
+            "spe": 10
+          }
+        }
+      ],
+      "ally": {
+        "name": "TEST PARTNER",
+        "team": [
+          {
+            "dex": 376,
+            "level": 42,
+            "moves": [
+              232
+            ],
+            "ivs": {
+              "hp": 31,
+              "atk": 31,
+              "def": 31,
+              "spa": 31,
+              "spd": 31,
+              "spe": 31
+            }
+          }
+        ]
+      },
+      "rules": {
+        "catch": false,
+        "flee": false
+      },
+      "region": "hoenn"
+    }
   }
 ]

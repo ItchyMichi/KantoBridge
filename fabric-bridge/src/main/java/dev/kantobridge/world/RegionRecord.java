@@ -189,7 +189,8 @@ public final class RegionRecord {
 	 * The region's compatibility profile (§4.9): what its shadow party can hold and what happens to the rest.
 	 *
 	 * @param nick           the longest nickname, or null when the record doesn't say
-	 * @param onIncompatible {@link #LEAVE_OUT} (today) or {@link #VISITOR} (the visitor plan)
+	 * @param onIncompatible {@link #VISITOR} (FOREIGN_POKEMON_PLAN Q12, the default since FP1: a member the game lacks
+	 *                       is a visitor) or {@link #LEAVE_OUT} (it is left out); sent to the link at bind
 	 */
 	public record Compat(int maxDex, int maxMove, @Nullable Integer nick, String onIncompatible) {
 		public Compat {
@@ -202,9 +203,9 @@ public final class RegionRecord {
 			}
 		}
 
-		/** The catalogue's profile for a game, leaving incompatible Pokémon out. */
+		/** The catalogue's profile for a game; FP1: incompatible Pokémon are visitors (Q12's default). */
 		public static Compat of(Games.Compat compat) {
-			return new Compat(compat.maxDex(), compat.maxMove(), compat.nick(), LEAVE_OUT);
+			return new Compat(compat.maxDex(), compat.maxMove(), compat.nick(), VISITOR);
 		}
 	}
 

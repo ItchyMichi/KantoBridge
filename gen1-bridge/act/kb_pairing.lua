@@ -4,7 +4,12 @@
 -- section 8 "Saving": each multiplayer world gets its own paired online story
 -- save, kept separate from the offline save.
 --
---   session.bind{world, multiplayer}   M->G
+--   session.bind{world, multiplayer, incompatible?}   M->G
+--
+-- FP1 (docs/specs/FOREIGN_POKEMON_PLAN.md section 4.15): `incompatible` is the
+-- link's region record's rules.compat.onIncompatible ("visitor", the default,
+-- or "leave_out"); the latest bind's value is kept for the party
+-- (pairing.incompatible()).
 --   session.bound{slot, switched}      G->M (re set): sent once the hidden
 --                                      game IS on that slot; M10: switched =
 --                                      how it got there: "none" (it already
@@ -88,6 +93,7 @@ Pairing.MAX_SLOT = 255     -- session.bound.slot's maximum
 Pairing.MAX_BYTES = 1024 * 1024
 
 local ID = "^[A-Za-z0-9_.:-]+$"
+local INCOMPATIBLE = { visitor = true, leave_out = true } -- FP1: session.bind.incompatible
 
 local function validWorld(v)
   return type(v) == "string" and #v >= 1 and #v <= 64 and v:find(ID) ~= nil
@@ -169,6 +175,7 @@ function Pairing.new(opts)
   local data      -- the pairing file, decoded on first use
   local FILE, TMP, BAK -- MG1: the game's own file, named on first use (the game is known by then)
   local req       -- the bind being worked on
+  local incompatible = "visitor" -- FP1: the latest bind's onIncompatible
   local loaded = setmetatable({}, { __mode = "k" }) -- save tables a CONTINUE brought
   local counts = {
     binds = 0, answered = 0, superseded = 0, cancelled = 0, refused = 0,
@@ -457,9 +464,11 @@ function Pairing.new(opts)
   -- slot now, so that what arrives after it is the new world's; the switch
   -- and the answer come in step(). Returns true, or nil plus an error code.
   function pairing.bind(d, seq, generation)
-    if type(d) ~= "table" or not validWorld(d.world) or type(d.multiplayer) ~= "boolean" then
+    if type(d) ~= "table" or not validWorld(d.world) or type(d.multiplayer) ~= "boolean"
+        or d.incompatible ~= nil and not INCOMPATIBLE[d.incompatible] then
       return nil, "bad_message"
     end
+    incompatible = d.incompatible or "visitor"
     counts.binds = counts.binds + 1
     if req then counts.superseded = counts.superseded + 1 end
     local r = { world = d.world, multiplayer = d.multiplayer, seq = seq, gen = generation }
@@ -509,6 +518,10 @@ function Pairing.new(opts)
   -- True while a bind waits for its switch: the new world's data waits too.
   function pairing.blocked() return req ~= nil and req.switch == true end
 
+  -- FP1: what the latest bind said to do with a member the game lacks:
+  -- "visitor" (the default, also before any bind) or "leave_out".
+  function pairing.incompatible() return incompatible end
+
   -- MG2: the live playthrough as the pairing judges it (kb_engine.playthrough
   -- with the save tables CONTINUE brought): "title", "fresh" or "saved", for
   -- observe/kb_progress.lua's game.status.
@@ -552,6 +565,7 @@ function Pairing.new(opts)
     local out = {}
     for k, v in pairs(counts) do out[k] = v end
     out.pending = pairing.blocked()
+    out.leaveOut = incompatible == "leave_out" -- FP1
     local version = engine.gameVersion()
     local g = version and data and data.games[version] or nil
     local worlds = 0

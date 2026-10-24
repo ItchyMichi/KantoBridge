@@ -41,7 +41,10 @@ public record ProgressRecord(String playthrough, boolean ingame, boolean started
 	/** A region whose game never reported: at the title, nothing reached. */
 	public static final ProgressRecord NONE = new ProgressRecord(TITLE, false, false, 0, Map.of(), null, -1);
 
-	private static final Set<String> FIELDS = Set.of("game", "region", "playthrough", "ingame", "started", "badges", "markers", "name", "slot");
+	private static final Set<String> FIELDS = Set.of("game", "region", "playthrough", "ingame", "started", "badges", "markers", "name", "slot",
+			"visitors");
+	/** FP1 (FOREIGN_POKEMON_PLAN §4.1): at most a party's worth of visitors. */
+	public static final int MAX_VISITORS = 6;
 	private static final Pattern MARKER = Pattern.compile("^[a-z][a-z0-9_]{0,15}$");
 
 	public static final Codec<ProgressRecord> CODEC = RecordCodecBuilder.create(instance -> instance.group(
@@ -66,8 +69,14 @@ public record ProgressRecord(String playthrough, boolean ingame, boolean started
 		markers = Collections.unmodifiableMap(new TreeMap<>(markers));
 	}
 
-	/** What one {@code game.status} says, read like its schema. */
-	public record Status(String game, @Nullable String region, ProgressRecord progress, @Nullable Integer slot) {
+	/**
+	 * What one {@code game.status} says, read like its schema; {@code visitors} (FP1) is how many party members the game
+	 * shows as visitors, or null when it didn't say (the HUD's line, FP2).
+	 */
+	public record Status(String game, @Nullable String region, ProgressRecord progress, @Nullable Integer slot, @Nullable Integer visitors) {
+		public Status(String game, @Nullable String region, ProgressRecord progress, @Nullable Integer slot) {
+			this(game, region, progress, slot, null);
+		}
 	}
 
 	/**
@@ -105,7 +114,8 @@ public record ProgressRecord(String playthrough, boolean ingame, boolean started
 			}
 		}
 		Integer slot = reader.has("slot") ? reader.integer("slot", 0, MAX_SLOT) : null;
-		return new Status(game, region, new ProgressRecord(playthrough, ingame, started, badges, markers, name, now), slot);
+		Integer visitors = reader.has("visitors") ? reader.integer("visitors", 0, MAX_VISITORS) : null;
+		return new Status(game, region, new ProgressRecord(playthrough, ingame, started, badges, markers, name, now), slot, visitors);
 	}
 
 	/** True when the game was ever started in this region (a resume at the pass; a start otherwise). */

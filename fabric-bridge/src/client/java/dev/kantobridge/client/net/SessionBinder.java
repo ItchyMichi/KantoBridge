@@ -27,6 +27,10 @@ import org.jetbrains.annotations.Nullable;
  *
  * <p>M10: {@code session.bound} may say how the hidden game reached the slot ({@code switched}: {@code none},
  * {@code title}, {@code saved}, {@code moved}); the binder keeps it ({@link #switched}) for the gate.
+ *
+ * <p>FOREIGN_POKEMON_PLAN §4.15 (FP1): the bind carries {@code incompatible}, the link's region record's
+ * {@code rules.compat.onIncompatible} ({@code visitor} or {@code leave_out}), once the world's regions are known; a change
+ * binds again. Absent (a legacy world, or before the regions arrive) means {@code visitor} to gen1-bridge.
  */
 public final class SessionBinder {
 	/** Where messages go. */
@@ -65,6 +69,9 @@ public final class SessionBinder {
 	private long sentSeq = -1;
 	private @Nullable String sentWorld;
 	private boolean sentMultiplayer;
+	/** FP1: the region's onIncompatible to send (null: none), and the last one sent. */
+	private @Nullable String incompatible;
+	private @Nullable String sentIncompatible;
 	private @Nullable Integer slot;
 	/** The last accepted answer's {@code switched}, or null when it didn't say. */
 	private @Nullable String switched;
@@ -107,24 +114,37 @@ public final class SessionBinder {
 		this.slot = null;
 	}
 
-	/** Each client tick: binds when this link hasn't heard about this world yet. */
+	/** FP1: the link's region's onIncompatible ({@code visitor}, {@code leave_out}; anything else or null: none). */
+	public void incompatible(@Nullable String value) {
+		this.incompatible = value != null && INCOMPATIBLE.contains(value) ? value : null;
+	}
+
+	/** {@code session.bind.incompatible}'s values. */
+	static final Set<String> INCOMPATIBLE = Set.of("visitor", "leave_out");
+
+	/** Each client tick: binds when this link hasn't heard about this world (or its region's choice) yet. */
 	public void tick() {
 		String current = this.world;
 		if (!this.connected || current == null) {
 			return;
 		}
-		if (this.sentLink == this.link && current.equals(this.sentWorld) && this.multiplayer == this.sentMultiplayer) {
+		if (this.sentLink == this.link && current.equals(this.sentWorld) && this.multiplayer == this.sentMultiplayer
+				&& Objects.equals(this.incompatible, this.sentIncompatible)) {
 			return;
 		}
 		JsonObject data = new JsonObject();
 		data.addProperty("world", current);
 		data.addProperty("multiplayer", this.multiplayer);
+		if (this.incompatible != null) {
+			data.addProperty("incompatible", this.incompatible);
+		}
 		long seq = this.port.toBridge(MsgTypes.SESSION_BIND, data);
 		if (seq >= 0) {
 			this.sentLink = this.link;
 			this.sentSeq = seq;
 			this.sentWorld = current;
 			this.sentMultiplayer = this.multiplayer;
+			this.sentIncompatible = this.incompatible;
 			this.slot = null;
 			this.stats.binds++;
 		}

@@ -10,6 +10,12 @@ snapshot, a bind, a save, a reload and every marker or badge change, and the reg
 answered: ``region.park`` holds the player (steps refused, ``snapshot.away``), ``region.resume``
 releases the hold (a warp onto a route map or the away cell), ``region.start`` starts a game at its
 title (CONTINUE when ``slot_has_save``, else NEW GAME).
+
+Foreign Pokémon (docs/specs/FOREIGN_POKEMON_PLAN.md §8, FP1): ``hello.ok.compat.visitor`` says whether the fake
+registered its stand-in (``visitor``, default true); a ``party.sync`` member the game can't show as itself (``dex`` 0,
+past ``compat.maxDex``, or any form in a Gen 1 game) is a visitor unless the last ``session.bind`` said ``leave_out``,
+and ``game.status.visitors`` counts them (sent again when the count changes). The helpers ``use_item``, ``order``,
+``change``, ``hold``, ``learn``, ``forget`` and ``take`` send what the hidden game reports.
 """
 import asyncio
 import secrets
@@ -33,7 +39,7 @@ ROUTE_MAP_PREFIX = "KB_ROUTE_"  # the bridge's route maps: the only warp targets
 
 class FakeGen1:
     def __init__(self, host="127.0.0.1", port=27151, game="red", timeout_s=10.0, log=None, state="saved",
-                 slot_has_save=True):
+                 slot_has_save=True, visitor=True):
         if state not in PLAYTHROUGHS:
             raise ValueError(f"state must be one of {PLAYTHROUGHS}")
         self.host = host
@@ -77,6 +83,11 @@ class FakeGen1:
         self.markers = dict(self.catalogue.markers) if self.catalogue is not None else {}
         self._status_sent = None
         self._start_task = None
+        # FP1: the stand-in registered (hello.ok.compat.visitor), the bind's choice, the last party.sync's members
+        self.visitor = visitor
+        self.incompatible = "visitor"
+        self.party = []
+        self.effect_counter = 0
 
     # --- lifecycle -------------------------------------------------------------------------------
 
@@ -164,7 +175,7 @@ class FakeGen1:
               "union_room": "off"}  # ENGINE_UPGRADE_PLAN U3: the real bridge says what it found
         if self.catalogue is not None:  # MG1: the family and the adapter's limits, as gen1-bridge sends them
             ok["family"] = self.catalogue.family
-            ok["compat"] = dict(self.catalogue.compat)
+            ok["compat"] = dict(self.catalogue.compat, visitor=self.visitor)
         await conn.send("hello.ok", ok, re=hello["seq"])
         await conn.send("snapshot", self.snapshot())
         await conn.send("game.status", self.game_status())  # MG2: the progress follows every snapshot
@@ -209,8 +220,16 @@ class FakeGen1:
         elif msg_type in ("ui.pick", "ui.back", "ui.qty", "ui.name"):
             await self._close_ui(conn, data["ui"])
         elif msg_type == "session.bind":
+            # FP1: the region's choice for members the game lacks (absent: visitor)
+            self.incompatible = data.get("incompatible", "visitor")
             # A waiting bind answers later without blocking pings.
             self._bind_task = asyncio.create_task(self._bind(conn, seq))
+        elif msg_type == "party.sync":
+            # FP1: the shadow party is Cobblemon's, member for member; game.status follows a new visitor count
+            before = self.visitors()
+            self.party = list(data["party"])
+            if self.ingame and self.visitors() != before:
+                await conn.send("game.status", self.game_status())
         elif msg_type == "pc.closed":
             if self.pc_open == data["pc"]:
                 self.pc_open = None
@@ -231,7 +250,7 @@ class FakeGen1:
             return "close"
         elif msg_type == "hello":
             await conn.send("error", {"code": "already_hello", "msg": "hello was already accepted"}, re=seq)
-        # Everything else (party.sync, dex.sync, battle.result, ...) is only recorded.
+        # Everything else (dex.sync, battle.result, act.result, ...) is only recorded.
         return None
 
     async def _bind(self, conn, seq):
@@ -272,7 +291,73 @@ class FakeGen1:
                 "slot": self.slot}
         if self.ingame:
             data["name"] = "TESTER"
+            data["visitors"] = self.visitors()  # FP1
         return data
+
+    # --- foreign Pokémon (FP1) ---------------------------------------------------------------------
+
+    def is_visitor(self, member):
+        """A party.sync member this game can't show as itself: no national number, past the catalogue's
+        maxDex, or (Gen 1, which has no forms) any form."""
+        max_dex = self.catalogue.compat["maxDex"] if self.catalogue is not None else 151
+        family = self.catalogue.family if self.catalogue is not None else "gen1"
+        return member["dex"] == 0 or member["dex"] > max_dex or (family == "gen1" and "form" in member)
+
+    def visitors(self):
+        """How many members are visitors (0 when the stand-in didn't register or the region leaves them out)."""
+        if not self.visitor or self.incompatible == "leave_out":
+            return 0
+        return sum(1 for member in self.party if self.is_visitor(member))
+
+    def _effect_id(self, prefix):
+        self.effect_counter += 1
+        return f"{prefix}-fake-{self.effect_counter}"
+
+    async def use_item(self, item, uid, kind, move=None, forget=None):
+        """An item from the hidden bag used on a member (party.item with its id and kind); returns the id."""
+        data = {"item": item, "uid": uid, "id": self._effect_id("it"), "kind": kind}
+        if move is not None:
+            data["move"] = move
+        if forget is not None:
+            data["forget"] = forget
+        await self._send("party.item", data)
+        return data["id"]
+
+    async def order(self, uids):
+        """A SWITCH in the hidden party menu (party.order)."""
+        await self._send("party.order", {"uids": list(uids)})
+
+    async def change(self, uid, **values):
+        """An effect outside items (party.change: hp, status, friendship); returns the id."""
+        data = {"uid": uid, "id": self._effect_id("ch"), **values}
+        await self._send("party.change", data)
+        return data["id"]
+
+    async def hold(self, uid, item):
+        """GIVE (a canonical id) or TAKE (None) in the hidden party menu (party.hold); returns the id."""
+        data = {"uid": uid, "item": item, "id": self._effect_id("hd")}
+        await self._send("party.hold", data)
+        return data["id"]
+
+    async def learn(self, uid, move, forget=None):
+        """A Move Tutor or the Move Reminder (party.learn); returns the id."""
+        data = {"uid": uid, "move": move, "id": self._effect_id("ln")}
+        if forget is not None:
+            data["forget"] = forget
+        await self._send("party.learn", data)
+        return data["id"]
+
+    async def forget(self, uid, move):
+        """The Move Deleter (party.forget); returns the id."""
+        data = {"uid": uid, "move": move, "id": self._effect_id("fg")}
+        await self._send("party.forget", data)
+        return data["id"]
+
+    async def take(self, uid, reason="trade"):
+        """The hidden game takes a member away (party.take: trade, daycare, quest)."""
+        await self._send("party.take", {"uid": uid, "reason": reason})
+        if self.connected:
+            self.ops += 1
 
     async def _status_if_changed(self):
         """game.status when a marker or the badge count changed since the last one sent."""

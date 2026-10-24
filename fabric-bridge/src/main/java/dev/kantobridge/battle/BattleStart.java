@@ -13,6 +13,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Set;
+import java.util.UUID;
 import org.jetbrains.annotations.Nullable;
 
 /**
@@ -24,16 +25,20 @@ import org.jetbrains.annotations.Nullable;
  * @param trainer required for trainer and rival battles
  * @param team    a trainer's (or a scripted battle's) Pokémon, 1–6; empty for wild kinds
  * @param wild    required for static, surf and fish encounters
+ * @param use     FOREIGN_POKEMON_PLAN §4.12 (FP1): the player's Pokémon Cobblemon may use (the contest's lead); empty: all
+ * @param format  §4.12: singles (the default), double or multi
+ * @param ally    §4.12: the partner beside the player in a multi battle (Steven), or null
  */
 public record BattleStart(String battle, Kind kind, @Nullable Trainer trainer, List<Gen1Mon> team, @Nullable Wild wild, boolean canCatch,
-		boolean canFlee) {
+		boolean canFlee, List<UUID> use, Format format, @Nullable Ally ally) {
 	static final int MAX_COORD = 4096;
 	static final int MAX_NAME = 32;
 	public static final int MAX_TEAM = 6;
 	/** A trainer's party index (Gen 1, within its class) or id (Gen 3: Emerald's reach 854). */
 	public static final int MAX_PARTY = 1023;
 
-	private static final Set<String> FIELDS = Set.of("battle", "kind", "trainer", "team", "wild", "rules", "region");
+	private static final Set<String> FIELDS = Set.of("battle", "kind", "trainer", "team", "wild", "rules", "region", "use", "format", "ally");
+	private static final Set<String> ALLY_FIELDS = Set.of("name", "team");
 	private static final Set<String> TRAINER_FIELDS = Set.of("cls", "party", "name", "npc", "map", "x", "y");
 	private static final Set<String> WILD_FIELDS = Set.of("dex", "level", "x", "y", "dvs", "item", "shiny", "gender", "form");
 	private static final Set<String> RULE_FIELDS = Set.of("catch", "flee");
@@ -53,6 +58,31 @@ public record BattleStart(String battle, Kind kind, @Nullable Trainer trainer, L
 				}
 			}
 			return null;
+		}
+	}
+
+	/** FP1: a battle's format (absent: singles). */
+	public enum Format {
+		SINGLES, DOUBLE, MULTI;
+
+		public String id() {
+			return this.name().toLowerCase(Locale.ROOT);
+		}
+
+		static @Nullable Format byId(String id) {
+			for (Format format : values()) {
+				if (format.id().equals(id)) {
+					return format;
+				}
+			}
+			return null;
+		}
+	}
+
+	/** FP1: the partner who fights beside the player in a multi battle: an optional name (ROM-derived) and a team. */
+	public record Ally(@Nullable String name, List<Gen1Mon> team) {
+		public Ally {
+			team = List.copyOf(team);
 		}
 	}
 
@@ -84,6 +114,14 @@ public record BattleStart(String battle, Kind kind, @Nullable Trainer trainer, L
 
 	public BattleStart {
 		team = List.copyOf(team);
+		use = List.copyOf(use);
+		format = format == null ? Format.SINGLES : format;
+	}
+
+	/** A battle as before FP1: the whole party, singles, no ally. */
+	public BattleStart(String battle, Kind kind, @Nullable Trainer trainer, List<Gen1Mon> team, @Nullable Wild wild, boolean canCatch,
+			boolean canFlee) {
+		this(battle, kind, trainer, team, wild, canCatch, canFlee, List.of(), Format.SINGLES, null);
 	}
 
 	/** True when a team (rather than a wild Pokémon) is to be fought. */
@@ -115,6 +153,18 @@ public record BattleStart(String battle, Kind kind, @Nullable Trainer trainer, L
 		DataReader rules = reader.object("rules").allowOnly(RULE_FIELDS);
 		boolean canCatch = rules.bool("catch");
 		boolean canFlee = rules.bool("flee");
+		List<UUID> use = reader.has("use") ? uids(reader.array("use"), reader.path("use")) : List.of();
+		Format format = Format.SINGLES;
+		if (reader.has("format")) {
+			format = Format.byId(reader.string("format"));
+			if (format == null) {
+				throw new DataException(reader.path("format"), "unknown format");
+			}
+		}
+		Ally ally = reader.has("ally") ? ally(reader.object("ally")) : null;
+		if (ally != null && format != Format.MULTI) {
+			throw new DataException(reader.path("ally"), "an ally needs format multi");
+		}
 		switch (kind) {
 			case TRAINER, RIVAL -> {
 				if (trainer == null || team.isEmpty()) {
@@ -132,7 +182,38 @@ public record BattleStart(String battle, Kind kind, @Nullable Trainer trainer, L
 				}
 			}
 		}
-		return new BattleStart(battle, kind, trainer, team, wild, canCatch, canFlee);
+		return new BattleStart(battle, kind, trainer, team, wild, canCatch, canFlee, use, format, ally);
+	}
+
+	private static List<UUID> uids(JsonArray array, String path) throws DataException {
+		if (array.isEmpty() || array.size() > MAX_TEAM) {
+			throw new DataException(path, "needs 1-6 uids");
+		}
+		List<UUID> out = new ArrayList<>(array.size());
+		for (int i = 0; i < array.size(); i++) {
+			JsonElement element = array.get(i);
+			if (!element.isJsonPrimitive() || !element.getAsJsonPrimitive().isString() || !Ids.UID.matcher(element.getAsString()).matches()) {
+				throw new DataException(path + "/" + i, "not a uid");
+			}
+			UUID uid = UUID.fromString(element.getAsString());
+			if (out.contains(uid)) {
+				throw new DataException(path + "/" + i, "repeated");
+			}
+			out.add(uid);
+		}
+		return out;
+	}
+
+	private static Ally ally(DataReader reader) throws DataException {
+		reader.allowOnly(ALLY_FIELDS);
+		String name = null;
+		if (reader.has("name")) {
+			name = reader.string("name");
+			if (name.codePointCount(0, name.length()) > MAX_NAME) {
+				throw new DataException(reader.path("name"), "too long");
+			}
+		}
+		return new Ally(name, team(reader.array("team"), reader.path("team")));
 	}
 
 	private static Trainer trainer(DataReader reader) throws DataException {

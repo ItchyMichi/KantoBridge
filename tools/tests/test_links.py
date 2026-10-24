@@ -110,3 +110,30 @@ def test_a_legacy_link_learns_its_game():
             await driver.close()
             await blue.stop()
     run(scenario())
+
+
+def test_a_sync_reaches_every_link_and_each_bind_carries_its_regions_choice():
+    # FOREIGN_POKEMON_PLAN §4.15 (FP1): parked links get every party.sync too, so a crossing shows the right
+    # party at once; each link's bind carries its own region's onIncompatible
+    async def scenario():
+        blue = await FakeGen1(port=0, game="blue").start()
+        emerald = await FakeGen1(port=0, game="emerald").start()
+        driver = LinksDriver([("blue", blue.port), ("emerald", emerald.port)], follow="blue", ping_ms=0)
+        try:
+            await driver.connect()
+            party = [{"uid": "0f8b6a2e-1c2d-4e5f-8a9b-0c1d2e3f4a5b", "dex": 258, "level": 5, "moves": [33],
+                      "hp": 20, "maxhp": 20, "types": ["water"]}]
+            assert await driver.sync_party(party) == 2
+            seqs = await driver.bind("w-fp", incompatible={"emerald": "leave_out"})
+            assert len(seqs) == 2
+            await asyncio.sleep(0.2)
+            assert (blue.counts().get("party.sync"), emerald.counts().get("party.sync")) == (1, 1)
+            assert (blue.visitors(), emerald.visitors()) == (1, 0), "Mudkip is a visitor in Blue, native in Emerald"
+            assert (blue.incompatible, emerald.incompatible) == ("visitor", "leave_out")
+            assert all(not link.client.conn.problems for link in driver.links)
+        finally:
+            await driver.close()
+            await blue.stop()
+            await emerald.stop()
+    run(scenario())
+

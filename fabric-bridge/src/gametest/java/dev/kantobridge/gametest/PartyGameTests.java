@@ -155,6 +155,26 @@ public class PartyGameTests implements FabricGameTest {
 			helper.assertTrue(list.get(1).getAsJsonObject().get("nick").getAsString().equals("BUD"), "the nickname isn't in the sync");
 			helper.assertTrue(data.getAsJsonObject("box").get("count").getAsInt() == 1, "the PC holds one Pokémon");
 			helper.assertTrue(syncs.size() <= 2, "syncs aren't debounced: " + syncs.size());
+			// FP1 (FOREIGN_POKEMON_PLAN §3.2): what a visitor record needs, from Cobblemon's own numbers
+			for (int i = 0; i < 2; i++) {
+				JsonObject entry = list.get(i).getAsJsonObject();
+				Pokemon pokemon = given.get(i);
+				JsonObject stats = entry.getAsJsonObject("stats");
+				helper.assertTrue(stats != null && stats.get("hp").getAsInt() == pokemon.getMaxHealth()
+						&& stats.get("atk").getAsInt() == pokemon.getAttack() && stats.get("def").getAsInt() == pokemon.getDefence()
+						&& stats.get("spa").getAsInt() == pokemon.getSpecialAttack() && stats.get("spd").getAsInt() == pokemon.getSpecialDefence()
+						&& stats.get("spe").getAsInt() == pokemon.getSpeed(), "stats of slot " + i);
+				helper.assertTrue(entry.get("nature").getAsString().equals(pokemon.getNature().getName().getPath()), "nature of slot " + i);
+				helper.assertFalse(entry.has("form"), "the standard form carries no form (slot " + i + ")");
+				helper.assertFalse(entry.has("ot"), "the owner's own Pokémon carries no ot (slot " + i + ")");
+				helper.assertTrue(entry.getAsJsonArray("canLearn").size() > 0, "Cobblemon's machine moves for slot " + i);
+			}
+			helper.assertTrue(first.getAsJsonArray("types").toString().equals("[\"electric\"]"), "Pikachu's type: " + first.get("types"));
+			helper.assertTrue(first.getAsJsonArray("stones").toString().equals("[\"thunder_stone\"]"),
+					"the Thunder Stone evolves Pikachu: " + first.get("stones"));
+			JsonObject second = list.get(1).getAsJsonObject();
+			helper.assertTrue(second.getAsJsonArray("types").toString().equals("[\"grass\",\"poison\"]"), "Bulbasaur's types: " + second.get("types"));
+			helper.assertTrue(second.getAsJsonArray("stones").isEmpty(), "no stone evolves Bulbasaur");
 			relay.close();
 			MockPlayers.leave(helper, player);
 		});
@@ -192,6 +212,10 @@ public class PartyGameTests implements FabricGameTest {
 			relay.receive(player, envelope(7, MsgTypes.PARTY_TAKE, "{\"uid\":\"" + UUID.randomUUID() + "\",\"reason\":\"trade\"}"));
 			helper.assertTrue(PartyService.warnings("take_unknown_uid") == unknown + 1, "an unknown uid wasn't counted");
 			helper.assertTrue(party.occupied() == 1, "an unknown uid took something");
+			// FP1: a quest (Kenya, Shuckie) takes one away like a trade
+			Pokemon last = party.iterator().next();
+			relay.receive(player, envelope(11, MsgTypes.PARTY_TAKE, "{\"uid\":\"" + last.getUuid() + "\",\"reason\":\"quest\",\"region\":\"johto\"}"));
+			helper.assertTrue(party.occupied() == 0, "party.take{quest} didn't remove the Pokémon");
 
 			// Malformed requests are refused with an error.
 			relay.receive(player, envelope(8, MsgTypes.PARTY_HEAL, "{\"all\":true}"));
@@ -397,6 +421,8 @@ public class PartyGameTests implements FabricGameTest {
 				helper.assertTrue(which >= 0, "slot " + i + " is neither the catch nor the trade");
 				helper.assertTrue(entry.get("give").getAsString().equals(which == 0 ? "nc-1" : "tr-1"), "slot " + i + " lacks its give id");
 				helper.assertTrue(entry.get("nick").getAsString().equals(which == 0 ? "SPIKE" : "MARCEL"), "slot " + i + "'s nickname");
+				// FP1: only the trade's trainer isn't the owner, so only it carries ot
+				helper.assertTrue(which == 0 ? !entry.has("ot") : "TRADER".equals(entry.get("ot").getAsString()), "slot " + i + "'s ot");
 			}
 			relay.close();
 			MockPlayers.leave(helper, player);

@@ -26,7 +26,7 @@
       "schema": "messages/act.interact.schema.json"
     },
     "act.result": {
-      "legs": ["g2m", "s2c", "c2s"],
+      "legs": ["g2m", "m2g", "s2c", "c2s"],
       "re": "required",
       "rom": false,
       "redact": [],
@@ -78,7 +78,7 @@
       "legs": ["g2m", "c2s"],
       "re": "never",
       "rom": true,
-      "redact": ["/team", "/trainer/name", "/wild"],
+      "redact": ["/ally", "/team", "/trainer/name", "/wild"],
       "schema": "messages/battle.start.schema.json"
     },
     "daycare.deposit": {
@@ -263,6 +263,20 @@
       "redact": [],
       "schema": "messages/npc.set.schema.json"
     },
+    "party.change": {
+      "legs": ["g2m", "c2s"],
+      "re": "never",
+      "rom": false,
+      "redact": [],
+      "schema": "messages/party.change.schema.json"
+    },
+    "party.forget": {
+      "legs": ["g2m", "c2s"],
+      "re": "never",
+      "rom": false,
+      "redact": [],
+      "schema": "messages/party.forget.schema.json"
+    },
     "party.give": {
       "legs": ["g2m", "c2s"],
       "re": "never",
@@ -277,12 +291,33 @@
       "redact": [],
       "schema": "messages/party.heal.schema.json"
     },
+    "party.hold": {
+      "legs": ["g2m", "c2s"],
+      "re": "never",
+      "rom": false,
+      "redact": [],
+      "schema": "messages/party.hold.schema.json"
+    },
     "party.item": {
       "legs": ["g2m", "c2s"],
       "re": "never",
       "rom": false,
       "redact": [],
       "schema": "messages/party.item.schema.json"
+    },
+    "party.learn": {
+      "legs": ["g2m", "c2s"],
+      "re": "never",
+      "rom": false,
+      "redact": [],
+      "schema": "messages/party.learn.schema.json"
+    },
+    "party.order": {
+      "legs": ["g2m", "c2s"],
+      "re": "never",
+      "rom": false,
+      "redact": [],
+      "schema": "messages/party.order.schema.json"
     },
     "party.rename": {
       "legs": ["g2m", "c2s"],
@@ -302,7 +337,7 @@
       "legs": ["m2g", "s2c"],
       "re": "never",
       "rom": true,
-      "redact": ["/party/*/nick"],
+      "redact": ["/party/*/nick", "/party/*/ot"],
       "schema": "messages/party.sync.schema.json"
     },
     "party.take": {

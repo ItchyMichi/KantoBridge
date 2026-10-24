@@ -32,5 +32,26 @@
       "tested": "0.3.85",
       "union_room": "off"
     }
+  },
+  {
+    "type": "hello.ok",
+    "seq": 13,
+    "re": 1,
+    "data": {
+      "protocol": 1,
+      "bridge": "0.1.0",
+      "engine": "0.3.85",
+      "game": "crystal",
+      "family": "gen2",
+      "compat": {
+        "maxDex": 251,
+        "maxMove": 251,
+        "nick": 10,
+        "visitor": true
+      },
+      "session": "s-7f3a93",
+      "tested": "0.3.85",
+      "union_room": "off"
+    }
   }
 ]

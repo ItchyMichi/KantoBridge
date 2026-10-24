@@ -131,6 +131,48 @@
         }
       }
     },
+    "use": {
+      "type": "array",
+      "items": {
+        "$ref": "../defs.schema.json#/$defs/uid"
+      },
+      "uniqueItems": true,
+      "minItems": 1,
+      "maxItems": 6,
+      "description": "FOREIGN_POKEMON_PLAN §4.12: the player's Pokémon Cobblemon may use (Crystal's Bug-Catching Contest: the lead); absent: the whole party."
+    },
+    "format": {
+      "enum": [
+        "singles",
+        "double",
+        "multi"
+      ],
+      "description": "§4.12: the battle format; absent: singles. multi seats an ally beside the player (Steven at the Space Center)."
+    },
+    "ally": {
+      "type": "object",
+      "required": [
+        "team"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "type": "string",
+          "maxLength": 32,
+          "x-rom-derived": true
+        },
+        "team": {
+          "type": "array",
+          "items": {
+            "$ref": "../defs.schema.json#/$defs/teamMon"
+          },
+          "minItems": 1,
+          "maxItems": 6
+        }
+      },
+      "x-rom-derived": true,
+      "description": "§4.12, format multi: the partner who fights beside the player."
+    },
     "region": {
       "$ref": "../defs.schema.json#/$defs/regionId",
       "description": "MG3 (several games): the region this message belongs to; absent = the legacy region. The client tags what it relays with its link's region; the server routes a tagged message to that region's link."
@@ -193,6 +235,23 @@
               "wild"
             ]
           }
+        ]
+      }
+    },
+    {
+      "if": {
+        "required": [
+          "ally"
+        ]
+      },
+      "then": {
+        "properties": {
+          "format": {
+            "const": "multi"
+          }
+        },
+        "required": [
+          "format"
         ]
       }
     }

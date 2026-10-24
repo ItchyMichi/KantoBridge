@@ -62,6 +62,30 @@ class SessionBinderTest {
 	}
 
 	@Test
+	void theBindCarriesTheRegionsChoiceForForeignMembers() {
+		// FP1 (FOREIGN_POKEMON_PLAN §4.15): the region record's onIncompatible rides the bind; a change binds again
+		SessionBinder binder = new SessionBinder(this.links, false);
+		binder.linkUp();
+		binder.world(WORLD, false);
+		binder.tick();
+		assertBind(this.links.bridge.get(0), WORLD, false);
+		binder.incompatible("leave_out");
+		binder.tick();
+		binder.tick();
+		assertEquals(2, this.links.bridge.size(), "the region's choice arrived: one bind more");
+		assertEquals("leave_out", this.links.bridge.get(1).data().get("incompatible").getAsString());
+		binder.incompatible("visitor");
+		binder.tick();
+		assertEquals("visitor", this.links.bridge.get(2).data().get("incompatible").getAsString());
+		binder.incompatible("drop");
+		binder.tick();
+		assertFalse(this.links.bridge.get(3).data().has("incompatible"), "an unknown value is not sent");
+		binder.incompatible(null);
+		binder.tick();
+		assertEquals(4, this.links.bridge.size(), "nothing changed");
+	}
+
+	@Test
 	void aWorldIsBoundOncePerLink() {
 		SessionBinder binder = new SessionBinder(this.links, false);
 		binder.tick();

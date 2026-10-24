@@ -1,0 +1,69 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kantobridge.invalid/protocol/messages/party.change.schema.json",
+  "title": "party.change",
+  "description": "FOREIGN_POKEMON_PLAN §4.3, Q17: an effect the hidden game had on a Pokémon outside items (overworld poison, a haircut, a massage); Cobblemon sets the value and the next sync brings the result.",
+  "x-type": "party.change",
+  "x-legs": [
+    "g2m",
+    "c2s"
+  ],
+  "x-re": "never",
+  "type": "object",
+  "required": [
+    "uid",
+    "id"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "uid": {
+      "$ref": "../defs.schema.json#/$defs/uid"
+    },
+    "id": {
+      "$ref": "../defs.schema.json#/$defs/id",
+      "description": "Idempotent: Cobblemon applies an id once."
+    },
+    "hp": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 9999,
+      "description": "The HP the hidden record has now (it mirrors Cobblemon's max HP)."
+    },
+    "status": {
+      "enum": [
+        "slp",
+        "psn",
+        "brn",
+        "frz",
+        "par",
+        "none"
+      ],
+      "description": "The status now; none: cured."
+    },
+    "friendship": {
+      "$ref": "../defs.schema.json#/$defs/friendship",
+      "description": "The friendship now."
+    },
+    "region": {
+      "$ref": "../defs.schema.json#/$defs/regionId",
+      "description": "MG3 (several games): the region this message belongs to; absent = the legacy region. The client tags what it relays with its link's region; the server routes a tagged message to that region's link."
+    }
+  },
+  "anyOf": [
+    {
+      "required": [
+        "hp"
+      ]
+    },
+    {
+      "required": [
+        "status"
+      ]
+    },
+    {
+      "required": [
+        "friendship"
+      ]
+    }
+  ]
+}

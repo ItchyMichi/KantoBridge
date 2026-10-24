@@ -29,5 +29,24 @@
       "markers": {},
       "slot": 2
     }
+  },
+  {
+    "type": "game.status",
+    "seq": 11,
+    "data": {
+      "game": "blue",
+      "region": "kanto",
+      "playthrough": "saved",
+      "ingame": true,
+      "started": true,
+      "badges": 3,
+      "markers": {
+        "starter": true,
+        "champion": false
+      },
+      "name": "TESTER",
+      "slot": 1,
+      "visitors": 2
+    }
   }
 ]

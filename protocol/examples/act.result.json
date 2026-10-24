@@ -67,5 +67,16 @@
         "POTION": 1
       }
     }
+  },
+  {
+    "type": "act.result",
+    "seq": 84,
+    "re": 13,
+    "data": {
+      "ok": false,
+      "kind": "item",
+      "reason": "move_known",
+      "id": "it-1"
+    }
   }
 ]

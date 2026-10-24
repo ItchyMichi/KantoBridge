@@ -2,10 +2,11 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://kantobridge.invalid/protocol/messages/act.result.schema.json",
   "title": "act.result",
-  "description": "Outcome of an act.* request; MG2: also of region.park, region.resume and region.start (kind park|resume|start; detail new|continue for a start); MG5: the server's answer to party.stash (kind stash, moved) travels S→C. MG6: the answer to bag.set (kind bag.set, left: what did not fit) is forwarded C→S by the client.",
+  "description": "Outcome of an act.* request; MG2: also of region.park, region.resume and region.start (kind park|resume|start; detail new|continue for a start); MG5: the server's answer to party.stash (kind stash, moved) travels S→C. MG6: the answer to bag.set (kind bag.set, left: what did not fit) is forwarded C→S by the client. FOREIGN_POKEMON_PLAN §4.4: the server's refusal of a party.item (kind item, ok false, reason unknown_uid, no_slot, move_known, no_evolution, max_level, no_effect, unsupported, its id) travels S→C and the client relays it to the link that sent the item (M→G).",
   "x-type": "act.result",
   "x-legs": [
     "g2m",
+    "m2g",
     "s2c",
     "c2s"
   ],
@@ -23,7 +24,7 @@
       "type": "string",
       "pattern": "^[A-Za-z0-9_][A-Za-z0-9_.]*$",
       "maxLength": 64,
-      "description": "What was done: an interact kind (npc, sign, ...), park, resume, start, stash, bag.set (MG6: a dotted kind names the request type it answers)."
+      "description": "What was done: an interact kind (npc, sign, ...), park, resume, start, stash, bag.set, item (FOREIGN_POKEMON_PLAN §4.4; MG6: a dotted kind names the request type it answers)."
     },
     "reason": {
       "type": "string",
@@ -54,6 +55,10 @@
       },
       "maxProperties": 128,
       "description": "MG6, kind bag.set: the items and quantities the bag could not hold (they stay in the ledger: \"in your trunk\")."
+    },
+    "id": {
+      "$ref": "../defs.schema.json#/$defs/id",
+      "description": "Kind item: the party.item's id this answers."
     }
   }
 }

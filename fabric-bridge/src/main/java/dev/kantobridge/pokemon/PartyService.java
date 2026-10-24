@@ -232,7 +232,7 @@ public final class PartyService {
 
 	/** The {@code party.sync} body for a player right now. */
 	public static JsonObject snapshot(ServerPlayer player) {
-		return PartySync.of(PlayerExtensionsKt.party(player), PlayerExtensionsKt.pc(player));
+		return PartySync.of(PlayerExtensionsKt.party(player), PlayerExtensionsKt.pc(player), player);
 	}
 
 	// ---- requests from the hidden game ----
@@ -321,7 +321,8 @@ public final class PartyService {
 			DataReader reader = DataReader.of(message.data(), "").allowOnly(Set.of("uid", "reason", "region"));
 			uid = UUID.fromString(reader.string("uid", Ids.UID));
 			reason = reader.string("reason");
-			if (!reason.equals("trade") && !reason.equals("daycare")) {
+			// FP1: "quest" (Kenya's delivery, Shuckie going home) takes it away like a trade
+			if (!reason.equals("trade") && !reason.equals("daycare") && !reason.equals("quest")) {
 				throw new DataException(reader.path("reason"), "unknown reason");
 			}
 		} catch (DataException e) {
@@ -350,7 +351,7 @@ public final class PartyService {
 			return;
 		}
 		markDirty(player);
-		KantoBridge.LOGGER.info("party: a Pokémon was traded away");
+		KantoBridge.LOGGER.info("party: a Pokémon was {}", reason.equals("quest") ? "taken by a quest" : "traded away");
 	}
 
 	// ---- party.item ----
@@ -370,7 +371,7 @@ public final class PartyService {
 		}
 		boolean applied = switch (item.kind()) {
 			case STONE -> evolveWithStone(player, pokemon, PartyItem.STONES.get(item.item()));
-			case MACHINE -> teach(pokemon, item.move(), item.slot());
+			case MACHINE -> teach(pokemon, item.move(), item.slot(), item.forget());
 			case RARE_CANDY -> rareCandy(player, pokemon);
 			case OTHER -> {
 				warn("item_unsupported");
@@ -405,10 +406,11 @@ public final class PartyService {
 	}
 
 	/**
-	 * A TM or HM: the move goes into {@code slot} (or the first free slot) with full PP; the move it replaces is benched,
-	 * so it stays re-learnable from Cobblemon's summary (P13: nobody softlocks over an HM).
+	 * A TM or HM: the move goes into the slot holding {@code forget} (FP1: the move replaced, by number, since the hidden
+	 * slot and Cobblemon's need not match), else {@code slot}, else the first free slot, with full PP; the move it
+	 * replaces is benched, so it stays re-learnable from Cobblemon's summary (P13: nobody softlocks over an HM).
 	 */
-	static boolean teach(Pokemon pokemon, int number, @Nullable Integer slot) {
+	static boolean teach(Pokemon pokemon, int number, @Nullable Integer slot, @Nullable Integer forget) {
 		MoveTemplate template = Gen1Mons.move(number);
 		if (template == null) {
 			warn("item_move_missing");
@@ -423,6 +425,15 @@ public final class PartyService {
 			}
 		}
 		int target = slot == null ? -1 : slot;
+		if (forget != null) {
+			target = -1;
+			for (int i = 0; i < MoveSet.MOVE_COUNT && target < 0; i++) {
+				Move known = moves.get(i);
+				if (known != null && known.getTemplate().getNum() == forget) {
+					target = i;
+				}
+			}
+		}
 		if (target < 0 || moves.get(target) == null) {
 			target = -1;
 			for (int i = 0; i < MoveSet.MOVE_COUNT && target < 0; i++) {
@@ -510,12 +521,20 @@ public final class PartyService {
 		if (!event.getResult()) {
 			return;
 		}
-		String target = event.getEvolution().getResult().getSpecies();
-		Species species = target == null ? null : speciesById(target);
-		if (species != null && species.getNationalPokedexNumber() > evolutionCeilingOf(event.getPokemon().getOwnerPlayer())) {
+		if (!evolutionAllowed(event.getEvolution(), event.getPokemon().getOwnerPlayer())) {
 			event.setResult(false);
 			EVOLUTIONS_BLOCKED.incrementAndGet();
 		}
+	}
+
+	/**
+	 * The evolution rule (P14): false when the result is a species past the owner's followed region's ceiling. FP1: the
+	 * sync's {@code stones} apply the same rule, so the hidden stone check and Cobblemon agree.
+	 */
+	static boolean evolutionAllowed(Evolution evolution, @Nullable ServerPlayer owner) {
+		String target = evolution.getResult().getSpecies();
+		Species species = target == null ? null : speciesById(target);
+		return species == null || species.getNationalPokedexNumber() <= evolutionCeilingOf(owner);
 	}
 
 	/** The highest dex a player's Pokémon may evolve into (MG7, MULTI_GAME_PLAN §4.9): their followed region's ceiling. */

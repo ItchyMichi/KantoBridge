@@ -1,0 +1,33 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kantobridge.invalid/protocol/messages/party.order.schema.json",
+  "title": "party.order",
+  "description": "FOREIGN_POKEMON_PLAN §4.1, Q16: a SWITCH in the hidden party menu; Cobblemon reorders its party to match (R1: the lead is the same Pokémon in both).",
+  "x-type": "party.order",
+  "x-legs": [
+    "g2m",
+    "c2s"
+  ],
+  "x-re": "never",
+  "type": "object",
+  "required": [
+    "uids"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "uids": {
+      "type": "array",
+      "items": {
+        "$ref": "../defs.schema.json#/$defs/uid"
+      },
+      "uniqueItems": true,
+      "minItems": 1,
+      "maxItems": 6,
+      "description": "The hidden party's members with a uid, in their new order."
+    },
+    "region": {
+      "$ref": "../defs.schema.json#/$defs/regionId",
+      "description": "MG3 (several games): the region this message belongs to; absent = the legacy region. The client tags what it relays with its link's region; the server routes a tagged message to that region's link."
+    }
+  }
+}

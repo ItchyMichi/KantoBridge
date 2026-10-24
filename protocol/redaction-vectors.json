@@ -40,6 +40,11 @@
       "seq": 83,
       "redacted": {"ok": false, "kind": "bag.set", "reason": "too_many", "left": {"POTION": 1}}
     },
+    {
+      "type": "act.result",
+      "seq": 84,
+      "redacted": {"ok": false, "kind": "item", "reason": "move_known", "id": "it-1"}
+    },
     {"type": "activity", "seq": 11, "redacted": {"activity": "dialogue"}},
     {
       "type": "bag.set",
@@ -99,6 +104,32 @@
         "kind": "surf",
         "wild": "<rom:obj:4:39661ca2>",
         "rules": {"catch": true, "flee": true}
+      }
+    },
+    {
+      "type": "battle.start",
+      "seq": 13,
+      "redacted": {
+        "battle": "b-3",
+        "kind": "static",
+        "wild": "<rom:obj:2:5603cd3e>",
+        "use": ["0f8b6a2e-1c2d-4e5f-8a9b-0c1d2e3f4a5b"],
+        "rules": {"catch": true, "flee": true},
+        "region": "johto"
+      }
+    },
+    {
+      "type": "battle.start",
+      "seq": 14,
+      "redacted": {
+        "battle": "b-4",
+        "kind": "scripted",
+        "format": "multi",
+        "trainer": {"cls": "TRAINER_CLASS_TEST", "party": 3, "name": "<rom:str:10:3d5161a4>"},
+        "team": "<rom:arr:2:089ed3ca>",
+        "ally": "<rom:obj:2:a598dbcc>",
+        "rules": {"catch": false, "flee": false},
+        "region": "hoenn"
       }
     },
     {
@@ -194,6 +225,22 @@
       }
     },
     {
+      "type": "game.status",
+      "seq": 11,
+      "redacted": {
+        "game": "blue",
+        "region": "kanto",
+        "playthrough": "saved",
+        "ingame": true,
+        "started": true,
+        "badges": 3,
+        "markers": {"starter": true, "champion": false},
+        "name": "<rom:str:6:92397ad4>",
+        "slot": 1,
+        "visitors": 2
+      }
+    },
+    {
       "type": "hello",
       "seq": 11,
       "redacted": {
@@ -234,6 +281,21 @@
         "family": "gen1",
         "compat": {"maxDex": 151, "maxMove": 165, "nick": 10},
         "session": "s-7f3a92",
+        "tested": "0.3.85",
+        "union_room": "off"
+      }
+    },
+    {
+      "type": "hello.ok",
+      "seq": 13,
+      "redacted": {
+        "protocol": 1,
+        "bridge": "0.1.0",
+        "engine": "0.3.85",
+        "game": "crystal",
+        "family": "gen2",
+        "compat": {"maxDex": 251, "maxMove": 251, "nick": 10, "visitor": true},
+        "session": "s-7f3a93",
         "tested": "0.3.85",
         "union_room": "off"
       }
@@ -317,6 +379,42 @@
       }
     },
     {
+      "type": "party.change",
+      "seq": 11,
+      "redacted": {"uid": "0f8b6a2e-1c2d-4e5f-8a9b-0c1d2e3f4a5b", "id": "ch-1", "hp": 41}
+    },
+    {
+      "type": "party.change",
+      "seq": 12,
+      "redacted": {
+        "uid": "0f8b6a2e-1c2d-4e5f-8a9b-0c1d2e3f4a5b",
+        "id": "ch-2",
+        "friendship": 140,
+        "region": "johto"
+      }
+    },
+    {
+      "type": "party.change",
+      "seq": 13,
+      "redacted": {
+        "uid": "6a1d3c4e-5f60-4a7b-8c9d-0e1f2a3b4c5d",
+        "id": "ch-3",
+        "hp": 1,
+        "status": "none",
+        "region": "hoenn"
+      }
+    },
+    {
+      "type": "party.forget",
+      "seq": 11,
+      "redacted": {
+        "uid": "0f8b6a2e-1c2d-4e5f-8a9b-0c1d2e3f4a5b",
+        "move": 57,
+        "id": "fg-1",
+        "region": "johto"
+      }
+    },
+    {
       "type": "party.give",
       "seq": 11,
       "redacted": {"give": "g-1", "dex": 7, "level": 5, "moves": [33, 39], "source": "starter"}
@@ -348,6 +446,26 @@
     },
     {"type": "party.heal", "seq": 11, "redacted": {}},
     {
+      "type": "party.hold",
+      "seq": 11,
+      "redacted": {
+        "uid": "0f8b6a2e-1c2d-4e5f-8a9b-0c1d2e3f4a5b",
+        "item": "leftovers",
+        "id": "hd-1",
+        "region": "johto"
+      }
+    },
+    {
+      "type": "party.hold",
+      "seq": 12,
+      "redacted": {
+        "uid": "0f8b6a2e-1c2d-4e5f-8a9b-0c1d2e3f4a5b",
+        "item": null,
+        "id": "hd-2",
+        "region": "johto"
+      }
+    },
+    {
       "type": "party.item",
       "seq": 11,
       "redacted": {"item": "TEST_STONE", "uid": "0f8b6a2e-1c2d-4e5f-8a9b-0c1d2e3f4a5b"}
@@ -360,6 +478,65 @@
         "uid": "0f8b6a2e-1c2d-4e5f-8a9b-0c1d2e3f4a5b",
         "slot": 3,
         "move": 15
+      }
+    },
+    {
+      "type": "party.item",
+      "seq": 13,
+      "redacted": {
+        "item": "TM_EARTHQUAKE",
+        "uid": "0f8b6a2e-1c2d-4e5f-8a9b-0c1d2e3f4a5b",
+        "id": "it-1",
+        "kind": "machine",
+        "move": 89,
+        "forget": 337
+      }
+    },
+    {
+      "type": "party.item",
+      "seq": 14,
+      "redacted": {
+        "item": "POTION",
+        "uid": "0f8b6a2e-1c2d-4e5f-8a9b-0c1d2e3f4a5b",
+        "id": "it-2",
+        "kind": "medicine",
+        "region": "hoenn"
+      }
+    },
+    {
+      "type": "party.learn",
+      "seq": 11,
+      "redacted": {
+        "uid": "0f8b6a2e-1c2d-4e5f-8a9b-0c1d2e3f4a5b",
+        "move": 7,
+        "forget": 33,
+        "id": "ln-1",
+        "region": "johto"
+      }
+    },
+    {
+      "type": "party.learn",
+      "seq": 12,
+      "redacted": {
+        "uid": "6a1d3c4e-5f60-4a7b-8c9d-0e1f2a3b4c5d",
+        "move": 9,
+        "id": "ln-2",
+        "region": "hoenn"
+      }
+    },
+    {
+      "type": "party.order",
+      "seq": 11,
+      "redacted": {
+        "uids": ["6a1d3c4e-5f60-4a7b-8c9d-0e1f2a3b4c5d", "0f8b6a2e-1c2d-4e5f-8a9b-0c1d2e3f4a5b"]
+      }
+    },
+    {
+      "type": "party.order",
+      "seq": 12,
+      "redacted": {
+        "uids": ["0f8b6a2e-1c2d-4e5f-8a9b-0c1d2e3f4a5b", "6a1d3c4e-5f60-4a7b-8c9d-0e1f2a3b4c5d"],
+        "region": "johto"
       }
     },
     {
@@ -389,9 +566,68 @@
       }
     },
     {
+      "type": "party.sync",
+      "seq": 12,
+      "redacted": {
+        "party": [
+          {
+            "uid": "0f8b6a2e-1c2d-4e5f-8a9b-0c1d2e3f4a5b",
+            "dex": 445,
+            "level": 48,
+            "nick": "<rom:str:6:51aea881>",
+            "moves": [57, 15, 89, 337],
+            "hp": 150,
+            "maxhp": 160,
+            "gender": "female",
+            "friendship": 120,
+            "stats": {"hp": 160, "atk": 140, "def": 105, "spa": 90, "spd": 95, "spe": 112},
+            "types": ["dragon", "ground"],
+            "nature": "jolly",
+            "ot": "<rom:str:6:594e5712>",
+            "canLearn": [15, 57, 70, 89, 91, 337],
+            "stones": []
+          },
+          {
+            "uid": "6a1d3c4e-5f60-4a7b-8c9d-0e1f2a3b4c5d",
+            "dex": 37,
+            "level": 20,
+            "moves": [52],
+            "hp": 51,
+            "maxhp": 51,
+            "form": "alola",
+            "stats": {"hp": 51, "atk": 25, "def": 27, "spa": 30, "spd": 37, "spe": 39},
+            "types": ["ice"],
+            "nature": "timid",
+            "canLearn": [58],
+            "stones": ["ice_stone"]
+          },
+          {
+            "uid": "7b2e4d6f-8a1c-4e3b-9d5f-1a2b3c4d5e6f",
+            "dex": 0,
+            "level": 5,
+            "moves": [33],
+            "hp": 20,
+            "maxhp": 20,
+            "stats": {"hp": 20, "atk": 9, "def": 9, "spa": 9, "spd": 9, "spe": 9},
+            "types": ["normal"]
+          }
+        ],
+        "box": {"count": 0}
+      }
+    },
+    {
       "type": "party.take",
       "seq": 11,
       "redacted": {"uid": "0f8b6a2e-1c2d-4e5f-8a9b-0c1d2e3f4a5b", "reason": "trade"}
+    },
+    {
+      "type": "party.take",
+      "seq": 12,
+      "redacted": {
+        "uid": "0f8b6a2e-1c2d-4e5f-8a9b-0c1d2e3f4a5b",
+        "reason": "quest",
+        "region": "johto"
+      }
     },
     {"type": "pass.abort", "seq": 14, "redacted": {"route": "eastern_pass", "reason": "not_idle"}},
     {"type": "pass.cross", "seq": 12, "redacted": {"route": "eastern_pass", "dir": "to"}},
@@ -543,6 +779,16 @@
       "redacted": {"kind": "hidden_older", "hiddenAt": 1789990000, "worldAt": 1790000000}
     },
     {"type": "session.bind", "seq": 11, "redacted": {"world": "kanto-test", "multiplayer": true}},
+    {
+      "type": "session.bind",
+      "seq": 12,
+      "redacted": {
+        "world": "kanto-test",
+        "multiplayer": false,
+        "incompatible": "leave_out",
+        "region": "johto"
+      }
+    },
     {"type": "session.bound", "seq": 11, "redacted": {"slot": 2, "switched": "title"}},
     {"type": "session.waiting", "seq": 12, "redacted": {"slot": 2, "reason": "busy"}},
     {

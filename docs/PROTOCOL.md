@@ -169,7 +169,7 @@ optional ones. The schemas give the exact types and limits.
 | Type | Dir | Data | ROM |
 |---|---|---|---|
 | `hello` | M→G | `protocol:1, role:"client"\|"builder"\|"test", mod, minecraft?, player?{uuid,name}, world?{id,multiplayer}` | |
-| `hello.ok` | G→M | `protocol, bridge, engine, tested?, union_room?, game, family?, compat?{maxDex,maxMove,nick}, session`; `re` required. `game` is the running game's id (any id of the game catalogue, MG1), `family` its engine family and `compat` the adapter's real limits (both from the catalogue when absent). `tested`: the engine version gen1-bridge was tested with (M10); `union_room`: `"on"` while the engine's Union Room patched this boot's Centers (U3) | |
+| `hello.ok` | G→M | `protocol, bridge, engine, tested?, union_room?, game, family?, compat?{maxDex,maxMove,nick,visitor?}, session`; `re` required. `game` is the running game's id (any id of the game catalogue, MG1), `family` its engine family and `compat` the adapter's real limits (both from the catalogue when absent). `tested`: the engine version gen1-bridge was tested with (M10); `union_room`: `"on"` while the engine's Union Room patched this boot's Centers (U3); `compat.visitor`: whether the adapter registered its stand-in species (foreign Pokémon, below) | |
 | `hello.reject` | G→M | `reason:"protocol"\|"role"\|"malformed"\|"busy"\|"game", protocol`; `re` required. `game` (MG1): the process runs a game this bridge has no engine adapter for | |
 | `ping` | G→M, M→G | `t` (sender's ms clock) | |
 | `pong` | G→M, M→G | `t` (echoed); `re` required | |
@@ -251,7 +251,7 @@ end. Every other cave link stays an ordinary warp with a fade.
 | `act.interact` | M→G | `map, x, y` (face the cell and press A) | |
 | `act.button` | M→G | `button, how:"tap"\|"down"\|"up"` (mirror screen, start menu) | |
 | `act.field` | M→G | `action:"cut"\|"surf"\|"strength"\|"flash"\|"dig"\|"teleport"\|"bicycle"\|"fish"\|"fly"\|"headbutt"\|"rock_smash"\|"whirlpool"\|"waterfall"\|"sweet_scent", x?, y?, dest?, item?` (MG9: the last five are Gen 2's; Gen 2's Fly opens its own map, so `dest` is refused there) | |
-| `act.result` | G→M, S→C, C→S | `ok, kind?, reason?, detail?, moved?, left?`; `re` required. MG2: also answers `region.park`/`region.resume`/`region.start` (kinds `park`, `resume`, `start`; `detail` `new`\|`continue` for a start); MG5: the server's answer to `party.stash` (kind `stash`, `moved`) travels S→C; MG6: the answer to `bag.set` (kind `bag.set`, `left`) is forwarded C→S | |
+| `act.result` | G→M, M→G, S→C, C→S | `ok, kind?, reason?, detail?, moved?, left?, id?`; `re` required. MG2: also answers `region.park`/`region.resume`/`region.start` (kinds `park`, `resume`, `start`; `detail` `new`\|`continue` for a start); MG5: the server's answer to `party.stash` (kind `stash`, `moved`) travels S→C; MG6: the answer to `bag.set` (kind `bag.set`, `left`) is forwarded C→S; FP: the server's refusal of a `party.item` (kind `item`, `ok:false`, `reason`, `id`) travels S→C and the client relays it M→G to the link that sent the item | |
 
 **`act.field` (M8):** each action runs through the hidden game's own entry points after its own
 checks (the move in the party, the badge, the place). `x`/`y` name an adjacent target cell (a cut
@@ -429,7 +429,7 @@ it for that player's collision.
 
 | Type | Dir | Data | ROM |
 |---|---|---|---|
-| `battle.start` | G→M, C→S | `battle` (id), `kind:"trainer"\|"rival"\|"scripted"\|"static"\|"surf"\|"fish"`, `trainer?{cls,party,name?,npc?,map?,x?,y?}`, `team?[{dex,level,moves[],dvs{atk,def,spd,spc} or ivs{hp,atk,def,spa,spd,spe}, item?, shiny?, gender?, form?}]`, `wild?{dex,level,x?,y?,dvs?,item?,shiny?,gender?,form?}`, `rules{catch,flee}`. Trainer and rival battles need `trainer` and `team`; static, surf and fish need `wild`; scripted needs `team` or `wild`. `party` is the party index within the class (Gen 1), the trainer's id (Gen 3, up to 1023) or the member number within the class (Gen 2) | yes |
+| `battle.start` | G→M, C→S | `battle` (id), `kind:"trainer"\|"rival"\|"scripted"\|"static"\|"surf"\|"fish"`, `trainer?{cls,party,name?,npc?,map?,x?,y?}`, `team?[{dex,level,moves[],dvs{atk,def,spd,spc} or ivs{hp,atk,def,spa,spd,spe}, item?, shiny?, gender?, form?}]`, `wild?{dex,level,x?,y?,dvs?,item?,shiny?,gender?,form?}`, `rules{catch,flee}`, and (foreign Pokémon) `use?[uid]` (the player's Pokémon Cobblemon may use; absent: the whole party), `format?:"singles"\|"double"\|"multi"` (absent: singles), `ally?{name?, team[]}` (only with `format:"multi"`). Trainer and rival battles need `trainer` and `team`; static, surf and fish need `wild`; scripted needs `team` or `wild`. `party` is the party index within the class (Gen 1), the trainer's id (Gen 3, up to 1023) or the member number within the class (Gen 2) | yes |
 | `battle.result` | S→C, M→G | `battle, outcome:"win"\|"lose"\|"fled"\|"caught"\|"aborted"`, `caught?{uid,dex,level}` (required when caught) | |
 | `battle.native` | G→M | `kind:"safari"\|"old_man"\|"ghost"\|"contest"\|"tower", phase:"start"\|"end"` (MG9: Gen 2's Bug-Catching Contest and Battle Tower; its catch tutorial is `old_man`) | |
 
@@ -550,8 +550,9 @@ it for that player's collision.
   gift put in a Gen 1 box is taken out of it, because Cobblemon's PC keeps it. gen1-bridge gives up on
   a gift after 5 syncs and 2 minutes without it.
 - **`party.sync` on the Gen 1 side** rebuilds the hidden party in place (species from dex, level,
-  moves by Gen 1 number, HP, status), keeping uids in the mod's save data; non-Gen-1 species and
-  moves are left out with counted warnings; a sync waits while a gift is pending, at the title
+  moves by Gen 1 number, HP, status), keeping uids in the mod's save data; species and moves the game
+  can't hold are left out with counted warnings (`party.foreign_species`, `party.foreign_moves`; FP2 makes such
+  members visitors); a sync waits while a gift is pending, at the title
   screen, or under a native battle.
 - **`party.heal`** is sent on the engine's `heal_party` (Mom, …) and on a blackout.
 - **Content rules (M8):** direct battles the engine pushes itself are held too: the ghost Marowak as
@@ -592,12 +593,17 @@ it for that player's collision.
 
 | Type | Dir | Data | ROM |
 |---|---|---|---|
-| `party.sync` | S→C, M→G | `party[{uid, give?, dex, level, nick?, moves[], hp, maxhp, status?, item?, shiny?, gender?, form?, friendship?}], box{count}` (Cobblemon is authoritative) | yes |
+| `party.sync` | S→C, M→G | `party[{uid, give?, dex, level, nick?, moves[], hp, maxhp, status?, item?, shiny?, gender?, form?, friendship?, stats?{hp,atk,def,spa,spd,spe}, types?[], nature?, ot?, canLearn?[], stones?[]}], box{count}` (Cobblemon is authoritative; `dex` 0: a species with no national number) | yes |
 | `party.give` | G→M, C→S | `give` (id), `dex, level, moves[]?, dvs?, ivs?, nick?, ot?, item?, shiny?, gender?, form?, friendship?, source:"starter"\|"gift"\|"trade"\|"prize"\|"native_catch"\|"egg"` (`ivs` over `dvs` when both; `egg`: an egg that hatched in the hidden game) | yes |
-| `party.take` | G→M, C→S | `uid, reason:"trade"\|"daycare"` | |
+| `party.take` | G→M, C→S | `uid, reason:"trade"\|"daycare"\|"quest"` (`quest`: a quest took it, Kenya, Shuckie) | |
 | `party.heal` | G→M, C→S | `{}` | |
 | `party.rename` | G→M, C→S | `uid, nick` (empty clears) | yes |
-| `party.item` | G→M, C→S | `item, uid, slot?, move?` (stone, TM/HM, Rare Candy) | |
+| `party.item` | G→M, C→S | `item, uid, id?, kind?:"stone"\|"machine"\|"candy"\|"medicine"\|"pp"\|"vitamin"\|"other", slot?, move?, forget?` (an item from the hidden bag; a refusal is answered `act.result{kind:"item"}`) | |
+| `party.order` | G→M, C→S | `uids[]` (a SWITCH in the hidden party menu: the new order) | |
+| `party.change` | G→M, C→S | `uid, id, hp?, status?:"slp"\|"psn"\|"brn"\|"frz"\|"par"\|"none", friendship?` (an effect outside items: overworld poison, a haircut; at least one value) | |
+| `party.hold` | G→M, C→S | `uid, item\|null, id` (GIVE/TAKE in the hidden party menu; `item` a canonical id, null for TAKE) | |
+| `party.learn` | G→M, C→S | `uid, move, forget?, id` (a Move Tutor or the Move Reminder) | |
+| `party.forget` | G→M, C→S | `uid, move, id` (the Move Deleter) | |
 | `dex.sync` | S→C, M→G | `seen[dex], owned[dex]`: every species the server can name (MG7: the first 386); each bridge keeps the ones its game holds (its compat `maxDex`) and counts the rest | |
 | `bag.sync` | G→M, C→S | `items{item:qty}` (battle-usable subset), and (MG6) `money?`, `stamp?` (the ledger stamp of the last projection) | |
 | `bag.use` | S→C, M→G | `item, qty` (consumed in Minecraft) | |
@@ -616,6 +622,27 @@ Minecraft applies shininess, gender, the held item (when Cobblemon has that item
 but not applied (Cobblemon's Unown has no letters). Gen 2's DVs are Gen 1's shape (`dvs`), and a Gen 2 game builds a
 new party member's DVs so that its gender, shininess and letter match what Cobblemon's member has.
 
+**Foreign Pokémon (FP1, [specs/FOREIGN_POKEMON_PLAN.md](specs/FOREIGN_POKEMON_PLAN.md) §8):** every Cobblemon
+party member gets a record in each hidden game; one the game can't show as itself (a species over its `compat.maxDex`,
+`dex` 0, a form it lacks) is a **visitor**, the adapter's stand-in species carrying the member's name, level, HP, stats
+and field moves. So `party.sync` members carry, besides today's fields: `form` (Cobblemon's Showdown form id, absent for
+the standard form), `stats` (Cobblemon's six numbers, pinned on every record with a uid), `types` (lower-case Showdown
+names), `nature`, `ot` (only when the original trainer isn't the owner), `canLearn` (the TM/HM move numbers Cobblemon's
+learnset allows; each adapter keeps its game's machines) and `stones` (the canonical ids of the stones that would evolve
+it now, the evolution rules applied); a species with no national number goes out as `dex: 0` instead of being dropped.
+The hidden game reports, Cobblemon decides (rule R6): a SWITCH is `party.order`, an effect outside items `party.change`,
+GIVE/TAKE `party.hold`, tutors `party.learn`, the Deleter `party.forget`, a quest that takes a Pokémon `party.take{reason:
+"quest"}`; each carries an `id` where a repeat would double an effect, and Cobblemon applies an id once. `party.item`
+gains `id`, `kind` and `forget` (the move replaced, by number); refusals come back as `act.result{kind:"item", ok:false,
+reason, id}` with reasons `unknown_uid`, `no_slot`, `move_known`, `no_evolution`, `max_level`, `no_effect`,
+`unsupported`. `hello.ok.compat.visitor` says whether the stand-in registered (false: such members are left out, as
+before); `session.bind.incompatible` carries the region's choice (`visitor`, the default, or `leave_out`);
+`game.status.visitors` counts the visitors; `battle.start` gains `use`, `format` and `ally` for the hidden game's own
+battles handed to Cobblemon (§4.12). The warnings for members and moves a game can't hold are `party.foreign_species`
+and `party.foreign_moves` (they were `party.non_gen1_*`), and a nickname is cut to the game's `compat.nick`. The
+messages and fields are defined now; each phase of the plan starts sending or applying its own (PROGRESS.md "Foreign
+Pokémon").
+
 Species travel as national dex numbers (defs `nationalDex`), moves as Showdown numbers (defs
 `moveNum`; Gen 1's move ids are the same numbers), items as engine symbols, and Pokémon identities
 as Cobblemon UUIDs (`uid`). The schemas carry any number up to 2000; what a game holds is its
@@ -627,7 +654,7 @@ compat profile (`hello.ok.compat`: Gen 1 151 and 165, Emerald 386 and 354), appl
 |---|---|---|---|
 | `save.begin` | G→M, C→S | `save` (id), `reason:"menu"\|"center"`, `pair` (the hidden save's lasting id), `at?` (its time, Unix s) | |
 | `save.done` | S→C, M→G | `save, ok`; `re` optional | |
-| `session.bind` | S→C, M→G | `world, multiplayer` (save pairing: the server tells its client the world id; the client passes it on after joining and after every reconnect) | |
+| `session.bind` | S→C, M→G | `world, multiplayer, incompatible?:"visitor"\|"leave_out"` (save pairing: the server tells its client the world id; the client passes it on after joining and after every reconnect; `incompatible`, M→G: the link's region record's `rules.compat.onIncompatible`, absent = `visitor`) | |
 | `session.bound` | G→M, C→S | `slot, switched?:"none"\|"title"\|"saved"\|"moved"`; `re` optional (the client records the pairing on the server) | |
 | `session.waiting` | G→M | `slot, reason:"busy"\|"new_game"\|"save_failed"`; `re` optional (the bind) | |
 | `save.loaded` | G→M, C→S | `fresh, ops, pair?, at?, daycare?, boarded?` (which save the hidden game runs from; M10 crash recovery; `boarded`: every uid the daycare holds when it holds more than one) | |
@@ -810,7 +837,7 @@ compat profile (`hello.ok.compat`: Gen 1 151 and 165, Emerald 386 and 354), appl
 
 | Type | Dir | Data | ROM |
 |---|---|---|---|
-| `game.status` | G→M, C→S | `game, region?, playthrough:"title"\|"fresh"\|"saved", ingame, started, badges, markers{<name>:bool}, name?, slot?` (one hidden game's story progress; `name` is the save's player name, the player's own text) | yes |
+| `game.status` | G→M, C→S | `game, region?, playthrough:"title"\|"fresh"\|"saved", ingame, started, badges, markers{<name>:bool}, name?, slot?, visitors?` (one hidden game's story progress; `name` is the save's player name, the player's own text; `visitors`: how many party members it shows as visitors) | yes |
 | `region.park` | M→G | `region` (hold this game where it stands) → `act.result{kind:"park"}` | |
 | `region.resume` | M→G | `region, to{map,x,y,facing}` (release the hold; warp onto `to` when not there) → `act.result{kind:"resume"}` | |
 | `region.start` | M→G | `region` (start the game from its title: CONTINUE or NEW GAME) → `act.result{kind:"start", detail:"new"\|"continue"}` | |

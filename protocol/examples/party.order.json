@@ -1,0 +1,23 @@
+[
+  {
+    "type": "party.order",
+    "seq": 11,
+    "data": {
+      "uids": [
+        "6a1d3c4e-5f60-4a7b-8c9d-0e1f2a3b4c5d",
+        "0f8b6a2e-1c2d-4e5f-8a9b-0c1d2e3f4a5b"
+      ]
+    }
+  },
+  {
+    "type": "party.order",
+    "seq": 12,
+    "data": {
+      "uids": [
+        "0f8b6a2e-1c2d-4e5f-8a9b-0c1d2e3f4a5b",
+        "6a1d3c4e-5f60-4a7b-8c9d-0e1f2a3b4c5d"
+      ],
+      "region": "johto"
+    }
+  }
+]

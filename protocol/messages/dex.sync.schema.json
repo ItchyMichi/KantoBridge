@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://kantobridge.invalid/protocol/messages/dex.sync.schema.json",
   "title": "dex.sync",
-  "description": "Pokédex seen/owned (dex <= 151) from Cobblemon.",
+  "description": "Pokédex seen/owned from Cobblemon: every species the server can name; each bridge keeps the ones its game holds (its compat maxDex).",
   "x-type": "dex.sync",
   "x-legs": ["m2g", "s2c"],
   "x-re": "never",

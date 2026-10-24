@@ -19,7 +19,8 @@ public final class RegionTags {
 			MsgTypes.ROUTE_RESULT, MsgTypes.ROUTE_PROGRESS, MsgTypes.ROUTE_SIGHT, MsgTypes.ROUTE_FADE, MsgTypes.PARTY_GIVE, MsgTypes.PARTY_HEAL,
 			MsgTypes.PARTY_ITEM, MsgTypes.PARTY_RENAME, MsgTypes.PARTY_SYNC, MsgTypes.PARTY_TAKE, MsgTypes.DAYCARE_DEPOSIT,
 			MsgTypes.DAYCARE_WITHDRAW, MsgTypes.BAG_SYNC, MsgTypes.BAG_USE, MsgTypes.BATTLE_NATIVE, MsgTypes.BATTLE_RESULT, MsgTypes.BATTLE_START,
-			MsgTypes.PC_OPEN, MsgTypes.PC_CLOSED, MsgTypes.GAME_STATUS);
+			MsgTypes.PC_OPEN, MsgTypes.PC_CLOSED, MsgTypes.GAME_STATUS, MsgTypes.PARTY_ORDER, MsgTypes.PARTY_CHANGE, MsgTypes.PARTY_HOLD,
+			MsgTypes.PARTY_LEARN, MsgTypes.PARTY_FORGET);
 
 	private RegionTags() {
 	}

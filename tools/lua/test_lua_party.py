@@ -329,10 +329,38 @@ def test_sync_leaves_out_species_and_moves_beyond_gen1_with_a_counted_warning():
     assert species(g) == ["BIRDMON"]
     assert [mv.id for mv in g.party()[0].moves.values()] == [b"GUST_T"]
     st = g.status()
-    assert st["partyNonGen1Species"] == 1 and st["partyNonGen1Moves"] == 2
+    assert st["partyForeignSpecies"] == 1 and st["partyForeignMoves"] == 2
     logs = g.rig.logs()
-    assert any("party.non_gen1_species" in line for line in logs)
-    assert any("party.non_gen1_moves" in line for line in logs)
+    # FP1: named for any game (they were party.non_gen1_*)
+    assert any("party.foreign_species" in line for line in logs)
+    assert any("party.foreign_moves" in line for line in logs)
+    assert not any("non_gen1" in line for line in logs)
+
+
+# FP1 (FOREIGN_POKEMON_PLAN section 8): what a visitor record needs, all made up
+VISITOR_FIELDS = {"stats": {"hp": 20, "atk": 11, "def": 12, "spa": 13, "spd": 14, "spe": 15},
+                  "types": ["dragon", "ground"], "nature": "jolly", "ot": "TRADER", "form": "alola",
+                  "canLearn": [15, 57, 89], "stones": ["ice_stone"]}
+
+
+def test_a_sync_with_the_visitor_fields_is_accepted_and_applied():
+    g = BattleGame()
+    sync(g, [entry(U2, 16, 9, [N["GUST_T"]], **VISITOR_FIELDS),
+             entry(U1, 16, 7, [N["GUST_T"]], types=["normal"], canLearn=[], stones=[])])
+    g.run(2)
+    assert not errors(g)
+    assert species(g) == ["BIRDMON", "BIRDMON"]
+
+
+def test_dex_0_is_a_valid_member_left_out_until_visitors_exist():
+    # a Cobblemon species with no national number goes out as dex 0 (Q21); before FP2's visitor
+    # path the game can't show it, so it is counted like any foreign species
+    g = BattleGame()
+    sync(g, [entry(U1, 0, 5, [N["TACKLE_T"]], **VISITOR_FIELDS), entry(U2, 16, 9, [N["GUST_T"]])])
+    g.run(2)
+    assert not errors(g)
+    assert species(g) == ["BIRDMON"]
+    assert g.status()["partyForeignSpecies"] == 1
 
 
 def test_a_sync_with_no_gen1_move_keeps_the_members_moves():
@@ -371,6 +399,20 @@ def test_the_last_sync_applies_again_after_new_game_or_continue():
     {"party": [entry(U1, 16, 101, [16])], "box": {"count": 0}},
     {"party": [entry(U1, 16, 9, [16, 33, 45, 22, 10])], "box": {"count": 0}},
     {"party": []},
+    # FP1: the visitor fields, each against its schema
+    {"party": [entry(U1, -1, 9, [16])], "box": {"count": 0}},
+    {"party": [entry(U1, 16, 9, [16], stats={"hp": 20, "atk": 1, "def": 1, "spa": 1, "spd": 1})], "box": {"count": 0}},
+    {"party": [entry(U1, 16, 9, [16], stats={"hp": 0, "atk": 1, "def": 1, "spa": 1, "spd": 1, "spe": 1})],
+     "box": {"count": 0}},
+    {"party": [entry(U1, 16, 9, [16], types=[])], "box": {"count": 0}},
+    {"party": [entry(U1, 16, 9, [16], types=["fire", "fire"])], "box": {"count": 0}},
+    {"party": [entry(U1, 16, 9, [16], types=["fire", "water", "grass"])], "box": {"count": 0}},
+    {"party": [entry(U1, 16, 9, [16], types=["Fire"])], "box": {"count": 0}},
+    {"party": [entry(U1, 16, 9, [16], nature="Jolly")], "box": {"count": 0}},
+    {"party": [entry(U1, 16, 9, [16], ot=7)], "box": {"count": 0}},
+    {"party": [entry(U1, 16, 9, [16], canLearn=[15, 15])], "box": {"count": 0}},
+    {"party": [entry(U1, 16, 9, [16], canLearn=[0])], "box": {"count": 0}},
+    {"party": [entry(U1, 16, 9, [16], stones=["FIRE_STONE"])], "box": {"count": 0}},
 ])
 def test_bad_syncs_are_refused(bad):
     g = BattleGame()
@@ -401,6 +443,10 @@ def test_engine_nickname_rules():
     assert Party.engineNick(b"<PK><MN>ABCDEFGHIJ") == b"<PK><MN>ABCDEFGH"
     assert Party.engineNick("é\x01ÉB".encode()) == "éÉB".encode()
     assert Party.engineNick(b"") is None and Party.engineNick(None) is None
+    # FP1: the game's compat.nick (Gen 1's 10 when it is missing or out of range)
+    assert Party.engineNick(b"<PK>ABCDEFG", 5) == b"<PK>ABCD"
+    assert Party.engineNick(b"ABCDEFGHIJKLMNOPQ", 16) == b"ABCDEFGHIJKLMNOP"
+    assert Party.engineNick(b"ABCDEFGHIJKL", 0) == b"ABCDEFGHIJ"
 
 
 # ------------------------------------------------------------ heals

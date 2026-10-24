@@ -53,4 +53,36 @@ class DexAndItemMessagesTest {
 			assertThrows(DataException.class, () -> PartyItem.read(ProtoJson.parseObject(bad)), bad);
 		}
 	}
+
+	@Test
+	void anItemCarriesItsIdKindAndTheMoveForgotten() throws Exception {
+		// FP1 (FOREIGN_POKEMON_PLAN §4.4): id, kind and forget; an old sender's message still reads
+		String uid = "0f8b6a2e-1c2d-4e5f-8a9b-0c1d2e3f4a5b";
+		PartyItem machine = PartyItem.read(ProtoJson.parseObject("{\"item\":\"TM_EARTHQUAKE\",\"uid\":\"" + uid
+				+ "\",\"id\":\"it-1\",\"kind\":\"machine\",\"move\":89,\"forget\":337,\"region\":\"hoenn\"}"));
+		assertEquals(PartyItem.Kind.MACHINE, machine.kind());
+		assertEquals("it-1", machine.id());
+		assertEquals("machine", machine.sentKind());
+		assertEquals(337, machine.forget());
+		assertNull(machine.slot());
+		PartyItem old = PartyItem.read(ProtoJson.parseObject("{\"item\":\"RARE_CANDY\",\"uid\":\"" + uid + "\"}"));
+		assertNull(old.id());
+		assertNull(old.sentKind());
+		assertEquals(new PartyItem("RARE_CANDY", UUID.fromString(uid), null, null), old);
+		// the kinds Cobblemon has no rule for yet are OTHER (FP4 applies them), whatever the item
+		for (String kind : List.of("medicine", "pp", "vitamin", "other")) {
+			assertEquals(PartyItem.Kind.OTHER, PartyItem.read(ProtoJson.parseObject("{\"item\":\"RARE_CANDY\",\"uid\":\"" + uid
+					+ "\",\"kind\":\"" + kind + "\",\"id\":\"it-2\"}")).kind(), kind);
+		}
+		assertEquals(PartyItem.Kind.STONE, PartyItem.read(ProtoJson.parseObject("{\"item\":\"MOON_STONE\",\"uid\":\"" + uid
+				+ "\",\"kind\":\"stone\"}")).kind());
+		assertEquals(PartyItem.Kind.RARE_CANDY, PartyItem.read(ProtoJson.parseObject("{\"item\":\"RARE_CANDY\",\"uid\":\"" + uid
+				+ "\",\"kind\":\"candy\"}")).kind());
+		// Malformed: an unknown kind, forget without a move, a bad id, forget past the protocol.
+		for (String bad : List.of("{\"item\":\"POTION\",\"uid\":\"" + uid + "\",\"kind\":\"potion\"}",
+				"{\"item\":\"TM_X\",\"uid\":\"" + uid + "\",\"forget\":33}", "{\"item\":\"POTION\",\"uid\":\"" + uid + "\",\"id\":\"a b\"}",
+				"{\"item\":\"TM_X\",\"uid\":\"" + uid + "\",\"move\":89,\"forget\":2001}")) {
+			assertThrows(DataException.class, () -> PartyItem.read(ProtoJson.parseObject(bad)), bad);
+		}
+	}
 }

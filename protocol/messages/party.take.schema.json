@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://kantobridge.invalid/protocol/messages/party.take.schema.json",
   "title": "party.take",
-  "description": "The hidden game takes a party Pokémon away (in-game trade).",
+  "description": "The hidden game takes a party Pokémon away (in-game trade, the daycare, a quest that takes it: Kenya, Shuckie).",
   "x-type": "party.take",
   "x-legs": [
     "g2m",
@@ -22,7 +22,8 @@
     "reason": {
       "enum": [
         "trade",
-        "daycare"
+        "daycare",
+        "quest"
       ]
     },
     "region": {

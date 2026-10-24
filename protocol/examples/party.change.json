@@ -1,0 +1,32 @@
+[
+  {
+    "type": "party.change",
+    "seq": 11,
+    "data": {
+      "uid": "0f8b6a2e-1c2d-4e5f-8a9b-0c1d2e3f4a5b",
+      "id": "ch-1",
+      "hp": 41
+    }
+  },
+  {
+    "type": "party.change",
+    "seq": 12,
+    "data": {
+      "uid": "0f8b6a2e-1c2d-4e5f-8a9b-0c1d2e3f4a5b",
+      "id": "ch-2",
+      "friendship": 140,
+      "region": "johto"
+    }
+  },
+  {
+    "type": "party.change",
+    "seq": 13,
+    "data": {
+      "uid": "6a1d3c4e-5f60-4a7b-8c9d-0e1f2a3b4c5d",
+      "id": "ch-3",
+      "hp": 1,
+      "status": "none",
+      "region": "hoenn"
+    }
+  }
+]

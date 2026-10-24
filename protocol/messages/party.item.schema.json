@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://kantobridge.invalid/protocol/messages/party.item.schema.json",
   "title": "party.item",
-  "description": "An item used on a Pokémon: stone, TM/HM or Rare Candy.",
+  "description": "An item from the hidden bag used on a Pokémon (FOREIGN_POKEMON_PLAN §4.4): Cobblemon applies it with its own amounts; a refusal comes back as act.result{kind:\"item\"}.",
   "x-type": "party.item",
   "x-legs": [
     "g2m",
@@ -26,11 +26,31 @@
       "type": "integer",
       "minimum": 0,
       "maximum": 3,
-      "description": "TM/HM: the move slot replaced."
+      "description": "TM/HM: the move slot replaced (older senders; forget names the move)."
     },
     "move": {
       "$ref": "../defs.schema.json#/$defs/moveNum",
       "description": "TM/HM: the move taught."
+    },
+    "id": {
+      "$ref": "../defs.schema.json#/$defs/id",
+      "description": "Idempotent: Cobblemon applies an id once; gen1-bridge re-sends it after snapshots until a sync follows."
+    },
+    "kind": {
+      "enum": [
+        "stone",
+        "machine",
+        "candy",
+        "medicine",
+        "pp",
+        "vitamin",
+        "other"
+      ],
+      "description": "What the item does: medicine is HP, status and Revive; pp Ether, Elixir, PP Up, PP Max; vitamin EVs; other anything new (Cobblemon warns, the hidden effect stands). Absent: decided from item and move, as before."
+    },
+    "forget": {
+      "$ref": "../defs.schema.json#/$defs/moveNum",
+      "description": "TM/HM: the move the taught one replaced (by number: the hidden slot and Cobblemon's need not match)."
     },
     "region": {
       "$ref": "../defs.schema.json#/$defs/regionId",

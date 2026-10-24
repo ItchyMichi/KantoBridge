@@ -29,7 +29,8 @@
       "properties": {
         "maxDex": {"type": "integer", "minimum": 1, "maximum": 2000, "description": "The highest national dex number the game holds."},
         "maxMove": {"type": "integer", "minimum": 1, "maximum": 2000, "description": "The highest move number the game holds."},
-        "nick": {"type": "integer", "minimum": 1, "maximum": 16, "description": "The longest nickname the game stores."}
+        "nick": {"type": "integer", "minimum": 1, "maximum": 16, "description": "The longest nickname the game stores."},
+        "visitor": {"type": "boolean", "description": "hello.ok only (FOREIGN_POKEMON_PLAN §4.15): whether the adapter registered its stand-in species, so members this game lacks are visitors; false means they are left out."}
       },
       "description": "A game's compatibility profile: what its shadow party can hold (MULTI_GAME_PLAN §4.9)."
     },
@@ -134,6 +135,12 @@
       "maximum": 2000,
       "description": "Any national dex number (Cobblemon side)."
     },
+    "partyDex": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 2000,
+      "description": "A party member's national dex number, or 0 for a Cobblemon species that has none (FOREIGN_POKEMON_PLAN §4.1, Q21: a visitor in every game)."
+    },
     "level": {"type": "integer", "minimum": 1, "maximum": 100},
     "gen1Move": {
       "type": "integer",
@@ -193,6 +200,30 @@
       "minimum": 0,
       "maximum": 255,
       "description": "MG9 (G2F): friendship (Gen 2's happiness), 0-255."
+    },
+    "stats": {
+      "type": "object",
+      "required": ["hp", "atk", "def", "spa", "spd", "spe"],
+      "additionalProperties": false,
+      "properties": {
+        "hp": {"type": "integer", "minimum": 1, "maximum": 9999},
+        "atk": {"type": "integer", "minimum": 1, "maximum": 9999},
+        "def": {"type": "integer", "minimum": 1, "maximum": 9999},
+        "spa": {"type": "integer", "minimum": 1, "maximum": 9999},
+        "spd": {"type": "integer", "minimum": 1, "maximum": 9999},
+        "spe": {"type": "integer", "minimum": 1, "maximum": 9999}
+      },
+      "description": "A Pokémon's six stats as Cobblemon has them (FOREIGN_POKEMON_PLAN §3.2, Q20: every record with a uid shows these numbers); Gen 1's special is spa."
+    },
+    "typeName": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_]{0,23}$",
+      "description": "A Pokémon type as Showdown and Cobblemon name it, lower case: normal, fire, ..., dark, steel, fairy. Each adapter maps it to its game's (FOREIGN_POKEMON_PLAN §3.2)."
+    },
+    "nature": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_]{0,23}$",
+      "description": "A nature as Cobblemon names it, lower case (hardy, adamant, ...): Emerald's summary and Pokéblock taste (FOREIGN_POKEMON_PLAN Q6)."
     },
     "cell": {
       "type": "object",

@@ -1,0 +1,40 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kantobridge.invalid/protocol/messages/party.learn.schema.json",
+  "title": "party.learn",
+  "description": "FOREIGN_POKEMON_PLAN §4.5, Q18: a Move Tutor or the Move Reminder taught a move in the hidden game.",
+  "x-type": "party.learn",
+  "x-legs": [
+    "g2m",
+    "c2s"
+  ],
+  "x-re": "never",
+  "type": "object",
+  "required": [
+    "uid",
+    "move",
+    "id"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "uid": {
+      "$ref": "../defs.schema.json#/$defs/uid"
+    },
+    "move": {
+      "$ref": "../defs.schema.json#/$defs/moveNum",
+      "description": "The move taught."
+    },
+    "forget": {
+      "$ref": "../defs.schema.json#/$defs/moveNum",
+      "description": "The move it replaced, when one was."
+    },
+    "id": {
+      "$ref": "../defs.schema.json#/$defs/id",
+      "description": "Idempotent: Cobblemon applies an id once."
+    },
+    "region": {
+      "$ref": "../defs.schema.json#/$defs/regionId",
+      "description": "MG3 (several games): the region this message belongs to; absent = the legacy region. The client tags what it relays with its link's region; the server routes a tagged message to that region's link."
+    }
+  }
+}

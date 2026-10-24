@@ -23,7 +23,7 @@
     },
     "compat": {
       "$ref": "../defs.schema.json#/$defs/compat",
-      "description": "The adapter's real compatibility limits (MG1); absent means the catalogue's profile for the game."
+      "description": "The adapter's real compatibility limits (MG1); absent means the catalogue's profile for the game. visitor (FOREIGN_POKEMON_PLAN §4.15): whether the stand-in species registered."
     },
     "session": {
       "$ref": "../defs.schema.json#/$defs/id",

@@ -22,6 +22,13 @@
     "multiplayer": {
       "type": "boolean"
     },
+    "incompatible": {
+      "enum": [
+        "visitor",
+        "leave_out"
+      ],
+      "description": "FOREIGN_POKEMON_PLAN §4.15, Q12: the region record's rules.compat.onIncompatible, what the link does with a member its game lacks; absent: visitor."
+    },
     "region": {
       "$ref": "../defs.schema.json#/$defs/regionId",
       "description": "MG3 (several games): the region this message belongs to; absent = the legacy region. The client tags what it relays with its link's region; the server routes a tagged message to that region's link."

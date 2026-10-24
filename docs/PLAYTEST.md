@@ -1000,3 +1000,12 @@ needs exporting again.
       one a new game starts with: it hangs on a wall, where no story cell can stand (a known gap). Needs Johto
       rebuilding (the bedroom's story cells are new).
 - [ ] **Other players:** two players in different story states see their own doors, shutters and stairs.
+
+### Foreign Pokémon: FP1, the protocol (with you)
+
+FP1 only adds messages and fields; nothing in the game should look different yet.
+
+- [ ] Play a few minutes in an existing world (any region) with a normal party: syncs, heals, a trainer battle and a
+      Center work as before, and F7 shows no new errors.
+- [ ] A world built before 2026-10-24 has `"onIncompatible": "leave_out"` in its region records; tell me whether to
+      rebuild, edit or migrate them before FP2 makes foreign members visitors.

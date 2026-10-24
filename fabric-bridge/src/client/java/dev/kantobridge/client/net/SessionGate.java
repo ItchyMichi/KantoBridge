@@ -67,7 +67,8 @@ public final class SessionGate {
 	/** gen1-bridge's story data the client relays to the server (G→M → C→S), gated here. */
 	public static final Set<String> UP = Set.of(MsgTypes.BATTLE_START, MsgTypes.PARTY_GIVE, MsgTypes.PARTY_TAKE, MsgTypes.PARTY_HEAL,
 			MsgTypes.PARTY_RENAME, MsgTypes.PARTY_ITEM, MsgTypes.DAYCARE_DEPOSIT, MsgTypes.DAYCARE_WITHDRAW, MsgTypes.BAG_SYNC,
-			MsgTypes.SAVE_BEGIN, MsgTypes.PC_OPEN, MsgTypes.SAVE_LOADED);
+			MsgTypes.SAVE_BEGIN, MsgTypes.PC_OPEN, MsgTypes.SAVE_LOADED, MsgTypes.PARTY_ORDER, MsgTypes.PARTY_CHANGE, MsgTypes.PARTY_HOLD,
+			MsgTypes.PARTY_LEARN, MsgTypes.PARTY_FORGET);
 	/** {@code session.bound.switched}: the hidden game stayed on the save it ran, so what waited may go on (M10). */
 	public static final String SWITCHED_NONE = "none";
 	/** A refusal that won't go away: no save slots to pair (a cartridge install); play on unpaired. */

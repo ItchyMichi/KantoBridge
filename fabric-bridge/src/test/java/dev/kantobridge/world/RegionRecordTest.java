@@ -74,7 +74,7 @@ class RegionRecordTest {
 		assertEquals(index.hash(), legacy.hashes().index());
 		assertEquals(Hashes.sha256(""), legacy.hashes().shapeIndex(), "no shape documents: the hash of nothing");
 		assertEquals(RegionRecord.NO_GENERATOR, legacy.generator());
-		assertEquals(new RegionRecord.Compat(151, 165, 10, "leave_out"), legacy.rules().compat());
+		assertEquals(new RegionRecord.Compat(151, 165, 10, "visitor"), legacy.rules().compat(), "FP1: visitors by default (Q12)");
 		assertEquals("gen1", legacy.rules().profile());
 		assertNull(legacy.rules().movement());
 		assertEquals(new RegionRecord.Namespaces("red", "kantobridge:kanto"), legacy.namespaces());

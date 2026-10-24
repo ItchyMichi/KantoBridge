@@ -3061,6 +3061,61 @@ state can live on the record (§3.5); gen1's reclaim refills the party, not a bo
 icon sheet record (FP3), what `Gen2Save.encode` returns for the stand-in (FP2), Cobblemon's `MULTI` format with an
 NPC ally (FP5; `BattleTypes.MULTI` exists in 1.8.1).
 
+## Foreign Pokémon: FP1, the protocol (2026-10-24)
+
+FOREIGN_POKEMON_PLAN.md §8, built as the plan's §9 lists it. Protocol stays 1: five new types and optional fields only.
+
+- **Schemas** (`protocol/`): defs `partyDex` (0..2000), `stats`, `typeName`, `nature`, and `compat.visitor`
+  (hello.ok only). `party.sync` members: `dex` may be 0, `form` described as Cobblemon's Showdown form id, new
+  `stats`, `types` (1-2, unique), `nature`, `ot`, `canLearn` (≤512 unique move numbers), `stones` (≤16 canonical ids).
+  `party.item`: `id`, `kind` (stone, machine, candy, medicine, pp, vitamin, other), `forget`. `party.take.reason` +
+  `quest`. `act.result`: the M→G leg and `id` (kind `item`, reasons listed in PROTOCOL.md). `battle.start`: `use`,
+  `format`, `ally` (an ally needs `format:"multi"`). `game.status.visitors` (0-6). `session.bind.incompatible`.
+  New: `party.order`, `party.change` (at least one of hp, status incl. `none`, friendship), `party.hold` (`item` a
+  canonical id or null), `party.learn`, `party.forget`, all G→M and C→S with `region`. The region record's
+  `onIncompatible` got a description. `dex.sync`'s description no longer says 151. Examples for every new and
+  changed field; `catalog.json`, `redaction-vectors.json` and `gen1-bridge/lib/kb_catalog.lua` regenerated;
+  PROTOCOL.md's tables and a "Foreign Pokémon (FP1)" paragraph match.
+- **Java.** `PartySync` sends `dex: 0` instead of dropping a species with no national number, and per member `form`
+  (none for the standard form), `stats` (Cobblemon's six), `types`, `nature`, `ot` (only when the trainer isn't the
+  owner), `canLearn` (the form's TM learnset) and `stones` (each catalogue stone whose item evolution fits, its
+  requirements met and the result allowed by `PartyService.evolutionAllowed`, the rule the evolution veto now shares).
+  `PartyItem` reads `id`, `kind`, `forget`; a machine with `forget` replaces the slot holding that move; the kinds
+  without a Cobblemon rule yet (medicine, pp, vitamin, other) are `OTHER` (warned, as today) until FP4. `party.take
+  {quest}` removes the Pokémon like a trade. `BattleStart` reads `use`, `format`, `ally` (kept, unused until FP5).
+  `ProgressRecord` reads `visitors`. The client relays the five new types like the party requests (`GameRelay`, the
+  session gate, region tags) and `SessionBinder` sends the link's region `onIncompatible` in the bind (a change binds
+  again). The region record's default `onIncompatible` is now `visitor` (Q12).
+- **Lua.** `Party.validSync` accepts and checks every new field (dex 0 included); `Party.engineNick(s, max)` cuts at the
+  game's `compat.nick`; the warnings are `party.foreign_species`/`party.foreign_moves` and the counters
+  `foreignSpecies`/`foreignMoves` (debug.status `partyForeign*`). `hello.ok.compat.visitor` comes from a new session
+  option `visitor()`, absent so far: **false** until FP2 registers the stand-in. `kb_pairing` keeps the bind's
+  `incompatible` (`pairing.incompatible()`, debug.status `pairingLeaveOut`). An `act.result` arriving M→G has no
+  handler yet and is logged once at debug level (FP4 adds it).
+- **Stand-ins.** fake_gen1: `compat.visitor` (option `visitor`, default true), visitors counted from each sync (dex 0,
+  past maxDex, any form in a Gen 1 game; none when the bind said `leave_out`) in `game.status.visitors`, and helpers
+  for every new G→M message. fake_minecraft's `LinksDriver`: `sync_party` (to every link, parked ones too) and `bind`
+  with per-link `incompatible`.
+
+**Tests.** pytest (protocol, stand-ins, every lupa suite): 2,331 passed, 68 skipped (e2e). JUnit on kb-dev21: 742 tests in the touched packages (pokemon, battle, server, world, client, proto), 1 failed: `client.packs.KbPackReloadTest.modelsReadFitAndStayWithinTheBudget` fails the same way on the unchanged commit 5979dd6 (pre-existing, not FP1's; the pack model budget warning is missing). GameTests
+(PartyGameTests: the sync's new fields from real Cobblemon Pokémon, Pikachu's Thunder Stone, Bulbasaur's none, a trade's
+ot, a quest take): 126 GameTests, every party test passed; 1 failed, `regionbuildgametests.tworegionsshareoneworld` "build still running", the known region-build flake on 4-vCPU pods. The full suite is due at FP3 (✔).
+
+**Deviations.**
+1. `stones` is sent only when the server builds the sync for an online owner (it needs the owner's level for
+   Cobblemon's item-evolution context); `PartySync.of(party, pc)` without an owner omits it. Every real sync has one.
+2. `canLearn` is the form's TM learnset (`Learnset.tmMoves`), not `tmLearnableMoves()` (which adds egg and tutor moves
+   where a server allows that); the plan says machine moves.
+3. Nicknames stay cut at 32 in Java: one `party.sync` goes to every link, so the cut to each game's `compat.nick` is
+   gen1-bridge's (`engineNick`).
+4. `party.change.status` gains the value `none` (cured): the plan's `status?` had no way to say a status went away.
+5. `evolveBeyond` and `symbols.gen3` (§8's last rows) wait for FP4, where they are used.
+
+**Open issue for the user.** Worlds built before FP1 have `onIncompatible: "leave_out"` written in their region
+records: every writer wrote that default, nothing read it. Since FP1 the bind forwards the value, so once FP2 lands
+those worlds would keep leaving foreign members out until rebuilt or edited. Not migrated: the user decides
+(rebuild, edit the records, or a one-time migration in FP2).
+
 ## Pre-flight (PLAN §0.6)
 
 | Step | State |

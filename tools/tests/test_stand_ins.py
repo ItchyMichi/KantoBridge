@@ -487,7 +487,8 @@ def test_game_status_follows_the_snapshot_and_marker_changes():
         try:
             assert snap["ingame"] is True and "away" not in snap
             assert status == {"game": "red", "playthrough": "saved", "ingame": True, "started": True, "badges": 0,
-                              "markers": {"champion": False, "starter": False}, "name": "TESTER", "slot": 1}
+                              "markers": {"champion": False, "starter": False}, "name": "TESTER", "slot": 1,
+                              "visitors": 0}
             # a resync's snapshot is followed by the status again; a bind too
             await mc.send("resync")
             await mc.expect("snapshot")
@@ -644,3 +645,94 @@ def test_a_crossing_between_two_fakes():
             await a.stop()
             await b.stop()
     run(scenario())
+
+
+# ------------------------------------------------------------ foreign Pokémon (FP1)
+
+U1 = "0f8b6a2e-1c2d-4e5f-8a9b-0c1d2e3f4a5b"
+U2 = "6a1d3c4e-5f60-4a7b-8c9d-0e1f2a3b4c5d"
+U3 = "7b2e4d6f-8a1c-4e3b-9d5f-1a2b3c4d5e6f"
+
+
+def member(uid, dex, **kw):
+    m = {"uid": uid, "dex": dex, "level": 20, "moves": [33], "hp": 40, "maxhp": 40,
+         "stats": {"hp": 40, "atk": 20, "def": 20, "spa": 20, "spd": 20, "spe": 20}, "types": ["normal"]}
+    m.update(kw)
+    return m
+
+
+def test_hello_ok_says_whether_the_stand_in_registered():
+    async def scenario():
+        for visitor in (True, False):
+            gen1 = await FakeGen1(port=0, game="blue", visitor=visitor).start()
+            mc = await FakeMinecraft(port=gen1.port, role="test", ping_ms=0).connect()
+            try:
+                ok = (await mc.hello())["data"]
+                assert ok["compat"] == {"maxDex": 151, "maxMove": 165, "nick": 10, "visitor": visitor}
+                assert not mc.conn.problems
+            finally:
+                await mc.close()
+                await gen1.stop()
+    run(scenario())
+
+
+def test_game_status_counts_the_visitors_of_each_sync():
+    # FOREIGN_POKEMON_PLAN §4.1 / R2: dex 0, a species past the game's maxDex and (Gen 1) any form are visitors;
+    # a region that leaves them out (session.bind.incompatible) shows none
+    async def scenario():
+        gen1, mc, snap, status = await _region_pair(game="blue")
+        try:
+            assert status["visitors"] == 0
+            party = [member(U1, 445, nature="jolly", canLearn=[15, 57], stones=[]), member(U2, 25),
+                     member(U3, 0)]
+            await mc.send("party.sync", {"party": party, "box": {"count": 0}})
+            assert (await mc.expect("game.status"))["data"]["visitors"] == 2
+            await mc.send("party.sync", {"party": [member(U1, 37, form="alola"), member(U2, 25)], "box": {"count": 0}})
+            assert (await mc.expect("game.status"))["data"]["visitors"] == 1
+            bind = (await mc.send("session.bind", {"world": "w-fp", "multiplayer": False, "incompatible": "leave_out"}))["seq"]
+            await mc.expect("session.bound", re=bind)
+            assert (await mc.expect("game.status"))["data"]["visitors"] == 0, "the region leaves them out"
+            assert gen1.incompatible == "leave_out"
+            assert not mc.conn.problems
+        finally:
+            await mc.close()
+            await gen1.stop()
+    run(scenario())
+
+
+def test_what_the_hidden_game_reports_is_schema_valid():
+    # FP1: party.item with id and kind, party.order, party.change, party.hold, party.learn, party.forget,
+    # party.take{quest}; the client stand-in checks every message it receives (strict)
+    async def scenario():
+        gen1, mc = await _pair()
+        try:
+            await mc.hello()
+            item = await gen1.use_item("TM_TEST", U1, "machine", move=89, forget=33)
+            await gen1.order([U2, U1])
+            change = await gen1.change(U1, hp=12, status="psn")
+            give = await gen1.hold(U1, "leftovers")
+            take = await gen1.hold(U1, None)
+            await gen1.learn(U2, 7, forget=33)
+            await gen1.forget(U2, 7)
+            await gen1.take(U2, "quest")
+            got = {}
+            for msg_type in ("party.item", "party.order", "party.change", "party.hold", "party.hold", "party.learn",
+                             "party.forget", "party.take"):
+                got.setdefault(msg_type, []).append((await mc.expect(msg_type))["data"])
+            assert got["party.item"][0] == {"item": "TM_TEST", "uid": U1, "id": item, "kind": "machine", "move": 89,
+                                            "forget": 33}
+            assert got["party.order"][0] == {"uids": [U2, U1]}
+            assert got["party.change"][0] == {"uid": U1, "id": change, "hp": 12, "status": "psn"}
+            assert [h["item"] for h in got["party.hold"]] == ["leftovers", None]
+            assert [h["id"] for h in got["party.hold"]] == [give, take] and give != take
+            assert got["party.take"][0] == {"uid": U2, "reason": "quest"}
+            # the answer to a refused item travels M->G now
+            await mc.send("act.result", {"ok": False, "kind": "item", "reason": "move_known", "id": item}, re=1)
+            await asyncio.sleep(0.1)
+            assert gen1.counts().get("act.result") == 1
+            assert not mc.conn.problems and not gen1.conn.problems
+        finally:
+            await mc.close()
+            await gen1.stop()
+    run(scenario())
+

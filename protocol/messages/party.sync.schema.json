@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://kantobridge.invalid/protocol/messages/party.sync.schema.json",
   "title": "party.sync",
-  "description": "The Cobblemon party (authoritative); gen1-bridge rebuilds the shadow party.",
+  "description": "The Cobblemon party (authoritative); gen1-bridge rebuilds the shadow party. FOREIGN_POKEMON_PLAN §3.2: each member also carries what a visitor record needs (stats, types, nature, ot, the machines and stones that work on it); a member a game can't show as itself is a visitor there.",
   "x-type": "party.sync",
   "x-legs": [
     "m2g",
@@ -38,7 +38,8 @@
             "description": "The party.give id this Pokémon came from, when it was a gift (exact gift matching)."
           },
           "dex": {
-            "$ref": "../defs.schema.json#/$defs/nationalDex"
+            "$ref": "../defs.schema.json#/$defs/partyDex",
+            "description": "The national dex number; 0 for a Cobblemon species with none (a visitor in every game, Q21)."
           },
           "level": {
             "$ref": "../defs.schema.json#/$defs/level"
@@ -78,10 +79,51 @@
             "$ref": "../defs.schema.json#/$defs/gender"
           },
           "form": {
-            "$ref": "../defs.schema.json#/$defs/form"
+            "$ref": "../defs.schema.json#/$defs/form",
+            "description": "Cobblemon's form (its Showdown form id, lower case: alola, galar, ...), absent for the species' standard form; a form the game lacks makes a visitor (Q15)."
           },
           "friendship": {
             "$ref": "../defs.schema.json#/$defs/friendship"
+          },
+          "stats": {
+            "$ref": "../defs.schema.json#/$defs/stats"
+          },
+          "types": {
+            "type": "array",
+            "items": {
+              "$ref": "../defs.schema.json#/$defs/typeName"
+            },
+            "uniqueItems": true,
+            "minItems": 1,
+            "maxItems": 2,
+            "description": "The Pokémon's one or two types (Blue writes them on the record, mapped)."
+          },
+          "nature": {
+            "$ref": "../defs.schema.json#/$defs/nature"
+          },
+          "ot": {
+            "type": "string",
+            "maxLength": 32,
+            "x-rom-derived": true,
+            "description": "The original trainer's name, only when it isn't the owner (a trade)."
+          },
+          "canLearn": {
+            "type": "array",
+            "items": {
+              "$ref": "../defs.schema.json#/$defs/moveNum"
+            },
+            "uniqueItems": true,
+            "maxItems": 512,
+            "description": "The machine (TM/HM) moves Cobblemon's learnset allows this Pokémon; each adapter keeps its game's machines (§4.4)."
+          },
+          "stones": {
+            "type": "array",
+            "items": {
+              "$ref": "../defs.schema.json#/$defs/heldItem"
+            },
+            "uniqueItems": true,
+            "maxItems": 16,
+            "description": "The canonical ids (protocol/items.json) of the stones that would evolve it in Cobblemon now, with the evolution rules applied (§4.5)."
           }
         }
       },

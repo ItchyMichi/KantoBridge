@@ -49,8 +49,10 @@ def test_hello_ok_then_snapshot():
     ok, snap = msgs
     assert ok["data"]["protocol"] == 1 and ok["data"]["bridge"] == "0.1.0"
     assert ok["data"]["engine"] == "0.3.85" and ok["data"]["game"] == "blue"
-    # MG1: the game's family and the adapter's limits, from the catalogue (lib/kb_games.lua)
-    assert ok["data"]["family"] == "gen1" and ok["data"]["compat"] == {"maxDex": 151, "maxMove": 165, "nick": 10}
+    # MG1: the game's family and the adapter's limits, from the catalogue (lib/kb_games.lua); FP1:
+    # visitor false until an adapter registers its stand-in
+    assert ok["data"]["family"] == "gen1" and ok["data"]["compat"] == {"maxDex": 151, "maxMove": 165, "nick": 10,
+                                                                 "visitor": False}
     assert ok["data"]["session"] == rig.status.session.decode()
     assert (ok["seq"], snap["seq"]) == (1, 2) and "re" not in snap
     data = snap["data"]

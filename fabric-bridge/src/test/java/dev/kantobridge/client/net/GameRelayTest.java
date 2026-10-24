@@ -304,6 +304,27 @@ class GameRelayTest {
 	}
 
 	@Test
+	void whatTheHiddenGameReportsOnAPokemonGoesUpLikePartyRequests() throws Exception {
+		// FP1 (FOREIGN_POKEMON_PLAN §8): order, change, hold, learn and forget travel as the party requests do
+		String uid = "0f8b6a2e-1c2d-4e5f-8a9b-0c1d2e3f4a5b";
+		List<String> types = List.of(MsgTypes.PARTY_ORDER, MsgTypes.PARTY_CHANGE, MsgTypes.PARTY_HOLD, MsgTypes.PARTY_LEARN,
+				MsgTypes.PARTY_FORGET);
+		this.relay.fromBridge(this.message(MsgTypes.PARTY_ORDER, "{\"uids\":[\"" + uid + "\"]}"), 0);
+		this.relay.fromBridge(this.message(MsgTypes.PARTY_CHANGE, "{\"uid\":\"" + uid + "\",\"id\":\"ch-1\",\"hp\":3}"), 0);
+		this.links.serverUp = false;
+		this.relay.fromBridge(this.message(MsgTypes.PARTY_HOLD, "{\"uid\":\"" + uid + "\",\"item\":null,\"id\":\"hd-1\"}"), 0);
+		this.relay.fromBridge(this.message(MsgTypes.PARTY_LEARN, "{\"uid\":\"" + uid + "\",\"move\":7,\"id\":\"ln-1\"}"), 0);
+		this.relay.fromBridge(this.message(MsgTypes.PARTY_FORGET, "{\"uid\":\"" + uid + "\",\"move\":7,\"id\":\"fg-1\"}"), 0);
+		assertEquals(3, this.relay.queued(), "no server: they wait, in order");
+		this.links.serverUp = true;
+		this.relay.fromBridge(this.message(MsgTypes.BATTLE_START, start("b-10")), 10);
+		List<String> sent = this.links.server.stream().map(Sent::type).toList();
+		assertEquals(types, sent.subList(0, 5));
+		assertTrue(this.links.server.get(2).data().get("item").isJsonNull(), "TAKE keeps its null");
+		assertEquals(5, this.relay.stats().partyRelayed);
+	}
+
+	@Test
 	void bagUsesGoDownOrWaitForTheNextSnapshot() throws Exception {
 		this.relay.fromServer(this.message(MsgTypes.BAG_USE, "{\"item\":\"POKE_BALL\",\"qty\":1}"), 0);
 		assertEquals(List.of(MsgTypes.BAG_USE), this.links.bridge.stream().map(Sent::type).toList());

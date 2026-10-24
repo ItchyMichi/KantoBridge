@@ -1,0 +1,22 @@
+[
+  {
+    "type": "party.hold",
+    "seq": 11,
+    "data": {
+      "uid": "0f8b6a2e-1c2d-4e5f-8a9b-0c1d2e3f4a5b",
+      "item": "leftovers",
+      "id": "hd-1",
+      "region": "johto"
+    }
+  },
+  {
+    "type": "party.hold",
+    "seq": 12,
+    "data": {
+      "uid": "0f8b6a2e-1c2d-4e5f-8a9b-0c1d2e3f4a5b",
+      "item": null,
+      "id": "hd-2",
+      "region": "johto"
+    }
+  }
+]

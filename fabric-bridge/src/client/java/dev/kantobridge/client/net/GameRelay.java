@@ -64,9 +64,13 @@ public final class GameRelay {
 		void warn(String code, long count);
 	}
 
-	/** gen1-bridge's requests about the party that the server carries out (the daycare's too: it holds Pokémon, P15). */
+	/**
+	 * gen1-bridge's requests about the party that the server carries out (the daycare's too: it holds Pokémon, P15); FP1
+	 * (FOREIGN_POKEMON_PLAN §8): what the hidden game reports on a Pokémon too (order, change, hold, learn, forget).
+	 */
 	public static final List<String> PARTY_REQUESTS = List.of(MsgTypes.PARTY_GIVE, MsgTypes.PARTY_HEAL, MsgTypes.PARTY_RENAME,
-			MsgTypes.PARTY_TAKE, MsgTypes.PARTY_ITEM, MsgTypes.DAYCARE_DEPOSIT, MsgTypes.DAYCARE_WITHDRAW);
+			MsgTypes.PARTY_TAKE, MsgTypes.PARTY_ITEM, MsgTypes.DAYCARE_DEPOSIT, MsgTypes.DAYCARE_WITHDRAW, MsgTypes.PARTY_ORDER,
+			MsgTypes.PARTY_CHANGE, MsgTypes.PARTY_HOLD, MsgTypes.PARTY_LEARN, MsgTypes.PARTY_FORGET);
 	/** The server's state for gen1-bridge. */
 	public static final List<String> SERVER_SYNCS = List.of(MsgTypes.PARTY_SYNC, MsgTypes.DEX_SYNC);
 

@@ -134,6 +134,9 @@ end
 --   tested       M10: the engine version gen1-bridge is tested with
 --                (hello.ok.tested; engine.untested when the running one differs)
 --   helloSeconds M10: how long a connection may go without hello (default 10)
+--   visitor()    FP1: true when the adapter registered its stand-in species
+--                (hello.ok.compat.visitor; absent or not true: false, members
+--                the game lacks are left out)
 function Session.new(opts)
   local json, catalog, log, clock = opts.json, opts.catalog, opts.log, opts.clock
   local timeout = opts.timeout or (catalog.timeoutMs / 1000)
@@ -256,7 +259,8 @@ function Session.new(opts)
       engine = running,
       game = game,
       family = entry.family,
-      compat = { maxDex = compat.maxDex, maxMove = compat.maxMove, nick = compat.nick },
+      compat = { maxDex = compat.maxDex, maxMove = compat.maxMove, nick = compat.nick,
+                 visitor = type(opts.visitor) == "function" and opts.visitor() == true },
       session = opts.sessionId,
     }
     local tested = opts.tested and versionText(opts.tested) or nil

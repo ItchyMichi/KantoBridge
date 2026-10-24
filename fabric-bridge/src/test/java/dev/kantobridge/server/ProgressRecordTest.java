@@ -42,6 +42,15 @@ class ProgressRecordTest {
 		assertFalse(progress.marker("unknown"), "a marker never reported is not reached");
 		assertEquals("TESTER", progress.name());
 		assertEquals(1_790_000_000L, progress.at());
+		assertNull(status.visitors(), "FP1: absent when the game didn't say");
+	}
+
+	@Test
+	void aStatusMayCountItsVisitors() throws DataException {
+		// FP1 (FOREIGN_POKEMON_PLAN §4.1): how many party members the game shows as visitors
+		assertEquals(2, ProgressRecord.read(json(STATUS.replace("\"slot\":1", "\"slot\":1,\"visitors\":2")), 0).visitors());
+		assertRefused(STATUS.replace("\"slot\":1", "\"slot\":1,\"visitors\":7"), "more visitors than a party");
+		assertRefused(STATUS.replace("\"slot\":1", "\"slot\":1,\"visitors\":-1"), "a negative count");
 	}
 
 	@Test

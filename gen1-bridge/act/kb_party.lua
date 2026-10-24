@@ -7,7 +7,14 @@
 --   party.heal{}                                                      G->M
 --   party.item{item, uid, slot?, move?}                               G->M
 --   party.sync{party[{uid, give?, dex, level, nick?, moves, hp, maxhp, status?,
---              item?, shiny?, gender?, form?, friendship?}], box}    M->G
+--              item?, shiny?, gender?, form?, friendship?, stats?, types?,
+--              nature?, ot?, canLearn?, stones?}], box}              M->G
+--
+-- FP1 (docs/specs/FOREIGN_POKEMON_PLAN.md section 8): a member may carry dex 0
+-- (a Cobblemon species with no national number) and what a visitor record
+-- needs (stats, types, nature, ot, canLearn, stones); validSync checks them,
+-- the visitor path (FP2) uses them. Members and moves a game can't hold are
+-- counted as foreign (party.foreign_species / party.foreign_moves).
 --
 -- MG9 (G2F): a game with held items, shininess, genders and forms (Gen 2 on)
 -- carries them both ways (Party.details): a gift's go out with it, a sync's
@@ -111,7 +118,7 @@ local Party = {}
 
 Party.GIVE_UP_AFTER = 5     -- syncs a sent gift may miss before it is given up on ...
 Party.GIVE_UP_SECONDS = 120 -- ... the last of them at least this long after it was first sent
-Party.MAX_NICK = 10       -- Gen 1 nickname glyphs (NamingScreen maxLen 10)
+Party.MAX_NICK = 10       -- Gen 1 nickname glyphs (NamingScreen maxLen 10); a game's compat.nick wins
 Party.MAX_TEXT = 32       -- party.give nick / ot maxLength
 -- MG7 (G3F): the running game's ceilings (the catalogue's compat); Gen 1's
 -- when the game didn't say
@@ -156,13 +163,15 @@ local function capChars(s, max)
 end
 
 -- A Cobblemon nickname as the hidden game keeps one: control characters
--- out, at most 10 glyphs (<PK> and <MN> count as one, as on the naming
--- grid). nil when nothing is left (no nickname).
-function Party.engineNick(s)
+-- out, at most `max` glyphs (the game's compat.nick, FP1; Gen 1's 10 without
+-- one; <PK> and <MN> count as one, as on the naming grid). nil when nothing
+-- is left (no nickname).
+function Party.engineNick(s, max)
   if type(s) ~= "string" then return nil end
+  max = whole(max, 1, 16) and max or Party.MAX_NICK
   s = gsub(s, "[%z\1-\31\127]", "")
   local out, glyphs, i = {}, 0, 1
-  while i <= #s and glyphs < Party.MAX_NICK do
+  while i <= #s and glyphs < max do
     local token = s:match("^<[PM][KN]>", i)
     if token == "<PK>" or token == "<MN>" then
       out[#out + 1] = token
@@ -179,6 +188,30 @@ function Party.engineNick(s)
   return nick ~= "" and nick or nil
 end
 
+-- FP1: a type or nature name (defs typeName, nature: at most 24 bytes) or a
+-- canonical item id (defs heldItem: at most 32)
+local NAME = "^[a-z][a-z0-9_]*$"
+local NAME_LEN, ITEM_LEN = 24, 32
+
+-- A list of `lo`..`hi` such names, each at most `len` bytes.
+function Party.names(list, lo, hi, len)
+  if type(list) ~= "table" or #list < lo or #list > hi then return false end
+  for _, v in ipairs(list) do
+    if type(v) ~= "string" or #v > len or not find(v, NAME) then return false end
+  end
+  return true
+end
+
+-- True when no value appears twice in the list.
+local function noDuplicates(list)
+  local seen = {}
+  for _, v in ipairs(list) do
+    if seen[v] then return false end
+    seen[v] = true
+  end
+  return true
+end
+
 -- party.sync data checked against its schema's shape (the protocol is
 -- strict); returns true or false.
 function Party.validSync(data)
@@ -191,7 +224,8 @@ function Party.validSync(data)
       return false
     end
     uids[e.uid] = true
-    if not (whole(e.dex, 1, 2000) and whole(e.level, 1, 100) and whole(e.hp, 0, 9999)
+    -- FP1: dex 0 is a Cobblemon species with no national number (a visitor everywhere)
+    if not (whole(e.dex, 0, 2000) and whole(e.level, 1, 100) and whole(e.hp, 0, 9999)
             and whole(e.maxhp, 1, 9999)) then
       return false
     end
@@ -215,6 +249,23 @@ function Party.validSync(data)
       return false
     end
     if e.friendship ~= nil and not whole(e.friendship, 0, 255) then return false end
+    -- FP1: what a visitor record needs, each checked as its schema has it
+    if e.stats ~= nil then
+      if type(e.stats) ~= "table" then return false end
+      for _, k in ipairs(IV_KEYS) do
+        if not whole(e.stats[k], 1, 9999) then return false end
+      end
+    end
+    if e.types ~= nil and not (Party.names(e.types, 1, 2, NAME_LEN) and noDuplicates(e.types)) then return false end
+    if e.nature ~= nil and not (type(e.nature) == "string" and #e.nature <= NAME_LEN and find(e.nature, NAME)) then return false end
+    if e.ot ~= nil and type(e.ot) ~= "string" then return false end
+    if e.canLearn ~= nil then
+      if type(e.canLearn) ~= "table" or #e.canLearn > 512 or not noDuplicates(e.canLearn) then return false end
+      for _, n in ipairs(e.canLearn) do
+        if not whole(n, 1, 2000) then return false end
+      end
+    end
+    if e.stones ~= nil and not (Party.names(e.stones, 0, 16, ITEM_LEN) and noDuplicates(e.stones)) then return false end
   end
   return true
 end
@@ -324,7 +375,7 @@ function Party.new(opts)
     gives = 0, givesSent = 0, givesResent = 0, givesConfirmed = 0, givesGivenUp = 0, givesBad = 0,
     givesExact = 0,
     syncs = 0, applied = 0, deferred = 0, created = 0, matched = 0, kept = 0, failed = 0,
-    nonGen1Species = 0, nonGen1Moves = 0, heals = 0,
+    foreignSpecies = 0, foreignMoves = 0, heals = 0, -- FP1: was nonGen1Species / nonGen1Moves
     dexSyncs = 0, dexApplied = 0, dexAddedSeen = 0, dexAddedOwned = 0, dexUnknown = 0, dexBeyond = 0,
     items = 0, itemsBad = 0,
     -- M8 (wave 2)
@@ -426,23 +477,23 @@ function Party.new(opts)
     confirmOps(data)
     local taken = {}
     local entries = {}
-    local species0, moves0 = counts.nonGen1Species, counts.nonGen1Moves
+    local species0, moves0 = counts.foreignSpecies, counts.foreignMoves
     for _, e in ipairs(data.party) do
       local species = e.dex <= maxDex and engine.speciesOfDex(e.dex) or nil
       if excluded[e.uid] then
         -- traded away, or boarded at the daycare: not the hidden party's
         counts.excluded = counts.excluded + 1
       elseif not species then
-        counts.nonGen1Species = counts.nonGen1Species + 1
+        counts.foreignSpecies = counts.foreignSpecies + 1
       else
         local moves = {}
         for _, n in ipairs(e.moves) do
           local id = n <= maxMove and engine.moveIdOfNum(n) or nil
-          if id then moves[#moves + 1] = id else counts.nonGen1Moves = counts.nonGen1Moves + 1 end
+          if id then moves[#moves + 1] = id else counts.foreignMoves = counts.foreignMoves + 1 end
         end
         local entry = Party.details(e, {
           uid = e.uid, species = species, level = e.level, moves = moves, hp = e.hp, maxhp = e.maxhp,
-          status = STATUS[e.status], nick = Party.engineNick(e.nick),
+          status = STATUS[e.status], nick = Party.engineNick(e.nick, compat.nick),
         })
         if e.give ~= nil then
           -- exact: the gift Cobblemon says this Pokemon came from (M6)
@@ -469,8 +520,8 @@ function Party.new(opts)
         entries[#entries + 1] = entry
       end
     end
-    if counts.nonGen1Species > species0 then warnGrowth("party.non_gen1_species", "nonGen1Species") end
-    if counts.nonGen1Moves > moves0 then warnGrowth("party.non_gen1_moves", "nonGen1Moves") end
+    if counts.foreignSpecies > species0 then warnGrowth("party.foreign_species", "foreignSpecies") end
+    if counts.foreignMoves > moves0 then warnGrowth("party.foreign_moves", "foreignMoves") end
     -- gifts this sync didn't show: a box gift is in Cobblemon's PC by now;
     -- a party gift waits a little longer, then is given up on
     for _, g in ipairs(gifts) do

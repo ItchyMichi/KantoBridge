@@ -101,6 +101,42 @@ class PartyMessagesTest {
 		assertEquals("N".repeat(32), PartySync.nickname(Component.literal("N".repeat(40))));
 	}
 
+	@Test
+	void theVisitorFieldsArePlainValues() {
+		// FP1 (FOREIGN_POKEMON_PLAN §3.2): dex 0 for a species with no national number, ids in the protocol's shapes
+		assertEquals(0, PartySync.partyDex(0));
+		assertEquals(0, PartySync.partyDex(-1));
+		assertEquals(0, PartySync.partyDex(2001));
+		assertEquals(445, PartySync.partyDex(445));
+		assertEquals("alola", PartySync.formId("alola"));
+		assertEquals("paldeacombat", PartySync.formId("Paldea-Combat"));
+		assertEquals("x".repeat(24), PartySync.formId("x".repeat(30)));
+		assertNull(PartySync.formId(""));
+		assertNull(PartySync.formId(null));
+		assertEquals("fire", PartySync.nameId("Fire"));
+		assertEquals("jolly", PartySync.nameId("jolly"));
+		assertNull(PartySync.nameId("???"));
+		assertNull(PartySync.nameId("9lives"));
+		assertEquals(1, PartySync.stat(0));
+		assertEquals(9999, PartySync.stat(12000));
+		assertEquals(List.of(), PartySync.canLearn(null), "no learnset: nothing (the GameTests read a real one)");
+		assertEquals(List.of(), PartySync.canLearn(List.of()));
+	}
+
+	@Test
+	void theOriginalTrainerGoesOutOnlyWhenItIsntTheOwner() {
+		java.util.UUID owner = java.util.UUID.fromString("0f8b6a2e-1c2d-4e5f-8a9b-0c1d2e3f4a5b");
+		java.util.UUID other = java.util.UUID.fromString("6a1d3c4e-5f60-4a7b-8c9d-0e1f2a3b4c5d");
+		assertNull(PartySync.otName(true, owner.toString(), "Owner", owner), "caught by the owner");
+		assertNull(PartySync.otName(true, owner.toString().toUpperCase(java.util.Locale.ROOT), "Owner", owner));
+		assertEquals("Friend", PartySync.otName(true, other.toString(), "Friend", owner), "traded from another player");
+		assertNull(PartySync.otName(true, other.toString(), null, owner), "a player without a known name: nothing");
+		assertEquals("TRADER", PartySync.otName(false, "TRADER", null, owner), "an NPC's name");
+		assertNull(PartySync.otName(false, null, null, owner));
+		assertNull(PartySync.otName(false, " ", null, owner));
+		assertEquals("N".repeat(32), PartySync.otName(false, "N".repeat(40), null, owner));
+	}
+
 	private static JsonObject json(String text) throws Exception {
 		return ProtoJson.parseObject(text);
 	}

@@ -69,6 +69,12 @@
       "minimum": 0,
       "maximum": 255,
       "description": "The active save slot (0: the flat legacy save), as session.bound carries it."
+    },
+    "visitors": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 6,
+      "description": "FOREIGN_POKEMON_PLAN §4.1: how many party members this game shows as visitors (the HUD's line)."
     }
   }
 }

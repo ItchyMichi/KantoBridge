@@ -289,6 +289,9 @@ public final class SessionRuntime {
 			// The gate learns the world before the binder sends its bind, so the bind is recorded against it.
 			this.gate.world(kanto, world, now);
 			this.binder.world(world, !minecraft.isLocalServer());
+			// FP1: the link's region's choice for members its game lacks (none in a legacy world: visitor)
+			dev.kantobridge.world.RegionRecord region = ClientRegions.byId(this.link.region());
+			this.binder.incompatible(region == null ? null : region.rules().compat().onIncompatible());
 			this.binder.tick();
 			this.gate.tick(now);
 			this.saves.tick(now);

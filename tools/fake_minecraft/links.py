@@ -7,6 +7,10 @@ parked: with ``park`` it sends ``region.park`` to each parked link and ``region.
 that becomes followed, as the real client does at a pass. Steps go to the followed link only; the
 heartbeat runs on every link. A parked link that drops never disturbs the followed one.
 
+Foreign Pokémon (FOREIGN_POKEMON_PLAN §4.15, FP1): ``sync_party`` fans one ``party.sync`` out to every
+connected link, parked ones too, as the client does, and ``bind`` sends each link its own ``session.bind`` with
+its region's ``incompatible`` choice.
+
 Everything is synthetic; logs show games, ports, states and counts only.
 """
 import asyncio
@@ -190,6 +194,29 @@ class LinksDriver:
             # gen1-bridge answers with the step's own seq as `re`; the stand-in sends the position without one
             if reply["type"] in ("player.pos", "player.blocked") and reply.get("re", message["seq"]) == message["seq"]:
                 return reply
+
+    async def sync_party(self, party, box=0):
+        """FP1: one party.sync to every connected link (the client's untagged fan-out); how many got it."""
+        sent = 0
+        for link in self.links:
+            if link.state in ("followed", "parked") and not link.client.eof:
+                await link.client.send("party.sync", {"party": party, "box": {"count": box}})
+                sent += 1
+        return sent
+
+    async def bind(self, world, multiplayer=False, incompatible=None):
+        """FP1: session.bind on every connected link; ``incompatible`` is one value for all, or a dict of
+        game -> value (a link whose game it doesn't name sends none: visitor). The bind seqs by link label."""
+        seqs = {}
+        for link in self.links:
+            if link.state not in ("followed", "parked") or link.client.eof:
+                continue
+            data = {"world": world, "multiplayer": multiplayer}
+            value = incompatible.get(link.game) if isinstance(incompatible, dict) else incompatible
+            if value is not None:
+                data["incompatible"] = value
+            seqs[link.label()] = (await link.client.send("session.bind", data))["seq"]
+        return seqs
 
     # --- bookkeeping ------------------------------------------------------------------------------
 
