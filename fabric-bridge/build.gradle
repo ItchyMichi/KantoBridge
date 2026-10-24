@@ -664,6 +664,10 @@ test {
 	// export> and -Pkb.storySweep=<sweep truth files> replay the sweep's cases through the client's story rules (pod only)
 	systemProperty "kb.realGen1Index", providers.gradleProperty("kb.realGen1Index").getOrElse("")
 	systemProperty "kb.realGen1Bundle", providers.gradleProperty("kb.realGen1Bundle").getOrElse("")
+	// FA2 (FIELD_MECHANICS_AUDIT_PLAN): -Pkb.fieldParity="<g*_field_parity.json>;<export bundle>;<report out>" compares the
+	// engine's step verdicts with the planned world's collision (pod only; counts, map ids and example cells)
+	systemProperty "kb.fieldParity", providers.gradleProperty("kb.fieldParity").getOrElse("")
+	systemProperty "kb.fieldRealIndex", providers.gradleProperty("kb.fieldRealIndex").getOrElse("")
 	// -Pkb.caves3d=pilot: the dry run with only the pilot's caves in 3D (H6's world) instead of all (the build's default)
 	systemProperty "kb.caves3d", providers.gradleProperty("kb.caves3d").getOrElse("all")
 	// -Pkb.testHeap=4g: a larger heap for the dry runs on a real export (MG7: Hoenn is three times Kanto)
