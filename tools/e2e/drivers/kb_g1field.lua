@@ -74,6 +74,36 @@
 --            forcedMovement, seafoam, spinners, the Safari step maps).
 --            Written to KB_REPORT_DIR/g1_field_scripts.json.
 --
+--   sweep    FA3 + FA4, the live sweep: the rows in KB_ROWS (a Lua file
+--            g1_field_check.py writes from the inventory, the parity dump
+--            and the scripts file), one step each, the stand-in Minecraft
+--            client of field_common.py stepping (kb_g3field.lua's design).
+--            Per row the hidden player is put on the row's start cell: a
+--            warp in (WorldAPI:warpTo, the new game's flags, toggles and
+--            every map's boot blocks restored first, the map's trainers
+--            beaten as kb_field.lua does) when the map differs, the row is
+--            fresh or the row before changed the world; else placed on the
+--            bound map by the player's own fields (setMap's placement,
+--            OC:575-580; refreshStandingOnWarp, OC:1781-1789; the arrival
+--            cell cleared). The vehicle is the engine's own state:
+--            player.surfing, save.onBike (a slope row mounts only after the
+--            client's go: the Cycling Road rolls at once, OC:1883-1905);
+--            REPEL and the encounter grace (ow.wildEncounterGraceSteps,
+--            OC:4791-4806) keep wild battles out; a boulder row sets
+--            ow.strengthActive (OC:1198) and asks for two steps (dirs=d+d:
+--            checkBoulderPush's first try only arms, the second pushes,
+--            OC:1934-1993). Then KB_ROW_READY n= dir= push= [dirs=]; the client
+--            steps (move.step) and writes KB_CTL; the driver waits until
+--            the field is quiet (fieldReady and none of update's in-flight
+--            states, OC:1678-1684) for the row's idle frames or its budget
+--            (halted), records the engine's end state (map, cell, facing,
+--            surfing, on the bike), the row's live block changes on the
+--            same map ({bx, by, block, was}: story.blocks), whether the
+--            story state changed, then KB_ROW_DONE and 0.8 s by the clock.
+--            trigger="warp" rows (a map whose entry sends the player on)
+--            print READY first and warp after the go (driven). Written to
+--            KB_REPORT_DIR/<KB_SWEEP_FILE> (g1_field_sweep.json).
+--
 -- Verdict codes (one character per cell and direction, directions up, down,
 -- left, right; cells row by row), the same alphabet as kb_g3field.lua:
 --   .  open (a step to the neighbour)       J  a ledge hop (lands two cells on)
@@ -84,7 +114,9 @@
 -- Markers: KB_BOOTED scene= pristine=, KB_FIELD map=, KB_SURVEY_MAP n= map=
 -- cells= warped= halted= classes=, KB_SURVEY maps= surveyed= cells= failed=
 -- file=, KB_SCRIPTS maps= hooks= onstep= files= coord= warps= moves=
--- scriptmoves= holes= probecells= file=, KB_QUIT code=; KB_FAIL <reason>.
+-- scriptmoves= holes= probecells= file=, KB_SWEEP_READY rows=, KB_ROW_READY
+-- n= dir= push=, KB_ROW_DONE n= map= cls= end= moved= changed= frames= halted=
+-- err=, KB_SWEEP_DONE rows= file=, KB_QUIT code=; KB_FAIL <reason>.
 -- Map symbols, ids, class names, counts and booleans only; no script text.
 --
 -- Runs unsandboxed as a POKEPORT_DRIVER coroutine, resumed once per frame
@@ -634,7 +666,8 @@ end
 
 -- ---- the static part of a map (no warp)
 
-local COMMON = { walk = true, water = true, shore = true, grass = true, counter = true }
+-- classes counted but not listed per cell (grass and counter cells are listed: the sweep samples them, 10 a map)
+local COMMON = { walk = true, water = true, shore = true }
 
 local function staticMap(game, id, def, kbCells)
   local data = game.data
@@ -1370,10 +1403,169 @@ local function nClasses(st)
   return n
 end
 
+-- ---- the live sweep (FA3-FA4): rows from KB_ROWS, one step each, a stand-in client stepping
+
+local CTL = os.getenv("KB_CTL")
+local ROW_BUDGET = tonumber(os.getenv("KB_ROW_FRAMES") or "") or 900 -- frames a row may take before it is halted
+local ROW_IDLE = 24                                                  -- the field quiet this long ends a row
+local ROW_SETTLE_MIN = 30
+local STEP_WAIT_S = 6.0      -- the client's answer wait (ANSWER_S 4 s) and some; by the clock (headless runs fast)
+local BOX_FALLBACK = 90      -- frames a box may sit before a warp-in's settle answers it B (the client answers first)
+local REPEL_STEPS = 9999     -- save.repelSteps: never worn off during a row (OC:4906-4913)
+local GRACE_STEPS = 9999     -- ow.wildEncounterGraceSteps: no wild roll (OC:4791-4806); a new game has no lead,
+                             -- so the REPEL filter alone (OC:4934-4940) would let every encounter through
+
+local function ctlValue()
+  if not CTL then return nil end
+  local f = io.open(CTL, "rb")
+  if not f then return nil end
+  local v = f:read("*a")
+  f:close()
+  return tonumber(v)
+end
+
+-- the field quiet: fieldReady and none of the in-flight states OverworldState:update holds input for (OC:1678-1684)
+local function quiet(game)
+  if not fieldReady(game) then return false end
+  local ow = overworld(game)
+  local p = ow.player
+  if (ow.hopLand or 0) > 0 or ow.engaging or ow.teleportOut or ow.flyAnim or ow.flyArrive or ow.spinArrive
+      or ow.holeFall or ow.holeArrive or ow.cutAnim or ow.dustAnim then
+    return false
+  end
+  return not (p.spinning or p.ledgeHop or (tonumber(p.hopFrames) or 0) > 0)
+end
+
+-- a box on top for BOX_FALLBACK frames is answered B (the client's auto_ui answers first; a battle is left to it)
+local function answerLate(game, st)
+  local top = topState(game)
+  local ow = overworld(game)
+  if top == nil or top == ow or (type(top) == "table" and top.isBattleState) then
+    st.boxFrames = 0
+    return
+  end
+  st.boxFrames = (st.boxFrames or 0) + 1
+  if st.boxFrames >= BOX_FALLBACK then
+    st.boxFrames = 0
+    st.answered = (st.answered or 0) + 1
+    pcall(game.input.sourcePress, game.input, "b", "kb-g1field")
+    pcall(game.input.sourceRelease, game.input, "b", "kb-g1field")
+  end
+end
+
+-- every map trainer of the row's map beaten (kb_field.lua's beatTrainers): nobody sights the hidden player
+local function beatTrainers(game, mapId)
+  local def = game.data.maps[mapId]
+  local save = game.save
+  save.defeatedTrainers = save.defeatedTrainers or {}
+  local n = 0
+  for _, o in ipairs(type(def) == "table" and type(def.objects) == "table" and def.objects or {}) do
+    if type(o) == "table" and o.trainerClass then
+      save.defeatedTrainers[mapId .. "_obj_" .. tostring(o.index)] = true
+      local okH, header = pcall(game.data.trainerHeader, game.data, def.label, o.index)
+      if okH and type(header) == "table" and header.event then save.flags[header.event] = true end
+      n = n + 1
+    end
+  end
+  return n
+end
+
+-- the current map's live blocks (a copy) and what changed between two copies, as story.blocks would carry it
+local function liveBlocks(ow)
+  local live = ow and ow.map and type(ow.map.def) == "table" and ow.map.def.blocks or {}
+  local out = {}
+  for i = 1, #live do out[i] = live[i] end
+  return out
+end
+
+local function blocksChanged(ow, before, after)
+  local w = tonumber(ow.map.def.width) or 1
+  local out = array()
+  for i = 1, math.max(#before, #after) do
+    if before[i] ~= after[i] and after[i] ~= nil then
+      out[#out + 1] = { bx = (i - 1) % w, by = floor((i - 1) / w), block = after[i], was = before[i] }
+    end
+  end
+  return out
+end
+
+-- the story state a row may change (flags, object toggles, the forced bike): a signature to compare
+local function storySig(game)
+  local save = game.save
+  local parts = {}
+  for k, v in pairs(type(save.flags) == "table" and save.flags or {}) do
+    if v then parts[#parts + 1] = "f" .. tostring(k) end
+  end
+  for m, list in pairs(type(save.objectToggles) == "table" and save.objectToggles or {}) do
+    for o, v in pairs(type(list) == "table" and list or {}) do
+      parts[#parts + 1] = "t" .. tostring(m) .. "." .. tostring(o) .. "=" .. tostring(v)
+    end
+  end
+  parts[#parts + 1] = "b" .. tostring(save.forcedBike)
+  table.sort(parts)
+  return table.concat(parts, "|")
+end
+
+-- the player's vehicle for the row (the engine's own fields): walk, surf (player.surfing, Player.lua; as the
+-- forced-surf tile sets it, OC:5160-5167), bike (save.onBike, as useBicycle sets it, OC:1154-1171)
+local function setVehicle(game, state, base)
+  local ow = overworld(game)
+  local p = ow and ow.player
+  if not p then return end
+  local surf = state == "surf"
+  if (p.surfing == true) ~= surf then
+    p.surfing = surf
+    if type(ow.syncSurfingPikachu) == "function" then pcall(ow.syncSurfingPikachu, ow) end
+  end
+  if state == "bike" then
+    game.save.onBike = true
+  else
+    game.save.onBike = base.onBike
+  end
+end
+
+-- the hidden player on (x, y) of the bound map without a warp: the fields setMap sets for a placement (OC:575-580),
+-- the in-flight states a halted row may leave cleared, the warp under the feet re-derived as a completed step does
+-- (refreshStandingOnWarp, OC:1781-1789) and the arrival cell cleared (OC:1709-1712)
+local function placeAt(game, row)
+  local ow = overworld(game)
+  local p = ow.player
+  p.cellX, p.cellY = row.x, row.y
+  p.px, p.py = row.x * 16, row.y * 16
+  p.facing = row.face or row.dir or p.facing or "down"
+  p.moving = false
+  p.targetX, p.targetY = nil, nil
+  p.progress = 0
+  p.turnTimer = 0
+  p.bumpFrames = nil
+  if p.spinning then p.spinning = false end
+  if p.ledgeHop then p.ledgeHop = nil end
+  if ow.spinnerSliding then ow.spinnerSliding, ow.spinnerLeft, ow.spinnerFirstTile = nil, nil, nil end
+  if ow.forcedWarp then ow.forcedWarp = false end
+  ow.boulderTried = nil
+  ow.warpEntryCell = nil
+  if type(ow.refreshStandingOnWarp) == "function" then pcall(ow.refreshStandingOnWarp, ow) end
+  if ow.camera and type(ow.camera.follow) == "function" then pcall(ow.camera.follow, ow.camera, p.px, p.py) end
+end
+
+-- REPEL and the encounter grace, every row (setMap and a battle reset the grace, OC:374, :5339)
+local function noEncounters(game)
+  game.save.repelSteps = REPEL_STEPS
+  local ow = overworld(game)
+  if ow then ow.wildEncounterGraceSteps = GRACE_STEPS end
+end
+
+local function rowsList()
+  local ok, list = pcall(dofile, os.getenv("KB_ROWS") or "")
+  if not (ok and type(list) == "table") then fail("no_rows") end
+  return list
+end
+
 return function(game)
   local started = love.timer.getTime()
   local phase = "ready"
   local sv, world, base, frames, idle, arrived
+  local sw, row, rec
   local st = {}
   local function finishMap(rec)
     local cur = sv.cur
@@ -1412,10 +1604,211 @@ return function(game)
           sv.inv.kbCells = sv.kbCells ~= nil
           world = require("src.world.WorldAPI").new(game, "kb-g1field-driver")
           phase = "map_next"
+        elseif SCENE == "sweep" then
+          sw = { rows = rowsList(), i = 0, results = array(), dirty = true, base = base, st = {},
+                 grace = ow.wildEncounterGraceSteps }
+          world = require("src.world.WorldAPI").new(game, "kb-g1field-driver")
+          frames = 0
+          phase = "sweep_client"
         else
           fail("unknown_scene")
         end
       end
+    elseif phase == "sweep_client" then
+      if (tonumber(status.sessions) or 0) >= 1 and fieldReady(game) then
+        frames = frames + 1
+        if frames >= 120 then
+          print(("KB_SWEEP_READY rows=%d"):format(#sw.rows))
+          phase = "row_next"
+        end
+      end
+    elseif phase == "row_next" then
+      sw.i = sw.i + 1
+      row = sw.rows[sw.i]
+      local ow = overworld(game)
+      if not row then
+        halt(game)
+        setVehicle(game, "walk", base)
+        restore(game, base)
+        if ow then ow.wildEncounterGraceSteps = sw.grace or 0 end
+        local path = writeJson(os.getenv("KB_SWEEP_FILE") or "g1_field_sweep.json", { game = GAME, rows = sw.results })
+        print(("KB_SWEEP_DONE rows=%d file=%s"):format(#sw.results, word(path ~= nil)))
+        phase = "done"
+      else
+        rec = { n = row.n, map = row.map, cls = row.cls, x = row.x, y = row.y, dir = row.dir, state = row.state }
+        halt(game)
+        setVehicle(game, "walk", base)
+        if ow and sw.strength then ow.strengthActive = false end
+        sw.strength = nil
+        if row.trigger == "warp" then
+          -- an entry script's row: the warp itself is the trigger, made after READY
+          rec.start = {}
+          rec.readyAt = love.timer.getTime()
+          print(("KB_ROW_READY n=%d dir=none push=0"):format(row.n))
+          frames = 0
+          phase = "row_wait_step"
+        elseif sw.dirty or row.fresh or not ow or ow.map.id ~= row.map then
+          -- the new game's story state and every map's boot blocks, the map's trainers beaten, then a warp in
+          restore(game, base)
+          beatTrainers(game, row.map)
+          arrived = false
+          local okW, res, err = pcall(world.warpTo, world, row.map, row.x, row.y, row.face or row.dir or "down",
+            { onDone = function() arrived = true end })
+          if not okW or not res then
+            rec.err = "warp " .. word(okW and err or res):sub(1, 50)
+            phase = "row_report"
+          else
+            rec.warped = true
+            frames, sw.st = 0, {}
+            phase = "row_settle"
+          end
+        else
+          placeAt(game, row)
+          frames = 0
+          phase = "row_place"
+        end
+      end
+    elseif phase == "row_settle" then
+      frames = frames + 1
+      answerLate(game, sw.st)
+      if frames == SETTLE_FRAMES and not rec.entryHalted then rec.entryHalted = halt(game) end
+      if (arrived and frames >= ROW_SETTLE_MIN and quiet(game)) or frames >= SETTLE_FRAMES + 120 then
+        local ow = overworld(game)
+        if not ow or ow.map.id ~= row.map or not quiet(game) then
+          rec.err = (ow and ow.map.id ~= row.map) and "left_on_entry" or "not_settled"
+          phase = "row_report"
+        else
+          placeAt(game, row)
+          frames = 0
+          phase = "row_place"
+        end
+      end
+    elseif phase == "row_place" then
+      frames = frames + 1
+      local ow = overworld(game)
+      if frames == 1 and ow then
+        if not row.late then setVehicle(game, row.state, base) end
+        if row.bicycle then
+          sw.bag = { had = true, v = game.save.inventory.BICYCLE }
+          game.save.inventory.BICYCLE = 1
+        end
+        noEncounters(game)
+        if row.strength then
+          -- BIT_STRENGTH_ACTIVE as the party menu's STRENGTH sets it (OC:1193-1198); cleared on every map load (:486)
+          ow.strengthActive = true
+          sw.strength = true
+        end
+      end
+      if frames >= 8 and quiet(game) then
+        local p = ow.player
+        local Collision = require("src.world.Collision")
+        if p.cellX ~= row.x or p.cellY ~= row.y then
+          rec.err = "not_placed"
+          phase = "row_report"
+        else
+          local okO, busy = pcall(Collision.occupied, ow.entities or {}, p.cellX, p.cellY, p)
+          if okO and busy then
+            rec.err = "occupied"
+            phase = "row_report"
+          else
+            local d = row.dir and DELTA[row.dir]
+            if d then
+              local okT, tbusy = pcall(Collision.occupied, ow.entities or {}, p.cellX + d[1], p.cellY + d[2], p)
+              rec.targetBusy = (okT and tbusy and true) or nil
+            end
+            rec.start = { x = p.cellX, y = p.cellY, facing = p.facing, surfing = p.surfing == true,
+                          biking = game.save.onBike == true }
+            rec.before = liveBlocks(ow)
+            rec.story = storySig(game)
+            rec.todSteps = tonumber(ow.todSteps)
+            rec.readyAt = love.timer.getTime()
+            -- dirs: several steps in one row (field_common sends them one after another, the first answered with n);
+            -- hold: a button the client holds over the row's steps (move.hold)
+            local extra = ""
+            if row.dirs then extra = extra .. " dirs=" .. word((row.dirs:gsub(",", "+"))) end
+            if row.hold then extra = extra .. " hold=" .. word(row.hold) end
+            print(("KB_ROW_READY n=%d dir=%s push=%s%s"):format(row.n, word(row.dir or "none"), row.push and "1" or "0",
+              extra))
+            frames = 0
+            phase = "row_wait_step"
+          end
+        end
+      elseif frames >= 200 then
+        halt(game)
+        rec.err = "not_quiet"
+        phase = "row_report"
+      end
+    elseif phase == "row_wait_step" then
+      frames = frames + 1
+      if ctlValue() == row.n or love.timer.getTime() - (rec.readyAt or 0) > STEP_WAIT_S then
+        rec.stepWait = frames
+        rec.ctl = ctlValue() == row.n
+        frames = 0
+        rec.idle = 0
+        if row.late then setVehicle(game, row.state, base) end
+        if row.trigger == "warp" then
+          restore(game, base)
+          beatTrainers(game, row.map)
+          local x, y = row.x, row.y
+          if not x or x < 0 then x, y = arrivalCell(game, row.map) end
+          local okW, res, err = pcall(world.warpTo, world, row.map, x, y, row.face or "down")
+          if not okW or not res then rec.err = "warp " .. word(okW and err or res):sub(1, 50) end
+          rec.driven = true
+        end
+        phase = rec.err and "row_report" or "row_run"
+      end
+    elseif phase == "row_run" then
+      frames = frames + 1
+      local ow = overworld(game)
+      if quiet(game) then rec.idle = rec.idle + 1 else rec.idle = 0 end
+      local now = ow and ow.map.id or nil
+      if now ~= rec.lastMap then
+        rec.maps = rec.maps or array()
+        rec.maps[#rec.maps + 1] = now
+        rec.lastMap = now
+      end
+      if row.roll and frames == row.roll then
+        -- the Cycling Road's roll has been seen: off the bike, so the roll ends after the step under way
+        game.save.onBike = base.onBike
+        rec.rollStopped = true
+      end
+      if (frames >= 30 and rec.idle >= (row.idle or ROW_IDLE)) or frames >= (row.wait or ROW_BUDGET) then
+        if frames >= (row.wait or ROW_BUDGET) then rec.halted = halt(game) or true end
+        ow = overworld(game)
+        local p = ow and ow.player or {}
+        rec.frames = frames
+        rec["end"] = { map = ow and ow.map.id or nil, x = p.cellX, y = p.cellY, facing = p.facing,
+                       surfing = p.surfing == true, biking = game.save.onBike == true }
+        if ow and ow.map.id == row.map and rec.before then
+          rec.changed = blocksChanged(ow, rec.before, liveBlocks(ow))
+        else
+          rec.changed = array()
+        end
+        rec.storyChanged = rec.story ~= nil and storySig(game) ~= rec.story or nil
+        rec.steps = (ow and rec.todSteps and tonumber(ow.todSteps)) and (tonumber(ow.todSteps) - rec.todSteps) or nil
+        rec.before, rec.story, rec.lastMap, rec.todSteps = nil, nil, nil, nil
+        phase = "row_report"
+      end
+    elseif phase == "row_report" then
+      local e = rec["end"] or {}
+      if row.bicycle and sw.bag then
+        game.save.inventory.BICYCLE = sw.bag.v
+        sw.bag = nil
+      end
+      sw.dirty = rec.err ~= nil or (e.map ~= nil and e.map ~= row.map) or (rec.changed ~= nil and #rec.changed > 0)
+        or rec.halted == true or rec.storyChanged == true or row.strength == true or row.trigger == "warp"
+      print(("KB_ROW_DONE n=%d map=%s cls=%s end=%s moved=%s changed=%d frames=%s halted=%s err=%s")
+        :format(row.n, word(row.map), word(row.cls), word(e.map or "none"),
+          word(e.x ~= nil and (e.x ~= row.x or e.y ~= row.y or e.map ~= row.map)),
+          rec.changed and #rec.changed or 0, word(rec.frames or 0), word(rec.halted or false), word(rec.err or "none")))
+      rec.readyAt = nil
+      sw.results[#sw.results + 1] = rec
+      sw.gapUntil = love.timer.getTime() + 0.8
+      phase = "row_gap"
+    elseif phase == "row_gap" then
+      -- the bridge's last messages for this row reach the client before the next row moves the player (by the
+      -- clock: the engine runs faster than 60 frames a second headless)
+      if love.timer.getTime() >= sw.gapUntil then phase = "row_next" end
     elseif phase == "map_next" then
       sv.i = sv.i + 1
       local id = sv.ids[sv.i]

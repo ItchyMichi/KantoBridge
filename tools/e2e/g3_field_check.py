@@ -187,6 +187,9 @@ SAMPLED = ("tall_grass", "sand", "puddle", "shallow_water", "long_grass", "pond_
 ARROWS = {"SOUTH_ARROW_WARP": "down", "NORTH_ARROW_WARP": "up", "EAST_ARROW_WARP": "right", "WEST_ARROW_WARP": "left",
           "WATER_SOUTH_ARROW_WARP": "down", "DEEP_SOUTH_WARP": "down"}
 PER_MAP_SAMPLE = 10
+# map states a mechanism needs that a new game hasn't reached (the engine's own tests set them: tests/drivers/
+# em_sky_pillar_cracks.lua sets VAR_SKY_PILLAR_STATE 2), by map prefix
+MAP_STATE = {"EM_SKY_PILLAR_": {"VAR_SKY_PILLAR_STATE": 2}}
 
 
 class Grid:
@@ -218,18 +221,18 @@ def make_rows(only_class: str = "", only_maps: str = "") -> list[dict]:
         if key in seen:
             return
         seen.add(key)
-        if only_class and r["cls"] != only_class:
+        if only_class and r["cls"] != only_class and not r["cls"].startswith(only_class + ":"):
             return
         rows.append(r)
 
-    def approach(g, tx, ty, surf_ok=True, walk_ok=True, prefer=None):
-        """(sx, sy, dir, state) for a step onto (tx, ty) the game allows, or None."""
+    def approach(g, tx, ty, surf_ok=True, walk_ok=True, prefer=None, avoid=frozenset()):
+        """(sx, sy, dir, state) for a step onto (tx, ty) the game allows, or None; never from a cell in avoid."""
         order = [prefer] if prefer else []
         order += [d for d in DIRS if d != prefer]
         for d in order:
             dx, dy = DELTA[d]
             sx, sy = tx - dx, ty - dy
-            if not g.inside(sx, sy):
+            if not g.inside(sx, sy) or (sx, sy) in avoid:
                 continue
             if walk_ok and g.st(sx, sy) == "." and g.v(sx, sy, d) in ".J":
                 return sx, sy, d, "walk"
@@ -278,9 +281,11 @@ def make_rows(only_class: str = "", only_maps: str = "") -> list[dict]:
                     elif g.st(sx, sy) == "." and g.v(sx, sy, d) == ".":
                         add(map=mid, x=sx, y=sy, dir=d, state="walk", cls=c, tx=x, ty=y, expect="forced")
         # every cell stepped on
+        # cells a row must not start on: they act on arrival (a crack gives way, ice slides, a current pushes)
+        acting = {tuple(xy) for c in ("cracked_floor", "cracked_floor_hole") for xy in cells.get(c) or []}
         for c in EVERY_CELL:
             for x, y in cells.get(c) or []:
-                a = approach(g, x, y, surf_ok=False)
+                a = approach(g, x, y, surf_ok=False, avoid=frozenset(acting))
                 if a:
                     add(map=mid, x=a[0], y=a[1], dir=a[2], state=a[3], cls=c if c != "thin_ice" else "thin_ice_cell", tx=x, ty=y,
                         expect="fall" if c.startswith("cracked") else "write", fresh=c.startswith("cracked") or c == "thin_ice")
@@ -412,11 +417,20 @@ def lua_rows(rows: list[dict]) -> str:
         return '"' + str(v).replace("\\", "\\\\").replace('"', '\\"') + '"'
     out = ["return {"]
     for r in rows:
+        # slow mechanics (a fall, a script, a warp's fade) get a longer quiet before the row ends
+        if r.get("expect") in ("fall", "warp", "script") or r["cls"] in ("cracked_floor", "thin_ice_cell"):
+            r.setdefault("idle", 90)
         keep = {k: r[k] for k in ("n", "map", "x", "y", "dir", "state", "cls", "fresh", "push", "wait", "trigger", "script",
-                                  "lid") if k in r}
+                                  "lid", "idle") if k in r}
         parts = [f"{k} = {val(v)}" for k, v in keep.items()]
         if r.get("vars"):
             parts.append("vars = { " + ", ".join(f"[{int(k)}] = {int(v)}" for k, v in r["vars"].items()) + " }")
+        varn = dict(r.get("varn") or {})
+        for prefix, st in MAP_STATE.items():
+            if r["map"].startswith(prefix):
+                varn.update(st)
+        if varn:
+            parts.append("varn = { " + ", ".join(f"{k} = {int(v)}" for k, v in varn.items()) + " }")
         out.append("  { " + ", ".join(parts) + " },")
     out.append("}")
     return "\n".join(out) + "\n"
@@ -454,96 +468,225 @@ WANT_KIND = {"LADDER": "ladder", "UP_ESCALATOR": "escalator", "DOWN_ESCALATOR": 
 
 
 def analyse(rows: list[dict], sweep: dict, received: list[dict], done: dict) -> dict:
-    by_n = {r["n"]: r for r in rows}
-    out = []
-    for rec in sweep.get("rows") or []:
-        n = rec.get("n")
-        row = by_n.get(n, {})
-        msgs = fc.row_messages(received, n)
-        sf = fc.stream_facts(msgs)
-        d = done.get(n) or {}
-        ans = [m for m in msgs if m["type"] in ("player.pos", "player.blocked") and (m.get("data") or {}).get("n") == n]
-        e = rec.get("end") or {}
-        entry = {"n": n, "map": rec.get("map"), "cls": rec.get("cls"), "state": rec.get("state"), "expect": row.get("expect"),
-                 "err": rec.get("err"), "halted": bool(rec.get("halted")), "answers": len(ans),
-                 "answer": ans[0]["type"] + ":" + str((ans[0].get("data") or {}).get("kind") or (ans[0].get("data") or {}).get("reason"))
-                 if ans else None,
-                 "pos_kinds": dict(Counter(k for k in sf["pos_kinds"])), "warps": [w["kind"] for w in sf["warps"] if w["phase"] == "arrive"],
-                 "modes": sf["modes"], "engine_end": [e.get("map"), e.get("x"), e.get("y")],
-                 "client_end": [(sf["last"] or {}).get("map"), (sf["last"] or {}).get("x"), (sf["last"] or {}).get("y")]
-                 if sf["last"] else None, "changed": len(rec.get("changed") or []), "story_cells": sf["story_cells"],
-                 "frames": rec.get("frames")}
-        problems = []
-        if not rec.get("err"):
-            if len(ans) != 1:
-                problems.append(f"answers={len(ans)}")
-            moved = e.get("map") is not None and [e.get("map"), e.get("x"), e.get("y")] != [rec.get("map"), (rec.get("start") or {}).get("x"), (rec.get("start") or {}).get("y")]
-            if moved:
-                ce = entry["client_end"]
-                if ce is None or ce != entry["engine_end"]:
-                    problems.append("C:left_behind")
-            # D: every cell the engine changed during the row (same map) reached the client as story.cells
-            if rec.get("changed") and (e.get("map") == rec.get("map")):
-                held = {}
-                for m in msgs:
-                    if m["type"] == "story.cells" and (m.get("data") or {}).get("map") == rec.get("map"):
-                        for c in (m["data"].get("cells") or []):
-                            held[(c["x"], c["y"])] = c.get("metatile")
-                miss = [c for c in rec["changed"] if held.get((c["x"], c["y"])) != c["l"][0]]
-                if miss:
-                    problems.append(f"D:not_shown={len(miss)}")
-            exp = row.get("expect")
-            if exp == "blocked" and not (entry["answer"] or "").startswith("player.blocked"):
-                problems.append("expect_blocked")
-            if exp == "warp" or exp == "fall":
-                if not entry["warps"]:
-                    problems.append("no_warp")
-                else:
-                    beh = (row.get("cls") or "").split(":", 1)[-1]
-                    want = WANT_KIND.get(beh) or WANT_KIND.get(row.get("cls"))
-                    if want and entry["warps"][0] != want:
-                        problems.append(f"N:kind {entry['warps'][0]} (mechanism {want})")
-            if exp == "script" and any(o.startswith("warp") for o in row.get("ops") or []) and not entry["warps"]:
-                problems.append("N:script_no_warp")
-            if exp == "forced" and not moved:
-                problems.append("forced_no_move")
-            if rec.get("halted"):
-                problems.append("halted")
-        entry["problems"] = problems
-        out.append(entry)
-    return {"rows": out}
+    return fc.analyse_rows(rows, sweep, received, done, WANT_KIND)
 
 
 def report(analysis: dict) -> None:
-    rows = analysis["rows"]
-    by_cls = defaultdict(Counter)
-    for e in rows:
-        cls = e["cls"]
-        by_cls[cls]["rows"] += 1
-        if e["err"]:
-            by_cls[cls]["err:" + str(e["err"]).split()[0]] += 1
-        for p in e["problems"]:
-            by_cls[cls][p.split(" (")[0] if p.startswith("N:") else p.split("=")[0]] += 1
-        if not e["problems"] and not e["err"]:
-            by_cls[cls]["ok"] += 1
-    print(f"\nSWEEP: {len(rows)} rows")
-    for cls in sorted(by_cls):
-        c = by_cls[cls]
-        print(f"  {cls}: " + ", ".join(f"{k} {v}" for k, v in sorted(c.items())))
-    kinds = Counter()
-    for e in rows:
-        if e["warps"]:
-            kinds[(e["cls"], e["warps"][0])] += 1
-    print("\nWARP KINDS SEEN (class: kind x rows):")
-    for (cls, k), n in sorted(kinds.items()):
-        print(f"  {cls}: {k} x{n}")
-    pk = defaultdict(Counter)
-    for e in rows:
-        for k, n in e["pos_kinds"].items():
-            pk[e["cls"]][k] += n
-    print("\nPLAYER.POS KINDS (class: kind count):")
-    for cls in sorted(pk):
-        print(f"  {cls}: " + ", ".join(f"{k} {v}" for k, v in pk[cls].most_common()))
+    fc.report_rows(analysis)
+
+# ---- FA5: features and step counters (§3.3, §3.4) -------------------------------------------------------------------
+
+FEATURES = REPORTS / "g3_field_features_rows.lua"
+FEATURE_MAPS = {
+    "boulder": ["EM_VICTORY_ROAD_B1F", "EM_SEAFLOOR_CAVERN_ROOM1", "EM_SEAFLOOR_CAVERN_ROOM2", "EM_SEAFLOOR_CAVERN_ROOM5"],
+    "cut_tree": ["EM_ROUTE116", "EM_ROUTE104", "EM_PETALBURG_WOODS", "EM_ROUTE119"],
+    "rock": ["EM_ROUTE111", "EM_ROUTE115", "EM_GRANITE_CAVE_B2F", "EM_SAFARI_ZONE_NORTH"],
+}
+
+
+def make_features() -> list[dict]:
+    inv = json.loads(INVENTORY.read_text(encoding="utf-8"))["maps"]
+    par = json.loads(PARITY.read_text(encoding="utf-8"))["maps"]
+    rows: list[dict] = []
+
+    def add(**r):
+        r.setdefault("badges", True)
+        r.setdefault("wait", 1500)
+        r.setdefault("idle", 60)
+        r.setdefault("fresh", True)
+        rows.append(r)
+
+    def grid(mid):
+        rec = par.get(mid) or {}
+        return Grid(rec) if rec.get("walk") else None
+
+    def line(g, length):
+        """A walkable cell with `length` open steps ahead in one direction (no ledge), or None."""
+        for y in range(g.h):
+            for x in range(g.w):
+                for d in DIRS:
+                    cx, cy, ok = x, y, True
+                    for _ in range(length):
+                        if g.st(cx, cy) != "." or g.v(cx, cy, d) != ".":
+                            ok = False
+                            break
+                        cx, cy = cx + DELTA[d][0], cy + DELTA[d][1]
+                    if ok:
+                        return x, y, d
+        return None
+
+    # running: B held through four steps, the running shoes' flag set, on maps whose header allows running
+    n = 0
+    for mid in ("EM_ROUTE101", "EM_ROUTE103", "EM_PETALBURG_CITY", "EM_RUSTBORO_CITY"):
+        g = grid(mid)
+        if not g or (inv.get(mid) or {}).get("allowRunning") in (0, False):
+            continue
+        ln = line(g, 4)
+        if ln:
+            add(map=mid, x=ln[0], y=ln[1], dir=ln[2], dirs=",".join([ln[2]] * 4), state="walk", cls="feature:run",
+                hold="b", flagn={"FLAG_SYS_B_DASH": True}, expect="feature")
+            n += 1
+        if n >= 2:
+            break
+    # the bikes: Mach five steps (its speeds), Acro three; B held on the Acro (a wheelie)
+    for mid in ("EM_ROUTE110", "EM_ROUTE111", "EM_ROUTE101"):
+        g = grid(mid)
+        ln = g and line(g, 6)
+        if ln:
+            add(map=mid, x=ln[0], y=ln[1], dir=ln[2], dirs=",".join([ln[2]] * 5), state="mach", cls="feature:mach",
+                expect="feature")
+            add(map=mid, x=ln[0], y=ln[1], dir=ln[2], dirs=",".join([ln[2]] * 3), state="acro", cls="feature:acro",
+                expect="feature")
+            add(map=mid, x=ln[0], y=ln[1], dir=ln[2], dirs=",".join([ln[2]] * 2), state="acro", cls="feature:acro_wheelie",
+                hold="b", expect="feature")
+            break
+    # Mach up a muddy slope; on foot up it
+    for mid, m in sorted(inv.items()):
+        cells = (m.get("cells") or {}).get("muddy_slope") or []
+        g = grid(mid)
+        if not cells or not g:
+            continue
+        x, y = cells[0]
+        if g.inside(x, y + 1) and g.st(x, y + 1) == "." and g.v(x, y + 1, "up") == ".":
+            add(map=mid, x=x, y=y + 1, dir="up", dirs="up,up", state="walk", cls="feature:muddy_foot", expect="feature")
+            add(map=mid, x=x, y=y + 1, dir="up", dirs="up,up", state="mach", cls="feature:muddy_mach", expect="feature")
+            break
+    # Surf on and off; Dive and emerge; Waterfall
+    k = 0
+    for mid in sorted(par):
+        g = grid(mid)
+        if not g or k >= 2:
+            continue
+        done = False
+        for y in range(g.h):
+            for x in range(g.w):
+                if done or g.st(x, y) != ".":
+                    continue
+                for d in DIRS:
+                    wx, wy = x + DELTA[d][0], y + DELTA[d][1]
+                    if g.inside(wx, wy) and g.st(wx, wy) == "~" and g.v(x, y, d) == "w" and g.v(x, y, d, True) == ".":
+                        add(map=mid, x=x, y=y, face=d, state="walk", cls="feature:surf_on", act="surf", ax=wx, ay=wy,
+                            expect="feature")
+                        add(map=mid, x=wx, y=wy, face=OPP[d], state="surf", cls="feature:surf_off", act="surf", ax=x, ay=y,
+                            expect="feature")
+                        done = True
+                        k += 1
+                        break
+    for mid, m in sorted(inv.items()):
+        cells = (m.get("cells") or {}).get("dive_spot") or []
+        g = grid(mid)
+        if cells and g and (m.get("type") != 5):
+            x, y = cells[len(cells) // 2]
+            if g.st(x, y) == "~":
+                add(map=mid, x=x, y=y, face="down", state="surf", cls="feature:dive", act="dive", expect="feature")
+                if sum(1 for r in rows if r["cls"] == "feature:dive") >= 3:
+                    break
+    for mid, m in sorted(inv.items()):
+        g = grid(mid)
+        if m.get("type") == 5 and g:
+            no = {tuple(c) for c in (m.get("cells") or {}).get("no_surfacing") or []}
+            pick = next(((x, y) for y in range(g.h) for x in range(g.w) if g.st(x, y) in ".~" and (x, y) not in no), None)
+            if pick:
+                add(map=mid, x=pick[0], y=pick[1], face="down", state="underwater", cls="feature:emerge", act="dive",
+                    expect="feature")
+                if sum(1 for r in rows if r["cls"] == "feature:emerge") >= 3:
+                    break
+    for mid, m in sorted(inv.items()):
+        cells = {tuple(c) for c in (m.get("cells") or {}).get("waterfall") or []}
+        g = grid(mid)
+        if not cells or not g:
+            continue
+        for x, y in sorted(cells):
+            if (x, y + 1) not in cells and g.inside(x, y + 1) and g.st(x, y + 1) == "~":
+                add(map=mid, x=x, y=y + 1, face="up", state="surf", cls="feature:waterfall", act="waterfall",
+                    ax=x, ay=y, expect="feature", wait=2400)
+                break
+        if sum(1 for r in rows if r["cls"] == "feature:waterfall") >= 3:
+            break
+    # Strength, Cut, Rock Smash on the objects the driver finds
+    for mid in FEATURE_MAPS["boulder"]:
+        if mid in par:
+            add(map=mid, x=0, y=0, find="boulder", strength=True, state="walk", cls="feature:strength", expect="feature")
+    for mid in FEATURE_MAPS["cut_tree"]:
+        if mid in par:
+            add(map=mid, x=0, y=0, find="cut_tree", act="cut", state="walk", cls="feature:cut", expect="feature")
+    for mid in FEATURE_MAPS["rock"]:
+        if mid in par:
+            add(map=mid, x=0, y=0, find="rock", act="rock_smash", state="walk", cls="feature:rock_smash", expect="feature")
+    # Flash in a cave, Dig out of it, Teleport outside, Fly (the game's own list)
+    for mid, act, cls in (("EM_GRANITE_CAVE_1F", "flash", "feature:flash"), ("EM_GRANITE_CAVE_1F", "dig", "feature:dig"),
+                          ("EM_ROUTE104", "teleport", "feature:teleport"), ("EM_ROUTE104", "fly", "feature:fly")):
+        g = grid(mid)
+        pick = g and next(((x, y) for y in range(g.h) for x in range(g.w) if g.st(x, y) == "."), None)
+        if pick:
+            add(map=mid, x=pick[0], y=pick[1], face="down", state="walk", cls=cls, act=act, expect="feature", wait=2400)
+    # step counters (§3.4): twenty steps back and forth, the counters read before and after
+    for mid in ("EM_ROUTE101", "EM_ROUTE104"):
+        g = grid(mid)
+        ln = g and line(g, 2)
+        if ln:
+            d = ln[2]
+            add(map=mid, x=ln[0], y=ln[1], dir=d, dirs=",".join([d, OPP[d]] * 10), state="walk", cls="steps:walk20",
+                expect="steps", wait=3000)
+            break
+    for i, r in enumerate(rows, 1):
+        r["n"] = i
+    return rows
+
+
+def lua_feature_rows(rows: list[dict]) -> str:
+    def val(v):
+        if isinstance(v, bool):
+            return "true" if v else "false"
+        if isinstance(v, (int, float)):
+            return str(v)
+        return '"' + str(v).replace("\\", "\\\\").replace('"', '\\"') + '"'
+    out = ["return {"]
+    for r in rows:
+        keep = {k: r[k] for k in ("n", "map", "x", "y", "dir", "face", "dirs", "state", "cls", "fresh", "push", "wait", "idle",
+                                  "act", "ax", "ay", "item", "dest", "hold", "find", "strength", "badges", "norepel") if k in r}
+        parts = [f"{k} = {val(v)}" for k, v in keep.items()]
+        if r.get("flagn"):
+            parts.append("flagn = { " + ", ".join(f"{k} = {val(v)}" for k, v in r["flagn"].items()) + " }")
+        out.append("  { " + ", ".join(parts) + " },")
+    out.append("}")
+    return "\n".join(out) + "\n"
+
+
+def cmd_features(timeout: float, tag: str) -> int:
+    rows = make_features()
+    FEATURES.write_text(lua_feature_rows(rows), encoding="utf-8")
+    print(f"FEATURE ROWS {len(rows)}:", dict(Counter(r["cls"] for r in rows)))
+    out = REPORTS / f"g3_field_features{tag}.json"
+    received, done, answered, result = fc.run_rows(DRIVER, GAME, "sweep", SWEEP_PORT, timeout,
+                                                   {"KB_ROWS": str(FEATURES.resolve()), "KB_SWEEP_FILE": out.name},
+                                                   party=fc.FIELD_PARTY)
+    fc.write(REPORTS / f"g3_field_features_stream{tag}.json", {"received": received, "rows": done})
+    sweep = json.loads(out.read_text(encoding="utf-8"))
+    report_features(rows, sweep, received, done)
+    return 0 if result.returncode == 0 else 1
+
+
+def report_features(rows, sweep, received, done) -> None:
+    by_n = {r["n"]: r for r in rows}
+    print("\nFEATURES:")
+    for rec in sweep.get("rows") or []:
+        n = rec["n"]
+        row = by_n.get(n, {})
+        d = done.get(n) or done.get(str(n)) or {}
+        msgs = fc.row_messages(received, n)
+        sf = fc.stream_facts(msgs)
+        steps = rec.get("stepsSeen") or []
+        cb, ca = rec.get("countersBefore") or {}, rec.get("countersAfter") or {}
+        delta = {k: (ca.get(k) - cb.get(k)) for k in ca if isinstance(ca.get(k), (int, float)) and isinstance(cb.get(k), (int, float))
+                 and ca.get(k) != cb.get(k)}
+        answers = [a for a in (d.get("answers") or []) if a]
+        frames = [((a.get("data") or {}).get("kind"), (a.get("data") or {}).get("frames")) for a in answers]
+        e = rec.get("end") or {}
+        print(f"  #{n} {row.get('cls')} {rec.get('map')} [{rec.get('state')}]: act {d.get('act')}; answers {len(answers)} {frames}; "
+              f"engine steps {[(x.get('f'), x.get('run'), x.get('bt')) for x in steps][:6]}; warps {[w['kind'] for w in sf['warps'] if w['phase'] == 'arrive']}; "
+              f"pos kinds {dict(Counter(sf['pos_kinds']))}; end {e.get('map')}:{e.get('x')},{e.get('y')} surf={e.get('surfing')} "
+              f"under={e.get('underwater')}; client {sf['last']}; counters {delta}; err {rec.get('err')}")
 
 
 def main(argv=None) -> int:
@@ -566,7 +709,12 @@ def main(argv=None) -> int:
     p.add_argument("--tag", default="")
     p = sub.add_parser("report")
     p.add_argument("--tag", default="")
+    p = sub.add_parser("features")
+    p.add_argument("--timeout", type=float, default=3600.0)
+    p.add_argument("--tag", default="")
     a = ap.parse_args(argv)
+    if a.cmd == "features":
+        return cmd_features(a.timeout, a.tag)
     if a.cmd == "rows":
         return cmd_rows(a.cls, a.maps)
     if a.cmd == "sweep":

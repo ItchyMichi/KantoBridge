@@ -352,6 +352,14 @@ return function(game)
             game.save.flashLit = true
             pcall(ow.setDark, ow, false)
           end
+          -- FA6 (the field audit's spots): the vehicle the spot needs, as the engine's own fields hold it
+          if ow and cmd.vehicle == "surf" then
+            ow.player.surfing = true
+            game.save.onBike = false
+          elseif ow and cmd.vehicle == "bike" then
+            ow.player.surfing = false
+            game.save.onBike = true
+          end
           print(("KB_SPOT id=%s map=%s x=%s y=%s blocks=%d dark=%s flash=%s halted=%s"):format(
             word(cmd.id), word(ow and ow.map.id), word(ow and ow.player.cellX), word(ow and ow.player.cellY),
             ow and changedBlocks(ow) or -1, tostring(ow and ow.dark == true), tostring(game.save.flashLit == true),

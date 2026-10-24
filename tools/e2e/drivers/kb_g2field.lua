@@ -65,6 +65,30 @@
 --            (World:engineFlagId's ids); and each map's coord events with their
 --            scene id. Written to KB_REPORT_DIR/g2_field_scripts.json.
 --
+--   sweep    FA3 + FA4, live: the rows of KB_ROWS (a Lua file returning a
+--            list, written by g2_field_check.py), one at a time, a stand-in
+--            Minecraft client (field_common.row_client) stepping. Per row the
+--            player is put where the row starts: a warp (World:warpToMapId,
+--            World.lua:2441-2449) when the map differs, the row is fresh or
+--            the last row changed the world (the story state put back to the
+--            new game's first, the row's map scene set, hour 12 and Monday),
+--            else World:setMap's own placement of the player without the load
+--            (World.lua:10249-10262, :10301-10304); the vehicle by
+--            World:applyPlayerState (normal, bike, surf, :6029). On the
+--            Cycling Road the downhill flag is held off while the player is put
+--            and given back at READY (the roll would move them before the row
+--            starts). Then KB_ROW_READY n= dir= push=; the client steps and
+--            writes "<n>" to KB_CTL; the driver waits for the field to stand
+--            quiet for row.idle frames (or row.wait / KB_ROW_FRAMES: a script
+--            still running is halted; a `roll` row just ends there), records
+--            the engine's end state and the live blocks the row changed, prints
+--            KB_ROW_DONE n= ... and waits 0.8 s by the clock. A row with
+--            trigger="warp" is an entry script's: READY first, the warp after
+--            the client's answer; trigger="script" starts an object's or a
+--            sign's script as an interaction does (Vm:start, src/script/gen2/
+--            Vm.lua:2582; World.lua:8750-8771), marked driven. Written to
+--            KB_REPORT_DIR/<KB_SWEEP_FILE> (default g2_field_sweep.json).
+--
 -- Verdict codes (one character per cell and direction, directions up, down,
 -- left, right; cells row by row), the same alphabet as kb_g3field.lua's (Gen 2
 -- has no elevation, so no "v" or "?"; no gates or Acro rails, so no "g"/"a"):
@@ -76,7 +100,9 @@
 -- Markers: KB_BOOTED, KB_FIELD map=, KB_SURVEY_MAP n= map= cells= warped=
 -- halted= classes=, KB_SURVEY maps= surveyed= cells= failed= file=, KB_SCRIPTS
 -- maps= roots= rows= warps= moves= blocks= elevators= specials= bikeflags=
--- coord= truncated= file=, KB_CLEANED deleted= active=, KB_QUIT code=;
+-- coord= truncated= file=, KB_SWEEP_READY rows=, KB_ROW_READY n= dir= push=,
+-- KB_ROW_DONE n= map= cls= end= moved= changed= frames= halted= err=,
+-- KB_SWEEP_DONE rows= file=, KB_CLEANED deleted= active=, KB_QUIT code=;
 -- KB_FAIL <reason>. Map symbols, ids, class names, counts and booleans only.
 --
 -- Runs unsandboxed as a POKEPORT_DRIVER coroutine, resumed once per frame
@@ -337,6 +363,9 @@ local COMMON = { grass = true, super_tall_grass = true, counter = true, water = 
                  land = true }
 -- The classes that say nothing beyond the base permission: a byte with only these is "unclassed".
 local BASE = { water = true, wall = true, void = true, land = true }
+-- The common classes the sweep samples (FA3: 10 a map): their first cells are listed as `samples`.
+local SAMPLE = { grass = true, super_tall_grass = true, counter = true }
+local SAMPLE_MAX = 400
 -- The bytes whose meaning is the base permission itself (COLL_FLOOR, COLL_WALL, COLL_WATER, the $ff sentinel).
 local PLAIN = { [0x00] = true, [0x07] = true, [0x29] = true, [0xff] = true }
 
@@ -408,7 +437,7 @@ local function staticMap(game, id, def, classes)
                 tileset = def.tileset, connections = conns, callbacks = cbs,
                 coordEvents = #(type(def.coordEvents) == "table" and def.coordEvents or {}),
                 edited = src ~= def or nil,
-                counts = {}, cells = {}, warps = array(), colls = {}, unclassed = {}, inMapLadders = 0 }
+                counts = {}, cells = {}, samples = {}, warps = array(), colls = {}, unclassed = {}, inMapLadders = 0 }
   local unknown = 0
   for y = 0, th - 1 do
     for x = 0, tw - 1 do
@@ -426,6 +455,11 @@ local function staticMap(game, id, def, classes)
           local name = cl[1]
           out.counts[name] = (out.counts[name] or 0) + 1
           if not BASE[name] then extra = true end
+          if SAMPLE[name] then
+            out.samples[name] = out.samples[name] or array()
+            local l = out.samples[name]
+            if #l < SAMPLE_MAX then l[#l + 1] = array({ x, y }) end
+          end
           if not COMMON[name] then
             out.cells[name] = out.cells[name] or array()
             local l = out.cells[name]
@@ -918,10 +952,176 @@ local function surveyList(game)
   return ids
 end
 
+-- ---- the live sweep (FA3-FA4): rows from KB_ROWS, one step each, a stand-in client stepping
+
+local CTL = os.getenv("KB_CTL")
+local ROW_FRAMES = tonumber(os.getenv("KB_ROW_FRAMES") or "") or 900 -- frames a row may take before it is halted
+local ROW_IDLE = 24                                                  -- the field quiet this long ends a row
+
+local function ctlValue()
+  if not CTL then return nil end
+  local f = io.open(CTL, "rb")
+  if not f then return nil end
+  local v = f:read("*a")
+  f:close()
+  return tonumber(v)
+end
+
+local function surfState(s) return s == "surf" or s == "surf_pika" end -- FieldMoves.isSurfing (FieldMoves.lua:437)
+
+-- The engine moving the player on its own where they stand (World:stepBody, World.lua:11512-11535): a current or
+-- a door push underfoot, a whirlpool (World:runForcedMovement), a latched slide on ice.
+local function forcedHere(w)
+  local P = perms()
+  local okC, coll = pcall(w.playerCollision, w)
+  if not okC or type(coll) ~= "number" then return false end
+  local ok, yes = pcall(function()
+    if P.currentDirection(coll) ~= nil or P.doorForcedDirection(coll) ~= nil or P.isWhirlpool(coll) then return true end
+    return w.turningDirection ~= nil and P.isIce(coll) == true
+  end)
+  return ok and yes == true
+end
+
+local function quiet(game)
+  return fieldReady(game) and not forcedHere(game.world)
+end
+
+-- The current map's live blocks (Map.new keeps def.blocks as its own array, Map.lua:22; World:replaceBlock edits
+-- it in place), copied: index -> block.
+local function liveBlocks(w)
+  local m = w.map
+  local live = m and type(m.def) == "table" and type(m.def.blocks) == "table" and m.def.blocks or {}
+  local out = {}
+  for i, b in pairs(live) do
+    if type(i) == "number" then out[i] = b end
+  end
+  return out
+end
+
+-- The blocks that changed since `before`, as story.blocks' changes ({ bx, by, block }, block coordinates) + was.
+local function blocksDiff(w, before)
+  local m = w.map
+  local width = tonumber(m.width) or tonumber(m.def and m.def.width) or 1
+  local out = array()
+  for i, b in pairs(liveBlocks(w)) do
+    if before[i] ~= b then
+      out[#out + 1] = { bx = (i - 1) % width, by = floor((i - 1) / width), block = b, was = before[i] }
+    end
+  end
+  table.sort(out, function(a, b) return a.by * 4096 + a.bx < b.by * 4096 + b.bx end)
+  return out
+end
+
+-- The player's vehicle for a row (World:applyPlayerState, World.lua:6029; the states FieldMoves.lua:387-390).
+local function setVehicle(w, state)
+  local want = (state == "surf" and "surf") or (state == "bike" and "bike") or "normal"
+  if w.playerState == want or (want == "surf" and surfState(w.playerState)) then return true end
+  local ok = pcall(w.applyPlayerState, w, want)
+  return ok
+end
+
+-- ENGINE_DOWNHILL (World:downhill, World.lua:5241; the id by World:engineFlagId, :5195, Bike.ENGINE_DOWNHILL 25):
+-- held off while the player is put on the Cycling Road, given back at READY.
+local function downhillFlag(w)
+  local okB, Bike = pcall(require, "src.world.gen2.Bike")
+  local gold = okB and type(Bike) == "table" and tonumber(Bike.ENGINE_DOWNHILL) or 25
+  local ok, id = pcall(w.engineFlagId, w, "ENGINE_DOWNHILL", gold)
+  return ok and tonumber(id) or gold
+end
+local function holdDownhill(w, rec)
+  if rec.downhillBack then return end
+  local ok, down = pcall(w.downhill, w)
+  if ok and down == true then
+    pcall(w.setEngineFlag, w, downhillFlag(w), false)
+    w.heldDir = nil -- this frame's poll may have read the roll already (World:pollInput, :11553-11557)
+    rec.downhill = true
+  end
+end
+local function releaseDownhill(w, rec)
+  if rec.downhill and not rec.downhillBack then
+    pcall(w.setEngineFlag, w, downhillFlag(w), true)
+    rec.downhillBack = true
+  end
+end
+
+-- World:setMap's own placement of the player (World.lua:10249-10262, the warp cooldown :10301-10304, IN_GRASS
+-- :10267), without the load.
+local function placeAt(w, row)
+  local p = w.player
+  local face = row.face or row.dir
+  if not DELTA[face] then face = p.facing or "down" end
+  p.cellX, p.cellY = row.x, row.y
+  p.px, p.py = row.x * 16, row.y * 16
+  p.facing = face
+  p.moving, p.progress = false, 0
+  p.targetX, p.targetY = nil, nil
+  p.jumping = nil          -- Player:update's landing (Player.lua:261-268)
+  p.spriteYOffset = nil
+  p.turnTimer = 0
+  p.bumpFrames = nil
+  w.turningDirection = nil -- no slide latched from the last row
+  w.warpCooldown = { x = row.x, y = row.y }
+  local okG, grass = pcall(w.grassAt, w, row.x, row.y)
+  if okG then p.inGrass = grass and true or false end
+  p.grassShake = nil
+end
+
+-- The script an interaction would start (World.lua:8750-8771): an object's by its index, a sign's by its number.
+local function rowScript(w, row)
+  local def = w.map and w.map.def
+  if type(def) ~= "table" then return nil end
+  if row.root == "bg" then
+    local e = type(def.bgEvents) == "table" and def.bgEvents[row.idx] or nil
+    return type(e) == "table" and e.scriptKey or nil, nil
+  elseif row.root == "object" then
+    for i, o in ipairs(type(def.objects) == "table" and def.objects or {}) do
+      if type(o) == "table" and (tonumber(o.index) or i) == row.idx then
+        local npc
+        for _, n in ipairs(type(w.npcs) == "table" and w.npcs or {}) do
+          if type(n) == "table" and n.def == o then npc = n break end
+        end
+        return o.scriptKey, npc
+      end
+    end
+  end
+  return nil
+end
+
+-- A warp to the row's map with the new game's story state, the clock at noon and the row's map scene.
+local function rowWarp(game, sw, row, x, y)
+  local w = game.world
+  restore(game, sw.base)
+  w.clockHour, w.clockDay = DEFAULT_HOUR, DEFAULT_DAY
+  if row.scene and type(w.mapScenes) == "table" then w.mapScenes[row.map] = tonumber(row.scene) end
+  setVehicle(w, "normal")
+  local okW, res = pcall(w.warpToMapId, w, row.map, x, y, row.face or (DELTA[row.dir] and row.dir) or "down")
+  if not okW then return "warp " .. word(res):sub(1, 50) end
+  if res == false then return "warp_refused" end
+  return nil
+end
+
+local function playerEnd(w)
+  local p = w.player
+  return { map = w.map and w.map.id or nil, x = p.cellX, y = p.cellY, facing = p.facing,
+           surfing = surfState(w.playerState), biking = w.playerState == "bike" }
+end
+
+local function stepCount(game)
+  local save = game.save
+  return type(save) == "table" and tonumber(save.stepCount) or nil
+end
+
+local function rowsList()
+  local ok, list = pcall(dofile, os.getenv("KB_ROWS") or "")
+  if not (ok and type(list) == "table") then fail("no_rows") end
+  return list
+end
+
 return function(game)
   local started = love.timer.getTime()
   local phase = "ready"
   local sv, frames, idle, saved
+  local sw, row, rec
   while true do
     local status = game and game.mods and game.mods.exports and game.mods.exports["gen1-bridge"]
     answerPending()
@@ -966,10 +1166,181 @@ return function(game)
           saved = quietHooks(w.vm)
           w.clockHour, w.clockDay = DEFAULT_HOUR, DEFAULT_DAY
           phase = "map_next"
+        elseif SCENE == "sweep" then
+          sw = { rows = rowsList(), i = 0, results = array(), dirty = true }
+          sw.base = snapshot(game)
+          w.clockHour, w.clockDay = DEFAULT_HOUR, DEFAULT_DAY
+          frames = 0
+          phase = "sweep_client"
         else
           fail("unknown_scene")
         end
       end
+    elseif phase == "sweep_client" then
+      if (tonumber(status and status.sessions) or 0) >= 1 and fieldReady(game) then
+        frames = frames + 1
+        if frames >= 120 then
+          print(("KB_SWEEP_READY rows=%d"):format(#sw.rows))
+          phase = "row_next"
+        end
+      end
+    elseif phase == "row_next" then
+      local w = game.world
+      sw.i = sw.i + 1
+      row = sw.rows[sw.i]
+      if not row then
+        local path = writeJson(os.getenv("KB_SWEEP_FILE") or "g2_field_sweep.json", { game = GAME, rows = sw.results })
+        print(("KB_SWEEP_DONE rows=%d file=%s"):format(#sw.results, word(path ~= nil)))
+        restore(game, sw.base)
+        setVehicle(w, sw.base.playerState)
+        w.clockHour, w.clockDay = sw.base.clockHour, sw.base.clockDay
+        phase = "done"
+      else
+        rec = { n = row.n, map = row.map, cls = row.cls, x = row.x, y = row.y, dir = row.dir, state = row.state }
+        haltScripts(game)
+        if row.trigger == "warp" then
+          -- an entry script's row: the warp itself is the trigger, made after READY
+          rec.start = {}
+          rec.trigger = "warp"
+          print(("KB_ROW_READY n=%d dir=none push=0"):format(row.n))
+          frames = 0
+          phase = "row_wait_step"
+        elseif sw.dirty or row.fresh or not w.map or w.map.id ~= row.map or row.scene then
+          rec.err = rowWarp(game, sw, row, row.x, row.y)
+          if rec.err then
+            phase = "row_report"
+          else
+            rec.warped = true
+            holdDownhill(w, rec)
+            frames = 0
+            phase = "row_settle"
+          end
+        else
+          placeAt(w, row)
+          holdDownhill(w, rec)
+          frames, rec.placed = 0, 1
+          phase = "row_place"
+        end
+      end
+    elseif phase == "row_settle" then
+      local w = game.world
+      frames = frames + 1
+      holdDownhill(w, rec)
+      if frames >= SETTLE_FRAMES and not rec.entryHalted then rec.entryHalted = haltScripts(game) end
+      if (frames >= SETTLE_MIN and quiet(game)) or frames >= SETTLE_FRAMES + 120 then
+        if not w.map or w.map.id ~= row.map then
+          rec.err = "left_on_entry"
+          phase = "row_report"
+        else
+          placeAt(w, row)
+          holdDownhill(w, rec)
+          frames, rec.placed = 0, 1
+          phase = "row_place"
+        end
+      end
+    elseif phase == "row_place" then
+      local w = game.world
+      frames = frames + 1
+      holdDownhill(w, rec)
+      if frames == 1 then
+        -- on foot is not a state the Cycling Road allows (ENGINE_ALWAYS_ON_BIKE, World:alwaysOnBike, :5236)
+        local okB, onBike = pcall(w.alwaysOnBike, w)
+        setVehicle(w, (okB and onBike == true and row.state ~= "surf") and "bike" or row.state)
+      end
+      if frames >= 8 and quiet(game) then
+        local p = w.player
+        if (p.cellX ~= row.x or p.cellY ~= row.y) and rec.placed < 3 then
+          -- something moved the player off the start (a roll, a push): put them back once more
+          placeAt(w, row)
+          frames, rec.placed = 0, rec.placed + 1
+        else
+          rec.start = { x = p.cellX, y = p.cellY, facing = p.facing, surfing = surfState(w.playerState) }
+          rec.before = liveBlocks(w)
+          rec.stepsBefore = stepCount(game)
+          releaseDownhill(w, rec)
+          print(("KB_ROW_READY n=%d dir=%s push=%s"):format(row.n, word(row.dir or "none"), row.push and "1" or "0"))
+          frames = 0
+          phase = "row_wait_step"
+        end
+      elseif frames >= 200 then
+        haltScripts(game)
+        rec.err = "not_quiet"
+        phase = "row_report"
+      end
+    elseif phase == "row_wait_step" then
+      local w = game.world
+      frames = frames + 1
+      if ctlValue() == row.n or frames >= 400 then
+        rec.stepWait = frames
+        frames = 0
+        rec.idle = 0
+        if row.trigger == "warp" then
+          rec.err = rowWarp(game, sw, row, row.x, row.y)
+        elseif row.trigger == "script" then
+          -- a script reached through an interaction the sweep can't make (an object's or a sign's script with a
+          -- warp): started as the interaction starts it (World.lua:8750-8771), marked driven
+          rec.driven = true
+          local okK, key, npc = pcall(rowScript, w, row)
+          if not okK or key == nil then
+            rec.err = "no_script"
+          else
+            w.talkNpc = npc
+            local okS, started = pcall(w.vm.start, w.vm, key)
+            if not okS or not started then rec.err = "script_not_started" end
+          end
+        end
+        phase = rec.err and "row_report" or "row_run"
+      end
+    elseif phase == "row_run" then
+      local w = game.world
+      frames = frames + 1
+      if quiet(game) then rec.idle = rec.idle + 1 else rec.idle = 0 end
+      local at = w.map and w.map.id or nil
+      if at ~= rec.lastMap then
+        rec.maps = rec.maps or array()
+        rec.maps[#rec.maps + 1] = at
+        rec.lastMap = at
+      end
+      local budget = row.wait or ROW_FRAMES
+      if (frames >= 30 and rec.idle >= (row.idle or ROW_IDLE)) or frames >= budget then
+        if frames >= budget then
+          if row.roll then
+            rec.cutoff = true -- the Cycling Road's roll never stands still: the row ends at its wait
+          else
+            rec.halted = haltScripts(game) or true
+          end
+        end
+        rec.frames = frames
+        rec["end"] = playerEnd(w)
+        if at == row.map then
+          -- an entry script's row: the visit's own edits (World.blockEdits, what the bridge sends as story.blocks)
+          rec.changed = rec.trigger == "warp" and blockDiffs(w) or blocksDiff(w, rec.before or {})
+        else
+          rec.changed = array()
+        end
+        rec.lastMap = nil
+        rec.stepsAfter = stepCount(game)
+        phase = "row_report"
+      end
+    elseif phase == "row_report" then
+      local w = game.world
+      releaseDownhill(w, rec)
+      if rec.driven then w.talkNpc = nil end
+      rec.before = nil
+      local e = rec["end"] or {}
+      sw.dirty = rec.err ~= nil or (e.map ~= nil and e.map ~= row.map) or (rec.changed ~= nil and #rec.changed > 0)
+        or rec.halted == true or row.fresh == true or row.trigger ~= nil or row.scene ~= nil
+      print(("KB_ROW_DONE n=%d map=%s cls=%s end=%s moved=%s changed=%d frames=%s halted=%s err=%s")
+        :format(row.n, word(row.map), word(row.cls), word(e.map or "none"),
+          word(e.x ~= nil and (e.x ~= row.x or e.y ~= row.y or e.map ~= row.map)),
+          rec.changed and #rec.changed or 0, word(rec.frames or 0), word(rec.halted or false), word(rec.err or "none")))
+      sw.results[#sw.results + 1] = rec
+      sw.gapUntil = love.timer.getTime() + 0.8
+      phase = "row_gap"
+    elseif phase == "row_gap" then
+      -- the bridge's last messages for this row reach the client before the next row moves the player (by the
+      -- clock: the engine runs faster than 60 frames a second headless)
+      if love.timer.getTime() >= sw.gapUntil then phase = "row_next" end
     elseif phase == "map_next" then
       sv.i = sv.i + 1
       local id = sv.ids[sv.i]

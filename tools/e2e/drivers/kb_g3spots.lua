@@ -343,6 +343,14 @@ return function(game)
           local Map, P = mod3("map"), mod3("player")
           local Runtime = mod3("runtime")
           local sess = Runtime and Runtime.getSession and Runtime.getSession()
+          -- FA6 (the field audit's spots): the vehicle the spot needs, as the engine's own fields hold it
+          if P and cmd.vehicle then
+            P.surfing = cmd.vehicle == "surf"
+            P.underwater = cmd.vehicle == "underwater"
+            P.biking = cmd.vehicle == "mach" or cmd.vehicle == "acro"
+            P.bikeType = P.biking and cmd.vehicle or nil
+            if sess then sess.biking, sess.bikeType = P.biking, P.bikeType end
+          end
           local R = mod3("field_weather_rse")
           local FV = mod3("field_view")
           print(("KB_SPOT id=%s map=%s x=%s y=%s cells=%d weather=%s drawn=%s flash=%s halted=%s"):format(

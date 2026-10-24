@@ -356,6 +356,8 @@ return function(game)
         idle = fieldReady(game) and idle + 1 or 0
         if idle >= 60 or frames >= SETTLE_FRAMES + 120 then
           if cmd.flash then w.flashUsed = true end
+          -- FA6 (the field audit's spots): the vehicle the spot needs (World:applyPlayerState, World.lua:6029)
+          if cmd.vehicle == "surf" or cmd.vehicle == "bike" then pcall(w.applyPlayerState, w, cmd.vehicle) end
           local dark = type(w.map.def) == "table" and w.map.def.palette == "PALETTE_DARK"
           print(("KB_SPOT id=%s map=%s x=%s y=%s blocks=%d dark=%s flash=%s halted=%s held=%s busy=%s"):format(
             word(cmd.id), word(w.map.id), word(w.player.cellX), word(w.player.cellY), changedBlocks(w),

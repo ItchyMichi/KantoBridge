@@ -802,12 +802,125 @@ local function restoreStore(baseline)
   for k, v in pairs(baseline.vars) do Space.store.vars[k] = v end
 end
 
+local varIds
+local function varId(name)
+  if not varIds then
+    varIds = {}
+    local ok, E = pcall(function() return require("src.core.game3.scripting.flags").forVersion(GAME) end)
+    for id, n in pairs(ok and type(E) == "table" and type(E.VAR_NAMES) == "table" and E.VAR_NAMES or {}) do varIds[n] = id end
+  end
+  return varIds[name]
+end
+
 local function applyRowState(row)
   local Space = mod3("scripting.space")
   local Flags = require("src.core.game3.scripting.flags")
   for id, on in pairs(row.flags or {}) do Flags.setFlag(Space.store, nil, tonumber(id), on == true) end
   local ctx = Space.vm and Space.vm.ctx
   for id, value in pairs(row.vars or {}) do Flags.setVar(Space.store, ctx, tonumber(id), tonumber(value)) end
+  -- a map's story state by its variables' names (e.g. VAR_SKY_PILLAR_STATE)
+  for name, value in pairs(row.varn or {}) do
+    local id = varId(name)
+    if id then Flags.setVar(Space.store, ctx, id, tonumber(value)) end
+  end
+end
+
+local flagIds
+local function flagId(name)
+  if not flagIds then
+    flagIds = {}
+    local ok, E = pcall(function() return require("src.core.game3.scripting.flags").forVersion(GAME) end)
+    for id, n in pairs(ok and type(E) == "table" and type(E.NAMES) == "table" and E.NAMES or {}) do flagIds[n] = id end
+  end
+  return flagIds[name]
+end
+
+-- FA5: the badges every field move asks for, and named flags (the running shoes: FLAG_SYS_B_DASH)
+local function applyFeatureState(row)
+  local Space = mod3("scripting.space")
+  local Flags = require("src.core.game3.scripting.flags")
+  if row.badges then
+    local FM = require("src.core.game3.field_moves")
+    for _, k in ipairs({ "CUT", "FLASH", "ROCK_SMASH", "STRENGTH", "SURF", "FLY", "DIVE", "WATERFALL" }) do
+      local okB, flag = pcall(FM.badgeFlag, k)
+      if okB and flag then pcall(Flags.setFlag, Space.store, nil, flag, true) end
+    end
+  end
+  for name, on in pairs(row.flagn or {}) do
+    local id = flagId(name)
+    if id then pcall(Flags.setFlag, Space.store, nil, id, on == true) end
+  end
+  if row.strength then
+    local FM = require("src.core.game3.field_moves")
+    local flag = FM.SYS_FLAGS and FM.SYS_FLAGS.USE_STRENGTH
+    if flag then pcall(Flags.setFlag, Space.store, nil, flag, true) end
+  end
+end
+
+-- the step counters the engine keeps (§3.4): totals, friendship, poison, repel, daycare, safari
+local function counters()
+  local out = {}
+  local Steps = mod3("step_events")
+  out.total = Steps and tonumber(Steps._totalSteps) or nil
+  local Runtime = mod3("runtime")
+  local session = Runtime and Runtime.getSession and Runtime.getSession()
+  local Sem = package.loaded["src.core.game3.field_semantics"]
+  if session and Sem and Sem.getVar then
+    for _, k in ipairs({ "repelSteps", "happinessSteps", "poisonSteps" }) do
+      local ok, v = pcall(Sem.getVar, session, k)
+      out[k] = ok and tonumber(v) or nil
+    end
+  end
+  local okD, Daycare = pcall(require, "src.core.game3.daycare")
+  if okD and type(Daycare) == "table" and Daycare.stateOf and session then
+    local ok, st = pcall(Daycare.stateOf, session)
+    if ok and type(st) == "table" then out.daycare = tonumber(st.stepCounter) end
+  end
+  if session and type(session.safari) == "table" then out.safari = tonumber(session.safari.steps) end
+  local P = mod3("player")
+  out.serial = P and tonumber(P.stepSerial) or nil
+  return out
+end
+
+-- FA5: an object row finds its object on the map: a boulder, a cut tree or a breakable rock, with an open cell to
+-- stand on facing it (and, for a boulder, an open cell behind it); sets the row's start, dir and target
+local function findObject(row)
+  local Objects, C = mod3("objects"), require("src.core.game3.collision")
+  local FM = require("src.core.game3.field_moves")
+  local want = ({ boulder = "PUSHABLE_BOULDER", cut_tree = "CUT_TREE", rock = "ROCK_SMASH_ROCK" })[row.find]
+  local gfx = want and FM.GFX_IDS[want]
+  if not (Objects and type(Objects._byId) == "table" and gfx) then return false end
+  local lids = {}
+  for lid in pairs(Objects._byId) do lids[#lids + 1] = lid end
+  table.sort(lids, function(a, b) return tostring(a) < tostring(b) end)
+  for _, lid in ipairs(lids) do
+    local o = Objects._byId[lid]
+    local g = type(o) == "table" and (o.graphicsId or (o.def and (o.def.graphicsId or o.def.gfx))) or nil
+    if g == gfx and o.visible ~= false and tonumber(o.cellX) then
+      for _, dir in ipairs(DIRS) do
+        local d = DELTA[dir]
+        local sx, sy = o.cellX - d[1], o.cellY - d[2]
+        local bx, by = o.cellX + d[1], o.cellY + d[2]
+        local okS = C.inBounds(sx, sy) and C.isWalkable(sx, sy) and not C.isWater(sx, sy)
+        local okB = row.find ~= "boulder" or (C.inBounds(bx, by) and C.isWalkable(bx, by))
+        if okS and okB then
+          row.x, row.y, row.dir, row.face = sx, sy, dir, dir
+          row.tx, row.ty = o.cellX, o.cellY
+          row.objLid = tonumber(lid)
+          return true
+        end
+      end
+    end
+  end
+  return false
+end
+
+local function stepCallbackNow()
+  local okC, Ctx = pcall(require, "src.core.game3.scripting.ctx")
+  local Map = mod3("map")
+  if not (okC and Ctx and Ctx.stepCallback and Map) then return nil end
+  local ok, cb = pcall(Ctx.stepCallback, Map.current)
+  return ok and cb or nil
 end
 
 -- the player's vehicle for the row: walk, surf, mach, acro (fields set directly, as the engine's own state)
@@ -928,11 +1041,13 @@ return function(game)
           print(("KB_ROW_READY n=%d dir=none push=0"):format(row.n))
           frames = 0
           phase = "row_wait_step"
-        elseif sw.dirty or row.fresh or Map.current ~= row.map or row.flags or row.vars then
+        elseif sw.dirty or row.fresh or Map.current ~= row.map or row.flags or row.vars or row.varn then
           restoreStore(sw.baseline)
           applyRowState(row)
-          local okW, res, err = pcall(mod3("warp").request, nil, game, row.map, row.x, row.y, row.face or row.dir,
-            { fade = false })
+          local wx, wy = row.x, row.y
+          if row.find then wx, wy = arrivalCell(game, row.map) end
+          local okW, res, err = pcall(mod3("warp").request, nil, game, row.map, wx or row.x, wy or row.y,
+            row.face or row.dir or "down", { fade = false })
           if not okW or (res == nil and err ~= nil) then
             rec.err = "warp " .. word(okW and err or res):sub(1, 50)
             phase = "row_report"
@@ -964,17 +1079,40 @@ return function(game)
     elseif phase == "row_place" then
       frames = frames + 1
       if frames == 1 then
+        applyFeatureState(row)
+        if row.find and not row.found then
+          row.found = findObject(row)
+          if row.found then
+            placeAt(game, row)
+            rec.x, rec.y, rec.dir, rec.tx, rec.ty = row.x, row.y, row.dir, row.tx, row.ty
+          else
+            rec.err = "no_object"
+          end
+        end
         setVehicle(row)
-        setRepel()
+        if not row.norepel then setRepel() end
       end
-      if frames >= 8 and quiet(game) then
+      if rec.err then
+        phase = "row_report"
+      elseif frames >= 8 and quiet(game) then
         local P = mod3("player")
         rec.start = { x = P.cellX, y = P.cellY, facing = P.facing, surfing = P.surfing == true }
         rec.before = liveCells()
         rec.stepSerial = tonumber(P.stepSerial)
+        rec.stepcb = stepCallbackNow()
         local Steps = mod3("step_events")
         rec.stepsBefore = Steps and tonumber(Steps._totalSteps) or nil
-        print(("KB_ROW_READY n=%d dir=%s push=%s"):format(row.n, word(row.dir or "none"), row.push and "1" or "0"))
+        rec.countersBefore = counters()
+        local extra = ""
+        if row.dirs then extra = extra .. " dirs=" .. word((row.dirs:gsub(",", "+"))) end
+        if row.hold then extra = extra .. " hold=" .. word(row.hold) end
+        if row.act then extra = extra .. " act=" .. word(row.act) end
+        if row.ax then extra = extra .. (" ax=%d ay=%d"):format(row.ax, row.ay) end
+        if row.item then extra = extra .. " item=" .. word(row.item) end
+        if row.dest then extra = extra .. " dest=" .. word(row.dest) end
+        print(("KB_ROW_READY n=%d dir=%s push=%s%s"):format(row.n, word(row.dir or "none"), row.push and "1" or "0", extra))
+        rec.stepsSeen = array()
+        rec.lastMoving = false
         frames = 0
         phase = "row_wait_step"
       elseif frames >= 200 then
@@ -1006,13 +1144,23 @@ return function(game)
     elseif phase == "row_run" then
       frames = frames + 1
       if quiet(game) then rec.idle = rec.idle + 1 else rec.idle = 0 end
+      do
+        -- every step the hidden player starts: its frames and whether it ran or rode (§3.3 speeds)
+        local P = mod3("player")
+        local moving = P and P.moving == true
+        if moving and not rec.lastMoving and rec.stepsSeen and #rec.stepsSeen < 64 then
+          rec.stepsSeen[#rec.stepsSeen + 1] = { f = tonumber(P.stepFrames), run = P.running == true, bike = P.biking == true,
+                                                bt = P.bikeType, x = P.targetX, y = P.targetY }
+        end
+        rec.lastMoving = moving
+      end
       local Map = mod3("map")
       if Map.current ~= rec.lastMap then
         rec.maps = rec.maps or array()
         rec.maps[#rec.maps + 1] = Map.current
         rec.lastMap = Map.current
       end
-      if (frames >= 30 and rec.idle >= IDLE_FRAMES) or frames >= (row.wait or ROW_BUDGET) then
+      if (frames >= 30 and rec.idle >= (row.idle or IDLE_FRAMES)) or frames >= (row.wait or ROW_BUDGET) then
         if frames >= (row.wait or ROW_BUDGET) then rec.halted = haltScripts() or true end
         local P = mod3("player")
         rec.frames = frames
@@ -1026,6 +1174,8 @@ return function(game)
         rec.before = nil
         rec.lastMap = nil
         rec.stepSerialEnd = tonumber(P.stepSerial)
+        rec.countersAfter = counters()
+        rec.lastMoving = nil
         local Steps = mod3("step_events")
         rec.stepsAfter = Steps and tonumber(Steps._totalSteps) or nil
         phase = "row_report"
@@ -1039,7 +1189,12 @@ return function(game)
           word(e.x ~= nil and (e.x ~= row.x or e.y ~= row.y or e.map ~= row.map)),
           rec.changed and #rec.changed or 0, word(rec.frames or 0), word(rec.halted or false), word(rec.err or "none")))
       sw.results[#sw.results + 1] = rec
-      phase = "row_next"
+      sw.gapUntil = love.timer.getTime() + 0.8
+      phase = "row_gap"
+    elseif phase == "row_gap" then
+      -- the bridge's last messages for this row reach the client before the next row moves the player (by the
+      -- clock: the engine runs faster than 60 frames a second headless)
+      if love.timer.getTime() >= sw.gapUntil then phase = "row_next" end
     elseif phase == "map_next" then
       sv.i = sv.i + 1
       local id = sv.ids[sv.i]
