@@ -7,6 +7,8 @@
     python tools/e2e/g1_field_check.py rows [--class C] [--maps A,B]   # FA3-FA4's rows, counted (no game)
     python tools/e2e/g1_field_check.py sweep [--class C] [--maps A,B]  # FA3-FA4: the live rows, a stand-in client
     python tools/e2e/g1_field_check.py report                # the sweep's analysis again
+    python tools/e2e/g1_field_check.py feature-rows          # FA5's rows, listed (no game)
+    python tools/e2e/g1_field_check.py features              # FA5: §3.3 features and §3.4 step counters, live
 
 The driver is drivers/kb_g1field.lua (port 27230 unless KB_TEST_PORT says otherwise; the sweep uses SWEEP_PORT). Its
 files in local/reports/ (g1_field_inventory.json, g1_field_parity.json, g1_field_scripts.json, g1_field_rows.*,
@@ -673,6 +675,357 @@ def report(analysis: dict) -> None:
     fc.report_rows(analysis)
 
 
+# ---- FA5: features and step counters (§3.3, §3.4) -------------------------------------------------------------------
+
+FEATURES = REPORTS / "g1_field_features_rows.lua"
+FEATURES_JSON = REPORTS / "g1_field_features_rows.json"
+
+# A Blue party that knows the field moves, synced as Cobblemon would (party.sync; made-up uids). Gen 1 move numbers:
+# Cut 15, Fly 19, Surf 57, Strength 70, Dig 91, Teleport 100, Flash 148; Gen 1 dex numbers. The third member is
+# poisoned (status psn, protocol/defs.schema.json gen1Status): applyFieldPoison takes 1 HP every 4th step (OC:4689)
+BLUE_PARTY = [
+    {"uid": "fa5b0001-0000-4000-8000-000000000001", "dex": 9, "level": 50, "moves": [57, 70], "hp": 150, "maxhp": 150},
+    {"uid": "fa5b0002-0000-4000-8000-000000000002", "dex": 6, "level": 50, "moves": [15, 19, 91, 70], "hp": 150,
+     "maxhp": 150},
+    {"uid": "fa5b0003-0000-4000-8000-000000000003", "dex": 64, "level": 50, "moves": [100, 148], "hp": 120,
+     "maxhp": 120, "status": "psn"},
+]
+
+# where each feature is tried first (map symbols as the engine names them); any other map that fits follows
+FEATURE_MAPS = {
+    "water": ["PALLET_TOWN", "CERULEAN_CITY", "VERMILION_CITY", "ROUTE_24", "ROUTE_19"],
+    "open": ["ROUTE_1", "ROUTE_2", "VIRIDIAN_CITY", "ROUTE_22"],
+    "cut": ["ROUTE_2", "CERULEAN_CITY", "ROUTE_9", "VERMILION_CITY", "ROUTE_8"],
+    "boulder": ["VICTORY_ROAD_1F", "SEAFOAM_ISLANDS_1F", "VICTORY_ROAD_2F", "VICTORY_ROAD_3F"],
+    "dark": ["ROCK_TUNNEL_1F", "ROCK_TUNNEL_B1F"],
+    "cave": ["MT_MOON_1F", "ROCK_TUNNEL_1F", "DIGLETTS_CAVE"],
+    "indoor": ["REDS_HOUSE_2F", "REDS_HOUSE_1F", "BLUES_HOUSE"],
+    "safari": ["SAFARI_ZONE_CENTER", "SAFARI_ZONE_EAST", "SAFARI_ZONE_WEST", "SAFARI_ZONE_NORTH"],
+}
+FLY_DEST = "PALLET_TOWN"
+BIKE_STEPS = 5
+WALK20 = 10                  # ten there-and-back pairs: twenty steps
+BRAKE_ROLL_FRAMES = 120      # the Cycling Road's roll watched this long after the go, then off the bike
+# classes whose cells a feature row never starts on or walks over (they act by themselves)
+ACTING = ("door", "warp_tile", "warp", "pad", "hole", "spinner", "forced_bike", "forced_surf", "seafoam_current",
+          "seafoam_entry_current", "seafoam_forced_exit", "seafoam_boulder_hole", "badge_gate", "ledge",
+          "scripted_hole", "surf_blocked", "pad_tile_no_warp", "hole_tile_no_warp")
+
+
+def _ordered(names: list[str], pool) -> list[str]:
+    return [m for m in names if m in pool] + sorted(m for m in pool if m not in names)
+
+
+def make_features() -> list[dict]:
+    inv = json.loads(INVENTORY.read_text(encoding="utf-8"))["maps"]
+    par = json.loads(PARITY.read_text(encoding="utf-8"))["maps"]
+    scripts = json.loads(SCRIPTS.read_text(encoding="utf-8")).get("maps") or {} if SCRIPTS.is_file() else {}
+    rows: list[dict] = []
+    notes = Counter()
+
+    def add(**r):
+        r.setdefault("badges", True)
+        r.setdefault("wait", 1500)
+        r.setdefault("idle", 60)
+        r.setdefault("fresh", not r.get("follow"))
+        n = len((r.get("dirs") or "").split(",")) if r.get("dirs") else (r.get("fwd") or 0)
+        # by the clock: the act's answer (8 s at most) and every step's (4 s at most) before the client's go
+        r.setdefault("stepwait", 6.0 + (9.0 if r.get("act") else 0.0) + 1.5 * n)
+        rows.append(r)
+
+    grids = {mid: Grid(rec) for mid, rec in par.items() if rec.get("walk") and not rec.get("left") and not rec.get("err")}
+
+    def avoid(mid):
+        m = inv.get(mid) or {}
+        out = set()
+        for name in ACTING:
+            for c in (m.get("cells") or {}).get(name) or []:
+                xy = _xy(c)
+                if xy:
+                    out.add(xy)
+        for w in m.get("warps") or []:
+            if isinstance(w.get("x"), int) and isinstance(w.get("y"), int):
+                out.add((w["x"], w["y"]))
+        probe = (scripts.get(mid) or {}).get("probe") or m.get("onStep") or {}
+        for sig in probe.get("sigs") or []:
+            if probe_kind(sig)[0] == "none":
+                continue
+            for c in sig.get("cells") or []:
+                xy = _xy(c)
+                if xy:
+                    out.add(xy)
+        for b in m.get("boulders") or []:
+            if isinstance(b.get("x"), int):
+                out.add((b["x"], b["y"]))
+        return out
+
+    def ok_cell(g, bad, x, y, mark="."):
+        return g.inside(x, y) and g.st(x, y) == mark and (x, y) not in bad
+
+    def line(mid, length):
+        """(x, y, d): `length` open steps one way from a quiet cell, no ledge, nothing acting on the way."""
+        g, bad = grids[mid], avoid(mid)
+        for y in range(g.h):
+            for x in range(g.w):
+                for d in DIRS:
+                    cx, cy, ok = x, y, True
+                    for _ in range(length):
+                        nx, ny = cx + DELTA[d][0], cy + DELTA[d][1]
+                        if not ok_cell(g, bad, cx, cy) or g.v(cx, cy, d) != "." or not ok_cell(g, bad, nx, ny):
+                            ok = False
+                            break
+                        cx, cy = nx, ny
+                    if ok:
+                        return x, y, d
+        return None
+
+    def back_and_forth(mid):
+        g, bad = grids[mid], avoid(mid)
+        for y in range(g.h):
+            for x in range(g.w):
+                for d in DIRS:
+                    nx, ny = x + DELTA[d][0], y + DELTA[d][1]
+                    if ok_cell(g, bad, x, y) and ok_cell(g, bad, nx, ny) and g.v(x, y, d) == "." \
+                            and g.v(nx, ny, OPP[d]) == ".":
+                        return x, y, d
+        return None
+
+    def any_cell(mid):
+        g, bad = grids[mid], avoid(mid)
+        return next(((x, y) for y in range(g.h) for x in range(g.w) if ok_cell(g, bad, x, y)), None)
+
+    def shore(mid):
+        """(x, y, d, wx, wy): a land cell facing surfable water (a walker refused 'w', a surfer let through)."""
+        g, bad = grids[mid], avoid(mid)
+        for y in range(g.h):
+            for x in range(g.w):
+                if not ok_cell(g, bad, x, y):
+                    continue
+                for d in DIRS:
+                    wx, wy = x + DELTA[d][0], y + DELTA[d][1]
+                    if ok_cell(g, bad, wx, wy, "~") and g.v(x, y, d) == "w" and g.v(x, y, d, True) == "." \
+                            and g.v(wx, wy, OPP[d], True) == ".":
+                        return x, y, d, wx, wy
+        return None
+
+    # Surf on (facing water) and off (surfing, facing land), with the badge; on without SOULBADGE (refused); fishing
+    # from the same shore: the OLD ROD (always a bite in Gen 1) and the SUPER ROD (the map's pool or none)
+    k = 0
+    for mid in _ordered(FEATURE_MAPS["water"], grids):
+        if k >= 2:
+            break
+        s = shore(mid)
+        if not s:
+            continue
+        x, y, d, wx, wy = s
+        add(map=mid, x=x, y=y, face=d, state="walk", cls="feature:surf_on", act="surf", ax=wx, ay=wy, expect="surf",
+            wait=1800)
+        add(map=mid, x=wx, y=wy, face=OPP[d], state="surf", cls="feature:surf_off", act="surf", ax=x, ay=y,
+            expect="dismount", wait=1800)
+        if k == 0:
+            add(map=mid, x=x, y=y, face=d, state="walk", cls="feature:surf_nobadge", act="surf", ax=wx, ay=wy,
+                badges=False, expect="refused")
+            for rod in ("OLD_ROD", "SUPER_ROD"):
+                add(map=mid, x=x, y=y, face=d, state="walk", cls="feature:fish_" + rod.lower(), act="fish", ax=wx,
+                    ay=wy, item=rod, give=rod, expect="fish", wait=2400, idle=90)
+        k += 1
+    if not k:
+        notes["surf:no_shore"] += 1
+    # the bicycle: on (act, the BICYCLE in the bag), BIKE_STEPS steps on it (frames per step), off again (act); the
+    # same steps on foot for the walking speed; refused indoors
+    for mid in _ordered(FEATURE_MAPS["open"], grids):
+        ln = line(mid, BIKE_STEPS + 1)
+        if not ln:
+            continue
+        x, y, d = ln
+        add(map=mid, x=x, y=y, face=d, state="walk", cls="feature:walk_speed", dir=d, dirs=",".join([d] * BIKE_STEPS),
+            badges=False, expect="steps")
+        add(map=mid, x=x, y=y, face=d, state="walk", cls="feature:bike_on", act="bicycle", bicycle=True, expect="bike_on")
+        add(map=mid, x=0, y=0, follow=True, fwd=BIKE_STEPS, state="keep", cls="feature:bike_speed", bicycle=True,
+            expect="steps")
+        add(map=mid, x=0, y=0, follow=True, state="keep", cls="feature:bike_off", act="bicycle", bicycle=True,
+            expect="bike_off")
+        break
+    else:
+        notes["bike:no_line"] += 1
+    for mid in _ordered(FEATURE_MAPS["indoor"], grids)[:1]:
+        c = any_cell(mid)
+        if c:
+            add(map=mid, x=c[0], y=c[1], face="down", state="walk", cls="feature:bike_indoors", act="bicycle",
+                bicycle=True, expect="refused")
+    # the Cycling Road: on the bike, B held (the driver's hold until READY, then only the client's move.hold window),
+    # then the roll; no step
+    for mid in sorted(grids):
+        if not (inv.get(mid) or {}).get("slope"):
+            continue
+        g, bad = grids[mid], avoid(mid)
+        starts = [(x, y) for y in range(1, g.h - 5) for x in range(g.w)
+                  if all(ok_cell(g, bad, x, y + i) and g.v(x, y + i, "down") == "." for i in range(4))]
+        if starts:
+            x, y = starts[len(starts) // 2]
+            add(map=mid, x=x, y=y, face="down", state="bike", cls="feature:slope_brake", hold="b", brake=True,
+                roll=BRAKE_ROLL_FRAMES, badges=False, expect="brake", wait=1800)
+        break
+    # Cut: a tree the engine cuts (the inventory's cut cells), faced from a cell the walker stands on
+    cuts = 0
+    for mid in _ordered(FEATURE_MAPS["cut"], grids):
+        if cuts >= 2:
+            break
+        g, bad = grids[mid], avoid(mid)
+        for c in (inv.get(mid) or {}).get("cells", {}).get("cut") or []:
+            xy = _xy(c)
+            hit = None
+            for d in DIRS if xy else ():
+                sx, sy = xy[0] - DELTA[d][0], xy[1] - DELTA[d][1]
+                if ok_cell(g, bad, sx, sy) and g.v(sx, sy, d) in "xw":
+                    hit = (sx, sy, d)
+                    break
+            if hit:
+                add(map=mid, x=hit[0], y=hit[1], face=hit[2], state="walk", cls="feature:cut", act="cut", ax=xy[0],
+                    ay=xy[1], expect="cut", wait=1800)
+                cuts += 1
+                break
+    # Strength: the act (a boulder found at runtime, faced), then two steps into it (the first arms, the second pushes)
+    nb = 0
+    for mid in _ordered(FEATURE_MAPS["boulder"], [m for m in grids if (inv.get(m) or {}).get("boulders")]):
+        if nb >= 2:
+            break
+        add(map=mid, x=0, y=0, find="boulder", state="walk", cls="feature:strength", act="strength", expect="strength",
+            wait=1800)
+        add(map=mid, x=0, y=0, follow=True, fwd=2, state="keep", cls="feature:strength_push", strengthAfter=True,
+            expect="push", wait=1800)
+        nb += 1
+    # Flash in Rock Tunnel; Dig and the ESCAPE ROPE out of a cave; Teleport and Fly (to a visited town) outside
+    for mid in _ordered(FEATURE_MAPS["dark"], grids)[:1]:
+        c = any_cell(mid)
+        if c:
+            add(map=mid, x=c[0], y=c[1], face="down", state="walk", cls="feature:flash", act="flash", expect="lit",
+                wait=1800)
+    caves = [m for m in _ordered(FEATURE_MAPS["cave"], grids) if (inv.get(m) or {}).get("tileset") == "CAVERN"]
+    for mid in caves[:1]:
+        c = any_cell(mid)
+        if c:
+            add(map=mid, x=c[0], y=c[1], face="down", state="walk", cls="feature:dig", act="dig", expect="warp",
+                wait=2400, idle=90)
+            add(map=mid, x=c[0], y=c[1], face="down", state="walk", cls="feature:escape_rope", act="dig",
+                item="ESCAPE_ROPE", give="ESCAPE_ROPE", badges=False, expect="warp", wait=2400, idle=90)
+    for mid in _ordered(FEATURE_MAPS["open"], grids)[:1]:
+        c = any_cell(mid)
+        if c:
+            add(map=mid, x=c[0], y=c[1], face="down", state="walk", cls="feature:teleport", act="teleport",
+                expect="warp", wait=2400, idle=90)
+            add(map=mid, x=c[0], y=c[1], face="down", state="walk", cls="feature:fly", act="fly", dest=FLY_DEST,
+                expect="warp", wait=2400, idle=90)
+    # step counters (§3.4): twenty steps there and back, the counters read before and after; a boarded day-care mon on
+    # the first, a Safari game (set directly) on a Safari Zone map
+    for mid in _ordered(FEATURE_MAPS["open"], grids):
+        bf = back_and_forth(mid)
+        if bf:
+            x, y, d = bf
+            add(map=mid, x=x, y=y, face=d, state="walk", cls="steps:walk20", dir=d,
+                dirs=",".join([d, OPP[d]] * WALK20), daycare=True, badges=False, expect="steps", wait=2400)
+            break
+    for mid in _ordered(FEATURE_MAPS["safari"], grids)[:1]:
+        bf = back_and_forth(mid)
+        if bf:
+            x, y, d = bf
+            add(map=mid, x=x, y=y, face=d, state="walk", cls="steps:safari20", dir=d,
+                dirs=",".join([d, OPP[d]] * WALK20), safari=True, badges=False, expect="steps", wait=2400)
+    for i, r in enumerate(rows, 1):
+        r["n"] = i
+    if notes:
+        print("FEATURE NOTES (left out):", dict(sorted(notes.items())))
+    return rows
+
+
+def lua_feature_rows(rows: list[dict]) -> str:
+    def val(v):
+        if isinstance(v, bool):
+            return "true" if v else "false"
+        if isinstance(v, (int, float)):
+            return str(v)
+        return '"' + str(v).replace("\\", "\\\\").replace('"', '\\"') + '"'
+    out = ["return {"]
+    for r in rows:
+        keep = {k: r[k] for k in ("n", "map", "x", "y", "dir", "face", "dirs", "state", "cls", "fresh", "push", "wait",
+                                  "idle", "act", "ax", "ay", "item", "dest", "hold", "find", "strength", "badges",
+                                  "bicycle", "give", "follow", "fwd", "strengthAfter", "brake", "roll", "daycare",
+                                  "safari", "stepwait")
+                if k in r and r[k] is not None}
+        out.append("  { " + ", ".join(f"{k} = {val(v)}" for k, v in keep.items()) + " },")
+    out.append("}")
+    return "\n".join(out) + "\n"
+
+
+def cmd_feature_rows() -> int:
+    rows = make_features()
+    print(f"FEATURE ROWS {len(rows)}:", dict(Counter(r["cls"] for r in rows)))
+    for r in rows:
+        print(f"  #{r['n']} {r['cls']} {r['map']}" + (" (follows)" if r.get("follow") else ""))
+    return 0
+
+
+def cmd_features(timeout: float, tag: str) -> int:
+    rows = make_features()
+    FEATURES.write_text(lua_feature_rows(rows), encoding="utf-8")
+    fc.write(FEATURES_JSON, rows)
+    print(f"FEATURE ROWS {len(rows)}:", dict(Counter(r["cls"] for r in rows)))
+    out = REPORTS / f"g1_field_features{tag}.json"
+    received, done, answered, result = fc.run_rows(DRIVER, GAME, "sweep", SWEEP_PORT, timeout,
+                                                   {"KB_ROWS": str(FEATURES.resolve()), "KB_SWEEP_FILE": out.name},
+                                                   party=BLUE_PARTY)
+    fc.write(REPORTS / f"g1_field_features_stream{tag}.json", {"received": received, "rows": done})
+    sweep = json.loads(out.read_text(encoding="utf-8"))
+    report_features(rows, sweep, received, done)
+    return 0 if result.returncode == 0 else 1
+
+
+def report_features(rows, sweep, received, done) -> None:
+    """Per row: act.result, the step answers and their frames, the engine's own step frames, warps, the end cell and
+    state, the counters' change; and what the client did on the brake row (its move.hold window)."""
+    by_n = {r["n"]: r for r in rows}
+    print("\nFEATURES:")
+    for rec in sweep.get("rows") or []:
+        n = rec["n"]
+        row = by_n.get(n, {})
+        d = done.get(n) or done.get(str(n)) or {}
+        msgs = fc.row_messages(received, n)
+        sf = fc.stream_facts(msgs)
+        steps = rec.get("stepsSeen") or []
+        cb, ca = rec.get("countersBefore") or {}, rec.get("countersAfter") or {}
+        delta = {k: (ca.get(k) - cb.get(k)) for k in ca if isinstance(ca.get(k), (int, float))
+                 and isinstance(cb.get(k), (int, float)) and ca.get(k) != cb.get(k)}
+        gone = sorted(k for k in cb if k not in ca)
+        answers = [a for a in (d.get("answers") or []) if a]
+        frames = [((a.get("data") or {}).get("kind") or (a.get("data") or {}).get("reason"),
+                   (a.get("data") or {}).get("frames")) for a in answers]
+        act = d.get("act")
+        act_s = None if act is None else (act.get("kind") if act.get("ok") else "refused:" + str(act.get("reason")))
+        e = rec.get("end") or {}
+        st = rec.get("startState") or {}
+        line = (f"  #{n} {row.get('cls')} {rec.get('map')} [{rec.get('state')}]: act {act_s if row.get('act') else '-'}; "
+                f"answers {len(answers)} {frames}; engine steps {[(x.get('f'), 'bike' if x.get('bike') else 'foot') for x in steps][:8]}"
+                f"{'...' if len(steps) > 8 else ''} (todSteps +{rec.get('steps')}); "
+                f"warps {[w['kind'] for w in sf['warps'] if w['phase'] == 'arrive']}; modes {sf['modes']}; "
+                f"end {e.get('map')}:{e.get('x')},{e.get('y')} surf={e.get('surfing')} bike={e.get('biking')} "
+                f"strength={st.get('strength')}->{e.get('strength')} dark={st.get('dark')}->{e.get('dark')}; "
+                f"client {sf['last']}; counters {delta}" + (f" (gone: {gone})" if gone else "")
+                + (f"; battle {rec.get('battle')} battle.start x{sf['types'].get('battle.start', 0)}" if row.get("act") == "fish" else "")
+                + (f"; heal point {st.get('heal')}" if row.get("act") in ("dig", "teleport") else "")
+                + f"; err {rec.get('err')}")
+        print(line)
+        if row.get("brake"):
+            b = rec.get("brake") or {}
+            print(f"     brake: B held by the driver until READY at {b.get('x')},{b.get('y')}; the client held B "
+                  f"{'(move.hold on, ~0.2 s, then off)' if row.get('hold') == 'b' else '(no hold)'} with no step and "
+                  f"wrote the go: the bike was at {b.get('ctlX')},{b.get('ctlY')} with {b.get('stepsBeforeGo')} "
+                  f"steps started; the roll after the go: {len(steps) - (b.get('stepsBeforeGo') or 0)} steps in "
+                  f"{row.get('roll')} frames, then off the bike")
+        if row.get("cls", "").startswith("steps:") and steps:
+            psn = [(x.get("psn"), x.get("hp")) for x in steps]
+            print(f"     poison counter / poisoned HP per step: {psn}")
+
+
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     sub = ap.add_subparsers(dest="cmd", required=True)
@@ -693,7 +1046,15 @@ def main(argv=None) -> int:
     p.add_argument("--tag", default="")
     p = sub.add_parser("report")
     p.add_argument("--tag", default="")
+    sub.add_parser("feature-rows")
+    p = sub.add_parser("features")
+    p.add_argument("--timeout", type=float, default=3600.0)
+    p.add_argument("--tag", default="")
     a = ap.parse_args(argv)
+    if a.cmd == "features":
+        return cmd_features(a.timeout, a.tag)
+    if a.cmd == "feature-rows":
+        return cmd_feature_rows()
     if a.cmd == "rows":
         return cmd_rows(a.cls, a.maps)
     if a.cmd == "sweep":

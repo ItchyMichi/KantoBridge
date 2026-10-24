@@ -89,6 +89,36 @@
 --            Vm.lua:2582; World.lua:8750-8771), marked driven. Written to
 --            KB_REPORT_DIR/<KB_SWEEP_FILE> (default g2_field_sweep.json).
 --
+--            FA5 (features and step counters, §3.3, §3.4; g2_field_check.py
+--            `features`) runs through the same scene. A feature row may carry:
+--              badges   the eight Johto badges, set as the engine's own badge
+--                       flags (World:setEngineFlag over FieldMoves.BADGE_FLAG,
+--                       World.lua:1907, FieldMoves.lua:162-185);
+--              give     an item put in the PACK (Bag.add, src/inventory/Bag.lua:
+--                       443, as `giveitem` does, World.lua:1151-1161): BICYCLE,
+--                       ESCAPE_ROPE;
+--              backup   the map's dig triple banked from its first warp to an
+--                       outdoor map (World.backupWarp, as World:recordWarpBackup
+--                       banks it on a walk in, :10442-10456: a warp-in by
+--                       warpToMapId banks nothing);
+--              find     boulder (movement 0x19, World.isStrengthBoulder) or
+--                       rock (0x18, FieldMoves.rockSmashFromMenu): the object
+--                       found among w.npcs at run time and the player put
+--                       beside it, facing it;
+--              chain    the row goes on from the last one as it stands (no
+--                       warp; state "keep" leaves the vehicle alone);
+--              repel    save.repelSteps for the row (default 200; norepel: 0);
+--              act/ax/ay/item/dest/dirs/hold on the READY line for the client.
+--            Per row the driver records each step the engine starts (its
+--            stepFrames, World.lua:10721, the player state, the target), the
+--            map setups run (World:runMapSetup's method, :3619), the maps seen,
+--            the step counters before and after (save.stepCount,
+--            poisonStepCount, repelSteps, happinessStepCount, bikeStep, the
+--            Day-Care's, the eggs'; StepEvents.lua:158-198), what the field
+--            move left queued and whether the found object is still there.
+--            The PACK, the dig triple, Strength, Flash and the Repel go back to
+--            the sweep's start at every warp-in and at the end.
+--
 -- Verdict codes (one character per cell and direction, directions up, down,
 -- left, right; cells row by row), the same alphabet as kb_g3field.lua's (Gen 2
 -- has no elevation, so no "v" or "?"; no gates or Acro rails, so no "g"/"a"):
@@ -1087,10 +1117,292 @@ local function rowScript(w, row)
   return nil
 end
 
+-- ---- FA5: features and step counters (§3.3, §3.4)
+
+local function fieldMoves()
+  local ok, FM = pcall(require, "src.world.gen2.FieldMoves")
+  return ok and type(FM) == "table" and FM or nil
+end
+
+-- The eight Johto badges, as the engine's own ENGINE_*BADGE flags (World:setEngineFlag routes a badge id to
+-- save.player.badges, World.lua:1907-1919; the ids from FieldMoves.BADGE_FLAG, FieldMoves.lua:162-185).
+local function setBadges(w, game)
+  local FM = fieldMoves()
+  local n = 0
+  for id, b in pairs(FM and type(FM.BADGE_FLAG) == "table" and FM.BADGE_FLAG or {}) do
+    if type(b) == "table" and b.store == "badges" then
+      if pcall(w.setEngineFlag, w, id, true) then n = n + 1 end
+    end
+  end
+  local save = game.save
+  if n == 0 and type(save) == "table" then
+    -- the store itself (FieldMoves.hasBadge reads save.player.badges by name, :202-211)
+    save.player = save.player or {}
+    save.player.badges = save.player.badges or {}
+    for _, name in ipairs(FM and FM.JOHTO_BADGES or {}) do save.player.badges[name] = true end
+    return "direct"
+  end
+  return n
+end
+
+-- An item into the PACK as `giveitem` puts one (World.lua:1151-1161 -> Bag.add, src/inventory/Bag.lua:443).
+local function giveItem(game, id)
+  local save = game.save
+  if type(save) ~= "table" then return false end
+  local okB, Bag = pcall(require, "src.inventory.Bag")
+  if okB and type(Bag) == "table" and type(Bag.add) == "function" then
+    local ok, res = pcall(Bag.add, save, id, 1, game.data)
+    if ok and res then return true end
+  end
+  save.inventory = save.inventory or {}
+  save.inventory[id] = (tonumber(save.inventory[id]) or 0) + 1
+  return "direct"
+end
+
+-- What a feature row may change outside the story state (snapshot/restore keep that): the PACK, the dig
+-- triple, Strength, Flash, the Repel.
+local function featureSnapshot(game)
+  local w, save = game.world, game.save or {}
+  return { inventory = copy(save.inventory), bagOrder = copy(save.bagOrder), bagStacks = copy(save.bagStacks),
+           hadOrder = save.bagOrder ~= nil, hadStacks = save.bagStacks ~= nil, repel = save.repelSteps,
+           backup = copy(w.backupWarp), hadBackup = w.backupWarp ~= nil, strength = w.strengthActive,
+           flash = w.flashUsed }
+end
+local function featureRestore(game, fb)
+  if type(fb) ~= "table" then return end
+  local w, save = game.world, game.save
+  if type(save) == "table" then
+    save.inventory = copy(fb.inventory)
+    save.bagOrder = fb.hadOrder and copy(fb.bagOrder) or nil
+    save.bagStacks = fb.hadStacks and copy(fb.bagStacks) or nil
+    save.repelSteps = fb.repel
+  end
+  if w then
+    w.backupWarp = fb.hadBackup and copy(fb.backup) or nil
+    w.strengthActive = fb.strength
+    w.flashUsed = fb.flash
+    w.queuedFieldMove = nil
+  end
+end
+
+-- The step counters (StepEvents.count, StepEvents.lua:158-198; Breeding.step owns stepCount, src/core/gen2/
+-- Breeding.lua:1024-1032; the Day-Care, Breeding.dayCare :686-696; an egg's mon.eggSteps, :1012), each read
+-- on its own.
+local function counters(game)
+  local save = game.save
+  local out = {}
+  if type(save) ~= "table" then return out end
+  for _, k in ipairs({ "stepCount", "poisonStepCount", "repelSteps", "happinessStepCount", "bikeStep" }) do
+    out[k] = tonumber(save[k])
+  end
+  local dc = type(save.dayCare) == "table" and save.dayCare or nil
+  if dc then
+    out.stepsToEgg = tonumber(dc.stepsToEgg)
+    for _, side in ipairs({ "man", "lady" }) do
+      local mon = type(dc[side]) == "table" and dc[side].mon or nil
+      if type(mon) == "table" then out["dayCare_" .. side .. "_exp"] = tonumber(mon.experience or mon.exp) end
+    end
+  end
+  local eggs, eggSteps, hp, happy = 0, 0, 0, 0
+  local okE, Breeding = pcall(require, "src.core.gen2.Breeding")
+  for _, mon in ipairs(type(save.party) == "table" and save.party or {}) do
+    if type(mon) == "table" then
+      local okI, egg = false, false
+      if okE and type(Breeding) == "table" and type(Breeding.isEgg) == "function" then
+        okI, egg = pcall(Breeding.isEgg, mon)
+      end
+      if (okI and egg) or mon.isEgg then
+        eggs = eggs + 1
+        eggSteps = eggSteps + (tonumber(mon.eggSteps) or 0)
+      else
+        hp = hp + (tonumber(mon.hp) or 0)
+        happy = happy + (tonumber(mon.happiness) or tonumber(mon.friendship) or 0)
+      end
+    end
+  end
+  out.eggs, out.eggSteps, out.partyHp, out.partyHappiness = eggs, eggSteps, hp, happy
+  return out
+end
+
+-- A boulder (movement 0x19, World.isStrengthBoulder, World.lua:6172-6175) or a smashable rock (0x18,
+-- FieldMoves.rockSmashFromMenu, FieldMoves.lua:719-731) among the map's live objects (w.npcs, what
+-- World:npcAt walks, :8403), with an open cell beside it to stand on facing it (and, for a boulder, the cell
+-- behind it open to an object step, Map:objectStepPermitted, Map.lua:281; two behind preferred: two pushes).
+-- Sets the row's start, face and target (and, for a push row, its three steps).
+local FIND_MOVEMENT = { boulder = 0x19, rock = 0x18 }
+local function locate(w, row)
+  local want = FIND_MOVEMENT[row.find]
+  local map, P = w.map, perms()
+  if not (want and map) then return false end
+  local function open(x, y)
+    local okB, inside = pcall(map.inBounds, map, x, y)
+    if not (okB and inside) then return false end
+    local okC, c = pcall(map.cellCollision, map, x, y)
+    if not (okC and type(c) == "number" and P.isWalkable(c)) then return false end
+    local okN, npc = pcall(w.npcAt, w, x, y)
+    return okN and npc == nil
+  end
+  local function pushable(x, y, dir)
+    local ok, yes = pcall(map.objectStepPermitted, map, x, y, dir)
+    return ok and yes == true
+  end
+  local best
+  for i, npc in ipairs(type(w.npcs) == "table" and w.npcs or {}) do
+    local def = type(npc) == "table" and npc.def or nil
+    if type(def) == "table" and def.movement == want and tonumber(npc.cellX) and tonumber(npc.cellY) then
+      local ox, oy = npc.cellX, npc.cellY
+      for _, dir in ipairs(DIRS) do
+        local d = DELTA[dir]
+        local sx, sy = ox - d[1], oy - d[2]
+        if open(sx, sy) then
+          local score = 1
+          if row.find == "boulder" then
+            local bx, by = ox + d[1], oy + d[2]
+            if pushable(ox, oy, dir) and open(bx, by) then
+              score = 2
+              if pushable(bx, by, dir) and open(bx + d[1], by + d[2]) then score = 3 end
+            else
+              score = 0
+            end
+          end
+          if score > 0 and (not best or score > best.score) then
+            best = { score = score, sx = sx, sy = sy, dir = dir, ox = ox, oy = oy, idx = tonumber(def.index) or i }
+          end
+        end
+      end
+    end
+  end
+  if not best then return false end
+  row.x, row.y, row.face = best.sx, best.sy, best.dir
+  row.tx, row.ty, row.objIndex, row.objScore = best.ox, best.oy, best.idx, best.score
+  if row.find == "boulder" and row.pushes then
+    -- push, step into the cell it left, push again (the player bumps on a push and stays, World.lua:6182-6189)
+    row.dirs = table.concat({ best.dir, best.dir, best.dir }, ",")
+  end
+  return true
+end
+
+-- The map's dig triple (World:escapeRopeTarget, World.lua:4932-4939, reads w.backupWarp): its first warp that
+-- leads to a ROUTE or TOWN, banked as World:recordWarpBackup would on a walk in (:10442-10456).
+local function bankBackup(w)
+  local def = w.map and w.map.def
+  for _, wp in ipairs(type(def) == "table" and type(def.warps) == "table" and def.warps or {}) do
+    local dest = type(wp) == "table" and wp.destMap and type(w.maps) == "table" and w.maps[wp.destMap] or nil
+    local di = type(wp) == "table" and tonumber(wp.destWarp) or nil
+    if type(dest) == "table" and (dest.environment == "ROUTE" or dest.environment == "TOWN") and di
+        and type(dest.warps) == "table" and dest.warps[di] then
+      w.backupWarp = { warp = di, map = wp.destMap }
+      return wp.destMap
+    end
+  end
+  return nil
+end
+
+-- The map setups the engine runs while a row is recorded (World:runMapSetup's method, World.lua:3619; MAPSETUP
+-- :187-199): the instance's method wrapped, the class's put back at the end.
+local SETUP_NAMES = { [0xf1] = "WARP", [0xf2] = "CONTINUE", [0xf3] = "RELOADMAP", [0xf4] = "TELEPORT", [0xf5] = "DOOR",
+                      [0xf6] = "FALL", [0xf7] = "CONNECTION", [0xf8] = "LINKRETURN", [0xf9] = "TRAIN",
+                      [0xfa] = "SUBMENU", [0xfb] = "BADWARP" }
+local setupLog
+local function hookSetups(w)
+  if type(w) ~= "table" or rawget(w, "kbSetupHooked") then return end
+  local orig = w.runMapSetup
+  if type(orig) ~= "function" then return end
+  w.kbSetupHooked = { had = rawget(w, "runMapSetup") }
+  w.runMapSetup = function(self, method, load, fly)
+    if setupLog and #setupLog < 16 then
+      local m = tonumber(method)
+      setupLog[#setupLog + 1] = (m and SETUP_NAMES[m]) or hex(m)
+    end
+    return orig(self, method, load, fly)
+  end
+end
+local function unhookSetups(w)
+  local h = type(w) == "table" and rawget(w, "kbSetupHooked") or nil
+  if not h then return end
+  w.runMapSetup = h.had -- nil puts the class's method back
+  w.kbSetupHooked = nil
+end
+
+-- Every step the engine starts during a row: its frames (World:movePlayer sets p.stepFrames, World.lua:10721;
+-- a ledge hop 32, :10701), the player state, the target; and the maps the player is on.
+local function sampleStep(w, rec)
+  local p = w.player
+  local moving = p ~= nil and (p.moving == true or (p.jumping ~= nil and p.jumping ~= false))
+  if moving and not rec.lastMoving and rec.stepsSeen and #rec.stepsSeen < 64 then
+    rec.stepsSeen[#rec.stepsSeen + 1] = { f = tonumber(p.stepFrames), st = w.playerState,
+                                          hop = (p.jumping ~= nil and p.jumping ~= false) or nil,
+                                          x = p.targetX, y = p.targetY, fx = p.cellX, fy = p.cellY }
+  end
+  rec.lastMoving = moving
+  local at = w.map and w.map.id or nil
+  if at ~= rec.lastMap then
+    rec.maps = rec.maps or array()
+    if #rec.maps < 16 then rec.maps[#rec.maps + 1] = at end
+    rec.lastMap = at
+  end
+end
+
+-- An FA5 row (g2_field_check.py's make_features: classes feature:* and steps:*).
+local function isFeature(row)
+  local cls = tostring(row.cls or "")
+  return cls:find("^feature:") ~= nil or cls:find("^steps:") ~= nil
+end
+
+-- The row's feature state, on the first frame of its placement.
+local function applyFeatureState(game, row, rec)
+  local w, save = game.world, game.save
+  if row.badges then rec.badges = setBadges(w, game) end
+  if row.give then
+    rec.given = array()
+    for id in tostring(row.give):gmatch("[A-Z0-9_]+") do rec.given[#rec.given + 1] = { id = id, ok = giveItem(game, id) } end
+  end
+  if row.backup then rec.backup = bankBackup(w) or false end
+  if type(save) == "table" and (row.repel or row.norepel or isFeature(row)) then
+    save.repelSteps = row.norepel and 0 or (tonumber(row.repel) or 200)
+  end
+end
+
+-- Whether the found object still stands where it was (a smashed rock is hidden, a pushed boulder moved).
+local function objectStill(w, row)
+  if not (row.find and row.tx) then return nil end
+  local ok, npc = pcall(w.npcAt, w, row.tx, row.ty)
+  return ok and type(npc) == "table" and type(npc.def) == "table" and npc.def.movement == FIND_MOVEMENT[row.find]
+end
+
+-- What a field move left behind: a queued result or script never run (World.queuedFieldMove, :6315-6339;
+-- queuedScript), a field-move phase, Strength, Flash.
+local function leftovers(w)
+  local q = w.queuedFieldMove
+  return { queuedMove = type(q) == "table" and tostring(q.action or "?") or nil,
+           queuedScript = w.queuedScript ~= nil or nil,
+           fieldMove = type(w.fieldMove) == "table" and tostring(w.fieldMove.phase or "?") or nil,
+           strength = w.strengthActive == true or nil, flash = w.flashUsed == true or nil }
+end
+
+-- The FA5 helpers as one table (the sweep's coroutine is near LuaJIT's 60-upvalue limit); log* run the map-setup
+-- record (setupLog) for the row between READY and its end.
+local FA5 = {
+  snapshot = featureSnapshot, restore = featureRestore, hook = hookSetups, unhook = unhookSetups,
+  isFeature = isFeature, locate = locate, apply = applyFeatureState, counters = counters, sample = sampleStep,
+  leftovers = leftovers, objectStill = objectStill,
+  logStart = function() setupLog = array() end,
+  logTake = function()
+    local l = setupLog
+    setupLog = nil
+    return l
+  end,
+}
+
 -- A warp to the row's map with the new game's story state, the clock at noon and the row's map scene.
 local function rowWarp(game, sw, row, x, y)
   local w = game.world
   restore(game, sw.base)
+  if sw.ftouched then
+    -- only after a feature row: the FA3/FA4 rows keep the dig triple their own warps banked
+    featureRestore(game, sw.fbase)
+    sw.ftouched = false
+  end
   w.clockHour, w.clockDay = DEFAULT_HOUR, DEFAULT_DAY
   if row.scene and type(w.mapScenes) == "table" then w.mapScenes[row.map] = tonumber(row.scene) end
   setVehicle(w, "normal")
@@ -1169,6 +1481,8 @@ return function(game)
         elseif SCENE == "sweep" then
           sw = { rows = rowsList(), i = 0, results = array(), dirty = true }
           sw.base = snapshot(game)
+          sw.fbase = FA5.snapshot(game)
+          FA5.hook(w)
           w.clockHour, w.clockDay = DEFAULT_HOUR, DEFAULT_DAY
           frames = 0
           phase = "sweep_client"
@@ -1191,13 +1505,17 @@ return function(game)
       if not row then
         local path = writeJson(os.getenv("KB_SWEEP_FILE") or "g2_field_sweep.json", { game = GAME, rows = sw.results })
         print(("KB_SWEEP_DONE rows=%d file=%s"):format(#sw.results, word(path ~= nil)))
+        FA5.logTake()
+        FA5.unhook(w)
         restore(game, sw.base)
+        FA5.restore(game, sw.fbase)
         setVehicle(w, sw.base.playerState)
         w.clockHour, w.clockDay = sw.base.clockHour, sw.base.clockDay
         phase = "done"
       else
         rec = { n = row.n, map = row.map, cls = row.cls, x = row.x, y = row.y, dir = row.dir, state = row.state }
         haltScripts(game)
+        if FA5.isFeature(row) then sw.ftouched = true end
         if row.trigger == "warp" then
           -- an entry script's row: the warp itself is the trigger, made after READY
           rec.start = {}
@@ -1205,8 +1523,37 @@ return function(game)
           print(("KB_ROW_READY n=%d dir=none push=0"):format(row.n))
           frames = 0
           phase = "row_wait_step"
+        elseif row.chain then
+          -- FA5: on from the last row as it stands (the same map, no warp)
+          rec.chain = true
+          if sw.lastErr or not w.map or w.map.id ~= row.map then
+            rec.err = "chain_broken"
+            phase = "row_report"
+          else
+            if row.find and not row.found then
+              row.found = FA5.locate(w, row)
+              if not row.found then rec.err = "no_object" end
+            end
+            if rec.err then
+              phase = "row_report"
+            else
+              rec.x, rec.y = row.x, row.y
+              placeAt(w, row)
+              holdDownhill(w, rec)
+              frames, rec.placed = 0, 1
+              phase = "row_place"
+            end
+          end
         elseif sw.dirty or row.fresh or not w.map or w.map.id ~= row.map or row.scene then
-          rec.err = rowWarp(game, sw, row, row.x, row.y)
+          local wx, wy = row.x, row.y
+          if row.find then
+            -- FA5: in at the map's arrival cell, then beside the object found there
+            local def = mapsOf(game)[row.map]
+            local okA, ax, ay = false, nil, nil
+            if type(def) == "table" then okA, ax, ay = pcall(arrivalCell, game, row.map, def) end
+            if okA and ax then wx, wy = ax, ay end
+          end
+          rec.err = rowWarp(game, sw, row, wx, wy)
           if rec.err then
             phase = "row_report"
           else
@@ -1232,10 +1579,22 @@ return function(game)
           rec.err = "left_on_entry"
           phase = "row_report"
         else
-          placeAt(w, row)
-          holdDownhill(w, rec)
-          frames, rec.placed = 0, 1
-          phase = "row_place"
+          if row.find and not row.found then
+            row.found = FA5.locate(w, row)
+            if row.found then
+              rec.x, rec.y, rec.tx, rec.ty = row.x, row.y, row.tx, row.ty
+            else
+              rec.err = "no_object"
+            end
+          end
+          if rec.err then
+            phase = "row_report"
+          else
+            placeAt(w, row)
+            holdDownhill(w, rec)
+            frames, rec.placed = 0, 1
+            phase = "row_place"
+          end
         end
       end
     elseif phase == "row_place" then
@@ -1243,9 +1602,12 @@ return function(game)
       frames = frames + 1
       holdDownhill(w, rec)
       if frames == 1 then
-        -- on foot is not a state the Cycling Road allows (ENGINE_ALWAYS_ON_BIKE, World:alwaysOnBike, :5236)
-        local okB, onBike = pcall(w.alwaysOnBike, w)
-        setVehicle(w, (okB and onBike == true and row.state ~= "surf") and "bike" or row.state)
+        if row.state ~= "keep" then
+          -- on foot is not a state the Cycling Road allows (ENGINE_ALWAYS_ON_BIKE, World:alwaysOnBike, :5236)
+          local okB, onBike = pcall(w.alwaysOnBike, w)
+          setVehicle(w, (okB and onBike == true and row.state ~= "surf") and "bike" or row.state)
+        end
+        FA5.apply(game, row, rec)
       end
       if frames >= 8 and quiet(game) then
         local p = w.player
@@ -1254,11 +1616,28 @@ return function(game)
           placeAt(w, row)
           frames, rec.placed = 0, rec.placed + 1
         else
-          rec.start = { x = p.cellX, y = p.cellY, facing = p.facing, surfing = surfState(w.playerState) }
+          rec.start = { x = p.cellX, y = p.cellY, facing = p.facing, surfing = surfState(w.playerState),
+                        state = w.playerState }
           rec.before = liveBlocks(w)
           rec.stepsBefore = stepCount(game)
           releaseDownhill(w, rec)
-          print(("KB_ROW_READY n=%d dir=%s push=%s"):format(row.n, word(row.dir or "none"), row.push and "1" or "0"))
+          local extra = ""
+          if FA5.isFeature(row) then
+            rec.countersBefore = FA5.counters(game)
+            rec.stepsSeen = array()
+            rec.lastMoving = false
+            rec.lastMap = w.map and w.map.id or nil
+            rec.maps = array({ rec.lastMap })
+            FA5.logStart()
+            if row.dirs then extra = extra .. " dirs=" .. word((tostring(row.dirs):gsub(",", "+"))) end
+            if row.hold then extra = extra .. " hold=" .. word(row.hold) end
+            if row.act then extra = extra .. " act=" .. word(row.act) end
+            if tonumber(row.ax) and tonumber(row.ay) then extra = extra .. (" ax=%d ay=%d"):format(row.ax, row.ay) end
+            if row.item then extra = extra .. " item=" .. word(row.item) end
+            if row.dest then extra = extra .. " dest=" .. word(row.dest) end
+          end
+          print(("KB_ROW_READY n=%d dir=%s push=%s%s"):format(row.n, word(row.dir or "none"), row.push and "1" or "0",
+            extra))
           frames = 0
           phase = "row_wait_step"
         end
@@ -1270,7 +1649,10 @@ return function(game)
     elseif phase == "row_wait_step" then
       local w = game.world
       frames = frames + 1
-      if ctlValue() == row.n or frames >= 400 then
+      if rec.stepsSeen then FA5.sample(w, rec) end
+      -- several steps (and an act's answer) take the client longer than one step: FA5 rows wait longer
+      local waitMax = (row.dirs or row.act) and 6000 or 400
+      if ctlValue() == row.n or frames >= waitMax then
         rec.stepWait = frames
         frames = 0
         rec.idle = 0
@@ -1296,7 +1678,9 @@ return function(game)
       frames = frames + 1
       if quiet(game) then rec.idle = rec.idle + 1 else rec.idle = 0 end
       local at = w.map and w.map.id or nil
-      if at ~= rec.lastMap then
+      if rec.stepsSeen then
+        FA5.sample(w, rec)
+      elseif at ~= rec.lastMap then
         rec.maps = rec.maps or array()
         rec.maps[#rec.maps + 1] = at
         rec.lastMap = at
@@ -1312,6 +1696,7 @@ return function(game)
         end
         rec.frames = frames
         rec["end"] = playerEnd(w)
+        rec["end"].state = w.playerState
         if at == row.map then
           -- an entry script's row: the visit's own edits (World.blockEdits, what the bridge sends as story.blocks)
           rec.changed = rec.trigger == "warp" and blockDiffs(w) or blocksDiff(w, rec.before or {})
@@ -1320,16 +1705,25 @@ return function(game)
         end
         rec.lastMap = nil
         rec.stepsAfter = stepCount(game)
+        if FA5.isFeature(row) then
+          rec.countersAfter = FA5.counters(game)
+          rec.setups = FA5.logTake()
+          rec.left = FA5.leftovers(w)
+          if row.find and at == row.map then rec.objectStill = FA5.objectStill(w, row) end
+          rec.lastMoving = nil
+        end
         phase = "row_report"
       end
     elseif phase == "row_report" then
       local w = game.world
       releaseDownhill(w, rec)
+      FA5.logTake()
       if rec.driven then w.talkNpc = nil end
       rec.before = nil
       local e = rec["end"] or {}
+      sw.lastErr = rec.err ~= nil or rec.halted == true
       sw.dirty = rec.err ~= nil or (e.map ~= nil and e.map ~= row.map) or (rec.changed ~= nil and #rec.changed > 0)
-        or rec.halted == true or row.fresh == true or row.trigger ~= nil or row.scene ~= nil
+        or rec.halted == true or row.fresh == true or row.trigger ~= nil or row.scene ~= nil or FA5.isFeature(row)
       print(("KB_ROW_DONE n=%d map=%s cls=%s end=%s moved=%s changed=%d frames=%s halted=%s err=%s")
         :format(row.n, word(row.map), word(row.cls), word(e.map or "none"),
           word(e.x ~= nil and (e.x ~= row.x or e.y ~= row.y or e.map ~= row.map)),

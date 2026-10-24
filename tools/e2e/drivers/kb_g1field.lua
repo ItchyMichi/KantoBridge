@@ -104,6 +104,32 @@
 --            print READY first and warp after the go (driven). Written to
 --            KB_REPORT_DIR/<KB_SWEEP_FILE> (g1_field_sweep.json).
 --
+--            FA5 (§3.3 features, §3.4 step counters; the `features`
+--            subcommand, the same scene with its own rows): per row the
+--            badges as the engine stores them (save.inventory[badge], the
+--            constants.hmBadges gate, FieldDefaults.lua:220-224; partyKnows
+--            reads them, OC:2327-2350), the items the row needs given
+--            (give=: a rod or the ESCAPE ROPE; bicycle=: the BICYCLE), a
+--            visited town for Fly (save.visited[dest]), a boarded day-care
+--            mon (save.daycare {mon, steps}, as GenSave.lua:1238 shapes it)
+--            and a Safari game (save.safari {balls=30, steps=500}, set
+--            directly: startGame's state, data/scripts/safari.lua:52, without
+--            the gate's walk-in), all put back after the row. The party that
+--            knows the moves is the client's party.sync. A find=boulder row
+--            finds a Strength boulder on the live map (ow.npcs,
+--            Map.isPushable, Map.lua:188) with a free walkable cell to stand on
+--            and one behind it; a follow row continues from where the row
+--            before left the player (no warp, no reset: Strength stays
+--            active, the bike stays mounted). A brake row (the Cycling Road)
+--            holds B from the driver until READY (OC:1883-1886's brake),
+--            then lets go: the client's own move.hold window is all that
+--            brakes. READY then carries act= ax= ay= item= dest= (act.field)
+--            besides dirs= / hold=; the steps the player starts are sampled
+--            (frames per step, on the bike, the poison counter, the
+--            poisoned HP), and the counters (ow.todSteps, save.poisonSteps,
+--            save.repelSteps, save.daycare.steps, save.safari.steps, the
+--            poisoned members' HP) are read at READY and at the end.
+--
 -- Verdict codes (one character per cell and direction, directions up, down,
 -- left, right; cells row by row), the same alphabet as kb_g3field.lua:
 --   .  open (a step to the neighbour)       J  a ledge hop (lands two cells on)
@@ -115,7 +141,7 @@
 -- cells= warped= halted= classes=, KB_SURVEY maps= surveyed= cells= failed=
 -- file=, KB_SCRIPTS maps= hooks= onstep= files= coord= warps= moves=
 -- scriptmoves= holes= probecells= file=, KB_SWEEP_READY rows=, KB_ROW_READY
--- n= dir= push=, KB_ROW_DONE n= map= cls= end= moved= changed= frames= halted=
+-- n= dir= push= [dirs= hold= act= ax= ay= item= dest=], KB_ROW_DONE n= map= cls= end= moved= changed= frames= halted=
 -- err=, KB_SWEEP_DONE rows= file=, KB_QUIT code=; KB_FAIL <reason>.
 -- Map symbols, ids, class names, counts and booleans only; no script text.
 --
@@ -1430,7 +1456,7 @@ local function quiet(game)
   local ow = overworld(game)
   local p = ow.player
   if (ow.hopLand or 0) > 0 or ow.engaging or ow.teleportOut or ow.flyAnim or ow.flyArrive or ow.spinArrive
-      or ow.holeFall or ow.holeArrive or ow.cutAnim or ow.dustAnim then
+      or ow.holeFall or ow.holeArrive or ow.cutAnim or ow.dustAnim or ow.flyFade then
     return false
   end
   return not (p.spinning or p.ledgeHop or (tonumber(p.hopFrames) or 0) > 0)
@@ -1555,6 +1581,151 @@ local function noEncounters(game)
   if ow then ow.wildEncounterGraceSteps = GRACE_STEPS end
 end
 
+-- ---- FA5: features and step counters (§3.3, §3.4)
+
+-- the badges the field moves ask for (constants.hmBadges, FieldDefaults.lua:220-224), kept in the bag as
+-- Badges.lua:22-37 and kb_field.lua keep them
+local FIELD_BADGES = { "CASCADEBADGE", "SOULBADGE", "RAINBOWBADGE", "THUNDERBADGE", "BOULDERBADGE" }
+local SAFARI_STATE = { balls = 30, steps = 500 }
+
+-- the row's feature state (badges, items, a visited town, the day-care, a Safari game); returns what to put back
+local function applyFeatureState(game, row)
+  local save = game.save
+  save.inventory = type(save.inventory) == "table" and save.inventory or {}
+  -- the bag's order and stacks as they were (Bag.add keeps them, src/inventory/Bag.lua:443-460)
+  local undo = { inv = {}, visited = {}, order = save.bagOrder and copy(save.bagOrder) or false,
+                 stacks = save.bagStacks and copy(save.bagStacks) or false }
+  local okBag, Bag = pcall(require, "src.inventory.Bag")
+  local function give(k)
+    if undo.inv[k] == nil then undo.inv[k] = { v = save.inventory[k] } end
+    if save.inventory[k] then return end
+    -- Bag.add as the engine gives an item or a badge (a badge is a count, :447-449); else the bag's field itself
+    local ok = okBag and type(Bag) == "table" and type(Bag.add) == "function"
+      and pcall(Bag.add, save, k, 1, game.data) and save.inventory[k]
+    if not ok then save.inventory[k] = 1 end
+  end
+  if row.badges then
+    for _, b in ipairs(FIELD_BADGES) do give(b) end
+  end
+  if row.give then give(row.give) end
+  if row.dest then
+    save.visited = type(save.visited) == "table" and save.visited or {}
+    undo.visited[row.dest] = { v = save.visited[row.dest] }
+    save.visited[row.dest] = true
+  end
+  if row.daycare then
+    -- a copy of the lead with no uid: the bridge's daycare watch sees it as "unknown" (gen1.lua:4465-4467)
+    local lead = type(save.party) == "table" and save.party[1] or nil
+    undo.daycare = { v = save.daycare }
+    if type(lead) == "table" then
+      local mon = copy(lead, 4)
+      save.daycare = { mon = mon, steps = 0, depositLevel = mon.level }
+    else
+      undo.daycareNone = true
+    end
+  end
+  if row.safari then
+    undo.safari = { v = save.safari }
+    save.safari = copy(SAFARI_STATE)
+  end
+  return undo
+end
+
+local function undoFeatureState(game, undo)
+  if type(undo) ~= "table" then return end
+  local save = game.save
+  for k, rec in pairs(undo.inv or {}) do save.inventory[k] = rec.v end
+  if undo.order ~= nil then save.bagOrder = undo.order or nil end
+  if undo.stacks ~= nil then save.bagStacks = undo.stacks or nil end
+  for k, rec in pairs(undo.visited or {}) do
+    if type(save.visited) == "table" then save.visited[k] = rec.v end
+  end
+  if undo.daycare then save.daycare = undo.daycare.v end
+  if undo.safari then save.safari = undo.safari.v end
+end
+
+-- the poisoned party members (status PSN, as applyFieldPoison reads it, OC:4689-4700): how many, their HP
+local function poisoned(game)
+  local n, hp = 0, 0
+  for _, mon in ipairs(type(game.save.party) == "table" and game.save.party or {}) do
+    if type(mon) == "table" and mon.status == "PSN" then
+      n = n + 1
+      hp = hp + (tonumber(mon.hp) or 0)
+    end
+  end
+  return n, hp
+end
+
+-- the step counters the engine keeps (§3.4; onStepComplete's order, OC:4790-4964)
+local function counters(game)
+  local ow, save = overworld(game), game.save
+  local out = {}
+  out.tod = ow and tonumber(ow.todSteps) or nil
+  out.poison = tonumber(save.poisonSteps)
+  out.repel = tonumber(save.repelSteps)
+  out.daycare = type(save.daycare) == "table" and type(save.daycare.mon) == "table" and tonumber(save.daycare.steps) or nil
+  out.safari = type(save.safari) == "table" and tonumber(save.safari.steps) or nil
+  out.safariBalls = type(save.safari) == "table" and tonumber(save.safari.balls) or nil
+  out.grace = ow and tonumber(ow.wildEncounterGraceSteps) or nil
+  out.psn, out.psnHp = poisoned(game)
+  return out
+end
+
+-- a Strength boulder on the live map (pushableAtCell's rule, OC:2629-2638) with a free walkable cell to stand on
+-- facing it and a free walkable cell behind it (checkBoulderPush's own checks, OC:1934-1993); sets the row's start
+local function findBoulder(game, row)
+  local ow = overworld(game)
+  local Map, Collision = require("src.world.Map"), require("src.world.Collision")
+  if not ow then return false end
+  local m = ow.map
+  local function free(x, y, ignore)
+    if not m:inBounds(x, y) then return false end
+    local okW, walk = pcall(m.isWalkableCell, m, x, y)
+    local okD, wet = pcall(m.isWaterCell, m, x, y)
+    if not (okW and walk) or (okD and wet) then return false end
+    local okO, busy = pcall(Collision.occupied, ow.entities or {}, x, y, ignore)
+    if okO and busy then return false end
+    local okA, w = pcall(m.warpAtCell, m, x, y)
+    return not (okA and w)
+  end
+  for _, npc in ipairs(ow.npcs or {}) do
+    local okP, pushable = pcall(Map.isPushable, type(npc.def) == "table" and npc.def or {})
+    if okP and pushable and tonumber(npc.cellX) and not npc.moving and npc.hidden ~= true then
+      for _, dir in ipairs(DIRS) do
+        local d = DELTA[dir]
+        local sx, sy = npc.cellX - d[1], npc.cellY - d[2]
+        local bx, by = npc.cellX + d[1], npc.cellY + d[2]
+        if free(sx, sy, ow.player) and free(bx, by, npc) then
+          -- the facing only: an act row steps nowhere (the follow row pushes, fwd=2)
+          row.x, row.y, row.face, row.findDir = sx, sy, dir, dir
+          row.tx, row.ty = npc.cellX, npc.cellY
+          row.ax, row.ay = npc.cellX, npc.cellY
+          return true
+        end
+      end
+    end
+  end
+  return false
+end
+
+-- every step the hidden player starts (its frames: Player:stepLength, Player.lua:118-140; on the bike; the poison
+-- counter and the poisoned HP as the step starts), and whether a battle came up
+local function sampleSteps(game, rec)
+  local ow = overworld(game)
+  local top = topState(game)
+  if type(top) == "table" and top.isBattleState then rec.battle = true end
+  if not (ow and ow.player and rec.stepsSeen) then return end
+  local p = ow.player
+  local moving = p.moving == true
+  if moving and not rec.lastMoving and #rec.stepsSeen < 64 then
+    local _, hp = poisoned(game)
+    rec.stepsSeen[#rec.stepsSeen + 1] = { f = tonumber(p.stepFramesCur), bike = game.save.onBike == true,
+                                          surf = p.surfing == true, x = p.targetX, y = p.targetY,
+                                          psn = tonumber(game.save.poisonSteps), hp = hp }
+  end
+  rec.lastMoving = moving
+end
+
 local function rowsList()
   local ok, list = pcall(dofile, os.getenv("KB_ROWS") or "")
   if not (ok and type(list) == "table") then fail("no_rows") end
@@ -1636,11 +1807,37 @@ return function(game)
         phase = "done"
       else
         rec = { n = row.n, map = row.map, cls = row.cls, x = row.x, y = row.y, dir = row.dir, state = row.state }
-        halt(game)
-        setVehicle(game, "walk", base)
-        if ow and sw.strength then ow.strengthActive = false end
-        sw.strength = nil
-        if row.trigger == "warp" then
+        local prev = sw.prev
+        sw.prev = nil
+        if not row.follow then
+          halt(game)
+          setVehicle(game, "walk", base)
+          if ow and sw.strength then ow.strengthActive = false end
+          sw.strength = nil
+        end
+        if row.follow then
+          -- FA5: on from where the row before left the player (same map, nothing reset)
+          local pe = prev and prev.rec["end"] or nil
+          if not (pe and ow and not prev.rec.err and pe.map == row.map and ow.map.id == row.map) then
+            rec.err = "no_follow"
+            phase = "row_report"
+          else
+            row.x, row.y = pe.x, pe.y
+            row.face = pe.facing
+            if row.fwd and DELTA[row.face or ""] then
+              -- fwd=N: N steps the way the player faces (a boulder found at runtime, a bike row's heading)
+              local list = {}
+              for i = 1, row.fwd do list[i] = row.face end
+              row.dirs, row.dir = table.concat(list, ","), row.face
+            end
+            if not row.dir and row.dirs then row.dir = row.dirs:match("^(%a+)") end
+            if prev.row.tx then row.tx, row.ty = prev.row.tx, prev.row.ty end
+            rec.x, rec.y, rec.dir = row.x, row.y, row.dir
+            placeAt(game, row)
+            frames = 0
+            phase = "row_place"
+          end
+        elseif row.trigger == "warp" then
           -- an entry script's row: the warp itself is the trigger, made after READY
           rec.start = {}
           rec.readyAt = love.timer.getTime()
@@ -1652,7 +1849,9 @@ return function(game)
           restore(game, base)
           beatTrainers(game, row.map)
           arrived = false
-          local okW, res, err = pcall(world.warpTo, world, row.map, row.x, row.y, row.face or row.dir or "down",
+          local wx, wy = row.x, row.y
+          if row.find then wx, wy = arrivalCell(game, row.map) end
+          local okW, res, err = pcall(world.warpTo, world, row.map, wx, wy, row.face or row.dir or "down",
             { onDone = function() arrived = true end })
           if not okW or not res then
             rec.err = "warp " .. word(okW and err or res):sub(1, 50)
@@ -1677,7 +1876,14 @@ return function(game)
         if not ow or ow.map.id ~= row.map or not quiet(game) then
           rec.err = (ow and ow.map.id ~= row.map) and "left_on_entry" or "not_settled"
           phase = "row_report"
+        elseif row.find and not row.found and not findBoulder(game, row) then
+          rec.err = "no_object"
+          phase = "row_report"
         else
+          if row.find then
+            row.found = true
+            rec.x, rec.y, rec.dir, rec.tx, rec.ty = row.x, row.y, row.findDir, row.tx, row.ty
+          end
           placeAt(game, row)
           frames = 0
           phase = "row_place"
@@ -1687,7 +1893,15 @@ return function(game)
       frames = frames + 1
       local ow = overworld(game)
       if frames == 1 and ow then
-        if not row.late then setVehicle(game, row.state, base) end
+        if row.brake then
+          -- the Cycling Road's brake held by the driver until READY, so the mounted bike stands still (OC:1883-1886)
+          pcall(game.input.sourcePress, game.input, "b", "kb-g1field-brake")
+          sw.braking = true
+        end
+        -- a follow row keeps the vehicle the row before left (the bike mounted by act.field)
+        if not row.late and not row.follow then setVehicle(game, row.state, base) end
+        sw.undo = applyFeatureState(game, row)
+        if row.follow and row.strengthAfter then sw.strength = true end
         if row.bicycle then
           sw.bag = { had = true, v = game.save.inventory.BICYCLE }
           game.save.inventory.BICYCLE = 1
@@ -1722,13 +1936,31 @@ return function(game)
             rec.story = storySig(game)
             rec.todSteps = tonumber(ow.todSteps)
             rec.readyAt = love.timer.getTime()
+            -- FA5: what the row starts from (the counters, Strength, the dark, a heal point for Dig / Teleport)
+            rec.countersBefore = counters(game)
+            rec.startState = { strength = ow.strengthActive == true, dark = ow.dark == true,
+                               flashLit = game.save.flashLit == true, heal = type(game.save.lastHeal) == "table",
+                               forcedBike = game.save.forcedBike == true }
+            rec.stepsSeen = array()
+            rec.lastMoving = false
             -- dirs: several steps in one row (field_common sends them one after another, the first answered with n);
-            -- hold: a button the client holds over the row's steps (move.hold)
+            -- hold: a button the client holds over the row's steps (move.hold); act/ax/ay/item/dest: an act.field
+            -- the client sends first
             local extra = ""
             if row.dirs then extra = extra .. " dirs=" .. word((row.dirs:gsub(",", "+"))) end
             if row.hold then extra = extra .. " hold=" .. word(row.hold) end
+            if row.act then extra = extra .. " act=" .. word(row.act) end
+            if row.ax and row.ay then extra = extra .. (" ax=%d ay=%d"):format(row.ax, row.ay) end
+            if row.item then extra = extra .. " item=" .. word(row.item) end
+            if row.dest then extra = extra .. " dest=" .. word(row.dest) end
             print(("KB_ROW_READY n=%d dir=%s push=%s%s"):format(row.n, word(row.dir or "none"), row.push and "1" or "0",
               extra))
+            if sw.braking then
+              -- let go: from here only the client's move.hold b holds the brake
+              pcall(game.input.sourceRelease, game.input, "b", "kb-g1field-brake")
+              sw.braking = nil
+              rec.brake = { x = p.cellX, y = p.cellY }
+            end
             frames = 0
             phase = "row_wait_step"
           end
@@ -1740,9 +1972,18 @@ return function(game)
       end
     elseif phase == "row_wait_step" then
       frames = frames + 1
-      if ctlValue() == row.n or love.timer.getTime() - (rec.readyAt or 0) > STEP_WAIT_S then
+      -- FA5: the client's steps land before it writes the go: sample them here too
+      sampleSteps(game, rec)
+      if ctlValue() == row.n or love.timer.getTime() - (rec.readyAt or 0) > (row.stepwait or STEP_WAIT_S) then
         rec.stepWait = frames
         rec.ctl = ctlValue() == row.n
+        if rec.brake then
+          -- where the bike stood when the client's hold window closed, and the steps it started meanwhile
+          local owB = overworld(game)
+          local pB = owB and owB.player or {}
+          rec.brake.ctlX, rec.brake.ctlY = pB.cellX, pB.cellY
+          rec.brake.stepsBeforeGo = rec.stepsSeen and #rec.stepsSeen or 0
+        end
         frames = 0
         rec.idle = 0
         if row.late then setVehicle(game, row.state, base) end
@@ -1760,6 +2001,7 @@ return function(game)
     elseif phase == "row_run" then
       frames = frames + 1
       local ow = overworld(game)
+      sampleSteps(game, rec)
       if quiet(game) then rec.idle = rec.idle + 1 else rec.idle = 0 end
       local now = ow and ow.map.id or nil
       if now ~= rec.lastMap then
@@ -1784,6 +2026,14 @@ return function(game)
         else
           rec.changed = array()
         end
+        if ow then
+          rec["end"].strength = ow.strengthActive == true
+          rec["end"].dark = ow.dark == true
+          rec["end"].flashLit = game.save.flashLit == true
+          rec["end"].forcedBike = game.save.forcedBike == true
+        end
+        rec.countersAfter = counters(game)
+        rec.lastMoving = nil
         rec.storyChanged = rec.story ~= nil and storySig(game) ~= rec.story or nil
         rec.steps = (ow and rec.todSteps and tonumber(ow.todSteps)) and (tonumber(ow.todSteps) - rec.todSteps) or nil
         rec.before, rec.story, rec.lastMap, rec.todSteps = nil, nil, nil, nil
@@ -1795,8 +2045,17 @@ return function(game)
         game.save.inventory.BICYCLE = sw.bag.v
         sw.bag = nil
       end
+      if sw.braking then
+        pcall(game.input.sourceRelease, game.input, "b", "kb-g1field-brake")
+        sw.braking = nil
+      end
+      undoFeatureState(game, sw.undo)
+      sw.undo = nil
       sw.dirty = rec.err ~= nil or (e.map ~= nil and e.map ~= row.map) or (rec.changed ~= nil and #rec.changed > 0)
         or rec.halted == true or rec.storyChanged == true or row.strength == true or row.trigger == "warp"
+        or row.act ~= nil or row.follow == true or row.safari == true or row.daycare == true
+      -- the row a follow row continues from
+      sw.prev = { rec = rec, row = row }
       print(("KB_ROW_DONE n=%d map=%s cls=%s end=%s moved=%s changed=%d frames=%s halted=%s err=%s")
         :format(row.n, word(row.map), word(row.cls), word(e.map or "none"),
           word(e.x ~= nil and (e.x ~= row.x or e.y ~= row.y or e.map ~= row.map)),

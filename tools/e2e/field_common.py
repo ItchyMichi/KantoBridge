@@ -237,7 +237,14 @@ def run_rows(driver: str, game: str, scene: str, port: int, timeout: float, extr
            "KB_DRIVER_SECONDS": str(int(timeout)), "KB_TEST_PORT": str(port), "KB_CTL": str(ctl.resolve())}
     env.update(extra or {})
     with launch(driver, game=game, extra_env=env, echo=False) as run:
-        received, rows, answered = asyncio.run(row_client(run, port, ctl, timeout, auto_ui=auto_ui, party=party))
+        try:
+            received, rows, answered = asyncio.run(row_client(run, port, ctl, timeout, auto_ui=auto_ui, party=party))
+        except Exception:
+            result = run.wait(30)
+            print("RUN", json.dumps(result.summary(), sort_keys=True))
+            for line in result.lines[-15:]:
+                print("  ", line)
+            raise
         result = run.wait(180)
     print("RUN", json.dumps(result.summary(), sort_keys=True))
     print("ANSWERED", dict(answered))
@@ -330,7 +337,9 @@ def analyse_rows(rows: list[dict], sweep: dict, received: list[dict], done: dict
                         if m["type"] == "story.cells" and (m.get("data") or {}).get("map") == rec.get("map"):
                             for c in (m["data"].get("cells") or []):
                                 held[(c["x"], c["y"])] = c.get("metatile")
-                    miss = [c for c in rec["changed"] if held.get((c["x"], c["y"])) != c["l"][0]]
+                    # a cell back in the map's own state needs no message unless the client was told otherwise
+                miss = [c for c in rec["changed"] if held.get((c["x"], c["y"])) != c["l"][0]
+                        and not (c.get("o") and c["o"][0] == c["l"][0] and (c["x"], c["y"]) not in held)]
                 if miss:
                     problems.append(f"D:not_shown={len(miss)}")
             exp = row.get("expect")

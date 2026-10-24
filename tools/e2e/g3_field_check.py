@@ -477,6 +477,7 @@ def report(analysis: dict) -> None:
 # ---- FA5: features and step counters (§3.3, §3.4) -------------------------------------------------------------------
 
 FEATURES = REPORTS / "g3_field_features_rows.lua"
+FEATURES_PORT = 27234
 FEATURE_MAPS = {
     "boulder": ["EM_VICTORY_ROAD_B1F", "EM_SEAFLOOR_CAVERN_ROOM1", "EM_SEAFLOOR_CAVERN_ROOM2", "EM_SEAFLOOR_CAVERN_ROOM5"],
     "cut_tree": ["EM_ROUTE116", "EM_ROUTE104", "EM_PETALBURG_WOODS", "EM_ROUTE119"],
@@ -606,7 +607,11 @@ def make_features() -> list[dict]:
     # Strength, Cut, Rock Smash on the objects the driver finds
     for mid in FEATURE_MAPS["boulder"]:
         if mid in par:
-            add(map=mid, x=0, y=0, find="boulder", strength=True, state="walk", cls="feature:strength", expect="feature")
+            add(map=mid, x=0, y=0, find="boulder", strength=True, act="strength", state="walk", cls="feature:strength",
+                expect="feature")
+            # the push itself once the game's Strength text is gone: the same map, no warp
+            add(map=mid, x=0, y=0, find="boulder", strength=True, state="walk", cls="feature:strength_push",
+                expect="feature", fresh=False)
     for mid in FEATURE_MAPS["cut_tree"]:
         if mid in par:
             add(map=mid, x=0, y=0, find="cut_tree", act="cut", state="walk", cls="feature:cut", expect="feature")
@@ -615,7 +620,7 @@ def make_features() -> list[dict]:
             add(map=mid, x=0, y=0, find="rock", act="rock_smash", state="walk", cls="feature:rock_smash", expect="feature")
     # Flash in a cave, Dig out of it, Teleport outside, Fly (the game's own list)
     for mid, act, cls in (("EM_GRANITE_CAVE_1F", "flash", "feature:flash"), ("EM_GRANITE_CAVE_1F", "dig", "feature:dig"),
-                          ("EM_ROUTE104", "teleport", "feature:teleport"), ("EM_ROUTE104", "fly", "feature:fly")):
+                          ("EM_ROUTE104", "teleport", "feature:teleport")):
         g = grid(mid)
         pick = g and next(((x, y) for y in range(g.h) for x in range(g.w) if g.st(x, y) == "."), None)
         if pick:
@@ -629,6 +634,12 @@ def make_features() -> list[dict]:
             add(map=mid, x=ln[0], y=ln[1], dir=d, dirs=",".join([d, OPP[d]] * 10), state="walk", cls="steps:walk20",
                 expect="steps", wait=3000)
             break
+    # Fly last: the game's own map screen stays open after it
+    g = grid("EM_ROUTE104")
+    pick = g and next(((x, y) for y in range(g.h) for x in range(g.w) if g.st(x, y) == "."), None)
+    if pick:
+        add(map="EM_ROUTE104", x=pick[0], y=pick[1], face="down", state="walk", cls="feature:fly", act="fly", expect="feature",
+            wait=600)
     for i, r in enumerate(rows, 1):
         r["n"] = i
     return rows
@@ -658,7 +669,7 @@ def cmd_features(timeout: float, tag: str) -> int:
     FEATURES.write_text(lua_feature_rows(rows), encoding="utf-8")
     print(f"FEATURE ROWS {len(rows)}:", dict(Counter(r["cls"] for r in rows)))
     out = REPORTS / f"g3_field_features{tag}.json"
-    received, done, answered, result = fc.run_rows(DRIVER, GAME, "sweep", SWEEP_PORT, timeout,
+    received, done, answered, result = fc.run_rows(DRIVER, GAME, "sweep", FEATURES_PORT, timeout,
                                                    {"KB_ROWS": str(FEATURES.resolve()), "KB_SWEEP_FILE": out.name},
                                                    party=fc.FIELD_PARTY)
     fc.write(REPORTS / f"g3_field_features_stream{tag}.json", {"received": received, "rows": done})
@@ -681,7 +692,8 @@ def report_features(rows, sweep, received, done) -> None:
         delta = {k: (ca.get(k) - cb.get(k)) for k in ca if isinstance(ca.get(k), (int, float)) and isinstance(cb.get(k), (int, float))
                  and ca.get(k) != cb.get(k)}
         answers = [a for a in (d.get("answers") or []) if a]
-        frames = [((a.get("data") or {}).get("kind"), (a.get("data") or {}).get("frames")) for a in answers]
+        frames = [((a.get("data") or {}).get("kind") or "blocked:" + str((a.get("data") or {}).get("reason")),
+                   (a.get("data") or {}).get("frames")) for a in answers]
         e = rec.get("end") or {}
         print(f"  #{n} {row.get('cls')} {rec.get('map')} [{rec.get('state')}]: act {d.get('act')}; answers {len(answers)} {frames}; "
               f"engine steps {[(x.get('f'), x.get('run'), x.get('bt')) for x in steps][:6]}; warps {[w['kind'] for w in sf['warps'] if w['phase'] == 'arrive']}; "

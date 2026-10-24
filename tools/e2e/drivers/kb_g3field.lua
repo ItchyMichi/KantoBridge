@@ -774,13 +774,33 @@ local function liveCells()
   return out
 end
 
+-- the cells that changed during the row: l the live cell, o the map's own (the layout's cell under the overrides:
+-- what a client already draws without a story.cells for it)
 local function cellsDiff(before, after)
   local out = array()
+  local Map = mod3("map")
+  local def = Map and Map.currentDef and Map.currentDef() or nil
+  local lay = def and def.midLayout
+  local w = lay and math.floor(tonumber(lay.width) or 0) or 0
+  local function own(x, y)
+    local c = lay and lay.cells and lay.cells[y * w + x + 1]
+    return type(c) == "table" and { c.mid, c.coll, c.elev } or nil
+  end
   for k, v in pairs(after) do
     local b = before[k]
     if not b or b[1] ~= v[1] or b[2] ~= v[2] or b[3] ~= v[3] then
       local x, y = k:match("^(%d+),(%d+)$")
-      out[#out + 1] = { x = tonumber(x), y = tonumber(y), l = { v[1], v[2], v[3] } }
+      x, y = tonumber(x), tonumber(y)
+      out[#out + 1] = { x = x, y = y, l = { v[1], v[2], v[3] }, o = own(x, y) }
+    end
+  end
+  -- overrides removed during the row: the cell went back to the map's own
+  for k, b in pairs(before) do
+    if after[k] == nil then
+      local x, y = k:match("^(%d+),(%d+)$")
+      x, y = tonumber(x), tonumber(y)
+      local o = own(x, y)
+      if o then out[#out + 1] = { x = x, y = y, l = o, o = o, back = true } end
     end
   end
   return out
@@ -1122,7 +1142,11 @@ return function(game)
       end
     elseif phase == "row_wait_step" then
       frames = frames + 1
-      if ctlValue() == row.n or frames >= 400 then
+      -- the client writes the control file once its step(s) are answered: up to 20 s by the clock (several steps,
+      -- a field action's answer)
+      sw.waitSince = sw.waitSince or love.timer.getTime()
+      if ctlValue() == row.n or love.timer.getTime() - sw.waitSince > 20 then
+        sw.waitSince = nil
         rec.stepWait = frames
         frames = 0
         rec.idle = 0
