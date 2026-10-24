@@ -262,8 +262,47 @@ def test_the_frontier_and_tent_desks_are_refused_while_a_client_follows():
     a.eng.scriptCommand(nxt, a.lua({"vm": vm}), b"special", a.lua({"id": 248}))
     assert plain(a.eng.refusedFeature()) == {"feature": "battle_tent", "n": 2}
     assert a.eng.scriptCommand(nxt, a.lua({"vm": vm}), b"special", a.lua({"id": 8})) == b"ran", "other specials run"
+    a.E.Map.current = b"MAP_MOSSDEEP_CITY_SPACE_CENTER_2F"
+    assert a.eng.scriptCommand(nxt, a.lua({"vm": vm}), b"special", a.lua({"id": 42})) == b"ran", "Steven's choice runs"
     off, _ = setup(live=False)
     vm2 = off.b.eval("function() return { ctx = {} } end")()
     c2, n2 = off.b.eval("function() local t = { n = 0 } return t, function() t.n = t.n + 1 end end")()
     off.eng.scriptCommand(n2, off.lua({"vm": vm2}), b"special", off.lua({"id": 42}))
     assert c2.n == 1 and off.eng.refusedFeature() is None, "no client: the desk as usual"
+
+
+def test_stevens_partner_battle_is_a_cobblemon_multi_battle():
+    # FP5 (§4.12): the player's chosen half by uid, Steven's three as the ally, the two foes split where the first ends
+    a, s = setup()
+    lead = "11111111-1111-4111-8111-111111111111"
+    a.eng.adoptUids(a.lua([lead]))
+    a.E.giveMon(2, 20, b"", False)                   # Steven's, appended after the player's half (playerHalf 1)
+    a.E.startTrainer(7, a.lua({"partner": True, "playerHalf": 1, "twoOpponents": True, "trainerIdB": 8,
+                               "partnerTrainerId": 9}))
+    f = last_facts(a)
+    assert f["format"] == "multi" and f["use"] == [lead] and len(f["allyTeam"]) == 1
+    assert f["split"] == 2 and a.E.starts[len(a.E.starts)].headless is True
+    # without a uid on the player's half: native, announced as a facility battle
+    b2, s2 = setup()
+    b2.E.giveMon(2, 20, b"", False)
+    b2.E.startTrainer(7, b2.lua({"partner": True, "playerHalf": 1, "twoOpponents": True, "trainerIdB": 8}))
+    assert b2.E.starts[len(b2.E.starts)].headless is False and b2.eng.nativeBattle() == b"facility"
+
+
+def test_main_sends_stevens_battle_as_multi_with_the_ally_and_the_split():
+    rig = rig_in_field()
+    peer = rig.connect()
+    peer.hello()
+    pump(rig, peer, lambda m: m["type"] == "snapshot")
+    lead = "11111111-1111-4111-8111-111111111111"
+    peer.send("party.sync", {"party": [{"uid": lead, "dex": 254, "level": 10, "moves": [33], "hp": 20, "maxhp": 30}],
+                             "box": {"count": 0}})
+    rig.step(3)
+    half = len(rig.E.Runtime.getSession().party)
+    rig.E.giveMon(2, 20, b"", False)                 # Steven's
+    rig.E.startTrainer(7, rig.b.to_lua({"partner": True, "playerHalf": half, "twoOpponents": True, "trainerIdB": 8,
+                                        "partnerTrainerId": 8}))
+    got = pump(rig, peer, lambda m: m["type"] == "battle.start")
+    start = next(m for m in got if m["type"] == "battle.start")["data"]
+    assert start["format"] == "multi" and start["use"] == [lead] and start["split"] == 2
+    assert len(start["team"]) == 3 and len(start["ally"]["team"]) == 1 and start["ally"]["name"] == "MAY"

@@ -206,17 +206,6 @@ function Battle.new(opts)
       end
       Battle.details(facts, data.wild)
       data.rules = { catch = facts.catch ~= false, flee = facts.flee ~= false }
-      -- FP5 (§4.12): the player's Pokemon Cobblemon may use (the contest's lead), by uid
-      if type(facts.use) == "table" then
-        local use, seen = {}, {}
-        for _, uid in ipairs(facts.use) do
-          if type(uid) == "string" and uid:find(UID) and uid == uid:lower() and not seen[uid] and #use < 6 then
-            use[#use + 1], seen[uid] = uid, true
-          end
-        end
-        if #use == 0 then return decline("use") end
-        data.use = use
-      end
     else
       if not (sym(facts.cls, "^[A-Za-z0-9_]+$") and whole(facts.party, 0, Battle.MAX_PARTY)) then return decline("trainer") end
       local team, name = engine.trainerTeam(facts.cls, facts.party)
@@ -240,6 +229,33 @@ function Battle.new(opts)
       if coord(facts.x) and coord(facts.y) then trainer.x, trainer.y = facts.x, facts.y end
       data.trainer, data.team = trainer, shaped
       data.rules = { catch = false, flee = false }
+      -- FP5 (§4.12): a multi battle (Steven's): the ally's team, the player's half by uid, where the first foe's
+      -- Pokemon end in the team
+      if facts.format == "multi" and type(facts.allyTeam) == "table" then
+        local ally = {}
+        for i = 1, math.min(#facts.allyTeam, 6) do
+          local t = Battle.teamMon(facts.allyTeam[i], compat)
+          if not t then return decline("ally_member", { index = i }) end
+          ally[#ally + 1] = t
+        end
+        if #ally == 0 then return decline("ally") end
+        data.format, data.ally = "multi", { team = ally }
+        if type(facts.allyName) == "string" then
+          local shown = capChars((markup(facts.allyName)), Battle.MAX_NAME)
+          if shown ~= "" then data.ally.name = shown end
+        end
+        if whole(facts.split, 1, #shaped - 1) then data.split = facts.split end
+      end
+    end
+    if type(facts.use) == "table" and not data.use then
+      local use, seen = {}, {}
+      for _, uid in ipairs(facts.use) do
+        if type(uid) == "string" and uid:find(UID) and uid == uid:lower() and not seen[uid] and #use < 6 then
+          use[#use + 1], seen[uid] = uid, true
+        end
+      end
+      if #use == 0 then return decline("use") end
+      data.use = use
     end
     local id = ("b-%s-%d"):format(engine.bridgeToken(), engine.nextSerial())
     data.battle, data.kind = id, kind

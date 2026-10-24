@@ -124,6 +124,50 @@ public class BattleGameTests implements FabricGameTest {
 		}
 	}
 
+	/**
+	 * FP5 (FOREIGN_POKEMON_PLAN §4.12; FP0's open question): Steven's partner battle is Cobblemon's multi battle. The server
+	 * seats an ally with no entity (a trainer actor) beside the player, the player fights with only the {@code use}
+	 * Pokémon, and the two foes split the team where {@code split} says.
+	 */
+	@GameTest(template = EMPTY_STRUCTURE, batch = BATCH, timeoutTicks = 200)
+	public void aPartnerBattleIsAMultiBattleWithAnAlly(GameTestHelper helper) {
+		ServerPlayer player = MockPlayers.join(helper);
+		RelayTap.Recorder relay = RelayTap.open(player);
+		try {
+			Pokemon mine = partner(player);
+			partner(player);
+			String data = "{\"battle\":\"bt-m1\",\"kind\":\"scripted\",\"trainer\":" + TRAINER + ",\"team\":" + TEAM
+					+ ",\"rules\":{\"catch\":false,\"flee\":false},\"format\":\"multi\",\"use\":[\"" + mine.getUuid()
+					+ "\"],\"split\":1,\"ally\":{\"name\":\"ALLY\",\"team\":[{\"dex\":376,\"level\":42,\"moves\":[33],\"dvs\":{\"atk\":9,\"def\":8,\"spd\":8,\"spc\":8}}]}}";
+			RelayService.get().receive(player, envelope(1, MsgTypes.BATTLE_START, data));
+			PokemonBattle battle = BattleService.battleOf(player);
+			helper.assertTrue(battle != null, "no multi battle (warnings: " + BattleService.warnings() + ")");
+			helper.assertTrue(battle.getFormat().equals(BattleFormat.Companion.getGEN_9_MULTI()), "not GEN_9_MULTI");
+			java.util.List<com.cobblemon.mod.common.api.battles.model.actor.BattleActor> ours = new java.util.ArrayList<>();
+			for (var actor : battle.getSide1().getActors()) {
+				ours.add(actor);
+			}
+			java.util.List<com.cobblemon.mod.common.api.battles.model.actor.BattleActor> theirs = new java.util.ArrayList<>();
+			for (var actor : battle.getSide2().getActors()) {
+				theirs.add(actor);
+			}
+			helper.assertTrue(ours.size() == 2 && theirs.size() == 2, "sides " + ours.size() + " and " + theirs.size());
+			com.cobblemon.mod.common.battles.actor.PlayerBattleActor me = (com.cobblemon.mod.common.battles.actor.PlayerBattleActor) battle.getActor(player);
+			helper.assertTrue(me.getPokemonList().size() == 1 && me.getPokemonList().get(0).getOriginalPokemon() == mine, "not only the chosen one");
+			helper.assertTrue(theirs.get(0).getPokemonList().size() == 1 && theirs.get(1).getPokemonList().size() == 1, "the foes' split");
+			battle.stop();
+		} catch (RuntimeException e) {
+			cleanUp(helper, player, relay);
+			throw e;
+		}
+		GameTestSequence end = helper.startSequence().thenExecuteAfter(2, () -> {
+			java.util.List<Envelope> results = relay.of(MsgTypes.BATTLE_RESULT);
+			helper.assertTrue(results.size() == 1, "expected one answer, got " + results.size());
+			assertResult(helper, results.get(0), "bt-m1", "aborted");
+		});
+		MockPlayers.leaveAfterBattle(helper, end, relay::close, player);
+	}
+
 	@GameTest(template = EMPTY_STRUCTURE, batch = BATCH, timeoutTicks = 400)
 	public void aTrainerBattleRunsAgainstAHiddenProxy(GameTestHelper helper) {
 		ServerPlayer player = MockPlayers.join(helper);

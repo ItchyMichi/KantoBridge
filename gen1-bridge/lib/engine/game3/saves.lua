@@ -121,7 +121,11 @@ function Saves.install(b)
       -- FP5 (FOREIGN_POKEMON_PLAN §4.12): the Battle Frontier's and the Battle Tents' desks choose a party here
       -- (script_pokemon_util.c's ChooseHalfPartyForBattle / ChoosePartyForBattleFrontier); while a client follows
       -- the choice is a cancel (VAR_RESULT 0), so the desk takes its own way out, and the HUD says why (FP9)
-      if name and Saves.DESK_SPECIALS[name] then
+      local Map0 = b.g3("map")
+      local here = type(Map0) == "table" and type(Map0.current) == "string" and Map0.current or ""
+      -- (only at the facilities: Steven's partner battle at the Space Center chooses its half the same way)
+      local desk = here:find("BATTLE_FRONTIER", 1, true) or here:find("BATTLE_TENT", 1, true)
+      if name and Saves.DESK_SPECIALS[name] and desk then
         local st = b.state()
         local bridge = st and st.bridge
         if type(bridge) == "table" and type(bridge.live) == "function" and bridge.live() == true then
@@ -129,9 +133,7 @@ function Saves.install(b)
           local Rse = b.g3("rse.init")
           if type(vm) == "table" and type(Rse) == "table" and type(Rse.setSpecialVar) == "function" then
             pcall(Rse.setSpecialVar, vm.ctx, Saves.VAR_RESULT, 0)
-            local Map = b.g3("map")
-            local map = type(Map) == "table" and type(Map.current) == "string" and Map.current or ""
-            b.refuse(map:find("TENT", 1, true) and "battle_tent" or "battle_frontier")
+            b.refuse(here:find("BATTLE_TENT", 1, true) and "battle_tent" or "battle_frontier")
             return nil
           end
         end

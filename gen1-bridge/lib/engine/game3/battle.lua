@@ -53,7 +53,7 @@ local Battle3 = {}
 Battle3.NATIVE_OPTS = { "link", "spectate", "unionRoom", "pokedude", "oldManTutorial", "tutorialKind", "frontier",
                         "frontierFoeHalf", "battleTower", "eReader", "secretBase", "trainerTower",
                         "pyramid", "pike", "dome", "palace", "arena", "factory", "recordedLink", "towerLinkMulti",
-                        "safari", "partner" }
+                        "safari" }
 -- FP5 (FOREIGN_POKEMON_PLAN §4.12): what battle.native says for each native battle (anything else: facility)
 Battle3.TUTORIAL_OPTS = { "pokedude", "oldManTutorial", "tutorialKind" }
 -- the core's outcome words -> the engine's (scripting/natives.lua:198-212)
@@ -264,12 +264,41 @@ function Battle3.install(b)
       if kind and st then st.native = { kind = kind, session = b.session() } end
       return original(mod, game, foe, opts)
     end
+    -- FP5 (FOREIGN_POKEMON_PLAN §4.12): Steven's partner battle (natives_frontier_story.lua:258-287: Steven's three
+    -- appended to session.party after the player's chosen half) is Cobblemon's multi battle: the player's half by uid,
+    -- Steven's team as the ally, the two foes split where the first one's party ends; anything missing: native
+    local multi
+    if opts.partner and not opts.wild then
+      local s = b.session()
+      local half = tonumber(opts.playerHalf) or 0
+      local use, ally = {}, {}
+      for i, mon in ipairs(type(s) == "table" and type(s.party) == "table" and s.party or {}) do
+        if i <= half then
+          local uid = b.adapter.uidOf(mon)
+          if uid then use[#use + 1] = uid end
+        elseif #ally < 6 then
+          local m = member(mon)
+          if m then ally[#ally + 1] = m end
+        end
+      end
+      if #use == 0 or #ally == 0 then
+        if st then st.native = { kind = "facility", session = b.session() } end
+        return original(mod, game, foe, opts)
+      end
+      local info = b.ask(b.g3("scripting.trainers"), "info", nil, opts.partnerTrainerId, { rivalName = nil })
+      multi = { use = use, ally = ally, split = type(foe) == "table" and type(foe.party) == "table" and #foe.party or nil,
+                allyName = type(info) == "table" and type(info.name) == "string" and info.name ~= "" and info.name or nil }
+    end
     if opts.twoOpponents and opts.trainerIdB and not opts.wild then
       local ok, merged = b.call(b.g3("battle_bridge"), "twoOpponentFoe", foe, opts.trainerIdB)
       if ok and type(merged) == "table" then foe = merged end
     end
     local facts = factsOf(foe, opts)
     if not facts then return original(mod, game, foe, opts) end
+    if multi then
+      facts.format, facts.use, facts.allyTeam, facts.allyName, facts.split = "multi", multi.use, multi.ally, multi.allyName,
+        multi.split
+    end
     st.starting = { foe = foe, trainerId = facts.party }
     local okPlan, plan = pcall(bridge.battle, facts)
     st.starting = nil

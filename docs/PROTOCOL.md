@@ -666,6 +666,13 @@ maximum, `status:"none"` clears), teaches as a machine does, or benches the move
 and are never sent, and a sync whose member holds nothing leaves them on the record. Emerald's syncs and gifts carry the
 held item through `symbols.gen3`. The server holds a new stack of the Cobblemon item (or removes it); an item the region's
 game couldn't show goes back to the player's inventory.
+**FP5 (the hidden games' own battles):** Crystal's Bug-Catching Contest battles are `battle.start{kind:"contest",
+use:[lead]}` (the server fights with only that Pokémon; a catch is the contest's, and the one let go at its question
+leaves as `party.take{reason:"contest"}`); Emerald's Steven battle is `format:"multi"` with `use`, `ally{name, team}` and
+`split` (Cobblemon's `GEN_9_MULTI`, the ally and foes as trainer actors). Crystal's Battle Tower desk and Emerald's
+Frontier and Tent desks refuse while a client follows, and `game.status.refused{feature, n}` gives the HUD its note;
+Trainer Hill is held like any trainer; every battle Emerald leaves native is announced (`battle.native` kind `facility`
+for rentals and facilities).
 
 Species travel as national dex numbers (defs `nationalDex`), moves as Showdown numbers (defs
 `moveNum`; Gen 1's move ids are the same numbers), items as engine symbols, and Pokémon identities

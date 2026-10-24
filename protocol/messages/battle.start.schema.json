@@ -175,6 +175,12 @@
       "x-rom-derived": true,
       "description": "§4.12, format multi: the partner who fights beside the player."
     },
+    "split": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 5,
+      "description": "FP5, format multi: how many of team belong to the first foe (the rest to the second); absent: half each."
+    },
     "region": {
       "$ref": "../defs.schema.json#/$defs/regionId",
       "description": "MG3 (several games): the region this message belongs to; absent = the legacy region. The client tags what it relays with its link's region; the server routes a tagged message to that region's link."

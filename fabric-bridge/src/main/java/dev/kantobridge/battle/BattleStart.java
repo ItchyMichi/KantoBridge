@@ -28,16 +28,18 @@ import org.jetbrains.annotations.Nullable;
  * @param use     FOREIGN_POKEMON_PLAN §4.12 (FP1): the player's Pokémon Cobblemon may use (the contest's lead); empty: all
  * @param format  §4.12: singles (the default), double or multi
  * @param ally    §4.12: the partner beside the player in a multi battle (Steven), or null
+ * @param split   FP5, format multi: how many of {@code team} belong to the first foe (the rest to the second); 0: half each
  */
 public record BattleStart(String battle, Kind kind, @Nullable Trainer trainer, List<Gen1Mon> team, @Nullable Wild wild, boolean canCatch,
-		boolean canFlee, List<UUID> use, Format format, @Nullable Ally ally) {
+		boolean canFlee, List<UUID> use, Format format, @Nullable Ally ally, int split) {
 	static final int MAX_COORD = 4096;
 	static final int MAX_NAME = 32;
 	public static final int MAX_TEAM = 6;
 	/** A trainer's party index (Gen 1, within its class) or id (Gen 3: Emerald's reach 854). */
 	public static final int MAX_PARTY = 1023;
 
-	private static final Set<String> FIELDS = Set.of("battle", "kind", "trainer", "team", "wild", "rules", "region", "use", "format", "ally");
+	private static final Set<String> FIELDS = Set.of("battle", "kind", "trainer", "team", "wild", "rules", "region", "use", "format", "ally",
+			"split");
 	private static final Set<String> ALLY_FIELDS = Set.of("name", "team");
 	private static final Set<String> TRAINER_FIELDS = Set.of("cls", "party", "name", "npc", "map", "x", "y");
 	private static final Set<String> WILD_FIELDS = Set.of("dex", "level", "x", "y", "dvs", "item", "shiny", "gender", "form");
@@ -122,7 +124,7 @@ public record BattleStart(String battle, Kind kind, @Nullable Trainer trainer, L
 	/** A battle as before FP1: the whole party, singles, no ally. */
 	public BattleStart(String battle, Kind kind, @Nullable Trainer trainer, List<Gen1Mon> team, @Nullable Wild wild, boolean canCatch,
 			boolean canFlee) {
-		this(battle, kind, trainer, team, wild, canCatch, canFlee, List.of(), Format.SINGLES, null);
+		this(battle, kind, trainer, team, wild, canCatch, canFlee, List.of(), Format.SINGLES, null, 0);
 	}
 
 	/** True when a team (rather than a wild Pokémon) is to be fought. */
@@ -166,6 +168,10 @@ public record BattleStart(String battle, Kind kind, @Nullable Trainer trainer, L
 		if (ally != null && format != Format.MULTI) {
 			throw new DataException(reader.path("ally"), "an ally needs format multi");
 		}
+		int split = reader.has("split") ? reader.integer("split", 1, MAX_TEAM - 1) : 0;
+		if (split > 0 && (format != Format.MULTI || split >= team.size())) {
+			throw new DataException(reader.path("split"), "a split needs format multi and a second foe");
+		}
 		switch (kind) {
 			case TRAINER, RIVAL -> {
 				if (trainer == null || team.isEmpty()) {
@@ -188,7 +194,7 @@ public record BattleStart(String battle, Kind kind, @Nullable Trainer trainer, L
 				}
 			}
 		}
-		return new BattleStart(battle, kind, trainer, team, wild, canCatch, canFlee, use, format, ally);
+		return new BattleStart(battle, kind, trainer, team, wild, canCatch, canFlee, use, format, ally, split);
 	}
 
 	private static List<UUID> uids(JsonArray array, String path) throws DataException {

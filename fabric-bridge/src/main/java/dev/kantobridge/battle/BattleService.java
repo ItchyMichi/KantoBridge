@@ -227,10 +227,14 @@ public final class BattleService {
 		Running run = new Running(player.server, player.getUUID(), start.battle(), start.kind(), proxyClass, proxy, region);
 		BattleStartResult result;
 		try {
-			// Modern rules (U3); the player's real party (no clone: damage and XP stick); no healing first, as in Gen 1. The
-			// hidden game plays the battle music (P22).
-			result = BattleMusic.starting(player,
-					() -> BattleBuilder.INSTANCE.pvn(player, proxy, null, BattleFormat.Companion.getGEN_9_SINGLES(), false, false));
+			if (start.format() == BattleStart.Format.MULTI && start.ally() != null) {
+				result = BattleMusic.starting(player, () -> multi(player, start, team, proxyClass));
+			} else {
+				// Modern rules (U3); the player's real party (no clone: damage and XP stick); no healing first, as in Gen 1. The
+				// hidden game plays the battle music (P22).
+				result = BattleMusic.starting(player,
+						() -> BattleBuilder.INSTANCE.pvn(player, proxy, null, BattleFormat.Companion.getGEN_9_SINGLES(), false, false));
+			}
 		} catch (RuntimeException e) {
 			KantoBridge.LOGGER.warn("battle: Cobblemon failed to start the battle ({})", e.getClass().getName());
 			result = null;
@@ -250,6 +254,45 @@ public final class BattleService {
 		long count = STARTED.incrementAndGet();
 		KantoBridge.LOGGER.info("battle: started a {} battle against {} Pokémon (class {}, skill {}); {} so far", start.kind().id(), team.size(),
 				proxyClass.path(), proxyClass.skill(), count);
+	}
+
+	/**
+	 * FP5 (FOREIGN_POKEMON_PLAN §4.12): Steven's partner battle at the Space Center as Cobblemon's multi battle: the player
+	 * (only the {@code use} Pokémon, the real ones: the half chosen in the hidden game) beside the ally (a trainer actor
+	 * with the ally's team), against the two foes (trainer actors, {@code team} split at {@code split}, else in half), in
+	 * {@code GEN_9_MULTI}. The proxy stays the battle's anchor and is discarded as usual.
+	 */
+	private static BattleStartResult multi(ServerPlayer player, BattleStart start, List<Pokemon> foes, ProxyClass proxyClass) {
+		com.cobblemon.mod.common.api.storage.party.PartyStore party = start.use().isEmpty() ? PlayerExtensionsKt.party(player)
+				: new EncounterService.OnlyUsed(player, start.use());
+		PlayerBattleActor me = new PlayerBattleActor(player.getUUID(), party.toBattleTeam(false, false, null));
+		List<com.cobblemon.mod.common.battles.pokemon.BattlePokemon> allyTeam = new ArrayList<>();
+		for (Gen1Mon mon : start.ally().team()) {
+			try {
+				allyTeam.add(com.cobblemon.mod.common.battles.pokemon.BattlePokemon.Companion.safeCopyOf(Gen1Mons.trainerMon(mon)));
+			} catch (Gen1Mons.Missing e) {
+				throw new IllegalStateException("ally " + e.code());
+			}
+		}
+		int split = start.split() > 0 ? start.split() : (foes.size() + 1) / 2;
+		List<com.cobblemon.mod.common.battles.pokemon.BattlePokemon> first = new ArrayList<>();
+		List<com.cobblemon.mod.common.battles.pokemon.BattlePokemon> second = new ArrayList<>();
+		for (int i = 0; i < foes.size(); i++) {
+			(i < split ? first : second).add(com.cobblemon.mod.common.battles.pokemon.BattlePokemon.Companion.safeCopyOf(foes.get(i)));
+		}
+		if (second.isEmpty()) {
+			second.add(first.remove(first.size() - 1));
+		}
+		String foeName = start.trainer() != null && start.trainer().name() != null ? start.trainer().name() : "";
+		String allyName = start.ally().name() != null ? start.ally().name() : "";
+		com.cobblemon.mod.common.battles.actor.TrainerBattleActor ally = new com.cobblemon.mod.common.battles.actor.TrainerBattleActor(
+				allyName, UUID.randomUUID(), allyTeam, new com.cobblemon.mod.common.battles.ai.StrongBattleAI(proxyClass.skill()));
+		com.cobblemon.mod.common.battles.actor.TrainerBattleActor foeA = new com.cobblemon.mod.common.battles.actor.TrainerBattleActor(
+				foeName, UUID.randomUUID(), first, new com.cobblemon.mod.common.battles.ai.StrongBattleAI(proxyClass.skill()));
+		com.cobblemon.mod.common.battles.actor.TrainerBattleActor foeB = new com.cobblemon.mod.common.battles.actor.TrainerBattleActor(
+				foeName, UUID.randomUUID(), second, new com.cobblemon.mod.common.battles.ai.StrongBattleAI(proxyClass.skill()));
+		return com.cobblemon.mod.common.battles.BattleRegistry.startBattle(BattleFormat.Companion.getGEN_9_MULTI(),
+				new com.cobblemon.mod.common.battles.BattleSide(me, ally), new com.cobblemon.mod.common.battles.BattleSide(foeA, foeB), false);
 	}
 
 	/** The proxy: the class, hidden for everyone, no AI, the trainer's name for the battle UI, the team as its party. */

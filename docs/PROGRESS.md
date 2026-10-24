@@ -3368,6 +3368,33 @@ itself, the rest of the party untouched. Lua 1,572; pytest 2,372; GameTests 130/
 down by the catches (`BugContest.catch`), so it ends on its clock. 2. The catch lines are ours (the engine's are pushed
 inside its own battle screen, which a held battle never shows).
 
+## Foreign Pokémon: FP5c, Steven's partner battle as a multi battle (2026-10-24)
+
+- **FP0's open question answered**: Cobblemon 1.8.1's server seats an ally with no entity beside the player:
+  `TrainerBattleActor(name, uuid, team, ai)` for the ally and each foe, the player's `PlayerBattleActor`, two
+  `BattleSide`s, `BattleRegistry.startBattle(GEN_9_MULTI, …)`. No double-battle fallback is needed.
+- **Emerald** (`game3/battle.lua`): `partner` left `NATIVE_OPTS`; Steven's battle (`Story.doStevenBattle`: Steven's three
+  appended to `session.party` after the player's chosen half, `playerHalf`) is held with `format:"multi"`, `use` (the
+  player's half by uid), `ally{name, team}` (Steven's three, shaped like a trainer's team) and `split` (where the first
+  foe's party ends in the merged two-opponent team). A half with no uid, or no ally, stays native (`facility`).
+- **FP5a's desk refusal** is limited to Battle Frontier and Battle Tent maps: the Space Center chooses Steven's half
+  with the same `ChooseHalfPartyForBattle` and must run.
+- **kb_battle**: `format`, `ally`, `split` and `use` go into `battle.start` (the ally's team checked like a trainer's,
+  its name marked up and capped); `use` now works for trainer battles too.
+- **Server** (`BattleService.multi`): the player with only the `use` Pokémon (the real ones, `OnlyUsed`), the ally and
+  the two foes as trainer actors (`StrongBattleAI` at the proxy class's skill), the team split at `split` (else half);
+  the proxy stays the battle's anchor and its end answers `battle.result` as for any trainer. `battle.start` gains
+  `split` (schema and `BattleStart`).
+
+**Tests.** Lupa: Steven's battle held with format, use, ally and split; native without a uid; through main.lua the
+schema-checked `battle.start` (format, use, split, the merged team, the ally's team and name); a Space Center map's
+`ChooseHalfPartyForBattle` runs. GameTest `aPartnerBattleIsAMultiBattleWithAnAlly`: `GEN_9_MULTI`, two actors a side,
+the player's one chosen Pokémon, the foes split. Lua 1,574; pytest 2,374; JUnit battle, pokemon, server, client 642
+of 643 (the old `KbPackReloadTest`); GameTests 131/131.
+
+**Not done in FP5.** The plan's real-engine e2e for the contest and the Space Center needs a save at each; the client's
+rendering of a multi battle with an entity-less ally is unchecked. Both wait for FP8's e2e (PLAYTEST.md gets them).
+
 ## Pre-flight (PLAN §0.6)
 
 | Step | State |
