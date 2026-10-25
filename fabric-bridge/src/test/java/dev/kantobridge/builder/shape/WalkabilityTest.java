@@ -37,7 +37,10 @@ class WalkabilityTest {
 
 	private static boolean collider(int code) {
 		int kind = BlockCode.kind(code);
-		return kind == BlockCode.KIND_FULL || kind == BlockCode.KIND_SHAPE;
+		// an empty solid column's invisible barrier, or its solid hanging (FIELD_MECHANICS_AUDIT_PLAN §13.8 item 1)
+		return kind == BlockCode.KIND_FULL || kind == BlockCode.KIND_SHAPE
+				|| code == BlockCode.vanilla(dev.kantobridge.builder.zone.ZoneBlock.BARRIER) || code == BlockCode.decor(false, false, true)
+				|| code == BlockCode.decor(true, false, true);
 	}
 
 	@Test

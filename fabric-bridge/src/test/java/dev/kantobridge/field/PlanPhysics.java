@@ -62,13 +62,15 @@ final class PlanPhysics {
 		double nz = z + dz;
 		double ny = y;
 		AABB box = box(nx, ny, nz);
-		List<AABB> hits = this.colliders(box, state);
+		// judged for the player's box before the move, as Minecraft's CollisionContext does
+		AABB now = box(x, y, z);
+		List<AABB> hits = this.colliders(box, state, now);
 		if (!hits.isEmpty()) {
 			double top = ny;
 			for (AABB hit : hits) {
 				top = Math.max(top, hit.maxY);
 			}
-			if (top - ny <= STEP_UP + EPS && this.colliders(box(nx, top, nz), state).isEmpty()) {
+			if (top - ny <= STEP_UP + EPS && this.colliders(box(nx, top, nz), state, now).isEmpty()) {
 				ny = top;
 			} else {
 				// blocked along both axes: try each alone, as Minecraft slides along walls
@@ -99,8 +101,12 @@ final class PlanPhysics {
 	}
 
 	List<AABB> colliders(AABB box, StoryState state) {
+		return this.colliders(box, state, box);
+	}
+
+	List<AABB> colliders(AABB box, StoryState state, AABB player) {
 		List<AABB> out = new ArrayList<>();
-		for (AABB a : this.shapesIn(box, state, box)) {
+		for (AABB a : this.shapesIn(box, state, player)) {
 			if (a.minX < box.maxX - EPS && a.maxX > box.minX + EPS && a.minY < box.maxY - EPS && a.maxY > box.minY + EPS
 					&& a.minZ < box.maxZ - EPS && a.maxZ > box.minZ + EPS) {
 				out.add(a);
@@ -137,7 +143,7 @@ final class PlanPhysics {
 		return switch (BlockCode.kind(code)) {
 			case BlockCode.KIND_FULL, BlockCode.KIND_SHAPE, BlockCode.KIND_VANILLA -> Shapes.block();
 			case BlockCode.KIND_HALF -> HALF_SHAPE;
-			case BlockCode.KIND_LEDGE -> LedgeColliderBlock.entirelyDownhill(player, new BlockPos(x, y, z), CodeStates.downhill(value))
+			case BlockCode.KIND_LEDGE -> LedgeColliderBlock.walls(player, new BlockPos(x, y, z), CodeStates.downhill(value), LedgeColliderBlock.Mode.of(value >> 2))
 					? LedgeColliderBlock.WALL : Shapes.empty();
 			case BlockCode.KIND_STORY, BlockCode.KIND_STORY_TILE -> {
 				int i = BlockCode.storyIndex(code);

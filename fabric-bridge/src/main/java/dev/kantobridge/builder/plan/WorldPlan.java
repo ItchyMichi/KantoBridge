@@ -1025,6 +1025,75 @@ public final class WorldPlan {
 		return count == 1 ? from.opposite() : Dir.UP;
 	}
 
+	/** A hop's cell step per Gen 1 direction number (0 down, 1 up, 2 left, 3 right). */
+	private static final int[][] HOP_DELTA = {{0, 1}, {0, -1}, {-1, 0}, {1, 0}};
+
+	/** A ledge collider's modes (LedgeColliderBlock.Mode's ordinals). */
+	static final int LEDGE_SIDES = 1;
+	static final int LEDGE_OPEN = 2;
+
+	/**
+	 * The hop direction (Gen 1 numbers: 0 down, 1 up, 2 left, 3 right) when cell (cx, cy) is the cell a Gen 2 ledge hop
+	 * jumps: its neighbour against that direction is a ledge cell hopping towards it. -1 otherwise.
+	 */
+	static int gen2HopDir(MapModel model, int cx, int cy) {
+		for (int dir = 0; dir < 4; dir++) {
+			int lx = cx - HOP_DELTA[dir][0];
+			int ly = cy - HOP_DELTA[dir][1];
+			if (lx >= 0 && ly >= 0 && lx < model.cellWidth() && ly < model.cellHeight() && model.kind(lx, ly) == MapModel.Kind.LEDGE
+					&& CellFlags.ledgeDir(model.flags(lx, ly)) == dir) {
+				return dir;
+			}
+		}
+		return -1;
+	}
+
+	/** True when a column's planned keys draw art at each of its first {@code levels} levels. */
+	static boolean drawsShapes(@Nullable dev.kantobridge.builder.shape.ShapeKey[] keys, int levels) {
+		if (keys == null || keys.length < levels) {
+			return false;
+		}
+		for (int k = 0; k < levels; k++) {
+			if (keys[k] == null) {
+				return false;
+			}
+		}
+		return true;
+	}
+
+	/** The highest level of a ground or ledge cell beside cell (cx, cy) on its map, its own level when none is higher. */
+	static int walkedNeighbourLevel(MapModel model, MapLayout layout, int cx, int cy) {
+		int top = level(layout, cx, cy);
+		int[][] n = {{0, -1}, {0, 1}, {-1, 0}, {1, 0}};
+		for (int[] d : n) {
+			int x = cx + d[0];
+			int y = cy + d[1];
+			if (x < 0 || y < 0 || x >= model.cellWidth() || y >= model.cellHeight()) {
+				continue;
+			}
+			MapModel.Kind k = model.kind(x, y);
+			if (k == MapModel.Kind.GROUND || k == MapModel.Kind.LEDGE) {
+				top = Math.max(top, level(layout, x, y));
+			}
+		}
+		return top;
+	}
+
+	/** The sides of art tile (tx, ty) whose neighbouring tile holds a seat ({@link ShapePlanner#SEAT}), as edge sides. */
+	static int seatSides(ShapePlanner.MapShapes planned, int cols, int rows, int tx, int ty) {
+		int sides = 0;
+		int[][] n = {{0, -1, dev.kantobridge.block.EdgeWallBlock.SIDE_NORTH}, {0, 1, dev.kantobridge.block.EdgeWallBlock.SIDE_SOUTH},
+				{-1, 0, dev.kantobridge.block.EdgeWallBlock.SIDE_WEST}, {1, 0, dev.kantobridge.block.EdgeWallBlock.SIDE_EAST}};
+		for (int[] d : n) {
+			int x = tx + d[0];
+			int y = ty + d[1];
+			if (x >= 0 && y >= 0 && x < cols && y < rows && (planned.decor()[y * cols + x] & ShapePlanner.SEAT) != 0) {
+				sides |= d[2];
+			}
+		}
+		return sides;
+	}
+
 	/** True when block (bx, bz) of a 2 × 2 column lies along its {@code wall} side. */
 	static boolean onWall(Dir wall, int bx, int bz) {
 		return switch (wall) {
@@ -1156,7 +1225,9 @@ public final class WorldPlan {
 			case WATER -> sink.set(x, feet - 1, z, BlockCode.half(this.slot(map, tile, true)));
 			case LEDGE -> {
 				sink.set(x, feet - 1, z, BlockCode.full(this.slot(map, tile, false)));
-				sink.set(x, feet, z, BlockCode.ledge(CellFlags.ledgeDir(model.flags(cx, cy))));
+				// Walled from its sides (FA8 item 3) but in Gen 2, whose ledge cell is land the hop starts on (G2Map ids: G2_)
+				sink.set(x, feet, z, BlockCode.ledge(CellFlags.ledgeDir(model.flags(cx, cy)),
+						map.id().startsWith("G2_") ? LEDGE_OPEN : LEDGE_SIDES));
 				taken |= 1L;
 			}
 			case COUNTER, SOLID -> {
@@ -1170,6 +1241,20 @@ public final class WorldPlan {
 				int shaped = planned == null ? 0 : planned.shapeMask()[planIndex];
 				for (int k = 0; k < blocks; k++) {
 					sink.set(x, feet + k, z, (shaped >> k & 1) != 0 ? BlockCode.shape(slot) : code);
+				}
+				int hop = story < 0 && planned != null && map.id().startsWith("G2_") ? gen2HopDir(model, cx, cy) : -1;
+				// the levels a hopping player's body passes: from feet to the ledge cell's feet + 1
+				int through = hop < 0 ? 0 : Math.max(2, level(layout, cx - HOP_DELTA[hop][0], cy - HOP_DELTA[hop][1]) - level(layout, cx, cy) + 2);
+				if (hop >= 0 && blocks >= 2 && drawsShapes(planned.open()[planIndex], Math.min(blocks, through))) {
+					// The cell a Gen 2 ledge hop jumps (FIELD_MECHANICS_AUDIT_PLAN §13.8 item 12, Q6): the hop starts on the ledge
+					// cell beside and lands beyond this one. The blocks a player's body meets keep their art (every carrier draws
+					// the shape map's piece at its position) but not their collision: a one-way ledge wall at feet, open only from
+					// the ledge's side, and decoration above it; nothing else (a cave's rock fill, a barrier) goes there.
+					sink.set(x, feet, z, BlockCode.ledge(hop, LEDGE_SIDES));
+					for (int k = 1; k < Math.min(blocks, through); k++) {
+						sink.set(x, feet + k, z, BlockCode.decor(false));
+					}
+					taken |= (1L << Math.min(through, 62)) - 1;
 				}
 				column = blocks;
 				taken |= (1L << Math.min(blocks, 62)) - 1;
@@ -1216,6 +1301,17 @@ public final class WorldPlan {
 						: BlockCode.story(story, edges));
 			}
 		}
+		// A counter or solid cell one block high beside a seat: the seat's half block lifts a player within step height of its
+		// top, so a plate on the seat's sides above it keeps the player off (FIELD_MECHANICS_AUDIT_PLAN §13.8 item 3). A
+		// plate has no outline, so a click across the counter still reaches the clerk.
+		if (planned != null && column == 1 && (taken & 2) == 0
+				&& (model.kind(cx, cy) == MapModel.Kind.COUNTER || model.kind(cx, cy) == MapModel.Kind.SOLID)) {
+			int seats = seatSides(planned, model.cellWidth() * Scale.CELL_BLOCKS, model.cellHeight() * Scale.CELL_BLOCKS, tx, ty);
+			if (seats != 0) {
+				sink.set(x, feet + 1, z, BlockCode.edge(seats));
+				taken |= 2;
+			}
+		}
 		// A carrier wins: the light goes only where the position is still air, or a hanging's carrier there gives it.
 		boolean light = map.interior() && !p.dark() && Math.floorMod(tx, LIGHT_SPACING) == 1 && Math.floorMod(ty, LIGHT_SPACING) == 1
 				&& column <= LIGHT_ABOVE_FEET + lift;
@@ -1225,16 +1321,39 @@ public final class WorldPlan {
 		// the only place a wild Pokémon can stand there.
 		boolean fill = map.interior() && BIOME_CAVE_3D.equals(p.biome())
 				&& (model.kind(cx, cy) == MapModel.Kind.SOLID || model.kind(cx, cy) == MapModel.Kind.COUNTER);
+		// A cell the game calls solid whose planned column here is empty (the shape plan draws it from its neighbours' or a
+		// model's blocks) still stops a player (FIELD_MECHANICS_AUDIT_PLAN §13.8 item 1): below, with an invisible barrier.
+		boolean emptySolid = !fill && story < 0 && column == 0
+				&& (model.kind(cx, cy) == MapModel.Kind.SOLID || model.kind(cx, cy) == MapModel.Kind.COUNTER);
 		for (int k = 0; k < 31 && hung >> k != 0; k++) {
 			if ((hung >> k & 1) == 0 || (taken >> (k + lift) & 1) != 0) {
 				continue;
 			}
 			// A hanging (CW1, CW2): a decor carrier for its piece, foliage for a wood's; the one on a light's position gives
-			// the light (CD15).
+			// the light (CD15). On an empty solid cell the ones a player's body meets collide.
 			boolean lit = light && k == LIGHT_ABOVE_FEET;
-			sink.set(x, feet + lift + k, z, BlockCode.decor((leaves >> k & 1) != 0, lit, fill && k + lift < ceilingLevel(layout, cx, cy) - level(layout, cx, cy)));
+			boolean solid = fill && k + lift < ceilingLevel(layout, cx, cy) - level(layout, cx, cy) || emptySolid && k + lift <= 1;
+			sink.set(x, feet + lift + k, z, BlockCode.decor((leaves >> k & 1) != 0, lit, solid));
 			light &= !lit;
 			taken |= 1L << (k + lift);
+		}
+		if (emptySolid && (taken & 3) != 3) {
+			// At feet, else in the block above (a tile-pair edge's plate at feet), where it still stops a player 1.8 tall.
+			int at = (taken & 1) == 0 ? 0 : 1;
+			sink.set(x, feet + at, z, BlockCode.vanilla(ZoneBlock.BARRIER));
+			taken |= 1L << at;
+		}
+		// A solid cell lower than ground beside it (raised ground): its column reaches that ground's feet level in
+		// barriers, so nobody walks over its top from there (FIELD_MECHANICS_AUDIT_PLAN §13.8 item 1).
+		if (!fill && story < 0 && layout != null
+				&& (model.kind(cx, cy) == MapModel.Kind.SOLID || model.kind(cx, cy) == MapModel.Kind.COUNTER)) {
+			int reach = walkedNeighbourLevel(model, layout, cx, cy) - level(layout, cx, cy);
+			for (int k = Math.max(column, 1); k <= reach && k < 62; k++) {
+				if ((taken >> k & 1) == 0) {
+					sink.set(x, feet + k, z, BlockCode.vanilla(ZoneBlock.BARRIER));
+					taken |= 1L << k;
+				}
+			}
 		}
 		if (fill) {
 			for (int k = column; k < ceilingLevel(layout, cx, cy) - level(layout, cx, cy); k++) {

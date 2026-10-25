@@ -108,7 +108,12 @@ public final class BlockCode {
 
 	/** A ledge collider; {@code dir} is the Gen 1 hop direction: 0 down, 1 up, 2 left, 3 right. */
 	public static int ledge(int dir) {
-		return (KIND_LEDGE << SHIFT) | dir;
+		return ledge(dir, 0);
+	}
+
+	/** The same with its mode ({@code LedgeColliderBlock.Mode}'s ordinal: 0 downhill, 1 sides, 2 open; value bits 2-3). */
+	public static int ledge(int dir, int mode) {
+		return (KIND_LEDGE << SHIFT) | (dir & 3) | (mode & 3) << 2;
 	}
 
 	/** A step collider climbing {@code climb}. */

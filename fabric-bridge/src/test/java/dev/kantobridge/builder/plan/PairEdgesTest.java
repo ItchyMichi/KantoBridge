@@ -193,4 +193,15 @@ class PairEdgesTest {
 		PlacedMap town = plan.maps().stream().filter(m -> m.id().equals("TEST_TOWN")).findFirst().orElseThrow();
 		assertSame(PairEdges.NONE, town.edges());
 	}
+
+	@Test
+	void gen3OneWaySidesFollowTheEnginesBehaviours() {
+		// MB_IMPASSABLE_EAST 0x30, WEST 0x31, NORTH 0x32, SOUTH 0x33, NE 0x34, NW 0x35, SE 0x36, SW 0x37 (game3/collision.lua)
+		assertTrue(PairEdges.eastBlocked(0x30) && PairEdges.eastBlocked(0x34) && PairEdges.eastBlocked(0x36));
+		assertTrue(PairEdges.westBlocked(0x31) && PairEdges.westBlocked(0x35) && PairEdges.westBlocked(0x37));
+		assertTrue(PairEdges.northBlocked(0x32) && PairEdges.northBlocked(0x34) && PairEdges.northBlocked(0x35));
+		assertTrue(PairEdges.southBlocked(0x33) && PairEdges.southBlocked(0x36) && PairEdges.southBlocked(0x37));
+		assertFalse(PairEdges.eastBlocked(0x31) || PairEdges.westBlocked(0x30) || PairEdges.northBlocked(0x33) || PairEdges.southBlocked(0x32));
+		assertFalse(PairEdges.eastBlocked(0x00) || PairEdges.northBlocked(0x38), "plain ground and others close nothing");
+	}
 }

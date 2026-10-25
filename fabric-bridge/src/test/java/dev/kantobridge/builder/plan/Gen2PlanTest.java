@@ -324,7 +324,7 @@ class Gen2PlanTest {
 		assertEquals(BlockCode.KIND_FULL, view.kind(ox(1), 63, oz(5)));
 		assertEquals(BlockCode.AIR, view.code(ox(1), 64, oz(5)));
 		// the ledges hop down
-		assertEquals(BlockCode.ledge(0), view.code(ox(0), 64, oz(14)));
+		assertEquals(BlockCode.ledge(0, 2), view.code(ox(0), 64, oz(14)), "open from its sides (Gen 2: the ledge cell is land)");
 		// water: a half block, its story block at the feet
 		assertEquals(BlockCode.KIND_HALF, view.kind(ox(16), 63, oz(8)));
 		assertEquals(BlockCode.KIND_STORY, view.kind(ox(16), 64, oz(8)));

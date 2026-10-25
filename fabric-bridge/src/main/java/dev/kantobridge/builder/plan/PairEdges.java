@@ -3,7 +3,9 @@ package dev.kantobridge.builder.plan;
 import dev.kantobridge.block.EdgeWallBlock;
 import dev.kantobridge.builder.export.ExportField;
 import dev.kantobridge.builder.export.G3Map;
+import dev.kantobridge.builder.export.G3Tiles;
 import dev.kantobridge.world.Scale;
+import org.jetbrains.annotations.Nullable;
 
 /**
  * The tile-pair edges of one map (docs/specs/CAVES_3D_PLAN.md §3.2): between two neighbouring cells whose collision
@@ -61,6 +63,16 @@ public final class PairEdges {
 	 * elevations differ and are neither 0 nor 15. Water gets none: surfing on and off is the engine's own move.
 	 */
 	public static PairEdges elevation(MapModel model, G3Map map) {
+		return elevation(model, map, null);
+	}
+
+	/**
+	 * The same, with the field audit's two more (FIELD_MECHANICS_AUDIT_PLAN §13.8 item 3), when {@code tiles} gives the
+	 * map's behaviours: the one-way sides ({@code MB_IMPASSABLE_*}: the engine refuses leaving a cell across a side its
+	 * behaviour closes, and entering one across it, {@code Collision.directionallyImpassable}), between any two cells a
+	 * player stands on; and water to water across two elevations, which a surfer can't cross either.
+	 */
+	public static PairEdges elevation(MapModel model, G3Map map, @Nullable G3Tiles tiles) {
 		int w = model.cellWidth();
 		int h = model.cellHeight();
 		if (w != map.w() || h != map.h()) {
@@ -70,12 +82,12 @@ public final class PairEdges {
 		int edges = 0;
 		for (int cy = 0; cy < h; cy++) {
 			for (int cx = 0; cx < w; cx++) {
-				if (cx + 1 < w && elevationWall(model, map, cx, cy, cx + 1, cy)) {
+				if (cx + 1 < w && (elevationWall(model, map, cx, cy, cx + 1, cy) || tiles != null && fieldWall(model, map, tiles, cx, cy, cx + 1, cy))) {
 					sides[cy * w + cx] |= EdgeWallBlock.SIDE_EAST;
 					sides[cy * w + cx + 1] |= EdgeWallBlock.SIDE_WEST;
 					edges++;
 				}
-				if (cy + 1 < h && elevationWall(model, map, cx, cy, cx, cy + 1)) {
+				if (cy + 1 < h && (elevationWall(model, map, cx, cy, cx, cy + 1) || tiles != null && fieldWall(model, map, tiles, cx, cy, cx, cy + 1))) {
 					sides[cy * w + cx] |= EdgeWallBlock.SIDE_SOUTH;
 					sides[(cy + 1) * w + cx] |= EdgeWallBlock.SIDE_NORTH;
 					edges++;
@@ -127,6 +139,46 @@ public final class PairEdges {
 		int a = map.elev(ax, ay);
 		int b = map.elev(bx, by);
 		return a != b && a != 0 && b != 0 && a != 15 && b != 15;
+	}
+
+	/** True when a one-way side or water's elevation closes the edge from (ax, ay) to its east or south neighbour (bx, by). */
+	static boolean fieldWall(MapModel model, G3Map map, G3Tiles tiles, int ax, int ay, int bx, int by) {
+		MapModel.Kind ka = model.kind(ax, ay);
+		MapModel.Kind kb = model.kind(bx, by);
+		if (!standable(ka) || !standable(kb)) {
+			return false;
+		}
+		int a = tiles.behavior(map.mid(ax, ay)) & 0xFF;
+		int b = tiles.behavior(map.mid(bx, by)) & 0xFF;
+		boolean east = bx > ax;
+		// leaving a east (south), or entering b from the west (north): the engine's two checks, one edge
+		if (east ? eastBlocked(a) || westBlocked(b) : southBlocked(a) || northBlocked(b)) {
+			return true;
+		}
+		if (ka == MapModel.Kind.WATER && kb == MapModel.Kind.WATER) {
+			int ea = map.elev(ax, ay);
+			int eb = map.elev(bx, by);
+			return ea != eb && ea != 0 && eb != 0 && ea != 15 && eb != 15;
+		}
+		return false;
+	}
+
+	// The engine's MB_IMPASSABLE_* (0x30 east, 0x31 west, 0x32 north, 0x33 south, 0x34 NE, 0x35 NW, 0x36 SE, 0x37 SW;
+	// game3/collision.lua, the canonical ids)
+	static boolean eastBlocked(int beh) {
+		return beh == 0x30 || beh == 0x34 || beh == 0x36;
+	}
+
+	static boolean westBlocked(int beh) {
+		return beh == 0x31 || beh == 0x35 || beh == 0x37;
+	}
+
+	static boolean northBlocked(int beh) {
+		return beh == 0x32 || beh == 0x34 || beh == 0x35;
+	}
+
+	static boolean southBlocked(int beh) {
+		return beh == 0x33 || beh == 0x36 || beh == 0x37;
 	}
 
 	private static boolean walked(MapModel.Kind kind) {

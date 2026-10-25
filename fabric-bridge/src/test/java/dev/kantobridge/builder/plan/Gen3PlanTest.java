@@ -311,7 +311,7 @@ class Gen3PlanTest {
 		assertEquals(BlockCode.KIND_FULL, view.kind(ox(2), 63, oz(2)));
 		assertEquals(BlockCode.AIR, view.code(ox(2), 64, oz(2)));
 		// the ledge row (y = 4) jumps south
-		assertEquals(BlockCode.ledge(0), view.code(ox(0), 64, oz(8)));
+		assertEquals(BlockCode.ledge(0, 1), view.code(ox(0), 64, oz(8)), "walled from its sides (Gen 3)");
 		// water on the route: a half block, its story block at the feet
 		assertEquals(BlockCode.KIND_HALF, view.kind(ox(2 + 10), 63, oz(-10)));
 		assertEquals(BlockCode.KIND_STORY, view.kind(ox(2 + 10), 64, oz(-10)));

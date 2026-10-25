@@ -95,4 +95,24 @@ class StoryStateTest {
 		assertTrue(LedgeColliderBlock.entirelyDownhill(west, pos, Direction.WEST));
 		assertTrue(LedgeColliderBlock.WALL.max(Direction.Axis.Y) == 1.5, "24 px: above step height and any jump");
 	}
+
+	@Test
+	void ledgesWallEveryoneButTheHopper() {
+		BlockPos pos = new BlockPos(10, 64, 20);
+		AABB uphill = new AABB(10.2, 64, 19.4, 10.8, 65.8, 20.0);
+		AABB downhill = new AABB(10.2, 64, 21.0, 10.8, 65.8, 21.6);
+		AABB inside = new AABB(10.2, 64, 20.5, 10.8, 65.8, 21.1);
+		AABB west = new AABB(9.4, 64, 20.2, 10.0, 65.8, 20.8);
+		AABB east = new AABB(11.0, 64, 20.2, 11.6, 65.8, 20.8);
+		assertFalse(LedgeColliderBlock.walls(west, pos, Direction.SOUTH, LedgeColliderBlock.Mode.DOWNHILL), "the old rule: open from the side");
+		assertTrue(LedgeColliderBlock.walls(downhill, pos, Direction.SOUTH, LedgeColliderBlock.Mode.DOWNHILL), "a wall from downhill");
+		assertFalse(LedgeColliderBlock.walls(downhill, pos, Direction.SOUTH, LedgeColliderBlock.Mode.OPEN), "Gen 2's: never a wall");
+		assertFalse(LedgeColliderBlock.walls(uphill, pos, Direction.SOUTH, LedgeColliderBlock.Mode.SIDES), "the hop: open from uphill");
+		assertFalse(LedgeColliderBlock.walls(inside, pos, Direction.SOUTH, LedgeColliderBlock.Mode.SIDES), "a hop under way isn't trapped");
+		assertTrue(LedgeColliderBlock.walls(downhill, pos, Direction.SOUTH, LedgeColliderBlock.Mode.SIDES), "nobody climbs back");
+		assertTrue(LedgeColliderBlock.walls(west, pos, Direction.SOUTH, LedgeColliderBlock.Mode.SIDES), "nobody walks on from the side");
+		assertTrue(LedgeColliderBlock.walls(east, pos, Direction.SOUTH, LedgeColliderBlock.Mode.SIDES));
+		assertFalse(LedgeColliderBlock.walls(west, pos, Direction.EAST, LedgeColliderBlock.Mode.SIDES), "west is uphill of an east-facing ledge");
+		assertTrue(LedgeColliderBlock.walls(uphill, pos, Direction.EAST, LedgeColliderBlock.Mode.SIDES), "and north is its side");
+	}
 }

@@ -253,7 +253,7 @@ final class Gen3Planner {
 			boolean interior = placement.kind() == MapPlacement.Kind.INTERIOR;
 			MapModel model = interior && interiorModels.containsKey(map.id()) ? interiorModels.get(map.id())
 					: G3Cells.model(map, tiles(bundle, pairs, map.pair()), interior, warnings);
-			PairEdges edges = PairEdges.elevation(model, map);
+			PairEdges edges = PairEdges.elevation(model, map, tiles(bundle, pairs, map.pair()));
 			elevationEdges += edges.edges();
 			// The 3D area's maps are drawn as their rooms (D1, CAVES_3D_PLAN §3.5), on their raised ground (D3); an interior
 			// under its ceilings (D5), its drawing stopping at the true map's edge

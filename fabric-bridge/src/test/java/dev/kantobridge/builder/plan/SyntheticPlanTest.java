@@ -164,7 +164,7 @@ class SyntheticPlanTest {
 		assertEquals(BlockCode.KIND_HALF, view.kind(ox(24), 63, oz(24)));
 		assertEquals(BlockCode.KIND_STORY, view.kind(ox(24), 64, oz(24)));
 		// The ledge row: art below, a collider facing the hop direction (down = 0) above.
-		assertEquals(BlockCode.ledge(0), view.code(ox(4), 64, oz(26)));
+		assertEquals(BlockCode.ledge(0, 1), view.code(ox(4), 64, oz(26)), "walled from its sides (Gen 1)");
 		assertEquals(full, view.kind(ox(4), 63, oz(26)));
 		// Void fill around the town: within two cells of it, border trees as units (two shape_full blocks); beyond, 3 high.
 		assertEquals(full, view.kind(ox(-1), 63, oz(-1)));
