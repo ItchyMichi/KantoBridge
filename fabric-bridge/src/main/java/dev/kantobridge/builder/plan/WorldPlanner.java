@@ -604,7 +604,7 @@ public final class WorldPlanner {
 			}
 			ramps.addAll(levels.ramps());
 		}
-		return MapLayout.of(w, h, pieces, lv, ramps);
+		return MapLayout.of(w, h, pieces, lv, ramps).keepDecks(levels, 0);
 	}
 
 	/**

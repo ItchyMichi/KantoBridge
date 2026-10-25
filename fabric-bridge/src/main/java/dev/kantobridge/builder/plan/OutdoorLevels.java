@@ -136,7 +136,28 @@ public final class OutdoorLevels {
 		if (layout == null && Arrays.stream(levels).allMatch(v -> v == 0)) {
 			return null;
 		}
-		return MapLayout.flat(w, h, levels, kept);
+		MapLayout out = MapLayout.flat(w, h, levels, kept);
+		if (layout == null || layout.decks().isEmpty()) {
+			return out;
+		}
+		// a deck's floor under it follows the cells beside it whose floor it was (the pins move paths and water too)
+		List<MapLayout.Deck> decks = new ArrayList<>();
+		for (MapLayout.Deck d : layout.decks()) {
+			int under = d.under();
+			for (Dir dir : Dir.values()) {
+				int nx = d.x() + dir.dx();
+				int ny = d.y() + dir.dy();
+				if (nx >= 0 && ny >= 0 && nx < w && ny < h && layout.deck(nx, ny) == null && standable[ny * w + nx]
+						&& layout.level(nx, ny) == d.under()) {
+					under = levels[ny * w + nx];
+					break;
+				}
+			}
+			if (under >= 0 && under < levels[d.y() * w + d.x()]) {
+				decks.add(new MapLayout.Deck(d.x(), d.y(), under, d.elev()));
+			}
+		}
+		return out.withDecks(decks);
 	}
 
 	/**
@@ -251,7 +272,7 @@ public final class OutdoorLevels {
 				}
 			}
 		}
-		return MapLayout.flat(w, h, levels, List.copyOf(layout.ramps()));
+		return MapLayout.flat(w, h, levels, List.copyOf(layout.ramps())).keepDecks(layout, 0);
 	}
 
 	private static boolean rock(MapModel.Kind kind) {

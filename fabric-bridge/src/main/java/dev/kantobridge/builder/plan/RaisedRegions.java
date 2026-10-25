@@ -123,10 +123,20 @@ public final class RaisedRegions {
 	 * @param faced     per cell, a solid cell whose drawing can be a face (a cliff's rim, a band of rock: the game's table,
 	 *                  {@link #tableFaces}), or null for every solid cell: a face climbs a step for each such cell in it, and
 	 *                  a run with none (a fence, a row of posts, a tree, a house: LEVELS_PIPELINE.md, the reviews) is no face
+	 * @param open      per cell, an edge cell the game connects across onto water (a neighbour map's water beyond it:
+	 *                  WATER_AND_BRIDGES_PLAN §2.1, D2), or null for every edge cell: outdoors with a shore key, a body of
+	 *                  water is the sea only through such a cell; any other is a pond standing with its banks (a lagoon)
 	 */
 	public record Input(MapModel model, int[] key, boolean[] joins, boolean[] bridge, int shore, Dir @Nullable [] climb, @Nullable PairEdges walls,
 			boolean wallsRise, int maxFace, boolean faceKeys, boolean room, int rise, boolean outdoor, boolean @Nullable [] falls,
-			boolean @Nullable [] faced) {
+			boolean @Nullable [] faced, boolean @Nullable [] open) {
+		/** Every edge cell open to the sea. */
+		public Input(MapModel model, int[] key, boolean[] joins, boolean[] bridge, int shore, Dir @Nullable [] climb, @Nullable PairEdges walls,
+				boolean wallsRise, int maxFace, boolean faceKeys, boolean room, int rise, boolean outdoor, boolean @Nullable [] falls,
+				boolean @Nullable [] faced) {
+			this(model, key, joins, bridge, shore, climb, walls, wallsRise, maxFace, faceKeys, room, rise, outdoor, falls, faced, null);
+		}
+
 		/** Every solid cell a face's. */
 		public Input(MapModel model, int[] key, boolean[] joins, boolean[] bridge, int shore, Dir @Nullable [] climb, @Nullable PairEdges walls,
 				boolean wallsRise, int maxFace, boolean faceKeys, boolean room, int rise, boolean outdoor, boolean @Nullable [] falls) {
@@ -302,6 +312,46 @@ public final class RaisedRegions {
 	}
 
 	/**
+	 * Emerald's edge cells the game connects across onto water (WATER_AND_BRIDGES_PLAN §2.1, D2): per cell of {@code map}, true
+	 * on a true edge cell whose connection that way leads onto a water cell of the neighbour (the engine's neighbour arithmetic,
+	 * connections.lua: north at offset, the neighbour's last row; south its first; west its last column; east its first).
+	 * {@code all} holds the neighbours (one it lacks is no water).
+	 */
+	public static boolean[] gen3Open(MapModel model, G3Map map, java.util.function.Function<String, G3Map> all) {
+		int w = model.cellWidth();
+		int h = model.cellHeight();
+		boolean[] out = new boolean[w * h];
+		for (G3Map.Connection c : map.connections()) {
+			G3Map dest = all.apply(c.map());
+			if (dest == null) {
+				continue;
+			}
+			switch (c.dir()) {
+				case "north", "south" -> {
+					int cy = c.dir().equals("north") ? 0 : map.trueH() - 1;
+					int ny = c.dir().equals("north") ? dest.trueH() - 1 : 0;
+					for (int cx = 0; cx < Math.min(w, map.trueW()); cx++) {
+						int nx = cx - c.offset();
+						out[cy * w + cx] |= cy < h && dest.inMap(nx, ny) && dest.coll(nx, ny) == G3Cells.WATER;
+					}
+				}
+				case "west", "east" -> {
+					int cx = c.dir().equals("west") ? 0 : map.trueW() - 1;
+					int nx = c.dir().equals("west") ? dest.trueW() - 1 : 0;
+					for (int cy = 0; cy < Math.min(h, map.trueH()); cy++) {
+						int ny = cy - c.offset();
+						out[cy * w + cx] |= cx < w && dest.inMap(nx, ny) && dest.coll(nx, ny) == G3Cells.WATER;
+					}
+				}
+				default -> {
+					// a dive or an emerge: no edge
+				}
+			}
+		}
+		return out;
+	}
+
+	/**
 	 * The same, and with {@code slopes} (per cell the way up of a slope or stairs the landscape marks name: the map's drawing
 	 * checked for them) the drawing decides, as the elevations are the engine's layers and not heights (Route 119's floor,
 	 * its sand slope's top and its plateau share one): the marked cells climb {@link #OUTDOOR_RISE} a cell, a strip of
@@ -309,6 +359,11 @@ public final class RaisedRegions {
 	 * ({@link #gen3Falls}, or null) part a river's water.
 	 */
 	public static Result gen3Outdoor(MapModel model, G3Map map, Dir @Nullable [] slopes, boolean @Nullable [] falls) {
+		return gen3Outdoor(model, map, slopes, falls, null);
+	}
+
+	/** The same, {@code open} (per cell, or null) the edge cells the game connects across onto water ({@link #gen3Open}). */
+	public static Result gen3Outdoor(MapModel model, G3Map map, Dir @Nullable [] slopes, boolean @Nullable [] falls, boolean @Nullable [] open) {
 		Input in = surfaceAside(emerald(model, map, false), map);
 		if (slopes != null) {
 			int n = in.key().length;
@@ -326,17 +381,17 @@ public final class RaisedRegions {
 				}
 			}
 			return solve(new Input(model, key, joins, in.bridge(), G3_SHORE, climb, null, false, MAX_FACE, false, false, OUTDOOR_RISE, true,
-					falls));
+					falls, null, open));
 		}
 		Result data = solve(new Input(model, in.key(), in.joins(), in.bridge(), G3_SHORE, null, null, false, MAX_FACE, true, false, OUTDOOR_RISE,
-				true, falls));
+				true, falls, null, open));
 		if (!data.outcome().startsWith("flat_one")) {
 			return data;
 		}
 		// One walkable elevation: the drawing's faces are the steps, as for Crystal and Blue (ground enclosed behind a short
 		// face, an island's walkable pits, stands at the face's top)
 		return solve(new Input(model, in.key(), in.joins(), in.bridge(), G3_SHORE, null, null, false, MAX_FACE, false, false, OUTDOOR_RISE, true,
-				falls));
+				falls, null, open));
 	}
 
 	/**
@@ -353,7 +408,7 @@ public final class RaisedRegions {
 			}
 		}
 		return new Input(in.model(), key, in.joins(), in.bridge(), in.shore(), in.climb(), in.walls(), in.wallsRise(), in.maxFace(), in.faceKeys(),
-				in.room(), in.rise(), in.outdoor(), in.falls(), in.faced());
+				in.room(), in.rise(), in.outdoor(), in.falls(), in.faced(), in.open());
 	}
 
 	/**
@@ -462,52 +517,119 @@ public final class RaisedRegions {
 	}
 
 	/**
-	 * {@code in} with a bridge's cells as its deck: each takes the level key most of its floor neighbours have (along the
-	 * bridge: its ends' floor; ties the higher), a cell among bridge cells only its neighbours' once they have one. A path
-	 * under the bridge meets the deck as a wall (walking under it waits for the two-floor cells of W6).
+	 * {@code in} with a bridge's cells as its deck: each bridge takes the highest level key round it (its ends'); the floor
+	 * under it is worked out at the end ({@link #decks}: the two-floor cells of W6, WATER_AND_BRIDGES_PLAN §2.2).
 	 */
 	private static Input decked(Input in, int n) {
 		int w = in.model().cellWidth();
 		int h = in.model().cellHeight();
 		int[] key = in.key().clone();
-		boolean[] left = in.bridge().clone();
+		boolean[] seen = new boolean[n];
+		for (int s = 0; s < n; s++) {
+			if (!in.bridge()[s] || seen[s]) {
+				continue;
+			}
+			// one bridge (its cells four-neighbour): the highest key round it (WATER_AND_BRIDGES_PLAN §2.2 item 5): a deck stands
+			// over what passes under it, so its ends' elevation is the highest; the cells across it (a path, a nook, the water)
+			// are no votes for its level
+			List<Integer> part = flood(w, h, s, (a, b) -> in.bridge()[b] && !seen[b]);
+			int best = -1;
+			for (int c : part) {
+				seen[c] = true;
+				for (Dir d : Dir.values()) {
+					int nx = c % w + d.dx();
+					int ny = c / w + d.dy();
+					if (nx >= 0 && ny >= 0 && nx < w && ny < h && !in.bridge()[ny * w + nx]) {
+						best = Math.max(best, in.key()[ny * w + nx]);
+					}
+				}
+			}
+			if (best >= 0) {
+				for (int c : part) {
+					key[c] = best;
+				}
+			}
+		}
+		return new Input(in.model(), key, in.joins(), new boolean[n], in.shore(), in.climb(), in.walls(), in.wallsRise(), in.maxFace(),
+				in.faceKeys(), in.room(), in.rise(), in.outdoor(), in.falls(), in.faced(), in.open());
+	}
+
+	/**
+	 * The two-floor cells outdoors (WATER_AND_BRIDGES_PLAN §2.2 item 5, D6, D8): per bridge cell (elevation 15) its deck at its
+	 * level (its ends', from {@link #decked}) and the floor under it: the water beside it across the deck (its level), else
+	 * the ground across whose elevation is not the deck's (its level); an inner cell of a wide deck takes its neighbours'.
+	 * A cell is two floors where the deck stands at least {@link #DECK_ROOM} blocks over that floor and the deck's elevation
+	 * differs from the floor's (a deck level with its ground is one floor: Littleroot's, the Cycling Road's landings);
+	 * {@code noRoom[0]} counts the cells that would be two floors but have less room (left one floor).
+	 */
+	static List<MapLayout.Deck> decks(int w, int h, MapModel model, boolean[] bridge, int[] deckKey, int[] key, int[] waterOf, int[] levels,
+			int[] noRoom) {
+		int n = w * h;
+		int[] under = new int[n];
+		int[] underElev = new int[n];
+		Arrays.fill(under, -1);
+		for (int c = 0; c < n; c++) {
+			if (!bridge[c]) {
+				continue;
+			}
+			for (Dir d : Dir.values()) {
+				int nx = c % w + d.dx();
+				int ny = c / w + d.dy();
+				if (nx < 0 || ny < 0 || nx >= w || ny >= h || bridge[ny * w + nx]) {
+					continue;
+				}
+				int b = ny * w + nx;
+				int elev;
+				if (waterOf[b] >= 0 && model.kind(nx, ny) == MapModel.Kind.WATER) {
+					elev = G3_SURFACE;
+				} else if (floor(model.kind(nx, ny)) && key[b] >= 0 && key[b] != deckKey[c]) {
+					elev = key[b];
+				} else {
+					continue;
+				}
+				if (levels[b] < levels[c] && (under[c] < 0 || levels[b] < under[c])) {
+					under[c] = levels[b];
+					underElev[c] = elev;
+				}
+			}
+		}
+		// an inner cell of a wide deck: its neighbours' floor under it
 		boolean changed = true;
 		while (changed) {
 			changed = false;
-			int[] next = key.clone();
-			for (int i = 0; i < n; i++) {
-				if (!left[i]) {
+			for (int c = 0; c < n; c++) {
+				if (!bridge[c] || under[c] >= 0) {
 					continue;
 				}
-				Map<Integer, Integer> votes = new TreeMap<>();
 				for (Dir d : Dir.values()) {
-					int nx = i % w + d.dx();
-					int ny = i / w + d.dy();
-					if (nx >= 0 && ny >= 0 && nx < w && ny < h && !left[ny * w + nx] && key[ny * w + nx] >= 0) {
-						votes.merge(key[ny * w + nx], 1, Integer::sum);
+					int nx = c % w + d.dx();
+					int ny = c / w + d.dy();
+					int b = ny * w + nx;
+					if (nx >= 0 && ny >= 0 && nx < w && ny < h && bridge[b] && under[b] >= 0 && levels[b] == levels[c]) {
+						under[c] = under[b];
+						underElev[c] = underElev[b];
+						changed = true;
+						break;
 					}
 				}
-				int best = -1;
-				for (Map.Entry<Integer, Integer> v : votes.entrySet()) {
-					if (best < 0 || v.getValue() >= votes.get(best)) {
-						best = v.getKey();
-					}
-				}
-				if (best >= 0) {
-					next[i] = best;
-					changed = true;
-				}
 			}
-			for (int i = 0; i < n; i++) {
-				if (left[i] && next[i] >= 0) {
-					left[i] = false;
-				}
-			}
-			key = next;
 		}
-		return new Input(in.model(), key, in.joins(), new boolean[n], in.shore(), in.climb(), in.walls(), in.wallsRise(), in.maxFace(),
-				in.faceKeys(), in.room(), in.rise(), true, in.falls(), in.faced());
+		List<MapLayout.Deck> out = new ArrayList<>();
+		for (int c = 0; c < n; c++) {
+			if (!bridge[c] || under[c] < 0 || deckKey[c] < 0 || deckKey[c] == underElev[c]) {
+				continue;
+			}
+			if (levels[c] - under[c] < DECK_ROOM) {
+				noRoom[0]++;
+				continue;
+			}
+			out.add(new MapLayout.Deck(c % w, c / w, under[c], Math.min(deckKey[c], MapLayout.MAX_ELEV)));
+		}
+		return out;
 	}
+
+	/** The least blocks a deck stands over the floor under it: a 1-block slab and 2 blocks of air (D8). */
+	static final int DECK_ROOM = 3;
 
 	/** True when the input's walls close the edge between neighbouring cells {@code a} and {@code b}. */
 	private static boolean walled(Input in, int w, int a, int b) {
@@ -530,11 +652,16 @@ public final class RaisedRegions {
 		int h = model.cellHeight();
 		int n = w * h;
 		// (decked keeps its deck flag: the bridges are joins now, and the rules outdoors are known by it)
-		Input in = given.outdoor() ? ledgesAside(decked(given, n)) : given;
+		// in the 3D caves too (WB7): a bridge's cells are its deck, the floor under it worked out at the end
+		boolean anyBridge = false;
+		for (boolean b : given.bridge()) {
+			anyBridge |= b;
+		}
+		Input in = given.outdoor() ? ledgesAside(decked(given, n)) : anyBridge && given.shore() >= 0 && !given.room() ? decked(given, n) : given;
 		// outdoors each ledge cell's hop (its way down), its cells kept out of the regions: a ledge drops
 		Dir[] hop = given.outdoor() ? ledgeHops(in.model()) : null;
 		// outdoors a river flows on under a bridge's deck: one body of water either side of it
-		boolean[] under = given.outdoor() ? given.bridge() : new boolean[n];
+		boolean[] under = given.outdoor() || in != given ? given.bridge() : new boolean[n];
 		int[] key = in.key();
 		// ---- regions ----
 		int[] region = new int[n];
@@ -609,8 +736,9 @@ public final class RaisedRegions {
 		}
 		// ---- water: level with the regions of the shore key it touches; outdoors the bank it touches most first, and a bank
 		// that disagrees stands over it (a break); outdoors, where a shore key says which banks a surfer lands on (Emerald), the
-		// sea (every body reaching the map's edge that no waterfall feeds) is one body, one level, whichever side of an island
-		// or a cape it lies ----
+		// sea (every body reaching an edge the game connects across onto water, {@code open}, that no waterfall feeds) is one
+		// body, one level, whichever side of an island or a cape it lies; a body reaching only an edge nothing connects across
+		// is a pond on its terrace (a lagoon: Lilycove's, D2) ----
 		int[] waterOf = new int[n];
 		Arrays.fill(waterOf, -1);
 		// each body's shore region (-1 for none) and every region it touches
@@ -634,7 +762,7 @@ public final class RaisedRegions {
 				}
 				wet[c] = true;
 				cells.add(c);
-				edge |= c % w == 0 || c / w == 0 || c % w == w - 1 || c / w == h - 1;
+				edge |= in.open() != null ? in.open()[c] : c % w == 0 || c / w == 0 || c % w == w - 1 || c / w == h - 1;
 				for (Dir dir : Dir.values()) {
 					int nx = c % w + dir.dx();
 					int ny = c / w + dir.dy();
@@ -935,6 +1063,12 @@ public final class RaisedRegions {
 				standable[c] = true;
 			}
 		}
+		// ---- waterfalls as cascades (WATER_AND_BRIDGES_PLAN §2.1 item 4, D4): each run of fall cells between a lower body and
+		// an upper one climbs from the lower's level, the rise a cell, toward the upper; a run too short goes on over the upper
+		// body's cells beyond its head; a run whose bodies stand level is water at their level ----
+		if (in.outdoor() && in.falls() != null) {
+			skipped += cascades(w, h, in.falls(), waterOf, levels, standable, rampAt, in.rise());
+		}
 		// The lowest floor is the map's floor level. Outdoors a pit (an area under the floor along the map's edge, where its
 		// neighbours meet it, of fewer than PIT cells: a gap in a tree line a face's vote put low) stands at that floor
 		// (counted: "sunken"); a larger one keeps its depth (a town under its mountain, Cianwood; a route's descent, Route 123:
@@ -990,10 +1124,26 @@ public final class RaisedRegions {
 					floorCell[c] = false;
 				}
 			}
-			// a pocket stands as the walkable ground nearest it (not the sea beyond its rock)
+			// a pocket stands as the walkable ground nearest it (not the sea beyond its rock); a bridge's deck is no ground
+			// for its neighbours to take (the paths under the Cycling Road, WATER_AND_BRIDGES_PLAN §2.2)
+			int[] deckLevels = levels.clone();
+			for (int i = 0; i < n; i++) {
+				if (given.bridge()[i] && standable[i]) {
+					floorCell[i] = false;
+				}
+			}
+			boolean[] sources = standable.clone();
+			for (int i = 0; i < n; i++) {
+				sources[i] &= !given.bridge()[i];
+			}
 			int[] onFloor = levels.clone();
 			nearestLevels(w, h, floorCell, onFloor);
-			nearestLevels(w, h, standable, levels);
+			nearestLevels(w, h, sources, levels);
+			for (int i = 0; i < n; i++) {
+				if (given.bridge()[i] && standable[i]) {
+					levels[i] = deckLevels[i];
+				}
+			}
 			for (int[] part : pockets) {
 				for (int c : part) {
 					levels[c] = onFloor[c];
@@ -1007,8 +1157,196 @@ public final class RaisedRegions {
 		if (failed != null) {
 			return Result.flat(failed, regions);
 		}
-		return new Result(MapLayout.flat(w, h, levels, new ArrayList<>(rampAt.values())), raisedOutcome, regions, raised, stairs.size(), top,
-				skipped, breaks == null ? List.of() : List.copyOf(new java.util.TreeSet<>(breaks)));
+		// the bridges' two floors (W6, WATER_AND_BRIDGES_PLAN §2.2): Emerald outdoors
+		int[] noRoom = new int[1];
+		List<MapLayout.Deck> deckList = given.shore() >= 0 && !given.room() && anyBridge
+				? decks(w, h, model, given.bridge(), in.key(), given.key(), waterOf, levels, noRoom) : List.of();
+		skipped += noRoom[0];
+		return new Result(MapLayout.flat(w, h, levels, new ArrayList<>(rampAt.values())).withDecks(deckList), raisedOutcome, regions, raised,
+				stairs.size(), top, skipped, breaks == null ? List.of() : List.copyOf(new java.util.TreeSet<>(breaks)));
+	}
+
+	/**
+	 * The cascades (D4): per run of fall cells (four-neighbour), the water bodies it touches; with two levels, the run climbs
+	 * from the lower body's side toward the upper's, {@code rise} blocks a cell row ({@link MapLayout.Ramp}s on water cells,
+	 * the way up their dir), a run too short for the difference going on over the upper body's cells straight beyond its
+	 * head; one level: the run stands at it. Returns the runs that could not reach their pool (each a skipped rule: the
+	 * pool ends in a drop, noted {@code fall_short} by its count). Levels, standable and ramps change in place.
+	 */
+	static int cascades(int w, int h, boolean[] falls, int[] waterOf, int[] levels, boolean[] standable, Map<Integer, MapLayout.Ramp> rampAt,
+			int rise) {
+		int n = w * h;
+		boolean[] seen = new boolean[n];
+		int sh = 0;
+		for (int s = 0; s < n; s++) {
+			if (!falls[s] || seen[s]) {
+				continue;
+			}
+			List<Integer> run = flood(w, h, s, (a, b) -> falls[b] && !seen[b]);
+			for (int c : run) {
+				seen[c] = true;
+			}
+			java.util.Set<Integer> runSet = new java.util.HashSet<>(run);
+			// the body cells it touches, by level
+			Map<Integer, List<Integer>> touched = new TreeMap<>();
+			for (int c : run) {
+				for (Dir d : Dir.values()) {
+					int nx = c % w + d.dx();
+					int ny = c / w + d.dy();
+					if (nx >= 0 && ny >= 0 && nx < w && ny < h && !runSet.contains(ny * w + nx) && waterOf[ny * w + nx] >= 0) {
+						touched.computeIfAbsent(levels[ny * w + nx], k -> new ArrayList<>()).add(ny * w + nx);
+					}
+				}
+			}
+			if (touched.isEmpty()) {
+				continue;
+			}
+			int low = touched.keySet().iterator().next();
+			int high = ((java.util.TreeMap<Integer, List<Integer>>) touched).lastKey();
+			if (low == high) {
+				for (int c : run) {
+					levels[c] = low;
+					standable[c] = true;
+				}
+				continue;
+			}
+			// the way up: from the lower body's cells toward the upper's
+			double lx = 0;
+			double ly = 0;
+			double ux = 0;
+			double uy = 0;
+			for (int c : touched.get(low)) {
+				lx += c % w;
+				ly += c / w;
+			}
+			for (int c : touched.get(high)) {
+				ux += c % w;
+				uy += c / w;
+			}
+			double dx = ux / touched.get(high).size() - lx / touched.get(low).size();
+			double dy = uy / touched.get(high).size() - ly / touched.get(low).size();
+			Dir up = Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? Dir.RIGHT : Dir.LEFT) : (dy > 0 ? Dir.DOWN : Dir.UP);
+			// each cell's row from the foot: 0 at the cell nearest the lower body
+			int foot = Integer.MAX_VALUE;
+			int head = Integer.MIN_VALUE;
+			for (int c : run) {
+				int along = (c % w) * up.dx() + (c / w) * up.dy();
+				foot = Math.min(foot, along);
+				head = Math.max(head, along);
+			}
+			int rows = head - foot + 1;
+			int need = (high - low + rise - 1) / rise;
+			for (int c : run) {
+				int k = (c % w) * up.dx() + (c / w) * up.dy() - foot;
+				// the top rows climb; a long run's lower rows stand at the lower body's level
+				int step = k - Math.max(0, rows - need);
+				levels[c] = low + rise * Math.max(0, step);
+				standable[c] = true;
+				if (step >= 0) {
+					rampAt.put(c, new MapLayout.Ramp(c % w, c / w, up, Math.min(rise, high - levels[c])));
+				}
+			}
+			// too short: on over the upper body's cells beyond the head, column by column
+			int more = need - rows;
+			boolean reached = true;
+			for (int c : run) {
+				int k = (c % w) * up.dx() + (c / w) * up.dy() - foot;
+				if (more <= 0 || k != rows - 1) {
+					continue;
+				}
+				for (int j = 1; j <= more; j++) {
+					int nx = c % w + up.dx() * j;
+					int ny = c / w + up.dy() * j;
+					int b = ny * w + nx;
+					if (nx < 0 || ny < 0 || nx >= w || ny >= h || waterOf[b] < 0 || falls[b] || levels[b] != high) {
+						reached = false;
+						break;
+					}
+					levels[b] = low + rise * (rows + j - 1);
+					rampAt.put(b, new MapLayout.Ramp(nx, ny, up, Math.min(rise, high - levels[b])));
+				}
+			}
+			if (!reached) {
+				sh++;
+			}
+		}
+		return sh;
+	}
+
+	/**
+	 * {@code layout} with its waterfalls' cascades built again on its final levels (after the reviews' pins, which may move a
+	 * pool and the sea apart: Ever Grande's): every ramp on a water cell dropped (a cascade's continuation cells back at their
+	 * body's commonest level), the bodies of water read again (four-neighbour, fall cells apart), and {@link #cascades} run.
+	 * Null stays null; a map without falls is returned as it is.
+	 */
+	public static @Nullable MapLayout cascaded(MapModel model, @Nullable MapLayout layout, boolean @Nullable [] falls) {
+		if (layout == null || falls == null || layout.w() != model.cellWidth() || layout.h() != model.cellHeight()) {
+			return layout;
+		}
+		int w = layout.w();
+		int h = layout.h();
+		int n = w * h;
+		boolean any = false;
+		for (boolean f : falls) {
+			any |= f;
+		}
+		if (!any) {
+			return layout;
+		}
+		int[] levels = new int[n];
+		boolean[] standable = new boolean[n];
+		boolean[] wasRamp = new boolean[n];
+		Map<Integer, MapLayout.Ramp> rampAt = new TreeMap<>();
+		for (int i = 0; i < n; i++) {
+			levels[i] = layout.level(i % w, i / w);
+			standable[i] = !solid(model.kind(i % w, i / w));
+			MapLayout.Ramp r = layout.ramp(i % w, i / w);
+			if (r != null && model.kind(i % w, i / w) == MapModel.Kind.WATER) {
+				wasRamp[i] = true;
+			} else if (r != null) {
+				rampAt.put(i, r);
+			}
+		}
+		int[] waterOf = new int[n];
+		Arrays.fill(waterOf, -1);
+		int bodies = 0;
+		for (int s = 0; s < n; s++) {
+			if (model.kind(s % w, s / w) != MapModel.Kind.WATER || falls[s] || waterOf[s] >= 0) {
+				continue;
+			}
+			int id = bodies++;
+			List<Integer> part = flood(w, h, s, (a, b) -> model.kind(b % w, b / w) == MapModel.Kind.WATER && !falls[b] && waterOf[b] < 0);
+			Map<Integer, Integer> common = new TreeMap<>();
+			for (int c : part) {
+				waterOf[c] = id;
+				if (!wasRamp[c]) {
+					common.merge(levels[c], 1, Integer::sum);
+				}
+			}
+			if (!common.isEmpty()) {
+				int level = mostCommon(common);
+				for (int c : part) {
+					if (wasRamp[c]) {
+						levels[c] = level;
+					}
+				}
+			}
+		}
+		cascades(w, h, falls, waterOf, levels, standable, rampAt, OUTDOOR_RISE);
+		for (int i = 0; i < n; i++) {
+			if (levels[i] > MapLayout.MAX_LEVEL) {
+				return layout;
+			}
+		}
+		MapLayout out = MapLayout.of(w, h, layout.pieces(), levels, new ArrayList<>(rampAt.values())).keepDecks(layout, 0);
+		if (layout.hasCeilings()) {
+			int[] ceilings = new int[n];
+			for (int i = 0; i < n; i++) {
+				ceilings[i] = layout.ceiling(i % w, i / w);
+			}
+			out = out.withCeilings(ceilings);
+		}
+		return out;
 	}
 
 	/** {@code in} with its ledge cells in no region and joining nothing: outdoors a ledge is its own rule (a drop). */
@@ -1026,7 +1364,7 @@ public final class RaisedRegions {
 			}
 		}
 		return !any ? in : new Input(model, key, joins, in.bridge(), in.shore(), in.climb(), in.walls(), in.wallsRise(), in.maxFace(), in.faceKeys(),
-				in.room(), in.rise(), in.outdoor(), in.falls(), in.faced());
+				in.room(), in.rise(), in.outdoor(), in.falls(), in.faced(), in.open());
 	}
 
 	/**

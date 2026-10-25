@@ -275,8 +275,12 @@ final class Gen3Planner {
 				// its slopes marked, on its drawing's
 				G3Tiles mapTiles = tiles(bundle, pairs, map.pair());
 				boolean[] falls = RaisedRegions.gen3Falls(model, map, mapTiles);
+				// the sea only through a water connection (WATER_AND_BRIDGES_PLAN D2): Lilycove's lagoon is a pond on its terrace
+				boolean[] open = RaisedRegions.gen3Open(model, map, all::get);
 				rooms = OutdoorLevels.plan(map.id(), model, RaisedRegions.gen3Stairs(model, map, mapTiles),
-						slopes -> RaisedRegions.gen3Outdoor(model, map, slopes, falls), warnings);
+						slopes -> RaisedRegions.gen3Outdoor(model, map, slopes, falls, open), warnings);
+				// the cascades on the final levels (D4: the reviews' pins may set a pool and the sea apart after the solver)
+				rooms = RaisedRegions.cascaded(model, rooms, falls);
 			}
 			rooms = WorldPlanner.withCeilings(placement, model, rooms, Headroom.blackFiller(model, probe, (cx, cy) -> !map.inMap(cx, cy)),
 					Headroom.screenRows(true), !area3d.contains(map.id()), warnings);
@@ -671,6 +675,10 @@ final class Gen3Planner {
 				for (int tx = 0; tx < model.cellWidth() * 2; tx++) {
 					boolean half = model.kind(tx / 2, ty / 2) == MapModel.Kind.WATER;
 					keys.add(key(model.tile(tx, ty), half ? SlotMap.Shape.HALF : SlotMap.Shape.FULL, perRow));
+					if (half) {
+						// a waterfall's cascade and the floor under a deck draw water's art on full blocks too (WATER_AND_BRIDGES_PLAN)
+						keys.add(key(model.tile(tx, ty), SlotMap.Shape.FULL, perRow));
+					}
 				}
 			}
 			for (int ty = 0; ty < map.border().h() * 2; ty++) {

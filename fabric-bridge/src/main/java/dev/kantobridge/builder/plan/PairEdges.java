@@ -229,6 +229,13 @@ public final class PairEdges {
 			int eb = map.elev(bx, by);
 			return ea != eb && ea != 0 && eb != 0 && ea != 15 && eb != 15;
 		}
+		if ((ka == MapModel.Kind.WATER) != (kb == MapModel.Kind.WATER)) {
+			// a surfer lands only on elevation 3 (collision.lua:989, isSurfDismount; 0 and 15 keep the surfer's): ground of
+			// any other elevation beside water is walled from it (WATER_AND_BRIDGES_PLAN: Lilycove's plateau over its lagoon)
+			int land = ka == MapModel.Kind.WATER ? map.elev(bx, by) : map.elev(ax, ay);
+			MapModel.Kind landKind = ka == MapModel.Kind.WATER ? kb : ka;
+			return walked(landKind) && land != 3 && land != 0 && land != 15 && land != 1;
+		}
 		return false;
 	}
 

@@ -115,7 +115,8 @@ class OutdoorLevelsDumpTest {
 			dev.kantobridge.world.Dir[] slopes = OutdoorLevels.slopes(dev.kantobridge.builder.shape.LandscapeModels.slopes(map.id(), w, h),
 					g3 == null ? RaisedRegions.tableStairs(map.model(), bundle.game()) : RaisedRegions.gen3Stairs(map.model(), g3, g3tiles));
 			RaisedRegions.Result result = g3 != null
-					? RaisedRegions.gen3Outdoor(map.model(), g3, slopes, RaisedRegions.gen3Falls(map.model(), g3, g3tiles))
+					? RaisedRegions.gen3Outdoor(map.model(), g3, slopes, RaisedRegions.gen3Falls(map.model(), g3, g3tiles),
+							RaisedRegions.gen3Open(map.model(), g3, g3maps::get))
 					: RaisedRegions.outdoor(map.model(), map.edges(), slopes, RaisedRegions.tableFaces(map.model(), bundle.game()));
 			// a named map's levels as the planner placed them; another's as the solver gives them
 			MapLayout layout = OutdoorLevels.covers(named, map.id()) ? map.layout() : result.layout();
@@ -207,6 +208,19 @@ class OutdoorLevelsDumpTest {
 				}
 			}
 			o.add("ramps", ramps);
+			// the two-floor cells (WATER_AND_BRIDGES_PLAN §2.2 item 5): [x, y, under, elev]
+			if (layout != null && !layout.decks().isEmpty()) {
+				com.google.gson.JsonArray decks = new com.google.gson.JsonArray();
+				for (MapLayout.Deck d : layout.decks()) {
+					com.google.gson.JsonArray e = new com.google.gson.JsonArray();
+					e.add(d.x());
+					e.add(d.y());
+					e.add(d.under());
+					e.add(d.elev());
+					decks.add(e);
+				}
+				o.add("decks", decks);
+			}
 			Files.writeString(out.resolve(map.id() + ".json"), ProtoJson.write(o), StandardCharsets.UTF_8);
 		}
 		if (all) {

@@ -99,6 +99,7 @@ public final class StepMend {
 				}
 				now = now.withCeilings(ceilings);
 			}
+			now = now.keepDecks(layout, 0);
 			placed.set(i, new PlacedMap(m.placement(), m.model(), m.edges(), now));
 			out.put(m.id(), now);
 		}
@@ -156,6 +157,7 @@ public final class StepMend {
 				}
 				now = now.withCeilings(ceilings);
 			}
+			now = now.keepDecks(layout, 0);
 			placed.set(i, new PlacedMap(m.placement(), m.model(), m.edges(), now));
 			out.put(m.id(), now);
 		}
