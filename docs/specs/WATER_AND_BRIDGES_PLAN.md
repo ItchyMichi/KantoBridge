@@ -310,3 +310,58 @@ decks; the Battle Arena corridor's odd keys.
 - Pod time: WB0 ~0.5 h, WB1–WB3 ~1.5 h (dumps, parity, a Hoenn build, spots), WB4–WB7 ~1.5 h, WB8 ~1.5 h (three
   regions ~50 min on 8 vCPU, spots, videos): about 5 pod hours, under $3 at the small pods' rates.
 - Rebuild: Hoenn after WB3, WB6 and WB7; all three at WB8 (Johto and Kanto only for the datum rule).
+
+## 8. Running it without the user (the recipe; written for an agent working alone, 2026-10-25)
+
+The user has accepted D1–D11 and will not answer questions while this runs. Decide by the defaults; where the plan is
+silent, keep the game's behaviour and write the choice in PROGRESS.md. A blocked phase is recorded with its reason and
+the work moves to the next phase that doesn't depend on it; the final report lists what is done and what is not.
+
+**Where things are.** The repo is `/home/claude/kantobridge` (commit identity set; push URL `github-kantobridge`, the
+repo is public). Dumps, tables, reviews and pictures from the levels work are in `/home/claude/kb-hub/work/landscape/`
+(`rollout/models_table_v15.json` is the current table; `review/<MAP>/r1` the review pictures; `pick/` the sheet tools).
+On a pod the volume `kantobridge-dev` (jcp4eqtl70, EU-RO-1 only) is `/workspace`: `/workspace/local` is ROM-derived (the
+builds read it; never open or copy it), `/workspace/local/minecraft/kantobridge/export/<game>` the export bundles,
+`/workspace/videos/landscape/` the models tables, dump outputs and build logs. Numbers, map ids and cells may leave the
+pod; nothing else.
+
+**Pods.** Create pods as `kb-dev51` (w0hifkqk7kapln) is made (`get-pod` it and copy: image `eclipse-temurin:21-jdk-noble`,
+the sshd start command with `PUBLIC_KEY`, the volume at `/workspace`, port 22/tcp, 20–30 GB container disk, EU-RO-1):
+4 vCPU / 16 GB (cpu3g x4 $0.16/h, cpu5g x4 $0.184/h, cpu5c x4 $0.14/h) for JUnit, dumps and the parity; 8 vCPU / 32 GB
+(cpu3g x8 $0.32/h) for region builds (`HEAP=20g`) and real-client pictures (they hang on 2 vCPU). When a stopped pod's
+host is full, make a new one rather than retrying for long. After every start: `kb-pod host <ip> <port>` (get-pod's
+`ssh.direct`), `kb-pod prep`, `ssh kb-dev 'ln -sfn /workspace/local /root/kantobridge/local'`; for anything that runs the
+engine or the client also `/home/claude/kb-runpod/prep_base.sh` and `/home/claude/kb-runpod/pod/prep2.sh`, then
+`Xvfb :99` (`setsid nohup`; check with `pgrep -f "[X]vfb :99"`; the field sweeps stop it, restart it before pictures).
+The container disk is wiped on stop: the pod scripts live in `/home/claude/kb-runpod/pod/` (scp them each time);
+`/workspace` persists. Stop a pod (`pod-action stop`) the moment its job ends; never leave one running while waiting.
+
+**Scripts.** `tools/landscape_sections/pod/levels_dump.sh` (`OUT`, `OUTDOOR=all`, `CHAIN=1`, `TABLE`, `GAMES`; a minute a
+game; copy the JSON off with scp), `levels_build.sh` (`WORLD`, `REGIONS`, `TABLE`, `OUTDOOR`, `CHAIN`, `HEAP`, `KEEP=1`
+to rebuild Kanto without wiping the others), `prep_pictures.sh` + `levels_shoot.sh`; `/home/claude/kb-runpod/pod/sky5.sh`
+(the full recipe: all three regions into a world, then `field_spots.py` per game; copy and rename for LandSky6),
+`fa2_run.sh 3 emerald <tag>` (Emerald's parity into `local/reports/g3_field_parity_report<tag>.json`; `FieldParity` reads
+the field dump the sweep wrote), `edge_probe.py` (one step of the real engine from chosen cells); `tools/e2e/g3_field_check.py`,
+`field_spots.py` and `context_shots.py` (`DISPLAY=:99 KB_DATASET_MEMO=30`); `tools/landscape_sections/rules_check.py`,
+`seams.py`, `pins_table.py`, `apply_reviews.py`, `levels_overlay.py`; sheets with `kb-hub/work/landscape/pick/levels_sheets.py`.
+
+**Tests.** JUnit on the pod with `/home/claude/kb-runpod/kb-junit [package ...]` (one package at a time: the whole suite
+in one Gradle run hangs at its end on these pods); GameTests `./gradlew runGameTest` (report in `build/reports/gametest`;
+tests that reset static state need their own batch); pytest from `tools/` with `tools/.venv/bin/python -m pytest -c
+pytest.ini --rootdir .`; after a schema change `python -m kb_protocol.catalog --write`. Feature tests per phase; the full
+set at WB3 and WB8 only. The Lua side under lupa is in the pytest run.
+
+**Gotchas.** Never `pkill -f` a pattern that matches your own ssh command line (kill by PID). Long jobs:
+`(setsid nohup cmd > log 2>&1 < /dev/null &)` and poll the log; a failed headless build can hang instead of exiting
+(watch for `failed`/`ERROR`, not only `ALL DONE`). Waiting: `for i in $(seq 1 N); do sleep 4; done`. The volume is 40 GB:
+delete the worlds and logs you made when done. Dumps want `-Pkb.testHeap=10g` on a 16 GB pod. Never load a whole
+transcript or log into context (`grep` it). The Minecraft EULA is accepted on the volume. Gen 3's engine exposes the
+player's elevation as `P.currentElevation` (the field driver saves it, `kb_g3field.lua:417`).
+
+**Record and report.** After each phase: commit (a clear message; the attribution lines the session carries), a
+PROGRESS.md entry under "Water and bridges" (numbers only: counts, cells, parity before/after), and the plan's results in
+a new §9 of this file. Pictures and videos go to the user with SendUserFile (30 MiB limit; shrink video with ffmpeg
+libx264 crf 26). Pushes at WB3 and WB8 only, after the scan every push had: author and committer the noreply identity,
+no `local/`, `refs/`, binaries, secrets or personal addresses; a bundle backup first in `/home/claude/backups/`
+(`kantobridge-<date>-<hash>.bundle` + `.sha256`). When everything is done, or nothing more can be done alone: stop every
+pod, confirm it, and finish with a summary (done, the parity before and after, left and why).
