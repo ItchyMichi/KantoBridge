@@ -90,6 +90,25 @@ function Observe.install(b)
     return false
   end
 
+  -- FA8 item 11: the forced move's kind by the engine's own table entry for the tile under the player
+  -- (forced_movement.lua M.lookup: sForcedMovementTestFuncs' names): a current (and a waterfall's), ice and slides, a
+  -- spin, a muddy slope; nil for the rest (walk tiles, mats: the step driver's script)
+  local FORCED_KINDS = { Slip = "ice", MuddySlope = "slope" }
+  local function forcedKind(P)
+    local FM, C = b.g3("forced_movement"), b.g3("collision")
+    if type(FM) ~= "table" or type(FM.lookup) ~= "function" or type(C) ~= "table" then return nil end
+    local beh = b.ask(C, "behavior", nil, P.cellX, P.cellY)
+    if beh == nil then return nil end
+    local ok, _, entry = pcall(FM.lookup, beh)
+    local name = ok and type(entry) == "table" and entry.name or nil
+    if type(name) ~= "string" then return nil end
+    if FORCED_KINDS[name] then return FORCED_KINDS[name] end
+    if name:find("Current$") then return "current" end
+    if name:find("^Slide") then return "ice" end
+    if name:find("^Spin") then return "spin" end
+    return nil
+  end
+
   -- SE6 (docs/specs/STORY_EVENTS_PLAN.md): the weather the field draws now, by the protocol's names, or nil
   -- without Emerald's weather engine: its state (field_weather_rse.lua:48-49, R.state; fields :406-456) once it
   -- started and was set up and while the weather isn't suspended (weather.lua's _suspended, the battle's freeze),
@@ -148,6 +167,11 @@ function Observe.install(b)
     f.boulderPush = type(P.boulderPush) == "table" and P.facing or nil
     f.playerScripted = P._scriptedStep ~= nil
     f.forcedPhase = forced() or nil
+    if f.forcedPhase then
+      local k = forcedKind(P)
+      f.current, f.ice, f.spinning = k == "current" or nil, k == "ice" or nil, k == "spin" or nil
+      f.muddy = k == "slope" or nil
+    end
     f.transitioning = transitioning()
     -- a field move's warp from Minecraft (fieldmoves.lua mark): the departure the tracker names a fade-started warp by,
     -- until a second after the fade, or a minute when nothing warps; an announced warp takes it (move.lua)

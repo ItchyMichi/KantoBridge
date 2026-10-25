@@ -73,15 +73,16 @@ function Observe.install(b)
   -- also set by every ordinary held step, so it counts only on ice, as
   -- acceptsMenuInput asks, :1567-1578). The Cycling Road's roll is no forced move (FA8 item 13, K4): any held
   -- direction wins over it (Bike.forcedDirection, Bike.lua:139-143), so steps go on; f.slope names it, as Gen 1's.
+  -- Its kind (FA8 item 11): "current", "ice", or "script" for a door's push; nil for none.
   local function forced(w)
     local P = b.w2("Permissions")
     local okC, coll = b.method(w, "playerCollision")
     if P and okC then
-      if b.ask(P, "currentDirection", nil, coll) ~= nil then return true end
-      if b.ask(P, "doorForcedDirection", nil, coll) ~= nil then return true end
-      if w.turningDirection ~= nil and b.ask(P, "isIce", false, coll) == true then return true end
+      if b.ask(P, "currentDirection", nil, coll) ~= nil then return "current" end
+      if b.ask(P, "doorForcedDirection", nil, coll) ~= nil then return "script" end
+      if w.turningDirection ~= nil and b.ask(P, "isIce", false, coll) == true then return "ice" end
     end
-    return false
+    return nil
   end
 
   -- A Strength push under way (FA8 item 15, K5): World:tryPushBoulder (World.lua:6190-6214) steps a strength boulder
@@ -145,7 +146,9 @@ function Observe.install(b)
     f.darkMap = darkSet[f.map] == true
     f.flashLit = type(b.flashLit) == "function" and b.flashLit() or false
     f.playerScripted = on(w.moveState)
-    f.forcedPhase = forced(w) or nil
+    local kind = forced(w)
+    f.forcedPhase = kind ~= nil or nil
+    f.current, f.ice = kind == "current" or nil, kind == "ice" or nil
     f.boulderPush = boulderPush(w, p)
     f.transitioning = on(w.mapSetup) or on(w.pendingWarp)
     -- a field move's warp from Minecraft (fieldmoves.lua mark): its kind until its fade starts, then forgotten; a

@@ -208,16 +208,18 @@ def test_no_departure_outside_the_field():
     assert departure(a) is None
 
 
-def test_a_requested_warp_is_a_script_warp_unless_it_stands_on_a_warp_tile():
+def test_a_requested_warp_is_a_script_warp_unless_a_warp_tile_names_it():
     # Warp.request (a script's or a mod's warp, and the step warps the engine hands it: ladders, cave doors, arrows)
-    # announces kind "warp": the tile under the player names it, else a script warp (never the tile in front: a
-    # script's warp facing a door is no door's). request marks it for a cave shaft's take (HEIGHTS_ALL_GAMES_PLAN W3).
+    # announces kind "warp": the warp tile under the player or in front names it, else a script warp. request marks it
+    # for a cave shaft's take (HEIGHTS_ALL_GAMES_PLAN W3).
     a = Adapter3()
     a.field("EM_TEST_HOUSE", 4, 5, "up")
     a.E.behavior(4, 4, b"MB_TEST_STAIRS")
     warp = lambda kind: plain(a.eng.warpDeparture(a.lua({"warp": {"kind": kind, "map": "EM_TEST_TOWN", "x": 1, "y": 1}})))  # noqa: E731
     requested = warp("warp")
-    assert requested["kind"] == "script" and requested["request"] is True
+    assert requested["kind"] == "stairs" and requested["request"] is True, "the step's tile in front"
+    a.E.behavior(4, 4, None)
+    assert warp("warp")["kind"] == "script", "no warp tile under or in front: a script's warp"
     assert warp("stairs")["kind"] == "stairs" and "request" not in warp("stairs")
     a.E.behavior(4, 5, b"MB_LADDER")
     assert warp("warp")["kind"] == "ladder" and warp("warp")["request"] is True

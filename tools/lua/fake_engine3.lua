@@ -429,6 +429,8 @@ function FakeEngine3.new(opts)
   -- forced_movement.lua:441-449
   E.Forced = { forced = false }
   function E.Forced.isForced() return E.Forced.forced == true end
+  -- M.lookup (forced_movement.lua:294-300): E.Forced.entry names the tile's entry ("Slip", "PushedSouthByCurrent", ...)
+  function E.Forced.lookup(beh) if E.Forced.entry then return 1, { name = E.Forced.entry } end return nil end
 
   -- ---- the HUD (src/ui/game3/*; G3B, GEN3_BRIDGE_PLAN.md §4.5)
 

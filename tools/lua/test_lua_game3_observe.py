@@ -131,6 +131,19 @@ def test_a_battle_names_the_screen_before_the_hud():
     assert a.facts()["topName"] == "BattleState"
 
 
+@pytest.mark.parametrize("entry, kind", [("Slip", "ice"), ("SlideEast", "ice"), ("PushedSouthByCurrent", "current"),
+                                         ("SpinRight", "spinning"), ("MuddySlope", "muddy"), ("WalkEast", None)])
+def test_a_forced_moves_kind_is_its_tiles_entry(entry, kind):
+    # FA8 item 11: the engine's forced-movement table entry for the tile under the player names the move
+    a = Adapter3()
+    a.field("EM_TEST_TOWN", 5, 6, "left")
+    a.E.Forced.forced, a.E.Forced.entry = True, entry.encode()
+    f = a.facts()
+    assert f["forcedPhase"] is True
+    for k in ("ice", "current", "spinning", "muddy"):
+        assert (f.get(k) is True) == (k == kind), k
+
+
 def test_a_strength_push_names_its_direction():
     # FA8 item 9 (K5): Player.boulderPush is set from the push until it lands; its direction is the player's facing
     a = Adapter3()

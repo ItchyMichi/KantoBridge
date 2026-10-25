@@ -97,6 +97,9 @@ def test_turns_and_teleports_are_syncs():
     ({"spinning": True}, "spin"),
     ({"playerScripted": True}, "script"),
     ({"forcedPhase": True}, "script"),
+    ({"forcedPhase": True, "ice": True}, "ice"),          # FA8 item 11: Gen 2's and Gen 3's slide
+    ({"forcedPhase": True, "current": True}, "current"),
+    ({"forcedPhase": True, "muddy": True}, "slope"),      # Emerald's muddy slope pushing back
 ])
 def test_step_kinds(facts, kind):
     o = Obs()

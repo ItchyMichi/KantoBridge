@@ -160,9 +160,10 @@ function Move.install(b)
     local dest = type(payload) == "table" and (payload.toMap or (type(payload.warp) == "table" and payload.warp.map)) or nil
     if out.map ~= nil and dest == out.map then out.inMap = true end
     if engineKind == "warp" then
-      -- a step warp stands on its tile (a ladder, a cave door, an arrow); a script's warp facing a door is no door's
+      -- a step warp's tile is under the player or, announced before the step lands, in front of it (a ladder, a cave
+      -- door, an escalator; the real engine's sweep, FA8); the kind only names the fade
       out.request = true
-      kind = under or "script"
+      kind = kind or "script"
     elseif not kind and ENGINE_KINDS[engineKind] then
       -- the behaviour first (a pad's tile says pad, whatever path the engine took); the engine's name where there is none
       kind = ENGINE_KINDS[engineKind]

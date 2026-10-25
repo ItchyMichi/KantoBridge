@@ -61,11 +61,11 @@ def test_forced_movement_is_the_engines_own_kinds_only():
     w.turningDirection = b"down"
     assert a.facts().get("forcedPhase") is None
     a.E.coll(b"TEST_TOWN", 5, 6, 0x23)
-    assert a.facts()["forcedPhase"] is True
+    assert a.facts()["forcedPhase"] is True and a.facts()["ice"] is True, "FA8 item 11: the slide's kind"
     w.turningDirection = None
     assert a.facts().get("forcedPhase") is None
     a.E.coll(b"TEST_TOWN", 5, 6, 0x3b)
-    assert a.facts()["forcedPhase"] is True
+    assert a.facts()["forcedPhase"] is True and a.facts().get("ice") is None
     a.E.coll(b"TEST_TOWN", 5, 6, 0x00)
     a.E.downhill = True
     f = a.facts()

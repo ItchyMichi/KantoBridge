@@ -138,7 +138,9 @@ def test_pairs_flatten_their_planes_share_alike_quarters_and_name_behaviours():
     assert a["behaviors"] == {"0": "MB_NORMAL", "64": "MB_TEST_GRASS", "32": "MB_TEST_WATER", "16": "MB_TEST_WALL"}
     assert a["land"] == [64], "the engine's rule: the grass rolls land encounters"
     b = res[("g3tiles", "TEST_B")]
-    assert b["mids"] == [512, 513] and b["over"] == [False, False] and b["land"] == []
+    assert b["mids"] == [512, 513] and b["over"] == [False, False]
+    # FA8 item 11: an Emerald-only behaviour (0x103) is written as its low byte but named, and judged for land, by its id
+    assert b["beh"] == [0, 3] and b["behaviors"]["3"] == "MB_TEST_LONG_GRASS" and b["land"] == [3]
     # the pages hold the flattened quarters at their ids
     pages = {int(i.split(".")[1]): png_rgba(d["png"]) for (k, i), d in res.items() if k == "g3image"}
     assert sorted(pages) == [0] and pages[0][:2] == (256, 256)

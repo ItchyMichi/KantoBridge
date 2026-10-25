@@ -659,15 +659,19 @@ function Export3.install(b)
                   qs[q + 1] = idOf(flat)
                 end
               end
-              local bv = floor(tonumber(beh[mid]) or 0) % 256
+              -- the engine's canonical id (Emerald-only ones from 0x100, mb.lua); the export keeps its low byte, one to one
+              -- inside a game, but names it and judges its land rule by the full id (FA8 item 11: by the byte, Emerald's
+              -- own behaviours took FireRed's names and long grass, ash and deep sand fell out of the land rule)
+              local raw = floor(tonumber(beh[mid]) or 0)
+              local bv = raw % 256
               midList[#midList + 1], quarters[#quarters + 1] = mid, qs
               behList[#behList + 1], overList[#overList + 1] = bv, anyOver
               if Rules and not landSeen[bv] then
                 landSeen[bv] = true
-                if land(bv) then landList[#landList + 1] = bv end
+                if land(raw) then landList[#landList + 1] = bv end
               end
               if names[tostring(bv)] == nil then
-                local name = b.ask(MB, "nameOf", nil, bv)
+                local name = b.ask(MB, "nameOf", nil, raw)
                 if b.symbol(name) then names[tostring(bv)] = name end
               end
               if #midList % 32 == 0 then checkpoint() end

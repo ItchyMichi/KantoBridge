@@ -247,9 +247,12 @@ function FakeExport3.attach(E)
     end }
     E.InteractionScripts.behaviors.TEST_A = { [0] = 0, [1] = 0x40, [2] = 0x40, [3] = 0x20, [4] = 0x20, [5] = 0, [6] = 0,
                                               [7] = 0x10 }
-    E.InteractionScripts.behaviors.TEST_B = { [512] = 0, [513] = 0x10 }
+    -- 513: an Emerald-only behaviour (the engine's canonical ids from 0x100, mb.lua): the export writes its low byte
+    E.InteractionScripts.behaviors.TEST_B = { [512] = 0, [513] = 0x103 }
     E.MB_IDS.MB_TEST_GRASS, E.MB_IDS.MB_TEST_WATER, E.MB_IDS.MB_TEST_WALL = 0x40, 0x20, 0x10
+    E.MB_IDS.MB_TEST_LONG_GRASS = 0x103
     E.landBehaviors[0x40] = true
+    E.landBehaviors[0x103] = true
     local mb = E.MB_IDS
     local byNum = {}
     for name, id in pairs(mb) do byNum[id] = name end

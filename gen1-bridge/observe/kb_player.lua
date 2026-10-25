@@ -102,6 +102,9 @@ function Player.moveKind(f)
   if f.ledge then return "ledge" end
   if f.spinning then return "spin" end
   if f.current then return "current" end
+  -- FA8 item 11: ice and slides (Gen 2's and Gen 3's latched slide), a muddy slope pushing back
+  if f.ice then return "ice" end
+  if f.muddy then return "slope" end
   if f.playerScripted or f.forcedPhase then return "script" end
   if f.surf then return "surf" end
   if f.bike then return "bike" end
