@@ -3531,6 +3531,11 @@ Parity is the planned world's (FieldParity, the rollout's options), FA8's last r
   two levels, 82 north and 85 in the harbour, matching Route 110's sea at 85 and Route 134's at 82: the chain leaves the
   region's sea at two heights, so one pin only moves the step to the next seam), **Route 109** (a beach chair's seat on
   the sand, not a level).
+- **World rebuilt (LandSky5, kb-dev51, models table v15, all of FA9):** Kanto, Hoenn and Johto build OK. Real-client
+  spots on it: Blue 11/11, Crystal 12/13 (the Ice Path ladder, as before), Emerald 29/29. No videos this time (the
+  recorder wrote none; the spots ran). The probe rows' sweep files had to go first (the spot tool reads every
+  `*_field_sweep_analysis_*.json`); the same cleanup also removed FA8's `g3_field_features*_fa8probe.json`, whose results
+  are in §13.10.
 - **Bridges:** the problem written up for a plan of its own (your call): [specs/BRIDGES_PROBLEM.md](specs/BRIDGES_PROBLEM.md).
 - **Not done yet:** SC5 (two-floor bridges: Route 110's Cycling Road about 220 cell-directions, Route 120 about 47, Route
   119 about 12; BRIDGES_PROBLEM.md). Also left: the two underwater routes 127
