@@ -106,6 +106,23 @@ class OutdoorLevelsTest {
 	}
 
 	@Test
+	void aDryPinStaysOnItsSideOfTheWater() {
+		// a pad of ground standing in the sea at the sea's level (Mossdeep's launch pad, FIELD_MECHANICS_AUDIT_PLAN §14):
+		// a plain pin lifts the sea with it, a dry one only the pad
+		MapModel model = RaisedRegionsTest.model(
+				"~~~~",
+				"~..~",
+				"~..~",
+				"~~~~");
+		MapLayout flat = MapLayout.flat(4, 4, new int[16], List.of());
+		MapLayout wet = OutdoorLevels.pinned(flat, model, List.of(new dev.kantobridge.builder.shape.LandscapeModels.Pin(1, 1, 6)));
+		assertEquals(6, wet.level(0, 0), "a plain pin crosses the water's edge");
+		MapLayout dry = OutdoorLevels.pinned(flat, model, List.of(new dev.kantobridge.builder.shape.LandscapeModels.Pin(1, 1, 6, true)));
+		assertEquals(6, dry.level(2, 2), "the pad");
+		assertEquals(0, dry.level(0, 0), "the sea stays");
+	}
+
+	@Test
 	void aStairGoesWithTheGroundAtItsEnds() {
 		// a stair at (1, 1) climbing north from the strip at 0 to the strip at 3
 		MapModel model = RaisedRegionsTest.model(

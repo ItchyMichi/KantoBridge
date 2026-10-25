@@ -111,6 +111,7 @@ public final class OutdoorLevels {
 			}
 			int start = pin.y() * w + pin.x();
 			int was = levels[start];
+			boolean wet = model.kind(pin.x(), pin.y()) == MapModel.Kind.WATER;
 			ArrayDeque<Integer> queue = new ArrayDeque<>(List.of(start));
 			boolean[] seen = new boolean[w * h];
 			seen[start] = true;
@@ -122,7 +123,8 @@ public final class OutdoorLevels {
 					int ny = c / w + dir.dy();
 					int j = ny * w + nx;
 					if (nx >= 0 && ny >= 0 && nx < w && ny < h && !seen[j] && standable[j] && levels[j] == was && !ramps.contains(j)
-							&& (walls == null || !walls.closed(c % w, c / w, nx, ny))) {
+							&& (walls == null || !walls.closed(c % w, c / w, nx, ny))
+							&& (!pin.dry() || (model.kind(nx, ny) == MapModel.Kind.WATER) == wet)) {
 						seen[j] = true;
 						queue.add(j);
 					}

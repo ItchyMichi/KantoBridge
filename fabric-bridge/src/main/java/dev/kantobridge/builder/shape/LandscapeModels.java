@@ -49,8 +49,15 @@ public final class LandscapeModels {
 	}
 
 	/** A cell of a slope or stairs the marks name, and its way up. */
-	/** A review's correction: the ground round cell (x, y), as far as it stands level with it, at {@code level} blocks. */
-	public record Pin(int x, int y, int level) {
+	/**
+	 * A review's correction: the ground round cell (x, y), as far as it stands level with it, at {@code level} blocks;
+	 * {@code dry} (a fourth value 1 in the table, FIELD_MECHANICS_AUDIT_PLAN §14: Mossdeep's launch pad) keeps it to the
+	 * pinned cell's own side of the water's edge, ground or water.
+	 */
+	public record Pin(int x, int y, int level, boolean dry) {
+		public Pin(int x, int y, int level) {
+			this(x, y, level, false);
+		}
 	}
 
 	record Slope(int x, int y, Dir climb) {
@@ -158,7 +165,7 @@ public final class LandscapeModels {
 				if (level < 0 || level > dev.kantobridge.world.MapLayout.MAX_LEVEL) {
 					throw new IllegalArgumentException("landscape models: pin " + a + " on " + e.getKey() + " is out of range");
 				}
-				pins.add(new Pin(a.get(0).getAsInt(), a.get(1).getAsInt(), level));
+				pins.add(new Pin(a.get(0).getAsInt(), a.get(1).getAsInt(), level, a.size() > 3 && a.get(3).getAsInt() == 1));
 			}
 			out.put(e.getKey(), List.copyOf(pins));
 		}

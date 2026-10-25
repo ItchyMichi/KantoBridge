@@ -806,7 +806,8 @@ Left out here, as in §13.10: Emerald's rails and bumpy slopes (the bike feature
 - **SC4 (C4): steps inside maps.** A one-cell stair the game climbs into a terrace (the higher cell plain ground beside
   the lower, rock round it) becomes a ramp; the levels that stand far apart where the game walks level get pins (read
   from the levels drawn over each map: `levels_overlay.py`), in a models table v15.
-- **SC5 (C5): two-floor bridges, Emerald first** (the user's choice of 2026-10-20, HEIGHTS_ALL_GAMES_PLAN D4): an
+- **SC5 (C5): two-floor bridges, Emerald first** (*2026-10-25: the user takes it to a plan of its own;
+  the problem is written up in [BRIDGES_PROBLEM.md](BRIDGES_PROBLEM.md)*) (the user's choice of 2026-10-20, HEIGHTS_ALL_GAMES_PLAN D4): an
   elevation-15 cell is the deck and the floor under it, the deck a level over with at least 2 blocks clear under it,
   walled at its sides on the deck; the client's position takes the floor from the game's elevation. Crystal's and
   Blue's bridges (no elevation in their data: an agent review) wait.
@@ -815,4 +816,5 @@ Left out here, as in §13.10: Emerald's rails and bumpy slopes (the bike feature
 - **SC7 (C7): Crystal's cave ledges** as FA8 item 12 did outdoors.
 
 Each fix: JUnit, the parity again (FieldParity), then pictures of the places it changed, a rebuilt world on the pod and
-the real-client spots. Progress in PROGRESS.md, "Field mechanics audit: FA9".
+the real-client spots. Progress in PROGRESS.md, "Field mechanics audit: FA9" (the results: SC1-SC4, SC6, SC7 done,
+Mossdeep's launch pad pinned in models table v15, SC5 to its own plan).

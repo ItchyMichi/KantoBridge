@@ -3492,7 +3492,7 @@ Parity is the planned world's (FieldParity, the rollout's options), FA8's last r
 |---|---|---|---|---|---|
 | Blue | 3 -> 2 | 98 -> 1 | 3 -> 3 | 26 -> 3 | 88 / 23 |
 | Crystal | 146 -> 14 | 267 -> 19 | 0 -> 0 | 62 -> 5 | 326 / 57 |
-| Emerald | 277 -> 231 | 295 -> 195 | 76 -> 27 | 251 -> 251 | 1 / 0 |
+| Emerald | 277 -> 231 | 295 -> 183 | 76 -> 27 | 251 -> 261 | 1 / 0 |
 
 - **SC1 seam walls** (`SeamEdges`, after the chain in all three planners): a surface map's edge cell is walled where
   nothing lies beyond it, where a walker would step onto the neighbour's water below, and where the game's own rule
@@ -3520,10 +3520,20 @@ Parity is the planned world's (FieldParity, the rollout's options), FA8's last r
   (`MapChain.chain(maps, which)`, `MapChain.raise`), and its ragged seams mended. Emerald's Safari Zone: its six areas
   in a 3 x 2 grid on one layer, 113 walled crossings -> 0. Crystal's Silver Cave outside beside Route 28: 28 -> 0 (its
   rows past Route 28's strip are clamps).
+- **The level mistakes (your call: fix them first):** the levels drawn over the art for each place left. **Mossdeep**: the
+  "beach" 24 blocks under the city is the rocket's launch pad and gantries, on the plateau in the drawing; pinned at 24
+  with a new *dry* pin (`[x, y, level, 1]`: the flood stays on its side of the water's edge, else the pin lifted 151 sea
+  cells with it), models table **v15** (`/workspace/videos/landscape/models_table_v15.json`, a copy in kb-hub
+  work/landscape/rollout). Walking breaks there 12 -> 0; the cost: 11 sea cells where the game lets a surfer land on the
+  pad now meet its side. Looked at and left: **Ever Grande** (rows 60 to 63 are its waterfall, climbed by the Waterfall
+  move as a forced move; likewise Routes 114 and 119 and the Safari Zone's south-east), **Lilycove** (the city's grass
+  meets the sea with no cliff drawn, 9 blocks over it: 2 surf landings; neither side can move), **Slateport** (its sea at
+  two levels, 82 north and 85 in the harbour, matching Route 110's sea at 85 and Route 134's at 82: the chain leaves the
+  region's sea at two heights, so one pin only moves the step to the next seam), **Route 109** (a beach chair's seat on
+  the sand, not a level).
+- **Bridges:** the problem written up for a plan of its own (your call): [specs/BRIDGES_PROBLEM.md](specs/BRIDGES_PROBLEM.md).
 - **Not done yet:** SC5 (two-floor bridges: Route 110's Cycling Road about 220 cell-directions, Route 120 about 47, Route
-  119 about 12; they need a second floor in the world index, the builder, the client and the art), Emerald's levels that
-  stand far apart where the game walks level (Mossdeep's north beach 24 blocks under the city: 12; Lilycove's north shore
-  9 over the sea; Ever Grande's pool, a waterfall: 37): they need the pictures. Also left: the two underwater routes 127
+  119 about 12; BRIDGES_PROBLEM.md). Also left: the two underwater routes 127
   and 128 placed apart (16), water a block apart across three seams (Route 134 | Slateport, Route 107, Route 4 | Cerulean:
   17), Route 130's Mirage Island story water (55), 16 Emerald walkers refused at a seam for a reason the model doesn't see.
   Emerald's 166 rails stay with the bike feature.
