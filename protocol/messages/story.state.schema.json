@@ -49,6 +49,10 @@
       "type": "boolean",
       "description": "FA8 item 7 (D4): the hidden player is running (player.state.run); the server gives it the running speed. Optional; absent in a full state: not running."
     },
+    "forced": {
+      "type": "boolean",
+      "description": "WATER_AND_BRIDGES_PLAN D4: the client walks the player in a forced move (a waterfall climbed or descended); a waterfall's foot wall opens for it. Optional; absent in a full state: no forced move."
+    },
     "lit": {
       "type": "array",
       "items": {

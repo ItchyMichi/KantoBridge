@@ -68,6 +68,8 @@ public final class MoveController {
 
 	private final Port port;
 	private final ForcedMover mover = new ForcedMover();
+	/** Whether the local player is walked by a forced move now (the story state relays it: the fall walls open, D4). */
+	private static volatile boolean forcedNow;
 	private final MovementSync sync;
 	private final WarpFade fade;
 	private final Map<String, Long> warnings = new TreeMap<>();
@@ -106,6 +108,7 @@ public final class MoveController {
 		}
 		this.fade.tick(now);
 		ForcedMover.Velocity velocity = this.following ? this.mover.tick(frame.x(), frame.z()) : null;
+		forcedNow = this.following && this.mover.active();
 		// A cave shaft's warp being taken holds the controls too (CAVES_3D_PLAN §3.6).
 		this.reason = InputLock.reason(kanto, frame.freeCamera(), frame.battle(), frame.connected(), frame.ingame(), this.sync.hiddenUnbuilt(),
 				frame.mode(), this.fade.holding() || this.sync.takeHolding(), this.mover.active(), frame.holds());
@@ -280,6 +283,11 @@ public final class MoveController {
 
 	// ---- helpers ----
 
+	/** True while the local player is walked by a forced move (WATER_AND_BRIDGES_PLAN D4: a waterfall's foot wall opens). */
+	public static boolean forcedNow() {
+		return forcedNow;
+	}
+
 	/** A place from a message's {@code map}, {@code x}, {@code y} and the given facing; null if anything is off. */
 	static @Nullable Place place(JsonObject data, @Nullable String facing) {
 		String map = JsonFields.str(data, "map");
@@ -289,8 +297,10 @@ public final class MoveController {
 		if (map == null || dir == null || Math.abs(x) > Place.MAX_COORD || Math.abs(y) > Place.MAX_COORD) {
 			return null;
 		}
+		// the hidden game's elevation (Gen 3: the floor of a two-floor cell, D7); absent or out of range: none
+		long elev = JsonFields.integer(data, "elev", -1);
 		try {
-			return new Place(map, (int) x, (int) y, dir);
+			return new Place(map, (int) x, (int) y, dir, elev >= 0 && elev <= 15 ? (int) elev : -1);
 		} catch (IllegalArgumentException e) {
 			return null;
 		}
@@ -377,7 +387,7 @@ public final class MoveController {
 			}
 			WorldIndex world = MoveController.this.index;
 			MoveController.this.requestSeq = seq;
-			MoveController.this.requestTarget = world == null ? null : world.toBlock(to.map(), to.x(), to.y());
+			MoveController.this.requestTarget = world == null ? null : world.toBlock(to.map(), to.x(), to.y(), to.elev());
 			return true;
 		}
 

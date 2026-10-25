@@ -26,7 +26,7 @@ public final class StoryStateMessages {
 	public static final int MAX_LIT = 256;
 
 	/** MG3: {@code region} is the client's link bookkeeping, read by the service, not applied here. */
-	private static final Set<String> FIELDS = Set.of("full", "active", "add", "remove", "surf", "bike", "run", "lit", "region");
+	private static final Set<String> FIELDS = Set.of("full", "active", "add", "remove", "surf", "bike", "run", "forced", "lit", "region");
 
 	/** What one message changed. */
 	public record Applied(boolean full, boolean surfChanged, boolean bikeChanged, int cellsChanged, boolean runChanged) {
@@ -60,6 +60,11 @@ public final class StoryStateMessages {
 
 	/** The same with the running flag (FA8 item 7; written only when running). */
 	public static JsonObject full(Collection<String> active, boolean surf, boolean bike, boolean run, Collection<String> lit) {
+		return full(active, surf, bike, run, false, lit);
+	}
+
+	/** The same with the forced-move flag (WATER_AND_BRIDGES_PLAN D4; written only during one). */
+	public static JsonObject full(Collection<String> active, boolean surf, boolean bike, boolean run, boolean forced, Collection<String> lit) {
 		JsonObject data = new JsonObject();
 		data.addProperty("full", true);
 		data.add("active", array(active));
@@ -67,6 +72,9 @@ public final class StoryStateMessages {
 		data.addProperty("bike", bike);
 		if (run) {
 			data.addProperty("run", true);
+		}
+		if (forced) {
+			data.addProperty("forced", true);
 		}
 		data.add("lit", array(lit));
 		return data;
@@ -81,6 +89,12 @@ public final class StoryStateMessages {
 	/** The same with the running flag (FA8 item 7), null when it didn't change. */
 	public static JsonObject delta(@Nullable Collection<String> add, @Nullable Collection<String> remove, @Nullable Boolean surf,
 			@Nullable Boolean bike, @Nullable Boolean run, @Nullable Collection<String> lit) {
+		return delta(add, remove, surf, bike, run, null, lit);
+	}
+
+	/** The same with the forced-move flag, null when it didn't change. */
+	public static JsonObject delta(@Nullable Collection<String> add, @Nullable Collection<String> remove, @Nullable Boolean surf,
+			@Nullable Boolean bike, @Nullable Boolean run, @Nullable Boolean forced, @Nullable Collection<String> lit) {
 		JsonObject data = new JsonObject();
 		data.addProperty("full", false);
 		if (add != null && !add.isEmpty()) {
@@ -97,6 +111,9 @@ public final class StoryStateMessages {
 		}
 		if (run != null) {
 			data.addProperty("run", run);
+		}
+		if (forced != null) {
+			data.addProperty("forced", forced);
 		}
 		if (lit != null) {
 			data.add("lit", array(lit));
@@ -118,7 +135,9 @@ public final class StoryStateMessages {
 		Boolean surf = bool(data, "surf");
 		Boolean bike = bool(data, "bike");
 		Boolean run = bool(data, "run");
-		if ((data.has("surf") && surf == null) || (data.has("bike") && bike == null) || (data.has("run") && run == null)) {
+		Boolean forced = bool(data, "forced");
+		if ((data.has("surf") && surf == null) || (data.has("bike") && bike == null) || (data.has("run") && run == null)
+				|| (data.has("forced") && forced == null)) {
 			throw new Invalid("flag");
 		}
 		List<String> lit = data.has("lit") ? strings(data.get("lit"), MAX_LIT, false) : null;
@@ -167,6 +186,9 @@ public final class StoryStateMessages {
 		if (run != null || full) {
 			// a full state without it: not running
 			state.setRun(Boolean.TRUE.equals(run));
+		}
+		if (forced != null || full) {
+			state.setForced(Boolean.TRUE.equals(forced));
 		}
 		if (lit != null) {
 			state.setLit(lit);

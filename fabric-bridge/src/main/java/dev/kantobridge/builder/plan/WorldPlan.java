@@ -1117,6 +1117,96 @@ public final class WorldPlan {
 		return top;
 	}
 
+	/**
+	 * The sides of a deck cell closed at the deck (§2.2 item 6): toward a neighbour whose floor is not at the deck's level
+	 * (water or ground under or beside it, rock) and that is no deck cell at the same level; as {@link EdgeWallBlock} sides.
+	 */
+	static int deckSides(MapModel model, MapLayout layout, int cx, int cy) {
+		int level = layout.level(cx, cy);
+		int sides = 0;
+		int[][] n = {{0, -1, dev.kantobridge.block.EdgeWallBlock.SIDE_NORTH}, {0, 1, dev.kantobridge.block.EdgeWallBlock.SIDE_SOUTH},
+				{-1, 0, dev.kantobridge.block.EdgeWallBlock.SIDE_WEST}, {1, 0, dev.kantobridge.block.EdgeWallBlock.SIDE_EAST}};
+		for (int[] d : n) {
+			int x = cx + d[0];
+			int y = cy + d[1];
+			if (x < 0 || y < 0 || x >= model.cellWidth() || y >= model.cellHeight()) {
+				continue;
+			}
+			MapModel.Kind k = model.kind(x, y);
+			boolean walked = k == MapModel.Kind.GROUND || k == MapModel.Kind.LEDGE;
+			if (walked && layout.level(x, y) == level && layout.ramp(x, y) == null) {
+				continue;
+			}
+			MapLayout.Ramp ramp = layout.ramp(x, y);
+			if (walked && ramp != null && (layout.level(x, y) == level || layout.level(x, y) + ramp.rise() == level)) {
+				continue;
+			}
+			sides |= d[2];
+		}
+		return sides;
+	}
+
+	/** The cell sides a block of a cell lies along (bx, bz 0 or 1 within it). */
+	static int blockTouches(int bx, int bz) {
+		return (bz == 0 ? dev.kantobridge.block.EdgeWallBlock.SIDE_NORTH : dev.kantobridge.block.EdgeWallBlock.SIDE_SOUTH)
+				| (bx == 0 ? dev.kantobridge.block.EdgeWallBlock.SIDE_WEST : dev.kantobridge.block.EdgeWallBlock.SIDE_EAST);
+	}
+
+	/**
+	 * The cell beside a deck whose floor is the deck's under floor: {x, y, 1 for water / 0 for ground}; water first, then
+	 * ground, then the deck cell itself (ground).
+	 */
+	static int[] underNeighbour(MapModel model, MapLayout layout, int cx, int cy, MapLayout.Deck deck) {
+		int[][] n = {{0, -1}, {0, 1}, {-1, 0}, {1, 0}};
+		for (int pass = 0; pass < 2; pass++) {
+			for (int[] d : n) {
+				int x = cx + d[0];
+				int y = cy + d[1];
+				if (x < 0 || y < 0 || x >= model.cellWidth() || y >= model.cellHeight() || layout.deck(x, y) != null
+						|| layout.level(x, y) != deck.under()) {
+					continue;
+				}
+				MapModel.Kind k = model.kind(x, y);
+				if (pass == 0 && k == MapModel.Kind.WATER) {
+					return new int[] {x, y, 1};
+				}
+				if (pass == 1 && (k == MapModel.Kind.GROUND || k == MapModel.Kind.LEDGE)) {
+					return new int[] {x, y, 0};
+				}
+			}
+		}
+		// an inner cell of a wide deck: its row-mates' floor (water when any deck neighbour's is)
+		for (int[] d : n) {
+			int x = cx + d[0];
+			int y = cy + d[1];
+			MapLayout.Deck other = layout.deck(x, y);
+			if (other != null && other.under() == deck.under()) {
+				for (int[] e : n) {
+					int ex = x + e[0];
+					int ey = y + e[1];
+					if (ex >= 0 && ey >= 0 && ex < model.cellWidth() && ey < model.cellHeight() && layout.deck(ex, ey) == null
+							&& layout.level(ex, ey) == deck.under() && model.kind(ex, ey) == MapModel.Kind.WATER) {
+						return new int[] {ex, ey, 1};
+					}
+				}
+			}
+		}
+		return new int[] {cx, cy, 0};
+	}
+
+	/** True when cell (cx, cy) has a water neighbour across an edge the map's walls leave open (D5: a surfer lands there). */
+	static boolean seatBesideWater(MapModel model, PairEdges edges, int cx, int cy) {
+		for (Dir d : Dir.values()) {
+			int nx = cx + d.dx();
+			int ny = cy + d.dy();
+			if (nx >= 0 && ny >= 0 && nx < model.cellWidth() && ny < model.cellHeight() && model.kind(nx, ny) == MapModel.Kind.WATER
+					&& !edges.closed(cx, cy, nx, ny)) {
+				return true;
+			}
+		}
+		return false;
+	}
+
 	/** The sides of art tile (tx, ty) whose neighbouring tile holds a seat ({@link ShapePlanner#SEAT}), as edge sides. */
 	static int seatSides(ShapePlanner.MapShapes planned, int cols, int rows, int tx, int ty) {
 		int sides = 0;
@@ -1245,8 +1335,10 @@ public final class WorldPlan {
 				// doorway or overhang (P2) on decor carriers up its column; over a ramp's steps, the rest of its stair.
 				int decor = planned == null ? 0 : planned.decor()[planIndex];
 				if ((decor & dev.kantobridge.builder.shape.ShapePlanner.SEAT) != 0 && from == 0 && story < 0) {
-					// A seat (HAND_MODELS.md section 6): half a block characters stand on, carrying the seat's art.
-					sink.set(x, feet, z, BlockCode.seat());
+					// A seat (HAND_MODELS.md section 6): half a block characters stand on, carrying the seat's art; a seat a surfer
+					// lands on (an open edge to water: Route 109's beach chairs) only its art, on a decor carrier: from the water
+					// half a block under the sand its top is a whole block up (WATER_AND_BRIDGES_PLAN §1.4, D5)
+					sink.set(x, feet, z, seatBesideWater(model, map.edges(), cx, cy) ? BlockCode.decor(false) : BlockCode.seat());
 					column = Math.max(column, 1);
 					taken |= 1L;
 					from = 1;
@@ -1260,7 +1352,36 @@ public final class WorldPlan {
 					}
 				}
 			}
-			case WATER -> sink.set(x, feet - 1, z, BlockCode.half(this.slot(map, tile, true)));
+			case WATER -> {
+				if (ramp == null) {
+					sink.set(x, feet - 1, z, BlockCode.half(this.slot(map, tile, true)));
+				} else {
+					// A waterfall's cascade cell (WATER_AND_BRIDGES_PLAN §2.1 item 4, D4): the outdoor ramp's half steps a block
+					// lower than on ground, so its first third meets the water's surface below it (a surfer at feet - 0.5)
+					// and its top the water's surface above; the fall's own art on its blocks. The steps are the forced moves'
+					// stairs (the Waterfall move climbs them, the push walks down them).
+					int bx = tx - cx * Scale.CELL_BLOCKS;
+					int bz = ty - cy * Scale.CELL_BLOCKS;
+					int art = this.slot(map, this.hasSlot(map, tile) ? tile : this.ringTile(map, tx, ty), false);
+					if (highRow(ramp.dir(), bx, bz)) {
+						sink.set(x, feet - 1, z, BlockCode.full(art));
+						sink.set(x, feet, z, BlockCode.full(art));
+						sink.set(x, feet + 1, z, BlockCode.step(ramp.dir(), 2));
+						column = 2;
+						taken |= 3L;
+					} else {
+						sink.set(x, feet - 1, z, BlockCode.step(ramp.dir(), 1));
+						MapLayout.Ramp below = layout.ramp(cx - ramp.dir().dx(), cy - ramp.dir().dy());
+						if (below == null || below.dir() != ramp.dir()) {
+							// the foot: a wall open only during a forced move (a surfer without Waterfall stays below)
+							sink.set(x, feet, z, BlockCode.fallWall());
+							sink.set(x, feet + 1, z, BlockCode.fallWall());
+							column = 2;
+							taken |= 3L;
+						}
+					}
+				}
+			}
 			case LEDGE -> {
 				sink.set(x, feet - 1, z, BlockCode.full(this.slot(map, tile, false)));
 				// Walled from its sides (FA8 item 3) but in Gen 2, whose ledge cell is land the hop starts on (G2Map ids: G2_)
@@ -1326,6 +1447,12 @@ public final class WorldPlan {
 		// An invisible wall on the cell's tile-pair edges (CAVES_3D_PLAN §3.2): at feet, else in the block above, where it
 		// still stops a player 1.8 blocks tall.
 		int edges = map.edges().blockSides(cx, cy, tx - cx * Scale.CELL_BLOCKS, ty - cy * Scale.CELL_BLOCKS);
+		MapLayout.Deck deck = layout == null ? null : layout.deck(cx, cy);
+		if (deck != null) {
+			// a deck's sides (WATER_AND_BRIDGES_PLAN §2.2 item 6): closed at the deck toward every neighbour that stands
+			// lower or higher (the game keeps a player on a bridge at the deck's elevation); open along the deck and onto its ends
+			edges |= deckSides(model, layout, cx, cy) & blockTouches(tx - cx * Scale.CELL_BLOCKS, ty - cy * Scale.CELL_BLOCKS);
+		}
 		if (edges != 0) {
 			if ((taken & 1) == 0) {
 				sink.set(x, feet, z, BlockCode.edge(edges));
@@ -1433,8 +1560,14 @@ public final class WorldPlan {
 				underTile = this.hasSlot(map, tile) ? tile : this.ringTile(map, tx, ty);
 			}
 			int under = BlockCode.full(this.slot(map, underTile, false));
-			for (int y = lifted ? Scale.GROUND_Y : base - 1; y < feet - 1; y++) {
+			// under a deck (D9): the fill only up to the floor under it, that floor (water's half block or the ground's
+			// block, the art of the cell beside it), then air up to the deck's slab
+			int top = deck == null ? feet - 1 : base + deck.under() - 1;
+			for (int y = lifted ? Scale.GROUND_Y : base - 1; y < top; y++) {
 				sink.set(x, y, z, under);
+			}
+			if (deck != null) {
+				sink.set(x, top, z, this.underFloor(map, model, layout, deck, tx, ty, cx, cy, tile, underTile));
 			}
 		}
 		if (map.interior()) {
@@ -1448,10 +1581,15 @@ public final class WorldPlan {
 				}
 			}
 			if (feet > base) {
-				// Under a raised floor, rock in the ceiling's art down to the map's floor level.
+				// Under a raised floor, rock in the ceiling's art down to the map's floor level; under a deck (WB7) only up to
+				// the floor under it, then that floor and air
 				int rock = BlockCode.full(this.slot(map, ceiling, false));
-				for (int y = base - 1; y < feet - 1; y++) {
+				int top = deck == null ? feet - 1 : base + deck.under() - 1;
+				for (int y = base - 1; y < top; y++) {
 					sink.set(x, y, z, rock);
+				}
+				if (deck != null) {
+					sink.set(x, top, z, this.underFloor(map, model, layout, deck, tx, ty, cx, cy, tile, ceiling));
 				}
 			}
 			if (light) {
@@ -1475,6 +1613,34 @@ public final class WorldPlan {
 		TileSlots slots = this.tileSlots.get(map.atlasOf(tile) + "|" + map.palette());
 		int index = map.indexOf(tile);
 		return slots != null && index < slots.full.length && slots.full[index] >= 0;
+	}
+
+	/**
+	 * The block of the floor under a deck (WATER_AND_BRIDGES_PLAN §2.2 item 7): water's half block or the ground's block,
+	 * in the art of the cell beside the deck whose floor it is; {@code fallback} a tile with a full slot.
+	 */
+	private int underFloor(PlacedMap map, MapModel model, MapLayout layout, MapLayout.Deck deck, int tx, int ty, int cx, int cy, int tile,
+			int fallback) {
+		int[] beside = underNeighbour(model, layout, cx, cy, deck);
+		int bx = tx + (beside[0] - cx) * Scale.CELL_BLOCKS;
+		int bz = ty + (beside[1] - cy) * Scale.CELL_BLOCKS;
+		boolean water = beside[2] == 1;
+		int besideTile = bx >= 0 && bz >= 0 && bx < model.cellWidth() * Scale.CELL_BLOCKS && bz < model.cellHeight() * Scale.CELL_BLOCKS
+				? model.tile(bx, bz) : tile;
+		if (water && this.hasHalfSlot(map, besideTile)) {
+			return BlockCode.half(this.slot(map, besideTile, true));
+		}
+		return BlockCode.full(this.slot(map, this.hasSlot(map, besideTile) ? besideTile : fallback, false));
+	}
+
+	/** True when the planner collected a half slot (water's) for the tile. */
+	private boolean hasHalfSlot(PlacedMap map, int tile) {
+		if (tile < 0) {
+			return false;
+		}
+		TileSlots slots = this.tileSlots.get(map.atlasOf(tile) + "|" + map.palette());
+		int index = map.indexOf(tile);
+		return slots != null && index < slots.half.length && slots.half[index] >= 0;
 	}
 
 	/** The slot of one of a map's art tiles; a Gen 3 tile is keyed by its quarter page and its index there (MG7). */

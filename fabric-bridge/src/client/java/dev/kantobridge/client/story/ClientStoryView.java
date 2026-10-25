@@ -64,6 +64,7 @@ public final class ClientStoryView {
 	private boolean sentSurf;
 	private boolean sentBike;
 	private boolean sentRun;
+	private boolean sentForced;
 	private @Nullable LocalPlayer sentFor;
 	private Set<String> drawn = Set.of();
 	/** SE3: each drawn Gen 3 cell cell's state (an index into its entry's {@code states}). */
@@ -210,21 +211,23 @@ public final class ClientStoryView {
 		boolean surf = rules.surf();
 		boolean bike = rules.bike();
 		boolean run = rules.run();
+		boolean forced = dev.kantobridge.client.move.MoveController.forcedNow();
 		Set<String> lit = new TreeSet<>(rules.lit());
 		JsonObject message;
 		if (!this.fullSent || player != this.sentFor) {
-			message = StoryStateMessages.full(cells.active(), surf, bike, run, lit);
+			message = StoryStateMessages.full(cells.active(), surf, bike, run, forced, lit);
 		} else {
 			Set<String> add = new TreeSet<>(cells.active());
 			add.removeAll(this.sentActive);
 			Set<String> remove = new TreeSet<>(this.sentActive);
 			remove.removeAll(cells.active());
 			boolean litChanged = !lit.equals(this.sentLit);
-			if (add.isEmpty() && remove.isEmpty() && surf == this.sentSurf && bike == this.sentBike && run == this.sentRun && !litChanged) {
+			if (add.isEmpty() && remove.isEmpty() && surf == this.sentSurf && bike == this.sentBike && run == this.sentRun && forced == this.sentForced
+					&& !litChanged) {
 				return;
 			}
 			message = StoryStateMessages.delta(add, remove, surf != this.sentSurf ? surf : null, bike != this.sentBike ? bike : null,
-					run != this.sentRun ? run : null, litChanged ? lit : null);
+					run != this.sentRun ? run : null, forced != this.sentForced ? forced : null, litChanged ? lit : null);
 		}
 		try {
 			StoryStateMessages.apply(local, message);
@@ -241,6 +244,7 @@ public final class ClientStoryView {
 			this.sentSurf = surf;
 			this.sentBike = bike;
 			this.sentRun = run;
+			this.sentForced = forced;
 			this.sentFor = player;
 			this.relayed++;
 		}

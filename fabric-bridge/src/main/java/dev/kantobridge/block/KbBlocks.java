@@ -56,6 +56,8 @@ public final class KbBlocks {
 	public static EdgeWallBlock EDGE_WALL;
 	/** A wall for bikers only (FIELD_MECHANICS_AUDIT_PLAN §13.8 item 10). */
 	public static BikeWallBlock BIKE_WALL;
+	/** A waterfall's foot wall, open during a forced move (WATER_AND_BRIDGES_PLAN D4). */
+	public static FallWallBlock FALL_WALL;
 	/** The half steps of a cave's stairs (docs/specs/CAVES_3D_PLAN.md §3.4). */
 	public static StepColliderBlock STEP_COLLIDER;
 	public static SeatColliderBlock SEAT_COLLIDER;
@@ -110,6 +112,7 @@ public final class KbBlocks {
 		LEDGE_COLLIDER = register("ledge_collider", new LedgeColliderBlock(invisibleProperties()));
 		EDGE_WALL = register("edge_wall", new EdgeWallBlock(invisibleProperties()));
 		BIKE_WALL = register("bike_wall", new BikeWallBlock(invisibleProperties()));
+		FALL_WALL = register("fall_wall", new FallWallBlock(invisibleProperties()));
 		STEP_COLLIDER = register("step_collider", new StepColliderBlock(invisibleProperties()));
 		SEAT_COLLIDER = register("seat_collider", new SeatColliderBlock(invisibleProperties()));
 		SHAFT_LADDER = register("shaft_ladder", new ShaftLadderBlock(BlockBehaviour.Properties.of().mapColor(MapColor.WOOD).strength(-1.0F, 3_600_000.0F)

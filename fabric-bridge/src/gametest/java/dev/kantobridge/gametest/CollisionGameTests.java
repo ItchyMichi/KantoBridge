@@ -258,6 +258,68 @@ public class CollisionGameTests implements FabricGameTest {
 	}
 
 	@GameTest(template = EMPTY_STRUCTURE)
+	public void aDeckKeepsItsWalkersAndLetsThePathPassUnder(GameTestHelper helper) {
+		// WATER_AND_BRIDGES_PLAN §2.2 items 6, 7: a deck cell (2 x 2 blocks) as the builder puts it: the path's ground at
+		// feet - 1, two blocks of air, the deck's slab, its sides walled at the deck toward the lower path; a walker on the
+		// deck can't step off sideways, one on the path walks under it
+		ServerLevel level = helper.getLevel();
+		for (int x = 1; x <= 6; x++) {
+			for (int z = 1; z <= 2; z++) {
+				helper.setBlock(new BlockPos(x, 1, z), Blocks.STONE); // the path, feet at y 2
+			}
+		}
+		for (int x = 3; x <= 4; x++) {
+			for (int z = 1; z <= 2; z++) {
+				helper.setBlock(new BlockPos(x, 4, z), Blocks.STONE); // the deck's slab, feet at y 5
+				int sides = (x == 3 ? EdgeWallBlock.SIDE_WEST : EdgeWallBlock.SIDE_EAST);
+				helper.setBlock(new BlockPos(x, 5, z), KbBlocks.EDGE_WALL.withSides(sides));
+			}
+		}
+		BlockPos deck = helper.absolutePos(new BlockPos(3, 5, 1));
+		BlockPos path = helper.absolutePos(new BlockPos(1, 2, 1));
+		MockPlayers.with(helper, player -> {
+			player.setPos(deck.getX() + 1.0, deck.getY(), deck.getZ() + 1.0);
+			player.move(MoverType.SELF, new Vec3(-2.0, 0, 0));
+			helper.assertTrue(player.getX() > deck.getX() - 0.1 && player.getY() >= deck.getY() - 0.01, "a walker stepped off a deck");
+			player.setPos(path.getX() + 0.5, path.getY(), path.getZ() + 0.5);
+			player.move(MoverType.SELF, new Vec3(5.0, 0, 0));
+			helper.assertTrue(player.getX() > path.getX() + 5.0 && Math.abs(player.getY() - path.getY()) < 0.01, "the path doesn't pass under the deck");
+		});
+		helper.succeed();
+	}
+
+	@GameTest(template = EMPTY_STRUCTURE)
+	public void aWaterfallsFootOpensOnlyForAForcedMove(GameTestHelper helper) {
+		// WATER_AND_BRIDGES_PLAN D4: a cascade's foot as the builder puts it: water's half block west, the foot's low row of
+		// half steps climbing east from the water's surface, the fall wall over them; a surfer without a forced move stays
+		// below, a forced one climbs, and is walked back down
+		BlockPos rel = new BlockPos(3, 2, 3);
+		helper.setBlock(rel.below().west(), Blocks.STONE_SLAB);
+		helper.setBlock(rel.below(), KbBlocks.STEP_COLLIDER.defaultBlockState().setValue(StepColliderBlock.FACING, Direction.EAST)
+				.setValue(StepColliderBlock.STAGE, StepColliderBlock.Stage.LOW3));
+		helper.setBlock(rel, KbBlocks.FALL_WALL.defaultBlockState());
+		helper.setBlock(rel.above(), KbBlocks.FALL_WALL.defaultBlockState());
+		BlockPos abs = helper.absolutePos(rel);
+		ServerLevel level = helper.getLevel();
+		helper.assertTrue(level.getBlockState(abs).getCollisionShape(level, abs, CollisionContext.empty()).isEmpty(), "open to pathfinding");
+		MockPlayers.with(helper, player -> {
+			StoryStates.of(player).setForced(false);
+			player.setPos(abs.getX() - 0.5, abs.getY() - 0.5, abs.getZ() + 0.5);
+			player.move(MoverType.SELF, new Vec3(1.0, 0, 0));
+			helper.assertTrue(player.getX() < abs.getX(), "a surfer climbed a waterfall without the move");
+			StoryStates.of(player).setForced(true);
+			player.setPos(abs.getX() - 0.5, abs.getY() - 0.5, abs.getZ() + 0.5);
+			player.move(MoverType.SELF, new Vec3(0, -0.1, 0)); // on the water's surface: a step up needs the ground under it
+			player.move(MoverType.SELF, new Vec3(1.0, 0, 0));
+			helper.assertTrue(player.getX() > abs.getX() + 0.2 && player.getY() > abs.getY() - 0.5, "a forced move didn't climb the foot");
+			player.move(MoverType.SELF, new Vec3(-1.5, -1.0, 0));
+			helper.assertTrue(player.getX() < abs.getX(), "a forced move didn't come back down");
+			StoryStates.of(player).clear();
+		});
+		helper.succeed();
+	}
+
+	@GameTest(template = EMPTY_STRUCTURE)
 	public void aStoryCellWithSidesKeepsItsStoryCollision(GameTestHelper helper) {
 		// CAVES_3D_PLAN §3.2: where neither feet nor the block above is free for an edge wall, the story block carries it.
 		BlockPos abs = storyCell(helper, new BlockPos(3, 2, 3), StoryCellType.BOULDER_AREA);

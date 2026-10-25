@@ -155,6 +155,7 @@ final class PlanPhysics {
 			case BlockCode.KIND_EDGE -> EdgeWallBlock.shape(value);
 			case BlockCode.KIND_STEP -> StepColliderBlock.shape(CodeStates.downhill(value), StepColliderBlock.Stage.of(value >> 2 & 3));
 			case BlockCode.KIND_SEAT -> SeatColliderBlock.SHAPE;
+			case BlockCode.KIND_FALL_WALL -> state.forced() ? Shapes.empty() : Shapes.block();
 			case BlockCode.KIND_DECOR -> (value & 4) != 0 ? Shapes.block() : Shapes.empty();
 			default -> Shapes.empty();
 		};

@@ -50,8 +50,10 @@ public final class BlockCode {
 	public static final int KIND_SEAT = 14;
 	/** A wall for bikers only (FA8 item 10, {@code BikeWallBlock}). */
 	public static final int KIND_BIKE_WALL = 15;
+	/** A waterfall's foot wall, open during a forced move (WATER_AND_BRIDGES_PLAN D4, {@code FallWallBlock}). */
+	public static final int KIND_FALL_WALL = 16;
 	/** One past the highest kind. */
-	public static final int KINDS = 16;
+	public static final int KINDS = 17;
 
 	private static final int SHIFT = 24;
 	private static final int VALUE_MASK = (1 << SHIFT) - 1;
@@ -111,6 +113,11 @@ public final class BlockCode {
 	/** A wall for bikers only. */
 	public static int bikeWall() {
 		return KIND_BIKE_WALL << SHIFT;
+	}
+
+	/** A waterfall's foot wall (D4). */
+	public static int fallWall() {
+		return KIND_FALL_WALL << SHIFT;
 	}
 
 	/** A ledge collider; {@code dir} is the Gen 1 hop direction: 0 down, 1 up, 2 left, 3 right. */

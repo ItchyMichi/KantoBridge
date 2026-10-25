@@ -30,6 +30,7 @@ public final class StoryState {
 	private boolean surf;
 	private boolean bike;
 	private boolean run;
+	private boolean forced;
 
 	/** True when a story cell of this type and key closes for this player. */
 	public boolean blocks(String key, StoryCellType type) {
@@ -107,6 +108,18 @@ public final class StoryState {
 		this.run = run;
 	}
 
+	/**
+	 * WATER_AND_BRIDGES_PLAN §2.1 item 4 (D4): the client walks the player in a forced move (a waterfall climbed or descended,
+	 * the push of a current): the fall walls open.
+	 */
+	public boolean forced() {
+		return this.forced;
+	}
+
+	public void setForced(boolean forced) {
+		this.forced = forced;
+	}
+
 	// ---- lit maps ----
 
 	public boolean isLit(String map) {
@@ -130,5 +143,6 @@ public final class StoryState {
 		this.surf = false;
 		this.bike = false;
 		this.run = false;
+		this.forced = false;
 	}
 }

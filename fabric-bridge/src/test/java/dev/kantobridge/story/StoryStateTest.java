@@ -108,6 +108,26 @@ class StoryStateTest {
 	}
 
 	@Test
+	void fallWallsOpenOnlyForAForcedMove() {
+		// WATER_AND_BRIDGES_PLAN D4: a waterfall's foot
+		BlockPos pos = new BlockPos(10, 65, 20);
+		AABB beside = new AABB(9.4, 64, 20.2, 10.0, 65.8, 20.8);
+		AABB inside = new AABB(10.2, 64, 20.2, 10.8, 65.8, 20.8);
+		assertTrue(dev.kantobridge.block.FallWallBlock.walls(false, beside, pos), "a surfer is stopped");
+		assertFalse(dev.kantobridge.block.FallWallBlock.walls(true, beside, pos), "a forced move isn't");
+		assertFalse(dev.kantobridge.block.FallWallBlock.walls(false, inside, pos), "a box already there is let out");
+	}
+
+	@Test
+	void theForcedFlagTravelsInAStoryState() throws Exception {
+		StoryState state = new StoryState();
+		StoryStateMessages.apply(state, StoryStateMessages.delta(null, null, null, null, null, true, null));
+		assertTrue(state.forced());
+		StoryStateMessages.apply(state, StoryStateMessages.full(java.util.List.of(), false, false, false, java.util.List.of()));
+		assertFalse(state.forced(), "a full state without it: no forced move");
+	}
+
+	@Test
 	void ledgesWallEveryoneButTheHopper() {
 		BlockPos pos = new BlockPos(10, 64, 20);
 		AABB uphill = new AABB(10.2, 64, 19.4, 10.8, 65.8, 20.0);
