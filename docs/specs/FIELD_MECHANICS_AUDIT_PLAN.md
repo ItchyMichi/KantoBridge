@@ -760,7 +760,12 @@ shaft by design (H5). Videos on the volume: `/workspace/videos/kanto-bridge-{blu
   planned in its own session (Q4).
 - **Bikes on Fortree's bridges and Pacifidlog's logs** (the bridges depend on the player's elevation, the logs are story
   cells).
-- **A world rebuild**: the builder's fixes reach a world when it is built again; the spots above ran on LandSky3 (built
-  2026-10-23), so they show the bridge's and the client's fixes, not the builder's.
+- ~~A world rebuild~~ **done 2026-10-25**: world **LandSky4** (LandSky3's recipe: models table v14, every outdoor map,
+  chained, 20 GB heap; kb-dev50, 50 minutes), all three regions `build OK` with the same warnings as LandSky3 (Kanto 0,
+  Hoenn 7, Johto 3). Blocks, LandSky3 -> LandSky4: edge walls Kanto 2,548 -> 4,596, Hoenn 1,839 -> 7,046, Johto 6,120 ->
+  11,406; Johto's ledges 5,232 -> 10,792 (two-facing). Real-client spots on LandSky4: Blue 11 of 11, Crystal 12 of 13
+  (the Ice Path ladder, as before), Emerald **29 of 29** (Artisan Cave's ladder now passes). Videos
+  `/workspace/videos/kanto-bridge-{blue,crystal,emerald}-field-spots-sky4-20261025.mp4`; FA8's LandSky3 results kept
+  in `/workspace/videos/landscape/spots_landsky3_fa8/`.
 - Small ones seen on the way: Lavaridge's B1F pop-up lands over a sand hole the builder draws as a drop (the client falls
   through, one replay row); an Emerald Dig shows a fade the bridge names `script` before the `dig` warp.

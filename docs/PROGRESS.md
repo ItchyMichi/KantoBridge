@@ -3505,8 +3505,8 @@ Emerald, then Crystal; the heights fixes that need no review last.
 - **Blue:** the builder's fixes only.
 - **Left for later, on purpose:** the seams between raised maps and the cliffs with no ramp (the levels pipeline's
   ragged seams and open loops: they need its stair tables and the user's review of pictures); the Mach Bike's speed and
-  the Acro tricks, rails and bumpy slopes (the bike feature); Fortree's bridges and Pacifidlog's logs for bikes; a world
-  rebuild to put the builder's fixes in a playable world (the parity numbers are the planned world's).
+  the Acro tricks, rails and bumpy slopes (the bike feature); Fortree's bridges and Pacifidlog's logs for bikes. (The world
+  rebuild that was here is done: below.)
 - **Shown:** parity on the planned world, walking A (audit -> now): Blue 1,225 -> 3, Crystal 5,677 -> 146, Emerald 2,722
   -> 277 (166 of them rails, the bike feature's); surfing A 11 -> 3, 154 -> 0, 440 -> 76; B unchanged but Crystal's 1,578
   -> 267 (the ledge hops). Real engine: Emerald's warp sweep 1,091 rows 0 C 0 D, its replay 1,075/1,077; ash grass
@@ -3517,6 +3517,10 @@ Emerald, then Crystal; the heights fixes that need no review last.
   the new `bikeWallsStopOnlyAPlayerOnABike` (run alone; inside the full check one build test timed out under load, "build
   still running", and passed alone); JUnit in package chunks 1,445 tests, 1 failed: the old `KbPackReloadTest`. Two Gen 2
   build GameTests now allow the closed west border's wall plate on the town's first column.
+- **World rebuilt (2026-10-25, kb-dev50):** world LandSky4 (LandSky3's recipe) with the builder's fixes; all three
+  regions build OK, the same warnings (0 / 7 / 3); edge walls Kanto 2,548 -> 4,596, Hoenn 1,839 -> 7,046, Johto 6,120 ->
+  11,406, Johto's ledges 5,232 -> 10,792. Real-client spots on LandSky4: Blue 11/11, Crystal 12/13 (Ice Path's ladder),
+  Emerald 29/29. Videos `/workspace/videos/kanto-bridge-*-field-spots-sky4-20261025.mp4`. Plan §13.10.
 
 ## Field mechanics audit: FA0–FA7 (2026-10-24/25, specs/FIELD_MECHANICS_AUDIT_PLAN.md §13)
 
