@@ -20,6 +20,9 @@
 
 local Observe = {}
 
+-- Logic steps a field move's departure mark waits for its warp's fade (a minute: the used-move text first)
+Observe.DEPARTURE_STEPS = 3600
+
 -- The boot screens that belong to a NEW GAME's intro (src/core/Game2.lua:277-310;
 -- OakSpeech's steps push them, src/ui/gen2/OakSpeech.lua:219-254).
 Observe.INTRO_SCREENS = { Gen2OakSpeech = true, Gen2GenderSelect = true, Gen2NamePick = true,
@@ -68,7 +71,8 @@ function Observe.install(b)
   -- push under the player (Permissions.currentDirection, doorForcedDirection,
   -- Permissions.lua:135-160), a latched direction on ice (turningDirection is
   -- also set by every ordinary held step, so it counts only on ice, as
-  -- acceptsMenuInput asks, :1567-1578), the Cycling Road's roll (downhill).
+  -- acceptsMenuInput asks, :1567-1578). The Cycling Road's roll is no forced move (FA8 item 13, K4): any held
+  -- direction wins over it (Bike.forcedDirection, Bike.lua:139-143), so steps go on; f.slope names it, as Gen 1's.
   local function forced(w)
     local P = b.w2("Permissions")
     local okC, coll = b.method(w, "playerCollision")
@@ -77,8 +81,26 @@ function Observe.install(b)
       if b.ask(P, "doorForcedDirection", nil, coll) ~= nil then return true end
       if w.turningDirection ~= nil and b.ask(P, "isIce", false, coll) == true then return true end
     end
-    local ok, down = b.method(w, "downhill")
-    return ok and down == true
+    return false
+  end
+
+  -- A Strength push under way (FA8 item 15, K5): World:tryPushBoulder (World.lua:6190-6214) steps a strength boulder
+  -- beside the player the way the player walked, and the player bumps. Its direction, or nil: the step driver then
+  -- answers the step "push" (act/kb_move.lua), as Gen 1's.
+  local STEP = { up = { 0, -1 }, down = { 0, 1 }, left = { -1, 0 }, right = { 1, 0 } }
+  local function boulderPush(w, p)
+    if not w.strengthActive then return nil end
+    local World = b.w2("World")
+    for _, npc in ipairs(type(w.npcs) == "table" and w.npcs or {}) do
+      local d = type(npc) == "table" and npc.moving and STEP[npc.stepDir] or nil
+      if d and b.ask(World, "isStrengthBoulder", false, npc) == true then
+        local nx, ny = tonumber(npc.cellX), tonumber(npc.cellY)
+        if (nx == p.cellX + d[1] and ny == p.cellY + d[2]) or (nx == p.cellX + 2 * d[1] and ny == p.cellY + 2 * d[2]) then
+          return npc.stepDir
+        end
+      end
+    end
+    return nil
   end
 
   -- A script, a field animation or a pending scene holds the field
@@ -116,12 +138,29 @@ function Observe.install(b)
     f.ledge = p.jumping == true
     f.surf = w.playerState == "surf" or w.playerState == "surf_pika"
     f.bike = w.playerState == "bike"
+    -- on the Cycling Road's downhill (ENGINE_DOWNHILL, World:downhill): the step driver names its roll "slope"
+    local okD, down = b.method(w, "downhill")
+    f.slope = (f.bike and okD and down == true) and true or false
     local darkSet = type(b.darkMapSet) == "function" and b.darkMapSet() or {}
     f.darkMap = darkSet[f.map] == true
     f.flashLit = type(b.flashLit) == "function" and b.flashLit() or false
     f.playerScripted = on(w.moveState)
     f.forcedPhase = forced(w) or nil
+    f.boulderPush = boulderPush(w, p)
     f.transitioning = on(w.mapSetup) or on(w.pendingWarp)
+    -- a field move's warp from Minecraft (fieldmoves.lua mark): its kind until its fade starts, then forgotten; a
+    -- move that warps nowhere is forgotten after DEPARTURE_STEPS
+    local st = b.state()
+    local mark = st and st.departure
+    if type(mark) == "table" then
+      mark.steps = (tonumber(mark.steps) or 0) + 1
+      if f.transitioning then
+        mark.seen = true
+      elseif mark.seen or mark.steps > Observe.DEPARTURE_STEPS then
+        st.departure, mark = nil, nil
+      end
+      f.departure = mark and mark.kind or nil
+    end
     f.battle = w.battleActive == true
     f.scripted = scripted(w)
     local top, name = classify(b.adapter.top())

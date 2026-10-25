@@ -68,7 +68,33 @@ def test_forced_movement_is_the_engines_own_kinds_only():
     assert a.facts()["forcedPhase"] is True
     a.E.coll(b"TEST_TOWN", 5, 6, 0x00)
     a.E.downhill = True
-    assert a.facts()["forcedPhase"] is True
+    f = a.facts()
+    assert f.get("forcedPhase") is None and f["slope"] is False, "the roll is no forced move (FA8 item 13): steering wins"
+    w.playerState = b"bike"
+    assert a.facts()["slope"] is True, "on the bike downhill: the step driver names the roll slope"
+    a.E.downhill = False
+    assert a.facts()["slope"] is False
+
+
+def test_a_strength_push_names_the_boulders_direction():
+    # FA8 item 15 (K5): World:tryPushBoulder steps the boulder beside the player and the player bumps; observe() names
+    # the push so the step driver answers it "push"
+    a = Adapter2()
+    a.field("TEST_TOWN", 5, 6, "down")
+    w = a.E.game.world
+    boulder = a.lua({"def": {"movement": "STRENGTH_BOULDER", "index": 3}, "moving": True, "stepDir": "down",
+                     "cellX": 5, "cellY": 7})
+    w.npcs = a.lua([])
+    w.npcs[1] = boulder
+    assert a.facts().get("boulderPush") is None, "no Strength in use: no push"
+    w.strengthActive = True
+    assert a.facts()["boulderPush"] == "down"
+    boulder.cellY = 8
+    assert a.facts()["boulderPush"] == "down", "the boulder already on its new cell"
+    boulder.moving = False
+    assert a.facts().get("boulderPush") is None
+    boulder.moving, boulder.cellX = True, 9
+    assert a.facts().get("boulderPush") is None, "a boulder elsewhere is no push of ours"
 
 
 def test_a_dark_map_and_flash():

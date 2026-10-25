@@ -55,6 +55,8 @@ local Warp = {}
 Warp.KINDS = {
   door = true, stairs = true, edge = true, hole = true, pad = true, fly = true, teleport = true,
   dig = true, rope = true, blackout = true, script = true, elevator = true,
+  -- FA0 (FIELD_MECHANICS_AUDIT_PLAN D2), sent from FA8: Gen 3's ladders, escalators, Dive and emerging
+  ladder = true, escalator = true, dive = true,
 }
 Warp.NOT_WARPS = { connection = true, reload = true, boot = true }
 -- logic steps a started warp may take before an arrival is sent from the
@@ -149,7 +151,9 @@ function Warp.new(opts)
     if ev.warped and not current then
       -- a script warp the engine announces as it starts (Gen 3) may be a warp.take's; a warp-table warp never is
       local kind = Warp.departureKind(ev.warped)
-      start(kind, kind == "script")
+      -- Gen 3's step warps the engine requests (ladders, arrows) now carry their own kind: a pending warp.take still
+      -- claims them (departure.request, game3/move.lua warpDeparture)
+      start(kind, kind == "script" or (expected ~= nil and type(ev.warped) == "table" and ev.warped.request == true))
     end
     if ev.blackout and not current then start("blackout") end
     if not f.transitioning then tail = false end

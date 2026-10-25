@@ -266,7 +266,7 @@ function FakeEngine3.new(opts)
   -- Metatile behaviours: made-up numbers, engine-style names (mb.lua:83-85)
   E.MB_IDS = {
     MB_NORMAL = 0, MB_TEST_DOOR = 1, MB_TEST_EXIT = 2, MB_TEST_PAD = 3, MB_TEST_HOLE = 4, MB_TEST_STAIRS = 5,
-    MB_TEST_ARROW = 6, MB_COUNTER = 7,
+    MB_TEST_ARROW = 6, MB_COUNTER = 7, MB_LADDER = 8, MB_AQUA_HIDEOUT_WARP = 9, MB_CRACKED_FLOOR_HOLE = 10,
   }
   local names = {}
   for name, id in pairs(E.MB_IDS) do names[id] = name end

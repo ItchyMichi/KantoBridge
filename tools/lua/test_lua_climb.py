@@ -183,6 +183,23 @@ def test_a_script_warp_the_engine_announces_is_the_takes():
         ("start", "script", None)], "with no take waiting, a script warp is just that"
 
 
+def test_a_requested_warp_on_a_ladder_tile_is_still_the_takes():
+    # FA8 item 4: Gen 3's requested step warps carry their tile's kind (a ladder's: ladder) with request = true; a take
+    # waiting claims it all the same, and with none waiting it keeps its own kind
+    t = Tracker()
+    t.t.expect(b"stairs", 7, 2)
+    assert t.step({"warped": {"kind": "ladder", "request": True, "map": "EM_TEST_CAVE"}}, transitioning=True) == [
+        ("start", "stairs", 7)]
+    assert t.step({"entered": [{"map": "EM_TEST_CAVE_B1F", "via": "warp"}]}, map="EM_TEST_CAVE_B1F", x=3, y=4) == [
+        ("arrive", "stairs", 7)]
+    assert t.step({"warped": {"kind": "ladder", "request": True, "map": "EM_TEST_CAVE_B1F"}}, transitioning=True) == [
+        ("start", "ladder", None)]
+    t2 = Tracker()
+    t2.t.expect(b"stairs", 8, 2)
+    assert t2.step({"warped": {"kind": "door", "map": "EM_TEST_CAVE"}}, transitioning=True) == [
+        ("start", "door", None)], "a warp-table warp (no request) never is a take's"
+
+
 def test_the_main_loop_sends_the_takes_warp_as_its_answer():
     # Through gen1-bridge's main.lua (the simulated route game: mod.world's queueScript on the fake script runner):
     # the take's warp.taken and both its warp messages go out with the take's re (the H6 pilot found them dropped)

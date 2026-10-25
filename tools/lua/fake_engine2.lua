@@ -865,6 +865,8 @@ function FakeEngine2.new(opts)
   local World = {}
   World.__index = World
   E.World = World
+  -- World.isStrengthBoulder (World.lua:6176-6179): the made-up movement name here
+  function World.isStrengthBoulder(npc) return type(npc) == "table" and type(npc.def) == "table" and npc.def.movement == "STRENGTH_BOULDER" end
   function World.new(mapId, cx, cy, facing, save)
     local w = setmetatable({ game = E.game, npcs = {}, blockEdits = {}, objectMasks = {}, maskScripted = {},
                              mapSetup = nil, pendingWarp = nil,

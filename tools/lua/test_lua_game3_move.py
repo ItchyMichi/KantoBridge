@@ -198,16 +198,40 @@ def test_no_departure_outside_the_field():
     assert departure(a) is None
 
 
-def test_a_requested_warp_is_a_script_warp():
-    # Warp.request (a script's or a mod's warp: a cave shaft's take, HEIGHTS_ALL_GAMES_PLAN W3) announces kind "warp";
-    # the warp table's own warps say door, stairs, fall, ...: only the first is a script warp, whatever the cells say
+def test_a_requested_warp_is_a_script_warp_unless_it_stands_on_a_warp_tile():
+    # Warp.request (a script's or a mod's warp, and the step warps the engine hands it: ladders, cave doors, arrows)
+    # announces kind "warp": the tile under the player names it, else a script warp (never the tile in front: a
+    # script's warp facing a door is no door's). request marks it for a cave shaft's take (HEIGHTS_ALL_GAMES_PLAN W3).
     a = Adapter3()
     a.field("EM_TEST_HOUSE", 4, 5, "up")
     a.E.behavior(4, 4, b"MB_TEST_STAIRS")
-    requested = plain(a.eng.warpDeparture(a.lua({"warp": {"kind": "warp", "map": "EM_TEST_TOWN", "x": 1, "y": 1}})))
-    assert requested["kind"] == "script"
-    stairs = plain(a.eng.warpDeparture(a.lua({"warp": {"kind": "stairs", "map": "EM_TEST_TOWN", "x": 1, "y": 1}})))
-    assert stairs["kind"] == "stairs"
+    warp = lambda kind: plain(a.eng.warpDeparture(a.lua({"warp": {"kind": kind, "map": "EM_TEST_TOWN", "x": 1, "y": 1}})))  # noqa: E731
+    requested = warp("warp")
+    assert requested["kind"] == "script" and requested["request"] is True
+    assert warp("stairs")["kind"] == "stairs" and "request" not in warp("stairs")
+    a.E.behavior(4, 5, b"MB_LADDER")
+    assert warp("warp")["kind"] == "ladder" and warp("warp")["request"] is True
+
+
+@pytest.mark.parametrize("under, engine_kind, kind", [
+    ("MB_LADDER", "warp", "ladder"),                # Emerald's own behaviours by the engine's names (FA8 item 4)
+    ("MB_AQUA_HIDEOUT_WARP", "rse_teleport_tile", "pad"),
+    ("MB_CRACKED_FLOOR_HOLE", "fall", "hole"),
+    (None, "fall", "hole"),                         # the engine's names where no tile says
+    (None, "dive", "dive"),
+    (None, "escalator", "escalator"),
+    (None, "escape_rope", "rope"),
+    (None, "lavaridge_b1f", "pad"),
+    ("MB_TEST_PAD", "teleport", "pad"),             # the tile first
+    (None, "something_new", "door"),
+])
+def test_warp_departure_kinds_from_emeralds_behaviours_and_the_engines_names(under, engine_kind, kind):
+    a = Adapter3()
+    a.field("EM_TEST_HOUSE", 4, 5, "up")
+    if under:
+        a.E.behavior(4, 5, under.encode())
+    d = plain(a.eng.warpDeparture(a.lua({"warp": {"kind": engine_kind, "map": "EM_TEST_TOWN", "x": 1, "y": 1}})))
+    assert d["kind"] == kind
 
 
 # ------------------------------------------------------------ interaction (§4.4)

@@ -77,7 +77,7 @@ def test_button_down():
 
 
 @pytest.mark.parametrize("under, ahead, kind", [
-    (0x71, None, "door"), (0x7b, None, "door"), (0x7a, None, "stairs"), (0x72, None, "stairs"), (0x7c, None, "pad"),
+    (0x71, None, "door"), (0x7b, None, "door"), (0x7a, None, "stairs"), (0x72, None, "ladder"), (0x7c, None, "pad"),
     (0x60, None, "hole"), (0x70, None, "edge"), (0x7e, None, "edge"), (None, 0x71, "door"), (None, None, "door"),
 ])
 def test_the_warp_kind_comes_from_the_coll_byte(under, ahead, kind):

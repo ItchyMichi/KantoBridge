@@ -16,6 +16,23 @@
 local Move = {}
 
 local DELTA = { up = { 0, -1 }, down = { 0, 1 }, left = { -1, 0 }, right = { 1, 0 } }
+
+-- The protocol's warp kinds for Emerald's warp behaviours (src/core/game3/constants/emerald/metatile_behaviors.lua),
+-- by name, MB_ prefix off (FIELD_MECHANICS_AUDIT_PLAN §13.8 item 4, D2).
+local BEHAVIOR_KINDS = {
+  LADDER = "ladder", NON_ANIMATED_DOOR = "door", WATER_DOOR = "door",
+  EAST_ARROW_WARP = "edge", WEST_ARROW_WARP = "edge", NORTH_ARROW_WARP = "edge", SOUTH_ARROW_WARP = "edge",
+  WATER_SOUTH_ARROW_WARP = "edge", DEEP_SOUTH_WARP = "edge",
+  AQUA_HIDEOUT_WARP = "pad", MOSSDEEP_GYM_WARP = "pad", BATTLE_PYRAMID_WARP = "pad", LAVARIDGE_GYM_B1F_WARP = "pad",
+  MT_PYRE_HOLE = "hole", CRACKED_FLOOR_HOLE = "hole", LAVARIDGE_GYM_1F_WARP = "hole",
+  UP_ESCALATOR = "escalator", DOWN_ESCALATOR = "escalator",
+}
+-- The engine's announced kinds (warp.lua announce) the protocol names otherwise; "warp" is a request (above).
+local ENGINE_KINDS = {
+  door = "door", exit_door = "door", escalator = "escalator", stairs = "stairs", teleport = "teleport",
+  escape_rope = "rope", fall = "hole", dive = "dive", lavaridge_b1f = "pad", rse_teleport_tile = "pad",
+  rse_spin_exit = "pad", rse_mossdeep_gym = "pad",
+}
 -- Gen 3's blocked reasons -> player.blocked's (protocol/messages/player.blocked.schema.json)
 Move.REASONS = { bounds = "bounds", tile = "tile", elevation = "tile", water = "tile", entity = "entity",
                  rotating_gate = "tile", acro = "tile" }
@@ -99,6 +116,7 @@ function Move.install(b)
 
   -- ---- warps
 
+
   -- Where a warp the player is taking leaves from, as the protocol's warp
   -- kinds, read from the metatile behaviours (collision.lua:586-662) under
   -- the player and in front: player.warped fires as the warp starts
@@ -111,9 +129,15 @@ function Move.install(b)
     local x, y, facing = P.cellX, P.cellY, P.facing
     local out = { map = type(Map) == "table" and b.symbol(Map.current) and Map.current or nil, x = x, y = y,
                   facing = facing }
+    local MB = b.g3("mb")
     local function kindAt(cx, cy)
       local beh = b.ask(C, "behavior", nil, cx, cy)
       if beh == nil then return nil end
+      -- Emerald's own warp behaviours by the engine's names (mb.lua nameOf; FA8 item 4, K1): the FRLG predicates
+      -- below never match them
+      local name = type(MB) == "table" and b.ask(MB, "nameOf", nil, beh) or nil
+      local byName = type(name) == "string" and BEHAVIOR_KINDS[(name:gsub("^MB_", ""))] or nil
+      if byName then return byName end
       if b.ask(C, "isFallWarp", false, beh) then return "hole" end
       if b.ask(C, "isWarpPad", false, beh) then return "pad" end
       if b.ask(C, "isStairWarpBehavior", false, beh) then return "stairs" end
@@ -121,15 +145,26 @@ function Move.install(b)
       if b.ask(C, "isWarpDoor", false, beh) or b.ask(C, "isWarpMetatileBehavior", false, beh) then return "door" end
       return nil
     end
-    local kind = (type(x) == "number" and type(y) == "number") and kindAt(x, y) or nil
+    local under = (type(x) == "number" and type(y) == "number") and kindAt(x, y) or nil
+    local kind = under
     local d = DELTA[facing]
     if not kind and d and type(x) == "number" then kind = kindAt(x + d[1], y + d[2]) end
+    -- The engine's own kind (announce, src/core/game3/warp.lua:55): door, escalator, fall, dive, ... A warp a
+    -- script or a mod asked for, and the step warps the engine hands to Warp.request (ladders, cave doors, arrows:
+    -- collision.lua:1553), announce "warp": the behaviour's kind then, else a script warp. Either may be a cave
+    -- shaft's take (act/kb_climb.lua, docs/specs/HEIGHTS_ALL_GAMES_PLAN.md W3): out.request lets the warp tracker
+    -- match it.
+    local engineKind = type(payload) == "table" and type(payload.warp) == "table" and payload.warp.kind or nil
+    if engineKind == "warp" then
+      -- a step warp stands on its tile (a ladder, a cave door, an arrow); a script's warp facing a door is no door's
+      out.request = true
+      kind = under or "script"
+    elseif not kind and ENGINE_KINDS[engineKind] then
+      -- the behaviour first (a pad's tile says pad, whatever path the engine took); the engine's name where there is none
+      kind = ENGINE_KINDS[engineKind]
+    end
     -- MG8: a Wild Routes end's own warps (the way back, a resume onto the route map) are script warps, as Gen 1's
     if type(b.routeOwnWarp) == "function" and b.routeOwnWarp() then kind = "script" end
-    -- A warp a script or a mod asked for (Warp.request announces kind "warp", src/core/game3/warp.lua:1401; the
-    -- warp table's own say door, stairs, fall, ...): a cave shaft's take (act/kb_climb.lua) arrives as one
-    -- (docs/specs/HEIGHTS_ALL_GAMES_PLAN.md W3)
-    if type(payload) == "table" and type(payload.warp) == "table" and payload.warp.kind == "warp" then kind = "script" end
     out.kind = kind or "door"
     return out
   end)

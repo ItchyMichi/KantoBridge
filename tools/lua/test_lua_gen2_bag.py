@@ -209,6 +209,40 @@ def test_field_moves_go_through_the_party_menus_path():
     assert tuple(a.eng.fieldAction(b"cut", a.lua({}))) == (False, b"busy")
 
 
+def test_rock_smash_queues_the_smash_script_as_the_party_menu_does():
+    # FA8 item 14: World:useFieldMove queues nothing that smashes; PartyMenu:useFieldMove queues SmashRockScript with
+    # the rock as the last talked-to object (src/ui/gen2/PartyMenu.lua:457-468)
+    a, w = adapter()
+    mon = a.E.Mon.new(a.E.data, b"TEST_CHIKORITA", 5, a.lua({"moves": [{"id": "ROCK_SMASH", "pp": 15, "maxPp": 15}]}))
+    a.E.game.save.party[1] = mon
+    w.vm = a.lua({"scripts": {}})
+    a.E.FieldMoves.rockSmashFromMenuScript = a.b.eval(
+        "function(std, scripts, special) return { { op = 'refreshmap' }, { op = 'sjump', script = 'SMASH' } } end")
+    a.E.fieldMoveResult = a.lua({"ok": True, "action": "rocksmash", "lastTalked": 4})
+    w.queuedFieldMove = a.lua({"action": "rocksmash"})
+    assert tuple(a.eng.fieldAction(b"rock_smash", a.lua({}))) == (True, b"rock_smash")
+    assert w.queuedFieldMove is None and w.vm.lastTalked == 4
+    assert w.queuedScript[2].script == b"SMASH"
+    a.E.FieldMoves.rockSmashFromMenuScript = a.b.eval("function() return nil end")
+    assert tuple(a.eng.fieldAction(b"rock_smash", a.lua({}))) == (False, b"failed"), "no SmashRockScript: nothing queued"
+
+
+def test_a_field_moves_warp_is_named_by_the_move_until_its_fade():
+    # FA8 item 16 (K11): Dig, Teleport, Fly and the rope from Minecraft mark the warp they set off; observe() reports
+    # the mark as the departure while the fade starts, then forgets it
+    a, w = adapter()
+    mon = a.E.Mon.new(a.E.data, b"TEST_CHIKORITA", 5, a.lua({"moves": [{"id": "DIG", "pp": 10, "maxPp": 10}]}))
+    a.E.game.save.party[1] = mon
+    assert tuple(a.eng.fieldAction(b"dig", a.lua({}))) == (True, b"dig")
+    assert a.facts().get("departure") == "dig"
+    w.mapSetup = a.lua({})
+    assert a.facts().get("departure") == "dig", "still named as the fade starts"
+    w.mapSetup = None
+    assert a.facts().get("departure") is None, "forgotten once the warp is under way and done"
+    assert tuple(a.eng.fieldAction(b"cut", a.lua({}))) == (False, b"no_move")
+    assert a.facts().get("departure") is None
+
+
 def test_field_items_go_through_the_packs_path():
     a, w = adapter()
     i = inv(a)

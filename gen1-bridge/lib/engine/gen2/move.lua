@@ -24,7 +24,7 @@ local DELTA = { up = { 0, -1 }, down = { 0, 1 }, left = { -1, 0 }, right = { 1, 
 -- (carpets, entered by a press in their direction) edges.
 Move.WARP_KINDS = {
   [0x71] = "door", [0x7b] = "door",
-  [0x7a] = "stairs", [0x72] = "stairs",
+  [0x7a] = "stairs", [0x72] = "ladder", -- COLL_LADDER: ladder (FA8 item 16, D2)
   [0x7c] = "pad",
   [0x60] = "hole", [0x68] = "hole",
   [0x70] = "edge", [0x76] = "edge", [0x78] = "edge", [0x7e] = "edge",

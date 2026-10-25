@@ -46,6 +46,29 @@ function Field2.install(b)
     return result
   end
 
+  -- The warp a field move from Minecraft sets off is named by it (FA8 item 16, K11): observe() reports the mark as the
+  -- departure until that warp's fade starts (gen2/observe.lua), as Gen 1's markDeparture does.
+  local MARKS = { dig = "dig", teleport = "teleport", fly = "fly", rope = "rope" }
+  local function mark(kind)
+    local st = b.state()
+    if st and MARKS[kind] then st.departure = { kind = MARKS[kind], steps = 0 } end
+  end
+
+  -- PartyMenu:useFieldMove's Rock Smash branch (src/ui/gen2/PartyMenu.lua:457-468, RockSmashFromMenuScript): the
+  -- world queues nothing that smashes; the menu queues SmashRockScript with the rock as the last talked-to object.
+  local function rockSmash(w, result)
+    w.queuedFieldMove = nil
+    local okS, script = b.call(b.w2("FieldMoves"), "rockSmashFromMenuScript", w.stdScripts, w.vm and w.vm.scripts,
+      function(name)
+        local ok, id = b.method(w, "specialIdNamed", name)
+        return ok and id or nil
+      end)
+    if not (okS and type(script) == "table") then return false end
+    if w.vm then w.vm.lastTalked = result.lastTalked end
+    w.queuedScript = script
+    return true
+  end
+
   def("fieldAction", function(action, opts)
     opts = type(opts) == "table" and opts or {}
     local w = b.ow()
@@ -75,7 +98,10 @@ function Field2.install(b)
     if action == "dig" and opts.item == Field2.ROPE then
       if (tonumber(inventory()[Field2.ROPE]) or 0) < 1 then return false, "no_item" end
       local r = useItem(w, Field2.ROPE)
-      if r == "escape_rope" then return true, "rope" end
+      if r == "escape_rope" then
+        mark("rope")
+        return true, "rope"
+      end
       return false, "not_here"
     end
     local moveId = Field2.MOVES[action]
@@ -90,7 +116,15 @@ function Field2.install(b)
     local ok, result = b.method(w, "useFieldMove", moveId, mon)
     if not ok or type(result) ~= "table" then return false, "failed" end
     if result.ok then
-      if action == "fly" and result.inMenu then return true, "fly_list" end
+      if action == "fly" and result.inMenu then
+        mark("fly")
+        return true, "fly_list"
+      end
+      if result.action == "rocksmash" then
+        if not rockSmash(w, result) then return false, "failed" end
+        return true, action
+      end
+      mark(action)
       return true, action
     end
     if result.badge ~= nil then return false, "no_badge" end
