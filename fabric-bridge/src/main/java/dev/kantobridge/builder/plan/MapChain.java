@@ -40,10 +40,15 @@ public final class MapChain {
 	}
 
 	/**
-	 * A seam: maps {@code a} and {@code b} (a before b by name), its pairs of touching cells, its step (b's level minus a's,
-	 * the commonest), and how many pairs have it.
+	 * A seam: maps {@code a} and {@code b} (a before b by name), its pairs of touching cells, its step (b's level minus a's:
+	 * the commonest over its water pairs where it has any, the sea being the datum, WATER_AND_BRIDGES_PLAN D1; else over
+	 * its walking pairs), how many pairs have it, and how many of its pairs are water.
 	 */
-	public record Seam(String a, String b, int pairs, int step, int atStep) {
+	public record Seam(String a, String b, int pairs, int step, int atStep, int water) {
+		/** A seam with no water pairs. */
+		public Seam(String a, String b, int pairs, int step, int atStep) {
+			this(a, b, pairs, step, atStep, 0);
+		}
 	}
 
 	/** The bases (blocks each surface map's floor stands over the surface), the seams, and the seams a loop leaves open with their step after the chain. */
@@ -64,9 +69,11 @@ public final class MapChain {
 			}
 		}
 		Map<String, Seam> seams = seams(surface);
-		// the spanning forest, the seams with the most pairs first
+		// the spanning forest: the seams the sea crosses first (the sea is the datum, D1: a loop's leftover falls on a land
+		// seam, where a join stair or a mend ramp closes it), then the seams with the most pairs
 		List<Seam> order = new ArrayList<>(seams.values());
-		order.sort(Comparator.comparingInt((Seam s) -> -s.pairs()).thenComparing(Seam::a).thenComparing(Seam::b));
+		order.sort(Comparator.comparingInt((Seam s) -> s.water() > 0 ? 0 : 1).thenComparingInt((Seam s) -> -s.pairs()).thenComparing(Seam::a)
+				.thenComparing(Seam::b));
 		Map<String, String> parent = new HashMap<>();
 		for (PlacedMap m : surface) {
 			parent.put(m.id(), m.id());
@@ -203,6 +210,7 @@ public final class MapChain {
 				}
 				now = now.withCeilings(ceilings);
 			}
+			now = now.keepDecks(layout, base);
 			placed.set(i, new PlacedMap(m.placement(), m.model(), m.edges(), now));
 			out.put(m.id(), now);
 		}
@@ -365,6 +373,7 @@ public final class MapChain {
 				}
 				now = now.withCeilings(ceilings);
 			}
+			now = now.keepDecks(layout, 0);
 			placed.set(i, new PlacedMap(m.placement(), m.model(), m.edges(), now));
 			layouts.put(m.id(), now);
 		}
@@ -441,7 +450,7 @@ public final class MapChain {
 			foot += rise;
 		}
 		PlacedMap lowNow = new PlacedMap(low.placement(), low.model(), low.edges(),
-				MapLayout.flat(low.placement().w(), low.placement().h(), lowLevels, lowRamps));
+				MapLayout.flat(low.placement().w(), low.placement().h(), lowLevels, lowRamps).keepDecks(low.layout(), 0));
 		int rest = climb - (foot - cl.level());
 		if (rest == 0) {
 			return new Join("stair", List.of(lowNow));
@@ -469,7 +478,7 @@ public final class MapChain {
 			step += rise;
 		}
 		PlacedMap highNow = new PlacedMap(high.placement().withY(high.placement().y() - under), high.model(), high.edges(),
-				MapLayout.flat(high.placement().w(), high.placement().h(), highLevels, highRamps));
+				MapLayout.flat(high.placement().w(), high.placement().h(), highLevels, highRamps).keepDecks(high.layout(), under));
 		return new Join("stair", List.of(lowNow, highNow));
 	}
 
@@ -643,6 +652,7 @@ public final class MapChain {
 			}
 			boolean swapped = a != surface.get((int) (e.getKey() >> 32));
 			Map<Integer, Integer> diffs = new TreeMap<>();
+			Map<Integer, Integer> wet = new TreeMap<>();
 			int n = 0;
 			for (long cells : e.getValue()) {
 				int ca = (int) (cells >> 32);
@@ -664,6 +674,9 @@ public final class MapChain {
 				int dz = Integer.signum((b.placement().z() + cb / b.placement().w() * c) - (a.placement().z() + ca / a.placement().w() * c));
 				int diff = edgeLevel(b, cb, -dx, -dz) - edgeLevel(a, ca, dx, dz);
 				diffs.merge(diff, 1, Integer::sum);
+				if (water) {
+					wet.merge(diff, 1, Integer::sum);
+				}
 				n++;
 			}
 			if (n == 0) {
@@ -671,14 +684,16 @@ public final class MapChain {
 			}
 			int step = 0;
 			int best = -1;
-			for (Map.Entry<Integer, Integer> d : diffs.entrySet()) {
+			int waterPairs = wet.values().stream().mapToInt(Integer::intValue).sum();
+			// the water pairs decide where there are any (the sea meets exactly; the walkers left apart are ragged, mended)
+			for (Map.Entry<Integer, Integer> d : (waterPairs > 0 ? wet : diffs).entrySet()) {
 				// the commonest; on a tie the nearest to level, then the lower
 				if (d.getValue() > best || d.getValue() == best && Math.abs(d.getKey()) < Math.abs(step)) {
 					step = d.getKey();
 					best = d.getValue();
 				}
 			}
-			out.put(a.id() + "|" + b.id(), new Seam(a.id(), b.id(), n, step, best));
+			out.put(a.id() + "|" + b.id(), new Seam(a.id(), b.id(), n, step, waterPairs > 0 ? diffs.get(step) : best, waterPairs));
 		}
 		return out;
 	}

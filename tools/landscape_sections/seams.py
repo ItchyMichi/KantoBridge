@@ -94,10 +94,12 @@ def edge_level(m, x, y, toward):
 
 
 def step(pairs):
-    """A seam's step: the commonest difference (on a tie the smallest), and how many pairs have it."""
-    counts = Counter(d for d, _, _, _ in pairs)
+    """A seam's step: the commonest difference over its water pairs where it has any (the sea is the datum,
+    WATER_AND_BRIDGES_PLAN D1), else over its walking pairs (on a tie the smallest), and how many pairs have it."""
+    wet = [p for p in pairs if p[1] == "water"]
+    counts = Counter(d for d, _, _, _ in (wet or pairs))
     best = max(counts.items(), key=lambda kv: (kv[1], -abs(kv[0]), -kv[0]))
-    return best[0], best[1]
+    return best[0], sum(1 for d, _, _, _ in pairs if d == best[0])
 
 
 def chain(maps, found):
@@ -112,7 +114,8 @@ def chain(maps, found):
         return m
 
     tree = []
-    for (a, b), pairs in sorted(found.items(), key=lambda kv: (-len(kv[1]), kv[0])):
+    # the seams the sea crosses first (the datum, D1), then by pairs
+    for (a, b), pairs in sorted(found.items(), key=lambda kv: (0 if any(p[1] == "water" for p in kv[1]) else 1, -len(kv[1]), kv[0])):
         ra, rb = root(a), root(b)
         if ra != rb:
             parent[rb] = ra
@@ -180,6 +183,12 @@ def main(argv):
         print(f"  loop open at {r['a']} | {r['b']}: {left:+d} blocks ({r['pairs']} pairs)")
     ragged = [r for r in rows if not r["loop"] and r["at_step"] < r["pairs"]]
     print(f"seams whose cells don't all meet even chained: {len(ragged)}")
+    apart = [(r, sum(1 for d, k, _, _ in found[(r["a"], r["b"])] if k == "water" and d + bases[r["b"]] - bases[r["a"]] != 0))
+             for r in rows]
+    apart = [(r, n) for r, n in apart if n]
+    print(f"water pairs apart after the chain: {sum(n for _, n in apart)} on {len(apart)} seams")
+    for r, n in apart[:12]:
+        print(f"  {r['a']} | {r['b']}: {n} water pairs apart{' (loop)' if r['loop'] else ''}")
     for r in sorted(ragged, key=lambda r: r["at_step"] - r["pairs"])[:12]:
         off = {d: n for d, n in r["chained"].items() if d}
         print(f"  {r['a']} | {r['b']}: {r['pairs'] - r['at_step']} of {r['pairs']} pairs step {off}")

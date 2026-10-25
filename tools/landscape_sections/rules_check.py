@@ -48,11 +48,15 @@ def pinned_ramps(dump, pins):
         return levels, list(dump.get("ramps", []))
     ramps = {(r[0], r[1]) for r in dump.get("ramps", [])}
     walls = dump.get("walls")
-    for x, y, n in pins:
+    for pin in pins:
+        x, y, n = pin[:3]
+        # a dry pin ([x, y, n, 1], OutdoorLevels.pinned's Pin.dry): its flood stays on its own side of the water's edge
+        dry = len(pin) > 3 and pin[3] == 1
         if not (0 <= x < w and 0 <= y < h) or kinds[y * w + x] == "#":
             continue
         start = y * w + x
         was = levels[start]
+        wet = kinds[start] == "~"
         seen, todo = {start}, [start]
         while todo:
             c = todo.pop()
@@ -61,7 +65,7 @@ def pinned_ramps(dump, pins):
                 nx, ny = c % w + dx, c // w + dy
                 j = ny * w + nx
                 if 0 <= nx < w and 0 <= ny < h and j not in seen and kinds[j] != "#" and levels[j] == was and (nx, ny) not in ramps \
-                        and not (walls and walls[c] & SIDE[(dx, dy)]):
+                        and not (walls and walls[c] & SIDE[(dx, dy)]) and not (dry and (kinds[j] == "~") != wet):
                     seen.add(j)
                     todo.append(j)
     return levels, stairs_with_their_ends(dump, levels)
@@ -119,7 +123,7 @@ def translate(old_dir, table, raw_dir):
     for name, pins in table.get("pins", {}).items():
         old, raw = load(old_dir, name), load(raw_dir, name)
         d = shift(old["levels"], raw["levels"], raw["kinds"]) if old and raw and "kinds" in raw else 0
-        out["pins"][name] = [[x, y, min(MAX_LEVEL, max(0, n + d))] for x, y, n in pins]
+        out["pins"][name] = [[p[0], p[1], min(MAX_LEVEL, max(0, p[2] + d))] + list(p[3:]) for p in pins]
     return out
 
 

@@ -49,6 +49,26 @@ class MapChainTest {
 	}
 
 	@Test
+	void theSeaIsTheDatum() {
+		// Slateport | Route 110 in small: A's ground at its east edge stands 3 over its sea, B's level with its own; the water
+		// pairs (one) decide the step over the walking pairs (three), and the walkers left apart are a ragged seam
+		MapLayout quay = MapLayout.flat(4, 4, new int[] {
+				0, 0, 0, 0,
+				3, 3, 3, 3,
+				3, 3, 3, 3,
+				3, 3, 3, 3}, List.of());
+		List<PlacedMap> placed = new ArrayList<>(List.of(
+				map("A", 0, 0, quay, "~~~~", "....", "....", "...."),
+				map("B", 8, 0, null, "~~~~", "....", "....", "....")));
+		MapChain.Result chain = MapChain.chain(placed);
+		assertEquals(Map.of("A", 0, "B", 0), chain.bases(), "the two seas meet");
+		MapChain.Seam seam = chain.seams().get(0);
+		assertEquals(1, seam.water());
+		assertEquals(0, seam.step());
+		assertEquals(1, seam.atStep(), "the walkers are the seam's ragged pairs");
+	}
+
+	@Test
 	void aRegionsLowestGroundStandsOnTheSurface() {
 		// two maps side by side, the west one climbing 6 blocks to its east edge: the east one is the bigger and is placed
 		// first, at the surface; then the group is lifted so the west map's low ground stands on the surface
