@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """The computer's levels drawn over a map's art (docs/specs/LEVELS_PIPELINE.md, step 2: the review), as the marking
 page's 🖥 overlay draws them: each walkable or water cell's level in half cells (a tile row of cliff, 1.5 blocks) over the
-window's lowest, a colour per level, the ramps' arrows, the cells the solver left at an unwalkable edge (breaks) boxed
+window's lowest, a colour per level (a deck's floor under it in its corner), the ramps' arrows, the cells the solver left at an unwalkable edge (breaks) boxed
 in red.
 
     python levels_overlay.py <levels.json> <art.png> <out dir> [--window X0,Y0,X1,Y1] [--chunk N] [--plain] [--blocks]
@@ -36,6 +36,7 @@ def main(argv):
     blocks = "--blocks" in argv
     ramps = {(r[0], r[1]): r for r in dump.get("ramps", [])}
     breaks = {tuple(b) for b in dump.get("breaks", [])}
+    decks = {(d[0], d[1]): d for d in dump.get("decks", [])}  # two-floor cells: [x, y, under, elev]
     floor = min((levels[y * w + x] for y in range(y0, y1) for x in range(x0, x1) if kinds[y * w + x] != "#"), default=0)
     mid = dump.get("map", os.path.basename(argv[1])[:-5])
     index = []
@@ -57,6 +58,11 @@ def main(argv):
                     text = ARROWS.get(ramps[(x, y)][2], "?") + str(n) if (x, y) in ramps else str(n)
                     d.rectangle([X + 12, Y + 14, X + 14 + 8 * len(text), Y + 32], fill=(0, 0, 0, 170 if k != "~" else 110))
                     d.text((X + 14, Y + 17), text, fill=(255, 255, 0, 255) if (x, y) in ramps else col + (255,))
+                    if (x, y) in decks:
+                        # the floor under a deck, in the cell's lower right corner (WATER_AND_BRIDGES_PLAN §2.2 item 5)
+                        u = decks[(x, y)][2] - floor if blocks else (decks[(x, y)][2] - floor) * 2 // 3
+                        d.rectangle([X + CELL - 22, Y + CELL - 18, X + CELL - 3, Y + CELL - 3], fill=(0, 0, 90, 200))
+                        d.text((X + CELL - 20, Y + CELL - 17), str(u), fill=(160, 220, 255, 255))
                     if (x, y) in breaks:
                         d.rectangle([X, Y, X + CELL - 1, Y + CELL - 1], outline=(255, 0, 0, 255), width=4)
             for x in range(c0, c1):
