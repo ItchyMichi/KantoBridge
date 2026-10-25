@@ -60,7 +60,14 @@ function Npcs.shape(n)
   return {
     id = n.id, sprite = n.sprite, kind = KINDS[n.kind] and n.kind or "person",
     x = x, y = y, facing = n.facing, moving = n.moving == true,
+    -- WATER_AND_BRIDGES_PLAN D7 (Gen 3): the object's elevation, which floor of a two-floor cell it stands on
+    elev = Npcs.elev(n.elev),
   }
+end
+
+-- An elevation that may travel (0-15), else nil.
+function Npcs.elev(e)
+  return type(e) == "number" and e == math.floor(e) and e >= 0 and e <= 15 and e or nil
 end
 
 -- The shaped list (at most 64) and how many were left out.
@@ -99,7 +106,8 @@ function Npcs.new(opts)
 
   local function move(n, x, y, kind, len, out)
     if not (coord(x) and coord(y)) then return end
-    out[#out + 1] = { "npc.move", { id = n.id, x = x, y = y, facing = n.facing, frames = frames(len), kind = kind }, "npc" }
+    out[#out + 1] = { "npc.move", { id = n.id, x = x, y = y, facing = n.facing, frames = frames(len), kind = kind,
+      elev = Npcs.elev(n.elev) }, "npc" }
     counts.moves = counts.moves + 1
   end
 

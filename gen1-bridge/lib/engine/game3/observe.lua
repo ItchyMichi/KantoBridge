@@ -151,6 +151,8 @@ function Observe.install(b)
     f.frames = tonumber(P.stepFrames) or 0
     f.ledge = P.jumping == true
     f.surf = P.surfing == true
+    -- WATER_AND_BRIDGES_PLAN D7: the engine's current elevation (on a bridge cell, elevation 15, it names the floor)
+    f.elev = tonumber(P.currentElevation)
     -- item 8: a dark map (a cave that needs Flash) and Flash in use (boot.lua); SE7: a map its scripts darken,
     -- lit by the game's flash level there (b.mapLit)
     f.darkMap = type(b.darkMapSet) == "function" and b.darkMapSet()[f.map] == true or false
@@ -261,6 +263,7 @@ function Observe.install(b)
           id = ("O%d"):format(lid), sprite = sprite, kind = kind,
           x = eo.cellX, y = eo.cellY, facing = eo.facing, moving = eo.moving == true,
           tx = eo.targetX, ty = eo.targetY, progress = eo.progress, frames = eo.stepFrames,
+          elev = tonumber(eo.currentElevation), -- D7: a two-floor cell's floor
         }
       end
     end

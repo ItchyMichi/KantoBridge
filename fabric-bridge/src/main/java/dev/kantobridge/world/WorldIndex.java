@@ -60,7 +60,7 @@ public final class WorldIndex {
 	private static final Set<String> THEMES = Set.of("forest");
 	private static final Set<String> SCALE_FIELDS = Set.of("cellBlocks", "surfaceY", "layerStep");
 	private static final Set<String> MAP_FIELDS = Set.of("x", "y", "z", "w", "h", "layer", "kind", "palette", "biome", "dark",
-			"parent", "pieces", "levels", "ramps", "ceilings");
+			"parent", "pieces", "levels", "ramps", "ceilings", "decks");
 	private static final Set<String> HABITAT_FIELDS = Set.of("map", "x", "y", "z", "pool", "range");
 	/** A habitat block's {@code RangeOfInfluence} unless it says otherwise (PLAN §4.5). */
 	public static final int HABITAT_RANGE = 14;
@@ -683,8 +683,59 @@ public final class WorldIndex {
 			if (y >= feet - PIECE_REACH_DOWN && y < feet + PIECE_REACH_UP) {
 				return new CellPos(map.id(), cx, cy);
 			}
+			// a two-floor cell (D7): its under floor with the same reach
+			int under = layout.under(cx, cy);
+			int below = map.y() + piece.dy() + under;
+			if (under >= 0 && y >= below - PIECE_REACH_DOWN && y < below + PIECE_REACH_UP) {
+				return new CellPos(map.id(), cx, cy);
+			}
 		}
 		return null;
+	}
+
+	/** Which floor of a two-floor cell (WATER_AND_BRIDGES_PLAN §2.2, D7): its deck, or the floor under it. */
+	public enum Floor {
+		DECK,
+		UNDER
+	}
+
+	/**
+	 * The floor of {@code cell} nearest a feet position {@code y} (blocks): the under floor of a two-floor cell when its feet
+	 * are the nearer (the deck on a tie); the deck (the cell's one floor) otherwise.
+	 */
+	public Floor floorAt(CellPos cell, double y) {
+		BlockPos deck = this.cellOrigin(cell.map(), cell.x(), cell.y());
+		BlockPos under = this.cellOrigin(cell.map(), cell.x(), cell.y(), Floor.UNDER);
+		if (deck == null || under == null || under.equals(deck)) {
+			return Floor.DECK;
+		}
+		return Math.abs(y - under.getY()) < Math.abs(y - deck.getY()) ? Floor.UNDER : Floor.DECK;
+	}
+
+	/**
+	 * The floor the hidden game's elevation {@code elev} names on a cell (D7): a cell of one floor, an elevation that is
+	 * unknown (negative) or 0, or the deck's own: the deck; any other: under it.
+	 */
+	public Floor floorFor(String map, int x, int y, int elev) {
+		MapLayout layout = this.layouts.get(map);
+		int deck = layout == null ? -1 : layout.deckElev(x, y);
+		return deck < 0 || elev <= 0 || elev == deck ? Floor.DECK : Floor.UNDER;
+	}
+
+	/** An elevation naming {@code floor} of a two-floor cell for {@link #floorFor} (-1 for a cell of one floor). */
+	public int elevOf(String map, int x, int y, Floor floor) {
+		MapLayout layout = this.layouts.get(map);
+		int deck = layout == null ? -1 : layout.deckElev(x, y);
+		if (deck < 0) {
+			return -1;
+		}
+		return floor == Floor.DECK ? deck : deck == 1 ? 3 : 1;
+	}
+
+	/** True when cell (x, y) of a map is a two-floor cell. */
+	public boolean twoFloors(String map, int x, int y) {
+		MapLayout layout = this.layouts.get(map);
+		return layout != null && layout.deck(x, y) != null;
 	}
 
 	public Optional<CellPos> toCell(BlockPos pos) {
@@ -693,14 +744,24 @@ public final class WorldIndex {
 
 	/** The centre of a cell's 2×2 footprint at its feet level, or null for an unknown map. */
 	public @Nullable Vec3 toBlock(String map, int x, int y) {
-		BlockPos origin = this.cellOrigin(map, x, y);
+		return this.toBlock(map, x, y, Floor.DECK);
+	}
+
+	/** The same on {@code floor} of a two-floor cell (a cell of one floor has only its own). */
+	public @Nullable Vec3 toBlock(String map, int x, int y, Floor floor) {
+		BlockPos origin = this.cellOrigin(map, x, y, floor);
 		if (origin == null) {
 			return null;
 		}
 		// A ramp's middle is where its second and third half steps meet: whoever stands there stands on the third.
 		MapLayout layout = this.layouts.get(map);
-		MapLayout.Ramp ramp = layout == null ? null : layout.ramp(x, y);
+		MapLayout.Ramp ramp = layout == null || floor == Floor.UNDER && layout.deck(x, y) != null ? null : layout.ramp(x, y);
 		return new Vec3(origin.getX() + 1.0, origin.getY() + (ramp == null ? 0.0 : ramp.rise() * 0.75), origin.getZ() + 1.0);
+	}
+
+	/** The same on the floor the hidden game's elevation names ({@link #floorFor}). */
+	public @Nullable Vec3 toBlock(String map, int x, int y, int elev) {
+		return this.toBlock(map, x, y, this.floorFor(map, x, y, elev));
 	}
 
 	/**
@@ -733,13 +794,19 @@ public final class WorldIndex {
 	 * unknown map. A cell outside the map, or in no piece, sits at the map's placement.
 	 */
 	public @Nullable BlockPos cellOrigin(String map, int x, int y) {
+		return this.cellOrigin(map, x, y, Floor.DECK);
+	}
+
+	/** The same on {@code floor} of a two-floor cell: under its deck, the under floor's feet (a cell of one floor: its own). */
+	public @Nullable BlockPos cellOrigin(String map, int x, int y, Floor floor) {
 		MapPlacement placement = this.maps.get(map);
 		if (placement == null) {
 			return null;
 		}
 		MapLayout layout = this.layouts.get(map);
 		MapLayout.Piece piece = layout == null ? null : layout.pieceAt(x, y);
-		int level = layout == null ? 0 : layout.level(x, y);
+		int under = floor == Floor.UNDER && layout != null ? layout.under(x, y) : -1;
+		int level = layout == null ? 0 : under >= 0 ? under : layout.level(x, y);
 		return new BlockPos(placement.x() + Scale.cellToBlock(x) + (piece == null ? 0 : piece.dx()),
 				placement.y() + (piece == null ? 0 : piece.dy()) + level, placement.z() + Scale.cellToBlock(y) + (piece == null ? 0 : piece.dz()));
 	}

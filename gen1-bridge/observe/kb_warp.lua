@@ -73,7 +73,9 @@ local floor = math.floor
 local DIRS = { up = true, down = true, left = true, right = true }
 
 local function place(f)
-  local to = { map = f.map, x = f.x, y = f.y, facing = f.facing }
+  local to = { map = f.map, x = f.x, y = f.y, facing = f.facing,
+    -- D7 (Gen 3): the floor of a two-floor cell the warp arrives on
+    elev = type(f.elev) == "number" and f.elev == math.floor(f.elev) and f.elev >= 0 and f.elev <= 15 and f.elev or nil }
   local ok = type(to.map) == "string" and to.map:find("^[A-Z0-9_]+$") ~= nil and #to.map <= 64
     and type(to.x) == "number" and to.x == floor(to.x) and to.x >= -4096 and to.x <= 4096
     and type(to.y) == "number" and to.y == floor(to.y) and to.y >= -4096 and to.y <= 4096

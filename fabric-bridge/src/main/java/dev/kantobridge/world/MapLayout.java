@@ -38,9 +38,12 @@ public final class MapLayout {
 	/** The highest a ceiling may stand, in blocks above its piece's feet level. */
 	public static final int MAX_CEILING = MAX_LEVEL + 64;
 
-	static final Set<String> KEYS = Set.of("pieces", "levels", "ramps", "ceilings");
+	static final Set<String> KEYS = Set.of("pieces", "levels", "ramps", "ceilings", "decks");
 	private static final Set<String> PIECE_FIELDS = Set.of("x", "y", "w", "h", "mask", "dx", "dy", "dz");
 	private static final Set<String> RAMP_FIELDS = Set.of("x", "y", "dir", "rise");
+	private static final Set<String> DECK_FIELDS = Set.of("x", "y", "under", "elev");
+	/** The highest elevation a deck may have (Gen 3's 4 bits). */
+	public static final int MAX_ELEV = 15;
 
 	/**
 	 * One part of a map placed on its own.
@@ -96,6 +99,20 @@ public final class MapLayout {
 		}
 	}
 
+	/**
+	 * A two-floor cell (WATER_AND_BRIDGES_PLAN §2.2, D6, D7: Emerald's bridges): the cell's level is its deck; {@code under}
+	 * the floor under the deck (water's or ground's), in blocks above its piece's feet level, lower than the deck; and
+	 * {@code elev} the deck's elevation in the hidden game (the bridge's ends'): a player of that elevation is on the deck,
+	 * any other under it.
+	 */
+	public record Deck(int x, int y, int under, int elev) {
+		public Deck {
+			if (x < 0 || y < 0 || under < 0 || under > MAX_LEVEL || elev < 0 || elev > MAX_ELEV) {
+				throw new IllegalArgumentException("bad deck");
+			}
+		}
+	}
+
 	private final int w;
 	private final int h;
 	private final List<Piece> pieces;
@@ -105,8 +122,14 @@ public final class MapLayout {
 	private final Map<Integer, Ramp> ramps;
 	/** Per cell, row by row: its ceiling's level (the first solid block over the room), or null for the builder's default. */
 	private final int @Nullable [] ceilings;
+	/** The two-floor cells by cell index (row by row). */
+	private final Map<Integer, Deck> decks;
 
 	private MapLayout(int w, int h, List<Piece> pieces, int[] levels, List<Ramp> ramps, int @Nullable [] ceilings) {
+		this(w, h, pieces, levels, ramps, ceilings, List.of());
+	}
+
+	private MapLayout(int w, int h, List<Piece> pieces, int[] levels, List<Ramp> ramps, int @Nullable [] ceilings, Collection<Deck> decks) {
 		this.w = w;
 		this.h = h;
 		this.pieces = List.copyOf(pieces);
@@ -131,6 +154,19 @@ public final class MapLayout {
 			}
 		}
 		this.ramps = Collections.unmodifiableMap(byCell);
+		Map<Integer, Deck> deckAt = new TreeMap<>();
+		for (Deck deck : decks) {
+			if (deck.x() >= w || deck.y() >= h) {
+				throw new IllegalArgumentException("deck outside its map");
+			}
+			if (deck.under() >= levels[deck.y() * w + deck.x()]) {
+				throw new IllegalArgumentException("a deck's under floor lies under the deck");
+			}
+			if (deckAt.put(deck.y() * w + deck.x(), deck) != null) {
+				throw new IllegalArgumentException("two decks on one cell");
+			}
+		}
+		this.decks = Collections.unmodifiableMap(deckAt);
 	}
 
 	/**
@@ -184,7 +220,55 @@ public final class MapLayout {
 				}
 			}
 		}
-		return new MapLayout(this.w, this.h, this.pieces, this.levels, new ArrayList<>(this.ramps.values()), ceilings);
+		return new MapLayout(this.w, this.h, this.pieces, this.levels, new ArrayList<>(this.ramps.values()), ceilings, this.decks.values());
+	}
+
+	/** The same layout with its two-floor cells (D7): each a cell of the map whose level is its deck, over its under floor. */
+	public MapLayout withDecks(Collection<Deck> decks) {
+		return new MapLayout(this.w, this.h, this.pieces, this.levels, new ArrayList<>(this.ramps.values()), this.ceilings, decks);
+	}
+
+	/**
+	 * This layout with {@code from}'s two-floor cells (a step that rebuilt the levels: the pins, the chain, the mends), each
+	 * under floor moved by {@code shift} blocks; a deck whose under floor no longer lies under its cell's level is dropped.
+	 * {@code from} null or without decks: this layout.
+	 */
+	public MapLayout keepDecks(@Nullable MapLayout from, int shift) {
+		if (from == null || from.decks.isEmpty()) {
+			return this;
+		}
+		List<Deck> kept = new ArrayList<>();
+		for (Deck d : from.decks.values()) {
+			int under = d.under() + shift;
+			if (d.x() < this.w && d.y() < this.h && under >= 0 && under < this.level(d.x(), d.y())) {
+				kept.add(new Deck(d.x(), d.y(), under, d.elev()));
+			}
+		}
+		return this.withDecks(kept);
+	}
+
+	/** The two-floor cell at (cx, cy), or null. */
+	public @Nullable Deck deck(int cx, int cy) {
+		if (cx < 0 || cy < 0 || cx >= this.w || cy >= this.h) {
+			return null;
+		}
+		return this.decks.get(cy * this.w + cx);
+	}
+
+	/** The floor under a deck at (cx, cy), in blocks above its piece's feet level; -1 for a cell with one floor. */
+	public int under(int cx, int cy) {
+		Deck deck = this.deck(cx, cy);
+		return deck == null ? -1 : deck.under();
+	}
+
+	/** The elevation of the deck at (cx, cy); -1 for a cell with one floor. */
+	public int deckElev(int cx, int cy) {
+		Deck deck = this.deck(cx, cy);
+		return deck == null ? -1 : deck.elev();
+	}
+
+	public Collection<Deck> decks() {
+		return this.decks.values();
 	}
 
 	/** One piece covering the whole map at its placement, with levels and ramps. */
@@ -246,6 +330,11 @@ public final class MapLayout {
 		for (int i = 0; i < this.ceilings.length; i++) {
 			Ramp ramp = this.ramps.get(i);
 			least = Math.min(least, this.ceilings[i] - this.levels[i] - (ramp == null ? 0 : ramp.rise()));
+			Deck deck = this.decks.get(i);
+			if (deck != null) {
+				// the room under a deck: up to the deck's slab
+				least = Math.min(least, this.levels[i] - 1 - deck.under());
+			}
 		}
 		return least;
 	}
@@ -264,7 +353,7 @@ public final class MapLayout {
 
 	/** True when the layout says nothing a map without one doesn't: one whole piece at 0, all levels 0, no ramps. */
 	public boolean trivial() {
-		return this.wholeAtZero() && this.flatLevels() && this.ramps.isEmpty() && this.ceilings == null;
+		return this.wholeAtZero() && this.flatLevels() && this.ramps.isEmpty() && this.ceilings == null && this.decks.isEmpty();
 	}
 
 	private boolean wholeAtZero() {
@@ -336,6 +425,18 @@ public final class MapLayout {
 		if (this.ceilings != null) {
 			item.add("ceilings", valueRuns(this.ceilings));
 		}
+		if (!this.decks.isEmpty()) {
+			JsonArray decks = new JsonArray();
+			for (Deck deck : this.decks.values()) {
+				JsonObject o = new JsonObject();
+				o.addProperty("x", deck.x());
+				o.addProperty("y", deck.y());
+				o.addProperty("under", deck.under());
+				o.addProperty("elev", deck.elev());
+				decks.add(o);
+			}
+			item.add("decks", decks);
+		}
 	}
 
 	/** Values as (value, count) pairs, row by row. */
@@ -373,7 +474,7 @@ public final class MapLayout {
 
 	/** The layout a map's WorldIndex entry describes, or null when it has none of the keys (or only defaults). */
 	static @Nullable MapLayout read(DataReader map, int w, int h) throws DataException {
-		if (!map.has("pieces") && !map.has("levels") && !map.has("ramps") && !map.has("ceilings")) {
+		if (!map.has("pieces") && !map.has("levels") && !map.has("ramps") && !map.has("ceilings") && !map.has("decks")) {
 			return null;
 		}
 		List<Piece> pieces = new ArrayList<>();
@@ -451,8 +552,15 @@ public final class MapLayout {
 				throw new DataException(map.path("ceilings"), "one ceiling per cell");
 			}
 		}
+		List<Deck> decks = new ArrayList<>();
+		if (map.has("decks")) {
+			for (DataReader d : DataReader.objects(map.array("decks"), map.path("decks"))) {
+				d.allowOnly(DECK_FIELDS);
+				decks.add(new Deck(d.integer("x", 0, w - 1), d.integer("y", 0, h - 1), d.integer("under", 0, MAX_LEVEL), d.integer("elev", 0, MAX_ELEV)));
+			}
+		}
 		try {
-			MapLayout layout = of(w, h, pieces, levels, ramps).withCeilings(ceilings);
+			MapLayout layout = of(w, h, pieces, levels, ramps).withCeilings(ceilings).withDecks(decks);
 			return layout.trivial() ? null : layout;
 		} catch (IllegalArgumentException e) {
 			throw new DataException(map.path(), e.getMessage());

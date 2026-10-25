@@ -9,9 +9,10 @@ import org.jetbrains.annotations.Nullable;
 /**
  * A cell plus a facing: the protocol's {@code place} ({@code {map, x, y, facing}}), used by {@code snapshot.player},
  * {@code warp.to}, {@code warp.request} and {@code warp.done}. Coordinates are 16-px cells and may be -1 or one past the
- * last cell at map edges.
+ * last cell at map edges. {@code elev} (WATER_AND_BRIDGES_PLAN D7, Gen 3 only) is the hidden game's elevation of the player
+ * there, which names the floor of a two-floor cell; -1 when not given.
  */
-public record Place(String map, int x, int y, Dir facing) {
+public record Place(String map, int x, int y, Dir facing, int elev) {
 	/** The protocol's {@code coord} range. */
 	public static final int MAX_COORD = 4096;
 
@@ -24,6 +25,14 @@ public record Place(String map, int x, int y, Dir facing) {
 		if (Math.abs(x) > MAX_COORD || Math.abs(y) > MAX_COORD) {
 			throw new IllegalArgumentException("coordinate out of range");
 		}
+		if (elev < -1 || elev > 15) {
+			throw new IllegalArgumentException("elevation out of range");
+		}
+	}
+
+	/** A place without an elevation. */
+	public Place(String map, int x, int y, Dir facing) {
+		this(map, x, y, facing, -1);
 	}
 
 	public CellPos cell() {
@@ -31,7 +40,12 @@ public record Place(String map, int x, int y, Dir facing) {
 	}
 
 	public Place withFacing(Dir dir) {
-		return new Place(this.map, this.x, this.y, dir);
+		return new Place(this.map, this.x, this.y, dir, this.elev);
+	}
+
+	/** The same place with elevation {@code elev} (-1: none). */
+	public Place withElev(int elev) {
+		return new Place(this.map, this.x, this.y, this.facing, elev);
 	}
 
 	public JsonObject toJson() {
@@ -40,6 +54,9 @@ public record Place(String map, int x, int y, Dir facing) {
 		object.addProperty("x", this.x);
 		object.addProperty("y", this.y);
 		object.addProperty("facing", this.facing.id());
+		if (this.elev >= 0) {
+			object.addProperty("elev", this.elev);
+		}
 		return object;
 	}
 
@@ -53,7 +70,7 @@ public record Place(String map, int x, int y, Dir facing) {
 		}
 		JsonObject object = element.getAsJsonObject();
 		for (String key : object.keySet()) {
-			if (!key.equals("map") && !key.equals("x") && !key.equals("y") && !key.equals("facing")) {
+			if (!key.equals("map") && !key.equals("x") && !key.equals("y") && !key.equals("facing") && !key.equals("elev")) {
 				return null;
 			}
 		}
@@ -64,7 +81,15 @@ public record Place(String map, int x, int y, Dir facing) {
 		if (map == null || !DataReader.MAP_ID.matcher(map).matches() || x == null || y == null || facing == null) {
 			return null;
 		}
-		return new Place(map, x, y, facing);
+		int elev = -1;
+		if (object.has("elev")) {
+			Integer e = coord(object.get("elev"));
+			if (e == null || e < 0 || e > 15) {
+				return null;
+			}
+			elev = e;
+		}
+		return new Place(map, x, y, facing, elev);
 	}
 
 	private static @Nullable String string(@Nullable JsonElement value) {

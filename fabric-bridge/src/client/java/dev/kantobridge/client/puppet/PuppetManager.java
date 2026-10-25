@@ -146,6 +146,9 @@ public final class PuppetManager {
 		}
 		this.stats.moves++;
 		puppet.move(x, y, facing, (int) frames);
+		if (data.has("elev")) {
+			puppet.setElev(elev(data));
+		}
 	}
 
 	public void onFace(JsonObject data) {
@@ -310,12 +313,15 @@ public final class PuppetManager {
 		int y = coord(npc, "y");
 		Dir facing = Dir.byId(JsonFields.str(npc, "facing"));
 		boolean moving = JsonFields.bool(npc, "moving", false);
+		int elev = elev(npc);
 		Puppet puppet = this.puppets.get(id);
 		if (puppet != null) {
 			puppet.reset(npcMap, sprite, kind, x, y, facing, moving);
+			puppet.setElev(elev);
 			return;
 		}
 		puppet = new Puppet(id, this.nextId--, npcMap, sprite, kind, x, y, facing, moving);
+		puppet.setElev(elev);
 		this.puppets.put(id, puppet);
 		this.byEntity.put(puppet.entityId(), puppet);
 		this.listener.added(puppet);
@@ -343,7 +349,7 @@ public final class PuppetManager {
 	/** One NPC entry as the schema's {@code npc}: id, sprite, kind, x, y, facing, moving, nothing else. */
 	private static boolean valid(JsonObject npc) {
 		for (String key : npc.keySet()) {
-			if (!Set.of("id", "sprite", "kind", "x", "y", "facing", "moving").contains(key)) {
+			if (!Set.of("id", "sprite", "kind", "x", "y", "facing", "moving", "elev").contains(key)) {
 				return false;
 			}
 		}
@@ -355,6 +361,12 @@ public final class PuppetManager {
 				&& KINDS.contains(kind) && coord(npc, "x") != null && coord(npc, "y") != null
 				&& Dir.byId(JsonFields.str(npc, "facing")) != null && moving != null && moving.isJsonPrimitive()
 				&& moving.getAsJsonPrimitive().isBoolean();
+	}
+
+	/** An object's elevation (D7: the floor of a two-floor cell it stands on), -1 when absent or out of range. */
+	private static int elev(JsonObject data) {
+		long value = JsonFields.integer(data, "elev", -1);
+		return value >= 0 && value <= 15 ? (int) value : -1;
 	}
 
 	private static @Nullable Integer coord(JsonObject data, String key) {

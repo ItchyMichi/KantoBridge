@@ -243,7 +243,8 @@
         "map": {"$ref": "#/$defs/mapId"},
         "x": {"$ref": "#/$defs/coord"},
         "y": {"$ref": "#/$defs/coord"},
-        "facing": {"$ref": "#/$defs/dir"}
+        "facing": {"$ref": "#/$defs/dir"},
+        "elev": {"type": "integer", "minimum": 0, "maximum": 15, "description": "WATER_AND_BRIDGES_PLAN D7 (Gen 3 only): the hidden game's elevation of the player (the engine's current one, not the cell's); on a bridge cell (elevation 15) it names the floor: the deck's elevation stands on the deck, any other under it. Optional; absent: the deck, or the floor nearest the player's feet."}
       }
     },
     "cellKey": {
@@ -263,7 +264,8 @@
         "x": {"$ref": "#/$defs/coord"},
         "y": {"$ref": "#/$defs/coord"},
         "facing": {"$ref": "#/$defs/dir"},
-        "moving": {"type": "boolean"}
+        "moving": {"type": "boolean"},
+        "elev": {"type": "integer", "minimum": 0, "maximum": 15, "description": "WATER_AND_BRIDGES_PLAN D7 (Gen 3 only): the hidden game's elevation of the object (the engine's current one, not the cell's); on a bridge cell (elevation 15) it names the floor: the deck's elevation stands on the deck, any other under it. Optional; absent: the deck, or the floor nearest the player's feet."}
       }
     },
     "playerState": {

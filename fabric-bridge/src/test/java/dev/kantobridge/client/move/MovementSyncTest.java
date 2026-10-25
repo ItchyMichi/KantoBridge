@@ -62,7 +62,7 @@ class MovementSyncTest {
 
 		@Override
 		public void teleport(Place to, long now) {
-			this.calls.add("teleport " + to);
+			this.calls.add("teleport " + to + (to.elev() >= 0 ? " elev " + to.elev() : ""));
 		}
 
 		@Override
@@ -688,6 +688,49 @@ class MovementSyncTest {
 		rig.sync.linkFrom(new Place("TEST_HOUSE", 4, 8, Dir.UP), true);
 		assertEquals(List.of("teleport TEST_HOUSE:4:8:up"), rig.tick());
 		assertEquals(1, rig.sync.stats().relinks);
+	}
+
+	/** A town of 6 × 4 cells with a deck across row 1 (cells 1 to 4) 9 blocks over water at 0, elevation 4 (D7). */
+	private static WorldIndex decked() {
+		int[] levels = new int[6 * 4];
+		for (int x = 0; x < 6; x++) {
+			levels[6 + x] = 9;
+		}
+		List<dev.kantobridge.world.MapLayout.Deck> decks = new ArrayList<>();
+		for (int x = 1; x <= 4; x++) {
+			decks.add(new dev.kantobridge.world.MapLayout.Deck(x, 1, 0, 4));
+		}
+		dev.kantobridge.world.MapLayout layout = dev.kantobridge.world.MapLayout.flat(6, 4, levels, List.of()).withDecks(decks);
+		dev.kantobridge.world.MapPlacement town = new dev.kantobridge.world.MapPlacement("TEST_TOWN", 0, 64, 0, 6, 4, 0,
+				dev.kantobridge.world.MapPlacement.Kind.SURFACE, "TEST_PALETTE", "kantobridge:kanto_outdoor", false, null);
+		return new WorldIndex("red", "a".repeat(64), List.of(town), java.util.Map.of("TEST_TOWN", layout), "b".repeat(64),
+				dev.kantobridge.world.StoryCellTable.of(List.of()), List.of(), List.of(), null);
+	}
+
+	@Test
+	void aResyncUnderADeckStaysUnderIt() {
+		// WATER_AND_BRIDGES_PLAN D7: the hidden player swims under the deck (elevation 1); the player drifted away is put back
+		// under it, and a teleport with the deck's elevation lands on top
+		WorldIndex deck = decked();
+		Rig rig = new Rig(deck);
+		Vec3 under = deck.toBlock("TEST_TOWN", 2, 1, WorldIndex.Floor.UNDER);
+		rig.x = under.x + 8;
+		rig.y = under.y;
+		rig.z = under.z + 4;
+		rig.sync.onSnapshot(true, new Place("TEST_TOWN", 2, 1, Dir.DOWN, 1), "idle");
+		rig.sync.setLinked(true);
+		rig.sync.onWorldJoin();
+		assertEquals(List.of("teleport TEST_TOWN:2:1:down elev 1"), rig.tick(), "under the deck, by the hidden elevation");
+		assertEquals(WorldIndex.Floor.UNDER, deck.floorFor("TEST_TOWN", 2, 1, 1));
+		Rig top = new Rig(deck);
+		top.x = under.x + 8;
+		top.y = under.y + 9;
+		top.z = under.z + 4;
+		top.sync.onSnapshot(true, new Place("TEST_TOWN", 2, 1, Dir.DOWN, 4), "idle");
+		top.sync.setLinked(true);
+		top.sync.onWorldJoin();
+		assertEquals(List.of("teleport TEST_TOWN:2:1:down elev 4"), top.tick(), "the deck's elevation: on top");
+		assertEquals(under.y + 9, deck.toBlock("TEST_TOWN", 2, 1, 4).y, 1e-9);
 	}
 
 	@Test

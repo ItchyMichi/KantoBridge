@@ -110,6 +110,49 @@ class MapLayoutTest {
 		assertFalse(cave.getAsJsonArray("pieces").get(0).getAsJsonObject().has("mask"));
 	}
 
+	/** The 6 × 4 map: a deck across row 1 at 9 blocks over water at 0 (Route 110 in small), cell (3, 1) an end at 9. */
+	static MapLayout deck() {
+		int[] levels = new int[6 * 4];
+		for (int x = 0; x < 6; x++) {
+			levels[6 + x] = 9;
+		}
+		return MapLayout.flat(6, 4, levels, List.of()).withDecks(List.of(new MapLayout.Deck(1, 1, 0, 4), new MapLayout.Deck(2, 1, 0, 4)));
+	}
+
+	@Test
+	void decksRoundTripAndAnswerForBothFloors() throws Exception {
+		// WATER_AND_BRIDGES_PLAN D7: two-floor cells
+		MapLayout layout = deck();
+		assertEquals(0, layout.under(1, 1));
+		assertEquals(4, layout.deckElev(2, 1));
+		assertEquals(-1, layout.under(0, 1), "an end has one floor");
+		assertFalse(layout.trivial());
+		WorldIndex index = index(layout);
+		WorldIndex back = WorldIndex.fromJson(index.toJson());
+		assertEquals(index.toJson(), back.toJson(), "decks round-trip");
+		assertTrue(index.toJson().contains("\"decks\""));
+		BlockPos deckAt = index.cellOrigin("TEST_CAVE", 1, 1);
+		BlockPos underAt = index.cellOrigin("TEST_CAVE", 1, 1, WorldIndex.Floor.UNDER);
+		assertEquals(deckAt.below(9), underAt);
+		CellPos cell = new CellPos("TEST_CAVE", 1, 1);
+		assertEquals(Optional.of(cell), index.toCell(underAt.getX(), underAt.getY(), underAt.getZ()), "the under floor is in the cell");
+		assertEquals(Optional.of(cell), index.toCell(deckAt.getX(), deckAt.getY(), deckAt.getZ()), "and the deck");
+		assertEquals(WorldIndex.Floor.UNDER, index.floorAt(cell, underAt.getY()));
+		assertEquals(WorldIndex.Floor.DECK, index.floorAt(cell, deckAt.getY()));
+		assertEquals(WorldIndex.Floor.DECK, index.floorFor("TEST_CAVE", 1, 1, 4), "the deck's elevation: on the deck");
+		assertEquals(WorldIndex.Floor.UNDER, index.floorFor("TEST_CAVE", 1, 1, 1), "a surfer's: under it");
+		assertEquals(WorldIndex.Floor.UNDER, index.floorFor("TEST_CAVE", 1, 1, 3), "a walker's from the ground: under it");
+		assertEquals(WorldIndex.Floor.DECK, index.floorFor("TEST_CAVE", 1, 1, -1), "unknown: the deck");
+		assertEquals(WorldIndex.Floor.DECK, index.floorFor("TEST_CAVE", 0, 0, 1), "a cell of one floor has only its own");
+		assertEquals(underAt.getY(), (int) index.toBlock("TEST_CAVE", 1, 1, 1).y, "a warp's arrival by elevation");
+		assertEquals(deckAt.getY(), (int) index.toBlock("TEST_CAVE", 1, 1, 4).y);
+		assertEquals(UNDER_ELEV_CHECK, index.floorFor("TEST_CAVE", 1, 1, index.elevOf("TEST_CAVE", 1, 1, WorldIndex.Floor.UNDER)));
+		assertThrows(IllegalArgumentException.class, () -> MapLayout.flat(6, 4, null, List.of()).withDecks(List.of(new MapLayout.Deck(1, 1, 0, 4))),
+				"a deck over its own floor");
+	}
+
+	private static final WorldIndex.Floor UNDER_ELEV_CHECK = WorldIndex.Floor.UNDER;
+
 	@Test
 	void ceilingsRoundTripAndBoundTheMap() throws Exception {
 		// HEIGHTS_ALL_GAMES_PLAN D5: a room's ceilings, as (ceiling, count) runs; the least room over any cell

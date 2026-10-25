@@ -34,6 +34,7 @@
       "$ref": "../defs.schema.json#/$defs/frames",
       "description": "How long the move takes; 0 for an instant change."
     },
+    "elev": {"type": "integer", "minimum": 0, "maximum": 15, "description": "WATER_AND_BRIDGES_PLAN D7 (Gen 3 only): the hidden game's elevation of the player (the engine's current one, not the cell's); on a bridge cell (elevation 15) it names the floor: the deck's elevation stands on the deck, any other under it. Optional; absent: the deck, or the floor nearest the player's feet."},
     "n": {
       "type": "integer",
       "minimum": 1,

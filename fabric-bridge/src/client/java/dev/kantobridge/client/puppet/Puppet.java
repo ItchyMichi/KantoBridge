@@ -38,6 +38,8 @@ public final class Puppet {
 	private int marchClock;
 	private @Nullable String bubble;
 	private int bubbleFrames;
+	/** The hidden game's elevation of the object (D7: which floor of a two-floor cell), -1 for none. */
+	private int elev = -1;
 
 	Puppet(String id, int entityId, String map, String sprite, String kind, int x, int y, Dir facing, boolean moving) {
 		this.id = id;
@@ -61,6 +63,15 @@ public final class Puppet {
 		}
 		this.facing = facing;
 		this.moving = moving;
+	}
+
+	/** The object's elevation (-1: none): on a two-floor cell, its floor. */
+	void setElev(int elev) {
+		this.elev = elev;
+	}
+
+	public int elev() {
+		return this.elev;
 	}
 
 	/** {@code npc.move}: a step (or a scripted move) to {@code x, y} over {@code frames}; 0 frames jumps there. */

@@ -112,7 +112,8 @@ public final class WarpService {
 		if (!map.containsCell(to.x(), to.y())) {
 			return Result.refused(Refusal.BAD_CELL);
 		}
-		Vec3 centre = index.toBlock(to.map(), to.x(), to.y());
+		// a two-floor cell's floor by the hidden game's elevation (D7: under a bridge, or on its deck)
+		Vec3 centre = index.toBlock(to.map(), to.x(), to.y(), to.elev());
 		// Same level: interiors are layers of the overworld, so this is a plain position packet, no loading screen.
 		player.teleportTo(player.serverLevel(), centre.x, centre.y, centre.z, Set.of(), to.facing().yaw(), player.getXRot());
 		player.resetFallDistance();

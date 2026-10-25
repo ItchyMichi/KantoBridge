@@ -81,6 +81,8 @@ public final class MovementSync {
 	}
 
 	public static final String IDLE = "idle";
+	/** The player's feet height at the last tick (a teleport onto a two-floor cell keeps the floor nearest it); NaN before. */
+	private double lastY = Double.NaN;
 	public static final int PUSH_TICKS = 8;
 	public static final int PUSH_REPEAT_TICKS = 16;
 	/** Blocks per tick along the pushed direction below which the player counts as stopped by something. */
@@ -252,6 +254,7 @@ public final class MovementSync {
 	 * @param yaw    the camera's yaw in degrees
 	 */
 	public void tick(long now, double x, double y, double z, @Nullable Dir intent, float yaw) {
+		this.lastY = y;
 		Spot here = this.index == null ? null : Spot.at(this.index, x, y, z);
 		if (!this.port.forcedMoving()) {
 			this.tail = null;
@@ -962,11 +965,20 @@ public final class MovementSync {
 			return;
 		}
 		Dir facing = this.hidden != null ? this.hidden.facing() : Dir.DOWN;
+		// the floor of a two-floor cell (D7): the hidden player's elevation where it stands there, else the floor nearest
+		// the player's feet
+		int elev = -1;
+		if (this.hidden != null && this.hidden.cell().equals(cell)) {
+			elev = this.hidden.elev();
+		}
+		if (elev < 0 && world.twoFloors(cell.map(), cell.x(), cell.y()) && !Double.isNaN(this.lastY)) {
+			elev = world.elevOf(cell.map(), cell.x(), cell.y(), world.floorAt(cell, this.lastY));
+		}
 		this.teleportAllowedAt = now + TELEPORT_COOLDOWN_MS;
 		this.stats.teleports++;
 		this.pending.clear();
 		this.tail = null;
-		this.port.teleport(new Place(cell.map(), cell.x(), cell.y(), facing), now);
+		this.port.teleport(new Place(cell.map(), cell.x(), cell.y(), facing, elev), now);
 	}
 
 	/** Where corrections start from: the end of the forced path being walked, else where the player stands. */

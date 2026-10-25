@@ -209,6 +209,21 @@
             },
             "description": "Each cell's ceiling: the level of the first solid block over its room, in blocks above its piece's feet level, row by row, as (ceiling, count) pairs covering every cell (docs/specs/HEIGHTS_ALL_GAMES_PLAN.md D5). Absent: 3 blocks of air over each cell's floor (worlds built before the plan)."
           },
+          "decks": {
+            "type": "array",
+            "description": "Two-floor cells (docs/specs/WATER_AND_BRIDGES_PLAN.md §2.2, D7: Emerald's bridges): the cell's level is its deck, over a floor under it. Absent: every cell one floor (worlds built before the plan).",
+            "items": {
+              "type": "object",
+              "required": ["x", "y", "under", "elev"],
+              "additionalProperties": false,
+              "properties": {
+                "x": {"type": "integer", "minimum": 0},
+                "y": {"type": "integer", "minimum": 0},
+                "under": {"type": "integer", "minimum": 0, "maximum": 64, "description": "The floor under the deck, in blocks above the piece's feet level (lower than the deck)."},
+                "elev": {"type": "integer", "minimum": 0, "maximum": 15, "description": "The deck's elevation in the hidden game (its ends'): a player of that elevation is on the deck, any other under it."}
+              }
+            }
+          },
           "ramps": {
             "type": "array",
             "description": "Stairs cells that climb between levels.",

@@ -284,13 +284,15 @@ public final class PuppetRuntime implements PuppetManager.Listener {
 		int rx = (int) Math.round(cx);
 		int ry = (int) Math.round(cy);
 		// The nearest cell's origin carries its piece's offset and its level (docs/specs/CAVES_3D_PLAN.md §3.1)
-		BlockPos origin = index.cellOrigin(puppet.map(), rx, ry);
+		// a two-floor cell's floor by the object's elevation (D7: a swimmer under the Cycling Road, a trainer on its deck)
+		WorldIndex.Floor floor = index.floorFor(puppet.map(), rx, ry, puppet.elev());
+		BlockPos origin = index.cellOrigin(puppet.map(), rx, ry, floor);
 		if (origin == null) {
 			return null;
 		}
 		double half = Scale.CELL_BLOCKS / 2.0;
 		// Along a ramp it climbs as it walks (CAVES_3D_PLAN §3.4); elsewhere it stands on the cell's column, if any.
-		double top = index.ramp(puppet.map(), rx, ry) ? index.rampLift(puppet.map(), rx, ry, cx, cy)
+		double top = floor == WorldIndex.Floor.UNDER ? 0.0 : index.ramp(puppet.map(), rx, ry) ? index.rampLift(puppet.map(), rx, ry, cx, cy)
 				: ClientShapes.topHeight(index, puppet.map(), rx, ry);
 		return new Vec3(origin.getX() + (cx - rx) * Scale.CELL_BLOCKS + half, origin.getY() + top,
 				origin.getZ() + (cy - ry) * Scale.CELL_BLOCKS + half);

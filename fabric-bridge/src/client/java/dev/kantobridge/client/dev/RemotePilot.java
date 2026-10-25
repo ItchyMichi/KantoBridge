@@ -1158,6 +1158,12 @@ final class RemotePilot {
 				JsonObject at = new JsonObject();
 				at.addProperty("x", cell.getX());
 				at.addProperty("z", cell.getZ());
+				at.addProperty("y", cell.getY());
+				if (index.twoFloors(state.map(), state.x(), state.y())) {
+					// WATER_AND_BRIDGES_PLAN D7: the floor under the deck
+					BlockPos under = index.cellOrigin(state.map(), state.x(), state.y(), WorldIndex.Floor.UNDER);
+					at.addProperty("under_y", under.getY());
+				}
 				out.add("hidden_block", at);
 			}
 			// SE5 (docs/specs/STORY_EVENTS_PLAN.md): the darkness the hidden game reports for its map and the world's own

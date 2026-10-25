@@ -339,3 +339,16 @@ def test_positions_that_dont_fit_the_schema_are_held_back():
     assert o.update(moving=True, tx=5.5, ty=5, facing="up", frames=16) == []
     (msg,) = o.update(moving=True, tx=5, ty=5, facing="up", frames=15.6)
     assert msg[1]["frames"] == 16                               # whole frames only
+
+
+def test_the_elevation_travels_with_the_position_where_the_game_has_it():
+    # WATER_AND_BRIDGES_PLAN D7: Gen 3's current elevation names the floor of a two-floor cell
+    o = Obs()
+    first = o.update(elev=3)
+    pos = [d for t, d in first if t == "player.pos"]
+    assert pos and pos[0]["elev"] == 3
+    step = o.update(elev=4, moving=True, tx=5, ty=5, frames=16)
+    assert [d["elev"] for t, d in step if t == "player.pos"] == [4]
+    o2 = Obs()
+    assert all("elev" not in d for t, d in o2.update() if t == "player.pos"), "absent where the game has none"
+    assert all("elev" not in d for t, d in Obs().update(elev=99) if t == "player.pos"), "out of range: left out"

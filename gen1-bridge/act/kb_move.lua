@@ -188,6 +188,7 @@ function Move.new(opts)
     local pos = settled(f)
     out[#out + 1] = { "player.pos", {
       map = pos.map, x = pos.x, y = pos.y, facing = pos.facing, kind = kind, frames = 0, n = req.n,
+      elev = type(f) == "table" and type(f.elev) == "number" and f.elev == math.floor(f.elev) and f.elev >= 0 and f.elev <= 15 and f.elev or nil,
     }, "answer" }
     answered(req)
   end

@@ -134,9 +134,16 @@ end
 function Player.position(f)
   if not f.inGame then return nil end
   if f.moving and f.tx ~= nil then
-    return { map = f.map, x = f.tx, y = f.ty, facing = f.facing }
+    return { map = f.map, x = f.tx, y = f.ty, facing = f.facing, elev = Player.elev(f) }
   end
-  return { map = f.map, x = f.x, y = f.y, facing = f.facing }
+  return { map = f.map, x = f.x, y = f.y, facing = f.facing, elev = Player.elev(f) }
+end
+
+-- WATER_AND_BRIDGES_PLAN D7 (Gen 3): the engine's current elevation, which names the floor of a two-floor cell; nil where
+-- the game has none.
+function Player.elev(f)
+  local e = f and f.elev
+  return type(e) == "number" and e == math.floor(e) and e >= 0 and e <= 15 and e or nil
 end
 
 local function copy(t)
@@ -151,6 +158,7 @@ function Player.new()
   local last = {}          -- the previous facts, for step detection
   local hop                -- the ledge hop already announced: { map }
   local syncWanted = false -- the next standing update sends a sync even if unchanged
+  local elevNow            -- the facts' elevation (Gen 3), sent with each player.pos
 
   local function remember(f)
     last = { moving = f.moving == true, tx = f.tx, ty = f.ty, map = f.map }
@@ -163,6 +171,7 @@ function Player.new()
     local data = copy(pos)
     data.kind = kind
     data.frames = frameCount(frames)
+    data.elev = elevNow
     return { "player.pos", data, tag }
   end
 
@@ -188,6 +197,7 @@ function Player.new()
   -- Messages to send for this step's facts: a list of { type, data, tag }.
   function observer.update(f)
     local out = {}
+    elevNow = Player.elev(f)
     local state = Player.state(f)
     if not same(state, sentState, STATE_KEYS) then
       sentState = state
