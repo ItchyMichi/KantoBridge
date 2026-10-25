@@ -131,6 +131,49 @@ public final class PairEdges {
 		return edges == 0 ? NONE : new PairEdges(w, h, sides, edges);
 	}
 
+	/**
+	 * {@code base} with the map's closed borders walled (FIELD_MECHANICS_AUDIT_PLAN §13.8 item 2): a cell a player stands on
+	 * along a side of the map that has no connection ({@code open} lacks its direction: north, south, east, west) gets a
+	 * wall on its outer side, where the game refuses the step off the map and Minecraft had the void fill or nothing.
+	 */
+	public static PairEdges withBorders(PairEdges base, MapModel model, java.util.Set<String> open) {
+		int w = model.cellWidth();
+		int h = model.cellHeight();
+		byte[] sides = new byte[w * h];
+		int edges = base.edges;
+		for (int cy = 0; cy < h; cy++) {
+			for (int cx = 0; cx < w; cx++) {
+				sides[cy * w + cx] = (byte) base.sides(cx, cy);
+			}
+		}
+		int added = 0;
+		for (int cy = 0; cy < h; cy++) {
+			for (int cx = 0; cx < w; cx++) {
+				if (!standable(model.kind(cx, cy))) {
+					continue;
+				}
+				int add = 0;
+				if (cy == 0 && !open.contains("north")) {
+					add |= EdgeWallBlock.SIDE_NORTH;
+				}
+				if (cy == h - 1 && !open.contains("south")) {
+					add |= EdgeWallBlock.SIDE_SOUTH;
+				}
+				if (cx == 0 && !open.contains("west")) {
+					add |= EdgeWallBlock.SIDE_WEST;
+				}
+				if (cx == w - 1 && !open.contains("east")) {
+					add |= EdgeWallBlock.SIDE_EAST;
+				}
+				if ((sides[cy * w + cx] & add) != add) {
+					sides[cy * w + cx] |= (byte) add;
+					added++;
+				}
+			}
+		}
+		return added == 0 ? base : new PairEdges(w, h, sides, edges + added);
+	}
+
 	/** True when the engine refuses a step between cells (ax, ay) and (bx, by) for their elevations. */
 	static boolean elevationWall(MapModel model, G3Map map, int ax, int ay, int bx, int by) {
 		if (!walked(model.kind(ax, ay)) || !walked(model.kind(bx, by))) {

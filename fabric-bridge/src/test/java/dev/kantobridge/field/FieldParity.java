@@ -327,6 +327,20 @@ final class FieldParity {
 				b.append(" dst feet ").append(t0[1]).append(' ').append(this.columns(t0)).append(" h ").append(this.pm.model().height(tx, ty))
 						.append(" flags ").append(this.pm.model().flags(tx, ty))
 						.append(this.pm.layout() == null ? "" : this.pm.layout().pieceAt(tx, ty) == null ? " nopiece" : " piece").append(';');
+			} else {
+				// off the map: the blocks just beyond the edge at the source's feet, and the cell the index names there
+				int[] beyond = {s0[0] + (tx - cx) * 2, s0[1], s0[2] + (ty - cy) * 2};
+				Optional<CellPos> there = this.index.toCell(beyond[0], beyond[1], beyond[2]);
+				b.append(" beyond ").append(this.columns(beyond)).append(" cell ").append(there.map(c -> c.map() + ":" + c.x() + ":" + c.y()).orElse("none"));
+				for (int dy = -12; dy <= 12 && there.isEmpty(); dy++) {
+					Optional<CellPos> near = this.index.toCell(beyond[0], beyond[1] + dy, beyond[2]);
+					if (near.isPresent()) {
+						b.append(" at dy ").append(dy).append(' ').append(near.get().map()).append(':').append(near.get().x()).append(':')
+								.append(near.get().y());
+						break;
+					}
+				}
+				b.append(';');
 			}
 			if (this.plan.shapes() != null && this.plan.shapes().shapes(this.map) != null && tx >= 0 && ty >= 0
 					&& tx < this.pm.model().cellWidth() && ty < this.pm.model().cellHeight()) {

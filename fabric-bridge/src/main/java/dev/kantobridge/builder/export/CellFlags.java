@@ -23,6 +23,9 @@ public final class CellFlags {
 	public static final int LEDGE_DIR_SHIFT = 14;
 	/** Gen 3: the game refuses a bike onto the cell and lets a walker on (FA8 item 10: long grass, hot springs, ...). */
 	public static final int NO_BIKE = 1 << 16;
+	/** Gen 2: a ledge with a second facing (FA8 item 17), its direction in bits 17-18 as {@link #LEDGE_DIR_SHIFT}'s. */
+	public static final int LEDGE2 = 1 << 19;
+	public static final int LEDGE2_DIR_SHIFT = 17;
 
 	private CellFlags() {
 	}
@@ -34,5 +37,10 @@ public final class CellFlags {
 	/** The hop direction of a ledge cell: 0 down, 1 up, 2 left, 3 right. */
 	public static int ledgeDir(int flags) {
 		return (flags >> LEDGE_DIR_SHIFT) & 3;
+	}
+
+	/** A Gen 2 ledge's second facing, or -1 for none. */
+	public static int ledgeDir2(int flags) {
+		return (flags & LEDGE2) == 0 ? -1 : (flags >> LEDGE2_DIR_SHIFT) & 3;
 	}
 }

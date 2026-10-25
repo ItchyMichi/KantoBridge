@@ -278,7 +278,14 @@ final class Gen3Planner {
 			if (rooms != null) {
 				mapLayouts.put(map.id(), rooms);
 			}
-			placed.add(new PlacedMap(placement, model, edges, rooms));
+			PairEdges placedEdges = edges;
+			if (placement.kind() == MapPlacement.Kind.SURFACE) {
+				// FA8 item 2: a side with no connection is walled where the game refuses the step off the map
+				java.util.Set<String> open = new java.util.HashSet<>();
+				map.connections().forEach(c -> open.add(c.dir()));
+				placedEdges = PairEdges.withBorders(edges, model, open);
+			}
+			placed.add(new PlacedMap(placement, model, placedEdges, rooms));
 		}
 		warnings.note("elevation_edges", elevationEdges);
 

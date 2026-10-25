@@ -147,12 +147,12 @@ class Gen3PlanTest {
 		// The route's raised patch (elevation 4) at (0..1, 3): walls on its north and south sides; its east side meets
 		// the stairs (elevation 0), which any elevation steps on.
 		PairEdges edges = plan.map("EM_TEST_ROUTE").edges();
-		assertEquals(4, edges.edges());
-		assertEquals(EdgeWallBlock.SIDE_NORTH | EdgeWallBlock.SIDE_SOUTH, edges.sides(0, 3));
+		// the elevation walls, and (FA8 item 2) the route's closed west border on its first column
+		assertTrue(edges.edges() > 4);
+		assertEquals(EdgeWallBlock.SIDE_NORTH | EdgeWallBlock.SIDE_SOUTH | EdgeWallBlock.SIDE_WEST, edges.sides(0, 3));
 		assertEquals(EdgeWallBlock.SIDE_NORTH | EdgeWallBlock.SIDE_SOUTH, edges.sides(1, 3));
-		assertEquals(EdgeWallBlock.SIDE_SOUTH, edges.sides(0, 2));
+		assertEquals(EdgeWallBlock.SIDE_SOUTH | EdgeWallBlock.SIDE_WEST, edges.sides(0, 2));
 		assertEquals(0, edges.sides(2, 3));
-		assertEquals(0, plan.map("EM_TEST_TOWN").edges().edges());
 		assertEquals(4, plan.warnings().notes().get("elevation_edges"));
 	}
 
@@ -322,8 +322,9 @@ class Gen3PlanTest {
 		assertEquals(BlockCode.KIND_STORY_TILE, view.kind(ox(14), 64, oz(4)));
 		assertEquals(BlockCode.AIR, view.code(ox(14), 65, oz(4)), "nothing stands over a site's story block");
 		// the raised patch's north wall, at the feet of its north-west block
-		assertEquals(BlockCode.edge(EdgeWallBlock.SIDE_NORTH), view.code(ox(2), 64, oz(-10 + 6)));
-		assertEquals(BlockCode.edge(EdgeWallBlock.SIDE_SOUTH), view.code(ox(2), 64, oz(-10 + 5)));
+		// (the route's first column: its closed west border's wall too, FA8 item 2)
+		assertEquals(BlockCode.edge(EdgeWallBlock.SIDE_NORTH | EdgeWallBlock.SIDE_WEST), view.code(ox(2), 64, oz(-10 + 6)));
+		assertEquals(BlockCode.edge(EdgeWallBlock.SIDE_SOUTH | EdgeWallBlock.SIDE_WEST), view.code(ox(2), 64, oz(-10 + 5)));
 		// the house's floor, a layer down
 		MapPlacement house = plan.index().map("EM_TEST_HOUSE");
 		assertEquals(BlockCode.KIND_FULL, view.kind(house.x() + 2, house.y() - 1, house.z() + 4));

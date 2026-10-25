@@ -1041,7 +1041,7 @@ public final class WorldPlan {
 			int lx = cx - HOP_DELTA[dir][0];
 			int ly = cy - HOP_DELTA[dir][1];
 			if (lx >= 0 && ly >= 0 && lx < model.cellWidth() && ly < model.cellHeight() && model.kind(lx, ly) == MapModel.Kind.LEDGE
-					&& CellFlags.ledgeDir(model.flags(lx, ly)) == dir) {
+					&& (CellFlags.ledgeDir(model.flags(lx, ly)) == dir || CellFlags.ledgeDir2(model.flags(lx, ly)) == dir)) {
 				return dir;
 			}
 		}
@@ -1348,6 +1348,17 @@ public final class WorldPlan {
 			int at = (taken & 1) == 0 ? 0 : 1;
 			sink.set(x, feet + at, z, BlockCode.vanilla(ZoneBlock.BARRIER));
 			taken |= 1L << at;
+		}
+		// Water lower than ground beside it: barriers from two blocks over the water (a surfer, 1.8 tall, passes under) up
+		// to that ground's feet level, so a walker can't step off the cliff and stand on the water (FA8 item 2)
+		if (!fill && layout != null && model.kind(cx, cy) == MapModel.Kind.WATER) {
+			int reach = walkedNeighbourLevel(model, layout, cx, cy) - level(layout, cx, cy);
+			for (int k = 2; k <= reach && k < 62; k++) {
+				if ((taken >> k & 1) == 0) {
+					sink.set(x, feet + k, z, BlockCode.vanilla(ZoneBlock.BARRIER));
+					taken |= 1L << k;
+				}
+			}
 		}
 		// A solid cell lower than ground beside it (raised ground): its column reaches that ground's feet level in
 		// barriers, so nobody walks over its top from there (FIELD_MECHANICS_AUDIT_PLAN §13.8 item 1).

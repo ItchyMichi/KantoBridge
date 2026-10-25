@@ -344,7 +344,14 @@ public final class WorldPlanner {
 			// An interior's ceilings (HEIGHTS_ALL_GAMES_PLAN D5): as tall as its drawing, at least 4 over its highest floor
 			raised = withCeilings(placement, model, raised, Headroom.blackFiller(model, probe, null), Headroom.screenRows(false),
 					!caves.contains(map.id()), warnings);
-			placed.add(new PlacedMap(placement, model, edges, raised));
+			PairEdges placedEdges = edges;
+			if (placement.kind() == MapPlacement.Kind.SURFACE) {
+				// FA8 item 2: a side with no connection is walled where the game refuses the step off the map
+				java.util.Set<String> open = new java.util.HashSet<>();
+				map.connections().keySet().forEach(d -> open.add(d.name().toLowerCase(java.util.Locale.ROOT)));
+				placedEdges = PairEdges.withBorders(edges, model, open);
+			}
+			placed.add(new PlacedMap(placement, model, placedEdges, raised));
 		}
 
 		// ---- the chain (docs/specs/LEVELS_PIPELINE.md, the seams): each surface map's floor where its neighbour's ground leaves off ----

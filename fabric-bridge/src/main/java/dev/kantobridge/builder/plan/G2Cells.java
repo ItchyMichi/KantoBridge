@@ -233,6 +233,11 @@ public final class G2Cells {
 			// a ledge is hopped, not walked on (as Gen 1's and 3's)
 			int dir = Math.max(0, LEDGE_DIRS.indexOf(m.ledge().get(0)));
 			f = (f & ~CellFlags.WALKABLE) | CellFlags.LEDGE | dir << CellFlags.LEDGE_DIR_SHIFT;
+			// a second facing (a corner ledge, hopped two ways): its hop's jumped cell is built too (FA8 item 17)
+			int dir2 = m.ledge().size() > 1 ? LEDGE_DIRS.indexOf(m.ledge().get(1)) : -1;
+			if (dir2 >= 0 && dir2 != dir) {
+				f |= CellFlags.LEDGE2 | dir2 << CellFlags.LEDGE2_DIR_SHIFT;
+			}
 		}
 		if (m.warp() != null) {
 			f |= switch (m.warp()) {

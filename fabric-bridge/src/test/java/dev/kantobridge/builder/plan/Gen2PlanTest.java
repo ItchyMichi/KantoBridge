@@ -189,18 +189,25 @@ class Gen2PlanTest {
 		assertEquals(CellFlags.WALKABLE, G2Cells.flags(cave.meaning(0x23)), "ice");
 		assertEquals(0, G2Cells.flags(outdoor.meaning(0x07)));
 		assertEquals(0, G2Cells.flags(outdoor.meaning(0x33)), "a byte the export doesn't describe: solid");
+		// FA8 item 17: a corner ledge keeps its second facing
+		G2Tiles.Meaning corner = new G2Tiles.Meaning("land", false, false, false, false, false, false, false, false, false, false, null,
+				java.util.List.of("down", "right"), java.util.List.of(), java.util.Map.of(), null, null, false);
+		int f = G2Cells.flags(corner);
+		assertEquals(0, CellFlags.ledgeDir(f));
+		assertEquals(3, CellFlags.ledgeDir2(f));
+		assertEquals(-1, CellFlags.ledgeDir2(G2Cells.flags(outdoor.meaning(0xA3))), "one facing: none");
 	}
 
 	@Test
 	void oneWayWalls() {
 		// the fence block (0, 2): its top row may not be left upward, nor entered from above (0xB2's side and arm)
 		PairEdges edges = plan.map("G2_TEST_TOWN").edges();
-		assertEquals(2, edges.edges());
-		assertEquals(EdgeWallBlock.SIDE_NORTH, edges.sides(0, 4));
+		// the one-way walls, and (FA8 item 2) the town's closed west border on its first column
+		assertTrue(edges.edges() > 2);
+		assertEquals(EdgeWallBlock.SIDE_NORTH | EdgeWallBlock.SIDE_WEST, edges.sides(0, 4));
 		assertEquals(EdgeWallBlock.SIDE_NORTH, edges.sides(1, 4));
-		assertEquals(EdgeWallBlock.SIDE_SOUTH, edges.sides(0, 3));
-		assertEquals(0, edges.sides(0, 5));
-		assertEquals(0, plan.map("G2_TEST_ROUTE").edges().edges());
+		assertEquals(EdgeWallBlock.SIDE_SOUTH | EdgeWallBlock.SIDE_WEST, edges.sides(0, 3));
+		assertEquals(EdgeWallBlock.SIDE_WEST, edges.sides(0, 5));
 		assertEquals(2, plan.warnings().notes().get("one_way_edges"));
 	}
 
@@ -331,8 +338,9 @@ class Gen2PlanTest {
 		// the Cut tree: built open, its tile story block (the tree drawn per player) at the feet
 		assertEquals(BlockCode.KIND_STORY_TILE, view.kind(ox(12), 64, oz(8)));
 		// the fence's wall on its north side, and the cell above's south side
-		assertEquals(BlockCode.edge(EdgeWallBlock.SIDE_NORTH), view.code(ox(0), 64, oz(8)));
-		assertEquals(BlockCode.edge(EdgeWallBlock.SIDE_SOUTH), view.code(ox(0), 64, oz(7)));
+		// the west block of the first column also carries the closed border's wall (FA8 item 2)
+		assertEquals(BlockCode.edge(EdgeWallBlock.SIDE_NORTH | EdgeWallBlock.SIDE_WEST), view.code(ox(0), 64, oz(8)));
+		assertEquals(BlockCode.edge(EdgeWallBlock.SIDE_SOUTH | EdgeWallBlock.SIDE_WEST), view.code(ox(0), 64, oz(7)));
 		// the house's floor (the cell (0, 3)), two layers down
 		MapPlacement house = plan.index().map("G2_TEST_HOUSE");
 		assertEquals(BlockCode.KIND_FULL, view.kind(house.x() + 1, house.y() - 1, house.z() + 7));
