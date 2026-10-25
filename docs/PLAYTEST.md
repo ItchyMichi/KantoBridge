@@ -1070,3 +1070,14 @@ Videos of the real-client spots: `/workspace/videos/kanto-bridge-{blue,crystal,e
 - [ ] Ride a bike into Route 119's long grass or Pacifidlog's logs: Minecraft lets you, the game snaps you back.
 - [ ] Walk onto water from a cliff on Route 110 or 120: you stand on the water.
 
+### After FA8 (the fixes; a world rebuilt with them)
+- [ ] Blue: walk into rocks, trees and furniture, onto ledges from the side, off a map's closed edge: stopped each time.
+- [ ] Crystal: hop a ledge on Route 45 or Route 9: you hop over the cliff, no fade; walk onto a ledge cell from its side: allowed.
+- [ ] Crystal: Rock Smash a rock from Minecraft (it breaks); Strength a boulder in the Ice Path (it moves, you stay).
+- [ ] Crystal: the Cycling Road: steer left and right while it rolls you.
+- [ ] Emerald: the Aqua Hideout's pads and Mossdeep Gym's tiles carry you across the room.
+- [ ] Emerald: hold sprint on foot with the running shoes: you run (faster), and stop running when you let go.
+- [ ] Emerald: Strength a boulder in Victory Road or the Seafloor Cavern: it moves.
+- [ ] Emerald: ride a bike into Route 119's long grass: stopped (walking in is fine).
+- [ ] Emerald: a ladder, an escalator, a dive and a cracked floor: each with its own fade (no plain script fade).
+

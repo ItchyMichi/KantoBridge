@@ -3483,6 +3483,41 @@ taken from what already arrived. `test_battle` and `test_route1` fail on cpu3g p
 **Deviation.** A real gym leader was not walked to (the drivers start trainer battles by script, as before); the Name
 Rater is its write to the record, not the walk to his house.
 
+## Field mechanics audit: FA8, the fixes (2026-10-25, specs/FIELD_MECHANICS_AUDIT_PLAN.md §13.10, commits 6985aaf..236834c)
+
+Pod **kb-dev24** (as FA0–FA7). The user's answers (§13.9): the defaults, except Q4 (the Acro tricks) and the Mach
+Bike's speed, which wait for a Minecraft bike feature planned in its own session. Order: the builder's colliders, then
+Emerald, then Crystal; the heights fixes that need no review last.
+
+- **The builder** (6985aaf, c35db07, 236834c): empty solid columns keep a barrier; ledges walled from their
+  sides in Gen 1 and Gen 3, open in Gen 2 (a ledge mode on the block, old worlds keep the old rule); Emerald's one-way
+  sides and water across elevations walled; a seat beside a counter gets a plate; Crystal's hop passes the cliff it jumps;
+  Emerald's bike-blocked cells close for bikers (a new invisible bike_wall); a map's closed sides walled; water under a
+  cliff and rock lower than its neighbours reach the ground beside them in barriers.
+- **Emerald** (dea8ecc, 475adbe, f9807b8, 0bd4557, b044727): warp kinds from the tile and the engine's own names (ladder,
+  door, edge, pad, hole, escalator, dive); in-map warps arrive (the pads, Mossdeep Gym); a battle's fade settles after
+  the battle; running (the sprint key holds B; player.state.run; the running speed); K7's runner; Strength pushes; Dig,
+  Teleport, Fly and the rope name their warps; forced moves named (current, ice, slope); the export names behaviours by
+  the engine's full id.
+- **Crystal** (dea8ecc): ladders are ladder warps; Dig, Teleport, Fly, the rope name their warps; the Cycling Road
+  steers (no forced move; its roll is a slope step); Rock Smash from Minecraft smashes; Strength pushes; two-facing ledges
+  keep both; forced moves named (current, ice).
+- **Blue:** the builder's fixes only.
+- **Left for later, on purpose:** the seams between raised maps and the cliffs with no ramp (the levels pipeline's
+  ragged seams and open loops: they need its stair tables and the user's review of pictures); the Mach Bike's speed and
+  the Acro tricks, rails and bumpy slopes (the bike feature); Fortree's bridges and Pacifidlog's logs for bikes; a world
+  rebuild to put the builder's fixes in a playable world (the parity numbers are the planned world's).
+- **Shown:** parity on the planned world, walking A (audit -> now): Blue 1,225 -> 3, Crystal 5,677 -> 146, Emerald 2,722
+  -> 277 (166 of them rails, the bike feature's); surfing A 11 -> 3, 154 -> 0, 440 -> 76; B unchanged but Crystal's 1,578
+  -> 267 (the ledge hops). Real engine: Emerald's warp sweep 1,091 rows 0 C 0 D, its replay 1,075/1,077; ash grass
+  281/281; Strength `push` Emerald 4/4, Crystal 3/3; Rock Smash 3/3; forced kinds named. Real client spots (LandSky3, an
+  old build): Blue 11/11, Crystal 12/13, Emerald 28/29 (the two left: 3D-cave ladders, climbed by design). Videos
+  `/workspace/videos/kanto-bridge-*-field-spots-fa8-20261025.mp4`.
+- **Check** (tools/check.sh on kb-dev24): pytest 2,414 passed (69 e2e skipped; Lua 1,614 of them); GameTests 133/133 with
+  the new `bikeWallsStopOnlyAPlayerOnABike` (run alone; inside the full check one build test timed out under load, "build
+  still running", and passed alone); JUnit in package chunks 1,445 tests, 1 failed: the old `KbPackReloadTest`. Two Gen 2
+  build GameTests now allow the closed west border's wall plate on the town's first column.
+
 ## Field mechanics audit: FA0–FA7 (2026-10-24/25, specs/FIELD_MECHANICS_AUDIT_PLAN.md §13)
 
 Pod **kb-dev24** (cpu5g x4, 16 GB, $0.184/hr, EU-RO-1, the volume's imports, Gen1Recomp v0.3.85, Union Room off at

@@ -332,7 +332,10 @@ public class Gen2BuildGameTests implements FabricGameTest {
 		SlotMap.Slot slot = slots.slot(JOHTO, new SlotMap.Key(QuarterPages.page(tile), QuarterPages.PALETTE, QuarterPages.index(tile), SlotMap.Shape.FULL));
 		helper.assertTrue(slot != null && slot.family() >= familyLo && slot.family() <= familyHi, "the ground's slot " + slot);
 		helper.assertTrue(groundState.is(KbBlocks.tileFull().get(slot.family())) && TileBlock.slot(groundState) == slot.slot(), "ground shows the wrong slot");
-		helper.assertTrue(level.getBlockState(ground).isAir(), "something stands on open ground");
+		// open above, but for the town's closed west border: its first column's wall plate (FIELD_MECHANICS_AUDIT_PLAN §13.10, item 2)
+		BlockState onGround = level.getBlockState(ground);
+		helper.assertTrue(onGround.isAir() || onGround.is(KbBlocks.EDGE_WALL) && EdgeWallBlock.sides(onGround) == EdgeWallBlock.SIDE_WEST,
+				"something stands on open ground: " + onGround);
 		// The ledges hop down (south).
 		BlockState collider = level.getBlockState(index.cellOrigin("G2_TEST_TOWN", 0, 7));
 		helper.assertTrue(collider.is(KbBlocks.LEDGE_COLLIDER) && collider.getValue(LedgeColliderBlock.FACING) == Direction.SOUTH, "the ledge's collider");

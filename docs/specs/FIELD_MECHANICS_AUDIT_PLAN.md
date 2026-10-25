@@ -1,6 +1,7 @@
 # Every script and field mechanic in Minecraft: the audit (Blue, Crystal, Emerald)
 
-**Status: FA0–FA7 done, 2026-10-25 (kb-dev24); the report is §13. §13.9 answered 2026-10-25; FA8 not started.** It was written
+**Status: FA0–FA8 done, 2026-10-25 (kb-dev24): the audit's report is §13, FA8's fixes §13.10. Left for later: the levels
+pipeline's seams and ramps (Q2, with pictures) and the bike feature (Q4).** It was written
 for an agent to execute phase by phase on a pod against the real engine, with the user's decisions in §9 (each a default
 the agent proceeds with unless the user changes it).
 
@@ -713,3 +714,53 @@ Ordered by what a player meets first. Each item names its rule and size; "Q" ite
 Minecraft bike feature, a real bike with the Acro tricks (wheelie, bunny hop, rails) and the Mach Bike's speed, planned
 in a separate session. FA8 leaves the tricks alone and does not design a bike key or bike speeds of its own: item 8's
 Mach speed and Q4 wait for that plan. FA8 item 10 (bike-blocked cells closed to a biking player) goes ahead.
+
+### 13.10 FA8: the fixes (2026-10-25, kb-dev24)
+
+Every item of §13.8 the answers left in FA8, in the order of Q0, each with its tests and a rerun on the real engines
+(the sweep rows that failed, the features, the replay through the client, the real-client spots). Commits 6985aaf to
+236834c, all local. The builder's fixes change the **planned** world (the parity numbers below are the plan's); a world
+built before them keeps the old blocks until it is rebuilt.
+
+| # | Fix | Where | Shown by |
+|---|---|---|---|
+| 1 | an empty solid column keeps an invisible barrier (or a solid hanging); a solid cell lower than ground beside it reaches that ground in barriers | `WorldPlan` | parity: solid-cell A Blue 849 → 3, Crystal 4,302 → 6, Emerald 1,197 → 7 |
+| 3 | ledges walled from their sides (Gen 1, Gen 3) and open in Gen 2 (`LedgeColliderBlock.MODE`; worlds built before keep the old rule); Emerald's one-way sides and water across elevations walled (`PairEdges`); a plate on a counter's seat sides | `LedgeColliderBlock`, `PairEdges`, `WorldPlan` | parity: ledge side entries Blue 281 → 0, Emerald 776 → 0; Emerald's one-way sides 219 → 7, water across elevations 94 → 8; counters Blue 27 → 0, Crystal 64 → 0 |
+| 12, 17 | Crystal's hop passes the cliff cell it jumps (a one-way ledge wall at feet, decoration above, the art kept), both facings of a corner ledge | `WorldPlan`, `G2Cells`, `CellFlags` | parity: Crystal's hop walls 1,349 → 38 (cells drawn as plain tiles keep the fade) |
+| 2 (part) | a surface map's side with no connection walled; water under a cliff gets barriers above a surfer's head | `PairEdges.withBorders`, `WorldPlan` | parity: off the map into the void Blue 67 → 0, Crystal 1,319 → 0, Emerald 386 → 55; Emerald's walkers on water 117 → 0 |
+| 4 | Emerald's warps named by the tile (ladder, door, edge, pad, hole, escalator) and else the engine's own announced kind (fall, dive, escalator, teleport, rope); a cave shaft's take still claims its warp | `game3/move.lua`, `kb_warp.lua` | real engine, warp sweep 1,091 rows: 0 C, 0 D; ladders `ladder` 86/100, cave doors `door` 142/187, pads `pad` 28/28, Mossdeep `pad` 21/22; replay 1,075/1,077 |
+| 5 | a warp within its map arrives (settled where the player stands) | `kb_warp.lua`, `game3/move.lua` | real client: the Aqua Hideout's pads and Mossdeep's tiles 6/6 (0/6 before) |
+| 6 | a battle's fade settles after the battle, where the step landed | `kb_warp.lua` | real engine's ash grass replayed: 281/281 (6 C before) |
+| 7 | running: the sprint key holds B on foot in Emerald (the brake's hold), `player.state.run`, `story.state.run`, the running speed; K7's `runner` is a script running again | client `MoveRuntime`, `SlopeBrake`; server `Rules`; protocol; `game3/observe.lua` | real engine: B held, 8 frames a cell; Lua, JUnit |
+| 9 | Emerald's Strength push observed and answered `push` (FA5's refusals were the driver's: a push direction the engine refuses) | `game3/observe.lua`, driver | real engine: `push` on 4 of 4 maps |
+| 10 | Emerald's bike-blocked cells (long grass, no running, hot springs, warp doors) close for bikers: a new invisible `bike_wall` | `BikeWallBlock`, `G3Cells`, `WorldPlan` | GameTest `bikeWallsStopOnlyAPlayerOnABike` (133/133) |
+| 11 | forced moves by kind (Emerald by the engine's table entry: current, ice, spin, slope; Crystal: current, ice); Dig, Teleport, Fly, the rope name their warps in both games; the Emerald export names behaviours by the engine's full id | `game3/`, `gen2/` adapters, `kb_player.lua`, `game3/export.lua` | real engine: Emerald ice 159 `ice`, currents 1,461 `current`; Crystal ice 777 `ice`, currents 174 `current`; Teleport `teleport`, Dig `dig` |
+| 13 | Crystal's Cycling Road steers: the roll is no forced move, its steps are `slope` | `gen2/observe.lua` | real engine: steering answered as steps, the roll `slope` |
+| 14 | Crystal's Rock Smash from Minecraft queues the smash script, as the party menu does | `gen2/fieldmoves.lua` | real engine: the rock gone on 3 of 3 maps |
+| 15 | Crystal's Strength push observed and answered `push` | `gen2/observe.lua` | real engine: `push` on 3 of 3 maps |
+| 16 | Crystal's ladders `ladder`; its field moves' warps named | `gen2/move.lua`, `gen2/fieldmoves.lua` | real engine: Teleport `teleport`, Dig `dig`, rope `rope` |
+
+**Parity now** (the planned world, cell-directions; the audit's numbers in brackets):
+
+| Game | Walking A | Walking B | Surfing A | Surfing B |
+|---|---|---|---|---|
+| Blue | 3 (1,225) | 98 (98) | 3 (11) | 26 (26) |
+| Crystal | 146 (5,677) | 267 (1,578) | 0 (154) | 62 (62) |
+| Emerald | 277 (2,722) | 295 (295) | 76 (440) | 251 (251) |
+
+**Real-client spots again** (LandSky3, built before the builder's fixes): Blue 11 of 11, Crystal 12 of 13, Emerald 28 of
+29 (25 of 28 before: the pads and Mossdeep's tiles pass); the two left are ladders in 3D caves, where the client climbs a
+shaft by design (H5). Videos on the volume: `/workspace/videos/kanto-bridge-{blue,crystal,emerald}-field-spots-fa8-20261025.mp4`.
+
+**Left for later, on purpose:**
+- **The seams between raised maps and the cliffs with no ramp** (most of the B left: Blue 124, Crystal ~300, Emerald
+  ~500): the levels pipeline's ragged seams and open loops (LEVELS_PIPELINE.md "Seams between maps"), which need its
+  stair tables for Johto and Kanto and the user's review of pictures (Q2: their own pass).
+- **The Mach Bike's speed, the Acro tricks, rails and bumpy slopes** (Emerald's 166 rail A): the Minecraft bike feature,
+  planned in its own session (Q4).
+- **Bikes on Fortree's bridges and Pacifidlog's logs** (the bridges depend on the player's elevation, the logs are story
+  cells).
+- **A world rebuild**: the builder's fixes reach a world when it is built again; the spots above ran on LandSky3 (built
+  2026-10-23), so they show the bridge's and the client's fixes, not the builder's.
+- Small ones seen on the way: Lavaridge's B1F pop-up lands over a sand hole the builder draws as a drop (the client falls
+  through, one replay row); an Emerald Dig shows a fade the bridge names `script` before the `dig` warp.
