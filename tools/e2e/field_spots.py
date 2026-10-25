@@ -236,7 +236,8 @@ def main(argv=None) -> int:
                     out["inside"] = inside(st)
                     out["moves"] = {k: after.get(k, 0) - before.get(k, 0) for k in sorted(set(after) | set(before))
                                     if isinstance(after.get(k, 0), (int, float)) and after.get(k, 0) != before.get(k, 0)}
-                    ee = [g["wire"] + spot["engine_end"][0], spot["engine_end"][1], spot["engine_end"][2]]
+                    ee = ([g["wire"] + spot["engine_end"][0], spot["engine_end"][1], spot["engine_end"][2]]
+                          if spot["engine_end"][0] is not None else out["hidden"])  # an extra spot: no sweep row to compare
                     same_end = out["hidden"] == ee
                     floor_ok = True
                     if spot.get("floor"):
