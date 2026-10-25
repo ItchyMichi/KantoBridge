@@ -143,9 +143,28 @@ function Observe.install(b)
     -- running is the running shoes' run
     f.running = P.running == true
     f.hidden = P.visible == false
+    -- FA8 item 9 (K5): a Strength push under way (Player.boulderPush, player.lua:801, cleared as it lands :1460): its
+    -- direction is the player's facing; the step driver answers the step "push" (act/kb_move.lua), as Gen 1's
+    f.boulderPush = type(P.boulderPush) == "table" and P.facing or nil
     f.playerScripted = P._scriptedStep ~= nil
     f.forcedPhase = forced() or nil
     f.transitioning = transitioning()
+    -- a field move's warp from Minecraft (fieldmoves.lua mark): the departure the tracker names a fade-started warp by,
+    -- until a second after the fade, or a minute when nothing warps; an announced warp takes it (move.lua)
+    local st = type(b.state) == "function" and b.state() or nil
+    local mark = st and st.departure
+    if type(mark) == "table" then
+      mark.steps = (tonumber(mark.steps) or 0) + 1
+      if f.transitioning then
+        mark.seen, mark.quiet = true, 0
+      elseif mark.seen then
+        mark.quiet = (mark.quiet or 0) + 1
+      end
+      if (mark.seen and mark.quiet > 60) or mark.steps > 3600 then
+        st.departure, mark = nil, nil
+      end
+      f.departure = mark and mark.kind or nil
+    end
     f.battle = battleActive()
     f.scripted = scriptRunning()
     f.runner = f.scripted == true

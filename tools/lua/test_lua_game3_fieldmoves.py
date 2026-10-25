@@ -56,6 +56,19 @@ def test_dive_fly_and_the_dismount():
     assert act(a, "surf") == (True, b"dismount")
 
 
+def test_a_field_moves_warp_is_named_by_the_move():
+    # FA8 item 11 (K11): Dig (and Teleport, Fly, the rope) from Minecraft mark the warp they set off: the departure hint
+    # for a fade-started warp, and the kind of the warp the engine announces (taken once)
+    a, s = adapter()
+    member(a, moves=(91,))
+    assert act(a, "dig") == (True, b"dig")
+    assert a.facts().get("departure") == "dig"
+    warp = lambda: plain(a.eng.warpDeparture(a.lua({"toMap": "EM_TEST_TOWN", "warp": {"kind": "escape_rope", "map": "EM_TEST_TOWN"}})))  # noqa: E731
+    assert warp()["kind"] == "dig"
+    assert warp()["kind"] == "rope", "taken once: the next warp is the engine's own"
+    assert a.facts().get("departure") is None
+
+
 def test_the_bike_and_the_escape_rope_from_the_bag():
     a, s = adapter()
     member(a)

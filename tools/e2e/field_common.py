@@ -248,6 +248,10 @@ def run_rows(driver: str, game: str, scene: str, port: int, timeout: float, extr
         result = run.wait(180)
     print("RUN", json.dumps(result.summary(), sort_keys=True))
     print("ANSWERED", dict(answered))
+    for line in result.lines:
+        if line.startswith("KB_PROBE"):
+            # a driver's diagnostic: ids, booleans and counts only (§4.4)
+            print(line)
     return received, rows, answered, result
 
 

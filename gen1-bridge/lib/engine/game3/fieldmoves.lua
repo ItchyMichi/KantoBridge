@@ -86,6 +86,14 @@ function Field3.install(b)
     }, fx, fy
   end
 
+  -- The warp a field move from Minecraft sets off is named by it (FA8 item 11, K11): warpDeparture takes the mark
+  -- (game3/move.lua); observe() forgets one no warp took (observe.lua)
+  local MARKS = { dig = "dig", teleport = "teleport", fly = "fly", rope = "rope" }
+  local function mark(kind)
+    local st = b.state()
+    if st and MARKS[kind] then st.departure = { kind = MARKS[kind], steps = 0 } end
+  end
+
   def("fieldAction", function(action, opts)
     opts = type(opts) == "table" and opts or {}
     local s = b.session()
@@ -123,7 +131,10 @@ function Field3.install(b)
     if action == "dig" and opts.item == Field3.ROPE then
       if not has(Field3.ROPE) then return false, "no_item" end
       local okCall, used = b.call(ItemUse, "useEscapeRope", s, s.bag, itemNum(Field3.ROPE))
-      if okCall and used then return true, "rope" end
+      if okCall and used then
+        mark("rope")
+        return true, "rope"
+      end
       return false, "not_here"
     end
     local move = Field3.MOVES[action]
@@ -150,6 +161,7 @@ function Field3.install(b)
     end
     local okRun = b.call(b.g3("field"), "executeFieldMove", res)
     if not okRun then return false, "failed" end
+    mark(action)
     if action == "fly" then return true, "fly_list" end
     return true, action
   end)

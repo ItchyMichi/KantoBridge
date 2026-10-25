@@ -167,6 +167,12 @@ function Move.install(b)
       -- the behaviour first (a pad's tile says pad, whatever path the engine took); the engine's name where there is none
       kind = ENGINE_KINDS[engineKind]
     end
+    -- a field move from Minecraft named the warp it set off (fieldmoves.lua mark): Dig, Teleport, Fly, the rope
+    local st = type(b.state) == "function" and b.state() or nil
+    if st and type(st.departure) == "table" then
+      kind = st.departure.kind
+      st.departure = nil
+    end
     -- MG8: a Wild Routes end's own warps (the way back, a resume onto the route map) are script warps, as Gen 1's
     if type(b.routeOwnWarp) == "function" and b.routeOwnWarp() then kind = "script" end
     out.kind = kind or "door"

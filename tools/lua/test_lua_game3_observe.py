@@ -131,6 +131,17 @@ def test_a_battle_names_the_screen_before_the_hud():
     assert a.facts()["topName"] == "BattleState"
 
 
+def test_a_strength_push_names_its_direction():
+    # FA8 item 9 (K5): Player.boulderPush is set from the push until it lands; its direction is the player's facing
+    a = Adapter3()
+    a.field("EM_TEST_TOWN", 5, 6, "left")
+    assert a.facts().get("boulderPush") is None
+    a.E.Player.boulderPush = a.lua({"obj": {}})
+    assert a.facts()["boulderPush"] == "left"
+    a.E.Player.boulderPush = None
+    assert a.facts().get("boulderPush") is None
+
+
 def test_a_field_lock_or_a_running_script_is_scripted():
     a = Adapter3()
     a.field()

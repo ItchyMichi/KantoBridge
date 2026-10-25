@@ -922,7 +922,15 @@ local function findObject(row)
         local sx, sy = o.cellX - d[1], o.cellY - d[2]
         local bx, by = o.cellX + d[1], o.cellY + d[2]
         local okS = C.inBounds(sx, sy) and C.isWalkable(sx, sy) and not C.isWater(sx, sy)
-        local okB = row.find ~= "boulder" or (C.inBounds(bx, by) and C.isWalkable(bx, by))
+        -- a boulder's cell behind as the engine judges a push (player.lua:791-796: canEnter at the boulder's elevation)
+        local okB = row.find ~= "boulder"
+        if not okB and C.inBounds(bx, by) then
+          local Runtime = mod3("runtime")
+          local game = Runtime and Runtime._game
+          local okE, enter = pcall(C.canEnter, game, bx, by, { fromX = o.cellX, fromY = o.cellY, dir = dir,
+            elevation = o.currentElevation })
+          okB = okE and enter == true and not (C.isNonAnimDoor and C.isNonAnimDoor(C.behavior(bx, by)))
+        end
         if okS and okB then
           row.x, row.y, row.dir, row.face = sx, sy, dir, dir
           row.tx, row.ty = o.cellX, o.cellY
