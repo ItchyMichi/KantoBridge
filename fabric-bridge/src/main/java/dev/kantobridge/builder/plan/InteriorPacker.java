@@ -41,6 +41,8 @@ public final class InteriorPacker {
 	 * the distance costs nothing.
 	 */
 	public static final int SKY_CLEARANCE = 34 * 16;
+	/** How far an open-air interior placed beside its group keeps from the other open-air interiors (§14, SC3). */
+	public static final int BESIDE_CLEARANCE = 64;
 
 	/** A horizontal box in blocks, max exclusive. */
 	public record Box(int minX, int minZ, int maxX, int maxZ) {
@@ -172,6 +174,41 @@ public final class InteriorPacker {
 			}
 		}
 		return null;
+	}
+
+	/**
+	 * Reserves exactly the spot ({@code x}, {@code z}) on layer {@code layer} for an open-air interior that the game connects
+	 * to open-air interiors placed before ({@code group}: their footprints, FIELD_MECHANICS_AUDIT_PLAN §14, SC3): beside them
+	 * as the connection says, so the seam is walked across as on the surface. Its footprint keeps half {@link #SKY_CLEARANCE}
+	 * from {@code surfaceBox} (17 chunks, still past a 16-chunk view), {@link #BESIDE_CLEARANCE} from every other open-air interior (the group as a whole grows past its
+	 * first map's clearance) and no gap from the group's; it is free on its layer and every
+	 * layer above it but for them. Null when it doesn't fit (the interior is then placed on its own).
+	 */
+	public @Nullable Spot placeSkyBeside(int x, int z, int blockWidth, int blockDepth, int layer, Box surfaceBox, List<Box> group) {
+		if (layer < 1 || layer > this.maxLayer) {
+			return null;
+		}
+		Box box = footprint(x, z, blockWidth, blockDepth);
+		if (!box.separated(surfaceBox, SKY_CLEARANCE / 2)) {
+			return null;
+		}
+		for (Box sky : this.skies) {
+			if (!group.contains(sky) && !box.separated(sky, BESIDE_CLEARANCE)) {
+				return null;
+			}
+		}
+		for (int l = 1; l <= layer; l++) {
+			for (Box other : this.occupied.getOrDefault(l, List.of())) {
+				if (!group.contains(other) && !box.separated(other, GAP)) {
+					return null;
+				}
+			}
+		}
+		for (int l = 1; l <= layer; l++) {
+			this.occupied.computeIfAbsent(l, k -> new ArrayList<>()).add(box);
+		}
+		this.skies.add(box);
+		return new Spot(x, z, layer, false);
 	}
 
 	/** A box open-air interiors keep {@link #SKY_CLEARANCE} from, as from each other (WorldPlanner.keepSkiesClear). */

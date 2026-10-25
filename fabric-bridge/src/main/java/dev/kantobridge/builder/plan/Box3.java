@@ -23,6 +23,11 @@ public record Box3(int minX, int minY, int minZ, int maxX, int maxY, int maxZ) {
 		return this.minX < x0 + 16 && this.maxX > x0 && this.minZ < z0 + 16 && this.maxZ > z0;
 	}
 
+	/** True when the two boxes' columns overlap. */
+	public boolean intersectsXZ(Box3 other) {
+		return this.minX < other.maxX && other.minX < this.maxX && this.minZ < other.maxZ && other.minZ < this.maxZ;
+	}
+
 	/** The same box grown by {@code n} blocks in every horizontal direction. */
 	public Box3 inflateXZ(int n) {
 		return new Box3(this.minX - n, this.minY, this.minZ - n, this.maxX + n, this.maxY, this.maxZ + n);

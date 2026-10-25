@@ -311,15 +311,37 @@ final class FieldParity {
 				this.report.agree(state, cls);
 				return;
 			}
-			if (verdict == 'E' && this.pm.placement().kind() == MapPlacement.Kind.SURFACE && this.beyond(cx, cy, tx, ty).isEmpty()) {
-				// a surface map's side past the end of the neighbour's strip: the engine clamps onto the neighbour's nearest cell, the original
-				// game's border stops the player, and so does the build's seam wall (FIELD_MECHANICS_AUDIT_PLAN §14, SC6)
+			if (verdict == 'E' && (this.pm.placement().kind() == MapPlacement.Kind.SURFACE || WorldPlan.openSky(this.pm.placement()))
+					&& this.beyond(cx, cy, tx, ty).isEmpty() && this.sideTouched(d)) {
+				// a surface or open-air map's side past the end of the neighbour's strip (the side meets a neighbour elsewhere):
+				// the engine clamps onto the neighbour's nearest cell, the original game's border stops the player, and so does
+				// the build's seam wall or ring (FIELD_MECHANICS_AUDIT_PLAN §14, SC6)
 				this.report.count(state + "_clamp");
 				this.report.example("clamp:" + state, this.map, cx, cy, d, state);
 				return;
 			}
 			String rule = gameOpen ? "B" : "A";
 			this.report.disagree(rule, state, cls, this.map, cx, cy, d, this.detail(cx, cy, tx, ty, mc));
+		}
+
+		/** Per direction, whether any cell along the map's side in that direction meets another map's cell (null: not worked out yet). */
+		private final Boolean[] touched = new Boolean[4];
+
+		/** True when some cell along the map's side in direction {@code d} meets another map's cell beyond it. */
+		private boolean sideTouched(int d) {
+			if (this.touched[d] == null) {
+				int w = this.pm.model().cellWidth();
+				int h = this.pm.model().cellHeight();
+				boolean any = false;
+				int n = DELTA[d][0] != 0 ? h : w;
+				for (int k = 0; k < n && !any; k++) {
+					int cx = DELTA[d][0] > 0 ? w - 1 : DELTA[d][0] < 0 ? 0 : k;
+					int cy = DELTA[d][1] > 0 ? h - 1 : DELTA[d][1] < 0 ? 0 : k;
+					any = this.beyond(cx, cy, cx + DELTA[d][0], cy + DELTA[d][1]).isPresent();
+				}
+				this.touched[d] = any;
+			}
+			return this.touched[d];
 		}
 
 		/** The cell of another map just beyond cell (cx, cy)'s edge towards (tx, ty), at any height within 12 blocks of its feet. */

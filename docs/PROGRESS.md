@@ -3491,8 +3491,8 @@ Parity is the planned world's (FieldParity, the rollout's options), FA8's last r
 | Game | Walking A | Walking B | Surfing A | Surfing B | Clamps (walk / surf) |
 |---|---|---|---|---|---|
 | Blue | 3 -> 2 | 98 -> 1 | 3 -> 3 | 26 -> 3 | 88 / 23 |
-| Crystal | 146 -> 14 | 267 -> 47 | 0 -> 0 | 62 -> 5 | 314 / 57 |
-| Emerald | 277 -> 231 | 295 -> 289 | 76 -> 27 | 251 -> 251 | 1 / 0 |
+| Crystal | 146 -> 14 | 267 -> 19 | 0 -> 0 | 62 -> 5 | 326 / 57 |
+| Emerald | 277 -> 231 | 295 -> 195 | 76 -> 27 | 251 -> 251 | 1 / 0 |
 
 - **SC1 seam walls** (`SeamEdges`, after the chain in all three planners): a surface map's edge cell is walled where
   nothing lies beyond it, where a walker would step onto the neighbour's water below, and where the game's own rule
@@ -3513,12 +3513,22 @@ Parity is the planned world's (FieldParity, the rollout's options), FA8's last r
   above, and four faces of 4 or 5 blocks: ramps are built up to 3).
 - **SC7 Crystal's cave hops** (`StepMend.hops`): the cell a hop jumps comes down to the hop cell's level in the 3D
   caves. 38 -> 2.
-- **Not done yet:** SC3 (the Safari Zone's six areas apart on three layers: 113 of Emerald's B), SC5 (two-floor
-  bridges: Route 110's Cycling Road and Route 120, about 280), and Emerald's levels that stand far apart where the game
-  walks level (Mossdeep's north beach 24 blocks under the city, Lilycove's north shore 9 over the sea, Ever Grande's
-  pool): they need the pictures. Emerald's 166 rails stay with the bike feature.
-- Tests: `SeamEdgesTest`, `MapChainTest` (two more), `StepMendTest`; JUnit builder, world, scene and field packages
-  678 passed.
+- **SC3 open-air maps the game connects, side by side** (`SkyGroups`, `InteriorPacker.placeSkyBeside`, both Gen 2 and
+  Gen 3): a map connected to an open-air map already placed goes right beside it, as the connection says, on its layer
+  (half the sky clearance from the surface, 64 blocks from other skies); a sky map's ring and apron step aside where a
+  neighbour's cells stand (`WorldPlan.skyNeighbourHolds`); the group is chained as the surface is, in its levels
+  (`MapChain.chain(maps, which)`, `MapChain.raise`), and its ragged seams mended. Emerald's Safari Zone: its six areas
+  in a 3 x 2 grid on one layer, 113 walled crossings -> 0. Crystal's Silver Cave outside beside Route 28: 28 -> 0 (its
+  rows past Route 28's strip are clamps).
+- **Not done yet:** SC5 (two-floor bridges: Route 110's Cycling Road about 220 cell-directions, Route 120 about 47, Route
+  119 about 12; they need a second floor in the world index, the builder, the client and the art), Emerald's levels that
+  stand far apart where the game walks level (Mossdeep's north beach 24 blocks under the city: 12; Lilycove's north shore
+  9 over the sea; Ever Grande's pool, a waterfall: 37): they need the pictures. Also left: the two underwater routes 127
+  and 128 placed apart (16), water a block apart across three seams (Route 134 | Slateport, Route 107, Route 4 | Cerulean:
+  17), Route 130's Mirage Island story water (55), 16 Emerald walkers refused at a seam for a reason the model doesn't see.
+  Emerald's 166 rails stay with the bike feature.
+- Tests: `SeamEdgesTest`, `MapChainTest` (two more), `StepMendTest`, `InteriorPackerTest` (one more); JUnit builder,
+  world, scene and field packages 679 passed; GameTests 133/133.
 
 ## Field mechanics audit: FA8, the fixes (2026-10-25, specs/FIELD_MECHANICS_AUDIT_PLAN.md §13.10, commits 6985aaf..236834c)
 

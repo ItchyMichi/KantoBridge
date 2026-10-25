@@ -13,6 +13,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
+import java.util.function.Predicate;
 import org.jetbrains.annotations.Nullable;
 
 /**
@@ -51,9 +52,14 @@ public final class MapChain {
 
 	/** The chain of {@code maps}' surface maps. */
 	public static Result chain(List<PlacedMap> maps) {
+		return chain(maps, MapChain::surface);
+	}
+
+	/** The chain of the maps {@code which} takes (the surface's, or the open-air maps under the sky: §14 SC3). */
+	public static Result chain(List<PlacedMap> maps, Predicate<PlacedMap> which) {
 		List<PlacedMap> surface = new ArrayList<>();
 		for (PlacedMap m : maps) {
-			if (m.placement().kind() == MapPlacement.Kind.SURFACE) {
+			if (which.test(m)) {
 				surface.add(m);
 			}
 		}
@@ -162,6 +168,51 @@ public final class MapChain {
 		return moved;
 	}
 
+	/**
+	 * {@code placed}'s maps raised by {@code bases} in their levels, their placements kept (the open-air maps under the sky,
+	 * §14 SC3: an interior's floor stays on its layer, and its raised ground is drawn from it); the layouts that changed,
+	 * by map. A map raised past {@link MapLayout#MAX_LEVEL} keeps its levels (noted {@code chain_sky_too_high}).
+	 */
+	public static Map<String, MapLayout> raise(List<PlacedMap> placed, Map<String, Integer> bases, Warnings warnings) {
+		Map<String, MapLayout> out = new TreeMap<>();
+		for (int i = 0; i < placed.size(); i++) {
+			PlacedMap m = placed.get(i);
+			int base = bases.getOrDefault(m.id(), 0);
+			if (base == 0) {
+				continue;
+			}
+			int w = m.placement().w();
+			int h = m.placement().h();
+			MapLayout layout = m.layout();
+			int[] levels = new int[w * h];
+			boolean fits = true;
+			for (int k = 0; k < levels.length; k++) {
+				levels[k] = m.level(k % w, k / w) + base;
+				fits &= levels[k] <= MapLayout.MAX_LEVEL;
+			}
+			if (!fits) {
+				warnings.note("chain_sky_too_high", Warnings.symbols("map", m.id()));
+				continue;
+			}
+			MapLayout now = layout == null ? MapLayout.flat(w, h, levels, List.of())
+					: MapLayout.of(w, h, layout.pieces(), levels, List.copyOf(layout.ramps()));
+			if (layout != null && layout.hasCeilings()) {
+				int[] ceilings = new int[levels.length];
+				for (int k = 0; k < ceilings.length; k++) {
+					ceilings[k] = layout.ceiling(k % w, k / w) + base;
+				}
+				now = now.withCeilings(ceilings);
+			}
+			placed.set(i, new PlacedMap(m.placement(), m.model(), m.edges(), now));
+			out.put(m.id(), now);
+		}
+		return out;
+	}
+
+	private static boolean surface(PlacedMap m) {
+		return m.placement().kind() == MapPlacement.Kind.SURFACE;
+	}
+
 	/** The placements and layouts the joins' stairs changed, by map. */
 	public record Joins(Map<String, MapPlacement> placements, Map<String, MapLayout> layouts) {
 	}
@@ -212,10 +263,15 @@ public final class MapChain {
 	 * {@code placed} takes the new layouts, in place; returns them by map.
 	 */
 	public static Map<String, MapLayout> mend(List<PlacedMap> placed, Warnings warnings) {
+		return mend(placed, MapChain::surface, warnings);
+	}
+
+	/** The same over the maps {@code which} takes. */
+	public static Map<String, MapLayout> mend(List<PlacedMap> placed, Predicate<PlacedMap> which, Warnings warnings) {
 		List<PlacedMap> surface = new ArrayList<>();
 		Map<String, Integer> at = new HashMap<>();
 		for (int i = 0; i < placed.size(); i++) {
-			if (placed.get(i).placement().kind() == MapPlacement.Kind.SURFACE) {
+			if (which.test(placed.get(i))) {
 				surface.add(placed.get(i));
 				at.put(placed.get(i).id(), i);
 			}

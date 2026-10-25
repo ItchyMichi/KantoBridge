@@ -214,6 +214,8 @@ final class Gen3Planner {
 			}
 		}
 		boolean progress = true;
+		// the open-air maps the game connects, side by side (SC3)
+		SkyGroups skyGroups = new SkyGroups();
 		while (!pending.isEmpty() && progress) {
 			progress = false;
 			List<String> next = new ArrayList<>();
@@ -225,7 +227,10 @@ final class Gen3Planner {
 					continue;
 				}
 				progress = true;
-				MapPlacement placedAt = placeInterior(all.get(id), door, parent, packer, wildMaps.contains(id), sky, warnings);
+				MapPlacement placedAt = sky == null ? null : besideSky(all, id, door, placements, packer, sky, skyGroups, warnings);
+				if (placedAt == null) {
+					placedAt = placeInterior(all.get(id), door, parent, packer, wildMaps.contains(id), sky, warnings);
+				}
 				if (placedAt != null) {
 					placements.put(id, placedAt);
 				}
@@ -304,6 +309,15 @@ final class Gen3Planner {
 		// the ragged seams mended (SC2): a ramp up to the seam where two maps' cells still stand apart
 		if (MapChain.enabled()) {
 			mapLayouts.putAll(MapChain.mend(placed, warnings));
+		}
+		// the open-air maps the game connects (the Safari Zone's areas), chained as the surface is in their levels, their
+		// ragged seams mended (SC3)
+		if (MapChain.enabled()) {
+			java.util.function.Predicate<PlacedMap> skyMap = m -> WorldPlan.openSky(m.placement());
+			MapChain.Result skies = MapChain.chain(placed, skyMap);
+			warnings.note("chain_sky_seams", skies.seams().size());
+			mapLayouts.putAll(MapChain.raise(placed, skies.bases(), warnings));
+			mapLayouts.putAll(MapChain.mend(placed, skyMap, warnings));
 		}
 		// a stair through a face the game climbs, ramped (SC4)
 		mapLayouts.putAll(StepMend.apply(placed, warnings));
@@ -557,6 +571,41 @@ final class Gen3Planner {
 		}
 		warnings.warn("layout_overlap", overlaps);
 		return new int[] {mismatches, overlaps};
+	}
+
+	/**
+	 * An open-air map the game connects to an open-air map already placed (its door's parent first, then any other it
+	 * connects to), beside it ({@link SkyGroups}); null otherwise.
+	 */
+	private static @Nullable MapPlacement besideSky(Map<String, G3Map> all, String id, Door door, Map<String, MapPlacement> placements, InteriorPacker packer,
+			InteriorPacker.Box sky, SkyGroups groups, Warnings warnings) {
+		G3Map map = all.get(id);
+		if (map == null || !G3Cells.outdoor(map)) {
+			return null;
+		}
+		List<String> near = new ArrayList<>(List.of(door.parent()));
+		for (G3Map.Connection c : map.connections()) {
+			if (!near.contains(c.map())) {
+				near.add(c.map());
+			}
+		}
+		for (String other : near) {
+			MapPlacement at = placements.get(other);
+			G3Map from = all.get(other);
+			if (at == null || from == null || !WorldPlan.openSky(at)) {
+				continue;
+			}
+			for (G3Map.Connection c : from.connections()) {
+				if (!c.map().equals(id)) {
+					continue;
+				}
+				MapPlacement placed = groups.beside(id, c.dir(), c.offset(), map.w(), map.h(), map.dark(), at, packer, sky, warnings);
+				if (placed != null) {
+					return placed;
+				}
+			}
+		}
+		return null;
 	}
 
 	/**

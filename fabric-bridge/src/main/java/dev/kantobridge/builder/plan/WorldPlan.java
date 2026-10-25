@@ -883,6 +883,11 @@ public final class WorldPlan {
 			// Another piece at this offset draws the column (rooms of one map that didn't move apart)
 			return;
 		}
+		if (!inside && openSky(p) && this.skyNeighbourHolds(map, x, z)) {
+			// An open-air map the game connects to this one stands here (the Safari Zone's areas, §14 SC3): its own cells,
+			// no ring or apron between them
+			return;
+		}
 		if (inside) {
 			// Another room's cell in this one's rectangle: rock (CAVES_3D_PLAN §3.5)
 			this.renderRingColumn(sink, map, piece, tx, ty, x, z);
@@ -907,6 +912,37 @@ public final class WorldPlan {
 				sink.set(x, p.y() + k, z, BlockCode.decor(true));
 			}
 		}
+	}
+
+	/** The open-air maps beside each open-air map (their footprints with a sky interior's margin touching), by map; built when first asked. */
+	private @Nullable Map<String, List<PlacedMap>> skyNeighbours;
+
+	/** True when another open-air map beside {@code map} holds column (x, z) on the same layer. */
+	private boolean skyNeighbourHolds(PlacedMap map, int x, int z) {
+		if (this.skyNeighbours == null) {
+			Map<String, List<PlacedMap>> out = new java.util.HashMap<>();
+			List<PlacedMap> skies = new ArrayList<>();
+			for (PlacedMap m : this.maps) {
+				if (openSky(m.placement())) {
+					skies.add(m);
+				}
+			}
+			for (PlacedMap a : skies) {
+				Box3 va = interiorVolume(a.placement());
+				for (PlacedMap b : skies) {
+					if (a != b && a.placement().layer() == b.placement().layer() && va.intersectsXZ(interiorVolume(b.placement()))) {
+						out.computeIfAbsent(a.id(), k -> new ArrayList<>()).add(b);
+					}
+				}
+			}
+			this.skyNeighbours = out;
+		}
+		for (PlacedMap b : this.skyNeighbours.getOrDefault(map.id(), List.of())) {
+			if (b.placement().containsColumn(x, z)) {
+				return true;
+			}
+		}
+		return false;
 	}
 
 	/**

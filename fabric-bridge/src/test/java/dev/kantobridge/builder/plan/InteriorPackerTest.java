@@ -175,4 +175,22 @@ class InteriorPackerTest {
 		assertNotNull(room);
 		assertFalse(room.moved());
 	}
+
+	@Test
+	void anOpenAirMapTheGameConnectsGoesBesideItsGroup() {
+		// the Safari Zone's way (FIELD_MECHANICS_AUDIT_PLAN §14, SC3): the first area under the open sky, the next right
+		// beside it on its layer, though a sky keeps SKY_CLEARANCE from the others
+		InteriorPacker packer = new InteriorPacker(14);
+		InteriorPacker.Box surface = new InteriorPacker.Box(-100, -100, 100, 100);
+		InteriorPacker.Spot first = packer.placeOpenSky(2000, 0, 80, 80, 2, surface);
+		assertNotNull(first);
+		List<InteriorPacker.Box> group = new java.util.ArrayList<>(List.of(InteriorPacker.footprint(first.x(), first.z(), 80, 80)));
+		InteriorPacker.Spot east = packer.placeSkyBeside(first.x() + 80, first.z(), 80, 80, first.layer(), surface, group);
+		assertNotNull(east, "beside its group: no gap, no clearance between them");
+		assertEquals(first.x() + 80, east.x());
+		assertEquals(first.layer(), east.layer());
+		// another group's sky nearby keeps the spot west of the first from them
+		packer.keepSkyClear(new InteriorPacker.Box(first.x() - 140, first.z(), first.x() - 120, first.z() + 20));
+		assertNull(packer.placeSkyBeside(first.x() - 80, first.z(), 80, 80, first.layer(), surface, group), "another sky within BESIDE_CLEARANCE");
+	}
 }
