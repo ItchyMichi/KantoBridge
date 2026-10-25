@@ -9,6 +9,7 @@ import dev.kantobridge.client.bridge.ClientBridgeState;
 import dev.kantobridge.client.bridge.Links;
 import dev.kantobridge.client.bridge.ConnectionState;
 import dev.kantobridge.client.bridge.Dispatcher;
+import dev.kantobridge.client.bridge.HelloOk;
 import dev.kantobridge.client.net.ClientRelay;
 import dev.kantobridge.client.net.SessionGate;
 import dev.kantobridge.client.net.SessionRuntime;
@@ -172,7 +173,13 @@ public final class MoveRuntime {
 		InputLock.setNoSneak(slope);
 		boolean connected = this.bridge.client().state() == ConnectionState.CONNECTED;
 		// The key itself: the input lock zeroes the player's sneak during the roll's forced steps.
-		Boolean hold = this.brake.tick(this.controller.following(), connected, slope, minecraft.options.keyShift.isDown());
+		// FA8 item 7 (D4): the sprint key runs where the hidden game runs (Gen 3: B held on foot; the game itself says where
+		// it may, and player.state.run gives the speed)
+		HelloOk hello = this.bridge.state().handshake();
+		boolean runs = hello != null && "gen3".equals(hello.family());
+		boolean run = runs && this.controller.following() && !slope && !this.bridge.state().bike() && !this.bridge.state().surf()
+				&& minecraft.options.keySprint.isDown();
+		Boolean hold = this.brake.tick(this.controller.following(), connected, slope, minecraft.options.keyShift.isDown(), run);
 		if (hold != null) {
 			JsonObject data = new JsonObject();
 			data.addProperty("button", "b");

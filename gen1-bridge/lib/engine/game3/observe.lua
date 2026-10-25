@@ -139,13 +139,16 @@ function Observe.install(b)
     -- SE6: the weather the game draws (field_weather_rse.lua)
     f.weather = weatherName()
     f.bike = P.biking == true
-    f.runner = P.running == true
+    -- K7 (FA8 item 7): runner is a script running, as Gen 1's (kb_story's flag reread, kb_route's stale check);
+    -- running is the running shoes' run
+    f.running = P.running == true
     f.hidden = P.visible == false
     f.playerScripted = P._scriptedStep ~= nil
     f.forcedPhase = forced() or nil
     f.transitioning = transitioning()
     f.battle = battleActive()
     f.scripted = scriptRunning()
+    f.runner = f.scripted == true
     local over = screenOver()
     if over then
       f.top, f.topName = "screen", over

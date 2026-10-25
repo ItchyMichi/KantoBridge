@@ -26,12 +26,20 @@ public final class SlopeBrake {
 	 * @return the {@code on} value to send now, or null when nothing changes
 	 */
 	public @Nullable Boolean tick(boolean following, boolean connected, boolean slope, boolean sneak) {
+		return this.tick(following, connected, slope, sneak, false);
+	}
+
+	/**
+	 * The same with a run wanted too ({@code run}: the sprint key on foot in a game that runs, FA8 item 7): Emerald runs
+	 * while B is held, so the one hold of B serves both.
+	 */
+	public @Nullable Boolean tick(boolean following, boolean connected, boolean slope, boolean sneak, boolean run) {
 		if (!connected) {
 			// Nothing can be sent, and gen1-bridge forgets the hold with the link anyway.
 			this.held = false;
 			return null;
 		}
-		boolean want = following && slope && sneak;
+		boolean want = following && (slope && sneak || run);
 		if (want == this.held) {
 			return null;
 		}

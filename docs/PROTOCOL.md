@@ -1115,7 +1115,7 @@ bytes. A downloaded export is stored as an **export bundle**, which stays under 
 
 | Type | Dir | Data | ROM |
 |---|---|---|---|
-| `story.state` | C→S | `full`; when full: `active[cell], surf, bike, lit[]`; otherwise deltas `add?[], remove?[], surf?, bike?, lit?`. A cell is `"MAP:x:y"`. `active` counts only in a full state; a delta's `lit` replaces the lit set. The client applies a change to its own player's state first, then relays it: a full state on join, snapshot and respawn, deltas after (sent from M3 on) | |
+| `story.state` | C→S | `full`; when full: `active[cell], surf, bike, lit[]` (and `run?`); otherwise deltas `add?[], remove?[], surf?, bike?, run?, lit?` (`run`, FA8: the hidden player runs, so the server gives the running speed). A cell is `"MAP:x:y"`. `active` counts only in a full state; a delta's `lit` replaces the lit set. The client applies a change to its own player's state first, then relays it: a full state on join, snapshot and respawn, deltas after (sent from M3 on) | |
 | `warp.request` | C→S | `to{map,x,y,facing}, kind?`. With `kind`: the hidden game's warp. Without: the client's own sync teleport (join, reconnect, drift, stuck) | |
 | `warp.done` | S→C | `ok, to?`; `re` optional | |
 | `activity` | C→S | `activity:"dialogue"\|"cutscene"\|"battle"\|"paused"\|"none"` (speech bubbles; `paused` while the player's Gen1Recomp is disconnected) | |

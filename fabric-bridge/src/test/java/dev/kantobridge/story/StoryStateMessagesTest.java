@@ -57,6 +57,23 @@ class StoryStateMessagesTest {
 	}
 
 	@Test
+	void runningIsAFlagOfItsOwn() throws Exception {
+		// FA8 item 7: player.state.run relayed; a full state without it is not running
+		StoryState state = new StoryState();
+		StoryStateMessages.Applied first = StoryStateMessages.apply(state, StoryStateMessages.full(List.of(), false, false, true, List.of()));
+		assertTrue(state.run() && first.runChanged());
+		JsonObject stop = StoryStateMessages.delta(null, null, null, null, false, null);
+		assertEquals("{\"full\":false,\"run\":false}", stop.toString());
+		assertTrue(StoryStateMessages.apply(state, stop).runChanged());
+		assertFalse(state.run());
+		StoryStateMessages.apply(state, StoryStateMessages.delta(null, null, null, null, true, null));
+		StoryStateMessages.apply(state, StoryStateMessages.full(List.of(), false, false, List.of()));
+		assertFalse(state.run(), "a full state without run: not running");
+		assertThrows(StoryStateMessages.Invalid.class, () -> StoryStateMessages.apply(state,
+				com.google.gson.JsonParser.parseString("{\"full\":false,\"run\":1}").getAsJsonObject()));
+	}
+
+	@Test
 	void malformedMessagesChangeNothing() throws Exception {
 		StoryState state = new StoryState();
 		StoryStateMessages.apply(state, StoryStateMessages.full(List.of("A_MAP:1:1"), true, false, List.of()));

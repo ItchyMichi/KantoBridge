@@ -18,6 +18,17 @@ class SlopeBrakeTest {
 	}
 
 	@Test
+	void aRunHoldsBOnFootToo() {
+		// FA8 item 7: Emerald runs while B is held; the one hold of B serves the run and the brake
+		SlopeBrake brake = new SlopeBrake();
+		assertEquals(Boolean.TRUE, brake.tick(true, true, false, false, true), "sprint on foot: hold B");
+		assertNull(brake.tick(true, true, false, false, true));
+		assertEquals(Boolean.FALSE, brake.tick(true, true, false, false, false), "sprint let go");
+		assertNull(brake.tick(false, true, false, false, false));
+		assertNull(brake.tick(false, true, false, false, true), "not following: nothing");
+	}
+
+	@Test
 	void leavingTheSlopeOrTheGameReleasesIt() {
 		SlopeBrake brake = new SlopeBrake();
 		brake.tick(true, true, true, true);

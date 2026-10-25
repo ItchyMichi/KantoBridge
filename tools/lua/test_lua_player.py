@@ -190,6 +190,19 @@ def test_the_weather_is_part_of_the_state():
     assert "weather" not in state
 
 
+def test_running_is_part_of_the_state_where_the_game_has_it():
+    # FA8 item 7 (D4): Emerald's running shoes (facts.running) are player.state.run; a game without running sends none
+    o = Obs()
+    (state,) = [d for t, d in o.update(running=False) if t == "player.state"]
+    assert state["run"] is False
+    (state,) = [d for t, d in o.update(running=True) if t == "player.state"]
+    assert state["run"] is True
+    assert o.update(running=True) == []
+    o2 = Obs()
+    (state,) = [d for t, d in o2.update() if t == "player.state"]
+    assert "run" not in state
+
+
 def test_rebase_suppresses_what_the_snapshot_said():
     o = Obs()
     o.o.rebase(o.facts(moving=True, tx=5, ty=5, facing="up", frames=16))

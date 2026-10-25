@@ -90,12 +90,13 @@ public final class Rules {
 	}
 
 	/**
-	 * Gen 1 speed for the player's {@code StoryState} (bike or not) and no jumping. The walking-speed ability is set to
+	 * Gen 1 speed for the player's {@code StoryState} (bike or not; running, FA8 item 7, at the bike's 8 frames a cell, as
+	 * Emerald runs) and no jumping. The walking-speed ability is set to
 	 * the same value as the attribute, so the field of view doesn't widen as it does under a speed effect.
 	 */
 	public static void applyMovement(ServerPlayer player) {
 		StoryState state = StoryStates.peek(player);
-		float speed = speedFor(state != null && state.bike());
+		float speed = speedFor(state != null && (state.bike() || state.run()));
 		player.getAbilities().setWalkingSpeed(speed);
 		AttributeInstance movement = player.getAttribute(Attributes.MOVEMENT_SPEED);
 		if (movement != null) {

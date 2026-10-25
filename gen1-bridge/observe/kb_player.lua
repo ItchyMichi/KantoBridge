@@ -46,7 +46,7 @@ local function same(a, b, keys)
   return true
 end
 
-local STATE_KEYS = { "mode", "bike", "surf", "slope", "hidden", "dark", "lit", "weather" }
+local STATE_KEYS = { "mode", "bike", "surf", "slope", "hidden", "dark", "lit", "weather", "run" }
 -- SE6 (docs/specs/STORY_EVENTS_PLAN.md): the weather names player.state may carry (defs.schema.json playerState)
 local WEATHERS = { none = true, clouds = true, sunny = true, rain = true, snow = true, thunder = true, fog = true,
                    ash = true, sand = true, fog_diagonal = true, underwater = true, shade = true, drought = true,
@@ -110,6 +110,8 @@ end
 
 function Player.state(f)
   local dark = f.darkMap == true
+  local run = nil
+  if f.running ~= nil then run = f.running == true end
   return {
     mode = Player.classify(f),
     bike = f.bike == true,
@@ -120,6 +122,8 @@ function Player.state(f)
     lit = dark and f.flashLit == true,
     -- SE6: the weather the game draws (Gen 3); absent where the game has none
     weather = WEATHERS[f.weather] and f.weather or nil,
+    -- FA8 item 7 (D4): the hidden player is running (Emerald's running shoes); absent where the game has no running
+    run = run,
   }
 end
 

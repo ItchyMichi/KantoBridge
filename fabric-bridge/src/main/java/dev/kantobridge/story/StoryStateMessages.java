@@ -26,10 +26,14 @@ public final class StoryStateMessages {
 	public static final int MAX_LIT = 256;
 
 	/** MG3: {@code region} is the client's link bookkeeping, read by the service, not applied here. */
-	private static final Set<String> FIELDS = Set.of("full", "active", "add", "remove", "surf", "bike", "lit", "region");
+	private static final Set<String> FIELDS = Set.of("full", "active", "add", "remove", "surf", "bike", "run", "lit", "region");
 
 	/** What one message changed. */
-	public record Applied(boolean full, boolean surfChanged, boolean bikeChanged, int cellsChanged) {
+	public record Applied(boolean full, boolean surfChanged, boolean bikeChanged, int cellsChanged, boolean runChanged) {
+		public Applied(boolean full, boolean surfChanged, boolean bikeChanged, int cellsChanged) {
+			this(full, surfChanged, bikeChanged, cellsChanged, false);
+		}
+
 	}
 
 	/** A message that breaks the schema's rules; nothing was applied. */
@@ -51,11 +55,19 @@ public final class StoryStateMessages {
 
 	/** A full state: every active cell, the surf and bike flags, and the lit maps. */
 	public static JsonObject full(Collection<String> active, boolean surf, boolean bike, Collection<String> lit) {
+		return full(active, surf, bike, false, lit);
+	}
+
+	/** The same with the running flag (FA8 item 7; written only when running). */
+	public static JsonObject full(Collection<String> active, boolean surf, boolean bike, boolean run, Collection<String> lit) {
 		JsonObject data = new JsonObject();
 		data.addProperty("full", true);
 		data.add("active", array(active));
 		data.addProperty("surf", surf);
 		data.addProperty("bike", bike);
+		if (run) {
+			data.addProperty("run", true);
+		}
 		data.add("lit", array(lit));
 		return data;
 	}
@@ -63,6 +75,12 @@ public final class StoryStateMessages {
 	/** A delta; null or empty parts are left out. {@code lit}, when given, replaces the lit maps. */
 	public static JsonObject delta(@Nullable Collection<String> add, @Nullable Collection<String> remove, @Nullable Boolean surf,
 			@Nullable Boolean bike, @Nullable Collection<String> lit) {
+		return delta(add, remove, surf, bike, null, lit);
+	}
+
+	/** The same with the running flag (FA8 item 7), null when it didn't change. */
+	public static JsonObject delta(@Nullable Collection<String> add, @Nullable Collection<String> remove, @Nullable Boolean surf,
+			@Nullable Boolean bike, @Nullable Boolean run, @Nullable Collection<String> lit) {
 		JsonObject data = new JsonObject();
 		data.addProperty("full", false);
 		if (add != null && !add.isEmpty()) {
@@ -76,6 +94,9 @@ public final class StoryStateMessages {
 		}
 		if (bike != null) {
 			data.addProperty("bike", bike);
+		}
+		if (run != null) {
+			data.addProperty("run", run);
 		}
 		if (lit != null) {
 			data.add("lit", array(lit));
@@ -96,12 +117,14 @@ public final class StoryStateMessages {
 		}
 		Boolean surf = bool(data, "surf");
 		Boolean bike = bool(data, "bike");
-		if ((data.has("surf") && surf == null) || (data.has("bike") && bike == null)) {
+		Boolean run = bool(data, "run");
+		if ((data.has("surf") && surf == null) || (data.has("bike") && bike == null) || (data.has("run") && run == null)) {
 			throw new Invalid("flag");
 		}
 		List<String> lit = data.has("lit") ? strings(data.get("lit"), MAX_LIT, false) : null;
 		boolean surfBefore = state.surf();
 		boolean bikeBefore = state.bike();
+		boolean runBefore = state.run();
 		int changed;
 		if (full) {
 			if (!data.has("active") || surf == null || bike == null || lit == null) {
@@ -141,10 +164,14 @@ public final class StoryStateMessages {
 		if (bike != null) {
 			state.setBike(bike);
 		}
+		if (run != null || full) {
+			// a full state without it: not running
+			state.setRun(Boolean.TRUE.equals(run));
+		}
 		if (lit != null) {
 			state.setLit(lit);
 		}
-		return new Applied(full, state.surf() != surfBefore, state.bike() != bikeBefore, changed);
+		return new Applied(full, state.surf() != surfBefore, state.bike() != bikeBefore, changed, state.run() != runBefore);
 	}
 
 	private static @Nullable Boolean bool(JsonObject data, String key) {

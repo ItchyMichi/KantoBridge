@@ -63,6 +63,7 @@ public final class ClientStoryView {
 	private Set<String> sentLit = Set.of();
 	private boolean sentSurf;
 	private boolean sentBike;
+	private boolean sentRun;
 	private @Nullable LocalPlayer sentFor;
 	private Set<String> drawn = Set.of();
 	/** SE3: each drawn Gen 3 cell cell's state (an index into its entry's {@code states}). */
@@ -208,21 +209,22 @@ public final class ClientStoryView {
 		StoryState local = StoryStates.of(player);
 		boolean surf = rules.surf();
 		boolean bike = rules.bike();
+		boolean run = rules.run();
 		Set<String> lit = new TreeSet<>(rules.lit());
 		JsonObject message;
 		if (!this.fullSent || player != this.sentFor) {
-			message = StoryStateMessages.full(cells.active(), surf, bike, lit);
+			message = StoryStateMessages.full(cells.active(), surf, bike, run, lit);
 		} else {
 			Set<String> add = new TreeSet<>(cells.active());
 			add.removeAll(this.sentActive);
 			Set<String> remove = new TreeSet<>(this.sentActive);
 			remove.removeAll(cells.active());
 			boolean litChanged = !lit.equals(this.sentLit);
-			if (add.isEmpty() && remove.isEmpty() && surf == this.sentSurf && bike == this.sentBike && !litChanged) {
+			if (add.isEmpty() && remove.isEmpty() && surf == this.sentSurf && bike == this.sentBike && run == this.sentRun && !litChanged) {
 				return;
 			}
 			message = StoryStateMessages.delta(add, remove, surf != this.sentSurf ? surf : null, bike != this.sentBike ? bike : null,
-					litChanged ? lit : null);
+					run != this.sentRun ? run : null, litChanged ? lit : null);
 		}
 		try {
 			StoryStateMessages.apply(local, message);
@@ -238,6 +240,7 @@ public final class ClientStoryView {
 			this.sentLit = Set.copyOf(lit);
 			this.sentSurf = surf;
 			this.sentBike = bike;
+			this.sentRun = run;
 			this.sentFor = player;
 			this.relayed++;
 		}

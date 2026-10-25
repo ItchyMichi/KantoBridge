@@ -42,7 +42,7 @@ public final class StoryStateService {
 			RelayService.get().sendError(player, "bad_message", message.seq());
 			return;
 		}
-		if (applied.full() || applied.bikeChanged()) {
+		if (applied.full() || applied.bikeChanged() || applied.runChanged()) {
 			Rules.applyMovement(player);
 		}
 		Surfing.set(player, StoryStates.of(player).surf());

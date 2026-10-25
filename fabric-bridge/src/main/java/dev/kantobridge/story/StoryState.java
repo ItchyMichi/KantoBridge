@@ -29,6 +29,7 @@ public final class StoryState {
 	private final Set<String> lit = new HashSet<>();
 	private boolean surf;
 	private boolean bike;
+	private boolean run;
 
 	/** True when a story cell of this type and key closes for this player. */
 	public boolean blocks(String key, StoryCellType type) {
@@ -97,6 +98,15 @@ public final class StoryState {
 		this.bike = bike;
 	}
 
+	/** FA8 item 7: the hidden player is running (Emerald's running shoes): the running speed. */
+	public boolean run() {
+		return this.run;
+	}
+
+	public void setRun(boolean run) {
+		this.run = run;
+	}
+
 	// ---- lit maps ----
 
 	public boolean isLit(String map) {
@@ -119,5 +129,6 @@ public final class StoryState {
 		this.lit.clear();
 		this.surf = false;
 		this.bike = false;
+		this.run = false;
 	}
 }

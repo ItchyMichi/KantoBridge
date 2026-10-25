@@ -115,6 +115,7 @@ public final class StoryRules {
 	private final Set<Long> boulderCells = new HashSet<>();
 	private boolean surf;
 	private boolean bike;
+	private boolean run;
 	private final Set<String> lit = new TreeSet<>();
 	private boolean dirty = true;
 	private Cells cells = new Cells(Set.of(), Set.of());
@@ -264,6 +265,8 @@ public final class StoryRules {
 		if (bike != null) {
 			this.bike = bike;
 		}
+		// FA8 item 7: player.state.run (absent: the game has no running)
+		this.run = Boolean.TRUE.equals(bool(state.get("run")));
 		Boolean dark = bool(state.get("dark"));
 		Boolean lit = bool(state.get("lit"));
 		if (Boolean.TRUE.equals(dark) && lit != null && this.currentMap != null) {
@@ -398,6 +401,11 @@ public final class StoryRules {
 
 	public boolean surf() {
 		return this.surf;
+	}
+
+	/** The hidden player is running ({@code player.state.run}). */
+	public boolean run() {
+		return this.run;
 	}
 
 	public boolean bike() {

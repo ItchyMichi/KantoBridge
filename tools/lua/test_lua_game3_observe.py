@@ -50,7 +50,7 @@ def test_the_idle_field_is_the_overworld():
     a.E.addObject(1, a.lua({"x": 2, "y": 2}))
     f = a.facts()
     assert f == {"inGame": True, "chainsHeld": True, "map": "EM_TEST_TOWN", "x": 5, "y": 6, "facing": "left",
-                 "moving": False, "frames": 16, "ledge": False, "surf": False, "bike": False, "runner": False,
+                 "moving": False, "frames": 16, "ledge": False, "surf": False, "bike": False, "running": False, "runner": False,
                  "hidden": False, "playerScripted": False, "transitioning": False, "battle": False,
                  "scripted": False, "top": "overworld", "topName": "Overworld", "npcs": 1,
                  "darkMap": False, "flashLit": False, "weather": "none"}
@@ -75,7 +75,8 @@ def test_the_players_states():
     P = a.E.Player
     P.jumping, P.surfing, P.biking, P.running, P.visible = True, True, True, True, False
     f = a.facts()
-    assert (f["ledge"], f["surf"], f["bike"], f["runner"], f["hidden"]) == (True, True, True, True, True)
+    # K7 (FA8 item 7): running is the running shoes'; runner a script running, as Gen 1's
+    assert (f["ledge"], f["surf"], f["bike"], f["running"], f["runner"], f["hidden"]) == (True, True, True, True, False, True)
     assert classify(a) == "forced"  # a ledge jump
     P.jumping = False
     P._scriptedStep = True
