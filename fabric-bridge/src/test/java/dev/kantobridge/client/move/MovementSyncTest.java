@@ -500,6 +500,27 @@ class MovementSyncTest {
 	}
 
 	@Test
+	void anInMapWarpsSyncsTakeThePlayerAcrossTheRoom() {
+		// FA8 item 5: an Emerald warp pad's step is answered as a walk onto the pad, then the hidden player is put across
+		// the room on the same map with syncs and no warp messages (the sweep's stream for the Aqua Hideout's pads)
+		Rig rig = Rig.at(world, "TEST_TOWN", 5, 8, Dir.UP);
+		rig.intent = Dir.UP;
+		rig.ticks(MovementSync.PUSH_TICKS - 1);
+		assertEquals(List.of("step up 1 push"), rig.tick());
+		rig.pos("TEST_TOWN", 5, 7, Dir.UP, "walk", 16, 1L);
+		rig.intent = null;
+		rig.ticks(4);
+		rig.moveTo("TEST_TOWN", 5, 7);
+		List<String> after = new ArrayList<>();
+		for (int i = 0; i < 4; i++) {
+			rig.pos("TEST_TOWN", 15, 2, Dir.DOWN, "sync", 0, null);
+			after.addAll(rig.ticks(5));
+		}
+		after.addAll(rig.ticks(80));
+		assertTrue(after.contains("teleport TEST_TOWN:15:2:down"), "the player follows across the room: " + after);
+	}
+
+	@Test
 	void aStrengthPushLeavesThePlayerWhereItIs() {
 		Rig rig = Rig.at(world, "TEST_TOWN", 5, 8, Dir.UP);
 		rig.intent = Dir.UP;

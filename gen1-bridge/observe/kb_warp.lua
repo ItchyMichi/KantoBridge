@@ -116,7 +116,7 @@ function Warp.new(opts)
     ev = ev or {}
     local out = {}
 
-    local function start(kind, taken, soft)
+    local function start(kind, taken, soft, inMap)
       local re, gen
       if taken and expected then
         kind, re, gen = expected.kind, expected.re, expected.gen
@@ -124,7 +124,9 @@ function Warp.new(opts)
         counts.taken = counts.taken + 1
         soft = false
       end
-      current = { kind = kind, at = steps, re = re, gen = gen, soft = soft and kind == "script" }
+      -- soft: settled where the player stands once the field is quiet (a script warp; a warp within its map, which no
+      -- map.entered ends)
+      current = { kind = kind, at = steps, re = re, gen = gen, soft = (soft and kind == "script") or inMap == true }
       counts.started = counts.started + 1
       out[#out + 1] = { "warp", { phase = "start", kind = kind }, "warp", re = re, gen = gen }
     end
@@ -153,7 +155,8 @@ function Warp.new(opts)
       local kind = Warp.departureKind(ev.warped)
       -- Gen 3's step warps the engine requests (ladders, arrows) now carry their own kind: a pending warp.take still
       -- claims them (departure.request, game3/move.lua warpDeparture)
-      start(kind, kind == "script" or (expected ~= nil and type(ev.warped) == "table" and ev.warped.request == true))
+      start(kind, kind == "script" or (expected ~= nil and type(ev.warped) == "table" and ev.warped.request == true), nil,
+        type(ev.warped) == "table" and ev.warped.inMap == true)
     end
     if ev.blackout and not current then start("blackout") end
     if not f.transitioning then tail = false end

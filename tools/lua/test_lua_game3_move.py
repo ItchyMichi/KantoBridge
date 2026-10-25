@@ -193,6 +193,16 @@ def test_warp_departure_kinds(under, ahead, kind):
     assert departure(a) == {"map": "EM_TEST_HOUSE", "x": 4, "y": 5, "facing": "up", "kind": kind}
 
 
+def test_a_warp_to_its_own_map_says_so():
+    # FA8 item 5: player.warped's toMap is the map left (a pad across the room): inMap, so the tracker settles it
+    a = Adapter3()
+    a.field("EM_TEST_HOUSE", 4, 5, "up")
+    same = plain(a.eng.warpDeparture(a.lua({"toMap": "EM_TEST_HOUSE", "warp": {"kind": "rse_teleport_tile", "map": "EM_TEST_HOUSE"}})))
+    assert same["inMap"] is True and same["kind"] == "pad"
+    other = plain(a.eng.warpDeparture(a.lua({"toMap": "EM_TEST_TOWN", "warp": {"kind": "door", "map": "EM_TEST_TOWN"}})))
+    assert "inMap" not in other
+
+
 def test_no_departure_outside_the_field():
     a = Adapter3()
     assert departure(a) is None

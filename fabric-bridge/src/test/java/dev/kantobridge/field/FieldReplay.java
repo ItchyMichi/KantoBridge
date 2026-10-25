@@ -176,6 +176,41 @@ final class FieldReplay {
 		}
 	}
 
+	/** The row's messages, each printed (type, kind, phase, cell, n: never text) with the client's counters as it is fed. */
+	private static List<JsonObject> traced(List<JsonObject> msgs, Rig rig) {
+		return new java.util.AbstractList<>() {
+			@Override
+			public JsonObject get(int i) {
+				JsonObject m = msgs.get(i);
+				JsonObject data = m.has("data") ? m.getAsJsonObject("data") : new JsonObject();
+				StringBuilder b = new StringBuilder("TRACE ").append(m.has("type") ? m.get("type").getAsString() : "?");
+				for (String k : new String[] {"phase", "kind", "map", "x", "y", "n", "reason"}) {
+					if (data.has(k) && data.get(k).isJsonPrimitive()) {
+						b.append(' ').append(k).append('=').append(data.get(k).getAsString());
+					}
+				}
+				if (data.has("to") && data.get("to").isJsonObject()) {
+					b.append(" to=").append(data.get("to"));
+				}
+				b.append(" | ").append(statsLine(rig)).append(" cell ").append(rig.cell());
+				System.out.println(b);
+				return m;
+			}
+
+			@Override
+			public int size() {
+				return msgs.size();
+			}
+		};
+	}
+
+	private static String statsLine(Rig rig) {
+		dev.kantobridge.client.move.MovementSync.Stats s = rig.controller.sync().stats();
+		return "positions " + s.positions + " forced " + s.forced + " snaps " + s.snaps + " drifts " + s.drifts + " steers " + s.steers
+				+ " teleports " + s.teleports + " syncs " + s.syncs + " pending " + rig.controller.sync().pendingSteps()
+				+ " warping " + rig.controller.fade().holding();
+	}
+
 	static JsonObject run(Path bundleFile, Path reports, String prefix) throws Exception {
 		McBootstrap.ensure();
 		ExportBundle bundle = ExportBundle.open(bundleFile);
@@ -198,6 +233,10 @@ final class FieldReplay {
 		for (Path sweepFile : sweeps) {
 			String tag = sweepFile.getFileName().toString().substring((prefix + "_field_sweep").length()).replace(".json", "");
 			if (tag.startsWith("_analysis")) {
+				continue;
+			}
+			String trace = System.getProperty("kb.fieldReplayTrace", "");
+			if (!trace.isBlank() && !tag.equals("_" + trace.split(":")[0])) {
 				continue;
 			}
 			Path streamFile = reports.resolve(prefix + "_field_stream" + tag + ".json");
@@ -270,6 +309,10 @@ final class FieldReplay {
 					}
 				}
 				List<JsonObject> msgs = byRow.getOrDefault(n, List.of());
+				boolean tracing = !trace.isBlank() && trace.endsWith(":" + n);
+				if (tracing) {
+					msgs = traced(msgs, rig);
+				}
 				int mi = 0;
 				Map<Long, Long> nMap = new HashMap<>();
 				for (int i = 0; i < dirs.size(); i++) {
@@ -308,6 +351,9 @@ final class FieldReplay {
 					rig.tick(null);
 				}
 				CellPos got = rig.cell();
+				if (tracing) {
+					System.out.println("TRACE end " + got + " teleports " + rig.teleports + " " + statsLine(rig));
+				}
 				boolean ok = got != null && got.map().equals(endMap) && got.x() == end.get("x").getAsInt() && got.y() == end.get("y").getAsInt();
 				String outcome = ok ? "ok" : got == null ? "C:nowhere" : !got.map().equals(endMap) ? "C:other_map" : "C:other_cell";
 				byClass.merge(clsKey + ":" + outcome + (rig.teleports > 0 ? "+teleport" : ""), 1, Integer::sum);

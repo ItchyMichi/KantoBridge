@@ -155,6 +155,10 @@ function Move.install(b)
     -- shaft's take (act/kb_climb.lua, docs/specs/HEIGHTS_ALL_GAMES_PLAN.md W3): out.request lets the warp tracker
     -- match it.
     local engineKind = type(payload) == "table" and type(payload.warp) == "table" and payload.warp.kind or nil
+    -- a warp to a cell of the map it leaves (the Aqua Hideout's pads, Mossdeep Gym's tiles): no map.entered follows,
+    -- so the tracker settles it once the field is quiet (observe/kb_warp.lua; FA8 item 5)
+    local dest = type(payload) == "table" and (payload.toMap or (type(payload.warp) == "table" and payload.warp.map)) or nil
+    if out.map ~= nil and dest == out.map then out.inMap = true end
     if engineKind == "warp" then
       -- a step warp stands on its tile (a ladder, a cave door, an arrow); a script's warp facing a door is no door's
       out.request = true

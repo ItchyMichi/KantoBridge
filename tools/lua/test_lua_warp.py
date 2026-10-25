@@ -133,6 +133,21 @@ def test_a_fade_with_no_map_change_settles_where_the_player_stands():
     assert stats.settled == 1 and stats.timeouts == 0
 
 
+def test_a_warp_within_its_map_settles_where_the_player_stands():
+    # FA8 item 5: an Emerald pad's warp (Gen 3's departure says inMap) gets no map.entered: once the field is quiet it
+    # arrives where the player stands, whatever its kind
+    t = Tracker()
+    t.Warp.SETTLE = 2
+    t.Warp.ARRIVE_TIMEOUT = 50
+    assert t.step({"warped": {"kind": "pad", "map": "TEST_TOWN", "inMap": True}}, transitioning=True) == [
+        {"phase": "start", "kind": "pad"}]
+    out = []
+    for _ in range(4):
+        out += t.step(x=9, y=2)
+    assert out == [{"phase": "arrive", "kind": "pad", "to": {"map": "TEST_TOWN", "x": 9, "y": 2, "facing": "down"}}]
+    assert t.t.stats().settled == 1
+
+
 def test_warps_with_a_departure_never_settle_early():
     # a door's, Fly's: only a map.entered or the timeout ends them
     for first in ({"warped": {"kind": "door", "map": "TEST_TOWN"}}, None):

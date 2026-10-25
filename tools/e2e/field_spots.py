@@ -226,8 +226,8 @@ def main(argv=None) -> int:
                     out["step"] = {"ok": res.get("ok")}
                     out["hidden"] = [st.get("map"), st.get("x"), st.get("y")]
                     out["inside"] = inside(st)
-                    out["moves"] = {k: after.get(k, 0) - before.get(k, 0) for k in ("steps", "blocked", "snaps", "teleports",
-                                                                                     "forced", "syncs") if after.get(k, 0) != before.get(k, 0)}
+                    out["moves"] = {k: after.get(k, 0) - before.get(k, 0) for k in sorted(set(after) | set(before))
+                                    if isinstance(after.get(k, 0), (int, float)) and after.get(k, 0) != before.get(k, 0)}
                     ee = [g["wire"] + spot["engine_end"][0], spot["engine_end"][1], spot["engine_end"][2]]
                     same_end = out["hidden"] == ee
                     if out["inside"] and same_end:
