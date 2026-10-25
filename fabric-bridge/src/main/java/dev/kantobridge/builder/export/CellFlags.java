@@ -21,6 +21,8 @@ public final class CellFlags {
 	public static final int LEDGE = 8192;
 	/** Bits 14-15: the ledge hop direction, 0 down, 1 up, 2 left, 3 right. */
 	public static final int LEDGE_DIR_SHIFT = 14;
+	/** Gen 3: the game refuses a bike onto the cell and lets a walker on (FA8 item 10: long grass, hot springs, ...). */
+	public static final int NO_BIKE = 1 << 16;
 
 	private CellFlags() {
 	}

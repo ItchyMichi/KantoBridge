@@ -20,7 +20,7 @@ local DELTA = { up = { 0, -1 }, down = { 0, 1 }, left = { -1, 0 }, right = { 1, 
 -- The protocol's warp kinds for Emerald's warp behaviours (src/core/game3/constants/emerald/metatile_behaviors.lua),
 -- by name, MB_ prefix off (FIELD_MECHANICS_AUDIT_PLAN §13.8 item 4, D2).
 local BEHAVIOR_KINDS = {
-  LADDER = "ladder", NON_ANIMATED_DOOR = "door", WATER_DOOR = "door",
+  LADDER = "ladder", NON_ANIMATED_DOOR = "door", CAVE_DOOR = "door", WARP_DOOR = "door", WATER_DOOR = "door",
   EAST_ARROW_WARP = "edge", WEST_ARROW_WARP = "edge", NORTH_ARROW_WARP = "edge", SOUTH_ARROW_WARP = "edge",
   WATER_SOUTH_ARROW_WARP = "edge", DEEP_SOUTH_WARP = "edge",
   AQUA_HIDEOUT_WARP = "pad", MOSSDEEP_GYM_WARP = "pad", BATTLE_PYRAMID_WARP = "pad", LAVARIDGE_GYM_B1F_WARP = "pad",

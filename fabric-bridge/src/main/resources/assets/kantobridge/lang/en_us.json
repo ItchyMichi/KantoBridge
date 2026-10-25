@@ -55,6 +55,7 @@
   "block.kantobridge.story_tile": "Story Cell",
   "block.kantobridge.ledge_collider": "Ledge",
   "block.kantobridge.edge_wall": "Edge Wall",
+  "block.kantobridge.bike_wall": "Bike Wall",
   "block.kantobridge.step_collider": "Steps",
   "block.kantobridge.seat_collider": "Seat",
   "block.kantobridge.shaft_ladder": "Ladder",

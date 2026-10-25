@@ -1301,6 +1301,12 @@ public final class WorldPlan {
 						: BlockCode.story(story, edges));
 			}
 		}
+		// A cell the game refuses a bike onto (Gen 3's long grass, hot springs, ...: CellFlags.NO_BIKE): a wall for bikers
+		// above feet level, where the grass's tufts leave room (FA8 item 10)
+		if (story < 0 && CellFlags.has(model.flags(cx, cy), CellFlags.NO_BIKE) && (taken & 2) == 0) {
+			sink.set(x, feet + 1, z, BlockCode.bikeWall());
+			taken |= 2;
+		}
 		// A counter or solid cell one block high beside a seat: the seat's half block lifts a player within step height of its
 		// top, so a plate on the seat's sides above it keeps the player off (FIELD_MECHANICS_AUDIT_PLAN §13.8 item 3). A
 		// plate has no outline, so a click across the counter still reaches the clerk.

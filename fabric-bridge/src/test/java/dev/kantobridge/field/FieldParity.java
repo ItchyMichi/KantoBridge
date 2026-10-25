@@ -69,7 +69,7 @@ final class FieldParity {
 	private static final VoxelShape HALF_SHAPE = Block.box(0, 0, 0, 16, 8, 16);
 	private static final int EXAMPLES = 40;
 	/** One letter per block kind (BlockCode.KIND_*): air, Full, Half, Ledge, light, Story, sTory tile, sHape, decor, Vanilla, prop, Edge, steP, ladder, seat, ? */
-	private static final String KIND_LETTERS = ".FHLlSTXdVpEPKs?";
+	private static final String KIND_LETTERS = ".FHLlSTXdVpEPKsB?";
 
 	private static WorldIndex REAL;
 

@@ -97,6 +97,17 @@ class StoryStateTest {
 	}
 
 	@Test
+	void bikeWallsStopOnlyBikers() {
+		// FA8 item 10: Emerald refuses a bike onto long grass and the like, and lets a walker on
+		BlockPos pos = new BlockPos(10, 65, 20);
+		AABB beside = new AABB(9.4, 64, 20.2, 10.0, 65.8, 20.8);
+		AABB inside = new AABB(10.2, 64, 20.2, 10.8, 65.8, 20.8);
+		assertTrue(dev.kantobridge.block.BikeWallBlock.walls(true, beside, pos), "a biker is stopped");
+		assertFalse(dev.kantobridge.block.BikeWallBlock.walls(false, beside, pos), "a walker isn't");
+		assertFalse(dev.kantobridge.block.BikeWallBlock.walls(true, inside, pos), "a biker already there is let out");
+	}
+
+	@Test
 	void ledgesWallEveryoneButTheHopper() {
 		BlockPos pos = new BlockPos(10, 64, 20);
 		AABB uphill = new AABB(10.2, 64, 19.4, 10.8, 65.8, 20.0);

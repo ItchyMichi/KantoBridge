@@ -231,6 +231,33 @@ public class CollisionGameTests implements FabricGameTest {
 	}
 
 	@GameTest(template = EMPTY_STRUCTURE)
+	public void bikeWallsStopOnlyAPlayerOnABike(GameTestHelper helper) {
+		// FIELD_MECHANICS_AUDIT_PLAN §13.8 item 10: Emerald's long grass and the like refuse a bike, not a walker. The wall
+		// stands in the block above feet level, as the builder puts it.
+		BlockPos rel = new BlockPos(3, 2, 3);
+		helper.setBlock(rel.below(), Blocks.STONE);
+		helper.setBlock(rel.below().west(), Blocks.STONE);
+		helper.setBlock(rel.above(), KbBlocks.BIKE_WALL.defaultBlockState());
+		BlockPos abs = helper.absolutePos(rel);
+		ServerLevel level = helper.getLevel();
+		BlockState state = level.getBlockState(abs.above());
+		helper.assertTrue(state.getShape(level, abs.above()).isEmpty() && !state.isSolid(), "no outline, no ground to spawn on");
+		helper.assertTrue(state.getCollisionShape(level, abs.above(), CollisionContext.empty()).isEmpty(), "open to pathfinding");
+		MockPlayers.with(helper, player -> {
+			StoryStates.of(player).setBike(false);
+			player.setPos(abs.getX() - 0.5, abs.getY(), abs.getZ() + 0.5);
+			player.move(MoverType.SELF, new Vec3(1.0, 0, 0));
+			helper.assertTrue(player.getX() > abs.getX() + 0.4, "a walker was stopped by a bike wall");
+			StoryStates.of(player).setBike(true);
+			player.setPos(abs.getX() - 0.5, abs.getY(), abs.getZ() + 0.5);
+			player.move(MoverType.SELF, new Vec3(1.0, 0, 0));
+			helper.assertTrue(player.getX() < abs.getX(), "a biker rode through a bike wall");
+			StoryStates.of(player).clear();
+		});
+		helper.succeed();
+	}
+
+	@GameTest(template = EMPTY_STRUCTURE)
 	public void aStoryCellWithSidesKeepsItsStoryCollision(GameTestHelper helper) {
 		// CAVES_3D_PLAN §3.2: where neither feet nor the block above is free for an edge wall, the story block carries it.
 		BlockPos abs = storyCell(helper, new BlockPos(3, 2, 3), StoryCellType.BOULDER_AREA);

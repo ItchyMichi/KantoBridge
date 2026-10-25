@@ -36,6 +36,7 @@ public final class CodeStates {
 			case BlockCode.KIND_STEP -> KbBlocks.STEP_COLLIDER.defaultBlockState().setValue(dev.kantobridge.block.StepColliderBlock.FACING, downhill(value))
 					.setValue(dev.kantobridge.block.StepColliderBlock.STAGE, dev.kantobridge.block.StepColliderBlock.Stage.of(value >> 2 & 3));
 			case BlockCode.KIND_SEAT -> KbBlocks.SEAT_COLLIDER.defaultBlockState();
+			case BlockCode.KIND_BIKE_WALL -> KbBlocks.BIKE_WALL.defaultBlockState();
 			case BlockCode.KIND_LADDER -> KbBlocks.SHAFT_LADDER.defaultBlockState().setValue(net.minecraft.world.level.block.LadderBlock.FACING,
 					downhill(value));
 			default -> Blocks.AIR.defaultBlockState();

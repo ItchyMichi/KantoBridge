@@ -23,6 +23,14 @@ import java.util.Set;
  * </ul>
  */
 public final class G3Cells {
+	/**
+	 * The behaviours Emerald refuses a bike onto and a walker not (bike/rse.lua:136-146, 182-221): long grass 0x03, no
+	 * running 0x0A, hot springs 0x28, a warp door 0x69, as the export writes them (the engine's canonical ids, mod 256:
+	 * src/core/game3/mb.lua). Pacifidlog's logs are story cells and Fortree's bridges depend on the player's elevation:
+	 * not walled here.
+	 */
+	static final java.util.Set<Integer> NO_BIKE_BEHAVIOURS = java.util.Set.of(0x03, 0x0A, 0x28, 0x69);
+
 	/** The collision bytes (GEN3_BRIDGE_PLAN §5; the engine's collision_frlg.lua:62-84, 148-175). */
 	public static final int WALK = 0x00;
 	public static final int BLOCKED = 0x07;
@@ -127,6 +135,9 @@ public final class G3Cells {
 				}
 				if (warpCells.contains(i)) {
 					f |= CellFlags.WARP;
+				}
+				if (CellFlags.has(f, CellFlags.WALKABLE) && NO_BIKE_BEHAVIOURS.contains(tiles.behavior(mid) & 0xFF)) {
+					f |= CellFlags.NO_BIKE;
 				}
 				flags[i] = f;
 				boolean walkable = CellFlags.has(f, CellFlags.WALKABLE) && !CellFlags.has(f, CellFlags.LEDGE);
