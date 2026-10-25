@@ -96,4 +96,52 @@ class MapChainTest {
 		assertEquals(Scale.SURFACE_Y + 6, placed.get(0).placement().y(), "placed takes them");
 		assertEquals(low, placed.get(1).layout());
 	}
+
+	@Test
+	void aRaggedSeamClimbsOnItsLowerSide() {
+		// A west of B, both on the surface: B's west column stands 1 block up on rows 0-1 and 4 up on row 3 (the chain left
+		// them apart), level on row 2
+		MapLayout ragged = MapLayout.flat(4, 4, new int[] {
+				1, 0, 0, 0,
+				1, 0, 0, 0,
+				0, 0, 0, 0,
+				4, 4, 4, 4}, List.of());
+		String[] open = {"....", "....", "....", "...."};
+		List<PlacedMap> placed = new ArrayList<>(List.of(map("A", 0, 0, null, open), map("B", 8, 0, ragged, open)));
+		Warnings warnings = new Warnings();
+		Map<String, MapLayout> layouts = MapChain.mend(placed, warnings);
+		assertEquals(List.of("A"), List.copyOf(layouts.keySet()), "only the lower side changes");
+		MapLayout a = placed.get(0).layout();
+		assertEquals(Dir.RIGHT, a.ramp(3, 0).dir());
+		assertEquals(1, a.ramp(3, 0).rise(), "a 1-block step: one ramp of 1");
+		assertEquals(0, a.level(3, 0), "a ramp stands at its foot's level");
+		assertEquals(1, a.ramp(3, 1).rise());
+		assertEquals(null, a.ramp(3, 2), "where the seam meets, nothing");
+		// 4 blocks: the cell behind climbs the first 3, the edge cell the last 1
+		assertEquals(0, a.level(2, 3));
+		assertEquals(RaisedRegions.OUTDOOR_RISE, a.ramp(2, 3).rise());
+		assertEquals(3, a.level(3, 3));
+		assertEquals(1, a.ramp(3, 3).rise());
+		assertEquals(4, warnings.noteCount("seam_mend_ramps"));
+		assertEquals(0, warnings.noteCount("seam_mend_unmet"));
+	}
+
+	@Test
+	void aRaggedSeamNextToRockOrAWallStaysAsItIs() {
+		// row 1's 6 blocks need two cells and the one behind A's edge cell is rock; row 2's 3 blocks meet A's walled side
+		MapLayout ragged = MapLayout.flat(4, 4, new int[] {
+				0, 0, 0, 0,
+				6, 6, 6, 6,
+				3, 3, 3, 3,
+				0, 0, 0, 0}, List.of());
+		byte[] walls = new byte[16];
+		walls[2 * 4 + 3] = (byte) dev.kantobridge.block.EdgeWallBlock.SIDE_EAST;
+		PlacedMap a = map("A", 0, 0, null, "....", "..#.", "....", "....");
+		a = new PlacedMap(a.placement(), a.model(), PairEdges.plus(PairEdges.NONE, a.model(), walls), null);
+		List<PlacedMap> placed = new ArrayList<>(List.of(a, map("B", 8, 0, ragged, "....", "....", "....", "....")));
+		Warnings warnings = new Warnings();
+		MapChain.mend(placed, warnings);
+		assertEquals(null, placed.get(0).layout(), "nothing could be ramped");
+		assertEquals(1, warnings.noteCount("seam_mend_unmet"), "row 1 (row 2 is walled: not asked)");
+	}
 }

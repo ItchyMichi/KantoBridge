@@ -204,6 +204,120 @@ public final class MapChain {
 	}
 
 	/**
+	 * The ragged seams mended (docs/specs/FIELD_MECHANICS_AUDIT_PLAN.md §14, SC2): after the chain and the joins, each pair
+	 * of touching walkable cells of two surface maps that still stand apart, its edge open on both sides, climbs from the
+	 * lower cell to the higher: the lower map's cell becomes a ramp up to the seam, {@link RaisedRegions#OUTDOOR_RISE} blocks
+	 * a cell, and a difference over one cell's rise takes the cells behind it (ground at the same level, no ramp), the
+	 * deepest first, as a join's corridor does. What can't be ramped stays as it was (noted {@code seam_mend_unmet}).
+	 * {@code placed} takes the new layouts, in place; returns them by map.
+	 */
+	public static Map<String, MapLayout> mend(List<PlacedMap> placed, Warnings warnings) {
+		List<PlacedMap> surface = new ArrayList<>();
+		Map<String, Integer> at = new HashMap<>();
+		for (int i = 0; i < placed.size(); i++) {
+			if (placed.get(i).placement().kind() == MapPlacement.Kind.SURFACE) {
+				surface.add(placed.get(i));
+				at.put(placed.get(i).id(), i);
+			}
+		}
+		// per lower map: {cell, out dx, out dy, rise}
+		Map<String, List<int[]>> asks = new TreeMap<>();
+		int c = Scale.CELL_BLOCKS;
+		for (Seam s : seams(surface).values()) {
+			PlacedMap a = placed.get(at.get(s.a()));
+			PlacedMap b = placed.get(at.get(s.b()));
+			for (int[] p : touching(a, b)) {
+				int ca = p[0];
+				int cb = p[1];
+				int ax = ca % a.placement().w();
+				int ay = ca / a.placement().w();
+				int bx = cb % b.placement().w();
+				int by = cb / b.placement().w();
+				int dx = Integer.signum(b.placement().x() + bx * c - (a.placement().x() + ax * c));
+				int dz = Integer.signum(b.placement().z() + by * c - (a.placement().z() + ay * c));
+				if (a.edges().closed(ax, ay, ax + dx, ay + dz) || b.edges().closed(bx, by, bx - dx, by - dz)) {
+					continue;
+				}
+				int d = b.placement().y() + edgeLevel(b, cb, -dx, -dz) - (a.placement().y() + edgeLevel(a, ca, dx, dz));
+				if (d > 0) {
+					asks.computeIfAbsent(a.id(), k -> new ArrayList<>()).add(new int[] {ca, dx, dz, d});
+				} else if (d < 0) {
+					asks.computeIfAbsent(b.id(), k -> new ArrayList<>()).add(new int[] {cb, -dx, -dz, -d});
+				}
+			}
+		}
+		Map<String, MapLayout> layouts = new TreeMap<>();
+		int ramps = 0;
+		int unmet = 0;
+		for (Map.Entry<String, List<int[]>> e : asks.entrySet()) {
+			int i = at.get(e.getKey());
+			PlacedMap m = placed.get(i);
+			int w = m.placement().w();
+			int[] levels = levels(m);
+			MapLayout layout = m.layout();
+			List<MapLayout.Ramp> rampList = new ArrayList<>(layout == null ? List.of() : layout.ramps());
+			Set<Integer> taken = new HashSet<>();
+			int before = ramps;
+			for (int[] ask : e.getValue()) {
+				Dir out = ask[1] > 0 ? Dir.RIGHT : ask[1] < 0 ? Dir.LEFT : ask[2] > 0 ? Dir.DOWN : Dir.UP;
+				List<Integer> rises = new ArrayList<>();
+				for (int left = ask[3]; left > 0; left -= RaisedRegions.OUTDOOR_RISE) {
+					rises.add(Math.min(RaisedRegions.OUTDOOR_RISE, left));
+				}
+				// the cells from the seam inward, all ground at the edge cell's level with no ramp
+				int x0 = ask[0] % w;
+				int y0 = ask[0] / w;
+				int foot = levels[ask[0]];
+				List<Integer> cells = new ArrayList<>();
+				for (int k = 0; k < rises.size(); k++) {
+					int x = x0 - out.dx() * k;
+					int y = y0 - out.dy() * k;
+					int cell = y * w + x;
+					if (!ground(m, x, y) || levels[cell] != foot || taken.contains(cell) || layout != null && layout.ramp(x, y) != null) {
+						break;
+					}
+					cells.add(cell);
+				}
+				int top = foot;
+				for (int r : rises) {
+					top += r;
+				}
+				if (cells.size() < rises.size() || top > MapLayout.MAX_LEVEL) {
+					unmet++;
+					continue;
+				}
+				// the deepest cell climbs first, from the ground's level; the edge cell's ramp ends at the seam
+				int level = foot;
+				for (int k = rises.size() - 1; k >= 0; k--) {
+					int cell = cells.get(k);
+					levels[cell] = level;
+					rampList.add(new MapLayout.Ramp(cell % w, cell / w, out, rises.get(rises.size() - 1 - k)));
+					level += rises.get(rises.size() - 1 - k);
+					taken.add(cell);
+					ramps++;
+				}
+			}
+			if (ramps == before) {
+				continue;
+			}
+			MapLayout now = layout == null ? MapLayout.flat(w, m.placement().h(), levels, rampList)
+					: MapLayout.of(w, m.placement().h(), layout.pieces(), levels, rampList);
+			if (layout != null && layout.hasCeilings()) {
+				int[] ceilings = new int[levels.length];
+				for (int k = 0; k < ceilings.length; k++) {
+					ceilings[k] = layout.ceiling(k % w, k / w);
+				}
+				now = now.withCeilings(ceilings);
+			}
+			placed.set(i, new PlacedMap(m.placement(), m.model(), m.edges(), now));
+			layouts.put(m.id(), now);
+		}
+		warnings.note("seam_mend_ramps", ramps);
+		warnings.note("seam_mend_unmet", unmet);
+		return layouts;
+	}
+
+	/**
 	 * A join's outcome ("stair", else why not: "no_corridor", "level", "too_short", "under_the_surface", "too_high") and the
 	 * maps it changed.
 	 */

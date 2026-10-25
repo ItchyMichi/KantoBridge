@@ -363,6 +363,15 @@ public final class WorldPlanner {
 			placements.putAll(joins.placements());
 		}
 
+		// ---- the seam walls (FIELD_MECHANICS_AUDIT_PLAN §14, SC1): where the game refuses the step into the world beyond a map's edge ----
+		SeamEdges.apply(placed, SeamEdges.Refusal.NONE, warnings);
+		// the ragged seams mended (SC2): a ramp up to the seam where two maps' cells still stand apart
+		if (MapChain.enabled()) {
+			MapChain.mend(placed, warnings);
+		}
+		// a stair through a face the game climbs, ramped (SC4)
+		StepMend.apply(placed, warnings);
+
 		// ---- surface void fill: each gap cell takes the border art of its nearest surface map ----
 		Box3 surfaceBox = WorldPlan.surfaceVolume(placements.values());
 		VoidFill fill = voidFill(placed, surfaceBox, (m, cx, cy) -> true, warnings);

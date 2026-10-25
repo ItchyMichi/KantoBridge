@@ -174,13 +174,39 @@ public final class PairEdges {
 		return added == 0 ? base : new PairEdges(w, h, sides, edges + added);
 	}
 
+	/**
+	 * {@code base} with more walled sides: {@code add} per cell, row by row ({@link EdgeWallBlock#SIDE_NORTH} …), the map's
+	 * seam walls (FIELD_MECHANICS_AUDIT_PLAN §14, SC1: {@link SeamEdges}). A side already walled counts once.
+	 */
+	public static PairEdges plus(PairEdges base, MapModel model, byte[] add) {
+		int w = model.cellWidth();
+		int h = model.cellHeight();
+		byte[] sides = new byte[w * h];
+		for (int cy = 0; cy < h; cy++) {
+			for (int cx = 0; cx < w; cx++) {
+				sides[cy * w + cx] = (byte) base.sides(cx, cy);
+			}
+		}
+		int added = 0;
+		for (int i = 0; i < sides.length; i++) {
+			if ((sides[i] & add[i]) != add[i]) {
+				sides[i] |= add[i];
+				added++;
+			}
+		}
+		return added == 0 ? base : new PairEdges(w, h, sides, base.edges + added);
+	}
+
 	/** True when the engine refuses a step between cells (ax, ay) and (bx, by) for their elevations. */
 	static boolean elevationWall(MapModel model, G3Map map, int ax, int ay, int bx, int by) {
 		if (!walked(model.kind(ax, ay)) || !walked(model.kind(bx, by))) {
 			return false;
 		}
-		int a = map.elev(ax, ay);
-		int b = map.elev(bx, by);
+		return elevationsRefuse(map.elev(ax, ay), map.elev(bx, by));
+	}
+
+	/** True when the engine refuses a step between two cells of elevations {@code a} and {@code b}: they differ, neither is 0 (any) nor 15 (a bridge). */
+	static boolean elevationsRefuse(int a, int b) {
 		return a != b && a != 0 && b != 0 && a != 15 && b != 15;
 	}
 

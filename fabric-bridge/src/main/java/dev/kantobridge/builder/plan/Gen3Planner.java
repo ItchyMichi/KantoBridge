@@ -299,6 +299,15 @@ final class Gen3Planner {
 			mapLayouts.putAll(joins.layouts());
 		}
 
+		// ---- the seam walls (FIELD_MECHANICS_AUDIT_PLAN §14, SC1): where the game refuses the step into the world beyond a map's edge ----
+		SeamEdges.apply(placed, SeamEdges.gen3(all, id -> pairs.get(all.get(id).pair())), warnings);
+		// the ragged seams mended (SC2): a ramp up to the seam where two maps' cells still stand apart
+		if (MapChain.enabled()) {
+			mapLayouts.putAll(MapChain.mend(placed, warnings));
+		}
+		// a stair through a face the game climbs, ramped (SC4)
+		mapLayouts.putAll(StepMend.apply(placed, warnings));
+
 		// ---- surface void fill: a map's own cells claim before its padding ----
 		Box3 surfaceBox = WorldPlan.surfaceVolume(placements.values());
 		WorldPlanner.VoidFill fill = WorldPlanner.voidFill(placed, surfaceBox, (m, cx, cy) -> all.get(placed.get(m).id()).inMap(cx, cy), warnings);

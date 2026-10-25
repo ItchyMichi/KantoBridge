@@ -3483,6 +3483,43 @@ taken from what already arrived. `test_battle` and `test_route1` fail on cpu3g p
 **Deviation.** A real gym leader was not walked to (the drivers start trainer battles by script, as before); the Name
 Rater is its write to the record, not the walk to his house.
 
+## Field mechanics audit: FA9, the seams and the cliffs (2026-10-25, specs/FIELD_MECHANICS_AUDIT_PLAN.md §14)
+
+Your go ("implement the seams and cliffs"), on kb-dev51 (cpu3m x4, 32 GB). The causes and the order are the plan's §14.
+Parity is the planned world's (FieldParity, the rollout's options), FA8's last run -> now:
+
+| Game | Walking A | Walking B | Surfing A | Surfing B | Clamps (walk / surf) |
+|---|---|---|---|---|---|
+| Blue | 3 -> 2 | 98 -> 1 | 3 -> 3 | 26 -> 3 | 88 / 23 |
+| Crystal | 146 -> 14 | 267 -> 47 | 0 -> 0 | 62 -> 5 | 314 / 57 |
+| Emerald | 277 -> 231 | 295 -> 289 | 76 -> 27 | 251 -> 251 | 1 / 0 |
+
+- **SC1 seam walls** (`SeamEdges`, after the chain in all three planners): a surface map's edge cell is walled where
+  nothing lies beyond it, where a walker would step onto the neighbour's water below, and where the game's own rule
+  refuses (Gen 3, read from `Collision.tryConnection`: no landing on a ledge cell, the one-way sides, a surfer onto water
+  of another elevation; walkers' elevations are not checked at a seam). Crystal's walking A 136 -> 4, Emerald's off-map
+  walks 55 -> 0 and surfers across elevations 41 -> 1.
+- **SC6 clamps:** probes on the real engines (a row per cell through the sweep's drivers) showed that past the end of a
+  neighbour's strip Gen1Recomp clamps the player onto the neighbour's nearest cell (Blue's Cerulean (0, 30) west lands on
+  Route 4 (89, 17); Crystal's Cerulean (39, 4) east on Route 9 (0, 0)). They are walled (the original games' border
+  stops you there) and FieldParity counts them as `walk_clamp` / `surf_clamp`, apart from B. Before SC1 most of Crystal's
+  let a player walk out onto the void fill, which the parity had counted as agreeing.
+- **SC2 ragged seams** (`MapChain.mend`): the lower map's cell climbs to the higher's as a ramp, 3 blocks a cell, the
+  cells behind it taking the rest. Blue's 3 ragged seams and Crystal's 12 meet; left: a 3-block ramp entered from the
+  side at its foot (Crystal's Cerulean and Lavender, 9 cells) and Route 4 | Cerulean's water a block apart (3, Blue).
+  Rock beside a ramp's top now reaches it in barriers (`walkedNeighbourLevel` counts a ramp's top).
+- **SC4 steps inside maps** (`StepMend.apply`): a one-cell gap through a face, the ground past it up to 3 blocks higher,
+  becomes a ramp; a stair whose foot is a ledge's hop cell comes down to it. Crystal's 38 -> 13 (left: the ramps' sides
+  above, and four faces of 4 or 5 blocks: ramps are built up to 3).
+- **SC7 Crystal's cave hops** (`StepMend.hops`): the cell a hop jumps comes down to the hop cell's level in the 3D
+  caves. 38 -> 2.
+- **Not done yet:** SC3 (the Safari Zone's six areas apart on three layers: 113 of Emerald's B), SC5 (two-floor
+  bridges: Route 110's Cycling Road and Route 120, about 280), and Emerald's levels that stand far apart where the game
+  walks level (Mossdeep's north beach 24 blocks under the city, Lilycove's north shore 9 over the sea, Ever Grande's
+  pool): they need the pictures. Emerald's 166 rails stay with the bike feature.
+- Tests: `SeamEdgesTest`, `MapChainTest` (two more), `StepMendTest`; JUnit builder, world, scene and field packages
+  678 passed.
+
 ## Field mechanics audit: FA8, the fixes (2026-10-25, specs/FIELD_MECHANICS_AUDIT_PLAN.md §13.10, commits 6985aaf..236834c)
 
 Pod **kb-dev24** (as FA0–FA7). The user's answers (§13.9): the defaults, except Q4 (the Acro tricks) and the Mach

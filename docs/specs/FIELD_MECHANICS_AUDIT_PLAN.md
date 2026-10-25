@@ -769,3 +769,50 @@ shaft by design (H5). Videos on the volume: `/workspace/videos/kanto-bridge-{blu
   in `/workspace/videos/landscape/spots_landsky3_fa8/`.
 - Small ones seen on the way: Lavaridge's B1F pop-up lands over a sand hole the builder draws as a drop (the client falls
   through, one replay row); an Emerald Dig shows a fade the bridge names `script` before the `dig` warp.
+
+## 14. FA9: the seams and the cliffs (the user's go, 2026-10-25)
+
+What §13.10 left as "the seams between raised maps and the cliffs with no ramp", worked out from FA8's last parity
+(`*_field_parity_report_fa8e.json`), a chained dump of every outdoor map (`levels_seams1`, the rollout's options) and
+probes on the real engines (a row per cell through the sweep's driver: the player put on the cell, one step).
+
+**What the breaks are** (cell-directions, walking + surfing):
+
+| # | Cause | Blue | Crystal | Emerald | Found by |
+|---|---|---|---|---|---|
+| C1 | A connected side the game refuses where it doesn't meet its neighbour: past the end of the neighbour's strip (Gen 2, Gen 3), a walker onto the neighbour's water, Gen 3 elevations across the seam. Minecraft walks off into the void ring or onto the neighbour | 1 A | 136 A | 112 A | parity A `edge_refused`, `off_map` |
+| C2 | Ragged seams: cells of two maps that touch at different heights after the chain (3 Kanto, 12 Johto, 5 Hoenn seams) | 26 B | 131 B | 16 B | `seams.py`, parity `edge_open/off_map/full` |
+| C3 | The Safari Zone's six areas are open-sky maps on three layers, apart: every crossing between them is walled | — | — | 119 B | placements, parity |
+| C4 | A step inside a map the game walks: one-cell stairs into a terrace with no ramp (Crystal), and levels standing far apart where the game walks level (Mossdeep's north beach 24 blocks under the city, a few more) | — | 38 B | ~20 B | parity `open/ground/full`, `fell` |
+| C5 | Bridges: the game walks and surfs under Emerald's elevation-15 decks (Route 110's Cycling Road, Route 120, Route 119), Minecraft builds them solid to the deck | — | — | ~280 B | parity, the dump |
+| C6 | Past the end of a connection's strip the engines clamp: Gen1Recomp lands the player on the neighbour's nearest cell (Blue's Cerulean (0, 30) west lands on Route 4 (89, 17); Crystal's Cerulean (39, 4) east on Route 9 (0, 0)). The original games stop you at the border tiles there | 98 B | 121 B | — | probes |
+| C7 | Crystal's ledges inside its 3D caves: the hop cell stands 2 blocks over the cell before it (FA8 item 12 was outdoors only) | — | 38 B | — | parity `ledge_hop/solid` |
+
+Left out here, as in §13.10: Emerald's rails and bumpy slopes (the bike feature), Route 130's Mirage Island story water
+(55 surfing cells: a story cell, not a height), the rotating gates.
+
+**The fixes, in order:**
+
+- **SC1 (C1): seam walls.** After the chain, every surface map's edge cell looks across at the cell it touches in the
+  world; where the game would refuse that step (no cell there on a connected side in Gen 2 and Gen 3; a walker onto
+  water; Gen 3's elevation rule of `PairEdges.elevationWall` across the two maps), its side gets an edge wall
+  (`PairEdges`, the FA8 border walls' mechanism).
+- **SC2 (C2): ragged seams mended.** Where two touching cells the game joins stand apart by a step or more, the lower
+  map's cell climbs to the higher's as a ramp (the join stairs' `MapLayout.Ramp`, 3 blocks a cell), a run of such cells
+  side by side together; a difference over one cell's rise takes the cells behind it, as the joins do; what can't be
+  ramped is noted (`seam_mend_<outcome>`).
+- **SC3 (C3): the Safari Zone together.** Open-sky maps the game connects are placed as one group, side by side as
+  their connections say, on one layer, and chained like the surface.
+- **SC4 (C4): steps inside maps.** A one-cell stair the game climbs into a terrace (the higher cell plain ground beside
+  the lower, rock round it) becomes a ramp; the levels that stand far apart where the game walks level get pins (read
+  from the levels drawn over each map: `levels_overlay.py`), in a models table v15.
+- **SC5 (C5): two-floor bridges, Emerald first** (the user's choice of 2026-10-20, HEIGHTS_ALL_GAMES_PLAN D4): an
+  elevation-15 cell is the deck and the floor under it, the deck a level over with at least 2 blocks clear under it,
+  walled at its sides on the deck; the client's position takes the floor from the game's elevation. Crystal's and
+  Blue's bridges (no elevation in their data: an agent review) wait.
+- **SC6 (C6): kept walled** (the original games' border, a default the user may change); the parity counts them as
+  `clamp`, apart from B.
+- **SC7 (C7): Crystal's cave ledges** as FA8 item 12 did outdoors.
+
+Each fix: JUnit, the parity again (FieldParity), then pictures of the places it changed, a rebuilt world on the pod and
+the real-client spots. Progress in PROGRESS.md, "Field mechanics audit: FA9".

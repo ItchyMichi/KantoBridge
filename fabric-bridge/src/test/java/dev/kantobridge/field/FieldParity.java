@@ -21,6 +21,7 @@ import dev.kantobridge.builder.plan.WorldPlanner;
 import dev.kantobridge.story.StoryRules;
 import dev.kantobridge.story.StoryState;
 import dev.kantobridge.world.CellPos;
+import dev.kantobridge.world.MapPlacement;
 import dev.kantobridge.world.SlotMap;
 import dev.kantobridge.world.StoryCellTable;
 import dev.kantobridge.world.StoryCellType;
@@ -310,8 +311,33 @@ final class FieldParity {
 				this.report.agree(state, cls);
 				return;
 			}
+			if (verdict == 'E' && this.pm.placement().kind() == MapPlacement.Kind.SURFACE && this.beyond(cx, cy, tx, ty).isEmpty()) {
+				// a surface map's side past the end of the neighbour's strip: the engine clamps onto the neighbour's nearest cell, the original
+				// game's border stops the player, and so does the build's seam wall (FIELD_MECHANICS_AUDIT_PLAN §14, SC6)
+				this.report.count(state + "_clamp");
+				this.report.example("clamp:" + state, this.map, cx, cy, d, state);
+				return;
+			}
 			String rule = gameOpen ? "B" : "A";
 			this.report.disagree(rule, state, cls, this.map, cx, cy, d, this.detail(cx, cy, tx, ty, mc));
+		}
+
+		/** The cell of another map just beyond cell (cx, cy)'s edge towards (tx, ty), at any height within 12 blocks of its feet. */
+		private Optional<CellPos> beyond(int cx, int cy, int tx, int ty) {
+			int[] s0 = WorldPlan.cellOrigin(this.pm.placement(), this.pm.layout(), cx, cy);
+			for (int dy = 0; dy <= 12; dy++) {
+				for (int sign : dy == 0 ? new int[] {1} : new int[] {1, -1}) {
+					for (int k = 0; k < 2; k++) {
+						int bx = s0[0] + (tx > cx ? 2 : tx < cx ? -1 : k);
+						int bz = s0[2] + (ty > cy ? 2 : ty < cy ? -1 : k);
+						Optional<CellPos> cell = this.index.toCell(bx, s0[1] + sign * dy, bz);
+						if (cell.isPresent() && !cell.get().map().equals(this.map)) {
+							return cell;
+						}
+					}
+				}
+			}
+			return Optional.empty();
 		}
 
 		/**

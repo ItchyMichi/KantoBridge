@@ -1061,7 +1061,7 @@ public final class WorldPlan {
 		return true;
 	}
 
-	/** The highest level of a ground or ledge cell beside cell (cx, cy) on its map, its own level when none is higher. */
+	/** The highest level of a ground or ledge cell beside cell (cx, cy) on its map (a ramp's top), its own level when none is higher. */
 	static int walkedNeighbourLevel(MapModel model, MapLayout layout, int cx, int cy) {
 		int top = level(layout, cx, cy);
 		int[][] n = {{0, -1}, {0, 1}, {-1, 0}, {1, 0}};
@@ -1073,7 +1073,9 @@ public final class WorldPlan {
 			}
 			MapModel.Kind k = model.kind(x, y);
 			if (k == MapModel.Kind.GROUND || k == MapModel.Kind.LEDGE) {
-				top = Math.max(top, level(layout, x, y));
+				// a ramp's top counts: from its high end nobody steps over a lower top beside it either (§14, SC2)
+				MapLayout.Ramp ramp = layout.ramp(x, y);
+				top = Math.max(top, level(layout, x, y) + (ramp == null ? 0 : ramp.rise()));
 			}
 		}
 		return top;
