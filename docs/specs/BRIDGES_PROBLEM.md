@@ -1,5 +1,7 @@
 # Bridges: the problem (for a plan; written 2026-10-25 at the end of FA9)
 
+**The plan that answers this: [WATER_AND_BRIDGES_PLAN.md](WATER_AND_BRIDGES_PLAN.md) (2026-10-25), §1.5 and §2.2.**
+
 A summary of what is wrong with bridges in the built world, what the game does there, what the code does today, and what a
 fix has to touch. It is input for a plan, not a plan. Sources: the field audit's parity after FA9
 (FIELD_MECHANICS_AUDIT_PLAN.md §14, report `g3_field_parity_report_v15.json`), HEIGHTS_ALL_GAMES_PLAN.md (D4, Q3, W6),

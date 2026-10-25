@@ -47,6 +47,10 @@ Pokémon Red/Blue's story runs in a **hidden Gen1Recomp**. It is displayed and p
   mechanic, in-visit script and field feature in all three games against Minecraft (FA0–FA8; rules A–F, decisions D1–D10;
   proposed 2026-10-24): inventory from the engine's own data, a live sweep on the pod, collision parity on the real index,
   then fixes per game. STORY_EVENTS_PLAN.md covers what entry scripts change; this covers what happens while moving.
+- [`docs/specs/WATER_AND_BRIDGES_PLAN.md`](docs/specs/WATER_AND_BRIDGES_PLAN.md) is the water and bridges plan
+  (WB0–WB8, written 2026-10-25 after FA9): the sea as the chain's datum, lagoons as ponds, waterfalls as cascades, seats
+  on landings, and Emerald's bridges as two-floor cells (`decks` in the layout, the floor from the game's elevation); its §3
+  decisions D1–D11 are defaults the user may change. BRIDGES_PROBLEM.md is its input.
 - `refs/_research/` (git-ignored) holds the research notes, with verified `file:line` references,
   that the plan cites.
 
