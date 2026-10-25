@@ -1,8 +1,8 @@
 # Every script and field mechanic in Minecraft: the audit (Blue, Crystal, Emerald)
 
-**Status: proposed, 2026-10-24.** Nothing in this plan has run yet. It is written for an agent to execute phase by
-phase on a pod against the real engine, with the user's decisions in §9 (each a default the agent proceeds with unless
-the user changes it).
+**Status: FA0–FA7 done, 2026-10-25 (kb-dev24); the report is §13. FA8 waits on the decisions in §13.9.** It was written
+for an agent to execute phase by phase on a pod against the real engine, with the user's decisions in §9 (each a default
+the agent proceeds with unless the user changes it).
 
 The user, 2026-10-24: "I want to create a plan that will instruct an AI to audit and check all of the script events in
 all three hidden games in KantoBridge. I want to confirm that when playing the game through Cobblemon there is no script
@@ -288,6 +288,9 @@ follow-ups list, not the gate.
 4. Features and steps: the §3.3 and §3.4 tables filled in with pass / fail / unreachable.
 5. The fix plan for that game (§8's shape) with the user's decisions asked where a default would guess.
 
+**Filled in (2026-10-25):** §13.2 Blue, §13.3 Crystal, §13.4 Emerald, each with items 1–5; the builder's breaks shared
+by all three in §13.5; K1–K13 in §13.6; pass or fail in §13.7; the fix plan in §13.8; the questions in §13.9.
+
 ## 8. Phases
 
 | Phase | Delivers | Check |
@@ -339,8 +342,369 @@ content. Foreign Pokémon's field moves are FOREIGN_POKEMON_PLAN.md §4.2's.
 
 ## 12. Unchecked facts (to verify in FA1, never to build on)
 
+*Verified in FA1: the answers are in §13.2–§13.4 (item 1 of each game); the Acro items remain open.*
+
 - Which Emerald rooms use MB_ICE and MB_SLIDE_*; the exact set of bike-only behaviours; the current routes (132–134);
   Trainer Hill's elevator.
 - Crystal's Ruins of Alph floor collapse and Burned Tower fall are step-driven falls (or script warps).
 - Pokérus and happiness count overworld steps in the engine's port.
 - Which optional items the Acro bike's tricks gate.
+
+## 13. Results (FA0–FA7: run 2026-10-24/25)
+
+Everything below ran on the pod **kb-dev24** (cpu5g x4, 16 GB, EU-RO-1, the volume's imports, Gen1Recomp v0.3.85),
+except where a line says *(read)* (a code reading, not run) or *(inference)*. The per-cell truth stays on the volume in
+`local/reports/g{1,2,3}_field_*.json`; this document names only map symbols, classes, kinds and counts (§4.4). Rule
+letters as §2 and §6: **A** the game refuses and Minecraft lets the player through (the client then snaps back);
+**B** the game allows and Minecraft stops the player (an invisible wall); **C** the client doesn't end where the hidden
+player does; **D** the game changes a cell the client isn't told about; **E** a feature the client can't trigger;
+**F** step counts that drift; **N** a note (a wrong kind with the right outcome, a fade instead of motion).
+
+### 13.1 What ran, and how to read the numbers
+
+| Phase | Tool (all committed) | Blue | Crystal | Emerald |
+|---|---|---|---|---|
+| FA0 | `protocol/`: warp kinds `ladder`, `escalator`, `dive`; `player.pos` kind `ice`; `player.state.run` (optional, nobody sends them yet) | — | — | — |
+| FA1 inventory, FA2 dump | `g{1,2,3}_field_check.py survey`, `scripts`; drivers `kb_g{1,2,3}field.lua` | 225 maps, 218 live | 389 maps, 380 live | 519 maps, 401 live |
+| FA2 parity | `RealGen{1,2,3}FieldParityTest` (`field/FieldParity.java`) | 187,800 + 37,156 | 300,069 + 55,710 | 328,047 + 213,988 cell-directions (walking + surfing) |
+| FA3/FA4 sweep | `… sweep --class C` (shared client `field_common.py`) | 3,515 rows | 7,962 rows | 6,147 rows |
+| FA5 | `… features` | 26 rows | 48 rows | 41 rows |
+| FA6 replay | `RealGen{1,2,3}FieldReplayTest` (`field/FieldReplay.java`, `PlanPhysics.java`) | 3,625 rows | 8,093 rows | 5,126 rows |
+| FA6 spots | `field_spots.py --game G` (the real dev client, RemotePilot), world LandSky3 | 11 of 11 | 12 of 13 | 25 of 28 |
+
+**How parity works (FA2).** The engine's own verdict for every cell, direction and state was asked without moving
+anyone, in the engine's order: Blue `Collision.canMove` with the ledge rows and the connection landing; Crystal
+`Permissions.stepPermitted`, walkable or surfable, the ledge rule, the seam; Emerald `Collision.ledgeLanding`,
+`Collision.canEnter`, the rotating gate, the Acro check and the read-only half of `tryConnection`; objects left out
+(terrain), after a warp into the map in the new game's state. Minecraft's side is the real export planned as a build
+plans it today (`kantobridge.outdoorLevels=all`, `chainLevels=true`, the landscape models table v14, every cave in 3D:
+the rollout worlds' options), and a 0.6 × 1.8 player box with Minecraft's 0.6 step walked two blocks from the cell's
+middle through the planned blocks' real collision shapes, story cells in the new game's state with the visit's
+overrides fed through `StoryRules`. **Checked against a world on disk:** example cells were read back from LandSky3's
+region files (built 2026-10-23) with a small Anvil reader on the pod; they held the plan's blocks.
+
+**How the sweep works (FA3–FA5).** Per row the driver puts the hidden player on the row's start (a warp, or a move on
+the same map), in its vehicle; a stand-in client (`fake_minecraft`, schema-strict) sends the step (or a field action,
+held B, several steps) and the driver records the engine's end once the field is quiet. Checks: one answer per step;
+the client's last known cell (from `player.pos` / `warp.arrive`) is the engine's end (C); every cell the engine changed
+was told (D); the warp kind against the mechanism's (D2: N notes). "Not started" rows couldn't be put in place (a cell
+inside a current, an NPC on it); "halted" rows ran into a scene the sweep cuts off after its budget.
+
+**How the replay works (FA6).** Every sweep row's messages go through the client's own `MoveController` (MovementSync,
+ForcedMover, WarpFade, the input lock) on the planned world, the player's box moved through the colliders and the
+server's teleports answered as `WarpService` does; the step is walked as a player walks it. After 4 s the cell under
+the player must be the engine's end cell.
+
+### 13.2 Blue
+
+**1. Inventory.** 225 maps (5 left out: link rooms, KantoBridge's own test routes), 218 live (Lance's room and Viridian
+City sent the player on at entry). The export's per-cell flags (`kb_cells`) agree with the engine's predicates on every
+cell of every map. Classes: ledges 758 cells on 22 maps; tile pairs (two-way walls; §3.1's "one-way edges" is wrong for
+Gen 1) 577 land + 65 water cells on 16/5 maps; spinners 71 on 3 maps; warp pads 64 on 11 maps; doors 205, warp tiles
+257, exit mats and edge warps 328 warps; cut trees 35; boulders 25 on 9 maps; badge-gate cells 136 (Route 22's gate,
+Route 23); forced bike and surf tiles 4 + 4 (Routes 16, 18; Seafoam B3F, B4F); Seafoam currents 4 + 1 entry current +
+4 forced-exit cells; Cycling Road (Route 17); dark maps 2 (Rock Tunnel). **12 scripted holes on 6 maps** (not 9:
+Seafoam 1F, B1F, B2F, B3F two each, Victory Road 3F one, Pokémon Mansion 3F three), found by probing every map's
+`onStep` with a stand-in overworld; none is marked a hole in the export. Scripts: `onStep` on 38 maps, `onEnter` on 51,
+19 `move_player` rows and 37 `scriptMove` calls, 5 warp rows, 20 block writes.
+
+**2. Parity.**
+
+| | Break | Walking | Surfing | Maps | Where (most) |
+|---|---|---|---|---|---|
+| A | a solid cell built with an empty column | 841 | 8 | 93 | Safari Zone north 68, west 58, east 46, Mansion B1F 34 |
+| A | onto a ledge cell from the side | 278 | 3 | 20 | Routes 4, 5, 1, 2 |
+| A | off an edge with no connection, into the void | 67 | — | 2 | Routes 2, 6 |
+| A | onto a counter, a crossing the game refuses, onto water from higher ground | 39 | — | 9 | Game Corner, Celadon Diner, Route 18 |
+| B | a connection walled at the seam | 98 | 26 | 9 | Route 13, Cerulean, Vermilion, Saffron |
+| | **Total** | **A 1,225, B 98** | **A 11, B 26** | | |
+
+Tile pairs, spinners and pads agree everywhere.
+
+**3. Sweep.** 3,515 rows: 3,406 passed, 61 not started (an NPC on the cell), 35 halted, **0 C, 0 D**; 2 notes (Seafoam's
+two edge warps announced `door`). Ledges 719/722 (`ledge`, the landing two cells on), refused from below 713/713, tile
+pairs 146/147, spinners 71/71 (`spin`), Seafoam's currents and forced exit (`current`), the Cycling Road's roll
+(`slope`), the 12 scripted holes (warp kind `hole`, landing on the floor below; 2 landed on another hole's cell than the
+probe's), boulders 16/17 (`push`), warp pads 64/64 (`pad`), doors 246, stairs 139, edges 308, elevators 6/6
+(`elevator`), coordinate triggers (scripted moves as `script`).
+
+**4. Features and steps.** Surf on and off (`act.field surf`, `dismount`; refused `no_badge` without it), the Old and
+Super Rods (a bite and a battle), the bicycle on and off (walking 16 frames a cell, the bike 8; refused indoors), the
+Cycling Road brake (B held through `move.hold`: the roll stops; let go, it rolls on), Cut, Strength (`push`), Flash in
+Rock Tunnel (the map lit), Dig, Escape Rope, Teleport and Fly (each its own warp kind) — all reachable from the client
+and all behaving as the game does. Steps (20 there and back, rule F): `todSteps` +20, daycare +20, Repel −20, Safari
+−20, poison every fourth step (−5 HP): **equal to the steps sent**.
+
+**5. Replay and spots.** Replay: 3,610 of 3,625 rows end in the engine's cell; 15 long spinner chains in Rocket Hideout
+B2F end 2–3 cells short in the replay model (the forced mover keeps at most 16 legs *(read)*), but the real client's
+spot on a B2F spinner passed, so this is the replay's limit, not the client's *(inference)*. Spots (real client):
+**11 of 11**: Route 18's forced bike, Seafoam's forced surf and current, a Celadon ledge, Mansion 3F's hole, a Rocket
+Hideout spinner, stairs, an edge warp, a Silph Co door and pad, the Celadon Mart elevator. Video:
+`/workspace/videos/kanto-bridge-blue-field-spots-20261024.mp4` (8.7 MB, on the volume).
+
+**Blue passes rules C, D, E and F.** Its A and B breaks are the builder's (§13.5).
+
+### 13.3 Crystal
+
+**1. Inventory.** 389 maps (8 left out: the Battle Tower's rooms, link and mobile rooms), 380 live (Ecruteak Gym's scene
+sent the player on; 46 entry scenes halted).
+
+| Class (COLL, the engine's `Permissions`) | Cells | Maps | Path today |
+|---|---|---|---|
+| one-way side walls | 2,355 | 81 | built as `PairEdges.walls`; the engine refuses |
+| ledges / with two facings | 1,318 / 62 | 72 / 29 | `ledge` / the export keeps the first facing only |
+| headbutt / cut trees | 1,056 / 40 | 26 / 23 | `act.field headbutt` / `cut` + `story.blocks` |
+| ice | 779 | Ice Path (4 floors), Mahogany Gym | `script` |
+| door pushes (the step off a door) | 387 | 139 | `script` |
+| currents / waterfalls | 164 / 164 | Mt. Mortar outside, Silver Cave room 2, Tohjo Falls, Whirl Islands B2F | `script` |
+| whirlpools | 6 | Dragon's Den B1F, Routes 27, 41 | `act.field whirlpool` + `story.blocks` |
+| warps: carpets 579, doors 217, ladders 200, staircases 74, pits 70, caves 51, panels 47 | | | `edge`, `door`, `stairs`, `stairs`, `hole`, `door`, `pad` |
+| counters / grass / super tall grass | 837 / 3,404 / 528 | | plain |
+
+Absent: buoys, the walk tiles 0x40–0x5F (no arm in the port; none on the cart), unused warp bytes. 94 in-map ladders
+on 14 maps. **§12:** the Ruins of Alph floor collapse (each chamber's puzzle: `changeblock` then `warpcheck`) and Burned
+Tower 1F's fall (a coord event: `changeblock`, `applymovement` on the player, `warpcheck`) are **script-made**, not
+step-driven. Scripts: 2,713 roots, 70 warp commands, 214 player moves on 55 maps, 331 `changeblock`, 114 coord events
+on 44 maps, `ENGINE_ALWAYS_ON_BIKE` set on Routes 16 and 17.
+
+**2. Parity.**
+
+| | Break | Walking | Surfing | Maps | Where (most) |
+|---|---|---|---|---|---|
+| A | a solid cell built with an empty column | 4,190 | 112 | 194 | Route 45 377, Blackthorn 210, Route 9 204, Route 32 154 |
+| A | off an edge with no connection, into the void | 1,277 | 42 | 30 | Routes 44, 45, 3, 22 |
+| A | a crossing the game refuses | 142 | — | 11 | Route 26, Pewter, Route 12, Cinnabar |
+| A | onto a counter (the shelf and table bytes 0x91–0x9F) | 64 | — | 12 | the Game Corners, Celadon Café |
+| A | onto water from higher ground | 4 | — | 1 | Cerulean Gym |
+| B | **a ledge hop** | **1,349** | — | 72 | Routes 4, 45, 9, 26; Dance Theater, Victory Road, the Whirl Islands, Dark Cave |
+| B | a connection walled at the seam | 190 | 62 | 22 | Cerulean, Route 13, Viridian, Route 25 |
+| B | a height step with no ramp | 39 | — | 22 | the Ruins of Alph outside, Routes 41, 42 |
+| | **Total** | **A 5,677, B 1,578** | **A 154, B 62** | | |
+
+The ledge hop: Gen 2's hop starts **on** the ledge cell (land) and jumps the next cell, which the engine calls a wall;
+the builder builds the ledge cell as Gen 1's one-way drop and the next cell as rock two blocks high, so walking can't make
+the hop (in-game it ends as a fade, below).
+
+**3. Sweep.** 7,962 rows: 7,528 passed, 1 not started, 86 halted, **0 D**; the 8 C rows are not breaks (4 Cycling Road
+rows the sweep cut off mid-roll, 3 refused steps on Route 17 while it rolled, one E4 walk-in snapshot with the hidden
+player off the map); 226 notes (ladders `stairs` 197/197, carpets into elevators `elevator`). Ledges 1,349/1,363 (the hop
+answered `ledge` on the far cell), refused from below 1,360/1,363, side walls 1,228/1,228 and entries 1,224/1,228, ice
+135/141 (the slide as `script` steps), currents and waterfalls 30/64 each (the others pushed straight back, as the game
+does), whirlpools 12/12, door pushes 36 (each pushed straight out, as the game does), carpets 543/565, doors 202/208,
+caves 47/47, staircases 72/74, pits 32/41 (`hole`; 9 didn't fall in the new game's state), panels 47/47 (`pad`), grass
+440/450, counters 608/608, coord events 81/112 (the rest a scene the sweep halted or a branch that doesn't warp).
+
+**4. Features and steps.** Reachable and right: Surf on (`act.field surf`) and off (a step onto land; `act.field surf`
+toward land is refused `no_target`), the bicycle on and off (16 → 8 frames; refused without the bike or indoors),
+Waterfall (the climb as `script` steps), Whirlpool (the swap as `story.blocks`), Headbutt, Cut, Flash in Dark Cave.
+**Not right:** Strength (the push is answered `blocked: entity`, the boulder moves only as a person; no `push`: K5); **Rock
+Smash from Minecraft does nothing** (`act.result ok`, the rock stays: the bridge's path, `World:useFieldMove`, has no
+arm for it *(read)*); the Cycling Road (steering, the brake and getting off refused while it rolls: K4); Teleport, Dig
+and Escape Rope arrive as warp kind `script` (K11); Fly opens the game's own map and a `dest` is refused (`no_target`).
+Steps: 20 walking and 20 on the bike: `stepCount` +20 each, `player.pos` 20, **equal**.
+
+**5. Replay and spots.** Replay: 8,076 of 8,093 rows end in the engine's cell (the 17 others are the cut-off rolls and
+off-map snapshots above); **every one of the 1,305 replayed ledge hops ends by a teleport**, because the Minecraft
+player can't walk the hop (FA2's B). Spots: **12 of 13** — the coord event, a current, Ice Path's ice, a ledge (the hop
+made by the client's push step, then a fade), a pit, a door, a carpet, a cave, a staircase, Saffron Gym's panel, a
+waterfall; the one failure is a ladder in a 3D cave, where the client climbs a shaft instead of stepping (H5: by design,
+the spot's single step can't climb). Video: `/workspace/videos/kanto-bridge-crystal-field-spots-20261024.mp4` (10.0 MB).
+
+### 13.4 Emerald
+
+**1. Inventory.** 519 maps, 110 left out by D8, 401 live (2 sent the player on). Classes by the engine's predicates
+(`collision.lua`, `forced_movement.lua`, `dive.lua`, `bike/rse.lua`):
+
+| Class | Cells | Maps | Path today (as the sweep saw it) |
+|---|---|---|---|
+| currents | 4,384 | Routes 132, 133, 134; Seafloor Cavern rooms 6, 7 | `script` |
+| dive spots / no-surfacing water | 3,902 / 1,636 | 26 / 8 | `act.field dive`; warp kind `door` |
+| one-way sides (`IMPASSABLE_*`) | 2,655 | 48 | the engine's refusal; no collider |
+| bike-blocked (long grass, hot springs, logs, Fortree bridges, no-running) | 1,574 | 6 | none |
+| ledges / diagonal jumps | 946 / 77 | 42 / 22 | `ledge` / none |
+| ice / thin ice / slide tiles / the Trick House's slippery floor | 340 / 64 / 12 / 186 | 2 / 1 / 2 / 1 | `script` (thin ice also `story.cells`) |
+| waterfalls | 277 | 7 | `act.field waterfall` (climb as `surf`); the fall as `script` |
+| ash grass / Fortree bridges / Pacifidlog logs | 287 / 27 / 38 | 2 / 1 / 1 | `story.cells` |
+| cracked floors / their holes | 190 / 80 | 6 / 1 | `story.cells`; the fall as warp kind `door` |
+| rails / bumpy / muddy slopes | 68 / 17 / 12 | 2 / 2 / 5 | refused `tile` on foot |
+| warps by behaviour: arrows 527, cave doors 217, warp doors 195, ladders 100, the Aqua Hideout's pads 28, Mossdeep Gym 22, Lavaridge 35, escalators 34, Mt. Pyre's holes 8, water doors and arrows 14 | | | see the sweep |
+| counters, tall grass, sand, puddles, shallow water | 566 / 2,801 / 2,932 / 646 / 3,683 | | plain (sampled) |
+
+Absent from the data: walk tiles, spin tiles, cracked ice, `MB_FALL_WARP` (an FRLG id: `isFallWarp` and
+`isStairWarpBehavior` never match Emerald *(read)*). **§12:** MB_ICE is in two rooms (the Hall of Fame and Shoal Cave's
+low-tide ice room); currents are Routes 132–134 and Seafloor Cavern rooms 6, 7; bike-only tiles are rails (Route 119,
+Safari Zone south), bumpy slopes (Jagged Pass, Safari Zone north) and muddy slopes (5 maps); bike-blocked are long grass
+(Routes 119, 120, Faraway Island), hot springs (Lavaridge), the logs (Pacifidlog), the Fortree bridges at an even
+elevation and `NO_RUNNING` (Fortree, Lavaridge, Pacifidlog); Trainer Hill's elevator is plain script warps *(read)*, and
+Trainer Hill is left out (D8). Which items the Acro tricks gate: **not settled** (needs a reachability walk over the
+object list; not run). **§10's alias question:** 74 Emerald-only canonical ids (≥ 0x100) on 7,852 cells; the export's
+`% 256` (GB/`lib/engine/game3/export.lua:662`) stays one-to-one inside Emerald, so FA1 didn't misclassify anything, but
+the names it writes are FRLG's (0x166, the cracked-floor hole, is written `FALL_WARP`) and its land rule misses long
+grass, ash grass and deep sand *(read; no builder code reads the names)*. Scripts: 4,047 roots; 405 warp commands, 115
+warp setters, 2,331 player moves on 218 maps, 37 `setstepcallback` (ash: Jagged Pass, Mt. Chimney, Route 113; Fortree;
+Pacifidlog; Sootopolis Gym's ice; the truck; secret bases; cracked floors: Granite Cave B1F, Mirage Tower 2F/3F, Mt.
+Pyre 2F, Sky Pillar 2F/4F), 289 coord events with a script on 62 maps.
+
+**2. Parity.**
+
+| | Break | Walking | Surfing | Maps | Where (most) |
+|---|---|---|---|---|---|
+| A | a solid cell built with an empty column | 1,183 | 14 | 77 | Slateport 134, Route 130 94, Route 119 84, Lilycove 76 |
+| A | onto a ledge cell from the side | 764 | 12 | 39 | Routes 118, 115, Meteor Falls 1F 2R, Route 114 |
+| A | off an edge with no connection, into the void | 118 | 268 | 17 | Route 130 155, Rustboro 50, Route 118 48, Route 120 42 |
+| A | one-way sides | 212 | 7 | 5 | Lilycove's contest hall 80, the Ancient Tomb, Desert Ruins, Island Cave 44 each |
+| A | walking onto water from a higher cliff (the walker stands on the closed water block's top) | 197 | — | 12 | Routes 110, 120, Mossdeep, Aqua Hideout 1F |
+| A | rails and bumpy slopes on foot | 166 | — | 4 | Route 119 101, Jagged Pass 33, the Safari Zone |
+| A | surfing across elevations (water gets no elevation walls) | — | 94 | 8 | Route 106 70, Route 121, Meteor Falls, Ever Grande |
+| A | a crossing the game refuses | 18 | 41 | 16 | Routes 133, 132, 115, Rustboro |
+| A | rotating gates; lower ground of another elevation; a counter; other | 64 | 4 | 11 | the Trick House 6, Fortree Gym, Mossdeep |
+| B | a wall or a height step with no ramp | 92 | 164 | 10 | Route 110 150 (the Cycling Road over the water), Route 120 49, Route 119, Ever Grande |
+| B | a connection walled at the seam | 121 | 14 | 16 | the Safari Zone (four maps), Dewford, Mossdeep, Routes 107, 114, 126, 127 |
+| B | a drop of more than 8 blocks | 77 | 16 | 4 | Route 110 71, Ever Grande, Mossdeep |
+| B | Mirage Island's story cells, closed to a surfer | 3 | 55 | 2 | Route 130 |
+| B | other | 2 | 2 | 2 | |
+| | **Total** | **A 2,722, B 295** | **A 440, B 251** | | |
+
+**The bike** (from the dump: Minecraft has one set of colliders for every vehicle): **5,761 cell-directions the game
+refuses a bike and lets a walker through** (Route 119 2,887, Route 120 1,654, Faraway Island 646, Pacifidlog 242,
+Fortree 140, warp doors refused to bikes) — A for a bike. 109 rail cell-directions only the Acro bike may ride.
+
+**3. Sweep.** 6,147 rows: 4,768 passed, 333 not started (mostly start cells inside a current), 88 halted, **0 D** (the
+14 flagged rows passed on a rerun with the map's own cells recorded, or were cells told just after the row ended),
+**6 C** (below), 739 notes (warp kinds). By class: ledges 746/760, refused from below 757/760, one-way sides 260/260,
+currents 681/957 (each step `script`; 19 crossed a map seam as a `script` warp), ice 68/68, waterfalls 78 (the push
+back down, as the game does), slides and the slippery floor, thin ice 64/64 (each crack told), cracked floors 87 falls
+(each crack in `story.cells`, the fall warp kind **`door`**, landing on the floor below), muddy slopes (pushed back),
+rails and bumpy slopes refused on foot 81/81, ash grass 272/287, the logs and bridges, counters 337/344, grass, sand,
+puddles, shallow water, coord events 182/244 (the rest a scene the sweep halted or a branch that didn't warp), driven
+script warps, entry scripts. **Warp kinds seen** (the mechanism's in brackets): ladders `script` 100/100 [ladder],
+cave doors `script` 183/183 [door], arrow warps `edge` 239 / `script` 175 [edge], water doors and arrows `script` 11
+[door/edge], escalators `door` 17 / `script` 15 [escalator], Mt. Pyre's holes `door` 4 / `script` 4 [hole], Lavaridge
+`door` 13 / `script` 13, the Aqua Hideout's pads `pad` 3 / `script` 3 [pad], warp doors `door` 160/162: the landing
+(`arrive.to`) was right every time. **The 6 C rows:** a step onto Route 113's ash grass that starts a wild battle: the
+battle's closing warp puts the client on the cell before the step while the hidden player stands on the new one (the
+replay shows the client doesn't recover).
+
+**4. Features and steps.** Reachable and right: Surf on (the hop sent as `ledge`) and off (`dismount`), Waterfall
+(the climb as `surf` steps), Dive and emerge (`act.field dive`: landing right, warp kind `door`: K1), Cut and Rock
+Smash (the objects gone), the bikes' basic riding. **Not right:** **running** (with `move.hold{b}` held the hidden
+player runs, 8 frames a cell, but the client never sends it: K2), the **Mach Bike** never speeds up (16 frames a step at
+the client's cadence) and the **Acro bike's** tricks can't be asked for (K3), **Strength** (the push answered
+`blocked: entity`, the boulder doesn't move, on 4 of 4 maps: K5, cause unresolved), Flash refused in Granite Cave 1F in
+the new game's state (`not_here`), Dig and Teleport arrive as `script` (K11), Fly opens the game's own map. Steps: 20
+walking steps: the step total +20, Repel −20, the daycare counter +20, **equal**.
+
+**5. Replay and spots.** Replay: 5,097 of 5,126 rows end in the engine's cell. The 29 others: the 6 ash-grass battles;
+**in-map warps** — the Aqua Hideout's pads (3), Mossdeep Gym's warp tiles (2), the Regi chambers' south arrow warp (3),
+Lavaridge B1F's sand warp to 1F (1); 12 rows on Mt. Pyre's exterior (the client a cell short: unexplained, worth a spot);
+a cut-off boat ride; one waterfall. Spots: **25 of 28** — the coord event, cracked floor and its hole, a current, ice, a
+ledge, the muddy slope, a slide tile, the slippery floor, thin ice, a cave door, Mt. Pyre's hole, the arrow warps
+(south, east, north, water), a warp door, a water door, both escalators, both Lavaridge warps, a Petalburg Gym door,
+Route 131's deep-water warp, a waterfall. **Failed: the Aqua Hideout's pad and Mossdeep Gym's warp tile** (the client
+stays where the warp started while the hidden player is across the room: **C confirmed in the real client**), and a 3D
+cave's ladder (the client climbs instead of stepping: by design). Video:
+`/workspace/videos/kanto-bridge-emerald-field-spots-20261024.mp4` (7.9 MB).
+
+### 13.5 Across the games: the builder's breaks (A, B)
+
+Four builder causes make most of the A and B counts, in every game:
+
+1. **Solid cells built with an empty column** (A: Blue 849, Crystal 4,302, Emerald 1,197): the shape plan's
+   `blocks()` gives 0 for cells the model calls solid (2–4 high), so nothing collides; the player walks into rock and
+   furniture until the client snaps back. Read back in LandSky3's region files: floor + air.
+2. **The heights pipeline at map edges and cliffs**: the void fill doesn't reach a raised map's height (A: Blue 67,
+   Crystal 1,319, Emerald 386), seams between raised maps are walled (B: Blue 124, Crystal 252, Emerald 135), cliffs
+   between cells the game joins have no ramp (B: Crystal 39, Emerald 256 + 93 drops), and a walker can drop from a cliff
+   onto the top of a closed water block and stand on the water (A: Emerald 197).
+3. **One-way rules without colliders**: the ledge collider is open from its sides (A: Blue 281, Emerald 776), Emerald's
+   one-way sides (219) and Acro tiles (166), surfing across elevations (94), counters built walkable in Crystal and Blue
+   (91). These rely on the client's snap-back today.
+4. **Crystal's ledges** (B 1,349): built the Gen 1 way, one cell off from Gen 2's hop.
+
+### 13.6 The suspected gaps K1–K13
+
+| # | Verdict | Evidence |
+|---|---|---|
+| K1 | **Confirmed, wider than §5 said** | Emerald's ladders, cave doors, water warps and half the arrow warps arrive as `script`; escalators, Mt. Pyre's holes and Lavaridge split `door`/`script`; cracked-floor falls and Dive are `door`. Landings right every time. *(read)* `game3/move.lua:132` turns the engine's announced kind `warp` into `script`, `:133` makes the rest `door`, and the engine's own name (`fall`, `dive`, `escalator`) is never used. Crystal's ladders arrive as `stairs` (D2 wants `ladder`). |
+| K2 | **Confirmed: a client gap only** | B held through four steps made the hidden player run (8 frames a cell); the client never sends that hold off the Cycling Road and no `run` fact is sent. |
+| K3 | **Confirmed** | The Mach Bike stays at 16 frames a step at a player's step cadence *(inference: the sweep's steps came one at a time, as a player's do)*; one bike speed in the protocol; Acro tricks can't be asked for; rails and bumpy slopes are refused `tile` on foot and open in Minecraft. Bike steps never pass the bridge's tryMove tap *(read)*. |
+| K4 | **Confirmed** | Route 17: steering, the brake and dismounting are refused (`blocked: script`, `not_idle`) while the road rolls the player as `script` steps; the engine lets the player steer *(read)*. |
+| K5 | **Confirmed in Crystal; not reached in Emerald** | Crystal: the push answered `blocked: entity`, the boulder moves as a person, no `push`. Emerald: the boulder didn't move at all in 4 of 4 maps (engine or setup: unresolved). Blue: `push`, as designed. |
+| K6 | **Confirmed** | 87 falls: the crack in `story.cells`, the fall `door`, the landing right. The fade stays (D3: a pass). |
+| K7 | **Confirmed by reading; no misfire seen** | While the hidden player ran, `f.runner` held the running shoes' state; nothing in those rows would show a wrong story diff. |
+| K8 | **Confirmed where it breaks** | Ice, slides and currents built as plain ground or water make no parity break; one-way sides, Acro tiles, bike-blocked cells and elevations do (above). |
+| K9 | **Partly settled** | 5 unused Emerald prototype maps aren't built; Dive and emerge land right where tried (the Abandoned Ship, the Aqua Hideout, Marine Cave); Sootopolis' own dive was not tried. |
+| K10 | **Confirmed: fades, not breaks** | Blue's 12 scripted holes land right as `hole` fades; Crystal's 94 in-map ladders are fades. |
+| K11 | **Confirmed in Crystal and Emerald** | Teleport, Dig, Escape Rope arrive as `script`; Blue's have their own kinds. |
+| K12 | **Counts equal** | 20 steps: equal in all three games (totals, Repel, daycare, Safari, poison). Repel doesn't touch Cobblemon's spawns, by design. |
+| K13 | **Listed** | Time-conditioned script commands on 29 Crystal maps: the 22 Pokémon Centers' 1F (the greeting), the Goldenrod underground, Mt. Moon Square, Routes 34, 35, 39, 45, Celadon Mansion's roof house. D6 keeps the DAY world. |
+
+**New findings outside K1–K13:** Emerald's in-map warps (pads, Mossdeep Gym, the Regi chambers' arrow) leave the client
+behind (C); a wild battle started by a step leaves the Emerald client a cell behind (C); Crystal's Rock Smash from
+Minecraft does nothing (E); Crystal's ledges can't be walked (B, ends as a fade); the shape plan's empty solid columns
+(A, all games); Gen 3 surfers cross elevations (A); the engine crashes when an `onFrame` script warps into a Battle Tent
+(`rse/frontier/factory.lua:605`, upstream; D8 leaves those maps out).
+
+### 13.7 Pass or fail (§6)
+
+| Game | A = 0, B = 0 | C = 0 | D = 0 | Features reachable | Steps equal | Verdict |
+|---|---|---|---|---|---|---|
+| Blue | no (A 1,236, B 124) | **yes** | **yes** | **yes** | **yes** | fails on the builder's A/B only |
+| Crystal | no (A 5,831, B 1,640) | yes (no real C) | **yes** | no (Rock Smash; Cycling Road steering; Fly's destination) | **yes** | fails |
+| Emerald | no (A 3,162, B 546) | **no** (in-map warps, a battle on a step) | **yes** | no (running, Mach speed, Acro tricks, Strength) | **yes** | fails |
+
+### 13.8 The fix plan (FA8), per game, with the questions it needs
+
+Ordered by what a player meets first. Each item names its rule and size; "Q" items need your answer (§13.9).
+
+**All games (the builder; one change helps all three):**
+1. **Never build a solid cell without a collider** (A, ~6,300): when the shape plan gives a solid cell no blocks, keep
+   an invisible barrier (or the plain column) at feet level. Small. Q1.
+2. **The heights pipeline**: carry the void fill up to a raised map's height; open seams the game crosses (a ramp or a
+   matching height); a ramp or wall where two joined cells sit far apart; keep walkers off water tops (a barrier over
+   closed water blocks next to higher ground). Medium; touches LEVELS_PIPELINE. Q2.
+3. **One-way rules**: ledge colliders closed from their sides; Emerald's one-way sides as edge plates; counters built
+   solid in Crystal and Blue; Emerald's water elevation walls. Small to medium. D7's default applies (breaks found);
+   Q3 asks whether to collide or keep relying on the snap-back.
+
+**Emerald (adapter and client):**
+4. **Warp kinds from the engine's own name** (K1, D2): `payload.warp.kind` → `ladder`, `escalator`, `dive`, `hole`
+   (falls), `pad`, `door`, `edge`; FA0's values. Small.
+5. **In-map warps** (C): the client must follow a warp whose destination is its own map (pads, Mossdeep Gym, the Regi
+   chambers' arrow). Medium (find the cause first: the warp's start/arrive pair or the fade's same-map rule).
+6. **A battle on a step** (C): after the battle's closing warp, the client must settle on the hidden player's cell.
+   Small to medium.
+7. **Running** (K2, D4: add): the sprint key → `move.hold{b}` through the step on maps the game allows; `player.state.run`;
+   the run speed in Minecraft; first split `f.runner` into script-running and running (K7). Medium.
+8. **The Mach Bike's speed** (K3, D5: yes): chain held steps so it accelerates; a second bike speed. Acro tricks: Q4.
+9. **Strength** (K5): find why the push is refused, then a `push` answer and the boulder's move. Small to medium.
+10. **Bike-blocked cells** (5,761 A for a bike): a story-state rule that closes them for a biking player. Q5.
+11. Kinds for forced moves (`current`, `ice`, `spin` for slides; N notes) and the export's behaviour names (§10). Small.
+
+**Crystal:**
+12. **Ledges** (B 1,349): build Gen 2's ledge cell as standable land and make the jumped cell passable downhill only
+    (a one-way drop one cell on). Medium; Q6.
+13. **The Cycling Road** (K4): stop counting the downhill as forced; answer steering steps; `slope` for the roll (Gen 2
+    has no brake). Small.
+14. **Rock Smash from Minecraft** (E): go through the party menu's path (`PartyMenu:useFieldMove`). Small.
+15. **Strength** (K5): a `push` answer and `npc.move push` for the boulder. Small.
+16. **Warp kinds**: `ladder` for ladders (D2); Fly, Dig, Teleport, Escape Rope from `setupMethod` (K11). Small.
+17. Two-facing ledges: export both facings. Small. Fly's destination from Minecraft: Q7.
+
+**Blue:**
+18. Only the builder's items 1–3. The 12 scripted holes' landings in the export (K10) stay a fade (D3) unless you want
+    the H5 shaft model for them: Q8.
+
+### 13.9 Decisions needed before FA8
+
+| # | Question | Default if you say "go" |
+|---|---|---|
+| Q0 | Which game first, and builder fixes before adapter fixes? | the builder's items 1–3 first (they help all three), then Emerald, Crystal, Blue |
+| Q1 | Empty solid columns: an invisible barrier, or bring the plain column back where the shape plan leaves none? | an invisible barrier at feet level (keeps the look) |
+| Q2 | The heights fixes now (they touch the levels pipeline and need a rebuilt world and pictures), or after the adapter fixes? | after the adapter fixes, as their own pass |
+| Q3 | One-way rules: real colliders (ledge sides, one-way sides, counters, water elevations), or keep the snap-back? | real colliders (D7: breaks were found) |
+| Q4 | The Acro bike's tricks (wheelie, bunny hop, rails): add a key, or leave them unreachable? | leave them (D5) |
+| Q5 | Bike-blocked cells: closed for a biking player (a story-state rule), or keep the snap-back? | closed for a biking player |
+| Q6 | Crystal's ledges: rebuild them the Gen 2 way (a medium builder change and a Johto rebuild), or keep today's fade? | rebuild |
+| Q7 | Fly from Minecraft in Crystal and Emerald opens the game's own map: keep that, or add a destination list on our side? | keep the game's map |
+| Q8 | Blue's scripted holes: real drops (the H5 shaft model) or fades? | fades (D3) |

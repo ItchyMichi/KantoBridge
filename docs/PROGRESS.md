@@ -3483,6 +3483,38 @@ taken from what already arrived. `test_battle` and `test_route1` fail on cpu3g p
 **Deviation.** A real gym leader was not walked to (the drivers start trainer battles by script, as before); the Name
 Rater is its write to the record, not the walk to his house.
 
+## Field mechanics audit: FA0–FA7 (2026-10-24/25, specs/FIELD_MECHANICS_AUDIT_PLAN.md §13)
+
+Pod **kb-dev24** (cpu5g x4, 16 GB, $0.184/hr, EU-RO-1, the volume's imports, Gen1Recomp v0.3.85, Union Room off at
+every install); stopped when the audit ended. No game behaviour changed. Per-cell truth in `local/reports/` on the volume.
+
+- **FA0** (50d7eeb): optional protocol values only: warp kinds `ladder`, `escalator`, `dive`; `player.pos` kind `ice`;
+  `player.state.run`. Nobody sends them yet.
+- **FA1** (14d93bc): inventory and script dump per game: Blue 225 maps (218 live), Crystal 389 (380), Emerald 519 (401;
+  110 left out by D8). §12's facts settled (Emerald's ice rooms, currents, bike sets; Crystal's Ruins and Burned Tower
+  falls are script-made; Blue has 12 scripted holes, not 9).
+- **FA2** (bb8f854 and the Blue stand fix): engine verdict against the planned world per cell and direction.
+
+  | | Walking A / B | Surfing A / B | Compared (walk + surf) |
+  |---|---|---|---|
+  | Blue | 1,225 / 98 | 11 / 26 | 187,800 + 37,156 |
+  | Crystal | 5,677 / 1,578 | 154 / 62 | 300,069 + 55,710 |
+  | Emerald | 2,722 / 295 | 440 / 251 | 328,047 + 213,988 |
+
+- **FA3/FA4** sweeps (c43a292, 09bc2f4), rows / passed / C / D: Blue 3,515 / 3,406 / 0 / 0; Crystal 7,962 / 7,528 / 8
+  (cut-off rolls and snapshots, no real C) / 0; Emerald 6,147 / 4,768 / 6 (a battle on an ash-grass step) / 0.
+- **FA5** features and steps (09bc2f4): steps equal in all three games. Not right: Emerald running, Mach speed, Acro
+  tricks, Strength; Crystal Strength (`blocked: entity`), Rock Smash from Minecraft, the Cycling Road's steering.
+- **FA6** replay through the client's MoveController on the planned world: Blue 3,610/3,625, Crystal 8,076/8,093 (every
+  ledge hop ends by a teleport), Emerald 5,097/5,126. Real dev client spots on LandSky3: Blue 11/11, Crystal 12/13,
+  Emerald 25/28 (the Aqua Hideout pad and Mossdeep Gym's warp leave the client behind). Videos on the volume:
+  `/workspace/videos/kanto-bridge-{blue,crystal,emerald}-field-spots-20261024.mp4`.
+- **FA7**: the report in the plan's §13; PLAYTEST.md "Field mechanics audit". FA8 waits on §13.9's questions.
+- **Check** (tools/check.sh on kb-dev24): pytest 2,385 passed (69 e2e skipped); GameTests 132/132; JUnit in package
+  chunks (the whole-suite worker hung at shutdown again) 1,439 tests, 1 failed: the old `KbPackReloadTest`.
+- **Upstream**: an `onFrame` script that warps into an Emerald Battle Tent crashes the engine
+  (`rse/frontier/factory.lua:605`); D8 leaves those maps out, so not ours to fix.
+
 ## Pre-flight (PLAN §0.6)
 
 | Step | State |

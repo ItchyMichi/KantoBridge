@@ -1043,3 +1043,30 @@ In a rebuilt world, give yourself a team with no Pokémon the game knows (e.g. `
       party arrives empty (it is in Cobblemon's PC). Tell me if this matches what you saw, or what was blank.
 - [ ] **B2:** CONTINUE on Blue's title from Minecraft hangs in a single-region world.
 
+## Field mechanics audit (specs/FIELD_MECHANICS_AUDIT_PLAN.md §13)
+
+Nothing here changed the game; these are the places the audit found, to see for yourself when you are at the PC.
+Videos of the real-client spots: `/workspace/videos/kanto-bridge-{blue,crystal,emerald}-field-spots-20261024.mp4`.
+
+### Blue
+- [ ] Walk into a rock or tree in the Safari Zone north: you go in, then snap back (an empty solid column).
+- [ ] Walk onto a ledge from its side on Route 4 or 5: you go in, then snap back.
+- [ ] Cross Route 13's and Cerulean's map seams: an invisible wall where the game lets you through?
+- [ ] Rocket Hideout B2F spinners, Seafoam's currents, a Silph Co pad, the Celadon Mart elevator: you end where the game says.
+
+### Crystal
+- [ ] Hop a ledge on Route 45 or Route 9: you can't walk it; it ends as a fade.
+- [ ] Walk off the edge of Route 44 or 45: into the void, then back.
+- [ ] Rock Smash a rock from Minecraft: nothing happens (the rock stays).
+- [ ] Strength on a boulder: the push is refused, the boulder moves anyway.
+- [ ] The Cycling Road: you can't steer or get off while it rolls.
+
+### Emerald
+- [ ] Step onto an Aqua Hideout warp pad, or a Mossdeep Gym warp tile: you stay put while the game moves you across the room.
+- [ ] Route 113's ash grass: when a wild battle starts on a step, you end a cell behind afterwards.
+- [ ] Hold the sprint key: you never run (the game would).
+- [ ] The Mach Bike never speeds up; the Acro bike's tricks can't be done.
+- [ ] Strength on a boulder: refused, the boulder stays.
+- [ ] Ride a bike into Route 119's long grass or Pacifidlog's logs: Minecraft lets you, the game snaps you back.
+- [ ] Walk onto water from a cliff on Route 110 or 120: you stand on the water.
+
