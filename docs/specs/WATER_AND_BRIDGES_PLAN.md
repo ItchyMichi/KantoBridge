@@ -365,3 +365,31 @@ libx264 crf 26). Pushes at WB3 and WB8 only, after the scan every push had: auth
 no `local/`, `refs/`, binaries, secrets or personal addresses; a bundle backup first in `/home/claude/backups/`
 (`kantobridge-<date>-<hash>.bundle` + `.sha256`). When everything is done, or nothing more can be done alone: stop every
 pod, confirm it, and finish with a summary (done, the parity before and after, left and why).
+
+## 9. Results (2026-10-25/26, run unattended)
+
+Numbers only; the reasons, the choices where the plan was silent and the deviations are in PROGRESS.md "Water and
+bridges". Emerald's parity is FieldParity on the planned world (walking A/B, surfing A/B; the waterfall class and the
+two-floor comparisons apart).
+
+| Phase | Emerald walking A / B | Emerald surfing A / B | Waterfall | Varies (walk / surf) |
+|---|---|---|---|---|
+| before (FA9's v15) | 231 / 183 | 27 / 261 | 0 | 166 / 16 |
+| WB1 (datum, lagoon rule, solver cascades, seats) | 219 / 184 | 31 / 224 | 61 | 166 / 16 |
+| WB5/WB6 decks built | 219 / 149 | 21 / 90 | 25 | 166 / 16 |
+| WB6/WB7 bridges judged per floor, final planner | 223 / 45 | 21 / 90 | 25 | 60 / 16 |
+
+- **WB0:** falls Ever Grande 8 cells for 24 blocks, Route 114 3 for 9, Route 119 4 for 15 (one more on the river above),
+  Route 119 south and the Frontier's east fall between water at one level; basins (30, 20) and (35, 10) at 3; Lilycove's
+  landings (39, 1), (40, 1); Fortree's bridge (30-33, 14).
+- **WB1:** water pairs left apart after the chain: Hoenn 9 (the Frontier's own pond), Johto 3, Kanto 0. Route 134 |
+  Slateport 8 -> 0. Blue surfing B 3 -> 0, Crystal 5 -> 3. D3 only half held (the basins have quay landings): table v16
+  keeps the harbour's pin `[35, 10, 0, 1]`, drops the east basin's; Lilycove's lagoon needed a wet pin `[45, 0, 9, 1]`.
+- **WB2:** cascades on Ever Grande (8), Route 114 (3), Route 119 (4 + 1); rebuilt after the pins.
+- **WB3:** Route 109 21 -> 3.
+- **WB4:** `decks`, floors, `elev` (format and client); tests MapLayoutTest, MovementSyncTest, StoryStateTest, Lua.
+- **WB5:** decks: Route 110 185 of 185, Route 120 48, Route 119 16, Fortree 4; Littleroot 2 one floor.
+- **WB6:** Route 110 222 -> 4, Route 120 52 -> 2; bridge cells compared per floor: 1,108 on decks, 592 walked under, 500
+  surfed under.
+- **WB7:** Shoal Cave's two inner rooms, Victory Road 1F/B1F/B2F and Meteor Falls 1F 1R raised with their decks
+  (breaks: Shoal Cave low tide 11, Meteor Falls 6, the rest 0).

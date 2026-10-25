@@ -1081,3 +1081,17 @@ Videos of the real-client spots: `/workspace/videos/kanto-bridge-{blue,crystal,e
 - [ ] Emerald: ride a bike into Route 119's long grass: stopped (walking in is fine).
 - [ ] Emerald: a ladder, an escalator, a dive and a cracked floor: each with its own fade (no plain script fade).
 
+
+## Water and bridges (specs/WATER_AND_BRIDGES_PLAN.md; a world rebuilt with it)
+- [ ] Route 110: ride the Cycling Road end to end: you stay on the deck (its sides stop you), 9 blocks over the water.
+- [ ] Route 110: walk the paths under the road (row 32) and surf under it (rows 29 to 30): you pass beneath, no wall.
+- [ ] Route 120: surf under the log bridges; walk over them.
+- [ ] Route 119: walk under the long log bridge north of the Weather Institute, and over it.
+- [ ] Fortree City: walk the bridge between the tree platforms, and under it.
+- [ ] Ever Grande City: Waterfall up the falls (a forced climb up the water's steps), surf off the top and get pushed back down;
+  without the move the foot of the falls stops you.
+- [ ] Route 114 and Route 119's falls: the same.
+- [ ] Lilycove City's north shore: surf on the lagoon and land on the plateau at its two landings; the rest of its edge stops you.
+- [ ] Slateport's harbour and both seams (Route 110's water, Route 134's sea): the sea meets across without a step.
+- [ ] Route 109: surf to a beach chair and land on it; sit-height art, no bump.
+- [ ] A warp or a resync while under a bridge puts you back under it (not on the deck).

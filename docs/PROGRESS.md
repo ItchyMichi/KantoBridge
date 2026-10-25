@@ -3483,6 +3483,101 @@ taken from what already arrived. `test_battle` and `test_route1` fail on cpu3g p
 **Deviation.** A real gym leader was not walked to (the drivers start trainer battles by script, as before); the Name
 Rater is its write to the record, not the walk to his house.
 
+## Water and bridges (2026-10-25, specs/WATER_AND_BRIDGES_PLAN.md)
+
+Run unattended (the user travelling; defaults D1-D11, choices recorded here). Pods: kb-dev51 (cpu3m x4, $0.22/hr) for
+WB0/WB1, a new **kb-dev52** (wi2la1q7lg49sj, cpu3g x8 32 GB, $0.32/hr) from WB3 on (kb-dev50/48: no free vCPU).
+Emerald's parity (FieldParity on the planned world, the rollout's options; walking A/B, surfing A/B):
+
+| Run | Walking A | Walking B | Surfing A | Surfing B | Waterfall (apart) | Varies (walk/surf) |
+|---|---|---|---|---|---|---|
+| v15 (FA9's last, before) | 231 | 183 | 27 | 261 | 0 | 166 / 16 |
+| WB1 (datum, lagoon rule, D3 pins, solver cascades, seats) | 219 | 184 | 31 | 224 | 61 | 166 / 16 |
+
+- **WB0 facts** (dump `levels_wb0`, table v15): the falls' climbs: Ever Grande 8 cells for 24 blocks, Route 114 3 for 9
+  (both fit), Route 119 north 4 cells for 15 (one short: the river's next row climbs on), Route 119 south 4 cells with no
+  water above or below (a drawn fall, left at its levels), the Safari Zone's south-east and the Frontier's east falls
+  between water at one level (no climb); Meteor Falls and Victory Road B2F are caves. Slateport's basin cells confirmed
+  ((30, 20) and (35, 10), water at 3). Lilycove's landings (39, 1) and (40, 1). Fortree's bridge (30-33, 14) at 0 like its
+  platforms. Seams with the datum (seams.py on the v15 dump): Route 110 | Slateport's water meets; left apart: Route 134 |
+  Slateport 8 pairs (the north-east harbour), the Frontier east | west 9 (was 23).
+- **WB1** `MapChain.seams` takes a seam's step from its water pairs where it has any and chains the sea's seams first;
+  `seams.py` the same (it now prints the water pairs left apart: Hoenn 9, all the Frontier's own pond; Johto 3, Cerulean |
+  Route 24; Kanto 0). `RaisedRegions` `Input.open` / `gen3Open`: a body is the sea only through an edge cell connected
+  onto water. Blue's surfing B 3 -> 0 and Crystal's 5 -> 3 by the datum alone; Kanto's Lavender Town and Route 16 move
+  only by the mend ramps the datum leaves (rules_check: same 1,079 of 1,116 before vs 1,085 at baseline; the new "look"
+  maps are the waterfall maps, Slateport and those two).
+  - **D3 does not hold as written:** both of Slateport's basins have quay cells a surfer lands on (9 and 11 landings
+    3 blocks up after the pins). The north-east harbour's pin is kept (it ties the harbour to Route 134's sea across the
+    seam: 8 crossings fixed for 9 landings lost); the east basin's pin is dropped (11 landings for nothing). Table v16:
+    Slateport `[35, 10, 0, 1]`.
+  - **Lilycove's lagoon:** the rule makes it a pond, but the solver's raw banks put it at 3 (a key-3 bank east), and the
+    review's pins lift the plateau to 9 afterwards; a wet pin `[45, 0, 9, 1]` (v16) sets it with the plateau. The game
+    lands a surfer on the two elevation-0 cells only: the plateau's elevation-5 cells beside the lagoon now meet it, so
+    water is walled from ground a surfer can't land on (`PairEdges.fieldWall`: elevations other than 0, 1, 3, 15).
+  - `rules_check.py` didn't know FA9's dry pins (a 4th element): fixed (translate keeps it, the flood honours it).
+- **WB2 cascades:** `RaisedRegions.cascades` (each fall run between two bodies climbs 3 a cell from the lower one, on over
+  the river above when short) and `cascaded`, run again in `Gen3Planner` after the pins: Ever Grande's raw levels put its
+  pool under the sea and only its 84 review pins turn them round. Built as the outdoor ramp's half steps a block lower
+  than on ground (the first third at the water's surface), the fall's art on them, and a `FallWallBlock` (kind 16) over
+  the foot's first row, open while the story state says `forced` (new `story.state` flag from the client's
+  `ForcedMover`). FieldParity counts steps onto and off a cascade as `waterfall`, apart from A and B (61 in WB1).
+- **WB3 seats on landings:** a seat (`ShapePlanner.SEAT`) on a cell with an open edge to water keeps its art on a decor
+  carrier and has no collider (`WorldPlan.seatBesideWater`). Route 109's breaks 21 -> 3 (the 12 walkers who stepped from
+  a seat onto the water's closed story block and the 9 surfers who couldn't climb onto one; left: 3 surfers onto
+  elevation-4 sand, the game's own refusal now walled the other way round). The checkpoint's run (kb-dev52) was spoiled
+  by an early bridge rule (see WB5) and by the volume's quota (below); its numbers are folded into WB5/WB6's.
+- **WB4 the format and the client:** `MapLayout.Deck {x, y, under, elev}` (`decks` in the index, its schema; a world
+  without them reads as before, `WorldIndex.VERSION` 1), `WorldIndex.Floor`, `floorAt`, `floorFor`, `elevOf`,
+  `toBlock(..., floor | elev)`, `cellOrigin(..., floor)`; `toCell` answers within the same reach of either floor. An
+  optional `elev` (0-15) in `place` (snapshot, warp), `player.pos`, `npc` / `npc.add` / `npc.move`, sent by the Gen 3
+  adapter only (`P.currentElevation`, an object event's `currentElevation`); the client's `Place` carries it, a
+  teleport (`MovementSync.teleport`, `WarpService.teleport`, the warp request's target) lands on the floor it names, else
+  on the floor nearest the player's feet; a puppet stands on its floor. `Spot` needed nothing: it keeps the piece's
+  level, and the physics keeps a walker under a deck under it. Tests: MapLayoutTest (decks, both floors), MovementSyncTest
+  (a resync under a deck stays under; elevation 4 lands on top), StoryStateTest, test_lua_player (elev travels).
+- **WB5 the planner:** `RaisedRegions.decked` gives each bridge (its cells four-neighbour) the highest level key round
+  it: its ends' (the first rule tried, votes along the bridge's run, put the Cycling Road on a path's level where a path
+  crosses under it in one row); `decks` gives each bridge cell the floor under it (the water beside it, else the ground
+  across whose elevation isn't the deck's; inner cells of a wide deck their row-mates'), two floors where the deck stands
+  3 or more blocks over it and the elevations differ. The deck's cells are no source for the nearest-ground fill (Route
+  110's elevation-1 paths beside the road had taken its 9), and the pins move a deck's under floor with the cells beside
+  it. The dump writes `decks` `[x, y, under, elev]`. Route 110: 185 of 185 bridge cells two floors (under 0, elevation
+  4 and 3 kinds); Route 120 48; Fortree 4 (the deck now at its platforms' elevation 4, 6 blocks over the ground: no lift
+  needed); Littleroot's 2 stay one floor (elevations agree).
+- **WB6 the builder and the parity:** a deck cell's column: the fill only up to the floor under it, that floor (water's
+  half block or the ground's block, in the art of the cell beside it), air, the deck's slab with the bridge's art; its
+  sides walled at the deck toward every neighbour not at the deck's level (`WorldPlan.deckSides`; done in the builder
+  rather than as a second side byte in `PairEdges`: the same walls, one place). The field driver now writes, for every
+  bridge cell, its verdicts for each elevation round the map's bridges (`bridges` in the parity dump; the 11 bridge maps
+  surveyed again on the engine, 457 cells, merged into the full dump); `FieldParity` walks each from its floor
+  (`walk_deck` 1,108, `walk_under` 592, `surf_under` 500 cell-directions compared). Water and the ground beside it are
+  walled where a surfer can't land (elevations other than 0, 1, 3, 15: the engine's `isSurfDismount`). Water tiles get
+  full slots too (the cascade's and the under floor's blocks).
+- **WB7 the caves:** the 3D caves' bridges are decks too (`decked` when not a room; `flat_bridge` stays for rooms only):
+  Shoal Cave's two inner rooms, Victory Road 1F/B1F/B2F and Meteor Falls 1F 1R are raised now; the rock fill under a
+  raised cave floor stops at a deck's under floor.
+
+| Run (Emerald) | Walking A | Walking B | Surfing A | Surfing B | Waterfall | Varies | Route 110 | Route 120 | Route 119 |
+|---|---|---|---|---|---|---|---|---|---|
+| v15 (before) | 231 | 183 | 27 | 261 | 0 | 166 / 16 | 221 | 52 | 120 |
+| WB1 | 219 | 184 | 31 | 224 | 61 | 166 / 16 | 222 | 52 | 114 |
+| WB5/6, decks built (bridge verdicts not yet per elevation) | 219 | 149 | 21 | 90 | 25 | 166 / 16 | 77 | 3 | 101 |
+| WB6, bridges judged per floor | 270 | 85 | 21 | 90 | 25 | 60 / 16 | 75 | 2 | 107 |
+| WB6/WB7 final planner (under-floor elevations, nearest fill, caves) | 223 | 45 | 21 | 90 | 25 | 60 / 16 | 4 | 2 | 107 |
+
+What is left in Emerald's parity (by map): Route 119 107 (101 of them the Acro Bike's rails: the bike feature), Route
+130's Mirage Island story water 70, Jagged Pass 33 and the Safari Zone 32 (Acro), Mossdeep 20 (FA9's launch pad), the
+Trick House and the Fortree gym 32 (gates), Slateport 11 (the north-east harbour's quay landings, see D3 above), Shoal
+Cave's low-tide room 11, the two underwater routes 16, Meteor Falls 6 (water a stair under its banks now the room is
+raised), Route 110 4 (an east-west path whose two ends the levels put 9 apart, under the road).
+
+- **The volume's quota:** the 40 GB volume was full (`Disk quota exceeded` copying a world); the world copies older runs
+  left (LandSky..LandSky4's Context, FieldG and Perf copies, about 6 GB) were not mine to delete, and the permission
+  layer refused it, so this session's worlds are built on the pod's container disk (`overlay_local.sh`: local/ a
+  directory of links to the volume, new worlds on the pod) and are lost when the pod stops. **To keep a rebuilt world
+  (LandSky6) the volume needs room: delete those copies or grow it (your call).**
+
 ## Field mechanics audit: FA9, the seams and the cliffs (2026-10-25, specs/FIELD_MECHANICS_AUDIT_PLAN.md §14)
 
 Your go ("implement the seams and cliffs"), on kb-dev51 (cpu3m x4, 32 GB). The causes and the order are the plan's §14.
