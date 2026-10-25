@@ -464,10 +464,45 @@ local function liveVerdicts(game, id, def)
     return list
   end
 
+  -- WATER_AND_BRIDGES_PLAN §2.2 item 8: every elevation a bridge cell (15) of this map may be entered with (any non-15
+  -- neighbour of any of its bridge cells: the deck's ends, the ground and water under it), and per bridge cell its
+  -- verdicts for each: "x,y" -> { ["e"] = 4 walking then 4 surfing verdicts, up down left right }
+  local bridgeElevs, bridges = {}, {}
+  do
+    local seen = {}
+    for y = 0, th - 1 do
+      for x = 0, tw - 1 do
+        if elevOf(x, y) == 15 then
+          for _, dir in ipairs(DIRS) do
+            local d = DELTA[dir]
+            local ne = elevOf(x + d[1], y + d[2])
+            if ne and ne ~= 15 and not seen[ne] then
+              seen[ne] = true
+              bridgeElevs[#bridgeElevs + 1] = ne
+            end
+          end
+        end
+      end
+    end
+    table.sort(bridgeElevs)
+  end
+
   local ok, err = pcall(function()
     for y = 0, th - 1 do
       for x = 0, tw - 1 do
         counts.cells = counts.cells + 1
+        if elevOf(x, y) == 15 and #bridgeElevs > 0 then
+          local per = {}
+          for _, e in ipairs(bridgeElevs) do
+            local wv, sv = {}, {}
+            for _, dir in ipairs(DIRS) do
+              wv[#wv + 1] = footVerdict(x, y, dir, false, e)
+              sv[#sv + 1] = footVerdict(x, y, dir, true, e)
+            end
+            per[tostring(e)] = table.concat(wv) .. table.concat(sv)
+          end
+          bridges[x .. "," .. y] = per
+        end
         -- where a player can stand: . walkable, ~ water, L a ledge cell, # neither
         local coll = C.cell(x, y)
         stand[#stand + 1] = (C.isWater(x, y) and "~") or (Perm.isLedge(coll) and "L") or (C.isWalkable(x, y) and ".") or "#"
@@ -496,7 +531,7 @@ local function liveVerdicts(game, id, def)
   if Rse.state then Rse.state.cyclingChallenge = challenge end
   if not ok then return nil, word(err):sub(1, 80) end
   return { w = tw, h = th, walk = table.concat(walk), surf = table.concat(surf), bike = table.concat(bike),
-           stand = table.concat(stand), varies = counts.varies }
+           stand = table.concat(stand), varies = counts.varies, bridges = next(bridges) and bridges or nil }
 end
 
 -- The current map's layout overrides that differ from its own cells (what the bridge sends as story.cells).

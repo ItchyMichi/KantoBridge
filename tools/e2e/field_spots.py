@@ -143,12 +143,20 @@ def main(argv=None) -> int:
     ap.add_argument("--world", default="LandSky3")
     ap.add_argument("--record")
     ap.add_argument("--only", default="")
+    ap.add_argument("--extra", default="", help="a JSON list of spots of our own: {cls, map, x, y, dir, vehicle, floor}"
+                    " (WATER_AND_BRIDGES_PLAN WB8: on and under the bridges, the lagoon, the waterfall, the chair); floor"
+                    " 'deck' or 'under' checks which floor of a two-floor cell the player ends on")
     ap.add_argument("--per-class", type=int, default=1)
     ap.add_argument("--timeout", type=int, default=3600)
     ap.add_argument("--plan", action="store_true", help="print the spots only")
     a = ap.parse_args(argv)
     g = GAMES[a.game]
     spots = pick_spots(g["prefix"], a.per_class, set(filter(None, a.only.split(","))))
+    if a.extra:
+        for s in json.loads(Path(a.extra).read_text(encoding="utf-8")):
+            s.setdefault("vehicle", None)
+            s.setdefault("engine_end", [None, None, None])
+            spots.append(s)
     # Emerald's Sky Pillar needs its later state (as the sweep set it)
     for s in spots:
         if a.game == "emerald" and s["map"].startswith("EM_SKY_PILLAR_"):
@@ -230,7 +238,17 @@ def main(argv=None) -> int:
                                     if isinstance(after.get(k, 0), (int, float)) and after.get(k, 0) != before.get(k, 0)}
                     ee = [g["wire"] + spot["engine_end"][0], spot["engine_end"][1], spot["engine_end"][2]]
                     same_end = out["hidden"] == ee
-                    if out["inside"] and same_end:
+                    floor_ok = True
+                    if spot.get("floor"):
+                        hb, pl = st.get("hidden_block") or {}, st.get("player") or {}
+                        out["floor"] = {"want": spot["floor"], "y": pl.get("y"), "deck_y": hb.get("y"), "under_y": hb.get("under_y")}
+                        if spot["floor"] == "under" and hb.get("under_y") is not None and pl.get("y") is not None:
+                            floor_ok = pl["y"] < hb["under_y"] + 1.5
+                        elif spot["floor"] == "deck" and hb.get("y") is not None and pl.get("y") is not None:
+                            floor_ok = pl["y"] > hb["y"] - 0.75
+                    if not floor_ok:
+                        out["result"] = "FAIL (the client is on the other floor)"
+                    elif out["inside"] and same_end:
                         out["result"] = "PASS"
                     elif out["inside"]:
                         out["result"] = "PASS (the game ended elsewhere than in the sweep)"

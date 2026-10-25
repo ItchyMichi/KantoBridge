@@ -14,6 +14,7 @@ import dev.kantobridge.builder.export.ExportBundle;
 import dev.kantobridge.builder.place.CodeStates;
 import dev.kantobridge.builder.plan.BlockCode;
 import dev.kantobridge.builder.plan.ChunkCodesView;
+import dev.kantobridge.builder.plan.MapModel;
 import dev.kantobridge.builder.plan.PlacedMap;
 import dev.kantobridge.builder.plan.RegionBuild;
 import dev.kantobridge.builder.plan.WorldPlan;
@@ -21,6 +22,7 @@ import dev.kantobridge.builder.plan.WorldPlanner;
 import dev.kantobridge.story.StoryRules;
 import dev.kantobridge.story.StoryState;
 import dev.kantobridge.world.CellPos;
+import dev.kantobridge.world.MapLayout;
 import dev.kantobridge.world.MapPlacement;
 import dev.kantobridge.world.SlotMap;
 import dev.kantobridge.world.StoryCellTable;
@@ -70,7 +72,7 @@ final class FieldParity {
 	private static final VoxelShape HALF_SHAPE = Block.box(0, 0, 0, 16, 8, 16);
 	private static final int EXAMPLES = 40;
 	/** One letter per block kind (BlockCode.KIND_*): air, Full, Half, Ledge, light, Story, sTory tile, sHape, decor, Vanilla, prop, Edge, steP, ladder, seat, ? */
-	private static final String KIND_LETTERS = ".FHLlSTXdVpEPKsB?";
+	private static final String KIND_LETTERS = ".FHLlSTXdVpEPKsBW?";
 
 	private static WorldIndex REAL;
 
@@ -124,6 +126,8 @@ final class FieldParity {
 		}
 		JsonObject dump = JsonParser.parseString(Files.readString(dumpFile, StandardCharsets.UTF_8)).getAsJsonObject();
 		Report report = new Report();
+		// Emerald's maps: the elevations round a two-floor cell name who passes under it (WATER_AND_BRIDGES_PLAN §2.2 item 8)
+		Map<String, dev.kantobridge.builder.export.G3Map> g3 = "gen3".equals(family) ? dev.kantobridge.builder.plan.G3Built.maps(bundle) : Map.of();
 		// kb.fieldRealIndex: a built world's world_index.json, to name the example cells' real block positions (the
 		// cross-check of the plan against a world on disk)
 		String realPath = System.getProperty("kb.fieldRealIndex", "");
@@ -144,6 +148,7 @@ final class FieldParity {
 			}
 			report.count("maps");
 			MapRun run = new MapRun(plan, index, pm, map, family, byKey, entries, rec, shaftEnds, report);
+			run.g3 = g3.get(engineMap);
 			run.compare();
 		}
 		JsonObject out = report.toJson();
@@ -171,6 +176,8 @@ final class FieldParity {
 		final Set<CellPos> shaftEnds;
 		final Report report;
 		final ChunkCodesView view;
+		/** Emerald's map (its elevations), or null. */
+		dev.kantobridge.builder.export.@org.jetbrains.annotations.Nullable G3Map g3;
 		final StoryState walkState = new StoryState();
 		final StoryState surfState = new StoryState();
 		final int w;
@@ -248,12 +255,18 @@ final class FieldParity {
 			String walk = this.rec.get("walk").getAsString();
 			String surf = this.rec.has("surf") ? this.rec.get("surf").getAsString() : null;
 			String stand = this.rec.has("stand") ? this.rec.get("stand").getAsString() : null;
+			JsonObject bridges = this.rec.has("bridges") && this.rec.get("bridges").isJsonObject() ? this.rec.getAsJsonObject("bridges") : null;
 			for (int cy = 0; cy < this.h; cy++) {
 				for (int cx = 0; cx < this.w; cx++) {
 					int cell = cy * this.w + cx;
 					char st = stand == null ? '.' : stand.charAt(cell);
 					if (this.shaftEnds.contains(new CellPos(this.map, cx, cy))) {
 						this.report.count("cells_shaft_end");
+						continue;
+					}
+					MapLayout.Deck deck = this.pm.layout() == null ? null : this.pm.layout().deck(cx, cy);
+					if (deck != null && bridges != null && bridges.has(cx + "," + cy)) {
+						this.twoFloors(cx, cy, deck, bridges.getAsJsonObject(cx + "," + cy));
 						continue;
 					}
 					for (int d = 0; d < 4; d++) {
@@ -268,7 +281,93 @@ final class FieldParity {
 			}
 		}
 
+		/**
+		 * A two-floor cell (WATER_AND_BRIDGES_PLAN §2.2 item 8): the engine's verdicts per elevation (the driver's side table),
+		 * each walked from the floor it names: the deck's elevation on the deck, a surfer's (1) on the water under it, any
+		 * other walker's on the ground under it. Counted {@code walk_deck}, {@code surf_under}, {@code walk_under}.
+		 */
+		private void twoFloors(int cx, int cy, MapLayout.Deck deck, JsonObject per) {
+			boolean water = this.underIsWater(cx, cy, deck);
+			Set<Integer> under = this.underElevations(cx, cy, deck.elev());
+			for (String k : per.keySet()) {
+				int elev = parseElev(k);
+				String v = per.get(k).getAsString();
+				if (elev < 0 || v.length() < 8) {
+					continue;
+				}
+				for (int d = 0; d < 4; d++) {
+					if (elev == deck.elev()) {
+						this.report.count("walk_deck");
+						this.one(cx, cy, d, v.charAt(d), false, false);
+					} else if (water && elev == 1) {
+						this.report.count("surf_under");
+						this.one(cx, cy, d, v.charAt(4 + d), true, true);
+					} else if (!water && under.contains(elev)) {
+						this.report.count("walk_under");
+						this.one(cx, cy, d, v.charAt(d), false, true);
+					}
+				}
+			}
+		}
+
+		/**
+		 * The elevations of the ground round a two-floor cell that is not its deck's (the walkers who pass under it): its
+		 * four neighbours', else (an inner cell of a wide deck) theirs; every elevation but the deck's without the map.
+		 */
+		private Set<Integer> underElevations(int cx, int cy, int deckElev) {
+			Set<Integer> out = new HashSet<>();
+			if (this.g3 == null) {
+				for (int e = 0; e < 15; e++) {
+					if (e != deckElev) {
+						out.add(e);
+					}
+				}
+				return out;
+			}
+			for (int r = 1; r <= 2 && out.isEmpty(); r++) {
+				for (int dy = -r; dy <= r; dy++) {
+					for (int dx = -r; dx <= r; dx++) {
+						int x = cx + dx;
+						int y = cy + dy;
+						if (Math.abs(dx) + Math.abs(dy) != r || !this.g3.inMap(x, y)) {
+							continue;
+						}
+						int e = this.g3.elev(x, y);
+						if (e != 15 && e != deckElev && e != 0) {
+							out.add(e);
+						}
+					}
+				}
+			}
+			return out;
+		}
+
+		private static int parseElev(String key) {
+			try {
+				return Integer.parseInt(key);
+			} catch (NumberFormatException e) {
+				return -1;
+			}
+		}
+
+		/** True when the floor under a deck is water: a water cell beside it at the under floor's level. */
+		private boolean underIsWater(int cx, int cy, MapLayout.Deck deck) {
+			for (int[] dd : DELTA) {
+				int nx = cx + dd[0];
+				int ny = cy + dd[1];
+				if (nx >= 0 && ny >= 0 && nx < this.pm.model().cellWidth() && ny < this.pm.model().cellHeight()
+						&& this.pm.model().kind(nx, ny) == MapModel.Kind.WATER && this.pm.layout().level(nx, ny) == deck.under()) {
+					return true;
+				}
+			}
+			return false;
+		}
+
 		private void one(int cx, int cy, int d, char verdict, boolean surfing) {
+			this.one(cx, cy, d, verdict, surfing, false);
+		}
+
+		private void one(int cx, int cy, int d, char verdict, boolean surfing, boolean under) {
 			String state = surfing ? "surf" : "walk";
 			if (verdict == '?') {
 				this.report.count(state + "_varies");
@@ -282,7 +381,7 @@ final class FieldParity {
 				this.report.count(state + "_into_shaft_end");
 				return;
 			}
-			Walk mc = this.walk(cx, cy, d, surfing ? this.surfState : this.walkState);
+			Walk mc = this.walk(cx, cy, d, surfing ? this.surfState : this.walkState, under);
 			if (mc == null) {
 				this.report.count(state + "_source_not_standable");
 				this.report.example("source_not_standable:" + state, this.map, cx, cy, d, state);
@@ -320,8 +419,22 @@ final class FieldParity {
 				this.report.example("clamp:" + state, this.map, cx, cy, d, state);
 				return;
 			}
+			if (this.cascade(cx, cy) || this.cascade(tx, ty)) {
+				// a step onto or off a waterfall's cascade (WATER_AND_BRIDGES_PLAN D4): the game climbs and descends it only as a
+				// forced move (the Waterfall move, the push), which the build follows with its foot wall open; counted apart
+				this.report.count(state + "_waterfall");
+				this.report.example("waterfall:" + state, this.map, cx, cy, d, (gameOpen ? "B " : "A ") + cls);
+				return;
+			}
 			String rule = gameOpen ? "B" : "A";
 			this.report.disagree(rule, state, cls, this.map, cx, cy, d, this.detail(cx, cy, tx, ty, mc));
+		}
+
+		/** True for a waterfall's cascade cell: water on a ramp (D4). */
+		private boolean cascade(int cx, int cy) {
+			MapLayout layout = this.pm.layout();
+			return layout != null && cx >= 0 && cy >= 0 && cx < this.pm.model().cellWidth() && cy < this.pm.model().cellHeight()
+					&& this.pm.model().kind(cx, cy) == MapModel.Kind.WATER && layout.ramp(cx, cy) != null;
 		}
 
 		/** Per direction, whether any cell along the map's side in that direction meets another map's cell (null: not worked out yet). */
@@ -372,6 +485,12 @@ final class FieldParity {
 			b.append("src feet ").append(s0[1]).append(' ').append(this.columns(s0)).append(';');
 			if (tx >= 0 && ty >= 0 && tx < this.pm.model().cellWidth() && ty < this.pm.model().cellHeight()) {
 				int[] t0 = WorldPlan.cellOrigin(this.pm.placement(), this.pm.layout(), tx, ty);
+				MapLayout.Deck tdeck = this.pm.layout() == null ? null : this.pm.layout().deck(tx, ty);
+				if (tdeck != null) {
+					// a two-floor cell: its under floor's blocks too
+					int[] u0 = {t0[0], t0[1] - this.pm.layout().level(tx, ty) + tdeck.under(), t0[2]};
+					b.append(" dst under ").append(u0[1]).append(' ').append(this.columns(u0)).append(';');
+				}
 				b.append(" dst feet ").append(t0[1]).append(' ').append(this.columns(t0)).append(" h ").append(this.pm.model().height(tx, ty))
 						.append(" flags ").append(this.pm.model().flags(tx, ty))
 						.append(this.pm.layout() == null ? "" : this.pm.layout().pieceAt(tx, ty) == null ? " nopiece" : " piece").append(';');
@@ -454,8 +573,13 @@ final class FieldParity {
 		}
 
 		/** The Minecraft walk from cell (cx, cy) one cell in direction d: null when nobody can stand on the cell. */
-		private Walk walk(int cx, int cy, int d, StoryState state) {
+		private Walk walk(int cx, int cy, int d, StoryState state, boolean under) {
 			int[] at = WorldPlan.cellOrigin(this.pm.placement(), this.pm.layout(), cx, cy);
+			MapLayout.Deck deck = under && this.pm.layout() != null ? this.pm.layout().deck(cx, cy) : null;
+			if (deck != null) {
+				// the floor under a deck (D7)
+				at = new int[] {at[0], at[1] - this.pm.layout().level(cx, cy) + deck.under(), at[2]};
+			}
 			double x = at[0] + 1.0;
 			double z = at[2] + 1.0;
 			Double y = this.restingY(x, at[1] + 1.0, z, state, 4.0);
@@ -525,6 +649,7 @@ final class FieldParity {
 				case BlockCode.KIND_EDGE -> "edge_wall";
 				case BlockCode.KIND_STEP -> "step";
 				case BlockCode.KIND_SEAT -> "seat";
+				case BlockCode.KIND_FALL_WALL -> "fall_wall";
 				case BlockCode.KIND_DECOR -> "decor";
 				case BlockCode.KIND_VANILLA -> "vanilla";
 				default -> "other";
@@ -619,6 +744,8 @@ final class FieldParity {
 				case BlockCode.KIND_STEP -> StepColliderBlock.shape(CodeStates.downhill(value), StepColliderBlock.Stage.of(value >> 2 & 3));
 				case BlockCode.KIND_SEAT -> SeatColliderBlock.SHAPE;
 				case BlockCode.KIND_DECOR -> (value & 4) != 0 ? Shapes.block() : Shapes.empty();
+				// a waterfall's foot: the parity's player is in no forced move (D4)
+				case BlockCode.KIND_FALL_WALL -> state.forced() ? Shapes.empty() : Shapes.block();
 				default -> Shapes.empty();
 			};
 		}
