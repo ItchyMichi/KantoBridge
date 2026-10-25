@@ -185,7 +185,9 @@ function Warp.new(opts)
       end
     end
     if current and current.soft then
-      if f.transitioning then
+      -- quiet means back in the field, standing: a battle's fade settles after the battle, where the step that started
+      -- it lands (FA8 item 6: settled during the battle it named the cell before the step)
+      if f.transitioning or f.battle or f.moving or f.top ~= "overworld" then
         current.quiet = nil
       elseif not current.quiet then
         current.quiet = steps
@@ -195,7 +197,7 @@ function Warp.new(opts)
       end
     end
     if current and steps - current.at > Warp.ARRIVE_TIMEOUT and not f.transitioning
-        and f.top == "overworld" then
+        and f.top == "overworld" and not f.battle and not f.moving then
       counts.timeouts = counts.timeouts + 1
       if log then log.warn("warp.no_arrival", { kind = current.kind, steps = steps - current.at }) end
       arrive("timeout")

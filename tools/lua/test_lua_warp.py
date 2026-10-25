@@ -148,6 +148,23 @@ def test_a_warp_within_its_map_settles_where_the_player_stands():
     assert t.t.stats().settled == 1
 
 
+def test_a_battles_fade_settles_after_the_battle_where_the_step_landed():
+    # FA8 item 6: a wild battle started by a step (Route 113's ash) fades like a script warp; settled during the battle
+    # it named the cell before the step, so it waits for the field, standing
+    t = Tracker()
+    t.Warp.SETTLE = 2
+    assert t.step(transitioning=True, moving=True) == [{"phase": "start", "kind": "script"}]
+    out = []
+    for _ in range(4):
+        out += t.step(battle=True, top="screen", moving=True)
+    for _ in range(2):
+        out += t.step(moving=True)
+    assert out == [], "nothing during the battle, nor while the step is still landing"
+    for _ in range(3):
+        out += t.step(x=3, y=5)
+    assert out == [{"phase": "arrive", "kind": "script", "to": {"map": "TEST_TOWN", "x": 3, "y": 5, "facing": "down"}}]
+
+
 def test_warps_with_a_departure_never_settle_early():
     # a door's, Fly's: only a map.entered or the timeout ends them
     for first in ({"warped": {"kind": "door", "map": "TEST_TOWN"}}, None):
