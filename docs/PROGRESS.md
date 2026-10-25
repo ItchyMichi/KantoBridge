@@ -3509,7 +3509,9 @@ every install); stopped when the audit ended. No game behaviour changed. Per-cel
   ledge hop ends by a teleport), Emerald 5,097/5,126. Real dev client spots on LandSky3: Blue 11/11, Crystal 12/13,
   Emerald 25/28 (the Aqua Hideout pad and Mossdeep Gym's warp leave the client behind). Videos on the volume:
   `/workspace/videos/kanto-bridge-{blue,crystal,emerald}-field-spots-20261024.mp4`.
-- **FA7**: the report in the plan's §13; PLAYTEST.md "Field mechanics audit". FA8 waits on §13.9's questions.
+- **FA7**: the report in the plan's §13; PLAYTEST.md "Field mechanics audit".
+- **Decisions (2026-10-25)**: the defaults for §13.9's Q0–Q3 and Q5–Q8. Q4 (the Acro tricks) and the Mach Bike's speed
+  wait for a Minecraft bike feature (a real bike and its tricks), to be planned in its own session. FA8 not started.
 - **Check** (tools/check.sh on kb-dev24): pytest 2,385 passed (69 e2e skipped); GameTests 132/132; JUnit in package
   chunks (the whole-suite worker hung at shutdown again) 1,439 tests, 1 failed: the old `KbPackReloadTest`.
 - **Upstream**: an `onFrame` script that warps into an Emerald Battle Tent crashes the engine

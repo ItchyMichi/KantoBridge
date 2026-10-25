@@ -1,6 +1,6 @@
 # Every script and field mechanic in Minecraft: the audit (Blue, Crystal, Emerald)
 
-**Status: FA0–FA7 done, 2026-10-25 (kb-dev24); the report is §13. FA8 waits on the decisions in §13.9.** It was written
+**Status: FA0–FA7 done, 2026-10-25 (kb-dev24); the report is §13. §13.9 answered 2026-10-25; FA8 not started.** It was written
 for an agent to execute phase by phase on a pod against the real engine, with the user's decisions in §9 (each a default
 the agent proceeds with unless the user changes it).
 
@@ -703,8 +703,13 @@ Ordered by what a player meets first. Each item names its rule and size; "Q" ite
 | Q1 | Empty solid columns: an invisible barrier, or bring the plain column back where the shape plan leaves none? | an invisible barrier at feet level (keeps the look) |
 | Q2 | The heights fixes now (they touch the levels pipeline and need a rebuilt world and pictures), or after the adapter fixes? | after the adapter fixes, as their own pass |
 | Q3 | One-way rules: real colliders (ledge sides, one-way sides, counters, water elevations), or keep the snap-back? | real colliders (D7: breaks were found) |
-| Q4 | The Acro bike's tricks (wheelie, bunny hop, rails): add a key, or leave them unreachable? | leave them (D5) |
+| Q4 | The Acro bike's tricks (wheelie, bunny hop, rails): add a key, or leave them unreachable? | leave them (D5). **Answer: not the default; see below** |
 | Q5 | Bike-blocked cells: closed for a biking player (a story-state rule), or keep the snap-back? | closed for a biking player |
 | Q6 | Crystal's ledges: rebuild them the Gen 2 way (a medium builder change and a Johto rebuild), or keep today's fade? | rebuild |
 | Q7 | Fly from Minecraft in Crystal and Emerald opens the game's own map: keep that, or add a destination list on our side? | keep the game's map |
 | Q8 | Blue's scripted holes: real drops (the H5 shaft model) or fades? | fades (D3) |
+
+**Answered by the user, 2026-10-25:** the default for Q0–Q3 and Q5–Q8. **Q4 is not the default.** The user wants a
+Minecraft bike feature, a real bike with the Acro tricks (wheelie, bunny hop, rails) and the Mach Bike's speed, planned
+in a separate session. FA8 leaves the tricks alone and does not design a bike key or bike speeds of its own: item 8's
+Mach speed and Q4 wait for that plan. FA8 item 10 (bike-blocked cells closed to a biking player) goes ahead.
