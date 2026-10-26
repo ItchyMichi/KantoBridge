@@ -31,8 +31,11 @@ client can't reach.
   direction is held back 2 ticks (100 ms) before it goes out.
 - **2026-10-26, STEP_SPEED_PLAN Part B:** `ForcedMover` now catches up while legs wait (1 + waiting ticks' frames a tick, at
   most 3, at most 3 blocks a tick). On the software client the Mach's lag max was 2/2 before and 2/2, 1/1, 2/2 in three
-  runs after (catch-up ticks 10-16 a run, 0 stuck, 0 server complaints): the backlog drains, the latency stays. **B9 is
-  still unbuilt**; the GPU-pod measurement above is still the next step.
+  runs after (catch-up ticks 10-16 a run, 0 stuck, 0 server complaints): the backlog drains, the latency stays.
+- **2026-10-26, the GPU pod** (kb-gpu1, L4, 340-400 fps): Mach lag max 1 in 3 of 3 runs with the catch-up (one 2 in the
+  first second without it); key to the seat's first motion 233-307 ms for the Mach, 793-917 ms for the wheelie (its B tap
+  waits first). The lag is solved; the **latency is still above the 150 ms bar**: B9 (the one-cell pre-move) is still
+  unbuilt and is what's left of A3.
 
 **A4. The Cycling Road deck end to end** wasn't shown: from Route 110 (27, 22) down, a Cycling Road trainer stands in
 that column after 9 cells (24 bumps). That's the game's object, so correct, but the full ride needs another lane or a

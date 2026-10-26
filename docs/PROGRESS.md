@@ -3570,11 +3570,32 @@ full). Results on the volume in `/workspace/reports/step_speed/`.
   (about 10 frames a second; the pilot's state is read once per frame, about 1.5 cells at the Mach's speed, and the lag
   metric rounds any shortfall up to a cell) what is left is mostly the key/latency path, which a mover can't remove: that is
   B9's pre-move (BIKE_FOLLOWUPS A3). Kept in (D6).
+- **S6 again on the GPU pod** (2026-10-26, the user's request; **kb-gpu1**, 6did26h2z804d2, NVIDIA L4 through VirtualGL
+  3.1.5 `vglrun -d egl`, $0.59/hr, 13:13-13:50 UTC, about $0.36). The client drew 340-400 frames a second (the software
+  client: about 10). Catch-up "off" is the same build with `MAX_RATE = 1` on the pod only (restored after).
+
+  | Catch-up | Run | Mach up: lag per second | Mach down | Lag max up/down | Wheelie / plain lag max | Catch-up ticks (Mach) | Stuck | Server complaints |
+  |---|---|---|---|---|---|---|---|---|
+  | on | 1 | 1, 1, 1, 0 | 1, 1, 1, 0 | 1 / 1 | 1 / 0 | 11 / 10 | 0 | 0 |
+  | on | 2 | 1, 1, 1, 0 | 1, 1, 1, 0 | 1 / 1 | 1 / 0 | 12 / 12 | 0 | 0 |
+  | on | 3 | 1, 1, 1, 0 | 0, 0, 0, 0 | 1 / 0 | 1 / 0 | 10 / 10 | 0 | 0 |
+  | off | 1 | 1, 1, 1, 0 | 1, 1, 1, 0 | 1 / 1 | 1 / 1 | 0 | 0 | 0 |
+  | off | 2 | 2, 1, 1, 0 | 1, 1, 1, 0 | 2 / 1 | 1 / 1 | 0 | 0 | 0 |
+  | off | 3 | 1, 1, 1, 0 | 1, 1, 1, 0 | 1 / 1 | 1 / 0 | 0 | 0 | 0 |
+
+  **With a real frame rate the bar (lag ≤ 1 after the first second) holds in 3 of 3 runs with the catch-up, and also
+  without it** (the one 2 without it was in the first second): the software client's 2s came from its frame rate, not from
+  the mover. The catch-up still removes the occasional extra cell (lag max never above 1 with it). From the keys
+  (`bike_ride.py --e2e`): Mach lag max 1 on and off, wheelie 1, the deck 1; key to motion: Mach 279 ms (on) / 233 ms (off),
+  wheelie 917 / 793 ms (the B tap's wait first), deck 307 / 235 ms: still above BIKE_PLAN's 150 ms (A3; this is the
+  bridge/engine round trip, not drawing). Emerald's diagonal walk on the GPU: 1X 6 refusals, 12 forced legs, 1 steer and 1
+  teleport walking; 5, 9, 1, 1 sprinting; **2X 0 of each** (lost 0 throughout); server complaints 0.
+
 - **Checkpoint 2** (on 21948e0 + the S6 mover): JUnit 1,493 with 2 failing (KbPackReloadTest, known; a ForcedMoverTest
   assertion of mine, `queued()` counts all three legs before the first tick: fixed, the client package then 567 with only
   the known failure); GameTests 140/141 (`tworegionsshareoneworld`: "build still running", a timing flake in server code
   this plan didn't touch), 141/141 on the rerun; pytest 2,477 passed.
-- **Left open:** Part B's bar on a real PC (or the GPU pod) and B9; the Gen 2/Gen 3 ledge answer of 64 frames (unchanged by
+- **Left open:** the key-to-motion latency (230-310 ms on the GPU pod; B9); the Gen 2/Gen 3 ledge answer of 64 frames (unchanged by
   this plan; compare BIKE_FOLLOWUPS E3); Gen 2's `moveFastPassed` doesn't count ledges (above).
 
 ## The bike (2026-10-26, specs/BIKE_PLAN.md)

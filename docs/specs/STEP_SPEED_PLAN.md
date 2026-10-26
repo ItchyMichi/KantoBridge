@@ -327,6 +327,9 @@ about 2.0 h, about $0.65.
 - **S6:** Mach lag max 2/2 before; 2/2, 1/1, 2/2 in three runs after; catch-up ticks 10-16 a run; stuck 0, "moved too
   quickly" 0, "moved wrongly" 0. Checkpoint 2: JUnit 1,493 (KbPackReloadTest and one assertion of mine, fixed: the client
   package then 567, the known failure only), GameTests 141/141 on the rerun (one flake), pytest 2,477.
+- **S6 on the GPU pod** (kb-gpu1, NVIDIA L4, 340-400 fps, about $0.36): Mach lag max 1/1, 1/1, 1/0 with the catch-up
+  (10-12 catch-up ticks a run), 1/1, 2/1, 1/1 without; the bar met 3 of 3 with it; 0 stuck, 0 server complaints; key to
+  motion 233-307 ms. Emerald's diagonal walk: 1X refusals 6, teleports 1; 2X 0.
 - **Defaults:** all kept. D6's bar (lag ≤ 1 after the first second) met in 1 of 3 runs on the software client; the catch-up
   stays (no cost measured), the rest is B9 (BIKE_FOLLOWUPS A3). Where the plan was silent: Gen 1's context passes bike steps
   (D3's intent); the functions sit in the "movement" group; Gen 2's ledges count as shortened (its hook runs before the
