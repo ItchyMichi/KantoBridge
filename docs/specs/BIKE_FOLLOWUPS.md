@@ -29,6 +29,10 @@ client can't reach.
 - Ideas: measure on the GPU pod (kb-gpu1, NVIDIA L4) with `tools/e2e/bike_ride.py`; if it's still slow, B9 (the client's
   one-cell pre-move, BIKE_PLAN §4) is designed and ready to build. Also check the side-jump assist: a sneak tap with no
   direction is held back 2 ticks (100 ms) before it goes out.
+- **2026-10-26, STEP_SPEED_PLAN Part B:** `ForcedMover` now catches up while legs wait (1 + waiting ticks' frames a tick, at
+  most 3, at most 3 blocks a tick). On the software client the Mach's lag max was 2/2 before and 2/2, 1/1, 2/2 in three
+  runs after (catch-up ticks 10-16 a run, 0 stuck, 0 server complaints): the backlog drains, the latency stays. **B9 is
+  still unbuilt**; the GPU-pod measurement above is still the next step.
 
 **A4. The Cycling Road deck end to end** wasn't shown: from Route 110 (27, 22) down, a Cycling Road trainer stands in
 that column after 9 cells (24 bumps). That's the game's object, so correct, but the full ride needs another lane or a

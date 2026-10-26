@@ -9,10 +9,10 @@ section says what it would change, why, and how we'd know it worked.
 
 ## 1. Hidden-player speed-up (less rubber-banding)
 
-> **Firm implementation spec:** [specs/HIDDEN_STEP_SPEEDUP.md](specs/HIDDEN_STEP_SPEEDUP.md)
-> (ready to code; gen1-bridge only). The analysis below is kept for background. The spec corrects
-> one detail: bridge-driven steps are shortened toward Minecraft's pace with
-> `min(in, base) × 100 / STEP SPEED`, which also fixes the Cycling Road uphill mismatch.
+> **Implemented 2026-10-26, see [specs/STEP_SPEED_PLAN.md](specs/STEP_SPEED_PLAN.md)** (all three games; PROGRESS.md
+> "Step speed"). It supersedes the Gen 1 spec [specs/HIDDEN_STEP_SPEEDUP.md](specs/HIDDEN_STEP_SPEEDUP.md); the rule is
+> `min(frames, ceil(pace × 100 / STEP SPEED))`, and bikes are rides now, so the Cycling Road row no longer applies. The
+> analysis below is kept for background.
 
 ### The problem
 

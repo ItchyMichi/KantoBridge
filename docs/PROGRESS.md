@@ -3483,6 +3483,100 @@ taken from what already arrived. `test_battle` and `test_route1` fail on cpu3g p
 **Deviation.** A real gym leader was not walked to (the drivers start trainer battles by script, as before); the Name
 Rater is its write to the record, not the walk to his house.
 
+## Step speed (2026-10-26, specs/STEP_SPEED_PLAN.md)
+
+Run unattended with every default (D1-D9) except one small addition (below). Pod: **kb-dev49** (hdneg2aj34eulb, cpu3g x8
+32 GB, $0.32/hr, EU-RO-1, the volume), 10:27-12:31 UTC, about 2.0 h, **about $0.65** (kb-dev50 and kb-dev52's hosts were
+full). Results on the volume in `/workspace/reports/step_speed/`.
+
+- **S0, the baseline** (`tools/e2e/step_speed.py`, the code before the plan): a 40-cell staircase ((right, up) × 5, then
+  (left, down) × 5, twice) inside an open square, one `move.step` every 188 ms (Minecraft's 45° walk; 94 ms running), the
+  next step sent whatever the answers. Starts found by a slow probe: Blue ROUTE_1 (11, 11), Crystal NEW_BARK_TOWN (7, 12)
+  (after 49 candidates: Crystal's routes are narrow), Emerald EM_ROUTE102 (5, 8).
+
+  | Game | Steps | `player.blocked{script}` | moveDropped | Answer frames | Cells on the staircase | Lost |
+  |---|---|---|---|---|---|---|
+  | Blue | 40 | 10 | 10 | 16 ×30 | 5 | 0 |
+  | Crystal | 40 | 12 | 12 | 16 ×27 | 7 | 0 |
+  | Emerald walking | 40 | 11 | 11 | 16 ×28 | 7 | 0 |
+  | Emerald running | 40 | 11 | 11 | 8 ×27 | 6 | 0 |
+
+  (Running needs the running shoes: the tool sets Emerald's FLAG_SYS_B_DASH (2240); without it a first run stayed at 16
+  frames.) A ledge hop: Blue 32 frames to the landing; Crystal and Emerald answer their hop with 64 frames, before and after.
+- **S1-S3, gen1-bridge** (commits 6b6df11, 5f70ca8): `act/kb_speed.lua`, `driver.ownsStep(dir)` and `lastMode`, the STEP
+  SPEED option and `configure{stepSpeed}`, `debug.status` `moveSpeedPct`/`moveFastSteps`/`moveFastPassed`, the
+  `movement.speed` wrap at priority 1000, `stepContext` for Gen 1 and Gen 2, Gen 3's `stepShaper` in the `tryMove` tap
+  (it shapes the results `step` and `connection`, the seam), `checkRequired` + `Player.stepFrames`/`progress`. The fake Gen 1
+  world now raises `movement.speed` as `Player:stepLength` does, so the driver tests see 8-frame steps (their expectations
+  updated; a push keeps 16). New tests: `test_lua_speed.py` 15, `test_lua_move.py` +8 (ownsStep; a lupa diagonal at
+  Minecraft's cadence: 0 drops at 2X, drops at 1X; configure and the F10 option; the ledge; a press of the user's own),
+  sandbox +5, gen2 +1, game3 move +5, game3 protocol +1 (walk 8, run 4, 1X 16 through main.lua). Lua 1,668 passed.
+  - **Choices where the plan was silent.** Gen 1's context also passes a bike step (`ctx.onBike`): bikes are rides (D3),
+    so this is the plan's intent, not a change. Gen 2 raises the hook *before* the step is tried, so a refused try or a
+    ledge passes through it too: the ledge then writes its own 32 frames (`tryLedgeJump`), so its timing is kept, but
+    `moveFastSteps` counts it as shortened and `moveFastPassed` stays 0 for Gen 2's ledges (Gen 3's ledge is a `ledge`
+    result, which the shaper never sees). The plan's interface group "field" doesn't exist: `stepContext`/`stepShaper`
+    are in "movement".
+- **S4, the real engines at 2X and 1X** (same starts):
+
+  | Game | STEP SPEED | script | moveDropped | Frames | Cells on the staircase | moveFastSteps | Ledge |
+  |---|---|---|---|---|---|---|---|
+  | Blue | **2X** | **0** | **0** | **8 ×40** | **40** | 40 | ledge 32, moveFastPassed 1 |
+  | Blue | 1X | 10 | 10 | 16 ×29 | 5 | 0 | ledge 32 |
+  | Crystal | **2X** | **0** | **0** | **8 ×40** | **40** | 40 | ledge 64 (as S0) |
+  | Crystal | 1X | 11 | 11 | 16 ×28 | 7 | 0 | ledge 64 |
+  | Emerald walking | **2X** | **0** | **0** | **8 ×40** | **40** | 40 | ledge 64 (as S0) |
+  | Emerald running | **2X** | **0** | **0** | **4 ×40** | **40** | 40 | |
+  | Emerald walking | 1X | 11 | 11 | 16 ×28 | 7 | 0 | |
+  | Emerald running | 1X | 11 | 11 | 8 ×27 | 6 | 0 | |
+
+  Lost answers 0 everywhere. E2E regressions: `test_walk` 1, `test_route1` 1, `test_crystal` 6 passed; `test_emerald`'s
+  Pass walk and `test_crossing_real`'s first test failed only because a warp's `to` now carries `elev` (WATER_AND_BRIDGES
+  D7): the tests compare the cell without it now, and pass (3 of 3). **Checkpoint 1** (on 5f70ca8): JUnit 1,488 (1 failing:
+  KbPackReloadTest, known), GameTests 141/141, pytest 2,477 passed (69 e2e skipped).
+- **S5, the real client** (`bike_ride.py --walk-diagonal`, Xvfb, LandSky6; W + D facing north, then facing south, in
+  turn, inside the staircase's square; F7's counters, the pilot now also reporting `lost`):
+
+  | Game | Walk | STEP SPEED | Steps sent | Refusals (`blocked`) | Forced legs | Lost | Snaps | Steers | Teleports | Lag max |
+  |---|---|---|---|---|---|---|---|---|---|---|
+  | Blue | walk | 1X | 50 | 8 | 16 | 0 | 0 | 0 | 0 | 3 |
+  | Blue | walk | **2X** | 80 | **0** | **0** | **0** | **0** | **0** | **0** | 2 |
+  | Crystal | walk | 1X | 48 | 8 | 16 | 0 | 0 | 0 | 0 | 3 |
+  | Crystal | walk | **2X** | 80 | **0** | **0** | **0** | **0** | **0** | **0** | 2 |
+  | Emerald | walk | 1X | 52 | 6 | 12 | 0 | 0 | 0 | 0 | 3 |
+  | Emerald | walk | **2X** | 80 | **0** | **0** | **0** | **0** | **0** | **0** | 2 |
+  | Emerald | sprint | 1X | 67 | 5 | 3 | 0 | 0 | 2 | **2** | 4 |
+  | Emerald | sprint | **2X** | 74 | **0** | **0** | **0** | **0** | **0** | **0** | 2 |
+
+  On this client the 1X symptom is a dropped step (a `script` refusal) and the forced legs that walk the player back to the
+  hidden cell; running, it is steering and two teleports (the user's report). Server complaints 0. The seam check (Emerald,
+  Fallarbor Town west into Route 114, PassE2E): 5 steps ok, snaps 0. Field spots: Blue 11/11, Crystal 12/13 (the Ice Path
+  ladder, known: BIKE_FOLLOWUPS E2), Emerald 42/42. `StepSpeedModelTest` (the model of §2.4) reproduces S0's 10 of 40 on a
+  walk at 16 frames, 0 at 8; running, 1.5X still drops (6 frames against a 5.7-frame cadence: why D1 is 2X).
+- **S6, Part B, the ride's catch-up** (`ForcedMover`: while legs wait a tick spends 1 + waiting ticks' frames, at most 3,
+  and moves at most 3 blocks; the frames that don't fit wait, nothing is skipped; tests: a backlog of two drains in 2 ticks
+  instead of 4, a single leg keeps its frames, the cap holds). `bike_follow.py --rank 2` (Route 110 (4, 41), 30 cells):
+
+  | Run | Mach up: lag per second | Mach down | Lag max up/down | Acro wheelie / plain lag max | Catch-up ticks (Mach) | Stuck | "moved too quickly" / "wrongly" |
+  |---|---|---|---|---|---|---|---|
+  | before | 1, 2, 1, 0 | 2, 2, 2, 0 | 2 / 2 | 1 / 1 | - | 0 | 0 / 0 |
+  | after, 1 | 1, 2, 2, 0 | 1, 1, 2, 0 | 2 / 2 | 2 / 1 | - | 0 | 0 / 0 |
+  | after, 2 | 1, 1, 1, 0 | 1, 1, 0, 0 | 1 / 1 | 1 / 1 | 11 / 12 | 0 | 0 / 0 |
+  | after, 3 | 2, 2, 1, 0 | 1, 2, 0, 0 | 2 / 2 | 1 / 1 | 10 / 12 | 0 | 0 / 0 |
+
+  `bike_ride.py --e2e` (from the keys): Mach lag max 2 before, 2 after; wheelie 2, then 1; the deck 1, then 1 (after 9
+  cells a trainer, as B7); server complaints 0. **The bar (lag ≤ 1 after the first second) was met in 1 of 3 runs.** The
+  catch-up engages (10-16 ticks a run) and costs nothing measurable (0 stuck, 0 complaints), but on this software client
+  (about 10 frames a second; the pilot's state is read once per frame, about 1.5 cells at the Mach's speed, and the lag
+  metric rounds any shortfall up to a cell) what is left is mostly the key/latency path, which a mover can't remove: that is
+  B9's pre-move (BIKE_FOLLOWUPS A3). Kept in (D6).
+- **Checkpoint 2** (on 21948e0 + the S6 mover): JUnit 1,493 with 2 failing (KbPackReloadTest, known; a ForcedMoverTest
+  assertion of mine, `queued()` counts all three legs before the first tick: fixed, the client package then 567 with only
+  the known failure); GameTests 140/141 (`tworegionsshareoneworld`: "build still running", a timing flake in server code
+  this plan didn't touch), 141/141 on the rerun; pytest 2,477 passed.
+- **Left open:** Part B's bar on a real PC (or the GPU pod) and B9; the Gen 2/Gen 3 ledge answer of 64 frames (unchanged by
+  this plan; compare BIKE_FOLLOWUPS E3); Gen 2's `moveFastPassed` doesn't count ledges (above).
+
 ## The bike (2026-10-26, specs/BIKE_PLAN.md)
 
 Run unattended (defaults D1-D12; the choices where the plan was silent are recorded here). Pods: kb-dev52's host had no

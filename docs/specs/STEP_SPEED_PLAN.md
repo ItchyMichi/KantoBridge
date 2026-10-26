@@ -309,6 +309,25 @@ local link, Xvfb for S5/S6, `KB_DATASET_MEMO=30` everywhere; feature tests per p
 PROGRESS.md section with the numbers; commit per phase, never push. Defaults D1–D9 proceed; a changed default is noted
 in PROGRESS and here (§9).
 
-## 9. Results
+## 9. Results (2026-10-26, run unattended)
 
-(filled in when the plan runs)
+Numbers only; the tables, the reasons and the choices are in PROGRESS.md "Step speed". Pod kb-dev49 (cpu3g x8, $0.32/hr),
+about 2.0 h, about $0.65.
+
+- **S0:** 40 steps at 188 ms (94 ms running): `script` refusals / moveDropped Blue 10, Crystal 12, Emerald 11 walking and 11
+  running; answers 16 frames (8 running).
+- **S1-S3:** Lua 1,668 passed (15 new policy tests, 8 driver, 5 sandbox, 1 Gen 2, 6 Gen 3).
+- **S4:** at 2X all three games (and Emerald running) 0 `script`, moveDropped 0, 40 of 40 cells, frames 8 (4 running),
+  moveFastSteps 40; at 1X 10, 11, 11, 11 dropped. Ledge: Blue 32 frames + moveFastPassed 1; Crystal and Emerald 64 frames,
+  as at S0. E2E `test_walk`, `test_route1`, `test_crystal`, `test_emerald`, `test_crossing_real` green (two checks updated
+  for the warp's `elev`). Checkpoint 1: JUnit 1,488 (KbPackReloadTest only), GameTests 141/141, pytest 2,477.
+- **S5:** F7 on a diagonal walk, 1X → 2X: refusals Blue 8 → 0, Crystal 8 → 0, Emerald 6 → 0, Emerald sprinting 5 → 0;
+  forced legs 16, 16, 12, 3 → 0; teleports (Emerald sprinting) 2 → 0; lost, snaps 0 in all. Field spots 11/11, 12/13
+  (known), 42/42; the seam check 5 of 5 steps.
+- **S6:** Mach lag max 2/2 before; 2/2, 1/1, 2/2 in three runs after; catch-up ticks 10-16 a run; stuck 0, "moved too
+  quickly" 0, "moved wrongly" 0. Checkpoint 2: JUnit 1,493 (KbPackReloadTest and one assertion of mine, fixed: the client
+  package then 567, the known failure only), GameTests 141/141 on the rerun (one flake), pytest 2,477.
+- **Defaults:** all kept. D6's bar (lag ≤ 1 after the first second) met in 1 of 3 runs on the software client; the catch-up
+  stays (no cost measured), the rest is B9 (BIKE_FOLLOWUPS A3). Where the plan was silent: Gen 1's context passes bike steps
+  (D3's intent); the functions sit in the "movement" group; Gen 2's ledges count as shortened (its hook runs before the
+  ledge test; the engine then writes 32).

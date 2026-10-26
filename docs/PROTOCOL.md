@@ -207,6 +207,14 @@ optional ones. The schemas give the exact types and limits.
     it produced no result within 12 logic steps, or the game is at the title screen.
 - **Queue:** at most 2 steps wait behind the one in flight; a third drops the oldest waiting one.
   Requests die with their connection.
+- **STEP SPEED ([specs/STEP_SPEED_PLAN.md](specs/STEP_SPEED_PLAN.md), 2026-10-26):** `player.pos.frames` is the hidden
+  step's real length. gen1-bridge shortens only the steps it drives for a `move.step` (walk, run and surf, in `idle`, not a
+  push) to `min(frames, ceil(pace × 100 / pct))`, where pace is Minecraft's 16 frames a cell (8 while Emerald runs) and pct
+  the STEP SPEED option (100, 150, 200 = the default, 300): at 2X a walk or surf step is 8 frames, Emerald's run 4,
+  Emerald's surf stays 8. Ledge hops, spinners, currents, scripted moves, pushes and every ride step keep the engine's
+  frames, so the forced moves a client animates are unchanged. A client ignores `frames` for the steps it asked for, so
+  nothing changes on Minecraft's side; the hidden player simply lands before the Minecraft player reaches the next cell
+  and the queue stays empty on a 45° walk.
 - **`move.face`** is answered by a `player.pos` kind `sync` (`frames` 0). **`move.hold`** applies only
   while idle.
 - **Kinds:** `ledge` is one message at the landing cell with the whole hop's 32 frames (a hop onto a

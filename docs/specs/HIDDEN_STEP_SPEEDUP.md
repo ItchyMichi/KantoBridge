@@ -1,6 +1,7 @@
 # Spec: hidden-player step speed-up (less rubber-banding)
 
-- **Status:** ready to implement. The user will code it after the voxel-world research.
+- **Status:** superseded by [STEP_SPEED_PLAN.md](STEP_SPEED_PLAN.md) (2026-10-26: all three games, implemented; its
+  §3–§6 policy, option, telemetry and tests were reused there). Kept for its Gen 1 analysis.
 - **Size:** small. gen1-bridge only: one hook, one option, telemetry and tests.
 - **Changes to the protocol schemas, the Minecraft mod or the server:** none.
 - **Background:** [NEXT_STAGES.md](../NEXT_STAGES.md) section 1.

@@ -1128,3 +1128,15 @@ jump is B. Try it in Blue, Crystal and Emerald.
 - [ ] **Two players:** the other player's bike is drawn under them, moving with them, in their bike's colours, and their
       wheelie or bunny hop shows.
 
+## Step speed (specs/STEP_SPEED_PLAN.md; no world rebuild needed)
+The hidden player's own steps are twice as fast by default (STEP SPEED 2X in Gen1Recomp's F10 mod manager → gen1-bridge),
+so walking diagonally in Minecraft no longer outruns it.
+- [ ] Walk diagonally (W + D) across Pallet Town and Route 1 (Blue), Cherrygrove to Route 30 (Crystal), Littleroot to
+      Route 102 (Emerald), with F7 open: "lost", "snaps" and "teleports" stay at 0 where they used to climb. Emerald again
+      holding sprint (the running shoes).
+- [ ] The Gen1Recomp window shows the player walking twice as fast: expected. STEP SPEED 1X in the F10 manager brings the
+      old pace back (and the old rubber-banding on diagonals).
+- [ ] Hop a ledge, walk through a door, watch a cutscene: the same timing as before.
+- [ ] (The ride's catch-up) The Mach Bike on Route 110: the bike under you stays within a cell of where the game is; no
+      put-backs on the lane.
+

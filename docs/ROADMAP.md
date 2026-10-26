@@ -23,7 +23,8 @@ GameTests; the whole of Kanto (220 maps, 2.5 million blocks) builds in about 61 
 voxel look, `PROGRESS.md:422-425`) found folded-cube trees and boxy buildings, which the profile plan answered; whether
 it fixed them waits on a new world. V1's own performance gate (X1) was skipped (`PROGRESS.md:53-55`).
 
-**Specced, not built:** the hidden-step speed-up ([specs/HIDDEN_STEP_SPEEDUP.md](specs/HIDDEN_STEP_SPEEDUP.md)).
+**Built 2026-10-26:** the hidden-step speed-up for all three games, STEP SPEED ([specs/STEP_SPEED_PLAN.md](specs/STEP_SPEED_PLAN.md),
+which supersedes [specs/HIDDEN_STEP_SPEEDUP.md](specs/HIDDEN_STEP_SPEEDUP.md)); PROGRESS.md "Step speed".
 
 **Close to their limits:**
 

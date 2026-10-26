@@ -589,6 +589,18 @@ once, through the engine's `mod.options_changed`); the Gen1Recomp launcher's mod
 same value before a boot. Test drivers move it with `game.mods.exports["gen1-bridge"].configure({ port
 = N })`.
 
+**STEP SPEED** is the mod option `step_speed` (1X, 1.5X, **2X** the default, 3X; docs/specs/STEP_SPEED_PLAN.md): how much
+shorter the hidden game's own step is for the steps gen1-bridge drives for Minecraft (`act/kb_speed.lua`). Minecraft walks
+at exactly the hidden game's pace, and a diagonal crosses cells about 1.4 times as often, so with the game's own 16-frame
+step the hidden player fell behind and steps were dropped (snap-backs, teleports). At 2X a driven walk or surf step takes
+8 frames (Emerald's run 4; Emerald's surf, already 8, stays). Only those steps change: ledge hops, spinners, currents,
+cutscenes and door walk-outs, Strength pushes, bike rides and your own presses in the Gen1Recomp window keep the game's
+timing. The Gen1Recomp window therefore shows the player walking twice as fast; 1X brings back the old lengths exactly.
+Gen 1 and Gen 2 apply it through the engine's `movement.speed` hook (wrapped outermost, priority 1000); Gen 3 has no such
+hook, so the game3 adapter writes the step's length in its `Player.tryMove` tap at the step's start. A change in the F10
+manager applies to the next step; test drivers set it with `configure({ stepSpeed = 100 })`. `debug.status` carries
+`moveSpeedPct`, `moveFastSteps` (driven steps shortened) and `moveFastPassed` (driven steps left at the game's timing).
+
 **A second instance on the same PC** (M9's play-test: two players, two hidden games) should be a
 **second install** (its own portable folder: its own saves, options and pairing file; two instances
 of one install would share the slot registry and the pairing file). Give it its own port: set BRIDGE

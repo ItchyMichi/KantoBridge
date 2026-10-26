@@ -76,6 +76,9 @@ records every deviation, open issue and question.
    at), B = `X` inside our screens, START = `Enter`, SELECT = `Backspace`, **Bicycle = `C`** (on and off, as the bag's
    Bicycle). On a bike the hidden game rides it: the movement keys steer by the camera, and sneak or jump is B (the Acro
    Bike's wheelie, bunny hop and jumps in Emerald; the Cycling Road's brake in Blue); sneak never gets you off.
+6. **STEP SPEED** (Gen1Recomp's F10 mod manager → gen1-bridge): the hidden player's own steps run at 2X by default, so a
+   diagonal walk in Minecraft never outruns it (no snap-backs); the Gen1Recomp window shows it walking faster. 1X is the
+   game's own pace.
 
 A one-click installer for players is designed but not built: [`docs/INSTALLER.md`](docs/INSTALLER.md).
 
