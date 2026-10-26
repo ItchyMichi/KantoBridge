@@ -55,6 +55,7 @@ return function(mod)
     Bag = import("observe/kb_bag.lua"),
     Progress = import("observe/kb_progress.lua"),
     Move = import("act/kb_move.lua"),
+    Speed = import("act/kb_speed.lua"),
     Interact = import("act/kb_interact.lua"),
     Field = import("act/kb_field.lua"),
     UiAct = import("act/kb_uiact.lua"),
@@ -166,6 +167,9 @@ return function(mod)
   end
   mod.options:define({
     { key = "port", label = "BRIDGE PORT", type = "number", default = 27151, min = 1024, max = 65535, step = 1 },
+    -- STEP_SPEED_PLAN D5: how much shorter the hidden game's own step is for the steps the bridge drives
+    { key = "step_speed", label = "STEP SPEED", type = "choice", default = 200,
+      choices = { { "1X", 100 }, { "1.5X", 150 }, { "2X", 200 }, { "3X", 300 } } },
   })
   local port = validPort(mod.options:get("port")) or 27151
 
@@ -210,6 +214,19 @@ return function(mod)
     press = function(btn) return mod.input:press(engine.game(), btn) end,
     release = function(token) return mod.input:release(token) end,
   })
+
+  -- STEP_SPEED_PLAN §2.3: STEP SPEED shortens the hidden game's own step for
+  -- the steps the driver owns (act/kb_speed.lua), so the hidden player never
+  -- falls behind a Minecraft player walking diagonally. Gen 1 and Gen 2 raise
+  -- movement.speed (wrapped below, outermost); Gen 3 has no such call, so its
+  -- adapter applies the same policy in its tryMove tap (stepShaper).
+  local speed = kb.Speed.new({ log = log })
+  local function applySpeed(v)
+    local ok = speed.setPct(v)
+    log.info("move.speed", { pct = speed.pct() })
+    return ok
+  end
+  applySpeed(mod.options:get("step_speed") or kb.Speed.DEFAULT)
 
   -- Engine events and the player's collision verdicts between two of our
   -- steps; each step takes them (they all happen during the stack update
@@ -488,6 +505,9 @@ return function(mod)
       end
     end
     merge("move", mover.stats())
+    -- STEP_SPEED_PLAN §2.3: moveSpeedPct, moveFastSteps, moveFastPassed
+    local sp = speed.stats()
+    out.moveSpeedPct, out.moveFastSteps, out.moveFastPassed = sp.pct, sp.fast, sp.passed
     merge("warp", warps.stats())
     merge("ui", uiObs.stats())
     merge("uiact", uiAct.stats())
@@ -831,6 +851,8 @@ return function(mod)
       session.setPort(opts.port)
       status.port, status.portConfigured = session.port(), session.configuredPort()
     end
+    -- STEP_SPEED_PLAN D5: test drivers set STEP SPEED (100, 150, 200, 300) as the F10 manager would
+    if type(opts) == "table" and opts.stepSpeed ~= nil then applySpeed(opts.stepSpeed) end
   end
   -- M9, for test drivers: the slot id paired with a world, the home slot id,
   -- and forgetting a world's pairing (its slot stays; the driver deletes it)
@@ -1013,6 +1035,9 @@ return function(mod)
     local moves, warped = mover.stats(), warps.stats()
     status.moveRequests, status.moveAnswered = moves.requests, moves.answered
     status.moveDropped, status.moveRepressed = moves.dropped, moves.repressed
+    -- STEP_SPEED_PLAN §2.3: the option and the driven steps shortened / left at the engine's timing
+    local sp = speed.stats()
+    status.moveSpeedPct, status.moveFastSteps, status.moveFastPassed = sp.pct, sp.fast, sp.passed
     status.warpsStarted, status.warpsArrived = warped.started, warped.arrived
     status.mapsEntered = mapsEntered
     status.mirrorOn = mirror.enabled()
@@ -1209,6 +1234,16 @@ return function(mod)
     local ow = engine.overworld()
     return type(ow) == "table" and type(ow.map) == "table" and mapOf(ow.map.id) or nil
   end
+  -- STEP_SPEED_PLAN §2.3: every player step length Gen 1 (Player:stepLength)
+  -- and Gen 2 (World:movePlayer) compute passes through movement.speed. Ours
+  -- is outermost (priority 1000: Hooks:wrap runs the highest first), so it
+  -- shapes the final length after any other mod's link, and only shortens.
+  mod.hooks:wrap("movement.speed", perf.hook(function(nextFn, frames, ctx)
+    local f = nextFn(frames, ctx)
+    local c = engine.stepContext(ctx)
+    return speed.apply(f, c, c ~= nil and mover.ownsStep(c.dir))
+  end), 1000)
+
   mod.hooks:wrap("movement.collision", function(nextFn, allowed, ctx)
     local result = nextFn(allowed, ctx)
     local t0 = clock()
@@ -1273,7 +1308,13 @@ return function(mod)
   -- M9: BRIDGE PORT changed in the F10 mod manager (ManagerState:setOption,
   -- src/mods/ManagerState.lua:1090-1112): the listener moves at once.
   mod.events:on("mod.options_changed", perf.timed(function(payload)
-    if type(payload) ~= "table" or payload.mod ~= mod.id or payload.key ~= "port" then return end
+    if type(payload) ~= "table" or payload.mod ~= mod.id then return end
+    -- STEP_SPEED_PLAN D5: STEP SPEED applies at once (a step under way keeps its length)
+    if payload.key == "step_speed" then
+      applySpeed(payload.value)
+      return
+    end
+    if payload.key ~= "port" then return end
     local p = validPort(payload.value)
     if p then
       session.setPort(p)

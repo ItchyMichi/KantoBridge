@@ -1386,6 +1386,25 @@ function Gen1.new(opts)
     }
   end
 
+  -- STEP_SPEED_PLAN §2.3: the facts kb_speed needs from a movement.speed
+  -- call, or nil (unchanged). Player:stepLength(dir) raises the hook with ctx
+  -- { onBike, slope, dir, surfing, player, input, save }
+  -- (src/world/Player.lua:121-145); a ledge hop sets player.ledgeHop before its
+  -- stepLength call (src/world/OverworldController.lua's hop, then
+  -- stepLength() * 2), a spinner player.spinning. Those, and a bike's steps
+  -- (rides since BIKE_PLAN D1), keep Gen 1's timing: pass. The player is the
+  -- overworld's (livePlayer, recorded by observe()).
+  function engine.stepContext(ctx)
+    local p = type(ctx) == "table" and ctx.player or nil
+    if type(p) ~= "table" or livePlayer == nil then return nil end
+    return {
+      isPlayer = p == livePlayer,
+      pass = (p.ledgeHop or p.spinning or ctx.onBike) and true or false,
+      run = false,
+      dir = DELTA[ctx.dir] and ctx.dir or nil,
+    }
+  end
+
   -- Where a warp the player is taking leaves from, for the protocol's warp
   -- kinds. Called from the player.warped event, which takeWarp emits before
   -- anything moves (OC:5456-5459), so the player still stands on the

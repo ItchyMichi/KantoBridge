@@ -65,7 +65,9 @@ Engine.GROUPS = {
          "screenSize" },
   movement = { "setFacing", "buttonDown", "playerVerdict", "warpDeparture", "displayPinned", "pinDisplay",
                -- MG7: an engine without the movement.collision hook (Gen 3) hands its verdicts over per step
-               "takeVerdicts" },
+               "takeVerdicts",
+               -- STEP_SPEED_PLAN §2.3: the movement.speed facts (Gen 1, Gen 2) and Gen 3's shaper in its tryMove tap
+               "stepContext", "stepShaper" },
   party = { "bridgeToken", "nextSerial", "dexOf", "speciesOfDex", "moveNumOf", "moveIdOfNum", "trainerTeam",
             "battlePending", "battleSent", "battleStale", "trainerBeforeBattle", "battleFinish", "ops", "opSent",
             "opSynced", "opDone", "excludedUids", "scriptCommand", "gifts", "giftSent", "giftSynced", "giftDone",
@@ -221,6 +223,7 @@ local function stub(opts, id, requireFn)
     pcItems = function(nextFn, g, items) return nextFn(g, items) end,
     worldTalk = function(nextFn, ow, target) return nextFn(ow, target) end,
     playerVerdict = nothing,
+    stepContext = nothing, stepShaper = nothing,
     holdAway = function() return false, "no_adapter" end,
     releaseAway = function() return false end,
     awayHeld = function() return false end,

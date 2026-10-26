@@ -116,3 +116,29 @@ def test_the_maps_cells_and_counters():
         True, True, False, False)
     a.E.coll(b"TEST_TOWN", 5, 8, 0x90)
     assert a.eng.counterCell(5, 8) is True and a.eng.counterCell(5, 9) is False
+
+
+# ------------------------------------------------------------ STEP SPEED (STEP_SPEED_PLAN.md S2)
+
+
+def speed_ctx(a, player, **kw):
+    """World:movePlayer's movement.speed context (World.lua:10716-10736): no dir."""
+    c = a.lua({"onBike": False, "surfing": False, "downhill": False, **kw})
+    c[b"player"] = player
+    return c
+
+
+def test_gen2_step_context_takes_the_facing_and_passes_bikes_and_the_downhill():
+    a = Adapter2()
+    assert a.eng.stepContext(speed_ctx(a, a.b.eval("{}"))) is None, "not in the field"
+    a.field("TEST_TOWN", 5, 6, "left")
+    w = a.E.game.world
+    c = plain(a.eng.stepContext(speed_ctx(a, w.player)))
+    assert c == {"isPlayer": True, "pass": False, "run": False, "dir": "left"}
+    assert plain(a.eng.stepContext(speed_ctx(a, w.player, surfing=True)))["pass"] is False, "a surf step is shortened"
+    assert plain(a.eng.stepContext(speed_ctx(a, w.player, onBike=True)))["pass"] is True, "a bike's step is a ride"
+    assert plain(a.eng.stepContext(speed_ctx(a, w.player, downhill=True)))["pass"] is True, "the Cycling Road"
+    npc = a.E.addNpc(1, a.lua({"x": 3, "y": 4}))
+    assert npc.index == 1
+    assert plain(a.eng.stepContext(speed_ctx(a, w.npcs[1])))["isPlayer"] is False
+    assert a.eng.stepContext(None) is None and a.eng.stepContext(a.lua({})) is None

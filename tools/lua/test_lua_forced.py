@@ -61,7 +61,7 @@ def test_a_spinner_slides_the_player_cell_by_cell():
     n = g.step("right")
     g.settle()
     assert positions(g) == [
-        (3, 2, "walk", 16, n),        # the step onto the arrow, answered
+        (3, 2, "walk", 8, n),        # the step onto the arrow, answered
         (4, 2, "spin", 48, None),     # the slide: 16 / 2 * 6 frames a cell (Player.lua:131-133)
         (5, 2, "spin", 48, None),
         (6 - 1, 3, "spin", 48, None),
@@ -85,7 +85,7 @@ def test_a_seafoam_current_drags_a_surfer():
     n = g.step("right")
     g.settle()
     assert positions(g) == [
-        (4, 1, "surf", 16, n),
+        (4, 1, "surf", 8, n),
         (4, 2, "current", 16, None),
         (4, 3, "current", 16, None),
     ]
@@ -97,13 +97,13 @@ def test_the_push_back_is_a_current_until_its_event():
     g.E.ow.player.surfing = True
     n = g.step("right")
     g.settle()
-    assert positions(g) == [(6, 3, "surf", 16, n), (6, 2, "current", 16, None)]
+    assert positions(g) == [(6, 3, "surf", 8, n), (6, 2, "current", 16, None)]
     g.E.save.flags[b"EVENT_TEST_PLUG"] = True
     g.E.setMapSim(b"TEST_SEA", 5, 3, b"right")
     g.settle()
     n2 = g.step("right")
     g.settle()
-    assert positions(g)[-1] == (6, 3, "surf", 16, n2), "plugged: no push-back"
+    assert positions(g)[-1] == (6, 3, "surf", 8, n2), "plugged: no push-back"
 
 
 def test_the_surf_mounts_own_step_is_no_current():
@@ -130,7 +130,7 @@ def test_a_hole_a_map_script_opens_is_a_hole_warp():
         {"phase": "start", "kind": "hole"},
         {"phase": "arrive", "kind": "hole", "to": {"map": "TEST_SEA", "x": 2, "y": 2, "facing": "down"}},
     ]
-    assert positions(g)[0] == (1, 4, "walk", 16, n)
+    assert positions(g)[0] == (1, 4, "walk", 8, n)
 
 
 def test_the_brake_holds_b_only_while_idle_on_the_slope():

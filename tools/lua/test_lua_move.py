@@ -6,6 +6,7 @@ made up."""
 
 import pytest
 
+from kblua import Bridge
 from rig import Rig
 
 pytestmark = pytest.mark.lua
@@ -61,10 +62,14 @@ CAVE = {"rows": ["######", "#.PH.#", "#....#", "######"],
                   {"x": 3, "y": 1, "to": "TEST_TOWN", "tx": 9, "ty": 4}]}
 ELEVATOR = {"rows": ["####", "#..#", "#M##"],
             "warps": [{"x": 1, "y": 2, "to": "TEST_TOWN", "tx": 1, "ty": 1}]}
+# STEP_SPEED_PLAN: an open field for the diagonal staircase
+FIELD = {"rows": ["#" * 26] + ["#" + "." * 24 + "#" for _ in range(24)] + ["#" * 26]}
 MAPS = {"TEST_TOWN": TOWN, "TEST_ROUTE": ROUTE, "TEST_HOUSE": HOUSE, "TEST_UP": UP,
-        "TEST_CAVE": CAVE, "TEST_ELEVATOR": ELEVATOR}
+        "TEST_CAVE": CAVE, "TEST_ELEVATOR": ELEVATOR, "TEST_FIELD": FIELD}
 
 DIRS = ("up", "down", "left", "right")
+# STEP_SPEED_PLAN: a step the driver owns takes 8 frames at the default STEP SPEED (2X; Gen 1 walks 16)
+WALK = 8
 
 
 class Walk:
@@ -186,12 +191,12 @@ def test_one_step_presses_at_once_and_releases_on_the_landing_poll():
     k = w.tick + 1                       # the logic step whose input.step presses
     n = w.step("right")
     answer = w.answer(n)
-    assert pos(answer) == ("TEST_TOWN", 10, 4, "right", "walk", 16)
+    assert pos(answer) == ("TEST_TOWN", 10, 4, "right", "walk", WALK)
     assert w.starts() == [k]             # the step starts in the press's own logic step
     w.run(20)
-    assert [w.moving(t) for t in range(k, k + 16)] == [True] * 15 + [False]  # lands in k+15
-    assert all(w.held(t) == "right" for t in range(k, k + 16))
-    assert w.held(k + 16) == ""          # released on the landing poll (k+16)
+    assert [w.moving(t) for t in range(k, k + WALK)] == [True] * (WALK - 1) + [False]  # lands in k+WALK-1
+    assert all(w.held(t) == "right" for t in range(k, k + WALK))
+    assert w.held(k + WALK) == ""          # released on the landing poll (k+WALK)
     assert w.cell() == ("TEST_TOWN", 10, 4, "right")
     assert w.starts() == [k]             # and no second step
     w.assert_no_drift()
@@ -201,7 +206,7 @@ def test_the_facing_is_set_first_so_there_is_no_turn():
     w = Walk(start=("TEST_TOWN", 5, 4, "left"))
     k = w.tick + 1
     n = w.step("right")
-    assert pos(w.answer(n)) == ("TEST_TOWN", 6, 4, "right", "walk", 16)
+    assert pos(w.answer(n)) == ("TEST_TOWN", 6, 4, "right", "walk", WALK)
     assert w.starts() == [k]             # an engine turn would have cost 4 frames first
 
 
@@ -215,9 +220,9 @@ def test_continuous_walking_has_no_idle_frame_between_steps():
     w.answer(second)
     w.answer(third)
     w.settle()
-    assert w.starts() == [k, k + 16, k + 32]
-    assert all(w.held(t) == "right" for t in range(k, k + 32))
-    assert all(w.held(t) == "down" for t in range(k + 32, k + 48))
+    assert w.starts() == [k, k + WALK, k + 2 * WALK]
+    assert all(w.held(t) == "right" for t in range(k, k + 2 * WALK))
+    assert all(w.held(t) == "down" for t in range(k + 2 * WALK, k + 3 * WALK))
     assert w.cell() == ("TEST_TOWN", 3, 7, "down")
     assert w.status()["moveChained"] == 2
     w.assert_no_drift()
@@ -246,7 +251,7 @@ def test_a_hold_lost_to_a_focus_reset_is_pressed_again():
     w.E.resetInput()                     # Game:focus -> Input:reset drops every mod hold
     assert w.E.game.input.state.right is not True
     w.settle()
-    assert w.starts() == [k, k + 16]     # the walk went on without a gap
+    assert w.starts() == [k, k + WALK]     # the walk went on without a gap
     assert w.status()["moveRepressed"] == 1
     w.assert_no_drift()
 
@@ -379,6 +384,7 @@ def test_a_push_against_a_wall_is_tried_then_released():
 def test_a_push_that_can_move_is_an_ordinary_step():
     w = Walk(start=("TEST_TOWN", 5, 4, "right"))
     n = w.step("right", push=True)
+    # a push is never shortened (STEP_SPEED_PLAN §2.3: ownsStep is false for push:true): Gen 1's 16 frames
     assert pos(w.answer(n)) == ("TEST_TOWN", 6, 4, "right", "walk", 16)
 
 
@@ -433,8 +439,8 @@ def test_a_strength_boulder_push_answers_with_kind_push():
 def test_a_connection_crossing_is_a_step_onto_the_new_map_not_a_warp():
     w = Walk(start=("TEST_TOWN", 5, 8, "down"))
     first, second = w.step("down"), w.step("down")
-    assert pos(w.answer(first)) == ("TEST_TOWN", 5, 9, "down", "walk", 16)
-    assert pos(w.answer(second)) == ("TEST_ROUTE", 5, 0, "down", "walk", 16)
+    assert pos(w.answer(first)) == ("TEST_TOWN", 5, 9, "down", "walk", WALK)
+    assert pos(w.answer(second)) == ("TEST_ROUTE", 5, 0, "down", "walk", WALK)
     w.settle()
     assert "warp" not in w.types()
     assert w.cell() == ("TEST_ROUTE", 5, 0, "down")
@@ -455,7 +461,7 @@ def arrival_order(w):
 def test_stairs_on_arrival():
     w = Walk(start=("TEST_HOUSE", 2, 1, "down"))
     n = w.step("down")
-    assert pos(w.answer(n)) == ("TEST_HOUSE", 2, 2, "down", "walk", 16)
+    assert pos(w.answer(n)) == ("TEST_HOUSE", 2, 2, "down", "walk", WALK)
     w.settle()
     assert warp_messages(w) == [
         {"phase": "start", "kind": "stairs"},
@@ -472,7 +478,7 @@ def test_stairs_on_arrival():
 def test_a_door_then_its_exit_mat_by_pushing():
     w = Walk(start=("TEST_TOWN", 3, 4, "down"))
     into = w.step("up")
-    assert pos(w.answer(into)) == ("TEST_TOWN", 3, 3, "up", "walk", 16)
+    assert pos(w.answer(into)) == ("TEST_TOWN", 3, 3, "up", "walk", WALK)
     w.settle()
     assert warp_messages(w) == [
         {"phase": "start", "kind": "door"},
@@ -498,7 +504,7 @@ def test_an_exit_mat_walked_onto_with_the_direction_held_warps_on_arrival():
     w = Walk(start=("TEST_HOUSE", 1, 3, "down"))
     a, b = w.step("down"), w.step("down")
     w.answer(a)
-    assert pos(w.answer(b)) == ("TEST_HOUSE", 1, 5, "down", "walk", 16)
+    assert pos(w.answer(b)) == ("TEST_HOUSE", 1, 5, "down", "walk", WALK)
     w.settle()
     assert [d["kind"] for d in warp_messages(w)] == ["edge", "edge"]
     assert w.cell() == ("TEST_TOWN", 3, 4, "down")
@@ -613,7 +619,7 @@ def test_a_step_sent_with_the_hello_belongs_to_the_new_connection():
     fresh.send("move.step", {"dir": "left", "n": 1})
     w.rig.step(3)
     answers = [m for m in fresh.messages() if m["type"] == "player.pos" and m["data"].get("n") == 1]
-    assert [pos(m) for m in answers] == [("TEST_TOWN", 4, 4, "left", "walk", 16)]
+    assert [pos(m) for m in answers] == [("TEST_TOWN", 4, 4, "left", "walk", WALK)]
 
 
 def test_after_a_hot_reload_the_new_instance_walks():
@@ -717,3 +723,179 @@ def test_a_bad_ride_is_refused():
         seq = w.peer.send("move.ride", bad)
         out = w.run(1)
         assert [m["data"]["code"] for m in out if m["type"] == "error"] in (["bad_message"], ["schema"], ["invalid"]), out
+
+
+# ------------------------------------------------------------ STEP SPEED (STEP_SPEED_PLAN.md S1, S2)
+
+
+class Owns:
+    """The driver alone (act/kb_move.lua) on hand-made facts: what driver.ownsStep says as a step goes."""
+
+    def __init__(self):
+        self.b = Bridge()
+        Move = self.b.module("act/kb_move.lua")
+        Player = self.b.module("observe/kb_player.lua")
+        self.d = self.b.eval("""function(Move, Player) return Move.new({
+          engine = { setFacing = function() return true end, buttonDown = function() return true end },
+          Player = Player, press = function(btn) return btn end, release = function() end }) end""")(Move, Player)
+        self.link = self.b.eval("{ live = true, generation = 1 }")
+        self.x, self.y = 3, 4
+
+    def facts(self, moving=False, facing="right", tx=None, ty=None):
+        f = self.b.eval("{}")
+        f[b"inGame"], f[b"map"], f[b"x"], f[b"y"] = True, b"TEST_TOWN", self.x, self.y
+        f[b"moving"], f[b"facing"] = moving, facing.encode()
+        if tx is not None:
+            f[b"tx"], f[b"ty"] = tx, ty
+        return f
+
+    def step(self, mode="idle", link=True, **kw):
+        out = self.b.eval("{}")
+        f = self.facts(**kw)
+        if kw.get("moving") and kw.get("tx") is not None:
+            # the observer's message for a step that just started
+            msg = self.b.eval("""function(x, y, facing) return { "player.pos", { map = "TEST_TOWN", x = x, y = y,
+              facing = facing, kind = "walk", frames = 8 }, "step" } end""")(kw["tx"], kw["ty"], f[b"facing"])
+            out[1] = msg
+        self.d.step(f, mode.encode(), self.b.eval("{}"), out, self.link if link else None)
+        return out
+
+    def request(self, direction, n, push=None):
+        data = self.b.eval("{}")
+        data[b"dir"], data[b"n"] = direction.encode(), n
+        if push is not None:
+            data[b"push"] = push
+        assert self.d.request(data, 1) is True
+
+    def owns(self, direction=None):
+        return self.d.ownsStep(direction.encode() if direction else None)
+
+
+def test_owns_step_follows_the_drivers_own_step():
+    o = Owns()
+    o.request("right", 1)
+    assert o.owns("right") is False, "before the press"
+    o.step()
+    assert o.owns("right") is True and o.owns() is True, "pressed, in idle"
+    assert o.owns("up") is False, "another direction"
+    o.step(moving=True, tx=4, ty=4)
+    assert o.owns("right") is True, "under way (the seam's second half reads it here)"
+    o.step(moving=True, tx=4, ty=4)
+    assert o.owns("right") is True
+    o.x = 4
+    o.step()                                      # landed, nothing waits
+    assert o.owns("right") is False
+
+
+def test_owns_step_on_the_landing_poll_is_the_chained_step():
+    o = Owns()
+    o.request("right", 1)
+    o.request("up", 2)
+    o.step()
+    o.step(moving=True, tx=4, ty=4)
+    o.x = 4
+    o.step(facing="right")                        # the landing poll: the waiting step starts in the same step
+    assert o.owns("up") is True and o.owns("right") is False
+
+
+def test_owns_step_is_false_for_a_push_off_idle_without_a_link_and_while_riding():
+    o = Owns()
+    o.request("left", 1, push=True)
+    o.step()
+    assert o.owns("left") is False, "a push"
+    o = Owns()
+    o.request("right", 1)
+    o.step()
+    o.step(mode="cutscene")
+    assert o.owns("right") is False and o.owns() is False, "off idle"
+    o = Owns()
+    o.request("right", 1)
+    o.step()
+    o.step(link=False)
+    assert o.owns("right") is False, "no link"
+    o = Owns()
+    ride = o.b.eval("{ dir = 'up', b = false }")
+    assert o.d.ride(ride, 1) is True
+    o.request("up", 1)
+    o.step()
+    assert o.owns("up") is False and o.owns() is False, "a ride direction held: the step is refused"
+
+
+def diag(w, steps, cadence, dirs=("right", "down")):
+    """The client at 45 degrees: one move.step per cell boundary, every `cadence` logic steps (16 / sqrt(2) ~ 11.3
+    walking: 11, 12, 11, ...)."""
+    sent = []
+    acc = 0.0
+    for i in range(steps):
+        sent.append(w.step(dirs[i % len(dirs)]))
+        acc += cadence
+        w.run(int(acc) - int(acc - cadence))
+    w.settle()
+    return sent
+
+
+def script_refusals(w, sent):
+    ans = w.answers()
+    return sum(1 for n in sent for m in ans.get(n, []) if m["type"] == "player.blocked" and m["data"]["reason"] == "script")
+
+
+def test_a_diagonal_at_minecrafts_cadence_drops_nothing_at_2x():
+    w = Walk(start=("TEST_FIELD", 2, 2, "right"))
+    sent = diag(w, 30, 16 / 2 ** 0.5)
+    w.assert_no_drift()
+    st = w.status()
+    assert script_refusals(w, sent) == 0 and st["moveDropped"] == 0
+    frames = {m["data"]["frames"] for n in sent for m in w.answers()[n] if m["type"] == "player.pos"}
+    assert frames == {8}
+    assert w.cell() == ("TEST_FIELD", 17, 17, "down")
+    assert (st["moveSpeedPct"], st["moveFastSteps"], st["moveFastPassed"]) == (200, 30, 0)
+
+
+def test_the_same_diagonal_at_1x_falls_behind_and_drops_steps():
+    w = Walk(start=("TEST_FIELD", 2, 2, "right"), mod_options={"step_speed": 100})
+    sent = diag(w, 30, 16 / 2 ** 0.5)
+    w.assert_no_drift()
+    st = w.status()
+    assert st["moveDropped"] > 0 and script_refusals(w, sent) == st["moveDropped"]
+    frames = {m["data"]["frames"] for n in sent for m in w.answers()[n] if m["type"] == "player.pos"}
+    assert frames == {16}
+    assert (st["moveSpeedPct"], st["moveFastSteps"]) == (100, 0)
+
+
+def test_step_speed_from_configure_and_from_the_manager():
+    w = Walk(start=("TEST_FIELD", 2, 2, "right"))
+    w.rig.status.configure(w.rig.b.to_lua({"stepSpeed": 100}))
+    assert pos(w.answer(w.step("right")))[5] == 16
+    w.settle()
+    w.rig.b.emit("mod.options_changed", w.rig.b.to_lua({"mod": "gen1-bridge", "key": "step_speed", "value": 150}))
+    assert pos(w.answer(w.step("right")))[5] == 11
+    w.settle()
+    w.rig.b.emit("mod.options_changed", w.rig.b.to_lua({"mod": "gen1-bridge", "key": "step_speed", "value": 7}))
+    assert pos(w.answer(w.step("right")))[5] == 8, "an invalid value is 2X"
+    w.settle()
+    assert w.status()["moveSpeedPct"] == 200
+    lines = w.rig.b.log_lines()
+    assert "[info] [gen1-bridge] move.speed pct=150" in lines
+    assert sum(1 for x in lines if "move.speed_option_invalid" in x) == 1
+
+
+def test_a_ledge_hop_keeps_its_32_frames_and_counts_as_passed():
+    w = Walk(start=("TEST_TOWN", 6, 4, "down"))
+    n = w.step("down")
+    assert pos(w.answer(n)) == ("TEST_TOWN", 6, 6, "down", "ledge", 32)
+    w.settle()
+    st = w.status()
+    assert st["moveFastPassed"] >= 1 and st["moveFastSteps"] == 0
+
+
+def test_a_step_nobody_asked_for_keeps_gen1s_timing():
+    # the user's own press in the hidden window: the driver holds nothing, the engine's 16 frames stand
+    w = Walk(start=("TEST_FIELD", 2, 2, "right"))
+    gi = w.E.game.input
+    gi.sourcePress(gi, b"right", b"key:d")
+    w.run(3)
+    gi.sourceRelease(gi, b"right", b"key:d")
+    w.settle()
+    steps = [m for t, m in w.log if m["type"] == "player.pos" and m["data"]["kind"] == "walk"]
+    assert steps and {m["data"]["frames"] for m in steps} == {16}
+    assert w.status()["moveFastSteps"] == 0

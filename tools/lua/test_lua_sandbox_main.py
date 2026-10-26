@@ -33,6 +33,7 @@ LIB_FILES = [
     "observe/kb_bag.lua",
     "observe/kb_progress.lua",
     "act/kb_move.lua",
+    "act/kb_speed.lua",
     "act/kb_interact.lua",
     "act/kb_field.lua",
     "act/kb_uiact.lua",
@@ -121,7 +122,8 @@ def test_main_loads_modules_and_logs():
     b = Bridge(modules={"src.core.Version": VERSION_OK})
     before = b.env_keys()
     b.run_main()
-    assert b.log_lines() == ["[info] [gen1-bridge] gen1-bridge loaded"]
+    # STEP_SPEED_PLAN §2.3: STEP SPEED is logged once at load
+    assert b.log_lines() == ["[info] [gen1-bridge] move.speed pct=200", "[info] [gen1-bridge] gen1-bridge loaded"]
     # every module, then (Wild Routes, WR2) the route list
     # MG2: kb_engine's loader reads the Gen 1 adapter after main.lua's own imports (not counted as a module)
     assert b.read_calls == LIB_FILES + ["lib/engine/gen1.lua", "data/routes.json"]
@@ -387,3 +389,48 @@ def test_the_stubs_hook_wrappers_pass_through():
     assert eng.takeOver(nxt) is False and eng.version()[0] == b"0.3.85"
     assert eng.observe().inGame is False and eng.playthrough() == b"title" and eng.saveSlot() == 0
     assert eng.noSuchFunction() is None, "anything else is a function returning nothing"
+
+
+# ------------------------------------------------------------ STEP SPEED (STEP_SPEED_PLAN.md S1)
+
+
+def speed_chain(b):
+    chain = b.mod._chains[b"movement.speed"]
+    return [int(chain[i].priority) for i in range(1, len(chain) + 1)] if chain else []
+
+
+def test_movement_speed_is_wrapped_once_outermost_and_once_after_a_reload():
+    b = Bridge(modules={"src.core.Version": VERSION_OK})
+    b.run_main()
+    assert speed_chain(b) == [1000]
+    b.mods_loaded()
+    b.ready()
+    b.reload()
+    assert speed_chain(b) == [1000], "the new instance's mod object has exactly one link"
+
+
+def test_the_step_speed_option_is_defined_next_to_the_port():
+    b = Bridge(modules={"src.core.Version": VERSION_OK})
+    b.run_main()
+    schema = b.mod._optionSchema
+    rows = {schema[i].key.decode(): schema[i] for i in range(1, len(schema) + 1)}
+    assert list(rows) == ["port", "step_speed"]
+    row = rows["step_speed"]
+    assert (row.label, row.type, row.default) == (b"STEP SPEED", b"choice", 200)
+    choices = [(row.choices[i][1].decode(), int(row.choices[i][2])) for i in range(1, len(row.choices) + 1)]
+    assert choices == [("1X", 100), ("1.5X", 150), ("2X", 200), ("3X", 300)]
+
+
+@pytest.mark.parametrize("stored,pct,warned", [(100, 100, False), (300, 300, False), (250, 200, True)])
+def test_a_stored_step_speed_is_read_at_load(stored, pct, warned):
+    b = Bridge(modules={"src.core.Version": VERSION_OK}, mod_options={"step_speed": stored})
+    b.run_main()
+    lines = b.log_lines()
+    assert f"[info] [gen1-bridge] move.speed pct={pct}" in lines
+    assert any("move.speed_option_invalid" in x for x in lines) is warned
+    assert b.mod.exports.moveSpeedPct is None, "the status fields are filled on the first step"
+    b.mods_loaded()
+    b.ready()
+    b.step()
+    st = b.mod.exports
+    assert (st.moveSpeedPct, st.moveFastSteps, st.moveFastPassed) == (pct, 0, 0)

@@ -99,6 +99,27 @@ function Move.install(b)
     return out
   end)
 
+  -- STEP_SPEED_PLAN §2.3: the facts kb_speed needs from a movement.speed
+  -- call, or nil (unchanged). World:movePlayer(dir) raises it with ctx
+  -- { onBike, surfing, downhill, playerState, player, input, save } and no
+  -- dir (src/world/gen2/World.lua:10716-10736): the player's facing stands in
+  -- (the step driver turned the player before pressing). A bike's step (a
+  -- ride, BIKE_PLAN D1) and the Cycling Road's downhill pass. The hook runs
+  -- before the step is tried (a refused try or a ledge goes through it too):
+  -- a ledge hop then writes its own 32 frames (tryLedgeJump, World.lua:10701),
+  -- so it keeps Gen 2's timing, though kb_speed counts it as shortened.
+  def("stepContext", function(ctx)
+    local p = type(ctx) == "table" and ctx.player or nil
+    local me = player()
+    if type(p) ~= "table" or me == nil then return nil end
+    return {
+      isPlayer = p == me,
+      pass = (ctx.onBike or ctx.downhill) and true or false,
+      run = false,
+      dir = DELTA[p.facing] and p.facing or nil,
+    }
+  end)
+
   -- Gen 2 pins no display options (gen1's classic pin is Gen 1's renderer).
   def("displayPinned", function() return true end)
   def("pinDisplay", function() return 0 end)

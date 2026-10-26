@@ -251,9 +251,14 @@ function FakeWorld.attach(E)
     local onBike = E.save.onBike and not p.ledgeHop
     local frames = onBike and 8 or 16
     if onBike and p.slopeMap and (dir or p.facing) ~= "down" then frames = 16 end
+    local slope = onBike and p.slopeMap and (dir or p.facing) ~= "down" or false
     -- a spinner's slide (Player.lua:131-133): 16 / 2 * 6 = 48
     if p.spinning and not p.spinFrames then frames = frames / 2 * 6 end
-    return frames
+    -- movement.speed (Player.lua:134-144), the same ctx keys
+    frames = E.runtime.call("movement.speed", function(f) return f end, frames, {
+      onBike = onBike and true or false, slope = slope and true or false, dir = dir or p.facing,
+      surfing = p.surfing and true or false, player = p, input = E.game and E.game.input, save = E.save })
+    return math.max(1, math.floor(tonumber(frames) or 16))
   end
   E.stepLength = stepLength
 

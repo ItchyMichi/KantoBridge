@@ -30,7 +30,8 @@
 --     facing first (kb_engine.setFacing, so there is no 4-frame turn), then
 --     mod.input:press the direction. The overworld polls held directions
 --     with isDown in that same logic step, so the step starts at once and
---     lands 16 frames later (8 on the bicycle);
+--     lands the engine's frames later (16 walking; STEP SPEED, act/kb_speed.lua,
+--     shortens a step this driver owns, 8 at the default 2X: driver.ownsStep);
 --   * the press is released on the landing poll -- the first input.step that
 --     finds the player standing again -- unless the next queued step is
 --     ready: that one then starts in the same logic step, with no idle frame
@@ -95,6 +96,7 @@ function Move.new(opts)
   local ride               -- move.ride: { dir (or nil), b, gen, drop }
   local lastCollide, lastCollideAt = nil, -1000 -- the bike's last bump (an engine action), and its logic step
   local faceReq            -- a move.face waiting for the player to stand idle
+  local lastMode           -- the mode driver.step was last called with (STEP_SPEED_PLAN §2.3)
   local generation         -- the connection the requests belong to
   local steps = 0
   local lastPos            -- the last valid settled position
@@ -392,6 +394,7 @@ function Move.new(opts)
   -- link:  { live = a client/test session is established, generation }
   function driver.step(f, mode, ev, out, link)
     steps = steps + 1
+    lastMode = mode
     ev = ev or {}
     if f.inGame then settled(f) end
     if not (link and link.live) then
@@ -487,6 +490,17 @@ function Move.new(opts)
       msg[2].kind = "slope"
       counts.rolls = count(counts.rolls)
     end
+  end
+
+  -- STEP_SPEED_PLAN §2.3: true while this driver is executing a move.step
+  -- (pressed, or under way: the seam's second half, a step chained on the
+  -- landing poll) in `dir`, in idle, and not a push. dir is optional: Gen 2's
+  -- movement.speed context has none (the adapter passes the facing, which the
+  -- driver set before pressing). The movement.speed hook and Gen 3's tap ask
+  -- it from inside the engine's update, after this step's driver.step.
+  function driver.ownsStep(dir)
+    return active ~= nil and not active.push and lastMode == "idle" and generation ~= nil
+      and (dir == nil or active.dir == dir)
   end
 
   function driver.releaseAll() releaseAll() end
