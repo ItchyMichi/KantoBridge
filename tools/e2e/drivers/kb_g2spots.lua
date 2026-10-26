@@ -310,7 +310,12 @@ return function(game)
       if not cmd and #queue > 0 then
         cmd = table.remove(queue, 1)
         frames, idle = 0, 0
-        if cmd.op ~= "go" or type(cmd.map) ~= "string" then
+        if cmd.op == "speed" then
+          -- STEP_SPEED_PLAN S0/S4: STEP SPEED as the F10 manager would set it (exports.configure{stepSpeed})
+          if type(status.configure) == "function" then pcall(status.configure, { stepSpeed = tonumber(cmd.pct) }) end
+          print(("KB_SPEED id=%s pct=%s"):format(word(cmd.id), word(status.moveSpeedPct or "none")))
+          cmd = nil
+        elseif cmd.op ~= "go" or type(cmd.map) ~= "string" then
           print(("KB_SPOT_FAIL id=%s reason=bad_command"):format(word(cmd.id)))
           cmd = nil
         elseif w.map.id == cmd.map and not cmd.nohop then

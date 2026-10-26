@@ -438,6 +438,11 @@ return function(game)
           end
           print(("KB_SIGHT id=%s on=%s"):format(word(cmd.id), word(cmd.on ~= false)))
           cmd = nil
+        elseif cmd.op == "speed" then
+          -- STEP_SPEED_PLAN S0/S4: STEP SPEED as the F10 manager would set it (exports.configure{stepSpeed})
+          if status and type(status.configure) == "function" then pcall(status.configure, { stepSpeed = tonumber(cmd.pct) }) end
+          print(("KB_SPEED id=%s pct=%s"):format(word(cmd.id), word(status and status.moveSpeedPct or "none")))
+          cmd = nil
         elseif cmd.op == "scan" then
           scanRuns(game, cmd.id, cmd.dir or "up", cmd.bike)
           cmd = nil
