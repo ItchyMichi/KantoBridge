@@ -73,6 +73,9 @@ def rides(ledge: dict | None) -> list[dict]:
          "keys": [(["sneak"], 50), (["forward", "sneak"], 40)]},
         {"name": "muddy_slope", "map": "EM_ROUTE111", "x": 29, "y": 11, "facing": "up", "vehicle": "mach",
          "keys": [(["forward"], 45)]},
+        # BIKE_CLIMB_PLAN C3: the slope ridden down from its top (the bike follows the stairs instead of flying off them)
+        {"name": "muddy_slope_down", "map": "EM_ROUTE111", "x": 29, "y": 3, "facing": "down", "vehicle": "mach",
+         "keys": [(["forward"], 45)]},
         {"name": "cracked_floor", "map": "EM_GRANITE_CAVE_B1F", "x": 9, "y": 1, "facing": "right", "vehicle": "mach",
          "keys": [(["forward"], 30)]},
     ]

@@ -268,25 +268,36 @@ public final class BikeEntity extends Entity {
 
 	/**
 	 * BIKE_CLIMB_PLAN §3: stairs along the move standing higher than the step-up allows lift the move first (the Mach's 1.5
-	 * blocks a tick up a slope's 1.5-per-block stairs); on both sides, so the server's own move lands where the client's did.
+	 * blocks a tick up a slope's 1.5-per-block stairs); stairs under the move's end lower than that by more than the step
+	 * are followed down (§3.5: the forward move first, then the drop, so the bike hugs the slope instead of flying off it).
+	 * On both sides, so the server's own move lands where the client's did.
 	 */
 	@Override
 	public void move(MoverType type, Vec3 movement) {
-		super.move(type, this.climb(movement));
-	}
-
-	private Vec3 climb(Vec3 movement) {
 		if (movement.x == 0.0 && movement.z == 0.0) {
-			return movement;
+			super.move(type, movement);
+			return;
 		}
 		AABB box = this.getBoundingBox();
 		AABB path = box.expandTowards(movement.x, 0.0, movement.z);
 		List<VoxelShape> stairs = BikeClimb.stairs(this.level(), path, BikeClimb.MAX_LIFT);
 		if (stairs.isEmpty()) {
-			return movement;
+			super.move(type, movement);
+			return;
 		}
 		double dy = BikeClimb.lift(movement.y, box.minY, BikeClimb.top(path, stairs, BikeClimb.MAX_LIFT), STEP, BikeClimb.MAX_LIFT);
-		return dy == movement.y ? movement : new Vec3(movement.x, dy, movement.z);
+		if (dy != movement.y) {
+			super.move(type, new Vec3(movement.x, dy, movement.z));
+			return;
+		}
+		double drop = BikeClimb.drop(movement.y, box.minY, BikeClimb.top(box.move(movement.x, 0.0, movement.z), stairs, BikeClimb.MAX_LIFT),
+				STEP, BikeClimb.MAX_LIFT);
+		if (drop != movement.y) {
+			super.move(type, new Vec3(movement.x, 0.0, movement.z));
+			super.move(type, new Vec3(0.0, drop, 0.0));
+			return;
+		}
+		super.move(type, movement);
 	}
 
 	// ---- never hurt, pushed, picked or saved ----

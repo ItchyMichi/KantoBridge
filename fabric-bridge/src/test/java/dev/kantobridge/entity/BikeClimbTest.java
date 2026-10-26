@@ -34,6 +34,16 @@ class BikeClimbTest {
 	}
 
 	@Test
+	void stairsFallingAwayUnderTheMovesEndAreFollowedDown() {
+		assertEquals(-2.0, BikeClimb.drop(-0.08, 91.0, 89.0, STEP, BikeClimb.MAX_LIFT), EPS);
+		assertEquals(-0.08, BikeClimb.drop(-0.08, 91.0, 90.5, STEP, BikeClimb.MAX_LIFT), EPS, "half a step: gravity's");
+		assertEquals(-0.08, BikeClimb.drop(-0.08, 94.0, 88.0, STEP, BikeClimb.MAX_LIFT), EPS, "a cliff is not followed");
+		assertEquals(0.42, BikeClimb.drop(0.42, 91.0, 89.0, STEP, BikeClimb.MAX_LIFT), EPS, "a hop is never pulled down");
+		assertEquals(-0.08, BikeClimb.drop(-0.08, 91.0, Double.NaN, STEP, BikeClimb.MAX_LIFT), EPS, "no stairs under the end");
+		assertEquals(-0.08, BikeClimb.lift(-0.08, 91.0, Double.NaN, STEP, BikeClimb.MAX_LIFT), EPS, "nor along the path");
+	}
+
+	@Test
 	void aHopsOwnLiftStaysWhenItIsTheLarger() {
 		assertEquals(0.42, BikeClimb.lift(0.42, 88.0, 88.4, STEP, BikeClimb.MAX_LIFT), EPS, "within the step: the hop's");
 		assertEquals(1.0, BikeClimb.lift(0.42, 88.0, 89.0, STEP, BikeClimb.MAX_LIFT), EPS, "the stairs need more than the hop");

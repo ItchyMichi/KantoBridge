@@ -178,10 +178,21 @@ public class RideGameTests implements FabricGameTest {
 				helper.assertTrue(Math.abs(bike.getX() - (x0 + 0.75 * (i + 1))) < 0.01, "the Acro stalled at tick " + i + ": x " + bike.getX());
 			}
 			helper.assertTrue(Math.abs(bike.getY() - (foot.getY() + 3.0)) < 0.01, "the Acro isn't on the plateau: y " + bike.getY());
-			// standing still or moving down the far side, nothing of this
+			// moving down the far side at the Mach's speed: nothing lifted
 			bike.setPos(x0 + 3.0, foot.getY() + 3.0, z);
 			bike.move(MoverType.SELF, new Vec3(-1.5, -0.08, 0));
 			helper.assertTrue(bike.getY() <= foot.getY() + 3.0 + 0.01, "a ride down the stairs was lifted: y " + bike.getY());
+			// C3: down the stairs at the slope's push-back speed (8 frames a cell): the third tick's end stands over the lower
+			// block's middle step, two blocks down, and the bike is set down on it instead of flying on
+			bike.setPos(x0 + 3.0, foot.getY() + 3.0, z);
+			for (int i = 0; i < 5; i++) {
+				bike.move(MoverType.SELF, new Vec3(-0.75, -0.08, 0));
+				helper.assertTrue(Math.abs(bike.getX() - (x0 + 3.0 - 0.75 * (i + 1))) < 0.01, "the way down stalled at tick " + i + ": x " + bike.getX());
+				if (i == 2) {
+					helper.assertTrue(Math.abs(bike.getY() - (foot.getY() + 1.0)) < 0.01, "the bike didn't follow the stairs down: y " + bike.getY());
+				}
+			}
+			helper.assertTrue(bike.getY() >= foot.getY() - 0.01 && bike.getY() <= foot.getY() + 1.0 + 0.01, "off the stairs' foot: y " + bike.getY());
 		} finally {
 			StoryStates.of(player).clear();
 			Bikes.dismount(player);

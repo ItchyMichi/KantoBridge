@@ -46,12 +46,25 @@ public final class BikeClimb {
 	}
 
 	/**
-	 * The collision shapes of the step colliders under a move's path: the columns the box {@code path} covers, from the
-	 * feet up to {@code maxLift} blocks over them. Empty where no stairs are.
+	 * §3.5, the way down: {@code dy} as given, or the fall from the feet to the stairs' top under the move's end when that
+	 * is more than {@code step} (a smaller one gravity takes in a tick or two) and at most {@code maxLift}, and the move is
+	 * not a hop ({@code dy} at most 0). The caller moves forward first, then down by this. Plain Java.
+	 */
+	public static double drop(double dy, double feetY, double topAhead, double step, double maxLift) {
+		double fall = feetY - topAhead;
+		if (dy <= 0.0 && fall > step && fall <= maxLift) {
+			return -fall;
+		}
+		return dy;
+	}
+
+	/**
+	 * The collision shapes of the step colliders under a move's path: the columns the box {@code path} covers, from
+	 * {@code maxLift} blocks under the feet to {@code maxLift} over them. Empty where no stairs are.
 	 */
 	public static List<VoxelShape> stairs(Level level, AABB path, double maxLift) {
 		List<VoxelShape> out = new ArrayList<>();
-		int y0 = Mth.floor(path.minY);
+		int y0 = Mth.floor(path.minY - maxLift);
 		int y1 = Mth.floor(path.minY + maxLift);
 		for (BlockPos pos : BlockPos.betweenClosed(Mth.floor(path.minX), y0, Mth.floor(path.minZ), Mth.floor(path.maxX - EDGE), y1,
 				Mth.floor(path.maxZ - EDGE))) {
@@ -67,12 +80,12 @@ public final class BikeClimb {
 	}
 
 	/**
-	 * The highest stairs top under {@code path} within {@code maxLift} of its feet: the box swept down from that height
-	 * against {@code stairs} stops on it. The feet themselves when nothing is in the way.
+	 * The highest stairs top under {@code box} between {@code maxLift} over its feet and {@code maxLift} under them: the box
+	 * swept down from that height against {@code stairs} stops on it. NaN when it meets none.
 	 */
-	public static double top(AABB path, List<VoxelShape> stairs, double maxLift) {
-		AABB probe = path.move(0.0, maxLift, 0.0);
-		double moved = Shapes.collide(Direction.Axis.Y, probe, stairs, -maxLift);
-		return probe.minY + moved;
+	public static double top(AABB box, List<VoxelShape> stairs, double maxLift) {
+		AABB probe = box.move(0.0, maxLift, 0.0);
+		double moved = Shapes.collide(Direction.Axis.Y, probe, stairs, -2.0 * maxLift);
+		return moved <= -2.0 * maxLift ? Double.NaN : probe.minY + moved;
 	}
 }
