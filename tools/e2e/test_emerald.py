@@ -62,6 +62,11 @@ TEST_PORT = 27220
 GAME = "emerald"
 TOWN = "EM_LITTLEROOT_TOWN"
 
+def cell_of(to: dict) -> dict:
+    """A warp's `to` without its floor (WATER_AND_BRIDGES_PLAN D7 added `elev`; these checks are about the cell)."""
+    return {k: v for k, v in to.items() if k != "elev"}
+
+
 
 def save_files():
     """{name: (size, mtime_ns)} of saves/emerald/ (a listing; nothing is opened)."""
@@ -389,7 +394,7 @@ async def _route(port, serving):
         assert step["type"] == "player.pos", (n, step)
     arrive = (await find_or_wait(mc, "warp", 60, since, lambda m: m["data"]["phase"] == "arrive"))["data"]
     report["in"] = (arrive["kind"], arrive["to"])
-    assert arrive["kind"] == "script" and arrive["to"] == {"map": ROUTE_MAP, "x": 1, "y": 0, "facing": "right"}, report
+    assert arrive["kind"] == "script" and cell_of(arrive["to"]) == {"map": ROUTE_MAP, "x": 1, "y": 0, "facing": "right"}, report
     blocked = [m["data"]["reason"] for m in mc.received[since:] if m["type"] == "player.blocked"]
     report["blocked_on_the_way"] = blocked
     assert blocked == [], report
@@ -402,7 +407,7 @@ async def _route(port, serving):
     await mc.send("move.step", {"dir": "left", "n": 7})
     back = (await find_or_wait(mc, "warp", 60, since, lambda m: m["data"]["phase"] == "arrive"))["data"]
     report["back"] = back["to"]
-    assert back["to"] == {"map": TOWN, "x": x, "y": y + 4, "facing": "up"}, report
+    assert cell_of(back["to"]) == {"map": TOWN, "x": x, "y": y + 4, "facing": "up"}, report
     await asyncio.sleep(2)
     parked = (await mc.request("region.park", {"region": "hoenn"}, reply_type="act.result", timeout=30))["data"]
     report["park"] = parked

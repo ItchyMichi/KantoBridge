@@ -62,6 +62,11 @@ X1 = {"x": 1, "y": 0, "facing": "right"}
 DELTA = {"up": (0, -1), "down": (0, 1), "left": (-1, 0), "right": (1, 0)}
 OPPOSITE = {"up": "down", "down": "up", "left": "right", "right": "left"}
 
+def cell_of(to: dict) -> dict:
+    """A warp's `to` without its floor (WATER_AND_BRIDGES_PLAN D7 added `elev`; these checks are about the cell)."""
+    return {k: v for k, v in to.items() if k != "elev"}
+
+
 
 def way_back(f):
     """Where the step onto A lands: the clearing's last block's near side, facing the town (kb_routes.lua plan)."""
@@ -188,7 +193,7 @@ async def _crossing(pids, rss, route=None, far_port=EMERALD_PORT, kanto_map=KANT
     since = await walk(blue, near["facing"], steps_to_trigger(near), 1)
     into = await arrival(blue, since)
     report["blue_in"] = (into["kind"], into["to"])
-    assert into["kind"] == "script" and into["to"] == dict(X1, map=kanto_map), report
+    assert into["kind"] == "script" and cell_of(into["to"]) == dict(X1, map=kanto_map), report
     await park(emerald, far_region)
     # 2. the crossings, each way
     for k in range(CROSSINGS):
@@ -205,12 +210,12 @@ async def _crossing(pids, rss, route=None, far_port=EMERALD_PORT, kanto_map=KANT
             await emerald.send("move.step", {"dir": "left", "n": 50})
             home = await arrival(emerald, since)
             report["far_home"] = home["to"]
-            assert home["to"] == dict(way_back(far), map=far["map"]), report
+            assert cell_of(home["to"]) == dict(way_back(far), map=far["map"]), report
             await asyncio.sleep(1)
             since = await walk(emerald, OPPOSITE[home["to"]["facing"]], 1, 60)
             back = await arrival(emerald, since)
             report["far_back_in"] = back["to"]
-            assert back["to"] == dict(X1, map=far_map), report
+            assert cell_of(back["to"]) == dict(X1, map=far_map), report
             # (G2H: Gen 2 reports the arrival as the map loads; its map setup's fade still runs a moment, and a
             # player crossing in Minecraft walks the zone first)
             await asyncio.sleep(2)
@@ -225,7 +230,7 @@ async def _crossing(pids, rss, route=None, far_port=EMERALD_PORT, kanto_map=KANT
     await blue.send("move.step", {"dir": "left", "n": 70})
     home = await arrival(blue, since)
     report["blue_home"] = home["to"]
-    assert home["to"] == dict(way_back(near), map=near["map"]), report
+    assert cell_of(home["to"]) == dict(way_back(near), map=near["map"]), report
     report["errors"] = errors(blue) + errors(emerald)
     report["problems"] = len(blue.conn.problems) + len(emerald.conn.problems)
     assert report["errors"] == [] and report["problems"] == 0, report

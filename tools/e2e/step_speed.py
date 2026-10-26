@@ -38,7 +38,8 @@ PORTS = {"blue": 27261, "crystal": 27262, "emerald": 27263}
 # open maps with no trainer in sight of the start (Emerald's trainers are switched off: the driver's "sight")
 PLACES = {
     "blue": ["ROUTE_1", "PALLET_TOWN", "VIRIDIAN_CITY"],
-    "crystal": ["ROUTE_29", "NEW_BARK_TOWN", "CHERRYGROVE_CITY", "ROUTE_30"],
+    "crystal": ["NEW_BARK_TOWN", "ROUTE_29", "CHERRYGROVE_CITY", "VIOLET_CITY", "ROUTE_31", "ROUTE_34", "ROUTE_36",
+                "NATIONAL_PARK"],
     "emerald": ["EM_ROUTE102", "EM_ROUTE101", "EM_LITTLEROOT_TOWN", "EM_ROUTE110"],
 }
 LEDGE_MAPS = {"blue": ("ROUTE_1",), "crystal": ("ROUTE_29",), "emerald": ("EM_ROUTE111",)}
@@ -72,7 +73,11 @@ class Session:
     def go(self, m, x, y, facing):
         self.sid += 1
         with open(self.commands, "a", encoding="utf-8") as f:
-            f.write(lua_go(self.sid, self.game, {"map": m, "x": x, "y": y, "dir": facing}) + "\n")
+            line = lua_go(self.sid, self.game, {"map": m, "x": x, "y": y, "dir": facing})
+            if self.game == "emerald":
+                # the running shoes (FLAG_SYS_B_DASH, constants/emerald/flags.lua), so B held runs (Player.canDash)
+                line = line.replace("flags = { }", "flags = { [2240] = true }", 1)
+            f.write(line + "\n")
         return wait_spot(self.run, self.sid, timeout=120)
 
     def speed(self, pct: int):
@@ -127,10 +132,13 @@ async def probe(s: Session, m: str, x: int, y: int) -> bool:
         return False
     sx, sy = int(spot["x"]), int(spot["y"])
     await s.drain(0.6)
-    for d, (cx, cy) in zip(LOOP, path_cells(sx, sy, LOOP)):
+    for i, (d, (cx, cy)) in enumerate(zip(LOOP, path_cells(sx, sy, LOOP))):
         a = await s.step_wait(d)
         if a is None or a["type"] != "player.pos" or a["data"].get("kind") not in ("walk", "run") \
                 or (a["data"]["x"], a["data"]["y"]) != (cx, cy):
+            got = None if a is None else (a["type"], a["data"].get("kind"), a["data"].get("reason"), a["data"].get("x"),
+                                          a["data"].get("y"))
+            say("probe miss", m, (sx, sy), "step", i, d, "want", (cx, cy), "got", got)
             return False
         await s.drain(0.35)
     return True
@@ -262,14 +270,14 @@ async def scenario(run, commands: Path, game: str, speeds: list[int], with_run: 
             s.command('{ id = ID, op = "sight", on = false }')
         # the start: the given ones, else a grid over the open maps
         found = None
-        cands = starts or [(m, x, y) for m in PLACES[game] for y in range(8, 34, 3) for x in range(2, 20, 3)]
+        cands = starts + [(m, x, y) for m in PLACES[game] for y in range(6, 40, 2) for x in range(1, 30, 2)]
         tried = 0
         for m, x, y in cands:
             tried += 1
             if await probe(s, m, x, y):
                 found = (m, x, y)
                 break
-            if tried >= 40:
+            if tried >= 300:
                 break
         report["probe"] = {"tried": tried, "found": found}
         say(game, "start:", found, "after", tried, "candidates")
