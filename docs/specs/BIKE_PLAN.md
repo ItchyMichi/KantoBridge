@@ -471,5 +471,5 @@ Numbers only; the reasons and the choices are in PROGRESS.md "The bike".
   first motion 100 ms → 50 ms after `move.ride` on the client's clock (RTX 4090 pod); not on a slope, not with B; 0 snaps,
   0 teleports. RideControllerTest +8.
 - **Not done / left:** Route 111's muddy slope at full speed (the client bike falls behind: lag 4, 8-9 "moved wrongly",
-  1 stuck); Route 119's rails (the engine stops after one hop); the latency on a real PC (pod: 0.26-0.38 s); Blue's
+  1 stuck; fixed later that day by BIKE_CLIMB_PLAN.md, the bike's own lift up the stairs); Route 119's rails (the engine stops after one hop); the latency on a real PC (pod: 0.26-0.38 s); Blue's
   forced-bike refusal and cave rides not driven.

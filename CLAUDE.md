@@ -59,7 +59,9 @@ Pokémon Red/Blue's story runs in a **hidden Gen1Recomp**. It is displayed and p
   plan's §9): `move.ride`, the client's `RideInput`/`MoveController.rideTick`, the server's `BikeEntity` and `Bikes`, the
   Bicycle key (C), the placeholder model and textures (`tools/bike_textures.py`); the bike e2e tools are
   `tools/e2e/bike_*.py`. B9 (the client's one-cell pre-move on a ride's key press, `MovementSync.predictRide`) was built
-  afterwards, the same day. What is left is listed in [`docs/specs/BIKE_FOLLOWUPS.md`](docs/specs/BIKE_FOLLOWUPS.md).
+  afterwards, the same day. What is left is listed in [`docs/specs/BIKE_FOLLOWUPS.md`](docs/specs/BIKE_FOLLOWUPS.md);
+  its A1 (the muddy slope at full speed) was fixed by [`docs/specs/BIKE_CLIMB_PLAN.md`](docs/specs/BIKE_CLIMB_PLAN.md)
+  (C1–C4, 2026-10-26: `BikeEntity.move` lifts the bike up the world's stairs, and follows them down, on both sides).
 - [`docs/specs/STEP_SPEED_PLAN.md`](docs/specs/STEP_SPEED_PLAN.md) is the step speed plan (S0–S7, decisions D1–D9; written
   and executed 2026-10-26, recorded in PROGRESS.md's "Step speed" and the plan's §9): the hidden game's own step is shortened
   (STEP SPEED, default 2X) for the steps the bridge drives, so a diagonal walk in Minecraft never outruns the hidden player,

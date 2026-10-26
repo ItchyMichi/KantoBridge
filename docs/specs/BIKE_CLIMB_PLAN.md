@@ -134,3 +134,19 @@ commits only (push on the user's go).
 C1 about 120 lines of Java and three GameTests; C2 one pod session (kb-dev50 or a small cpu3g x4 pod, ~45 min with the
 regression rides, about $0.15–0.25); C3 ~40 lines if built; C4 docs. Full suite (JUnit per package, GameTests, pytest)
 once, at C2's end.
+
+## 7. Results (2026-10-26, run the same day; the record is PROGRESS.md "The bike", "The climb")
+
+- **C1** (b295ed6): `BikeClimb` (`lift`, `drop`, `stairs`, `top`) and the `BikeEntity.move` override; BikeClimbTest 6,
+  RideGameTests +2. One change to the design: D2's sweep runs against the step colliders' shapes only (not every block
+  collision), so the plateau's own height comes from the last step's flush top and a bike wall in the column is never a
+  "floor"; the stairs scan reaches 5 blocks under the feet as well, for the way down.
+- **C2** (kb-dev49): the Mach up the slope three times: lag 1, 0 "moved wrongly", 0 "moved too quickly", 0 stuck, ends in
+  (29, 3) (B5/B7: lag 4, 8-9, 0, 1, not in the cell). The regression rides (Mach lane, wheelie, side jump, rail hops, the
+  crack, the ledge hop, the deck) as before: lag ≤ 2, 0 complaints, in the hidden cell. Video sent.
+- **C3** built: `drop` and the two-part move (forward, then down); `bike_ride.py` gained `muddy_slope_down` ((29, 3), W
+  facing down). The engine rides the Mach down at 16, 8, 4, then 8, 8 on the slope's cells, then up to 4 again, 19 cells
+  to (29, 22): lag 1, 0 complaints, in the hidden cell; the GameTest's push-back-speed descent lands on its stair. Video
+  sent.
+- **C4**: this section; PROGRESS, BIKE_FOLLOWUPS A1, BIKE_PLAN §9, PLAYTEST.md, CLAUDE.md. Checkpoint: GameTests 143/143,
+  JUnit per package 1,507 (1 failing: KbPackReloadTest, as before). Pod about 35 min, about $0.19. Not pushed.

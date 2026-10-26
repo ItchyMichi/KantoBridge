@@ -1111,8 +1111,9 @@ jump is B. Try it in Blue, Crystal and Emerald.
       now starts a cell ahead the moment you press, about 50 ms after the key reaches the game on the test pod, and the
       game confirms it. If you ever see the bike start and then slide back a cell, note where.)
 - [ ] Emerald, the **Mach Bike**: hold a direction: 16, then 8, then 4 frames a cell (30 blocks a second); let go: it rolls
-      on a few cells and stops. Ride up Route 111's muddy slope at full speed: the game lets you climb (known: here the
-      Minecraft bike may lag behind and be put back; tell me what you see), and from a standing start it pushes you back.
+      on a few cells and stops. Ride up Route 111's muddy slope at full speed: the game lets you climb and the bike should
+      take the stairs in one go, staying with the hidden game (it used to lag and be put back; fixed 2026-10-26); from a
+      standing start it pushes you back. Ride down the slope too: the bike should hug the stairs, not fly off the top.
 - [ ] Emerald, the **Acro Bike**: tap sneak (a wheelie standing), hold sneak about a second (a bunny hop in place), sneak +
       W (a wheelie ride), sneak with a new direction (a side jump), sneak with the opposite direction (a turn jump), a
       wheelie into a ledge (hopped over). Route 119's rails: hop along them (the game here stopped at the rail's end:

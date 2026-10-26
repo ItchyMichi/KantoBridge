@@ -30,6 +30,11 @@ was reverted). Every other ride in B5 and B7 had 0 complaints.
   when the floor ahead rises more than step-up allows, so collision resolves the lift first and the forward move clears the
   stairs; the server re-simulates the same move. Bars: the Mach up Route 111 (29, 11) to (29, 3) with 0 "moved wrongly",
   0 stuck, lag at most 1; walkers and the other rides unchanged.
+- **Done 2026-10-26** (BIKE_CLIMB_PLAN.md C1-C4; PROGRESS "The bike", "The climb"): in the entity rather than the mover,
+  since step-up keeps the first (lowest) candidate step and a client-side lift alone would leave the server's own move
+  short: `BikeEntity.move` lifts the move onto the step colliders' top along its path when that is more than the step-up
+  (`BikeClimb`; stairs only, at most 5 blocks), and follows stairs down under the move's end; both sides run it. The bars
+  were met three times (lag 1, 0 complaints, 0 stuck, ends in (29, 3)); the slope ridden down too (19 cells, lag 1).
 
 **A2. Route 119's rails.** The engine (Gen1Recomp v0.3.85) lets the Acro hop once, to (10, 7), then stops at the rail;
 across the rail from (11, 6) is refused; the Mach stops there too. B0's other start under a rail, (5, 12), is a cell the

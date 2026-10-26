@@ -3788,7 +3788,8 @@ minutes); **kb-dev50** (qjtrqukmu5lp52, cpu3g x8 32 GB, $0.32/hr) ran B0 and B1.
   - **Route 111's muddy slope at full Mach speed:** the engine climbs it; the Minecraft bike falls behind (lag 4 cells,
     the server's "moved wrongly" 8-9 times, the stuck fallback once). A full-block step didn't help; most likely the built
     climb there (a walker is pushed back, so it was never built to be ridden up). Needs a builder or world change, which
-    this plan leaves alone (§2.8).
+    this plan leaves alone (§2.8). **Fixed later the same day** (BIKE_FOLLOWUPS A1, "The climb" below): the bike lifts
+    itself up the stairs before each move; no world change.
   - **Route 119's rails:** in Gen1Recomp v0.3.85 the Acro's hop stops at the rail's end (one hop, from both directions
     tried); not a bridge matter (D5). A play-test item.
   - **The feel:** key to motion 0.26-0.38 s on the pod's 10-fps software client (above the plan's 150 ms); the real feel
@@ -3831,6 +3832,37 @@ minutes); **kb-dev50** (qjtrqukmu5lp52, cpu3g x8 32 GB, $0.32/hr) ran B0 and B1.
     teleports, 0 server complaints; Blue's Cycling Road steer had mispredicted twice in a first run (the engine rolls a
     released braked bike downhill), so nothing is predicted on a slope now: 0 predicted there in the second run; the Route 16
     gate rides predicted and confirmed 1 each.
+
+- **The climb, BIKE_FOLLOWUPS A1** (2026-10-26, specs/BIKE_CLIMB_PLAN.md C1-C4; commits d11b318, b295ed6 and the two
+  after). The A1 check (b8bd649) had found the cause: Route 111's muddy slope is two ramp cells of step colliders rising
+  1.5 blocks per block, and the Mach's 1.5 blocks a tick need about 2.25 blocks of climb a tick where step-up gives 0.6.
+  Reading `Entity.collide` added why a bigger step can't help: step-up tries the colliders' tops lowest first and keeps the
+  first that gains ground, so on half-block stairs a tick gains a third of a block whatever `maxUpStep` is. The fix is in
+  the entity, on both sides: `BikeEntity.move` (new `BikeClimb`) finds the step colliders along the move's path (and
+  nothing else: a bike wall, a ledge or a plain wall is never ridden up), sweeps the path's box down onto their highest
+  top, and when that stands more than the step-up over the feet (at most 5 blocks: a catch-up tick's 4.5 and a half step)
+  lifts the move to it before `super.move`: Minecraft resolves the vertical first, the forward pass clears the steps and
+  gravity lands the bike on its stair; a hop's own lift stays when larger. The server's `handleMoveVehicle` re-simulates
+  the packet through the same override from the same start and end, so it lands where the client did and "moved wrongly"
+  can't fire. C3, the way down: stairs under the move's end lower than the feet by more than the step (and at most 5) are
+  followed, the forward move first and then the drop, so the bike hugs the slope instead of flying off it (a hop is never
+  pulled down; a cliff isn't stairs). Tests: BikeClimbTest 6 (the lift, the drop, a cliff, a hop, no stairs); RideGameTests
+  +2 (an outdoor stairs cell as the builder lays it: the Mach's 1.5 a tick on the plateau in two ticks and each tick on its
+  stair, the Acro's 0.75 in four, the way down at the Mach's speed not lifted and at the push-back speed set down on the
+  stairs; a cave's stairs in two ticks; a plain two-block wall not ridden; a walker on the stairs stalls as before).
+  Checkpoint: GameTests 143/143 twice, JUnit per package 1,507 (1 failing: KbPackReloadTest, E1, as before); pytest not
+  rerun (no Python under test changed). Pod kb-dev49 (hdneg2aj34eulb, cpu3g x8, $0.32/hr) 19:53-20:28 UTC, about $0.19.
+  - **The real engine** (`bike_ride.py`, Emerald on LandSky6, the pod's software client at about 10 fps):
+
+    | Ride (keys) | Engine steps | Lag max | Server (moved wrongly / too quickly / stuck) | Ends in the hidden cell |
+    |---|---|---|---|---|
+    | Mach up the muddy slope, (29, 11) W (3 runs) | 8: 16, 8, 4 ×6 to (29, 3) | 1, 1, 1 | 0 / 0 / 0 | yes (was: lag 4, 8-9 / 0 / 1, no) |
+    | Mach down it, (29, 3) W facing down (new ride `muddy_slope_down`) | 19: 16, 8, 4, 8, 8 (the slope's cells), 16, 8, 4 ×12 to (29, 22) | 1, 1 | 0 / 0 / 0 | yes |
+    | Mach lane, wheelie, side jump, rail hops, crack, ledge hop, deck end to end | as B5/B7 (the deck 4 then 9 cells: the road's moving triathletes) | ≤ 2 | 0 / 0 / 0 | yes |
+
+    The walkers' muddy-slope field spot (the driver picks Granite Cave B1F's flat one) passes; Route 111's walkers are
+    covered by the GameTest (nothing of this runs for a player). Videos `/workspace/reports/c2/slope.mp4` and
+    `/workspace/reports/c3/slope_down.mp4` (sent to the user). Not pushed.
 
 ## Water and bridges (2026-10-25, specs/WATER_AND_BRIDGES_PLAN.md)
 
