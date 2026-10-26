@@ -358,6 +358,11 @@ return function(game)
           if cmd.flash then w.flashUsed = true end
           -- FA6 (the field audit's spots): the vehicle the spot needs (World:applyPlayerState, World.lua:6029)
           if cmd.vehicle == "surf" or cmd.vehicle == "bike" then pcall(w.applyPlayerState, w, cmd.vehicle) end
+          -- BIKE_PLAN B6/B7: the Bicycle in the pack (give_bike = true), for the Bicycle key
+          if cmd.give_bike and type(game.save) == "table" then
+            game.save.inventory = type(game.save.inventory) == "table" and game.save.inventory or {}
+            if (tonumber(game.save.inventory.BICYCLE) or 0) < 1 then game.save.inventory.BICYCLE = 1 end
+          end
           local dark = type(w.map.def) == "table" and w.map.def.palette == "PALETTE_DARK"
           print(("KB_SPOT id=%s map=%s x=%s y=%s blocks=%d dark=%s flash=%s halted=%s held=%s busy=%s"):format(
             word(cmd.id), word(w.map.id), word(w.player.cellX), word(w.player.cellY), changedBlocks(w),

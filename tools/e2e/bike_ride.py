@@ -24,13 +24,33 @@ sys.path.insert(0, str(HERE))
 sys.path.insert(0, str(HERE.parent))
 
 from bike_bridge import sweep_rows  # noqa: E402
+from bike_bridge12 import go_line  # noqa: E402
 from bike_follow import Sampler, facts, lag_cells, line_time  # noqa: E402
-from field_spots import GRADLE_DIR, SAVES, client_command, inside, lua_go, stream, wait_spot  # noqa: E402
+from field_spots import GAMES, GRADLE_DIR, SAVES, client_command, inside, lua_go, stream, wait_spot  # noqa: E402
 from run_gen1recomp import REPORTS, launch  # noqa: E402
 from story_video import Pilot, Stuck, make_home, say  # noqa: E402
 
-PORT = 27255
-DIR_KEY = {"up": "forward"}
+PORTS = {"emerald": 27255, "blue": 27258, "crystal": 27259}
+
+
+def rides12(game: str) -> list[dict]:
+    """B6: Blue's and Crystal's Cycling Road (the roll, steering, the brake, the Bicycle key refused on the road) and Route
+    16 (the key off and on, a ride into the gate)."""
+    if game == "blue":
+        road, gate = ("ROUTE_17", 9, 57), ("ROUTE_16", 16, 10, "right")
+    else:
+        rows = sweep_rows("cycling_road", ("ROUTE_17",), "g2") or sweep_rows("cycling_road_roll", ("ROUTE_17",), "g2")
+        r = rows[0] if rows else {"x": 10, "y": 40}
+        road, gate = ("ROUTE_17", r["x"], r["y"]), ("ROUTE_16", 9, 6, "right")
+    base = {"map": road[0], "x": road[1], "y": road[2], "facing": "down", "vehicle": "bike", "give": True}
+    return [
+        dict(base, name="roll", keys=[([], 60)]),
+        dict(base, name="steer", keys=[(["strafe_left"], 6), ([], 20), (["strafe_right"], 6), ([], 20)]),
+        dict(base, name="brake", keys=[(["sneak"], 50), ([], 20)]),
+        dict(base, name="key_on_the_road", keys=[(["bicycle"], 2), ([], 30)]),
+        {"name": "key_off_on_and_the_gate", "map": gate[0], "x": gate[1], "y": gate[2], "facing": gate[3], "vehicle": "bike",
+         "give": True, "keys": [(["bicycle"], 2), ([], 50), (["bicycle"], 2), ([], 60), (["forward"], 40)]},
+    ]
 
 
 def rides(ledge: dict | None) -> list[dict]:
@@ -62,33 +82,40 @@ def rides(ledge: dict | None) -> list[dict]:
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--world", default="LandSky6")
+    ap.add_argument("--game", default="emerald", choices=sorted(PORTS))
     ap.add_argument("--record")
     ap.add_argument("--only", default="")
     a = ap.parse_args(argv)
     only = set(filter(None, a.only.split(",")))
-    ledges = sweep_rows("ledge_jump", ("EM_ROUTE111",)) or sweep_rows("ledge_jump", ("EM_ROUTE110", "EM_ROUTE112", "EM_ROUTE113"))
-    plan = [r for r in rides(ledges[0] if ledges else None) if not only or r["name"] in only]
-    world = a.world + "RideG3"
+    g = GAMES[a.game]
+    PORT = PORTS[a.game]
+    if a.game == "emerald":
+        ledges = sweep_rows("ledge_jump", ("EM_ROUTE111",)) or sweep_rows("ledge_jump", ("EM_ROUTE110", "EM_ROUTE112", "EM_ROUTE113"))
+        plan = rides(ledges[0] if ledges else None)
+    else:
+        plan = rides12(a.game)
+    plan = [r for r in plan if not only or r["name"] in only]
+    world = a.world + "Ride" + g["prefix"].upper()
     if (SAVES / world).exists():
         shutil.rmtree(SAVES / world)
     shutil.copytree(SAVES / a.world, SAVES / world)
-    pilot_dir = REPORTS / "bike_ride_g3"
+    pilot_dir = REPORTS / f"bike_ride_{g['prefix']}"
     pilot_dir.mkdir(parents=True, exist_ok=True)
-    home = make_home("bike_ride_g3", "emerald")
+    home = make_home(f"bike_ride_{g['prefix']}", a.game)
     env = {"KB_DATASET_MEMO": "30", "KB_PACE": "60", "KB_DRIVER_SECONDS": "3600"}
-    with launch("kb_union_off.lua", game="emerald", install=home, echo=False, extra_env=env) as off:
+    with launch("kb_union_off.lua", game=a.game, install=home, echo=False, extra_env=env) as off:
         say("union off:", off.wait(timeout=180).marker("KB_UNION_OFF"))
     commands = pilot_dir / "game_commands.lua"
     commands.write_text("", encoding="utf-8")
     pilot = Pilot(pilot_dir)
-    run = launch("kb_g3spots.lua", game="emerald", install=home, echo=False,
+    run = launch(g["driver"], game=a.game, install=home, echo=False,
                  extra_env=dict(env, KB_TEST_PORT=str(PORT), KB_SPOT_COMMANDS=str(commands)))
     client = None
     sampler = None
     report = {"rides": []}
     try:
-        say("emerald:", run.wait_marker("KB_SERVING", timeout=300))
-        client = subprocess.Popen(client_command("emerald", world, pilot_dir, PORT), cwd=GRADLE_DIR,
+        say(a.game + ":", run.wait_marker("KB_SERVING", timeout=300))
+        client = subprocess.Popen(client_command(a.game, world, pilot_dir, PORT), cwd=GRADLE_DIR,
                                   env=dict(os.environ, JAVA_HOME=os.environ.get("KB_JAVA_HOME") or "/opt/java/openjdk"),
                                   stdin=subprocess.DEVNULL, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
         client_log = pilot_dir / "client.log"
@@ -98,10 +125,11 @@ def main(argv=None) -> int:
             if time.monotonic() > deadline or client.poll() is not None:
                 raise Stuck("the client never reached the world")
             time.sleep(1.0)
-        say("follow:", pilot.do("follow", game="emerald").get("ok"))
+        say("follow:", pilot.do("follow", game=a.game).get("ok"))
         time.sleep(15)
-        with open(commands, "a", encoding="utf-8") as f:
-            f.write('{ id = 90, op = "sight", on = false }\n')
+        if a.game == "emerald":
+            with open(commands, "a", encoding="utf-8") as f:
+                f.write('{ id = 90, op = "sight", on = false }\n')
         sampler = Sampler(pilot)
         if a.record:
             pilot.do("record", file=a.record, timeout=30)
@@ -109,7 +137,13 @@ def main(argv=None) -> int:
         for r in plan:
             n += 1
             with open(commands, "a", encoding="utf-8") as f:
-                f.write(lua_go(n, "emerald", {"map": r["map"], "x": r["x"], "y": r["y"], "dir": r["facing"], "vehicle": r["vehicle"]}) + "\n")
+                if a.game == "emerald":
+                    line = lua_go(n, "emerald", {"map": r["map"], "x": r["x"], "y": r["y"], "dir": r["facing"], "vehicle": r["vehicle"]})
+                    if r.get("give"):
+                        line = line[:-2] + ', give_bike = "' + ("ACRO_BIKE" if r["vehicle"] == "acro" else "MACH_BIKE") + '" }'
+                else:
+                    line = go_line(n, a.game, r["map"], r["x"], r["y"], r["facing"], r["vehicle"], r.get("give", False))
+                f.write(line + "\n")
             spot = wait_spot(run, n)
             deadline = time.monotonic() + 45
             st = pilot.state()
@@ -125,13 +159,19 @@ def main(argv=None) -> int:
             n += 1
             total = sum(t for _, t in r["keys"]) * 3 + 150
             n0 = len(run.result.lines)
-            with open(commands, "a", encoding="utf-8") as f:
-                f.write(f'{{ id = {n}, op = "trace", frames = {total} }}\n')
-            line_time(run, n0, f"KB_RT f=", 5)
+            if a.game == "emerald":
+                with open(commands, "a", encoding="utf-8") as f:
+                    f.write(f'{{ id = {n}, op = "trace", frames = {total} }}\n')
+                line_time(run, n0, f"KB_RT f=", 5)
             t_key = time.monotonic()
             for keys, ticks in r["keys"]:
-                pilot.do("keys", keys=keys, hold=ticks, timeout=30 + ticks / 10)
-            t_end, end_line, _ = line_time(run, n0, f"KB_TRACE_END id={n} ", total / 60 + 30)
+                if keys:
+                    pilot.do("keys", keys=keys, hold=ticks, timeout=30 + ticks / 10)
+                else:
+                    time.sleep(ticks / 20)
+            end_line = None
+            if a.game == "emerald":
+                t_end, end_line, _ = line_time(run, n0, f"KB_TRACE_END id={n} ", total / 60 + 30)
             time.sleep(2.0)
             after = pilot.state()
             m1 = after.get("move") or {}
@@ -182,9 +222,10 @@ def main(argv=None) -> int:
                 client.kill()
         run.kill()
         run.wait(timeout=30)
-        (pilot_dir / "emerald.log").write_text("\n".join(run.result.lines) + "\n", encoding="utf-8")
-    (REPORTS / "g3_bike_ride.json").write_text(json.dumps(report, indent=1, sort_keys=True), encoding="utf-8")
-    say("== report", REPORTS / "g3_bike_ride.json")
+        (pilot_dir / f"{a.game}.log").write_text("\n".join(run.result.lines) + "\n", encoding="utf-8")
+    out = REPORTS / f"{g['prefix']}_bike_ride.json"
+    out.write_text(json.dumps(report, indent=1, sort_keys=True), encoding="utf-8")
+    say("== report", out)
     return 0
 
 

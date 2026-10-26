@@ -360,6 +360,11 @@ return function(game)
             ow.player.surfing = false
             game.save.onBike = true
           end
+          -- BIKE_PLAN B6/B7: the Bicycle in the bag (give_bike = true), for the Bicycle key
+          if cmd.give_bike and type(game.save) == "table" then
+            game.save.inventory = type(game.save.inventory) == "table" and game.save.inventory or {}
+            if (tonumber(game.save.inventory.BICYCLE) or 0) < 1 then game.save.inventory.BICYCLE = 1 end
+          end
           print(("KB_SPOT id=%s map=%s x=%s y=%s blocks=%d dark=%s flash=%s halted=%s"):format(
             word(cmd.id), word(ow and ow.map.id), word(ow and ow.player.cellX), word(ow and ow.player.cellY),
             ow and changedBlocks(ow) or -1, tostring(ow and ow.dark == true), tostring(game.save.flashLit == true),

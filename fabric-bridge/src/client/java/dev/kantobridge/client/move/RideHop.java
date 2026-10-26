@@ -18,8 +18,8 @@ import dev.kantobridge.entity.BikeEntity;
  * </ul>
  */
 public final class RideHop {
-	public static final double LOW = 0.25;
-	public static final double NORMAL = 0.3;
+	public static final double LOW = 0.22;
+	public static final double NORMAL = 0.27;
 	public static final double HIGH = 0.42;
 	public static final int STANDING_HOP_TICKS = 6;
 

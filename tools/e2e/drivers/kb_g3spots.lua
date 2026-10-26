@@ -600,6 +600,15 @@ return function(game)
             P.bikeType = P.biking and cmd.vehicle or nil
             if sess then sess.biking, sess.bikeType = P.biking, P.bikeType end
           end
+          -- BIKE_PLAN B6/B7: the bike in the bag (give_bike = "MACH_BIKE" or "ACRO_BIKE"), for the Bicycle key
+          if cmd.give_bike and sess and type(sess.bag) == "table" then
+            local Constants = mod3("constants")
+            local okC, C = pcall(function() return Constants.of(version()) end)
+            C = okC and C or nil
+            local Bag = mod3("bag")
+            local id = C and C.id and C.id(C, "items", "ITEM_" .. tostring(cmd.give_bike)) or nil
+            if Bag and id and (tonumber(Bag.get(sess.bag, id)) or 0) < 1 then pcall(Bag.add, sess.bag, id, 1) end
+          end
           local R = mod3("field_weather_rse")
           local FV = mod3("field_view")
           print(("KB_SPOT id=%s map=%s x=%s y=%s cells=%d weather=%s drawn=%s flash=%s halted=%s"):format(

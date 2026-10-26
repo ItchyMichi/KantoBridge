@@ -60,12 +60,12 @@ def states(msgs):
             for m in msgs if m["type"] == "player.state"]
 
 
-def sweep_rows(cls: str, maps: tuple[str, ...]) -> list[dict]:
+def sweep_rows(cls: str, maps: tuple[str, ...], prefix: str = "g3") -> list[dict]:
     """Rows of the earlier field sweep (FA5) of a class on those maps: start cell, direction, end (cells only)."""
     out = []
-    for af in sorted(REPORTS.glob("g3_field_sweep_analysis_*.json")):
-        tag = af.name[len("g3_field_sweep_analysis"):-len(".json")]
-        sf = REPORTS / f"g3_field_sweep{tag}.json"
+    for af in sorted(REPORTS.glob(f"{prefix}_field_sweep_analysis_*.json")):
+        tag = af.name[len(f"{prefix}_field_sweep_analysis"):-len(".json")]
+        sf = REPORTS / f"{prefix}_field_sweep{tag}.json"
         if not sf.is_file():
             continue
         recs = {r["n"]: r for r in json.loads(sf.read_text(encoding="utf-8"))["rows"]}
@@ -140,11 +140,11 @@ async def b5(run, commands: Path) -> dict:
         # the Cycling Road challenge counts a bump
         spot = await asyncio.to_thread(go, "EM_ROUTE110", "mach", 4, 12, "up")
         cid = lua('{ id = ID, op = "challenge", begin = true }')
-        before = await asyncio.to_thread(run.wait_marker, f"KB_CHALLENGE id={cid} ", 10)
+        before = await asyncio.to_thread(run.wait_marker, f"KB_CHALLENGE id={cid}", 20)
         bump = await ride("up", False, 1.5)
         await ride(None, False, 0.8)
         cid = lua('{ id = ID, op = "challenge" }')
-        after = await asyncio.to_thread(run.wait_marker, f"KB_CHALLENGE id={cid} ", 10)
+        after = await asyncio.to_thread(run.wait_marker, f"KB_CHALLENGE id={cid}", 20)
         report["challenge"] = {"before": before, "after": after, "bumps": sum(1 for x in bump if x["type"] == "player.blocked")}
         say("challenge:", before, "->", after)
     finally:

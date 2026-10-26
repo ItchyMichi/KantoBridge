@@ -105,9 +105,10 @@ def main(argv=None) -> int:
                    "ride": st.get("ride")}
             time.sleep(4)
             shots = []
-            for view, cam, look in (("first", "first", facing), ("behind", "third", facing), ("side", "third", SIDE[facing])):
+            for view, cam, look, pitch in (("first", "first", facing, 55), ("side", "third", SIDE[facing], 15),
+                                           ("other_side", "third", SIDE[SIDE[SIDE[facing]]], 15)):
                 pilot.do("camera", mode=cam, hud=False)
-                pilot.do("face", dir=look, pitch=25 if view == "first" else 10)
+                pilot.do("face", dir=look, pitch=pitch)
                 time.sleep(2.5)
                 p = out / f"{a.game}_{label}_{view}.png"
                 if grab(display, p, False):

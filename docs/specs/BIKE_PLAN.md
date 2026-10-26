@@ -452,3 +452,9 @@ Numbers only; the reasons and the choices are in PROGRESS.md "The bike".
 - **B2:** client ride input and controller; RideInputTest 7, RideControllerTest 7, StoryStateMessagesTest +2.
 - **B3 (checkpoint):** BikeEntity, Bikes, the mixin, the bike wall's bike shape; RideGameTests 6, BikesTest 1. JUnit 1,485
   (1 failing before this plan too), GameTests 141/141, pytest 2,442.
+- **B4:** model, renderer, 3 textures; BikeModelTest 4; 9 pictures (Mach, Acro, Blue's bike; first person and both sides),
+  3 of 3 seated.
+- **B5:** engine via `move.ride`: the wheelie's ledge hop (32 frames, high); the muddy slope climbed at full speed, pushed
+  back slower; the crack held at full speed, fallen through slower; challenge collisions 0 -> 6; rails: one hop, then
+  stopped (the engine). Real client from keys: 8 of 9 rides end in the hidden cell (the muddy slope: lag 4, 9 "moved
+  wrongly", 1 stuck); Mach key-to-motion 360 ms (software client at 10 fps).

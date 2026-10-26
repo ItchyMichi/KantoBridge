@@ -3563,6 +3563,64 @@ minutes); **kb-dev50** (qjtrqukmu5lp52, cpu3g x8 32 GB, $0.32/hr) ran B0 and B1.
     pytest 2,442. The first GameTest run failed 2: the bike wall above, and MultiplayerGameTests' relay test (a synthetic
     state with surf and bike both on seated its player, whose warp then landed on a bike): surfers are never seated now.
 
+- **B4 the look.** `BikeModel` (cuboids: two 8-unit wheels, a frame of tubes, a saddle, a fork, a stem and a bar; the Mach
+  a low bar, the Acro a low frame, a high bar and pegs on both hubs, the plain bike an upright frame and a tall seat),
+  three 64 × 32 textures drawn by `tools/bike_textures.py` (hand-picked colours: the Mach red, the Acro green with yellow
+  hubs, the plain bike blue; nothing from a game; a resource pack replaces `textures/entity/bike_{mach,acro,plain}.png`),
+  `BikeRenderer` (the wheels turn with the distance rolled, drawn in first person too), `RideRuntime` (the layers and the
+  renderer). Tests: BikeModelTest 4. Pod (`tools/e2e/bike_shots.py`, LandSky6): the client seated on Emerald's Mach and Acro
+  (Route 110 (4, 41), (4, 36)) and Blue's bike (Route 1), 9 pictures, 3 of 3 seated; the sheet went to the user. Seen
+  there: in first person the bar and the stem show under the camera; the wheels' 8-pixel discs read a little square.
+- **B5 tricks, hops and the collide** (engine half; `tools/e2e/bike_bridge.py --b5`, a test session sending `move.ride`):
+
+  | Case | Steps the engine took (cell, kind, frames, jump) | Result |
+  |---|---|---|
+  | Acro hops at Route 119's rail (from (10, 8) up) | (10, 7) bike 16 low | 1 hop, then stops at the rail (10, 6) |
+  | Acro hops across the rail (from (11, 6) left) | none | refused |
+  | Mach at the rail | (10, 7) bike 16 | stops at the rail |
+  | Acro wheelie at Route 111's ledge (19, 12) right | (21, 12) ledge 32 high, then (22, 12), (23, 12) bike 16 low | hopped over |
+  | Mach at the same ledge | (21, 12) ledge 32 high, (22, 12) 16, (23, 12) 8 | the ledge jump |
+  | Mach up Route 111's muddy slope from (29, 11) | 16, 8, then 4 frames to (29, 3) | climbed at full speed |
+  | Mach up the slope from (29, 8), Acro the same | (29, 7) then pushed back to (29, 8) (`slope` 8), over and over | refused slower |
+  | Mach over Granite Cave B1F's crack from (14, 1) | (15, 1) bike 16, then a warp to B2F | fell through |
+  | Mach from (9, 1), a run-up of 3 cells | 16, 8, then 4 frames to (22, 1) | held at full speed |
+  | Cycling Road challenge (begun by the driver), Mach into a wall | 6 bumps | collisions 0 -> 6 |
+
+  - The rails: in this engine (v0.3.85) the Acro's hop does not mount Route 119's rail from its end at (10, 7); B0's
+    other start (5, 12) is a cell the client can't reach. Left as the engine's behaviour (D5: collision is the engine's);
+    a play-test item.
+  - Hop lifts tuned to land within their legs (gravity 0.08, drag 0.98): low 0.22 (5 ticks), normal 0.27 (6), high 0.42
+    (10). RideHopTest 3, BikeModelTest's RideLook checks (the wheelie's 35°, the standing hop's arc, the jolt).
+  - **The real client** (`tools/e2e/bike_ride.py`: the pilot holds Minecraft's movement keys, sneak and jump; the driver
+    traces the engine meanwhile):
+
+    | Ride (keys) | Engine steps | Key to the seat's first motion | Lag max (cells) | Client in the hidden cell |
+    |---|---|---|---|---|
+    | Mach (W) | 30: 16, 8, then 4 ×28 | 360 ms | 2 | yes |
+    | Acro wheelie (sneak, then W + sneak) | 25: 8 ×17 (wheelie), 6 ×8 | 965 ms (the B tap's wait first) | 1 | yes |
+    | Bunny hop (sneak held 70 ticks) | none; acroState 2 then 3 | - | 0 | yes |
+    | Side jump (D + sneak, 3 ticks) | 1: 16 frames, `jump` normal | 378 ms | 1 | yes |
+    | Jump key as B (70 ticks) | none; acroState 2 then 3 | - | 0 | yes |
+    | Route 119's rail (sneak, then W + sneak) | 1 (to (10, 7)), then stopped | - | 1 | yes |
+    | Route 111's muddy slope (W from (29, 11)) | 8: 16, 8, 4 ×6, to (29, 3) | 303 ms | 4 | **no** |
+    | Granite Cave B1F's crack (W from (9, 1)) | 13: 16, 8, 4 ×11; fell at the stop to B2F (22, 1) | 377 ms | 2 | yes |
+    | Route 111's ledge (sneak, then W + sneak) | ledge 32 `high`, then 8, 8 | - | 2 | yes |
+
+    The server answered "moved wrongly" 9 times and the mover's stuck fallback fired once, all during the muddy slope's
+    climb (0.33 blocks each: the server's own move of the bike stopped where the client's went on); "moved too quickly" 0.
+    **Open:** the muddy slope's built climb doesn't let the bike follow the engine at 4 frames a cell. Video
+    `/workspace/videos/bike/b5_tricks.mp4` (sent shrunk, 6.6 MB).
+- **B6 Blue and Crystal** (engine half; `tools/e2e/bike_bridge12.py`):
+  - Blue, Route 17 from (9, 57): the roll `slope` 8 frames a cell (5 cells in 2 s); a held left steps across, (8, 62) `bike`
+    16, then the roll goes on; **B held: no step in 1.5 s** (the brake: FA K4 closed); `act.field{bicycle}` on the road
+    gets off (`ok`: the spots driver's warp doesn't set the gate's forced-bike flag, so `not_here` isn't reproduced
+    there); Route 16 (16, 10): off and on from the bag, then a held right rides into the gate (warp to ROUTE_16_GATE_1F,
+    the engine walks the player on).
+  - Crystal, Route 17 from (2, 2) (a held left from the arrival keeps the biker at the top: a held direction wins over the
+    roll): the roll `slope` 8 frames a cell; a held right steps across (x 1 -> 3); B held: the roll goes on (Crystal has no
+    brake); getting off while rolling `not_idle`; on Route 16 (9, 6) off `not_here`; a held right towards the gate took
+    no step (not resolved: the engine refused it or a script held the field).
+
 ## Water and bridges (2026-10-25, specs/WATER_AND_BRIDGES_PLAN.md)
 
 Run unattended (the user travelling; defaults D1-D11, choices recorded here). Pods: kb-dev51 (cpu3m x4, $0.22/hr) for
