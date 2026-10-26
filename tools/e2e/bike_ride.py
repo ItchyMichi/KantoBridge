@@ -103,6 +103,45 @@ def rides_e2e() -> list[dict]:
     return out
 
 
+# STEP_SPEED_PLAN S5: open starts on foot (the S0 staircase's square, tools/e2e/step_speed.py's probe), facing up
+WALK_STARTS = {"blue": ("ROUTE_1", 8, 20), "crystal": ("ROUTE_29", 30, 10), "emerald": ("EM_ROUTE102", 20, 10)}
+
+
+def walks(game: str, start: tuple, speeds=(100, 200)) -> list[dict]:
+    """S5: W + D held on foot (a 45° walk), facing north then south in turn so the walk goes north-east and back south-west
+    inside the start's open square (step_speed.py's staircase), at each STEP SPEED; Emerald again with sprint (B: the
+    running shoes; Minecraft sprints only forward, hence the camera turns)."""
+    m, x, y = start
+    out = []
+
+    def legs(keys, ticks, n):
+        seq = []
+        for i in range(n):
+            seq += [("face:" + ("up" if i % 2 == 0 else "down"), 0), (keys, ticks)]
+        return seq
+
+    for pct in speeds:
+        base = {"map": m, "x": x, "y": y, "facing": "up", "vehicle": None, "speed": pct, "walk": True}
+        out.append(dict(base, name=f"diagonal_{pct}", keys=legs(["forward", "strafe_right"], 34, 8)))
+        if game == "emerald":
+            out.append(dict(base, name=f"diagonal_run_{pct}", keys=legs(["forward", "strafe_right", "sprint"], 17, 12)))
+    return out
+
+
+def walk_start(game: str, given: str | None) -> tuple:
+    if given:
+        m, x, y = given.split(":")
+        return m, int(x), int(y)
+    rep = REPORTS / f"step_speed_{game}_s4.json"
+    if not rep.is_file():
+        rep = REPORTS / f"step_speed_{game}_s0.json"
+    if rep.is_file():
+        found = (json.loads(rep.read_text(encoding="utf-8")).get("probe") or {}).get("found")
+        if found:
+            return tuple(found)
+    return WALK_STARTS[game]
+
+
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--world", default="LandSky6")
@@ -110,11 +149,16 @@ def main(argv=None) -> int:
     ap.add_argument("--record")
     ap.add_argument("--only", default="")
     ap.add_argument("--e2e", action="store_true", help="B7: the end-to-end spots too (Emerald)")
+    ap.add_argument("--walk-diagonal", action="store_true",
+                    help="STEP_SPEED_PLAN S5: on foot, W + D held 20 s at STEP SPEED 1X then 2X (F7's counters)")
+    ap.add_argument("--walk-start", help="MAP:X:Y for --walk-diagonal (default: step_speed.py's probe)")
     a = ap.parse_args(argv)
     only = set(filter(None, a.only.split(",")))
     g = GAMES[a.game]
     PORT = PORTS[a.game]
-    if a.game == "emerald":
+    if a.walk_diagonal:
+        plan = walks(a.game, walk_start(a.game, a.walk_start))
+    elif a.game == "emerald":
         ledges = sweep_rows("ledge_jump", ("EM_ROUTE111",)) or sweep_rows("ledge_jump", ("EM_ROUTE110", "EM_ROUTE112", "EM_ROUTE113"))
         plan = rides(ledges[0] if ledges else None) + (rides_e2e() if a.e2e else [])
     else:
@@ -124,7 +168,7 @@ def main(argv=None) -> int:
     if (SAVES / world).exists():
         shutil.rmtree(SAVES / world)
     shutil.copytree(SAVES / a.world, SAVES / world)
-    pilot_dir = REPORTS / f"bike_ride_{g['prefix']}"
+    pilot_dir = REPORTS / (f"walk_diagonal_{g['prefix']}" if a.walk_diagonal else f"bike_ride_{g['prefix']}")
     pilot_dir.mkdir(parents=True, exist_ok=True)
     home = make_home(f"bike_ride_{g['prefix']}", a.game)
     env = {"KB_DATASET_MEMO": "30", "KB_PACE": "60", "KB_DRIVER_SECONDS": "3600"}
@@ -166,9 +210,19 @@ def main(argv=None) -> int:
                 # keys held from before the arrival (the pilot holds them while the rest waits)
                 pilot.send("keys", keys=r["pre"][0], hold=r["pre"][1])
                 pre_end = time.monotonic() + r["pre"][1] / 20 + 0.5
+            if r.get("speed"):
+                # STEP_SPEED_PLAN S5: STEP SPEED for this walk (the spots driver's speed op)
+                n += 1
+                with open(commands, "a", encoding="utf-8") as f:
+                    f.write(f'{{ id = {n}, op = "speed", pct = {r["speed"]} }}\n')
+                run.wait_marker(f"KB_SPEED id={n}", 30)
+                n += 1
             with open(commands, "a", encoding="utf-8") as f:
                 if a.game == "emerald":
                     line = lua_go(n, "emerald", {"map": r["map"], "x": r["x"], "y": r["y"], "dir": r["facing"], "vehicle": r["vehicle"]})
+                    if r.get("walk"):
+                        # STEP_SPEED_PLAN S5: the running shoes (FLAG_SYS_B_DASH), so sprint (B) runs
+                        line = line.replace("flags = { }", "flags = { [2240] = true }", 1)
                     if r.get("give"):
                         line = line[:-2] + ', give_bike = "' + ("ACRO_BIKE" if r["vehicle"] == "acro" else "MACH_BIKE") + '" }'
                 else:
@@ -177,7 +231,7 @@ def main(argv=None) -> int:
             spot = wait_spot(run, n)
             deadline = time.monotonic() + 45
             st = pilot.state()
-            while time.monotonic() < deadline and not (st.get("ride") and inside(st)):
+            while time.monotonic() < deadline and not ((st.get("ride") or r.get("walk")) and inside(st)):
                 time.sleep(0.3)
                 st = pilot.state()
             seated = bool(st.get("ride"))
@@ -196,7 +250,9 @@ def main(argv=None) -> int:
             time.sleep(max(0.0, pre_end - time.monotonic()))  # the pre-held keys let go of first
             t_key = time.monotonic()
             for keys, ticks in r["keys"]:
-                if keys:
+                if isinstance(keys, str) and keys.startswith("face:"):
+                    pilot.do("face", dir=keys[5:], pitch=20)
+                elif keys:
                     pilot.do("keys", keys=keys, hold=ticks, timeout=30 + ticks / 10)
                 else:
                     time.sleep(ticks / 20)
@@ -219,7 +275,7 @@ def main(argv=None) -> int:
                     lags.append(lag)
             rt = [facts(x) for x in run.result.lines[n0:] if x.startswith("KB_RT")]
             starts = [f for i, f in enumerate(rt) if f.get("mv") == "1" and (i == 0 or rt[i - 1].get("t") != f.get("t") or rt[i - 1].get("mv") != "1")]
-            res = {"name": r["name"], "seated": seated, "start": [spot.get("map"), spot.get("x"), spot.get("y")],
+            res = {"name": r["name"], "seated": seated, "speed": r.get("speed"), "start": [spot.get("map"), spot.get("x"), spot.get("y")],
                    "end": facts(end_line) if end_line else None,
                    "engine_steps": [(f.get("sf"), f.get("j")) for f in starts],
                    "tricks": sorted({f.get("as") for f in rt}),
@@ -254,7 +310,7 @@ def main(argv=None) -> int:
         run.kill()
         run.wait(timeout=30)
         (pilot_dir / f"{a.game}.log").write_text("\n".join(run.result.lines) + "\n", encoding="utf-8")
-    out = REPORTS / f"{g['prefix']}_bike_ride.json"
+    out = REPORTS / (f"{g['prefix']}_walk_diagonal.json" if a.walk_diagonal else f"{g['prefix']}_bike_ride.json")
     out.write_text(json.dumps(report, indent=1, sort_keys=True), encoding="utf-8")
     say("== report", out)
     return 0
