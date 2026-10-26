@@ -42,7 +42,10 @@ def rides12(game: str) -> list[dict]:
         rows = sweep_rows("cycling_road", ("ROUTE_17",), "g2") or sweep_rows("cycling_road_roll", ("ROUTE_17",), "g2")
         r = rows[0] if rows else {"x": 10, "y": 40}
         road, gate = ("ROUTE_17", r["x"], r["y"]), ("ROUTE_16", 9, 6, "right")
-    base = {"map": road[0], "x": road[1], "y": road[2], "facing": "down", "vehicle": "bike", "give": True}
+    # held from before the arrival, so the road doesn't roll the biker down while the driver waits for the field to settle:
+    # Blue's brake (B), Crystal's held direction (it wins over the roll)
+    pre = (["sneak"], 120) if game == "blue" else (["strafe_right"], 120)
+    base = {"map": road[0], "x": road[1], "y": road[2], "facing": "down", "vehicle": "bike", "give": True, "pre": pre}
     return [
         dict(base, name="roll", keys=[([], 60)]),
         dict(base, name="steer", keys=[(["strafe_left"], 6), ([], 20), (["strafe_right"], 6), ([], 20)]),
@@ -79,19 +82,41 @@ def rides(ledge: dict | None) -> list[dict]:
     return out
 
 
+def rides_e2e() -> list[dict]:
+    """B7's Emerald spots beside B5's: the Cycling Road's deck end to end, the bike-blocked cells (long grass, Fortree's
+    bridges at an even elevation, Pacifidlog's logs), the Mauville bike shop's door; each from the earlier sweep's rows."""
+    out = [{"name": "deck_end_to_end", "map": "EM_ROUTE110", "x": 27, "y": 22, "facing": "down", "vehicle": "mach",
+            "keys": [(["forward"], 140)]}]
+    for name, cls, maps in (("long_grass", "long_grass", ("EM_ROUTE119", "EM_ROUTE120", "EM_FARAWAY_ISLAND_INTERIOR")),
+                            ("fortree_bridge", "fortree_bridge", ("EM_FORTREE_CITY",)),
+                            ("pacifidlog_logs", "pacifidlog_log", ("EM_PACIFIDLOG_TOWN",))):
+        rows = sweep_rows(cls, maps)
+        if rows:
+            r = rows[0]
+            out.append({"name": name, "map": r["map"], "x": r["x"], "y": r["y"], "facing": r["dir"], "vehicle": "mach",
+                        "keys": [(["forward"], 20)]})
+    doors = [r for r in sweep_rows("warp", ("EM_MAUVILLE_CITY",)) if "BIKE_SHOP" in str((r.get("end") or {}).get("map"))]
+    if doors:
+        d = doors[0]
+        out.append({"name": "bike_shop_door", "map": d["map"], "x": d["x"], "y": d["y"], "facing": d["dir"], "vehicle": "mach",
+                    "keys": [(["forward"], 20), ([], 60)]})
+    return out
+
+
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--world", default="LandSky6")
     ap.add_argument("--game", default="emerald", choices=sorted(PORTS))
     ap.add_argument("--record")
     ap.add_argument("--only", default="")
+    ap.add_argument("--e2e", action="store_true", help="B7: the end-to-end spots too (Emerald)")
     a = ap.parse_args(argv)
     only = set(filter(None, a.only.split(",")))
     g = GAMES[a.game]
     PORT = PORTS[a.game]
     if a.game == "emerald":
         ledges = sweep_rows("ledge_jump", ("EM_ROUTE111",)) or sweep_rows("ledge_jump", ("EM_ROUTE110", "EM_ROUTE112", "EM_ROUTE113"))
-        plan = rides(ledges[0] if ledges else None)
+        plan = rides(ledges[0] if ledges else None) + (rides_e2e() if a.e2e else [])
     else:
         plan = rides12(a.game)
     plan = [r for r in plan if not only or r["name"] in only]
@@ -136,6 +161,11 @@ def main(argv=None) -> int:
         n = 100
         for r in plan:
             n += 1
+            pre_end = 0.0
+            if r.get("pre"):
+                # keys held from before the arrival (the pilot holds them while the rest waits)
+                pilot.send("keys", keys=r["pre"][0], hold=r["pre"][1])
+                pre_end = time.monotonic() + r["pre"][1] / 20 + 0.5
             with open(commands, "a", encoding="utf-8") as f:
                 if a.game == "emerald":
                     line = lua_go(n, "emerald", {"map": r["map"], "x": r["x"], "y": r["y"], "dir": r["facing"], "vehicle": r["vehicle"]})
@@ -163,6 +193,7 @@ def main(argv=None) -> int:
                 with open(commands, "a", encoding="utf-8") as f:
                     f.write(f'{{ id = {n}, op = "trace", frames = {total} }}\n')
                 line_time(run, n0, f"KB_RT f=", 5)
+            time.sleep(max(0.0, pre_end - time.monotonic()))  # the pre-held keys let go of first
             t_key = time.monotonic()
             for keys, ticks in r["keys"]:
                 if keys:

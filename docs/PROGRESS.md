@@ -3621,6 +3621,28 @@ minutes); **kb-dev50** (qjtrqukmu5lp52, cpu3g x8 32 GB, $0.32/hr) ran B0 and B1.
     brake); getting off while rolling `not_idle`; on Route 16 (9, 6) off `not_here`; a held right towards the gate took
     no step (not resolved: the engine refused it or a script held the field).
 
+  - **The real client** (`bike_ride.py --game blue|crystal`; a key held from before the arrival keeps the road from
+    rolling the biker down while the driver waits for the field to settle: B in Blue, a direction in Crystal):
+
+    | Game, ride | Legs walked | Lag max (cells) | Result |
+    |---|---|---|---|
+    | Blue, the roll from (9, 57) | (rolled to (9, 62), the end of that stretch, before the measure) | 0 | stays put at (9, 62) |
+    | Blue, steer (strafe left, then right) | 23 | 2 | stepped onto column 8 and rolled on to (8, 84) |
+    | Blue, sneak held (B) | 0 | 0 | braked |
+    | Blue, the Bicycle key on the road | 0 | 0 | still on the bike |
+    | Blue, Route 16: the key off, on, W into the gate | 1 leg, 2 walking steps | 1 | in ROUTE_16_GATE_1F (2, 8) on foot (the game walks you in) |
+    | Crystal, the roll | 37 | 1 | rolling at the sample (lag 1) |
+    | Crystal, steer | 34 | 2 | steered, rolling on |
+    | Crystal, sneak held | 43 | 2 | rolls on (Crystal has no brake) |
+    | Crystal, the Bicycle key on the road | 28 | 1 | still on the bike, rolling |
+    | Crystal, Route 16 | 9 | 4 | on Route 16 (the game refused getting off there) |
+
+    No "moved too quickly", "moved wrongly" or stuck legs in either game. Videos `/workspace/videos/bike/b6_blue.mp4`,
+    `b6_crystal.mp4` (sent shrunk: 4.7 and 13.6 MB). Blue's roll on (9, 57) stops at (9, 62) (the slope's stretch); after a
+    brake it starts again with the next direction pressed (seen in the steer ride). Not driven: Blue's forced bike from
+    the gate (the spots driver warps in without the gate's forced-bike flag, so `not_here` on the road isn't reproduced);
+    a cave ride (bikes in Blue's and Crystal's caves were not tried).
+
 ## Water and bridges (2026-10-25, specs/WATER_AND_BRIDGES_PLAN.md)
 
 Run unattended (the user travelling; defaults D1-D11, choices recorded here). Pods: kb-dev51 (cpu3m x4, $0.22/hr) for

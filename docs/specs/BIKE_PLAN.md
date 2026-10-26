@@ -458,3 +458,6 @@ Numbers only; the reasons and the choices are in PROGRESS.md "The bike".
   back slower; the crack held at full speed, fallen through slower; challenge collisions 0 -> 6; rails: one hop, then
   stopped (the engine). Real client from keys: 8 of 9 rides end in the hidden cell (the muddy slope: lag 4, 9 "moved
   wrongly", 1 stuck); Mach key-to-motion 360 ms (software client at 10 fps).
+- **B6:** Blue's road: roll 8 frames, steer (a held direction), brake (B held: 0 steps in 1.5 s; K4 closed), the bag's
+  Bicycle off and on on Route 16, a ride into its gate. Crystal's road: roll 8 frames, steer; no brake (the game's). Real
+  client: Blue lag <= 2, Crystal <= 4; 0 server complaints, 0 stuck.

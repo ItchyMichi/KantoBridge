@@ -72,6 +72,10 @@ records every deviation, open issue and question.
    steps as above), then `.\tools\launch.ps1 -Players 2`. Both clients join `localhost`.
 4. **If Gen1Recomp closes,** Minecraft pauses until it's back. `-Watch` restarts it for you; then pick
    CONTINUE.
+5. **Keys** (rebindable under Options → Controls → Key Binds → Kanto Bridge): A = `Z` (and right-click on what you aim
+   at), B = `X` inside our screens, START = `Enter`, SELECT = `Backspace`, **Bicycle = `C`** (on and off, as the bag's
+   Bicycle). On a bike the hidden game rides it: the movement keys steer by the camera, and sneak or jump is B (the Acro
+   Bike's wheelie, bunny hop and jumps in Emerald; the Cycling Road's brake in Blue); sneak never gets you off.
 
 A one-click installer for players is designed but not built: [`docs/INSTALLER.md`](docs/INSTALLER.md).
 

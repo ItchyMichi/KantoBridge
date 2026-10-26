@@ -186,9 +186,9 @@ optional ones. The schemas give the exact types and limits.
 | `move.face` | M→G | `dir` (turn in place while idle) | |
 | `move.hold` | M→G | `button:"b", on` (Cycling Road brake) | |
 | `move.ride` | M→G | `dir` (a direction or null), `b`: the rider's held intent while the hidden player is on a bike (BIKE_PLAN D1); sent on change, held like the brake | |
-| `player.pos` | G→M | `map, x, y, facing, kind:"walk"\|"bike"\|"surf"\|"ledge"\|"script"\|"spin"\|"current"\|"slope"\|"push"\|"sync"\|"ice", frames, n?`. Sent at step start (target cell) and on non-step changes. `ice` (FA0): optional, sent by no adapter before FA8 | |
+| `player.pos` | G→M | `map, x, y, facing, kind:"walk"\|"bike"\|"surf"\|"ledge"\|"script"\|"spin"\|"current"\|"slope"\|"push"\|"sync"\|"ice", frames, n?`. Sent at step start (target cell) and on non-step changes. `ice` (FA0): optional, sent by no adapter before FA8. BIKE_PLAN `jump?:"low"\|"normal"\|"high"` (Gen 3): the step is a bike's hop (low a bunny hop onto the next cell, normal a side jump, high a wheelie's ledge hop: kind `ledge`, 32 frames) | |
 | `player.blocked` | G→M | `dir, reason:"tile"\|"entity"\|"bounds"\|"script", map, x, y, n?` | |
-| `player.state` | G→M | `mode:"idle"\|"screen"\|"forced"\|"cutscene"\|"busy", bike, surf, slope, hidden, dark, lit` (all required); SE6 (Gen 3) `weather`: the weather the hidden game draws now (`none`, `clouds`, `sunny`, `rain`, `snow`, `thunder`, `fog`, `ash`, `sand`, `fog_diagonal`, `underwater`, `shade`, `drought`, `downpour`, `bubbles`; Emerald's abnormal weather is drought and downpour in turn, as the game draws it), absent where the game has no weather; FA0 `run?`: the hidden player is running (Emerald's running shoes; optional, sent by no adapter before FA8) | |
+| `player.state` | G→M | `mode:"idle"\|"screen"\|"forced"\|"cutscene"\|"busy", bike, surf, slope, hidden, dark, lit` (all required); SE6 (Gen 3) `weather`: the weather the hidden game draws now (`none`, `clouds`, `sunny`, `rain`, `snow`, `thunder`, `fog`, `ash`, `sand`, `fog_diagonal`, `underwater`, `shade`, `drought`, `downpour`, `bubbles`; Emerald's abnormal weather is drought and downpour in turn, as the game draws it), absent where the game has no weather; FA0 `run?`: the hidden player is running (Emerald's running shoes; optional, sent by no adapter before FA8); BIKE_PLAN `bikeKind?:"bike"\|"mach"\|"acro"` (present whenever `bike` is true: Blue and Crystal `bike`), `trick?:"none"\|"wheelie"\|"hop"` and `gear?:0..2` (Gen 3 only: the Acro's pose, the Mach's gear) | |
 | `warp` | G→M | `phase:"start"\|"arrive", kind:"door"\|"stairs"\|"edge"\|"hole"\|"pad"\|"fly"\|"teleport"\|"dig"\|"rope"\|"blackout"\|"script"\|"elevator"\|"ladder"\|"escalator"\|"dive", to?{map,x,y,facing}` (required on arrive; `ladder`, `escalator`, `dive` are FA0's optional values, sent by no adapter before FA8); `re` optional: the `warp.take` it answers | |
 | `warp.take` | M→G | `from{map,x,y}, to{map,x,y,facing}, kind:"ladder"\|"hole"`: the player climbed or fell through a cave's shaft to its far end | |
 | `warp.taken` | G→M | `ok, reason?:"busy"\|"mode"\|"map"\|"far"`; `re` required | |
@@ -224,6 +224,16 @@ optional ones. The schemas give the exact types and limits.
   the Crystal and Emerald adapters are to send `spin`, `current`, `slope`, `push` and `ice` where Blue already does);
   `player.state.run` (the running shoes). A client that doesn't know a warp kind treats it as `script`, and an unknown
   `player.pos` kind as a forced move.
+- **The ride (BIKE_PLAN D1, [specs/BIKE_PLAN.md](specs/BIKE_PLAN.md)):** while the hidden player is on a bike the client
+  sends no `move.step` or `move.face`; it sends `move.ride{dir, b}` on each change of its held intent (the movement keys
+  as one direction by the camera, sneak or jump as B) and `move.ride{dir:null, b:false}` once on leaving the bike, a warp,
+  a link change or a mode other than `idle`. gen1-bridge holds the ride like the brake: pressed on each idle logic step and
+  kept across landings, let go of off `idle` and pressed again on the way back; never answered. A `move.ride` with a
+  direction drops the waiting steps (`player.blocked{script}` each), and a `move.step` that comes while a ride direction is
+  held is refused the same way. The engine's own bike code moves the player: every `player.pos` is a move the client didn't
+  ask for (kind `bike`, `slope`, `ledge`; `jump` on a hop). Gen 3 reports a bump of the ridden bike as a `player.blocked`
+  without `n` (reason `tile`), at most once per 16 logic steps. `move.hold{b}` and the ride's B share the button: either
+  holds it. A client that doesn't know `bikeKind`, `trick`, `gear` or `jump` ignores them.
 - **Connection crossings** (walking off a map edge into the connected map) are not warps: the step's
   `player.pos` simply names the new map and cell.
 - **A fade is not always a warp** (Gen 3, 2026-10-14): a `script` warp that only a screen transition started, and whose
@@ -1116,7 +1126,7 @@ bytes. A downloaded export is stored as an **export bundle**, which stays under 
 
 | Type | Dir | Data | ROM |
 |---|---|---|---|
-| `story.state` | C→S | `full`; when full: `active[cell], surf, bike, lit[]` (and `run?`); otherwise deltas `add?[], remove?[], surf?, bike?, run?, lit?` (`run`, FA8: the hidden player runs, so the server gives the running speed). A cell is `"MAP:x:y"`. `active` counts only in a full state; a delta's `lit` replaces the lit set. The client applies a change to its own player's state first, then relays it: a full state on join, snapshot and respawn, deltas after (sent from M3 on) | |
+| `story.state` | C→S | `full`; when full: `active[cell], surf, bike, lit[]` (and `run?`); otherwise deltas `add?[], remove?[], surf?, bike?, run?, lit?` (`run`, FA8: the hidden player runs, so the server gives the running speed). BIKE_PLAN: `bikeKind?` (with `bike` in a full state or a delta that changes it) and `trick?` deltas: the server keeps the player seated on a bike entity of that kind and pose while `bike` is true (never while `surf` is). A cell is `"MAP:x:y"`. `active` counts only in a full state; a delta's `lit` replaces the lit set. The client applies a change to its own player's state first, then relays it: a full state on join, snapshot and respawn, deltas after (sent from M3 on) | |
 | `warp.request` | C→S | `to{map,x,y,facing}, kind?`. With `kind`: the hidden game's warp. Without: the client's own sync teleport (join, reconnect, drift, stuck) | |
 | `warp.done` | S→C | `ok, to?`; `re` optional | |
 | `activity` | C→S | `activity:"dialogue"\|"cutscene"\|"battle"\|"paused"\|"none"` (speech bubbles; `paused` while the player's Gen1Recomp is disconnected) | |
