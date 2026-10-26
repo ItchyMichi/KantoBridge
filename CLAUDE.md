@@ -58,7 +58,7 @@ Pokémon Red/Blue's story runs in a **hidden Gen1Recomp**. It is displayed and p
   §8 is the recipe for running it unattended. Executed 2026-10-26 (B0-B8; recorded in PROGRESS.md's "The bike" and the
   plan's §9): `move.ride`, the client's `RideInput`/`MoveController.rideTick`, the server's `BikeEntity` and `Bikes`, the
   Bicycle key (C), the placeholder model and textures (`tools/bike_textures.py`); the bike e2e tools are
-  `tools/e2e/bike_*.py`.
+  `tools/e2e/bike_*.py`. What is left is listed in [`docs/specs/BIKE_FOLLOWUPS.md`](docs/specs/BIKE_FOLLOWUPS.md).
 - `refs/_research/` (git-ignored) holds the research notes, with verified `file:line` references,
   that the plan cites.
 
