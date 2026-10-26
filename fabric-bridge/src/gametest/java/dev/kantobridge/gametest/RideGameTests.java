@@ -2,6 +2,7 @@ package dev.kantobridge.gametest;
 
 import dev.kantobridge.block.KbBlocks;
 import dev.kantobridge.block.LedgeColliderBlock;
+import dev.kantobridge.block.StepColliderBlock;
 import dev.kantobridge.entity.BikeEntity;
 import dev.kantobridge.entity.KbEntities;
 import dev.kantobridge.net.RelayService;
@@ -19,13 +20,15 @@ import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.MoverType;
 import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.Vec3;
 
 /**
  * The ridden bike on a real server (docs/specs/BIKE_PLAN.md B3, §2.5): a relayed {@code story.state} seats its player on a
  * {@link BikeEntity} of its kind and takes it away again; the bike is stopped by a bike wall and rides down a ledge as its
  * rider would; a warp keeps the rider on a bike; sneak never dismounts; a bike without a rider goes; two riders' bikes are
- * both in the world for each other. A batch of its own (the warp test publishes the synthetic index).
+ * both in the world for each other; the bike climbs the world's stairs at the Mach's speed (BIKE_CLIMB_PLAN C1) and
+ * nothing else. A batch of its own (the warp test publishes the synthetic index).
  */
 public class RideGameTests implements FabricGameTest {
 	private static final String BATCH = "kantobridge_bikes";
@@ -113,6 +116,106 @@ public class RideGameTests implements FabricGameTest {
 			helper.assertTrue(Bikes.bikeOf(player) != null, "sneaking got the player off the bike");
 		} finally {
 			player.setShiftKeyDown(false);
+			StoryStates.of(player).clear();
+			Bikes.dismount(player);
+			MockPlayers.leave(helper, player);
+		}
+		helper.succeed();
+	}
+
+	/**
+	 * BIKE_CLIMB_PLAN C1: a stone floor at y 1 (feet y 2) across x 0..7, z 1..6, and a stairs cell climbing east at x 3..4:
+	 * outdoors ({@code rise3}) the lower block's LOW3 thirds at x 3, two full blocks with HIGH3 on them at x 4 and the
+	 * plateau three up from x 5; in a cave two half steps at x 3, a block with two more on it at x 4, the plateau two up.
+	 */
+	private static void stairsEast(GameTestHelper helper, boolean rise3) {
+		for (int x = 0; x < 8; x++) {
+			for (int z = 1; z < 7; z++) {
+				helper.setBlock(new BlockPos(x, 1, z), Blocks.STONE);
+			}
+		}
+		int rise = rise3 ? 3 : 2;
+		BlockState steps = KbBlocks.STEP_COLLIDER.defaultBlockState().setValue(StepColliderBlock.FACING, Direction.EAST);
+		for (int z = 2; z < 4; z++) {
+			helper.setBlock(new BlockPos(3, 2, z), steps.setValue(StepColliderBlock.STAGE, rise3 ? StepColliderBlock.Stage.LOW3 : StepColliderBlock.Stage.TWO));
+			for (int y = 2; y < 1 + rise; y++) {
+				helper.setBlock(new BlockPos(4, y, z), Blocks.STONE);
+			}
+			helper.setBlock(new BlockPos(4, 1 + rise, z), steps.setValue(StepColliderBlock.STAGE, rise3 ? StepColliderBlock.Stage.HIGH3 : StepColliderBlock.Stage.TWO));
+		}
+		for (int x = 5; x < 8; x++) {
+			for (int z = 1; z < 7; z++) {
+				for (int y = 2; y < 2 + rise; y++) {
+					helper.setBlock(new BlockPos(x, y, z), Blocks.STONE);
+				}
+			}
+		}
+	}
+
+	@GameTest(template = EMPTY_STRUCTURE, batch = BATCH)
+	public void theBikeClimbsOutdoorStairsAtTheMachsSpeed(GameTestHelper helper) {
+		stairsEast(helper, true);
+		ServerPlayer player = standing(helper, new BlockPos(1, 2, 5));
+		try {
+			RelayService.get().receive(player, state(1, FULL_MACH));
+			BikeEntity bike = Bikes.bikeOf(player);
+			helper.assertTrue(bike != null, "not seated");
+			BlockPos foot = helper.absolutePos(new BlockPos(2, 2, 2));
+			double x0 = foot.getX() + 0.5;
+			double z = foot.getZ() + 1.0;
+			// the Mach: 1.5 blocks a tick (4 frames a cell); the stairs' top under the first move's front edge is 2.5 up
+			bike.setPos(x0, foot.getY(), z);
+			bike.move(MoverType.SELF, new Vec3(1.5, -0.08, 0));
+			helper.assertTrue(Math.abs(bike.getX() - (x0 + 1.5)) < 0.01, "the first tick stalled on the stairs: x " + bike.getX());
+			helper.assertTrue(Math.abs(bike.getY() - (foot.getY() + 2.5)) < 0.01, "the first tick didn't land on its stair: y " + bike.getY());
+			bike.move(MoverType.SELF, new Vec3(1.5, -0.08, 0));
+			helper.assertTrue(Math.abs(bike.getX() - (x0 + 3.0)) < 0.01 && Math.abs(bike.getY() - (foot.getY() + 3.0)) < 0.01,
+					"the second tick isn't on the plateau: " + bike.position());
+			// the Acro: 0.75 a tick (8 frames a cell): on the plateau within four
+			bike.setPos(x0, foot.getY(), z);
+			for (int i = 0; i < 4; i++) {
+				bike.move(MoverType.SELF, new Vec3(0.75, -0.08, 0));
+				helper.assertTrue(Math.abs(bike.getX() - (x0 + 0.75 * (i + 1))) < 0.01, "the Acro stalled at tick " + i + ": x " + bike.getX());
+			}
+			helper.assertTrue(Math.abs(bike.getY() - (foot.getY() + 3.0)) < 0.01, "the Acro isn't on the plateau: y " + bike.getY());
+			// standing still or moving down the far side, nothing of this
+			bike.setPos(x0 + 3.0, foot.getY() + 3.0, z);
+			bike.move(MoverType.SELF, new Vec3(-1.5, -0.08, 0));
+			helper.assertTrue(bike.getY() <= foot.getY() + 3.0 + 0.01, "a ride down the stairs was lifted: y " + bike.getY());
+		} finally {
+			StoryStates.of(player).clear();
+			Bikes.dismount(player);
+			MockPlayers.leave(helper, player);
+		}
+		helper.succeed();
+	}
+
+	@GameTest(template = EMPTY_STRUCTURE, batch = BATCH)
+	public void theBikeClimbsCaveStairsButNoWallAndAWalkerStalls(GameTestHelper helper) {
+		stairsEast(helper, false);
+		// a plain two-block wall across z 5
+		helper.setBlock(new BlockPos(4, 2, 5), Blocks.STONE);
+		helper.setBlock(new BlockPos(4, 3, 5), Blocks.STONE);
+		ServerPlayer player = standing(helper, new BlockPos(1, 2, 2));
+		try {
+			RelayService.get().receive(player, state(1, FULL_MACH));
+			BikeEntity bike = Bikes.bikeOf(player);
+			helper.assertTrue(bike != null, "not seated");
+			BlockPos foot = helper.absolutePos(new BlockPos(2, 2, 2));
+			double x0 = foot.getX() + 0.5;
+			bike.setPos(x0, foot.getY(), foot.getZ() + 1.0);
+			bike.move(MoverType.SELF, new Vec3(1.5, -0.08, 0));
+			bike.move(MoverType.SELF, new Vec3(1.5, -0.08, 0));
+			helper.assertTrue(Math.abs(bike.getX() - (x0 + 3.0)) < 0.01 && Math.abs(bike.getY() - (foot.getY() + 2.0)) < 0.01,
+					"two ticks up a cave's stairs didn't reach the plateau: " + bike.position());
+			bike.setPos(x0, foot.getY(), foot.getZ() + 3.5);
+			bike.move(MoverType.SELF, new Vec3(1.5, -0.08, 0));
+			helper.assertTrue(bike.getX() < foot.getX() + 2.0 && bike.getY() < foot.getY() + 0.01, "a bike rode up a plain wall: " + bike.position());
+			Bikes.dismount(player);
+			player.setPos(x0, foot.getY(), foot.getZ() + 1.0);
+			player.move(MoverType.SELF, new Vec3(1.5, -0.08, 0));
+			helper.assertTrue(player.getX() < x0 + 1.0, "a walker was lifted up the stairs: x " + player.getX());
+		} finally {
 			StoryStates.of(player).clear();
 			Bikes.dismount(player);
 			MockPlayers.leave(helper, player);

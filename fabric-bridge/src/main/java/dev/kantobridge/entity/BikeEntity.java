@@ -1,5 +1,6 @@
 package dev.kantobridge.entity;
 
+import java.util.List;
 import java.util.Locale;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.syncher.EntityDataAccessor;
@@ -13,7 +14,9 @@ import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.MoverType;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
+import net.minecraft.world.phys.shapes.VoxelShape;
 import org.jetbrains.annotations.Nullable;
 
 /**
@@ -261,6 +264,29 @@ public final class BikeEntity extends Entity {
 	@Override
 	public float maxUpStep() {
 		return STEP;
+	}
+
+	/**
+	 * BIKE_CLIMB_PLAN §3: stairs along the move standing higher than the step-up allows lift the move first (the Mach's 1.5
+	 * blocks a tick up a slope's 1.5-per-block stairs); on both sides, so the server's own move lands where the client's did.
+	 */
+	@Override
+	public void move(MoverType type, Vec3 movement) {
+		super.move(type, this.climb(movement));
+	}
+
+	private Vec3 climb(Vec3 movement) {
+		if (movement.x == 0.0 && movement.z == 0.0) {
+			return movement;
+		}
+		AABB box = this.getBoundingBox();
+		AABB path = box.expandTowards(movement.x, 0.0, movement.z);
+		List<VoxelShape> stairs = BikeClimb.stairs(this.level(), path, BikeClimb.MAX_LIFT);
+		if (stairs.isEmpty()) {
+			return movement;
+		}
+		double dy = BikeClimb.lift(movement.y, box.minY, BikeClimb.top(path, stairs, BikeClimb.MAX_LIFT), STEP, BikeClimb.MAX_LIFT);
+		return dy == movement.y ? movement : new Vec3(movement.x, dy, movement.z);
 	}
 
 	// ---- never hurt, pushed, picked or saved ----
