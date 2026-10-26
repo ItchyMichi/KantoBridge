@@ -378,6 +378,7 @@ two-floor comparisons apart).
 | WB1 (datum, lagoon rule, solver cascades, seats) | 219 / 184 | 31 / 224 | 61 | 166 / 16 |
 | WB5/WB6 decks built | 219 / 149 | 21 / 90 | 25 | 166 / 16 |
 | WB6/WB7 bridges judged per floor, final planner | 223 / 45 | 21 / 90 | 25 | 60 / 16 |
+| WB8 (LandSky6, the final code) | 223 / 45 | 21 / 90 | 25 | 60 / 16 |
 
 - **WB0:** falls Ever Grande 8 cells for 24 blocks, Route 114 3 for 9, Route 119 4 for 15 (one more on the river above),
   Route 119 south and the Frontier's east fall between water at one level; basins (30, 20) and (35, 10) at 3; Lilycove's
@@ -393,3 +394,9 @@ two-floor comparisons apart).
   surfed under.
 - **WB7:** Shoal Cave's two inner rooms, Victory Road 1F/B1F/B2F and Meteor Falls 1F 1R raised with their decks
   (breaks: Shoal Cave low tide 11, Meteor Falls 6, the rest 0).
+- **WB8:** LandSky6 (all three regions, build OK). Blue 2/1; 3/0, Crystal 14/19; 0/3. Spots Blue 11/11, Crystal 12/13,
+  Emerald 41/42 (13 of 13 new: on and under the bridges, the lagoon, the fall, the chair; Artisan Cave's ladder failed).
+  Full suite: JUnit 1,464 (1 failing before this plan too), GameTests 135/135, pytest 2,415.
+- **Not done / left:** a Waterfall climb driven in the real client (the spots can only step: the push down was driven);
+  Meteor Falls' in-cave fall stays flat water (cave cascades would need 2-block steps); Fortree needed no lift (its deck
+  stands 6 over the ground); D3 only half applied; the Battle Arena corridor is a room (one floor, as planned).

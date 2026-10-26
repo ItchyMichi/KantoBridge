@@ -3566,6 +3566,19 @@ Emerald's parity (FieldParity on the planned world, the rollout's options; walki
 | WB6, bridges judged per floor | 270 | 85 | 21 | 90 | 25 | 60 / 16 | 75 | 2 | 107 |
 | WB6/WB7 final planner (under-floor elevations, nearest fill, caves) | 223 | 45 | 21 | 90 | 25 | 60 / 16 | 4 | 2 | 107 |
 
+- **WB8 the world and the record (kb-dev52, 2026-10-25 23:02 to 26 00:12 UTC):** the volume grown 40 -> 60 GB at your
+  request mid-run, so the world is on it: **LandSky6** (models table v16t, every region: Kanto, Hoenn and Johto build OK).
+  The full suite: JUnit 1,464 tests, 1 failed (`KbPackReloadTest.modelsReadFitAndStayWithinTheBudget`: it fails the same
+  on daf6299, before this plan); GameTests 135/135; pytest 2,415 passed. Parity, final (walking A/B; surfing A/B):
+  Blue 2/1; 3/0 (surfing B 3 -> 0, the datum), Crystal 14/19; 0/3 (5 -> 3), Emerald 223/45; 21/90. Real-client spots on
+  LandSky6: Blue 11/11, Crystal 12/13 (the Ice Path ladder, as before), Emerald 41/42: the 13 new spots all pass (Route
+  110 walk under, surf under, onto the deck, off the deck refused; Route 120 surf under and onto the deck; Route 119
+  under and onto; Fortree onto and under; Lilycove's lagoon landing; Ever Grande's fall pushed down; Route 109's chair),
+  each bridge spot on the floor it should be (under: the under floor's height; on: the deck's); of the 29 before, Artisan
+  Cave 1F's ladder fails twice on LandSky6 (it passed on the same Hoenn code built into a copy of LandSky5 an hour
+  earlier: the hidden player stays on the ladder cell both times, the client isn't in it; left for a look, nothing in
+  this plan touches ladders). Pictures (context shots, 15 places): sent as five sheets. Pods stopped (all 66 EXITED).
+
 What is left in Emerald's parity (by map): Route 119 107 (101 of them the Acro Bike's rails: the bike feature), Route
 130's Mirage Island story water 70, Jagged Pass 33 and the Safari Zone 32 (Acro), Mossdeep 20 (FA9's launch pad), the
 Trick House and the Fortree gym 32 (gates), Slateport 11 (the north-east harbour's quay landings, see D3 above), Shoal
@@ -3575,8 +3588,8 @@ raised), Route 110 4 (an east-west path whose two ends the levels put 9 apart, u
 - **The volume's quota:** the 40 GB volume was full (`Disk quota exceeded` copying a world); the world copies older runs
   left (LandSky..LandSky4's Context, FieldG and Perf copies, about 6 GB) were not mine to delete, and the permission
   layer refused it, so this session's worlds are built on the pod's container disk (`overlay_local.sh`: local/ a
-  directory of links to the volume, new worlds on the pod) and are lost when the pod stops. **To keep a rebuilt world
-  (LandSky6) the volume needs room: delete those copies or grow it (your call).**
+  directory of links to the volume, new worlds on the pod) and are lost when the pod stops. You then had the volume grown
+  to 60 GB (done, 2026-10-25 ~22:55 UTC), and WB8's LandSky6 is on it.
 
 ## Field mechanics audit: FA9, the seams and the cliffs (2026-10-25, specs/FIELD_MECHANICS_AUDIT_PLAN.md §14)
 
