@@ -11,6 +11,15 @@
 -- queues verdicts in the protocol's words (player.blocked's reasons: tile,
 -- entity, bounds, script); main.lua takes them each step (takeVerdicts).
 --
+-- STEP_SPEED_PLAN §2.3 (D7): Gen 3 raises no movement.speed hook either, so
+-- the same tap shapes the step: when tryMove answers "step" (beginStep, then
+-- ordinaryStepFrames: player.lua:502-531, :852-865) or "connection" (the seam,
+-- Collision.tryConnection: collision.lua:853-866), Player.stepFrames is final
+-- for that step and Player.progress is 0 (the position is progress /
+-- stepFrames, player.lua:1362-1372), so a write there is what a hook's answer
+-- would be. The core's shaper (stepShaper) decides; a hop, a bike's step and
+-- a surf hop or dismount pass (jumping, biking, surfHopping, dismounting).
+--
 -- Paths are refs/gen1recomp's (Gen1Recomp v0.3.85).
 
 local Move = {}
@@ -38,10 +47,12 @@ Move.REASONS = { bounds = "bounds", tile = "tile", elevation = "tile", water = "
                  rotating_gate = "tile", acro = "tile" }
 Move.MAX_VERDICTS = 16
 local WRAP_SLOT = "kantoBridgeTryMove"
+local STEP_RESULTS = { step = true, connection = true }
 
 function Move.install(b)
   local def = b.def
   local verdicts = {}
+  local shaper -- STEP_SPEED_PLAN: function(dir, frames, { isPlayer, run, pass }) -> frames or nil
 
   -- ---- the tryMove tap
 
@@ -49,6 +60,25 @@ function Move.install(b)
     if result ~= "blocked" or DELTA[dir] == nil then return end
     if #verdicts >= Move.MAX_VERDICTS then table.remove(verdicts, 1) end
     verdicts[#verdicts + 1] = { allowed = false, dir = dir, reason = Move.REASONS[why] or "tile" }
+  end
+
+  -- A step just begun, shaped by the core's STEP SPEED (see the header).
+  local function shape(dir, result)
+    if type(shaper) ~= "function" or not STEP_RESULTS[result] or DELTA[dir] == nil then return end
+    local P = b.g3("player")
+    if type(P) ~= "table" or not P.moving or P.progress ~= 0 then return end
+    local frames = tonumber(P.stepFrames)
+    if frames == nil then return end
+    local c = { isPlayer = true, run = P.running == true,
+                pass = (P.jumping or P.biking or P.surfHopping or P.dismounting) and true or false }
+    local out = shaper(dir, frames, c)
+    out = tonumber(out)
+    if out and out >= 1 and out == math.floor(out) and out ~= frames then P.stepFrames = out end
+  end
+
+  local function sink(dir, result, why)
+    record(dir, result, why)
+    shape(dir, result)
   end
 
   -- The wrapper's process-lifetime record lives on the Player module (it
@@ -71,7 +101,7 @@ function Move.install(b)
       end
       rawset(P, WRAP_SLOT, tap)
     end
-    tap.sink = record
+    tap.sink = sink
     if P.tryMove ~= tap.wrapper then P.tryMove = tap.wrapper end
     return true
   end
@@ -87,6 +117,15 @@ function Move.install(b)
     return out
   end)
   def("playerVerdict", function() return nil end) -- no movement.collision hook on Gen 3
+
+  -- STEP_SPEED_PLAN §2.3: Gen 3 has no movement.speed call, so no context for the hook; the core hands its policy
+  -- here instead, and the tap applies it at each step's start (installed now if the player module is there).
+  def("stepContext", function() return nil end)
+  def("stepShaper", function(fn)
+    shaper = type(fn) == "function" and fn or nil
+    if not tapped then tapped = installTap() end
+    return tapped
+  end)
 
   -- ---- facing and buttons
 

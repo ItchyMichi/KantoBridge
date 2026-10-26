@@ -324,3 +324,34 @@ def test_region_park_holds_the_field_and_resume_lets_it_go():
     calls = rig.E.audioCalls
     assert [calls[i].op for i in range(1, len(calls) + 1)] == [b"fadeOut", b"fadeIn"]
     no_faults(rig)
+
+
+# ------------------------------------------------------------ STEP SPEED (STEP_SPEED_PLAN.md S3)
+
+
+def test_step_speed_shortens_emeralds_driven_walk_and_run_through_main():
+    rig = field_rig()
+    E = rig.E
+    peer = rig.connect()
+    peer.hello()
+    peer.messages()
+    peer.send("move.step", {"dir": "down", "n": 1})
+    msgs = pump(rig, peer, lambda m: m["data"].get("n") == 1)
+    assert (answer(msgs, 1)["data"]["kind"], answer(msgs, 1)["data"]["frames"]) == ("walk", 8)
+    rig.step(20)
+    peer.send("move.hold", {"button": "b", "on": True})  # running shoes: B held
+    rig.step()
+    peer.send("move.step", {"dir": "down", "n": 2})
+    msgs = pump(rig, peer, lambda m: m["data"].get("n") == 2)
+    assert answer(msgs, 2)["data"]["frames"] == 4 and E.Player.running is True
+    rig.step(20)
+    peer.send("move.hold", {"button": "b", "on": False})
+    rig.status.configure(rig.b.to_lua({"stepSpeed": 100}))
+    rig.step()
+    peer.send("move.step", {"dir": "down", "n": 3})
+    msgs = pump(rig, peer, lambda m: m["data"].get("n") == 3)
+    assert answer(msgs, 3)["data"]["frames"] == 16, "1X: the engine's own frames"
+    rig.step(30)
+    st = rig.status
+    assert (st.moveSpeedPct, st.moveFastSteps, st.moveFastPassed) == (100, 2, 0)
+    no_faults(rig)

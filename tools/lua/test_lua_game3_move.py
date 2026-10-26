@@ -283,3 +283,92 @@ def test_counter_cell_by_the_behaviours_name():
     a.field()
     a.E.behavior(3, 2, b"MB_COUNTER")
     assert (a.eng.counterCell(3, 2), a.eng.counterCell(3, 3)) == (True, False)
+
+
+# ------------------------------------------------------------ STEP SPEED (STEP_SPEED_PLAN.md S3)
+
+
+def shaper(a, frames_for):
+    """A core stand-in: records (dir, frames, run, pass) and answers frames_for(frames, run, pass)."""
+    calls = a.b.eval("{}")
+    fn = a.b.eval("""function(calls, decide) return function(dir, frames, c)
+      calls[#calls + 1] = { dir = dir, frames = frames, run = c.run, pass = c.pass, isPlayer = c.isPlayer }
+      return decide(frames, c.run, c.pass)
+    end end""")(calls, frames_for)
+    return calls, fn
+
+
+def two_x(frames, run, pass_):
+    if pass_:
+        return frames
+    return min(frames, 4 if run else 8)
+
+
+def test_the_tap_shapes_a_walk_and_a_run_step():
+    a = Adapter3()
+    a.field("EM_TEST_TOWN", 5, 6, "down")
+    calls, fn = shaper(a, two_x)
+    assert a.eng.stepShaper(fn) is True
+    P = a.E.Player
+    assert try_move(a, "left") == b"step" and P.stepFrames == 8 and P.progress == 0
+    a.E.land()
+    assert a.E.Player.tryMove(b"left", a.E.game, True) == b"step" and P.running is True and P.stepFrames == 4
+    a.E.land()
+    assert [(c.dir, c.frames, c.run, c[b"pass"], c.isPlayer) for c in calls.values()] == [
+        (b"left", 16, False, False, True), (b"left", 8, True, False, True)]
+
+
+def test_the_tap_leaves_refusals_hops_bikes_and_surf_hops_alone():
+    a = Adapter3()
+    a.field("EM_TEST_TOWN", 5, 6, "down")
+    calls, fn = shaper(a, two_x)
+    a.eng.stepShaper(fn)
+    P = a.E.Player
+    a.E.block(4, 6, b"tile")
+    assert try_move(a, "left")[0] == b"blocked" and len(calls) == 0, "a refusal is never shaped"
+    for flag in ("jumping", "biking", "surfHopping", "dismounting"):
+        P[flag.encode()] = True
+        before = len(calls)
+        orig = P.tryMove
+        assert try_move(a, "right") == b"step"
+        assert P.stepFrames == 16, flag
+        assert calls[before + 1][b"pass"] is True, flag
+        a.E.land()
+        P[flag.encode()] = False
+        assert a.b.eval("rawequal")(P.tryMove, orig)
+
+
+def test_the_tap_without_a_shaper_or_with_a_bad_answer_leaves_the_step():
+    a = Adapter3()
+    a.field("EM_TEST_TOWN", 5, 6, "down")
+    a.eng.takeVerdicts()  # the tap, with no shaper yet
+    assert try_move(a, "left") == b"step" and a.E.Player.stepFrames == 16
+    a.E.land()
+    for i, answer in enumerate(("function() return nil end", "function() return 0 end", "function() return 2.5 end",
+                                "function() error('boom') end")):
+        a.eng.stepShaper(a.b.eval(answer))
+        assert try_move(a, ("right", "left")[i % 2]) == b"step" and a.E.Player.stepFrames == 16, answer
+        a.E.land()
+    a.eng.stepShaper(None)
+    assert try_move(a, "left") == b"step" and a.E.Player.stepFrames == 16
+
+
+def test_a_hot_reload_keeps_one_tap_and_the_new_shaper():
+    a = Adapter3()
+    a.field("EM_TEST_TOWN", 5, 6, "down")
+    _, old = shaper(a, lambda f, r, p: 12)
+    a.eng.stepShaper(old)
+    wrapper = a.E.Player.tryMove
+    eng2 = a.new_instance()
+    _, new = shaper(a, two_x)
+    assert eng2.stepShaper(new) is True
+    assert a.b.eval("rawequal")(a.E.Player.tryMove, wrapper), "still one tap on the module"
+    assert try_move(a, "left") == b"step" and a.E.Player.stepFrames == 8, "the new instance's shaper"
+
+
+def test_check_required_names_the_step_fields():
+    a = Adapter3()
+    a.field()
+    assert "src.core.game3.player.stepFrames" not in plain(a.eng.checkRequired())
+    a.E.Player.stepFrames = None
+    assert "src.core.game3.player.stepFrames" in plain(a.eng.checkRequired())

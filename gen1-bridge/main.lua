@@ -227,6 +227,11 @@ return function(mod)
     return ok
   end
   applySpeed(mod.options:get("step_speed") or kb.Speed.DEFAULT)
+  if type(engine.stepShaper) == "function" then
+    pcall(engine.stepShaper, function(dir, frames, c)
+      return speed.apply(frames, c, mover.ownsStep(dir))
+    end)
+  end
 
   -- Engine events and the player's collision verdicts between two of our
   -- steps; each step takes them (they all happen during the stack update

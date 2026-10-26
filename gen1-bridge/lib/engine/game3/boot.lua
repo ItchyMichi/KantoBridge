@@ -17,7 +17,7 @@ Boot.REQUIRES = {
   ["src.core.SaveData"] = { "activeSlot", "setActiveSlot", "createSlot", "deleteSlot", "renameSlot",
                             "persistenceFs", "loadOptions" },
   ["src.core.game3.runtime"] = { "getSession", "isActive" },
-  ["src.core.game3.player"] = { "tryMove" },
+  ["src.core.game3.player"] = { "tryMove", "stepFrames", "progress" }, -- the step tap and STEP SPEED (move.lua)
   ["src.core.game3.field"] = { "isLocked", "lock", "unlock", "callbackPending", "respawnAtHeal", "tryFishingEncounter" },
   ["src.core.game3.map"] = { "currentDef" },
   ["src.core.game3.warp"] = { "isBusy" },

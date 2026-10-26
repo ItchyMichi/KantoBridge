@@ -228,6 +228,7 @@ function FakeEngine3.new(opts)
     if why == nil and E.inMap(tx, ty) == false then why = "bounds" end
     if why then return "blocked", why end
     E.startStep(dir, run and 8 or 16)
+    P.running = run == true -- ordinaryStepFrames' second answer (player.lua:852-865)
     return "step"
   end
   function P.scriptFace(dir)
@@ -1344,7 +1345,8 @@ function FakeEngine3.new(opts)
       end
       if not P.moving and not fieldBusy() then
         local dir = direction(g.input)
-        if dir then E.Player.tryMove(dir, g, false) end
+        -- B held runs (player.lua:1501-1503: wantRun and Player.canDash(); the fake can always dash)
+        if dir then E.Player.tryMove(dir, g, E.canRun ~= false and g.input:isDown("b") == true) end
       end
       E.Message.tick()
       if E.pendingWait and E.Message.isWaiting() and E.Message._page >= #(E.Message._pages or {}) then
