@@ -14,6 +14,16 @@
 --   move.face{dir}             turn in place while idle; the observer then
 --                              sends player.pos kind "sync", frames 0
 --   move.hold{button:"b", on}  hold B, the Cycling Road brake
+--   move.ride{dir, b}          BIKE_PLAN D1: the rider's held intent while
+--                              the hidden player is on a bike: the
+--                              direction (or none) and B, held like the
+--                              brake (pressed on each idle step, released
+--                              off idle, pressed again on the way back);
+--                              the engine's own bike code moves the
+--                              player. No answer. A ride with a direction
+--                              drops the waiting steps (blocked/script),
+--                              and a move.step that comes while a ride
+--                              direction is held is refused the same way.
 --
 -- How a step is driven (refs/_research/P1_gen1_movement.md sections 1.3-3):
 --   * only while the classifier says "idle" and the player stands: set the
@@ -82,6 +92,8 @@ function Move.new(opts)
   local active             -- the request being executed
   local holds = {}         -- button -> token, the presses we own
   local brake              -- move.hold b: { on, gen }
+  local ride               -- move.ride: { dir (or nil), b, gen, drop }
+  local lastCollide, lastCollideAt = nil, -1000 -- the bike's last bump (an engine action), and its logic step
   local faceReq            -- a move.face waiting for the player to stand idle
   local generation         -- the connection the requests belong to
   local steps = 0
@@ -90,6 +102,9 @@ function Move.new(opts)
     requests = 0, answered = 0, started = 0, blocked = 0, script = 0, dropped = 0,
     pushes = 0, warps = 0, hops = 0, timeouts = 0, repressed = 0, faces = 0, rolls = 0,
     chained = 0, -- steps begun on the landing poll of the one before (no idle frame)
+    rides = 0,   -- move.ride messages taken (BIKE_PLAN B1)
+    collides = 0, -- a bike's bumps reported as player.blocked without n
+    rideRefused = 0, -- steps refused or dropped because a ride direction was held
   }
 
   local function press(btn)
@@ -115,8 +130,12 @@ function Move.new(opts)
     end
   end
 
-  local function releaseDirections()
-    for i = 1, #DIR_LIST do unhold(DIR_LIST[i]) end
+  -- keep: a direction the ride holds, never let go of on a landing (a release
+  -- and a press in one step would read as a new press)
+  local function releaseDirections(keep)
+    for i = 1, #DIR_LIST do
+      if DIR_LIST[i] ~= keep then unhold(DIR_LIST[i]) end
+    end
   end
 
   local function releaseAll()
@@ -315,7 +334,7 @@ function Move.new(opts)
 
   local function dropAll()
     releaseAll()
-    queue, active, faceReq, brake = {}, nil, nil, nil
+    queue, active, faceReq, brake, ride = {}, nil, nil, nil, nil
   end
 
   -- ------------------------------------------------------------ requests
@@ -342,6 +361,23 @@ function Move.new(opts)
   function driver.hold(data, gen)
     if data.button ~= "b" or type(data.on) ~= "boolean" then return false, "bad_message" end
     brake = { on = data.on, gen = gen }
+    return true
+  end
+
+  -- move.ride (BIKE_PLAN B1): dir a direction or null (kb_json's null, or
+  -- absent), b a boolean.
+  function driver.ride(data, gen)
+    local dir = data.dir
+    if type(dir) == "table" then
+      local mt = getmetatable(dir)
+      if not (mt and mt.kind == "null") then return false, "bad_message" end
+      dir = nil
+    elseif dir ~= nil and DELTA[dir] == nil then
+      return false, "bad_message"
+    end
+    if type(data.b) ~= "boolean" then return false, "bad_message" end
+    counts.rides = count(counts.rides)
+    ride = { dir = dir, b = data.b, gen = gen, drop = dir ~= nil }
     return true
   end
 
@@ -374,6 +410,7 @@ function Move.new(opts)
       queue = kept
       if faceReq and faceReq.gen ~= link.generation then faceReq = nil end
       if brake and brake.gen ~= link.generation then brake = nil end
+      if ride and ride.gen ~= link.generation then ride = nil end
       generation = link.generation
     end
 
@@ -388,13 +425,22 @@ function Move.new(opts)
       queue, faceReq = {}, nil
     else
       repress()
+      local rideDir = ride and ride.dir or nil
+      if rideDir and (ride.drop or #queue > 0) then
+        -- a ride direction is held: the hidden game drives, steps wait for nobody
+        for i = 1, #queue do
+          counts.rideRefused = count(counts.rideRefused)
+          blocked(out, queue[i], "script", f)
+        end
+        queue, ride.drop = {}, false
+      end
       if not f.moving then
         if active == nil and #queue > 0 then
           if landed then counts.chained = count(counts.chained) end
           begin(table.remove(queue, 1), f, out)
         end
         if active == nil then
-          releaseDirections() -- the landing release
+          releaseDirections(rideDir) -- the landing release (the ride's own direction stays)
           if faceReq then
             if engine.setFacing(faceReq.dir) then
               counts.faces = count(counts.faces)
@@ -404,7 +450,26 @@ function Move.new(opts)
           end
         end
       end
-      if brake and brake.on then hold("b") else unhold("b") end
+      if active == nil and rideDir then
+        -- the ride's direction pressed and kept; a change presses the new one in the step it lets go of the old
+        releaseDirections(rideDir)
+        hold(rideDir)
+      end
+      if (brake and brake.on) or (ride and ride.b) then hold("b") else unhold("b") end
+    end
+
+    -- BIKE_PLAN B1: the ridden bike bumped into something (Gen 3: the engine's collide action): player.blocked without
+    -- n, at most once per 16 logic steps, so the client can jolt the bike (the engine plays its own sound)
+    if f.bikeCollide ~= nil and f.bikeCollide ~= lastCollide then
+      lastCollide = f.bikeCollide
+      if steps - lastCollideAt >= 16 and mode == "idle" and DELTA[f.facing] then
+        lastCollideAt = steps
+        counts.collides = count(counts.collides)
+        local pos = settled(f)
+        out[#out + 1] = { "player.blocked", { dir = f.facing, reason = "tile", map = pos.map, x = pos.x, y = pos.y }, "bump" }
+      end
+    elseif f.bikeCollide == nil then
+      lastCollide = nil
     end
 
     -- the waiting line stays short: the oldest waiting steps go first
@@ -434,6 +499,7 @@ function Move.new(opts)
     local held = 0
     for _ in pairs(holds) do held = held + 1 end
     out.held = held
+    out.rideHeld = (ride and ride.dir) and 1 or 0
     return out
   end
 

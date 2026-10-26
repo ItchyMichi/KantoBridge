@@ -46,7 +46,11 @@ local function same(a, b, keys)
   return true
 end
 
-local STATE_KEYS = { "mode", "bike", "surf", "slope", "hidden", "dark", "lit", "weather", "run" }
+local STATE_KEYS = { "mode", "bike", "surf", "slope", "hidden", "dark", "lit", "weather", "run", "bikeKind", "trick", "gear" }
+-- BIKE_PLAN B1: the bikes and the Acro's poses player.state may name
+local BIKE_KINDS = { bike = true, mach = true, acro = true }
+local TRICKS = { none = true, wheelie = true, hop = true }
+local JUMPS = { low = true, normal = true, high = true }
 -- SE6 (docs/specs/STORY_EVENTS_PLAN.md): the weather names player.state may carry (defs.schema.json playerState)
 local WEATHERS = { none = true, clouds = true, sunny = true, rain = true, snow = true, thunder = true, fog = true,
                    ash = true, sand = true, fog_diagonal = true, underwater = true, shade = true, drought = true,
@@ -127,6 +131,10 @@ function Player.state(f)
     weather = WEATHERS[f.weather] and f.weather or nil,
     -- FA8 item 7 (D4): the hidden player is running (Emerald's running shoes); absent where the game has no running
     run = run,
+    -- BIKE_PLAN D10/D11: which bike (whenever bike is true), the Acro's pose and the Mach's gear (Gen 3 only)
+    bikeKind = f.bike == true and (BIKE_KINDS[f.bikeKind] and f.bikeKind or "bike") or nil,
+    trick = f.bike == true and TRICKS[f.trick] and f.trick or nil,
+    gear = f.bike == true and type(f.gear) == "number" and f.gear >= 0 and f.gear <= 2 and f.gear == floor(f.gear) and f.gear or nil,
   }
 end
 
@@ -164,7 +172,7 @@ function Player.new()
     last = { moving = f.moving == true, tx = f.tx, ty = f.ty, map = f.map }
   end
 
-  local function posMessage(map, x, y, facing, kind, frames, tag)
+  local function posMessage(map, x, y, facing, kind, frames, tag, jump)
     local pos = { map = map, x = x, y = y, facing = facing }
     if not sendable(pos) then return nil end
     sentPos = pos
@@ -172,6 +180,7 @@ function Player.new()
     data.kind = kind
     data.frames = frameCount(frames)
     data.elev = elevNow
+    data.jump = JUMPS[jump] and jump or nil
     return { "player.pos", data, tag }
   end
 
@@ -191,6 +200,12 @@ function Player.new()
       return posMessage(f.map, f.tx, f.ty, f.facing, "ledge", f.frames, "seam")
     end
     hop = nil
+    if f.bikeJump then
+      -- BIKE_PLAN B1 (Gen 3): a bike's hop is its own step to its target (a wheelie's ledge hop lands two cells on: kind
+      -- ledge with its 32 frames)
+      local kind = f.bikeJump == "high" and "ledge" or "bike"
+      return posMessage(f.map, f.tx, f.ty, f.facing, kind, f.frames, "step", f.bikeJump)
+    end
     return posMessage(f.map, f.tx, f.ty, f.facing, Player.moveKind(f), f.frames, "step")
   end
 

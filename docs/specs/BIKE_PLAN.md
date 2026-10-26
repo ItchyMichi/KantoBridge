@@ -437,6 +437,15 @@ Pushes only on the user's go, after the scan every push had: author and committe
 (`kantobridge-<date>-<hash>.bundle` + `.sha256`). When everything is done, or nothing more can be done alone: stop every
 pod, confirm it, and finish with a summary (done, the measurements, left and why).
 
-## 9. Results
+## 9. Results (2026-10-26, run unattended)
 
-Not started.
+Numbers only; the reasons and the choices are in PROGRESS.md "The bike".
+
+- **B0:** Mach 30 cells up and 30 down on Route 110 from (4, 41): steps 16, 8, then 4 frames (28); lag per second at most
+  2 cells (first 3 seconds), 0 after; stuck 0, teleports 0; "moved too quickly" 0. Acro wheelie 26 cells at 8 frames, plain
+  25 at 6. Client 10 fps (software). Key to engine (`move.hold b`): 69-118 ms (8 presses); press to client motion 182-325
+  ms. Classifier: no in-place action leaves `idle`; moving hops set `P.jumping` (read as a ledge before B1). Gate held:
+  D1 stays, no B9.
+- **B1:** real engine through `move.ride`: Mach 4 frames at step 3; a step while riding refused `script`; Acro B held:
+  wheelie, then hop; one message side jump (16 frames, jump normal); wheelie run 8 frames. Tests: Lua move 41, game3
+  observe 42, stand-ins 31, protocol 585; pytest 2,441.

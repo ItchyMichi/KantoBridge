@@ -736,3 +736,27 @@ def test_what_the_hidden_game_reports_is_schema_valid():
             await gen1.stop()
     run(scenario())
 
+
+
+def test_a_ride_walks_on_at_the_bikes_frames_and_refuses_steps():
+    # BIKE_PLAN B1: move.ride holds a direction; the stand-in walks its player on at 8 frames a cell
+    async def scenario():
+        gen1, mc = await _pair()
+        try:
+            await mc.hello()
+            gen1.state.bike, gen1.state.bike_kind = True, "mach"
+            await mc.send("move.ride", {"dir": "up", "b": False})
+            first = await mc.expect("player.pos")
+            second = await mc.expect("player.pos")
+            assert (first["data"]["kind"], first["data"]["frames"], "n" in first["data"]) == ("bike", 8, False)
+            assert second["data"]["y"] == first["data"]["y"] - 1
+            await mc.send("move.step", {"dir": "left", "n": 1})
+            refused = await mc.expect("player.blocked")
+            assert (refused["data"]["reason"], refused["data"]["n"]) == ("script", 1)
+            await mc.send("move.ride", {"dir": None, "b": False})
+            await asyncio.sleep(0.2)
+            assert gen1.state.as_data()["bikeKind"] == "mach" and gen1.rides == 2
+        finally:
+            await mc.close()
+            await gen1.stop()
+    run(scenario())

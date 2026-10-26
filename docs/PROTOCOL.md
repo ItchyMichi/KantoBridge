@@ -185,6 +185,7 @@ optional ones. The schemas give the exact types and limits.
 | `move.step` | M→G | `dir:"up"\|"down"\|"left"\|"right", n` (counter), `push?`. Sent on a cell crossing, or (`push:true`) after pushing against an edge for 8 or more ticks (exit mats, gates) | |
 | `move.face` | M→G | `dir` (turn in place while idle) | |
 | `move.hold` | M→G | `button:"b", on` (Cycling Road brake) | |
+| `move.ride` | M→G | `dir` (a direction or null), `b`: the rider's held intent while the hidden player is on a bike (BIKE_PLAN D1); sent on change, held like the brake | |
 | `player.pos` | G→M | `map, x, y, facing, kind:"walk"\|"bike"\|"surf"\|"ledge"\|"script"\|"spin"\|"current"\|"slope"\|"push"\|"sync"\|"ice", frames, n?`. Sent at step start (target cell) and on non-step changes. `ice` (FA0): optional, sent by no adapter before FA8 | |
 | `player.blocked` | G→M | `dir, reason:"tile"\|"entity"\|"bounds"\|"script", map, x, y, n?` | |
 | `player.state` | G→M | `mode:"idle"\|"screen"\|"forced"\|"cutscene"\|"busy", bike, surf, slope, hidden, dark, lit` (all required); SE6 (Gen 3) `weather`: the weather the hidden game draws now (`none`, `clouds`, `sunny`, `rain`, `snow`, `thunder`, `fog`, `ash`, `sand`, `fog_diagonal`, `underwater`, `shade`, `drought`, `downpour`, `bubbles`; Emerald's abnormal weather is drought and downpour in turn, as the game draws it), absent where the game has no weather; FA0 `run?`: the hidden player is running (Emerald's running shoes; optional, sent by no adapter before FA8) | |

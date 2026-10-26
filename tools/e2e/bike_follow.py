@@ -244,6 +244,7 @@ def main(argv=None) -> int:
     ap.add_argument("--record")
     ap.add_argument("--timeout", type=int, default=2400)
     ap.add_argument("--only", default="", help="comma list of: mach,acro,classifier,rails,latency")
+    ap.add_argument("--rank", type=int, default=1, help="which of Route 110's longest runs to ride (1 = the longest)")
     a = ap.parse_args(argv)
     only = set(filter(None, a.only.split(",")))
     want = (lambda k: not only or k in only)
@@ -297,7 +298,7 @@ def main(argv=None) -> int:
         runs, _ = rig.scan("up", "mach")
         report["r110_runs"] = runs
         say("route 110 runs up:", json.dumps(runs))
-        best = runs[0] if runs else None
+        best = runs[a.rank - 1] if len(runs) >= a.rank else (runs[0] if runs else None)
 
         if best and want("mach"):
             x, y, n = int(best["x"]), int(best["y"]), int(best["cells"])
@@ -331,13 +332,15 @@ def main(argv=None) -> int:
 
         if best and want("classifier"):
             x, y = int(best["x"]), int(best["y"])
-            say("classifier start:", rig.go("EM_ROUTE110", x, y + 2, "up", "acro"))
+            # inside the run (open ahead and behind), five cells up from its start
+            say("classifier start:", rig.go("EM_ROUTE110", x, y - 5, "up", "acro"))
             plan = [
                 ("acro_tap_b_wheelie_standing", [{"b": True, "frames": 6}, {"frames": 60}]),
                 ("acro_hold_b_bunny_hop", [{"b": True, "frames": 150}, {"frames": 60}]),
                 ("acro_turn_in_place", [{"dir": "left", "frames": 3}, {"frames": 40}, {"dir": "up", "frames": 3}, {"frames": 40}]),
-                ("acro_side_jump", [{"dir": "up", "frames": 3}, {"frames": 30}, {"dir": "left", "b": True, "frames": 4},
+                ("acro_side_jump", [{"dir": "up", "frames": 3}, {"frames": 30}, {"dir": "right", "b": True, "frames": 4},
                                     {"frames": 60}]),
+                ("acro_side_jump_back", [{"dir": "left", "b": True, "frames": 4}, {"frames": 60}]),
                 ("acro_turn_jump", [{"dir": "down", "b": True, "frames": 4}, {"frames": 60}]),
                 ("acro_hop_moving", [{"b": True, "frames": 50}, {"dir": "up", "b": True, "frames": 40}, {"frames": 60}]),
             ]
@@ -364,14 +367,15 @@ def main(argv=None) -> int:
                 # from the cell below the run, along it in a wheelie
                 say("rail start:", rig.go("EM_ROUTE119", top["x"], top["y1"] + 1, "up", "acro"))
                 n = top["y1"] - top["y0"] + 1
-                r = rig.ride([{"b": True, "frames": 20}, {"dir": "up", "b": True, "frames": 8 * (n + 3) + 10}, {"frames": 60}],
-                             sampler, "acro_rail_wheelie")
+                # rails are ridden hopping (bike/rse.lua wheelieHoppingMoving): B held 40 frames, then B with the rail's way
+                r = rig.ride([{"b": True, "frames": 60}, {"dir": "up", "b": True, "frames": 16 * (n + 3) + 10}, {"frames": 60}],
+                             sampler, "acro_rail_hops")
                 report["rides"].append(r)
                 say(json.dumps({k: r[k] for k in ("label", "end", "lag_max", "moves", "stuck", "engine_steps", "end_inside")}))
 
         if want("latency"):
             # (b) the client's sprint key holds B on foot (move.hold b): the pilot's key to the engine's B
-            say("latency start:", rig.go("EM_ROUTE110", int(best["x"]) if best else None, int(best["y"]) if best else None, "up", None))
+            say("latency start:", rig.go("EM_ROUTE110", int(best["x"]) if best else None, int(best["y"]) if best else None, "up", "none"))
             i = rig.cid()
             n0 = len(run.result.lines)
             rig.lua(f'{{ id = {i}, op = "watch", frames = 1500 }}')

@@ -160,6 +160,39 @@ function Observe.install(b)
     -- SE6: the weather the game draws (field_weather_rse.lua)
     f.weather = weatherName()
     f.bike = P.biking == true
+    -- BIKE_PLAN B1: which bike, the Acro's pose, the Mach's gear (bike/rse.lua: P.bikeType, Rse.state.acroState 2/4
+    -- the wheelie standing/moving, 3 the bunny hop, frameCounter the Mach's gear 0-2; P.acroAnim back/pedal a wheelie)
+    if f.bike then
+      f.bikeKind = P.bikeType == "acro" and "acro" or "mach"
+      local Rse = b.g3("bike.rse")
+      local S = type(Rse) == "table" and type(Rse.state) == "table" and Rse.state or {}
+      if f.bikeKind == "acro" then
+        local st, anim = tonumber(S.acroState), type(P.acroAnim) == "table" and P.acroAnim.kind or nil
+        if st == 3 then
+          f.trick = "hop"
+        elseif st == 2 or st == 4 or anim == "back" or anim == "pedal" then
+          f.trick = "wheelie"
+        else
+          f.trick = "none"
+        end
+      else
+        local g = tonumber(S.frameCounter) or 0
+        f.gear = (g >= 2 and 2) or (g >= 1 and 1) or 0
+      end
+      -- a bike's hop (Player.bikeStep's jump: low a bunny hop on, normal a side jump, high a wheelie's ledge hop) is
+      -- the bike's own step, not a ledge: the mode stays idle so the ride's holds stay pressed
+      -- a collide: the bike bumps in place (bike/rse.lua playerOnBikeCollide: a walk in place; the Acro's wheelie in
+      -- place: the pedal pose); the action table itself tells one collide from the next (act/kb_move.lua reports it)
+      local a = P.action
+      if not P.moving and type(a) == "table" and (a.walk == "normal"
+          or (type(P.acroAnim) == "table" and P.acroAnim.kind == "pedal" and not a.jump)) then
+        f.bikeCollide = a
+      end
+      if P.jumping == true and P.moving == true then
+        f.ledge = false
+        f.bikeJump = (P.jumpType == "low" or P.jumpType == "high") and P.jumpType or "normal"
+      end
+    end
     -- K7 (FA8 item 7): runner is a script running, as Gen 1's (kb_story's flag reread, kb_route's stale check);
     -- running is the running shoes' run
     f.running = P.running == true

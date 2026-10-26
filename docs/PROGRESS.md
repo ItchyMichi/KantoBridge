@@ -3483,6 +3483,54 @@ taken from what already arrived. `test_battle` and `test_route1` fail on cpu3g p
 **Deviation.** A real gym leader was not walked to (the drivers start trainer battles by script, as before); the Name
 Rater is its write to the record, not the walk to his house.
 
+## The bike (2026-10-26, specs/BIKE_PLAN.md)
+
+Run unattended (defaults D1-D12; the choices where the plan was silent are recorded here). Pods: kb-dev52's host had no
+free memory and a new kb-dev53 (kza1plmun3ass8, cpu3g x8, $0.32/hr) never answered on its ssh port (stopped after 6
+minutes); **kb-dev50** (qjtrqukmu5lp52, cpu3g x8 32 GB, $0.32/hr) ran B0 and B1.
+
+- **B0 facts** (`tools/e2e/bike_follow.py`, the spots driver's new `scan`/`ride`/`watch`; the real client following through
+  today's forced legs, no ride code; Xvfb + Mesa llvmpipe, ~10 frames a second). Route 110's longest Mach runs north:
+  (35, 71) 32 cells (a script at (35, 56) stops a ride after 15: a cutscene, then a text box), (4, 41) 30 cells; the second
+  pass rode (4, 41).
+
+  | (a) The follow | Cells | Step frames seen | Lag per second (cells) | Forced legs | Stuck | Teleports | Fps |
+  |---|---|---|---|---|---|---|---|
+  | Mach up | 30 | 16 ×1, 8 ×1, 4 ×28 | 1, 2, 1, 0, 0, 0, 0 | 30 | 0 | 0 | 10.3 |
+  | Mach down | 30 | 16 ×1, 8 ×1, 4 ×28 | 2, 2, 1, 0, 0, 0, 0 | 30 | 0 | 0 | 9.7 |
+  | Acro wheelie (B + up) | 26 | 8 ×26 | 1, 2, 2, 2, 1, 0, 0, 0 | 26 | 0 | 0 | 9.9 |
+  | Acro plain | 25 | 6 ×25 | 1, 1, 1, 0, 0, 0, 0 | 25 | 0 | 0 | 9.8 |
+
+  The server never answered "moved too quickly" or "moved wrongly" (0 and 0). **D1's gate holds** (stuck 0 per 30 cells,
+  lag at most 2 cells, only in the first seconds of a run): the hidden game drives; B9 is not needed.
+  - (b) The key path: the client's existing hold (the sprint key on foot: `move.hold b`) from the pilot's key to the engine
+    seeing B: 69, 80, 93, 97, 106, 116, 117, 118 ms (8 presses). A ride's press to the client's first motion: 182-325 ms
+    (Mach 279 and 325). Both are dominated by the pod's software client (10 frames a second: the client runs its ticks two
+    at a time); B7 measures the finished ride from the key itself, and the feel is a play-test item.
+  - (c) The classifier: no in-place action of the bike leaves `idle` (the wheelie standing, the bunny hop's 40-frame charge
+    and its hops, a turn in place, the turn jump, a collide: each an engine `P.action`, which Gen 3's facts never read). The
+    moving hops (a side jump: `jumpType` normal, 16 frames; a bunny hop on: low, 16 frames; a wheelie's ledge hop: high)
+    set `P.jumping`, which the classifier read as a ledge (`forced`): B1 exempts them on a bike. The engine's rails are
+    ridden hopping (B held 40 frames, then the rail's way: `wheelieHoppingMoving`), not in a wheelie; the cell below Route
+    119's longest rail run (5, 12) was not reached by the client (left to B5).
+  - Video: `/workspace/videos/bike/b0_follow2.mp4` (sent to the user shrunk, 6.7 MB).
+- **B1 the protocol and the bridge.** `move.ride{dir, b}` (new schema, example, catalog, PROTOCOL.md's row);
+  `player.state` + `bikeKind`/`trick`/`gear`, `player.pos` + `jump`, `story.state` + `bikeKind`/`trick`. `kb_move.lua`:
+  the ride held like the brake (pressed on each idle step, kept across landings: the landing release spares it; let go of
+  off `idle`, pressed again on the way back), a ride with a direction drops the waiting steps and a step while one is
+  held is refused `script` (counts `rides`, `rideRefused`, `collides`; stats `rideHeld`). Gen 3's facts: `bikeKind` (mach /
+  acro), `trick` (acroState 2/4 or the back/pedal pose: wheelie; 3: hop), `gear` (frameCounter), `bikeJump`; a bike's hop
+  is its own step (kind `bike` with `jump`, a wheelie's ledge hop kind `ledge` to the engine's own landing) and keeps the
+  mode `idle`; a bump (`P.action` walk-in-place or the pedal pose) is a `player.blocked` without `n`, reason `tile`, at
+  most once per 16 logic steps. Gen 1 and Gen 2: `bikeKind: bike`. `fake_gen1` rides at 8 frames a cell. Tests: Lua 41
+  (move, 6 new) and 42 (game3 observe, 13 new), stand-ins 31 (1 new), protocol 585; the whole pytest run 2,441 passed.
+  - Real engine (`tools/e2e/bike_bridge.py`, a test session sending `move.ride`; trainer sight off): the Mach's steps
+    16, 8, 4, 4, ... (4 frames at step 3); a `move.step` while riding refused `script`; B held standing on the Acro gives
+    `trick` wheelie then hop; one `move.ride{right, b}` is a side jump (`bike`, 16 frames, `jump: normal`); B then up is a
+    wheelie run at 8 frames. After the release the Mach rolled on 4 more cells at 4 frames (the engine's own slow-down).
+  - Choices: a bump's reason is always `tile` (the engine's collide action doesn't say what it hit); the brake and the
+    ride share B (either holds it).
+
 ## Water and bridges (2026-10-25, specs/WATER_AND_BRIDGES_PLAN.md)
 
 Run unattended (the user travelling; defaults D1-D11, choices recorded here). Pods: kb-dev51 (cpu3m x4, $0.22/hr) for

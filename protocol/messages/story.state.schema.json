@@ -45,6 +45,14 @@
     "bike": {
       "type": "boolean"
     },
+    "bikeKind": {
+      "enum": ["bike", "mach", "acro"],
+      "description": "BIKE_PLAN D10: the bike the hidden player rides (player.state.bikeKind), sent with bike in a full state or a delta that changes it; the server keeps it for the bike entity's look. Optional."
+    },
+    "trick": {
+      "enum": ["none", "wheelie", "hop"],
+      "description": "BIKE_PLAN D6: the Acro bike's pose (player.state.trick), relayed to the bike entity. Optional."
+    },
     "run": {
       "type": "boolean",
       "description": "FA8 item 7 (D4): the hidden player is running (player.state.run); the server gives it the running speed. Optional; absent in a full state: not running."

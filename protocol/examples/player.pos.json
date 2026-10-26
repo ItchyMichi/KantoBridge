@@ -15,6 +15,26 @@
   {
     "type": "player.pos",
     "seq": 12,
-    "data": {"map": "TEST_TOWN", "x": 5, "y": 7, "facing": "down", "kind": "ledge", "frames": 32}
+    "data": {
+      "map": "TEST_TOWN",
+      "x": 5,
+      "y": 7,
+      "facing": "down",
+      "kind": "ledge",
+      "frames": 32
+    }
+  },
+  {
+    "type": "player.pos",
+    "seq": 13,
+    "data": {
+      "map": "EM_ROUTE110",
+      "x": 12,
+      "y": 40,
+      "facing": "up",
+      "kind": "bike",
+      "frames": 16,
+      "jump": "low"
+    }
   }
 ]

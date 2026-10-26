@@ -1,0 +1,16 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kantobridge.invalid/protocol/messages/move.ride.schema.json",
+  "title": "move.ride",
+  "description": "BIKE_PLAN D1: the rider's held intent while the hidden player is on a bike (the movement keys as one Gen 1 direction, sneak or jump as B). Sent on change; gen1-bridge holds the buttons while the mode is idle (the brake's rule) and the engine's own bike code moves the player. No answer.",
+  "x-type": "move.ride",
+  "x-legs": ["m2g"],
+  "x-re": "never",
+  "type": "object",
+  "required": ["dir", "b"],
+  "additionalProperties": false,
+  "properties": {
+    "dir": {"oneOf": [{"$ref": "../defs.schema.json#/$defs/dir"}, {"type": "null"}], "description": "The direction held, or null for none."},
+    "b": {"type": "boolean", "description": "B held (Emerald's Acro tricks; Blue's and Crystal's brake)."}
+  }
+}

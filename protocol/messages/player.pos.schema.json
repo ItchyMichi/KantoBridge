@@ -35,6 +35,7 @@
       "description": "How long the move takes; 0 for an instant change."
     },
     "elev": {"type": "integer", "minimum": 0, "maximum": 15, "description": "WATER_AND_BRIDGES_PLAN D7 (Gen 3 only): the hidden game's elevation of the player (the engine's current one, not the cell's); on a bridge cell (elevation 15) it names the floor: the deck's elevation stands on the deck, any other under it. Optional; absent: the deck, or the floor nearest the player's feet."},
+    "jump": {"enum": ["low", "normal", "high"], "description": "BIKE_PLAN D6 (Gen 3 only): the step is a bike hop (low: a bunny hop onto the next cell; normal: a side jump; high: a wheelie's ledge hop, kind ledge). Optional."},
     "n": {
       "type": "integer",
       "minimum": 1,

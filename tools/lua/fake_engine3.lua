@@ -428,6 +428,7 @@ function FakeEngine3.new(opts)
 
   -- forced_movement.lua:441-449
   E.Forced = { forced = false }
+  E.BikeRse = { state = { acroState = 0, frameCounter = 0 } } -- BIKE_PLAN B1 (bike/rse.lua: Rse.state)
   function E.Forced.isForced() return E.Forced.forced == true end
   -- M.lookup (forced_movement.lua:294-300): E.Forced.entry names the tile's entry ("Slip", "PushedSouthByCurrent", ...)
   function E.Forced.lookup(beh) if E.Forced.entry then return 1, { name = E.Forced.entry } end return nil end
@@ -996,6 +997,8 @@ function FakeEngine3.new(opts)
     ["src.core.game3.battle.init"] = E.Battle,
     ["src.core.game3.audio"] = E.Audio,
     ["src.core.game3.forced_movement"] = E.Forced,
+    -- BIKE_PLAN B1: bike/rse.lua's state (acroState, frameCounter), set by the tests
+    ["src.core.game3.bike.rse"] = E.BikeRse,
     ["src.core.game3.mb"] = E.MB,
     ["src.ui.game3.message"] = E.Message,
     ["src.ui.game3.choice"] = E.Choice,

@@ -630,6 +630,7 @@ function Gen1.new(opts)
     facts.dark = ow.dark and true or false                          -- OC:514-522, :1182
     facts.surf = p.surfing and true or false                         -- Player.lua:139, :331
     facts.bike = (save and save.onBike) and true or false            -- OC:1420-1421
+    facts.bikeKind = facts.bike and "bike" or nil                    -- BIKE_PLAN D11: the one bike
     facts.slope = (facts.bike and p.slopeMap) and true or false      -- Player.lua:128
     facts.hidden = ow.playerHidden and true or false                 -- OC:6725-6728
     facts.darkMap = darkMapSet()[facts.map] == true                  -- OC:517-522

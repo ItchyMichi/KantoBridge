@@ -664,6 +664,7 @@ return function(mod)
   session.on("move.step", movement(mover.request, "move.step"))
   session.on("move.face", movement(mover.face, "move.face"))
   session.on("move.hold", movement(mover.hold, "move.hold"))
+  session.on("move.ride", movement(mover.ride, "move.ride")) -- BIKE_PLAN B1: the rider's held intent
 
   -- M4 requests (docs/PROTOCOL.md "Interaction", "UI"), client and test
   -- roles only. They queue in their modules and are applied in the step,

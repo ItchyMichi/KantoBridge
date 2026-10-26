@@ -12,5 +12,22 @@
       "lit": false,
       "weather": "rain"
     }
+  },
+  {
+    "type": "player.state",
+    "seq": 12,
+    "data": {
+      "mode": "cutscene",
+      "bike": true,
+      "surf": false,
+      "slope": false,
+      "hidden": false,
+      "dark": false,
+      "lit": false,
+      "weather": "rain",
+      "bikeKind": "acro",
+      "trick": "wheelie",
+      "gear": 0
+    }
   }
 ]

@@ -259,3 +259,91 @@ def test_the_npc_generation_follows_the_object_table_and_the_map():
     raw, map_id, gen3 = npc_list(a)
     assert (map_id, gen3) == ("EM_TEST_ROUTE", gen2 + 1)
     assert npc_list(a)[2] == gen3
+
+
+# ------------------------------------------------------------ the bikes (BIKE_PLAN B1)
+
+
+def state_of(a):
+    return plain(a.b.module("observe/kb_player.lua").state(a.eng.observe()))
+
+
+def test_the_mach_bikes_kind_and_gear():
+    a = Adapter3()
+    a.field()
+    P = a.E.Player
+    P.biking, P.bikeType = True, b"mach"
+    for counter, gear in ((0, 0), (1, 1), (2, 2)):
+        a.E.BikeRse.state.frameCounter = counter
+        s = state_of(a)
+        assert (s["bike"], s["bikeKind"], s["gear"]) == (True, "mach", gear) and "trick" not in s
+    P.biking = False
+    s = state_of(a)
+    assert "bikeKind" not in s and "gear" not in s
+
+
+@pytest.mark.parametrize("acro_state, anim, trick", [
+    (0, None, "none"), (2, None, "wheelie"), (4, None, "wheelie"), (3, None, "hop"), (1, "back", "wheelie"),
+    (0, "pedal", "wheelie"), (5, None, "none"),
+])
+def test_the_acro_bikes_trick(acro_state, anim, trick):
+    a = Adapter3()
+    a.field()
+    P = a.E.Player
+    P.biking, P.bikeType = True, b"acro"
+    a.E.BikeRse.state.acroState = acro_state
+    P.acroAnim = a.lua({"kind": anim}) if anim else None
+    s = state_of(a)
+    assert (s["bikeKind"], s["trick"]) == ("acro", trick) and "gear" not in s
+
+
+def test_a_bikes_hop_is_its_own_step_and_keeps_the_mode_idle():
+    a = Adapter3()
+    a.field("EM_TEST_TOWN", 5, 6, "up")
+    P = a.E.Player
+    P.biking, P.bikeType = True, b"acro"
+    a.E.startStep(b"up", 16)
+    P.jumping, P.jumpType = True, b"low"
+    f = a.facts()
+    assert f["ledge"] is False and f["bikeJump"] == "low"
+    assert classify(a) == "idle"
+    obs = a.b.module("observe/kb_player.lua").new()
+    out = plain(obs.update(a.eng.observe()))
+    pos = [m[1] for m in out if m[0] == "player.pos"]
+    assert pos and (pos[0]["x"], pos[0]["y"], pos[0]["kind"], pos[0]["frames"], pos[0]["jump"]) == (5, 5, "bike", 16, "low")
+
+
+def test_a_wheelies_ledge_hop_is_a_ledge_step_to_its_landing():
+    a = Adapter3()
+    a.field("EM_TEST_TOWN", 5, 6, "down")
+    P = a.E.Player
+    P.biking, P.bikeType = True, b"acro"
+    a.E.startStep(b"down", 32)
+    P.targetY = 8                                     # the engine's own landing, two cells on
+    P.jumping, P.jumpType = True, b"high"
+    obs = a.b.module("observe/kb_player.lua").new()
+    out = plain(obs.update(a.eng.observe()))
+    pos = [m[1] for m in out if m[0] == "player.pos"]
+    assert (pos[0]["y"], pos[0]["kind"], pos[0]["frames"], pos[0]["jump"]) == (8, "ledge", 32, "high")
+    assert classify(a) == "idle"
+
+
+def test_a_jump_on_foot_is_still_a_ledge():
+    a = Adapter3()
+    a.field()
+    a.E.startStep(b"down", 32)
+    a.E.Player.jumping = True
+    assert a.facts()["ledge"] is True and classify(a) == "forced"
+
+
+def test_a_bikes_bump_is_a_collide_fact_and_a_wheelie_is_not():
+    a = Adapter3()
+    a.field()
+    P = a.E.Player
+    P.biking, P.bikeType = True, b"mach"
+    P.action = a.lua({"frames": 16, "t": 0, "walk": "normal"})
+    assert a.eng.observe().bikeCollide is not None
+    assert classify(a) == "idle"                      # in-place actions keep the mode
+    P.action = a.lua({"frames": 8, "t": 0})
+    P.acroAnim = a.lua({"kind": "back"})
+    assert a.eng.observe().bikeCollide is None and classify(a) == "idle"

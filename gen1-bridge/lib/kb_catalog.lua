@@ -42,6 +42,7 @@ return {
     ["mirror.unsub"] = { m2g = true, re = "never" },
     ["move.face"] = { m2g = true, re = "never" },
     ["move.hold"] = { m2g = true, re = "never" },
+    ["move.ride"] = { m2g = true, re = "never" },
     ["move.step"] = { m2g = true, re = "never" },
     ["npc.add"] = { g2m = true, re = "never" },
     ["npc.face"] = { g2m = true, re = "never" },

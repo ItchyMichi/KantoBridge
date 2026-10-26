@@ -132,10 +132,14 @@ class State:
     hidden: bool = False
     dark: bool = False
     lit: bool = False
+    bike_kind: str = "bike"  # BIKE_PLAN B1: the bike ridden (bikeKind), sent while bike is true
 
     def as_data(self):
-        return {"mode": self.mode, "bike": self.bike, "surf": self.surf, "slope": self.slope,
+        data = {"mode": self.mode, "bike": self.bike, "surf": self.surf, "slope": self.slope,
                 "hidden": self.hidden, "dark": self.dark, "lit": self.lit}
+        if self.bike:
+            data["bikeKind"] = self.bike_kind
+        return data
 
 
 @dataclass

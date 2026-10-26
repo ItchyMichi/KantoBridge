@@ -321,6 +321,8 @@
     {"type": "mirror.unsub", "seq": 11, "redacted": {}},
     {"type": "move.face", "seq": 11, "redacted": {"dir": "right"}},
     {"type": "move.hold", "seq": 11, "redacted": {"button": "b", "on": true}},
+    {"type": "move.ride", "seq": 12, "redacted": {"dir": "up", "b": false}},
+    {"type": "move.ride", "seq": 13, "redacted": {"dir": null, "b": true}},
     {"type": "move.step", "seq": 11, "redacted": {"dir": "up", "n": 1}},
     {"type": "move.step", "seq": 12, "redacted": {"dir": "left", "n": 2, "push": true}},
     {
@@ -665,6 +667,19 @@
       }
     },
     {
+      "type": "player.pos",
+      "seq": 13,
+      "redacted": {
+        "map": "EM_ROUTE110",
+        "x": 12,
+        "y": 40,
+        "facing": "up",
+        "kind": "bike",
+        "frames": 16,
+        "jump": "low"
+      }
+    },
+    {
       "type": "player.state",
       "seq": 11,
       "redacted": {
@@ -676,6 +691,23 @@
         "dark": false,
         "lit": false,
         "weather": "rain"
+      }
+    },
+    {
+      "type": "player.state",
+      "seq": 12,
+      "redacted": {
+        "mode": "cutscene",
+        "bike": true,
+        "surf": false,
+        "slope": false,
+        "hidden": false,
+        "dark": false,
+        "lit": false,
+        "weather": "rain",
+        "bikeKind": "acro",
+        "trick": "wheelie",
+        "gear": 0
       }
     },
     {"type": "pong", "seq": 11, "redacted": {"t": 123456}},
@@ -1002,6 +1034,11 @@
       }
     },
     {"type": "story.state", "seq": 12, "redacted": {"full": false, "remove": ["TEST_TOWN:9:4"]}},
+    {
+      "type": "story.state",
+      "seq": 13,
+      "redacted": {"full": false, "bike": true, "bikeKind": "mach", "trick": "none"}
+    },
     {
       "type": "story.toggles",
       "seq": 11,

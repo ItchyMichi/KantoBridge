@@ -139,6 +139,7 @@ function Observe.install(b)
     f.ledge = p.jumping == true
     f.surf = w.playerState == "surf" or w.playerState == "surf_pika"
     f.bike = w.playerState == "bike"
+    f.bikeKind = f.bike and "bike" or nil -- BIKE_PLAN D11: the one bike
     -- on the Cycling Road's downhill (ENGINE_DOWNHILL, World:downhill): the step driver names its roll "slope"
     local okD, down = b.method(w, "downhill")
     f.slope = (f.bike and okD and down == true) and true or false

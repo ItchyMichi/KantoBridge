@@ -240,6 +240,8 @@ end
 --     j jump type, ac action kind, as acroState, fc frameCounter, an acroAnim kind, fl the flags the bridge's
 --     classifier reads: J jumping, S scripted step, F forced movement, T transitioning, L locked or a script);
 --     KB_RIDE id= seg= f= at each segment, KB_RIDE_END id= x= y= moved= frames=
+--   { id = 5, op = "sight", on = false }
+--     trainer sight off for good (on = true: back), for a ride driven through the bridge
 --   { id = 4, op = "watch", frames = 600 }
 --     prints KB_BTN f= b= dir= whenever B or the held direction changes (the latency of a client's hold)
 local RIDE_SOURCE = "kbdrv:ride"
@@ -418,7 +420,21 @@ return function(game)
       if not cmd and #queue > 0 then
         cmd = table.remove(queue, 1)
         frames = 0
-        if cmd.op == "scan" then
+        if cmd.op == "sight" then
+          -- B1: trainer sight off (or back on) for a run driven through the bridge
+          local TS = package.loaded["src.core.game3.trainer_sight"]
+          if TS and TS.check then
+            if cmd.on == false and not patches.sightAlways then
+              patches.sightAlways = TS.check
+              TS.check = function() return false end
+            elseif cmd.on ~= false and patches.sightAlways then
+              TS.check = patches.sightAlways
+              patches.sightAlways = nil
+            end
+          end
+          print(("KB_SIGHT id=%s on=%s"):format(word(cmd.id), word(cmd.on ~= false)))
+          cmd = nil
+        elseif cmd.op == "scan" then
           scanRuns(game, cmd.id, cmd.dir or "up", cmd.bike)
           cmd = nil
         elseif cmd.op == "ride" or cmd.op == "watch" then

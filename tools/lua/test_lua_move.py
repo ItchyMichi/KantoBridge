@@ -638,3 +638,82 @@ def test_after_a_hot_reload_the_new_instance_walks():
     assert [pos(got[n][0])[:3] for n in (1, 2)] == [("TEST_TOWN", 4, 5), ("TEST_TOWN", 4, 4)]
     blocked = got[3][0]                       # (4,3) is a wall: the new instance's hook saw the verdict
     assert (blocked["type"], blocked["data"]["reason"]) == ("player.blocked", "tile")
+
+
+# ------------------------------------------------------------ the ride (BIKE_PLAN B1)
+
+
+def test_a_ride_direction_is_pressed_and_kept_across_landings():
+    w = Walk(start=("TEST_TOWN", 1, 6, "right"))
+    w.E.save.onBike = True
+    w.run(1)
+    w.peer.send("move.ride", {"dir": "right", "b": False})
+    out = w.run(40)
+    assert not [m for m in out if m["type"] == "player.blocked"]  # nothing answered: a ride is no step
+    starts = w.starts()
+    assert len(starts) >= 3                                      # the engine walks on by itself
+    t0 = starts[0]
+    assert all(w.held(t) == "right" for t in range(t0, w.tick))  # never let go of on a landing
+    assert all(m["data"]["kind"] == "bike" for m in out if m["type"] == "player.pos" and m["data"]["kind"] != "sync")
+    w.peer.send("move.ride", {"dir": None, "b": False})
+    w.settle()
+    x = w.cell()[1]
+    w.run(20)
+    assert w.cell()[1] == x and w.held(w.tick) == ""             # released: it stops on a cell
+
+
+def test_a_ride_is_released_off_idle_and_pressed_again():
+    w = Walk(start=("TEST_TOWN", 1, 6, "right"))
+    w.E.save.onBike = True
+    w.peer.send("move.ride", {"dir": "right", "b": True})
+    w.run(3)
+    assert w.E.game.input.state.b is True
+    w.E.push(w.E.text())
+    w.run(2)
+    assert w.held(w.tick) == "" and w.E.game.input.state.b is not True
+    w.E.pop()
+    w.run(3)
+    assert w.held(w.tick) == "right,b" and w.E.game.input.state.b is True
+
+
+def test_a_step_is_refused_while_a_ride_direction_is_held():
+    w = Walk(start=("TEST_TOWN", 1, 6, "right"))
+    w.E.save.onBike = True
+    w.peer.send("move.ride", {"dir": "right", "b": False})
+    w.run(2)
+    n = w.step("down")
+    blocked = w.answer(n)
+    assert (blocked["type"], blocked["data"]["reason"]) == ("player.blocked", "script")
+    w.peer.send("move.ride", {"dir": None, "b": False})
+    w.settle()
+    n = w.step("down")                                           # off the ride, steps are steps again
+    assert w.answer(n)["type"] == "player.pos"
+
+
+def test_a_ride_with_a_direction_drops_the_waiting_steps():
+    w = Walk(start=("TEST_TOWN", 1, 6, "right"))
+    first = w.step("right")
+    w.answer(first)
+    second, third = w.step("right"), w.step("right")
+    w.peer.send("move.ride", {"dir": "down", "b": False})
+    w.run(3)
+    blocked = {m["data"]["n"]: m["data"]["reason"] for t, m in w.log if m["type"] == "player.blocked"}
+    assert blocked == {second: "script", third: "script"}
+
+
+def test_b_is_pressed_with_the_direction_in_one_step():
+    w = Walk(start=("TEST_TOWN", 5, 4, "down"))
+    w.E.save.onBike = True
+    w.run(1)
+    w.peer.send("move.ride", {"dir": "left", "b": True})
+    w.run(1)
+    t = w.tick
+    assert w.held(t) == "left,b"   # both in the one step
+
+
+def test_a_bad_ride_is_refused():
+    w = Walk(start=("TEST_TOWN", 5, 4, "down"))
+    for bad in ({"dir": "north", "b": False}, {"dir": "up"}, {"dir": "up", "b": 1}):
+        seq = w.peer.send("move.ride", bad)
+        out = w.run(1)
+        assert [m["data"]["code"] for m in out if m["type"] == "error"] in (["bad_message"], ["schema"], ["invalid"]), out

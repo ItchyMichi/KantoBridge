@@ -221,6 +221,13 @@
       "redact": [],
       "schema": "messages/move.hold.schema.json"
     },
+    "move.ride": {
+      "legs": ["m2g"],
+      "re": "never",
+      "rom": false,
+      "redact": [],
+      "schema": "messages/move.ride.schema.json"
+    },
     "move.step": {
       "legs": ["m2g"],
       "re": "never",

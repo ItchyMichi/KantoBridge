@@ -32,6 +32,7 @@ BRIDGE_VERSION = "fake_gen1-0.1.0"
 ENGINE_VERSION = "0.0.0-fake"
 ROLES = ("client", "builder", "test")
 WALK_FRAMES = 16
+BIKE_FRAMES = 8  # BIKE_PLAN B1: a ride walks on at the bike's frames
 PLAYTHROUGHS = ("title", "fresh", "saved")
 START_FRAMES = 10  # frames a region.start takes to reach the overworld
 ROUTE_MAP_PREFIX = "KB_ROUTE_"  # the bridge's route maps: the only warp targets a resume accepts
@@ -56,6 +57,9 @@ class FakeGen1:
         self.export_index = synth.index(game, ENGINE_VERSION, BRIDGE_VERSION, self.exports)
         self.player = Player()
         self.state = State()
+        self.ride = {"dir": None, "b": False}  # BIKE_PLAN B1: move.ride's held intent
+        self._ride_task = None
+        self.rides = 0
         self.story = Story()
         self.session = "s-" + secrets.token_hex(4)
         self.server = None
@@ -204,6 +208,8 @@ class FakeGen1:
             await conn.send("game.status", self.game_status())
         elif msg_type == "move.step":
             await self._step(conn, data["dir"], data["n"])
+        elif msg_type == "move.ride":
+            await self._ride(conn, data.get("dir"), bool(data.get("b")))
         elif msg_type == "move.face":
             self.player.facing = data["dir"]
             await conn.send("player.pos", self._pos("sync", 0))
@@ -461,7 +467,30 @@ class FakeGen1:
         cells = exported["cells"]
         return cells[y][x] if 0 <= y < len(cells) and 0 <= x < len(cells[0]) else 0
 
+    async def _ride(self, conn, direction, b):
+        """move.ride (BIKE_PLAN B1): the held intent; while a direction is held on the bike and idle, the player walks on
+        one cell each BIKE_FRAMES (player.pos kind bike), until released or refused. No answer."""
+        self.rides += 1
+        self.ride = {"dir": direction, "b": b}
+        if direction and (self._ride_task is None or self._ride_task.done()):
+            self._ride_task = asyncio.create_task(self._ride_loop(conn))
+
+    async def _ride_loop(self, conn):
+        while self.ride["dir"] and self.state.bike and self.state.mode == "idle" and self.ingame:
+            direction = self.ride["dir"]
+            dx, dy = DIRS[direction]
+            self.player.facing = direction
+            x, y = self.player.x + dx, self.player.y + dy
+            if self._map().walkable(x, y) and self._map().npc_at(x, y) is None:
+                self.player.x, self.player.y = x, y
+                await conn.send("player.pos", self._pos("bike", BIKE_FRAMES))
+            await asyncio.sleep(BIKE_FRAMES / 60)
+
     async def _step(self, conn, direction, n):
+        if self.ride["dir"]:
+            # a ride direction is held: steps are refused (the hidden game drives)
+            await conn.send("player.blocked", dict(self._cell(), dir=direction, reason="script", n=n))
+            return
         self.player.facing = direction
         # not in the game, a region.park hold (MG2) or a screen: the hidden game takes no steps
         if not self.ingame or self.parked or self.state.mode != "idle":
