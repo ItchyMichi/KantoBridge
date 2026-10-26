@@ -51,6 +51,11 @@ Pokémon Red/Blue's story runs in a **hidden Gen1Recomp**. It is displayed and p
   (WB0–WB8, written 2026-10-25 after FA9): the sea as the chain's datum, lagoons as ponds, waterfalls as cascades, seats
   on landings, and Emerald's bridges as two-floor cells (`decks` in the layout, the floor from the game's elevation); its §3
   decisions D1–D11 are defaults the user may change. BRIDGES_PROBLEM.md is its input.
+- [`docs/specs/BIKE_PLAN.md`](docs/specs/BIKE_PLAN.md) is the bike plan (B0–B8, written 2026-10-26 from the audit's
+  K3/K4): while the hidden player is on a bike the hidden game drives and Minecraft steers (`move.ride` holds, the
+  engine's steps walked on a ridden bike entity other players see); Emerald's Mach and Acro mechanics come out of the
+  engine, Blue and Crystal keep their one bike unchanged; its §3 decisions D1–D12 are defaults the user may change and
+  §8 is the recipe for running it unattended.
 - `refs/_research/` (git-ignored) holds the research notes, with verified `file:line` references,
   that the plan cites.
 
