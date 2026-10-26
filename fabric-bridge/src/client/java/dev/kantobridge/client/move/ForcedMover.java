@@ -16,6 +16,13 @@ import org.jetbrains.annotations.Nullable;
  * <p>After the last leg the player is checked: arrived means one braking tick (otherwise inertia carries it about a
  * third of a cell on); not arrived means up to {@value #SETTLE_TICKS} ticks pushing towards the target, then giving up
  * ({@link #takeStuck}), and the caller teleports instead.
+ *
+ * <p>STEP_SPEED_PLAN §2.5 (Part B, D6): a leg started late is otherwise never caught up, so on a ride (the hidden game
+ * drives, the client follows) the latency stays as a constant lag. While legs wait behind the one under way, a tick
+ * spends {@code 1 + waiting} ticks' worth of frames (at most {@value #MAX_RATE}), and never moves the player more than
+ * {@value #MAX_CATCH_UP} blocks in that tick (far below the server's vehicle and player move checks, 10 blocks a tick):
+ * the frames that don't fit wait for the next tick, so nothing is skipped. A backlog of two legs drains within about a
+ * cell; a single leg keeps its frames exactly.
  */
 public final class ForcedMover {
 	/** Gen 1 frames per Minecraft tick. */
@@ -27,6 +34,10 @@ public final class ForcedMover {
 	public static final double SETTLE_SPEED = 0.4;
 	/** Legs waiting beyond this mean Minecraft fell far behind: keep only the newest. */
 	public static final int MAX_LEGS = 16;
+	/** STEP_SPEED_PLAN Part B: the most ticks' worth of frames one tick spends while legs wait. */
+	public static final int MAX_RATE = 3;
+	/** STEP_SPEED_PLAN Part B: blocks a catch-up tick may move at most. */
+	public static final double MAX_CATCH_UP = 3.0;
 	private static final double EPSILON = 1.0E-9;
 
 	/** A horizontal velocity in blocks per tick. */
@@ -47,6 +58,7 @@ public final class ForcedMover {
 	private boolean stuck;
 	private long added;
 	private long stuckCount;
+	private long catchUpTicks;
 
 	/** Adds a leg: reach block point ({@code x}, {@code z}) {@code frames} Gen 1 frames after the previous leg ends. */
 	public void add(double x, double z, int frames) {
@@ -77,7 +89,13 @@ public final class ForcedMover {
 		if (this.current != null || !this.legs.isEmpty()) {
 			double x = px;
 			double z = pz;
-			double budget = FRAMES_PER_TICK;
+			int waiting = this.legs.size() - (this.current == null ? 1 : 0);
+			int rate = 1 + Math.min(Math.max(0, waiting), MAX_RATE - 1);
+			double budget = FRAMES_PER_TICK * rate;
+			double room = rate > 1 ? MAX_CATCH_UP : Double.POSITIVE_INFINITY;
+			if (rate > 1) {
+				this.catchUpTicks++;
+			}
 			while (budget > EPSILON) {
 				if (this.current == null) {
 					this.current = this.legs.poll();
@@ -88,12 +106,24 @@ public final class ForcedMover {
 				}
 				double use = Math.min(budget, this.framesLeft);
 				double share = use / this.framesLeft;
+				double dist = Math.hypot(this.current.x() - x, this.current.z() - z) * share;
+				boolean full = false;
+				if (dist > room) {
+					// the catch-up's cap: only the frames that fit; the rest wait for the next tick
+					use *= room / dist;
+					share = use / this.framesLeft;
+					full = true;
+				}
 				x += (this.current.x() - x) * share;
 				z += (this.current.z() - z) * share;
+				room -= Math.min(dist, room);
 				this.framesLeft -= use;
 				budget -= use;
 				if (this.framesLeft <= EPSILON) {
 					this.current = null;
+				}
+				if (full) {
+					break;
 				}
 			}
 			if (this.current == null && this.legs.isEmpty()) {
@@ -137,6 +167,11 @@ public final class ForcedMover {
 	/** Legs added so far. */
 	public long added() {
 		return this.added;
+	}
+
+	/** STEP_SPEED_PLAN Part B: ticks that caught up (spent more than one tick's frames) so far. */
+	public long catchUpTicks() {
+		return this.catchUpTicks;
 	}
 
 	/** Moves given up so far. */

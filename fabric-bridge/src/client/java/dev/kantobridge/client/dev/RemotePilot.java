@@ -1203,6 +1203,12 @@ final class RemotePilot {
 			counts.addProperty("forced", move.forced);
 			counts.addProperty("syncs", move.syncs);
 			counts.addProperty("positions", move.positions);
+			// STEP_SPEED_PLAN S5/S6: F7's lost answers, and the forced mover's catch-up ticks (Part B)
+			counts.addProperty("lost", move.lost);
+			dev.kantobridge.client.move.MoveController mc = MoveRuntime.controller();
+			if (mc != null) {
+				counts.addProperty("catchUp", mc.mover().catchUpTicks());
+			}
 			out.add("move", counts);
 		}
 		Links links = Links.get();

@@ -58,13 +58,68 @@ class ForcedMoverTest {
 		mover.add(2.0, 0.0, 16);
 		mover.add(2.0, 2.0, 16);
 		List<ForcedMover.Velocity> velocities = run(mover, position, 30, false);
-		// Tick 6 spends one frame finishing the first leg and two starting the second.
-		assertEquals(0.125, velocities.get(5).x(), EPS);
-		assertEquals(0.25, velocities.get(5).z(), EPS);
+		// STEP_SPEED_PLAN Part B: the second leg waits, so the first ticks spend 6 frames (0.75 blocks); tick 3 spends four
+		// finishing the first leg and two starting the second; then 3 frames a tick again.
+		assertEquals(0.75, velocities.get(0).x(), EPS);
+		assertEquals(0.5, velocities.get(2).x(), EPS);
+		assertEquals(0.25, velocities.get(2).z(), EPS);
+		assertEquals(0.375, velocities.get(3).z(), EPS);
 		assertEquals(2.0, position[0], EPS);
 		assertEquals(2.0, position[1], EPS);
-		// 32 frames = 10 2/3 ticks: 11 moving ticks, then the brake.
-		assertEquals(12, velocities.size());
+		// 32 frames: 18 in three ticks, 14 in five more, then the brake (the old 11 moving ticks less three).
+		assertEquals(9, velocities.size());
+	}
+
+	@Test
+	void aBacklogOfTwoLegsDrainsWithinACell() {
+		// the Mach: three legs of one cell (2 blocks) at 4 frames, the last two waiting
+		ForcedMover mover = new ForcedMover();
+		double[] position = {0.0, 0.0};
+		mover.add(2.0, 0.0, 4);
+		mover.add(4.0, 0.0, 4);
+		mover.add(6.0, 0.0, 4);
+		assertEquals(3, mover.queued(), "none under way yet: all three wait");
+		List<ForcedMover.Velocity> velocities = run(mover, position, 30, false);
+		// tick 1: the first leg and half the second (the cap: 3 blocks), tick 2 the rest; the brake. Without the catch-up
+		// the legs take 12 frames = 4 ticks.
+		assertEquals(3, velocities.size());
+		assertEquals(3.0, velocities.get(0).x(), EPS);
+		assertEquals(3.0, velocities.get(1).x(), EPS);
+		assertEquals(ForcedMover.Velocity.ZERO, velocities.get(2));
+		assertEquals(6.0, position[0], EPS);
+		assertFalse(mover.active());
+		assertEquals(2, mover.catchUpTicks());
+	}
+
+	@Test
+	void aCatchUpTickNeverMovesMoreThanTheCap() {
+		ForcedMover mover = new ForcedMover();
+		double[] position = {0.0, 0.0};
+		for (int i = 1; i <= 12; i++) {
+			mover.add(2.0 * i, 0.0, 4);
+		}
+		List<ForcedMover.Velocity> velocities = run(mover, position, 60, false);
+		double fastest = 0.0;
+		for (ForcedMover.Velocity v : velocities) {
+			fastest = Math.max(fastest, Math.hypot(v.x(), v.z()));
+		}
+		assertTrue(fastest <= ForcedMover.MAX_CATCH_UP + EPS, "fastest " + fastest);
+		assertEquals(24.0, position[0], EPS, "every leg walked, none skipped");
+		// 48 frames: 8 catch-up ticks of 3 blocks (24 blocks) and the brake; at plain speed 16 ticks
+		assertEquals(9, velocities.size());
+	}
+
+	@Test
+	void aLegAddedLaterIsCaughtUpFromThen() {
+		ForcedMover mover = new ForcedMover();
+		double[] position = {0.0, 0.0};
+		mover.add(2.0, 0.0, 16);
+		ForcedMover.Velocity first = mover.tick(position[0], position[1]);
+		assertEquals(0.375, first.x(), EPS, "a single leg keeps its frames");
+		position[0] += first.x();
+		mover.add(4.0, 0.0, 16);
+		ForcedMover.Velocity second = mover.tick(position[0], position[1]);
+		assertEquals(0.75, second.x(), EPS, "one leg waiting: twice the frames");
 	}
 
 	@Test
