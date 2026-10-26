@@ -16,6 +16,20 @@ was reverted). Every other ride in B5 and B7 had 0 complaints.
   `ServerGamePacketListenerImpl.handleMoveVehicle` (why the server's own move of the bike stops short).
 - Ideas: a dump of those cells' heights and colliders; a slope collider that opens for a biker at full speed (as the
   waterfall's foot wall opens while `forced`); or let the bike be teleported along the slope (a forced-move kind).
+- **Checked 2026-10-26** (LandSky6's region files and the levels dump `levels_wb6_pin`, the same table and options; the
+  dump on the volume in `/workspace/reports/muddy/`): Route 111's column 29 is level 15 (floor y 88) from (29, 8) south and
+  level 21 (y 94) from (29, 5) north; the 6-block climb is two ramp cells, (29, 7) and (29, 6), rise 3 each, built as
+  `step_collider` low3/high3 stairs: six half-block stairs a third of a block long per cell, **1.5 blocks up per block
+  forward**. Every outdoor muddy slope is built alike (Route 111 (17, 36-37), Route 115 (28, 8-12), Route 119 (6, 54-55),
+  the Safari Zone southwest (8, 0-3), rise 2-3 a cell); Granite Cave B1F's muddy column is flat (y 49). **The cause:**
+  Minecraft lifts an entity at most its step-up (0.6) per tick; the Mach moves 1.5 blocks a tick, which on this slope needs
+  about 2.25 blocks of climb a tick, so the bike stalls on the stairs whatever its step-up (1.0 also failed). A gentler
+  ramp can't fix it: even spread over all four muddy cells the slope needs 1.1 blocks a tick.
+- **The fix this points to:** let the ride's forced legs climb: give a leg the target cell's floor height (the levels and
+  the ramp lift the WorldIndex already has, `toBlock`/`rampLift`) and have the mover add the vertical share to its velocity
+  when the floor ahead rises more than step-up allows, so collision resolves the lift first and the forward move clears the
+  stairs; the server re-simulates the same move. Bars: the Mach up Route 111 (29, 11) to (29, 3) with 0 "moved wrongly",
+  0 stuck, lag at most 1; walkers and the other rides unchanged.
 
 **A2. Route 119's rails.** The engine (Gen1Recomp v0.3.85) lets the Acro hop once, to (10, 7), then stops at the rail;
 across the rail from (11, 6) is refused; the Mach stops there too. B0's other start under a rail, (5, 12), is a cell the
