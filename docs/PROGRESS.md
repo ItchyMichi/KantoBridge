@@ -3643,6 +3643,46 @@ minutes); **kb-dev50** (qjtrqukmu5lp52, cpu3g x8 32 GB, $0.32/hr) ran B0 and B1.
     the gate (the spots driver warps in without the gate's forced-bike flag, so `not_here` on the road isn't reproduced);
     a cave ride (bikes in Blue's and Crystal's caves were not tried).
 
+- **B7 end to end** (kb-dev50, LandSky6):
+  - Emerald from the keys (`bike_ride.py --e2e`): the Mach 30 cells (16, 8, 4 ×28; key to motion 342 ms, lag <= 2), the
+    wheelie run 25 cells, **the Cycling Road's deck** from (27, 22) down: 9 cells at 16, 8, 4 frames, then a Cycling Road
+    trainer standing in the column stops the bike (24 bumps; the engine's object); **long grass** (Faraway Island
+    (8, 1)), **Fortree's bridge** ((14, 4), elevation even) and **Pacifidlog's logs** ((3, 17)): no step, 4 bumps each
+    (the engine refuses a bike); **Mauville's bike shop door**: ridden in (warp to the shop). 0 "moved too quickly",
+    0 "moved wrongly", 0 stuck. Video `/workspace/videos/bike/b7_emerald.mp4` (sent shrunk, 5.8 MB).
+  - **Two clients** (`bike_lan.py`: player 1 hosts and rides, player 2 joins over LAN following a second hidden Emerald
+    five cells behind on foot): player 2's client sees 1 bike before and after player 1's Mach ride (50 blocks up the
+    lane), then the Acro's wheelie and bunny hop; player 2's screen recorded (`b7_second_client.mp4`, 26 s, sent).
+  - **The frame rate at 30 blocks a second:** the software client draws 10.3 frames a second at the Mach's 4 frames a cell
+    (B0), the same as standing (about 10): riding costs nothing measurable there; a GPU measure was not run.
+  - **The latency from the key:** 260-378 ms from the pilot's key to the seat's first motion (Mach, side jump, slope,
+    crack; 7 rides), on the 10-fps software client; the plan's 150 ms isn't met on this pod and can't be judged here: a
+    play-test item.
+  - The muddy slope again with the bike's step a full block (a horse's): the same (8 "moved wrongly", 1 stuck): the
+    step reverted to 0.6. Open.
+  - Field spots (the regression after the ride; Emerald with WB8's extra spots, some on a bike): Blue 11 of 11, Crystal
+    12 of 13 (the Ice Path ladder, as before), Emerald 42 of 42 (WB8: 41 of 42; Artisan Cave's ladder passed this time).
+  - PLAYTEST.md: the bike items rewritten (the Bicycle key, the model, the feel, the Mach, the Acro's tricks, the crack, the
+    refused cells, the deck, Blue's and Crystal's roads, warps, two players); the old K3/K4 items struck through.
+
+- **B8 the record** (checkpoint, kb-dev50): JUnit 1,488 (1 failing: KbPackReloadTest, as before this plan), GameTests
+  141/141, pytest 2,442. PROTOCOL.md (the ride's rules, `move.ride`, the new fields), README (the keys), CLAUDE.md's
+  pointer, the plan's §9. Pod time this plan: kb-dev50 about 2 h 50 min ($0.32/hr), kb-dev53 6 min. Not pushed.
+- **Left, and why:**
+  - **Route 111's muddy slope at full Mach speed:** the engine climbs it; the Minecraft bike falls behind (lag 4 cells,
+    the server's "moved wrongly" 8-9 times, the stuck fallback once). A full-block step didn't help; most likely the built
+    climb there (a walker is pushed back, so it was never built to be ridden up). Needs a builder or world change, which
+    this plan leaves alone (§2.8).
+  - **Route 119's rails:** in Gen1Recomp v0.3.85 the Acro's hop stops at the rail's end (one hop, from both directions
+    tried); not a bridge matter (D5). A play-test item.
+  - **The feel:** key to motion 0.26-0.38 s on the pod's 10-fps software client (above the plan's 150 ms); the real feel
+    can only be judged on a real PC. B9 (the client's pre-move) was not built: B0's gate (stuck legs, lag) held.
+  - Blue's forced bike on Route 17 (`not_here` when getting off) wasn't reproduced (the spots driver warps in without the
+    gate's flag); bikes in caves weren't tried in Blue or Crystal; Crystal's ride into Route 16's gate took no step (the
+    engine refused it or a script held the field).
+  - The Mach's gear isn't relayed to other players (the wheels turn with the distance); the bike's bump reason is always
+    `tile`.
+
 ## Water and bridges (2026-10-25, specs/WATER_AND_BRIDGES_PLAN.md)
 
 Run unattended (the user travelling; defaults D1-D11, choices recorded here). Pods: kb-dev51 (cpu3m x4, $0.22/hr) for

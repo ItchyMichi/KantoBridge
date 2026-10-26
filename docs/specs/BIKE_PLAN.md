@@ -461,3 +461,11 @@ Numbers only; the reasons and the choices are in PROGRESS.md "The bike".
 - **B6:** Blue's road: roll 8 frames, steer (a held direction), brake (B held: 0 steps in 1.5 s; K4 closed), the bag's
   Bicycle off and on on Route 16, a ride into its gate. Crystal's road: roll 8 frames, steer; no brake (the game's). Real
   client: Blue lag <= 2, Crystal <= 4; 0 server complaints, 0 stuck.
+- **B7:** Emerald from keys: Mach 30 cells (342 ms key to motion), wheelie 25; deck 9 cells then a trainer; long grass,
+  Fortree's bridge, Pacifidlog's logs refused (4 bumps each); the bike shop door ridden in; 0 server complaints. Two
+  clients: player 2 sees player 1's bike (1 of 1) before and after a 50-block ride. Field spots: Blue 11/11, Crystal 12/13,
+  Emerald 42/42. Frame rate at 4 frames a cell 10.3 fps (software, as standing).
+- **B8 (checkpoint):** JUnit 1,488 (1 failing before this plan too), GameTests 141/141, pytest 2,442.
+- **Not done / left:** Route 111's muddy slope at full speed (the client bike falls behind: lag 4, 8-9 "moved wrongly",
+  1 stuck); Route 119's rails (the engine stops after one hop); the latency on a real PC (pod: 0.26-0.38 s); Blue's
+  forced-bike refusal and cave rides not driven.

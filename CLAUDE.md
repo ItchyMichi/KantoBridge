@@ -55,7 +55,10 @@ Pokémon Red/Blue's story runs in a **hidden Gen1Recomp**. It is displayed and p
   K3/K4): while the hidden player is on a bike the hidden game drives and Minecraft steers (`move.ride` holds, the
   engine's steps walked on a ridden bike entity other players see); Emerald's Mach and Acro mechanics come out of the
   engine, Blue and Crystal keep their one bike unchanged; its §3 decisions D1–D12 are defaults the user may change and
-  §8 is the recipe for running it unattended.
+  §8 is the recipe for running it unattended. Executed 2026-10-26 (B0-B8; recorded in PROGRESS.md's "The bike" and the
+  plan's §9): `move.ride`, the client's `RideInput`/`MoveController.rideTick`, the server's `BikeEntity` and `Bikes`, the
+  Bicycle key (C), the placeholder model and textures (`tools/bike_textures.py`); the bike e2e tools are
+  `tools/e2e/bike_*.py`.
 - `refs/_research/` (git-ignored) holds the research notes, with verified `file:line` references,
   that the plan cites.
 

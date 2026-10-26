@@ -236,7 +236,9 @@ in order; tick each item, or note what went wrong and where (map and what you di
 - [ ] **Surf**: right-click water: you ride on the surface (surf sprite); right-click land to get off.
 - [ ] **Strength**: use it from the party menu, then walk into a boulder twice: it moves.
 - [ ] **Flash** in Rock Tunnel: dark until you use Flash, then you can see (Night Vision).
-- [ ] **Bicycle** from the bag: faster; Cycling Road's slope pulls you downhill; sneak brakes.
+- [ ] **Bicycle** from the bag, or the **Bicycle key (C)**: you sit on a bike under you (getting off: the key or the
+      bag again; sneak never does); the movement keys steer by the camera; Cycling Road's slope rolls you downhill;
+      sneak or jump (B) brakes, a held direction steers across the road (the bike plan, below).
 - [ ] **Fly** (party menu → FLY → a town), **Dig**, **Teleport**, **Escape Rope**.
 - [ ] Spinner tiles slide you (Viridian Gym, Rocket Hideout); holes and warp pads move you (Silph Co,
       Saffron Gym, the Mansion); Seafoam's currents push you.
@@ -1059,15 +1061,16 @@ Videos of the real-client spots: `/workspace/videos/kanto-bridge-{blue,crystal,e
 - [ ] Walk off the edge of Route 44 or 45: into the void, then back.
 - [ ] Rock Smash a rock from Minecraft: nothing happens (the rock stays).
 - [ ] Strength on a boulder: the push is refused, the boulder moves anyway.
-- [ ] The Cycling Road: you can't steer or get off while it rolls.
+- [ ] ~~The Cycling Road: you can't steer or get off while it rolls.~~ Replaced by the bike plan's items below.
 
 ### Emerald
 - [ ] Step onto an Aqua Hideout warp pad, or a Mossdeep Gym warp tile: you stay put while the game moves you across the room.
 - [ ] Route 113's ash grass: when a wild battle starts on a step, you end a cell behind afterwards.
 - [ ] Hold the sprint key: you never run (the game would).
-- [ ] The Mach Bike never speeds up; the Acro bike's tricks can't be done.
+- [ ] ~~The Mach Bike never speeds up; the Acro bike's tricks can't be done.~~ Replaced by the bike plan's items below.
 - [ ] Strength on a boulder: refused, the boulder stays.
-- [ ] Ride a bike into Route 119's long grass or Pacifidlog's logs: Minecraft lets you, the game snaps you back.
+- [ ] ~~Ride a bike into Route 119's long grass or Pacifidlog's logs: Minecraft lets you, the game snaps you back.~~ The
+      bike plan's items below.
 - [ ] Walk onto water from a cliff on Route 110 or 120: you stand on the water.
 
 ### After FA8 (the fixes; a world rebuilt with them: LandSky4 on the volume)
@@ -1095,3 +1098,33 @@ Videos of the real-client spots: `/workspace/videos/kanto-bridge-{blue,crystal,e
 - [ ] Slateport's harbour and both seams (Route 110's water, Route 134's sea): the sea meets across without a step.
 - [ ] Route 109: surf to a beach chair and land on it; sit-height art, no bump.
 - [ ] A warp or a resync while under a bridge puts you back under it (not on the deck).
+
+
+## The bike (specs/BIKE_PLAN.md; no world rebuild needed)
+On a bike the hidden game rides it and Minecraft steers: hold a movement key and the game's own bike moves you; sneak or
+jump is B. Try it in Blue, Crystal and Emerald.
+- [ ] The **Bicycle key (C)**: on and off where the game allows it (a short text box from the game); where it doesn't (the
+      Cycling Road, Route 16 in Crystal, indoors), the line says it can't be used here. The bag's Bicycle still works.
+- [ ] You sit on a bike model (red Mach, green Acro with pegs, blue for Blue's and Crystal's bike); in first person the
+      handlebar and stem show below the camera. Sneak never gets you off.
+- [ ] **The feel:** press W on the Mach Bike and let go; how long until you move, and do you stop on a cell? (Measured on a
+      slow software-rendered test client: about 0.3 s from the key to motion; on your PC it should be shorter.)
+- [ ] Emerald, the **Mach Bike**: hold a direction: 16, then 8, then 4 frames a cell (30 blocks a second); let go: it rolls
+      on a few cells and stops. Ride up Route 111's muddy slope at full speed: the game lets you climb (known: here the
+      Minecraft bike may lag behind and be put back; tell me what you see), and from a standing start it pushes you back.
+- [ ] Emerald, the **Acro Bike**: tap sneak (a wheelie standing), hold sneak about a second (a bunny hop in place), sneak +
+      W (a wheelie ride), sneak with a new direction (a side jump), sneak with the opposite direction (a turn jump), a
+      wheelie into a ledge (hopped over). Route 119's rails: hop along them (the game here stopped at the rail's end:
+      does it let you ride them in your game?).
+- [ ] Emerald: Granite Cave B1F's cracked floor at full Mach speed holds; slower, you fall to B2F.
+- [ ] Emerald: ride into Route 119's long grass, Fortree's bridges or Pacifidlog's logs: the bike bumps and stops (walking in
+      is fine).
+- [ ] Emerald, Route 110: ride the Cycling Road on the deck at full speed (the trainers riding there stop you when they
+      stand in your way, as in the game); you stay on the deck.
+- [ ] Blue, Route 17: the road rolls you down; hold left or right to steer across it; hold sneak to brake; getting off on
+      the road is refused (when you came in through the gate).
+- [ ] Crystal, Route 17: rolls you down, a held direction steers; there is no brake in Crystal.
+- [ ] A warp (a door, a ladder, a resync) keeps you on the bike.
+- [ ] **Two players:** the other player's bike is drawn under them, moving with them, in their bike's colours, and their
+      wheelie or bunny hop shows.
+
