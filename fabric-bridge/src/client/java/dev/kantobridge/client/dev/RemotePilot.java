@@ -1205,6 +1205,10 @@ final class RemotePilot {
 			counts.addProperty("positions", move.positions);
 			// STEP_SPEED_PLAN S5/S6: F7's lost answers, and the forced mover's catch-up ticks (Part B)
 			counts.addProperty("lost", move.lost);
+			// BIKE_PLAN B9: the ride's pre-moved cells, confirmed and taken back
+			counts.addProperty("predicted", move.predicted);
+			counts.addProperty("predictConfirmed", move.predictConfirmed);
+			counts.addProperty("predictMissed", move.predictMissed);
 			dev.kantobridge.client.move.MoveController mc = MoveRuntime.controller();
 			if (mc != null) {
 				counts.addProperty("catchUp", mc.mover().catchUpTicks());
@@ -1285,6 +1289,9 @@ final class RemotePilot {
 				dev.kantobridge.world.Dir held = moves.ride().sent().dir();
 				ride.addProperty("held", held == null ? "-" : held.id());
 				ride.addProperty("b", moves.ride().sent().b());
+				// BIKE_PLAN B9: the last start from standing, on the client's clock
+				ride.addProperty("motionMs", moves.rideMotionMs());
+				ride.addProperty("answerMs", moves.rideAnswerMs());
 			}
 			out.add("ride", ride);
 		}

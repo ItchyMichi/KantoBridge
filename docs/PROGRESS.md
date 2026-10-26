@@ -3587,15 +3587,16 @@ full). Results on the volume in `/workspace/reports/step_speed/`.
   without it** (the one 2 without it was in the first second): the software client's 2s came from its frame rate, not from
   the mover. The catch-up still removes the occasional extra cell (lag max never above 1 with it). From the keys
   (`bike_ride.py --e2e`): Mach lag max 1 on and off, wheelie 1, the deck 1; key to motion: Mach 279 ms (on) / 233 ms (off),
-  wheelie 917 / 793 ms (the B tap's wait first), deck 307 / 235 ms: still above BIKE_PLAN's 150 ms (A3; this is the
-  bridge/engine round trip, not drawing). Emerald's diagonal walk on the GPU: 1X 6 refusals, 12 forced legs, 1 steer and 1
+  wheelie 917 / 793 ms (the B tap's wait first), deck 307 / 235 ms. (Corrected after B9: these come mostly from the
+  measurement itself, the pilot's state written every 4 ticks and its command file; on the client's own clock the engine's
+  first step arrives about 50 ms after `move.ride`: see "The bike", B9.) Emerald's diagonal walk on the GPU: 1X 6 refusals, 12 forced legs, 1 steer and 1
   teleport walking; 5, 9, 1, 1 sprinting; **2X 0 of each** (lost 0 throughout); server complaints 0.
 
 - **Checkpoint 2** (on 21948e0 + the S6 mover): JUnit 1,493 with 2 failing (KbPackReloadTest, known; a ForcedMoverTest
   assertion of mine, `queued()` counts all three legs before the first tick: fixed, the client package then 567 with only
   the known failure); GameTests 140/141 (`tworegionsshareoneworld`: "build still running", a timing flake in server code
   this plan didn't touch), 141/141 on the rerun; pytest 2,477 passed.
-- **Left open:** the key-to-motion latency (230-310 ms on the GPU pod; B9); the Gen 2/Gen 3 ledge answer of 64 frames (unchanged by
+- **Left open:** (B9 was built afterwards: "The bike", B9); the Gen 2/Gen 3 ledge answer of 64 frames (unchanged by
   this plan; compare BIKE_FOLLOWUPS E3); Gen 2's `moveFastPassed` doesn't count ledges (above).
 
 ## The bike (2026-10-26, specs/BIKE_PLAN.md)
@@ -3797,6 +3798,39 @@ minutes); **kb-dev50** (qjtrqukmu5lp52, cpu3g x8 32 GB, $0.32/hr) ran B0 and B1.
     engine refused it or a script held the field).
   - The Mach's gear isn't relayed to other players (the wheels turn with the distance); the bike's bump reason is always
     `tile`.
+
+- **B9, the one-cell pre-move** (2026-10-26, the user's request after the GPU measurements; D1's fallback). On a ride, a
+  direction pressed from standing (the bike on the hidden cell, no ride step in the last 400 ms, not on a slope, B not
+  held: a B with a direction is a trick the engine decides) makes the client walk the next cell at once, at the bike's first
+  gear (the Mach 16 frames, the Acro 6, Blue's and Crystal's bike 8; `player.state.bikeKind`), as `move.ride` goes out. The
+  engine's `player.pos` for that cell confirms it (not walked twice); a step elsewhere drops the walk and the bike goes there;
+  a bump (`player.blocked`) or no answer within 600 ms walks it back to the hidden cell's centre; a warp, a resync or leaving
+  the ride drops it (`MovementSync.predictRide`, `MoveController.rideTick`; the pilot reports `predicted`,
+  `predictConfirmed`, `predictMissed`, and the ride's `motionMs`/`answerMs` on the client's own clock). Tests:
+  RideControllerTest +8 (confirm, a bump, the timeout, the engine elsewhere, B held or rolling, a slope, the gear, the
+  timing). Client JUnit 575 (KbPackReloadTest only).
+  - Pods: kb-gpu1's host had no GPU; **kb-gpu2** (RTX PRO 4000, $0.57/hr) never got a runtime in 6 minutes (stopped, then
+    deleted, about $0.06); **kb-gpu3** (b6b96suksnmc58, RTX 4090, 16 vCPU, $0.89/hr, EU-RO-1, the volume) 15:25-16:08 UTC,
+    about $0.64. VirtualGL as on kb-gpu1. B9 "off" is the same build with the call disabled on the pod only.
+  - **The measurement corrected.** `bike_ride.py`'s key-to-motion (the pilot's key to the first state sample that moved) is
+    dominated by the pilot: its state file is written every 4 ticks (200 ms). On the client's own clock, from `move.ride`:
+
+    | Ride (Emerald, LandSky6) | B9 | Seat's first motion | Engine's first step arrives | Predicted / confirmed / missed | Lag max | Snaps, teleports |
+    |---|---|---|---|---|---|---|
+    | Mach (W from standing) | on (2 runs) | 49, 50 ms | 50, 52 ms | 1/1/0 each | 1 | 0 |
+    | Mach | off (2 runs) | 101, 99 ms | 51, 50 ms | - | 1 | 0 |
+    | Deck, Route 110 | on | 51, 48 ms | 52, 49 ms | 1/1/0 each | 1 | 0 |
+    | Deck | off | 351, 100 ms | 301, 52 ms | - | 1 | 0 |
+    | Muddy slope (Route 111) | on | 49 ms | 49, 50 ms | 1/1/0 each | 4 (A1, as before) | 0 |
+    | Muddy slope | off | 100, 99 ms | 50 ms | - | 4 | 0 |
+    | Wheelie, side jump (B held) | on and off | 100 ms | 50 ms | not predicted | 1 | 0 |
+
+    So the round trip to the engine is about one tick (50 ms) on this machine, and B9 brings the seat's first motion from two
+    ticks to one: 100 ms to 50 ms, both under BIKE_PLAN's 150 ms. Server: "moved too quickly" 0; "moved wrongly" 11-12 on and
+    off (the muddy slope, A1, unchanged). Blue's and Crystal's rides (`bike_ride.py --game blue|crystal`): 0 snaps, 0
+    teleports, 0 server complaints; Blue's Cycling Road steer had mispredicted twice in a first run (the engine rolls a
+    released braked bike downhill), so nothing is predicted on a slope now: 0 predicted there in the second run; the Route 16
+    gate rides predicted and confirmed 1 each.
 
 ## Water and bridges (2026-10-25, specs/WATER_AND_BRIDGES_PLAN.md)
 

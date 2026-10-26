@@ -89,7 +89,9 @@ class RideControllerTest {
 		for (int i = 0; i < 20; i++) {
 			tick(rig, true, UP);
 		}
-		assertEquals(4, rig.controller.sync().stats().forced);
+		// BIKE_PLAN B9: the first cell was walked ahead on the key press and the engine's first step confirmed it
+		assertEquals(1, rig.controller.sync().stats().predictConfirmed);
+		assertEquals(3, rig.controller.sync().stats().forced);
 		assertEquals(0, rig.controller.sync().stats().steps);   // the crossings sent nothing
 		assertEquals(0, rig.controller.sync().stats().teleports);
 		assertEquals(world.toBlock("TEST_TOWN", 5, 4).z, rig.z, 0.25);
@@ -129,8 +131,132 @@ class RideControllerTest {
 	void theLockSaysRidingWhileTheHiddenGameDrives() throws Exception {
 		MoveControllerTest.Rig rig = riding(true);
 		tick(rig, true, UP);
-		tick(rig, true, UP);
+		// BIKE_PLAN B9: the pre-moved cell is a forced leg (the lock says FORCED while it runs, as for the engine's own
+		// legs); once it is walked, RIDING
+		for (int i = 0; i < 8; i++) {
+			tick(rig, true, UP);
+		}
 		assertEquals(InputLock.Reason.RIDING, rig.controller.reason());
 		assertEquals(Dir.UP, rig.controller.ride().sent().dir());
+	}
+
+	// ---- BIKE_PLAN B9: the one-cell pre-move ----
+
+	private static final MoveController.RideKeys UP_B = new MoveController.RideKeys(true, false, false, false, 180.0F, true);
+
+	private static double cellZ(int y) {
+		return world.toBlock("TEST_TOWN", 5, y).z;
+	}
+
+	@Test
+	void aPressFromStandingMovesACellAheadAndTheEngineConfirmsIt() throws Exception {
+		MoveControllerTest.Rig rig = riding(true);
+		double z0 = rig.z;
+		tick(rig, true, UP);
+		assertEquals(1, rig.controller.sync().stats().predicted);
+		tick(rig, true, UP);
+		assertTrue(rig.z < z0 - 0.3, "moving before any answer: " + (z0 - rig.z));
+		for (int i = 0; i < 6; i++) {
+			tick(rig, true, UP);
+		}
+		assertEquals(cellZ(7), rig.z, 0.25);
+		rig.bridge("player.pos", "{\"map\":\"TEST_TOWN\",\"x\":5,\"y\":7,\"facing\":\"up\",\"kind\":\"bike\",\"frames\":8}");
+		MovementSync.Stats st = rig.controller.sync().stats();
+		assertEquals(1, st.predictConfirmed);
+		assertEquals(0, st.forced, "the confirmed cell is not walked twice");
+		assertNull(rig.controller.sync().predicted());
+		// the stream goes on from there as legs
+		rig.bridge("player.pos", "{\"map\":\"TEST_TOWN\",\"x\":5,\"y\":6,\"facing\":\"up\",\"kind\":\"bike\",\"frames\":8}");
+		for (int i = 0; i < 10; i++) {
+			tick(rig, true, UP);
+		}
+		assertEquals(cellZ(6), rig.z, 0.25);
+		assertEquals(1, st.forced);
+		assertEquals(0, st.teleports);
+	}
+
+	@Test
+	void aBumpTakesThePredictedCellBack() throws Exception {
+		MoveControllerTest.Rig rig = riding(true);
+		tick(rig, true, UP);
+		tick(rig, true, UP);
+		rig.bridge("player.blocked", "{\"map\":\"TEST_TOWN\",\"x\":5,\"y\":8,\"dir\":\"up\",\"reason\":\"tile\"}");
+		for (int i = 0; i < 12; i++) {
+			tick(rig, true, UP);
+		}
+		MovementSync.Stats st = rig.controller.sync().stats();
+		assertEquals(1, st.predictMissed);
+		assertEquals(cellZ(8), rig.z, 0.25);
+		assertEquals(0, st.teleports);
+	}
+
+	@Test
+	void noAnswerTakesThePredictedCellBackAfterTheTimeout() throws Exception {
+		MoveControllerTest.Rig rig = riding(true);
+		tick(rig, true, UP);
+		int ticks = (int) (MovementSync.PREDICT_MS / 50) + 14;
+		for (int i = 0; i < ticks; i++) {
+			tick(rig, true, UP);
+		}
+		MovementSync.Stats st = rig.controller.sync().stats();
+		assertEquals(1, st.predictMissed);
+		assertEquals(cellZ(8), rig.z, 0.25);
+		assertNull(rig.controller.sync().predicted());
+	}
+
+	@Test
+	void theEngineGoingElsewhereWinsOverThePrediction() throws Exception {
+		MoveControllerTest.Rig rig = riding(true);
+		tick(rig, true, UP);
+		tick(rig, true, UP);
+		rig.bridge("player.pos", "{\"map\":\"TEST_TOWN\",\"x\":6,\"y\":8,\"facing\":\"right\",\"kind\":\"bike\",\"frames\":16,\"jump\":\"normal\"}");
+		for (int i = 0; i < 16; i++) {
+			tick(rig, true, MoveController.RideKeys.NONE);
+		}
+		MovementSync.Stats st = rig.controller.sync().stats();
+		assertEquals(1, st.predictMissed);
+		assertEquals(world.toBlock("TEST_TOWN", 6, 8).x, rig.x, 0.25);
+		assertEquals(cellZ(8), rig.z, 0.25);
+	}
+
+	@Test
+	void nothingIsPredictedWithBHeldOrWhileRolling() throws Exception {
+		MoveControllerTest.Rig rig = riding(true);
+		tick(rig, true, UP_B);
+		assertEquals(0, rig.controller.sync().stats().predicted, "B with the direction: a trick, the engine decides");
+		tick(rig, true, MoveController.RideKeys.NONE);
+		// the engine rolls the bike on by itself (the Mach's slow-down): a press now joins the stream
+		rig.bridge("player.pos", "{\"map\":\"TEST_TOWN\",\"x\":5,\"y\":7,\"facing\":\"up\",\"kind\":\"bike\",\"frames\":8}");
+		tick(rig, true, UP);
+		assertEquals(0, rig.controller.sync().stats().predicted);
+	}
+
+	@Test
+	void theStartIsTimedToTheFirstMotionAndToTheEnginesFirstStep() throws Exception {
+		MoveControllerTest.Rig rig = riding(true);
+		tick(rig, true, UP);           // sent, and the cell ahead begun
+		tick(rig, true, UP);           // the seat moves
+		assertEquals(50, rig.controller.rideMotionMs());
+		assertEquals(-1, rig.controller.rideAnswerMs());
+		tick(rig, true, UP);
+		tick(rig, true, UP);
+		rig.bridge("player.pos", "{\"map\":\"TEST_TOWN\",\"x\":5,\"y\":7,\"facing\":\"up\",\"kind\":\"bike\",\"frames\":8}");
+		assertEquals(150, rig.controller.rideAnswerMs());
+	}
+
+	@Test
+	void nothingIsPredictedOnASlope() throws Exception {
+		MoveControllerTest.Rig rig = riding(true);
+		rig.bridge("player.state", "{\"mode\":\"idle\",\"bike\":true,\"surf\":false,\"slope\":true,\"hidden\":false,\"dark\":false,\"lit\":false}");
+		tick(rig, true, UP);
+		assertEquals(0, rig.controller.sync().stats().predicted, "the Cycling Road rolls the bike whatever is pressed");
+	}
+
+	@Test
+	void theFirstGearFollowsTheBike() {
+		assertEquals(16, MoveController.firstGearFrames("mach"));
+		assertEquals(6, MoveController.firstGearFrames("acro"));
+		assertEquals(8, MoveController.firstGearFrames("bike"));
+		assertEquals(8, MoveController.firstGearFrames(null));
 	}
 }

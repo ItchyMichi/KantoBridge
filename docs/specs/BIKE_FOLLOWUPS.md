@@ -34,8 +34,11 @@ client can't reach.
   runs after (catch-up ticks 10-16 a run, 0 stuck, 0 server complaints): the backlog drains, the latency stays.
 - **2026-10-26, the GPU pod** (kb-gpu1, L4, 340-400 fps): Mach lag max 1 in 3 of 3 runs with the catch-up (one 2 in the
   first second without it); key to the seat's first motion 233-307 ms for the Mach, 793-917 ms for the wheelie (its B tap
-  waits first). The lag is solved; the **latency is still above the 150 ms bar**: B9 (the one-cell pre-move) is still
-  unbuilt and is what's left of A3.
+  waits first). (Those latencies were mostly the pilot's own sampling: see below.)
+- **2026-10-26, B9 built** (PROGRESS.md "The bike", B9): on the client's own clock the engine's first step arrives about
+  50 ms after `move.ride`; the seat's first motion went from 100 ms to 50 ms with the pre-move (RTX 4090 pod). **A3 is
+  closed on the pod**; the feel on the user's PC is the play-test item. Still open here: the side-jump assist's 2-tick wait
+  for a B tap with no direction (B with a direction is never pre-moved).
 
 **A4. The Cycling Road deck end to end** wasn't shown: from Route 110 (27, 22) down, a Cycling Road trainer stands in
 that column after 9 cells (24 bumps). That's the game's object, so correct, but the full ride needs another lane or a

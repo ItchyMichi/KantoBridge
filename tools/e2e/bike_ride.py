@@ -280,6 +280,9 @@ def main(argv=None) -> int:
                    "engine_steps": [(f.get("sf"), f.get("j")) for f in starts],
                    "tricks": sorted({f.get("as") for f in rt}),
                    "key_to_motion_ms": round((first - t_key) * 1000) if first else None,
+                   # BIKE_PLAN B9: on the client's own clock, from the ride's move.ride to the seat's motion / the engine's step
+                   "motion_ms": (after.get("ride") or {}).get("motionMs"),
+                   "answer_ms": (after.get("ride") or {}).get("answerMs"),
                    "lag_max": max(lags) if lags else None,
                    "moves": {k: m1.get(k, 0) - m0.get(k, 0) for k in m1 if isinstance(m1.get(k), (int, float)) and m1.get(k, 0) != m0.get(k, 0)},
                    "ride_after": after.get("ride"), "hidden": [after.get("map"), after.get("x"), after.get("y")],

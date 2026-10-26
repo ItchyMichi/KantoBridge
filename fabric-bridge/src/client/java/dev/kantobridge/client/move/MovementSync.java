@@ -78,6 +78,10 @@ public final class MovementSync {
 
 		/** Send {@code warp.take} (a cave shaft's warp, CAVES_3D_PLAN §3.6); its {@code seq}, or -1 when it was dropped. */
 		long take(CellPos from, Place to, String kind);
+
+		/** BIKE_PLAN B9: drop the forced path being walked (a predicted cell the engine didn't take). */
+		default void stopWalk() {
+		}
 	}
 
 	public static final String IDLE = "idle";
@@ -88,6 +92,10 @@ public final class MovementSync {
 	/** Blocks per tick along the pushed direction below which the player counts as stopped by something. */
 	static final double PUSH_PROGRESS = 0.02;
 	public static final long DRIFT_MS = 500;
+	/** BIKE_PLAN B9: a predicted cell the engine hasn't confirmed by then is taken back. */
+	public static final long PREDICT_MS = 600;
+	/** BIKE_PLAN B9: a ride step this recent means the bike is rolling: the engine's stream leads, nothing is predicted. */
+	public static final long ROLLING_MS = 400;
 	public static final int STEER_CELLS = 2;
 	/**
 	 * A step gen1-bridge hasn't answered by then is forgotten (counted as lost). gen1-bridge answers every step within
@@ -151,6 +159,10 @@ public final class MovementSync {
 		/** MG4: followed-link changes relinked here, and resumes refused because the hidden player was over a step away. */
 		public long relinks;
 		public long relinkFar;
+		/** BIKE_PLAN B9: cells pre-moved on a ride's key press, confirmed by the engine, and taken back. */
+		public long predicted;
+		public long predictConfirmed;
+		public long predictMissed;
 	}
 
 	private final Port port;
@@ -200,6 +212,14 @@ public final class MovementSync {
 	 * pushes or faces are sent; every position it reports is walked as a forced move.
 	 */
 	private boolean riding;
+	/**
+	 * BIKE_PLAN B9: the cell the client walked to ahead of the engine on a ride's key press, until the engine's
+	 * {@code player.pos} confirms it (or moves elsewhere, bumps, or says nothing for {@value #PREDICT_MS} ms).
+	 */
+	private @Nullable Spot predicted;
+	private long predictedAt;
+	/** When the engine last reported a ride step (the bike rolling). */
+	private long rideAt = Long.MIN_VALUE / 2;
 	/** The last tick found the player out in a Wild Routes zone (the ride is free there: nothing follows). */
 	private boolean away;
 	/** The {@code warp.take} sent at the far end, waiting for its answer and its warp; -1 for none. */
@@ -291,7 +311,17 @@ public final class MovementSync {
 		} else if (ready && !moved && !away && IDLE.equals(this.mode) && this.hasLast && !this.port.forcedMoving() && this.riding) {
 			// BIKE_PLAN D1: the hidden game drives the bike; only a drift is corrected
 			this.calm();
-			this.drift(here, now);
+			if (this.predicted != null && now - this.predictedAt > PREDICT_MS) {
+				// BIKE_PLAN B9: the engine never took the predicted cell (a turn in place, a trick): back to the hidden cell
+				this.unpredict();
+				Spot target = this.hiddenSpot();
+				if (here != null && target != null && !target.equals(here)) {
+					this.stats.snaps++;
+					this.correct(here, target, SNAP_FRAMES, now);
+				}
+			} else if (this.predicted == null) {
+				this.drift(here, now);
+			}
 		} else if (ready && !moved && !away && IDLE.equals(this.mode) && this.hasLast && !this.port.forcedMoving()) {
 			this.crossings(here, x, z, now);
 			this.push(intent, here, x, z, now);
@@ -311,6 +341,7 @@ public final class MovementSync {
 	/** A {@code snapshot}: a new connection or a resync. Steps in flight are forgotten. */
 	public void onSnapshot(boolean ingame, @Nullable Place player, @Nullable String mode) {
 		this.pending.clear();
+		this.predicted = null;
 		if (player != null) {
 			this.hidden = player;
 		}
@@ -383,6 +414,19 @@ public final class MovementSync {
 			this.settleWanted = true;
 			return;
 		}
+		if (this.riding && !"sync".equals(kind)) {
+			this.rideAt = now;
+		}
+		if (this.predicted != null) {
+			// BIKE_PLAN B9: the engine's first step: the predicted cell (already walked), or elsewhere
+			if (!"sync".equals(kind) && sameCell(this.predicted, target)) {
+				this.predicted = null;
+				this.stats.predictConfirmed++;
+				this.answer(n);
+				return;
+			}
+			this.unpredict();
+		}
 		switch (kind) {
 			case "sync" -> {
 				// A turn (move.face), a step that set off a warp or moved the player without a visible step, a script
@@ -414,6 +458,11 @@ public final class MovementSync {
 	public void onBlocked(Place cell, @Nullable Long n, long now) {
 		this.hidden = cell;
 		this.stats.blocked++;
+		boolean unpredicted = this.predicted != null;
+		if (unpredicted) {
+			// BIKE_PLAN B9: the engine refused the cell the client went ahead to: back to the hidden cell's centre
+			this.unpredict();
+		}
 		if (n != null) {
 			this.answer(n);
 		} else {
@@ -425,6 +474,11 @@ public final class MovementSync {
 		}
 		Spot target = Spot.of(this.index, cell);
 		Spot from = this.from();
+		if (unpredicted && target != null) {
+			this.stats.snaps++;
+			this.correct(target, target, SNAP_FRAMES, now);
+			return;
+		}
 		if (target == null || target.equals(from) || this.waitsForClimb(target)) {
 			return;
 		}
@@ -435,6 +489,7 @@ public final class MovementSync {
 	/** {@code warp{start}}: the old map's steps and moves no longer matter. */
 	public void onWarpStart() {
 		this.pending.clear();
+		this.predicted = null;
 		this.tail = null;
 		this.endClimb();
 		this.calm();
@@ -514,8 +569,55 @@ public final class MovementSync {
 	public void setRiding(boolean riding) {
 		if (riding != this.riding) {
 			this.riding = riding;
+			if (this.predicted != null) {
+				// BIKE_PLAN B9: off the bike (or unlinked) before the engine answered: the walk ahead stops here
+				this.predicted = null;
+				this.port.stopWalk();
+				this.tail = null;
+			}
 			this.calm();
 		}
+	}
+
+	/**
+	 * BIKE_PLAN B9 (D1's fallback): the rider pressed {@code dir} while the bike stands on the hidden cell. The engine's
+	 * first step reaches the client a round trip later, so the client walks the next cell at once, over
+	 * {@code frames} (the bike's first gear); the engine's {@code player.pos} for that cell confirms it, anything else
+	 * takes it back ({@link #onPosition}, {@link #onBlocked}, the timeout in {@link #tick}). Returns whether it started.
+	 */
+	public boolean predictRide(Dir dir, int frames, long now) {
+		if (!this.riding || !this.linked || this.index == null || this.predicted != null || this.port.forcedMoving()
+				|| this.port.warping() || !IDLE.equals(this.mode) || now - this.rideAt < ROLLING_MS || this.away) {
+			return false;
+		}
+		Spot from = this.hiddenSpot();
+		if (from == null || this.last == null || !from.equals(this.last) || this.hiddenUnbuilt()) {
+			return false;
+		}
+		Spot next = from.offset(dir.dx(), dir.dy());
+		this.predicted = next;
+		this.predictedAt = now;
+		this.stats.predicted++;
+		this.driftSince = -1;
+		this.walk(next, Math.max(1, frames));
+		return true;
+	}
+
+	/** BIKE_PLAN B9: a cell predicted and not yet confirmed. */
+	public @Nullable Spot predicted() {
+		return this.predicted;
+	}
+
+	/** BIKE_PLAN B9: the prediction was wrong: stop walking it; the caller moves the player from where it stands. */
+	private void unpredict() {
+		this.predicted = null;
+		this.stats.predictMissed++;
+		this.port.stopWalk();
+		this.tail = null;
+	}
+
+	private static boolean sameCell(Spot a, Spot b) {
+		return a.x() == b.x() && a.z() == b.z();
 	}
 
 	public boolean riding() {

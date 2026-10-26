@@ -90,6 +90,21 @@ public final class MoveController {
 	private long bumps;
 	private long bumpAt = Long.MIN_VALUE;
 	private long ridesSent;
+	/** BIKE_PLAN B9: the hidden bike's kind ({@code player.state.bikeKind}: mach, acro, bike), for the first gear. */
+	private @Nullable String bikeKind;
+	/** BIKE_PLAN B9: the hidden player is on a slope (the Cycling Road pulls downhill): nothing is predicted there. */
+	private boolean slope;
+	/** The clock of the tick under way (beforeMove's), for the ride's prediction. */
+	private long tickNow;
+	/**
+	 * BIKE_PLAN B9's measure, on the client's own clock: from a ride's direction pressed from standing ({@code move.ride}
+	 * sent) to the seat's first motion, and to the engine's first {@code player.pos}; -1 until measured.
+	 */
+	private long rideStartAt = -1;
+	private boolean awaitingMotion;
+	private boolean awaitingAnswer;
+	private long rideMotionMs = -1;
+	private long rideAnswerMs = -1;
 
 	/** BIKE_PLAN B2: the rider's keys this tick (read physically: the input lock zeroes the player's own). */
 	public record RideKeys(boolean forward, boolean back, boolean left, boolean right, float yaw, boolean b) {
@@ -107,6 +122,7 @@ public final class MoveController {
 	/** Start of a world tick, before the player moves: returns the velocity to give the player, or null. */
 	public ForcedMover.@Nullable Velocity beforeMove(long now, Frame frame) {
 		this.index = frame.index();
+		this.tickNow = now;
 		this.sync.setIndex(frame.index());
 		boolean kanto = frame.index() != null;
 		this.following = kanto && !frame.freeCamera();
@@ -122,6 +138,10 @@ public final class MoveController {
 		}
 		this.fade.tick(now);
 		ForcedMover.Velocity velocity = this.following ? this.mover.tick(frame.x(), frame.z()) : null;
+		if (this.awaitingMotion && velocity != null && Math.hypot(velocity.x(), velocity.z()) > 1.0E-6) {
+			this.awaitingMotion = false;
+			this.rideMotionMs = now - this.rideStartAt;
+		}
 		forcedNow = this.following && this.mover.active();
 		// A cave shaft's warp being taken holds the controls too (CAVES_3D_PLAN §3.6).
 		this.reason = InputLock.reason(kanto, frame.freeCamera(), frame.battle(), frame.connected(), frame.ingame(), this.sync.hiddenUnbuilt(),
@@ -154,11 +174,37 @@ public final class MoveController {
 			this.ride.reset();
 			return;
 		}
+		Dir before = this.ride.sent().dir();
 		RideInput.Ride want = this.ride.tick(keys.forward(), keys.back(), keys.left(), keys.right(), keys.yaw(), keys.b());
 		if (want != null && !this.sendRide(want)) {
 			// not sent (the link dropped): start over, gen1-bridge forgets its holds with the link anyway
 			this.ride.reset();
+		} else if (want != null && want.dir() != null && before == null) {
+			if (!this.mover.active()) {
+				this.rideStartAt = this.tickNow;
+				this.awaitingMotion = true;
+				this.awaitingAnswer = true;
+			}
+			if (!want.b() && !this.slope) {
+				// BIKE_PLAN B9: a direction pressed from standing: the client goes a cell ahead at the bike's first gear
+				// (not on a slope: there the engine rolls the bike downhill whatever is pressed)
+				this.sync.predictRide(want.dir(), firstGearFrames(this.bikeKind), this.tickNow);
+			}
 		}
+	}
+
+	/**
+	 * BIKE_PLAN B9: the frames of a bike's first step from standing (PROGRESS.md "The bike", B0/B6): the Mach 16 (then 8,
+	 * then 4), the Acro 6, Blue's and Crystal's bike 8.
+	 */
+	static int firstGearFrames(@Nullable String bikeKind) {
+		if ("mach".equals(bikeKind)) {
+			return 16;
+		}
+		if ("acro".equals(bikeKind)) {
+			return 6;
+		}
+		return 8;
 	}
 
 	private boolean sendRide(RideInput.Ride ride) {
@@ -201,6 +247,15 @@ public final class MoveController {
 
 	public long ridesSent() {
 		return this.ridesSent;
+	}
+
+	/** BIKE_PLAN B9: the last ride start's milliseconds to the seat's first motion, and to the engine's first step; -1 none. */
+	public long rideMotionMs() {
+		return this.rideMotionMs;
+	}
+
+	public long rideAnswerMs() {
+		return this.rideAnswerMs;
 	}
 
 	/**
@@ -247,6 +302,10 @@ public final class MoveController {
 				String kind = JsonFields.str(data, "kind");
 				if (place != null && kind != null) {
 					int frames = (int) Math.max(0, Math.min(3600, JsonFields.integer(data, "frames", 0)));
+					if (this.awaitingAnswer && this.sync.riding() && !"sync".equals(kind)) {
+						this.awaitingAnswer = false;
+						this.rideAnswerMs = now - this.rideStartAt;
+					}
 					this.sync.onPosition(place, kind, frames, step(data), now);
 					// BIKE_PLAN D6: a bike's hop gives the seat a small jump on top of the leg
 					String jump = JsonFields.str(data, "jump");
@@ -273,6 +332,8 @@ public final class MoveController {
 				if (mode != null) {
 					this.sync.onMode(mode);
 				}
+				this.bikeKind = JsonFields.str(data, "bikeKind");
+				this.slope = JsonFields.bool(data, "slope", false);
 			}
 			case MsgTypes.WARP -> this.onWarp(data, message.re(), now);
 			case MsgTypes.WARP_TAKEN -> this.sync.onTaken(message.re(), JsonFields.bool(data, "ok", false), JsonFields.str(data, "reason"), now);
@@ -420,6 +481,11 @@ public final class MoveController {
 
 	/** The movement sync's requests, carried out with the links and the forced mover. */
 	private final class SyncPort implements MovementSync.Port {
+		@Override
+		public void stopWalk() {
+			MoveController.this.mover.clear();
+		}
+
 		@Override
 		public void step(Dir dir, long n, boolean push) {
 			JsonObject data = new JsonObject();

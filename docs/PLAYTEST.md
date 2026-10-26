@@ -1107,8 +1107,9 @@ jump is B. Try it in Blue, Crystal and Emerald.
       Cycling Road, Route 16 in Crystal, indoors), the line says it can't be used here. The bag's Bicycle still works.
 - [ ] You sit on a bike model (red Mach, green Acro with pegs, blue for Blue's and Crystal's bike); in first person the
       handlebar and stem show below the camera. Sneak never gets you off.
-- [ ] **The feel:** press W on the Mach Bike and let go; how long until you move, and do you stop on a cell? (Measured on a
-      slow software-rendered test client: about 0.3 s from the key to motion; on your PC it should be shorter.)
+- [ ] **The feel:** press W on the Mach Bike and let go; how long until you move, and do you stop on a cell? (B9: the bike
+      now starts a cell ahead the moment you press, about 50 ms after the key reaches the game on the test pod, and the
+      game confirms it. If you ever see the bike start and then slide back a cell, note where.)
 - [ ] Emerald, the **Mach Bike**: hold a direction: 16, then 8, then 4 frames a cell (30 blocks a second); let go: it rolls
       on a few cells and stops. Ride up Route 111's muddy slope at full speed: the game lets you climb (known: here the
       Minecraft bike may lag behind and be put back; tell me what you see), and from a standing start it pushes you back.

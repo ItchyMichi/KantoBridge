@@ -466,6 +466,10 @@ Numbers only; the reasons and the choices are in PROGRESS.md "The bike".
   clients: player 2 sees player 1's bike (1 of 1) before and after a 50-block ride. Field spots: Blue 11/11, Crystal 12/13,
   Emerald 42/42. Frame rate at 4 frames a cell 10.3 fps (software, as standing).
 - **B8 (checkpoint):** JUnit 1,488 (1 failing before this plan too), GameTests 141/141, pytest 2,442.
+- **B9** (2026-10-26, after STEP_SPEED_PLAN; the user's request): the one-cell pre-move on a ride's key press from standing;
+  confirmed by the engine's step every time in Emerald's rides (Mach, the deck, the muddy slope), none missed; the seat's
+  first motion 100 ms → 50 ms after `move.ride` on the client's clock (RTX 4090 pod); not on a slope, not with B; 0 snaps,
+  0 teleports. RideControllerTest +8.
 - **Not done / left:** Route 111's muddy slope at full speed (the client bike falls behind: lag 4, 8-9 "moved wrongly",
   1 stuck); Route 119's rails (the engine stops after one hop); the latency on a real PC (pod: 0.26-0.38 s); Blue's
   forced-bike refusal and cave rides not driven.
