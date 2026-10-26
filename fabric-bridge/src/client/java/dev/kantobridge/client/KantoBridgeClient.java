@@ -72,6 +72,7 @@ public class KantoBridgeClient implements ClientModInitializer {
 		UiRuntime.init(bridge);
 		// The hidden game's NPCs as client-only puppets (§4.3 puppet/).
 		PuppetRuntime.init(bridge);
+		dev.kantobridge.client.ride.RideRuntime.init();
 		// A, START and right-clicks from the world: act.interact and act.button.
 		ActRuntime.init(bridge);
 		// Battles and Pokémon between gen1-bridge and the server (battle.start/result, party.*, syncs) and the activity.

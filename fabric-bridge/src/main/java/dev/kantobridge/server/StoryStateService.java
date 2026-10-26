@@ -46,6 +46,8 @@ public final class StoryStateService {
 			Rules.applyMovement(player);
 		}
 		Surfing.set(player, StoryStates.of(player).surf());
+		// BIKE_PLAN D2: the seat follows the state (on, off, its kind and pose)
+		Bikes.ensure(player);
 		FlashService.update(player, Regions.currentIndexAt(player));
 		KantoBridge.LOGGER.debug("story.state: {} applied ({} cells changed)", applied.full() ? "full" : "delta", applied.cellsChanged());
 	}

@@ -89,6 +89,8 @@ public final class ActRuntime {
 	private final FieldFeedback feedback = new FieldFeedback();
 	private boolean aWasDown;
 	private boolean startWasDown;
+	/** BIKE_PLAN D4: Bicycle key presses sent. */
+	private long bicycles;
 	private long results;
 	private long failures;
 	private @Nullable String lastReason;
@@ -119,6 +121,7 @@ public final class ActRuntime {
 		// B and SELECT do nothing in the world (Gen 1's overworld ignores them); they matter only inside our screens.
 		boolean aClicked = drain(Keybinds.a());
 		boolean startClicked = drain(Keybinds.start());
+		boolean bicycleClicked = drain(Keybinds.bicycle());
 		// The physical state, read every tick even under a screen: a key held since before is no new press.
 		boolean aDown = physicallyDown(minecraft, Keybinds.a());
 		boolean startDown = physicallyDown(minecraft, Keybinds.start());
@@ -133,11 +136,29 @@ public final class ActRuntime {
 		if (aPress && this.idle() && this.gate.tryInteract(now)) {
 			this.interactFacing(minecraft.player);
 		}
+		if (bicycleClicked && this.idle()) {
+			// BIKE_PLAN D4: on or off the bike, as the bag's Bicycle does: the hidden game decides and answers
+			this.bicycle(now);
+		}
 		if (startPress && this.idle() && this.gate.tryButton(now)) {
 			JsonObject data = new JsonObject();
 			data.addProperty("button", Keybinds.Button.START.id());
 			data.addProperty("how", "tap");
 			this.bridge.client().send(MsgTypes.ACT_BUTTON, data);
+		}
+	}
+
+	/** BIKE_PLAN D4: {@code act.field{action:"bicycle"}}, tracked like a field move's click (its answer is shown). */
+	private void bicycle(long now) {
+		if (this.feedback.busy(now)) {
+			return;
+		}
+		JsonObject data = new JsonObject();
+		data.addProperty("action", "bicycle");
+		long seq = this.bridge.client().sendTracked(MsgTypes.ACT_FIELD, data);
+		if (seq > 0) {
+			this.feedback.sent(seq, "bicycle", now);
+			this.bicycles++;
 		}
 	}
 

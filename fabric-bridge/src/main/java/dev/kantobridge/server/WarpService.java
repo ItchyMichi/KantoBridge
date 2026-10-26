@@ -114,6 +114,12 @@ public final class WarpService {
 		}
 		// a two-floor cell's floor by the hidden game's elevation (D7: under a bridge, or on its deck)
 		Vec3 centre = index.toBlock(to.map(), to.x(), to.y(), to.elev());
+		// BIKE_PLAN D9: a rider keeps a bike: this one goes, and a fresh one is under the player at the destination the next
+		// tick (a vehicle its rider's client moves ignores the server's teleports, so the old one can't simply follow)
+		if (Bikes.bikeOf(player) != null) {
+			Bikes.dismount(player);
+			Bikes.reseatSoon(player);
+		}
 		// Same level: interiors are layers of the overworld, so this is a plain position packet, no loading screen.
 		player.teleportTo(player.serverLevel(), centre.x, centre.y, centre.z, Set.of(), to.facing().yaw(), player.getXRot());
 		player.resetFallDistance();

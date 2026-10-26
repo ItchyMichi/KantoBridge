@@ -81,6 +81,20 @@ public final class MoveController {
 	private @Nullable WorldIndex index;
 	private long lostReported;
 	private long lostWarnedAt = Long.MIN_VALUE;
+	/** BIKE_PLAN B2: the rider's keys as one held intent, and whether the ride is on (the hidden game drives). */
+	private final RideInput ride = new RideInput();
+	private boolean rideOn;
+	/** A hop the last {@code player.pos} carried ({@code low}, {@code normal}, {@code high}), until the glue takes it. */
+	private @Nullable String hop;
+	/** The bike's bumps ({@code player.blocked} without {@code n} while riding), for the jolt and the overlay. */
+	private long bumps;
+	private long bumpAt = Long.MIN_VALUE;
+	private long ridesSent;
+
+	/** BIKE_PLAN B2: the rider's keys this tick (read physically: the input lock zeroes the player's own). */
+	public record RideKeys(boolean forward, boolean back, boolean left, boolean right, float yaw, boolean b) {
+		public static final RideKeys NONE = new RideKeys(false, false, false, false, 0.0F, false);
+	}
 
 	public MoveController(Port port) {
 		this.port = port;
@@ -112,7 +126,81 @@ public final class MoveController {
 		// A cave shaft's warp being taken holds the controls too (CAVES_3D_PLAN §3.6).
 		this.reason = InputLock.reason(kanto, frame.freeCamera(), frame.battle(), frame.connected(), frame.ingame(), this.sync.hiddenUnbuilt(),
 				frame.mode(), this.fade.holding() || this.sync.takeHolding(), this.mover.active(), frame.holds());
+		if (this.reason == InputLock.Reason.NONE && this.rideOn) {
+			// BIKE_PLAN D1: the hidden game drives; the keys are read physically for move.ride
+			this.reason = InputLock.Reason.RIDING;
+		}
 		return velocity;
+	}
+
+	/**
+	 * BIKE_PLAN B2: one tick of the ride, after {@link #beforeMove}. On a bike, followed and linked, the hidden game drives:
+	 * the movement sync sends no steps, and while the mode is {@code idle} (no warp, no unbuilt map, not out in a zone) the
+	 * keys go to gen1-bridge as {@code move.ride} on each change; leaving any of that sends the empty ride once.
+	 *
+	 * @param bike   the hidden player is on a bike ({@code player.state.bike})
+	 * @param keys   the rider's keys
+	 */
+	public void rideTick(boolean bike, RideKeys keys) {
+		boolean riding = this.following && bike && this.sync.linked();
+		this.sync.setRiding(riding);
+		boolean on = riding && MovementSync.IDLE.equals(this.sync.mode()) && !this.fade.holding() && !this.sync.hiddenUnbuilt()
+				&& !this.sync.away();
+		this.rideOn = on;
+		if (!on) {
+			if (this.ride.holding()) {
+				this.sendRide(RideInput.Ride.NONE);
+			}
+			this.ride.reset();
+			return;
+		}
+		RideInput.Ride want = this.ride.tick(keys.forward(), keys.back(), keys.left(), keys.right(), keys.yaw(), keys.b());
+		if (want != null && !this.sendRide(want)) {
+			// not sent (the link dropped): start over, gen1-bridge forgets its holds with the link anyway
+			this.ride.reset();
+		}
+	}
+
+	private boolean sendRide(RideInput.Ride ride) {
+		JsonObject data = new JsonObject();
+		if (ride.dir() == null) {
+			data.add("dir", com.google.gson.JsonNull.INSTANCE);
+		} else {
+			data.addProperty("dir", ride.dir().id());
+		}
+		data.addProperty("b", ride.b());
+		this.ridesSent++;
+		return this.port.toBridge(MsgTypes.MOVE_RIDE, data);
+	}
+
+	/** True while the ride is on: the hidden game drives the bike from the keys. */
+	public boolean rideOn() {
+		return this.rideOn;
+	}
+
+	/** The ride's input (what gen1-bridge holds). */
+	public RideInput ride() {
+		return this.ride;
+	}
+
+	/** The hop the last position carried, once ({@code low}, {@code normal}, {@code high}), or null. */
+	public @Nullable String takeHop() {
+		String was = this.hop;
+		this.hop = null;
+		return was;
+	}
+
+	/** The bike's bumps so far, and when the last came (a client clock), for the jolt. */
+	public long bumps() {
+		return this.bumps;
+	}
+
+	public long bumpAt() {
+		return this.bumpAt;
+	}
+
+	public long ridesSent() {
+		return this.ridesSent;
 	}
 
 	/**
@@ -120,6 +208,7 @@ public final class MoveController {
 	 * the teleport in flight belonged to the old one; the movement sync relinks from the new hidden player's cell.
 	 */
 	public void relink(@Nullable Place hidden, boolean allowTeleport) {
+		this.ride.reset();
 		this.mover.clear();
 		this.fade.reset();
 		this.requestSeq = -1;
@@ -159,13 +248,24 @@ public final class MoveController {
 				if (place != null && kind != null) {
 					int frames = (int) Math.max(0, Math.min(3600, JsonFields.integer(data, "frames", 0)));
 					this.sync.onPosition(place, kind, frames, step(data), now);
+					// BIKE_PLAN D6: a bike's hop gives the seat a small jump on top of the leg
+					String jump = JsonFields.str(data, "jump");
+					if (jump != null && (jump.equals("low") || jump.equals("normal") || jump.equals("high"))) {
+						this.hop = jump;
+					}
 				}
 			}
 			case MsgTypes.PLAYER_BLOCKED -> {
 				// Gen 1 turns the player towards the step it refused.
 				Place cell = place(data, JsonFields.str(data, "dir"));
 				if (cell != null) {
-					this.sync.onBlocked(cell, step(data), now);
+					Long n = step(data);
+					if (n == null && this.sync.riding()) {
+						// BIKE_PLAN B1: the ridden bike bumped into something (the engine plays its own sound): a jolt
+						this.bumps++;
+						this.bumpAt = now;
+					}
+					this.sync.onBlocked(cell, n, now);
 				}
 			}
 			case MsgTypes.PLAYER_STATE -> {
@@ -236,6 +336,8 @@ public final class MoveController {
 
 	/** The player left the world. */
 	public void onLeave() {
+		this.ride.reset();
+		this.rideOn = false;
 		this.mover.clear();
 		this.fade.reset();
 		this.requestSeq = -1;

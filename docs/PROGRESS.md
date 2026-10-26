@@ -3531,6 +3531,38 @@ minutes); **kb-dev50** (qjtrqukmu5lp52, cpu3g x8 32 GB, $0.32/hr) ran B0 and B1.
   - Choices: a bump's reason is always `tile` (the engine's collide action doesn't say what it hit); the brake and the
     ride share B (either holds it).
 
+- **B2 the client.** `RideInput` (the movement keys read physically, the camera's yaw, `Intent.of`; a diagonal keeps the
+  last direction; sneak or jump is B), `MoveController.rideTick` (the ride on while the hidden player is on a bike,
+  followed, linked and `idle`, with no warp, no unbuilt map and not out in a zone; `move.ride` on each change, the empty
+  ride once on leaving), `MovementSync.riding` (no steps, pushes, faces or shaft climbs; drift still corrected),
+  `InputLock.RIDING` and no crouch, the brake's own hold let go of while riding, the mover's velocity on the seat
+  (`MoveRuntime`, the seat's feet for the cell and the floor), a hop's lift (`RideHop`: low 0.25, normal 0.3, high 0.42
+  blocks a tick), a bump counted, the Bicycle key (C, `act.field{bicycle}` tracked as a field move), `bikeKind` and
+  `trick` relayed in `story.state`, the overlay's ride line. Tests: RideInputTest 7, RideControllerTest 7,
+  StoryStateMessagesTest +2.
+  - Choices: the side-jump assist holds a B pressed with **no** direction back up to 2 ticks (the engine wants the
+    direction no later than B: bike/rse.lua's turning state, then `jumpDirection`); a B tap shorter than that still goes
+    out (pressed, then released the next tick). Free mode (D8) is only out in a zone: on a map this world doesn't have the
+    rider is held, as a walker is (the lock's `UNBUILT_MAP`), and free speed is 0.75 blocks a tick (1.0 on the Acro).
+    `act.field{bicycle}`'s success shows nothing of ours (the hidden game's text and the seat say it); its refusals use
+    the field moves' line. The Mach's gear stays client-side (the overlay; other players see the wheels turn with the
+    distance).
+- **B3 the server entity** (checkpoint). `BikeEntity` (one seat, the rider controls it, synced kind/trick/gear bytes,
+  gravity 0.08, step 0.6, never saved/summoned/hurt/pushed/picked, gone after 20 riderless ticks, the rider's body within
+  105° of its heading; the rider's feet 0.15 above the bike's: hips on the saddle), `KbEntities.BIKE` (tracking range 10,
+  every tick), `Bikes` (seats a player whose state says bike, at most once a second, removes the bike when it doesn't;
+  never a surfer), `StoryState`/`StoryStateMessages` + `bikeKind`/`trick`, `PlayerMixin` (sneak never dismounts our bike).
+  Tests: RideGameTests 6 (seat, kind and pose from the relay, removal; a bike wall stops the bike and a ledge lets it
+  down, not up; sneak; riderless; a warp; two riders), BikesTest 1.
+  - **The bike wall:** it stands a block above the feet, where a walker's head meets it; the 0.9-tall bike passed under
+    it. For a bike entity its shape now reaches down to the feet (`BikeWallBlock.BIKE_SHAPE`) and the block has a dynamic
+    shape (Minecraft tests a face-layer block only when its shape may leave the cube). No rebuild: same block, same id.
+  - **A warp** (D9) takes the bike away and seats the rider on a fresh one at the destination the next tick (a vehicle its
+    rider's client moves ignores the server's teleports, so the old one can't simply follow).
+  - Checkpoint (kb-dev50): JUnit 1,485 (1 failing: KbPackReloadTest, failing before this plan too), GameTests 141/141,
+    pytest 2,442. The first GameTest run failed 2: the bike wall above, and MultiplayerGameTests' relay test (a synthetic
+    state with surf and bike both on seated its player, whose warp then landed on a bike): surfers are never seated now.
+
 ## Water and bridges (2026-10-25, specs/WATER_AND_BRIDGES_PLAN.md)
 
 Run unattended (the user travelling; defaults D1-D11, choices recorded here). Pods: kb-dev51 (cpu3m x4, $0.22/hr) for

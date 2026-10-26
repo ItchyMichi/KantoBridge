@@ -19,6 +19,7 @@ import dev.kantobridge.pokemon.PcService;
 import dev.kantobridge.pokemon.StashService;
 import dev.kantobridge.proto.Catalog;
 import dev.kantobridge.server.ActivityService;
+import dev.kantobridge.server.Bikes;
 import dev.kantobridge.server.BuildHold;
 import dev.kantobridge.server.FlashService;
 import dev.kantobridge.server.HabitatService;
@@ -72,6 +73,7 @@ public class KantoBridge implements ModInitializer {
 		Rules.init();
 		// The relay's story.state and warp.request (docs/PLAN.md §4.4).
 		StoryStateService.init();
+		Bikes.init();
 		WarpService.init();
 		// Night Vision on dark maps the player's hidden game lit with Flash (M8).
 		FlashService.init();

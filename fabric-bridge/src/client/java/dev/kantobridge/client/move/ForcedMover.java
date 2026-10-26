@@ -129,6 +129,11 @@ public final class ForcedMover {
 		return was;
 	}
 
+	/** BIKE_PLAN B2: legs waiting behind the one under way (the overlay's ride line). */
+	public int queued() {
+		return this.legs.size();
+	}
+
 	/** Legs added so far. */
 	public long added() {
 		return this.added;

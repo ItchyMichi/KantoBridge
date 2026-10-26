@@ -65,6 +65,8 @@ public final class ClientStoryView {
 	private boolean sentBike;
 	private boolean sentRun;
 	private boolean sentForced;
+	private @Nullable String sentKind;
+	private String sentTrick = "none";
 	private @Nullable LocalPlayer sentFor;
 	private Set<String> drawn = Set.of();
 	/** SE3: each drawn Gen 3 cell cell's state (an index into its entry's {@code states}). */
@@ -174,6 +176,12 @@ public final class ClientStoryView {
 		}
 	}
 
+	/** BIKE_PLAN B2: the followed link's rules (the bike's kind, the Acro's pose, the Mach's gear), or null before init. */
+	public static @Nullable StoryRules followedRules() {
+		ClientStoryView view = instance;
+		return view == null ? null : view.rules();
+	}
+
 	/** True while the hidden player surfs (the field moves a click means depend on it). */
 	public static boolean surfing() {
 		ClientStoryView view = instance;
@@ -212,22 +220,29 @@ public final class ClientStoryView {
 		boolean bike = rules.bike();
 		boolean run = rules.run();
 		boolean forced = dev.kantobridge.client.move.MoveController.forcedNow();
+		// BIKE_PLAN B2: the bike's kind and the Acro's pose, for the server's bike entity
+		String kind = bike ? rules.bikeKind() : null;
+		String trick = bike ? rules.trick() : "none";
 		Set<String> lit = new TreeSet<>(rules.lit());
 		JsonObject message;
 		if (!this.fullSent || player != this.sentFor) {
-			message = StoryStateMessages.full(cells.active(), surf, bike, run, forced, lit);
+			message = StoryStateMessages.withBike(StoryStateMessages.full(cells.active(), surf, bike, run, forced, lit), kind,
+					"none".equals(trick) ? null : trick);
 		} else {
 			Set<String> add = new TreeSet<>(cells.active());
 			add.removeAll(this.sentActive);
 			Set<String> remove = new TreeSet<>(this.sentActive);
 			remove.removeAll(cells.active());
 			boolean litChanged = !lit.equals(this.sentLit);
+			boolean kindChanged = !java.util.Objects.equals(kind, this.sentKind);
+			boolean trickChanged = !trick.equals(this.sentTrick);
 			if (add.isEmpty() && remove.isEmpty() && surf == this.sentSurf && bike == this.sentBike && run == this.sentRun && forced == this.sentForced
-					&& !litChanged) {
+					&& !litChanged && !kindChanged && !trickChanged) {
 				return;
 			}
-			message = StoryStateMessages.delta(add, remove, surf != this.sentSurf ? surf : null, bike != this.sentBike ? bike : null,
-					run != this.sentRun ? run : null, forced != this.sentForced ? forced : null, litChanged ? lit : null);
+			message = StoryStateMessages.withBike(StoryStateMessages.delta(add, remove, surf != this.sentSurf ? surf : null,
+					bike != this.sentBike ? bike : null, run != this.sentRun ? run : null, forced != this.sentForced ? forced : null,
+					litChanged ? lit : null), kindChanged ? kind : null, trickChanged ? trick : null);
 		}
 		try {
 			StoryStateMessages.apply(local, message);
@@ -245,6 +260,8 @@ public final class ClientStoryView {
 			this.sentBike = bike;
 			this.sentRun = run;
 			this.sentForced = forced;
+			this.sentKind = kind;
+			this.sentTrick = trick;
 			this.sentFor = player;
 			this.relayed++;
 		}

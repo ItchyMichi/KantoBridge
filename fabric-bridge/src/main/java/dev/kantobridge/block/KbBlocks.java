@@ -111,7 +111,8 @@ public final class KbBlocks {
 		STORY_TILE = register("story_tile", new StoryTileBlock(invisibleProperties()));
 		LEDGE_COLLIDER = register("ledge_collider", new LedgeColliderBlock(invisibleProperties()));
 		EDGE_WALL = register("edge_wall", new EdgeWallBlock(invisibleProperties()));
-		BIKE_WALL = register("bike_wall", new BikeWallBlock(invisibleProperties()));
+		// BIKE_PLAN B3: a dynamic shape, so a bike entity (its shape reaches down to the bike's feet) is tested against it
+		BIKE_WALL = register("bike_wall", new BikeWallBlock(invisibleProperties().dynamicShape()));
 		FALL_WALL = register("fall_wall", new FallWallBlock(invisibleProperties()));
 		STEP_COLLIDER = register("step_collider", new StepColliderBlock(invisibleProperties()));
 		SEAT_COLLIDER = register("seat_collider", new SeatColliderBlock(invisibleProperties()));

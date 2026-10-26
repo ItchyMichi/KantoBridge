@@ -195,6 +195,13 @@ public final class MovementSync {
 	private long driftSince = -1;
 	private long teleportAllowedAt = Long.MIN_VALUE;
 	private @Nullable Climb climb;
+	/**
+	 * BIKE_PLAN D1: the hidden player rides a bike and is followed: the hidden game drives ({@code move.ride}), so no steps,
+	 * pushes or faces are sent; every position it reports is walked as a forced move.
+	 */
+	private boolean riding;
+	/** The last tick found the player out in a Wild Routes zone (the ride is free there: nothing follows). */
+	private boolean away;
 	/** The {@code warp.take} sent at the far end, waiting for its answer and its warp; -1 for none. */
 	private long takeSeq = -1;
 	private long takeSentAt;
@@ -265,6 +272,7 @@ public final class MovementSync {
 		boolean ready = this.linked && this.index != null && !this.port.warping() && !this.port.forcedMoving();
 		// Wild Routes: out in a zone, where the hidden player waits on the route map
 		boolean away = this.awayInZone(here, x, z);
+		this.away = away;
 		if (away) {
 			this.stats.zoneTicks++;
 		}
@@ -278,8 +286,12 @@ public final class MovementSync {
 			moved = !away && this.settle(here, now);
 		}
 		// A cave shaft (CAVES_3D_PLAN §3.6): climbing in it, or waiting for its warp, sends nothing else.
-		if (ready && !moved && !away && IDLE.equals(this.mode) && this.hasLast && this.climbing(here, x, y, z, yaw, now)) {
+		if (ready && !moved && !away && IDLE.equals(this.mode) && this.hasLast && !this.riding && this.climbing(here, x, y, z, yaw, now)) {
 			this.calm();
+		} else if (ready && !moved && !away && IDLE.equals(this.mode) && this.hasLast && !this.port.forcedMoving() && this.riding) {
+			// BIKE_PLAN D1: the hidden game drives the bike; only a drift is corrected
+			this.calm();
+			this.drift(here, now);
 		} else if (ready && !moved && !away && IDLE.equals(this.mode) && this.hasLast && !this.port.forcedMoving()) {
 			this.crossings(here, x, z, now);
 			this.push(intent, here, x, z, now);
@@ -496,6 +508,23 @@ public final class MovementSync {
 		if (target != null) {
 			this.teleport(target, now);
 		}
+	}
+
+	/** BIKE_PLAN D1: the hidden game drives (on a bike, followed): no steps, pushes or faces from here. */
+	public void setRiding(boolean riding) {
+		if (riding != this.riding) {
+			this.riding = riding;
+			this.calm();
+		}
+	}
+
+	public boolean riding() {
+		return this.riding;
+	}
+
+	/** True when the last tick found the player out in a Wild Routes zone. */
+	public boolean away() {
+		return this.away;
 	}
 
 	// ---- views ----

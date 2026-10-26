@@ -31,6 +31,10 @@ public final class StoryState {
 	private boolean bike;
 	private boolean run;
 	private boolean forced;
+	/** BIKE_PLAN D10: the bike ridden ({@code bike}, {@code mach}, {@code acro}), or null when not known. */
+	private @org.jetbrains.annotations.Nullable String bikeKind;
+	/** BIKE_PLAN D6: the Acro bike's pose ({@code none}, {@code wheelie}, {@code hop}). */
+	private String trick = "none";
 
 	/** True when a story cell of this type and key closes for this player. */
 	public boolean blocks(String key, StoryCellType type) {
@@ -120,6 +124,24 @@ public final class StoryState {
 		this.forced = forced;
 	}
 
+	/** BIKE_PLAN D10: the bike ridden, or null (not riding, or a client that doesn't say). */
+	public @org.jetbrains.annotations.Nullable String bikeKind() {
+		return this.bikeKind;
+	}
+
+	public void setBikeKind(@org.jetbrains.annotations.Nullable String bikeKind) {
+		this.bikeKind = bikeKind;
+	}
+
+	/** BIKE_PLAN D6: the Acro bike's pose. */
+	public String trick() {
+		return this.trick;
+	}
+
+	public void setTrick(String trick) {
+		this.trick = trick;
+	}
+
 	// ---- lit maps ----
 
 	public boolean isLit(String map) {
@@ -144,5 +166,7 @@ public final class StoryState {
 		this.bike = false;
 		this.run = false;
 		this.forced = false;
+		this.bikeKind = null;
+		this.trick = "none";
 	}
 }

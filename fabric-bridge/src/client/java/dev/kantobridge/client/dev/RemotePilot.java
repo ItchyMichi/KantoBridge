@@ -359,6 +359,14 @@ final class RemotePilot {
 		this.mark("command id=" + command.get("id") + " op=" + op);
 		switch (op == null ? "" : op) {
 			case "key" -> this.press(text(command, "key"), Math.max(1, number(command, "hold", 2)));
+			case "keys" -> {
+				// BIKE_PLAN B5/B7: several keys held together (a direction with sneak: a wheelie run, a side jump)
+				com.google.gson.JsonArray keys = command.has("keys") && command.get("keys").isJsonArray() ? command.getAsJsonArray("keys")
+						: new com.google.gson.JsonArray();
+				for (com.google.gson.JsonElement key : keys) {
+					this.press(key.getAsString(), Math.max(1, number(command, "hold", 2)));
+				}
+			}
 			case "step" -> this.startStep(text(command, "dir"));
 			case "face" -> {
 				// a direction, and optionally a pitch (degrees, negative looks up) so a tall face fits the frame
@@ -479,7 +487,7 @@ final class RemotePilot {
 	private void run(JsonObject command) {
 		String op = text(command, "op");
 		switch (op == null ? "" : op) {
-			case "key" -> {
+			case "key", "keys" -> {
 				if (this.currentTicks > number(command, "hold", 2)) {
 					this.finish(this.result(true, null));
 				}
@@ -699,6 +707,7 @@ final class RemotePilot {
 			case "sneak" -> bound(net.minecraft.client.Minecraft.getInstance().options.keyShift, GLFW.GLFW_KEY_LEFT_SHIFT);
 			case "sprint" -> bound(net.minecraft.client.Minecraft.getInstance().options.keySprint, GLFW.GLFW_KEY_LEFT_CONTROL);
 			case "jump" -> bound(net.minecraft.client.Minecraft.getInstance().options.keyJump, GLFW.GLFW_KEY_SPACE);
+			case "bicycle" -> bound(Keybinds.bicycle(), GLFW.GLFW_KEY_C);
 			default -> -1;
 		};
 	}
@@ -1254,6 +1263,35 @@ final class RemotePilot {
 			out.addProperty("weather", WeatherView.shown());
 		}
 		out.addProperty("fps", this.minecraft.getFps());
+		// BIKE_PLAN B7: the ride as the client sees it (the seat, its kind and pose; what the ride holds)
+		if (player != null && player.getVehicle() instanceof dev.kantobridge.entity.BikeEntity bike) {
+			JsonObject ride = new JsonObject();
+			ride.addProperty("kind", bike.kind().id());
+			ride.addProperty("trick", bike.trick().id());
+			ride.addProperty("x", Math.round(bike.getX() * 100) / 100.0);
+			ride.addProperty("y", Math.round(bike.getY() * 100) / 100.0);
+			ride.addProperty("z", Math.round(bike.getZ() * 100) / 100.0);
+			dev.kantobridge.client.move.MoveController moves = dev.kantobridge.client.move.MoveRuntime.controller();
+			if (moves != null) {
+				ride.addProperty("on", moves.rideOn());
+				ride.addProperty("sent", moves.ridesSent());
+				ride.addProperty("bumps", moves.bumps());
+				dev.kantobridge.world.Dir held = moves.ride().sent().dir();
+				ride.addProperty("held", held == null ? "-" : held.id());
+				ride.addProperty("b", moves.ride().sent().b());
+			}
+			out.add("ride", ride);
+		}
+		if (this.minecraft.level != null) {
+			// BIKE_PLAN B7: the other players' bikes this client sees (kinds, a count)
+			int bikes = 0;
+			for (net.minecraft.world.entity.Entity e : this.minecraft.level.entitiesForRendering()) {
+				if (e instanceof dev.kantobridge.entity.BikeEntity && (player == null || e != player.getVehicle())) {
+					bikes++;
+				}
+			}
+			out.addProperty("other_bikes", bikes);
+		}
 		out.addProperty("recording", this.recordStartNanos != 0);
 		Path file = this.dir.resolve("state.json");
 		Path temp = this.dir.resolve("state.json.tmp");

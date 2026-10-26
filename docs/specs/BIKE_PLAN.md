@@ -449,3 +449,6 @@ Numbers only; the reasons and the choices are in PROGRESS.md "The bike".
 - **B1:** real engine through `move.ride`: Mach 4 frames at step 3; a step while riding refused `script`; Acro B held:
   wheelie, then hop; one message side jump (16 frames, jump normal); wheelie run 8 frames. Tests: Lua move 41, game3
   observe 42, stand-ins 31, protocol 585; pytest 2,441.
+- **B2:** client ride input and controller; RideInputTest 7, RideControllerTest 7, StoryStateMessagesTest +2.
+- **B3 (checkpoint):** BikeEntity, Bikes, the mixin, the bike wall's bike shape; RideGameTests 6, BikesTest 1. JUnit 1,485
+  (1 failing before this plan too), GameTests 141/141, pytest 2,442.

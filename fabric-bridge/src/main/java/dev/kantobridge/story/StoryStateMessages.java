@@ -26,7 +26,11 @@ public final class StoryStateMessages {
 	public static final int MAX_LIT = 256;
 
 	/** MG3: {@code region} is the client's link bookkeeping, read by the service, not applied here. */
-	private static final Set<String> FIELDS = Set.of("full", "active", "add", "remove", "surf", "bike", "run", "forced", "lit", "region");
+	private static final Set<String> FIELDS = Set.of("full", "active", "add", "remove", "surf", "bike", "run", "forced", "lit", "region", "bikeKind",
+			"trick");
+	/** BIKE_PLAN D10, D6: the values {@code bikeKind} and {@code trick} may take. */
+	public static final Set<String> BIKE_KINDS = Set.of("bike", "mach", "acro");
+	public static final Set<String> TRICKS = Set.of("none", "wheelie", "hop");
 
 	/** What one message changed. */
 	public record Applied(boolean full, boolean surfChanged, boolean bikeChanged, int cellsChanged, boolean runChanged) {
@@ -121,6 +125,20 @@ public final class StoryStateMessages {
 		return data;
 	}
 
+	/**
+	 * BIKE_PLAN B2: adds the bike's kind and the Acro's pose to a message built by {@link #full} or {@link #delta} (each
+	 * null when it isn't sent); returns the message.
+	 */
+	public static JsonObject withBike(JsonObject data, @Nullable String bikeKind, @Nullable String trick) {
+		if (bikeKind != null) {
+			data.addProperty("bikeKind", bikeKind);
+		}
+		if (trick != null) {
+			data.addProperty("trick", trick);
+		}
+		return data;
+	}
+
 	/** Checks a message and applies it to {@code state}; throws without changing anything if it is malformed. */
 	public static Applied apply(StoryState state, JsonObject data) throws Invalid {
 		for (String key : data.keySet()) {
@@ -139,6 +157,12 @@ public final class StoryStateMessages {
 		if ((data.has("surf") && surf == null) || (data.has("bike") && bike == null) || (data.has("run") && run == null)
 				|| (data.has("forced") && forced == null)) {
 			throw new Invalid("flag");
+		}
+		String bikeKind = str(data, "bikeKind");
+		String trick = str(data, "trick");
+		if ((data.has("bikeKind") && (bikeKind == null || !BIKE_KINDS.contains(bikeKind)))
+				|| (data.has("trick") && (trick == null || !TRICKS.contains(trick)))) {
+			throw new Invalid("bike");
 		}
 		List<String> lit = data.has("lit") ? strings(data.get("lit"), MAX_LIT, false) : null;
 		boolean surfBefore = state.surf();
@@ -190,10 +214,26 @@ public final class StoryStateMessages {
 		if (forced != null || full) {
 			state.setForced(Boolean.TRUE.equals(forced));
 		}
+		if (bikeKind != null) {
+			state.setBikeKind(bikeKind);
+		} else if (full || (bike != null && !bike)) {
+			// a full state without it, or off the bike: no kind known
+			state.setBikeKind(null);
+		}
+		if (trick != null) {
+			state.setTrick(trick);
+		} else if (full || (bike != null && !bike)) {
+			state.setTrick("none");
+		}
 		if (lit != null) {
 			state.setLit(lit);
 		}
 		return new Applied(full, state.surf() != surfBefore, state.bike() != bikeBefore, changed, state.run() != runBefore);
+	}
+
+	private static @Nullable String str(JsonObject data, String key) {
+		JsonElement value = data.get(key);
+		return value != null && value.isJsonPrimitive() && value.getAsJsonPrimitive().isString() ? value.getAsString() : null;
 	}
 
 	private static @Nullable Boolean bool(JsonObject data, String key) {

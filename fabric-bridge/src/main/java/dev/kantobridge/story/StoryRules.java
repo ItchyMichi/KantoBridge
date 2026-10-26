@@ -115,6 +115,10 @@ public final class StoryRules {
 	private final Set<Long> boulderCells = new HashSet<>();
 	private boolean surf;
 	private boolean bike;
+	/** BIKE_PLAN B2: player.state's bikeKind and trick (null / "none" when absent). */
+	private @Nullable String bikeKind;
+	private String trick = "none";
+	private int gear;
 	private boolean run;
 	private final Set<String> lit = new TreeSet<>();
 	private boolean dirty = true;
@@ -265,6 +269,15 @@ public final class StoryRules {
 		if (bike != null) {
 			this.bike = bike;
 		}
+		// BIKE_PLAN B2: a player.state is whole: no bikeKind or trick means none
+		JsonElement kind = state.get("bikeKind");
+		String k = kind != null && kind.isJsonPrimitive() ? kind.getAsString() : null;
+		this.bikeKind = this.bike ? (k != null && StoryStateMessages.BIKE_KINDS.contains(k) ? k : "bike") : null;
+		JsonElement tr = state.get("trick");
+		String t = tr != null && tr.isJsonPrimitive() ? tr.getAsString() : null;
+		this.trick = this.bike && t != null && StoryStateMessages.TRICKS.contains(t) ? t : "none";
+		JsonElement g = state.get("gear");
+		this.gear = this.bike && g != null && g.isJsonPrimitive() && g.getAsJsonPrimitive().isNumber() ? Math.max(0, Math.min(2, g.getAsInt())) : 0;
 		// FA8 item 7: player.state.run (absent: the game has no running)
 		this.run = Boolean.TRUE.equals(bool(state.get("run")));
 		Boolean dark = bool(state.get("dark"));
@@ -406,6 +419,21 @@ public final class StoryRules {
 	/** The hidden player is running ({@code player.state.run}). */
 	public boolean run() {
 		return this.run;
+	}
+
+	/** BIKE_PLAN B2: the bike ridden ({@code bike}, {@code mach}, {@code acro}), or null when not riding. */
+	public @Nullable String bikeKind() {
+		return this.bikeKind;
+	}
+
+	/** BIKE_PLAN B2: the Acro bike's pose ({@code none}, {@code wheelie}, {@code hop}). */
+	public String trick() {
+		return this.trick;
+	}
+
+	/** BIKE_PLAN B2: the Mach Bike's gear (0-2; 0 elsewhere). */
+	public int gear() {
+		return this.gear;
 	}
 
 	public boolean bike() {

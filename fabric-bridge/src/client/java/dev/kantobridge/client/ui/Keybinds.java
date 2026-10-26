@@ -47,6 +47,8 @@ public final class Keybinds {
 	private static @Nullable KeyMapping b;
 	private static @Nullable KeyMapping start;
 	private static @Nullable KeyMapping select;
+	/** BIKE_PLAN D4: gets on and off the bike ({@code act.field{bicycle}}); C is free in vanilla and Cobblemon 1.8.1. */
+	private static @Nullable KeyMapping bicycle;
 
 	private Keybinds() {
 	}
@@ -62,6 +64,13 @@ public final class Keybinds {
 				new KeyMapping("key.kantobridge.start", InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_ENTER, CATEGORY));
 		select = KeyBindingHelper.registerKeyBinding(
 				new KeyMapping("key.kantobridge.select", InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_BACKSPACE, CATEGORY));
+		bicycle = KeyBindingHelper.registerKeyBinding(
+				new KeyMapping("key.kantobridge.bicycle", InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_C, CATEGORY));
+	}
+
+	/** BIKE_PLAN D4: the Bicycle key. */
+	public static KeyMapping bicycle() {
+		return require(bicycle);
 	}
 
 	public static KeyMapping a() {

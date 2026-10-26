@@ -25,7 +25,10 @@ import net.fabricmc.fabric.api.event.Event;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.multiplayer.ClientLevel;
+import net.minecraft.client.Options;
 import net.minecraft.client.player.LocalPlayer;
+import dev.kantobridge.entity.BikeEntity;
+import net.minecraft.world.entity.Entity;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.resources.language.I18n;
 import net.minecraft.core.BlockPos;
@@ -105,6 +108,7 @@ public final class MoveRuntime {
 			links.onFollow((link, teleport) -> runtime.controller.relink(placeOf(link.state()), teleport));
 		}
 		bridge.addDebugLine(runtime::debugSteps);
+		bridge.addDebugLine(runtime::debugRide);
 		bridge.addDebugLine(runtime::debugFixes);
 	}
 
@@ -125,6 +129,18 @@ public final class MoveRuntime {
 		}
 		Dir facing = Dir.byId(state.facing());
 		return new Place(state.map(), state.x(), state.y(), facing == null ? Dir.DOWN : facing);
+	}
+
+	/** BIKE_PLAN B5: when the local bike last bumped into something (the bridge clock's millis), or Long.MIN_VALUE. */
+	public static long bumpAt() {
+		MoveRuntime runtime = instance;
+		return runtime == null ? Long.MIN_VALUE : runtime.controller.bumpAt();
+	}
+
+	/** BIKE_PLAN B2: the ride's controller state for the dev pilot (null before init). */
+	public static @Nullable MoveController controller() {
+		MoveRuntime runtime = instance;
+		return runtime == null ? null : runtime.controller;
 	}
 
 	/** The movement sync's counts (the dev client's autopilot logs them), or null before init. */
@@ -154,23 +170,74 @@ public final class MoveRuntime {
 			InputLock.setHoldOnLadder(false);
 			return;
 		}
+		// BIKE_PLAN B2: on our bike the seat is what moves (the rider follows it)
+		Entity seat = seat(player);
+		Entity body = seat != null ? seat : player;
 		MoveController.Frame frame = new MoveController.Frame(ClientWorldIndex.current(), player.isSpectator() || player.isCreative(),
 				this.bridge.client().state() == ConnectionState.CONNECTED, this.bridge.state().ingame() && !pairing(), this.bridge.state().mode(),
-				InputLock.screenHolds(minecraft.screen), ClientBattles.active(), player.getX(), player.getZ());
+				InputLock.screenHolds(minecraft.screen), ClientBattles.active(), body.getX(), body.getZ());
 		ForcedMover.Velocity velocity = this.controller.beforeMove(this.clock.millis(), frame);
+		Options options = minecraft.options;
+		boolean b = options.keyShift.isDown() || options.keyJump.isDown();
+		this.controller.rideTick(this.bridge.state().bike(), new MoveController.RideKeys(options.keyUp.isDown(), options.keyDown.isDown(),
+				options.keyLeft.isDown(), options.keyRight.isDown(), player.getYRot(), b));
 		if (velocity != null) {
 			// Keep the vertical speed, so gravity, landing and step-up work as when walking.
-			player.setDeltaMovement(velocity.x(), player.getDeltaMovement().y, velocity.z());
+			body.setDeltaMovement(velocity.x(), body.getDeltaMovement().y, velocity.z());
+		} else if (seat != null && this.controller.reason() == InputLock.Reason.NONE && !this.controller.rideOn()) {
+			// D8: free mode (out in a zone): the rider's keys move the bike like a boat at its kind's base speed
+			body.setDeltaMovement(free(player, seat), body.getDeltaMovement().y, freeZ);
+		} else if (seat != null && velocity == null && !this.controller.mover().active()) {
+			// standing: no drift
+			body.setDeltaMovement(0.0, body.getDeltaMovement().y, 0.0);
+		}
+		if (seat != null && this.controller.sync().riding() && !this.controller.mover().active()) {
+			// standing: the bike faces the way the hidden player does (a turn in place, a turn jump)
+			Dir facing = Dir.byId(this.bridge.state().facing());
+			if (facing != null) {
+				seat.setYRot(facing.yaw());
+			}
+		}
+		if (seat != null) {
+			// D6: a hop on the step (a bunny hop on, a side jump, a wheelie's ledge hop) lifts the seat; gravity lands it
+			String hop = this.controller.takeHop();
+			if (hop != null) {
+				body.setDeltaMovement(body.getDeltaMovement().x, RideHop.velocity(hop), body.getDeltaMovement().z);
+			}
 		}
 		InputLock.set(this.controller.reason() != InputLock.Reason.NONE);
 		InputLock.setHoldOnLadder(this.controller.sync().takeHolding() && player.onClimbable());
 		this.brake(minecraft);
 	}
 
+	/** The local player's seat when it rides our bike, else null. */
+	private static @Nullable Entity seat(LocalPlayer player) {
+		Entity vehicle = player.getVehicle();
+		return vehicle instanceof BikeEntity ? vehicle : null;
+	}
+
+	private double freeZ;
+
+	/** Free mode's velocity (x returned, z in {@link #freeZ}) from the rider's own impulses and yaw. */
+	private double free(LocalPlayer player, Entity seat) {
+		double speed = RideHop.freeSpeed(seat instanceof BikeEntity bike ? bike.kind() : BikeEntity.Kind.BIKE);
+		float fwd = player.input.forwardImpulse;
+		float side = player.input.leftImpulse;
+		double radians = Math.toRadians(player.getYRot());
+		double sin = Math.sin(radians);
+		double cos = Math.cos(radians);
+		double length = Math.max(1.0, Math.hypot(fwd, side));
+		double x = (side * cos - fwd * sin) / length * speed;
+		this.freeZ = (fwd * cos + side * sin) / length * speed;
+		return x;
+	}
+
 	/** Cycling Road: sneak holds B while the hidden player is on a slope map (and never crouches there). */
 	private void brake(Minecraft minecraft) {
 		boolean slope = this.controller.following() && this.bridge.state().slope();
-		InputLock.setNoSneak(slope);
+		// BIKE_PLAN D4: sneak is B on the bike (move.ride), never a crouch
+		boolean riding = this.controller.sync().riding();
+		InputLock.setNoSneak(slope || riding);
 		boolean connected = this.bridge.client().state() == ConnectionState.CONNECTED;
 		// The key itself: the input lock zeroes the player's sneak during the roll's forced steps.
 		// FA8 item 7 (D4): the sprint key runs where the hidden game runs (Gen 3: B held on foot; the game itself says where
@@ -179,7 +246,8 @@ public final class MoveRuntime {
 		boolean runs = hello != null && "gen3".equals(hello.family());
 		boolean run = runs && this.controller.following() && !slope && !this.bridge.state().bike() && !this.bridge.state().surf()
 				&& minecraft.options.keySprint.isDown();
-		Boolean hold = this.brake.tick(this.controller.following(), connected, slope, minecraft.options.keyShift.isDown(), run);
+		// BIKE_PLAN B2: on the bike B travels in move.ride; the brake's own hold is let go of
+		Boolean hold = this.brake.tick(this.controller.following() && !riding, connected, slope, minecraft.options.keyShift.isDown(), run);
 		if (hold != null) {
 			JsonObject data = new JsonObject();
 			data.addProperty("button", "b");
@@ -196,7 +264,10 @@ public final class MoveRuntime {
 			return;
 		}
 		Dir intent = Intent.of(player.input.leftImpulse, player.input.forwardImpulse, player.getYRot());
-		this.controller.afterMove(this.clock.millis(), player.getX(), player.getY(), player.getZ(), intent, player.getYRot());
+		// BIKE_PLAN B2: on our bike, the seat's feet (the rider sits above them; a deck's floors overlap, WB4)
+		Entity seat = seat(player);
+		Entity body = seat != null ? seat : player;
+		this.controller.afterMove(this.clock.millis(), body.getX(), body.getY(), body.getZ(), intent, player.getYRot());
 	}
 
 	private void renderFade(GuiGraphics graphics) {
@@ -215,6 +286,18 @@ public final class MoveRuntime {
 		MovementSync.Stats stats = sync.stats();
 		return I18n.get("kantobridge.debug.move", this.controller.reason().name().toLowerCase(Locale.ROOT), stats.steps, stats.pushes,
 				stats.faces, sync.pendingSteps(), stats.lost);
+	}
+
+	/** BIKE_PLAN B2: the ride line (kind, gear, trick, held dir/b, legs queued, bumps, rides sent), or null off the bike. */
+	private @Nullable String debugRide() {
+		if (!this.bridge.state().bike()) {
+			return null;
+		}
+		dev.kantobridge.story.StoryRules rules = dev.kantobridge.client.story.ClientStoryView.followedRules();
+		RideInput.Ride held = this.controller.ride().sent();
+		return I18n.get("kantobridge.debug.ride", rules == null ? "?" : rules.bikeKind(), rules == null ? 0 : rules.gear(),
+				rules == null ? "none" : rules.trick(), held.dir() == null ? "-" : held.dir().id(), held.b() ? "+b" : "",
+				this.controller.mover().queued(), this.controller.bumps(), this.controller.ridesSent());
 	}
 
 	private String debugFixes() {

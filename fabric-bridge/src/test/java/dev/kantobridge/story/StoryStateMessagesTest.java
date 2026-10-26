@@ -103,4 +103,28 @@ class StoryStateMessagesTest {
 		assertEquals("cell_key", invalid.code());
 		assertFalse(invalid.getMessage().contains("SECRET"), "never the offending value");
 	}
+
+	@Test
+	void theBikesKindAndPoseTravelInFullStatesAndDeltas() throws Exception {
+		// BIKE_PLAN B2: bikeKind and trick, relayed for the server's bike entity
+		StoryState state = new StoryState();
+		JsonObject full = StoryStateMessages.withBike(StoryStateMessages.full(List.of(), false, true, List.of()), "mach", null);
+		StoryStateMessages.apply(state, full);
+		assertEquals("mach", state.bikeKind());
+		assertEquals("none", state.trick());
+		StoryStateMessages.apply(state, parse("{\"full\":false,\"bikeKind\":\"acro\",\"trick\":\"wheelie\"}"));
+		assertEquals("acro", state.bikeKind());
+		assertEquals("wheelie", state.trick());
+		StoryStateMessages.apply(state, parse("{\"full\":false,\"bike\":false}"));
+		assertEquals(null, state.bikeKind());          // off the bike: no kind, no pose
+		assertEquals("none", state.trick());
+	}
+
+	@Test
+	void anUnknownBikeKindOrTrickIsRefused() throws Exception {
+		StoryState state = new StoryState();
+		assertThrows(StoryStateMessages.Invalid.class, () -> StoryStateMessages.apply(state, parse("{\"full\":false,\"bikeKind\":\"tandem\"}")));
+		assertThrows(StoryStateMessages.Invalid.class, () -> StoryStateMessages.apply(state, parse("{\"full\":false,\"trick\":1}")));
+		assertFalse(state.bike());
+	}
 }

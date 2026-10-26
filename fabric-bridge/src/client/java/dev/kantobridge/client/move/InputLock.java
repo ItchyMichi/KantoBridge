@@ -32,7 +32,12 @@ public final class InputLock {
 		/** One of our screens is open, or a hidden-game UI is open while something covers its screen (M4). */
 		SCREEN,
 		/** The hidden game's mode isn't {@code idle} (a menu, a cutscene, a transition). */
-		BUSY
+		BUSY,
+		/**
+		 * BIKE_PLAN D1: the hidden player rides a bike and the hidden game drives it: the player's own movement, jump and sneak
+		 * are zeroed; the ride reads the keys physically ({@code RideInput}).
+		 */
+		RIDING
 	}
 
 	/** Implemented by our screens (M4) that should hold the player even where vanilla wouldn't. */

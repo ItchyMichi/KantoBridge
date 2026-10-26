@@ -242,6 +242,10 @@ end
 --     KB_RIDE id= seg= f= at each segment, KB_RIDE_END id= x= y= moved= frames=
 --   { id = 5, op = "sight", on = false }
 --     trainer sight off for good (on = true: back), for a ride driven through the bridge
+--   { id = 6, op = "trace", frames = 600 }
+--     prints KB_RT (as ride does) while somebody else drives (the client's move.ride); KB_TRACE_END id= map= x= y= moved=
+--   { id = 7, op = "challenge", begin = true }
+--     the Cycling Road challenge begun (Rse.beginCyclingRoadChallenge); KB_CHALLENGE id= on= collisions=
 --   { id = 4, op = "watch", frames = 600 }
 --     prints KB_BTN f= b= dir= whenever B or the held direction changes (the latency of a client's hold)
 local RIDE_SOURCE = "kbdrv:ride"
@@ -437,6 +441,19 @@ return function(game)
         elseif cmd.op == "scan" then
           scanRuns(game, cmd.id, cmd.dir or "up", cmd.bike)
           cmd = nil
+        elseif cmd.op == "challenge" then
+          -- B5: the Cycling Road challenge begun (bike/rse.lua Rse.beginCyclingRoadChallenge), or its count read
+          local Rse = package.loaded["src.core.game3.bike.rse"] or require("src.core.game3.bike.rse")
+          if cmd.begin then pcall(Rse.beginCyclingRoadChallenge) end
+          local S = Rse.state or {}
+          print(("KB_CHALLENGE id=%s on=%s collisions=%s"):format(word(cmd.id), word(S.cyclingChallenge == true),
+            word(S.collisions)))
+          cmd = nil
+        elseif cmd.op == "trace" then
+          -- B5: the bike's facts while somebody else (the client's move.ride) drives
+          cmd.state, cmd.last = "trace", nil
+          local P = mod3("player")
+          cmd.from = { P.cellX or 0, P.cellY or 0 }
         elseif cmd.op == "ride" or cmd.op == "watch" then
           cmd.state, cmd.seg, cmd.held, cmd.last = cmd.op, 0, {}, nil
           local P = mod3("player")
@@ -497,6 +514,19 @@ return function(game)
           print(("KB_RIDE_END id=%s map=%s x=%s y=%s moved=%d frames=%d"):format(word(cmd.id), word(Map and Map.current),
             word(P.cellX), word(P.cellY), math.abs((P.cellX or 0) - cmd.from[1]) + math.abs((P.cellY or 0) - cmd.from[2]),
             frames))
+          cmd = nil
+        end
+      elseif cmd and cmd.state == "trace" then
+        frames = frames + 1
+        local facts = bikeFacts(game)
+        if facts ~= cmd.last then
+          cmd.last = facts
+          print(("KB_RT f=%d %s"):format(frames, facts))
+        end
+        if frames >= (tonumber(cmd.frames) or 600) then
+          local P, Map = mod3("player"), mod3("map")
+          print(("KB_TRACE_END id=%s map=%s x=%s y=%s moved=%d"):format(word(cmd.id), word(Map and Map.current), word(P.cellX),
+            word(P.cellY), math.abs((P.cellX or 0) - cmd.from[1]) + math.abs((P.cellY or 0) - cmd.from[2])))
           cmd = nil
         end
       elseif cmd and cmd.state == "watch" then

@@ -27,6 +27,11 @@ import net.minecraft.world.phys.shapes.VoxelShape;
 public class BikeWallBlock extends Block {
 	public static final MapCodec<BikeWallBlock> CODEC = simpleCodec(BikeWallBlock::new);
 	private static final double EPSILON = 1.0E-7;
+	/**
+	 * BIKE_PLAN B3: for the ridden bike entity (0.9 tall, its feet on the cell's floor) the wall reaches down to the feet:
+	 * it stands a block above them, where a walking player's head meets it.
+	 */
+	private static final VoxelShape BIKE_SHAPE = Block.box(0.0, -16.0, 0.0, 16.0, 16.0, 16.0);
 
 	public BikeWallBlock(Properties properties) {
 		super(properties);
@@ -60,7 +65,10 @@ public class BikeWallBlock extends Block {
 		}
 		Player player = StoryStates.governingPlayer(entity);
 		StoryState story = player == null ? null : StoryStates.peek(player);
-		return walls(story != null && story.bike(), entity.getBoundingBox(), pos) ? Shapes.block() : Shapes.empty();
+		if (!walls(story != null && story.bike(), entity.getBoundingBox(), pos)) {
+			return Shapes.empty();
+		}
+		return entity instanceof dev.kantobridge.entity.BikeEntity ? BIKE_SHAPE : Shapes.block();
 	}
 
 	/** The rule: a wall for a biker whose box isn't already over the block. */
